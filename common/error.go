@@ -2,12 +2,45 @@ package common
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 )
 
 type Error struct {
 	code    string `json:"code"`
 	message string `json:"message"`
+}
+
+func (e Error) MarshalJSON() ([]byte, error) {
+	return json.Marshal(map[string]string{
+		"code":    e.code,
+		"message": e.message,
+	})
+}
+
+func (e *Error) UnmarshalJSON(b []byte) error {
+	var m map[string]string
+	if err := json.Unmarshal(b, &m); err != nil {
+		return err
+	}
+
+	var code, message string
+	if c, ok := m["code"]; !ok {
+		return errors.New("failed to Unmarshal Error; missing `code`")
+	} else {
+		code = c
+	}
+
+	if c, ok := m["message"]; !ok {
+		return errors.New("failed to Unmarshal Error; missing `message`")
+	} else {
+		message = c
+	}
+
+	e.code = code
+	e.message = message
+
+	return nil
 }
 
 func (e Error) Error() string {

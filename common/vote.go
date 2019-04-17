@@ -5,20 +5,20 @@ import "encoding/json"
 type Vote int
 
 const (
-	VoteNO   Vote = -1
-	VoteNONE Vote = 0
-	VoteYES  Vote = 1
-	VoteEXP  Vote = 2
+	VoteNOP    Vote = -1
+	VoteNONE   Vote = 0
+	VoteYES    Vote = 1
+	VoteEXPIRE Vote = 2
 )
 
 func (v Vote) String() string {
 	switch v {
-	case VoteNO:
-		return "no"
+	case VoteNOP:
+		return "nop"
 	case VoteYES:
 		return "yes"
-	case VoteEXP:
-		return "expire"
+	case VoteEXPIRE:
+		return "exp"
 	default:
 		return ""
 	}
@@ -39,12 +39,12 @@ func (v *Vote) UnmarshalJSON(b []byte) error {
 	}
 
 	switch s {
-	case "no":
-		*v = VoteNO
+	case "nop":
+		*v = VoteNOP
 	case "yes":
 		*v = VoteYES
-	case "expire":
-		*v = VoteEXP
+	case "exp":
+		*v = VoteEXPIRE
 	default:
 		return InvalidVoteError
 	}

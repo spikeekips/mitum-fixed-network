@@ -8,7 +8,7 @@ import (
 )
 
 var (
-	CurrentTransactionVersion semver.Version = *semver.MustParse("v0.1-proto")
+	CurrentTransactionVersion semver.Version = *semver.MustParse("0.1.0-proto")
 )
 
 func NewTransactionHash(t Transaction) (common.Hash, error) {
@@ -18,20 +18,20 @@ func NewTransactionHash(t Transaction) (common.Hash, error) {
 type Transaction struct {
 	Version    semver.Version
 	Source     common.Address
-	Checkpoint []byte // TODO account state root
-	Fee        common.Amount
-	Created    common.Time
+	Checkpoint []byte // NOTE account state root
+	Fee        common.Big
+	CreatedAt  common.Time
 	Operations []Operation
 }
 
-func NewTransaction(source common.Address, checkpoint []byte, baseFee common.Amount, operations []Operation) Transaction {
+func NewTransaction(source common.Address, checkpoint []byte, baseFee common.Big, operations []Operation) Transaction {
 	return Transaction{
 		Version:    CurrentTransactionVersion,
 		Source:     source,
 		Checkpoint: checkpoint,
-		Fee:        baseFee.Mul(common.NewAmount(uint64(len(operations)))),
+		Fee:        baseFee.Mul(common.NewBig(uint64(len(operations)))),
 		Operations: operations,
-		Created:    common.Now(),
+		CreatedAt:  common.Now(),
 	}
 }
 
@@ -44,11 +44,11 @@ func (t Transaction) MarshalJSON() ([]byte, error) {
 		"version":    &t.Version,
 		"source":     t.Source,
 		"checkpoint": t.Checkpoint,
-		"created":    t.Created,
+		"created_at": t.CreatedAt,
 		"operations": t.Operations,
 	}
 
-	if !t.Fee.IsZero() {
+	if !t.Fee.IsZero() { // NOTE fee can be omitted
 		m["fee"] = t.Fee
 	}
 
@@ -76,13 +76,15 @@ func (t *Transaction) UnmarshalJSON(b []byte) error {
 		return err
 	}
 
-	var fee common.Amount
-	if err := json.Unmarshal(raw["fee"], &fee); err != nil {
-		return err
+	var fee common.Big
+	if r, ok := raw["fee"]; ok {
+		if err := json.Unmarshal(r, &fee); err != nil {
+			return err
+		}
 	}
 
-	var created common.Time
-	if err := json.Unmarshal(raw["created"], &created); err != nil {
+	var createdAt common.Time
+	if err := json.Unmarshal(raw["created_at"], &createdAt); err != nil {
 		return err
 	}
 
@@ -90,7 +92,7 @@ func (t *Transaction) UnmarshalJSON(b []byte) error {
 	t.Source = source
 	t.Checkpoint = checkpoint
 	t.Fee = fee
-	t.Created = created
+	t.CreatedAt = createdAt
 
 	return nil
 }

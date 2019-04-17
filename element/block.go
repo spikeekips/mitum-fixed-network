@@ -8,6 +8,7 @@ import (
 type Block interface {
 	Version() semver.Version
 	Hash() common.Hash
+	Height() common.Big
 	PrevHash() common.Hash
 	State() []byte
 	PrevState() []byte

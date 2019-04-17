@@ -6,7 +6,7 @@ import (
 )
 
 var (
-	CurrentBallotVersion semver.Version = *semver.MustParse("v0.1-proto")
+	CurrentBallotVersion semver.Version = *semver.MustParse("0.1.0-proto")
 )
 
 type BallotBlock struct {
@@ -19,15 +19,19 @@ type BallotBlockState struct {
 	Next    []byte
 }
 
-type Ballot struct {
-	Version   semver.Version
-	Proposer  common.Address
-	VoteStage common.VoteStage
-	Vote      common.Vote
-	Block     BallotBlock
-	State     BallotBlockState
-	Proposed  common.Time
-	Round     uint64
+type ProposeBallot struct {
+	Version    semver.Version
+	Proposer   common.Address
+	Block      BallotBlock
+	State      BallotBlockState
+	ProposedAt common.Time
 
-	Transactions []common.Hash // TODO check Hash.p is 'tx'
+	Transactions []common.Hash // NOTE check Hash.p is 'tx'
+}
+
+type VoteBallot struct {
+	ProposeBallot common.Hash // NOTE ProposeBallot Hash
+	VoteStage     common.VoteStage
+	Vote          common.Vote
+	Round         uint64
 }

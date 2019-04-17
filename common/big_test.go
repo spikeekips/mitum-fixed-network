@@ -8,11 +8,11 @@ import (
 	"github.com/stretchr/testify/suite"
 )
 
-type testAmount struct {
+type testBig struct {
 	suite.Suite
 }
 
-func (t *testAmount) TestAdd() {
+func (t *testBig) TestAdd() {
 	{ // big.Int: add overflow, but ok
 		var a, b, c big.Int
 		a.SetUint64(10)
@@ -22,8 +22,8 @@ func (t *testAmount) TestAdd() {
 	}
 
 	{
-		a := NewAmount(10)
-		b := NewAmount(math.MaxUint64)
+		a := NewBig(10)
+		b := NewBig(math.MaxUint64)
 
 		c, ok := a.AddOK(b)
 		t.True(ok)
@@ -32,8 +32,8 @@ func (t *testAmount) TestAdd() {
 	}
 
 	{
-		a := NewAmount(math.MaxUint64)
-		b := NewAmount(math.MaxUint64)
+		a := NewBig(math.MaxUint64)
+		b := NewBig(math.MaxUint64)
 
 		c, ok := a.AddOK(b)
 		t.True(ok)
@@ -44,10 +44,10 @@ func (t *testAmount) TestAdd() {
 	}
 }
 
-func (t *testAmount) TestSub() {
+func (t *testBig) TestSub() {
 	{
-		a := NewAmount(10)
-		b := NewAmount(math.MaxUint64)
+		a := NewBig(10)
+		b := NewBig(math.MaxUint64)
 
 		c, ok := b.SubOK(a)
 		t.True(ok)
@@ -55,8 +55,8 @@ func (t *testAmount) TestSub() {
 	}
 
 	{
-		a := NewAmount(10)
-		b := NewAmount(math.MaxUint64)
+		a := NewBig(10)
+		b := NewBig(math.MaxUint64)
 
 		c, ok := a.SubOK(b)
 		t.False(ok)
@@ -64,8 +64,8 @@ func (t *testAmount) TestSub() {
 	}
 
 	{
-		a := NewAmount(math.MaxUint64)
-		b := NewAmount(math.MaxUint64)
+		a := NewBig(math.MaxUint64)
+		b := NewBig(math.MaxUint64)
 		c, _ := a.AddOK(b)
 
 		d, ok := c.SubOK(a)
@@ -74,10 +74,10 @@ func (t *testAmount) TestSub() {
 	}
 }
 
-func (t *testAmount) TestMul() {
+func (t *testBig) TestMul() {
 	{
-		a := NewAmount(10)
-		b := NewAmount(math.MaxUint64)
+		a := NewBig(10)
+		b := NewBig(math.MaxUint64)
 
 		c, ok := b.MulOK(a)
 		t.True(ok)
@@ -85,8 +85,8 @@ func (t *testAmount) TestMul() {
 	}
 
 	{
-		a := NewAmount(math.MaxUint64)
-		b := NewAmount(math.MaxUint64)
+		a := NewBig(math.MaxUint64)
+		b := NewBig(math.MaxUint64)
 		c, _ := a.AddOK(b)
 
 		d, ok := c.MulOK(a)
@@ -95,10 +95,10 @@ func (t *testAmount) TestMul() {
 	}
 }
 
-func (t *testAmount) TestDiv() {
+func (t *testBig) TestDiv() {
 	{
-		a := NewAmount(10)
-		b := NewAmount(math.MaxUint64)
+		a := NewBig(10)
+		b := NewBig(math.MaxUint64)
 
 		c, ok := b.DivOK(a)
 		t.True(ok)
@@ -106,8 +106,8 @@ func (t *testAmount) TestDiv() {
 	}
 
 	{ // divizion zero
-		a := NewAmount(10)
-		b := NewAmount(0)
+		a := NewBig(10)
+		b := NewBig(0)
 
 		c, ok := b.DivOK(a)
 		t.True(ok)
@@ -115,8 +115,8 @@ func (t *testAmount) TestDiv() {
 	}
 
 	{ // zero divizion
-		a := NewAmount(10)
-		b := NewAmount(0)
+		a := NewBig(10)
+		b := NewBig(0)
 
 		c, ok := a.DivOK(b)
 		t.False(ok)
@@ -124,6 +124,6 @@ func (t *testAmount) TestDiv() {
 	}
 }
 
-func TestAmount(t *testing.T) {
-	suite.Run(t, new(testAmount))
+func TestBig(t *testing.T) {
+	suite.Run(t, new(testBig))
 }

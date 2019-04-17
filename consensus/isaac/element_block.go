@@ -6,7 +6,7 @@ import (
 )
 
 var (
-	CurrentBlockVersion semver.Version = *semver.MustParse("v0.1-proto")
+	CurrentBlockVersion semver.Version = *semver.MustParse("0.1.0-proto")
 )
 
 type Block struct {
@@ -18,10 +18,10 @@ type Block struct {
 	state     []byte
 	prevState []byte
 
-	proposer common.Address
-	proposed common.Time
+	proposer       common.Address
+	proposedAt     common.Time
+	proposedBallot common.Hash
 
-	ballot       common.Hash
 	transactions []common.Hash
 }
 

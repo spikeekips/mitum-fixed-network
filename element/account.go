@@ -7,4 +7,5 @@ type Account struct {
 }
 
 func NewAccount(address common.Address) Account {
+	return Account{}
 }

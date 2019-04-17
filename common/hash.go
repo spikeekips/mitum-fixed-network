@@ -9,6 +9,18 @@ import (
 	"github.com/ethereum/go-ethereum/rlp"
 )
 
+var (
+	emptyRawHash = [32]byte{}
+)
+
+func Encode(i interface{}) ([]byte, error) {
+	return rlp.EncodeToBytes(i)
+}
+
+func Decode(b []byte, i interface{}) error {
+	return rlp.DecodeBytes(b, i)
+}
+
 type NetworkID []byte
 
 type Signature []byte
@@ -33,7 +45,12 @@ func (s *Signature) UnmarshalJSON(b []byte) error {
 }
 
 type Hashable interface {
-	Hash() (Hash, error)
+	Encode() ([]byte, error)
+	Hash() (Hash, error) // Hash().Body() == RawHash(Hashable.Encode())
+}
+
+type Decodable interface {
+	Decode([]byte) error
 }
 
 func RawHash(b []byte) [32]byte {
@@ -42,9 +59,16 @@ func RawHash(b []byte) [32]byte {
 }
 
 func RawHashFromObject(i interface{}) ([32]byte, error) {
-	b, err := rlp.EncodeToBytes(i)
-	if err != nil {
-		return [32]byte{}, err
+	var b []byte
+	switch i.(type) {
+	case []byte:
+		b = i.([]byte)
+	default:
+		if e, err := Encode(i); err != nil {
+			return [32]byte{}, err
+		} else {
+			b = e
+		}
 	}
 
 	return RawHash(b), nil
@@ -55,20 +79,20 @@ type Hash struct {
 	b [32]byte
 }
 
-func NewHash(prefix string, b []byte) Hash {
-	return Hash{p: prefix, b: RawHash(b)}
+func NewHash(hint string, b []byte) Hash {
+	return Hash{p: hint, b: RawHash(b)}
 }
 
-func NewHashFromObject(prefix string, i interface{}) (Hash, error) {
+func NewHashFromObject(hint string, i interface{}) (Hash, error) {
 	r, err := RawHashFromObject(i)
 	if err != nil {
 		return Hash{}, err
 	}
 
-	return Hash{p: prefix, b: r}, nil
+	return Hash{p: hint, b: r}, nil
 }
 
-func (h Hash) Prefix() string {
+func (h Hash) Hint() string {
 	return h.p
 }
 
@@ -81,14 +105,18 @@ func (h Hash) Bytes() []byte {
 }
 
 func (h Hash) String() string {
-	return h.Prefix() + "-" + base58.Encode(h.Bytes())
+	return h.Hint() + "-" + base58.Encode(h.Bytes())
 }
 
 func (h Hash) Equal(n Hash) bool {
-	return h.Prefix() == n.Prefix() && h.Body() == n.Body()
+	return h.Hint() == n.Hint() && h.Body() == n.Body()
 }
 
 func (h Hash) MarshalJSON() ([]byte, error) {
+	if h.b == emptyRawHash {
+		return nil, EmptyHashError
+	}
+
 	return json.Marshal(h.String())
 }
 

@@ -12,12 +12,12 @@ type testHash struct {
 }
 
 func (t *testHash) TestNew() {
-	prefix := "tx"
+	hint := "tx"
 	body := []byte("findme")
 
-	hash := NewHash(prefix, body)
+	hash := NewHash(hint, body)
 
-	t.Equal(prefix, hash.Prefix())
+	t.Equal(hint, hash.Hint())
 
 	raw := RawHash(body)
 	t.Equal(raw, hash.Body())
@@ -25,19 +25,19 @@ func (t *testHash) TestNew() {
 }
 
 func (t *testHash) TestString() {
-	prefix := "tx"
+	hint := "tx"
 	body := []byte("findme")
 
-	hash := NewHash(prefix, body)
+	hash := NewHash(hint, body)
 
 	t.Equal("tx-JAdmEqVfoBGitPN386jVGhKGtF6tAhQZVSaAze8DPD1M", hash.String())
 }
 
 func (t *testHash) TestJSON() {
-	prefix := "tx"
+	hint := "tx"
 	body := []byte("findme")
 
-	hash, err := NewHashFromObject(prefix, body)
+	hash, err := NewHashFromObject(hint, body)
 	t.NoError(err)
 
 	b, err := json.Marshal(hash)
@@ -49,6 +49,12 @@ func (t *testHash) TestJSON() {
 
 	t.Equal(hash, returned)
 	t.True(hash.Equal(returned))
+}
+
+func (t *testHash) TestJSONEmptyHash() {
+	hash := Hash{}
+	_, err := json.Marshal(hash)
+	t.Contains(err.Error(), EmptyHashError.Message())
 }
 
 func TestHash(t *testing.T) {

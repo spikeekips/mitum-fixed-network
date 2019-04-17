@@ -8,6 +8,7 @@ const (
 	JSONUnmarshalCode
 	NotImplementedCode
 	InvalidHashCode
+	EmptyHashCode
 )
 
 var (
@@ -17,4 +18,5 @@ var (
 	JSONUnmarshalError   Error = NewError("common", JSONUnmarshalCode, "failed json unmarshal")
 	NotImplementedError  Error = NewError("common", NotImplementedCode, "not implemented")
 	InvalidHashError     Error = NewError("common", InvalidHashCode, "invalid has found")
+	EmptyHashError       Error = NewError("common", EmptyHashCode, "hash is empty")
 )

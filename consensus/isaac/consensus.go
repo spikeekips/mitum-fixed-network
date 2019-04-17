@@ -5,7 +5,7 @@ import "github.com/spikeekips/mitum/common"
 type Consensus struct {
 }
 
-func NewConsensus() (*Consesus, error) {
+func NewConsensus() (*Consensus, error) {
 	return &Consensus{}, nil
 }
 

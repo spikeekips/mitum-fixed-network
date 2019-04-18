@@ -1,6 +1,7 @@
 package common
 
 import (
+	"encoding"
 	"encoding/base64"
 	"encoding/json"
 
@@ -34,11 +35,11 @@ func (s SealType) String() string {
 	}
 }
 
-func (s SealType) MarshalJSON() ([]byte, error) {
+func (s SealType) MarshalText() ([]byte, error) {
 	return json.Marshal(s.String())
 }
 
-func (s *SealType) UnmarshalJSON(b []byte) error {
+func (s *SealType) UnmarshalText(b []byte) error {
 	var i string
 	if err := json.Unmarshal(b, &i); err != nil {
 		return err
@@ -65,16 +66,10 @@ type Seal struct {
 	Signature Signature
 	hash      Hash
 	Body      []byte
-	encoded   []byte
 }
 
 func NewSeal(t SealType, body Hashable) (Seal, error) {
-	encoded, err := body.Encode()
-	if err != nil {
-		return Seal{}, err
-	}
-
-	hash, err := body.Hash()
+	hash, encoded, err := body.Hash()
 	if err != nil {
 		return Seal{}, err
 	}
@@ -87,7 +82,7 @@ func NewSeal(t SealType, body Hashable) (Seal, error) {
 	}, nil
 }
 
-func (s Seal) Encode() ([]byte, error) {
+func (s Seal) MarshalBinary() ([]byte, error) {
 	var err error
 
 	version, err := json.Marshal(&s.Version)
@@ -100,7 +95,7 @@ func (s Seal) Encode() ([]byte, error) {
 		return nil, err
 	}
 
-	s.encoded, err = Encode([]interface{}{
+	return Encode([]interface{}{
 		version,
 		s.Type,
 		s.Source,
@@ -108,11 +103,9 @@ func (s Seal) Encode() ([]byte, error) {
 		hash,
 		s.Body,
 	})
-
-	return s.encoded, err
 }
 
-func (s *Seal) Decode(b []byte) error {
+func (s *Seal) UnmarshalBinary(b []byte) error {
 	var m []rlp.RawValue
 	if err := Decode(b, &m); err != nil {
 		return err
@@ -174,14 +167,13 @@ func (s *Seal) Decode(b []byte) error {
 	return nil
 }
 
-func (s Seal) Hash() (Hash, error) {
-	if s.encoded == nil {
-		if _, err := s.Encode(); err != nil {
-			return Hash{}, err
-		}
+func (s Seal) Hash() (Hash, []byte, error) {
+	encoded, err := s.MarshalBinary()
+	if err != nil {
+		return Hash{}, nil, err
 	}
 
-	return NewHash("sl", s.encoded), nil
+	return NewHash("sl", encoded), encoded, nil
 }
 
 func (s *Seal) Sign(networkID NetworkID, seed Seed) error {
@@ -207,7 +199,7 @@ func (s Seal) CheckSignature(networkID NetworkID) error {
 	return nil
 }
 
-func (s Seal) MarshalJSON() ([]byte, error) {
+func (s Seal) MarshalText() ([]byte, error) {
 	return json.Marshal(map[string]interface{}{
 		"version":   &s.Version,
 		"type":      s.Type,
@@ -218,7 +210,7 @@ func (s Seal) MarshalJSON() ([]byte, error) {
 	})
 }
 
-func (s *Seal) UnmarshalJSON(b []byte) error {
+func (s *Seal) UnmarshalText(b []byte) error {
 	var raw map[string]json.RawMessage
 	if err := json.Unmarshal(b, &raw); err != nil {
 		return err
@@ -271,8 +263,8 @@ func (s *Seal) UnmarshalJSON(b []byte) error {
 	return nil
 }
 
-func (s Seal) DecodeBody(i Decodable) error {
-	return i.Decode(s.Body)
+func (s Seal) UnmarshalBody(i encoding.BinaryUnmarshaler) error {
+	return i.UnmarshalBinary(s.Body)
 }
 
 func (s Seal) String() string {

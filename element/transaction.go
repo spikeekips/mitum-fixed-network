@@ -39,7 +39,7 @@ func (t Transaction) Hash() (common.Hash, error) {
 	return NewTransactionHash(t)
 }
 
-func (t Transaction) MarshalJSON() ([]byte, error) {
+func (t Transaction) MarshalText() ([]byte, error) {
 	m := map[string]interface{}{
 		"version":    &t.Version,
 		"source":     t.Source,
@@ -55,7 +55,7 @@ func (t Transaction) MarshalJSON() ([]byte, error) {
 	return json.Marshal(m)
 }
 
-func (t *Transaction) UnmarshalJSON(b []byte) error {
+func (t *Transaction) UnmarshalText(b []byte) error {
 	var raw map[string]json.RawMessage
 	if err := json.Unmarshal(b, &raw); err != nil {
 		return err

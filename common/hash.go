@@ -2,6 +2,7 @@ package common
 
 import (
 	"crypto/sha256"
+	"encoding"
 	"encoding/json"
 	"strings"
 
@@ -29,11 +30,11 @@ func NewSignature(networkID NetworkID, seed Seed, hash Hash) (Signature, error) 
 	return seed.Sign(append(networkID, hash.Bytes()...))
 }
 
-func (s Signature) MarshalJSON() ([]byte, error) {
+func (s Signature) MarshalText() ([]byte, error) {
 	return json.Marshal(base58.Encode(s[:]))
 }
 
-func (s *Signature) UnmarshalJSON(b []byte) error {
+func (s *Signature) UnmarshalText(b []byte) error {
 	var n string
 	if err := json.Unmarshal(b, &n); err != nil {
 		return err
@@ -45,12 +46,8 @@ func (s *Signature) UnmarshalJSON(b []byte) error {
 }
 
 type Hashable interface {
-	Encode() ([]byte, error)
-	Hash() (Hash, error) // Hash().Body() == RawHash(Hashable.Encode())
-}
-
-type Decodable interface {
-	Decode([]byte) error
+	encoding.BinaryMarshaler
+	Hash() (Hash, []byte, error) // Hash().Body() == RawHash(Hashable.Encode())
 }
 
 func RawHash(b []byte) [32]byte {
@@ -112,7 +109,7 @@ func (h Hash) Equal(n Hash) bool {
 	return h.Hint() == n.Hint() && h.Body() == n.Body()
 }
 
-func (h Hash) MarshalJSON() ([]byte, error) {
+func (h Hash) MarshalText() ([]byte, error) {
 	if h.b == emptyRawHash {
 		return nil, EmptyHashError
 	}
@@ -120,7 +117,7 @@ func (h Hash) MarshalJSON() ([]byte, error) {
 	return json.Marshal(h.String())
 }
 
-func (h *Hash) UnmarshalJSON(b []byte) error {
+func (h *Hash) UnmarshalText(b []byte) error {
 	var n string
 	if err := json.Unmarshal(b, &n); err != nil {
 		return err

@@ -24,7 +24,7 @@ func (v Vote) String() string {
 	}
 }
 
-func (v Vote) MarshalJSON() ([]byte, error) {
+func (v Vote) MarshalText() ([]byte, error) {
 	if v == VoteNONE {
 		return nil, InvalidVoteError
 	}
@@ -32,7 +32,7 @@ func (v Vote) MarshalJSON() ([]byte, error) {
 	return json.Marshal(v.String())
 }
 
-func (v *Vote) UnmarshalJSON(b []byte) error {
+func (v *Vote) UnmarshalText(b []byte) error {
 	var s string
 	if err := json.Unmarshal(b, &s); err != nil {
 		return err

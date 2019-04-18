@@ -20,11 +20,11 @@ func NewBig(i uint64) Big {
 	return Big{Int: a}
 }
 
-func (a Big) MarshalJSON() ([]byte, error) {
+func (a Big) MarshalText() ([]byte, error) {
 	return json.Marshal(a.Bytes())
 }
 
-func (a *Big) UnmarshalJSON(b []byte) error {
+func (a *Big) UnmarshalText(b []byte) error {
 	var n []byte
 	if err := json.Unmarshal(b, &n); err != nil {
 		return err

@@ -21,7 +21,11 @@ func (a Address) Verify(input []byte, sig []byte) error {
 	return kp.Verify(input, sig)
 }
 
-func (a *Address) UnmarshalJSON(b []byte) error {
+func (a Address) MarshalText() ([]byte, error) {
+	return json.Marshal(string(a))
+}
+
+func (a *Address) UnmarshalText(b []byte) error {
 	var n string
 	if err := json.Unmarshal(b, &n); err != nil {
 		return err

@@ -29,11 +29,11 @@ func (t Time) String() string {
 	return FormatISO8601(t.Time)
 }
 
-func (t Time) MarshalJSON() ([]byte, error) {
+func (t Time) MarshalText() ([]byte, error) {
 	return json.Marshal(FormatISO8601(t.Time))
 }
 
-func (t *Time) UnmarshalJSON(b []byte) error {
+func (t *Time) UnmarshalText(b []byte) error {
 	var s string
 	if err := json.Unmarshal(b, &s); err != nil {
 		return err

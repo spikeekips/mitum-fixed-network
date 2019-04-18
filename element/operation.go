@@ -1,18 +1,29 @@
 package element
 
-import "github.com/spikeekips/mitum/common"
+import (
+	"github.com/spikeekips/mitum/common"
+)
 
 type OperationType interface {
-	String() string
-	Bytes() []byte
+	common.Marshaler
 }
 
 type OperationValue interface {
-	Bytes() []byte
+	common.Marshaler
+}
+
+type OperationOptions interface {
+	common.Marshaler
+
+	Get(string) interface{}
+	Set(string) interface{}
 }
 
 type Operation interface {
-	Target() common.Address
+	common.Marshaler
+
 	Type() OperationType
 	Value() OperationValue
+	Options() OperationOptions
+	Target() common.Address
 }

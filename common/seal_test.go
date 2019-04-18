@@ -35,7 +35,12 @@ func (s testSerializableForSeal) Hash() (Hash, []byte, error) {
 		return Hash{}, nil, err
 	}
 
-	return NewHash("tt", encoded), encoded, nil
+	hash, err := NewHash("tt", encoded)
+	if err != nil {
+		return Hash{}, nil, err
+	}
+
+	return hash, encoded, nil
 }
 
 func (t *testSeal) TesttestSerializableForSeal() {

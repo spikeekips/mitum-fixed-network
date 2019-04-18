@@ -9,6 +9,7 @@ const (
 	NotImplementedCode
 	InvalidHashCode
 	EmptyHashCode
+	InvalidHashHintCode
 )
 
 var (
@@ -19,4 +20,5 @@ var (
 	NotImplementedError  Error = NewError("common", NotImplementedCode, "not implemented")
 	InvalidHashError     Error = NewError("common", InvalidHashCode, "invalid has found")
 	EmptyHashError       Error = NewError("common", EmptyHashCode, "hash is empty")
+	InvalidHashHintError Error = NewError("common", InvalidHashHintCode, "invalid hash hint")
 )

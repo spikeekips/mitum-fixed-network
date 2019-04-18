@@ -14,40 +14,17 @@ var (
 	emptyRawHash = [32]byte{}
 )
 
+type Hashable interface {
+	encoding.BinaryMarshaler
+	Hash() (Hash, []byte, error) // Hash().Body() == RawHash(Hashable.Encode())
+}
+
 func Encode(i interface{}) ([]byte, error) {
 	return rlp.EncodeToBytes(i)
 }
 
 func Decode(b []byte, i interface{}) error {
 	return rlp.DecodeBytes(b, i)
-}
-
-type NetworkID []byte
-
-type Signature []byte
-
-func NewSignature(networkID NetworkID, seed Seed, hash Hash) (Signature, error) {
-	return seed.Sign(append(networkID, hash.Bytes()...))
-}
-
-func (s Signature) MarshalText() ([]byte, error) {
-	return json.Marshal(base58.Encode(s[:]))
-}
-
-func (s *Signature) UnmarshalText(b []byte) error {
-	var n string
-	if err := json.Unmarshal(b, &n); err != nil {
-		return err
-	}
-
-	*s = Signature(base58.Decode(n))
-
-	return nil
-}
-
-type Hashable interface {
-	encoding.BinaryMarshaler
-	Hash() (Hash, []byte, error) // Hash().Body() == RawHash(Hashable.Encode())
 }
 
 func RawHash(b []byte) [32]byte {
@@ -72,25 +49,29 @@ func RawHashFromObject(i interface{}) ([32]byte, error) {
 }
 
 type Hash struct {
-	p string
+	h string
 	b [32]byte
 }
 
-func NewHash(hint string, b []byte) Hash {
-	return Hash{p: hint, b: RawHash(b)}
+func NewHash(hint string, b []byte) (Hash, error) {
+	if len([]byte(hint)) != 2 {
+		return Hash{}, InvalidHashHintError
+	}
+
+	return Hash{h: hint, b: RawHash(b)}, nil
 }
 
 func NewHashFromObject(hint string, i interface{}) (Hash, error) {
-	r, err := RawHashFromObject(i)
+	r, err := Encode(i)
 	if err != nil {
 		return Hash{}, err
 	}
 
-	return Hash{p: hint, b: r}, nil
+	return NewHash(hint, r)
 }
 
 func (h Hash) Hint() string {
-	return h.p
+	return h.h
 }
 
 func (h Hash) Body() [32]byte {
@@ -107,6 +88,26 @@ func (h Hash) String() string {
 
 func (h Hash) Equal(n Hash) bool {
 	return h.Hint() == n.Hint() && h.Body() == n.Body()
+}
+
+func (h Hash) MarshalBinary() ([]byte, error) {
+	if h.b == emptyRawHash {
+		return nil, EmptyHashError
+	}
+
+	return append([]byte(h.Hint()), h.Bytes()...), nil
+}
+
+func (h *Hash) UnmarshalBinary(b []byte) error {
+	if len(b) != 34 {
+		return InvalidHashError
+	}
+
+	h.h = string(b[:2])
+
+	copy(h.b[:], b[2:])
+
+	return nil
 }
 
 func (h Hash) MarshalText() ([]byte, error) {
@@ -130,14 +131,37 @@ func (h *Hash) UnmarshalText(b []byte) error {
 
 	decoded := base58.Decode(s[1])
 	if len(decoded) != 32 {
-		return JSONUnmarshalError
+		return InvalidHashError
 	}
 
 	var a [32]byte
 	copy(a[:], decoded)
 
-	h.p = s[0]
+	h.h = s[0]
 	h.b = a
+
+	return nil
+}
+
+type NetworkID []byte
+
+type Signature []byte
+
+func NewSignature(networkID NetworkID, seed Seed, hash Hash) (Signature, error) {
+	return seed.Sign(append(networkID, hash.Bytes()...))
+}
+
+func (s Signature) MarshalText() ([]byte, error) {
+	return json.Marshal(base58.Encode(s[:]))
+}
+
+func (s *Signature) UnmarshalText(b []byte) error {
+	var n string
+	if err := json.Unmarshal(b, &n); err != nil {
+		return err
+	}
+
+	*s = Signature(base58.Decode(n))
 
 	return nil
 }

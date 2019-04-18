@@ -15,7 +15,8 @@ func (t *testHash) TestNew() {
 	hint := "tx"
 	body := []byte("findme")
 
-	hash := NewHash(hint, body)
+	hash, err := NewHash(hint, body)
+	t.NoError(err)
 
 	t.Equal(hint, hash.Hint())
 
@@ -28,7 +29,8 @@ func (t *testHash) TestString() {
 	hint := "tx"
 	body := []byte("findme")
 
-	hash := NewHash(hint, body)
+	hash, err := NewHash(hint, body)
+	t.NoError(err)
 
 	t.Equal("tx-JAdmEqVfoBGitPN386jVGhKGtF6tAhQZVSaAze8DPD1M", hash.String())
 }
@@ -55,6 +57,23 @@ func (t *testHash) TestJSONEmptyHash() {
 	hash := Hash{}
 	_, err := json.Marshal(hash)
 	t.Contains(err.Error(), EmptyHashError.Message())
+}
+
+func (t *testHash) TestBinaryMarshal() {
+	hint := "sl"
+	body := []byte("showme")
+	hash, _ := NewHashFromObject(hint, body)
+
+	b, err := hash.MarshalBinary()
+	t.NoError(err)
+
+	var newHash Hash
+	err = newHash.UnmarshalBinary(b)
+	t.NoError(err)
+
+	t.Equal(hash.h, newHash.h)
+	t.Equal(hash.b, newHash.b)
+	t.True(hash.Equal(newHash))
 }
 
 func TestHash(t *testing.T) {

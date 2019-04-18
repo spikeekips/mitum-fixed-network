@@ -90,7 +90,7 @@ func (s Seal) MarshalBinary() ([]byte, error) {
 		return nil, err
 	}
 
-	hash, err := json.Marshal(s.hash)
+	hash, err := s.hash.MarshalBinary()
 	if err != nil {
 		return nil, err
 	}
@@ -122,24 +122,18 @@ func (s *Seal) UnmarshalBinary(b []byte) error {
 	}
 
 	var sealType SealType
-	{
-		if err := Decode(m[1], &sealType); err != nil {
-			return err
-		}
+	if err := Decode(m[1], &sealType); err != nil {
+		return err
 	}
 
 	var source Address
-	{
-		if err := Decode(m[2], &source); err != nil {
-			return err
-		}
+	if err := Decode(m[2], &source); err != nil {
+		return err
 	}
 
 	var signature Signature
-	{
-		if err := Decode(m[3], &signature); err != nil {
-			return err
-		}
+	if err := Decode(m[3], &signature); err != nil {
+		return err
 	}
 
 	var hash Hash
@@ -147,7 +141,7 @@ func (s *Seal) UnmarshalBinary(b []byte) error {
 		var vs []byte
 		if err := Decode(m[4], &vs); err != nil {
 			return err
-		} else if err := json.Unmarshal(vs, &hash); err != nil {
+		} else if err := hash.UnmarshalBinary(vs); err != nil {
 			return err
 		}
 	}
@@ -173,7 +167,11 @@ func (s Seal) Hash() (Hash, []byte, error) {
 		return Hash{}, nil, err
 	}
 
-	return NewHash("sl", encoded), encoded, nil
+	hash, err := NewHash("sl", encoded)
+	if err != nil {
+		return Hash{}, nil, err
+	}
+	return hash, encoded, nil
 }
 
 func (s *Seal) Sign(networkID NetworkID, seed Seed) error {

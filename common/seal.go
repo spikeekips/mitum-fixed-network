@@ -68,7 +68,7 @@ type Seal struct {
 	Body      []byte
 }
 
-func NewSeal(t SealType, body Hashable) (Seal, error) {
+func NewSeal(t SealType, body Hasher) (Seal, error) {
 	hash, encoded, err := body.Hash()
 	if err != nil {
 		return Seal{}, err

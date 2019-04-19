@@ -5,22 +5,26 @@ import (
 )
 
 type OperationType interface {
-	common.Marshaler
+	common.BinaryEncoder
+	common.TextEncoder
 }
 
 type OperationValue interface {
-	common.Marshaler
+	common.BinaryEncoder
+	common.TextEncoder
 }
 
 type OperationOptions interface {
-	common.Marshaler
+	common.BinaryEncoder
+	common.TextEncoder
 
 	Get(string) interface{}
 	Set(string) interface{}
 }
 
 type Operation interface {
-	common.Marshaler
+	common.BinaryEncoder
+	common.TextEncoder
 
 	Type() OperationType
 	Value() OperationValue

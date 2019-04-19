@@ -14,9 +14,9 @@ var (
 	emptyRawHash = [32]byte{}
 )
 
-type Hashable interface {
+type Hasher interface {
 	encoding.BinaryMarshaler
-	Hash() (Hash, []byte, error) // Hash().Body() == RawHash(Hashable.Encode())
+	Hash() (Hash, []byte, error) // Hash().Body() == RawHash(Hasher.Encode())
 }
 
 func Encode(i interface{}) ([]byte, error) {

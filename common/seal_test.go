@@ -12,24 +12,24 @@ type testSeal struct {
 	suite.Suite
 }
 
-type testSerializableForSeal struct {
+type sealTestBody struct {
 	A uint64
 	B string
 }
 
-func (s testSerializableForSeal) String() string {
+func (s sealTestBody) String() string {
 	return fmt.Sprintf("A='%v' B='%v'", s.A, s.B)
 }
 
-func (s testSerializableForSeal) MarshalBinary() ([]byte, error) {
+func (s sealTestBody) MarshalBinary() ([]byte, error) {
 	return Encode(s)
 }
 
-func (s *testSerializableForSeal) UnmarshalBinary(b []byte) error {
+func (s *sealTestBody) UnmarshalBinary(b []byte) error {
 	return Decode(b, s)
 }
 
-func (s testSerializableForSeal) Hash() (Hash, []byte, error) {
+func (s sealTestBody) Hash() (Hash, []byte, error) {
 	encoded, err := s.MarshalBinary()
 	if err != nil {
 		return Hash{}, nil, err
@@ -43,8 +43,8 @@ func (s testSerializableForSeal) Hash() (Hash, []byte, error) {
 	return hash, encoded, nil
 }
 
-func (t *testSeal) TesttestSerializableForSeal() {
-	s := testSerializableForSeal{A: 1, B: "b"}
+func (t *testSeal) TestsealTestBody() {
+	s := sealTestBody{A: 1, B: "b"}
 	hash, encoded, err := s.Hash()
 	t.NoError(err)
 
@@ -52,7 +52,7 @@ func (t *testSeal) TesttestSerializableForSeal() {
 }
 
 func (t *testSeal) TestNew() {
-	body := testSerializableForSeal{A: 1, B: "b"}
+	body := sealTestBody{A: 1, B: "b"}
 	bodyHash, _, err := body.Hash()
 	t.NoError(err)
 
@@ -75,7 +75,7 @@ func (t *testSeal) TestNew() {
 
 func (t *testSeal) TestSign() {
 	networkID := NetworkID([]byte("this-is-network"))
-	body := testSerializableForSeal{A: 1, B: "b"}
+	body := sealTestBody{A: 1, B: "b"}
 	bodyHash, _, _ := body.Hash()
 
 	seal, _ := NewSeal(BallotSeal, body)
@@ -100,7 +100,7 @@ func (t *testSeal) TestSign() {
 
 func (t *testSeal) TestJSON() {
 	networkID := NetworkID([]byte("this-is-network"))
-	body := testSerializableForSeal{A: 1, B: "b"}
+	body := sealTestBody{A: 1, B: "b"}
 	seal, _ := NewSeal(BallotSeal, body)
 
 	seed := RandomSeed()
@@ -114,17 +114,17 @@ func (t *testSeal) TestJSON() {
 	err = json.Unmarshal(b, &returnedSeal)
 	t.NoError(err)
 
-	var returnedBody testSerializableForSeal
+	var returnedBody sealTestBody
 	err = returnedSeal.UnmarshalBody(&returnedBody)
 	t.NoError(err)
 
-	t.IsType(testSerializableForSeal{}, returnedBody)
+	t.IsType(sealTestBody{}, returnedBody)
 	t.NotEmpty(returnedSeal)
 }
 
 func (t *testSeal) TestJSONEmptyHash() {
 	networkID := NetworkID([]byte("this-is-network"))
-	body := testSerializableForSeal{A: 1, B: "b"}
+	body := sealTestBody{A: 1, B: "b"}
 	seal, _ := NewSeal(BallotSeal, body)
 
 	seed := RandomSeed()
@@ -139,7 +139,7 @@ func (t *testSeal) TestJSONEmptyHash() {
 
 func (t *testSeal) TestSealedSeal() {
 	networkID := NetworkID([]byte("this-is-network"))
-	body := testSerializableForSeal{A: 1, B: "b"}
+	body := sealTestBody{A: 1, B: "b"}
 
 	// make new seal
 	seal, _ := NewSeal(BallotSeal, body)
@@ -184,7 +184,7 @@ func (t *testSeal) TestSealedSeal() {
 	}
 
 	{
-		var sealedBody testSerializableForSeal
+		var sealedBody sealTestBody
 		err = sealInsideSeal.UnmarshalBody(&sealedBody)
 		t.NoError(err)
 
@@ -199,7 +199,7 @@ func (t *testSeal) TestSealedSeal() {
 	}
 
 	{
-		var ts testSerializableForSeal
+		var ts sealTestBody
 		err = sealInsideSeal.UnmarshalBody(&ts)
 		t.NoError(err)
 

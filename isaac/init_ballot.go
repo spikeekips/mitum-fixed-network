@@ -19,11 +19,12 @@ func NewINITBallot(
 ) (Ballot, error) {
 	ib := BaseBallotBody{
 		node:      n,
-		height:    nextHeight,
-		round:     nextRound,
+		height:    nextHeight.Add(1),
+		round:     nextRound + 1,
 		proposal:  nextProposal,
 		block:     nextBlock,
 		lastBlock: lastBlock,
+		stage:     StageINIT,
 	}
 
 	h, err := ib.makeHash()

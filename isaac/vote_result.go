@@ -97,9 +97,17 @@ func (vr VoteResult) SetProposal(proposal hash.Hash) VoteResult {
 	return vr
 }
 
+func (vr VoteResult) Block() hash.Hash {
+	return vr.block
+}
+
 func (vr VoteResult) SetBlock(block hash.Hash) VoteResult {
 	vr.block = block
 	return vr
+}
+
+func (vr VoteResult) LastBlock() hash.Hash {
+	return vr.lastBlock
 }
 
 func (vr VoteResult) SetLastBlock(lastBlock hash.Hash) VoteResult {

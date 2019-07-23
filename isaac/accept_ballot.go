@@ -24,6 +24,7 @@ func NewACCEPTBallot(
 		proposal:  currentProposal,
 		block:     nextBlock,
 		lastBlock: lastBlock,
+		stage:     StageACCEPT,
 	}
 
 	h, err := ib.makeHash()

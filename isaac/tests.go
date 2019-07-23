@@ -1,4 +1,6 @@
-package keypair
+// +build test
+
+package isaac
 
 import (
 	"github.com/spikeekips/mitum/common"

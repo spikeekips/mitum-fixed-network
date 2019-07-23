@@ -24,5 +24,5 @@ func SetTestLogger(logger log15.Logger) {
 }
 
 func init() {
-	SetTestLogger(Log())
+	SetTestLogger(log)
 }

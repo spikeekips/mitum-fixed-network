@@ -110,6 +110,10 @@ func (h Hash) MarshalJSON() ([]byte, error) {
 	return json.Marshal(h.String())
 }
 
+func (h Hash) MarshalText() ([]byte, error) {
+	return []byte(h.String()), nil
+}
+
 func (h Hash) Hint() string {
 	return h.hint
 }

@@ -6,13 +6,8 @@ import (
 	"crypto/rand"
 	"math/big"
 
-	"github.com/spikeekips/mitum/common"
 	"github.com/spikeekips/mitum/hash"
 )
-
-func init() {
-	common.SetTestLogger(Log())
-}
 
 func NewRandomProposalHash() hash.Hash {
 	b := make([]byte, 4)

@@ -185,6 +185,7 @@ type BaseBallotBody struct {
 	proposal  hash.Hash
 	block     hash.Hash
 	lastBlock hash.Hash
+	stage     Stage
 }
 
 func (bbb BaseBallotBody) MarshalJSON() ([]byte, error) {
@@ -196,6 +197,7 @@ func (bbb BaseBallotBody) MarshalJSON() ([]byte, error) {
 		"proposal":       bbb.proposal,
 		"block":          bbb.block,
 		"previous_block": bbb.lastBlock,
+		"stage":          bbb.stage,
 	})
 }
 
@@ -225,7 +227,7 @@ func (bbb BaseBallotBody) Round() Round {
 }
 
 func (bbb BaseBallotBody) Stage() Stage {
-	return StageINIT
+	return bbb.stage
 }
 
 func (bbb BaseBallotBody) Proposal() hash.Hash {

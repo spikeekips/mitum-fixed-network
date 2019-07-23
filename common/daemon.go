@@ -23,13 +23,11 @@ type Daemon interface {
 type ReaderDaemon struct {
 	sync.RWMutex
 	*Logger
-
-	stopOnce       *sync.Once
 	synchronous    bool
-	stop           chan struct{}
 	reader         chan interface{}
 	readerCallback func(interface{}) error
 	errCallback    func(error)
+	stopped        bool
 }
 
 func NewReaderDaemon(synchronous bool, bufsize uint, readerCallback func(interface{}) error) *ReaderDaemon {
@@ -38,34 +36,16 @@ func NewReaderDaemon(synchronous bool, bufsize uint, readerCallback func(interfa
 		synchronous:    synchronous,
 		reader:         make(chan interface{}, int(bufsize)),
 		readerCallback: readerCallback,
+		stopped:        true,
 	}
-}
-
-func (d *ReaderDaemon) Reader() <-chan interface{} {
-	return d.reader
 }
 
 func (d *ReaderDaemon) Write(v interface{}) bool {
-	if d.IsStopped() {
-		return false
-	}
-
-	d.reader <- v
+	go func() {
+		d.reader <- v
+	}()
 
 	return true
-}
-
-func (d *ReaderDaemon) Close() error {
-	if err := d.Stop(); err != nil {
-		return err
-	}
-
-	d.Lock()
-	defer d.Unlock()
-
-	close(d.reader)
-
-	return nil
 }
 
 func (d *ReaderDaemon) SetErrCallback(errCallback func(error)) *ReaderDaemon {
@@ -78,31 +58,29 @@ func (d *ReaderDaemon) SetErrCallback(errCallback func(error)) *ReaderDaemon {
 }
 
 func (d *ReaderDaemon) Start() error {
-	if !d.IsStopped() {
-		return DaemonAleadyStartedError
-	}
-
-	d.Lock()
-	defer d.Unlock()
-
-	d.stop = make(chan struct{}, 2)
-	d.stopOnce = new(sync.Once)
+	_ = d.Stop()
 
 	if d.readerCallback != nil {
 		go d.loop()
 	}
 
+	d.Lock()
+	defer d.Unlock()
+
+	d.stopped = false
+
 	return nil
 }
 
 func (d *ReaderDaemon) Stop() error {
-	d.stopOnce.Do(func() {
-		d.Lock()
-		defer d.Unlock()
+	if d.IsStopped() {
+		return nil
+	}
 
-		d.stop <- struct{}{}
-		close(d.stop)
-	})
+	d.Lock()
+	defer d.Unlock()
+
+	d.stopped = true
 
 	return nil
 }
@@ -111,32 +89,27 @@ func (d *ReaderDaemon) IsStopped() bool {
 	d.RLock()
 	defer d.RUnlock()
 
-	return d.stop == nil
+	return d.stopped
+}
+
+func (d *ReaderDaemon) Reader() <-chan interface{} {
+	return d.reader
 }
 
 func (d *ReaderDaemon) loop() {
-end:
-	for {
-		select {
-		case <-d.stop:
-			break end
-		case v, notClosed := <-d.reader:
-			if !notClosed {
-				break end
-			}
+	for v := range d.reader {
+		if d.readerCallback == nil {
+			continue
+		} else if d.IsStopped() {
+			continue
+		}
 
-			if d.synchronous {
-				d.runCallback(v)
-			} else {
-				go d.runCallback(v)
-			}
+		if d.synchronous {
+			d.runCallback(v)
+		} else {
+			go d.runCallback(v)
 		}
 	}
-
-	d.Lock()
-	defer d.Unlock()
-
-	d.stop = nil
 }
 
 func (d *ReaderDaemon) runCallback(v interface{}) {

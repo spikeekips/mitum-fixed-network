@@ -10,7 +10,7 @@ import (
 )
 
 func init() {
-	common.SetTestLogger(Log())
+	common.SetTestLogger(log)
 }
 
 func NewRandomAddress() Address {

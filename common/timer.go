@@ -25,10 +25,11 @@ var (
 
 type Timer interface {
 	Daemon
+	RunCount() uint
 }
 
 type TimerCallback func(Timer) error
-type TimerCallbackIntervalFunc func( /* ran count */ uint /* elapsed time */, time.Duration) time.Duration
+type TimerCallbackIntervalFunc func(uint /* ran count */, time.Duration /* elapsed time */) time.Duration
 
 type CallbackTimer struct {
 	sync.RWMutex
@@ -39,6 +40,7 @@ type CallbackTimer struct {
 	intervalFunc TimerCallbackIntervalFunc
 	startedAt    Time
 	runCount     uint
+	limit        uint
 }
 
 func NewCallbackTimer(name string, interval time.Duration, callbacks ...TimerCallback) *CallbackTimer {
@@ -107,6 +109,22 @@ func (ct *CallbackTimer) SetIntervalFunc(intervalFunc TimerCallbackIntervalFunc)
 	return ct
 }
 
+func (ct *CallbackTimer) Limit() uint {
+	ct.RLock()
+	defer ct.RUnlock()
+
+	return ct.limit
+}
+
+func (ct *CallbackTimer) SetLimit(limit uint) *CallbackTimer {
+	ct.Lock()
+	defer ct.Unlock()
+
+	ct.limit = ct.runCount + limit
+
+	return ct
+}
+
 func (ct *CallbackTimer) RunCount() uint {
 	ct.RLock()
 	defer ct.RUnlock()
@@ -122,6 +140,14 @@ func (ct *CallbackTimer) incRunCount() {
 }
 
 func (ct *CallbackTimer) runCallback(interface{}) error {
+	limit := ct.Limit()
+	runCount := ct.RunCount()
+
+	if limit > 0 && runCount >= limit {
+		ct.Log().Debug("reached to limit", "count", runCount, "limit", limit)
+		return ct.Stop()
+	}
+
 	var wg sync.WaitGroup
 	wg.Add(len(ct.callbacks))
 
@@ -149,7 +175,20 @@ func (ct *CallbackTimer) runCallback(interface{}) error {
 }
 
 func (ct *CallbackTimer) next() {
-	<-time.After(ct.intervalFunc(ct.RunCount(), Now().Sub(ct.startedAt)))
+	if ct.IsStopped() {
+		return
+	}
+
+	interval := ct.intervalFunc(ct.RunCount(), Now().Sub(ct.startedAt))
+	if interval == 0 { // stop it
+		return
+	}
+
+	<-time.After(interval)
+
+	if ct.IsStopped() {
+		return
+	}
 
 	ct.daemon.Write(nil)
 }

@@ -9,7 +9,7 @@ type SIGNBallotBody struct {
 	BaseBallotBody
 }
 
-func NewSIGNBallotBody(
+func NewSIGNBallot(
 	n node.Address,
 	lastBlock hash.Hash,
 	nextHeight Height,
@@ -24,6 +24,7 @@ func NewSIGNBallotBody(
 		proposal:  currentProposal,
 		block:     nextBlock,
 		lastBlock: lastBlock,
+		stage:     StageSIGN,
 	}
 
 	h, err := ib.makeHash()

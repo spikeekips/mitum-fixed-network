@@ -8,6 +8,7 @@ import (
 	"github.com/stretchr/testify/suite"
 	"golang.org/x/xerrors"
 
+	"github.com/spikeekips/mitum/common"
 	"github.com/spikeekips/mitum/network"
 	"github.com/spikeekips/mitum/node"
 	"github.com/spikeekips/mitum/seal"
@@ -56,8 +57,9 @@ func (t *testJoinStateHandler) TestNew() {
 
 	_ = js.SetChanState(make(chan node.State))
 
-	err := js.Start()
-	t.NoError(err)
+	t.NoError(js.Start())
+	defer js.Stop()
+	t.NoError(js.Activate())
 
 	// check timer run count
 	<-time.After(time.Millisecond * 20)
@@ -78,19 +80,23 @@ func (t *testJoinStateHandler) TestEmptyPreviousBlock() {
 }
 
 func (t *testJoinStateHandler) TestBroadcastINITBallot() {
+	defer common.DebugPanic()
+
 	js, closeFunc := t.handler(time.Second*3, time.Second*6)
 	defer closeFunc()
 
 	_ = js.SetChanState(make(chan node.State))
 
-	err := js.Start()
-	t.NoError(err)
+	t.NoError(js.Start())
+	defer js.Stop()
+	t.NoError(js.Activate())
 
 	// check timer run count
 	var ballot Ballot
 	select {
 	case <-time.After(time.Millisecond * 100):
 		t.NoError(errors.New("timed out"))
+		return
 	case message := <-js.nt.(*network.ChannelNetwork).Reader():
 		var ok bool
 		ballot, ok = message.(Ballot)
@@ -108,6 +114,7 @@ func (t *testJoinStateHandler) TestBroadcastINITBallot() {
 }
 
 func (t *testJoinStateHandler) TestReceiveVoteResult() {
+	// TODO
 }
 
 func (t *testJoinStateHandler) TestTimeoutVoteProof() {
@@ -127,8 +134,9 @@ func (t *testJoinStateHandler) TestTimeoutVoteProof() {
 
 	_ = js.SetChanState(make(chan node.State))
 
-	err := js.Start()
-	t.NoError(err)
+	t.NoError(js.Start())
+	defer js.Stop()
+	t.NoError(js.Activate())
 
 	sl := <-chRequest
 
@@ -137,6 +145,72 @@ func (t *testJoinStateHandler) TestTimeoutVoteProof() {
 
 	t.Equal(RquestType, rv.Type())
 	t.Equal(RequestVoteProof, rv.Request())
+}
+
+func (t *testJoinStateHandler) TestActivateDeactivate() {
+	defer common.DebugPanic()
+
+	js, closeFunc := t.handler(time.Second*3, time.Second*6)
+	defer closeFunc()
+
+	_ = js.SetChanState(make(chan node.State))
+
+	t.NoError(js.Start())
+	defer js.Stop()
+	t.NoError(js.Activate())
+
+	{ // initially init ballot broadcasted
+		select {
+		case <-time.After(time.Millisecond * 100):
+			t.NoError(errors.New("timed out"))
+			return
+		case message := <-js.nt.(*network.ChannelNetwork).Reader():
+			ballot, ok := message.(Ballot)
+			t.True(ok)
+
+			t.Equal(BallotType, ballot.Type())
+			t.Equal(StageINIT, ballot.Stage())
+			t.True(js.homeState.Home().Address().Equal(ballot.Node()))
+			t.True(js.homeState.Block().Height().Add(1).Equal(ballot.Height()))
+			t.Equal(js.homeState.Block().Round()+1, ballot.Round())
+			t.True(js.homeState.Block().Hash().Equal(ballot.Block()))
+			t.True(js.homeState.PreviousBlock().Hash().Equal(ballot.LastBlock()))
+			t.True(js.homeState.Block().Proposal().Equal(ballot.Proposal()))
+		}
+	}
+
+	t.NoError(js.Deactivate())
+
+	// after Deactivate(), timer should be stopped
+	select {
+	case <-time.After(time.Millisecond * 100):
+	case _ = <-js.nt.(*network.ChannelNetwork).Reader():
+		t.Error(errors.New("timer should be stopped"))
+		return
+	}
+	t.True(js.timer.IsStopped())
+
+	// after Activate(), timer should work again
+	t.NoError(js.Activate())
+
+	select {
+	case <-time.After(time.Millisecond * 100):
+		t.Error(errors.New("timer should work"))
+		return
+	case message := <-js.nt.(*network.ChannelNetwork).Reader():
+		ballot, ok := message.(Ballot)
+		t.True(ok)
+
+		t.Equal(BallotType, ballot.Type())
+		t.Equal(StageINIT, ballot.Stage())
+		t.True(js.homeState.Home().Address().Equal(ballot.Node()))
+		t.True(js.homeState.Block().Height().Add(1).Equal(ballot.Height()))
+		t.Equal(js.homeState.Block().Round()+1, ballot.Round())
+		t.True(js.homeState.Block().Hash().Equal(ballot.Block()))
+		t.True(js.homeState.PreviousBlock().Hash().Equal(ballot.LastBlock()))
+		t.True(js.homeState.Block().Proposal().Equal(ballot.Proposal()))
+	}
+	t.False(js.timer.IsStopped())
 }
 
 func TestJoinStateHandler(t *testing.T) {

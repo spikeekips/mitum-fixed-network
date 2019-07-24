@@ -17,7 +17,7 @@ type testChannelNetwork struct {
 
 func (t *testChannelNetwork) TestNew() {
 	home := node.NewRandomHome()
-	cn := NewChannelNetwork(home)
+	cn := NewChannelNetwork(home, nil)
 	t.Equal(1, len(cn.chans))
 }
 
@@ -25,11 +25,11 @@ func (t *testChannelNetwork) TestReceive() {
 	defer common.DebugPanic()
 
 	home := node.NewRandomHome()
-	cn := NewChannelNetwork(home)
+	cn := NewChannelNetwork(home, nil)
 
 	var networks []*ChannelNetwork
 	for i := 0; i < 4; i++ {
-		c := NewChannelNetwork(node.NewRandomHome())
+		c := NewChannelNetwork(node.NewRandomHome(), nil)
 		_ = cn.AddMembers(c)
 		networks = append(networks, c)
 

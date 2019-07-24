@@ -22,12 +22,14 @@ func (t *testBootingStateHandler) TestMoveToNextState() {
 	bs := NewBootingStateHandler(homeState)
 	_ = bs.SetChanState(chanState)
 
-	err := bs.Start()
-	t.NoError(err)
+	t.NoError(bs.Start())
+	defer bs.Stop()
+	t.NoError(bs.Activate())
 
 	nextState := <-chanState
 	t.Equal(node.StateJoin, nextState)
 }
+
 func TestBootingStateHandler(t *testing.T) {
 	suite.Run(t, new(testBootingStateHandler))
 }

@@ -5,7 +5,6 @@ import (
 
 	"github.com/stretchr/testify/suite"
 
-	"github.com/spikeekips/mitum/common"
 	"github.com/spikeekips/mitum/node"
 )
 
@@ -42,7 +41,8 @@ func (t *testCompilerBallotChecker) TestEmptyLastVoteResult() {
 
 func (t *testCompilerBallotChecker) TestINITBallotHeightNotHigherThanHomeState() {
 	home := node.NewRandomHome()
-	lastBlock := NewRandomBlock()
+	prevBlock := NewRandomBlock()
+	lastBlock := NewRandomNextBlock(prevBlock)
 	nextBlock := NewRandomNextBlock(lastBlock)
 
 	homeState := NewHomeState(home, lastBlock)
@@ -50,7 +50,7 @@ func (t *testCompilerBallotChecker) TestINITBallotHeightNotHigherThanHomeState()
 	ballot, _ := NewINITBallot(
 		home.Address(),
 		lastBlock.Hash(),
-		lastBlock.Height(),
+		prevBlock.Height(),
 		nextBlock.Hash(),
 		nextBlock.Round(),
 		lastBlock.Proposal(),
@@ -79,7 +79,7 @@ func (t *testCompilerBallotChecker) TestINITBallotRoundNotHigherThanHomeState() 
 		lastBlock.Hash(),
 		nextBlock.Height(),
 		nextBlock.Hash(),
-		lastBlock.Round(),
+		lastBlock.Round()-1,
 		lastBlock.Proposal(),
 	)
 
@@ -104,7 +104,7 @@ func (t *testCompilerBallotChecker) TestINITBallotHeightNotHigherThanLastINITVot
 	ballot, _ := NewINITBallot(
 		home.Address(),
 		lastBlock.Hash(),
-		nextBlock.Height(),
+		lastBlock.Height(),
 		nextBlock.Hash(),
 		nextBlock.Round(),
 		lastBlock.Proposal(),
@@ -130,8 +130,6 @@ func (t *testCompilerBallotChecker) TestINITBallotHeightNotHigherThanLastINITVot
 }
 
 func (t *testCompilerBallotChecker) TestSIGNBallotHeightNotSameWithLastINITVoteResult() {
-	defer common.DebugPanic()
-
 	home := node.NewRandomHome()
 	lastBlock := NewRandomBlock()
 	nextBlock := NewRandomNextBlock(lastBlock)
@@ -167,8 +165,6 @@ func (t *testCompilerBallotChecker) TestSIGNBallotHeightNotSameWithLastINITVoteR
 }
 
 func (t *testCompilerBallotChecker) TestSIGNBallotRoundNotSameWithLastINITVoteResult() {
-	defer common.DebugPanic()
-
 	home := node.NewRandomHome()
 	lastBlock := NewRandomBlock()
 	nextBlock := NewRandomNextBlock(lastBlock)

@@ -1,32 +1,28 @@
 package isaac
 
 import (
+	"sync"
+
 	"github.com/spikeekips/mitum/common"
 	"github.com/spikeekips/mitum/node"
 )
 
 type BootingStateHandler struct {
+	sync.RWMutex
 	*common.Logger
-	*common.ReaderDaemon
+	started         bool
 	chanState       chan node.State
 	proposalChecker *common.ChainChecker
 }
 
 func NewBootingStateHandler(homeState *HomeState) *BootingStateHandler {
-	bs := &BootingStateHandler{
+	return &BootingStateHandler{
 		Logger:          common.NewLogger(log, "module", "booting-state-handler"),
 		proposalChecker: NewProposalCheckerBooting(homeState),
 	}
-	bs.ReaderDaemon = common.NewReaderDaemon(true, 0, nil)
-
-	return bs
 }
 
 func (bs *BootingStateHandler) Start() error {
-	if err := bs.ReaderDaemon.Start(); err != nil {
-		return err
-	}
-
 	// TODO health check:
 	//	- blocks in storage is valid
 	//	- network status
@@ -34,10 +30,37 @@ func (bs *BootingStateHandler) Start() error {
 	//	- etc
 
 	// NOTE everything ok, move to next state, JOIN
+
+	bs.Lock()
+	defer bs.Unlock()
+	bs.started = true
+
+	return nil
+}
+
+func (bs *BootingStateHandler) Stop() error {
+	bs.Lock()
+	defer bs.Unlock()
+	bs.started = false
+
+	return nil
+}
+
+func (bs *BootingStateHandler) IsStopped() bool {
+	bs.RLock()
+	defer bs.RUnlock()
+	return bs.started
+}
+
+func (bs *BootingStateHandler) Activate() error {
 	go func() {
 		bs.chanState <- node.StateJoin
 	}()
 
+	return nil
+}
+
+func (bs *BootingStateHandler) Deactivate() error {
 	return nil
 }
 

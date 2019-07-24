@@ -5,6 +5,7 @@ import (
 
 	"github.com/stretchr/testify/suite"
 
+	"github.com/spikeekips/mitum/common"
 	"github.com/spikeekips/mitum/node"
 	"github.com/spikeekips/mitum/seal"
 )
@@ -33,7 +34,7 @@ func (t *testINITBallotBody) TestNew() {
 	t.True(home.Address().Equal(ballot.Node()))
 	t.True(nextBlock.Hash().Equal(ballot.Block()))
 	t.True(lastBlock.Hash().Equal(ballot.LastBlock()))
-	t.Equal(Round(1), ballot.Round())
+	t.Equal(Round(1)+1, ballot.Round())
 	t.True(nextBlock.Proposal().Equal(ballot.Proposal()))
 	t.Equal(BallotType, ballot.Type())
 
@@ -50,6 +51,8 @@ func (t *testINITBallotBody) TestNew() {
 }
 
 func (t *testINITBallotBody) TestZeroRound() {
+	defer common.DebugPanic()
+
 	home := node.NewRandomHome()
 	lastBlock := NewRandomBlock()
 	nextBlock := NewRandomNextBlock(lastBlock)
@@ -63,6 +66,10 @@ func (t *testINITBallotBody) TestZeroRound() {
 		nextBlock.Proposal(),
 	)
 	t.NoError(err)
+
+	body := ballot.body.(INITBallotBody)
+	body.round = Round(0)
+	ballot.body = body
 
 	_ = interface{}(ballot).(seal.Seal)
 

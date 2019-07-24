@@ -2,6 +2,7 @@ package isaac
 
 import (
 	"context"
+	"sync"
 	"time"
 
 	"github.com/spikeekips/mitum/common"
@@ -23,14 +24,15 @@ import (
 // 	- select the valid and highest VoteProof
 // 	- broadcast INIT ballot, based on highest VoteProof
 type JoinStateHandler struct {
+	sync.RWMutex
 	*common.Logger
-	*common.ReaderDaemon
 	homeState                   *HomeState
 	compiler                    *Compiler
 	nt                          network.Network
 	intervalBroadcastINITBallot time.Duration
 	timeoutWaitVoteResult       time.Duration
 	chanState                   chan node.State
+	started                     bool
 	proposalChecker             *common.ChainChecker
 	timer                       *common.CallbackTimer
 	voteResultChecker           *common.ChainChecker
@@ -43,27 +45,27 @@ func NewJoinStateHandler(
 	intervalBroadcastINITBallot time.Duration,
 	timeoutWaitVoteResult time.Duration,
 ) (*JoinStateHandler, error) {
+	if homeState.PreviousBlock().Empty() {
+		return nil, xerrors.Errorf("previous block is empty")
+	}
+
+	logger := common.NewLogger(log, "module", "join-state-handler")
+	if intervalBroadcastINITBallot < time.Second*2 {
+		logger.Log().Warn("intervalBroadcastINITBallot is too short", "interval", intervalBroadcastINITBallot)
+	}
+
+	if timeoutWaitVoteResult <= intervalBroadcastINITBallot {
+		logger.Log().Warn("timeoutWaitVoteResult is too short", "timeout", timeoutWaitVoteResult)
+	}
+
 	js := &JoinStateHandler{
-		Logger:                      common.NewLogger(log, "module", "join-state-handler"),
+		Logger:                      logger,
 		homeState:                   homeState,
 		compiler:                    compiler,
 		nt:                          nt,
 		proposalChecker:             NewProposalCheckerJoin(homeState),
 		intervalBroadcastINITBallot: intervalBroadcastINITBallot,
 		timeoutWaitVoteResult:       timeoutWaitVoteResult,
-	}
-	js.ReaderDaemon = common.NewReaderDaemon(true, 0, nil)
-
-	if homeState.PreviousBlock().Empty() {
-		return nil, xerrors.Errorf("previous block is empty")
-	}
-
-	if intervalBroadcastINITBallot < time.Second*2 {
-		js.Log().Warn("intervalBroadcastINITBallot is too short", "interval", intervalBroadcastINITBallot)
-	}
-
-	if timeoutWaitVoteResult <= intervalBroadcastINITBallot {
-		js.Log().Warn("timeoutWaitVoteResult is too short", "timeout", timeoutWaitVoteResult)
 	}
 
 	js.voteResultChecker = NewJoinVoteResultChecker(homeState)
@@ -72,15 +74,39 @@ func NewJoinStateHandler(
 }
 
 func (js *JoinStateHandler) Start() error {
-	if err := js.ReaderDaemon.Start(); err != nil {
+	_ = js.stopTimer()
+
+	js.Lock()
+	defer js.Unlock()
+	js.started = true
+
+	return nil
+}
+
+func (js *JoinStateHandler) Stop() error {
+	if err := js.Deactivate(); err != nil {
 		return err
 	}
 
-	if js.timer != nil {
-		if err := js.timer.Stop(); err != nil {
-			return err
-		}
-	}
+	js.Lock()
+	defer js.Unlock()
+	js.started = false
+
+	return nil
+}
+
+func (js *JoinStateHandler) IsStopped() bool {
+	js.RLock()
+	defer js.RUnlock()
+
+	return !js.started
+}
+
+func (js *JoinStateHandler) Activate() error {
+	_ = js.stopTimer()
+
+	js.Lock()
+	defer js.Unlock()
 
 	// NOTE keeps broadcasting init ballot, which is based on last block of
 	// homeState until timeoutWaitVoteResult
@@ -105,21 +131,24 @@ func (js *JoinStateHandler) Start() error {
 		return err
 	}
 
-	go js.requestVoteProof()
-
 	return nil
 }
 
-func (js *JoinStateHandler) Stop() error {
-	if err := js.ReaderDaemon.Stop(); err != nil {
-		return err
+func (js *JoinStateHandler) Deactivate() error {
+	return js.stopTimer()
+}
+
+func (js *JoinStateHandler) stopTimer() error {
+	js.RLock()
+	defer js.RUnlock()
+
+	if js.timer == nil || js.timer.IsStopped() {
+		return nil
 	}
 
-	if !js.timer.IsStopped() {
-		if err := js.timer.Stop(); err != nil {
-			return err
-		}
-		js.timer = nil
+	if err := js.timer.Stop(); err != nil {
+		js.Log().Error("failed to stop timer", "error", err)
+		return err
 	}
 
 	return nil
@@ -142,10 +171,11 @@ func (js *JoinStateHandler) ReceiveProposal(proposal Proposal) error {
 			"lastINITVoteResult", js.compiler.LastINITVoteResult(),
 		).
 		Check()
-
 	if err != nil {
 		return err
 	}
+
+	// TODO prepare to store new block
 
 	return nil
 }
@@ -155,6 +185,7 @@ func (js *JoinStateHandler) ReceiveVoteResult(vr VoteResult) error {
 		New(nil).
 		SetContext(
 			"vr", vr,
+			"lastINITVoteResult", js.compiler.LastINITVoteResult(),
 		).Check()
 	if err != nil {
 		return err
@@ -166,29 +197,9 @@ func (js *JoinStateHandler) ReceiveVoteResult(vr VoteResult) error {
 	}
 
 	if vr.Stage() == StageINIT {
-		if !js.timer.IsStopped() {
-			_ = js.timer.Stop()
-		}
-
-		diff := vr.Height().Sub(js.homeState.Block().Height()).Int64()
-		switch {
-		case diff == 1: // network already stores 1 higher block
-			// NOTE trying to catch up the latest vote result
-			go js.catchUp(vr)
-			return nil
-		case diff == 0: // expected; move to consensus
-			js.Log().Debug("got expected VoteResult; move to consensus", "vr", vr)
-			js.chanState <- node.StateConsensus
-			return nil
-		case diff < 0: // something wrong, move to sync
-			js.Log().Debug("got lower height VoteResult; move to sync", "vr", vr)
-			js.chanState <- node.StateSync
-			return nil
-		default: // higher height received, move to sync
-			js.Log().Debug("got higher height VoteResult; move to sync", "vr", vr)
-			js.chanState <- node.StateSync
-			return nil
-		}
+		return js.gotMajorityINIT(vr)
+	} else {
+		return js.gotMajorityStages(vr)
 	}
 
 	return nil
@@ -227,11 +238,8 @@ func (js *JoinStateHandler) requestVoteProof() {
 
 	js.Log().Debug("timeout to wait VoteResult; try to request VoteProof", "timeout", js.timeoutWaitVoteResult)
 
-	if !js.timer.IsStopped() {
-		if err := js.timer.Stop(); err != nil {
-			js.Log().Error("failed to stop broadcastINITBallot timer", "error", err)
-			return
-		}
+	if err := js.stopTimer(); err != nil {
+		return
 	}
 
 	js.Log().Debug("trying to request VoteProof to suffrage members")
@@ -254,13 +262,14 @@ func (js *JoinStateHandler) requestVoteProof() {
 	js.Log().Debug("got VoteProofs", "vote_proofs", vps)
 }
 
-func (js *JoinStateHandler) catchUp(vr VoteResult) {
+func (js *JoinStateHandler) catchUp(vr VoteResult) error {
 	// TODO fix; it's just for testing
 	block, err := NewBlock(vr.Height(), vr.Round(), vr.Proposal())
 	if err != nil {
 		js.Log().Error("failed to create new block from VoteResult", "vr", vr, "error", err)
-		return
+		return err
 	}
+
 	if !block.Hash().Equal(vr.Block()) {
 		js.Log().Error(
 			"new block from VoteResult does not match",
@@ -268,12 +277,42 @@ func (js *JoinStateHandler) catchUp(vr VoteResult) {
 			"block", block.Hash(),
 			"vr_block", vr.Block(),
 		)
-		return
+		return xerrors.Errorf("new block from VoteResult does not match")
 	}
 
 	_ = js.homeState.SetBlock(block)
 
 	js.Log().Debug("new block from VoteResult saved", "block", block)
 
-	return
+	return nil
+}
+
+func (js *JoinStateHandler) gotMajorityINIT(vr VoteResult) error {
+	_ = js.stopTimer()
+
+	diff := vr.Height().Sub(js.homeState.Block().Height()).Int64()
+	switch {
+	case diff == 1: // network already stores 1 higher block
+		// NOTE trying to catch up the latest vote result
+		go js.catchUp(vr)
+		return nil
+	case diff == 0: // expected; move to consensus
+		js.Log().Debug("got expected VoteResult; move to consensus", "vr", vr)
+		js.chanState <- node.StateConsensus
+		return nil
+	case diff < 0: // something wrong, move to sync
+		js.Log().Debug("got lower height VoteResult; move to sync", "vr", vr)
+		js.chanState <- node.StateSync
+		return nil
+	default: // higher height received, move to sync
+		js.Log().Debug("got higher height VoteResult; move to sync", "vr", vr)
+		js.chanState <- node.StateSync
+		return nil
+	}
+}
+
+func (js *JoinStateHandler) gotMajorityStages(vr VoteResult) error {
+	// TODO
+
+	return nil
 }

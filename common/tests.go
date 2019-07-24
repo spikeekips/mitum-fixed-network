@@ -8,11 +8,8 @@ import (
 	"github.com/inconshreveable/log15"
 )
 
-func DebugPanic() {
-	if r := recover(); r != nil {
-		debug.PrintStack()
-		panic(r)
-	}
+func init() {
+	SetTestLogger(log)
 }
 
 func SetTestLogger(logger log15.Logger) {
@@ -23,6 +20,9 @@ func SetTestLogger(logger log15.Logger) {
 	//logger.SetHandler(log15.LvlFilterHandler(log15.LvlCrit, handler))
 }
 
-func init() {
-	SetTestLogger(log)
+func DebugPanic() {
+	if r := recover(); r != nil {
+		debug.PrintStack()
+		panic(r)
+	}
 }

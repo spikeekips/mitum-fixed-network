@@ -53,13 +53,15 @@ func (pc ProposalChecker) checkHeightAndRoundWithHomeState(c *common.ChainChecke
 		return err
 	}
 
-	// NOTE proposal.Height() should be greater than homeState.Block().Height()
-	if proposal.Height().Cmp(pc.homeState.Block().Height()) < 1 {
+	// NOTE proposal.Height() should be equal with homeState.Block().Height() +
+	// 1
+	if !proposal.Height().Equal(pc.homeState.Block().Height().Add(1)) {
 		err := xerrors.Errorf("invalid proposal height")
 		c.Log().Error(
-			"proposal.Height() should be greater than homeState.Block().Height(); ignore this ballot",
+			"proposal.Height() should be same than homeState.Block().Height() + 1; ignore this ballot",
 			"proposal_height", proposal.Height(),
-			"height", pc.homeState.Block().Height(),
+			"expected_height", pc.homeState.Block().Height().Add(1),
+			"current_height", pc.homeState.Block().Height(),
 		)
 
 		return err
@@ -71,7 +73,7 @@ func (pc ProposalChecker) checkHeightAndRoundWithHomeState(c *common.ChainChecke
 		c.Log().Error(
 			"proposal.Round() should be greater than homeState.Block().Round(); ignore this ballot",
 			"proposal_round", proposal.Round(),
-			"round", pc.homeState.Block().Round(),
+			"expected_round", pc.homeState.Block().Round()+1,
 		)
 
 		return err

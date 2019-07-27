@@ -58,7 +58,7 @@ func NewJoinStateHandler(
 		logger.Log().Warn("timeoutWaitVoteResult is too short", "timeout", timeoutWaitVoteResult)
 	}
 
-	js := &JoinStateHandler{
+	return &JoinStateHandler{
 		Logger:                      logger,
 		homeState:                   homeState,
 		compiler:                    compiler,
@@ -66,15 +66,12 @@ func NewJoinStateHandler(
 		proposalChecker:             NewProposalCheckerJoin(homeState),
 		intervalBroadcastINITBallot: intervalBroadcastINITBallot,
 		timeoutWaitVoteResult:       timeoutWaitVoteResult,
-	}
-
-	js.voteResultChecker = NewJoinVoteResultChecker(homeState)
-
-	return js, nil
+		voteResultChecker:           NewJoinVoteResultChecker(homeState),
+	}, nil
 }
 
 func (js *JoinStateHandler) Start() error {
-	_ = js.stopTimer()
+	_ = js.Stop()
 
 	js.Lock()
 	defer js.Unlock()
@@ -138,6 +135,15 @@ func (js *JoinStateHandler) Deactivate() error {
 	return js.stopTimer()
 }
 
+func (js *JoinStateHandler) SetChanState(ch chan node.State) StateHandler {
+	js.chanState = ch
+	return js
+}
+
+func (js *JoinStateHandler) State() node.State {
+	return node.StateBooting
+}
+
 func (js *JoinStateHandler) stopTimer() error {
 	js.RLock()
 	defer js.RUnlock()
@@ -152,15 +158,6 @@ func (js *JoinStateHandler) stopTimer() error {
 	}
 
 	return nil
-}
-
-func (js *JoinStateHandler) SetChanState(ch chan node.State) StateHandler {
-	js.chanState = ch
-	return js
-}
-
-func (js *JoinStateHandler) State() node.State {
-	return node.StateBooting
 }
 
 func (js *JoinStateHandler) ReceiveProposal(proposal Proposal) error {
@@ -192,7 +189,7 @@ func (js *JoinStateHandler) ReceiveVoteResult(vr VoteResult) error {
 	}
 
 	if !vr.GotMajority() {
-		js.Log().Debug("got draw; ignore", "vr", vr)
+		js.Log().Debug("got not majority; ignore", "vr", vr)
 		return nil
 	}
 
@@ -264,7 +261,12 @@ func (js *JoinStateHandler) requestVoteProof() {
 
 func (js *JoinStateHandler) catchUp(vr VoteResult) error {
 	// TODO fix; it's just for testing
-	block, err := NewBlock(vr.Height(), vr.Round(), vr.Proposal())
+	height, ok := vr.Height().SubOk(1)
+	if !ok {
+		return xerrors.Errorf("height of new block is under 0")
+	}
+
+	block, err := NewBlock(height, vr.Round()-1, vr.Proposal())
 	if err != nil {
 		js.Log().Error("failed to create new block from VoteResult", "vr", vr, "error", err)
 		return err
@@ -292,11 +294,11 @@ func (js *JoinStateHandler) gotMajorityINIT(vr VoteResult) error {
 
 	diff := vr.Height().Sub(js.homeState.Block().Height()).Int64()
 	switch {
-	case diff == 1: // network already stores 1 higher block
+	case diff == 2: // network already stores 1 higher block
 		// NOTE trying to catch up the latest vote result
 		go js.catchUp(vr)
 		return nil
-	case diff == 0: // expected; move to consensus
+	case diff == 1: // expected; move to consensus
 		js.Log().Debug("got expected VoteResult; move to consensus", "vr", vr)
 		js.chanState <- node.StateConsensus
 		return nil

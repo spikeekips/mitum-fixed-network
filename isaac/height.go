@@ -20,8 +20,13 @@ func (ht Height) Add(v interface{}) Height {
 	return Height{Big: ht.Big.Add(v)}
 }
 
-func (ht Height) Sub(v interface{}) common.Big {
-	return ht.Big.Sub(v)
+func (ht Height) SubOk(v interface{}) (Height, bool) {
+	s := ht.Big.Sub(v)
+	if s.Cmp(0) < 0 {
+		return Height{}, false
+	}
+
+	return Height{Big: s}, true
 }
 
 func (ht Height) Cmp(height Height) int {

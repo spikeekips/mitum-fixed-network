@@ -21,8 +21,8 @@ func NewCompilerBallotChecker(homeState *HomeState) *common.ChainChecker {
 		"compiler-ballot-checker",
 		context.Background(),
 		cbc.checkHeightAndRound,
-		cbc.checkINITBallot,
-		cbc.checkStagesBallot,
+		cbc.checkINIT,
+		cbc.checkNotINIT,
 	)
 }
 
@@ -79,7 +79,7 @@ func (cbc CompilerBallotChecker) checkHeightAndRound(c *common.ChainChecker) err
 	return nil
 }
 
-func (cbc CompilerBallotChecker) checkINITBallot(c *common.ChainChecker) error {
+func (cbc CompilerBallotChecker) checkINIT(c *common.ChainChecker) error {
 	var ballot Ballot
 	if err := c.ContextValue("ballot", &ballot); err != nil {
 		return err
@@ -89,10 +89,49 @@ func (cbc CompilerBallotChecker) checkINITBallot(c *common.ChainChecker) error {
 		return nil
 	}
 
+	var lastINITVoteResult VoteResult
+	if err := c.ContextValue("lastINITVoteResult", &lastINITVoteResult); err != nil {
+		return err
+	}
+
+	if !lastINITVoteResult.IsFinished() {
+		c.Log().Debug("lastINITVoteResult is empty; ignore this ballot")
+		return nil
+	}
+
+	lastHeight := lastINITVoteResult.Height()
+	lastRound := lastINITVoteResult.Round()
+
+	if ballot.Height().Equal(lastHeight) { // should be draw; round should be greater
+		if ballot.Round() <= lastRound {
+			err := xerrors.Errorf("ballot.Round() should be greater than lastINITVoteResult")
+			c.Log().Error(
+				"compared with lastINITVoteResult",
+				"last_height", lastHeight,
+				"last_round", lastRound,
+				"ballot_height", ballot.Height(),
+				"ballot_round", ballot.Round(),
+				"error", err,
+			)
+			return err
+		}
+	} else if ballot.Height().Cmp(lastHeight) <= 1 {
+		err := xerrors.Errorf("ballot.Height() should be greater than lastINITVoteResult")
+		c.Log().Error(
+			"compared with lastINITVoteResult",
+			"last_height", lastHeight,
+			"last_round", lastRound,
+			"ballot_height", ballot.Height(),
+			"ballot_round", ballot.Round(),
+			"error", err,
+		)
+		return err
+	}
+
 	return nil
 }
 
-func (cbc CompilerBallotChecker) checkStagesBallot(c *common.ChainChecker) error {
+func (cbc CompilerBallotChecker) checkNotINIT(c *common.ChainChecker) error {
 	var ballot Ballot
 	if err := c.ContextValue("ballot", &ballot); err != nil {
 		return err

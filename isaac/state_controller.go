@@ -20,6 +20,7 @@ type StateController struct {
 	joinHandler      StateHandler
 	consensusHandler StateHandler
 	stoppedHandler   StateHandler
+	stateHandler     StateHandler
 }
 
 func NewStateController(
@@ -53,10 +54,8 @@ func (sc *StateController) Start() error {
 	go sc.loopState()
 
 	// start booting
-	if sc.homeState.State() == node.StateBooting {
-		if err := sc.bootingHandler.Start(); err != nil {
-			return err
-		}
+	if err := sc.setState(node.StateBooting); err != nil {
+		return err
 	}
 
 	return nil
@@ -68,6 +67,15 @@ func (sc *StateController) Stop() error {
 	}
 
 	close(sc.chanState)
+
+	sc.Lock()
+	defer sc.Unlock()
+
+	if err := sc.stateHandler.Deactivate(); err != nil {
+		return err
+	}
+
+	sc.stateHandler = nil
 
 	return nil
 }
@@ -132,38 +140,44 @@ func (sc *StateController) receiveMessage(message interface{}) error {
 }
 
 func (sc *StateController) setState(state node.State) error {
-	if sc.homeState.State() == state {
-		return xerrors.Errorf("same state")
+	if err := state.IsValid(); err != nil {
+		return err
 	}
 
 	sc.Lock()
 	defer sc.Unlock()
 
+	if sc.stateHandler != nil && sc.stateHandler.State() == state {
+		return xerrors.Errorf("same state")
+	}
+
 	// stop previous StateHandler and start new StateHandler
-	if err := sc.stateHandler().Stop(); err != nil {
+	if sc.stateHandler != nil {
+		if err := sc.stateHandler.Deactivate(); err != nil {
+			return err
+		}
+	}
+
+	var handler StateHandler
+	switch state {
+	case node.StateBooting:
+		handler = sc.bootingHandler
+	case node.StateJoin:
+		handler = sc.joinHandler
+	case node.StateConsensus:
+		handler = sc.consensusHandler
+	case node.StateStopped:
+		handler = sc.stoppedHandler
+	default:
+		return xerrors.Errorf("handler not found for state; state=%q", state)
+	}
+
+	if err := handler.Activate(); err != nil {
 		return err
 	}
 
 	_ = sc.homeState.SetState(state)
-
-	if err := sc.stateHandler().Start(); err != nil {
-		return err
-	}
-
-	return nil
-}
-
-func (sc *StateController) stateHandler() StateHandler {
-	switch sc.homeState.State() {
-	case node.StateBooting:
-		return sc.bootingHandler
-	case node.StateJoin:
-		return sc.joinHandler
-	case node.StateConsensus:
-		return sc.consensusHandler
-	case node.StateStopped:
-		return sc.stoppedHandler
-	}
+	sc.stateHandler = handler
 
 	return nil
 }
@@ -172,8 +186,14 @@ func (sc *StateController) handleProposal(proposal Proposal) error {
 	// TODO check proposal
 
 	// hand over VoteResult to StateHandler
-	if err := sc.stateHandler().ReceiveProposal(proposal); err != nil {
-		return err
+	sc.RLock()
+	handler := sc.stateHandler
+	sc.RUnlock()
+
+	if handler != nil {
+		if err := handler.ReceiveProposal(proposal); err != nil {
+			return err
+		}
 	}
 
 	return nil
@@ -187,9 +207,15 @@ func (sc *StateController) handleBallot(ballot Ballot) error {
 	}
 
 	if !vr.IsClosed() && vr.IsFinished() {
+		sc.RLock()
+		handler := sc.stateHandler
+		sc.RUnlock()
+
 		// hand over VoteResult to StateHandler
-		if err := sc.stateHandler().ReceiveVoteResult(vr); err != nil {
-			return err
+		if handler != nil {
+			if err := handler.ReceiveVoteResult(vr); err != nil {
+				return err
+			}
 		}
 	}
 

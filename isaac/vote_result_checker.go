@@ -26,6 +26,21 @@ func NewJoinVoteResultChecker(homeState *HomeState) *common.ChainChecker {
 	)
 }
 
+func NewConsensusVoteResultChecker(homeState *HomeState) *common.ChainChecker {
+	vrc := VoteResultChecker{
+		homeState: homeState,
+	}
+
+	return common.NewChainChecker(
+		"vote-result-checker",
+		context.Background(),
+		vrc.checkFinished,
+		vrc.checkHeightAndRound,
+		vrc.checkINIT,
+		vrc.checkNotINIT,
+	)
+}
+
 func (vrc VoteResultChecker) checkFinished(c *common.ChainChecker) error {
 	var vr VoteResult
 	if err := c.ContextValue("vr", &vr); err != nil {

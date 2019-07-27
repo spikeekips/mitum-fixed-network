@@ -170,8 +170,13 @@ func (a Big) IsZero() bool {
 	return a.Int.Cmp(ZeroBigInt) == 0
 }
 
-func (a Big) Cmp(b Big) int {
-	return a.Int.Cmp(&b.Int)
+func (a Big) Cmp(v interface{}) int {
+	n, err := FromValue(v)
+	if err != nil {
+		return -1
+	}
+
+	return a.Int.Cmp(&n.Int)
 }
 
 func (a Big) Equal(v interface{}) bool {

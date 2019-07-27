@@ -31,11 +31,10 @@ func (t *testCompilerBallotChecker) TestEmptyLastVoteResult() {
 	checker := NewCompilerBallotChecker(homeState)
 	err := checker.
 		New(nil).
-		SetContext(
-			"ballot", ballot,
-			"lastINITVoteResult", VoteResult{},
-			"lastStagesVoteResult", VoteResult{},
-		).Check()
+		SetContext("ballot", ballot).
+		SetContext("lastINITVoteResult", VoteResult{}).
+		SetContext("lastStagesVoteResult", VoteResult{}).
+		Check()
 	t.NoError(err)
 }
 
@@ -59,11 +58,10 @@ func (t *testCompilerBallotChecker) TestINITBallotHeightNotHigherThanHomeState()
 	checker := NewCompilerBallotChecker(homeState)
 	err := checker.
 		New(nil).
-		SetContext(
-			"ballot", ballot,
-			"lastINITVoteResult", VoteResult{},
-			"lastStagesVoteResult", VoteResult{},
-		).Check()
+		SetContext("ballot", ballot).
+		SetContext("lastINITVoteResult", VoteResult{}).
+		SetContext("lastStagesVoteResult", VoteResult{}).
+		Check()
 	t.Contains(err.Error(), "lower ballot height")
 }
 
@@ -86,11 +84,10 @@ func (t *testCompilerBallotChecker) TestINITBallotRoundNotHigherThanHomeState() 
 	checker := NewCompilerBallotChecker(homeState)
 	err := checker.
 		New(nil).
-		SetContext(
-			"ballot", ballot,
-			"lastINITVoteResult", VoteResult{},
-			"lastStagesVoteResult", VoteResult{},
-		).Check()
+		SetContext("ballot", ballot).
+		SetContext("lastINITVoteResult", VoteResult{}).
+		SetContext("lastStagesVoteResult", VoteResult{}).
+		Check()
 	t.Contains(err.Error(), "lower ballot round")
 }
 
@@ -121,11 +118,10 @@ func (t *testCompilerBallotChecker) TestINITBallotHeightNotHigherThanLastINITVot
 	checker := NewCompilerBallotChecker(homeState)
 	err := checker.
 		New(nil).
-		SetContext(
-			"ballot", ballot,
-			"lastINITVoteResult", lastINITVoteResult,
-			"lastStagesVoteResult", VoteResult{},
-		).Check()
+		SetContext("ballot", ballot).
+		SetContext("lastINITVoteResult", lastINITVoteResult).
+		SetContext("lastStagesVoteResult", VoteResult{}).
+		Check()
 	t.Contains(err.Error(), "lower ballot height")
 }
 
@@ -156,11 +152,10 @@ func (t *testCompilerBallotChecker) TestSIGNBallotHeightNotSameWithLastINITVoteR
 	checker := NewCompilerBallotChecker(homeState)
 	err := checker.
 		New(nil).
-		SetContext(
-			"ballot", ballot,
-			"lastINITVoteResult", lastINITVoteResult,
-			"lastStagesVoteResult", VoteResult{},
-		).Check()
+		SetContext("ballot", ballot).
+		SetContext("lastINITVoteResult", lastINITVoteResult).
+		SetContext("lastStagesVoteResult", VoteResult{}).
+		Check()
 	t.Contains(err.Error(), "lower ballot height")
 }
 
@@ -191,11 +186,10 @@ func (t *testCompilerBallotChecker) TestSIGNBallotRoundNotSameWithLastINITVoteRe
 	checker := NewCompilerBallotChecker(homeState)
 	err := checker.
 		New(nil).
-		SetContext(
-			"ballot", ballot,
-			"lastINITVoteResult", lastINITVoteResult,
-			"lastStagesVoteResult", VoteResult{},
-		).Check()
+		SetContext("ballot", ballot).
+		SetContext("lastINITVoteResult", lastINITVoteResult).
+		SetContext("lastStagesVoteResult", VoteResult{}).
+		Check()
 	t.Contains(err.Error(), "lower ballot round")
 }
 

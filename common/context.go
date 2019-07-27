@@ -5,7 +5,7 @@ import (
 	"fmt"
 )
 
-func SetContext(ctx context.Context, args ...interface{}) context.Context {
+func SetContextWithArgs(ctx context.Context, args ...interface{}) context.Context {
 	if len(args)%2 != 0 {
 		panic(fmt.Errorf("invalid number of args: %v", len(args)))
 	}
@@ -19,4 +19,12 @@ func SetContext(ctx context.Context, args ...interface{}) context.Context {
 	}
 
 	return ctx
+}
+
+func SetContext(ctx context.Context, key, value interface{}) context.Context {
+	if ctx == nil || ctx == context.TODO() {
+		ctx = context.Background()
+	}
+
+	return context.WithValue(ctx, key, value)
 }

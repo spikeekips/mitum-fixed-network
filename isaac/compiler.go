@@ -39,11 +39,10 @@ func (cm *Compiler) Vote(ballot Ballot) (VoteResult, error) {
 
 	err := cm.ballotChecker.
 		New(nil).
-		SetContext(
-			"ballot", ballot,
-			"lastINITVoteResult", cm.lastINITVoteResult,
-			"lastStagesVoteResult", cm.lastStagesVoteResult,
-		).Check()
+		SetContext("ballot", ballot).
+		SetContext("lastINITVoteResult", cm.lastINITVoteResult).
+		SetContext("lastStagesVoteResult", cm.lastStagesVoteResult).
+		Check()
 	if err != nil {
 		return VoteResult{}, err
 	}

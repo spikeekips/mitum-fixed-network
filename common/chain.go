@@ -64,11 +64,11 @@ func (c *ChainChecker) Context() context.Context {
 	return c.ctx
 }
 
-func (c *ChainChecker) SetContext(args ...interface{}) *ChainChecker {
+func (c *ChainChecker) SetContext(key, value interface{}) *ChainChecker {
 	c.Lock()
 	defer c.Unlock()
 
-	c.ctx = SetContext(c.ctx, args...)
+	c.ctx = SetContext(c.ctx, key, value)
 
 	return c
 }

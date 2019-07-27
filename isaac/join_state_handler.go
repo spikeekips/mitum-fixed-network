@@ -163,10 +163,8 @@ func (js *JoinStateHandler) stopTimer() error {
 func (js *JoinStateHandler) ReceiveProposal(proposal Proposal) error {
 	err := js.proposalChecker.
 		New(nil).
-		SetContext(
-			"proposal", proposal,
-			"lastINITVoteResult", js.compiler.LastINITVoteResult(),
-		).
+		SetContext("proposal", proposal).
+		SetContext("lastINITVoteResult", js.compiler.LastINITVoteResult()).
 		Check()
 	if err != nil {
 		return err
@@ -180,10 +178,9 @@ func (js *JoinStateHandler) ReceiveProposal(proposal Proposal) error {
 func (js *JoinStateHandler) ReceiveVoteResult(vr VoteResult) error {
 	err := js.voteResultChecker.
 		New(nil).
-		SetContext(
-			"vr", vr,
-			"lastINITVoteResult", js.compiler.LastINITVoteResult(),
-		).Check()
+		SetContext("vr", vr).
+		SetContext("lastINITVoteResult", js.compiler.LastINITVoteResult()).
+		Check()
 	if err != nil {
 		return err
 	}
@@ -194,9 +191,9 @@ func (js *JoinStateHandler) ReceiveVoteResult(vr VoteResult) error {
 	}
 
 	if vr.Stage() == StageINIT {
-		return js.gotMajorityINIT(vr)
+		return js.gotINITMajority(vr)
 	} else {
-		return js.gotMajorityStages(vr)
+		return js.gotNotINITMajority(vr)
 	}
 
 	return nil
@@ -289,7 +286,7 @@ func (js *JoinStateHandler) catchUp(vr VoteResult) error {
 	return nil
 }
 
-func (js *JoinStateHandler) gotMajorityINIT(vr VoteResult) error {
+func (js *JoinStateHandler) gotINITMajority(vr VoteResult) error {
 	_ = js.stopTimer()
 
 	diff := vr.Height().Sub(js.homeState.Block().Height()).Int64()
@@ -313,8 +310,8 @@ func (js *JoinStateHandler) gotMajorityINIT(vr VoteResult) error {
 	}
 }
 
-func (js *JoinStateHandler) gotMajorityStages(vr VoteResult) error {
+func (js *JoinStateHandler) gotNotINITMajority(vr VoteResult) error {
 	// TODO
-
+	js.Log().Debug("got majority, not init; will be ignored", "vr", vr)
 	return nil
 }

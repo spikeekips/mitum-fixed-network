@@ -114,10 +114,9 @@ func (cs *ConsensusStateHandler) ReceiveProposal(proposal Proposal) error {
 func (cs *ConsensusStateHandler) ReceiveVoteResult(vr VoteResult) error {
 	err := cs.voteResultChecker.
 		New(nil).
-		SetContext(
-			"vr", vr,
-			"lastINITVoteResult", cs.compiler.LastINITVoteResult(),
-		).Check()
+		SetContext("vr", vr).
+		SetContext("lastINITVoteResult", cs.compiler.LastINITVoteResult()).
+		Check()
 	if err != nil {
 		return err
 	}

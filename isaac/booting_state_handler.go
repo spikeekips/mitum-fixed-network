@@ -11,7 +11,7 @@ type BootingStateHandler struct {
 	sync.RWMutex
 	*common.Logger
 	started         bool
-	chanState       chan node.State
+	chanState       chan StateContext
 	proposalChecker *common.ChainChecker
 }
 
@@ -52,9 +52,9 @@ func (bs *BootingStateHandler) IsStopped() bool {
 	return bs.started
 }
 
-func (bs *BootingStateHandler) Activate() error {
+func (bs *BootingStateHandler) Activate(sct StateContext) error {
 	go func() {
-		bs.chanState <- node.StateJoin
+		bs.chanState <- NewStateContext(node.StateJoin)
 	}()
 
 	return nil
@@ -64,7 +64,7 @@ func (bs *BootingStateHandler) Deactivate() error {
 	return nil
 }
 
-func (bs *BootingStateHandler) SetChanState(ch chan node.State) StateHandler {
+func (bs *BootingStateHandler) SetChanState(ch chan StateContext) StateHandler {
 	bs.chanState = ch
 	return bs
 }

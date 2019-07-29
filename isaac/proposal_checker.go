@@ -41,6 +41,21 @@ func NewProposalCheckerJoin(homeState *HomeState) *common.ChainChecker {
 	)
 }
 
+func NewProposalCheckerConsensus(homeState *HomeState) *common.ChainChecker {
+	pc := ProposalChecker{
+		homeState: homeState,
+	}
+
+	return common.NewChainChecker(
+		"join-proposal-checker",
+		context.Background(),
+		pc.saveProposal,
+		pc.checkHeightAndRoundWithHomeState,
+		pc.checkHeightAndRoundWithLastINITVoteResult,
+		pc.checkProposerIsValid,
+	)
+}
+
 func (pc ProposalChecker) saveProposal(c *common.ChainChecker) error {
 	// TODO
 

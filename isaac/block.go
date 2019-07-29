@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 
 	"github.com/ethereum/go-ethereum/rlp"
+	"golang.org/x/xerrors"
 
 	"github.com/spikeekips/mitum/common"
 	"github.com/spikeekips/mitum/hash"
@@ -50,6 +51,30 @@ func NewBlock(height Height, round Round, proposal hash.Hash) (Block, error) {
 	bk.hash = h
 
 	return bk, nil
+}
+
+func NewBlockFromVoteResult(vr VoteResult) (Block, error) {
+	// TODO fix; it's just for testing
+	height, ok := vr.Height().SubOk(1)
+	if !ok {
+		return Block{}, xerrors.Errorf("height of new block is under 0")
+	}
+
+	round := vr.Round() - 1
+	if round < 1 {
+		return Block{}, xerrors.Errorf("round of new block is under 0")
+	}
+
+	block, err := NewBlock(height, round, vr.Proposal())
+	if err != nil {
+		return Block{}, err
+	}
+
+	if !block.Hash().Equal(vr.Block()) {
+		return Block{}, xerrors.Errorf("new block from VoteResult does not match")
+	}
+
+	return block, nil
 }
 
 func (bk Block) makeHash() (hash.Hash, error) {

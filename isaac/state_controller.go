@@ -15,7 +15,7 @@ type StateController struct {
 	*common.ReaderDaemon
 	homeState        *HomeState
 	compiler         *Compiler
-	chanState        chan node.State
+	chanState        chan StateContext
 	bootingHandler   StateHandler
 	joinHandler      StateHandler
 	consensusHandler StateHandler
@@ -31,7 +31,7 @@ func NewStateController(
 	consensusHandler StateHandler,
 	stoppedHandler StateHandler,
 ) *StateController {
-	chanState := make(chan node.State)
+	chanState := make(chan StateContext)
 	sc := &StateController{
 		Logger:           common.NewLogger(log, "module", "state-controller"),
 		homeState:        homeState,
@@ -54,7 +54,7 @@ func (sc *StateController) Start() error {
 	go sc.loopState()
 
 	// start booting
-	if err := sc.setState(node.StateBooting); err != nil {
+	if err := sc.setState(NewStateContext(node.StateBooting)); err != nil {
 		return err
 	}
 
@@ -81,23 +81,66 @@ func (sc *StateController) Stop() error {
 }
 
 func (sc *StateController) loopState() {
-	for state := range sc.chanState {
+	for sct := range sc.chanState {
 		current := sc.homeState.State()
-		if err := sc.setState(state); err != nil {
+		if err := sc.setState(sct); err != nil {
 			sc.Log().Error(
 				"error change state",
 				"error", err,
 				"current_state", current,
-				"new_state", state,
+				"new_state", sct.State(),
 			)
 		} else {
 			sc.Log().Error(
 				"state changed",
 				"current_state", current,
-				"new_state", state,
+				"new_state", sct.State(),
 			)
 		}
 	}
+}
+
+func (sc *StateController) setState(sct StateContext) error {
+	if err := sct.State().IsValid(); err != nil {
+		return err
+	}
+
+	sc.Lock()
+	defer sc.Unlock()
+
+	if sc.stateHandler != nil && sc.stateHandler.State() == sct.State() {
+		return xerrors.Errorf("same state")
+	}
+
+	// stop previous StateHandler and start new StateHandler
+	if sc.stateHandler != nil {
+		if err := sc.stateHandler.Deactivate(); err != nil {
+			return err
+		}
+	}
+
+	var handler StateHandler
+	switch sct.State() {
+	case node.StateBooting:
+		handler = sc.bootingHandler
+	case node.StateJoin:
+		handler = sc.joinHandler
+	case node.StateConsensus:
+		handler = sc.consensusHandler
+	case node.StateStopped:
+		handler = sc.stoppedHandler
+	default:
+		return xerrors.Errorf("handler not found for state; state=%q", sct.State())
+	}
+
+	if err := handler.Activate(sct); err != nil {
+		return err
+	}
+
+	_ = sc.homeState.SetState(sct.State())
+	sc.stateHandler = handler
+
+	return nil
 }
 
 func (sc *StateController) receiveMessage(message interface{}) error {
@@ -135,49 +178,6 @@ func (sc *StateController) receiveMessage(message interface{}) error {
 			return err
 		}
 	}
-
-	return nil
-}
-
-func (sc *StateController) setState(state node.State) error {
-	if err := state.IsValid(); err != nil {
-		return err
-	}
-
-	sc.Lock()
-	defer sc.Unlock()
-
-	if sc.stateHandler != nil && sc.stateHandler.State() == state {
-		return xerrors.Errorf("same state")
-	}
-
-	// stop previous StateHandler and start new StateHandler
-	if sc.stateHandler != nil {
-		if err := sc.stateHandler.Deactivate(); err != nil {
-			return err
-		}
-	}
-
-	var handler StateHandler
-	switch state {
-	case node.StateBooting:
-		handler = sc.bootingHandler
-	case node.StateJoin:
-		handler = sc.joinHandler
-	case node.StateConsensus:
-		handler = sc.consensusHandler
-	case node.StateStopped:
-		handler = sc.stoppedHandler
-	default:
-		return xerrors.Errorf("handler not found for state; state=%q", state)
-	}
-
-	if err := handler.Activate(); err != nil {
-		return err
-	}
-
-	_ = sc.homeState.SetState(state)
-	sc.stateHandler = handler
 
 	return nil
 }

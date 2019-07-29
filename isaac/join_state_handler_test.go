@@ -55,11 +55,11 @@ func (t *testJoinStateHandler) TestNew() {
 	js, closeFunc := t.handler(time.Second*3, time.Second*6)
 	defer closeFunc()
 
-	_ = js.SetChanState(make(chan node.State))
+	_ = js.SetChanState(make(chan StateContext))
 
 	t.NoError(js.Start())
 	defer js.Stop()
-	t.NoError(js.Activate())
+	t.NoError(js.Activate(StateContext{}))
 
 	// check timer run count
 	<-time.After(time.Millisecond * 20)
@@ -85,11 +85,11 @@ func (t *testJoinStateHandler) TestBroadcastINITBallot() {
 	js, closeFunc := t.handler(time.Second*3, time.Second*6)
 	defer closeFunc()
 
-	_ = js.SetChanState(make(chan node.State))
+	_ = js.SetChanState(make(chan StateContext))
 
 	t.NoError(js.Start())
 	defer js.Stop()
-	t.NoError(js.Activate())
+	t.NoError(js.Activate(StateContext{}))
 
 	// check timer run count
 	var ballot Ballot
@@ -132,11 +132,11 @@ func (t *testJoinStateHandler) TestTimeoutVoteProof() {
 		js.nt.(*network.ChannelNetwork).AddMembers(t.newNetwork(home))
 	}
 
-	_ = js.SetChanState(make(chan node.State))
+	_ = js.SetChanState(make(chan StateContext))
 
 	t.NoError(js.Start())
 	defer js.Stop()
-	t.NoError(js.Activate())
+	t.NoError(js.Activate(StateContext{}))
 
 	sl := <-chRequest
 
@@ -153,11 +153,11 @@ func (t *testJoinStateHandler) TestActivateDeactivate() {
 	js, closeFunc := t.handler(time.Second*3, time.Second*6)
 	defer closeFunc()
 
-	_ = js.SetChanState(make(chan node.State))
+	_ = js.SetChanState(make(chan StateContext))
 
 	t.NoError(js.Start())
 	defer js.Stop()
-	t.NoError(js.Activate())
+	t.NoError(js.Activate(StateContext{}))
 
 	{ // initially init ballot broadcasted
 		select {
@@ -191,7 +191,7 @@ func (t *testJoinStateHandler) TestActivateDeactivate() {
 	t.True(js.timer.IsStopped())
 
 	// after Activate(), timer should work again
-	t.NoError(js.Activate())
+	t.NoError(js.Activate(StateContext{}))
 
 	select {
 	case <-time.After(time.Millisecond * 100):

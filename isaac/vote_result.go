@@ -136,13 +136,14 @@ func (vr VoteResult) SetClosed() VoteResult {
 
 func (vr VoteResult) MarshalJSON() ([]byte, error) {
 	return json.Marshal(map[string]interface{}{
-		"height":    vr.height,
-		"round":     vr.round,
-		"stage":     vr.stage,
-		"proposal":  vr.proposal,
-		"records":   vr.records,
-		"agreement": vr.agreement,
-		"closed":    vr.closed,
+		"height":     vr.height,
+		"round":      vr.round,
+		"stage":      vr.stage,
+		"proposal":   vr.proposal,
+		"records":    vr.records,
+		"agreement":  vr.agreement,
+		"closed":     vr.closed,
+		"last_block": vr.lastBlock,
 	})
 }
 

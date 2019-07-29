@@ -18,16 +18,16 @@ func (t *testBootingStateHandler) TestMoveToNextState() {
 
 	homeState := NewHomeState(home, lastBlock)
 
-	chanState := make(chan node.State)
+	chanState := make(chan StateContext)
 	bs := NewBootingStateHandler(homeState)
 	_ = bs.SetChanState(chanState)
 
 	t.NoError(bs.Start())
 	defer bs.Stop()
-	t.NoError(bs.Activate())
+	t.NoError(bs.Activate(StateContext{}))
 
-	nextState := <-chanState
-	t.Equal(node.StateJoin, nextState)
+	sct := <-chanState
+	t.Equal(node.StateJoin, sct.State())
 }
 
 func TestBootingStateHandler(t *testing.T) {

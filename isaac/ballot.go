@@ -170,11 +170,7 @@ type BallotBody interface {
 }
 
 func IsBallotHash(h hash.Hash) bool {
-	if h.Hint() != BallotHashHint {
-		return false
-	}
-
-	return true
+	return h.Hint() == BallotHashHint
 }
 
 type BaseBallotBody struct {

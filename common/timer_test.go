@@ -14,7 +14,7 @@ type testCallbackTimer struct {
 
 func (t *testCallbackTimer) TestNew() {
 	var runCount uint64
-	callback := func(ti Timer) error {
+	callback := func(Timer) error {
 		atomic.AddUint64(&runCount, 1)
 		return nil
 	}
@@ -38,7 +38,7 @@ func (t *testCallbackTimer) TestNew() {
 
 func (t *testCallbackTimer) TestIntervalFunc() {
 	var runCount uint64
-	callback := func(ti Timer) error {
+	callback := func(Timer) error {
 		atomic.AddUint64(&runCount, 1)
 		return nil
 	}
@@ -46,7 +46,7 @@ func (t *testCallbackTimer) TestIntervalFunc() {
 	timeout := time.Millisecond * 50
 	defaultInterval := time.Millisecond * 1
 
-	intervalFunc := func(index uint, elapsed time.Duration) time.Duration {
+	intervalFunc := func(index uint, _ time.Duration) time.Duration {
 		if index > 2 {
 			return timeout + time.Second*50
 		}
@@ -76,7 +76,7 @@ func (t *testCallbackTimer) TestIntervalFunc() {
 
 func (t *testCallbackTimer) TestMultipleCallbacks() {
 	var runCount uint64
-	callback := func(ti Timer) error {
+	callback := func(Timer) error {
 		atomic.AddUint64(&runCount, 1)
 		return nil
 	}
@@ -100,7 +100,7 @@ func (t *testCallbackTimer) TestMultipleCallbacks() {
 
 func (t *testCallbackTimer) TestLimit() {
 	var runCount uint64
-	callback := func(ti Timer) error {
+	callback := func(Timer) error {
 		atomic.AddUint64(&runCount, 1)
 		return nil
 	}
@@ -126,7 +126,7 @@ func (t *testCallbackTimer) TestLimit() {
 
 func (t *testCallbackTimer) TestZeroInterval() {
 	var runCount uint64
-	callback := func(ti Timer) error {
+	callback := func(Timer) error {
 		atomic.AddUint64(&runCount, 1)
 		return nil
 	}
@@ -134,7 +134,7 @@ func (t *testCallbackTimer) TestZeroInterval() {
 	timeout := time.Millisecond * 10
 	interval := time.Millisecond * 1
 
-	intervalFunc := func(index uint, elapsed time.Duration) time.Duration {
+	intervalFunc := func(_ uint, elapsed time.Duration) time.Duration {
 		if elapsed >= timeout {
 			return 0
 		}

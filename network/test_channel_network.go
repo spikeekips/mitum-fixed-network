@@ -82,7 +82,7 @@ func (cn *ChannelNetwork) Broadcast(sl seal.Seal) error {
 	return nil
 }
 
-func (cn *ChannelNetwork) Request(ctx context.Context, n node.Address, sl seal.Seal) (seal.Seal, error) {
+func (cn *ChannelNetwork) Request(_ context.Context, n node.Address, sl seal.Seal) (seal.Seal, error) {
 	cn.RLock()
 	defer cn.RUnlock()
 
@@ -104,7 +104,7 @@ func (cn *ChannelNetwork) RequestAll(ctx context.Context, sl seal.Seal) (map[nod
 	cn.RLock()
 	defer cn.RUnlock()
 
-	for n, _ := range cn.chans {
+	for n := range cn.chans {
 		r, err := cn.Request(ctx, n, sl)
 		if err != nil {
 			cn.Log().Error("failed to request", "target", n, "error", err)

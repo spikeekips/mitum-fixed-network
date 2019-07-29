@@ -68,7 +68,9 @@ func (t *testBallotbox) TestGotMajority() {
 	_, threshold := thr.Get(StageSIGN)
 	for i := uint(0); i < threshold-1; i++ {
 		home := node.NewRandomHome()
-		vr, err := t.vote(bb, home.Address(), StageSIGN, lastBlock, nextBlock)
+
+		var vr VoteResult
+		vr, err = t.vote(bb, home.Address(), StageSIGN, lastBlock, nextBlock)
 		t.NoError(err)
 
 		t.False(vr.IsFinished())
@@ -109,7 +111,8 @@ func (t *testBallotbox) TestClosed() {
 	_, threshold := thr.Get(StageSIGN)
 	for i := uint(0); i < threshold; i++ {
 		home := node.NewRandomHome()
-		vr, err := t.vote(bb, home.Address(), StageSIGN, lastBlock, nextBlock)
+		var vr VoteResult
+		vr, err = t.vote(bb, home.Address(), StageSIGN, lastBlock, nextBlock)
 		t.NoError(err)
 
 		if i == threshold-1 {

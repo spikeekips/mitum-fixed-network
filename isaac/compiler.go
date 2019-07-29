@@ -1,6 +1,7 @@
 package isaac
 
 import (
+	"context"
 	"sync"
 
 	"github.com/inconshreveable/log15"
@@ -38,7 +39,7 @@ func (cm *Compiler) Vote(ballot Ballot) (VoteResult, error) {
 	defer cm.Unlock()
 
 	err := cm.ballotChecker.
-		New(nil).
+		New(context.TODO()).
 		SetContext("ballot", ballot).
 		SetContext("lastINITVoteResult", cm.lastINITVoteResult).
 		SetContext("lastStagesVoteResult", cm.lastStagesVoteResult).

@@ -1,6 +1,7 @@
 package isaac
 
 import (
+	"context"
 	"sync"
 	"time"
 
@@ -139,7 +140,7 @@ func (cs *ConsensusStateHandler) stopTimer() error {
 
 func (cs *ConsensusStateHandler) ReceiveProposal(proposal Proposal) error {
 	err := cs.proposalChecker.
-		New(nil).
+		New(context.TODO()).
 		SetContext("proposal", proposal).
 		SetContext("lastINITVoteResult", cs.compiler.LastINITVoteResult()).
 		Check()
@@ -147,13 +148,14 @@ func (cs *ConsensusStateHandler) ReceiveProposal(proposal Proposal) error {
 		return err
 	}
 
-	if err := cs.nextRoundTimer("wait-ballot-timeout-next-round-consensus", cs.compiler.LastINITVoteResult()); err != nil {
+	err = cs.nextRoundTimer("wait-ballot-timeout-next-round-consensus", cs.compiler.LastINITVoteResult())
+	if err != nil {
 		return err
 	}
 
 	// TODO validate proposal
-	block, err := cs.proposalValidator.NewBlock(proposal)
-	if err != nil {
+	var block Block
+	if block, err = cs.proposalValidator.NewBlock(proposal); err != nil {
 		return err
 	}
 	// TODO prepare to store new block
@@ -183,7 +185,7 @@ func (cs *ConsensusStateHandler) ReceiveProposal(proposal Proposal) error {
 
 func (cs *ConsensusStateHandler) ReceiveVoteResult(vr VoteResult) error {
 	err := cs.voteResultChecker.
-		New(nil).
+		New(context.TODO()).
 		SetContext("vr", vr).
 		SetContext("lastINITVoteResult", cs.compiler.LastINITVoteResult()).
 		Check()

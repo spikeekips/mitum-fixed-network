@@ -1,6 +1,7 @@
 package isaac
 
 import (
+	"context"
 	"sync"
 
 	"github.com/spikeekips/mitum/common"
@@ -52,7 +53,7 @@ func (bs *BootingStateHandler) IsStopped() bool {
 	return bs.started
 }
 
-func (bs *BootingStateHandler) Activate(sct StateContext) error {
+func (bs *BootingStateHandler) Activate(StateContext) error {
 	go func() {
 		bs.chanState <- NewStateContext(node.StateJoin)
 	}()
@@ -75,7 +76,7 @@ func (bs *BootingStateHandler) State() node.State {
 
 func (bs *BootingStateHandler) ReceiveProposal(proposal Proposal) error {
 	err := bs.proposalChecker.
-		New(nil).
+		New(context.TODO()).
 		SetContext(
 			"proposal", proposal,
 		).
@@ -88,6 +89,6 @@ func (bs *BootingStateHandler) ReceiveProposal(proposal Proposal) error {
 	return nil
 }
 
-func (bs *BootingStateHandler) ReceiveVoteResult(vr VoteResult) error {
+func (bs *BootingStateHandler) ReceiveVoteResult(VoteResult) error {
 	return nil
 }

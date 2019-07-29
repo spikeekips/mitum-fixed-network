@@ -1,6 +1,7 @@
 package isaac
 
 import (
+	"context"
 	"testing"
 
 	"github.com/stretchr/testify/suite"
@@ -30,7 +31,7 @@ func (t *testCompilerBallotChecker) TestEmptyLastVoteResult() {
 
 	checker := NewCompilerBallotChecker(homeState)
 	err := checker.
-		New(nil).
+		New(context.TODO()).
 		SetContext("ballot", ballot).
 		SetContext("lastINITVoteResult", VoteResult{}).
 		SetContext("lastStagesVoteResult", VoteResult{}).
@@ -57,7 +58,7 @@ func (t *testCompilerBallotChecker) TestINITBallotHeightNotHigherThanHomeState()
 
 	checker := NewCompilerBallotChecker(homeState)
 	err := checker.
-		New(nil).
+		New(context.TODO()).
 		SetContext("ballot", ballot).
 		SetContext("lastINITVoteResult", VoteResult{}).
 		SetContext("lastStagesVoteResult", VoteResult{}).
@@ -83,7 +84,7 @@ func (t *testCompilerBallotChecker) TestINITBallotRoundNotHigherThanHomeState() 
 
 	checker := NewCompilerBallotChecker(homeState)
 	err := checker.
-		New(nil).
+		New(context.TODO()).
 		SetContext("ballot", ballot).
 		SetContext("lastINITVoteResult", VoteResult{}).
 		SetContext("lastStagesVoteResult", VoteResult{}).
@@ -117,7 +118,7 @@ func (t *testCompilerBallotChecker) TestINITBallotHeightNotHigherThanLastINITVot
 
 	checker := NewCompilerBallotChecker(homeState)
 	err := checker.
-		New(nil).
+		New(context.TODO()).
 		SetContext("ballot", ballot).
 		SetContext("lastINITVoteResult", lastINITVoteResult).
 		SetContext("lastStagesVoteResult", VoteResult{}).
@@ -151,7 +152,7 @@ func (t *testCompilerBallotChecker) TestSIGNBallotHeightNotSameWithLastINITVoteR
 
 	checker := NewCompilerBallotChecker(homeState)
 	err := checker.
-		New(nil).
+		New(context.TODO()).
 		SetContext("ballot", ballot).
 		SetContext("lastINITVoteResult", lastINITVoteResult).
 		SetContext("lastStagesVoteResult", VoteResult{}).
@@ -185,7 +186,7 @@ func (t *testCompilerBallotChecker) TestSIGNBallotRoundNotSameWithLastINITVoteRe
 
 	checker := NewCompilerBallotChecker(homeState)
 	err := checker.
-		New(nil).
+		New(context.TODO()).
 		SetContext("ballot", ballot).
 		SetContext("lastINITVoteResult", lastINITVoteResult).
 		SetContext("lastStagesVoteResult", VoteResult{}).

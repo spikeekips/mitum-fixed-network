@@ -22,11 +22,7 @@ func NewProposalHash(b []byte) (hash.Hash, error) {
 }
 
 func IsProposalHash(h hash.Hash) bool {
-	if h.Hint() != ProposalHashHint {
-		return false
-	}
-
-	return true
+	return h.Hint() == ProposalHashHint
 }
 
 type Proposal struct {

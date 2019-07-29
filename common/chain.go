@@ -41,7 +41,7 @@ func (c *ChainChecker) New(ctx context.Context) *ChainChecker {
 	c.RLock()
 	defer c.RUnlock()
 
-	if ctx == nil {
+	if ctx == nil || ctx == context.TODO() {
 		ctx = c.originalCtx
 	}
 

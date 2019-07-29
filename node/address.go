@@ -26,9 +26,5 @@ func (ad Address) Equal(nad Address) bool {
 }
 
 func IsAddress(h Address) bool {
-	if h.Hint() != AddressHashHint {
-		return false
-	}
-
-	return true
+	return h.Hint() == AddressHashHint
 }

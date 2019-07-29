@@ -20,7 +20,7 @@ func (t *testReaderDaemon) TestNew() {
 	var wg sync.WaitGroup
 	wg.Add(count)
 
-	callback := func(v interface{}) error {
+	callback := func(interface{}) error {
 		defer wg.Done()
 
 		return nil

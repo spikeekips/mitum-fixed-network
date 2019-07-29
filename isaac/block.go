@@ -19,11 +19,7 @@ func NewBlockHash(b []byte) (hash.Hash, error) {
 }
 
 func IsBlockHash(h hash.Hash) bool {
-	if h.Hint() != BlockHashHint {
-		return false
-	}
-
-	return true
+	return h.Hint() == BlockHashHint
 }
 
 // TODO create func to check block hash

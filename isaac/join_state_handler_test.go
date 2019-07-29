@@ -184,7 +184,7 @@ func (t *testJoinStateHandler) TestActivateDeactivate() {
 	// after Deactivate(), timer should be stopped
 	select {
 	case <-time.After(time.Millisecond * 100):
-	case _ = <-js.nt.(*network.ChannelNetwork).Reader():
+	case <-js.nt.(*network.ChannelNetwork).Reader():
 		t.Error(errors.New("timer should be stopped"))
 		return
 	}

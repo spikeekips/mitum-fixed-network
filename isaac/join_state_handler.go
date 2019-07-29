@@ -99,7 +99,7 @@ func (js *JoinStateHandler) IsStopped() bool {
 	return !js.started
 }
 
-func (js *JoinStateHandler) Activate(sct StateContext) error {
+func (js *JoinStateHandler) Activate(StateContext) error {
 	_ = js.stopTimer()
 
 	js.Lock()
@@ -162,7 +162,7 @@ func (js *JoinStateHandler) stopTimer() error {
 
 func (js *JoinStateHandler) ReceiveProposal(proposal Proposal) error {
 	err := js.proposalChecker.
-		New(nil).
+		New(context.TODO()).
 		SetContext("proposal", proposal).
 		SetContext("lastINITVoteResult", js.compiler.LastINITVoteResult()).
 		Check()
@@ -177,7 +177,7 @@ func (js *JoinStateHandler) ReceiveProposal(proposal Proposal) error {
 
 func (js *JoinStateHandler) ReceiveVoteResult(vr VoteResult) error {
 	err := js.voteResultChecker.
-		New(nil).
+		New(context.TODO()).
 		SetContext("vr", vr).
 		SetContext("lastINITVoteResult", js.compiler.LastINITVoteResult()).
 		Check()
@@ -195,8 +195,6 @@ func (js *JoinStateHandler) ReceiveVoteResult(vr VoteResult) error {
 	} else {
 		return js.gotNotINITMajority(vr)
 	}
-
-	return nil
 }
 
 func (js *JoinStateHandler) broadcastINITBallot(common.Timer) error {
@@ -285,7 +283,12 @@ func (js *JoinStateHandler) gotINITMajority(vr VoteResult) error {
 	switch {
 	case diff == 2: // network already stores 1 higher block
 		// NOTE trying to catch up the latest vote result
-		go js.catchUp(vr)
+		go func() {
+			if err := js.catchUp(vr); err != nil {
+				js.Log().Error("failed to catchup", "error", err)
+			}
+		}()
+
 		return nil
 	case diff == 1: // expected; move to consensus
 		js.Log().Debug("got expected VoteResult; move to consensus", "vr", vr)

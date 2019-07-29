@@ -56,7 +56,7 @@ func NewProposalCheckerConsensus(homeState *HomeState) *common.ChainChecker {
 	)
 }
 
-func (pc ProposalChecker) saveProposal(c *common.ChainChecker) error {
+func (pc ProposalChecker) saveProposal(*common.ChainChecker) error {
 	// TODO
 
 	return nil
@@ -139,7 +139,7 @@ func (pc ProposalChecker) checkHeightAndRoundWithLastINITVoteResult(c *common.Ch
 	return nil
 }
 
-func (pc ProposalChecker) checkProposerIsValid(c *common.ChainChecker) error {
+func (pc ProposalChecker) checkProposerIsValid(*common.ChainChecker) error {
 	// TODO
 
 	return nil

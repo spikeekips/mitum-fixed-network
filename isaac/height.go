@@ -2,6 +2,7 @@ package isaac
 
 import (
 	"github.com/spikeekips/mitum/common"
+	"golang.org/x/xerrors"
 )
 
 type Height struct {
@@ -10,6 +11,14 @@ type Height struct {
 
 func NewBlockHeight(height uint64) Height {
 	return Height{Big: common.NewBigFromUint64(height)}
+}
+
+func (ht Height) IsValid() error {
+	if ht.Big.UnderZero() {
+		return xerrors.Errorf("height should be over zero; %q", ht.String())
+	}
+
+	return nil
 }
 
 func (ht Height) Equal(height Height) bool {

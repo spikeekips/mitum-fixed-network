@@ -8,6 +8,7 @@ require (
 	github.com/btcsuite/btcutil v0.0.0-20190112041146-bf1e1be93589
 	github.com/ethereum/go-ethereum v1.9.0
 	github.com/inconshreveable/log15 v0.0.0-20180818164646-67afb5ed74ec
+	github.com/kr/pretty v0.1.0 // indirect
 	github.com/mattn/go-colorable v0.1.2 // indirect
 	github.com/mattn/go-isatty v0.0.8
 	github.com/satori/go.uuid v1.2.0

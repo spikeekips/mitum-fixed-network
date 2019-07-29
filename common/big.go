@@ -170,6 +170,10 @@ func (a Big) IsZero() bool {
 	return a.Int.Cmp(ZeroBigInt) == 0
 }
 
+func (a Big) UnderZero() bool {
+	return a.Int.Cmp(ZeroBigInt) < 0
+}
+
 func (a Big) Cmp(v interface{}) int {
 	n, err := FromValue(v)
 	if err != nil {

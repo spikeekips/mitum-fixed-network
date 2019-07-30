@@ -2,7 +2,9 @@ package main
 
 import (
 	"encoding/json"
+	"fmt"
 	"io/ioutil"
+	"sort"
 	"time"
 
 	"golang.org/x/xerrors"
@@ -14,6 +16,7 @@ import (
 type Config struct {
 	Global *NodeConfig
 	Nodes  map[string]*NodeConfig
+	blocks map[string]isaac.Block
 }
 
 func LoadConfig(f string) (*Config, error) {
@@ -61,18 +64,69 @@ func (cn *Config) IsValid() error {
 		}
 	}
 
+	inputs := cn.Global.Blocks[:]
+	sort.Slice(
+		inputs,
+		func(i, j int) bool {
+			switch (*inputs[i].Height).Cmp(*inputs[j].Height) {
+			case 0:
+				return *inputs[i].Round < *inputs[j].Round
+			case -1:
+				return true
+			case 1:
+				return false
+			}
+
+			return false
+		},
+	)
+
+	// check height is serialized
+	var b isaac.Block
+	if inputs[0].Height.Equal(isaac.GenesisHeight) {
+		b = NewBlock(*inputs[0].Height, *inputs[0].Round)
+		inputs = inputs[1:]
+	} else {
+		b = NewBlock(isaac.GenesisHeight, isaac.Round(0))
+	}
+
+	blocks := []isaac.Block{b}
+	for _, nextBlock := range inputs {
+		if (*nextBlock.Height).Cmp(b.Height()) < 1 {
+			return xerrors.Errorf(
+				"next height should be greater; previous=%q next=%q",
+				b.Height(),
+				nextBlock.Height,
+			)
+		}
+
+		diff := (*nextBlock.Height).Sub(b.Height()).Uint64()
+		if diff > 0 {
+			for i := uint64(0); i < diff-1; i++ {
+				b = isaac.NewRandomNextBlock(b)
+				blocks = append(blocks, b)
+			}
+		}
+
+		b = NewBlock(*nextBlock.Height, *nextBlock.Round)
+		blocks = append(blocks, b)
+
+		for _, b := range blocks {
+			fmt.Println(">>", b)
+		}
+	}
+
 	return nil
 }
 
 type NodeConfig struct {
-	Policy    *PolicyConfig `yaml:",omitempty"`
-	LastBlock *BlockConfig  `yaml:"last_block,omitempty"`
+	Policy *PolicyConfig  `yaml:",omitempty"`
+	Blocks []*BlockConfig `yaml:"blocks,omitempty"`
 }
 
 func defaultNodeConfig() *NodeConfig {
 	return &NodeConfig{
-		Policy:    defaultPolicyConfig(),
-		LastBlock: defaultBlockConfig(),
+		Policy: defaultPolicyConfig(),
 	}
 }
 
@@ -81,15 +135,7 @@ func (nc *NodeConfig) IsValid() error {
 		nc.Policy = defaultPolicyConfig()
 	}
 
-	if nc.LastBlock == nil {
-		nc.LastBlock = defaultBlockConfig()
-	}
-
 	if err := nc.Policy.IsValid(); err != nil {
-		return err
-	}
-
-	if err := nc.LastBlock.IsValid(); err != nil {
 		return err
 	}
 

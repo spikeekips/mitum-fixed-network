@@ -7,7 +7,6 @@ import (
 	"path/filepath"
 	"runtime/pprof"
 	"syscall"
-	"time"
 
 	"github.com/inconshreveable/log15"
 	"github.com/spf13/cobra"
@@ -19,6 +18,10 @@ import (
 	"github.com/spikeekips/mitum/network"
 	"github.com/spikeekips/mitum/node"
 	"github.com/spikeekips/mitum/seal"
+)
+
+var (
+	sigc chan os.Signal
 )
 
 var rootCmd = &cobra.Command{
@@ -86,22 +89,12 @@ var rootCmd = &cobra.Command{
 			log.Debug("cpuprofile enabled")
 		}
 
-		sigc := make(chan os.Signal, 1)
+		sigc = make(chan os.Signal, 1)
 		signal.Notify(
 			sigc,
 			syscall.SIGTERM,
 			syscall.SIGQUIT,
 		)
-
-		// exit-after
-		go func() {
-			if flagExitAfter < time.Nanosecond {
-				return
-			}
-
-			<-time.After(flagExitAfter)
-			sigc <- syscall.SIGINT // interrupt process by force after timeout
-		}()
 
 		go func() {
 			s := <-sigc

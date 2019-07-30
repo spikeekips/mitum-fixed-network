@@ -12,6 +12,7 @@ type ACCEPTBallotBody struct {
 func NewACCEPTBallot(
 	n node.Address,
 	lastBlock hash.Hash,
+	lastRound Round,
 	nextHeight Height,
 	nextBlock hash.Hash,
 	currentRound Round,
@@ -19,12 +20,13 @@ func NewACCEPTBallot(
 ) (Ballot, error) {
 	ib := BaseBallotBody{
 		node:      n,
+		stage:     StageACCEPT,
 		height:    nextHeight,
 		round:     currentRound,
 		proposal:  currentProposal,
 		block:     nextBlock,
 		lastBlock: lastBlock,
-		stage:     StageACCEPT,
+		lastRound: lastRound,
 	}
 
 	h, err := ib.makeHash()

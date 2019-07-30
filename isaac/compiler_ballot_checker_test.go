@@ -23,6 +23,7 @@ func (t *testCompilerBallotChecker) TestEmptyLastVoteResult() {
 	ballot, _ := NewINITBallot(
 		home.Address(),
 		lastBlock.Hash(),
+		lastBlock.Round(),
 		nextBlock.Height(),
 		nextBlock.Hash(),
 		nextBlock.Round(),
@@ -50,6 +51,7 @@ func (t *testCompilerBallotChecker) TestINITBallotHeightNotHigherThanHomeState()
 	ballot, _ := NewINITBallot(
 		home.Address(),
 		lastBlock.Hash(),
+		lastBlock.Round(),
 		prevBlock.Height(),
 		nextBlock.Hash(),
 		nextBlock.Round(),
@@ -66,32 +68,6 @@ func (t *testCompilerBallotChecker) TestINITBallotHeightNotHigherThanHomeState()
 	t.Contains(err.Error(), "lower ballot height")
 }
 
-func (t *testCompilerBallotChecker) TestINITBallotRoundNotHigherThanHomeState() {
-	home := node.NewRandomHome()
-	lastBlock := NewRandomBlock()
-	nextBlock := NewRandomNextBlock(lastBlock)
-
-	homeState := NewHomeState(home, lastBlock)
-
-	ballot, _ := NewINITBallot(
-		home.Address(),
-		lastBlock.Hash(),
-		nextBlock.Height(),
-		nextBlock.Hash(),
-		lastBlock.Round()-1,
-		lastBlock.Proposal(),
-	)
-
-	checker := NewCompilerBallotChecker(homeState)
-	err := checker.
-		New(context.TODO()).
-		SetContext("ballot", ballot).
-		SetContext("lastINITVoteResult", VoteResult{}).
-		SetContext("lastStagesVoteResult", VoteResult{}).
-		Check()
-	t.Contains(err.Error(), "lower ballot round")
-}
-
 func (t *testCompilerBallotChecker) TestINITBallotHeightNotHigherThanLastINITVoteResult() {
 	home := node.NewRandomHome()
 	lastBlock := NewRandomBlock()
@@ -102,6 +78,7 @@ func (t *testCompilerBallotChecker) TestINITBallotHeightNotHigherThanLastINITVot
 	ballot, _ := NewINITBallot(
 		home.Address(),
 		lastBlock.Hash(),
+		lastBlock.Round(),
 		lastBlock.Height(),
 		nextBlock.Hash(),
 		nextBlock.Round(),
@@ -136,6 +113,7 @@ func (t *testCompilerBallotChecker) TestSIGNBallotHeightNotSameWithLastINITVoteR
 	ballot, _ := NewSIGNBallot(
 		home.Address(),
 		lastBlock.Hash(),
+		lastBlock.Round(),
 		nextBlock.Height(),
 		nextBlock.Hash(),
 		nextBlock.Round(),
@@ -170,6 +148,7 @@ func (t *testCompilerBallotChecker) TestSIGNBallotRoundNotSameWithLastINITVoteRe
 	ballot, _ := NewSIGNBallot(
 		home.Address(),
 		lastBlock.Hash(),
+		lastBlock.Round(),
 		nextBlock.Height(),
 		nextBlock.Hash(),
 		nextBlock.Round(),

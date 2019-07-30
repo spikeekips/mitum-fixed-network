@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/spikeekips/mitum/common"
+	"github.com/spikeekips/mitum/hash"
 	"github.com/spikeekips/mitum/network"
 	"github.com/spikeekips/mitum/node"
 	"golang.org/x/xerrors"
@@ -155,7 +156,11 @@ func (cs *ConsensusStateHandler) ReceiveProposal(proposal Proposal) error {
 
 	// TODO validate proposal
 	var block Block
-	if block, err = cs.proposalValidator.NewBlock(proposal); err != nil {
+	if block, err = cs.proposalValidator.NewBlock(
+		proposal.Height(),
+		proposal.Round(),
+		proposal.Hash(),
+	); err != nil {
 		return err
 	}
 	// TODO prepare to store new block
@@ -164,6 +169,7 @@ func (cs *ConsensusStateHandler) ReceiveProposal(proposal Proposal) error {
 	ballot, err := NewSIGNBallot(
 		cs.homeState.Home().Address(),
 		cs.homeState.Block().Hash(),
+		cs.homeState.Block().Round(),
 		block.Height(),
 		block.Hash(),
 		block.Round(),
@@ -207,6 +213,7 @@ func (cs *ConsensusStateHandler) ReceiveVoteResult(vr VoteResult) error {
 }
 
 func (cs *ConsensusStateHandler) gotINITMajority(vr VoteResult) error {
+	// TODO check NilHash
 	_ = cs.stopTimer()
 
 	diff := vr.Height().Sub(cs.homeState.Block().Height()).Int64()
@@ -265,31 +272,59 @@ func (cs *ConsensusStateHandler) gotINITMajority(vr VoteResult) error {
 }
 
 func (cs *ConsensusStateHandler) gotNotINITMajority(vr VoteResult) error {
+	// TODO check NilHash
 	// TODO broadcast next stage ballot
 
-	var ballot Ballot
+	switch vr.Stage() {
+	case StageSIGN, StageACCEPT:
+	default:
+		return xerrors.Errorf("invalid stage found", "vr", vr)
+	}
+
+	if cs.proposalValidator.Validated(vr.Proposal()) {
+		cs.Log().Debug("proposal did not validated; validate it", "vr", vr)
+	}
+
+	var blockHash hash.Hash
+	if block, err := cs.proposalValidator.NewBlock(vr.Height(), vr.Round(), vr.Proposal()); err != nil {
+		cs.Log().Error("failed to make new block from proposal", "vr", vr, "error", err)
+	} else {
+		blockHash = block.Hash()
+	}
+
+	if !vr.Block().Equal(blockHash) {
+		cs.Log().Warn(
+			"block hash does not match",
+			"vr_block", vr.Block(),
+			"block", blockHash,
+			"vr", vr,
+		)
+	}
+
 	var err error
+	var ballot Ballot
 	switch vr.Stage() {
 	case StageSIGN:
 		ballot, err = NewACCEPTBallot(
 			cs.homeState.Home().Address(),
 			cs.homeState.Block().Hash(),
+			cs.homeState.Block().Round(),
 			vr.Height(),
-			vr.Block(),
+			blockHash,
 			vr.Round(),
 			vr.Proposal(),
 		)
 	case StageACCEPT:
+		// TODO fix this
 		ballot, err = NewINITBallot(
 			cs.homeState.Home().Address(),
 			cs.homeState.Block().Hash(),
+			Round(0), // NOTE initialize round to 0
 			vr.Height(),
-			vr.Block(),
+			blockHash,
 			vr.Round(),
 			vr.Proposal(),
 		)
-	default:
-		return xerrors.Errorf("invalid stage found", "vr", vr)
 	}
 	if err != nil {
 		return err
@@ -371,9 +406,10 @@ func (cs *ConsensusStateHandler) startNextRound(vr VoteResult) error {
 	ballot, err := NewINITBallot(
 		cs.homeState.Home().Address(),
 		cs.homeState.Block().Hash(),
+		cs.homeState.Block().Round(),
 		height,
 		vr.Block(),
-		vr.Round(),
+		vr.Round()+1,
 		vr.Proposal(),
 	)
 	if err != nil {

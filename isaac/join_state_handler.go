@@ -201,9 +201,10 @@ func (js *JoinStateHandler) broadcastINITBallot(common.Timer) error {
 	ballot, err := NewINITBallot(
 		js.homeState.Home().Address(),
 		js.homeState.PreviousBlock().Hash(),
+		js.homeState.PreviousBlock().Round(),
 		js.homeState.Block().Height(),
 		js.homeState.Block().Hash(),
-		js.homeState.Block().Round(),
+		Round(0),
 		js.homeState.Block().Proposal(),
 	)
 	if err != nil {

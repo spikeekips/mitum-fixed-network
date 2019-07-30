@@ -11,6 +11,7 @@ import (
 
 var (
 	zeroBody [100]byte = [100]byte{}
+	nilBody  [5]byte   = [5]byte{186, 47, 126, 25, 238}
 )
 
 type Hash struct {
@@ -32,6 +33,11 @@ func NewHash(hint string, body []byte) (Hash, error) {
 		body:   b,
 		length: len(body),
 	}, nil
+}
+
+func NilHash(hint string) Hash {
+	h, _ := NewHash(hint, nilBody[:])
+	return h
 }
 
 func (h Hash) EncodeRLP(w io.Writer) error {
@@ -66,6 +72,20 @@ func (h *Hash) DecodeRLP(s *rlp.Stream) error {
 func (h Hash) Empty() bool {
 	if len(h.hint) > 0 || h.body != zeroBody {
 		return false
+	}
+
+	return true
+}
+
+func (h Hash) IsNil() bool {
+	if len(h.hint) < 1 || h.length != len(nilBody) {
+		return false
+	}
+
+	for i, a := range nilBody {
+		if a != h.body[i] {
+			return false
+		}
 	}
 
 	return true

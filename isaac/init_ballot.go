@@ -11,20 +11,22 @@ type INITBallotBody struct {
 
 func NewINITBallot(
 	n node.Address,
-	lastBlock hash.Hash,
+	newBlock hash.Hash,
+	newRound Round,
 	nextHeight Height,
 	nextBlock hash.Hash,
 	nextRound Round,
-	nextProposal hash.Hash,
+	newProposal hash.Hash,
 ) (Ballot, error) {
 	ib := BaseBallotBody{
 		node:      n,
-		height:    nextHeight.Add(1),
-		round:     nextRound + 1,
-		proposal:  nextProposal,
-		block:     nextBlock,
-		lastBlock: lastBlock,
 		stage:     StageINIT,
+		height:    nextHeight.Add(1),
+		round:     nextRound,
+		proposal:  newProposal,
+		block:     nextBlock,
+		lastBlock: newBlock,
+		lastRound: newRound,
 	}
 
 	h, err := ib.makeHash()

@@ -1,5 +1,8 @@
 package isaac
 
+import "github.com/spikeekips/mitum/hash"
+
 type ProposalValidator interface {
-	NewBlock(Proposal) (Block, error)
+	Validated(hash.Hash /* Proposal.Hash() */) bool
+	NewBlock(Height, Round, hash.Hash /* Proposal.Hash() */) (Block, error)
 }

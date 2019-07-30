@@ -100,6 +100,10 @@ func (ib Ballot) LastBlock() hash.Hash {
 	return ib.body.LastBlock()
 }
 
+func (ib Ballot) LastRound() Round {
+	return ib.body.LastRound()
+}
+
 func (ib Ballot) IsValid() error {
 	if err := ib.BaseSeal.IsValid(); err != nil {
 		return err
@@ -143,10 +147,6 @@ func (ib Ballot) IsValid() error {
 		)
 	}
 
-	if ib.Round() < 1 {
-		return xerrors.Errorf("round should be greater than 0; round=%q", ib.Round())
-	}
-
 	h0, err := ib.body.makeHash()
 	if err != nil {
 		return err
@@ -161,12 +161,13 @@ type BallotBody interface {
 	seal.Body
 	makeHash() (hash.Hash, error)
 	Node() node.Address
+	Stage() Stage
 	Height() Height
 	Round() Round
-	Stage() Stage
 	Proposal() hash.Hash
 	Block() hash.Hash
 	LastBlock() hash.Hash
+	LastRound() Round
 }
 
 func IsBallotHash(h hash.Hash) bool {
@@ -176,24 +177,26 @@ func IsBallotHash(h hash.Hash) bool {
 type BaseBallotBody struct {
 	hash      hash.Hash
 	node      node.Address
+	stage     Stage
 	height    Height
 	round     Round
 	proposal  hash.Hash
 	block     hash.Hash
 	lastBlock hash.Hash
-	stage     Stage
+	lastRound Round
 }
 
 func (bbb BaseBallotBody) MarshalJSON() ([]byte, error) {
 	return json.Marshal(map[string]interface{}{
-		"hash":           bbb.hash,
-		"node":           bbb.node,
-		"height":         bbb.height,
-		"round":          bbb.round,
-		"proposal":       bbb.proposal,
-		"block":          bbb.block,
-		"previous_block": bbb.lastBlock,
-		"stage":          bbb.stage,
+		"hash":       bbb.hash,
+		"node":       bbb.node,
+		"stage":      bbb.stage,
+		"height":     bbb.height,
+		"round":      bbb.round,
+		"proposal":   bbb.proposal,
+		"block":      bbb.block,
+		"last_block": bbb.lastBlock,
+		"last_round": bbb.lastRound,
 	})
 }
 
@@ -214,16 +217,16 @@ func (bbb BaseBallotBody) Node() node.Address {
 	return bbb.node
 }
 
+func (bbb BaseBallotBody) Stage() Stage {
+	return bbb.stage
+}
+
 func (bbb BaseBallotBody) Height() Height {
 	return bbb.height
 }
 
 func (bbb BaseBallotBody) Round() Round {
 	return bbb.round
-}
-
-func (bbb BaseBallotBody) Stage() Stage {
-	return bbb.stage
 }
 
 func (bbb BaseBallotBody) Proposal() hash.Hash {
@@ -238,6 +241,10 @@ func (bbb BaseBallotBody) LastBlock() hash.Hash {
 	return bbb.lastBlock
 }
 
+func (bbb BaseBallotBody) LastRound() Round {
+	return bbb.lastRound
+}
+
 func (bbb BaseBallotBody) IsValid() error {
 	return nil
 }
@@ -246,19 +253,23 @@ func (bbb BaseBallotBody) EncodeRLP(w io.Writer) error {
 	return rlp.Encode(w, struct {
 		HS hash.Hash
 		N  node.Address
+		S  Stage
 		H  Height
 		R  Round
 		P  hash.Hash
 		B  hash.Hash
-		PR hash.Hash
+		LB hash.Hash
+		LR Round
 	}{
 		HS: bbb.hash,
 		N:  bbb.node,
+		S:  bbb.stage,
 		H:  bbb.height,
 		R:  bbb.round,
 		P:  bbb.proposal,
 		B:  bbb.block,
-		PR: bbb.lastBlock,
+		LB: bbb.lastBlock,
+		LR: bbb.lastRound,
 	})
 }
 
@@ -266,11 +277,13 @@ func (bbb *BaseBallotBody) DecodeRLP(s *rlp.Stream) error {
 	var body struct {
 		HS hash.Hash
 		N  node.Address
+		S  Stage
 		H  Height
 		R  Round
 		P  hash.Hash
 		B  hash.Hash
-		PR hash.Hash
+		LB hash.Hash
+		LR Round
 	}
 	if err := s.Decode(&body); err != nil {
 		return err
@@ -278,11 +291,13 @@ func (bbb *BaseBallotBody) DecodeRLP(s *rlp.Stream) error {
 
 	bbb.hash = body.HS
 	bbb.node = body.N
+	bbb.stage = body.S
 	bbb.height = body.H
 	bbb.round = body.R
 	bbb.proposal = body.P
 	bbb.block = body.B
-	bbb.lastBlock = body.PR
+	bbb.lastBlock = body.LB
+	bbb.lastRound = body.LR
 
 	return nil
 }
@@ -290,11 +305,13 @@ func (bbb *BaseBallotBody) DecodeRLP(s *rlp.Stream) error {
 func (bbb BaseBallotBody) makeHash() (hash.Hash, error) {
 	ib := BaseBallotBody{
 		node:      bbb.node,
+		stage:     bbb.stage,
 		height:    bbb.height,
 		round:     bbb.round,
 		proposal:  bbb.proposal,
 		block:     bbb.block,
 		lastBlock: bbb.lastBlock,
+		lastRound: bbb.lastRound,
 	}
 
 	b, err := rlp.EncodeToBytes(ib)

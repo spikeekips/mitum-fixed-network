@@ -3,6 +3,7 @@ package hash
 import (
 	"testing"
 
+	"github.com/btcsuite/btcutil/base58"
 	"github.com/ethereum/go-ethereum/rlp"
 	"github.com/stretchr/testify/suite"
 	"golang.org/x/xerrors"
@@ -75,6 +76,16 @@ func (t *testHash) TestUnmarshal() {
 	var uhash Hash
 	err := rlp.DecodeBytes(b, &uhash)
 	t.True(xerrors.Is(InvalidHashInputError, err))
+}
+
+func (t *testHash) TestNilHash() {
+	b := base58.Decode("N1LHASH")
+	t.Equal(nilBody[:], b)
+
+	h := NilHash("block")
+	t.NoError(h.IsValid())
+	t.True(h.IsNil())
+	t.Equal("block:N1LHASH", h.String())
 }
 
 func TestHash(t *testing.T) {

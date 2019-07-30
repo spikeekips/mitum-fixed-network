@@ -5,6 +5,10 @@ import (
 	"golang.org/x/xerrors"
 )
 
+var (
+	GenesisHeight Height = NewBlockHeight(0)
+)
+
 type Height struct {
 	common.Big
 }

@@ -12,6 +12,7 @@ type SIGNBallotBody struct {
 func NewSIGNBallot(
 	n node.Address,
 	lastBlock hash.Hash,
+	lastRound Round,
 	nextHeight Height,
 	nextBlock hash.Hash,
 	currentRound Round,
@@ -19,12 +20,13 @@ func NewSIGNBallot(
 ) (Ballot, error) {
 	ib := BaseBallotBody{
 		node:      n,
+		stage:     StageSIGN,
 		height:    nextHeight,
 		round:     currentRound,
 		proposal:  currentProposal,
 		block:     nextBlock,
 		lastBlock: lastBlock,
-		stage:     StageSIGN,
+		lastRound: lastRound,
 	}
 
 	h, err := ib.makeHash()

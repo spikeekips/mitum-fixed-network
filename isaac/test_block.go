@@ -30,9 +30,11 @@ func NewRandomBlock() Block {
 }
 
 func NewRandomNextBlock(bk Block) Block {
+	b, _ := rand.Int(rand.Reader, big.NewInt(27))
+
 	nbk, _ := NewBlock(
 		bk.Height().Add(1),
-		bk.Round()+1,
+		Round(uint64(b.Int64())),
 		NewRandomProposalHash(),
 	)
 

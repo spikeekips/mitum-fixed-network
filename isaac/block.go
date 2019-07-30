@@ -51,7 +51,7 @@ func NewBlock(height Height, round Round, proposal hash.Hash) (Block, error) {
 
 func NewBlockFromVoteResult(vr VoteResult) (Block, error) {
 	// TODO fix; it's just for testing
-	height, ok := vr.Height().SubOk(1)
+	height, ok := vr.Height().SubOK(1)
 	if !ok {
 		return Block{}, xerrors.Errorf("height of new block is under 0")
 	}

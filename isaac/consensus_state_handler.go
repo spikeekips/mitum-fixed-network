@@ -398,7 +398,7 @@ func (cs *ConsensusStateHandler) propose(vr VoteResult) error {
 
 func (cs *ConsensusStateHandler) startNextRound(vr VoteResult) error {
 	cs.Log().Debug("broadcast next round ballot", "vr", vr)
-	height, ok := vr.Height().SubOk(1)
+	height, ok := vr.Height().SubOK(1)
 	if !ok {
 		return xerrors.Errorf("height of next round is under zero", "height", vr.Height())
 	}

@@ -33,9 +33,19 @@ func (ht Height) Add(v interface{}) Height {
 	return Height{Big: ht.Big.Add(v)}
 }
 
-func (ht Height) SubOk(v interface{}) (Height, bool) {
-	s := ht.Big.Sub(v)
-	if s.Cmp(0) < 0 {
+func (ht Height) Sub(v interface{}) Height {
+	b, _ := ht.SubOK(v)
+	return b
+}
+
+func (ht Height) SubOK(v interface{}) (Height, bool) {
+	switch v.(type) {
+	case Height:
+		v = v.(Height).Big
+	}
+
+	s, t := ht.Big.SubOK(v)
+	if !t || s.Cmp(0) < 0 {
 		return Height{}, false
 	}
 

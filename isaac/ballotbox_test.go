@@ -167,8 +167,11 @@ func (t *testBallotbox) TestGotDrawAnotherNextBlock() {
 		t.Equal(StageSIGN, vr.Stage())
 	}
 
-	// vote by left with another next block
+	// vote by left with another next block; height and round are same, but
+	// block has is different
 	anotherNextBlock := NewRandomNextBlock(lastBlock)
+	anotherNextBlock.height = nextBlock.height
+	anotherNextBlock.round = nextBlock.round
 
 	var lastVR VoteResult
 	for i := uint(0); i < total-threshold+1; i++ {
@@ -218,6 +221,8 @@ func (t *testBallotbox) TestGotDrawAnotherProposal() {
 	// vote by left with same next block hash, but another proposal
 	anotherNextBlock := NewRandomNextBlock(lastBlock)
 	anotherNextBlock.hash = nextBlock.Hash()
+	anotherNextBlock.height = nextBlock.height
+	anotherNextBlock.round = nextBlock.round
 
 	var lastVR VoteResult
 	for i := uint(0); i < total-threshold+1; i++ {

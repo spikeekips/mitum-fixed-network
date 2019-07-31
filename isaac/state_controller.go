@@ -66,10 +66,10 @@ func (sc *StateController) Stop() error {
 		return err
 	}
 
-	close(sc.chanState)
-
 	sc.Lock()
 	defer sc.Unlock()
+
+	close(sc.chanState)
 
 	if err := sc.stateHandler.Deactivate(); err != nil {
 		return err
@@ -91,7 +91,7 @@ func (sc *StateController) loopState() {
 				"new_state", sct.State(),
 			)
 		} else {
-			sc.Log().Error(
+			sc.Log().Debug(
 				"state changed",
 				"current_state", current,
 				"new_state", sct.State(),

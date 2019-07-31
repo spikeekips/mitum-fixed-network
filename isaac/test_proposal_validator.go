@@ -19,6 +19,7 @@ func NewDummyProposalValidator() *DummyProposalValidator {
 	}
 }
 
+/*
 func (dp *DummyProposalValidator) isValid(proposal Proposal) error {
 	if err := proposal.IsValid(); err != nil {
 		return err
@@ -28,6 +29,7 @@ func (dp *DummyProposalValidator) isValid(proposal Proposal) error {
 
 	return nil
 }
+*/
 
 func (dp *DummyProposalValidator) Validated(proposal hash.Hash) bool {
 	dp.RLock()

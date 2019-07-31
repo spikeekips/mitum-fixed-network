@@ -3,6 +3,7 @@ package main
 import (
 	"encoding/json"
 	"io/ioutil"
+	"path/filepath"
 	"sort"
 	"time"
 
@@ -20,9 +21,10 @@ type Config struct {
 
 func LoadConfig(f string) (*Config, error) {
 	log.Debug("trying to load config", "file", f)
-	b, err := ioutil.ReadFile(f)
+
+	b, err := ioutil.ReadFile(filepath.Clean(f))
 	if err != nil {
-		return nil, xerrors.Errorf("failed to load config: %w", err)
+		return nil, xerrors.Errorf("failed to load config: %s, %w", f, err)
 	}
 
 	var config Config
@@ -87,7 +89,7 @@ func (cn *Config) IsValid() error {
 		diff := (*nextBlock.Height).Sub(b.Height()).Uint64()
 		if diff > 0 {
 			for i := uint64(0); i < diff-1; i++ {
-				b = isaac.NewRandomNextBlock(b)
+				b = NewBlock(b.Height().Add(1), isaac.Round(0))
 				blocks[b.Height().String()] = b
 			}
 		}
@@ -114,7 +116,7 @@ func (cn *Config) IsValid() error {
 }
 
 func (cn *Config) NumberOfNodes() uint {
-	if cn.NumberOfNodes_ != nil {
+	if cn.NumberOfNodes_ == nil {
 		return uint(len(cn.Nodes))
 	}
 
@@ -151,6 +153,7 @@ func (nc *NodeConfig) IsValid(global *NodeConfig) error {
 
 	if len(nc.Blocks) < 1 {
 		nc.blocks = globalBlocks
+		nc.Blocks = global.Blocks
 	} else if globalBlocks != nil {
 		inputs := nc.Blocks[:]
 		sort.Slice(
@@ -180,15 +183,24 @@ func (nc *NodeConfig) IsValid(global *NodeConfig) error {
 	return nil
 }
 
+func (nc *NodeConfig) Block(height isaac.Height) isaac.Block {
+	return nc.blocks[height.String()]
+}
+
+func (nc *NodeConfig) LastBlock() isaac.Block {
+	height := *nc.Blocks[len(nc.Blocks)-1].Height
+	return nc.blocks[height.String()]
+}
+
 type PolicyConfig struct {
-	Threshold                         *uint          `yaml:",omitempty"`
+	Threshold                         *float64       `yaml:",omitempty"`
 	IntervalBroadcastINITBallotInJoin *time.Duration `yaml:"interval_broadcast_init_ballot_in_join,omitempty"`
 	TimeoutWaitVoteResultInJoin       *time.Duration `yaml:"timeout_wait_vote_result_in_join,omitempty"`
 	TimeoutWaitBallot                 *time.Duration `yaml:"timeout_wait_ballot,omitempty"`
 }
 
 func defaultPolicyConfig() *PolicyConfig {
-	th := uint(67)
+	th := float64(67)
 	intervalBroadcastINITBallotInJoin := time.Second * 1
 	timeoutWaitVoteResultInJoin := time.Second * 3
 	timeoutWaitBallot := time.Second * 3
@@ -233,17 +245,7 @@ type BlockConfig struct {
 	Round  *isaac.Round
 }
 
-func defaultBlockConfig() *BlockConfig {
-	height := isaac.NewBlockHeight(33)
-	round := isaac.Round(0)
-
-	return &BlockConfig{
-		Height: &height,
-		Round:  &round,
-	}
-}
-
-func (bc *BlockConfig) IsValid(global *BlockConfig) error {
+func (bc *BlockConfig) IsValid(*BlockConfig) error {
 	if bc.Height == nil {
 		return xerrors.Errorf("height is empty")
 	}

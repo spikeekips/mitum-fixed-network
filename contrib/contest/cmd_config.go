@@ -39,6 +39,11 @@ var configFullCmd = &cobra.Command{
 		}
 
 		b, err := yaml.Marshal(config)
+		if err != nil {
+			cmd.Println("Error:", err.Error())
+			os.Exit(1)
+		}
+
 		fmt.Println("-x" + strings.Repeat("-", int(TermWidth())-2))
 		fmt.Println(string(bytes.TrimSpace(b)))
 		fmt.Println(strings.Repeat("-", int(TermWidth())-2) + "x-")

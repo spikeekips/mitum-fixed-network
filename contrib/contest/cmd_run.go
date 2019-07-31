@@ -13,6 +13,13 @@ var runCmd = &cobra.Command{
 	Short: "run contest",
 	Args:  cobra.ExactArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
+		if cmd.Flags().Changed("number-of-nodes") {
+			if flagNumberOfNodes < 1 {
+				cmd.Println("Error: `--number-of-nodes` should be greater than zero")
+				os.Exit(1)
+			}
+		}
+
 		log.Info("contest started")
 		defer func() {
 			log.Info("contest stopped")
@@ -22,6 +29,10 @@ var runCmd = &cobra.Command{
 		if err != nil {
 			cmd.Println("Error:", err.Error())
 			os.Exit(1)
+		}
+
+		if flagNumberOfNodes > 0 {
+			config.NumberOfNodes_ = &flagNumberOfNodes
 		}
 
 		log.Debug("config loaded", "config", config)
@@ -35,8 +46,9 @@ var runCmd = &cobra.Command{
 			sigc <- syscall.SIGINT // interrupt process by force after timeout
 		}()
 
-		if err := run(config); err != nil {
+		if err := run(cmd, config); err != nil {
 			printError(cmd, err)
+			os.Exit(1)
 		}
 	},
 }

@@ -14,7 +14,7 @@ func run(cmd *cobra.Command, config *Config) error {
 
 	defer func() {
 		if err := nodes.Stop(); err != nil {
-			cmd.Println("Error: failed to stop nodes: %s", err.Error())
+			cmd.Println("Error: failed to stop nodes:", err.Error())
 			os.Exit(1)
 		}
 	}()

@@ -124,6 +124,7 @@ func (js *JoinStateHandler) Activate(StateContext) error {
 
 			return js.intervalBroadcastINITBallot
 		})
+	js.timer.SetLogContext(nil, "node", js.homeState.Home().Alias())
 	if err := js.timer.Start(); err != nil {
 		return err
 	}
@@ -201,11 +202,11 @@ func (js *JoinStateHandler) broadcastINITBallot(common.Timer) error {
 	ballot, err := NewINITBallot(
 		js.homeState.Home().Address(),
 		js.homeState.PreviousBlock().Hash(),
-		js.homeState.PreviousBlock().Round(),
-		js.homeState.Block().Height(),
 		js.homeState.Block().Hash(),
-		Round(0),
+		js.homeState.Block().Round(),
 		js.homeState.Block().Proposal(),
+		js.homeState.Block().Height().Add(1),
+		Round(0),
 	)
 	if err != nil {
 		return err
@@ -292,6 +293,28 @@ func (js *JoinStateHandler) gotINITMajority(vr VoteResult) error {
 
 		return nil
 	case diff == 1: // expected; move to consensus
+		if !vr.LastBlock().Equal(js.homeState.Block().Hash()) {
+			js.Log().Debug(
+				"block does not match; move to sync",
+				"expected_block", js.homeState.Block().Hash(),
+				"block_vr", vr.LastBlock(),
+				"vr", vr,
+			)
+			js.chanState <- NewStateContext(node.StateSync)
+			return nil
+		}
+
+		if vr.LastRound() != js.homeState.Block().Round() {
+			js.Log().Debug(
+				"round does not match; move to sync",
+				"expected_round", js.homeState.Block().Hash(),
+				"round_vr", vr.LastRound(),
+				"vr", vr,
+			)
+			js.chanState <- NewStateContext(node.StateSync)
+			return nil
+		}
+
 		js.Log().Debug("got expected VoteResult; move to consensus", "vr", vr)
 		js.chanState <- NewStateContext(node.StateConsensus).
 			SetContext("vr", vr)

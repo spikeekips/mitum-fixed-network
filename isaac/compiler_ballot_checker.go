@@ -5,6 +5,7 @@ import (
 
 	"golang.org/x/xerrors"
 
+	"github.com/inconshreveable/log15"
 	"github.com/spikeekips/mitum/common"
 )
 
@@ -32,31 +33,7 @@ func (cbc CompilerBallotChecker) checkHeightAndRound(c *common.ChainChecker) err
 		return err
 	}
 
-	// NOTE ballot.Height() should be greater than homeState.Block().Height()
-	if ballot.Height().Cmp(cbc.homeState.Block().Height()) < 1 {
-		err := xerrors.Errorf("lower ballot height")
-		c.Log().Error(
-			"ballot.Height() should be greater than homeState.Block().Height(); ignore this ballot",
-			"ballot_height", ballot.Height(),
-			"height", cbc.homeState.Block().Height(),
-		)
-
-		return err
-	}
-
-	// NOTE ballot.Round() should be greater than homeState.Block().Round()
-	if ballot.LastBlock().Equal(cbc.homeState.Block().Hash()) {
-		if ballot.LastRound() != cbc.homeState.Block().Round() {
-			err := xerrors.Errorf("ballot last round does not match with last block")
-			c.Log().Error(
-				"ballot.Round() should be same with homeState.Block().Round(); ignore this ballot",
-				"ballot_round", ballot.Round(),
-				"round", cbc.homeState.Block().Round(),
-			)
-
-			return err
-		}
-	}
+	log_ := c.Log().New(log15.Ctx{"ballot": ballot.Hash()})
 
 	// NOTE ballot.Height() and ballot.Round() should be same than last init ballot
 	var lastINITVoteResult VoteResult
@@ -69,7 +46,7 @@ func (cbc CompilerBallotChecker) checkHeightAndRound(c *common.ChainChecker) err
 	if lastINITVoteResult.IsFinished() {
 		if ballot.Height().Cmp(lastINITVoteResult.Height()) < 0 {
 			err := xerrors.Errorf("lower ballot height")
-			c.Log().Error(
+			log_.Error(
 				"ballot.Height() should be greater than last init ballot; ignore this ballot",
 				"ballot_height", ballot.Height(),
 				"height", lastINITVoteResult.Height(),
@@ -91,13 +68,27 @@ func (cbc CompilerBallotChecker) checkINIT(c *common.ChainChecker) error {
 		return nil
 	}
 
+	log_ := c.Log().New(log15.Ctx{"ballot": ballot.Hash()})
+
+	// NOTE ballot.Height() should be greater than homeState.Block().Height()
+	if sub := ballot.Height().Sub(cbc.homeState.Block().Height()); sub.Int64() < 2 {
+		err := xerrors.Errorf("lower ballot height")
+		log_.Error(
+			"ballot.Height() should be greater than homeState.Block().Height() + 2; ignore this ballot",
+			"ballot_height", ballot.Height(),
+			"height", cbc.homeState.Block().Height(),
+		)
+
+		return err
+	}
+
 	var lastINITVoteResult VoteResult
 	if err := c.ContextValue("lastINITVoteResult", &lastINITVoteResult); err != nil {
 		return err
 	}
 
 	if !lastINITVoteResult.IsFinished() {
-		c.Log().Debug("lastINITVoteResult is empty; ignore this ballot")
+		c.Log().Debug("lastINITVoteResult is empty")
 		return nil
 	}
 
@@ -107,7 +98,7 @@ func (cbc CompilerBallotChecker) checkINIT(c *common.ChainChecker) error {
 	if ballot.Height().Equal(lastHeight) { // this should be draw; round should be greater
 		if ballot.Round() <= lastRound {
 			err := xerrors.Errorf("ballot.Round() should be greater than lastINITVoteResult")
-			c.Log().Error(
+			log_.Error(
 				"compared with lastINITVoteResult",
 				"last_height", lastHeight,
 				"last_round", lastRound,
@@ -117,9 +108,9 @@ func (cbc CompilerBallotChecker) checkINIT(c *common.ChainChecker) error {
 			)
 			return err
 		}
-	} else if ballot.Height().Cmp(lastHeight) <= 1 {
+	} else if ballot.Height().Cmp(lastHeight) < 1 {
 		err := xerrors.Errorf("ballot.Height() should be greater than lastINITVoteResult")
-		c.Log().Error(
+		log_.Error(
 			"compared with lastINITVoteResult",
 			"last_height", lastHeight,
 			"last_round", lastRound,
@@ -144,6 +135,34 @@ func (cbc CompilerBallotChecker) checkNotINIT(c *common.ChainChecker) error {
 		return nil
 	}
 
+	log_ := c.Log().New(log15.Ctx{"ballot": ballot.Hash()})
+
+	// NOTE ballot.Height() should be greater than homeState.Block().Height()
+	if sub := ballot.Height().Sub(cbc.homeState.Block().Height()); sub.Int64() < 1 {
+		err := xerrors.Errorf("lower ballot height")
+		log_.Error(
+			"ballot.Height() should be greater than homeState.Block().Height() + 1; ignore this ballot",
+			"ballot_height", ballot.Height(),
+			"height", cbc.homeState.Block().Height(),
+		)
+
+		return err
+	}
+
+	// NOTE ballot.Round() should be greater than homeState.Block().Round()
+	if ballot.LastBlock().Equal(cbc.homeState.Block().Hash()) {
+		if ballot.LastRound() != cbc.homeState.Block().Round() {
+			err := xerrors.Errorf("ballot last round does not match with last block")
+			log_.Error(
+				"ballot.Round() should be same with homeState.Block().Round(); ignore this ballot",
+				"ballot_round", ballot.Round(),
+				"round", cbc.homeState.Block().Round(),
+			)
+
+			return err
+		}
+	}
+
 	var lastINITVoteResult VoteResult
 	if err := c.ContextValue("lastINITVoteResult", &lastINITVoteResult); err != nil {
 		return err
@@ -153,7 +172,7 @@ func (cbc CompilerBallotChecker) checkNotINIT(c *common.ChainChecker) error {
 	// ignored
 	if !lastINITVoteResult.IsFinished() {
 		err := xerrors.Errorf("lastINITVoteResult is empty")
-		c.Log().Error("lastINITVoteResult is empty; ignore this ballot")
+		log_.Error("lastINITVoteResult is empty; ignore this ballot")
 		return err
 	}
 
@@ -161,7 +180,7 @@ func (cbc CompilerBallotChecker) checkNotINIT(c *common.ChainChecker) error {
 	// lastINITVoteResult.Height()
 	if !ballot.Height().Equal(lastINITVoteResult.Height()) {
 		err := xerrors.Errorf("lower ballot height")
-		c.Log().Error(
+		log_.Error(
 			"ballot.Height() should be same with last init ballot; ignore this ballot",
 			"ballot_height", ballot.Height(),
 			"height", lastINITVoteResult.Height(),
@@ -173,7 +192,7 @@ func (cbc CompilerBallotChecker) checkNotINIT(c *common.ChainChecker) error {
 	// lastINITVoteResult.Round()
 	if ballot.Round() != lastINITVoteResult.Round() {
 		err := xerrors.Errorf("lower ballot round")
-		c.Log().Error(
+		log_.Error(
 			"ballot.Round() should be same with last init ballot; ignore this ballot",
 			"ballot_round", ballot.Round(),
 			"round", lastINITVoteResult.Round(),

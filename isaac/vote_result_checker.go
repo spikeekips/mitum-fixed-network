@@ -17,7 +17,7 @@ func NewJoinVoteResultChecker(homeState *HomeState) *common.ChainChecker {
 	}
 
 	return common.NewChainChecker(
-		"vote-result-checker",
+		"vote-result-checker-join",
 		context.Background(),
 		vrc.checkFinished,
 		vrc.checkHeightAndRound,
@@ -32,7 +32,7 @@ func NewConsensusVoteResultChecker(homeState *HomeState) *common.ChainChecker {
 	}
 
 	return common.NewChainChecker(
-		"vote-result-checker",
+		"vote-result-checker-consensus",
 		context.Background(),
 		vrc.checkFinished,
 		vrc.checkHeightAndRound,
@@ -65,7 +65,6 @@ func (vrc VoteResultChecker) checkHeightAndRound(c *common.ChainChecker) error {
 	}
 
 	lastHeight := vrc.homeState.Block().Height()
-	lastRound := vrc.homeState.Block().Round()
 
 	// NOTE VoteResult.Height() should be greater than lastHeight
 	if vr.Height().Cmp(lastHeight) < 1 {
@@ -73,15 +72,6 @@ func (vrc VoteResultChecker) checkHeightAndRound(c *common.ChainChecker) error {
 			"VoteResult.Height() should be greater than lastHeight; VoteResult=%q lastHeight=%q",
 			vr.Height(),
 			lastHeight,
-		)
-	}
-
-	// NOTE VoteResult.Round() should be greater than lastRound
-	if vr.Round() <= lastRound {
-		return xerrors.Errorf(
-			"VoteResult.Round() should be greater than lastRound; VoteResult=%q lastRound=%q",
-			vr.Round(),
-			lastRound,
 		)
 	}
 

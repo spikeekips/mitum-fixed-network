@@ -21,11 +21,11 @@ func (t *testINITBallotBody) TestNew() {
 	ballot, err := NewINITBallot(
 		home.Address(),
 		lastBlock.Hash(),
-		lastBlock.Round(),
-		nextBlock.Height(),
 		nextBlock.Hash(),
-		Round(1),
+		nextBlock.Round(),
 		nextBlock.Proposal(),
+		nextBlock.Height().Add(1),
+		Round(1),
 	)
 	t.NoError(err)
 

@@ -55,6 +55,7 @@ func (cm *Compiler) Vote(ballot Ballot) (VoteResult, error) {
 		ballot.Stage(),
 		ballot.Block(),
 		ballot.LastBlock(),
+		ballot.LastRound(),
 		ballot.Proposal(),
 	)
 	if err != nil {

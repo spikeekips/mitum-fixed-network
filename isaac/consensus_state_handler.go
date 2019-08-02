@@ -6,7 +6,6 @@ import (
 	"time"
 
 	"github.com/spikeekips/mitum/common"
-	"github.com/spikeekips/mitum/hash"
 	"github.com/spikeekips/mitum/network"
 	"github.com/spikeekips/mitum/node"
 	"golang.org/x/xerrors"
@@ -264,6 +263,8 @@ func (cs *ConsensusStateHandler) gotINITMajority(vr VoteResult) error {
 		return err
 	}
 
+	cs.Log().Debug("new block created", "block", block, "vr", vr)
+
 	_ = cs.homeState.SetBlock(block)
 
 	cs.Log().Debug("new block from VoteResult saved", "block", block)
@@ -285,23 +286,21 @@ func (cs *ConsensusStateHandler) gotNotINITMajority(vr VoteResult) error {
 		cs.Log().Debug("proposal did not validated; validate it", "vr", vr)
 	}
 
-	var blockHash hash.Hash
-	if block, err := cs.proposalValidator.NewBlock(vr.Height(), vr.Round(), vr.Proposal()); err != nil {
+	block, err := cs.proposalValidator.NewBlock(vr.Height(), vr.Round(), vr.Proposal())
+	if err != nil {
 		cs.Log().Error("failed to make new block from proposal", "vr", vr, "error", err)
-	} else {
-		blockHash = block.Hash()
+		return err
 	}
 
-	if !vr.Block().Equal(blockHash) {
+	if !vr.Block().Equal(block.Hash()) {
 		cs.Log().Warn(
 			"block hash does not match",
 			"vr_block", vr.Block(),
-			"block", blockHash,
+			"block", block.Hash(),
 			"vr", vr,
 		)
 	}
 
-	var err error
 	var ballot Ballot
 	switch vr.Stage() {
 	case StageSIGN:
@@ -310,7 +309,7 @@ func (cs *ConsensusStateHandler) gotNotINITMajority(vr VoteResult) error {
 			cs.homeState.Block().Hash(),
 			cs.homeState.Block().Round(),
 			vr.Height(),
-			blockHash,
+			block.Hash(),
 			vr.Round(),
 			vr.Proposal(),
 		)
@@ -319,11 +318,11 @@ func (cs *ConsensusStateHandler) gotNotINITMajority(vr VoteResult) error {
 		ballot, err = NewINITBallot(
 			cs.homeState.Home().Address(),
 			cs.homeState.Block().Hash(),
-			Round(0), // NOTE initialize round to 0
-			vr.Height(),
-			blockHash,
-			vr.Round(),
-			vr.Proposal(),
+			block.Hash(),
+			block.Round(),
+			block.Proposal(),
+			block.Height().Add(1),
+			Round(0),
 		)
 	}
 	if err != nil {
@@ -398,19 +397,15 @@ func (cs *ConsensusStateHandler) propose(vr VoteResult) error {
 
 func (cs *ConsensusStateHandler) startNextRound(vr VoteResult) error {
 	cs.Log().Debug("broadcast next round ballot", "vr", vr)
-	height, ok := vr.Height().SubOK(1)
-	if !ok {
-		return xerrors.Errorf("height of next round is under zero", "height", vr.Height())
-	}
 
 	ballot, err := NewINITBallot(
 		cs.homeState.Home().Address(),
+		cs.homeState.PreviousBlock().Hash(),
 		cs.homeState.Block().Hash(),
 		cs.homeState.Block().Round(),
-		height,
-		vr.Block(),
+		cs.homeState.Block().Proposal(),
+		vr.Height(),
 		vr.Round()+1,
-		vr.Proposal(),
 	)
 	if err != nil {
 		return err
@@ -441,6 +436,7 @@ func (cs *ConsensusStateHandler) nextRoundTimer(name string, vr VoteResult) erro
 			return cs.startNextRound(vr)
 		},
 	)
+	cs.timer.SetLogContext(nil, "node", cs.homeState.Home().Alias())
 	if err := cs.timer.Start(); err != nil {
 		return err
 	}

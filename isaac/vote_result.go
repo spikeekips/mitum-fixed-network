@@ -38,6 +38,7 @@ type VoteResult struct {
 	proposal  hash.Hash
 	block     hash.Hash
 	lastBlock hash.Hash
+	lastRound Round
 	records   []Record
 	agreement Agreement
 	closed    bool
@@ -115,6 +116,15 @@ func (vr VoteResult) SetLastBlock(lastBlock hash.Hash) VoteResult {
 	return vr
 }
 
+func (vr VoteResult) LastRound() Round {
+	return vr.lastRound
+}
+
+func (vr VoteResult) SetLastRound(lastRound Round) VoteResult {
+	vr.lastRound = lastRound
+	return vr
+}
+
 func (vr VoteResult) SetAgreement(agreement Agreement) VoteResult {
 	vr.agreement = agreement
 	return vr
@@ -144,6 +154,7 @@ func (vr VoteResult) MarshalJSON() ([]byte, error) {
 		"agreement":  vr.agreement,
 		"closed":     vr.closed,
 		"last_block": vr.lastBlock,
+		"last_round": vr.lastRound,
 	})
 }
 

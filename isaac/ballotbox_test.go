@@ -27,6 +27,7 @@ func (t *testBallotbox) vote(
 		stage,
 		nextBlock.Hash(),
 		lastBlock.Hash(),
+		lastBlock.Round(),
 		nextBlock.Proposal(),
 	)
 }

@@ -23,11 +23,11 @@ func (t *testCompilerBallotChecker) TestEmptyLastVoteResult() {
 	ballot, _ := NewINITBallot(
 		home.Address(),
 		lastBlock.Hash(),
-		lastBlock.Round(),
-		nextBlock.Height(),
 		nextBlock.Hash(),
 		nextBlock.Round(),
-		lastBlock.Proposal(),
+		nextBlock.Proposal(),
+		nextBlock.Height().Add(1),
+		Round(1),
 	)
 
 	checker := NewCompilerBallotChecker(homeState)
@@ -42,8 +42,7 @@ func (t *testCompilerBallotChecker) TestEmptyLastVoteResult() {
 
 func (t *testCompilerBallotChecker) TestINITBallotHeightNotHigherThanHomeState() {
 	home := node.NewRandomHome()
-	prevBlock := NewRandomBlock()
-	lastBlock := NewRandomNextBlock(prevBlock)
+	lastBlock := NewRandomBlock()
 	nextBlock := NewRandomNextBlock(lastBlock)
 
 	homeState := NewHomeState(home, lastBlock)
@@ -51,11 +50,11 @@ func (t *testCompilerBallotChecker) TestINITBallotHeightNotHigherThanHomeState()
 	ballot, _ := NewINITBallot(
 		home.Address(),
 		lastBlock.Hash(),
-		lastBlock.Round(),
-		prevBlock.Height(),
 		nextBlock.Hash(),
 		nextBlock.Round(),
-		lastBlock.Proposal(),
+		nextBlock.Proposal(),
+		nextBlock.Height(),
+		Round(0),
 	)
 
 	checker := NewCompilerBallotChecker(homeState)
@@ -68,30 +67,30 @@ func (t *testCompilerBallotChecker) TestINITBallotHeightNotHigherThanHomeState()
 	t.Contains(err.Error(), "lower ballot height")
 }
 
-func (t *testCompilerBallotChecker) TestINITBallotHeightNotHigherThanLastINITVoteResult() {
+func (t *testCompilerBallotChecker) TestINITBallotHeightLowerThanLastINITVoteResult() {
 	home := node.NewRandomHome()
 	lastBlock := NewRandomBlock()
 	nextBlock := NewRandomNextBlock(lastBlock)
 
 	homeState := NewHomeState(home, lastBlock)
 
-	ballot, _ := NewINITBallot(
-		home.Address(),
-		lastBlock.Hash(),
-		lastBlock.Round(),
-		lastBlock.Height(),
-		nextBlock.Hash(),
-		nextBlock.Round(),
-		lastBlock.Proposal(),
-	)
-
 	lastINITVoteResult := NewVoteResult(
-		nextBlock.Height().Add(1),
-		nextBlock.Round(),
+		lastBlock.Height(),
+		lastBlock.Round(),
 		StageINIT,
 	)
 	lastINITVoteResult = lastINITVoteResult.
 		SetAgreement(Majority)
+
+	ballot, _ := NewINITBallot(
+		home.Address(),
+		lastBlock.Hash(),
+		nextBlock.Hash(),
+		nextBlock.Round(),
+		nextBlock.Proposal(),
+		nextBlock.Height().Sub(1),
+		Round(0),
+	)
 
 	checker := NewCompilerBallotChecker(homeState)
 	err := checker.

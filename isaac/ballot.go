@@ -123,8 +123,6 @@ func (ib Ballot) IsValid() error {
 
 	if err := ib.Proposal().IsValid(); err != nil {
 		return err
-	} else if !IsProposalHash(ib.Proposal()) {
-		return xerrors.Errorf("proposal is not proposal hash; proposal=%q", ib.Proposal())
 	}
 
 	if err := ib.Block().IsValid(); err != nil {

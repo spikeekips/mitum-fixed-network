@@ -11,7 +11,6 @@ import (
 
 type StateController struct {
 	sync.RWMutex
-	*common.Logger
 	*common.ReaderDaemon
 	homeState        *HomeState
 	compiler         *Compiler
@@ -33,7 +32,6 @@ func NewStateController(
 ) *StateController {
 	chanState := make(chan StateContext)
 	sc := &StateController{
-		Logger:           common.NewLogger(log, "module", "state-controller"),
 		homeState:        homeState,
 		compiler:         compiler,
 		chanState:        chanState,
@@ -43,6 +41,7 @@ func NewStateController(
 		stoppedHandler:   stoppedHandler.SetChanState(chanState),
 	}
 	sc.ReaderDaemon = common.NewReaderDaemon(false, 0, sc.receiveMessage)
+	sc.ReaderDaemon.Logger = common.NewLogger(log, "module", "state-controller")
 	return sc
 }
 
@@ -130,7 +129,7 @@ func (sc *StateController) setState(sct StateContext) error {
 	case node.StateStopped:
 		handler = sc.stoppedHandler
 	default:
-		return xerrors.Errorf("handler not found for state; state=%q", sct.State())
+		return xerrors.Errorf("handler not found for state; state=%v", sct.State())
 	}
 
 	if err := handler.Activate(sct); err != nil {

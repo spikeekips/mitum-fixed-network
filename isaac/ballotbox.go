@@ -32,6 +32,7 @@ func (bb *Ballotbox) Vote(
 	stage Stage,
 	block hash.Hash,
 	lastBlock hash.Hash,
+	lastRound Round,
 	proposal hash.Hash,
 ) (VoteResult, error) {
 	bb.Lock()
@@ -50,7 +51,7 @@ func (bb *Ballotbox) Vote(
 		bb.voted[key] = rs
 	}
 
-	if err := rs.Vote(n, block, lastBlock, proposal); err != nil {
+	if err := rs.Vote(n, block, lastBlock, lastRound, proposal); err != nil {
 		return VoteResult{}, err
 	}
 
@@ -83,15 +84,17 @@ func (rs *Records) Vote(
 	n node.Address,
 	block hash.Hash,
 	lastBlock hash.Hash,
+	lastRound Round,
 	proposal hash.Hash,
 ) error {
 	rs.Lock()
 	defer rs.Unlock()
 
 	key := fmt.Sprintf(
-		"%s-%s-%s",
+		"%s-%s-%s-%s",
 		block.String(),
 		lastBlock.String(),
+		lastRound.String(),
 		proposal.String(),
 	)
 
@@ -105,6 +108,7 @@ func (rs *Records) Vote(
 		n,
 		block,
 		lastBlock,
+		lastRound,
 		proposal,
 	)
 
@@ -152,6 +156,7 @@ func (rs *Records) CheckMajority(total, threshold uint) VoteResult {
 		for _, r := range rs.voted[keys[idx]] {
 			vr = vr.SetBlock(r.block).
 				SetLastBlock(r.lastBlock).
+				SetLastRound(r.lastRound).
 				SetProposal(r.proposal)
 			break
 		}
@@ -177,15 +182,17 @@ type Record struct {
 	node      node.Address
 	block     hash.Hash
 	lastBlock hash.Hash
+	lastRound Round
 	proposal  hash.Hash
 	votedAt   common.Time
 }
 
-func NewRecord(n node.Address, block hash.Hash, lastBlock hash.Hash, proposal hash.Hash) Record {
+func NewRecord(n node.Address, block hash.Hash, lastBlock hash.Hash, lastRound Round, proposal hash.Hash) Record {
 	return Record{
 		node:      n,
 		block:     block,
 		lastBlock: lastBlock,
+		lastRound: lastRound,
 		proposal:  proposal,
 		votedAt:   common.Now(),
 	}
@@ -203,6 +210,10 @@ func (rc Record) LastBlock() hash.Hash {
 	return rc.lastBlock
 }
 
+func (rc Record) LastRound() Round {
+	return rc.lastRound
+}
+
 func (rc Record) Proposal() hash.Hash {
 	return rc.proposal
 }
@@ -216,6 +227,7 @@ func (rc Record) MarshalJSON() ([]byte, error) {
 		"node":       rc.node,
 		"block":      rc.block,
 		"last_block": rc.lastBlock,
+		"last_round": rc.lastRound,
 		"proposal":   rc.proposal,
 		"voted_at":   rc.votedAt,
 	})

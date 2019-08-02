@@ -5,10 +5,11 @@ import (
 	"sync"
 	"time"
 
+	"golang.org/x/xerrors"
+
 	"github.com/spikeekips/mitum/common"
 	"github.com/spikeekips/mitum/network"
 	"github.com/spikeekips/mitum/node"
-	"golang.org/x/xerrors"
 )
 
 type ConsensusStateHandler struct {
@@ -263,7 +264,7 @@ func (cs *ConsensusStateHandler) gotINITMajority(vr VoteResult) error {
 		return err
 	}
 
-	cs.Log().Debug("new block created", "block", block, "vr", vr)
+	cs.Log().Info("new block created", "block", block, "vr", vr)
 
 	_ = cs.homeState.SetBlock(block)
 

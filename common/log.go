@@ -7,7 +7,6 @@ import (
 	"reflect"
 	"time"
 
-	"boscoin.io/sebak/lib/errors"
 	"github.com/inconshreveable/log15"
 	"github.com/mattn/go-isatty"
 )
@@ -63,8 +62,6 @@ func formatLogJSONValue(value interface{}) (result interface{}) {
 	}()
 
 	switch v := value.(type) {
-	case *errors.Error:
-		result = v
 	case Time:
 		result = v.String()
 	case time.Duration:

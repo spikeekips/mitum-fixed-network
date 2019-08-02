@@ -3,9 +3,9 @@ package isaac
 import (
 	"context"
 
+	"github.com/inconshreveable/log15"
 	"golang.org/x/xerrors"
 
-	"github.com/inconshreveable/log15"
 	"github.com/spikeekips/mitum/common"
 )
 

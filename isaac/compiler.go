@@ -5,6 +5,7 @@ import (
 	"sync"
 
 	"github.com/inconshreveable/log15"
+
 	"github.com/spikeekips/mitum/common"
 )
 

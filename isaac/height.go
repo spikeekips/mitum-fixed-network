@@ -1,8 +1,9 @@
 package isaac
 
 import (
-	"github.com/spikeekips/mitum/common"
 	"golang.org/x/xerrors"
+
+	"github.com/spikeekips/mitum/common"
 )
 
 var (

@@ -3,8 +3,9 @@ package isaac
 import (
 	"context"
 
-	"github.com/spikeekips/mitum/common"
 	"golang.org/x/xerrors"
+
+	"github.com/spikeekips/mitum/common"
 )
 
 type VoteResultChecker struct {

@@ -5,10 +5,11 @@ import (
 	"sync"
 	"time"
 
+	"golang.org/x/xerrors"
+
 	"github.com/spikeekips/mitum/common"
 	"github.com/spikeekips/mitum/network"
 	"github.com/spikeekips/mitum/node"
-	"golang.org/x/xerrors"
 )
 
 // JoinStateHandler tries to join network safely. This is basic strategy,

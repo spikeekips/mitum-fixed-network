@@ -4,5 +4,5 @@
 ## Run
 
 ```
-$ go run -race -tags test *.go
+$ go run -race *.go
 ```

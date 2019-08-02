@@ -53,7 +53,7 @@ func (t *testCompilerBallotChecker) TestINITBallotHeightNotHigherThanHomeState()
 		nextBlock.Hash(),
 		nextBlock.Round(),
 		nextBlock.Proposal(),
-		nextBlock.Height(),
+		nextBlock.Height().Sub(1),
 		Round(0),
 	)
 

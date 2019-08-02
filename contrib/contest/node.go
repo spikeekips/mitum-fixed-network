@@ -26,18 +26,21 @@ func NewNode(i uint, globalConfig *Config, config *NodeConfig) (*Node, error) {
 
 	thr, _ := isaac.NewThreshold(globalConfig.NumberOfNodes(), *config.Policy.Threshold)
 	cm := isaac.NewCompiler(homeState, isaac.NewBallotbox(thr))
+	cm.SetLogContext(nil, "node", home.Alias())
 	nt := contest_module.NewChannelNetwork(
 		home,
 		func(sl seal.Seal) (seal.Seal, error) {
 			return sl, xerrors.Errorf("echo back")
 		},
 	)
+	nt.SetLogContext(nil, "node", home.Alias())
 	suffrage := contest_module.NewFixedProposerSuffrage(home, home)
 	pv := contest_module.NewDummyProposalValidator()
 
 	var sc *isaac.StateController
 	{ // state handlers
 		bs := isaac.NewBootingStateHandler(homeState)
+		bs.SetLogContext(nil, "node", home.Alias())
 		js, err := isaac.NewJoinStateHandler(
 			homeState,
 			cm,
@@ -48,6 +51,7 @@ func NewNode(i uint, globalConfig *Config, config *NodeConfig) (*Node, error) {
 		if err != nil {
 			return nil, err
 		}
+		js.SetLogContext(nil, "node", home.Alias())
 		cs, err := isaac.NewConsensusStateHandler(
 			homeState,
 			cm,
@@ -59,9 +63,12 @@ func NewNode(i uint, globalConfig *Config, config *NodeConfig) (*Node, error) {
 		if err != nil {
 			return nil, err
 		}
+		cs.SetLogContext(nil, "node", home.Alias())
 		ss := isaac.NewStoppedStateHandler()
+		ss.SetLogContext(nil, "node", home.Alias())
 
 		sc = isaac.NewStateController(homeState, cm, bs, js, cs, ss)
+		sc.SetLogContext(nil, "node", home.Alias())
 
 		go func() {
 			for m := range nt.Reader() {

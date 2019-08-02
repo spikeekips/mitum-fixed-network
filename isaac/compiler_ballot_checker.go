@@ -71,15 +71,48 @@ func (cbc CompilerBallotChecker) checkINIT(c *common.ChainChecker) error {
 	log_ := c.Log().New(log15.Ctx{"ballot": ballot.Hash()})
 
 	// NOTE ballot.Height() should be greater than homeState.Block().Height()
-	if sub := ballot.Height().Sub(cbc.homeState.Block().Height()); sub.Int64() < 2 {
+	if ballot.Height().Cmp(cbc.homeState.Block().Height()) < 1 {
 		err := xerrors.Errorf("lower ballot height")
 		log_.Error(
-			"ballot.Height() should be greater than homeState.Block().Height() + 2; ignore this ballot",
+			"ballot.Height() should be greater than homeState.Block().Height(); ignore this ballot",
 			"ballot_height", ballot.Height(),
 			"height", cbc.homeState.Block().Height(),
 		)
 
 		return err
+	} else {
+		sub := ballot.Height().Sub(cbc.homeState.Block().Height())
+		switch sub.Int64() {
+		case 2:
+			if !ballot.LastBlock().Equal(cbc.homeState.Block().Hash()) {
+				return xerrors.Errorf(
+					"block does not match; ballot=%v block=%v",
+					ballot.Block(),
+					cbc.homeState.Block().Hash(),
+				)
+			}
+		case 1:
+			if !ballot.Block().Equal(cbc.homeState.Block().Hash()) {
+				return xerrors.Errorf(
+					"block does not match; ballot=%v block=%v",
+					ballot.Block(),
+					cbc.homeState.Block().Hash(),
+				)
+			}
+			if ballot.LastRound() != cbc.homeState.Block().Round() {
+				return xerrors.Errorf(
+					"round does not match; ballot=%v round=%v",
+					ballot.LastRound(),
+					cbc.homeState.Block().Round(),
+				)
+			}
+		default:
+			log_.Warn(
+				"ballot height is higher than expected; ignore this ballot",
+				"ballot_height", ballot.Height(),
+				"height", cbc.homeState.Block().Height(),
+			)
+		}
 	}
 
 	var lastINITVoteResult VoteResult

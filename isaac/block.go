@@ -56,12 +56,7 @@ func NewBlockFromVoteResult(vr VoteResult) (Block, error) {
 		return Block{}, xerrors.Errorf("height of new block is under 0")
 	}
 
-	round := vr.Round() - 1
-	if round < 1 {
-		return Block{}, xerrors.Errorf("round of new block is under 0")
-	}
-
-	block, err := NewBlock(height, round, vr.Proposal())
+	block, err := NewBlock(height, vr.LastRound(), vr.Proposal())
 	if err != nil {
 		return Block{}, err
 	}

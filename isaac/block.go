@@ -97,7 +97,7 @@ func (bk Block) MarshalJSON() ([]byte, error) {
 }
 
 func (bk Block) String() string {
-	b, _ := json.Marshal(bk)
+	b, _ := json.Marshal(bk) // nolint
 	return string(b)
 }
 

@@ -118,7 +118,7 @@ func (rb RequestBody) MarshalJSON() ([]byte, error) {
 }
 
 func (rb RequestBody) String() string {
-	b, _ := common.EncodeJSON(rb, true, false)
+	b, _ := json.Marshal(rb) // nolint
 	return string(b)
 }
 

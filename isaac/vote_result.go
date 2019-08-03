@@ -159,6 +159,6 @@ func (vr VoteResult) MarshalJSON() ([]byte, error) {
 }
 
 func (vr VoteResult) String() string {
-	b, _ := json.Marshal(vr)
+	b, _ := json.Marshal(vr) // nolint
 	return string(b)
 }

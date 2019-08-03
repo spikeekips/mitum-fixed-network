@@ -51,10 +51,10 @@ func (ns *Nodes) Start() error {
 	errChan := make(chan error, len(ns.nodes))
 
 	for _, n := range ns.nodes {
-		go func() {
+		go func(n *Node) {
 			errChan <- n.Start()
 			wg.Done()
-		}()
+		}(n)
 	}
 
 	wg.Wait()
@@ -79,10 +79,10 @@ func (ns *Nodes) Stop() error {
 	errChan := make(chan error, len(ns.nodes))
 
 	for _, n := range ns.nodes {
-		go func() {
+		go func(n *Node) {
 			errChan <- n.Stop()
 			wg.Done()
-		}()
+		}(n)
 	}
 
 	wg.Wait()

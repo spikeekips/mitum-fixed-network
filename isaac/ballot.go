@@ -199,7 +199,7 @@ func (bbb BaseBallotBody) MarshalJSON() ([]byte, error) {
 }
 
 func (bbb BaseBallotBody) String() string {
-	b, _ := common.EncodeJSON(bbb, true, false)
+	b, _ := common.EncodeJSON(bbb, true, false) // nolint
 	return string(b)
 }
 

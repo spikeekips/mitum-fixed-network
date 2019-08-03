@@ -62,7 +62,7 @@ func (hm Home) MarshalJSON() ([]byte, error) {
 }
 
 func (hm Home) String() string {
-	b, _ := json.Marshal(hm)
+	b, _ := json.Marshal(hm) // nolint
 	return string(b)
 }
 

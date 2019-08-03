@@ -58,7 +58,7 @@ func (d *ReaderDaemon) SetErrCallback(errCallback func(error)) *ReaderDaemon {
 }
 
 func (d *ReaderDaemon) Start() error {
-	_ = d.Stop()
+	_ = d.Stop() // nolint
 
 	if d.readerCallback != nil {
 		go d.loop()

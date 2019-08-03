@@ -155,7 +155,7 @@ func (ppb ProposalBody) MarshalJSON() ([]byte, error) {
 }
 
 func (ppb ProposalBody) String() string {
-	b, _ := common.EncodeJSON(ppb, true, false)
+	b, _ := json.Marshal(ppb) // nolint
 	return string(b)
 }
 

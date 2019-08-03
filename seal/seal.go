@@ -90,7 +90,7 @@ func (bs *BaseSeal) DecodeRLP(s *rlp.Stream) error {
 }
 
 func (bs BaseSeal) String() string {
-	b, _ := json.Marshal(bs)
+	b, _ := json.Marshal(bs) // nolint
 	return string(b)
 }
 
@@ -261,7 +261,7 @@ func (hd Header) MarshalJSON() ([]byte, error) {
 }
 
 func (hd Header) String() string {
-	b, _ := json.Marshal(hd)
+	b, _ := json.Marshal(hd) // nolint
 	return string(b)
 }
 

@@ -234,6 +234,6 @@ func (rc Record) MarshalJSON() ([]byte, error) {
 }
 
 func (rc Record) String() string {
-	b, _ := json.Marshal(rc)
+	b, _ := json.Marshal(rc) // nolint
 	return string(b)
 }

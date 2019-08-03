@@ -40,7 +40,7 @@ func (ht Height) Sub(v interface{}) Height {
 }
 
 func (ht Height) SubOK(v interface{}) (Height, bool) {
-	switch v.(type) {
+	switch v.(type) { // nolint
 	case Height:
 		v = v.(Height).Big
 	}

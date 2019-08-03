@@ -72,7 +72,7 @@ func NewJoinStateHandler(
 }
 
 func (js *JoinStateHandler) Start() error {
-	_ = js.Stop()
+	_ = js.Stop() // nolint
 
 	js.Lock()
 	defer js.Unlock()
@@ -101,7 +101,7 @@ func (js *JoinStateHandler) IsStopped() bool {
 }
 
 func (js *JoinStateHandler) Activate(StateContext) error {
-	_ = js.stopTimer()
+	_ = js.stopTimer() // nolint
 
 	js.Lock()
 	defer js.Unlock()
@@ -280,7 +280,7 @@ func (js *JoinStateHandler) catchUp(vr VoteResult) error {
 }
 
 func (js *JoinStateHandler) gotINITMajority(vr VoteResult) error {
-	_ = js.stopTimer()
+	_ = js.stopTimer() // nolint
 
 	diff := vr.Height().Sub(js.homeState.Block().Height()).Int64()
 	switch {

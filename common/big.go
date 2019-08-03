@@ -211,40 +211,40 @@ func (a Big) Uint64Ok() (uint64, bool) {
 }
 
 func FromValue(v interface{}) (Big, error) {
-	switch v.(type) {
+	switch v := v.(type) {
 	default:
 		return Big{}, xerrors.Errorf("invalid value; type=%q", v)
 	case Big:
-		return v.(Big), nil
+		return v, nil
 	case int, int8, int16, int32, int64:
 		var a int64
-		switch v.(type) {
+		switch v := v.(type) {
 		case int:
-			a = int64(v.(int))
+			a = int64(v)
 		case int8:
-			a = int64(v.(int8))
+			a = int64(v)
 		case int16:
-			a = int64(v.(int16))
+			a = int64(v)
 		case int32:
-			a = int64(v.(int32))
+			a = int64(v)
 		case int64:
-			a = v.(int64)
+			a = v
 		}
 
 		return NewBigFromInt64(a), nil
 	case uint, uint8, uint16, uint32, uint64:
 		var a uint64
-		switch v.(type) {
+		switch v := v.(type) {
 		case uint:
-			a = uint64(v.(uint))
+			a = uint64(v)
 		case uint8:
-			a = uint64(v.(uint8))
+			a = uint64(v)
 		case uint16:
-			a = uint64(v.(uint16))
+			a = uint64(v)
 		case uint32:
-			a = uint64(v.(uint32))
+			a = uint64(v)
 		case uint64:
-			a = uint64(v.(uint64))
+			a = uint64(v)
 		}
 		return NewBigFromUint64(a), nil
 	}

@@ -99,7 +99,7 @@ func JsonFormatEx() log15.Format {
 
 		b, err := EncodeJSON(props, false, false)
 		if err != nil {
-			b, _ = json.Marshal(map[string]string{
+			b, _ = json.Marshal(map[string]string{ // nolint
 				errorKey: err.Error(),
 			})
 			return b

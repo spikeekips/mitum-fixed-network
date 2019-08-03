@@ -74,7 +74,7 @@ func (tr *Threshold) MarshalJSON() ([]byte, error) {
 }
 
 func (tr *Threshold) String() string {
-	b, _ := json.Marshal(tr)
+	b, _ := json.Marshal(tr) // nolint
 	return string(b)
 }
 

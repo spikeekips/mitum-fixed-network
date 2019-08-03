@@ -51,6 +51,6 @@ func (af ActingSuffrage) MarshalJSON() ([]byte, error) {
 }
 
 func (af ActingSuffrage) String() string {
-	b, _ := json.Marshal(af)
+	b, _ := json.Marshal(af) // nolint
 	return string(b)
 }

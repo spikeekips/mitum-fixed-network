@@ -60,7 +60,7 @@ func (ss *StoppedStateHandler) State() node.State {
 	return node.StateStopped
 }
 
-func (ss *StoppedStateHandler) ReceiveProposal(proposal Proposal) error {
+func (ss *StoppedStateHandler) ReceiveProposal(Proposal) error {
 	return nil
 }
 

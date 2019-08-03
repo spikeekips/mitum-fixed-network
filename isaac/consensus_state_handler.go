@@ -63,7 +63,7 @@ func NewConsensusStateHandler(
 }
 
 func (cs *ConsensusStateHandler) Start() error {
-	_ = cs.Stop()
+	_ = cs.Stop() // nolint
 
 	cs.Lock()
 	defer cs.Unlock()
@@ -92,7 +92,7 @@ func (cs *ConsensusStateHandler) IsStopped() bool {
 }
 
 func (cs *ConsensusStateHandler) Activate(sct StateContext) error {
-	_ = cs.stopTimer()
+	_ = cs.stopTimer() // nolint
 
 	var vr VoteResult
 	if err := sct.ContextValue("vr", &vr); err != nil {
@@ -219,8 +219,7 @@ func (cs *ConsensusStateHandler) ReceiveVoteResult(vr VoteResult) error {
 }
 
 func (cs *ConsensusStateHandler) gotINITMajority(vr VoteResult) error {
-	// TODO check NilHash
-	_ = cs.stopTimer()
+	_ = cs.stopTimer() // nolint
 
 	diff := vr.Height().Sub(cs.homeState.Block().Height()).Int64()
 	switch {

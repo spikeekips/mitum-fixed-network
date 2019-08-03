@@ -102,9 +102,9 @@ end:
 			continue
 		}
 
-		switch err.(type) {
+		switch err := err.(type) {
 		case *ChainChecker:
-			newChecker = err.(*ChainChecker)
+			newChecker = err
 			break end
 		default:
 			if xerrors.Is(err, ChainCheckerStopError) {

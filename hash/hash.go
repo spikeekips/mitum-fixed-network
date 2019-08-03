@@ -36,7 +36,7 @@ func NewHash(hint string, body []byte) (Hash, error) {
 }
 
 func NilHash(hint string) Hash {
-	h, _ := NewHash(hint, nilBody[:])
+	h, _ := NewHash(hint, nilBody[:]) // nolint
 	return h
 }
 

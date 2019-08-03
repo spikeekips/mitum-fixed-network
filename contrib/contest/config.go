@@ -32,13 +32,19 @@ func LoadConfig(f string) (*Config, error) {
 		return nil, err
 	}
 
-	log.Debug("config loaded", "config", config.String())
-
 	if err := config.IsValid(); err != nil {
 		return nil, err
 	}
 
 	return &config, nil
+}
+
+func (cn *Config) MarshalJSON() ([]byte, error) {
+	return json.Marshal(map[string]interface{}{
+		"global":          cn.Global,
+		"nodes":           cn.Nodes,
+		"number_of_nodes": cn.NumberOfNodes(),
+	})
 }
 
 func (cn *Config) String() string {

@@ -35,6 +35,7 @@ type CallbackTimer struct {
 	sync.RWMutex
 	*Logger
 	id           string
+	name         string
 	daemon       *ReaderDaemon
 	callbacks    []TimerCallback
 	intervalFunc TimerCallbackIntervalFunc
@@ -47,7 +48,8 @@ func NewCallbackTimer(name string, interval time.Duration, callbacks ...TimerCal
 	id := RandomUUID()
 	ct := &CallbackTimer{
 		id:        id,
-		Logger:    NewLogger(Log(), "name", name, "timer_id", id),
+		name:      name,
+		Logger:    NewLogger(Log(), "module", name, "timer_id", id),
 		callbacks: callbacks,
 		intervalFunc: func(uint, time.Duration) time.Duration {
 			return interval
@@ -57,6 +59,10 @@ func NewCallbackTimer(name string, interval time.Duration, callbacks ...TimerCal
 	_ = ct.daemon.SetLogContext(ct.LogContext())
 
 	return ct
+}
+
+func (ct *CallbackTimer) Name() string {
+	return ct.name
 }
 
 func (ct *CallbackTimer) Start() error {

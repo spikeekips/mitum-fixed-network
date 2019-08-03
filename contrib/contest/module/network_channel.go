@@ -15,7 +15,6 @@ type ChannelNetworkSealHandler func(seal.Seal) (seal.Seal, error)
 
 type ChannelNetwork struct {
 	sync.RWMutex
-	*common.Logger
 	*common.ReaderDaemon
 	home    node.Home
 	chans   map[node.Address]*ChannelNetwork
@@ -24,12 +23,13 @@ type ChannelNetwork struct {
 
 func NewChannelNetwork(home node.Home, handler ChannelNetworkSealHandler) *ChannelNetwork {
 	cn := &ChannelNetwork{
-		Logger:       common.NewLogger(log, "module", "channel-suffrage-network"),
 		ReaderDaemon: common.NewReaderDaemon(false, 0, nil),
 		home:         home,
 		handler:      handler,
+		chans:        map[node.Address]*ChannelNetwork{},
 	}
-	cn.chans = map[node.Address]*ChannelNetwork{home.Address(): cn}
+	cn.ReaderDaemon.Logger = common.NewLogger(log, "module", "channel-suffrage-network")
+	cn.chans[home.Address()] = cn
 
 	return cn
 }

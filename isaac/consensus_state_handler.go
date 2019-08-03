@@ -20,6 +20,7 @@ type ConsensusStateHandler struct {
 	nt                network.Network
 	suffrage          Suffrage
 	proposalValidator ProposalValidator
+	proposalMaker     ProposalMaker
 	timeoutWaitBallot time.Duration
 	started           bool
 	chanState         chan StateContext
@@ -34,6 +35,7 @@ func NewConsensusStateHandler(
 	nt network.Network,
 	suffrage Suffrage,
 	proposalValidator ProposalValidator,
+	proposalMaker ProposalMaker,
 	timeoutWaitBallot time.Duration,
 ) (*ConsensusStateHandler, error) {
 	if homeState.PreviousBlock().Empty() {
@@ -53,6 +55,7 @@ func NewConsensusStateHandler(
 		nt:                nt,
 		suffrage:          suffrage,
 		proposalValidator: proposalValidator,
+		proposalMaker:     proposalMaker,
 		timeoutWaitBallot: timeoutWaitBallot,
 		proposalChecker:   NewProposalCheckerConsensus(homeState),
 		voteResultChecker: NewConsensusVoteResultChecker(homeState),
@@ -149,7 +152,10 @@ func (cs *ConsensusStateHandler) ReceiveProposal(proposal Proposal) error {
 		return err
 	}
 
-	err = cs.nextRoundTimer("wait-ballot-timeout-next-round-consensus", cs.compiler.LastINITVoteResult())
+	err = cs.nextRoundTimer(
+		"wait-ballot-timeout-next-round-consensus",
+		cs.compiler.LastINITVoteResult(),
+	)
 	if err != nil {
 		return err
 	}
@@ -264,11 +270,9 @@ func (cs *ConsensusStateHandler) gotINITMajority(vr VoteResult) error {
 		return err
 	}
 
-	cs.Log().Info("new block created", "block", block, "vr", vr)
-
 	_ = cs.homeState.SetBlock(block)
 
-	cs.Log().Debug("new block from VoteResult saved", "block", block)
+	cs.Log().Info("new block created", "block", block, "vr", vr)
 
 	return cs.prepareProposal(vr)
 }
@@ -283,7 +287,7 @@ func (cs *ConsensusStateHandler) gotNotINITMajority(vr VoteResult) error {
 		return xerrors.Errorf("invalid stage found", "vr", vr)
 	}
 
-	if cs.proposalValidator.Validated(vr.Proposal()) {
+	if !cs.proposalValidator.Validated(vr.Proposal()) {
 		cs.Log().Debug("proposal did not validated; validate it", "vr", vr)
 	}
 
@@ -375,13 +379,7 @@ func (cs *ConsensusStateHandler) prepareProposal(vr VoteResult) error {
 func (cs *ConsensusStateHandler) propose(vr VoteResult) error {
 	cs.Log().Debug("proposer is home; propose new proposal")
 
-	proposal, err := NewProposal(
-		vr.Height(),
-		vr.Round(),
-		cs.homeState.Block().Hash(),
-		cs.homeState.Home().Address(),
-		nil, // TODO transactions
-	)
+	proposal, err := cs.proposalMaker.Make(vr.Height(), vr.Round(), cs.homeState.Block().Hash())
 	if err != nil {
 		return err
 	}

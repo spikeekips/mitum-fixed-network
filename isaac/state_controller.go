@@ -164,7 +164,6 @@ func (sc *StateController) receiveMessage(message interface{}) error {
 			return xerrors.Errorf("seal.Type() is proposal, but it's not; message=%q", message)
 		}
 
-		sc.Log().Debug("seal is proposal", "seal", sl.Hash())
 		if err := sc.handleProposal(proposal); err != nil {
 			return err
 		}
@@ -173,7 +172,7 @@ func (sc *StateController) receiveMessage(message interface{}) error {
 		if !ok {
 			return xerrors.Errorf("seal.Type() is ballot, but it's not; message=%q", message)
 		}
-		sc.Log().Debug("seal is ballot", "seal", sl.Hash())
+
 		if err := sc.handleBallot(ballot); err != nil {
 			return err
 		}

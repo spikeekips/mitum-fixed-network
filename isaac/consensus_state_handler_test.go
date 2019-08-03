@@ -40,7 +40,8 @@ func (t *testConsensusStateHandler) handler(suffrage Suffrage, timeoutWaitBallot
 
 	pv := NewDummyProposalValidator()
 
-	cs, err := NewConsensusStateHandler(homeState, cm, cn, suffrage, pv, timeoutWaitBallot)
+	dp := NewDefaultProposalMaker(home, 0)
+	cs, err := NewConsensusStateHandler(homeState, cm, cn, suffrage, pv, dp, timeoutWaitBallot)
 	t.NoError(err)
 
 	return cs, func() {
@@ -125,7 +126,8 @@ func (t *testConsensusStateHandler) TestEmptyPreviousBlock() {
 	thr, _ := NewThreshold(4, 67)
 	cm := NewCompiler(homeState, NewBallotbox(thr))
 
-	_, err := NewConsensusStateHandler(homeState, cm, nil, nil, nil, time.Second)
+	dp := NewDefaultProposalMaker(home, 0)
+	_, err := NewConsensusStateHandler(homeState, cm, nil, nil, nil, dp, time.Second)
 	t.Contains(err.Error(), "previous block is empty")
 }
 

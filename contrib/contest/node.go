@@ -1,8 +1,11 @@
 package main
 
 import (
+	"time"
+
 	"golang.org/x/xerrors"
 
+	"github.com/inconshreveable/log15"
 	contest_module "github.com/spikeekips/mitum/contrib/contest/module"
 	"github.com/spikeekips/mitum/isaac"
 	"github.com/spikeekips/mitum/keypair"
@@ -18,6 +21,8 @@ type Node struct {
 
 func NewNode(i uint, globalConfig *Config, config *NodeConfig) (*Node, error) {
 	home := NewHome(i)
+
+	log_ := log.New(log15.Ctx{"node": home.Alias()})
 
 	lastBlock := config.LastBlock()
 	previousBlock := config.Block(lastBlock.Height().Sub(1))
@@ -52,18 +57,24 @@ func NewNode(i uint, globalConfig *Config, config *NodeConfig) (*Node, error) {
 			return nil, err
 		}
 		js.SetLogContext(nil, "node", home.Alias())
+
+		dp := isaac.NewDefaultProposalMaker(home, time.Second*1)
+		dp.SetLogContext(nil, "node", home.Alias())
+
 		cs, err := isaac.NewConsensusStateHandler(
 			homeState,
 			cm,
 			nt,
 			suffrage,
 			pv,
+			dp,
 			*config.Policy.TimeoutWaitBallot,
 		)
 		if err != nil {
 			return nil, err
 		}
 		cs.SetLogContext(nil, "node", home.Alias())
+
 		ss := isaac.NewStoppedStateHandler()
 		ss.SetLogContext(nil, "node", home.Alias())
 
@@ -76,6 +87,12 @@ func NewNode(i uint, globalConfig *Config, config *NodeConfig) (*Node, error) {
 			}
 		}()
 	}
+
+	log_.Debug(
+		"node created",
+		"config", config,
+		"home", home,
+	)
 
 	n := &Node{
 		homeState: homeState,

@@ -68,6 +68,7 @@ func (d *ReaderDaemon) Start() error {
 	defer d.Unlock()
 
 	d.stopped = false
+	d.Log().Debug("started")
 
 	return nil
 }
@@ -81,6 +82,7 @@ func (d *ReaderDaemon) Stop() error {
 	defer d.Unlock()
 
 	d.stopped = true
+	d.Log().Debug("stopped")
 
 	return nil
 }

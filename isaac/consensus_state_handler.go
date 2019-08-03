@@ -57,7 +57,7 @@ func NewConsensusStateHandler(
 		proposalValidator: proposalValidator,
 		proposalMaker:     proposalMaker,
 		timeoutWaitBallot: timeoutWaitBallot,
-		proposalChecker:   NewProposalCheckerConsensus(homeState),
+		proposalChecker:   NewProposalCheckerConsensus(homeState, suffrage),
 		voteResultChecker: NewConsensusVoteResultChecker(homeState),
 	}, nil
 }
@@ -152,6 +152,8 @@ func (cs *ConsensusStateHandler) ReceiveProposal(proposal Proposal) error {
 		return err
 	}
 
+	cs.Log().Debug("proposal checked", "proposal", proposal.Hash())
+
 	err = cs.nextRoundTimer(
 		"wait-ballot-timeout-next-round-consensus",
 		cs.compiler.LastINITVoteResult(),
@@ -205,6 +207,8 @@ func (cs *ConsensusStateHandler) ReceiveVoteResult(vr VoteResult) error {
 		return err
 	}
 
+	cs.Log().Debug("VoteResult checked", "vr", vr)
+
 	if vr.GotDraw() {
 		return cs.startNextRound(vr)
 	} else if vr.GotMajority() {
@@ -238,6 +242,17 @@ func (cs *ConsensusStateHandler) gotINITMajority(vr VoteResult) error {
 
 			return xerrors.Errorf("init for next block; last block does not match; move to sync")
 		}
+
+		// TODO store new block; fix; it's just for testing
+		block, err := NewBlockFromVoteResult(vr)
+		if err != nil {
+			cs.Log().Error("failed to create new block from VoteResult", "vr", vr, "error", err)
+			return err
+		}
+
+		_ = cs.homeState.SetBlock(block)
+
+		cs.Log().Info("new block created", "block", block, "vr", vr)
 	case diff == 1: // next round
 		cs.Log().Debug("got VoteResult of next round; keep going", "vr", vr)
 
@@ -254,24 +269,13 @@ func (cs *ConsensusStateHandler) gotINITMajority(vr VoteResult) error {
 			return xerrors.Errorf("init for next round; block does not match; move to sync")
 		}
 
-		return cs.startNextRound(vr)
+		//return cs.startNextRound(vr)
 	default: // unexpected height received, move to sync
 		cs.Log().Debug("got not expected height VoteResult; move to sync", "vr", vr)
 		cs.chanState <- NewStateContext(node.StateSync).
 			SetContext("vr", vr)
 		return xerrors.Errorf("got not expected height VoteResult; move to sync")
 	}
-
-	// TODO store new block; fix; it's just for testing
-	block, err := NewBlockFromVoteResult(vr)
-	if err != nil {
-		cs.Log().Error("failed to create new block from VoteResult", "vr", vr, "error", err)
-		return err
-	}
-
-	_ = cs.homeState.SetBlock(block)
-
-	cs.Log().Info("new block created", "block", block, "vr", vr)
 
 	return cs.prepareProposal(vr)
 }
@@ -394,8 +398,6 @@ func (cs *ConsensusStateHandler) propose(vr VoteResult) error {
 }
 
 func (cs *ConsensusStateHandler) startNextRound(vr VoteResult) error {
-	cs.Log().Debug("broadcast next round ballot", "vr", vr)
-
 	ballot, err := NewINITBallot(
 		cs.homeState.Home().Address(),
 		cs.homeState.PreviousBlock().Hash(),
@@ -411,6 +413,8 @@ func (cs *ConsensusStateHandler) startNextRound(vr VoteResult) error {
 	if err := ballot.Sign(cs.homeState.Home().PrivateKey(), nil); err != nil {
 		return err
 	}
+
+	cs.Log().Debug("broadcast next round ballot", "vr", vr, "ballot", ballot)
 
 	if err := cs.nt.Broadcast(ballot); err != nil {
 		return err

@@ -19,9 +19,12 @@ type Node struct {
 	sc        *isaac.StateController
 }
 
-func NewNode(i uint, globalConfig *Config, config *NodeConfig) (*Node, error) {
-	home := NewHome(i)
-
+func NewNode(
+	home node.Home,
+	nodes []node.Node,
+	globalConfig *Config,
+	config *NodeConfig,
+) (*Node, error) {
 	log_ := log.New(log15.Ctx{"node": home.Alias()})
 
 	lastBlock := config.LastBlock()
@@ -39,7 +42,9 @@ func NewNode(i uint, globalConfig *Config, config *NodeConfig) (*Node, error) {
 		},
 	)
 	nt.SetLogContext(nil, "node", home.Alias())
-	suffrage := contest_module.NewFixedProposerSuffrage(home, home)
+
+	suffrage := newSuffrage(config, home, nodes)
+
 	pv := contest_module.NewDummyProposalValidator()
 
 	var sc *isaac.StateController
@@ -136,4 +141,19 @@ func NewHome(i uint) node.Home {
 
 	h, _ := node.NewAddress([]byte{uint8(i)})
 	return node.NewHome(h, pk)
+}
+
+func newSuffrage(config *NodeConfig, home node.Home, nodes []node.Node) isaac.Suffrage {
+	//return contest_module.NewRoundrobinSuffrage(nodes...)
+
+	// find proposer
+	proposer := interface{}(home).(node.Node)
+	for _, n := range nodes {
+		if n.Alias() == *config.DefaultProposer {
+			proposer = n
+			break
+		}
+	}
+
+	return contest_module.NewFixedProposerSuffrage(proposer, nodes...)
 }

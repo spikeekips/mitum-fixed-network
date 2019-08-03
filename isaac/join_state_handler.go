@@ -216,11 +216,11 @@ func (js *JoinStateHandler) broadcastINITBallot(common.Timer) error {
 		return err
 	}
 
+	js.Log().Debug("broadcast init ballot for joining", "ballot", ballot.Hash())
 	if err := js.nt.Broadcast(ballot); err != nil {
 		return err
 	}
 
-	js.Log().Debug("broadcast init ballot for joining", "ballot", ballot.Hash())
 	return nil
 }
 

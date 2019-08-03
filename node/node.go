@@ -10,12 +10,15 @@ type Node interface {
 	Address() Address
 	PublicKey() keypair.PublicKey
 	Equal(Node) bool
+	Alias() string
+	SetAlias(string) Node
 }
 
 type Home struct {
 	address    Address
 	publicKey  keypair.PublicKey
 	privateKey keypair.PrivateKey
+	alias      string
 }
 
 func NewHome(address Address, privateKey keypair.PrivateKey) Home {
@@ -51,7 +54,16 @@ func (hm Home) Other() Other {
 }
 
 func (hm Home) Alias() string {
-	return hm.Address().String()[:6]
+	if len(hm.alias) > 0 {
+		return hm.alias
+	}
+
+	return hm.address.String()[:6]
+}
+
+func (hm Home) SetAlias(alias string) Node {
+	hm.alias = alias
+	return hm
 }
 
 func (hm Home) MarshalJSON() ([]byte, error) {
@@ -69,6 +81,7 @@ func (hm Home) String() string {
 type Other struct {
 	address   Address
 	publicKey keypair.PublicKey
+	alias     string
 }
 
 func NewOther(address Address, publicKey keypair.PublicKey) Other {
@@ -97,4 +110,17 @@ func (ot Other) Equal(o Node) bool {
 	}
 
 	return true
+}
+
+func (ot Other) Alias() string {
+	if len(ot.alias) > 0 {
+		return ot.alias
+	}
+
+	return ot.address.String()[:6]
+}
+
+func (ot Other) SetAlias(alias string) Node {
+	ot.alias = alias
+	return ot
 }

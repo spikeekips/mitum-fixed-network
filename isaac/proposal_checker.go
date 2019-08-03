@@ -10,6 +10,7 @@ import (
 
 type ProposalChecker struct {
 	homeState *HomeState
+	suffrage  Suffrage
 }
 
 func NewProposalCheckerBooting(homeState *HomeState) *common.ChainChecker {
@@ -41,9 +42,10 @@ func NewProposalCheckerJoin(homeState *HomeState) *common.ChainChecker {
 	)
 }
 
-func NewProposalCheckerConsensus(homeState *HomeState) *common.ChainChecker {
+func NewProposalCheckerConsensus(homeState *HomeState, suffrage Suffrage) *common.ChainChecker {
 	pc := ProposalChecker{
 		homeState: homeState,
+		suffrage:  suffrage,
 	}
 
 	return common.NewChainChecker(
@@ -127,8 +129,21 @@ func (pc ProposalChecker) checkHeightAndRoundWithLastINITVoteResult(c *common.Ch
 	return nil
 }
 
-func (pc ProposalChecker) checkProposerIsValid(*common.ChainChecker) error {
+func (pc ProposalChecker) checkProposerIsValid(c *common.ChainChecker) error {
 	// TODO
+	var proposal Proposal
+	if err := c.ContextValue("proposal", &proposal); err != nil {
+		return err
+	}
+
+	acting := pc.suffrage.Acting(proposal.Height(), proposal.Round())
+	if !acting.Proposer().Address().Equal(proposal.Proposer()) {
+		return xerrors.Errorf(
+			"invalid proposer in proposal; expected=%v proposal=%v",
+			acting.Proposer().Address(),
+			proposal.Proposer(),
+		)
+	}
 
 	return nil
 }

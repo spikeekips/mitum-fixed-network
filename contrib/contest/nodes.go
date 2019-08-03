@@ -3,6 +3,8 @@ package main
 import (
 	"sort"
 	"sync"
+
+	"github.com/spikeekips/mitum/node"
 )
 
 type Nodes struct {
@@ -18,9 +20,22 @@ func NewNodes(config *Config) (*Nodes, error) {
 	}
 	sort.Strings(nodeNames)
 
-	var nodes []*Node
+	var nodeList []node.Node
 	for i, name := range nodeNames[:config.NumberOfNodes()] {
-		no, err := NewNode(uint(i), config, config.Nodes[name])
+		n := NewHome(uint(i)).SetAlias(name)
+		nodeList = append(nodeList, n)
+	}
+
+	var nodes []*Node
+	for _, n := range nodeList {
+		nodeConfig := config.Nodes[n.Alias()]
+
+		no, err := NewNode(
+			n.(node.Home),
+			nodeList,
+			config,
+			nodeConfig,
+		)
 		if err != nil {
 			return nil, err
 		}

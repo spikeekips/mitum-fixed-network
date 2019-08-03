@@ -102,10 +102,19 @@ func (cn *Config) IsValid() error {
 
 		b = NewBlock(*nextBlock.Height, *nextBlock.Round)
 		blocks[b.Height().String()] = b
-
 	}
 
 	cn.Global.blocks = blocks
+
+	var nodeNames []string
+	for name, _ := range cn.Nodes {
+		nodeNames = append(nodeNames, name)
+	}
+	sort.Strings(nodeNames)
+
+	if cn.Global.DefaultProposer == nil {
+		cn.Global.DefaultProposer = &(nodeNames[0])
+	}
 
 	for i, n := range cn.Nodes {
 		if n == nil {
@@ -130,9 +139,10 @@ func (cn *Config) NumberOfNodes() uint {
 }
 
 type NodeConfig struct {
-	Policy *PolicyConfig  `yaml:",omitempty"`
-	Blocks []*BlockConfig `yaml:"blocks,omitempty"`
-	blocks map[string]isaac.Block
+	Policy          *PolicyConfig  `yaml:",omitempty"`
+	DefaultProposer *string        `yaml:"default_proposer,omitempty"`
+	Blocks          []*BlockConfig `yaml:"blocks,omitempty"`
+	blocks          map[string]isaac.Block
 }
 
 func defaultNodeConfig() *NodeConfig {
@@ -155,6 +165,10 @@ func (nc *NodeConfig) IsValid(global *NodeConfig) error {
 
 	if err := nc.Policy.IsValid(globalPolicy); err != nil {
 		return err
+	}
+
+	if nc.DefaultProposer == nil && global != nil {
+		nc.DefaultProposer = global.DefaultProposer
 	}
 
 	if len(nc.Blocks) < 1 {

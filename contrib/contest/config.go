@@ -2,6 +2,7 @@ package main
 
 import (
 	"encoding/json"
+	"fmt"
 	"io/ioutil"
 	"path/filepath"
 	"sort"
@@ -10,6 +11,8 @@ import (
 	"golang.org/x/xerrors"
 	"gopkg.in/yaml.v2"
 
+	"github.com/spikeekips/mitum/common"
+	contest_module "github.com/spikeekips/mitum/contrib/contest/module"
 	"github.com/spikeekips/mitum/isaac"
 )
 
@@ -35,6 +38,9 @@ func LoadConfig(f string) (*Config, error) {
 	if err := config.IsValid(); err != nil {
 		return nil, err
 	}
+
+	c, _ := common.EncodeJSON(config, true, true)
+	fmt.Println(">", string(c))
 
 	return &config, nil
 }
@@ -112,6 +118,7 @@ func (cn *Config) IsValid() error {
 	}
 	sort.Strings(nodeNames)
 
+	// TODO remove DefaultProposer
 	if cn.Global.DefaultProposer == nil {
 		cn.Global.DefaultProposer = &(nodeNames[0])
 	}
@@ -142,6 +149,7 @@ type NodeConfig struct {
 	Policy          *PolicyConfig  `yaml:",omitempty"`
 	DefaultProposer *string        `yaml:"default_proposer,omitempty"`
 	Blocks          []*BlockConfig `yaml:"blocks,omitempty"`
+	Modules         *ModulesConfig `yaml:"modules,omitempty"`
 	blocks          map[string]isaac.Block
 }
 
@@ -169,6 +177,23 @@ func (nc *NodeConfig) IsValid(global *NodeConfig) error {
 
 	if nc.DefaultProposer == nil && global != nil {
 		nc.DefaultProposer = global.DefaultProposer
+	}
+
+	if nc.Modules == nil {
+		if global == nil {
+			nc.Modules = defaultModulesConfig()
+		} else {
+			nc.Modules = global.Modules
+		}
+	} else {
+		var mc *ModulesConfig
+		if global != nil {
+			mc = global.Modules
+		}
+
+		if err := nc.Modules.IsValid(mc); err != nil {
+			return err
+		}
 	}
 
 	if len(nc.Blocks) < 1 {
@@ -271,6 +296,80 @@ func (bc *BlockConfig) IsValid(*BlockConfig) error {
 	}
 	if err := bc.Height.IsValid(); err != nil {
 		return err
+	}
+
+	return nil
+}
+
+type ModulesConfig struct {
+	Suffrage *SuffrageConfig `yaml:"suffrage,omitempty"`
+}
+
+func defaultModulesConfig() *ModulesConfig {
+	return &ModulesConfig{
+		Suffrage: defaultSuffrageConfig(),
+	}
+}
+
+func (mc *ModulesConfig) IsValid(global *ModulesConfig) error {
+	if mc.Suffrage == nil {
+		if global == nil {
+			mc.Suffrage = defaultSuffrageConfig()
+		} else {
+			mc.Suffrage = global.Suffrage
+		}
+	} else {
+		var sc *SuffrageConfig
+		if global != nil {
+			sc = global.Suffrage
+		}
+
+		if err := mc.Suffrage.IsValid(sc); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+type SuffrageConfig map[string]interface{}
+
+func defaultSuffrageConfig() *SuffrageConfig {
+	return &SuffrageConfig{
+		"name": "RoundrobinSuffrage",
+	}
+}
+
+func (sc *SuffrageConfig) IsValid(global *SuffrageConfig) error {
+	if len(*sc) < 1 {
+		if global == nil {
+			*sc = *defaultSuffrageConfig()
+		} else {
+			*sc = *global
+		}
+
+		return nil
+	}
+
+	var found bool
+	name := (*sc)["name"]
+	for _, n := range contest_module.Suffrages {
+		if n == name {
+			found = true
+			break
+		}
+	}
+	if !found {
+		return xerrors.Errorf("unknown suffrage found: %v", name)
+	}
+
+	switch name {
+	case "FixedProposerSuffrage":
+		if _, found := (*sc)["proposer"]; !found {
+			return xerrors.Errorf("`proposer` must be given for `FixedProposerSuffrage`")
+		}
+	case "RoundrobinSuffrage":
+		//
 	}
 
 	return nil

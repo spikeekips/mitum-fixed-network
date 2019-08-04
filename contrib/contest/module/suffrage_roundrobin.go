@@ -7,6 +7,10 @@ import (
 	"github.com/spikeekips/mitum/node"
 )
 
+func init() {
+	Suffrages = append(Suffrages, "RoundrobinSuffrage")
+}
+
 type RoundrobinSuffrage struct {
 	sync.RWMutex
 	nodes []node.Node

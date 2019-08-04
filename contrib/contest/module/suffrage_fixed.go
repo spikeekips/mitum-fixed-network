@@ -7,6 +7,10 @@ import (
 	"github.com/spikeekips/mitum/node"
 )
 
+func init() {
+	Suffrages = append(Suffrages, "FixedProposerSuffrage")
+}
+
 type FixedProposerSuffrage struct {
 	sync.RWMutex
 	proposer node.Node

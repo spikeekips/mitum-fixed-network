@@ -13,42 +13,19 @@ func init() {
 
 type RoundrobinSuffrage struct {
 	sync.RWMutex
-	nodes []node.Node
+	numberOfActing uint // by default numberOfActing is 0; it means all nodes will be acting member
+	nodes          []node.Node
 }
 
-func NewRoundrobinSuffrage(nodes ...node.Node) *RoundrobinSuffrage {
-	return &RoundrobinSuffrage{nodes: nodes}
+func NewRoundrobinSuffrage(numberOfActing uint, nodes ...node.Node) *RoundrobinSuffrage {
+	return &RoundrobinSuffrage{numberOfActing: numberOfActing, nodes: nodes}
 }
 
 func (fs *RoundrobinSuffrage) AddNodes(nodes ...node.Node) isaac.Suffrage {
-	fs.Lock()
-	defer fs.Unlock()
-
-	fs.nodes = append(fs.nodes, nodes...)
 	return fs
 }
 
 func (fs *RoundrobinSuffrage) RemoveNodes(nodes ...node.Node) isaac.Suffrage {
-	fs.Lock()
-	defer fs.Unlock()
-
-	var newNodes []node.Node
-	for _, a := range fs.nodes {
-		var found bool
-		for _, b := range nodes {
-			if a.Equal(b) {
-				found = true
-				break
-			}
-		}
-
-		if found {
-			continue
-		}
-		newNodes = append(newNodes, a)
-	}
-
-	fs.nodes = newNodes
 	return fs
 }
 
@@ -63,6 +40,20 @@ func (fs RoundrobinSuffrage) Acting(height isaac.Height, round isaac.Round) isaa
 	fs.RLock()
 	defer fs.RUnlock()
 
-	idx := (height.Int64() + int64(round)) % int64(len(fs.nodes))
-	return isaac.NewActingSuffrage(height, round, fs.nodes[idx], fs.nodes)
+	nodes := selectNodes(height, round, int(fs.numberOfActing), fs.nodes)
+
+	return isaac.NewActingSuffrage(height, round, nodes[0], nodes)
+}
+
+func (fs RoundrobinSuffrage) Exists(address node.Address) bool {
+	fs.RLock()
+	defer fs.RUnlock()
+
+	for _, n := range fs.nodes {
+		if n.Address().Equal(address) {
+			return true
+		}
+	}
+
+	return false
 }

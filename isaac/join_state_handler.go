@@ -50,17 +50,8 @@ func NewJoinStateHandler(
 		return nil, xerrors.Errorf("previous block is empty")
 	}
 
-	logger := common.NewLogger(log, "module", "join-state-handler")
-	if intervalBroadcastINITBallot < time.Second*2 {
-		logger.Log().Warn("intervalBroadcastINITBallot is too short", "interval", intervalBroadcastINITBallot)
-	}
-
-	if timeoutWaitVoteResult <= intervalBroadcastINITBallot {
-		logger.Log().Warn("timeoutWaitVoteResult is too short", "timeout", timeoutWaitVoteResult)
-	}
-
 	return &JoinStateHandler{
-		Logger:                      logger,
+		Logger:                      common.NewLogger(log, "module", "join-state-handler"),
 		homeState:                   homeState,
 		compiler:                    compiler,
 		nt:                          nt,
@@ -72,6 +63,14 @@ func NewJoinStateHandler(
 }
 
 func (js *JoinStateHandler) Start() error {
+	if js.intervalBroadcastINITBallot < time.Second*2 {
+		js.Log().Warn("intervalBroadcastINITBallot is too short", "interval", js.intervalBroadcastINITBallot)
+	}
+
+	if js.timeoutWaitVoteResult <= js.intervalBroadcastINITBallot {
+		js.Log().Warn("timeoutWaitVoteResult is too short", "timeout", js.timeoutWaitVoteResult)
+	}
+
 	_ = js.Stop() // nolint
 
 	js.Lock()

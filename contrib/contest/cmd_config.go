@@ -13,17 +13,8 @@ import (
 var configCmd = &cobra.Command{
 	Use:   "config",
 	Short: "contest config",
-	Args:  cobra.ExactArgs(1),
+	Args:  cobra.NoArgs,
 	Run: func(cmd *cobra.Command, args []string) {
-		config, err := LoadConfig(args[0])
-		if err != nil {
-			cmd.Println("Error:", err.Error())
-			os.Exit(1)
-		}
-
-		b, err := yaml.Marshal(config)
-		fmt.Println(">> err", err)
-		fmt.Println(">> config", string(b))
 	},
 }
 
@@ -32,7 +23,7 @@ var configFullCmd = &cobra.Command{
 	Short: "full config",
 	Args:  cobra.ExactArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
-		config, err := LoadConfig(args[0])
+		config, err := LoadConfig(args[0], 0)
 		if err != nil {
 			cmd.Println("Error:", err.Error())
 			os.Exit(1)
@@ -55,7 +46,7 @@ var configCheckCmd = &cobra.Command{
 	Short: "check config",
 	Args:  cobra.ExactArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
-		_, err := LoadConfig(args[0])
+		_, err := LoadConfig(args[0], 0)
 		if err != nil {
 			cmd.Println("Error:", err.Error())
 			os.Exit(1)

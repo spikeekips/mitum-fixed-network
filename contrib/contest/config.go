@@ -11,7 +11,6 @@ import (
 	"golang.org/x/xerrors"
 	"gopkg.in/yaml.v2"
 
-	"github.com/spikeekips/mitum/common"
 	contest_module "github.com/spikeekips/mitum/contrib/contest/module"
 	"github.com/spikeekips/mitum/isaac"
 )
@@ -22,8 +21,8 @@ type Config struct {
 	NumberOfNodes_ *uint `yaml:"number_of_nodes,omitempty"`
 }
 
-func LoadConfig(f string) (*Config, error) {
-	log.Debug("trying to load config", "file", f)
+func LoadConfig(f string, numberOfNodes uint) (*Config, error) {
+	log.Debug("trying to load config", "file", f, "number_of_nodes", numberOfNodes)
 
 	b, err := ioutil.ReadFile(filepath.Clean(f))
 	if err != nil {
@@ -39,8 +38,42 @@ func LoadConfig(f string) (*Config, error) {
 		return nil, err
 	}
 
-	c, _ := common.EncodeJSON(config, true, true)
-	fmt.Println(">", string(c))
+	if numberOfNodes < 1 {
+		numberOfNodes = uint(len(config.Nodes))
+	}
+
+	// extends nodes by numberOfNodes
+	if int(numberOfNodes) > len(config.Nodes) {
+		log.Debug("extend nodes", "numberOfNodes", numberOfNodes)
+		var last int
+		for name, _ := range config.Nodes {
+			var c int
+			if _, err := fmt.Sscanf(name, "n%d", &c); err != nil {
+				log.Debug("not expected node name format", "name", name)
+				continue
+			} else if c > last {
+				last = c
+			}
+		}
+
+		upto := int(numberOfNodes) - len(config.Nodes)
+		for i := 0; i < upto; i++ {
+			name := fmt.Sprintf("n%d", i+last+1)
+			config.Nodes[name] = config.Global
+		}
+	} else if int(numberOfNodes) < len(config.Nodes) {
+		var names []string
+		for name, _ := range config.Nodes {
+			names = append(names, name)
+		}
+
+		sort.Strings(names)
+		for _, name := range names[numberOfNodes:] {
+			delete(config.Nodes, name)
+		}
+	}
+
+	config.NumberOfNodes_ = &numberOfNodes
 
 	return &config, nil
 }
@@ -118,11 +151,6 @@ func (cn *Config) IsValid() error {
 	}
 	sort.Strings(nodeNames)
 
-	// TODO remove DefaultProposer
-	if cn.Global.DefaultProposer == nil {
-		cn.Global.DefaultProposer = &(nodeNames[0])
-	}
-
 	for i, n := range cn.Nodes {
 		if n == nil {
 			n = defaultNodeConfig()
@@ -146,11 +174,10 @@ func (cn *Config) NumberOfNodes() uint {
 }
 
 type NodeConfig struct {
-	Policy          *PolicyConfig  `yaml:",omitempty"`
-	DefaultProposer *string        `yaml:"default_proposer,omitempty"`
-	Blocks          []*BlockConfig `yaml:"blocks,omitempty"`
-	Modules         *ModulesConfig `yaml:"modules,omitempty"`
-	blocks          map[string]isaac.Block
+	Policy  *PolicyConfig  `yaml:",omitempty"`
+	Blocks  []*BlockConfig `yaml:"blocks,omitempty"`
+	Modules *ModulesConfig `yaml:"modules,omitempty"`
+	blocks  map[string]isaac.Block
 }
 
 func defaultNodeConfig() *NodeConfig {
@@ -173,10 +200,6 @@ func (nc *NodeConfig) IsValid(global *NodeConfig) error {
 
 	if err := nc.Policy.IsValid(globalPolicy); err != nil {
 		return err
-	}
-
-	if nc.DefaultProposer == nil && global != nil {
-		nc.DefaultProposer = global.DefaultProposer
 	}
 
 	if nc.Modules == nil {
@@ -336,7 +359,8 @@ type SuffrageConfig map[string]interface{}
 
 func defaultSuffrageConfig() *SuffrageConfig {
 	return &SuffrageConfig{
-		"name": "RoundrobinSuffrage",
+		"name":             "RoundrobinSuffrage",
+		"number_of_acting": 0,
 	}
 }
 
@@ -372,5 +396,14 @@ func (sc *SuffrageConfig) IsValid(global *SuffrageConfig) error {
 		//
 	}
 
+	if v, found := (*sc)["number_of_acting"]; !found {
+		return xerrors.Errorf("`number_of_acting` must be given")
+	} else {
+		switch v.(type) {
+		case int:
+		default:
+			return xerrors.Errorf("`number_of_acting` must be int")
+		}
+	}
 	return nil
 }

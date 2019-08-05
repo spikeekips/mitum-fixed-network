@@ -33,25 +33,26 @@ var rootCmd = &cobra.Command{
 		var logOutput string
 		var handler log15.Handler
 		if len(FlagLogOut) > 0 {
-			logOutput = filepath.Join(FlagLogOut, common.Now().Format("20060102150405"))
-			handler = LogFileByNodeHandler(
-				logOutput,
-				common.LogFormatter(flagLogFormat.f),
-				flagQuiet,
-			)
-
-			latest := filepath.Join(FlagLogOut, "latest")
-			if _, err := os.Lstat(latest); err == nil {
-				if err := os.Remove(latest); err != nil {
-					cmd.Println("Error:", err.Error())
-					os.Exit(1)
-				}
-			}
-
-			if err := os.Symlink(logOutput, latest); err != nil {
+			// check FlagLogOut is directory
+			fi, err := os.Stat(FlagLogOut)
+			if err != nil {
 				cmd.Println("Error:", err.Error())
 				os.Exit(1)
 			}
+
+			var logOutput string = FlagLogOut
+			switch mode := fi.Mode(); {
+			case mode.IsDir():
+				//
+			case mode.IsRegular():
+				logOutput = filepath.Base(FlagLogOut)
+			}
+
+			handler = LogFileByNodeHandler(
+				filepath.Clean(logOutput),
+				common.LogFormatter(flagLogFormat.f),
+				flagQuiet,
+			)
 		} else {
 			handler, _ = common.LogHandler(common.LogFormatter(flagLogFormat.f), FlagLogOut)
 		}

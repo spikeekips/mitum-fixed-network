@@ -56,7 +56,7 @@ func NewCallbackTimer(name string, interval time.Duration, callbacks ...TimerCal
 		},
 	}
 	ct.daemon = NewReaderDaemon(true, 0, ct.runCallback)
-	_ = ct.daemon.SetLogContext(ct.LogContext())
+	ct.daemon.Logger = ct.Logger
 
 	return ct
 }

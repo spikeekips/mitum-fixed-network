@@ -46,3 +46,13 @@ func (fs FixedProposerSuffrage) Nodes() []node.Node {
 func (fs FixedProposerSuffrage) Acting(height Height, round Round) ActingSuffrage {
 	return NewActingSuffrage(height, round, fs.proposer, fs.nodes)
 }
+
+func (fs FixedProposerSuffrage) Exists(address node.Address) bool {
+	for _, n := range fs.nodes {
+		if n.Address().Equal(address) {
+			return true
+		}
+	}
+
+	return false
+}

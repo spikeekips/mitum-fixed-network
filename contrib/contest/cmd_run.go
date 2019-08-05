@@ -25,14 +25,10 @@ var runCmd = &cobra.Command{
 			log.Info("contest stopped")
 		}()
 
-		config, err := LoadConfig(args[0])
+		config, err := LoadConfig(args[0], flagNumberOfNodes)
 		if err != nil {
 			cmd.Println("Error:", err.Error())
 			os.Exit(1)
-		}
-
-		if flagNumberOfNodes > 0 {
-			config.NumberOfNodes_ = &flagNumberOfNodes
 		}
 
 		log.Debug("config loaded", "config", config)

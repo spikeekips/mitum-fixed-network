@@ -146,6 +146,9 @@ func NewHome(i uint) node.Home {
 
 func newSuffrage(config *NodeConfig, home node.Home, nodes []node.Node) isaac.Suffrage {
 	sc := *config.Modules.Suffrage
+
+	numberOfActing := uint(sc["number_of_acting"].(int))
+
 	switch sc["name"] {
 	case "FixedProposerSuffrage":
 		// find proposer
@@ -157,9 +160,9 @@ func newSuffrage(config *NodeConfig, home node.Home, nodes []node.Node) isaac.Su
 			}
 		}
 
-		return contest_module.NewFixedProposerSuffrage(proposer, nodes...)
+		return contest_module.NewFixedProposerSuffrage(proposer, numberOfActing, nodes...)
 	case "RoundrobinSuffrage":
-		return contest_module.NewRoundrobinSuffrage(nodes...)
+		return contest_module.NewRoundrobinSuffrage(numberOfActing, nodes...)
 	default:
 		panic(xerrors.Errorf("unknown suffrage config: %v", config))
 	}

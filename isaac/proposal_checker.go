@@ -22,8 +22,8 @@ func NewProposalCheckerBooting(homeState *HomeState) *common.ChainChecker {
 		"booting-proposal-checker",
 		context.Background(),
 		pc.saveProposal,
+		pc.checkInActing,
 		pc.checkHeightAndRoundWithHomeState,
-		pc.checkProposerIsValid,
 	)
 }
 
@@ -36,9 +36,9 @@ func NewProposalCheckerJoin(homeState *HomeState) *common.ChainChecker {
 		"join-proposal-checker",
 		context.Background(),
 		pc.saveProposal,
+		pc.checkInActing,
 		pc.checkHeightAndRoundWithHomeState,
 		pc.checkHeightAndRoundWithLastINITVoteResult,
-		pc.checkProposerIsValid,
 	)
 }
 
@@ -52,14 +52,33 @@ func NewProposalCheckerConsensus(homeState *HomeState, suffrage Suffrage) *commo
 		"join-proposal-checker",
 		context.Background(),
 		pc.saveProposal,
+		pc.checkInActing,
 		pc.checkHeightAndRoundWithHomeState,
 		pc.checkHeightAndRoundWithLastINITVoteResult,
-		pc.checkProposerIsValid,
 	)
 }
 
 func (pc ProposalChecker) saveProposal(*common.ChainChecker) error {
 	// TODO
+
+	return nil
+}
+
+func (pc ProposalChecker) checkInActing(c *common.ChainChecker) error {
+	// TODO
+	var proposal Proposal
+	if err := c.ContextValue("proposal", &proposal); err != nil {
+		return err
+	}
+
+	acting := pc.suffrage.Acting(proposal.Height(), proposal.Round())
+	if !acting.Proposer().Address().Equal(proposal.Proposer()) {
+		return xerrors.Errorf(
+			"invalid proposer in proposal; expected=%v proposal=%v",
+			acting.Proposer().Address(),
+			proposal.Proposer(),
+		)
+	}
 
 	return nil
 }
@@ -124,25 +143,6 @@ func (pc ProposalChecker) checkHeightAndRoundWithLastINITVoteResult(c *common.Ch
 		)
 
 		return err
-	}
-
-	return nil
-}
-
-func (pc ProposalChecker) checkProposerIsValid(c *common.ChainChecker) error {
-	// TODO
-	var proposal Proposal
-	if err := c.ContextValue("proposal", &proposal); err != nil {
-		return err
-	}
-
-	acting := pc.suffrage.Acting(proposal.Height(), proposal.Round())
-	if !acting.Proposer().Address().Equal(proposal.Proposer()) {
-		return xerrors.Errorf(
-			"invalid proposer in proposal; expected=%v proposal=%v",
-			acting.Proposer().Address(),
-			proposal.Proposer(),
-		)
 	}
 
 	return nil

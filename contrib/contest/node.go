@@ -32,8 +32,11 @@ func NewNode(
 	homeState := isaac.NewHomeState(home, previousBlock).
 		SetBlock(lastBlock)
 
+	suffrage := newSuffrage(config, home, nodes)
+	ballotChecker := isaac.NewCompilerBallotChecker(homeState, suffrage)
+
 	thr, _ := isaac.NewThreshold(globalConfig.NumberOfNodes(), *config.Policy.Threshold)
-	cm := isaac.NewCompiler(homeState, isaac.NewBallotbox(thr))
+	cm := isaac.NewCompiler(homeState, isaac.NewBallotbox(thr), ballotChecker)
 	cm.SetLogContext(nil, "node", home.Alias())
 	nt := contest_module.NewChannelNetwork(
 		home,
@@ -42,8 +45,6 @@ func NewNode(
 		},
 	)
 	nt.SetLogContext(nil, "node", home.Alias())
-
-	suffrage := newSuffrage(config, home, nodes)
 
 	pv := contest_module.NewDummyProposalValidator()
 

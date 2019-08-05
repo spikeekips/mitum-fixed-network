@@ -11,22 +11,41 @@ import (
 
 type CompilerBallotChecker struct {
 	homeState *HomeState
+	suffrage  Suffrage
 }
 
-func NewCompilerBallotChecker(homeState *HomeState) *common.ChainChecker {
+func NewCompilerBallotChecker(homeState *HomeState, suffrage Suffrage) *common.ChainChecker {
 	cbc := CompilerBallotChecker{
 		homeState: homeState,
+		suffrage:  suffrage,
 	}
 
 	return common.NewChainChecker(
 		"compiler-ballot-checker",
 		context.Background(),
+		cbc.checkInActing,
 		cbc.checkHeightAndRound,
 		cbc.checkINIT,
 		cbc.checkNotINIT,
 	)
 }
 
+func (cbc CompilerBallotChecker) checkInActing(c *common.ChainChecker) error {
+	var ballot Ballot
+	if err := c.ContextValue("ballot", &ballot); err != nil {
+		return err
+	}
+
+	acting := cbc.suffrage.Acting(ballot.Height(), ballot.Round())
+	if !acting.Exists(ballot.Node()) {
+		return xerrors.Errorf(
+			"ballot node does not in acting suffrage; node=%v",
+			ballot.Node(),
+		)
+	}
+
+	return nil
+}
 func (cbc CompilerBallotChecker) checkHeightAndRound(c *common.ChainChecker) error {
 	var ballot Ballot
 	if err := c.ContextValue("ballot", &ballot); err != nil {

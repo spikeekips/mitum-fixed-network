@@ -26,17 +26,19 @@ func (t *testConsensusStateHandler) handler(suffrage Suffrage, timeoutWaitBallot
 	homeState := NewHomeState(home, lastBlock)
 	_ = homeState.SetBlock(nextBlock)
 
-	thr, _ := NewThreshold(4, 67)
-	cm := NewCompiler(homeState, NewBallotbox(thr))
-
-	cn := t.newNetwork(homeState.Home())
-	t.NoError(cn.Start())
-
 	if suffrage == nil {
 		suffrage = NewFixedProposerSuffrage(home, home)
 	} else {
 		suffrage.AddNodes(home)
 	}
+
+	ballotChecker := NewCompilerBallotChecker(homeState, suffrage)
+
+	thr, _ := NewThreshold(4, 67)
+	cm := NewCompiler(homeState, NewBallotbox(thr), ballotChecker)
+
+	cn := t.newNetwork(homeState.Home())
+	t.NoError(cn.Start())
 
 	pv := NewDummyProposalValidator()
 
@@ -123,8 +125,11 @@ func (t *testConsensusStateHandler) TestEmptyPreviousBlock() {
 
 	homeState := NewHomeState(home, lastBlock)
 
+	suffrage := NewFixedProposerSuffrage(home, home)
+	ballotChecker := NewCompilerBallotChecker(homeState, suffrage)
+
 	thr, _ := NewThreshold(4, 67)
-	cm := NewCompiler(homeState, NewBallotbox(thr))
+	cm := NewCompiler(homeState, NewBallotbox(thr), ballotChecker)
 
 	dp := NewDefaultProposalMaker(home, 0)
 	_, err := NewConsensusStateHandler(homeState, cm, nil, nil, nil, dp, time.Second)

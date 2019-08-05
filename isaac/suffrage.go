@@ -8,9 +8,9 @@ import (
 
 type Suffrage interface {
 	Nodes() []node.Node
+	Acting(height Height, round Round) ActingSuffrage
 	AddNodes(...node.Node) Suffrage
 	RemoveNodes(...node.Node) Suffrage
-	Acting(height Height, round Round) ActingSuffrage
 }
 
 type ActingSuffrage struct {
@@ -53,4 +53,14 @@ func (af ActingSuffrage) MarshalJSON() ([]byte, error) {
 func (af ActingSuffrage) String() string {
 	b, _ := json.Marshal(af) // nolint
 	return string(b)
+}
+
+func (af ActingSuffrage) Exists(address node.Address) bool {
+	for _, n := range af.nodes {
+		if n.Address() == address {
+			return true
+		}
+	}
+
+	return false
 }

@@ -19,12 +19,12 @@ type Compiler struct {
 	ballotChecker        *common.ChainChecker
 }
 
-func NewCompiler(homeState *HomeState, ballotbox *Ballotbox) *Compiler {
+func NewCompiler(homeState *HomeState, ballotbox *Ballotbox, ballotChecker *common.ChainChecker) *Compiler {
 	return &Compiler{
 		Logger:        common.NewLogger(log, "module", "compiler"),
 		homeState:     homeState,
 		ballotbox:     ballotbox,
-		ballotChecker: NewCompilerBallotChecker(homeState),
+		ballotChecker: ballotChecker,
 	}
 }
 

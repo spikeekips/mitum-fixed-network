@@ -144,16 +144,22 @@ func NewHome(i uint) node.Home {
 }
 
 func newSuffrage(config *NodeConfig, home node.Home, nodes []node.Node) isaac.Suffrage {
-	//return contest_module.NewRoundrobinSuffrage(nodes...)
-
-	// find proposer
-	proposer := interface{}(home).(node.Node)
-	for _, n := range nodes {
-		if n.Alias() == *config.DefaultProposer {
-			proposer = n
-			break
+	sc := *config.Modules.Suffrage
+	switch sc["name"] {
+	case "FixedProposerSuffrage":
+		// find proposer
+		proposer := interface{}(home).(node.Node)
+		for _, n := range nodes {
+			if n.Alias() == sc["proposer"].(string) {
+				proposer = n
+				break
+			}
 		}
-	}
 
-	return contest_module.NewFixedProposerSuffrage(proposer, nodes...)
+		return contest_module.NewFixedProposerSuffrage(proposer, nodes...)
+	case "RoundrobinSuffrage":
+		return contest_module.NewRoundrobinSuffrage(nodes...)
+	default:
+		panic(xerrors.Errorf("unknown suffrage config: %v", config))
+	}
 }

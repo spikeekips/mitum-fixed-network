@@ -3,12 +3,15 @@ package isaac
 import (
 	"encoding/binary"
 	"encoding/json"
+
+	"golang.org/x/xerrors"
 )
 
 type Stage uint
 
 const (
-	StageINIT Stage = iota + 33
+	StageNone Stage = iota + 33
+	StageINIT
 	StageSIGN
 	StageACCEPT
 	StageALLCONFIRM
@@ -47,17 +50,17 @@ func (s Stage) MarshalJSON() ([]byte, error) {
 	return json.Marshal(s.String())
 }
 
-func (s Stage) IsValid() bool {
+func (s Stage) IsValid() error {
 	switch s {
 	case StageINIT:
 	case StageSIGN:
 	case StageACCEPT:
 	//case StageALLCONFIRM:
 	default:
-		return false
+		return xerrors.Errorf("unknown stage")
 	}
 
-	return true
+	return nil
 }
 
 func (s Stage) Next() Stage {

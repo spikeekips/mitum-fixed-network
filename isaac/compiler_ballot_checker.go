@@ -36,16 +36,7 @@ func (cbc CompilerBallotChecker) checkInSuffrage(c *common.ChainChecker) error {
 		return err
 	}
 
-	if ballot.Stage() == StageINIT {
-		if !cbc.suffrage.Exists(ballot.Height(), ballot.Round(), ballot.Node()) {
-			return xerrors.Errorf(
-				"%s ballot node does not in suffrage; ballot=%v node=%v",
-				ballot.Stage(),
-				ballot.Hash(),
-				ballot.Node(),
-			)
-		}
-	} else {
+	if ballot.Stage() != StageINIT {
 		acting := cbc.suffrage.Acting(ballot.Height(), ballot.Round())
 		if !acting.Exists(ballot.Node()) {
 			return xerrors.Errorf(

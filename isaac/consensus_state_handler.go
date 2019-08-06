@@ -12,6 +12,7 @@ import (
 	"github.com/spikeekips/mitum/node"
 )
 
+// ConsensusStateHandler is only for suffrage node
 type ConsensusStateHandler struct {
 	sync.RWMutex
 	*common.Logger
@@ -171,27 +172,45 @@ func (cs *ConsensusStateHandler) ReceiveProposal(proposal Proposal) error {
 	); err != nil {
 		return err
 	}
-	// TODO prepare to store new block
 
-	// TODO Broadcast sign ballot
-	ballot, err := NewSIGNBallot(
-		cs.homeState.Home().Address(),
-		cs.homeState.Block().Hash(),
-		cs.homeState.Block().Round(),
-		block.Height(),
-		block.Hash(),
-		block.Round(),
-		block.Proposal(),
-	)
-	if err != nil {
-		return err
-	}
-	if err := ballot.Sign(cs.homeState.Home().PrivateKey(), nil); err != nil {
-		return err
+	acting := cs.suffrage.Acting(proposal.Height(), proposal.Round())
+	insideActing := acting.Exists(cs.homeState.Home().Address())
+	if insideActing {
+		cs.Log().Debug(
+			"not acting member at this proposal; not broadcast sign ballot",
+			"proposal", proposal.Hash(),
+			"height", proposal.Height(),
+			"round", proposal.Round(),
+		)
+	} else {
+		cs.Log().Debug(
+			"acting member at this proposal; broadcast sign ballot",
+			"proposal", proposal.Hash(),
+			"height", proposal.Height(),
+			"round", proposal.Round(),
+		)
 	}
 
-	if err := cs.nt.Broadcast(ballot); err != nil {
-		return err
+	if insideActing {
+		ballot, err := NewSIGNBallot(
+			cs.homeState.Home().Address(),
+			cs.homeState.Block().Hash(),
+			cs.homeState.Block().Round(),
+			block.Height(),
+			block.Hash(),
+			block.Round(),
+			block.Proposal(),
+		)
+		if err != nil {
+			return err
+		}
+		if err := ballot.Sign(cs.homeState.Home().PrivateKey(), nil); err != nil {
+			return err
+		}
+
+		if err := cs.nt.Broadcast(ballot); err != nil {
+			return err
+		}
 	}
 
 	return nil
@@ -268,8 +287,6 @@ func (cs *ConsensusStateHandler) gotINITMajority(vr VoteResult) error {
 
 			return xerrors.Errorf("init for next round; block does not match; move to sync")
 		}
-
-		//return cs.startNextRound(vr)
 	default: // unexpected height received, move to sync
 		cs.Log().Debug("got not expected height VoteResult; move to sync", "vr", vr)
 		cs.chanState <- NewStateContext(node.StateSync).
@@ -312,17 +329,32 @@ func (cs *ConsensusStateHandler) gotNotINITMajority(vr VoteResult) error {
 	var ballot Ballot
 	switch vr.Stage() {
 	case StageSIGN:
-		ballot, err = NewACCEPTBallot(
-			cs.homeState.Home().Address(),
-			cs.homeState.Block().Hash(),
-			cs.homeState.Block().Round(),
-			vr.Height(),
-			block.Hash(),
-			vr.Round(),
-			vr.Proposal(),
-		)
+		acting := cs.suffrage.Acting(vr.Height(), vr.Round())
+		if !acting.Exists(cs.homeState.Home().Address()) {
+			cs.Log().Debug(
+				"not acting member at this VoteResult; not broadcast sign ballot",
+				"vr", vr,
+				"height", vr.Height(),
+				"round", vr.Round(),
+			)
+		} else {
+			cs.Log().Debug(
+				"acting member at this VoteResult; broadcast sign ballot",
+				"vr", vr,
+				"height", vr.Height(),
+				"round", vr.Round(),
+			)
+			ballot, err = NewACCEPTBallot(
+				cs.homeState.Home().Address(),
+				cs.homeState.Block().Hash(),
+				cs.homeState.Block().Round(),
+				vr.Height(),
+				block.Hash(),
+				vr.Round(),
+				vr.Proposal(),
+			)
+		}
 	case StageACCEPT:
-		// TODO fix this
 		ballot, err = NewINITBallot(
 			cs.homeState.Home().Address(),
 			cs.homeState.Block().Hash(),
@@ -336,12 +368,15 @@ func (cs *ConsensusStateHandler) gotNotINITMajority(vr VoteResult) error {
 	if err != nil {
 		return err
 	}
-	if err := ballot.Sign(cs.homeState.Home().PrivateKey(), nil); err != nil {
-		return err
-	}
 
-	if err := cs.nt.Broadcast(ballot); err != nil {
-		return err
+	if !ballot.Empty() {
+		if err := ballot.Sign(cs.homeState.Home().PrivateKey(), nil); err != nil {
+			return err
+		}
+
+		if err := cs.nt.Broadcast(ballot); err != nil {
+			return err
+		}
 	}
 
 	if err := cs.nextRoundTimer("wait-ballot-timeout-next-round-consensus", vr); err != nil {

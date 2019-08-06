@@ -105,6 +105,10 @@ func (ib Ballot) LastRound() Round {
 }
 
 func (ib Ballot) IsValid() error {
+	if err := ib.Stage().IsValid(); err != nil {
+		return err
+	}
+
 	if err := ib.BaseSeal.IsValid(); err != nil {
 		return err
 	}
@@ -153,6 +157,10 @@ func (ib Ballot) IsValid() error {
 	}
 
 	return nil
+}
+
+func (ib Ballot) Empty() bool {
+	return ib.Stage().IsValid() == nil
 }
 
 type BallotBody interface {

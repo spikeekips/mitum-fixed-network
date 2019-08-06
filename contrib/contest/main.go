@@ -79,6 +79,7 @@ var rootCmd = &cobra.Command{
 			log.Debug("output log", "directory", logOutput)
 		}
 
+		// TODO add memory profile
 		if len(flagCPUProfile) > 0 {
 			f, err := os.Create(flagCPUProfile)
 			if err != nil {

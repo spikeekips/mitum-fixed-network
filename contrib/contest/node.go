@@ -64,6 +64,7 @@ func NewNode(
 		}
 		js.SetLogContext(nil, "node", home.Alias())
 
+		// TODO delay can be set in config
 		dp := isaac.NewDefaultProposalMaker(home, time.Second*1)
 		dp.SetLogContext(nil, "node", home.Alias())
 

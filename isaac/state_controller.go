@@ -201,7 +201,7 @@ func (sc *StateController) handleProposal(proposal Proposal) error {
 func (sc *StateController) handleBallot(ballot Ballot) error {
 	vr, err := sc.compiler.Vote(ballot)
 	if err != nil {
-		sc.Log().Debug("failed to vote ballot", "ballot", ballot.Hash(), "error", err)
+		sc.Log().Error("failed to vote ballot", "ballot", ballot.Hash(), "error", err)
 		return err
 	}
 

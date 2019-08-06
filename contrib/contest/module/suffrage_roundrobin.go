@@ -45,7 +45,7 @@ func (fs RoundrobinSuffrage) Acting(height isaac.Height, round isaac.Round) isaa
 	return isaac.NewActingSuffrage(height, round, nodes[0], nodes)
 }
 
-func (fs RoundrobinSuffrage) Exists(address node.Address) bool {
+func (fs RoundrobinSuffrage) Exists(_ isaac.Height, _ isaac.Round, address node.Address) bool {
 	fs.RLock()
 	defer fs.RUnlock()
 

@@ -9,7 +9,7 @@ import (
 type Suffrage interface {
 	Nodes() []node.Node
 	Acting(height Height, round Round) ActingSuffrage
-	Exists(address node.Address) bool
+	Exists(height Height, round Round, address node.Address) bool
 	AddNodes(...node.Node) Suffrage
 	RemoveNodes(...node.Node) Suffrage
 }

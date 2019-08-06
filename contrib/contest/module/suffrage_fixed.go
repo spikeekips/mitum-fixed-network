@@ -78,7 +78,7 @@ func (fs FixedProposerSuffrage) Acting(height isaac.Height, round isaac.Round) i
 	return isaac.NewActingSuffrage(height, round, fs.proposer, nodes)
 }
 
-func (fs FixedProposerSuffrage) Exists(address node.Address) bool {
+func (fs FixedProposerSuffrage) Exists(_ isaac.Height, _ isaac.Round, address node.Address) bool {
 	fs.RLock()
 	defer fs.RUnlock()
 

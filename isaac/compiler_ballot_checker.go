@@ -23,11 +23,26 @@ func NewCompilerBallotChecker(homeState *HomeState, suffrage Suffrage) *common.C
 	return common.NewChainChecker(
 		"compiler-ballot-checker",
 		context.Background(),
+		cbc.initialize,
 		cbc.checkInSuffrage,
 		cbc.checkHeightAndRound,
 		cbc.checkINIT,
 		cbc.checkNotINIT,
 	)
+}
+
+func (cbc CompilerBallotChecker) initialize(c *common.ChainChecker) error {
+	var ballot Ballot
+	if err := c.ContextValue("ballot", &ballot); err != nil {
+		return err
+	}
+
+	log_ := c.Log().New(log15.Ctx{"ballot": ballot.Hash()})
+	c.SetContext("log", log_)
+
+	log_.Debug("will check ballot", "seal", ballot)
+
+	return nil
 }
 
 func (cbc CompilerBallotChecker) checkInSuffrage(c *common.ChainChecker) error {
@@ -50,13 +65,17 @@ func (cbc CompilerBallotChecker) checkInSuffrage(c *common.ChainChecker) error {
 
 	return nil
 }
+
 func (cbc CompilerBallotChecker) checkHeightAndRound(c *common.ChainChecker) error {
 	var ballot Ballot
 	if err := c.ContextValue("ballot", &ballot); err != nil {
 		return err
 	}
 
-	log_ := c.Log().New(log15.Ctx{"ballot": ballot.Hash()})
+	var log_ log15.Logger
+	if err := c.ContextValue("log", &log_); err != nil {
+		return err
+	}
 
 	// NOTE ballot.Height() and ballot.Round() should be same than last init ballot
 	var lastINITVoteResult VoteResult
@@ -91,7 +110,10 @@ func (cbc CompilerBallotChecker) checkINIT(c *common.ChainChecker) error {
 		return nil
 	}
 
-	log_ := c.Log().New(log15.Ctx{"ballot": ballot.Hash()})
+	var log_ log15.Logger
+	if err := c.ContextValue("log", &log_); err != nil {
+		return err
+	}
 
 	// NOTE ballot.Height() should be greater than homeState.Block().Height()
 	if ballot.Height().Cmp(cbc.homeState.Block().Height()) < 1 {
@@ -144,7 +166,7 @@ func (cbc CompilerBallotChecker) checkINIT(c *common.ChainChecker) error {
 	}
 
 	if !lastINITVoteResult.IsFinished() {
-		c.Log().Debug("lastINITVoteResult is empty")
+		log_.Debug("lastINITVoteResult is empty")
 		return nil
 	}
 
@@ -191,7 +213,10 @@ func (cbc CompilerBallotChecker) checkNotINIT(c *common.ChainChecker) error {
 		return nil
 	}
 
-	log_ := c.Log().New(log15.Ctx{"ballot": ballot.Hash()})
+	var log_ log15.Logger
+	if err := c.ContextValue("log", &log_); err != nil {
+		return err
+	}
 
 	// NOTE ballot.Height() should be greater than homeState.Block().Height()
 	if sub := ballot.Height().Sub(cbc.homeState.Block().Height()); sub.Int64() < 1 {

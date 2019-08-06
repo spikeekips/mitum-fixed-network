@@ -160,7 +160,7 @@ func (ib Ballot) IsValid() error {
 }
 
 func (ib Ballot) Empty() bool {
-	return ib.Stage().IsValid() == nil
+	return ib.Stage().IsValid() != nil
 }
 
 type BallotBody interface {

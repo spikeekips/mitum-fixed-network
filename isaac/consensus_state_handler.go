@@ -175,7 +175,7 @@ func (cs *ConsensusStateHandler) ReceiveProposal(proposal Proposal) error {
 
 	acting := cs.suffrage.Acting(proposal.Height(), proposal.Round())
 	insideActing := acting.Exists(cs.homeState.Home().Address())
-	if insideActing {
+	if !insideActing {
 		cs.Log().Debug(
 			"not acting member at this proposal; not broadcast sign ballot",
 			"proposal", proposal.Hash(),
@@ -332,14 +332,14 @@ func (cs *ConsensusStateHandler) gotNotINITMajority(vr VoteResult) error {
 		acting := cs.suffrage.Acting(vr.Height(), vr.Round())
 		if !acting.Exists(cs.homeState.Home().Address()) {
 			cs.Log().Debug(
-				"not acting member at this VoteResult; not broadcast sign ballot",
+				"not acting member at this VoteResult; not broadcast accept ballot",
 				"vr", vr,
 				"height", vr.Height(),
 				"round", vr.Round(),
 			)
 		} else {
 			cs.Log().Debug(
-				"acting member at this VoteResult; broadcast sign ballot",
+				"acting member at this VoteResult; broadcast accept ballot",
 				"vr", vr,
 				"height", vr.Height(),
 				"round", vr.Round(),

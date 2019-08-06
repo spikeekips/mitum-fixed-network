@@ -1,6 +1,7 @@
 package contest_module
 
 import (
+	"encoding/json"
 	"sync"
 
 	"github.com/spikeekips/mitum/isaac"
@@ -56,4 +57,15 @@ func (fs RoundrobinSuffrage) Exists(_ isaac.Height, _ isaac.Round, address node.
 	}
 
 	return false
+}
+
+func (fs RoundrobinSuffrage) MarshalJSON() ([]byte, error) {
+	fs.RLock()
+	defer fs.RUnlock()
+
+	return json.Marshal(map[string]interface{}{
+		"type":             "RoundrobinSuffrage",
+		"nodes":            fs.nodes,
+		"number_of_acting": fs.numberOfActing,
+	})
 }

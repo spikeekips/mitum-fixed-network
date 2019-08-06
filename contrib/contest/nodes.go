@@ -30,6 +30,7 @@ func NewNodes(config *Config) (*Nodes, error) {
 	for _, n := range nodeList {
 		nodeConfig := config.Nodes[n.Alias()]
 
+		n = n.SetAlias("")
 		no, err := NewNode(
 			n.(node.Home),
 			nodeList,
@@ -49,11 +50,7 @@ func NewNodes(config *Config) (*Nodes, error) {
 		}
 	}
 
-	ns := &Nodes{
-		nodes: nodes,
-	}
-
-	return ns, nil
+	return &Nodes{nodes: nodes}, nil
 }
 
 func (ns *Nodes) Start() error {

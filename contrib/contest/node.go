@@ -35,7 +35,10 @@ func NewNode(
 	suffrage := newSuffrage(config, home, nodes)
 	ballotChecker := isaac.NewCompilerBallotChecker(homeState, suffrage)
 
-	thr, _ := isaac.NewThreshold(globalConfig.NumberOfNodes(), *config.Policy.Threshold)
+	numberOfActing := uint((*config.Modules.Suffrage)["number_of_acting"].(int))
+	thr, _ := isaac.NewThreshold(numberOfActing, *config.Policy.Threshold)
+	thr.Set(isaac.StageINIT, globalConfig.NumberOfNodes(), *config.Policy.Threshold)
+
 	cm := isaac.NewCompiler(homeState, isaac.NewBallotbox(thr), ballotChecker)
 	cm.SetLogContext(nil, "node", home.Alias())
 	nt := contest_module.NewChannelNetwork(
@@ -99,6 +102,9 @@ func NewNode(
 		"node created",
 		"config", config,
 		"home", home,
+		"homeState", homeState,
+		"threshold", thr,
+		"suffrage", suffrage,
 	)
 
 	n := &Node{

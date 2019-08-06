@@ -62,6 +62,10 @@ func (hm Home) Alias() string {
 }
 
 func (hm Home) SetAlias(alias string) Node {
+	if len(alias) < 1 {
+		alias = hm.address.String()[:6]
+	}
+
 	hm.alias = alias
 	return hm
 }

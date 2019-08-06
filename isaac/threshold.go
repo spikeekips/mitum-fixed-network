@@ -10,8 +10,8 @@ import (
 
 type Threshold struct {
 	sync.RWMutex
-	base      [2]uint // [2]uint{total, threshold}
-	threshold map[Stage][2]uint
+	base      [3]uint // [2]uint{total, threshold}
+	threshold map[Stage][3]uint
 }
 
 func NewThreshold(baseTotal uint, basePercent float64) (*Threshold, error) {
@@ -21,8 +21,8 @@ func NewThreshold(baseTotal uint, basePercent float64) (*Threshold, error) {
 	}
 
 	return &Threshold{
-		base:      [2]uint{baseTotal, th},
-		threshold: map[Stage][2]uint{},
+		base:      [3]uint{baseTotal, th, uint(basePercent * 100)},
+		threshold: map[Stage][3]uint{},
 	}, nil
 }
 
@@ -47,7 +47,7 @@ func (tr *Threshold) SetBase(baseTotal uint, basePercent float64) error {
 		return err
 	}
 
-	tr.base = [2]uint{baseTotal, th}
+	tr.base = [3]uint{baseTotal, th, uint(basePercent * 100)}
 
 	return nil
 }
@@ -61,15 +61,23 @@ func (tr *Threshold) Set(stage Stage, total uint, percent float64) error {
 		return err
 	}
 
-	tr.threshold[stage] = [2]uint{total, th}
+	tr.threshold[stage] = [3]uint{total, th, uint(percent * 100)}
 
 	return nil
 }
 
 func (tr *Threshold) MarshalJSON() ([]byte, error) {
+	tr.RLock()
+	defer tr.RUnlock()
+
+	thh := map[string]interface{}{}
+	for k, v := range tr.threshold {
+		thh[k.String()] = flattenThreshold(v)
+	}
+
 	return json.Marshal(map[string]interface{}{
-		"base":      tr.base,
-		"threshold": tr.threshold,
+		"base":      flattenThreshold(tr.base),
+		"threshold": thh,
 	})
 }
 
@@ -84,4 +92,12 @@ func calculateThreshold(total uint, percent float64) (uint, error) {
 	}
 
 	return uint(math.Ceil(float64(total) * (percent / 100))), nil
+}
+
+func flattenThreshold(a [3]uint) [3]interface{} {
+	return [3]interface{}{
+		a[0],
+		a[1],
+		float64(a[2]) / 100,
+	}
 }

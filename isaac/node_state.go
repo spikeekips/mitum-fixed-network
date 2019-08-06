@@ -1,6 +1,7 @@
 package isaac
 
 import (
+	"encoding/json"
 	"sync"
 
 	"github.com/spikeekips/mitum/node"
@@ -64,4 +65,16 @@ func (hs *HomeState) SetState(state node.State) *HomeState {
 	hs.state = state
 
 	return hs
+}
+
+func (hs *HomeState) MarshalJSON() ([]byte, error) {
+	hs.RLock()
+	defer hs.RUnlock()
+
+	return json.Marshal(map[string]interface{}{
+		"home":           hs.home,
+		"block":          hs.block,
+		"previous_block": hs.previousBlock,
+		"state":          hs.state.String(),
+	})
 }

@@ -1,7 +1,6 @@
 package isaac
 
 import (
-	"encoding/binary"
 	"encoding/json"
 
 	"golang.org/x/xerrors"
@@ -30,20 +29,6 @@ func (s Stage) String() string {
 	default:
 		return "<unknown stage>"
 	}
-}
-
-func (s Stage) MarshalBinary() ([]byte, error) {
-	b := make([]byte, 4)
-	binary.LittleEndian.PutUint32(b, uint32(s))
-	return b, nil
-}
-
-func (s *Stage) UnmarshalBinary(b []byte) error {
-	u := binary.LittleEndian.Uint32(b)
-
-	*s = Stage(u)
-
-	return nil
 }
 
 func (s Stage) MarshalJSON() ([]byte, error) {

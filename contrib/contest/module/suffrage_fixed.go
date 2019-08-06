@@ -1,6 +1,7 @@
 package contest_module
 
 import (
+	"encoding/json"
 	"sync"
 
 	"github.com/spikeekips/mitum/isaac"
@@ -89,6 +90,18 @@ func (fs FixedProposerSuffrage) Exists(_ isaac.Height, _ isaac.Round, address no
 	}
 
 	return false
+}
+
+func (fs FixedProposerSuffrage) MarshalJSON() ([]byte, error) {
+	fs.RLock()
+	defer fs.RUnlock()
+
+	return json.Marshal(map[string]interface{}{
+		"type":             "FixedProposerSuffrage",
+		"proposer":         fs.proposer,
+		"nodes":            fs.nodes,
+		"number_of_acting": fs.numberOfActing,
+	})
 }
 
 func selectNodes(height isaac.Height, round isaac.Round, n int, nodes []node.Node) []node.Node {

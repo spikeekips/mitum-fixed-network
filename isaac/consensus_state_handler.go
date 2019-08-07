@@ -181,6 +181,7 @@ func (cs *ConsensusStateHandler) ReceiveProposal(proposal Proposal) error {
 			"proposal", proposal.Hash(),
 			"height", proposal.Height(),
 			"round", proposal.Round(),
+			"acting", acting,
 		)
 	} else {
 		cs.Log().Debug(
@@ -188,6 +189,7 @@ func (cs *ConsensusStateHandler) ReceiveProposal(proposal Proposal) error {
 			"proposal", proposal.Hash(),
 			"height", proposal.Height(),
 			"round", proposal.Round(),
+			"acting", acting,
 		)
 	}
 
@@ -336,6 +338,7 @@ func (cs *ConsensusStateHandler) gotNotINITMajority(vr VoteResult) error {
 				"vr", vr,
 				"height", vr.Height(),
 				"round", vr.Round(),
+				"acting", acting,
 			)
 		} else {
 			cs.Log().Debug(
@@ -343,6 +346,7 @@ func (cs *ConsensusStateHandler) gotNotINITMajority(vr VoteResult) error {
 				"vr", vr,
 				"height", vr.Height(),
 				"round", vr.Round(),
+				"acting", acting,
 			)
 			ballot, err = NewACCEPTBallot(
 				cs.homeState.Home().Address(),

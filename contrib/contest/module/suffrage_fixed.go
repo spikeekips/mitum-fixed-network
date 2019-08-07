@@ -4,9 +4,10 @@ import (
 	"encoding/json"
 	"sync"
 
+	"golang.org/x/xerrors"
+
 	"github.com/spikeekips/mitum/isaac"
 	"github.com/spikeekips/mitum/node"
-	"golang.org/x/xerrors"
 )
 
 func init() {
@@ -114,6 +115,8 @@ func selectNodes(height isaac.Height, round isaac.Round, n int, nodes []node.Nod
 	selected = append(selected, nodes[index:]...)
 	if len(selected) < n {
 		selected = append(selected, nodes[:n-len(selected)]...)
+	} else if len(selected) > n {
+		selected = selected[:n]
 	}
 
 	return selected

@@ -185,6 +185,8 @@ type Record struct {
 	lastRound Round
 	proposal  hash.Hash
 	votedAt   common.Time
+
+	// TODO needs ballot hash
 }
 
 func NewRecord(n node.Address, block hash.Hash, lastBlock hash.Hash, lastRound Round, proposal hash.Hash) Record {

@@ -1,0 +1,278 @@
+@import url('https://highlightjs.org/static/demo/styles/github.css');
+
+html {
+  height: 100%;
+}
+
+body {
+  height: 100%;
+  margin: 0px;
+}
+
+#root {
+  height: 100%;
+}
+
+
+.hljs {
+  background: transparent;
+  white-space: pre-wrap;
+  word-break: break-all;
+}
+
+.App {
+  text-align: center;
+}
+
+.App-logo {
+  animation: App-logo-spin infinite 20s linear;
+  height: 40vmin;
+  pointer-events: none;
+}
+
+.App-header {
+  background-color: #282c34;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  font-size: calc(10px + 2vmin);
+  color: white;
+}
+
+.App-link {
+  color: #61dafb;
+}
+
+@keyframes App-logo-spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.MuiExpansionPanelSummary-content-120,
+.MuiExpansionPanelSummary-content-120.MuiExpansionPanelSummary-expanded-117 {
+  margin: 0 !important;
+}
+
+.MuiExpansionPanelSummary-root-116 {
+  min-height: 0 !important;
+}
+
+#root > .IntegrationNotistack-root-1 {
+  height: 100%;
+}
+
+table.scrollable {
+  z-index: 1000;
+}
+
+table * {
+  font-size: 13px !important;
+}
+
+table.scrollable tr.header,
+table.scrollable tr.header * {
+  background-color: #999 !important;
+  color: #fff !important;
+  cursor: default !important;
+}
+
+table.scrollable tr.header td > div {
+  background-color: white;
+  margin: 0 1px 0 1px;
+}
+
+table.scrollable tr.header td > div {
+  padding-left: 0.6em;
+}
+
+table.scrollable tbody td:nth-child(1) {
+  vertical-align: top;
+}
+
+table.scrollable tbody tr * {
+  background-color: transparent;
+}
+
+table.scrollable tbody tr:hover {
+  background-color: #eeffe9;
+}
+
+.MuiExpansionPanelSummary-content-120 {
+  margin: 0 !important;
+}
+
+.MuiExpansionPanelDetails-root-162,
+.MuiIconButton-root-79,
+table.scrollable td > button,
+.MuiExpansionPanelSummary-root-116 {
+  padding: 0 !important;
+}
+
+.MuiExpansionPanelSummary-root-116 {
+  min-height: auto !important;
+}
+
+.MuiExpansionPanel-rounded-86 {
+  border-radius: 0 !important;
+}
+
+.MuiPaper-elevation1-92 {
+  box-shadow: none !important;
+}
+
+table.scrollable tr {
+  height: auto !important;
+}
+
+table.scrollable td,
+.MuiTableCell-body-15 {
+    padding: 0.3rem !important;
+}
+
+.MuiCollapse-container-158 {
+  transition: none !important;
+}
+
+table td,
+table td * {
+  cursor: zoom-in !important;
+}
+
+.hljs,
+.hljs * {
+  cursor: auto !important;
+  font-size: 0.7rem !important;
+}
+
+table td pre {
+  background: transparent;
+  white-space: pre-wrap;
+  word-break: break-all;
+}
+
+table.scrollable tbody td:nth-child(1) {
+  white-space: nowrap;
+  width: 150px;
+}
+
+table.scrollable tbody td:nth-child(1) button svg {
+  width: 1.5em;
+  height: 1.5em;
+  color: gray;
+}
+
+table.scrollable tbody tr.selected td:nth-child(1) button svg {
+  color: #bf04fd;
+}
+
+.MuiIconButton-root-79 {
+  margin-right: 0.3rem !important;
+}
+
+table.scrollable tbody tr.selected {
+  background-color: #faebff;
+}
+
+table.scrollable tbody tr td:first-child {
+  font-family: source-code-pro, Menlo, Monaco, Consolas, "Courier New", monospace !important;
+  font-size: 0.7rem !important;
+  padding-right: 0.3rem !important;
+}
+
+table.scrollable tbody tr td:first-child > button {
+  cursor: pointer !important;
+}
+
+table.scrollable tbody tr td .detail div[role=button] svg {
+  display: none;
+}
+
+table.scrollable tbody tr td {
+    border-right: solid 0.05em #efefef;
+}
+
+table.scrollable tbody tr td:last-child {
+    border-right: none;
+}
+
+table.scrollable tbody tr td > p:first-child {
+    padding-left: 0.3rem;
+}
+
+table.scrollable tbody tr.row-detail {
+  display: none;
+}
+
+table.scrollable tbody tr.row-detail-open {
+  display: table-row;
+}
+
+.record p {
+  display: inline;
+}
+
+.module {
+  height: 18px !important;
+  margin: 0 0.3rem;
+  /*
+  background-color: #e2e2e2 !important;
+  */
+  filter: saturate(30%);
+}
+
+.module > span {
+  font-family: source-code-pro, Menlo, Monaco, Consolas, "Courier New", monospace !important;
+  font-size: 0.6rem !important;
+  /*
+  color: gray !important;
+  */
+}
+
+.lvl {
+  height: 18px !important;
+  margin: 0 0.3rem;
+}
+
+.lvl > span {
+  font-family: source-code-pro, Menlo, Monaco, Consolas, "Courier New", monospace !important;
+  font-size: 0.6rem !important;
+}
+
+.lvl-dbug {
+  background-color: #e2e2e2 !important;
+  color: gray !important;
+}
+
+.lvl-warn {
+  background-color: yellow !important;
+  color: black !important;
+}
+
+.lvl-info {
+  background-color: blue !important;
+}
+
+.lvl-eror {
+  background-color: #f50057 !important;
+}
+
+.lvl-crit {
+  background-color: #f300f5 !important;
+}
+
+table.scrollable tbody tr td:first-child > span {
+  font-size: 0.7rem !important;
+}
+
+table.scrollable tbody tr td .record code {
+  font-size: 0.7rem !important;
+  background: #efecec;
+  padding: 0.1rem 0.2rem 0.1rem 0.2rem;
+  border-radius: 0.2rem;
+}

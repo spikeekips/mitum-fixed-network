@@ -19,6 +19,12 @@ class Time {
       }
     }
 
+    var tail = (p[7].length > 0 ? p[7] : '0').slice(0, 6)
+    if (tail.length < 6) {
+      tail = tail + '0'.repeat(6 - tail.length)
+    }
+    //tail = Number.parseInt(tail, 10)
+
     var t = new Date(
       p[1],
       Number.parseInt(p[2], 10) - 1,
@@ -26,16 +32,12 @@ class Time {
       p[4],
       p[5],
       p[6],
+      Number.parseInt(tail.slice(0, 3), 10),
     )
-
-    var tail = p[7].length > 0 ? p[7] : 0
-    if (tail.length < 6) {
-      tail = tail + '0'.repeat(6 - tail.length)
-    }
 
     var time = new Time()
     time.t = t
-    time.n = (t.getTime() * 1000000) + Number.parseInt(tail, 10)
+    time.n = ((t.getTime() - 1559314800000) * 1000000) + Number.parseInt(tail, 10)
     time.orig = s
 
     return time
@@ -80,7 +82,7 @@ class Record {
     try {
       o = JSON.parse(line)
     } catch(e) {
-      console.warn(e)
+      console.warn(e, 'line:', line)
       return null
     }
 
@@ -245,6 +247,10 @@ class Log {
   }
 
   static parseRecord(line) {
+    if (line.trim().length < 1) {
+      return
+    }
+
     var record = null
     try {
       record = Record.fromJSONString(line)

@@ -105,6 +105,7 @@ class CenteredGrid extends React.Component {
   log = null
   prevRecords = []
   prevRecordsFragment = null
+  timeSpanOneRow = 200000
 
   toggleDrawer = (open) => () => {
     this.setState({
@@ -297,18 +298,20 @@ class CenteredGrid extends React.Component {
     }
   }
 
-  toggleDetail(ref, o) {
+  toggleDetail(ref, open) {
     const tr = ReactDOM.findDOMNode(ref.current)
 
-    var open = !tr.nextSibling.classList.contains('row-detail-open')
-
-    if (open === true) {
-      tr.nextSibling.classList.add('row-detail-open')
-    } else {
-      tr.nextSibling.classList.remove('row-detail-open')
+    if (open === undefined) {
+      open = !tr.classList.contains('row-detail-open')
     }
 
-    o.current.toggle(open)
+    if (open === true) {
+      tr.classList.add('row-detail-open')
+    } else {
+      tr.classList.remove('row-detail-open')
+    }
+
+    ref.current.toggle(open)
 
     return
   }
@@ -318,56 +321,81 @@ class CenteredGrid extends React.Component {
     return a.slice(3, a.length - 4)
   }
 
-  renderRecord(first, record, nodes) {
-    const { classes } = this.props;
+  renderRecord(index, first, records, nodes) {
+    const { classes } = this.props
 
-    var i = nodes.indexOf(record.node)
-    if (i < 0) {
-      return null
+    var early = records.filter(r => r != null).sort((a, b) => a.t.n - b.t.n)[0]
+    if (early == null) {
+      return
     }
 
     var rowRef = React.createRef()
-    var rowDetailRef = React.createRef()
 
-    return <React.Fragment key={record.id + 'f'}>
-      <TableRow key={record.id} ref={rowRef}>
-        <TableCell key={record.id + '-t'}>
+    var rowDetailRefs = new Array(nodes.length)
+    records.map((record, i) => {
+      if (record == null) {
+        return null
+      }
+      rowDetailRefs[i] = React.createRef()
+      return null
+    })
+
+    return <React.Fragment key={index + 'f'}>
+      <TableRow key={index} ref={rowRef}>
+        <TableCell key={index + '-t'}>
           <IconButton className={classes.button} aria-label='Bookmark' onClick={e => {
             const tr = ReactDOM.findDOMNode(rowRef.current)
             tr.classList.toggle('selected')
-            tr.nextSibling.classList.toggle('selected')
 
-            this.toggleDetail(rowRef, rowDetailRef)
+            // find details
+            var s = tr.nextSibling
+            while(s.classList.contains('row-detail')) {
+              s.classList.toggle('selected')
+              s = s.nextSibling
+            }
+            rowDetailRefs.map(ref => this.toggleDetail(ref, true))
           }}>
             <BookmarksIcon />
           </IconButton>
-          <Chip label={record.level} className={'lvl lvl-' + record.level} color='secondary' />
           <span className='t'>
-            {record.t.elapsed(first.t)}
+            {early.t.elapsed(first.t)}
           </span>
         </TableCell>
-        {nodes.map((node, index) => (
+        {nodes.map((node, ni) => (
           <TableCell
             className={classes.listTableTd}
-            key={record.id + node + '-m'}
-            onClick={e => this.toggleDetail(rowRef, rowDetailRef)}
+            key={ni + node + '-m'}
+            onClick={e => {
+              if (rowDetailRefs[ni] == null) {
+                return
+              }
+
+              this.toggleDetail(rowDetailRefs[ni])
+            }}
           >
-          {i === index ? (
-            <div key={record.id + record.module} className='record'>
-              <Chip label={record.module} className={'module'} color='secondary' style={{
-                backgroundColor: this.state.moduleColors[this.state.modules.indexOf(record.module)],
-                color: fontColorByBG(this.state.moduleColors[this.state.modules.indexOf(record.module)]),
+          {records[ni] != null ? (
+            <div key={records[ni].id + records[ni].module} className='record'>
+              <Chip label={records[ni].level} className={'lvl lvl-' + records[ni].level} color='secondary' />
+              <Chip label={records[ni].module} className={'module'} color='secondary' style={{
+                backgroundColor: this.state.moduleColors[this.state.modules.indexOf(records[ni].module)],
+                color: fontColorByBG(this.state.moduleColors[this.state.modules.indexOf(records[ni].module)]),
               }} />
-              <span dangerouslySetInnerHTML={{__html: this.sanitizeRecordMessage(record.message)}} />
+              <span dangerouslySetInnerHTML={{__html: this.sanitizeRecordMessage(records[ni].message)}} />
             </div>
             ) : (
-              <Typography key={record.id + node + 'ty'}></Typography>
+              <Typography key={ni + node + 'ty'}></Typography>
             )
           }
           </TableCell>
         ))}
       </TableRow>
-      <RecordDetail classes={classes} nodes={nodes} record={record} ref={rowDetailRef} />
+
+      {records.map((record, i) => {
+        return <RecordDetail
+          key={'rd' + index + '-' + i}
+          classes={classes} nodes={nodes} record={record} ref={rowDetailRefs[i]} />
+      })}
+
     </React.Fragment>
   }
 
@@ -377,15 +405,13 @@ class CenteredGrid extends React.Component {
       return
     }
 
-    this.setState({ records: records })
+    this.setState({ records: records, speedDial: false })
 
     this.recordsOffset += this.limit
     this.onLoading = false
   }
 
   renderRecords(records, nodes) {
-    const { classes } = this.props;
-
     var update = false
     if (records.length !== this.prevRecords.length) {
       update = true
@@ -400,57 +426,66 @@ class CenteredGrid extends React.Component {
     }
  
     this.prevRecords = records
-    this.prevRecordsFragment = <React.Fragment>
-      <Box height='100%'>
-        <Table id='inner-root' className={' scrollable'}>
-          <TableBody>
-            {this.state.records.map((record, index) => {
-              if (index % 30 === 0) {
-                return <React.Fragment key={record.id + 'r' + index}>
-                  <TableRow className='header' key={record.id + 'h' + index}>
-                    <TableCell className={classes.listTableT} key={'t'}><div>T</div></TableCell>
-                    {this.state.nodes.map(node => (
-                      <TableCell align='left' key={node}><div>{node}</div></TableCell>
-                    ))}
-                  </TableRow>
-                  {this.renderRecord(records[0], record, nodes)}
-                </React.Fragment>
-              }
 
-              return this.renderRecord(records[0], record, nodes)
-            })}
-          </TableBody>
-        </Table>
-      </Box>
-    </React.Fragment>
+    var rs = new Array(nodes.length)
+    var last = null
 
-    return this.prevRecordsFragment
+    this.prevRecordsFragment = records.map((record, index) => {
+      var i = nodes.indexOf(record.node)
+      if (rs[i] != null) {
+        var o = this.renderRow(index, records[0], rs, nodes)
+
+        rs = new Array(nodes.length)
+        rs[i] = record
+        last = record.t.n
+
+        return o
   }
 
+      if (last != null) {
+        var sub = record.t.n - last
+        if (sub > this.timeSpanOneRow) {
+          o = this.renderRow(index, records[0], rs, nodes)
+
+          rs = new Array(nodes.length)
+          rs[i] = record
+          last = record.t.n
+
+          return o
+        }
+    }
+
+      rs[i] = record
+      last = record.t.n
+
+      return null
+    })
+
+    this.prevRecordsFragment.push(this.renderRow(records.length, records[0], rs, nodes))
+
+    return this.prevRecordsFragment
+    }
+
   shouldComponentUpdate(nextProps, nextState) {
-    if (nextState.speedDial !== this.state.speedDial) {
       return true
     }
 
-    if (nextState.records.length < 1 || this.state.records.length < 1) {
-      this.prevRecords = this.state.records
-      return true
+  renderRow(index, first, records, nodes) {
+    const { classes } = this.props;
+
+    if (index === 1 || index % 30 === 0) {
+      return <React.Fragment key={'r' + index}>
+        <TableRow className='header' key={'h' + index}>
+          <TableCell className={classes.listTableT} key={'t'}><div>T</div></TableCell>
+          {this.state.nodes.map(node => (
+            <TableCell align='left' key={node}><div>{node}</div></TableCell>
+          ))}
+        </TableRow>
+        {this.renderRecord(index, first, records, nodes)}
+      </React.Fragment>
     }
 
-    if (nextState.records.length !== this.state.records.length) {
-      this.prevRecords = this.state.records
-      return true
-    }
-
-    var pl = this.state.records[this.state.records.length - 1].t.n
-    var tl = nextState.records[nextState.records.length - 1].t.n
-    if (pl === tl) {
-      return false
-    }
-
-    //this.prevRecords = this.state.records
-
-    return true
+    return this.renderRecord(index, first, records, nodes)
   }
 
   render() {
@@ -472,7 +507,13 @@ class CenteredGrid extends React.Component {
         </div>
       </div>
 
+      <Box height='100%'>
+        <Table id='inner-root' className={' scrollable'}>
+          <TableBody>
       {this.renderRecords(this.state.records, this.state.nodes)}
+          </TableBody>
+        </Table>
+      </Box>
 
       <SpeedDial
         ariaLabel='SpeedDial tooltip example'

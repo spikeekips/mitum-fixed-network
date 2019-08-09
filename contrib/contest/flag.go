@@ -19,6 +19,7 @@ var (
 	flagLogFormat     FlagLogFormat = FlagLogFormat{f: "json"}
 	FlagLogOut        string
 	flagCPUProfile    string
+	flagMemProfile    string
 	flagExitAfter     time.Duration
 	flagNumberOfNodes uint = 3
 	flagQuiet         bool

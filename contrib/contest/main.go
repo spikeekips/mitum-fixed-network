@@ -21,7 +21,8 @@ import (
 )
 
 var (
-	sigc chan os.Signal
+	sigc           chan os.Signal
+	memProfileFile *os.File
 )
 
 var rootCmd = &cobra.Command{
@@ -79,7 +80,6 @@ var rootCmd = &cobra.Command{
 			log.Debug("output log", "directory", logOutput)
 		}
 
-		// TODO add memory profile
 		if len(flagCPUProfile) > 0 {
 			f, err := os.Create(flagCPUProfile)
 			if err != nil {
@@ -89,6 +89,18 @@ var rootCmd = &cobra.Command{
 				panic(err)
 			}
 			log.Debug("cpuprofile enabled")
+		}
+
+		if len(flagMemProfile) > 0 {
+			f, err := os.Create(flagMemProfile)
+			if err != nil {
+				panic(err)
+			}
+			if err := pprof.WriteHeapProfile(f); err != nil {
+				panic(err)
+			}
+			memProfileFile = f
+			log.Debug("memprofile enabled")
 		}
 
 		sigc = make(chan os.Signal, 1)
@@ -102,6 +114,11 @@ var rootCmd = &cobra.Command{
 			s := <-sigc
 			if len(flagCPUProfile) > 0 {
 				pprof.StopCPUProfile()
+				log.Debug("cpuprofile closed")
+			}
+
+			if len(flagMemProfile) > 0 {
+				memProfileFile.Close()
 				log.Debug("cpuprofile closed")
 			}
 
@@ -122,6 +139,7 @@ func main() {
 	rootCmd.PersistentFlags().Var(&flagLogFormat, "log-format", "log format: {json terminal}")
 	rootCmd.PersistentFlags().StringVar(&FlagLogOut, "log", FlagLogOut, "log output directory")
 	rootCmd.PersistentFlags().StringVar(&flagCPUProfile, "cpuprofile", flagCPUProfile, "write cpu profile to file")
+	rootCmd.PersistentFlags().StringVar(&flagMemProfile, "memprofile", flagMemProfile, "write memory profile to file")
 	rootCmd.PersistentFlags().BoolVar(&flagQuiet, "quiet", flagQuiet, "quiet")
 
 	if err := rootCmd.Execute(); err != nil {

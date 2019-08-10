@@ -25,6 +25,7 @@ import DialogActions from '@material-ui/core/DialogActions';
 import DialogContent from '@material-ui/core/DialogContent';
 import DialogTitle from '@material-ui/core/DialogTitle';
 import Button from '@material-ui/core/Button';
+import TextField from '@material-ui/core/TextField';
 import FormControlLabel from '@material-ui/core/FormControlLabel';
 import Checkbox from '@material-ui/core/Checkbox';
 import FormControl from '@material-ui/core/FormControl';
@@ -59,6 +60,9 @@ const styles = theme => ({
     bottom: theme.spacing.unit * 2,
     right: theme.spacing.unit * 3,
   },
+  textField: {
+    minWidth: '400px'
+  }
 });
 
 
@@ -93,13 +97,13 @@ class CenteredGrid extends React.Component {
     bottom: true,
     records: [],
     nodes: [],
-    levels: [],
+    levels: ['eror', 'dbug', 'info', 'warn', 'crit'],
     modules: [],
-    msgs: [],
     record: null,
     speedDial: false,
     openDialog: false,
     moduleColors: [],
+    filteredLevels: { eror: true,dbug: true,info: true,warn: true,crit: true },
   }
 
   log = null
@@ -158,7 +162,6 @@ class CenteredGrid extends React.Component {
 
       this.setState({
         nodes: this.log.nodes,
-        msgs: this.log.msgs,
         levels: this.log.levels,
         modules: this.log.modules,
         moduleColors: colors,
@@ -189,8 +192,107 @@ class CenteredGrid extends React.Component {
     })
   }
 
+  filters = {
+    message: null,
+    regexp: null,
+  }
+
+  onFilterFormChanged (name, value) {
+    console.log('>', name, value, this.filters)
+
+    switch (name) {
+      case 'log-level-add':
+        var f = this.state.filteredLevels
+        f[value] = true
+        this.setState({filteredLevels: f})
+        this.setState()
+        break
+      case 'log-level-remove':
+        f = this.state.filteredLevels
+        f[value] = false
+        this.setState({filteredLevels: f})
+        break
+      case 'message':
+        if (value.trim().length < 1) {
+          this.filters.message = ""
+          this.filters.regexp = null
+          this.filters.message_error = null
+        } else {
+          if (value.search(/^\//) < 0) {
+            this.filters.regexp = new RegExp(value)
+          } else {
+            try {
+              this.filters.regexp = new RegExp(eval(value))
+            } catch (e) {
+              console.error(e)
+              return null
+            }
+          }
+
+          this.filters.message = value.trim()
+        }
+        break
+      default:
+        return null
+    }
+
+    console.log('<', name, value, this.filters)
+  }
+
+  filterRecords (records) {
+    var levels = []
+    for (const [level, v] of Object.entries(this.state.filteredLevels)) {
+      if (!v) {
+        continue
+      }
+      levels.push(level)
+    }
+
+    console.log('filteredLevels:', levels)
+
+    var rs = records.filter(r => {
+      if (levels.length > 0) {
+        if (!levels.includes(r.level)) {
+          return false
+        }
+      }
+
+      if (this.filters.regexp !== null) {
+        if (!this.filters.regexp.test(r.body)) {
+          return false
+        }
+      }
+
+      return true
+    })
+
+    return rs
+  }
+
+  filter () {
+    setTimeout(() => {
+      this.setState({speedDial: false})
+    }, 10);
+
+    this.setState({ openDialog: false});
+    console.log('filters:', this.filters)
+
+    if (this.log === null || this.log.records === null) {
+      return
+    }
+
+    var records = this.filterRecords(this.log.records)
+
+    this.props.enqueueSnackbar(
+      'logs successfully imported: ' + records.length + ' records found',
+      {variant: 'info'},
+    )
+
+    this.setState({records: records})
+  }
+
   handleCloseDialog = () => {
-    this.setState({ openDialog: false, });
+    this.setState({ openDialog: false});
   };
 
   importTestData = () => {
@@ -210,7 +312,6 @@ class CenteredGrid extends React.Component {
 
       this.setState({
         nodes: this.log.nodes,
-        msgs: this.log.msgs,
         levels: this.log.levels,
         modules: this.log.modules,
         moduleColors: colors,
@@ -229,7 +330,8 @@ class CenteredGrid extends React.Component {
 
     var data = []
     const stringifier = stringify({
-      delimiter: ','
+      delimiter: ',',
+      escape: "\\",
     })
     stringifier.on('readable', function(){
       let row;
@@ -255,12 +357,12 @@ class CenteredGrid extends React.Component {
 
     stringifier.write(header)
 
-    this.log.records.map(record => {
+    this.state.records.map(record => {
       var row = [record.t.orig]
 
       this.log.nodes.map(node => {
         if (node === record.node) {
-          row.push(JSON.stringify(record, null, "  "))
+          row.push(JSON.stringify(record).replace(/\n/, ""))
         } else {
           row.push('')
         }
@@ -276,6 +378,7 @@ class CenteredGrid extends React.Component {
 
   componentDidMount() {
     window.addEventListener('scroll', this.onScroll, false);
+    //this.importTestData()
   }
 
   componentWillUnmount() {
@@ -400,7 +503,7 @@ class CenteredGrid extends React.Component {
   }
 
   renderRecordsMore() {
-    var records = this.log.records.slice(0, this.recordsOffset+this.limit)
+    var records = this.filterRecords(this.log.records.slice(0, this.recordsOffset+this.limit))
     if (records.length < 1) {
       return
     }
@@ -424,7 +527,7 @@ class CenteredGrid extends React.Component {
     if (!update && this.prevRecordsFragment != null) {
       return this.prevRecordsFragment
     }
- 
+
     this.prevRecords = records
 
     var rs = new Array(nodes.length)
@@ -440,7 +543,7 @@ class CenteredGrid extends React.Component {
         last = record.t.n
 
         return o
-  }
+      }
 
       if (last != null) {
         var sub = record.t.n - last
@@ -453,7 +556,7 @@ class CenteredGrid extends React.Component {
 
           return o
         }
-    }
+      }
 
       rs[i] = record
       last = record.t.n
@@ -464,11 +567,11 @@ class CenteredGrid extends React.Component {
     this.prevRecordsFragment.push(this.renderRow(records.length, records[0], rs, nodes))
 
     return this.prevRecordsFragment
-    }
+  }
 
   shouldComponentUpdate(nextProps, nextState) {
-      return true
-    }
+    return true
+  }
 
   renderRow(index, first, records, nodes) {
     const { classes } = this.props;
@@ -484,10 +587,11 @@ class CenteredGrid extends React.Component {
         {this.renderRecord(index, first, records, nodes)}
       </React.Fragment>
     }
-
+    
     return this.renderRecord(index, first, records, nodes)
   }
 
+  filterrMessageRef = React.createRef()
   render() {
     const { classes } = this.props;
 
@@ -510,7 +614,7 @@ class CenteredGrid extends React.Component {
       <Box height='100%'>
         <Table id='inner-root' className={' scrollable'}>
           <TableBody>
-      {this.renderRecords(this.state.records, this.state.nodes)}
+            {this.renderRecords(this.state.records, this.state.nodes)}
           </TableBody>
         </Table>
       </Box>
@@ -534,7 +638,7 @@ class CenteredGrid extends React.Component {
           tooltipOpen
           onClick={e=>{this.refs['dropzone'].open()}}
         />
-      {this.state.msgs.length > 0 ? (
+      {this.state.records.length > 0 ? (
         <SpeedDialAction
           key={'expand-collapse-all'}
           icon={<SettingsOverscanIcon />}
@@ -542,15 +646,14 @@ class CenteredGrid extends React.Component {
           tooltipOpen
           onClick={e=>{this.toggleExpandAll()}}
         />) : ([]) }
-      {this.state.msgs.length > 0 ? (
-        <SpeedDialAction
-          key={'filter'}
-          icon={<FilterListIcon />}
-          tooltipTitle={'filter records'}
-          tooltipOpen
-          onClick={e=>{this.setState({openDialog: true})}}
-        />) : ([]) }
-      {this.state.msgs.length > 0 ? (
+      <SpeedDialAction
+        key={'filter'}
+        icon={<FilterListIcon />}
+        tooltipTitle={'filter records'}
+        tooltipOpen
+        onClick={e=>{this.setState({ openDialog: true})}}
+      />
+      {this.state.records.length > 0 ? (
         <SpeedDialAction
           key={'export to csv'}
           icon={<ChildCareIcon />}
@@ -580,30 +683,49 @@ class CenteredGrid extends React.Component {
           <DialogContent>
             <FormControl component='fieldset' className={classes.formControl}>
               <FormLabel component='legend'>Level</FormLabel>
-                {this.state.levels.map(level => (
-                  <FormControlLabel
+                {this.state.levels.map(level => {
+                  return <FormControlLabel
                     key={level}
                     label={level}
-                    control={ <Checkbox color='default' value={level} /> }
+                    checked={this.state.filteredLevels[level]}
+                    control={
+                      <Checkbox
+                        color='default'
+                        value={level}
+                      />
+                    }
+                    onChange={e => {
+                      this.onFilterFormChanged(
+                        (e.target.checked) ? 'log-level-add' : 'log-level-remove',
+                        level,
+                      )
+                    }}
                   />
-                ))}
+                })}
             </FormControl>
             <FormControl component='fieldset' className={classes.formControl}>
-              <FormLabel component='legend'>Messages</FormLabel>
-                {this.state.msgs.map(msg => (
-                  <FormControlLabel
-                    key={msg}
-                    label={msg}
-                    control={ <Checkbox color='default' value={msg} /> }
-                  />
-                ))}
+              <FormLabel component='legend'>Message</FormLabel>
+              <TextField
+                id="filter-message"
+                ref={this.filterrMessageRef}
+                multiline
+                rows="4"
+                defaultValue={this.filters.message}
+                className={classes.textField}
+                margin="normal"
+                variant="outlined"
+                helperText="/<regular expression>/"
+                onChange={e => {
+                  this.onFilterFormChanged( 'message', e.target.value)
+                }}
+              />
             </FormControl>
           </DialogContent>
           <DialogActions>
             <Button onClick={this.handleCloseDialog} color='primary'>
               Close
             </Button>
-            <Button onClick={this.handleCloseDialog} color='primary'>
+            <Button onClick={e => {this.filter()}} color='primary'>
               Apply Filters
             </Button>
           </DialogActions>

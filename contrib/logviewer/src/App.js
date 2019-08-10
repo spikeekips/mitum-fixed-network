@@ -17,7 +17,8 @@ import IconButton from '@material-ui/core/IconButton';
 import ChildCareIcon from '@material-ui/icons/ChildCare';
 import BookmarksIcon from '@material-ui/icons/Bookmarks';
 import SpeedDialAction from '@material-ui/lab/SpeedDialAction';
-import { unstable_Box as Box } from '@material-ui/core/Box';
+import Slider from '@material-ui/core/Slider';
+import Box from '@material-ui/core/Box';
 import Chip from '@material-ui/core/Chip';
 import Highlight from 'react-highlight'
 import Dialog from '@material-ui/core/Dialog';
@@ -104,6 +105,7 @@ class CenteredGrid extends React.Component {
     openDialog: false,
     moduleColors: [],
     filteredLevels: { eror: true,dbug: true,info: true,warn: true,crit: true },
+    filteredTimeRange: [0, 0],
   }
 
   log = null
@@ -212,6 +214,9 @@ class CenteredGrid extends React.Component {
         f[value] = false
         this.setState({filteredLevels: f})
         break
+      case 'timerange':
+        this.setState({filteredTimeRange: value})
+        break
       case 'message':
         if (value.trim().length < 1) {
           this.filters.message = ""
@@ -250,7 +255,7 @@ class CenteredGrid extends React.Component {
 
     console.log('filteredLevels:', levels)
 
-    var rs = records.filter(r => {
+    return records.filter(r => {
       if (levels.length > 0) {
         if (!levels.includes(r.level)) {
           return false
@@ -265,11 +270,9 @@ class CenteredGrid extends React.Component {
 
       return true
     })
-
-    return rs
   }
 
-  filter () {
+  filter() {
     setTimeout(() => {
       this.setState({speedDial: false})
     }, 10);
@@ -316,8 +319,6 @@ class CenteredGrid extends React.Component {
         modules: this.log.modules,
         moduleColors: colors,
       })
-
-
 
       this.renderRecordsMore()
   }
@@ -533,10 +534,12 @@ class CenteredGrid extends React.Component {
     var rs = new Array(nodes.length)
     var last = null
 
-    this.prevRecordsFragment = records.map((record, index) => {
+    var index = 0
+    this.prevRecordsFragment = records.map((record) => {
       var i = nodes.indexOf(record.node)
       if (rs[i] != null) {
         var o = this.renderRow(index, records[0], rs, nodes)
+        index++
 
         rs = new Array(nodes.length)
         rs[i] = record
@@ -549,6 +552,7 @@ class CenteredGrid extends React.Component {
         var sub = record.t.n - last
         if (sub > this.timeSpanOneRow) {
           o = this.renderRow(index, records[0], rs, nodes)
+          index++
 
           rs = new Array(nodes.length)
           rs[i] = record
@@ -576,7 +580,7 @@ class CenteredGrid extends React.Component {
   renderRow(index, first, records, nodes) {
     const { classes } = this.props;
 
-    if (index === 1 || index % 30 === 0) {
+    if (index % 30 === 0) {
       return <React.Fragment key={'r' + index}>
         <TableRow className='header' key={'h' + index}>
           <TableCell className={classes.listTableT} key={'t'}><div>T</div></TableCell>
@@ -716,9 +720,21 @@ class CenteredGrid extends React.Component {
                 variant="outlined"
                 helperText="/<regular expression>/"
                 onChange={e => {
-                  this.onFilterFormChanged( 'message', e.target.value)
+                  this.onFilterFormChanged('message', e.target.value)
                 }}
               />
+              <FormLabel component='legend'>Elapsed Time</FormLabel>
+              (/*
+                <Slider
+                  min={0}
+                  value={this.state.filteredTimeRange}
+                  valueLabelDisplay="auto"
+                  aria-labelledby="range-slider"
+                  onChange={(e, value) => {
+                    this.onFilterFormChanged('timerange', value)
+                  }}
+                />
+                */)
             </FormControl>
           </DialogContent>
           <DialogActions>

@@ -17,7 +17,6 @@ import IconButton from '@material-ui/core/IconButton';
 import ChildCareIcon from '@material-ui/icons/ChildCare';
 import BookmarksIcon from '@material-ui/icons/Bookmarks';
 import SpeedDialAction from '@material-ui/lab/SpeedDialAction';
-import Slider from '@material-ui/core/Slider';
 import Box from '@material-ui/core/Box';
 import Chip from '@material-ui/core/Chip';
 import Highlight from 'react-highlight'
@@ -38,6 +37,7 @@ import colormap from 'colormap';
 import markdown from 'markdown';
 
 import Log from './log'
+import LogFilter from './filter'
 import raw from './raw'
 
 const styles = theme => ({
@@ -58,14 +58,15 @@ const styles = theme => ({
   speedDial: {
     zIndex: 100000,
     position: 'fixed',
-    bottom: theme.spacing.unit * 2,
-    right: theme.spacing.unit * 3,
+    bottom: theme.spacing(2),
+    right: theme.spacing(3),
   },
   textField: {
     minWidth: '400px'
   }
 });
 
+var allLevels = ['eror', 'dbug', 'info', 'warn', 'crit']
 
 var hexToRgb = (hex) => {
   var shorthandRegex = /^#?([a-f\d])([a-f\d])([a-f\d])$/i;
@@ -98,20 +99,19 @@ class CenteredGrid extends React.Component {
     bottom: true,
     records: [],
     nodes: [],
-    levels: ['eror', 'dbug', 'info', 'warn', 'crit'],
     modules: [],
     record: null,
     speedDial: false,
     openDialog: false,
     moduleColors: [],
     filteredLevels: { eror: true,dbug: true,info: true,warn: true,crit: true },
-    filteredTimeRange: [0, 0],
   }
 
   log = null
   prevRecords = []
-  prevRecordsFragment = null
+  prevRecordsFragment = []
   timeSpanOneRow = 200000
+  logFilter = null
 
   toggleDrawer = (open) => () => {
     this.setState({
@@ -149,6 +149,10 @@ class CenteredGrid extends React.Component {
         this.props.enqueueSnackbar('failed to load logs', {variant: 'error'})
         return
       }
+      // initialize
+      this.logFilter = new LogFilter(this.log.records, {})
+      this.prevRecords = []
+      this.prevRecordsFragment = []
 
       this.props.enqueueSnackbar(
         'logs successfully imported: ' + this.log.records.length + ' records found',
@@ -163,6 +167,7 @@ class CenteredGrid extends React.Component {
       })
 
       this.setState({
+                records: [],
         nodes: this.log.nodes,
         levels: this.log.levels,
         modules: this.log.modules,
@@ -207,15 +212,11 @@ class CenteredGrid extends React.Component {
         var f = this.state.filteredLevels
         f[value] = true
         this.setState({filteredLevels: f})
-        this.setState()
         break
       case 'log-level-remove':
         f = this.state.filteredLevels
         f[value] = false
         this.setState({filteredLevels: f})
-        break
-      case 'timerange':
-        this.setState({filteredTimeRange: value})
         break
       case 'message':
         if (value.trim().length < 1) {
@@ -240,6 +241,16 @@ class CenteredGrid extends React.Component {
       default:
         return null
     }
+
+    var levels = []
+    for (const [level, v] of Object.entries(this.state.filteredLevels)) {
+      if (!v) {
+        continue
+      }
+      levels.push(level)
+    }
+
+    this.logFilter.setFilters({levels: levels, message: this.filters.message})
 
     console.log('<', name, value, this.filters)
   }
@@ -284,10 +295,17 @@ class CenteredGrid extends React.Component {
       return
     }
 
-    var records = this.filterRecords(this.log.records)
+    this.logFilter.reset()
+    this.prevRecords = []
+    this.prevRecordsFragment = []
+    var records = []
+    for (let record of this.logFilter.filter(this.limit)) {
+      records.push(record)
+    }
+    console.log('log filters:', this.logFilter.filters)
 
     this.props.enqueueSnackbar(
-      'logs successfully imported: ' + records.length + ' records found',
+      'logs successfully filtered: ' + records.length + ' records found',
       {variant: 'info'},
     )
 
@@ -299,28 +317,31 @@ class CenteredGrid extends React.Component {
   };
 
   importTestData = () => {
-      this.log = Log.load(raw)
+    this.log = Log.load(raw)
+    this.logFilter = new LogFilter(this.log.records, {})
+    this.prevRecords = []
+    this.prevRecordsFragment = []
 
-      this.props.enqueueSnackbar(
-        'test log data successfully imported: ' + this.log.records.length + ' records found',
-        {variant: 'info'},
-      )
+    this.props.enqueueSnackbar(
+      'test log data successfully imported: ' + this.log.records.length + ' records found',
+      {variant: 'info'},
+    )
 
-      var colors = colormap({
-        colormap: 'hsv',
-        nshades: this.log.modules.length > 10 ? this.log.modules.length : 11,
-        format: 'hex',
-        alpha: 1,
-      })
+    var colors = colormap({
+      colormap: 'hsv',
+      nshades: this.log.modules.length > 10 ? this.log.modules.length : 11,
+      format: 'hex',
+      alpha: 1,
+    })
 
-      this.setState({
-        nodes: this.log.nodes,
-        levels: this.log.levels,
-        modules: this.log.modules,
-        moduleColors: colors,
-      })
+    this.setState({
+      nodes: this.log.nodes,
+      levels: this.log.levels,
+      modules: this.log.modules,
+      moduleColors: colors,
+    })
 
-      this.renderRecordsMore()
+    this.renderRecordsMore()
   }
 
   exportToCSV() {
@@ -504,10 +525,12 @@ class CenteredGrid extends React.Component {
   }
 
   renderRecordsMore() {
-    var records = this.filterRecords(this.log.records.slice(0, this.recordsOffset+this.limit))
-    if (records.length < 1) {
-      return
-    }
+        console.log('log filters:', this.logFilter.filters)
+
+        var records = [
+        ...this.state.records,
+        ...this.logFilter.filter(this.limit),
+        ]
 
     this.setState({ records: records, speedDial: false })
 
@@ -525,7 +548,7 @@ class CenteredGrid extends React.Component {
       update = pl !== tl
     }
 
-    if (!update && this.prevRecordsFragment != null) {
+    if (!update) {
       return this.prevRecordsFragment
     }
 
@@ -534,8 +557,8 @@ class CenteredGrid extends React.Component {
     var rs = new Array(nodes.length)
     var last = null
 
-    var index = 0
-    this.prevRecordsFragment = records.map((record) => {
+    var index = this.prevRecordsFragment.length
+    var updated = records.slice(this.prevRecordsFragment.length).map((record) => {
       var i = nodes.indexOf(record.node)
       if (rs[i] != null) {
         var o = this.renderRow(index, records[0], rs, nodes)
@@ -568,7 +591,11 @@ class CenteredGrid extends React.Component {
       return null
     })
 
-    this.prevRecordsFragment.push(this.renderRow(records.length, records[0], rs, nodes))
+    updated.push(this.renderRow(records.length, records[0], rs, nodes))
+    this.prevRecordsFragment = [
+        ...this.prevRecordsFragment,
+        ...updated,
+    ]
 
     return this.prevRecordsFragment
   }
@@ -687,7 +714,7 @@ class CenteredGrid extends React.Component {
           <DialogContent>
             <FormControl component='fieldset' className={classes.formControl}>
               <FormLabel component='legend'>Level</FormLabel>
-                {this.state.levels.map(level => {
+                {allLevels.map(level => {
                   return <FormControlLabel
                     key={level}
                     label={level}
@@ -723,18 +750,6 @@ class CenteredGrid extends React.Component {
                   this.onFilterFormChanged('message', e.target.value)
                 }}
               />
-              <FormLabel component='legend'>Elapsed Time</FormLabel>
-              (/*
-                <Slider
-                  min={0}
-                  value={this.state.filteredTimeRange}
-                  valueLabelDisplay="auto"
-                  aria-labelledby="range-slider"
-                  onChange={(e, value) => {
-                    this.onFilterFormChanged('timerange', value)
-                  }}
-                />
-                */)
             </FormControl>
           </DialogContent>
           <DialogActions>
@@ -779,11 +794,11 @@ class RecordDetail extends React.Component {
       {this.state.closed ? (
         <React.Fragment />
       ) : (
-        <Grid container className={classes.root} spacing={16}>
-          <Grid item xs={4}>
+        <Grid container className={classes.root} spacing={10}>
+          <Grid item xs={5}>
             <Highlight className='json'>{JSON.stringify(record.basic(), null, 2)}</Highlight>
           </Grid>
-          <Grid item xs={8}>
+          <Grid item xs={5}>
             <Highlight className='json'>{JSON.stringify(record.extra, null, 2)}</Highlight>
           </Grid>
         </Grid>

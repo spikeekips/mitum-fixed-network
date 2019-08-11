@@ -174,6 +174,10 @@ class Record {
       body: this.line,
     }
   }
+
+	equal(r) {
+		return this.body === r.body
+	}
 }
 
 class Log {

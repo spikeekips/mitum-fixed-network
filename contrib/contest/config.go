@@ -325,7 +325,8 @@ func (bc *BlockConfig) IsValid(*BlockConfig) error {
 }
 
 type ModulesConfig struct {
-	Suffrage *SuffrageConfig `yaml:"suffrage,omitempty"`
+	Suffrage      *SuffrageConfig `yaml:"suffrage,omitempty"`
+	ProposalMaker *ProposalMaker  `yaml:"proposal_maker,omitempty"`
 }
 
 func defaultModulesConfig() *ModulesConfig {
@@ -348,6 +349,23 @@ func (mc *ModulesConfig) IsValid(global *ModulesConfig) error {
 		}
 
 		if err := mc.Suffrage.IsValid(sc); err != nil {
+			return err
+		}
+	}
+
+	if mc.ProposalMaker == nil {
+		if global == nil {
+			mc.ProposalMaker = defaultProposalMaker()
+		} else {
+			mc.ProposalMaker = global.ProposalMaker
+		}
+	} else {
+		var sc *ProposalMaker
+		if global != nil {
+			sc = global.ProposalMaker
+		}
+
+		if err := mc.ProposalMaker.IsValid(sc); err != nil {
 			return err
 		}
 	}
@@ -405,5 +423,47 @@ func (sc *SuffrageConfig) IsValid(global *SuffrageConfig) error {
 			return xerrors.Errorf("`number_of_acting` must be int")
 		}
 	}
+	return nil
+}
+
+type ProposalMaker map[string]interface{}
+
+func defaultProposalMaker() *ProposalMaker {
+	return &ProposalMaker{
+		"name":  "DefaultProposalMaker",
+		"delay": "1s",
+	}
+}
+
+func (sc *ProposalMaker) IsValid(global *ProposalMaker) error {
+	if len(*sc) < 1 {
+		if global == nil {
+			*sc = *defaultProposalMaker()
+		} else {
+			*sc = *global
+		}
+
+		return nil
+	}
+
+	var found bool
+	name := (*sc)["name"]
+	for _, n := range contest_module.ProposalMakers {
+		if n == name {
+			found = true
+			break
+		}
+	}
+	if !found {
+		return xerrors.Errorf("unknown proposal_maker found: %v", name)
+	}
+
+	switch name {
+	case "DefaultProposalMaker":
+		if _, found := (*sc)["delay"]; !found {
+			return xerrors.Errorf("`delay` must be given for `DefaultProposalMaker`")
+		}
+	}
+
 	return nil
 }

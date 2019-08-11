@@ -41,7 +41,7 @@ var rootCmd = &cobra.Command{
 				os.Exit(1)
 			}
 
-			var logOutput string = FlagLogOut
+			logOutput = FlagLogOut
 			switch mode := fi.Mode(); {
 			case mode.IsDir():
 				//
@@ -118,7 +118,10 @@ var rootCmd = &cobra.Command{
 			}
 
 			if len(flagMemProfile) > 0 {
-				memProfileFile.Close()
+				if err := memProfileFile.Close(); err != nil {
+					log.Error("failed to close mem profile file", "error", err)
+				}
+
 				log.Debug("cpuprofile closed")
 			}
 

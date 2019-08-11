@@ -65,7 +65,6 @@ func (pc ProposalChecker) saveProposal(*common.ChainChecker) error {
 }
 
 func (pc ProposalChecker) checkInActing(c *common.ChainChecker) error {
-	// TODO
 	var proposal Proposal
 	if err := c.ContextValue("proposal", &proposal); err != nil {
 		return err

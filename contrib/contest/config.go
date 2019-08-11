@@ -46,7 +46,7 @@ func LoadConfig(f string, numberOfNodes uint) (*Config, error) {
 	if int(numberOfNodes) > len(config.Nodes) {
 		log.Debug("extend nodes", "numberOfNodes", numberOfNodes)
 		var last int
-		for name, _ := range config.Nodes {
+		for name := range config.Nodes {
 			var c int
 			if _, err := fmt.Sscanf(name, "n%d", &c); err != nil {
 				log.Debug("not expected node name format", "name", name)
@@ -63,7 +63,7 @@ func LoadConfig(f string, numberOfNodes uint) (*Config, error) {
 		}
 	} else if int(numberOfNodes) < len(config.Nodes) {
 		var names []string
-		for name, _ := range config.Nodes {
+		for name := range config.Nodes {
 			names = append(names, name)
 		}
 
@@ -146,7 +146,7 @@ func (cn *Config) IsValid() error {
 	cn.Global.blocks = blocks
 
 	var nodeNames []string
-	for name, _ := range cn.Nodes {
+	for name := range cn.Nodes {
 		nodeNames = append(nodeNames, name)
 	}
 	sort.Strings(nodeNames)

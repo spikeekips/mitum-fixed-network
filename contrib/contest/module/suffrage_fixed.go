@@ -2,7 +2,6 @@ package contest_module
 
 import (
 	"encoding/json"
-	"sync"
 
 	"golang.org/x/xerrors"
 
@@ -15,7 +14,6 @@ func init() {
 }
 
 type FixedProposerSuffrage struct {
-	sync.RWMutex
 	proposer       node.Node
 	numberOfActing uint // by default numberOfActing is 0; it means all nodes will be acting member
 	nodes          []node.Node
@@ -23,6 +21,8 @@ type FixedProposerSuffrage struct {
 }
 
 func NewFixedProposerSuffrage(proposer node.Node, numberOfActing uint, nodes ...node.Node) *FixedProposerSuffrage {
+	node.SortNodesByAddress(nodes)
+
 	if int(numberOfActing) > len(nodes) {
 		panic(xerrors.Errorf(
 			"numberOfActing should be lesser than number of nodes: numberOfActing=%v nodes=%v",
@@ -56,16 +56,10 @@ func (fs FixedProposerSuffrage) RemoveNodes(nodes ...node.Node) isaac.Suffrage {
 }
 
 func (fs FixedProposerSuffrage) Nodes() []node.Node {
-	fs.RLock()
-	defer fs.RUnlock()
-
 	return fs.nodes
 }
 
 func (fs FixedProposerSuffrage) Acting(height isaac.Height, round isaac.Round) isaac.ActingSuffrage {
-	fs.RLock()
-	defer fs.RUnlock()
-
 	var nodes []node.Node
 	if fs.numberOfActing == 0 || int(fs.numberOfActing) == len(nodes) {
 		nodes = fs.nodes
@@ -81,9 +75,6 @@ func (fs FixedProposerSuffrage) Acting(height isaac.Height, round isaac.Round) i
 }
 
 func (fs FixedProposerSuffrage) Exists(_ isaac.Height, _ isaac.Round, address node.Address) bool {
-	fs.RLock()
-	defer fs.RUnlock()
-
 	for _, n := range fs.nodes {
 		if n.Address().Equal(address) {
 			return true
@@ -94,9 +85,6 @@ func (fs FixedProposerSuffrage) Exists(_ isaac.Height, _ isaac.Round, address no
 }
 
 func (fs FixedProposerSuffrage) MarshalJSON() ([]byte, error) {
-	fs.RLock()
-	defer fs.RUnlock()
-
 	return json.Marshal(map[string]interface{}{
 		"type":             "FixedProposerSuffrage",
 		"proposer":         fs.proposer,

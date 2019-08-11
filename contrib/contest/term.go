@@ -16,7 +16,7 @@ func TermWidth() uint {
 		syscall.SYS_IOCTL,
 		uintptr(syscall.Stdin),
 		uintptr(syscall.TIOCGWINSZ),
-		uintptr(unsafe.Pointer(ws)),
+		uintptr(unsafe.Pointer(ws)), // nolint
 	)
 
 	if int(retCode) == -1 {

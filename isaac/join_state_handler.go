@@ -171,8 +171,6 @@ func (js *JoinStateHandler) ReceiveProposal(proposal Proposal) error {
 		return err
 	}
 
-	// TODO prepare to store new block
-
 	return nil
 }
 
@@ -311,7 +309,6 @@ func (js *JoinStateHandler) gotINITMajority(vr VoteResult) error {
 }
 
 func (js *JoinStateHandler) gotNotINITMajority(vr VoteResult) error {
-	// TODO
 	js.Log().Debug("got majority, not init; will be ignored", "vr", vr)
 	return nil
 }

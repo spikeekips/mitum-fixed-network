@@ -119,10 +119,6 @@ func (t *testJoinStateHandler) TestBroadcastINITBallot() {
 	t.True(js.homeState.Block().Proposal().Equal(ballot.Proposal()))
 }
 
-func (t *testJoinStateHandler) TestReceiveVoteResult() {
-	// TODO
-}
-
 func (t *testJoinStateHandler) TestTimeoutVoteProof() {
 	js, closeFunc := t.handler(time.Second*1, time.Millisecond*20)
 	defer closeFunc()

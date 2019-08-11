@@ -38,7 +38,7 @@ func (cbc CompilerBallotChecker) initialize(c *common.ChainChecker) error {
 	}
 
 	log_ := c.Log().New(log15.Ctx{"ballot": ballot.Hash()})
-	c.SetContext("log", log_)
+	_ = c.SetContext("log", log_)
 
 	log_.Debug("will check ballot", "seal", ballot)
 

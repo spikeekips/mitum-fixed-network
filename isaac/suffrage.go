@@ -22,6 +22,8 @@ type ActingSuffrage struct {
 }
 
 func NewActingSuffrage(height Height, round Round, proposer node.Node, nodes []node.Node) ActingSuffrage {
+	node.SortNodesByAddress(nodes)
+
 	return ActingSuffrage{height: height, round: round, proposer: proposer, nodes: nodes}
 }
 
@@ -30,7 +32,6 @@ func (af ActingSuffrage) Proposer() node.Node {
 }
 
 func (af ActingSuffrage) Nodes() []node.Node {
-	// TODO nodes should be sorted by it's address
 	return af.nodes
 }
 

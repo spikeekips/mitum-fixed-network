@@ -37,7 +37,9 @@ func NewNode(
 
 	numberOfActing := uint((*config.Modules.Suffrage)["number_of_acting"].(int))
 	thr, _ := isaac.NewThreshold(numberOfActing, *config.Policy.Threshold)
-	thr.Set(isaac.StageINIT, globalConfig.NumberOfNodes(), *config.Policy.Threshold)
+	if err := thr.Set(isaac.StageINIT, globalConfig.NumberOfNodes(), *config.Policy.Threshold); err != nil {
+		return nil, err
+	}
 
 	cm := isaac.NewCompiler(homeState, isaac.NewBallotbox(thr), ballotChecker)
 	cm.SetLogContext(nil, "node", home.Alias())
@@ -67,7 +69,6 @@ func NewNode(
 		}
 		js.SetLogContext(nil, "node", home.Alias())
 
-		// TODO delay can be set in config
 		dp := newProposalMaker(config, home)
 
 		cs, err := isaac.NewConsensusStateHandler(

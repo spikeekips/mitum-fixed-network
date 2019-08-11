@@ -163,7 +163,6 @@ func (cs *ConsensusStateHandler) ReceiveProposal(proposal Proposal) error {
 		return err
 	}
 
-	// TODO validate proposal
 	var block Block
 	if block, err = cs.proposalValidator.NewBlock(
 		proposal.Height(),
@@ -264,7 +263,6 @@ func (cs *ConsensusStateHandler) gotINITMajority(vr VoteResult) error {
 			return xerrors.Errorf("init for next block; last block does not match; move to sync")
 		}
 
-		// TODO store new block; fix; it's just for testing
 		block, err := NewBlockFromVoteResult(vr)
 		if err != nil {
 			cs.Log().Error("failed to create new block from VoteResult", "vr", vr, "error", err)
@@ -300,9 +298,6 @@ func (cs *ConsensusStateHandler) gotINITMajority(vr VoteResult) error {
 }
 
 func (cs *ConsensusStateHandler) gotNotINITMajority(vr VoteResult) error {
-	// TODO check NilHash
-	// TODO broadcast next stage ballot
-
 	switch vr.Stage() {
 	case StageSIGN, StageACCEPT:
 	default:

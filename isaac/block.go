@@ -22,8 +22,6 @@ func IsBlockHash(h hash.Hash) bool {
 	return h.Hint() == BlockHashHint
 }
 
-// TODO create func to check block hash
-
 type Block struct {
 	hash      hash.Hash
 	height    Height

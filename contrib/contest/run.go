@@ -24,6 +24,4 @@ func run(cmd *cobra.Command, config *Config) error {
 	}
 
 	select {}
-
-	return nil
 }

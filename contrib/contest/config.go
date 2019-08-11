@@ -460,8 +460,12 @@ func (sc *ProposalMaker) IsValid(global *ProposalMaker) error {
 
 	switch name {
 	case "DefaultProposalMaker":
-		if _, found := (*sc)["delay"]; !found {
+		if s, found := (*sc)["delay"]; !found {
 			return xerrors.Errorf("`delay` must be given for `DefaultProposalMaker`")
+		} else if d, ok := s.(string); !ok {
+			return xerrors.Errorf("`delay` must be time.Duration string format; %v", (*sc)["delay"])
+		} else if _, err := time.ParseDuration(d); err != nil {
+			return err
 		}
 	}
 

@@ -68,8 +68,7 @@ func NewNode(
 		js.SetLogContext(nil, "node", home.Alias())
 
 		// TODO delay can be set in config
-		dp := isaac.NewDefaultProposalMaker(home, time.Second*1)
-		dp.SetLogContext(nil, "node", home.Alias())
+		dp := newProposalMaker(config, home)
 
 		cs, err := isaac.NewConsensusStateHandler(
 			homeState,
@@ -172,5 +171,22 @@ func newSuffrage(config *NodeConfig, home node.Home, nodes []node.Node) isaac.Su
 		return contest_module.NewRoundrobinSuffrage(numberOfActing, nodes...)
 	default:
 		panic(xerrors.Errorf("unknown suffrage config: %v", config))
+	}
+}
+
+func newProposalMaker(config *NodeConfig, home node.Home) isaac.ProposalMaker {
+	pc := *config.Modules.ProposalMaker
+	switch pc["name"] {
+	case "DefaultProposalMaker":
+		delay, err := time.ParseDuration(pc["delay"].(string))
+		if err != nil {
+			panic(err)
+		}
+
+		dp := isaac.NewDefaultProposalMaker(home, delay)
+		dp.SetLogContext(nil, "node", home.Alias())
+		return dp
+	default:
+		panic(xerrors.Errorf("unknown proposal maker config: %v", config))
 	}
 }

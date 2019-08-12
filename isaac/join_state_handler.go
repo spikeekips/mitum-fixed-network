@@ -30,6 +30,7 @@ type JoinStateHandler struct {
 	homeState                   *HomeState
 	compiler                    *Compiler
 	nt                          network.Network
+	proposalValidator           ProposalValidator
 	intervalBroadcastINITBallot time.Duration
 	timeoutWaitVoteResult       time.Duration
 	chanState                   chan StateContext
@@ -43,6 +44,7 @@ func NewJoinStateHandler(
 	homeState *HomeState,
 	compiler *Compiler,
 	nt network.Network,
+	proposalValidator ProposalValidator,
 	intervalBroadcastINITBallot time.Duration,
 	timeoutWaitVoteResult time.Duration,
 ) (*JoinStateHandler, error) {
@@ -55,6 +57,7 @@ func NewJoinStateHandler(
 		homeState:                   homeState,
 		compiler:                    compiler,
 		nt:                          nt,
+		proposalValidator:           proposalValidator,
 		intervalBroadcastINITBallot: intervalBroadcastINITBallot,
 		timeoutWaitVoteResult:       timeoutWaitVoteResult,
 		proposalChecker:             NewProposalCheckerJoin(homeState),
@@ -263,9 +266,9 @@ func (js *JoinStateHandler) catchUp(vr VoteResult) error {
 		)
 	}
 
-	block, err := NewBlockFromVoteResult(vr)
+	block, err := js.proposalValidator.NewBlock(vr.Height(), vr.Round(), vr.Proposal())
 	if err != nil {
-		js.Log().Error("failed to create new block from VoteResult", "vr", vr, "error", err)
+		js.Log().Error("failed to make new block from proposal", "vr", vr, "error", err)
 		return err
 	}
 

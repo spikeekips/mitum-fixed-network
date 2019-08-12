@@ -15,6 +15,7 @@ type StateController struct {
 	*common.ReaderDaemon
 	homeState        *HomeState
 	compiler         *Compiler
+	sealStorage      SealStorage
 	chanState        chan StateContext
 	bootingHandler   StateHandler
 	joinHandler      StateHandler
@@ -26,6 +27,7 @@ type StateController struct {
 func NewStateController(
 	homeState *HomeState,
 	compiler *Compiler,
+	sealStorage SealStorage,
 	bootingHandler StateHandler,
 	joinHandler StateHandler,
 	consensusHandler StateHandler,
@@ -35,6 +37,7 @@ func NewStateController(
 	sc := &StateController{
 		homeState:        homeState,
 		compiler:         compiler,
+		sealStorage:      sealStorage,
 		chanState:        chanState,
 		bootingHandler:   bootingHandler.SetChanState(chanState),
 		joinHandler:      joinHandler.SetChanState(chanState),
@@ -154,6 +157,11 @@ func (sc *StateController) receiveMessage(message interface{}) error {
 
 	if err := sl.IsValid(); err != nil {
 		sc.Log().Error("invalid seal", "seal", sl.Hash(), "error", err)
+		return err
+	}
+
+	// save seal
+	if err := sc.sealStorage.Save(sl); err != nil {
 		return err
 	}
 

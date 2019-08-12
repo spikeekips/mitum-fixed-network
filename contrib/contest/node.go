@@ -61,6 +61,7 @@ func NewNode(
 			homeState,
 			cm,
 			nt,
+			pv,
 			*config.Policy.IntervalBroadcastINITBallotInJoin,
 			*config.Policy.TimeoutWaitVoteResultInJoin,
 		)
@@ -88,7 +89,9 @@ func NewNode(
 		ss := isaac.NewStoppedStateHandler()
 		ss.SetLogContext(nil, "node", home.Alias())
 
-		sc = isaac.NewStateController(homeState, cm, bs, js, cs, ss)
+		ssr := newSealStorage(config, home)
+
+		sc = isaac.NewStateController(homeState, cm, ssr, bs, js, cs, ss)
 		sc.SetLogContext(nil, "node", home.Alias())
 
 		go func() {
@@ -190,4 +193,11 @@ func newProposalMaker(config *NodeConfig, home node.Home) isaac.ProposalMaker {
 	default:
 		panic(xerrors.Errorf("unknown proposal maker config: %v", config))
 	}
+}
+
+func newSealStorage(config *NodeConfig, home node.Home) isaac.SealStorage {
+	ss := contest_module.NewMemorySealStorage()
+	ss.SetLogContext(nil, "node", home.Alias())
+
+	return ss
 }

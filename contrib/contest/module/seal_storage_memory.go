@@ -1,30 +1,31 @@
-// +build test
-
-package isaac
+package contest_module
 
 import (
+	"github.com/spikeekips/mitum/common"
 	"github.com/spikeekips/mitum/hash"
 	"github.com/spikeekips/mitum/seal"
 	"golang.org/x/sync/syncmap"
 	"golang.org/x/xerrors"
 )
 
-type TSealStorage struct {
+type MemorySealStorage struct {
+	*common.Logger
 	m *syncmap.Map
 }
 
-func NewTSealStorage() *TSealStorage {
-	return &TSealStorage{
-		m: &syncmap.Map{},
+func NewMemorySealStorage() *MemorySealStorage {
+	return &MemorySealStorage{
+		Logger: common.NewLogger(log, "module", "memory-seal-storage"),
+		m:      &syncmap.Map{},
 	}
 }
 
-func (tss *TSealStorage) Has(h hash.Hash) bool {
+func (tss *MemorySealStorage) Has(h hash.Hash) bool {
 	_, found := tss.m.Load(h)
 	return found
 }
 
-func (tss *TSealStorage) Get(h hash.Hash) seal.Seal {
+func (tss *MemorySealStorage) Get(h hash.Hash) seal.Seal {
 	if s, found := tss.m.Load(h); !found {
 		return nil
 	} else if sl, ok := s.(seal.Seal); !ok {
@@ -34,7 +35,7 @@ func (tss *TSealStorage) Get(h hash.Hash) seal.Seal {
 	}
 }
 
-func (tss *TSealStorage) Save(sl seal.Seal) error {
+func (tss *MemorySealStorage) Save(sl seal.Seal) error {
 	if sl == nil {
 		return xerrors.Errorf("seal should not be nil")
 	}
@@ -45,5 +46,6 @@ func (tss *TSealStorage) Save(sl seal.Seal) error {
 
 	tss.m.Store(sl.Hash(), sl)
 
+	tss.Log().Debug("seal saved", "seal", sl.Hash())
 	return nil
 }

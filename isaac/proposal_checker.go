@@ -21,7 +21,6 @@ func NewProposalCheckerBooting(homeState *HomeState) *common.ChainChecker {
 	return common.NewChainChecker(
 		"booting-proposal-checker",
 		context.Background(),
-		pc.saveProposal,
 		pc.checkInActing,
 		pc.checkHeightAndRoundWithHomeState,
 	)
@@ -35,7 +34,6 @@ func NewProposalCheckerJoin(homeState *HomeState) *common.ChainChecker {
 	return common.NewChainChecker(
 		"join-proposal-checker",
 		context.Background(),
-		pc.saveProposal,
 		pc.checkInActing,
 		pc.checkHeightAndRoundWithHomeState,
 		pc.checkHeightAndRoundWithLastINITVoteResult,
@@ -51,17 +49,10 @@ func NewProposalCheckerConsensus(homeState *HomeState, suffrage Suffrage) *commo
 	return common.NewChainChecker(
 		"join-proposal-checker",
 		context.Background(),
-		pc.saveProposal,
 		pc.checkInActing,
 		pc.checkHeightAndRoundWithHomeState,
 		pc.checkHeightAndRoundWithLastINITVoteResult,
 	)
-}
-
-func (pc ProposalChecker) saveProposal(*common.ChainChecker) error {
-	// TODO
-
-	return nil
 }
 
 func (pc ProposalChecker) checkInActing(c *common.ChainChecker) error {

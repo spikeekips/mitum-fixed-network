@@ -263,9 +263,9 @@ func (cs *ConsensusStateHandler) gotINITMajority(vr VoteResult) error {
 			return xerrors.Errorf("init for next block; last block does not match; move to sync")
 		}
 
-		block, err := NewBlockFromVoteResult(vr)
+		block, err := cs.proposalValidator.NewBlock(vr.Height(), vr.Round(), vr.Proposal())
 		if err != nil {
-			cs.Log().Error("failed to create new block from VoteResult", "vr", vr, "error", err)
+			cs.Log().Error("failed to make new block from VoteResult", "vr", vr, "error", err)
 			return err
 		}
 

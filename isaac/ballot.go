@@ -18,6 +18,10 @@ var (
 	BallotHashHint string          = "ballot"
 )
 
+func NewBallotHash(b []byte) (hash.Hash, error) {
+	return hash.NewDoubleSHAHash(BallotHashHint, b)
+}
+
 type Ballot struct {
 	seal.BaseSeal
 	body BallotBody
@@ -324,10 +328,6 @@ func (bbb BaseBallotBody) makeHash() (hash.Hash, error) {
 	if err != nil {
 		return hash.Hash{}, err
 	}
-	h, err := hash.NewDoubleSHAHash(BallotHashHint, b)
-	if err != nil {
-		return hash.Hash{}, err
-	}
 
-	return h, nil
+	return NewBallotHash(b)
 }

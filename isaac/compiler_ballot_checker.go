@@ -61,6 +61,13 @@ func (cbc CompilerBallotChecker) checkInSuffrage(c *common.ChainChecker) error {
 				ballot.Node(),
 			)
 		}
+	} else if !cbc.suffrage.Exists(ballot.Height().Sub(1), ballot.Node()) {
+		return xerrors.Errorf(
+			"%s ballot node does not in suffrage; ballot=%v node=%v",
+			ballot.Stage(),
+			ballot.Hash(),
+			ballot.Node(),
+		)
 	}
 
 	return nil

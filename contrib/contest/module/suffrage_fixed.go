@@ -74,7 +74,7 @@ func (fs FixedProposerSuffrage) Acting(height isaac.Height, round isaac.Round) i
 	return isaac.NewActingSuffrage(height, round, fs.proposer, nodes)
 }
 
-func (fs FixedProposerSuffrage) Exists(_ isaac.Height, _ isaac.Round, address node.Address) bool {
+func (fs FixedProposerSuffrage) Exists(_ isaac.Height, address node.Address) bool {
 	for _, n := range fs.nodes {
 		if n.Address().Equal(address) {
 			return true

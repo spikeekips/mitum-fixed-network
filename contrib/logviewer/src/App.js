@@ -110,7 +110,7 @@ class CenteredGrid extends React.Component {
   log = null
   prevRecords = []
   prevRecordsFragment = []
-  timeSpanOneRow = 200000
+  timeSpanOneRow = 8000000
   logFilter = null
 
   toggleDrawer = (open) => () => {

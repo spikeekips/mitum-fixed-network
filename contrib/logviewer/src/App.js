@@ -561,7 +561,7 @@ class CenteredGrid extends React.Component {
     var updated = records.slice(this.prevRecordsFragment.length).map((record) => {
       var i = nodes.indexOf(record.node)
       if (rs[i] != null) {
-        var o = this.renderRow(index, records[0], rs, nodes)
+        var o = this.renderRow(index, this.log.records[0], rs, nodes)
         index++
 
         rs = new Array(nodes.length)
@@ -574,7 +574,7 @@ class CenteredGrid extends React.Component {
       if (last != null) {
         var sub = record.t.n - last
         if (sub > this.timeSpanOneRow) {
-          o = this.renderRow(index, records[0], rs, nodes)
+          o = this.renderRow(index, this.log.records[0], rs, nodes)
           index++
 
           rs = new Array(nodes.length)
@@ -591,7 +591,7 @@ class CenteredGrid extends React.Component {
       return null
     })
 
-    updated.push(this.renderRow(records.length, records[0], rs, nodes))
+    updated.push(this.renderRow(records.length, this.log.records[0], rs, nodes))
     this.prevRecordsFragment = [
         ...this.prevRecordsFragment,
         ...updated,

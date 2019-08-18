@@ -230,6 +230,7 @@ func (cs *ConsensusStateHandler) ReceiveVoteResult(vr VoteResult) error {
 	cs.Log().Debug("VoteResult checked", "vr", vr)
 
 	if vr.GotDraw() {
+		cs.Log().Debug("VoteResult drawed", "vr", vr)
 		return cs.startNextRound(vr)
 	} else if vr.GotMajority() {
 		if vr.Stage() == StageINIT {
@@ -400,11 +401,9 @@ func (cs *ConsensusStateHandler) prepareProposal(vr VoteResult) error {
 		return nil
 	}
 
-	go func() {
-		if err := cs.propose(vr); err != nil {
-			cs.Log().Error("failed to propose", "error", err)
-		}
-	}()
+	if err := cs.propose(vr); err != nil {
+		cs.Log().Error("failed to propose", "error", err)
+	}
 
 	if err := cs.nextRoundTimer("proposal-timeout-next-round-consensus", vr); err != nil {
 		return err

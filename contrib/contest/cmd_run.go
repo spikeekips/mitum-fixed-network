@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"os"
 	"syscall"
 	"time"
@@ -31,7 +32,7 @@ var runCmd = &cobra.Command{
 			os.Exit(1)
 		}
 
-		log.Debug("config loaded", "config", config)
+		log.Debug("config loaded", "config", config, "flagExitAfter", flagExitAfter)
 
 		go func() { // exit-after
 			if flagExitAfter < time.Nanosecond {
@@ -39,6 +40,7 @@ var runCmd = &cobra.Command{
 			}
 
 			<-time.After(flagExitAfter)
+			fmt.Println("> exited", flagExitAfter.String())
 			sigc <- syscall.SIGINT // interrupt process by force after timeout
 		}()
 

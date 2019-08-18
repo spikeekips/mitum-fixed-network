@@ -21,18 +21,21 @@ type FixedProposerSuffrage struct {
 }
 
 func NewFixedProposerSuffrage(proposer node.Node, numberOfActing uint, nodes ...node.Node) *FixedProposerSuffrage {
-	node.SortNodesByAddress(nodes)
+	sorted := make([]node.Node, len(nodes))
+	copy(sorted, nodes)
 
-	if int(numberOfActing) > len(nodes) {
+	node.SortNodesByAddress(sorted)
+
+	if int(numberOfActing) > len(sorted) {
 		panic(xerrors.Errorf(
 			"numberOfActing should be lesser than number of nodes: numberOfActing=%v nodes=%v",
 			numberOfActing,
-			len(nodes),
+			len(sorted),
 		))
 	}
 
 	var others []node.Node
-	for _, n := range nodes {
+	for _, n := range sorted {
 		if n.Address().Equal(proposer.Address()) {
 			continue
 		}
@@ -42,7 +45,7 @@ func NewFixedProposerSuffrage(proposer node.Node, numberOfActing uint, nodes ...
 	return &FixedProposerSuffrage{
 		proposer:       proposer,
 		numberOfActing: numberOfActing,
-		nodes:          nodes,
+		nodes:          sorted,
 		others:         others,
 	}
 }

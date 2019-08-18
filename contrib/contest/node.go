@@ -6,6 +6,7 @@ import (
 	"golang.org/x/xerrors"
 
 	"github.com/inconshreveable/log15"
+	"github.com/spikeekips/mitum/common"
 	contest_module "github.com/spikeekips/mitum/contrib/contest/module"
 	"github.com/spikeekips/mitum/isaac"
 	"github.com/spikeekips/mitum/keypair"
@@ -14,6 +15,7 @@ import (
 )
 
 type Node struct {
+	*common.Logger
 	homeState *isaac.HomeState
 	nt        *contest_module.ChannelNetwork
 	sc        *isaac.StateController
@@ -61,6 +63,7 @@ func NewNode(
 			homeState,
 			cm,
 			nt,
+			suffrage,
 			pv,
 			*config.Policy.IntervalBroadcastINITBallotInJoin,
 			*config.Policy.TimeoutWaitVoteResultInJoin,
@@ -93,12 +96,6 @@ func NewNode(
 
 		sc = isaac.NewStateController(homeState, cm, ssr, bs, js, cs, ss)
 		sc.SetLogContext(nil, "node", home.Alias())
-
-		go func() {
-			for m := range nt.Reader() {
-				_ = sc.Write(m)
-			}
-		}()
 	}
 
 	log_.Debug(
@@ -111,6 +108,7 @@ func NewNode(
 	)
 
 	n := &Node{
+		Logger:    common.NewLogger(log, "node", home.Alias()),
 		homeState: homeState,
 		nt:        nt,
 		sc:        sc,
@@ -124,6 +122,8 @@ func (no *Node) Home() node.Home {
 }
 
 func (no *Node) Start() error {
+	started := time.Now()
+
 	if err := no.nt.Start(); err != nil {
 		return err
 	}
@@ -131,6 +131,22 @@ func (no *Node) Start() error {
 	if err := no.sc.Start(); err != nil {
 		return err
 	}
+
+	go func() {
+		for m := range no.nt.Reader() {
+			go func(m interface{}) {
+				started := time.Now()
+				err := no.sc.Receive(m)
+				no.sc.Log().Debug(
+					"message received",
+					"message", m,
+					"error", err,
+					"elapsed", time.Now().Sub(started),
+				)
+			}(m)
+		}
+	}()
+	no.Log().Debug("node started", "elapsed", time.Now().Sub(started))
 
 	return nil
 }
@@ -162,12 +178,15 @@ func newSuffrage(config *NodeConfig, home node.Home, nodes []node.Node) isaac.Su
 	switch sc["name"] {
 	case "FixedProposerSuffrage":
 		// find proposer
-		proposer := interface{}(home).(node.Node)
+		var proposer node.Node
 		for _, n := range nodes {
 			if n.Alias() == sc["proposer"].(string) {
 				proposer = n
 				break
 			}
+		}
+		if proposer == nil {
+			panic(xerrors.Errorf("failed to find proposer: %v", config))
 		}
 
 		return contest_module.NewFixedProposerSuffrage(proposer, numberOfActing, nodes...)

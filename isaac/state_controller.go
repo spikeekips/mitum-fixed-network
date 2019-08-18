@@ -1,6 +1,7 @@
 package isaac
 
 import (
+	"fmt"
 	"sync"
 
 	"golang.org/x/xerrors"
@@ -12,7 +13,7 @@ import (
 
 type StateController struct {
 	sync.RWMutex
-	*common.ReaderDaemon
+	*common.Logger
 	homeState        *HomeState
 	compiler         *Compiler
 	sealStorage      SealStorage
@@ -35,6 +36,7 @@ func NewStateController(
 ) *StateController {
 	chanState := make(chan StateContext)
 	sc := &StateController{
+		Logger:           common.NewLogger(log, "module", "state-controller"),
 		homeState:        homeState,
 		compiler:         compiler,
 		sealStorage:      sealStorage,
@@ -44,16 +46,11 @@ func NewStateController(
 		consensusHandler: consensusHandler.SetChanState(chanState),
 		stoppedHandler:   stoppedHandler.SetChanState(chanState),
 	}
-	sc.ReaderDaemon = common.NewReaderDaemon(false, 0, sc.receiveMessage)
-	sc.ReaderDaemon.Logger = common.NewLogger(log, "module", "state-controller")
+
 	return sc
 }
 
 func (sc *StateController) Start() error {
-	if err := sc.ReaderDaemon.Start(); err != nil {
-		return err
-	}
-
 	go sc.loopState()
 
 	// start booting
@@ -65,10 +62,6 @@ func (sc *StateController) Start() error {
 }
 
 func (sc *StateController) Stop() error {
-	if err := sc.ReaderDaemon.Stop(); err != nil {
-		return err
-	}
-
 	sc.Lock()
 	defer sc.Unlock()
 
@@ -146,14 +139,17 @@ func (sc *StateController) setState(sct StateContext) error {
 	return nil
 }
 
-func (sc *StateController) receiveMessage(message interface{}) error {
+func (sc *StateController) Receive(message interface{}) error {
 	sl, ok := message.(seal.Seal)
 	if !ok {
 		sc.Log().Error("receive unknown message", "message", message)
 		return xerrors.Errorf("receive unknown message; message=%q", message)
 	}
 
-	sc.Log().Debug("receive seal", "seal", sl)
+	sc.Log().Debug(
+		fmt.Sprintf("seal received; %v", sl.Type()),
+		"seal", sl,
+	)
 
 	if err := sl.IsValid(); err != nil {
 		sc.Log().Error("invalid seal", "seal", sl.Hash(), "error", err)
@@ -206,6 +202,12 @@ func (sc *StateController) handleProposal(proposal Proposal) error {
 	return nil
 }
 
+func (sc *StateController) StateHandler() StateHandler {
+	sc.RLock()
+	defer sc.RUnlock()
+	return sc.stateHandler
+}
+
 func (sc *StateController) handleBallot(ballot Ballot) error {
 	vr, err := sc.compiler.Vote(ballot)
 	if err != nil {
@@ -214,15 +216,9 @@ func (sc *StateController) handleBallot(ballot Ballot) error {
 	}
 
 	if !vr.IsClosed() && vr.IsFinished() {
-		sc.RLock()
-		handler := sc.stateHandler
-		sc.RUnlock()
-
 		// hand over VoteResult to StateHandler
-		if handler != nil {
-			if err := handler.ReceiveVoteResult(vr); err != nil {
-				return err
-			}
+		if err := sc.StateHandler().ReceiveVoteResult(vr); err != nil {
+			return err
 		}
 	}
 

@@ -46,6 +46,6 @@ func (tss *MemorySealStorage) Save(sl seal.Seal) error {
 
 	tss.m.Store(sl.Hash(), sl)
 
-	tss.Log().Debug("seal saved", "seal", sl.Hash())
+	//tss.Log().Debug("seal saved", "seal", sl.Hash())
 	return nil
 }

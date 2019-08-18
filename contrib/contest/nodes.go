@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"sort"
 	"sync"
 
@@ -18,7 +19,15 @@ func NewNodes(config *Config) (*Nodes, error) {
 	for n := range config.Nodes {
 		nodeNames = append(nodeNames, n)
 	}
-	sort.Strings(nodeNames)
+	sort.Slice(
+		nodeNames,
+		func(i, j int) bool {
+			var ni, nj int
+			_, _ = fmt.Sscanf(nodeNames[i], "n%d", &ni)
+			_, _ = fmt.Sscanf(nodeNames[j], "n%d", &nj)
+			return ni < nj
+		},
+	)
 
 	var nodeList []node.Node
 	for i, name := range nodeNames[:config.NumberOfNodes()] {
@@ -26,22 +35,39 @@ func NewNodes(config *Config) (*Nodes, error) {
 		nodeList = append(nodeList, n)
 	}
 
-	var nodes []*Node
+	var wg sync.WaitGroup
+	wg.Add(len(nodeList))
+
+	nch := make(chan *Node)
 	for _, n := range nodeList {
 		nodeConfig := config.Nodes[n.Alias()]
 
-		n = n.SetAlias("")
-		no, err := NewNode(
-			n.(node.Home),
-			nodeList,
-			config,
-			nodeConfig,
-		)
-		if err != nil {
-			return nil, err
-		}
-		nodes = append(nodes, no)
+		go func(n node.Node, c *NodeConfig) {
+			no, err := NewNode(
+				interface{}(n).(node.Home),
+				nodeList,
+				config,
+				c,
+			)
+			if err != nil {
+				panic(err)
+			}
+
+			nch <- no
+		}(n, nodeConfig)
 	}
+
+	var nodes []*Node
+	for no := range nch {
+		nodes = append(nodes, no)
+		wg.Done()
+		if len(nodes) == len(nodeList) {
+			break
+		}
+	}
+	close(nch)
+
+	wg.Wait()
 
 	// connect network
 	for _, n := range nodes {

@@ -2,7 +2,9 @@ package contest_module
 
 import (
 	"context"
+	"fmt"
 	"sync"
+	"time"
 
 	"golang.org/x/xerrors"
 
@@ -52,31 +54,43 @@ func (cn *ChannelNetwork) AddMembers(chans ...*ChannelNetwork) *ChannelNetwork {
 	return cn
 }
 
-func (cn *ChannelNetwork) SetHandler(handler ChannelNetworkSealHandler) *ChannelNetwork {
-	cn.handler = handler
-	return cn
+func (cn *ChannelNetwork) Chans() []*ChannelNetwork {
+	cn.RLock()
+	defer cn.RUnlock()
+
+	var chans []*ChannelNetwork
+	for _, ch := range cn.chans {
+		chans = append(chans, ch)
+	}
+
+	return chans
 }
 
 func (cn *ChannelNetwork) Broadcast(sl seal.Seal) error {
-	cn.RLock()
-	defer cn.RUnlock()
+	started := time.Now()
 
 	var wg sync.WaitGroup
 	wg.Add(len(cn.chans))
 
-	for _, ch := range cn.chans {
-		go func(ch *ChannelNetwork) {
-			defer wg.Done()
-
-			if ch.Write(sl) {
-				cn.Log().Debug("sent seal", "to", ch.Home().Address(), "seal", sl)
-			} else {
-				cn.Log().Error("failed to send seal", "to", ch.Home().Address(), "seal", sl)
+	var targets []node.Address
+	for _, ch := range cn.Chans() {
+		targets = append(targets, ch.Home().Address())
+		go func(a node.Address, sl seal.Seal) {
+			if !ch.Write(sl) {
+				cn.Log().Error("failed to send seal", "to", a, "seal", sl)
 			}
-		}(ch)
+			wg.Done()
+		}(ch.Home().Address(), sl)
 	}
 
 	wg.Wait()
+
+	cn.Log().Debug(
+		fmt.Sprintf("seal sent; %v", sl.Type()),
+		"seal", sl,
+		"targets", targets,
+		"elapsed", time.Now().Sub(started),
+	)
 
 	return nil
 }

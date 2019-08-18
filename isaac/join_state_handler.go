@@ -30,6 +30,7 @@ type JoinStateHandler struct {
 	homeState                   *HomeState
 	compiler                    *Compiler
 	nt                          network.Network
+	suffrage                    Suffrage
 	proposalValidator           ProposalValidator
 	intervalBroadcastINITBallot time.Duration
 	timeoutWaitVoteResult       time.Duration
@@ -44,6 +45,7 @@ func NewJoinStateHandler(
 	homeState *HomeState,
 	compiler *Compiler,
 	nt network.Network,
+	suffrage Suffrage,
 	proposalValidator ProposalValidator,
 	intervalBroadcastINITBallot time.Duration,
 	timeoutWaitVoteResult time.Duration,
@@ -57,10 +59,11 @@ func NewJoinStateHandler(
 		homeState:                   homeState,
 		compiler:                    compiler,
 		nt:                          nt,
+		suffrage:                    suffrage,
 		proposalValidator:           proposalValidator,
 		intervalBroadcastINITBallot: intervalBroadcastINITBallot,
 		timeoutWaitVoteResult:       timeoutWaitVoteResult,
-		proposalChecker:             NewProposalCheckerJoin(homeState),
+		proposalChecker:             NewProposalCheckerJoin(homeState, suffrage),
 		voteResultChecker:           NewJoinVoteResultChecker(homeState),
 	}, nil
 }
@@ -186,6 +189,8 @@ func (js *JoinStateHandler) ReceiveVoteResult(vr VoteResult) error {
 	if err != nil {
 		return err
 	}
+
+	js.Log().Debug("VoteResult checked", "vr", vr)
 
 	if !vr.GotMajority() {
 		js.Log().Debug("got not majority; ignore", "vr", vr)

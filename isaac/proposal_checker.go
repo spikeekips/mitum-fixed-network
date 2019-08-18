@@ -26,9 +26,10 @@ func NewProposalCheckerBooting(homeState *HomeState) *common.ChainChecker {
 	)
 }
 
-func NewProposalCheckerJoin(homeState *HomeState) *common.ChainChecker {
+func NewProposalCheckerJoin(homeState *HomeState, suffrage Suffrage) *common.ChainChecker {
 	pc := ProposalChecker{
 		homeState: homeState,
+		suffrage:  suffrage,
 	}
 
 	return common.NewChainChecker(

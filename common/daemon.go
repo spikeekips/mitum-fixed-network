@@ -74,12 +74,12 @@ func (d *ReaderDaemon) Start() error {
 }
 
 func (d *ReaderDaemon) Stop() error {
-	if d.IsStopped() {
-		return nil
-	}
-
 	d.Lock()
 	defer d.Unlock()
+
+	if d.stopped {
+		return nil
+	}
 
 	d.stopped = true
 	d.Log().Debug("stopped")
@@ -100,12 +100,6 @@ func (d *ReaderDaemon) Reader() <-chan interface{} {
 
 func (d *ReaderDaemon) loop() {
 	for v := range d.reader {
-		if d.readerCallback == nil {
-			continue
-		} else if d.IsStopped() {
-			continue
-		}
-
 		if d.synchronous {
 			d.runCallback(v)
 		} else {
@@ -115,10 +109,6 @@ func (d *ReaderDaemon) loop() {
 }
 
 func (d *ReaderDaemon) runCallback(v interface{}) {
-	if d.readerCallback == nil {
-		return
-	}
-
 	err := d.readerCallback(v)
 	if err != nil {
 		d.Log().Error("error occurred", "error", err)

@@ -75,12 +75,12 @@ func (cn *ChannelNetwork) Broadcast(sl seal.Seal) error {
 	var targets []node.Address
 	for _, ch := range cn.Chans() {
 		targets = append(targets, ch.Home().Address())
-		go func(a node.Address, sl seal.Seal) {
+		go func(ch *ChannelNetwork, sl seal.Seal) {
 			if !ch.Write(sl) {
-				cn.Log().Error("failed to send seal", "to", a, "seal", sl)
+				cn.Log().Error("failed to send seal", "to", ch.Home().Address(), "seal", sl)
 			}
 			wg.Done()
-		}(ch.Home().Address(), sl)
+		}(ch, sl)
 	}
 
 	wg.Wait()

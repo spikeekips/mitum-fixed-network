@@ -98,7 +98,7 @@ func NewNode(
 		sc.SetLogContext(nil, "node", home.Alias())
 	}
 
-	log_.Debug(
+	log_.Info(
 		"node created",
 		"config", config,
 		"home", home,

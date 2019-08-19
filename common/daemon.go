@@ -74,14 +74,14 @@ func (d *ReaderDaemon) Start() error {
 }
 
 func (d *ReaderDaemon) Stop() error {
-	d.Lock()
-	defer d.Unlock()
-
-	if d.stopped {
+	if d.IsStopped() {
 		return nil
 	}
 
+	d.Lock()
 	d.stopped = true
+	d.Unlock()
+
 	d.Log().Debug("stopped")
 
 	return nil

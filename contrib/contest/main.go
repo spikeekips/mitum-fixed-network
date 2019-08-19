@@ -6,6 +6,7 @@ import (
 	"os/signal"
 	"path/filepath"
 	"runtime/pprof"
+	"runtime/trace"
 	"syscall"
 
 	"github.com/inconshreveable/log15"
@@ -23,6 +24,7 @@ import (
 var (
 	sigc           chan os.Signal
 	memProfileFile *os.File
+	traceFile      *os.File
 )
 
 var rootCmd = &cobra.Command{
@@ -33,32 +35,37 @@ var rootCmd = &cobra.Command{
 		// set logging
 		var logOutput string
 		var handler log15.Handler
-		if len(FlagLogOut) > 0 {
-			// check FlagLogOut is directory
-			fi, err := os.Stat(FlagLogOut)
-			if err != nil {
-				cmd.Println("Error:", err.Error())
-				os.Exit(1)
-			}
-
-			logOutput = FlagLogOut
-			switch mode := fi.Mode(); {
-			case mode.IsDir():
-				//
-			case mode.IsRegular():
-				logOutput = filepath.Base(FlagLogOut)
-			}
-
-			handler = LogFileByNodeHandler(
-				filepath.Clean(logOutput),
-				common.LogFormatter(flagLogFormat.f),
-				flagQuiet,
-			)
+		if FlagLogOut == "null" {
+			handler = log15.LvlFilterHandler(flagLogLevel.lvl, log15.DiscardHandler())
 		} else {
-			handler, _ = common.LogHandler(common.LogFormatter(flagLogFormat.f), FlagLogOut)
+			if len(FlagLogOut) > 0 {
+				// check FlagLogOut is directory
+				fi, err := os.Stat(FlagLogOut)
+				if err != nil {
+					cmd.Println("Error:", err.Error())
+					os.Exit(1)
+				}
+
+				logOutput = FlagLogOut
+				switch mode := fi.Mode(); {
+				case mode.IsDir():
+					//
+				case mode.IsRegular():
+					logOutput = filepath.Base(FlagLogOut)
+				}
+
+				handler = LogFileByNodeHandler(
+					filepath.Clean(logOutput),
+					common.LogFormatter(flagLogFormat.f),
+					flagQuiet,
+				)
+			} else {
+				handler, _ = common.LogHandler(common.LogFormatter(flagLogFormat.f), FlagLogOut)
+			}
+
+			handler = log15.CallerFileHandler(handler)
+			handler = log15.LvlFilterHandler(flagLogLevel.lvl, handler)
 		}
-		handler = log15.CallerFileHandler(handler)
-		handler = log15.LvlFilterHandler(flagLogLevel.lvl, handler)
 
 		logs := []log15.Logger{
 			log,
@@ -79,29 +86,7 @@ var rootCmd = &cobra.Command{
 		if len(logOutput) > 0 {
 			log.Debug("output log", "directory", logOutput)
 		}
-
-		if len(flagCPUProfile) > 0 {
-			f, err := os.Create(flagCPUProfile)
-			if err != nil {
-				panic(err)
-			}
-			if err := pprof.StartCPUProfile(f); err != nil {
-				panic(err)
-			}
-			log.Debug("cpuprofile enabled")
-		}
-
-		if len(flagMemProfile) > 0 {
-			f, err := os.Create(flagMemProfile)
-			if err != nil {
-				panic(err)
-			}
-			if err := pprof.WriteHeapProfile(f); err != nil {
-				panic(err)
-			}
-			memProfileFile = f
-			log.Debug("memprofile enabled")
-		}
+		startProfile()
 
 		sigc = make(chan os.Signal, 1)
 		signal.Notify(
@@ -112,29 +97,77 @@ var rootCmd = &cobra.Command{
 
 		go func() {
 			s := <-sigc
-			if len(flagCPUProfile) > 0 {
-				pprof.StopCPUProfile()
-				log.Debug("cpuprofile closed")
-			}
 
-			if len(flagMemProfile) > 0 {
-				if err := memProfileFile.Close(); err != nil {
-					log.Error("failed to close mem profile file", "error", err)
-				}
-
-				log.Debug("cpuprofile closed")
-			}
+			closeProfile()
 
 			log.Info("contest stopped by force", "sig", s)
 			os.Exit(0)
 		}()
 	},
 	PersistentPostRun: func(cmd *cobra.Command, args []string) {
-		if len(flagCPUProfile) > 0 {
-			pprof.StopCPUProfile()
-			log.Debug("cpuprofile closed")
-		}
+		closeProfile()
 	},
+}
+
+func startProfile() {
+	if len(flagTrace) > 0 {
+		f, err := os.Create(flagTrace)
+		if err != nil {
+			panic(err)
+		}
+		if err := trace.Start(f); err != nil {
+			panic(err)
+		}
+		traceFile = f
+		log.Debug("trace enabled")
+	}
+
+	if len(flagCPUProfile) > 0 {
+		f, err := os.Create(flagCPUProfile)
+		if err != nil {
+			panic(err)
+		}
+		if err := pprof.StartCPUProfile(f); err != nil {
+			panic(err)
+		}
+		log.Debug("cpuprofile enabled")
+	}
+
+	if len(flagMemProfile) > 0 {
+		f, err := os.Create(flagMemProfile)
+		if err != nil {
+			panic(err)
+		}
+		if err := pprof.WriteHeapProfile(f); err != nil {
+			panic(err)
+		}
+		memProfileFile = f
+		log.Debug("memprofile enabled")
+	}
+}
+
+func closeProfile() {
+	if len(flagCPUProfile) > 0 {
+		pprof.StopCPUProfile()
+		log.Debug("cpu profile closed")
+	}
+
+	if len(flagMemProfile) > 0 {
+		if err := memProfileFile.Close(); err != nil {
+			log.Error("failed to close mem profile file", "error", err)
+		}
+
+		log.Debug("mem profile closed")
+	}
+
+	if len(flagTrace) > 0 {
+		trace.Stop()
+		if err := traceFile.Close(); err != nil {
+			log.Error("failed to close trace file", "error", err)
+		}
+
+		log.Debug("trace closed")
+	}
 }
 
 func main() {
@@ -143,6 +176,7 @@ func main() {
 	rootCmd.PersistentFlags().StringVar(&FlagLogOut, "log", FlagLogOut, "log output directory")
 	rootCmd.PersistentFlags().StringVar(&flagCPUProfile, "cpuprofile", flagCPUProfile, "write cpu profile to file")
 	rootCmd.PersistentFlags().StringVar(&flagMemProfile, "memprofile", flagMemProfile, "write memory profile to file")
+	rootCmd.PersistentFlags().StringVar(&flagTrace, "trace", flagTrace, "write trace to file")
 	rootCmd.PersistentFlags().BoolVar(&flagQuiet, "quiet", flagQuiet, "quiet")
 
 	if err := rootCmd.Execute(); err != nil {

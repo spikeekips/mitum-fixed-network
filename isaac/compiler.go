@@ -36,14 +36,11 @@ func (cm *Compiler) SetLogContext(ctx log15.Ctx, args ...interface{}) *common.Lo
 }
 
 func (cm *Compiler) Vote(ballot Ballot) (VoteResult, error) {
-	cm.Lock()
-	defer cm.Unlock()
-
 	err := cm.ballotChecker.
 		New(context.TODO()).
 		SetContext("ballot", ballot).
-		SetContext("lastINITVoteResult", cm.lastINITVoteResult).
-		SetContext("lastStagesVoteResult", cm.lastStagesVoteResult).
+		SetContext("lastINITVoteResult", cm.LastINITVoteResult()).
+		SetContext("lastStagesVoteResult", cm.LastStagesVoteResult()).
 		Check()
 	if err != nil {
 		return VoteResult{}, err
@@ -70,9 +67,9 @@ func (cm *Compiler) Vote(ballot Ballot) (VoteResult, error) {
 
 	switch vr.Stage() {
 	case StageINIT:
-		cm.lastINITVoteResult = vr
+		cm.SetLastINITVoteResult(vr)
 	default:
-		cm.lastStagesVoteResult = vr
+		cm.SetLastStagesVoteResult(vr)
 	}
 
 	return vr, nil
@@ -83,4 +80,25 @@ func (cm *Compiler) LastINITVoteResult() VoteResult {
 	defer cm.RUnlock()
 
 	return cm.lastINITVoteResult
+}
+
+func (cm *Compiler) SetLastINITVoteResult(vr VoteResult) {
+	cm.Lock()
+	defer cm.Unlock()
+
+	cm.lastINITVoteResult = vr
+}
+
+func (cm *Compiler) LastStagesVoteResult() VoteResult {
+	cm.RLock()
+	defer cm.RUnlock()
+
+	return cm.lastStagesVoteResult
+}
+
+func (cm *Compiler) SetLastStagesVoteResult(vr VoteResult) {
+	cm.Lock()
+	defer cm.Unlock()
+
+	cm.lastStagesVoteResult = vr
 }

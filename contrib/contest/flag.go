@@ -20,6 +20,7 @@ var (
 	FlagLogOut        string
 	flagCPUProfile    string
 	flagMemProfile    string
+	flagTrace         string
 	flagExitAfter     time.Duration
 	flagNumberOfNodes uint = 3
 	flagQuiet         bool

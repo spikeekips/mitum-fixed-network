@@ -35,9 +35,6 @@ func (bb *Ballotbox) Vote(
 	lastRound Round,
 	proposal hash.Hash,
 ) (VoteResult, error) {
-	bb.Lock()
-	defer bb.Unlock()
-
 	key := fmt.Sprintf(
 		"%v-%v-%v",
 		height.String(),
@@ -45,11 +42,13 @@ func (bb *Ballotbox) Vote(
 		stage.String(),
 	)
 
+	bb.Lock()
 	rs, found := bb.voted[key]
 	if !found {
 		rs = NewRecords(height, round, stage)
 		bb.voted[key] = rs
 	}
+	bb.Unlock()
 
 	if err := rs.Vote(n, block, lastBlock, lastRound, proposal); err != nil {
 		return VoteResult{}, err
@@ -116,12 +115,12 @@ func (rs *Records) Vote(
 }
 
 func (rs *Records) CheckMajority(total, threshold uint) VoteResult {
-	rs.RLock()
-	defer rs.RUnlock()
-
 	var records []Record
 
-	if rs.closed {
+	if rs.IsClosed() {
+		rs.RLock()
+		defer rs.RUnlock()
+
 		for _, nr := range rs.voted {
 			for _, r := range nr {
 				records = append(records, r)
@@ -129,6 +128,9 @@ func (rs *Records) CheckMajority(total, threshold uint) VoteResult {
 		}
 		return rs.result.SetRecords(records).SetClosed()
 	}
+
+	rs.Lock()
+	defer rs.Unlock()
 
 	var keys []string
 	var sets []uint

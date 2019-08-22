@@ -112,7 +112,6 @@ end:
 				return nil
 			}
 
-			c.Log().Error("failed to check", "error", err, "func", FuncName(f, false))
 			return err
 		}
 	}

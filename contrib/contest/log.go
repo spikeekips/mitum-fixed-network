@@ -70,7 +70,8 @@ func LogFileByNodeHandler(directory string, fmtr log15.Format, quiet bool) log15
 		h = log15.MultiHandler(h, log15.StreamHandler(os.Stdout, fmtr))
 	}
 
-	return closingHandler{Handler: log15.LazyHandler(log15.SyncHandler(h)), files: logs}
+	//return closingHandler{Handler: log15.LazyHandler(log15.SyncHandler(h)), files: logs}
+	return closingHandler{Handler: h, files: logs}
 }
 
 type closingHandler struct {

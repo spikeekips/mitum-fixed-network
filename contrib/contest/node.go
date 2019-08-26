@@ -5,7 +5,7 @@ import (
 
 	"golang.org/x/xerrors"
 
-	"github.com/inconshreveable/log15"
+	"github.com/rs/zerolog"
 	"github.com/spikeekips/mitum/common"
 	contest_module "github.com/spikeekips/mitum/contrib/contest/module"
 	"github.com/spikeekips/mitum/isaac"
@@ -15,7 +15,7 @@ import (
 )
 
 type Node struct {
-	*common.Logger
+	*common.ZLogger
 	homeState *isaac.HomeState
 	nt        *contest_module.ChannelNetwork
 	sc        *isaac.StateController
@@ -27,15 +27,15 @@ func NewNode(
 	globalConfig *Config,
 	config *NodeConfig,
 ) (*Node, error) {
-	log_ := log.New(log15.Ctx{"node": home.Alias()})
+	log_ := log.With().Str("node", home.Alias()).Logger()
 
 	lastBlock := config.LastBlock()
 	previousBlock := config.Block(lastBlock.Height().Sub(1))
-	homeState := isaac.NewHomeState(home, previousBlock).
-		SetBlock(lastBlock)
+	homeState := isaac.NewHomeState(home, previousBlock).SetBlock(lastBlock)
 
 	suffrage := newSuffrage(config, home, nodes)
 	ballotChecker := isaac.NewCompilerBallotChecker(homeState, suffrage)
+	ballotChecker.SetLogger(log_)
 
 	numberOfActing := uint((*config.Modules.Suffrage)["number_of_acting"].(int))
 	thr, _ := isaac.NewThreshold(numberOfActing, *config.Policy.Threshold)
@@ -44,21 +44,23 @@ func NewNode(
 	}
 
 	cm := isaac.NewCompiler(homeState, isaac.NewBallotbox(thr), ballotChecker)
-	cm.SetLogContext(nil, "node", home.Alias())
+	cm.SetLogger(log_)
+
 	nt := contest_module.NewChannelNetwork(
 		home,
 		func(sl seal.Seal) (seal.Seal, error) {
 			return sl, xerrors.Errorf("echo back")
 		},
 	)
-	nt.SetLogContext(nil, "node", home.Alias())
+	nt.SetLogger(log_)
 
 	pv := contest_module.NewDummyProposalValidator()
 
 	var sc *isaac.StateController
 	{ // state handlers
 		bs := isaac.NewBootingStateHandler(homeState)
-		bs.SetLogContext(nil, "node", home.Alias())
+		bs.SetLogger(log_)
+
 		js, err := isaac.NewJoinStateHandler(
 			homeState,
 			cm,
@@ -71,9 +73,9 @@ func NewNode(
 		if err != nil {
 			return nil, err
 		}
-		js.SetLogContext(nil, "node", home.Alias())
+		js.SetLogger(log_)
 
-		dp := newProposalMaker(config, home)
+		dp := newProposalMaker(config, home, log_)
 
 		cs, err := isaac.NewConsensusStateHandler(
 			homeState,
@@ -87,28 +89,29 @@ func NewNode(
 		if err != nil {
 			return nil, err
 		}
-		cs.SetLogContext(nil, "node", home.Alias())
+		cs.SetLogger(log_)
 
 		ss := isaac.NewStoppedStateHandler()
-		ss.SetLogContext(nil, "node", home.Alias())
+		ss.SetLogger(log_)
 
-		ssr := newSealStorage(config, home)
+		ssr := newSealStorage(config, home, log_)
 
 		sc = isaac.NewStateController(homeState, cm, ssr, bs, js, cs, ss)
-		sc.SetLogContext(nil, "node", home.Alias())
+		sc.SetLogger(log_)
 	}
 
-	log_.Info(
-		"node created",
-		"config", config,
-		"home", home,
-		"homeState", homeState,
-		"threshold", thr,
-		"suffrage", suffrage,
-	)
+	log_.Info().
+		Interface("config", config).
+		Interface("home", home).
+		Interface("homeState", homeState).
+		Interface("threshold", thr).
+		Interface("suffrage", suffrage).
+		Msg("node created")
 
 	n := &Node{
-		Logger:    common.NewLogger(log, "node", home.Alias()),
+		ZLogger: common.NewZLogger(func(c zerolog.Context) zerolog.Context {
+			return c.Str("node", home.Alias())
+		}),
 		homeState: homeState,
 		nt:        nt,
 		sc:        sc,
@@ -137,16 +140,15 @@ func (no *Node) Start() error {
 			go func(m interface{}) {
 				started := time.Now()
 				err := no.sc.Receive(m)
-				no.sc.Log().Debug(
-					"message received",
-					"message", m,
-					"error", err,
-					"elapsed", time.Now().Sub(started),
-				)
+				no.sc.Log().Debug().
+					Err(err).
+					Interface("message", m).
+					Dur("elapsed", time.Now().Sub(started)).
+					Msg("message received")
 			}(m)
 		}
 	}()
-	no.Log().Debug("node started", "elapsed", time.Now().Sub(started))
+	no.Log().Debug().Dur("elapsed", time.Now().Sub(started)).Msg("node started")
 
 	return nil
 }
@@ -197,7 +199,7 @@ func newSuffrage(config *NodeConfig, home node.Home, nodes []node.Node) isaac.Su
 	}
 }
 
-func newProposalMaker(config *NodeConfig, home node.Home) isaac.ProposalMaker {
+func newProposalMaker(config *NodeConfig, home node.Home, l zerolog.Logger) isaac.ProposalMaker {
 	pc := *config.Modules.ProposalMaker
 	switch pc["name"] {
 	case "DefaultProposalMaker":
@@ -207,16 +209,16 @@ func newProposalMaker(config *NodeConfig, home node.Home) isaac.ProposalMaker {
 		}
 
 		dp := isaac.NewDefaultProposalMaker(home, delay)
-		dp.SetLogContext(nil, "node", home.Alias())
+		dp.SetLogger(l)
 		return dp
 	default:
 		panic(xerrors.Errorf("unknown proposal maker config: %v", config))
 	}
 }
 
-func newSealStorage(config *NodeConfig, home node.Home) isaac.SealStorage {
+func newSealStorage(config *NodeConfig, home node.Home, l zerolog.Logger) isaac.SealStorage {
 	ss := contest_module.NewMemorySealStorage()
-	ss.SetLogContext(nil, "node", home.Alias())
+	ss.SetLogger(l)
 
 	return ss
 }

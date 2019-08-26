@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/beevik/ntp"
+	"github.com/rs/zerolog"
 )
 
 var (
@@ -14,7 +15,7 @@ var (
 
 type TimeSyncer struct {
 	sync.RWMutex
-	*Logger
+	*ZLogger
 	server   string
 	offset   time.Duration
 	stopChan chan bool
@@ -28,12 +29,12 @@ func NewTimeSyncer(server string, checkInterval time.Duration) (*TimeSyncer, err
 	}
 
 	return &TimeSyncer{
-		Logger: NewLogger(
-			log,
-			"module", "time-syncer",
-			"server", server,
-			"interval", checkInterval,
-		),
+		ZLogger: NewZLogger(func(c zerolog.Context) zerolog.Context {
+			return c.
+				Str("module", "time-syncer").
+				Str("server", server).
+				Dur("interval", checkInterval)
+		}),
 		server:   server,
 		interval: checkInterval,
 		stopChan: make(chan bool),
@@ -42,15 +43,14 @@ func NewTimeSyncer(server string, checkInterval time.Duration) (*TimeSyncer, err
 
 func SetTimeSyncer(syncer *TimeSyncer) {
 	timeSyncer = syncer
-	log.Debug("common.timeSyncer is set")
 }
 
 func (s *TimeSyncer) Start() error {
-	s.Log().Debug("trying to start time-syncer")
+	s.Log().Debug().Msg("trying to start time-syncer")
 
 	go s.schedule()
 
-	s.Log().Debug("time-syncer started")
+	s.Log().Debug().Msg("time-syncer started")
 	return nil
 }
 
@@ -58,7 +58,7 @@ func (s *TimeSyncer) Stop() error {
 	s.Lock()
 	defer s.Unlock()
 
-	s.Log().Debug("trying to stop time-syncer")
+	s.Log().Debug().Msg("trying to stop time-syncer")
 	if s.stopChan != nil {
 		s.stopChan <- true
 		close(s.stopChan)
@@ -76,7 +76,7 @@ end:
 		select {
 		case <-s.stopChan:
 			ticker.Stop()
-			s.Log().Debug("time-syncer stopped")
+			s.Log().Debug().Msg("time-syncer stopped")
 			break end
 		case <-ticker.C:
 			s.check()
@@ -94,16 +94,16 @@ func (s *TimeSyncer) check() {
 
 	response, err := ntp.Query(s.server)
 	if err != nil {
-		s.Log().Error("failed to query", "error", err)
+		s.Log().Error().Err(err).Msg("failed to query")
 		return
 	}
 
 	if err := response.Validate(); err != nil {
-		s.Log().Error("failed to validate response", "response", response, "error", err)
+		s.Log().Error().Err(err).Interface("response", response).Msg("failed to validate response")
 		return
 	}
 	defer func() {
-		s.Log().Debug("time checked", "response", response, "offset", s.offset)
+		s.Log().Debug().Interface("response", response).Dur("offset", s.offset).Msg("time checked")
 	}()
 
 	if s.offset < 1 {

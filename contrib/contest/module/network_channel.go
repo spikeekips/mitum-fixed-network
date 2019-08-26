@@ -8,6 +8,7 @@ import (
 
 	"golang.org/x/xerrors"
 
+	"github.com/rs/zerolog"
 	"github.com/spikeekips/mitum/common"
 	"github.com/spikeekips/mitum/node"
 	"github.com/spikeekips/mitum/seal"
@@ -30,7 +31,9 @@ func NewChannelNetwork(home node.Home, handler ChannelNetworkSealHandler) *Chann
 		handler:      handler,
 		chans:        map[node.Address]*ChannelNetwork{},
 	}
-	cn.ReaderDaemon.Logger = common.NewLogger(log, "module", "channel-suffrage-network")
+	cn.ReaderDaemon.ZLogger = common.NewZLogger(func(c zerolog.Context) zerolog.Context {
+		return c.Str("module", "channel-suffrage-network")
+	})
 	cn.chans[home.Address()] = cn
 
 	return cn
@@ -77,7 +80,7 @@ func (cn *ChannelNetwork) Broadcast(sl seal.Seal) error {
 		targets = append(targets, ch.Home().Address())
 		go func(ch *ChannelNetwork, sl seal.Seal) {
 			if !ch.Write(sl) {
-				cn.Log().Error("failed to send seal", "to", ch.Home().Address(), "seal", sl)
+				cn.Log().Error().Interface("to", ch.Home().Address()).Interface("seal", sl).Msg("failed to send seal")
 			}
 			wg.Done()
 		}(ch, sl)
@@ -85,12 +88,11 @@ func (cn *ChannelNetwork) Broadcast(sl seal.Seal) error {
 
 	wg.Wait()
 
-	cn.Log().Debug(
-		fmt.Sprintf("seal sent; %v", sl.Type()),
-		"seal", sl,
-		"targets", targets,
-		"elapsed", time.Now().Sub(started),
-	)
+	cn.Log().Debug().
+		Interface("seal", sl).
+		Interface("targets", targets).
+		Dur("elapsed", time.Now().Sub(started)).
+		Msg(fmt.Sprintf("seal sent; %v", sl.Type()))
 
 	return nil
 }
@@ -120,7 +122,7 @@ func (cn *ChannelNetwork) RequestAll(ctx context.Context, sl seal.Seal) (map[nod
 	for n := range cn.chans {
 		r, err := cn.Request(ctx, n, sl)
 		if err != nil {
-			cn.Log().Error("failed to request", "target", n, "error", err)
+			cn.Log().Error().Err(err).Interface("target", n).Msg("failed to request")
 		}
 		results[n] = r
 	}

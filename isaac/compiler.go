@@ -4,14 +4,14 @@ import (
 	"context"
 	"sync"
 
-	"github.com/inconshreveable/log15"
+	"github.com/rs/zerolog"
 
 	"github.com/spikeekips/mitum/common"
 )
 
 type Compiler struct {
 	sync.RWMutex
-	*common.Logger
+	*common.ZLogger
 	homeState            *HomeState
 	ballotbox            *Ballotbox
 	lastINITVoteResult   VoteResult
@@ -21,18 +21,27 @@ type Compiler struct {
 
 func NewCompiler(homeState *HomeState, ballotbox *Ballotbox, ballotChecker *common.ChainChecker) *Compiler {
 	return &Compiler{
-		Logger:        common.NewLogger(log, "module", "compiler"),
+		ZLogger: common.NewZLogger(func(c zerolog.Context) zerolog.Context {
+			return c.Str("module", "compiler")
+		}),
 		homeState:     homeState,
 		ballotbox:     ballotbox,
 		ballotChecker: ballotChecker,
 	}
 }
 
-func (cm *Compiler) SetLogContext(ctx log15.Ctx, args ...interface{}) *common.Logger {
-	_ = cm.Logger.SetLogContext(ctx, args...)
-	_ = cm.ballotChecker.SetLogContext(ctx, args...)
+func (cm *Compiler) SetLogger(l zerolog.Logger) *common.ZLogger {
+	_ = cm.ZLogger.SetLogger(l)
+	_ = cm.ballotChecker.SetLogger(l)
 
-	return cm.Logger
+	return cm.ZLogger
+}
+
+func (cm *Compiler) AddLoggerContext(cf func(c zerolog.Context) zerolog.Context) *common.ZLogger {
+	_ = cm.ZLogger.AddLoggerContext(cf)
+	_ = cm.ballotChecker.AddLoggerContext(cf)
+
+	return cm.ZLogger
 }
 
 func (cm *Compiler) Vote(ballot Ballot) (VoteResult, error) {
@@ -46,7 +55,7 @@ func (cm *Compiler) Vote(ballot Ballot) (VoteResult, error) {
 		return VoteResult{}, err
 	}
 
-	cm.Log().Debug("ballot checked", "ballot", ballot)
+	cm.Log().Debug().Interface("ballot", ballot).Msg("ballot checked")
 
 	vr, err := cm.ballotbox.Vote(
 		ballot.Node(),

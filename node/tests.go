@@ -5,12 +5,10 @@ package node
 import (
 	"crypto/rand"
 
-	"github.com/spikeekips/mitum/common"
 	"github.com/spikeekips/mitum/keypair"
 )
 
 func init() {
-	common.SetTestLogger(log)
 }
 
 func NewRandomAddress() Address {

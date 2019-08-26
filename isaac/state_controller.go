@@ -6,6 +6,7 @@ import (
 
 	"golang.org/x/xerrors"
 
+	"github.com/rs/zerolog"
 	"github.com/spikeekips/mitum/common"
 	"github.com/spikeekips/mitum/node"
 	"github.com/spikeekips/mitum/seal"
@@ -13,7 +14,7 @@ import (
 
 type StateController struct {
 	sync.RWMutex
-	*common.Logger
+	*common.ZLogger
 	homeState        *HomeState
 	compiler         *Compiler
 	sealStorage      SealStorage
@@ -36,7 +37,9 @@ func NewStateController(
 ) *StateController {
 	chanState := make(chan StateContext)
 	sc := &StateController{
-		Logger:           common.NewLogger(log, "module", "state-controller"),
+		ZLogger: common.NewZLogger(func(c zerolog.Context) zerolog.Context {
+			return c.Str("module", "state-controller")
+		}),
 		homeState:        homeState,
 		compiler:         compiler,
 		sealStorage:      sealStorage,
@@ -80,18 +83,17 @@ func (sc *StateController) loopState() {
 	for sct := range sc.chanState {
 		current := sc.homeState.State()
 		if err := sc.setState(sct); err != nil {
-			sc.Log().Error(
-				"error change state",
-				"error", err,
-				"current_state", current,
-				"new_state", sct.State(),
-			)
+			sc.Log().Error().
+				Err(err).
+				Interface("error", err).
+				Interface("current_state", current).
+				Interface("new_state", sct.State()).
+				Msg("error change state")
 		} else {
-			sc.Log().Debug(
-				"state changed",
-				"current_state", current,
-				"new_state", sct.State(),
-			)
+			sc.Log().Debug().
+				Interface("current_state", current).
+				Interface("new_state", sct.State()).
+				Msg("state changed")
 		}
 	}
 }
@@ -142,17 +144,16 @@ func (sc *StateController) setState(sct StateContext) error {
 func (sc *StateController) Receive(message interface{}) error {
 	sl, ok := message.(seal.Seal)
 	if !ok {
-		sc.Log().Error("receive unknown message", "message", message)
+		sc.Log().Error().Interface("message", message).Msg("receive unknown message")
 		return xerrors.Errorf("receive unknown message; message=%q", message)
 	}
 
-	sc.Log().Debug(
-		fmt.Sprintf("seal received; %v", sl.Type()),
-		"seal", sl,
-	)
+	sc.Log().Debug().
+		Interface("seal", sl).
+		Msg(fmt.Sprintf("seal received; %v", sl.Type()))
 
 	if err := sl.IsValid(); err != nil {
-		sc.Log().Error("invalid seal", "seal", sl.Hash(), "error", err)
+		sc.Log().Error().Err(err).Interface("seal", sl.Hash()).Msg("invalid seal")
 		return err
 	}
 
@@ -211,7 +212,7 @@ func (sc *StateController) StateHandler() StateHandler {
 func (sc *StateController) handleBallot(ballot Ballot) error {
 	vr, err := sc.compiler.Vote(ballot)
 	if err != nil {
-		sc.Log().Error("failed to vote ballot", "ballot", ballot.Hash(), "error", err)
+		sc.Log().Error().Err(err).Interface("ballot", ballot.Hash()).Msg("failed to vote ballot")
 		return err
 	}
 

@@ -14,7 +14,6 @@ import (
 )
 
 func init() {
-	common.SetTestLogger(log)
 }
 
 func NewRandomSealHash() hash.Hash {
@@ -39,13 +38,11 @@ func (t SealBodyTest) Type() common.DataType {
 func (t SealBodyTest) makeHash() (hash.Hash, error) {
 	b, err := rlp.EncodeToBytes(t)
 	if err != nil {
-		log.Error("Hash() failed", "error", err)
 		return hash.Hash{}, err
 	}
 
 	h, err := hash.NewDoubleSHAHash("ts", b)
 	if err != nil {
-		log.Error("Hash() failed", "error", err)
 		return hash.Hash{}, err
 	}
 

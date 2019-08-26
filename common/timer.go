@@ -3,6 +3,8 @@ package common
 import (
 	"sync"
 	"time"
+
+	"github.com/rs/zerolog"
 )
 
 const (
@@ -31,179 +33,9 @@ type Timer interface {
 type TimerCallback func(Timer) error
 type TimerCallbackIntervalFunc func(uint /* ran count */, time.Duration /* elapsed time */) time.Duration
 
-/*
 type CallbackTimer struct {
 	sync.RWMutex
-	*Logger
-	id           string
-	name         string
-	daemon       *ReaderDaemon
-	callbacks    []TimerCallback
-	intervalFunc TimerCallbackIntervalFunc
-	startedAt    Time
-	runCount     uint
-	limit        uint
-}
-
-func NewCallbackTimer(name string, interval time.Duration, callbacks ...TimerCallback) *CallbackTimer {
-	id := RandomUUID()
-	ct := &CallbackTimer{
-		id:        id,
-		name:      name,
-		Logger:    NewLogger(Log(), "module", name, "timer_id", id),
-		callbacks: callbacks,
-		intervalFunc: func(uint, time.Duration) time.Duration {
-			return interval
-		},
-	}
-	ct.daemon = NewReaderDaemon(true, 0, ct.runCallback)
-	ct.daemon.Logger = ct.Logger
-
-	return ct
-}
-
-func (ct *CallbackTimer) Name() string {
-	return ct.name
-}
-
-func (ct *CallbackTimer) Start() error {
-	ct.Lock()
-	defer ct.Unlock()
-
-	if !ct.daemon.IsStopped() {
-		return DaemonAleadyStartedError.Newf(
-			"Timer is already running; daemon is still running; id=%q",
-			ct.id,
-		)
-	}
-
-	if err := ct.daemon.Start(); err != nil {
-		return err
-	}
-
-	ct.startedAt = Now()
-	ct.runCount = 0
-
-	go ct.next()
-
-	ct.Log().Debug("timer started")
-
-	return nil
-}
-
-func (ct *CallbackTimer) Stop() error {
-	ct.Lock()
-	defer ct.Unlock()
-
-	if err := ct.daemon.Stop(); err != nil {
-		return err
-	}
-	ct.Log().Debug("timer stopped")
-
-	return nil
-}
-
-func (ct *CallbackTimer) IsStopped() bool {
-	return ct.daemon.IsStopped()
-}
-
-func (ct *CallbackTimer) SetIntervalFunc(intervalFunc TimerCallbackIntervalFunc) *CallbackTimer {
-	ct.Lock()
-	defer ct.Unlock()
-
-	ct.intervalFunc = intervalFunc
-
-	return ct
-}
-
-func (ct *CallbackTimer) Limit() uint {
-	ct.RLock()
-	defer ct.RUnlock()
-
-	return ct.limit
-}
-
-func (ct *CallbackTimer) SetLimit(limit uint) *CallbackTimer {
-	ct.Lock()
-	defer ct.Unlock()
-
-	ct.limit = ct.runCount + limit
-
-	return ct
-}
-
-func (ct *CallbackTimer) RunCount() uint {
-	ct.RLock()
-	defer ct.RUnlock()
-
-	return ct.runCount
-}
-
-func (ct *CallbackTimer) incRunCount() {
-	ct.Lock()
-	defer ct.Unlock()
-
-	ct.runCount++
-}
-
-func (ct *CallbackTimer) runCallback(interface{}) error {
-	limit := ct.Limit()
-	runCount := ct.RunCount()
-
-	if limit > 0 && runCount >= limit {
-		ct.Log().Debug("reached to limit", "count", runCount, "limit", limit)
-		return ct.Stop()
-	}
-
-	var wg sync.WaitGroup
-	wg.Add(len(ct.callbacks))
-
-	for i, callback := range ct.callbacks {
-		go func(index int, cb TimerCallback) {
-			defer wg.Done()
-
-			if err := cb(ct); err != nil {
-				ct.Log().Error("callback error", "index", index, "error", err)
-			}
-		}(i, callback)
-	}
-
-	wg.Wait()
-
-	ct.incRunCount()
-
-	if ct.IsStopped() {
-		return nil
-	}
-
-	go ct.next()
-
-	return nil
-}
-
-func (ct *CallbackTimer) next() {
-	if ct.IsStopped() {
-		return
-	}
-
-	interval := ct.intervalFunc(ct.RunCount(), Now().Sub(ct.startedAt))
-	if interval == 0 { // stop it
-		return
-	}
-
-	<-time.After(interval)
-
-	if ct.IsStopped() {
-		return
-	}
-
-	ct.daemon.Write(nil)
-}
-*/
-
-type CallbackTimer struct {
-	sync.RWMutex
-	*Logger
+	*ZLogger
 	id           string
 	name         string
 	callbacks    []TimerCallback
@@ -218,7 +50,11 @@ type CallbackTimer struct {
 func NewCallbackTimer(name string, interval time.Duration, callbacks ...TimerCallback) *CallbackTimer {
 	id := RandomUUID()
 	ct := &CallbackTimer{
-		Logger:    NewLogger(Log(), "module", name, "timer_id", id),
+		ZLogger: NewZLogger(func(c zerolog.Context) zerolog.Context {
+			return c.
+				Str("module", name).
+				Str("timer_id", id)
+		}),
 		id:        id,
 		name:      name,
 		callbacks: callbacks,
@@ -246,7 +82,7 @@ func (ct *CallbackTimer) Start() error {
 
 	go ct.run()
 
-	ct.Log().Debug("timer started")
+	ct.Log().Debug().Msg("timer started")
 
 	return nil
 }
@@ -262,7 +98,7 @@ func (ct *CallbackTimer) Stop() error {
 	ct.stopped = true
 	ct.stopChan <- struct{}{}
 	//close(ct.stopChan)
-	ct.Log().Debug("timer stopped")
+	ct.Log().Debug().Msg("timer stopped")
 
 	return nil
 }
@@ -334,7 +170,7 @@ func (ct *CallbackTimer) run() {
 	}
 
 	if err := ct.runCallback(); err != nil {
-		ct.Log().Error("failed to run callback", "error", err)
+		ct.Log().Error().Err(err).Msg("failed to run callback")
 	}
 
 	go ct.run()
@@ -345,7 +181,10 @@ func (ct *CallbackTimer) runCallback() error {
 	runCount := ct.RunCount()
 
 	if limit > 0 && runCount >= limit {
-		ct.Log().Debug("reached to limit", "count", runCount, "limit", limit)
+		ct.Log().Debug().
+			Uint("count", runCount).
+			Uint("limit", limit).
+			Msg("reached to limit")
 		return ct.Stop()
 	}
 
@@ -357,7 +196,10 @@ func (ct *CallbackTimer) runCallback() error {
 			defer wg.Done()
 
 			if err := cb(ct); err != nil {
-				ct.Log().Error("callback error", "index", index, "error", err)
+				ct.Log().Error().
+					Err(err).
+					Int("index", index).
+					Msg("callback error")
 			}
 		}(i, callback)
 	}

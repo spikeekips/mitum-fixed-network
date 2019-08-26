@@ -3,7 +3,7 @@ package isaac
 import (
 	"time"
 
-	"github.com/inconshreveable/log15"
+	"github.com/rs/zerolog"
 	"github.com/spikeekips/mitum/common"
 	"github.com/spikeekips/mitum/hash"
 	"github.com/spikeekips/mitum/node"
@@ -14,27 +14,29 @@ type ProposalMaker interface {
 }
 
 type DefaultProposalMaker struct {
-	*common.Logger
+	*common.ZLogger
 	home  node.Home
 	delay time.Duration
 }
 
 func NewDefaultProposalMaker(home node.Home, delay time.Duration) DefaultProposalMaker {
 	return DefaultProposalMaker{
-		Logger: common.NewLogger(log, "module", "proposer-maker"),
-		home:   home,
-		delay:  delay,
+		ZLogger: common.NewZLogger(func(c zerolog.Context) zerolog.Context {
+			return c.Str("module", "proposer-maker")
+		}),
+		home:  home,
+		delay: delay,
 	}
 }
 
 func (dp DefaultProposalMaker) Make(height Height, round Round, lastBlock hash.Hash) (Proposal, error) {
-	log_ := dp.Log().New(log15.Ctx{
-		"height":     height,
-		"round":      round,
-		"last_block": lastBlock,
-		"delay":      dp.delay,
-	})
-	log_.Debug("ready to make new proposal")
+	log_ := dp.Log().With().
+		Interface("height", height).
+		Interface("round", round).
+		Interface("last_block", lastBlock).
+		Interface("delay", dp.delay).
+		Logger()
+	log_.Debug().Msg("ready to make new proposal")
 
 	var started time.Time
 	if dp.delay > 0 {
@@ -59,7 +61,7 @@ func (dp DefaultProposalMaker) Make(height Height, round Round, lastBlock hash.H
 		}
 	}
 
-	log_.Debug("new proposal created")
+	log_.Debug().Msg("new proposal created")
 
 	return proposal, nil
 }

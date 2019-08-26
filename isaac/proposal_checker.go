@@ -84,12 +84,11 @@ func (pc ProposalChecker) checkHeightAndRoundWithHomeState(c *common.ChainChecke
 	// 1
 	if !proposal.Height().Equal(pc.homeState.Block().Height().Add(1)) {
 		err := xerrors.Errorf("invalid proposal height")
-		c.Log().Error(
-			"proposal.Height() should be same than homeState.Block().Height() + 1; ignore this ballot",
-			"proposal_height", proposal.Height(),
-			"expected_height", pc.homeState.Block().Height().Add(1),
-			"current_height", pc.homeState.Block().Height(),
-		)
+		c.Log().Error().
+			Interface("proposal_height", proposal.Height()).
+			Interface("expected_height", pc.homeState.Block().Height().Add(1)).
+			Interface("current_height", pc.homeState.Block().Height()).
+			Msg("proposal.Height() should be same than homeState.Block().Height() + 1; ignore this ballot")
 
 		return err
 	}
@@ -115,11 +114,10 @@ func (pc ProposalChecker) checkHeightAndRoundWithLastINITVoteResult(c *common.Ch
 	// NOTE proposal.Height() should be same with lastINITVoteResult
 	if !proposal.Height().Equal(lastINITVoteResult.Height()) {
 		err := xerrors.Errorf("invalid proposal height")
-		c.Log().Error(
-			"proposal.Height() should be same with lastINITVoteResult; ignore this ballot",
-			"proposal_height", proposal.Height(),
-			"height", lastINITVoteResult.Height(),
-		)
+		c.Log().Error().
+			Interface("proposal_height", proposal.Height()).
+			Interface("height", lastINITVoteResult.Height()).
+			Msg("proposal.Height() should be same with lastINITVoteResult; ignore this ballot")
 
 		return err
 	}
@@ -127,11 +125,10 @@ func (pc ProposalChecker) checkHeightAndRoundWithLastINITVoteResult(c *common.Ch
 	// NOTE proposal.Round() should be same with lastINITVoteResult
 	if proposal.Round() != lastINITVoteResult.Round() {
 		err := xerrors.Errorf("invalid proposal round")
-		c.Log().Error(
-			"proposal.Round() should be same with lastINITVoteResult; ignore this ballot",
-			"proposal_round", proposal.Round(),
-			"round", lastINITVoteResult.Round(),
-		)
+		c.Log().Error().
+			Interface("proposal_round", proposal.Round()).
+			Interface("round", lastINITVoteResult.Round()).
+			Msg("proposal.Round() should be same with lastINITVoteResult; ignore this ballot")
 
 		return err
 	}

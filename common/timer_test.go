@@ -20,6 +20,7 @@ func (t *testCallbackTimer) TestNew() {
 	}
 
 	ct := NewCallbackTimer("test", time.Millisecond*2, callback)
+	ct.SetLogger(zlog)
 
 	err := ct.Start()
 	t.NoError(err)
@@ -55,6 +56,7 @@ func (t *testCallbackTimer) TestIntervalFunc() {
 	}
 
 	ct := NewCallbackTimer("test", defaultInterval, callback)
+	ct.SetLogger(zlog)
 	ct.SetIntervalFunc(intervalFunc)
 
 	err := ct.Start()
@@ -82,6 +84,7 @@ func (t *testCallbackTimer) TestMultipleCallbacks() {
 	}
 
 	ct := NewCallbackTimer("test", time.Millisecond*2, callback, callback, callback)
+	ct.SetLogger(zlog)
 
 	err := ct.Start()
 	t.NoError(err)
@@ -106,6 +109,7 @@ func (t *testCallbackTimer) TestLimit() {
 	}
 
 	ct := NewCallbackTimer("test", time.Millisecond*1, callback)
+	ct.SetLogger(zlog)
 	defer ct.Stop()
 
 	var limit uint = 3
@@ -143,6 +147,7 @@ func (t *testCallbackTimer) TestZeroInterval() {
 	}
 
 	ct := NewCallbackTimer("test", interval, callback)
+	ct.SetLogger(zlog)
 	ct.SetIntervalFunc(intervalFunc)
 
 	err := ct.Start()

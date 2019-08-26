@@ -7,6 +7,7 @@ import (
 
 	"golang.org/x/xerrors"
 
+	"github.com/rs/zerolog"
 	"github.com/spikeekips/mitum/common"
 	"github.com/spikeekips/mitum/network"
 	"github.com/spikeekips/mitum/node"
@@ -15,7 +16,7 @@ import (
 // ConsensusStateHandler is only for suffrage node
 type ConsensusStateHandler struct {
 	sync.RWMutex
-	*common.Logger
+	*common.ZLogger
 	homeState         *HomeState
 	compiler          *Compiler
 	nt                network.Network
@@ -43,14 +44,10 @@ func NewConsensusStateHandler(
 		return nil, xerrors.Errorf("previous block is empty")
 	}
 
-	logger := common.NewLogger(log, "module", "consensus-state-handler")
-
-	if timeoutWaitBallot < time.Nanosecond {
-		logger.Log().Warn("timeoutWaitBallot is too short", "timeout", timeoutWaitBallot)
-	}
-
 	return &ConsensusStateHandler{
-		Logger:            logger,
+		ZLogger: common.NewZLogger(func(c zerolog.Context) zerolog.Context {
+			return c.Str("module", "consensus-state-handler")
+		}),
 		homeState:         homeState,
 		compiler:          compiler,
 		nt:                nt,
@@ -64,6 +61,10 @@ func NewConsensusStateHandler(
 }
 
 func (cs *ConsensusStateHandler) Start() error {
+	if cs.timeoutWaitBallot < time.Nanosecond {
+		cs.Log().Warn().Dur("timeout", cs.timeoutWaitBallot).Msg("timeoutWaitBallot is too short")
+	}
+
 	_ = cs.Stop() // nolint
 
 	cs.Lock()
@@ -107,7 +108,7 @@ func (cs *ConsensusStateHandler) Activate(sct StateContext) error {
 	go func() {
 		// propose proposal with VoteResult
 		if err := cs.prepareProposal(vr); err != nil {
-			cs.Log().Error("failed to propose", "error", err)
+			cs.Log().Error().Err(err).Msg("failed to propose")
 		}
 	}()
 
@@ -136,7 +137,7 @@ func (cs *ConsensusStateHandler) stopTimer() error {
 	}
 
 	if err := cs.timer.Stop(); err != nil {
-		cs.Log().Error("failed to stop timer", "error", err)
+		cs.Log().Error().Err(err).Msg("failed to stop timer")
 		return err
 	}
 
@@ -153,7 +154,7 @@ func (cs *ConsensusStateHandler) ReceiveProposal(proposal Proposal) error {
 		return err
 	}
 
-	cs.Log().Debug("proposal checked", "proposal", proposal.Hash())
+	cs.Log().Debug().Interface("proposal", proposal.Hash()).Msg("proposal checked")
 
 	err = cs.nextRoundTimer(
 		"wait-ballot-timeout-next-round-consensus",
@@ -175,21 +176,19 @@ func (cs *ConsensusStateHandler) ReceiveProposal(proposal Proposal) error {
 	acting := cs.suffrage.Acting(proposal.Height(), proposal.Round())
 	insideActing := acting.Exists(cs.homeState.Home().Address())
 	if !insideActing {
-		cs.Log().Debug(
-			"not acting member at this proposal; not broadcast sign ballot",
-			"proposal", proposal.Hash(),
-			"height", proposal.Height(),
-			"round", proposal.Round(),
-			"acting", acting,
-		)
+		cs.Log().Debug().
+			Interface("proposal", proposal.Hash()).
+			Interface("height", proposal.Height()).
+			Interface("round", proposal.Round()).
+			Interface("acting", acting).
+			Msg("not acting member at this proposal; not broadcast sign ballot")
 	} else {
-		cs.Log().Debug(
-			"acting member at this proposal; broadcast sign ballot",
-			"proposal", proposal.Hash(),
-			"height", proposal.Height(),
-			"round", proposal.Round(),
-			"acting", acting,
-		)
+		cs.Log().Debug().
+			Interface("proposal", proposal.Hash()).
+			Interface("height", proposal.Height()).
+			Interface("round", proposal.Round()).
+			Interface("acting", acting).
+			Msg("acting member at this proposal; broadcast sign ballot")
 	}
 
 	if insideActing {
@@ -227,10 +226,10 @@ func (cs *ConsensusStateHandler) ReceiveVoteResult(vr VoteResult) error {
 		return err
 	}
 
-	cs.Log().Debug("VoteResult checked", "vr", vr)
+	cs.Log().Debug().Interface("vr", vr).Msg("VoteResult checked")
 
 	if vr.GotDraw() {
-		cs.Log().Debug("VoteResult drawed", "vr", vr)
+		cs.Log().Debug().Interface("vr", vr).Msg("VoteResult drawed")
 		return cs.startNextRound(vr)
 	} else if vr.GotMajority() {
 		if vr.Stage() == StageINIT {
@@ -249,15 +248,14 @@ func (cs *ConsensusStateHandler) gotINITMajority(vr VoteResult) error {
 	diff := vr.Height().Sub(cs.homeState.Block().Height()).Int64()
 	switch {
 	case diff == 2: // move to next block
-		cs.Log().Debug("got VoteResult of next block; keep going", "vr", vr)
+		cs.Log().Debug().Interface("vr", vr).Msg("got VoteResult of next block; keep going")
 
 		if !cs.homeState.Block().Hash().Equal(vr.LastBlock()) {
-			cs.Log().Error(
-				"init for next block; last block does not match; move to sync",
-				"home", cs.homeState.Block().Hash(),
-				"block_vr", vr.LastBlock(),
-				"vr", vr,
-			)
+			cs.Log().Error().
+				Interface("home", cs.homeState.Block().Hash()).
+				Interface("block_vr", vr.LastBlock()).
+				Interface("vr", vr).
+				Msg("init for next block; last block does not match; move to sync")
 			cs.chanState <- NewStateContext(node.StateSync).
 				SetContext("vr", vr)
 
@@ -266,30 +264,32 @@ func (cs *ConsensusStateHandler) gotINITMajority(vr VoteResult) error {
 
 		block, err := cs.proposalValidator.NewBlock(vr.Height(), vr.Round(), vr.Proposal())
 		if err != nil {
-			cs.Log().Error("failed to make new block from VoteResult", "vr", vr, "error", err)
+			cs.Log().Error().
+				Err(err).
+				Interface("vr", vr).
+				Msg("failed to make new block from VoteResult")
 			return err
 		}
 
 		_ = cs.homeState.SetBlock(block)
 
-		cs.Log().Info("new block created", "block", block, "vr", vr)
+		cs.Log().Info().Interface("block", block).Interface("vr", vr).Msg("new block created")
 	case diff == 1: // next round
-		cs.Log().Debug("got VoteResult of next round; keep going", "vr", vr)
+		cs.Log().Debug().Interface("vr", vr).Msg("got VoteResult of next round; keep going")
 
 		if !cs.homeState.Block().Hash().Equal(vr.Block()) {
-			cs.Log().Error(
-				"init for next round; block does not match; move to sync",
-				"home", cs.homeState.Block().Hash(),
-				"block_vr", vr.Block(),
-				"vr", vr,
-			)
+			cs.Log().Error().
+				Interface("home", cs.homeState.Block().Hash()).
+				Interface("block_vr", vr.Block()).
+				Interface("vr", vr).
+				Msg("init for next round; block does not match; move to sync")
 			cs.chanState <- NewStateContext(node.StateSync).
 				SetContext("vr", vr)
 
 			return xerrors.Errorf("init for next round; block does not match; move to sync")
 		}
 	default: // unexpected height received, move to sync
-		cs.Log().Debug("got not expected height VoteResult; move to sync", "vr", vr)
+		cs.Log().Debug().Interface("vr", vr).Msg("got not expected height VoteResult; move to sync")
 		cs.chanState <- NewStateContext(node.StateSync).
 			SetContext("vr", vr)
 		return xerrors.Errorf("got not expected height VoteResult; move to sync")
@@ -306,22 +306,21 @@ func (cs *ConsensusStateHandler) gotNotINITMajority(vr VoteResult) error {
 	}
 
 	if !cs.proposalValidator.Validated(vr.Proposal()) {
-		cs.Log().Debug("proposal did not validated; validate it", "vr", vr)
+		cs.Log().Debug().Interface("vr", vr).Msg("proposal did not validated; validate it")
 	}
 
 	block, err := cs.proposalValidator.NewBlock(vr.Height(), vr.Round(), vr.Proposal())
 	if err != nil {
-		cs.Log().Error("failed to make new block from proposal", "vr", vr, "error", err)
+		cs.Log().Error().Err(err).Interface("vr", vr).Msg("failed to make new block from proposal")
 		return err
 	}
 
 	if !vr.Block().Equal(block.Hash()) {
-		cs.Log().Warn(
-			"block hash does not match",
-			"vr_block", vr.Block(),
-			"block", block.Hash(),
-			"vr", vr,
-		)
+		cs.Log().Warn().
+			Interface("vr_block", vr.Block()).
+			Interface("block", block.Hash()).
+			Interface("vr", vr).
+			Msg("block hash does not match")
 	}
 
 	var ballot Ballot
@@ -329,21 +328,19 @@ func (cs *ConsensusStateHandler) gotNotINITMajority(vr VoteResult) error {
 	case StageSIGN:
 		acting := cs.suffrage.Acting(vr.Height(), vr.Round())
 		if !acting.Exists(cs.homeState.Home().Address()) {
-			cs.Log().Debug(
-				"not acting member at this VoteResult; not broadcast accept ballot",
-				"vr", vr,
-				"height", vr.Height(),
-				"round", vr.Round(),
-				"acting", acting,
-			)
+			cs.Log().Debug().
+				Interface("vr", vr).
+				Interface("height", vr.Height()).
+				Interface("round", vr.Round()).
+				Interface("acting", acting).
+				Msg("not acting member at this VoteResult; not broadcast accept ballot")
 		} else {
-			cs.Log().Debug(
-				"acting member at this VoteResult; broadcast accept ballot",
-				"vr", vr,
-				"height", vr.Height(),
-				"round", vr.Round(),
-				"acting", acting,
-			)
+			cs.Log().Debug().
+				Interface("vr", vr).
+				Interface("height", vr.Height()).
+				Interface("round", vr.Round()).
+				Interface("acting", acting).
+				Msg("acting member at this VoteResult; broadcast accept ballot")
 			ballot, err = NewACCEPTBallot(
 				cs.homeState.Home().Address(),
 				cs.homeState.Block().Hash(),
@@ -387,11 +384,11 @@ func (cs *ConsensusStateHandler) gotNotINITMajority(vr VoteResult) error {
 }
 
 func (cs *ConsensusStateHandler) prepareProposal(vr VoteResult) error {
-	cs.Log().Debug("prepare proposal", "vr", vr)
+	cs.Log().Debug().Interface("vr", vr).Msg("prepare proposal")
 	acting := cs.suffrage.Acting(vr.Height(), vr.Round())
-	cs.Log().Debug("proposer selected", "acting", acting)
+	cs.Log().Debug().Interface("acting", acting).Msg("proposer selected")
 	if !acting.Proposer().Equal(cs.homeState.Home()) {
-		cs.Log().Debug("proposer is not home; wait proposal")
+		cs.Log().Debug().Msg("proposer is not home; wait proposal")
 
 		// NOTE wait proposal
 		if err := cs.nextRoundTimer("proposal-timeout-next-round-consensus", vr); err != nil {
@@ -402,7 +399,7 @@ func (cs *ConsensusStateHandler) prepareProposal(vr VoteResult) error {
 	}
 
 	if err := cs.propose(vr); err != nil {
-		cs.Log().Error("failed to propose", "error", err)
+		cs.Log().Error().Err(err).Msg("failed to propose")
 	}
 
 	if err := cs.nextRoundTimer("proposal-timeout-next-round-consensus", vr); err != nil {
@@ -413,7 +410,7 @@ func (cs *ConsensusStateHandler) prepareProposal(vr VoteResult) error {
 }
 
 func (cs *ConsensusStateHandler) propose(vr VoteResult) error {
-	cs.Log().Debug("proposer is home; propose new proposal")
+	cs.Log().Debug().Msg("proposer is home; propose new proposal")
 
 	proposal, err := cs.proposalMaker.Make(vr.Height(), vr.Round(), cs.homeState.Block().Hash())
 	if err != nil {
@@ -447,7 +444,7 @@ func (cs *ConsensusStateHandler) startNextRound(vr VoteResult) error {
 		return err
 	}
 
-	cs.Log().Debug("broadcast next round ballot", "vr", vr, "ballot", ballot)
+	cs.Log().Debug().Interface("vr", vr).Interface("ballot", ballot).Msg("broadcast next round ballot")
 
 	if err := cs.nt.Broadcast(ballot); err != nil {
 		return err
@@ -471,7 +468,9 @@ func (cs *ConsensusStateHandler) nextRoundTimer(name string, vr VoteResult) erro
 			return cs.startNextRound(vr)
 		},
 	)
-	cs.timer.SetLogContext(nil, "node", cs.homeState.Home().Alias())
+	cs.timer.AddLoggerContext(func(c zerolog.Context) zerolog.Context {
+		return c.Interface("node", cs.homeState.Home().Alias())
+	})
 	if err := cs.timer.Start(); err != nil {
 		return err
 	}

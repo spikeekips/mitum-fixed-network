@@ -6,6 +6,7 @@ import (
 	"context"
 	"sync"
 
+	"github.com/rs/zerolog"
 	"github.com/spikeekips/mitum/common"
 	"github.com/spikeekips/mitum/node"
 	"github.com/spikeekips/mitum/seal"
@@ -28,7 +29,9 @@ func NewChannelNetwork(home node.Home, handler ChannelNetworkSealHandler) *Chann
 		home:         home,
 		handler:      handler,
 	}
-	cn.ReaderDaemon.Logger = common.NewLogger(log, "module", "channel-suffrage-network")
+	cn.ReaderDaemon.ZLogger = common.NewZLogger(func(c zerolog.Context) zerolog.Context {
+		return c.Str("module", "channel-suffrage-network")
+	})
 	cn.chans = map[node.Address]*ChannelNetwork{home.Address(): cn}
 
 	return cn
@@ -69,9 +72,9 @@ func (cn *ChannelNetwork) Broadcast(sl seal.Seal) error {
 			defer wg.Done()
 
 			if ch.Write(sl) {
-				cn.Log().Debug("sent seal", "to", ch.Home().Address(), "seal", sl)
+				cn.Log().Debug().Interface("to", ch.Home().Address()).Interface("seal", sl).Msg("sent seal")
 			} else {
-				cn.Log().Error("failed to send seal", "to", ch.Home().Address(), "seal", sl)
+				cn.Log().Error().Interface("to", ch.Home().Address()).Interface("seal", sl).Msg("failed to send seal")
 			}
 		}(ch)
 	}
@@ -106,7 +109,7 @@ func (cn *ChannelNetwork) RequestAll(ctx context.Context, sl seal.Seal) (map[nod
 	for n := range cn.chans {
 		r, err := cn.Request(ctx, n, sl)
 		if err != nil {
-			cn.Log().Error("failed to request", "target", n, "error", err)
+			cn.Log().Error().Err(err).Interface("target", n).Msg("failed to request")
 		}
 		results[n] = r
 	}

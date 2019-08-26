@@ -3,19 +3,22 @@ package isaac
 import (
 	"sync"
 
+	"github.com/rs/zerolog"
 	"github.com/spikeekips/mitum/common"
 	"github.com/spikeekips/mitum/node"
 )
 
 type StoppedStateHandler struct {
 	sync.RWMutex
-	*common.Logger
+	*common.ZLogger
 	started bool
 }
 
 func NewStoppedStateHandler() *StoppedStateHandler {
 	return &StoppedStateHandler{
-		Logger: common.NewLogger(log, "module", "stopped-state-handler"),
+		ZLogger: common.NewZLogger(func(c zerolog.Context) zerolog.Context {
+			return c.Str("module", "stopped-state-handler")
+		}),
 	}
 }
 

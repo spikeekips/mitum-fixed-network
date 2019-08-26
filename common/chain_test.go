@@ -34,6 +34,7 @@ func (t *testChain) TestNew() {
 			return nil
 		},
 	)
+	checker.SetLogger(zlog)
 
 	err := checker.Check()
 	t.NoError(err)
@@ -58,6 +59,7 @@ func (t *testChain) TestContext() {
 			return nil
 		},
 	)
+	checker.SetLogger(zlog)
 
 	err := checker.Check()
 	t.NoError(err)
@@ -80,6 +82,7 @@ func (t *testChain) TestStop() {
 			return nil
 		},
 	)
+	checker.SetLogger(zlog)
 
 	err := checker.Check()
 	t.NoError(err)
@@ -102,6 +105,7 @@ func (t *testChain) TestStopError() {
 			return nil
 		},
 	)
+	checker.SetLogger(zlog)
 
 	err := checker.Check()
 	t.Error(err, "something wrong")
@@ -134,6 +138,7 @@ func (t *testChain) TestChainCheckerChained() {
 			return nil
 		},
 	)
+	checker.SetLogger(zlog)
 
 	err := checker.Check()
 	t.NoError(err)

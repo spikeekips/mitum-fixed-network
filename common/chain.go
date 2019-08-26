@@ -5,6 +5,7 @@ import (
 	"reflect"
 	"sync"
 
+	"github.com/rs/zerolog"
 	"golang.org/x/xerrors"
 )
 
@@ -22,7 +23,7 @@ type ChainCheckerFunc func(*ChainChecker) error
 
 type ChainChecker struct {
 	sync.RWMutex
-	*Logger
+	*ZLogger
 	checkers    []ChainCheckerFunc
 	originalCtx context.Context
 	ctx         context.Context
@@ -30,7 +31,9 @@ type ChainChecker struct {
 
 func NewChainChecker(name string, ctx context.Context, checkers ...ChainCheckerFunc) *ChainChecker {
 	return &ChainChecker{
-		Logger:      NewLogger(log, "module", name),
+		ZLogger: NewZLogger(func(c zerolog.Context) zerolog.Context {
+			return c.Str("module", name)
+		}),
 		checkers:    checkers,
 		ctx:         ctx,
 		originalCtx: ctx,
@@ -46,7 +49,7 @@ func (c *ChainChecker) New(ctx context.Context) *ChainChecker {
 	}
 
 	return &ChainChecker{
-		Logger:      c.Logger,
+		ZLogger:     c.ZLogger,
 		checkers:    c.checkers,
 		ctx:         ctx,
 		originalCtx: ctx,
@@ -107,12 +110,10 @@ end:
 			newChecker = err
 			break end
 		default:
-			if xerrors.Is(err, ChainCheckerStopError) {
-				c.Log().Debug("checker stopped", "stop", err)
-				return nil
+			if !xerrors.Is(err, ChainCheckerStopError) {
+				return err
 			}
-
-			return err
+			return nil
 		}
 	}
 
@@ -120,7 +121,7 @@ end:
 		return nil
 	}
 
-	newChecker.SetLogContext(c.LogContext())
+	newChecker.SetLogger(c.RootLog())
 	err = newChecker.Check()
 
 	c.Lock()

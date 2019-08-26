@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"sync"
 
+	"github.com/rs/zerolog"
 	"github.com/spikeekips/mitum/common"
 	"github.com/spikeekips/mitum/hash"
 	"github.com/spikeekips/mitum/node"
@@ -12,14 +13,16 @@ import (
 
 type Ballotbox struct {
 	sync.RWMutex
-	*common.Logger
+	*common.ZLogger
 	voted     map[string]*Records
 	threshold *Threshold
 }
 
 func NewBallotbox(threshold *Threshold) *Ballotbox {
 	return &Ballotbox{
-		Logger:    common.NewLogger(log, "module", "ballotbox"),
+		ZLogger: common.NewZLogger(func(c zerolog.Context) zerolog.Context {
+			return c.Str("module", "ballotbox")
+		}),
 		voted:     map[string]*Records{},
 		threshold: threshold,
 	}

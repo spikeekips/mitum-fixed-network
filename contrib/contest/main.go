@@ -9,22 +9,15 @@ import (
 	"runtime/trace"
 	"syscall"
 
-	"github.com/inconshreveable/log15"
+	"github.com/rs/zerolog"
 	"github.com/spf13/cobra"
-
-	"github.com/spikeekips/mitum/common"
-	contest_module "github.com/spikeekips/mitum/contrib/contest/module"
-	"github.com/spikeekips/mitum/isaac"
-	"github.com/spikeekips/mitum/keypair"
-	"github.com/spikeekips/mitum/network"
-	"github.com/spikeekips/mitum/node"
-	"github.com/spikeekips/mitum/seal"
 )
 
 var (
 	sigc           chan os.Signal
 	memProfileFile *os.File
 	traceFile      *os.File
+	log            zerolog.Logger
 )
 
 var rootCmd = &cobra.Command{
@@ -32,60 +25,44 @@ var rootCmd = &cobra.Command{
 	Short: "contest is the consensus tester of ISAAC+",
 	Args:  cobra.NoArgs,
 	PersistentPreRun: func(cmd *cobra.Command, args []string) {
-		// set logging
-		var logOutput string
-		var handler log15.Handler
+		var logOutput *os.File
 		if FlagLogOut == "null" {
-			handler = log15.LvlFilterHandler(flagLogLevel.lvl, log15.DiscardHandler())
-		} else {
-			if len(FlagLogOut) > 0 {
-				// check FlagLogOut is directory
-				fi, err := os.Stat(FlagLogOut)
-				if err != nil {
-					cmd.Println("Error:", err.Error())
-					os.Exit(1)
-				}
-
-				logOutput = FlagLogOut
-				switch mode := fi.Mode(); {
-				case mode.IsDir():
-					//
-				case mode.IsRegular():
-					logOutput = filepath.Base(FlagLogOut)
-				}
-
-				handler = LogFileByNodeHandler(
-					filepath.Clean(logOutput),
-					common.LogFormatter(flagLogFormat.f),
-					flagQuiet,
-				)
-			} else {
-				handler, _ = common.LogHandler(common.LogFormatter(flagLogFormat.f), FlagLogOut)
+			logOutput = nil
+		} else if len(FlagLogOut) > 0 {
+			// check FlagLogOut is directory
+			fi, err := os.Stat(FlagLogOut)
+			if err != nil {
+				cmd.Println("Error:", err.Error())
+				os.Exit(1)
 			}
 
-			handler = log15.CallerFileHandler(handler)
-			handler = log15.LvlFilterHandler(flagLogLevel.lvl, handler)
+			var dir string
+			switch mode := fi.Mode(); {
+			case mode.IsDir():
+			case mode.IsRegular():
+				dir = filepath.Base(FlagLogOut)
+			}
+
+			if f, err := os.Create(filepath.Join(dir, "all.log")); err != nil {
+				cmd.Println("Error:", err.Error())
+				os.Exit(1)
+			} else {
+				logOutput = f
+			}
 		}
 
-		logs := []log15.Logger{
-			log,
-			common.Log(),
-			isaac.Log(),
-			keypair.Log(),
-			network.Log(),
-			node.Log(),
-			seal.Log(),
-			contest_module.Log(),
-		}
-		for _, l := range logs {
-			common.SetLogger(l, flagLogLevel.lvl, handler)
+		logContext := zerolog.New(logOutput).
+			With().
+			Timestamp()
+
+		if flagLogLevel.lvl == zerolog.DebugLevel {
+			logContext = logContext.Caller()
 		}
 
-		log.Debug("parsed flags", "flags", printFlags(cmd, flagLogFormat.f))
+		log = logContext.Logger().Level(flagLogLevel.lvl)
 
-		if len(logOutput) > 0 {
-			log.Debug("output log", "directory", logOutput)
-		}
+		log.Debug().Interface("flags", printFlags(cmd, flagLogFormat.f)).Msg("parsed flags")
+
 		startProfile()
 
 		sigc = make(chan os.Signal, 1)
@@ -100,7 +77,7 @@ var rootCmd = &cobra.Command{
 
 			closeProfile()
 
-			log.Info("contest stopped by force", "sig", s)
+			log.Info().Interface("sig", s).Msg("contest stopped by force")
 			os.Exit(0)
 		}()
 	},
@@ -119,7 +96,7 @@ func startProfile() {
 			panic(err)
 		}
 		traceFile = f
-		log.Debug("trace enabled")
+		log.Debug().Msg("trace enabled")
 	}
 
 	if len(flagCPUProfile) > 0 {
@@ -130,7 +107,7 @@ func startProfile() {
 		if err := pprof.StartCPUProfile(f); err != nil {
 			panic(err)
 		}
-		log.Debug("cpuprofile enabled")
+		log.Debug().Msg("cpuprofile enabled")
 	}
 
 	if len(flagMemProfile) > 0 {
@@ -142,31 +119,31 @@ func startProfile() {
 			panic(err)
 		}
 		memProfileFile = f
-		log.Debug("memprofile enabled")
+		log.Debug().Msg("memprofile enabled")
 	}
 }
 
 func closeProfile() {
 	if len(flagCPUProfile) > 0 {
 		pprof.StopCPUProfile()
-		log.Debug("cpu profile closed")
+		log.Debug().Msg("cpu profile closed")
 	}
 
 	if len(flagMemProfile) > 0 {
 		if err := memProfileFile.Close(); err != nil {
-			log.Error("failed to close mem profile file", "error", err)
+			log.Error().Err(err).Msg("failed to close mem profile file")
 		}
 
-		log.Debug("mem profile closed")
+		log.Debug().Msg("mem profile closed")
 	}
 
 	if len(flagTrace) > 0 {
 		trace.Stop()
 		if err := traceFile.Close(); err != nil {
-			log.Error("failed to close trace file", "error", err)
+			log.Error().Err(err).Msg("failed to close trace file")
 		}
 
-		log.Debug("trace closed")
+		log.Debug().Msg("trace closed")
 	}
 }
 

@@ -8,14 +8,14 @@ import (
 	"strings"
 	"time"
 
-	"github.com/inconshreveable/log15"
+	"github.com/rs/zerolog"
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
 	"golang.org/x/xerrors"
 )
 
 var (
-	flagLogLevel      FlagLogLevel  = FlagLogLevel{lvl: log15.LvlDebug}
+	flagLogLevel      FlagLogLevel  = FlagLogLevel{lvl: zerolog.DebugLevel}
 	flagLogFormat     FlagLogFormat = FlagLogFormat{f: "json"}
 	FlagLogOut        string
 	flagCPUProfile    string
@@ -27,7 +27,7 @@ var (
 )
 
 type FlagLogLevel struct {
-	lvl log15.Lvl
+	lvl zerolog.Level
 }
 
 func (f FlagLogLevel) String() string {
@@ -35,7 +35,7 @@ func (f FlagLogLevel) String() string {
 }
 
 func (f *FlagLogLevel) Set(v string) error {
-	lvl, err := log15.LvlFromString(v)
+	lvl, err := zerolog.ParseLevel(v)
 	if err != nil {
 		return err
 	}

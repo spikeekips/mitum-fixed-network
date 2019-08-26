@@ -3,21 +3,22 @@
 package common
 
 import (
+	"os"
 	"runtime/debug"
 
-	"github.com/inconshreveable/log15"
+	"github.com/rs/zerolog"
 )
 
-func init() {
-	SetTestLogger(log)
-}
+var zlog zerolog.Logger = zerolog.Nop()
 
-func SetTestLogger(logger log15.Logger) {
-	//handler, _ := LogHandler(LogFormatter("terminal"), "")
-	handler, _ := LogHandler(LogFormatter("json"), "")
-	handler = log15.CallerFileHandler(handler)
-	logger.SetHandler(log15.LvlFilterHandler(log15.LvlDebug, handler))
-	//logger.SetHandler(log15.LvlFilterHandler(log15.LvlCrit, handler))
+func init() {
+	zlog = zerolog.
+		New(os.Stderr).
+		With().
+		Timestamp().
+		Caller().
+		Logger().
+		Level(zerolog.DebugLevel)
 }
 
 func DebugPanic() {

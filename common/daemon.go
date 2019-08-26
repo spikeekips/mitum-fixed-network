@@ -22,7 +22,7 @@ type Daemon interface {
 
 type ReaderDaemon struct {
 	sync.RWMutex
-	*Logger
+	*ZLogger
 	synchronous    bool
 	reader         chan interface{}
 	readerCallback func(interface{}) error
@@ -32,7 +32,7 @@ type ReaderDaemon struct {
 
 func NewReaderDaemon(synchronous bool, bufsize uint, readerCallback func(interface{}) error) *ReaderDaemon {
 	return &ReaderDaemon{
-		Logger:         NewLogger(log),
+		ZLogger:        NewZLogger(nil),
 		synchronous:    synchronous,
 		reader:         make(chan interface{}, int(bufsize)),
 		readerCallback: readerCallback,
@@ -68,7 +68,7 @@ func (d *ReaderDaemon) Start() error {
 	defer d.Unlock()
 
 	d.stopped = false
-	d.Log().Debug("started")
+	d.Log().Debug().Msg("started")
 
 	return nil
 }
@@ -82,7 +82,7 @@ func (d *ReaderDaemon) Stop() error {
 	d.stopped = true
 	d.Unlock()
 
-	d.Log().Debug("stopped")
+	d.Log().Debug().Msg("stopped")
 
 	return nil
 }
@@ -111,7 +111,7 @@ func (d *ReaderDaemon) loop() {
 func (d *ReaderDaemon) runCallback(v interface{}) {
 	err := d.readerCallback(v)
 	if err != nil {
-		d.Log().Error("error occurred", "error", err)
+		d.Log().Error().Err(err).Msg("error occurred")
 	}
 	if err != nil && d.errCallback != nil {
 		go d.errCallback(err)

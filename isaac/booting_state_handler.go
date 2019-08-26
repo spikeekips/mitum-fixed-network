@@ -4,13 +4,14 @@ import (
 	"context"
 	"sync"
 
+	"github.com/rs/zerolog"
 	"github.com/spikeekips/mitum/common"
 	"github.com/spikeekips/mitum/node"
 )
 
 type BootingStateHandler struct {
 	sync.RWMutex
-	*common.Logger
+	*common.ZLogger
 	started         bool
 	chanState       chan StateContext
 	proposalChecker *common.ChainChecker
@@ -18,7 +19,9 @@ type BootingStateHandler struct {
 
 func NewBootingStateHandler(homeState *HomeState) *BootingStateHandler {
 	return &BootingStateHandler{
-		Logger:          common.NewLogger(log, "module", "booting-state-handler"),
+		ZLogger: common.NewZLogger(func(c zerolog.Context) zerolog.Context {
+			return c.Str("module", "booting-state-handler")
+		}),
 		proposalChecker: NewProposalCheckerBooting(homeState),
 	}
 }

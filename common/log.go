@@ -1,112 +1,64 @@
 package common
 
 import (
-	"encoding/json"
-	"fmt"
-	"os"
-	"reflect"
 	"time"
 
-	"github.com/inconshreveable/log15"
-	"github.com/mattn/go-isatty"
+	"github.com/rs/zerolog"
 )
 
-var log log15.Logger = log15.New("module", "common")
-
-func Log() log15.Logger {
-	return log
+func init() {
+	zerolog.TimestampFieldName = "t"
+	zerolog.TimeFieldFormat = time.RFC3339Nano
+	zerolog.DisableSampling(true)
 }
 
-func LogFormatter(f string) log15.Format {
-	var logFormatter log15.Format
-	switch f {
-	case "terminal":
-		if isatty.IsTerminal(os.Stdout.Fd()) {
-			logFormatter = log15.TerminalFormat()
-		} else {
-			logFormatter = log15.LogfmtFormat()
+type ZLogger struct {
+	root        zerolog.Logger
+	nop         *zerolog.Logger
+	l           *zerolog.Logger
+	contextFunc []func(zerolog.Context) zerolog.Context
+}
+
+func NewZLogger(cf func(zerolog.Context) zerolog.Context) *ZLogger {
+	n := zerolog.Nop()
+	zl := &ZLogger{nop: &n}
+	zl.contextFunc = append(zl.contextFunc, cf)
+
+	return zl
+}
+
+func (zl *ZLogger) SetLogger(l zerolog.Logger) *ZLogger {
+	zl.root = l
+	if len(zl.contextFunc) > 0 {
+		for _, cf := range zl.contextFunc {
+			l = cf(l.With()).Logger()
 		}
-	case "", "json":
-		logFormatter = JsonFormatEx()
+		zl.l = &l
+	} else {
+		zl.l = &l
 	}
 
-	return logFormatter
+	return zl
 }
 
-func LogHandler(format log15.Format, f string) (log15.Handler, error) {
-	if len(f) < 1 {
-		return log15.StreamHandler(os.Stdout, format), nil
+func (zl *ZLogger) AddLoggerContext(cf func(zerolog.Context) zerolog.Context) *ZLogger {
+	zl.contextFunc = append(zl.contextFunc, cf)
+	if zl.l != nil {
+		l := cf(zl.l.With()).Logger()
+		zl.l = &l
 	}
 
-	return log15.FileHandler(f, format)
+	return zl
 }
 
-func SetLogger(logger log15.Logger, level log15.Lvl, handler log15.Handler) {
-	logger.SetHandler(log15.LvlFilterHandler(level, handler))
+func (zl *ZLogger) RootLog() zerolog.Logger {
+	return zl.root
 }
 
-// `formatJSONValue` and `JsonFormatEx` was derived from
-// https://github.com/inconshreveable/log15/blob/199fca55789248e0520a3bd33e9045799738e793/format.go#L131
-// .
-const errorKey = "LOG15_ERROR"
-
-func formatLogJSONValue(value interface{}) (result interface{}) {
-	defer func() {
-		if err := recover(); err != nil {
-			if v := reflect.ValueOf(value); v.Kind() == reflect.Ptr && v.IsNil() {
-				result = "nil"
-			} else {
-				panic(err)
-			}
-		}
-	}()
-
-	switch v := value.(type) {
-	case json.Marshaler:
-		result = v
-	case Time:
-		result = v.String()
-	case time.Duration:
-		result = v.String()
-	case time.Time:
-		result = v.Format(TIMEFORMAT_ISO8601)
-	case error:
-		result = v.Error()
-	case fmt.Stringer:
-		result = v.String()
-	default:
-		result = v
+func (zl *ZLogger) Log() *zerolog.Logger {
+	if zl.l == nil {
+		return zl.nop
 	}
 
-	return
-}
-
-func JsonFormatEx() log15.Format {
-	return log15.FormatFunc(func(r *log15.Record) []byte {
-		props := make(map[string]interface{})
-
-		props[r.KeyNames.Time] = r.Time
-		props[r.KeyNames.Lvl] = r.Lvl.String()
-		props[r.KeyNames.Msg] = r.Msg
-
-		for i := 0; i < len(r.Ctx); i += 2 {
-			k, ok := r.Ctx[i].(string)
-			if !ok {
-				props[errorKey] = fmt.Sprintf("%+v is not a string key", r.Ctx[i])
-			}
-			props[k] = formatLogJSONValue(r.Ctx[i+1])
-		}
-
-		b, err := EncodeJSON(props, false, false)
-		if err != nil {
-			b, _ = json.Marshal(map[string]string{ // nolint
-				errorKey: err.Error(),
-			})
-			return b
-		}
-
-		b = append(b, '\n')
-
-		return b
-	})
+	return zl.l
 }

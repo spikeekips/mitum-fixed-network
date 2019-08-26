@@ -21,9 +21,9 @@ var runCmd = &cobra.Command{
 			}
 		}
 
-		log.Info("contest started")
+		log.Info().Msg("contest started")
 		defer func() {
-			log.Info("contest stopped")
+			log.Info().Msg("contest stopped")
 		}()
 
 		config, err := LoadConfig(args[0], flagNumberOfNodes)
@@ -32,7 +32,7 @@ var runCmd = &cobra.Command{
 			os.Exit(1)
 		}
 
-		log.Debug("config loaded", "config", config, "flagExitAfter", flagExitAfter)
+		log.Debug().Interface("config", config).Interface("flagExitAfter", flagExitAfter).Msg("config loaded")
 
 		go func() { // exit-after
 			if flagExitAfter < time.Nanosecond {

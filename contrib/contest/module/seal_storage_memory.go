@@ -1,6 +1,7 @@
 package contest_module
 
 import (
+	"github.com/rs/zerolog"
 	"github.com/spikeekips/mitum/common"
 	"github.com/spikeekips/mitum/hash"
 	"github.com/spikeekips/mitum/seal"
@@ -9,14 +10,16 @@ import (
 )
 
 type MemorySealStorage struct {
-	*common.Logger
+	*common.ZLogger
 	m *syncmap.Map
 }
 
 func NewMemorySealStorage() *MemorySealStorage {
 	return &MemorySealStorage{
-		Logger: common.NewLogger(log, "module", "memory-seal-storage"),
-		m:      &syncmap.Map{},
+		ZLogger: common.NewZLogger(func(c zerolog.Context) zerolog.Context {
+			return c.Str("module", "memory-seal-storage")
+		}),
+		m: &syncmap.Map{},
 	}
 }
 
@@ -46,6 +49,6 @@ func (tss *MemorySealStorage) Save(sl seal.Seal) error {
 
 	tss.m.Store(sl.Hash(), sl)
 
-	//tss.Log().Debug("seal saved", "seal", sl.Hash())
+	//tss.Log().Debug().Interface("seal", sl.Hash()).Msg("seal saved")
 	return nil
 }

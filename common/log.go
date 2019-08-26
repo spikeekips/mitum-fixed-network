@@ -22,7 +22,9 @@ type ZLogger struct {
 func NewZLogger(cf func(zerolog.Context) zerolog.Context) *ZLogger {
 	n := zerolog.Nop()
 	zl := &ZLogger{nop: &n}
-	zl.contextFunc = append(zl.contextFunc, cf)
+	if cf != nil {
+		zl.contextFunc = append(zl.contextFunc, cf)
+	}
 
 	return zl
 }

@@ -66,7 +66,7 @@ const styles = theme => ({
   }
 });
 
-var allLevels = ['eror', 'dbug', 'info', 'warn', 'crit']
+var allLevels = ['error', 'debug', 'info', 'warn', 'fatal', 'panic']
 
 var hexToRgb = (hex) => {
   var shorthandRegex = /^#?([a-f\d])([a-f\d])([a-f\d])$/i;
@@ -104,7 +104,7 @@ class CenteredGrid extends React.Component {
     speedDial: false,
     openDialog: false,
     moduleColors: [],
-    filteredLevels: { eror: true,dbug: true,info: true,warn: true,crit: true },
+    filteredLevels: { error: true, debug: true, info: true, warn: true, fatal: true, panic: true},
   }
 
   log = null

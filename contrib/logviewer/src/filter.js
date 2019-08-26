@@ -3,7 +3,7 @@ class LogFilter {
     this.all = records
     this.offset = 0
     this.defaultFilters = {
-			levels: ['eror', 'dbug', 'info', 'warn', 'crit'],
+			levels: ['error', 'debug', 'info', 'warn', 'fatal', 'panic'],
       message: null,
     }
 		this.filters = this.defaultFilters

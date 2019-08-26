@@ -244,7 +244,7 @@ table.scrollable tbody tr.row-detail-open {
   font-size: 0.6rem !important;
 }
 
-.lvl-dbug {
+.lvl-debug {
   background-color: #e2e2e2 !important;
   color: gray !important;
 }
@@ -258,12 +258,17 @@ table.scrollable tbody tr.row-detail-open {
   background-color: blue !important;
 }
 
-.lvl-eror {
+.lvl-error {
   background-color: #f50057 !important;
 }
 
-.lvl-crit {
+.lvl-fatal {
   background-color: #f300f5 !important;
+}
+
+.lvl-panic {
+  background-color: #000 !important;
+  color: gray !important;
 }
 
 table.scrollable tbody tr td:first-child > span {

@@ -101,16 +101,13 @@ func (sc *StateController) setState(sct StateContext) error {
 		return err
 	}
 
-	sc.Lock()
-	defer sc.Unlock()
-
-	if sc.stateHandler != nil && sc.stateHandler.State() == sct.State() {
+	if sc.StateHandler() != nil && sc.StateHandler().State() == sct.State() {
 		return xerrors.Errorf("same state")
 	}
 
 	// stop previous StateHandler and start new StateHandler
-	if sc.stateHandler != nil {
-		if err := sc.stateHandler.Deactivate(); err != nil {
+	if sc.StateHandler() != nil {
+		if err := sc.StateHandler().Deactivate(); err != nil {
 			return err
 		}
 	}
@@ -128,6 +125,9 @@ func (sc *StateController) setState(sct StateContext) error {
 	default:
 		return xerrors.Errorf("handler not found for state; state=%v", sct.State())
 	}
+
+	sc.Lock()
+	defer sc.Unlock()
 
 	if err := handler.Activate(sct); err != nil {
 		return err
@@ -188,12 +188,8 @@ func (sc *StateController) handleProposal(proposal Proposal) error {
 	// TODO check proposal
 
 	// hand over VoteResult to StateHandler
-	sc.RLock()
-	handler := sc.stateHandler
-	sc.RUnlock()
-
-	if handler != nil {
-		if err := handler.ReceiveProposal(proposal); err != nil {
+	if sc.StateHandler() != nil {
+		if err := sc.StateHandler().ReceiveProposal(proposal); err != nil {
 			return err
 		}
 	}
@@ -204,6 +200,7 @@ func (sc *StateController) handleProposal(proposal Proposal) error {
 func (sc *StateController) StateHandler() StateHandler {
 	sc.RLock()
 	defer sc.RUnlock()
+
 	return sc.stateHandler
 }
 

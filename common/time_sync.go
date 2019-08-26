@@ -15,7 +15,7 @@ var (
 
 type TimeSyncer struct {
 	sync.RWMutex
-	*ZLogger
+	*Logger
 	server   string
 	offset   time.Duration
 	stopChan chan bool
@@ -29,7 +29,7 @@ func NewTimeSyncer(server string, checkInterval time.Duration) (*TimeSyncer, err
 	}
 
 	return &TimeSyncer{
-		ZLogger: NewZLogger(func(c zerolog.Context) zerolog.Context {
+		Logger: NewLogger(func(c zerolog.Context) zerolog.Context {
 			return c.
 				Str("module", "time-syncer").
 				Str("server", server).
@@ -99,11 +99,17 @@ func (s *TimeSyncer) check() {
 	}
 
 	if err := response.Validate(); err != nil {
-		s.Log().Error().Err(err).Interface("response", response).Msg("failed to validate response")
+		s.Log().Error().
+			Err(err).
+			Interface("response", response).
+			Msg("failed to validate response")
 		return
 	}
 	defer func() {
-		s.Log().Debug().Interface("response", response).Dur("offset", s.offset).Msg("time checked")
+		s.Log().Debug().
+			Interface("response", response).
+			Dur("offset", s.offset).
+			Msg("time checked")
 	}()
 
 	if s.offset < 1 {

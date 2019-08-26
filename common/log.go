@@ -6,22 +6,23 @@ import (
 	"github.com/rs/zerolog"
 )
 
+var NilLog zerolog.Logger = zerolog.Nop()
+
 func init() {
 	zerolog.TimestampFieldName = "t"
 	zerolog.TimeFieldFormat = time.RFC3339Nano
 	zerolog.DisableSampling(true)
 }
 
-type ZLogger struct {
+type Logger struct {
 	root        zerolog.Logger
 	nop         *zerolog.Logger
 	l           *zerolog.Logger
 	contextFunc []func(zerolog.Context) zerolog.Context
 }
 
-func NewZLogger(cf func(zerolog.Context) zerolog.Context) *ZLogger {
-	n := zerolog.Nop()
-	zl := &ZLogger{nop: &n}
+func NewLogger(cf func(zerolog.Context) zerolog.Context) *Logger {
+	zl := &Logger{nop: &NilLog}
 	if cf != nil {
 		zl.contextFunc = append(zl.contextFunc, cf)
 	}
@@ -29,7 +30,7 @@ func NewZLogger(cf func(zerolog.Context) zerolog.Context) *ZLogger {
 	return zl
 }
 
-func (zl *ZLogger) SetLogger(l zerolog.Logger) *ZLogger {
+func (zl *Logger) SetLogger(l zerolog.Logger) *Logger {
 	zl.root = l
 	if len(zl.contextFunc) > 0 {
 		for _, cf := range zl.contextFunc {
@@ -43,7 +44,7 @@ func (zl *ZLogger) SetLogger(l zerolog.Logger) *ZLogger {
 	return zl
 }
 
-func (zl *ZLogger) AddLoggerContext(cf func(zerolog.Context) zerolog.Context) *ZLogger {
+func (zl *Logger) AddLoggerContext(cf func(zerolog.Context) zerolog.Context) *Logger {
 	zl.contextFunc = append(zl.contextFunc, cf)
 	if zl.l != nil {
 		l := cf(zl.l.With()).Logger()
@@ -53,11 +54,11 @@ func (zl *ZLogger) AddLoggerContext(cf func(zerolog.Context) zerolog.Context) *Z
 	return zl
 }
 
-func (zl *ZLogger) RootLog() zerolog.Logger {
+func (zl *Logger) RootLog() zerolog.Logger {
 	return zl.root
 }
 
-func (zl *ZLogger) Log() *zerolog.Logger {
+func (zl *Logger) Log() *zerolog.Logger {
 	if zl.l == nil {
 		return zl.nop
 	}

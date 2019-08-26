@@ -7,6 +7,7 @@ import (
 
 	"github.com/btcsuite/btcutil/base58"
 	"github.com/ethereum/go-ethereum/rlp"
+	"github.com/rs/zerolog"
 )
 
 var (
@@ -121,13 +122,17 @@ func (h Hash) Equal(a Hash) bool {
 }
 
 func (h Hash) MarshalJSON() ([]byte, error) {
-	/*
-		return json.Marshal(map[string]interface{}{
-			"hint": h.hint,
-			"body": base58.Encode(h.Body()),
-		})
+	/* NOTE
+	return json.Marshal(map[string]interface{}{
+		"hint": h.hint,
+		"body": base58.Encode(h.Body()),
+	})
 	*/
 	return json.Marshal(h.String())
+}
+
+func (h Hash) MarshalZerologObject(e *zerolog.Event) {
+	e.Str("hash", h.String())
 }
 
 func (h Hash) MarshalText() ([]byte, error) {

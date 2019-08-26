@@ -15,7 +15,7 @@ import (
 )
 
 type Node struct {
-	*common.ZLogger
+	*common.Logger
 	homeState *isaac.HomeState
 	nt        *contest_module.ChannelNetwork
 	sc        *isaac.StateController
@@ -101,15 +101,15 @@ func NewNode(
 	}
 
 	log_.Info().
-		Interface("config", config).
-		Interface("home", home).
-		Interface("homeState", homeState).
-		Interface("threshold", thr).
+		Object("config", config).
+		Object("home", home).
+		Object("homeState", homeState).
+		Object("threshold", thr).
 		Interface("suffrage", suffrage).
 		Msg("node created")
 
 	n := &Node{
-		ZLogger: common.NewZLogger(func(c zerolog.Context) zerolog.Context {
+		Logger: common.NewLogger(func(c zerolog.Context) zerolog.Context {
 			return c.Str("node", home.Alias())
 		}),
 		homeState: homeState,

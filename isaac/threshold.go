@@ -5,6 +5,7 @@ import (
 	"math"
 	"sync"
 
+	"github.com/rs/zerolog"
 	"golang.org/x/xerrors"
 )
 
@@ -79,6 +80,19 @@ func (tr *Threshold) MarshalJSON() ([]byte, error) {
 		"base":      flattenThreshold(tr.base),
 		"threshold": thh,
 	})
+}
+
+func (tr *Threshold) MarshalZerologObject(e *zerolog.Event) {
+	tr.RLock()
+	defer tr.RUnlock()
+
+	thh := zerolog.Dict()
+	for k, v := range tr.threshold {
+		thh.Uints(k.String(), v[:])
+	}
+
+	e.Uints("base", tr.base[:])
+	e.Dict("threshold", thh)
 }
 
 func (tr *Threshold) String() string {

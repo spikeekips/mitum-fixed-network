@@ -16,7 +16,7 @@ import (
 // ConsensusStateHandler is only for suffrage node
 type ConsensusStateHandler struct {
 	sync.RWMutex
-	*common.ZLogger
+	*common.Logger
 	homeState         *HomeState
 	compiler          *Compiler
 	nt                network.Network
@@ -45,7 +45,7 @@ func NewConsensusStateHandler(
 	}
 
 	return &ConsensusStateHandler{
-		ZLogger: common.NewZLogger(func(c zerolog.Context) zerolog.Context {
+		Logger: common.NewLogger(func(c zerolog.Context) zerolog.Context {
 			return c.Str("module", "consensus-state-handler")
 		}),
 		homeState:         homeState,
@@ -154,7 +154,7 @@ func (cs *ConsensusStateHandler) ReceiveProposal(proposal Proposal) error {
 		return err
 	}
 
-	cs.Log().Debug().Interface("proposal", proposal.Hash()).Msg("proposal checked")
+	cs.Log().Debug().Object("proposal", proposal.Hash()).Msg("proposal checked")
 
 	err = cs.nextRoundTimer(
 		"wait-ballot-timeout-next-round-consensus",
@@ -177,17 +177,17 @@ func (cs *ConsensusStateHandler) ReceiveProposal(proposal Proposal) error {
 	insideActing := acting.Exists(cs.homeState.Home().Address())
 	if !insideActing {
 		cs.Log().Debug().
-			Interface("proposal", proposal.Hash()).
-			Interface("height", proposal.Height()).
-			Interface("round", proposal.Round()).
-			Interface("acting", acting).
+			Object("proposal", proposal.Hash()).
+			Uint64("height", proposal.Height().Uint64()).
+			Uint64("round", proposal.Round().Uint64()).
+			Object("acting", acting).
 			Msg("not acting member at this proposal; not broadcast sign ballot")
 	} else {
 		cs.Log().Debug().
-			Interface("proposal", proposal.Hash()).
-			Interface("height", proposal.Height()).
-			Interface("round", proposal.Round()).
-			Interface("acting", acting).
+			Object("proposal", proposal.Hash()).
+			Uint64("height", proposal.Height().Uint64()).
+			Uint64("round", proposal.Round().Uint64()).
+			Object("acting", acting).
 			Msg("acting member at this proposal; broadcast sign ballot")
 	}
 
@@ -226,10 +226,10 @@ func (cs *ConsensusStateHandler) ReceiveVoteResult(vr VoteResult) error {
 		return err
 	}
 
-	cs.Log().Debug().Interface("vr", vr).Msg("VoteResult checked")
+	cs.Log().Debug().Object("vr", vr).Msg("VoteResult checked")
 
 	if vr.GotDraw() {
-		cs.Log().Debug().Interface("vr", vr).Msg("VoteResult drawed")
+		cs.Log().Debug().Object("vr", vr).Msg("VoteResult drawed")
 		return cs.startNextRound(vr)
 	} else if vr.GotMajority() {
 		if vr.Stage() == StageINIT {
@@ -248,13 +248,13 @@ func (cs *ConsensusStateHandler) gotINITMajority(vr VoteResult) error {
 	diff := vr.Height().Sub(cs.homeState.Block().Height()).Int64()
 	switch {
 	case diff == 2: // move to next block
-		cs.Log().Debug().Interface("vr", vr).Msg("got VoteResult of next block; keep going")
+		cs.Log().Debug().Object("vr", vr).Msg("got VoteResult of next block; keep going")
 
 		if !cs.homeState.Block().Hash().Equal(vr.LastBlock()) {
 			cs.Log().Error().
-				Interface("home", cs.homeState.Block().Hash()).
-				Interface("block_vr", vr.LastBlock()).
-				Interface("vr", vr).
+				Object("home", cs.homeState.Block().Hash()).
+				Object("block_vr", vr.LastBlock()).
+				Object("vr", vr).
 				Msg("init for next block; last block does not match; move to sync")
 			cs.chanState <- NewStateContext(node.StateSync).
 				SetContext("vr", vr)
@@ -266,22 +266,22 @@ func (cs *ConsensusStateHandler) gotINITMajority(vr VoteResult) error {
 		if err != nil {
 			cs.Log().Error().
 				Err(err).
-				Interface("vr", vr).
+				Object("vr", vr).
 				Msg("failed to make new block from VoteResult")
 			return err
 		}
 
 		_ = cs.homeState.SetBlock(block)
 
-		cs.Log().Info().Interface("block", block).Interface("vr", vr).Msg("new block created")
+		cs.Log().Info().Object("block", block).Object("vr", vr).Msg("new block created")
 	case diff == 1: // next round
-		cs.Log().Debug().Interface("vr", vr).Msg("got VoteResult of next round; keep going")
+		cs.Log().Debug().Object("vr", vr).Msg("got VoteResult of next round; keep going")
 
 		if !cs.homeState.Block().Hash().Equal(vr.Block()) {
 			cs.Log().Error().
-				Interface("home", cs.homeState.Block().Hash()).
-				Interface("block_vr", vr.Block()).
-				Interface("vr", vr).
+				Object("home", cs.homeState.Block().Hash()).
+				Object("block_vr", vr.Block()).
+				Object("vr", vr).
 				Msg("init for next round; block does not match; move to sync")
 			cs.chanState <- NewStateContext(node.StateSync).
 				SetContext("vr", vr)
@@ -289,7 +289,7 @@ func (cs *ConsensusStateHandler) gotINITMajority(vr VoteResult) error {
 			return xerrors.Errorf("init for next round; block does not match; move to sync")
 		}
 	default: // unexpected height received, move to sync
-		cs.Log().Debug().Interface("vr", vr).Msg("got not expected height VoteResult; move to sync")
+		cs.Log().Debug().Object("vr", vr).Msg("got not expected height VoteResult; move to sync")
 		cs.chanState <- NewStateContext(node.StateSync).
 			SetContext("vr", vr)
 		return xerrors.Errorf("got not expected height VoteResult; move to sync")
@@ -306,20 +306,20 @@ func (cs *ConsensusStateHandler) gotNotINITMajority(vr VoteResult) error {
 	}
 
 	if !cs.proposalValidator.Validated(vr.Proposal()) {
-		cs.Log().Debug().Interface("vr", vr).Msg("proposal did not validated; validate it")
+		cs.Log().Debug().Object("vr", vr).Msg("proposal did not validated; validate it")
 	}
 
 	block, err := cs.proposalValidator.NewBlock(vr.Height(), vr.Round(), vr.Proposal())
 	if err != nil {
-		cs.Log().Error().Err(err).Interface("vr", vr).Msg("failed to make new block from proposal")
+		cs.Log().Error().Err(err).Object("vr", vr).Msg("failed to make new block from proposal")
 		return err
 	}
 
 	if !vr.Block().Equal(block.Hash()) {
 		cs.Log().Warn().
-			Interface("vr_block", vr.Block()).
-			Interface("block", block.Hash()).
-			Interface("vr", vr).
+			Object("vr_block", vr.Block()).
+			Object("block", block.Hash()).
+			Object("vr", vr).
 			Msg("block hash does not match")
 	}
 
@@ -329,17 +329,17 @@ func (cs *ConsensusStateHandler) gotNotINITMajority(vr VoteResult) error {
 		acting := cs.suffrage.Acting(vr.Height(), vr.Round())
 		if !acting.Exists(cs.homeState.Home().Address()) {
 			cs.Log().Debug().
-				Interface("vr", vr).
-				Interface("height", vr.Height()).
-				Interface("round", vr.Round()).
-				Interface("acting", acting).
+				Object("vr", vr).
+				Uint64("height", vr.Height().Uint64()).
+				Uint64("round", vr.Round().Uint64()).
+				Object("acting", acting).
 				Msg("not acting member at this VoteResult; not broadcast accept ballot")
 		} else {
 			cs.Log().Debug().
-				Interface("vr", vr).
-				Interface("height", vr.Height()).
-				Interface("round", vr.Round()).
-				Interface("acting", acting).
+				Object("vr", vr).
+				Uint64("height", vr.Height().Uint64()).
+				Uint64("round", vr.Round().Uint64()).
+				Object("acting", acting).
 				Msg("acting member at this VoteResult; broadcast accept ballot")
 			ballot, err = NewACCEPTBallot(
 				cs.homeState.Home().Address(),
@@ -384,9 +384,9 @@ func (cs *ConsensusStateHandler) gotNotINITMajority(vr VoteResult) error {
 }
 
 func (cs *ConsensusStateHandler) prepareProposal(vr VoteResult) error {
-	cs.Log().Debug().Interface("vr", vr).Msg("prepare proposal")
+	cs.Log().Debug().Object("vr", vr).Msg("prepare proposal")
 	acting := cs.suffrage.Acting(vr.Height(), vr.Round())
-	cs.Log().Debug().Interface("acting", acting).Msg("proposer selected")
+	cs.Log().Debug().Object("acting", acting).Msg("proposer selected")
 	if !acting.Proposer().Equal(cs.homeState.Home()) {
 		cs.Log().Debug().Msg("proposer is not home; wait proposal")
 
@@ -444,7 +444,7 @@ func (cs *ConsensusStateHandler) startNextRound(vr VoteResult) error {
 		return err
 	}
 
-	cs.Log().Debug().Interface("vr", vr).Interface("ballot", ballot).Msg("broadcast next round ballot")
+	cs.Log().Debug().Object("vr", vr).Object("ballot", ballot).Msg("broadcast next round ballot")
 
 	if err := cs.nt.Broadcast(ballot); err != nil {
 		return err
@@ -468,9 +468,7 @@ func (cs *ConsensusStateHandler) nextRoundTimer(name string, vr VoteResult) erro
 			return cs.startNextRound(vr)
 		},
 	)
-	cs.timer.AddLoggerContext(func(c zerolog.Context) zerolog.Context {
-		return c.Interface("node", cs.homeState.Home().Alias())
-	})
+	cs.timer.SetLogger(*cs.Log())
 	if err := cs.timer.Start(); err != nil {
 		return err
 	}

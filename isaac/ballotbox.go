@@ -13,14 +13,14 @@ import (
 
 type Ballotbox struct {
 	sync.RWMutex
-	*common.ZLogger
+	*common.Logger
 	voted     map[string]*Records
 	threshold *Threshold
 }
 
 func NewBallotbox(threshold *Threshold) *Ballotbox {
 	return &Ballotbox{
-		ZLogger: common.NewZLogger(func(c zerolog.Context) zerolog.Context {
+		Logger: common.NewLogger(func(c zerolog.Context) zerolog.Context {
 			return c.Str("module", "ballotbox")
 		}),
 		voted:     map[string]*Records{},
@@ -238,6 +238,15 @@ func (rc Record) MarshalJSON() ([]byte, error) {
 		"proposal":   rc.proposal,
 		"voted_at":   rc.votedAt,
 	})
+}
+
+func (rc Record) MarshalZerologObject(e *zerolog.Event) {
+	e.Object("node", rc.node)
+	e.Object("block", rc.block)
+	e.Object("last_block", rc.lastBlock)
+	e.Uint64("last_round", rc.lastRound.Uint64())
+	e.Object("proposal", rc.proposal)
+	e.Time("voted_at", rc.votedAt.Time)
 }
 
 func (rc Record) String() string {

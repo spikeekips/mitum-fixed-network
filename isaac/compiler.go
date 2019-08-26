@@ -11,7 +11,7 @@ import (
 
 type Compiler struct {
 	sync.RWMutex
-	*common.ZLogger
+	*common.Logger
 	homeState            *HomeState
 	ballotbox            *Ballotbox
 	lastINITVoteResult   VoteResult
@@ -21,7 +21,7 @@ type Compiler struct {
 
 func NewCompiler(homeState *HomeState, ballotbox *Ballotbox, ballotChecker *common.ChainChecker) *Compiler {
 	return &Compiler{
-		ZLogger: common.NewZLogger(func(c zerolog.Context) zerolog.Context {
+		Logger: common.NewLogger(func(c zerolog.Context) zerolog.Context {
 			return c.Str("module", "compiler")
 		}),
 		homeState:     homeState,
@@ -30,18 +30,18 @@ func NewCompiler(homeState *HomeState, ballotbox *Ballotbox, ballotChecker *comm
 	}
 }
 
-func (cm *Compiler) SetLogger(l zerolog.Logger) *common.ZLogger {
-	_ = cm.ZLogger.SetLogger(l)
+func (cm *Compiler) SetLogger(l zerolog.Logger) *common.Logger {
+	_ = cm.Logger.SetLogger(l)
 	_ = cm.ballotChecker.SetLogger(l)
 
-	return cm.ZLogger
+	return cm.Logger
 }
 
-func (cm *Compiler) AddLoggerContext(cf func(c zerolog.Context) zerolog.Context) *common.ZLogger {
-	_ = cm.ZLogger.AddLoggerContext(cf)
+func (cm *Compiler) AddLoggerContext(cf func(c zerolog.Context) zerolog.Context) *common.Logger {
+	_ = cm.Logger.AddLoggerContext(cf)
 	_ = cm.ballotChecker.AddLoggerContext(cf)
 
-	return cm.ZLogger
+	return cm.Logger
 }
 
 func (cm *Compiler) Vote(ballot Ballot) (VoteResult, error) {
@@ -55,7 +55,7 @@ func (cm *Compiler) Vote(ballot Ballot) (VoteResult, error) {
 		return VoteResult{}, err
 	}
 
-	cm.Log().Debug().Interface("ballot", ballot).Msg("ballot checked")
+	cm.Log().Debug().Object("ballot", ballot).Msg("ballot checked")
 
 	vr, err := cm.ballotbox.Vote(
 		ballot.Node(),

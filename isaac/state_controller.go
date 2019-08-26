@@ -1,7 +1,6 @@
 package isaac
 
 import (
-	"fmt"
 	"sync"
 
 	"golang.org/x/xerrors"
@@ -14,7 +13,7 @@ import (
 
 type StateController struct {
 	sync.RWMutex
-	*common.ZLogger
+	*common.Logger
 	homeState        *HomeState
 	compiler         *Compiler
 	sealStorage      SealStorage
@@ -37,7 +36,7 @@ func NewStateController(
 ) *StateController {
 	chanState := make(chan StateContext)
 	sc := &StateController{
-		ZLogger: common.NewZLogger(func(c zerolog.Context) zerolog.Context {
+		Logger: common.NewLogger(func(c zerolog.Context) zerolog.Context {
 			return c.Str("module", "state-controller")
 		}),
 		homeState:        homeState,
@@ -85,14 +84,13 @@ func (sc *StateController) loopState() {
 		if err := sc.setState(sct); err != nil {
 			sc.Log().Error().
 				Err(err).
-				Interface("error", err).
-				Interface("current_state", current).
-				Interface("new_state", sct.State()).
+				Str("current_state", current.String()).
+				Str("new_state", sct.State().String()).
 				Msg("error change state")
 		} else {
 			sc.Log().Debug().
-				Interface("current_state", current).
-				Interface("new_state", sct.State()).
+				Str("current_state", current.String()).
+				Str("new_state", sct.State().String()).
 				Msg("state changed")
 		}
 	}
@@ -149,11 +147,11 @@ func (sc *StateController) Receive(message interface{}) error {
 	}
 
 	sc.Log().Debug().
-		Interface("seal", sl).
-		Msg(fmt.Sprintf("seal received; %v", sl.Type()))
+		Object("seal", sl).
+		Msgf("seal received; %v", sl.Type())
 
 	if err := sl.IsValid(); err != nil {
-		sc.Log().Error().Err(err).Interface("seal", sl.Hash()).Msg("invalid seal")
+		sc.Log().Error().Err(err).Object("seal", sl.Hash()).Msg("invalid seal")
 		return err
 	}
 
@@ -212,7 +210,7 @@ func (sc *StateController) StateHandler() StateHandler {
 func (sc *StateController) handleBallot(ballot Ballot) error {
 	vr, err := sc.compiler.Vote(ballot)
 	if err != nil {
-		sc.Log().Error().Err(err).Interface("ballot", ballot.Hash()).Msg("failed to vote ballot")
+		sc.Log().Error().Err(err).Object("ballot", ballot.Hash()).Msg("failed to vote ballot")
 		return err
 	}
 

@@ -8,6 +8,7 @@ import (
 	"sort"
 	"time"
 
+	"github.com/rs/zerolog"
 	"golang.org/x/xerrors"
 	"gopkg.in/yaml.v2"
 
@@ -22,7 +23,10 @@ type Config struct {
 }
 
 func LoadConfig(f string, numberOfNodes uint) (*Config, error) {
-	log.Debug().Interface("number_of_nodes", numberOfNodes).Interface("file", f).Msg("trying to load config")
+	log.Debug().
+		Uint("number_of_nodes", numberOfNodes).
+		Str("file", f).
+		Msg("trying to load config")
 
 	b, err := ioutil.ReadFile(filepath.Clean(f))
 	if err != nil {
@@ -44,7 +48,10 @@ func LoadConfig(f string, numberOfNodes uint) (*Config, error) {
 
 	// extends nodes by numberOfNodes
 	if int(numberOfNodes) > len(config.Nodes) {
-		log.Debug().Interface("numberOfNodes", numberOfNodes).Msg("extend nodes")
+		log.Debug().
+			Uint("numberOfNodes", numberOfNodes).
+			Msg("extend nodes")
+
 		var last int
 		for name := range config.Nodes {
 			var c int
@@ -84,6 +91,12 @@ func (cn *Config) MarshalJSON() ([]byte, error) {
 		"nodes":           cn.Nodes,
 		"number_of_nodes": cn.NumberOfNodes(),
 	})
+}
+
+func (cn *Config) MarshalZerologObject(e *zerolog.Event) {
+	e.Interface("global", cn.Global)
+	e.Interface("nodes", cn.Nodes)
+	e.Uint("number_of_nodes", cn.NumberOfNodes())
 }
 
 func (cn *Config) String() string {
@@ -258,6 +271,13 @@ func (nc *NodeConfig) Block(height isaac.Height) isaac.Block {
 func (nc *NodeConfig) LastBlock() isaac.Block {
 	height := *nc.Blocks[len(nc.Blocks)-1].Height
 	return nc.blocks[height.String()]
+}
+
+func (nc *NodeConfig) MarshalZerologObject(e *zerolog.Event) {
+	e.Interface("Policy", nc.Policy)
+	e.Interface("Blocks", nc.Blocks)
+	e.Interface("Modules", nc.Modules)
+	e.Interface("blocks", nc.blocks)
 }
 
 type PolicyConfig struct {

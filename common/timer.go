@@ -35,7 +35,7 @@ type TimerCallbackIntervalFunc func(uint /* ran count */, time.Duration /* elaps
 
 type CallbackTimer struct {
 	sync.RWMutex
-	*ZLogger
+	*Logger
 	id           string
 	name         string
 	callbacks    []TimerCallback
@@ -50,7 +50,7 @@ type CallbackTimer struct {
 func NewCallbackTimer(name string, interval time.Duration, callbacks ...TimerCallback) *CallbackTimer {
 	id := RandomUUID()
 	ct := &CallbackTimer{
-		ZLogger: NewZLogger(func(c zerolog.Context) zerolog.Context {
+		Logger: NewLogger(func(c zerolog.Context) zerolog.Context {
 			return c.
 				Str("module", name).
 				Str("timer_id", id)

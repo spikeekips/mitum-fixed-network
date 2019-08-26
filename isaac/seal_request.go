@@ -6,6 +6,7 @@ import (
 	"reflect"
 
 	"github.com/ethereum/go-ethereum/rlp"
+	"github.com/rs/zerolog"
 	"golang.org/x/xerrors"
 
 	"github.com/spikeekips/mitum/common"
@@ -115,6 +116,12 @@ func (rb RequestBody) MarshalJSON() ([]byte, error) {
 		"request": rb.request,
 		"params":  rb.params,
 	})
+}
+
+func (rb RequestBody) MarshalZerologObject(e *zerolog.Event) {
+	e.Object("hash", rb.hash)
+	e.Str("request", rb.request.String())
+	e.Interface("params", rb.params)
 }
 
 func (rb RequestBody) String() string {

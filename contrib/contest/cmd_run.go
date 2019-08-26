@@ -32,7 +32,10 @@ var runCmd = &cobra.Command{
 			os.Exit(1)
 		}
 
-		log.Debug().Interface("config", config).Interface("flagExitAfter", flagExitAfter).Msg("config loaded")
+		log.Debug().
+			Object("config", config).
+			Dur("flagExitAfter", flagExitAfter).
+			Msg("config loaded")
 
 		go func() { // exit-after
 			if flagExitAfter < time.Nanosecond {

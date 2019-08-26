@@ -14,14 +14,14 @@ type ProposalMaker interface {
 }
 
 type DefaultProposalMaker struct {
-	*common.ZLogger
+	*common.Logger
 	home  node.Home
 	delay time.Duration
 }
 
 func NewDefaultProposalMaker(home node.Home, delay time.Duration) DefaultProposalMaker {
 	return DefaultProposalMaker{
-		ZLogger: common.NewZLogger(func(c zerolog.Context) zerolog.Context {
+		Logger: common.NewLogger(func(c zerolog.Context) zerolog.Context {
 			return c.Str("module", "proposer-maker")
 		}),
 		home:  home,
@@ -31,10 +31,10 @@ func NewDefaultProposalMaker(home node.Home, delay time.Duration) DefaultProposa
 
 func (dp DefaultProposalMaker) Make(height Height, round Round, lastBlock hash.Hash) (Proposal, error) {
 	log_ := dp.Log().With().
-		Interface("height", height).
-		Interface("round", round).
-		Interface("last_block", lastBlock).
-		Interface("delay", dp.delay).
+		Uint64("height", height.Uint64()).
+		Uint64("round", round.Uint64()).
+		Object("last_block", lastBlock).
+		Dur("delay", dp.delay).
 		Logger()
 	log_.Debug().Msg("ready to make new proposal")
 

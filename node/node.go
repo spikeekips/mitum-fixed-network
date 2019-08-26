@@ -3,6 +3,7 @@ package node
 import (
 	"encoding/json"
 
+	"github.com/rs/zerolog"
 	"github.com/spikeekips/mitum/keypair"
 )
 
@@ -12,6 +13,7 @@ type Node interface {
 	Equal(Node) bool
 	Alias() string
 	SetAlias(string) Node
+	MarshalZerologObject(*zerolog.Event)
 }
 
 type Home struct {
@@ -77,6 +79,11 @@ func (hm Home) MarshalJSON() ([]byte, error) {
 	})
 }
 
+func (hm Home) MarshalZerologObject(e *zerolog.Event) {
+	e.Object("address", hm.address)
+	e.Str("publickey", hm.publicKey.String())
+}
+
 func (hm Home) String() string {
 	b, _ := json.Marshal(hm) // nolint
 	return string(b)
@@ -127,4 +134,9 @@ func (ot Other) Alias() string {
 func (ot Other) SetAlias(alias string) Node {
 	ot.alias = alias
 	return ot
+}
+
+func (ot Other) MarshalZerologObject(e *zerolog.Event) {
+	e.Object("address", ot.address)
+	e.Str("publickey", ot.publicKey.String())
 }

@@ -23,7 +23,7 @@ type ChainCheckerFunc func(*ChainChecker) error
 
 type ChainChecker struct {
 	sync.RWMutex
-	*ZLogger
+	*Logger
 	checkers    []ChainCheckerFunc
 	originalCtx context.Context
 	ctx         context.Context
@@ -31,7 +31,7 @@ type ChainChecker struct {
 
 func NewChainChecker(name string, ctx context.Context, checkers ...ChainCheckerFunc) *ChainChecker {
 	return &ChainChecker{
-		ZLogger: NewZLogger(func(c zerolog.Context) zerolog.Context {
+		Logger: NewLogger(func(c zerolog.Context) zerolog.Context {
 			return c.Str("module", name)
 		}),
 		checkers:    checkers,
@@ -49,7 +49,7 @@ func (c *ChainChecker) New(ctx context.Context) *ChainChecker {
 	}
 
 	return &ChainChecker{
-		ZLogger:     c.ZLogger,
+		Logger:      c.Logger,
 		checkers:    c.checkers,
 		ctx:         ctx,
 		originalCtx: ctx,

@@ -2,7 +2,6 @@ package contest_module
 
 import (
 	"context"
-	"fmt"
 	"sync"
 	"time"
 
@@ -31,7 +30,7 @@ func NewChannelNetwork(home node.Home, handler ChannelNetworkSealHandler) *Chann
 		handler:      handler,
 		chans:        map[node.Address]*ChannelNetwork{},
 	}
-	cn.ReaderDaemon.ZLogger = common.NewZLogger(func(c zerolog.Context) zerolog.Context {
+	cn.ReaderDaemon.Logger = common.NewLogger(func(c zerolog.Context) zerolog.Context {
 		return c.Str("module", "channel-suffrage-network")
 	})
 	cn.chans[home.Address()] = cn
@@ -80,7 +79,10 @@ func (cn *ChannelNetwork) Broadcast(sl seal.Seal) error {
 		targets = append(targets, ch.Home().Address())
 		go func(ch *ChannelNetwork, sl seal.Seal) {
 			if !ch.Write(sl) {
-				cn.Log().Error().Interface("to", ch.Home().Address()).Interface("seal", sl).Msg("failed to send seal")
+				cn.Log().Error().
+					Object("to", ch.Home().Address()).
+					Object("seal", sl).
+					Msg("failed to send seal")
 			}
 			wg.Done()
 		}(ch, sl)
@@ -88,11 +90,18 @@ func (cn *ChannelNetwork) Broadcast(sl seal.Seal) error {
 
 	wg.Wait()
 
-	cn.Log().Debug().
-		Interface("seal", sl).
-		Interface("targets", targets).
-		Dur("elapsed", time.Now().Sub(started)).
-		Msg(fmt.Sprintf("seal sent; %v", sl.Type()))
+	if cn.Log().Debug().Enabled() {
+		tas := zerolog.Arr()
+		for _, t := range targets {
+			tas.Object(t)
+		}
+
+		cn.Log().Debug().
+			Object("seal", sl).
+			Array("targets", tas).
+			Dur("elapsed", time.Now().Sub(started)).
+			Msgf("seal sent; %v", sl.Type())
+	}
 
 	return nil
 }
@@ -122,7 +131,7 @@ func (cn *ChannelNetwork) RequestAll(ctx context.Context, sl seal.Seal) (map[nod
 	for n := range cn.chans {
 		r, err := cn.Request(ctx, n, sl)
 		if err != nil {
-			cn.Log().Error().Err(err).Interface("target", n).Msg("failed to request")
+			cn.Log().Error().Err(err).Object("target", n).Msg("failed to request")
 		}
 		results[n] = r
 	}

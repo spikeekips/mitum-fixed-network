@@ -85,9 +85,9 @@ func (pc ProposalChecker) checkHeightAndRoundWithHomeState(c *common.ChainChecke
 	if !proposal.Height().Equal(pc.homeState.Block().Height().Add(1)) {
 		err := xerrors.Errorf("invalid proposal height")
 		c.Log().Error().
-			Interface("proposal_height", proposal.Height()).
-			Interface("expected_height", pc.homeState.Block().Height().Add(1)).
-			Interface("current_height", pc.homeState.Block().Height()).
+			Uint64("proposal_height", proposal.Height().Uint64()).
+			Uint64("expected_height", pc.homeState.Block().Height().Add(1).Uint64()).
+			Uint64("current_height", pc.homeState.Block().Height().Uint64()).
 			Msg("proposal.Height() should be same than homeState.Block().Height() + 1; ignore this ballot")
 
 		return err
@@ -115,8 +115,8 @@ func (pc ProposalChecker) checkHeightAndRoundWithLastINITVoteResult(c *common.Ch
 	if !proposal.Height().Equal(lastINITVoteResult.Height()) {
 		err := xerrors.Errorf("invalid proposal height")
 		c.Log().Error().
-			Interface("proposal_height", proposal.Height()).
-			Interface("height", lastINITVoteResult.Height()).
+			Uint64("proposal_height", proposal.Height().Uint64()).
+			Uint64("height", lastINITVoteResult.Height().Uint64()).
 			Msg("proposal.Height() should be same with lastINITVoteResult; ignore this ballot")
 
 		return err
@@ -126,8 +126,8 @@ func (pc ProposalChecker) checkHeightAndRoundWithLastINITVoteResult(c *common.Ch
 	if proposal.Round() != lastINITVoteResult.Round() {
 		err := xerrors.Errorf("invalid proposal round")
 		c.Log().Error().
-			Interface("proposal_round", proposal.Round()).
-			Interface("round", lastINITVoteResult.Round()).
+			Uint64("proposal_round", proposal.Round().Uint64()).
+			Uint64("round", lastINITVoteResult.Round().Uint64()).
 			Msg("proposal.Round() should be same with lastINITVoteResult; ignore this ballot")
 
 		return err

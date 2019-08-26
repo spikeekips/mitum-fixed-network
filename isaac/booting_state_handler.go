@@ -11,7 +11,7 @@ import (
 
 type BootingStateHandler struct {
 	sync.RWMutex
-	*common.ZLogger
+	*common.Logger
 	started         bool
 	chanState       chan StateContext
 	proposalChecker *common.ChainChecker
@@ -19,7 +19,7 @@ type BootingStateHandler struct {
 
 func NewBootingStateHandler(homeState *HomeState) *BootingStateHandler {
 	return &BootingStateHandler{
-		ZLogger: common.NewZLogger(func(c zerolog.Context) zerolog.Context {
+		Logger: common.NewLogger(func(c zerolog.Context) zerolog.Context {
 			return c.Str("module", "booting-state-handler")
 		}),
 		proposalChecker: NewProposalCheckerBooting(homeState),

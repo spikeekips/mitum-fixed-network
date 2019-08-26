@@ -5,6 +5,7 @@ import (
 	"io"
 
 	"github.com/ethereum/go-ethereum/rlp"
+	"github.com/rs/zerolog"
 	"golang.org/x/xerrors"
 
 	"github.com/spikeekips/mitum/common"
@@ -152,6 +153,20 @@ func (ppb ProposalBody) MarshalJSON() ([]byte, error) {
 		"proposer":     ppb.proposer,
 		"transactions": ppb.transactions,
 	})
+}
+
+func (ppb ProposalBody) MarshalZerologObject(e *zerolog.Event) {
+	e.Object("hash", ppb.hash)
+	e.Str("height", ppb.height.String())
+	e.Uint64("round", uint64(ppb.round))
+	e.Object("last_block", ppb.lastBlock)
+	e.Object("proposer", ppb.proposer)
+
+	tas := zerolog.Arr()
+	for _, t := range ppb.transactions {
+		tas.Object(t)
+	}
+	e.Array("transactions", tas)
 }
 
 func (ppb ProposalBody) String() string {

@@ -27,7 +27,7 @@ import (
 // 	- broadcast INIT ballot, based on highest VoteProof
 type JoinStateHandler struct {
 	sync.RWMutex
-	*common.ZLogger
+	*common.Logger
 	homeState                   *HomeState
 	compiler                    *Compiler
 	nt                          network.Network
@@ -56,7 +56,7 @@ func NewJoinStateHandler(
 	}
 
 	return &JoinStateHandler{
-		ZLogger: common.NewZLogger(func(c zerolog.Context) zerolog.Context {
+		Logger: common.NewLogger(func(c zerolog.Context) zerolog.Context {
 			return c.Str("module", "join-state-handler")
 		}),
 		homeState:                   homeState,
@@ -133,9 +133,7 @@ func (js *JoinStateHandler) Activate(StateContext) error {
 
 			return js.intervalBroadcastINITBallot
 		})
-	js.timer.AddLoggerContext(func(c zerolog.Context) zerolog.Context {
-		return c.Interface("node", js.homeState.Home().Alias())
-	})
+	js.timer.SetLogger(*js.Log())
 
 	if err := js.timer.Start(); err != nil {
 		return err
@@ -196,10 +194,10 @@ func (js *JoinStateHandler) ReceiveVoteResult(vr VoteResult) error {
 		return err
 	}
 
-	js.Log().Debug().Interface("vr", vr).Msg("VoteResult checked")
+	js.Log().Debug().Object("vr", vr).Msg("VoteResult checked")
 
 	if !vr.GotMajority() {
-		js.Log().Debug().Interface("vr", vr).Msg("got not majority; ignore")
+		js.Log().Debug().Object("vr", vr).Msg("got not majority; ignore")
 		return nil
 	}
 
@@ -227,7 +225,7 @@ func (js *JoinStateHandler) broadcastINITBallot(common.Timer) error {
 		return err
 	}
 
-	js.Log().Debug().Interface("ballot", ballot.Hash()).Msg("broadcast init ballot for joining")
+	js.Log().Debug().Object("ballot", ballot.Hash()).Msg("broadcast init ballot for joining")
 	if err := js.nt.Broadcast(ballot); err != nil {
 		return err
 	}
@@ -265,7 +263,14 @@ func (js *JoinStateHandler) requestVoteProof() {
 		return
 	}
 
-	js.Log().Debug().Interface("vote_proofs", vps).Msg("got VoteProofs")
+	if js.Log().Debug().Enabled() {
+		lvps := zerolog.Dict()
+		for k, v := range vps {
+			lvps = lvps.Object(k.String(), v)
+		}
+
+		js.Log().Debug().Dict("vote_proofs", lvps).Msg("got VoteProofs")
+	}
 }
 
 func (js *JoinStateHandler) catchUp(vr VoteResult) error {
@@ -279,13 +284,13 @@ func (js *JoinStateHandler) catchUp(vr VoteResult) error {
 
 	block, err := js.proposalValidator.NewBlock(vr.Height(), vr.Round(), vr.Proposal())
 	if err != nil {
-		js.Log().Error().Err(err).Interface("vr", vr).Msg("failed to make new block from proposal")
+		js.Log().Error().Err(err).Object("vr", vr).Msg("failed to make new block from proposal")
 		return err
 	}
 
 	_ = js.homeState.SetBlock(block)
 
-	js.Log().Debug().Interface("block", block).Msg("new block from VoteResult saved")
+	js.Log().Debug().Object("block", block).Msg("new block from VoteResult saved")
 
 	return nil
 }
@@ -305,17 +310,17 @@ func (js *JoinStateHandler) gotINITMajority(vr VoteResult) error {
 
 		return nil
 	case diff == 1: // expected; move to consensus
-		js.Log().Debug().Interface("vr", vr).Msg("got expected VoteResult; move to consensus")
+		js.Log().Debug().Object("vr", vr).Msg("got expected VoteResult; move to consensus")
 		js.chanState <- NewStateContext(node.StateConsensus).
 			SetContext("vr", vr)
 		return nil
 	case diff < 0: // something wrong, move to sync
-		js.Log().Debug().Interface("vr", vr).Msg("got lower height VoteResult; move to sync")
+		js.Log().Debug().Object("vr", vr).Msg("got lower height VoteResult; move to sync")
 		js.chanState <- NewStateContext(node.StateSync).
 			SetContext("vr", vr)
 		return nil
 	default: // higher height received, move to sync
-		js.Log().Debug().Interface("vr", vr).Msg("got higher height VoteResult; move to sync")
+		js.Log().Debug().Object("vr", vr).Msg("got higher height VoteResult; move to sync")
 		js.chanState <- NewStateContext(node.StateSync).
 			SetContext("vr", vr)
 		return nil
@@ -323,6 +328,6 @@ func (js *JoinStateHandler) gotINITMajority(vr VoteResult) error {
 }
 
 func (js *JoinStateHandler) gotNotINITMajority(vr VoteResult) error {
-	js.Log().Debug().Interface("vr", vr).Msg("got majority, not init; will be ignored")
+	js.Log().Debug().Object("vr", vr).Msg("got majority, not init; will be ignored")
 	return nil
 }

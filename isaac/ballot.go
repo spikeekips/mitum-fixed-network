@@ -5,6 +5,7 @@ import (
 	"io"
 
 	"github.com/ethereum/go-ethereum/rlp"
+	"github.com/rs/zerolog"
 	"golang.org/x/xerrors"
 
 	"github.com/spikeekips/mitum/common"
@@ -208,6 +209,18 @@ func (bbb BaseBallotBody) MarshalJSON() ([]byte, error) {
 		"last_block": bbb.lastBlock,
 		"last_round": bbb.lastRound,
 	})
+}
+
+func (bbb BaseBallotBody) MarshalZerologObject(e *zerolog.Event) {
+	e.Str("hash", bbb.hash.String())
+	e.Str("node", bbb.node.String())
+	e.Str("stage", bbb.stage.String())
+	e.Str("height", bbb.height.String())
+	e.Uint64("round", uint64(bbb.round))
+	e.Str("proposal", bbb.proposal.String())
+	e.Str("block", bbb.block.String())
+	e.Str("last_block", bbb.lastBlock.String())
+	e.Uint64("last_round", uint64(bbb.lastRound))
 }
 
 func (bbb BaseBallotBody) String() string {

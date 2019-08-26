@@ -10,13 +10,13 @@ import (
 
 type StoppedStateHandler struct {
 	sync.RWMutex
-	*common.ZLogger
+	*common.Logger
 	started bool
 }
 
 func NewStoppedStateHandler() *StoppedStateHandler {
 	return &StoppedStateHandler{
-		ZLogger: common.NewZLogger(func(c zerolog.Context) zerolog.Context {
+		Logger: common.NewLogger(func(c zerolog.Context) zerolog.Context {
 			return c.Str("module", "stopped-state-handler")
 		}),
 	}

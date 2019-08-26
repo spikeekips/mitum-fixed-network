@@ -27,7 +27,6 @@ func (t *testReaderDaemon) TestNew() {
 	}
 
 	d := NewReaderDaemon(true, 0, callback)
-	d.SetLogger(zlog)
 
 	err := d.Start()
 	t.NoError(err)
@@ -71,7 +70,6 @@ func (t *testReaderDaemon) TestCount() {
 	}
 
 	d := NewReaderDaemon(true, 0, callback)
-	d.SetLogger(zlog)
 
 	err := d.Start()
 	t.NoError(err)
@@ -103,7 +101,6 @@ func (t *testReaderDaemon) TestAsynchronous() {
 	}
 
 	d := NewReaderDaemon(false, 0, callback)
-	d.SetLogger(zlog)
 
 	err := d.Start()
 	t.NoError(err)
@@ -137,7 +134,6 @@ func (t *testReaderDaemon) TestErrCallback() {
 	}
 
 	d := NewReaderDaemon(false, 0, callback)
-	d.SetLogger(zlog)
 
 	d.SetErrCallback(func(err error) {
 		defer wg.Done()
@@ -178,7 +174,6 @@ func (t *testReaderDaemon) TestRestart() {
 	}
 
 	d := NewReaderDaemon(true, 0, callback)
-	d.SetLogger(zlog)
 
 	err := d.Start()
 	t.NoError(err)

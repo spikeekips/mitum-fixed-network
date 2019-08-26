@@ -22,7 +22,7 @@ type Daemon interface {
 
 type ReaderDaemon struct {
 	sync.RWMutex
-	*ZLogger
+	*Logger
 	synchronous    bool
 	reader         chan interface{}
 	readerCallback func(interface{}) error
@@ -32,7 +32,7 @@ type ReaderDaemon struct {
 
 func NewReaderDaemon(synchronous bool, bufsize uint, readerCallback func(interface{}) error) *ReaderDaemon {
 	return &ReaderDaemon{
-		ZLogger:        NewZLogger(nil),
+		Logger:         NewLogger(nil),
 		synchronous:    synchronous,
 		reader:         make(chan interface{}, int(bufsize)),
 		readerCallback: readerCallback,

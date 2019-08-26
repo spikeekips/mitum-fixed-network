@@ -3,6 +3,7 @@ package isaac
 import (
 	"encoding/json"
 
+	"github.com/rs/zerolog"
 	"github.com/spikeekips/mitum/hash"
 )
 
@@ -156,6 +157,23 @@ func (vr VoteResult) MarshalJSON() ([]byte, error) {
 		"last_block": vr.lastBlock,
 		"last_round": vr.lastRound,
 	})
+}
+
+func (vr VoteResult) MarshalZerologObject(e *zerolog.Event) {
+	e.Uint64("height", vr.height.Uint64())
+	e.Uint64("round", vr.round.Uint64())
+	e.Str("stage", vr.stage.String())
+	e.Object("proposal", vr.proposal)
+
+	rs := zerolog.Arr()
+	for _, r := range vr.records {
+		rs.Object(r)
+	}
+	e.Array("records", rs)
+	e.Str("agreement", vr.agreement.String())
+	e.Bool("closed", vr.closed)
+	e.Object("last_block", vr.lastBlock)
+	e.Uint64("last_round", vr.lastRound.Uint64())
 }
 
 func (vr VoteResult) String() string {

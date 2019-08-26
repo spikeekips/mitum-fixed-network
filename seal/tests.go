@@ -7,6 +7,7 @@ import (
 	"io"
 
 	"github.com/ethereum/go-ethereum/rlp"
+	"github.com/rs/zerolog"
 	"github.com/spikeekips/mitum/common"
 	"github.com/spikeekips/mitum/hash"
 	"github.com/spikeekips/mitum/keypair"
@@ -101,6 +102,13 @@ func (t *SealBodyTest) DecodeRLP(s *rlp.Stream) error {
 	t.B = h.B
 
 	return nil
+}
+
+func (t SealBodyTest) MarshalZerologObject(e *zerolog.Event) {
+	e.Str("H", t.hash.String())
+	e.Str("T", t.T.String())
+	e.Str("A", t.A)
+	e.Uint64("B", t.B)
 }
 
 func NewSealBody(a string, b uint64) SealBodyTest {

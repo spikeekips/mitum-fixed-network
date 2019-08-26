@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"sync"
 
+	"github.com/rs/zerolog"
 	"github.com/spikeekips/mitum/node"
 )
 
@@ -77,4 +78,14 @@ func (hs *HomeState) MarshalJSON() ([]byte, error) {
 		"previous_block": hs.previousBlock,
 		"state":          hs.state.String(),
 	})
+}
+
+func (hs *HomeState) MarshalZerologObject(e *zerolog.Event) {
+	hs.RLock()
+	defer hs.RUnlock()
+
+	e.Object("home", hs.home)
+	e.Object("block", hs.block)
+	e.Object("previous_block", hs.previousBlock)
+	e.Str("state", hs.state.String())
 }

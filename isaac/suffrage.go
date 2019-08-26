@@ -3,6 +3,7 @@ package isaac
 import (
 	"encoding/json"
 
+	"github.com/rs/zerolog"
 	"github.com/spikeekips/mitum/node"
 )
 
@@ -50,6 +51,19 @@ func (af ActingSuffrage) MarshalJSON() ([]byte, error) {
 		"proposer": af.proposer,
 		"nodes":    af.nodes,
 	})
+}
+
+func (af ActingSuffrage) MarshalZerologObject(e *zerolog.Event) {
+	e.Uint64("height", af.height.Uint64())
+	e.Uint64("round", af.round.Uint64())
+	e.Object("proposer", af.proposer)
+
+	ns := zerolog.Arr()
+	for _, n := range af.nodes {
+		ns.Object(n)
+	}
+
+	e.Array("nodes", ns)
 }
 
 func (af ActingSuffrage) String() string {

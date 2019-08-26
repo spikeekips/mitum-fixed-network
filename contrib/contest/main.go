@@ -61,7 +61,9 @@ var rootCmd = &cobra.Command{
 
 		log = logContext.Logger().Level(flagLogLevel.lvl)
 
-		log.Debug().Interface("flags", printFlags(cmd, flagLogFormat.f)).Msg("parsed flags")
+		log.Debug().
+			RawJSON("flags", printFlagsJSON(cmd)).
+			Msg("parsed flags")
 
 		startProfile()
 
@@ -77,7 +79,7 @@ var rootCmd = &cobra.Command{
 
 			closeProfile()
 
-			log.Info().Interface("sig", s).Msg("contest stopped by force")
+			log.Info().Str("sig", s.String()).Msg("contest stopped by force")
 			os.Exit(0)
 		}()
 	},

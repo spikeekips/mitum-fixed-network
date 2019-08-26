@@ -5,6 +5,7 @@ import (
 	"io"
 
 	"github.com/ethereum/go-ethereum/rlp"
+	"github.com/rs/zerolog"
 
 	"github.com/spikeekips/mitum/common"
 	"github.com/spikeekips/mitum/hash"
@@ -27,6 +28,7 @@ type Seal interface {
 	Body() Body
 	Equal(Seal) bool
 	CheckSignature([]byte) error
+	MarshalZerologObject(*zerolog.Event)
 }
 
 type Body interface {
@@ -34,6 +36,7 @@ type Body interface {
 	common.IsValid
 	Type() common.DataType
 	Hash() hash.Hash
+	MarshalZerologObject(*zerolog.Event)
 }
 
 type BaseSeal struct {
@@ -60,6 +63,13 @@ func (bs BaseSeal) MarshalJSON() ([]byte, error) {
 		"header": bs.header,
 		"body":   bs.body,
 	})
+}
+
+func (bs BaseSeal) MarshalZerologObject(e *zerolog.Event) {
+	e.Str("type", bs.t.String())
+	e.Str("hash", bs.hash.String())
+	e.Object("header", bs.header)
+	e.Object("body", bs.body)
 }
 
 func (bs BaseSeal) EncodeRLP(w io.Writer) error {
@@ -258,6 +268,13 @@ func (hd Header) MarshalJSON() ([]byte, error) {
 		"bodyHash":  hd.bodyHash,
 		"signedAt":  hd.signedAt,
 	})
+}
+
+func (hd Header) MarshalZerologObject(e *zerolog.Event) {
+	e.Str("signer", hd.signer.String())
+	e.Str("signature", hd.signature.String())
+	e.Str("bodyHash", hd.bodyHash.String())
+	e.Time("signedAt", hd.signedAt.Time)
 }
 
 func (hd Header) String() string {

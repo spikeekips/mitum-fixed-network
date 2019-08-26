@@ -96,18 +96,18 @@ class Record {
 
     // message
     var message = null
-    if ('msg' in o === false) {
+    if ('m' in o === false) {
       throw new Error('message is missing')
     } else {
-      message = o['msg']
+      message = o['m']
     }
 
     // level
     var level = null
-    if ('lvl' in o === false) {
+    if ('level' in o === false) {
       throw new Error('level is missing')
     } else {
-      level = o['lvl']
+      level = o['level']
     }
 
     // t
@@ -139,7 +139,7 @@ class Record {
     // extra
     var extra = null;
     delete o.msg
-    delete o.lvl
+    delete o.level
     delete o.t
     delete o.caller
     delete o.node

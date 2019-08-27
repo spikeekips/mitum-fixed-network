@@ -21,6 +21,7 @@ type ConsensusStateHandler struct {
 	compiler          *Compiler
 	nt                network.Network
 	suffrage          Suffrage
+	ballotMaker       BallotMaker
 	proposalValidator ProposalValidator
 	proposalMaker     ProposalMaker
 	timeoutWaitBallot time.Duration
@@ -36,6 +37,7 @@ func NewConsensusStateHandler(
 	compiler *Compiler,
 	nt network.Network,
 	suffrage Suffrage,
+	ballotMaker BallotMaker,
 	proposalValidator ProposalValidator,
 	proposalMaker ProposalMaker,
 	timeoutWaitBallot time.Duration,
@@ -52,6 +54,7 @@ func NewConsensusStateHandler(
 		compiler:          compiler,
 		nt:                nt,
 		suffrage:          suffrage,
+		ballotMaker:       ballotMaker,
 		proposalValidator: proposalValidator,
 		proposalMaker:     proposalMaker,
 		timeoutWaitBallot: timeoutWaitBallot,
@@ -192,8 +195,7 @@ func (cs *ConsensusStateHandler) ReceiveProposal(proposal Proposal) error {
 	}
 
 	if insideActing {
-		ballot, err := NewSIGNBallot(
-			cs.homeState.Home().Address(),
+		ballot, err := cs.ballotMaker.SIGN(
 			cs.homeState.Block().Hash(),
 			cs.homeState.Block().Round(),
 			block.Height(),
@@ -202,9 +204,6 @@ func (cs *ConsensusStateHandler) ReceiveProposal(proposal Proposal) error {
 			block.Proposal(),
 		)
 		if err != nil {
-			return err
-		}
-		if err := ballot.Sign(cs.homeState.Home().PrivateKey(), nil); err != nil {
 			return err
 		}
 
@@ -341,8 +340,7 @@ func (cs *ConsensusStateHandler) gotNotINITMajority(vr VoteResult) error {
 				Uint64("round", vr.Round().Uint64()).
 				Object("acting", acting).
 				Msg("acting member at this VoteResult; broadcast accept ballot")
-			ballot, err = NewACCEPTBallot(
-				cs.homeState.Home().Address(),
+			ballot, err = cs.ballotMaker.ACCEPT(
 				cs.homeState.Block().Hash(),
 				cs.homeState.Block().Round(),
 				vr.Height(),
@@ -352,8 +350,7 @@ func (cs *ConsensusStateHandler) gotNotINITMajority(vr VoteResult) error {
 			)
 		}
 	case StageACCEPT:
-		ballot, err = NewINITBallot(
-			cs.homeState.Home().Address(),
+		ballot, err = cs.ballotMaker.INIT(
 			cs.homeState.Block().Hash(),
 			block.Hash(),
 			block.Round(),
@@ -367,10 +364,6 @@ func (cs *ConsensusStateHandler) gotNotINITMajority(vr VoteResult) error {
 	}
 
 	if !ballot.Empty() {
-		if err := ballot.Sign(cs.homeState.Home().PrivateKey(), nil); err != nil {
-			return err
-		}
-
 		if err := cs.nt.Broadcast(ballot); err != nil {
 			return err
 		}
@@ -428,8 +421,7 @@ func (cs *ConsensusStateHandler) propose(vr VoteResult) error {
 }
 
 func (cs *ConsensusStateHandler) startNextRound(vr VoteResult) error {
-	ballot, err := NewINITBallot(
-		cs.homeState.Home().Address(),
+	ballot, err := cs.ballotMaker.INIT(
 		cs.homeState.PreviousBlock().Hash(),
 		cs.homeState.Block().Hash(),
 		cs.homeState.Block().Round(),
@@ -438,9 +430,6 @@ func (cs *ConsensusStateHandler) startNextRound(vr VoteResult) error {
 		vr.Round()+1,
 	)
 	if err != nil {
-		return err
-	}
-	if err := ballot.Sign(cs.homeState.Home().PrivateKey(), nil); err != nil {
 		return err
 	}
 

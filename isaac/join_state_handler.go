@@ -32,6 +32,7 @@ type JoinStateHandler struct {
 	compiler                    *Compiler
 	nt                          network.Network
 	suffrage                    Suffrage
+	ballotMaker                 BallotMaker
 	proposalValidator           ProposalValidator
 	intervalBroadcastINITBallot time.Duration
 	timeoutWaitVoteResult       time.Duration
@@ -47,6 +48,7 @@ func NewJoinStateHandler(
 	compiler *Compiler,
 	nt network.Network,
 	suffrage Suffrage,
+	ballotMaker BallotMaker,
 	proposalValidator ProposalValidator,
 	intervalBroadcastINITBallot time.Duration,
 	timeoutWaitVoteResult time.Duration,
@@ -63,6 +65,7 @@ func NewJoinStateHandler(
 		compiler:                    compiler,
 		nt:                          nt,
 		suffrage:                    suffrage,
+		ballotMaker:                 ballotMaker,
 		proposalValidator:           proposalValidator,
 		intervalBroadcastINITBallot: intervalBroadcastINITBallot,
 		timeoutWaitVoteResult:       timeoutWaitVoteResult,
@@ -209,8 +212,7 @@ func (js *JoinStateHandler) ReceiveVoteResult(vr VoteResult) error {
 }
 
 func (js *JoinStateHandler) broadcastINITBallot(common.Timer) error {
-	ballot, err := NewINITBallot(
-		js.homeState.Home().Address(),
+	ballot, err := js.ballotMaker.INIT(
 		js.homeState.PreviousBlock().Hash(),
 		js.homeState.Block().Hash(),
 		js.homeState.Block().Round(),
@@ -219,9 +221,6 @@ func (js *JoinStateHandler) broadcastINITBallot(common.Timer) error {
 		Round(0),
 	)
 	if err != nil {
-		return err
-	}
-	if err := ballot.Sign(js.homeState.Home().PrivateKey(), nil); err != nil {
 		return err
 	}
 

@@ -56,6 +56,8 @@ func NewNode(
 
 	pv := contest_module.NewDummyProposalValidator()
 
+	ballotMaker := isaac.NewDefaultBallotMaker(home)
+
 	var sc *isaac.StateController
 	{ // state handlers
 		bs := isaac.NewBootingStateHandler(homeState)
@@ -66,6 +68,7 @@ func NewNode(
 			cm,
 			nt,
 			suffrage,
+			ballotMaker,
 			pv,
 			*config.Policy.IntervalBroadcastINITBallotInJoin,
 			*config.Policy.TimeoutWaitVoteResultInJoin,
@@ -82,6 +85,7 @@ func NewNode(
 			cm,
 			nt,
 			suffrage,
+			ballotMaker,
 			pv,
 			dp,
 			*config.Policy.TimeoutWaitBallot,

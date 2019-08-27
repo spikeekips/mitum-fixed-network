@@ -38,7 +38,8 @@ func (t *testJoinStateHandler) handler(
 	t.NoError(cn.Start())
 
 	pv := NewDummyProposalValidator()
-	js, err := NewJoinStateHandler(homeState, cm, cn, suffrage, pv, intervalBroadcastINITBallot, timeoutWaitVoteResult)
+	ballotMaker := NewDefaultBallotMaker(home)
+	js, err := NewJoinStateHandler(homeState, cm, cn, suffrage, ballotMaker, pv, intervalBroadcastINITBallot, timeoutWaitVoteResult)
 	t.NoError(err)
 
 	return js, func() {
@@ -83,7 +84,8 @@ func (t *testJoinStateHandler) TestEmptyPreviousBlock() {
 	cm := NewCompiler(homeState, NewBallotbox(thr), ballotChecker)
 
 	pv := NewDummyProposalValidator()
-	_, err := NewJoinStateHandler(homeState, cm, nil, suffrage, pv, time.Second*10, time.Second*20)
+	ballotMaker := NewDefaultBallotMaker(home)
+	_, err := NewJoinStateHandler(homeState, cm, nil, suffrage, ballotMaker, pv, time.Second*10, time.Second*20)
 	t.Contains(err.Error(), "previous block is empty")
 }
 

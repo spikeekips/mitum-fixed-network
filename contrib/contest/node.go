@@ -1,6 +1,8 @@
 package main
 
 import (
+	"fmt"
+	"strings"
 	"time"
 
 	"golang.org/x/xerrors"
@@ -56,7 +58,7 @@ func NewNode(
 
 	pv := contest_module.NewDummyProposalValidator()
 
-	ballotMaker := isaac.NewDefaultBallotMaker(home)
+	ballotMaker := newBallotMaker(config, home, log_)
 
 	var sc *isaac.StateController
 	{ // state handlers
@@ -224,4 +226,41 @@ func newSealStorage(config *NodeConfig, home node.Home, l zerolog.Logger) isaac.
 	ss.SetLogger(l)
 
 	return ss
+}
+
+func newBallotMaker(config *NodeConfig, home node.Home, l zerolog.Logger) isaac.BallotMaker {
+	pc := *config.Modules.BallotMaker
+	switch pc["name"] {
+	case "DefaultBallotMaker":
+		return isaac.NewDefaultBallotMaker(home)
+	case "DamangedBallotMaker":
+		bmc := config.Modules.BallotMaker
+
+		var height, round, stage string
+
+		if s, found := (*bmc)["height"]; !found {
+			height = "*"
+		} else {
+			height = fmt.Sprintf("%v", s)
+		}
+
+		if s, found := (*bmc)["round"]; !found {
+			round = "*"
+		} else {
+			round = fmt.Sprintf("%v", s)
+		}
+
+		if s, found := (*bmc)["stage"]; !found {
+			stage = "*"
+		} else {
+			stage = strings.ToUpper(s.(string))
+		}
+
+		db := contest_module.NewDamangedBallotMaker(home)
+		db = db.AddPoint(height, round, stage)
+
+		return db
+	default:
+		panic(xerrors.Errorf("unknown ballot_maker found: %v", pc["name"]))
+	}
 }

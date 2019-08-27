@@ -30,7 +30,7 @@ func LoadConfig(f string, numberOfNodes uint) (*Config, error) {
 
 	b, err := ioutil.ReadFile(filepath.Clean(f))
 	if err != nil {
-		return nil, xerrors.Errorf("failed to load config: %s, %w", f, err)
+		return nil, xerrors.Errorf("failed to load config(%s): %w", f, err)
 	}
 
 	var config Config
@@ -345,13 +345,16 @@ func (bc *BlockConfig) IsValid(*BlockConfig) error {
 }
 
 type ModulesConfig struct {
-	Suffrage      *SuffrageConfig `yaml:"suffrage,omitempty"`
-	ProposalMaker *ProposalMaker  `yaml:"proposal_maker,omitempty"`
+	Suffrage      *SuffrageConfig      `yaml:"suffrage,omitempty"`
+	ProposalMaker *ProposalMakerConfig `yaml:"proposal_maker,omitempty"`
+	BallotMaker   *BallotMakerConfig   `yaml:"ballot_maker,omitempty"`
 }
 
 func defaultModulesConfig() *ModulesConfig {
 	return &ModulesConfig{
-		Suffrage: defaultSuffrageConfig(),
+		Suffrage:      defaultSuffrageConfig(),
+		ProposalMaker: defaultProposalMakerConfig(),
+		BallotMaker:   defaultBallotMakerConfig(),
 	}
 }
 
@@ -375,17 +378,34 @@ func (mc *ModulesConfig) IsValid(global *ModulesConfig) error {
 
 	if mc.ProposalMaker == nil {
 		if global == nil {
-			mc.ProposalMaker = defaultProposalMaker()
+			mc.ProposalMaker = defaultProposalMakerConfig()
 		} else {
 			mc.ProposalMaker = global.ProposalMaker
 		}
 	} else {
-		var sc *ProposalMaker
+		var sc *ProposalMakerConfig
 		if global != nil {
 			sc = global.ProposalMaker
 		}
 
 		if err := mc.ProposalMaker.IsValid(sc); err != nil {
+			return err
+		}
+	}
+
+	if mc.BallotMaker == nil {
+		if global == nil {
+			mc.BallotMaker = defaultBallotMakerConfig()
+		} else {
+			mc.BallotMaker = global.BallotMaker
+		}
+	} else {
+		var sc *BallotMakerConfig
+		if global != nil {
+			sc = global.BallotMaker
+		}
+
+		if err := mc.BallotMaker.IsValid(sc); err != nil {
 			return err
 		}
 	}
@@ -446,19 +466,19 @@ func (sc *SuffrageConfig) IsValid(global *SuffrageConfig) error {
 	return nil
 }
 
-type ProposalMaker map[string]interface{}
+type ProposalMakerConfig map[string]interface{}
 
-func defaultProposalMaker() *ProposalMaker {
-	return &ProposalMaker{
+func defaultProposalMakerConfig() *ProposalMakerConfig {
+	return &ProposalMakerConfig{
 		"name":  "DefaultProposalMaker",
 		"delay": "1s",
 	}
 }
 
-func (sc *ProposalMaker) IsValid(global *ProposalMaker) error {
+func (sc *ProposalMakerConfig) IsValid(global *ProposalMakerConfig) error {
 	if len(*sc) < 1 {
 		if global == nil {
-			*sc = *defaultProposalMaker()
+			*sc = *defaultProposalMakerConfig()
 		} else {
 			*sc = *global
 		}
@@ -486,6 +506,67 @@ func (sc *ProposalMaker) IsValid(global *ProposalMaker) error {
 			return xerrors.Errorf("`delay` must be time.Duration string format; %v", (*sc)["delay"])
 		} else if _, err := time.ParseDuration(d); err != nil {
 			return err
+		}
+	}
+
+	return nil
+}
+
+type BallotMakerConfig map[string]interface{}
+
+func defaultBallotMakerConfig() *BallotMakerConfig {
+	return &BallotMakerConfig{
+		"name": "DefaultBallotMaker",
+	}
+}
+
+func (bmc *BallotMakerConfig) IsValid(global *BallotMakerConfig) error {
+	if len(*bmc) < 1 {
+		if global == nil {
+			*bmc = *defaultBallotMakerConfig()
+		} else {
+			*bmc = *global
+		}
+
+		return nil
+	}
+
+	var found bool
+	name := (*bmc)["name"]
+	for _, n := range contest_module.BallotMakers {
+		if n == name {
+			found = true
+			break
+		}
+	}
+	if !found {
+		return xerrors.Errorf("unknown ballot_maker found: %v", name)
+	}
+
+	switch name {
+	case "DefaultBallotMaker":
+	case "DamangedBallotMaker":
+		// height
+		if s, found := (*bmc)["height"]; !found {
+			//
+		} else if d, ok := s.(int); !ok || d < 0 {
+			return xerrors.Errorf("`height` must be uint; %v", (*bmc)["height"])
+		}
+
+		// round
+		if s, found := (*bmc)["round"]; !found {
+			//
+		} else if d, ok := s.(int); !ok || d < 0 {
+			return xerrors.Errorf("`round` must be uint; %v", (*bmc)["round"])
+		}
+
+		// stage
+		if s, found := (*bmc)["stage"]; !found {
+			//
+		} else if d, ok := s.(string); !ok {
+			return xerrors.Errorf("`stage` must be string; %v", (*bmc)["stage"])
+		} else if _, err := isaac.StageFromString(d); err != nil {
+			return xerrors.Errorf("`round` must be valid Stage; %v: %w", (*bmc)["stage"], err)
 		}
 	}
 

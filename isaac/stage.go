@@ -31,6 +31,21 @@ func (s Stage) String() string {
 	}
 }
 
+func StageFromString(s string) (Stage, error) {
+	switch s {
+	case "init", "INIT":
+		return StageINIT, nil
+	case "sign", "SIGN":
+		return StageSIGN, nil
+	case "accept", "ACCEPT":
+		return StageACCEPT, nil
+	case "allconfirm", "ALLCONFIRM":
+		return StageALLCONFIRM, nil
+	default:
+		return StageNone, xerrors.Errorf("unknown stage: %s", s)
+	}
+}
+
 func (s Stage) MarshalJSON() ([]byte, error) {
 	return json.Marshal(s.String())
 }

@@ -1,7 +1,6 @@
 package main
 
 import (
-	"fmt"
 	"os"
 	"os/signal"
 	"path/filepath"
@@ -28,7 +27,9 @@ var rootCmd = &cobra.Command{
 		var logOutput *os.File
 		if FlagLogOut == "null" {
 			logOutput = nil
-		} else if len(FlagLogOut) > 0 {
+		} else if len(FlagLogOut) < 1 {
+			logOutput = os.Stdout
+		} else {
 			// check FlagLogOut is directory
 			fi, err := os.Stat(FlagLogOut)
 			if err != nil {
@@ -51,7 +52,8 @@ var rootCmd = &cobra.Command{
 			}
 		}
 
-		logContext := zerolog.New(logOutput).
+		logContext := zerolog.
+			New(logOutput).
 			With().
 			Timestamp()
 
@@ -159,7 +161,7 @@ func main() {
 	rootCmd.PersistentFlags().BoolVar(&flagQuiet, "quiet", flagQuiet, "quiet")
 
 	if err := rootCmd.Execute(); err != nil {
-		fmt.Println(err)
+		rootCmd.Println("Error:", err.Error())
 		os.Exit(1)
 	}
 

@@ -128,10 +128,10 @@ func (cn *Config) IsValid() error {
 
 	var b isaac.Block
 	if inputs[0].Height.Equal(isaac.GenesisHeight) {
-		b = NewBlock(*inputs[0].Height, *inputs[0].Round)
+		b = contest_module.NewBlock(*inputs[0].Height, *inputs[0].Round)
 		inputs = inputs[1:]
 	} else {
-		b = NewBlock(isaac.GenesisHeight, isaac.Round(0))
+		b = contest_module.NewBlock(isaac.GenesisHeight, isaac.Round(0))
 	}
 
 	blocks := map[string]isaac.Block{b.Height().String(): b}
@@ -147,12 +147,12 @@ func (cn *Config) IsValid() error {
 		diff := (*nextBlock.Height).Sub(b.Height()).Uint64()
 		if diff > 0 {
 			for i := uint64(0); i < diff-1; i++ {
-				b = NewBlock(b.Height().Add(1), isaac.Round(0))
+				b = contest_module.NewBlock(b.Height().Add(1), isaac.Round(0))
 				blocks[b.Height().String()] = b
 			}
 		}
 
-		b = NewBlock(*nextBlock.Height, *nextBlock.Round)
+		b = contest_module.NewBlock(*nextBlock.Height, *nextBlock.Round)
 		blocks[b.Height().String()] = b
 	}
 
@@ -256,7 +256,7 @@ func (nc *NodeConfig) IsValid(global *NodeConfig) error {
 		nc.blocks = nb
 
 		for _, i := range inputs {
-			b := NewBlock(*i.Height, *i.Round)
+			b := contest_module.NewBlock(*i.Height, *i.Round)
 			nc.blocks[b.Height().String()] = b
 		}
 	}

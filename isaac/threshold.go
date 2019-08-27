@@ -11,8 +11,8 @@ import (
 
 type Threshold struct {
 	sync.RWMutex
-	base      [3]uint // [2]uint{total, threshold}
-	threshold map[Stage][3]uint
+	base      [3]uint // [2]uint{total, threshold, percent}
+	threshold *sync.Map
 }
 
 func NewThreshold(baseTotal uint, basePercent float64) (*Threshold, error) {
@@ -23,30 +23,30 @@ func NewThreshold(baseTotal uint, basePercent float64) (*Threshold, error) {
 
 	return &Threshold{
 		base:      [3]uint{baseTotal, th, uint(basePercent * 100)},
-		threshold: map[Stage][3]uint{},
+		threshold: &sync.Map{},
 	}, nil
 }
 
 func (tr *Threshold) Get(stage Stage) (uint, uint) {
-	tr.RLock()
-	defer tr.RUnlock()
-
-	t, found := tr.threshold[stage]
-	if found {
+	if i, found := tr.threshold.Load(stage); found {
+		t := i.([3]uint)
 		return t[0], t[1]
 	}
+
+	tr.RLock()
+	defer tr.RUnlock()
 
 	return tr.base[0], tr.base[1]
 }
 
 func (tr *Threshold) SetBase(baseTotal uint, basePercent float64) error {
-	tr.Lock()
-	defer tr.Unlock()
-
 	th, err := calculateThreshold(baseTotal, basePercent)
 	if err != nil {
 		return err
 	}
+
+	tr.Lock()
+	defer tr.Unlock()
 
 	tr.base = [3]uint{baseTotal, th, uint(basePercent * 100)}
 
@@ -54,15 +54,12 @@ func (tr *Threshold) SetBase(baseTotal uint, basePercent float64) error {
 }
 
 func (tr *Threshold) Set(stage Stage, total uint, percent float64) error {
-	tr.Lock()
-	defer tr.Unlock()
-
 	th, err := calculateThreshold(total, percent)
 	if err != nil {
 		return err
 	}
 
-	tr.threshold[stage] = [3]uint{total, th, uint(percent * 100)}
+	tr.threshold.Store(stage, [3]uint{total, th, uint(percent * 100)})
 
 	return nil
 }
@@ -72,9 +69,11 @@ func (tr *Threshold) MarshalJSON() ([]byte, error) {
 	defer tr.RUnlock()
 
 	thh := map[string]interface{}{}
-	for k, v := range tr.threshold {
-		thh[k.String()] = flattenThreshold(v)
-	}
+	tr.threshold.Range(func(k, v interface{}) bool {
+		thh[k.(Stage).String()] = flattenThreshold(v.([3]uint))
+
+		return true
+	})
 
 	return json.Marshal(map[string]interface{}{
 		"base":      flattenThreshold(tr.base),
@@ -87,9 +86,12 @@ func (tr *Threshold) MarshalZerologObject(e *zerolog.Event) {
 	defer tr.RUnlock()
 
 	thh := zerolog.Dict()
-	for k, v := range tr.threshold {
-		thh.Uints(k.String(), v[:])
-	}
+	tr.threshold.Range(func(k, v interface{}) bool {
+		t := v.([3]uint)
+		thh.Uints(k.(Stage).String(), t[:])
+
+		return true
+	})
 
 	e.Uints("base", tr.base[:])
 	e.Dict("threshold", thh)

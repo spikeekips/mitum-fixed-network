@@ -16,10 +16,9 @@ import (
 type ChannelNetworkSealHandler func(seal.Seal) (seal.Seal, error)
 
 type ChannelNetwork struct {
-	sync.RWMutex
 	*common.ReaderDaemon
 	home    node.Home
-	chans   map[node.Address]*ChannelNetwork
+	chans   *sync.Map
 	handler ChannelNetworkSealHandler
 }
 
@@ -28,12 +27,12 @@ func NewChannelNetwork(home node.Home, handler ChannelNetworkSealHandler) *Chann
 		ReaderDaemon: common.NewReaderDaemon(false, 0, nil),
 		home:         home,
 		handler:      handler,
-		chans:        map[node.Address]*ChannelNetwork{},
+		chans:        &sync.Map{},
 	}
 	cn.ReaderDaemon.Logger = common.NewLogger(func(c zerolog.Context) zerolog.Context {
 		return c.Str("module", "channel-suffrage-network")
 	})
-	cn.chans[home.Address()] = cn
+	cn.chans.Store(home.Address(), cn)
 
 	return cn
 }
@@ -43,27 +42,23 @@ func (cn *ChannelNetwork) Home() node.Home {
 }
 
 func (cn *ChannelNetwork) AddMembers(chans ...*ChannelNetwork) *ChannelNetwork {
-	cn.Lock()
-	defer cn.Unlock()
-
 	for _, ch := range chans {
 		if ch.Home().Equal(cn.Home()) {
 			continue
 		}
-		cn.chans[ch.Home().Address()] = ch
+
+		cn.chans.Store(ch.Home().Address(), ch)
 	}
 
 	return cn
 }
 
 func (cn *ChannelNetwork) Chans() []*ChannelNetwork {
-	cn.RLock()
-	defer cn.RUnlock()
-
 	var chans []*ChannelNetwork
-	for _, ch := range cn.chans {
-		chans = append(chans, ch)
-	}
+	cn.chans.Range(func(k, v interface{}) bool {
+		chans = append(chans, v.(*ChannelNetwork))
+		return true
+	})
 
 	return chans
 }
@@ -72,7 +67,10 @@ func (cn *ChannelNetwork) Broadcast(sl seal.Seal) error {
 	started := time.Now()
 
 	var wg sync.WaitGroup
-	wg.Add(len(cn.chans))
+	cn.chans.Range(func(_, _ interface{}) bool {
+		wg.Add(1)
+		return true
+	})
 
 	var targets []node.Address
 	for _, ch := range cn.Chans() {
@@ -106,17 +104,20 @@ func (cn *ChannelNetwork) Broadcast(sl seal.Seal) error {
 	return nil
 }
 
-func (cn *ChannelNetwork) Request(_ context.Context, n node.Address, sl seal.Seal) (seal.Seal, error) {
-	cn.RLock()
-	defer cn.RUnlock()
-
-	ch, found := cn.chans[n]
-	if !found {
+func (cn *ChannelNetwork) Request(ctx context.Context, n node.Address, sl seal.Seal) (seal.Seal, error) {
+	var ch *ChannelNetwork
+	if i, found := cn.chans.Load(n); !found {
 		return nil, xerrors.Errorf("unknown node; node=%q", n)
+	} else {
+		ch = i.(*ChannelNetwork)
 	}
 
+	return ch.request(ctx, ch, sl)
+}
+
+func (cn *ChannelNetwork) request(_ context.Context, ch *ChannelNetwork, sl seal.Seal) (seal.Seal, error) {
 	if ch.handler == nil {
-		return nil, xerrors.Errorf("node=%q handler not registered", n)
+		return nil, xerrors.Errorf("node=%q handler not registered", ch.home.Address())
 	}
 
 	return ch.handler(sl)
@@ -125,15 +126,12 @@ func (cn *ChannelNetwork) Request(_ context.Context, n node.Address, sl seal.Sea
 func (cn *ChannelNetwork) RequestAll(ctx context.Context, sl seal.Seal) (map[node.Address]seal.Seal, error) {
 	results := map[node.Address]seal.Seal{}
 
-	cn.RLock()
-	defer cn.RUnlock()
-
-	for n := range cn.chans {
-		r, err := cn.Request(ctx, n, sl)
+	for _, ch := range cn.Chans() {
+		r, err := cn.request(ctx, ch, sl)
 		if err != nil {
-			cn.Log().Error().Err(err).Object("target", n).Msg("failed to request")
+			cn.Log().Error().Err(err).Object("target", ch.home.Address()).Msg("failed to request")
 		}
-		results[n] = r
+		results[ch.home.Address()] = r
 	}
 
 	return results, nil

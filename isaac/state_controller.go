@@ -64,15 +64,14 @@ func (sc *StateController) Start() error {
 }
 
 func (sc *StateController) Stop() error {
+	if err := sc.StateHandler().Deactivate(); err != nil {
+		return err
+	}
+
 	sc.Lock()
 	defer sc.Unlock()
 
 	close(sc.chanState)
-
-	if err := sc.stateHandler.Deactivate(); err != nil {
-		return err
-	}
-
 	sc.stateHandler = nil
 
 	return nil

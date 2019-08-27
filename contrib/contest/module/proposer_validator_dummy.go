@@ -8,30 +8,23 @@ import (
 )
 
 type DummyProposalValidator struct {
-	sync.RWMutex
-	validated map[hash.Hash] /* Proposal.Hash() */ isaac.Block
+	validated *sync.Map
 }
 
 func NewDummyProposalValidator() *DummyProposalValidator {
 	return &DummyProposalValidator{
-		validated: map[hash.Hash]isaac.Block{},
+		validated: &sync.Map{},
 	}
 }
 
 func (dp *DummyProposalValidator) Validated(proposal hash.Hash) bool {
-	dp.RLock()
-	defer dp.RUnlock()
-
-	_, found := dp.validated[proposal]
+	_, found := dp.validated.Load(proposal)
 	return found
 }
 
 func (dp *DummyProposalValidator) NewBlock(height isaac.Height, round isaac.Round, proposal hash.Hash) (isaac.Block, error) {
-	dp.Lock()
-	defer dp.Unlock()
-
-	if block, found := dp.validated[proposal]; found {
-		return block, nil
+	if i, found := dp.validated.Load(proposal); found {
+		return i.(isaac.Block), nil
 	}
 
 	block, err := isaac.NewBlock(height, round, proposal)
@@ -39,7 +32,7 @@ func (dp *DummyProposalValidator) NewBlock(height isaac.Height, round isaac.Roun
 		return isaac.Block{}, err
 	}
 
-	dp.validated[proposal] = block
+	dp.validated.Store(proposal, block)
 
 	return block, nil
 }

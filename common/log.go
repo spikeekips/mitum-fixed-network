@@ -11,6 +11,8 @@ var NilLog zerolog.Logger = zerolog.Nop()
 func init() {
 	zerolog.TimestampFieldName = "t"
 	zerolog.TimeFieldFormat = time.RFC3339Nano
+	zerolog.MessageFieldName = "m"
+
 	zerolog.DisableSampling(true)
 }
 

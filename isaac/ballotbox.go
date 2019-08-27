@@ -12,9 +12,8 @@ import (
 )
 
 type Ballotbox struct {
-	sync.RWMutex
 	*common.Logger
-	voted     map[string]*Records
+	voted     *sync.Map
 	threshold *Threshold
 }
 
@@ -23,7 +22,7 @@ func NewBallotbox(threshold *Threshold) *Ballotbox {
 		Logger: common.NewLogger(func(c zerolog.Context) zerolog.Context {
 			return c.Str("module", "ballotbox")
 		}),
-		voted:     map[string]*Records{},
+		voted:     &sync.Map{},
 		threshold: threshold,
 	}
 }
@@ -45,13 +44,13 @@ func (bb *Ballotbox) Vote(
 		stage.String(),
 	)
 
-	bb.Lock()
-	rs, found := bb.voted[key]
-	if !found {
+	var rs *Records
+	if i, found := bb.voted.Load(key); !found {
 		rs = NewRecords(height, round, stage)
-		bb.voted[key] = rs
+		bb.voted.Store(key, rs)
+	} else {
+		rs = i.(*Records)
 	}
-	bb.Unlock()
 
 	if err := rs.Vote(n, block, lastBlock, lastRound, proposal); err != nil {
 		return VoteResult{}, err
@@ -68,8 +67,7 @@ type Records struct {
 	height Height
 	round  Round
 	stage  Stage
-	voted  map[string]map[node.Address]Record
-	closed bool
+	voted  *sync.Map
 	result VoteResult
 }
 
@@ -78,8 +76,23 @@ func NewRecords(height Height, round Round, stage Stage) *Records {
 		height: height,
 		round:  round,
 		stage:  stage,
-		voted:  map[string]map[node.Address]Record{},
+		voted:  &sync.Map{},
 	}
+}
+
+func (rs *Records) key(
+	block hash.Hash,
+	lastBlock hash.Hash,
+	lastRound Round,
+	proposal hash.Hash,
+) string {
+	return fmt.Sprintf(
+		"%s-%s-%s-%s",
+		block.String(),
+		lastBlock.String(),
+		lastRound.String(),
+		proposal.String(),
+	)
 }
 
 func (rs *Records) Vote(
@@ -89,62 +102,48 @@ func (rs *Records) Vote(
 	lastRound Round,
 	proposal hash.Hash,
 ) error {
-	rs.Lock()
-	defer rs.Unlock()
+	key := rs.key(block, lastBlock, lastRound, proposal)
 
-	key := fmt.Sprintf(
-		"%s-%s-%s-%s",
-		block.String(),
-		lastBlock.String(),
-		lastRound.String(),
-		proposal.String(),
-	)
-
-	nr, found := rs.voted[key]
-	if !found {
-		nr = map[node.Address]Record{}
-		rs.voted[key] = nr
+	var nr *NodesRecord
+	if i, found := rs.voted.Load(key); !found {
+		nr = NewNodesRecord()
+		rs.voted.Store(key, nr)
+	} else {
+		nr = i.(*NodesRecord)
 	}
 
-	nr[n] = NewRecord(
-		n,
-		block,
-		lastBlock,
-		lastRound,
-		proposal,
-	)
+	_ = nr.Vote(n, block, lastBlock, lastRound, proposal)
 
 	return nil
 }
 
 func (rs *Records) CheckMajority(total, threshold uint) VoteResult {
-	var records []Record
-
 	if rs.IsClosed() {
+		var records []Record
+		rs.voted.Range(func(k, v interface{}) bool {
+			records = append(records, v.(*NodesRecord).Records()...)
+			return true
+		})
+
 		rs.RLock()
 		defer rs.RUnlock()
 
-		for _, nr := range rs.voted {
-			for _, r := range nr {
-				records = append(records, r)
-			}
-		}
 		return rs.result.SetRecords(records).SetClosed()
 	}
 
-	rs.Lock()
-	defer rs.Unlock()
-
+	var records []Record
 	var keys []string
 	var sets []uint
-	for k, nr := range rs.voted {
-		// TODO filter the old Record
-		keys = append(keys, k)
-		sets = append(sets, uint(len(nr)))
-		for _, r := range nr {
-			records = append(records, r)
-		}
-	}
+
+	rs.voted.Range(func(k, v interface{}) bool {
+		nrs := v.(*NodesRecord).Records()
+
+		keys = append(keys, k.(string))
+		sets = append(sets, uint(len(nrs)))
+		records = append(records, nrs...)
+
+		return true
+	})
 
 	vr := NewVoteResult(rs.height, rs.round, rs.stage).
 		SetRecords(records)
@@ -155,10 +154,11 @@ func (rs *Records) CheckMajority(total, threshold uint) VoteResult {
 		vr = vr.SetAgreement(NotYet)
 	case -2:
 		vr = vr.SetAgreement(Draw)
-		rs.closed = true
 	default:
 		vr = vr.SetAgreement(Majority)
-		for _, r := range rs.voted[keys[idx]] {
+
+		i, _ := rs.voted.Load(keys[idx])
+		for _, r := range i.(*NodesRecord).Records() {
 			vr = vr.SetBlock(r.block).
 				SetLastBlock(r.lastBlock).
 				SetLastRound(r.lastRound).
@@ -166,11 +166,10 @@ func (rs *Records) CheckMajority(total, threshold uint) VoteResult {
 			break
 		}
 
-		rs.closed = true
 	}
 
-	if rs.closed {
-		rs.result = vr
+	if vr.IsFinished() {
+		rs.setResult(vr)
 	}
 
 	return vr
@@ -180,7 +179,14 @@ func (rs *Records) IsClosed() bool {
 	rs.RLock()
 	defer rs.RUnlock()
 
-	return rs.closed
+	return rs.result.IsFinished()
+}
+
+func (rs *Records) setResult(vr VoteResult) {
+	rs.Lock()
+	defer rs.Unlock()
+
+	rs.result = vr
 }
 
 type Record struct {
@@ -252,4 +258,34 @@ func (rc Record) MarshalZerologObject(e *zerolog.Event) {
 func (rc Record) String() string {
 	b, _ := json.Marshal(rc) // nolint
 	return string(b)
+}
+
+type NodesRecord struct {
+	voted *sync.Map
+}
+
+func NewNodesRecord() *NodesRecord {
+	return &NodesRecord{voted: &sync.Map{}}
+}
+
+func (nr *NodesRecord) Vote(
+	n node.Address,
+	block hash.Hash,
+	lastBlock hash.Hash,
+	lastRound Round,
+	proposal hash.Hash,
+) *NodesRecord {
+	nr.voted.Store(n, NewRecord(n, block, lastBlock, lastRound, proposal))
+
+	return nr
+}
+
+func (nr *NodesRecord) Records() []Record {
+	var rs []Record
+	nr.voted.Range(func(k, v interface{}) bool {
+		rs = append(rs, v.(Record))
+		return true
+	})
+
+	return rs
 }

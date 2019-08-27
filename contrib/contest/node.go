@@ -142,7 +142,6 @@ func (no *Node) Start() error {
 				err := no.sc.Receive(m)
 				no.sc.Log().Debug().
 					Err(err).
-					Interface("message", m).
 					Dur("elapsed", time.Now().Sub(started)).
 					Msg("message received")
 			}(m)

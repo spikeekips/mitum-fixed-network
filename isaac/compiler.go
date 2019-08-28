@@ -55,7 +55,7 @@ func (cm *Compiler) Vote(ballot Ballot) (VoteResult, error) {
 		return VoteResult{}, err
 	}
 
-	cm.Log().Debug().Object("ballot", ballot).Msg("ballot checked")
+	cm.Log().Debug().Object("ballot", ballot.Hash()).Msg("ballot checked")
 
 	vr, err := cm.ballotbox.Vote(
 		ballot.Node(),

@@ -23,7 +23,7 @@ type Seal interface {
 	Signer() keypair.PublicKey
 	SignedAt() common.Time
 	Signature() keypair.Signature
-	Hash() hash.Hash
+	Hash() hash.Hash // TODO seal.Hash() should use SealBody.Hash().Hint()
 	Header() Header
 	Body() Body
 	Equal(Seal) bool

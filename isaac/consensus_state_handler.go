@@ -160,7 +160,7 @@ func (cs *ConsensusStateHandler) ReceiveProposal(proposal Proposal) error {
 	cs.Log().Debug().Object("proposal", proposal.Hash()).Msg("proposal checked")
 
 	err = cs.nextRoundTimer(
-		"wait-ballot-timeout-next-round-consensus",
+		"ballot-timeout-next-round",
 		cs.compiler.LastINITVoteResult(),
 	)
 	if err != nil {
@@ -369,7 +369,7 @@ func (cs *ConsensusStateHandler) gotNotINITMajority(vr VoteResult) error {
 		}
 	}
 
-	if err := cs.nextRoundTimer("wait-ballot-timeout-next-round-consensus", vr); err != nil {
+	if err := cs.nextRoundTimer("ballot-timeout-next-round", vr); err != nil {
 		return err
 	}
 
@@ -384,7 +384,7 @@ func (cs *ConsensusStateHandler) prepareProposal(vr VoteResult) error {
 		cs.Log().Debug().Msg("proposer is not home; wait proposal")
 
 		// NOTE wait proposal
-		if err := cs.nextRoundTimer("proposal-timeout-next-round-consensus", vr); err != nil {
+		if err := cs.nextRoundTimer("proposal-timeout-next-round", vr); err != nil {
 			return err
 		}
 
@@ -395,7 +395,7 @@ func (cs *ConsensusStateHandler) prepareProposal(vr VoteResult) error {
 		cs.Log().Error().Err(err).Msg("failed to propose")
 	}
 
-	if err := cs.nextRoundTimer("proposal-timeout-next-round-consensus", vr); err != nil {
+	if err := cs.nextRoundTimer("proposal-timeout-next-round", vr); err != nil {
 		return err
 	}
 

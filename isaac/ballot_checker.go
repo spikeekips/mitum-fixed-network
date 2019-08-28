@@ -21,7 +21,7 @@ func NewCompilerBallotChecker(homeState *HomeState, suffrage Suffrage) *common.C
 	}
 
 	return common.NewChainChecker(
-		"compiler-ballot-checker",
+		"ballot-checker",
 		context.Background(),
 		cbc.initialize,
 		cbc.checkInSuffrage,
@@ -98,7 +98,7 @@ func (cbc CompilerBallotChecker) checkHeightAndRound(c *common.ChainChecker) err
 			log_.Debug().
 				Uint64("ballot_height", ballot.Height().Uint64()).
 				Uint64("height", lastINITVoteResult.Height().Uint64()).
-				Msg("ballot.Height() should be greater than last init ballot; ignore this ballot")
+				Msg("ballot height should be greater than last init ballot; ignore this ballot")
 			return err
 		}
 	}
@@ -135,32 +135,32 @@ func (cbc CompilerBallotChecker) checkINIT(c *common.ChainChecker) error {
 		switch sub.Int64() {
 		case 2:
 			if !ballot.LastBlock().Equal(cbc.homeState.Block().Hash()) {
-				return xerrors.Errorf(
-					"block does not match; ballot=%v block=%v",
-					ballot.Block(),
-					cbc.homeState.Block().Hash(),
-				)
+				log_.Debug().
+					Object("last_block of ballot", ballot.LastBlock()).
+					Object("block", cbc.homeState.Block().Hash()).
+					Msg("last block of ballot does not match with home")
+				return common.ChainCheckerStopError
 			}
 		case 1:
 			if !ballot.Block().Equal(cbc.homeState.Block().Hash()) {
-				return xerrors.Errorf(
-					"block does not match; ballot=%v block=%v",
-					ballot.Block(),
-					cbc.homeState.Block().Hash(),
-				)
+				log_.Debug().
+					Object("block of ballot", ballot.Block()).
+					Object("block", cbc.homeState.Block().Hash()).
+					Msg("block of ballot does not match with home")
+				return common.ChainCheckerStopError
 			}
 			if ballot.LastRound() != cbc.homeState.Block().Round() {
-				return xerrors.Errorf(
-					"round does not match; ballot=%v round=%v",
-					ballot.LastRound(),
-					cbc.homeState.Block().Round(),
-				)
+				log_.Debug().
+					Uint64("last round of ballot", ballot.LastRound().Uint64()).
+					Uint64("round", cbc.homeState.Block().Round().Uint64()).
+					Msg("last round of ballot does not match with home")
+				return common.ChainCheckerStopError
 			}
 		default:
-			log_.Warn().
+			log_.Debug().
 				Uint64("ballot_height", ballot.Height().Uint64()).
 				Uint64("height", cbc.homeState.Block().Height().Uint64()).
-				Msg("ballot height is higher than expected; ignore this ballot")
+				Msg("ballot height is higher than expected")
 			return common.ChainCheckerStopError
 		}
 	}
@@ -227,7 +227,7 @@ func (cbc CompilerBallotChecker) checkNotINIT(c *common.ChainChecker) error {
 		log_.Error().
 			Uint64("ballot_height", ballot.Height().Uint64()).
 			Uint64("height", cbc.homeState.Block().Height().Uint64()).
-			Msg("ballot.Height() should be greater than homeState.Block().Height() + 1; ignore this ballot")
+			Msg("ballot height should be greater than homeState.Block().Height() + 1; ignore this ballot")
 
 		return err
 	}
@@ -239,7 +239,7 @@ func (cbc CompilerBallotChecker) checkNotINIT(c *common.ChainChecker) error {
 			log_.Error().
 				Uint64("ballot_round", ballot.Round().Uint64()).
 				Uint64("round", cbc.homeState.Block().Round().Uint64()).
-				Msg("ballot.Round() should be same with homeState.Block().Round(); ignore this ballot")
+				Msg("ballot round should be same with block round of homeState; ignore this ballot")
 
 			return err
 		}
@@ -262,10 +262,10 @@ func (cbc CompilerBallotChecker) checkNotINIT(c *common.ChainChecker) error {
 	// lastINITVoteResult.Height()
 	if !ballot.Height().Equal(lastINITVoteResult.Height()) {
 		err := xerrors.Errorf("lower ballot height")
-		log_.Error().
+		log_.Debug().
 			Uint64("ballot_height", ballot.Height().Uint64()).
 			Uint64("height", lastINITVoteResult.Height().Uint64()).
-			Msg("ballot.Height() should be same with last init ballot; ignore this ballot")
+			Msg("ballot height should be same with last init ballot; ignore this ballot")
 		return err
 	}
 
@@ -273,10 +273,10 @@ func (cbc CompilerBallotChecker) checkNotINIT(c *common.ChainChecker) error {
 	// lastINITVoteResult.Round()
 	if ballot.Round() != lastINITVoteResult.Round() {
 		err := xerrors.Errorf("lower ballot round")
-		log_.Error().
+		log_.Debug().
 			Uint64("ballot_round", ballot.Round().Uint64()).
 			Uint64("round", lastINITVoteResult.Round().Uint64()).
-			Msg("ballot.Round() should be same with last init ballot; ignore this ballot")
+			Msg("ballot round should be same with last init ballot; ignore this ballot")
 		return err
 	}
 

@@ -281,3 +281,34 @@ table.scrollable tbody tr td .record code {
   padding: 0.1rem 0.2rem 0.1rem 0.2rem;
   border-radius: 0.2rem;
 }
+
+.MuiChip-colorSecondary {
+    border-top-right-radius: 0 !important;
+    border-bottom-right-radius: 0 !important;
+    margin-right: 0 !important;
+    margin-left: 0 !important;
+}
+
+.MuiChip-colorSecondary:nth-child(1) {
+    min-width: 20px;
+}
+
+.MuiChip-colorSecondary+.MuiChip-colorSecondary {
+    margin-right: 3px !important;
+    margin-left: 0 !important;
+    border-top-left-radius: 0 !important;
+    border-bottom-left-radius: 0 !important;
+    border-top-right-radius: 16px !important;
+    border-bottom-right-radius: 16px !important;
+}
+
+.MuiChip-label {
+    padding-left: 9px !important;
+    padding-right: 3px !important;
+}
+
+
+.MuiChip-colorSecondary+.MuiChip-colorSecondary .MuiChip-label {
+    padding-left: 3px !important;
+    padding-right: 9px !important;
+}

@@ -20,7 +20,7 @@ type BootingStateHandler struct {
 func NewBootingStateHandler(homeState *HomeState) *BootingStateHandler {
 	return &BootingStateHandler{
 		Logger: common.NewLogger(func(c zerolog.Context) zerolog.Context {
-			return c.Str("module", "booting-state-handler")
+			return c.Str("module", "s.h.booting")
 		}),
 		proposalChecker: NewProposalCheckerBooting(homeState),
 	}

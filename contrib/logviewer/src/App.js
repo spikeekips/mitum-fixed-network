@@ -500,7 +500,7 @@ class CenteredGrid extends React.Component {
           >
           {records[ni] != null ? (
             <div key={records[ni].id + records[ni].module} className='record'>
-              <Chip label={records[ni].level} className={'lvl lvl-' + records[ni].level} color='secondary' />
+              <Chip label={records[ni].level[0]} className={'lvl lvl-' + records[ni].level} color='secondary' />
               <Chip label={records[ni].module} className={'module'} color='secondary' style={{
                 backgroundColor: this.state.moduleColors[this.state.modules.indexOf(records[ni].module)],
                 color: fontColorByBG(this.state.moduleColors[this.state.modules.indexOf(records[ni].module)]),

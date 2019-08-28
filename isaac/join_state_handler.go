@@ -59,7 +59,7 @@ func NewJoinStateHandler(
 
 	return &JoinStateHandler{
 		Logger: common.NewLogger(func(c zerolog.Context) zerolog.Context {
-			return c.Str("module", "join-state-handler")
+			return c.Str("module", "s.h.join")
 		}),
 		homeState:                   homeState,
 		compiler:                    compiler,
@@ -120,7 +120,7 @@ func (js *JoinStateHandler) Activate(StateContext) error {
 	// NOTE keeps broadcasting init ballot, which is based on last block of
 	// homeState until timeoutWaitVoteResult
 	js.timer = common.NewCallbackTimer(
-		"broadcasting-init-ballot-for-joining",
+		"join-broadcasting-init",
 		js.intervalBroadcastINITBallot,
 		js.broadcastINITBallot,
 	).

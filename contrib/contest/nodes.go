@@ -13,7 +13,7 @@ type Nodes struct {
 	nodes []*Node
 }
 
-func NewNodes(config *Config) (*Nodes, error) {
+func NewNodes(config *Config) (*Nodes, error) { // nolint
 	// create node
 	var nodeNames []string
 	for n := range config.Nodes {

@@ -36,7 +36,7 @@ func NewNode(
 	previousBlock := config.Block(lastBlock.Height().Sub(1))
 	homeState := isaac.NewHomeState(home, previousBlock).SetBlock(lastBlock)
 
-	suffrage := newSuffrage(config, home, nodes)
+	suffrage := newSuffrage(config, nodes)
 	ballotChecker := isaac.NewCompilerBallotChecker(homeState, suffrage)
 	ballotChecker.SetLogger(rootLog)
 
@@ -101,7 +101,7 @@ func NewNode(
 		ss := isaac.NewStoppedStateHandler()
 		ss.SetLogger(rootLog)
 
-		ssr := newSealStorage(config, home, rootLog)
+		ssr := newSealStorage(config, rootLog)
 
 		sc = isaac.NewStateController(homeState, cm, ssr, bs, js, cs, ss)
 		sc.SetLogger(rootLog)
@@ -145,16 +145,16 @@ func (no *Node) Start() error {
 	go func() {
 		for m := range no.nt.Reader() {
 			go func(m interface{}) {
-				started := time.Now()
+				st := time.Now()
 				err := no.sc.Receive(m)
 				no.sc.Log().Debug().
 					Err(err).
-					Dur("elapsed", time.Now().Sub(started)).
+					Dur("elapsed", time.Since(st)).
 					Msg("message received")
 			}(m)
 		}
 	}()
-	no.Log().Debug().Dur("elapsed", time.Now().Sub(started)).Msg("node started")
+	no.Log().Debug().Dur("elapsed", time.Since(started)).Msg("node started")
 
 	return nil
 }
@@ -178,7 +178,7 @@ func NewHome(i uint) node.Home {
 	return node.NewHome(h, pk)
 }
 
-func newSuffrage(config *NodeConfig, home node.Home, nodes []node.Node) isaac.Suffrage {
+func newSuffrage(config *NodeConfig, nodes []node.Node) isaac.Suffrage {
 	sc := *config.Modules.Suffrage
 
 	numberOfActing := uint(sc["number_of_acting"].(int))
@@ -223,7 +223,7 @@ func newProposalMaker(config *NodeConfig, home node.Home, l zerolog.Logger) isaa
 	}
 }
 
-func newSealStorage(config *NodeConfig, home node.Home, l zerolog.Logger) isaac.SealStorage {
+func newSealStorage(_ *NodeConfig, l zerolog.Logger) isaac.SealStorage {
 	ss := contest_module.NewMemorySealStorage()
 	ss.SetLogger(l)
 

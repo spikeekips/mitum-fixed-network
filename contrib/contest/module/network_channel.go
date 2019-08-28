@@ -97,7 +97,7 @@ func (cn *ChannelNetwork) Broadcast(sl seal.Seal) error {
 		cn.Log().Debug().
 			Object("seal", sl).
 			Array("targets", tas).
-			Dur("elapsed", time.Now().Sub(started)).
+			Dur("elapsed", time.Since(started)).
 			Msgf("seal sent; %v", sl.Type())
 	}
 

@@ -1,7 +1,6 @@
 package main
 
 import (
-	"bytes"
 	"encoding/json"
 	"fmt"
 	"os"
@@ -80,15 +79,6 @@ func printError(cmd *cobra.Command, err error) {
 	_ = cmd.Help()
 }
 
-func printFlags(cmd *cobra.Command, format string) interface{} {
-	switch format {
-	case "json":
-		return printFlagsJSON(cmd)
-	default:
-		return printFlagsTerminal(cmd)
-	}
-}
-
 func escapeFlagValue(v interface{}, q string) string {
 	if len(q) < 1 {
 		return fmt.Sprintf("%v", v)
@@ -115,22 +105,4 @@ func printFlagsJSON(cmd *cobra.Command) json.RawMessage {
 	b, _ := json.Marshal(out)
 
 	return b
-}
-
-func printFlagsTerminal(cmd *cobra.Command) string {
-	var b bytes.Buffer
-
-	var flags []string
-	cmd.Flags().VisitAll(func(pf *pflag.Flag) {
-		if pf.Name == "help" {
-			return
-		}
-
-		flags = append(flags, fmt.Sprintf(
-			"--%s=%s (default: %s)", pf.Name, escapeFlagValue(pf.DefValue, "'"), escapeFlagValue(pf.Value, "'"),
-		))
-	})
-
-	fmt.Fprintf(&b, strings.Join(flags, ", "))
-	return b.String()
 }

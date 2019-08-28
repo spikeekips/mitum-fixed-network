@@ -32,14 +32,27 @@ func (db DamangedBallotMaker) key(height, round, stage string) string {
 }
 
 func (db DamangedBallotMaker) AddPoint(height, round, stage string, kinds ...string) DamangedBallotMaker {
-	var nk []string
-	seen := map[string]struct{}{}
-	for _, k := range kinds {
-		if _, found := seen[k]; found {
-			continue
+	nk := []string{}
+
+	if len(height) < 1 {
+		height = "*"
+	}
+	if len(round) < 1 {
+		round = "*"
+	}
+	if len(stage) < 1 {
+		stage = "*"
+	}
+
+	if len(kinds) > 0 {
+		seen := map[string]struct{}{}
+		for _, k := range kinds {
+			if _, found := seen[k]; found {
+				continue
+			}
+			nk = append(nk, k)
+			seen[k] = struct{}{}
 		}
-		nk = append(nk, k)
-		seen[k] = struct{}{}
 	}
 
 	k := db.key(height, round, stage)
@@ -91,22 +104,24 @@ func (db DamangedBallotMaker) INIT(
 			Interface("kinds", p).
 			Msg("damaged point")
 
-		for _, k := range p {
-			switch k {
-			case "previousBlock":
-				previousBlock = NewRandomBlockHash()
-			case "newBlock":
-				newBlock = NewRandomBlockHash()
-			case "newRound":
-				newRound = NewRandomRound()
-			case "newProposal":
-				newProposal = NewRandomProposalHash()
-			case "nextHeight":
-				nextHeight = NewRandomHeight()
-			case "nextRound":
-				nextRound = NewRandomRound()
-			default:
-				newBlock = NewRandomBlockHash()
+		if len(p) < 1 {
+			newBlock = NewRandomBlockHash()
+		} else {
+			for _, k := range p {
+				switch k {
+				case "previousBlock":
+					previousBlock = NewRandomBlockHash()
+				case "newBlock":
+					newBlock = NewRandomBlockHash()
+				case "newRound":
+					newRound = NewRandomRound()
+				case "newProposal":
+					newProposal = NewRandomProposalHash()
+				case "nextHeight":
+					nextHeight = NewRandomHeight()
+				case "nextRound":
+					nextRound = NewRandomRound()
+				}
 			}
 		}
 	}
@@ -132,22 +147,24 @@ func (db DamangedBallotMaker) SIGN(
 			Interface("kinds", p).
 			Msg("damaged point")
 
-		for _, k := range p {
-			switch k {
-			case "lastBlock":
-				lastBlock = NewRandomBlockHash()
-			case "lastRound":
-				lastRound = NewRandomRound()
-			case "nextHeight":
-				nextHeight = NewRandomHeight()
-			case "nextBlock":
-				nextBlock = NewRandomBlockHash()
-			case "currentRound":
-				currentRound = NewRandomRound()
-			case "currentProposal":
-				currentProposal = NewRandomProposalHash()
-			default:
-				nextBlock = NewRandomBlockHash()
+		if len(p) < 1 {
+			nextBlock = NewRandomBlockHash()
+		} else {
+			for _, k := range p {
+				switch k {
+				case "lastBlock":
+					lastBlock = NewRandomBlockHash()
+				case "lastRound":
+					lastRound = NewRandomRound()
+				case "nextHeight":
+					nextHeight = NewRandomHeight()
+				case "nextBlock":
+					nextBlock = NewRandomBlockHash()
+				case "currentRound":
+					currentRound = NewRandomRound()
+				case "currentProposal":
+					currentProposal = NewRandomProposalHash()
+				}
 			}
 		}
 	}
@@ -173,22 +190,24 @@ func (db DamangedBallotMaker) ACCEPT(
 			Interface("kinds", p).
 			Msg("damaged point")
 
-		for _, k := range p {
-			switch k {
-			case "lastBlock":
-				lastBlock = NewRandomBlockHash()
-			case "lastRound":
-				lastRound = NewRandomRound()
-			case "nextHeight":
-				nextHeight = NewRandomHeight()
-			case "nextBlock":
-				nextBlock = NewRandomBlockHash()
-			case "currentRound":
-				currentRound = NewRandomRound()
-			case "currentProposal":
-				currentProposal = NewRandomProposalHash()
-			default:
-				nextBlock = NewRandomBlockHash()
+		if len(p) < 1 {
+			nextBlock = NewRandomBlockHash()
+		} else {
+			for _, k := range p {
+				switch k {
+				case "lastBlock":
+					lastBlock = NewRandomBlockHash()
+				case "lastRound":
+					lastRound = NewRandomRound()
+				case "nextHeight":
+					nextHeight = NewRandomHeight()
+				case "nextBlock":
+					nextBlock = NewRandomBlockHash()
+				case "currentRound":
+					currentRound = NewRandomRound()
+				case "currentProposal":
+					currentProposal = NewRandomProposalHash()
+				}
 			}
 		}
 	}

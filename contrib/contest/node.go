@@ -216,6 +216,7 @@ func newProposalMaker(config *NodeConfig, home node.Home, l zerolog.Logger) isaa
 
 		dp := isaac.NewDefaultProposalMaker(home, delay)
 		dp.SetLogger(l)
+
 		return dp
 	default:
 		panic(xerrors.Errorf("unknown proposal maker config: %v", config))
@@ -259,6 +260,7 @@ func newBallotMaker(config *NodeConfig, home node.Home, l zerolog.Logger) isaac.
 
 		db := contest_module.NewDamangedBallotMaker(home)
 		db = db.AddPoint(height, round, stage)
+		db.SetLogger(l)
 
 		return db
 	default:

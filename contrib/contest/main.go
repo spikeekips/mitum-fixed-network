@@ -1,6 +1,8 @@
 package main
 
 import (
+	"fmt"
+	"io"
 	"os"
 	"os/signal"
 	"path/filepath"
@@ -9,6 +11,7 @@ import (
 	"syscall"
 
 	"github.com/rs/zerolog"
+	"github.com/rs/zerolog/diode"
 	"github.com/spf13/cobra"
 )
 
@@ -24,7 +27,7 @@ var rootCmd = &cobra.Command{
 	Short: "contest is the consensus tester of ISAAC+",
 	Args:  cobra.NoArgs,
 	PersistentPreRun: func(cmd *cobra.Command, args []string) {
-		var logOutput *os.File
+		var logOutput io.Writer
 		if FlagLogOut == "null" {
 			logOutput = nil
 		} else if len(FlagLogOut) < 1 {
@@ -52,13 +55,26 @@ var rootCmd = &cobra.Command{
 			}
 		}
 
+		if flagLogLevel.lvl == zerolog.DebugLevel {
+			logOutput = diode.NewWriter(
+				logOutput,
+				1000,
+				0,
+				func(missed int) {
+					fmt.Fprintf(os.Stderr, "dropped %d messages", missed)
+				},
+			)
+		}
+
 		logContext := zerolog.
 			New(logOutput).
 			With().
 			Timestamp()
 
 		if flagLogLevel.lvl == zerolog.DebugLevel {
-			logContext = logContext.Caller()
+			logContext = logContext.
+				Caller().
+				Stack()
 		}
 
 		log = logContext.Logger().Level(flagLogLevel.lvl)

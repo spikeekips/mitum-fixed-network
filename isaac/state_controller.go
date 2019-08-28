@@ -206,7 +206,7 @@ func (sc *StateController) StateHandler() StateHandler {
 func (sc *StateController) handleBallot(ballot Ballot) error {
 	vr, err := sc.compiler.Vote(ballot)
 	if err != nil {
-		sc.Log().Error().Err(err).Object("ballot", ballot.Hash()).Msg("failed to vote ballot")
+		sc.Log().Debug().Err(err).Object("ballot", ballot.Hash()).Msg("ballot did not vote")
 		return err
 	}
 

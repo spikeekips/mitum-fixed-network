@@ -81,7 +81,7 @@ var rootCmd = &cobra.Command{
 
 			closeProfile()
 
-			log.Info().Str("sig", s.String()).Msg("contest stopped by force")
+			log.Debug().Str("sig", s.String()).Msg("contest stopped by force")
 			os.Exit(0)
 		}()
 	},

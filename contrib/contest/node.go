@@ -29,7 +29,8 @@ func NewNode(
 	globalConfig *Config,
 	config *NodeConfig,
 ) (*Node, error) {
-	log_ := log.With().Str("node", home.Alias()).Logger()
+	rootLog := log.With().Str("node", home.Alias()).Logger()
+	log_ := rootLog.With().Str("module", "node").Logger()
 
 	lastBlock := config.LastBlock()
 	previousBlock := config.Block(lastBlock.Height().Sub(1))
@@ -37,7 +38,7 @@ func NewNode(
 
 	suffrage := newSuffrage(config, home, nodes)
 	ballotChecker := isaac.NewCompilerBallotChecker(homeState, suffrage)
-	ballotChecker.SetLogger(log_)
+	ballotChecker.SetLogger(rootLog)
 
 	numberOfActing := uint((*config.Modules.Suffrage)["number_of_acting"].(int))
 	thr, _ := isaac.NewThreshold(numberOfActing, *config.Policy.Threshold)
@@ -46,7 +47,7 @@ func NewNode(
 	}
 
 	cm := isaac.NewCompiler(homeState, isaac.NewBallotbox(thr), ballotChecker)
-	cm.SetLogger(log_)
+	cm.SetLogger(rootLog)
 
 	nt := contest_module.NewChannelNetwork(
 		home,
@@ -54,16 +55,16 @@ func NewNode(
 			return sl, xerrors.Errorf("echo back")
 		},
 	)
-	nt.SetLogger(log_)
+	nt.SetLogger(rootLog)
 
 	pv := contest_module.NewDummyProposalValidator()
 
-	ballotMaker := newBallotMaker(config, home, log_)
+	ballotMaker := newBallotMaker(config, home, rootLog)
 
 	var sc *isaac.StateController
 	{ // state handlers
 		bs := isaac.NewBootingStateHandler(homeState)
-		bs.SetLogger(log_)
+		bs.SetLogger(rootLog)
 
 		js, err := isaac.NewJoinStateHandler(
 			homeState,
@@ -78,9 +79,9 @@ func NewNode(
 		if err != nil {
 			return nil, err
 		}
-		js.SetLogger(log_)
+		js.SetLogger(rootLog)
 
-		dp := newProposalMaker(config, home, log_)
+		dp := newProposalMaker(config, home, rootLog)
 
 		cs, err := isaac.NewConsensusStateHandler(
 			homeState,
@@ -95,15 +96,15 @@ func NewNode(
 		if err != nil {
 			return nil, err
 		}
-		cs.SetLogger(log_)
+		cs.SetLogger(rootLog)
 
 		ss := isaac.NewStoppedStateHandler()
-		ss.SetLogger(log_)
+		ss.SetLogger(rootLog)
 
-		ssr := newSealStorage(config, home, log_)
+		ssr := newSealStorage(config, home, rootLog)
 
 		sc = isaac.NewStateController(homeState, cm, ssr, bs, js, cs, ss)
-		sc.SetLogger(log_)
+		sc.SetLogger(rootLog)
 	}
 
 	log_.Info().

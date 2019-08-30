@@ -22,11 +22,11 @@ func NewRoundrobinSuffrage(numberOfActing uint, nodes ...node.Node) *RoundrobinS
 	return &RoundrobinSuffrage{numberOfActing: numberOfActing, nodes: nodes}
 }
 
-func (fs *RoundrobinSuffrage) AddNodes(nodes ...node.Node) isaac.Suffrage {
+func (fs *RoundrobinSuffrage) AddNodes(_ ...node.Node) isaac.Suffrage {
 	return fs
 }
 
-func (fs *RoundrobinSuffrage) RemoveNodes(nodes ...node.Node) isaac.Suffrage {
+func (fs *RoundrobinSuffrage) RemoveNodes(_ ...node.Node) isaac.Suffrage {
 	return fs
 }
 

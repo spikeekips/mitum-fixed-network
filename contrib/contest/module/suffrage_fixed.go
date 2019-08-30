@@ -50,11 +50,11 @@ func NewFixedProposerSuffrage(proposer node.Node, numberOfActing uint, nodes ...
 	}
 }
 
-func (fs FixedProposerSuffrage) AddNodes(nodes ...node.Node) isaac.Suffrage {
+func (fs FixedProposerSuffrage) AddNodes(_ ...node.Node) isaac.Suffrage {
 	return fs
 }
 
-func (fs FixedProposerSuffrage) RemoveNodes(nodes ...node.Node) isaac.Suffrage {
+func (fs FixedProposerSuffrage) RemoveNodes(_ ...node.Node) isaac.Suffrage {
 	return fs
 }
 

@@ -19,7 +19,7 @@ var configCmd = &cobra.Command{
 }
 
 var configFullCmd = &cobra.Command{
-	Use:   "full",
+	Use:   "full <config>",
 	Short: "full config",
 	Args:  cobra.ExactArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
@@ -42,7 +42,7 @@ var configFullCmd = &cobra.Command{
 }
 
 var configCheckCmd = &cobra.Command{
-	Use:   "check",
+	Use:   "check <config>",
 	Short: "check config",
 	Args:  cobra.ExactArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {

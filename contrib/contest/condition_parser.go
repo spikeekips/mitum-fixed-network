@@ -2,22 +2,40 @@ package main
 
 import (
 	"fmt"
+	"regexp"
 	"strconv"
+	"strings"
 
 	"github.com/knocknote/vitess-sqlparser/sqlparser"
 	"golang.org/x/xerrors"
 )
 
+var puncs = strings.Join(
+	[]string{"=", "<", ">", "<=", ">=", "!=", "<=>", "->", "->>"},
+	"|",
+)
+var connts = strings.Join(
+	[]string{"in", "not in", "like", "not like", "regexp", "not regexp"},
+	"|",
+)
+
+var re_column = regexp.MustCompile(
+	fmt.Sprintf(`[\s]*([\w][\w\.]*)%s`,
+		fmt.Sprintf(`([\s]*(%s)|[\s]+(%s))`, puncs, connts),
+	),
+)
+
 type ConditionParser struct {
-	condition string
 }
 
-func NewConditionParser(condition string) *ConditionParser {
-	return &ConditionParser{condition: condition}
+func NewConditionParser() ConditionParser {
+	return ConditionParser{}
 }
 
-func (cp *ConditionParser) Parse() (ConditionChecker, error) {
-	stmt, err := sqlparser.Parse(fmt.Sprintf("select * from a where %s", cp.condition))
+func (cp ConditionParser) Parse(condition string) (Condition, error) {
+	nc := re_column.ReplaceAllString(condition, "`$1`$2")
+
+	stmt, err := sqlparser.Parse(fmt.Sprintf("select * from a where %s", nc))
 	if err != nil {
 		return nil, err
 	}
@@ -39,7 +57,7 @@ func (cp *ConditionParser) Parse() (ConditionChecker, error) {
 	return cp.parseSQLNode(where)
 }
 
-func (cp *ConditionParser) parseSQLNode(expr sqlparser.SQLNode) (ConditionChecker, error) {
+func (cp ConditionParser) parseSQLNode(expr sqlparser.SQLNode) (Condition, error) {
 	switch t := expr.(type) {
 	case *sqlparser.AndExpr:
 		return cp.parseJointExpr("and", t)
@@ -51,7 +69,7 @@ func (cp *ConditionParser) parseSQLNode(expr sqlparser.SQLNode) (ConditionChecke
 
 	jc := NewJointConditions("")
 
-	var checkers []ConditionChecker
+	var conditions []Condition
 	err := expr.WalkSubtree(func(n sqlparser.SQLNode) (bool, error) {
 		cc, err := cp.parseSQLNode(n)
 		if err != nil {
@@ -61,7 +79,7 @@ func (cp *ConditionParser) parseSQLNode(expr sqlparser.SQLNode) (ConditionChecke
 			return false, nil
 		}
 
-		checkers = append(checkers, cc)
+		conditions = append(conditions, cc)
 
 		return false, nil
 	})
@@ -69,16 +87,16 @@ func (cp *ConditionParser) parseSQLNode(expr sqlparser.SQLNode) (ConditionChecke
 		return nil, err
 	}
 
-	if len(checkers) < 1 {
+	if len(conditions) < 1 {
 		return nil, nil
-	} else if len(checkers) == 1 {
-		return checkers[0], nil
+	} else if len(conditions) == 1 {
+		return conditions[0], nil
 	}
 
-	return jc.Add(NewJointConditions("", checkers...)), nil
+	return jc.Add(NewJointConditions("", conditions...)), nil
 }
 
-func (cp *ConditionParser) parseComparisonExpr(expr *sqlparser.ComparisonExpr) (ConditionChecker, error) {
+func (cp ConditionParser) parseComparisonExpr(expr *sqlparser.ComparisonExpr) (Condition, error) {
 	var colName string
 	var val []interface{}
 
@@ -113,7 +131,7 @@ func (cp *ConditionParser) parseComparisonExpr(expr *sqlparser.ComparisonExpr) (
 	return NewComparison(colName, expr.Operator, val), nil
 }
 
-func (cp *ConditionParser) parseJointExpr(joint string, expr sqlparser.SQLNode) (ConditionChecker, error) {
+func (cp ConditionParser) parseJointExpr(joint string, expr sqlparser.SQLNode) (Condition, error) {
 	var left, right sqlparser.Expr
 	switch t := expr.(type) {
 	case *sqlparser.AndExpr:
@@ -142,17 +160,8 @@ func (cp *ConditionParser) parseJointExpr(joint string, expr sqlparser.SQLNode) 
 	return jc, nil
 }
 
-func (cp *ConditionParser) parseColName(expr *sqlparser.ColName) (string, error) {
-	var colName string
-	_ = expr.WalkSubtree(func(n sqlparser.SQLNode) (bool, error) {
-		switch t := n.(type) {
-		case sqlparser.ColIdent:
-			colName = t.String()
-			return false, xerrors.Errorf("found")
-		}
-
-		return false, nil
-	})
+func (cp ConditionParser) parseColName(expr *sqlparser.ColName) (string, error) {
+	colName := expr.Name.String()
 	if len(colName) < 1 {
 		return "", xerrors.Errorf("ColName not found")
 	}
@@ -160,7 +169,7 @@ func (cp *ConditionParser) parseColName(expr *sqlparser.ColName) (string, error)
 	return colName, nil
 }
 
-func (cp *ConditionParser) parseSQLVal(expr *sqlparser.SQLVal) (interface{}, error) {
+func (cp ConditionParser) parseSQLVal(expr *sqlparser.SQLVal) (interface{}, error) {
 	var v interface{}
 	var err error
 	switch expr.Type {
@@ -180,7 +189,7 @@ func (cp *ConditionParser) parseSQLVal(expr *sqlparser.SQLVal) (interface{}, err
 	return v, err
 }
 
-func (cp *ConditionParser) parseValTuple(expr sqlparser.ValTuple) ([]interface{}, error) {
+func (cp ConditionParser) parseValTuple(expr sqlparser.ValTuple) ([]interface{}, error) {
 	var exprs sqlparser.Exprs
 	_ = expr.WalkSubtree(func(n sqlparser.SQLNode) (bool, error) {
 		switch t := n.(type) {

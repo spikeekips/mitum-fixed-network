@@ -5,7 +5,7 @@ import (
 	"strings"
 )
 
-type ConditionChecker interface {
+type Condition interface {
 	Name() string
 	Op() string
 	Value() []interface{}
@@ -44,24 +44,24 @@ func (bc Comparison) String() string {
 }
 
 type JointConditions struct {
-	op       string
-	checkers []ConditionChecker
+	op         string
+	conditions []Condition
 }
 
-func NewJointConditions(op string, checkers ...ConditionChecker) JointConditions {
-	return JointConditions{op: op, checkers: checkers}
+func NewJointConditions(op string, conditions ...Condition) JointConditions {
+	return JointConditions{op: op, conditions: conditions}
 }
 
-func (bc JointConditions) Add(checkers ...ConditionChecker) JointConditions {
-	if len(bc.checkers) < 1 && len(checkers) == 1 {
-		switch t := checkers[0].(type) {
+func (bc JointConditions) Add(conditions ...Condition) JointConditions {
+	if len(bc.conditions) < 1 && len(conditions) == 1 {
+		switch t := conditions[0].(type) {
 		case JointConditions:
 			if len(bc.op) < 1 || bc.op == t.op {
 				return t
 			}
 		}
 	}
-	bc.checkers = append(bc.checkers, checkers...)
+	bc.conditions = append(bc.conditions, conditions...)
 
 	return bc
 }
@@ -80,7 +80,7 @@ func (bc JointConditions) Value() []interface{} {
 
 func (bc JointConditions) String() string {
 	var l []string
-	for _, c := range bc.checkers {
+	for _, c := range bc.conditions {
 		l = append(l, c.String())
 	}
 

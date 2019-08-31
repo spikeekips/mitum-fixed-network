@@ -34,6 +34,11 @@ func TestCondition(t *testing.T) {
 			expected: "(a = [3.141592])",
 		},
 		{
+			name:     "simple: dot connected field",
+			where:    "a.b.c.d.e = 2",
+			expected: "(a.b.c.d.e = [2])",
+		},
+		{
 			name:     "simple: a>=2",
 			where:    "a>=2",
 			expected: "(a >= [2])",
@@ -133,16 +138,21 @@ func TestCondition(t *testing.T) {
 			where:    `(a > 1 or b < 2) and (c >= 3 and d <= 4) or (e != 5 and f not in (6, 7))`,
 			expected: "(or:(and:(or:(a > [1]), (b < [2])), (and:(c >= [3]), (d <= [4]))), (and:(e != [5]), (f not in [6,7])))",
 		},
+		{
+			name:     "joint: complex #1",
+			where:    `(a.x.y.z > 1 or b < 2) and (c.o.p.q.r >= 3 and d.s.t.u <= 4) or (e.v.w != 5 and f.m.n not in (6, 7))`,
+			expected: "(or:(and:(or:(a.x.y.z > [1]), (b < [2])), (and:(c.o.p.q.r >= [3]), (d.s.t.u <= [4]))), (and:(e.v.w != [5]), (f.m.n not in [6,7])))",
+		},
 	}
 
+	cp := NewConditionParser()
 	for i, c := range cases {
 		i := i
 		c := c
 		t.Run(
 			c.name,
 			func(*testing.T) {
-				cp := NewConditionParser(c.where)
-				result, err := cp.Parse()
+				result, err := cp.Parse(c.where)
 				if len(c.err) > 0 {
 					errString := ""
 					if err != nil {

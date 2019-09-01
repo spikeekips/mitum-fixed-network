@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"reflect"
+	"regexp"
 	"strings"
 
 	"golang.org/x/xerrors"
@@ -27,18 +28,34 @@ func (dc ConditionChecker) Check(o map[string]interface{}) bool {
 }
 
 func (dc ConditionChecker) check(condition Condition, o map[string]interface{}) bool {
-	/*
-		switch c := condition.(type) {
-		case Comparison:
-				v, found := lookup(o, c.Name())
-				if !found {
+	switch c := condition.(type) {
+	case Comparison:
+		return dc.checkComparison(c, o)
+	case JointConditions:
+		for _, cd := range c.Conditions() {
+			if dc.check(cd, o) {
+				if c.Op() == "or" {
+					return true
+				}
+			} else {
+				if c.Op() == "and" {
 					return false
 				}
-		case JointConditions:
+			}
 		}
-	*/
+
+		return c.Op() == "and"
+	}
 
 	return true
+}
+
+func (dc ConditionChecker) checkComparison(condition Comparison, o map[string]interface{}) bool {
+	v, found := lookup(o, condition.Name())
+	if !found {
+		return false
+	}
+	return compare(condition.Op(), v, condition.Value(), condition.Hint())
 }
 
 func lookup(o map[string]interface{}, keys string) (interface{}, bool) {
@@ -167,6 +184,39 @@ func convertToFloat64(v interface{}) (float64, error) {
 }
 
 func compare(op string, a, b interface{}, kind reflect.Kind) bool {
+	switch op {
+	case "in", "not in":
+		rv := reflect.ValueOf(b)
+		if rv.Kind() != reflect.Slice {
+			return false
+		}
+
+		for i := 0; i < rv.Len(); i++ {
+			if compare("equal", a, rv.Index(i).Interface(), kind) {
+				return op == "in"
+			}
+		}
+
+		return op != "in"
+	case "like", "not like", "regexp", "not regexp":
+		ca, err := convertToString(a)
+		if err != nil {
+			return false
+		}
+
+		re, ok := b.(*regexp.Regexp)
+		if !ok {
+			if re, err = regexp.Compile(b.(string)); err != nil {
+				return false
+			}
+		}
+
+		if len(re.FindAll([]byte(ca), -1)) < 1 {
+			return op != "regexp" && op != "like"
+		}
+		return op == "regexp" || op == "like"
+	}
+
 	var ct CompareType
 	switch kind {
 	case reflect.String:
@@ -212,15 +262,17 @@ func compare(op string, a, b interface{}, kind reflect.Kind) bool {
 	}
 
 	switch op {
-	case "equal":
+	case "equal", "=":
 		return ct.Cmp() == 0
-	case "greater_than":
+	case "not equal", "!=":
+		return ct.Cmp() != 0
+	case "greater_than", ">":
 		return ct.Cmp() > 0
-	case "equal_or_greater_than":
+	case "equal_or_greater_than", ">=":
 		return ct.Cmp() >= 0
-	case "lesser_than":
+	case "lesser_than", "<":
 		return ct.Cmp() < 0
-	case "equal_or_lesser_than":
+	case "equal_or_lesser_than", "<=":
 		return ct.Cmp() <= 0
 	}
 

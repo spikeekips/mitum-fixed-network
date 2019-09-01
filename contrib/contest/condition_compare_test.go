@@ -168,6 +168,126 @@ func TestConditionCompare(t *testing.T) {
 			hint:     reflect.String,
 			expected: true,
 		},
+		{
+			name:     "in: string",
+			op:       "in",
+			a:        "a",
+			b:        []string{"a", "b"},
+			hint:     reflect.String,
+			expected: true,
+		},
+		{
+			name:     "in: string, but not in",
+			op:       "in",
+			a:        "c",
+			b:        []string{"a", "b"},
+			hint:     reflect.String,
+			expected: false,
+		},
+		{
+			name:     "not in: string",
+			op:       "not in",
+			a:        "c",
+			b:        []string{"a", "b"},
+			hint:     reflect.String,
+			expected: true,
+		},
+		{
+			name:     "not in: string, but in",
+			op:       "not in",
+			a:        "a",
+			b:        []string{"a", "b"},
+			hint:     reflect.String,
+			expected: false,
+		},
+		{
+			name:     "in: int",
+			op:       "in",
+			a:        33,
+			b:        []int{33, 34},
+			hint:     reflect.Int,
+			expected: true,
+		},
+		{
+			name:     "in: int, but not in",
+			op:       "in",
+			a:        35,
+			b:        []int{33, 34},
+			hint:     reflect.Int,
+			expected: false,
+		},
+		{
+			name:     "not in: int",
+			op:       "not in",
+			a:        35,
+			b:        []int{33, 34},
+			hint:     reflect.Int,
+			expected: true,
+		},
+		{
+			name:     "not in: int, but in",
+			op:       "not in",
+			a:        33,
+			b:        []int{33, 34},
+			hint:     reflect.Int,
+			expected: false,
+		},
+		{
+			name:     "equal: int",
+			op:       "equal",
+			a:        int(1),
+			b:        int(1),
+			hint:     reflect.Int,
+			expected: true,
+		},
+		{
+			name:     "regexp: matched",
+			op:       "regexp",
+			a:        "show me",
+			b:        "^show",
+			hint:     reflect.String,
+			expected: true,
+		},
+		{
+			name:     "not regexp: matched",
+			op:       "rnot egexp",
+			a:        "show me",
+			b:        "^show",
+			hint:     reflect.String,
+			expected: false,
+		},
+		{
+			name:     "not regexp: not matched",
+			op:       "not regexp",
+			a:        "show me",
+			b:        "^show0",
+			hint:     reflect.String,
+			expected: true,
+		},
+		{
+			name:     "regexp: not matched",
+			op:       "regexp",
+			a:        "show me",
+			b:        "^show0",
+			hint:     reflect.String,
+			expected: false,
+		},
+		{
+			name:     "regexp: int matched",
+			op:       "regexp",
+			a:        int(12345),
+			b:        "^12",
+			hint:     reflect.String,
+			expected: true,
+		},
+		{
+			name:     "regexp: int not matched",
+			op:       "regexp",
+			a:        int(12345),
+			b:        "678",
+			hint:     reflect.String,
+			expected: false,
+		},
 	}
 
 	for i, c := range cases {
@@ -176,9 +296,8 @@ func TestConditionCompare(t *testing.T) {
 		t.Run(
 			c.name,
 			func(*testing.T) {
-				var result bool
-				result = compare(c.op, c.a, c.b, c.hint)
-				assert.Equal(t, c.expected, result, "%d: %v; %v %s %v", i, c.name, c.op, c.expected, result)
+				result := compare(c.op, c.a, c.b, c.hint)
+				assert.Equal(t, c.expected, result, "%d: %v; %v %v %v", i, c.name, c.op, c.expected, result)
 			},
 		)
 	}

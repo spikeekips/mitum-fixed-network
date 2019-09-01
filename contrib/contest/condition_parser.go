@@ -139,6 +139,16 @@ func (cp ConditionParser) parseComparisonExpr(expr *sqlparser.ComparisonExpr) (C
 		return nil, err
 	}
 
+	switch expr.Operator {
+	case "regexp", "not regexp":
+		re, err := regexp.Compile(val[0].(string))
+		if err != nil {
+			return nil, err
+		}
+
+		val = []interface{}{re}
+	}
+
 	return NewComparison(colName, expr.Operator, val, kind), nil
 }
 

@@ -30,8 +30,13 @@ func (bc Comparison) Op() string {
 	return bc.op
 }
 
-func (bc Comparison) Value() []interface{} {
-	return bc.value
+func (bc Comparison) Value() interface{} {
+	switch bc.op {
+	case "in", "not in":
+		return bc.value
+	}
+
+	return bc.value[0]
 }
 
 func (bc Comparison) Hint() reflect.Kind {
@@ -68,6 +73,14 @@ func (bc JointConditions) Add(conditions ...Condition) JointConditions {
 	bc.conditions = append(bc.conditions, conditions...)
 
 	return bc
+}
+
+func (bc JointConditions) Conditions() []Condition {
+	return bc.conditions
+}
+
+func (bc JointConditions) Op() string {
+	return bc.op
 }
 
 func (bc JointConditions) Hint() reflect.Kind {

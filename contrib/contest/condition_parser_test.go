@@ -104,6 +104,11 @@ func TestCondition(t *testing.T) {
 			expected: "(a not regexp [foo.*])",
 		},
 		{
+			name:  "simple: bad regexp expression",
+			where: `a not regexp "foo(.*"`,
+			err:   "error parsing regexp",
+		},
+		{
 			name:     "joint: and with 2 comparison",
 			where:    `a = 1 and b = 2`,
 			expected: "(and:(a = [1]), (b = [2]))",

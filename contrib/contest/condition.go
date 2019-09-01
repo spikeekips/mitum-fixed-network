@@ -2,13 +2,12 @@ package main
 
 import (
 	"fmt"
+	"reflect"
 	"strings"
 )
 
 type Condition interface {
-	Name() string
-	Op() string
-	Value() []interface{}
+	Hint() reflect.Kind
 	String() string
 }
 
@@ -16,10 +15,11 @@ type Comparison struct {
 	name  string
 	op    string
 	value []interface{}
+	kind  reflect.Kind
 }
 
-func NewComparison(name, op string, value []interface{}) Comparison {
-	return Comparison{name: name, op: op, value: value}
+func NewComparison(name, op string, value []interface{}, kind reflect.Kind) Comparison {
+	return Comparison{name: name, op: op, value: value, kind: kind}
 }
 
 func (bc Comparison) Name() string {
@@ -32,6 +32,10 @@ func (bc Comparison) Op() string {
 
 func (bc Comparison) Value() []interface{} {
 	return bc.value
+}
+
+func (bc Comparison) Hint() reflect.Kind {
+	return bc.kind
 }
 
 func (bc Comparison) String() string {
@@ -66,16 +70,8 @@ func (bc JointConditions) Add(conditions ...Condition) JointConditions {
 	return bc
 }
 
-func (bc JointConditions) Name() string {
-	return ""
-}
-
-func (bc JointConditions) Op() string {
-	return bc.op
-}
-
-func (bc JointConditions) Value() []interface{} {
-	return nil
+func (bc JointConditions) Hint() reflect.Kind {
+	return reflect.Invalid
 }
 
 func (bc JointConditions) String() string {

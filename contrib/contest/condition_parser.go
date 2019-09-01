@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"reflect"
 	"regexp"
 	"strconv"
 	"strings"
@@ -11,7 +12,14 @@ import (
 )
 
 var puncs = strings.Join(
-	[]string{"=", "<", ">", "<=", ">=", "!=", "<=>", "->", "->>"},
+	func() []string {
+		var es []string
+		for _, s := range []string{"=", "<", ">", "<=", ">=", "!=", "<=>", "->", "->>"} {
+			es = append(es, regexp.QuoteMeta(s))
+		}
+
+		return es
+	}(),
 	"|",
 )
 var connts = strings.Join(
@@ -99,6 +107,7 @@ func (cp ConditionParser) parseSQLNode(expr sqlparser.SQLNode) (Condition, error
 func (cp ConditionParser) parseComparisonExpr(expr *sqlparser.ComparisonExpr) (Condition, error) {
 	var colName string
 	var val []interface{}
+	var kind reflect.Kind
 
 	err := expr.WalkSubtree(func(n sqlparser.SQLNode) (bool, error) {
 		switch t := n.(type) {
@@ -109,17 +118,19 @@ func (cp ConditionParser) parseComparisonExpr(expr *sqlparser.ComparisonExpr) (C
 			}
 			colName = c
 		case *sqlparser.SQLVal:
-			v, err := cp.parseSQLVal(t)
+			v, k, err := cp.parseSQLVal(t)
 			if err != nil {
 				return false, err
 			}
 			val = append(val, v)
+			kind = k
 		case sqlparser.ValTuple:
-			v, err := cp.parseValTuple(t)
+			v, k, err := cp.parseValTuple(t)
 			if err != nil {
 				return false, err
 			}
 			val = v
+			kind = k
 		}
 
 		return false, nil
@@ -128,7 +139,7 @@ func (cp ConditionParser) parseComparisonExpr(expr *sqlparser.ComparisonExpr) (C
 		return nil, err
 	}
 
-	return NewComparison(colName, expr.Operator, val), nil
+	return NewComparison(colName, expr.Operator, val, kind), nil
 }
 
 func (cp ConditionParser) parseJointExpr(joint string, expr sqlparser.SQLNode) (Condition, error) {
@@ -169,27 +180,32 @@ func (cp ConditionParser) parseColName(expr *sqlparser.ColName) (string, error) 
 	return colName, nil
 }
 
-func (cp ConditionParser) parseSQLVal(expr *sqlparser.SQLVal) (interface{}, error) {
+func (cp ConditionParser) parseSQLVal(expr *sqlparser.SQLVal) (interface{}, reflect.Kind, error) {
 	var v interface{}
+	var kind reflect.Kind
+
 	var err error
 	switch expr.Type {
 	case sqlparser.StrVal:
 		v = string(expr.Val)
+		kind = reflect.String
 	case sqlparser.IntVal:
 		v, err = strconv.ParseInt(string(expr.Val), 10, 64)
+		kind = reflect.Int64
 	case sqlparser.FloatVal:
 		v, err = strconv.ParseFloat(string(expr.Val), 64)
+		kind = reflect.Float64
 		//case sqlparser.HexNum:
 		//case sqlparser.HexVal:
 		//case sqlparser.ValArg:
 	default:
-		return nil, xerrors.Errorf("unsupported value found; %v", string(expr.Val))
+		return nil, kind, xerrors.Errorf("unsupported value found; %v", string(expr.Val))
 	}
 
-	return v, err
+	return v, kind, err
 }
 
-func (cp ConditionParser) parseValTuple(expr sqlparser.ValTuple) ([]interface{}, error) {
+func (cp ConditionParser) parseValTuple(expr sqlparser.ValTuple) ([]interface{}, reflect.Kind, error) {
 	var exprs sqlparser.Exprs
 	_ = expr.WalkSubtree(func(n sqlparser.SQLNode) (bool, error) {
 		switch t := n.(type) {
@@ -201,15 +217,22 @@ func (cp ConditionParser) parseValTuple(expr sqlparser.ValTuple) ([]interface{},
 		return false, nil
 	})
 
+	var kind reflect.Kind = reflect.Invalid
 	var values []interface{}
+
 	err := exprs.WalkSubtree(func(n sqlparser.SQLNode) (bool, error) {
 		switch t := n.(type) {
 		case *sqlparser.SQLVal:
-			v, err := cp.parseSQLVal(t)
+			v, k, err := cp.parseSQLVal(t)
 			if err != nil {
 				return false, err
 			}
 			values = append(values, v)
+			if kind == reflect.Invalid {
+				kind = k
+			} else if kind != k {
+				return false, xerrors.Errorf("value tuple should have same type of values; %v != %v", kind, k)
+			}
 
 			return false, nil
 		}
@@ -217,10 +240,10 @@ func (cp ConditionParser) parseValTuple(expr sqlparser.ValTuple) ([]interface{},
 		return false, nil
 	})
 	if err != nil {
-		return nil, err
+		return nil, kind, err
 	} else if len(values) < 1 {
-		return nil, xerrors.Errorf("values found")
+		return nil, kind, xerrors.Errorf("values found")
 	}
 
-	return values, nil
+	return values, kind, nil
 }

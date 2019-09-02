@@ -12,6 +12,7 @@ import (
 	"golang.org/x/xerrors"
 	"gopkg.in/yaml.v2"
 
+	"github.com/spikeekips/mitum/contrib/contest/condition"
 	contest_module "github.com/spikeekips/mitum/contrib/contest/module"
 	"github.com/spikeekips/mitum/isaac"
 )
@@ -20,6 +21,7 @@ type Config struct {
 	Global         *NodeConfig
 	Nodes          map[string]*NodeConfig
 	NumberOfNodes_ *uint `yaml:"number_of_nodes,omitempty"`
+	Condition      map[string]*ConditionConfig
 }
 
 func LoadConfig(f string, numberOfNodes uint) (*Config, error) {
@@ -171,6 +173,17 @@ func (cn *Config) IsValid() error {
 		}
 
 		if err := n.IsValid(cn.Global); err != nil {
+			return err
+		}
+	}
+
+	all, found := cn.Condition["all"]
+	if !found {
+		all = defaultConditionConfig()
+	}
+
+	for _, c := range cn.Condition {
+		if err := c.IsValid(all); err != nil {
 			return err
 		}
 	}
@@ -567,6 +580,44 @@ func (bmc *BallotMakerConfig) IsValid(global *BallotMakerConfig) error {
 			return xerrors.Errorf("`stage` must be string; %v", (*bmc)["stage"])
 		} else if _, err := isaac.StageFromString(d); err != nil {
 			return xerrors.Errorf("`round` must be valid Stage; %v: %w", (*bmc)["stage"], err)
+		}
+	}
+
+	return nil
+}
+
+type ConditionConfig map[string][]string
+
+func defaultConditionConfig() *ConditionConfig {
+	return &ConditionConfig{}
+}
+
+func (cc *ConditionConfig) IsValid(global *ConditionConfig) error {
+	if len(*cc) < 1 {
+		if global == nil {
+			*cc = *defaultConditionConfig()
+		} else {
+			*cc = *global
+		}
+
+		return nil
+	}
+
+	cp := condition.NewConditionParser()
+	for _, qs := range *cc {
+		for _, q := range qs {
+			var err error
+			if _, e := cp.Parse(q); e != nil {
+				err = xerrors.Errorf("invalid query found; %q: %w", q, e)
+			}
+			log.Debug().
+				Err(err).
+				Str("query", q).
+				Msg("condition query parsed")
+
+			if err != nil {
+				return err
+			}
 		}
 	}
 

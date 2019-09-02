@@ -80,6 +80,78 @@ func TestConditionChecker(t *testing.T) {
 			o:        `{"a": 1, "b": {"c": 2, "d": "showme"}}`,
 			expected: true,
 		},
+		{
+			name:     "and: matched",
+			query:    `a=1 AND b.c=2`,
+			o:        `{"a": 1, "b": {"c": 2, "d": "showme"}}`,
+			expected: true,
+		},
+		{
+			name:     "and: not matched #0",
+			query:    `a=2 AND b.c=2`,
+			o:        `{"a": 1, "b": {"c": 2, "d": "showme"}}`,
+			expected: false,
+		},
+		{
+			name:     "and: not matched #1",
+			query:    `a=1 AND b.c=3`,
+			o:        `{"a": 1, "b": {"c": 2, "d": "showme"}}`,
+			expected: false,
+		},
+		{
+			name:     "or: matched",
+			query:    `a=1 OR b.c=2`,
+			o:        `{"a": 1, "b": {"c": 2, "d": "showme"}}`,
+			expected: true,
+		},
+		{
+			name:     "or: not matched",
+			query:    `a=2 OR b.c=3`,
+			o:        `{"a": 1, "b": {"c": 2, "d": "showme"}}`,
+			expected: false,
+		},
+		{
+			name:     "nested: matched",
+			query:    `(a=1 OR b.c=3) AND (a=2 OR b.d="showme")`,
+			o:        `{"a": 1, "b": {"c": 2, "d": "showme"}}`,
+			expected: true,
+		},
+		{
+			name:     "null: matched",
+			query:    `a=null`,
+			o:        `{"a": null}`,
+			expected: true,
+		},
+		{
+			name:     "null: string matched",
+			query:    `a=""`,
+			o:        `{"a": null}`,
+			expected: false,
+		},
+		{
+			name:     "null: int matched",
+			query:    `a=1`,
+			o:        `{"a": null}`,
+			expected: false,
+		},
+		{
+			name:     "null: float matched #0",
+			query:    `a=1.1`,
+			o:        `{"a": null}`,
+			expected: false,
+		},
+		{
+			name:     "null: float matched #1",
+			query:    `a>1.1`,
+			o:        `{"a": null}`,
+			expected: false,
+		},
+		{
+			name:     "null: float matched #2",
+			query:    `a=null`,
+			o:        `{"a": 1}`,
+			expected: false,
+		},
 	}
 
 	for i, c := range cases {

@@ -1,6 +1,8 @@
 package main
 
-import "sort"
+import (
+	"sort"
+)
 
 type CompareType interface {
 	Cmp() int
@@ -66,4 +68,20 @@ func (ci CompareString) Cmp() int {
 	}
 
 	return -1
+}
+
+type CompareNil struct {
+	a interface{}
+}
+
+func NewCompareNil(a interface{}) CompareNil {
+	return CompareNil{a: a}
+}
+
+func (ci CompareNil) Cmp() int {
+	if ci.a == nil {
+		return 0
+	}
+
+	return 1
 }

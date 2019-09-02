@@ -33,6 +33,8 @@ var re_column = regexp.MustCompile(
 	),
 )
 
+var reflectNilKind reflect.Kind = reflect.UnsafePointer + 1
+
 type ConditionParser struct {
 }
 
@@ -131,6 +133,8 @@ func (cp ConditionParser) parseComparisonExpr(expr *sqlparser.ComparisonExpr) (C
 			}
 			val = v
 			kind = k
+		case *sqlparser.NullVal:
+			kind = reflectNilKind
 		}
 
 		return false, nil

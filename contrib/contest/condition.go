@@ -36,6 +36,10 @@ func (bc Comparison) Value() interface{} {
 		return bc.value
 	}
 
+	if len(bc.value) < 1 {
+		return nil
+	}
+
 	return bc.value[0]
 }
 

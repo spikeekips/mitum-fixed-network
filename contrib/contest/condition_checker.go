@@ -65,6 +65,7 @@ func lookup(o map[string]interface{}, keys string) (interface{}, bool) {
 }
 
 func lookupByKeys(o map[string]interface{}, keys []string) (interface{}, bool) {
+	var found bool
 	var f interface{}
 	for k, v := range o {
 		if k != keys[0] {
@@ -72,11 +73,12 @@ func lookupByKeys(o map[string]interface{}, keys []string) (interface{}, bool) {
 		}
 
 		f = v
+		found = true
 		break
 	}
 
 	if len(keys) == 1 {
-		return f, f != nil
+		return f, found
 	}
 
 	if vv, ok := f.(map[string]interface{}); !ok {
@@ -113,15 +115,6 @@ func indirectToInt(v interface{}) (int64, error) {
 	}
 }
 
-func convertToString(v interface{}) (string, error) {
-	switch reflect.TypeOf(v).Kind() {
-	case reflect.String:
-		return v.(string), nil
-	default:
-		return fmt.Sprintf("%v", v), nil
-	}
-}
-
 func indirectToFloat(v interface{}) (float64, error) {
 	k := reflect.TypeOf(v).Kind()
 	switch {
@@ -137,6 +130,15 @@ func indirectToFloat(v interface{}) (float64, error) {
 		return float64(a), nil
 	default:
 		return float64(0), xerrors.Errorf("value is not float; %v", v)
+	}
+}
+
+func convertToString(v interface{}) (string, error) {
+	switch reflect.TypeOf(v).Kind() {
+	case reflect.String:
+		return v.(string), nil
+	default:
+		return fmt.Sprintf("%v", v), nil
 	}
 }
 
@@ -220,6 +222,10 @@ func compare(op string, a, b interface{}, kind reflect.Kind) bool {
 	var ct CompareType
 	switch kind {
 	case reflect.String:
+		if a == nil {
+			return false
+		}
+
 		ca, err := convertToString(a)
 		if err != nil {
 			return false
@@ -240,40 +246,51 @@ func compare(op string, a, b interface{}, kind reflect.Kind) bool {
 		reflect.Uint16,
 		reflect.Uint32,
 		reflect.Uint64:
-		cb, err := indirectToInt(b)
+		if a == nil {
+			return false
+		}
+
+		ca, err := convertToInt64(a)
 		if err != nil {
 			return false
 		}
-		ca, err := convertToInt64(a)
+		cb, err := indirectToInt(b)
 		if err != nil {
 			return false
 		}
 		ct = NewCompareInt(ca, cb)
 	case reflect.Float32, reflect.Float64:
-		cb, err := indirectToFloat(b)
-		if err != nil {
+		if a == nil {
 			return false
 		}
+
 		ca, err := convertToFloat64(a)
 		if err != nil {
 			return false
 		}
+		cb, err := indirectToFloat(b)
+		if err != nil {
+			return false
+		}
 		ct = NewCompareFloat(ca, cb)
+	case reflectNilKind:
+		ct = NewCompareNil(a)
 	}
 
+	cmp := ct.Cmp()
 	switch op {
 	case "equal", "=":
-		return ct.Cmp() == 0
+		return cmp == 0
 	case "not equal", "!=":
-		return ct.Cmp() != 0
+		return cmp != 0
 	case "greater_than", ">":
-		return ct.Cmp() > 0
+		return cmp > 0
 	case "equal_or_greater_than", ">=":
-		return ct.Cmp() >= 0
+		return cmp >= 0
 	case "lesser_than", "<":
-		return ct.Cmp() < 0
+		return cmp < 0
 	case "equal_or_lesser_than", "<=":
-		return ct.Cmp() <= 0
+		return cmp <= 0
 	}
 
 	return false

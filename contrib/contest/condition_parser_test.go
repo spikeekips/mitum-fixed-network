@@ -148,6 +148,11 @@ func TestCondition(t *testing.T) {
 			where:    `(a.x.y.z > 1 or b < 2) and (c.o.p.q.r >= 3 and d.s.t.u <= 4) or (e.v.w != 5 and f.m.n not in (6, 7))`,
 			expected: "(or:(and:(or:(a.x.y.z > [1]), (b < [2])), (and:(c.o.p.q.r >= [3]), (d.s.t.u <= [4]))), (and:(e.v.w != [5]), (f.m.n not in [6,7])))",
 		},
+		{
+			name:     "null: #0",
+			where:    `a = null`,
+			expected: "(a = [])",
+		},
 	}
 
 	cp := NewConditionParser()

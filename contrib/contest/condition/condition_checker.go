@@ -139,7 +139,7 @@ func indirectToFloat(v interface{}) (float64, error) {
 	}
 }
 
-func convertToString(v interface{}) (string, error) {
+func convertToString(v interface{}) (string, error) { // nolint
 	switch reflect.TypeOf(v).Kind() {
 	case reflect.String:
 		return v.(string), nil
@@ -327,15 +327,6 @@ func NewMultipleConditionChecker(queries []string, limit uint) (
 		satisfied:      &sync.Map{},
 		limit:          limit,
 	}, nil
-}
-
-func (mc *MultipleConditionChecker) logItems(query string) []LogItem {
-	i, found := mc.satisfied.Load(query)
-	if !found {
-		return nil
-	}
-
-	return i.([]LogItem)
 }
 
 func (mc *MultipleConditionChecker) addLogItems(query string, li LogItem) bool {

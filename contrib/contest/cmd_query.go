@@ -77,7 +77,9 @@ var queryCmd = &cobra.Command{
 		for _, o := range conditionChecker.Satisfied() {
 			for _, li := range o {
 				if enc != nil {
-					enc.Encode(json.RawMessage(li.Bytes()))
+					if err := enc.Encode(json.RawMessage(li.Bytes())); err != nil {
+						log.Error().Err(err).Msg("failed to encode log item")
+					}
 				} else {
 					fmt.Fprint(hw, string(li.Bytes()))
 				}

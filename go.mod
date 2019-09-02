@@ -3,6 +3,7 @@ module github.com/spikeekips/mitum
 go 1.12
 
 require (
+	github.com/alecthomas/chroma v0.6.6
 	github.com/beevik/ntp v0.2.0
 	github.com/btcsuite/btcutil v0.0.0-20190425235716-9e5f4b9a998d
 	github.com/ethereum/go-ethereum v1.9.2

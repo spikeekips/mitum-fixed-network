@@ -87,7 +87,7 @@ func (sc *StateController) loopState() {
 				Str("new_state", sct.State().String()).
 				Msg("error change state")
 		} else {
-			sc.Log().Debug().
+			sc.Log().Info().
 				Str("current_state", current.String()).
 				Str("new_state", sct.State().String()).
 				Msg("state changed")

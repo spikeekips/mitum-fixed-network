@@ -103,7 +103,7 @@ func (cp ConditionParser) parseSQLNode(expr sqlparser.SQLNode) (Condition, error
 		return conditions[0], nil
 	}
 
-	return jc.Add(NewJointConditions("", conditions...)), nil
+	return jc.Append(NewJointConditions("", conditions...)), nil
 }
 
 func (cp ConditionParser) parseComparisonExpr(expr *sqlparser.ComparisonExpr) (Condition, error) {
@@ -179,7 +179,7 @@ func (cp ConditionParser) parseJointExpr(joint string, expr sqlparser.SQLNode) (
 			continue
 		}
 
-		jc = jc.Add(cc)
+		jc = jc.Append(cc).(JointConditions)
 	}
 
 	return jc, nil

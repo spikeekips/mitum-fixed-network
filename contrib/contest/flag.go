@@ -23,7 +23,7 @@ var (
 	flagExitAfter     time.Duration
 	flagNumberOfNodes uint = 3
 	flagQuiet         bool
-	flagQuery         string
+	flagQueries       []string
 	flagJSONPretty    bool
 )
 

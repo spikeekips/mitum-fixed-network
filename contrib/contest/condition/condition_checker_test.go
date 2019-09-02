@@ -1,7 +1,6 @@
 package condition
 
 import (
-	"encoding/json"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -160,8 +159,8 @@ func TestConditionChecker(t *testing.T) {
 		t.Run(
 			c.name,
 			func(*testing.T) {
-				o := map[string]interface{}{}
-				if err := json.Unmarshal([]byte(c.o), &o); err != nil {
+				o, err := NewLogItem([]byte(c.o))
+				if err != nil {
 					assert.NoError(t, err)
 					return
 				}

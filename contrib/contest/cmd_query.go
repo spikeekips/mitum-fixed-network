@@ -4,13 +4,9 @@ import (
 	"bufio"
 	"encoding/json"
 	"fmt"
-	"io"
 	"os"
+	"sync"
 
-	"github.com/alecthomas/chroma"
-	"github.com/alecthomas/chroma/formatters"
-	"github.com/alecthomas/chroma/lexers"
-	"github.com/alecthomas/chroma/styles"
 	"github.com/spf13/cobra"
 
 	"github.com/spikeekips/mitum/contrib/contest/condition"
@@ -29,159 +25,70 @@ var queryCmd = &cobra.Command{
 		defer lf.Close() // nolint
 
 		log.Debug().
-			Str("query", flagQuery).
+			Strs("query", flagQueries).
 			Msg("query")
 
-		var conditionChecker *condition.ConditionChecker
-		if len(flagQuery) > 0 {
-			cc, err := condition.NewConditionChecker(flagQuery)
+		var conditionChecker *condition.MultipleConditionChecker
+		if len(flagQueries) > 0 {
+			cc, err := condition.NewMultipleConditionChecker(flagQueries, 1)
 			if err != nil {
 				cmd.Println("Error: wrong query:", err.Error())
 				os.Exit(1)
 			}
-			conditionChecker = &cc
+			conditionChecker = cc
 		}
 
-		lw := NewLogWatcher(conditionChecker, flagJSONPretty)
-		lw.Start()
+		satisfiedChan := make(chan bool, 1)
+		lw := condition.NewLogWatcher(conditionChecker, satisfiedChan)
+		_ = lw.Start()
 
-		reader := bufio.NewReader(lf)
-		for {
-			b, err := reader.ReadBytes('\n')
-			if err != nil {
-				break
+		var wait sync.WaitGroup
+		wait.Add(1)
+		go func() {
+			reader := bufio.NewReader(lf)
+
+		end:
+			for {
+				select {
+				case <-satisfiedChan:
+					wait.Done()
+					break end
+				default:
+					b, err := reader.ReadBytes('\n')
+					if err != nil {
+						wait.Done()
+						break end
+					}
+					lw.Write(b)
+				}
 			}
-			lw.Write(b)
+		}()
+		wait.Wait()
+
+		hw := condition.NewHighlightWriter(os.Stdout)
+
+		var enc *json.Encoder
+		if flagJSONPretty {
+			enc = json.NewEncoder(hw)
+			enc.SetEscapeHTML(false)
+			enc.SetIndent("", "  ")
+		}
+
+		for _, o := range conditionChecker.Satisfied() {
+			for _, li := range o {
+				if enc != nil {
+					enc.Encode(json.RawMessage(li.Bytes()))
+				} else {
+					fmt.Fprint(hw, string(li.Bytes()))
+				}
+			}
 		}
 	},
 }
 
 func init() {
-	queryCmd.Flags().StringVar(&flagQuery, "query", "", "query")
+	queryCmd.Flags().StringArrayVar(&flagQueries, "query", nil, "query")
 	queryCmd.Flags().BoolVar(&flagJSONPretty, "pretty", false, "pretty json output")
 
 	rootCmd.AddCommand(queryCmd)
-}
-
-type LogItem struct {
-	raw []byte
-	o   map[string]interface{}
-}
-
-func NewLogItem(b []byte) (LogItem, error) {
-	o := map[string]interface{}{}
-	if err := json.Unmarshal(b, &o); err != nil {
-		return LogItem{}, err
-	}
-
-	return LogItem{raw: b, o: o}, nil
-}
-
-type LogWatcher struct {
-	conditionChecker *condition.ConditionChecker
-	chanRead         chan LogItem
-	enc              *json.Encoder
-	hw               HighlightWriter
-}
-
-func NewLogWatcher(
-	conditionChecker *condition.ConditionChecker,
-	pretty bool,
-) *LogWatcher {
-	var enc *json.Encoder
-
-	hw := NewHighlightWriter(os.Stdout)
-	if pretty {
-		enc = json.NewEncoder(hw)
-		enc.SetEscapeHTML(false)
-		enc.SetIndent("", "  ")
-	}
-
-	return &LogWatcher{
-		conditionChecker: conditionChecker,
-		chanRead:         make(chan LogItem),
-		enc:              enc,
-		hw:               hw,
-	}
-}
-
-func (lw *LogWatcher) Write(b []byte) {
-	i, err := NewLogItem(b)
-	if err != nil {
-		log.Debug().
-			Err(err).
-			Str("data", string(b)).
-			Msg("invalid data found")
-		return
-	}
-
-	lw.chanRead <- i
-}
-
-func (lw *LogWatcher) Start() {
-	go func() {
-		for o := range lw.chanRead {
-			if lw.conditionChecker == nil {
-				fmt.Println(o)
-				continue
-			}
-
-			lw.check(o)
-		}
-	}()
-}
-
-func (lw *LogWatcher) check(o LogItem) {
-	if !lw.conditionChecker.Check(o.o) {
-		return
-	}
-
-	if lw.enc != nil {
-		lw.enc.Encode(json.RawMessage(o.raw))
-		return
-	}
-	fmt.Fprint(lw.hw, string(o.raw))
-}
-
-type HighlightWriter struct {
-	w         io.Writer
-	lexer     chroma.Lexer
-	formatter chroma.Formatter
-	style     *chroma.Style
-}
-
-func NewHighlightWriter(w io.Writer) HighlightWriter {
-	lexer := "json"
-	formatter := "terminal16m"
-	// style := "github"
-	// style := "monokai"
-	// style := "vim"
-	style := "native"
-
-	f := formatters.Get(formatter)
-	if f == nil {
-		f = formatters.Fallback
-	}
-
-	s := styles.Get(style)
-	if s == nil {
-		s = styles.Fallback
-	}
-
-	l := chroma.Coalesce(lexers.Get(lexer))
-
-	return HighlightWriter{w: w, formatter: f, lexer: l, style: s}
-}
-
-func (hw HighlightWriter) Write(b []byte) (int, error) {
-	it, err := hw.lexer.Tokenise(nil, string(b))
-	if err != nil {
-		return 0, err
-	}
-
-	if err = hw.formatter.Format(hw.w, hw.style, it); err != nil {
-		return 0, err
-	}
-
-	return len(b), nil
 }

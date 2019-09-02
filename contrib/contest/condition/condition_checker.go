@@ -6,11 +6,13 @@ import (
 	"reflect"
 	"regexp"
 	"strings"
+	"sync"
 
 	"golang.org/x/xerrors"
 )
 
 type ConditionChecker struct {
+	query     string
 	condition Condition
 }
 
@@ -20,14 +22,18 @@ func NewConditionChecker(query string) (ConditionChecker, error) {
 		return ConditionChecker{}, err
 	}
 
-	return ConditionChecker{condition: condition}, nil
+	return ConditionChecker{query: query, condition: condition}, nil
 }
 
-func (dc ConditionChecker) Check(o map[string]interface{}) bool {
+func (dc ConditionChecker) Query() string {
+	return dc.query
+}
+
+func (dc ConditionChecker) Check(o LogItem) bool {
 	return dc.check(dc.condition, o)
 }
 
-func (dc ConditionChecker) check(condition Condition, o map[string]interface{}) bool {
+func (dc ConditionChecker) check(condition Condition, o LogItem) bool {
 	switch c := condition.(type) {
 	case Comparison:
 		return dc.checkComparison(c, o)
@@ -50,8 +56,8 @@ func (dc ConditionChecker) check(condition Condition, o map[string]interface{}) 
 	return true
 }
 
-func (dc ConditionChecker) checkComparison(condition Comparison, o map[string]interface{}) bool {
-	v, found := lookup(o, condition.Name())
+func (dc ConditionChecker) checkComparison(condition Comparison, o LogItem) bool {
+	v, found := lookup(o.Map(), condition.Name())
 	if !found {
 		return false
 	}
@@ -294,4 +300,113 @@ func compare(op string, a, b interface{}, kind reflect.Kind) bool {
 	}
 
 	return false
+}
+
+type MultipleConditionChecker struct {
+	checkers       []ConditionChecker
+	activeCheckers []ConditionChecker
+	satisfied      *sync.Map
+	limit          uint
+}
+
+func NewMultipleConditionChecker(queries []string, limit uint) (
+	*MultipleConditionChecker, error,
+) {
+	var checkers []ConditionChecker
+	for _, q := range queries {
+		cd, err := NewConditionChecker(q)
+		if err != nil {
+			return nil, err
+		}
+		checkers = append(checkers, cd)
+	}
+
+	return &MultipleConditionChecker{
+		checkers:       checkers,
+		activeCheckers: checkers,
+		satisfied:      &sync.Map{},
+		limit:          limit,
+	}, nil
+}
+
+func (mc *MultipleConditionChecker) logItems(query string) []LogItem {
+	i, found := mc.satisfied.Load(query)
+	if !found {
+		return nil
+	}
+
+	return i.([]LogItem)
+}
+
+func (mc *MultipleConditionChecker) addLogItems(query string, li LogItem) bool {
+	var lis []LogItem
+	if i, found := mc.satisfied.Load(query); found {
+		lis = i.([]LogItem)
+	}
+
+	if len(lis) >= int(mc.limit) {
+		return false
+	}
+
+	lis = append(lis, li)
+	mc.satisfied.Store(query, lis)
+
+	return true
+}
+
+func (mc *MultipleConditionChecker) Check(o LogItem) bool {
+	if len(mc.activeCheckers) < 1 {
+		return false
+	}
+
+	var ok bool
+	var satisfied []ConditionChecker
+	for _, checker := range mc.activeCheckers {
+		if checker.Check(o) {
+			if !mc.addLogItems(checker.Query(), o) {
+				satisfied = append(satisfied, checker)
+			}
+			ok = true
+		}
+	}
+
+	if len(satisfied) > 0 {
+		var actives []ConditionChecker
+		for _, a := range mc.activeCheckers {
+			var found bool
+			for _, b := range satisfied {
+				if a.Query() == b.Query() {
+					found = true
+					break
+				}
+			}
+			if !found {
+				actives = append(actives, a)
+			}
+		}
+		mc.activeCheckers = actives
+	}
+
+	return ok
+}
+
+func (mc *MultipleConditionChecker) Satisfied() map[string][]LogItem {
+	o := map[string][]LogItem{}
+
+	mc.satisfied.Range(func(k, v interface{}) bool {
+		o[k.(string)] = v.([]LogItem)
+		return true
+	})
+
+	return o
+}
+
+func (mc *MultipleConditionChecker) AllSatisfied() bool {
+	var l int
+	mc.satisfied.Range(func(k, v interface{}) bool {
+		l++
+		return true
+	})
+
+	return l == len(mc.checkers)
 }

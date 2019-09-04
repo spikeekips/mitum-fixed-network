@@ -18,10 +18,12 @@ import (
 var (
 	sigc           chan os.Signal
 	exitHooks      []func()
+	exitCode       int = 0
 	memProfileFile *os.File
 	traceFile      *os.File
 	log            zerolog.Logger
 	logOutput      io.Writer
+	stdoutLog      zerolog.Logger
 )
 
 var rootCmd = &cobra.Command{
@@ -68,7 +70,7 @@ var rootCmd = &cobra.Command{
 		}
 
 		logContext := zerolog.
-			New(logOutput).
+			New(os.Stdout).
 			With().
 			Timestamp()
 
@@ -78,7 +80,8 @@ var rootCmd = &cobra.Command{
 				Stack()
 		}
 
-		log = logContext.Logger().Level(flagLogLevel.lvl)
+		stdoutLog = logContext.Logger().Level(flagLogLevel.lvl)
+		log = stdoutLog.Output(logOutput)
 
 		log.Debug().
 			RawJSON("flags", printFlagsJSON(cmd)).
@@ -99,8 +102,16 @@ var rootCmd = &cobra.Command{
 				h()
 			}
 
-			log.Debug().Str("sig", s.String()).Msg("contest stopped by force")
-			os.Exit(0)
+			log.Info().
+				Str("sig", s.String()).
+				Int("exit", exitCode).
+				Msg("contest stopped by force")
+
+			if l, ok := logOutput.(diode.Writer); ok {
+				l.Close()
+			}
+
+			os.Exit(exitCode)
 		}()
 	},
 	PersistentPostRun: func(cmd *cobra.Command, args []string) {
@@ -189,5 +200,8 @@ func main() {
 		os.Exit(1)
 	}
 
-	os.Exit(0)
+	log.Info().
+		Int("exit", exitCode).
+		Msg("contest stopped")
+	os.Exit(exitCode)
 }

@@ -11,7 +11,6 @@ import (
 	"time"
 
 	"github.com/fatih/color"
-	"github.com/rs/zerolog"
 	"github.com/spf13/cobra"
 
 	"github.com/spikeekips/mitum/common"
@@ -19,15 +18,11 @@ import (
 	"github.com/spikeekips/mitum/node"
 )
 
-var stdoutLog zerolog.Logger
-
 var runCmd = &cobra.Command{
 	Use:   "run <config>",
 	Short: "run contest",
 	Args:  cobra.ExactArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
-		stdoutLog = log.Output(os.Stdout)
-
 		if cmd.Flags().Changed("number-of-nodes") {
 			if flagNumberOfNodes < 1 {
 				cmd.Println("Error: `--number-of-nodes` should be greater than zero")
@@ -35,9 +30,9 @@ var runCmd = &cobra.Command{
 			}
 		}
 
-		stdoutLog.Info().Msg("contest started")
+		log.Info().Msg("contest started")
 		defer func() {
-			stdoutLog.Info().Msg("contest stopped")
+			log.Info().Msg("contest stopped")
 		}()
 
 		config, err := LoadConfig(args[0], flagNumberOfNodes)
@@ -46,14 +41,19 @@ var runCmd = &cobra.Command{
 			os.Exit(1)
 		}
 
-		stdoutLog.Debug().
+		log.Debug().
 			Object("config", config).
 			Dur("flagExitAfter", flagExitAfter).
 			Msg("config loaded")
 
 		var nodes *Nodes
 		nodeList := getAllNodesFromConfig(config)
-		exitHooks = append(exitHooks, func() { _ = nodes.Stop() })
+
+		previousExitHooks := exitHooks
+		exitHooks = nil
+		exitHooks = append(exitHooks, func() {
+			_ = nodes.Stop()
+		})
 
 		if config.Condition != nil {
 			satisfiedChan := make(chan bool)
@@ -76,12 +76,14 @@ var runCmd = &cobra.Command{
 					_ = lw.Stop()
 
 					satisfied := cp.AllSatisfied()
-					stdoutLog.Info().
+					log.Info().
 						Bool("satisfied", satisfied).
 						Msg("all satisfied?")
 
 					if satisfied {
 						printSatisfied(cp)
+					} else {
+						exitCode = 1
 					}
 				},
 			)
@@ -92,6 +94,7 @@ var runCmd = &cobra.Command{
 			_ = lw.SetLogger(stdoutLog)
 			_ = lw.Start()
 		}
+		exitHooks = append(exitHooks, previousExitHooks...)
 
 		nodes, err = NewNodes(config, nodeList)
 		if err != nil {
@@ -105,13 +108,9 @@ var runCmd = &cobra.Command{
 			}
 
 			<-time.After(flagExitAfter)
-			fmt.Fprintln(
-				os.Stdout,
-				fmt.Sprintf(
-					`{"level": "info", "m": "exited", "signal": %q}`,
-					flagExitAfter.String(),
-				),
-			)
+			log.Info().
+				Dur("expire", flagExitAfter).
+				Msg("expired")
 			sigc <- syscall.SIGINT // interrupt process by force after timeout
 		}()
 

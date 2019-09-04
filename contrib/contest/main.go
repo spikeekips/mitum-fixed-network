@@ -17,9 +17,11 @@ import (
 
 var (
 	sigc           chan os.Signal
+	exitHooks      []func()
 	memProfileFile *os.File
 	traceFile      *os.File
 	log            zerolog.Logger
+	logOutput      io.Writer
 )
 
 var rootCmd = &cobra.Command{
@@ -27,7 +29,6 @@ var rootCmd = &cobra.Command{
 	Short: "contest is the consensus tester of ISAAC+",
 	Args:  cobra.NoArgs,
 	PersistentPreRun: func(cmd *cobra.Command, args []string) {
-		var logOutput io.Writer
 		if FlagLogOut == "null" {
 			logOutput = nil
 		} else if len(FlagLogOut) < 1 {
@@ -86,8 +87,7 @@ var rootCmd = &cobra.Command{
 		startProfile()
 
 		sigc = make(chan os.Signal, 1)
-		signal.Notify(
-			sigc,
+		signal.Notify(sigc,
 			syscall.SIGTERM,
 			syscall.SIGQUIT,
 		)
@@ -95,14 +95,18 @@ var rootCmd = &cobra.Command{
 		go func() {
 			s := <-sigc
 
-			closeProfile()
+			for _, h := range exitHooks {
+				h()
+			}
 
 			log.Debug().Str("sig", s.String()).Msg("contest stopped by force")
 			os.Exit(0)
 		}()
 	},
 	PersistentPostRun: func(cmd *cobra.Command, args []string) {
-		closeProfile()
+		for _, h := range exitHooks {
+			h()
+		}
 	},
 }
 
@@ -165,6 +169,10 @@ func closeProfile() {
 
 		log.Debug().Msg("trace closed")
 	}
+}
+
+func init() {
+	exitHooks = append(exitHooks, closeProfile)
 }
 
 func main() {

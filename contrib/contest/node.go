@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"sort"
 	"strings"
 	"time"
 
@@ -266,4 +267,28 @@ func newBallotMaker(config *NodeConfig, home node.Home, l zerolog.Logger) isaac.
 	default:
 		panic(xerrors.Errorf("unknown ballot_maker found: %v", pc["name"]))
 	}
+}
+
+func getAllNodesFromConfig(config *Config) []node.Node {
+	var nodeNames []string
+	for n := range config.Nodes {
+		nodeNames = append(nodeNames, n)
+	}
+	sort.Slice(
+		nodeNames,
+		func(i, j int) bool {
+			var ni, nj int
+			_, _ = fmt.Sscanf(nodeNames[i], "n%d", &ni)
+			_, _ = fmt.Sscanf(nodeNames[j], "n%d", &nj)
+			return ni < nj
+		},
+	)
+
+	var nodeList []node.Node
+	for i, name := range nodeNames[:config.NumberOfNodes()] {
+		n := NewHome(uint(i)).SetAlias(name)
+		nodeList = append(nodeList, n)
+	}
+
+	return nodeList
 }

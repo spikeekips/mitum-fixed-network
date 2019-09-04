@@ -6,12 +6,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
-func run(cmd *cobra.Command, config *Config) error {
-	nodes, err := NewNodes(config)
-	if err != nil {
-		return err
-	}
-
+func run(cmd *cobra.Command, nodes *Nodes) error {
 	defer func() {
 		if err := nodes.Stop(); err != nil {
 			cmd.Println("Error: failed to stop nodes:", err.Error())
@@ -24,4 +19,6 @@ func run(cmd *cobra.Command, config *Config) error {
 	}
 
 	select {}
+
+	return nil
 }

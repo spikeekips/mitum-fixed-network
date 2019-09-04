@@ -3,10 +3,12 @@ module github.com/spikeekips/mitum
 go 1.12
 
 require (
+	github.com/Workiva/go-datastructures v1.0.50
 	github.com/alecthomas/chroma v0.6.6
 	github.com/beevik/ntp v0.2.0
 	github.com/btcsuite/btcutil v0.0.0-20190425235716-9e5f4b9a998d
 	github.com/ethereum/go-ethereum v1.9.2
+	github.com/fatih/color v1.7.0
 	github.com/golang/protobuf v1.3.2 // indirect
 	github.com/juju/errors v0.0.0-20190806202954-0232dcc7464d // indirect
 	github.com/juju/loggo v0.0.0-20190526231331-6e530bcce5d8 // indirect

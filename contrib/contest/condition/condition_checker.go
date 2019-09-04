@@ -25,6 +25,10 @@ func NewConditionChecker(query string) (ConditionChecker, error) {
 	return ConditionChecker{query: query, condition: condition}, nil
 }
 
+func NewConditionCheckerFromCondition(c Condition) ConditionChecker {
+	return ConditionChecker{query: c.String(), condition: c}
+}
+
 func (dc ConditionChecker) Query() string {
 	return dc.query
 }
@@ -327,6 +331,20 @@ func NewMultipleConditionChecker(queries []string, limit uint) (
 		satisfied:      &sync.Map{},
 		limit:          limit,
 	}, nil
+}
+
+func NewMultipleConditionCheckerFromConditions(conditions []Condition, limit uint) *MultipleConditionChecker {
+	var checkers []ConditionChecker
+	for _, cd := range conditions {
+		checkers = append(checkers, NewConditionCheckerFromCondition(cd))
+	}
+
+	return &MultipleConditionChecker{
+		checkers:       checkers,
+		activeCheckers: checkers,
+		satisfied:      &sync.Map{},
+		limit:          limit,
+	}
 }
 
 func (mc *MultipleConditionChecker) addLogItems(query string, li LogItem) bool {

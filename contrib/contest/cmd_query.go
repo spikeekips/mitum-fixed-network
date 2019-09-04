@@ -28,18 +28,18 @@ var queryCmd = &cobra.Command{
 			Strs("query", flagQueries).
 			Msg("query")
 
-		var conditionChecker *condition.MultipleConditionChecker
+		var cp *condition.MultipleConditionChecker
 		if len(flagQueries) > 0 {
 			cc, err := condition.NewMultipleConditionChecker(flagQueries, 1)
 			if err != nil {
 				cmd.Println("Error: wrong query:", err.Error())
 				os.Exit(1)
 			}
-			conditionChecker = cc
+			cp = cc
 		}
 
 		satisfiedChan := make(chan bool, 1)
-		lw := condition.NewLogWatcher(conditionChecker, satisfiedChan)
+		lw := condition.NewLogWatcher(cp, satisfiedChan)
 		_ = lw.Start()
 
 		var wait sync.WaitGroup
@@ -74,7 +74,7 @@ var queryCmd = &cobra.Command{
 			enc.SetIndent("", "  ")
 		}
 
-		for _, o := range conditionChecker.Satisfied() {
+		for _, o := range cp.Satisfied() {
 			for _, li := range o {
 				if enc != nil {
 					if err := enc.Encode(json.RawMessage(li.Bytes())); err != nil {

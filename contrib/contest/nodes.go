@@ -1,8 +1,6 @@
 package main
 
 import (
-	"fmt"
-	"sort"
 	"sync"
 
 	"github.com/spikeekips/mitum/node"
@@ -13,28 +11,7 @@ type Nodes struct {
 	nodes []*Node
 }
 
-func NewNodes(config *Config) (*Nodes, error) { // nolint
-	// create node
-	var nodeNames []string
-	for n := range config.Nodes {
-		nodeNames = append(nodeNames, n)
-	}
-	sort.Slice(
-		nodeNames,
-		func(i, j int) bool {
-			var ni, nj int
-			_, _ = fmt.Sscanf(nodeNames[i], "n%d", &ni)
-			_, _ = fmt.Sscanf(nodeNames[j], "n%d", &nj)
-			return ni < nj
-		},
-	)
-
-	var nodeList []node.Node
-	for i, name := range nodeNames[:config.NumberOfNodes()] {
-		n := NewHome(uint(i)).SetAlias(name)
-		nodeList = append(nodeList, n)
-	}
-
+func NewNodes(config *Config, nodeList []node.Node) (*Nodes, error) { // nolint
 	var wg sync.WaitGroup
 	wg.Add(len(nodeList))
 

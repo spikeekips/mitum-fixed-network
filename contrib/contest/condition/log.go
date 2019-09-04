@@ -3,11 +3,17 @@ package condition
 import (
 	"encoding/json"
 	"io"
+	"sync"
+	"time"
 
+	"github.com/Workiva/go-datastructures/queue"
 	"github.com/alecthomas/chroma"
 	"github.com/alecthomas/chroma/formatters"
 	"github.com/alecthomas/chroma/lexers"
 	"github.com/alecthomas/chroma/styles"
+	"github.com/rs/zerolog"
+
+	"github.com/spikeekips/mitum/common"
 )
 
 type LogItem struct {
@@ -33,9 +39,12 @@ func (li LogItem) Map() map[string]interface{} {
 }
 
 type LogWatcher struct {
+	sync.RWMutex
+	*common.Logger
+	q                *queue.Queue
 	conditionChecker *MultipleConditionChecker
-	chanRead         chan LogItem
 	satisfiedChan    chan bool
+	stopped          bool
 }
 
 func NewLogWatcher(
@@ -43,28 +52,103 @@ func NewLogWatcher(
 	satisfiedChan chan bool,
 ) *LogWatcher {
 	return &LogWatcher{
+		Logger: common.NewLogger(func(c zerolog.Context) zerolog.Context {
+			return c.Str("module", "log-watcher")
+		}),
+		q:                queue.New(100000),
 		conditionChecker: conditionChecker,
-		chanRead:         make(chan LogItem),
 		satisfiedChan:    satisfiedChan,
 	}
 }
 
-func (lw *LogWatcher) Write(b []byte) {
-	i, err := NewLogItem(b)
-	if err != nil {
-		return
+func (lw *LogWatcher) Stop() error {
+	lw.Lock()
+	lw.stopped = true
+	lw.Unlock()
+
+	// empty queue
+	for {
+		if lw.q.Len() < 1 {
+			break
+		}
+
+		_, _ = lw.q.Get(10000)
 	}
 
-	lw.chanRead <- i
+	return nil
+}
+
+func (lw *LogWatcher) Write(b []byte) (int, error) {
+	lw.RLock()
+	if lw.stopped {
+		lw.RUnlock()
+		return len(b), nil
+	}
+	lw.RUnlock()
+
+	if err := lw.q.Put(string(b)); err != nil {
+		return 0, err
+	}
+
+	return len(b), nil
+}
+
+func (lw *LogWatcher) peek() (string, error) {
+	b, err := lw.q.Peek()
+	if err != nil {
+		return "", err
+	}
+
+	return b.(string), nil
+}
+
+func (lw *LogWatcher) Left() bool {
+	return lw.q.Len() > 0
 }
 
 func (lw *LogWatcher) Start() error {
+	check := func() bool {
+		if lw.q.Len() < 1 {
+			<-time.After(time.Millisecond * 100)
+			return false
+		}
+
+		defer func() {
+			if _, err := lw.q.Get(1); err != nil {
+				lw.Log().Error().Err(err).
+					Msg("failed to get log item")
+			}
+		}()
+
+		b, err := lw.peek()
+		if err != nil {
+			lw.Log().Error().Err(err).
+				Msg("failed to peek log")
+			return false
+		} else if len(b) < 1 {
+			return false
+		}
+
+		o, err := NewLogItem([]byte(b))
+		if err != nil {
+			lw.Log().Error().Err(err).
+				Msg("failed to make LogItem")
+			return false
+		}
+
+		return lw.check(o)
+	}
+
 	go func() {
-		for o := range lw.chanRead {
-			if lw.check(o) {
-				lw.satisfiedChan <- true
+		for {
+			if check() {
+				break
 			}
 		}
+
+		lw.Stop()
+
+		lw.satisfiedChan <- true
 	}()
 
 	return nil

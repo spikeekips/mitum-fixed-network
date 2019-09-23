@@ -2,6 +2,7 @@
 
 Prepare for winter.
 
+[![Documentation](https://readthedocs.org/projects/mitum-doc/badge/?version=proto2)](https://mitum-doc.readthedocs.io/en/latest/?badge=proto2)
 [![GoDoc](https://godoc.org/github.com/golang/gddo?status.svg)](https://godoc.org/github.com/spikeekips/mitum) 
 [![FOSSA Status](https://app.fossa.com/api/projects/git%2Bgithub.com%2Fspikeekips%2Fmitum.svg?type=shield)](https://app.fossa.com/projects/git%2Bgithub.com%2Fspikeekips%2Fmitum?ref=badge_shield)
 [![Go Report Card](https://goreportcard.com/badge/github.com/spikeekips/mitum)](https://goreportcard.com/report/github.com/spikeekips/mitum)

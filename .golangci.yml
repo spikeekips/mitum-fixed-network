@@ -4,7 +4,7 @@
 # options for analysis running
 run:
   # default concurrency is a available CPU number
-  concurrency: 4
+  # concurrency: 4
 
   # timeout for analysis, e.g. 30s, 5m, default is 1m
   deadline: 1m
@@ -165,7 +165,7 @@ issues:
   # it can be disabled by `exclude-use-default: false`. To list all
   # excluded by default patterns execute `golangci-lint run --help`
   exclude:
-    - abcdef
+    - G103
 
   # Excluding configuration per-path, per-linter, per-text and per-source
   exclude-rules:

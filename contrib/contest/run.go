@@ -19,6 +19,4 @@ func run(cmd *cobra.Command, nodes *Nodes) error {
 	}
 
 	select {}
-
-	return nil
 }

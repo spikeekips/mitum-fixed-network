@@ -108,7 +108,7 @@ var rootCmd = &cobra.Command{
 				Msg("contest stopped by force")
 
 			if l, ok := logOutput.(diode.Writer); ok {
-				l.Close()
+				_ = l.Close()
 			}
 
 			os.Exit(exitCode)

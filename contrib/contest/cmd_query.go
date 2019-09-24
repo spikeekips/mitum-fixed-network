@@ -59,7 +59,7 @@ var queryCmd = &cobra.Command{
 						wait.Done()
 						break end
 					}
-					lw.Write(b)
+					_, _ = lw.Write(b)
 				}
 			}
 		}()

@@ -146,7 +146,7 @@ func (lw *LogWatcher) Start() error {
 			}
 		}
 
-		lw.Stop()
+		_ = lw.Stop()
 
 		lw.satisfiedChan <- true
 	}()

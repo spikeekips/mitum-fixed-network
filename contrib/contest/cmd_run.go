@@ -59,10 +59,8 @@ var runCmd = &cobra.Command{
 			satisfiedChan := make(chan bool)
 
 			go func() {
-				select {
-				case <-satisfiedChan:
-					sigc <- syscall.SIGINT
-				}
+				<-satisfiedChan
+				sigc <- syscall.SIGINT
 			}()
 
 			conditions := prepareConditions(config, nodeList)

@@ -82,6 +82,10 @@ func LoadConfig(f string, numberOfNodes uint) (*Config, error) {
 		}
 	}
 
+	if numberOfNodes < 1 {
+		return nil, xerrors.Errorf("number-of-nodes should be greater than 0")
+	}
+
 	config.NumberOfNodes_ = &numberOfNodes
 
 	return &config, nil

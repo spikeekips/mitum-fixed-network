@@ -17,9 +17,11 @@ type RoundrobinSuffrage struct {
 }
 
 func NewRoundrobinSuffrage(numberOfActing uint, nodes ...node.Node) *RoundrobinSuffrage {
-	node.SortNodesByAddress(nodes)
+	ns := append(nodes[:0:0], nodes...)
 
-	return &RoundrobinSuffrage{numberOfActing: numberOfActing, nodes: nodes}
+	node.SortNodesByAddress(ns)
+
+	return &RoundrobinSuffrage{numberOfActing: numberOfActing, nodes: ns}
 }
 
 func (fs *RoundrobinSuffrage) AddNodes(_ ...node.Node) isaac.Suffrage {

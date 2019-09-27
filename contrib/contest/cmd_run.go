@@ -191,9 +191,9 @@ func printSatisfied(cp *condition.MultipleConditionChecker) {
 	}
 
 	for q, os := range allSatisfied {
-		fmt.Printf("%s %q\n", color.New(color.FgGreen).Sprintf("✓"), q)
+		fmt.Printf("%s %s\n", color.New(color.FgGreen).Sprintf("query:"), q)
 
-		fmt.Println(strings.Repeat(".", termWidth))
+		fmt.Println(color.New(color.FgGreen).Sprintf("matched log:"))
 		for _, li := range os {
 			if enc != nil {
 				if err := enc.Encode(json.RawMessage(li.Bytes())); err != nil {

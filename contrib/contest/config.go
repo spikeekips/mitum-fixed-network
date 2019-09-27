@@ -111,12 +111,24 @@ func (cn *Config) IsValid() error {
 		cn.Global = defaultNodeConfig()
 	}
 
+	if cn.Nodes == nil {
+		cn.Nodes = map[string]*NodeConfig{}
+	}
+
 	if len(cn.Nodes) < 1 {
 		log.Warn().Msg("nodes empty")
 	}
 
 	if err := cn.Global.IsValid(nil); err != nil {
 		return err
+	}
+
+	// default blocks for no blocks found in Global config.
+	if len(cn.Global.Blocks) < 1 {
+		cn.Global.Blocks = []*BlockConfig{
+			NewBlockConfig(isaac.NewBlockHeight(9), isaac.Round(10)),
+			NewBlockConfig(isaac.NewBlockHeight(10), isaac.Round(11)),
+		}
 	}
 
 	// generate global blocks
@@ -129,7 +141,7 @@ func (cn *Config) IsValid() error {
 	)
 
 	var b isaac.Block
-	if inputs[0].Height.Equal(isaac.GenesisHeight) {
+	if len(inputs) > 0 && inputs[0].Height.Equal(isaac.GenesisHeight) {
 		b = contest_module.NewBlock(*inputs[0].Height, *inputs[0].Round)
 		inputs = inputs[1:]
 	} else {
@@ -245,7 +257,7 @@ func (nc *NodeConfig) IsValid(global *NodeConfig) error {
 		}
 	}
 
-	if len(nc.Blocks) < 1 {
+	if len(nc.Blocks) < 1 && globalBlocks != nil {
 		nc.blocks = globalBlocks
 		nc.Blocks = global.Blocks
 	} else if globalBlocks != nil {
@@ -344,6 +356,10 @@ func (pc *PolicyConfig) IsValid(global *PolicyConfig) error {
 type BlockConfig struct {
 	Height *isaac.Height
 	Round  *isaac.Round
+}
+
+func NewBlockConfig(height isaac.Height, round isaac.Round) *BlockConfig {
+	return &BlockConfig{Height: &height, Round: &round}
 }
 
 func (bc *BlockConfig) IsValid(*BlockConfig) error {

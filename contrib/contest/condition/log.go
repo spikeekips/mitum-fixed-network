@@ -154,6 +154,17 @@ func (lw *LogWatcher) Start() error {
 	return nil
 }
 
+func (lw *LogWatcher) CheckBytes(b []byte) bool {
+	o, err := NewLogItem(b)
+	if err != nil {
+		lw.Log().Error().Err(err).
+			Msg("failed to make LogItem")
+		return false
+	}
+
+	return lw.check(o)
+}
+
 func (lw *LogWatcher) check(o LogItem) bool {
 	if lw.conditionChecker == nil {
 		return false

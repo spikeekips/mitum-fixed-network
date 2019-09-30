@@ -47,7 +47,6 @@ var queryCmd = &cobra.Command{
 
 		satisfiedChan := make(chan bool, 1)
 		lw := condition.NewLogWatcher(cp, satisfiedChan)
-		_ = lw.Start()
 
 		reader := bufio.NewReader(lf)
 
@@ -57,10 +56,16 @@ var queryCmd = &cobra.Command{
 			if err != nil {
 				break end
 			}
-			_, _ = lw.Write(b)
+			if lw.CheckBytes(b) {
+				break end
+			}
 		}
 
-		<-satisfiedChan
+		if !cp.AllSatisfied() {
+			log.Error().Msg("matched not found")
+			exitCode = 1
+			return
+		}
 
 		hw := condition.NewHighlightWriter(os.Stdout)
 

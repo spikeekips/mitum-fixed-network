@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
-	"sync"
 
 	"github.com/spf13/cobra"
 
@@ -24,9 +23,17 @@ var queryCmd = &cobra.Command{
 		}
 		defer lf.Close() // nolint
 
-		log.Debug().
-			Strs("query", flagQueries).
-			Msg("query")
+		fi, err := os.Stat(args[0])
+		if err != nil {
+			cmd.Println("Error: failed to open log file:", err.Error())
+			os.Exit(1)
+		}
+		if fi.Mode().IsDir() {
+			cmd.Println("Error: log file is directory")
+			os.Exit(1)
+		}
+
+		log.Debug().Strs("query", flagQueries).Msg("query")
 
 		var cp *condition.MultipleConditionChecker
 		if len(flagQueries) > 0 {
@@ -42,28 +49,18 @@ var queryCmd = &cobra.Command{
 		lw := condition.NewLogWatcher(cp, satisfiedChan)
 		_ = lw.Start()
 
-		var wait sync.WaitGroup
-		wait.Add(1)
-		go func() {
-			reader := bufio.NewReader(lf)
+		reader := bufio.NewReader(lf)
 
-		end:
-			for {
-				select {
-				case <-satisfiedChan:
-					wait.Done()
-					break end
-				default:
-					b, err := reader.ReadBytes('\n')
-					if err != nil {
-						wait.Done()
-						break end
-					}
-					_, _ = lw.Write(b)
-				}
+	end:
+		for {
+			b, err := reader.ReadBytes('\n')
+			if err != nil {
+				break end
 			}
-		}()
-		wait.Wait()
+			_, _ = lw.Write(b)
+		}
+
+		<-satisfiedChan
 
 		hw := condition.NewHighlightWriter(os.Stdout)
 

@@ -118,6 +118,11 @@ var rootCmd = &cobra.Command{
 		for _, h := range exitHooks {
 			h()
 		}
+
+		log.Info().
+			Int("exit", exitCode).
+			Msg("contest stopped")
+		os.Exit(exitCode)
 	},
 }
 
@@ -199,9 +204,4 @@ func main() {
 		rootCmd.Println("Error:", err.Error())
 		os.Exit(1)
 	}
-
-	log.Info().
-		Int("exit", exitCode).
-		Msg("contest stopped")
-	os.Exit(exitCode)
 }

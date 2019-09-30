@@ -403,7 +403,7 @@ func (cs *ConsensusStateHandler) prepareProposal(vr VoteResult) error {
 }
 
 func (cs *ConsensusStateHandler) propose(vr VoteResult) error {
-	cs.Log().Debug().Msg("proposer is home; propose new proposal")
+	cs.Log().Debug().Object("vr", vr).Msg("proposer is home; propose new proposal")
 
 	proposal, err := cs.proposalMaker.Make(vr.Height(), vr.Round(), cs.homeState.Block().Hash())
 	if err != nil {

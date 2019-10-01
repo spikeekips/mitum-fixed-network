@@ -27,7 +27,7 @@ func (t *testBootingStateHandler) TestMoveToNextState() {
 	t.NoError(bs.Activate(StateContext{}))
 
 	sct := <-chanState
-	t.Equal(node.StateJoin, sct.State())
+	t.Equal(node.StateJoining, sct.State())
 }
 
 func TestBootingStateHandler(t *testing.T) {

@@ -255,7 +255,7 @@ func (cs *ConsensusStateHandler) gotINITMajority(vr VoteResult) error {
 				Object("block_vr", vr.LastBlock()).
 				Object("vr", vr).
 				Msg("init for next block; last block does not match; move to sync")
-			cs.chanState <- NewStateContext(node.StateSync).
+			cs.chanState <- NewStateContext(node.StateSyncing).
 				SetContext("vr", vr)
 
 			return xerrors.Errorf("init for next block; last block does not match; move to sync")
@@ -282,14 +282,14 @@ func (cs *ConsensusStateHandler) gotINITMajority(vr VoteResult) error {
 				Object("block_vr", vr.Block()).
 				Object("vr", vr).
 				Msg("init for next round; block does not match; move to sync")
-			cs.chanState <- NewStateContext(node.StateSync).
+			cs.chanState <- NewStateContext(node.StateSyncing).
 				SetContext("vr", vr)
 
 			return xerrors.Errorf("init for next round; block does not match; move to sync")
 		}
 	default: // unexpected height received, move to sync
 		cs.Log().Debug().Object("vr", vr).Msg("got not expected height VoteResult; move to sync")
-		cs.chanState <- NewStateContext(node.StateSync).
+		cs.chanState <- NewStateContext(node.StateSyncing).
 			SetContext("vr", vr)
 		return xerrors.Errorf("got not expected height VoteResult; move to sync")
 	}

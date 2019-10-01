@@ -58,7 +58,7 @@ func (bs *BootingStateHandler) IsStopped() bool {
 
 func (bs *BootingStateHandler) Activate(StateContext) error {
 	go func() {
-		bs.chanState <- NewStateContext(node.StateJoin)
+		bs.chanState <- NewStateContext(node.StateJoining)
 	}()
 
 	return nil

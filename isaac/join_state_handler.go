@@ -315,12 +315,12 @@ func (js *JoinStateHandler) gotINITMajority(vr VoteResult) error {
 		return nil
 	case diff < 0: // something wrong, move to sync
 		js.Log().Debug().Object("vr", vr).Msg("got lower height VoteResult; move to sync")
-		js.chanState <- NewStateContext(node.StateSync).
+		js.chanState <- NewStateContext(node.StateSyncing).
 			SetContext("vr", vr)
 		return nil
 	default: // higher height received, move to sync
 		js.Log().Debug().Object("vr", vr).Msg("got higher height VoteResult; move to sync")
-		js.chanState <- NewStateContext(node.StateSync).
+		js.chanState <- NewStateContext(node.StateSyncing).
 			SetContext("vr", vr)
 		return nil
 	}

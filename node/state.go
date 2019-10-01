@@ -4,18 +4,18 @@ type State uint
 
 const (
 	StateBooting State = iota + 1
-	StateJoin
+	StateJoining
 	StateConsensus
-	StateSync
+	StateSyncing
 	StateStopped
 )
 
 func (n State) IsValid() error {
 	switch n {
 	case StateBooting:
-	case StateJoin:
+	case StateJoining:
 	case StateConsensus:
-	case StateSync:
+	case StateSyncing:
 	case StateStopped:
 	default:
 		return InvalidStateError
@@ -28,12 +28,12 @@ func (n State) String() string {
 	switch n {
 	case StateBooting:
 		return "booting"
-	case StateJoin:
-		return "join"
+	case StateJoining:
+		return "joining"
 	case StateConsensus:
 		return "consensus"
-	case StateSync:
-		return "sync"
+	case StateSyncing:
+		return "syncing"
 	case StateStopped:
 		return "stopped"
 	default:
@@ -43,7 +43,7 @@ func (n State) String() string {
 
 func (n State) CanVote() bool {
 	switch n {
-	case StateJoin, StateConsensus:
+	case StateJoining, StateConsensus:
 		return true
 	}
 

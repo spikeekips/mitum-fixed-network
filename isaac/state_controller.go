@@ -115,7 +115,7 @@ func (sc *StateController) setState(sct StateContext) error {
 	switch sct.State() {
 	case node.StateBooting:
 		handler = sc.bootingHandler
-	case node.StateJoin:
+	case node.StateJoining:
 		handler = sc.joinHandler
 	case node.StateConsensus:
 		handler = sc.consensusHandler

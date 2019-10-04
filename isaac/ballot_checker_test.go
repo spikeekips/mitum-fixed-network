@@ -23,11 +23,11 @@ func (t *testCompilerBallotChecker) TestEmptyLastVoteResult() {
 	ballot, _ := NewINITBallot(
 		home.Address(),
 		lastBlock.Hash(),
-		nextBlock.Hash(),
 		nextBlock.Round(),
-		nextBlock.Proposal(),
 		nextBlock.Height().Add(1),
+		nextBlock.Hash(),
 		Round(1),
+		nextBlock.Proposal(),
 	)
 
 	suffrage := NewFixedProposerSuffrage(home, home)
@@ -51,11 +51,11 @@ func (t *testCompilerBallotChecker) TestINITBallotHeightNotHigherThanHomeState()
 	ballot, _ := NewINITBallot(
 		home.Address(),
 		lastBlock.Hash(),
-		nextBlock.Hash(),
 		nextBlock.Round(),
-		nextBlock.Proposal(),
 		nextBlock.Height().Sub(1),
+		nextBlock.Hash(),
 		Round(0),
+		nextBlock.Proposal(),
 	)
 
 	suffrage := NewFixedProposerSuffrage(home, home)
@@ -87,11 +87,11 @@ func (t *testCompilerBallotChecker) TestINITBallotHeightLowerThanLastINITVoteRes
 	ballot, _ := NewINITBallot(
 		home.Address(),
 		lastBlock.Hash(),
-		nextBlock.Hash(),
 		nextBlock.Round(),
-		nextBlock.Proposal(),
 		nextBlock.Height().Sub(1),
+		nextBlock.Hash(),
 		Round(0),
+		nextBlock.Proposal(),
 	)
 
 	suffrage := NewFixedProposerSuffrage(home, home)

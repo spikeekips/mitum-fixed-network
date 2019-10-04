@@ -30,11 +30,11 @@ func (t *testDamagedBallotMaker) TestFilter() {
 	{ // INIT
 		ballot, err := db.INIT(
 			previousBlock,
-			newBlock,
 			isaac.Round(0),
-			NewRandomProposalHash(),
 			height,
+			newBlock,
 			round,
+			NewRandomProposalHash(),
 		)
 		t.NoError(err)
 		t.True(ballot.LastBlock().Equal(previousBlock))
@@ -81,13 +81,13 @@ func (t *testDamagedBallotMaker) TestKinds() {
 		height.String(),
 		round.String(),
 		stage.String(),
-		"newBlock", "newBlock", // duplication will be eliminated
-		"nextRound",
+		"nextBlock", "nextBlock", // duplication will be eliminated
+		"currentRound",
 	)
 
 	kinds := db.IsDamaged(height, round, stage)
 	t.NotNil(kinds)
-	t.Equal(kinds, []string{"newBlock", "nextRound"})
+	t.Equal(kinds, []string{"nextBlock", "currentRound"})
 
 	previousBlock := NewRandomBlockHash()
 	newBlock := NewRandomBlockHash()
@@ -95,11 +95,11 @@ func (t *testDamagedBallotMaker) TestKinds() {
 	{ // INIT
 		ballot, err := db.INIT(
 			previousBlock,
-			newBlock,
 			isaac.Round(0),
-			NewRandomProposalHash(),
 			height,
+			newBlock,
 			round,
+			NewRandomProposalHash(),
 		)
 		t.NoError(err)
 		t.True(ballot.LastBlock().Equal(previousBlock))
@@ -119,13 +119,13 @@ func (t *testDamagedBallotMaker) TestGlobal() {
 		"",
 		"",
 		"",
-		"newBlock",
-		"nextRound",
+		"nextBlock",
+		"currentRound",
 	)
 
 	kinds := db.IsDamaged(height, round, stage)
 	t.NotNil(kinds)
-	t.Equal(kinds, []string{"newBlock", "nextRound"})
+	t.Equal(kinds, []string{"nextBlock", "currentRound"})
 
 	previousBlock := NewRandomBlockHash()
 	newBlock := NewRandomBlockHash()
@@ -133,11 +133,11 @@ func (t *testDamagedBallotMaker) TestGlobal() {
 	{ // INIT
 		ballot, err := db.INIT(
 			previousBlock,
-			newBlock,
 			isaac.Round(0),
-			NewRandomProposalHash(),
 			height,
+			newBlock,
 			round,
+			NewRandomProposalHash(),
 		)
 		t.NoError(err)
 		t.True(ballot.LastBlock().Equal(previousBlock))
@@ -148,11 +148,11 @@ func (t *testDamagedBallotMaker) TestGlobal() {
 	{ // INIT; next height and round
 		ballot, err := db.INIT(
 			previousBlock,
-			newBlock,
 			isaac.Round(0),
-			NewRandomProposalHash(),
 			height.Add(1),
+			newBlock,
 			round+isaac.Round(1),
+			NewRandomProposalHash(),
 		)
 		t.NoError(err)
 		t.True(ballot.LastBlock().Equal(previousBlock))

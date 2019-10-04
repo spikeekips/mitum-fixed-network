@@ -89,45 +89,45 @@ func (db DamangedBallotMaker) isDamaged(key string) []string {
 }
 
 func (db DamangedBallotMaker) INIT(
-	previousBlock hash.Hash,
-	newBlock hash.Hash,
-	newRound isaac.Round,
-	newProposal hash.Hash,
+	lastBlock hash.Hash,
+	lastRound isaac.Round,
 	nextHeight isaac.Height,
-	nextRound isaac.Round,
+	nextBlock hash.Hash,
+	currentRound isaac.Round,
+	currentProposal hash.Hash,
 ) (isaac.Ballot, error) {
-	if p := db.IsDamaged(nextHeight, nextRound, isaac.StageINIT); p != nil {
+	if p := db.IsDamaged(nextHeight, currentRound, isaac.StageINIT); p != nil {
 		db.Log().Debug().
 			Uint64("height", nextHeight.Uint64()).
-			Uint64("round", nextRound.Uint64()).
+			Uint64("round", currentRound.Uint64()).
 			Str("stage", isaac.StageINIT.String()).
 			Interface("kinds", p).
 			Msg("damaged point")
 
 		if len(p) < 1 {
-			newBlock = NewRandomBlockHash()
+			nextBlock = NewRandomBlockHash()
 		} else {
 			for _, k := range p {
 				switch k {
-				case "previousBlock":
-					previousBlock = NewRandomBlockHash()
-				case "newBlock":
-					newBlock = NewRandomBlockHash()
-				case "newRound":
-					newRound = NewRandomRound()
-				case "newProposal":
-					newProposal = NewRandomProposalHash()
+				case "lastBlock":
+					lastBlock = NewRandomBlockHash()
+				case "lastRound":
+					lastRound = NewRandomRound()
 				case "nextHeight":
 					nextHeight = NewRandomHeight()
-				case "nextRound":
-					nextRound = NewRandomRound()
+				case "nextBlock":
+					nextBlock = NewRandomBlockHash()
+				case "currentRound":
+					currentRound = NewRandomRound()
+				case "currentProposal":
+					currentProposal = NewRandomProposalHash()
 				}
 			}
 		}
 	}
 
 	return db.DefaultBallotMaker.INIT(
-		previousBlock, newBlock, newRound, newProposal, nextHeight, nextRound,
+		lastBlock, lastRound, nextHeight, nextBlock, currentRound, currentProposal,
 	)
 }
 
@@ -186,7 +186,7 @@ func (db DamangedBallotMaker) ACCEPT(
 		db.Log().Debug().
 			Uint64("height", nextHeight.Uint64()).
 			Uint64("round", currentRound.Uint64()).
-			Str("stage", isaac.StageSIGN.String()).
+			Str("stage", isaac.StageACCEPT.String()).
 			Interface("kinds", p).
 			Msg("damaged point")
 

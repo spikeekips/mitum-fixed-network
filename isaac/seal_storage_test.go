@@ -17,11 +17,11 @@ func (t *testSealStorage) newBallot() Ballot {
 	ballot, _ := NewINITBallot(
 		home.Address(),
 		NewRandomBlockHash(),
-		NewRandomBlockHash(),
 		Round(0),
-		NewRandomProposalHash(),
 		NewBlockHeight(1),
+		NewRandomBlockHash(),
 		Round(1),
+		NewRandomProposalHash(),
 	)
 
 	_ = ballot.Sign(home.PrivateKey(), nil)

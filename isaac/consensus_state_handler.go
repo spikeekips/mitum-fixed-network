@@ -352,11 +352,11 @@ func (cs *ConsensusStateHandler) gotNotINITMajority(vr VoteResult) error {
 	case StageACCEPT:
 		ballot, err = cs.ballotMaker.INIT(
 			cs.homeState.Block().Hash(),
-			block.Hash(),
 			block.Round(),
-			block.Proposal(),
 			block.Height().Add(1),
+			block.Hash(),
 			Round(0),
+			block.Proposal(),
 		)
 	}
 	if err != nil {
@@ -423,11 +423,11 @@ func (cs *ConsensusStateHandler) propose(vr VoteResult) error {
 func (cs *ConsensusStateHandler) startNextRound(vr VoteResult) error {
 	ballot, err := cs.ballotMaker.INIT(
 		cs.homeState.PreviousBlock().Hash(),
-		cs.homeState.Block().Hash(),
 		cs.homeState.Block().Round(),
-		cs.homeState.Block().Proposal(),
 		vr.Height(),
+		cs.homeState.Block().Hash(),
 		vr.Round()+1,
+		cs.homeState.Block().Proposal(),
 	)
 	if err != nil {
 		return err

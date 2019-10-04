@@ -7,13 +7,13 @@ import (
 
 type BallotMaker interface {
 	INIT(
-		previousBlock hash.Hash,
-		newBlock hash.Hash,
-		newRound Round,
-		newProposal hash.Hash,
+		lastBlock hash.Hash,
+		lastRound Round,
 		nextHeight Height,
-		nextRound Round,
-	) (Ballot, error) // NOTE signed Ballot
+		nextBlock hash.Hash,
+		currentRound Round,
+		currentProposal hash.Hash,
+	) (Ballot, error) // NOTE signed seal
 	SIGN(
 		lastBlock hash.Hash,
 		lastRound Round,
@@ -21,7 +21,7 @@ type BallotMaker interface {
 		nextBlock hash.Hash,
 		currentRound Round,
 		currentProposal hash.Hash,
-	) (Ballot, error) // NOTE signed Ballot
+	) (Ballot, error) // NOTE signed seal
 	ACCEPT(
 		lastBlock hash.Hash,
 		lastRound Round,
@@ -29,7 +29,7 @@ type BallotMaker interface {
 		nextBlock hash.Hash,
 		currentRound Round,
 		currentProposal hash.Hash,
-	) (Ballot, error) // NOTE signed Ballot
+	) (Ballot, error) // NOTE signed seal
 }
 
 type DefaultBallotMaker struct {
@@ -41,15 +41,15 @@ func NewDefaultBallotMaker(home node.Home) DefaultBallotMaker {
 }
 
 func (db DefaultBallotMaker) INIT(
-	previousBlock hash.Hash,
-	newBlock hash.Hash,
-	newRound Round,
-	newProposal hash.Hash,
+	lastBlock hash.Hash,
+	lastRound Round,
 	nextHeight Height,
-	nextRound Round,
+	nextBlock hash.Hash,
+	currentRound Round,
+	currentProposal hash.Hash,
 ) (Ballot, error) {
 	ballot, err := NewINITBallot(
-		db.home.Address(), previousBlock, newBlock, newRound, newProposal, nextHeight, nextRound,
+		db.home.Address(), lastBlock, lastRound, nextHeight, nextBlock, currentRound, currentProposal,
 	)
 	if err != nil {
 		return Ballot{}, err

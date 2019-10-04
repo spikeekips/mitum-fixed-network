@@ -214,11 +214,11 @@ func (js *JoinStateHandler) ReceiveVoteResult(vr VoteResult) error {
 func (js *JoinStateHandler) broadcastINITBallot(common.Timer) error {
 	ballot, err := js.ballotMaker.INIT(
 		js.homeState.PreviousBlock().Hash(),
-		js.homeState.Block().Hash(),
 		js.homeState.Block().Round(),
-		js.homeState.Block().Proposal(),
 		js.homeState.Block().Height().Add(1),
+		js.homeState.Block().Hash(),
 		Round(0),
+		js.homeState.Block().Proposal(),
 	)
 	if err != nil {
 		return err

@@ -9,6 +9,7 @@ import (
 	"github.com/spikeekips/mitum/hash"
 	"github.com/spikeekips/mitum/isaac"
 	"github.com/spikeekips/mitum/node"
+	"golang.org/x/xerrors"
 )
 
 type DamangedBallotMaker struct {
@@ -88,19 +89,20 @@ func (db DamangedBallotMaker) isDamaged(key string) []string {
 	return p
 }
 
-func (db DamangedBallotMaker) INIT(
+func (db DamangedBallotMaker) modifyBallot(
 	lastBlock hash.Hash,
 	lastRound isaac.Round,
 	nextHeight isaac.Height,
 	nextBlock hash.Hash,
 	currentRound isaac.Round,
 	currentProposal hash.Hash,
+	stage isaac.Stage,
 ) (isaac.Ballot, error) {
-	if p := db.IsDamaged(nextHeight, currentRound, isaac.StageINIT); p != nil {
+	if p := db.IsDamaged(nextHeight, currentRound, stage); p != nil {
 		db.Log().Debug().
 			Uint64("height", nextHeight.Uint64()).
 			Uint64("round", currentRound.Uint64()).
-			Str("stage", isaac.StageINIT.String()).
+			Str("stage", stage.String()).
 			Interface("kinds", p).
 			Msg("damaged point")
 
@@ -126,8 +128,40 @@ func (db DamangedBallotMaker) INIT(
 		}
 	}
 
-	return db.DefaultBallotMaker.INIT(
+	var cbFunc func(hash.Hash, isaac.Round, isaac.Height, hash.Hash, isaac.Round, hash.Hash) (isaac.Ballot, error)
+
+	switch stage {
+	case isaac.StageINIT:
+		cbFunc = db.DefaultBallotMaker.INIT
+	case isaac.StageSIGN:
+		cbFunc = db.DefaultBallotMaker.SIGN
+	case isaac.StageACCEPT:
+		cbFunc = db.DefaultBallotMaker.ACCEPT
+	default:
+		err := xerrors.Errorf("unknown stage found")
+		db.Log().Error().
+			Err(err).
+			Str("stage", stage.String()).
+			Send()
+		return isaac.Ballot{}, err
+	}
+
+	return cbFunc(
 		lastBlock, lastRound, nextHeight, nextBlock, currentRound, currentProposal,
+	)
+}
+
+func (db DamangedBallotMaker) INIT(
+	lastBlock hash.Hash,
+	lastRound isaac.Round,
+	nextHeight isaac.Height,
+	nextBlock hash.Hash,
+	currentRound isaac.Round,
+	currentProposal hash.Hash,
+) (isaac.Ballot, error) {
+	return db.modifyBallot(
+		lastBlock, lastRound, nextHeight, nextBlock, currentRound, currentProposal,
+		isaac.StageINIT,
 	)
 }
 
@@ -139,38 +173,9 @@ func (db DamangedBallotMaker) SIGN(
 	currentRound isaac.Round,
 	currentProposal hash.Hash,
 ) (isaac.Ballot, error) {
-	if p := db.IsDamaged(nextHeight, currentRound, isaac.StageSIGN); p != nil {
-		db.Log().Debug().
-			Uint64("height", nextHeight.Uint64()).
-			Uint64("round", currentRound.Uint64()).
-			Str("stage", isaac.StageSIGN.String()).
-			Interface("kinds", p).
-			Msg("damaged point")
-
-		if len(p) < 1 {
-			nextBlock = NewRandomBlockHash()
-		} else {
-			for _, k := range p {
-				switch k {
-				case "lastBlock":
-					lastBlock = NewRandomBlockHash()
-				case "lastRound":
-					lastRound = NewRandomRound()
-				case "nextHeight":
-					nextHeight = NewRandomHeight()
-				case "nextBlock":
-					nextBlock = NewRandomBlockHash()
-				case "currentRound":
-					currentRound = NewRandomRound()
-				case "currentProposal":
-					currentProposal = NewRandomProposalHash()
-				}
-			}
-		}
-	}
-
-	return db.DefaultBallotMaker.SIGN(
+	return db.modifyBallot(
 		lastBlock, lastRound, nextHeight, nextBlock, currentRound, currentProposal,
+		isaac.StageSIGN,
 	)
 }
 
@@ -182,38 +187,9 @@ func (db DamangedBallotMaker) ACCEPT(
 	currentRound isaac.Round,
 	currentProposal hash.Hash,
 ) (isaac.Ballot, error) {
-	if p := db.IsDamaged(nextHeight, currentRound, isaac.StageACCEPT); p != nil {
-		db.Log().Debug().
-			Uint64("height", nextHeight.Uint64()).
-			Uint64("round", currentRound.Uint64()).
-			Str("stage", isaac.StageACCEPT.String()).
-			Interface("kinds", p).
-			Msg("damaged point")
-
-		if len(p) < 1 {
-			nextBlock = NewRandomBlockHash()
-		} else {
-			for _, k := range p {
-				switch k {
-				case "lastBlock":
-					lastBlock = NewRandomBlockHash()
-				case "lastRound":
-					lastRound = NewRandomRound()
-				case "nextHeight":
-					nextHeight = NewRandomHeight()
-				case "nextBlock":
-					nextBlock = NewRandomBlockHash()
-				case "currentRound":
-					currentRound = NewRandomRound()
-				case "currentProposal":
-					currentProposal = NewRandomProposalHash()
-				}
-			}
-		}
-	}
-
-	return db.DefaultBallotMaker.ACCEPT(
+	return db.modifyBallot(
 		lastBlock, lastRound, nextHeight, nextBlock, currentRound, currentProposal,
+		isaac.StageACCEPT,
 	)
 }
 

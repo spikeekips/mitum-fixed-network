@@ -7,15 +7,13 @@ import (
 	"strings"
 
 	"github.com/spf13/cobra"
-	"gopkg.in/yaml.v2"
+	"gopkg.in/yaml.v3"
 )
 
 var configCmd = &cobra.Command{
 	Use:   "config",
 	Short: "contest config",
 	Args:  cobra.NoArgs,
-	Run: func(cmd *cobra.Command, args []string) {
-	},
 }
 
 var configFullCmd = &cobra.Command{

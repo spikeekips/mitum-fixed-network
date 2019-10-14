@@ -10,7 +10,7 @@ import (
 
 	"github.com/rs/zerolog"
 	"golang.org/x/xerrors"
-	"gopkg.in/yaml.v2"
+	"gopkg.in/yaml.v3"
 
 	"github.com/spikeekips/mitum/contrib/contest/condition"
 	contest_module "github.com/spikeekips/mitum/contrib/contest/module"
@@ -44,47 +44,58 @@ func LoadConfig(f string, numberOfNodes uint) (*Config, error) {
 		return nil, err
 	}
 
-	if numberOfNodes < 1 {
-		numberOfNodes = uint(len(config.Nodes))
-	}
-
-	// extends nodes by numberOfNodes
-	if int(numberOfNodes) > len(config.Nodes) {
-		log.Debug().
-			Uint("numberOfNodes", numberOfNodes).
-			Msg("extend nodes")
-
-		var last int
-		for name := range config.Nodes {
-			var c int
-			if _, err := fmt.Sscanf(name, "n%d", &c); err != nil {
-				log.Debug().Str("name", name).Msg("not expected node name format")
-				continue
-			} else if c > last {
-				last = c
-			}
-		}
-
-		upto := int(numberOfNodes) - len(config.Nodes)
-		for i := 0; i < upto; i++ {
-			name := fmt.Sprintf("n%d", i+last+1)
-			config.Nodes[name] = config.Global
-		}
-	} else if int(numberOfNodes) < len(config.Nodes) {
-		var names []string
-		for name := range config.Nodes {
-			names = append(names, name)
-		}
-
-		sort.Strings(names)
-		for _, name := range names[numberOfNodes:] {
-			delete(config.Nodes, name)
+	var last uint
+	for name := range config.Nodes {
+		var c uint
+		if _, err := fmt.Sscanf(name, "n%d", &c); err != nil {
+			err := xerrors.Errorf("unexpected node name format: node name should be `n<digit>`")
+			log.Error().Err(err).Str("name", name).Send()
+			return nil, err
+		} else if c > last {
+			last = c
 		}
 	}
 
-	if numberOfNodes < 1 {
+	if last < 1 {
 		return nil, xerrors.Errorf("number-of-nodes should be greater than 0")
+	} else {
+		numberOfNodes = last + 1
 	}
+
+	// check node names
+	var nodeNames []string
+	for name := range config.Nodes {
+		var c uint
+		if _, err := fmt.Sscanf(name, "n%d", &c); err != nil {
+			err := xerrors.Errorf("unexpected node name format: node name should be `n<digit>`")
+			log.Error().Err(err).Str("name", name).Send()
+			return nil, err
+		}
+
+		nodeNames = append(nodeNames, name)
+	}
+
+	sort.Slice(
+		nodeNames,
+		func(i, j int) bool {
+			var ni, nj int
+			_, _ = fmt.Sscanf(nodeNames[i], "n%d", &ni)
+			_, _ = fmt.Sscanf(nodeNames[j], "n%d", &nj)
+			return ni < nj
+		},
+	)
+
+	nodes := map[string]*NodeConfig{}
+	for i := 0; i < int(numberOfNodes); i++ {
+		name := fmt.Sprintf("n%d", i)
+		n, found := config.Nodes[name]
+		if !found {
+			n = config.Global
+		}
+		nodes[name] = n
+	}
+
+	config.Nodes = nodes
 
 	config.NumberOfNodes_ = &numberOfNodes
 
@@ -229,18 +240,15 @@ func defaultNodeConfig() *NodeConfig {
 }
 
 func (nc *NodeConfig) IsValid(global *NodeConfig) error {
-	var globalPolicy *PolicyConfig
-	var globalBlocks map[string]isaac.Block
-	if global != nil {
-		globalPolicy = global.Policy
-		globalBlocks = global.blocks
+	if global == nil {
+		global = defaultNodeConfig()
 	}
 
 	if nc.Policy == nil {
-		nc.Policy = globalPolicy
+		nc.Policy = global.Policy
 	}
 
-	if err := nc.Policy.IsValid(globalPolicy); err != nil {
+	if err := nc.Policy.IsValid(global.Policy); err != nil {
 		return err
 	}
 
@@ -261,10 +269,10 @@ func (nc *NodeConfig) IsValid(global *NodeConfig) error {
 		}
 	}
 
-	if len(nc.Blocks) < 1 && globalBlocks != nil {
-		nc.blocks = globalBlocks
+	if len(nc.Blocks) < 1 && global.Blocks != nil {
+		nc.blocks = global.blocks
 		nc.Blocks = global.Blocks
-	} else if globalBlocks != nil {
+	} else if global.Blocks != nil {
 		inputs := nc.Blocks[:]
 		sort.Slice(
 			inputs,
@@ -276,7 +284,7 @@ func (nc *NodeConfig) IsValid(global *NodeConfig) error {
 		lastBlock := inputs[len(inputs)-1]
 
 		nb := map[string]isaac.Block{}
-		for _, b := range globalBlocks {
+		for _, b := range global.blocks {
 			if b.Height().Cmp(*lastBlock.Height) > 0 {
 				continue
 			}
@@ -578,7 +586,7 @@ func (bmc *BallotMakerConfig) IsValid(global *BallotMakerConfig) error {
 
 	switch name {
 	case "DefaultBallotMaker":
-	case "DamangedBallotMaker":
+	case "DamangedBallotMaker": // NOTE Deprecated
 		// height
 		if s, found := (*bmc)["height"]; !found {
 			//
@@ -600,6 +608,16 @@ func (bmc *BallotMakerConfig) IsValid(global *BallotMakerConfig) error {
 			return xerrors.Errorf("`stage` must be string; %v", (*bmc)["stage"])
 		} else if _, err := isaac.StageFromString(d); err != nil {
 			return xerrors.Errorf("`round` must be valid Stage; %v: %w", (*bmc)["stage"], err)
+		}
+	case "ConditionBallotMaker":
+		if s, found := (*bmc)["conditions"]; !found {
+			log.Warn().Msg("conditions is missing")
+		} else {
+			for _, c := range s.(BallotMakerConfig) {
+				if _, err := parseConditionHandler(c.(BallotMakerConfig)); err != nil {
+					return err
+				}
+			}
 		}
 	}
 
@@ -642,4 +660,31 @@ func (cc *ConditionConfig) IsValid(global *ConditionConfig) error {
 	}
 
 	return nil
+}
+
+func parseConditionHandler(m map[string]interface{}) (contest_module.ConditionBallotHandler, error) {
+	var query, action string
+	if s, found := m["condition"]; !found {
+		err := xerrors.Errorf("condition is missing in condition block")
+		log.Error().Err(err).Send()
+		return contest_module.ConditionBallotHandler{}, err
+	} else {
+		query = s.(string)
+	}
+
+	if s, found := m["action"]; !found {
+		err := xerrors.Errorf("action is missing in condition block")
+		log.Error().Err(err).Send()
+		return contest_module.ConditionBallotHandler{}, err
+	} else {
+		action = s.(string)
+	}
+
+	cc, err := condition.NewConditionChecker(query)
+	if err != nil {
+		log.Error().Err(err).Send()
+		return contest_module.ConditionBallotHandler{}, err
+	}
+
+	return contest_module.NewConditionBallotHandler(cc, action), nil
 }

@@ -264,6 +264,24 @@ func newBallotMaker(config *NodeConfig, home node.Home, l zerolog.Logger) isaac.
 		db.SetLogger(l)
 
 		return db
+	case "ConditionBallotMaker":
+		bmc := config.Modules.BallotMaker
+		conditions := map[string]contest_module.ConditionBallotHandler{}
+
+		if s, found := (*bmc)["conditions"]; found {
+			for n, c := range s.(BallotMakerConfig) {
+				cc, err := parseConditionHandler(c.(BallotMakerConfig))
+				if err != nil {
+					panic(err)
+				}
+
+				conditions[n] = cc
+			}
+		}
+
+		cb := contest_module.NewConditionBallotMaker(home, conditions)
+		cb.SetLogger(l)
+		return cb
 	default:
 		panic(xerrors.Errorf("unknown ballot_maker found: %v", pc["name"]))
 	}

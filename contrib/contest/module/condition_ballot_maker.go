@@ -59,6 +59,7 @@ func (cb ConditionBallotMaker) modifyBallot(
 		li, err := condition.NewLogItemFromMap(
 			map[string]interface{}{
 				"node":             cb.home.Alias(),
+				"stage":            stage.String(),
 				"last_block":       lastBlock.String(),
 				"last_round":       lastRound,
 				"next_height":      nextHeight.Uint64(),

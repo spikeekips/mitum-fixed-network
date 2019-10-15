@@ -61,11 +61,11 @@ func (cb ConditionBallotMaker) modifyBallot(
 				"node":             cb.home.Alias(),
 				"stage":            stage.String(),
 				"last_block":       lastBlock.String(),
-				"last_round":       lastRound,
+				"last_round":       lastRound.Uint64(),
 				"next_height":      nextHeight.Uint64(),
-				"next_block":       nextBlock,
-				"current_round":    currentRound,
-				"current_proposal": currentProposal,
+				"next_block":       nextBlock.String(),
+				"current_round":    currentRound.Uint64(),
+				"current_proposal": currentProposal.String(),
 			})
 		if err != nil {
 			return isaac.Ballot{}, err

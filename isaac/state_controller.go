@@ -210,11 +210,17 @@ func (sc *StateController) handleBallot(ballot Ballot) error {
 		return err
 	}
 
-	if !vr.IsClosed() && vr.IsFinished() {
-		// hand over VoteResult to StateHandler
-		if err := sc.StateHandler().ReceiveVoteResult(vr); err != nil {
-			return err
-		}
+	if vr.IsClosed() || !vr.IsFinished() {
+		return nil
+	}
+
+	if sc.StateHandler() == nil {
+		return nil
+	}
+
+	// NOTE hand over VoteResult to StateHandler
+	if err := sc.StateHandler().ReceiveVoteResult(vr); err != nil {
+		return err
 	}
 
 	return nil

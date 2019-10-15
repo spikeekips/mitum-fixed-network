@@ -3,6 +3,7 @@ package isaac
 import (
 	"encoding/json"
 	"fmt"
+	"strings"
 	"sync"
 
 	"github.com/rs/zerolog"
@@ -47,6 +48,7 @@ func (bb *Ballotbox) Vote(
 	var rs *Records
 	if i, found := bb.voted.Load(key); !found {
 		rs = NewRecords(height, round, stage)
+		_ = rs.SetLogger(*bb.Log())
 		bb.voted.Store(key, rs)
 	} else {
 		rs = i.(*Records)
@@ -62,8 +64,39 @@ func (bb *Ballotbox) Vote(
 	return vr, nil
 }
 
+func (bb *Ballotbox) Tidy(height Height, round Round) {
+	var keys []interface{}
+	prefix := fmt.Sprintf("%v-", height.String())
+	bb.voted.Range(func(k, v interface{}) bool {
+		key := k.(string)
+		if !strings.HasPrefix(key, prefix) {
+			keys = append(keys, key)
+			return true
+		}
+
+		var rs *Records
+		i, found := bb.voted.Load(key)
+		if !found {
+			keys = append(keys, key)
+			return true
+		}
+
+		rs = i.(*Records)
+		if rs.round < round {
+			keys = append(keys, key)
+		}
+
+		return true
+	})
+
+	for _, key := range keys {
+		bb.voted.Delete(key)
+	}
+}
+
 type Records struct {
 	sync.RWMutex
+	*common.Logger
 	height Height
 	round  Round
 	stage  Stage
@@ -73,6 +106,9 @@ type Records struct {
 
 func NewRecords(height Height, round Round, stage Stage) *Records {
 	return &Records{
+		Logger: common.NewLogger(func(c zerolog.Context) zerolog.Context {
+			return c.Str("module", "records")
+		}),
 		height: height,
 		round:  round,
 		stage:  stage,
@@ -118,7 +154,15 @@ func (rs *Records) Vote(
 }
 
 func (rs *Records) CheckMajority(total, threshold uint) VoteResult {
-	if rs.IsClosed() {
+	l := rs.Log().With().
+		Str("height", rs.height.String()).
+		Uint64("round", rs.round.Uint64()).
+		Uint("total", total).
+		Uint("threshold", threshold).
+		Str("stage", rs.stage.String()).
+		Logger()
+
+	if rs.IsFinished() {
 		var records []Record
 		rs.voted.Range(func(k, v interface{}) bool {
 			records = append(records, v.(*NodesRecord).Records()...)
@@ -127,6 +171,10 @@ func (rs *Records) CheckMajority(total, threshold uint) VoteResult {
 
 		rs.RLock()
 		defer rs.RUnlock()
+
+		l.Debug().
+			Bool("is_finished", rs.result.IsFinished()).
+			Msg("check majority, but closed")
 
 		return rs.result.SetRecords(records).SetClosed()
 	}
@@ -168,6 +216,11 @@ func (rs *Records) CheckMajority(total, threshold uint) VoteResult {
 
 	}
 
+	l.Debug().
+		Uints("set", sets).
+		Bool("is_finished", vr.IsFinished()).
+		Msg("check majority")
+
 	if vr.IsFinished() {
 		rs.setResult(vr)
 	}
@@ -175,7 +228,7 @@ func (rs *Records) CheckMajority(total, threshold uint) VoteResult {
 	return vr
 }
 
-func (rs *Records) IsClosed() bool {
+func (rs *Records) IsFinished() bool {
 	rs.RLock()
 	defer rs.RUnlock()
 

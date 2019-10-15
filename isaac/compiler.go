@@ -33,6 +33,7 @@ func NewCompiler(homeState *HomeState, ballotbox *Ballotbox, ballotChecker *comm
 func (cm *Compiler) SetLogger(l zerolog.Logger) *common.Logger {
 	_ = cm.Logger.SetLogger(l)
 	_ = cm.ballotChecker.SetLogger(l)
+	_ = cm.ballotbox.SetLogger(l)
 
 	return cm.Logger
 }
@@ -70,15 +71,21 @@ func (cm *Compiler) Vote(ballot Ballot) (VoteResult, error) {
 	if err != nil {
 		return VoteResult{}, err
 	}
+
 	if vr.IsClosed() || !vr.IsFinished() {
 		return VoteResult{}, nil
-	}
+	} else if vr.GotMajority() {
+		switch vr.Stage() {
+		case StageINIT:
+			cm.SetLastINITVoteResult(vr)
 
-	switch vr.Stage() {
-	case StageINIT:
-		cm.SetLastINITVoteResult(vr)
-	default:
-		cm.SetLastStagesVoteResult(vr)
+			// NOTE remove vote records,
+			// - other heights
+			// - same height, but lower round
+			cm.ballotbox.Tidy(vr.Height(), vr.Round())
+		default:
+			cm.SetLastStagesVoteResult(vr)
+		}
 	}
 
 	return vr, nil
@@ -94,6 +101,11 @@ func (cm *Compiler) LastINITVoteResult() VoteResult {
 func (cm *Compiler) SetLastINITVoteResult(vr VoteResult) {
 	cm.Lock()
 	defer cm.Unlock()
+
+	cm.Log().Debug().
+		Object("previous_vr", cm.lastINITVoteResult).
+		Object("new_vr", vr).
+		Msg("set last init vote result")
 
 	cm.lastINITVoteResult = vr
 }

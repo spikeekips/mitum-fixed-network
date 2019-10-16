@@ -77,7 +77,7 @@ func (cb ConditionBallotMaker) modifyBallot(
 					Str("checker", name).
 					Str("query", c.checker.Query()).
 					Str("action", c.action).
-					Interface("item", li).
+					RawJSON("ballot", li.Bytes()).
 					Msg("condition matched")
 				switch c.action {
 				case "empty-ballot":

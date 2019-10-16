@@ -37,11 +37,15 @@ func NewNode(
 	previousBlock := config.Block(lastBlock.Height().Sub(1))
 	homeState := isaac.NewHomeState(home, previousBlock).SetBlock(lastBlock)
 
-	suffrage := newSuffrage(config, nodes)
+	numberOfActing := uint((*config.Modules.Suffrage)["number_of_acting"].(int))
+	if numberOfActing < 1 {
+		numberOfActing = globalConfig.NumberOfNodes()
+	}
+
+	suffrage := newSuffrage(config, nodes, numberOfActing)
 	ballotChecker := isaac.NewCompilerBallotChecker(homeState, suffrage)
 	ballotChecker.SetLogger(rootLog)
 
-	numberOfActing := uint((*config.Modules.Suffrage)["number_of_acting"].(int))
 	thr, _ := isaac.NewThreshold(numberOfActing, *config.Policy.Threshold)
 	if err := thr.Set(isaac.StageINIT, globalConfig.NumberOfNodes(), *config.Policy.Threshold); err != nil {
 		return nil, err
@@ -114,6 +118,7 @@ func NewNode(
 		Object("homeState", homeState).
 		Object("threshold", thr).
 		Interface("suffrage", suffrage).
+		Uint("number_of_acting", numberOfActing).
 		Msg("node created")
 
 	n := &Node{
@@ -179,10 +184,13 @@ func NewHome(i uint) node.Home {
 	return node.NewHome(h, pk)
 }
 
-func newSuffrage(config *NodeConfig, nodes []node.Node) isaac.Suffrage {
+func newSuffrage(config *NodeConfig, nodes []node.Node, globalNumberOfNodes uint) isaac.Suffrage {
 	sc := *config.Modules.Suffrage
 
 	numberOfActing := uint(sc["number_of_acting"].(int))
+	if numberOfActing < 1 {
+		numberOfActing = globalNumberOfNodes
+	}
 
 	switch sc["name"] {
 	case "FixedProposerSuffrage":

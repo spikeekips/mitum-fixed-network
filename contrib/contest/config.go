@@ -61,6 +61,7 @@ func LoadConfig(f string, numberOfNodes uint) (*Config, error) {
 	} else {
 		numberOfNodes = last + 1
 	}
+	config.NumberOfNodes_ = &numberOfNodes
 
 	// check node names
 	var nodeNames []string
@@ -96,8 +97,6 @@ func LoadConfig(f string, numberOfNodes uint) (*Config, error) {
 	}
 
 	config.Nodes = nodes
-
-	config.NumberOfNodes_ = &numberOfNodes
 
 	return &config, nil
 }
@@ -496,7 +495,8 @@ func (sc *SuffrageConfig) IsValid(global *SuffrageConfig) error {
 	}
 
 	if v, found := (*sc)["number_of_acting"]; !found {
-		return xerrors.Errorf("`number_of_acting` must be given")
+		log.Warn().Msg("number_of_acting is missing; the total number of nodes will be number_of_acting")
+		(*sc)["number_of_acting"] = 0
 	} else {
 		switch v.(type) {
 		case int:

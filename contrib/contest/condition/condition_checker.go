@@ -283,6 +283,8 @@ func compare(op string, a, b interface{}, kind reflect.Kind) bool {
 			return false
 		}
 		ct = NewCompareFloat(ca, cb)
+	case reflect.Bool:
+		ct = NewCompareBool(a, b.(bool))
 	case reflectNilKind:
 		ct = NewCompareNil(a)
 	}

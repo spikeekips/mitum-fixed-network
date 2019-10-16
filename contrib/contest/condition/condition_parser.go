@@ -135,6 +135,9 @@ func (cp ConditionParser) parseComparisonExpr(expr *sqlparser.ComparisonExpr) (C
 			kind = k
 		case *sqlparser.NullVal:
 			kind = reflectNilKind
+		case sqlparser.BoolVal:
+			val = append(val, bool(t))
+			kind = reflect.Bool
 		}
 
 		return false, nil

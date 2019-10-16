@@ -63,6 +63,7 @@ var queryCmd = &cobra.Command{
 
 		if !cp.AllSatisfied() {
 			log.Error().Msg("matched not found")
+			fmt.Println("matched not found")
 			exitCode = 1
 			return
 		}

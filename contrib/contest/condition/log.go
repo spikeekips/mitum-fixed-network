@@ -31,15 +31,18 @@ func NewLogItem(b []byte) (LogItem, error) {
 }
 
 func NewLogItemFromMap(m map[string]interface{}) (LogItem, error) {
-	b, err := json.Marshal(m)
-	if err != nil {
-		return LogItem{}, err
-	}
-
-	return LogItem{bytes: b, m: m}, nil
+	return LogItem{m: m}, nil
 }
 
 func (li LogItem) Bytes() []byte {
+	if li.bytes == nil {
+		b, err := json.Marshal(li.m)
+		if err != nil {
+			return nil
+		}
+		li.bytes = b
+	}
+
 	return li.bytes
 }
 

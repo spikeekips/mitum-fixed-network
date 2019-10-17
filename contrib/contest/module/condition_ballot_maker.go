@@ -8,7 +8,6 @@ import (
 	"github.com/spikeekips/mitum/contrib/contest/condition"
 	"github.com/spikeekips/mitum/hash"
 	"github.com/spikeekips/mitum/isaac"
-	"github.com/spikeekips/mitum/node"
 	"golang.org/x/xerrors"
 )
 
@@ -24,17 +23,17 @@ func NewConditionBallotHandler(checker condition.ConditionChecker, action string
 type ConditionBallotMaker struct {
 	*common.Logger
 	isaac.DefaultBallotMaker
-	home       node.Home
+	homeState  *isaac.HomeState
 	conditions map[string]ConditionBallotHandler
 }
 
-func NewConditionBallotMaker(home node.Home, conditions map[string]ConditionBallotHandler) ConditionBallotMaker {
+func NewConditionBallotMaker(homeState *isaac.HomeState, conditions map[string]ConditionBallotHandler) ConditionBallotMaker {
 	return ConditionBallotMaker{
-		DefaultBallotMaker: isaac.NewDefaultBallotMaker(home),
+		DefaultBallotMaker: isaac.NewDefaultBallotMaker(homeState.Home()),
 		Logger: common.NewLogger(func(c zerolog.Context) zerolog.Context {
 			return c.Str("module", "condition-ballot_maker")
 		}),
-		home:       home,
+		homeState:  homeState,
 		conditions: conditions,
 	}
 }
@@ -58,14 +57,27 @@ func (cb ConditionBallotMaker) modifyBallot(
 	if cb.conditions != nil {
 		li, err := condition.NewLogItemFromMap(
 			map[string]interface{}{
-				"node":             cb.home.Alias(),
-				"stage":            stage.String(),
-				"last_block":       lastBlock.String(),
-				"last_round":       lastRound.Uint64(),
-				"next_height":      nextHeight.Uint64(),
-				"next_block":       nextBlock.String(),
-				"current_round":    currentRound.Uint64(),
-				"current_proposal": currentProposal.String(),
+				"node":  cb.homeState.Home().Alias(),
+				"state": cb.homeState.State().String(),
+				"block": map[string]interface{}{
+					"height":   cb.homeState.Block().Height().Uint64(),
+					"round":    cb.homeState.Block().Round().Uint64(),
+					"proposal": cb.homeState.Block().Proposal().String(),
+				},
+				"previousBlock": map[string]interface{}{
+					"height":   cb.homeState.PreviousBlock().Height().Uint64(),
+					"round":    cb.homeState.PreviousBlock().Round().Uint64(),
+					"proposal": cb.homeState.PreviousBlock().Proposal().String(),
+				},
+				"ballot": map[string]interface{}{
+					"stage":            stage.String(),
+					"last_block":       lastBlock.String(),
+					"last_round":       lastRound.Uint64(),
+					"next_height":      nextHeight.Uint64(),
+					"next_block":       nextBlock.String(),
+					"current_round":    currentRound.Uint64(),
+					"current_proposal": currentProposal.String(),
+				},
 			})
 		if err != nil {
 			return isaac.Ballot{}, err
@@ -77,7 +89,7 @@ func (cb ConditionBallotMaker) modifyBallot(
 					Str("checker", name).
 					Str("query", c.checker.Query()).
 					Str("action", c.action).
-					RawJSON("ballot", li.Bytes()).
+					RawJSON("data", li.Bytes()).
 					Msg("condition matched")
 				switch c.action {
 				case "empty-ballot":

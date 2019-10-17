@@ -16,70 +16,66 @@ type testConditionBallotMaker struct {
 }
 
 func (t *testConditionBallotMaker) TestEmptyBallot() {
-	home := node.NewRandomHome()
+	lastBlock := NewRandomBlock()
+	nextBlock := NewRandomNextBlock(lastBlock)
+	homeState := isaac.NewHomeState(node.NewRandomHome(), lastBlock).SetBlock(nextBlock)
 
-	lastBlock := NewRandomBlockHash()
-	lastRound := isaac.Round(0)
-	nextHeight := isaac.NewBlockHeight(1)
-	nextBlock := NewRandomBlockHash()
 	currentRound := isaac.Round(1)
 	currentProposal := NewRandomProposalHash()
 
 	{
-		query := fmt.Sprintf(`next_height=%s`, nextHeight)
+		query := fmt.Sprintf(`ballot.next_height=%s`, nextBlock.Height())
 
 		cc, _ := condition.NewConditionChecker(query)
 		cb := NewConditionBallotMaker(
-			home,
+			homeState,
 			map[string]ConditionBallotHandler{
 				"default": NewConditionBallotHandler(cc, "empty-ballot"),
 			},
 		)
 
-		_, err := cb.INIT(lastBlock, lastRound, nextHeight, nextBlock, currentRound, currentProposal)
+		_, err := cb.INIT(lastBlock.Hash(), lastBlock.Round(), nextBlock.Height(), nextBlock.Hash(), currentRound, currentProposal)
 		t.NotNil(err)
 	}
 
 	{
-		query := fmt.Sprintf(`next_height=%s`, nextHeight.Add(1))
+		query := fmt.Sprintf(`ballot.next_height=%s`, nextBlock.Height().Add(1))
 
 		cc, _ := condition.NewConditionChecker(query)
 		cb := NewConditionBallotMaker(
-			home,
+			homeState,
 			map[string]ConditionBallotHandler{
 				"default": NewConditionBallotHandler(cc, "empty-ballot"),
 			},
 		)
 
-		ballot, err := cb.INIT(lastBlock, lastRound, nextHeight, nextBlock, currentRound, currentProposal)
+		ballot, err := cb.INIT(lastBlock.Hash(), lastBlock.Round(), nextBlock.Height(), nextBlock.Hash(), currentRound, currentProposal)
 		t.NoError(err)
 
-		t.True(ballot.Height().Equal(nextHeight))
+		t.True(ballot.Height().Equal(nextBlock.Height()))
 		t.Equal(ballot.Round(), currentRound)
 		t.Equal(ballot.Stage(), isaac.StageINIT)
 		t.True(ballot.Proposal().Equal(currentProposal))
-		t.True(ballot.Block().Equal(nextBlock))
-		t.True(ballot.LastBlock().Equal(lastBlock))
-		t.Equal(ballot.LastRound(), lastRound)
+		t.True(ballot.Block().Equal(nextBlock.Hash()))
+		t.True(ballot.LastBlock().Equal(lastBlock.Hash()))
+		t.Equal(ballot.LastRound(), lastBlock.Round())
 	}
 }
 
 func (t *testConditionBallotMaker) TestModifyRandom() {
-	home := node.NewRandomHome()
+	lastBlock := NewRandomBlock()
+	nextBlock := NewRandomNextBlock(lastBlock)
+	homeState := isaac.NewHomeState(node.NewRandomHome(), lastBlock).SetBlock(nextBlock)
 
-	lastBlock := NewRandomBlockHash()
-	lastRound := isaac.Round(0)
-	nextHeight := isaac.NewBlockHeight(1)
-	nextBlock := NewRandomBlockHash()
 	currentRound := isaac.Round(1)
 	currentProposal := NewRandomProposalHash()
 
-	query := fmt.Sprintf(`next_height=%s`, nextHeight)
+	query := fmt.Sprintf(`ballot.next_height=%s`, nextBlock.Height())
 	cc, _ := condition.NewConditionChecker(query)
 
 	cmps := map[string]func(isaac.Ballot) bool{
 		"match-last_round": func(ballot isaac.Ballot) bool {
-			return ballot.LastRound() == lastRound
+			return ballot.LastRound() == lastBlock.Round()
 		},
 		"match-current_round": func(ballot isaac.Ballot) bool {
 			return ballot.Round() == currentRound
@@ -88,13 +84,13 @@ func (t *testConditionBallotMaker) TestModifyRandom() {
 			return ballot.Stage() == isaac.StageINIT
 		},
 		"match-last_block": func(ballot isaac.Ballot) bool {
-			return ballot.LastBlock().Equal(lastBlock)
+			return ballot.LastBlock().Equal(lastBlock.Hash())
 		},
 		"match-next_block": func(ballot isaac.Ballot) bool {
-			return ballot.Block().Equal(nextBlock)
+			return ballot.Block().Equal(nextBlock.Hash())
 		},
 		"match-next_height": func(ballot isaac.Ballot) bool {
-			return ballot.Height().Equal(nextHeight)
+			return ballot.Height().Equal(nextBlock.Height())
 		},
 		"match-current_proposal": func(ballot isaac.Ballot) bool {
 			return ballot.Proposal().Equal(currentProposal)
@@ -152,12 +148,12 @@ func (t *testConditionBallotMaker) TestModifyRandom() {
 			c.name,
 			func(*testing.T) {
 				cb := NewConditionBallotMaker(
-					home,
+					homeState,
 					map[string]ConditionBallotHandler{
 						"default": NewConditionBallotHandler(cc, c.action),
 					},
 				)
-				ballot, err := cb.INIT(lastBlock, lastRound, nextHeight, nextBlock, currentRound, currentProposal)
+				ballot, err := cb.INIT(lastBlock.Hash(), lastBlock.Round(), nextBlock.Height(), nextBlock.Hash(), currentRound, currentProposal)
 				t.NoError(err)
 
 				for m, f := range cmps {

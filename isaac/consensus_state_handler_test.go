@@ -18,7 +18,7 @@ type testConsensusStateHandler struct {
 	suite.Suite
 }
 
-func (t *testConsensusStateHandler) handler(suffrage Suffrage, timeoutWaitBallot time.Duration) (*ConsensusStateHandler, func()) {
+func (t *testConsensusStateHandler) handler(suffrage Suffrage, timeoutWaitBallot time.Duration, timeoutWaitINITBallot time.Duration) (*ConsensusStateHandler, func()) {
 	home := node.NewRandomHome()
 	lastBlock := NewRandomBlock()
 	nextBlock := NewRandomNextBlock(lastBlock)
@@ -44,7 +44,7 @@ func (t *testConsensusStateHandler) handler(suffrage Suffrage, timeoutWaitBallot
 
 	dp := NewDefaultProposalMaker(home, 0)
 	ballotMaker := NewDefaultBallotMaker(home)
-	cs, err := NewConsensusStateHandler(homeState, cm, cn, suffrage, ballotMaker, pv, dp, timeoutWaitBallot)
+	cs, err := NewConsensusStateHandler(homeState, cm, cn, suffrage, ballotMaker, pv, dp, timeoutWaitBallot, timeoutWaitINITBallot)
 	t.NoError(err)
 
 	return cs, func() {
@@ -56,8 +56,9 @@ func (t *testConsensusStateHandler) handler(suffrage Suffrage, timeoutWaitBallot
 func (t *testConsensusStateHandler) handlerActivated(
 	suffrage Suffrage,
 	timeoutWaitBallot time.Duration,
+	timeoutWaitINITBallot time.Duration,
 ) (*ConsensusStateHandler, func(), VoteResult) {
-	cs, closeFunc := t.handler(suffrage, timeoutWaitBallot)
+	cs, closeFunc := t.handler(suffrage, timeoutWaitBallot, timeoutWaitINITBallot)
 
 	t.Equal(node.StateConsensus, cs.State())
 
@@ -95,7 +96,7 @@ func (t *testConsensusStateHandler) newNetwork(home node.Home) *network.ChannelN
 func (t *testConsensusStateHandler) TestNew() {
 	defer common.DebugPanic()
 
-	cs, closeFunc := t.handler(nil, time.Second*3)
+	cs, closeFunc := t.handler(nil, time.Second*3, time.Second*3)
 	defer closeFunc()
 
 	t.Equal(node.StateConsensus, cs.State())
@@ -134,12 +135,12 @@ func (t *testConsensusStateHandler) TestEmptyPreviousBlock() {
 
 	dp := NewDefaultProposalMaker(home, 0)
 	ballotMaker := NewDefaultBallotMaker(home)
-	_, err := NewConsensusStateHandler(homeState, cm, nil, nil, ballotMaker, nil, dp, time.Second)
+	_, err := NewConsensusStateHandler(homeState, cm, nil, nil, ballotMaker, nil, dp, time.Second, time.Second)
 	t.Contains(err.Error(), "previous block is empty")
 }
 
 func (t *testConsensusStateHandler) TestBrodcastProposal() {
-	cs, closeFunc, vr := t.handlerActivated(nil, time.Second*3)
+	cs, closeFunc, vr := t.handlerActivated(nil, time.Second*3, time.Second*3)
 	defer closeFunc()
 
 	var proposal Proposal
@@ -171,7 +172,7 @@ func (t *testConsensusStateHandler) TestTimeoutWaitProposal() {
 	proposer := node.NewRandomHome()
 	suffrage := NewFixedProposerSuffrage(proposer)
 
-	cs, closeFunc, vr := t.handlerActivated(suffrage, time.Millisecond*10)
+	cs, closeFunc, vr := t.handlerActivated(suffrage, time.Millisecond*10, time.Millisecond*10)
 	defer closeFunc()
 
 	var ballot Ballot
@@ -194,8 +195,8 @@ func (t *testConsensusStateHandler) TestTimeoutWaitProposal() {
 	t.True(vr.Proposal().Equal(ballot.Proposal()))
 }
 
-func (t *testConsensusStateHandler) TestReceiveProposalAndNestStages() {
-	cs, closeFunc, vr := t.handlerActivated(nil, time.Second*3)
+func (t *testConsensusStateHandler) TestReceiveProposalAndNextStages() {
+	cs, closeFunc, vr := t.handlerActivated(nil, time.Second*3, time.Second*3)
 	defer closeFunc()
 
 	cs.compiler.lastINITVoteResult = vr
@@ -239,7 +240,7 @@ func (t *testConsensusStateHandler) TestReceiveProposalAndNestStages() {
 func (t *testConsensusStateHandler) TestProposalTimeoutNextRound() {
 	proposer := node.NewRandomHome()
 	suffrage := NewFixedProposerSuffrage(proposer)
-	cs, closeFunc, vr := t.handlerActivated(suffrage, time.Millisecond*50)
+	cs, closeFunc, vr := t.handlerActivated(suffrage, time.Millisecond*50, time.Millisecond*50)
 	defer closeFunc()
 
 	select {
@@ -260,7 +261,7 @@ func (t *testConsensusStateHandler) TestProposalTimeoutNextRound() {
 }
 
 func (t *testConsensusStateHandler) TestBallotTimeoutNextRound() {
-	cs, closeFunc, vr := t.handlerActivated(nil, time.Millisecond*50)
+	cs, closeFunc, vr := t.handlerActivated(nil, time.Millisecond*50, time.Millisecond*50)
 	defer closeFunc()
 
 	cs.compiler.lastINITVoteResult = vr
@@ -316,8 +317,38 @@ func (t *testConsensusStateHandler) TestBallotTimeoutNextRound() {
 		t.True(cs.homeState.Home().Address().Equal(ballot.Node()))
 		t.NotEmpty(ballot.Block())
 	}
+}
 
-	closeFunc()
+func (t *testConsensusStateHandler) TestINITBallotTimeoutStateJoining() {
+	timeoutWaitINITBallot := time.Millisecond * 1
+	cs, closeFunc, vr := t.handlerActivated(nil, time.Millisecond*50, timeoutWaitINITBallot)
+	defer closeFunc()
+
+	cs.compiler.lastINITVoteResult = vr
+
+	chanState := make(chan StateContext)
+	_ = cs.SetChanState(chanState)
+
+	acceptVR := NewVoteResult(
+		vr.Height(),
+		vr.Round(),
+		StageACCEPT,
+	).
+		SetAgreement(Majority).
+		SetBlock(NewRandomBlock().Hash()).
+		SetLastBlock(vr.Block()).
+		SetProposal(NewRandomProposalHash())
+
+	err := cs.ReceiveVoteResult(acceptVR)
+	t.NoError(err)
+
+	select {
+	case <-time.After(timeoutWaitINITBallot * 2):
+		t.NoError(errors.New("timed out; wait state changing to joining"))
+		return
+	case stateContext := <-chanState:
+		t.Equal(node.StateJoining, stateContext.State())
+	}
 }
 
 func TestConsensusStateHandler(t *testing.T) {

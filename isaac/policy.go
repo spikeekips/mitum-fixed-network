@@ -7,4 +7,5 @@ type Policy struct {
 	IntervalBroadcastINITBallotInJoin time.Duration // interval to broadcast INIT ballot in join
 	TimeoutWaitVoteResultInJoin       time.Duration // wait VoteResult in join state
 	TimeoutWaitBallot                 time.Duration // wait the new Proposal
+	TimeoutWaitINITBallot             time.Duration // wait the INIT ballot
 }

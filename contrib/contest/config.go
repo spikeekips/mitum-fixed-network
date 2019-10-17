@@ -321,6 +321,7 @@ type PolicyConfig struct {
 	IntervalBroadcastINITBallotInJoin *time.Duration `yaml:"interval_broadcast_init_ballot_in_join,omitempty"`
 	TimeoutWaitVoteResultInJoin       *time.Duration `yaml:"timeout_wait_vote_result_in_join,omitempty"`
 	TimeoutWaitBallot                 *time.Duration `yaml:"timeout_wait_ballot,omitempty"`
+	TimeoutWaitINITBallot             *time.Duration `yaml:"timeout_wait_init_ballot,omitempty"`
 }
 
 func defaultPolicyConfig() *PolicyConfig {
@@ -328,12 +329,14 @@ func defaultPolicyConfig() *PolicyConfig {
 	intervalBroadcastINITBallotInJoin := time.Second * 1
 	timeoutWaitVoteResultInJoin := time.Second * 3
 	timeoutWaitBallot := time.Second * 3
+	timeoutWaitINITBallot := time.Second * 3
 
 	return &PolicyConfig{
 		Threshold:                         &th,
 		IntervalBroadcastINITBallotInJoin: &intervalBroadcastINITBallotInJoin,
 		TimeoutWaitVoteResultInJoin:       &timeoutWaitVoteResultInJoin,
 		TimeoutWaitBallot:                 &timeoutWaitBallot,
+		TimeoutWaitINITBallot:             &timeoutWaitINITBallot,
 	}
 }
 
@@ -359,6 +362,11 @@ func (pc *PolicyConfig) IsValid(global *PolicyConfig) error {
 	if *pc.TimeoutWaitBallot < time.Nanosecond {
 		log.Warn().Dur("duration", *pc.TimeoutWaitBallot).Msg("TimeoutWaitBallot is too short")
 		pc.TimeoutWaitBallot = global.TimeoutWaitBallot
+	}
+
+	if *pc.TimeoutWaitINITBallot < time.Nanosecond {
+		log.Warn().Dur("duration", *pc.TimeoutWaitINITBallot).Msg("TimeoutWaitINITBallot is too short")
+		pc.TimeoutWaitINITBallot = global.TimeoutWaitINITBallot
 	}
 
 	return nil

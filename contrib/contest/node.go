@@ -97,6 +97,7 @@ func NewNode(
 			pv,
 			dp,
 			*config.Policy.TimeoutWaitBallot,
+			*config.Policy.TimeoutWaitINITBallot,
 		)
 		if err != nil {
 			return nil, err

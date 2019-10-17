@@ -64,7 +64,7 @@ func NewNode(
 
 	pv := contest_module.NewDummyProposalValidator()
 
-	ballotMaker := newBallotMaker(config, home, rootLog)
+	ballotMaker := newBallotMaker(config, homeState, rootLog)
 
 	var sc *isaac.StateController
 	{ // state handlers
@@ -240,11 +240,11 @@ func newSealStorage(_ *NodeConfig, l zerolog.Logger) isaac.SealStorage {
 	return ss
 }
 
-func newBallotMaker(config *NodeConfig, home node.Home, l zerolog.Logger) isaac.BallotMaker {
+func newBallotMaker(config *NodeConfig, homeState *isaac.HomeState, l zerolog.Logger) isaac.BallotMaker {
 	pc := *config.Modules.BallotMaker
 	switch pc["name"] {
 	case "DefaultBallotMaker":
-		return isaac.NewDefaultBallotMaker(home)
+		return isaac.NewDefaultBallotMaker(homeState.Home())
 	case "DamangedBallotMaker":
 		bmc := config.Modules.BallotMaker
 
@@ -268,7 +268,7 @@ func newBallotMaker(config *NodeConfig, home node.Home, l zerolog.Logger) isaac.
 			stage = strings.ToUpper(s.(string))
 		}
 
-		db := contest_module.NewDamangedBallotMaker(home)
+		db := contest_module.NewDamangedBallotMaker(homeState.Home())
 		db = db.AddPoint(height, round, stage)
 		db.SetLogger(l)
 
@@ -288,7 +288,7 @@ func newBallotMaker(config *NodeConfig, home node.Home, l zerolog.Logger) isaac.
 			}
 		}
 
-		cb := contest_module.NewConditionBallotMaker(home, conditions)
+		cb := contest_module.NewConditionBallotMaker(homeState, conditions)
 		cb.SetLogger(l)
 		return cb
 	default:

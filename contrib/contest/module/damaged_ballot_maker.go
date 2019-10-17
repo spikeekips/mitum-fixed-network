@@ -116,11 +116,27 @@ func (db DamangedBallotMaker) modifyBallot(
 				case "lastRound":
 					lastRound = NewRandomRound()
 				case "nextHeight":
-					nextHeight = NewRandomHeight()
+					var a isaac.Height
+					for {
+						if !a.Equal(nextHeight) {
+							break
+						}
+						a = NewRandomHeight()
+					}
+
+					nextHeight = a
 				case "nextBlock":
 					nextBlock = NewRandomBlockHash()
 				case "currentRound":
-					currentRound = NewRandomRound()
+					var a isaac.Round
+					for {
+						if a != currentRound {
+							break
+						}
+						a = NewRandomRound()
+					}
+
+					currentRound = a
 				case "currentProposal":
 					currentProposal = NewRandomProposalHash()
 				}

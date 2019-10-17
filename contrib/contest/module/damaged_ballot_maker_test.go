@@ -157,7 +157,7 @@ func (t *testDamagedBallotMaker) TestGlobal() {
 		t.NoError(err)
 		t.True(ballot.LastBlock().Equal(previousBlock))
 		t.False(ballot.Block().Equal(newBlock))
-		t.NotEqual(ballot.Round(), round)
+		t.NotEqual(ballot.Round(), round+isaac.Round(1))
 	}
 }
 

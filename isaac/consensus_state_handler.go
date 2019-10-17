@@ -236,6 +236,7 @@ func (cs *ConsensusStateHandler) ReceiveVoteResult(vr VoteResult) error {
 	}
 
 	if vr.GotMajority() {
+		cs.Log().Debug().Object("vr", vr).Msg("VoteResult majority")
 		if vr.Stage() == StageINIT {
 			return cs.gotINITMajority(vr)
 		} else {

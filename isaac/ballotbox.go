@@ -138,6 +138,9 @@ func (rs *Records) Vote(
 	lastRound Round,
 	proposal hash.Hash,
 ) error {
+	rs.Lock()
+	defer rs.Unlock()
+
 	key := rs.key(block, lastBlock, lastRound, proposal)
 
 	var nr *NodesRecord
@@ -154,29 +157,23 @@ func (rs *Records) Vote(
 }
 
 func (rs *Records) CheckMajority(total, threshold uint) VoteResult {
+	rs.Lock()
+	defer rs.Unlock()
+
 	l := rs.Log().With().
 		Str("height", rs.height.String()).
 		Uint64("round", rs.round.Uint64()).
 		Uint("total", total).
 		Uint("threshold", threshold).
 		Str("stage", rs.stage.String()).
+		Bool("is_finished", rs.result.IsFinished()).
+		Bool("is_closed", rs.result.IsClosed()).
 		Logger()
 
-	if rs.IsFinished() {
-		var records []Record
-		rs.voted.Range(func(k, v interface{}) bool {
-			records = append(records, v.(*NodesRecord).Records()...)
-			return true
-		})
+	if rs.result.IsFinished() {
+		l.Debug().Msg("check majority, but closed")
 
-		rs.RLock()
-		defer rs.RUnlock()
-
-		l.Debug().
-			Bool("is_finished", rs.result.IsFinished()).
-			Msg("check majority, but closed")
-
-		return rs.result.SetRecords(records).SetClosed()
+		return rs.result.SetRecords(rs.Records()).SetClosed()
 	}
 
 	var records []Record
@@ -222,7 +219,7 @@ func (rs *Records) CheckMajority(total, threshold uint) VoteResult {
 		Msg("check majority")
 
 	if vr.IsFinished() {
-		rs.setResult(vr)
+		rs.result = vr
 	}
 
 	return vr
@@ -235,11 +232,28 @@ func (rs *Records) IsFinished() bool {
 	return rs.result.IsFinished()
 }
 
-func (rs *Records) setResult(vr VoteResult) {
-	rs.Lock()
-	defer rs.Unlock()
+func (rs *Records) IsClosed() bool {
+	rs.RLock()
+	defer rs.RUnlock()
 
-	rs.result = vr
+	return rs.result.IsClosed()
+}
+
+func (rs *Records) Result() VoteResult {
+	rs.RLock()
+	defer rs.RUnlock()
+
+	return rs.result
+}
+
+func (rs *Records) Records() []Record {
+	var records []Record
+	rs.voted.Range(func(k, v interface{}) bool {
+		records = append(records, v.(*NodesRecord).Records()...)
+		return true
+	})
+
+	return records
 }
 
 type Record struct {

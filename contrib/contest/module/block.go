@@ -35,6 +35,26 @@ func NewRandomBlockHash() hash.Hash {
 	return h
 }
 
+func NewRandomBlock() isaac.Block {
+	bk, _ := isaac.NewBlock(
+		NewRandomHeight(),
+		NewRandomRound(),
+		NewRandomProposalHash(),
+	)
+
+	return bk
+}
+
+func NewRandomNextBlock(bk isaac.Block) isaac.Block {
+	nbk, _ := isaac.NewBlock(
+		bk.Height().Add(1),
+		NewRandomRound(),
+		NewRandomProposalHash(),
+	)
+
+	return nbk
+}
+
 func NewRandomHeight() isaac.Height {
 	return isaac.NewBlockHeight(uint64(mrand.Intn(100)))
 }

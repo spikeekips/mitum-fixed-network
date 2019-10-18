@@ -56,7 +56,7 @@ func LoadConfig(f string, numberOfNodes uint) (*Config, error) {
 		}
 	}
 
-	if last < 1 {
+	if numberOfNodes < 1 && last < 1 {
 		return nil, xerrors.Errorf("number-of-nodes should be greater than 0")
 	} else {
 		numberOfNodes = last + 1
@@ -251,21 +251,19 @@ func (nc *NodeConfig) IsValid(global *NodeConfig) error {
 		return err
 	}
 
-	if nc.Modules == nil {
-		if global == nil {
-			nc.Modules = defaultModulesConfig()
-		} else {
-			nc.Modules = global.Modules
-		}
+	var gmc *ModulesConfig
+	if global == nil || global.Modules == nil {
+		gmc = defaultModulesConfig()
 	} else {
-		var mc *ModulesConfig
-		if global != nil {
-			mc = global.Modules
-		}
+		gmc = global.Modules
+	}
 
-		if err := nc.Modules.IsValid(mc); err != nil {
-			return err
-		}
+	if nc.Modules == nil {
+		nc.Modules = gmc
+	}
+
+	if err := nc.Modules.IsValid(gmc); err != nil {
+		return err
 	}
 
 	if len(nc.Blocks) < 1 && global.Blocks != nil {
@@ -349,23 +347,31 @@ func (pc *PolicyConfig) IsValid(global *PolicyConfig) error {
 		log.Warn().Float64("threshold", *pc.Threshold).Msg("Threshold is too low")
 	}
 
-	if *pc.IntervalBroadcastINITBallotInJoin < time.Nanosecond {
-		log.Warn().Dur("duration", *pc.IntervalBroadcastINITBallotInJoin).Msg("IntervalBroadcastINITBallotInJoin is too short")
+	dur := func(d *time.Duration) time.Duration {
+		if d == nil {
+			return time.Second * 0
+		}
+
+		return *d
+	}
+
+	if d := dur(pc.IntervalBroadcastINITBallotInJoin); d < time.Nanosecond {
+		log.Warn().Dur("duration", d).Msg("IntervalBroadcastINITBallotInJoin is too short")
 		pc.IntervalBroadcastINITBallotInJoin = global.IntervalBroadcastINITBallotInJoin
 	}
 
-	if *pc.TimeoutWaitVoteResultInJoin < time.Nanosecond {
-		log.Warn().Dur("duration", *pc.TimeoutWaitVoteResultInJoin).Msg("TimeoutWaitVoteResultInJoin is too short")
+	if d := dur(pc.TimeoutWaitVoteResultInJoin); d < time.Nanosecond {
+		log.Warn().Dur("duration", d).Msg("TimeoutWaitVoteResultInJoin is too short")
 		pc.TimeoutWaitVoteResultInJoin = global.TimeoutWaitVoteResultInJoin
 	}
 
-	if *pc.TimeoutWaitBallot < time.Nanosecond {
-		log.Warn().Dur("duration", *pc.TimeoutWaitBallot).Msg("TimeoutWaitBallot is too short")
+	if d := dur(pc.TimeoutWaitBallot); d < time.Nanosecond {
+		log.Warn().Dur("duration", d).Msg("TimeoutWaitBallot is too short")
 		pc.TimeoutWaitBallot = global.TimeoutWaitBallot
 	}
 
-	if *pc.TimeoutWaitINITBallot < time.Nanosecond {
-		log.Warn().Dur("duration", *pc.TimeoutWaitINITBallot).Msg("TimeoutWaitINITBallot is too short")
+	if d := dur(pc.TimeoutWaitINITBallot); d < time.Nanosecond {
+		log.Warn().Dur("duration", d).Msg("TimeoutWaitINITBallot is too short")
 		pc.TimeoutWaitINITBallot = global.TimeoutWaitINITBallot
 	}
 

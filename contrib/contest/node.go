@@ -86,7 +86,7 @@ func NewNode(
 		}
 		js.SetLogger(rootLog)
 
-		dp := newProposalMaker(config, home, rootLog)
+		dp := newProposalMaker(config, homeState, rootLog)
 
 		cs, err := isaac.NewConsensusStateHandler(
 			homeState,
@@ -215,7 +215,7 @@ func newSuffrage(config *NodeConfig, nodes []node.Node, globalNumberOfNodes uint
 	}
 }
 
-func newProposalMaker(config *NodeConfig, home node.Home, l zerolog.Logger) isaac.ProposalMaker {
+func newProposalMaker(config *NodeConfig, homeState *isaac.HomeState, l zerolog.Logger) isaac.ProposalMaker {
 	pc := *config.Modules.ProposalMaker
 	switch pc["name"] {
 	case "DefaultProposalMaker":
@@ -224,10 +224,32 @@ func newProposalMaker(config *NodeConfig, home node.Home, l zerolog.Logger) isaa
 			panic(err)
 		}
 
-		dp := isaac.NewDefaultProposalMaker(home, delay)
+		dp := isaac.NewDefaultProposalMaker(homeState.Home(), delay)
 		dp.SetLogger(l)
 
 		return dp
+	case "ConditionProposalMaker":
+		delay, err := time.ParseDuration(pc["delay"].(string))
+		if err != nil {
+			panic(err)
+		}
+
+		conditions := map[string]contest_module.ConditionHandler{}
+
+		if s, found := pc["conditions"]; found {
+			for n, c := range s.(ProposalMakerConfig) {
+				cc, err := parseConditionHandler(c.(ProposalMakerConfig))
+				if err != nil {
+					panic(err)
+				}
+
+				conditions[n] = cc
+			}
+		}
+
+		cb := contest_module.NewConditionProposalMaker(homeState, delay, conditions)
+		cb.SetLogger(l)
+		return cb
 	default:
 		panic(xerrors.Errorf("unknown proposal maker config: %v", config))
 	}

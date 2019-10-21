@@ -556,11 +556,29 @@ func (sc *ProposalMakerConfig) IsValid(global *ProposalMakerConfig) error {
 	switch name {
 	case "DefaultProposalMaker":
 		if s, found := (*sc)["delay"]; !found {
-			return xerrors.Errorf("`delay` must be given for `DefaultProposalMaker`")
+			(*sc)["delay"] = "1s"
 		} else if d, ok := s.(string); !ok {
 			return xerrors.Errorf("`delay` must be time.Duration string format; %v", (*sc)["delay"])
 		} else if _, err := time.ParseDuration(d); err != nil {
 			return err
+		}
+	case "ConditionProposalMaker":
+		if s, found := (*sc)["delay"]; !found {
+			(*sc)["delay"] = "1s"
+		} else if d, ok := s.(string); !ok {
+			return xerrors.Errorf("`delay` must be time.Duration string format; %v", (*sc)["delay"])
+		} else if _, err := time.ParseDuration(d); err != nil {
+			return err
+		}
+
+		if s, found := (*sc)["conditions"]; !found {
+			log.Warn().Msg("conditions is missing")
+		} else {
+			for _, c := range s.(ProposalMakerConfig) {
+				if _, err := parseConditionHandler(c.(ProposalMakerConfig)); err != nil {
+					return err
+				}
+			}
 		}
 	}
 

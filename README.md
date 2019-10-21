@@ -18,5 +18,5 @@ $ go test -race -tags test ./... -v
 
 ```
 $ golangci-lint run
-$ for i in *; do [ -d "$i" ] || continue; nargs ./$i...; done
+$ for i in *; do [ -d "$i" ] || continue; nargs -set_exit_status -named_returns -tests ./$i...; done
 ```

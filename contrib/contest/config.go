@@ -676,12 +676,12 @@ func (cc *ConditionConfig) IsValid(global *ConditionConfig) error {
 	return nil
 }
 
-func parseConditionHandler(m map[string]interface{}) (contest_module.ConditionBallotHandler, error) {
+func parseConditionHandler(m map[string]interface{}) (contest_module.ConditionHandler, error) {
 	var query, action string
 	if s, found := m["condition"]; !found {
 		err := xerrors.Errorf("condition is missing in condition block")
 		log.Error().Err(err).Send()
-		return contest_module.ConditionBallotHandler{}, err
+		return contest_module.ConditionHandler{}, err
 	} else {
 		query = s.(string)
 	}
@@ -689,7 +689,7 @@ func parseConditionHandler(m map[string]interface{}) (contest_module.ConditionBa
 	if s, found := m["action"]; !found {
 		err := xerrors.Errorf("action is missing in condition block")
 		log.Error().Err(err).Send()
-		return contest_module.ConditionBallotHandler{}, err
+		return contest_module.ConditionHandler{}, err
 	} else {
 		action = s.(string)
 	}
@@ -697,8 +697,8 @@ func parseConditionHandler(m map[string]interface{}) (contest_module.ConditionBa
 	cc, err := condition.NewConditionChecker(query)
 	if err != nil {
 		log.Error().Err(err).Send()
-		return contest_module.ConditionBallotHandler{}, err
+		return contest_module.ConditionHandler{}, err
 	}
 
-	return contest_module.NewConditionBallotHandler(cc, action), nil
+	return contest_module.NewConditionHandler(cc, action), nil
 }

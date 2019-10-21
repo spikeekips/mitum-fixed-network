@@ -275,7 +275,7 @@ func newBallotMaker(config *NodeConfig, homeState *isaac.HomeState, l zerolog.Lo
 		return db
 	case "ConditionBallotMaker":
 		bmc := config.Modules.BallotMaker
-		conditions := map[string]contest_module.ConditionBallotHandler{}
+		conditions := map[string]contest_module.ConditionHandler{}
 
 		if s, found := (*bmc)["conditions"]; found {
 			for n, c := range s.(BallotMakerConfig) {

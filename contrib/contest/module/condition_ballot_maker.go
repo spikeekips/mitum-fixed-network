@@ -11,23 +11,23 @@ import (
 	"golang.org/x/xerrors"
 )
 
-type ConditionBallotHandler struct {
+type ConditionHandler struct {
 	checker condition.ConditionChecker
 	action  string
 }
 
-func NewConditionBallotHandler(checker condition.ConditionChecker, action string) ConditionBallotHandler {
-	return ConditionBallotHandler{checker: checker, action: action}
+func NewConditionHandler(checker condition.ConditionChecker, action string) ConditionHandler {
+	return ConditionHandler{checker: checker, action: action}
 }
 
 type ConditionBallotMaker struct {
 	*common.Logger
 	isaac.DefaultBallotMaker
 	homeState  *isaac.HomeState
-	conditions map[string]ConditionBallotHandler
+	conditions map[string]ConditionHandler
 }
 
-func NewConditionBallotMaker(homeState *isaac.HomeState, conditions map[string]ConditionBallotHandler) ConditionBallotMaker {
+func NewConditionBallotMaker(homeState *isaac.HomeState, conditions map[string]ConditionHandler) ConditionBallotMaker {
 	return ConditionBallotMaker{
 		DefaultBallotMaker: isaac.NewDefaultBallotMaker(homeState.Home()),
 		Logger: common.NewLogger(func(c zerolog.Context) zerolog.Context {

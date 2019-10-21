@@ -58,7 +58,7 @@ func LoadConfig(f string, numberOfNodes uint) (*Config, error) {
 
 	if numberOfNodes < 1 && last < 1 {
 		return nil, xerrors.Errorf("number-of-nodes should be greater than 0")
-	} else {
+	} else if numberOfNodes == last {
 		numberOfNodes = last + 1
 	}
 	config.NumberOfNodes_ = &numberOfNodes

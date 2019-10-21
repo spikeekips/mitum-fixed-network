@@ -163,7 +163,7 @@ func (cs *ConsensusStateHandler) ReceiveProposal(proposal Proposal) error {
 	cs.Log().Debug().Object("proposal", proposal.Hash()).Msg("proposal checked")
 
 	err = cs.nextRoundTimer(
-		"ballot-timeout",
+		"proposal-timeout",
 		cs.compiler.LastINITVoteResult(),
 	)
 	if err != nil {

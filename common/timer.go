@@ -40,7 +40,7 @@ type CallbackTimer struct {
 	name         string
 	callbacks    []TimerCallback
 	intervalFunc TimerCallbackIntervalFunc
-	startedAt    Time
+	startedAt    time.Time
 	runCount     uint
 	limit        uint
 	stopped      bool
@@ -75,7 +75,7 @@ func (ct *CallbackTimer) Start() error {
 	ct.Lock()
 	defer ct.Unlock()
 
-	ct.startedAt = Now()
+	ct.startedAt = time.Now()
 	ct.runCount = 0
 	ct.stopped = false
 	ct.stopChan = make(chan struct{}, 1)
@@ -154,7 +154,7 @@ func (ct *CallbackTimer) run() {
 		return
 	}
 
-	interval := ct.intervalFunc(ct.RunCount(), Now().Sub(ct.startedAt))
+	interval := ct.intervalFunc(ct.RunCount(), time.Now().Sub(ct.startedAt))
 	if interval == 0 { // stop it
 		return
 	}
@@ -188,6 +188,8 @@ func (ct *CallbackTimer) runCallback() error {
 		return ct.Stop()
 	}
 
+	startedAt := time.Now()
+
 	var wg sync.WaitGroup
 	wg.Add(len(ct.callbacks))
 
@@ -205,6 +207,13 @@ func (ct *CallbackTimer) runCallback() error {
 	}
 
 	wg.Wait()
+
+	ct.Log().Debug().
+		Uint("count", runCount).
+		Uint("limit", limit).
+		Int("callbacks", len(ct.callbacks)).
+		Dur("elapsed", time.Now().Sub(startedAt)).
+		Msg("callback executed")
 
 	ct.incRunCount()
 

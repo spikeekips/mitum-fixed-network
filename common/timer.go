@@ -154,7 +154,7 @@ func (ct *CallbackTimer) run() {
 		return
 	}
 
-	interval := ct.intervalFunc(ct.RunCount(), time.Now().Sub(ct.startedAt))
+	interval := ct.intervalFunc(ct.RunCount(), time.Since(ct.startedAt))
 	if interval == 0 { // stop it
 		return
 	}
@@ -212,7 +212,7 @@ func (ct *CallbackTimer) runCallback() error {
 		Uint("count", runCount).
 		Uint("limit", limit).
 		Int("callbacks", len(ct.callbacks)).
-		Dur("elapsed", time.Now().Sub(startedAt)).
+		Dur("elapsed", time.Since(startedAt)).
 		Msg("callback executed")
 
 	ct.incRunCount()

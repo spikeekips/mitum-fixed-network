@@ -10,6 +10,7 @@ import (
 
 	"github.com/rs/zerolog"
 	"github.com/spikeekips/mitum/common"
+	"github.com/spikeekips/mitum/contrib/contest/condition"
 	contest_module "github.com/spikeekips/mitum/contrib/contest/module"
 	"github.com/spikeekips/mitum/isaac"
 	"github.com/spikeekips/mitum/keypair"
@@ -234,11 +235,11 @@ func newProposalMaker(config *NodeConfig, homeState *isaac.HomeState, l zerolog.
 			panic(err)
 		}
 
-		conditions := map[string]contest_module.ConditionHandler{}
+		conditions := map[string]condition.Action{}
 
 		if s, found := pc["conditions"]; found {
 			for n, c := range s.(ProposalMakerConfig) {
-				cc, err := parseConditionHandler(c.(ProposalMakerConfig))
+				cc, err := parseConditionValue(c.(ProposalMakerConfig))
 				if err != nil {
 					panic(err)
 				}
@@ -297,11 +298,11 @@ func newBallotMaker(config *NodeConfig, homeState *isaac.HomeState, l zerolog.Lo
 		return db
 	case "ConditionBallotMaker":
 		bmc := config.Modules.BallotMaker
-		conditions := map[string]contest_module.ConditionHandler{}
+		conditions := map[string]condition.Action{}
 
 		if s, found := (*bmc)["conditions"]; found {
 			for n, c := range s.(BallotMakerConfig) {
-				cc, err := parseConditionHandler(c.(BallotMakerConfig))
+				cc, err := parseConditionValue(c.(BallotMakerConfig))
 				if err != nil {
 					panic(err)
 				}

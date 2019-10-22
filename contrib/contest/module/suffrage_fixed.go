@@ -9,10 +9,6 @@ import (
 	"github.com/spikeekips/mitum/node"
 )
 
-func init() {
-	Suffrages = append(Suffrages, "FixedProposerSuffrage")
-}
-
 type FixedProposerSuffrage struct {
 	proposer       node.Node
 	numberOfActing uint // by default numberOfActing is 0; it means all nodes will be acting member

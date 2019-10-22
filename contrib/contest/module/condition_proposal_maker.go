@@ -16,10 +16,10 @@ type ConditionProposalMaker struct {
 	*common.Logger
 	isaac.DefaultProposalMaker
 	homeState  *isaac.HomeState
-	conditions map[string]ConditionHandler
+	conditions map[string]condition.Action
 }
 
-func NewConditionProposalMaker(homeState *isaac.HomeState, delay time.Duration, conditions map[string]ConditionHandler) ConditionProposalMaker {
+func NewConditionProposalMaker(homeState *isaac.HomeState, delay time.Duration, conditions map[string]condition.Action) ConditionProposalMaker {
 	return ConditionProposalMaker{
 		DefaultProposalMaker: isaac.NewDefaultProposalMaker(homeState.Home(), delay),
 		Logger: common.NewLogger(func(c zerolog.Context) zerolog.Context {
@@ -67,14 +67,15 @@ func (cp ConditionProposalMaker) Make(height isaac.Height, round isaac.Round, la
 	}
 
 	for name, c := range cp.conditions {
-		if c.checker.Check(li) {
+		if c.Checker().Check(li) {
 			cp.Log().Debug().
 				Str("checker", name).
-				Str("query", c.checker.Query()).
-				Str("action", c.action).
+				Str("query", c.Checker().Query()).
+				Str("action", c.Action()).
 				RawJSON("data", li.Bytes()).
 				Msg("condition matched")
-			switch c.action {
+
+			switch c.Action() {
 			case "empty-proposal":
 				return isaac.Proposal{}, xerrors.Errorf("empty proposal by force")
 			case "random-last_block":

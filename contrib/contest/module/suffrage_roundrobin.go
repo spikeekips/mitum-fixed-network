@@ -5,6 +5,7 @@ import (
 
 	"github.com/spikeekips/mitum/isaac"
 	"github.com/spikeekips/mitum/node"
+	"golang.org/x/xerrors"
 )
 
 func init() {
@@ -17,11 +18,20 @@ type RoundrobinSuffrage struct {
 }
 
 func NewRoundrobinSuffrage(numberOfActing uint, nodes ...node.Node) *RoundrobinSuffrage {
-	ns := append(nodes[:0:0], nodes...)
+	if int(numberOfActing) > len(nodes) {
+		panic(xerrors.Errorf(
+			"numberOfActing should be lesser than number of nodes: numberOfActing=%v nodes=%v",
+			numberOfActing,
+			len(nodes),
+		))
+	}
 
-	node.SortNodesByAddress(ns)
+	sorted := make([]node.Node, len(nodes))
+	copy(sorted, nodes)
 
-	return &RoundrobinSuffrage{numberOfActing: numberOfActing, nodes: ns}
+	node.SortNodesByAddress(sorted)
+
+	return &RoundrobinSuffrage{numberOfActing: numberOfActing, nodes: sorted}
 }
 
 func (fs *RoundrobinSuffrage) AddNodes(_ ...node.Node) isaac.Suffrage {

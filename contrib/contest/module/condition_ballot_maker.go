@@ -11,23 +11,14 @@ import (
 	"golang.org/x/xerrors"
 )
 
-type ConditionHandler struct {
-	checker condition.ConditionChecker
-	action  string
-}
-
-func NewConditionHandler(checker condition.ConditionChecker, action string) ConditionHandler {
-	return ConditionHandler{checker: checker, action: action}
-}
-
 type ConditionBallotMaker struct {
 	*common.Logger
 	isaac.DefaultBallotMaker
 	homeState  *isaac.HomeState
-	conditions map[string]ConditionHandler
+	conditions map[string]condition.Action
 }
 
-func NewConditionBallotMaker(homeState *isaac.HomeState, conditions map[string]ConditionHandler) ConditionBallotMaker {
+func NewConditionBallotMaker(homeState *isaac.HomeState, conditions map[string]condition.Action) ConditionBallotMaker {
 	return ConditionBallotMaker{
 		DefaultBallotMaker: isaac.NewDefaultBallotMaker(homeState.Home()),
 		Logger: common.NewLogger(func(c zerolog.Context) zerolog.Context {
@@ -84,14 +75,14 @@ func (cb ConditionBallotMaker) modifyBallot(
 		}
 
 		for name, c := range cb.conditions {
-			if c.checker.Check(li) {
+			if c.Checker().Check(li) {
 				cb.Log().Debug().
 					Str("checker", name).
-					Str("query", c.checker.Query()).
-					Str("action", c.action).
+					Str("query", c.Checker().Query()).
+					Str("action", c.Action()).
 					RawJSON("data", li.Bytes()).
 					Msg("condition matched")
-				switch c.action {
+				switch c.Action() {
 				case "empty-ballot":
 					return isaac.Ballot{}, xerrors.Errorf("empty ballot by force")
 				case "random-last_block":

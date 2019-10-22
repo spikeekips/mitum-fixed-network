@@ -29,8 +29,8 @@ func (t *testConditionBallotMaker) TestEmptyBallot() {
 		cc, _ := condition.NewConditionChecker(query)
 		cb := NewConditionBallotMaker(
 			homeState,
-			map[string]ConditionHandler{
-				"default": NewConditionHandler(cc, "empty-ballot"),
+			map[string]condition.Action{
+				"default": condition.NewActionWithoutValue(cc, "empty-ballot"),
 			},
 		)
 
@@ -44,8 +44,8 @@ func (t *testConditionBallotMaker) TestEmptyBallot() {
 		cc, _ := condition.NewConditionChecker(query)
 		cb := NewConditionBallotMaker(
 			homeState,
-			map[string]ConditionHandler{
-				"default": NewConditionHandler(cc, "empty-ballot"),
+			map[string]condition.Action{
+				"default": condition.NewActionWithoutValue(cc, "empty-ballot"),
 			},
 		)
 
@@ -149,8 +149,8 @@ func (t *testConditionBallotMaker) TestModifyRandom() {
 			func(*testing.T) {
 				cb := NewConditionBallotMaker(
 					homeState,
-					map[string]ConditionHandler{
-						"default": NewConditionHandler(cc, c.action),
+					map[string]condition.Action{
+						"default": condition.NewActionWithoutValue(cc, c.action),
 					},
 				)
 				ballot, err := cb.INIT(lastBlock.Hash(), lastBlock.Round(), nextBlock.Height(), nextBlock.Hash(), currentRound, currentProposal)

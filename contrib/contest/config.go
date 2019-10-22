@@ -575,7 +575,7 @@ func (sc *ProposalMakerConfig) IsValid(global *ProposalMakerConfig) error {
 			log.Warn().Msg("conditions is missing")
 		} else {
 			for _, c := range s.(ProposalMakerConfig) {
-				if _, err := parseConditionHandler(c.(ProposalMakerConfig)); err != nil {
+				if _, err := parseConditionValue(c.(ProposalMakerConfig)); err != nil {
 					return err
 				}
 			}
@@ -646,7 +646,7 @@ func (bmc *BallotMakerConfig) IsValid(global *BallotMakerConfig) error {
 			log.Warn().Msg("conditions is missing")
 		} else {
 			for _, c := range s.(BallotMakerConfig) {
-				if _, err := parseConditionHandler(c.(BallotMakerConfig)); err != nil {
+				if _, err := parseConditionValue(c.(BallotMakerConfig)); err != nil {
 					return err
 				}
 			}
@@ -694,12 +694,12 @@ func (cc *ConditionConfig) IsValid(global *ConditionConfig) error {
 	return nil
 }
 
-func parseConditionHandler(m map[string]interface{}) (contest_module.ConditionHandler, error) {
+func parseConditionValue(m map[string]interface{}) (condition.Action, error) {
 	var query, action string
 	if s, found := m["condition"]; !found {
 		err := xerrors.Errorf("condition is missing in condition block")
 		log.Error().Err(err).Send()
-		return contest_module.ConditionHandler{}, err
+		return condition.Action{}, err
 	} else {
 		query = s.(string)
 	}
@@ -707,7 +707,7 @@ func parseConditionHandler(m map[string]interface{}) (contest_module.ConditionHa
 	if s, found := m["action"]; !found {
 		err := xerrors.Errorf("action is missing in condition block")
 		log.Error().Err(err).Send()
-		return contest_module.ConditionHandler{}, err
+		return condition.Action{}, err
 	} else {
 		action = s.(string)
 	}
@@ -715,8 +715,8 @@ func parseConditionHandler(m map[string]interface{}) (contest_module.ConditionHa
 	cc, err := condition.NewConditionChecker(query)
 	if err != nil {
 		log.Error().Err(err).Send()
-		return contest_module.ConditionHandler{}, err
+		return condition.Action{}, err
 	}
 
-	return contest_module.NewConditionHandler(cc, action), nil
+	return condition.NewActionWithoutValue(cc, action), nil
 }

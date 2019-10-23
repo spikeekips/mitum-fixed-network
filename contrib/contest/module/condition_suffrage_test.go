@@ -17,14 +17,12 @@ type testConditionSuffrage struct {
 }
 
 func (t *testConditionSuffrage) checkActing(acting isaac.ActingSuffrage) error {
-	var filtered []node.Node
 	checked := map[string]bool{}
 	for _, n := range acting.Nodes() {
 		if _, found := checked[n.Address().String()]; found {
 			return xerrors.Errorf("duplicated node found")
 		}
 
-		filtered = append(filtered, n)
 		checked[n.Address().String()] = true
 	}
 
@@ -283,14 +281,6 @@ func (t *testConditionSuffrage) TestFixedActingButUnknownNodeName() {
 
 	lastBlock := NewRandomBlock()
 	homeState := isaac.NewHomeState(nodes[0].(node.Home), lastBlock).SetBlock(NewRandomNextBlock(lastBlock))
-
-	defaultSuffrage := NewRoundrobinSuffrage(numberOfActing, nodes...)
-	defaultActing := defaultSuffrage.Acting(homeState.Block().Height(), isaac.Round(0))
-
-	var defaultActingNames []string
-	for _, n := range defaultActing.Nodes() {
-		defaultActingNames = append(defaultActingNames, n.Address().String())
-	}
 
 	fixedActingNodes := nodes[:2]
 	node.SortNodesByAddress(fixedActingNodes)

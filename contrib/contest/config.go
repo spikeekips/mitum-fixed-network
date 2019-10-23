@@ -741,38 +741,7 @@ func parseConditionValue(m map[string]interface{}) (condition.Action, error) {
 }
 
 type ConditionAction struct {
-	Condition string      `yaml:"condition"`
-	Action    string      `yaml:"action"`
-	Value     interface{} `yaml:"value,omitempty"`
-}
-
-func NewConditionActionFromMap(m map[string]interface{}) (ConditionAction, error) {
-	ca := ConditionAction{}
-
-	// condition
-	if v, found := m["condition"]; !found {
-		return ConditionAction{}, xerrors.Errorf("`condition` is missing")
-	} else if x, ok := v.(string); !ok {
-		return ConditionAction{}, xerrors.Errorf("`condition` must be string: %v", v)
-	} else {
-		ca.Condition = x
-	}
-
-	// action
-	if v, found := m["action"]; !found {
-		return ConditionAction{}, xerrors.Errorf("`action` is missing")
-	} else if x, ok := v.(string); !ok {
-		return ConditionAction{}, xerrors.Errorf("`action` must be string: %v", v)
-	} else {
-		ca.Action = x
-	}
-
-	// value
-	if v, found := m["value"]; !found {
-		return ConditionAction{}, xerrors.Errorf("`value` is missing")
-	} else {
-		ca.Value = v
-	}
-
-	return ca, nil
+	Condition string        `yaml:"condition"`
+	Action    string        `yaml:"action"`
+	Value     []interface{} `yaml:"value,omitempty"`
 }

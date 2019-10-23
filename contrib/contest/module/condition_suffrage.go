@@ -133,8 +133,10 @@ func (cs ConditionSuffrage) Acting(height isaac.Height, round isaac.Round) isaac
 				rd := make([]node.Node, len(cs.Nodes()))
 				copy(rd, cs.Nodes())
 
-				rand.Seed(time.Now().UnixNano())
-				rand.Shuffle(len(rd), func(i, j int) { rd[i], rd[j] = rd[j], rd[i] })
+				if int(cs.RoundrobinSuffrage.numberOfActing) != len(cs.Nodes()) {
+					rand.Seed(time.Now().UnixNano())
+					rand.Shuffle(len(rd), func(i, j int) { rd[i], rd[j] = rd[j], rd[i] })
+				}
 
 				if proposer == nil {
 					panic(xerrors.Errorf(
@@ -197,16 +199,14 @@ func nodeNameFromActionValue(value condition.ActionValue) ([]string, error) {
 		return nil, xerrors.Errorf("invalid action value type for node name action: %v", value.Hint())
 	}
 
-	var names []string
-	for _, v := range value.Value() {
-		if p, ok := v.(string); !ok {
-			return nil, xerrors.Errorf("invalid action value for node name action: %q", v)
-		} else if len(p) < 1 {
-			return nil, xerrors.Errorf("empty value for node name")
-		} else {
-			names = append(names, p)
-		}
+	var values []string
+	if x, ok := value.Value().(string); ok {
+		values = append(values, x)
+	} else if x, ok := value.Value().([]string); ok {
+		values = append(values, x...)
+	} else {
+		return nil, xerrors.Errorf("action value should be []string for node name action: %q", value.Value())
 	}
 
-	return names, nil
+	return values, nil
 }

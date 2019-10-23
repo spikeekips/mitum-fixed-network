@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"path/filepath"
+	"reflect"
 	"sort"
 	"time"
 
@@ -58,7 +59,7 @@ func LoadConfig(f string, numberOfNodes uint) (*Config, error) {
 
 	if numberOfNodes < 1 && last < 1 {
 		return nil, xerrors.Errorf("number-of-nodes should be greater than 0")
-	} else if numberOfNodes == last {
+	} else if numberOfNodes < 1 || numberOfNodes == last {
 		numberOfNodes = last + 1
 	}
 	config.NumberOfNodes_ = &numberOfNodes
@@ -506,6 +507,16 @@ func (sc *SuffrageConfig) IsValid(global *SuffrageConfig) error {
 		}
 	case "RoundrobinSuffrage":
 		//
+	case "ConditionSuffrage":
+		if s, found := (*sc)["conditions"]; !found {
+			log.Warn().Msg("conditions is missing")
+		} else {
+			for _, c := range s.(SuffrageConfig) {
+				if _, err := parseConditionValue(c.(SuffrageConfig)); err != nil {
+					return err
+				}
+			}
+		}
 	}
 
 	if v, found := (*sc)["number_of_acting"]; !found {
@@ -712,11 +723,56 @@ func parseConditionValue(m map[string]interface{}) (condition.Action, error) {
 		action = s.(string)
 	}
 
+	var value interface{}
+	var hint reflect.Kind
+	if s, found := m["value"]; found {
+		value = s
+		hint = reflect.TypeOf(s).Kind()
+	}
+
 	cc, err := condition.NewConditionChecker(query)
 	if err != nil {
 		log.Error().Err(err).Send()
 		return condition.Action{}, err
 	}
 
-	return condition.NewActionWithoutValue(cc, action), nil
+	av := condition.NewActionValue(value, hint)
+	return condition.NewAction(cc, action, av), nil
+}
+
+type ConditionAction struct {
+	Condition string      `yaml:"condition"`
+	Action    string      `yaml:"action"`
+	Value     interface{} `yaml:"value,omitempty"`
+}
+
+func NewConditionActionFromMap(m map[string]interface{}) (ConditionAction, error) {
+	ca := ConditionAction{}
+
+	// condition
+	if v, found := m["condition"]; !found {
+		return ConditionAction{}, xerrors.Errorf("`condition` is missing")
+	} else if x, ok := v.(string); !ok {
+		return ConditionAction{}, xerrors.Errorf("`condition` must be string: %v", v)
+	} else {
+		ca.Condition = x
+	}
+
+	// action
+	if v, found := m["action"]; !found {
+		return ConditionAction{}, xerrors.Errorf("`action` is missing")
+	} else if x, ok := v.(string); !ok {
+		return ConditionAction{}, xerrors.Errorf("`action` must be string: %v", v)
+	} else {
+		ca.Action = x
+	}
+
+	// value
+	if v, found := m["value"]; !found {
+		return ConditionAction{}, xerrors.Errorf("`value` is missing")
+	} else {
+		ca.Value = v
+	}
+
+	return ca, nil
 }

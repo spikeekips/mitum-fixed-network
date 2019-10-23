@@ -43,7 +43,7 @@ func NewNode(
 		numberOfActing = globalConfig.NumberOfNodes()
 	}
 
-	suffrage := newSuffrage(config, nodes, numberOfActing)
+	suffrage := newSuffrage(homeState, config, nodes, numberOfActing)
 	ballotChecker := isaac.NewCompilerBallotChecker(homeState, suffrage)
 	ballotChecker.SetLogger(rootLog)
 
@@ -186,7 +186,12 @@ func NewHome(i uint) node.Home {
 	return node.NewHome(h, pk)
 }
 
-func newSuffrage(config *NodeConfig, nodes []node.Node, globalNumberOfNodes uint) isaac.Suffrage {
+func newSuffrage(
+	homeState *isaac.HomeState,
+	config *NodeConfig,
+	nodes []node.Node,
+	globalNumberOfNodes uint,
+) isaac.Suffrage {
 	sc := *config.Modules.Suffrage
 
 	numberOfActing := uint(sc["number_of_acting"].(int))
@@ -211,6 +216,21 @@ func newSuffrage(config *NodeConfig, nodes []node.Node, globalNumberOfNodes uint
 		return contest_module.NewFixedProposerSuffrage(proposer, numberOfActing, nodes...)
 	case "RoundrobinSuffrage":
 		return contest_module.NewRoundrobinSuffrage(numberOfActing, nodes...)
+	case "ConditionSuffrage":
+		conditions := map[string]condition.Action{}
+
+		if s, found := sc["conditions"]; found {
+			for n, c := range s.(SuffrageConfig) {
+				cc, err := parseConditionValue(c.(SuffrageConfig))
+				if err != nil {
+					panic(err)
+				}
+
+				conditions[n] = cc
+			}
+		}
+
+		return contest_module.NewConditionSuffrage(homeState, conditions, numberOfActing, nodes...)
 	default:
 		panic(xerrors.Errorf("unknown suffrage config: %v", config))
 	}

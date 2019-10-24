@@ -21,7 +21,14 @@ var configFullCmd = &cobra.Command{
 	Short: "full config",
 	Args:  cobra.ExactArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
-		config, err := LoadConfig(args[0], 0)
+		if cmd.Flags().Changed("number-of-nodes") {
+			if flagNumberOfNodes < 1 {
+				cmd.Println("Error: `--number-of-nodes` should be greater than zero")
+				os.Exit(1)
+			}
+		}
+
+		config, err := LoadConfig(args[0], flagNumberOfNodes)
 		if err != nil {
 			cmd.Println("Error:", err.Error())
 			os.Exit(1)
@@ -53,6 +60,8 @@ var configCheckCmd = &cobra.Command{
 }
 
 func init() {
+	configFullCmd.Flags().UintVar(&flagNumberOfNodes, "number-of-nodes", 0, "number of nodes")
+
 	configCmd.AddCommand(configCheckCmd)
 	configCmd.AddCommand(configFullCmd)
 	rootCmd.AddCommand(configCmd)

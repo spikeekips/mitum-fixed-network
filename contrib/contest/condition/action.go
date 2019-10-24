@@ -3,15 +3,15 @@ package condition
 import "reflect"
 
 type ActionValue struct {
-	value interface{}
+	value []interface{}
 	kind  reflect.Kind
 }
 
-func NewActionValue(value interface{}, kind reflect.Kind) ActionValue {
+func NewActionValue(value []interface{}, kind reflect.Kind) ActionValue {
 	return ActionValue{value: value, kind: kind}
 }
 
-func (av ActionValue) Value() interface{} {
+func (av ActionValue) Value() []interface{} {
 	return av.value
 }
 

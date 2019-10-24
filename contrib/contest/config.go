@@ -58,7 +58,7 @@ func LoadConfig(f string, numberOfNodes uint) (*Config, error) {
 	}
 
 	if numberOfNodes < 1 && last < 1 {
-		return nil, xerrors.Errorf("number-of-nodes should be greater than 0")
+		return nil, xerrors.Errorf("--number-of-nodes should be greater than 0")
 	} else if numberOfNodes < 1 || numberOfNodes == last {
 		numberOfNodes = last + 1
 	}
@@ -736,12 +736,83 @@ func parseConditionValue(m map[string]interface{}) (condition.Action, error) {
 		return condition.Action{}, err
 	}
 
-	av := condition.NewActionValue(value, hint)
+	av := condition.NewActionValue([]interface{}{value}, hint)
 	return condition.NewAction(cc, action, av), nil
 }
 
 type ConditionAction struct {
-	Condition string        `yaml:"condition"`
-	Action    string        `yaml:"action"`
-	Value     []interface{} `yaml:"value,omitempty"`
+	Condition string           `yaml:"condition"`
+	Action    string           `yaml:"action"`
+	Value     interface{}      `yaml:"value,omitempty"`
+	Instance  condition.Action `yaml:"-"`
+}
+
+func (ca *ConditionAction) IsValid() error {
+	var conditionChecker condition.ConditionChecker
+	if len(ca.Condition) < 1 {
+		return xerrors.Errorf("empty `condition`")
+	} else {
+		if cc, err := condition.NewConditionChecker(ca.Condition); err != nil {
+			return err
+		} else {
+			conditionChecker = cc
+		}
+	}
+
+	if len(ca.Action) < 1 {
+		return xerrors.Errorf("empty `action`")
+	}
+
+	var hint reflect.Kind
+	var values []interface{}
+	if ca.Value != nil {
+		if sl, ok := ca.Value.([]interface{}); !ok {
+			hint = reflect.TypeOf(ca.Value).Kind()
+			values = []interface{}{ca.Value}
+		} else if len(sl) > 0 {
+			var vt *reflect.Kind
+			for _, i := range sl {
+				ik := reflect.TypeOf(i).Kind()
+				if vt == nil {
+					vt = &ik
+					continue
+				}
+				if ik != *vt {
+					return xerrors.Errorf(
+						"invalid value type found; value type should be same in list values; %v",
+						i,
+					)
+				}
+			}
+
+			hint = *vt
+			values = sl
+		}
+	}
+
+	if len(ca.Instance.Action()) < 1 {
+		ca.Instance = condition.NewAction(conditionChecker, ca.Action, condition.NewActionValue(values, hint))
+	}
+
+	return nil
+}
+
+func parseCodnitionAction(m interface{}) ([]ConditionAction, error) {
+	b, err := yaml.Marshal(m)
+	if err != nil {
+		return nil, err
+	}
+
+	var cs []ConditionAction
+	if err := yaml.Unmarshal(b, &cs); err != nil {
+		return nil, err
+	}
+
+	for _, ca := range cs {
+		if err := ca.IsValid(); err != nil {
+			return nil, err
+		}
+	}
+
+	return cs, nil
 }

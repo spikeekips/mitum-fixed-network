@@ -194,18 +194,14 @@ func (cs ConditionSuffrage) MarshalJSON() ([]byte, error) {
 	})
 }
 
-func nodeNameFromActionValue(value condition.ActionValue) ([]string, error) {
-	if value.Hint() != reflect.String {
-		return nil, xerrors.Errorf("invalid action value type for node name action: %v", value.Hint())
+func nodeNameFromActionValue(ca condition.ActionValue) ([]string, error) {
+	if ca.Hint() != reflect.String {
+		return nil, xerrors.Errorf("invalid action value type for node name action: %v", ca.Hint())
 	}
 
 	var values []string
-	if x, ok := value.Value().(string); ok {
-		values = append(values, x)
-	} else if x, ok := value.Value().([]string); ok {
-		values = append(values, x...)
-	} else {
-		return nil, xerrors.Errorf("action value should be []string for node name action: %q", value.Value())
+	for _, i := range ca.Value() {
+		values = append(values, i.(string))
 	}
 
 	return values, nil

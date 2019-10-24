@@ -123,7 +123,7 @@ func (t *testConditionSuffrage) TestFixedProposer() {
 				"default": condition.NewAction(
 					cc,
 					"fixed-proposer",
-					condition.NewActionValue([]string{fixed.Address().String()}, reflect.String),
+					condition.NewActionValue([]interface{}{fixed.Address().String()}, reflect.String),
 				),
 			},
 			numberOfActing,
@@ -200,7 +200,7 @@ func (t *testConditionSuffrage) TestFixedActing() {
 	fixedActingNodes := nodes[:2]
 	node.SortNodesByAddress(fixedActingNodes)
 
-	var fixedActingNames []string
+	var fixedActingNames []interface{}
 	for _, n := range fixedActingNodes {
 		fixedActingNames = append(fixedActingNames, n.Address().String())
 	}
@@ -257,7 +257,7 @@ func (t *testConditionSuffrage) TestFixedActing() {
 		acting := cs.Acting(homeState.Block().Height(), isaac.Round(0))
 		t.Equal(len(fixedActingNames), len(acting.Nodes()))
 
-		var actingNodeNames []string
+		var actingNodeNames []interface{}
 		for _, n := range acting.Nodes() {
 			actingNodeNames = append(actingNodeNames, n.Address().String())
 		}

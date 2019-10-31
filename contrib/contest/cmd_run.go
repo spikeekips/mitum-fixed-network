@@ -15,6 +15,7 @@ import (
 
 	"github.com/spikeekips/mitum/common"
 	"github.com/spikeekips/mitum/contrib/contest/condition"
+	"github.com/spikeekips/mitum/contrib/contest/configs"
 	"github.com/spikeekips/mitum/node"
 )
 
@@ -35,8 +36,14 @@ var runCmd = &cobra.Command{
 			log.Info().Msg("contest stopped")
 		}()
 
-		config, err := LoadConfig(args[0], flagNumberOfNodes)
+		config, err := configs.LoadConfigFromFile(args[0], flagNumberOfNodes)
 		if err != nil {
+			cmd.Println("Error:", err.Error())
+			os.Exit(1)
+		} else if err := config.IsValid(); err != nil {
+			cmd.Println("Error:", err.Error())
+			os.Exit(1)
+		} else if err := config.Merge(nil); err != nil {
 			cmd.Println("Error:", err.Error())
 			os.Exit(1)
 		}
@@ -55,7 +62,7 @@ var runCmd = &cobra.Command{
 			_ = nodes.Stop()
 		})
 
-		if config.Condition != nil {
+		if len(config.Conditions.Conditions) > 0 {
 			satisfiedChan := make(chan bool)
 
 			go func() {
@@ -63,9 +70,8 @@ var runCmd = &cobra.Command{
 				sigc <- syscall.SIGINT
 			}()
 
-			conditions := prepareConditions(config, nodeList)
-
-			cp := condition.NewMultipleConditionCheckerFromConditions(conditions, 1)
+			checkers := prepareConditions(config, nodeList)
+			cp := condition.NewMultipleConditionCheckers(checkers, 1)
 			lw := condition.NewLogWatcher(cp, satisfiedChan)
 
 			exitHooks = append(
@@ -126,51 +132,31 @@ func init() {
 	rootCmd.AddCommand(runCmd)
 }
 
-func prepareConditions(config *Config, nodeList []node.Node) []condition.Condition {
-	var conditions []condition.Condition
+func prepareConditions(config *configs.Config, nodeList []node.Node) []condition.ConditionChecker {
+	var checkers []condition.ConditionChecker
 
-	all, found := config.Condition["all"]
+	all, found := config.Conditions.Conditions["all"]
 	if found {
-		cds, _ := prepareCondition(all)
 		for _, n := range nodeList {
-			for _, cd := range cds {
-				conditions = append(
-					conditions,
-					cd.Prepend(
-						"and",
-						condition.NewComparison("node", "=", []interface{}{n.Alias()}, reflect.String),
-					),
+			for _, ck := range all {
+				nc := ck.Condition().Prepend(
+					"and",
+					condition.NewComparison("node", "=", []interface{}{n.Alias()}, reflect.String),
 				)
+				checkers = append(checkers, condition.NewConditionCheckerFromCondition(nc))
 			}
 		}
 	}
 
-	for k, v := range config.Condition {
+	for k, cks := range config.Conditions.Conditions {
 		if k == "all" {
 			continue
 		}
 
-		cds, _ := prepareCondition(v)
-		conditions = append(conditions, cds...)
+		checkers = append(checkers, cks...)
 	}
 
-	return conditions
-}
-
-func prepareCondition(config *ConditionConfig) ([]condition.Condition, error) {
-	var cs []condition.Condition
-	for _, m := range *config {
-		for _, q := range m {
-			cd, err := condition.NewConditionParser().Parse(q)
-			if err != nil {
-				return nil, err
-			}
-
-			cs = append(cs, cd)
-		}
-	}
-
-	return cs, nil
+	return checkers
 }
 
 func printSatisfied(cp *condition.MultipleConditionChecker) {

@@ -4,35 +4,82 @@ import (
 	"encoding/json"
 
 	"github.com/rs/zerolog"
+	"golang.org/x/xerrors"
+
 	"github.com/spikeekips/mitum/common"
 	"github.com/spikeekips/mitum/contrib/contest/condition"
+	contest_config "github.com/spikeekips/mitum/contrib/contest/config"
 	"github.com/spikeekips/mitum/hash"
 	"github.com/spikeekips/mitum/isaac"
-	"golang.org/x/xerrors"
 )
+
+func init() {
+	BallotMakers = append(BallotMakers, "ConditionBallotMaker")
+	BallotMakerConfigs["ConditionBallotMaker"] = ConditionBallotMakerConfig{}
+}
+
+type ConditionBallotMakerConfig struct {
+	N          string                            `yaml:"name"`
+	Conditions []*contest_config.ActionCondition `yaml:"conditions"`
+}
+
+func (cb ConditionBallotMakerConfig) Name() string {
+	return cb.N
+}
+
+func (cb *ConditionBallotMakerConfig) IsValid() error {
+	// NOTE empty condition be allowed.
+	// if len(cb.Conditions) < 1 {
+	// 	return xerrors.Errorf("empty `conditions`")
+	// }
+
+	for _, ca := range cb.Conditions {
+		if err := ca.IsValid(); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func (cb *ConditionBallotMakerConfig) Merge(i interface{}) error {
+	return nil
+}
+
+func (cb ConditionBallotMakerConfig) New(homeState *isaac.HomeState, l zerolog.Logger) isaac.BallotMaker {
+	var checkers []condition.ActionChecker
+	for _, c := range cb.Conditions {
+		checkers = append(checkers, c.ActionChecker())
+	}
+
+	bm := NewConditionBallotMaker(homeState, checkers)
+	bm.SetLogger(l)
+
+	return bm
+}
 
 type ConditionBallotMaker struct {
 	*common.Logger
 	isaac.DefaultBallotMaker
-	homeState  *isaac.HomeState
-	conditions map[string]condition.Action
+	homeState *isaac.HomeState
+	checkers  []condition.ActionChecker
 }
 
-func NewConditionBallotMaker(homeState *isaac.HomeState, conditions map[string]condition.Action) ConditionBallotMaker {
+func NewConditionBallotMaker(homeState *isaac.HomeState, checkers []condition.ActionChecker) ConditionBallotMaker {
 	return ConditionBallotMaker{
 		DefaultBallotMaker: isaac.NewDefaultBallotMaker(homeState.Home()),
 		Logger: common.NewLogger(func(c zerolog.Context) zerolog.Context {
 			return c.Str("module", "condition-ballot_maker")
 		}),
-		homeState:  homeState,
-		conditions: conditions,
+		homeState: homeState,
+		checkers:  checkers,
 	}
 }
 
 func (cb ConditionBallotMaker) MarshalJSON() ([]byte, error) {
 	return json.Marshal(map[string]interface{}{
-		"type":       "ConditionBallotMaker",
-		"conditions": cb.conditions,
+		"type":     "ConditionBallotMaker",
+		"checkers": cb.checkers,
 	})
 }
 
@@ -45,7 +92,7 @@ func (cb ConditionBallotMaker) modifyBallot(
 	currentProposal hash.Hash,
 	stage isaac.Stage,
 ) (isaac.Ballot, error) {
-	if cb.conditions != nil {
+	if cb.checkers != nil {
 		li, err := condition.NewLogItemFromMap(
 			map[string]interface{}{
 				"node":  cb.homeState.Home().Alias(),
@@ -74,29 +121,30 @@ func (cb ConditionBallotMaker) modifyBallot(
 			return isaac.Ballot{}, err
 		}
 
-		for name, c := range cb.conditions {
+		for _, c := range cb.checkers {
 			if c.Checker().Check(li) {
-				cb.Log().Debug().
-					Str("checker", name).
-					Str("query", c.Checker().Query()).
-					Str("action", c.Action()).
-					RawJSON("data", li.Bytes()).
-					Msg("condition matched")
-				switch c.Action() {
-				case "empty-ballot":
-					return isaac.Ballot{}, xerrors.Errorf("empty ballot by force")
-				case "random-last_block":
-					lastBlock = NewRandomBlockHash()
-				case "random-last_round":
-					lastRound = NewRandomRound()
-				case "random-next_height":
-					nextHeight = NewRandomHeight()
-				case "random-next_block":
-					nextBlock = NewRandomBlockHash()
-				case "random-current_round":
-					currentRound = NewRandomRound()
-				case "random-current_proposal":
-					currentProposal = NewRandomProposalHash()
+				for _, action := range c.Actions() {
+					cb.Log().Debug().
+						Str("query", c.Checker().Query()).
+						Str("action", action.Action()).
+						RawJSON("data", li.Bytes()).
+						Msg("condition matched")
+					switch action.Action() {
+					case "empty-ballot":
+						return isaac.Ballot{}, xerrors.Errorf("empty ballot by force")
+					case "random-last_block":
+						lastBlock = NewRandomBlockHash()
+					case "random-last_round":
+						lastRound = NewRandomRound()
+					case "random-next_height":
+						nextHeight = NewRandomHeight()
+					case "random-next_block":
+						nextBlock = NewRandomBlockHash()
+					case "random-current_round":
+						currentRound = NewRandomRound()
+					case "random-current_proposal":
+						currentProposal = NewRandomProposalHash()
+					}
 				}
 			}
 		}

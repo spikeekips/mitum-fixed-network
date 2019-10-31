@@ -33,6 +33,10 @@ func (dc ConditionChecker) Query() string {
 	return dc.query
 }
 
+func (dc ConditionChecker) Condition() Condition {
+	return dc.condition
+}
+
 func (dc ConditionChecker) Check(o LogItem) bool {
 	return dc.check(dc.condition, o)
 }
@@ -341,6 +345,15 @@ func NewMultipleConditionCheckerFromConditions(conditions []Condition, limit uin
 		checkers = append(checkers, NewConditionCheckerFromCondition(cd))
 	}
 
+	return &MultipleConditionChecker{
+		checkers:       checkers,
+		activeCheckers: checkers,
+		satisfied:      &sync.Map{},
+		limit:          limit,
+	}
+}
+
+func NewMultipleConditionCheckers(checkers []ConditionChecker, limit uint) *MultipleConditionChecker {
 	return &MultipleConditionChecker{
 		checkers:       checkers,
 		activeCheckers: checkers,

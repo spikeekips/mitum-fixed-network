@@ -30,8 +30,8 @@ func (t *testConditionProposalMaker) TestEmptyProposal() {
 		cb := NewConditionProposalMaker(
 			homeState,
 			0, // no delay
-			map[string]condition.Action{
-				"default": condition.NewActionWithoutValue(cc, "empty-proposal"),
+			[]condition.ActionChecker{
+				condition.NewActionChecker0(cc, condition.NewActionWithoutValue("empty-proposal")),
 			},
 		)
 
@@ -46,8 +46,8 @@ func (t *testConditionProposalMaker) TestEmptyProposal() {
 		cb := NewConditionProposalMaker(
 			homeState,
 			0,
-			map[string]condition.Action{
-				"default": condition.NewActionWithoutValue(cc, "empty-proposal"),
+			[]condition.ActionChecker{
+				condition.NewActionChecker0(cc, condition.NewActionWithoutValue("empty-proposal")),
 			},
 		)
 
@@ -66,8 +66,8 @@ func (t *testConditionProposalMaker) TestEmptyProposal() {
 		cb := NewConditionProposalMaker(
 			homeState,
 			0, // no delay
-			map[string]condition.Action{
-				"default": condition.NewActionWithoutValue(cc, "empty-proposal"),
+			[]condition.ActionChecker{
+				condition.NewActionChecker0(cc, condition.NewActionWithoutValue("empty-proposal")),
 			},
 		)
 
@@ -82,8 +82,8 @@ func (t *testConditionProposalMaker) TestEmptyProposal() {
 		cb := NewConditionProposalMaker(
 			homeState,
 			0, // no delay
-			map[string]condition.Action{
-				"default": condition.NewActionWithoutValue(cc, "empty-proposal"),
+			[]condition.ActionChecker{
+				condition.NewActionChecker0(cc, condition.NewActionWithoutValue("empty-proposal")),
 			},
 		)
 
@@ -153,8 +153,8 @@ func (t *testConditionProposalMaker) TestModifyRandom() {
 				cp := NewConditionProposalMaker(
 					homeState,
 					0,
-					map[string]condition.Action{
-						"default": condition.NewActionWithoutValue(cc, c.action),
+					[]condition.ActionChecker{
+						condition.NewActionChecker0(cc, condition.NewActionWithoutValue(c.action)),
 					},
 				)
 

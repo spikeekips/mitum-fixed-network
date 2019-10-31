@@ -1,6 +1,8 @@
 package isaac
 
 import (
+	"github.com/rs/zerolog"
+	"github.com/spikeekips/mitum/common"
 	"github.com/spikeekips/mitum/hash"
 	"github.com/spikeekips/mitum/node"
 )
@@ -33,11 +35,17 @@ type BallotMaker interface {
 }
 
 type DefaultBallotMaker struct {
+	*common.Logger
 	home node.Home
 }
 
 func NewDefaultBallotMaker(home node.Home) DefaultBallotMaker {
-	return DefaultBallotMaker{home: home}
+	return DefaultBallotMaker{
+		Logger: common.NewLogger(func(c zerolog.Context) zerolog.Context {
+			return c.Str("module", "default-ballot_maker")
+		}),
+		home: home,
+	}
 }
 
 func (db DefaultBallotMaker) INIT(

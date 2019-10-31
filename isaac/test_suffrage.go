@@ -13,6 +13,10 @@ func NewFixedProposerSuffrage(proposer node.Node, nodes ...node.Node) FixedPropo
 	return FixedProposerSuffrage{proposer: proposer, nodes: nodes}
 }
 
+func (fs FixedProposerSuffrage) NumberOfActing() uint {
+	return uint(len(fs.nodes))
+}
+
 func (fs FixedProposerSuffrage) AddNodes(nodes ...node.Node) Suffrage {
 	fs.nodes = append(fs.nodes, nodes...)
 	return fs

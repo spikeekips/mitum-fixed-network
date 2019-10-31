@@ -8,6 +8,8 @@ import (
 
 	"github.com/spf13/cobra"
 	"gopkg.in/yaml.v3"
+
+	"github.com/spikeekips/mitum/contrib/contest/configs"
 )
 
 var configCmd = &cobra.Command{
@@ -28,8 +30,16 @@ var configFullCmd = &cobra.Command{
 			}
 		}
 
-		config, err := LoadConfig(args[0], flagNumberOfNodes)
+		config, err := configs.LoadConfigFromFile(args[0], flagNumberOfNodes)
 		if err != nil {
+			cmd.Println("Error:", err.Error())
+			os.Exit(1)
+		}
+
+		if err := config.IsValid(); err != nil {
+			cmd.Println("Error:", err.Error())
+			os.Exit(1)
+		} else if err := config.Merge(nil); err != nil {
 			cmd.Println("Error:", err.Error())
 			os.Exit(1)
 		}
@@ -51,7 +61,7 @@ var configCheckCmd = &cobra.Command{
 	Short: "check config",
 	Args:  cobra.ExactArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
-		_, err := LoadConfig(args[0], 0)
+		_, err := configs.LoadConfigFromFile(args[0], 0)
 		if err != nil {
 			cmd.Println("Error:", err.Error())
 			os.Exit(1)

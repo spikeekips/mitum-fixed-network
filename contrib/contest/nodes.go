@@ -3,6 +3,7 @@ package main
 import (
 	"sync"
 
+	"github.com/spikeekips/mitum/contrib/contest/configs"
 	"github.com/spikeekips/mitum/node"
 )
 
@@ -11,7 +12,7 @@ type Nodes struct {
 	nodes []*Node
 }
 
-func NewNodes(config *Config, nodeList []node.Node) (*Nodes, error) { // nolint
+func NewNodes(config *configs.Config, nodeList []node.Node) (*Nodes, error) { // nolint
 	var wg sync.WaitGroup
 	wg.Add(len(nodeList))
 
@@ -19,7 +20,7 @@ func NewNodes(config *Config, nodeList []node.Node) (*Nodes, error) { // nolint
 	for _, n := range nodeList {
 		nodeConfig := config.Nodes[n.Alias()]
 
-		go func(n node.Node, c *NodeConfig) {
+		go func(n node.Node, c *configs.NodeConfig) {
 			no, err := NewNode(
 				interface{}(n).(node.Home),
 				nodeList,

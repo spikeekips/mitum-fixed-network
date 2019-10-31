@@ -5,11 +5,73 @@ import (
 
 	"golang.org/x/xerrors"
 
+	"github.com/rs/zerolog"
+	"github.com/spikeekips/mitum/common"
 	"github.com/spikeekips/mitum/isaac"
 	"github.com/spikeekips/mitum/node"
 )
 
+func init() {
+	Suffrages = append(Suffrages, "FixedProposerSuffrage")
+	SuffrageConfigs["FixedProposerSuffrage"] = FixedProposerSuffrageConfig{}
+}
+
+type FixedProposerSuffrageConfig struct {
+	N        string `yaml:"name"`
+	NA       uint   `yaml:"number_of_acting,omitempty"`
+	Proposer string `yaml:"proposer"`
+}
+
+func (sc FixedProposerSuffrageConfig) Name() string {
+	return sc.N
+}
+
+func (sc FixedProposerSuffrageConfig) NumberOfActing() uint {
+	return sc.NA
+}
+
+func (sc *FixedProposerSuffrageConfig) IsValid() error {
+	if len(sc.Proposer) < 1 {
+		return xerrors.Errorf("empty `proposer`")
+	}
+
+	return nil
+}
+
+func (sc *FixedProposerSuffrageConfig) Merge(i interface{}) error {
+	n, ok := interface{}(i).(SuffrageConfig)
+	if !ok {
+		return xerrors.Errorf("invalid merge source found: %%", i)
+	}
+
+	if sc.NA < 1 {
+		sc.NA = n.NumberOfActing()
+	}
+
+	return nil
+}
+
+func (sc FixedProposerSuffrageConfig) New(homeState *isaac.HomeState, nodes []node.Node, l zerolog.Logger) isaac.Suffrage {
+	var proposer node.Node
+	for _, n := range nodes {
+		if sc.Proposer == n.Alias() || sc.Proposer == n.Address().String() {
+			proposer = n
+			break
+		}
+	}
+
+	if proposer == nil {
+		panic(xerrors.Errorf("failed to find proposer: %v", sc.Proposer))
+	}
+
+	sf := NewFixedProposerSuffrage(proposer, sc.NumberOfActing(), nodes...)
+	sf.SetLogger(l)
+
+	return sf
+}
+
 type FixedProposerSuffrage struct {
+	*common.Logger
 	proposer       node.Node
 	numberOfActing uint // by default numberOfActing is 0; it means all nodes will be acting member
 	nodes          []node.Node
@@ -39,11 +101,18 @@ func NewFixedProposerSuffrage(proposer node.Node, numberOfActing uint, nodes ...
 	}
 
 	return &FixedProposerSuffrage{
+		Logger: common.NewLogger(func(c zerolog.Context) zerolog.Context {
+			return c.Str("module", "fixed-suffrage")
+		}),
 		proposer:       proposer,
 		numberOfActing: numberOfActing,
 		nodes:          sorted,
 		others:         others,
 	}
+}
+
+func (fs FixedProposerSuffrage) NumberOfActing() uint {
+	return fs.numberOfActing
 }
 
 func (fs FixedProposerSuffrage) AddNodes(_ ...node.Node) isaac.Suffrage {

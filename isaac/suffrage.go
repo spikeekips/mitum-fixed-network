@@ -9,6 +9,7 @@ import (
 
 type Suffrage interface {
 	Nodes() []node.Node
+	NumberOfActing() uint
 	Acting(height Height, round Round) ActingSuffrage
 	Exists(height Height, address node.Address) bool
 	AddNodes(...node.Node) Suffrage

@@ -51,8 +51,8 @@ func (t *testConditionSuffrage) TestNew() {
 
 	cs := NewConditionSuffrage(
 		homeState,
-		map[string]condition.Action{
-			"default": condition.NewActionWithoutValue(cc, "random"),
+		[]condition.ActionChecker{
+			condition.NewActionChecker0(cc, condition.NewActionWithoutValue("random")),
 		},
 		numberOfActing,
 		nodes...,
@@ -93,11 +93,13 @@ func (t *testConditionSuffrage) TestFixedProposer() {
 
 		cs := NewConditionSuffrage(
 			homeState,
-			map[string]condition.Action{
-				"default": condition.NewAction(
+			[]condition.ActionChecker{
+				condition.NewActionChecker0(
 					cc,
-					"fixed-proposer",
-					condition.NewActionValue([]interface{}{fixed.Address().String()}, reflect.String),
+					condition.NewAction(
+						"fixed-proposer",
+						condition.NewActionValue([]interface{}{fixed.Address().String()}, reflect.String),
+					),
 				),
 			},
 			numberOfActing,
@@ -119,11 +121,13 @@ func (t *testConditionSuffrage) TestFixedProposer() {
 
 		cs := NewConditionSuffrage(
 			homeState,
-			map[string]condition.Action{
-				"default": condition.NewAction(
+			[]condition.ActionChecker{
+				condition.NewActionChecker0(
 					cc,
-					"fixed-proposer",
-					condition.NewActionValue([]interface{}{fixed.Address().String()}, reflect.String),
+					condition.NewAction(
+						"fixed-proposer",
+						condition.NewActionValue([]interface{}{fixed.Address().String()}, reflect.String),
+					),
 				),
 			},
 			numberOfActing,
@@ -160,11 +164,13 @@ func (t *testConditionSuffrage) TestFixedProposerButUnknownNode() {
 
 		cs := NewConditionSuffrage(
 			homeState,
-			map[string]condition.Action{
-				"default": condition.NewAction(
+			[]condition.ActionChecker{
+				condition.NewActionChecker0(
 					cc,
-					"fixed-proposer",
-					condition.NewActionValue([]interface{}{fixedName}, reflect.String),
+					condition.NewAction(
+						"fixed-proposer",
+						condition.NewActionValue([]interface{}{fixedName}, reflect.String),
+					),
 				),
 			},
 			numberOfActing,
@@ -211,11 +217,13 @@ func (t *testConditionSuffrage) TestFixedActing() {
 
 		cs := NewConditionSuffrage(
 			homeState,
-			map[string]condition.Action{
-				"default": condition.NewAction(
+			[]condition.ActionChecker{
+				condition.NewActionChecker0(
 					cc,
-					"fixed-acting",
-					condition.NewActionValue(fixedActingNames, reflect.String),
+					condition.NewAction(
+						"fixed-acting",
+						condition.NewActionValue(fixedActingNames, reflect.String),
+					),
 				),
 			},
 			numberOfActing,
@@ -243,11 +251,13 @@ func (t *testConditionSuffrage) TestFixedActing() {
 
 		cs := NewConditionSuffrage(
 			homeState,
-			map[string]condition.Action{
-				"default": condition.NewAction(
+			[]condition.ActionChecker{
+				condition.NewActionChecker0(
 					cc,
-					"fixed-acting",
-					condition.NewActionValue(fixedActingNames, reflect.String),
+					condition.NewAction(
+						"fixed-acting",
+						condition.NewActionValue(fixedActingNames, reflect.String),
+					),
 				),
 			},
 			numberOfActing,
@@ -299,11 +309,13 @@ func (t *testConditionSuffrage) TestFixedActingButUnknownNodeName() {
 
 		cs := NewConditionSuffrage(
 			homeState,
-			map[string]condition.Action{
-				"default": condition.NewAction(
+			[]condition.ActionChecker{
+				condition.NewActionChecker0(
 					cc,
-					"fixed-acting",
-					condition.NewActionValue(fixedActingNames, reflect.String),
+					condition.NewAction(
+						"fixed-acting",
+						condition.NewActionValue(fixedActingNames, reflect.String),
+					),
 				),
 			},
 			numberOfActing,
@@ -344,8 +356,8 @@ func (t *testConditionSuffrage) TestRandom() {
 
 		cs := NewConditionSuffrage(
 			homeState,
-			map[string]condition.Action{
-				"default": condition.NewActionWithoutValue(cc, "random"),
+			[]condition.ActionChecker{
+				condition.NewActionChecker0(cc, condition.NewActionWithoutValue("random")),
 			},
 			numberOfActing,
 			nodes...,

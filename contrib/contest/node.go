@@ -3,14 +3,13 @@ package main
 import (
 	"fmt"
 	"sort"
-	"strings"
 	"time"
 
 	"golang.org/x/xerrors"
 
 	"github.com/rs/zerolog"
 	"github.com/spikeekips/mitum/common"
-	"github.com/spikeekips/mitum/contrib/contest/condition"
+	"github.com/spikeekips/mitum/contrib/contest/configs"
 	contest_module "github.com/spikeekips/mitum/contrib/contest/module"
 	"github.com/spikeekips/mitum/isaac"
 	"github.com/spikeekips/mitum/keypair"
@@ -28,27 +27,23 @@ type Node struct {
 func NewNode(
 	home node.Home,
 	nodes []node.Node,
-	globalConfig *Config,
-	config *NodeConfig,
+	globalConfig *configs.Config,
+	config *configs.NodeConfig,
 ) (*Node, error) {
 	rootLog := log.With().Str("node", home.Alias()).Logger()
 	log_ := rootLog.With().Str("module", "node").Logger()
 
-	lastBlock := config.LastBlock()
-	previousBlock := config.Block(lastBlock.Height().Sub(1))
+	lastBlock := config.Blocks[len(config.Blocks)-1].ToBlock()
+	previousBlock := config.Blocks[len(config.Blocks)-2].ToBlock()
+
 	homeState := isaac.NewHomeState(home, previousBlock).SetBlock(lastBlock)
 
-	numberOfActing := uint((*config.Modules.Suffrage)["number_of_acting"].(int))
-	if numberOfActing < 1 {
-		numberOfActing = globalConfig.NumberOfNodes()
-	}
-
-	suffrage := newSuffrage(homeState, config, nodes, numberOfActing)
+	suffrage := config.Modules.Suffrage.(contest_module.SuffrageConfig).New(homeState, nodes, rootLog)
 	ballotChecker := isaac.NewCompilerBallotChecker(homeState, suffrage)
 	ballotChecker.SetLogger(rootLog)
 
-	thr, _ := isaac.NewThreshold(numberOfActing, *config.Policy.Threshold)
-	if err := thr.Set(isaac.StageINIT, globalConfig.NumberOfNodes(), *config.Policy.Threshold); err != nil {
+	thr, _ := isaac.NewThreshold(suffrage.NumberOfActing(), *config.Policy.Threshold)
+	if err := thr.Set(isaac.StageINIT, globalConfig.NumberOfNodes, *config.Policy.Threshold); err != nil {
 		return nil, err
 	}
 
@@ -65,7 +60,7 @@ func NewNode(
 
 	pv := contest_module.NewDummyProposalValidator()
 
-	ballotMaker := newBallotMaker(config, homeState, rootLog)
+	ballotMaker := config.Modules.BallotMaker.(contest_module.BallotMakerConfig).New(homeState, rootLog)
 
 	var sc *isaac.StateController
 	{ // state handlers
@@ -87,7 +82,7 @@ func NewNode(
 		}
 		js.SetLogger(rootLog)
 
-		dp := newProposalMaker(config, homeState, rootLog)
+		dp := config.Modules.ProposalMaker.(contest_module.ProposalMakerConfig).New(homeState, rootLog)
 
 		cs, err := isaac.NewConsensusStateHandler(
 			homeState,
@@ -120,7 +115,7 @@ func NewNode(
 		Object("homeState", homeState).
 		Object("threshold", thr).
 		Interface("suffrage", suffrage).
-		Uint("number_of_acting", numberOfActing).
+		Uint("number_of_acting", suffrage.NumberOfActing()).
 		Msg("node created")
 
 	n := &Node{
@@ -186,160 +181,14 @@ func NewHome(i uint) node.Home {
 	return node.NewHome(h, pk)
 }
 
-func newSuffrage(
-	homeState *isaac.HomeState,
-	config *NodeConfig,
-	nodes []node.Node,
-	globalNumberOfNodes uint,
-) isaac.Suffrage {
-	sc := *config.Modules.Suffrage
-
-	numberOfActing := uint(sc["number_of_acting"].(int))
-	if numberOfActing < 1 {
-		numberOfActing = globalNumberOfNodes
-	}
-
-	switch sc["name"] {
-	case "FixedProposerSuffrage":
-		// find proposer
-		var proposer node.Node
-		for _, n := range nodes {
-			if n.Alias() == sc["proposer"].(string) {
-				proposer = n
-				break
-			}
-		}
-		if proposer == nil {
-			panic(xerrors.Errorf("failed to find proposer: %v", config))
-		}
-
-		return contest_module.NewFixedProposerSuffrage(proposer, numberOfActing, nodes...)
-	case "RoundrobinSuffrage":
-		return contest_module.NewRoundrobinSuffrage(numberOfActing, nodes...)
-	case "ConditionSuffrage":
-		conditions := map[string]condition.Action{}
-
-		if s, found := sc["conditions"]; found {
-			for n, c := range s.(SuffrageConfig) {
-				cc, err := parseConditionValue(c.(SuffrageConfig))
-				if err != nil {
-					panic(err)
-				}
-
-				conditions[n] = cc
-			}
-		}
-
-		return contest_module.NewConditionSuffrage(homeState, conditions, numberOfActing, nodes...)
-	default:
-		panic(xerrors.Errorf("unknown suffrage config: %v", config))
-	}
-}
-
-func newProposalMaker(config *NodeConfig, homeState *isaac.HomeState, l zerolog.Logger) isaac.ProposalMaker {
-	pc := *config.Modules.ProposalMaker
-	switch pc["name"] {
-	case "DefaultProposalMaker":
-		delay, err := time.ParseDuration(pc["delay"].(string))
-		if err != nil {
-			panic(err)
-		}
-
-		dp := isaac.NewDefaultProposalMaker(homeState.Home(), delay)
-		dp.SetLogger(l)
-
-		return dp
-	case "ConditionProposalMaker":
-		delay, err := time.ParseDuration(pc["delay"].(string))
-		if err != nil {
-			panic(err)
-		}
-
-		conditions := map[string]condition.Action{}
-
-		if s, found := pc["conditions"]; found {
-			for n, c := range s.(ProposalMakerConfig) {
-				cc, err := parseConditionValue(c.(ProposalMakerConfig))
-				if err != nil {
-					panic(err)
-				}
-
-				conditions[n] = cc
-			}
-		}
-
-		cb := contest_module.NewConditionProposalMaker(homeState, delay, conditions)
-		cb.SetLogger(l)
-		return cb
-	default:
-		panic(xerrors.Errorf("unknown proposal maker config: %v", config))
-	}
-}
-
-func newSealStorage(_ *NodeConfig, l zerolog.Logger) isaac.SealStorage {
+func newSealStorage(_ *configs.NodeConfig, l zerolog.Logger) isaac.SealStorage {
 	ss := contest_module.NewMemorySealStorage()
 	ss.SetLogger(l)
 
 	return ss
 }
 
-func newBallotMaker(config *NodeConfig, homeState *isaac.HomeState, l zerolog.Logger) isaac.BallotMaker {
-	pc := *config.Modules.BallotMaker
-	switch pc["name"] {
-	case "DefaultBallotMaker":
-		return isaac.NewDefaultBallotMaker(homeState.Home())
-	case "DamangedBallotMaker":
-		bmc := config.Modules.BallotMaker
-
-		var height, round, stage string
-
-		if s, found := (*bmc)["height"]; !found {
-			height = "*"
-		} else {
-			height = fmt.Sprintf("%v", s)
-		}
-
-		if s, found := (*bmc)["round"]; !found {
-			round = "*"
-		} else {
-			round = fmt.Sprintf("%v", s)
-		}
-
-		if s, found := (*bmc)["stage"]; !found {
-			stage = "*"
-		} else {
-			stage = strings.ToUpper(s.(string))
-		}
-
-		db := contest_module.NewDamangedBallotMaker(homeState.Home())
-		db = db.AddPoint(height, round, stage)
-		db.SetLogger(l)
-
-		return db
-	case "ConditionBallotMaker":
-		bmc := config.Modules.BallotMaker
-		conditions := map[string]condition.Action{}
-
-		if s, found := (*bmc)["conditions"]; found {
-			for n, c := range s.(BallotMakerConfig) {
-				cc, err := parseConditionValue(c.(BallotMakerConfig))
-				if err != nil {
-					panic(err)
-				}
-
-				conditions[n] = cc
-			}
-		}
-
-		cb := contest_module.NewConditionBallotMaker(homeState, conditions)
-		cb.SetLogger(l)
-		return cb
-	default:
-		panic(xerrors.Errorf("unknown ballot_maker found: %v", pc["name"]))
-	}
-}
-
-func getAllNodesFromConfig(config *Config) []node.Node {
+func getAllNodesFromConfig(config *configs.Config) []node.Node {
 	var nodeNames []string
 	for n := range config.Nodes {
 		nodeNames = append(nodeNames, n)
@@ -355,7 +204,7 @@ func getAllNodesFromConfig(config *Config) []node.Node {
 	)
 
 	var nodeList []node.Node
-	for i, name := range nodeNames[:config.NumberOfNodes()] {
+	for i, name := range nodeNames[:config.NumberOfNodes] {
 		n := NewHome(uint(i)).SetAlias(name)
 		nodeList = append(nodeList, n)
 	}

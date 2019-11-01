@@ -273,6 +273,20 @@ func (cs *ConsensusStateHandler) gotINITMajority(vr VoteResult) error {
 				Msg("failed to make new block from VoteResult")
 			return err
 		}
+		l := cs.Log().With().
+			Object("block", block.Hash()).
+			Object("block_vr", vr.Block()).
+			Logger()
+		if block.Hash().Equal(vr.Block()) {
+			l.Debug().Msg("block of VoteResult matched")
+		} else {
+			l.Debug().Msg("block of VoteResult not matched")
+
+			cs.chanState <- NewStateContext(node.StateSyncing).
+				SetContext("vr", vr)
+
+			return xerrors.Errorf("init for next block; next block does not match; move to sync")
+		}
 
 		_ = cs.homeState.SetBlock(block)
 

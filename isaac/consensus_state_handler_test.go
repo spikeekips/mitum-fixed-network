@@ -389,6 +389,40 @@ func (t *testConsensusStateHandler) TestINITBallotTimeoutStateJoining() {
 	}
 }
 
+func (t *testConsensusStateHandler) TestDifferrentBlockVoteResult() {
+	cs, closeFunc, vr := t.handlerActivated(nil, time.Millisecond*50, time.Millisecond*50)
+	defer closeFunc()
+
+	cs.compiler.lastINITVoteResult = vr
+
+	// receive draw vote result
+	drawVR := NewVoteResult(
+		vr.Height().Add(1),
+		Round(0),
+		StageINIT,
+	).
+		SetAgreement(Majority).
+		SetBlock(NewRandomBlock().Hash()). // different block hash
+		SetLastBlock(cs.homeState.Block().Hash()).
+		SetProposal(NewRandomProposalHash())
+
+	chanState := make(chan StateContext)
+	go func() {
+		chanState <- <-cs.chanState
+	}()
+
+	err := cs.ReceiveVoteResult(drawVR)
+	t.Contains(err.Error(), "block does not match")
+
+	select {
+	case <-time.After(time.Millisecond * 200):
+		t.NoError(errors.New("state not changed"))
+		return
+	case sc := <-chanState:
+		t.Equal(node.StateSyncing, sc.State())
+	}
+}
+
 func TestConsensusStateHandler(t *testing.T) {
 	suite.Run(t, new(testConsensusStateHandler))
 }

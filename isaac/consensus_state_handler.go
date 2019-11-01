@@ -231,11 +231,9 @@ func (cs *ConsensusStateHandler) ReceiveVoteResult(vr VoteResult) error {
 	cs.Log().Debug().Object("vr", vr).Msg("VoteResult checked")
 
 	if vr.GotDraw() {
-		cs.Log().Debug().Object("vr", vr).Msg("VoteResult drawed")
-		return cs.startNextRound(vr)
-	}
-
-	if vr.GotMajority() {
+		cs.Log().Debug().Object("vr", vr).Msg("VoteResult drawed; restart from previous block")
+		return cs.restartFromPreviousBlock(vr)
+	} else if vr.GotMajority() {
 		cs.Log().Debug().Object("vr", vr).Msg("VoteResult majority")
 		if vr.Stage() == StageINIT {
 			return cs.gotINITMajority(vr)
@@ -463,6 +461,28 @@ func (cs *ConsensusStateHandler) startNextRound(vr VoteResult) error {
 	}
 
 	cs.Log().Debug().Object("vr", vr).Object("ballot", ballot).Msg("broadcast next round ballot")
+
+	if err := cs.nt.Broadcast(ballot); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (cs *ConsensusStateHandler) restartFromPreviousBlock(vr VoteResult) error {
+	ballot, err := cs.ballotMaker.INIT(
+		cs.homeState.PreviousBlock().Hash(),
+		cs.homeState.Block().Round(),
+		vr.Height().Sub(1),
+		cs.homeState.Block().Hash(),
+		vr.LastRound()+1,
+		cs.homeState.Block().Proposal(),
+	)
+	if err != nil {
+		return err
+	}
+
+	cs.Log().Debug().Object("vr", vr).Object("ballot", ballot).Msg("broadcast next round ballot from previous block")
 
 	if err := cs.nt.Broadcast(ballot); err != nil {
 		return err

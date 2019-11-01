@@ -319,6 +319,44 @@ func (t *testConsensusStateHandler) TestBallotTimeoutNextRound() {
 	}
 }
 
+func (t *testConsensusStateHandler) TestBallotDrawedAndNextRound() {
+	cs, closeFunc, vr := t.handlerActivated(nil, time.Millisecond*50, time.Millisecond*50)
+	defer closeFunc()
+
+	cs.compiler.lastINITVoteResult = vr
+
+	// receive draw vote result
+	drawVR := NewVoteResult(
+		vr.Height().Add(1),
+		Round(0),
+		StageINIT,
+	).
+		SetAgreement(Draw).
+		SetBlock(NewRandomBlock().Hash()).
+		SetLastBlock(cs.homeState.Block().Hash()).
+		SetProposal(NewRandomProposalHash())
+
+	err := cs.ReceiveVoteResult(drawVR)
+	t.NoError(err)
+
+	// wait new init ballot, it will restart next round from previous block
+	select {
+	case <-time.After(time.Second):
+		t.NoError(errors.New("timed out; sign ballot"))
+		return
+	case message := <-cs.nt.(*network.ChannelNetwork).Reader():
+		ballot, ok := message.(Ballot)
+		t.True(ok)
+
+		t.Equal(BallotType, ballot.Type())
+		t.Equal(StageINIT, ballot.Stage())
+		t.True(drawVR.Height().Sub(1).Equal(ballot.Height()))
+		t.Equal(drawVR.LastRound()+1, ballot.Round())
+		t.True(cs.homeState.Home().Address().Equal(ballot.Node()))
+		t.NotEmpty(ballot.Block())
+	}
+}
+
 func (t *testConsensusStateHandler) TestINITBallotTimeoutStateJoining() {
 	timeoutWaitINITBallot := time.Millisecond * 1
 	cs, closeFunc, vr := t.handlerActivated(nil, time.Millisecond*50, timeoutWaitINITBallot)

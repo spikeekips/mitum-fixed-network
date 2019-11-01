@@ -57,6 +57,10 @@ func NewVoteResult(
 	}
 }
 
+func (vr VoteResult) Agreement() Agreement {
+	return vr.agreement
+}
+
 func (vr VoteResult) GotDraw() bool {
 	return vr.agreement == Draw
 }
@@ -172,6 +176,7 @@ func (vr VoteResult) MarshalZerologObject(e *zerolog.Event) {
 	e.Array("records", rs)
 	e.Str("agreement", vr.agreement.String())
 	e.Bool("closed", vr.closed)
+	e.Object("block", vr.block)
 	e.Object("last_block", vr.lastBlock)
 	e.Uint64("last_round", vr.lastRound.Uint64())
 }

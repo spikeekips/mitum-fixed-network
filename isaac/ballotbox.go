@@ -65,7 +65,7 @@ func (bb *Ballotbox) Vote(
 }
 
 func (bb *Ballotbox) Tidy(height Height, round Round) {
-	var keys []interface{}
+	var keys []string
 	prefix := fmt.Sprintf("%v-", height.String())
 	bb.voted.Range(func(k, v interface{}) bool {
 		key := k.(string)
@@ -92,6 +92,9 @@ func (bb *Ballotbox) Tidy(height Height, round Round) {
 	for _, key := range keys {
 		bb.voted.Delete(key)
 	}
+	bb.Log().Debug().
+		Strs("records", keys).
+		Msg("tidy the vote records")
 }
 
 type Records struct {
@@ -216,6 +219,7 @@ func (rs *Records) CheckMajority(total, threshold uint) VoteResult {
 	l.Debug().
 		Uints("set", sets).
 		Bool("is_finished", vr.IsFinished()).
+		Str("agreement", vr.Agreement().String()).
 		Msg("check majority")
 
 	if vr.IsFinished() {

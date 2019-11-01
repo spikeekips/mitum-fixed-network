@@ -19,11 +19,7 @@ import (
 	"github.com/spikeekips/mitum/isaac"
 )
 
-var blockGenerator *BlockGenerator
-
-func init() {
-	blockGenerator = newBlockGenerator()
-}
+var blockGenerator sync.Map
 
 type Config struct {
 	Global        *NodeConfig
@@ -330,7 +326,9 @@ func (bc *BlockConfig) IsValid() error {
 }
 
 func (bc *BlockConfig) ToBlock() isaac.Block {
-	return blockGenerator.Get(*bc.Height, *bc.Round)
+	k := fmt.Sprintf("%s-%d", (*bc.Height).String(), (*bc.Round).Uint64())
+	r, _ := blockGenerator.LoadOrStore(k, contest_module.NewBlock(*bc.Height, *bc.Round))
+	return r.(isaac.Block)
 }
 
 type ModulesConfig struct {
@@ -523,29 +521,4 @@ func cmpBlocksByHeight(a, b *BlockConfig) bool {
 
 func SortBlocksByHeight(bs []*BlockConfig) {
 	sortByBlock(cmpBlocksByHeight).Sort(bs)
-}
-
-type BlockGenerator struct {
-	sync.RWMutex
-	blocks map[string]isaac.Block
-}
-
-func newBlockGenerator() *BlockGenerator {
-	return &BlockGenerator{
-		blocks: map[string]isaac.Block{},
-	}
-}
-
-func (bg *BlockGenerator) Get(height isaac.Height, round isaac.Round) isaac.Block {
-	bg.Lock()
-	defer bg.Unlock()
-
-	k := fmt.Sprintf("%s-%d", height.String(), round.Uint64())
-	b, found := bg.blocks[k]
-	if !found {
-		b = contest_module.NewBlock(height, round)
-		bg.blocks[k] = b
-	}
-
-	return b
 }

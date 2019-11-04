@@ -249,15 +249,18 @@ func (cs *ConsensusStateHandler) gotINITMajority(vr VoteResult) error {
 	_ = cs.stopTimer() // nolint
 
 	diff := vr.Height().Sub(cs.homeState.Block().Height()).Int64()
+	l := cs.Log().With().
+		Object("block", cs.homeState.Block()).
+		Object("vr", vr).
+		Logger()
+
 	switch {
 	case diff == 2: // move to next block
-		cs.Log().Debug().Object("vr", vr).Msg("got VoteResult of next block; keep going")
+		l.Debug().Msg("got VoteResult of next block; keep going")
 
 		if !cs.homeState.Block().Hash().Equal(vr.LastBlock()) {
-			cs.Log().Error().
+			l.Error().
 				Object("home", cs.homeState.Block().Hash()).
-				Object("block_vr", vr.LastBlock()).
-				Object("vr", vr).
 				Msg("init for next block; last block does not match; move to sync")
 			cs.chanState <- NewStateContext(node.StateSyncing).
 				SetContext("vr", vr)
@@ -267,16 +270,11 @@ func (cs *ConsensusStateHandler) gotINITMajority(vr VoteResult) error {
 
 		block, err := cs.proposalValidator.NewBlock(vr.Height(), vr.Round(), vr.Proposal())
 		if err != nil {
-			cs.Log().Error().
+			l.Error().
 				Err(err).
-				Object("vr", vr).
 				Msg("failed to make new block from VoteResult")
 			return err
 		}
-		l := cs.Log().With().
-			Object("block", block.Hash()).
-			Object("block_vr", vr.Block()).
-			Logger()
 		if block.Hash().Equal(vr.Block()) {
 			l.Debug().Msg("block of VoteResult matched")
 		} else {
@@ -295,10 +293,7 @@ func (cs *ConsensusStateHandler) gotINITMajority(vr VoteResult) error {
 		cs.Log().Debug().Object("vr", vr).Msg("got VoteResult of next round; keep going")
 
 		if !cs.homeState.Block().Hash().Equal(vr.Block()) {
-			cs.Log().Error().
-				Object("home", cs.homeState.Block().Hash()).
-				Object("block_vr", vr.Block()).
-				Object("vr", vr).
+			l.Error().
 				Msg("init for next round; block does not match; move to sync")
 			cs.chanState <- NewStateContext(node.StateSyncing).
 				SetContext("vr", vr)
@@ -306,7 +301,7 @@ func (cs *ConsensusStateHandler) gotINITMajority(vr VoteResult) error {
 			return xerrors.Errorf("init for next round; block does not match; move to sync")
 		}
 	default: // unexpected height received, move to sync
-		cs.Log().Debug().Object("vr", vr).Msg("got not expected height VoteResult; move to sync")
+		l.Debug().Msg("got not expected height VoteResult; move to sync")
 		cs.chanState <- NewStateContext(node.StateSyncing).
 			SetContext("vr", vr)
 		return xerrors.Errorf("got not expected height VoteResult; move to sync")

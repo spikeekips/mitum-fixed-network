@@ -157,14 +157,14 @@ func (vr VoteResult) MarshalJSON() ([]byte, error) {
 		"proposal":   vr.proposal,
 		"records":    vr.records,
 		"agreement":  vr.agreement,
-		"closed":     vr.closed,
+		"is_closed":  vr.closed,
 		"last_block": vr.lastBlock,
 		"last_round": vr.lastRound,
 	})
 }
 
 func (vr VoteResult) MarshalZerologObject(e *zerolog.Event) {
-	e.Uint64("height", vr.height.Uint64())
+	e.Str("height", vr.height.String())
 	e.Uint64("round", vr.round.Uint64())
 	e.Str("stage", vr.stage.String())
 	e.Object("proposal", vr.proposal)
@@ -175,7 +175,7 @@ func (vr VoteResult) MarshalZerologObject(e *zerolog.Event) {
 	}
 	e.Array("records", rs)
 	e.Str("agreement", vr.agreement.String())
-	e.Bool("closed", vr.closed)
+	e.Bool("is_closed", vr.closed)
 	e.Object("block", vr.block)
 	e.Object("last_block", vr.lastBlock)
 	e.Uint64("last_round", vr.lastRound.Uint64())

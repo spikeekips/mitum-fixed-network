@@ -658,6 +658,69 @@ global:
 	}
 }
 
+func (t *testMainConfig) TestProposalValidator() {
+	{
+		source := `
+global:
+  modules:
+    proposal_validator:
+      name: DefaultProposalValidator
+`
+
+		nc, err := LoadConfig([]byte(source), 4)
+		t.NoError(err)
+
+		err = nc.IsValid()
+		t.NoError(err)
+
+		fc, ok := nc.Global.Modules.ProposalValidator.(*contest_module.DefaultProposalValidatorConfig)
+		t.True(ok)
+
+		t.Equal("DefaultProposalValidator", fc.Name())
+	}
+
+	{
+		source := `
+global:
+  modules:
+    proposal_validator:
+      name: ConditionProposalValidator
+      conditions:
+        - condition: a = 1
+          actions:
+            - action: do-something
+              value: hahaha
+        - condition: a = 2
+          actions:
+            - action: dont-something
+              value: hihihi
+            - action: make-something
+              value: kokoko
+`
+
+		nc, err := LoadConfig([]byte(source), 4)
+		t.NoError(err)
+
+		err = nc.IsValid()
+		t.NoError(err)
+
+		fc, ok := nc.Global.Modules.ProposalValidator.(*contest_module.ConditionProposalValidatorConfig)
+		t.True(ok)
+
+		t.Equal("ConditionProposalValidator", fc.Name())
+		t.Equal(2, len(fc.Conditions))
+
+		t.Equal("a = 1", fc.Conditions[0].ActionChecker().Checker().Query())
+		t.Equal("do-something", fc.Conditions[0].Actions[0].Action)
+		t.Equal("hahaha", fc.Conditions[0].Actions[0].Value)
+		t.Equal("a = 2", fc.Conditions[1].ActionChecker().Checker().Query())
+		t.Equal("dont-something", fc.Conditions[1].Actions[0].Action)
+		t.Equal("hihihi", fc.Conditions[1].Actions[0].Value)
+		t.Equal("make-something", fc.Conditions[1].Actions[1].Action)
+		t.Equal("kokoko", fc.Conditions[1].Actions[1].Value)
+	}
+}
+
 func TestMainConfig(t *testing.T) {
 	suite.Run(t, new(testMainConfig))
 }

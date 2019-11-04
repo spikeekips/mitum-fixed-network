@@ -332,28 +332,32 @@ func (bc *BlockConfig) ToBlock() isaac.Block {
 }
 
 type ModulesConfig struct {
-	Suffrage      contest_module.SuffrageConfig      `yaml:"suffrage"`
-	ProposalMaker contest_module.ProposalMakerConfig `yaml:"proposal_maker"`
-	BallotMaker   contest_module.BallotMakerConfig   `yaml:"ballot_maker"`
+	Suffrage          contest_module.SuffrageConfig          `yaml:"suffrage"`
+	ProposalMaker     contest_module.ProposalMakerConfig     `yaml:"proposal_maker"`
+	ProposalValidator contest_module.ProposalValidatorConfig `yaml:"proposal_validator"`
+	BallotMaker       contest_module.BallotMakerConfig       `yaml:"ballot_maker"`
 }
 
 func defaultModulesConfig(numberOfNodes uint) *ModulesConfig {
 	return &ModulesConfig{
-		Suffrage:      &contest_module.RoundrobinSuffrageConfig{N: "RoundrobinSuffrage", NA: numberOfNodes},
-		ProposalMaker: &contest_module.DefaultProposalMakerConfig{N: "DefaultProposalMaker", D: 1},
-		BallotMaker:   &contest_module.DefaultBallotMakerConfig{N: "DefaultBallotMaker"},
+		Suffrage:          &contest_module.RoundrobinSuffrageConfig{N: "RoundrobinSuffrage", NA: numberOfNodes},
+		ProposalMaker:     &contest_module.DefaultProposalMakerConfig{N: "DefaultProposalMaker", D: 1},
+		ProposalValidator: &contest_module.DefaultProposalValidatorConfig{N: "DefaultProposalValdator"},
+		BallotMaker:       &contest_module.DefaultBallotMakerConfig{N: "DefaultBallotMaker"},
 	}
 }
 
 func (mc *ModulesConfig) UnmarshalYAML(value *yaml.Node) error {
 	n := struct {
-		Suffrage      contest_config.NameBasedConfig `yaml:"suffrage,omitempty"`
-		ProposalMaker contest_config.NameBasedConfig `yaml:"proposal_maker,omitempty"`
-		BallotMaker   contest_config.NameBasedConfig `yaml:"ballot_maker,omitempty"`
+		Suffrage          contest_config.NameBasedConfig `yaml:"suffrage,omitempty"`
+		ProposalMaker     contest_config.NameBasedConfig `yaml:"proposal_maker,omitempty"`
+		ProposalValidator contest_config.NameBasedConfig `yaml:"proposal_validator,omitempty"`
+		BallotMaker       contest_config.NameBasedConfig `yaml:"ballot_maker,omitempty"`
 	}{
-		Suffrage:      contest_config.NewNameBasedConfig(contest_module.SuffrageConfigs),
-		ProposalMaker: contest_config.NewNameBasedConfig(contest_module.ProposalMakerConfigs),
-		BallotMaker:   contest_config.NewNameBasedConfig(contest_module.BallotMakerConfigs),
+		Suffrage:          contest_config.NewNameBasedConfig(contest_module.SuffrageConfigs),
+		ProposalMaker:     contest_config.NewNameBasedConfig(contest_module.ProposalMakerConfigs),
+		ProposalValidator: contest_config.NewNameBasedConfig(contest_module.ProposalValidatorConfigs),
+		BallotMaker:       contest_config.NewNameBasedConfig(contest_module.BallotMakerConfigs),
 	}
 
 	if err := value.Decode(&n); err != nil {
@@ -365,6 +369,9 @@ func (mc *ModulesConfig) UnmarshalYAML(value *yaml.Node) error {
 	}
 	if n.ProposalMaker.Instance() != nil {
 		mc.ProposalMaker = n.ProposalMaker.Instance().(contest_module.ProposalMakerConfig)
+	}
+	if n.ProposalValidator.Instance() != nil {
+		mc.ProposalValidator = n.ProposalValidator.Instance().(contest_module.ProposalValidatorConfig)
 	}
 	if n.BallotMaker.Instance() != nil {
 		mc.BallotMaker = n.BallotMaker.Instance().(contest_module.BallotMakerConfig)
@@ -382,6 +389,12 @@ func (mc *ModulesConfig) IsValid() error {
 
 	if mc.ProposalMaker != nil {
 		if err := mc.ProposalMaker.(contest_config.IsValider).IsValid(); err != nil {
+			return err
+		}
+	}
+
+	if mc.ProposalValidator != nil {
+		if err := mc.ProposalValidator.(contest_config.IsValider).IsValid(); err != nil {
 			return err
 		}
 	}
@@ -410,6 +423,12 @@ func (mc *ModulesConfig) Merge(i interface{}) error {
 	if mc.ProposalMaker == nil {
 		mc.ProposalMaker = gc.ProposalMaker
 	} else if err := merge(mc.ProposalMaker, gc.ProposalMaker); err != nil {
+		return err
+	}
+
+	if mc.ProposalValidator == nil {
+		mc.ProposalValidator = gc.ProposalValidator
+	} else if err := merge(mc.ProposalValidator, gc.ProposalValidator); err != nil {
 		return err
 	}
 

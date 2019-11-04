@@ -58,7 +58,7 @@ func NewNode(
 	)
 	nt.SetLogger(rootLog)
 
-	pv := contest_module.NewDummyProposalValidator()
+	pv := config.Modules.ProposalValidator.(contest_module.ProposalValidatorConfig).New(homeState, rootLog)
 
 	ballotMaker := config.Modules.BallotMaker.(contest_module.BallotMakerConfig).New(homeState, rootLog)
 

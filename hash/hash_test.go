@@ -88,6 +88,16 @@ func (t *testHash) TestNilHash() {
 	t.Equal("block:N1LHASH", h.String())
 }
 
+func (t *testHash) TestFromString() {
+	{
+		s := "bk:6kpjZZfXn9b8m2qx37xS5pvBH16BLEvYwoZA2WvfQw4s"
+		h, err := NewHashFromString(s)
+		t.NoError(err)
+		t.Equal("bk", h.Hint())
+		t.Equal(s, h.String())
+	}
+}
+
 func TestHash(t *testing.T) {
 	suite.Run(t, new(testHash))
 }

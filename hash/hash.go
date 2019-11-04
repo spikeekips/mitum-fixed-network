@@ -4,6 +4,9 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"strings"
+
+	"golang.org/x/xerrors"
 
 	"github.com/btcsuite/btcutil/base58"
 	"github.com/ethereum/go-ethereum/rlp"
@@ -34,6 +37,15 @@ func NewHash(hint string, body []byte) (Hash, error) {
 		body:   b,
 		length: len(body),
 	}, nil
+}
+
+func NewHashFromString(s string) (Hash, error) {
+	n := strings.SplitN(s, ":", 2)
+	if len(n) < 2 {
+		return Hash{}, xerrors.Errorf("invalid hash strng found: %s", s)
+	}
+
+	return NewHash(n[0], base58.Decode(n[1]))
 }
 
 func NilHash(hint string) Hash {

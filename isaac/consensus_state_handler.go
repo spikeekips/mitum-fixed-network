@@ -231,7 +231,7 @@ func (cs *ConsensusStateHandler) ReceiveVoteResult(vr VoteResult) error {
 	cs.Log().Debug().Object("vr", vr).Msg("VoteResult checked")
 
 	if vr.GotDraw() {
-		cs.Log().Debug().Object("vr", vr).Msg("VoteResult drawed; restart from previous block")
+		cs.Log().Debug().Object("vr", vr).Msg("VoteResult drew; restart from previous block")
 		return cs.restartFromPreviousBlock(vr)
 	} else if vr.GotMajority() {
 		cs.Log().Debug().Object("vr", vr).Msg("VoteResult majority")

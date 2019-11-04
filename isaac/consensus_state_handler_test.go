@@ -319,7 +319,7 @@ func (t *testConsensusStateHandler) TestBallotTimeoutNextRound() {
 	}
 }
 
-func (t *testConsensusStateHandler) TestBallotDrawedAndNextRound() {
+func (t *testConsensusStateHandler) TestBallotDrewAndNextRound() {
 	cs, closeFunc, vr := t.handlerActivated(nil, time.Millisecond*50, time.Millisecond*50)
 	defer closeFunc()
 

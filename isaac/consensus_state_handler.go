@@ -232,7 +232,7 @@ func (cs *ConsensusStateHandler) ReceiveVoteResult(vr VoteResult) error {
 
 	if vr.GotDraw() {
 		cs.Log().Debug().Object("vr", vr).Msg("VoteResult drew; restart from previous block")
-		return cs.restartFromPreviousBlock(vr)
+		return cs.gotINITMajorityButDrew(vr)
 	} else if vr.GotMajority() {
 		cs.Log().Debug().Object("vr", vr).Msg("VoteResult majority")
 		if vr.Stage() == StageINIT {
@@ -308,6 +308,44 @@ func (cs *ConsensusStateHandler) gotINITMajority(vr VoteResult) error {
 	}
 
 	return cs.prepareProposal(vr)
+}
+
+func (cs *ConsensusStateHandler) gotINITMajorityButDrew(vr VoteResult) error {
+	l := cs.Log().With().
+		Object("block", cs.homeState.Block()).
+		Object("vr", vr).
+		Logger()
+
+	diff := vr.Height().Sub(cs.homeState.Block().Height()).Int64()
+	switch {
+	case diff == 2: // restart round from previous block
+	case diff == 1: // next round from restarted round
+	default: // unexpected height, move to sync
+		l.Debug().Msg("got not expected height VoteResult; move to sync")
+		cs.chanState <- NewStateContext(node.StateSyncing).
+			SetContext("vr", vr)
+		return xerrors.Errorf("got not expected height VoteResult; move to sync")
+	}
+
+	ballot, err := cs.ballotMaker.INIT(
+		cs.homeState.PreviousBlock().Hash(),
+		cs.homeState.Block().Round(),
+		vr.Height().Sub(1),
+		cs.homeState.Block().Hash(),
+		vr.LastRound()+1,
+		cs.homeState.Block().Proposal(),
+	)
+	if err != nil {
+		return err
+	}
+
+	l.Debug().Object("ballot", ballot).Msg("broadcast next round ballot from previous block")
+
+	if err := cs.nt.Broadcast(ballot); err != nil {
+		return err
+	}
+
+	return nil
 }
 
 func (cs *ConsensusStateHandler) gotNotINITMajority(vr VoteResult) error {
@@ -470,28 +508,6 @@ func (cs *ConsensusStateHandler) startNextRound(vr VoteResult) error {
 	}
 
 	cs.Log().Debug().Object("vr", vr).Object("ballot", ballot).Msg("broadcast next round ballot")
-
-	if err := cs.nt.Broadcast(ballot); err != nil {
-		return err
-	}
-
-	return nil
-}
-
-func (cs *ConsensusStateHandler) restartFromPreviousBlock(vr VoteResult) error {
-	ballot, err := cs.ballotMaker.INIT(
-		cs.homeState.PreviousBlock().Hash(),
-		cs.homeState.Block().Round(),
-		vr.Height().Sub(1),
-		cs.homeState.Block().Hash(),
-		vr.LastRound()+1,
-		cs.homeState.Block().Proposal(),
-	)
-	if err != nil {
-		return err
-	}
-
-	cs.Log().Debug().Object("vr", vr).Object("ballot", ballot).Msg("broadcast next round ballot from previous block")
 
 	if err := cs.nt.Broadcast(ballot); err != nil {
 		return err

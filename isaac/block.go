@@ -48,6 +48,16 @@ func NewBlock(height Height, round Round, proposal hash.Hash) (Block, error) {
 	return bk, nil
 }
 
+func NewBlockWithHash(height Height, round Round, proposal hash.Hash, newHash hash.Hash) (Block, error) {
+	return Block{
+		hash:      newHash,
+		height:    height,
+		proposal:  proposal,
+		round:     round,
+		createdAt: common.Now(),
+	}, nil
+}
+
 func NewBlockFromVoteResult(vr VoteResult) (Block, error) {
 	// TODO fix; it's just for testing
 	height, ok := vr.Height().SubOK(1)

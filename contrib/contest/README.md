@@ -10,7 +10,7 @@ $ go get github.com/spikeekips/mitum/contrib/contest
 ## Run
 
 ```
-./contest run config.yml
+./contest run config.yml \
     --log /tmp/contest-log \
     --cpuprofile /tmp/contest-log/cpu.prof \
     --memprofile /tmp/contest-log/mem.prof \

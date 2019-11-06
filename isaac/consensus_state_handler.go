@@ -21,6 +21,7 @@ type ConsensusStateHandler struct {
 	compiler              *Compiler
 	nt                    network.Network
 	suffrage              Suffrage
+	sealStorage           SealStorage
 	ballotMaker           BallotMaker
 	proposalValidator     ProposalValidator
 	proposalMaker         ProposalMaker
@@ -38,6 +39,7 @@ func NewConsensusStateHandler(
 	compiler *Compiler,
 	nt network.Network,
 	suffrage Suffrage,
+	sealStorage SealStorage,
 	ballotMaker BallotMaker,
 	proposalValidator ProposalValidator,
 	proposalMaker ProposalMaker,
@@ -56,6 +58,7 @@ func NewConsensusStateHandler(
 		compiler:              compiler,
 		nt:                    nt,
 		suffrage:              suffrage,
+		sealStorage:           sealStorage,
 		ballotMaker:           ballotMaker,
 		proposalValidator:     proposalValidator,
 		proposalMaker:         proposalMaker,
@@ -451,11 +454,23 @@ func (cs *ConsensusStateHandler) gotACCEPTMajority(block Block, vr VoteResult) e
 }
 
 func (cs *ConsensusStateHandler) prepareProposal(vr VoteResult) error {
-	cs.Log().Debug().Object("vr", vr).Msg("prepare proposal")
+	l := cs.Log().With().Object("vr", vr).Logger()
+	l.Debug().Msg("prepare proposal")
+
 	acting := cs.suffrage.Acting(vr.Height(), vr.Round())
-	cs.Log().Debug().Object("acting", acting).Msg("proposer selected")
+	l.Debug().Object("acting", acting).Msg("proposer selected")
 	if !acting.Proposer().Equal(cs.homeState.Home()) {
-		cs.Log().Debug().Msg("proposer is not home; wait proposal")
+		l.Debug().Msg("proposer is not home; wait proposal")
+
+		// NOTE dig proposal
+		if proposal, found := cs.sealStorage.GetProposal(
+			acting.Proposer().Address(),
+			vr.Height(),
+			vr.Round(),
+		); found {
+			l.Debug().Msg("proposal already received; keep going with proposal")
+			return cs.ReceiveProposal(proposal)
+		}
 
 		// NOTE wait proposal
 		if err := cs.nextRoundTimer("proposal-timeout", vr); err != nil {
@@ -466,7 +481,7 @@ func (cs *ConsensusStateHandler) prepareProposal(vr VoteResult) error {
 	}
 
 	if err := cs.propose(vr); err != nil {
-		cs.Log().Error().Err(err).Msg("failed to propose")
+		l.Error().Err(err).Msg("failed to propose")
 	}
 
 	if err := cs.nextRoundTimer("proposal-timeout", vr); err != nil {

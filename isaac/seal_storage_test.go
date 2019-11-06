@@ -37,8 +37,9 @@ func (t *testSealStorage) TestSave() {
 	t.NoError(err)
 
 	t.True(st.Has(ballot.Hash()))
-	loaded := st.Get(ballot.Hash())
+	loaded, found := st.Get(ballot.Hash())
 
+	t.True(found)
 	t.True(ballot.Hash().Equal(loaded.Hash()))
 	t.True(ballot.Equal(loaded))
 }
@@ -53,7 +54,8 @@ func (t *testSealStorage) TestHas() {
 	t.True(st.Has(ballot.Hash()))
 
 	t.False(st.Has(NewRandomBallotHash()))
-	t.Nil(st.Get(NewRandomBallotHash()))
+	_, found := st.Get(NewRandomBallotHash())
+	t.False(found)
 }
 
 func (t *testSealStorage) TestNilSeal() {

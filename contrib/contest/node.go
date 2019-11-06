@@ -89,6 +89,7 @@ func NewNode(
 			cm,
 			nt,
 			suffrage,
+			contest_module.NewMemorySealStorage(),
 			ballotMaker,
 			pv,
 			dp,

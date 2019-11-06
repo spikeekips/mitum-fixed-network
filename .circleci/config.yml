@@ -57,6 +57,7 @@ workflows:
 
   unittests:
     jobs:
+      - build
       - go_test:
           requires:
             - build

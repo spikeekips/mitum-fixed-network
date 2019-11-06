@@ -16,20 +16,22 @@ import (
 
 type testConsensusStateHandler struct {
 	suite.Suite
+	home        node.Home
+	sealStorage SealStorage
 }
 
 func (t *testConsensusStateHandler) handler(suffrage Suffrage, timeoutWaitBallot time.Duration, timeoutWaitINITBallot time.Duration) (*ConsensusStateHandler, func()) {
-	home := node.NewRandomHome()
+	t.home = node.NewRandomHome()
 	lastBlock := NewRandomBlock()
 	nextBlock := NewRandomNextBlock(lastBlock)
 
-	homeState := NewHomeState(home, lastBlock)
+	homeState := NewHomeState(t.home, lastBlock)
 	_ = homeState.SetBlock(nextBlock)
 
 	if suffrage == nil {
-		suffrage = NewFixedProposerSuffrage(home, home)
+		suffrage = NewFixedProposerSuffrage(t.home, t.home)
 	} else {
-		suffrage.AddNodes(home)
+		suffrage.AddNodes(t.home)
 	}
 
 	ballotChecker := NewCompilerBallotChecker(homeState, suffrage)
@@ -40,11 +42,23 @@ func (t *testConsensusStateHandler) handler(suffrage Suffrage, timeoutWaitBallot
 	cn := t.newNetwork(homeState.Home())
 	t.NoError(cn.Start())
 
-	pv := NewDummyProposalValidator()
+	t.sealStorage = NewTSealStorage()
+	pv := NewDummyProposalValidator(t.sealStorage)
 
-	dp := NewDefaultProposalMaker(home, 0)
-	ballotMaker := NewDefaultBallotMaker(home)
-	cs, err := NewConsensusStateHandler(homeState, cm, cn, suffrage, NewTSealStorage(), ballotMaker, pv, dp, timeoutWaitBallot, timeoutWaitINITBallot)
+	dp := NewDefaultProposalMaker(t.home, 0)
+	ballotMaker := NewDefaultBallotMaker(t.home)
+	cs, err := NewConsensusStateHandler(
+		homeState,
+		cm,
+		cn,
+		suffrage,
+		t.sealStorage,
+		ballotMaker,
+		pv,
+		dp,
+		timeoutWaitBallot,
+		timeoutWaitINITBallot,
+	)
 	t.NoError(err)
 
 	return cs, func() {
@@ -208,6 +222,7 @@ func (t *testConsensusStateHandler) TestReceiveProposalAndNextStages() {
 	case message := <-cs.nt.(*network.ChannelNetwork).Reader():
 		proposal, ok := message.(Proposal)
 		t.True(ok)
+		_ = t.sealStorage.Save(proposal)
 
 		t.Equal(ProposalType, proposal.Type())
 		t.True(vr.Height().Equal(proposal.Height()))
@@ -273,6 +288,7 @@ func (t *testConsensusStateHandler) TestBallotTimeoutNextRound() {
 	case message := <-cs.nt.(*network.ChannelNetwork).Reader():
 		proposal, ok := message.(Proposal)
 		t.True(ok)
+		_ = t.sealStorage.Save(proposal)
 
 		t.Equal(ProposalType, proposal.Type())
 		t.True(vr.Height().Equal(proposal.Height()))
@@ -367,6 +383,16 @@ func (t *testConsensusStateHandler) TestINITBallotTimeoutStateJoining() {
 	chanState := make(chan StateContext)
 	_ = cs.SetChanState(chanState)
 
+	proposal, _ := NewProposal(
+		vr.Height(),
+		vr.Round(),
+		vr.Block(),
+		t.home.Address(),
+		nil,
+	)
+	_ = proposal.Sign(t.home.PrivateKey(), nil)
+	_ = t.sealStorage.Save(proposal)
+
 	acceptVR := NewVoteResult(
 		vr.Height(),
 		vr.Round(),
@@ -374,8 +400,8 @@ func (t *testConsensusStateHandler) TestINITBallotTimeoutStateJoining() {
 	).
 		SetAgreement(Majority).
 		SetBlock(NewRandomBlock().Hash()).
-		SetLastBlock(vr.Block()).
-		SetProposal(NewRandomProposalHash())
+		SetLastBlock(proposal.LastBlock()).
+		SetProposal(proposal.Hash())
 
 	err := cs.ReceiveVoteResult(acceptVR)
 	t.NoError(err)
@@ -395,6 +421,16 @@ func (t *testConsensusStateHandler) TestDifferrentBlockVoteResult() {
 
 	cs.compiler.lastINITVoteResult = vr
 
+	proposal, _ := NewProposal(
+		vr.Height(),
+		vr.Round(),
+		vr.Block(),
+		t.home.Address(),
+		nil,
+	)
+	_ = proposal.Sign(t.home.PrivateKey(), nil)
+	_ = t.sealStorage.Save(proposal)
+
 	// receive draw vote result
 	drawVR := NewVoteResult(
 		vr.Height().Add(1),
@@ -403,8 +439,8 @@ func (t *testConsensusStateHandler) TestDifferrentBlockVoteResult() {
 	).
 		SetAgreement(Majority).
 		SetBlock(NewRandomBlock().Hash()). // different block hash
-		SetLastBlock(cs.homeState.Block().Hash()).
-		SetProposal(NewRandomProposalHash())
+		SetLastBlock(proposal.LastBlock()).
+		SetProposal(proposal.Hash())
 
 	chanState := make(chan StateContext)
 	go func() {

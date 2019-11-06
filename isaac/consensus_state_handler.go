@@ -174,11 +174,7 @@ func (cs *ConsensusStateHandler) ReceiveProposal(proposal Proposal) error {
 	}
 
 	var block Block
-	if block, err = cs.proposalValidator.NewBlock(
-		proposal.Height(),
-		proposal.Round(),
-		proposal.Hash(),
-	); err != nil {
+	if block, err = cs.proposalValidator.NewBlock(proposal.Hash()); err != nil {
 		return err
 	}
 
@@ -271,7 +267,7 @@ func (cs *ConsensusStateHandler) gotINITMajority(vr VoteResult) error {
 			return xerrors.Errorf("init for next block; last block does not match; move to sync")
 		}
 
-		block, err := cs.proposalValidator.NewBlock(vr.Height(), vr.Round(), vr.Proposal())
+		block, err := cs.proposalValidator.NewBlock(vr.Proposal())
 		if err != nil {
 			l.Error().
 				Err(err).
@@ -362,7 +358,7 @@ func (cs *ConsensusStateHandler) gotNotINITMajority(vr VoteResult) error {
 		cs.Log().Debug().Object("vr", vr).Msg("proposal did not validated; validate it")
 	}
 
-	block, err := cs.proposalValidator.NewBlock(vr.Height(), vr.Round(), vr.Proposal())
+	block, err := cs.proposalValidator.NewBlock(vr.Proposal())
 	if err != nil {
 		cs.Log().Error().Err(err).Object("vr", vr).Msg("failed to make new block from proposal")
 		return err

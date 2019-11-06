@@ -281,7 +281,7 @@ func (js *JoinStateHandler) catchUp(vr VoteResult) error {
 		)
 	}
 
-	block, err := js.proposalValidator.NewBlock(vr.Height(), vr.Round(), vr.Proposal())
+	block, err := js.proposalValidator.NewBlock(vr.Proposal())
 	if err != nil {
 		js.Log().Error().Err(err).Object("vr", vr).Msg("failed to make new block from proposal")
 		return err

@@ -39,6 +39,9 @@ func NewNode(
 	homeState := isaac.NewHomeState(home, previousBlock).SetBlock(lastBlock)
 
 	suffrage := config.Modules.Suffrage.(contest_module.SuffrageConfig).New(homeState, nodes, rootLog)
+
+	sealStorage := newSealStorage(nil, rootLog)
+
 	ballotChecker := isaac.NewCompilerBallotChecker(homeState, suffrage)
 	ballotChecker.SetLogger(rootLog)
 
@@ -58,7 +61,7 @@ func NewNode(
 	)
 	nt.SetLogger(rootLog)
 
-	pv := config.Modules.ProposalValidator.(contest_module.ProposalValidatorConfig).New(homeState, rootLog)
+	pv := config.Modules.ProposalValidator.(contest_module.ProposalValidatorConfig).New(homeState, sealStorage, rootLog)
 
 	ballotMaker := config.Modules.BallotMaker.(contest_module.BallotMakerConfig).New(homeState, rootLog)
 
@@ -89,7 +92,7 @@ func NewNode(
 			cm,
 			nt,
 			suffrage,
-			contest_module.NewMemorySealStorage(),
+			sealStorage,
 			ballotMaker,
 			pv,
 			dp,
@@ -104,9 +107,7 @@ func NewNode(
 		ss := isaac.NewStoppedStateHandler()
 		ss.SetLogger(rootLog)
 
-		ssr := newSealStorage(config, rootLog)
-
-		sc = isaac.NewStateController(homeState, cm, ssr, bs, js, cs, ss)
+		sc = isaac.NewStateController(homeState, cm, sealStorage, bs, js, cs, ss)
 		sc.SetLogger(rootLog)
 	}
 

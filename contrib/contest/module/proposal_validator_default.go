@@ -32,8 +32,8 @@ func (cm *DefaultProposalValidatorConfig) Merge(i interface{}) error {
 	return nil
 }
 
-func (cm DefaultProposalValidatorConfig) New(homeState *isaac.HomeState, l zerolog.Logger) isaac.ProposalValidator {
-	cb := NewDefaultProposalValidator(homeState)
+func (cm DefaultProposalValidatorConfig) New(homeState *isaac.HomeState, sealStorage isaac.SealStorage, l zerolog.Logger) isaac.ProposalValidator {
+	cb := NewDefaultProposalValidator(homeState, sealStorage)
 	cb.SetLogger(l)
 
 	return cb
@@ -41,17 +41,19 @@ func (cm DefaultProposalValidatorConfig) New(homeState *isaac.HomeState, l zerol
 
 type DefaultProposalValidator struct {
 	*common.Logger
+	isaac.BaseProposalValidator
 	homeState *isaac.HomeState
 	validated *sync.Map
 }
 
-func NewDefaultProposalValidator(homeState *isaac.HomeState) DefaultProposalValidator {
+func NewDefaultProposalValidator(homeState *isaac.HomeState, sealStorage isaac.SealStorage) DefaultProposalValidator {
 	return DefaultProposalValidator{
 		Logger: common.NewLogger(func(c zerolog.Context) zerolog.Context {
 			return c.Str("module", "default-proposer_Validator")
 		}),
-		homeState: homeState,
-		validated: &sync.Map{},
+		BaseProposalValidator: isaac.NewBaseProposalValidator(sealStorage),
+		homeState:             homeState,
+		validated:             &sync.Map{},
 	}
 }
 
@@ -61,22 +63,31 @@ func (dp DefaultProposalValidator) MarshalJSON() ([]byte, error) {
 	})
 }
 
-func (dp DefaultProposalValidator) Validated(proposal hash.Hash) bool {
-	_, found := dp.validated.Load(proposal)
+func (dp DefaultProposalValidator) Validated(h hash.Hash) bool {
+	_, found := dp.validated.Load(h)
 	return found
 }
 
-func (dp DefaultProposalValidator) NewBlock(height isaac.Height, round isaac.Round, proposal hash.Hash) (isaac.Block, error) {
-	if block, found := dp.validated.Load(proposal); found {
+func (dp DefaultProposalValidator) SetNewBlock(block isaac.Block) {
+	dp.validated.Store(block.Proposal(), block)
+}
+
+func (dp DefaultProposalValidator) NewBlock(h hash.Hash) (isaac.Block, error) {
+	if block, found := dp.validated.Load(h); found {
 		return block.(isaac.Block), nil
 	}
 
-	block, err := isaac.NewBlock(height, round, proposal)
+	proposal, err := dp.BaseProposalValidator.GetProposal(h)
 	if err != nil {
 		return isaac.Block{}, err
 	}
 
-	dp.validated.Store(proposal, block)
+	block, err := isaac.NewBlock(proposal.Height(), proposal.Round(), proposal.Hash())
+	if err != nil {
+		return isaac.Block{}, err
+	}
+
+	dp.validated.Store(proposal.Hash(), block)
 
 	return block, nil
 }

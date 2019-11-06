@@ -46,13 +46,13 @@ func (cm *ConditionProposalValidatorConfig) Merge(i interface{}) error {
 	return nil
 }
 
-func (cm ConditionProposalValidatorConfig) New(homeState *isaac.HomeState, l zerolog.Logger) isaac.ProposalValidator {
+func (cm ConditionProposalValidatorConfig) New(homeState *isaac.HomeState, sealStorage isaac.SealStorage, l zerolog.Logger) isaac.ProposalValidator {
 	var checkers []condition.ActionChecker
 	for _, c := range cm.Conditions {
 		checkers = append(checkers, c.ActionChecker())
 	}
 
-	cb := NewConditionProposalValidator(homeState, checkers)
+	cb := NewConditionProposalValidator(homeState, sealStorage, checkers)
 	cb.SetLogger(l)
 
 	return cb
@@ -65,9 +65,9 @@ type ConditionProposalValidator struct {
 	checkers  []condition.ActionChecker
 }
 
-func NewConditionProposalValidator(homeState *isaac.HomeState, checkers []condition.ActionChecker) ConditionProposalValidator {
+func NewConditionProposalValidator(homeState *isaac.HomeState, sealStorage isaac.SealStorage, checkers []condition.ActionChecker) ConditionProposalValidator {
 	return ConditionProposalValidator{
-		DefaultProposalValidator: NewDefaultProposalValidator(homeState),
+		DefaultProposalValidator: NewDefaultProposalValidator(homeState, sealStorage),
 		Logger: common.NewLogger(func(c zerolog.Context) zerolog.Context {
 			return c.Str("module", "condition-proposer_validator")
 		}),
@@ -87,9 +87,18 @@ func (dp ConditionProposalValidator) Validated(proposal hash.Hash) bool {
 	return dp.DefaultProposalValidator.Validated(proposal)
 }
 
-func (dp ConditionProposalValidator) NewBlock(height isaac.Height, round isaac.Round, proposal hash.Hash) (isaac.Block, error) {
+func (dp ConditionProposalValidator) NewBlock(h hash.Hash) (isaac.Block, error) {
 	if dp.checkers == nil {
-		return dp.DefaultProposalValidator.NewBlock(height, round, proposal)
+		return dp.DefaultProposalValidator.NewBlock(h)
+	}
+
+	if found := dp.DefaultProposalValidator.Validated(h); found {
+		return dp.DefaultProposalValidator.NewBlock(h)
+	}
+
+	proposal, err := dp.DefaultProposalValidator.BaseProposalValidator.GetProposal(h)
+	if err != nil {
+		return isaac.Block{}, err
 	}
 
 	li, err := condition.NewLogItemFromMap(
@@ -97,9 +106,9 @@ func (dp ConditionProposalValidator) NewBlock(height isaac.Height, round isaac.R
 			"node":  dp.homeState.Home().Alias(),
 			"state": dp.homeState.State().String(),
 			"block": map[string]interface{}{
-				"height":   height.Uint64(),
-				"round":    round.Uint64(),
-				"proposal": proposal.String(),
+				"height":   proposal.Height().String(),
+				"round":    proposal.Round().Uint64(),
+				"proposal": proposal.Hash().String(),
 			},
 		})
 	if err != nil {
@@ -118,11 +127,33 @@ func (dp ConditionProposalValidator) NewBlock(height isaac.Height, round isaac.R
 				l.Debug().Msg("condition matched")
 
 				switch action.Action() {
-				case "fail":
-					return isaac.Block{}, xerrors.Errorf("failed to make new block")
+				case "error":
+					var errString string
+					if len(action.Value().Value()) < 1 {
+						errString = "failed to make new block"
+					} else if action.Value().Hint() != reflect.String {
+						err := xerrors.Errorf("invalid value found: %v", action.Value().Hint())
+						l.Error().Err(err).Send()
+						return isaac.Block{}, err
+					} else {
+						errString = action.Value().Value()[0].(string)
+					}
+
+					return isaac.Block{}, xerrors.Errorf(errString)
 				case "random-block-hash":
 					newHash := NewRandomBlockHash()
-					return isaac.NewBlockWithHash(height, round, proposal, newHash)
+					block, err := isaac.NewBlockWithHash(
+						proposal.Height(),
+						proposal.Round(),
+						proposal.Hash(),
+						newHash,
+					)
+					if err != nil {
+						return isaac.Block{}, err
+					}
+					dp.DefaultProposalValidator.SetNewBlock(block)
+
+					return block, nil
 				case "block-hash":
 					if len(action.Value().Value()) < 1 {
 						err := xerrors.Errorf("value not found: %v")
@@ -140,11 +171,22 @@ func (dp ConditionProposalValidator) NewBlock(height isaac.Height, round isaac.R
 						return isaac.Block{}, err
 					}
 
-					return isaac.NewBlockWithHash(height, round, proposal, newHash)
+					block, err := isaac.NewBlockWithHash(
+						proposal.Height(),
+						proposal.Round(),
+						proposal.Hash(),
+						newHash,
+					)
+					if err != nil {
+						return isaac.Block{}, err
+					}
+					dp.DefaultProposalValidator.SetNewBlock(block)
+
+					return block, nil
 				}
 			}
 		}
 	}
 
-	return dp.DefaultProposalValidator.NewBlock(height, round, proposal)
+	return dp.DefaultProposalValidator.NewBlock(h)
 }

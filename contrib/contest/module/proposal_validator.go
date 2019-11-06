@@ -15,5 +15,5 @@ func init() {
 type ProposalValidatorConfig interface {
 	Name() string
 	Merge(interface{}) error
-	New(*isaac.HomeState, zerolog.Logger) isaac.ProposalValidator
+	New(*isaac.HomeState, isaac.SealStorage, zerolog.Logger) isaac.ProposalValidator
 }

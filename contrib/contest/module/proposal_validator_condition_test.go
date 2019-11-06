@@ -22,55 +22,74 @@ func (t *testConditionProposalValidator) TestEmptyProposal() {
 	nextBlock := NewRandomNextBlock(lastBlock)
 	homeState := isaac.NewHomeState(node.NewRandomHome(), lastBlock).SetBlock(nextBlock)
 
+	proposal, _ := isaac.NewProposal(
+		nextBlock.Height().Add(1),
+		isaac.Round(0),
+		nextBlock.Hash(),
+		homeState.Home().Address(),
+		nil,
+	)
+	ss := NewMemorySealStorage()
+	_ = ss.Save(proposal)
+
 	{
-		query := fmt.Sprintf(`proposal.height=%s`, nextBlock.Height())
+		query := fmt.Sprintf(`proposal.height=%s`, proposal.Height())
 
 		cc, _ := condition.NewConditionChecker(query)
 		cb := NewConditionProposalValidator(
 			homeState,
+			ss,
 			[]condition.ActionChecker{
 				condition.NewActionChecker0(cc, condition.NewActionWithoutValue("empty-proposal")),
 			},
 		)
 
-		validated := cb.Validated(nextBlock.Proposal())
+		validated := cb.Validated(proposal.Hash())
 		t.False(validated)
 
-		block, err := cb.NewBlock(nextBlock.Height(), nextBlock.Round(), nextBlock.Proposal())
+		block, err := cb.NewBlock(proposal.Hash())
 		t.NoError(err)
 
-		t.True(nextBlock.Height().Equal(block.Height()))
-		t.Equal(nextBlock.Round(), block.Round())
+		t.True(proposal.Height().Equal(block.Height()))
+		t.Equal(proposal.Round(), block.Round())
 
-		validated = cb.Validated(nextBlock.Proposal())
+		validated = cb.Validated(proposal.Hash())
 		t.True(validated)
 	}
 
 	{ // `fail` action: failed to make new block
-		query := fmt.Sprintf(`block.height=%s`, nextBlock.Height())
+		query := fmt.Sprintf(`block.height=%s`, proposal.Height())
 
 		cc, _ := condition.NewConditionChecker(query)
 		cb := NewConditionProposalValidator(
 			homeState,
+			ss,
 			[]condition.ActionChecker{
-				condition.NewActionChecker0(cc, condition.NewActionWithoutValue("fail")),
+				condition.NewActionChecker0(cc, condition.NewAction(
+					"error",
+					condition.NewActionValue(
+						[]interface{}{"show me"},
+						reflect.String,
+					),
+				)),
 			},
 		)
 
-		validated := cb.Validated(nextBlock.Proposal())
+		validated := cb.Validated(proposal.Hash())
 		t.False(validated)
 
-		_, err := cb.NewBlock(nextBlock.Height(), nextBlock.Round(), nextBlock.Proposal())
-		t.Contains(err.Error(), "failed to make new block")
+		_, err := cb.NewBlock(proposal.Hash())
+		t.Contains(err.Error(), "show me")
 	}
 
 	{ // `block-hash` action: set block hash
 		newBlockHash := NewRandomBlockHash()
-		query := fmt.Sprintf(`block.height=%s`, nextBlock.Height())
+		query := fmt.Sprintf(`block.height=%s`, proposal.Height())
 
 		cc, _ := condition.NewConditionChecker(query)
 		cb := NewConditionProposalValidator(
 			homeState,
+			ss,
 			[]condition.ActionChecker{
 				condition.NewActionChecker0(cc, condition.NewAction(
 					"block-hash",
@@ -82,42 +101,50 @@ func (t *testConditionProposalValidator) TestEmptyProposal() {
 			},
 		)
 
-		validated := cb.Validated(nextBlock.Proposal())
+		validated := cb.Validated(proposal.Hash())
 		t.False(validated)
 
-		block, err := cb.NewBlock(nextBlock.Height(), nextBlock.Round(), nextBlock.Proposal())
+		block, err := cb.NewBlock(proposal.Hash())
 		t.NoError(err)
 		t.True(newBlockHash.Equal(block.Hash()))
 
-		t.True(nextBlock.Height().Equal(block.Height()))
-		t.Equal(nextBlock.Round(), block.Round())
+		t.True(proposal.Height().Equal(block.Height()))
+		t.Equal(proposal.Round(), block.Round())
 	}
 
 	{ // `random-block-hash` action: set random block hash
 		var correctBlockHash hash.Hash
 		{
-			cb := NewConditionProposalValidator(homeState, nil)
-			block, err := cb.NewBlock(nextBlock.Height(), nextBlock.Round(), nextBlock.Proposal())
+			cb := NewConditionProposalValidator(homeState, ss, nil)
+			block, err := cb.NewBlock(proposal.Hash())
 			t.NoError(err)
 			correctBlockHash = block.Hash()
 		}
 
-		query := fmt.Sprintf(`block.height=%s`, nextBlock.Height())
+		query := fmt.Sprintf(`block.height=%s`, proposal.Height())
 
 		cc, _ := condition.NewConditionChecker(query)
 		cb := NewConditionProposalValidator(
 			homeState,
+			ss,
 			[]condition.ActionChecker{
 				condition.NewActionChecker0(cc, condition.NewActionWithoutValue("random-block-hash")),
 			},
 		)
 
-		validated := cb.Validated(nextBlock.Proposal())
+		validated := cb.Validated(proposal.Hash())
 		t.False(validated)
 
-		block, err := cb.NewBlock(nextBlock.Height(), nextBlock.Round(), nextBlock.Proposal())
+		block, err := cb.NewBlock(proposal.Hash())
 		t.NoError(err)
 		t.False(correctBlockHash.Equal(block.Hash()))
+
+		// same height, round and proposal, new block should be same
+		sameBlock, err := cb.NewBlock(proposal.Hash())
+		t.NoError(err)
+
+		t.True(block.Hash().Equal(sameBlock.Hash()))
+		t.True(block.Proposal().Equal(sameBlock.Proposal()))
 	}
 }
 

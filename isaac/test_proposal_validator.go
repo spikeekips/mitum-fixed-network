@@ -10,12 +10,16 @@ import (
 
 type DummyProposalValidator struct {
 	sync.RWMutex
-	validated map[hash.Hash] /* Proposal.Hash() */ Block
+	BaseProposalValidator
+	sealStorage SealStorage
+	validated   map[hash.Hash] /* Proposal.Hash() */ Block
 }
 
-func NewDummyProposalValidator() *DummyProposalValidator {
+func NewDummyProposalValidator(sealStorage SealStorage) *DummyProposalValidator {
 	return &DummyProposalValidator{
-		validated: map[hash.Hash]Block{},
+		BaseProposalValidator: NewBaseProposalValidator(sealStorage),
+		validated:             map[hash.Hash]Block{},
+		sealStorage:           sealStorage,
 	}
 }
 
@@ -27,20 +31,25 @@ func (dp *DummyProposalValidator) Validated(proposal hash.Hash) bool {
 	return found
 }
 
-func (dp *DummyProposalValidator) NewBlock(height Height, round Round, proposal hash.Hash) (Block, error) {
+func (dp *DummyProposalValidator) NewBlock(h hash.Hash) (Block, error) {
 	dp.Lock()
 	defer dp.Unlock()
 
-	if block, found := dp.validated[proposal]; found {
+	if block, found := dp.validated[h]; found {
 		return block, nil
 	}
 
-	block, err := NewBlock(height, round, proposal)
+	proposal, err := dp.BaseProposalValidator.GetProposal(h)
 	if err != nil {
 		return Block{}, err
 	}
 
-	dp.validated[proposal] = block
+	block, err := NewBlock(proposal.Height(), proposal.Round(), proposal.Hash())
+	if err != nil {
+		return Block{}, err
+	}
+
+	dp.validated[proposal.Hash()] = block
 
 	return block, nil
 }

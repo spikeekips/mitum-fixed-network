@@ -4,7 +4,7 @@ go 1.12
 
 require (
 	github.com/Workiva/go-datastructures v1.0.50
-	github.com/alecthomas/chroma v0.6.8
+	github.com/alecthomas/chroma v0.6.9
 	github.com/beevik/ntp v0.2.0
 	github.com/btcsuite/btcutil v0.0.0-20190425235716-9e5f4b9a998d
 	github.com/dlclark/regexp2 v1.2.0 // indirect
@@ -24,15 +24,15 @@ require (
 	github.com/satori/go.uuid v1.2.0
 	github.com/spf13/cobra v0.0.5
 	github.com/spf13/pflag v1.0.5
-	github.com/stellar/go v0.0.0-20191030195643-203722ea65a4
+	github.com/stellar/go v0.0.0-20191031165136-ed88b67b723d
 	github.com/stellar/go-xdr v0.0.0-20191025181027-f16312a9bced // indirect
 	github.com/stretchr/testify v1.4.0
-	golang.org/x/crypto v0.0.0-20191029031824-8986dd9e96cf // indirect
-	golang.org/x/net v0.0.0-20191028085509-fe3aa8a45271 // indirect
+	golang.org/x/crypto v0.0.0-20191105034135-c7e5f84aec59 // indirect
+	golang.org/x/net v0.0.0-20191105084925-a882066a44e0 // indirect
 	golang.org/x/sync v0.0.0-20190911185100-cd5d95a43a6e
-	golang.org/x/sys v0.0.0-20191029155521-f43be2a4598c // indirect
+	golang.org/x/sys v0.0.0-20191105231009-c1f44814a5cd // indirect
 	golang.org/x/xerrors v0.0.0-20191011141410-1b5146add898
 	gopkg.in/mgo.v2 v2.0.0-20190816093944-a6b53ec6cb22 // indirect
 	gopkg.in/yaml.v2 v2.2.3
-	gopkg.in/yaml.v3 v3.0.0-20191026110619-0b21df46bc1d
+	gopkg.in/yaml.v3 v3.0.0-20191105164941-196cff6ef4b6
 )

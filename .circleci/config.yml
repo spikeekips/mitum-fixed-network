@@ -46,7 +46,7 @@ jobs:
          command: go get -u github.com/alexkohler/nargs/cmd/nargs
       - run:
          name: Run nargs
-         command: for i in *; do [ -d "$i" ] || continue; nargs -set_exit_status -named_returns -tests ./$i...; done
+         command: nargs -set_exit_status -named_returns -tests ./...
 
   go-test:
     <<: *defaults

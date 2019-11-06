@@ -45,7 +45,7 @@ func (sc *RoundrobinSuffrageConfig) Merge(i interface{}) error {
 	return nil
 }
 
-func (sc RoundrobinSuffrageConfig) New(homeState *isaac.HomeState, nodes []node.Node, l zerolog.Logger) isaac.Suffrage {
+func (sc RoundrobinSuffrageConfig) New(_ *isaac.HomeState, nodes []node.Node, l zerolog.Logger) isaac.Suffrage {
 	sf := NewRoundrobinSuffrage(sc.NA, nodes...)
 	sf.SetLogger(l)
 

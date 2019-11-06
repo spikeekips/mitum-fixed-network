@@ -49,6 +49,8 @@ func (cc *ConditionSuffrageConfig) IsValid() error {
 		cs = append(cs, c)
 	}
 
+	cc.Conditions = cs
+
 	return nil
 }
 

@@ -51,7 +51,7 @@ func (sc *FixedProposerSuffrageConfig) Merge(i interface{}) error {
 	return nil
 }
 
-func (sc FixedProposerSuffrageConfig) New(homeState *isaac.HomeState, nodes []node.Node, l zerolog.Logger) isaac.Suffrage {
+func (sc FixedProposerSuffrageConfig) New(_ *isaac.HomeState, nodes []node.Node, l zerolog.Logger) isaac.Suffrage {
 	var proposer node.Node
 	for _, n := range nodes {
 		if sc.Proposer == n.Alias() || sc.Proposer == n.Address().String() {

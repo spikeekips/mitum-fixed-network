@@ -28,7 +28,7 @@ func (cm *DefaultProposalValidatorConfig) IsValid() error {
 	return nil
 }
 
-func (cm *DefaultProposalValidatorConfig) Merge(i interface{}) error {
+func (cm *DefaultProposalValidatorConfig) Merge(interface{}) error {
 	return nil
 }
 

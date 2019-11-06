@@ -51,7 +51,7 @@ func (nc *NameBasedConfig) UnmarshalYAML(value *yaml.Node) error {
 		nc.instance = reflect.ValueOf(cii).Interface()
 	}
 
-	nc.Name = nc.Name
+	nc.Name = nnc.Name
 
 	return nil
 }

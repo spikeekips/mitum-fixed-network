@@ -36,10 +36,10 @@ var configFullCmd = &cobra.Command{
 			os.Exit(1)
 		}
 
-		if err := config.IsValid(); err != nil {
+		if err = config.IsValid(); err != nil {
 			cmd.Println("Error:", err.Error())
 			os.Exit(1)
-		} else if err := config.Merge(nil); err != nil {
+		} else if err = config.Merge(nil); err != nil {
 			cmd.Println("Error:", err.Error())
 			os.Exit(1)
 		}

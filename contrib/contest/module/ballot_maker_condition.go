@@ -42,7 +42,7 @@ func (cb *ConditionBallotMakerConfig) IsValid() error {
 	return nil
 }
 
-func (cb *ConditionBallotMakerConfig) Merge(i interface{}) error {
+func (cb *ConditionBallotMakerConfig) Merge(interface{}) error {
 	return nil
 }
 

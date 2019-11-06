@@ -32,6 +32,7 @@ jobs:
 
   golangci-lint:
     <<: *defaults
+    working_directory: /go/src/github.com/spikeekips/mitum
     steps:
       - <<: *workspace
       - run:
@@ -44,6 +45,7 @@ jobs:
 
   go_test:
     <<: *defaults
+    working_directory: /go/src/github.com/spikeekips/mitum
     steps:
       - <<: *workspace
       - run:
@@ -59,6 +61,9 @@ workflows:
   unittests:
     jobs:
       - build
+      - golangci-lint:
+          requires:
+            - build
       - go_test:
           requires:
             - build

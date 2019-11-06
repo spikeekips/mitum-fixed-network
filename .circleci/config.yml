@@ -1,18 +1,63 @@
 version: 2
+
+defaults: &defaults
+  docker:
+    - image: circleci/golang:1.13
+  working_directory: /go/src/github.com/spikeekips/mitum
+
+workspace: &workspace
+  attach_workspace:
+    at: /
+
 jobs:
   build:
-    docker:
-      # specify the version
-      - image: circleci/golang:1.13
-
-    working_directory: /go/src/github.com/spikeekips/mitum
+    <<: *defaults
     steps:
       - checkout
+      - restore_cache:
+          key: dependency-cache-mod-{{ checksum "go.sum" }}
+      - run:
+          name: Download dependencies
+          command: go mod download
+      - save_cache:
+          key: dependency-cache-mod-{{ checksum "go.sum" }}
+          paths:
+            - /go/pkg/mod/
+      - persist_to_workspace:
+          root: /
+          paths:
+            - home/circleci/bin
+            - go/pkg/mod/
+
+  golangci-lint:
+    <<: *defaults
+    steps:
+      - <<: *workspace
+      - run:
+          name: Run golangci-lint
+          command: curl -sfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh| sh -s -- -b /home/circleci/bin v1.21.0
 
       - run:
-         name: update modules
-         command: go get -v -t -d ./...
+         name: golangci-lint
+         command: /home/circleci/bin/golangci-lint run
 
+  go_test:
+    <<: *defaults
+    steps:
+      - <<: *workspace
       - run:
          name: unit test
          command: go test -race -tags test -timeout 1m -v ./...
+
+workflows:
+  version: 2
+  build:
+    jobs:
+      - build
+
+  unittests:
+    jobs:
+      - unittests:
+          requires:
+            - build
+            - go_test

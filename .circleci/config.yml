@@ -28,9 +28,11 @@ jobs:
           paths:
             - home/circleci/bin
             - go/pkg/mod/
+            - go/src/github.com/spikeekips/mitum
 
   golangci-lint:
     <<: *defaults
+    working_directory: /go/src/github.com/spikeekips/mitum
     steps:
       - <<: *workspace
       - run:

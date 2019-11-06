@@ -26,7 +26,6 @@ jobs:
       - persist_to_workspace:
           root: /
           paths:
-            - home/circleci/bin
             - go/pkg/mod/
             - go/src/github.com/spikeekips/mitum
 
@@ -36,10 +35,10 @@ jobs:
       - <<: *workspace
       - run:
           name: Install golangci-lint
-          command: curl -sfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh| sh -s -- -b /home/circleci/bin v1.21.0
+          command: curl -sfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh| sh -s -- -b $(go env GOPATH)/bin v1.21.0
       - run:
          name: Run golangci-lint
-         command: /home/circleci/bin/golangci-lint run
+         command: golangci-lint run
 
       - run:
          name: Install nargs

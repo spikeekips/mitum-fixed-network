@@ -43,6 +43,7 @@ jobs:
 
   go_test:
     <<: *defaults
+    working_directory: /go/src/github.com/spikeekips/mitum
     steps:
       - <<: *workspace
       - run:

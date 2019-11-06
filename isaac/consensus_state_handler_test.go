@@ -191,7 +191,7 @@ func (t *testConsensusStateHandler) TestTimeoutWaitProposal() {
 
 	var ballot Ballot
 	select {
-	case <-time.After(time.Millisecond * 30):
+	case <-time.After(time.Millisecond * 200):
 		t.NoError(errors.New("timed out"))
 		return
 	case message := <-cs.nt.(*network.ChannelNetwork).Reader():
@@ -216,7 +216,7 @@ func (t *testConsensusStateHandler) TestReceiveProposalAndNextStages() {
 	cs.compiler.lastINITVoteResult = vr
 
 	select {
-	case <-time.After(time.Millisecond * 50):
+	case <-time.After(time.Millisecond * 200):
 		t.NoError(errors.New("timed out; wait proposal"))
 		return
 	case message := <-cs.nt.(*network.ChannelNetwork).Reader():
@@ -236,7 +236,7 @@ func (t *testConsensusStateHandler) TestReceiveProposalAndNextStages() {
 
 	// wait sign ballot
 	select {
-	case <-time.After(time.Millisecond * 50):
+	case <-time.After(time.Millisecond * 200):
 		t.NoError(errors.New("timed out; sign ballot"))
 		return
 	case message := <-cs.nt.(*network.ChannelNetwork).Reader():
@@ -259,7 +259,7 @@ func (t *testConsensusStateHandler) TestProposalTimeoutNextRound() {
 	defer closeFunc()
 
 	select {
-	case <-time.After(time.Millisecond * 100):
+	case <-time.After(time.Millisecond * 200):
 		t.NoError(errors.New("timed out; wait next round ballot"))
 		return
 	case message := <-cs.nt.(*network.ChannelNetwork).Reader():
@@ -282,7 +282,7 @@ func (t *testConsensusStateHandler) TestBallotTimeoutNextRound() {
 	cs.compiler.lastINITVoteResult = vr
 
 	select {
-	case <-time.After(time.Millisecond * 100):
+	case <-time.After(time.Millisecond * 200):
 		t.NoError(errors.New("timed out; wait proposal"))
 		return
 	case message := <-cs.nt.(*network.ChannelNetwork).Reader():
@@ -302,7 +302,7 @@ func (t *testConsensusStateHandler) TestBallotTimeoutNextRound() {
 
 	// wait sign ballot
 	select {
-	case <-time.After(time.Millisecond * 100):
+	case <-time.After(time.Millisecond * 200):
 		t.NoError(errors.New("timed out; sign ballot"))
 		return
 	case message := <-cs.nt.(*network.ChannelNetwork).Reader():
@@ -407,7 +407,7 @@ func (t *testConsensusStateHandler) TestINITBallotTimeoutStateJoining() {
 	t.NoError(err)
 
 	select {
-	case <-time.After(timeoutWaitINITBallot * 2):
+	case <-time.After(time.Millisecond * 200):
 		t.NoError(errors.New("timed out; wait state changing to joining"))
 		return
 	case stateContext := <-chanState:

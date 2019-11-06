@@ -30,17 +30,23 @@ jobs:
             - go/pkg/mod/
             - go/src/github.com/spikeekips/mitum
 
-  golangci-lint:
+  lint:
     <<: *defaults
     steps:
       - <<: *workspace
       - run:
-          name: Run golangci-lint
+          name: Install golangci-lint
           command: curl -sfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh| sh -s -- -b /home/circleci/bin v1.21.0
+      - run:
+         name: Run golangci-lint
+         command: /home/circleci/bin/golangci-lint run
 
       - run:
-         name: golangci-lint
-         command: /home/circleci/bin/golangci-lint run
+         name: Install nargs
+         command: go get -u github.com/alexkohler/nargs/cmd/nargs
+      - run:
+         name: Run nargs
+         command: for i in *; do [ -d "$i" ] || continue; nargs -set_exit_status -named_returns -tests ./$i...; done
 
   go-test:
     <<: *defaults
@@ -59,7 +65,7 @@ workflows:
   unittests:
     jobs:
       - build
-      - golangci-lint:
+      - lint:
           requires:
             - build
       - go-test:

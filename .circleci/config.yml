@@ -8,6 +8,11 @@ jobs:
     working_directory: /go/src/github.com/spikeekips/mitum
     steps:
       - checkout
+
+      - run:
+         name: update modules
+         command: go get -v -t -d ./...
+
       - run:
          name: unit test
          command: go test -race -tags test -timeout 1m -v ./...

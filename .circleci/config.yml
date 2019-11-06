@@ -42,7 +42,7 @@ jobs:
          name: golangci-lint
          command: /home/circleci/bin/golangci-lint run
 
-  go_test:
+  go-test:
     <<: *defaults
     steps:
       - <<: *workspace
@@ -62,6 +62,6 @@ workflows:
       - golangci-lint:
           requires:
             - build
-      - go_test:
+      - go-test:
           requires:
             - build

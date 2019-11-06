@@ -29,6 +29,7 @@ func (t *testConditionProposalValidator) TestEmptyProposal() {
 		homeState.Home().Address(),
 		nil,
 	)
+	_ = proposal.Sign(homeState.Home().PrivateKey(), nil)
 	ss := NewMemorySealStorage()
 	_ = ss.Save(proposal)
 

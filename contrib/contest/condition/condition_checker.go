@@ -9,6 +9,7 @@ import (
 	"sync"
 
 	"golang.org/x/xerrors"
+	"gopkg.in/yaml.v3"
 )
 
 type ConditionChecker struct {
@@ -27,6 +28,29 @@ func NewConditionChecker(query string) (ConditionChecker, error) {
 
 func NewConditionCheckerFromCondition(c Condition) ConditionChecker {
 	return ConditionChecker{query: c.String(), condition: c}
+}
+
+func (dc ConditionChecker) MarshalYAML() (interface{}, error) {
+	return dc.Query(), nil
+}
+
+func (dc ConditionChecker) MarshalJSON() ([]byte, error) {
+	return json.Marshal(dc.Query())
+}
+
+func (dc *ConditionChecker) UnmarshalYAML(value *yaml.Node) error {
+	var s string
+	if err := value.Decode(&s); err != nil {
+		return err
+	}
+
+	c, err := NewConditionChecker(s)
+	if err != nil {
+		return err
+	}
+
+	*dc = c
+	return nil
 }
 
 func (dc ConditionChecker) Query() string {

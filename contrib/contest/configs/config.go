@@ -1,7 +1,6 @@
 package configs
 
 import (
-	"encoding/json"
 	"fmt"
 	"io/ioutil"
 	"path/filepath"
@@ -24,7 +23,7 @@ var blockGenerator sync.Map
 type Config struct {
 	Global        *NodeConfig
 	Nodes         map[string]*NodeConfig
-	Conditions    *ConditionsConfig
+	Conditions    map[string][]condition.ConditionChecker
 	NumberOfNodes uint `yaml:"-"`
 }
 
@@ -84,12 +83,6 @@ func (nc *Config) IsValid() error {
 
 	if nc.NumberOfNodes < 1 {
 		return xerrors.Errorf("not enough nodes")
-	}
-
-	if nc.Conditions != nil {
-		if err := nc.Conditions.IsValid(); err != nil {
-			return err
-		}
 	}
 
 	return nil
@@ -438,64 +431,6 @@ func (mc *ModulesConfig) Merge(i interface{}) error {
 		return err
 	}
 
-	return nil
-}
-
-type ConditionsConfig struct {
-	Conditions map[string][]condition.ConditionChecker
-}
-
-func (cc *ConditionsConfig) UnmarshalYAML(value *yaml.Node) error {
-	m := map[string][]string{}
-	if err := value.Decode(&m); err != nil {
-		return err
-	}
-
-	conditions := map[string][]condition.ConditionChecker{}
-	for k, v := range m {
-		var l []condition.ConditionChecker
-		for _, c := range v {
-			cc, err := condition.NewConditionChecker(c)
-			if err != nil {
-				return err
-			}
-			l = append(l, cc)
-		}
-
-		if len(l) < 1 {
-			return xerrors.Errorf("empty conditions in %s", k)
-		}
-		conditions[k] = l
-	}
-
-	cc.Conditions = conditions
-
-	return nil
-}
-
-func (cc *ConditionsConfig) MarshalYAML() (interface{}, error) {
-	m := map[string][]string{}
-	for name, c := range cc.Conditions {
-		var l []string
-		for _, q := range c {
-			l = append(l, q.Query())
-		}
-		m[name] = l
-	}
-
-	return m, nil
-}
-
-func (cc *ConditionsConfig) MarshalJSON() ([]byte, error) {
-	m, err := cc.MarshalYAML()
-	if err != nil {
-		return nil, err
-	}
-
-	return json.Marshal(m)
-}
-
-func (cc *ConditionsConfig) IsValid() error {
 	return nil
 }
 

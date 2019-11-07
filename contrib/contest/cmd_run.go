@@ -65,7 +65,7 @@ var runCmd = &cobra.Command{
 			_ = nodes.Stop()
 		})
 
-		if len(config.Conditions.Conditions) > 0 {
+		if len(config.Conditions) > 0 {
 			satisfiedChan := make(chan bool)
 
 			go func() {
@@ -138,7 +138,7 @@ func init() {
 func prepareConditions(config *configs.Config, nodeList []node.Node) []condition.ConditionChecker {
 	var checkers []condition.ConditionChecker
 
-	all, found := config.Conditions.Conditions["all"]
+	all, found := config.Conditions["all"]
 	if found {
 		for _, n := range nodeList {
 			for _, ck := range all {
@@ -151,7 +151,7 @@ func prepareConditions(config *configs.Config, nodeList []node.Node) []condition
 		}
 	}
 
-	for k, cks := range config.Conditions.Conditions {
+	for k, cks := range config.Conditions {
 		if k == "all" {
 			continue
 		}

@@ -5,11 +5,12 @@ import (
 	"reflect"
 	"testing"
 
+	"github.com/stretchr/testify/suite"
+	"golang.org/x/xerrors"
+
 	"github.com/spikeekips/mitum/contrib/contest/condition"
 	"github.com/spikeekips/mitum/isaac"
 	"github.com/spikeekips/mitum/node"
-	"github.com/stretchr/testify/suite"
-	"golang.org/x/xerrors"
 )
 
 type testConditionSuffrage struct {

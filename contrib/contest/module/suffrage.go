@@ -2,6 +2,7 @@ package contest_module
 
 import (
 	"github.com/rs/zerolog"
+
 	"github.com/spikeekips/mitum/isaac"
 	"github.com/spikeekips/mitum/node"
 )

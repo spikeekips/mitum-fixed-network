@@ -3,8 +3,9 @@ package isaac
 import (
 	"testing"
 
-	"github.com/spikeekips/mitum/node"
 	"github.com/stretchr/testify/suite"
+
+	"github.com/spikeekips/mitum/node"
 )
 
 type testSealStorage struct {

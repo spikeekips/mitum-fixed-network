@@ -5,9 +5,9 @@ import (
 	"sync"
 	"time"
 
+	"github.com/rs/zerolog"
 	"golang.org/x/xerrors"
 
-	"github.com/rs/zerolog"
 	"github.com/spikeekips/mitum/common"
 	"github.com/spikeekips/mitum/node"
 	"github.com/spikeekips/mitum/seal"

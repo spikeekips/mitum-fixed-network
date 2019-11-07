@@ -3,9 +3,9 @@ package contest_module
 import (
 	"encoding/json"
 
+	"github.com/rs/zerolog"
 	"golang.org/x/xerrors"
 
-	"github.com/rs/zerolog"
 	"github.com/spikeekips/mitum/common"
 	"github.com/spikeekips/mitum/isaac"
 	"github.com/spikeekips/mitum/node"

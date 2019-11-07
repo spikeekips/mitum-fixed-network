@@ -3,9 +3,10 @@ package contest_module
 import (
 	"testing"
 
+	"github.com/stretchr/testify/suite"
+
 	"github.com/spikeekips/mitum/isaac"
 	"github.com/spikeekips/mitum/node"
-	"github.com/stretchr/testify/suite"
 )
 
 type testMemorySealStorage struct {

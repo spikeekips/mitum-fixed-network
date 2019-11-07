@@ -5,6 +5,7 @@ import (
 	"sync"
 
 	"github.com/rs/zerolog"
+
 	"github.com/spikeekips/mitum/node"
 )
 

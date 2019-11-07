@@ -4,13 +4,14 @@ import (
 	"fmt"
 
 	"github.com/rs/zerolog"
+	"golang.org/x/sync/syncmap"
+	"golang.org/x/xerrors"
+
 	"github.com/spikeekips/mitum/common"
 	"github.com/spikeekips/mitum/hash"
 	"github.com/spikeekips/mitum/isaac"
 	"github.com/spikeekips/mitum/node"
 	"github.com/spikeekips/mitum/seal"
-	"golang.org/x/sync/syncmap"
-	"golang.org/x/xerrors"
 )
 
 type MemorySealStorage struct {

@@ -6,9 +6,9 @@ import (
 	"reflect"
 	"time"
 
+	"github.com/rs/zerolog"
 	"golang.org/x/xerrors"
 
-	"github.com/rs/zerolog"
 	"github.com/spikeekips/mitum/common"
 	"github.com/spikeekips/mitum/contrib/contest/condition"
 	contest_config "github.com/spikeekips/mitum/contrib/contest/config"

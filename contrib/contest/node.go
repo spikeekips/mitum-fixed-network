@@ -5,9 +5,9 @@ import (
 	"sort"
 	"time"
 
+	"github.com/rs/zerolog"
 	"golang.org/x/xerrors"
 
-	"github.com/rs/zerolog"
 	"github.com/spikeekips/mitum/common"
 	"github.com/spikeekips/mitum/contrib/contest/configs"
 	contest_module "github.com/spikeekips/mitum/contrib/contest/module"

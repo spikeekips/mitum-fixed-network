@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 
 	"github.com/rs/zerolog"
+
 	"github.com/spikeekips/mitum/node"
 )
 

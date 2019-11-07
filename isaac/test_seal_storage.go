@@ -5,11 +5,12 @@ package isaac
 import (
 	"fmt"
 
+	"golang.org/x/sync/syncmap"
+	"golang.org/x/xerrors"
+
 	"github.com/spikeekips/mitum/hash"
 	"github.com/spikeekips/mitum/node"
 	"github.com/spikeekips/mitum/seal"
-	"golang.org/x/sync/syncmap"
-	"golang.org/x/xerrors"
 )
 
 type TSealStorage struct {

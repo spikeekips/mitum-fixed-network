@@ -7,6 +7,7 @@ import (
 	"sync"
 
 	"github.com/rs/zerolog"
+
 	"github.com/spikeekips/mitum/common"
 	"github.com/spikeekips/mitum/hash"
 	"github.com/spikeekips/mitum/node"

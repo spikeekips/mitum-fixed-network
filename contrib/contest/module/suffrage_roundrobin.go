@@ -4,10 +4,11 @@ import (
 	"encoding/json"
 
 	"github.com/rs/zerolog"
+	"golang.org/x/xerrors"
+
 	"github.com/spikeekips/mitum/common"
 	"github.com/spikeekips/mitum/isaac"
 	"github.com/spikeekips/mitum/node"
-	"golang.org/x/xerrors"
 )
 
 func init() {

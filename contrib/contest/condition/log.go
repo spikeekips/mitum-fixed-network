@@ -3,7 +3,6 @@ package condition
 import (
 	"encoding/json"
 	"io"
-	"reflect"
 	"sync"
 	"time"
 
@@ -56,7 +55,7 @@ type LogWatcher struct {
 	*common.Logger
 	q             *queue.Queue
 	cc            *MultipleConditionChecker
-	acc           []ActionChecker
+	acc           *MultiActionCheckers
 	satisfiedChan chan bool
 	stopped       bool
 }
@@ -76,7 +75,7 @@ func NewLogWatcher(
 }
 
 func (lw *LogWatcher) SetActionCheckers(acc []ActionChecker) {
-	lw.acc = acc
+	lw.acc = NewMultiActionCheckers(acc)
 }
 
 func (lw *LogWatcher) Stop() error {
@@ -185,19 +184,7 @@ func (lw *LogWatcher) CheckBytes(b []byte) bool {
 
 func (lw *LogWatcher) check(o LogItem) bool {
 	if lw.acc != nil {
-		for _, c := range lw.acc {
-			if !c.Checker().Check(o) {
-				continue
-			}
-			for _, action := range c.Actions() {
-				if len(action.Value().Value()) < 1 {
-					continue
-				} else if action.Value().Hint() != reflect.Func {
-					continue
-				}
-				go action.Value().Value()[0].(func())()
-			}
-		}
+		_ = lw.acc.Check(o)
 	}
 
 	if lw.cc != nil && lw.cc.Check(o) && lw.cc.AllSatisfied() {

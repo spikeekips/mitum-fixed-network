@@ -726,7 +726,11 @@ func (t *testMainConfig) TestStartCondition() {
 		source := `
 nodes:
   n0:
-    start-condition: node="n1" AND height="13"
+    node_control:
+      - condition: node="n1" AND current_state="booting" AND new_state="joining"
+        actions:
+          - action: start
+
 `
 
 		nc, err := LoadConfig([]byte(source), 4)
@@ -735,8 +739,10 @@ nodes:
 		err = nc.IsValid()
 		t.NoError(err)
 
-		sc := nc.Nodes["n0"].StartCondition
-		t.Equal(`node="n1" AND height="13"`, sc.Query())
+		sc := nc.Nodes["n0"].NodeControl
+		t.Equal(1, len(sc))
+		t.Equal(`node="n1" AND current_state="booting" AND new_state="joining"`, sc[0].Condition)
+		t.Equal("start", sc[0].Actions[0].Action)
 	}
 }
 

@@ -107,8 +107,8 @@ func (bk Block) MarshalJSON() ([]byte, error) {
 
 func (bk Block) MarshalZerologObject(e *zerolog.Event) {
 	e.Object("hash", bk.hash)
-	e.Uint64("height", bk.height.Uint64())
-	e.Uint64("round", uint64(bk.round))
+	e.Str("height", bk.height.String())
+	e.Uint64("round", bk.round.Uint64())
 	e.Object("proposal", bk.proposal)
 	e.Time("createdAt", bk.createdAt.Time)
 }

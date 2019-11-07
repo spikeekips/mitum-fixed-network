@@ -64,15 +64,19 @@ func (sc *StateController) Start() error {
 }
 
 func (sc *StateController) Stop() error {
-	if err := sc.StateHandler().Deactivate(); err != nil {
-		return err
-	}
-
 	sc.Lock()
-	defer sc.Unlock()
 
-	close(sc.chanState)
+	//close(sc.chanState)
+
+	stateHandler := sc.stateHandler
 	sc.stateHandler = nil
+	sc.Unlock()
+
+	if stateHandler != nil {
+		if err := stateHandler.Deactivate(); err != nil {
+			return err
+		}
+	}
 
 	return nil
 }
@@ -204,6 +208,10 @@ func (sc *StateController) StateHandler() StateHandler {
 }
 
 func (sc *StateController) handleBallot(ballot Ballot) error {
+	if sc.StateHandler() == nil {
+		return nil
+	}
+
 	vr, err := sc.compiler.Vote(ballot)
 	if err != nil {
 		sc.Log().Debug().Err(err).Object("ballot", ballot.Hash()).Msg("ballot was not voted")
@@ -211,10 +219,6 @@ func (sc *StateController) handleBallot(ballot Ballot) error {
 	}
 
 	if vr.IsClosed() || !vr.IsFinished() {
-		return nil
-	}
-
-	if sc.StateHandler() == nil {
 		return nil
 	}
 

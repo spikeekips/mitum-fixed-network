@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/fatih/color"
+	"github.com/rs/zerolog"
 	"github.com/spf13/cobra"
 
 	"github.com/spikeekips/mitum/common"
@@ -52,6 +53,8 @@ var runCmd = &cobra.Command{
 			Object("config", config).
 			Dur("flagExitAfter", flagExitAfter).
 			Msg("config loaded")
+
+		log = log.Level(zerolog.DebugLevel)
 
 		var nodes *Nodes
 		nodeList := getAllNodesFromConfig(config)

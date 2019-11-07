@@ -45,15 +45,11 @@ type ActionChecker struct {
 	actions []Action
 }
 
-func NewActionChecker(checker ConditionChecker, action string, value ActionValue) ActionChecker {
-	return ActionChecker{checker: checker, actions: []Action{NewAction(action, value)}}
-}
-
 func NewActionCheckerWithoutValue(checker ConditionChecker, action string) ActionChecker {
 	return ActionChecker{checker: checker, actions: []Action{Action{action: action}}}
 }
 
-func NewActionChecker0(checker ConditionChecker, actions ...Action) ActionChecker {
+func NewActionChecker(checker ConditionChecker, actions ...Action) ActionChecker {
 	return ActionChecker{checker: checker, actions: actions}
 }
 

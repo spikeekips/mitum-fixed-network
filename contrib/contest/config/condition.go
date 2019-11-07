@@ -77,7 +77,7 @@ func (ca *ActionCondition) IsValid() error {
 		)
 	}
 
-	ca.actionChecker = condition.NewActionChecker0(
+	ca.actionChecker = condition.NewActionChecker(
 		conditionChecker,
 		actions...,
 	)

@@ -586,7 +586,7 @@ conditions:
 		err = nc.IsValid()
 		t.NoError(err)
 
-		all, found := nc.Conditions.Conditions["all"]
+		all, found := nc.Conditions["all"]
 		t.True(found)
 
 		t.Equal(2, len(all))

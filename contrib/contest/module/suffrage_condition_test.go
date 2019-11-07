@@ -53,7 +53,7 @@ func (t *testConditionSuffrage) TestNew() {
 	cs := NewConditionSuffrage(
 		homeState,
 		[]condition.ActionChecker{
-			condition.NewActionChecker0(cc, condition.NewActionWithoutValue("random")),
+			condition.NewActionChecker(cc, condition.NewActionWithoutValue("random")),
 		},
 		numberOfActing,
 		nodes...,
@@ -95,7 +95,7 @@ func (t *testConditionSuffrage) TestFixedProposer() {
 		cs := NewConditionSuffrage(
 			homeState,
 			[]condition.ActionChecker{
-				condition.NewActionChecker0(
+				condition.NewActionChecker(
 					cc,
 					condition.NewAction(
 						"fixed-proposer",
@@ -123,7 +123,7 @@ func (t *testConditionSuffrage) TestFixedProposer() {
 		cs := NewConditionSuffrage(
 			homeState,
 			[]condition.ActionChecker{
-				condition.NewActionChecker0(
+				condition.NewActionChecker(
 					cc,
 					condition.NewAction(
 						"fixed-proposer",
@@ -166,7 +166,7 @@ func (t *testConditionSuffrage) TestFixedProposerButUnknownNode() {
 		cs := NewConditionSuffrage(
 			homeState,
 			[]condition.ActionChecker{
-				condition.NewActionChecker0(
+				condition.NewActionChecker(
 					cc,
 					condition.NewAction(
 						"fixed-proposer",
@@ -219,7 +219,7 @@ func (t *testConditionSuffrage) TestFixedActing() {
 		cs := NewConditionSuffrage(
 			homeState,
 			[]condition.ActionChecker{
-				condition.NewActionChecker0(
+				condition.NewActionChecker(
 					cc,
 					condition.NewAction(
 						"fixed-acting",
@@ -253,7 +253,7 @@ func (t *testConditionSuffrage) TestFixedActing() {
 		cs := NewConditionSuffrage(
 			homeState,
 			[]condition.ActionChecker{
-				condition.NewActionChecker0(
+				condition.NewActionChecker(
 					cc,
 					condition.NewAction(
 						"fixed-acting",
@@ -311,7 +311,7 @@ func (t *testConditionSuffrage) TestFixedActingButUnknownNodeName() {
 		cs := NewConditionSuffrage(
 			homeState,
 			[]condition.ActionChecker{
-				condition.NewActionChecker0(
+				condition.NewActionChecker(
 					cc,
 					condition.NewAction(
 						"fixed-acting",
@@ -358,7 +358,7 @@ func (t *testConditionSuffrage) TestRandom() {
 		cs := NewConditionSuffrage(
 			homeState,
 			[]condition.ActionChecker{
-				condition.NewActionChecker0(cc, condition.NewActionWithoutValue("random")),
+				condition.NewActionChecker(cc, condition.NewActionWithoutValue("random")),
 			},
 			numberOfActing,
 			nodes...,

@@ -41,7 +41,7 @@ func (t *testConditionProposalValidator) TestEmptyProposal() {
 			homeState,
 			ss,
 			[]condition.ActionChecker{
-				condition.NewActionChecker0(cc, condition.NewActionWithoutValue("empty-proposal")),
+				condition.NewActionChecker(cc, condition.NewActionWithoutValue("empty-proposal")),
 			},
 		)
 
@@ -66,7 +66,7 @@ func (t *testConditionProposalValidator) TestEmptyProposal() {
 			homeState,
 			ss,
 			[]condition.ActionChecker{
-				condition.NewActionChecker0(cc, condition.NewAction(
+				condition.NewActionChecker(cc, condition.NewAction(
 					"error",
 					condition.NewActionValue(
 						[]interface{}{"show me"},
@@ -92,7 +92,7 @@ func (t *testConditionProposalValidator) TestEmptyProposal() {
 			homeState,
 			ss,
 			[]condition.ActionChecker{
-				condition.NewActionChecker0(cc, condition.NewAction(
+				condition.NewActionChecker(cc, condition.NewAction(
 					"block-hash",
 					condition.NewActionValue(
 						[]interface{}{newBlockHash.String()},
@@ -129,7 +129,7 @@ func (t *testConditionProposalValidator) TestEmptyProposal() {
 			homeState,
 			ss,
 			[]condition.ActionChecker{
-				condition.NewActionChecker0(cc, condition.NewActionWithoutValue("random-block-hash")),
+				condition.NewActionChecker(cc, condition.NewActionWithoutValue("random-block-hash")),
 			},
 		)
 

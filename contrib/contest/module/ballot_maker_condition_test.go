@@ -30,7 +30,7 @@ func (t *testConditionBallotMaker) TestEmptyBallot() {
 		cb := NewConditionBallotMaker(
 			homeState,
 			[]condition.ActionChecker{
-				condition.NewActionChecker0(cc, condition.NewActionWithoutValue("empty-ballot")),
+				condition.NewActionChecker(cc, condition.NewActionWithoutValue("empty-ballot")),
 			},
 		)
 
@@ -45,7 +45,7 @@ func (t *testConditionBallotMaker) TestEmptyBallot() {
 		cb := NewConditionBallotMaker(
 			homeState,
 			[]condition.ActionChecker{
-				condition.NewActionChecker0(cc, condition.NewActionWithoutValue("empty-ballot")),
+				condition.NewActionChecker(cc, condition.NewActionWithoutValue("empty-ballot")),
 			},
 		)
 
@@ -150,7 +150,7 @@ func (t *testConditionBallotMaker) TestModifyRandom() {
 				cb := NewConditionBallotMaker(
 					homeState,
 					[]condition.ActionChecker{
-						condition.NewActionChecker0(cc, condition.NewActionWithoutValue(c.action)),
+						condition.NewActionChecker(cc, condition.NewActionWithoutValue(c.action)),
 					},
 				)
 				ballot, err := cb.INIT(lastBlock.Hash(), lastBlock.Round(), nextBlock.Height(), nextBlock.Hash(), currentRound, currentProposal)

@@ -721,6 +721,25 @@ global:
 	}
 }
 
+func (t *testMainConfig) TestStartCondition() {
+	{
+		source := `
+nodes:
+  n0:
+    start-condition: node="n1" AND height="13"
+`
+
+		nc, err := LoadConfig([]byte(source), 4)
+		t.NoError(err)
+
+		err = nc.IsValid()
+		t.NoError(err)
+
+		sc := nc.Nodes["n0"].StartCondition
+		t.Equal(`node="n1" AND height="13"`, sc.Query())
+	}
+}
+
 func TestMainConfig(t *testing.T) {
 	suite.Run(t, new(testMainConfig))
 }

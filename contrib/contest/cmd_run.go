@@ -25,6 +25,8 @@ var runCmd = &cobra.Command{
 	Short: "run contest",
 	Args:  cobra.ExactArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
+		log = log.Level(zerolog.DebugLevel)
+
 		if cmd.Flags().Changed("number-of-nodes") {
 			if flagNumberOfNodes < 1 {
 				cmd.Println("Error: `--number-of-nodes` should be greater than zero")
@@ -54,34 +56,35 @@ var runCmd = &cobra.Command{
 			Dur("flagExitAfter", flagExitAfter).
 			Msg("config loaded")
 
-		log = log.Level(zerolog.DebugLevel)
-
-		var nodes *Nodes
 		nodeList := getAllNodesFromConfig(config)
 
-		previousExitHooks := exitHooks
-		exitHooks = nil
+		satisfiedChan := make(chan bool)
+
+		go func() {
+			<-satisfiedChan
+			sigc <- syscall.SIGINT
+		}()
+
+		var cp *condition.MultipleConditionChecker
+		if len(config.Conditions) > 0 {
+			checkers := prepareConditions(config, nodeList)
+			cp = condition.NewMultipleConditionCheckers(checkers, 1)
+		}
+
+		lw := condition.NewLogWatcher(cp, satisfiedChan)
+		_ = lw.SetLogger(stdoutLog)
+		_ = lw.Start()
+
 		exitHooks = append(exitHooks, func() {
-			_ = nodes.Stop()
+			_ = lw.Stop()
 		})
 
-		if len(config.Conditions) > 0 {
-			satisfiedChan := make(chan bool)
+		log = log.Output(io.MultiWriter(logOutput, lw))
 
-			go func() {
-				<-satisfiedChan
-				sigc <- syscall.SIGINT
-			}()
-
-			checkers := prepareConditions(config, nodeList)
-			cp := condition.NewMultipleConditionCheckers(checkers, 1)
-			lw := condition.NewLogWatcher(cp, satisfiedChan)
-
+		if cp != nil {
 			exitHooks = append(
 				exitHooks,
 				func() {
-					_ = lw.Stop()
-
 					satisfied := cp.AllSatisfied()
 					log.Info().
 						Bool("satisfied", satisfied).
@@ -94,20 +97,76 @@ var runCmd = &cobra.Command{
 					}
 				},
 			)
-
-			log = log.
-				Output(io.MultiWriter(logOutput, lw))
-
-			_ = lw.SetLogger(stdoutLog)
-			_ = lw.Start()
 		}
-		exitHooks = append(exitHooks, previousExitHooks...)
 
+		var nodes *Nodes
 		nodes, err = NewNodes(config, nodeList)
 		if err != nil {
 			printError(cmd, err)
 			os.Exit(1)
 		}
+
+		for _, n := range nodes.Nodes() {
+			n.SetLogger(log)
+		}
+
+		var startingNodes []*Node
+
+		var actionCheckers []condition.ActionChecker
+		for _, n := range nodes.Nodes() {
+			if len(n.Config().NodeControl) < 1 {
+				startingNodes = append(startingNodes, n)
+				continue
+			}
+
+			for _, control := range n.Config().NodeControl {
+				for _, action := range control.ActionChecker().Actions() {
+					name := action.Action()
+					an := n
+					var f func()
+					switch action.Action() {
+					case "start":
+						f = func() {
+							if err := an.Start(); err != nil {
+								log.Error().Err(err).
+									Str("node", an.Home().Alias()).Msg("failed to start node")
+							}
+						}
+					case "stop":
+						f = func() {
+							if err := an.Stop(); err != nil {
+								log.Error().Err(err).
+									Str("node", an.Home().Alias()).Msg("failed to stop node")
+							}
+						}
+					}
+					if f == nil {
+						continue
+					}
+
+					ac := condition.NewActionChecker(
+						control.ActionChecker().Checker(),
+						condition.NewAction(
+							name,
+							condition.NewActionValue(
+								[]interface{}{f},
+								reflect.Func,
+							),
+						),
+					)
+					actionCheckers = append(actionCheckers, ac)
+				}
+			}
+		}
+		lw.SetActionCheckers(actionCheckers)
+
+		previousExitHooks := exitHooks
+		exitHooks = nil
+		exitHooks = append(exitHooks, func() {
+			_ = nodes.Stop()
+		})
+
+		exitHooks = append(exitHooks, previousExitHooks...)
 
 		go func() { // exit-after
 			if flagExitAfter < time.Nanosecond {
@@ -121,10 +180,12 @@ var runCmd = &cobra.Command{
 			sigc <- syscall.SIGINT // interrupt process by force after timeout
 		}()
 
-		if err := run(cmd, nodes); err != nil {
+		if err := nodes.Start(startingNodes); err != nil {
 			printError(cmd, err)
 			os.Exit(1)
 		}
+
+		select {}
 	},
 }
 

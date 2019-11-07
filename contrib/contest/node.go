@@ -22,6 +22,7 @@ type Node struct {
 	homeState *isaac.HomeState
 	nt        *contest_module.ChannelNetwork
 	sc        *isaac.StateController
+	config    *configs.NodeConfig
 }
 
 func NewNode(
@@ -127,9 +128,14 @@ func NewNode(
 		homeState: homeState,
 		nt:        nt,
 		sc:        sc,
+		config:    config,
 	}
 
 	return n, nil
+}
+
+func (no *Node) Config() *configs.NodeConfig {
+	return no.config
 }
 
 func (no *Node) Home() node.Home {
@@ -165,6 +171,7 @@ func (no *Node) Start() error {
 }
 
 func (no *Node) Stop() error {
+	started := time.Now()
 	if err := no.sc.Stop(); err != nil {
 		return err
 	}
@@ -173,6 +180,7 @@ func (no *Node) Stop() error {
 		return err
 	}
 
+	no.Log().Debug().Dur("elapsed", time.Since(started)).Msg("node stopped")
 	return nil
 }
 

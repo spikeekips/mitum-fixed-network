@@ -57,16 +57,24 @@ func NewNodes(config *configs.Config, nodeList []node.Node) (*Nodes, error) { //
 	return &Nodes{nodes: nodes}, nil
 }
 
-func (ns *Nodes) Start() error {
+func (ns *Nodes) Nodes() []*Node {
+	return ns.nodes
+}
+
+func (ns *Nodes) Start(nodes []*Node) error {
 	ns.Lock()
 	defer ns.Unlock()
 
+	if len(nodes) < 1 {
+		nodes = ns.nodes
+	}
+
 	var wg sync.WaitGroup
-	wg.Add(len(ns.nodes))
+	wg.Add(len(nodes))
 
-	errChan := make(chan error, len(ns.nodes))
+	errChan := make(chan error, len(nodes))
 
-	for _, n := range ns.nodes {
+	for _, n := range nodes {
 		go func(n *Node) {
 			errChan <- n.Start()
 			wg.Done()

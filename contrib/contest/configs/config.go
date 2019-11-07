@@ -124,9 +124,10 @@ func (nc *Config) MarshalZerologObject(e *zerolog.Event) {
 }
 
 type NodeConfig struct {
-	Policy  *PolicyConfig  `yaml:",omitempty"`
-	Blocks  []*BlockConfig `yaml:"blocks,omitempty"`
-	Modules *ModulesConfig `yaml:"modules,omitempty"`
+	Policy      *PolicyConfig                     `yaml:",omitempty"`
+	Blocks      []*BlockConfig                    `yaml:"blocks,omitempty"`
+	Modules     *ModulesConfig                    `yaml:"modules,omitempty"`
+	NodeControl []*contest_config.ActionCondition `yaml:"node_control,omitempty"`
 }
 
 func defaultNodeConfig(numberOfNodes uint) *NodeConfig {
@@ -152,6 +153,12 @@ func (nc *NodeConfig) IsValid() error {
 
 	if nc.Modules != nil {
 		if err := nc.Modules.IsValid(); err != nil {
+			return err
+		}
+	}
+
+	for _, c := range nc.NodeControl {
+		if err := c.IsValid(); err != nil {
 			return err
 		}
 	}

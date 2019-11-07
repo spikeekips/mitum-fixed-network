@@ -3,6 +3,7 @@ package condition
 import (
 	"encoding/json"
 	"io"
+	"reflect"
 	"sync"
 	"time"
 
@@ -53,24 +54,29 @@ func (li LogItem) Map() map[string]interface{} {
 type LogWatcher struct {
 	sync.RWMutex
 	*common.Logger
-	q                *queue.Queue
-	conditionChecker *MultipleConditionChecker
-	satisfiedChan    chan bool
-	stopped          bool
+	q             *queue.Queue
+	cc            *MultipleConditionChecker
+	acc           []ActionChecker
+	satisfiedChan chan bool
+	stopped       bool
 }
 
 func NewLogWatcher(
-	conditionChecker *MultipleConditionChecker,
+	cc *MultipleConditionChecker,
 	satisfiedChan chan bool,
 ) *LogWatcher {
 	return &LogWatcher{
 		Logger: common.NewLogger(func(c zerolog.Context) zerolog.Context {
 			return c.Str("module", "log-watcher")
 		}),
-		q:                queue.New(100000),
-		conditionChecker: conditionChecker,
-		satisfiedChan:    satisfiedChan,
+		q:             queue.New(100000),
+		cc:            cc,
+		satisfiedChan: satisfiedChan,
 	}
+}
+
+func (lw *LogWatcher) SetActionCheckers(acc []ActionChecker) {
+	lw.acc = acc
 }
 
 func (lw *LogWatcher) Stop() error {
@@ -178,15 +184,27 @@ func (lw *LogWatcher) CheckBytes(b []byte) bool {
 }
 
 func (lw *LogWatcher) check(o LogItem) bool {
-	if lw.conditionChecker == nil {
-		return false
+	if lw.acc != nil {
+		for _, c := range lw.acc {
+			if !c.Checker().Check(o) {
+				continue
+			}
+			for _, action := range c.Actions() {
+				if len(action.Value().Value()) < 1 {
+					continue
+				} else if action.Value().Hint() != reflect.Func {
+					continue
+				}
+				go action.Value().Value()[0].(func())()
+			}
+		}
 	}
 
-	if !lw.conditionChecker.Check(o) {
-		return false
+	if lw.cc != nil && lw.cc.Check(o) && lw.cc.AllSatisfied() {
+		return true
 	}
 
-	return lw.conditionChecker.AllSatisfied()
+	return false
 }
 
 type HighlightWriter struct {

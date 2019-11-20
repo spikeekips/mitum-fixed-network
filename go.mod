@@ -8,7 +8,7 @@ require (
 	github.com/beevik/ntp v0.2.0
 	github.com/btcsuite/btcutil v0.0.0-20190425235716-9e5f4b9a998d
 	github.com/dlclark/regexp2 v1.2.0 // indirect
-	github.com/ethereum/go-ethereum v1.9.6
+	github.com/ethereum/go-ethereum v1.9.7
 	github.com/fatih/color v1.7.0
 	github.com/golang/protobuf v1.3.2 // indirect
 	github.com/juju/errors v0.0.0-20190930114154-d42613fe1ab9 // indirect
@@ -20,19 +20,19 @@ require (
 	github.com/mattn/go-isatty v0.0.10 // indirect
 	github.com/onsi/ginkgo v1.9.0 // indirect
 	github.com/onsi/gomega v1.6.0 // indirect
-	github.com/rs/zerolog v1.16.0
+	github.com/rs/zerolog v1.17.2
 	github.com/satori/go.uuid v1.2.0
 	github.com/spf13/cobra v0.0.5
 	github.com/spf13/pflag v1.0.5
-	github.com/stellar/go v0.0.0-20191031165136-ed88b67b723d
-	github.com/stellar/go-xdr v0.0.0-20191025181027-f16312a9bced // indirect
+	github.com/stellar/go v0.0.0-20191119213158-2c655530b13c
+	github.com/stellar/go-xdr v0.0.0-20191118232123-3aa35463cbdb // indirect
 	github.com/stretchr/testify v1.4.0
-	golang.org/x/crypto v0.0.0-20191105034135-c7e5f84aec59 // indirect
-	golang.org/x/net v0.0.0-20191105084925-a882066a44e0 // indirect
+	golang.org/x/crypto v0.0.0-20191119213627-4f8c1d86b1ba // indirect
+	golang.org/x/net v0.0.0-20191119073136-fc4aabc6c914 // indirect
 	golang.org/x/sync v0.0.0-20190911185100-cd5d95a43a6e
-	golang.org/x/sys v0.0.0-20191105231009-c1f44814a5cd // indirect
+	golang.org/x/sys v0.0.0-20191120130536-6bfc516c8699 // indirect
 	golang.org/x/xerrors v0.0.0-20191011141410-1b5146add898
 	gopkg.in/mgo.v2 v2.0.0-20190816093944-a6b53ec6cb22 // indirect
 	gopkg.in/yaml.v2 v2.2.3
-	gopkg.in/yaml.v3 v3.0.0-20191105164941-196cff6ef4b6
+	gopkg.in/yaml.v3 v3.0.0-20191119213130-fa1aa9f3318e
 )

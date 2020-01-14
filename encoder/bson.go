@@ -43,8 +43,8 @@ func (be BSON) Decoder(target interface{}) (func(*HintEncoder, []byte) error, bo
 		var raw []byte
 		if _, ok := target.(hint.Hinter); ok {
 			var h struct {
-				H hint.Hint `bson:"_hint"`
-				R bson.Raw  `bson:"_raw,omitempty"`
+				H bson.Raw `bson:"_hint"`
+				R bson.Raw `bson:"_raw,omitempty"`
 			}
 
 			if err := be.Unmarshal(b, &h); err != nil {

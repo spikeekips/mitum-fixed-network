@@ -13,3 +13,4 @@ tmp*
 *.orig
 .idea
 tests/*/*/coverage/
+.*vimrc

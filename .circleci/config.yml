@@ -1,0 +1,72 @@
+version: 2
+
+defaults: &defaults
+  docker:
+    - image: circleci/golang:1.13
+  working_directory: /go/src/github.com/spikeekips/mitum
+
+workspace: &workspace
+  attach_workspace:
+    at: /
+
+jobs:
+  build:
+    <<: *defaults
+    steps:
+      - checkout
+      - restore_cache:
+          key: dependency-cache-mod-{{ checksum "go.sum" }}
+      - run:
+          name: Download dependencies
+          command: go mod download
+      - save_cache:
+          key: dependency-cache-mod-{{ checksum "go.sum" }}
+          paths:
+            - /go/pkg/mod/
+      - persist_to_workspace:
+          root: /
+          paths:
+            - go/pkg/mod/
+            - go/src/github.com/spikeekips/mitum
+
+  lint:
+    <<: *defaults
+    steps:
+      - <<: *workspace
+      - run:
+          name: Install golangci-lint
+          command: curl -sfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh| sh -s -- -b $(go env GOPATH)/bin v1.21.0
+      - run:
+         name: Run golangci-lint
+         command: golangci-lint run
+
+      - run:
+         name: Install nargs
+         command: go get -u github.com/alexkohler/nargs/cmd/nargs
+      - run:
+         name: Run nargs
+         command: nargs -set_exit_status -named_returns -tests ./...
+
+  go-test:
+    <<: *defaults
+    steps:
+      - <<: *workspace
+      - run:
+         name: unit test
+         command: go test -race -tags test -timeout 1m -v ./...
+
+workflows:
+  version: 2
+  build:
+    jobs:
+      - build
+
+  unittests:
+    jobs:
+      - build
+      - lint:
+          requires:
+            - build
+      - go-test:
+          requires:
+            - build

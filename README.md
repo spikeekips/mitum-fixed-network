@@ -1,3 +1,3 @@
 # mitum
 
-Ready to go to winter.
+Ready to go to next winter.

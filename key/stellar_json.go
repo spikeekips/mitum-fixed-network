@@ -2,7 +2,7 @@ package key
 
 import "github.com/spikeekips/mitum/encoder"
 
-func (sp StellarPrivatekey) EncodeJSON(enc *encoder.HintEncoder) (interface{}, error) {
+func (sp StellarPrivatekey) EncodeJSON(_ *encoder.HintEncoder) (interface{}, error) {
 	return &struct {
 		encoder.JSONHinterHead
 		K string `json:"key"`
@@ -29,7 +29,7 @@ func (sp *StellarPrivatekey) DecodeJSON(enc *encoder.HintEncoder, b []byte) erro
 	return nil
 }
 
-func (sp StellarPublickey) EncodeJSON(enc *encoder.HintEncoder) (interface{}, error) {
+func (sp StellarPublickey) EncodeJSON(_ *encoder.HintEncoder) (interface{}, error) {
 	return &struct {
 		encoder.JSONHinterHead
 		K string `json:"key"`

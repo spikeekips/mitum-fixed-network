@@ -11,7 +11,7 @@ import (
 	"github.com/spikeekips/mitum/hint"
 )
 
-func (h0 sH0) EncodeBSON(hs *HintEncoder) (interface{}, error) {
+func (h0 sH0) EncodeBSON(_ *HintEncoder) (interface{}, error) {
 	return h0, nil
 }
 
@@ -50,7 +50,7 @@ func (h0 sH3) EncodeBSON(hs *HintEncoder) (interface{}, error) {
 	return []byte(b), err
 }
 
-func (h0 sH4) EncodeBSON(hs *HintEncoder) (interface{}, error) {
+func (h0 sH4) EncodeBSON(_ *HintEncoder) (interface{}, error) {
 	return map[string]interface{}{
 		"_hint": h0.Hint(),
 		"A":     h0.A,

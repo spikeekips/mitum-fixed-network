@@ -11,7 +11,7 @@ import (
 	"github.com/spikeekips/mitum/hint"
 )
 
-func (h0 sH0) EncodeJSON(hs *HintEncoder) (interface{}, error) {
+func (h0 sH0) EncodeJSON(_ *HintEncoder) (interface{}, error) {
 	return &struct {
 		JSONHinterHead
 		sH0
@@ -34,7 +34,7 @@ func (h0 *sH0) DecodeJSON(hs *HintEncoder, b []byte) error {
 	return nil
 }
 
-func (h0 sH1) EncodeJSON(hs *HintEncoder) (interface{}, error) {
+func (h0 sH1) EncodeJSON(_ *HintEncoder) (interface{}, error) {
 	return &struct {
 		JSONHinterHead
 		sH1
@@ -67,7 +67,7 @@ func (h0 sH3) EncodeJSON(hs *HintEncoder) (interface{}, error) {
 	return []byte(b), err
 }
 
-func (h0 sH4) EncodeJSON(hs *HintEncoder) (interface{}, error) {
+func (h0 sH4) EncodeJSON(_ *HintEncoder) (interface{}, error) {
 	return map[string]interface{}{
 		"_hint": h0.Hint(),
 		"A":     h0.A,

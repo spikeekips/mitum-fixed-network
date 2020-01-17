@@ -13,13 +13,20 @@ var (
 	VersionNotCompatibleError = errors.NewError("versions not compatible")
 )
 
+type Version string
+
+func (vs Version) String() string {
+	return string(vs)
+}
+
 // VersionGO returns golang style semver string. It does not check IsValid().
-func VersionGO(version string) string {
-	if strings.HasPrefix(version, "v") {
-		return version
+func (vs Version) GO() string {
+	s := string(vs)
+	if strings.HasPrefix(s, "v") {
+		return s
 	}
 
-	return "v" + version
+	return "v" + s
 }
 
 // IsVersionCompatible checks if the check version is compatible to the target.
@@ -27,9 +34,10 @@ func VersionGO(version string) string {
 // - major matches
 // - minor of the check version is same or lower than target
 // - patch of the check version is same or lower than target
-func IsVersionCompatible(target, check string) error {
-	a := VersionGO(target)
-	b := VersionGO(check)
+func (vs Version) IsCompatible(check Version) error {
+	a := vs.GO()
+	b := check.GO()
+
 	if !semver.IsValid(a) {
 		return InvalidVersionError.Wrapf("version=%s", a)
 	}

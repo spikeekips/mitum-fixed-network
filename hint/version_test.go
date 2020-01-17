@@ -11,18 +11,18 @@ type testVersionGo struct {
 }
 
 func (t *testVersionGo) TestWithoutPrefix() {
-	v0 := "0.1.1"
-	t.Equal("v"+v0, VersionGO(v0))
+	v0 := Version("0.1.1")
+	t.Equal("v"+v0.String(), v0.GO())
 }
 
 func (t *testVersionGo) TestWithPrefix() {
-	v0 := "v0.1.1"
-	t.Equal(v0, VersionGO(v0))
+	v0 := Version("v0.1.1")
+	t.Equal(v0.String(), v0.GO())
 }
 
 func (t *testVersionGo) TestWithMultiplePrefix() {
-	v0 := "vv0.1.1"
-	t.Equal(v0, VersionGO(v0))
+	v0 := Version("vv0.1.1")
+	t.Equal(v0.String(), v0.GO())
 }
 
 func TestVersionGo(t *testing.T) {

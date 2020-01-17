@@ -3,73 +3,119 @@ package encoder
 import (
 	"testing"
 
-	"github.com/stretchr/testify/suite"
-
+	uuid "github.com/satori/go.uuid"
 	"github.com/spikeekips/mitum/hint"
+	"github.com/stretchr/testify/suite"
+	"golang.org/x/xerrors"
 )
 
 type testEncoders struct {
 	suite.Suite
 }
 
-func (t *testEncoders) SetupTest() {
-	je := JSON{}
-	_ = hint.RegisterType(je.Hint().Type(), "json-encoder-v0.1")
+func (t *testEncoders) SetupSuite() {
+	_ = hint.RegisterType(NewJSONEncoder().Hint().Type(), "1st-json-encoder")
+	_ = hint.RegisterType(NewBSONEncoder().Hint().Type(), "1st-bson-encoder")
+	_ = hint.RegisterType(NewRLPEncoder().Hint().Type(), "1st-rlp-encoder")
+	_ = hint.RegisterType(sh0{}.Hint().Type(), "sh0")
 }
 
-func (t *testEncoders) TestNew() {
-	je := NewHintEncoder(JSON{})
+func (t *testEncoders) TestAddEncoder() {
+	encs := NewEncoders()
 
-	encoders := NewEncoders()
-	t.NoError(encoders.Add(je))
+	je := NewJSONEncoder()
+	t.NoError(encs.AddEncoder(je))
 
-	ec, err := encoders.HintEncoder(je.Hint().Type(), je.Hint().Version())
+	nje, err := encs.Encoder(je.Hint().Type(), je.Hint().Version())
 	t.NoError(err)
-	t.NotNil(ec)
+	t.NoError(je.Hint().IsCompatible(nje.Hint()))
+	t.True(je.Hint().Equal(nje.Hint()))
 }
 
-func (t *testEncoders) TestJSONDecodeHint() {
-	encoders := NewEncoders()
-	_ = encoders.Add(NewHintEncoder(JSON{}))
+func (t *testEncoders) TestAddHinter() {
+	encs := NewEncoders()
+	je := NewJSONEncoder()
+	t.NoError(encs.AddEncoder(je))
 
-	ec, _ := encoders.HintEncoder(JSON{}.Hint().Type(), JSON{}.Hint().Version())
+	t.NoError(encs.AddHinter(sh0{}))
 
-	ht, _ := hint.NewHint(hint.Type([2]byte{0xff, 0xf0}), "0.1")
-	_ = hint.RegisterType(ht.Type(), "find me")
+	s0, err := encs.Hinter((sh0{}).Hint().Type(), (sh0{}).Hint().Version())
+	t.NoError(err)
+	t.NotNil(s0)
+	t.NoError((sh0{}).Hint().IsCompatible(s0.Hint()))
+	t.True((sh0{}).Hint().Equal(s0.Hint()))
+}
 
-	data := struct {
-		JSONHinterHead
-		A string
-		B int
-	}{
-		JSONHinterHead: NewJSONHinterHead(ht),
-		A:              "findme",
-		B:              33,
+func (t *testEncoders) TestJSONDecodeByHint() {
+	encs := NewEncoders()
+	je := NewJSONEncoder()
+	t.NoError(encs.AddEncoder(je))
+
+	s := sh0{B: uuid.Must(uuid.NewV4(), nil).String()}
+
+	b, err := je.Encode(s)
+	t.NoError(err)
+	t.NotNil(b)
+
+	{ // without AddHinter
+		a, err := je.DecodeByHint(b)
+		t.Empty(a)
+		t.True(xerrors.Is(err, hint.HintNotFoundError))
 	}
-	b, err := ec.Encoder().Marshal(data)
-	t.NoError(err)
 
-	eht, err := ec.Encoder().DecodeHint(b)
+	t.NoError(encs.AddHinter(sh0{}))
+	us, err := je.DecodeByHint(b)
 	t.NoError(err)
-
-	t.Equal(ht.Type(), eht.Type())
-	t.Equal(ht.Version(), eht.Version())
+	t.IsType(sh0{}, us)
+	t.Equal(s.B, us.(sh0).B)
 }
 
-func (t *testEncoders) TestJSONMarshal() {
-	encoders := NewEncoders()
-	_ = encoders.Add(NewHintEncoder(JSON{}))
+func (t *testEncoders) TestBSONDecodeByHint() {
+	encs := NewEncoders()
+	be := NewBSONEncoder()
+	t.NoError(encs.AddEncoder(be))
 
-	ec, _ := encoders.HintEncoder(JSON{}.Hint().Type(), JSON{}.Hint().Version())
+	s := sh0{B: uuid.Must(uuid.NewV4(), nil).String()}
 
-	data := []string{"1", "2"}
-	b, err := ec.Encoder().Marshal(data)
+	b, err := be.Encode(s)
 	t.NoError(err)
+	t.NotNil(b)
 
-	var sl []string
-	t.NoError(ec.Encoder().Unmarshal(b, &sl))
+	{ // without AddHinter
+		a, err := be.DecodeByHint(b)
+		t.Empty(a)
+		t.True(xerrors.Is(err, hint.HintNotFoundError))
+	}
 
-	t.Equal(data, sl)
+	t.NoError(encs.AddHinter(sh0{}))
+	us, err := be.DecodeByHint(b)
+	t.NoError(err)
+	t.IsType(sh0{}, us)
+	t.Equal(s.B, us.(sh0).B)
+}
+
+func (t *testEncoders) TestRLPDecodeByHint() {
+	encs := NewEncoders()
+	re := NewRLPEncoder()
+	t.NoError(encs.AddEncoder(re))
+
+	s := sh0{B: uuid.Must(uuid.NewV4(), nil).String()}
+
+	b, err := re.Encode(s)
+	t.NoError(err)
+	t.NotNil(b)
+
+	{ // without AddHinter
+		a, err := re.DecodeByHint(b)
+		t.Empty(a)
+		t.True(xerrors.Is(err, hint.HintNotFoundError))
+	}
+
+	t.NoError(encs.AddHinter(sh0{}))
+	us, err := re.DecodeByHint(b)
+	t.NoError(err)
+	t.IsType(sh0{}, us)
+	t.Equal(s.B, us.(sh0).B)
 }
 
 func TestEncoders(t *testing.T) {

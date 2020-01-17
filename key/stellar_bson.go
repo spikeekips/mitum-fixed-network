@@ -1,8 +1,10 @@
 package key
 
-import "github.com/spikeekips/mitum/encoder"
+import (
+	"github.com/spikeekips/mitum/encoder"
+)
 
-func (sp StellarPrivatekey) EncodeBSON(_ *encoder.HintEncoder) (interface{}, error) {
+func (sp StellarPrivatekey) PackBSON(_ *encoder.BSONEncoder) (interface{}, error) {
 	return &struct {
 		K string `bson:"key"`
 	}{
@@ -10,11 +12,11 @@ func (sp StellarPrivatekey) EncodeBSON(_ *encoder.HintEncoder) (interface{}, err
 	}, nil
 }
 
-func (sp *StellarPrivatekey) DecodeBSON(enc *encoder.HintEncoder, b []byte) error {
+func (sp *StellarPrivatekey) UnpackBSON(b []byte, enc *encoder.BSONEncoder) error {
 	var k struct {
 		K string `bson:"key"`
 	}
-	if err := enc.Encoder().Unmarshal(b, &k); err != nil {
+	if err := enc.Unmarshal(b, &k); err != nil {
 		return err
 	}
 
@@ -28,7 +30,7 @@ func (sp *StellarPrivatekey) DecodeBSON(enc *encoder.HintEncoder, b []byte) erro
 	return nil
 }
 
-func (sp StellarPublickey) EncodeBSON(_ *encoder.HintEncoder) (interface{}, error) {
+func (sp StellarPublickey) PackBSON(_ *encoder.BSONEncoder) (interface{}, error) {
 	return &struct {
 		K string `bson:"key"`
 	}{
@@ -36,11 +38,11 @@ func (sp StellarPublickey) EncodeBSON(_ *encoder.HintEncoder) (interface{}, erro
 	}, nil
 }
 
-func (sp *StellarPublickey) DecodeBSON(enc *encoder.HintEncoder, b []byte) error {
+func (sp *StellarPublickey) UnpackBSON(b []byte, enc *encoder.BSONEncoder) error {
 	var k struct {
 		K string `bson:"key"`
 	}
-	if err := enc.Encoder().Unmarshal(b, &k); err != nil {
+	if err := enc.Unmarshal(b, &k); err != nil {
 		return err
 	}
 

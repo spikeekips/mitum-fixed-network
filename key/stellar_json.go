@@ -2,20 +2,20 @@ package key
 
 import "github.com/spikeekips/mitum/encoder"
 
-func (sp StellarPrivatekey) EncodeJSON(_ *encoder.HintEncoder) (interface{}, error) {
+func (sp StellarPrivatekey) PackJSON(_ *encoder.JSONEncoder) (interface{}, error) {
 	return &struct {
-		encoder.JSONHinterHead
+		encoder.JSONPackHintedHead
 		K string `json:"key"`
 	}{
 		K: sp.String(),
 	}, nil
 }
 
-func (sp *StellarPrivatekey) DecodeJSON(enc *encoder.HintEncoder, b []byte) error {
+func (sp *StellarPrivatekey) UnpackJSON(b []byte, enc *encoder.JSONEncoder) error {
 	var k struct {
 		K string `json:"key"`
 	}
-	if err := enc.Encoder().Unmarshal(b, &k); err != nil {
+	if err := enc.Unmarshal(b, &k); err != nil {
 		return err
 	}
 
@@ -29,20 +29,20 @@ func (sp *StellarPrivatekey) DecodeJSON(enc *encoder.HintEncoder, b []byte) erro
 	return nil
 }
 
-func (sp StellarPublickey) EncodeJSON(_ *encoder.HintEncoder) (interface{}, error) {
+func (sp StellarPublickey) PackJSON(_ *encoder.JSONEncoder) (interface{}, error) {
 	return &struct {
-		encoder.JSONHinterHead
+		encoder.JSONPackHintedHead
 		K string `json:"key"`
 	}{
 		K: sp.String(),
 	}, nil
 }
 
-func (sp *StellarPublickey) DecodeJSON(enc *encoder.HintEncoder, b []byte) error {
+func (sp *StellarPublickey) UnpackJSON(b []byte, enc *encoder.JSONEncoder) error {
 	var k struct {
 		K string `json:"key"`
 	}
-	if err := enc.Encoder().Unmarshal(b, &k); err != nil {
+	if err := enc.Unmarshal(b, &k); err != nil {
 		return err
 	}
 

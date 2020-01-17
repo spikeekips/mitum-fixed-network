@@ -15,16 +15,16 @@ const (
 
 type Hint struct {
 	t       Type
-	version string
+	version Version
 }
 
-func NewHint(t Type, version string) (Hint, error) {
+func NewHint(t Type, version Version) (Hint, error) {
 	ht := Hint{t: t, version: version}
 
 	return ht, ht.IsValid()
 }
 
-func MustHint(t Type, version string) Hint {
+func MustHint(t Type, version Version) Hint {
 	ht := Hint{t: t, version: version}
 	if err := ht.IsValid(); err != nil {
 		panic(err)
@@ -43,7 +43,7 @@ func NewHintFromBytes(b []byte) (Hint, error) {
 
 	ht := Hint{
 		t:       Type(t),
-		version: string(bytes.TrimRight(b[2:], "\x00")),
+		version: Version(bytes.TrimRight(b[2:], "\x00")),
 	}
 
 	return ht, ht.IsValid()
@@ -56,7 +56,7 @@ func (ht Hint) IsValid() error {
 
 	if len(ht.version) > MaxVersionSize {
 		return InvalidVersionError.Wrapf("oversized version; len=%d", len(ht.version))
-	} else if !semver.IsValid(VersionGO(ht.version)) {
+	} else if !semver.IsValid(ht.version.GO()) {
 		return InvalidVersionError.Wrapf("version=%s", ht.version)
 	}
 
@@ -75,7 +75,7 @@ func (ht Hint) Type() Type {
 	return ht.t
 }
 
-func (ht Hint) Version() string {
+func (ht Hint) Version() Version {
 	return ht.version
 }
 
@@ -96,7 +96,7 @@ func (ht Hint) IsCompatible(check Hint) error {
 		return NewTypeDoesNotMatchError(ht.Type(), check.Type())
 	}
 
-	return IsVersionCompatible(ht.Version(), check.Version())
+	return ht.Version().IsCompatible(check.Version())
 }
 
 func (ht Hint) Bytes() []byte {
@@ -112,4 +112,8 @@ func (ht Hint) Verbose() string {
 
 type Hinter interface {
 	Hint() Hint
+}
+
+type IsHinted interface {
+	IsHinted() bool
 }

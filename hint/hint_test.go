@@ -14,7 +14,7 @@ type testHintVersion struct {
 
 func (t *testHintVersion) TestNew() {
 	ty := Type([2]byte{0xff, 0xf0})
-	v := "0.1"
+	v := Version("0.1")
 
 	h, err := NewHint(ty, v)
 	t.NoError(err)
@@ -25,7 +25,7 @@ func (t *testHintVersion) TestNew() {
 func (t *testHintVersion) TestInvalidVersion() {
 	_, err := NewHint(
 		Type([2]byte{0xff, 0xf0}),
-		"vv0.1",
+		Version("vv0.1"),
 	)
 	t.True(xerrors.Is(err, InvalidVersionError))
 }
@@ -40,7 +40,7 @@ type testHint struct {
 
 func (t *testHint) TestNew() {
 	ty := Type([2]byte{0xff, 0xf0})
-	v := "0.1"
+	v := Version("0.1")
 
 	hint, err := NewHint(ty, v)
 	t.NoError(err)
@@ -51,7 +51,7 @@ func (t *testHint) TestNew() {
 
 func (t *testHint) TestWrongSizeVersion() {
 	ty := Type([2]byte{0xff, 0xf0})
-	v := "0.1-" + strings.Repeat("k", MaxVersionSize-3)
+	v := Version("0.1-" + strings.Repeat("k", MaxVersionSize-3))
 
 	_, err := NewHint(ty, v)
 	t.True(xerrors.Is(err, InvalidVersionError))
@@ -60,7 +60,7 @@ func (t *testHint) TestWrongSizeVersion() {
 
 func (t *testHint) TestInvalidType() {
 	ty := NullType
-	v := "0.1"
+	v := Version("0.1")
 
 	_, err := NewHint(ty, v)
 	t.True(xerrors.Is(err, InvalidTypeError))
@@ -69,7 +69,7 @@ func (t *testHint) TestInvalidType() {
 
 func (t *testHint) TestBytes() {
 	ty := Type([2]byte{0xff, 0xf0})
-	v := "0.1"
+	v := Version("0.1")
 
 	hint, err := NewHint(ty, v)
 	t.NoError(err)
@@ -145,8 +145,8 @@ func (t *testHint) TestCompatible() {
 		t.Run(
 			c.name,
 			func() {
-				target, _ := NewHint(Type(c.t0), c.v0)
-				check, _ := NewHint(Type(c.t1), c.v1)
+				target, _ := NewHint(Type(c.t0), Version(c.v0))
+				check, _ := NewHint(Type(c.t1), Version(c.v1))
 
 				err := target.IsCompatible(check)
 				if c.err != nil {

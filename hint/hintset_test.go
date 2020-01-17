@@ -26,7 +26,7 @@ type somethingHinted struct {
 }
 
 func newSomethingHinted(t Type, version string, a int) somethingHinted {
-	h, _ := NewHint(t, version)
+	h, _ := NewHint(t, Version(version))
 	return somethingHinted{H: h, a: a}
 }
 

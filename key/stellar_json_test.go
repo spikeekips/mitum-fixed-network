@@ -6,12 +6,12 @@ import (
 )
 
 func (t *testStellarKeypair) TestPrivatekeyJSONMarshal() {
-	je := encoder.NewHintEncoder(encoder.JSON{})
+	je := encoder.NewJSONEncoder()
 	_ = hint.RegisterType(je.Hint().Type(), "json-encoder")
 	_ = hint.RegisterType((StellarPrivatekey{}).Hint().Type(), "stellar-privatekey")
 
 	encs := encoder.NewEncoders()
-	_ = encs.Add(je)
+	_ = encs.AddEncoder(je)
 	_ = encs.AddHinter(StellarPrivatekey{})
 
 	seed := "SCD6GQMWGDQT33QOCNKYKRJZL3YWFSLBVQSL6ICVWBUYQZCBFYUQY673"
@@ -19,7 +19,7 @@ func (t *testStellarKeypair) TestPrivatekeyJSONMarshal() {
 
 	b, err := je.Encode(kp)
 	t.NoError(err)
-	t.Equal(`{"_hint":{"type":"stellar-privatekey","version":"0.1"},"key":"SCD6GQMWGDQT33QOCNKYKRJZL3YWFSLBVQSL6ICVWBUYQZCBFYUQY673"}`, string(b))
+	t.Equal(`{"_hint":{"type":{"name":"stellar-privatekey","code":"0200"},"version":"0.1"},"key":"SCD6GQMWGDQT33QOCNKYKRJZL3YWFSLBVQSL6ICVWBUYQZCBFYUQY673"}`, string(b))
 
 	var unkp StellarPrivatekey
 	t.NoError(je.Decode(b, &unkp))
@@ -28,9 +28,9 @@ func (t *testStellarKeypair) TestPrivatekeyJSONMarshal() {
 
 func (t *testStellarKeypair) TestPublickeyJSONMarshal() {
 	_ = hint.RegisterType((StellarPrivatekey{}).Hint().Type(), "stellar-privatekey")
-	je := encoder.NewHintEncoder(encoder.JSON{})
+	je := encoder.NewJSONEncoder()
 	encs := encoder.NewEncoders()
-	_ = encs.Add(je)
+	_ = encs.AddEncoder(je)
 	_ = encs.AddHinter(StellarPrivatekey{})
 
 	seed := "SCD6GQMWGDQT33QOCNKYKRJZL3YWFSLBVQSL6ICVWBUYQZCBFYUQY673"
@@ -39,7 +39,7 @@ func (t *testStellarKeypair) TestPublickeyJSONMarshal() {
 
 	b, err := je.Encode(pb)
 	t.NoError(err)
-	t.Equal(`{"_hint":{"type":"stellar-publickey","version":"0.1"},"key":"GAVAONBETT4MVPV2IYN2T7OB7ZTYXGNN4BFGZHUYBUYR6G4ACHZMDOQ6"}`, string(b))
+	t.Equal(`{"_hint":{"type":{"name":"stellar-publickey","code":"0201"},"version":"0.1"},"key":"GAVAONBETT4MVPV2IYN2T7OB7ZTYXGNN4BFGZHUYBUYR6G4ACHZMDOQ6"}`, string(b))
 
 	var unpb StellarPublickey
 	t.NoError(je.Decode(b, &unpb))

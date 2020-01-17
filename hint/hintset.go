@@ -35,7 +35,7 @@ func NewHintset() *Hintset {
 	}
 }
 
-func (st Hintset) key(t Type, v string) string {
+func (st Hintset) key(t Type, v Version) string {
 	if len(v) < 1 {
 		return fmt.Sprintf("%x", t.Bytes())
 	}
@@ -63,8 +63,8 @@ func (st *Hintset) Add(hd Hinter) error {
 		sl,
 		func(i, j int) bool {
 			return semver.Compare(
-				VersionGO(sl[i].Hint().Version()),
-				VersionGO(sl[j].Hint().Version()),
+				sl[i].Hint().Version().GO(),
+				sl[j].Hint().Version().GO(),
 			) < 0
 		},
 	)
@@ -75,7 +75,7 @@ func (st *Hintset) Add(hd Hinter) error {
 }
 
 // Remove removes Hint by it's Type() and Version().
-func (st *Hintset) Remove(t Type, version string) error {
+func (st *Hintset) Remove(t Type, version Version) error {
 	key := st.key(t, version)
 	if _, found := st.known.Load(key); !found {
 		return HintNotFoundError.Wrapf("type=%s version=%s", t.Verbose(), version)
@@ -113,7 +113,7 @@ func (st *Hintset) Remove(t Type, version string) error {
 // - If version argument is empty, the latest version of same type will be
 // returned.
 // - The unknown Hinter will be cached.
-func (st *Hintset) Hinter(t Type, version string) (Hinter, error) {
+func (st *Hintset) Hinter(t Type, version Version) (Hinter, error) {
 	key := st.key(t, version)
 	if e, found := st.known.Load(key); found {
 		return e.(Hinter), nil
@@ -130,10 +130,10 @@ func (st *Hintset) Hinter(t Type, version string) (Hinter, error) {
 		// NOTE trying to find hint, which is,
 		// - same major version
 		// - and latest version
-		major := semver.Major(VersionGO(version))
+		major := semver.Major(version.GO())
 	end:
 		for _, e := range st.m[t] {
-			switch c := semver.Compare(major, semver.Major(VersionGO(e.Hint().Version()))); {
+			switch c := semver.Compare(major, semver.Major(e.Hint().Version().GO())); {
 			case c < 0:
 				continue
 			case c > 0:

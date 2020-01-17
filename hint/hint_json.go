@@ -11,8 +11,8 @@ var jsoni = jsoniter.Config{
 }.Froze()
 
 type hintJSON struct {
-	Type    Type   `json:"type"`
-	Version string `json:"version"`
+	Type    Type    `json:"type"`
+	Version Version `json:"version"`
 }
 
 func (ht Hint) MarshalJSON() ([]byte, error) {

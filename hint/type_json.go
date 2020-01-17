@@ -1,6 +1,15 @@
 package hint
 
-import "golang.org/x/xerrors"
+import (
+	"encoding/hex"
+
+	"golang.org/x/xerrors"
+)
+
+type typeJSON struct {
+	N string `json:"name"`
+	C string `json:"code"`
+}
 
 func (ty Type) MarshalJSON() ([]byte, error) {
 	name := ty.String()
@@ -8,21 +17,34 @@ func (ty Type) MarshalJSON() ([]byte, error) {
 		return nil, xerrors.Errorf("Type does not have name: type=%x", ty.Bytes())
 	}
 
-	return jsoni.Marshal(name)
+	return jsoni.Marshal(typeJSON{
+		N: name,
+		C: hex.EncodeToString(ty.Bytes()),
+	})
 }
 
 func (ty *Type) UnmarshalJSON(b []byte) error {
-	var name string
-	if err := jsoni.Unmarshal(b, &name); err != nil {
+	var o typeJSON
+	if err := jsoni.Unmarshal(b, &o); err != nil {
 		return err
 	}
 
-	t, err := TypeByName(name)
-	if err != nil {
+	var n [2]byte
+	if d, err := hex.DecodeString(o.C); err != nil {
 		return err
+	} else {
+		copy(n[:], d)
 	}
 
-	*ty = t
+	nt := Type(n)
+
+	if t, err := TypeByName(o.N); err != nil {
+		return err
+	} else if !nt.Equal(t) {
+		return NewTypeDoesNotMatchError(t, nt)
+	}
+
+	*ty = nt
 
 	return nil
 }

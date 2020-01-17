@@ -1,8 +1,10 @@
 package hint
 
+import "fmt"
+
 func (t *testHint) TestMarshalJSON() {
 	ty := Type([2]byte{0xff, 0xf0})
-	v := "0.1"
+	v := Version("0.1")
 
 	_ = RegisterType(ty, "0xfff0")
 
@@ -15,8 +17,8 @@ func (t *testHint) TestMarshalJSON() {
 	var m map[string]interface{}
 	t.NoError(jsoni.Unmarshal(b, &m))
 
-	t.Equal(h.Type().String(), m["type"])
-	t.Equal(h.Version(), m["version"])
+	t.Contains(fmt.Sprintf("%v", m["type"]), h.Type().String())
+	t.Equal(h.Version().String(), m["version"])
 
 	// unmarshal
 	var uh Hint

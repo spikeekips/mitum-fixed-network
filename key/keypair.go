@@ -20,13 +20,13 @@ type Key interface {
 	Equal(Key) bool
 }
 
-type Publickey interface {
-	Key
-	Verify([]byte, Signature) error
-}
-
 type Privatekey interface {
 	Key
 	Publickey() Publickey
 	Sign([]byte) (Signature, error)
+}
+
+type Publickey interface {
+	Key
+	Verify([]byte, Signature) error
 }

@@ -40,7 +40,7 @@ func (ty Type) String() string {
 }
 
 // IsValid checks Type
-func (ty Type) IsValid() error {
+func (ty Type) IsValid([]byte) error {
 	if ty == NullType {
 		return InvalidTypeError.Wrapf("empty Type")
 	}
@@ -76,7 +76,7 @@ func IsRegisteredTypeName(name string) bool {
 
 // RegisterType registers the givven Type in globals
 func RegisterType(t Type, name string) error {
-	if err := t.IsValid(); err != nil {
+	if err := t.IsValid(nil); err != nil {
 		return err
 	}
 

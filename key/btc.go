@@ -52,7 +52,7 @@ func (bt BTCPrivatekey) Hint() hint.Hint {
 	return btcPrivatekeyHint
 }
 
-func (bt BTCPrivatekey) IsValid() error {
+func (bt BTCPrivatekey) IsValid([]byte) error {
 	if bt.wif == nil {
 		return InvalidKeyError.Wrapf("empty btc wif")
 	} else if bt.wif.PrivKey == nil {
@@ -116,7 +116,7 @@ func (bt BTCPublickey) Hint() hint.Hint {
 	return btcPublickeyHint
 }
 
-func (bt BTCPublickey) IsValid() error {
+func (bt BTCPublickey) IsValid([]byte) error {
 	if bt.pk == nil {
 		return InvalidKeyError.Wrapf("empty btc PublicKey")
 	}

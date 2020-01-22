@@ -19,13 +19,13 @@ func (t *testType) TestNew() {
 
 func (t *testType) TestIsValid() {
 	ty := Type([2]byte{0x00, 0xff})
-	t.NoError(ty.IsValid())
+	t.NoError(ty.IsValid(nil))
 
 	ty = Type([2]byte{0x00, 0x00})
-	t.True(xerrors.Is(ty.IsValid(), InvalidTypeError))
+	t.True(xerrors.Is(ty.IsValid(nil), InvalidTypeError))
 
 	ty = Type{}
-	t.True(xerrors.Is(ty.IsValid(), InvalidTypeError))
+	t.True(xerrors.Is(ty.IsValid(nil), InvalidTypeError))
 }
 
 func (t *testType) TestRegister() {

@@ -27,11 +27,11 @@ func (t *testEtherKeypair) TestNew() {
 
 func (t *testEtherKeypair) TestKeypairIsValid() {
 	kp, _ := NewEtherPrivatekey()
-	t.NoError(kp.IsValid())
+	t.NoError(kp.IsValid(nil))
 
 	// empty Keypair
 	empty := EtherPrivatekey{}
-	t.True(xerrors.Is(empty.IsValid(), InvalidKeyError))
+	t.True(xerrors.Is(empty.IsValid(nil), InvalidKeyError))
 }
 
 func (t *testEtherKeypair) TestKeypairExportKeys() {
@@ -49,7 +49,7 @@ func (t *testEtherKeypair) TestPublickey() {
 
 	t.Equal("04cd279abff49a644f77f001baa1aba98880368d5a5cf476eb79e2c375a386edf495544f201d1774fbce4c5ef11e2de9c83f423d662d9d69147fcc6d3f96e81a75", kp.Publickey().String())
 
-	t.NoError(kp.IsValid())
+	t.NoError(kp.IsValid(nil))
 
 	pk, err := NewEtherPublickey(kp.Publickey().String())
 	t.NoError(err)
@@ -72,7 +72,7 @@ func (t *testEtherKeypair) TestPrivatekey() {
 
 	t.Equal(priv, kp.String())
 
-	t.NoError(kp.IsValid())
+	t.NoError(kp.IsValid(nil))
 
 	pk, err := NewEtherPrivatekeyFromString(kp.String())
 	t.NoError(err)

@@ -40,7 +40,7 @@ func (sa ShortAddress) Hint() hint.Hint {
 	return h
 }
 
-func (sa ShortAddress) IsValid() error {
+func (sa ShortAddress) IsValid([]byte) error {
 	if len(sa) < 1 {
 		return xerrors.Errorf("empty address")
 	}

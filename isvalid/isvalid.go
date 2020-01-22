@@ -1,5 +1,5 @@
 package isvalid
 
 type IsValider interface {
-	IsValid() error
+	IsValid([]byte) error
 }

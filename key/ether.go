@@ -56,7 +56,7 @@ func (ep EtherPrivatekey) Hint() hint.Hint {
 	return etherPrivatekeyHint
 }
 
-func (ep EtherPrivatekey) IsValid() error {
+func (ep EtherPrivatekey) IsValid([]byte) error {
 	if ep.pk == nil {
 		return InvalidKeyError.Wrapf("empty ether Privatekey")
 	}
@@ -134,7 +134,7 @@ func (ep EtherPublickey) Hint() hint.Hint {
 	return etherPublickeyHint
 }
 
-func (ep EtherPublickey) IsValid() error {
+func (ep EtherPublickey) IsValid([]byte) error {
 	if ep.pk == nil {
 		return InvalidKeyError.Wrapf("empty ether Publickey")
 	}

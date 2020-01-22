@@ -9,7 +9,7 @@ import (
 type Height int64
 
 // IsValid checks Height.
-func (ht Height) IsValid() error {
+func (ht Height) IsValid([]byte) error {
 	if ht < 0 {
 		return InvalidError.Wrapf("height must be greater than 0; height=%d", ht)
 	}

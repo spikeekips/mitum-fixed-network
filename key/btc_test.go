@@ -27,11 +27,11 @@ func (t *testBTCKeypair) TestNew() {
 
 func (t *testBTCKeypair) TestKeypairIsValid() {
 	kp, _ := NewBTCPrivatekey()
-	t.NoError(kp.IsValid())
+	t.NoError(kp.IsValid(nil))
 
 	// empty Keypair
 	empty := BTCPrivatekey{}
-	t.True(xerrors.Is(empty.IsValid(), InvalidKeyError))
+	t.True(xerrors.Is(empty.IsValid(nil), InvalidKeyError))
 }
 
 func (t *testBTCKeypair) TestKeypairExportKeys() {
@@ -48,7 +48,7 @@ func (t *testBTCKeypair) TestPublickey() {
 
 	t.Equal("27phogA4gmbMGfg321EHfx5eABkL7KAYuDPRGFoyQtAUb", kp.Publickey().String())
 
-	t.NoError(kp.IsValid())
+	t.NoError(kp.IsValid(nil))
 
 	pk, err := NewBTCPublickeyFromString(kp.Publickey().String())
 	t.NoError(err)
@@ -71,7 +71,7 @@ func (t *testBTCKeypair) TestPrivatekey() {
 
 	t.Equal(priv, kp.String())
 
-	t.NoError(kp.IsValid())
+	t.NoError(kp.IsValid(nil))
 
 	pk, err := NewBTCPrivatekeyFromString(kp.String())
 	t.NoError(err)

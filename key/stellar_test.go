@@ -27,11 +27,11 @@ func (t *testStellarKeypair) TestNew() {
 
 func (t *testStellarKeypair) TestKeypairIsValid() {
 	kp, _ := NewStellarPrivatekey()
-	t.NoError(kp.IsValid())
+	t.NoError(kp.IsValid(nil))
 
 	// empty Keypair
 	empty := StellarPrivatekey{}
-	t.True(xerrors.Is(empty.IsValid(), InvalidKeyError))
+	t.True(xerrors.Is(empty.IsValid(nil), InvalidKeyError))
 }
 
 func (t *testStellarKeypair) TestKeypairExportKeys() {
@@ -48,7 +48,7 @@ func (t *testStellarKeypair) TestPublickey() {
 
 	t.Equal("GAVAONBETT4MVPV2IYN2T7OB7ZTYXGNN4BFGZHUYBUYR6G4ACHZMDOQ6", kp.Publickey().String())
 
-	t.NoError(kp.IsValid())
+	t.NoError(kp.IsValid(nil))
 
 	pk, err := NewStellarPublickeyFromString(kp.Publickey().String())
 	t.NoError(err)
@@ -71,7 +71,7 @@ func (t *testStellarKeypair) TestPrivatekey() {
 
 	t.Equal(seed, kp.String())
 
-	t.NoError(kp.IsValid())
+	t.NoError(kp.IsValid(nil))
 
 	pk, err := NewStellarPrivatekeyFromString(kp.String())
 	t.NoError(err)

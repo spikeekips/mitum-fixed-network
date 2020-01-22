@@ -21,12 +21,12 @@ type Hint struct {
 func NewHint(t Type, version Version) (Hint, error) {
 	ht := Hint{t: t, version: version}
 
-	return ht, ht.IsValid()
+	return ht, ht.IsValid(nil)
 }
 
 func MustHint(t Type, version Version) Hint {
 	ht := Hint{t: t, version: version}
-	if err := ht.IsValid(); err != nil {
+	if err := ht.IsValid(nil); err != nil {
 		panic(err)
 	}
 
@@ -46,11 +46,11 @@ func NewHintFromBytes(b []byte) (Hint, error) {
 		version: Version(bytes.TrimRight(b[2:], "\x00")),
 	}
 
-	return ht, ht.IsValid()
+	return ht, ht.IsValid(nil)
 }
 
-func (ht Hint) IsValid() error {
-	if err := ht.Type().IsValid(); err != nil {
+func (ht Hint) IsValid([]byte) error {
+	if err := ht.Type().IsValid(nil); err != nil {
 		return err
 	}
 

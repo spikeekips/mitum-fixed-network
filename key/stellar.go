@@ -48,7 +48,7 @@ func (sp StellarPrivatekey) Hint() hint.Hint {
 	return stellarPrivatekeyHint
 }
 
-func (sp StellarPrivatekey) IsValid() error {
+func (sp StellarPrivatekey) IsValid([]byte) error {
 	if sp.kp == nil {
 		return InvalidKeyError.Wrapf("empty stellar Privatekey")
 	}
@@ -119,7 +119,7 @@ func (sp StellarPublickey) Hint() hint.Hint {
 	return stellarPublickeyHint
 }
 
-func (sp StellarPublickey) IsValid() error {
+func (sp StellarPublickey) IsValid([]byte) error {
 	if sp.kp == nil {
 		return InvalidKeyError.Wrapf("empty stellar Publickey")
 	}

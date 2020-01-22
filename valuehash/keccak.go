@@ -36,7 +36,7 @@ func (s512 SHA512) Hint() hint.Hint {
 	return sha512Hint
 }
 
-func (s512 SHA512) IsValid() error {
+func (s512 SHA512) IsValid([]byte) error {
 	if emptySHA512 == s512.b {
 		return EmptyHashError
 	}

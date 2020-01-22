@@ -23,10 +23,10 @@ func (t *testHeight) TestInt64() {
 
 func (t *testHeight) TestInvalid() {
 	h10 := Height(10)
-	t.NoError(h10.IsValid())
+	t.NoError(h10.IsValid(nil))
 
 	hu1 := Height(-1)
-	t.True(xerrors.Is(InvalidError, hu1.IsValid()))
+	t.True(xerrors.Is(InvalidError, hu1.IsValid(nil)))
 }
 
 func TestHeight(t *testing.T) {

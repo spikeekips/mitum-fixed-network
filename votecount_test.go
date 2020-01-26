@@ -6,7 +6,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestCheckMajority(t *testing.T) {
+func TestFindMajority(t *testing.T) {
 	cases := []struct {
 		name      string
 		total     uint
@@ -100,7 +100,7 @@ func TestCheckMajority(t *testing.T) {
 		t.Run(
 			c.name,
 			func(*testing.T) {
-				result := CheckMajority(c.total, c.threshold, c.set...)
+				result := FindMajority(c.total, c.threshold, c.set...)
 				assert.Equal(t, c.expected, result, "%d: %v; %v != %v", i, c.name, c.expected, result)
 			},
 		)

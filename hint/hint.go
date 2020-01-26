@@ -65,7 +65,7 @@ func (ht Hint) IsValid([]byte) error {
 
 func (ht Hint) IsRegistered() error {
 	if !IsRegisteredType(ht.Type()) {
-		return NotRegisteredTypeFoundError.Wrapf("type=%s", ht.Verbose())
+		return NotRegisteredTypeFoundError.Wrapf("hint=%s", ht.Verbose())
 	}
 
 	return nil
@@ -112,8 +112,4 @@ func (ht Hint) Verbose() string {
 
 type Hinter interface {
 	Hint() Hint
-}
-
-type IsHinted interface {
-	IsHinted() bool
 }

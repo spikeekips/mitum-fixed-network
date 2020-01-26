@@ -78,7 +78,8 @@ func (s0 sh0) PackJSON(_ *JSONEncoder) (interface{}, error) {
 		JSONPackHintedHead
 		sh0
 	}{
-		sh0: s0,
+		JSONPackHintedHead: NewJSONPackHintedHead(s0.Hint()),
+		sh0:                s0,
 	}, nil
 }
 

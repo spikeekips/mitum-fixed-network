@@ -1,4 +1,4 @@
-package mitum
+package localtime
 
 import (
 	"fmt"
@@ -6,6 +6,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/spikeekips/mitum/util"
 	"github.com/stretchr/testify/suite"
 	"golang.org/x/xerrors"
 )
@@ -41,7 +42,7 @@ func (t *testCallbackTimer) TestStart() {
 	t.NoError(err)
 
 	t.NoError(ct.Start())
-	t.True(xerrors.Is(ct.Start(), DaemonAlreadyStartedError))
+	t.True(xerrors.Is(ct.Start(), util.DaemonAlreadyStartedError))
 
 	time.Sleep(time.Millisecond * 50)
 
@@ -64,7 +65,7 @@ func (t *testCallbackTimer) TestStop() {
 	t.NoError(err)
 
 	t.NoError(ct.Start())
-	t.True(xerrors.Is(ct.Start(), DaemonAlreadyStartedError))
+	t.True(xerrors.Is(ct.Start(), util.DaemonAlreadyStartedError))
 
 	time.Sleep(time.Millisecond * 30)
 	ct.Stop()
@@ -89,7 +90,7 @@ func (t *testCallbackTimer) TestStoppedByCallback() {
 	t.NoError(err)
 
 	t.NoError(ct.Start())
-	t.True(xerrors.Is(ct.Start(), DaemonAlreadyStartedError))
+	t.True(xerrors.Is(ct.Start(), util.DaemonAlreadyStartedError))
 
 	time.Sleep(time.Millisecond * 100)
 	t.True(ct.IsStopped())
@@ -115,7 +116,7 @@ func (t *testCallbackTimer) TestStoppedByError() {
 	t.NoError(err)
 
 	t.NoError(ct.Start())
-	t.True(xerrors.Is(ct.Start(), DaemonAlreadyStartedError))
+	t.True(xerrors.Is(ct.Start(), util.DaemonAlreadyStartedError))
 
 	time.Sleep(time.Millisecond * 100)
 	t.True(ct.IsStopped())
@@ -139,7 +140,7 @@ func (t *testCallbackTimer) TestIntervalFunc() {
 	t.NoError(err)
 
 	t.NoError(ct.Start())
-	t.True(xerrors.Is(ct.Start(), DaemonAlreadyStartedError))
+	t.True(xerrors.Is(ct.Start(), util.DaemonAlreadyStartedError))
 
 	time.Sleep(time.Millisecond * 50)
 
@@ -169,7 +170,7 @@ func (t *testCallbackTimer) TestIntervalFuncNarrowInterval() {
 	t.NoError(err)
 
 	t.NoError(ct.Start())
-	t.True(xerrors.Is(ct.Start(), DaemonAlreadyStartedError))
+	t.True(xerrors.Is(ct.Start(), util.DaemonAlreadyStartedError))
 
 	time.Sleep(time.Millisecond * 50)
 

@@ -5,8 +5,10 @@ package mitum
 import (
 	"crypto/rand"
 	"encoding/hex"
+	"encoding/json"
 	"fmt"
 
+	"github.com/spikeekips/mitum/encoder"
 	"github.com/spikeekips/mitum/hint"
 	"golang.org/x/xerrors"
 )
@@ -58,4 +60,29 @@ func (sa ShortAddress) Equal(a Address) bool {
 
 func (sa ShortAddress) Bytes() []byte {
 	return []byte(sa)
+}
+
+func (sa ShortAddress) PackJSON(*encoder.JSONEncoder) (interface{}, error) {
+	return struct {
+		encoder.JSONPackHintedHead
+		A string `json:"address"`
+	}{
+		JSONPackHintedHead: encoder.NewJSONPackHintedHead(sa.Hint()),
+		A:                  sa.String(),
+	}, nil
+}
+
+func (sa *ShortAddress) UnpackJSON(b []byte, _ *encoder.JSONEncoder) error {
+	var s struct {
+		A string `json:"address"`
+	}
+	if err := json.Unmarshal(b, &s); err != nil {
+		return err
+	} else if len(s.A) < 8 {
+		return xerrors.Errorf("not enough address")
+	}
+
+	*sa = ShortAddress(s.A[8:])
+
+	return nil
 }

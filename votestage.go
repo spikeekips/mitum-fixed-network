@@ -1,6 +1,8 @@
 package mitum
 
-import "github.com/spikeekips/mitum/errors"
+import (
+	"github.com/spikeekips/mitum/errors"
+)
 
 var (
 	InvalidStageError = errors.NewError("invalid stage")
@@ -13,6 +15,7 @@ const (
 	StageINIT
 	StageSIGN
 	StageACCEPT
+	StageProposal
 )
 
 func (st Stage) String() string {
@@ -23,16 +26,22 @@ func (st Stage) String() string {
 		return "SIGN"
 	case StageACCEPT:
 		return "ACCEPT"
+	case StageProposal:
+		return "PROPOSAL"
 	default:
 		return "<unknown stage>"
 	}
 }
 
-func (st Stage) IsValid() error {
+func (st Stage) IsValid([]byte) error {
 	switch st {
-	case StageINIT, StageSIGN, StageACCEPT:
+	case StageINIT, StageSIGN, StageACCEPT, StageProposal:
 		return nil
 	}
 
 	return InvalidStageError.Wrapf("stage=%d", st)
+}
+
+func (st Stage) MarshalText() ([]byte, error) {
+	return []byte(st.String()), nil
 }

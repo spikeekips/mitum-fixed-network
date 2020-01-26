@@ -260,22 +260,11 @@ func (je JSONEncoder) wrapPackerHinter(hinter hint.Hinter, fn jsonPackFunc) json
 			return nil, err
 		}
 
-		if _, ok := o.(hint.IsHinted); !ok {
+		if _, ok := o.(IsJSONHinted); !ok {
 			o = JSONPackHinted{H: hinter.Hint(), D: o}
 		}
 
-		ptr, _ := ExtractPtr(o)
-		for i := 0; i < ptr.Elem().NumField(); i++ {
-			f := ptr.Elem().Field(i)
-
-			if f.Type() != reflect.TypeOf(JSONPackHintedHead{}) {
-				continue
-			}
-
-			f.Set(reflect.ValueOf(JSONPackHintedHead{H: hinter.Hint()}))
-		}
-
-		return ptr.Elem().Interface(), nil
+		return o, nil
 	}
 }
 
@@ -290,12 +279,12 @@ func (je JSONEncoder) wrapUnpackerHinter(hinter hint.Hinter, fn jsonUnpackFunc) 
 			return nil, err
 		}
 
-		if uj.D != nil {
-			return fn(uj.D, i)
-		}
-
 		if err := hinter.Hint().IsCompatible(uj.H); err != nil {
 			return nil, err
+		}
+
+		if uj.D != nil {
+			return fn(uj.D, i)
 		}
 
 		return fn(b, i)
@@ -336,6 +325,14 @@ type JSONPackHintedHead struct {
 	H hint.Hint `json:"_hint"`
 }
 
-func (jh JSONPackHintedHead) IsHinted() bool {
+func NewJSONPackHintedHead(h hint.Hint) JSONPackHintedHead {
+	return JSONPackHintedHead{H: h}
+}
+
+func (jh JSONPackHintedHead) IsJSONHinted() bool {
 	return true
+}
+
+type IsJSONHinted interface {
+	IsJSONHinted() bool
 }

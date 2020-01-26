@@ -1,4 +1,4 @@
-package mitum
+package localtime
 
 import (
 	"sync"
@@ -6,12 +6,13 @@ import (
 
 	"github.com/rs/zerolog"
 	"github.com/spikeekips/mitum/logging"
+	"github.com/spikeekips/mitum/util"
 	"golang.org/x/xerrors"
 )
 
 type CallbackTimer struct {
 	*logging.Logger
-	*Daemon
+	*util.Daemon
 	intervalFunc func() time.Duration
 }
 
@@ -39,7 +40,7 @@ func NewCallbackTimer(
 		}),
 		intervalFunc: intervalFunc,
 	}
-	ct.Daemon = NewDaemon(ct.callback(callback))
+	ct.Daemon = util.NewDaemon(ct.callback(callback))
 
 	return ct, nil
 }

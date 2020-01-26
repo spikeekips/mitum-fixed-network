@@ -4,13 +4,12 @@ import (
 	"encoding/json"
 
 	"github.com/btcsuite/btcutil/base58"
-
-	"github.com/spikeekips/mitum/hint"
+	"github.com/spikeekips/mitum/encoder"
 )
 
 type JSONHash struct {
-	Hint hint.Hint `json:"_hint"`
-	Hash string    `json:"hash"`
+	encoder.JSONPackHintedHead
+	Hash string `json:"hash"`
 }
 
 func (jh *JSONHash) Bytes() []byte {
@@ -19,8 +18,8 @@ func (jh *JSONHash) Bytes() []byte {
 
 func MarshalJSON(h Hash) ([]byte, error) {
 	return json.Marshal(JSONHash{
-		Hint: h.Hint(),
-		Hash: base58.Encode(h.Bytes()),
+		JSONPackHintedHead: encoder.NewJSONPackHintedHead(h.Hint()),
+		Hash:               base58.Encode(h.Bytes()),
 	})
 }
 

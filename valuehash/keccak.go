@@ -8,13 +8,18 @@ import (
 	"github.com/spikeekips/mitum/hint"
 )
 
+const sha256Size int = 32
 const sha512Size int = 64
 
-var emptySHA512 [64]byte
+var emptySHA256 [sha256Size]byte
+var emptySHA512 [sha512Size]byte
+
+var sha256Hint = hint.MustHint(hint.Type{0x02, 0x01}, "0.1")
 var sha512Hint = hint.MustHint(hint.Type{0x02, 0x00}, "0.1")
 
 func init() {
-	copy(emptySHA512[:], sha3.New512().Sum(nil))
+	emptySHA256 = sha3.Sum256(nil)
+	emptySHA512 = sha3.Sum512(nil)
 }
 
 type SHA512 struct {
@@ -22,10 +27,7 @@ type SHA512 struct {
 }
 
 func NewSHA512(b []byte) Hash {
-	var s [sha512Size]byte
-	copy(s[:], sha3.New512().Sum(b))
-
-	return SHA512{b: s}
+	return SHA512{b: sha3.Sum512(b)}
 }
 
 func (s512 SHA512) String() string {
@@ -57,6 +59,49 @@ func (s512 SHA512) Equal(h Hash) bool {
 		return false
 	}
 	if s512.b != h.(SHA512).b {
+		return false
+	}
+
+	return true
+}
+
+type SHA256 struct {
+	b [sha256Size]byte
+}
+
+func NewSHA256(b []byte) Hash {
+	return SHA256{b: sha3.Sum256(b)}
+}
+
+func (s256 SHA256) String() string {
+	return hex.EncodeToString(s256.Bytes())
+}
+
+func (s256 SHA256) Hint() hint.Hint {
+	return sha256Hint
+}
+
+func (s256 SHA256) IsValid([]byte) error {
+	if emptySHA256 == s256.b {
+		return EmptyHashError
+	}
+
+	return nil
+}
+
+func (s256 SHA256) Size() int {
+	return sha256Size
+}
+
+func (s256 SHA256) Bytes() []byte {
+	return s256.b[:]
+}
+
+func (s256 SHA256) Equal(h Hash) bool {
+	if s256.Hint().Type() != h.Hint().Type() {
+		return false
+	}
+	if s256.b != h.(SHA256).b {
 		return false
 	}
 

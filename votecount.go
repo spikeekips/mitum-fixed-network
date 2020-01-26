@@ -2,12 +2,12 @@ package mitum
 
 import "sort"
 
-// CheckMajority finds the majority(over threshold) set between the given sets.
+// FindMajority finds the majority(over threshold) set between the given sets.
 // The returned value means,
 // 0-N: index number of set
 // -1: not yet majority
 // -2: draw
-func CheckMajority(total, threshold uint, set ...uint) int {
+func FindMajority(total, threshold uint, set ...uint) int {
 	if threshold > total {
 		threshold = total
 	}

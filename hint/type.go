@@ -60,7 +60,7 @@ func (ty Type) Bytes() []byte {
 
 // Verbose shows the detailed Type info
 func (ty Type) Verbose() string {
-	return fmt.Sprintf("%v(%s)", [2]byte(ty), ty)
+	return fmt.Sprintf("%x", [2]byte(ty))
 }
 
 func IsRegisteredType(t Type) bool {

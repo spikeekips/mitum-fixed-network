@@ -11,11 +11,11 @@ import (
 )
 
 type emptyDaemon struct {
-	*Daemon
+	*FunctionDaemon
 }
 
 func (ed *emptyDaemon) Start() error {
-	if err := ed.Daemon.Start(); err != nil {
+	if err := ed.FunctionDaemon.Start(); err != nil {
 		return err
 	}
 
@@ -27,7 +27,7 @@ type testDaemon struct {
 }
 
 func (t *testDaemon) TestStart() {
-	ed := &emptyDaemon{Daemon: NewDaemon(func(stopChan chan struct{}) error {
+	ed := &emptyDaemon{FunctionDaemon: NewFunctionDaemon(func(stopChan chan struct{}) error {
 	end:
 		for {
 			select {
@@ -52,7 +52,7 @@ func (t *testDaemon) TestStart() {
 }
 
 func (t *testDaemon) TestStop() {
-	ed := &emptyDaemon{Daemon: NewDaemon(func(stopChan chan struct{}) error {
+	ed := &emptyDaemon{FunctionDaemon: NewFunctionDaemon(func(stopChan chan struct{}) error {
 	end:
 		for {
 			select {
@@ -77,7 +77,7 @@ func (t *testDaemon) TestStop() {
 }
 
 func (t *testDaemon) TestFunctionError() {
-	ed := &emptyDaemon{Daemon: NewDaemon(func(stopChan chan struct{}) error {
+	ed := &emptyDaemon{FunctionDaemon: NewFunctionDaemon(func(stopChan chan struct{}) error {
 		return xerrors.Errorf("find me :)")
 	})}
 	t.NoError(ed.Start())
@@ -89,7 +89,7 @@ func (t *testDaemon) TestFunctionError() {
 }
 
 func (t *testDaemon) TestStopByStopChan() {
-	ed := &emptyDaemon{Daemon: NewDaemon(func(stopChan chan struct{}) error {
+	ed := &emptyDaemon{FunctionDaemon: NewFunctionDaemon(func(stopChan chan struct{}) error {
 	end:
 		for {
 			select {
@@ -117,7 +117,7 @@ func (t *testDaemon) TestTimer() {
 	var wg sync.WaitGroup
 	wg.Add(1)
 
-	timer := &emptyDaemon{Daemon: NewDaemon(func(stopChan chan struct{}) error {
+	timer := &emptyDaemon{FunctionDaemon: NewFunctionDaemon(func(stopChan chan struct{}) error {
 		ticker := time.NewTicker(time.Millisecond * 10)
 		done := make(chan struct{})
 
@@ -161,7 +161,7 @@ func (t *testDaemon) TestMultipleTimer() {
 	var timers []*emptyDaemon
 
 	for i := 0; i < n; i++ {
-		tr := &emptyDaemon{Daemon: NewDaemon(func(stopChan chan struct{}) error {
+		tr := &emptyDaemon{FunctionDaemon: NewFunctionDaemon(func(stopChan chan struct{}) error {
 			ticker := time.NewTicker(time.Millisecond * 10)
 			done := make(chan struct{})
 

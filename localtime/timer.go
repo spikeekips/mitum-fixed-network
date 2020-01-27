@@ -12,13 +12,13 @@ import (
 
 type CallbackTimer struct {
 	*logging.Logger
-	*util.Daemon
+	*util.FunctionDaemon
 	intervalFunc func() time.Duration
 }
 
 func NewCallbackTimer(
 	name string,
-	callback func() (error, bool),
+	callback func() (bool, error),
 	defaultInterval time.Duration,
 	intervalFunc func() time.Duration,
 ) (*CallbackTimer, error) {
@@ -40,7 +40,7 @@ func NewCallbackTimer(
 		}),
 		intervalFunc: intervalFunc,
 	}
-	ct.Daemon = util.NewDaemon(ct.callback(callback))
+	ct.FunctionDaemon = util.NewFunctionDaemon(ct.callback(callback))
 
 	return ct, nil
 }
@@ -48,16 +48,16 @@ func NewCallbackTimer(
 func (ct *CallbackTimer) Start() error {
 	defer ct.Log().Debug().Msg("timer started")
 
-	return ct.Daemon.Start()
+	return ct.FunctionDaemon.Start()
 }
 
 func (ct *CallbackTimer) Stop() error {
 	defer ct.Log().Debug().Msg("timer stopped")
 
-	return ct.Daemon.Stop()
+	return ct.FunctionDaemon.Stop()
 }
 
-func (ct *CallbackTimer) callback(cb func() (error, bool)) func(chan struct{}) error {
+func (ct *CallbackTimer) callback(cb func() (bool, error)) func(chan struct{}) error {
 	return func(stopChan chan struct{}) error {
 		returnChan := make(chan error)
 
@@ -80,7 +80,7 @@ func (ct *CallbackTimer) callback(cb func() (error, bool)) func(chan struct{}) e
 					time.Sleep(i)
 
 					go func() {
-						if err, keep := cb(); err != nil {
+						if keep, err := cb(); err != nil {
 							errChan <- err
 						} else if !keep {
 							errChan <- xerrors.Errorf("don't go")

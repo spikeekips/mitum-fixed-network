@@ -18,8 +18,8 @@ type testCallbackTimer struct {
 func (t *testCallbackTimer) TestNew() {
 	_, err := NewCallbackTimer(
 		"good timer",
-		func() (error, bool) {
-			return nil, true
+		func() (bool, error) {
+			return true, nil
 		},
 		time.Millisecond*10,
 		nil,
@@ -31,10 +31,10 @@ func (t *testCallbackTimer) TestStart() {
 	var ticked int64
 	ct, err := NewCallbackTimer(
 		"good timer",
-		func() (error, bool) {
+		func() (bool, error) {
 			atomic.AddInt64(&ticked, 1)
 
-			return nil, true
+			return true, nil
 		},
 		time.Millisecond*10,
 		nil,
@@ -55,9 +55,9 @@ func (t *testCallbackTimer) TestStop() {
 	var ticked int64
 	ct, err := NewCallbackTimer(
 		"good timer",
-		func() (error, bool) {
+		func() (bool, error) {
 			atomic.AddInt64(&ticked, 1)
-			return nil, true
+			return true, nil
 		},
 		time.Millisecond*10,
 		nil,
@@ -67,22 +67,23 @@ func (t *testCallbackTimer) TestStop() {
 	t.NoError(ct.Start())
 	t.True(xerrors.Is(ct.Start(), util.DaemonAlreadyStartedError))
 
-	time.Sleep(time.Millisecond * 30)
+	time.Sleep(time.Millisecond * 40)
 	ct.Stop()
 	tickedStopped := atomic.LoadInt64(&ticked)
 
 	time.Sleep(time.Millisecond * 30)
-	t.Equal(tickedStopped, atomic.LoadInt64(&ticked))
+	t.True(tickedStopped >= 3)
+	t.True(tickedStopped <= atomic.LoadInt64(&ticked))
 }
 
 func (t *testCallbackTimer) TestStoppedByCallback() {
 	var ticked int64
 	ct, err := NewCallbackTimer(
 		"good timer",
-		func() (error, bool) {
+		func() (bool, error) {
 			atomic.AddInt64(&ticked, 1)
 
-			return nil, atomic.LoadInt64(&ticked) < 2 // stop after calling 2 times
+			return atomic.LoadInt64(&ticked) < 2, nil // stop after calling 2 times
 		},
 		time.Millisecond*10,
 		nil,
@@ -101,14 +102,14 @@ func (t *testCallbackTimer) TestStoppedByError() {
 	var ticked int64
 	ct, err := NewCallbackTimer(
 		"good timer",
-		func() (error, bool) {
+		func() (bool, error) {
 			atomic.AddInt64(&ticked, 1)
 
 			if atomic.LoadInt64(&ticked) < 2 {
-				return nil, true
+				return true, nil
 			}
 
-			return xerrors.Errorf("idontknow"), true
+			return true, xerrors.Errorf("idontknow")
 		},
 		time.Millisecond*10,
 		nil,
@@ -127,10 +128,10 @@ func (t *testCallbackTimer) TestIntervalFunc() {
 	var ticked int64
 	ct, err := NewCallbackTimer(
 		"good timer",
-		func() (error, bool) {
+		func() (bool, error) {
 			atomic.AddInt64(&ticked, 1)
 
-			return nil, true
+			return true, nil
 		},
 		0,
 		func() time.Duration {
@@ -153,10 +154,10 @@ func (t *testCallbackTimer) TestIntervalFuncNarrowInterval() {
 	var ticked int64
 	ct, err := NewCallbackTimer(
 		"good timer",
-		func() (error, bool) {
+		func() (bool, error) {
 			atomic.AddInt64(&ticked, 1)
 
-			return nil, true
+			return true, nil
 		},
 		0,
 		func() time.Duration {
@@ -192,10 +193,10 @@ func (t *testCallbackTimer) TestCallbackTimerset() {
 
 		ct, err := NewCallbackTimer(
 			fmt.Sprintf("good timer: %d", i),
-			func() (error, bool) {
+			func() (bool, error) {
 				atomic.AddInt64(ticked, 1)
 
-				return nil, true
+				return true, nil
 			},
 			time.Millisecond*10,
 			nil,

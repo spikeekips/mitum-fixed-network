@@ -2,11 +2,12 @@ package mitum
 
 import (
 	"github.com/spikeekips/mitum/hint"
+	"github.com/spikeekips/mitum/seal"
 	"github.com/spikeekips/mitum/valuehash"
 )
 
 type Ballot interface {
-	Seal
+	seal.Seal
 	Stage() Stage
 	Height() Height
 	Round() Round
@@ -27,7 +28,7 @@ type INITBallot interface {
 	VoteResult() VoteResult
 }
 
-type ProposalBallot interface {
+type Proposal interface {
 	Ballot
 	Seals() []valuehash.Hash // collection of received Seals
 }

@@ -1,4 +1,4 @@
-package mitum
+package util
 
 import (
 	"math"

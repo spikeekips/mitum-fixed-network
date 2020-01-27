@@ -12,7 +12,14 @@ var (
 	DaemonAlreadyStoppedError = errors.NewError("daemon already stopped")
 )
 
-type Daemon struct {
+type Daemon interface {
+	Start() error
+	Stop() error
+	IsStarted() bool
+	IsStopped() bool
+}
+
+type FunctionDaemon struct {
 	sync.RWMutex
 	*logging.Logger
 	fn           func(chan struct{}) error
@@ -21,8 +28,8 @@ type Daemon struct {
 	stoppingWait *sync.WaitGroup
 }
 
-func NewDaemon(fn func(chan struct{}) error) *Daemon {
-	dm := &Daemon{
+func NewFunctionDaemon(fn func(chan struct{}) error) *FunctionDaemon {
+	dm := &FunctionDaemon{
 		Logger:   logging.NewLogger(nil),
 		fn:       fn,
 		stopChan: make(chan struct{}),
@@ -31,7 +38,21 @@ func NewDaemon(fn func(chan struct{}) error) *Daemon {
 	return dm
 }
 
-func (dm *Daemon) Start() error {
+func (dm *FunctionDaemon) IsStarted() bool {
+	dm.RLock()
+	defer dm.RUnlock()
+
+	return dm.stoppingChan != nil
+}
+
+func (dm *FunctionDaemon) IsStopped() bool {
+	dm.RLock()
+	defer dm.RUnlock()
+
+	return dm.stoppingChan == nil
+}
+
+func (dm *FunctionDaemon) Start() error {
 	dm.Log().Debug().Msg("trying to start")
 
 	if dm.IsStarted() {
@@ -61,7 +82,7 @@ func (dm *Daemon) Start() error {
 	return nil
 }
 
-func (dm *Daemon) kill() {
+func (dm *FunctionDaemon) kill() {
 	<-dm.stoppingChan
 	dm.stoppingWait.Done()
 
@@ -71,7 +92,7 @@ func (dm *Daemon) kill() {
 	dm.Unlock()
 }
 
-func (dm *Daemon) Stop() error {
+func (dm *FunctionDaemon) Stop() error {
 	dm.Log().Debug().Msg("trying to stop")
 
 	if dm.IsStopped() {
@@ -89,18 +110,4 @@ func (dm *Daemon) Stop() error {
 
 	dm.Log().Debug().Msg("stopped")
 	return nil
-}
-
-func (dm *Daemon) IsStarted() bool {
-	dm.RLock()
-	defer dm.RUnlock()
-
-	return dm.stoppingChan != nil
-}
-
-func (dm *Daemon) IsStopped() bool {
-	dm.RLock()
-	defer dm.RUnlock()
-
-	return dm.stoppingChan == nil
 }

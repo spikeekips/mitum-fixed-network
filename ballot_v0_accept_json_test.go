@@ -41,12 +41,16 @@ func (t *testBallotV0ACCEPTJSON) TestEncode() {
 
 	ab := ACCEPTBallotV0{
 		BaseBallotV0: BaseBallotV0{
-			height: Height(10),
-			round:  Round(0),
-			node:   NewShortAddress("test-for-accept-ballot"),
+			node: NewShortAddress("test-for-accept-ballot"),
 		},
-		proposal: valuehash.RandomSHA256(),
-		newBlock: valuehash.RandomSHA256(),
+		ACCEPTBallotV0Fact: ACCEPTBallotV0Fact{
+			BaseBallotV0Fact: BaseBallotV0Fact{
+				height: Height(10),
+				round:  Round(0),
+			},
+			proposal: valuehash.RandomSHA256(),
+			newBlock: valuehash.RandomSHA256(),
+		},
 	}
 
 	t.NoError(ab.Sign(t.pk, nil))

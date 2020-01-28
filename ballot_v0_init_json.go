@@ -12,12 +12,12 @@ type INITBallotV0PackerJSON struct {
 	BaseBallotV0PackerJSON
 	PB json.RawMessage `json:"previous_block"`
 	PR Round           `json:"previous_round"`
-	VR interface{}     `json:"voteresult"`
+	VR interface{}     `json:"voteresult"` // TODO
 }
 
 func (ib INITBallotV0) PackJSON(enc *encoder.JSONEncoder) (interface{}, error) {
 	var jpb json.RawMessage
-	if h, err := enc.Marshal(ib.PreviousBlock()); err != nil {
+	if h, err := enc.Marshal(ib.INITBallotV0Fact.previousBlock); err != nil {
 		return nil, err
 	} else {
 		jpb = h
@@ -30,7 +30,7 @@ func (ib INITBallotV0) PackJSON(enc *encoder.JSONEncoder) (interface{}, error) {
 	return INITBallotV0PackerJSON{
 		BaseBallotV0PackerJSON: bb,
 		PB:                     jpb,
-		PR:                     ib.PreviousRound(),
+		PR:                     ib.INITBallotV0Fact.previousRound,
 		VR:                     ib.VoteResult(),
 	}, nil
 }
@@ -41,7 +41,7 @@ func (ib *INITBallotV0) UnpackJSON(b []byte, enc *encoder.JSONEncoder) error {
 		return err
 	}
 
-	eh, ebh, bb, err := UnpackBaseBallotJSON(nib.BaseBallotV0PackerJSON, enc)
+	eh, ebh, bb, bf, err := UnpackBaseBallotJSON(nib.BaseBallotV0PackerJSON, enc)
 	if err != nil {
 		return err
 	}
@@ -58,8 +58,12 @@ func (ib *INITBallotV0) UnpackJSON(b []byte, enc *encoder.JSONEncoder) error {
 
 	ib.BaseBallotV0 = bb
 	ib.h = eh
-	ib.bh = ebh
-	ib.previousBlock = epb
+	ib.factHash = ebh
+	ib.INITBallotV0Fact = INITBallotV0Fact{
+		BaseBallotV0Fact: bf,
+		previousBlock:    epb,
+		previousRound:    nib.PR,
+	}
 
 	return nil
 }

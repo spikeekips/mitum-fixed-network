@@ -19,7 +19,7 @@ type BaseBallotV0PackerJSON struct {
 	HT Height             `json:"height"`
 	RD Round              `json:"round"`
 	N  json.RawMessage    `json:"node"`
-	BH json.RawMessage    `json:"body_hash"`
+	BH json.RawMessage    `json:"fact_hash"`
 }
 
 func PackBaseBallotJSON(ballot Ballot, enc *encoder.JSONEncoder) (BaseBallotV0PackerJSON, error) {
@@ -59,14 +59,14 @@ func PackBaseBallotJSON(ballot Ballot, enc *encoder.JSONEncoder) (BaseBallotV0Pa
 }
 
 func UnpackBaseBallotJSON(nib BaseBallotV0PackerJSON, enc *encoder.JSONEncoder) (
-	valuehash.Hash, valuehash.Hash, BaseBallotV0, error,
+	valuehash.Hash, valuehash.Hash, BaseBallotV0, BaseBallotV0Fact, error,
 ) {
 	// signer
 	var signer key.Publickey
 	if i, err := enc.DecodeByHint(nib.SN); err != nil {
-		return nil, nil, BaseBallotV0{}, err
+		return nil, nil, BaseBallotV0{}, BaseBallotV0Fact{}, err
 	} else if v, ok := i.(key.Publickey); !ok {
-		return nil, nil, BaseBallotV0{}, errors.InvalidTypeError.Wrapf("not key.Publickey; type=%T", i)
+		return nil, nil, BaseBallotV0{}, BaseBallotV0Fact{}, errors.InvalidTypeError.Wrapf("not key.Publickey; type=%T", i)
 	} else {
 		signer = v
 	}
@@ -75,37 +75,42 @@ func UnpackBaseBallotJSON(nib BaseBallotV0PackerJSON, enc *encoder.JSONEncoder) 
 
 	// seal hash
 	if i, err := enc.DecodeByHint(nib.H); err != nil {
-		return nil, nil, BaseBallotV0{}, err
+		return nil, nil, BaseBallotV0{}, BaseBallotV0Fact{}, err
 	} else if v, ok := i.(valuehash.Hash); !ok {
-		return nil, nil, BaseBallotV0{}, errors.InvalidTypeError.Wrapf("not valuehash.Hash; type=%T", i)
+		return nil, nil, BaseBallotV0{}, BaseBallotV0Fact{}, errors.InvalidTypeError.Wrapf("not valuehash.Hash; type=%T", i)
 	} else {
 		eh = v
 	}
 
 	// bodyhash
 	if i, err := enc.DecodeByHint(nib.BH); err != nil {
-		return nil, nil, BaseBallotV0{}, err
+		return nil, nil, BaseBallotV0{}, BaseBallotV0Fact{}, err
 	} else if v, ok := i.(valuehash.Hash); !ok {
-		return nil, nil, BaseBallotV0{}, errors.InvalidTypeError.Wrapf("not valuehash.Hash; type=%T", i)
+		return nil, nil, BaseBallotV0{}, BaseBallotV0Fact{}, errors.InvalidTypeError.Wrapf("not valuehash.Hash; type=%T", i)
 	} else {
 		ebh = v
 	}
 
 	var node Address
 	if i, err := enc.DecodeByHint(nib.N); err != nil {
-		return nil, nil, BaseBallotV0{}, err
+		return nil, nil, BaseBallotV0{}, BaseBallotV0Fact{}, err
 	} else if v, ok := i.(Address); !ok {
-		return nil, nil, BaseBallotV0{}, errors.InvalidTypeError.Wrapf("not Address; type=%T", i)
+		return nil, nil, BaseBallotV0{}, BaseBallotV0Fact{}, errors.InvalidTypeError.Wrapf("not Address; type=%T", i)
 	} else {
 		node = v
 	}
 
-	return eh, ebh, BaseBallotV0{
-		signer:    signer,
-		signature: nib.SG,
-		signedAt:  nib.SA.Time,
-		node:      node,
-		height:    nib.HT,
-		round:     nib.RD,
-	}, nil
+	return eh,
+		ebh,
+		BaseBallotV0{
+			signer:    signer,
+			signature: nib.SG,
+			signedAt:  nib.SA.Time,
+			node:      node,
+		},
+		BaseBallotV0Fact{
+			height: nib.HT,
+			round:  nib.RD,
+		},
+		nil
 }

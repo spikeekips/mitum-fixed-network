@@ -11,16 +11,60 @@ import (
 
 var INITBallotV0Hint hint.Hint = hint.MustHint(INITBallotType, "0.1")
 
-type INITBallotV0 struct {
-	BaseBallotV0
-	h  valuehash.Hash
-	bh valuehash.Hash
-
-	//-x-------------------- hashing parts
+type INITBallotV0Fact struct {
+	BaseBallotV0Fact
 	previousBlock valuehash.Hash
 	previousRound Round
-	voteResult    VoteResult
-	//--------------------x-
+}
+
+func (ibf INITBallotV0Fact) IsValid(b []byte) error {
+	if err := ibf.IsReadyToSign(b); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (ibf INITBallotV0Fact) IsReadyToSign(b []byte) error {
+	if err := isvalid.Check([]isvalid.IsValider{
+		ibf.BaseBallotV0Fact,
+		ibf.previousBlock,
+	}, b); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (ibf INITBallotV0Fact) Hash(b []byte) (valuehash.Hash, error) {
+	// TODO check IsValid?
+	e := util.ConcatSlice([][]byte{ibf.Bytes(), b})
+
+	return valuehash.NewSHA256(e), nil
+}
+
+func (ibf INITBallotV0Fact) Bytes() []byte {
+	return util.ConcatSlice([][]byte{
+		ibf.BaseBallotV0Fact.Bytes(),
+		ibf.previousBlock.Bytes(),
+		ibf.previousRound.Bytes(),
+	})
+}
+
+func (ibf INITBallotV0Fact) PreviousBlock() valuehash.Hash {
+	return ibf.previousBlock
+}
+
+func (ibf INITBallotV0Fact) PreviousRound() Round {
+	return ibf.previousRound
+}
+
+type INITBallotV0 struct {
+	BaseBallotV0
+	INITBallotV0Fact
+	h          valuehash.Hash
+	factHash   valuehash.Hash
+	voteResult VoteResult
 }
 
 func (ib INITBallotV0) Hint() hint.Hint {
@@ -36,23 +80,20 @@ func (ib INITBallotV0) Hash() valuehash.Hash {
 }
 
 func (ib INITBallotV0) BodyHash() valuehash.Hash {
-	return ib.bh
+	return ib.factHash
 }
 
 func (ib INITBallotV0) IsValid(b []byte) error {
-	if err := isvalid.Check([]isvalid.IsValider{ib.BaseBallotV0, ib.previousBlock}, b); err != nil {
+	if err := isvalid.Check([]isvalid.IsValider{
+		ib.BaseBallotV0,
+		ib.INITBallotV0Fact,
+	}, b); err != nil {
 		return err
 	}
 
+	// TODO validate VoteResult
+
 	return nil
-}
-
-func (ib INITBallotV0) PreviousBlock() valuehash.Hash {
-	return ib.previousBlock
-}
-
-func (ib INITBallotV0) PreviousRound() Round {
-	return ib.previousRound
 }
 
 func (ib INITBallotV0) VoteResult() VoteResult {
@@ -66,8 +107,8 @@ func (ib INITBallotV0) GenerateHash(b []byte) (valuehash.Hash, error) {
 
 	e := util.ConcatSlice([][]byte{
 		ib.BaseBallotV0.Bytes(),
-		ib.previousBlock.Bytes(),
-		ib.previousRound.Bytes(),
+		ib.INITBallotV0Fact.Bytes(),
+		ib.factHash.Bytes(),
 		ib.voteResult.Bytes(),
 		b,
 	})
@@ -76,37 +117,41 @@ func (ib INITBallotV0) GenerateHash(b []byte) (valuehash.Hash, error) {
 }
 
 func (ib INITBallotV0) GenerateBodyHash(b []byte) (valuehash.Hash, error) {
-	if err := ib.BaseBallotV0.IsReadyToSign(b); err != nil {
+	if err := ib.INITBallotV0Fact.IsValid(b); err != nil {
 		return nil, err
 	}
 
-	e := util.ConcatSlice([][]byte{
-		ib.BaseBallotV0.BodyBytes(),
-		ib.previousBlock.Bytes(),
-		ib.previousRound.Bytes(),
-		ib.voteResult.Bytes(),
-		b,
-	})
-
-	return valuehash.NewSHA256(e), nil
+	return ib.INITBallotV0Fact.Hash(b)
 }
 
-func (ib *INITBallotV0) Sign(pk key.Privatekey, b []byte) error {
-	var bodyHash valuehash.Hash
-	if h, err := ib.GenerateBodyHash(b); err != nil {
+func (ib INITBallotV0) Fact() Fact {
+	return ib.INITBallotV0Fact
+}
+
+func (ib *INITBallotV0) Sign(pk key.Privatekey, b []byte) error { // nolint
+	// TODO other ballots should use this
+	if err := ib.BaseBallotV0.IsReadyToSign(b); err != nil {
 		return err
-	} else {
-		bodyHash = h
+	}
+	if err := ib.INITBallotV0Fact.IsReadyToSign(b); err != nil {
+		return err
 	}
 
-	sig, err := pk.Sign(util.ConcatSlice([][]byte{bodyHash.Bytes(), b}))
+	var factHash valuehash.Hash
+	if h, err := ib.INITBallotV0Fact.Hash(b); err != nil {
+		return err
+	} else {
+		factHash = h
+	}
+
+	sig, err := pk.Sign(util.ConcatSlice([][]byte{factHash.Bytes(), b}))
 	if err != nil {
 		return err
 	}
 	ib.BaseBallotV0.signer = pk.Publickey()
 	ib.BaseBallotV0.signature = sig
 	ib.BaseBallotV0.signedAt = localtime.Now()
-	ib.bh = bodyHash
+	ib.factHash = factHash
 
 	if h, err := ib.GenerateHash(b); err != nil {
 		return err

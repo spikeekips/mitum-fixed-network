@@ -28,9 +28,13 @@ func (t *testBallotV0Proposal) SetupSuite() {
 func (t *testBallotV0Proposal) TestNew() {
 	ib := ProposalV0{
 		BaseBallotV0: BaseBallotV0{
-			height: Height(10),
-			round:  Round(0),
-			node:   NewShortAddress("test-for-proposal"),
+			node: NewShortAddress("test-for-proposal"),
+		},
+		ProposalV0Fact: ProposalV0Fact{
+			BaseBallotV0Fact: BaseBallotV0Fact{
+				height: Height(10),
+				round:  Round(0),
+			},
 		},
 	}
 
@@ -40,17 +44,45 @@ func (t *testBallotV0Proposal) TestNew() {
 	t.Implements((*Ballot)(nil), ib)
 }
 
+func (t *testBallotV0Proposal) TestFact() {
+	ib := ProposalV0{
+		BaseBallotV0: BaseBallotV0{
+			node: NewShortAddress("test-for-proposal"),
+		},
+		ProposalV0Fact: ProposalV0Fact{
+			BaseBallotV0Fact: BaseBallotV0Fact{
+				height: Height(10),
+				round:  Round(0),
+			},
+		},
+	}
+
+	fact := ib.Fact()
+
+	_ = (interface{})(fact).(Fact)
+	_ = (interface{})(fact).(ProposalV0Fact)
+
+	factHash, err := fact.Hash(nil)
+	t.NoError(err)
+	t.NotNil(factHash)
+	t.NoError(fact.IsValid(nil))
+}
+
 func (t *testBallotV0Proposal) TestGenerateHash() {
 	ib := ProposalV0{
 		BaseBallotV0: BaseBallotV0{
-			height: Height(10),
-			round:  Round(0),
-			node:   NewShortAddress("test-for-proposal"),
+			node: NewShortAddress("test-for-proposal"),
 		},
-		seals: []valuehash.Hash{
-			valuehash.RandomSHA256(),
-			valuehash.RandomSHA256(),
-			valuehash.RandomSHA256(),
+		ProposalV0Fact: ProposalV0Fact{
+			BaseBallotV0Fact: BaseBallotV0Fact{
+				height: Height(10),
+				round:  Round(0),
+			},
+			seals: []valuehash.Hash{
+				valuehash.RandomSHA256(),
+				valuehash.RandomSHA256(),
+				valuehash.RandomSHA256(),
+			},
 		},
 	}
 
@@ -68,14 +100,18 @@ func (t *testBallotV0Proposal) TestGenerateHash() {
 func (t *testBallotV0Proposal) TestSign() {
 	ib := ProposalV0{
 		BaseBallotV0: BaseBallotV0{
-			height: Height(10),
-			round:  Round(0),
-			node:   NewShortAddress("test-for-proposal"),
+			node: NewShortAddress("test-for-proposal"),
 		},
-		seals: []valuehash.Hash{
-			valuehash.RandomSHA256(),
-			valuehash.RandomSHA256(),
-			valuehash.RandomSHA256(),
+		ProposalV0Fact: ProposalV0Fact{
+			BaseBallotV0Fact: BaseBallotV0Fact{
+				height: Height(10),
+				round:  Round(0),
+			},
+			seals: []valuehash.Hash{
+				valuehash.RandomSHA256(),
+				valuehash.RandomSHA256(),
+				valuehash.RandomSHA256(),
+			},
 		},
 	}
 

@@ -130,20 +130,22 @@ func (vrc VoteRecordACCEPT) Key() string {
 
 type VoteRecords struct {
 	sync.RWMutex
-	height Height
-	round  Round
-	stage  Stage
-	votes  *sync.Map // key: node, value: VoteRecord
-	vr     VoteResult
+	height    Height
+	round     Round
+	stage     Stage
+	threshold Threshold
+	votes     *sync.Map // key: node, value: VoteRecord
+	vr        VoteResult
 }
 
-func NewVoteRecords(ballot Ballot) *VoteRecords {
+func NewVoteRecords(ballot Ballot, threshold Threshold) *VoteRecords {
 	return &VoteRecords{
-		height: ballot.Height(),
-		round:  ballot.Round(),
-		stage:  ballot.Stage(),
-		votes:  &sync.Map{},
-		vr:     NewVoteResult(ballot),
+		height:    ballot.Height(),
+		round:     ballot.Round(),
+		stage:     ballot.Stage(),
+		threshold: threshold,
+		votes:     &sync.Map{},
+		vr:        NewVoteResult(ballot, threshold),
 	}
 }
 
@@ -187,7 +189,7 @@ func (vrs *VoteRecords) VoteCount() int {
 	return count
 }
 
-func (vrs *VoteRecords) Vote(ballot Ballot, threshold Threshold) (VoteResult, error) {
+func (vrs *VoteRecords) Vote(ballot Ballot) (VoteResult, error) {
 	vrs.Lock()
 	defer vrs.Unlock()
 
@@ -206,14 +208,14 @@ func (vrs *VoteRecords) Vote(ballot Ballot, threshold Threshold) (VoteResult, er
 
 	if vrs.Result().IsFinished() {
 		return vrs.vr, nil
-	} else if vrs.VoteCount() < int(threshold.Threshold) {
+	} else if vrs.VoteCount() < int(vrs.threshold.Threshold) {
 		return vrs.vr, nil
 	}
 
-	return vrs.CheckMajority(threshold), nil
+	return vrs.CheckMajority(), nil
 }
 
-func (vrs *VoteRecords) CheckMajority(threshold Threshold) VoteResult {
+func (vrs *VoteRecords) CheckMajority() VoteResult {
 	votes := map[Address]VoteRecord{}
 	vrs.votes.Range(func(k, v interface{}) bool {
 		votes[k.(Address)] = v.(VoteRecord)
@@ -221,7 +223,7 @@ func (vrs *VoteRecords) CheckMajority(threshold Threshold) VoteResult {
 		return true
 	})
 
-	result, majority := CheckVoteRecordsMajority(threshold, votes)
+	result, majority := CheckVoteRecordsMajority(vrs.threshold, votes)
 	if result == VoteResultNotYet {
 		return vrs.vr
 	}

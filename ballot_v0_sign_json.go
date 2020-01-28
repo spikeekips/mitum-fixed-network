@@ -16,13 +16,13 @@ type SIGNBallotV0PackerJSON struct {
 
 func (sb SIGNBallotV0) PackJSON(enc *encoder.JSONEncoder) (interface{}, error) {
 	var jpr, jnb json.RawMessage
-	if h, err := enc.Marshal(sb.Proposal()); err != nil {
+	if h, err := enc.Marshal(sb.SIGNBallotV0Fact.proposal); err != nil {
 		return nil, err
 	} else {
 		jpr = h
 	}
 
-	if h, err := enc.Marshal(sb.NewBlock()); err != nil {
+	if h, err := enc.Marshal(sb.SIGNBallotV0Fact.newBlock); err != nil {
 		return nil, err
 	} else {
 		jnb = h
@@ -45,7 +45,7 @@ func (sb *SIGNBallotV0) UnpackJSON(b []byte, enc *encoder.JSONEncoder) error { /
 		return err
 	}
 
-	eh, ebh, bb, err := UnpackBaseBallotJSON(nib.BaseBallotV0PackerJSON, enc)
+	eh, ebh, bb, bf, err := UnpackBaseBallotJSON(nib.BaseBallotV0PackerJSON, enc)
 	if err != nil {
 		return err
 	}
@@ -69,9 +69,12 @@ func (sb *SIGNBallotV0) UnpackJSON(b []byte, enc *encoder.JSONEncoder) error { /
 
 	sb.BaseBallotV0 = bb
 	sb.h = eh
-	sb.bh = ebh
-	sb.proposal = epr
-	sb.newBlock = enb
+	sb.factHash = ebh
+	sb.SIGNBallotV0Fact = SIGNBallotV0Fact{
+		BaseBallotV0Fact: bf,
+		proposal:         epr,
+		newBlock:         enb,
+	}
 
 	return nil
 }

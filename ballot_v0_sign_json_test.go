@@ -41,12 +41,16 @@ func (t *testBallotV0SIGNJSON) TestEncode() {
 
 	ib := SIGNBallotV0{
 		BaseBallotV0: BaseBallotV0{
-			height: Height(10),
-			round:  Round(0),
-			node:   NewShortAddress("test-for-sign-ballot"),
+			node: NewShortAddress("test-for-sign-ballot"),
 		},
-		proposal: valuehash.RandomSHA256(),
-		newBlock: valuehash.RandomSHA256(),
+		SIGNBallotV0Fact: SIGNBallotV0Fact{
+			BaseBallotV0Fact: BaseBallotV0Fact{
+				height: Height(10),
+				round:  Round(0),
+			},
+			proposal: valuehash.RandomSHA256(),
+			newBlock: valuehash.RandomSHA256(),
+		},
 	}
 
 	t.NoError(ib.Sign(t.pk, nil))

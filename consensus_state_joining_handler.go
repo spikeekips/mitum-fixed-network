@@ -9,6 +9,7 @@ import (
 
 	"github.com/spikeekips/mitum/localtime"
 	"github.com/spikeekips/mitum/logging"
+	"github.com/spikeekips/mitum/seal"
 	"github.com/spikeekips/mitum/util"
 )
 
@@ -16,16 +17,17 @@ import (
 ConsensusStateJoiningHandler tries to join network safely. This is the basic
 strategy,
 
-* Keeping Broadcasting INIT ballot
-	- waits the new VR(VoteResult)
-	- if timed out, requests VP(VoteProof)
+* Keeping broadcasting INIT ballot with VoteResult
+
+- waits the incoming INIT ballots, which have VoteResult.
+- if timed out, still broadcasts and wait.
 
 * With VoteResult
 
 - if height of VoteResult is not the next of local block
 	-> moves to sync
 
-- if not,
+- if next of local block,
 	- if INIT VR,
 		-> moves to consensus
 
@@ -38,27 +40,6 @@ strategy,
 
 		- processing may be late before next INIT VR.
 		- with next INIT VR and next Proposal, waits next next INIT VR.
-
-* Requesting VoteProof(INIT)
-
-1. requests VP(VoteProof) to the suffrage members.
-1. if requesting VP is timeed out
-	-> keeps requesting.
-
-* With VoteProof
-
-	VP has,
-		- height
-		- round
-		- previous block hash
-		- previous round
-		- VoteRecord(s) of suffrage members
-
-- if height of VP is not the next of local block
-	-> moves to syncing state.
-
-- if not,
-	-> keeps broadcasting INIT ballot by round of VP
 */
 type ConsensusStateJoiningHandler struct {
 	*logging.Logger
@@ -97,6 +78,7 @@ func (cs ConsensusStateJoiningHandler) State() ConsensusState {
 }
 
 func (cs *ConsensusStateJoiningHandler) Activate() error {
+	// starts to keep broadcasting INIT Ballot
 	if err := cs.startbroadcastingINITBallotTimer(); err != nil {
 		return err
 	}
@@ -130,15 +112,18 @@ func (cs *ConsensusStateJoiningHandler) stopbroadcastingINITBallotTimer() error 
 }
 
 func (cs *ConsensusStateJoiningHandler) broadcastingINITBallot() (bool, error) {
-	// TODO set valid values in INIT ballot
 	ib := INITBallotV0{
 		BaseBallotV0: BaseBallotV0{
-			height: cs.localState.LastBlockHeight() + 1,
-			round:  Round(0),
-			node:   cs.localState.Node().Address(),
+			node: cs.localState.Node().Address(),
 		},
-		previousBlock: cs.localState.LastBlockHash(),
-		previousRound: cs.localState.LastBlockRound(),
+		INITBallotV0Fact: INITBallotV0Fact{
+			BaseBallotV0Fact: BaseBallotV0Fact{
+				height: cs.localState.LastBlockHeight() + 1,
+				round:  Round(0),
+			},
+			previousBlock: cs.localState.LastBlockHash(),
+			previousRound: cs.localState.LastBlockRound(),
+		},
 	}
 
 	// TODO NetworkID must be given.
@@ -156,11 +141,22 @@ func (cs *ConsensusStateJoiningHandler) broadcastingINITBallot() (bool, error) {
 
 		return true
 	})
+
 	return true, nil
 }
 
-func (cs *ConsensusStateJoiningHandler) NewProposal(pr Proposal) error {
-	fmt.Println(">", pr)
+// NewSeal only cares on INIT ballot and it's VoteResult.
+func (cs *ConsensusStateJoiningHandler) NewSeal(sl seal.Seal) error {
+	var ballot INITBallot
+	switch t := sl.(type) {
+	case INITBallot:
+		ballot = t
+	default:
+		return nil
+	}
+
+	fmt.Println(">", ballot)
+
 	return nil
 }
 
@@ -170,5 +166,6 @@ func (cs *ConsensusStateJoiningHandler) NewVoteResult(vr VoteResult) error {
 	}
 
 	fmt.Println(">", vr)
+
 	return nil
 }

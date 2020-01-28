@@ -4,7 +4,6 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/suite"
-	"golang.org/x/xerrors"
 
 	"github.com/spikeekips/mitum/hint"
 	"github.com/spikeekips/mitum/key"
@@ -28,17 +27,13 @@ func (t *testBaseBallotV0) SetupSuite() {
 func (t *testBaseBallotV0) TestIsReadyToSign() {
 	{ // empty signedAt
 		bb := BaseBallotV0{
-			height: Height(10),
-			round:  Round(0),
-			node:   NewShortAddress("test-for-init-ballot"),
+			node: NewShortAddress("test-for-init-ballot"),
 		}
 		t.NoError(bb.IsReadyToSign(nil))
 	}
 
 	{ // empty signer
 		bb := BaseBallotV0{
-			height:   Height(10),
-			round:    Round(0),
 			node:     NewShortAddress("test-for-init-ballot"),
 			signedAt: localtime.Now(),
 		}
@@ -47,8 +42,6 @@ func (t *testBaseBallotV0) TestIsReadyToSign() {
 
 	{ // empty signature
 		bb := BaseBallotV0{
-			height:   Height(10),
-			round:    Round(0),
 			node:     NewShortAddress("test-for-init-ballot"),
 			signedAt: localtime.Now(),
 			signer:   t.pk.Publickey(),
@@ -56,21 +49,9 @@ func (t *testBaseBallotV0) TestIsReadyToSign() {
 		t.NoError(bb.IsReadyToSign(nil))
 	}
 
-	{ // invalid Height
-		bb := BaseBallotV0{
-			height: Height(-10),
-			round:  Round(0),
-			node:   NewShortAddress("test-for-init-ballot"),
-		}
-		err := bb.IsReadyToSign(nil)
-		t.True(xerrors.Is(err, InvalidError))
-	}
-
 	{ // invalid Node
 		bb := BaseBallotV0{
-			height: Height(33),
-			round:  Round(0),
-			node:   NewShortAddress(""), // empty Address
+			node: NewShortAddress(""), // empty Address
 		}
 		err := bb.IsReadyToSign(nil)
 		t.Contains(err.Error(), "empty address")
@@ -80,9 +61,7 @@ func (t *testBaseBallotV0) TestIsReadyToSign() {
 func (t *testBaseBallotV0) TestIsValid() {
 	{ // empty signedAt
 		bb := BaseBallotV0{
-			height: Height(10),
-			round:  Round(0),
-			node:   NewShortAddress("test-for-init-ballot"),
+			node: NewShortAddress("test-for-init-ballot"),
 		}
 		err := bb.IsValid(nil)
 		t.Contains(err.Error(), "empty SignedAt")
@@ -90,8 +69,6 @@ func (t *testBaseBallotV0) TestIsValid() {
 
 	{ // empty signer
 		bb := BaseBallotV0{
-			height:   Height(10),
-			round:    Round(0),
 			node:     NewShortAddress("test-for-init-ballot"),
 			signedAt: localtime.Now(),
 		}
@@ -101,8 +78,6 @@ func (t *testBaseBallotV0) TestIsValid() {
 
 	{ // empty signature
 		bb := BaseBallotV0{
-			height:   Height(10),
-			round:    Round(0),
 			node:     NewShortAddress("test-for-init-ballot"),
 			signedAt: localtime.Now(),
 			signer:   t.pk.Publickey(),
@@ -111,21 +86,9 @@ func (t *testBaseBallotV0) TestIsValid() {
 		t.Contains(err.Error(), "empty Signature")
 	}
 
-	{ // invalid Height
-		bb := BaseBallotV0{
-			height: Height(-10),
-			round:  Round(0),
-			node:   NewShortAddress("test-for-init-ballot"),
-		}
-		err := bb.IsValid(nil)
-		t.True(xerrors.Is(err, InvalidError))
-	}
-
 	{ // invalid Node
 		bb := BaseBallotV0{
-			height: Height(33),
-			round:  Round(0),
-			node:   NewShortAddress(""), // empty Address
+			node: NewShortAddress(""), // empty Address
 		}
 		err := bb.IsValid(nil)
 		t.Contains(err.Error(), "empty address")

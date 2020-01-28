@@ -13,15 +13,15 @@ type ProposalV0PackerJSON struct {
 	SL json.RawMessage `json:"seals"`
 }
 
-func (pb ProposalV0) PackJSON(enc *encoder.JSONEncoder) (interface{}, error) {
+func (pr ProposalV0) PackJSON(enc *encoder.JSONEncoder) (interface{}, error) {
 	var jsl json.RawMessage
-	if h, err := enc.Marshal(pb.Seals()); err != nil {
+	if h, err := enc.Marshal(pr.ProposalV0Fact.Seals()); err != nil {
 		return nil, err
 	} else {
 		jsl = h
 	}
 
-	bb, err := PackBaseBallotJSON(pb, enc)
+	bb, err := PackBaseBallotJSON(pr, enc)
 	if err != nil {
 		return nil, err
 	}
@@ -31,13 +31,13 @@ func (pb ProposalV0) PackJSON(enc *encoder.JSONEncoder) (interface{}, error) {
 	}, nil
 }
 
-func (pb *ProposalV0) UnpackJSON(b []byte, enc *encoder.JSONEncoder) error {
+func (pr *ProposalV0) UnpackJSON(b []byte, enc *encoder.JSONEncoder) error {
 	var npb ProposalV0PackerJSON
 	if err := enc.Unmarshal(b, &npb); err != nil {
 		return err
 	}
 
-	eh, ebh, bb, err := UnpackBaseBallotJSON(npb.BaseBallotV0PackerJSON, enc)
+	eh, ebh, bb, bf, err := UnpackBaseBallotJSON(npb.BaseBallotV0PackerJSON, enc)
 	if err != nil {
 		return err
 	}
@@ -58,10 +58,13 @@ func (pb *ProposalV0) UnpackJSON(b []byte, enc *encoder.JSONEncoder) error {
 		}
 	}
 
-	pb.BaseBallotV0 = bb
-	pb.h = eh
-	pb.bh = ebh
-	pb.seals = esl
+	pr.BaseBallotV0 = bb
+	pr.h = eh
+	pr.factHash = ebh
+	pr.ProposalV0Fact = ProposalV0Fact{
+		BaseBallotV0Fact: bf,
+		seals:            esl,
+	}
 
 	return nil
 }

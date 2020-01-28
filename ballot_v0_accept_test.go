@@ -29,12 +29,16 @@ func (t *testBallotV0ACCEPT) SetupSuite() {
 func (t *testBallotV0ACCEPT) TestNew() {
 	ib := ACCEPTBallotV0{
 		BaseBallotV0: BaseBallotV0{
-			height: Height(10),
-			round:  Round(0),
-			node:   NewShortAddress("test-for-accept-ballot"),
+			node: NewShortAddress("test-for-accept-ballot"),
 		},
-		proposal: valuehash.RandomSHA256(),
-		newBlock: valuehash.RandomSHA256(),
+		ACCEPTBallotV0Fact: ACCEPTBallotV0Fact{
+			BaseBallotV0Fact: BaseBallotV0Fact{
+				height: Height(10),
+				round:  Round(0),
+			},
+			proposal: valuehash.RandomSHA256(),
+			newBlock: valuehash.RandomSHA256(),
+		},
 	}
 
 	t.NotEmpty(ib)
@@ -43,15 +47,47 @@ func (t *testBallotV0ACCEPT) TestNew() {
 	t.Implements((*Ballot)(nil), ib)
 }
 
+func (t *testBallotV0ACCEPT) TestFact() {
+	ib := ACCEPTBallotV0{
+		BaseBallotV0: BaseBallotV0{
+			node: NewShortAddress("test-for-accept-ballot"),
+		},
+		ACCEPTBallotV0Fact: ACCEPTBallotV0Fact{
+			BaseBallotV0Fact: BaseBallotV0Fact{
+				height: Height(10),
+				round:  Round(0),
+			},
+			proposal: valuehash.RandomSHA256(),
+			newBlock: valuehash.RandomSHA256(),
+		},
+	}
+
+	t.NotEmpty(ib)
+
+	fact := ib.Fact()
+
+	_ = (interface{})(fact).(Fact)
+	t.IsType(ACCEPTBallotV0Fact{}, fact)
+
+	factHash, err := fact.Hash(nil)
+	t.NoError(err)
+	t.NotNil(factHash)
+	t.NoError(fact.IsValid(nil))
+}
+
 func (t *testBallotV0ACCEPT) TestGenerateHash() {
 	ib := ACCEPTBallotV0{
 		BaseBallotV0: BaseBallotV0{
-			height: Height(10),
-			round:  Round(0),
-			node:   NewShortAddress("test-for-accept-ballot"),
+			node: NewShortAddress("test-for-accept-ballot"),
 		},
-		proposal: valuehash.RandomSHA256(),
-		newBlock: valuehash.RandomSHA256(),
+		ACCEPTBallotV0Fact: ACCEPTBallotV0Fact{
+			BaseBallotV0Fact: BaseBallotV0Fact{
+				height: Height(10),
+				round:  Round(0),
+			},
+			proposal: valuehash.RandomSHA256(),
+			newBlock: valuehash.RandomSHA256(),
+		},
 	}
 
 	h, err := ib.GenerateBodyHash(nil)
@@ -68,12 +104,16 @@ func (t *testBallotV0ACCEPT) TestGenerateHash() {
 func (t *testBallotV0ACCEPT) TestSign() {
 	ib := ACCEPTBallotV0{
 		BaseBallotV0: BaseBallotV0{
-			height: Height(10),
-			round:  Round(0),
-			node:   NewShortAddress("test-for-accept-ballot"),
+			node: NewShortAddress("test-for-accept-ballot"),
 		},
-		proposal: valuehash.RandomSHA256(),
-		newBlock: valuehash.RandomSHA256(),
+		ACCEPTBallotV0Fact: ACCEPTBallotV0Fact{
+			BaseBallotV0Fact: BaseBallotV0Fact{
+				height: Height(10),
+				round:  Round(0),
+			},
+			proposal: valuehash.RandomSHA256(),
+			newBlock: valuehash.RandomSHA256(),
+		},
 	}
 
 	t.Nil(ib.Hash())
@@ -101,9 +141,7 @@ func (t *testBallotV0ACCEPT) TestSign() {
 func (t *testBallotV0ACCEPT) TestIsValid() {
 	{ // empty signedAt
 		bb := BaseBallotV0{
-			height: Height(10),
-			round:  Round(0),
-			node:   NewShortAddress("test-for-accept-ballot"),
+			node: NewShortAddress("test-for-accept-ballot"),
 		}
 		err := bb.IsValid(nil)
 		t.Contains(err.Error(), "empty SignedAt")
@@ -111,8 +149,6 @@ func (t *testBallotV0ACCEPT) TestIsValid() {
 
 	{ // empty signer
 		bb := BaseBallotV0{
-			height:   Height(10),
-			round:    Round(0),
 			node:     NewShortAddress("test-for-accept-ballot"),
 			signedAt: localtime.Now(),
 		}
@@ -122,8 +158,6 @@ func (t *testBallotV0ACCEPT) TestIsValid() {
 
 	{ // empty signature
 		bb := BaseBallotV0{
-			height:   Height(10),
-			round:    Round(0),
 			node:     NewShortAddress("test-for-accept-ballot"),
 			signedAt: localtime.Now(),
 			signer:   t.pk.Publickey(),

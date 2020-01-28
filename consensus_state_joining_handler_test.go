@@ -38,6 +38,27 @@ func (t *testConsensusStateJoiningHandler) SetupSuite() {
 	t.NoError(t.localState.Nodes().Add(t.remoteNode))
 }
 
+func (t *testConsensusStateJoiningHandler) newINITBallot(localState *LocalState, round Round) INITBallotV0 {
+	ib := INITBallotV0{
+		BaseBallotV0: BaseBallotV0{
+			node: localState.Node().Address(),
+		},
+		INITBallotV0Fact: INITBallotV0Fact{
+			BaseBallotV0Fact: BaseBallotV0Fact{
+				height: localState.LastBlockHeight() + 1,
+				round:  round,
+			},
+			previousBlock: localState.LastBlockHash(),
+			previousRound: localState.LastBlockRound(),
+		},
+	}
+
+	err := ib.Sign(localState.Node().Privatekey(), nil)
+	t.NoError(err)
+
+	return ib
+}
+
 func (t *testConsensusStateJoiningHandler) TestNew() {
 	cs, err := NewConsensusStateJoiningHandler(t.localState)
 	t.NoError(err)
@@ -84,6 +105,29 @@ func (t *testConsensusStateJoiningHandler) TestKeepBroadcastingINITBallot() {
 	t.True(localState.Node().Address().Equal(ballot.Node()))
 	t.True(localState.LastBlockHash().Equal(ballot.PreviousBlock()))
 	t.Equal(localState.LastBlockRound(), ballot.PreviousRound())
+}
+
+func (t *testConsensusStateJoiningHandler) TestCheckINITBallot() {
+	policy := NewLocalPolicy()
+	localState := NewLocalState(t.localNode, policy).
+		SetLastBlockHeight(Height(33)).
+		SetLastBlockRound(Round(3)).
+		SetLastBlockHash(valuehash.RandomSHA256())
+
+	remoteState := NewLocalState(t.remoteNode, localState.Policy()).
+		SetLastBlockHeight(localState.LastBlockHeight()).
+		SetLastBlockRound(localState.LastBlockRound() + 1). // different round
+		SetLastBlockHash(localState.LastBlockHash())
+
+	cs, err := NewConsensusStateJoiningHandler(t.localState)
+	t.NoError(err)
+	t.NotNil(cs)
+
+	ib := t.newINITBallot(remoteState, Round(0))
+
+	// set custom VoteResult
+
+	t.NoError(cs.NewSeal(ib))
 }
 
 func TestConsensusStateJoiningHandler(t *testing.T) {

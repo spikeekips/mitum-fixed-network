@@ -187,7 +187,12 @@ func (ls *LocalState) Nodes() *NodesState {
 }
 
 func (ls *LocalState) LastBlockHash() valuehash.Hash {
-	return ls.lastBlockHash.Value().(valuehash.Hash)
+	v := ls.lastBlockHash.Value()
+	if v == nil {
+		return nil
+	}
+
+	return v.(valuehash.Hash)
 }
 
 func (ls *LocalState) SetLastBlockHash(h valuehash.Hash) *LocalState {

@@ -17,13 +17,13 @@ type ACCEPTBallotV0PackerJSON struct {
 
 func (ab ACCEPTBallotV0) PackJSON(enc *encoder.JSONEncoder) (interface{}, error) {
 	var jpr, jnb json.RawMessage
-	if h, err := enc.Marshal(ab.Proposal()); err != nil {
+	if h, err := enc.Marshal(ab.ACCEPTBallotV0Fact.proposal); err != nil {
 		return nil, err
 	} else {
 		jpr = h
 	}
 
-	if h, err := enc.Marshal(ab.NewBlock()); err != nil {
+	if h, err := enc.Marshal(ab.ACCEPTBallotV0Fact.newBlock); err != nil {
 		return nil, err
 	} else {
 		jnb = h
@@ -47,7 +47,7 @@ func (ab *ACCEPTBallotV0) UnpackJSON(b []byte, enc *encoder.JSONEncoder) error {
 		return err
 	}
 
-	eh, ebh, bb, err := UnpackBaseBallotJSON(nab.BaseBallotV0PackerJSON, enc)
+	eh, ebh, bb, bf, err := UnpackBaseBallotJSON(nab.BaseBallotV0PackerJSON, enc)
 	if err != nil {
 		return err
 	}
@@ -71,9 +71,12 @@ func (ab *ACCEPTBallotV0) UnpackJSON(b []byte, enc *encoder.JSONEncoder) error {
 
 	ab.BaseBallotV0 = bb
 	ab.h = eh
-	ab.bh = ebh
-	ab.proposal = epr
-	ab.newBlock = enb
+	ab.factHash = ebh
+	ab.ACCEPTBallotV0Fact = ACCEPTBallotV0Fact{
+		BaseBallotV0Fact: bf,
+		proposal:         epr,
+		newBlock:         enb,
+	}
 
 	return nil
 }

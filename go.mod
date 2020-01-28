@@ -13,6 +13,7 @@ require (
 	github.com/modern-go/reflect2 v1.0.1 // indirect
 	github.com/pkg/errors v0.9.0 // indirect
 	github.com/rs/zerolog v1.17.2
+	github.com/sanity-io/litter v1.2.0
 	github.com/satori/go.uuid v1.2.0
 	github.com/stellar/go v0.0.0-20200106181920-54d2e97fc842
 	github.com/stellar/go-xdr v0.0.0-20191118232123-3aa35463cbdb // indirect

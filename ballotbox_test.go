@@ -38,12 +38,16 @@ func (t *testBallotbox) TestNew() {
 func (t *testBallotbox) newINITBallot(height Height, round Round, node Address) Ballot {
 	return INITBallotV0{
 		BaseBallotV0: BaseBallotV0{
-			height: height,
-			round:  round,
-			node:   node,
+			node: node,
 		},
-		previousBlock: valuehash.RandomSHA256(),
-		previousRound: Round(0),
+		INITBallotV0Fact: INITBallotV0Fact{
+			BaseBallotV0Fact: BaseBallotV0Fact{
+				height: height,
+				round:  round,
+			},
+			previousBlock: valuehash.RandomSHA256(),
+			previousRound: Round(0),
+		},
 	}
 }
 
@@ -169,12 +173,16 @@ func (t *testBallotbox) TestINITVoteResultMajority() {
 func (t *testBallotbox) newSIGNBallot(height Height, round Round, node Address) Ballot {
 	return SIGNBallotV0{
 		BaseBallotV0: BaseBallotV0{
-			height: height,
-			round:  round,
-			node:   node,
+			node: node,
 		},
-		proposal: valuehash.RandomSHA256(),
-		newBlock: valuehash.RandomSHA256(),
+		SIGNBallotV0Fact: SIGNBallotV0Fact{
+			BaseBallotV0Fact: BaseBallotV0Fact{
+				height: height,
+				round:  round,
+			},
+			proposal: valuehash.RandomSHA256(),
+			newBlock: valuehash.RandomSHA256(),
+		},
 	}
 }
 
@@ -253,12 +261,16 @@ func (t *testBallotbox) TestSIGNVoteResultMajority() {
 func (t *testBallotbox) newACCEPTBallot(height Height, round Round, node Address) Ballot {
 	return ACCEPTBallotV0{
 		BaseBallotV0: BaseBallotV0{
-			height: height,
-			round:  round,
-			node:   node,
+			node: node,
 		},
-		proposal: valuehash.RandomSHA256(),
-		newBlock: valuehash.RandomSHA256(),
+		ACCEPTBallotV0Fact: ACCEPTBallotV0Fact{
+			BaseBallotV0Fact: BaseBallotV0Fact{
+				height: height,
+				round:  round,
+			},
+			proposal: valuehash.RandomSHA256(),
+			newBlock: valuehash.RandomSHA256(),
+		},
 	}
 }
 

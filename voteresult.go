@@ -45,21 +45,23 @@ func (vrt VoteResultType) MarshalText() ([]byte, error) {
 }
 
 type VoteResult struct {
-	height   Height
-	round    Round
-	stage    Stage
-	result   VoteResultType
-	majority VoteRecord
-	votes    map[Address]VoteRecord // key: node Address, value: VoteRecord
+	height    Height
+	round     Round
+	stage     Stage
+	result    VoteResultType
+	majority  VoteRecord
+	votes     map[Address]VoteRecord // key: node Address, value: VoteRecord
+	threshold Threshold
 }
 
-func NewVoteResult(ballot Ballot) VoteResult {
+func NewVoteResult(ballot Ballot, threshold Threshold) VoteResult {
 	return VoteResult{
-		height: ballot.Height(),
-		round:  ballot.Round(),
-		stage:  ballot.Stage(),
-		result: VoteResultNotYet,
-		votes:  nil,
+		height:    ballot.Height(),
+		round:     ballot.Round(),
+		stage:     ballot.Stage(),
+		result:    VoteResultNotYet,
+		votes:     nil,
+		threshold: threshold,
 	}
 }
 

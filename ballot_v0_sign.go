@@ -11,15 +11,60 @@ import (
 
 var SIGNBallotV0Hint hint.Hint = hint.MustHint(INITBallotType, "0.1")
 
-type SIGNBallotV0 struct {
-	BaseBallotV0
-	h  valuehash.Hash
-	bh valuehash.Hash
-
-	//-x-------------------- hashing parts
+type SIGNBallotV0Fact struct {
+	BaseBallotV0Fact
 	proposal valuehash.Hash
 	newBlock valuehash.Hash
-	//--------------------x-
+}
+
+func (sbf SIGNBallotV0Fact) IsValid(b []byte) error {
+	if err := sbf.IsReadyToSign(b); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (sbf SIGNBallotV0Fact) IsReadyToSign(b []byte) error {
+	if err := isvalid.Check([]isvalid.IsValider{
+		sbf.BaseBallotV0Fact,
+		sbf.proposal,
+		sbf.newBlock,
+	}, b); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (sbf SIGNBallotV0Fact) Hash(b []byte) (valuehash.Hash, error) {
+	// TODO check IsValid?
+	e := util.ConcatSlice([][]byte{sbf.Bytes(), b})
+
+	return valuehash.NewSHA256(e), nil
+}
+
+func (sbf SIGNBallotV0Fact) Bytes() []byte {
+	return util.ConcatSlice([][]byte{
+		sbf.BaseBallotV0Fact.Bytes(),
+		sbf.proposal.Bytes(),
+		sbf.newBlock.Bytes(),
+	})
+}
+
+func (sbf SIGNBallotV0Fact) Proposal() valuehash.Hash {
+	return sbf.proposal
+}
+
+func (sbf SIGNBallotV0Fact) NewBlock() valuehash.Hash {
+	return sbf.newBlock
+}
+
+type SIGNBallotV0 struct {
+	BaseBallotV0
+	SIGNBallotV0Fact
+	h        valuehash.Hash
+	factHash valuehash.Hash
 }
 
 func (sb SIGNBallotV0) Hint() hint.Hint {
@@ -35,23 +80,18 @@ func (sb SIGNBallotV0) Hash() valuehash.Hash {
 }
 
 func (sb SIGNBallotV0) BodyHash() valuehash.Hash {
-	return sb.bh
+	return sb.factHash
 }
 
 func (sb SIGNBallotV0) IsValid(b []byte) error {
-	if err := isvalid.Check([]isvalid.IsValider{sb.BaseBallotV0, sb.proposal, sb.newBlock}, b); err != nil {
+	if err := isvalid.Check([]isvalid.IsValider{
+		sb.BaseBallotV0,
+		sb.SIGNBallotV0Fact,
+	}, b); err != nil {
 		return err
 	}
 
 	return nil
-}
-
-func (sb SIGNBallotV0) Proposal() valuehash.Hash {
-	return sb.proposal
-}
-
-func (sb SIGNBallotV0) NewBlock() valuehash.Hash {
-	return sb.newBlock
 }
 
 func (sb SIGNBallotV0) GenerateHash(b []byte) (valuehash.Hash, error) {
@@ -61,8 +101,8 @@ func (sb SIGNBallotV0) GenerateHash(b []byte) (valuehash.Hash, error) {
 
 	e := util.ConcatSlice([][]byte{
 		sb.BaseBallotV0.Bytes(),
-		sb.proposal.Bytes(),
-		sb.newBlock.Bytes(),
+		sb.SIGNBallotV0Fact.Bytes(),
+		sb.factHash.Bytes(),
 		b,
 	})
 
@@ -70,36 +110,40 @@ func (sb SIGNBallotV0) GenerateHash(b []byte) (valuehash.Hash, error) {
 }
 
 func (sb SIGNBallotV0) GenerateBodyHash(b []byte) (valuehash.Hash, error) {
-	if err := sb.BaseBallotV0.IsReadyToSign(b); err != nil {
+	if err := sb.SIGNBallotV0Fact.IsValid(b); err != nil {
 		return nil, err
 	}
 
-	e := util.ConcatSlice([][]byte{
-		sb.BaseBallotV0.BodyBytes(),
-		sb.proposal.Bytes(),
-		sb.newBlock.Bytes(),
-		b,
-	})
-
-	return valuehash.NewSHA256(e), nil
+	return sb.SIGNBallotV0Fact.Hash(b)
 }
 
-func (sb *SIGNBallotV0) Sign(pk key.Privatekey, b []byte) error {
-	var bodyHash valuehash.Hash
-	if h, err := sb.GenerateBodyHash(b); err != nil {
+func (sb SIGNBallotV0) Fact() Fact {
+	return sb.SIGNBallotV0Fact
+}
+
+func (sb *SIGNBallotV0) Sign(pk key.Privatekey, b []byte) error { // nolint
+	if err := sb.BaseBallotV0.IsReadyToSign(b); err != nil {
 		return err
-	} else {
-		bodyHash = h
+	}
+	if err := sb.SIGNBallotV0Fact.IsReadyToSign(b); err != nil {
+		return err
 	}
 
-	sig, err := pk.Sign(util.ConcatSlice([][]byte{bodyHash.Bytes(), b}))
+	var factHash valuehash.Hash
+	if h, err := sb.SIGNBallotV0Fact.Hash(b); err != nil {
+		return err
+	} else {
+		factHash = h
+	}
+
+	sig, err := pk.Sign(util.ConcatSlice([][]byte{factHash.Bytes(), b}))
 	if err != nil {
 		return err
 	}
 	sb.BaseBallotV0.signer = pk.Publickey()
 	sb.BaseBallotV0.signature = sig
 	sb.BaseBallotV0.signedAt = localtime.Now()
-	sb.bh = bodyHash
+	sb.factHash = factHash
 
 	if h, err := sb.GenerateHash(b); err != nil {
 		return err

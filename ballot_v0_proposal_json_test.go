@@ -41,14 +41,18 @@ func (t *testBallotProposalV0JSON) TestEncode() {
 
 	ib := ProposalV0{
 		BaseBallotV0: BaseBallotV0{
-			height: Height(10),
-			round:  Round(0),
-			node:   NewShortAddress("test-for-proposal"),
+			node: NewShortAddress("test-for-proposal"),
 		},
-		seals: []valuehash.Hash{
-			valuehash.RandomSHA256(),
-			valuehash.RandomSHA256(),
-			valuehash.RandomSHA256(),
+		ProposalV0Fact: ProposalV0Fact{
+			BaseBallotV0Fact: BaseBallotV0Fact{
+				height: Height(10),
+				round:  Round(0),
+			},
+			seals: []valuehash.Hash{
+				valuehash.RandomSHA256(),
+				valuehash.RandomSHA256(),
+				valuehash.RandomSHA256(),
+			},
 		},
 	}
 

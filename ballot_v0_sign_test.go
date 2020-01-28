@@ -29,12 +29,16 @@ func (t *testBallotV0SIGN) SetupSuite() {
 func (t *testBallotV0SIGN) TestNew() {
 	ib := SIGNBallotV0{
 		BaseBallotV0: BaseBallotV0{
-			height: Height(10),
-			round:  Round(0),
-			node:   NewShortAddress("test-for-sign-ballot"),
+			node: NewShortAddress("test-for-sign-ballot"),
 		},
-		proposal: valuehash.RandomSHA256(),
-		newBlock: valuehash.RandomSHA256(),
+		SIGNBallotV0Fact: SIGNBallotV0Fact{
+			BaseBallotV0Fact: BaseBallotV0Fact{
+				height: Height(10),
+				round:  Round(0),
+			},
+			proposal: valuehash.RandomSHA256(),
+			newBlock: valuehash.RandomSHA256(),
+		},
 	}
 
 	t.NotEmpty(ib)
@@ -46,12 +50,16 @@ func (t *testBallotV0SIGN) TestNew() {
 func (t *testBallotV0SIGN) TestGenerateHash() {
 	ib := SIGNBallotV0{
 		BaseBallotV0: BaseBallotV0{
-			height: Height(10),
-			round:  Round(0),
-			node:   NewShortAddress("test-for-sign-ballot"),
+			node: NewShortAddress("test-for-sign-ballot"),
 		},
-		proposal: valuehash.RandomSHA256(),
-		newBlock: valuehash.RandomSHA256(),
+		SIGNBallotV0Fact: SIGNBallotV0Fact{
+			BaseBallotV0Fact: BaseBallotV0Fact{
+				height: Height(10),
+				round:  Round(0),
+			},
+			proposal: valuehash.RandomSHA256(),
+			newBlock: valuehash.RandomSHA256(),
+		},
 	}
 
 	h, err := ib.GenerateBodyHash(nil)
@@ -68,12 +76,16 @@ func (t *testBallotV0SIGN) TestGenerateHash() {
 func (t *testBallotV0SIGN) TestSign() {
 	ib := SIGNBallotV0{
 		BaseBallotV0: BaseBallotV0{
-			height: Height(10),
-			round:  Round(0),
-			node:   NewShortAddress("test-for-sign-ballot"),
+			node: NewShortAddress("test-for-sign-ballot"),
 		},
-		proposal: valuehash.RandomSHA256(),
-		newBlock: valuehash.RandomSHA256(),
+		SIGNBallotV0Fact: SIGNBallotV0Fact{
+			BaseBallotV0Fact: BaseBallotV0Fact{
+				height: Height(10),
+				round:  Round(0),
+			},
+			proposal: valuehash.RandomSHA256(),
+			newBlock: valuehash.RandomSHA256(),
+		},
 	}
 
 	t.Nil(ib.Hash())
@@ -101,9 +113,7 @@ func (t *testBallotV0SIGN) TestSign() {
 func (t *testBallotV0SIGN) TestIsValid() {
 	{ // empty signedAt
 		bb := BaseBallotV0{
-			height: Height(10),
-			round:  Round(0),
-			node:   NewShortAddress("test-for-sign-ballot"),
+			node: NewShortAddress("test-for-sign-ballot"),
 		}
 		err := bb.IsValid(nil)
 		t.Contains(err.Error(), "empty SignedAt")
@@ -111,8 +121,6 @@ func (t *testBallotV0SIGN) TestIsValid() {
 
 	{ // empty signer
 		bb := BaseBallotV0{
-			height:   Height(10),
-			round:    Round(0),
 			node:     NewShortAddress("test-for-sign-ballot"),
 			signedAt: localtime.Now(),
 		}
@@ -122,8 +130,6 @@ func (t *testBallotV0SIGN) TestIsValid() {
 
 	{ // empty signature
 		bb := BaseBallotV0{
-			height:   Height(10),
-			round:    Round(0),
 			node:     NewShortAddress("test-for-sign-ballot"),
 			signedAt: localtime.Now(),
 			signer:   t.pk.Publickey(),

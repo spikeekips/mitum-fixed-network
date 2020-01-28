@@ -5,18 +5,21 @@ import (
 
 	"github.com/rs/zerolog"
 	"github.com/spikeekips/mitum/logging"
+	"github.com/spikeekips/mitum/seal"
 	"golang.org/x/xerrors"
 )
 
 type ConsensusStates struct {
 	sync.RWMutex
 	*logging.Logger
-	ballotbox *Ballotbox
-	states    map[ConsensusState]ConsensusStateHandler
-	activated ConsensusStateHandler
+	localState *LocalState
+	ballotbox  *Ballotbox
+	states     map[ConsensusState]ConsensusStateHandler
+	activated  ConsensusStateHandler
 }
 
 func NewConsensusStates(
+	localState *LocalState,
 	ballotbox *Ballotbox,
 	joining *ConsensusStateJoiningHandler,
 	consensus ConsensusStateHandler,
@@ -27,7 +30,8 @@ func NewConsensusStates(
 		Logger: logging.NewLogger(func(c zerolog.Context) zerolog.Context {
 			return c.Str("module", "consensus-states")
 		}),
-		ballotbox: ballotbox,
+		localState: localState,
+		ballotbox:  ballotbox,
 		states: map[ConsensusState]ConsensusStateHandler{
 			ConsensusStateJoining:   joining,
 			ConsensusStateConsensus: consensus,
@@ -74,24 +78,43 @@ func (css *ConsensusStates) Activate(cs ConsensusState) error {
 	return nil
 }
 
-func (css *ConsensusStates) newProposal(pr Proposal) error {
-	return css.Activated().NewProposal(pr)
-}
-
 func (css *ConsensusStates) newVoteResult(vr VoteResult) error {
 	return css.Activated().NewVoteResult(vr)
 }
 
-func (css *ConsensusStates) NewBallot(ballot Ballot) error {
+// NewSeal receives Seal and hand it over to handler;
+// - Seal is considered it should be already checked IsValid().
+// - if Seal is signed by LocalNode, it will be ignored.
+func (css *ConsensusStates) NewSeal(sl seal.Seal) error {
 	if css.Activated() == nil {
 		return xerrors.Errorf("no activated handler")
 	}
 
-	if ballot.Stage() == StageProposal {
-		return css.newProposal(ballot.(Proposal))
+	log := css.Log().With().
+		Str("handler", css.Activated().State().String()).
+		Str("seal", sl.Hash().String()).
+		Str("seal_hint", sl.Hint().Verbose()).
+		Logger()
+
+	if sl.Signer().Equal(css.localState.Node().Publickey()) {
+		err := xerrors.Errorf("Seal is from LocalNode")
+		log.Error().Err(err).Send()
+
+		return err
 	}
 
-	vr, err := css.ballotbox.Vote(ballot)
+	go func() {
+		if err := css.Activated().NewSeal(sl); err != nil {
+			log.Error().
+				Err(err).Msg("activated handler can not receive Seal")
+		}
+	}()
+
+	if _, isBallot := sl.(Ballot); !isBallot {
+		return nil
+	}
+
+	vr, err := css.ballotbox.Vote(sl.(Ballot))
 	if err != nil {
 		return err
 	} else if !vr.IsFinished() {

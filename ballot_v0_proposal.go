@@ -2,6 +2,7 @@ package mitum
 
 import (
 	"github.com/spikeekips/mitum/hint"
+	"github.com/spikeekips/mitum/isvalid"
 	"github.com/spikeekips/mitum/key"
 	"github.com/spikeekips/mitum/localtime"
 	"github.com/spikeekips/mitum/util"
@@ -10,113 +11,141 @@ import (
 
 var ProposalV0Hint hint.Hint = hint.MustHint(ProposalBallotType, "0.1")
 
-type ProposalV0 struct {
-	BaseBallotV0
-	h  valuehash.Hash
-	bh valuehash.Hash
-
-	//-x-------------------- hashing parts
+type ProposalV0Fact struct {
+	BaseBallotV0Fact
 	seals []valuehash.Hash
-	//--------------------x-
 }
 
-func (pb ProposalV0) Hint() hint.Hint {
-	return ProposalV0Hint
-}
-
-func (pb ProposalV0) Stage() Stage {
-	return StageProposal
-}
-
-func (pb ProposalV0) Hash() valuehash.Hash {
-	return pb.h
-}
-
-func (pb ProposalV0) BodyHash() valuehash.Hash {
-	return pb.bh
-}
-
-func (pb ProposalV0) IsValid(b []byte) error {
-	if err := pb.BaseBallotV0.IsValid(b); err != nil {
+func (prf ProposalV0Fact) IsValid(b []byte) error {
+	if err := prf.IsReadyToSign(b); err != nil {
 		return err
-	}
-
-	for _, h := range pb.seals {
-		if err := h.IsValid(b); err != nil {
-			return err
-		}
 	}
 
 	return nil
 }
 
-func (pb ProposalV0) Seals() []valuehash.Hash {
-	return pb.seals
-}
-
-func (pb ProposalV0) GenerateHash(b []byte) (valuehash.Hash, error) {
-	if err := pb.IsValid(b); err != nil {
-		return nil, err
+func (prf ProposalV0Fact) IsReadyToSign(b []byte) error {
+	if err := prf.BaseBallotV0Fact.IsValid(b); err != nil {
+		return err
 	}
 
-	e := util.ConcatSlice([][]byte{
-		pb.BaseBallotV0.Bytes(),
+	return nil
+}
+
+func (prf ProposalV0Fact) Hash(b []byte) (valuehash.Hash, error) {
+	// TODO check IsValid?
+	e := util.ConcatSlice([][]byte{prf.Bytes(), b})
+
+	return valuehash.NewSHA256(e), nil
+}
+
+func (prf ProposalV0Fact) Bytes() []byte {
+	return util.ConcatSlice([][]byte{
+		prf.BaseBallotV0Fact.Bytes(),
 		func() []byte {
 			var hl [][]byte
-			for _, h := range pb.seals {
+			for _, h := range prf.seals {
 				hl = append(hl, h.Bytes())
 			}
 
 			return util.ConcatSlice(hl)
 		}(),
+	})
+}
+
+func (prf ProposalV0Fact) Seals() []valuehash.Hash {
+	return prf.seals
+}
+
+type ProposalV0 struct {
+	BaseBallotV0
+	ProposalV0Fact
+	h        valuehash.Hash
+	factHash valuehash.Hash
+}
+
+func (pr ProposalV0) Hint() hint.Hint {
+	return ProposalV0Hint
+}
+
+func (pr ProposalV0) Stage() Stage {
+	return StageProposal
+}
+
+func (pr ProposalV0) Hash() valuehash.Hash {
+	return pr.h
+}
+
+func (pr ProposalV0) BodyHash() valuehash.Hash {
+	return pr.factHash
+}
+
+func (pr ProposalV0) IsValid(b []byte) error {
+	if err := isvalid.Check([]isvalid.IsValider{
+		pr.BaseBallotV0,
+		pr.ProposalV0Fact,
+	}, b); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (pr ProposalV0) GenerateHash(b []byte) (valuehash.Hash, error) {
+	if err := pr.IsValid(b); err != nil {
+		return nil, err
+	}
+
+	e := util.ConcatSlice([][]byte{
+		pr.BaseBallotV0.Bytes(),
+		pr.ProposalV0Fact.Bytes(),
+		pr.factHash.Bytes(),
 		b,
 	})
 
 	return valuehash.NewSHA256(e), nil
 }
 
-func (pb ProposalV0) GenerateBodyHash(b []byte) (valuehash.Hash, error) {
-	if err := pb.BaseBallotV0.IsReadyToSign(b); err != nil {
+func (pr ProposalV0) GenerateBodyHash(b []byte) (valuehash.Hash, error) {
+	if err := pr.ProposalV0Fact.IsValid(b); err != nil {
 		return nil, err
 	}
 
-	e := util.ConcatSlice([][]byte{
-		pb.BaseBallotV0.BodyBytes(),
-		func() []byte {
-			var hl [][]byte
-			for _, h := range pb.seals {
-				hl = append(hl, h.Bytes())
-			}
-
-			return util.ConcatSlice(hl)
-		}(),
-		b,
-	})
-
-	return valuehash.NewSHA256(e), nil
+	return pr.ProposalV0Fact.Hash(b)
 }
 
-func (pb *ProposalV0) Sign(pk key.Privatekey, b []byte) error {
-	var bodyHash valuehash.Hash
-	if h, err := pb.GenerateBodyHash(b); err != nil {
+func (pr ProposalV0) Fact() Fact {
+	return pr.ProposalV0Fact
+}
+
+func (pr *ProposalV0) Sign(pk key.Privatekey, b []byte) error { // nolint
+	if err := pr.BaseBallotV0.IsReadyToSign(b); err != nil {
+		return err
+	}
+	if err := pr.ProposalV0Fact.IsReadyToSign(b); err != nil {
+		return err
+	}
+
+	var factHash valuehash.Hash
+	if h, err := pr.ProposalV0Fact.Hash(b); err != nil {
 		return err
 	} else {
-		bodyHash = h
+		factHash = h
 	}
 
-	sig, err := pk.Sign(util.ConcatSlice([][]byte{bodyHash.Bytes(), b}))
+	sig, err := pk.Sign(util.ConcatSlice([][]byte{factHash.Bytes(), b}))
 	if err != nil {
 		return err
 	}
-	pb.BaseBallotV0.signer = pk.Publickey()
-	pb.BaseBallotV0.signature = sig
-	pb.BaseBallotV0.signedAt = localtime.Now()
-	pb.bh = bodyHash
+	pr.BaseBallotV0.signer = pk.Publickey()
+	pr.BaseBallotV0.signature = sig
+	pr.BaseBallotV0.signedAt = localtime.Now()
+	pr.factHash = factHash
 
-	if h, err := pb.GenerateHash(b); err != nil {
+	if h, err := pr.GenerateHash(b); err != nil {
 		return err
 	} else {
-		pb.h = h
+		pr.h = h
 	}
 
 	return nil

@@ -13,13 +13,15 @@ const sha512Size int = 64
 
 var emptySHA256 [sha256Size]byte
 var emptySHA512 [sha512Size]byte
+var nilSHA256 [sha256Size]byte
+var nilSHA512 [sha512Size]byte
 
 var sha256Hint = hint.MustHint(hint.Type{0x02, 0x01}, "0.1")
 var sha512Hint = hint.MustHint(hint.Type{0x02, 0x00}, "0.1")
 
 func init() {
-	emptySHA256 = sha3.Sum256(nil)
-	emptySHA512 = sha3.Sum512(nil)
+	nilSHA256 = sha3.Sum256(nil)
+	nilSHA512 = sha3.Sum512(nil)
 }
 
 type SHA512 struct {
@@ -39,7 +41,7 @@ func (s512 SHA512) Hint() hint.Hint {
 }
 
 func (s512 SHA512) IsValid([]byte) error {
-	if emptySHA512 == s512.b {
+	if emptySHA512 == s512.b || nilSHA512 == s512.b {
 		return EmptyHashError
 	}
 
@@ -82,7 +84,7 @@ func (s256 SHA256) Hint() hint.Hint {
 }
 
 func (s256 SHA256) IsValid([]byte) error {
-	if emptySHA256 == s256.b {
+	if emptySHA256 == s256.b || nilSHA256 == s256.b {
 		return EmptyHashError
 	}
 

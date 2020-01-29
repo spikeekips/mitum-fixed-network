@@ -78,7 +78,7 @@ func (css *ConsensusStates) Activate(cs ConsensusState) error {
 	return nil
 }
 
-func (css *ConsensusStates) newVoteResult(vr *VoteResult) error {
+func (css *ConsensusStates) newVoteResult(vr VoteResult) error {
 	return css.Activated().NewVoteResult(vr)
 }
 

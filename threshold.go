@@ -33,12 +33,12 @@ func (thr Threshold) IsValid([]byte) error {
 		return xerrors.Errorf("0 total")
 	}
 	if thr.Percent < 1 {
-		return xerrors.Errorf("0 percent: %v", thr.Percent)
+		return InvalidError.Wrapf("0 percent: %v", thr.Percent)
 	} else if thr.Percent > 100 {
-		return xerrors.Errorf("over 100 percent: %v", thr.Percent)
+		return InvalidError.Wrapf("over 100 percent: %v", thr.Percent)
 	}
 	if thr.Threshold > thr.Total {
-		return xerrors.Errorf("Threshold over Total: Threshold=%v Total=%v", thr.Threshold, thr.Total)
+		return InvalidError.Wrapf("Threshold over Total: Threshold=%v Total=%v", thr.Threshold, thr.Total)
 	}
 
 	return nil

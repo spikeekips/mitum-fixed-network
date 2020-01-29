@@ -9,5 +9,5 @@ type ConsensusStateHandler interface {
 	// NewSeal receives Seal.
 	NewSeal(seal.Seal) error
 	// NewVoteResult receives the finished VoteResult.
-	NewVoteResult(*VoteResult) error
+	NewVoteResult(VoteResult) error
 }

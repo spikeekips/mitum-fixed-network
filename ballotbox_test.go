@@ -109,7 +109,10 @@ func (t *testBallotbox) TestINITVoteResultNotYet() {
 	t.Equal(ba.Round(), vr.Round())
 	t.Equal(ba.Stage(), vr.Stage())
 
-	ib, found := vr.ballots[ba.Node()]
+	vrs := bb.loadVoteRecords(ba, false)
+	t.NotNil(vrs)
+
+	ib, found := vrs.ballots[ba.Node()]
 	t.True(found)
 
 	iba := ib.(INITBallotV0)
@@ -205,7 +208,10 @@ func (t *testBallotbox) TestSIGNVoteResultNotYet() {
 	t.Equal(ba.Round(), vr.Round())
 	t.Equal(ba.Stage(), vr.Stage())
 
-	ib, found := vr.ballots[ba.Node()]
+	vrs := bb.loadVoteRecords(ba, false)
+	t.NotNil(vrs)
+
+	ib, found := vrs.ballots[ba.Node()]
 	t.True(found)
 
 	iba := ib.(SIGNBallotV0)
@@ -293,7 +299,10 @@ func (t *testBallotbox) TestACCEPTVoteResultNotYet() {
 	t.Equal(ba.Round(), vr.Round())
 	t.Equal(ba.Stage(), vr.Stage())
 
-	ib, found := vr.ballots[ba.Node()]
+	vrs := bb.loadVoteRecords(ba, false)
+	t.NotNil(vrs)
+
+	ib, found := vrs.ballots[ba.Node()]
 	t.True(found)
 
 	iba := ib.(ACCEPTBallotV0)

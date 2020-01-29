@@ -160,7 +160,7 @@ func (cs *ConsensusStateJoiningHandler) NewSeal(sl seal.Seal) error {
 	return nil
 }
 
-func (cs *ConsensusStateJoiningHandler) NewVoteResult(vr *VoteResult) error {
+func (cs *ConsensusStateJoiningHandler) NewVoteResult(vr VoteResult) error {
 	if err := cs.stopbroadcastingINITBallotTimer(); err != nil {
 		return err
 	}

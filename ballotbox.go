@@ -27,30 +27,31 @@ func NewBallotbox(threshold Threshold) *Ballotbox {
 	}
 }
 
-// Vote receives Ballot and returns VoteResult, which has VoteResult.Result()
-// and VoteResult.Majority().
-func (bb *Ballotbox) Vote(ballot Ballot) (*VoteResult, error) {
-	vr := bb.loadVoteResult(ballot, true)
+// Vote receives Ballot and returns VoteRecords, which has VoteRecords.Result()
+// and VoteRecords.Majority().
+func (bb *Ballotbox) Vote(ballot Ballot) (VoteResult, error) {
+	vrs := bb.loadVoteRecords(ballot, true)
 
-	// TODO if VoteResult is finished, clean up the vrs;
+	// TODO if VoteRecords is finished, clean up the vrs;
 	// - not next height or round
-	_, _ = vr.Vote(ballot)
-
-	return vr, nil
+	return vrs.Vote(ballot), nil
 }
 
-func (bb *Ballotbox) loadVoteResult(ballot Ballot, ifNotCreate bool) *VoteResult {
+func (bb *Ballotbox) loadVoteRecords(ballot Ballot, ifNotCreate bool) *VoteRecords {
+	bb.Lock()
+	defer bb.Unlock()
+
 	key := bb.vrsKey(ballot)
 
-	var vr *VoteResult
+	var vrs *VoteRecords
 	if i, found := bb.vrs.Load(key); found {
-		vr = i.(*VoteResult)
+		vrs = i.(*VoteRecords)
 	} else if ifNotCreate {
-		vr = NewVoteResult(ballot, bb.threshold)
-		bb.vrs.Store(key, vr)
+		vrs = NewVoteRecords(ballot, bb.threshold)
+		bb.vrs.Store(key, vrs)
 	}
 
-	return vr
+	return vrs
 }
 
 func (bb *Ballotbox) vrsKey(ballot Ballot) string {

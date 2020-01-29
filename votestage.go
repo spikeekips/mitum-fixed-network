@@ -1,13 +1,5 @@
 package mitum
 
-import (
-	"github.com/spikeekips/mitum/errors"
-)
-
-var (
-	InvalidStageError = errors.NewError("invalid stage")
-)
-
 type Stage uint8
 
 const (
@@ -39,7 +31,7 @@ func (st Stage) IsValid([]byte) error {
 		return nil
 	}
 
-	return InvalidStageError.Wrapf("stage=%d", st)
+	return InvalidError.Wrapf("stage=%d", st)
 }
 
 func (st Stage) MarshalText() ([]byte, error) {

@@ -47,7 +47,7 @@ func (ab *ACCEPTBallotV0) UnpackJSON(b []byte, enc *encoder.JSONEncoder) error {
 		return err
 	}
 
-	eh, ebh, bb, bf, err := UnpackBaseBallotJSON(nab.BaseBallotV0PackerJSON, enc)
+	eh, ebh, efh, efsg, bb, bf, err := UnpackBaseBallotJSON(nab.BaseBallotV0PackerJSON, enc)
 	if err != nil {
 		return err
 	}
@@ -71,7 +71,9 @@ func (ab *ACCEPTBallotV0) UnpackJSON(b []byte, enc *encoder.JSONEncoder) error {
 
 	ab.BaseBallotV0 = bb
 	ab.h = eh
-	ab.factHash = ebh
+	ab.bodyHash = ebh
+	ab.factHash = efh
+	ab.factSignature = efsg
 	ab.ACCEPTBallotV0Fact = ACCEPTBallotV0Fact{
 		BaseBallotV0Fact: bf,
 		proposal:         epr,

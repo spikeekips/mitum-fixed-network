@@ -61,6 +61,8 @@ func (t *testBallotV0INIT) TestFact() {
 			previousRound: Round(0),
 		},
 	}
+	t.Implements((*FactSeal)(nil), ib)
+
 	fact := ib.Fact()
 
 	_ = (interface{})(fact).(Fact)
@@ -69,6 +71,17 @@ func (t *testBallotV0INIT) TestFact() {
 	t.NoError(err)
 	t.NotNil(factHash)
 	t.NoError(fact.IsValid(nil))
+
+	// before signing, FactHash() and FactSignature() is nil
+	t.Nil(ib.FactHash())
+	t.Nil(ib.FactSignature())
+
+	t.NoError(ib.Sign(t.pk, nil))
+
+	t.NotNil(ib.FactHash())
+	t.NotNil(ib.FactSignature())
+
+	t.NoError(ib.Signer().Verify(ib.FactHash().Bytes(), ib.FactSignature()))
 }
 
 func (t *testBallotV0INIT) TestGenerateHash() {

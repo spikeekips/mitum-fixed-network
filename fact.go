@@ -2,6 +2,7 @@ package mitum
 
 import (
 	"github.com/spikeekips/mitum/isvalid"
+	"github.com/spikeekips/mitum/key"
 	"github.com/spikeekips/mitum/seal"
 	"github.com/spikeekips/mitum/valuehash"
 )
@@ -15,4 +16,6 @@ type Fact interface {
 type FactSeal interface {
 	seal.Seal
 	Fact() Fact
+	FactHash() valuehash.Hash
+	FactSignature() key.Signature
 }

@@ -37,7 +37,7 @@ func (pr *ProposalV0) UnpackJSON(b []byte, enc *encoder.JSONEncoder) error {
 		return err
 	}
 
-	eh, ebh, bb, bf, err := UnpackBaseBallotJSON(npb.BaseBallotV0PackerJSON, enc)
+	eh, ebh, efh, efsg, bb, bf, err := UnpackBaseBallotJSON(npb.BaseBallotV0PackerJSON, enc)
 	if err != nil {
 		return err
 	}
@@ -60,7 +60,9 @@ func (pr *ProposalV0) UnpackJSON(b []byte, enc *encoder.JSONEncoder) error {
 
 	pr.BaseBallotV0 = bb
 	pr.h = eh
-	pr.factHash = ebh
+	pr.bodyHash = ebh
+	pr.factHash = efh
+	pr.factSignature = efsg
 	pr.ProposalV0Fact = ProposalV0Fact{
 		BaseBallotV0Fact: bf,
 		seals:            esl,

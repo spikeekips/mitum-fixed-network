@@ -47,6 +47,43 @@ func (t *testBallotV0SIGN) TestNew() {
 	t.Implements((*Ballot)(nil), ib)
 }
 
+func (t *testBallotV0SIGN) TestFact() {
+	ib := SIGNBallotV0{
+		BaseBallotV0: BaseBallotV0{
+			node: NewShortAddress("test-for-sign-ballot"),
+		},
+		SIGNBallotV0Fact: SIGNBallotV0Fact{
+			BaseBallotV0Fact: BaseBallotV0Fact{
+				height: Height(10),
+				round:  Round(0),
+			},
+			proposal: valuehash.RandomSHA256(),
+			newBlock: valuehash.RandomSHA256(),
+		},
+	}
+	t.Implements((*FactSeal)(nil), ib)
+
+	fact := ib.Fact()
+
+	_ = (interface{})(fact).(Fact)
+
+	factHash, err := fact.Hash(nil)
+	t.NoError(err)
+	t.NotNil(factHash)
+	t.NoError(fact.IsValid(nil))
+
+	// before signing, FactHash() and FactSignature() is nil
+	t.Nil(ib.FactHash())
+	t.Nil(ib.FactSignature())
+
+	t.NoError(ib.Sign(t.pk, nil))
+
+	t.NotNil(ib.FactHash())
+	t.NotNil(ib.FactSignature())
+
+	t.NoError(ib.Signer().Verify(ib.FactHash().Bytes(), ib.FactSignature()))
+}
+
 func (t *testBallotV0SIGN) TestGenerateHash() {
 	ib := SIGNBallotV0{
 		BaseBallotV0: BaseBallotV0{

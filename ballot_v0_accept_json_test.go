@@ -63,6 +63,8 @@ func (t *testBallotV0ACCEPTJSON) TestEncode() {
 
 	nib, ok := ht.(ACCEPTBallotV0)
 	t.True(ok)
+	t.NoError(nib.IsValid(nil))
+
 	t.Equal(ab.Node(), nib.Node())
 	t.Equal(ab.Signature(), nib.Signature())
 	t.Equal(ab.Height(), nib.Height())
@@ -73,6 +75,8 @@ func (t *testBallotV0ACCEPTJSON) TestEncode() {
 	t.True(ab.BodyHash().Equal(nib.BodyHash()))
 	t.True(ab.NewBlock().Equal(nib.NewBlock()))
 	t.True(ab.Proposal().Equal(nib.Proposal()))
+	t.Equal(ab.FactSignature(), nib.FactSignature())
+	t.True(ab.FactHash().Equal(nib.FactHash()))
 }
 
 func TestBallotV0ACCEPTJSON(t *testing.T) {

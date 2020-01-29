@@ -2,8 +2,11 @@ package mitum
 
 import (
 	"encoding/json"
+	"sort"
+	"sync"
 
 	"github.com/spikeekips/mitum/errors"
+	"github.com/spikeekips/mitum/valuehash"
 )
 
 var (
@@ -45,66 +48,153 @@ func (vrt VoteResultType) MarshalText() ([]byte, error) {
 }
 
 type VoteResult struct {
+	sync.RWMutex
 	height    Height
 	round     Round
 	stage     Stage
-	result    VoteResultType
-	majority  VoteRecord
-	votes     map[Address]VoteRecord // key: node Address, value: VoteRecord
+	facts     map[valuehash.Hash]Fact
+	votes     map[Address]valuehash.Hash // key: node Address, value: fact hash
+	factCount map[valuehash.Hash]uint
 	threshold Threshold
+	result    VoteResultType
+	majority  Fact
+	ballots   map[Address]Ballot
 }
 
-func NewVoteResult(ballot Ballot, threshold Threshold) VoteResult {
-	return VoteResult{
+func NewVoteResult(ballot Ballot, threshold Threshold) *VoteResult {
+	return &VoteResult{
 		height:    ballot.Height(),
 		round:     ballot.Round(),
 		stage:     ballot.Stage(),
-		result:    VoteResultNotYet,
-		votes:     nil,
+		facts:     map[valuehash.Hash]Fact{},
+		votes:     map[Address]valuehash.Hash{},
+		factCount: map[valuehash.Hash]uint{},
 		threshold: threshold,
+		result:    VoteResultNotYet,
+		ballots:   map[Address]Ballot{},
 	}
 }
 
-func (vr VoteResult) String() string {
+func (vr *VoteResult) String() string {
 	b, _ := json.Marshal(vr)
 
 	return string(b)
 }
 
-func (vr VoteResult) Height() Height {
+func (vr *VoteResult) Height() Height {
 	return vr.height
 }
 
-func (vr VoteResult) Round() Round {
+func (vr *VoteResult) Round() Round {
 	return vr.round
 }
 
-func (vr VoteResult) Stage() Stage {
+func (vr *VoteResult) Stage() Stage {
 	return vr.stage
 }
 
-func (vr VoteResult) Bytes() []byte {
+func (vr *VoteResult) Bytes() []byte {
 	return nil
 }
 
-func (vr VoteResult) Result() VoteResultType {
+func (vr *VoteResult) Result() VoteResultType {
+	vr.RLock()
+	defer vr.RUnlock()
+
 	return vr.result
 }
 
-func (vr VoteResult) Majority() VoteRecord {
+func (vr *VoteResult) Majority() Fact {
+	vr.RLock()
+	defer vr.RUnlock()
+
 	return vr.majority
 }
 
-func (vr VoteResult) IsVoted(node Address) bool {
+func (vr *VoteResult) IsVoted(node Address) bool {
+	vr.RLock()
+	defer vr.RUnlock()
+
 	_, found := vr.votes[node]
 
 	return found
 }
 
-func (vr VoteResult) VoteCount() int {
+func (vr *VoteResult) VoteCount() int {
+	vr.RLock()
+	defer vr.RUnlock()
+
 	return len(vr.votes)
 }
 
-func (vr VoteResult) IsFinished() bool {
+func (vr *VoteResult) IsFinished() bool {
+	vr.RLock()
+	defer vr.RUnlock()
+
+	return vr.isFinished()
+}
+
+func (vr *VoteResult) isFinished() bool {
 	return vr.result != VoteResultNotYet
+}
+
+func (vr *VoteResult) addBallot(ballot Ballot) bool {
+	if _, found := vr.votes[ballot.Node()]; found {
+		return true
+	}
+
+	vr.ballots[ballot.Node()] = ballot
+
+	factHash := ballot.FactHash()
+	vr.votes[ballot.Node()] = factHash
+
+	if _, found := vr.facts[factHash]; !found {
+		vr.facts[factHash] = ballot.Fact()
+	}
+	vr.factCount[factHash]++
+
+	return false
+}
+
+func (vr *VoteResult) Vote(ballot Ballot) (VoteResultType, Fact) {
+	vr.Lock()
+	defer vr.Unlock()
+
+	if vr.addBallot(ballot) {
+		return vr.result, nil
+	}
+
+	if vr.isFinished() {
+		return vr.result, nil
+	} else if len(vr.votes) < int(vr.threshold.Threshold) {
+		return vr.result, nil
+	}
+
+	byCount := map[uint]Fact{}
+	var set []uint
+	for factHash, c := range vr.factCount {
+		set = append(set, c)
+		byCount[c] = vr.facts[factHash]
+	}
+
+	if len(set) > 0 {
+		sort.Slice(set, func(i, j int) bool { return set[i] > set[j] })
+	}
+
+	var fact Fact
+	var result VoteResultType
+	switch index := FindMajority(vr.threshold.Total, vr.threshold.Threshold, set...); index {
+	case -1:
+		result = VoteResultNotYet
+	case -2:
+		result = VoteResultDraw
+	default:
+		result = VoteResultMajority
+		fact = byCount[set[index]]
+	}
+
+	vr.result = result
+	vr.majority = fact
+
+	return vr.result, vr.majority
 }

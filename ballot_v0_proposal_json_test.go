@@ -66,6 +66,7 @@ func (t *testBallotProposalV0JSON) TestEncode() {
 
 	nib, ok := ht.(ProposalV0)
 	t.True(ok)
+	t.NoError(nib.IsValid(nil))
 	t.Equal(ib.Node(), nib.Node())
 	t.Equal(ib.Signature(), nib.Signature())
 	t.Equal(ib.Height(), nib.Height())
@@ -74,6 +75,8 @@ func (t *testBallotProposalV0JSON) TestEncode() {
 	t.True(ib.Signer().Equal(nib.Signer()))
 	t.True(ib.Hash().Equal(nib.Hash()))
 	t.True(ib.BodyHash().Equal(nib.BodyHash()))
+	t.Equal(ib.FactSignature(), nib.FactSignature())
+	t.True(ib.FactHash().Equal(nib.FactHash()))
 
 	for i, s := range ib.Seals() {
 		t.True(s.Equal(nib.Seals()[i]))

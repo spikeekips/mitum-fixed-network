@@ -2,7 +2,6 @@ package mitum
 
 import (
 	"github.com/spikeekips/mitum/hint"
-	"github.com/spikeekips/mitum/seal"
 	"github.com/spikeekips/mitum/valuehash"
 )
 
@@ -14,8 +13,7 @@ var (
 )
 
 type Ballot interface {
-	seal.Seal
-	Fact() Fact
+	FactSeal
 	Stage() Stage
 	Height() Height
 	Round() Round

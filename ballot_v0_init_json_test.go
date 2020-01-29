@@ -63,6 +63,7 @@ func (t *testBallotV0INITJSON) TestEncode() {
 
 	nib, ok := ht.(INITBallotV0)
 	t.True(ok)
+	t.NoError(nib.IsValid(nil))
 	t.Equal(ib.Node(), nib.Node())
 	t.Equal(ib.Signature(), nib.Signature())
 	t.Equal(ib.Height(), nib.Height())
@@ -73,6 +74,8 @@ func (t *testBallotV0INITJSON) TestEncode() {
 	t.True(ib.Hash().Equal(nib.Hash()))
 	t.True(ib.BodyHash().Equal(nib.BodyHash()))
 	t.True(ib.PreviousBlock().Equal(nib.PreviousBlock()))
+	t.Equal(ib.FactSignature(), nib.FactSignature())
+	t.True(ib.FactHash().Equal(nib.FactHash()))
 }
 
 func TestBallotV0INITJSON(t *testing.T) {

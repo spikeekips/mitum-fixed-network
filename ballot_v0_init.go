@@ -18,14 +18,6 @@ type INITBallotV0Fact struct {
 }
 
 func (ibf INITBallotV0Fact) IsValid(b []byte) error {
-	if err := ibf.IsReadyToSign(b); err != nil {
-		return err
-	}
-
-	return nil
-}
-
-func (ibf INITBallotV0Fact) IsReadyToSign(b []byte) error {
 	if err := isvalid.Check([]isvalid.IsValider{
 		ibf.BaseBallotV0Fact,
 		ibf.previousBlock,
@@ -62,9 +54,11 @@ func (ibf INITBallotV0Fact) PreviousRound() Round {
 type INITBallotV0 struct {
 	BaseBallotV0
 	INITBallotV0Fact
-	h          valuehash.Hash
-	factHash   valuehash.Hash
-	voteResult VoteResult
+	h             valuehash.Hash
+	bodyHash      valuehash.Hash
+	voteResult    VoteResult
+	factHash      valuehash.Hash
+	factSignature key.Signature
 }
 
 func (ib INITBallotV0) Hint() hint.Hint {
@@ -80,7 +74,7 @@ func (ib INITBallotV0) Hash() valuehash.Hash {
 }
 
 func (ib INITBallotV0) BodyHash() valuehash.Hash {
-	return ib.factHash
+	return ib.bodyHash
 }
 
 func (ib INITBallotV0) IsValid(b []byte) error {
@@ -108,7 +102,7 @@ func (ib INITBallotV0) GenerateHash(b []byte) (valuehash.Hash, error) {
 	e := util.ConcatSlice([][]byte{
 		ib.BaseBallotV0.Bytes(),
 		ib.INITBallotV0Fact.Bytes(),
-		ib.factHash.Bytes(),
+		ib.bodyHash.Bytes(),
 		ib.voteResult.Bytes(),
 		b,
 	})
@@ -121,22 +115,49 @@ func (ib INITBallotV0) GenerateBodyHash(b []byte) (valuehash.Hash, error) {
 		return nil, err
 	}
 
-	return ib.INITBallotV0Fact.Hash(b)
+	e := util.ConcatSlice([][]byte{
+		ib.INITBallotV0Fact.Bytes(),
+		ib.voteResult.Bytes(),
+		b,
+	})
+
+	return valuehash.NewSHA256(e), nil
 }
 
 func (ib INITBallotV0) Fact() Fact {
 	return ib.INITBallotV0Fact
 }
 
+func (ib INITBallotV0) FactHash() valuehash.Hash {
+	return ib.factHash
+}
+
+func (ib INITBallotV0) FactSignature() key.Signature {
+	return ib.factSignature
+}
+
 func (ib *INITBallotV0) Sign(pk key.Privatekey, b []byte) error { // nolint
-	// TODO other ballots should use this
 	if err := ib.BaseBallotV0.IsReadyToSign(b); err != nil {
 		return err
 	}
-	if err := ib.INITBallotV0Fact.IsReadyToSign(b); err != nil {
+	if err := ib.INITBallotV0Fact.IsValid(b); err != nil {
 		return err
 	}
 
+	// body signature
+	var bodyHash valuehash.Hash
+	if h, err := ib.GenerateBodyHash(b); err != nil {
+		return err
+	} else {
+		bodyHash = h
+	}
+
+	sig, err := pk.Sign(util.ConcatSlice([][]byte{bodyHash.Bytes(), b}))
+	if err != nil {
+		return err
+	}
+
+	// fact signature
 	var factHash valuehash.Hash
 	if h, err := ib.INITBallotV0Fact.Hash(b); err != nil {
 		return err
@@ -144,14 +165,17 @@ func (ib *INITBallotV0) Sign(pk key.Privatekey, b []byte) error { // nolint
 		factHash = h
 	}
 
-	sig, err := pk.Sign(util.ConcatSlice([][]byte{factHash.Bytes(), b}))
+	factSig, err := pk.Sign(util.ConcatSlice([][]byte{factHash.Bytes(), b}))
 	if err != nil {
 		return err
 	}
+
 	ib.BaseBallotV0.signer = pk.Publickey()
 	ib.BaseBallotV0.signature = sig
 	ib.BaseBallotV0.signedAt = localtime.Now()
+	ib.bodyHash = bodyHash
 	ib.factHash = factHash
+	ib.factSignature = factSig
 
 	if h, err := ib.GenerateHash(b); err != nil {
 		return err

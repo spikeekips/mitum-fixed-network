@@ -14,7 +14,7 @@ import (
 type testBallotbox struct {
 	suite.Suite
 
-	pk key.BTCPrivatekey
+	pk key.Privatekey
 }
 
 func (t *testBallotbox) SetupSuite() {
@@ -23,6 +23,8 @@ func (t *testBallotbox) SetupSuite() {
 	_ = hint.RegisterType(SIGNBallotType, "sign-ballot")
 	_ = hint.RegisterType(ACCEPTBallotType, "accept-ballot")
 	_ = hint.RegisterType((valuehash.SHA256{}).Hint().Type(), "sha256")
+
+	t.pk, _ = key.NewBTCPrivatekey()
 }
 
 func (t *testBallotbox) TestNew() {
@@ -35,8 +37,8 @@ func (t *testBallotbox) TestNew() {
 	t.NotEmpty(vr)
 }
 
-func (t *testBallotbox) newINITBallot(height Height, round Round, node Address) Ballot {
-	return INITBallotV0{
+func (t *testBallotbox) newINITBallot(height Height, round Round, node Address) INITBallotV0 {
+	ib := INITBallotV0{
 		BaseBallotV0: BaseBallotV0{
 			node: node,
 		},
@@ -49,6 +51,9 @@ func (t *testBallotbox) newINITBallot(height Height, round Round, node Address) 
 			previousRound: Round(0),
 		},
 	}
+	t.NoError(ib.Sign(t.pk, nil))
+
+	return ib
 }
 
 func (t *testBallotbox) TestVoteRace() {
@@ -104,12 +109,13 @@ func (t *testBallotbox) TestINITVoteResultNotYet() {
 	t.Equal(ba.Round(), vr.Round())
 	t.Equal(ba.Stage(), vr.Stage())
 
-	vrc, found := bb.VoteRecord(ba)
+	ib, found := vr.ballots[ba.Node()]
 	t.True(found)
-	ivrc := vrc.(VoteRecordINIT)
-	t.True(ba.(INITBallot).PreviousBlock().Equal(ivrc.previousBlock))
-	t.Equal(ba.Node(), ivrc.node)
-	t.Equal(ba.(INITBallot).PreviousRound(), ivrc.previousRound)
+
+	iba := ib.(INITBallotV0)
+	t.True(ba.PreviousBlock().Equal(iba.PreviousBlock()))
+	t.Equal(ba.Node(), iba.Node())
+	t.Equal(ba.PreviousRound(), iba.PreviousRound())
 }
 
 func (t *testBallotbox) TestINITVoteResultDraw() {
@@ -149,13 +155,10 @@ func (t *testBallotbox) TestINITVoteResultMajority() {
 	ba1 := t.newINITBallot(Height(10), Round(0), NewShortAddress("node1"))
 
 	{ // set same previousBlock and previousRound
-		ib0 := ba0.(INITBallotV0)
-		ib1 := ba1.(INITBallotV0)
-		ib1.previousBlock = ib0.previousBlock
-		ib1.previousRound = ib0.previousRound
+		ba1.previousBlock = ba0.previousBlock
+		ba1.previousRound = ba0.previousRound
 
-		ba0 = ib0
-		ba1 = ib1
+		t.NoError(ba1.Sign(t.pk, nil))
 	}
 
 	{
@@ -170,8 +173,8 @@ func (t *testBallotbox) TestINITVoteResultMajority() {
 	}
 }
 
-func (t *testBallotbox) newSIGNBallot(height Height, round Round, node Address) Ballot {
-	return SIGNBallotV0{
+func (t *testBallotbox) newSIGNBallot(height Height, round Round, node Address) SIGNBallotV0 {
+	ib := SIGNBallotV0{
 		BaseBallotV0: BaseBallotV0{
 			node: node,
 		},
@@ -184,6 +187,9 @@ func (t *testBallotbox) newSIGNBallot(height Height, round Round, node Address) 
 			newBlock: valuehash.RandomSHA256(),
 		},
 	}
+	t.NoError(ib.Sign(t.pk, nil))
+
+	return ib
 }
 
 func (t *testBallotbox) TestSIGNVoteResultNotYet() {
@@ -199,13 +205,13 @@ func (t *testBallotbox) TestSIGNVoteResultNotYet() {
 	t.Equal(ba.Round(), vr.Round())
 	t.Equal(ba.Stage(), vr.Stage())
 
-	vrc, found := bb.VoteRecord(ba)
+	ib, found := vr.ballots[ba.Node()]
 	t.True(found)
 
-	ivrc := vrc.(VoteRecordSIGN)
-	t.True(ba.(SIGNBallot).Proposal().Equal(ivrc.proposal))
-	t.Equal(ba.Node(), ivrc.node)
-	t.Equal(ba.(SIGNBallot).NewBlock(), ivrc.newBlock)
+	iba := ib.(SIGNBallotV0)
+	t.True(ba.Proposal().Equal(iba.Proposal()))
+	t.Equal(ba.Node(), iba.Node())
+	t.Equal(ba.NewBlock(), iba.NewBlock())
 }
 
 func (t *testBallotbox) TestSIGNVoteResultDraw() {
@@ -237,13 +243,10 @@ func (t *testBallotbox) TestSIGNVoteResultMajority() {
 	ba1 := t.newSIGNBallot(Height(10), Round(0), NewShortAddress("node1"))
 
 	{ // set same previousBlock and previousRound
-		ib0 := ba0.(SIGNBallotV0)
-		ib1 := ba1.(SIGNBallotV0)
-		ib1.proposal = ib0.proposal
-		ib1.newBlock = ib0.newBlock
+		ba1.proposal = ba0.proposal
+		ba1.newBlock = ba0.newBlock
 
-		ba0 = ib0
-		ba1 = ib1
+		t.NoError(ba1.Sign(t.pk, nil))
 	}
 
 	{
@@ -258,8 +261,8 @@ func (t *testBallotbox) TestSIGNVoteResultMajority() {
 	}
 }
 
-func (t *testBallotbox) newACCEPTBallot(height Height, round Round, node Address) Ballot {
-	return ACCEPTBallotV0{
+func (t *testBallotbox) newACCEPTBallot(height Height, round Round, node Address) ACCEPTBallotV0 {
+	ib := ACCEPTBallotV0{
 		BaseBallotV0: BaseBallotV0{
 			node: node,
 		},
@@ -272,6 +275,9 @@ func (t *testBallotbox) newACCEPTBallot(height Height, round Round, node Address
 			newBlock: valuehash.RandomSHA256(),
 		},
 	}
+	t.NoError(ib.Sign(t.pk, nil))
+
+	return ib
 }
 
 func (t *testBallotbox) TestACCEPTVoteResultNotYet() {
@@ -287,12 +293,13 @@ func (t *testBallotbox) TestACCEPTVoteResultNotYet() {
 	t.Equal(ba.Round(), vr.Round())
 	t.Equal(ba.Stage(), vr.Stage())
 
-	vrc, found := bb.VoteRecord(ba)
+	ib, found := vr.ballots[ba.Node()]
 	t.True(found)
-	ivrc := vrc.(VoteRecordACCEPT)
-	t.True(ba.(ACCEPTBallot).Proposal().Equal(ivrc.proposal))
-	t.Equal(ba.Node(), ivrc.node)
-	t.Equal(ba.(ACCEPTBallot).NewBlock(), ivrc.newBlock)
+
+	iba := ib.(ACCEPTBallotV0)
+	t.True(ba.Proposal().Equal(iba.Proposal()))
+	t.Equal(ba.Node(), iba.Node())
+	t.Equal(ba.NewBlock(), iba.NewBlock())
 }
 
 func (t *testBallotbox) TestACCEPTVoteResultDraw() {
@@ -324,13 +331,10 @@ func (t *testBallotbox) TestACCEPTVoteResultMajority() {
 	ba1 := t.newACCEPTBallot(Height(10), Round(0), NewShortAddress("node1"))
 
 	{ // set same previousBlock and previousRound
-		ib0 := ba0.(ACCEPTBallotV0)
-		ib1 := ba1.(ACCEPTBallotV0)
-		ib1.proposal = ib0.proposal
-		ib1.newBlock = ib0.newBlock
+		ba1.proposal = ba0.proposal
+		ba1.newBlock = ba0.newBlock
 
-		ba0 = ib0
-		ba1 = ib1
+		t.NoError(ba1.Sign(t.pk, nil))
 	}
 
 	{
@@ -342,30 +346,6 @@ func (t *testBallotbox) TestACCEPTVoteResultMajority() {
 		vr, err := bb.Vote(ba1)
 		t.NoError(err)
 		t.Equal(VoteResultMajority, vr.Result())
-	}
-}
-
-func (t *testBallotbox) TestGetVoteRecord() {
-	threshold, _ := NewThreshold(3, 66)
-	bb := NewBallotbox(threshold)
-
-	{
-		ba := t.newACCEPTBallot(Height(10), Round(0), NewShortAddress("node0"))
-		_, err := bb.Vote(ba)
-		t.NoError(err)
-
-		_, isVoted := bb.VoteRecord(ba)
-		t.True(isVoted)
-		_, found := bb.vrs.Load(bb.vrsKey(ba))
-		t.True(found)
-	}
-
-	{
-		ba := t.newACCEPTBallot(Height(11), Round(0), NewShortAddress("node1"))
-		_, isVoted := bb.VoteRecord(ba)
-		t.False(isVoted)
-		_, found := bb.vrs.Load(bb.vrsKey(ba))
-		t.False(found)
 	}
 }
 

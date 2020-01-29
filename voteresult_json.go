@@ -9,11 +9,11 @@ func (vr VoteResult) MarshalJSON() ([]byte, error) {
 	}
 
 	return json.Marshal(map[string]interface{}{
-		"height":   vr.height,
-		"round":    vr.round,
-		"stage":    vr.stage,
-		"result":   vr.result,
-		"majority": vr.majority,
-		"votes":    votes,
+		"height": vr.height,
+		"round":  vr.round,
+		"stage":  vr.stage,
+		"result": vr.result,
+		//"majority": vr.majority,
+		//"votes":    votes,
 	})
 }

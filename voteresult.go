@@ -2,6 +2,7 @@ package mitum
 
 import (
 	"github.com/spikeekips/mitum/isvalid"
+	"github.com/spikeekips/mitum/key"
 	"github.com/spikeekips/mitum/valuehash"
 	"golang.org/x/xerrors"
 )
@@ -40,6 +41,24 @@ func (vrt VoteResultType) MarshalText() ([]byte, error) {
 	return []byte(vrt.String()), nil
 }
 
+type VoteResultNodeFact struct {
+	fact          valuehash.Hash
+	factSignature key.Signature
+	signer        key.Publickey
+}
+
+func (vf VoteResultNodeFact) IsValid(b []byte) error {
+	if err := isvalid.Check([]isvalid.IsValider{
+		vf.fact,
+		vf.factSignature,
+		vf.signer,
+	}, b); err != nil {
+		return err
+	}
+
+	return vf.signer.Verify(vf.fact.Bytes(), vf.factSignature)
+}
+
 type VoteResult struct {
 	height    Height
 	round     Round
@@ -47,9 +66,9 @@ type VoteResult struct {
 	threshold Threshold
 	result    VoteResultType
 	majority  Fact
-	facts     map[valuehash.Hash]Fact    // key: Fact.Hash(), value: Fact
-	ballots   map[Address]valuehash.Hash // key: node Address, value: ballot hash
-	votes     map[Address]valuehash.Hash // key: node Address, value: fact hash
+	facts     map[valuehash.Hash]Fact        // key: Fact.Hash(), value: Fact
+	ballots   map[Address]valuehash.Hash     // key: node Address, value: ballot hash
+	votes0    map[Address]VoteResultNodeFact // key: node Address, value: VoteResultNodeFact
 }
 
 func (vr VoteResult) IsFinished() bool {
@@ -86,7 +105,7 @@ func (vr VoteResult) IsValid(b []byte) error {
 	}
 
 	// check majority
-	if len(vr.votes) < int(vr.threshold.Threshold) {
+	if len(vr.votes0) < int(vr.threshold.Threshold) {
 		if vr.result != VoteResultNotYet {
 			return xerrors.Errorf("result should be not-yet: %s", vr.result)
 		}
@@ -99,8 +118,8 @@ func (vr VoteResult) IsValid(b []byte) error {
 
 func (vr VoteResult) isValidCheckMajority(b []byte) error {
 	counts := map[valuehash.Hash]uint{}
-	for _, h := range vr.votes {
-		counts[h]++
+	for _, f := range vr.votes0 {
+		counts[f.fact]++
 	}
 
 	var set []uint
@@ -174,17 +193,37 @@ func (vr VoteResult) isValidFields(b []byte) error {
 		return InvalidError.Wrapf("empty ballots")
 	}
 
-	if len(vr.votes) < 1 {
+	if len(vr.votes0) < 1 {
 		return InvalidError.Wrapf("empty votes")
 	}
 
-	if len(vr.ballots) != len(vr.votes) {
-		return InvalidError.Wrapf("vote count does not match: ballots=%d votes=%d", len(vr.ballots), len(vr.votes))
+	if len(vr.ballots) != len(vr.votes0) {
+		return InvalidError.Wrapf("vote count does not match: ballots=%d votes=%d", len(vr.ballots), len(vr.votes0))
+	}
+
+	factHashes := map[valuehash.Hash]bool{}
+	for _, f := range vr.votes0 {
+		if _, found := vr.facts[f.fact]; !found {
+			return xerrors.Errorf("missing fact found in facts: %s", f.fact.String())
+		}
+		factHashes[f.fact] = true
+	}
+
+	if len(factHashes) != len(vr.facts) {
+		return xerrors.Errorf("unknown facts found in facts: %d", len(vr.facts)-len(factHashes))
 	}
 
 	for k, v := range vr.facts {
 		if err := isvalid.Check([]isvalid.IsValider{k, v}, b); err != nil {
 			return err
+		}
+		if h, err := v.Hash(b); err != nil {
+			return err
+		} else if !h.Equal(k) {
+			return xerrors.Errorf(
+				"factHash and Fact.Hash() does not match: factHash=%v != Fact.Hash()=%v",
+				k.String(), h.String(),
+			)
 		}
 	}
 
@@ -194,22 +233,14 @@ func (vr VoteResult) isValidFields(b []byte) error {
 		}
 	}
 
-	for k, v := range vr.votes {
-		if err := isvalid.Check([]isvalid.IsValider{k, v}, b); err != nil {
+	{
+		var vs []isvalid.IsValider
+		for node, f := range vr.votes0 {
+			vs = append(vs, f, node)
+		}
+		if err := isvalid.Check(vs, b); err != nil {
 			return err
 		}
-	}
-
-	factHashes := map[valuehash.Hash]bool{}
-	for _, factHash := range vr.votes {
-		if _, found := vr.facts[factHash]; !found {
-			return xerrors.Errorf("missing fact found in facts: %s", factHash.String())
-		}
-		factHashes[factHash] = true
-	}
-
-	if len(factHashes) != len(vr.facts) {
-		return xerrors.Errorf("unknown facts found in facts: %d", len(vr.facts)-len(factHashes))
 	}
 
 	return nil

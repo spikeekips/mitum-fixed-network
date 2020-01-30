@@ -30,7 +30,7 @@ func NewVoteRecords(ballot Ballot, threshold Threshold) *VoteRecords {
 			result:    VoteResultNotYet,
 			facts:     map[valuehash.Hash]Fact{},
 			ballots:   map[Address]valuehash.Hash{},
-			votes:     map[Address]valuehash.Hash{},
+			votes0:    map[Address]VoteResultNodeFact{},
 		},
 	}
 }
@@ -80,11 +80,15 @@ func (vrs *VoteRecords) Vote(ballot Ballot) VoteResult {
 	}
 
 	{
-		votes := map[Address]valuehash.Hash{}
-		for k, v := range vrs.votes {
-			votes[k] = v
+		votes0 := map[Address]VoteResultNodeFact{}
+		for node, ballot := range vrs.ballots {
+			votes0[node] = VoteResultNodeFact{
+				fact:          ballot.FactHash(),
+				factSignature: ballot.FactSignature(),
+				signer:        ballot.Signer(),
+			}
 		}
-		vrs.vr.votes = votes
+		vrs.vr.votes0 = votes0
 	}
 
 	return vrs.vr

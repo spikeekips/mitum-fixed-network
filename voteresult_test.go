@@ -157,7 +157,7 @@ func (t *testVoteResult) TestWrongVotesCount() {
 			n0.Address(): valuehash.RandomSHA256(),
 			n1.Address(): valuehash.RandomSHA256(),
 		},
-		votes0: map[Address]VoteResultNodeFact{
+		votes: map[Address]VoteResultNodeFact{
 			n0.Address(): VoteResultNodeFact{
 				fact: factHash,
 			},
@@ -186,7 +186,7 @@ func (t *testVoteResult) TestInvalidFactHash() {
 		ballots: map[Address]valuehash.Hash{
 			n0.Address(): valuehash.RandomSHA256(),
 		},
-		votes0: map[Address]VoteResultNodeFact{
+		votes: map[Address]VoteResultNodeFact{
 			n0.Address(): VoteResultNodeFact{
 				fact:          invalidFactHash,
 				factSignature: factSignature,
@@ -218,7 +218,7 @@ func (t *testVoteResult) TestUnknownFactHash() {
 		ballots: map[Address]valuehash.Hash{
 			n0.Address(): valuehash.RandomSHA256(),
 		},
-		votes0: map[Address]VoteResultNodeFact{
+		votes: map[Address]VoteResultNodeFact{
 			n0.Address(): VoteResultNodeFact{
 				fact:          unknownFactHash,
 				factSignature: factSignature,
@@ -248,7 +248,7 @@ func (t *testVoteResult) TestFactNotFound() {
 		ballots: map[Address]valuehash.Hash{
 			n0: valuehash.RandomSHA256(),
 		},
-		votes0: map[Address]VoteResultNodeFact{
+		votes: map[Address]VoteResultNodeFact{
 			n0: VoteResultNodeFact{
 				fact: valuehash.RandomSHA256(),
 			},
@@ -256,6 +256,39 @@ func (t *testVoteResult) TestFactNotFound() {
 	}
 	err = vr.IsValid(nil)
 	t.Contains(err.Error(), "missing fact found")
+}
+
+func (t *testVoteResult) TestUnknownNodeFound() {
+	threshold, _ := NewThreshold(10, 40)
+	fact := tinyFact{A: "showme"}
+	factHash, err := fact.Hash(nil)
+	t.NoError(err)
+
+	n0 := NewShortAddress("n0")
+
+	vr := VoteResult{
+		stage:     StageINIT,
+		threshold: threshold,
+		result:    VoteResultNotYet,
+		majority:  fact,
+		facts: map[valuehash.Hash]Fact{
+			factHash: fact,
+		},
+		ballots: map[Address]valuehash.Hash{
+			n0:                    valuehash.RandomSHA256(),
+			NewShortAddress("n2"): valuehash.RandomSHA256(),
+		},
+		votes: map[Address]VoteResultNodeFact{
+			n0: VoteResultNodeFact{
+				fact: factHash,
+			},
+			NewShortAddress("n1"): VoteResultNodeFact{
+				fact: factHash,
+			},
+		},
+	}
+	err = vr.IsValid(nil)
+	t.Contains(err.Error(), "unknown node found")
 }
 
 func (t *testVoteResult) TestSuplusFacts() {
@@ -277,7 +310,7 @@ func (t *testVoteResult) TestSuplusFacts() {
 		ballots: map[Address]valuehash.Hash{
 			n0: valuehash.RandomSHA256(),
 		},
-		votes0: map[Address]VoteResultNodeFact{
+		votes: map[Address]VoteResultNodeFact{
 			n0: VoteResultNodeFact{
 				fact: factHash,
 			},
@@ -308,7 +341,7 @@ func (t *testVoteResult) TesteNotYetButNot() {
 		ballots: map[Address]valuehash.Hash{
 			n0.Address(): valuehash.RandomSHA256(),
 		},
-		votes0: map[Address]VoteResultNodeFact{
+		votes: map[Address]VoteResultNodeFact{
 			n0.Address(): VoteResultNodeFact{
 				fact:          factHash,
 				factSignature: factSignature,
@@ -346,7 +379,7 @@ func (t *testVoteResult) TesteDrawButNot() {
 			n0.Address(): valuehash.RandomSHA256(),
 			n1.Address(): valuehash.RandomSHA256(),
 		},
-		votes0: map[Address]VoteResultNodeFact{
+		votes: map[Address]VoteResultNodeFact{
 			n0.Address(): VoteResultNodeFact{
 				fact:          factHash0,
 				factSignature: factSignature0,
@@ -386,7 +419,7 @@ func (t *testVoteResult) TesteMajorityButNot() {
 			n0.Address(): valuehash.RandomSHA256(),
 			n1.Address(): valuehash.RandomSHA256(),
 		},
-		votes0: map[Address]VoteResultNodeFact{
+		votes: map[Address]VoteResultNodeFact{
 			n0.Address(): VoteResultNodeFact{
 				fact:          factHash0,
 				factSignature: factSignature0,

@@ -48,6 +48,8 @@ type VoteResultNodeFact struct {
 }
 
 func (vf VoteResultNodeFact) IsValid(b []byte) error {
+	// TODO check,
+	// - signer is valid Ballot.Signer()?
 	if err := isvalid.Check([]isvalid.IsValider{
 		vf.fact,
 		vf.factSignature,
@@ -68,7 +70,7 @@ type VoteResult struct {
 	majority  Fact
 	facts     map[valuehash.Hash]Fact        // key: Fact.Hash(), value: Fact
 	ballots   map[Address]valuehash.Hash     // key: node Address, value: ballot hash
-	votes0    map[Address]VoteResultNodeFact // key: node Address, value: VoteResultNodeFact
+	votes     map[Address]VoteResultNodeFact // key: node Address, value: VoteResultNodeFact
 }
 
 func (vr VoteResult) IsFinished() bool {
@@ -105,7 +107,7 @@ func (vr VoteResult) IsValid(b []byte) error {
 	}
 
 	// check majority
-	if len(vr.votes0) < int(vr.threshold.Threshold) {
+	if len(vr.votes) < int(vr.threshold.Threshold) {
 		if vr.result != VoteResultNotYet {
 			return xerrors.Errorf("result should be not-yet: %s", vr.result)
 		}
@@ -118,7 +120,7 @@ func (vr VoteResult) IsValid(b []byte) error {
 
 func (vr VoteResult) isValidCheckMajority(b []byte) error {
 	counts := map[valuehash.Hash]uint{}
-	for _, f := range vr.votes0 {
+	for _, f := range vr.votes {
 		counts[f.fact]++
 	}
 
@@ -193,16 +195,22 @@ func (vr VoteResult) isValidFields(b []byte) error {
 		return InvalidError.Wrapf("empty ballots")
 	}
 
-	if len(vr.votes0) < 1 {
+	if len(vr.votes) < 1 {
 		return InvalidError.Wrapf("empty votes")
 	}
 
-	if len(vr.ballots) != len(vr.votes0) {
-		return InvalidError.Wrapf("vote count does not match: ballots=%d votes=%d", len(vr.ballots), len(vr.votes0))
+	if len(vr.ballots) != len(vr.votes) {
+		return InvalidError.Wrapf("vote count does not match: ballots=%d votes=%d", len(vr.ballots), len(vr.votes))
+	}
+
+	for k := range vr.ballots {
+		if _, found := vr.votes[k]; !found {
+			return xerrors.Errorf("unknown node found: %v", k)
+		}
 	}
 
 	factHashes := map[valuehash.Hash]bool{}
-	for _, f := range vr.votes0 {
+	for _, f := range vr.votes {
 		if _, found := vr.facts[f.fact]; !found {
 			return xerrors.Errorf("missing fact found in facts: %s", f.fact.String())
 		}
@@ -235,7 +243,7 @@ func (vr VoteResult) isValidFields(b []byte) error {
 
 	{
 		var vs []isvalid.IsValider
-		for node, f := range vr.votes0 {
+		for node, f := range vr.votes {
 			vs = append(vs, f, node)
 		}
 		if err := isvalid.Check(vs, b); err != nil {

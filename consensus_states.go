@@ -78,8 +78,8 @@ func (css *ConsensusStates) Activate(cs ConsensusState) error {
 	return nil
 }
 
-func (css *ConsensusStates) newVoteResult(vr VoteResult) error {
-	return css.Activated().NewVoteResult(vr)
+func (css *ConsensusStates) newVoteProof(vr VoteProof) error {
+	return css.Activated().NewVoteProof(vr)
 }
 
 // NewSeal receives Seal and hand it over to handler;
@@ -121,5 +121,5 @@ func (css *ConsensusStates) NewSeal(sl seal.Seal) error {
 		return nil
 	}
 
-	return css.newVoteResult(vr)
+	return css.newVoteProof(vr)
 }

@@ -68,8 +68,8 @@ func (t *testBallotbox) TestVoteRace() {
 			switch c := i.(type) {
 			case error:
 				t.NoError(c)
-			case VoteResult:
-				t.Equal(VoteResultNotYet, c.Result())
+			case VoteProof:
+				t.Equal(VoteProofNotYet, c.Result())
 			}
 		}
 		checkDone <- true
@@ -96,14 +96,14 @@ func (t *testBallotbox) TestVoteRace() {
 	<-checkDone
 }
 
-func (t *testBallotbox) TestINITVoteResultNotYet() {
+func (t *testBallotbox) TestINITVoteProofNotYet() {
 	threshold, _ := NewThreshold(2, 67)
 	bb := NewBallotbox(threshold)
 	ba := t.newINITBallot(Height(10), Round(0), NewShortAddress("test-for-init-ballot"))
 
 	vr, err := bb.Vote(ba)
 	t.NoError(err)
-	t.Equal(VoteResultNotYet, vr.Result())
+	t.Equal(VoteProofNotYet, vr.Result())
 
 	t.Equal(ba.Height(), vr.Height())
 	t.Equal(ba.Round(), vr.Round())
@@ -121,7 +121,7 @@ func (t *testBallotbox) TestINITVoteResultNotYet() {
 	t.Equal(ba.PreviousRound(), iba.PreviousRound())
 }
 
-func (t *testBallotbox) TestINITVoteResultDraw() {
+func (t *testBallotbox) TestINITVoteProofDraw() {
 	threshold, _ := NewThreshold(2, 67)
 	bb := NewBallotbox(threshold)
 
@@ -130,13 +130,13 @@ func (t *testBallotbox) TestINITVoteResultDraw() {
 		ba := t.newINITBallot(Height(10), Round(0), NewShortAddress("node0"))
 		vr, err := bb.Vote(ba)
 		t.NoError(err)
-		t.Equal(VoteResultNotYet, vr.Result())
+		t.Equal(VoteProofNotYet, vr.Result())
 	}
 	{
 		ba := t.newINITBallot(Height(10), Round(0), NewShortAddress("node1"))
 		vr, err := bb.Vote(ba)
 		t.NoError(err)
-		t.Equal(VoteResultDraw, vr.Result())
+		t.Equal(VoteProofDraw, vr.Result())
 		t.True(vr.IsFinished())
 	}
 
@@ -144,12 +144,12 @@ func (t *testBallotbox) TestINITVoteResultDraw() {
 		ba := t.newINITBallot(Height(10), Round(0), NewShortAddress("node2"))
 		vr, err := bb.Vote(ba)
 		t.NoError(err)
-		t.Equal(VoteResultDraw, vr.Result())
+		t.Equal(VoteProofDraw, vr.Result())
 		t.True(vr.IsFinished())
 	}
 }
 
-func (t *testBallotbox) TestINITVoteResultMajority() {
+func (t *testBallotbox) TestINITVoteProofMajority() {
 	threshold, _ := NewThreshold(3, 66)
 	bb := NewBallotbox(threshold)
 
@@ -167,12 +167,12 @@ func (t *testBallotbox) TestINITVoteResultMajority() {
 	{
 		vr, err := bb.Vote(ba0)
 		t.NoError(err)
-		t.Equal(VoteResultNotYet, vr.Result())
+		t.Equal(VoteProofNotYet, vr.Result())
 	}
 	{
 		vr, err := bb.Vote(ba1)
 		t.NoError(err)
-		t.Equal(VoteResultMajority, vr.Result())
+		t.Equal(VoteProofMajority, vr.Result())
 	}
 }
 
@@ -195,14 +195,14 @@ func (t *testBallotbox) newSIGNBallot(height Height, round Round, node Address) 
 	return ib
 }
 
-func (t *testBallotbox) TestSIGNVoteResultNotYet() {
+func (t *testBallotbox) TestSIGNVoteProofNotYet() {
 	threshold, _ := NewThreshold(2, 67)
 	bb := NewBallotbox(threshold)
 	ba := t.newSIGNBallot(Height(10), Round(0), NewShortAddress("test-for-sign-ballot"))
 
 	vr, err := bb.Vote(ba)
 	t.NoError(err)
-	t.Equal(VoteResultNotYet, vr.Result())
+	t.Equal(VoteProofNotYet, vr.Result())
 
 	t.Equal(ba.Height(), vr.Height())
 	t.Equal(ba.Round(), vr.Round())
@@ -220,7 +220,7 @@ func (t *testBallotbox) TestSIGNVoteResultNotYet() {
 	t.Equal(ba.NewBlock(), iba.NewBlock())
 }
 
-func (t *testBallotbox) TestSIGNVoteResultDraw() {
+func (t *testBallotbox) TestSIGNVoteProofDraw() {
 	threshold, _ := NewThreshold(2, 67)
 	bb := NewBallotbox(threshold)
 
@@ -231,16 +231,16 @@ func (t *testBallotbox) TestSIGNVoteResultDraw() {
 	{
 		vr, err := bb.Vote(ba0)
 		t.NoError(err)
-		t.Equal(VoteResultNotYet, vr.Result())
+		t.Equal(VoteProofNotYet, vr.Result())
 	}
 	{
 		vr, err := bb.Vote(ba1)
 		t.NoError(err)
-		t.Equal(VoteResultDraw, vr.Result())
+		t.Equal(VoteProofDraw, vr.Result())
 	}
 }
 
-func (t *testBallotbox) TestSIGNVoteResultMajority() {
+func (t *testBallotbox) TestSIGNVoteProofMajority() {
 	threshold, _ := NewThreshold(3, 66)
 	bb := NewBallotbox(threshold)
 
@@ -258,12 +258,12 @@ func (t *testBallotbox) TestSIGNVoteResultMajority() {
 	{
 		vr, err := bb.Vote(ba0)
 		t.NoError(err)
-		t.Equal(VoteResultNotYet, vr.Result())
+		t.Equal(VoteProofNotYet, vr.Result())
 	}
 	{
 		vr, err := bb.Vote(ba1)
 		t.NoError(err)
-		t.Equal(VoteResultMajority, vr.Result())
+		t.Equal(VoteProofMajority, vr.Result())
 	}
 }
 
@@ -286,14 +286,14 @@ func (t *testBallotbox) newACCEPTBallot(height Height, round Round, node Address
 	return ib
 }
 
-func (t *testBallotbox) TestACCEPTVoteResultNotYet() {
+func (t *testBallotbox) TestACCEPTVoteProofNotYet() {
 	threshold, _ := NewThreshold(2, 67)
 	bb := NewBallotbox(threshold)
 	ba := t.newACCEPTBallot(Height(10), Round(0), NewShortAddress("test-for-accept-ballot"))
 
 	vr, err := bb.Vote(ba)
 	t.NoError(err)
-	t.Equal(VoteResultNotYet, vr.Result())
+	t.Equal(VoteProofNotYet, vr.Result())
 
 	t.Equal(ba.Height(), vr.Height())
 	t.Equal(ba.Round(), vr.Round())
@@ -311,7 +311,7 @@ func (t *testBallotbox) TestACCEPTVoteResultNotYet() {
 	t.Equal(ba.NewBlock(), iba.NewBlock())
 }
 
-func (t *testBallotbox) TestACCEPTVoteResultDraw() {
+func (t *testBallotbox) TestACCEPTVoteProofDraw() {
 	threshold, _ := NewThreshold(2, 67)
 	bb := NewBallotbox(threshold)
 
@@ -322,16 +322,16 @@ func (t *testBallotbox) TestACCEPTVoteResultDraw() {
 	{
 		vr, err := bb.Vote(ba0)
 		t.NoError(err)
-		t.Equal(VoteResultNotYet, vr.Result())
+		t.Equal(VoteProofNotYet, vr.Result())
 	}
 	{
 		vr, err := bb.Vote(ba1)
 		t.NoError(err)
-		t.Equal(VoteResultDraw, vr.Result())
+		t.Equal(VoteProofDraw, vr.Result())
 	}
 }
 
-func (t *testBallotbox) TestACCEPTVoteResultMajority() {
+func (t *testBallotbox) TestACCEPTVoteProofMajority() {
 	threshold, _ := NewThreshold(3, 66)
 	bb := NewBallotbox(threshold)
 
@@ -349,12 +349,12 @@ func (t *testBallotbox) TestACCEPTVoteResultMajority() {
 	{
 		vr, err := bb.Vote(ba0)
 		t.NoError(err)
-		t.Equal(VoteResultNotYet, vr.Result())
+		t.Equal(VoteProofNotYet, vr.Result())
 	}
 	{
 		vr, err := bb.Vote(ba1)
 		t.NoError(err)
-		t.Equal(VoteResultMajority, vr.Result())
+		t.Equal(VoteProofMajority, vr.Result())
 	}
 }
 

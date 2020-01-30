@@ -7,47 +7,47 @@ import (
 	"golang.org/x/xerrors"
 )
 
-type VoteResultType uint8
+type VoteProofType uint8
 
 const (
-	VoteResultNotYet VoteResultType = iota
-	VoteResultDraw
-	VoteResultMajority
+	VoteProofNotYet VoteProofType = iota
+	VoteProofDraw
+	VoteProofMajority
 )
 
-func (vrt VoteResultType) String() string {
+func (vrt VoteProofType) String() string {
 	switch vrt {
-	case VoteResultNotYet:
+	case VoteProofNotYet:
 		return "NOT-YET"
-	case VoteResultDraw:
+	case VoteProofDraw:
 		return "DRAW"
-	case VoteResultMajority:
+	case VoteProofMajority:
 		return "MAJORITY"
 	default:
-		return "<unknown VoteResultType>"
+		return "<unknown VoteProofType>"
 	}
 }
 
-func (vrt VoteResultType) IsValid([]byte) error {
+func (vrt VoteProofType) IsValid([]byte) error {
 	switch vrt {
-	case VoteResultNotYet, VoteResultDraw, VoteResultMajority:
+	case VoteProofNotYet, VoteProofDraw, VoteProofMajority:
 		return nil
 	}
 
-	return InvalidError.Wrapf("VoteResultType=%d", vrt)
+	return InvalidError.Wrapf("VoteProofType=%d", vrt)
 }
 
-func (vrt VoteResultType) MarshalText() ([]byte, error) {
+func (vrt VoteProofType) MarshalText() ([]byte, error) {
 	return []byte(vrt.String()), nil
 }
 
-type VoteResultNodeFact struct {
+type VoteProofNodeFact struct {
 	fact          valuehash.Hash
 	factSignature key.Signature
 	signer        key.Publickey
 }
 
-func (vf VoteResultNodeFact) IsValid(b []byte) error {
+func (vf VoteProofNodeFact) IsValid(b []byte) error {
 	// TODO check,
 	// - signer is valid Ballot.Signer()?
 	if err := isvalid.Check([]isvalid.IsValider{
@@ -61,54 +61,54 @@ func (vf VoteResultNodeFact) IsValid(b []byte) error {
 	return vf.signer.Verify(vf.fact.Bytes(), vf.factSignature)
 }
 
-type VoteResult struct {
+type VoteProof struct {
 	height    Height
 	round     Round
 	stage     Stage
 	threshold Threshold
-	result    VoteResultType
+	result    VoteProofType
 	majority  Fact
-	facts     map[valuehash.Hash]Fact        // key: Fact.Hash(), value: Fact
-	ballots   map[Address]valuehash.Hash     // key: node Address, value: ballot hash
-	votes     map[Address]VoteResultNodeFact // key: node Address, value: VoteResultNodeFact
+	facts     map[valuehash.Hash]Fact       // key: Fact.Hash(), value: Fact
+	ballots   map[Address]valuehash.Hash    // key: node Address, value: ballot hash
+	votes     map[Address]VoteProofNodeFact // key: node Address, value: VoteProofNodeFact
 }
 
-func (vr VoteResult) IsFinished() bool {
-	return vr.result != VoteResultNotYet
+func (vr VoteProof) IsFinished() bool {
+	return vr.result != VoteProofNotYet
 }
 
-func (vr VoteResult) Height() Height {
+func (vr VoteProof) Height() Height {
 	return vr.height
 }
 
-func (vr VoteResult) Round() Round {
+func (vr VoteProof) Round() Round {
 	return vr.round
 }
 
-func (vr VoteResult) Stage() Stage {
+func (vr VoteProof) Stage() Stage {
 	return vr.stage
 }
 
-func (vr VoteResult) Result() VoteResultType {
+func (vr VoteProof) Result() VoteProofType {
 	return vr.result
 }
 
-func (vr VoteResult) Ballots() map[Address]valuehash.Hash {
+func (vr VoteProof) Ballots() map[Address]valuehash.Hash {
 	return vr.ballots
 }
 
-func (vr VoteResult) Bytes() []byte {
+func (vr VoteProof) Bytes() []byte {
 	return nil
 }
 
-func (vr VoteResult) IsValid(b []byte) error {
+func (vr VoteProof) IsValid(b []byte) error {
 	if err := vr.isValidFields(b); err != nil {
 		return err
 	}
 
 	// check majority
 	if len(vr.votes) < int(vr.threshold.Threshold) {
-		if vr.result != VoteResultNotYet {
+		if vr.result != VoteProofNotYet {
 			return xerrors.Errorf("result should be not-yet: %s", vr.result)
 		}
 
@@ -118,7 +118,7 @@ func (vr VoteResult) IsValid(b []byte) error {
 	return vr.isValidCheckMajority(b)
 }
 
-func (vr VoteResult) isValidCheckMajority(b []byte) error {
+func (vr VoteProof) isValidCheckMajority(b []byte) error {
 	counts := map[valuehash.Hash]uint{}
 	for _, f := range vr.votes {
 		counts[f.fact]++
@@ -133,14 +133,14 @@ func (vr VoteResult) isValidCheckMajority(b []byte) error {
 
 	var fact Fact
 	var factHash valuehash.Hash
-	var result VoteResultType
+	var result VoteProofType
 	switch index := FindMajority(vr.threshold.Total, vr.threshold.Threshold, set...); index {
 	case -1:
-		result = VoteResultNotYet
+		result = VoteProofNotYet
 	case -2:
-		result = VoteResultDraw
+		result = VoteProofDraw
 	default:
-		result = VoteResultMajority
+		result = VoteProofMajority
 		factHash = byCount[set[index]]
 		fact = vr.facts[factHash]
 	}
@@ -167,7 +167,7 @@ func (vr VoteResult) isValidCheckMajority(b []byte) error {
 	return nil
 }
 
-func (vr VoteResult) isValidFields(b []byte) error {
+func (vr VoteProof) isValidFields(b []byte) error {
 	if err := isvalid.Check([]isvalid.IsValider{
 		vr.height,
 		vr.stage,
@@ -178,7 +178,7 @@ func (vr VoteResult) isValidFields(b []byte) error {
 	}
 
 	if vr.majority == nil {
-		if vr.result == VoteResultMajority {
+		if vr.result == VoteProofMajority {
 			return InvalidError.Wrapf("empty majority")
 		}
 	} else {

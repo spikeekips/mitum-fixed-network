@@ -29,7 +29,7 @@ func NewBallotbox(threshold Threshold) *Ballotbox {
 
 // Vote receives Ballot and returns VoteRecords, which has VoteRecords.Result()
 // and VoteRecords.Majority().
-func (bb *Ballotbox) Vote(ballot Ballot) (VoteResult, error) {
+func (bb *Ballotbox) Vote(ballot Ballot) (VoteProof, error) {
 	vrs := bb.loadVoteRecords(ballot, true)
 
 	// TODO if VoteRecords is finished, clean up the vrs;

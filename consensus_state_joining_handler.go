@@ -17,14 +17,14 @@ import (
 ConsensusStateJoiningHandler tries to join network safely. This is the basic
 strategy,
 
-* Keeping broadcasting INIT ballot with VoteResult
+* Keeping broadcasting INIT ballot with VoteProof
 
-- waits the incoming INIT ballots, which have VoteResult.
+- waits the incoming INIT ballots, which have VoteProof.
 - if timed out, still broadcasts and wait.
 
-* With VoteResult
+* With VoteProof
 
-- if height of VoteResult is not the next of local block
+- if height of VoteProof is not the next of local block
 	-> moves to sync
 
 - if next of local block,
@@ -145,7 +145,7 @@ func (cs *ConsensusStateJoiningHandler) broadcastingINITBallot() (bool, error) {
 	return true, nil
 }
 
-// NewSeal only cares on INIT ballot and it's VoteResult.
+// NewSeal only cares on INIT ballot and it's VoteProof.
 func (cs *ConsensusStateJoiningHandler) NewSeal(sl seal.Seal) error {
 	var ballot INITBallot
 	switch t := sl.(type) {
@@ -160,7 +160,7 @@ func (cs *ConsensusStateJoiningHandler) NewSeal(sl seal.Seal) error {
 	return nil
 }
 
-func (cs *ConsensusStateJoiningHandler) NewVoteResult(vr VoteResult) error {
+func (cs *ConsensusStateJoiningHandler) NewVoteProof(vr VoteProof) error {
 	if err := cs.stopbroadcastingINITBallotTimer(); err != nil {
 		return err
 	}

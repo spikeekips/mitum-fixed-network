@@ -56,7 +56,7 @@ type INITBallotV0 struct {
 	INITBallotV0Fact
 	h             valuehash.Hash
 	bodyHash      valuehash.Hash
-	voteResult    VoteResult
+	voteProof     VoteProof
 	factHash      valuehash.Hash
 	factSignature key.Signature
 }
@@ -85,13 +85,13 @@ func (ib INITBallotV0) IsValid(b []byte) error {
 		return err
 	}
 
-	// TODO validate VoteResult
+	// TODO validate VoteProof
 
 	return nil
 }
 
-func (ib INITBallotV0) VoteResult() VoteResult {
-	return ib.voteResult
+func (ib INITBallotV0) VoteProof() VoteProof {
+	return ib.voteProof
 }
 
 func (ib INITBallotV0) GenerateHash(b []byte) (valuehash.Hash, error) {
@@ -103,7 +103,7 @@ func (ib INITBallotV0) GenerateHash(b []byte) (valuehash.Hash, error) {
 		ib.BaseBallotV0.Bytes(),
 		ib.INITBallotV0Fact.Bytes(),
 		ib.bodyHash.Bytes(),
-		ib.voteResult.Bytes(),
+		ib.voteProof.Bytes(),
 		b,
 	})
 
@@ -117,7 +117,7 @@ func (ib INITBallotV0) GenerateBodyHash(b []byte) (valuehash.Hash, error) {
 
 	e := util.ConcatSlice([][]byte{
 		ib.INITBallotV0Fact.Bytes(),
-		ib.voteResult.Bytes(),
+		ib.voteProof.Bytes(),
 		b,
 	})
 

@@ -125,7 +125,7 @@ func (t *testConsensusStateJoiningHandler) TestCheckINITBallot() {
 
 	ib := t.newINITBallot(remoteState, Round(0))
 
-	// set custom VoteResult
+	// set custom VoteProof
 
 	t.NoError(cs.NewSeal(ib))
 }

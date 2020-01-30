@@ -57,7 +57,7 @@ type ACCEPTBallotV0 struct {
 	ACCEPTBallotV0Fact
 	h             valuehash.Hash
 	bodyHash      valuehash.Hash
-	voteResult    VoteResult
+	voteProof     VoteProof
 	factHash      valuehash.Hash
 	factSignature key.Signature
 }
@@ -89,8 +89,8 @@ func (ab ACCEPTBallotV0) IsValid(b []byte) error {
 	return nil
 }
 
-func (ab ACCEPTBallotV0) VoteResult() VoteResult {
-	return ab.voteResult
+func (ab ACCEPTBallotV0) VoteProof() VoteProof {
+	return ab.voteProof
 }
 
 func (ab ACCEPTBallotV0) GenerateHash(b []byte) (valuehash.Hash, error) {
@@ -102,7 +102,7 @@ func (ab ACCEPTBallotV0) GenerateHash(b []byte) (valuehash.Hash, error) {
 		ab.BaseBallotV0.Bytes(),
 		ab.ACCEPTBallotV0Fact.Bytes(),
 		ab.bodyHash.Bytes(),
-		ab.voteResult.Bytes(),
+		ab.voteProof.Bytes(),
 		b,
 	})
 
@@ -116,7 +116,7 @@ func (ab ACCEPTBallotV0) GenerateBodyHash(b []byte) (valuehash.Hash, error) {
 
 	e := util.ConcatSlice([][]byte{
 		ab.ACCEPTBallotV0Fact.Bytes(),
-		ab.voteResult.Bytes(),
+		ab.voteProof.Bytes(),
 		b,
 	})
 

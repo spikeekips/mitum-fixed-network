@@ -8,6 +8,6 @@ type ConsensusStateHandler interface {
 	Deactivate() error
 	// NewSeal receives Seal.
 	NewSeal(seal.Seal) error
-	// NewVoteResult receives the finished VoteResult.
-	NewVoteResult(VoteResult) error
+	// NewVoteProof receives the finished VoteProof.
+	NewVoteProof(VoteProof) error
 }

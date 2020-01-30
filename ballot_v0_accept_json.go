@@ -12,7 +12,7 @@ type ACCEPTBallotV0PackerJSON struct {
 	BaseBallotV0PackerJSON
 	PR json.RawMessage `json:"proposal"`
 	NB json.RawMessage `json:"previous_block"`
-	VR VoteResult      `json:"voteresult"`
+	VR VoteProof       `json:"voteproof"`
 }
 
 func (ab ACCEPTBallotV0) PackJSON(enc *encoder.JSONEncoder) (interface{}, error) {
@@ -37,7 +37,7 @@ func (ab ACCEPTBallotV0) PackJSON(enc *encoder.JSONEncoder) (interface{}, error)
 		BaseBallotV0PackerJSON: bb,
 		PR:                     jpr,
 		NB:                     jnb,
-		VR:                     ab.VoteResult(),
+		VR:                     ab.VoteProof(),
 	}, nil
 }
 

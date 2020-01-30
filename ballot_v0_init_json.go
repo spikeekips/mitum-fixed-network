@@ -12,7 +12,7 @@ type INITBallotV0PackerJSON struct {
 	BaseBallotV0PackerJSON
 	PB json.RawMessage `json:"previous_block"`
 	PR Round           `json:"previous_round"`
-	VR interface{}     `json:"voteresult"` // TODO
+	VR interface{}     `json:"voteproof"` // TODO
 }
 
 func (ib INITBallotV0) PackJSON(enc *encoder.JSONEncoder) (interface{}, error) {
@@ -31,7 +31,7 @@ func (ib INITBallotV0) PackJSON(enc *encoder.JSONEncoder) (interface{}, error) {
 		BaseBallotV0PackerJSON: bb,
 		PB:                     jpb,
 		PR:                     ib.INITBallotV0Fact.previousRound,
-		VR:                     ib.VoteResult(),
+		VR:                     ib.VoteProof(),
 	}, nil
 }
 

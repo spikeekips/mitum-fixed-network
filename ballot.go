@@ -24,7 +24,7 @@ type INITBallot interface {
 	Ballot
 	PreviousBlock() valuehash.Hash
 	PreviousRound() Round
-	VoteResult() VoteResult
+	VoteProof() VoteProof
 }
 
 type Proposal interface {
@@ -42,5 +42,5 @@ type ACCEPTBallot interface {
 	Ballot
 	Proposal() valuehash.Hash
 	NewBlock() valuehash.Hash
-	VoteResult() VoteResult
+	VoteProof() VoteProof
 }

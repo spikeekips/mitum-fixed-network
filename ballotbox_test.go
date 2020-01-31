@@ -27,14 +27,21 @@ func (t *testBallotbox) SetupSuite() {
 	t.pk, _ = key.NewBTCPrivatekey()
 }
 
+func (t *testBallotbox) newLocalState(total uint, percent float64) *LocalState {
+	policy := NewLocalPolicy()
+	threshold, _ := NewThreshold(total, percent)
+	_ = policy.SetThreshold(threshold)
+
+	return NewLocalState(nil, policy)
+}
+
 func (t *testBallotbox) TestNew() {
-	threshold, _ := NewThreshold(2, 67)
-	bb := NewBallotbox(threshold)
+	bb := NewBallotbox(t.newLocalState(2, 67))
 	ba := t.newINITBallot(Height(10), Round(0), NewShortAddress("test-for-init-ballot"))
 
-	vr, err := bb.Vote(ba)
+	vp, err := bb.Vote(ba)
 	t.NoError(err)
-	t.NotEmpty(vr)
+	t.NotEmpty(vp)
 }
 
 func (t *testBallotbox) newINITBallot(height Height, round Round, node Address) INITBallotV0 {
@@ -57,8 +64,7 @@ func (t *testBallotbox) newINITBallot(height Height, round Round, node Address) 
 }
 
 func (t *testBallotbox) TestVoteRace() {
-	threshold, _ := NewThreshold(50, 100)
-	bb := NewBallotbox(threshold)
+	bb := NewBallotbox(t.newLocalState(50, 100))
 
 	checkDone := make(chan bool)
 	vrChan := make(chan interface{}, 49)
@@ -82,11 +88,11 @@ func (t *testBallotbox) TestVoteRace() {
 			defer wg.Done()
 			ba := t.newINITBallot(Height(10), Round(0), RandomShortAddress())
 
-			vr, err := bb.Vote(ba)
+			vp, err := bb.Vote(ba)
 			if err != nil {
 				vrChan <- err
 			} else {
-				vrChan <- vr
+				vrChan <- vp
 			}
 		}()
 	}
@@ -97,17 +103,16 @@ func (t *testBallotbox) TestVoteRace() {
 }
 
 func (t *testBallotbox) TestINITVoteProofNotYet() {
-	threshold, _ := NewThreshold(2, 67)
-	bb := NewBallotbox(threshold)
+	bb := NewBallotbox(t.newLocalState(2, 67))
 	ba := t.newINITBallot(Height(10), Round(0), NewShortAddress("test-for-init-ballot"))
 
-	vr, err := bb.Vote(ba)
+	vp, err := bb.Vote(ba)
 	t.NoError(err)
-	t.Equal(VoteProofNotYet, vr.Result())
+	t.Equal(VoteProofNotYet, vp.Result())
 
-	t.Equal(ba.Height(), vr.Height())
-	t.Equal(ba.Round(), vr.Round())
-	t.Equal(ba.Stage(), vr.Stage())
+	t.Equal(ba.Height(), vp.Height())
+	t.Equal(ba.Round(), vp.Round())
+	t.Equal(ba.Stage(), vp.Stage())
 
 	vrs := bb.loadVoteRecords(ba, false)
 	t.NotNil(vrs)
@@ -122,36 +127,34 @@ func (t *testBallotbox) TestINITVoteProofNotYet() {
 }
 
 func (t *testBallotbox) TestINITVoteProofDraw() {
-	threshold, _ := NewThreshold(2, 67)
-	bb := NewBallotbox(threshold)
+	bb := NewBallotbox(t.newLocalState(2, 67))
 
 	// 2 ballot have the differnt previousBlock hash
 	{
 		ba := t.newINITBallot(Height(10), Round(0), NewShortAddress("node0"))
-		vr, err := bb.Vote(ba)
+		vp, err := bb.Vote(ba)
 		t.NoError(err)
-		t.Equal(VoteProofNotYet, vr.Result())
+		t.Equal(VoteProofNotYet, vp.Result())
 	}
 	{
 		ba := t.newINITBallot(Height(10), Round(0), NewShortAddress("node1"))
-		vr, err := bb.Vote(ba)
+		vp, err := bb.Vote(ba)
 		t.NoError(err)
-		t.Equal(VoteProofDraw, vr.Result())
-		t.True(vr.IsFinished())
+		t.Equal(VoteProofDraw, vp.Result())
+		t.True(vp.IsFinished())
 	}
 
 	{ // already finished
 		ba := t.newINITBallot(Height(10), Round(0), NewShortAddress("node2"))
-		vr, err := bb.Vote(ba)
+		vp, err := bb.Vote(ba)
 		t.NoError(err)
-		t.Equal(VoteProofDraw, vr.Result())
-		t.True(vr.IsFinished())
+		t.Equal(VoteProofDraw, vp.Result())
+		t.True(vp.IsFinished())
 	}
 }
 
 func (t *testBallotbox) TestINITVoteProofMajority() {
-	threshold, _ := NewThreshold(3, 66)
-	bb := NewBallotbox(threshold)
+	bb := NewBallotbox(t.newLocalState(3, 66))
 
 	// 2 ballot have the differnt previousBlock hash
 	ba0 := t.newINITBallot(Height(10), Round(0), NewShortAddress("node0"))
@@ -165,14 +168,14 @@ func (t *testBallotbox) TestINITVoteProofMajority() {
 	}
 
 	{
-		vr, err := bb.Vote(ba0)
+		vp, err := bb.Vote(ba0)
 		t.NoError(err)
-		t.Equal(VoteProofNotYet, vr.Result())
+		t.Equal(VoteProofNotYet, vp.Result())
 	}
 	{
-		vr, err := bb.Vote(ba1)
+		vp, err := bb.Vote(ba1)
 		t.NoError(err)
-		t.Equal(VoteProofMajority, vr.Result())
+		t.Equal(VoteProofMajority, vp.Result())
 	}
 }
 
@@ -196,17 +199,16 @@ func (t *testBallotbox) newSIGNBallot(height Height, round Round, node Address) 
 }
 
 func (t *testBallotbox) TestSIGNVoteProofNotYet() {
-	threshold, _ := NewThreshold(2, 67)
-	bb := NewBallotbox(threshold)
+	bb := NewBallotbox(t.newLocalState(2, 67))
 	ba := t.newSIGNBallot(Height(10), Round(0), NewShortAddress("test-for-sign-ballot"))
 
-	vr, err := bb.Vote(ba)
+	vp, err := bb.Vote(ba)
 	t.NoError(err)
-	t.Equal(VoteProofNotYet, vr.Result())
+	t.Equal(VoteProofNotYet, vp.Result())
 
-	t.Equal(ba.Height(), vr.Height())
-	t.Equal(ba.Round(), vr.Round())
-	t.Equal(ba.Stage(), vr.Stage())
+	t.Equal(ba.Height(), vp.Height())
+	t.Equal(ba.Round(), vp.Round())
+	t.Equal(ba.Stage(), vp.Stage())
 
 	vrs := bb.loadVoteRecords(ba, false)
 	t.NotNil(vrs)
@@ -221,28 +223,26 @@ func (t *testBallotbox) TestSIGNVoteProofNotYet() {
 }
 
 func (t *testBallotbox) TestSIGNVoteProofDraw() {
-	threshold, _ := NewThreshold(2, 67)
-	bb := NewBallotbox(threshold)
+	bb := NewBallotbox(t.newLocalState(2, 67))
 
 	// 2 ballot have the differnt previousBlock hash
 	ba0 := t.newSIGNBallot(Height(10), Round(0), NewShortAddress("node0"))
 	ba1 := t.newSIGNBallot(Height(10), Round(0), NewShortAddress("node1"))
 
 	{
-		vr, err := bb.Vote(ba0)
+		vp, err := bb.Vote(ba0)
 		t.NoError(err)
-		t.Equal(VoteProofNotYet, vr.Result())
+		t.Equal(VoteProofNotYet, vp.Result())
 	}
 	{
-		vr, err := bb.Vote(ba1)
+		vp, err := bb.Vote(ba1)
 		t.NoError(err)
-		t.Equal(VoteProofDraw, vr.Result())
+		t.Equal(VoteProofDraw, vp.Result())
 	}
 }
 
 func (t *testBallotbox) TestSIGNVoteProofMajority() {
-	threshold, _ := NewThreshold(3, 66)
-	bb := NewBallotbox(threshold)
+	bb := NewBallotbox(t.newLocalState(3, 66))
 
 	// 2 ballot have the differnt previousBlock hash
 	ba0 := t.newSIGNBallot(Height(10), Round(0), NewShortAddress("node0"))
@@ -256,14 +256,14 @@ func (t *testBallotbox) TestSIGNVoteProofMajority() {
 	}
 
 	{
-		vr, err := bb.Vote(ba0)
+		vp, err := bb.Vote(ba0)
 		t.NoError(err)
-		t.Equal(VoteProofNotYet, vr.Result())
+		t.Equal(VoteProofNotYet, vp.Result())
 	}
 	{
-		vr, err := bb.Vote(ba1)
+		vp, err := bb.Vote(ba1)
 		t.NoError(err)
-		t.Equal(VoteProofMajority, vr.Result())
+		t.Equal(VoteProofMajority, vp.Result())
 	}
 }
 
@@ -287,17 +287,16 @@ func (t *testBallotbox) newACCEPTBallot(height Height, round Round, node Address
 }
 
 func (t *testBallotbox) TestACCEPTVoteProofNotYet() {
-	threshold, _ := NewThreshold(2, 67)
-	bb := NewBallotbox(threshold)
+	bb := NewBallotbox(t.newLocalState(2, 67))
 	ba := t.newACCEPTBallot(Height(10), Round(0), NewShortAddress("test-for-accept-ballot"))
 
-	vr, err := bb.Vote(ba)
+	vp, err := bb.Vote(ba)
 	t.NoError(err)
-	t.Equal(VoteProofNotYet, vr.Result())
+	t.Equal(VoteProofNotYet, vp.Result())
 
-	t.Equal(ba.Height(), vr.Height())
-	t.Equal(ba.Round(), vr.Round())
-	t.Equal(ba.Stage(), vr.Stage())
+	t.Equal(ba.Height(), vp.Height())
+	t.Equal(ba.Round(), vp.Round())
+	t.Equal(ba.Stage(), vp.Stage())
 
 	vrs := bb.loadVoteRecords(ba, false)
 	t.NotNil(vrs)
@@ -312,28 +311,26 @@ func (t *testBallotbox) TestACCEPTVoteProofNotYet() {
 }
 
 func (t *testBallotbox) TestACCEPTVoteProofDraw() {
-	threshold, _ := NewThreshold(2, 67)
-	bb := NewBallotbox(threshold)
+	bb := NewBallotbox(t.newLocalState(2, 67))
 
 	// 2 ballot have the differnt previousBlock hash
 	ba0 := t.newACCEPTBallot(Height(10), Round(0), NewShortAddress("node0"))
 	ba1 := t.newACCEPTBallot(Height(10), Round(0), NewShortAddress("node1"))
 
 	{
-		vr, err := bb.Vote(ba0)
+		vp, err := bb.Vote(ba0)
 		t.NoError(err)
-		t.Equal(VoteProofNotYet, vr.Result())
+		t.Equal(VoteProofNotYet, vp.Result())
 	}
 	{
-		vr, err := bb.Vote(ba1)
+		vp, err := bb.Vote(ba1)
 		t.NoError(err)
-		t.Equal(VoteProofDraw, vr.Result())
+		t.Equal(VoteProofDraw, vp.Result())
 	}
 }
 
 func (t *testBallotbox) TestACCEPTVoteProofMajority() {
-	threshold, _ := NewThreshold(3, 66)
-	bb := NewBallotbox(threshold)
+	bb := NewBallotbox(t.newLocalState(3, 66))
 
 	// 2 ballot have the differnt previousBlock hash
 	ba0 := t.newACCEPTBallot(Height(10), Round(0), NewShortAddress("node0"))
@@ -347,14 +344,14 @@ func (t *testBallotbox) TestACCEPTVoteProofMajority() {
 	}
 
 	{
-		vr, err := bb.Vote(ba0)
+		vp, err := bb.Vote(ba0)
 		t.NoError(err)
-		t.Equal(VoteProofNotYet, vr.Result())
+		t.Equal(VoteProofNotYet, vp.Result())
 	}
 	{
-		vr, err := bb.Vote(ba1)
+		vp, err := bb.Vote(ba1)
 		t.NoError(err)
-		t.Equal(VoteProofMajority, vr.Result())
+		t.Equal(VoteProofMajority, vp.Result())
 	}
 }
 

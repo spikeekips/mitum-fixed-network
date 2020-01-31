@@ -61,6 +61,29 @@ type INITBallotV0 struct {
 	factSignature key.Signature
 }
 
+func NewINITBallotV0FromLocalState(localState *LocalState, round Round, b []byte) (INITBallotV0, error) {
+	ib := INITBallotV0{
+		BaseBallotV0: BaseBallotV0{
+			node: localState.Node().Address(),
+		},
+		INITBallotV0Fact: INITBallotV0Fact{
+			BaseBallotV0Fact: BaseBallotV0Fact{
+				height: localState.LastBlockHeight() + 1,
+				round:  round,
+			},
+			previousBlock: localState.LastBlockHash(),
+			previousRound: localState.LastBlockRound(),
+		},
+	}
+
+	// TODO NetworkID must be given.
+	if err := ib.Sign(localState.Node().Privatekey(), b); err != nil {
+		return INITBallotV0{}, err
+	}
+
+	return ib, nil
+}
+
 func (ib INITBallotV0) Hint() hint.Hint {
 	return INITBallotV0Hint
 }
@@ -152,9 +175,11 @@ func (ib *INITBallotV0) Sign(pk key.Privatekey, b []byte) error { // nolint
 		bodyHash = h
 	}
 
-	sig, err := pk.Sign(util.ConcatSlice([][]byte{bodyHash.Bytes(), b}))
-	if err != nil {
+	var sig key.Signature
+	if s, err := pk.Sign(util.ConcatSlice([][]byte{bodyHash.Bytes(), b})); err != nil {
 		return err
+	} else {
+		sig = s
 	}
 
 	// fact signature

@@ -13,17 +13,17 @@ import (
 type Ballotbox struct {
 	sync.RWMutex
 	*logging.Logger
-	vrs       *sync.Map
-	threshold Threshold
+	vrs        *sync.Map
+	localState *LocalState
 }
 
-func NewBallotbox(threshold Threshold) *Ballotbox {
+func NewBallotbox(localState *LocalState) *Ballotbox {
 	return &Ballotbox{
 		Logger: logging.NewLogger(func(c zerolog.Context) zerolog.Context {
 			return c.Str("module", "ballotbox")
 		}),
-		vrs:       &sync.Map{},
-		threshold: threshold,
+		vrs:        &sync.Map{},
+		localState: localState,
 	}
 }
 
@@ -47,7 +47,7 @@ func (bb *Ballotbox) loadVoteRecords(ballot Ballot, ifNotCreate bool) *VoteRecor
 	if i, found := bb.vrs.Load(key); found {
 		vrs = i.(*VoteRecords)
 	} else if ifNotCreate {
-		vrs = NewVoteRecords(ballot, bb.threshold)
+		vrs = NewVoteRecords(ballot, bb.localState.Policy().Threshold())
 		bb.vrs.Store(key, vrs)
 	}
 

@@ -78,8 +78,8 @@ func (css *ConsensusStates) Activate(cs ConsensusState) error {
 	return nil
 }
 
-func (css *ConsensusStates) newVoteProof(vr VoteProof) error {
-	return css.Activated().NewVoteProof(vr)
+func (css *ConsensusStates) newVoteProof(vp VoteProof) error {
+	return css.Activated().NewVoteProof(vp)
 }
 
 // NewSeal receives Seal and hand it over to handler;
@@ -110,16 +110,26 @@ func (css *ConsensusStates) NewSeal(sl seal.Seal) error {
 		}
 	}()
 
-	if _, isBallot := sl.(Ballot); !isBallot {
+	b, isBallot := sl.(Ballot)
+	if !isBallot {
 		return nil
 	}
 
-	vr, err := css.ballotbox.Vote(sl.(Ballot))
+	switch b.Stage() {
+	case StageINIT, StageACCEPT:
+		return css.vote(b)
+	}
+
+	return nil
+}
+
+func (css *ConsensusStates) vote(ballot Ballot) error {
+	vp, err := css.ballotbox.Vote(ballot)
 	if err != nil {
 		return err
-	} else if !vr.IsFinished() {
+	} else if !vp.IsFinished() {
 		return nil
 	}
 
-	return css.newVoteProof(vr)
+	return css.newVoteProof(vp)
 }

@@ -147,9 +147,11 @@ func (ab *ACCEPTBallotV0) Sign(pk key.Privatekey, b []byte) error { // nolint
 		bodyHash = h
 	}
 
-	sig, err := pk.Sign(util.ConcatSlice([][]byte{bodyHash.Bytes(), b}))
-	if err != nil {
+	var sig key.Signature
+	if s, err := pk.Sign(util.ConcatSlice([][]byte{bodyHash.Bytes(), b})); err != nil {
 		return err
+	} else {
+		sig = s
 	}
 
 	var factHash valuehash.Hash

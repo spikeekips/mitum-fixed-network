@@ -64,67 +64,71 @@ func (vf VoteProofNodeFact) IsValid(b []byte) error {
 type VoteProof struct {
 	height    Height
 	round     Round
-	stage     Stage
 	threshold Threshold
 	result    VoteProofType
+	stage     Stage
 	majority  Fact
 	facts     map[valuehash.Hash]Fact       // key: Fact.Hash(), value: Fact
 	ballots   map[Address]valuehash.Hash    // key: node Address, value: ballot hash
 	votes     map[Address]VoteProofNodeFact // key: node Address, value: VoteProofNodeFact
 }
 
-func (vr VoteProof) IsFinished() bool {
-	return vr.result != VoteProofNotYet
+func (vp VoteProof) IsFinished() bool {
+	return vp.result != VoteProofNotYet
 }
 
-func (vr VoteProof) Height() Height {
-	return vr.height
+func (vp VoteProof) Height() Height {
+	return vp.height
 }
 
-func (vr VoteProof) Round() Round {
-	return vr.round
+func (vp VoteProof) Round() Round {
+	return vp.round
 }
 
-func (vr VoteProof) Stage() Stage {
-	return vr.stage
+func (vp VoteProof) Stage() Stage {
+	return vp.stage
 }
 
-func (vr VoteProof) Result() VoteProofType {
-	return vr.result
+func (vp VoteProof) Result() VoteProofType {
+	return vp.result
 }
 
-func (vr VoteProof) Ballots() map[Address]valuehash.Hash {
-	return vr.ballots
+func (vp VoteProof) Ballots() map[Address]valuehash.Hash {
+	return vp.ballots
 }
 
-func (vr VoteProof) Bytes() []byte {
+func (vp VoteProof) Bytes() []byte {
 	return nil
 }
 
-func (vr VoteProof) IsValid(b []byte) error {
-	if err := vr.isValidFields(b); err != nil {
+func (vp VoteProof) IsValid(b []byte) error {
+	if err := vp.isValidFields(b); err != nil {
+		return err
+	}
+
+	if err := vp.isValidFacts(b); err != nil {
 		return err
 	}
 
 	// check majority
-	if len(vr.votes) < int(vr.threshold.Threshold) {
-		if vr.result != VoteProofNotYet {
-			return xerrors.Errorf("result should be not-yet: %s", vr.result)
+	if len(vp.votes) < int(vp.threshold.Threshold) {
+		if vp.result != VoteProofNotYet {
+			return xerrors.Errorf("result should be not-yet: %s", vp.result)
 		}
 
 		return nil
 	}
 
-	return vr.isValidCheckMajority(b)
+	return vp.isValidCheckMajority(b)
 }
 
-func (vr VoteProof) isValidCheckMajority(b []byte) error {
+func (vp VoteProof) isValidCheckMajority(b []byte) error {
 	counts := map[valuehash.Hash]uint{}
-	for _, f := range vr.votes {
+	for _, f := range vp.votes { // nolint
 		counts[f.fact]++
 	}
 
-	var set []uint
+	set := make([]uint, len(counts))
 	byCount := map[uint]valuehash.Hash{}
 	for h, c := range counts {
 		set = append(set, c)
@@ -134,7 +138,7 @@ func (vr VoteProof) isValidCheckMajority(b []byte) error {
 	var fact Fact
 	var factHash valuehash.Hash
 	var result VoteProofType
-	switch index := FindMajority(vr.threshold.Total, vr.threshold.Threshold, set...); index {
+	switch index := FindMajority(vp.threshold.Total, vp.threshold.Threshold, set...); index {
 	case -1:
 		result = VoteProofNotYet
 	case -2:
@@ -142,86 +146,96 @@ func (vr VoteProof) isValidCheckMajority(b []byte) error {
 	default:
 		result = VoteProofMajority
 		factHash = byCount[set[index]]
-		fact = vr.facts[factHash]
+		fact = vp.facts[factHash]
 	}
 
-	if vr.result != result {
-		return xerrors.Errorf("result mismatch; vr.result=%s != result=%s", vr.result, result)
+	if vp.result != result {
+		return xerrors.Errorf("result mismatch; vp.result=%s != result=%s", vp.result, result)
 	}
 
 	if fact == nil {
-		if vr.majority != nil {
+		if vp.majority != nil {
 			return xerrors.Errorf("result should be nil, but not")
 		}
 	} else {
-		mhash, err := vr.majority.Hash(b)
+		mhash, err := vp.majority.Hash(b)
 		if err != nil {
 			return err
 		}
 
 		if !mhash.Equal(factHash) {
-			return xerrors.Errorf("fact hash mismatch; vr.majority=%s != fact=%s", mhash, factHash)
+			return xerrors.Errorf("fact hash mismatch; vp.majority=%s != fact=%s", mhash, factHash)
 		}
 	}
 
 	return nil
 }
 
-func (vr VoteProof) isValidFields(b []byte) error {
+func (vp VoteProof) isValidFields(b []byte) error {
 	if err := isvalid.Check([]isvalid.IsValider{
-		vr.height,
-		vr.stage,
-		vr.threshold,
-		vr.result,
+		vp.height,
+		vp.stage,
+		vp.threshold,
+		vp.result,
 	}, b); err != nil {
 		return err
 	}
 
-	if vr.majority == nil {
-		if vr.result == VoteProofMajority {
-			return InvalidError.Wrapf("empty majority")
-		}
-	} else {
-		if err := vr.majority.IsValid(b); err != nil {
-			return err
-		}
+	if vp.result != VoteProofMajority && vp.result != VoteProofDraw {
+		return InvalidError.Wrapf("invalid result; result=%v", vp.result)
 	}
 
-	if len(vr.facts) < 1 {
+	if vp.majority == nil {
+		if vp.result != VoteProofDraw {
+			return InvalidError.Wrapf("empty majority, but result is not draw; result=%v", vp.result)
+		}
+	} else if err := vp.majority.IsValid(b); err != nil {
+		return err
+	}
+
+	if len(vp.facts) < 1 {
 		return InvalidError.Wrapf("empty facts")
 	}
 
-	if len(vr.ballots) < 1 {
+	if len(vp.ballots) < 1 {
 		return InvalidError.Wrapf("empty ballots")
 	}
 
-	if len(vr.votes) < 1 {
+	if len(vp.votes) < 1 {
 		return InvalidError.Wrapf("empty votes")
 	}
 
-	if len(vr.ballots) != len(vr.votes) {
-		return InvalidError.Wrapf("vote count does not match: ballots=%d votes=%d", len(vr.ballots), len(vr.votes))
+	if len(vp.ballots) != len(vp.votes) {
+		return InvalidError.Wrapf("vote count does not match: ballots=%d votes=%d", len(vp.ballots), len(vp.votes))
 	}
 
-	for k := range vr.ballots {
-		if _, found := vr.votes[k]; !found {
+	for k := range vp.ballots {
+		if _, found := vp.votes[k]; !found {
 			return xerrors.Errorf("unknown node found: %v", k)
 		}
 	}
 
+	return nil
+}
+
+func (vp VoteProof) isValidFacts(b []byte) error {
 	factHashes := map[valuehash.Hash]bool{}
-	for _, f := range vr.votes {
-		if _, found := vr.facts[f.fact]; !found {
+	for node, f := range vp.votes { // nolint
+		if err := node.IsValid(b); err != nil {
+			return err
+		}
+
+		if _, found := vp.facts[f.fact]; !found {
 			return xerrors.Errorf("missing fact found in facts: %s", f.fact.String())
 		}
 		factHashes[f.fact] = true
 	}
 
-	if len(factHashes) != len(vr.facts) {
-		return xerrors.Errorf("unknown facts found in facts: %d", len(vr.facts)-len(factHashes))
+	if len(factHashes) != len(vp.facts) {
+		return xerrors.Errorf("unknown facts found in facts: %d", len(vp.facts)-len(factHashes))
 	}
 
-	for k, v := range vr.facts {
+	for k, v := range vp.facts {
 		if err := isvalid.Check([]isvalid.IsValider{k, v}, b); err != nil {
 			return err
 		}
@@ -235,18 +249,8 @@ func (vr VoteProof) isValidFields(b []byte) error {
 		}
 	}
 
-	for k, v := range vr.ballots {
+	for k, v := range vp.ballots {
 		if err := isvalid.Check([]isvalid.IsValider{k, v}, b); err != nil {
-			return err
-		}
-	}
-
-	{
-		var vs []isvalid.IsValider
-		for node, f := range vr.votes {
-			vs = append(vs, f, node)
-		}
-		if err := isvalid.Check(vs, b); err != nil {
 			return err
 		}
 	}

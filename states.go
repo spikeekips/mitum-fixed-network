@@ -34,13 +34,27 @@ func (li *LockedItem) SetValue(value interface{}) *LockedItem {
 }
 
 type LocalPolicy struct {
+	threshold                               *LockedItem
 	intervalBroadcastingINITBallotInJoining *LockedItem
 }
 
 func NewLocalPolicy() *LocalPolicy {
+	threshold, _ := NewThreshold(1, 100)
 	return &LocalPolicy{
+		// NOTE default threshold assumes only one node exists, it means the network is just booted.
+		threshold:                               NewLockedItem(threshold),
 		intervalBroadcastingINITBallotInJoining: NewLockedItem(time.Second * 2),
 	}
+}
+
+func (lp *LocalPolicy) Threshold() Threshold {
+	return lp.threshold.Value().(Threshold)
+}
+
+func (lp *LocalPolicy) SetThreshold(threshold Threshold) *LocalPolicy {
+	_ = lp.threshold.SetValue(threshold)
+
+	return lp
 }
 
 func (lp *LocalPolicy) IntervalBroadcastingINITBallotInJoining() time.Duration {
@@ -155,22 +169,27 @@ func (ns *NodesState) Traverse(callback func(Node) bool) {
 }
 
 type LocalState struct {
-	node            *LocalNode
-	policy          *LocalPolicy
-	nodes           *NodesState
-	lastBlockHeight *LockedItem // TODO combine these 3 values by last block
-	lastBlockHash   *LockedItem
-	lastBlockRound  *LockedItem
+	node                *LocalNode
+	policy              *LocalPolicy
+	nodes               *NodesState
+	lastBlockHeight     *LockedItem // TODO combine these 3 values by last block
+	lastBlockHash       *LockedItem
+	lastBlockRound      *LockedItem
+	lastINITVoteProof   *LockedItem
+	lastACCEPTVoteProof *LockedItem
 }
 
 func NewLocalState(node *LocalNode, policy *LocalPolicy) *LocalState {
+	// TODO fill this values from storage
 	return &LocalState{
-		node:            node,
-		policy:          policy,
-		nodes:           NewNodesState(nil),
-		lastBlockHash:   NewLockedItem(nil),
-		lastBlockHeight: NewLockedItem(Height(0)),
-		lastBlockRound:  NewLockedItem(Round(0)),
+		node:                node,
+		policy:              policy,
+		nodes:               NewNodesState(nil),
+		lastBlockHash:       NewLockedItem(nil),
+		lastBlockHeight:     NewLockedItem(Height(0)),
+		lastBlockRound:      NewLockedItem(Round(0)),
+		lastINITVoteProof:   NewLockedItem(VoteProof{}),
+		lastACCEPTVoteProof: NewLockedItem(VoteProof{}),
 	}
 }
 
@@ -217,6 +236,26 @@ func (ls *LocalState) LastBlockRound() Round {
 
 func (ls *LocalState) SetLastBlockRound(round Round) *LocalState {
 	_ = ls.lastBlockRound.SetValue(round)
+
+	return ls
+}
+
+func (ls *LocalState) LastINITVoteProof() VoteProof {
+	return ls.lastINITVoteProof.Value().(VoteProof)
+}
+
+func (ls *LocalState) SetVoteProofound(vp VoteProof) *LocalState {
+	_ = ls.lastINITVoteProof.SetValue(vp)
+
+	return ls
+}
+
+func (ls *LocalState) LastACCEPTVoteProof() VoteProof {
+	return ls.lastACCEPTVoteProof.Value().(VoteProof)
+}
+
+func (ls *LocalState) SetLastACCEPTVoteProofound(vp VoteProof) *LocalState {
+	_ = ls.lastACCEPTVoteProof.SetValue(vp)
 
 	return ls
 }

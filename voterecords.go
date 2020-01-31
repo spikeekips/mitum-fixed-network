@@ -13,7 +13,7 @@ type VoteRecords struct {
 	votes     map[Address]valuehash.Hash // key: node Address, value: fact hash
 	factCount map[valuehash.Hash]uint
 	ballots   map[Address]Ballot
-	vr        VoteProof
+	vp        VoteProof
 }
 
 func NewVoteRecords(ballot Ballot, threshold Threshold) *VoteRecords {
@@ -22,7 +22,7 @@ func NewVoteRecords(ballot Ballot, threshold Threshold) *VoteRecords {
 		votes:     map[Address]valuehash.Hash{},
 		factCount: map[valuehash.Hash]uint{},
 		ballots:   map[Address]Ballot{},
-		vr: VoteProof{
+		vp: VoteProof{
 			height:    ballot.Height(),
 			round:     ballot.Round(),
 			stage:     ballot.Stage(),
@@ -60,7 +60,7 @@ func (vrs *VoteRecords) Vote(ballot Ballot) VoteProof {
 	defer vrs.Unlock()
 
 	if !vrs.vote(ballot) {
-		return vrs.vr
+		return vrs.vp
 	}
 
 	{
@@ -68,7 +68,7 @@ func (vrs *VoteRecords) Vote(ballot Ballot) VoteProof {
 		for k, v := range vrs.facts {
 			facts[k] = v
 		}
-		vrs.vr.facts = facts
+		vrs.vp.facts = facts
 	}
 
 	{
@@ -76,7 +76,7 @@ func (vrs *VoteRecords) Vote(ballot Ballot) VoteProof {
 		for k, v := range vrs.ballots {
 			ballots[k] = v.Hash()
 		}
-		vrs.vr.ballots = ballots
+		vrs.vp.ballots = ballots
 	}
 
 	{
@@ -88,10 +88,10 @@ func (vrs *VoteRecords) Vote(ballot Ballot) VoteProof {
 				signer:        ballot.Signer(),
 			}
 		}
-		vrs.vr.votes = votes
+		vrs.vp.votes = votes
 	}
 
-	return vrs.vr
+	return vrs.vp
 }
 
 func (vrs *VoteRecords) vote(ballot Ballot) bool {
@@ -99,14 +99,14 @@ func (vrs *VoteRecords) vote(ballot Ballot) bool {
 		return false
 	}
 
-	if vrs.vr.IsFinished() {
+	if vrs.vp.IsFinished() {
 		return false
-	} else if len(vrs.votes) < int(vrs.vr.threshold.Threshold) {
+	} else if len(vrs.votes) < int(vrs.vp.threshold.Threshold) {
 		return false
 	}
 
 	byCount := map[uint]Fact{}
-	var set []uint
+	set := make([]uint, len(vrs.factCount))
 	for factHash, c := range vrs.factCount {
 		set = append(set, c)
 		byCount[c] = vrs.facts[factHash]
@@ -118,7 +118,7 @@ func (vrs *VoteRecords) vote(ballot Ballot) bool {
 
 	var fact Fact
 	var result VoteProofType
-	switch index := FindMajority(vrs.vr.threshold.Total, vrs.vr.threshold.Threshold, set...); index {
+	switch index := FindMajority(vrs.vp.threshold.Total, vrs.vp.threshold.Threshold, set...); index {
 	case -1:
 		result = VoteProofNotYet
 	case -2:
@@ -128,8 +128,8 @@ func (vrs *VoteRecords) vote(ballot Ballot) bool {
 		fact = byCount[set[index]]
 	}
 
-	vrs.vr.result = result
-	vrs.vr.majority = fact
+	vrs.vp.result = result
+	vrs.vp.majority = fact
 
 	return true
 }

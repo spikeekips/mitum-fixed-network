@@ -12,7 +12,7 @@ type tinyFact struct {
 	A string
 }
 
-func (tf tinyFact) IsValid(b []byte) error {
+func (tf tinyFact) IsValid([]byte) error {
 	if len(tf.A) < 1 {
 		return InvalidError.Wrapf("empty A")
 	}
@@ -20,7 +20,7 @@ func (tf tinyFact) IsValid(b []byte) error {
 	return nil
 }
 
-func (tf tinyFact) Hash(b []byte) (valuehash.Hash, error) {
+func (tf tinyFact) Hash([]byte) (valuehash.Hash, error) {
 	return valuehash.NewSHA256(tf.Bytes()), nil
 }
 

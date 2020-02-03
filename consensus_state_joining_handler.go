@@ -423,13 +423,28 @@ func (cs *ConsensusStateJoiningHandler) handleINITVoteProof(vp VoteProof) error 
 		log.Debug().Msg("hiehger height; moves to sync")
 		return cs.changeState(ConsensusStateSyncing, vp)
 	default:
-		log.Debug().Msg("same height; moves to consensus state")
+		log.Debug().Msg("expected height; moves to consensus state")
 		return cs.changeState(ConsensusStateConsensus, vp)
 	}
 }
 
 func (cs *ConsensusStateJoiningHandler) handleACCEPTVoteProof(vp VoteProof) error {
-	return nil
+	log := cs.loggerWithLocalState(cs.loggerWithVoteProof(vp, cs.Log()))
+
+	switch d := vp.Height() - (cs.localState.LastBlockHeight() + 1); {
+	case d < 0:
+		// TODO check previousBlock and previousRound. If not matched with local
+		// blocks, it should be **argue** with other nodes.
+		log.Debug().Msg("lower height; still wait")
+		return nil
+	case d > 0:
+		log.Debug().Msg("hiehger height; moves to sync")
+		return cs.changeState(ConsensusStateSyncing, vp)
+	default:
+		log.Debug().Msg("expected height; processing Proposal")
+		// TODO processing Proposal and then wait next INIT VoteProof.
+		return nil
+	}
 }
 
 func (cs *ConsensusStateJoiningHandler) loggerWithBallot(ballot Ballot, l *zerolog.Logger) *zerolog.Logger {

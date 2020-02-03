@@ -597,6 +597,129 @@ func (t *testConsensusStateJoiningHandler) TestINITVoteProofLowerHeight() {
 	t.NoError(cs.NewVoteProof(vp))
 }
 
+// With new ACCEPT VoteProof
+// - vp.Height() == local + 1
+// ConsensusStateJoiningHandler will processing Proposal.
+func (t *testConsensusStateJoiningHandler) TestACCEPTVoteProofExpected() {
+	localState, remoteState := t.states()
+
+	thr, _ := NewThreshold(2, 67)
+	_ = localState.Policy().SetThreshold(thr)
+	_ = remoteState.Policy().SetThreshold(thr)
+
+	cs, err := NewConsensusStateJoiningHandler(localState)
+	t.NoError(err)
+	t.NotNil(cs)
+
+	t.NoError(cs.Activate())
+	defer func() {
+		_ = cs.Deactivate()
+	}()
+
+	acceptFact := ACCEPTBallotV0Fact{
+		BaseBallotV0Fact: BaseBallotV0Fact{
+			height: localState.LastBlockHeight() + 1,
+			round:  Round(2), // round is not important to go
+		},
+		proposal: valuehash.RandomSHA256(),
+		newBlock: valuehash.RandomSHA256(),
+	}
+
+	vp, err := t.newVoteProof(StageACCEPT, acceptFact, localState, remoteState)
+	t.NoError(err)
+
+	stateChan := make(chan ConsensusStateChangeContext)
+	cs.SetStateChan(stateChan)
+
+	t.NoError(cs.NewVoteProof(vp))
+}
+
+// With new ACCEPT VoteProof
+// - vp.Height() > local + 1
+// ConsensusStateJoiningHandler will moves to syncing state.
+func (t *testConsensusStateJoiningHandler) TestACCEPTVoteProofHigherHeight() {
+	localState, remoteState := t.states()
+
+	thr, _ := NewThreshold(2, 67)
+	_ = localState.Policy().SetThreshold(thr)
+	_ = remoteState.Policy().SetThreshold(thr)
+
+	cs, err := NewConsensusStateJoiningHandler(localState)
+	t.NoError(err)
+	t.NotNil(cs)
+
+	t.NoError(cs.Activate())
+	defer func() {
+		_ = cs.Deactivate()
+	}()
+
+	acceptFact := ACCEPTBallotV0Fact{
+		BaseBallotV0Fact: BaseBallotV0Fact{
+			height: localState.LastBlockHeight() + 3,
+			round:  Round(2), // round is not important to go
+		},
+		proposal: valuehash.RandomSHA256(),
+		newBlock: valuehash.RandomSHA256(),
+	}
+
+	vp, err := t.newVoteProof(StageACCEPT, acceptFact, localState, remoteState)
+	t.NoError(err)
+
+	stateChan := make(chan ConsensusStateChangeContext)
+	cs.SetStateChan(stateChan)
+
+	t.NoError(cs.NewVoteProof(vp))
+
+	var ctx ConsensusStateChangeContext
+	select {
+	case ctx = <-stateChan:
+	case <-time.After(time.Millisecond * 100):
+		t.NoError(xerrors.Errorf("failed to change state to syncing"))
+	}
+
+	t.Equal(ConsensusStateJoining, ctx.fromState)
+	t.Equal(ConsensusStateSyncing, ctx.toState)
+	t.Equal(StageACCEPT, ctx.voteProof.stage)
+	t.Equal(acceptFact, ctx.voteProof.majority)
+}
+
+// With new ACCEPT VoteProof
+// - vp.Height() < local + 1
+// ConsensusStateJoiningHandler will wait another VoteProof
+func (t *testConsensusStateJoiningHandler) TestACCEPTVoteProofLowerHeight() {
+	localState, remoteState := t.states()
+
+	thr, _ := NewThreshold(2, 67)
+	_ = localState.Policy().SetThreshold(thr)
+	_ = remoteState.Policy().SetThreshold(thr)
+
+	cs, err := NewConsensusStateJoiningHandler(localState)
+	t.NoError(err)
+	t.NotNil(cs)
+
+	t.NoError(cs.Activate())
+	defer func() {
+		_ = cs.Deactivate()
+	}()
+
+	acceptFact := ACCEPTBallotV0Fact{
+		BaseBallotV0Fact: BaseBallotV0Fact{
+			height: localState.LastBlockHeight(),
+			round:  Round(2), // round is not important to go
+		},
+		proposal: valuehash.RandomSHA256(),
+		newBlock: valuehash.RandomSHA256(),
+	}
+
+	vp, err := t.newVoteProof(StageACCEPT, acceptFact, localState, remoteState)
+	t.NoError(err)
+
+	stateChan := make(chan ConsensusStateChangeContext)
+	cs.SetStateChan(stateChan)
+
+	t.NoError(cs.NewVoteProof(vp))
+}
+
 func TestConsensusStateJoiningHandler(t *testing.T) {
 	suite.Run(t, new(testConsensusStateJoiningHandler))
 }

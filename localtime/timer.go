@@ -45,13 +45,20 @@ func NewCallbackTimer(
 	return ct, nil
 }
 
+func (ct *CallbackTimer) SetLogger(l zerolog.Logger) *logging.Logger {
+	_ = ct.Logger.SetLogger(l)
+	return ct.FunctionDaemon.SetLogger(l)
+}
+
 func (ct *CallbackTimer) Start() error {
+	ct.Log().Debug().Msg("trying to start")
 	defer ct.Log().Debug().Msg("timer started")
 
 	return ct.FunctionDaemon.Start()
 }
 
 func (ct *CallbackTimer) Stop() error {
+	ct.Log().Debug().Msg("trying to stop")
 	defer ct.Log().Debug().Msg("timer stopped")
 
 	return ct.FunctionDaemon.Stop()
@@ -60,6 +67,9 @@ func (ct *CallbackTimer) Stop() error {
 func (ct *CallbackTimer) callback(cb func() (bool, error)) func(chan struct{}) error {
 	return func(stopChan chan struct{}) error {
 		returnChan := make(chan error)
+
+		ticker := time.NewTicker(ct.intervalFunc())
+		defer ticker.Stop()
 
 		go func() {
 			errChan := make(chan error)
@@ -71,14 +81,7 @@ func (ct *CallbackTimer) callback(cb func() (bool, error)) func(chan struct{}) e
 				case <-stopChan:
 					returnChan <- nil
 					return
-				default:
-					i := ct.intervalFunc()
-					if i < time.Millisecond {
-						returnChan <- xerrors.Errorf("too narrow interval: %v", i)
-						return
-					}
-					time.Sleep(i)
-
+				case <-ticker.C:
 					go func() {
 						if keep, err := cb(); err != nil {
 							errChan <- err
@@ -86,6 +89,14 @@ func (ct *CallbackTimer) callback(cb func() (bool, error)) func(chan struct{}) e
 							errChan <- xerrors.Errorf("don't go")
 						}
 					}()
+
+					i := ct.intervalFunc()
+					if i < time.Millisecond {
+						returnChan <- xerrors.Errorf("too narrow interval: %v", i)
+						return
+					}
+
+					ticker = time.NewTicker(i)
 				}
 			}
 		}()

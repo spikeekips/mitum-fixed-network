@@ -29,14 +29,14 @@ func NewLogger(cf func(zerolog.Context) zerolog.Context) *Logger {
 
 // SetLogger does not support asynchronous access, so it must be called at a
 // created time.
-func (zl *Logger) SetLogger(l *zerolog.Logger) *Logger {
+func (zl *Logger) SetLogger(l zerolog.Logger) *Logger {
 	if len(zl.contextFunc) > 0 {
 		for _, cf := range zl.contextFunc {
-			*l = cf(l.With()).Logger()
+			l = cf(l.With()).Logger()
 		}
 	}
 
-	zl.l = l
+	zl.l = &l
 
 	return zl
 }

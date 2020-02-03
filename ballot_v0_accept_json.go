@@ -15,6 +15,7 @@ type ACCEPTBallotV0PackerJSON struct {
 	VR VoteProof       `json:"voteproof"`
 }
 
+// TODO for marshaling, most of instances does not need 'PackXXX'.
 func (ab ACCEPTBallotV0) PackJSON(enc *encoder.JSONEncoder) (interface{}, error) {
 	var jpr, jnb json.RawMessage
 	if h, err := enc.Marshal(ab.ACCEPTBallotV0Fact.proposal); err != nil {

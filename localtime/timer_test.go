@@ -215,6 +215,28 @@ func (t *testCallbackTimer) TestCallbackTimerset() {
 	}
 }
 
+func (t *testCallbackTimer) TestLongInterval() {
+	ct, err := NewCallbackTimer(
+		"long-interval timer",
+		func() (bool, error) {
+			return true, nil
+		},
+		time.Second*30,
+		nil,
+	)
+	t.NoError(err)
+	t.NoError(ct.Start())
+
+	defer func() {
+		t.NoError(ct.Stop())
+	}()
+
+	select {
+	case <-time.After(time.Millisecond * 100):
+		t.Error(xerrors.Errorf("stopping too long waited"))
+	}
+}
+
 func TestCallbackTimer(t *testing.T) {
 	suite.Run(t, new(testCallbackTimer))
 }

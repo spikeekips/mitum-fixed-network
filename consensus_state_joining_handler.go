@@ -1,7 +1,6 @@
 package mitum
 
 import (
-	"fmt"
 	"sync"
 	"time"
 
@@ -60,7 +59,7 @@ type ConsensusStateJoiningHandler struct {
 	*logging.Logger
 	localState                  *LocalState
 	stateChan                   chan<- ConsensusStateChangeContext
-	broadcastingINITBallotTimer util.Daemon
+	broadcastingINITBallotTimer *localtime.CallbackTimer
 	cr                          Round
 }
 
@@ -88,6 +87,12 @@ func NewConsensusStateJoiningHandler(
 	cs.broadcastingINITBallotTimer = bt
 
 	return cs, nil
+}
+
+func (cs *ConsensusStateJoiningHandler) SetLogger(l zerolog.Logger) *logging.Logger {
+	_ = cs.Logger.SetLogger(l)
+
+	return cs.broadcastingINITBallotTimer.SetLogger(l)
 }
 
 func (cs *ConsensusStateJoiningHandler) State() ConsensusState {
@@ -253,15 +258,15 @@ func (cs *ConsensusStateJoiningHandler) handleProposal(proposal Proposal) error 
 	return nil
 }
 
-func (cs *ConsensusStateJoiningHandler) changeState(state ConsensusState, vp VoteProof) error {
-	if state == cs.State() {
+func (cs *ConsensusStateJoiningHandler) changeState(newState ConsensusState, vp VoteProof) error {
+	if newState == cs.State() {
 		return xerrors.Errorf("can not change state to same joining state")
 	}
 
 	go func() {
 		cs.stateChan <- ConsensusStateChangeContext{
 			fromState: cs.State(),
-			toState:   state,
+			toState:   newState,
 			voteProof: vp,
 		}
 	}()
@@ -383,13 +388,47 @@ func (cs *ConsensusStateJoiningHandler) handleACCEPTBallotAndINITVoteProof(ballo
 	}
 }
 
+// NewVoteProof receives VoteProof. If received, stop broadcasting INIT ballot.
 func (cs *ConsensusStateJoiningHandler) NewVoteProof(vp VoteProof) error {
 	if err := cs.stopbroadcastingINITBallotTimer(); err != nil {
 		return err
 	}
 
-	fmt.Println(">", vp)
+	log := cs.loggerWithVoteProof(vp, cs.Log())
 
+	log.Debug().Msg("VoteProof received")
+
+	switch vp.Stage() {
+	case StageACCEPT:
+		return cs.handleACCEPTVoteProof(vp)
+	case StageINIT:
+		return cs.handleINITVoteProof(vp)
+	default:
+		err := xerrors.Errorf("unknown stage VoteProof received")
+		log.Error().Err(err).Send()
+		return err
+	}
+}
+
+func (cs *ConsensusStateJoiningHandler) handleINITVoteProof(vp VoteProof) error {
+	log := cs.loggerWithLocalState(cs.loggerWithVoteProof(vp, cs.Log()))
+
+	switch d := vp.Height() - (cs.localState.LastBlockHeight() + 1); {
+	case d < 0:
+		// TODO check previousBlock and previousRound. If not matched with local
+		// blocks, it should be **argue** with other nodes.
+		log.Debug().Msg("lower height; still wait")
+		return nil
+	case d > 0:
+		log.Debug().Msg("hiehger height; moves to sync")
+		return cs.changeState(ConsensusStateSyncing, vp)
+	default:
+		log.Debug().Msg("same height; moves to consensus state")
+		return cs.changeState(ConsensusStateConsensus, vp)
+	}
+}
+
+func (cs *ConsensusStateJoiningHandler) handleACCEPTVoteProof(vp VoteProof) error {
 	return nil
 }
 
@@ -406,14 +445,19 @@ func (cs *ConsensusStateJoiningHandler) loggerWithBallot(ballot Ballot, l *zerol
 }
 
 func (cs *ConsensusStateJoiningHandler) loggerWithVoteProof(vp VoteProof, l *zerolog.Logger) *zerolog.Logger {
-	if l == nil {
-		l = cs.Log()
-	}
-
 	ll := l.With().
 		Int64("voteproof_height", vp.Height().Int64()).
 		Uint64("voteproof_round", vp.Round().Uint64()).
 		Str("voteproof_stage", vp.Stage().String()).
+		Logger()
+
+	return &ll
+}
+
+func (cs *ConsensusStateJoiningHandler) loggerWithLocalState(l *zerolog.Logger) *zerolog.Logger {
+	ll := l.With().
+		Int64("local_height", cs.localState.LastBlockHeight().Int64()).
+		Uint64("current_round", cs.currentRound().Uint64()).
 		Logger()
 
 	return &ll

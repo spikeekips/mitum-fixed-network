@@ -33,6 +33,7 @@ func (abf ACCEPTBallotV0Fact) Hash(b []byte) (valuehash.Hash, error) {
 	// TODO check IsValid?
 	e := util.ConcatSlice([][]byte{abf.Bytes(), b})
 
+	// TODO create common hash func for hashing Ballot.
 	return valuehash.NewSHA256(e), nil
 }
 

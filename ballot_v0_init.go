@@ -11,6 +11,7 @@ import (
 
 var INITBallotV0Hint hint.Hint = hint.MustHint(INITBallotType, "0.1")
 
+// TODO rename to INITBallotFactV0
 type INITBallotV0Fact struct {
 	BaseBallotV0Fact
 	previousBlock valuehash.Hash
@@ -61,6 +62,9 @@ type INITBallotV0 struct {
 	factSignature key.Signature
 }
 
+// TODO round argument should be removed, round is already set by
+// - VoteProof.Round() + 1: if VoteProof.Stage() == StageINIT) or
+// - Round(0): if VoteProof.Stage() == StageACCEPT
 func NewINITBallotV0FromLocalState(localState *LocalState, round Round, b []byte) (INITBallotV0, error) {
 	ib := INITBallotV0{
 		BaseBallotV0: BaseBallotV0{
@@ -75,6 +79,7 @@ func NewINITBallotV0FromLocalState(localState *LocalState, round Round, b []byte
 			previousRound: localState.LastBlockRound(),
 		},
 	}
+	ib.voteProof = localState.LastINITVoteProof()
 
 	// TODO NetworkID must be given.
 	if err := ib.Sign(localState.Node().Privatekey(), b); err != nil {

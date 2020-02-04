@@ -34,16 +34,19 @@ func (li *LockedItem) SetValue(value interface{}) *LockedItem {
 }
 
 type LocalPolicy struct {
-	threshold                               *LockedItem
-	intervalBroadcastingINITBallotInJoining *LockedItem
+	threshold                      *LockedItem
+	timeoutWaitingProposal         *LockedItem
+	intervalBroadcastingINITBallot *LockedItem
 }
 
 func NewLocalPolicy() *LocalPolicy {
 	threshold, _ := NewThreshold(1, 100)
 	return &LocalPolicy{
 		// NOTE default threshold assumes only one node exists, it means the network is just booted.
-		threshold:                               NewLockedItem(threshold),
-		intervalBroadcastingINITBallotInJoining: NewLockedItem(time.Second * 2),
+		threshold: NewLockedItem(threshold),
+		// TODO these values must be reset by last block's data
+		timeoutWaitingProposal:         NewLockedItem(time.Second * 3),
+		intervalBroadcastingINITBallot: NewLockedItem(time.Second * 1),
 	}
 }
 
@@ -57,16 +60,30 @@ func (lp *LocalPolicy) SetThreshold(threshold Threshold) *LocalPolicy {
 	return lp
 }
 
-func (lp *LocalPolicy) IntervalBroadcastingINITBallotInJoining() time.Duration {
-	return lp.intervalBroadcastingINITBallotInJoining.Value().(time.Duration)
+func (lp *LocalPolicy) TimeoutWaitingProposal() time.Duration {
+	return lp.timeoutWaitingProposal.Value().(time.Duration)
 }
 
-func (lp *LocalPolicy) SetIntervalBroadcastingINITBallotInJoining(d time.Duration) (*LocalPolicy, error) {
+func (lp *LocalPolicy) SetTimeoutWaitingProposal(d time.Duration) (*LocalPolicy, error) {
 	if d < 1 {
-		return nil, xerrors.Errorf("IntervalBroadcastingINITBallotInJoining too short; %v", d)
+		return nil, xerrors.Errorf("TimeoutWaitingProposal too short; %v", d)
 	}
 
-	_ = lp.intervalBroadcastingINITBallotInJoining.SetValue(d)
+	_ = lp.timeoutWaitingProposal.SetValue(d)
+
+	return lp, nil
+}
+
+func (lp *LocalPolicy) IntervalBroadcastingINITBallot() time.Duration {
+	return lp.intervalBroadcastingINITBallot.Value().(time.Duration)
+}
+
+func (lp *LocalPolicy) SetIntervalBroadcastingINITBallot(d time.Duration) (*LocalPolicy, error) {
+	if d < 1 {
+		return nil, xerrors.Errorf("IntervalBroadcastingINITBallot too short; %v", d)
+	}
+
+	_ = lp.intervalBroadcastingINITBallot.SetValue(d)
 
 	return lp, nil
 }
@@ -244,7 +261,7 @@ func (ls *LocalState) LastINITVoteProof() VoteProof {
 	return ls.lastINITVoteProof.Value().(VoteProof)
 }
 
-func (ls *LocalState) SetVoteProofound(vp VoteProof) *LocalState {
+func (ls *LocalState) SetLastINITVoteProof(vp VoteProof) *LocalState {
 	_ = ls.lastINITVoteProof.SetValue(vp)
 
 	return ls
@@ -254,7 +271,7 @@ func (ls *LocalState) LastACCEPTVoteProof() VoteProof {
 	return ls.lastACCEPTVoteProof.Value().(VoteProof)
 }
 
-func (ls *LocalState) SetLastACCEPTVoteProofound(vp VoteProof) *LocalState {
+func (ls *LocalState) SetLastACCEPTVoteProof(vp VoteProof) *LocalState {
 	_ = ls.lastACCEPTVoteProof.SetValue(vp)
 
 	return ls

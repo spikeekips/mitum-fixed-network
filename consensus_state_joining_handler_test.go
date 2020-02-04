@@ -124,20 +124,24 @@ func (t *testConsensusStateJoiningHandler) TestNew() {
 	t.NoError(err)
 	t.NotNil(cs)
 
-	t.NoError(cs.Activate())
+	t.NoError(cs.Activate(ConsensusStateChangeContext{}))
+
+	defer func() {
+		_ = cs.Deactivate(ConsensusStateChangeContext{})
+	}()
 }
 
 func (t *testConsensusStateJoiningHandler) TestKeepBroadcastingINITBallot() {
 	localState, remoteState := t.states()
 
-	_, _ = localState.Policy().SetIntervalBroadcastingINITBallotInJoining(time.Millisecond * 30)
+	_, _ = localState.Policy().SetIntervalBroadcastingINITBallot(time.Millisecond * 30)
 	cs, err := NewConsensusStateJoiningHandler(localState)
 	t.NoError(err)
 	t.NotNil(cs)
 
-	t.NoError(cs.Activate())
+	t.NoError(cs.Activate(ConsensusStateChangeContext{}))
 	defer func() {
-		_ = cs.Deactivate()
+		_ = cs.Deactivate(ConsensusStateChangeContext{})
 	}()
 
 	time.Sleep(time.Millisecond * 50)
@@ -179,9 +183,9 @@ func (t *testConsensusStateJoiningHandler) TestINITBallotWithACCEPTVoteProofExpe
 	t.NoError(err)
 	t.NotNil(cs)
 
-	t.NoError(cs.Activate())
+	t.NoError(cs.Activate(ConsensusStateChangeContext{}))
 	defer func() {
-		_ = cs.Deactivate()
+		_ = cs.Deactivate(ConsensusStateChangeContext{})
 	}()
 
 	ib := t.newINITBallot(remoteState, cs.currentRound())
@@ -224,9 +228,9 @@ func (t *testConsensusStateJoiningHandler) TestINITBallotWithACCEPTVoteProofLowe
 	t.NoError(err)
 	t.NotNil(cs)
 
-	t.NoError(cs.Activate())
+	t.NoError(cs.Activate(ConsensusStateChangeContext{}))
 	defer func() {
-		_ = cs.Deactivate()
+		_ = cs.Deactivate(ConsensusStateChangeContext{})
 	}()
 
 	ib := t.newINITBallot(remoteState, cs.currentRound())
@@ -271,9 +275,9 @@ func (t *testConsensusStateJoiningHandler) TestINITBallotWithACCEPTVoteProofHigh
 	t.NoError(err)
 	t.NotNil(cs)
 
-	t.NoError(cs.Activate())
+	t.NoError(cs.Activate(ConsensusStateChangeContext{}))
 	defer func() {
-		_ = cs.Deactivate()
+		_ = cs.Deactivate(ConsensusStateChangeContext{})
 	}()
 
 	ib := t.newINITBallot(remoteState, cs.currentRound())
@@ -335,9 +339,9 @@ func (t *testConsensusStateJoiningHandler) TestINITBallotWithINITVoteProofExpect
 	t.NoError(err)
 	t.NotNil(cs)
 
-	t.NoError(cs.Activate())
+	t.NoError(cs.Activate(ConsensusStateChangeContext{}))
 	defer func() {
-		_ = cs.Deactivate()
+		_ = cs.Deactivate(ConsensusStateChangeContext{})
 	}()
 
 	cs.setCurrentRound(Round(1))
@@ -383,9 +387,9 @@ func (t *testConsensusStateJoiningHandler) TestINITBallotWithINITVoteProofLowerH
 	t.NoError(err)
 	t.NotNil(cs)
 
-	t.NoError(cs.Activate())
+	t.NoError(cs.Activate(ConsensusStateChangeContext{}))
 	defer func() {
-		_ = cs.Deactivate()
+		_ = cs.Deactivate(ConsensusStateChangeContext{})
 	}()
 
 	cs.setCurrentRound(Round(1))
@@ -433,9 +437,9 @@ func (t *testConsensusStateJoiningHandler) TestINITBallotWithINITVoteProofHigher
 	t.NoError(err)
 	t.NotNil(cs)
 
-	t.NoError(cs.Activate())
+	t.NoError(cs.Activate(ConsensusStateChangeContext{}))
 	defer func() {
-		_ = cs.Deactivate()
+		_ = cs.Deactivate(ConsensusStateChangeContext{})
 	}()
 
 	cs.setCurrentRound(Round(1))
@@ -476,9 +480,9 @@ func (t *testConsensusStateJoiningHandler) TestINITVoteProofExpected() {
 	t.NoError(err)
 	t.NotNil(cs)
 
-	t.NoError(cs.Activate())
+	t.NoError(cs.Activate(ConsensusStateChangeContext{}))
 	defer func() {
-		_ = cs.Deactivate()
+		_ = cs.Deactivate(ConsensusStateChangeContext{})
 	}()
 
 	initFact := INITBallotV0Fact{
@@ -525,9 +529,9 @@ func (t *testConsensusStateJoiningHandler) TestINITVoteProofHigherHeight() {
 	t.NoError(err)
 	t.NotNil(cs)
 
-	t.NoError(cs.Activate())
+	t.NoError(cs.Activate(ConsensusStateChangeContext{}))
 	defer func() {
-		_ = cs.Deactivate()
+		_ = cs.Deactivate(ConsensusStateChangeContext{})
 	}()
 
 	initFact := INITBallotV0Fact{
@@ -574,9 +578,9 @@ func (t *testConsensusStateJoiningHandler) TestINITVoteProofLowerHeight() {
 	t.NoError(err)
 	t.NotNil(cs)
 
-	t.NoError(cs.Activate())
+	t.NoError(cs.Activate(ConsensusStateChangeContext{}))
 	defer func() {
-		_ = cs.Deactivate()
+		_ = cs.Deactivate(ConsensusStateChangeContext{})
 	}()
 
 	initFact := INITBallotV0Fact{
@@ -611,9 +615,9 @@ func (t *testConsensusStateJoiningHandler) TestACCEPTVoteProofExpected() {
 	t.NoError(err)
 	t.NotNil(cs)
 
-	t.NoError(cs.Activate())
+	t.NoError(cs.Activate(ConsensusStateChangeContext{}))
 	defer func() {
-		_ = cs.Deactivate()
+		_ = cs.Deactivate(ConsensusStateChangeContext{})
 	}()
 
 	acceptFact := ACCEPTBallotV0Fact{
@@ -648,9 +652,9 @@ func (t *testConsensusStateJoiningHandler) TestACCEPTVoteProofHigherHeight() {
 	t.NoError(err)
 	t.NotNil(cs)
 
-	t.NoError(cs.Activate())
+	t.NoError(cs.Activate(ConsensusStateChangeContext{}))
 	defer func() {
-		_ = cs.Deactivate()
+		_ = cs.Deactivate(ConsensusStateChangeContext{})
 	}()
 
 	acceptFact := ACCEPTBallotV0Fact{
@@ -697,9 +701,9 @@ func (t *testConsensusStateJoiningHandler) TestACCEPTVoteProofLowerHeight() {
 	t.NoError(err)
 	t.NotNil(cs)
 
-	t.NoError(cs.Activate())
+	t.NoError(cs.Activate(ConsensusStateChangeContext{}))
 	defer func() {
-		_ = cs.Deactivate()
+		_ = cs.Deactivate(ConsensusStateChangeContext{})
 	}()
 
 	acceptFact := ACCEPTBallotV0Fact{

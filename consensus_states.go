@@ -22,7 +22,7 @@ func NewConsensusStates(
 	localState *LocalState,
 	ballotbox *Ballotbox,
 	joining *ConsensusStateJoiningHandler,
-	consensus ConsensusStateHandler,
+	consensus *ConsensusStateConsensusHandler,
 	syncing ConsensusStateHandler,
 	broken ConsensusStateHandler,
 ) *ConsensusStates {
@@ -47,35 +47,6 @@ func (css *ConsensusStates) Activated() ConsensusStateHandler {
 	defer css.RUnlock()
 
 	return css.activated
-}
-
-// Activate activates the handler of the given ConsensusState.
-func (css *ConsensusStates) Activate(cs ConsensusState) error {
-	if err := cs.IsValid(nil); err != nil {
-		return err
-	}
-
-	css.Lock()
-	defer css.Unlock()
-
-	if css.activated != nil {
-		go func() {
-			if err := css.activated.Deactivate(); err != nil {
-				css.Log().Error().Err(err).
-					Str("state", css.activated.State().String()).
-					Msg("failed to Deactivate handler")
-			}
-		}()
-	}
-
-	handler := css.states[cs]
-	if err := handler.Activate(); err != nil {
-		return err
-	}
-
-	css.activated = handler
-
-	return nil
 }
 
 func (css *ConsensusStates) newVoteProof(vp VoteProof) error {

@@ -93,6 +93,10 @@ func (vp VoteProof) Result() VoteProofType {
 	return vp.result
 }
 
+func (vp VoteProof) Majority() Fact {
+	return vp.majority
+}
+
 func (vp VoteProof) Ballots() map[Address]valuehash.Hash {
 	return vp.ballots
 }

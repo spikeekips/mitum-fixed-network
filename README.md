@@ -10,5 +10,5 @@ Ready to go to next winter.
 
 This is the third prototype for MITUM. The previous prototype, `proto2` can be found at [`proto2` branch](https://github.com/spikeekips/mitum/tree/proto1). The detailed operations of this prototype is writing at [MITUM Documentation](https://mitum-doc.readthedocs.io/en/proto3/). After
 
-![FOSSA Status](https://app.fossa.com/api/projects/git%2Bgithub.com%2Fspikeekips%2Fmitum.svg?type=large)
+[![FOSSA Status](https://app.fossa.com/api/projects/git%2Bgithub.com%2Fspikeekips%2Fmitum.svg?type=large)](https://app.fossa.com/projects/git%2Bgithub.com%2Fspikeekips%2Fmitum?ref=badge_large)
 

@@ -5,43 +5,46 @@ import (
 
 	"github.com/spikeekips/mitum/encoder"
 	"github.com/spikeekips/mitum/errors"
+	"github.com/spikeekips/mitum/util"
 	"github.com/spikeekips/mitum/valuehash"
 )
 
 type INITBallotV0PackerJSON struct {
 	BaseBallotV0PackerJSON
-	PB json.RawMessage `json:"previous_block"`
-	PR Round           `json:"previous_round"`
-	VR interface{}     `json:"voteproof"` // TODO
+	PB valuehash.Hash `json:"previous_block"`
+	PR Round          `json:"previous_round"`
+	VR VoteProof      `json:"voteproof"` // TODO
 }
 
-func (ib INITBallotV0) PackJSON(enc *encoder.JSONEncoder) (interface{}, error) {
-	var jpb json.RawMessage
-	if h, err := enc.Marshal(ib.INITBallotV0Fact.previousBlock); err != nil {
-		return nil, err
-	} else {
-		jpb = h
-	}
-
-	bb, err := PackBaseBallotJSON(ib, enc)
+func (ib INITBallotV0) MarshalJSON() ([]byte, error) {
+	bb, err := PackBaseBallotV0JSON(ib)
 	if err != nil {
 		return nil, err
 	}
-	return INITBallotV0PackerJSON{
+	return util.JSONMarshal(INITBallotV0PackerJSON{
 		BaseBallotV0PackerJSON: bb,
-		PB:                     jpb,
-		PR:                     ib.INITBallotV0Fact.previousRound,
-		VR:                     ib.VoteProof(),
-	}, nil
+		PB:                     ib.previousBlock,
+		PR:                     ib.previousRound,
+		VR:                     ib.voteProof,
+	})
+}
+
+type INITBallotV0UnpackerJSON struct {
+	BaseBallotV0UnpackerJSON
+	PB json.RawMessage `json:"previous_block"`
+	PR Round           `json:"previous_round"`
+	VR json.RawMessage `json:"voteproof"` // TODO
 }
 
 func (ib *INITBallotV0) UnpackJSON(b []byte, enc *encoder.JSONEncoder) error {
-	var nib INITBallotV0PackerJSON
+	var nib INITBallotV0UnpackerJSON
 	if err := enc.Unmarshal(b, &nib); err != nil {
+		return err
+	} else if err := ib.Hint().IsCompatible(nib.JSONPackHintedHead.H); err != nil {
 		return err
 	}
 
-	eh, ebh, efh, efsg, bb, bf, err := UnpackBaseBallotJSON(nib.BaseBallotV0PackerJSON, enc)
+	eh, ebh, efh, efsg, bb, bf, err := UnpackBaseBallotV0JSON(nib.BaseBallotV0UnpackerJSON, enc)
 	if err != nil {
 		return err
 	}
@@ -66,6 +69,7 @@ func (ib *INITBallotV0) UnpackJSON(b []byte, enc *encoder.JSONEncoder) error {
 		previousBlock:    epb,
 		previousRound:    nib.PR,
 	}
+	// TODO set VoteProof
 
 	return nil
 }

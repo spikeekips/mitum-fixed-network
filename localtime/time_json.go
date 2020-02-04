@@ -1,8 +1,9 @@
 package localtime
 
 import (
-	"encoding/json"
 	"time"
+
+	"github.com/spikeekips/mitum/util"
 )
 
 type JSONTime struct {
@@ -14,12 +15,12 @@ func NewJSONTime(t time.Time) JSONTime {
 }
 
 func (jt JSONTime) MarshalJSON() ([]byte, error) {
-	return json.Marshal(RFC3339(jt.Time))
+	return util.JSONMarshal(RFC3339(jt.Time))
 }
 
 func (jt *JSONTime) UnmarshalJSON(b []byte) error {
 	var s string
-	if err := json.Unmarshal(b, &s); err != nil {
+	if err := util.JSONUnmarshal(b, &s); err != nil {
 		return err
 	}
 

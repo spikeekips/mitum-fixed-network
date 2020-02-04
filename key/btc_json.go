@@ -1,18 +1,20 @@
 package key // nolint
 
-import "github.com/spikeekips/mitum/encoder"
-
-func (bt BTCPrivatekey) PackJSON(enc *encoder.JSONEncoder) (interface{}, error) {
-	return PackKeyJSON(bt, enc)
+func (bt BTCPrivatekey) MarshalJSON() ([]byte, error) {
+	return MarshalJSONKey(bt)
 }
 
-func (bt *BTCPrivatekey) UnpackJSON(b []byte, enc *encoder.JSONEncoder) error {
-	s, err := UnpackKeyJSON(b, enc)
-	if err != nil {
+func (bt *BTCPrivatekey) UnmarshalJSON(b []byte) error {
+	var key string
+	if h, s, err := UnmarshalJSONKey(b); err != nil {
 		return err
+	} else if err := bt.Hint().IsCompatible(h); err != nil {
+		return err
+	} else {
+		key = s
 	}
 
-	kp, err := NewBTCPrivatekeyFromString(s)
+	kp, err := NewBTCPrivatekeyFromString(key)
 	if err != nil {
 		return err
 	}
@@ -22,17 +24,21 @@ func (bt *BTCPrivatekey) UnpackJSON(b []byte, enc *encoder.JSONEncoder) error {
 	return nil
 }
 
-func (bt BTCPublickey) PackJSON(enc *encoder.JSONEncoder) (interface{}, error) {
-	return PackKeyJSON(bt, enc)
+func (bt BTCPublickey) MarshalJSON() ([]byte, error) {
+	return MarshalJSONKey(bt)
 }
 
-func (bt *BTCPublickey) UnpackJSON(b []byte, enc *encoder.JSONEncoder) error {
-	s, err := UnpackKeyJSON(b, enc)
-	if err != nil {
+func (bt *BTCPublickey) UnmarshalJSON(b []byte) error {
+	var key string
+	if h, s, err := UnmarshalJSONKey(b); err != nil {
 		return err
+	} else if err := bt.Hint().IsCompatible(h); err != nil {
+		return err
+	} else {
+		key = s
 	}
 
-	kp, err := NewBTCPublickeyFromString(s)
+	kp, err := NewBTCPublickeyFromString(key)
 	if err != nil {
 		return err
 	}

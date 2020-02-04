@@ -12,6 +12,36 @@ import (
 
 type BaseBallotV0PackerJSON struct {
 	encoder.JSONPackHintedHead
+	H   valuehash.Hash     `json:"hash"`
+	SN  key.Publickey      `json:"signer"`
+	SG  key.Signature      `json:"signature"`
+	SA  localtime.JSONTime `json:"signed_at"`
+	HT  Height             `json:"height"`
+	RD  Round              `json:"round"`
+	N   Address            `json:"node"`
+	BH  valuehash.Hash     `json:"body_hash"`
+	FH  valuehash.Hash     `json:"fact_hash"`
+	FSG key.Signature      `json:"fact_signature"`
+}
+
+func PackBaseBallotV0JSON(ballot Ballot) (BaseBallotV0PackerJSON, error) {
+	return BaseBallotV0PackerJSON{
+		JSONPackHintedHead: encoder.NewJSONPackHintedHead(ballot.Hint()),
+		H:                  ballot.Hash(),
+		SN:                 ballot.Signer(),
+		SG:                 ballot.Signature(),
+		SA:                 localtime.NewJSONTime(ballot.SignedAt()),
+		HT:                 ballot.Height(),
+		RD:                 ballot.Round(),
+		N:                  ballot.Node(),
+		BH:                 ballot.BodyHash(),
+		FH:                 ballot.FactHash(),
+		FSG:                ballot.FactSignature(),
+	}, nil
+}
+
+type BaseBallotV0UnpackerJSON struct {
+	encoder.JSONPackHintedHead
 	H   json.RawMessage    `json:"hash"`
 	SN  json.RawMessage    `json:"signer"`
 	SG  key.Signature      `json:"signature"`
@@ -24,50 +54,7 @@ type BaseBallotV0PackerJSON struct {
 	FSG key.Signature      `json:"fact_signature"`
 }
 
-func PackBaseBallotJSON(ballot Ballot, enc *encoder.JSONEncoder) (BaseBallotV0PackerJSON, error) {
-	var jh, jbh, jfh, ja json.RawMessage
-	if h, err := enc.Marshal(ballot.Hash()); err != nil {
-		return BaseBallotV0PackerJSON{}, err
-	} else {
-		jh = h
-	}
-	if h, err := enc.Marshal(ballot.BodyHash()); err != nil {
-		return BaseBallotV0PackerJSON{}, err
-	} else {
-		jbh = h
-	}
-	if h, err := enc.Marshal(ballot.FactHash()); err != nil {
-		return BaseBallotV0PackerJSON{}, err
-	} else {
-		jfh = h
-	}
-	if h, err := enc.Encode(ballot.Node()); err != nil {
-		return BaseBallotV0PackerJSON{}, err
-	} else {
-		ja = h
-	}
-
-	bs, err := enc.Encode(ballot.Signer())
-	if err != nil {
-		return BaseBallotV0PackerJSON{}, err
-	}
-
-	return BaseBallotV0PackerJSON{
-		JSONPackHintedHead: encoder.NewJSONPackHintedHead(ballot.Hint()),
-		H:                  jh,
-		SN:                 bs,
-		SG:                 ballot.Signature(),
-		SA:                 localtime.NewJSONTime(ballot.SignedAt()),
-		HT:                 ballot.Height(),
-		RD:                 ballot.Round(),
-		N:                  ja,
-		BH:                 jbh,
-		FH:                 jfh,
-		FSG:                ballot.FactSignature(),
-	}, nil
-}
-
-func UnpackBaseBallotJSON(nib BaseBallotV0PackerJSON, enc *encoder.JSONEncoder) (
+func UnpackBaseBallotV0JSON(nib BaseBallotV0UnpackerJSON, enc *encoder.JSONEncoder) (
 	valuehash.Hash, // seal hash
 	valuehash.Hash, // body hash
 	valuehash.Hash, // fact hash

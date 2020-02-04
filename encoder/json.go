@@ -3,21 +3,14 @@ package encoder
 import (
 	"encoding/json"
 	"reflect"
-	"strings"
 
-	jsoniter "github.com/json-iterator/go"
 	"golang.org/x/xerrors"
 
 	"github.com/spikeekips/mitum/hint"
+	"github.com/spikeekips/mitum/util"
 )
 
 var jsonHint hint.Hint = hint.MustHint(hint.Type([2]byte{0x01, 0x01}), "0.1")
-
-var jsoni = jsoniter.Config{
-	EscapeHTML:             true,
-	SortMapKeys:            false,
-	ValidateJsonRawMessage: true,
-}.Froze()
 
 type JSONEncoder struct {
 	cache   *cache
@@ -39,11 +32,11 @@ func (je JSONEncoder) Hint() hint.Hint {
 }
 
 func (je JSONEncoder) Marshal(i interface{}) ([]byte, error) {
-	return json.Marshal(i)
+	return util.JSONMarshal(i)
 }
 
 func (je JSONEncoder) Unmarshal(b []byte, i interface{}) error {
-	return json.Unmarshal(b, i)
+	return util.JSONUnmarshal(b, i)
 }
 
 func (je *JSONEncoder) Encode(i interface{}) ([]byte, error) {
@@ -59,7 +52,7 @@ func (je *JSONEncoder) Encode(i interface{}) ([]byte, error) {
 		}
 	}
 
-	return jsoni.Marshal(target)
+	return util.JSONMarshal(target)
 }
 
 func (je *JSONEncoder) Decode(b []byte, i interface{}) error {
@@ -105,10 +98,9 @@ func (je *JSONEncoder) Analyze(i interface{}) error {
 	return nil
 }
 
-func (je *JSONEncoder) analyze(i interface{}) (string, CachedPacker, error) { // nolint
-	name, pack, unpack := je.analyzeInstance(i)
+func (je *JSONEncoder) analyze(i interface{}) ([]string, CachedPacker, error) { // nolint
+	names, pack, unpack := je.analyzeInstance(i)
 
-	// hint
 	_, elem := ExtractPtr(i)
 	if elem.Kind() == reflect.Struct {
 		var hinter hint.Hinter
@@ -116,28 +108,42 @@ func (je *JSONEncoder) analyze(i interface{}) (string, CachedPacker, error) { //
 			hinter = ht
 		}
 
-		pack = je.wrapPackerHinter(hinter, pack)
-		unpack = je.wrapUnpackerHinter(hinter, unpack)
+		if names[0] != "NativeJSONMarshaler" {
+			pack = je.wrapPackerHinter(hinter, pack)
+		}
+		if names[0] != "NativeJSONUnmarshaler" {
+			unpack = je.wrapUnpackerHinter(hinter, unpack)
+		}
 	}
 
-	return name, NewCachedPacker(elem.Type(), pack, unpack), nil
+	return names, NewCachedPacker(elem.Type(), pack, unpack), nil
 }
 
-func (je *JSONEncoder) analyzeInstance(i interface{}) (string, jsonPackFunc, jsonUnpackFunc) { // nolint
+func (je *JSONEncoder) analyzeInstance(i interface{}) ([]string, jsonPackFunc, jsonUnpackFunc) { // nolint
 	var names []string
 	var pf jsonPackFunc
 	var upf jsonUnpackFunc
 
 	ptr, elem := ExtractPtr(i)
 
-	if _, ok := elem.Interface().(JSONPackable); ok {
+	if _, ok := elem.Interface().(json.Marshaler); ok {
+		names = append(names, "NativeJSONMarshaler")
+		pf = func(i interface{}) (interface{}, error) {
+			return i, nil
+		}
+	} else if _, ok := elem.Interface().(JSONPackable); ok {
 		names = append(names, "JSONPackable")
 		pf = func(i interface{}) (interface{}, error) {
 			return i.(JSONPackable).PackJSON(je)
 		}
 	}
 
-	if _, ok := ptr.Interface().(JSONUnpackable); ok {
+	if _, ok := ptr.Interface().(json.Unmarshaler); ok {
+		names = append(names, "NativeJSONUnmarshaler")
+		upf = func([]byte, interface{}) (interface{}, error) {
+			return nil, nil
+		}
+	} else if _, ok := ptr.Interface().(JSONUnpackable); ok {
 		names = append(names, "JSONUnpackable")
 		upf = func(b []byte, i interface{}) (interface{}, error) {
 			if err := i.(JSONUnpackable).UnpackJSON(b, je); err != nil {
@@ -156,13 +162,13 @@ func (je *JSONEncoder) analyzeInstance(i interface{}) (string, jsonPackFunc, jso
 			upf = je.unpackValueDefault
 		}
 
-		return strings.Join(names, "+"), pf, upf
+		return names, pf, upf
 	}
 
 	pf = je.packValueDefault
 	upf = je.unpackValueDefault
 
-	return encoderAnalyzedTypeDefault, pf, upf
+	return []string{encoderAnalyzedTypeDefault, encoderAnalyzedTypeDefault}, pf, upf
 }
 
 func (je *JSONEncoder) Pack(i interface{}) (interface{}, error) {
@@ -200,7 +206,7 @@ func (je *JSONEncoder) Unpack(b []byte, i interface{}) error {
 		return nil
 	}
 
-	return jsoni.Unmarshal(b, i)
+	return util.JSONUnmarshal(b, i)
 }
 
 func (je *JSONEncoder) unpackValue(b []byte, i interface{}) (interface{}, error) {
@@ -234,7 +240,7 @@ func (je *JSONEncoder) callUnpacker(b []byte, i interface{}, fn jsonUnpackFunc) 
 		return n, nil
 	}
 
-	if err := jsoni.Unmarshal(b, i); err != nil {
+	if err := util.JSONUnmarshal(b, i); err != nil {
 		return nil, err
 	}
 
@@ -242,7 +248,7 @@ func (je *JSONEncoder) callUnpacker(b []byte, i interface{}, fn jsonUnpackFunc) 
 }
 
 func (je *JSONEncoder) unpackValueDefault(b []byte, i interface{}) (interface{}, error) {
-	if err := jsoni.Unmarshal(b, i); err != nil {
+	if err := util.JSONUnmarshal(b, i); err != nil {
 		return nil, err
 	}
 
@@ -275,7 +281,7 @@ func (je JSONEncoder) wrapUnpackerHinter(hinter hint.Hinter, fn jsonUnpackFunc) 
 
 	return func(b []byte, i interface{}) (interface{}, error) {
 		var uj JSONUnpackHinted
-		if err := jsoni.Unmarshal(b, &uj); err != nil {
+		if err := util.JSONUnmarshal(b, &uj); err != nil {
 			return nil, err
 		}
 
@@ -293,7 +299,7 @@ func (je JSONEncoder) wrapUnpackerHinter(hinter hint.Hinter, fn jsonUnpackFunc) 
 
 func (je JSONEncoder) loadHint(b []byte) (hint.Hint, error) {
 	var m JSONPackHintedHead
-	if err := jsoni.Unmarshal(b, &m); err != nil {
+	if err := util.JSONUnmarshal(b, &m); err != nil {
 		return hint.Hint{}, err
 	}
 

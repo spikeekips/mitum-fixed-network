@@ -1,10 +1,10 @@
 package valuehash
 
 import (
-	"encoding/json"
-
 	"github.com/btcsuite/btcutil/base58"
+
 	"github.com/spikeekips/mitum/encoder"
+	"github.com/spikeekips/mitum/util"
 )
 
 type JSONHash struct {
@@ -17,7 +17,7 @@ func (jh *JSONHash) Bytes() []byte {
 }
 
 func MarshalJSON(h Hash) ([]byte, error) {
-	return json.Marshal(JSONHash{
+	return util.JSONMarshal(JSONHash{
 		JSONPackHintedHead: encoder.NewJSONPackHintedHead(h.Hint()),
 		Hash:               base58.Encode(h.Bytes()),
 	})
@@ -25,7 +25,7 @@ func MarshalJSON(h Hash) ([]byte, error) {
 
 func UnmarshalJSON(b []byte) (JSONHash, error) {
 	var jh JSONHash
-	if err := json.Unmarshal(b, &jh); err != nil {
+	if err := util.JSONUnmarshal(b, &jh); err != nil {
 		return JSONHash{}, err
 	}
 

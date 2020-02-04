@@ -3,6 +3,7 @@ package key
 import (
 	"github.com/spikeekips/mitum/encoder"
 	"github.com/spikeekips/mitum/hint"
+	"github.com/spikeekips/mitum/util"
 )
 
 func (t *testStellarKeypair) TestPrivatekeyJSONMarshal() {
@@ -26,8 +27,21 @@ func (t *testStellarKeypair) TestPrivatekeyJSONMarshal() {
 	t.True(kp.Equal(unkp))
 }
 
-func (t *testStellarKeypair) TestPublickeyJSONMarshal() {
+func (t *testStellarKeypair) TestPrivatekeyNativeJSONMarshal() {
 	_ = hint.RegisterType((StellarPrivatekey{}).Hint().Type(), "stellar-privatekey")
+
+	kp, _ := NewStellarPrivatekeyFromString("SCD6GQMWGDQT33QOCNKYKRJZL3YWFSLBVQSL6ICVWBUYQZCBFYUQY673")
+
+	b, err := util.JSONMarshal(kp)
+	t.NoError(err)
+
+	var ukp StellarPrivatekey
+	t.NoError(util.JSONUnmarshal(b, &ukp))
+	t.True(kp.Equal(ukp))
+}
+
+func (t *testStellarKeypair) TestPublickeyJSONMarshal() {
+	_ = hint.RegisterType((StellarPublickey{}).Hint().Type(), "stellar-publickey")
 	je := encoder.NewJSONEncoder()
 	encs := encoder.NewEncoders()
 	_ = encs.AddEncoder(je)
@@ -44,4 +58,19 @@ func (t *testStellarKeypair) TestPublickeyJSONMarshal() {
 	var unpb StellarPublickey
 	t.NoError(je.Decode(b, &unpb))
 	t.True(pb.Equal(unpb))
+}
+
+func (t *testStellarKeypair) TestPublickeyNativeJSONMarshal() {
+	_ = hint.RegisterType((StellarPublickey{}).Hint().Type(), "stellar-publickey")
+
+	kp, _ := NewStellarPrivatekeyFromString("SCD6GQMWGDQT33QOCNKYKRJZL3YWFSLBVQSL6ICVWBUYQZCBFYUQY673")
+
+	pb := kp.Publickey()
+
+	b, err := util.JSONMarshal(pb)
+	t.NoError(err)
+
+	var upb StellarPublickey
+	t.NoError(util.JSONUnmarshal(b, &upb))
+	t.True(pb.Equal(upb))
 }

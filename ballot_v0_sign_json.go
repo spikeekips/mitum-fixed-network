@@ -5,47 +5,44 @@ import (
 
 	"github.com/spikeekips/mitum/encoder"
 	"github.com/spikeekips/mitum/errors"
+	"github.com/spikeekips/mitum/util"
 	"github.com/spikeekips/mitum/valuehash"
 )
 
 type SIGNBallotV0PackerJSON struct {
 	BaseBallotV0PackerJSON
-	PR json.RawMessage `json:"proposal"`
-	NB json.RawMessage `json:"previous_block"`
+	PR valuehash.Hash `json:"proposal"`
+	NB valuehash.Hash `json:"new_block"`
 }
 
-func (sb SIGNBallotV0) PackJSON(enc *encoder.JSONEncoder) (interface{}, error) {
-	var jpr, jnb json.RawMessage
-	if h, err := enc.Marshal(sb.SIGNBallotV0Fact.proposal); err != nil {
-		return nil, err
-	} else {
-		jpr = h
-	}
-
-	if h, err := enc.Marshal(sb.SIGNBallotV0Fact.newBlock); err != nil {
-		return nil, err
-	} else {
-		jnb = h
-	}
-
-	bb, err := PackBaseBallotJSON(sb, enc)
+func (sb SIGNBallotV0) MarshalJSON() ([]byte, error) {
+	bb, err := PackBaseBallotV0JSON(sb)
 	if err != nil {
 		return nil, err
 	}
-	return SIGNBallotV0PackerJSON{
+
+	return util.JSONMarshal(SIGNBallotV0PackerJSON{
 		BaseBallotV0PackerJSON: bb,
-		PR:                     jpr,
-		NB:                     jnb,
-	}, nil
+		PR:                     sb.proposal,
+		NB:                     sb.newBlock,
+	})
+}
+
+type SIGNBallotV0UnpackerJSON struct {
+	BaseBallotV0UnpackerJSON
+	PR json.RawMessage `json:"proposal"`
+	NB json.RawMessage `json:"new_block"`
 }
 
 func (sb *SIGNBallotV0) UnpackJSON(b []byte, enc *encoder.JSONEncoder) error { // nolint
-	var nib SIGNBallotV0PackerJSON
+	var nib SIGNBallotV0UnpackerJSON
 	if err := enc.Unmarshal(b, &nib); err != nil {
+		return err
+	} else if err := sb.Hint().IsCompatible(nib.JSONPackHintedHead.H); err != nil {
 		return err
 	}
 
-	eh, ebh, efh, efsg, bb, bf, err := UnpackBaseBallotJSON(nib.BaseBallotV0PackerJSON, enc)
+	eh, ebh, efh, efsg, bb, bf, err := UnpackBaseBallotV0JSON(nib.BaseBallotV0UnpackerJSON, enc)
 	if err != nil {
 		return err
 	}

@@ -1,9 +1,9 @@
 package mitum
 
 import (
-	"encoding/json"
 	"math"
 
+	"github.com/spikeekips/mitum/util"
 	"golang.org/x/xerrors"
 )
 
@@ -24,7 +24,7 @@ func NewThreshold(total uint, percent float64) (Threshold, error) {
 }
 
 func (thr Threshold) String() string {
-	b, _ := json.Marshal(thr)
+	b, _ := util.JSONMarshal(thr)
 	return string(b)
 }
 

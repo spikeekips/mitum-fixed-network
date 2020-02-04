@@ -5,39 +5,41 @@ import (
 
 	"github.com/spikeekips/mitum/encoder"
 	"github.com/spikeekips/mitum/errors"
+	"github.com/spikeekips/mitum/util"
 	"github.com/spikeekips/mitum/valuehash"
 )
 
 type ProposalV0PackerJSON struct {
 	BaseBallotV0PackerJSON
-	SL json.RawMessage `json:"seals"`
+	SL []valuehash.Hash `json:"seals"`
 }
 
-func (pr ProposalV0) PackJSON(enc *encoder.JSONEncoder) (interface{}, error) {
-	var jsl json.RawMessage
-	if h, err := enc.Marshal(pr.ProposalV0Fact.Seals()); err != nil {
-		return nil, err
-	} else {
-		jsl = h
-	}
-
-	bb, err := PackBaseBallotJSON(pr, enc)
+func (pr ProposalV0) MarshalJSON() ([]byte, error) {
+	bb, err := PackBaseBallotV0JSON(pr)
 	if err != nil {
 		return nil, err
 	}
-	return ProposalV0PackerJSON{
+
+	return util.JSONMarshal(ProposalV0PackerJSON{
 		BaseBallotV0PackerJSON: bb,
-		SL:                     jsl,
-	}, nil
+		SL:                     pr.seals,
+	})
+}
+
+type ProposalV0UnpackerJSON struct {
+	BaseBallotV0UnpackerJSON
+	SL json.RawMessage `json:"seals"`
 }
 
 func (pr *ProposalV0) UnpackJSON(b []byte, enc *encoder.JSONEncoder) error {
-	var npb ProposalV0PackerJSON
+	var npb ProposalV0UnpackerJSON
 	if err := enc.Unmarshal(b, &npb); err != nil {
+		return err
+	} else if err := pr.Hint().IsCompatible(npb.JSONPackHintedHead.H); err != nil {
 		return err
 	}
 
-	eh, ebh, efh, efsg, bb, bf, err := UnpackBaseBallotJSON(npb.BaseBallotV0PackerJSON, enc)
+	eh, ebh, efh, efsg, bb, bf, err := UnpackBaseBallotV0JSON(npb.BaseBallotV0UnpackerJSON, enc)
 	if err != nil {
 		return err
 	}

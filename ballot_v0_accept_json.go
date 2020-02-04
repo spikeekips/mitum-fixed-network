@@ -5,50 +5,48 @@ import (
 
 	"github.com/spikeekips/mitum/encoder"
 	"github.com/spikeekips/mitum/errors"
+	"github.com/spikeekips/mitum/util"
 	"github.com/spikeekips/mitum/valuehash"
 )
 
 type ACCEPTBallotV0PackerJSON struct {
 	BaseBallotV0PackerJSON
-	PR json.RawMessage `json:"proposal"`
-	NB json.RawMessage `json:"previous_block"`
-	VR VoteProof       `json:"voteproof"`
+	PR valuehash.Hash `json:"proposal"`
+	NB valuehash.Hash `json:"new_block"`
+	VR VoteProof      `json:"voteproof"`
 }
 
-// TODO for marshaling, most of instances does not need 'PackXXX'.
-func (ab ACCEPTBallotV0) PackJSON(enc *encoder.JSONEncoder) (interface{}, error) {
-	var jpr, jnb json.RawMessage
-	if h, err := enc.Marshal(ab.ACCEPTBallotV0Fact.proposal); err != nil {
-		return nil, err
-	} else {
-		jpr = h
-	}
-
-	if h, err := enc.Marshal(ab.ACCEPTBallotV0Fact.newBlock); err != nil {
-		return nil, err
-	} else {
-		jnb = h
-	}
-
-	bb, err := PackBaseBallotJSON(ab, enc)
+func (ab ACCEPTBallotV0) MarshalJSON() ([]byte, error) {
+	bb, err := PackBaseBallotV0JSON(ab)
 	if err != nil {
 		return nil, err
 	}
-	return ACCEPTBallotV0PackerJSON{
+
+	// TODO use jsoniterator
+	return util.JSONMarshal(ACCEPTBallotV0PackerJSON{
 		BaseBallotV0PackerJSON: bb,
-		PR:                     jpr,
-		NB:                     jnb,
-		VR:                     ab.VoteProof(),
-	}, nil
+		PR:                     ab.proposal,
+		NB:                     ab.newBlock,
+		VR:                     ab.voteProof,
+	})
+}
+
+type ACCEPTBallotV0UnpackerJSON struct {
+	BaseBallotV0UnpackerJSON
+	PR json.RawMessage `json:"proposal"`
+	NB json.RawMessage `json:"new_block"`
+	VR json.RawMessage `json:"voteproof"`
 }
 
 func (ab *ACCEPTBallotV0) UnpackJSON(b []byte, enc *encoder.JSONEncoder) error { // nolint
-	var nab ACCEPTBallotV0PackerJSON
+	var nab ACCEPTBallotV0UnpackerJSON
 	if err := enc.Unmarshal(b, &nab); err != nil {
+		return err
+	} else if err := ab.Hint().IsCompatible(nab.JSONPackHintedHead.H); err != nil {
 		return err
 	}
 
-	eh, ebh, efh, efsg, bb, bf, err := UnpackBaseBallotJSON(nab.BaseBallotV0PackerJSON, enc)
+	eh, ebh, efh, efsg, bb, bf, err := UnpackBaseBallotV0JSON(nab.BaseBallotV0UnpackerJSON, enc)
 	if err != nil {
 		return err
 	}
@@ -80,6 +78,7 @@ func (ab *ACCEPTBallotV0) UnpackJSON(b []byte, enc *encoder.JSONEncoder) error {
 		proposal:         epr,
 		newBlock:         enb,
 	}
+	// TODO set VoteProof
 
 	return nil
 }

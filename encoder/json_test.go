@@ -8,9 +8,10 @@ import (
 	"testing"
 
 	uuid "github.com/satori/go.uuid"
-	"github.com/spikeekips/mitum/hint"
 	"github.com/stretchr/testify/suite"
 	"golang.org/x/xerrors"
+
+	"github.com/spikeekips/mitum/hint"
 )
 
 func (s0 sp0) PackJSON(_ *JSONEncoder) (interface{}, error) {
@@ -28,7 +29,7 @@ func (s0 sup0) PackJSON(_ *JSONEncoder) (interface{}, error) {
 
 func (s0 *sup0) UnpackJSON(b []byte, _ *JSONEncoder) error {
 	var us sup0
-	if err := jsoni.Unmarshal(b, &us); err != nil {
+	if err := json.Unmarshal(b, &us); err != nil {
 		return err
 	}
 
@@ -58,7 +59,7 @@ func (s0 *se0) UnpackJSON(b []byte, rp *JSONEncoder) error {
 		A string
 		S json.RawMessage
 	}
-	if err := jsoni.Unmarshal(b, &se); err != nil {
+	if err := json.Unmarshal(b, &se); err != nil {
 		return err
 	}
 
@@ -236,7 +237,7 @@ func (t *testJSON) TestAnalyzePack() {
 		t.NoError(err)
 		t.NotNil(cp.Pack)
 		t.NotNil(cp.Unpack)
-		t.Equal("JSONPackable+JSONUnpackable", name)
+		t.Equal([]string{"JSONPackable", "JSONUnpackable"}, name)
 	}
 
 	{ // don't have PackRLP
@@ -246,7 +247,7 @@ func (t *testJSON) TestAnalyzePack() {
 		t.NoError(err)
 		t.NotNil(cp.Pack)
 		t.NotNil(cp.Unpack)
-		t.Equal(encoderAnalyzedTypeDefault, name)
+		t.Equal([]string{encoderAnalyzedTypeDefault, encoderAnalyzedTypeDefault}, name)
 	}
 
 	{ // int-like
@@ -254,7 +255,7 @@ func (t *testJSON) TestAnalyzePack() {
 		t.NoError(err)
 		t.NotNil(cp.Pack)
 		t.NotNil(cp.Unpack)
-		t.Equal(encoderAnalyzedTypeDefault, name)
+		t.Equal([]string{encoderAnalyzedTypeDefault, encoderAnalyzedTypeDefault}, name)
 	}
 
 	{ // array
@@ -262,7 +263,7 @@ func (t *testJSON) TestAnalyzePack() {
 		t.NoError(err)
 		t.NotNil(cp.Pack)
 		t.NotNil(cp.Unpack)
-		t.Equal(encoderAnalyzedTypeDefault, name)
+		t.Equal([]string{encoderAnalyzedTypeDefault, encoderAnalyzedTypeDefault}, name)
 	}
 
 	{ // map
@@ -270,7 +271,7 @@ func (t *testJSON) TestAnalyzePack() {
 		t.NoError(err)
 		t.NotNil(cp.Pack)
 		t.NotNil(cp.Unpack)
-		t.Equal(encoderAnalyzedTypeDefault, name)
+		t.Equal([]string{encoderAnalyzedTypeDefault, encoderAnalyzedTypeDefault}, name)
 	}
 }
 

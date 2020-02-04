@@ -62,21 +62,24 @@ func (sa ShortAddress) Bytes() []byte {
 	return []byte(sa)
 }
 
-func (sa ShortAddress) PackJSON(*encoder.JSONEncoder) (interface{}, error) {
-	return struct {
+func (sa ShortAddress) MarshalJSON() ([]byte, error) {
+	return json.Marshal(struct {
 		encoder.JSONPackHintedHead
 		A string `json:"address"`
 	}{
 		JSONPackHintedHead: encoder.NewJSONPackHintedHead(sa.Hint()),
 		A:                  sa.String(),
-	}, nil
+	})
 }
 
 func (sa *ShortAddress) UnpackJSON(b []byte, _ *encoder.JSONEncoder) error {
 	var s struct {
+		encoder.JSONPackHintedHead
 		A string `json:"address"`
 	}
 	if err := json.Unmarshal(b, &s); err != nil {
+		return err
+	} else if err := sa.Hint().IsCompatible(s.H); err != nil {
 		return err
 	} else if len(s.A) < 8 {
 		return xerrors.Errorf("not enough address")

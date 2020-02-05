@@ -62,8 +62,7 @@ func (t *testVoteProofJSON) TestMajorityButNot() {
 
 	b, err := util.JSONMarshal(vp)
 	t.NoError(err)
-
-	println(string(b))
+	t.NotNil(b)
 }
 
 func TestVoteProofJSON(t *testing.T) {

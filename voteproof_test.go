@@ -320,7 +320,7 @@ func (t *testVoteProof) TestSuplusFacts() {
 	t.Contains(err.Error(), "unknown facts found")
 }
 
-func (t *testVoteProof) TesteNotYetButNot() {
+func (t *testVoteProof) TestNotYetButNot() {
 	threshold, _ := NewThreshold(10, 40)
 
 	n0 := RandomLocalNode("n0", nil)
@@ -353,7 +353,7 @@ func (t *testVoteProof) TesteNotYetButNot() {
 	t.Contains(err.Error(), "result should be not-yet")
 }
 
-func (t *testVoteProof) TesteDrawButNot() {
+func (t *testVoteProof) TestDrawButNot() {
 	threshold, _ := NewThreshold(2, 80)
 
 	n0 := RandomLocalNode("n0", nil)
@@ -398,7 +398,7 @@ func (t *testVoteProof) TesteDrawButNot() {
 	t.Contains(err.Error(), "DRAW")
 }
 
-func (t *testVoteProof) TesteMajorityButNot() {
+func (t *testVoteProof) TestMajorityButNot() {
 	threshold, _ := NewThreshold(2, 80)
 
 	n0 := RandomLocalNode("n0", nil)

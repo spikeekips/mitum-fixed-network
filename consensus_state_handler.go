@@ -104,6 +104,10 @@ func loggerWithBallot(ballot Ballot, l *zerolog.Logger) *zerolog.Logger {
 }
 
 func loggerWithVoteProof(vp VoteProof, l *zerolog.Logger) *zerolog.Logger {
+	if vp == nil {
+		return l
+	}
+
 	ll := l.With().
 		Int64("voteproof_height", vp.Height().Int64()).
 		Uint64("voteproof_round", vp.Round().Uint64()).

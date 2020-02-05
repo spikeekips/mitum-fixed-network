@@ -135,7 +135,7 @@ func (cs *ConsensusStateJoiningHandler) startbroadcastingINITBallotTimer() error
 	lastBlockHeight := cs.localState.LastBlockHeight()
 
 	currentRound := Round(0)
-	if lastBlockHeight <= vp.Height() {
+	if vp != nil && lastBlockHeight <= vp.Height() {
 		currentRound = vp.Round()
 	}
 	cs.cr = currentRound

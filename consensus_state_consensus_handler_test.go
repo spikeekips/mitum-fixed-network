@@ -68,10 +68,10 @@ func (t *testConsensusStateConsensusHandler) newINITBallot(localState *LocalStat
 	return ib
 }
 
-func (t *testConsensusStateConsensusHandler) newVoteProof(stage Stage, fact Fact, states ...*LocalState) (VoteProof, error) {
+func (t *testConsensusStateConsensusHandler) newVoteProof(stage Stage, fact Fact, states ...*LocalState) (VoteProofV0, error) {
 	factHash, err := fact.Hash(nil)
 	if err != nil {
-		return VoteProof{}, err
+		return VoteProofV0{}, err
 	}
 
 	ballots := map[Address]valuehash.Hash{}
@@ -80,7 +80,7 @@ func (t *testConsensusStateConsensusHandler) newVoteProof(stage Stage, fact Fact
 	for _, state := range states {
 		factSignature, err := state.Node().Privatekey().Sign(factHash.Bytes())
 		if err != nil {
-			return VoteProof{}, err
+			return VoteProofV0{}, err
 		}
 
 		ballots[state.Node().Address()] = valuehash.RandomSHA256()
@@ -102,7 +102,7 @@ func (t *testConsensusStateConsensusHandler) newVoteProof(stage Stage, fact Fact
 		round = f.Round()
 	}
 
-	vp := VoteProof{
+	vp := VoteProofV0{
 		height:    height,
 		round:     round,
 		stage:     stage,
@@ -168,7 +168,6 @@ func (t *testConsensusStateConsensusHandler) TestWaitingProposal() {
 	cs, err := NewConsensusStateConsensusHandler(localState)
 	t.NoError(err)
 	t.NotNil(cs)
-	_ = cs.SetLogger(*log) // TODO remove
 
 	initFact := INITBallotV0Fact{
 		BaseBallotV0Fact: BaseBallotV0Fact{

@@ -66,10 +66,10 @@ func (t *testConsensusStateJoiningHandler) newINITBallot(localState *LocalState,
 	return ib
 }
 
-func (t *testConsensusStateJoiningHandler) newVoteProof(stage Stage, fact Fact, states ...*LocalState) (VoteProof, error) {
+func (t *testConsensusStateJoiningHandler) newVoteProof(stage Stage, fact Fact, states ...*LocalState) (VoteProofV0, error) {
 	factHash, err := fact.Hash(nil)
 	if err != nil {
-		return VoteProof{}, err
+		return VoteProofV0{}, err
 	}
 
 	ballots := map[Address]valuehash.Hash{}
@@ -78,7 +78,7 @@ func (t *testConsensusStateJoiningHandler) newVoteProof(stage Stage, fact Fact, 
 	for _, state := range states {
 		factSignature, err := state.Node().Privatekey().Sign(factHash.Bytes())
 		if err != nil {
-			return VoteProof{}, err
+			return VoteProofV0{}, err
 		}
 
 		ballots[state.Node().Address()] = valuehash.RandomSHA256()
@@ -100,7 +100,7 @@ func (t *testConsensusStateJoiningHandler) newVoteProof(stage Stage, fact Fact, 
 		round = f.Round()
 	}
 
-	vp := VoteProof{
+	vp := VoteProofV0{
 		height:    height,
 		round:     round,
 		stage:     stage,
@@ -317,8 +317,8 @@ func (t *testConsensusStateJoiningHandler) TestINITBallotWithACCEPTVoteProofHigh
 
 	t.Equal(ConsensusStateJoining, ctx.fromState)
 	t.Equal(ConsensusStateSyncing, ctx.toState)
-	t.Equal(StageACCEPT, ctx.voteProof.stage)
-	t.Equal(acceptFact, ctx.voteProof.majority)
+	t.Equal(StageACCEPT, ctx.voteProof.Stage())
+	t.Equal(acceptFact, ctx.voteProof.Majority())
 }
 
 // INIT Ballot, which,
@@ -511,8 +511,8 @@ func (t *testConsensusStateJoiningHandler) TestINITVoteProofExpected() {
 
 	t.Equal(ConsensusStateJoining, ctx.fromState)
 	t.Equal(ConsensusStateConsensus, ctx.toState)
-	t.Equal(StageINIT, ctx.voteProof.stage)
-	t.Equal(initFact, ctx.voteProof.majority)
+	t.Equal(StageINIT, ctx.voteProof.Stage())
+	t.Equal(initFact, ctx.voteProof.Majority())
 }
 
 // With new INIT VoteProof
@@ -560,8 +560,8 @@ func (t *testConsensusStateJoiningHandler) TestINITVoteProofHigherHeight() {
 
 	t.Equal(ConsensusStateJoining, ctx.fromState)
 	t.Equal(ConsensusStateSyncing, ctx.toState)
-	t.Equal(StageINIT, ctx.voteProof.stage)
-	t.Equal(initFact, ctx.voteProof.majority)
+	t.Equal(StageINIT, ctx.voteProof.Stage())
+	t.Equal(initFact, ctx.voteProof.Majority())
 }
 
 // With new INIT VoteProof
@@ -683,8 +683,8 @@ func (t *testConsensusStateJoiningHandler) TestACCEPTVoteProofHigherHeight() {
 
 	t.Equal(ConsensusStateJoining, ctx.fromState)
 	t.Equal(ConsensusStateSyncing, ctx.toState)
-	t.Equal(StageACCEPT, ctx.voteProof.stage)
-	t.Equal(acceptFact, ctx.voteProof.majority)
+	t.Equal(StageACCEPT, ctx.voteProof.Stage())
+	t.Equal(acceptFact, ctx.voteProof.Majority())
 }
 
 // With new ACCEPT VoteProof

@@ -33,30 +33,30 @@ type testVoteProof struct {
 }
 
 func (t *testVoteProof) TestInvalidHeight() {
-	vp := VoteProof{height: Height(-3)}
+	vp := VoteProofV0{height: Height(-3)}
 	err := vp.IsValid(nil)
 	t.True(xerrors.Is(err, InvalidError))
 }
 
 func (t *testVoteProof) TestInvalidStage() {
-	vp := VoteProof{stage: Stage(100)}
+	vp := VoteProofV0{stage: Stage(100)}
 	err := vp.IsValid(nil)
 	t.True(xerrors.Is(err, InvalidError))
 }
 
 func (t *testVoteProof) TestInvalidThreshold() {
 	threshold, _ := NewThreshold(10, 140)
-	vp := VoteProof{stage: StageINIT, threshold: threshold}
+	vp := VoteProofV0{stage: StageINIT, threshold: threshold}
 	err := vp.IsValid(nil)
 	t.True(xerrors.Is(err, InvalidError))
 }
 
 func (t *testVoteProof) TestInvalidResult() {
 	threshold, _ := NewThreshold(10, 40)
-	vp := VoteProof{
+	vp := VoteProofV0{
 		stage:     StageINIT,
 		threshold: threshold,
-		result:    VoteProofType(10),
+		result:    VoteProofResultType(10),
 	}
 	err := vp.IsValid(nil)
 	t.True(xerrors.Is(err, InvalidError))
@@ -64,7 +64,7 @@ func (t *testVoteProof) TestInvalidResult() {
 
 func (t *testVoteProof) TestEmptyMajority() {
 	threshold, _ := NewThreshold(10, 40)
-	vp := VoteProof{
+	vp := VoteProofV0{
 		stage:     StageINIT,
 		threshold: threshold,
 		result:    VoteProofMajority,
@@ -77,7 +77,7 @@ func (t *testVoteProof) TestEmptyMajority() {
 
 func (t *testVoteProof) TestInvalidMajority() {
 	threshold, _ := NewThreshold(10, 40)
-	vp := VoteProof{
+	vp := VoteProofV0{
 		stage:     StageINIT,
 		threshold: threshold,
 		result:    VoteProofNotYet,
@@ -90,7 +90,7 @@ func (t *testVoteProof) TestInvalidMajority() {
 func (t *testVoteProof) TestEmptyFacts() {
 	threshold, _ := NewThreshold(10, 40)
 
-	vp := VoteProof{
+	vp := VoteProofV0{
 		stage:     StageINIT,
 		threshold: threshold,
 		result:    VoteProofNotYet,
@@ -106,7 +106,7 @@ func (t *testVoteProof) TestEmptyBallots() {
 	factHash, err := fact.Hash(nil)
 	t.NoError(err)
 
-	vp := VoteProof{
+	vp := VoteProofV0{
 		stage:     StageINIT,
 		threshold: threshold,
 		result:    VoteProofNotYet,
@@ -123,7 +123,7 @@ func (t *testVoteProof) TestEmptyVotes() {
 	factHash, err := fact.Hash(nil)
 	t.NoError(err)
 
-	vp := VoteProof{
+	vp := VoteProofV0{
 		stage:     StageINIT,
 		threshold: threshold,
 		result:    VoteProofNotYet,
@@ -147,7 +147,7 @@ func (t *testVoteProof) TestWrongVotesCount() {
 	factHash, err := fact.Hash(nil)
 	t.NoError(err)
 
-	vp := VoteProof{
+	vp := VoteProofV0{
 		stage:     StageINIT,
 		threshold: threshold,
 		result:    VoteProofNotYet,
@@ -177,7 +177,7 @@ func (t *testVoteProof) TestInvalidFactHash() {
 
 	factSignature, _ := n0.Privatekey().Sign(invalidFactHash.Bytes())
 
-	vp := VoteProof{
+	vp := VoteProofV0{
 		stage:     StageINIT,
 		threshold: threshold,
 		result:    VoteProofMajority,
@@ -209,7 +209,7 @@ func (t *testVoteProof) TestUnknownFactHash() {
 
 	unknownFactHash := valuehash.RandomSHA256()
 
-	vp := VoteProof{
+	vp := VoteProofV0{
 		stage:     StageINIT,
 		threshold: threshold,
 		result:    VoteProofMajority,
@@ -239,7 +239,7 @@ func (t *testVoteProof) TestFactNotFound() {
 
 	n0 := NewShortAddress("n0")
 
-	vp := VoteProof{
+	vp := VoteProofV0{
 		stage:     StageINIT,
 		threshold: threshold,
 		result:    VoteProofMajority,
@@ -266,7 +266,7 @@ func (t *testVoteProof) TestUnknownNodeFound() {
 
 	n0 := NewShortAddress("n0")
 
-	vp := VoteProof{
+	vp := VoteProofV0{
 		stage:     StageINIT,
 		threshold: threshold,
 		result:    VoteProofMajority,
@@ -298,7 +298,7 @@ func (t *testVoteProof) TestSuplusFacts() {
 	t.NoError(err)
 
 	n0 := NewShortAddress("n0")
-	vp := VoteProof{
+	vp := VoteProofV0{
 		stage:     StageINIT,
 		threshold: threshold,
 		result:    VoteProofMajority,
@@ -330,7 +330,7 @@ func (t *testVoteProof) TesteNotYetButNot() {
 	t.NoError(err)
 	factSignature, _ := n0.Privatekey().Sign(factHash.Bytes())
 
-	vp := VoteProof{
+	vp := VoteProofV0{
 		stage:     StageINIT,
 		threshold: threshold,
 		result:    VoteProofDraw,
@@ -367,7 +367,7 @@ func (t *testVoteProof) TesteDrawButNot() {
 	factHash1, _ := fact1.Hash(nil)
 	factSignature1, _ := n1.Privatekey().Sign(factHash1.Bytes())
 
-	vp := VoteProof{
+	vp := VoteProofV0{
 		stage:     StageINIT,
 		threshold: threshold,
 		result:    VoteProofMajority,
@@ -409,7 +409,7 @@ func (t *testVoteProof) TesteMajorityButNot() {
 	factSignature0, _ := n0.Privatekey().Sign(factHash0.Bytes())
 	factSignature1, _ := n1.Privatekey().Sign(factHash0.Bytes())
 
-	vp := VoteProof{
+	vp := VoteProofV0{
 		stage:     StageINIT,
 		threshold: threshold,
 		result:    VoteProofDraw,

@@ -127,11 +127,16 @@ func (ib INITBallotV0) GenerateHash(b []byte) (valuehash.Hash, error) {
 		return nil, err
 	}
 
+	var vpb []byte
+	if ib.voteProof != nil {
+		vpb = ib.voteProof.Bytes()
+	}
+
 	e := util.ConcatSlice([][]byte{
 		ib.BaseBallotV0.Bytes(),
 		ib.INITBallotV0Fact.Bytes(),
 		ib.bodyHash.Bytes(),
-		ib.voteProof.Bytes(),
+		vpb,
 		b,
 	})
 
@@ -143,9 +148,14 @@ func (ib INITBallotV0) GenerateBodyHash(b []byte) (valuehash.Hash, error) {
 		return nil, err
 	}
 
+	var vpb []byte
+	if ib.voteProof != nil {
+		vpb = ib.voteProof.Bytes()
+	}
+
 	e := util.ConcatSlice([][]byte{
 		ib.INITBallotV0Fact.Bytes(),
-		ib.voteProof.Bytes(),
+		vpb,
 		b,
 	})
 

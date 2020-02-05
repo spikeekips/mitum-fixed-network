@@ -13,7 +13,7 @@ type VoteRecords struct {
 	votes     map[Address]valuehash.Hash // key: node Address, value: fact hash
 	factCount map[valuehash.Hash]uint
 	ballots   map[Address]Ballot
-	vp        VoteProof
+	vp        VoteProofV0
 }
 
 func NewVoteRecords(ballot Ballot, threshold Threshold) *VoteRecords {
@@ -22,7 +22,7 @@ func NewVoteRecords(ballot Ballot, threshold Threshold) *VoteRecords {
 		votes:     map[Address]valuehash.Hash{},
 		factCount: map[valuehash.Hash]uint{},
 		ballots:   map[Address]Ballot{},
-		vp: VoteProof{
+		vp: VoteProofV0{
 			height:    ballot.Height(),
 			round:     ballot.Round(),
 			stage:     ballot.Stage(),
@@ -117,7 +117,7 @@ func (vrs *VoteRecords) vote(ballot Ballot) bool {
 	}
 
 	var fact Fact
-	var result VoteProofType
+	var result VoteProofResultType
 	switch index := FindMajority(vrs.vp.threshold.Total, vrs.vp.threshold.Threshold, set...); index {
 	case -1:
 		result = VoteProofNotYet

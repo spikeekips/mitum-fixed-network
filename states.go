@@ -205,8 +205,8 @@ func NewLocalState(node *LocalNode, policy *LocalPolicy) *LocalState {
 		lastBlockHash:       NewLockedItem(nil),
 		lastBlockHeight:     NewLockedItem(Height(0)),
 		lastBlockRound:      NewLockedItem(Round(0)),
-		lastINITVoteProof:   NewLockedItem(VoteProof{}),
-		lastACCEPTVoteProof: NewLockedItem(VoteProof{}),
+		lastINITVoteProof:   NewLockedItem(nil),
+		lastACCEPTVoteProof: NewLockedItem(nil),
 	}
 }
 
@@ -258,7 +258,12 @@ func (ls *LocalState) SetLastBlockRound(round Round) *LocalState {
 }
 
 func (ls *LocalState) LastINITVoteProof() VoteProof {
-	return ls.lastINITVoteProof.Value().(VoteProof)
+	vp := ls.lastINITVoteProof.Value()
+	if vp == nil {
+		return nil
+	}
+
+	return vp.(VoteProof)
 }
 
 func (ls *LocalState) SetLastINITVoteProof(vp VoteProof) *LocalState {

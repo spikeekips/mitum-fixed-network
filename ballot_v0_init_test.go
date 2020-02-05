@@ -31,8 +31,8 @@ func (t *testBallotV0INIT) TestNew() {
 		BaseBallotV0: BaseBallotV0{
 			node: NewShortAddress("test-for-init-ballot"),
 		},
-		INITBallotV0Fact: INITBallotV0Fact{
-			BaseBallotV0Fact: BaseBallotV0Fact{
+		INITBallotFactV0: INITBallotFactV0{
+			BaseBallotFactV0: BaseBallotFactV0{
 				height: Height(10),
 				round:  Round(0),
 			},
@@ -52,8 +52,8 @@ func (t *testBallotV0INIT) TestFact() {
 		BaseBallotV0: BaseBallotV0{
 			node: NewShortAddress("test-for-init-ballot"),
 		},
-		INITBallotV0Fact: INITBallotV0Fact{
-			BaseBallotV0Fact: BaseBallotV0Fact{
+		INITBallotFactV0: INITBallotFactV0{
+			BaseBallotFactV0: BaseBallotFactV0{
 				height: Height(10),
 				round:  Round(0),
 			},
@@ -89,8 +89,8 @@ func (t *testBallotV0INIT) TestGenerateHash() {
 		BaseBallotV0: BaseBallotV0{
 			node: NewShortAddress("test-for-init-ballot"),
 		},
-		INITBallotV0Fact: INITBallotV0Fact{
-			BaseBallotV0Fact: BaseBallotV0Fact{
+		INITBallotFactV0: INITBallotFactV0{
+			BaseBallotFactV0: BaseBallotFactV0{
 				height: Height(10),
 				round:  Round(0),
 			},
@@ -115,8 +115,8 @@ func (t *testBallotV0INIT) TestSign() {
 		BaseBallotV0: BaseBallotV0{
 			node: NewShortAddress("test-for-init-ballot"),
 		},
-		INITBallotV0Fact: INITBallotV0Fact{
-			BaseBallotV0Fact: BaseBallotV0Fact{
+		INITBallotFactV0: INITBallotFactV0{
+			BaseBallotFactV0: BaseBallotFactV0{
 				height: Height(10),
 				round:  Round(0),
 			},

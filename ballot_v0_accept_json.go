@@ -73,8 +73,8 @@ func (ab *ACCEPTBallotV0) UnpackJSON(b []byte, enc *encoder.JSONEncoder) error {
 	ab.bodyHash = ebh
 	ab.factHash = efh
 	ab.factSignature = efsg
-	ab.ACCEPTBallotV0Fact = ACCEPTBallotV0Fact{
-		BaseBallotV0Fact: bf,
+	ab.ACCEPTBallotFactV0 = ACCEPTBallotFactV0{
+		BaseBallotFactV0: bf,
 		proposal:         epr,
 		newBlock:         enb,
 	}

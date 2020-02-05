@@ -49,8 +49,8 @@ func (t *testBallotbox) newINITBallot(height Height, round Round, node Address) 
 		BaseBallotV0: BaseBallotV0{
 			node: node,
 		},
-		INITBallotV0Fact: INITBallotV0Fact{
-			BaseBallotV0Fact: BaseBallotV0Fact{
+		INITBallotFactV0: INITBallotFactV0{
+			BaseBallotFactV0: BaseBallotFactV0{
 				height: height,
 				round:  round,
 			},
@@ -184,8 +184,8 @@ func (t *testBallotbox) newSIGNBallot(height Height, round Round, node Address) 
 		BaseBallotV0: BaseBallotV0{
 			node: node,
 		},
-		SIGNBallotV0Fact: SIGNBallotV0Fact{
-			BaseBallotV0Fact: BaseBallotV0Fact{
+		SIGNBallotFactV0: SIGNBallotFactV0{
+			BaseBallotFactV0: BaseBallotFactV0{
 				height: height,
 				round:  round,
 			},
@@ -272,8 +272,8 @@ func (t *testBallotbox) newACCEPTBallot(height Height, round Round, node Address
 		BaseBallotV0: BaseBallotV0{
 			node: node,
 		},
-		ACCEPTBallotV0Fact: ACCEPTBallotV0Fact{
-			BaseBallotV0Fact: BaseBallotV0Fact{
+		ACCEPTBallotFactV0: ACCEPTBallotFactV0{
+			BaseBallotFactV0: BaseBallotFactV0{
 				height: height,
 				round:  round,
 			},

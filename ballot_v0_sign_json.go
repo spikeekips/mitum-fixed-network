@@ -69,8 +69,8 @@ func (sb *SIGNBallotV0) UnpackJSON(b []byte, enc *encoder.JSONEncoder) error { /
 	sb.bodyHash = ebh
 	sb.factHash = efh
 	sb.factSignature = efsg
-	sb.SIGNBallotV0Fact = SIGNBallotV0Fact{
-		BaseBallotV0Fact: bf,
+	sb.SIGNBallotFactV0 = SIGNBallotFactV0{
+		BaseBallotFactV0: bf,
 		proposal:         epr,
 		newBlock:         enb,
 	}

@@ -55,8 +55,8 @@ func (t *testConsensusStateConsensusHandler) newINITBallot(localState *LocalStat
 		BaseBallotV0: BaseBallotV0{
 			node: localState.Node().Address(),
 		},
-		INITBallotV0Fact: INITBallotV0Fact{
-			BaseBallotV0Fact: BaseBallotV0Fact{
+		INITBallotFactV0: INITBallotFactV0{
+			BaseBallotFactV0: BaseBallotFactV0{
 				height: localState.LastBlockHeight() + 1,
 				round:  round,
 			},
@@ -94,10 +94,10 @@ func (t *testConsensusStateConsensusHandler) newVoteProof(stage Stage, fact Fact
 	var height Height
 	var round Round
 	switch f := fact.(type) {
-	case ACCEPTBallotV0Fact:
+	case ACCEPTBallotFactV0:
 		height = f.Height()
 		round = f.Round()
-	case INITBallotV0Fact:
+	case INITBallotFactV0:
 		height = f.Height()
 		round = f.Round()
 	}
@@ -127,8 +127,8 @@ func (t *testConsensusStateConsensusHandler) TestNew() {
 	t.NoError(err)
 	t.NotNil(cs)
 
-	initFact := INITBallotV0Fact{
-		BaseBallotV0Fact: BaseBallotV0Fact{
+	initFact := INITBallotFactV0{
+		BaseBallotFactV0: BaseBallotFactV0{
 			height: localState.LastBlockHeight() + 1,
 			round:  Round(0),
 		},
@@ -169,8 +169,8 @@ func (t *testConsensusStateConsensusHandler) TestWaitingProposal() {
 	t.NoError(err)
 	t.NotNil(cs)
 
-	initFact := INITBallotV0Fact{
-		BaseBallotV0Fact: BaseBallotV0Fact{
+	initFact := INITBallotFactV0{
+		BaseBallotFactV0: BaseBallotFactV0{
 			height: localState.LastBlockHeight() + 1,
 			round:  Round(0),
 		},

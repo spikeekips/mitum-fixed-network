@@ -53,8 +53,8 @@ func (t *testConsensusStateJoiningHandler) newINITBallot(localState *LocalState,
 		BaseBallotV0: BaseBallotV0{
 			node: localState.Node().Address(),
 		},
-		INITBallotV0Fact: INITBallotV0Fact{
-			BaseBallotV0Fact: BaseBallotV0Fact{
+		INITBallotFactV0: INITBallotFactV0{
+			BaseBallotFactV0: BaseBallotFactV0{
 				height: localState.LastBlockHeight() + 1,
 				round:  round,
 			},
@@ -92,10 +92,10 @@ func (t *testConsensusStateJoiningHandler) newVoteProof(stage Stage, fact Fact, 
 	var height Height
 	var round Round
 	switch f := fact.(type) {
-	case ACCEPTBallotV0Fact:
+	case ACCEPTBallotFactV0:
 		height = f.Height()
 		round = f.Round()
-	case INITBallotV0Fact:
+	case INITBallotFactV0:
 		height = f.Height()
 		round = f.Round()
 	}
@@ -191,8 +191,8 @@ func (t *testConsensusStateJoiningHandler) TestINITBallotWithACCEPTVoteProofExpe
 	ib := t.newINITBallot(remoteState, cs.currentRound())
 
 	// ACCEPT VoteProof; 2 node(local and remote) vote with same AcceptFact.
-	acceptFact := ACCEPTBallotV0Fact{
-		BaseBallotV0Fact: BaseBallotV0Fact{
+	acceptFact := ACCEPTBallotFactV0{
+		BaseBallotFactV0: BaseBallotFactV0{
 			height: localState.LastBlockHeight(),
 			round:  localState.LastBlockRound(),
 		},
@@ -234,12 +234,12 @@ func (t *testConsensusStateJoiningHandler) TestINITBallotWithACCEPTVoteProofLowe
 	}()
 
 	ib := t.newINITBallot(remoteState, cs.currentRound())
-	ib.INITBallotV0Fact.height = remoteState.LastBlockHeight() - 1
+	ib.INITBallotFactV0.height = remoteState.LastBlockHeight() - 1
 
 	// ACCEPT VoteProof; 2 node(local and remote) vote with same AcceptFact.
-	acceptFact := ACCEPTBallotV0Fact{
-		BaseBallotV0Fact: BaseBallotV0Fact{
-			height: ib.INITBallotV0Fact.height - 1,
+	acceptFact := ACCEPTBallotFactV0{
+		BaseBallotFactV0: BaseBallotFactV0{
+			height: ib.INITBallotFactV0.height - 1,
 			round:  Round(0),
 		},
 		proposal: valuehash.RandomSHA256(),
@@ -281,14 +281,14 @@ func (t *testConsensusStateJoiningHandler) TestINITBallotWithACCEPTVoteProofHigh
 	}()
 
 	ib := t.newINITBallot(remoteState, cs.currentRound())
-	ib.INITBallotV0Fact.height = remoteState.LastBlockHeight() + 2
-	ib.INITBallotV0Fact.previousBlock = valuehash.RandomSHA256()
-	ib.INITBallotV0Fact.previousRound = Round(0)
+	ib.INITBallotFactV0.height = remoteState.LastBlockHeight() + 2
+	ib.INITBallotFactV0.previousBlock = valuehash.RandomSHA256()
+	ib.INITBallotFactV0.previousRound = Round(0)
 
 	// ACCEPT VoteProof; 2 node(local and remote) vote with same AcceptFact.
-	acceptFact := ACCEPTBallotV0Fact{
-		BaseBallotV0Fact: BaseBallotV0Fact{
-			height: ib.INITBallotV0Fact.height - 1,
+	acceptFact := ACCEPTBallotFactV0{
+		BaseBallotFactV0: BaseBallotFactV0{
+			height: ib.INITBallotFactV0.height - 1,
 			round:  Round(0),
 		},
 		proposal: valuehash.RandomSHA256(),
@@ -347,10 +347,10 @@ func (t *testConsensusStateJoiningHandler) TestINITBallotWithINITVoteProofExpect
 	cs.setCurrentRound(Round(1))
 	ib := t.newINITBallot(remoteState, cs.currentRound())
 
-	initFact := INITBallotV0Fact{
-		BaseBallotV0Fact: BaseBallotV0Fact{
-			height: ib.INITBallotV0Fact.height,
-			round:  ib.INITBallotV0Fact.round - 1,
+	initFact := INITBallotFactV0{
+		BaseBallotFactV0: BaseBallotFactV0{
+			height: ib.INITBallotFactV0.height,
+			round:  ib.INITBallotFactV0.round - 1,
 		},
 		previousBlock: localState.LastBlockHash(),
 		previousRound: localState.LastBlockRound(),
@@ -394,11 +394,11 @@ func (t *testConsensusStateJoiningHandler) TestINITBallotWithINITVoteProofLowerH
 
 	cs.setCurrentRound(Round(1))
 	ib := t.newINITBallot(remoteState, cs.currentRound())
-	ib.INITBallotV0Fact.height = remoteState.LastBlockHeight() - 1
+	ib.INITBallotFactV0.height = remoteState.LastBlockHeight() - 1
 
-	initFact := INITBallotV0Fact{
-		BaseBallotV0Fact: BaseBallotV0Fact{
-			height: ib.INITBallotV0Fact.height - 1,
+	initFact := INITBallotFactV0{
+		BaseBallotFactV0: BaseBallotFactV0{
+			height: ib.INITBallotFactV0.height - 1,
 			round:  Round(0),
 		},
 		previousBlock: localState.LastBlockHash(),
@@ -444,11 +444,11 @@ func (t *testConsensusStateJoiningHandler) TestINITBallotWithINITVoteProofHigher
 
 	cs.setCurrentRound(Round(1))
 	ib := t.newINITBallot(remoteState, cs.currentRound())
-	ib.INITBallotV0Fact.height = remoteState.LastBlockHeight() + 3
+	ib.INITBallotFactV0.height = remoteState.LastBlockHeight() + 3
 
-	initFact := INITBallotV0Fact{
-		BaseBallotV0Fact: BaseBallotV0Fact{
-			height: ib.INITBallotV0Fact.height,
+	initFact := INITBallotFactV0{
+		BaseBallotFactV0: BaseBallotFactV0{
+			height: ib.INITBallotFactV0.height,
 			round:  Round(0),
 		},
 		previousBlock: localState.LastBlockHash(),
@@ -485,8 +485,8 @@ func (t *testConsensusStateJoiningHandler) TestINITVoteProofExpected() {
 		_ = cs.Deactivate(ConsensusStateChangeContext{})
 	}()
 
-	initFact := INITBallotV0Fact{
-		BaseBallotV0Fact: BaseBallotV0Fact{
+	initFact := INITBallotFactV0{
+		BaseBallotFactV0: BaseBallotFactV0{
 			height: localState.LastBlockHeight() + 1,
 			round:  Round(2), // round is not important to go
 		},
@@ -534,8 +534,8 @@ func (t *testConsensusStateJoiningHandler) TestINITVoteProofHigherHeight() {
 		_ = cs.Deactivate(ConsensusStateChangeContext{})
 	}()
 
-	initFact := INITBallotV0Fact{
-		BaseBallotV0Fact: BaseBallotV0Fact{
+	initFact := INITBallotFactV0{
+		BaseBallotFactV0: BaseBallotFactV0{
 			height: localState.LastBlockHeight() + 3,
 			round:  Round(2), // round is not important to go
 		},
@@ -583,8 +583,8 @@ func (t *testConsensusStateJoiningHandler) TestINITVoteProofLowerHeight() {
 		_ = cs.Deactivate(ConsensusStateChangeContext{})
 	}()
 
-	initFact := INITBallotV0Fact{
-		BaseBallotV0Fact: BaseBallotV0Fact{
+	initFact := INITBallotFactV0{
+		BaseBallotFactV0: BaseBallotFactV0{
 			height: localState.LastBlockHeight(),
 			round:  Round(2), // round is not important to go
 		},
@@ -620,8 +620,8 @@ func (t *testConsensusStateJoiningHandler) TestACCEPTVoteProofExpected() {
 		_ = cs.Deactivate(ConsensusStateChangeContext{})
 	}()
 
-	acceptFact := ACCEPTBallotV0Fact{
-		BaseBallotV0Fact: BaseBallotV0Fact{
+	acceptFact := ACCEPTBallotFactV0{
+		BaseBallotFactV0: BaseBallotFactV0{
 			height: localState.LastBlockHeight() + 1,
 			round:  Round(2), // round is not important to go
 		},
@@ -657,8 +657,8 @@ func (t *testConsensusStateJoiningHandler) TestACCEPTVoteProofHigherHeight() {
 		_ = cs.Deactivate(ConsensusStateChangeContext{})
 	}()
 
-	acceptFact := ACCEPTBallotV0Fact{
-		BaseBallotV0Fact: BaseBallotV0Fact{
+	acceptFact := ACCEPTBallotFactV0{
+		BaseBallotFactV0: BaseBallotFactV0{
 			height: localState.LastBlockHeight() + 3,
 			round:  Round(2), // round is not important to go
 		},
@@ -706,8 +706,8 @@ func (t *testConsensusStateJoiningHandler) TestACCEPTVoteProofLowerHeight() {
 		_ = cs.Deactivate(ConsensusStateChangeContext{})
 	}()
 
-	acceptFact := ACCEPTBallotV0Fact{
-		BaseBallotV0Fact: BaseBallotV0Fact{
+	acceptFact := ACCEPTBallotFactV0{
+		BaseBallotFactV0: BaseBallotFactV0{
 			height: localState.LastBlockHeight(),
 			round:  Round(2), // round is not important to go
 		},

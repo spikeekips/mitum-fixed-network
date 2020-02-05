@@ -44,7 +44,7 @@ func (t *testBallotProposalV0JSON) TestEncode() {
 			node: NewShortAddress("test-for-proposal"),
 		},
 		ProposalV0Fact: ProposalV0Fact{
-			BaseBallotV0Fact: BaseBallotV0Fact{
+			BaseBallotFactV0: BaseBallotFactV0{
 				height: Height(10),
 				round:  Round(0),
 			},

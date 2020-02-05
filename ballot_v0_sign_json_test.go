@@ -43,8 +43,8 @@ func (t *testBallotV0SIGNJSON) TestEncode() {
 		BaseBallotV0: BaseBallotV0{
 			node: NewShortAddress("test-for-sign-ballot"),
 		},
-		SIGNBallotV0Fact: SIGNBallotV0Fact{
-			BaseBallotV0Fact: BaseBallotV0Fact{
+		SIGNBallotFactV0: SIGNBallotFactV0{
+			BaseBallotFactV0: BaseBallotFactV0{
 				height: Height(10),
 				round:  Round(0),
 			},

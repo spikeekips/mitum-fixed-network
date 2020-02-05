@@ -12,15 +12,15 @@ import (
 var INITBallotV0Hint hint.Hint = hint.MustHint(INITBallotType, "0.1")
 
 // TODO rename to INITBallotFactV0
-type INITBallotV0Fact struct {
-	BaseBallotV0Fact
+type INITBallotFactV0 struct {
+	BaseBallotFactV0
 	previousBlock valuehash.Hash
 	previousRound Round
 }
 
-func (ibf INITBallotV0Fact) IsValid(b []byte) error {
+func (ibf INITBallotFactV0) IsValid(b []byte) error {
 	if err := isvalid.Check([]isvalid.IsValider{
-		ibf.BaseBallotV0Fact,
+		ibf.BaseBallotFactV0,
 		ibf.previousBlock,
 	}, b); err != nil {
 		return err
@@ -29,32 +29,32 @@ func (ibf INITBallotV0Fact) IsValid(b []byte) error {
 	return nil
 }
 
-func (ibf INITBallotV0Fact) Hash(b []byte) (valuehash.Hash, error) {
+func (ibf INITBallotFactV0) Hash(b []byte) (valuehash.Hash, error) {
 	// TODO check IsValid?
 	e := util.ConcatSlice([][]byte{ibf.Bytes(), b})
 
 	return valuehash.NewSHA256(e), nil
 }
 
-func (ibf INITBallotV0Fact) Bytes() []byte {
+func (ibf INITBallotFactV0) Bytes() []byte {
 	return util.ConcatSlice([][]byte{
-		ibf.BaseBallotV0Fact.Bytes(),
+		ibf.BaseBallotFactV0.Bytes(),
 		ibf.previousBlock.Bytes(),
 		ibf.previousRound.Bytes(),
 	})
 }
 
-func (ibf INITBallotV0Fact) PreviousBlock() valuehash.Hash {
+func (ibf INITBallotFactV0) PreviousBlock() valuehash.Hash {
 	return ibf.previousBlock
 }
 
-func (ibf INITBallotV0Fact) PreviousRound() Round {
+func (ibf INITBallotFactV0) PreviousRound() Round {
 	return ibf.previousRound
 }
 
 type INITBallotV0 struct {
 	BaseBallotV0
-	INITBallotV0Fact
+	INITBallotFactV0
 	h             valuehash.Hash
 	bodyHash      valuehash.Hash
 	voteProof     VoteProof
@@ -70,8 +70,8 @@ func NewINITBallotV0FromLocalState(localState *LocalState, round Round, b []byte
 		BaseBallotV0: BaseBallotV0{
 			node: localState.Node().Address(),
 		},
-		INITBallotV0Fact: INITBallotV0Fact{
-			BaseBallotV0Fact: BaseBallotV0Fact{
+		INITBallotFactV0: INITBallotFactV0{
+			BaseBallotFactV0: BaseBallotFactV0{
 				height: localState.LastBlockHeight() + 1,
 				round:  round,
 			},
@@ -108,7 +108,7 @@ func (ib INITBallotV0) BodyHash() valuehash.Hash {
 func (ib INITBallotV0) IsValid(b []byte) error {
 	if err := isvalid.Check([]isvalid.IsValider{
 		ib.BaseBallotV0,
-		ib.INITBallotV0Fact,
+		ib.INITBallotFactV0,
 	}, b); err != nil {
 		return err
 	}
@@ -134,7 +134,7 @@ func (ib INITBallotV0) GenerateHash(b []byte) (valuehash.Hash, error) {
 
 	e := util.ConcatSlice([][]byte{
 		ib.BaseBallotV0.Bytes(),
-		ib.INITBallotV0Fact.Bytes(),
+		ib.INITBallotFactV0.Bytes(),
 		ib.bodyHash.Bytes(),
 		vpb,
 		b,
@@ -144,7 +144,7 @@ func (ib INITBallotV0) GenerateHash(b []byte) (valuehash.Hash, error) {
 }
 
 func (ib INITBallotV0) GenerateBodyHash(b []byte) (valuehash.Hash, error) {
-	if err := ib.INITBallotV0Fact.IsValid(b); err != nil {
+	if err := ib.INITBallotFactV0.IsValid(b); err != nil {
 		return nil, err
 	}
 
@@ -154,7 +154,7 @@ func (ib INITBallotV0) GenerateBodyHash(b []byte) (valuehash.Hash, error) {
 	}
 
 	e := util.ConcatSlice([][]byte{
-		ib.INITBallotV0Fact.Bytes(),
+		ib.INITBallotFactV0.Bytes(),
 		vpb,
 		b,
 	})
@@ -163,7 +163,7 @@ func (ib INITBallotV0) GenerateBodyHash(b []byte) (valuehash.Hash, error) {
 }
 
 func (ib INITBallotV0) Fact() Fact {
-	return ib.INITBallotV0Fact
+	return ib.INITBallotFactV0
 }
 
 func (ib INITBallotV0) FactHash() valuehash.Hash {
@@ -178,7 +178,7 @@ func (ib *INITBallotV0) Sign(pk key.Privatekey, b []byte) error { // nolint
 	if err := ib.BaseBallotV0.IsReadyToSign(b); err != nil {
 		return err
 	}
-	if err := ib.INITBallotV0Fact.IsValid(b); err != nil {
+	if err := ib.INITBallotFactV0.IsValid(b); err != nil {
 		return err
 	}
 
@@ -199,7 +199,7 @@ func (ib *INITBallotV0) Sign(pk key.Privatekey, b []byte) error { // nolint
 
 	// fact signature
 	var factHash valuehash.Hash
-	if h, err := ib.INITBallotV0Fact.Hash(b); err != nil {
+	if h, err := ib.INITBallotFactV0.Hash(b); err != nil {
 		return err
 	} else {
 		factHash = h

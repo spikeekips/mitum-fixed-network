@@ -10,12 +10,12 @@ import (
 	"github.com/spikeekips/mitum/util"
 )
 
-type BaseBallotV0Fact struct {
+type BaseBallotFactV0 struct {
 	height Height
 	round  Round
 }
 
-func (bf BaseBallotV0Fact) IsReadyToSign(b []byte) error {
+func (bf BaseBallotFactV0) IsReadyToSign(b []byte) error {
 	if err := bf.height.IsValid(b); err != nil {
 		return err
 	}
@@ -23,7 +23,7 @@ func (bf BaseBallotV0Fact) IsReadyToSign(b []byte) error {
 	return nil
 }
 
-func (bf BaseBallotV0Fact) IsValid(b []byte) error {
+func (bf BaseBallotFactV0) IsValid(b []byte) error {
 	if err := bf.IsReadyToSign(b); err != nil {
 		return err
 	}
@@ -31,18 +31,18 @@ func (bf BaseBallotV0Fact) IsValid(b []byte) error {
 	return nil
 }
 
-func (bf BaseBallotV0Fact) Bytes() []byte {
+func (bf BaseBallotFactV0) Bytes() []byte {
 	return util.ConcatSlice([][]byte{
 		bf.height.Bytes(),
 		bf.round.Bytes(),
 	})
 }
 
-func (bf BaseBallotV0Fact) Height() Height {
+func (bf BaseBallotFactV0) Height() Height {
 	return bf.height
 }
 
-func (bf BaseBallotV0Fact) Round() Round {
+func (bf BaseBallotFactV0) Round() Round {
 	return bf.round
 }
 

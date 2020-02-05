@@ -43,8 +43,8 @@ func (t *testBallotV0INITJSON) TestEncode() {
 		BaseBallotV0: BaseBallotV0{
 			node: NewShortAddress("test-for-init-ballot"),
 		},
-		INITBallotV0Fact: INITBallotV0Fact{
-			BaseBallotV0Fact: BaseBallotV0Fact{
+		INITBallotFactV0: INITBallotFactV0{
+			BaseBallotFactV0: BaseBallotFactV0{
 				height: Height(10),
 				round:  Round(0),
 			},

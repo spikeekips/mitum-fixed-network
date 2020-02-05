@@ -66,7 +66,7 @@ func (pr *ProposalV0) UnpackJSON(b []byte, enc *encoder.JSONEncoder) error {
 	pr.factHash = efh
 	pr.factSignature = efsg
 	pr.ProposalV0Fact = ProposalV0Fact{
-		BaseBallotV0Fact: bf,
+		BaseBallotFactV0: bf,
 		seals:            esl,
 	}
 

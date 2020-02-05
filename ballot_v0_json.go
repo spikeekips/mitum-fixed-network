@@ -60,7 +60,7 @@ func UnpackBaseBallotV0JSON(nib BaseBallotV0UnpackerJSON, enc *encoder.JSONEncod
 	valuehash.Hash, // fact hash
 	key.Signature, // fact signature
 	BaseBallotV0,
-	BaseBallotV0Fact,
+	BaseBallotFactV0,
 	error,
 ) {
 	var err error
@@ -68,25 +68,25 @@ func UnpackBaseBallotV0JSON(nib BaseBallotV0UnpackerJSON, enc *encoder.JSONEncod
 	// signer
 	var signer key.Publickey
 	if signer, err = decodePublickey(enc, nib.SN); err != nil {
-		return nil, nil, nil, nil, BaseBallotV0{}, BaseBallotV0Fact{}, err
+		return nil, nil, nil, nil, BaseBallotV0{}, BaseBallotFactV0{}, err
 	}
 
 	var eh, ebh, efh valuehash.Hash
 	if eh, err = decodeHash(enc, nib.H); err != nil {
-		return nil, nil, nil, nil, BaseBallotV0{}, BaseBallotV0Fact{}, err
+		return nil, nil, nil, nil, BaseBallotV0{}, BaseBallotFactV0{}, err
 	}
 
 	if ebh, err = decodeHash(enc, nib.BH); err != nil {
-		return nil, nil, nil, nil, BaseBallotV0{}, BaseBallotV0Fact{}, err
+		return nil, nil, nil, nil, BaseBallotV0{}, BaseBallotFactV0{}, err
 	}
 
 	if efh, err = decodeHash(enc, nib.FH); err != nil {
-		return nil, nil, nil, nil, BaseBallotV0{}, BaseBallotV0Fact{}, err
+		return nil, nil, nil, nil, BaseBallotV0{}, BaseBallotFactV0{}, err
 	}
 
 	var node Address
 	if node, err = decodeAddress(enc, nib.N); err != nil {
-		return nil, nil, nil, nil, BaseBallotV0{}, BaseBallotV0Fact{}, err
+		return nil, nil, nil, nil, BaseBallotV0{}, BaseBallotFactV0{}, err
 	}
 
 	return eh, ebh, efh, nib.FSG,
@@ -96,7 +96,7 @@ func UnpackBaseBallotV0JSON(nib BaseBallotV0UnpackerJSON, enc *encoder.JSONEncod
 			signedAt:  nib.SA.Time,
 			node:      node,
 		},
-		BaseBallotV0Fact{
+		BaseBallotFactV0{
 			height: nib.HT,
 			round:  nib.RD,
 		}, nil

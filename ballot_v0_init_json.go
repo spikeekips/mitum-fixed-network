@@ -64,8 +64,8 @@ func (ib *INITBallotV0) UnpackJSON(b []byte, enc *encoder.JSONEncoder) error {
 	ib.bodyHash = ebh
 	ib.factHash = efh
 	ib.factSignature = efsg
-	ib.INITBallotV0Fact = INITBallotV0Fact{
-		BaseBallotV0Fact: bf,
+	ib.INITBallotFactV0 = INITBallotFactV0{
+		BaseBallotFactV0: bf,
 		previousBlock:    epb,
 		previousRound:    nib.PR,
 	}

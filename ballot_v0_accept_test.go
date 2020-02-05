@@ -31,8 +31,8 @@ func (t *testBallotV0ACCEPT) TestNew() {
 		BaseBallotV0: BaseBallotV0{
 			node: NewShortAddress("test-for-accept-ballot"),
 		},
-		ACCEPTBallotV0Fact: ACCEPTBallotV0Fact{
-			BaseBallotV0Fact: BaseBallotV0Fact{
+		ACCEPTBallotFactV0: ACCEPTBallotFactV0{
+			BaseBallotFactV0: BaseBallotFactV0{
 				height: Height(10),
 				round:  Round(0),
 			},
@@ -52,8 +52,8 @@ func (t *testBallotV0ACCEPT) TestFact() {
 		BaseBallotV0: BaseBallotV0{
 			node: NewShortAddress("test-for-accept-ballot"),
 		},
-		ACCEPTBallotV0Fact: ACCEPTBallotV0Fact{
-			BaseBallotV0Fact: BaseBallotV0Fact{
+		ACCEPTBallotFactV0: ACCEPTBallotFactV0{
+			BaseBallotFactV0: BaseBallotFactV0{
 				height: Height(10),
 				round:  Round(0),
 			},
@@ -90,8 +90,8 @@ func (t *testBallotV0ACCEPT) TestGenerateHash() {
 		BaseBallotV0: BaseBallotV0{
 			node: NewShortAddress("test-for-accept-ballot"),
 		},
-		ACCEPTBallotV0Fact: ACCEPTBallotV0Fact{
-			BaseBallotV0Fact: BaseBallotV0Fact{
+		ACCEPTBallotFactV0: ACCEPTBallotFactV0{
+			BaseBallotFactV0: BaseBallotFactV0{
 				height: Height(10),
 				round:  Round(0),
 			},
@@ -116,8 +116,8 @@ func (t *testBallotV0ACCEPT) TestSign() {
 		BaseBallotV0: BaseBallotV0{
 			node: NewShortAddress("test-for-accept-ballot"),
 		},
-		ACCEPTBallotV0Fact: ACCEPTBallotV0Fact{
-			BaseBallotV0Fact: BaseBallotV0Fact{
+		ACCEPTBallotFactV0: ACCEPTBallotFactV0{
+			BaseBallotFactV0: BaseBallotFactV0{
 				height: Height(10),
 				round:  Round(0),
 			},

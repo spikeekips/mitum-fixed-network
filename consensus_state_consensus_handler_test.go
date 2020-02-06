@@ -30,17 +30,16 @@ func (t *testConsensusStateConsensusHandler) SetupSuite() {
 }
 
 func (t *testConsensusStateConsensusHandler) states() (*LocalState, *LocalState) {
+	lastBlock, err := NewTestBlockV0(Height(33), Round(0), nil, valuehash.RandomSHA256())
+	t.NoError(err)
+
 	localNode := RandomLocalNode("local", nil)
 	localState := NewLocalState(localNode, NewLocalPolicy()).
-		SetLastBlockHeight(Height(33)).
-		SetLastBlockRound(Round(3)).
-		SetLastBlockHash(valuehash.RandomSHA256())
+		SetLastBlock(lastBlock)
 
 	remoteNode := RandomLocalNode("remote", nil)
 	remoteState := NewLocalState(remoteNode, NewLocalPolicy()).
-		SetLastBlockHeight(localState.LastBlockHeight()).
-		SetLastBlockRound(localState.LastBlockRound()).
-		SetLastBlockHash(localState.LastBlockHash())
+		SetLastBlock(lastBlock)
 
 	t.NoError(localState.Nodes().Add(remoteNode))
 	t.NoError(remoteState.Nodes().Add(localNode))
@@ -48,24 +47,6 @@ func (t *testConsensusStateConsensusHandler) states() (*LocalState, *LocalState)
 	// TODO close up node's Network
 
 	return localState, remoteState
-}
-
-func (t *testConsensusStateConsensusHandler) newINITBallot(localState *LocalState, round Round) INITBallotV0 {
-	ib := INITBallotV0{
-		BaseBallotV0: BaseBallotV0{
-			node: localState.Node().Address(),
-		},
-		INITBallotFactV0: INITBallotFactV0{
-			BaseBallotFactV0: BaseBallotFactV0{
-				height: localState.LastBlockHeight() + 1,
-				round:  round,
-			},
-			previousBlock: localState.LastBlockHash(),
-			previousRound: localState.LastBlockRound(),
-		},
-	}
-
-	return ib
 }
 
 func (t *testConsensusStateConsensusHandler) newVoteProof(stage Stage, fact Fact, states ...*LocalState) (VoteProofV0, error) {
@@ -119,22 +100,28 @@ func (t *testConsensusStateConsensusHandler) newVoteProof(stage Stage, fact Fact
 	return vp, nil
 }
 
+func (t *testConsensusStateConsensusHandler) suffrage(proposerState *LocalState, states ...*LocalState) Suffrage {
+	var nodes []Node
+	for _, s := range states {
+		nodes = append(nodes, s.Node())
+	}
+
+	return NewFixedSuffrage(proposerState.Node(), nodes)
+}
+
 func (t *testConsensusStateConsensusHandler) TestNew() {
 	localState, remoteState := t.states()
 	localState.Policy().SetTimeoutWaitingProposal(time.Millisecond * 10)
 
-	cs, err := NewConsensusStateConsensusHandler(localState)
+	suffrage := t.suffrage(remoteState, localState)
+
+	cs, err := NewConsensusStateConsensusHandler(localState, DummyProposalProcessor{}, suffrage)
 	t.NoError(err)
 	t.NotNil(cs)
 
-	initFact := INITBallotFactV0{
-		BaseBallotFactV0: BaseBallotFactV0{
-			height: localState.LastBlockHeight() + 1,
-			round:  Round(0),
-		},
-		previousBlock: localState.LastBlockHash(),
-		previousRound: localState.LastBlockRound(),
-	}
+	ib, err := NewINITBallotV0FromLocalState(localState, Round(0), nil)
+	t.NoError(err)
+	initFact := ib.INITBallotFactV0
 
 	vp, err := t.newVoteProof(StageINIT, initFact, localState, remoteState)
 	t.NoError(err)
@@ -160,30 +147,27 @@ func (t *testConsensusStateConsensusHandler) TestNew() {
 	<-time.After(time.Millisecond * 100)
 }
 
-func (t *testConsensusStateConsensusHandler) TestWaitingProposal() {
+func (t *testConsensusStateConsensusHandler) TestWaitingProposalButTimeedOut() {
 	localState, remoteState := t.states()
 	localState.Policy().SetTimeoutWaitingProposal(time.Millisecond * 3)
 	localState.Policy().SetIntervalBroadcastingINITBallot(time.Millisecond * 5)
 
-	cs, err := NewConsensusStateConsensusHandler(localState)
+	suffrage := t.suffrage(remoteState, localState)
+
+	cs, err := NewConsensusStateConsensusHandler(localState, DummyProposalProcessor{}, suffrage)
 	t.NoError(err)
 	t.NotNil(cs)
 
-	initFact := INITBallotFactV0{
-		BaseBallotFactV0: BaseBallotFactV0{
-			height: localState.LastBlockHeight() + 1,
-			round:  Round(0),
-		},
-		previousBlock: localState.LastBlockHash(),
-		previousRound: localState.LastBlockRound(),
-	}
+	ib, err := NewINITBallotV0FromLocalState(localState, Round(0), nil)
+	t.NoError(err)
+	initFact := ib.INITBallotFactV0
 
 	vp, err := t.newVoteProof(StageINIT, initFact, localState, remoteState)
 	t.NoError(err)
 
 	t.NoError(cs.Activate(ConsensusStateChangeContext{
 		fromState: ConsensusStateJoining,
-		toState:   ConsensusStateJoining,
+		toState:   ConsensusStateConsensus,
 		voteProof: vp,
 	}))
 
@@ -203,6 +187,110 @@ func (t *testConsensusStateConsensusHandler) TestWaitingProposal() {
 		t.Equal(vp.Height(), rb.Height())
 		t.Equal(vp.Round()+1, rb.Round()) // means that handler moves to next round
 	}
+}
+
+// with Proposal, ACCEPTBallot will be broadcasted with newly processed
+// Proposal.
+func (t *testConsensusStateConsensusHandler) TestWithProposalWaitACCEPTBallot() {
+	localState, remoteState := t.states()
+	localState.Policy().SetWaitBroadcastingACCEPTBallot(time.Millisecond * 1)
+
+	ib, err := NewINITBallotV0FromLocalState(localState, Round(0), nil)
+	t.NoError(err)
+	initFact := ib.INITBallotFactV0
+
+	cs, err := NewConsensusStateConsensusHandler(
+		localState,
+		DummyProposalProcessor{},
+		t.suffrage(remoteState, remoteState), // localnode is not in ActingSuffrage.
+	)
+	t.NoError(err)
+	t.NotNil(cs)
+
+	vp, err := t.newVoteProof(StageINIT, initFact, localState, remoteState)
+	t.NoError(err)
+
+	t.NoError(cs.Activate(ConsensusStateChangeContext{
+		fromState: ConsensusStateJoining,
+		toState:   ConsensusStateConsensus,
+		voteProof: vp,
+	}))
+
+	defer func() {
+		_ = cs.Deactivate(ConsensusStateChangeContext{})
+	}()
+
+	pr, err := NewProposalFromLocalState(remoteState, initFact.round, nil, nil)
+	t.NoError(err)
+
+	returnedBlock, err := NewTestBlockV0(initFact.Height(), initFact.Round(), pr.Hash(), valuehash.RandomSHA256())
+	t.NoError(err)
+	cs.proposalProcessor = NewDummyProposalProcessor(returnedBlock, nil)
+
+	t.NoError(cs.NewSeal(pr))
+
+	r := <-remoteState.Node().Channel().ReceiveSeal()
+	t.NotNil(r)
+
+	rb := r.(ACCEPTBallotV0)
+	t.Equal(StageACCEPT, rb.Stage())
+
+	t.Equal(pr.Height(), rb.Height())
+	t.Equal(pr.Round(), rb.Round())
+	t.True(pr.Hash().Equal(rb.Proposal()))
+	t.True(returnedBlock.Hash().Equal(rb.NewBlock()))
+}
+
+// with Proposal, ACCEPTBallot will be broadcasted with newly processed
+// Proposal.
+func (t *testConsensusStateConsensusHandler) TestWithProposalWaitSIGNBallot() {
+	localState, remoteState := t.states()
+	//localState.Policy().SetWaitBroadcastingACCEPTBallot(time.Millisecond * 1)
+
+	ib, err := NewINITBallotV0FromLocalState(localState, Round(0), nil)
+	t.NoError(err)
+	initFact := ib.INITBallotFactV0
+
+	cs, err := NewConsensusStateConsensusHandler(
+		localState,
+		DummyProposalProcessor{},
+		t.suffrage(remoteState, localState, remoteState), // localnode is not in ActingSuffrage.
+	)
+	t.NoError(err)
+	t.NotNil(cs)
+
+	vp, err := t.newVoteProof(StageINIT, initFact, localState, remoteState)
+	t.NoError(err)
+
+	t.NoError(cs.Activate(ConsensusStateChangeContext{
+		fromState: ConsensusStateJoining,
+		toState:   ConsensusStateConsensus,
+		voteProof: vp,
+	}))
+
+	defer func() {
+		_ = cs.Deactivate(ConsensusStateChangeContext{})
+	}()
+
+	pr, err := NewProposalFromLocalState(remoteState, initFact.round, nil, nil)
+	t.NoError(err)
+
+	returnedBlock, err := NewTestBlockV0(initFact.Height(), initFact.Round(), pr.Hash(), valuehash.RandomSHA256())
+	t.NoError(err)
+	cs.proposalProcessor = NewDummyProposalProcessor(returnedBlock, nil)
+
+	t.NoError(cs.NewSeal(pr))
+
+	r := <-remoteState.Node().Channel().ReceiveSeal()
+	t.NotNil(r)
+
+	rb := r.(SIGNBallotV0)
+	t.Equal(StageSIGN, rb.Stage())
+
+	t.Equal(pr.Height(), rb.Height())
+	t.Equal(pr.Round(), rb.Round())
+	t.True(pr.Hash().Equal(rb.Proposal()))
+	t.True(returnedBlock.Hash().Equal(rb.NewBlock()))
 }
 
 func TestConsensusStateConsensusHandler(t *testing.T) {

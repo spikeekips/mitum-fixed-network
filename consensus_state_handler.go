@@ -78,17 +78,38 @@ func (bs *BaseStateHandler) ChangeState(newState ConsensusState, vp VoteProof) e
 }
 
 func (bs *BaseStateHandler) BroadcastSeal(sl seal.Seal, errChan chan<- error) {
+	l := loggerWithSeal(sl, bs.Log())
+	l.Debug().Msg("trying to broadcast")
+
 	bs.localState.Nodes().Traverse(func(n Node) bool {
 		go func(n Node) {
+			lt := l.With().
+				Str("target_node", n.Address().String()).
+				Logger()
+
 			if err := n.Channel().SendSeal(sl); err != nil {
+				lt.Error().Err(err).Msg("failed to broadcast")
+
 				if errChan != nil {
 					errChan <- err
 				}
+				return
 			}
+
+			lt.Debug().Msg("broadcasted")
 		}(n)
 
 		return true
 	})
+}
+
+func loggerWithSeal(sl seal.Seal, l *zerolog.Logger) *zerolog.Logger {
+	ll := l.With().
+		Str("seal_hint", sl.Hint().Verbose()).
+		Str("seal_hash", sl.Hash().String()).
+		Logger()
+
+	return &ll
 }
 
 func loggerWithBallot(ballot Ballot, l *zerolog.Logger) *zerolog.Logger {
@@ -118,10 +139,15 @@ func loggerWithVoteProof(vp VoteProof, l *zerolog.Logger) *zerolog.Logger {
 }
 
 func loggerWithLocalState(localState *LocalState, l *zerolog.Logger) *zerolog.Logger {
+	lastBlock := localState.LastBlock()
+	if lastBlock == nil {
+		return l
+	}
+
 	ll := l.With().
-		Str("last_block_hash", localState.LastBlockHash().String()).
-		Int64("last_block_height", localState.LastBlockHeight().Int64()).
-		Uint64("last_block_round", localState.LastBlockRound().Uint64()).
+		Str("last_block_hash", lastBlock.Hash().String()).
+		Int64("last_block_height", lastBlock.Height().Int64()).
+		Uint64("last_block_round", lastBlock.Round().Uint64()).
 		Logger()
 
 	return &ll

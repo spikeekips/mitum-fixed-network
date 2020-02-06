@@ -7,6 +7,7 @@ import (
 	"github.com/spikeekips/mitum/localtime"
 	"github.com/spikeekips/mitum/util"
 	"github.com/spikeekips/mitum/valuehash"
+	"golang.org/x/xerrors"
 )
 
 var ACCEPTBallotV0Hint hint.Hint = hint.MustHint(ACCEPTBallotType, "0.1")
@@ -61,6 +62,39 @@ type ACCEPTBallotV0 struct {
 	voteProof     VoteProof
 	factHash      valuehash.Hash
 	factSignature key.Signature
+}
+
+func NewACCEPTBallotV0FromLocalState(
+	localState *LocalState,
+	round Round,
+	newBlock Block,
+	b []byte,
+) (ACCEPTBallotV0, error) {
+	lastBlock := localState.LastBlock()
+	if lastBlock == nil {
+		return ACCEPTBallotV0{}, xerrors.Errorf("lastBlock is empty")
+	}
+
+	ab := ACCEPTBallotV0{
+		BaseBallotV0: BaseBallotV0{
+			node: localState.Node().Address(),
+		},
+		ACCEPTBallotFactV0: ACCEPTBallotFactV0{
+			BaseBallotFactV0: BaseBallotFactV0{
+				height: lastBlock.Height() + 1,
+				round:  round,
+			},
+			proposal: newBlock.Proposal(),
+			newBlock: newBlock.Hash(),
+		},
+	}
+
+	// TODO NetworkID must be given.
+	if err := ab.Sign(localState.Node().Privatekey(), b); err != nil {
+		return ACCEPTBallotV0{}, err
+	}
+
+	return ab, nil
 }
 
 func (ab ACCEPTBallotV0) Hint() hint.Hint {

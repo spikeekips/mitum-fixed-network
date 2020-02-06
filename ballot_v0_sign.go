@@ -7,9 +7,10 @@ import (
 	"github.com/spikeekips/mitum/localtime"
 	"github.com/spikeekips/mitum/util"
 	"github.com/spikeekips/mitum/valuehash"
+	"golang.org/x/xerrors"
 )
 
-var SIGNBallotV0Hint hint.Hint = hint.MustHint(INITBallotType, "0.1")
+var SIGNBallotV0Hint hint.Hint = hint.MustHint(SIGNBallotType, "0.1")
 
 type SIGNBallotFactV0 struct {
 	BaseBallotFactV0
@@ -59,6 +60,39 @@ type SIGNBallotV0 struct {
 	bodyHash      valuehash.Hash
 	factHash      valuehash.Hash
 	factSignature key.Signature
+}
+
+func NewSIGNBallotV0FromLocalState(
+	localState *LocalState,
+	round Round,
+	newBlock Block,
+	b []byte,
+) (SIGNBallotV0, error) {
+	lastBlock := localState.LastBlock()
+	if lastBlock == nil {
+		return SIGNBallotV0{}, xerrors.Errorf("lastBlock is empty")
+	}
+
+	sb := SIGNBallotV0{
+		BaseBallotV0: BaseBallotV0{
+			node: localState.Node().Address(),
+		},
+		SIGNBallotFactV0: SIGNBallotFactV0{
+			BaseBallotFactV0: BaseBallotFactV0{
+				height: lastBlock.Height() + 1,
+				round:  round,
+			},
+			proposal: newBlock.Proposal(),
+			newBlock: newBlock.Hash(),
+		},
+	}
+
+	// TODO NetworkID must be given.
+	if err := sb.Sign(localState.Node().Privatekey(), b); err != nil {
+		return SIGNBallotV0{}, err
+	}
+
+	return sb, nil
 }
 
 func (sb SIGNBallotV0) Hint() hint.Hint {

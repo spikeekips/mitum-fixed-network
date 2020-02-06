@@ -30,7 +30,7 @@ func (t *testBallotV0Proposal) TestNew() {
 		BaseBallotV0: BaseBallotV0{
 			node: NewShortAddress("test-for-proposal"),
 		},
-		ProposalV0Fact: ProposalV0Fact{
+		ProposalFactV0: ProposalFactV0{
 			BaseBallotFactV0: BaseBallotFactV0{
 				height: Height(10),
 				round:  Round(0),
@@ -49,7 +49,7 @@ func (t *testBallotV0Proposal) TestFact() {
 		BaseBallotV0: BaseBallotV0{
 			node: NewShortAddress("test-for-proposal"),
 		},
-		ProposalV0Fact: ProposalV0Fact{
+		ProposalFactV0: ProposalFactV0{
 			BaseBallotFactV0: BaseBallotFactV0{
 				height: Height(10),
 				round:  Round(0),
@@ -85,7 +85,7 @@ func (t *testBallotV0Proposal) TestGenerateHash() {
 		BaseBallotV0: BaseBallotV0{
 			node: NewShortAddress("test-for-proposal"),
 		},
-		ProposalV0Fact: ProposalV0Fact{
+		ProposalFactV0: ProposalFactV0{
 			BaseBallotFactV0: BaseBallotFactV0{
 				height: Height(10),
 				round:  Round(0),
@@ -114,7 +114,7 @@ func (t *testBallotV0Proposal) TestSign() {
 		BaseBallotV0: BaseBallotV0{
 			node: NewShortAddress("test-for-proposal"),
 		},
-		ProposalV0Fact: ProposalV0Fact{
+		ProposalFactV0: ProposalFactV0{
 			BaseBallotFactV0: BaseBallotFactV0{
 				height: Height(10),
 				round:  Round(0),

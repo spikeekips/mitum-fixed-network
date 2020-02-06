@@ -10,11 +10,16 @@ import (
 
 type testNodesState struct {
 	suite.Suite
+	localNode *LocalNode
+}
+
+func (t *testNodesState) SetupSuite() {
+	t.localNode = RandomLocalNode("local", nil)
 }
 
 func (t *testNodesState) TestEmpty() {
 	var nodes []Node
-	ns := NewNodesState(nodes)
+	ns := NewNodesState(t.localNode, nodes)
 	t.Equal(0, ns.Len())
 }
 
@@ -25,7 +30,7 @@ func (t *testNodesState) TestDuplicatedAddress() {
 		RandomLocalNode("n1", nil),
 	}
 
-	ns := NewNodesState(nodes)
+	ns := NewNodesState(t.localNode, nodes)
 	t.Equal(len(nodes)-1, ns.Len())
 }
 
@@ -35,7 +40,7 @@ func (t *testNodesState) TestAdd() {
 		RandomLocalNode("n1", nil),
 	}
 
-	ns := NewNodesState(nodes)
+	ns := NewNodesState(t.localNode, nodes)
 
 	{ // add, but same Address
 		err := ns.Add(RandomLocalNode("n1", nil))
@@ -76,7 +81,7 @@ func (t *testNodesState) TestRemove() {
 		RandomLocalNode("n2", nil),
 	}
 
-	ns := NewNodesState(nodes)
+	ns := NewNodesState(t.localNode, nodes)
 
 	{ // try to remove, but nothing
 		err := ns.Remove(NewShortAddress("hehe"))
@@ -115,7 +120,7 @@ func (t *testNodesState) TestTraverse() {
 		RandomLocalNode("n2", nil),
 	}
 
-	ns := NewNodesState(nodes)
+	ns := NewNodesState(t.localNode, nodes)
 
 	{ // all
 		var traversed []Node

@@ -7,6 +7,7 @@ import (
 	"github.com/spikeekips/mitum/localtime"
 	"github.com/spikeekips/mitum/util"
 	"github.com/spikeekips/mitum/valuehash"
+	"golang.org/x/xerrors"
 )
 
 var INITBallotV0Hint hint.Hint = hint.MustHint(INITBallotType, "0.1")
@@ -66,20 +67,32 @@ type INITBallotV0 struct {
 // - VoteProof.Round() + 1: if VoteProof.Stage() == StageINIT) or
 // - Round(0): if VoteProof.Stage() == StageACCEPT
 func NewINITBallotV0FromLocalState(localState *LocalState, round Round, b []byte) (INITBallotV0, error) {
+	lastBlock := localState.LastBlock()
+	if lastBlock == nil {
+		return INITBallotV0{}, xerrors.Errorf("lastBlock is empty")
+	}
+
 	ib := INITBallotV0{
 		BaseBallotV0: BaseBallotV0{
 			node: localState.Node().Address(),
 		},
 		INITBallotFactV0: INITBallotFactV0{
 			BaseBallotFactV0: BaseBallotFactV0{
-				height: localState.LastBlockHeight() + 1,
+				height: lastBlock.Height() + 1,
 				round:  round,
 			},
-			previousBlock: localState.LastBlockHash(),
-			previousRound: localState.LastBlockRound(),
+			previousBlock: lastBlock.Hash(),
+			previousRound: lastBlock.Round(),
 		},
 	}
-	ib.voteProof = localState.LastINITVoteProof()
+
+	var voteProof VoteProof
+	if round == 0 {
+		voteProof = localState.LastACCEPTVoteProof()
+	} else {
+		voteProof = localState.LastINITVoteProof()
+	}
+	ib.voteProof = voteProof
 
 	// TODO NetworkID must be given.
 	if err := ib.Sign(localState.Node().Privatekey(), b); err != nil {

@@ -6,10 +6,11 @@ import (
 	"time"
 
 	"github.com/rs/zerolog"
+	"golang.org/x/xerrors"
+
 	"github.com/spikeekips/mitum/localtime"
 	"github.com/spikeekips/mitum/logging"
 	"github.com/spikeekips/mitum/seal"
-	"golang.org/x/xerrors"
 )
 
 /*
@@ -24,14 +25,25 @@ Consensus state is started by new INIT VoteProof and waits next Proposal.
 */
 type ConsensusStateConsensusHandler struct {
 	*BaseStateHandler
-	initBallotTimer *localtime.CallbackTimer
+	proposalProcessor ProposalProcessor
+	suffrage          Suffrage
+	initBallotTimer   *localtime.CallbackTimer
+	acceptBallotTimer *localtime.CallbackTimer
 }
 
 func NewConsensusStateConsensusHandler(
 	localState *LocalState,
+	proposalProcessor ProposalProcessor,
+	suffrage Suffrage,
 ) (*ConsensusStateConsensusHandler, error) {
+	if lastBlock := localState.LastBlock(); lastBlock == nil {
+		return nil, xerrors.Errorf("last block is empty")
+	}
+
 	cs := &ConsensusStateConsensusHandler{
-		BaseStateHandler: NewBaseStateHandler(localState, ConsensusStateConsensus),
+		BaseStateHandler:  NewBaseStateHandler(localState, ConsensusStateConsensus),
+		proposalProcessor: proposalProcessor,
+		suffrage:          suffrage,
 	}
 	cs.BaseStateHandler.Logger = logging.NewLogger(func(c zerolog.Context) zerolog.Context {
 		return c.Str("module", "consensus-state-consensus-handler")
@@ -49,24 +61,33 @@ func (cs *ConsensusStateConsensusHandler) SetLogger(l zerolog.Logger) *logging.L
 }
 
 func (cs *ConsensusStateConsensusHandler) Activate(ctx ConsensusStateChangeContext) error {
-	log := loggerWithConsensusStateChangeContext(ctx, cs.Log())
-	log.Debug().Msg("activated")
+	l := loggerWithConsensusStateChangeContext(ctx, cs.Log())
+	l.Debug().Msg("activated")
 
 	_ = cs.localState.SetLastINITVoteProof(ctx.VoteProof())
 
 	if err := cs.waitProposal(); err != nil {
 		return err
 	}
+	// TODO find Proposal; Proposal can be received early.
 
 	return nil
 }
 
 func (cs *ConsensusStateConsensusHandler) Deactivate(ctx ConsensusStateChangeContext) error {
+	l := loggerWithConsensusStateChangeContext(ctx, cs.Log())
+	l.Debug().Msg("deactivated")
+
+	if err := cs.initializeTimer(); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (cs *ConsensusStateConsensusHandler) initializeTimer() error {
 	cs.Lock()
 	defer cs.Unlock()
-
-	log := loggerWithConsensusStateChangeContext(ctx, cs.Log())
-	log.Debug().Msg("deactivated")
 
 	if cs.initBallotTimer != nil {
 		if err := cs.initBallotTimer.Stop(); err != nil {
@@ -75,14 +96,19 @@ func (cs *ConsensusStateConsensusHandler) Deactivate(ctx ConsensusStateChangeCon
 		cs.initBallotTimer = nil
 	}
 
+	if cs.acceptBallotTimer != nil {
+		if err := cs.acceptBallotTimer.Stop(); err != nil {
+			return err
+		}
+		cs.acceptBallotTimer = nil
+	}
+
 	return nil
 }
 
 func (cs *ConsensusStateConsensusHandler) waitProposal() error {
-	if cs.initBallotTimer != nil {
-		if err := cs.initBallotTimer.Stop(); err != nil {
-			return err
-		}
+	if err := cs.initializeTimer(); err != nil {
+		return err
 	}
 
 	cs.Lock()
@@ -94,19 +120,19 @@ func (cs *ConsensusStateConsensusHandler) waitProposal() error {
 		func() (bool, error) {
 			vp := cs.localState.LastINITVoteProof()
 
-			log := loggerWithVoteProof(vp, cs.Log())
+			l := loggerWithVoteProof(vp, cs.Log())
 			if !vp.IsFinished() { // NOTE check VoteProof is empty
-				log.Error().Err(xerrors.Errorf("invalid VoteProof found in LocalState"))
+				l.Error().Err(xerrors.Errorf("invalid VoteProof found in LocalState"))
 				return true, nil
 			}
 
 			round := vp.Round() + 1
 
-			log.Debug().Msg("timeout; waiting Proposal; trying to move next round")
+			l.Debug().Msg("timeout; waiting Proposal; trying to move next round")
 
 			ib, err := NewINITBallotV0FromLocalState(cs.localState, round, nil)
 			if err != nil {
-				log.Error().Err(err).Msg("failed to move next round; will keep trying")
+				l.Error().Err(err).Msg("failed to move next round; will keep trying")
 				return true, nil
 			}
 
@@ -124,7 +150,6 @@ func (cs *ConsensusStateConsensusHandler) waitProposal() error {
 				return cs.localState.Policy().TimeoutWaitingProposal()
 			}
 
-			// TODO this duration also should be managed by LocalState
 			return cs.localState.Policy().IntervalBroadcastingINITBallot()
 		},
 	)
@@ -147,26 +172,10 @@ func (cs *ConsensusStateConsensusHandler) NewSeal(sl seal.Seal) error {
 	}
 }
 
-func (cs *ConsensusStateConsensusHandler) handleProposal(proposal Proposal) error {
-	log := cs.Log().With().
-		Str("proposal_hash", proposal.Hash().String()).
-		Int64("proposal_height", proposal.Height().Int64()).
-		Uint64("proposal_round", proposal.Round().Uint64()).
-		Logger()
-
-	log.Debug().Msg("got proposal")
-
-	// TODO check Proposal is proper
-	// TODO process Proposal
-	// TODO broadcast ACCEPT Ballot
-
-	return nil
-}
-
 func (cs *ConsensusStateConsensusHandler) NewVoteProof(vp VoteProof) error {
-	log := loggerWithVoteProof(vp, cs.Log())
+	l := loggerWithVoteProof(vp, cs.Log())
 
-	log.Debug().Msg("VoteProof received")
+	l.Debug().Msg("VoteProof received")
 
 	switch vp.Stage() {
 	case StageACCEPT:
@@ -184,19 +193,19 @@ func (cs *ConsensusStateConsensusHandler) NewVoteProof(vp VoteProof) error {
 	default:
 		err := xerrors.Errorf("invalid VoteProof received")
 
-		log.Error().Err(err).Send()
+		l.Error().Err(err).Send()
 
 		return err
 	}
 }
 
 func (cs *ConsensusStateConsensusHandler) handleINITVoteProof(vp VoteProof) error {
-	log := loggerWithVoteProof(vp, cs.Log())
+	l := loggerWithVoteProof(vp, cs.Log())
 
-	switch d := (vp.Height() - cs.localState.LastBlockHeight() + 1); {
+	switch d := (vp.Height() - cs.localState.LastBlock().Height() + 1); {
 	case d < 0: // old VoteProof
 		// TODO check it's previousBlock and previousRound is matched with local.
-		log.Debug().Msg("old VoteProof received; ignore it")
+		l.Debug().Msg("old VoteProof received; ignore it")
 		return nil
 	case d > 0: // far from local; moves to syncing
 		if err := cs.ChangeState(ConsensusStateSyncing, vp); err != nil {
@@ -210,10 +219,8 @@ func (cs *ConsensusStateConsensusHandler) handleINITVoteProof(vp VoteProof) erro
 }
 
 func (cs *ConsensusStateConsensusHandler) keepBroadcastingINITBallotForNextBlock() error {
-	if cs.initBallotTimer != nil {
-		if err := cs.initBallotTimer.Stop(); err != nil {
-			return err
-		}
+	if err := cs.initializeTimer(); err != nil {
+		return err
 	}
 
 	cs.Lock()
@@ -224,17 +231,17 @@ func (cs *ConsensusStateConsensusHandler) keepBroadcastingINITBallotForNextBlock
 		func() (bool, error) {
 			vp := cs.localState.LastINITVoteProof()
 
-			log := loggerWithVoteProof(vp, cs.Log())
+			l := loggerWithVoteProof(vp, cs.Log())
 			if !vp.IsFinished() { // NOTE check VoteProof is empty
-				log.Error().Err(xerrors.Errorf("invalid VoteProof found in LocalState"))
+				l.Error().Err(xerrors.Errorf("invalid VoteProof found in LocalState"))
 				return true, nil
 			}
 
-			log.Debug().Msg("trying to broadcast INIT Ballot for next block")
+			l.Debug().Msg("trying to broadcast INIT Ballot for next block")
 
 			ib, err := NewINITBallotV0FromLocalState(cs.localState, Round(0), nil)
 			if err != nil {
-				log.Error().Err(err).Msg("trying to broadcast INIT Ballot for next block; will keep trying")
+				l.Error().Err(err).Msg("trying to broadcast INIT Ballot for next block; will keep trying")
 				return true, nil
 			}
 
@@ -259,4 +266,100 @@ func (cs *ConsensusStateConsensusHandler) storeNewBlock(vp VoteProof) error {
 	// TODO store processed new block of Proposal
 	fmt.Println(">", vp)
 	return nil
+}
+
+func (cs *ConsensusStateConsensusHandler) handleProposal(proposal Proposal) error {
+	l := loggerWithBallot(proposal, cs.Log())
+
+	l.Debug().Msg("got proposal")
+
+	if err := cs.initializeTimer(); err != nil {
+		return err
+	}
+
+	newBlock, err := cs.proposalProcessor.Process(proposal)
+	if err != nil {
+		return err
+	} else if newBlock == nil {
+		return xerrors.Errorf("failed to process Proposal; empty Block returned")
+	}
+
+	acting := cs.suffrage.Acting(proposal.Height(), proposal.Round())
+	isActing := acting.Exists(cs.localState.Node().Address())
+	l.Debug().
+		Object("acting_suffrag", acting).
+		Bool("is_acting", isActing).
+		Msg("node is in acting suffrage?")
+	if isActing {
+		// TODO broadcast SIGN Ballot if local node is in acting suffrage.
+		if err := cs.readyToSIGNBallot(proposal, newBlock); err != nil {
+			return err
+		}
+	}
+
+	return cs.readyToACCEPTBallot(proposal, newBlock)
+}
+
+func (cs *ConsensusStateConsensusHandler) readyToSIGNBallot(proposal Proposal, newBlock Block) error {
+	// NOTE not like broadcasting ACCEPT Ballot, SIGN Ballot will be broadcasted
+	// withtout waiting.
+
+	sb, err := NewSIGNBallotV0FromLocalState(cs.localState, proposal.Round(), newBlock, nil)
+	if err != nil {
+		cs.Log().Error().Err(err).Msg("failed to create SIGNBallot")
+		return err
+	}
+
+	cs.BroadcastSeal(sb, nil)
+
+	loggerWithBallot(sb, cs.Log()).Debug().Msg("SIGNBallot was broadcasted")
+
+	return nil
+}
+
+func (cs *ConsensusStateConsensusHandler) readyToACCEPTBallot(proposal Proposal, newBlock Block) error {
+	// TODO if not in acting suffrage, broadcast ACCEPT Ballot after interval.
+	// TODO wait until the given interval.
+
+	var calledCount int64
+	nt, err := localtime.NewCallbackTimer(
+		"consensus-broadcasting-accept-ballot",
+		func() (bool, error) {
+			// TODO ACCEPTBallot should include the received SIGNBallots.
+			ab, err := NewACCEPTBallotV0FromLocalState(cs.localState, proposal.Round(), newBlock, nil)
+			if err != nil {
+				cs.Log().Error().Err(err).Msg("failed to create ACCEPTBallot; will keep trying")
+				return true, nil
+			}
+
+			cs.BroadcastSeal(ab, nil)
+
+			loggerWithBallot(ab, cs.Log()).Debug().Msg("ACCEPTBallot was broadcasted")
+
+			return true, nil
+		},
+		0,
+		func() time.Duration {
+			defer atomic.AddInt64(&calledCount, 1)
+
+			// NOTE at 1st time, wait timeout duration, after then, periodically
+			// broadcast ACCEPT Ballot.
+			if atomic.LoadInt64(&calledCount) < 1 {
+				return cs.localState.Policy().WaitBroadcastingACCEPTBallot()
+			}
+
+			return cs.localState.Policy().IntervalBroadcastingACCEPTBallot()
+		},
+	)
+	if err != nil {
+		return err
+	}
+
+	cs.Lock()
+	defer cs.Unlock()
+
+	cs.acceptBallotTimer = nt
+	cs.acceptBallotTimer.SetLogger(*cs.Log())
+
+	return cs.acceptBallotTimer.Start()
 }

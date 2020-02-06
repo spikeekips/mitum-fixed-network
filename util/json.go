@@ -1,6 +1,10 @@
 package util
 
-import jsoniter "github.com/json-iterator/go"
+import (
+	"encoding/json"
+
+	jsoniter "github.com/json-iterator/go"
+)
 
 var jsoni = jsoniter.Config{
 	EscapeHTML:             true,
@@ -10,6 +14,15 @@ var jsoni = jsoniter.Config{
 
 func JSONMarshal(i interface{}) ([]byte, error) {
 	return jsoni.Marshal(i)
+}
+
+func JSONMarshalIndent(i interface{}) ([]byte, error) {
+	return json.MarshalIndent(i, "", "  ")
+}
+
+func ToString(i interface{}) string {
+	b, _ := json.MarshalIndent(i, "", "  ")
+	return string(b)
 }
 
 func JSONUnmarshal(b []byte, i interface{}) error {

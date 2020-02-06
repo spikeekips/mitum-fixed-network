@@ -12,24 +12,16 @@ type VoteProofNodeFactPackJSON struct {
 	SG key.Publickey  `json:"signer"`
 }
 
-func NewVoteProofNodeFactPackJSON(vf VoteProofNodeFact) VoteProofNodeFactPackJSON {
-	return VoteProofNodeFactPackJSON{
-		FC: vf.fact,
-		FS: vf.factSignature,
-		SG: vf.signer,
-	}
-}
-
 type VoteProofV0PackJSON struct {
-	HT Height                               `json:"height"`
-	RD Round                                `json:"round"`
-	TH Threshold                            `json:"threshold"`
-	RS VoteProofResultType                  `json:"result"`
-	ST Stage                                `json:"stage"`
-	MJ Fact                                 `json:"majority"`
-	FS map[string]Fact                      `json:"facts"`
-	BS map[string]valuehash.Hash            `json:"ballots"`
-	VS map[string]VoteProofNodeFactPackJSON `json:"votes"`
+	HT Height                       `json:"height"`
+	RD Round                        `json:"round"`
+	TH Threshold                    `json:"threshold"`
+	RS VoteProofResultType          `json:"result"`
+	ST Stage                        `json:"stage"`
+	MJ Fact                         `json:"majority"`
+	FS map[string]Fact              `json:"facts"`
+	BS map[string]valuehash.Hash    `json:"ballots"`
+	VS map[string]VoteProofNodeFact `json:"votes"`
 }
 
 func (vp VoteProofV0) MarshalJSON() ([]byte, error) {
@@ -43,9 +35,9 @@ func (vp VoteProofV0) MarshalJSON() ([]byte, error) {
 		ballots[a.String()] = h
 	}
 
-	votes := map[string]VoteProofNodeFactPackJSON{}
-	for a, nf := range vp.votes {
-		votes[a.String()] = NewVoteProofNodeFactPackJSON(nf)
+	votes := map[string]VoteProofNodeFact{}
+	for a := range vp.votes {
+		votes[a.String()] = vp.votes[a]
 	}
 
 	return util.JSONMarshal(VoteProofV0PackJSON{
@@ -58,5 +50,13 @@ func (vp VoteProofV0) MarshalJSON() ([]byte, error) {
 		FS: facts,
 		BS: ballots,
 		VS: votes,
+	})
+}
+
+func (vf VoteProofNodeFact) MarshalJSON() ([]byte, error) {
+	return util.JSONMarshal(VoteProofNodeFactPackJSON{
+		FC: vf.fact,
+		FS: vf.factSignature,
+		SG: vf.signer,
 	})
 }

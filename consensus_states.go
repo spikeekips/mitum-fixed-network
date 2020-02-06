@@ -14,6 +14,7 @@ type ConsensusStates struct {
 	*logging.Logger
 	localState *LocalState
 	ballotbox  *Ballotbox
+	suffrage   Suffrage
 	states     map[ConsensusState]ConsensusStateHandler
 	activated  ConsensusStateHandler
 }
@@ -21,6 +22,7 @@ type ConsensusStates struct {
 func NewConsensusStates(
 	localState *LocalState,
 	ballotbox *Ballotbox,
+	suffrage Suffrage,
 	joining *ConsensusStateJoiningHandler,
 	consensus *ConsensusStateConsensusHandler,
 	syncing ConsensusStateHandler,
@@ -32,6 +34,7 @@ func NewConsensusStates(
 		}),
 		localState: localState,
 		ballotbox:  ballotbox,
+		suffrage:   suffrage,
 		states: map[ConsensusState]ConsensusStateHandler{
 			ConsensusStateJoining:   joining,
 			ConsensusStateConsensus: consensus,
@@ -61,22 +64,27 @@ func (css *ConsensusStates) NewSeal(sl seal.Seal) error {
 		return xerrors.Errorf("no activated handler")
 	}
 
-	log := css.Log().With().
+	l := loggerWithSeal(sl, css.Log()).With().
 		Str("handler", css.Activated().State().String()).
-		Str("seal", sl.Hash().String()).
-		Str("seal_hint", sl.Hint().Verbose()).
 		Logger()
 
 	if sl.Signer().Equal(css.localState.Node().Publickey()) {
 		err := xerrors.Errorf("Seal is from LocalNode")
-		log.Error().Err(err).Send()
+		l.Error().Err(err).Send()
+
+		return err
+	}
+
+	// TODO check validation for Seal
+	if err := css.validateSeal(sl); err != nil {
+		l.Error().Err(err).Msg("seal validation failed")
 
 		return err
 	}
 
 	go func() {
 		if err := css.Activated().NewSeal(sl); err != nil {
-			log.Error().
+			l.Error().
 				Err(err).Msg("activated handler can not receive Seal")
 		}
 	}()
@@ -89,6 +97,47 @@ func (css *ConsensusStates) NewSeal(sl seal.Seal) error {
 	switch b.Stage() {
 	case StageINIT, StageACCEPT:
 		return css.vote(b)
+	}
+
+	return nil
+}
+
+func (css *ConsensusStates) validateSeal(sl seal.Seal) error {
+	switch t := sl.(type) {
+	case Proposal:
+		return css.validateProposal(t)
+	case Ballot:
+		return css.validateBallot(t)
+	}
+
+	return nil
+}
+
+func (css *ConsensusStates) validateBallot(_ Ballot) error {
+	// TODO check validation
+	// - Ballot.Node() is in suffrage
+	// - Ballot.Height() is equal or higher than LastINITVoteProof.
+	// - Ballot.Round() is equal or higher than LastINITVoteProof.
+	return nil
+}
+
+func (css *ConsensusStates) validateProposal(proposal Proposal) error {
+	// TODO Proposal should be validated by ConsensusStates.
+
+	l := loggerWithBallot(proposal, css.Log())
+
+	// TODO check Proposer is valid proposer
+	if !css.suffrage.IsProposer(proposal.Height(), proposal.Round(), proposal.Node()) {
+		err := xerrors.Errorf(
+			"wrong proposer; height=%d round=%d, but proposer=%v",
+			proposal.Height(),
+			proposal.Round(),
+			proposal.Node(),
+		)
+
+		l.Error().Err(err).Msg("wrong proposer found")
+
+		return err
 	}
 
 	return nil

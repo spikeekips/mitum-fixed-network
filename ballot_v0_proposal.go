@@ -7,31 +7,43 @@ import (
 	"github.com/spikeekips/mitum/localtime"
 	"github.com/spikeekips/mitum/util"
 	"github.com/spikeekips/mitum/valuehash"
+	"golang.org/x/xerrors"
 )
 
 var ProposalV0Hint hint.Hint = hint.MustHint(ProposalBallotType, "0.1")
 
-type ProposalV0Fact struct {
+type ProposalFactV0 struct {
 	BaseBallotFactV0
 	seals []valuehash.Hash
 }
 
-func (prf ProposalV0Fact) IsValid(b []byte) error {
+func (prf ProposalFactV0) IsValid(b []byte) error {
 	if err := prf.BaseBallotFactV0.IsValid(b); err != nil {
+		return err
+	}
+
+	if err := isvalid.Check(func() []isvalid.IsValider {
+		var sl []isvalid.IsValider
+		for _, s := range prf.seals {
+			sl = append(sl, s)
+		}
+
+		return sl
+	}(), b); err != nil {
 		return err
 	}
 
 	return nil
 }
 
-func (prf ProposalV0Fact) Hash(b []byte) (valuehash.Hash, error) {
+func (prf ProposalFactV0) Hash(b []byte) (valuehash.Hash, error) {
 	// TODO check IsValid?
 	e := util.ConcatSlice([][]byte{prf.Bytes(), b})
 
 	return valuehash.NewSHA256(e), nil
 }
 
-func (prf ProposalV0Fact) Bytes() []byte {
+func (prf ProposalFactV0) Bytes() []byte {
 	return util.ConcatSlice([][]byte{
 		prf.BaseBallotFactV0.Bytes(),
 		func() []byte {
@@ -45,17 +57,49 @@ func (prf ProposalV0Fact) Bytes() []byte {
 	})
 }
 
-func (prf ProposalV0Fact) Seals() []valuehash.Hash {
+func (prf ProposalFactV0) Seals() []valuehash.Hash {
 	return prf.seals
 }
 
 type ProposalV0 struct {
 	BaseBallotV0
-	ProposalV0Fact
+	ProposalFactV0
 	h             valuehash.Hash
 	bodyHash      valuehash.Hash
 	factHash      valuehash.Hash
 	factSignature key.Signature
+}
+
+func NewProposalFromLocalState(
+	localState *LocalState,
+	round Round,
+	seals []valuehash.Hash,
+	b []byte,
+) (Proposal, error) {
+	lastBlock := localState.LastBlock()
+	if lastBlock == nil {
+		return ProposalV0{}, xerrors.Errorf("lastBlock is empty")
+	}
+
+	pr := ProposalV0{
+		BaseBallotV0: BaseBallotV0{
+			node: localState.Node().Address(),
+		},
+		ProposalFactV0: ProposalFactV0{
+			BaseBallotFactV0: BaseBallotFactV0{
+				height: lastBlock.Height() + 1,
+				round:  round,
+			},
+			seals: seals,
+		},
+	}
+
+	// TODO NetworkID must be given.
+	if err := pr.Sign(localState.Node().Privatekey(), b); err != nil {
+		return ProposalV0{}, err
+	}
+
+	return pr, nil
 }
 
 func (pr ProposalV0) Hint() hint.Hint {
@@ -77,7 +121,7 @@ func (pr ProposalV0) BodyHash() valuehash.Hash {
 func (pr ProposalV0) IsValid(b []byte) error {
 	if err := isvalid.Check([]isvalid.IsValider{
 		pr.BaseBallotV0,
-		pr.ProposalV0Fact,
+		pr.ProposalFactV0,
 	}, b); err != nil {
 		return err
 	}
@@ -92,7 +136,7 @@ func (pr ProposalV0) GenerateHash(b []byte) (valuehash.Hash, error) {
 
 	e := util.ConcatSlice([][]byte{
 		pr.BaseBallotV0.Bytes(),
-		pr.ProposalV0Fact.Bytes(),
+		pr.ProposalFactV0.Bytes(),
 		pr.bodyHash.Bytes(),
 		b,
 	})
@@ -101,12 +145,12 @@ func (pr ProposalV0) GenerateHash(b []byte) (valuehash.Hash, error) {
 }
 
 func (pr ProposalV0) GenerateBodyHash(b []byte) (valuehash.Hash, error) {
-	if err := pr.ProposalV0Fact.IsValid(b); err != nil {
+	if err := pr.ProposalFactV0.IsValid(b); err != nil {
 		return nil, err
 	}
 
 	e := util.ConcatSlice([][]byte{
-		pr.ProposalV0Fact.Bytes(),
+		pr.ProposalFactV0.Bytes(),
 		b,
 	})
 
@@ -114,7 +158,7 @@ func (pr ProposalV0) GenerateBodyHash(b []byte) (valuehash.Hash, error) {
 }
 
 func (pr ProposalV0) Fact() Fact {
-	return pr.ProposalV0Fact
+	return pr.ProposalFactV0
 }
 
 func (pr ProposalV0) FactHash() valuehash.Hash {
@@ -145,7 +189,7 @@ func (pr *ProposalV0) Sign(pk key.Privatekey, b []byte) error { // nolint
 	}
 
 	var factHash valuehash.Hash
-	if h, err := pr.ProposalV0Fact.Hash(b); err != nil {
+	if h, err := pr.ProposalFactV0.Hash(b); err != nil {
 		return err
 	} else {
 		factHash = h

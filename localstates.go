@@ -7,13 +7,15 @@ import (
 	"golang.org/x/xerrors"
 
 	"github.com/spikeekips/mitum/util"
-	"github.com/spikeekips/mitum/valuehash"
 )
 
 type LocalPolicy struct {
-	threshold                      *util.LockedItem
-	timeoutWaitingProposal         *util.LockedItem
-	intervalBroadcastingINITBallot *util.LockedItem
+	threshold                        *util.LockedItem
+	timeoutWaitingProposal           *util.LockedItem
+	intervalBroadcastingINITBallot   *util.LockedItem
+	waitBroadcastingACCEPTBallot     *util.LockedItem
+	intervalBroadcastingACCEPTBallot *util.LockedItem
+	numberOfActingSuffrageNodes      *util.LockedItem
 }
 
 func NewLocalPolicy() *LocalPolicy {
@@ -22,8 +24,11 @@ func NewLocalPolicy() *LocalPolicy {
 		// NOTE default threshold assumes only one node exists, it means the network is just booted.
 		threshold: util.NewLockedItem(threshold),
 		// TODO these values must be reset by last block's data
-		timeoutWaitingProposal:         util.NewLockedItem(time.Second * 3),
-		intervalBroadcastingINITBallot: util.NewLockedItem(time.Second * 1),
+		timeoutWaitingProposal:           util.NewLockedItem(time.Second * 3),
+		intervalBroadcastingINITBallot:   util.NewLockedItem(time.Second * 1),
+		waitBroadcastingACCEPTBallot:     util.NewLockedItem(time.Second * 2),
+		intervalBroadcastingACCEPTBallot: util.NewLockedItem(time.Second * 1),
+		numberOfActingSuffrageNodes:      util.NewLockedItem(uint(1)),
 	}
 }
 
@@ -65,12 +70,55 @@ func (lp *LocalPolicy) SetIntervalBroadcastingINITBallot(d time.Duration) (*Loca
 	return lp, nil
 }
 
-type NodesState struct {
-	sync.RWMutex
-	nodes map[Address]Node
+func (lp *LocalPolicy) WaitBroadcastingACCEPTBallot() time.Duration {
+	return lp.waitBroadcastingACCEPTBallot.Value().(time.Duration)
 }
 
-func NewNodesState(nodes []Node) *NodesState {
+func (lp *LocalPolicy) SetWaitBroadcastingACCEPTBallot(d time.Duration) (*LocalPolicy, error) {
+	if d < 1 {
+		return nil, xerrors.Errorf("WaitBroadcastingACCEPTBallot too short; %v", d)
+	}
+
+	_ = lp.waitBroadcastingACCEPTBallot.SetValue(d)
+
+	return lp, nil
+}
+
+func (lp *LocalPolicy) IntervalBroadcastingACCEPTBallot() time.Duration {
+	return lp.intervalBroadcastingACCEPTBallot.Value().(time.Duration)
+}
+
+func (lp *LocalPolicy) SetIntervalBroadcastingACCEPTBallot(d time.Duration) (*LocalPolicy, error) {
+	if d < 1 {
+		return nil, xerrors.Errorf("IntervalBroadcastingACCEPTBallot too short; %v", d)
+	}
+
+	_ = lp.intervalBroadcastingACCEPTBallot.SetValue(d)
+
+	return lp, nil
+}
+
+func (lp *LocalPolicy) NumberOfActingSuffrageNodes() uint {
+	return lp.numberOfActingSuffrageNodes.Value().(uint)
+}
+
+func (lp *LocalPolicy) SetNumberOfActingSuffrageNodes(i uint) (*LocalPolicy, error) {
+	if i < 1 {
+		return nil, xerrors.Errorf("NumberOfActingSuffrageNodes should be greater than 0; %v", i)
+	}
+
+	_ = lp.numberOfActingSuffrageNodes.SetValue(i)
+
+	return lp, nil
+}
+
+type NodesState struct {
+	sync.RWMutex
+	localNode *LocalNode
+	nodes     map[Address]Node
+}
+
+func NewNodesState(localNode *LocalNode, nodes []Node) *NodesState {
 	m := map[Address]Node{}
 	for _, n := range nodes {
 		if _, found := m[n.Address()]; found {
@@ -79,7 +127,7 @@ func NewNodesState(nodes []Node) *NodesState {
 		m[n.Address()] = n
 	}
 
-	return &NodesState{nodes: m}
+	return &NodesState{localNode: localNode, nodes: m}
 }
 
 func (ns *NodesState) Node(address Address) (Node, bool) {
@@ -108,6 +156,10 @@ func (ns *NodesState) Add(nl ...Node) error {
 	defer ns.Unlock()
 
 	for _, n := range nl {
+		if n.Address().Equal(ns.localNode.Address()) {
+			return xerrors.Errorf("local node can be added")
+		}
+
 		if ns.exists(n.Address()) {
 			return xerrors.Errorf("same Address already exists; %v", n.Address())
 		}
@@ -166,9 +218,7 @@ type LocalState struct {
 	node                *LocalNode
 	policy              *LocalPolicy
 	nodes               *NodesState
-	lastBlockHeight     *util.LockedItem // TODO combine these 3 values by last block
-	lastBlockHash       *util.LockedItem
-	lastBlockRound      *util.LockedItem
+	lastBlock           *util.LockedItem // TODO combine these 3 values by last block
 	lastINITVoteProof   *util.LockedItem
 	lastACCEPTVoteProof *util.LockedItem
 }
@@ -178,10 +228,8 @@ func NewLocalState(node *LocalNode, policy *LocalPolicy) *LocalState {
 	return &LocalState{
 		node:                node,
 		policy:              policy,
-		nodes:               NewNodesState(nil),
-		lastBlockHash:       util.NewLockedItem(nil),
-		lastBlockHeight:     util.NewLockedItem(Height(0)),
-		lastBlockRound:      util.NewLockedItem(Round(0)),
+		nodes:               NewNodesState(node, nil),
+		lastBlock:           util.NewLockedItem(nil),
 		lastINITVoteProof:   util.NewLockedItem(nil),
 		lastACCEPTVoteProof: util.NewLockedItem(nil),
 	}
@@ -199,37 +247,17 @@ func (ls *LocalState) Nodes() *NodesState {
 	return ls.nodes
 }
 
-func (ls *LocalState) LastBlockHash() valuehash.Hash {
-	v := ls.lastBlockHash.Value()
+func (ls *LocalState) LastBlock() Block {
+	v := ls.lastBlock.Value()
 	if v == nil {
 		return nil
 	}
 
-	return v.(valuehash.Hash)
+	return v.(Block)
 }
 
-func (ls *LocalState) SetLastBlockHash(h valuehash.Hash) *LocalState {
-	_ = ls.lastBlockHash.SetValue(h)
-
-	return ls
-}
-
-func (ls *LocalState) LastBlockHeight() Height {
-	return ls.lastBlockHeight.Value().(Height)
-}
-
-func (ls *LocalState) SetLastBlockHeight(height Height) *LocalState {
-	_ = ls.lastBlockHeight.SetValue(height)
-
-	return ls
-}
-
-func (ls *LocalState) LastBlockRound() Round {
-	return ls.lastBlockRound.Value().(Round)
-}
-
-func (ls *LocalState) SetLastBlockRound(round Round) *LocalState {
-	_ = ls.lastBlockRound.SetValue(round)
+func (ls *LocalState) SetLastBlock(bk Block) *LocalState {
+	_ = ls.lastBlock.SetValue(bk)
 
 	return ls
 }
@@ -250,7 +278,12 @@ func (ls *LocalState) SetLastINITVoteProof(vp VoteProof) *LocalState {
 }
 
 func (ls *LocalState) LastACCEPTVoteProof() VoteProof {
-	return ls.lastACCEPTVoteProof.Value().(VoteProof)
+	v := ls.lastACCEPTVoteProof.Value()
+	if v == nil {
+		return nil
+	}
+
+	return v.(VoteProof)
 }
 
 func (ls *LocalState) SetLastACCEPTVoteProof(vp VoteProof) *LocalState {

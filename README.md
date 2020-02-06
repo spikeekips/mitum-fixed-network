@@ -12,3 +12,8 @@ This is the third prototype for MITUM. The previous prototype, `proto2` can be f
 
 [![FOSSA Status](https://app.fossa.com/api/projects/git%2Bgithub.com%2Fspikeekips%2Fmitum.svg?type=large)](https://app.fossa.com/projects/git%2Bgithub.com%2Fspikeekips%2Fmitum?ref=badge_large)
 
+## Test
+
+```sh
+$ go clean -testcache; go test -timeout 10s -tags test -race -v ./... -run .
+```

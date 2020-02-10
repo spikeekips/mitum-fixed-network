@@ -328,9 +328,13 @@ func (css *ConsensusStates) vote(ballot Ballot) error {
 	voteProof, err := css.ballotbox.Vote(ballot)
 	if err != nil {
 		return err
-	} else if !voteProof.IsFinished() {
+	}
+
+	if !voteProof.IsFinished() {
 		return nil
-	} else if voteProof.IsClosed() {
+	}
+
+	if voteProof.IsClosed() {
 		return nil
 	}
 

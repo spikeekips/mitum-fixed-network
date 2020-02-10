@@ -26,7 +26,6 @@ type ConsensusStateConsensusHandler struct {
 	*BaseStateHandler
 	proposalProcessor ProposalProcessor
 	suffrage          Suffrage
-	ballotbox         *Ballotbox
 	proposalMaker     *ProposalMaker
 	ballotTimer       *localtime.CallbackTimer
 }
@@ -35,7 +34,6 @@ func NewConsensusStateConsensusHandler(
 	localState *LocalState,
 	proposalProcessor ProposalProcessor,
 	suffrage Suffrage,
-	ballotbox *Ballotbox,
 	proposalMaker *ProposalMaker,
 ) (*ConsensusStateConsensusHandler, error) {
 	if lastBlock := localState.LastBlock(); lastBlock == nil {
@@ -43,7 +41,7 @@ func NewConsensusStateConsensusHandler(
 	}
 
 	cs := &ConsensusStateConsensusHandler{
-		BaseStateHandler:  NewBaseStateHandler(localState, ConsensusStateConsensus, ballotbox),
+		BaseStateHandler:  NewBaseStateHandler(localState, ConsensusStateConsensus),
 		proposalProcessor: proposalProcessor,
 		suffrage:          suffrage,
 		proposalMaker:     proposalMaker,
@@ -282,12 +280,16 @@ func (cs *ConsensusStateConsensusHandler) storeNewBlock(vp VoteProof) error {
 	newBlock, err := cs.proposalProcessor.Process(fact.Proposal(), nil)
 	if err != nil {
 		return err
-	} else if newBlock == nil {
+	}
+
+	if newBlock == nil {
 		err := xerrors.Errorf("failed to process Proposal; empty Block returned")
 		l.Error().Err(err).Send()
 
 		return err
-	} else if !fact.NewBlock().Equal(newBlock.Hash()) {
+	}
+
+	if !fact.NewBlock().Equal(newBlock.Hash()) {
 		err := xerrors.Errorf(
 			"processed new block does not match; fact=%s processed=%s",
 			fact.NewBlock(),

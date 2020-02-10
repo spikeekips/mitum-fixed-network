@@ -55,14 +55,12 @@ type BaseStateHandler struct {
 	state      ConsensusState
 	stateChan  chan<- ConsensusStateChangeContext
 	sealChan   chan<- seal.Seal
-	ballotbox  *Ballotbox
 }
 
-func NewBaseStateHandler(localState *LocalState, state ConsensusState, ballotbox *Ballotbox) *BaseStateHandler {
+func NewBaseStateHandler(localState *LocalState, state ConsensusState) *BaseStateHandler {
 	return &BaseStateHandler{
 		localState: localState,
 		state:      state,
-		ballotbox:  ballotbox,
 	}
 }
 

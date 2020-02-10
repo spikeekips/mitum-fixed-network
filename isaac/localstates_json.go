@@ -20,7 +20,6 @@ func (lp LocalPolicy) MarshalJSON() ([]byte, error) {
 		IA: lp.IntervalBroadcastingACCEPTBallot().String(),
 		NA: lp.NumberOfActingSuffrageNodes(),
 	})
-
 }
 
 func (ls LocalState) MarshalJSON() ([]byte, error) {

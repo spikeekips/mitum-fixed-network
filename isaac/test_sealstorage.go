@@ -29,9 +29,8 @@ func (ss *MapSealStorage) proposalKey(height Height, round Round) string {
 func (ss *MapSealStorage) Add(sl seal.Seal) error {
 	ss.sm.Store(sl.Hash(), sl)
 
-	switch t := sl.(type) {
-	case Proposal:
-		ss.proposals.Store(ss.proposalKey(t.Height(), t.Round()), sl.Hash())
+	if proposal, ok := sl.(Proposal); ok {
+		ss.proposals.Store(ss.proposalKey(proposal.Height(), proposal.Round()), proposal.Hash())
 	}
 
 	return nil
@@ -78,8 +77,8 @@ func (ss *MapSealStorage) Proposal(height Height, round Round) (Proposal, bool, 
 	}
 
 	sl, found, err := ss.Seal(ph.(valuehash.Hash))
-	if err != nil {
-		return nil, false, err
+	if err != nil || !found {
+		return nil, found, err
 	}
 
 	return sl.(Proposal), true, nil

@@ -117,7 +117,7 @@ func (t *testConsensusStateConsensusHandler) TestNew() {
 	suffrage := t.suffrage(remoteState, localState)
 
 	proposalMaker := NewProposalMaker(localState)
-	cs, err := NewConsensusStateConsensusHandler(localState, DummyProposalProcessor{}, suffrage, nil, proposalMaker)
+	cs, err := NewConsensusStateConsensusHandler(localState, DummyProposalProcessor{}, suffrage, proposalMaker)
 	t.NoError(err)
 	t.NotNil(cs)
 
@@ -157,7 +157,7 @@ func (t *testConsensusStateConsensusHandler) TestWaitingProposalButTimeedOut() {
 	suffrage := t.suffrage(remoteState, localState)
 
 	proposalMaker := NewProposalMaker(localState)
-	cs, err := NewConsensusStateConsensusHandler(localState, DummyProposalProcessor{}, suffrage, nil, proposalMaker)
+	cs, err := NewConsensusStateConsensusHandler(localState, DummyProposalProcessor{}, suffrage, proposalMaker)
 	t.NoError(err)
 	t.NotNil(cs)
 
@@ -208,7 +208,6 @@ func (t *testConsensusStateConsensusHandler) TestWithProposalWaitACCEPTBallot() 
 		localState,
 		DummyProposalProcessor{},
 		t.suffrage(remoteState, remoteState), // localnode is not in ActingSuffrage.
-		nil,
 		proposalMaker,
 	)
 	t.NoError(err)
@@ -266,7 +265,6 @@ func (t *testConsensusStateConsensusHandler) TestWithProposalWaitSIGNBallot() {
 		localState,
 		DummyProposalProcessor{},
 		t.suffrage(remoteState, localState, remoteState), // localnode is not in ActingSuffrage.
-		nil,
 		proposalMaker,
 	)
 	t.NoError(err)

@@ -17,6 +17,7 @@ func NewError(s string, a ...interface{}) Error {
 	return Error{S: fmt.Sprintf(s, a...)}
 }
 
+// TODO something wrong, needs rewriting
 // Wrap put error inside Error.
 func (we Error) Wrap(err error) error {
 	return Error{
@@ -63,5 +64,5 @@ func (we Error) Error() string {
 		return we.S
 	}
 
-	return fmt.Sprintf("%s; %v", we.S, we.Err)
+	return fmt.Sprintf("%s; %+v", we.S, we.Err)
 }

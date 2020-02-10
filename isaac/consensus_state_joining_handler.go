@@ -53,21 +53,19 @@ strategy,
 */
 type ConsensusStateJoiningHandler struct {
 	*BaseStateHandler
-	ballotbox                   *Ballotbox
 	broadcastingINITBallotTimer *localtime.CallbackTimer
 	cr                          Round
 }
 
 func NewConsensusStateJoiningHandler(
 	localState *LocalState,
-	ballotbox *Ballotbox,
 ) (*ConsensusStateJoiningHandler, error) {
 	if lastBlock := localState.LastBlock(); lastBlock == nil {
 		return nil, xerrors.Errorf("last block is empty")
 	}
 
 	cs := &ConsensusStateJoiningHandler{
-		BaseStateHandler: NewBaseStateHandler(localState, ConsensusStateJoining, ballotbox),
+		BaseStateHandler: NewBaseStateHandler(localState, ConsensusStateJoining),
 	}
 	cs.BaseStateHandler.Logger = logging.NewLogger(func(c zerolog.Context) zerolog.Context {
 		return c.Str("module", "consensus-state-joining-handler")

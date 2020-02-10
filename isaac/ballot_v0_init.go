@@ -19,7 +19,12 @@ type INITBallotFactV0 struct {
 	previousRound Round
 }
 
-func NewINITBallotFactV0(height Height, round Round, previousBlock valuehash.Hash, previousRound Round) INITBallotFactV0 {
+func NewINITBallotFactV0(
+	height Height,
+	round Round,
+	previousBlock valuehash.Hash,
+	previousRound Round,
+) INITBallotFactV0 {
 	return INITBallotFactV0{
 		BaseBallotFactV0: NewBaseBallotFactV0(height, round),
 		previousBlock:    previousBlock,

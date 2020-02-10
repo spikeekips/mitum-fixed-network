@@ -119,7 +119,7 @@ func (t *testConsensusStateJoiningHandler) newVoteProof(stage Stage, fact Fact, 
 func (t *testConsensusStateJoiningHandler) TestNew() {
 	localState, _ := t.states()
 
-	cs, err := NewConsensusStateJoiningHandler(localState, nil)
+	cs, err := NewConsensusStateJoiningHandler(localState)
 	t.NoError(err)
 	t.NotNil(cs)
 
@@ -134,7 +134,7 @@ func (t *testConsensusStateJoiningHandler) TestKeepBroadcastingINITBallot() {
 	localState, _ := t.states()
 
 	_, _ = localState.Policy().SetIntervalBroadcastingINITBallot(time.Millisecond * 30)
-	cs, err := NewConsensusStateJoiningHandler(localState, nil)
+	cs, err := NewConsensusStateJoiningHandler(localState)
 	t.NoError(err)
 	t.NotNil(cs)
 
@@ -181,7 +181,7 @@ func (t *testConsensusStateJoiningHandler) TestINITBallotWithACCEPTVoteProofExpe
 	_ = localState.Policy().SetThreshold(thr)
 	_ = remoteState.Policy().SetThreshold(thr)
 
-	cs, err := NewConsensusStateJoiningHandler(localState, nil)
+	cs, err := NewConsensusStateJoiningHandler(localState)
 	t.NoError(err)
 	t.NotNil(cs)
 
@@ -228,7 +228,7 @@ func (t *testConsensusStateJoiningHandler) TestINITBallotWithACCEPTVoteProofLowe
 	_ = localState.Policy().SetThreshold(thr)
 	_ = remoteState.Policy().SetThreshold(thr)
 
-	cs, err := NewConsensusStateJoiningHandler(localState, nil)
+	cs, err := NewConsensusStateJoiningHandler(localState)
 	t.NoError(err)
 	t.NotNil(cs)
 
@@ -277,7 +277,7 @@ func (t *testConsensusStateJoiningHandler) TestINITBallotWithACCEPTVoteProofHigh
 	_ = localState.Policy().SetThreshold(thr)
 	_ = remoteState.Policy().SetThreshold(thr)
 
-	cs, err := NewConsensusStateJoiningHandler(localState, nil)
+	cs, err := NewConsensusStateJoiningHandler(localState)
 	t.NoError(err)
 	t.NotNil(cs)
 
@@ -343,7 +343,7 @@ func (t *testConsensusStateJoiningHandler) TestINITBallotWithINITVoteProofExpect
 	_ = localState.Policy().SetThreshold(thr)
 	_ = remoteState.Policy().SetThreshold(thr)
 
-	cs, err := NewConsensusStateJoiningHandler(localState, nil)
+	cs, err := NewConsensusStateJoiningHandler(localState)
 	t.NoError(err)
 	t.NotNil(cs)
 
@@ -393,7 +393,7 @@ func (t *testConsensusStateJoiningHandler) TestINITBallotWithINITVoteProofLowerH
 	_ = localState.Policy().SetThreshold(thr)
 	_ = remoteState.Policy().SetThreshold(thr)
 
-	cs, err := NewConsensusStateJoiningHandler(localState, nil)
+	cs, err := NewConsensusStateJoiningHandler(localState)
 	t.NoError(err)
 	t.NotNil(cs)
 
@@ -446,7 +446,7 @@ func (t *testConsensusStateJoiningHandler) TestINITBallotWithINITVoteProofHigher
 	_ = localState.Policy().SetThreshold(thr)
 	_ = remoteState.Policy().SetThreshold(thr)
 
-	cs, err := NewConsensusStateJoiningHandler(localState, nil)
+	cs, err := NewConsensusStateJoiningHandler(localState)
 	t.NoError(err)
 	t.NotNil(cs)
 
@@ -493,7 +493,7 @@ func (t *testConsensusStateJoiningHandler) TestINITVoteProofExpected() {
 	_ = localState.Policy().SetThreshold(thr)
 	_ = remoteState.Policy().SetThreshold(thr)
 
-	cs, err := NewConsensusStateJoiningHandler(localState, nil)
+	cs, err := NewConsensusStateJoiningHandler(localState)
 	t.NoError(err)
 	t.NotNil(cs)
 
@@ -542,7 +542,7 @@ func (t *testConsensusStateJoiningHandler) TestINITVoteProofHigherHeight() {
 	_ = localState.Policy().SetThreshold(thr)
 	_ = remoteState.Policy().SetThreshold(thr)
 
-	cs, err := NewConsensusStateJoiningHandler(localState, nil)
+	cs, err := NewConsensusStateJoiningHandler(localState)
 	t.NoError(err)
 	t.NotNil(cs)
 
@@ -591,7 +591,7 @@ func (t *testConsensusStateJoiningHandler) TestINITVoteProofLowerHeight() {
 	_ = localState.Policy().SetThreshold(thr)
 	_ = remoteState.Policy().SetThreshold(thr)
 
-	cs, err := NewConsensusStateJoiningHandler(localState, nil)
+	cs, err := NewConsensusStateJoiningHandler(localState)
 	t.NoError(err)
 	t.NotNil(cs)
 
@@ -628,7 +628,7 @@ func (t *testConsensusStateJoiningHandler) TestACCEPTVoteProofExpected() {
 	_ = localState.Policy().SetThreshold(thr)
 	_ = remoteState.Policy().SetThreshold(thr)
 
-	cs, err := NewConsensusStateJoiningHandler(localState, nil)
+	cs, err := NewConsensusStateJoiningHandler(localState)
 	t.NoError(err)
 	t.NotNil(cs)
 
@@ -665,7 +665,7 @@ func (t *testConsensusStateJoiningHandler) TestACCEPTVoteProofHigherHeight() {
 	_ = localState.Policy().SetThreshold(thr)
 	_ = remoteState.Policy().SetThreshold(thr)
 
-	cs, err := NewConsensusStateJoiningHandler(localState, nil)
+	cs, err := NewConsensusStateJoiningHandler(localState)
 	t.NoError(err)
 	t.NotNil(cs)
 
@@ -714,7 +714,7 @@ func (t *testConsensusStateJoiningHandler) TestACCEPTVoteProofLowerHeight() {
 	_ = localState.Policy().SetThreshold(thr)
 	_ = remoteState.Policy().SetThreshold(thr)
 
-	cs, err := NewConsensusStateJoiningHandler(localState, nil)
+	cs, err := NewConsensusStateJoiningHandler(localState)
 	t.NoError(err)
 	t.NotNil(cs)
 

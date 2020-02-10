@@ -239,18 +239,27 @@ func (vp VoteProofV0) CompareWithBlock(block Block) error {
 // if VoteProof is belongs to Block.
 func (vp VoteProofV0) compareINITWithBlock(block Block) error {
 	if vp.Height() > block.Height()+1 || vp.Height() < block.Height() {
-		return xerrors.Errorf("height of INIT VoteProof is different from block.Round(); VoteProof.Height=%d != block.Heightd=%d", vp.Height(), block.Height())
+		return xerrors.Errorf(
+			"height of INIT VoteProof is different from block.Round(); VoteProof.Height=%d != block.Heightd=%d",
+			vp.Height(), block.Height(),
+		)
 	} else if vp.Height() != block.Height()+1 {
 		return nil
 	}
 
 	if vp.Round() != block.Round() {
-		return xerrors.Errorf("round of INIT VoteProof is different from block.Round(); VoteProof.Round=%d != block.Round=%d", vp.Round(), block.Round())
+		return xerrors.Errorf(
+			"round of INIT VoteProof is different from block.Round(); VoteProof.Round=%d != block.Round=%d",
+			vp.Round(), block.Round(),
+		)
 	}
 
 	vpPreviousBlock := vp.Majority().(INITBallotFact).PreviousBlock()
 	if !vpPreviousBlock.Equal(block.PreviousBlock()) {
-		return xerrors.Errorf("previous block of INIT VoteProof is different from block; VoteProof.PreviousBlock=%d != block.PreviousBlock=%d", vpPreviousBlock, block.PreviousBlock())
+		return xerrors.Errorf(
+			"previous block of INIT VoteProof is different from block; VoteProof.PreviousBlock=%d != block.PreviousBlock=%d",
+			vpPreviousBlock, block.PreviousBlock(),
+		)
 	}
 
 	return nil
@@ -258,9 +267,15 @@ func (vp VoteProofV0) compareINITWithBlock(block Block) error {
 
 func (vp VoteProofV0) compareACCEPTWithBlock(block Block) error {
 	if vp.Height() != block.Height() {
-		return xerrors.Errorf("height of ACCEPT VoteProof is different from block.Height(); VoteProof.Height=%d != block.Height=%d", vp.Height(), block.Height())
+		return xerrors.Errorf(
+			"height of ACCEPT VoteProof is different from block.Height(); VoteProof.Height=%d != block.Height=%d",
+			vp.Height(), block.Height(),
+		)
 	} else if vp.Round() != block.Round() {
-		return xerrors.Errorf("round of ACCEPT VoteProof is different from block.Round(); VoteProof.Round=%d != block.Round=%d", vp.Round(), block.Round())
+		return xerrors.Errorf(
+			"round of ACCEPT VoteProof is different from block.Round(); VoteProof.Round=%d != block.Round=%d",
+			vp.Round(), block.Round(),
+		)
 	}
 
 	fact := vp.Majority().(ACCEPTBallotFact)

@@ -4,28 +4,24 @@ import (
 	"github.com/rs/zerolog"
 	"golang.org/x/xerrors"
 
-	"github.com/spikeekips/mitum/localtime"
+	"github.com/spikeekips/mitum/errors"
 	"github.com/spikeekips/mitum/logging"
 	"github.com/spikeekips/mitum/seal"
 )
 
 type ConsensusStateBootingHandler struct {
 	*BaseStateHandler
-	ballotbox                   *Ballotbox
-	broadcastingINITBallotTimer *localtime.CallbackTimer
-	cr                          Round
 }
 
 func NewConsensusStateBootingHandler(
 	localState *LocalState,
-	ballotbox *Ballotbox,
 ) (*ConsensusStateBootingHandler, error) {
 	if lastBlock := localState.LastBlock(); lastBlock == nil {
 		return nil, xerrors.Errorf("last block is empty")
 	}
 
 	cs := &ConsensusStateBootingHandler{
-		BaseStateHandler: NewBaseStateHandler(localState, ConsensusStateBooting, ballotbox),
+		BaseStateHandler: NewBaseStateHandler(localState, ConsensusStateBooting),
 	}
 	cs.BaseStateHandler.Logger = logging.NewLogger(func(c zerolog.Context) zerolog.Context {
 		return c.Str("module", "consensus-state-booting-handler")
@@ -85,19 +81,27 @@ func (cs *ConsensusStateBootingHandler) check() error {
 	cs.Log().Debug().Msg("checked; moves to joining")
 
 	if err := cs.checkBlock(); err != nil {
-		if err := cs.ChangeState(ConsensusStateSyncing, nil); err != nil {
-			cs.Log().Error().Err(err).Send()
+		xerr := errors.NewError("failed to check block").Wrap(err).(errors.Error)
+		cs.Log().Error().Err(xerr).Send()
+
+		if errc := cs.ChangeState(ConsensusStateSyncing, nil); errc != nil {
+			cs.Log().Error().Err(errc).Send()
+			return xerr.Wrap(errc)
 		}
 
-		return err
+		return xerr
 	}
 
 	if err := cs.checkVoteProof(); err != nil {
-		if err := cs.ChangeState(ConsensusStateSyncing, nil); err != nil {
-			cs.Log().Error().Err(err).Send()
+		xerr := errors.NewError("failed to check VoteProof").Wrap(err).(errors.Error)
+		cs.Log().Error().Err(xerr).Send()
+
+		if errc := cs.ChangeState(ConsensusStateSyncing, nil); errc != nil {
+			cs.Log().Error().Err(errc).Send()
+			return xerr.Wrap(errc)
 		}
 
-		return err
+		return xerr
 	}
 
 	if err := cs.ChangeState(ConsensusStateJoining, nil); err != nil {

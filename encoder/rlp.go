@@ -296,13 +296,13 @@ func (re *RLPEncoder) packValueMap(i interface{}) (interface{}, error) {
 		return nil, xerrors.Errorf("not map like value: type=%T", i)
 	}
 
-	na := make([][2]interface{}, 0, elem.Len()) // slice of (key, value)
+	na := make([][2]interface{}, len(elem.MapKeys())) // slice of (key, value)
 
 	// sort key by alphanumeric order
-	keys := make([]string, 0, elem.Len())
+	keys := make([]string, len(elem.MapKeys()))
 	keyMap := map[string]reflect.Value{}
 
-	for _, kv := range elem.MapKeys() {
+	for i, kv := range elem.MapKeys() {
 		k := kv.Interface()
 
 		var s string
@@ -312,12 +312,12 @@ func (re *RLPEncoder) packValueMap(i interface{}) (interface{}, error) {
 			s = fmt.Sprintf("%v", k)
 		}
 
-		keys = append(keys, s)
+		keys[i] = s
 		keyMap[s] = kv
 	}
 	sort.Strings(keys)
 
-	for _, k := range keys {
+	for i, k := range keys {
 		kv := keyMap[k]
 		vv := elem.MapIndex(kv)
 
@@ -334,7 +334,7 @@ func (re *RLPEncoder) packValueMap(i interface{}) (interface{}, error) {
 			value = vv.Interface()
 		}
 
-		na = append(na, [2]interface{}{key, value})
+		na[i] = [2]interface{}{key, value}
 	}
 
 	return na, nil

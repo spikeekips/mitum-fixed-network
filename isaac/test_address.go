@@ -10,6 +10,7 @@ import (
 
 	"github.com/spikeekips/mitum/encoder"
 	"github.com/spikeekips/mitum/hint"
+	"github.com/spikeekips/mitum/util"
 	"golang.org/x/xerrors"
 )
 
@@ -63,7 +64,7 @@ func (sa ShortAddress) Bytes() []byte {
 }
 
 func (sa ShortAddress) MarshalJSON() ([]byte, error) {
-	return json.Marshal(struct {
+	return util.JSONMarshal(struct {
 		encoder.JSONPackHintedHead
 		A string `json:"address"`
 	}{

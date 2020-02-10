@@ -3,6 +3,7 @@ module github.com/spikeekips/mitum
 go 1.13
 
 require (
+	github.com/alecthomas/kong v0.2.2
 	github.com/beevik/ntp v0.2.0
 	github.com/btcsuite/btcd v0.20.1-beta
 	github.com/btcsuite/btcutil v1.0.1

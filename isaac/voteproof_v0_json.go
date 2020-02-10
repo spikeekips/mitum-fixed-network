@@ -60,3 +60,5 @@ func (vf VoteProofNodeFact) MarshalJSON() ([]byte, error) {
 		SG: vf.signer,
 	})
 }
+
+// TODO UnpackXXX

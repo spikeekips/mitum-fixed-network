@@ -16,12 +16,14 @@ type VoteProof interface {
 	isvalid.IsValider
 	Bytes() []byte
 	IsFinished() bool
+	IsClosed() bool
 	Height() Height
 	Round() Round
 	Stage() Stage
 	Result() VoteProofResultType
 	Majority() Fact
 	Ballots() map[Address]valuehash.Hash
+	CompareWithBlock(Block) error
 }
 
 type VoteProofResultType uint8

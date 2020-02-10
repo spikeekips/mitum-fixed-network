@@ -39,7 +39,7 @@ func (t *testDaemon) TestStart() {
 		}
 
 		return nil
-	})}
+	}, true)}
 	t.NoError(ed.Start())
 	t.True(ed.IsStarted())
 
@@ -64,7 +64,7 @@ func (t *testDaemon) TestStop() {
 		}
 
 		return nil
-	})}
+	}, true)}
 	t.NoError(ed.Start())
 	t.True(ed.IsStarted())
 
@@ -79,7 +79,7 @@ func (t *testDaemon) TestStop() {
 func (t *testDaemon) TestFunctionError() {
 	ed := &emptyDaemon{FunctionDaemon: NewFunctionDaemon(func(stopChan chan struct{}) error {
 		return xerrors.Errorf("find me :)")
-	})}
+	}, true)}
 	t.NoError(ed.Start())
 
 	time.Sleep(time.Millisecond * 100)
@@ -99,7 +99,7 @@ func (t *testDaemon) TestStopByStopChan() {
 		}
 
 		return nil
-	})}
+	}, true)}
 	t.NoError(ed.Start())
 	t.True(ed.IsStarted())
 
@@ -137,7 +137,7 @@ func (t *testDaemon) TestTimer() {
 		wg.Done()
 
 		return nil
-	})}
+	}, true)}
 	t.NoError(timer.Start())
 	t.True(timer.IsStarted())
 
@@ -181,7 +181,7 @@ func (t *testDaemon) TestMultipleTimer() {
 			wgStopped.Done()
 
 			return nil
-		})}
+		}, true)}
 		timers = append(timers, tr)
 
 		go func() {

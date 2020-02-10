@@ -21,7 +21,7 @@ func JSONMarshalIndent(i interface{}) ([]byte, error) {
 }
 
 func ToString(i interface{}) string {
-	b, _ := json.MarshalIndent(i, "", "  ")
+	b, _ := JSONMarshalIndent(i)
 	return string(b)
 }
 

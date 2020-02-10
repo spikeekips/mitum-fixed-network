@@ -15,6 +15,7 @@ type VoteProofV0 struct {
 	round     Round
 	threshold Threshold
 	result    VoteProofResultType
+	closed    bool
 	stage     Stage
 	majority  Fact
 	facts     map[valuehash.Hash]Fact       // key: Fact.Hash(), value: Fact
@@ -28,6 +29,10 @@ func (vp VoteProofV0) Hint() hint.Hint {
 
 func (vp VoteProofV0) IsFinished() bool {
 	return vp.result != VoteProofNotYet
+}
+
+func (vp VoteProofV0) IsClosed() bool {
+	return vp.closed
 }
 
 func (vp VoteProofV0) Height() Height {
@@ -87,8 +92,11 @@ func (vp VoteProofV0) isValidCheckMajority(b []byte) error {
 
 	set := make([]uint, len(counts))
 	byCount := map[uint]valuehash.Hash{}
+
+	var index int
 	for h, c := range counts {
-		set = append(set, c)
+		set[index] = c
+		index++
 		byCount[c] = h
 	}
 
@@ -210,6 +218,54 @@ func (vp VoteProofV0) isValidFacts(b []byte) error {
 		if err := isvalid.Check([]isvalid.IsValider{k, v}, b); err != nil {
 			return err
 		}
+	}
+
+	return nil
+}
+
+func (vp VoteProofV0) CompareWithBlock(block Block) error {
+	switch vp.Stage() {
+	case StageINIT:
+		return vp.compareINITWithBlock(block)
+	case StageACCEPT:
+		return vp.compareACCEPTWithBlock(block)
+	default:
+		return nil
+	}
+}
+
+// compareINITWithBlock checks VoteProof is valid by Block,
+// if VoteProof is next of Block, or
+// if VoteProof is belongs to Block.
+func (vp VoteProofV0) compareINITWithBlock(block Block) error {
+	if vp.Height() > block.Height()+1 || vp.Height() < block.Height() {
+		return xerrors.Errorf("height of INIT VoteProof is different from block.Round(); VoteProof.Height=%d != block.Heightd=%d", vp.Height(), block.Height())
+	} else if vp.Height() != block.Height()+1 {
+		return nil
+	}
+
+	if vp.Round() != block.Round() {
+		return xerrors.Errorf("round of INIT VoteProof is different from block.Round(); VoteProof.Round=%d != block.Round=%d", vp.Round(), block.Round())
+	}
+
+	vpPreviousBlock := vp.Majority().(INITBallotFact).PreviousBlock()
+	if !vpPreviousBlock.Equal(block.PreviousBlock()) {
+		return xerrors.Errorf("previous block of INIT VoteProof is different from block; VoteProof.PreviousBlock=%d != block.PreviousBlock=%d", vpPreviousBlock, block.PreviousBlock())
+	}
+
+	return nil
+}
+
+func (vp VoteProofV0) compareACCEPTWithBlock(block Block) error {
+	if vp.Height() != block.Height() {
+		return xerrors.Errorf("height of ACCEPT VoteProof is different from block.Height(); VoteProof.Height=%d != block.Height=%d", vp.Height(), block.Height())
+	} else if vp.Round() != block.Round() {
+		return xerrors.Errorf("round of ACCEPT VoteProof is different from block.Round(); VoteProof.Round=%d != block.Round=%d", vp.Round(), block.Round())
+	}
+
+	fact := vp.Majority().(ACCEPTBallotFact)
+	if !fact.NewBlock().Equal(block.Hash()) {
+		return xerrors.Errorf("block hash does not match; vp=%s != block=%s", fact.NewBlock(), block.Hash())
 	}
 
 	return nil

@@ -6,12 +6,14 @@ import (
 	"github.com/rs/zerolog"
 	"github.com/spikeekips/mitum/logging"
 	"github.com/spikeekips/mitum/seal"
+	"github.com/spikeekips/mitum/util"
 	"golang.org/x/xerrors"
 )
 
 type ConsensusStateHandler interface {
 	State() ConsensusState
 	SetStateChan(chan<- ConsensusStateChangeContext)
+	SetSealChan(chan<- seal.Seal)
 	Activate(ConsensusStateChangeContext) error
 	Deactivate(ConsensusStateChangeContext) error
 	// NewSeal receives Seal.
@@ -24,6 +26,14 @@ type ConsensusStateChangeContext struct {
 	fromState ConsensusState
 	toState   ConsensusState
 	voteProof VoteProof
+}
+
+func NewConsensusStateChangeContext(from, to ConsensusState, voteProof VoteProof) ConsensusStateChangeContext {
+	return ConsensusStateChangeContext{
+		fromState: from,
+		toState:   to,
+		voteProof: voteProof,
+	}
 }
 
 func (csc ConsensusStateChangeContext) From() ConsensusState {
@@ -44,12 +54,15 @@ type BaseStateHandler struct {
 	localState *LocalState
 	state      ConsensusState
 	stateChan  chan<- ConsensusStateChangeContext
+	sealChan   chan<- seal.Seal
+	ballotbox  *Ballotbox
 }
 
-func NewBaseStateHandler(localState *LocalState, state ConsensusState) *BaseStateHandler {
+func NewBaseStateHandler(localState *LocalState, state ConsensusState, ballotbox *Ballotbox) *BaseStateHandler {
 	return &BaseStateHandler{
 		localState: localState,
 		state:      state,
+		ballotbox:  ballotbox,
 	}
 }
 
@@ -61,46 +74,34 @@ func (bs *BaseStateHandler) SetStateChan(stateChan chan<- ConsensusStateChangeCo
 	bs.stateChan = stateChan
 }
 
+func (bs *BaseStateHandler) SetSealChan(sealChan chan<- seal.Seal) {
+	bs.sealChan = sealChan
+}
+
 func (bs *BaseStateHandler) ChangeState(newState ConsensusState, vp VoteProof) error {
+	if bs.stateChan == nil {
+		return nil
+	}
+
 	if newState == bs.state {
 		return xerrors.Errorf("can not change state to same joining state")
 	}
 
 	go func() {
-		bs.stateChan <- ConsensusStateChangeContext{
-			fromState: bs.state,
-			toState:   newState,
-			voteProof: vp,
-		}
+		bs.stateChan <- NewConsensusStateChangeContext(bs.state, newState, vp)
 	}()
 
 	return nil
 }
 
-func (bs *BaseStateHandler) BroadcastSeal(sl seal.Seal, errChan chan<- error) {
-	l := loggerWithSeal(sl, bs.Log())
-	l.Debug().Msg("trying to broadcast")
+func (bs *BaseStateHandler) BroadcastSeal(sl seal.Seal) {
+	if bs.sealChan == nil {
+		return
+	}
 
-	bs.localState.Nodes().Traverse(func(n Node) bool {
-		go func(n Node) {
-			lt := l.With().
-				Str("target_node", n.Address().String()).
-				Logger()
-
-			if err := n.Channel().SendSeal(sl); err != nil {
-				lt.Error().Err(err).Msg("failed to broadcast")
-
-				if errChan != nil {
-					errChan <- err
-				}
-				return
-			}
-
-			lt.Debug().Msg("broadcasted")
-		}(n)
-
-		return true
-	})
+	go func() {
+		bs.sealChan <- sl
+	}()
 }
 
 func loggerWithSeal(sl seal.Seal, l *zerolog.Logger) *zerolog.Logger {
@@ -129,10 +130,13 @@ func loggerWithVoteProof(vp VoteProof, l *zerolog.Logger) *zerolog.Logger {
 		return l
 	}
 
+	rvp, _ := util.JSONMarshal(vp)
+
 	ll := l.With().
 		Int64("voteproof_height", vp.Height().Int64()).
 		Uint64("voteproof_round", vp.Round().Uint64()).
 		Str("voteproof_stage", vp.Stage().String()).
+		RawJSON("voteproof", rvp).
 		Logger()
 
 	return &ll

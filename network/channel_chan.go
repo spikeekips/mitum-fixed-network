@@ -1,19 +1,42 @@
 package network
 
-import "github.com/spikeekips/mitum/seal"
+import (
+	"github.com/rs/zerolog"
+	"github.com/spikeekips/mitum/logging"
+	"github.com/spikeekips/mitum/seal"
+)
 
 type ChanChannel struct {
-	recvChan chan seal.Seal
+	*logging.Logger
+	recvChan    chan seal.Seal
+	sealHandler SealHandler
 }
 
-func NewChanChannel(bufsize uint) *ChanChannel {
+func NewChanChannel(bufsize uint, sealHandler SealHandler) *ChanChannel {
 	return &ChanChannel{
-		recvChan: make(chan seal.Seal, bufsize),
+		Logger: logging.NewLogger(func(c zerolog.Context) zerolog.Context {
+			return c.Str("module", "chan-network")
+		}),
+		recvChan:    make(chan seal.Seal, bufsize),
+		sealHandler: sealHandler,
 	}
+}
+
+func (gs *ChanChannel) SetSealHandler(sealHandler SealHandler) {
+	gs.sealHandler = sealHandler
 }
 
 func (gs *ChanChannel) SendSeal(sl seal.Seal) error {
 	go func() {
+		if gs.sealHandler != nil {
+			if s, err := gs.sealHandler(sl); err != nil {
+				gs.Log().Error().Err(err).Msg("invalid seal found")
+				return
+			} else {
+				sl = s
+			}
+		}
+
 		gs.recvChan <- sl
 	}()
 

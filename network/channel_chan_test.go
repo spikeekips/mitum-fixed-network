@@ -5,10 +5,12 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/suite"
+	"golang.org/x/xerrors"
 
 	"github.com/spikeekips/mitum/hint"
 	"github.com/spikeekips/mitum/key"
 	"github.com/spikeekips/mitum/localtime"
+	"github.com/spikeekips/mitum/seal"
 	"github.com/spikeekips/mitum/valuehash"
 )
 
@@ -73,7 +75,7 @@ func (t *testChanChannel) SetupSuite() {
 }
 
 func (t *testChanChannel) TestSendReceive() {
-	gs := NewChanChannel(0)
+	gs := NewChanChannel(0, nil)
 
 	sl := newDummySeal(t.pk)
 	t.NoError(gs.SendSeal(sl))
@@ -81,6 +83,22 @@ func (t *testChanChannel) TestSendReceive() {
 	rsl := <-gs.ReceiveSeal()
 
 	t.True(sl.Hash().Equal(rsl.Hash()))
+}
+
+func (t *testChanChannel) TestSealHandler() {
+	gs := NewChanChannel(0, func(sl seal.Seal) (seal.Seal, error) {
+		return nil, xerrors.Errorf("invalid seal found")
+	})
+
+	sl := newDummySeal(t.pk)
+	t.NoError(gs.SendSeal(sl))
+
+	select {
+	case <-time.After(time.Millisecond * 10):
+		break
+	case <-gs.ReceiveSeal():
+		t.Error(xerrors.Errorf("seal should be ignored"))
+	}
 }
 
 func TestChanChannel(t *testing.T) {

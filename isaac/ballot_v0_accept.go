@@ -87,6 +87,7 @@ func NewACCEPTBallotV0FromLocalState(
 			proposal: newBlock.Proposal(),
 			newBlock: newBlock.Hash(),
 		},
+		voteProof: localState.LastINITVoteProof(),
 	}
 
 	// TODO NetworkID must be given.

@@ -9,6 +9,7 @@ import (
 	"github.com/spikeekips/mitum/encoder"
 	"github.com/spikeekips/mitum/hint"
 	"github.com/spikeekips/mitum/key"
+	"github.com/spikeekips/mitum/seal"
 	"github.com/spikeekips/mitum/valuehash"
 )
 
@@ -115,7 +116,8 @@ func (t *testConsensusStateConsensusHandler) TestNew() {
 
 	suffrage := t.suffrage(remoteState, localState)
 
-	cs, err := NewConsensusStateConsensusHandler(localState, DummyProposalProcessor{}, suffrage)
+	proposalMaker := NewProposalMaker(localState)
+	cs, err := NewConsensusStateConsensusHandler(localState, DummyProposalProcessor{}, suffrage, nil, proposalMaker)
 	t.NoError(err)
 	t.NotNil(cs)
 
@@ -154,9 +156,13 @@ func (t *testConsensusStateConsensusHandler) TestWaitingProposalButTimeedOut() {
 
 	suffrage := t.suffrage(remoteState, localState)
 
-	cs, err := NewConsensusStateConsensusHandler(localState, DummyProposalProcessor{}, suffrage)
+	proposalMaker := NewProposalMaker(localState)
+	cs, err := NewConsensusStateConsensusHandler(localState, DummyProposalProcessor{}, suffrage, nil, proposalMaker)
 	t.NoError(err)
 	t.NotNil(cs)
+
+	sealChan := make(chan seal.Seal)
+	cs.SetSealChan(sealChan)
 
 	ib, err := NewINITBallotV0FromLocalState(localState, Round(0), nil)
 	t.NoError(err)
@@ -177,16 +183,14 @@ func (t *testConsensusStateConsensusHandler) TestWaitingProposalButTimeedOut() {
 
 	<-time.After(time.Millisecond * 10)
 
-	for i := 0; i < 2; i++ {
-		r := <-remoteState.Node().Channel().ReceiveSeal()
-		t.NotNil(r)
+	r := <-sealChan
+	t.NotNil(r)
 
-		rb := r.(INITBallotV0)
+	rb := r.(INITBallotV0)
 
-		t.Equal(StageINIT, rb.Stage())
-		t.Equal(vp.Height(), rb.Height())
-		t.Equal(vp.Round()+1, rb.Round()) // means that handler moves to next round
-	}
+	t.Equal(StageINIT, rb.Stage())
+	t.Equal(vp.Height(), rb.Height())
+	t.Equal(vp.Round()+1, rb.Round()) // means that handler moves to next round
 }
 
 // with Proposal, ACCEPTBallot will be broadcasted with newly processed
@@ -199,13 +203,19 @@ func (t *testConsensusStateConsensusHandler) TestWithProposalWaitACCEPTBallot() 
 	t.NoError(err)
 	initFact := ib.INITBallotFactV0
 
+	proposalMaker := NewProposalMaker(localState)
 	cs, err := NewConsensusStateConsensusHandler(
 		localState,
 		DummyProposalProcessor{},
 		t.suffrage(remoteState, remoteState), // localnode is not in ActingSuffrage.
+		nil,
+		proposalMaker,
 	)
 	t.NoError(err)
 	t.NotNil(cs)
+
+	sealChan := make(chan seal.Seal)
+	cs.SetSealChan(sealChan)
 
 	vp, err := t.newVoteProof(StageINIT, initFact, localState, remoteState)
 	t.NoError(err)
@@ -229,7 +239,7 @@ func (t *testConsensusStateConsensusHandler) TestWithProposalWaitACCEPTBallot() 
 
 	t.NoError(cs.NewSeal(pr))
 
-	r := <-remoteState.Node().Channel().ReceiveSeal()
+	r := <-sealChan
 	t.NotNil(r)
 
 	rb := r.(ACCEPTBallotV0)
@@ -251,13 +261,19 @@ func (t *testConsensusStateConsensusHandler) TestWithProposalWaitSIGNBallot() {
 	t.NoError(err)
 	initFact := ib.INITBallotFactV0
 
+	proposalMaker := NewProposalMaker(localState)
 	cs, err := NewConsensusStateConsensusHandler(
 		localState,
 		DummyProposalProcessor{},
 		t.suffrage(remoteState, localState, remoteState), // localnode is not in ActingSuffrage.
+		nil,
+		proposalMaker,
 	)
 	t.NoError(err)
 	t.NotNil(cs)
+
+	sealChan := make(chan seal.Seal)
+	cs.SetSealChan(sealChan)
 
 	vp, err := t.newVoteProof(StageINIT, initFact, localState, remoteState)
 	t.NoError(err)
@@ -281,7 +297,7 @@ func (t *testConsensusStateConsensusHandler) TestWithProposalWaitSIGNBallot() {
 
 	t.NoError(cs.NewSeal(pr))
 
-	r := <-remoteState.Node().Channel().ReceiveSeal()
+	r := <-sealChan
 	t.NotNil(r)
 
 	rb := r.(SIGNBallotV0)

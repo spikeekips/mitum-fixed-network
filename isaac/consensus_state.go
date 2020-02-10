@@ -12,6 +12,11 @@ type ConsensusState uint8
 
 const (
 	_ ConsensusState = iota
+	// ConsensusStateStopped indicates node is in state, node process is
+	// finished.
+	ConsensusStateStopped
+	// ConsensusStateBooting indicates node is in state, node checks it's state.
+	ConsensusStateBooting
 	// ConsensusStateJoining indicates node is in state, node is trying to
 	// join network.
 	ConsensusStateJoining
@@ -27,6 +32,10 @@ const (
 
 func (st ConsensusState) String() string {
 	switch st {
+	case ConsensusStateStopped:
+		return "STOPPED"
+	case ConsensusStateBooting:
+		return "BOOTING"
 	case ConsensusStateJoining:
 		return "JOINING"
 	case ConsensusStateConsensus:
@@ -42,8 +51,8 @@ func (st ConsensusState) String() string {
 
 func (st ConsensusState) IsValid([]byte) error {
 	switch st {
-	case ConsensusStateJoining, ConsensusStateConsensus,
-		ConsensusStateSyncing, ConsensusStateBroken:
+	case ConsensusStateStopped, ConsensusStateBooting, ConsensusStateJoining,
+		ConsensusStateConsensus, ConsensusStateSyncing, ConsensusStateBroken:
 		return nil
 	}
 

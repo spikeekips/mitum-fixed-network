@@ -7,8 +7,10 @@ import (
 
 func (as ActingSuffrage) MarshalJSON() ([]byte, error) {
 	nodes := make([]string, len(as.nodes))
+	var index int
 	for n := range as.nodes {
-		nodes = append(nodes, n.String())
+		nodes[index] = n.String()
+		index++
 	}
 
 	return util.JSONMarshal(struct {
@@ -26,8 +28,10 @@ func (as ActingSuffrage) MarshalJSON() ([]byte, error) {
 
 func (as ActingSuffrage) MarshalZerologObject(e *zerolog.Event) {
 	nodes := make([]string, len(as.nodes))
+	var index int
 	for n := range as.nodes {
-		nodes = append(nodes, n.String())
+		nodes[index] = n.String()
+		index++
 	}
 
 	e.Int64("height", as.height.Int64())

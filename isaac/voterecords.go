@@ -100,6 +100,7 @@ func (vrs *VoteRecords) vote(ballot Ballot) bool {
 	}
 
 	if vrs.vp.IsFinished() {
+		vrs.vp.closed = true
 		return false
 	} else if len(vrs.votes) < int(vrs.vp.threshold.Threshold) {
 		return false

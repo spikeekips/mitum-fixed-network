@@ -355,6 +355,43 @@ func (t *testBallotbox) TestACCEPTVoteProofMajority() {
 	}
 }
 
+func (t *testBallotbox) TestINITVoteProofMajorityClosed() {
+	bb := NewBallotbox(t.newLocalState(3, 66))
+
+	// 2 ballot have the differnt previousBlock hash
+	ba0 := t.newINITBallot(Height(10), Round(0), NewShortAddress("n0"))
+	ba1 := t.newINITBallot(Height(10), Round(0), NewShortAddress("n1"))
+	ba2 := t.newINITBallot(Height(10), Round(0), NewShortAddress("n2"))
+
+	{ // set same previousBlock and previousRound
+		ba1.previousBlock = ba0.previousBlock
+		ba1.previousRound = ba0.previousRound
+
+		t.NoError(ba1.Sign(t.pk, nil))
+	}
+
+	{
+		vp, err := bb.Vote(ba0)
+		t.NoError(err)
+		t.Equal(VoteProofNotYet, vp.Result())
+		t.False(vp.IsClosed())
+	}
+
+	{
+		vp, err := bb.Vote(ba1)
+		t.NoError(err)
+		t.Equal(VoteProofMajority, vp.Result())
+		t.False(vp.IsClosed())
+	}
+
+	{
+		vp, err := bb.Vote(ba2)
+		t.NoError(err)
+		t.Equal(VoteProofMajority, vp.Result())
+		t.True(vp.IsClosed())
+	}
+}
+
 func TestBallotbox(t *testing.T) {
 	suite.Run(t, new(testBallotbox))
 }

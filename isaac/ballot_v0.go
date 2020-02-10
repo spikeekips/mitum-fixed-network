@@ -15,6 +15,13 @@ type BaseBallotFactV0 struct {
 	round  Round
 }
 
+func NewBaseBallotFactV0(height Height, round Round) BaseBallotFactV0 {
+	return BaseBallotFactV0{
+		height: height,
+		round:  round,
+	}
+}
+
 func (bf BaseBallotFactV0) IsReadyToSign(b []byte) error {
 	if err := bf.height.IsValid(b); err != nil {
 		return err

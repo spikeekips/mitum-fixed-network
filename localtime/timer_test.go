@@ -207,7 +207,7 @@ func (t *testCallbackTimer) TestCallbackTimerset() {
 	cts := NewCallbackTimerset(timers)
 	t.NoError(cts.Start())
 
-	time.Sleep(time.Millisecond * 50)
+	<-time.After(time.Millisecond * 100)
 	t.NoError(cts.Stop())
 
 	for _, ticked := range tickeds {

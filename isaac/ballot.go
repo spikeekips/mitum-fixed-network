@@ -44,3 +44,21 @@ type ACCEPTBallot interface {
 	NewBlock() valuehash.Hash
 	VoteProof() VoteProof
 }
+
+type INITBallotFact interface {
+	Hash([]byte) (valuehash.Hash, error)
+	PreviousBlock() valuehash.Hash
+	PreviousRound() Round
+}
+
+type SIGNBallotFact interface {
+	Hash([]byte) (valuehash.Hash, error)
+	Proposal() valuehash.Hash
+	NewBlock() valuehash.Hash
+}
+
+type ACCEPTBallotFact interface {
+	Hash([]byte) (valuehash.Hash, error)
+	Proposal() valuehash.Hash
+	NewBlock() valuehash.Hash
+}

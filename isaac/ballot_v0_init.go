@@ -19,6 +19,14 @@ type INITBallotFactV0 struct {
 	previousRound Round
 }
 
+func NewINITBallotFactV0(height Height, round Round, previousBlock valuehash.Hash, previousRound Round) INITBallotFactV0 {
+	return INITBallotFactV0{
+		BaseBallotFactV0: NewBaseBallotFactV0(height, round),
+		previousBlock:    previousBlock,
+		previousRound:    previousRound,
+	}
+}
+
 func (ibf INITBallotFactV0) IsValid(b []byte) error {
 	if err := isvalid.Check([]isvalid.IsValider{
 		ibf.BaseBallotFactV0,
@@ -76,14 +84,12 @@ func NewINITBallotV0FromLocalState(localState *LocalState, round Round, b []byte
 		BaseBallotV0: BaseBallotV0{
 			node: localState.Node().Address(),
 		},
-		INITBallotFactV0: INITBallotFactV0{
-			BaseBallotFactV0: BaseBallotFactV0{
-				height: lastBlock.Height() + 1,
-				round:  round,
-			},
-			previousBlock: lastBlock.Hash(),
-			previousRound: lastBlock.Round(),
-		},
+		INITBallotFactV0: NewINITBallotFactV0(
+			lastBlock.Height()+1,
+			round,
+			lastBlock.Hash(),
+			lastBlock.Round(),
+		),
 	}
 
 	var voteProof VoteProof

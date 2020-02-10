@@ -14,6 +14,20 @@ type ActingSuffrage struct {
 	nodes    map[Address]Node
 }
 
+func NewActingSuffrage(height Height, round Round, proposer Node, selected []Node) ActingSuffrage {
+	nodes := map[Address]Node{}
+	for _, n := range selected {
+		nodes[n.Address()] = n
+	}
+
+	return ActingSuffrage{
+		height:   height,
+		round:    round,
+		proposer: proposer,
+		nodes:    nodes,
+	}
+}
+
 func (as ActingSuffrage) Height() Height {
 	return as.height
 }

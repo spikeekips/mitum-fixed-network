@@ -22,7 +22,6 @@ func (ab ACCEPTBallotV0) MarshalJSON() ([]byte, error) {
 		return nil, err
 	}
 
-	// TODO use jsoniterator
 	return util.JSONMarshal(ACCEPTBallotV0PackerJSON{
 		BaseBallotV0PackerJSON: bb,
 		PR:                     ab.proposal,

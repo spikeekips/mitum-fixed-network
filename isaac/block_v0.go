@@ -73,13 +73,23 @@ func GenerateBlockV0Hash(
 	blockStates valuehash.Hash,
 	b []byte,
 ) (valuehash.Hash, error) {
+	var blockOperationsBytes []byte
+	if blockOperations != nil {
+		blockOperationsBytes = blockOperations.Bytes()
+	}
+
+	var blockStatesBytes []byte
+	if blockStatesBytes != nil {
+		blockStatesBytes = blockStates.Bytes()
+	}
+
 	e := util.ConcatSlice([][]byte{
 		height.Bytes(),
 		round.Bytes(),
 		proposal.Bytes(),
 		previousBlock.Bytes(),
-		blockOperations.Bytes(),
-		blockStates.Bytes(),
+		blockOperationsBytes,
+		blockStatesBytes,
 		b,
 	})
 

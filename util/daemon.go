@@ -26,13 +26,15 @@ type FunctionDaemon struct {
 	stoppingChan chan struct{}
 	stopChan     chan struct{}
 	stoppingWait *sync.WaitGroup
+	isDebug      bool
 }
 
-func NewFunctionDaemon(fn func(chan struct{}) error) *FunctionDaemon {
+func NewFunctionDaemon(fn func(chan struct{}) error, isDebug bool) *FunctionDaemon {
 	dm := &FunctionDaemon{
 		Logger:   logging.NewLogger(nil),
 		fn:       fn,
 		stopChan: make(chan struct{}),
+		isDebug:  isDebug,
 	}
 
 	return dm
@@ -53,7 +55,9 @@ func (dm *FunctionDaemon) IsStopped() bool {
 }
 
 func (dm *FunctionDaemon) Start() error {
-	dm.Log().Debug().Msg("trying to start")
+	if dm.isDebug {
+		dm.Log().Debug().Msg("trying to start")
+	}
 
 	if dm.IsStarted() {
 		return DaemonAlreadyStartedError
@@ -78,7 +82,9 @@ func (dm *FunctionDaemon) Start() error {
 		dm.stoppingChan <- struct{}{}
 	}()
 
-	dm.Log().Debug().Msg("started")
+	if dm.isDebug {
+		dm.Log().Debug().Msg("started")
+	}
 	return nil
 }
 
@@ -93,7 +99,9 @@ func (dm *FunctionDaemon) kill() {
 }
 
 func (dm *FunctionDaemon) Stop() error {
-	dm.Log().Debug().Msg("trying to stop")
+	if dm.isDebug {
+		dm.Log().Debug().Msg("trying to stop")
+	}
 
 	if dm.IsStopped() {
 		return DaemonAlreadyStoppedError
@@ -108,6 +116,8 @@ func (dm *FunctionDaemon) Stop() error {
 	dm.stoppingWait = nil
 	dm.Unlock()
 
-	dm.Log().Debug().Msg("stopped")
+	if dm.isDebug {
+		dm.Log().Debug().Msg("stopped")
+	}
 	return nil
 }

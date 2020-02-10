@@ -18,7 +18,7 @@ func RandomLocalNode(name string, channel network.Channel) *LocalNode {
 	)
 
 	if channel == nil {
-		channel = network.NewChanChannel(0)
+		channel = network.NewChanChannel(0, nil)
 	}
 
 	return ln.SetChannel(channel)

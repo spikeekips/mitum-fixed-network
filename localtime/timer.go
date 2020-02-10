@@ -13,6 +13,7 @@ import (
 type CallbackTimer struct {
 	*logging.Logger
 	*util.FunctionDaemon
+	name         string
 	intervalFunc func() time.Duration
 }
 
@@ -38,9 +39,10 @@ func NewCallbackTimer(
 				Str("module", "callback-timer").
 				Str("name", name)
 		}),
+		name:         name,
 		intervalFunc: intervalFunc,
 	}
-	ct.FunctionDaemon = util.NewFunctionDaemon(ct.callback(callback))
+	ct.FunctionDaemon = util.NewFunctionDaemon(ct.callback(callback), true)
 
 	return ct, nil
 }

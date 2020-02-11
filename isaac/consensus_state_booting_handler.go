@@ -4,7 +4,6 @@ import (
 	"github.com/rs/zerolog"
 	"golang.org/x/xerrors"
 
-	"github.com/spikeekips/mitum/errors"
 	"github.com/spikeekips/mitum/logging"
 	"github.com/spikeekips/mitum/seal"
 )
@@ -38,7 +37,7 @@ func (cs *ConsensusStateBootingHandler) Activate(ctx ConsensusStateChangeContext
 	l.Debug().Msg("activated")
 
 	go func() {
-		if err := cs.check(); err != nil {
+		if err := cs.initialize(); err != nil {
 			cs.Log().Error().Err(err).Msg("failed to check")
 		}
 	}()
@@ -56,7 +55,6 @@ func (cs *ConsensusStateBootingHandler) Deactivate(ctx ConsensusStateChangeConte
 	return nil
 }
 
-// NewSeal only cares on INIT ballot and it's VoteProof.
 func (cs *ConsensusStateBootingHandler) NewSeal(sl seal.Seal) error {
 	l := loggerWithSeal(sl, cs.Log())
 	l.Debug().Msg("got Seal")
@@ -64,7 +62,6 @@ func (cs *ConsensusStateBootingHandler) NewSeal(sl seal.Seal) error {
 	return nil
 }
 
-// NewVoteProof receives VoteProof. If received, stop broadcasting INIT ballot.
 func (cs *ConsensusStateBootingHandler) NewVoteProof(vp VoteProof) error {
 	l := loggerWithVoteProof(vp, cs.Log())
 
@@ -73,45 +70,38 @@ func (cs *ConsensusStateBootingHandler) NewVoteProof(vp VoteProof) error {
 	return nil
 }
 
+func (cs *ConsensusStateBootingHandler) initialize() error {
+	cs.Log().Debug().Msg("trying to initialize")
+	defer cs.Log().Debug().Msg("complete to initialize; moves to joining")
+
+	// TODO load Policies
+
+	return cs.ChangeState(ConsensusStateJoining, nil)
+}
+
 func (cs *ConsensusStateBootingHandler) check() error {
 	cs.Log().Debug().Msg("trying to check")
-
-	// TODO set Policies
-
-	cs.Log().Debug().Msg("checked; moves to joining")
+	defer cs.Log().Debug().Msg("complete to check")
 
 	if err := cs.checkBlock(); err != nil {
-		xerr := errors.NewError("failed to check block").Wrap(err).(errors.Error)
-		cs.Log().Error().Err(xerr).Send()
+		cs.Log().Error().Err(err).Send()
 
-		if errc := cs.ChangeState(ConsensusStateSyncing, nil); errc != nil {
-			cs.Log().Error().Err(errc).Send()
-			return xerr.Wrap(errc)
-		}
-
-		return xerr
+		return cs.ChangeState(ConsensusStateSyncing, nil)
 	}
 
 	if err := cs.checkVoteProof(); err != nil {
-		xerr := errors.NewError("failed to check VoteProof").Wrap(err).(errors.Error)
-		cs.Log().Error().Err(xerr).Send()
-
-		if errc := cs.ChangeState(ConsensusStateSyncing, nil); errc != nil {
-			cs.Log().Error().Err(errc).Send()
-			return xerr.Wrap(errc)
-		}
-
-		return xerr
-	}
-
-	if err := cs.ChangeState(ConsensusStateJoining, nil); err != nil {
 		cs.Log().Error().Err(err).Send()
+
+		return cs.ChangeState(ConsensusStateSyncing, nil)
 	}
 
 	return nil
 }
 
 func (cs *ConsensusStateBootingHandler) checkBlock() error {
+	cs.Log().Debug().Msg("trying to check block")
+	defer cs.Log().Debug().Msg("complete to check block")
+
 	block := cs.localState.LastBlock()
 	if block == nil {
 		return xerrors.Errorf("empty Block")
@@ -121,6 +111,9 @@ func (cs *ConsensusStateBootingHandler) checkBlock() error {
 }
 
 func (cs *ConsensusStateBootingHandler) checkVoteProof() error {
+	cs.Log().Debug().Msg("trying to check VoteProofs")
+	defer cs.Log().Debug().Msg("trying to check VoteProofs")
+
 	ivp := cs.localState.LastINITVoteProof()
 	if ivp == nil {
 		return xerrors.Errorf("empty INIT VoteProof")

@@ -263,22 +263,20 @@ func (css *ConsensusStates) NewSeal(sl seal.Seal) error {
 		}
 	}
 
+	if ballot, ok := sl.(Ballot); ok {
+		if ballot.Stage().CanVote() {
+			if err := css.vote(ballot); err != nil {
+				return err
+			}
+		}
+	}
+
 	go func() {
 		if err := css.ActiveHandler().NewSeal(sl); err != nil {
 			l.Error().
 				Err(err).Msg("activated handler can not receive Seal")
 		}
 	}()
-
-	b, isBallot := sl.(Ballot)
-	if !isBallot {
-		return nil
-	}
-
-	switch b.Stage() {
-	case StageINIT, StageACCEPT:
-		return css.vote(b)
-	}
 
 	return nil
 }

@@ -5,6 +5,7 @@ import (
 	"sync"
 
 	"github.com/rs/zerolog"
+	"golang.org/x/xerrors"
 
 	"github.com/spikeekips/mitum/logging"
 )
@@ -30,6 +31,10 @@ func NewBallotbox(localState *LocalState) *Ballotbox {
 // Vote receives Ballot and returns VoteRecords, which has VoteRecords.Result()
 // and VoteRecords.Majority().
 func (bb *Ballotbox) Vote(ballot Ballot) (VoteProof, error) {
+	if !ballot.Stage().CanVote() {
+		return nil, xerrors.Errorf("this ballot is not for voting; stage=%s", ballot.Stage())
+	}
+
 	vrs := bb.loadVoteRecords(ballot, true)
 
 	// TODO if VoteRecords is finished, clean up the vrs;

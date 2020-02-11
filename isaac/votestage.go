@@ -37,3 +37,12 @@ func (st Stage) IsValid([]byte) error {
 func (st Stage) MarshalText() ([]byte, error) {
 	return []byte(st.String()), nil
 }
+
+func (st Stage) CanVote() bool {
+	switch st {
+	case StageINIT, StageACCEPT:
+		return true
+	default:
+		return false
+	}
+}

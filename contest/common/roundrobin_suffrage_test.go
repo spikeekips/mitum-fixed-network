@@ -1,18 +1,20 @@
-package isaac
+package common
 
 import (
 	"testing"
 
 	"github.com/stretchr/testify/suite"
+
+	"github.com/spikeekips/mitum/isaac"
 )
 
 type testRoundrobinSuffrage struct {
 	suite.Suite
 }
 
-func (t *testRoundrobinSuffrage) localState() *LocalState {
-	localNode := RandomLocalNode("local", nil)
-	localState := NewLocalState(localNode, NewLocalPolicy())
+func (t *testRoundrobinSuffrage) localState() *isaac.LocalState {
+	localNode := isaac.RandomLocalNode("local", nil)
+	localState := isaac.NewLocalState(localNode, isaac.NewLocalPolicy())
 
 	return localState
 }
@@ -22,33 +24,33 @@ func (t *testRoundrobinSuffrage) TestNew() {
 	sf := NewRoundrobinSuffrage(localState, 10)
 	t.NotNil(sf)
 
-	t.Implements((*Suffrage)(nil), sf)
+	t.Implements((*isaac.Suffrage)(nil), sf)
 }
 
 func (t *testRoundrobinSuffrage) TestActingSuffrage() {
 	localState := t.localState()
 	_, _ = localState.Policy().SetNumberOfActingSuffrageNodes(3)
 
-	nodes := []Node{
-		RandomLocalNode("n0", nil),
-		RandomLocalNode("n1", nil),
-		RandomLocalNode("n2", nil),
-		RandomLocalNode("n3", nil),
-		RandomLocalNode("n4", nil),
+	nodes := []isaac.Node{
+		isaac.RandomLocalNode("n0", nil),
+		isaac.RandomLocalNode("n1", nil),
+		isaac.RandomLocalNode("n2", nil),
+		isaac.RandomLocalNode("n3", nil),
+		isaac.RandomLocalNode("n4", nil),
 	}
 	t.NoError(localState.Nodes().Add(nodes...))
 
 	sf := NewRoundrobinSuffrage(localState, 10)
 
-	af := sf.Acting(Height(33), Round(0))
+	af := sf.Acting(isaac.Height(33), isaac.Round(0))
 	t.NotNil(af)
-	t.Equal(int(localState.Policy().NumberOfActingSuffrageNodes()), len(af.nodes))
+	t.Equal(int(localState.Policy().NumberOfActingSuffrageNodes()), len(af.Nodes()))
 
 	expectedProposer := nodes[2]
 	t.True(expectedProposer.Address().Equal(af.Proposer().Address()))
 
 	expected := nodes[2:5]
-	for _, n := range af.nodes {
+	for _, n := range af.Nodes() {
 		var found bool
 		for _, e := range expected {
 			if e.Address().Equal(n.Address()) {
@@ -59,34 +61,34 @@ func (t *testRoundrobinSuffrage) TestActingSuffrage() {
 		t.True(found)
 	}
 
-	t.False(sf.IsActing(Height(33), Round(0), nodes[0].Address()))
-	t.False(sf.IsActing(Height(33), Round(0), nodes[1].Address()))
-	t.True(sf.IsActing(Height(33), Round(0), nodes[2].Address()))
-	t.True(sf.IsProposer(Height(33), Round(0), nodes[2].Address()))
+	t.False(sf.IsActing(isaac.Height(33), isaac.Round(0), nodes[0].Address()))
+	t.False(sf.IsActing(isaac.Height(33), isaac.Round(0), nodes[1].Address()))
+	t.True(sf.IsActing(isaac.Height(33), isaac.Round(0), nodes[2].Address()))
+	t.True(sf.IsProposer(isaac.Height(33), isaac.Round(0), nodes[2].Address()))
 }
 
 func (t *testRoundrobinSuffrage) TestActingSuffrageNotSufficient() {
 	localState := t.localState()
 	_, _ = localState.Policy().SetNumberOfActingSuffrageNodes(4)
 
-	nodes := []Node{
-		RandomLocalNode("n0", nil),
-		RandomLocalNode("n1", nil),
+	nodes := []isaac.Node{
+		isaac.RandomLocalNode("n0", nil),
+		isaac.RandomLocalNode("n1", nil),
 	}
 	t.NoError(localState.Nodes().Add(nodes...))
 
 	sf := NewRoundrobinSuffrage(localState, 10)
 
-	af := sf.Acting(Height(33), Round(0))
+	af := sf.Acting(isaac.Height(33), isaac.Round(0))
 	t.NotNil(af)
-	t.Equal(len(nodes)+1, len(af.nodes))
+	t.Equal(len(nodes)+1, len(af.Nodes()))
 
 	expectedProposer := localState.Node()
 	t.True(expectedProposer.Address().Equal(af.Proposer().Address()))
 
-	expected := []Node{localState.Node()}
+	expected := []isaac.Node{localState.Node()}
 	expected = append(expected, nodes...)
-	for _, n := range af.nodes {
+	for _, n := range af.Nodes() {
 		var found bool
 		for _, e := range expected {
 			if e.Address().Equal(n.Address()) {

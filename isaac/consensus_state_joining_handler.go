@@ -252,13 +252,7 @@ func (cs *ConsensusStateJoiningHandler) handleINITBallotAndACCEPTVoteProof(ballo
 		l.Debug().
 			Msgf("Ballot.Height() is higher than expected, %d + 1; moves to syncing", lastBlock.Height())
 
-		go func() {
-			if err := cs.ChangeState(ConsensusStateSyncing, vp); err != nil {
-				l.Error().Err(err).Send()
-			}
-		}()
-
-		return nil
+		return cs.ChangeState(ConsensusStateSyncing, vp)
 	case d == 0:
 		l.Debug().Msg("same height; keep waiting CVP")
 
@@ -296,13 +290,10 @@ func (cs *ConsensusStateJoiningHandler) handleINITBallotAndINITVoteProof(ballot 
 
 		return nil
 	case d > 0:
-		go func() {
-			cs.stateChan <- NewConsensusStateChangeContext(cs.State(), ConsensusStateSyncing, vp)
-		}()
 		l.Debug().
 			Msgf("ballotVoteProof.Height() is higher than expected, %d + 1; moves to syncing", lastBlock.Height())
 
-		return nil
+		return cs.ChangeState(ConsensusStateSyncing, vp)
 	default:
 		l.Debug().
 			Msgf("ballotVoteProof.Height() is lower than expected, %d + 1; ignore it", lastBlock.Height())
@@ -330,13 +321,10 @@ func (cs *ConsensusStateJoiningHandler) handleACCEPTBallotAndINITVoteProof(ballo
 		// 1. broadcast ACCEPT Ballot with the processing result
 		return nil
 	case d > 0:
-		go func() {
-			cs.stateChan <- NewConsensusStateChangeContext(cs.State(), ConsensusStateSyncing, vp)
-		}()
 		l.Debug().
 			Msgf("Ballot.Height() is higher than expected, %d + 1; moves to syncing", lastBlock.Height())
 
-		return nil
+		return cs.ChangeState(ConsensusStateSyncing, vp)
 	default:
 		l.Debug().
 			Msgf("Ballot.Height() is lower than expected, %d + 1; ignore it", lastBlock.Height())
@@ -378,9 +366,11 @@ func (cs *ConsensusStateJoiningHandler) handleINITVoteProof(vp VoteProof) error 
 		return nil
 	case d > 0:
 		l.Debug().Msg("hiehger height; moves to sync")
+
 		return cs.ChangeState(ConsensusStateSyncing, vp)
 	default:
 		l.Debug().Msg("expected height; moves to consensus state")
+
 		return cs.ChangeState(ConsensusStateConsensus, vp)
 	}
 }
@@ -396,9 +386,11 @@ func (cs *ConsensusStateJoiningHandler) handleACCEPTVoteProof(vp VoteProof) erro
 		return nil
 	case d > 0:
 		l.Debug().Msg("hiehger height; moves to sync")
+
 		return cs.ChangeState(ConsensusStateSyncing, vp)
 	default:
 		l.Debug().Msg("expected height; processing Proposal")
+
 		// TODO processing Proposal and then wait next INIT VoteProof.
 		return nil
 	}

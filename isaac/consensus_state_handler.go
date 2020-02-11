@@ -81,8 +81,10 @@ func (bs *BaseStateHandler) ChangeState(newState ConsensusState, vp VoteProof) e
 		return nil
 	}
 
-	if newState == bs.state {
-		return xerrors.Errorf("can not change state to same joining state")
+	if err := newState.IsValid(nil); err != nil {
+		return err
+	} else if newState == bs.state {
+		return xerrors.Errorf("can not change state to same state; current=%s new=%s", bs.state, newState)
 	}
 
 	go func() {

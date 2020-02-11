@@ -62,27 +62,35 @@ func (cs *ConsensusStateConsensusHandler) SetLogger(l zerolog.Logger) *logging.L
 }
 
 func (cs *ConsensusStateConsensusHandler) Activate(ctx ConsensusStateChangeContext) error {
-	l := loggerWithConsensusStateChangeContext(ctx, cs.Log())
-	l.Debug().Msg("activated")
+	if ctx.VoteProof() == nil {
+		return xerrors.Errorf("consensus handler got empty VoteProof")
+	} else if err := ctx.VoteProof().IsValid(nil); err != nil {
+		return xerrors.Errorf("consensus handler got invalid VoteProof: %w", err)
+	}
 
 	_ = cs.localState.SetLastINITVoteProof(ctx.VoteProof())
 
+	l := loggerWithConsensusStateChangeContext(ctx, cs.Log())
+
 	go func() {
 		if err := cs.waitProposal(ctx.VoteProof()); err != nil {
-			cs.Log().Error().Err(err).Send()
+			l.Error().Err(err).Send()
 		}
 	}()
+
+	l.Debug().Msg("activated")
 
 	return nil
 }
 
 func (cs *ConsensusStateConsensusHandler) Deactivate(ctx ConsensusStateChangeContext) error {
 	l := loggerWithConsensusStateChangeContext(ctx, cs.Log())
-	defer l.Debug().Msg("deactivated")
 
 	if err := cs.stopBallotTimer(); err != nil {
 		return err
 	}
+
+	l.Debug().Msg("deactivated")
 
 	return nil
 }
@@ -223,11 +231,8 @@ func (cs *ConsensusStateConsensusHandler) handleINITVoteProof(vp VoteProof) erro
 		return nil
 	case d > 0: // far from local; moves to syncing
 		l.Debug().Msg("higher VoteProof received; moves to sync")
-		if err := cs.ChangeState(ConsensusStateSyncing, vp); err != nil {
-			return err
-		}
 
-		return nil
+		return cs.ChangeState(ConsensusStateSyncing, vp)
 	default: // expected VoteProof
 		l.Debug().Msg("expected VoteProof received; will wait Proposal")
 		return cs.waitProposal(vp)
@@ -360,7 +365,7 @@ func (cs *ConsensusStateConsensusHandler) readyToACCEPTBallot(proposal Proposal,
 	timer, err := localtime.NewCallbackTimer(
 		"consensus-broadcasting-accept-ballot",
 		func() (bool, error) {
-			// TODO ACCEPTBallot should include the received SIGNBallots.
+			// TODO ACCEPTBallot should include the received SIGN Ballots.
 
 			ab, err := NewACCEPTBallotV0FromLocalState(cs.localState, proposal.Round(), newBlock, nil)
 			if err != nil {

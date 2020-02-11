@@ -1,4 +1,4 @@
-package isaac
+package common
 
 import (
 	"fmt"
@@ -6,20 +6,28 @@ import (
 	"strings"
 
 	lru "github.com/hashicorp/golang-lru"
+	"github.com/rs/zerolog"
+
+	"github.com/spikeekips/mitum/isaac"
+	"github.com/spikeekips/mitum/logging"
 )
 
 type RoundrobinSuffrage struct {
-	localState *LocalState
+	*logging.Logger
+	localState *isaac.LocalState
 	cache      *lru.TwoQueueCache
 }
 
-func NewRoundrobinSuffrage(localState *LocalState, cacheSize int) *RoundrobinSuffrage {
+func NewRoundrobinSuffrage(localState *isaac.LocalState, cacheSize int) *RoundrobinSuffrage {
 	var cache *lru.TwoQueueCache
 	if cacheSize > 0 {
 		cache, _ = lru.New2Q(cacheSize)
 	}
 
 	return &RoundrobinSuffrage{
+		Logger: logging.NewLogger(func(c zerolog.Context) zerolog.Context {
+			return c.Str("module", "roundrobin-suffrage")
+		}),
 		localState: localState,
 		cache:      cache,
 	}
@@ -29,18 +37,18 @@ func (sf *RoundrobinSuffrage) Name() string {
 	return "roundrobin-suffrage"
 }
 
-func (sf *RoundrobinSuffrage) cacheKey(height Height, round Round) string {
+func (sf *RoundrobinSuffrage) cacheKey(height isaac.Height, round isaac.Round) string {
 	return fmt.Sprintf("%d-%d", height.Int64(), round.Uint64())
 }
 
-func (sf *RoundrobinSuffrage) Acting(height Height, round Round) ActingSuffrage {
+func (sf *RoundrobinSuffrage) Acting(height isaac.Height, round isaac.Round) isaac.ActingSuffrage {
 	if sf.cache == nil {
 		return sf.acting(height, round)
 	}
 
 	cacheKey := sf.cacheKey(height, round)
 	if af, found := sf.cache.Get(cacheKey); found {
-		return af.(ActingSuffrage)
+		return af.(isaac.ActingSuffrage)
 	}
 
 	af := sf.acting(height, round)
@@ -49,9 +57,9 @@ func (sf *RoundrobinSuffrage) Acting(height Height, round Round) ActingSuffrage 
 	return af
 }
 
-func (sf *RoundrobinSuffrage) acting(height Height, round Round) ActingSuffrage {
-	all := []Node{sf.localState.Node()}
-	sf.localState.Nodes().Traverse(func(n Node) bool {
+func (sf *RoundrobinSuffrage) acting(height isaac.Height, round isaac.Round) isaac.ActingSuffrage {
+	all := []isaac.Node{sf.localState.Node()}
+	sf.localState.Nodes().Traverse(func(n isaac.Node) bool {
 		all = append(all, n)
 
 		return true
@@ -76,7 +84,7 @@ func (sf *RoundrobinSuffrage) acting(height Height, round Round) ActingSuffrage 
 
 	pos := sf.pos(height, round, len(all))
 
-	var selected []Node
+	var selected []isaac.Node
 	if len(all) == numberOfActingSuffrageNodes {
 		selected = all
 	} else {
@@ -90,32 +98,22 @@ func (sf *RoundrobinSuffrage) acting(height Height, round Round) ActingSuffrage 
 		}
 	}
 
-	nodes := map[Address]Node{}
-	for _, n := range selected {
-		nodes[n.Address()] = n
-	}
-
-	return ActingSuffrage{
-		height:   height,
-		round:    round,
-		proposer: all[pos],
-		nodes:    nodes,
-	}
+	return isaac.NewActingSuffrage(height, round, all[pos], selected)
 }
 
-func (sf *RoundrobinSuffrage) pos(height Height, round Round, all int) int {
+func (sf *RoundrobinSuffrage) pos(height isaac.Height, round isaac.Round, all int) int {
 	sum := uint64(height.Int64()) + round.Uint64()
 
 	return int(sum % uint64(all))
 }
 
-func (sf *RoundrobinSuffrage) IsActing(height Height, round Round, node Address) bool {
+func (sf *RoundrobinSuffrage) IsActing(height isaac.Height, round isaac.Round, node isaac.Address) bool {
 	af := sf.Acting(height, round)
 
 	return af.Exists(node)
 }
 
-func (sf *RoundrobinSuffrage) IsProposer(height Height, round Round, node Address) bool {
+func (sf *RoundrobinSuffrage) IsProposer(height isaac.Height, round isaac.Round, node isaac.Address) bool {
 	af := sf.Acting(height, round)
 
 	return af.Proposer().Address().Equal(node)

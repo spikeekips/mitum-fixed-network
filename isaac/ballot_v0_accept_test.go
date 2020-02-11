@@ -27,18 +27,26 @@ func (t *testBallotV0ACCEPT) SetupSuite() {
 }
 
 func (t *testBallotV0ACCEPT) TestNew() {
+	vp := NewDummyVoteProof(
+		Height(10),
+		Round(0),
+		StageINIT,
+		VoteProofMajority,
+	)
+
 	ib := ACCEPTBallotV0{
 		BaseBallotV0: BaseBallotV0{
 			node: NewShortAddress("test-for-accept-ballot"),
 		},
 		ACCEPTBallotFactV0: ACCEPTBallotFactV0{
 			BaseBallotFactV0: BaseBallotFactV0{
-				height: Height(10),
-				round:  Round(0),
+				height: vp.Height(),
+				round:  vp.Round(),
 			},
 			proposal: valuehash.RandomSHA256(),
 			newBlock: valuehash.RandomSHA256(),
 		},
+		voteProof: vp,
 	}
 
 	t.NotEmpty(ib)
@@ -48,18 +56,26 @@ func (t *testBallotV0ACCEPT) TestNew() {
 }
 
 func (t *testBallotV0ACCEPT) TestFact() {
+	vp := NewDummyVoteProof(
+		Height(10),
+		Round(0),
+		StageINIT,
+		VoteProofMajority,
+	)
+
 	ib := ACCEPTBallotV0{
 		BaseBallotV0: BaseBallotV0{
 			node: NewShortAddress("test-for-accept-ballot"),
 		},
 		ACCEPTBallotFactV0: ACCEPTBallotFactV0{
 			BaseBallotFactV0: BaseBallotFactV0{
-				height: Height(10),
-				round:  Round(0),
+				height: vp.Height(),
+				round:  vp.Round(),
 			},
 			proposal: valuehash.RandomSHA256(),
 			newBlock: valuehash.RandomSHA256(),
 		},
+		voteProof: vp,
 	}
 
 	t.Implements((*FactSeal)(nil), ib)
@@ -86,18 +102,26 @@ func (t *testBallotV0ACCEPT) TestFact() {
 }
 
 func (t *testBallotV0ACCEPT) TestGenerateHash() {
+	vp := NewDummyVoteProof(
+		Height(10),
+		Round(0),
+		StageINIT,
+		VoteProofMajority,
+	)
+
 	ib := ACCEPTBallotV0{
 		BaseBallotV0: BaseBallotV0{
 			node: NewShortAddress("test-for-accept-ballot"),
 		},
 		ACCEPTBallotFactV0: ACCEPTBallotFactV0{
 			BaseBallotFactV0: BaseBallotFactV0{
-				height: Height(10),
-				round:  Round(0),
+				height: vp.Height(),
+				round:  vp.Round(),
 			},
 			proposal: valuehash.RandomSHA256(),
 			newBlock: valuehash.RandomSHA256(),
 		},
+		voteProof: vp,
 	}
 
 	h, err := ib.GenerateBodyHash(nil)
@@ -112,18 +136,26 @@ func (t *testBallotV0ACCEPT) TestGenerateHash() {
 }
 
 func (t *testBallotV0ACCEPT) TestSign() {
+	vp := NewDummyVoteProof(
+		Height(10),
+		Round(0),
+		StageINIT,
+		VoteProofMajority,
+	)
+
 	ib := ACCEPTBallotV0{
 		BaseBallotV0: BaseBallotV0{
 			node: NewShortAddress("test-for-accept-ballot"),
 		},
 		ACCEPTBallotFactV0: ACCEPTBallotFactV0{
 			BaseBallotFactV0: BaseBallotFactV0{
-				height: Height(10),
-				round:  Round(0),
+				height: vp.Height(),
+				round:  vp.Round(),
 			},
 			proposal: valuehash.RandomSHA256(),
 			newBlock: valuehash.RandomSHA256(),
 		},
+		voteProof: vp,
 	}
 
 	t.Nil(ib.Hash())

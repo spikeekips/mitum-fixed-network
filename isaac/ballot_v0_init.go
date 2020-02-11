@@ -130,14 +130,17 @@ func (ib INITBallotV0) BodyHash() valuehash.Hash {
 }
 
 func (ib INITBallotV0) IsValid(b []byte) error {
+	if ib.voteProof == nil {
+		return xerrors.Errorf("empty VoteProof")
+	}
+
 	if err := isvalid.Check([]isvalid.IsValider{
 		ib.BaseBallotV0,
 		ib.INITBallotFactV0,
+		ib.voteProof,
 	}, b); err != nil {
 		return err
 	}
-
-	// TODO validate VoteProof
 
 	return nil
 }
@@ -151,16 +154,11 @@ func (ib INITBallotV0) GenerateHash(b []byte) (valuehash.Hash, error) {
 		return nil, err
 	}
 
-	var vpb []byte
-	if ib.voteProof != nil {
-		vpb = ib.voteProof.Bytes()
-	}
-
 	e := util.ConcatSlice([][]byte{
 		ib.BaseBallotV0.Bytes(),
 		ib.INITBallotFactV0.Bytes(),
 		ib.bodyHash.Bytes(),
-		vpb,
+		ib.voteProof.Bytes(),
 		b,
 	})
 
@@ -172,14 +170,9 @@ func (ib INITBallotV0) GenerateBodyHash(b []byte) (valuehash.Hash, error) {
 		return nil, err
 	}
 
-	var vpb []byte
-	if ib.voteProof != nil {
-		vpb = ib.voteProof.Bytes()
-	}
-
 	e := util.ConcatSlice([][]byte{
 		ib.INITBallotFactV0.Bytes(),
-		vpb,
+		ib.voteProof.Bytes(),
 		b,
 	})
 

@@ -45,6 +45,13 @@ func (t *testBallotbox) TestNew() {
 }
 
 func (t *testBallotbox) newINITBallot(height Height, round Round, node Address) INITBallotV0 {
+	vp := NewDummyVoteProof(
+		height-1,
+		Round(0),
+		StageACCEPT,
+		VoteProofMajority,
+	)
+
 	ib := INITBallotV0{
 		BaseBallotV0: BaseBallotV0{
 			node: node,
@@ -55,8 +62,9 @@ func (t *testBallotbox) newINITBallot(height Height, round Round, node Address) 
 				round:  round,
 			},
 			previousBlock: valuehash.RandomSHA256(),
-			previousRound: Round(0),
+			previousRound: vp.Round(),
 		},
+		voteProof: vp,
 	}
 	t.NoError(ib.Sign(t.pk, nil))
 
@@ -180,6 +188,13 @@ func (t *testBallotbox) TestINITVoteProofMajority() {
 }
 
 func (t *testBallotbox) newACCEPTBallot(height Height, round Round, node Address) ACCEPTBallotV0 {
+	vp := NewDummyVoteProof(
+		height,
+		round,
+		StageINIT,
+		VoteProofMajority,
+	)
+
 	ib := ACCEPTBallotV0{
 		BaseBallotV0: BaseBallotV0{
 			node: node,
@@ -192,6 +207,7 @@ func (t *testBallotbox) newACCEPTBallot(height Height, round Round, node Address
 			proposal: valuehash.RandomSHA256(),
 			newBlock: valuehash.RandomSHA256(),
 		},
+		voteProof: vp,
 	}
 	t.NoError(ib.Sign(t.pk, nil))
 

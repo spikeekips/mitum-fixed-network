@@ -45,6 +45,23 @@ func (t *testConsensusStateConsensusHandler) states() (*LocalState, *LocalState)
 	t.NoError(localState.Nodes().Add(remoteNode))
 	t.NoError(remoteState.Nodes().Add(localNode))
 
+	lastINITVoteProof := NewDummyVoteProof(
+		localState.LastBlock().Height(),
+		localState.LastBlock().Round(),
+		StageINIT,
+		VoteProofMajority,
+	)
+	_ = localState.SetLastINITVoteProof(lastINITVoteProof)
+	_ = remoteState.SetLastINITVoteProof(lastINITVoteProof)
+	lastACCEPTVoteProof := NewDummyVoteProof(
+		localState.LastBlock().Height(),
+		localState.LastBlock().Round(),
+		StageACCEPT,
+		VoteProofMajority,
+	)
+	_ = localState.SetLastACCEPTVoteProof(lastACCEPTVoteProof)
+	_ = remoteState.SetLastACCEPTVoteProof(lastACCEPTVoteProof)
+
 	// TODO close up node's Network
 
 	return localState, remoteState

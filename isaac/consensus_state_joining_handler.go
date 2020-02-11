@@ -53,19 +53,22 @@ strategy,
 */
 type ConsensusStateJoiningHandler struct {
 	*BaseStateHandler
+	proposalProcessor           ProposalProcessor
 	broadcastingINITBallotTimer *localtime.CallbackTimer
 	cr                          Round
 }
 
 func NewConsensusStateJoiningHandler(
 	localState *LocalState,
+	proposalProcessor ProposalProcessor,
 ) (*ConsensusStateJoiningHandler, error) {
 	if lastBlock := localState.LastBlock(); lastBlock == nil {
 		return nil, xerrors.Errorf("last block is empty")
 	}
 
 	cs := &ConsensusStateJoiningHandler{
-		BaseStateHandler: NewBaseStateHandler(localState, ConsensusStateJoining),
+		BaseStateHandler:  NewBaseStateHandler(localState, ConsensusStateJoining),
+		proposalProcessor: proposalProcessor,
 	}
 	cs.BaseStateHandler.Logger = logging.NewLogger(func(c zerolog.Context) zerolog.Context {
 		return c.Str("module", "consensus-state-joining-handler")
@@ -194,7 +197,6 @@ func (cs *ConsensusStateJoiningHandler) NewSeal(sl seal.Seal) error {
 	l.Debug().Msg("got ballot")
 
 	if ballot.Stage() == StageINIT {
-		// TODO vp should not be nil
 		switch vp.Stage() {
 		case StageACCEPT:
 			return cs.handleINITBallotAndACCEPTVoteProof(ballot.(INITBallot), vp)
@@ -391,7 +393,38 @@ func (cs *ConsensusStateJoiningHandler) handleACCEPTVoteProof(vp VoteProof) erro
 	default:
 		l.Debug().Msg("expected height; processing Proposal")
 
-		// TODO processing Proposal and then wait next INIT VoteProof.
+		// processing Proposal
+		fact, ok := vp.Majority().(ACCEPTBallotFact)
+		if !ok {
+			return xerrors.Errorf("needs ACCEPTBallotFact: fact=%T", vp.Majority())
+		}
+
+		lc := loggerWithVoteProof(vp, l).With().
+			Str("proposal", fact.Proposal().String()).
+			Str("new_block", fact.NewBlock().String()).
+			Logger()
+
+		newBlock, err := cs.proposalProcessor.Process(fact.Proposal(), nil)
+		if err != nil {
+			return err
+		}
+
+		if !fact.NewBlock().Equal(newBlock.Hash()) {
+			err := xerrors.Errorf(
+				"processed new block does not match; fact=%s processed=%s",
+				fact.NewBlock(),
+				newBlock.Hash(),
+			)
+			lc.Error().Err(err).Send()
+
+			return err
+		}
+
+		_ = cs.localState.SetLastACCEPTVoteProof(vp)
+		_ = cs.localState.SetLastBlock(newBlock)
+
+		lc.Info().Msg("new block stored using ACCEPT VoteProof")
+
 		return nil
 	}
 }

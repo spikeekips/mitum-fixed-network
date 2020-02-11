@@ -39,18 +39,26 @@ func (t *testBallotV0INITJSON) TestEncode() {
 	t.NoError(encs.AddHinter(key.BTCPublickey{}))
 	t.NoError(encs.AddHinter(INITBallotV0{}))
 
+	vp := NewDummyVoteProof(
+		Height(10),
+		Round(0),
+		StageACCEPT,
+		VoteProofMajority,
+	)
+
 	ib := INITBallotV0{
 		BaseBallotV0: BaseBallotV0{
 			node: NewShortAddress("test-for-init-ballot"),
 		},
 		INITBallotFactV0: INITBallotFactV0{
 			BaseBallotFactV0: BaseBallotFactV0{
-				height: Height(10),
+				height: vp.Height() + 1,
 				round:  Round(0),
 			},
 			previousBlock: valuehash.RandomSHA256(),
-			previousRound: Round(0),
+			previousRound: vp.Round(),
 		},
+		voteProof: vp,
 	}
 
 	t.NoError(ib.Sign(t.pk, nil))
@@ -63,6 +71,9 @@ func (t *testBallotV0INITJSON) TestEncode() {
 
 	nib, ok := ht.(INITBallotV0)
 	t.True(ok)
+
+	nib.voteProof = vp // TODO remove this; VoteProof also can be unmarshaled
+
 	t.NoError(nib.IsValid(nil))
 	t.Equal(ib.Node(), nib.Node())
 	t.Equal(ib.Signature(), nib.Signature())

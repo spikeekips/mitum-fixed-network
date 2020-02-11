@@ -115,9 +115,14 @@ func (ab ACCEPTBallotV0) BodyHash() valuehash.Hash {
 }
 
 func (ab ACCEPTBallotV0) IsValid(b []byte) error {
+	if ab.voteProof == nil {
+		return xerrors.Errorf("empty VoteProof")
+	}
+
 	if err := isvalid.Check([]isvalid.IsValider{
 		ab.BaseBallotV0,
 		ab.ACCEPTBallotFactV0,
+		ab.voteProof,
 	}, b); err != nil {
 		return err
 	}
@@ -134,16 +139,11 @@ func (ab ACCEPTBallotV0) GenerateHash(b []byte) (valuehash.Hash, error) {
 		return nil, err
 	}
 
-	var vpb []byte
-	if ab.voteProof != nil {
-		vpb = ab.voteProof.Bytes()
-	}
-
 	e := util.ConcatSlice([][]byte{
 		ab.BaseBallotV0.Bytes(),
 		ab.ACCEPTBallotFactV0.Bytes(),
 		ab.bodyHash.Bytes(),
-		vpb,
+		ab.voteProof.Bytes(),
 		b,
 	})
 
@@ -155,14 +155,9 @@ func (ab ACCEPTBallotV0) GenerateBodyHash(b []byte) (valuehash.Hash, error) {
 		return nil, err
 	}
 
-	var vpb []byte
-	if ab.voteProof != nil {
-		vpb = ab.voteProof.Bytes()
-	}
-
 	e := util.ConcatSlice([][]byte{
 		ab.ACCEPTBallotFactV0.Bytes(),
-		vpb,
+		ab.voteProof.Bytes(),
 		b,
 	})
 

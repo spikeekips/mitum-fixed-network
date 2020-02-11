@@ -37,7 +37,6 @@ func (prf ProposalFactV0) IsValid(b []byte) error {
 }
 
 func (prf ProposalFactV0) Hash(b []byte) (valuehash.Hash, error) {
-	// TODO check IsValid?
 	e := util.ConcatSlice([][]byte{prf.Bytes(), b})
 
 	return valuehash.NewSHA256(e), nil

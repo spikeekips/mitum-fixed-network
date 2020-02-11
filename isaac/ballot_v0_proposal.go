@@ -20,7 +20,7 @@ type ProposalFactV0 struct {
 	seals []valuehash.Hash
 }
 
-func (pbf ProposalFactV0) Hint() hint.Hint {
+func (prf ProposalFactV0) Hint() hint.Hint {
 	return ProposalFactV0Hint
 }
 

@@ -25,17 +25,17 @@ type VoteProofV0PackJSON struct {
 }
 
 func (vp VoteProofV0) MarshalJSON() ([]byte, error) {
-	var facts [][2]interface{}
+	var facts [][2]interface{} // nolint
 	for h, f := range vp.facts {
 		facts = append(facts, [2]interface{}{h, f})
 	}
 
-	var ballots [][2]interface{}
+	var ballots [][2]interface{} // nolint
 	for a, h := range vp.ballots {
 		ballots = append(ballots, [2]interface{}{a, h})
 	}
 
-	var votes [][2]interface{}
+	var votes [][2]interface{} // nolint
 	for a := range vp.votes {
 		votes = append(votes, [2]interface{}{a, vp.votes[a]})
 	}
@@ -66,7 +66,7 @@ type VoteProofV0UnpackJSON struct {
 	VS [][2]json.RawMessage `json:"votes"`
 }
 
-func (vp *VoteProofV0) UnpackJSON(b []byte, enc *encoder.JSONEncoder) error {
+func (vp *VoteProofV0) UnpackJSON(b []byte, enc *encoder.JSONEncoder) error { // nolint
 	var vpp VoteProofV0UnpackJSON
 	if err := enc.Unmarshal(b, &vpp); err != nil {
 		return err
@@ -79,7 +79,8 @@ func (vp *VoteProofV0) UnpackJSON(b []byte, enc *encoder.JSONEncoder) error {
 	}
 
 	facts := map[valuehash.Hash]Fact{}
-	for _, l := range vpp.FS {
+	for i := range vpp.FS {
+		l := vpp.FS[i]
 		if len(l) != 2 {
 			return xerrors.Errorf("invalid raw of facts; not [2]json.RawMessage")
 		}
@@ -98,17 +99,18 @@ func (vp *VoteProofV0) UnpackJSON(b []byte, enc *encoder.JSONEncoder) error {
 	}
 
 	ballots := map[Address]valuehash.Hash{}
-	for _, l := range vpp.BS {
+	for i := range vpp.BS {
+		l := vpp.BS[i]
 		if len(l) != 2 {
 			return xerrors.Errorf("invalid raw of ballots; not [2]json.RawMessage")
 		}
 
 		var address Address
-		var ballot valuehash.Hash
-
 		if address, err = decodeAddress(enc, l[0]); err != nil {
 			return err
 		}
+
+		var ballot valuehash.Hash
 		if ballot, err = decodeHash(enc, l[1]); err != nil {
 			return err
 		}
@@ -117,17 +119,18 @@ func (vp *VoteProofV0) UnpackJSON(b []byte, enc *encoder.JSONEncoder) error {
 	}
 
 	votes := map[Address]VoteProofNodeFact{}
-	for _, l := range vpp.VS {
+	for i := range vpp.VS {
+		l := vpp.VS[i]
 		if len(l) != 2 {
 			return xerrors.Errorf("invalid raw of votes; not [2]json.RawMessage")
 		}
 
 		var address Address
-		var nodeFact VoteProofNodeFact
-
 		if address, err = decodeAddress(enc, l[0]); err != nil {
 			return err
 		}
+
+		var nodeFact VoteProofNodeFact
 		if err = enc.Decode(l[1], &nodeFact); err != nil {
 			return err
 		}

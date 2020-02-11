@@ -76,6 +76,10 @@ func (cs *ConsensusStateBootingHandler) initialize() error {
 
 	// TODO load Policies
 
+	if err := cs.check(); err != nil {
+		return err
+	}
+
 	return cs.ChangeState(ConsensusStateJoining, nil)
 }
 

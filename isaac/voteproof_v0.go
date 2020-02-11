@@ -17,13 +17,13 @@ type VoteProofV0 struct {
 	round      Round
 	threshold  Threshold
 	result     VoteProofResultType
-	finishedAt time.Time
 	closed     bool
 	stage      Stage
 	majority   Fact
 	facts      map[valuehash.Hash]Fact       // key: Fact.Hash(), value: Fact
 	ballots    map[Address]valuehash.Hash    // key: node Address, value: ballot hash
 	votes      map[Address]VoteProofNodeFact // key: node Address, value: VoteProofNodeFact
+	finishedAt time.Time
 }
 
 func (vp VoteProofV0) Hint() hint.Hint {

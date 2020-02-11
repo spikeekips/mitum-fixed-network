@@ -10,12 +10,19 @@ import (
 	"golang.org/x/xerrors"
 )
 
-var ACCEPTBallotV0Hint hint.Hint = hint.MustHint(ACCEPTBallotType, "0.1")
+var (
+	ACCEPTBallotV0Hint     hint.Hint = hint.MustHint(ACCEPTBallotType, "0.1")
+	ACCEPTBallotFactV0Hint hint.Hint = hint.MustHint(ACCEPTBallotFactType, "0.1")
+)
 
 type ACCEPTBallotFactV0 struct {
 	BaseBallotFactV0
 	proposal valuehash.Hash
 	newBlock valuehash.Hash
+}
+
+func (abf ACCEPTBallotFactV0) Hint() hint.Hint {
+	return ACCEPTBallotFactV0Hint
 }
 
 func (abf ACCEPTBallotFactV0) IsValid(b []byte) error {

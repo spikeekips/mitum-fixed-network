@@ -7,6 +7,7 @@ import (
 	"github.com/spikeekips/mitum/isvalid"
 	"github.com/spikeekips/mitum/key"
 	"github.com/spikeekips/mitum/valuehash"
+	"golang.org/x/xerrors"
 )
 
 var (
@@ -61,6 +62,24 @@ func (vrt VoteProofResultType) IsValid([]byte) error {
 
 func (vrt VoteProofResultType) MarshalText() ([]byte, error) {
 	return []byte(vrt.String()), nil
+}
+
+func (vrt *VoteProofResultType) UnmarshalText(b []byte) error {
+	var t VoteProofResultType
+	switch string(b) {
+	case "NOT-YET":
+		t = VoteProofNotYet
+	case "DRAW":
+		t = VoteProofDraw
+	case "MAJORITY":
+		t = VoteProofMajority
+	default:
+		return xerrors.Errorf("<unknown VoteProofResultType>")
+	}
+
+	*vrt = t
+
+	return nil
 }
 
 type VoteProofNodeFact struct {

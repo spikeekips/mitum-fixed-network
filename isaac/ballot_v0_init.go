@@ -10,9 +10,11 @@ import (
 	"golang.org/x/xerrors"
 )
 
-var INITBallotV0Hint hint.Hint = hint.MustHint(INITBallotType, "0.1")
+var (
+	INITBallotV0Hint     hint.Hint = hint.MustHint(INITBallotType, "0.1")
+	INITBallotFactV0Hint hint.Hint = hint.MustHint(INITBallotFactType, "0.1")
+)
 
-// TODO rename to INITBallotFactV0
 type INITBallotFactV0 struct {
 	BaseBallotFactV0
 	previousBlock valuehash.Hash
@@ -30,6 +32,10 @@ func NewINITBallotFactV0(
 		previousBlock:    previousBlock,
 		previousRound:    previousRound,
 	}
+}
+
+func (ibf INITBallotFactV0) Hint() hint.Hint {
+	return INITBallotFactV0Hint
 }
 
 func (ibf INITBallotFactV0) IsValid(b []byte) error {

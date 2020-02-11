@@ -5,6 +5,7 @@ import (
 
 	"github.com/stretchr/testify/suite"
 
+	"github.com/spikeekips/mitum/encoder"
 	"github.com/spikeekips/mitum/hint"
 	"github.com/spikeekips/mitum/key"
 	"github.com/spikeekips/mitum/util"
@@ -13,11 +14,22 @@ import (
 
 type testVoteProofJSON struct {
 	suite.Suite
+
+	hs *hint.Hintset
 }
 
 func (t *testVoteProofJSON) SetupSuite() {
 	_ = hint.RegisterType(valuehash.SHA256{}.Hint().Type(), "sha256")
 	_ = hint.RegisterType(key.BTCPublickey{}.Hint().Type(), "btc-publickey")
+	_ = hint.RegisterType((ShortAddress("")).Hint().Type(), "short-address")
+	_ = hint.RegisterType(VoteProofV0{}.Hint().Type(), "voteproof")
+	_ = hint.RegisterType(tinyFact{}.Hint().Type(), "tiny-fact")
+
+	t.hs = hint.NewHintset()
+	t.hs.Add(valuehash.SHA256{})
+	t.hs.Add(ShortAddress(""))
+	t.hs.Add(key.BTCPublickey{})
+	t.hs.Add(tinyFact{})
 }
 
 func (t *testVoteProofJSON) TestMajorityButNot() {
@@ -63,6 +75,37 @@ func (t *testVoteProofJSON) TestMajorityButNot() {
 	b, err := util.JSONMarshal(vp)
 	t.NoError(err)
 	t.NotNil(b)
+
+	je := encoder.NewJSONEncoder()
+	je.SetHintset(t.hs)
+
+	var uvp VoteProofV0
+	t.NoError(je.Decode(b, &uvp))
+
+	t.Equal(vp.Height(), uvp.Height())
+	t.Equal(vp.Round(), uvp.Round())
+	t.Equal(vp.threshold, uvp.threshold)
+	t.Equal(vp.Result(), uvp.Result())
+	t.Equal(vp.Stage(), uvp.Stage())
+
+	// TODO check rest of VoteProofV0 values.
+	t.Equal(vp.Majority().Bytes(), uvp.Majority().Bytes())
+	t.Equal(len(vp.facts), len(uvp.facts))
+	for h, f := range vp.facts {
+		t.Equal(f.Bytes(), uvp.facts[h].Bytes())
+	}
+	t.Equal(len(vp.ballots), len(uvp.ballots))
+	for a, h := range vp.ballots {
+		t.True(h.Equal(uvp.ballots[a]))
+	}
+	t.Equal(len(vp.votes), len(uvp.votes))
+	for a, f := range vp.votes {
+		u := uvp.votes[a]
+
+		t.True(f.fact.Equal(u.fact))
+		t.True(f.factSignature.Equal(u.factSignature))
+		t.True(f.signer.Equal(u.signer))
+	}
 }
 
 func TestVoteProofJSON(t *testing.T) {

@@ -68,8 +68,6 @@ func (ss *MapSealStorage) Seal(sh valuehash.Hash) (seal.Seal, bool, error) {
 	return i.(seal.Seal), true, nil
 }
 
-// TODO the returned Proposal should be checked by it's SignedAt time. Too old
-// Proposal will be ignored.
 func (ss *MapSealStorage) Proposal(height Height, round Round) (Proposal, bool, error) {
 	ph, found := ss.proposals.Load(ss.proposalKey(height, round))
 	if !found {

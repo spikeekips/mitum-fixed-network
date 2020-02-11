@@ -1,5 +1,7 @@
 package isaac
 
+import "golang.org/x/xerrors"
+
 type Stage uint8
 
 const (
@@ -36,6 +38,26 @@ func (st Stage) IsValid([]byte) error {
 
 func (st Stage) MarshalText() ([]byte, error) {
 	return []byte(st.String()), nil
+}
+
+func (st *Stage) UnmarshalText(b []byte) error {
+	var t Stage
+	switch string(b) {
+	case "INIT":
+		t = StageINIT
+	case "SIGN":
+		t = StageSIGN
+	case "ACCEPT":
+		t = StageACCEPT
+	case "PROPOSAL":
+		t = StageProposal
+	default:
+		return xerrors.Errorf("<unknown stage>")
+	}
+
+	*st = t
+
+	return nil
 }
 
 func (st Stage) CanVote() bool {

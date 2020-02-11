@@ -61,7 +61,7 @@ func (je *JSONEncoder) Decode(b []byte, i interface{}) error {
 
 func (je *JSONEncoder) DecodeByHint(b []byte) (hint.Hinter, error) {
 	if je.hintset == nil {
-		return nil, xerrors.Errorf("SetHintset() first")
+		return nil, xerrors.Errorf("SetHintset() first: %q", string(b))
 	}
 
 	h, err := je.loadHint(b)

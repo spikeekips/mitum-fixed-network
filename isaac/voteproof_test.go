@@ -3,6 +3,9 @@ package isaac
 import (
 	"testing"
 
+	"github.com/spikeekips/mitum/encoder"
+	"github.com/spikeekips/mitum/hint"
+	"github.com/spikeekips/mitum/util"
 	"github.com/spikeekips/mitum/valuehash"
 	"github.com/stretchr/testify/suite"
 	"golang.org/x/xerrors"
@@ -10,6 +13,10 @@ import (
 
 type tinyFact struct {
 	A string
+}
+
+func (tf tinyFact) Hint() hint.Hint {
+	return hint.MustHint(hint.Type([2]byte{0xff, 0xf4}), "0.1")
 }
 
 func (tf tinyFact) IsValid([]byte) error {
@@ -26,6 +33,16 @@ func (tf tinyFact) Hash([]byte) (valuehash.Hash, error) {
 
 func (tf tinyFact) Bytes() []byte {
 	return []byte(tf.A)
+}
+
+func (tf tinyFact) MarshalJSON() ([]byte, error) {
+	return util.JSONMarshal(struct {
+		encoder.JSONPackHintedHead
+		A string
+	}{
+		JSONPackHintedHead: encoder.NewJSONPackHintedHead(tf.Hint()),
+		A:                  tf.A,
+	})
 }
 
 type testVoteProof struct {

@@ -10,12 +10,19 @@ import (
 	"golang.org/x/xerrors"
 )
 
-var SIGNBallotV0Hint hint.Hint = hint.MustHint(SIGNBallotType, "0.1")
+var (
+	SIGNBallotV0Hint     hint.Hint = hint.MustHint(SIGNBallotType, "0.1")
+	SIGNBallotFactV0Hint hint.Hint = hint.MustHint(SIGNBallotFactType, "0.1")
+)
 
 type SIGNBallotFactV0 struct {
 	BaseBallotFactV0
 	proposal valuehash.Hash
 	newBlock valuehash.Hash
+}
+
+func (sbf SIGNBallotFactV0) Hint() hint.Hint {
+	return SIGNBallotFactV0Hint
 }
 
 func (sbf SIGNBallotFactV0) IsValid(b []byte) error {

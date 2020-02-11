@@ -10,11 +10,18 @@ import (
 	"golang.org/x/xerrors"
 )
 
-var ProposalV0Hint hint.Hint = hint.MustHint(ProposalBallotType, "0.1")
+var (
+	ProposalV0Hint     hint.Hint = hint.MustHint(ProposalBallotType, "0.1")
+	ProposalFactV0Hint hint.Hint = hint.MustHint(ProposalBallotFactType, "0.1")
+)
 
 type ProposalFactV0 struct {
 	BaseBallotFactV0
 	seals []valuehash.Hash
+}
+
+func (pbf ProposalFactV0) Hint() hint.Hint {
+	return ProposalFactV0Hint
 }
 
 func (prf ProposalFactV0) IsValid(b []byte) error {

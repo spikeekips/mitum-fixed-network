@@ -3,6 +3,7 @@ package isaac
 import (
 	"sync"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/suite"
 
@@ -150,6 +151,8 @@ func (t *testBallotbox) TestINITVoteProofDraw() {
 		t.NoError(err)
 		t.Equal(VoteProofDraw, vp.Result())
 		t.True(vp.IsFinished())
+		t.NotNil(vp.FinishedAt())
+		t.True(time.Now().Sub(vp.FinishedAt()) < time.Second)
 	}
 
 	{ // already finished

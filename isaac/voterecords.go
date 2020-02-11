@@ -4,6 +4,7 @@ import (
 	"sort"
 	"sync"
 
+	"github.com/spikeekips/mitum/localtime"
 	"github.com/spikeekips/mitum/valuehash"
 )
 
@@ -90,6 +91,8 @@ func (vrs *VoteRecords) Vote(ballot Ballot) VoteProof {
 		}
 		vrs.vp.votes = votes
 	}
+
+	vrs.vp.finishedAt = localtime.Now()
 
 	return vrs.vp
 }

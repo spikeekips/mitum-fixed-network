@@ -16,6 +16,9 @@ type LocalPolicy struct {
 	waitBroadcastingACCEPTBallot     *util.LockedItem
 	intervalBroadcastingACCEPTBallot *util.LockedItem
 	numberOfActingSuffrageNodes      *util.LockedItem
+	// timespanValidBallot is used to check the SignedAt time of incoming
+	// Ballot should be within timespanValidBallot on now. By default, 1 minute.
+	timespanValidBallot *util.LockedItem
 }
 
 func NewLocalPolicy() *LocalPolicy {
@@ -29,6 +32,7 @@ func NewLocalPolicy() *LocalPolicy {
 		waitBroadcastingACCEPTBallot:     util.NewLockedItem(time.Second * 2),
 		intervalBroadcastingACCEPTBallot: util.NewLockedItem(time.Second * 1),
 		numberOfActingSuffrageNodes:      util.NewLockedItem(uint(1)),
+		timespanValidBallot:              util.NewLockedItem(time.Minute * 1),
 	}
 }
 
@@ -108,6 +112,20 @@ func (lp *LocalPolicy) SetNumberOfActingSuffrageNodes(i uint) (*LocalPolicy, err
 	}
 
 	_ = lp.numberOfActingSuffrageNodes.SetValue(i)
+
+	return lp, nil
+}
+
+func (lp *LocalPolicy) TimespanValidBallot() time.Duration {
+	return lp.timespanValidBallot.Value().(time.Duration)
+}
+
+func (lp *LocalPolicy) SetTimespanValidBallot(d time.Duration) (*LocalPolicy, error) {
+	if d < 1 {
+		return nil, xerrors.Errorf("TimespanValidBallot too short; %v", d)
+	}
+
+	_ = lp.timespanValidBallot.SetValue(d)
 
 	return lp, nil
 }

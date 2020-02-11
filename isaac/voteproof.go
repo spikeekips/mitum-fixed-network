@@ -1,6 +1,8 @@
 package isaac
 
 import (
+	"time"
+
 	"github.com/spikeekips/mitum/hint"
 	"github.com/spikeekips/mitum/isvalid"
 	"github.com/spikeekips/mitum/key"
@@ -16,6 +18,7 @@ type VoteProof interface {
 	isvalid.IsValider
 	Bytes() []byte
 	IsFinished() bool
+	FinishedAt() time.Time
 	IsClosed() bool
 	Height() Height
 	Round() Round

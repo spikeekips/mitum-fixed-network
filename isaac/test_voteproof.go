@@ -3,6 +3,8 @@
 package isaac
 
 import (
+	"time"
+
 	"github.com/spikeekips/mitum/hint"
 	"github.com/spikeekips/mitum/valuehash"
 )
@@ -31,6 +33,10 @@ func (vp DummyVoteProof) Hint() hint.Hint {
 
 func (vp DummyVoteProof) IsValid([]byte) error {
 	return nil
+}
+
+func (vp DummyVoteProof) FinishedAt() time.Time {
+	return time.Now()
 }
 
 func (vp DummyVoteProof) IsFinished() bool {

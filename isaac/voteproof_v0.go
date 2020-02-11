@@ -1,6 +1,8 @@
 package isaac
 
 import (
+	"time"
+
 	"golang.org/x/xerrors"
 
 	"github.com/spikeekips/mitum/hint"
@@ -11,16 +13,17 @@ import (
 var VoteProofV0Hint hint.Hint = hint.MustHint(VoteProofType, "0.1")
 
 type VoteProofV0 struct {
-	height    Height
-	round     Round
-	threshold Threshold
-	result    VoteProofResultType
-	closed    bool
-	stage     Stage
-	majority  Fact
-	facts     map[valuehash.Hash]Fact       // key: Fact.Hash(), value: Fact
-	ballots   map[Address]valuehash.Hash    // key: node Address, value: ballot hash
-	votes     map[Address]VoteProofNodeFact // key: node Address, value: VoteProofNodeFact
+	height     Height
+	round      Round
+	threshold  Threshold
+	result     VoteProofResultType
+	finishedAt time.Time
+	closed     bool
+	stage      Stage
+	majority   Fact
+	facts      map[valuehash.Hash]Fact       // key: Fact.Hash(), value: Fact
+	ballots    map[Address]valuehash.Hash    // key: node Address, value: ballot hash
+	votes      map[Address]VoteProofNodeFact // key: node Address, value: VoteProofNodeFact
 }
 
 func (vp VoteProofV0) Hint() hint.Hint {
@@ -29,6 +32,10 @@ func (vp VoteProofV0) Hint() hint.Hint {
 
 func (vp VoteProofV0) IsFinished() bool {
 	return vp.result != VoteProofNotYet
+}
+
+func (vp VoteProofV0) FinishedAt() time.Time {
+	return vp.finishedAt
 }
 
 func (vp VoteProofV0) IsClosed() bool {

@@ -239,13 +239,8 @@ func (cs *ConsensusStateJoiningHandler) handleProposal(proposal Proposal) error 
 }
 
 func (cs *ConsensusStateJoiningHandler) handleINITBallotAndACCEPTVoteProof(ballot INITBallot, vp VoteProof) error {
-	// TODO check,
-	// - ballot.Round() == 0
-	// - ballot.Height() == vp.Height() + 1
-	// - vp.Result() == VoteProofMajority
-
 	l := loggerWithVoteProof(vp, loggerWithBallot(ballot, cs.Log()))
-	l.Debug().Msg("> INIT Ballot + ACCEPT VoteProof")
+	l.Debug().Msg("INIT Ballot + ACCEPT VoteProof")
 
 	lastBlock := cs.localState.LastBlock()
 
@@ -268,18 +263,19 @@ func (cs *ConsensusStateJoiningHandler) handleINITBallotAndACCEPTVoteProof(ballo
 }
 
 func (cs *ConsensusStateJoiningHandler) handleINITBallotAndINITVoteProof(ballot INITBallot, vp VoteProof) error {
-	// TODO check,
-	// Ballot.Round() == VoteProof.Round() + 1
-	// Ballot.Height() == VoteProof.Height()
-	// VoteProof.Result == VoteProofMajority || VoteProofDraw
-
 	l := loggerWithVoteProof(vp, loggerWithBallot(ballot, cs.Log()))
-	l.Debug().Msg("> INIT Ballot + INIT VoteProof")
+	l.Debug().Msg("INIT Ballot + INIT VoteProof")
 
 	lastBlock := cs.localState.LastBlock()
 
 	switch d := ballot.Height() - (lastBlock.Height() + 1); {
 	case d == 0:
+		if err := checkBlockWithINITVoteProof(lastBlock, vp); err != nil {
+			l.Error().Err(err).Send()
+
+			return err
+		}
+
 		if ballot.Round() > cs.currentRound() {
 			l.Debug().
 				Uint64("current_round", cs.currentRound().Uint64()).
@@ -305,22 +301,40 @@ func (cs *ConsensusStateJoiningHandler) handleINITBallotAndINITVoteProof(ballot 
 }
 
 func (cs *ConsensusStateJoiningHandler) handleACCEPTBallotAndINITVoteProof(ballot ACCEPTBallot, vp VoteProof) error {
-	// TODO check,
-	// - Ballot.Height() == VoteProof.Height()
-	// - Ballot.Round() == VoteProof.Round()
-	// - VoteProof.Result() == VoteProofMajority || VoteProofDraw
-
 	l := loggerWithVoteProof(vp, loggerWithBallot(ballot, cs.Log()))
-	l.Debug().Msg("> ACCEPT Ballot + INIT VoteProof")
+	l.Debug().Msg("ACCEPT Ballot + INIT VoteProof")
 
 	lastBlock := cs.localState.LastBlock()
 
 	switch d := ballot.Height() - (lastBlock.Height() + 1); {
 	case d == 0:
-		// TODO
-		// 1. check Ballot.Proposal()
-		// 1. process Ballot.Proposal()
-		// 1. broadcast ACCEPT Ballot with the processing result
+		if err := checkBlockWithINITVoteProof(lastBlock, vp); err != nil {
+			l.Error().Err(err).Send()
+
+			return err
+		}
+
+		// NOTE expected ACCEPT Ballot received, so will process Proposal of
+		// INIT VoteProof and broadcast new ACCEPT Ballot.
+		_ = cs.localState.SetLastINITVoteProof(vp)
+
+		newBlock, err := cs.proposalProcessor.Process(ballot.Proposal(), nil)
+		if err != nil {
+			l.Debug().Err(err).Msg("tried to process Proposal, but it is not yet received")
+			return err
+		}
+
+		ab, err := NewACCEPTBallotV0FromLocalState(cs.localState, vp.Round(), newBlock, nil)
+		if err != nil {
+			cs.Log().Error().Err(err).Msg("failed to create ACCEPTBallot; will keep trying")
+			return nil
+		}
+
+		al := loggerWithBallot(ab, l)
+		cs.BroadcastSeal(ab)
+
+		al.Debug().Msg("ACCEPTBallot was broadcasted")
+
 		return nil
 	case d > 0:
 		l.Debug().
@@ -360,71 +374,57 @@ func (cs *ConsensusStateJoiningHandler) NewVoteProof(vp VoteProof) error {
 func (cs *ConsensusStateJoiningHandler) handleINITVoteProof(vp VoteProof) error {
 	l := loggerWithLocalState(cs.localState, loggerWithVoteProof(vp, cs.Log()))
 
-	switch d := vp.Height() - (cs.localState.LastBlock().Height() + 1); {
-	case d < 0:
-		// TODO check previousBlock and previousRound. If not matched with local
-		// blocks, it should be **argue** with other nodes.
-		l.Debug().Msg("lower height; still wait")
-		return nil
-	case d > 0:
-		l.Debug().Msg("hiehger height; moves to sync")
+	l.Debug().Msg("expected height; moves to consensus state")
 
-		return cs.ChangeState(ConsensusStateSyncing, vp)
-	default:
-		l.Debug().Msg("expected height; moves to consensus state")
-
-		return cs.ChangeState(ConsensusStateConsensus, vp)
-	}
+	return cs.ChangeState(ConsensusStateConsensus, vp)
 }
 
 func (cs *ConsensusStateJoiningHandler) handleACCEPTVoteProof(vp VoteProof) error {
 	l := loggerWithLocalState(cs.localState, loggerWithVoteProof(vp, cs.Log()))
 
-	switch d := vp.Height() - (cs.localState.LastBlock().Height() + 1); {
-	case d < 0:
-		// TODO check previousBlock and previousRound. If not matched with local
-		// blocks, it should be **argue** with other nodes.
-		l.Debug().Msg("lower height; still wait")
-		return nil
-	case d > 0:
-		l.Debug().Msg("hiehger height; moves to sync")
+	lastBlock := cs.localState.LastBlock()
+
+	l.Debug().Msg("expected height; processing Proposal")
+
+	// NOTE if PreviousBlock does not match with local block, moves to
+	// syncing.
+	if err := checkBlockWithINITVoteProof(lastBlock, vp); err != nil {
+		l.Error().Err(err).Send()
 
 		return cs.ChangeState(ConsensusStateSyncing, vp)
-	default:
-		l.Debug().Msg("expected height; processing Proposal")
-
-		// processing Proposal
-		fact, ok := vp.Majority().(ACCEPTBallotFact)
-		if !ok {
-			return xerrors.Errorf("needs ACCEPTBallotFact: fact=%T", vp.Majority())
-		}
-
-		lc := loggerWithVoteProof(vp, l).With().
-			Str("proposal", fact.Proposal().String()).
-			Str("new_block", fact.NewBlock().String()).
-			Logger()
-
-		newBlock, err := cs.proposalProcessor.Process(fact.Proposal(), nil)
-		if err != nil {
-			return err
-		}
-
-		if !fact.NewBlock().Equal(newBlock.Hash()) {
-			err := xerrors.Errorf(
-				"processed new block does not match; fact=%s processed=%s",
-				fact.NewBlock(),
-				newBlock.Hash(),
-			)
-			lc.Error().Err(err).Send()
-
-			return err
-		}
-
-		_ = cs.localState.SetLastACCEPTVoteProof(vp)
-		_ = cs.localState.SetLastBlock(newBlock)
-
-		lc.Info().Msg("new block stored using ACCEPT VoteProof")
-
-		return nil
 	}
+
+	// processing Proposal
+	fact, ok := vp.Majority().(ACCEPTBallotFact)
+	if !ok {
+		return xerrors.Errorf("needs ACCEPTBallotFact: fact=%T", vp.Majority())
+	}
+
+	lc := loggerWithVoteProof(vp, l).With().
+		Str("proposal", fact.Proposal().String()).
+		Str("new_block", fact.NewBlock().String()).
+		Logger()
+
+	newBlock, err := cs.proposalProcessor.Process(fact.Proposal(), nil)
+	if err != nil {
+		return err
+	}
+
+	if !fact.NewBlock().Equal(newBlock.Hash()) {
+		err := xerrors.Errorf(
+			"processed new block does not match; fact=%s processed=%s",
+			fact.NewBlock(),
+			newBlock.Hash(),
+		)
+		lc.Error().Err(err).Send()
+
+		return err
+	}
+
+	_ = cs.localState.SetLastACCEPTVoteProof(vp)
+	_ = cs.localState.SetLastBlock(newBlock)
+
+	lc.Info().Msg("new block stored using ACCEPT VoteProof")
+
+	return nil
 }

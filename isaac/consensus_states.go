@@ -29,9 +29,9 @@ func NewConsensusStates(
 	ballotbox *Ballotbox,
 	suffrage Suffrage,
 	sealStorage SealStorage,
-	booting *ConsensusStateBootingHandler,
-	joining *ConsensusStateJoiningHandler,
-	consensus *ConsensusStateConsensusHandler,
+	booting ConsensusStateHandler,
+	joining ConsensusStateHandler,
+	consensus ConsensusStateHandler,
 	syncing ConsensusStateHandler,
 	broken ConsensusStateHandler,
 ) *ConsensusStates {
@@ -233,6 +233,48 @@ func (css *ConsensusStates) broadcastSeal(sl seal.Seal, errChan chan<- error) {
 }
 
 func (css *ConsensusStates) newVoteProof(vp VoteProof) error {
+	l := loggerWithVoteProof(vp, css.Log())
+
+	lastBlock := css.localState.LastBlock()
+
+	if d := vp.Height() - (lastBlock.Height() + 1); d > 0 {
+		l.Debug().
+			Int64("local_block_height", lastBlock.Height().Int64()).
+			Msg("VoteProof has higher height from local block")
+
+		var fromState ConsensusState
+		if css.ActiveHandler() != nil {
+			fromState = css.ActiveHandler().State()
+		}
+
+		go func() {
+			css.stateChan <- NewConsensusStateChangeContext(fromState, ConsensusStateSyncing, vp)
+		}()
+
+		return nil
+	} else if d < 0 {
+		l.Debug().
+			Int64("local_block_height", lastBlock.Height().Int64()).
+			Msg("VoteProof has lower height from local block; ignore it")
+
+		return nil
+	}
+
+	if vp.Stage() == StageINIT {
+		if err := checkBlockWithINITVoteProof(lastBlock, vp); err != nil {
+			l.Error().Err(err).Send()
+			css.stateChan <- NewConsensusStateChangeContext(css.ActiveHandler().State(), ConsensusStateSyncing, vp)
+			return nil
+		}
+	}
+
+	switch vp.Stage() {
+	case StageACCEPT:
+		_ = css.localState.SetLastACCEPTVoteProof(vp)
+	case StageINIT:
+		_ = css.localState.SetLastINITVoteProof(vp)
+	}
+
 	return css.ActiveHandler().NewVoteProof(vp)
 }
 
@@ -337,4 +379,23 @@ func (css *ConsensusStates) vote(ballot Ballot) error {
 	}
 
 	return css.newVoteProof(voteProof)
+}
+
+func checkBlockWithINITVoteProof(block Block, vp VoteProof) error {
+	// check vp.PreviousBlock with local block
+	fact, ok := vp.Majority().(INITBallotFact)
+	if !ok {
+		return xerrors.Errorf("needs INITTBallotFact: fact=%T", vp.Majority())
+	}
+
+	if !fact.PreviousBlock().Equal(block.Hash()) {
+		return xerrors.Errorf(
+			"INIT VoteProof of ACCEPT Ballot has different PreviousBlock with local: previousRound=%s local=%s",
+
+			fact.PreviousBlock(),
+			block.Hash(),
+		)
+	}
+
+	return nil
 }

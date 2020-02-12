@@ -271,7 +271,6 @@ func (t *testConsensusStateConsensusHandler) TestWithProposalWaitACCEPTBallot() 
 // Proposal.
 func (t *testConsensusStateConsensusHandler) TestWithProposalWaitSIGNBallot() {
 	localState, remoteState := t.states()
-	//localState.Policy().SetWaitBroadcastingACCEPTBallot(time.Millisecond * 1)
 
 	ib, err := NewINITBallotV0FromLocalState(localState, Round(0), nil)
 	t.NoError(err)
@@ -322,6 +321,65 @@ func (t *testConsensusStateConsensusHandler) TestWithProposalWaitSIGNBallot() {
 	t.Equal(pr.Round(), rb.Round())
 	t.True(pr.Hash().Equal(rb.Proposal()))
 	t.True(returnedBlock.Hash().Equal(rb.NewBlock()))
+}
+
+func (t *testConsensusStateConsensusHandler) TestDraw() {
+	localState, remoteState := t.states()
+
+	proposalMaker := NewProposalMaker(localState)
+	cs, err := NewConsensusStateConsensusHandler(
+		localState,
+		DummyProposalProcessor{},
+		t.suffrage(remoteState, localState, remoteState), // localnode is not in ActingSuffrage.
+		proposalMaker,
+	)
+	t.NoError(err)
+	t.NotNil(cs)
+
+	sealChan := make(chan seal.Seal)
+	cs.SetSealChan(sealChan)
+
+	var vp VoteProof
+	{
+		ib, err := NewINITBallotV0FromLocalState(localState, Round(0), nil)
+		t.NoError(err)
+		fact := ib.INITBallotFactV0
+
+		vp, _ = t.newVoteProof(StageINIT, fact, localState, remoteState)
+	}
+
+	t.NoError(cs.Activate(ConsensusStateChangeContext{
+		fromState: ConsensusStateJoining,
+		toState:   ConsensusStateConsensus,
+		voteProof: vp,
+	}))
+
+	defer func() {
+		_ = cs.Deactivate(ConsensusStateChangeContext{})
+	}()
+
+	var drew VoteProofV0
+	{
+		dummyBlock, _ := NewTestBlockV0(vp.Height(), vp.Round(), valuehash.RandomSHA256(), valuehash.RandomSHA256())
+
+		ab, err := NewACCEPTBallotV0FromLocalState(localState, vp.Round(), dummyBlock, nil)
+		t.NoError(err)
+		fact := ab.ACCEPTBallotFactV0
+
+		drew, _ = t.newVoteProof(StageINIT, fact, localState, remoteState)
+		drew.result = VoteProofDraw
+	}
+
+	t.NoError(cs.NewVoteProof(drew))
+
+	r := <-sealChan
+	t.NotNil(r)
+	t.Implements((*INITBallot)(nil), r)
+
+	ib := r.(INITBallotV0)
+	t.Equal(StageINIT, ib.Stage())
+	t.Equal(vp.Height(), ib.Height())
+	t.Equal(vp.Round()+1, ib.Round())
 }
 
 func TestConsensusStateConsensusHandler(t *testing.T) {

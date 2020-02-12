@@ -149,6 +149,7 @@ func (cs *ConsensusStateConsensusHandler) waitProposal(vp VoteProof) error {
 
 			l.Debug().
 				Dur("timeout", cs.localState.Policy().TimeoutWaitingProposal()).
+				Uint64("next_round", round.Uint64()).
 				Msg("timeout; waiting Proposal; trying to move next round")
 
 			ib, err := NewINITBallotV0FromLocalState(cs.localState, round, nil)
@@ -199,18 +200,20 @@ func (cs *ConsensusStateConsensusHandler) NewVoteProof(vp VoteProof) error {
 
 	l.Debug().Msg("VoteProof received")
 
+	// NOTE if drew, goes to next round.
+	if vp.Result() == VoteProofDraw {
+		println("00000")
+		return cs.startNextRound(vp)
+	}
+
 	switch vp.Stage() {
 	case StageACCEPT:
-		_ = cs.localState.SetLastACCEPTVoteProof(vp)
-
 		if err := cs.storeNewBlock(vp); err != nil {
 			return err
 		}
 
 		return cs.keepBroadcastingINITBallotForNextBlock()
 	case StageINIT:
-		_ = cs.localState.SetLastINITVoteProof(vp)
-
 		return cs.handleINITVoteProof(vp)
 	default:
 		err := xerrors.Errorf("invalid VoteProof received")
@@ -426,4 +429,53 @@ func (cs *ConsensusStateConsensusHandler) proposal(vp VoteProof) (bool, error) {
 	cs.BroadcastSeal(proposal)
 
 	return true, nil
+}
+
+func (cs *ConsensusStateConsensusHandler) startNextRound(vp VoteProof) error {
+	cs.Log().Debug().Msg("trying to start next round")
+
+	var round Round
+	if vp.Stage() == StageACCEPT {
+		round = 0
+	} else {
+		round = vp.Round() + 1
+	}
+
+	var calledCount int64
+	timer, err := localtime.NewCallbackTimer(
+		"consensus-next-round",
+		func() (bool, error) {
+			l := loggerWithVoteProof(vp, cs.Log()).With().
+				Dur("timeout", cs.localState.Policy().TimeoutWaitingProposal()).
+				Uint64("next_round", round.Uint64()).
+				Logger()
+
+			ib, err := NewINITBallotV0FromLocalState(cs.localState, round, nil)
+			if err != nil {
+				l.Error().Err(err).Msg("failed to move next round; will keep trying")
+				return true, nil
+			}
+
+			cs.BroadcastSeal(ib)
+
+			return true, nil
+		},
+		0,
+		func() time.Duration {
+			defer atomic.AddInt64(&calledCount, 1)
+
+			// NOTE at 1st time, wait timeout duration, after then, periodically
+			// broadcast INIT Ballot.
+			if atomic.LoadInt64(&calledCount) < 1 {
+				return time.Nanosecond
+			}
+
+			return cs.localState.Policy().IntervalBroadcastingINITBallot()
+		},
+	)
+	if err != nil {
+		return err
+	}
+
+	return cs.startBallotTimer(timer)
 }

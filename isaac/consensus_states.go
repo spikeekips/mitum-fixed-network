@@ -4,11 +4,38 @@ import (
 	"sync"
 
 	"github.com/rs/zerolog"
+	"github.com/spikeekips/mitum/errors"
 	"github.com/spikeekips/mitum/logging"
 	"github.com/spikeekips/mitum/seal"
 	"github.com/spikeekips/mitum/util"
 	"golang.org/x/xerrors"
 )
+
+var (
+	IgnoreVoteProofError = errors.NewError("VoteProof should be ignored")
+)
+
+type ConsensusStateToBeChangeError struct {
+	errors.CError
+	FromState ConsensusState
+	ToState   ConsensusState
+	VoteProof VoteProof
+}
+
+func (ce ConsensusStateToBeChangeError) Error() string {
+	return ce.CError.Error()
+}
+
+func NewConsensusStateToBeChangeError(
+	fromState, toState ConsensusState, voteProof VoteProof,
+) ConsensusStateToBeChangeError {
+	return ConsensusStateToBeChangeError{
+		CError:    errors.NewError("ConsensusState needs to be changed"),
+		FromState: fromState,
+		ToState:   toState,
+		VoteProof: voteProof,
+	}
+}
 
 type ConsensusStates struct {
 	sync.RWMutex
@@ -233,39 +260,35 @@ func (css *ConsensusStates) broadcastSeal(sl seal.Seal, errChan chan<- error) {
 }
 
 func (css *ConsensusStates) newVoteProof(vp VoteProof) error {
-	l := loggerWithVoteProof(vp, css.Log())
+	vpc := VoteProofChecker{
+		Logger: logging.NewLogger(func(c zerolog.Context) zerolog.Context {
+			return c.Str("module", "consensus-states-voteproof-checker")
+		}),
+		lastBlock:         css.localState.LastBlock(),
+		lastINITVoteProof: css.localState.LastINITVoteProof(),
+		voteProof:         vp,
+		css:               css,
+	}
+	_ = vpc.SetLogger(*css.Log())
 
-	lastBlock := css.localState.LastBlock()
+	err := util.NewChecker("voteproof-checker", []util.CheckerFunc{
+		vpc.CheckHeight,
+		vpc.CheckINITVoteProof,
+	}).Check()
 
-	if d := vp.Height() - (lastBlock.Height() + 1); d > 0 {
-		l.Debug().
-			Int64("local_block_height", lastBlock.Height().Int64()).
-			Msg("VoteProof has higher height from local block")
-
-		var fromState ConsensusState
-		if css.ActiveHandler() != nil {
-			fromState = css.ActiveHandler().State()
-		}
-
+	var ctx ConsensusStateToBeChangeError
+	if xerrors.As(err, &ctx) {
 		go func() {
-			css.stateChan <- NewConsensusStateChangeContext(fromState, ConsensusStateSyncing, vp)
+			css.stateChan <- NewConsensusStateChangeContext(ctx.FromState, ctx.ToState, ctx.VoteProof)
 		}()
 
 		return nil
-	} else if d < 0 {
-		l.Debug().
-			Int64("local_block_height", lastBlock.Height().Int64()).
-			Msg("VoteProof has lower height from local block; ignore it")
-
+	} else if xerrors.Is(err, IgnoreVoteProofError) {
 		return nil
 	}
 
-	if vp.Stage() == StageINIT {
-		if err := checkBlockWithINITVoteProof(lastBlock, vp); err != nil {
-			l.Error().Err(err).Send()
-			css.stateChan <- NewConsensusStateChangeContext(css.ActiveHandler().State(), ConsensusStateSyncing, vp)
-			return nil
-		}
+	if err != nil {
+		return err
 	}
 
 	switch vp.Stage() {
@@ -336,7 +359,7 @@ func (css *ConsensusStates) validateSeal(sl seal.Seal) error {
 
 func (css *ConsensusStates) validateBallot(_ Ballot) error {
 	// TODO check validation
-	// - Ballot.Node() is in suffrage
+	// - Ballot.Node() is inside suffrage
 	// - Ballot.Height() is equal or higher than LastINITVoteProof.
 	// - Ballot.Round() is equal or higher than LastINITVoteProof.
 	return nil

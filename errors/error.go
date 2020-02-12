@@ -6,21 +6,21 @@ import (
 	"golang.org/x/xerrors"
 )
 
-// Error is simple wrapper for xerror.Is and xerror.As.
-type Error struct {
+// CError is simple wrapper for xerror.Is and xerror.As.
+type CError struct {
 	S     string
 	Err   error
 	Frame xerrors.Frame
 }
 
-func NewError(s string, a ...interface{}) Error {
-	return Error{S: fmt.Sprintf(s, a...)}
+func NewError(s string, a ...interface{}) CError {
+	return CError{S: fmt.Sprintf(s, a...)}
 }
 
 // TODO something wrong, needs rewriting
 // Wrap put error inside Error.
-func (we Error) Wrap(err error) error {
-	return Error{
+func (we CError) Wrap(err error) error {
+	return CError{
 		S:     we.S,
 		Err:   err,
 		Frame: xerrors.Caller(1),
@@ -28,8 +28,8 @@ func (we Error) Wrap(err error) error {
 }
 
 // Wrapf acts like `fmt.Errorf()`.
-func (we Error) Wrapf(s string, a ...interface{}) error {
-	return Error{
+func (we CError) Wrapf(s string, a ...interface{}) error {
+	return CError{
 		S:     we.S,
 		Err:   xerrors.Errorf(s, a...),
 		Frame: xerrors.Caller(1),
@@ -37,12 +37,12 @@ func (we Error) Wrapf(s string, a ...interface{}) error {
 }
 
 // Is is for `xerrors.Is()`.
-func (we Error) Is(err error) bool {
+func (we CError) Is(err error) bool {
 	if err == nil {
 		return false
 	}
 
-	e, ok := err.(Error)
+	e, ok := err.(CError)
 	if !ok {
 		return false
 	}
@@ -50,16 +50,16 @@ func (we Error) Is(err error) bool {
 	return e.S == we.S
 }
 
-func (we Error) Unwrap() error {
+func (we CError) Unwrap() error {
 	return we.Err
 }
 
-func (we Error) FormatError(p xerrors.Printer) error {
+func (we CError) FormatError(p xerrors.Printer) error {
 	we.Frame.Format(p)
 	return we.Unwrap()
 }
 
-func (we Error) Error() string {
+func (we CError) Error() string {
 	if we.Err == nil {
 		return we.S
 	}

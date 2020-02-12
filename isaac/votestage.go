@@ -1,6 +1,10 @@
 package isaac
 
-import "golang.org/x/xerrors"
+import (
+	"golang.org/x/xerrors"
+
+	"github.com/spikeekips/mitum/isvalid"
+)
 
 type Stage uint8
 
@@ -33,7 +37,7 @@ func (st Stage) IsValid([]byte) error {
 		return nil
 	}
 
-	return InvalidError.Wrapf("stage=%d", st)
+	return isvalid.InvalidError.Wrapf("stage=%d", st)
 }
 
 func (st Stage) MarshalText() ([]byte, error) {

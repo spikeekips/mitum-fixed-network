@@ -3,11 +3,12 @@ package isaac
 import (
 	"time"
 
+	"golang.org/x/xerrors"
+
 	"github.com/spikeekips/mitum/hint"
 	"github.com/spikeekips/mitum/isvalid"
 	"github.com/spikeekips/mitum/key"
 	"github.com/spikeekips/mitum/valuehash"
-	"golang.org/x/xerrors"
 )
 
 var (
@@ -57,7 +58,7 @@ func (vrt VoteProofResultType) IsValid([]byte) error {
 		return nil
 	}
 
-	return InvalidError.Wrapf("VoteProofResultType=%d", vrt)
+	return isvalid.InvalidError.Wrapf("VoteProofResultType=%d", vrt)
 }
 
 func (vrt VoteProofResultType) MarshalText() ([]byte, error) {

@@ -227,19 +227,9 @@ func (cs *ConsensusStateConsensusHandler) NewVoteProof(vp VoteProof) error {
 func (cs *ConsensusStateConsensusHandler) handleINITVoteProof(vp VoteProof) error {
 	l := loggerWithLocalState(cs.localState, loggerWithVoteProof(vp, cs.Log()))
 
-	switch d := (vp.Height() - (cs.localState.LastBlock().Height() + 1)); {
-	case d < 0: // old VoteProof
-		// TODO check it's previousBlock and previousRound is matched with local.
-		l.Debug().Msg("old VoteProof received; ignore it")
-		return nil
-	case d > 0: // far from local; moves to syncing
-		l.Debug().Msg("higher VoteProof received; moves to sync")
+	l.Debug().Msg("expected VoteProof received; will wait Proposal")
 
-		return cs.ChangeState(ConsensusStateSyncing, vp)
-	default: // expected VoteProof
-		l.Debug().Msg("expected VoteProof received; will wait Proposal")
-		return cs.waitProposal(vp)
-	}
+	return cs.waitProposal(vp)
 }
 
 func (cs *ConsensusStateConsensusHandler) keepBroadcastingINITBallotForNextBlock() error {
@@ -329,12 +319,13 @@ func (cs *ConsensusStateConsensusHandler) handleProposal(proposal Proposal) erro
 
 	acting := cs.suffrage.Acting(proposal.Height(), proposal.Round())
 	isActing := acting.Exists(cs.localState.Node().Address())
+
 	l.Debug().
 		Object("acting_suffrag", acting).
 		Bool("is_acting", isActing).
 		Msg("node is in acting suffrage?")
+
 	if isActing {
-		// TODO broadcast SIGN Ballot if local node is in acting suffrage.
 		if err := cs.readyToSIGNBallot(proposal, newBlock); err != nil {
 			return err
 		}
@@ -361,9 +352,7 @@ func (cs *ConsensusStateConsensusHandler) readyToSIGNBallot(proposal Proposal, n
 }
 
 func (cs *ConsensusStateConsensusHandler) readyToACCEPTBallot(proposal Proposal, newBlock Block) error {
-	// TODO if not in acting suffrage, broadcast ACCEPT Ballot after interval.
-	// TODO wait until the given interval.
-
+	// NOTE if not in acting suffrage, broadcast ACCEPT Ballot after interval.
 	var calledCount int64
 	timer, err := localtime.NewCallbackTimer(
 		"consensus-broadcasting-accept-ballot",
@@ -404,7 +393,6 @@ func (cs *ConsensusStateConsensusHandler) readyToACCEPTBallot(proposal Proposal,
 }
 
 func (cs *ConsensusStateConsensusHandler) proposal(vp VoteProof) (bool, error) {
-	// TODO find Proposal; Proposal can be received early.
 	l := loggerWithVoteProof(vp, cs.Log())
 
 	l.Debug().Msg("prepare to broadcast Proposal")

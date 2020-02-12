@@ -37,9 +37,15 @@ func (bb *Ballotbox) Vote(ballot Ballot) (VoteProof, error) {
 
 	vrs := bb.loadVoteRecords(ballot, true)
 
-	// TODO if VoteRecords is finished, clean up the vrs;
-	// - not next height or round
-	return vrs.Vote(ballot), nil
+	vp := vrs.Vote(ballot)
+
+	if vp.IsFinished() && !vp.IsClosed() {
+		if err := bb.clean(vp.Height(), vp.Round()); err != nil {
+			return nil, err
+		}
+	}
+
+	return vp, nil
 }
 
 func (bb *Ballotbox) loadVoteRecords(ballot Ballot, ifNotCreate bool) *VoteRecords {
@@ -57,6 +63,51 @@ func (bb *Ballotbox) loadVoteRecords(ballot Ballot, ifNotCreate bool) *VoteRecor
 	}
 
 	return vrs
+}
+
+func (bb *Ballotbox) clean(height Height, round Round) error {
+	gh := height.Int64()
+	gr := round.Uint64()
+
+	var err error
+	var removes []interface{}
+	bb.vrs.Range(func(k, v interface{}) bool {
+		var h int64
+		var r uint64
+		var s uint8
+
+		var n int
+		n, err = fmt.Sscanf(k.(string), "%d-%d-%d", &h, &r, &s)
+		if err != nil {
+			return false
+		}
+		if n != 3 {
+			err = xerrors.Errorf("invalid formatted key found: key=%q", k)
+			return false
+		}
+
+		if h != gh {
+			removes = append(removes, k)
+		}
+		if r != gr {
+			removes = append(removes, k)
+		}
+
+		return true
+	})
+
+	if err != nil {
+		return err
+	}
+
+	if len(removes) < 1 {
+		return nil
+	}
+	for _, k := range removes {
+		bb.vrs.Delete(k)
+	}
+
+	return nil
 }
 
 func (bb *Ballotbox) vrsKey(ballot Ballot) string {

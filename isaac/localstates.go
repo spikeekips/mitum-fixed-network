@@ -25,8 +25,7 @@ func NewLocalPolicy() *LocalPolicy {
 	threshold, _ := NewThreshold(1, 100)
 	return &LocalPolicy{
 		// NOTE default threshold assumes only one node exists, it means the network is just booted.
-		threshold: util.NewLockedItem(threshold),
-		// TODO these values must be reset by last block's data
+		threshold:                        util.NewLockedItem(threshold),
 		timeoutWaitingProposal:           util.NewLockedItem(time.Second * 5),
 		intervalBroadcastingINITBallot:   util.NewLockedItem(time.Second * 1),
 		waitBroadcastingACCEPTBallot:     util.NewLockedItem(time.Second * 2),
@@ -245,7 +244,6 @@ type LocalState struct {
 }
 
 func NewLocalState(node *LocalNode, policy *LocalPolicy) *LocalState {
-	// TODO fill this values from storage
 	return &LocalState{
 		node:                node,
 		policy:              policy,

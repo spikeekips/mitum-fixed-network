@@ -3,12 +3,14 @@ package isaac
 import (
 	"testing"
 
-	"github.com/spikeekips/mitum/encoder"
-	"github.com/spikeekips/mitum/hint"
-	"github.com/spikeekips/mitum/util"
-	"github.com/spikeekips/mitum/valuehash"
 	"github.com/stretchr/testify/suite"
 	"golang.org/x/xerrors"
+
+	"github.com/spikeekips/mitum/encoder"
+	"github.com/spikeekips/mitum/hint"
+	"github.com/spikeekips/mitum/isvalid"
+	"github.com/spikeekips/mitum/util"
+	"github.com/spikeekips/mitum/valuehash"
 )
 
 type tinyFact struct {
@@ -21,7 +23,7 @@ func (tf tinyFact) Hint() hint.Hint {
 
 func (tf tinyFact) IsValid([]byte) error {
 	if len(tf.A) < 1 {
-		return InvalidError.Wrapf("empty A")
+		return isvalid.InvalidError.Wrapf("empty A")
 	}
 
 	return nil
@@ -52,20 +54,20 @@ type testVoteProof struct {
 func (t *testVoteProof) TestInvalidHeight() {
 	vp := VoteProofV0{height: Height(-3)}
 	err := vp.IsValid(nil)
-	t.True(xerrors.Is(err, InvalidError))
+	t.True(xerrors.Is(err, isvalid.InvalidError))
 }
 
 func (t *testVoteProof) TestInvalidStage() {
 	vp := VoteProofV0{stage: Stage(100)}
 	err := vp.IsValid(nil)
-	t.True(xerrors.Is(err, InvalidError))
+	t.True(xerrors.Is(err, isvalid.InvalidError))
 }
 
 func (t *testVoteProof) TestInvalidThreshold() {
 	threshold, _ := NewThreshold(10, 140)
 	vp := VoteProofV0{stage: StageINIT, threshold: threshold}
 	err := vp.IsValid(nil)
-	t.True(xerrors.Is(err, InvalidError))
+	t.True(xerrors.Is(err, isvalid.InvalidError))
 }
 
 func (t *testVoteProof) TestInvalidResult() {
@@ -76,7 +78,7 @@ func (t *testVoteProof) TestInvalidResult() {
 		result:    VoteProofResultType(10),
 	}
 	err := vp.IsValid(nil)
-	t.True(xerrors.Is(err, InvalidError))
+	t.True(xerrors.Is(err, isvalid.InvalidError))
 }
 
 func (t *testVoteProof) TestEmptyMajority() {
@@ -88,7 +90,7 @@ func (t *testVoteProof) TestEmptyMajority() {
 		majority:  nil,
 	}
 	err := vp.IsValid(nil)
-	t.True(xerrors.Is(err, InvalidError))
+	t.True(xerrors.Is(err, isvalid.InvalidError))
 	t.Contains(err.Error(), "empty majority")
 }
 
@@ -101,7 +103,7 @@ func (t *testVoteProof) TestInvalidMajority() {
 		majority:  tinyFact{A: ""},
 	}
 	err := vp.IsValid(nil)
-	t.True(xerrors.Is(err, InvalidError))
+	t.True(xerrors.Is(err, isvalid.InvalidError))
 }
 
 func (t *testVoteProof) TestEmptyFacts() {
@@ -114,7 +116,7 @@ func (t *testVoteProof) TestEmptyFacts() {
 		majority:  tinyFact{A: "showme"},
 	}
 	err := vp.IsValid(nil)
-	t.True(xerrors.Is(err, InvalidError))
+	t.True(xerrors.Is(err, isvalid.InvalidError))
 }
 
 func (t *testVoteProof) TestEmptyBallots() {
@@ -131,7 +133,7 @@ func (t *testVoteProof) TestEmptyBallots() {
 		facts:     map[valuehash.Hash]Fact{factHash: fact},
 	}
 	err = vp.IsValid(nil)
-	t.True(xerrors.Is(err, InvalidError))
+	t.True(xerrors.Is(err, isvalid.InvalidError))
 }
 
 func (t *testVoteProof) TestEmptyVotes() {
@@ -151,7 +153,7 @@ func (t *testVoteProof) TestEmptyVotes() {
 		},
 	}
 	err = vp.IsValid(nil)
-	t.True(xerrors.Is(err, InvalidError))
+	t.True(xerrors.Is(err, isvalid.InvalidError))
 }
 
 func (t *testVoteProof) TestWrongVotesCount() {
@@ -181,7 +183,7 @@ func (t *testVoteProof) TestWrongVotesCount() {
 		},
 	}
 	err = vp.IsValid(nil)
-	t.True(xerrors.Is(err, InvalidError))
+	t.True(xerrors.Is(err, isvalid.InvalidError))
 }
 
 func (t *testVoteProof) TestInvalidFactHash() {

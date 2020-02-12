@@ -154,31 +154,31 @@ func (vp VoteProofV0) isValidFields(b []byte) error {
 	}
 
 	if vp.result != VoteProofMajority && vp.result != VoteProofDraw {
-		return InvalidError.Wrapf("invalid result; result=%v", vp.result)
+		return isvalid.InvalidError.Wrapf("invalid result; result=%v", vp.result)
 	}
 
 	if vp.majority == nil {
 		if vp.result != VoteProofDraw {
-			return InvalidError.Wrapf("empty majority, but result is not draw; result=%v", vp.result)
+			return isvalid.InvalidError.Wrapf("empty majority, but result is not draw; result=%v", vp.result)
 		}
 	} else if err := vp.majority.IsValid(b); err != nil {
 		return err
 	}
 
 	if len(vp.facts) < 1 {
-		return InvalidError.Wrapf("empty facts")
+		return isvalid.InvalidError.Wrapf("empty facts")
 	}
 
 	if len(vp.ballots) < 1 {
-		return InvalidError.Wrapf("empty ballots")
+		return isvalid.InvalidError.Wrapf("empty ballots")
 	}
 
 	if len(vp.votes) < 1 {
-		return InvalidError.Wrapf("empty votes")
+		return isvalid.InvalidError.Wrapf("empty votes")
 	}
 
 	if len(vp.ballots) != len(vp.votes) {
-		return InvalidError.Wrapf("vote count does not match: ballots=%d votes=%d", len(vp.ballots), len(vp.votes))
+		return isvalid.InvalidError.Wrapf("vote count does not match: ballots=%d votes=%d", len(vp.ballots), len(vp.votes))
 	}
 
 	for k := range vp.ballots {

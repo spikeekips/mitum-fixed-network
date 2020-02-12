@@ -7,7 +7,6 @@ import (
 	"github.com/spikeekips/mitum/valuehash"
 )
 
-// TODO rename to decodeHashJSON
 func decodeHash(enc encoder.Encoder, b []byte) (valuehash.Hash, error) {
 	if i, err := enc.DecodeByHint(b); err != nil {
 		return nil, err

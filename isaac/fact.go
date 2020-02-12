@@ -13,7 +13,6 @@ type Fact interface {
 	hint.Hinter
 	Hash([]byte) (valuehash.Hash, error)
 	Bytes() []byte
-	// TODO needs Equal()?
 }
 
 type FactSeal interface {

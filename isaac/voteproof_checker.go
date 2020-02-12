@@ -1,9 +1,36 @@
 package isaac
 
 import (
+	"github.com/spikeekips/mitum/errors"
 	"github.com/spikeekips/mitum/logging"
 	"golang.org/x/xerrors"
 )
+
+var (
+	IgnoreVoteProofError = errors.NewError("VoteProof should be ignored")
+)
+
+type ConsensusStateToBeChangeError struct {
+	errors.CError
+	FromState ConsensusState
+	ToState   ConsensusState
+	VoteProof VoteProof
+}
+
+func (ce ConsensusStateToBeChangeError) Error() string {
+	return ce.CError.Error()
+}
+
+func NewConsensusStateToBeChangeError(
+	fromState, toState ConsensusState, voteProof VoteProof,
+) ConsensusStateToBeChangeError {
+	return ConsensusStateToBeChangeError{
+		CError:    errors.NewError("ConsensusState needs to be changed"),
+		FromState: fromState,
+		ToState:   toState,
+		VoteProof: voteProof,
+	}
+}
 
 type VoteProofChecker struct {
 	*logging.Logger

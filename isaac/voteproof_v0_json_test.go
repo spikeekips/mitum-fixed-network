@@ -88,7 +88,6 @@ func (t *testVoteProofJSON) TestMajorityButNot() {
 	t.Equal(vp.Result(), uvp.Result())
 	t.Equal(vp.Stage(), uvp.Stage())
 
-	// TODO check rest of VoteProofV0 values.
 	t.Equal(vp.Majority().Bytes(), uvp.Majority().Bytes())
 	t.Equal(len(vp.facts), len(uvp.facts))
 	for h, f := range vp.facts {

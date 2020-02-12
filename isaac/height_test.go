@@ -5,6 +5,8 @@ import (
 
 	"github.com/stretchr/testify/suite"
 	"golang.org/x/xerrors"
+
+	"github.com/spikeekips/mitum/isvalid"
 )
 
 type testHeight struct {
@@ -26,7 +28,7 @@ func (t *testHeight) TestInvalid() {
 	t.NoError(h10.IsValid(nil))
 
 	hu1 := Height(-1)
-	t.True(xerrors.Is(InvalidError, hu1.IsValid(nil)))
+	t.True(xerrors.Is(isvalid.InvalidError, hu1.IsValid(nil)))
 }
 
 func TestHeight(t *testing.T) {

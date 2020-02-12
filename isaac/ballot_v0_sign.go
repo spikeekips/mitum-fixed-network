@@ -38,7 +38,6 @@ func (sbf SIGNBallotFactV0) IsValid(b []byte) error {
 }
 
 func (sbf SIGNBallotFactV0) Hash(b []byte) (valuehash.Hash, error) {
-	// TODO check IsValid?
 	e := util.ConcatSlice([][]byte{sbf.Bytes(), b})
 
 	return valuehash.NewSHA256(e), nil

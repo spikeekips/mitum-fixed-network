@@ -161,6 +161,7 @@ func (t *testBallotbox) TestINITVoteProofDraw() {
 		t.NoError(err)
 		t.Equal(VoteProofDraw, vp.Result())
 		t.True(vp.IsFinished())
+		t.True(vp.IsClosed())
 	}
 }
 
@@ -188,6 +189,55 @@ func (t *testBallotbox) TestINITVoteProofMajority() {
 		t.NoError(err)
 		t.Equal(VoteProofMajority, vp.Result())
 	}
+}
+
+func (t *testBallotbox) TestINITVoteProofClean() {
+	bb := NewBallotbox(t.newLocalState(3, 66))
+
+	// 2 ballot have the differnt previousBlock hash
+	ba0 := t.newINITBallot(Height(10), Round(0), NewShortAddress("node0"))
+	ba1 := t.newINITBallot(Height(10), Round(0), NewShortAddress("node1"))
+	bar := t.newINITBallot(Height(9), Round(0), NewShortAddress("node0"))
+
+	{ // set same previousBlock and previousRound
+		ba1.previousBlock = ba0.previousBlock
+		ba1.previousRound = ba0.previousRound
+
+		t.NoError(ba1.Sign(t.pk, nil))
+	}
+
+	{
+		vp, err := bb.Vote(ba0)
+		t.NoError(err)
+		t.Equal(VoteProofNotYet, vp.Result())
+	}
+
+	{
+		_, err := bb.Vote(bar)
+		t.NoError(err)
+	}
+
+	{
+		vp, err := bb.Vote(ba1)
+		t.NoError(err)
+		t.Equal(VoteProofMajority, vp.Result())
+	}
+
+	var remains []string
+	bb.vrs.Range(func(k, v interface{}) bool {
+		remains = append(remains, k.(string))
+		return true
+	})
+	t.Equal(1, len(remains))
+
+	var barFound bool
+	for _, r := range remains {
+		if r == "9-0-1" {
+			barFound = true
+			break
+		}
+	}
+	t.False(barFound)
 }
 
 func (t *testBallotbox) newACCEPTBallot(height Height, round Round, node Address) ACCEPTBallotV0 {

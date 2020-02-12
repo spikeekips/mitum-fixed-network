@@ -4,38 +4,11 @@ import (
 	"sync"
 
 	"github.com/rs/zerolog"
-	"github.com/spikeekips/mitum/errors"
 	"github.com/spikeekips/mitum/logging"
 	"github.com/spikeekips/mitum/seal"
 	"github.com/spikeekips/mitum/util"
 	"golang.org/x/xerrors"
 )
-
-var (
-	IgnoreVoteProofError = errors.NewError("VoteProof should be ignored")
-)
-
-type ConsensusStateToBeChangeError struct {
-	errors.CError
-	FromState ConsensusState
-	ToState   ConsensusState
-	VoteProof VoteProof
-}
-
-func (ce ConsensusStateToBeChangeError) Error() string {
-	return ce.CError.Error()
-}
-
-func NewConsensusStateToBeChangeError(
-	fromState, toState ConsensusState, voteProof VoteProof,
-) ConsensusStateToBeChangeError {
-	return ConsensusStateToBeChangeError{
-		CError:    errors.NewError("ConsensusState needs to be changed"),
-		FromState: fromState,
-		ToState:   toState,
-		VoteProof: voteProof,
-	}
-}
 
 type ConsensusStates struct {
 	sync.RWMutex
@@ -82,16 +55,6 @@ func NewConsensusStates(
 	}
 	css.FunctionDaemon = util.NewFunctionDaemon(css.start, false)
 
-	for _, handler := range css.states {
-		if handler == nil {
-			// TODO do panic
-			continue
-		}
-
-		handler.SetStateChan(css.stateChan)
-		handler.SetSealChan(css.sealChan)
-	}
-
 	return css
 }
 
@@ -105,6 +68,18 @@ func (css *ConsensusStates) SetLogger(l zerolog.Logger) *ConsensusStates {
 func (css *ConsensusStates) Start() error {
 	css.Log().Debug().Msg("trying to start")
 	defer css.Log().Debug().Msg("started")
+
+	for state, handler := range css.states {
+		if handler == nil {
+			css.Log().Warn().Str("state_handler", state.String()).Msg("empty state handler found")
+			continue
+		}
+
+		handler.SetStateChan(css.stateChan)
+		handler.SetSealChan(css.sealChan)
+
+		css.Log().Debug().Str("state_handler", state.String()).Msg("state handler registered")
+	}
 
 	if err := css.FunctionDaemon.Start(); err != nil {
 		return err
@@ -195,8 +170,8 @@ func (css *ConsensusStates) activateHandler(ctx ConsensusStateChangeContext) err
 	toHandler, found := css.states[ctx.toState]
 	if !found {
 		return xerrors.Errorf("unknown state found: %s", ctx.toState)
-	} else if toHandler == nil { // TODO remove
-		panic("next handler does not implemented")
+	} else if toHandler == nil {
+		return xerrors.Errorf("state handler not registered: %s", ctx.toState)
 	}
 
 	css.Lock()
@@ -302,7 +277,7 @@ func (css *ConsensusStates) newVoteProof(vp VoteProof) error {
 }
 
 // NewSeal receives Seal and hand it over to handler;
-// - Seal is considered it should be already checked IsValid().
+// - (TODO) Seal is considered it should be already checked IsValid().
 // - if Seal is signed by LocalNode, it will be ignored.
 func (css *ConsensusStates) NewSeal(sl seal.Seal) error {
 	if err := css.sealStorage.Add(sl); err != nil {
@@ -320,7 +295,6 @@ func (css *ConsensusStates) NewSeal(sl seal.Seal) error {
 	isFromLocal := sl.Signer().Equal(css.localState.Node().Publickey())
 
 	if !isFromLocal {
-		// TODO check validation for Seal
 		if err := css.validateSeal(sl); err != nil {
 			l.Error().Err(err).Msg("seal validation failed")
 
@@ -366,11 +340,8 @@ func (css *ConsensusStates) validateBallot(_ Ballot) error {
 }
 
 func (css *ConsensusStates) validateProposal(proposal Proposal) error {
-	// TODO Proposal should be validated by ConsensusStates.
-
 	l := loggerWithBallot(proposal, css.Log())
 
-	// TODO check Proposer is valid proposer
 	if !css.suffrage.IsProposer(proposal.Height(), proposal.Round(), proposal.Node()) {
 		err := xerrors.Errorf(
 			"wrong proposer; height=%d round=%d, but proposer=%v",

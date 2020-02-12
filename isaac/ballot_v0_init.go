@@ -50,7 +50,6 @@ func (ibf INITBallotFactV0) IsValid(b []byte) error {
 }
 
 func (ibf INITBallotFactV0) Hash(b []byte) (valuehash.Hash, error) {
-	// TODO check IsValid?
 	e := util.ConcatSlice([][]byte{ibf.Bytes(), b})
 
 	return valuehash.NewSHA256(e), nil
@@ -82,9 +81,6 @@ type INITBallotV0 struct {
 	factSignature key.Signature
 }
 
-// TODO round argument should be removed, round is already set by
-// - VoteProof.Round() + 1: if VoteProof.Stage() == StageINIT) or
-// - Round(0): if VoteProof.Stage() == StageACCEPT
 func NewINITBallotV0FromLocalState(localState *LocalState, round Round, b []byte) (INITBallotV0, error) {
 	lastBlock := localState.LastBlock()
 	if lastBlock == nil {

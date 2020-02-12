@@ -25,6 +25,7 @@ func (t *testBallotV0ACCEPTJSON) SetupSuite() {
 	_ = hint.RegisterType(encoder.JSONEncoder{}.Hint().Type(), "json-encoder")
 	_ = hint.RegisterType((NewShortAddress("")).Hint().Type(), "short-address")
 	_ = hint.RegisterType(ACCEPTBallotType, "accept-ballot")
+	_ = hint.RegisterType(DummyVoteProof{}.Hint().Type(), "dummy-voteproof")
 
 	t.pk, _ = key.NewBTCPrivatekey()
 }
@@ -38,6 +39,7 @@ func (t *testBallotV0ACCEPTJSON) TestEncode() {
 	t.NoError(encs.AddHinter(NewShortAddress("")))
 	t.NoError(encs.AddHinter(key.BTCPublickey{}))
 	t.NoError(encs.AddHinter(ACCEPTBallotV0{}))
+	t.NoError(encs.AddHinter(DummyVoteProof{}))
 
 	vp := NewDummyVoteProof(
 		Height(10),
@@ -71,7 +73,6 @@ func (t *testBallotV0ACCEPTJSON) TestEncode() {
 
 	nib, ok := ht.(ACCEPTBallotV0)
 	t.True(ok)
-	nib.voteProof = vp // TODO remove this
 
 	t.NoError(nib.IsValid(nil))
 
@@ -87,6 +88,7 @@ func (t *testBallotV0ACCEPTJSON) TestEncode() {
 	t.True(ab.Proposal().Equal(nib.Proposal()))
 	t.Equal(ab.FactSignature(), nib.FactSignature())
 	t.True(ab.FactHash().Equal(nib.FactHash()))
+	t.Equal(vp, nib.VoteProof())
 }
 
 func TestBallotV0ACCEPTJSON(t *testing.T) {

@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 
 	"github.com/spikeekips/mitum/encoder"
-	"github.com/spikeekips/mitum/errors"
 	"github.com/spikeekips/mitum/key"
 	"github.com/spikeekips/mitum/util"
 	"github.com/spikeekips/mitum/valuehash"
@@ -196,14 +195,4 @@ func (vf *VoteProofNodeFact) UnpackJSON(b []byte, enc *encoder.JSONEncoder) erro
 	vf.signer = signer
 
 	return nil
-}
-
-func decodeFact(enc *encoder.JSONEncoder, b []byte) (Fact, error) {
-	if i, err := enc.DecodeByHint(b); err != nil {
-		return nil, err
-	} else if v, ok := i.(Fact); !ok {
-		return nil, errors.InvalidTypeError.Wrapf("not Fact; type=%T", i)
-	} else {
-		return v, nil
-	}
 }

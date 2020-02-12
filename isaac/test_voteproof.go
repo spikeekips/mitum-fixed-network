@@ -5,7 +5,9 @@ package isaac
 import (
 	"time"
 
+	"github.com/spikeekips/mitum/encoder"
 	"github.com/spikeekips/mitum/hint"
+	"github.com/spikeekips/mitum/util"
 	"github.com/spikeekips/mitum/valuehash"
 )
 
@@ -76,5 +78,41 @@ func (vp DummyVoteProof) Ballots() map[Address]valuehash.Hash {
 }
 
 func (vp DummyVoteProof) CompareWithBlock(Block) error {
+	return nil
+}
+
+func (vp DummyVoteProof) MarshalJSON() ([]byte, error) {
+	return util.JSONMarshal(struct {
+		encoder.JSONPackHintedHead
+		HT Height
+		RD Round
+		SG Stage
+		RS VoteProofResultType
+	}{
+		JSONPackHintedHead: encoder.NewJSONPackHintedHead(vp.Hint()),
+		HT:                 vp.height,
+		RD:                 vp.round,
+		SG:                 vp.stage,
+		RS:                 vp.result,
+	})
+}
+
+func (vp *DummyVoteProof) UnpackJSON(b []byte, enc *encoder.JSONEncoder) error {
+	var uvp struct {
+		HT Height
+		RD Round
+		SG Stage
+		RS VoteProofResultType
+	}
+
+	if err := enc.Unmarshal(b, &uvp); err != nil {
+		return err
+	}
+
+	vp.height = uvp.HT
+	vp.round = uvp.RD
+	vp.stage = uvp.SG
+	vp.result = uvp.RS
+
 	return nil
 }

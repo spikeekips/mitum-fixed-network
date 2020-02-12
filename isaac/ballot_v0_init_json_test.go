@@ -25,6 +25,7 @@ func (t *testBallotV0INITJSON) SetupSuite() {
 	_ = hint.RegisterType(encoder.JSONEncoder{}.Hint().Type(), "json-encoder")
 	_ = hint.RegisterType((NewShortAddress("")).Hint().Type(), "short-address")
 	_ = hint.RegisterType(INITBallotType, "init-ballot")
+	_ = hint.RegisterType(DummyVoteProof{}.Hint().Type(), "dummy-voteproof")
 
 	t.pk, _ = key.NewBTCPrivatekey()
 }
@@ -38,6 +39,7 @@ func (t *testBallotV0INITJSON) TestEncode() {
 	t.NoError(encs.AddHinter(NewShortAddress("")))
 	t.NoError(encs.AddHinter(key.BTCPublickey{}))
 	t.NoError(encs.AddHinter(INITBallotV0{}))
+	t.NoError(encs.AddHinter(DummyVoteProof{}))
 
 	vp := NewDummyVoteProof(
 		Height(10),
@@ -72,8 +74,6 @@ func (t *testBallotV0INITJSON) TestEncode() {
 	nib, ok := ht.(INITBallotV0)
 	t.True(ok)
 
-	nib.voteProof = vp // TODO remove this; VoteProof also can be unmarshaled
-
 	t.NoError(nib.IsValid(nil))
 	t.Equal(ib.Node(), nib.Node())
 	t.Equal(ib.Signature(), nib.Signature())
@@ -87,6 +87,7 @@ func (t *testBallotV0INITJSON) TestEncode() {
 	t.True(ib.PreviousBlock().Equal(nib.PreviousBlock()))
 	t.Equal(ib.FactSignature(), nib.FactSignature())
 	t.True(ib.FactHash().Equal(nib.FactHash()))
+	t.Equal(vp, nib.VoteProof())
 }
 
 func TestBallotV0INITJSON(t *testing.T) {

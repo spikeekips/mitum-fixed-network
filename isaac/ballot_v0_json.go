@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 
 	"github.com/spikeekips/mitum/encoder"
-	"github.com/spikeekips/mitum/errors"
 	"github.com/spikeekips/mitum/key"
 	"github.com/spikeekips/mitum/localtime"
 	"github.com/spikeekips/mitum/valuehash"
@@ -100,34 +99,4 @@ func UnpackBaseBallotV0JSON(nib BaseBallotV0UnpackerJSON, enc *encoder.JSONEncod
 			height: nib.HT,
 			round:  nib.RD,
 		}, nil
-}
-
-func decodeHash(enc *encoder.JSONEncoder, b []byte) (valuehash.Hash, error) {
-	if i, err := enc.DecodeByHint(b); err != nil {
-		return nil, err
-	} else if v, ok := i.(valuehash.Hash); !ok {
-		return nil, errors.InvalidTypeError.Wrapf("not valuehash.Hash; type=%T", i)
-	} else {
-		return v, nil
-	}
-}
-
-func decodePublickey(enc *encoder.JSONEncoder, b []byte) (key.Publickey, error) {
-	if i, err := enc.DecodeByHint(b); err != nil {
-		return nil, err
-	} else if v, ok := i.(key.Publickey); !ok {
-		return nil, errors.InvalidTypeError.Wrapf("not key.Publickey; type=%T", i)
-	} else {
-		return v, nil
-	}
-}
-
-func decodeAddress(enc *encoder.JSONEncoder, b []byte) (Address, error) {
-	if i, err := enc.DecodeByHint(b); err != nil {
-		return nil, err
-	} else if v, ok := i.(Address); !ok {
-		return nil, errors.InvalidTypeError.Wrapf("not Address; type=%T", i)
-	} else {
-		return v, nil
-	}
 }

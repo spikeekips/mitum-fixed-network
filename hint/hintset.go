@@ -125,7 +125,9 @@ func (st *Hintset) Hinter(t Type, version Version) (Hinter, error) {
 
 	var hd Hinter
 	if len(version) < 1 {
-		hd = st.m[t][len(st.m[t])-1]
+		if l, found := st.m[t]; found {
+			hd = l[len(st.m[t])-1]
+		}
 	} else {
 		// NOTE trying to find hint, which is,
 		// - same major version

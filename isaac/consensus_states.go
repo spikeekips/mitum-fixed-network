@@ -58,11 +58,19 @@ func NewConsensusStates(
 	return css
 }
 
-func (css *ConsensusStates) SetLogger(l zerolog.Logger) *ConsensusStates {
+func (css *ConsensusStates) SetLogger(l zerolog.Logger) *logging.Logger {
 	_ = css.Logger.SetLogger(l)
 	_ = css.FunctionDaemon.SetLogger(l)
 
-	return css
+	for _, handler := range css.states {
+		if handler == nil {
+			continue
+		}
+
+		_ = handler.(logging.SetLogger).SetLogger(l)
+	}
+
+	return css.Logger
 }
 
 func (css *ConsensusStates) Start() error {
@@ -332,10 +340,6 @@ func (css *ConsensusStates) validateSeal(sl seal.Seal) error {
 }
 
 func (css *ConsensusStates) validateBallot(_ Ballot) error {
-	// TODO check validation
-	// - Ballot.Node() is inside suffrage
-	// - Ballot.Height() is equal or higher than LastINITVoteProof.
-	// - Ballot.Round() is equal or higher than LastINITVoteProof.
 	return nil
 }
 

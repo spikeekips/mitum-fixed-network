@@ -67,6 +67,7 @@ func (vp VoteProofV0) Ballots() map[Address]valuehash.Hash {
 }
 
 func (vp VoteProofV0) Bytes() []byte {
+	// TODO returns proper bytes
 	return nil
 }
 
@@ -151,6 +152,9 @@ func (vp VoteProofV0) isValidFields(b []byte) error {
 		vp.result,
 	}, b); err != nil {
 		return err
+	}
+	if vp.finishedAt.IsZero() {
+		return isvalid.InvalidError.Wrapf("empty finishedAt")
 	}
 
 	if vp.result != VoteProofMajority && vp.result != VoteProofDraw {
@@ -245,15 +249,22 @@ func (vp VoteProofV0) CompareWithBlock(block Block) error {
 // if VoteProof is next of Block, or
 // if VoteProof is belongs to Block.
 func (vp VoteProofV0) compareINITWithBlock(block Block) error {
-	if vp.Height() > block.Height()+1 || vp.Height() < block.Height() {
+	switch d := vp.Height() - block.Height(); {
+	case d == 0:
+		// INIT VoteProof of block
+		return vp.compareINITWithSameBlock(block)
+	case d == 1:
+		// next INIT VoteProof
+		return vp.compareINITWithNextBlock(block)
+	default:
 		return xerrors.Errorf(
-			"height of INIT VoteProof is different from block.Round(); VoteProof.Height=%d != block.Heightd=%d",
+			"height of INIT VoteProof is different from block.Height(); VoteProof.Height=%d != block.Heightd=%d",
 			vp.Height(), block.Height(),
 		)
-	} else if vp.Height() != block.Height()+1 {
-		return nil
 	}
+}
 
+func (vp VoteProofV0) compareINITWithSameBlock(block Block) error {
 	if vp.Round() != block.Round() {
 		return xerrors.Errorf(
 			"round of INIT VoteProof is different from block.Round(); VoteProof.Round=%d != block.Round=%d",
@@ -261,6 +272,12 @@ func (vp VoteProofV0) compareINITWithBlock(block Block) error {
 		)
 	}
 
+	// TODO compare PreviousBlock of VoteProof with PreviousBlock of block
+
+	return nil
+}
+
+func (vp VoteProofV0) compareINITWithNextBlock(block Block) error {
 	vpPreviousBlock := vp.Majority().(INITBallotFact).PreviousBlock()
 	if !vpPreviousBlock.Equal(block.PreviousBlock()) {
 		return xerrors.Errorf(

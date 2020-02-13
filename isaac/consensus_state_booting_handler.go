@@ -74,8 +74,6 @@ func (cs *ConsensusStateBootingHandler) initialize() error {
 	cs.Log().Debug().Msg("trying to initialize")
 	defer cs.Log().Debug().Msg("complete to initialize; moves to joining")
 
-	// TODO load last Policies
-
 	if err := cs.check(); err != nil {
 		return err
 	}

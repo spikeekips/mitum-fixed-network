@@ -40,6 +40,7 @@ func (bb *Ballotbox) Vote(ballot Ballot) (VoteProof, error) {
 	vp := vrs.Vote(ballot)
 
 	if vp.IsFinished() && !vp.IsClosed() {
+		// TODO Cleaning VoteRecords may take too long time.
 		if err := bb.clean(vp.Height(), vp.Round()); err != nil {
 			return nil, err
 		}

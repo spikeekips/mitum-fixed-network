@@ -21,6 +21,7 @@ type LocalPolicy struct {
 	timespanValidBallot *util.LockedItem
 }
 
+// TODO load last data from storage, especially Policies
 func NewLocalPolicy() *LocalPolicy {
 	threshold, _ := NewThreshold(1, 100)
 	return &LocalPolicy{

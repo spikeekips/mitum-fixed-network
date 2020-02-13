@@ -90,8 +90,9 @@ func NewConsensusStateJoiningHandler(
 
 func (cs *ConsensusStateJoiningHandler) SetLogger(l zerolog.Logger) *logging.Logger {
 	_ = cs.Logger.SetLogger(l)
+	_ = cs.broadcastingINITBallotTimer.SetLogger(l)
 
-	return cs.broadcastingINITBallotTimer.SetLogger(l)
+	return cs.Logger
 }
 
 func (cs *ConsensusStateJoiningHandler) Activate(ctx ConsensusStateChangeContext) error {

@@ -54,11 +54,13 @@ func NewConsensusStateConsensusHandler(
 }
 
 func (cs *ConsensusStateConsensusHandler) SetLogger(l zerolog.Logger) *logging.Logger {
+	_ = cs.Logger.SetLogger(l)
+
 	if cs.ballotTimer != nil {
 		_ = cs.ballotTimer.SetLogger(l)
 	}
 
-	return cs.Logger.SetLogger(l)
+	return cs.Logger
 }
 
 func (cs *ConsensusStateConsensusHandler) Activate(ctx ConsensusStateChangeContext) error {
@@ -103,7 +105,7 @@ func (cs *ConsensusStateConsensusHandler) startBallotTimer(timer *localtime.Call
 	cs.Lock()
 	defer cs.Unlock()
 
-	timer.SetLogger(*cs.Log())
+	_ = timer.SetLogger(*cs.Log())
 
 	cs.ballotTimer = timer
 
@@ -202,7 +204,6 @@ func (cs *ConsensusStateConsensusHandler) NewVoteProof(vp VoteProof) error {
 
 	// NOTE if drew, goes to next round.
 	if vp.Result() == VoteProofDraw {
-		println("00000")
 		return cs.startNextRound(vp)
 	}
 
@@ -310,6 +311,7 @@ func (cs *ConsensusStateConsensusHandler) handleProposal(proposal Proposal) erro
 
 	l.Debug().Msg("got proposal")
 
+	// TODO if processing takes too long?
 	newBlock, err := cs.proposalProcessor.Process(proposal.Hash(), nil)
 	if err != nil {
 		return err

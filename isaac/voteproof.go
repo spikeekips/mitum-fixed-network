@@ -90,8 +90,6 @@ type VoteProofNodeFact struct {
 }
 
 func (vf VoteProofNodeFact) IsValid(b []byte) error {
-	// TODO check,
-	// - signer is valid Ballot.Signer()?
 	if err := isvalid.Check([]isvalid.IsValider{
 		vf.fact,
 		vf.factSignature,

@@ -103,3 +103,20 @@ func (vpc *VoteProofChecker) CheckACCEPTVoteProof() (bool, error) {
 
 	return true, nil
 }
+
+type VoteProofValidationChecker struct {
+	*logging.Logger
+	voteProof VoteProof
+	b         []byte
+}
+
+func (vpc *VoteProofValidationChecker) CheckValidate() (bool, error) {
+	if err := vpc.voteProof.IsValid(vpc.b); err != nil {
+		return false, err
+	}
+
+	return true, nil
+}
+
+// TODO check, signer is inside suffrage
+// TODO check, signer of VoteProofNodeFact is valid Ballot.Signer()

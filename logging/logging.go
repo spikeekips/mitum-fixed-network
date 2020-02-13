@@ -10,6 +10,10 @@ func init() {
 	NilLog = &n
 }
 
+type SetLogger interface {
+	SetLogger(zerolog.Logger) *Logger
+}
+
 // Logger provides message logging with github.com/rs/zerolog. Logger can be
 // embedded into struct.
 type Logger struct {

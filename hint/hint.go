@@ -93,7 +93,6 @@ func (ht Hint) Equal(h Hint) bool {
 
 func (ht Hint) IsCompatible(check Hint) error {
 	if !ht.Type().Equal(check.Type()) {
-		println(">>>>>>>>")
 		return NewTypeDoesNotMatchError(ht.Type(), check.Type())
 	}
 

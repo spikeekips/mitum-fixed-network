@@ -49,7 +49,9 @@ func NewCallbackTimer(
 
 func (ct *CallbackTimer) SetLogger(l zerolog.Logger) *logging.Logger {
 	_ = ct.Logger.SetLogger(l)
-	return ct.FunctionDaemon.SetLogger(l)
+	_ = ct.FunctionDaemon.SetLogger(l)
+
+	return ct.Logger
 }
 
 func (ct *CallbackTimer) Start() error {

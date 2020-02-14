@@ -9,6 +9,7 @@ import (
 	"github.com/spikeekips/mitum/encoder"
 	"github.com/spikeekips/mitum/hint"
 	"github.com/spikeekips/mitum/key"
+	"github.com/spikeekips/mitum/localtime"
 	"github.com/spikeekips/mitum/seal"
 	"github.com/spikeekips/mitum/valuehash"
 )
@@ -111,8 +112,9 @@ func (t *testConsensusStateConsensusHandler) newVoteProof(stage Stage, fact Fact
 		facts: map[valuehash.Hash]Fact{
 			factHash: fact,
 		},
-		ballots: ballots,
-		votes:   votes,
+		ballots:    ballots,
+		votes:      votes,
+		finishedAt: localtime.Now(),
 	}
 
 	return vp, nil

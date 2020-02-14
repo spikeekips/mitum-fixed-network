@@ -120,6 +120,7 @@ func loggerWithBallot(ballot Ballot, l *zerolog.Logger) *zerolog.Logger {
 		Int64("ballot_height", ballot.Height().Int64()).
 		Uint64("ballot_round", ballot.Round().Uint64()).
 		Str("ballot_stage", ballot.Stage().String()).
+		Str("ballot_node", ballot.Node().String()).
 		Logger()
 
 	return &ll

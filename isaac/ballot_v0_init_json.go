@@ -80,3 +80,17 @@ func (ib *INITBallotV0) UnpackJSON(b []byte, enc *encoder.JSONEncoder) error {
 
 	return nil
 }
+
+type INITBallotFactV0PackerJSON struct {
+	BaseBallotFactV0PackerJSON
+	PB valuehash.Hash `json:"previous_block"`
+	PR Round          `json:"previous_round"`
+}
+
+func (ibf INITBallotFactV0) MarshalJSON() ([]byte, error) {
+	return util.JSONMarshal(INITBallotFactV0PackerJSON{
+		BaseBallotFactV0PackerJSON: NewBaseBallotFactV0PackerJSON(ibf.BaseBallotFactV0),
+		PB:                         ibf.previousBlock,
+		PR:                         ibf.previousRound,
+	})
+}

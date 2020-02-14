@@ -9,7 +9,7 @@ import (
 var jsoni = jsoniter.Config{
 	EscapeHTML:             true,
 	SortMapKeys:            false,
-	ValidateJsonRawMessage: true,
+	ValidateJsonRawMessage: false,
 }.Froze()
 
 func JSONMarshal(i interface{}) ([]byte, error) {

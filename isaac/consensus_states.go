@@ -74,6 +74,9 @@ func (css *ConsensusStates) SetLogger(l zerolog.Logger) *logging.Logger {
 }
 
 func (css *ConsensusStates) Start() error {
+	css.Lock()
+	defer css.Unlock()
+
 	css.Log().Debug().Msg("trying to start")
 	defer css.Log().Debug().Msg("started")
 
@@ -93,21 +96,18 @@ func (css *ConsensusStates) Start() error {
 		return err
 	}
 
-	css.Lock()
-	defer css.Unlock()
-
 	css.ActivateHandler(NewConsensusStateChangeContext(ConsensusStateStopped, ConsensusStateBooting, nil))
 
 	return nil
 }
 
 func (css *ConsensusStates) Stop() error {
+	css.Lock()
+	defer css.Unlock()
+
 	if err := css.FunctionDaemon.Stop(); err != nil {
 		return err
 	}
-
-	css.Lock()
-	defer css.Unlock()
 
 	if css.activeHandler != nil {
 		ctx := NewConsensusStateChangeContext(css.activeHandler.State(), ConsensusStateStopped, nil)

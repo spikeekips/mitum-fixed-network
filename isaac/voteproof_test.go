@@ -9,6 +9,7 @@ import (
 	"github.com/spikeekips/mitum/encoder"
 	"github.com/spikeekips/mitum/hint"
 	"github.com/spikeekips/mitum/isvalid"
+	"github.com/spikeekips/mitum/localtime"
 	"github.com/spikeekips/mitum/util"
 	"github.com/spikeekips/mitum/valuehash"
 )
@@ -84,10 +85,11 @@ func (t *testVoteProof) TestInvalidResult() {
 func (t *testVoteProof) TestEmptyMajority() {
 	threshold, _ := NewThreshold(10, 40)
 	vp := VoteProofV0{
-		stage:     StageINIT,
-		threshold: threshold,
-		result:    VoteProofMajority,
-		majority:  nil,
+		stage:      StageINIT,
+		threshold:  threshold,
+		result:     VoteProofMajority,
+		majority:   nil,
+		finishedAt: localtime.Now(),
 	}
 	err := vp.IsValid(nil)
 	t.True(xerrors.Is(err, isvalid.InvalidError))
@@ -212,6 +214,7 @@ func (t *testVoteProof) TestInvalidFactHash() {
 				signer:        n0.Publickey(),
 			},
 		},
+		finishedAt: localtime.Now(),
 	}
 	err := vp.IsValid(nil)
 	t.True(xerrors.Is(err, valuehash.EmptyHashError))
@@ -244,6 +247,7 @@ func (t *testVoteProof) TestUnknownFactHash() {
 				signer:        n0.Publickey(),
 			},
 		},
+		finishedAt: localtime.Now(),
 	}
 	err = vp.IsValid(nil)
 	t.Contains(err.Error(), "does not match")
@@ -272,6 +276,7 @@ func (t *testVoteProof) TestFactNotFound() {
 				fact: valuehash.RandomSHA256(),
 			},
 		},
+		finishedAt: localtime.Now(),
 	}
 	err = vp.IsValid(nil)
 	t.Contains(err.Error(), "missing fact found")
@@ -305,6 +310,7 @@ func (t *testVoteProof) TestUnknownNodeFound() {
 				fact: factHash,
 			},
 		},
+		finishedAt: localtime.Now(),
 	}
 	err = vp.IsValid(nil)
 	t.Contains(err.Error(), "unknown node found")
@@ -334,6 +340,7 @@ func (t *testVoteProof) TestSuplusFacts() {
 				fact: factHash,
 			},
 		},
+		finishedAt: localtime.Now(),
 	}
 	err = vp.IsValid(nil)
 	t.Contains(err.Error(), "unknown facts found")
@@ -367,6 +374,7 @@ func (t *testVoteProof) TestNotYetButNot() {
 				signer:        n0.Publickey(),
 			},
 		},
+		finishedAt: localtime.Now(),
 	}
 	err = vp.IsValid(nil)
 	t.Contains(err.Error(), "result should be not-yet")
@@ -411,6 +419,7 @@ func (t *testVoteProof) TestDrawButNot() {
 				signer:        n1.Publickey(),
 			},
 		},
+		finishedAt: localtime.Now(),
 	}
 	err := vp.IsValid(nil)
 	t.Contains(err.Error(), "result mismatch")
@@ -451,6 +460,7 @@ func (t *testVoteProof) TestMajorityButNot() {
 				signer:        n1.Publickey(),
 			},
 		},
+		finishedAt: localtime.Now(),
 	}
 	err := vp.IsValid(nil)
 	t.Contains(err.Error(), "result mismatch")

@@ -88,3 +88,17 @@ func (ab *ACCEPTBallotV0) UnpackJSON(b []byte, enc *encoder.JSONEncoder) error {
 
 	return nil
 }
+
+type ACCEPTBallotFactV0PackerJSON struct {
+	BaseBallotFactV0PackerJSON
+	PR valuehash.Hash `json:"proposal"`
+	NB valuehash.Hash `json:"new_block"`
+}
+
+func (abf ACCEPTBallotFactV0) MarshalJSON() ([]byte, error) {
+	return util.JSONMarshal(ACCEPTBallotFactV0PackerJSON{
+		BaseBallotFactV0PackerJSON: NewBaseBallotFactV0PackerJSON(abf.BaseBallotFactV0),
+		PR:                         abf.proposal,
+		NB:                         abf.newBlock,
+	})
+}

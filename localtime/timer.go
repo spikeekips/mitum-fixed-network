@@ -42,7 +42,7 @@ func NewCallbackTimer(
 		name:         name,
 		intervalFunc: intervalFunc,
 	}
-	ct.FunctionDaemon = util.NewFunctionDaemon(ct.callback(callback), true)
+	ct.FunctionDaemon = util.NewFunctionDaemon(ct.callback(callback), false)
 
 	return ct, nil
 }
@@ -65,7 +65,12 @@ func (ct *CallbackTimer) Stop() error {
 	ct.Log().Debug().Msg("trying to stop")
 	defer ct.Log().Debug().Msg("timer stopped")
 
-	return ct.FunctionDaemon.Stop()
+	err := ct.FunctionDaemon.Stop()
+	if xerrors.Is(err, util.DaemonAlreadyStoppedError) {
+		return nil
+	}
+
+	return err
 }
 
 func (ct *CallbackTimer) callback(cb func() (bool, error)) func(chan struct{}) error {
@@ -114,7 +119,9 @@ func (ct *CallbackTimer) callback(cb func() (bool, error)) func(chan struct{}) e
 }
 
 type CallbackTimerset struct {
-	timers []*CallbackTimer
+	sync.RWMutex
+	timers    []*CallbackTimer
+	isStarted bool
 }
 
 func NewCallbackTimerset(timers []*CallbackTimer) *CallbackTimerset {
@@ -123,7 +130,18 @@ func NewCallbackTimerset(timers []*CallbackTimer) *CallbackTimerset {
 	}
 }
 
+func (ct *CallbackTimerset) SetLogger(l zerolog.Logger) *logging.Logger {
+	for _, t := range ct.timers {
+		_ = t.SetLogger(l)
+	}
+
+	return nil
+}
+
 func (ct *CallbackTimerset) Start() error {
+	ct.Lock()
+	defer ct.Unlock()
+
 	var wg sync.WaitGroup
 	wg.Add(len(ct.timers))
 
@@ -173,10 +191,19 @@ func (ct *CallbackTimerset) Start() error {
 		return err
 	}
 
+	ct.isStarted = true
+
 	return nil
 }
 
 func (ct *CallbackTimerset) Stop() error {
+	if !ct.IsStarted() {
+		return nil
+	}
+
+	ct.Lock()
+	defer ct.Unlock()
+
 	var wg sync.WaitGroup
 	wg.Add(len(ct.timers))
 
@@ -195,9 +222,8 @@ func (ct *CallbackTimerset) Stop() error {
 		}(tr)
 	}
 
-	close(errChan)
-
 	wg.Wait()
+	close(errChan)
 
 	var err error
 	for err = range errChan {
@@ -206,5 +232,14 @@ func (ct *CallbackTimerset) Stop() error {
 		}
 	}
 
+	ct.isStarted = false
+
 	return err
+}
+
+func (ct *CallbackTimerset) IsStarted() bool {
+	ct.RLock()
+	defer ct.RUnlock()
+
+	return ct.isStarted
 }

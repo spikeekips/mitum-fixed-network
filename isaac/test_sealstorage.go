@@ -30,6 +30,7 @@ func (ss *MapSealStorage) Add(sl seal.Seal) error {
 	ss.sm.Store(sl.Hash(), sl)
 
 	if proposal, ok := sl.(Proposal); ok {
+		// TODO Proposal also be considered Proposal.Node()
 		ss.proposals.Store(ss.proposalKey(proposal.Height(), proposal.Round()), proposal.Hash())
 	}
 

@@ -35,6 +35,12 @@ func printError(err error) {
 }
 
 func setupLogging(flags Flags) (zerolog.Logger, error) {
+	zerolog.TimestampFieldName = "t"
+	zerolog.TimeFieldFormat = time.RFC3339Nano
+	zerolog.MessageFieldName = "m"
+
+	zerolog.DisableSampling(true)
+
 	var output io.Writer
 	if flags.Log == nil || *flags.Log == "" {
 		output = os.Stdout

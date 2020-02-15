@@ -141,7 +141,7 @@ end:
 			break end
 		case ctx := <-css.stateChan:
 			l := loggerWithConsensusStateChangeContext(ctx, css.Log())
-			l.Debug().Msg("chaning state requested")
+			l.Debug().Msgf("chaning state requested: %s -> %s", ctx.From(), ctx.To())
 
 			if err := css.activateHandler(ctx); err != nil {
 				l.Error().Err(err).Msg("failed to activate handler")
@@ -189,13 +189,13 @@ func (css *ConsensusStates) activateHandler(ctx ConsensusStateChangeContext) err
 		if err := handler.Deactivate(ctx); err != nil {
 			return err
 		}
-		l.Info().Str("handler", handler.State().String()).Msg("deactivated")
+		l.Info().Str("handler", handler.State().String()).Msgf("deactivated: %s", handler.State())
 	}
 
 	if err := toHandler.Activate(ctx); err != nil {
 		return err
 	}
-	l.Info().Str("handler", toHandler.State().String()).Msg("activated")
+	l.Info().Str("handler", toHandler.State().String()).Msgf("activated: %s", toHandler.State())
 
 	css.activeHandler = toHandler
 
@@ -221,22 +221,21 @@ func (css *ConsensusStates) broadcastSeal(sl seal.Seal, errChan chan<- error) {
 	}()
 
 	css.localState.Nodes().Traverse(func(n Node) bool {
-		go func(n Node) {
-			lt := l.With().
-				Str("target_node", n.Address().String()).
-				Logger()
+		lt := l.With().
+			Str("target_node", n.Address().String()).
+			Logger()
 
-			if err := n.Channel().SendSeal(sl); err != nil {
-				lt.Error().Err(err).Msg("failed to broadcast")
+		if err := n.Channel().SendSeal(sl); err != nil {
+			lt.Error().Err(err).Msg("failed to broadcast")
 
-				if errChan != nil {
-					errChan <- err
-				}
-				return
+			if errChan != nil {
+				errChan <- err
 			}
 
-			lt.Debug().Msg("broadcasted")
-		}(n)
+			return
+		}
+
+		lt.Debug().Msgf("seal broadcasted: %T", sl)
 
 		return true
 	})
@@ -310,11 +309,9 @@ func (css *ConsensusStates) NewSeal(sl seal.Seal) error {
 		}
 	}
 
-	if ballot, ok := sl.(Ballot); ok {
-		if ballot.Stage().CanVote() {
-			if err := css.vote(ballot); err != nil {
-				return err
-			}
+	if ballot, ok := sl.(Ballot); ok && ballot.Stage().CanVote() {
+		if err := css.vote(ballot); err != nil {
+			return err
 		}
 	}
 
@@ -355,6 +352,16 @@ func (css *ConsensusStates) validateProposal(proposal Proposal) error {
 		)
 
 		l.Error().Err(err).Msg("wrong proposer found")
+
+		return err
+	}
+
+	ivp := css.localState.LastINITVoteProof()
+	l = loggerWithVoteProof(ivp, l)
+	if proposal.Height() != ivp.Height() || proposal.Round() != ivp.Round() {
+		err := xerrors.Errorf("unexpected Proposal received")
+
+		l.Error().Err(err).Send()
 
 		return err
 	}

@@ -23,7 +23,7 @@ func NewLocalNode(id int) *isaac.LocalNode {
 
 	ln := isaac.NewLocalNode(NewContestAddress(id), pk)
 
-	channel := network.NewChanChannel(0, nil)
+	channel := network.NewChanChannel(100000000, nil)
 
 	return ln.SetChannel(channel)
 }
@@ -76,6 +76,7 @@ func NewNodeProcess(localState *isaac.LocalState, initialBlock isaac.Block) (*No
 		localState,
 		proposalProcessor,
 		suffrage,
+		sealStorage,
 		proposalMaker,
 	)
 	if err != nil {

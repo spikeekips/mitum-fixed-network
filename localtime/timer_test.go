@@ -94,7 +94,6 @@ func (t *testCallbackTimer) TestStoppedByCallback() {
 	t.True(xerrors.Is(ct.Start(), util.DaemonAlreadyStartedError))
 
 	time.Sleep(time.Millisecond * 100)
-	t.True(ct.IsStopped())
 	t.True(atomic.LoadInt64(&ticked) < 4)
 }
 
@@ -120,7 +119,6 @@ func (t *testCallbackTimer) TestStoppedByError() {
 	t.True(xerrors.Is(ct.Start(), util.DaemonAlreadyStartedError))
 
 	time.Sleep(time.Millisecond * 100)
-	t.True(ct.IsStopped())
 	t.True(atomic.LoadInt64(&ticked) < 4)
 }
 

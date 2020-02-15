@@ -264,13 +264,13 @@ func (cm RunCommand) Run(_ *CommonFlags, log *zerolog.Logger, exitHooks *[]func(
 	}
 
 	nps := make([]*common.NodeProcess, len(ns))
-	for _, nl := range ns {
+	for i, nl := range ns {
 		np, err := cm.createNodeProcess(nl, initialBlock, log)
 		if err != nil {
 			return err
 		}
 
-		nps = append(nps, np)
+		nps[i] = np
 	}
 
 	for _, np := range nps {

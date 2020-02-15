@@ -3,6 +3,8 @@ package util
 import (
 	"sync"
 
+	"github.com/rs/zerolog"
+
 	"github.com/spikeekips/mitum/errors"
 	"github.com/spikeekips/mitum/logging"
 )
@@ -15,8 +17,6 @@ var (
 type Daemon interface {
 	Start() error
 	Stop() error
-	IsStarted() bool
-	IsStopped() bool
 }
 
 type FunctionDaemon struct {
@@ -31,7 +31,9 @@ type FunctionDaemon struct {
 
 func NewFunctionDaemon(fn func(chan struct{}) error, isDebug bool) *FunctionDaemon {
 	dm := &FunctionDaemon{
-		Logger:   logging.NewLogger(nil),
+		Logger: logging.NewLogger(func(c zerolog.Context) zerolog.Context {
+			return c.Str("module", "functondaemon")
+		}),
 		fn:       fn,
 		stopChan: make(chan struct{}),
 		isDebug:  isDebug,
@@ -77,7 +79,9 @@ func (dm *FunctionDaemon) Start() error {
 
 	go func() {
 		if err := dm.fn(dm.stopChan); err != nil {
-			dm.Log().Error().Err(err).Msg("occurred in daemon function")
+			if dm.isDebug {
+				dm.Log().Error().Err(err).Msg("occurred in daemon function")
+			}
 		}
 		dm.stoppingChan <- struct{}{}
 	}()

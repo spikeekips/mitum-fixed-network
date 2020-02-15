@@ -232,7 +232,7 @@ func (css *ConsensusStates) broadcastSeal(sl seal.Seal, errChan chan<- error) {
 				errChan <- err
 			}
 
-			return
+			return true
 		}
 
 		lt.Debug().Msgf("seal broadcasted: %T", sl)
@@ -287,6 +287,8 @@ func (css *ConsensusStates) newVoteProof(vp VoteProof) error {
 // - (TODO) Seal is considered it should be already checked IsValid().
 // - if Seal is signed by LocalNode, it will be ignored.
 func (css *ConsensusStates) NewSeal(sl seal.Seal) error {
+	css.Log().Debug().Interface("seal", sl).Msg("seal received")
+
 	if err := css.sealStorage.Add(sl); err != nil {
 		return err
 	}

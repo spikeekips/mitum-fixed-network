@@ -105,23 +105,35 @@ func (bs *BaseStateHandler) BroadcastSeal(sl seal.Seal) {
 }
 
 func loggerWithSeal(sl seal.Seal, l *zerolog.Logger) *zerolog.Logger {
+	if ls, ok := sl.(zerolog.LogObjectMarshaler); ok {
+		ll := l.With().EmbedObject(ls).Logger()
+
+		return &ll
+	}
+
 	ll := l.With().
-		Str("seal_hint", sl.Hint().Verbose()).
-		Str("seal_hash", sl.Hash().String()).
-		Logger()
+		Dict("seal", zerolog.Dict().
+			Str("hint", sl.Hint().Verbose()).
+			Str("hash", sl.Hash().String()),
+		).Logger()
 
 	return &ll
 }
 
 func loggerWithBallot(ballot Ballot, l *zerolog.Logger) *zerolog.Logger {
-	ll := l.With().
-		Str("seal_hint", ballot.Hint().Verbose()).
-		Str("seal_hash", ballot.Hash().String()).
-		Int64("ballot_height", ballot.Height().Int64()).
-		Uint64("ballot_round", ballot.Round().Uint64()).
-		Str("ballot_stage", ballot.Stage().String()).
-		Str("ballot_node", ballot.Node().String()).
-		Logger()
+	if lb, ok := ballot.(zerolog.LogObjectMarshaler); ok {
+		ll := l.With().EmbedObject(lb).Logger()
+
+		return &ll
+	}
+
+	ll := loggerWithSeal(ballot, l).With().
+		Dict("ballot", zerolog.Dict().
+			Int64("height", ballot.Height().Int64()).
+			Uint64("round", ballot.Round().Uint64()).
+			Str("stage", ballot.Stage().String()).
+			Str("node", ballot.Node().String()),
+		).Logger()
 
 	return &ll
 }
@@ -131,14 +143,15 @@ func loggerWithVoteProof(vp VoteProof, l *zerolog.Logger) *zerolog.Logger {
 		return l
 	}
 
+	if lvp, ok := vp.(zerolog.LogObjectMarshaler); ok {
+		ll := l.With().EmbedObject(lvp).Logger()
+
+		return &ll
+	}
+
 	rvp, _ := util.JSONMarshal(vp)
 
-	ll := l.With().
-		Int64("voteproof_height", vp.Height().Int64()).
-		Uint64("voteproof_round", vp.Round().Uint64()).
-		Str("voteproof_stage", vp.Stage().String()).
-		RawJSON("voteproof", rvp).
-		Logger()
+	ll := l.With().RawJSON("voteproof", rvp).Logger()
 
 	return &ll
 }
@@ -150,19 +163,33 @@ func loggerWithLocalState(localState *LocalState, l *zerolog.Logger) *zerolog.Lo
 	}
 
 	ll := l.With().
-		Str("last_block_hash", lastBlock.Hash().String()).
-		Int64("last_block_height", lastBlock.Height().Int64()).
-		Uint64("last_block_round", lastBlock.Round().Uint64()).
-		Logger()
+		Dict("local_state", zerolog.Dict().
+			Dict("block", zerolog.Dict().
+				Str("hash", lastBlock.Hash().String()).
+				Int64("height", lastBlock.Height().Int64()).
+				Uint64("round", lastBlock.Round().Uint64()),
+			),
+		).Logger()
 
 	return &ll
 }
 
 func loggerWithConsensusStateChangeContext(ctx ConsensusStateChangeContext, l *zerolog.Logger) *zerolog.Logger {
-	ll := l.With().
-		Str("from_state", ctx.fromState.String()).
-		Str("to_state", ctx.toState.String()).
-		Logger()
+	e := zerolog.Dict().
+		Str("from_state", ctx.From().String()).
+		Str("to_state", ctx.To().String())
+
+	if ctx.voteProof != nil {
+		if lvp, ok := ctx.voteProof.(zerolog.LogObjectMarshaler); ok {
+			e.EmbedObject(lvp)
+		} else {
+			rvp, _ := util.JSONMarshal(ctx.voteProof)
+
+			e.RawJSON("voteproof", rvp)
+		}
+	}
+
+	ll := l.With().Dict("change_context", e).Logger()
 
 	return loggerWithVoteProof(ctx.voteProof, &ll)
 }

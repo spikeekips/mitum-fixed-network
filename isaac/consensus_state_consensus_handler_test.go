@@ -29,6 +29,7 @@ func (t *testConsensusStateConsensusHandler) SetupSuite() {
 	_ = hint.RegisterType(INITBallotType, "init-ballot")
 	_ = hint.RegisterType(SIGNBallotType, "sign-ballot")
 	_ = hint.RegisterType(ACCEPTBallotType, "accept-ballot")
+	_ = hint.RegisterType(VoteProofType, "voteproof")
 }
 
 func (t *testConsensusStateConsensusHandler) states() (*LocalState, *LocalState) {

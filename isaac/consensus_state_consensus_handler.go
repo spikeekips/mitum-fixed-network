@@ -140,7 +140,7 @@ func (cs *ConsensusStateConsensusHandler) stopBallotTimer() error {
 	return nil
 }
 
-func (cs *ConsensusStateConsensusHandler) waitProposal(vp VoteProof) error {
+func (cs *ConsensusStateConsensusHandler) waitProposal(vp VoteProof) error { // nolint
 	cs.Log().Debug().Msg("waiting proposal")
 
 	if proposed, err := cs.proposal(vp); err != nil {
@@ -159,14 +159,14 @@ func (cs *ConsensusStateConsensusHandler) waitProposal(vp VoteProof) error {
 				l.Debug().Msg("trying to check already received Proposal")
 
 				// if Proposal already received, find and processing it.
-				if proposal, found, err := cs.sealStorage.Proposal(vp.Height(), vp.Round()); found {
+				if proposal, found, err := cs.sealStorage.Proposal(vp.Height(), vp.Round()); err != nil {
+					l.Error().Err(err).Msg("failed to check the received Proposal, but keep trying")
+				} else if found {
 					go func() {
 						if err := cs.handleProposal(proposal); err != nil {
 							l.Error().Err(err).Send()
 						}
 					}()
-				} else if err != nil {
-					l.Error().Err(err).Msg("failed to check the received Proposal, but keep trying")
 				}
 
 				return false, nil

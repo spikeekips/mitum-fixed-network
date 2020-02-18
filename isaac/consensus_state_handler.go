@@ -51,16 +51,20 @@ func (csc ConsensusStateChangeContext) VoteProof() VoteProof {
 type BaseStateHandler struct {
 	sync.RWMutex
 	*logging.Logger
-	localState *LocalState
-	state      ConsensusState
-	stateChan  chan<- ConsensusStateChangeContext
-	sealChan   chan<- seal.Seal
+	localState        *LocalState
+	proposalProcessor ProposalProcessor
+	state             ConsensusState
+	stateChan         chan<- ConsensusStateChangeContext
+	sealChan          chan<- seal.Seal
 }
 
-func NewBaseStateHandler(localState *LocalState, state ConsensusState) *BaseStateHandler {
+func NewBaseStateHandler(
+	localState *LocalState, proposalProcessor ProposalProcessor, state ConsensusState,
+) *BaseStateHandler {
 	return &BaseStateHandler{
-		localState: localState,
-		state:      state,
+		localState:        localState,
+		proposalProcessor: proposalProcessor,
+		state:             state,
 	}
 }
 
@@ -102,6 +106,65 @@ func (bs *BaseStateHandler) BroadcastSeal(sl seal.Seal) {
 	go func() {
 		bs.sealChan <- sl
 	}()
+}
+
+func (bs *BaseStateHandler) StoreNewBlock(blockStorage BlockStorage) error {
+	if err := blockStorage.Commit(); err != nil {
+		return err
+	}
+
+	_ = bs.localState.SetLastBlock(blockStorage.Block())
+
+	return nil
+}
+
+// TODO rename 'vp' to 'voteProof'
+func (bs *BaseStateHandler) StoreNewBlockByVoteProof(vp VoteProof) error {
+	fact, ok := vp.Majority().(ACCEPTBallotFact)
+	if !ok {
+		return xerrors.Errorf("needs ACCEPTBallotFact: fact=%T", vp.Majority())
+	}
+
+	l := loggerWithVoteProof(vp, bs.Log()).With().
+		Str("proposal", fact.Proposal().String()).
+		Str("new_block", fact.NewBlock().String()).
+		Logger()
+
+	_ = bs.localState.SetLastACCEPTVoteProof(vp)
+
+	l.Debug().Msg("trying to store new block")
+
+	blockStorage, err := bs.proposalProcessor.Process(fact.Proposal(), nil)
+	if err != nil {
+		return err
+	}
+
+	if blockStorage.Block() == nil {
+		err := xerrors.Errorf("failed to process Proposal; empty Block returned")
+		l.Error().Err(err).Send()
+
+		return err
+	}
+
+	if !fact.NewBlock().Equal(blockStorage.Block().Hash()) {
+		err := xerrors.Errorf(
+			"processed new block does not match; fact=%s processed=%s",
+			fact.NewBlock(),
+			blockStorage.Block().Hash(),
+		)
+		l.Error().Err(err).Send()
+
+		return err
+	}
+
+	if err := bs.StoreNewBlock(blockStorage); err != nil {
+		l.Error().Err(err).Msg("failed to store new block")
+		return err
+	}
+
+	l.Info().Msg("new block stored")
+
+	return nil
 }
 
 func loggerWithSeal(sl seal.Seal, l *zerolog.Logger) *zerolog.Logger {

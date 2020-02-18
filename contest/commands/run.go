@@ -8,6 +8,7 @@ import (
 	"golang.org/x/xerrors"
 
 	"github.com/spikeekips/mitum/contest/common"
+	"github.com/spikeekips/mitum/encoder"
 	"github.com/spikeekips/mitum/hint"
 	"github.com/spikeekips/mitum/isaac"
 	"github.com/spikeekips/mitum/key"
@@ -20,6 +21,7 @@ type RunCommand struct {
 }
 
 func (cm RunCommand) registerTypes() {
+	_ = hint.RegisterType(encoder.JSONEncoder{}.Hint().Type(), "json-encoder")
 	_ = hint.RegisterType(key.BTCPrivatekey{}.Hint().Type(), "btc-privatekey")
 	_ = hint.RegisterType(key.BTCPublickey{}.Hint().Type(), "btc-publickey")
 	_ = hint.RegisterType(valuehash.SHA256{}.Hint().Type(), "keccak256")
@@ -30,6 +32,10 @@ func (cm RunCommand) registerTypes() {
 	_ = hint.RegisterType(isaac.SIGNBallotType, "sign-ballot")
 	_ = hint.RegisterType(isaac.ACCEPTBallotType, "accept-ballot")
 	_ = hint.RegisterType(isaac.VoteProofType, "voteproof-genesis")
+	_ = hint.RegisterType(isaac.BlockType, "block")
+	_ = hint.RegisterType(isaac.BlockOperationType, "block-operation")
+	_ = hint.RegisterType(isaac.BlockStatesType, "block-states")
+	_ = hint.RegisterType(isaac.BlockStateType, "block-state")
 }
 
 func (cm RunCommand) generateInitialBlock() (isaac.Block, error) {
@@ -145,7 +151,7 @@ func (cm RunCommand) generateBasement(nps []*common.NodeProcess) error {
 	}
 
 	for _, np := range nps {
-		np.LocalState.SetLastINITVoteProof(ivps[np.LocalState.Node().Address()])
+		_ = np.LocalState.SetLastINITVoteProof(ivps[np.LocalState.Node().Address()])
 	}
 
 	proposal := valuehash.RandomSHA256()
@@ -164,8 +170,16 @@ func (cm RunCommand) generateBasement(nps []*common.NodeProcess) error {
 
 	for _, np := range nps {
 		_ = np.LocalState.SetLastACCEPTVoteProof(avps[np.LocalState.Node().Address()])
-		_ = np.LocalState.SetLastBlock(newBlocks[np.LocalState.Node().Address()])
 
+		newBlock := newBlocks[np.LocalState.Node().Address()]
+		ob, err := np.LocalState.Storage().OpenBlockStorage(newBlock)
+		if err != nil {
+			return err
+		} else if err := ob.Commit(); err != nil {
+			return err
+		}
+
+		_ = np.LocalState.SetLastBlock(newBlock)
 		np.Log().Debug().Interface("last_block", np.LocalState.LastBlock()).Msg("will start from here")
 	}
 
@@ -174,10 +188,9 @@ func (cm RunCommand) generateBasement(nps []*common.NodeProcess) error {
 
 func (cm RunCommand) createNodeProcess(
 	localState *isaac.LocalState,
-	initialBlock isaac.Block,
 	log *zerolog.Logger,
 ) (*common.NodeProcess, error) {
-	np, err := common.NewNodeProcess(localState, initialBlock)
+	np, err := common.NewNodeProcess(localState)
 	if err != nil {
 		return nil, err
 	}
@@ -241,8 +254,11 @@ func (cm RunCommand) Run(_ *CommonFlags, log *zerolog.Logger, exitHooks *[]func(
 
 	var ns []*isaac.LocalState
 	for i := 0; i < int(cm.Nodes); i++ {
-		nl := common.NewNode(i)
-		ns = append(ns, nl)
+		if nl, err := common.NewNode(i, initialBlock); err != nil {
+			return err
+		} else {
+			ns = append(ns, nl)
+		}
 	}
 
 	for _, nl := range ns {
@@ -255,7 +271,6 @@ func (cm RunCommand) Run(_ *CommonFlags, log *zerolog.Logger, exitHooks *[]func(
 			}
 		}
 
-		// set threshold
 		threshold, err := isaac.NewThreshold(uint(nl.Nodes().Len()+1), 67)
 		if err != nil {
 			return err
@@ -265,11 +280,10 @@ func (cm RunCommand) Run(_ *CommonFlags, log *zerolog.Logger, exitHooks *[]func(
 
 	nps := make([]*common.NodeProcess, len(ns))
 	for i, nl := range ns {
-		np, err := cm.createNodeProcess(nl, initialBlock, log)
+		np, err := cm.createNodeProcess(nl, log)
 		if err != nil {
 			return err
 		}
-
 		nps[i] = np
 	}
 

@@ -1,6 +1,7 @@
 package encoder
 
 import (
+	"bytes"
 	"encoding/json"
 	"reflect"
 
@@ -10,6 +11,8 @@ import (
 	"github.com/spikeekips/mitum/util"
 )
 
+var jsonNULL []byte = []byte("null")
+var jsonNULLLength int = len(jsonNULL)
 var jsonHint hint.Hint = hint.MustHint(hint.Type([2]byte{0x01, 0x01}), "0.1")
 
 type JSONEncoder struct {
@@ -60,6 +63,10 @@ func (je *JSONEncoder) Decode(b []byte, i interface{}) error {
 }
 
 func (je *JSONEncoder) DecodeByHint(b []byte) (hint.Hinter, error) {
+	if jsonIsNullRawMesage(b) {
+		return nil, nil
+	}
+
 	if je.hintset == nil {
 		return nil, xerrors.Errorf("SetHintset() first: %q", string(b))
 	}
@@ -70,7 +77,7 @@ func (je *JSONEncoder) DecodeByHint(b []byte) (hint.Hinter, error) {
 	}
 	hinter, err := je.hintset.Hinter(h.Type(), h.Version())
 	if err != nil {
-		return nil, err
+		return nil, xerrors.Errorf(`failed to find hinter: input="%s": %w`, string(b), err)
 	}
 
 	p := reflect.New(reflect.TypeOf(hinter))
@@ -341,4 +348,12 @@ func (jh JSONPackHintedHead) IsJSONHinted() bool {
 
 type IsJSONHinted interface {
 	IsJSONHinted() bool
+}
+
+func jsonIsNullRawMesage(b []byte) bool {
+	if len(b) != jsonNULLLength {
+		return false
+	}
+
+	return bytes.Equal(jsonNULL, b)
 }

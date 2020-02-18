@@ -29,11 +29,13 @@ func (t *testBallotbox) SetupSuite() {
 }
 
 func (t *testBallotbox) newLocalState(total uint, percent float64) *LocalState {
-	policy := NewLocalPolicy()
-	threshold, _ := NewThreshold(total, percent)
-	_ = policy.SetThreshold(threshold)
+	ls, err := NewLocalState(nil, nil)
+	t.NoError(err)
 
-	return NewLocalState(nil, policy)
+	threshold, _ := NewThreshold(total, percent)
+	_ = ls.Policy().SetThreshold(threshold)
+
+	return ls
 }
 
 func (t *testBallotbox) TestNew() {

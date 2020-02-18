@@ -160,5 +160,8 @@ func main() {
 		connectSignal()
 	}
 
+	if err != nil {
+		log.Error().Err(err).Send()
+	}
 	ctx.FatalIfErrorf(err)
 }

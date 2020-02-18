@@ -234,6 +234,7 @@ func (vp VoteProofV0) isValidFacts(b []byte) error {
 	return nil
 }
 
+// TODO moves to checkers
 func (vp VoteProofV0) CompareWithBlock(block Block) error {
 	switch vp.Stage() {
 	case StageINIT:
@@ -290,12 +291,7 @@ func (vp VoteProofV0) compareINITWithNextBlock(block Block) error {
 }
 
 func (vp VoteProofV0) compareACCEPTWithBlock(block Block) error {
-	if vp.Height() != block.Height() {
-		return xerrors.Errorf(
-			"height of ACCEPT VoteProof is different from block.Height(); VoteProof.Height=%d != block.Height=%d",
-			vp.Height(), block.Height(),
-		)
-	} else if vp.Round() != block.Round() {
+	if vp.Round() != block.Round() {
 		return xerrors.Errorf(
 			"round of ACCEPT VoteProof is different from block.Round(); VoteProof.Round=%d != block.Round=%d",
 			vp.Round(), block.Round(),
@@ -305,6 +301,13 @@ func (vp VoteProofV0) compareACCEPTWithBlock(block Block) error {
 	fact := vp.Majority().(ACCEPTBallotFact)
 	if !fact.NewBlock().Equal(block.Hash()) {
 		return xerrors.Errorf("block hash does not match; vp=%s != block=%s", fact.NewBlock(), block.Hash())
+	}
+
+	if d := vp.Height() - block.Height(); d < 0 || d > 1 {
+		return xerrors.Errorf(
+			"height of ACCEPT VoteProof is different from block.Height(); VoteProof.Height=%d != block.Height=%d",
+			vp.Height(), block.Height(),
+		)
 	}
 
 	return nil

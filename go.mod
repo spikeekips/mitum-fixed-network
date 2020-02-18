@@ -17,9 +17,11 @@ require (
 	github.com/rs/zerolog v1.17.2
 	github.com/sanity-io/litter v1.2.0
 	github.com/satori/go.uuid v1.2.0
+	github.com/spikeekips/avl v0.0.0-20191218024138-87d874c0c032
 	github.com/stellar/go v0.0.0-20200203232630-a29b5ca2f46f
 	github.com/stellar/go-xdr v0.0.0-20191118232123-3aa35463cbdb // indirect
 	github.com/stretchr/testify v1.4.0
+	github.com/syndtr/goleveldb v1.0.1-0.20190923125748-758128399b1d
 	github.com/tidwall/pretty v1.0.0 // indirect
 	go.mongodb.org/mongo-driver v1.2.1
 	golang.org/x/crypto v0.0.0-20200204104054-c9f3fb736b72

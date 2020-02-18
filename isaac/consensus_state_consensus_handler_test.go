@@ -17,7 +17,8 @@ import (
 type testConsensusStateConsensusHandler struct {
 	suite.Suite
 
-	policy *LocalPolicy
+	policy      *LocalPolicy
+	sealStorage SealStorage
 }
 
 func (t *testConsensusStateConsensusHandler) SetupSuite() {
@@ -32,17 +33,23 @@ func (t *testConsensusStateConsensusHandler) SetupSuite() {
 	_ = hint.RegisterType(VoteProofType, "voteproof")
 }
 
+func (t *testConsensusStateConsensusHandler) SetupTest() {
+	t.sealStorage = NewMapSealStorage()
+}
+
 func (t *testConsensusStateConsensusHandler) states() (*LocalState, *LocalState) {
 	lastBlock, err := NewTestBlockV0(Height(33), Round(0), nil, valuehash.RandomSHA256())
 	t.NoError(err)
 
 	localNode := RandomLocalNode("local", nil)
-	localState := NewLocalState(localNode, NewLocalPolicy()).
-		SetLastBlock(lastBlock)
+	localState, err := NewLocalState(nil, localNode)
+	t.NoError(err)
+	localState.SetLastBlock(lastBlock)
 
 	remoteNode := RandomLocalNode("remote", nil)
-	remoteState := NewLocalState(remoteNode, NewLocalPolicy()).
-		SetLastBlock(lastBlock)
+	remoteState, err := NewLocalState(nil, remoteNode)
+	t.NoError(err)
+	remoteState.SetLastBlock(lastBlock)
 
 	t.NoError(localState.Nodes().Add(remoteNode))
 	t.NoError(remoteState.Nodes().Add(localNode))
@@ -137,7 +144,9 @@ func (t *testConsensusStateConsensusHandler) TestNew() {
 	suffrage := t.suffrage(remoteState, localState)
 
 	proposalMaker := NewProposalMaker(localState)
-	cs, err := NewConsensusStateConsensusHandler(localState, DummyProposalProcessor{}, suffrage, nil, proposalMaker)
+	cs, err := NewConsensusStateConsensusHandler(
+		localState, DummyProposalProcessor{}, suffrage, t.sealStorage, proposalMaker,
+	)
 	t.NoError(err)
 	t.NotNil(cs)
 
@@ -177,7 +186,7 @@ func (t *testConsensusStateConsensusHandler) TestWaitingProposalButTimeedOut() {
 	suffrage := t.suffrage(remoteState, localState)
 
 	proposalMaker := NewProposalMaker(localState)
-	cs, err := NewConsensusStateConsensusHandler(localState, DummyProposalProcessor{}, suffrage, nil, proposalMaker)
+	cs, err := NewConsensusStateConsensusHandler(localState, DummyProposalProcessor{}, suffrage, t.sealStorage, proposalMaker)
 	t.NoError(err)
 	t.NotNil(cs)
 
@@ -228,7 +237,7 @@ func (t *testConsensusStateConsensusHandler) TestWithProposalWaitACCEPTBallot() 
 		localState,
 		DummyProposalProcessor{},
 		t.suffrage(remoteState, remoteState), // localnode is not in ActingSuffrage.
-		nil,
+		t.sealStorage,
 		proposalMaker,
 	)
 	t.NoError(err)
@@ -285,7 +294,7 @@ func (t *testConsensusStateConsensusHandler) TestWithProposalWaitSIGNBallot() {
 		localState,
 		DummyProposalProcessor{},
 		t.suffrage(remoteState, localState, remoteState), // localnode is not in ActingSuffrage.
-		nil,
+		t.sealStorage,
 		proposalMaker,
 	)
 	t.NoError(err)
@@ -336,7 +345,7 @@ func (t *testConsensusStateConsensusHandler) TestDraw() {
 		localState,
 		DummyProposalProcessor{},
 		t.suffrage(remoteState, localState, remoteState), // localnode is not in ActingSuffrage.
-		nil,
+		t.sealStorage,
 		proposalMaker,
 	)
 	t.NoError(err)

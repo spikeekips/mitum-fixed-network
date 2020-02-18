@@ -4,13 +4,17 @@ import (
 	"fmt"
 
 	"github.com/rs/zerolog"
+	"github.com/syndtr/goleveldb/leveldb"
+	leveldbStorage "github.com/syndtr/goleveldb/leveldb/storage"
 
+	"github.com/spikeekips/mitum/encoder"
 	"github.com/spikeekips/mitum/hint"
 	"github.com/spikeekips/mitum/isaac"
 	"github.com/spikeekips/mitum/key"
 	"github.com/spikeekips/mitum/logging"
 	"github.com/spikeekips/mitum/network"
 	"github.com/spikeekips/mitum/seal"
+	"github.com/spikeekips/mitum/valuehash"
 )
 
 var (
@@ -28,17 +32,42 @@ func NewLocalNode(id int) *isaac.LocalNode {
 	return ln.SetChannel(channel)
 }
 
-func NewNode(id int) *isaac.LocalState {
+func NewNode(id int, initialBlock isaac.Block) (*isaac.LocalState, error) {
+	// encoder
+	encs := encoder.NewEncoders()
+	enc := encoder.NewJSONEncoder()
+	if err := encs.AddEncoder(enc); err != nil {
+		return nil, err
+	}
+	_ = encs.AddHinter(isaac.BlockV0{})
+	_ = encs.AddHinter(valuehash.SHA256{})
+	_ = encs.AddHinter(isaac.VoteProofV0{})
+
 	// create new node
+	db, _ := leveldb.Open(leveldbStorage.NewMemStorage(), nil)
+	st := isaac.NewLeveldbStorage(db, encs, enc)
+
+	{
+		ob, err := st.OpenBlockStorage(initialBlock)
+		if err != nil {
+			return nil, err
+		} else if err := ob.Commit(); err != nil {
+			return nil, err
+		}
+	}
+
 	localNode := NewLocalNode(id)
-	localState := isaac.NewLocalState(localNode, isaac.NewLocalPolicy())
+	localState, err := isaac.NewLocalState(st, localNode)
+	if err != nil {
+		return nil, err
+	}
 
 	// NOTE only one node does not use SealHandler
 	localNode.Channel().(*network.ChanChannel).SetSealHandler(func(sl seal.Seal) (seal.Seal, error) {
 		return sl, nil
 	})
 
-	return localState
+	return localState, nil
 }
 
 type NodeProcess struct {
@@ -53,15 +82,13 @@ type NodeProcess struct {
 	stopChan          chan struct{}
 }
 
-func NewNodeProcess(localState *isaac.LocalState, initialBlock isaac.Block) (*NodeProcess, error) {
-	_ = localState.SetLastBlock(initialBlock)
-
+func NewNodeProcess(localState *isaac.LocalState) (*NodeProcess, error) {
 	ballotbox := isaac.NewBallotbox(localState)
 	suffrage := NewRoundrobinSuffrage(localState, 100)
 	sealStorage := NewMapSealStorage()
 	proposalProcessor := isaac.NewProposalProcessorV0(localState, sealStorage)
 
-	cshandlerBooting, err := isaac.NewConsensusStateBootingHandler(localState)
+	cshandlerBooting, err := isaac.NewConsensusStateBootingHandler(localState, proposalProcessor)
 	if err != nil {
 		return nil, err
 	}

@@ -31,12 +31,13 @@ func (t *testConsensusStates) states() (*LocalState, *LocalState) {
 	t.NoError(err)
 
 	localNode := RandomLocalNode("local", nil)
-	localState := NewLocalState(localNode, NewLocalPolicy()).
-		SetLastBlock(lastBlock)
+	localState, err := NewLocalState(nil, localNode)
+	t.NoError(err)
+	localState.SetLastBlock(lastBlock)
 
 	remoteNode := RandomLocalNode("remote", nil)
-	remoteState := NewLocalState(remoteNode, NewLocalPolicy()).
-		SetLastBlock(lastBlock)
+	remoteState, err := NewLocalState(nil, remoteNode)
+	remoteState.SetLastBlock(lastBlock)
 
 	t.NoError(localState.Nodes().Add(remoteNode))
 	t.NoError(remoteState.Nodes().Add(localNode))

@@ -9,7 +9,7 @@ import (
 )
 
 type ProposalProcessor interface {
-	Process(valuehash.Hash /* Proposal.Hash() */, []byte) (Block, error)
+	Process(valuehash.Hash /* Proposal.Hash() */, []byte) (BlockStorage, error)
 }
 
 type ProposalProcessorV0 struct {
@@ -29,14 +29,14 @@ func NewProposalProcessorV0(localState *LocalState, sealStorage SealStorage) Pro
 }
 
 // TODO b is NetworkID
-func (dp ProposalProcessorV0) Process(ph valuehash.Hash, b []byte) (Block, error) {
+func (dp ProposalProcessorV0) Process(ph valuehash.Hash, b []byte) (BlockStorage, error) {
 	var proposal Proposal
 	if sl, found, err := dp.sealStorage.Seal(ph); err != nil || !found {
 		if err != nil {
 			return nil, err
 		}
 
-		return nil, xerrors.Errorf("Proposal not found; proposal=%s", ph)
+		return nil, xerrors.Errorf("Proposal not found; proposal=%s", ph.String())
 	} else {
 		proposal = sl.(Proposal)
 	}
@@ -84,7 +84,7 @@ func (dp ProposalProcessorV0) Process(ph valuehash.Hash, b []byte) (Block, error
 		return nil, err
 	}
 
-	return block, nil
+	return dp.localState.Storage().OpenBlockStorage(block)
 }
 
 func (dp ProposalProcessorV0) processSeals(Proposal, []byte) (valuehash.Hash, error) {

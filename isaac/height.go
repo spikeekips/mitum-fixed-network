@@ -3,6 +3,7 @@ package isaac
 import (
 	"bytes"
 	"encoding/binary"
+	"fmt"
 
 	"github.com/spikeekips/mitum/isvalid"
 )
@@ -29,4 +30,8 @@ func (ht Height) Bytes() []byte {
 	_ = binary.Write(b, binary.LittleEndian, int64(ht))
 
 	return b.Bytes()
+}
+
+func (ht Height) String() string {
+	return fmt.Sprintf("%d", ht)
 }

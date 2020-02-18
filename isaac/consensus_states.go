@@ -287,7 +287,7 @@ func (css *ConsensusStates) newVoteProof(vp VoteProof) error {
 // - (TODO) Seal is considered it should be already checked IsValid().
 // - if Seal is signed by LocalNode, it will be ignored.
 func (css *ConsensusStates) NewSeal(sl seal.Seal) error {
-	css.Log().Debug().Interface("seal", sl).Msg("seal received")
+	css.Log().Debug().Interface("seal", sl).Msgf("seal received: %T", sl)
 
 	if err := css.sealStorage.Add(sl); err != nil {
 		return err

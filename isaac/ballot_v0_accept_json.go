@@ -50,6 +50,7 @@ func (ab *ACCEPTBallotV0) UnpackJSON(b []byte, enc *encoder.JSONEncoder) error {
 		return err
 	}
 
+	// TODO use decodehash
 	var epr, enb valuehash.Hash
 	if i, err := enc.DecodeByHint(nab.PR); err != nil {
 		return err

@@ -6,8 +6,140 @@ import (
 
 	"golang.org/x/xerrors"
 
+	"github.com/spikeekips/mitum/seal"
 	"github.com/spikeekips/mitum/util"
+	"github.com/spikeekips/mitum/valuehash"
 )
+
+type LocalState struct {
+	storage             Storage
+	node                *LocalNode
+	policy              *LocalPolicy
+	nodes               *NodesState
+	lastBlock           *util.LockedItem
+	lastINITVoteProof   *util.LockedItem
+	lastACCEPTVoteProof *util.LockedItem
+}
+
+func NewLocalState(st Storage, node *LocalNode) (*LocalState, error) {
+	// load last states from storage.
+	var lastBlock Block
+	var lastINITVoteProof VoteProof
+	var lastACCEPTVoteProof VoteProof
+	if st != nil {
+		var err error
+		if lastBlock, err = st.LastBlock(); err != nil {
+			return nil, err
+		}
+
+		if lastINITVoteProof, err = st.LastINITVoteProof(); err != nil {
+			return nil, err
+		}
+
+		if lastACCEPTVoteProof, err = st.LastACCEPTVoteProof(); err != nil {
+			return nil, err
+		}
+	}
+
+	var policy *LocalPolicy
+	if p, err := NewLocalPolicy(st); err != nil {
+		return nil, err
+	} else {
+		policy = p
+	}
+
+	return &LocalState{
+		storage:             st,
+		node:                node,
+		policy:              policy,
+		nodes:               NewNodesState(node, nil),
+		lastBlock:           util.NewLockedItem(lastBlock),
+		lastINITVoteProof:   util.NewLockedItem(lastINITVoteProof),
+		lastACCEPTVoteProof: util.NewLockedItem(lastACCEPTVoteProof),
+	}, nil
+}
+
+func (ls *LocalState) Storage() Storage {
+	return ls.storage
+}
+
+func (ls *LocalState) Node() *LocalNode {
+	return ls.node
+}
+
+func (ls *LocalState) Policy() *LocalPolicy {
+	return ls.policy
+}
+
+func (ls *LocalState) Nodes() *NodesState {
+	return ls.nodes
+}
+
+func (ls *LocalState) LastBlock() Block {
+	v := ls.lastBlock.Value()
+	if v == nil {
+		return nil
+	}
+
+	return v.(Block)
+}
+
+// NOTE for debugging and testing only
+func (ls *LocalState) SetLastBlock(block Block) error {
+	_ = ls.lastBlock.SetValue(block)
+
+	return nil
+}
+
+func (ls *LocalState) LastINITVoteProof() VoteProof {
+	vp := ls.lastINITVoteProof.Value()
+	if vp == nil {
+		return nil
+	}
+
+	return vp.(VoteProof)
+}
+
+func (ls *LocalState) SetLastINITVoteProof(vp VoteProof) error {
+	if ls.storage != nil {
+		if err := ls.storage.NewINITVoteProof(vp); err != nil {
+			return err
+		}
+	}
+
+	_ = ls.lastINITVoteProof.SetValue(vp)
+
+	return nil
+}
+
+func (ls *LocalState) LastACCEPTVoteProof() VoteProof {
+	v := ls.lastACCEPTVoteProof.Value()
+	if v == nil {
+		return nil
+	}
+
+	return v.(VoteProof)
+}
+
+func (ls *LocalState) SetLastACCEPTVoteProof(vp VoteProof) error {
+	if ls.storage != nil {
+		if err := ls.storage.NewACCEPTVoteProof(vp); err != nil {
+			return err
+		}
+	}
+
+	_ = ls.lastACCEPTVoteProof.SetValue(vp)
+
+	return nil
+}
+
+func (ls *LocalState) Seal(h valuehash.Hash) (seal.Seal, error) {
+	if ls.storage != nil {
+		return ls.storage.Seal(h)
+	}
+
+	return nil, nil
+}
 
 type LocalPolicy struct {
 	threshold                        *util.LockedItem
@@ -21,8 +153,8 @@ type LocalPolicy struct {
 	timespanValidBallot *util.LockedItem
 }
 
-// TODO load last data from storage, especially Policies
-func NewLocalPolicy() *LocalPolicy {
+func NewLocalPolicy(Storage) (*LocalPolicy, error) {
+	// TODO load last data from storage, especially Policies
 	threshold, _ := NewThreshold(1, 100)
 	return &LocalPolicy{
 		// NOTE default threshold assumes only one node exists, it means the network is just booted.
@@ -33,7 +165,7 @@ func NewLocalPolicy() *LocalPolicy {
 		intervalBroadcastingACCEPTBallot: util.NewLockedItem(time.Second * 1),
 		numberOfActingSuffrageNodes:      util.NewLockedItem(uint(1)),
 		timespanValidBallot:              util.NewLockedItem(time.Minute * 1),
-	}
+	}, nil
 }
 
 func (lp *LocalPolicy) Threshold() Threshold {
@@ -233,81 +365,4 @@ func (ns *NodesState) Traverse(callback func(Node) bool) {
 			break
 		}
 	}
-}
-
-type LocalState struct {
-	node                *LocalNode
-	policy              *LocalPolicy
-	nodes               *NodesState
-	lastBlock           *util.LockedItem
-	lastINITVoteProof   *util.LockedItem
-	lastACCEPTVoteProof *util.LockedItem
-}
-
-func NewLocalState(node *LocalNode, policy *LocalPolicy) *LocalState {
-	return &LocalState{
-		node:                node,
-		policy:              policy,
-		nodes:               NewNodesState(node, nil),
-		lastBlock:           util.NewLockedItem(nil),
-		lastINITVoteProof:   util.NewLockedItem(nil),
-		lastACCEPTVoteProof: util.NewLockedItem(nil),
-	}
-}
-
-func (ls *LocalState) Node() *LocalNode {
-	return ls.node
-}
-
-func (ls *LocalState) Policy() *LocalPolicy {
-	return ls.policy
-}
-
-func (ls *LocalState) Nodes() *NodesState {
-	return ls.nodes
-}
-
-func (ls *LocalState) LastBlock() Block {
-	v := ls.lastBlock.Value()
-	if v == nil {
-		return nil
-	}
-
-	return v.(Block)
-}
-
-func (ls *LocalState) SetLastBlock(bk Block) *LocalState {
-	_ = ls.lastBlock.SetValue(bk)
-
-	return ls
-}
-
-func (ls *LocalState) LastINITVoteProof() VoteProof {
-	vp := ls.lastINITVoteProof.Value()
-	if vp == nil {
-		return nil
-	}
-
-	return vp.(VoteProof)
-}
-
-func (ls *LocalState) SetLastINITVoteProof(vp VoteProof) *LocalState {
-	_ = ls.lastINITVoteProof.SetValue(vp)
-
-	return ls
-}
-
-func (ls *LocalState) LastACCEPTVoteProof() VoteProof {
-	v := ls.lastACCEPTVoteProof.Value()
-	if v == nil {
-		return nil
-	}
-
-	return v.(VoteProof)
-}
-
-func (ls *LocalState) SetLastACCEPTVoteProof(vp VoteProof) *LocalState {
-	_ = ls.lastACCEPTVoteProof.SetValue(vp)
-
-	return ls
 }

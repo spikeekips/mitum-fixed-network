@@ -1,3 +1,5 @@
+// +build test
+
 package isaac
 
 import "github.com/spikeekips/mitum/valuehash"
@@ -11,6 +13,6 @@ func NewDummyProposalProcessor(returnBlock Block, err error) DummyProposalProces
 	return DummyProposalProcessor{returnBlock: returnBlock, err: err}
 }
 
-func (dp DummyProposalProcessor) Process(valuehash.Hash /* Proposal.Hash() */, []byte) (Block, error) {
-	return dp.returnBlock, dp.err
+func (dp DummyProposalProcessor) Process(valuehash.Hash /* Proposal.Hash() */, []byte) (BlockStorage, error) {
+	return &DummyBlockStorage{block: dp.returnBlock}, dp.err
 }

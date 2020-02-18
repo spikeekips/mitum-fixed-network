@@ -14,13 +14,14 @@ type ConsensusStateBootingHandler struct {
 
 func NewConsensusStateBootingHandler(
 	localState *LocalState,
+	proposalProcessor ProposalProcessor,
 ) (*ConsensusStateBootingHandler, error) {
 	if lastBlock := localState.LastBlock(); lastBlock == nil {
 		return nil, xerrors.Errorf("last block is empty")
 	}
 
 	cs := &ConsensusStateBootingHandler{
-		BaseStateHandler: NewBaseStateHandler(localState, ConsensusStateBooting),
+		BaseStateHandler: NewBaseStateHandler(localState, proposalProcessor, ConsensusStateBooting),
 	}
 	cs.BaseStateHandler.Logger = logging.NewLogger(func(c zerolog.Context) zerolog.Context {
 		return c.Str("module", "consensus-state-booting-handler")
@@ -72,11 +73,12 @@ func (cs *ConsensusStateBootingHandler) NewVoteProof(vp VoteProof) error {
 
 func (cs *ConsensusStateBootingHandler) initialize() error {
 	cs.Log().Debug().Msg("trying to initialize")
-	defer cs.Log().Debug().Msg("complete to initialize; moves to joining")
 
 	if err := cs.check(); err != nil {
 		return err
 	}
+
+	cs.Log().Debug().Msg("initialized; moves to joining")
 
 	return cs.ChangeState(ConsensusStateJoining, nil)
 }
@@ -88,13 +90,23 @@ func (cs *ConsensusStateBootingHandler) check() error {
 	if err := cs.checkBlock(); err != nil {
 		cs.Log().Error().Err(err).Send()
 
-		return cs.ChangeState(ConsensusStateSyncing, nil)
+		if err0 := cs.ChangeState(ConsensusStateSyncing, nil); err0 != nil {
+			// TODO wrap err
+			return err0
+		}
+
+		return err
 	}
 
 	if err := cs.checkVoteProof(); err != nil {
 		cs.Log().Error().Err(err).Send()
 
-		return cs.ChangeState(ConsensusStateSyncing, nil)
+		if err0 := cs.ChangeState(ConsensusStateSyncing, nil); err0 != nil {
+			// TODO wrap err
+			return err0
+		}
+
+		return err
 	}
 
 	return nil
@@ -132,12 +144,20 @@ func (cs *ConsensusStateBootingHandler) checkVoteProof() error {
 
 	block := cs.localState.LastBlock()
 
+	if err := ivp.CompareWithBlock(block); err != nil {
+		return err
+	}
+
 	if err := avp.CompareWithBlock(block); err != nil {
 		return err
 	}
 
-	if err := ivp.CompareWithBlock(block); err != nil {
-		return err
+	// TODO if last block is the previous block of accept VoteProof, trying to store accept VoteProof.
+	if (avp.Height() - block.Height() + 1) == 0 {
+		if err := cs.StoreNewBlockByVoteProof(avp); err != nil {
+			cs.Log().Error().Err(err).Send()
+			return err
+		}
 	}
 
 	return nil

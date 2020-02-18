@@ -67,8 +67,7 @@ func NewConsensusStateJoiningHandler(
 	}
 
 	cs := &ConsensusStateJoiningHandler{
-		BaseStateHandler:  NewBaseStateHandler(localState, ConsensusStateJoining),
-		proposalProcessor: proposalProcessor,
+		BaseStateHandler: NewBaseStateHandler(localState, proposalProcessor, ConsensusStateJoining),
 	}
 	cs.BaseStateHandler.Logger = logging.NewLogger(func(c zerolog.Context) zerolog.Context {
 		return c.Str("module", "consensus-state-joining-handler")
@@ -319,13 +318,13 @@ func (cs *ConsensusStateJoiningHandler) handleACCEPTBallotAndINITVoteProof(ballo
 		// INIT VoteProof and broadcast new ACCEPT Ballot.
 		_ = cs.localState.SetLastINITVoteProof(vp)
 
-		newBlock, err := cs.proposalProcessor.Process(ballot.Proposal(), nil)
+		bs, err := cs.proposalProcessor.Process(ballot.Proposal(), nil)
 		if err != nil {
 			l.Debug().Err(err).Msg("tried to process Proposal, but it is not yet received")
 			return err
 		}
 
-		ab, err := NewACCEPTBallotV0FromLocalState(cs.localState, vp.Round(), newBlock, nil)
+		ab, err := NewACCEPTBallotV0FromLocalState(cs.localState, vp.Round(), bs.Block(), nil)
 		if err != nil {
 			cs.Log().Error().Err(err).Msg("failed to create ACCEPTBallot; will keep trying")
 			return nil
@@ -406,24 +405,28 @@ func (cs *ConsensusStateJoiningHandler) handleACCEPTVoteProof(vp VoteProof) erro
 		Str("new_block", fact.NewBlock().String()).
 		Logger()
 
-	newBlock, err := cs.proposalProcessor.Process(fact.Proposal(), nil)
+	_ = cs.localState.SetLastACCEPTVoteProof(vp)
+
+	bs, err := cs.proposalProcessor.Process(fact.Proposal(), nil)
 	if err != nil {
 		return err
 	}
 
-	if !fact.NewBlock().Equal(newBlock.Hash()) {
+	if !fact.NewBlock().Equal(bs.Block().Hash()) {
 		err := xerrors.Errorf(
 			"processed new block does not match; fact=%s processed=%s",
 			fact.NewBlock(),
-			newBlock.Hash(),
+			bs.Block().Hash(),
 		)
 		lc.Error().Err(err).Send()
 
 		return err
 	}
 
-	_ = cs.localState.SetLastACCEPTVoteProof(vp)
-	_ = cs.localState.SetLastBlock(newBlock)
+	if err := cs.StoreNewBlock(bs); err != nil {
+		l.Error().Err(err).Msg("failed to store new block")
+		return err
+	}
 
 	lc.Info().Msg("new block stored using ACCEPT VoteProof")
 

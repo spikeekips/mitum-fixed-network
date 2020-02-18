@@ -9,7 +9,8 @@ import (
 
 type JSONHash struct {
 	encoder.JSONPackHintedHead
-	Hash string `json:"hash"`
+	Hash   string `json:"hash"`
+	String string `json:"string"`
 }
 
 func (jh *JSONHash) Bytes() []byte {
@@ -20,6 +21,7 @@ func MarshalJSON(h Hash) ([]byte, error) {
 	return util.JSONMarshal(JSONHash{
 		JSONPackHintedHead: encoder.NewJSONPackHintedHead(h.Hint()),
 		Hash:               base58.Encode(h.Bytes()),
+		String:             h.String(),
 	})
 }
 

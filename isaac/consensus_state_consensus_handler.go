@@ -44,11 +44,10 @@ func NewConsensusStateConsensusHandler(
 	}
 
 	cs := &ConsensusStateConsensusHandler{
-		BaseStateHandler:  NewBaseStateHandler(localState, ConsensusStateConsensus),
-		proposalProcessor: proposalProcessor,
-		suffrage:          suffrage,
-		sealStorage:       sealStorage,
-		proposalMaker:     proposalMaker,
+		BaseStateHandler: NewBaseStateHandler(localState, proposalProcessor, ConsensusStateConsensus),
+		suffrage:         suffrage,
+		sealStorage:      sealStorage,
+		proposalMaker:    proposalMaker,
 	}
 	cs.BaseStateHandler.Logger = logging.NewLogger(func(c zerolog.Context) zerolog.Context {
 		return c.Str("module", "consensus-state-consensus-handler")
@@ -255,8 +254,8 @@ func (cs *ConsensusStateConsensusHandler) NewVoteProof(vp VoteProof) error {
 
 	switch vp.Stage() {
 	case StageACCEPT:
-		if err := cs.storeNewBlock(vp); err != nil {
-			return err
+		if err := cs.StoreNewBlockByVoteProof(vp); err != nil {
+			l.Error().Err(err).Send()
 		}
 
 		return cs.keepBroadcastingINITBallotForNextBlock()
@@ -309,60 +308,15 @@ func (cs *ConsensusStateConsensusHandler) keepBroadcastingINITBallotForNextBlock
 	return cs.startBallotTimer(timer)
 }
 
-func (cs *ConsensusStateConsensusHandler) storeNewBlock(vp VoteProof) error {
-	fact, ok := vp.Majority().(ACCEPTBallotFact)
-	if !ok {
-		return xerrors.Errorf("needs ACCEPTBallotFact: fact=%T", vp.Majority())
-	}
-
-	l := loggerWithVoteProof(vp, cs.Log()).With().
-		Str("proposal", fact.Proposal().String()).
-		Str("new_block", fact.NewBlock().String()).
-		Logger()
-
-	l.Debug().Msg("trying to store new block")
-
-	newBlock, err := cs.proposalProcessor.Process(fact.Proposal(), nil)
-	if err != nil {
-		return err
-	}
-
-	if newBlock == nil {
-		err := xerrors.Errorf("failed to process Proposal; empty Block returned")
-		l.Error().Err(err).Send()
-
-		return err
-	}
-
-	if !fact.NewBlock().Equal(newBlock.Hash()) {
-		err := xerrors.Errorf(
-			"processed new block does not match; fact=%s processed=%s",
-			fact.NewBlock(),
-			newBlock.Hash(),
-		)
-		l.Error().Err(err).Send()
-
-		return err
-	}
-
-	_ = cs.localState.SetLastBlock(newBlock)
-
-	l.Info().Msg("new block stored")
-
-	return nil
-}
-
 func (cs *ConsensusStateConsensusHandler) handleProposal(proposal Proposal) error {
 	l := loggerWithBallot(proposal, cs.Log())
 
 	l.Debug().Msg("got proposal")
 
 	// TODO if processing takes too long?
-	newBlock, err := cs.proposalProcessor.Process(proposal.Hash(), nil)
+	bs, err := cs.proposalProcessor.Process(proposal.Hash(), nil)
 	if err != nil {
 		return err
-	} else if newBlock == nil {
-		return xerrors.Errorf("failed to process Proposal; empty Block returned")
 	}
 
 	if err := cs.stopBallotTimer(); err != nil {
@@ -378,12 +332,12 @@ func (cs *ConsensusStateConsensusHandler) handleProposal(proposal Proposal) erro
 		Msgf("node is in acting suffrage? %v", isActing)
 
 	if isActing {
-		if err := cs.readyToSIGNBallot(proposal, newBlock); err != nil {
+		if err := cs.readyToSIGNBallot(proposal, bs.Block()); err != nil {
 			return err
 		}
 	}
 
-	return cs.readyToACCEPTBallot(proposal, newBlock)
+	return cs.readyToACCEPTBallot(proposal, bs.Block())
 }
 
 func (cs *ConsensusStateConsensusHandler) readyToSIGNBallot(proposal Proposal, newBlock Block) error {
@@ -464,7 +418,7 @@ func (cs *ConsensusStateConsensusHandler) proposal(vp VoteProof) (bool, error) {
 		return false, err
 	}
 
-	l.Debug().Msg("trying to broadcast Proposal")
+	l.Debug().Interface("proposal", proposal).Msg("trying to broadcast Proposal")
 
 	cs.BroadcastSeal(proposal)
 

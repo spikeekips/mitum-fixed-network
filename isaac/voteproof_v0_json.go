@@ -5,6 +5,7 @@ import (
 
 	"github.com/spikeekips/mitum/encoder"
 	"github.com/spikeekips/mitum/key"
+	"github.com/spikeekips/mitum/localtime"
 	"github.com/spikeekips/mitum/util"
 	"github.com/spikeekips/mitum/valuehash"
 	"golang.org/x/xerrors"
@@ -21,6 +22,7 @@ type VoteProofV0PackJSON struct {
 	FS [][2]interface{}    `json:"facts"`
 	BS [][2]interface{}    `json:"ballots"`
 	VS [][2]interface{}    `json:"votes"`
+	FA localtime.JSONTime  `json:"finished_at"`
 }
 
 func (vp VoteProofV0) MarshalJSON() ([]byte, error) {
@@ -50,6 +52,7 @@ func (vp VoteProofV0) MarshalJSON() ([]byte, error) {
 		FS:                 facts,
 		BS:                 ballots,
 		VS:                 votes,
+		FA:                 localtime.NewJSONTime(vp.finishedAt),
 	})
 }
 
@@ -63,6 +66,7 @@ type VoteProofV0UnpackJSON struct {
 	FS [][2]json.RawMessage `json:"facts"`
 	BS [][2]json.RawMessage `json:"ballots"`
 	VS [][2]json.RawMessage `json:"votes"`
+	FA localtime.JSONTime   `json:"finished_at"`
 }
 
 func (vp *VoteProofV0) UnpackJSON(b []byte, enc *encoder.JSONEncoder) error { // nolint
@@ -73,8 +77,10 @@ func (vp *VoteProofV0) UnpackJSON(b []byte, enc *encoder.JSONEncoder) error { //
 
 	var err error
 	var majority Fact
-	if majority, err = decodeFact(enc, vpp.MJ); err != nil {
-		return err
+	if vpp.MJ != nil {
+		if majority, err = decodeFact(enc, vpp.MJ); err != nil {
+			return err
+		}
 	}
 
 	facts := map[valuehash.Hash]Fact{}
@@ -146,6 +152,7 @@ func (vp *VoteProofV0) UnpackJSON(b []byte, enc *encoder.JSONEncoder) error { //
 	vp.facts = facts
 	vp.ballots = ballots
 	vp.votes = votes
+	vp.finishedAt = vpp.FA.Time
 
 	return nil
 }

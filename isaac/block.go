@@ -28,6 +28,8 @@ type Block interface {
 	States() valuehash.Hash
 	INITVoteProof() VoteProof
 	ACCEPTVoteProof() VoteProof
+	SetINITVoteProof(VoteProof) Block
+	SetACCEPTVoteProof(VoteProof) Block
 	CreatedAt() time.Time
 }
 

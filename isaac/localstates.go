@@ -32,13 +32,8 @@ func NewLocalState(st Storage, node *LocalNode) (*LocalState, error) {
 			return nil, err
 		}
 
-		if lastINITVoteProof, err = st.LastINITVoteProof(); err != nil {
-			return nil, err
-		}
-
-		if lastACCEPTVoteProof, err = st.LastACCEPTVoteProof(); err != nil {
-			return nil, err
-		}
+		lastINITVoteProof = lastBlock.INITVoteProof()
+		lastACCEPTVoteProof = lastBlock.ACCEPTVoteProof()
 	}
 
 	var policy *LocalPolicy
@@ -101,12 +96,6 @@ func (ls *LocalState) LastINITVoteProof() VoteProof {
 }
 
 func (ls *LocalState) SetLastINITVoteProof(vp VoteProof) error {
-	if ls.storage != nil {
-		if err := ls.storage.NewINITVoteProof(vp); err != nil {
-			return err
-		}
-	}
-
 	_ = ls.lastINITVoteProof.SetValue(vp)
 
 	return nil
@@ -122,12 +111,6 @@ func (ls *LocalState) LastACCEPTVoteProof() VoteProof {
 }
 
 func (ls *LocalState) SetLastACCEPTVoteProof(vp VoteProof) error {
-	if ls.storage != nil {
-		if err := ls.storage.NewACCEPTVoteProof(vp); err != nil {
-			return err
-		}
-	}
-
 	_ = ls.lastACCEPTVoteProof.SetValue(vp)
 
 	return nil

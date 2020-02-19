@@ -313,7 +313,11 @@ func (cs *ConsensusStateConsensusHandler) handleProposal(proposal Proposal) erro
 	l.Debug().Msg("got proposal")
 
 	// TODO if processing takes too long?
-	bs, err := cs.proposalProcessor.Process(proposal.Hash(), nil)
+	block, err := cs.proposalProcessor.ProcessINIT(
+		proposal.Hash(),
+		cs.localState.LastINITVoteProof(),
+		nil,
+	)
 	if err != nil {
 		return err
 	}
@@ -331,12 +335,12 @@ func (cs *ConsensusStateConsensusHandler) handleProposal(proposal Proposal) erro
 		Msgf("node is in acting suffrage? %v", isActing)
 
 	if isActing {
-		if err := cs.readyToSIGNBallot(proposal, bs.Block()); err != nil {
+		if err := cs.readyToSIGNBallot(proposal, block); err != nil {
 			return err
 		}
 	}
 
-	return cs.readyToACCEPTBallot(proposal, bs.Block())
+	return cs.readyToACCEPTBallot(proposal, block)
 }
 
 func (cs *ConsensusStateConsensusHandler) readyToSIGNBallot(proposal Proposal, newBlock Block) error {

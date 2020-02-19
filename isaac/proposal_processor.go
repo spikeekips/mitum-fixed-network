@@ -1,6 +1,8 @@
 package isaac
 
 import (
+	"sync"
+
 	"github.com/rs/zerolog"
 	"golang.org/x/xerrors"
 
@@ -9,27 +11,33 @@ import (
 )
 
 type ProposalProcessor interface {
-	Process(valuehash.Hash /* Proposal.Hash() */, []byte) (BlockStorage, error)
+	ProcessINIT(valuehash.Hash /* Proposal.Hash() */, VoteProof /* INIT VoteProof */, []byte) (Block, error)
+	ProcessACCEPT(valuehash.Hash /* Proposal.Hash() */, VoteProof /* ACCEPT VoteProof */, []byte) (BlockStorage, error)
 }
 
 type ProposalProcessorV0 struct {
 	*logging.Logger
 	localState  *LocalState
 	sealStorage SealStorage
+	blocks      *sync.Map
 }
 
-func NewProposalProcessorV0(localState *LocalState, sealStorage SealStorage) ProposalProcessorV0 {
-	return ProposalProcessorV0{
+func NewProposalProcessorV0(localState *LocalState, sealStorage SealStorage) *ProposalProcessorV0 {
+	return &ProposalProcessorV0{
 		Logger: logging.NewLogger(func(c zerolog.Context) zerolog.Context {
 			return c.Str("module", "proposal-processor-v0")
 		}),
 		localState:  localState,
 		sealStorage: sealStorage,
+		blocks:      &sync.Map{},
 	}
 }
 
-// TODO b is NetworkID
-func (dp ProposalProcessorV0) Process(ph valuehash.Hash, b []byte) (BlockStorage, error) {
+func (dp *ProposalProcessorV0) ProcessINIT(ph valuehash.Hash, initVoteProof VoteProof, b []byte) (Block, error) {
+	if i, found := dp.blocks.Load(ph); found {
+		return i.(Block), nil
+	}
+
 	var proposal Proposal
 	if sl, found, err := dp.sealStorage.Seal(ph); err != nil || !found {
 		if err != nil {
@@ -39,6 +47,21 @@ func (dp ProposalProcessorV0) Process(ph valuehash.Hash, b []byte) (BlockStorage
 		return nil, xerrors.Errorf("Proposal not found; proposal=%s", ph.String())
 	} else {
 		proposal = sl.(Proposal)
+	}
+
+	{ // check proposed time
+		ivp := dp.localState.LastINITVoteProof()
+		if ivp == nil {
+			return nil, xerrors.Errorf("last INIT VoteProof is missing")
+		}
+
+		timespan := dp.localState.Policy().TimespanValidBallot()
+		if proposal.SignedAt().Before(ivp.FinishedAt().Add(timespan * -1)) {
+			return nil, xerrors.Errorf(
+				"Proposal was sent before VoteProof; SignedAt=%s now=%s timespan=%s",
+				proposal.SignedAt(), ivp.FinishedAt(), timespan,
+			)
+		}
 	}
 
 	lastBlock := dp.localState.LastBlock()
@@ -56,41 +79,40 @@ func (dp ProposalProcessorV0) Process(ph valuehash.Hash, b []byte) (BlockStorage
 		return nil, err
 	}
 
-	ivp := dp.localState.LastINITVoteProof()
-	if ivp == nil {
-		return nil, xerrors.Errorf("last INIT VoteProof is missing")
-	}
-
-	{ // check proposed time
-		timespan := dp.localState.Policy().TimespanValidBallot()
-		if proposal.SignedAt().Before(ivp.FinishedAt().Add(timespan * -1)) {
-			return nil, xerrors.Errorf(
-				"Proposal was sent before VoteProof; SignedAt=%s now=%s timespan=%s",
-				proposal.SignedAt(), ivp.FinishedAt(), timespan,
-			)
-		}
-	}
-
-	avp := dp.localState.LastACCEPTVoteProof()
-	if ivp == nil {
-		return nil, xerrors.Errorf("last ACCEPT VoteProof is missing")
-	}
-
-	block, err := NewBlockV0(
+	var block Block
+	if b, err := NewBlockV0(
 		proposal.Height(), proposal.Round(), proposal.Hash(), lastBlock.Hash(),
-		blockOperations, blockStates, ivp, avp, b,
-	)
-	if err != nil {
+		blockOperations, blockStates,
+		b,
+	); err != nil {
 		return nil, err
+	} else {
+		block = b
+	}
+
+	block = block.SetINITVoteProof(initVoteProof)
+
+	dp.blocks.Store(ph, block)
+
+	return block, nil
+}
+
+// TODO b is NetworkID
+func (dp *ProposalProcessorV0) ProcessACCEPT(ph valuehash.Hash, acceptVoteProof VoteProof, b []byte) (BlockStorage, error) {
+	var block Block
+	if i, found := dp.blocks.Load(ph); !found {
+		return nil, xerrors.Errorf("not processed ProcessINIT")
+	} else {
+		block = i.(Block).SetACCEPTVoteProof(acceptVoteProof)
 	}
 
 	return dp.localState.Storage().OpenBlockStorage(block)
 }
 
-func (dp ProposalProcessorV0) processSeals(Proposal, []byte) (valuehash.Hash, error) {
+func (dp *ProposalProcessorV0) processSeals(Proposal, []byte) (valuehash.Hash, error) {
 	return nil, nil
 }
 
-func (dp ProposalProcessorV0) processStates(Proposal, []byte) (valuehash.Hash, error) {
+func (dp *ProposalProcessorV0) processStates(Proposal, []byte) (valuehash.Hash, error) {
 	return nil, nil
 }

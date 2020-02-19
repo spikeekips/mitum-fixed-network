@@ -17,6 +17,6 @@ func NewContestBlock(
 
 	return isaac.NewBlockV0(
 		height, round, proposal, previousBlock,
-		nil, nil, nil, nil, nil,
+		nil, nil, nil,
 	)
 }

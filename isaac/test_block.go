@@ -17,7 +17,5 @@ func NewTestBlockV0(height Height, round Round, proposal, previousBlock valuehas
 		valuehash.RandomSHA256(),
 		valuehash.RandomSHA256(),
 		nil,
-		nil,
-		nil,
 	)
 }

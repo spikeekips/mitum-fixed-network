@@ -118,22 +118,22 @@ func (bs *BaseStateHandler) StoreNewBlock(blockStorage BlockStorage) error {
 }
 
 // TODO rename 'vp' to 'voteProof'
-func (bs *BaseStateHandler) StoreNewBlockByVoteProof(vp VoteProof) error {
-	fact, ok := vp.Majority().(ACCEPTBallotFact)
+func (bs *BaseStateHandler) StoreNewBlockByVoteProof(acceptVoteProof VoteProof) error {
+	fact, ok := acceptVoteProof.Majority().(ACCEPTBallotFact)
 	if !ok {
-		return xerrors.Errorf("needs ACCEPTBallotFact: fact=%T", vp.Majority())
+		return xerrors.Errorf("needs ACCEPTBallotFact: fact=%T", acceptVoteProof.Majority())
 	}
 
-	l := loggerWithVoteProof(vp, bs.Log()).With().
+	l := loggerWithVoteProof(acceptVoteProof, bs.Log()).With().
 		Str("proposal", fact.Proposal().String()).
 		Str("new_block", fact.NewBlock().String()).
 		Logger()
 
-	_ = bs.localState.SetLastACCEPTVoteProof(vp)
+	_ = bs.localState.SetLastACCEPTVoteProof(acceptVoteProof)
 
 	l.Debug().Msg("trying to store new block")
 
-	blockStorage, err := bs.proposalProcessor.Process(fact.Proposal(), nil)
+	blockStorage, err := bs.proposalProcessor.ProcessACCEPT(fact.Proposal(), acceptVoteProof, nil)
 	if err != nil {
 		return err
 	}

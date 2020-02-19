@@ -33,8 +33,6 @@ func NewBlockV0(
 	previousBlock valuehash.Hash,
 	blockOperations valuehash.Hash,
 	blockStates valuehash.Hash,
-	initVoteProof VoteProof,
-	acceptVoteProof VoteProof,
 	b []byte,
 ) (BlockV0, error) {
 	root, err := GenerateBlockV0Hash(
@@ -56,8 +54,6 @@ func NewBlockV0(
 		height:          height,
 		round:           round,
 		proposal:        proposal,
-		initVoteProof:   initVoteProof,
-		acceptVoteProof: acceptVoteProof,
 		blockOperations: blockOperations,
 		blockStates:     blockStates,
 		createdAt:       localtime.Now(),
@@ -178,4 +174,15 @@ func (bm BlockV0) ACCEPTVoteProof() VoteProof {
 
 func (bm BlockV0) CreatedAt() time.Time {
 	return bm.createdAt
+}
+
+func (bm BlockV0) SetINITVoteProof(voteProof VoteProof) Block {
+	bm.initVoteProof = voteProof
+
+	return bm
+}
+func (bm BlockV0) SetACCEPTVoteProof(voteProof VoteProof) Block {
+	bm.acceptVoteProof = voteProof
+
+	return bm
 }

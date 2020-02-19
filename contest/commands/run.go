@@ -38,8 +38,8 @@ func (cm RunCommand) registerTypes() {
 	_ = hint.RegisterType(isaac.BlockStateType, "block-state")
 }
 
-func (cm RunCommand) generateInitialBlock() (isaac.Block, error) {
-	var initial isaac.Block
+func (cm RunCommand) generateInitialBlock() (isaac.BlockV0, error) {
+	var initial isaac.BlockV0
 	initial, err := common.NewContestBlock(
 		isaac.Height(33),
 		isaac.Round(0),
@@ -47,7 +47,7 @@ func (cm RunCommand) generateInitialBlock() (isaac.Block, error) {
 		valuehash.RandomSHA256(),
 	)
 	if err != nil {
-		return nil, err
+		return isaac.BlockV0{}, err
 	}
 
 	return initial, nil
@@ -88,7 +88,7 @@ func (cm RunCommand) generateINITVoteProof(np *common.NodeProcess) (isaac.VotePr
 
 func (cm RunCommand) generateACCEPTVoteProof(
 	np *common.NodeProcess, proposal valuehash.Hash,
-) (isaac.Block, isaac.VoteProof, error) {
+) (isaac.BlockV0, isaac.VoteProof, error) {
 	ivp := np.LocalState.LastINITVoteProof()
 
 	newBlock, err := common.NewContestBlock(
@@ -98,19 +98,19 @@ func (cm RunCommand) generateACCEPTVoteProof(
 		np.LocalState.LastBlock().Hash(),
 	)
 	if err != nil {
-		return nil, nil, err
+		return isaac.BlockV0{}, nil, err
 	}
 
 	var avp isaac.VoteProof
 	for _, n := range np.AllNodes {
 		ab, err := isaac.NewACCEPTBallotV0FromLocalState(n, ivp.Round(), newBlock, nil)
 		if err != nil {
-			return nil, nil, err
+			return isaac.BlockV0{}, nil, err
 		}
 
 		vp, err := np.Ballotbox.Vote(ab)
 		if err != nil {
-			return nil, nil, err
+			return isaac.BlockV0{}, nil, err
 		}
 
 		if !vp.IsFinished() {
@@ -124,7 +124,7 @@ func (cm RunCommand) generateACCEPTVoteProof(
 	}
 
 	if avp == nil {
-		return nil, nil, xerrors.Errorf("failed to make ACCEPT VoteProof")
+		return isaac.BlockV0{}, nil, xerrors.Errorf("failed to make ACCEPT VoteProof")
 	}
 
 	return newBlock, avp, nil
@@ -172,6 +172,9 @@ func (cm RunCommand) generateBasement(nps []*common.NodeProcess) error {
 		_ = np.LocalState.SetLastACCEPTVoteProof(avps[np.LocalState.Node().Address()])
 
 		newBlock := newBlocks[np.LocalState.Node().Address()]
+		newBlock = newBlock.SetINITVoteProof(ivps[np.LocalState.Node().Address()])
+		newBlock = newBlock.SetACCEPTVoteProof(avps[np.LocalState.Node().Address()])
+
 		ob, err := np.LocalState.Storage().OpenBlockStorage(newBlock)
 		if err != nil {
 			return err

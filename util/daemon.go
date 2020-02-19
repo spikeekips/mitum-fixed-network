@@ -35,7 +35,7 @@ func NewFunctionDaemon(fn func(chan struct{}) error, isDebug bool) *FunctionDaem
 			return c.Str("module", "functondaemon")
 		}),
 		fn:       fn,
-		stopChan: make(chan struct{}),
+		stopChan: make(chan struct{}, 2),
 		isDebug:  isDebug,
 	}
 
@@ -67,7 +67,6 @@ func (dm *FunctionDaemon) Start() error {
 
 	{
 		dm.Lock()
-		dm.stopChan = make(chan struct{})
 		dm.stoppingChan = make(chan struct{}, 2)
 
 		dm.stoppingWait = &sync.WaitGroup{}
@@ -97,7 +96,6 @@ func (dm *FunctionDaemon) kill() {
 	dm.stoppingWait.Done()
 
 	dm.Lock()
-	dm.stopChan = nil
 	dm.stoppingChan = nil
 	dm.Unlock()
 }
@@ -113,12 +111,6 @@ func (dm *FunctionDaemon) Stop() error {
 
 	dm.stopChan <- struct{}{}
 	dm.stoppingWait.Wait()
-
-	dm.Lock()
-	dm.stopChan = nil
-	dm.stoppingChan = nil
-	dm.stoppingWait = nil
-	dm.Unlock()
 
 	if dm.isDebug {
 		dm.Log().Debug().Msg("stopped")

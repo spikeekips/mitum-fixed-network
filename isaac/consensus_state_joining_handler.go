@@ -53,7 +53,6 @@ strategy,
 */
 type ConsensusStateJoiningHandler struct {
 	*BaseStateHandler
-	proposalProcessor           ProposalProcessor
 	broadcastingINITBallotTimer *localtime.CallbackTimer
 	cr                          Round
 }

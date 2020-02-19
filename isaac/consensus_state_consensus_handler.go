@@ -25,11 +25,10 @@ Consensus state is started by new INIT VoteProof and waits next Proposal.
 */
 type ConsensusStateConsensusHandler struct {
 	*BaseStateHandler
-	proposalProcessor ProposalProcessor
-	suffrage          Suffrage
-	sealStorage       SealStorage
-	proposalMaker     *ProposalMaker
-	ballotTimer       util.Daemon
+	suffrage      Suffrage
+	sealStorage   SealStorage
+	proposalMaker *ProposalMaker
+	ballotTimer   util.Daemon
 }
 
 func NewConsensusStateConsensusHandler(

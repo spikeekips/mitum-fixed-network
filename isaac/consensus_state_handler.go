@@ -3,10 +3,8 @@ package isaac
 import (
 	"sync"
 
-	"github.com/rs/zerolog"
 	"github.com/spikeekips/mitum/logging"
 	"github.com/spikeekips/mitum/seal"
-	"github.com/spikeekips/mitum/util"
 	"golang.org/x/xerrors"
 )
 
@@ -165,94 +163,4 @@ func (bs *BaseStateHandler) StoreNewBlockByVoteProof(vp VoteProof) error {
 	l.Info().Msg("new block stored")
 
 	return nil
-}
-
-func loggerWithSeal(sl seal.Seal, l *zerolog.Logger) *zerolog.Logger {
-	if ls, ok := sl.(zerolog.LogObjectMarshaler); ok {
-		ll := l.With().EmbedObject(ls).Logger()
-
-		return &ll
-	}
-
-	ll := l.With().
-		Dict("seal", zerolog.Dict().
-			Str("hint", sl.Hint().Verbose()).
-			Str("hash", sl.Hash().String()),
-		).Logger()
-
-	return &ll
-}
-
-func loggerWithBallot(ballot Ballot, l *zerolog.Logger) *zerolog.Logger {
-	if lb, ok := ballot.(zerolog.LogObjectMarshaler); ok {
-		ll := l.With().EmbedObject(lb).Logger()
-
-		return &ll
-	}
-
-	ll := loggerWithSeal(ballot, l).With().
-		Dict("ballot", zerolog.Dict().
-			Int64("height", ballot.Height().Int64()).
-			Uint64("round", ballot.Round().Uint64()).
-			Str("stage", ballot.Stage().String()).
-			Str("node", ballot.Node().String()),
-		).Logger()
-
-	return &ll
-}
-
-func loggerWithVoteProof(vp VoteProof, l *zerolog.Logger) *zerolog.Logger {
-	if vp == nil {
-		return l
-	}
-
-	if lvp, ok := vp.(zerolog.LogObjectMarshaler); ok {
-		ll := l.With().EmbedObject(lvp).Logger()
-
-		return &ll
-	}
-
-	rvp, _ := util.JSONMarshal(vp)
-
-	ll := l.With().RawJSON("voteproof", rvp).Logger()
-
-	return &ll
-}
-
-func loggerWithLocalState(localState *LocalState, l *zerolog.Logger) *zerolog.Logger {
-	lastBlock := localState.LastBlock()
-	if lastBlock == nil {
-		return l
-	}
-
-	ll := l.With().
-		Dict("local_state", zerolog.Dict().
-			Dict("block", zerolog.Dict().
-				Str("hash", lastBlock.Hash().String()).
-				Int64("height", lastBlock.Height().Int64()).
-				Uint64("round", lastBlock.Round().Uint64()),
-			),
-		).Logger()
-
-	return &ll
-}
-
-func loggerWithConsensusStateChangeContext(ctx ConsensusStateChangeContext, l *zerolog.Logger) *zerolog.Logger {
-	e := zerolog.Dict().
-		Str("from_state", ctx.From().String()).
-		Str("to_state", ctx.To().String())
-
-	if ctx.voteProof != nil {
-		if lvp, ok := ctx.voteProof.(zerolog.LogObjectMarshaler); ok {
-			e.EmbedObject(lvp)
-		} else {
-			rvp, _ := util.JSONMarshal(ctx.voteProof)
-
-			e.RawJSON("voteproof", rvp)
-		}
-	}
-
-	ll := l.With().Dict("change_context", e).Logger()
-
-	return loggerWithVoteProof(ctx.voteProof, &ll)
 }

@@ -64,25 +64,25 @@ type ACCEPTBallotV0 struct {
 	ACCEPTBallotFactV0
 	h             valuehash.Hash
 	bodyHash      valuehash.Hash
-	voteProof     VoteProof
+	voteproof     Voteproof
 	factHash      valuehash.Hash
 	factSignature key.Signature
 }
 
-func NewACCEPTBallotV0FromLocalState(
-	localState *LocalState,
+func NewACCEPTBallotV0FromLocalstate(
+	localstate *Localstate,
 	round Round,
 	newBlock Block,
 	b []byte,
 ) (ACCEPTBallotV0, error) {
-	lastBlock := localState.LastBlock()
+	lastBlock := localstate.LastBlock()
 	if lastBlock == nil {
 		return ACCEPTBallotV0{}, xerrors.Errorf("lastBlock is empty")
 	}
 
 	ab := ACCEPTBallotV0{
 		BaseBallotV0: BaseBallotV0{
-			node: localState.Node().Address(),
+			node: localstate.Node().Address(),
 		},
 		ACCEPTBallotFactV0: ACCEPTBallotFactV0{
 			BaseBallotFactV0: BaseBallotFactV0{
@@ -92,11 +92,11 @@ func NewACCEPTBallotV0FromLocalState(
 			proposal: newBlock.Proposal(),
 			newBlock: newBlock.Hash(),
 		},
-		voteProof: localState.LastINITVoteProof(),
+		voteproof: localstate.LastINITVoteproof(),
 	}
 
 	// TODO NetworkID must be given.
-	if err := ab.Sign(localState.Node().Privatekey(), b); err != nil {
+	if err := ab.Sign(localstate.Node().Privatekey(), b); err != nil {
 		return ACCEPTBallotV0{}, err
 	}
 
@@ -120,14 +120,14 @@ func (ab ACCEPTBallotV0) BodyHash() valuehash.Hash {
 }
 
 func (ab ACCEPTBallotV0) IsValid(b []byte) error {
-	if ab.voteProof == nil {
-		return xerrors.Errorf("empty VoteProof")
+	if ab.voteproof == nil {
+		return xerrors.Errorf("empty Voteproof")
 	}
 
 	if err := isvalid.Check([]isvalid.IsValider{
 		ab.BaseBallotV0,
 		ab.ACCEPTBallotFactV0,
-		ab.voteProof,
+		ab.voteproof,
 	}, b, false); err != nil {
 		return err
 	}
@@ -135,8 +135,8 @@ func (ab ACCEPTBallotV0) IsValid(b []byte) error {
 	return nil
 }
 
-func (ab ACCEPTBallotV0) VoteProof() VoteProof {
-	return ab.voteProof
+func (ab ACCEPTBallotV0) Voteproof() Voteproof {
+	return ab.voteproof
 }
 
 func (ab ACCEPTBallotV0) GenerateHash(b []byte) (valuehash.Hash, error) {
@@ -148,7 +148,7 @@ func (ab ACCEPTBallotV0) GenerateHash(b []byte) (valuehash.Hash, error) {
 		ab.BaseBallotV0.Bytes(),
 		ab.ACCEPTBallotFactV0.Bytes(),
 		ab.bodyHash.Bytes(),
-		ab.voteProof.Bytes(),
+		ab.voteproof.Bytes(),
 		b,
 	})
 
@@ -162,7 +162,7 @@ func (ab ACCEPTBallotV0) GenerateBodyHash(b []byte) (valuehash.Hash, error) {
 
 	e := util.ConcatSlice([][]byte{
 		ab.ACCEPTBallotFactV0.Bytes(),
-		ab.voteProof.Bytes(),
+		ab.voteproof.Bytes(),
 		b,
 	})
 

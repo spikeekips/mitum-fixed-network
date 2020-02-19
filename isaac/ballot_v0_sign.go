@@ -68,20 +68,20 @@ type SIGNBallotV0 struct {
 	factSignature key.Signature
 }
 
-func NewSIGNBallotV0FromLocalState(
-	localState *LocalState,
+func NewSIGNBallotV0FromLocalstate(
+	localstate *Localstate,
 	round Round,
 	newBlock Block,
 	b []byte,
 ) (SIGNBallotV0, error) {
-	lastBlock := localState.LastBlock()
+	lastBlock := localstate.LastBlock()
 	if lastBlock == nil {
 		return SIGNBallotV0{}, xerrors.Errorf("lastBlock is empty")
 	}
 
 	sb := SIGNBallotV0{
 		BaseBallotV0: BaseBallotV0{
-			node: localState.Node().Address(),
+			node: localstate.Node().Address(),
 		},
 		SIGNBallotFactV0: SIGNBallotFactV0{
 			BaseBallotFactV0: BaseBallotFactV0{
@@ -94,7 +94,7 @@ func NewSIGNBallotV0FromLocalState(
 	}
 
 	// TODO NetworkID must be given.
-	if err := sb.Sign(localState.Node().Privatekey(), b); err != nil {
+	if err := sb.Sign(localstate.Node().Privatekey(), b); err != nil {
 		return SIGNBallotV0{}, err
 	}
 

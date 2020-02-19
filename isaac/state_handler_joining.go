@@ -11,15 +11,15 @@ import (
 )
 
 /*
-ConsensusStateJoiningHandler tries to join network safely. This is the basic
+StateJoiningHandler tries to join network safely. This is the basic
 strategy,
 
-* Keeping broadcasting INIT ballot with VoteProof
+* Keeping broadcasting INIT ballot with Voteproof
 
-- waits the incoming INIT ballots, which should have VoteProof.
+- waits the incoming INIT ballots, which should have Voteproof.
 - if timed out, still broadcasts and waits.
 
-* With (valid) incoming Ballot VoteProof
+* With (valid) incoming Ballot Voteproof
 
 - validate it.
 
@@ -27,13 +27,13 @@ strategy,
 
 - if not valid, still broadcasts and waits.
 
-- if VoteProof is INIT
-	- if height is the next of local block, keeps broadcasts INIT ballot with VoteProof's round
+- if Voteproof is INIT
+	- if height is the next of local block, keeps broadcasts INIT ballot with Voteproof's round
 
 	- if not,
 		-> moves to sync.
 
-- if VoteProof is ACCEPT
+- if Voteproof is ACCEPT
 	- if height is not the next of local block,
 		-> moves to syncing.
 
@@ -44,29 +44,29 @@ strategy,
 			-> moves to sync.
 		1. waits next INIT VP
 
-* With consensused INIT VoteProof received,
+* With consensused INIT Voteproof received,
 	- if height is not the next of local block,
 		-> moves to syncing.
 
 	- if next of local block,
 		-> moves to consesus.
 */
-type ConsensusStateJoiningHandler struct {
+type StateJoiningHandler struct {
 	*BaseStateHandler
 	broadcastingINITBallotTimer *localtime.CallbackTimer
 	cr                          Round
 }
 
-func NewConsensusStateJoiningHandler(
-	localState *LocalState,
+func NewStateJoiningHandler(
+	localstate *Localstate,
 	proposalProcessor ProposalProcessor,
-) (*ConsensusStateJoiningHandler, error) {
-	if lastBlock := localState.LastBlock(); lastBlock == nil {
+) (*StateJoiningHandler, error) {
+	if lastBlock := localstate.LastBlock(); lastBlock == nil {
 		return nil, xerrors.Errorf("last block is empty")
 	}
 
-	cs := &ConsensusStateJoiningHandler{
-		BaseStateHandler: NewBaseStateHandler(localState, proposalProcessor, ConsensusStateJoining),
+	cs := &StateJoiningHandler{
+		BaseStateHandler: NewBaseStateHandler(localstate, proposalProcessor, StateJoining),
 	}
 	cs.BaseStateHandler.Logger = logging.NewLogger(func(c zerolog.Context) zerolog.Context {
 		return c.Str("module", "consensus-state-joining-handler")
@@ -75,7 +75,7 @@ func NewConsensusStateJoiningHandler(
 	bt, err := localtime.NewCallbackTimer(
 		"joining-broadcasting-init-ballot",
 		cs.broadcastingINITBallot,
-		localState.Policy().IntervalBroadcastingINITBallot(),
+		localstate.Policy().IntervalBroadcastingINITBallot(),
 		nil,
 	)
 	if err != nil {
@@ -86,14 +86,14 @@ func NewConsensusStateJoiningHandler(
 	return cs, nil
 }
 
-func (cs *ConsensusStateJoiningHandler) SetLogger(l zerolog.Logger) *logging.Logger {
+func (cs *StateJoiningHandler) SetLogger(l zerolog.Logger) *logging.Logger {
 	_ = cs.Logger.SetLogger(l)
 	_ = cs.broadcastingINITBallotTimer.SetLogger(l)
 
 	return cs.Logger
 }
 
-func (cs *ConsensusStateJoiningHandler) Activate(ctx ConsensusStateChangeContext) error {
+func (cs *StateJoiningHandler) Activate(ctx StateChangeContext) error {
 	// starts to keep broadcasting INIT Ballot
 	if err := cs.startbroadcastingINITBallotTimer(); err != nil {
 		return err
@@ -102,13 +102,13 @@ func (cs *ConsensusStateJoiningHandler) Activate(ctx ConsensusStateChangeContext
 	cs.Lock()
 	defer cs.Unlock()
 
-	l := loggerWithConsensusStateChangeContext(ctx, cs.Log())
+	l := loggerWithStateChangeContext(ctx, cs.Log())
 	l.Debug().Msg("activated")
 
 	return nil
 }
 
-func (cs *ConsensusStateJoiningHandler) Deactivate(ctx ConsensusStateChangeContext) error {
+func (cs *StateJoiningHandler) Deactivate(ctx StateChangeContext) error {
 	if err := cs.stopbroadcastingINITBallotTimer(); err != nil {
 		return err
 	}
@@ -116,27 +116,27 @@ func (cs *ConsensusStateJoiningHandler) Deactivate(ctx ConsensusStateChangeConte
 	cs.Lock()
 	defer cs.Unlock()
 
-	l := loggerWithConsensusStateChangeContext(ctx, cs.Log())
+	l := loggerWithStateChangeContext(ctx, cs.Log())
 	l.Debug().Msg("deactivated")
 
 	return nil
 }
 
-func (cs *ConsensusStateJoiningHandler) currentRound() Round {
+func (cs *StateJoiningHandler) currentRound() Round {
 	cs.RLock()
 	defer cs.RUnlock()
 
 	return cs.cr
 }
 
-func (cs *ConsensusStateJoiningHandler) setCurrentRound(round Round) {
+func (cs *StateJoiningHandler) setCurrentRound(round Round) {
 	cs.Lock()
 	defer cs.Unlock()
 
 	cs.cr = round
 }
 
-func (cs *ConsensusStateJoiningHandler) startbroadcastingINITBallotTimer() error {
+func (cs *StateJoiningHandler) startbroadcastingINITBallotTimer() error {
 	if err := cs.stopbroadcastingINITBallotTimer(); err != nil {
 		return err
 	}
@@ -147,7 +147,7 @@ func (cs *ConsensusStateJoiningHandler) startbroadcastingINITBallotTimer() error
 	return cs.broadcastingINITBallotTimer.Start()
 }
 
-func (cs *ConsensusStateJoiningHandler) stopbroadcastingINITBallotTimer() error {
+func (cs *StateJoiningHandler) stopbroadcastingINITBallotTimer() error {
 	cs.Lock()
 	defer cs.Unlock()
 
@@ -158,8 +158,8 @@ func (cs *ConsensusStateJoiningHandler) stopbroadcastingINITBallotTimer() error 
 	return nil
 }
 
-func (cs *ConsensusStateJoiningHandler) broadcastingINITBallot() (bool, error) {
-	ib, err := NewINITBallotV0FromLocalState(cs.localState, cs.currentRound(), nil)
+func (cs *StateJoiningHandler) broadcastingINITBallot() (bool, error) {
+	ib, err := NewINITBallotV0FromLocalstate(cs.localstate, cs.currentRound(), nil)
 	if err != nil {
 		cs.Log().Error().Err(err).Msg("failed to broadcast INIT ballot; will keep trying")
 		return true, nil
@@ -170,10 +170,10 @@ func (cs *ConsensusStateJoiningHandler) broadcastingINITBallot() (bool, error) {
 	return true, nil
 }
 
-// NewSeal only cares on INIT ballot and it's VoteProof.
-func (cs *ConsensusStateJoiningHandler) NewSeal(sl seal.Seal) error {
+// NewSeal only cares on INIT ballot and it's Voteproof.
+func (cs *StateJoiningHandler) NewSeal(sl seal.Seal) error {
 	var ballot Ballot
-	var vp VoteProof
+	var vp Voteproof
 	switch t := sl.(type) {
 	case Proposal:
 		return cs.handleProposal(t)
@@ -186,23 +186,23 @@ func (cs *ConsensusStateJoiningHandler) NewSeal(sl seal.Seal) error {
 		return nil
 	case INITBallot:
 		ballot = t
-		vp = t.VoteProof()
+		vp = t.Voteproof()
 	case ACCEPTBallot:
 		ballot = t
-		vp = t.VoteProof()
+		vp = t.Voteproof()
 	}
 
-	l := loggerWithVoteProof(vp, loggerWithBallot(ballot, cs.Log()))
+	l := loggerWithVoteproof(vp, loggerWithBallot(ballot, cs.Log()))
 	l.Debug().Msg("got ballot")
 
 	if ballot.Stage() == StageINIT {
 		switch vp.Stage() {
 		case StageACCEPT:
-			return cs.handleINITBallotAndACCEPTVoteProof(ballot.(INITBallot), vp)
+			return cs.handleINITBallotAndACCEPTVoteproof(ballot.(INITBallot), vp)
 		case StageINIT:
-			return cs.handleINITBallotAndINITVoteProof(ballot.(INITBallot), vp)
+			return cs.handleINITBallotAndINITVoteproof(ballot.(INITBallot), vp)
 		default:
-			err := xerrors.Errorf("invalid VoteProof stage found")
+			err := xerrors.Errorf("invalid Voteproof stage found")
 			l.Error().Err(err).Send()
 
 			return err
@@ -210,9 +210,9 @@ func (cs *ConsensusStateJoiningHandler) NewSeal(sl seal.Seal) error {
 	} else if ballot.Stage() == StageACCEPT {
 		switch vp.Stage() {
 		case StageINIT:
-			return cs.handleACCEPTBallotAndINITVoteProof(ballot.(ACCEPTBallot), vp)
+			return cs.handleACCEPTBallotAndINITVoteproof(ballot.(ACCEPTBallot), vp)
 		default:
-			err := xerrors.Errorf("invalid VoteProof stage found")
+			err := xerrors.Errorf("invalid Voteproof stage found")
 			l.Error().Err(err).Send()
 
 			return err
@@ -225,7 +225,7 @@ func (cs *ConsensusStateJoiningHandler) NewSeal(sl seal.Seal) error {
 	return err
 }
 
-func (cs *ConsensusStateJoiningHandler) handleProposal(proposal Proposal) error {
+func (cs *StateJoiningHandler) handleProposal(proposal Proposal) error {
 	l := cs.Log().With().
 		Str("proposal_hash", proposal.Hash().String()).
 		Int64("proposal_height", proposal.Height().Int64()).
@@ -237,18 +237,18 @@ func (cs *ConsensusStateJoiningHandler) handleProposal(proposal Proposal) error 
 	return nil
 }
 
-func (cs *ConsensusStateJoiningHandler) handleINITBallotAndACCEPTVoteProof(ballot INITBallot, vp VoteProof) error {
-	l := loggerWithVoteProof(vp, loggerWithBallot(ballot, cs.Log()))
-	l.Debug().Msg("INIT Ballot + ACCEPT VoteProof")
+func (cs *StateJoiningHandler) handleINITBallotAndACCEPTVoteproof(ballot INITBallot, vp Voteproof) error {
+	l := loggerWithVoteproof(vp, loggerWithBallot(ballot, cs.Log()))
+	l.Debug().Msg("INIT Ballot + ACCEPT Voteproof")
 
-	lastBlock := cs.localState.LastBlock()
+	lastBlock := cs.localstate.LastBlock()
 
 	switch d := ballot.Height() - (lastBlock.Height() + 1); {
 	case d > 0:
 		l.Debug().
 			Msgf("Ballot.Height() is higher than expected, %d + 1; moves to syncing", lastBlock.Height())
 
-		return cs.ChangeState(ConsensusStateSyncing, vp)
+		return cs.ChangeState(StateSyncing, vp)
 	case d == 0:
 		l.Debug().Msg("same height; keep waiting CVP")
 
@@ -261,15 +261,15 @@ func (cs *ConsensusStateJoiningHandler) handleINITBallotAndACCEPTVoteProof(ballo
 	}
 }
 
-func (cs *ConsensusStateJoiningHandler) handleINITBallotAndINITVoteProof(ballot INITBallot, vp VoteProof) error {
-	l := loggerWithVoteProof(vp, loggerWithBallot(ballot, cs.Log()))
-	l.Debug().Msg("INIT Ballot + INIT VoteProof")
+func (cs *StateJoiningHandler) handleINITBallotAndINITVoteproof(ballot INITBallot, vp Voteproof) error {
+	l := loggerWithVoteproof(vp, loggerWithBallot(ballot, cs.Log()))
+	l.Debug().Msg("INIT Ballot + INIT Voteproof")
 
-	lastBlock := cs.localState.LastBlock()
+	lastBlock := cs.localstate.LastBlock()
 
 	switch d := ballot.Height() - (lastBlock.Height() + 1); {
 	case d == 0:
-		if err := checkBlockWithINITVoteProof(lastBlock, vp); err != nil {
+		if err := checkBlockWithINITVoteproof(lastBlock, vp); err != nil {
 			l.Error().Err(err).Send()
 
 			return err
@@ -278,7 +278,7 @@ func (cs *ConsensusStateJoiningHandler) handleINITBallotAndINITVoteProof(ballot 
 		if ballot.Round() > cs.currentRound() {
 			l.Debug().
 				Uint64("current_round", cs.currentRound().Uint64()).
-				Msg("VoteProof.Round() is same or greater than currentRound; use this round")
+				Msg("Voteproof.Round() is same or greater than currentRound; use this round")
 
 			cs.setCurrentRound(ballot.Round())
 		}
@@ -288,34 +288,34 @@ func (cs *ConsensusStateJoiningHandler) handleINITBallotAndINITVoteProof(ballot 
 		return nil
 	case d > 0:
 		l.Debug().
-			Msgf("ballotVoteProof.Height() is higher than expected, %d + 1; moves to syncing", lastBlock.Height())
+			Msgf("ballotVoteproof.Height() is higher than expected, %d + 1; moves to syncing", lastBlock.Height())
 
-		return cs.ChangeState(ConsensusStateSyncing, vp)
+		return cs.ChangeState(StateSyncing, vp)
 	default:
 		l.Debug().
-			Msgf("ballotVoteProof.Height() is lower than expected, %d + 1; ignore it", lastBlock.Height())
+			Msgf("ballotVoteproof.Height() is lower than expected, %d + 1; ignore it", lastBlock.Height())
 
 		return nil
 	}
 }
 
-func (cs *ConsensusStateJoiningHandler) handleACCEPTBallotAndINITVoteProof(ballot ACCEPTBallot, vp VoteProof) error {
-	l := loggerWithVoteProof(vp, loggerWithBallot(ballot, cs.Log()))
-	l.Debug().Msg("ACCEPT Ballot + INIT VoteProof")
+func (cs *StateJoiningHandler) handleACCEPTBallotAndINITVoteproof(ballot ACCEPTBallot, vp Voteproof) error {
+	l := loggerWithVoteproof(vp, loggerWithBallot(ballot, cs.Log()))
+	l.Debug().Msg("ACCEPT Ballot + INIT Voteproof")
 
-	lastBlock := cs.localState.LastBlock()
+	lastBlock := cs.localstate.LastBlock()
 
 	switch d := ballot.Height() - (lastBlock.Height() + 1); {
 	case d == 0:
-		if err := checkBlockWithINITVoteProof(lastBlock, vp); err != nil {
+		if err := checkBlockWithINITVoteproof(lastBlock, vp); err != nil {
 			l.Error().Err(err).Send()
 
 			return err
 		}
 
 		// NOTE expected ACCEPT Ballot received, so will process Proposal of
-		// INIT VoteProof and broadcast new ACCEPT Ballot.
-		_ = cs.localState.SetLastINITVoteProof(vp)
+		// INIT Voteproof and broadcast new ACCEPT Ballot.
+		_ = cs.localstate.SetLastINITVoteproof(vp)
 
 		block, err := cs.proposalProcessor.ProcessINIT(ballot.Proposal(), vp, nil)
 		if err != nil {
@@ -323,7 +323,7 @@ func (cs *ConsensusStateJoiningHandler) handleACCEPTBallotAndINITVoteProof(ballo
 			return err
 		}
 
-		ab, err := NewACCEPTBallotV0FromLocalState(cs.localState, vp.Round(), block, nil)
+		ab, err := NewACCEPTBallotV0FromLocalstate(cs.localstate, vp.Round(), block, nil)
 		if err != nil {
 			cs.Log().Error().Err(err).Msg("failed to create ACCEPTBallot; will keep trying")
 			return nil
@@ -339,7 +339,7 @@ func (cs *ConsensusStateJoiningHandler) handleACCEPTBallotAndINITVoteProof(ballo
 		l.Debug().
 			Msgf("Ballot.Height() is higher than expected, %d + 1; moves to syncing", lastBlock.Height())
 
-		return cs.ChangeState(ConsensusStateSyncing, vp)
+		return cs.ChangeState(StateSyncing, vp)
 	default:
 		l.Debug().
 			Msgf("Ballot.Height() is lower than expected, %d + 1; ignore it", lastBlock.Height())
@@ -348,34 +348,34 @@ func (cs *ConsensusStateJoiningHandler) handleACCEPTBallotAndINITVoteProof(ballo
 	}
 }
 
-// NewVoteProof receives VoteProof. If received, stop broadcasting INIT ballot.
-func (cs *ConsensusStateJoiningHandler) NewVoteProof(vp VoteProof) error {
+// NewVoteproof receives Voteproof. If received, stop broadcasting INIT ballot.
+func (cs *StateJoiningHandler) NewVoteproof(vp Voteproof) error {
 	if err := cs.stopbroadcastingINITBallotTimer(); err != nil {
 		return err
 	}
 
-	l := loggerWithVoteProof(vp, cs.Log())
+	l := loggerWithVoteproof(vp, cs.Log())
 
-	l.Debug().Msg("got VoteProof")
+	l.Debug().Msg("got Voteproof")
 
 	switch vp.Stage() {
 	case StageACCEPT:
-		// TODO ACCEPT VoteProof is next block of local, try to process
-		// VoteProof.
+		// TODO ACCEPT Voteproof is next block of local, try to process
+		// Voteproof.
 		return nil
 	case StageINIT:
-		return cs.handleINITVoteProof(vp)
+		return cs.handleINITVoteproof(vp)
 	default:
-		err := xerrors.Errorf("unknown stage VoteProof received")
+		err := xerrors.Errorf("unknown stage Voteproof received")
 		l.Error().Err(err).Send()
 		return err
 	}
 }
 
-func (cs *ConsensusStateJoiningHandler) handleINITVoteProof(vp VoteProof) error {
-	l := loggerWithLocalState(cs.localState, loggerWithVoteProof(vp, cs.Log()))
+func (cs *StateJoiningHandler) handleINITVoteproof(vp Voteproof) error {
+	l := loggerWithLocalstate(cs.localstate, loggerWithVoteproof(vp, cs.Log()))
 
 	l.Debug().Msg("expected height; moves to consensus state")
 
-	return cs.ChangeState(ConsensusStateConsensus, vp)
+	return cs.ChangeState(StateConsensus, vp)
 }

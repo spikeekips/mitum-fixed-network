@@ -13,7 +13,7 @@ type INITBallotV0PackerJSON struct {
 	BaseBallotV0PackerJSON
 	PB valuehash.Hash `json:"previous_block"`
 	PR Round          `json:"previous_round"`
-	VR VoteProof      `json:"voteproof"`
+	VR Voteproof      `json:"voteproof"`
 }
 
 func (ib INITBallotV0) MarshalJSON() ([]byte, error) {
@@ -25,7 +25,7 @@ func (ib INITBallotV0) MarshalJSON() ([]byte, error) {
 		BaseBallotV0PackerJSON: bb,
 		PB:                     ib.previousBlock,
 		PR:                     ib.previousRound,
-		VR:                     ib.voteProof,
+		VR:                     ib.voteproof,
 	})
 }
 
@@ -59,8 +59,8 @@ func (ib *INITBallotV0) UnpackJSON(b []byte, enc *encoder.JSONEncoder) error {
 		epb = v
 	}
 
-	var vp VoteProof
-	if i, err := decodeVoteProof(enc, nib.VR); err != nil {
+	var vp Voteproof
+	if i, err := decodeVoteproof(enc, nib.VR); err != nil {
 		return err
 	} else {
 		vp = i
@@ -76,7 +76,7 @@ func (ib *INITBallotV0) UnpackJSON(b []byte, enc *encoder.JSONEncoder) error {
 		previousBlock:    epb,
 		previousRound:    nib.PR,
 	}
-	ib.voteProof = vp
+	ib.voteproof = vp
 
 	return nil
 }

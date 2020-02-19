@@ -76,20 +76,20 @@ type ProposalV0 struct {
 	factSignature key.Signature
 }
 
-func NewProposalFromLocalState(
-	localState *LocalState,
+func NewProposalFromLocalstate(
+	localstate *Localstate,
 	round Round,
 	seals []valuehash.Hash,
 	b []byte,
 ) (Proposal, error) {
-	lastBlock := localState.LastBlock()
+	lastBlock := localstate.LastBlock()
 	if lastBlock == nil {
 		return ProposalV0{}, xerrors.Errorf("lastBlock is empty")
 	}
 
 	pr := ProposalV0{
 		BaseBallotV0: BaseBallotV0{
-			node: localState.Node().Address(),
+			node: localstate.Node().Address(),
 		},
 		ProposalFactV0: ProposalFactV0{
 			BaseBallotFactV0: BaseBallotFactV0{
@@ -101,7 +101,7 @@ func NewProposalFromLocalState(
 	}
 
 	// TODO NetworkID must be given.
-	if err := pr.Sign(localState.Node().Privatekey(), b); err != nil {
+	if err := pr.Sign(localstate.Node().Privatekey(), b); err != nil {
 		return ProposalV0{}, err
 	}
 

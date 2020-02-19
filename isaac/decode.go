@@ -55,13 +55,13 @@ func decodeFact(enc encoder.Encoder, b []byte) (Fact, error) {
 	}
 }
 
-func decodeVoteProof(enc encoder.Encoder, b []byte) (VoteProof, error) {
+func decodeVoteproof(enc encoder.Encoder, b []byte) (Voteproof, error) {
 	if i, err := enc.DecodeByHint(b); err != nil {
 		return nil, err
 	} else if i == nil {
 		return nil, nil
-	} else if v, ok := i.(VoteProof); !ok {
-		return nil, errors.InvalidTypeError.Wrapf("not VoteProof; type=%T", i)
+	} else if v, ok := i.(Voteproof); !ok {
+		return nil, errors.InvalidTypeError.Wrapf("not Voteproof; type=%T", i)
 	} else {
 		return v, nil
 	}

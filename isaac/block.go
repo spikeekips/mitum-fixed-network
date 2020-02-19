@@ -26,10 +26,10 @@ type Block interface {
 	Proposal() valuehash.Hash
 	Operations() valuehash.Hash
 	States() valuehash.Hash
-	INITVoteProof() VoteProof
-	ACCEPTVoteProof() VoteProof
-	SetINITVoteProof(VoteProof) Block
-	SetACCEPTVoteProof(VoteProof) Block
+	INITVoteproof() Voteproof
+	ACCEPTVoteproof() Voteproof
+	SetINITVoteproof(Voteproof) Block
+	SetACCEPTVoteproof(Voteproof) Block
 	CreatedAt() time.Time
 }
 

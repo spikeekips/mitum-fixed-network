@@ -14,7 +14,7 @@ type VoteRecords struct {
 	votes     map[Address]valuehash.Hash // key: node Address, value: fact hash
 	factCount map[valuehash.Hash]uint
 	ballots   map[Address]Ballot
-	vp        VoteProofV0
+	vp        VoteproofV0
 }
 
 func NewVoteRecords(ballot Ballot, threshold Threshold) *VoteRecords {
@@ -23,15 +23,15 @@ func NewVoteRecords(ballot Ballot, threshold Threshold) *VoteRecords {
 		votes:     map[Address]valuehash.Hash{},
 		factCount: map[valuehash.Hash]uint{},
 		ballots:   map[Address]Ballot{},
-		vp: VoteProofV0{
+		vp: VoteproofV0{
 			height:    ballot.Height(),
 			round:     ballot.Round(),
 			stage:     ballot.Stage(),
 			threshold: threshold,
-			result:    VoteProofNotYet,
+			result:    VoteproofNotYet,
 			facts:     map[valuehash.Hash]Fact{},
 			ballots:   map[Address]valuehash.Hash{},
-			votes:     map[Address]VoteProofNodeFact{},
+			votes:     map[Address]VoteproofNodeFact{},
 		},
 	}
 }
@@ -55,8 +55,8 @@ func (vrs *VoteRecords) addBallot(ballot Ballot) bool {
 }
 
 // Vote votes by Ballot and keep track the vote records. If getting result is
-// done, VoteProof will not be updated.
-func (vrs *VoteRecords) Vote(ballot Ballot) VoteProof {
+// done, Voteproof will not be updated.
+func (vrs *VoteRecords) Vote(ballot Ballot) Voteproof {
 	vrs.Lock()
 	defer vrs.Unlock()
 
@@ -81,9 +81,9 @@ func (vrs *VoteRecords) Vote(ballot Ballot) VoteProof {
 	}
 
 	{
-		votes := map[Address]VoteProofNodeFact{}
+		votes := map[Address]VoteproofNodeFact{}
 		for node, ballot := range vrs.ballots {
-			votes[node] = VoteProofNodeFact{
+			votes[node] = VoteproofNodeFact{
 				fact:          ballot.FactHash(),
 				factSignature: ballot.FactSignature(),
 				signer:        ballot.Signer(),
@@ -121,14 +121,14 @@ func (vrs *VoteRecords) vote(ballot Ballot) bool {
 	}
 
 	var fact Fact
-	var result VoteProofResultType
+	var result VoteproofResultType
 	switch index := FindMajority(vrs.vp.threshold.Total, vrs.vp.threshold.Threshold, set...); index {
 	case -1:
-		result = VoteProofNotYet
+		result = VoteproofNotYet
 	case -2:
-		result = VoteProofDraw
+		result = VoteproofDraw
 	default:
-		result = VoteProofMajority
+		result = VoteproofMajority
 		fact = byCount[set[index]]
 	}
 

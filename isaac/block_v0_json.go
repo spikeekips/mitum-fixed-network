@@ -18,8 +18,8 @@ type BlockV0PackJSON struct {
 	PB valuehash.Hash     `json:"previous_block"`
 	BO valuehash.Hash     `json:"block_operations"`
 	BS valuehash.Hash     `json:"block_states"`
-	IV VoteProof          `json:"init_voteproof,omitempty"`
-	AV VoteProof          `json:"accept_voteproof,omitempty"`
+	IV Voteproof          `json:"init_voteproof,omitempty"`
+	AV Voteproof          `json:"accept_voteproof,omitempty"`
 	CA localtime.JSONTime `json:"created_at"`
 }
 
@@ -33,8 +33,8 @@ func (bm BlockV0) MarshalJSON() ([]byte, error) {
 		PB:                 bm.previousBlock,
 		BO:                 bm.blockOperations,
 		BS:                 bm.blockStates,
-		IV:                 bm.initVoteProof,
-		AV:                 bm.acceptVoteProof,
+		IV:                 bm.initVoteproof,
+		AV:                 bm.acceptVoteproof,
 		CA:                 localtime.NewJSONTime(bm.createdAt),
 	})
 }
@@ -77,14 +77,14 @@ func (bm *BlockV0) UnpackJSON(b []byte, enc *encoder.JSONEncoder) error {
 		return err
 	}
 
-	var iv, av VoteProof
+	var iv, av Voteproof
 	if nbm.IV != nil {
-		if iv, err = decodeVoteProof(enc, nbm.IV); err != nil {
+		if iv, err = decodeVoteproof(enc, nbm.IV); err != nil {
 			return err
 		}
 	}
 	if nbm.AV != nil {
-		if av, err = decodeVoteProof(enc, nbm.AV); err != nil {
+		if av, err = decodeVoteproof(enc, nbm.AV); err != nil {
 			return err
 		}
 	}
@@ -96,8 +96,8 @@ func (bm *BlockV0) UnpackJSON(b []byte, enc *encoder.JSONEncoder) error {
 	bm.previousBlock = pb
 	bm.blockOperations = bo
 	bm.blockStates = bs
-	bm.initVoteProof = iv
-	bm.acceptVoteProof = av
+	bm.initVoteproof = iv
+	bm.acceptVoteproof = av
 	bm.createdAt = nbm.CA.Time
 
 	return nil

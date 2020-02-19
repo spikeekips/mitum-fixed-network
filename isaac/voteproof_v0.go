@@ -10,68 +10,68 @@ import (
 	"github.com/spikeekips/mitum/valuehash"
 )
 
-var VoteProofV0Hint hint.Hint = hint.MustHint(VoteProofType, "0.1")
+var VoteproofV0Hint hint.Hint = hint.MustHint(VoteproofType, "0.1")
 
-type VoteProofV0 struct {
+type VoteproofV0 struct {
 	height     Height
 	round      Round
 	threshold  Threshold
-	result     VoteProofResultType
+	result     VoteproofResultType
 	closed     bool
 	stage      Stage
 	majority   Fact
 	facts      map[valuehash.Hash]Fact       // key: Fact.Hash(), value: Fact
 	ballots    map[Address]valuehash.Hash    // key: node Address, value: ballot hash
-	votes      map[Address]VoteProofNodeFact // key: node Address, value: VoteProofNodeFact
+	votes      map[Address]VoteproofNodeFact // key: node Address, value: VoteproofNodeFact
 	finishedAt time.Time
 }
 
-func (vp VoteProofV0) Hint() hint.Hint {
-	return VoteProofV0Hint
+func (vp VoteproofV0) Hint() hint.Hint {
+	return VoteproofV0Hint
 }
 
-func (vp VoteProofV0) IsFinished() bool {
-	return vp.result != VoteProofNotYet
+func (vp VoteproofV0) IsFinished() bool {
+	return vp.result != VoteproofNotYet
 }
 
-func (vp VoteProofV0) FinishedAt() time.Time {
+func (vp VoteproofV0) FinishedAt() time.Time {
 	return vp.finishedAt
 }
 
-func (vp VoteProofV0) IsClosed() bool {
+func (vp VoteproofV0) IsClosed() bool {
 	return vp.closed
 }
 
-func (vp VoteProofV0) Height() Height {
+func (vp VoteproofV0) Height() Height {
 	return vp.height
 }
 
-func (vp VoteProofV0) Round() Round {
+func (vp VoteproofV0) Round() Round {
 	return vp.round
 }
 
-func (vp VoteProofV0) Stage() Stage {
+func (vp VoteproofV0) Stage() Stage {
 	return vp.stage
 }
 
-func (vp VoteProofV0) Result() VoteProofResultType {
+func (vp VoteproofV0) Result() VoteproofResultType {
 	return vp.result
 }
 
-func (vp VoteProofV0) Majority() Fact {
+func (vp VoteproofV0) Majority() Fact {
 	return vp.majority
 }
 
-func (vp VoteProofV0) Ballots() map[Address]valuehash.Hash {
+func (vp VoteproofV0) Ballots() map[Address]valuehash.Hash {
 	return vp.ballots
 }
 
-func (vp VoteProofV0) Bytes() []byte {
+func (vp VoteproofV0) Bytes() []byte {
 	// TODO returns proper bytes
 	return nil
 }
 
-func (vp VoteProofV0) IsValid(b []byte) error {
+func (vp VoteproofV0) IsValid(b []byte) error {
 	if err := vp.isValidFields(b); err != nil {
 		return err
 	}
@@ -82,7 +82,7 @@ func (vp VoteProofV0) IsValid(b []byte) error {
 
 	// check majority
 	if len(vp.votes) < int(vp.threshold.Threshold) {
-		if vp.result != VoteProofNotYet {
+		if vp.result != VoteproofNotYet {
 			return xerrors.Errorf("result should be not-yet: %s", vp.result)
 		}
 
@@ -92,7 +92,7 @@ func (vp VoteProofV0) IsValid(b []byte) error {
 	return vp.isValidCheckMajority(b)
 }
 
-func (vp VoteProofV0) isValidCheckMajority(b []byte) error {
+func (vp VoteproofV0) isValidCheckMajority(b []byte) error {
 	counts := map[valuehash.Hash]uint{}
 	for _, f := range vp.votes { // nolint
 		counts[f.fact]++
@@ -110,14 +110,14 @@ func (vp VoteProofV0) isValidCheckMajority(b []byte) error {
 
 	var fact Fact
 	var factHash valuehash.Hash
-	var result VoteProofResultType
+	var result VoteproofResultType
 	switch index := FindMajority(vp.threshold.Total, vp.threshold.Threshold, set...); index {
 	case -1:
-		result = VoteProofNotYet
+		result = VoteproofNotYet
 	case -2:
-		result = VoteProofDraw
+		result = VoteproofDraw
 	default:
-		result = VoteProofMajority
+		result = VoteproofMajority
 		factHash = byCount[set[index]]
 		fact = vp.facts[factHash]
 	}
@@ -144,7 +144,7 @@ func (vp VoteProofV0) isValidCheckMajority(b []byte) error {
 	return nil
 }
 
-func (vp VoteProofV0) isValidFields(b []byte) error {
+func (vp VoteproofV0) isValidFields(b []byte) error {
 	if err := isvalid.Check([]isvalid.IsValider{
 		vp.height,
 		vp.stage,
@@ -157,12 +157,12 @@ func (vp VoteProofV0) isValidFields(b []byte) error {
 		return isvalid.InvalidError.Wrapf("empty finishedAt")
 	}
 
-	if vp.result != VoteProofMajority && vp.result != VoteProofDraw {
+	if vp.result != VoteproofMajority && vp.result != VoteproofDraw {
 		return isvalid.InvalidError.Wrapf("invalid result; result=%v", vp.result)
 	}
 
 	if vp.majority == nil {
-		if vp.result != VoteProofDraw {
+		if vp.result != VoteproofDraw {
 			return isvalid.InvalidError.Wrapf("empty majority, but result is not draw; result=%v", vp.result)
 		}
 	} else if err := vp.majority.IsValid(b); err != nil {
@@ -194,7 +194,7 @@ func (vp VoteProofV0) isValidFields(b []byte) error {
 	return nil
 }
 
-func (vp VoteProofV0) isValidFacts(b []byte) error {
+func (vp VoteproofV0) isValidFacts(b []byte) error {
 	factHashes := map[valuehash.Hash]bool{}
 	for node, f := range vp.votes { // nolint
 		if err := node.IsValid(b); err != nil {

@@ -12,10 +12,10 @@ import (
 )
 
 var (
-	VoteProofType hint.Type = hint.Type([2]byte{0x04, 0x00})
+	VoteproofType hint.Type = hint.Type([2]byte{0x04, 0x00})
 )
 
-type VoteProof interface {
+type Voteproof interface {
 	hint.Hinter
 	isvalid.IsValider
 	Bytes() []byte
@@ -25,56 +25,56 @@ type VoteProof interface {
 	Height() Height
 	Round() Round
 	Stage() Stage
-	Result() VoteProofResultType
+	Result() VoteproofResultType
 	Majority() Fact
 	Ballots() map[Address]valuehash.Hash
 }
 
-type VoteProofResultType uint8
+type VoteproofResultType uint8
 
 const (
-	VoteProofNotYet VoteProofResultType = iota
-	VoteProofDraw
-	VoteProofMajority
+	VoteproofNotYet VoteproofResultType = iota
+	VoteproofDraw
+	VoteproofMajority
 )
 
-func (vrt VoteProofResultType) String() string {
+func (vrt VoteproofResultType) String() string {
 	switch vrt {
-	case VoteProofNotYet:
+	case VoteproofNotYet:
 		return "NOT-YET"
-	case VoteProofDraw:
+	case VoteproofDraw:
 		return "DRAW"
-	case VoteProofMajority:
+	case VoteproofMajority:
 		return "MAJORITY"
 	default:
-		return "<unknown VoteProofResultType>"
+		return "<unknown VoteproofResultType>"
 	}
 }
 
-func (vrt VoteProofResultType) IsValid([]byte) error {
+func (vrt VoteproofResultType) IsValid([]byte) error {
 	switch vrt {
-	case VoteProofNotYet, VoteProofDraw, VoteProofMajority:
+	case VoteproofNotYet, VoteproofDraw, VoteproofMajority:
 		return nil
 	}
 
-	return isvalid.InvalidError.Wrapf("VoteProofResultType=%d", vrt)
+	return isvalid.InvalidError.Wrapf("VoteproofResultType=%d", vrt)
 }
 
-func (vrt VoteProofResultType) MarshalText() ([]byte, error) {
+func (vrt VoteproofResultType) MarshalText() ([]byte, error) {
 	return []byte(vrt.String()), nil
 }
 
-func (vrt *VoteProofResultType) UnmarshalText(b []byte) error {
-	var t VoteProofResultType
+func (vrt *VoteproofResultType) UnmarshalText(b []byte) error {
+	var t VoteproofResultType
 	switch string(b) {
 	case "NOT-YET":
-		t = VoteProofNotYet
+		t = VoteproofNotYet
 	case "DRAW":
-		t = VoteProofDraw
+		t = VoteproofDraw
 	case "MAJORITY":
-		t = VoteProofMajority
+		t = VoteproofMajority
 	default:
-		return xerrors.Errorf("<unknown VoteProofResultType>")
+		return xerrors.Errorf("<unknown VoteproofResultType>")
 	}
 
 	*vrt = t
@@ -82,13 +82,13 @@ func (vrt *VoteProofResultType) UnmarshalText(b []byte) error {
 	return nil
 }
 
-type VoteProofNodeFact struct {
+type VoteproofNodeFact struct {
 	fact          valuehash.Hash
 	factSignature key.Signature
 	signer        key.Publickey
 }
 
-func (vf VoteProofNodeFact) IsValid(b []byte) error {
+func (vf VoteproofNodeFact) IsValid(b []byte) error {
 	if err := isvalid.Check([]isvalid.IsValider{
 		vf.fact,
 		vf.factSignature,

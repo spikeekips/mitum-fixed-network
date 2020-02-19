@@ -9,17 +9,17 @@ import (
 	"github.com/spikeekips/mitum/valuehash"
 )
 
-var VoteProofGenesisV0Hint hint.Hint = hint.MustHint(VoteProofType, "0.1")
+var VoteproofGenesisV0Hint hint.Hint = hint.MustHint(VoteproofType, "0.1")
 
-type VoteProofGenesisV0 struct {
+type VoteproofGenesisV0 struct {
 	height     Height
 	threshold  Threshold
 	stage      Stage
 	finishedAt time.Time
 }
 
-func NewVoteProofGenesisV0(height Height, threshold Threshold, stage Stage) VoteProofGenesisV0 {
-	return VoteProofGenesisV0{
+func NewVoteproofGenesisV0(height Height, threshold Threshold, stage Stage) VoteproofGenesisV0 {
+	return VoteproofGenesisV0{
 		height:     height,
 		threshold:  threshold,
 		stage:      stage,
@@ -27,51 +27,51 @@ func NewVoteProofGenesisV0(height Height, threshold Threshold, stage Stage) Vote
 	}
 }
 
-func (vpg VoteProofGenesisV0) Hint() hint.Hint {
-	return VoteProofGenesisV0Hint
+func (vpg VoteproofGenesisV0) Hint() hint.Hint {
+	return VoteproofGenesisV0Hint
 }
 
-func (vpg VoteProofGenesisV0) IsFinished() bool {
+func (vpg VoteproofGenesisV0) IsFinished() bool {
 	return true
 }
 
-func (vpg VoteProofGenesisV0) FinishedAt() time.Time {
+func (vpg VoteproofGenesisV0) FinishedAt() time.Time {
 	return vpg.finishedAt
 }
 
-func (vpg VoteProofGenesisV0) IsClosed() bool {
+func (vpg VoteproofGenesisV0) IsClosed() bool {
 	return true
 }
 
-func (vpg VoteProofGenesisV0) Height() Height {
+func (vpg VoteproofGenesisV0) Height() Height {
 	return vpg.height
 }
 
-func (vpg VoteProofGenesisV0) Round() Round {
+func (vpg VoteproofGenesisV0) Round() Round {
 	return Round(0)
 }
 
-func (vpg VoteProofGenesisV0) Stage() Stage {
+func (vpg VoteproofGenesisV0) Stage() Stage {
 	return vpg.stage
 }
 
-func (vpg VoteProofGenesisV0) Result() VoteProofResultType {
-	return VoteProofMajority
+func (vpg VoteproofGenesisV0) Result() VoteproofResultType {
+	return VoteproofMajority
 }
 
-func (vpg VoteProofGenesisV0) Majority() Fact {
+func (vpg VoteproofGenesisV0) Majority() Fact {
 	return nil
 }
 
-func (vpg VoteProofGenesisV0) Ballots() map[Address]valuehash.Hash {
+func (vpg VoteproofGenesisV0) Ballots() map[Address]valuehash.Hash {
 	return nil
 }
 
-func (vpg VoteProofGenesisV0) Bytes() []byte {
+func (vpg VoteproofGenesisV0) Bytes() []byte {
 	return nil
 }
 
-func (vpg VoteProofGenesisV0) IsValid(b []byte) error {
+func (vpg VoteproofGenesisV0) IsValid(b []byte) error {
 	if err := isvalid.Check([]isvalid.IsValider{
 		vpg.height,
 		vpg.threshold,

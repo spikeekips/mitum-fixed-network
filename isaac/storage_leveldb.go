@@ -20,7 +20,7 @@ import (
 
 var (
 	leveldbBlockHeightPrefix     []byte = []byte{0x00, 0x01}
-	leveldbVoteProofHeightPrefix []byte = []byte{0x00, 0x02}
+	leveldbVoteproofHeightPrefix []byte = []byte{0x00, 0x02}
 	leveldbSealPrefix            []byte = []byte{0x00, 0x03}
 	leveldbProposalPrefix        []byte = []byte{0x00, 0x04}
 	leveldbBlockOperationsPrefix []byte = []byte{0x00, 0x05}
@@ -80,35 +80,35 @@ func (st *LeveldbStorage) LastBlock() (Block, error) {
 	return hinter.(Block), nil
 }
 
-func (st *LeveldbStorage) loadLastVoteProof(stage Stage) (VoteProof, error) {
-	return st.filterVoteProof(leveldbVoteProofHeightPrefix, stage)
+func (st *LeveldbStorage) loadLastVoteproof(stage Stage) (Voteproof, error) {
+	return st.filterVoteproof(leveldbVoteproofHeightPrefix, stage)
 }
 
-func (st *LeveldbStorage) newVoteProof(voteProof VoteProof) error {
+func (st *LeveldbStorage) newVoteproof(voteproof Voteproof) error {
 	st.Log().Debug().
-		Int64("height", voteProof.Height().Int64()).
-		Uint64("round", voteProof.Round().Uint64()).
-		Str("stage", voteProof.Stage().String()).
+		Int64("height", voteproof.Height().Int64()).
+		Uint64("round", voteproof.Round().Uint64()).
+		Str("stage", voteproof.Stage().String()).
 		Msg("voteproof stored")
 
-	raw, err := st.defaultEnc.Marshal(voteProof)
+	raw, err := st.defaultEnc.Marshal(voteproof)
 	if err != nil {
 		return err
 	}
 
 	hb := storage.LeveldbDataWithEncoder(st.defaultEnc, raw)
-	return st.db.Put(leveldbVoteProofKey(voteProof), hb, nil)
+	return st.db.Put(leveldbVoteproofKey(voteproof), hb, nil)
 }
 
-func (st *LeveldbStorage) LastINITVoteProof() (VoteProof, error) {
-	return st.loadLastVoteProof(StageINIT)
+func (st *LeveldbStorage) LastINITVoteproof() (Voteproof, error) {
+	return st.loadLastVoteproof(StageINIT)
 }
 
-func (st *LeveldbStorage) NewINITVoteProof(voteProof VoteProof) error {
-	return st.newVoteProof(voteProof)
+func (st *LeveldbStorage) NewINITVoteproof(voteproof Voteproof) error {
+	return st.newVoteproof(voteproof)
 }
 
-func (st *LeveldbStorage) filterVoteProof(prefix []byte, stage Stage) (VoteProof, error) {
+func (st *LeveldbStorage) filterVoteproof(prefix []byte, stage Stage) (Voteproof, error) {
 	var raw []byte
 
 	iter := st.db.NewIterator(leveldbutil.BytesPrefix(prefix), nil)
@@ -120,7 +120,7 @@ func (st *LeveldbStorage) filterVoteProof(prefix []byte, stage Stage) (VoteProof
 			var round uint64
 			var stg uint8
 			n, err := fmt.Sscanf(
-				string(key[len(leveldbVoteProofHeightPrefix):]),
+				string(key[len(leveldbVoteproofHeightPrefix):]),
 				"%020d-%020d-%d", &height, &round, &stg,
 			)
 			if err != nil {
@@ -168,23 +168,23 @@ func (st *LeveldbStorage) filterVoteProof(prefix []byte, stage Stage) (VoteProof
 		return nil, err
 	}
 
-	return hinter.(VoteProof), nil
+	return hinter.(Voteproof), nil
 }
 
-func (st *LeveldbStorage) LastINITVoteProofOfHeight(height Height) (VoteProof, error) {
-	return st.filterVoteProof(leveldbVoteProofKeyByHeight(height), StageINIT)
+func (st *LeveldbStorage) LastINITVoteproofOfHeight(height Height) (Voteproof, error) {
+	return st.filterVoteproof(leveldbVoteproofKeyByHeight(height), StageINIT)
 }
 
-func (st *LeveldbStorage) LastACCEPTVoteProofOfHeight(height Height) (VoteProof, error) {
-	return st.filterVoteProof(leveldbVoteProofKeyByHeight(height), StageACCEPT)
+func (st *LeveldbStorage) LastACCEPTVoteproofOfHeight(height Height) (Voteproof, error) {
+	return st.filterVoteproof(leveldbVoteproofKeyByHeight(height), StageACCEPT)
 }
 
-func (st *LeveldbStorage) LastACCEPTVoteProof() (VoteProof, error) {
-	return st.loadLastVoteProof(StageACCEPT)
+func (st *LeveldbStorage) LastACCEPTVoteproof() (Voteproof, error) {
+	return st.loadLastVoteproof(StageACCEPT)
 }
 
-func (st *LeveldbStorage) NewACCEPTVoteProof(voteProof VoteProof) error {
-	return st.newVoteProof(voteProof)
+func (st *LeveldbStorage) NewACCEPTVoteproof(voteproof Voteproof) error {
+	return st.newVoteproof(voteproof)
 }
 
 func (st *LeveldbStorage) sealKey(h valuehash.Hash) []byte {
@@ -342,21 +342,21 @@ func leveldbBlockKey(block Block) []byte {
 	})
 }
 
-func leveldbVoteProofKey(voteProof VoteProof) []byte {
+func leveldbVoteproofKey(voteproof Voteproof) []byte {
 	return util.ConcatSlice([][]byte{
-		leveldbVoteProofHeightPrefix,
+		leveldbVoteproofHeightPrefix,
 		[]byte(fmt.Sprintf(
 			"%020d-%020d-%d",
-			voteProof.Height().Int64(),
-			voteProof.Round().Uint64(),
-			voteProof.Stage(),
+			voteproof.Height().Int64(),
+			voteproof.Round().Uint64(),
+			voteproof.Stage(),
 		)),
 	})
 }
 
-func leveldbVoteProofKeyByHeight(height Height) []byte {
+func leveldbVoteproofKeyByHeight(height Height) []byte {
 	return util.ConcatSlice([][]byte{
-		leveldbVoteProofHeightPrefix,
+		leveldbVoteproofHeightPrefix,
 		[]byte(fmt.Sprintf("%020d-", height.Int64())),
 	})
 }

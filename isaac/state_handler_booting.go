@@ -9,20 +9,20 @@ import (
 	"github.com/spikeekips/mitum/util"
 )
 
-type ConsensusStateBootingHandler struct {
+type StateBootingHandler struct {
 	*BaseStateHandler
 }
 
-func NewConsensusStateBootingHandler(
-	localState *LocalState,
+func NewStateBootingHandler(
+	localstate *Localstate,
 	proposalProcessor ProposalProcessor,
-) (*ConsensusStateBootingHandler, error) {
-	if lastBlock := localState.LastBlock(); lastBlock == nil {
+) (*StateBootingHandler, error) {
+	if lastBlock := localstate.LastBlock(); lastBlock == nil {
 		return nil, xerrors.Errorf("last block is empty")
 	}
 
-	cs := &ConsensusStateBootingHandler{
-		BaseStateHandler: NewBaseStateHandler(localState, proposalProcessor, ConsensusStateBooting),
+	cs := &StateBootingHandler{
+		BaseStateHandler: NewBaseStateHandler(localstate, proposalProcessor, StateBooting),
 	}
 	cs.BaseStateHandler.Logger = logging.NewLogger(func(c zerolog.Context) zerolog.Context {
 		return c.Str("module", "consensus-state-booting-handler")
@@ -31,11 +31,11 @@ func NewConsensusStateBootingHandler(
 	return cs, nil
 }
 
-func (cs *ConsensusStateBootingHandler) Activate(ctx ConsensusStateChangeContext) error {
+func (cs *StateBootingHandler) Activate(ctx StateChangeContext) error {
 	cs.Lock()
 	defer cs.Unlock()
 
-	l := loggerWithConsensusStateChangeContext(ctx, cs.Log())
+	l := loggerWithStateChangeContext(ctx, cs.Log())
 	l.Debug().Msg("activated")
 
 	go func() {
@@ -47,32 +47,32 @@ func (cs *ConsensusStateBootingHandler) Activate(ctx ConsensusStateChangeContext
 	return nil
 }
 
-func (cs *ConsensusStateBootingHandler) Deactivate(ctx ConsensusStateChangeContext) error {
+func (cs *StateBootingHandler) Deactivate(ctx StateChangeContext) error {
 	cs.Lock()
 	defer cs.Unlock()
 
-	l := loggerWithConsensusStateChangeContext(ctx, cs.Log())
+	l := loggerWithStateChangeContext(ctx, cs.Log())
 	l.Debug().Msg("deactivated")
 
 	return nil
 }
 
-func (cs *ConsensusStateBootingHandler) NewSeal(sl seal.Seal) error {
+func (cs *StateBootingHandler) NewSeal(sl seal.Seal) error {
 	l := loggerWithSeal(sl, cs.Log())
 	l.Debug().Msg("got Seal")
 
 	return nil
 }
 
-func (cs *ConsensusStateBootingHandler) NewVoteProof(vp VoteProof) error {
-	l := loggerWithVoteProof(vp, cs.Log())
+func (cs *StateBootingHandler) NewVoteproof(vp Voteproof) error {
+	l := loggerWithVoteproof(vp, cs.Log())
 
-	l.Debug().Msg("got VoteProof")
+	l.Debug().Msg("got Voteproof")
 
 	return nil
 }
 
-func (cs *ConsensusStateBootingHandler) initialize() error {
+func (cs *StateBootingHandler) initialize() error {
 	cs.Log().Debug().Msg("trying to initialize")
 
 	if err := cs.check(); err != nil {
@@ -81,17 +81,17 @@ func (cs *ConsensusStateBootingHandler) initialize() error {
 
 	cs.Log().Debug().Msg("initialized; moves to joining")
 
-	return cs.ChangeState(ConsensusStateJoining, nil)
+	return cs.ChangeState(StateJoining, nil)
 }
 
-func (cs *ConsensusStateBootingHandler) check() error {
+func (cs *StateBootingHandler) check() error {
 	cs.Log().Debug().Msg("trying to check")
 	defer cs.Log().Debug().Msg("complete to check")
 
 	if err := cs.checkBlock(); err != nil {
 		cs.Log().Error().Err(err).Send()
 
-		if err0 := cs.ChangeState(ConsensusStateSyncing, nil); err0 != nil {
+		if err0 := cs.ChangeState(StateSyncing, nil); err0 != nil {
 			// TODO wrap err
 			return err0
 		}
@@ -99,12 +99,12 @@ func (cs *ConsensusStateBootingHandler) check() error {
 		return err
 	}
 
-	if err := cs.checkVoteProof(); err != nil {
+	if err := cs.checkVoteproof(); err != nil {
 		cs.Log().Error().Err(err).Send()
 
-		var ctx ConsensusStateToBeChangeError
+		var ctx StateToBeChangeError
 		if xerrors.As(err, &ctx) {
-			if err0 := cs.ChangeState(ctx.ToState, ctx.VoteProof); err0 != nil {
+			if err0 := cs.ChangeState(ctx.ToState, ctx.Voteproof); err0 != nil {
 				// TODO wrap err
 				return err0
 			}
@@ -118,11 +118,11 @@ func (cs *ConsensusStateBootingHandler) check() error {
 	return nil
 }
 
-func (cs *ConsensusStateBootingHandler) checkBlock() error {
+func (cs *StateBootingHandler) checkBlock() error {
 	cs.Log().Debug().Msg("trying to check block")
 	defer cs.Log().Debug().Msg("complete to check block")
 
-	block := cs.localState.LastBlock()
+	block := cs.localstate.LastBlock()
 	if block == nil {
 		return xerrors.Errorf("empty Block")
 	} else if err := block.IsValid(nil); err != nil {
@@ -132,17 +132,17 @@ func (cs *ConsensusStateBootingHandler) checkBlock() error {
 	return nil
 }
 
-func (cs *ConsensusStateBootingHandler) checkVoteProof() error {
-	cs.Log().Debug().Msg("trying to check VoteProofs")
-	defer cs.Log().Debug().Msg("trying to check VoteProofs")
+func (cs *StateBootingHandler) checkVoteproof() error {
+	cs.Log().Debug().Msg("trying to check Voteproofs")
+	defer cs.Log().Debug().Msg("trying to check Voteproofs")
 
-	vpc, err := NewVoteProofBootingChecker(cs.localState)
+	vpc, err := NewVoteproofBootingChecker(cs.localstate)
 	if err != nil {
 		return err
 	}
 
 	return util.NewChecker("voteproof-booting-checker", []util.CheckerFunc{
-		vpc.CheckACCEPTVoteProofHeight,
-		vpc.CheckINITVoteProofHeight,
+		vpc.CheckACCEPTVoteproofHeight,
+		vpc.CheckINITVoteproofHeight,
 	}).Check()
 }

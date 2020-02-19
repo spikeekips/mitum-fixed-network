@@ -3,11 +3,11 @@ package isaac
 import "github.com/spikeekips/mitum/valuehash"
 
 type ProposalMaker struct {
-	localState *LocalState
+	localstate *Localstate
 }
 
-func NewProposalMaker(localState *LocalState) *ProposalMaker {
-	return &ProposalMaker{localState: localState}
+func NewProposalMaker(localstate *Localstate) *ProposalMaker {
+	return &ProposalMaker{localstate: localstate}
 }
 
 func (pm *ProposalMaker) seals() []valuehash.Hash {
@@ -15,5 +15,5 @@ func (pm *ProposalMaker) seals() []valuehash.Hash {
 }
 
 func (pm *ProposalMaker) Proposal(round Round, b []byte) (Proposal, error) {
-	return NewProposalFromLocalState(pm.localState, round, pm.seals(), b)
+	return NewProposalFromLocalstate(pm.localstate, round, pm.seals(), b)
 }

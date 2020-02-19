@@ -48,11 +48,11 @@ func (t *testBallotV0INIT) TestNew() {
 }
 
 func (t *testBallotV0INIT) TestFact() {
-	vp := NewDummyVoteProof(
+	vp := NewDummyVoteproof(
 		Height(10),
 		Round(0),
 		StageACCEPT,
-		VoteProofMajority,
+		VoteproofMajority,
 	)
 
 	ib := INITBallotV0{
@@ -67,7 +67,7 @@ func (t *testBallotV0INIT) TestFact() {
 			previousBlock: valuehash.RandomSHA256(),
 			previousRound: vp.Round(),
 		},
-		voteProof: vp,
+		voteproof: vp,
 	}
 	t.Implements((*FactSeal)(nil), ib)
 
@@ -93,11 +93,11 @@ func (t *testBallotV0INIT) TestFact() {
 }
 
 func (t *testBallotV0INIT) TestGenerateHash() {
-	vp := NewDummyVoteProof(
+	vp := NewDummyVoteproof(
 		Height(10),
 		Round(0),
 		StageACCEPT,
-		VoteProofMajority,
+		VoteproofMajority,
 	)
 
 	ib := INITBallotV0{
@@ -112,7 +112,7 @@ func (t *testBallotV0INIT) TestGenerateHash() {
 			previousBlock: valuehash.RandomSHA256(),
 			previousRound: Round(0),
 		},
-		voteProof: vp,
+		voteproof: vp,
 	}
 
 	h, err := ib.GenerateBodyHash(nil)
@@ -127,11 +127,11 @@ func (t *testBallotV0INIT) TestGenerateHash() {
 }
 
 func (t *testBallotV0INIT) TestSign() {
-	vp := NewDummyVoteProof(
+	vp := NewDummyVoteproof(
 		Height(10),
 		Round(0),
 		StageACCEPT,
-		VoteProofMajority,
+		VoteproofMajority,
 	)
 
 	ib := INITBallotV0{
@@ -146,7 +146,7 @@ func (t *testBallotV0INIT) TestSign() {
 			previousBlock: valuehash.RandomSHA256(),
 			previousRound: Round(0),
 		},
-		voteProof: vp,
+		voteproof: vp,
 	}
 
 	t.Nil(ib.Hash())

@@ -22,7 +22,7 @@ func (lp LocalPolicy) MarshalJSON() ([]byte, error) {
 	})
 }
 
-func (ls LocalState) MarshalJSON() ([]byte, error) {
+func (ls Localstate) MarshalJSON() ([]byte, error) {
 	var nodes []Node
 	ls.Nodes().Traverse(func(n Node) bool {
 		nodes = append(nodes, n)
@@ -34,14 +34,14 @@ func (ls LocalState) MarshalJSON() ([]byte, error) {
 		PL *LocalPolicy `json:"policy"`
 		NS []Node       `json:"nodes"`
 		LB Block        `json:"last_block"`
-		IV VoteProof    `json:"last_init_voteproof"`
-		AV VoteProof    `json:"last_accept_voteproof"`
+		IV Voteproof    `json:"last_init_voteproof"`
+		AV Voteproof    `json:"last_accept_voteproof"`
 	}{
 		ND: ls.Node(),
 		PL: ls.Policy(),
 		NS: nodes,
 		LB: ls.LastBlock(),
-		IV: ls.LastINITVoteProof(),
-		AV: ls.LastACCEPTVoteProof(),
+		IV: ls.LastINITVoteproof(),
+		AV: ls.LastACCEPTVoteproof(),
 	})
 }

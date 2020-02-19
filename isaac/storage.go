@@ -10,12 +10,12 @@ type Storage interface {
 	LastBlock() (Block, error)
 	// BlockByHeight(Height) (Block, error)
 	// BlockByHash() (Block, error)
-	LastINITVoteProof() (VoteProof, error)
-	NewINITVoteProof(VoteProof) error
-	LastINITVoteProofOfHeight(Height) (VoteProof, error)
-	LastACCEPTVoteProofOfHeight(Height) (VoteProof, error)
-	LastACCEPTVoteProof() (VoteProof, error)
-	NewACCEPTVoteProof(VoteProof) error
+	LastINITVoteproof() (Voteproof, error)
+	NewINITVoteproof(Voteproof) error
+	LastINITVoteproofOfHeight(Height) (Voteproof, error)
+	LastACCEPTVoteproofOfHeight(Height) (Voteproof, error)
+	LastACCEPTVoteproof() (Voteproof, error)
+	NewACCEPTVoteproof(Voteproof) error
 	// TODO replace SealStorage
 	Seal(valuehash.Hash) (seal.Seal, error)
 	NewSeal(seal.Seal) error

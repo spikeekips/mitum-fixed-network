@@ -11,29 +11,29 @@ import (
 )
 
 type ProposalProcessor interface {
-	ProcessINIT(valuehash.Hash /* Proposal.Hash() */, VoteProof /* INIT VoteProof */, []byte) (Block, error)
-	ProcessACCEPT(valuehash.Hash /* Proposal.Hash() */, VoteProof /* ACCEPT VoteProof */, []byte) (BlockStorage, error)
+	ProcessINIT(valuehash.Hash /* Proposal.Hash() */, Voteproof /* INIT Voteproof */, []byte) (Block, error)
+	ProcessACCEPT(valuehash.Hash /* Proposal.Hash() */, Voteproof /* ACCEPT Voteproof */, []byte) (BlockStorage, error)
 }
 
 type ProposalProcessorV0 struct {
 	*logging.Logger
-	localState  *LocalState
+	localstate  *Localstate
 	sealStorage SealStorage
 	blocks      *sync.Map
 }
 
-func NewProposalProcessorV0(localState *LocalState, sealStorage SealStorage) *ProposalProcessorV0 {
+func NewProposalProcessorV0(localstate *Localstate, sealStorage SealStorage) *ProposalProcessorV0 {
 	return &ProposalProcessorV0{
 		Logger: logging.NewLogger(func(c zerolog.Context) zerolog.Context {
 			return c.Str("module", "proposal-processor-v0")
 		}),
-		localState:  localState,
+		localstate:  localstate,
 		sealStorage: sealStorage,
 		blocks:      &sync.Map{},
 	}
 }
 
-func (dp *ProposalProcessorV0) ProcessINIT(ph valuehash.Hash, initVoteProof VoteProof, b []byte) (Block, error) {
+func (dp *ProposalProcessorV0) ProcessINIT(ph valuehash.Hash, initVoteproof Voteproof, b []byte) (Block, error) {
 	if i, found := dp.blocks.Load(ph); found {
 		return i.(Block), nil
 	}
@@ -46,15 +46,15 @@ func (dp *ProposalProcessorV0) ProcessINIT(ph valuehash.Hash, initVoteProof Vote
 
 		return nil, xerrors.Errorf("Proposal not found; proposal=%s", ph.String())
 	} else { // check proposed time
-		ivp := dp.localState.LastINITVoteProof()
+		ivp := dp.localstate.LastINITVoteproof()
 		if ivp == nil {
-			return nil, xerrors.Errorf("last INIT VoteProof is missing")
+			return nil, xerrors.Errorf("last INIT Voteproof is missing")
 		}
 
-		timespan := dp.localState.Policy().TimespanValidBallot()
+		timespan := dp.localstate.Policy().TimespanValidBallot()
 		if sl.SignedAt().Before(ivp.FinishedAt().Add(timespan * -1)) {
 			return nil, xerrors.Errorf(
-				"Proposal was sent before VoteProof; SignedAt=%s now=%s timespan=%s",
+				"Proposal was sent before Voteproof; SignedAt=%s now=%s timespan=%s",
 				sl.SignedAt(), ivp.FinishedAt(), timespan,
 			)
 		}
@@ -62,7 +62,7 @@ func (dp *ProposalProcessorV0) ProcessINIT(ph valuehash.Hash, initVoteProof Vote
 		proposal = sl.(Proposal)
 	}
 
-	lastBlock := dp.localState.LastBlock()
+	lastBlock := dp.localstate.LastBlock()
 	if lastBlock == nil {
 		return nil, xerrors.Errorf("last block is empty")
 	}
@@ -85,7 +85,7 @@ func (dp *ProposalProcessorV0) ProcessINIT(ph valuehash.Hash, initVoteProof Vote
 	); err != nil {
 		return nil, err
 	} else {
-		block = b.SetINITVoteProof(initVoteProof)
+		block = b.SetINITVoteproof(initVoteproof)
 	}
 
 	dp.blocks.Store(ph, block)
@@ -95,16 +95,16 @@ func (dp *ProposalProcessorV0) ProcessINIT(ph valuehash.Hash, initVoteProof Vote
 
 // TODO b is NetworkID
 func (dp *ProposalProcessorV0) ProcessACCEPT(
-	ph valuehash.Hash, acceptVoteProof VoteProof, _ []byte,
+	ph valuehash.Hash, acceptVoteproof Voteproof, _ []byte,
 ) (BlockStorage, error) {
 	var block Block
 	if i, found := dp.blocks.Load(ph); !found {
 		return nil, xerrors.Errorf("not processed ProcessINIT")
 	} else {
-		block = i.(Block).SetACCEPTVoteProof(acceptVoteProof)
+		block = i.(Block).SetACCEPTVoteproof(acceptVoteproof)
 	}
 
-	return dp.localState.Storage().OpenBlockStorage(block)
+	return dp.localstate.Storage().OpenBlockStorage(block)
 }
 
 func (dp *ProposalProcessorV0) processSeals(Proposal, []byte) (valuehash.Hash, error) {

@@ -27,11 +27,11 @@ func (t *testBallotV0ACCEPT) SetupSuite() {
 }
 
 func (t *testBallotV0ACCEPT) TestNew() {
-	vp := NewDummyVoteProof(
+	vp := NewDummyVoteproof(
 		Height(10),
 		Round(0),
 		StageINIT,
-		VoteProofMajority,
+		VoteproofMajority,
 	)
 
 	ib := ACCEPTBallotV0{
@@ -46,7 +46,7 @@ func (t *testBallotV0ACCEPT) TestNew() {
 			proposal: valuehash.RandomSHA256(),
 			newBlock: valuehash.RandomSHA256(),
 		},
-		voteProof: vp,
+		voteproof: vp,
 	}
 
 	t.NotEmpty(ib)
@@ -56,11 +56,11 @@ func (t *testBallotV0ACCEPT) TestNew() {
 }
 
 func (t *testBallotV0ACCEPT) TestFact() {
-	vp := NewDummyVoteProof(
+	vp := NewDummyVoteproof(
 		Height(10),
 		Round(0),
 		StageINIT,
-		VoteProofMajority,
+		VoteproofMajority,
 	)
 
 	ib := ACCEPTBallotV0{
@@ -75,7 +75,7 @@ func (t *testBallotV0ACCEPT) TestFact() {
 			proposal: valuehash.RandomSHA256(),
 			newBlock: valuehash.RandomSHA256(),
 		},
-		voteProof: vp,
+		voteproof: vp,
 	}
 
 	t.Implements((*FactSeal)(nil), ib)
@@ -102,11 +102,11 @@ func (t *testBallotV0ACCEPT) TestFact() {
 }
 
 func (t *testBallotV0ACCEPT) TestGenerateHash() {
-	vp := NewDummyVoteProof(
+	vp := NewDummyVoteproof(
 		Height(10),
 		Round(0),
 		StageINIT,
-		VoteProofMajority,
+		VoteproofMajority,
 	)
 
 	ib := ACCEPTBallotV0{
@@ -121,7 +121,7 @@ func (t *testBallotV0ACCEPT) TestGenerateHash() {
 			proposal: valuehash.RandomSHA256(),
 			newBlock: valuehash.RandomSHA256(),
 		},
-		voteProof: vp,
+		voteproof: vp,
 	}
 
 	h, err := ib.GenerateBodyHash(nil)
@@ -136,11 +136,11 @@ func (t *testBallotV0ACCEPT) TestGenerateHash() {
 }
 
 func (t *testBallotV0ACCEPT) TestSign() {
-	vp := NewDummyVoteProof(
+	vp := NewDummyVoteproof(
 		Height(10),
 		Round(0),
 		StageINIT,
-		VoteProofMajority,
+		VoteproofMajority,
 	)
 
 	ib := ACCEPTBallotV0{
@@ -155,7 +155,7 @@ func (t *testBallotV0ACCEPT) TestSign() {
 			proposal: valuehash.RandomSHA256(),
 			newBlock: valuehash.RandomSHA256(),
 		},
-		voteProof: vp,
+		voteproof: vp,
 	}
 
 	t.Nil(ib.Hash())

@@ -13,17 +13,17 @@ import (
 	"github.com/spikeekips/mitum/valuehash"
 )
 
-type testVoteProofJSON struct {
+type testVoteproofJSON struct {
 	suite.Suite
 
 	hs *hint.Hintset
 }
 
-func (t *testVoteProofJSON) SetupSuite() {
+func (t *testVoteproofJSON) SetupSuite() {
 	_ = hint.RegisterType(valuehash.SHA256{}.Hint().Type(), "sha256")
 	_ = hint.RegisterType(key.BTCPublickey{}.Hint().Type(), "btc-publickey")
 	_ = hint.RegisterType((ShortAddress("")).Hint().Type(), "short-address")
-	_ = hint.RegisterType(VoteProofV0{}.Hint().Type(), "voteproof")
+	_ = hint.RegisterType(VoteproofV0{}.Hint().Type(), "voteproof")
 	_ = hint.RegisterType(tinyFact{}.Hint().Type(), "tiny-fact")
 
 	t.hs = hint.NewHintset()
@@ -33,7 +33,7 @@ func (t *testVoteProofJSON) SetupSuite() {
 	t.hs.Add(tinyFact{})
 }
 
-func (t *testVoteProofJSON) TestMajorityButNot() {
+func (t *testVoteproofJSON) TestMajorityButNot() {
 	threshold, _ := NewThreshold(2, 80)
 
 	n0 := RandomLocalNode("n0", nil)
@@ -44,12 +44,12 @@ func (t *testVoteProofJSON) TestMajorityButNot() {
 	factSignature0, _ := n0.Privatekey().Sign(factHash0.Bytes())
 	factSignature1, _ := n1.Privatekey().Sign(factHash0.Bytes())
 
-	vp := VoteProofV0{
+	vp := VoteproofV0{
 		height:    Height(33),
 		round:     Round(3),
 		stage:     StageINIT,
 		threshold: threshold,
-		result:    VoteProofMajority,
+		result:    VoteproofMajority,
 		facts: map[valuehash.Hash]Fact{
 			factHash0: fact0,
 		},
@@ -58,13 +58,13 @@ func (t *testVoteProofJSON) TestMajorityButNot() {
 			n0.Address(): valuehash.RandomSHA256(),
 			n1.Address(): valuehash.RandomSHA256(),
 		},
-		votes: map[Address]VoteProofNodeFact{
-			n0.Address(): VoteProofNodeFact{
+		votes: map[Address]VoteproofNodeFact{
+			n0.Address(): VoteproofNodeFact{
 				fact:          factHash0,
 				factSignature: factSignature0,
 				signer:        n0.Publickey(),
 			},
-			n1.Address(): VoteProofNodeFact{
+			n1.Address(): VoteproofNodeFact{
 				fact:          factHash0,
 				factSignature: factSignature1,
 				signer:        n1.Publickey(),
@@ -81,7 +81,7 @@ func (t *testVoteProofJSON) TestMajorityButNot() {
 	je := encoder.NewJSONEncoder()
 	je.SetHintset(t.hs)
 
-	var uvp VoteProofV0
+	var uvp VoteproofV0
 	t.NoError(je.Decode(b, &uvp))
 
 	t.Equal(vp.Height(), uvp.Height())
@@ -109,6 +109,6 @@ func (t *testVoteProofJSON) TestMajorityButNot() {
 	}
 }
 
-func TestVoteProofJSON(t *testing.T) {
-	suite.Run(t, new(testVoteProofJSON))
+func TestVoteproofJSON(t *testing.T) {
+	suite.Run(t, new(testVoteproofJSON))
 }

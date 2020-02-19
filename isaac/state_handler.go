@@ -9,69 +9,69 @@ import (
 	"golang.org/x/xerrors"
 )
 
-type ConsensusStateHandler interface {
-	State() ConsensusState
-	SetStateChan(chan<- ConsensusStateChangeContext)
+type StateHandler interface {
+	State() State
+	SetStateChan(chan<- StateChangeContext)
 	SetSealChan(chan<- seal.Seal)
-	Activate(ConsensusStateChangeContext) error
-	Deactivate(ConsensusStateChangeContext) error
+	Activate(StateChangeContext) error
+	Deactivate(StateChangeContext) error
 	// NewSeal receives Seal.
 	NewSeal(seal.Seal) error
-	// NewVoteProof receives the finished VoteProof.
-	NewVoteProof(VoteProof) error
+	// NewVoteproof receives the finished Voteproof.
+	NewVoteproof(Voteproof) error
 }
 
-type ConsensusStateChangeContext struct {
-	fromState ConsensusState
-	toState   ConsensusState
-	voteProof VoteProof
+type StateChangeContext struct {
+	fromState State
+	toState   State
+	voteproof Voteproof
 }
 
-func NewConsensusStateChangeContext(from, to ConsensusState, voteProof VoteProof) ConsensusStateChangeContext {
-	return ConsensusStateChangeContext{
+func NewStateChangeContext(from, to State, voteproof Voteproof) StateChangeContext {
+	return StateChangeContext{
 		fromState: from,
 		toState:   to,
-		voteProof: voteProof,
+		voteproof: voteproof,
 	}
 }
 
-func (csc ConsensusStateChangeContext) From() ConsensusState {
+func (csc StateChangeContext) From() State {
 	return csc.fromState
 }
 
-func (csc ConsensusStateChangeContext) To() ConsensusState {
+func (csc StateChangeContext) To() State {
 	return csc.toState
 }
 
-func (csc ConsensusStateChangeContext) VoteProof() VoteProof {
-	return csc.voteProof
+func (csc StateChangeContext) Voteproof() Voteproof {
+	return csc.voteproof
 }
 
 type BaseStateHandler struct {
 	sync.RWMutex
 	*logging.Logger
-	localState        *LocalState
+	localstate        *Localstate
 	proposalProcessor ProposalProcessor
-	state             ConsensusState
-	stateChan         chan<- ConsensusStateChangeContext
+	state             State
+	stateChan         chan<- StateChangeContext
 	sealChan          chan<- seal.Seal
 }
 
 func NewBaseStateHandler(
-	localState *LocalState, proposalProcessor ProposalProcessor, state ConsensusState,
+	localstate *Localstate, proposalProcessor ProposalProcessor, state State,
 ) *BaseStateHandler {
 	return &BaseStateHandler{
-		localState:        localState,
+		localstate:        localstate,
 		proposalProcessor: proposalProcessor,
 		state:             state,
 	}
 }
 
-func (bs *BaseStateHandler) State() ConsensusState {
+func (bs *BaseStateHandler) State() State {
 	return bs.state
 }
 
-func (bs *BaseStateHandler) SetStateChan(stateChan chan<- ConsensusStateChangeContext) {
+func (bs *BaseStateHandler) SetStateChan(stateChan chan<- StateChangeContext) {
 	bs.stateChan = stateChan
 }
 
@@ -79,7 +79,7 @@ func (bs *BaseStateHandler) SetSealChan(sealChan chan<- seal.Seal) {
 	bs.sealChan = sealChan
 }
 
-func (bs *BaseStateHandler) ChangeState(newState ConsensusState, vp VoteProof) error {
+func (bs *BaseStateHandler) ChangeState(newState State, vp Voteproof) error {
 	if bs.stateChan == nil {
 		return nil
 	}
@@ -91,7 +91,7 @@ func (bs *BaseStateHandler) ChangeState(newState ConsensusState, vp VoteProof) e
 	}
 
 	go func() {
-		bs.stateChan <- NewConsensusStateChangeContext(bs.state, newState, vp)
+		bs.stateChan <- NewStateChangeContext(bs.state, newState, vp)
 	}()
 
 	return nil
@@ -112,28 +112,28 @@ func (bs *BaseStateHandler) StoreNewBlock(blockStorage BlockStorage) error {
 		return err
 	}
 
-	_ = bs.localState.SetLastBlock(blockStorage.Block())
+	_ = bs.localstate.SetLastBlock(blockStorage.Block())
 
 	return nil
 }
 
-// TODO rename 'vp' to 'voteProof'
-func (bs *BaseStateHandler) StoreNewBlockByVoteProof(acceptVoteProof VoteProof) error {
-	fact, ok := acceptVoteProof.Majority().(ACCEPTBallotFact)
+// TODO rename 'vp' to 'voteproof'
+func (bs *BaseStateHandler) StoreNewBlockByVoteproof(acceptVoteproof Voteproof) error {
+	fact, ok := acceptVoteproof.Majority().(ACCEPTBallotFact)
 	if !ok {
-		return xerrors.Errorf("needs ACCEPTBallotFact: fact=%T", acceptVoteProof.Majority())
+		return xerrors.Errorf("needs ACCEPTBallotFact: fact=%T", acceptVoteproof.Majority())
 	}
 
-	l := loggerWithVoteProof(acceptVoteProof, bs.Log()).With().
+	l := loggerWithVoteproof(acceptVoteproof, bs.Log()).With().
 		Str("proposal", fact.Proposal().String()).
 		Str("new_block", fact.NewBlock().String()).
 		Logger()
 
-	_ = bs.localState.SetLastACCEPTVoteProof(acceptVoteProof)
+	_ = bs.localstate.SetLastACCEPTVoteproof(acceptVoteproof)
 
 	l.Debug().Msg("trying to store new block")
 
-	blockStorage, err := bs.proposalProcessor.ProcessACCEPT(fact.Proposal(), acceptVoteProof, nil)
+	blockStorage, err := bs.proposalProcessor.ProcessACCEPT(fact.Proposal(), acceptVoteproof, nil)
 	if err != nil {
 		return err
 	}

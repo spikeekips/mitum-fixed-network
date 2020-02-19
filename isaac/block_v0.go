@@ -21,8 +21,8 @@ type BlockV0 struct {
 	previousBlock   valuehash.Hash
 	blockOperations valuehash.Hash
 	blockStates     valuehash.Hash
-	initVoteProof   VoteProof
-	acceptVoteProof VoteProof
+	initVoteproof   Voteproof
+	acceptVoteproof Voteproof
 	createdAt       time.Time
 }
 
@@ -164,25 +164,25 @@ func (bm BlockV0) States() valuehash.Hash {
 	return bm.blockStates
 }
 
-func (bm BlockV0) INITVoteProof() VoteProof {
-	return bm.initVoteProof
+func (bm BlockV0) INITVoteproof() Voteproof {
+	return bm.initVoteproof
 }
 
-func (bm BlockV0) ACCEPTVoteProof() VoteProof {
-	return bm.acceptVoteProof
+func (bm BlockV0) ACCEPTVoteproof() Voteproof {
+	return bm.acceptVoteproof
 }
 
 func (bm BlockV0) CreatedAt() time.Time {
 	return bm.createdAt
 }
 
-func (bm BlockV0) SetINITVoteProof(voteProof VoteProof) Block {
-	bm.initVoteProof = voteProof
+func (bm BlockV0) SetINITVoteproof(voteproof Voteproof) Block {
+	bm.initVoteproof = voteproof
 
 	return bm
 }
-func (bm BlockV0) SetACCEPTVoteProof(voteProof VoteProof) Block {
-	bm.acceptVoteProof = voteProof
+func (bm BlockV0) SetACCEPTVoteproof(voteproof Voteproof) Block {
+	bm.acceptVoteproof = voteproof
 
 	return bm
 }

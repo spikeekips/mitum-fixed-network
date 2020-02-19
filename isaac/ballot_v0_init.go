@@ -76,20 +76,20 @@ type INITBallotV0 struct {
 	INITBallotFactV0
 	h             valuehash.Hash
 	bodyHash      valuehash.Hash
-	voteProof     VoteProof
+	voteproof     Voteproof
 	factHash      valuehash.Hash
 	factSignature key.Signature
 }
 
-func NewINITBallotV0FromLocalState(localState *LocalState, round Round, b []byte) (INITBallotV0, error) {
-	lastBlock := localState.LastBlock()
+func NewINITBallotV0FromLocalstate(localstate *Localstate, round Round, b []byte) (INITBallotV0, error) {
+	lastBlock := localstate.LastBlock()
 	if lastBlock == nil {
 		return INITBallotV0{}, xerrors.Errorf("lastBlock is empty")
 	}
 
 	ib := INITBallotV0{
 		BaseBallotV0: BaseBallotV0{
-			node: localState.Node().Address(),
+			node: localstate.Node().Address(),
 		},
 		INITBallotFactV0: NewINITBallotFactV0(
 			lastBlock.Height()+1,
@@ -99,16 +99,16 @@ func NewINITBallotV0FromLocalState(localState *LocalState, round Round, b []byte
 		),
 	}
 
-	var voteProof VoteProof
+	var voteproof Voteproof
 	if round == 0 {
-		voteProof = localState.LastACCEPTVoteProof()
+		voteproof = localstate.LastACCEPTVoteproof()
 	} else {
-		voteProof = localState.LastINITVoteProof()
+		voteproof = localstate.LastINITVoteproof()
 	}
-	ib.voteProof = voteProof
+	ib.voteproof = voteproof
 
 	// TODO NetworkID must be given.
-	if err := ib.Sign(localState.Node().Privatekey(), b); err != nil {
+	if err := ib.Sign(localstate.Node().Privatekey(), b); err != nil {
 		return INITBallotV0{}, err
 	}
 
@@ -132,14 +132,14 @@ func (ib INITBallotV0) BodyHash() valuehash.Hash {
 }
 
 func (ib INITBallotV0) IsValid(b []byte) error {
-	if ib.voteProof == nil {
-		return xerrors.Errorf("empty VoteProof")
+	if ib.voteproof == nil {
+		return xerrors.Errorf("empty Voteproof")
 	}
 
 	if err := isvalid.Check([]isvalid.IsValider{
 		ib.BaseBallotV0,
 		ib.INITBallotFactV0,
-		ib.voteProof,
+		ib.voteproof,
 	}, b, false); err != nil {
 		return err
 	}
@@ -147,8 +147,8 @@ func (ib INITBallotV0) IsValid(b []byte) error {
 	return nil
 }
 
-func (ib INITBallotV0) VoteProof() VoteProof {
-	return ib.voteProof
+func (ib INITBallotV0) Voteproof() Voteproof {
+	return ib.voteproof
 }
 
 func (ib INITBallotV0) GenerateHash(b []byte) (valuehash.Hash, error) {
@@ -160,7 +160,7 @@ func (ib INITBallotV0) GenerateHash(b []byte) (valuehash.Hash, error) {
 		ib.BaseBallotV0.Bytes(),
 		ib.INITBallotFactV0.Bytes(),
 		ib.bodyHash.Bytes(),
-		ib.voteProof.Bytes(),
+		ib.voteproof.Bytes(),
 		b,
 	})
 
@@ -174,7 +174,7 @@ func (ib INITBallotV0) GenerateBodyHash(b []byte) (valuehash.Hash, error) {
 
 	e := util.ConcatSlice([][]byte{
 		ib.INITBallotFactV0.Bytes(),
-		ib.voteProof.Bytes(),
+		ib.voteproof.Bytes(),
 		b,
 	})
 

@@ -11,12 +11,12 @@ import (
 	"golang.org/x/xerrors"
 )
 
-type VoteProofV0PackJSON struct {
+type VoteproofV0PackJSON struct {
 	encoder.JSONPackHintedHead
 	HT Height              `json:"height"`
 	RD Round               `json:"round"`
 	TH Threshold           `json:"threshold"`
-	RS VoteProofResultType `json:"result"`
+	RS VoteproofResultType `json:"result"`
 	ST Stage               `json:"stage"`
 	MJ Fact                `json:"majority"`
 	FS [][2]interface{}    `json:"facts"`
@@ -25,7 +25,7 @@ type VoteProofV0PackJSON struct {
 	FA localtime.JSONTime  `json:"finished_at"`
 }
 
-func (vp VoteProofV0) MarshalJSON() ([]byte, error) {
+func (vp VoteproofV0) MarshalJSON() ([]byte, error) {
 	var facts [][2]interface{} // nolint
 	for h, f := range vp.facts {
 		facts = append(facts, [2]interface{}{h, f})
@@ -41,7 +41,7 @@ func (vp VoteProofV0) MarshalJSON() ([]byte, error) {
 		votes = append(votes, [2]interface{}{a, vp.votes[a]})
 	}
 
-	return util.JSONMarshal(VoteProofV0PackJSON{
+	return util.JSONMarshal(VoteproofV0PackJSON{
 		JSONPackHintedHead: encoder.NewJSONPackHintedHead(vp.Hint()),
 		HT:                 vp.height,
 		RD:                 vp.round,
@@ -56,11 +56,11 @@ func (vp VoteProofV0) MarshalJSON() ([]byte, error) {
 	})
 }
 
-type VoteProofV0UnpackJSON struct {
+type VoteproofV0UnpackJSON struct {
 	HT Height               `json:"height"`
 	RD Round                `json:"round"`
 	TH Threshold            `json:"threshold"`
-	RS VoteProofResultType  `json:"result"`
+	RS VoteproofResultType  `json:"result"`
 	ST Stage                `json:"stage"`
 	MJ json.RawMessage      `json:"majority"`
 	FS [][2]json.RawMessage `json:"facts"`
@@ -69,8 +69,8 @@ type VoteProofV0UnpackJSON struct {
 	FA localtime.JSONTime   `json:"finished_at"`
 }
 
-func (vp *VoteProofV0) UnpackJSON(b []byte, enc *encoder.JSONEncoder) error { // nolint
-	var vpp VoteProofV0UnpackJSON
+func (vp *VoteproofV0) UnpackJSON(b []byte, enc *encoder.JSONEncoder) error { // nolint
+	var vpp VoteproofV0UnpackJSON
 	if err := enc.Unmarshal(b, &vpp); err != nil {
 		return err
 	}
@@ -123,7 +123,7 @@ func (vp *VoteProofV0) UnpackJSON(b []byte, enc *encoder.JSONEncoder) error { //
 		ballots[address] = ballot
 	}
 
-	votes := map[Address]VoteProofNodeFact{}
+	votes := map[Address]VoteproofNodeFact{}
 	for i := range vpp.VS {
 		l := vpp.VS[i]
 		if len(l) != 2 {
@@ -135,7 +135,7 @@ func (vp *VoteProofV0) UnpackJSON(b []byte, enc *encoder.JSONEncoder) error { //
 			return err
 		}
 
-		var nodeFact VoteProofNodeFact
+		var nodeFact VoteproofNodeFact
 		if err = enc.Decode(l[1], &nodeFact); err != nil {
 			return err
 		}
@@ -157,28 +157,28 @@ func (vp *VoteProofV0) UnpackJSON(b []byte, enc *encoder.JSONEncoder) error { //
 	return nil
 }
 
-type VoteProofNodeFactPackJSON struct {
+type VoteproofNodeFactPackJSON struct {
 	FC valuehash.Hash `json:"fact"`
 	FS key.Signature  `json:"fact_signature"`
 	SG key.Publickey  `json:"signer"`
 }
 
-func (vf VoteProofNodeFact) MarshalJSON() ([]byte, error) {
-	return util.JSONMarshal(VoteProofNodeFactPackJSON{
+func (vf VoteproofNodeFact) MarshalJSON() ([]byte, error) {
+	return util.JSONMarshal(VoteproofNodeFactPackJSON{
 		FC: vf.fact,
 		FS: vf.factSignature,
 		SG: vf.signer,
 	})
 }
 
-type VoteProofNodeFactUnpackJSON struct {
+type VoteproofNodeFactUnpackJSON struct {
 	FC json.RawMessage `json:"fact"`
 	FS key.Signature   `json:"fact_signature"`
 	SG json.RawMessage `json:"signer"`
 }
 
-func (vf *VoteProofNodeFact) UnpackJSON(b []byte, enc *encoder.JSONEncoder) error {
-	var vpp VoteProofNodeFactUnpackJSON
+func (vf *VoteproofNodeFact) UnpackJSON(b []byte, enc *encoder.JSONEncoder) error {
+	var vpp VoteproofNodeFactUnpackJSON
 	if err := enc.Unmarshal(b, &vpp); err != nil {
 		return err
 	}

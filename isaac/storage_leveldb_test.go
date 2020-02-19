@@ -30,14 +30,14 @@ func (t *testLeveldbStorage) SetupSuite() {
 	_ = hint.RegisterType(encoder.JSONEncoder{}.Hint().Type(), "json-encoder")
 	_ = hint.RegisterType((NewShortAddress("")).Hint().Type(), "short-address")
 	_ = hint.RegisterType(BlockType, "block")
-	_ = hint.RegisterType(VoteProofType, "voteproof")
+	_ = hint.RegisterType(VoteproofType, "voteproof")
 
 	t.encs = encoder.NewEncoders()
 	t.enc = encoder.NewJSONEncoder()
 	_ = t.encs.AddEncoder(t.enc)
 	_ = t.encs.AddHinter(BlockV0{})
 	_ = t.encs.AddHinter(valuehash.SHA256{})
-	_ = t.encs.AddHinter(VoteProofV0{})
+	_ = t.encs.AddHinter(VoteproofV0{})
 }
 
 func (t *testLeveldbStorage) SetupTest() {
@@ -78,73 +78,73 @@ func (t *testLeveldbStorage) TestLoadBlock() {
 	t.True(block.PreviousBlock().Equal(loaded.PreviousBlock()))
 	t.True(block.Operations().Equal(loaded.Operations()))
 	t.True(block.States().Equal(loaded.States()))
-	t.Equal(block.INITVoteProof(), loaded.INITVoteProof())
-	t.Equal(block.ACCEPTVoteProof(), loaded.ACCEPTVoteProof())
+	t.Equal(block.INITVoteproof(), loaded.INITVoteproof())
+	t.Equal(block.ACCEPTVoteproof(), loaded.ACCEPTVoteproof())
 }
 
-func (t *testLeveldbStorage) TestLoadINITVoteProof() {
+func (t *testLeveldbStorage) TestLoadINITVoteproof() {
 	st := NewLeveldbStorage(t.db, t.encs, t.enc)
 	t.NotNil(st)
 
 	{
-		loaded, err := st.LastINITVoteProof()
+		loaded, err := st.LastINITVoteproof()
 		t.Nil(err)
 		t.Nil(loaded)
 	}
 
 	// store first
-	voteProof := VoteProofV0{
+	voteproof := VoteproofV0{
 		height:     Height(33),
 		round:      Round(3),
-		result:     VoteProofMajority,
+		result:     VoteproofMajority,
 		stage:      StageINIT,
 		finishedAt: localtime.Now(),
 	}
 
-	t.NoError(st.NewINITVoteProof(voteProof))
+	t.NoError(st.NewINITVoteproof(voteproof))
 
-	loaded, err := st.LastINITVoteProof()
+	loaded, err := st.LastINITVoteproof()
 	t.NoError(err)
 	t.NotNil(loaded)
 
-	t.Equal(voteProof.Stage(), StageINIT)
-	t.Equal(voteProof.Height(), loaded.Height())
-	t.Equal(voteProof.Round(), loaded.Round())
-	t.Equal(voteProof.Result(), loaded.Result())
-	t.Equal(localtime.RFC3339(voteProof.FinishedAt()), localtime.RFC3339(loaded.FinishedAt()))
+	t.Equal(voteproof.Stage(), StageINIT)
+	t.Equal(voteproof.Height(), loaded.Height())
+	t.Equal(voteproof.Round(), loaded.Round())
+	t.Equal(voteproof.Result(), loaded.Result())
+	t.Equal(localtime.RFC3339(voteproof.FinishedAt()), localtime.RFC3339(loaded.FinishedAt()))
 }
 
-func (t *testLeveldbStorage) TestLoadACCEPTTVoteProof() {
+func (t *testLeveldbStorage) TestLoadACCEPTTVoteproof() {
 	st := NewLeveldbStorage(t.db, t.encs, t.enc)
 	t.NotNil(st)
 
 	{
-		loaded, err := st.LastINITVoteProof()
+		loaded, err := st.LastINITVoteproof()
 		t.Nil(err)
 		t.Nil(loaded)
 	}
 
 	// store first
-	ivp := VoteProofV0{
+	ivp := VoteproofV0{
 		height:     Height(33),
 		round:      Round(3),
-		result:     VoteProofMajority,
+		result:     VoteproofMajority,
 		stage:      StageINIT,
 		finishedAt: localtime.Now(),
 	}
 
-	t.NoError(st.NewINITVoteProof(ivp))
+	t.NoError(st.NewINITVoteproof(ivp))
 
-	avp := VoteProofV0{
+	avp := VoteproofV0{
 		height:     Height(33),
 		round:      Round(3),
-		result:     VoteProofMajority,
+		result:     VoteproofMajority,
 		stage:      StageACCEPT,
 		finishedAt: localtime.Now(),
 	}
-	t.NoError(st.NewACCEPTVoteProof(avp))
+	t.NoError(st.NewACCEPTVoteproof(avp))
 
-	loaded, err := st.LastACCEPTVoteProof()
+	loaded, err := st.LastACCEPTVoteproof()
 	t.NoError(err)
 	t.NotNil(loaded)
 

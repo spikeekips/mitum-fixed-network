@@ -32,7 +32,7 @@ func NewLocalNode(id int) *isaac.LocalNode {
 	return ln.SetChannel(channel)
 }
 
-func NewNode(id int, initialBlock isaac.Block) (*isaac.LocalState, error) {
+func NewNode(id int, initialBlock isaac.Block) (*isaac.Localstate, error) {
 	// encoder
 	encs := encoder.NewEncoders()
 	enc := encoder.NewJSONEncoder()
@@ -41,7 +41,7 @@ func NewNode(id int, initialBlock isaac.Block) (*isaac.LocalState, error) {
 	}
 	_ = encs.AddHinter(isaac.BlockV0{})
 	_ = encs.AddHinter(valuehash.SHA256{})
-	_ = encs.AddHinter(isaac.VoteProofV0{})
+	_ = encs.AddHinter(isaac.VoteproofV0{})
 
 	// create new node
 	db, _ := leveldb.Open(leveldbStorage.NewMemStorage(), nil)
@@ -57,7 +57,7 @@ func NewNode(id int, initialBlock isaac.Block) (*isaac.LocalState, error) {
 	}
 
 	localNode := NewLocalNode(id)
-	localState, err := isaac.NewLocalState(st, localNode)
+	localstate, err := isaac.NewLocalstate(st, localNode)
 	if err != nil {
 		return nil, err
 	}
@@ -67,40 +67,40 @@ func NewNode(id int, initialBlock isaac.Block) (*isaac.LocalState, error) {
 		return sl, nil
 	})
 
-	return localState, nil
+	return localstate, nil
 }
 
 type NodeProcess struct {
 	*logging.Logger
-	LocalState        *isaac.LocalState
+	Localstate        *isaac.Localstate
 	Ballotbox         *isaac.Ballotbox
 	Suffrage          isaac.Suffrage
 	SealStorage       isaac.SealStorage
 	ProposalProcessor isaac.ProposalProcessor
 	ConsensusStates   *isaac.ConsensusStates
-	AllNodes          []*isaac.LocalState
+	AllNodes          []*isaac.Localstate
 	stopChan          chan struct{}
 }
 
-func NewNodeProcess(localState *isaac.LocalState) (*NodeProcess, error) {
-	ballotbox := isaac.NewBallotbox(localState)
-	suffrage := NewRoundrobinSuffrage(localState, 100)
+func NewNodeProcess(localstate *isaac.Localstate) (*NodeProcess, error) {
+	ballotbox := isaac.NewBallotbox(localstate)
+	suffrage := NewRoundrobinSuffrage(localstate, 100)
 	sealStorage := NewMapSealStorage()
-	proposalProcessor := isaac.NewProposalProcessorV0(localState, sealStorage)
+	proposalProcessor := isaac.NewProposalProcessorV0(localstate, sealStorage)
 
-	cshandlerBooting, err := isaac.NewConsensusStateBootingHandler(localState, proposalProcessor)
+	cshandlerBooting, err := isaac.NewStateBootingHandler(localstate, proposalProcessor)
 	if err != nil {
 		return nil, err
 	}
 
-	cshandlerJoining, err := isaac.NewConsensusStateJoiningHandler(localState, proposalProcessor)
+	cshandlerJoining, err := isaac.NewStateJoiningHandler(localstate, proposalProcessor)
 	if err != nil {
 		return nil, err
 	}
 
-	proposalMaker := isaac.NewProposalMaker(localState)
-	cshandlerConsensus, err := isaac.NewConsensusStateConsensusHandler(
-		localState,
+	proposalMaker := isaac.NewProposalMaker(localstate)
+	cshandlerConsensus, err := isaac.NewStateConsensusHandler(
+		localstate,
 		proposalProcessor,
 		suffrage,
 		sealStorage,
@@ -111,7 +111,7 @@ func NewNodeProcess(localState *isaac.LocalState) (*NodeProcess, error) {
 	}
 
 	css := isaac.NewConsensusStates(
-		localState,
+		localstate,
 		ballotbox,
 		suffrage,
 		sealStorage,
@@ -126,7 +126,7 @@ func NewNodeProcess(localState *isaac.LocalState) (*NodeProcess, error) {
 		Logger: logging.NewLogger(func(c zerolog.Context) zerolog.Context {
 			return c
 		}),
-		LocalState:        localState,
+		Localstate:        localstate,
 		Ballotbox:         ballotbox,
 		Suffrage:          suffrage,
 		SealStorage:       sealStorage,
@@ -143,7 +143,7 @@ func (np *NodeProcess) Start() error {
 			select {
 			case <-np.stopChan:
 				break end
-			case sl := <-np.LocalState.Node().Channel().ReceiveSeal():
+			case sl := <-np.Localstate.Node().Channel().ReceiveSeal():
 				go func() {
 					if err := np.ConsensusStates.NewSeal(sl); err != nil {
 						np.Log().Error().Err(err).Msg("ConsensusStates failed to receive seal")

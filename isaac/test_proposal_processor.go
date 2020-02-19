@@ -13,14 +13,14 @@ func NewDummyProposalProcessor(returnBlock Block, err error) DummyProposalProces
 	return DummyProposalProcessor{returnBlock: returnBlock, err: err}
 }
 
-func (dp DummyProposalProcessor) ProcessINIT(_ valuehash.Hash, initVoteProof VoteProof, _ []byte) (Block, error) {
-	dp.returnBlock = dp.returnBlock.SetINITVoteProof(initVoteProof)
+func (dp DummyProposalProcessor) ProcessINIT(_ valuehash.Hash, initVoteproof Voteproof, _ []byte) (Block, error) {
+	dp.returnBlock = dp.returnBlock.SetINITVoteproof(initVoteproof)
 	return dp.returnBlock, dp.err
 }
 
 func (dp DummyProposalProcessor) ProcessACCEPT(
-	_ valuehash.Hash, acceptVoteProof VoteProof, _ []byte,
+	_ valuehash.Hash, acceptVoteproof Voteproof, _ []byte,
 ) (BlockStorage, error) {
-	dp.returnBlock = dp.returnBlock.SetACCEPTVoteProof(acceptVoteProof)
+	dp.returnBlock = dp.returnBlock.SetACCEPTVoteproof(acceptVoteproof)
 	return &DummyBlockStorage{block: dp.returnBlock}, dp.err
 }

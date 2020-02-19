@@ -14,11 +14,11 @@ import (
 
 type RoundrobinSuffrage struct {
 	*logging.Logger
-	localState *isaac.LocalState
+	localstate *isaac.Localstate
 	cache      *lru.TwoQueueCache
 }
 
-func NewRoundrobinSuffrage(localState *isaac.LocalState, cacheSize int) *RoundrobinSuffrage {
+func NewRoundrobinSuffrage(localstate *isaac.Localstate, cacheSize int) *RoundrobinSuffrage {
 	var cache *lru.TwoQueueCache
 	if cacheSize > 0 {
 		cache, _ = lru.New2Q(cacheSize)
@@ -28,7 +28,7 @@ func NewRoundrobinSuffrage(localState *isaac.LocalState, cacheSize int) *Roundro
 		Logger: logging.NewLogger(func(c zerolog.Context) zerolog.Context {
 			return c.Str("module", "roundrobin-suffrage")
 		}),
-		localState: localState,
+		localstate: localstate,
 		cache:      cache,
 	}
 }
@@ -58,8 +58,8 @@ func (sf *RoundrobinSuffrage) Acting(height isaac.Height, round isaac.Round) isa
 }
 
 func (sf *RoundrobinSuffrage) acting(height isaac.Height, round isaac.Round) isaac.ActingSuffrage {
-	all := []isaac.Node{sf.localState.Node()}
-	sf.localState.Nodes().Traverse(func(n isaac.Node) bool {
+	all := []isaac.Node{sf.localstate.Node()}
+	sf.localstate.Nodes().Traverse(func(n isaac.Node) bool {
 		all = append(all, n)
 
 		return true
@@ -77,7 +77,7 @@ func (sf *RoundrobinSuffrage) acting(height isaac.Height, round isaac.Round) isa
 		)
 	}
 
-	numberOfActingSuffrageNodes := int(sf.localState.Policy().NumberOfActingSuffrageNodes())
+	numberOfActingSuffrageNodes := int(sf.localstate.Policy().NumberOfActingSuffrageNodes())
 	if len(all) < numberOfActingSuffrageNodes {
 		numberOfActingSuffrageNodes = len(all)
 	}

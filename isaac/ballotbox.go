@@ -15,22 +15,22 @@ type Ballotbox struct {
 	sync.RWMutex
 	*logging.Logger
 	vrs        *sync.Map
-	localState *LocalState
+	localstate *Localstate
 }
 
-func NewBallotbox(localState *LocalState) *Ballotbox {
+func NewBallotbox(localstate *Localstate) *Ballotbox {
 	return &Ballotbox{
 		Logger: logging.NewLogger(func(c zerolog.Context) zerolog.Context {
 			return c.Str("module", "ballotbox")
 		}),
 		vrs:        &sync.Map{},
-		localState: localState,
+		localstate: localstate,
 	}
 }
 
 // Vote receives Ballot and returns VoteRecords, which has VoteRecords.Result()
 // and VoteRecords.Majority().
-func (bb *Ballotbox) Vote(ballot Ballot) (VoteProof, error) {
+func (bb *Ballotbox) Vote(ballot Ballot) (Voteproof, error) {
 	if !ballot.Stage().CanVote() {
 		return nil, xerrors.Errorf("this ballot is not for voting; stage=%s", ballot.Stage())
 	}
@@ -59,7 +59,7 @@ func (bb *Ballotbox) loadVoteRecords(ballot Ballot, ifNotCreate bool) *VoteRecor
 	if i, found := bb.vrs.Load(key); found {
 		vrs = i.(*VoteRecords)
 	} else if ifNotCreate {
-		vrs = NewVoteRecords(ballot, bb.localState.Policy().Threshold())
+		vrs = NewVoteRecords(ballot, bb.localstate.Policy().Threshold())
 		bb.vrs.Store(key, vrs)
 	}
 

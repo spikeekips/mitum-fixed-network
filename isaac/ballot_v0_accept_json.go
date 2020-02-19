@@ -13,7 +13,7 @@ type ACCEPTBallotV0PackerJSON struct {
 	BaseBallotV0PackerJSON
 	PR valuehash.Hash `json:"proposal"`
 	NB valuehash.Hash `json:"new_block"`
-	VR VoteProof      `json:"voteproof"`
+	VR Voteproof      `json:"voteproof"`
 }
 
 func (ab ACCEPTBallotV0) MarshalJSON() ([]byte, error) {
@@ -26,7 +26,7 @@ func (ab ACCEPTBallotV0) MarshalJSON() ([]byte, error) {
 		BaseBallotV0PackerJSON: bb,
 		PR:                     ab.proposal,
 		NB:                     ab.newBlock,
-		VR:                     ab.voteProof,
+		VR:                     ab.voteproof,
 	})
 }
 
@@ -68,8 +68,8 @@ func (ab *ACCEPTBallotV0) UnpackJSON(b []byte, enc *encoder.JSONEncoder) error {
 		enb = v
 	}
 
-	var vp VoteProof
-	if i, err := decodeVoteProof(enc, nab.VR); err != nil {
+	var vp Voteproof
+	if i, err := decodeVoteproof(enc, nab.VR); err != nil {
 		return err
 	} else {
 		vp = i
@@ -85,7 +85,7 @@ func (ab *ACCEPTBallotV0) UnpackJSON(b []byte, enc *encoder.JSONEncoder) error {
 		proposal:         epr,
 		newBlock:         enb,
 	}
-	ab.voteProof = vp
+	ab.voteproof = vp
 
 	return nil
 }

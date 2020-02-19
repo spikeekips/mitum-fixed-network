@@ -14,43 +14,43 @@ type ConsensusStates struct {
 	sync.RWMutex
 	*logging.Logger
 	*util.FunctionDaemon
-	localState    *LocalState
+	localstate    *Localstate
 	ballotbox     *Ballotbox
 	suffrage      Suffrage
 	sealStorage   SealStorage
-	states        map[ConsensusState]ConsensusStateHandler
-	activeHandler ConsensusStateHandler
-	stateChan     chan ConsensusStateChangeContext
+	states        map[State]StateHandler
+	activeHandler StateHandler
+	stateChan     chan StateChangeContext
 	sealChan      chan seal.Seal
 }
 
 func NewConsensusStates(
-	localState *LocalState,
+	localstate *Localstate,
 	ballotbox *Ballotbox,
 	suffrage Suffrage,
 	sealStorage SealStorage,
-	booting ConsensusStateHandler,
-	joining ConsensusStateHandler,
-	consensus ConsensusStateHandler,
-	syncing ConsensusStateHandler,
-	broken ConsensusStateHandler,
+	booting StateHandler,
+	joining StateHandler,
+	consensus StateHandler,
+	syncing StateHandler,
+	broken StateHandler,
 ) *ConsensusStates {
 	css := &ConsensusStates{
 		Logger: logging.NewLogger(func(c zerolog.Context) zerolog.Context {
 			return c.Str("module", "consensus-states")
 		}),
-		localState:  localState,
+		localstate:  localstate,
 		ballotbox:   ballotbox,
 		suffrage:    suffrage,
 		sealStorage: sealStorage,
-		states: map[ConsensusState]ConsensusStateHandler{
-			ConsensusStateBooting:   booting,
-			ConsensusStateJoining:   joining,
-			ConsensusStateConsensus: consensus,
-			ConsensusStateSyncing:   syncing,
-			ConsensusStateBroken:    broken,
+		states: map[State]StateHandler{
+			StateBooting:   booting,
+			StateJoining:   joining,
+			StateConsensus: consensus,
+			StateSyncing:   syncing,
+			StateBroken:    broken,
 		},
-		stateChan: make(chan ConsensusStateChangeContext),
+		stateChan: make(chan StateChangeContext),
 		sealChan:  make(chan seal.Seal),
 	}
 	css.FunctionDaemon = util.NewFunctionDaemon(css.start, false)
@@ -96,7 +96,7 @@ func (css *ConsensusStates) Start() error {
 		return err
 	}
 
-	css.ActivateHandler(NewConsensusStateChangeContext(ConsensusStateStopped, ConsensusStateBooting, nil))
+	css.ActivateHandler(NewStateChangeContext(StateStopped, StateBooting, nil))
 
 	return nil
 }
@@ -110,7 +110,7 @@ func (css *ConsensusStates) Stop() error {
 	}
 
 	if css.activeHandler != nil {
-		ctx := NewConsensusStateChangeContext(css.activeHandler.State(), ConsensusStateStopped, nil)
+		ctx := NewStateChangeContext(css.activeHandler.State(), StateStopped, nil)
 		if err := css.activeHandler.Deactivate(ctx); err != nil {
 			return err
 		}
@@ -140,7 +140,7 @@ end:
 		case <-stopChan:
 			break end
 		case ctx := <-css.stateChan:
-			l := loggerWithConsensusStateChangeContext(ctx, css.Log())
+			l := loggerWithStateChangeContext(ctx, css.Log())
 			l.Debug().Msgf("chaning state requested: %s -> %s", ctx.From(), ctx.To())
 
 			if err := css.activateHandler(ctx); err != nil {
@@ -163,12 +163,12 @@ end:
 }
 
 // ActiveHandler returns the current activated handler.
-func (css *ConsensusStates) ActivateHandler(ctx ConsensusStateChangeContext) {
+func (css *ConsensusStates) ActivateHandler(ctx StateChangeContext) {
 	css.stateChan <- ctx
 }
 
-func (css *ConsensusStates) activateHandler(ctx ConsensusStateChangeContext) error {
-	l := loggerWithConsensusStateChangeContext(ctx, css.Log())
+func (css *ConsensusStates) activateHandler(ctx StateChangeContext) error {
+	l := loggerWithStateChangeContext(ctx, css.Log())
 
 	handler := css.ActiveHandler()
 	if handler != nil && handler.State() == ctx.toState {
@@ -203,7 +203,7 @@ func (css *ConsensusStates) activateHandler(ctx ConsensusStateChangeContext) err
 }
 
 // ActiveHandler returns the current activated handler.
-func (css *ConsensusStates) ActiveHandler() ConsensusStateHandler {
+func (css *ConsensusStates) ActiveHandler() StateHandler {
 	css.RLock()
 	defer css.RUnlock()
 
@@ -220,7 +220,7 @@ func (css *ConsensusStates) broadcastSeal(sl seal.Seal, errChan chan<- error) {
 		}
 	}()
 
-	css.localState.Nodes().Traverse(func(n Node) bool {
+	css.localstate.Nodes().Traverse(func(n Node) bool {
 		lt := l.With().
 			Str("target_node", n.Address().String()).
 			Logger()
@@ -241,31 +241,31 @@ func (css *ConsensusStates) broadcastSeal(sl seal.Seal, errChan chan<- error) {
 	})
 }
 
-func (css *ConsensusStates) newVoteProof(vp VoteProof) error {
-	vpc := VoteProofValidationChecker{
+func (css *ConsensusStates) newVoteproof(vp Voteproof) error {
+	vpc := VoteproofValidationChecker{
 		Logger: logging.NewLogger(func(c zerolog.Context) zerolog.Context {
 			return c.Str("module", "consensus-states-voteproof-checker")
 		}),
-		lastBlock:         css.localState.LastBlock(),
-		lastINITVoteProof: css.localState.LastINITVoteProof(),
-		voteProof:         vp,
+		lastBlock:         css.localstate.LastBlock(),
+		lastINITVoteproof: css.localstate.LastINITVoteproof(),
+		voteproof:         vp,
 		css:               css,
 	}
 	_ = vpc.SetLogger(*css.Log())
 
 	err := util.NewChecker("voteproof-checker", []util.CheckerFunc{
 		vpc.CheckHeight,
-		vpc.CheckINITVoteProof,
+		vpc.CheckINITVoteproof,
 	}).Check()
 
-	var ctx ConsensusStateToBeChangeError
+	var ctx StateToBeChangeError
 	if xerrors.As(err, &ctx) {
 		go func() {
-			css.stateChan <- ctx.ConsensusStateChangeContext()
+			css.stateChan <- ctx.StateChangeContext()
 		}()
 
 		return nil
-	} else if xerrors.Is(err, IgnoreVoteProofError) {
+	} else if xerrors.Is(err, IgnoreVoteproofError) {
 		return nil
 	}
 
@@ -275,12 +275,12 @@ func (css *ConsensusStates) newVoteProof(vp VoteProof) error {
 
 	switch vp.Stage() {
 	case StageACCEPT:
-		_ = css.localState.SetLastACCEPTVoteProof(vp)
+		_ = css.localstate.SetLastACCEPTVoteproof(vp)
 	case StageINIT:
-		_ = css.localState.SetLastINITVoteProof(vp)
+		_ = css.localstate.SetLastINITVoteproof(vp)
 	}
 
-	return css.ActiveHandler().NewVoteProof(vp)
+	return css.ActiveHandler().NewVoteproof(vp)
 }
 
 // NewSeal receives Seal and hand it over to handler;
@@ -301,7 +301,7 @@ func (css *ConsensusStates) NewSeal(sl seal.Seal) error {
 		Str("handler", css.ActiveHandler().State().String()).
 		Logger()
 
-	isFromLocal := sl.Signer().Equal(css.localState.Node().Publickey())
+	isFromLocal := sl.Signer().Equal(css.localstate.Node().Publickey())
 
 	if !isFromLocal {
 		if err := css.validateSeal(sl); err != nil {
@@ -358,8 +358,8 @@ func (css *ConsensusStates) validateProposal(proposal Proposal) error {
 		return err
 	}
 
-	ivp := css.localState.LastINITVoteProof()
-	l = loggerWithVoteProof(ivp, l)
+	ivp := css.localstate.LastINITVoteproof()
+	l = loggerWithVoteproof(ivp, l)
 	if proposal.Height() != ivp.Height() || proposal.Round() != ivp.Round() {
 		err := xerrors.Errorf("unexpected Proposal received")
 
@@ -372,23 +372,23 @@ func (css *ConsensusStates) validateProposal(proposal Proposal) error {
 }
 
 func (css *ConsensusStates) vote(ballot Ballot) error {
-	voteProof, err := css.ballotbox.Vote(ballot)
+	voteproof, err := css.ballotbox.Vote(ballot)
 	if err != nil {
 		return err
 	}
 
-	if !voteProof.IsFinished() {
+	if !voteproof.IsFinished() {
 		return nil
 	}
 
-	if voteProof.IsClosed() {
+	if voteproof.IsClosed() {
 		return nil
 	}
 
-	return css.newVoteProof(voteProof)
+	return css.newVoteproof(voteproof)
 }
 
-func checkBlockWithINITVoteProof(block Block, vp VoteProof) error {
+func checkBlockWithINITVoteproof(block Block, vp Voteproof) error {
 	// check vp.PreviousBlock with local block
 	fact, ok := vp.Majority().(INITBallotFact)
 	if !ok {
@@ -397,7 +397,7 @@ func checkBlockWithINITVoteProof(block Block, vp VoteProof) error {
 
 	if !fact.PreviousBlock().Equal(block.Hash()) {
 		return xerrors.Errorf(
-			"INIT VoteProof of ACCEPT Ballot has different PreviousBlock with local: previousRound=%s local=%s",
+			"INIT Voteproof of ACCEPT Ballot has different PreviousBlock with local: previousRound=%s local=%s",
 
 			fact.PreviousBlock(),
 			block.Hash(),

@@ -11,17 +11,17 @@ import (
 	"github.com/spikeekips/mitum/valuehash"
 )
 
-var DummyVoteProofHint hint.Hint = hint.MustHint(VoteProofType, "0.1.0-dummy")
+var DummyVoteproofHint hint.Hint = hint.MustHint(VoteproofType, "0.1.0-dummy")
 
-type DummyVoteProof struct {
+type DummyVoteproof struct {
 	height Height
 	round  Round
 	stage  Stage
-	result VoteProofResultType
+	result VoteproofResultType
 }
 
-func NewDummyVoteProof(height Height, round Round, stage Stage, result VoteProofResultType) DummyVoteProof {
-	return DummyVoteProof{
+func NewDummyVoteproof(height Height, round Round, stage Stage, result VoteproofResultType) DummyVoteproof {
+	return DummyVoteproof{
 		height: height,
 		round:  round,
 		stage:  stage,
@@ -29,61 +29,61 @@ func NewDummyVoteProof(height Height, round Round, stage Stage, result VoteProof
 	}
 }
 
-func (vp DummyVoteProof) Hint() hint.Hint {
-	return DummyVoteProofHint
+func (vp DummyVoteproof) Hint() hint.Hint {
+	return DummyVoteproofHint
 }
 
-func (vp DummyVoteProof) IsValid([]byte) error {
+func (vp DummyVoteproof) IsValid([]byte) error {
 	return nil
 }
 
-func (vp DummyVoteProof) FinishedAt() time.Time {
+func (vp DummyVoteproof) FinishedAt() time.Time {
 	return time.Now()
 }
 
-func (vp DummyVoteProof) IsFinished() bool {
-	return vp.result != VoteProofNotYet
+func (vp DummyVoteproof) IsFinished() bool {
+	return vp.result != VoteproofNotYet
 }
 
-func (vp DummyVoteProof) IsClosed() bool {
+func (vp DummyVoteproof) IsClosed() bool {
 	return false
 }
 
-func (vp DummyVoteProof) Bytes() []byte {
+func (vp DummyVoteproof) Bytes() []byte {
 	return nil
 }
 
-func (vp DummyVoteProof) Height() Height {
+func (vp DummyVoteproof) Height() Height {
 	return vp.height
 }
 
-func (vp DummyVoteProof) Round() Round {
+func (vp DummyVoteproof) Round() Round {
 	return vp.round
 }
 
-func (vp DummyVoteProof) Stage() Stage {
+func (vp DummyVoteproof) Stage() Stage {
 	return vp.stage
 }
 
-func (vp DummyVoteProof) Result() VoteProofResultType {
+func (vp DummyVoteproof) Result() VoteproofResultType {
 	return vp.result
 }
 
-func (vp DummyVoteProof) Majority() Fact {
+func (vp DummyVoteproof) Majority() Fact {
 	return nil
 }
 
-func (vp DummyVoteProof) Ballots() map[Address]valuehash.Hash {
+func (vp DummyVoteproof) Ballots() map[Address]valuehash.Hash {
 	return nil
 }
 
-func (vp DummyVoteProof) MarshalJSON() ([]byte, error) {
+func (vp DummyVoteproof) MarshalJSON() ([]byte, error) {
 	return util.JSONMarshal(struct {
 		encoder.JSONPackHintedHead
 		HT Height
 		RD Round
 		SG Stage
-		RS VoteProofResultType
+		RS VoteproofResultType
 	}{
 		JSONPackHintedHead: encoder.NewJSONPackHintedHead(vp.Hint()),
 		HT:                 vp.height,
@@ -93,12 +93,12 @@ func (vp DummyVoteProof) MarshalJSON() ([]byte, error) {
 	})
 }
 
-func (vp *DummyVoteProof) UnpackJSON(b []byte, enc *encoder.JSONEncoder) error {
+func (vp *DummyVoteproof) UnpackJSON(b []byte, enc *encoder.JSONEncoder) error {
 	var uvp struct {
 		HT Height
 		RD Round
 		SG Stage
-		RS VoteProofResultType
+		RS VoteproofResultType
 	}
 
 	if err := enc.Unmarshal(b, &uvp); err != nil {

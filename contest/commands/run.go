@@ -31,7 +31,7 @@ func (cm RunCommand) registerTypes() {
 	_ = hint.RegisterType(isaac.ProposalBallotType, "proposal")
 	_ = hint.RegisterType(isaac.SIGNBallotType, "sign-ballot")
 	_ = hint.RegisterType(isaac.ACCEPTBallotType, "accept-ballot")
-	_ = hint.RegisterType(isaac.VoteProofType, "voteproof-genesis")
+	_ = hint.RegisterType(isaac.VoteproofType, "voteproof-genesis")
 	_ = hint.RegisterType(isaac.BlockType, "block")
 	_ = hint.RegisterType(isaac.BlockOperationType, "block-operation")
 	_ = hint.RegisterType(isaac.BlockStatesType, "block-states")
@@ -53,13 +53,13 @@ func (cm RunCommand) generateInitialBlock() (isaac.BlockV0, error) {
 	return initial, nil
 }
 
-func (cm RunCommand) generateINITVoteProof(np *common.NodeProcess) (isaac.VoteProof, error) {
+func (cm RunCommand) generateINITVoteproof(np *common.NodeProcess) (isaac.Voteproof, error) {
 	round := isaac.Round(0)
 
-	// empty VoteProof
-	var ivp isaac.VoteProof
+	// empty Voteproof
+	var ivp isaac.Voteproof
 	for _, n := range np.AllNodes {
-		ib, err := isaac.NewINITBallotV0FromLocalState(n, round, nil)
+		ib, err := isaac.NewINITBallotV0FromLocalstate(n, round, nil)
 		if err != nil {
 			return nil, err
 		}
@@ -80,30 +80,30 @@ func (cm RunCommand) generateINITVoteProof(np *common.NodeProcess) (isaac.VotePr
 	}
 
 	if ivp == nil {
-		return nil, xerrors.Errorf("failed to make INIT VoteProof")
+		return nil, xerrors.Errorf("failed to make INIT Voteproof")
 	}
 
 	return ivp, nil
 }
 
-func (cm RunCommand) generateACCEPTVoteProof(
+func (cm RunCommand) generateACCEPTVoteproof(
 	np *common.NodeProcess, proposal valuehash.Hash,
-) (isaac.BlockV0, isaac.VoteProof, error) {
-	ivp := np.LocalState.LastINITVoteProof()
+) (isaac.BlockV0, isaac.Voteproof, error) {
+	ivp := np.Localstate.LastINITVoteproof()
 
 	newBlock, err := common.NewContestBlock(
 		ivp.Height(),
 		ivp.Round(),
 		proposal,
-		np.LocalState.LastBlock().Hash(),
+		np.Localstate.LastBlock().Hash(),
 	)
 	if err != nil {
 		return isaac.BlockV0{}, nil, err
 	}
 
-	var avp isaac.VoteProof
+	var avp isaac.Voteproof
 	for _, n := range np.AllNodes {
-		ab, err := isaac.NewACCEPTBallotV0FromLocalState(n, ivp.Round(), newBlock, nil)
+		ab, err := isaac.NewACCEPTBallotV0FromLocalstate(n, ivp.Round(), newBlock, nil)
 		if err != nil {
 			return isaac.BlockV0{}, nil, err
 		}
@@ -124,7 +124,7 @@ func (cm RunCommand) generateACCEPTVoteProof(
 	}
 
 	if avp == nil {
-		return isaac.BlockV0{}, nil, xerrors.Errorf("failed to make ACCEPT VoteProof")
+		return isaac.BlockV0{}, nil, xerrors.Errorf("failed to make ACCEPT Voteproof")
 	}
 
 	return newBlock, avp, nil
@@ -132,78 +132,78 @@ func (cm RunCommand) generateACCEPTVoteProof(
 
 func (cm RunCommand) generateBasement(nps []*common.NodeProcess) error {
 	for _, np := range nps {
-		localState := np.LocalState
-		lastBlock := localState.LastBlock()
+		localstate := np.Localstate
+		lastBlock := localstate.LastBlock()
 
-		ivpg := isaac.NewVoteProofGenesisV0(lastBlock.Height(), localState.Policy().Threshold(), isaac.StageINIT)
-		avpg := isaac.NewVoteProofGenesisV0(lastBlock.Height(), localState.Policy().Threshold(), isaac.StageACCEPT)
-		_ = localState.SetLastINITVoteProof(ivpg)
-		_ = localState.SetLastACCEPTVoteProof(avpg)
+		ivpg := isaac.NewVoteproofGenesisV0(lastBlock.Height(), localstate.Policy().Threshold(), isaac.StageINIT)
+		avpg := isaac.NewVoteproofGenesisV0(lastBlock.Height(), localstate.Policy().Threshold(), isaac.StageACCEPT)
+		_ = localstate.SetLastINITVoteproof(ivpg)
+		_ = localstate.SetLastACCEPTVoteproof(avpg)
 	}
 
-	ivps := map[isaac.Address]isaac.VoteProof{}
+	ivps := map[isaac.Address]isaac.Voteproof{}
 	for _, np := range nps {
-		vp, err := cm.generateINITVoteProof(np)
+		vp, err := cm.generateINITVoteproof(np)
 		if err != nil {
 			return err
 		}
-		ivps[np.LocalState.Node().Address()] = vp
+		ivps[np.Localstate.Node().Address()] = vp
 	}
 
 	for _, np := range nps {
-		_ = np.LocalState.SetLastINITVoteProof(ivps[np.LocalState.Node().Address()])
+		_ = np.Localstate.SetLastINITVoteproof(ivps[np.Localstate.Node().Address()])
 	}
 
 	proposal := valuehash.RandomSHA256()
 
 	newBlocks := map[isaac.Address]isaac.Block{}
-	avps := map[isaac.Address]isaac.VoteProof{}
+	avps := map[isaac.Address]isaac.Voteproof{}
 	for _, np := range nps {
-		newBlock, vp, err := cm.generateACCEPTVoteProof(np, proposal)
+		newBlock, vp, err := cm.generateACCEPTVoteproof(np, proposal)
 		if err != nil {
 			return err
 		}
 
-		avps[np.LocalState.Node().Address()] = vp
-		newBlocks[np.LocalState.Node().Address()] = newBlock
+		avps[np.Localstate.Node().Address()] = vp
+		newBlocks[np.Localstate.Node().Address()] = newBlock
 	}
 
 	for _, np := range nps {
-		_ = np.LocalState.SetLastACCEPTVoteProof(avps[np.LocalState.Node().Address()])
+		_ = np.Localstate.SetLastACCEPTVoteproof(avps[np.Localstate.Node().Address()])
 
-		newBlock := newBlocks[np.LocalState.Node().Address()]
-		newBlock = newBlock.SetINITVoteProof(ivps[np.LocalState.Node().Address()])
-		newBlock = newBlock.SetACCEPTVoteProof(avps[np.LocalState.Node().Address()])
+		newBlock := newBlocks[np.Localstate.Node().Address()]
+		newBlock = newBlock.SetINITVoteproof(ivps[np.Localstate.Node().Address()])
+		newBlock = newBlock.SetACCEPTVoteproof(avps[np.Localstate.Node().Address()])
 
-		ob, err := np.LocalState.Storage().OpenBlockStorage(newBlock)
+		ob, err := np.Localstate.Storage().OpenBlockStorage(newBlock)
 		if err != nil {
 			return err
 		} else if err := ob.Commit(); err != nil {
 			return err
 		}
 
-		_ = np.LocalState.SetLastBlock(newBlock)
-		np.Log().Debug().Interface("last_block", np.LocalState.LastBlock()).Msg("will start from here")
+		_ = np.Localstate.SetLastBlock(newBlock)
+		np.Log().Debug().Interface("last_block", np.Localstate.LastBlock()).Msg("will start from here")
 	}
 
 	return nil
 }
 
 func (cm RunCommand) createNodeProcess(
-	localState *isaac.LocalState,
+	localstate *isaac.Localstate,
 	log *zerolog.Logger,
 ) (*common.NodeProcess, error) {
-	np, err := common.NewNodeProcess(localState)
+	np, err := common.NewNodeProcess(localstate)
 	if err != nil {
 		return nil, err
 	}
 
 	_ = np.SetLogger(log.With().
-		Str("node", np.LocalState.Node().Address().String()).
+		Str("node", np.Localstate.Node().Address().String()).
 		Logger())
 
 	{
-		b, err := util.JSONMarshal(np.LocalState)
+		b, err := util.JSONMarshal(np.Localstate)
 		if err != nil {
 			return nil, err
 		}
@@ -255,7 +255,7 @@ func (cm RunCommand) Run(_ *CommonFlags, log *zerolog.Logger, exitHooks *[]func(
 		return err
 	}
 
-	var ns []*isaac.LocalState
+	var ns []*isaac.Localstate
 	for i := 0; i < int(cm.Nodes); i++ {
 		if nl, err := common.NewNode(i, initialBlock); err != nil {
 			return err
@@ -291,9 +291,9 @@ func (cm RunCommand) Run(_ *CommonFlags, log *zerolog.Logger, exitHooks *[]func(
 	}
 
 	for _, np := range nps {
-		var nodes []*isaac.LocalState
+		var nodes []*isaac.Localstate
 		for _, other := range nps {
-			nodes = append(nodes, other.LocalState)
+			nodes = append(nodes, other.Localstate)
 		}
 
 		np.AllNodes = nodes

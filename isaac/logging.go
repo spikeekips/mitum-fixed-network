@@ -42,7 +42,7 @@ func loggerWithBallot(ballot Ballot, l *zerolog.Logger) *zerolog.Logger {
 	return &ll
 }
 
-func loggerWithVoteProof(vp VoteProof, l *zerolog.Logger) *zerolog.Logger {
+func loggerWithVoteproof(vp Voteproof, l *zerolog.Logger) *zerolog.Logger {
 	if vp == nil {
 		return l
 	}
@@ -59,8 +59,8 @@ func loggerWithVoteProof(vp VoteProof, l *zerolog.Logger) *zerolog.Logger {
 	return &ll
 }
 
-func loggerWithLocalState(localState *LocalState, l *zerolog.Logger) *zerolog.Logger {
-	lastBlock := localState.LastBlock()
+func loggerWithLocalstate(localstate *Localstate, l *zerolog.Logger) *zerolog.Logger {
+	lastBlock := localstate.LastBlock()
 	if lastBlock == nil {
 		return l
 	}
@@ -77,16 +77,16 @@ func loggerWithLocalState(localState *LocalState, l *zerolog.Logger) *zerolog.Lo
 	return l
 }
 
-func loggerWithConsensusStateChangeContext(ctx ConsensusStateChangeContext, l *zerolog.Logger) *zerolog.Logger {
+func loggerWithStateChangeContext(ctx StateChangeContext, l *zerolog.Logger) *zerolog.Logger {
 	e := zerolog.Dict().
 		Str("from_state", ctx.From().String()).
 		Str("to_state", ctx.To().String())
 
-	if ctx.voteProof != nil {
-		if lvp, ok := ctx.voteProof.(zerolog.LogObjectMarshaler); ok {
+	if ctx.voteproof != nil {
+		if lvp, ok := ctx.voteproof.(zerolog.LogObjectMarshaler); ok {
 			e.EmbedObject(lvp)
 		} else {
-			rvp, _ := util.JSONMarshal(ctx.voteProof)
+			rvp, _ := util.JSONMarshal(ctx.voteproof)
 
 			e.RawJSON("voteproof", rvp)
 		}
@@ -98,5 +98,5 @@ func loggerWithConsensusStateChangeContext(ctx ConsensusStateChangeContext, l *z
 		Logger()
 	ll.Debug().Dict("change_state_context", e).Send()
 
-	return loggerWithVoteProof(ctx.voteProof, &ll)
+	return loggerWithVoteproof(ctx.voteproof, &ll)
 }

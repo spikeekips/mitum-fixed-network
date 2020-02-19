@@ -9,5 +9,5 @@ type BallotChecker struct {
 }
 
 // (TODO) Ballot.Node() is inside suffrage
-// (TODO) Ballot.Height() is equal or higher than LastINITVoteProof.
-// (TODO) Ballot.Round() is equal or higher than LastINITVoteProof.
+// (TODO) Ballot.Height() is equal or higher than LastINITVoteproof.
+// (TODO) Ballot.Round() is equal or higher than LastINITVoteproof.

@@ -21,6 +21,10 @@ func (ce ConsensusStateToBeChangeError) Error() string {
 	return ce.CError.Error()
 }
 
+func (ce ConsensusStateToBeChangeError) ConsensusStateChangeContext() ConsensusStateChangeContext {
+	return NewConsensusStateChangeContext(ce.FromState, ce.ToState, ce.VoteProof)
+}
+
 func NewConsensusStateToBeChangeError(
 	fromState, toState ConsensusState, voteProof VoteProof,
 ) ConsensusStateToBeChangeError {
@@ -32,7 +36,7 @@ func NewConsensusStateToBeChangeError(
 	}
 }
 
-type VoteProofChecker struct {
+type VoteProofValidationChecker struct {
 	*logging.Logger
 	lastBlock         Block
 	lastINITVoteProof VoteProof
@@ -40,7 +44,7 @@ type VoteProofChecker struct {
 	css               *ConsensusStates
 }
 
-func (vpc *VoteProofChecker) CheckHeight() (bool, error) {
+func (vpc *VoteProofValidationChecker) CheckHeight() (bool, error) {
 	l := loggerWithVoteProof(vpc.voteProof, vpc.Log())
 
 	d := vpc.voteProof.Height() - (vpc.lastBlock.Height() + 1)
@@ -69,7 +73,7 @@ func (vpc *VoteProofChecker) CheckHeight() (bool, error) {
 	return true, nil
 }
 
-func (vpc *VoteProofChecker) CheckINITVoteProof() (bool, error) {
+func (vpc *VoteProofValidationChecker) CheckINITVoteProof() (bool, error) {
 	if vpc.voteProof.Stage() != StageINIT {
 		return true, nil
 	}
@@ -90,7 +94,7 @@ func (vpc *VoteProofChecker) CheckINITVoteProof() (bool, error) {
 	return true, nil
 }
 
-func (vpc *VoteProofChecker) CheckACCEPTVoteProof() (bool, error) {
+func (vpc *VoteProofValidationChecker) CheckACCEPTVoteProof() (bool, error) {
 	if vpc.voteProof.Stage() != StageACCEPT {
 		return true, nil
 	}
@@ -104,19 +108,102 @@ func (vpc *VoteProofChecker) CheckACCEPTVoteProof() (bool, error) {
 	return true, nil
 }
 
-type VoteProofValidationChecker struct {
+// TODO check, signer is inside suffrage
+// TODO check, signer of VoteProofNodeFact is valid Ballot.Signer()
+
+var StopBootingError = errors.NewError("stop booting process")
+
+type VoteProofBootingChecker struct {
 	*logging.Logger
-	voteProof VoteProof
-	b         []byte
+	localState      *LocalState
+	lastBlock       Block
+	initVoteProof   VoteProof
+	acceptVoteProof VoteProof
 }
 
-func (vpc *VoteProofValidationChecker) CheckValidate() (bool, error) {
-	if err := vpc.voteProof.IsValid(vpc.b); err != nil {
-		return false, err
+func NewVoteProofBootingChecker(localState *LocalState) (*VoteProofBootingChecker, error) {
+	initVoteProof, err := localState.Storage().LastINITVoteProof()
+	if err != nil {
+		return nil, err
+	} else if initVoteProof.IsValid(nil); err != nil {
+		return nil, err
 	}
+
+	acceptVoteProof, err := localState.Storage().LastACCEPTVoteProof()
+	if err != nil {
+		return nil, err
+	} else if acceptVoteProof.IsValid(nil); err != nil {
+		return nil, err
+	}
+
+	return &VoteProofBootingChecker{
+		lastBlock:       localState.LastBlock(),
+		initVoteProof:   initVoteProof,
+		acceptVoteProof: acceptVoteProof,
+	}, nil
+}
+
+func (vpc *VoteProofBootingChecker) CheckACCEPTVoteProofHeight() (bool, error) {
+	switch d := vpc.acceptVoteProof.Height() - vpc.lastBlock.Height(); {
+	case d < 0: // missing ACCEPTVoteProof of last block, something wrong
+		// TODO fill missing ACCEPTVoteProof from other nodes.
+		return false, StopBootingError.Wrapf(
+			"missing ACCEPTVoteProof found: voteProof.Height()=%d block.Height()=%d",
+			vpc.acceptVoteProof.Height(), vpc.lastBlock.Height(),
+		)
+	case d > 0: // next ACCEPTVoteProof, it will be used new ACCEPT stage
+		// TODO recover ACCEPTVoteProof
+		// TODO fill missing ACCEPTVoteProof from other nodes.
+		return false, StopBootingError.Wrapf(
+			"last ACCEPTVoteProof was not stored: voteProof.Height()=%d block.Height()=%d",
+			vpc.acceptVoteProof.Height(), vpc.lastBlock.Height(),
+		)
+	}
+
+	if vpc.acceptVoteProof.Round() != vpc.lastBlock.Round() {
+		return false, StopBootingError.Wrapf(
+			"round of ACCEPTVoteProof of same height not matched: voteProof.Round()=%d block.Round()=%d",
+			vpc.acceptVoteProof.Round(), vpc.lastBlock.Round(),
+		)
+	}
+
+	fact := vpc.acceptVoteProof.Majority().(ACCEPTBallotFact)
+	if !vpc.lastBlock.Hash().Equal(fact.NewBlock()) {
+		return false, StopBootingError.Wrapf(
+			"block hash of ACCEPTVoteProof of same height not matched: voteProof.Block()=%s block.Block()=%s",
+			fact.NewBlock(), vpc.lastBlock.Hash(),
+		)
+	}
+
+	_ = vpc.localState.SetLastACCEPTVoteProof(vpc.acceptVoteProof)
 
 	return true, nil
 }
 
-// TODO check, signer is inside suffrage
-// TODO check, signer of VoteProofNodeFact is valid Ballot.Signer()
+func (vpc *VoteProofBootingChecker) CheckINITVoteProofHeight() (bool, error) {
+	switch d := vpc.initVoteProof.Height() - vpc.lastBlock.Height(); {
+	case d < 0: // old VoteProof found, some VoteProofs missing
+		// TODO fill missing INITVoteProof from other nodes.
+		return false, StopBootingError.Wrapf(
+			"missing INITVoteProof found: voteProof.Height()=%d block.Height()=%d",
+			vpc.initVoteProof.Height(), vpc.lastBlock.Height(),
+		)
+	case d > 1: // future VoteProof found, if future INITVoteProofs is stored, it may be ok, or ignore?
+		return false, StopBootingError.Wrapf(
+			"last INITVoteProof was not stored: voteProof.Height()=%d block.Height()=%d",
+			vpc.initVoteProof.Height(), vpc.lastBlock.Height(),
+		)
+	case d == 1: // next VoteProof
+		fact := vpc.initVoteProof.Majority().(INITBallotFact)
+		if !vpc.lastBlock.Hash().Equal(fact.PreviousBlock()) {
+			return false, StopBootingError.Wrapf(
+				"previous block hash of INITVoteProof of same height not matched: voteProof.Block()=%s block.Block()=%s",
+				fact.PreviousBlock(), vpc.lastBlock.Hash(),
+			)
+		}
+	}
+
+	_ = vpc.localState.SetLastINITVoteProof(vpc.initVoteProof)
+
+	return true, nil
+}

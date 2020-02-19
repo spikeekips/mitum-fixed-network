@@ -28,7 +28,6 @@ type VoteProof interface {
 	Result() VoteProofResultType
 	Majority() Fact
 	Ballots() map[Address]valuehash.Hash
-	CompareWithBlock(Block) error
 }
 
 type VoteProofResultType uint8
@@ -94,7 +93,7 @@ func (vf VoteProofNodeFact) IsValid(b []byte) error {
 		vf.fact,
 		vf.factSignature,
 		vf.signer,
-	}, b); err != nil {
+	}, b, false); err != nil {
 		return err
 	}
 

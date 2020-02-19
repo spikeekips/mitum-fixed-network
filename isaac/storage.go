@@ -12,6 +12,8 @@ type Storage interface {
 	// BlockByHash() (Block, error)
 	LastINITVoteProof() (VoteProof, error)
 	NewINITVoteProof(VoteProof) error
+	LastINITVoteProofOfHeight(Height) (VoteProof, error)
+	LastACCEPTVoteProofOfHeight(Height) (VoteProof, error)
 	LastACCEPTVoteProof() (VoteProof, error)
 	NewACCEPTVoteProof(VoteProof) error
 	// TODO replace SealStorage

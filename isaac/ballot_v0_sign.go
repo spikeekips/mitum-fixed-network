@@ -30,7 +30,7 @@ func (sbf SIGNBallotFactV0) IsValid(b []byte) error {
 		sbf.BaseBallotFactV0,
 		sbf.proposal,
 		sbf.newBlock,
-	}, b); err != nil {
+	}, b, false); err != nil {
 		return err
 	}
 
@@ -121,7 +121,7 @@ func (sb SIGNBallotV0) IsValid(b []byte) error {
 	if err := isvalid.Check([]isvalid.IsValider{
 		sb.BaseBallotV0,
 		sb.SIGNBallotFactV0,
-	}, b); err != nil {
+	}, b, false); err != nil {
 		return err
 	}
 

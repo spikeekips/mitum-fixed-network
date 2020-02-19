@@ -30,7 +30,7 @@ func (abf ACCEPTBallotFactV0) IsValid(b []byte) error {
 		abf.BaseBallotFactV0,
 		abf.proposal,
 		abf.newBlock,
-	}, b); err != nil {
+	}, b, false); err != nil {
 		return err
 	}
 
@@ -128,7 +128,7 @@ func (ab ACCEPTBallotV0) IsValid(b []byte) error {
 		ab.BaseBallotV0,
 		ab.ACCEPTBallotFactV0,
 		ab.voteProof,
-	}, b); err != nil {
+	}, b, false); err != nil {
 		return err
 	}
 

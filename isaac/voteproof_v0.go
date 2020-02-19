@@ -150,7 +150,7 @@ func (vp VoteProofV0) isValidFields(b []byte) error {
 		vp.stage,
 		vp.threshold,
 		vp.result,
-	}, b); err != nil {
+	}, b, false); err != nil {
 		return err
 	}
 	if vp.finishedAt.IsZero() {
@@ -212,7 +212,7 @@ func (vp VoteProofV0) isValidFacts(b []byte) error {
 	}
 
 	for k, v := range vp.facts {
-		if err := isvalid.Check([]isvalid.IsValider{k, v}, b); err != nil {
+		if err := isvalid.Check([]isvalid.IsValider{k, v}, b, false); err != nil {
 			return err
 		}
 		if h, err := v.Hash(b); err != nil {
@@ -226,88 +226,9 @@ func (vp VoteProofV0) isValidFacts(b []byte) error {
 	}
 
 	for k, v := range vp.ballots {
-		if err := isvalid.Check([]isvalid.IsValider{k, v}, b); err != nil {
+		if err := isvalid.Check([]isvalid.IsValider{k, v}, b, false); err != nil {
 			return err
 		}
-	}
-
-	return nil
-}
-
-// TODO moves to checkers
-func (vp VoteProofV0) CompareWithBlock(block Block) error {
-	switch vp.Stage() {
-	case StageINIT:
-		return vp.compareINITWithBlock(block)
-	case StageACCEPT:
-		return vp.compareACCEPTWithBlock(block)
-	default:
-		return nil
-	}
-}
-
-// compareINITWithBlock checks VoteProof is valid by Block,
-// if VoteProof is next of Block, or
-// if VoteProof is belongs to Block.
-func (vp VoteProofV0) compareINITWithBlock(block Block) error {
-	switch d := vp.Height() - block.Height(); {
-	case d == 0:
-		// INIT VoteProof of block
-		return vp.compareINITWithSameBlock(block)
-	case d == 1:
-		// next INIT VoteProof
-		return vp.compareINITWithNextBlock(block)
-	default:
-		return xerrors.Errorf(
-			"height of INIT VoteProof is different from block.Height(); VoteProof.Height=%d != block.Heightd=%d",
-			vp.Height(), block.Height(),
-		)
-	}
-}
-
-func (vp VoteProofV0) compareINITWithSameBlock(block Block) error {
-	if vp.Round() != block.Round() {
-		return xerrors.Errorf(
-			"round of INIT VoteProof is different from block.Round(); VoteProof.Round=%d != block.Round=%d",
-			vp.Round(), block.Round(),
-		)
-	}
-
-	// TODO compare PreviousBlock of VoteProof with PreviousBlock of block
-
-	return nil
-}
-
-func (vp VoteProofV0) compareINITWithNextBlock(block Block) error {
-	vpPreviousBlock := vp.Majority().(INITBallotFact).PreviousBlock()
-	if !vpPreviousBlock.Equal(block.PreviousBlock()) {
-		return xerrors.Errorf(
-			"previous block of INIT VoteProof is different from block; VoteProof.PreviousBlock=%d != block.PreviousBlock=%d",
-			vpPreviousBlock, block.PreviousBlock(),
-		)
-	}
-
-	return nil
-}
-
-func (vp VoteProofV0) compareACCEPTWithBlock(block Block) error {
-	if vp.Round() != block.Round() {
-		return xerrors.Errorf(
-			"round of ACCEPT VoteProof is different from block.Round(); VoteProof.Round=%d != block.Round=%d",
-			vp.Round(), block.Round(),
-		)
-	}
-
-	fact := vp.Majority().(ACCEPTBallotFact)
-	if !fact.NewBlock().Equal(block.Hash()) {
-		return xerrors.Errorf("block hash does not match; vp=%s != block=%s", fact.NewBlock(), block.Hash())
-	}
-
-	if d := vp.Height() - block.Height(); d < 0 || d > 1 {
-		return xerrors.Errorf(
-			"height of ACCEPT VoteProof is different from block.Height(); VoteProof.Height=%d != block.Height=%d",
-			vp.Height(), block.Height(),
-		)
 	}
 
 	return nil

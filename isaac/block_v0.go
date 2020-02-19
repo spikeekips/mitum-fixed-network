@@ -102,7 +102,7 @@ func (bm BlockV0) IsValid(b []byte) error {
 		bm.height,
 		bm.proposal,
 		bm.previousBlock,
-	}, b); err != nil {
+	}, b, false); err != nil {
 		return err
 	}
 
@@ -110,7 +110,7 @@ func (bm BlockV0) IsValid(b []byte) error {
 	if err := isvalid.Check([]isvalid.IsValider{
 		bm.blockOperations,
 		bm.blockStates,
-	}, b); err != nil && !xerrors.Is(err, valuehash.EmptyHashError) {
+	}, b, true); err != nil && !xerrors.Is(err, valuehash.EmptyHashError) {
 		return err
 	}
 

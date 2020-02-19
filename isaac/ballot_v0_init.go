@@ -42,7 +42,7 @@ func (ibf INITBallotFactV0) IsValid(b []byte) error {
 	if err := isvalid.Check([]isvalid.IsValider{
 		ibf.BaseBallotFactV0,
 		ibf.previousBlock,
-	}, b); err != nil {
+	}, b, false); err != nil {
 		return err
 	}
 
@@ -140,7 +140,7 @@ func (ib INITBallotV0) IsValid(b []byte) error {
 		ib.BaseBallotV0,
 		ib.INITBallotFactV0,
 		ib.voteProof,
-	}, b); err != nil {
+	}, b, false); err != nil {
 		return err
 	}
 

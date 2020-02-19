@@ -3,6 +3,7 @@ package isaac
 import (
 	"sync"
 
+	"github.com/rs/zerolog"
 	"github.com/spikeekips/mitum/logging"
 	"github.com/spikeekips/mitum/seal"
 	"golang.org/x/xerrors"
@@ -160,7 +161,13 @@ func (bs *BaseStateHandler) StoreNewBlockByVoteProof(vp VoteProof) error {
 		return err
 	}
 
-	l.Info().Msg("new block stored")
+	l.Info().Dict("block", zerolog.Dict().
+		Str("proposal", blockStorage.Block().Proposal().String()).
+		Str("hash", blockStorage.Block().Hash().String()).
+		Int64("height", blockStorage.Block().Height().Int64()).
+		Uint64("round", blockStorage.Block().Round().Uint64()),
+	).
+		Msg("new block stored")
 
 	return nil
 }

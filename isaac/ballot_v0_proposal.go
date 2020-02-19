@@ -36,7 +36,7 @@ func (prf ProposalFactV0) IsValid(b []byte) error {
 		}
 
 		return sl
-	}(), b); err != nil {
+	}(), b, false); err != nil {
 		return err
 	}
 
@@ -128,7 +128,7 @@ func (pr ProposalV0) IsValid(b []byte) error {
 	if err := isvalid.Check([]isvalid.IsValider{
 		pr.BaseBallotV0,
 		pr.ProposalFactV0,
-	}, b); err != nil {
+	}, b, false); err != nil {
 		return err
 	}
 

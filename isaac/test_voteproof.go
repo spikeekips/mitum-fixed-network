@@ -77,10 +77,6 @@ func (vp DummyVoteProof) Ballots() map[Address]valuehash.Hash {
 	return nil
 }
 
-func (vp DummyVoteProof) CompareWithBlock(Block) error {
-	return nil
-}
-
 func (vp DummyVoteProof) MarshalJSON() ([]byte, error) {
 	return util.JSONMarshal(struct {
 		encoder.JSONPackHintedHead

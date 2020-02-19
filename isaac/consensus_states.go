@@ -242,7 +242,7 @@ func (css *ConsensusStates) broadcastSeal(sl seal.Seal, errChan chan<- error) {
 }
 
 func (css *ConsensusStates) newVoteProof(vp VoteProof) error {
-	vpc := VoteProofChecker{
+	vpc := VoteProofValidationChecker{
 		Logger: logging.NewLogger(func(c zerolog.Context) zerolog.Context {
 			return c.Str("module", "consensus-states-voteproof-checker")
 		}),
@@ -261,7 +261,7 @@ func (css *ConsensusStates) newVoteProof(vp VoteProof) error {
 	var ctx ConsensusStateToBeChangeError
 	if xerrors.As(err, &ctx) {
 		go func() {
-			css.stateChan <- NewConsensusStateChangeContext(ctx.FromState, ctx.ToState, ctx.VoteProof)
+			css.stateChan <- ctx.ConsensusStateChangeContext()
 		}()
 
 		return nil

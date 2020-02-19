@@ -76,7 +76,7 @@ func (vpg VoteProofGenesisV0) IsValid(b []byte) error {
 		vpg.height,
 		vpg.threshold,
 		vpg.stage,
-	}, b); err != nil {
+	}, b, false); err != nil {
 		return err
 	}
 
@@ -84,9 +84,5 @@ func (vpg VoteProofGenesisV0) IsValid(b []byte) error {
 		return isvalid.InvalidError.Wrapf("empty finishedAt")
 	}
 
-	return nil
-}
-
-func (vpg VoteProofGenesisV0) CompareWithBlock(Block) error {
 	return nil
 }

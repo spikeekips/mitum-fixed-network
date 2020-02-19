@@ -6,6 +6,7 @@ import (
 
 	"github.com/spikeekips/mitum/logging"
 	"github.com/spikeekips/mitum/seal"
+	"github.com/spikeekips/mitum/util"
 )
 
 type ConsensusStateBootingHandler struct {
@@ -101,12 +102,18 @@ func (cs *ConsensusStateBootingHandler) check() error {
 	if err := cs.checkVoteProof(); err != nil {
 		cs.Log().Error().Err(err).Send()
 
-		if err0 := cs.ChangeState(ConsensusStateSyncing, nil); err0 != nil {
-			// TODO wrap err
-			return err0
+		var ctx ConsensusStateToBeChangeError
+		if xerrors.As(err, &ctx) {
+			if err0 := cs.ChangeState(ctx.ToState, ctx.VoteProof); err0 != nil {
+				// TODO wrap err
+				return err0
+			}
+
+			return nil
+		} else if xerrors.Is(err, StopBootingError) {
+			return err
 		}
 
-		return err
 	}
 
 	return nil
@@ -119,6 +126,8 @@ func (cs *ConsensusStateBootingHandler) checkBlock() error {
 	block := cs.localState.LastBlock()
 	if block == nil {
 		return xerrors.Errorf("empty Block")
+	} else if err := block.IsValid(nil); err != nil {
+		return err
 	}
 
 	return nil
@@ -128,37 +137,13 @@ func (cs *ConsensusStateBootingHandler) checkVoteProof() error {
 	cs.Log().Debug().Msg("trying to check VoteProofs")
 	defer cs.Log().Debug().Msg("trying to check VoteProofs")
 
-	ivp := cs.localState.LastINITVoteProof()
-	if ivp == nil {
-		return xerrors.Errorf("empty INIT VoteProof")
-	} else if err := ivp.IsValid(nil); err != nil {
+	vpc, err := NewVoteProofBootingChecker(cs.localState)
+	if err != nil {
 		return err
 	}
 
-	avp := cs.localState.LastACCEPTVoteProof()
-	if avp == nil {
-		return xerrors.Errorf("empty ACCEPT VoteProof")
-	} else if err := avp.IsValid(nil); err != nil {
-		return err
-	}
-
-	block := cs.localState.LastBlock()
-
-	if err := ivp.CompareWithBlock(block); err != nil {
-		return err
-	}
-
-	if err := avp.CompareWithBlock(block); err != nil {
-		return err
-	}
-
-	// TODO if last block is the previous block of accept VoteProof, trying to store accept VoteProof.
-	if (avp.Height() - block.Height() + 1) == 0 {
-		if err := cs.StoreNewBlockByVoteProof(avp); err != nil {
-			cs.Log().Error().Err(err).Send()
-			return err
-		}
-	}
-
-	return nil
+	return util.NewChecker("voteproof-booting-checker", []util.CheckerFunc{
+		vpc.CheckACCEPTVoteProofHeight,
+		vpc.CheckINITVoteProofHeight,
+	}).Check()
 }

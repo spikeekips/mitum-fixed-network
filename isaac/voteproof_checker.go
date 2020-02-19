@@ -115,9 +115,9 @@ var StopBootingError = errors.NewError("stop booting process")
 
 type VoteProofBootingChecker struct {
 	*logging.Logger
-	localState      *LocalState
+	localState      *LocalState // nolint
 	lastBlock       Block
-	initVoteProof   VoteProof
+	initVoteProof   VoteProof // NOTE these VoteProof are from last block
 	acceptVoteProof VoteProof
 }
 
@@ -143,6 +143,7 @@ func (vpc *VoteProofBootingChecker) CheckACCEPTVoteProofHeight() (bool, error) {
 	switch d := vpc.acceptVoteProof.Height() - vpc.lastBlock.Height(); {
 	case d == 0:
 	default:
+		// TODO needs self-correction by syncing
 		// wrong ACCEPTVoteProof of last block, something wrong
 		return false, StopBootingError.Wrapf(
 			"missing ACCEPTVoteProof found: voteProof.Height()=%d != block.Height()=%d",

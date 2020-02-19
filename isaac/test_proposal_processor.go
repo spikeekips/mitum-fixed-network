@@ -18,7 +18,9 @@ func (dp DummyProposalProcessor) ProcessINIT(_ valuehash.Hash, initVoteProof Vot
 	return dp.returnBlock, dp.err
 }
 
-func (dp DummyProposalProcessor) ProcessACCEPT(_ valuehash.Hash, acceptVoteProof VoteProof, _ []byte) (BlockStorage, error) {
+func (dp DummyProposalProcessor) ProcessACCEPT(
+	_ valuehash.Hash, acceptVoteProof VoteProof, _ []byte,
+) (BlockStorage, error) {
 	dp.returnBlock = dp.returnBlock.SetACCEPTVoteProof(acceptVoteProof)
 	return &DummyBlockStorage{block: dp.returnBlock}, dp.err
 }

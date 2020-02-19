@@ -45,23 +45,21 @@ func (dp *ProposalProcessorV0) ProcessINIT(ph valuehash.Hash, initVoteProof Vote
 		}
 
 		return nil, xerrors.Errorf("Proposal not found; proposal=%s", ph.String())
-	} else {
-		proposal = sl.(Proposal)
-	}
-
-	{ // check proposed time
+	} else { // check proposed time
 		ivp := dp.localState.LastINITVoteProof()
 		if ivp == nil {
 			return nil, xerrors.Errorf("last INIT VoteProof is missing")
 		}
 
 		timespan := dp.localState.Policy().TimespanValidBallot()
-		if proposal.SignedAt().Before(ivp.FinishedAt().Add(timespan * -1)) {
+		if sl.SignedAt().Before(ivp.FinishedAt().Add(timespan * -1)) {
 			return nil, xerrors.Errorf(
 				"Proposal was sent before VoteProof; SignedAt=%s now=%s timespan=%s",
-				proposal.SignedAt(), ivp.FinishedAt(), timespan,
+				sl.SignedAt(), ivp.FinishedAt(), timespan,
 			)
 		}
+
+		proposal = sl.(Proposal)
 	}
 
 	lastBlock := dp.localState.LastBlock()
@@ -87,10 +85,8 @@ func (dp *ProposalProcessorV0) ProcessINIT(ph valuehash.Hash, initVoteProof Vote
 	); err != nil {
 		return nil, err
 	} else {
-		block = b
+		block = b.SetINITVoteProof(initVoteProof)
 	}
-
-	block = block.SetINITVoteProof(initVoteProof)
 
 	dp.blocks.Store(ph, block)
 
@@ -98,7 +94,9 @@ func (dp *ProposalProcessorV0) ProcessINIT(ph valuehash.Hash, initVoteProof Vote
 }
 
 // TODO b is NetworkID
-func (dp *ProposalProcessorV0) ProcessACCEPT(ph valuehash.Hash, acceptVoteProof VoteProof, b []byte) (BlockStorage, error) {
+func (dp *ProposalProcessorV0) ProcessACCEPT(
+	ph valuehash.Hash, acceptVoteProof VoteProof, _ []byte,
+) (BlockStorage, error) {
 	var block Block
 	if i, found := dp.blocks.Load(ph); !found {
 		return nil, xerrors.Errorf("not processed ProcessINIT")

@@ -113,7 +113,6 @@ func (cs *ConsensusStateBootingHandler) check() error {
 		} else if xerrors.Is(err, StopBootingError) {
 			return err
 		}
-
 	}
 
 	return nil

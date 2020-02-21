@@ -45,7 +45,7 @@ type testHintsetMarshal struct {
 func (t *testHintsetMarshal) TestAddRemove() {
 	hintset := NewHintset()
 
-	h, err := NewHint(Type([2]byte{0xff, 0x20}), "0.1.1")
+	h, err := NewHint(Type{0xff, 0x20}, "0.1.1")
 	t.NoError(err)
 	t.NoError(RegisterType(h.Type(), "0xff20-0.1.1"))
 
@@ -66,7 +66,7 @@ func (t *testHintsetMarshal) TestAddRemove() {
 func (t *testHintsetMarshal) TestJSONMarshalFieldHinted() {
 	hintset := NewHintset()
 
-	h, err := NewHint(Type([2]byte{0xff, 0x21}), "0.1.1")
+	h, err := NewHint(Type{0xff, 0x21}, "0.1.1")
 	t.NoError(err)
 	t.NoError(RegisterType(h.Type(), "0xff21-0.1.1"))
 

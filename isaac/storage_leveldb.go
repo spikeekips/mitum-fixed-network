@@ -4,11 +4,12 @@ import (
 	"fmt"
 
 	"github.com/rs/zerolog"
+	"github.com/spikeekips/avl"
 	"github.com/syndtr/goleveldb/leveldb"
+	leveldbStorage "github.com/syndtr/goleveldb/leveldb/storage"
 	leveldbutil "github.com/syndtr/goleveldb/leveldb/util"
 	"golang.org/x/xerrors"
 
-	"github.com/spikeekips/avl"
 	"github.com/spikeekips/mitum/encoder"
 	"github.com/spikeekips/mitum/hint"
 	"github.com/spikeekips/mitum/logging"
@@ -20,11 +21,12 @@ import (
 
 var (
 	leveldbBlockHeightPrefix     []byte = []byte{0x00, 0x01}
-	leveldbVoteproofHeightPrefix []byte = []byte{0x00, 0x02}
-	leveldbSealPrefix            []byte = []byte{0x00, 0x03}
-	leveldbProposalPrefix        []byte = []byte{0x00, 0x04}
-	leveldbBlockOperationsPrefix []byte = []byte{0x00, 0x05}
-	leveldbBlockStatesPrefix     []byte = []byte{0x00, 0x06}
+	leveldbBlockHashPrefix       []byte = []byte{0x00, 0x02}
+	leveldbVoteproofHeightPrefix []byte = []byte{0x00, 0x03}
+	leveldbSealPrefix            []byte = []byte{0x00, 0x04}
+	leveldbProposalPrefix        []byte = []byte{0x00, 0x05}
+	leveldbBlockOperationsPrefix []byte = []byte{0x00, 0x06}
+	leveldbBlockStatesPrefix     []byte = []byte{0x00, 0x07}
 )
 
 type LeveldbStorage struct {
@@ -45,39 +47,66 @@ func NewLeveldbStorage(db *leveldb.DB, encs *encoder.Encoders, defaultEnc encode
 	}
 }
 
-func (st *LeveldbStorage) LastBlock() (Block, error) {
-	var raw []byte
+func NewMemStorage(encs *encoder.Encoders, enc encoder.Encoder) *LeveldbStorage {
+	db, _ := leveldb.Open(leveldbStorage.NewMemStorage(), nil)
+	return NewLeveldbStorage(db, encs, enc)
+}
 
-	iter := st.db.NewIterator(leveldbutil.BytesPrefix(leveldbBlockHeightPrefix), nil)
-	if iter.Last() {
-		raw = util.CopyBytes(iter.Value())
-	}
-	iter.Release()
-	if err := iter.Error(); err != nil {
+func (st *LeveldbStorage) Encoder() encoder.Encoder {
+	return st.defaultEnc
+}
+
+func (st *LeveldbStorage) Encoders() *encoder.Encoders {
+	return st.encs
+}
+
+func (st *LeveldbStorage) LastBlock() (Block, error) {
+	var key []byte
+
+	if err := st.iter(
+		leveldbBlockHeightPrefix,
+		func(_ []byte, value []byte) (bool, error) {
+			key = value
+			return false, nil
+		},
+		false,
+	); err != nil {
 		return nil, err
 	}
 
-	if raw == nil {
+	if key == nil {
 		return nil, nil
 	}
 
-	var ht hint.Hint
-	ht, data, err := storage.LeveldbLoadHint(raw)
+	raw, err := st.db.Get(key, nil)
 	if err != nil {
 		return nil, err
 	}
 
-	enc, err := st.encs.Encoder(ht.Type(), ht.Version())
+	return st.loadBlock(raw)
+}
+
+func (st *LeveldbStorage) Block(h valuehash.Hash) (Block, error) {
+	raw, err := st.db.Get(leveldbBlockHashKey(h), nil)
 	if err != nil {
 		return nil, err
 	}
 
-	hinter, err := enc.DecodeByHint(data)
+	return st.loadBlock(raw)
+}
+
+func (st *LeveldbStorage) BlockByHeight(height Height) (Block, error) {
+	key, err := st.db.Get(leveldbBlockHeightKey(height), nil)
 	if err != nil {
 		return nil, err
 	}
 
-	return hinter.(Block), nil
+	raw, err := st.db.Get(key, nil)
+	if err != nil {
+		return nil, err
+	}
+
+	return st.loadBlock(raw)
 }
 
 func (st *LeveldbStorage) loadLastVoteproof(stage Stage) (Voteproof, error) {
@@ -91,7 +120,7 @@ func (st *LeveldbStorage) newVoteproof(voteproof Voteproof) error {
 		Str("stage", voteproof.Stage().String()).
 		Msg("voteproof stored")
 
-	raw, err := st.defaultEnc.Marshal(voteproof)
+	raw, err := st.defaultEnc.Encode(voteproof)
 	if err != nil {
 		return err
 	}
@@ -110,12 +139,9 @@ func (st *LeveldbStorage) NewINITVoteproof(voteproof Voteproof) error {
 
 func (st *LeveldbStorage) filterVoteproof(prefix []byte, stage Stage) (Voteproof, error) {
 	var raw []byte
-
-	iter := st.db.NewIterator(leveldbutil.BytesPrefix(prefix), nil)
-	if iter.Last() {
-		for {
-			key := util.CopyBytes(iter.Key())
-
+	if err := st.iter(
+		prefix,
+		func(key, value []byte) (bool, error) {
 			var height int64
 			var round uint64
 			var stg uint8
@@ -124,51 +150,26 @@ func (st *LeveldbStorage) filterVoteproof(prefix []byte, stage Stage) (Voteproof
 				"%020d-%020d-%d", &height, &round, &stg,
 			)
 			if err != nil {
-				return nil, err
+				return false, err
 			}
 
 			if n != 3 {
-				return nil, xerrors.Errorf("invalid formatted key found: key=%q", string(key))
+				return false, xerrors.Errorf("invalid formatted key found: key=%q", string(key))
 			}
 
 			if Stage(stg) != stage {
-				if !iter.Prev() {
-					break
-				}
-				continue
+				return true, nil
 			}
 
-			raw = util.CopyBytes(iter.Value())
-
-			break
-		}
-	}
-	iter.Release()
-	if err := iter.Error(); err != nil {
+			raw = value
+			return false, nil
+		},
+		false,
+	); err != nil {
 		return nil, err
 	}
 
-	if raw == nil {
-		return nil, nil
-	}
-
-	var ht hint.Hint
-	ht, data, err := storage.LeveldbLoadHint(raw)
-	if err != nil {
-		return nil, err
-	}
-
-	enc, err := st.encs.Encoder(ht.Type(), ht.Version())
-	if err != nil {
-		return nil, err
-	}
-
-	hinter, err := enc.DecodeByHint(data)
-	if err != nil {
-		return nil, err
-	}
-
-	return hinter.(Voteproof), nil
+	return st.loadVoteproof(raw)
 }
 
 func (st *LeveldbStorage) LastINITVoteproofOfHeight(height Height) (Voteproof, error) {
@@ -185,6 +186,21 @@ func (st *LeveldbStorage) LastACCEPTVoteproof() (Voteproof, error) {
 
 func (st *LeveldbStorage) NewACCEPTVoteproof(voteproof Voteproof) error {
 	return st.newVoteproof(voteproof)
+}
+
+func (st *LeveldbStorage) Voteproofs(callback func(Voteproof) (bool, error), sort bool) error {
+	return st.iter(
+		leveldbVoteproofHeightPrefix,
+		func(_, value []byte) (bool, error) {
+			voteproof, err := st.loadVoteproof(value)
+			if err != nil {
+				return false, err
+			}
+
+			return callback(voteproof)
+		},
+		sort,
+	)
 }
 
 func (st *LeveldbStorage) sealKey(h valuehash.Hash) []byte {
@@ -221,7 +237,7 @@ func (st *LeveldbStorage) sealByKey(key []byte) (seal.Seal, error) {
 }
 
 func (st *LeveldbStorage) NewSeal(sl seal.Seal) error {
-	raw, err := st.defaultEnc.Marshal(sl)
+	raw, err := st.defaultEnc.Encode(sl)
 	if err != nil {
 		return err
 	}
@@ -229,6 +245,158 @@ func (st *LeveldbStorage) NewSeal(sl seal.Seal) error {
 	hb := storage.LeveldbDataWithEncoder(st.defaultEnc, raw)
 
 	return st.db.Put(st.sealKey(sl.Hash()), hb, nil)
+}
+
+func (st *LeveldbStorage) loadVoteproof(b []byte) (Voteproof, error) {
+	if b == nil {
+		return nil, nil
+	}
+
+	var ht hint.Hint
+	ht, data, err := storage.LeveldbLoadHint(b)
+	if err != nil {
+		return nil, err
+	}
+
+	enc, err := st.encs.Encoder(ht.Type(), ht.Version())
+	if err != nil {
+		return nil, err
+	}
+
+	var voteproof Voteproof
+	if hinter, err := enc.DecodeByHint(data); err != nil {
+		return nil, err
+	} else if i, ok := hinter.(Voteproof); !ok {
+		return nil, xerrors.Errorf("not Voteproof: %T", hinter)
+	} else {
+		voteproof = i
+	}
+
+	return voteproof, nil
+}
+
+func (st *LeveldbStorage) loadBlock(b []byte) (Block, error) {
+	if b == nil {
+		return nil, nil
+	}
+
+	var ht hint.Hint
+	ht, data, err := storage.LeveldbLoadHint(b)
+	if err != nil {
+		return nil, err
+	}
+
+	enc, err := st.encs.Encoder(ht.Type(), ht.Version())
+	if err != nil {
+		return nil, err
+	}
+
+	var block Block
+	if hinter, err := enc.DecodeByHint(data); err != nil {
+		return nil, err
+	} else if bl, ok := hinter.(Block); !ok {
+		return nil, xerrors.Errorf("not Block: %T", hinter)
+	} else {
+		block = bl
+	}
+
+	return block, nil
+}
+
+func (st *LeveldbStorage) loadSeal(b []byte) (seal.Seal, error) {
+	if b == nil {
+		return nil, nil
+	}
+
+	var ht hint.Hint
+	ht, data, err := storage.LeveldbLoadHint(b)
+	if err != nil {
+		return nil, err
+	}
+
+	enc, err := st.encs.Encoder(ht.Type(), ht.Version())
+	if err != nil {
+		return nil, err
+	}
+
+	hinter, err := enc.DecodeByHint(data)
+	if err != nil {
+		return nil, err
+	}
+
+	sl, ok := hinter.(seal.Seal)
+	if !ok {
+		return nil, xerrors.Errorf("not Seal: %T", hinter)
+	}
+
+	return sl, nil
+}
+
+func (st *LeveldbStorage) iter(
+	prefix []byte,
+	callback func([]byte /* key */, []byte /* value */) (bool, error),
+	sort bool,
+) error {
+	iter := st.db.NewIterator(leveldbutil.BytesPrefix(prefix), nil)
+	defer iter.Release()
+
+	var seek func() bool
+	var next func() bool
+	if sort {
+		seek = iter.First
+		next = iter.Next
+	} else {
+		seek = iter.Last
+		next = iter.Prev
+	}
+
+	if !seek() {
+		return nil
+	}
+
+	for {
+		if keep, err := callback(util.CopyBytes(iter.Key()), util.CopyBytes(iter.Value())); err != nil {
+			return err
+		} else if !keep {
+			break
+		}
+		if !next() {
+			break
+		}
+	}
+
+	return iter.Error()
+}
+
+func (st *LeveldbStorage) Seals(callback func(seal.Seal) (bool, error), sort bool) error {
+	return st.iter(
+		leveldbSealPrefix,
+		func(_, value []byte) (bool, error) {
+			sl, err := st.loadSeal(value)
+			if err != nil {
+				return false, err
+			}
+
+			return callback(sl)
+		},
+		sort,
+	)
+}
+
+func (st *LeveldbStorage) Proposals(callback func(Proposal) (bool, error), sort bool) error {
+	return st.iter(
+		leveldbProposalPrefix,
+		func(_, value []byte) (bool, error) {
+			if sl, err := st.sealByKey(value); err != nil {
+				return false, err
+			} else if pr, ok := sl.(Proposal); !ok {
+				return false, xerrors.Errorf("not Proposal: %T", sl)
+			} else {
+				return callback(pr)
+			}
+		},
+		sort,
+	)
 }
 
 func (st *LeveldbStorage) proposalKey(height Height, round Round) []byte {
@@ -288,7 +456,9 @@ func NewLeveldbBlockStorage(st *LeveldbStorage, block Block) (*LeveldbBlockStora
 	if b, err := bst.marshal(block); err != nil { // block 1st
 		return nil, err
 	} else {
-		bst.batch.Put(leveldbBlockKey(block), b)
+		key := leveldbBlockHashKey(block.Hash())
+		bst.batch.Put(leveldbBlockHeightKey(block.Height()), key)
+		bst.batch.Put(key, b)
 	}
 
 	return bst, nil
@@ -323,7 +493,7 @@ func (bst *LeveldbBlockStorage) SetStates(tree *avl.Tree) error {
 }
 
 func (bst *LeveldbBlockStorage) marshal(i interface{}) ([]byte, error) {
-	b, err := bst.st.defaultEnc.Marshal(i)
+	b, err := bst.st.defaultEnc.Encode(i)
 	if err != nil {
 		return nil, err
 	}
@@ -335,10 +505,17 @@ func (bst *LeveldbBlockStorage) Commit() error {
 	return bst.st.db.Write(bst.batch, nil)
 }
 
-func leveldbBlockKey(block Block) []byte {
+func leveldbBlockHeightKey(height Height) []byte {
 	return util.ConcatSlice([][]byte{
 		leveldbBlockHeightPrefix,
-		[]byte(fmt.Sprintf("%020d", block.Height().Int64())),
+		[]byte(fmt.Sprintf("%020d", height.Int64())),
+	})
+}
+
+func leveldbBlockHashKey(h valuehash.Hash) []byte {
+	return util.ConcatSlice([][]byte{
+		leveldbBlockHashPrefix,
+		h.Bytes(),
 	})
 }
 

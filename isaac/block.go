@@ -9,10 +9,10 @@ import (
 )
 
 var (
-	BlockType          hint.Type = hint.Type([2]byte{0x05, 0x00})
-	BlockOperationType hint.Type = hint.Type([2]byte{0x05, 0x02})
-	BlockStatesType    hint.Type = hint.Type([2]byte{0x05, 0x03})
-	BlockStateType     hint.Type = hint.Type([2]byte{0x05, 0x04})
+	BlockType          hint.Type = hint.Type{0x05, 0x00}
+	BlockOperationType hint.Type = hint.Type{0x05, 0x02}
+	BlockStatesType    hint.Type = hint.Type{0x05, 0x03}
+	BlockStateType     hint.Type = hint.Type{0x05, 0x04}
 )
 
 type Block interface {

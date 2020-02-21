@@ -30,10 +30,10 @@ func NewLocalstate(st Storage, node *LocalNode) (*Localstate, error) {
 		var err error
 		if lastBlock, err = st.LastBlock(); err != nil {
 			return nil, err
+		} else if lastBlock != nil {
+			lastINITVoteproof = lastBlock.INITVoteproof()
+			lastACCEPTVoteproof = lastBlock.ACCEPTVoteproof()
 		}
-
-		lastINITVoteproof = lastBlock.INITVoteproof()
-		lastACCEPTVoteproof = lastBlock.ACCEPTVoteproof()
 	}
 
 	var policy *LocalPolicy

@@ -6,8 +6,8 @@ import (
 	"github.com/spikeekips/mitum/hint"
 )
 
-var stellarPrivatekeyHint = hint.MustHint(hint.Type([2]byte{0x02, 0x00}), "0.1")
-var stellarPublickeyHint = hint.MustHint(hint.Type([2]byte{0x02, 0x01}), "0.1")
+var stellarPrivatekeyHint = hint.MustHint(hint.Type{0x02, 0x00}, "0.1")
+var stellarPublickeyHint = hint.MustHint(hint.Type{0x02, 0x01}, "0.1")
 
 type StellarPrivatekey struct {
 	kp *stellarKeypair.Full

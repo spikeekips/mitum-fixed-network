@@ -98,7 +98,7 @@ type ACCEPTBallotFactV0PackerJSON struct {
 
 func (abf ACCEPTBallotFactV0) MarshalJSON() ([]byte, error) {
 	return util.JSONMarshal(ACCEPTBallotFactV0PackerJSON{
-		BaseBallotFactV0PackerJSON: NewBaseBallotFactV0PackerJSON(abf.BaseBallotFactV0),
+		BaseBallotFactV0PackerJSON: NewBaseBallotFactV0PackerJSON(abf.BaseBallotFactV0, abf.Hint()),
 		PR:                         abf.proposal,
 		NB:                         abf.newBlock,
 	})

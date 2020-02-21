@@ -13,7 +13,7 @@ import (
 
 var jsonNULL []byte = []byte("null")
 var jsonNULLLength int = len(jsonNULL)
-var jsonHint hint.Hint = hint.MustHint(hint.Type([2]byte{0x01, 0x01}), "0.1")
+var jsonHint hint.Hint = hint.MustHint(hint.Type{0x01, 0x01}, "0.1")
 
 type JSONEncoder struct {
 	cache   *cache
@@ -77,7 +77,7 @@ func (je *JSONEncoder) DecodeByHint(b []byte) (hint.Hinter, error) {
 	}
 	hinter, err := je.hintset.Hinter(h.Type(), h.Version())
 	if err != nil {
-		return nil, xerrors.Errorf(`failed to find hinter: input="%s": %w`, string(b), err)
+		return nil, xerrors.Errorf(`failed to find hinter: hint=%s input="%s": %w`, h.Verbose(), string(b), err)
 	}
 
 	p := reflect.New(reflect.TypeOf(hinter))

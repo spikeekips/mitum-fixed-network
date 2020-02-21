@@ -3,12 +3,13 @@ package isaac
 import (
 	"time"
 
+	"golang.org/x/xerrors"
+
 	"github.com/spikeekips/mitum/hint"
 	"github.com/spikeekips/mitum/isvalid"
 	"github.com/spikeekips/mitum/localtime"
 	"github.com/spikeekips/mitum/util"
 	"github.com/spikeekips/mitum/valuehash"
-	"golang.org/x/xerrors"
 )
 
 var BlockV0Hint hint.Hint = hint.MustHint(BlockType, "0.1")

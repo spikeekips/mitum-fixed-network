@@ -6,9 +6,10 @@ import (
 	"testing"
 	"time"
 
-	"github.com/spikeekips/mitum/util"
 	"github.com/stretchr/testify/suite"
 	"golang.org/x/xerrors"
+
+	"github.com/spikeekips/mitum/util"
 )
 
 type testCallbackTimer struct {

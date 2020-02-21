@@ -11,9 +11,7 @@ import (
 	"github.com/spikeekips/mitum/valuehash"
 )
 
-var (
-	VoteproofType hint.Type = hint.Type([2]byte{0x04, 0x00})
-)
+var VoteproofType hint.Type = hint.Type{0x04, 0x00}
 
 type Voteproof interface {
 	hint.Hinter

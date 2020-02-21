@@ -2,7 +2,9 @@
 
 package isaac
 
-import "github.com/spikeekips/avl"
+import (
+	"github.com/spikeekips/avl"
+)
 
 type DummyBlockStorage struct {
 	block      Block

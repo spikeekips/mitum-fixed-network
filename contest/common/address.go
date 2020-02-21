@@ -4,11 +4,16 @@ import (
 	"encoding/json"
 	"fmt"
 
+	"golang.org/x/xerrors"
+
 	"github.com/spikeekips/mitum/encoder"
 	"github.com/spikeekips/mitum/hint"
 	"github.com/spikeekips/mitum/isaac"
 	"github.com/spikeekips/mitum/util"
-	"golang.org/x/xerrors"
+)
+
+var (
+	ContestAddressHint hint.Hint = hint.MustHint(hint.Type{0xd0, 0x00}, "0.1")
 )
 
 type ContestAddress string
@@ -64,11 +69,11 @@ func (sa *ContestAddress) UnpackJSON(b []byte, _ *encoder.JSONEncoder) error {
 		return err
 	} else if err := sa.Hint().IsCompatible(s.H); err != nil {
 		return err
-	} else if len(s.A) < 8 {
+	} else if len(s.A) < 5 {
 		return xerrors.Errorf("not enough address")
 	}
 
-	*sa = ContestAddress(s.A[8:])
+	*sa = ContestAddress(s.A[5:])
 
 	return nil
 }

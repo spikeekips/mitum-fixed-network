@@ -2,6 +2,7 @@ package common
 
 import (
 	"github.com/rs/zerolog"
+
 	"github.com/spikeekips/mitum/isaac"
 	"github.com/spikeekips/mitum/logging"
 )

@@ -12,7 +12,7 @@ type customMarshalHinted struct {
 }
 
 func (mh customMarshalHinted) Hint() Hint {
-	h, _ := NewHint(Type([2]byte{0xff, 0x12}), "0.0.3")
+	h, _ := NewHint(Type{0xff, 0x12}, "0.0.3")
 	return h
 }
 

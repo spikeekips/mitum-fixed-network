@@ -89,7 +89,7 @@ type INITBallotFactV0PackerJSON struct {
 
 func (ibf INITBallotFactV0) MarshalJSON() ([]byte, error) {
 	return util.JSONMarshal(INITBallotFactV0PackerJSON{
-		BaseBallotFactV0PackerJSON: NewBaseBallotFactV0PackerJSON(ibf.BaseBallotFactV0),
+		BaseBallotFactV0PackerJSON: NewBaseBallotFactV0PackerJSON(ibf.BaseBallotFactV0, ibf.Hint()),
 		PB:                         ibf.previousBlock,
 		PR:                         ibf.previousRound,
 	})

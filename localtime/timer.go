@@ -5,9 +5,10 @@ import (
 	"time"
 
 	"github.com/rs/zerolog"
+	"golang.org/x/xerrors"
+
 	"github.com/spikeekips/mitum/logging"
 	"github.com/spikeekips/mitum/util"
-	"golang.org/x/xerrors"
 )
 
 type CallbackTimer struct {

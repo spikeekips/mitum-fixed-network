@@ -40,7 +40,7 @@ type testHintset struct {
 
 func (t *testHintset) TestNewUnRegisteredType() {
 	sh := newSomethingHinted(
-		Type([2]byte{0xff, 0xf3}),
+		Type{0xff, 0xf3},
 		"2019.10-alpha",
 		10,
 	)
@@ -50,7 +50,7 @@ func (t *testHintset) TestNewUnRegisteredType() {
 }
 
 func (t *testHintset) TestAdd() {
-	ty := Type([2]byte{0xff, 0xf1})
+	ty := Type{0xff, 0xf1}
 	t.NoError(RegisterType(ty, "findme"))
 
 	sh := newSomethingHinted(ty, "2019.10", 10)
@@ -61,7 +61,7 @@ func (t *testHintset) TestAdd() {
 }
 
 func (t *testHintset) TestRemove() {
-	ty := Type([2]byte{0xff, 0xf2})
+	ty := Type{0xff, 0xf2}
 	_ = RegisterType(ty, "showme")
 
 	sh := newSomethingHinted(ty, "2019.10", 10)
@@ -70,7 +70,7 @@ func (t *testHintset) TestRemove() {
 	_ = hs.Add(sh)
 
 	// Remove unknown
-	err := hs.Remove(Type([2]byte{0x00, 0x00}), sh.Hint().Version())
+	err := hs.Remove(Type{0x00, 0x00}, sh.Hint().Version())
 	t.True(xerrors.Is(err, HintNotFoundError))
 
 	err = hs.Remove(sh.Hint().Type(), sh.Hint().Version())
@@ -78,7 +78,7 @@ func (t *testHintset) TestRemove() {
 }
 
 func (t *testHintset) TestRemoveCached() {
-	ty := Type([2]byte{0xff, 0xf2})
+	ty := Type{0xff, 0xf2}
 	_ = RegisterType(ty, "showme")
 
 	hs := NewHintset()
@@ -110,7 +110,7 @@ func (t *testHintset) TestRemoveCached() {
 }
 
 func (t *testHintset) TestGetHint() {
-	ty := Type([2]byte{0xff, 0xf2})
+	ty := Type{0xff, 0xf2}
 	_ = RegisterType(ty, "showme")
 
 	sh := newSomethingHinted(ty, "2019.10", 10)
@@ -124,7 +124,7 @@ func (t *testHintset) TestGetHint() {
 }
 
 func (t *testHintset) TestGetHintWithEmptyVersion() {
-	ty := Type([2]byte{0xff, 0xf2})
+	ty := Type{0xff, 0xf2}
 	_ = RegisterType(ty, "showme")
 
 	hs := NewHintset()

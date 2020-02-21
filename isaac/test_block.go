@@ -2,7 +2,9 @@
 
 package isaac
 
-import "github.com/spikeekips/mitum/valuehash"
+import (
+	"github.com/spikeekips/mitum/valuehash"
+)
 
 func NewTestBlockV0(height Height, round Round, proposal, previousBlock valuehash.Hash) (BlockV0, error) {
 	if proposal == nil {

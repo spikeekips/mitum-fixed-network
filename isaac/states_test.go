@@ -15,7 +15,7 @@ func (t *testConsensusStates) TestINITVoteproofHigherHeight() {
 	_ = t.localstate.Policy().SetThreshold(thr)
 	_ = t.remoteState.Policy().SetThreshold(thr)
 
-	css := NewConsensusStates(t.localstate, nil, nil, nil, nil, nil, nil, nil, nil)
+	css := NewConsensusStates(t.localstate, nil, nil, nil, nil, nil, nil, nil)
 	t.NotNil(css)
 
 	initFact := INITBallotFactV0{

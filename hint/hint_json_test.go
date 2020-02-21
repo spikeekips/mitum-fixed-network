@@ -3,7 +3,7 @@ package hint
 import "fmt"
 
 func (t *testHint) TestMarshalJSON() {
-	ty := Type([2]byte{0xff, 0xf0})
+	ty := Type{0xff, 0xf0}
 	v := Version("0.1")
 
 	_ = RegisterType(ty, "0xfff0")

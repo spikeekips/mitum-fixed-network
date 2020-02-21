@@ -33,7 +33,7 @@ type testFeildHinted struct {
 }
 
 func (t *testFeildHinted) TestNew() {
-	h, err := NewHint(Type([2]byte{0xff, 0x10}), "0.0.1")
+	h, err := NewHint(Type{0xff, 0x10}, "0.0.1")
 	t.NoError(err)
 
 	fh := fieldHinted{
@@ -46,7 +46,7 @@ func (t *testFeildHinted) TestNew() {
 }
 
 func (t *testFeildHinted) TestHintFromJSONMarshaled() {
-	h, err := NewHint(Type([2]byte{0xff, 0x10}), "0.0.1")
+	h, err := NewHint(Type{0xff, 0x10}, "0.0.1")
 	t.NoError(err)
 
 	// NOTE to marshal Hint, especially Type, it's Type should be registered

@@ -2,6 +2,7 @@ package isaac
 
 import (
 	"github.com/rs/zerolog"
+
 	"github.com/spikeekips/mitum/util"
 )
 

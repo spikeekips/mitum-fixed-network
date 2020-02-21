@@ -12,7 +12,7 @@ type methodHinted struct {
 }
 
 func (mh methodHinted) Hint() Hint {
-	h, _ := NewHint(Type([2]byte{0xff, 0x11}), "0.0.2")
+	h, _ := NewHint(Type{0xff, 0x11}, "0.0.2")
 	return h
 }
 

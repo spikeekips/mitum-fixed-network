@@ -6,14 +6,14 @@ import (
 )
 
 var (
-	INITBallotType         hint.Type = hint.Type([2]byte{0x03, 0x00})
-	ProposalBallotType     hint.Type = hint.Type([2]byte{0x03, 0x01})
-	SIGNBallotType         hint.Type = hint.Type([2]byte{0x03, 0x02})
-	ACCEPTBallotType       hint.Type = hint.Type([2]byte{0x03, 0x03})
-	INITBallotFactType     hint.Type = hint.Type([2]byte{0x03, 0x04})
-	ProposalBallotFactType hint.Type = hint.Type([2]byte{0x03, 0x05})
-	SIGNBallotFactType     hint.Type = hint.Type([2]byte{0x03, 0x06})
-	ACCEPTBallotFactType   hint.Type = hint.Type([2]byte{0x03, 0x07})
+	INITBallotType         hint.Type = hint.Type{0x03, 0x00}
+	ProposalBallotType     hint.Type = hint.Type{0x03, 0x01}
+	SIGNBallotType         hint.Type = hint.Type{0x03, 0x02}
+	ACCEPTBallotType       hint.Type = hint.Type{0x03, 0x03}
+	INITBallotFactType     hint.Type = hint.Type{0x03, 0x04}
+	ProposalBallotFactType hint.Type = hint.Type{0x03, 0x05}
+	SIGNBallotFactType     hint.Type = hint.Type{0x03, 0x06}
+	ACCEPTBallotFactType   hint.Type = hint.Type{0x03, 0x07}
 )
 
 type Ballot interface {

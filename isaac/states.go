@@ -4,10 +4,11 @@ import (
 	"sync"
 
 	"github.com/rs/zerolog"
+	"golang.org/x/xerrors"
+
 	"github.com/spikeekips/mitum/logging"
 	"github.com/spikeekips/mitum/seal"
 	"github.com/spikeekips/mitum/util"
-	"golang.org/x/xerrors"
 )
 
 type ConsensusStates struct {
@@ -17,7 +18,6 @@ type ConsensusStates struct {
 	localstate    *Localstate
 	ballotbox     *Ballotbox
 	suffrage      Suffrage
-	sealStorage   SealStorage
 	states        map[State]StateHandler
 	activeHandler StateHandler
 	stateChan     chan StateChangeContext
@@ -28,7 +28,6 @@ func NewConsensusStates(
 	localstate *Localstate,
 	ballotbox *Ballotbox,
 	suffrage Suffrage,
-	sealStorage SealStorage,
 	booting StateHandler,
 	joining StateHandler,
 	consensus StateHandler,
@@ -39,10 +38,9 @@ func NewConsensusStates(
 		Logger: logging.NewLogger(func(c zerolog.Context) zerolog.Context {
 			return c.Str("module", "consensus-states")
 		}),
-		localstate:  localstate,
-		ballotbox:   ballotbox,
-		suffrage:    suffrage,
-		sealStorage: sealStorage,
+		localstate: localstate,
+		ballotbox:  ballotbox,
+		suffrage:   suffrage,
 		states: map[State]StateHandler{
 			StateBooting:   booting,
 			StateJoining:   joining,
@@ -289,7 +287,7 @@ func (css *ConsensusStates) newVoteproof(vp Voteproof) error {
 func (css *ConsensusStates) NewSeal(sl seal.Seal) error {
 	css.Log().Debug().Interface("seal", sl).Msgf("seal received: %T", sl)
 
-	if err := css.sealStorage.Add(sl); err != nil {
+	if err := css.localstate.Storage().NewSeal(sl); err != nil {
 		return err
 	}
 

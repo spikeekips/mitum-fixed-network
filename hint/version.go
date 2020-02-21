@@ -3,8 +3,9 @@ package hint
 import (
 	"strings"
 
-	"github.com/spikeekips/mitum/errors"
 	"golang.org/x/mod/semver"
+
+	"github.com/spikeekips/mitum/errors"
 )
 
 var (

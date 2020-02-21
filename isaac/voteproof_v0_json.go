@@ -3,12 +3,13 @@ package isaac
 import (
 	"encoding/json"
 
+	"golang.org/x/xerrors"
+
 	"github.com/spikeekips/mitum/encoder"
 	"github.com/spikeekips/mitum/key"
 	"github.com/spikeekips/mitum/localtime"
 	"github.com/spikeekips/mitum/util"
 	"github.com/spikeekips/mitum/valuehash"
-	"golang.org/x/xerrors"
 )
 
 type VoteproofV0PackJSON struct {

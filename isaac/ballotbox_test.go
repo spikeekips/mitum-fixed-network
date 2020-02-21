@@ -28,18 +28,20 @@ func (t *testBallotbox) SetupSuite() {
 	t.pk, _ = key.NewBTCPrivatekey()
 }
 
-func (t *testBallotbox) newLocalstate(total uint, percent float64) *Localstate {
+func (t *testBallotbox) thresholdFunc(total uint, percent float64) func() Threshold {
 	ls, err := NewLocalstate(nil, nil)
 	t.NoError(err)
 
 	threshold, _ := NewThreshold(total, percent)
 	_ = ls.Policy().SetThreshold(threshold)
 
-	return ls
+	return func() Threshold {
+		return threshold
+	}
 }
 
 func (t *testBallotbox) TestNew() {
-	bb := NewBallotbox(t.newLocalstate(2, 67))
+	bb := NewBallotbox(t.thresholdFunc(2, 67))
 	ba := t.newINITBallot(Height(10), Round(0), NewShortAddress("test-for-init-ballot"))
 
 	vp, err := bb.Vote(ba)
@@ -75,7 +77,7 @@ func (t *testBallotbox) newINITBallot(height Height, round Round, node Address) 
 }
 
 func (t *testBallotbox) TestVoteRace() {
-	bb := NewBallotbox(t.newLocalstate(50, 100))
+	bb := NewBallotbox(t.thresholdFunc(50, 100))
 
 	checkDone := make(chan bool)
 	vrChan := make(chan interface{}, 49)
@@ -114,7 +116,7 @@ func (t *testBallotbox) TestVoteRace() {
 }
 
 func (t *testBallotbox) TestINITVoteproofNotYet() {
-	bb := NewBallotbox(t.newLocalstate(2, 67))
+	bb := NewBallotbox(t.thresholdFunc(2, 67))
 	ba := t.newINITBallot(Height(10), Round(0), NewShortAddress("test-for-init-ballot"))
 
 	vp, err := bb.Vote(ba)
@@ -138,7 +140,7 @@ func (t *testBallotbox) TestINITVoteproofNotYet() {
 }
 
 func (t *testBallotbox) TestINITVoteproofDraw() {
-	bb := NewBallotbox(t.newLocalstate(2, 67))
+	bb := NewBallotbox(t.thresholdFunc(2, 67))
 
 	// 2 ballot have the differnt previousBlock hash
 	{
@@ -168,7 +170,7 @@ func (t *testBallotbox) TestINITVoteproofDraw() {
 }
 
 func (t *testBallotbox) TestINITVoteproofMajority() {
-	bb := NewBallotbox(t.newLocalstate(3, 66))
+	bb := NewBallotbox(t.thresholdFunc(3, 66))
 
 	// 2 ballot have the differnt previousBlock hash
 	ba0 := t.newINITBallot(Height(10), Round(0), NewShortAddress("node0"))
@@ -194,7 +196,7 @@ func (t *testBallotbox) TestINITVoteproofMajority() {
 }
 
 func (t *testBallotbox) TestINITVoteproofClean() {
-	bb := NewBallotbox(t.newLocalstate(3, 66))
+	bb := NewBallotbox(t.thresholdFunc(3, 66))
 
 	// 2 ballot have the differnt previousBlock hash
 	ba0 := t.newINITBallot(Height(10), Round(0), NewShortAddress("node0"))
@@ -270,7 +272,7 @@ func (t *testBallotbox) newACCEPTBallot(height Height, round Round, node Address
 }
 
 func (t *testBallotbox) TestACCEPTVoteproofNotYet() {
-	bb := NewBallotbox(t.newLocalstate(2, 67))
+	bb := NewBallotbox(t.thresholdFunc(2, 67))
 	ba := t.newACCEPTBallot(Height(10), Round(0), NewShortAddress("test-for-accept-ballot"))
 
 	vp, err := bb.Vote(ba)
@@ -294,7 +296,7 @@ func (t *testBallotbox) TestACCEPTVoteproofNotYet() {
 }
 
 func (t *testBallotbox) TestACCEPTVoteproofDraw() {
-	bb := NewBallotbox(t.newLocalstate(2, 67))
+	bb := NewBallotbox(t.thresholdFunc(2, 67))
 
 	// 2 ballot have the differnt previousBlock hash
 	ba0 := t.newACCEPTBallot(Height(10), Round(0), NewShortAddress("node0"))
@@ -313,7 +315,7 @@ func (t *testBallotbox) TestACCEPTVoteproofDraw() {
 }
 
 func (t *testBallotbox) TestACCEPTVoteproofMajority() {
-	bb := NewBallotbox(t.newLocalstate(3, 66))
+	bb := NewBallotbox(t.thresholdFunc(3, 66))
 
 	// 2 ballot have the differnt previousBlock hash
 	ba0 := t.newACCEPTBallot(Height(10), Round(0), NewShortAddress("node0"))
@@ -339,7 +341,7 @@ func (t *testBallotbox) TestACCEPTVoteproofMajority() {
 }
 
 func (t *testBallotbox) TestINITVoteproofMajorityClosed() {
-	bb := NewBallotbox(t.newLocalstate(3, 66))
+	bb := NewBallotbox(t.thresholdFunc(3, 66))
 
 	// 2 ballot have the differnt previousBlock hash
 	ba0 := t.newINITBallot(Height(10), Round(0), NewShortAddress("n0"))

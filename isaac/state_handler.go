@@ -4,9 +4,10 @@ import (
 	"sync"
 
 	"github.com/rs/zerolog"
+	"golang.org/x/xerrors"
+
 	"github.com/spikeekips/mitum/logging"
 	"github.com/spikeekips/mitum/seal"
-	"golang.org/x/xerrors"
 )
 
 type StateHandler interface {

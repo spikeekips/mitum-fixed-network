@@ -1,13 +1,14 @@
 package isaac
 
 import (
+	"golang.org/x/xerrors"
+
 	"github.com/spikeekips/mitum/hint"
 	"github.com/spikeekips/mitum/isvalid"
 	"github.com/spikeekips/mitum/key"
 	"github.com/spikeekips/mitum/localtime"
 	"github.com/spikeekips/mitum/util"
 	"github.com/spikeekips/mitum/valuehash"
-	"golang.org/x/xerrors"
 )
 
 var (
@@ -74,6 +75,34 @@ type ProposalV0 struct {
 	bodyHash      valuehash.Hash
 	factHash      valuehash.Hash
 	factSignature key.Signature
+}
+
+func NewProposal(
+	localstate *Localstate,
+	height Height,
+	round Round,
+	seals []valuehash.Hash,
+	b []byte,
+) (Proposal, error) {
+	pr := ProposalV0{
+		BaseBallotV0: BaseBallotV0{
+			node: localstate.Node().Address(),
+		},
+		ProposalFactV0: ProposalFactV0{
+			BaseBallotFactV0: BaseBallotFactV0{
+				height: height,
+				round:  round,
+			},
+			seals: seals,
+		},
+	}
+
+	// TODO NetworkID must be given.
+	if err := pr.Sign(localstate.Node().Privatekey(), b); err != nil {
+		return ProposalV0{}, err
+	}
+
+	return pr, nil
 }
 
 func NewProposalFromLocalstate(

@@ -17,19 +17,17 @@ type ProposalProcessor interface {
 
 type ProposalProcessorV0 struct {
 	*logging.Logger
-	localstate  *Localstate
-	sealStorage SealStorage
-	blocks      *sync.Map
+	localstate *Localstate
+	blocks     *sync.Map
 }
 
-func NewProposalProcessorV0(localstate *Localstate, sealStorage SealStorage) *ProposalProcessorV0 {
+func NewProposalProcessorV0(localstate *Localstate) *ProposalProcessorV0 {
 	return &ProposalProcessorV0{
 		Logger: logging.NewLogger(func(c zerolog.Context) zerolog.Context {
 			return c.Str("module", "proposal-processor-v0")
 		}),
-		localstate:  localstate,
-		sealStorage: sealStorage,
-		blocks:      &sync.Map{},
+		localstate: localstate,
+		blocks:     &sync.Map{},
 	}
 }
 
@@ -39,27 +37,27 @@ func (dp *ProposalProcessorV0) ProcessINIT(ph valuehash.Hash, initVoteproof Vote
 	}
 
 	var proposal Proposal
-	if sl, found, err := dp.sealStorage.Seal(ph); err != nil || !found {
-		if err != nil {
-			return nil, err
-		}
+	if sl, err := dp.localstate.Storage().Seal(ph); err != nil {
+		return nil, err
+	} else if pr, ok := sl.(Proposal); !ok {
+		return nil, xerrors.Errorf("seal is not Proposal: %T", sl)
+	} else {
+		proposal = pr
+	}
 
-		return nil, xerrors.Errorf("Proposal not found; proposal=%s", ph.String())
-	} else { // check proposed time
+	if proposal.Height() != Height(0) { // check proposed time if not genesis proposal
 		ivp := dp.localstate.LastINITVoteproof()
 		if ivp == nil {
 			return nil, xerrors.Errorf("last INIT Voteproof is missing")
 		}
 
 		timespan := dp.localstate.Policy().TimespanValidBallot()
-		if sl.SignedAt().Before(ivp.FinishedAt().Add(timespan * -1)) {
+		if proposal.SignedAt().Before(ivp.FinishedAt().Add(timespan * -1)) {
 			return nil, xerrors.Errorf(
 				"Proposal was sent before Voteproof; SignedAt=%s now=%s timespan=%s",
-				sl.SignedAt(), ivp.FinishedAt(), timespan,
+				proposal.SignedAt(), ivp.FinishedAt(), timespan,
 			)
 		}
-
-		proposal = sl.(Proposal)
 	}
 
 	lastBlock := dp.localstate.LastBlock()

@@ -4,9 +4,10 @@ import (
 	"testing"
 
 	uuid "github.com/satori/go.uuid"
-	"github.com/spikeekips/mitum/hint"
 	"github.com/stretchr/testify/suite"
 	"golang.org/x/xerrors"
+
+	"github.com/spikeekips/mitum/hint"
 )
 
 type testEncoders struct {

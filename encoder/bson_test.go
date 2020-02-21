@@ -317,7 +317,7 @@ func (t *testBSON) TestEncodeHinterNotCompatible() {
 
 	{ // wrong type version
 		c, _ := bson.Marshal(BSONPackHinted{
-			H: hint.MustHint(hint.Type([2]byte{0xff, 0x30}), sh0{}.Hint().Version()),
+			H: hint.MustHint(hint.Type{0xff, 0x30}, sh0{}.Hint().Version()),
 			D: s,
 		})
 

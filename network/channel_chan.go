@@ -2,6 +2,7 @@ package network
 
 import (
 	"github.com/rs/zerolog"
+
 	"github.com/spikeekips/mitum/logging"
 	"github.com/spikeekips/mitum/seal"
 )

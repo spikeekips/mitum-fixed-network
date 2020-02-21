@@ -1,13 +1,14 @@
 package isaac
 
 import (
+	"golang.org/x/xerrors"
+
 	"github.com/spikeekips/mitum/hint"
 	"github.com/spikeekips/mitum/isvalid"
 	"github.com/spikeekips/mitum/key"
 	"github.com/spikeekips/mitum/localtime"
 	"github.com/spikeekips/mitum/util"
 	"github.com/spikeekips/mitum/valuehash"
-	"golang.org/x/xerrors"
 )
 
 var (
@@ -81,6 +82,36 @@ type INITBallotV0 struct {
 	factSignature key.Signature
 }
 
+func NewINITBallotV0(
+	localstate *Localstate,
+	height Height,
+	round Round,
+	previousBlock valuehash.Hash,
+	previousRound Round,
+	voteproof Voteproof,
+	b []byte,
+) (INITBallotV0, error) {
+	ib := INITBallotV0{
+		BaseBallotV0: BaseBallotV0{
+			node: localstate.Node().Address(),
+		},
+		INITBallotFactV0: NewINITBallotFactV0(
+			height,
+			round,
+			previousBlock,
+			previousRound,
+		),
+		voteproof: voteproof,
+	}
+
+	// TODO NetworkID must be given.
+	if err := ib.Sign(localstate.Node().Privatekey(), b); err != nil {
+		return INITBallotV0{}, err
+	}
+
+	return ib, nil
+}
+
 func NewINITBallotV0FromLocalstate(localstate *Localstate, round Round, b []byte) (INITBallotV0, error) {
 	lastBlock := localstate.LastBlock()
 	if lastBlock == nil {
@@ -132,16 +163,29 @@ func (ib INITBallotV0) BodyHash() valuehash.Hash {
 }
 
 func (ib INITBallotV0) IsValid(b []byte) error {
-	if ib.voteproof == nil {
-		return xerrors.Errorf("empty Voteproof")
-	}
+	if ib.Height() == Height(0) {
+		if ib.voteproof != nil {
+			return xerrors.Errorf("not empty Voteproof for genesis INITBallot")
+		}
 
-	if err := isvalid.Check([]isvalid.IsValider{
-		ib.BaseBallotV0,
-		ib.INITBallotFactV0,
-		ib.voteproof,
-	}, b, false); err != nil {
-		return err
+		if err := isvalid.Check([]isvalid.IsValider{
+			ib.BaseBallotV0,
+			ib.INITBallotFactV0,
+		}, b, false); err != nil {
+			return err
+		}
+	} else {
+		if ib.voteproof == nil {
+			return xerrors.Errorf("empty Voteproof")
+		}
+
+		if err := isvalid.Check([]isvalid.IsValider{
+			ib.BaseBallotV0,
+			ib.INITBallotFactV0,
+			ib.voteproof,
+		}, b, false); err != nil {
+			return err
+		}
 	}
 
 	return nil
@@ -156,15 +200,14 @@ func (ib INITBallotV0) GenerateHash(b []byte) (valuehash.Hash, error) {
 		return nil, err
 	}
 
-	e := util.ConcatSlice([][]byte{
-		ib.BaseBallotV0.Bytes(),
-		ib.INITBallotFactV0.Bytes(),
-		ib.bodyHash.Bytes(),
-		ib.voteproof.Bytes(),
-		b,
-	})
-
-	return valuehash.NewSHA256(e), nil
+	return valuehash.NewSHA256(
+		util.ConcatSlice([][]byte{
+			ib.BaseBallotV0.Bytes(),
+			ib.INITBallotFactV0.Bytes(),
+			ib.bodyHash.Bytes(),
+			b,
+		}),
+	), nil
 }
 
 func (ib INITBallotV0) GenerateBodyHash(b []byte) (valuehash.Hash, error) {
@@ -172,13 +215,18 @@ func (ib INITBallotV0) GenerateBodyHash(b []byte) (valuehash.Hash, error) {
 		return nil, err
 	}
 
-	e := util.ConcatSlice([][]byte{
-		ib.INITBallotFactV0.Bytes(),
-		ib.voteproof.Bytes(),
-		b,
-	})
+	var vb []byte
+	if ib.Height() != Height(0) {
+		vb = ib.voteproof.Bytes()
+	}
 
-	return valuehash.NewSHA256(e), nil
+	return valuehash.NewSHA256(
+		util.ConcatSlice([][]byte{
+			ib.INITBallotFactV0.Bytes(),
+			vb,
+			b,
+		}),
+	), nil
 }
 
 func (ib INITBallotV0) Fact() Fact {

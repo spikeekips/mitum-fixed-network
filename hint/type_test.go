@@ -13,15 +13,15 @@ type testType struct {
 }
 
 func (t *testType) TestNew() {
-	ty := Type([2]byte{0x00, 0xff})
+	ty := Type{0x00, 0xff}
 	t.IsType(Type{}, ty)
 }
 
 func (t *testType) TestIsValid() {
-	ty := Type([2]byte{0x00, 0xff})
+	ty := Type{0x00, 0xff}
 	t.NoError(ty.IsValid(nil))
 
-	ty = Type([2]byte{0x00, 0x00})
+	ty = Type{0x00, 0x00}
 	t.True(xerrors.Is(ty.IsValid(nil), InvalidTypeError))
 
 	ty = Type{}
@@ -30,7 +30,7 @@ func (t *testType) TestIsValid() {
 
 func (t *testType) TestRegister() {
 	tn := "showme-ff-00"
-	ty := Type([2]byte{0xff, 0x00})
+	ty := Type{0xff, 0x00}
 	t.False(IsRegisteredType(ty))
 	t.False(IsRegisteredTypeName(tn))
 
@@ -46,7 +46,7 @@ func (t *testType) TestRegister() {
 
 func (t *testType) TestString() {
 	tn := "showme-ff-01"
-	ty := Type([2]byte{0xff, 0x01})
+	ty := Type{0xff, 0x01}
 
 	_ = RegisterType(ty, tn)
 	t.Equal(tn, ty.String())
@@ -55,12 +55,12 @@ func (t *testType) TestString() {
 func (t *testType) TestRegisterSameName() {
 	tn := "showme-ff-02"
 	{
-		ty := Type([2]byte{0xff, 0x02})
+		ty := Type{0xff, 0x02}
 		_ = RegisterType(ty, tn)
 		t.True(IsRegisteredType(ty))
 	}
 
-	ty := Type([2]byte{0xff, 0x03})
+	ty := Type{0xff, 0x03}
 	err := RegisterType(ty, tn)
 	t.True(xerrors.Is(err, DuplicatedTypeNameFoundError))
 }
@@ -70,7 +70,7 @@ func TestType(t *testing.T) {
 }
 
 func (t *testType) TestMarshal() {
-	ty := Type([2]byte{0xff, 0x04})
+	ty := Type{0xff, 0x04}
 	_ = RegisterType(ty, "0xff03-showme")
 
 	b, err := json.Marshal(ty)

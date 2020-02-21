@@ -7,8 +7,9 @@ import (
 
 	"github.com/ethereum/go-ethereum/rlp"
 	uuid "github.com/satori/go.uuid"
-	"github.com/spikeekips/mitum/hint"
 	"github.com/stretchr/testify/suite"
+
+	"github.com/spikeekips/mitum/hint"
 )
 
 // s0 is simple struct
@@ -98,7 +99,7 @@ type sh0 struct {
 }
 
 func (s0 sh0) Hint() hint.Hint {
-	return hint.MustHint(hint.Type([2]byte{0xff, 0x31}), "0.1")
+	return hint.MustHint(hint.Type{0xff, 0x31}, "0.1")
 }
 
 type testRLP struct {

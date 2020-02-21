@@ -90,7 +90,7 @@ type s1 struct {
 
 // s1 does not PackJSON without JSONPackHintedHead
 func (s0 s1) Hint() hint.Hint {
-	return hint.MustHint(hint.Type([2]byte{0xff, 0x32}), "0.1")
+	return hint.MustHint(hint.Type{0xff, 0x32}, "0.1")
 }
 
 type testJSON struct {

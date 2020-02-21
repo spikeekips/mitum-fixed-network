@@ -6,6 +6,7 @@ import (
 	"github.com/rs/zerolog"
 	"github.com/syndtr/goleveldb/leveldb"
 	leveldbStorage "github.com/syndtr/goleveldb/leveldb/storage"
+	"golang.org/x/xerrors"
 
 	"github.com/spikeekips/mitum/encoder"
 	"github.com/spikeekips/mitum/hint"
@@ -14,12 +15,6 @@ import (
 	"github.com/spikeekips/mitum/logging"
 	"github.com/spikeekips/mitum/network"
 	"github.com/spikeekips/mitum/seal"
-	"github.com/spikeekips/mitum/valuehash"
-)
-
-var (
-	ContestAddressType hint.Type = hint.Type([2]byte{0xd0, 0x00})
-	ContestAddressHint hint.Hint = hint.MustHint(ContestAddressType, "0.1")
 )
 
 func NewLocalNode(id int) *isaac.LocalNode {
@@ -32,29 +27,28 @@ func NewLocalNode(id int) *isaac.LocalNode {
 	return ln.SetChannel(channel)
 }
 
-func NewNode(id int, initialBlock isaac.Block) (*isaac.Localstate, error) {
+func NewNode(id int) (*isaac.Localstate, error) {
 	// encoder
 	encs := encoder.NewEncoders()
 	enc := encoder.NewJSONEncoder()
 	if err := encs.AddEncoder(enc); err != nil {
 		return nil, err
 	}
-	_ = encs.AddHinter(isaac.BlockV0{})
-	_ = encs.AddHinter(valuehash.SHA256{})
-	_ = encs.AddHinter(isaac.VoteproofV0{})
+
+	for i := range Hinters {
+		hinter, ok := Hinters[i][1].(hint.Hinter)
+		if !ok {
+			return nil, xerrors.Errorf("not hint.Hinter: %T", Hinters[i])
+		}
+
+		if err := encs.AddHinter(hinter); err != nil {
+			return nil, err
+		}
+	}
 
 	// create new node
 	db, _ := leveldb.Open(leveldbStorage.NewMemStorage(), nil)
 	st := isaac.NewLeveldbStorage(db, encs, enc)
-
-	{
-		ob, err := st.OpenBlockStorage(initialBlock)
-		if err != nil {
-			return nil, err
-		} else if err := ob.Commit(); err != nil {
-			return nil, err
-		}
-	}
 
 	localNode := NewLocalNode(id)
 	localstate, err := isaac.NewLocalstate(st, localNode)
@@ -75,18 +69,22 @@ type NodeProcess struct {
 	Localstate        *isaac.Localstate
 	Ballotbox         *isaac.Ballotbox
 	Suffrage          isaac.Suffrage
-	SealStorage       isaac.SealStorage
 	ProposalProcessor isaac.ProposalProcessor
 	ConsensusStates   *isaac.ConsensusStates
 	AllNodes          []*isaac.Localstate
 	stopChan          chan struct{}
 }
 
+func NewSuffrage(localstate *isaac.Localstate) isaac.Suffrage {
+	return NewRoundrobinSuffrage(localstate, 100)
+}
+
 func NewNodeProcess(localstate *isaac.Localstate) (*NodeProcess, error) {
-	ballotbox := isaac.NewBallotbox(localstate)
-	suffrage := NewRoundrobinSuffrage(localstate, 100)
-	sealStorage := NewMapSealStorage()
-	proposalProcessor := isaac.NewProposalProcessorV0(localstate, sealStorage)
+	ballotbox := isaac.NewBallotbox(func() isaac.Threshold {
+		return localstate.Policy().Threshold()
+	})
+	suffrage := NewSuffrage(localstate)
+	proposalProcessor := isaac.NewProposalProcessorV0(localstate)
 
 	cshandlerBooting, err := isaac.NewStateBootingHandler(localstate, proposalProcessor)
 	if err != nil {
@@ -103,7 +101,6 @@ func NewNodeProcess(localstate *isaac.Localstate) (*NodeProcess, error) {
 		localstate,
 		proposalProcessor,
 		suffrage,
-		sealStorage,
 		proposalMaker,
 	)
 	if err != nil {
@@ -114,7 +111,6 @@ func NewNodeProcess(localstate *isaac.Localstate) (*NodeProcess, error) {
 		localstate,
 		ballotbox,
 		suffrage,
-		sealStorage,
 		cshandlerBooting,
 		cshandlerJoining,
 		cshandlerConsensus,
@@ -129,7 +125,6 @@ func NewNodeProcess(localstate *isaac.Localstate) (*NodeProcess, error) {
 		Localstate:        localstate,
 		Ballotbox:         ballotbox,
 		Suffrage:          suffrage,
-		SealStorage:       sealStorage,
 		ProposalProcessor: proposalProcessor,
 		ConsensusStates:   css,
 		stopChan:          make(chan struct{}, 2),
@@ -168,7 +163,6 @@ func (np *NodeProcess) SetLogger(l zerolog.Logger) *logging.Logger {
 	np.setLogger(np.ProposalProcessor, l)
 	np.setLogger(np.Ballotbox, l)
 	np.setLogger(np.Suffrage, l)
-	np.setLogger(np.SealStorage, l)
 
 	return np.Logger
 }

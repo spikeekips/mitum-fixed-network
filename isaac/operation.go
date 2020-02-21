@@ -8,7 +8,7 @@ import (
 )
 
 var (
-	OperationType hint.Type = hint.Type([2]byte{0x06, 0x00})
+	OperationType hint.Type = hint.Type{0x06, 0x00}
 )
 
 type Operation interface {

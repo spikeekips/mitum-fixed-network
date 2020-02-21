@@ -4,9 +4,9 @@ import (
 	"encoding/json"
 
 	"github.com/spikeekips/mitum/encoder"
+	"github.com/spikeekips/mitum/hint"
 	"github.com/spikeekips/mitum/key"
 	"github.com/spikeekips/mitum/localtime"
-	"github.com/spikeekips/mitum/util"
 	"github.com/spikeekips/mitum/valuehash"
 )
 
@@ -103,17 +103,15 @@ func UnpackBaseBallotV0JSON(nib BaseBallotV0UnpackerJSON, enc *encoder.JSONEncod
 }
 
 type BaseBallotFactV0PackerJSON struct {
+	encoder.JSONPackHintedHead
 	HT Height `json:"height"`
 	RD Round  `json:"round"`
 }
 
-func NewBaseBallotFactV0PackerJSON(bbf BaseBallotFactV0) BaseBallotFactV0PackerJSON {
+func NewBaseBallotFactV0PackerJSON(bbf BaseBallotFactV0, ht hint.Hint) BaseBallotFactV0PackerJSON {
 	return BaseBallotFactV0PackerJSON{
-		HT: bbf.height,
-		RD: bbf.round,
+		JSONPackHintedHead: encoder.NewJSONPackHintedHead(ht),
+		HT:                 bbf.height,
+		RD:                 bbf.round,
 	}
-}
-
-func (bf BaseBallotFactV0) MarshalJSON() ([]byte, error) {
-	return util.JSONMarshal(NewBaseBallotFactV0PackerJSON(bf))
 }

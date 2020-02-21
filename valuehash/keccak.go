@@ -16,8 +16,8 @@ var emptySHA512 [sha512Size]byte
 var nilSHA256 [sha256Size]byte
 var nilSHA512 [sha512Size]byte
 
-var sha256Hint = hint.MustHint(hint.Type{0x07, 0x01}, "0.1")
-var sha512Hint = hint.MustHint(hint.Type{0x07, 0x00}, "0.1")
+var sha256Hint = hint.MustHint(hint.Type{0x07, 0x00}, "0.1")
+var sha512Hint = hint.MustHint(hint.Type{0x07, 0x01}, "0.1")
 
 func init() {
 	nilSHA256 = sha3.Sum256(nil)

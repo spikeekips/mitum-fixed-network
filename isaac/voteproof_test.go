@@ -19,7 +19,7 @@ type tinyFact struct {
 }
 
 func (tf tinyFact) Hint() hint.Hint {
-	return hint.MustHint(hint.Type([2]byte{0xff, 0xf4}), "0.1")
+	return hint.MustHint(hint.Type{0xff, 0xf4}, "0.1")
 }
 
 func (tf tinyFact) IsValid([]byte) error {

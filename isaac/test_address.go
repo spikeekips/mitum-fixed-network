@@ -8,10 +8,11 @@ import (
 	"encoding/json"
 	"fmt"
 
+	"golang.org/x/xerrors"
+
 	"github.com/spikeekips/mitum/encoder"
 	"github.com/spikeekips/mitum/hint"
 	"github.com/spikeekips/mitum/util"
-	"golang.org/x/xerrors"
 )
 
 type ShortAddress string
@@ -33,7 +34,7 @@ func (sa ShortAddress) String() string {
 
 func (sa ShortAddress) Hint() hint.Hint {
 	h, err := hint.NewHint(
-		hint.Type([2]byte{0xff, 0x40}),
+		hint.Type{0xff, 0x40},
 		"0.1",
 	)
 	if err != nil {

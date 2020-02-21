@@ -21,7 +21,7 @@ func (t *testStateConsensusHandler) TestNew() {
 
 	proposalMaker := NewProposalMaker(t.localstate)
 	cs, err := NewStateConsensusHandler(
-		t.localstate, DummyProposalProcessor{}, suffrage, t.sealStorage, proposalMaker,
+		t.localstate, DummyProposalProcessor{}, suffrage, proposalMaker,
 	)
 	t.NoError(err)
 	t.NotNil(cs)
@@ -61,7 +61,7 @@ func (t *testStateConsensusHandler) TestWaitingProposalButTimeedOut() {
 	suffrage := t.suffrage(t.remoteState, t.localstate)
 
 	proposalMaker := NewProposalMaker(t.localstate)
-	cs, err := NewStateConsensusHandler(t.localstate, DummyProposalProcessor{}, suffrage, t.sealStorage, proposalMaker)
+	cs, err := NewStateConsensusHandler(t.localstate, DummyProposalProcessor{}, suffrage, proposalMaker)
 	t.NoError(err)
 	t.NotNil(cs)
 
@@ -111,7 +111,6 @@ func (t *testStateConsensusHandler) TestWithProposalWaitACCEPTBallot() {
 		t.localstate,
 		DummyProposalProcessor{},
 		t.suffrage(t.remoteState, t.remoteState), // localnode is not in ActingSuffrage.
-		t.sealStorage,
 		proposalMaker,
 	)
 	t.NoError(err)
@@ -166,7 +165,6 @@ func (t *testStateConsensusHandler) TestWithProposalWaitSIGNBallot() {
 		t.localstate,
 		DummyProposalProcessor{},
 		t.suffrage(t.remoteState, t.localstate, t.remoteState), // localnode is not in ActingSuffrage.
-		t.sealStorage,
 		proposalMaker,
 	)
 	t.NoError(err)
@@ -215,7 +213,6 @@ func (t *testStateConsensusHandler) TestDraw() {
 		t.localstate,
 		DummyProposalProcessor{},
 		t.suffrage(t.remoteState, t.localstate, t.remoteState), // localnode is not in ActingSuffrage.
-		t.sealStorage,
 		proposalMaker,
 	)
 	t.NoError(err)

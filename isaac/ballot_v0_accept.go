@@ -1,13 +1,14 @@
 package isaac
 
 import (
+	"golang.org/x/xerrors"
+
 	"github.com/spikeekips/mitum/hint"
 	"github.com/spikeekips/mitum/isvalid"
 	"github.com/spikeekips/mitum/key"
 	"github.com/spikeekips/mitum/localtime"
 	"github.com/spikeekips/mitum/util"
 	"github.com/spikeekips/mitum/valuehash"
-	"golang.org/x/xerrors"
 )
 
 var (
@@ -67,6 +68,37 @@ type ACCEPTBallotV0 struct {
 	voteproof     Voteproof
 	factHash      valuehash.Hash
 	factSignature key.Signature
+}
+
+func NewACCEPTBallotV0(
+	localstate *Localstate,
+	height Height,
+	round Round,
+	newBlock Block,
+	initVoteproof Voteproof,
+	b []byte,
+) (ACCEPTBallotV0, error) {
+	ab := ACCEPTBallotV0{
+		BaseBallotV0: BaseBallotV0{
+			node: localstate.Node().Address(),
+		},
+		ACCEPTBallotFactV0: ACCEPTBallotFactV0{
+			BaseBallotFactV0: BaseBallotFactV0{
+				height: height,
+				round:  round,
+			},
+			proposal: newBlock.Proposal(),
+			newBlock: newBlock.Hash(),
+		},
+		voteproof: initVoteproof,
+	}
+
+	// TODO NetworkID must be given.
+	if err := ab.Sign(localstate.Node().Privatekey(), b); err != nil {
+		return ACCEPTBallotV0{}, err
+	}
+
+	return ab, nil
 }
 
 func NewACCEPTBallotV0FromLocalstate(

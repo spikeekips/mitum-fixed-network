@@ -26,7 +26,6 @@ Consensus state is started by new INIT Voteproof and waits next Proposal.
 type StateConsensusHandler struct {
 	*BaseStateHandler
 	suffrage      Suffrage
-	sealStorage   SealStorage
 	proposalMaker *ProposalMaker
 	ballotTimer   util.Daemon
 }
@@ -35,7 +34,6 @@ func NewStateConsensusHandler(
 	localstate *Localstate,
 	proposalProcessor ProposalProcessor,
 	suffrage Suffrage,
-	sealStorage SealStorage,
 	proposalMaker *ProposalMaker,
 ) (*StateConsensusHandler, error) {
 	if lastBlock := localstate.LastBlock(); lastBlock == nil {
@@ -45,7 +43,6 @@ func NewStateConsensusHandler(
 	cs := &StateConsensusHandler{
 		BaseStateHandler: NewBaseStateHandler(localstate, proposalProcessor, StateConsensus),
 		suffrage:         suffrage,
-		sealStorage:      sealStorage,
 		proposalMaker:    proposalMaker,
 	}
 	cs.BaseStateHandler.Logger = logging.NewLogger(func(c zerolog.Context) zerolog.Context {
@@ -157,9 +154,9 @@ func (cs *StateConsensusHandler) waitProposal(vp Voteproof) error { // nolint
 				l.Debug().Msg("trying to check already received Proposal")
 
 				// if Proposal already received, find and processing it.
-				if proposal, found, err := cs.sealStorage.Proposal(vp.Height(), vp.Round()); err != nil {
+				if proposal, err := cs.localstate.Storage().Proposal(vp.Height(), vp.Round()); err != nil {
 					l.Error().Err(err).Msg("failed to check the received Proposal, but keep trying")
-				} else if found {
+				} else {
 					go func() {
 						if err := cs.handleProposal(proposal); err != nil {
 							l.Error().Err(err).Send()

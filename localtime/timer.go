@@ -119,6 +119,10 @@ func (ct *CallbackTimer) callback(cb func() (bool, error)) func(chan struct{}) e
 	}
 }
 
+func (ct *CallbackTimer) Name() string {
+	return ct.name
+}
+
 type CallbackTimerset struct {
 	sync.RWMutex
 	timers    []*CallbackTimer

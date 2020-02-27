@@ -79,17 +79,25 @@ func (ts *Timers) SetTimer(id string, timer *CallbackTimer) error {
 }
 
 // StartTimers starts timers with the given ids, before starting timers, stops
-// the other timers.
-func (ts *Timers) StartTimers(ids []string) error {
+// the other timers if stopOthers is true.
+func (ts *Timers) StartTimers(ids []string, stopOthers bool) error {
 	ts.Lock()
 	defer ts.Unlock()
 
-	var stopIDs []string
-	for id := range ts.timers {
-		if util.InStringSlice(id, ids) {
-			continue
+	if stopOthers {
+		var stopIDs []string
+		for id := range ts.timers {
+			if util.InStringSlice(id, ids) {
+				continue
+			}
+			stopIDs = append(stopIDs, id)
 		}
-		stopIDs = append(stopIDs, id)
+
+		if len(stopIDs) > 0 {
+			if err := ts.stopTimers(stopIDs); err != nil {
+				return err
+			}
+		}
 	}
 
 	callback := func(t *CallbackTimer) {
@@ -99,12 +107,6 @@ func (ts *Timers) StartTimers(ids []string) error {
 
 		if err := t.Start(); err != nil {
 			ts.Log().Error().Err(err).Str("timer", t.Name()).Msg("failed to start timer")
-		}
-	}
-
-	if len(stopIDs) > 0 {
-		if err := ts.stopTimers(stopIDs); err != nil {
-			return err
 		}
 	}
 
@@ -130,6 +132,21 @@ func (ts *Timers) stopTimers(ids []string) error {
 	}
 
 	return ts.traverse(callback, ids)
+}
+
+func (ts *Timers) Started() []string {
+	ts.RLock()
+	defer ts.RUnlock()
+
+	var started []string
+	for id := range ts.timers {
+		timer := ts.timers[id]
+		if timer != nil && ts.timers[id].IsStarted() {
+			started = append(started, id)
+		}
+	}
+
+	return started
 }
 
 func (ts *Timers) checkExists(ids []string) error {

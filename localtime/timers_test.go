@@ -4,6 +4,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/spikeekips/mitum/util"
 	"github.com/stretchr/testify/suite"
 )
 
@@ -64,7 +65,7 @@ func (t *testTimers) TestStartTimer() {
 	startID := "showme"
 	stoppedID := "findme"
 
-	t.NoError(timers.StartTimers([]string{startID}))
+	t.NoError(timers.StartTimers([]string{startID}, true))
 
 	t.True(timers.timers[startID].IsStarted())
 	t.False(timers.timers[stoppedID].IsStarted())
@@ -84,17 +85,44 @@ func (t *testTimers) TestStartTimerStopOthers() {
 	}
 
 	// start all
-	t.NoError(timers.StartTimers(ids))
+	t.NoError(timers.StartTimers(ids, true))
 
 	// start again only one
 	startID := "showme"
-	t.NoError(timers.StartTimers([]string{startID}))
+	t.NoError(timers.StartTimers([]string{startID}, true))
 
 	for _, id := range ids {
 		if id == startID {
 			continue
 		}
 		t.False(timers.timers[id].IsStarted())
+	}
+}
+
+func (t *testTimers) TestStartTimerNotStop() {
+	ids := []string{
+		"showme",
+		"findme",
+		"eatme",
+	}
+
+	timers := NewTimers(ids, false)
+
+	for _, id := range ids {
+		t.NoError(timers.SetTimer(id, t.timer(id)))
+	}
+
+	// start all except startID
+	t.NoError(timers.StartTimers(ids, true))
+
+	startID := "showme"
+	t.NoError(timers.StopTimers([]string{startID}))
+	t.False(timers.timers[startID].IsStarted())
+
+	t.NoError(timers.StartTimers([]string{startID}, false))
+
+	for _, id := range ids {
+		t.True(timers.timers[id].IsStarted())
 	}
 }
 
@@ -112,7 +140,7 @@ func (t *testTimers) TestStopTimer() {
 	}
 
 	// start all
-	t.NoError(timers.StartTimers(ids))
+	t.NoError(timers.StartTimers(ids, true))
 
 	for _, id := range ids {
 		t.True(timers.timers[id].IsStarted())
@@ -129,6 +157,10 @@ func (t *testTimers) TestStopTimer() {
 
 		t.True(timers.timers[id].IsStarted())
 	}
+
+	t.Equal(2, len(timers.Started()))
+	t.True(util.InStringSlice("showme", timers.Started()))
+	t.True(util.InStringSlice("findme", timers.Started()))
 }
 
 func (t *testTimers) TestStopAll() {
@@ -145,7 +177,7 @@ func (t *testTimers) TestStopAll() {
 	}
 
 	// start all
-	t.NoError(timers.StartTimers(ids))
+	t.NoError(timers.StartTimers(ids, true))
 
 	for _, id := range ids {
 		t.True(timers.timers[id].IsStarted())

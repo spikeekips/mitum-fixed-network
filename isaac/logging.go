@@ -2,7 +2,6 @@ package isaac
 
 import (
 	"github.com/rs/zerolog"
-	uuid "github.com/satori/go.uuid"
 
 	"github.com/spikeekips/mitum/seal"
 	"github.com/spikeekips/mitum/util"
@@ -11,15 +10,18 @@ import (
 func loggerWithSeal(sl seal.Seal, l *zerolog.Logger) *zerolog.Logger {
 	ll := l.With().Str("seal_hash", sl.Hash().String()).CallerWithSkipFrameCount(3).Logger()
 
+	var event *zerolog.Event
 	if ls, ok := sl.(zerolog.LogObjectMarshaler); ok {
-		ll.Debug().EmbedObject(ls).Send()
+		event = ll.Debug().EmbedObject(ls)
 	} else {
-		ll.Debug().
+		event = ll.Debug().
 			Dict("seal", zerolog.Dict().
 				Str("hint", sl.Hint().Verbose()).
 				Str("hash", sl.Hash().String()),
-			).Send()
+			)
 	}
+
+	event.Msg("seal")
 
 	return &ll
 }
@@ -27,17 +29,20 @@ func loggerWithSeal(sl seal.Seal, l *zerolog.Logger) *zerolog.Logger {
 func loggerWithBallot(ballot Ballot, l *zerolog.Logger) *zerolog.Logger {
 	ll := l.With().Str("seal_hash", ballot.Hash().String()).CallerWithSkipFrameCount(3).Logger()
 
+	var event *zerolog.Event
 	if lb, ok := ballot.(zerolog.LogObjectMarshaler); ok {
-		ll.Debug().EmbedObject(lb).Send()
+		event = ll.Debug().EmbedObject(lb)
 	} else {
-		ll.Debug().
+		event = ll.Debug().
 			Dict("ballot", zerolog.Dict().
 				Int64("height", ballot.Height().Int64()).
 				Uint64("round", ballot.Round().Uint64()).
 				Str("stage", ballot.Stage().String()).
 				Str("node", ballot.Node().String()),
-			).Send()
+			)
 	}
+
+	event.Msg("ballot")
 
 	return &ll
 }
@@ -47,14 +52,17 @@ func loggerWithVoteproof(vp Voteproof, l *zerolog.Logger) *zerolog.Logger {
 		return l
 	}
 
-	ll := l.With().Str("voteproof_id", uuid.Must(uuid.NewV4(), nil).String()).CallerWithSkipFrameCount(3).Logger()
+	ll := l.With().Str("voteproof_id", util.UUID().String()).CallerWithSkipFrameCount(3).Logger()
 
+	var event *zerolog.Event
 	if lvp, ok := vp.(zerolog.LogObjectMarshaler); ok {
-		ll.Debug().EmbedObject(lvp).Send()
+		event = ll.Debug().EmbedObject(lvp)
 	} else if l.GetLevel() == zerolog.DebugLevel {
 		rvp, _ := util.JSONMarshal(vp)
-		ll.Debug().RawJSON("voteproof", rvp).Send()
+		event = ll.Debug().RawJSON("voteproof", rvp)
 	}
+
+	event.Msg("voteproof")
 
 	return &ll
 }
@@ -72,7 +80,7 @@ func loggerWithLocalstate(localstate *Localstate, l *zerolog.Logger) *zerolog.Lo
 				Int64("height", lastBlock.Height().Int64()).
 				Uint64("round", lastBlock.Round().Uint64()),
 			),
-		).Send()
+		).Msg("localstate")
 
 	return l
 }
@@ -93,10 +101,11 @@ func loggerWithStateChangeContext(ctx StateChangeContext, l *zerolog.Logger) *ze
 	}
 
 	ll := l.With().
-		Str("change_state_context_id", uuid.Must(uuid.NewV4(), nil).String()).
+		Str("change_state_context_id", util.UUID().String()).
 		CallerWithSkipFrameCount(3).
 		Logger()
-	ll.Debug().Dict("change_state_context", e).Send()
+
+	ll.Debug().Dict("change_state_context", e).Msg("state_change_context")
 
 	return loggerWithVoteproof(ctx.voteproof, &ll)
 }

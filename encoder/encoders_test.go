@@ -3,11 +3,11 @@ package encoder
 import (
 	"testing"
 
-	uuid "github.com/satori/go.uuid"
 	"github.com/stretchr/testify/suite"
 	"golang.org/x/xerrors"
 
 	"github.com/spikeekips/mitum/hint"
+	"github.com/spikeekips/mitum/util"
 )
 
 type testEncoders struct {
@@ -52,7 +52,7 @@ func (t *testEncoders) TestJSONDecodeByHint() {
 	je := NewJSONEncoder()
 	t.NoError(encs.AddEncoder(je))
 
-	s := sh0{B: uuid.Must(uuid.NewV4(), nil).String()}
+	s := sh0{B: util.UUID().String()}
 
 	b, err := je.Encode(s)
 	t.NoError(err)
@@ -76,7 +76,7 @@ func (t *testEncoders) TestBSONDecodeByHint() {
 	be := NewBSONEncoder()
 	t.NoError(encs.AddEncoder(be))
 
-	s := sh0{B: uuid.Must(uuid.NewV4(), nil).String()}
+	s := sh0{B: util.UUID().String()}
 
 	b, err := be.Encode(s)
 	t.NoError(err)
@@ -100,7 +100,7 @@ func (t *testEncoders) TestRLPDecodeByHint() {
 	re := NewRLPEncoder()
 	t.NoError(encs.AddEncoder(re))
 
-	s := sh0{B: uuid.Must(uuid.NewV4(), nil).String()}
+	s := sh0{B: util.UUID().String()}
 
 	b, err := re.Encode(s)
 	t.NoError(err)

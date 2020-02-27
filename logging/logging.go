@@ -76,3 +76,11 @@ func (zl *Logger) Log() *zerolog.Logger {
 
 	return zl.l
 }
+
+func (zl *Logger) IsDebug() bool {
+	if zl.l == nil {
+		return false
+	}
+
+	return zl.l.GetLevel() == zerolog.DebugLevel
+}

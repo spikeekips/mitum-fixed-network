@@ -9,8 +9,9 @@ import (
 )
 
 const (
-	MaxVersionSize int = 15
-	MaxHintSize    int = MaxVersionSize + 2
+	MaxVersionSize   int    = 15
+	MaxHintSize      int    = MaxVersionSize + 2
+	HintStringFormat string = `hint{type=%q code="%x" version=%q}`
 )
 
 type Hint struct {
@@ -31,6 +32,25 @@ func MustHint(t Type, version Version) Hint {
 	}
 
 	return ht
+}
+
+func NewHintFromString(s string) (Hint, error) {
+	var name, version string
+	var code []byte
+	n, err := fmt.Sscanf(s, HintStringFormat, &name, &code, &version)
+	if err != nil {
+		return Hint{}, err
+	}
+	if n != 3 {
+		return Hint{}, xerrors.Errorf("invalid formatted hint string found: hint=%q", s)
+	}
+	if len(code) != 2 {
+		return Hint{}, xerrors.Errorf("invalid formatted hint code found: hint=%q", s)
+	}
+
+	ht := Hint{t: Type([2]byte{code[0], code[1]}), version: Version(version)}
+
+	return ht, ht.IsValid(nil)
 }
 
 func NewHintFromBytes(b []byte) (Hint, error) {
@@ -108,6 +128,15 @@ func (ht Hint) Bytes() []byte {
 
 func (ht Hint) Verbose() string {
 	return fmt.Sprintf("type=%s version=%s", ht.Type().Verbose(), ht.version)
+}
+
+func (ht Hint) String() string {
+	return fmt.Sprintf(
+		HintStringFormat,
+		ht.Type().String(),
+		[2]byte(ht.Type()),
+		ht.version,
+	)
 }
 
 type Hinter interface {

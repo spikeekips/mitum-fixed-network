@@ -77,10 +77,8 @@ func (dm *FunctionDaemon) Start() error {
 	go dm.kill()
 
 	go func() {
-		if err := dm.fn(dm.stopChan); err != nil {
-			if dm.isDebug {
-				dm.Log().Error().Err(err).Msg("occurred in daemon function")
-			}
+		if err := dm.fn(dm.stopChan); err != nil && dm.isDebug {
+			dm.Log().Error().Err(err).Msg("occurred in daemon function")
 		}
 		dm.stoppingChan <- struct{}{}
 	}()

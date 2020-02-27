@@ -79,7 +79,7 @@ func (cs *StateConsensusHandler) Activate(ctx StateChangeContext) error {
 
 	go func() {
 		if err := cs.handleINITVoteproof(ctx.Voteproof()); err != nil {
-			l.Error().Err(err).Send()
+			l.Error().Err(err).Msg("activated, but handleINITVoteproof failed with voteproof")
 		}
 	}()
 
@@ -159,7 +159,7 @@ func (cs *StateConsensusHandler) waitProposal(vp Voteproof) error { // nolint
 				} else {
 					go func() {
 						if err := cs.handleProposal(proposal); err != nil {
-							l.Error().Err(err).Send()
+							l.Error().Err(err).Msg("processing already received proposal, but")
 						}
 					}()
 				}
@@ -251,8 +251,10 @@ func (cs *StateConsensusHandler) NewVoteproof(vp Voteproof) error {
 	switch vp.Stage() {
 	case StageACCEPT:
 		if err := cs.StoreNewBlockByVoteproof(vp); err != nil {
-			l.Error().Err(err).Send()
+			l.Error().Err(err).Msg("failed to store accept voteproof")
 		}
+
+		cs.proposalMaker.Clean() // NOTE clean proposed Proposal
 
 		return cs.keepBroadcastingINITBallotForNextBlock()
 	case StageINIT:
@@ -260,7 +262,7 @@ func (cs *StateConsensusHandler) NewVoteproof(vp Voteproof) error {
 	default:
 		err := xerrors.Errorf("invalid Voteproof received")
 
-		l.Error().Err(err).Send()
+		l.Error().Err(err).Msg("invalid voteproof found")
 
 		return err
 	}

@@ -2,13 +2,12 @@ package network
 
 import (
 	"testing"
-	"time"
 
 	"github.com/stretchr/testify/suite"
-	"golang.org/x/xerrors"
 
 	"github.com/spikeekips/mitum/key"
 	"github.com/spikeekips/mitum/seal"
+	"github.com/spikeekips/mitum/valuehash"
 )
 
 type testChanChannel struct {
@@ -22,30 +21,32 @@ func (t *testChanChannel) SetupSuite() {
 }
 
 func (t *testChanChannel) TestSendReceive() {
-	gs := NewChanChannel(0, nil)
+	gs := NewChanChannel(0)
 
 	sl := seal.NewDummySeal(t.pk)
-	t.NoError(gs.SendSeal(sl))
+	go func() {
+		t.NoError(gs.SendSeal(sl))
+	}()
 
 	rsl := <-gs.ReceiveSeal()
 
 	t.True(sl.Hash().Equal(rsl.Hash()))
 }
 
-func (t *testChanChannel) TestSealHandler() {
-	gs := NewChanChannel(0, func(sl seal.Seal) (seal.Seal, error) {
-		return nil, xerrors.Errorf("invalid seal found")
-	})
+func (t *testChanChannel) TestGetSeal() {
+	gs := NewChanChannel(0)
 
 	sl := seal.NewDummySeal(t.pk)
-	t.NoError(gs.SendSeal(sl))
 
-	select {
-	case <-time.After(time.Millisecond * 10):
-		break
-	case <-gs.ReceiveSeal():
-		t.Error(xerrors.Errorf("seal should be ignored"))
-	}
+	gs.SetGetSealHandler(func([]valuehash.Hash) ([]seal.Seal, error) {
+		return []seal.Seal{sl}, nil
+	})
+
+	gsls, err := gs.Seals([]valuehash.Hash{sl.Hash()})
+	t.NoError(err)
+	t.Equal(1, len(gsls))
+
+	t.True(sl.Hash().Equal(gsls[0].Hash()))
 }
 
 func TestChanChannel(t *testing.T) {

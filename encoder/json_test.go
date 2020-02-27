@@ -7,11 +7,11 @@ import (
 	"reflect"
 	"testing"
 
-	uuid "github.com/satori/go.uuid"
 	"github.com/stretchr/testify/suite"
 	"golang.org/x/xerrors"
 
 	"github.com/spikeekips/mitum/hint"
+	"github.com/spikeekips/mitum/util"
 )
 
 func (s0 sp0) PackJSON(_ *JSONEncoder) (interface{}, error) {
@@ -103,7 +103,7 @@ func (t *testJSON) TestEncodeNatives() {
 		v    interface{}
 	}{
 		//{name: "nil", v: nil},
-		{name: "string", v: uuid.Must(uuid.NewV4(), nil).String()},
+		{name: "string", v: util.UUID().String()},
 		{name: "int", v: rand.Int()},
 		{name: "int8", v: int8(33)},
 		{name: "int16", v: int16(33)},
@@ -123,9 +123,9 @@ func (t *testJSON) TestEncodeNatives() {
 		{name: "empty slice", v: []int{}},
 		{name: "slice ptr", v: &([]int{3, 33, 333, 3333})},
 		{name: "map",
-			v: map[string]int{uuid.Must(uuid.NewV4(), nil).String(): 1, uuid.Must(uuid.NewV4(), nil).String(): 2}},
+			v: map[string]int{util.UUID().String(): 1, util.UUID().String(): 2}},
 		{name: "map ptr",
-			v: &map[string]int{uuid.Must(uuid.NewV4(), nil).String(): 1, uuid.Must(uuid.NewV4(), nil).String(): 2}},
+			v: &map[string]int{util.UUID().String(): 1, util.UUID().String(): 2}},
 		{name: "empty map", v: map[string]int{}},
 		{name: "empty map ptr", v: &map[string]int{}},
 	}
@@ -167,7 +167,7 @@ func (t *testJSON) TestEncodeNatives() {
 }
 
 func (t *testJSON) TestEncodeSimpleStruct() {
-	s := s0{A: uuid.Must(uuid.NewV4(), nil).String()}
+	s := s0{A: util.UUID().String()}
 
 	je := NewJSONEncoder()
 	b, err := je.Encode(s)
@@ -180,7 +180,7 @@ func (t *testJSON) TestEncodeSimpleStruct() {
 }
 
 func (t *testJSON) TestEncodeRLPPackable() {
-	s := sp0{A: uuid.Must(uuid.NewV4(), nil).String()}
+	s := sp0{A: util.UUID().String()}
 
 	je := NewJSONEncoder()
 	b, err := je.Encode(s)
@@ -194,7 +194,7 @@ func (t *testJSON) TestEncodeRLPPackable() {
 }
 
 func (t *testJSON) TestEncodeRLPUnpackable() {
-	s := sup0{A: uuid.Must(uuid.NewV4(), nil).String()}
+	s := sup0{A: util.UUID().String()}
 
 	je := NewJSONEncoder()
 	b, err := je.Encode(s)
@@ -208,8 +208,8 @@ func (t *testJSON) TestEncodeRLPUnpackable() {
 
 func (t *testJSON) TestEncodeEmbed() {
 	s := se0{
-		A: uuid.Must(uuid.NewV4(), nil).String(),
-		S: sup0{A: uuid.Must(uuid.NewV4(), nil).String()},
+		A: util.UUID().String(),
+		S: sup0{A: util.UUID().String()},
 	}
 
 	je := NewJSONEncoder()
@@ -229,8 +229,8 @@ func (t *testJSON) TestAnalyzePack() {
 
 	{ // has PackRLP
 		s := se0{
-			A: uuid.Must(uuid.NewV4(), nil).String(),
-			S: sup0{A: uuid.Must(uuid.NewV4(), nil).String()},
+			A: util.UUID().String(),
+			S: sup0{A: util.UUID().String()},
 		}
 
 		name, cp, err := je.analyze(s)
@@ -241,7 +241,7 @@ func (t *testJSON) TestAnalyzePack() {
 	}
 
 	{ // don't have PackRLP
-		s := s0{A: uuid.Must(uuid.NewV4(), nil).String()}
+		s := s0{A: util.UUID().String()}
 
 		name, cp, err := je.analyze(s)
 		t.NoError(err)
@@ -278,7 +278,7 @@ func (t *testJSON) TestAnalyzePack() {
 func (t *testJSON) TestEncodeHinter() {
 	_ = hint.RegisterType(sh0{}.Hint().Type(), "sh0")
 
-	s := sh0{B: uuid.Must(uuid.NewV4(), nil).String()}
+	s := sh0{B: util.UUID().String()}
 
 	je := NewJSONEncoder()
 	b, err := je.Encode(s)
@@ -310,7 +310,7 @@ func (t *testJSON) TestEncodeHinterWithHead() {
 func (t *testJSON) TestEncodeHinterNotCompatible() {
 	_ = hint.RegisterType(sh0{}.Hint().Type(), "sh0")
 
-	s := sh0{B: uuid.Must(uuid.NewV4(), nil).String()}
+	s := sh0{B: util.UUID().String()}
 
 	je := NewJSONEncoder()
 	b, err := je.Encode(s)

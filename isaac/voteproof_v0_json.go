@@ -24,6 +24,7 @@ type VoteproofV0PackJSON struct {
 	BS [][2]interface{}    `json:"ballots"`
 	VS [][2]interface{}    `json:"votes"`
 	FA localtime.JSONTime  `json:"finished_at"`
+	CL string              `json:"is_closed"`
 }
 
 func (vp VoteproofV0) MarshalJSON() ([]byte, error) {
@@ -42,6 +43,13 @@ func (vp VoteproofV0) MarshalJSON() ([]byte, error) {
 		votes = append(votes, [2]interface{}{a, vp.votes[a]})
 	}
 
+	var isClosed string
+	if vp.closed {
+		isClosed = "true"
+	} else {
+		isClosed = "false"
+	}
+
 	return util.JSONMarshal(VoteproofV0PackJSON{
 		JSONPackHintedHead: encoder.NewJSONPackHintedHead(vp.Hint()),
 		HT:                 vp.height,
@@ -54,6 +62,7 @@ func (vp VoteproofV0) MarshalJSON() ([]byte, error) {
 		BS:                 ballots,
 		VS:                 votes,
 		FA:                 localtime.NewJSONTime(vp.finishedAt),
+		CL:                 isClosed,
 	})
 }
 
@@ -68,6 +77,7 @@ type VoteproofV0UnpackJSON struct {
 	BS [][2]json.RawMessage `json:"ballots"`
 	VS [][2]json.RawMessage `json:"votes"`
 	FA localtime.JSONTime   `json:"finished_at"`
+	CL string               `json:"is_closed"`
 }
 
 func (vp *VoteproofV0) UnpackJSON(b []byte, enc *encoder.JSONEncoder) error { // nolint
@@ -154,6 +164,7 @@ func (vp *VoteproofV0) UnpackJSON(b []byte, enc *encoder.JSONEncoder) error { //
 	vp.ballots = ballots
 	vp.votes = votes
 	vp.finishedAt = vpp.FA.Time
+	vp.closed = vpp.CL == "true"
 
 	return nil
 }

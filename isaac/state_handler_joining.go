@@ -203,7 +203,7 @@ func (cs *StateJoiningHandler) NewSeal(sl seal.Seal) error {
 			return cs.handleINITBallotAndINITVoteproof(ballot.(INITBallot), vp)
 		default:
 			err := xerrors.Errorf("invalid Voteproof stage found")
-			l.Error().Err(err).Send()
+			l.Error().Err(err).Msg("invalid voteproof found in init ballot")
 
 			return err
 		}
@@ -213,14 +213,14 @@ func (cs *StateJoiningHandler) NewSeal(sl seal.Seal) error {
 			return cs.handleACCEPTBallotAndINITVoteproof(ballot.(ACCEPTBallot), vp)
 		default:
 			err := xerrors.Errorf("invalid Voteproof stage found")
-			l.Error().Err(err).Send()
+			l.Error().Err(err).Msg("invalid voteproof found in accept ballot")
 
 			return err
 		}
 	}
 
 	err := xerrors.Errorf("invalid ballot stage found")
-	l.Error().Err(err).Send()
+	l.Error().Err(err).Msg("invalid ballot found")
 
 	return err
 }
@@ -270,7 +270,7 @@ func (cs *StateJoiningHandler) handleINITBallotAndINITVoteproof(ballot INITBallo
 	switch d := ballot.Height() - (lastBlock.Height() + 1); {
 	case d == 0:
 		if err := checkBlockWithINITVoteproof(lastBlock, vp); err != nil {
-			l.Error().Err(err).Send()
+			l.Error().Err(err).Msg("expected height, checked voteproof with block")
 
 			return err
 		}
@@ -308,7 +308,7 @@ func (cs *StateJoiningHandler) handleACCEPTBallotAndINITVoteproof(ballot ACCEPTB
 	switch d := ballot.Height() - (lastBlock.Height() + 1); {
 	case d == 0:
 		if err := checkBlockWithINITVoteproof(lastBlock, vp); err != nil {
-			l.Error().Err(err).Send()
+			l.Error().Err(err).Msg("expected height, checked voteproof with block")
 
 			return err
 		}
@@ -367,7 +367,7 @@ func (cs *StateJoiningHandler) NewVoteproof(vp Voteproof) error {
 		return cs.handleINITVoteproof(vp)
 	default:
 		err := xerrors.Errorf("unknown stage Voteproof received")
-		l.Error().Err(err).Send()
+		l.Error().Err(err).Msg("invalid voteproof found")
 		return err
 	}
 }

@@ -73,7 +73,7 @@ func (sa *ContestAddress) UnpackJSON(b []byte, _ *encoder.JSONEncoder) error {
 		return xerrors.Errorf("not enough address")
 	}
 
-	*sa = ContestAddress(s.A[5:])
+	*sa = ContestAddress(s.A)
 
 	return nil
 }

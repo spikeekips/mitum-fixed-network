@@ -141,7 +141,7 @@ func (bs *BaseStateHandler) StoreNewBlockByVoteproof(acceptVoteproof Voteproof) 
 
 	if blockStorage.Block() == nil {
 		err := xerrors.Errorf("failed to process Proposal; empty Block returned")
-		l.Error().Err(err).Send()
+		l.Error().Err(err).Msg("failed to store new block")
 
 		return err
 	}
@@ -152,7 +152,7 @@ func (bs *BaseStateHandler) StoreNewBlockByVoteproof(acceptVoteproof Voteproof) 
 			fact.NewBlock(),
 			blockStorage.Block().Hash(),
 		)
-		l.Error().Err(err).Send()
+		l.Error().Err(err).Msg("failed to store new block")
 
 		return err
 	}

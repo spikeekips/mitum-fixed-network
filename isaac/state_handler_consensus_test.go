@@ -54,7 +54,7 @@ func (t *testStateConsensusHandler) TestNew() {
 	<-time.After(time.Millisecond * 100)
 }
 
-func (t *testStateConsensusHandler) TestWaitingProposalButTimeedOut() {
+func (t *testStateConsensusHandler) TestWaitingProposalButTimedOut() {
 	t.localstate.Policy().SetTimeoutWaitingProposal(time.Millisecond * 3)
 	t.localstate.Policy().SetIntervalBroadcastingINITBallot(time.Millisecond * 5)
 

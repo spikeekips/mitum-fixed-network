@@ -3,13 +3,13 @@
 package isaac
 
 import (
-	uuid "github.com/satori/go.uuid"
 	"github.com/stretchr/testify/suite"
 
 	"github.com/spikeekips/mitum/encoder"
 	"github.com/spikeekips/mitum/hint"
 	"github.com/spikeekips/mitum/key"
 	"github.com/spikeekips/mitum/localtime"
+	"github.com/spikeekips/mitum/util"
 	"github.com/spikeekips/mitum/valuehash"
 )
 
@@ -67,13 +67,13 @@ func (t *baseTestStateHandler) states() (*Localstate, *Localstate) {
 	t.NoError(err)
 
 	lst := NewMemStorage(t.encs, t.enc)
-	localNode := RandomLocalNode(uuid.Must(uuid.NewV4(), nil).String(), nil)
+	localNode := RandomLocalNode(util.UUID().String(), nil)
 	localstate, err := NewLocalstate(lst, localNode)
 	t.NoError(err)
 	_ = localstate.SetLastBlock(lastBlock)
 
 	rst := NewMemStorage(t.encs, t.enc)
-	remoteNode := RandomLocalNode(uuid.Must(uuid.NewV4(), nil).String(), nil)
+	remoteNode := RandomLocalNode(util.UUID().String(), nil)
 	remoteState, err := NewLocalstate(rst, remoteNode)
 	t.NoError(err)
 	_ = remoteState.SetLastBlock(lastBlock)

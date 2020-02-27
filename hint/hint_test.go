@@ -83,6 +83,23 @@ func (t *testHint) TestBytes() {
 	t.Equal(hint.Version(), nh.Version())
 }
 
+func (t *testHint) TestString() {
+	ty := Type{0xff, 0xf0}
+	_ = RegisterType(ty, "dummy")
+	v := Version("0.1")
+
+	hint, err := NewHint(ty, v)
+	t.NoError(err)
+
+	nh, err := NewHintFromString(hint.String())
+	t.NoError(err)
+
+	t.Equal(hint.Type(), nh.Type())
+	t.Equal(hint.Version(), nh.Version())
+
+	t.True(hint.Equal(nh))
+}
+
 func (t *testHint) TestCompatible() {
 	cases := []struct {
 		name string

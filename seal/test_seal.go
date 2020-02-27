@@ -3,8 +3,6 @@ package seal
 import (
 	"time"
 
-	uuid "github.com/satori/go.uuid"
-
 	"github.com/spikeekips/mitum/encoder"
 	"github.com/spikeekips/mitum/hint"
 	"github.com/spikeekips/mitum/key"
@@ -26,7 +24,7 @@ func NewDummySeal(pk key.BTCPrivatekey) DummySeal {
 		PK:        pk,
 		H:         valuehash.RandomSHA256().(valuehash.SHA256),
 		BH:        valuehash.RandomSHA256().(valuehash.SHA256),
-		S:         uuid.Must(uuid.NewV4(), nil).String(),
+		S:         util.UUID().String(),
 		CreatedAt: localtime.Now(),
 	}
 }
@@ -67,18 +65,37 @@ func (ds DummySeal) SignedAt() time.Time {
 	return ds.CreatedAt
 }
 
+type DummySealJSONPacker struct {
+	encoder.JSONPackHintedHead
+	PK        key.BTCPrivatekey
+	H         valuehash.SHA256
+	BH        valuehash.SHA256
+	S         string
+	CreatedAt localtime.JSONTime
+}
+
 func (ds DummySeal) MarshalJSON() ([]byte, error) {
-	return util.JSONMarshal(struct {
-		encoder.JSONPackHintedHead
-		PK        key.Privatekey
-		H         valuehash.Hash
-		BH        valuehash.Hash
-		CreatedAt time.Time
-	}{
+	return util.JSONMarshal(DummySealJSONPacker{
 		JSONPackHintedHead: encoder.NewJSONPackHintedHead(ds.Hint()),
 		PK:                 ds.PK,
 		H:                  ds.H,
 		BH:                 ds.BH,
-		CreatedAt:          ds.CreatedAt,
+		S:                  ds.S,
+		CreatedAt:          localtime.NewJSONTime(ds.CreatedAt),
 	})
+}
+
+func (ds *DummySeal) UnmarshalJSON(b []byte) error {
+	var uds DummySealJSONPacker
+	if err := util.JSONUnmarshal(b, &uds); err != nil {
+		return err
+	}
+
+	ds.PK = uds.PK
+	ds.H = uds.H
+	ds.BH = uds.BH
+	ds.S = uds.S
+	ds.CreatedAt = uds.CreatedAt.Time
+
+	return nil
 }

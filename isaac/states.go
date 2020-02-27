@@ -139,7 +139,7 @@ end:
 			break end
 		case ctx := <-css.stateChan:
 			l := loggerWithStateChangeContext(ctx, css.Log())
-			l.Debug().Msgf("chaning state requested: %s -> %s", ctx.From(), ctx.To())
+			l.Debug().Msgf("changing state requested: %s -> %s", ctx.From(), ctx.To())
 
 			if err := css.activateHandler(ctx); err != nil {
 				l.Error().Err(err).Msg("failed to activate handler")
@@ -214,26 +214,28 @@ func (css *ConsensusStates) broadcastSeal(sl seal.Seal, errChan chan<- error) {
 
 	go func() {
 		if err := css.NewSeal(sl); err != nil {
-			l.Error().Err(err).Send()
+			l.Error().Err(err).Msg("failed to send ballot to local")
 		}
 	}()
 
 	css.localstate.Nodes().Traverse(func(n Node) bool {
-		lt := l.With().
-			Str("target_node", n.Address().String()).
-			Logger()
+		go func(n Node) {
+			lt := l.With().
+				Str("target_node", n.Address().String()).
+				Logger()
 
-		if err := n.Channel().SendSeal(sl); err != nil {
-			lt.Error().Err(err).Msg("failed to broadcast")
+			if err := n.Channel().SendSeal(sl); err != nil {
+				lt.Error().Err(err).Msg("failed to broadcast")
 
-			if errChan != nil {
-				errChan <- err
+				if errChan != nil {
+					errChan <- err
+
+					return
+				}
 			}
 
-			return true
-		}
-
-		lt.Debug().Msgf("seal broadcasted: %T", sl)
+			lt.Debug().Msgf("seal broadcasted: %T", sl)
+		}(n)
 
 		return true
 	})
@@ -344,15 +346,25 @@ func (css *ConsensusStates) validateProposal(proposal Proposal) error {
 	l := loggerWithBallot(proposal, css.Log())
 
 	if !css.suffrage.IsProposer(proposal.Height(), proposal.Round(), proposal.Node()) {
-		err := xerrors.Errorf(
-			"wrong proposer; height=%d round=%d, but proposer=%v",
-			proposal.Height(),
-			proposal.Round(),
-			proposal.Node(),
-		)
+		err := xerrors.Errorf("proposal has wrong proposer")
+
+		if css.Log().GetLevel() == zerolog.DebugLevel {
+			l.Error().Err(err).
+				Dict("proposal", zerolog.Dict().
+					Int64("height", proposal.Height().Int64()).
+					Uint64("round", proposal.Round().Uint64()).
+					Str("node", proposal.Node().String()),
+				).
+				Str("expected", css.suffrage.Acting(proposal.Height(), proposal.Round()).Proposer().Address().String()).
+				Send()
+		}
 
 		l.Error().Err(err).Msg("wrong proposer found")
 
+		return err
+	}
+
+	if err := css.localstate.Storage().NewProposal(proposal); err != nil {
 		return err
 	}
 
@@ -361,7 +373,7 @@ func (css *ConsensusStates) validateProposal(proposal Proposal) error {
 	if proposal.Height() != ivp.Height() || proposal.Round() != ivp.Round() {
 		err := xerrors.Errorf("unexpected Proposal received")
 
-		l.Error().Err(err).Send()
+		l.Error().Err(err).Msg("invalid proposal found")
 
 		return err
 	}
@@ -382,6 +394,9 @@ func (css *ConsensusStates) vote(ballot Ballot) error {
 	if voteproof.IsClosed() {
 		return nil
 	}
+
+	l := loggerWithVoteproof(voteproof, css.Log())
+	l.Debug().Msgf("new voteproof: %d-%d-%s", voteproof.Height().Int64(), voteproof.Round().Uint64(), voteproof.Stage())
 
 	return css.newVoteproof(voteproof)
 }

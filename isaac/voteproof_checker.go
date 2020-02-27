@@ -82,7 +82,7 @@ func (vpc *VoteproofValidationChecker) CheckINITVoteproof() (bool, error) {
 	l := loggerWithVoteproof(vpc.voteproof, vpc.Log())
 
 	if err := checkBlockWithINITVoteproof(vpc.lastBlock, vpc.voteproof); err != nil {
-		l.Error().Err(err).Send()
+		l.Error().Err(err).Msg("invalid init voteproof")
 
 		var fromState State
 		if vpc.css.ActiveHandler() != nil {

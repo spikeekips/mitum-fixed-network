@@ -6,10 +6,10 @@ import (
 	"testing"
 
 	"github.com/ethereum/go-ethereum/rlp"
-	uuid "github.com/satori/go.uuid"
 	"github.com/stretchr/testify/suite"
 
 	"github.com/spikeekips/mitum/hint"
+	"github.com/spikeekips/mitum/util"
 )
 
 // s0 is simple struct
@@ -112,7 +112,7 @@ func (t *testRLP) TestEncodeNatives() {
 		v    interface{}
 	}{
 		//{name: "nil", v: nil},
-		{name: "string", v: uuid.Must(uuid.NewV4(), nil).String()},
+		{name: "string", v: util.UUID().String()},
 		{name: "int", v: rand.Int()},
 		{name: "int8", v: int8(33)},
 		{name: "int16", v: int16(33)},
@@ -132,9 +132,9 @@ func (t *testRLP) TestEncodeNatives() {
 		{name: "empty slice", v: []int{}},
 		{name: "slice ptr", v: &([]int{3, 33, 333, 3333})},
 		{name: "map",
-			v: map[string]int{uuid.Must(uuid.NewV4(), nil).String(): 1, uuid.Must(uuid.NewV4(), nil).String(): 2}},
+			v: map[string]int{util.UUID().String(): 1, util.UUID().String(): 2}},
 		{name: "map ptr",
-			v: &map[string]int{uuid.Must(uuid.NewV4(), nil).String(): 1, uuid.Must(uuid.NewV4(), nil).String(): 2}},
+			v: &map[string]int{util.UUID().String(): 1, util.UUID().String(): 2}},
 		{name: "empty map", v: map[string]int{}},
 		{name: "empty map ptr", v: &map[string]int{}},
 	}
@@ -176,7 +176,7 @@ func (t *testRLP) TestEncodeNatives() {
 }
 
 func (t *testRLP) TestEncodeSimpleStruct() {
-	s := s0{A: uuid.Must(uuid.NewV4(), nil).String()}
+	s := s0{A: util.UUID().String()}
 
 	re := NewRLPEncoder()
 	b, err := re.Encode(s)
@@ -189,7 +189,7 @@ func (t *testRLP) TestEncodeSimpleStruct() {
 }
 
 func (t *testRLP) TestEncodeRLPPackable() {
-	s := sp0{A: uuid.Must(uuid.NewV4(), nil).String()}
+	s := sp0{A: util.UUID().String()}
 
 	re := NewRLPEncoder()
 	b, err := re.Encode(s)
@@ -203,7 +203,7 @@ func (t *testRLP) TestEncodeRLPPackable() {
 }
 
 func (t *testRLP) TestEncodeRLPUnpackable() {
-	s := sup0{A: uuid.Must(uuid.NewV4(), nil).String()}
+	s := sup0{A: util.UUID().String()}
 
 	re := NewRLPEncoder()
 	b, err := re.Encode(s)
@@ -217,8 +217,8 @@ func (t *testRLP) TestEncodeRLPUnpackable() {
 
 func (t *testRLP) TestEncodeEmbed() {
 	s := se0{
-		A: uuid.Must(uuid.NewV4(), nil).String(),
-		S: sup0{A: uuid.Must(uuid.NewV4(), nil).String()},
+		A: util.UUID().String(),
+		S: sup0{A: util.UUID().String()},
 	}
 
 	re := NewRLPEncoder()
@@ -238,8 +238,8 @@ func (t *testRLP) TestAnalyzePack() {
 
 	{ // has PackRLP
 		s := se0{
-			A: uuid.Must(uuid.NewV4(), nil).String(),
-			S: sup0{A: uuid.Must(uuid.NewV4(), nil).String()},
+			A: util.UUID().String(),
+			S: sup0{A: util.UUID().String()},
 		}
 
 		name, cp, err := re.analyze(s)
@@ -250,7 +250,7 @@ func (t *testRLP) TestAnalyzePack() {
 	}
 
 	{ // don't have PackRLP
-		s := s0{A: uuid.Must(uuid.NewV4(), nil).String()}
+		s := s0{A: util.UUID().String()}
 
 		name, cp, err := re.analyze(s)
 		t.NoError(err)
@@ -285,7 +285,7 @@ func (t *testRLP) TestAnalyzePack() {
 }
 
 func (t *testRLP) TestEncodeHinter() {
-	s := sh0{B: uuid.Must(uuid.NewV4(), nil).String()}
+	s := sh0{B: util.UUID().String()}
 
 	re := NewRLPEncoder()
 	b, err := re.Encode(s)

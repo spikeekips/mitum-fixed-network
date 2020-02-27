@@ -161,7 +161,7 @@ func main() {
 	}
 
 	if err != nil {
-		log.Error().Err(err).Send()
+		log.Error().Err(err).Msg("something wrong")
 	}
 	ctx.FatalIfErrorf(err)
 }

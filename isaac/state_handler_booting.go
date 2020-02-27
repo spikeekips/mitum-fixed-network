@@ -89,7 +89,7 @@ func (cs *StateBootingHandler) check() error {
 	defer cs.Log().Debug().Msg("complete to check")
 
 	if err := cs.checkBlock(); err != nil {
-		cs.Log().Error().Err(err).Send()
+		cs.Log().Error().Err(err).Msg("checked block")
 
 		if err0 := cs.ChangeState(StateSyncing, nil); err0 != nil {
 			// TODO wrap err
@@ -100,7 +100,7 @@ func (cs *StateBootingHandler) check() error {
 	}
 
 	if err := cs.checkVoteproof(); err != nil {
-		cs.Log().Error().Err(err).Send()
+		cs.Log().Error().Err(err).Msg("checked voteproof")
 
 		var ctx StateToBeChangeError
 		if xerrors.As(err, &ctx) {

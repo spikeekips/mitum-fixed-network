@@ -1,10 +1,11 @@
 package network
 
-import "github.com/spikeekips/mitum/seal"
+import (
+	"github.com/spikeekips/mitum/seal"
+	"github.com/spikeekips/mitum/valuehash"
+)
 
 type Channel interface {
-	SendSeal(seal.Seal) error // NOTE should not block
-	ReceiveSeal() <-chan seal.Seal
+	Seals([]valuehash.Hash) ([]seal.Seal, error)
+	SendSeal(seal.Seal) error
 }
-
-type SealHandler func(seal.Seal) (seal.Seal, error)

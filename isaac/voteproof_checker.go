@@ -7,9 +7,7 @@ import (
 	"github.com/spikeekips/mitum/logging"
 )
 
-var (
-	IgnoreVoteproofError = errors.NewError("Voteproof should be ignored")
-)
+var IgnoreVoteproofError = errors.NewError("Voteproof should be ignored")
 
 type StateToBeChangeError struct {
 	errors.CError

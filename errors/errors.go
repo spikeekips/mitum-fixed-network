@@ -1,5 +1,3 @@
 package errors
 
-var (
-	InvalidTypeError = NewError("invalid type")
-)
+var InvalidTypeError = NewError("invalid type")

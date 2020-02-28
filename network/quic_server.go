@@ -54,7 +54,7 @@ func NewQuicServer(
 		enc:  enc,
 		tlsConfig: &tls.Config{
 			Certificates: certs,
-			//NextProtos:   []string{""}, // TODO set NetworkID
+			// NextProtos:   []string{""}, // TODO set NetworkID
 		},
 		stoppedChan: make(chan struct{}, 10),
 		router:      mux.NewRouter(),

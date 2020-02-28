@@ -4,9 +4,7 @@ import (
 	"github.com/spikeekips/mitum/errors"
 )
 
-var (
-	InvalidStateError = errors.NewError("invalid State")
-)
+var InvalidStateError = errors.NewError("invalid State")
 
 type State uint8
 

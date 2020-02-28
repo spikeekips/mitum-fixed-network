@@ -18,8 +18,10 @@ var (
 var NullType = Type{}
 
 // NOTE typeNames and nameTypes maintain all the registered Type and it's name.
-var typeNames map[Type]string
-var nameTypes map[string]Type
+var (
+	typeNames map[Type]string
+	nameTypes map[string]Type
+)
 
 func init() {
 	typeNames = map[Type]string{}

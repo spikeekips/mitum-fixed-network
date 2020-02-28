@@ -7,9 +7,7 @@ import (
 	"github.com/spikeekips/mitum/valuehash"
 )
 
-var (
-	OperationType hint.Type = hint.Type{0x06, 0x00}
-)
+var OperationType hint.Type = hint.Type{0x06, 0x00}
 
 type Operation interface {
 	isvalid.IsValider

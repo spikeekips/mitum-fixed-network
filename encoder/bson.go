@@ -285,8 +285,10 @@ func (be BSONEncoder) loadHint(b []byte) (hint.Hint, error) {
 	return o.H, nil
 }
 
-type bsonPackFunc func(interface{}) (interface{}, error)
-type bsonUnpackFunc func([]byte, interface{}) (interface{}, error)
+type (
+	bsonPackFunc   func(interface{}) (interface{}, error)
+	bsonUnpackFunc func([]byte, interface{}) (interface{}, error)
+)
 
 type BSONPackable interface {
 	PackBSON(*BSONEncoder) (interface{}, error)

@@ -6,8 +6,10 @@ import (
 	"github.com/spikeekips/mitum/valuehash"
 )
 
-type GetSealsHandler func([]valuehash.Hash) ([]seal.Seal, error)
-type NewSealHandler func(seal.Seal) error
+type (
+	GetSealsHandler func([]valuehash.Hash) ([]seal.Seal, error)
+	NewSealHandler  func(seal.Seal) error
+)
 
 type Server interface {
 	util.Daemon

@@ -11,8 +11,10 @@ import (
 	"github.com/spikeekips/mitum/hint"
 )
 
-var btcPrivatekeyHint hint.Hint = hint.MustHint(hint.Type{0x02, 0x02}, "0.1")
-var btcPublickeyHint hint.Hint = hint.MustHint(hint.Type{0x02, 0x03}, "0.1")
+var (
+	btcPrivatekeyHint hint.Hint = hint.MustHint(hint.Type{0x02, 0x02}, "0.1")
+	btcPublickeyHint  hint.Hint = hint.MustHint(hint.Type{0x02, 0x03}, "0.1")
+)
 
 type BTCPrivatekey struct {
 	wif *btcutil.WIF

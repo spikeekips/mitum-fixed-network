@@ -179,7 +179,7 @@ func (t *testVoteproof) TestWrongVotesCount() {
 			n1.Address(): valuehash.RandomSHA256(),
 		},
 		votes: map[Address]VoteproofNodeFact{
-			n0.Address(): VoteproofNodeFact{
+			n0.Address(): {
 				fact: factHash,
 			},
 		},
@@ -208,7 +208,7 @@ func (t *testVoteproof) TestInvalidFactHash() {
 			n0.Address(): valuehash.RandomSHA256(),
 		},
 		votes: map[Address]VoteproofNodeFact{
-			n0.Address(): VoteproofNodeFact{
+			n0.Address(): {
 				fact:          invalidFactHash,
 				factSignature: factSignature,
 				signer:        n0.Publickey(),
@@ -241,7 +241,7 @@ func (t *testVoteproof) TestUnknownFactHash() {
 			n0.Address(): valuehash.RandomSHA256(),
 		},
 		votes: map[Address]VoteproofNodeFact{
-			n0.Address(): VoteproofNodeFact{
+			n0.Address(): {
 				fact:          unknownFactHash,
 				factSignature: factSignature,
 				signer:        n0.Publickey(),
@@ -272,7 +272,7 @@ func (t *testVoteproof) TestFactNotFound() {
 			n0: valuehash.RandomSHA256(),
 		},
 		votes: map[Address]VoteproofNodeFact{
-			n0: VoteproofNodeFact{
+			n0: {
 				fact: valuehash.RandomSHA256(),
 			},
 		},
@@ -303,10 +303,10 @@ func (t *testVoteproof) TestUnknownNodeFound() {
 			NewShortAddress("n2"): valuehash.RandomSHA256(),
 		},
 		votes: map[Address]VoteproofNodeFact{
-			n0: VoteproofNodeFact{
+			n0: {
 				fact: factHash,
 			},
-			NewShortAddress("n1"): VoteproofNodeFact{
+			NewShortAddress("n1"): {
 				fact: factHash,
 			},
 		},
@@ -336,7 +336,7 @@ func (t *testVoteproof) TestSuplusFacts() {
 			n0: valuehash.RandomSHA256(),
 		},
 		votes: map[Address]VoteproofNodeFact{
-			n0: VoteproofNodeFact{
+			n0: {
 				fact: factHash,
 			},
 		},
@@ -368,7 +368,7 @@ func (t *testVoteproof) TestNotYetButNot() {
 			n0.Address(): valuehash.RandomSHA256(),
 		},
 		votes: map[Address]VoteproofNodeFact{
-			n0.Address(): VoteproofNodeFact{
+			n0.Address(): {
 				fact:          factHash,
 				factSignature: factSignature,
 				signer:        n0.Publickey(),
@@ -408,12 +408,12 @@ func (t *testVoteproof) TestDrawButNot() {
 			n1.Address(): valuehash.RandomSHA256(),
 		},
 		votes: map[Address]VoteproofNodeFact{
-			n0.Address(): VoteproofNodeFact{
+			n0.Address(): {
 				fact:          factHash0,
 				factSignature: factSignature0,
 				signer:        n0.Publickey(),
 			},
-			n1.Address(): VoteproofNodeFact{
+			n1.Address(): {
 				fact:          factHash1,
 				factSignature: factSignature1,
 				signer:        n1.Publickey(),
@@ -449,12 +449,12 @@ func (t *testVoteproof) TestMajorityButNot() {
 			n1.Address(): valuehash.RandomSHA256(),
 		},
 		votes: map[Address]VoteproofNodeFact{
-			n0.Address(): VoteproofNodeFact{
+			n0.Address(): {
 				fact:          factHash0,
 				factSignature: factSignature0,
 				signer:        n0.Publickey(),
 			},
-			n1.Address(): VoteproofNodeFact{
+			n1.Address(): {
 				fact:          factHash0,
 				factSignature: factSignature1,
 				signer:        n1.Publickey(),

@@ -53,9 +53,9 @@ func (qc *QuicClient) newClient() (*http.Client, func() error /* close func */) 
 	roundTripper := &http3.RoundTripper{
 		TLSClientConfig: &tls.Config{
 			InsecureSkipVerify: qc.insecure, // nolint
-			//KeyLogWriter:       nil, // TODO set cert key writer
+			// KeyLogWriter:       nil, // TODO set cert key writer
 		},
-		//QuicConfig: qc.quicConfig,
+		// QuicConfig: qc.quicConfig,
 	}
 
 	return &http.Client{

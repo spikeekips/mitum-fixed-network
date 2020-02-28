@@ -108,10 +108,14 @@ func (t *testBSON) TestEncodeNatives() {
 			{name: "empty slice", v: []int{}},
 			{name: "slice ptr", v: &([]int{3, 33, 333, 3333})},
 		*/
-		{name: "map",
-			v: map[string]int{util.UUID().String(): 1, util.UUID().String(): 2}},
-		{name: "map ptr",
-			v: &map[string]int{util.UUID().String(): 1, util.UUID().String(): 2}},
+		{
+			name: "map",
+			v:    map[string]int{util.UUID().String(): 1, util.UUID().String(): 2},
+		},
+		{
+			name: "map ptr",
+			v:    &map[string]int{util.UUID().String(): 1, util.UUID().String(): 2},
+		},
 		{name: "empty map", v: map[string]int{}},
 		{name: "empty map ptr", v: &map[string]int{}},
 	}
@@ -126,7 +130,6 @@ func (t *testBSON) TestEncodeNatives() {
 			func() {
 				b, err := je.Encode(c.v)
 				t.NoError(err, "encode: %d: %v; error=%v", i, c.name, err)
-				return
 
 				if c.v == nil {
 					t.Nil(b, "%d: %v", i, c.name)

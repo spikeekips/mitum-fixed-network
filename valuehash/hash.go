@@ -8,9 +8,7 @@ import (
 	"github.com/spikeekips/mitum/isvalid"
 )
 
-var (
-	EmptyHashError = errors.NewError("empty hash")
-)
+var EmptyHashError = errors.NewError("empty hash")
 
 type Hash interface {
 	fmt.Stringer

@@ -6,13 +6,9 @@ import (
 	"github.com/spikeekips/mitum/errors"
 )
 
-var (
-	InvalidUnsignedIntError = errors.NewError("invalid UnsignedInt")
-)
+var InvalidUnsignedIntError = errors.NewError("invalid UnsignedInt")
 
-var (
-	ZeroInt *big.Int = big.NewInt(0)
-)
+var ZeroInt *big.Int = big.NewInt(0)
 
 type UnsignedBigInt struct {
 	*big.Int

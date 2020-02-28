@@ -4,7 +4,7 @@ Ready to go to next winter.
 
 [![CircleCI](https://img.shields.io/circleci/project/github/spikeekips/mitum/proto3.svg?style=flat-square&logo=circleci&label=circleci&cacheSeconds=60)](https://circleci.com/gh/spikeekips/mitum/tree/proto3)
 [![Documentation](https://readthedocs.org/projects/mitum-doc/badge/?version=proto3)](https://mitum-doc.readthedocs.io/en/latest/?badge=proto3)
-[![GoDoc](https://godoc.org/github.com/golang/gddo?status.svg)](https://godoc.org/github.com/spikeekips/mitum) 
+[![GoDoc](https://godoc.org/github.com/golang/gddo?status.svg)](https://godoc.org/github.com/spikeekips/mitum)
 [![Go Report Card](https://goreportcard.com/badge/github.com/spikeekips/mitum)](https://goreportcard.com/report/github.com/spikeekips/mitum)
 [![](https://tokei.rs/b1/github/spikeekips/mitum?category=lines)](https://github.com/spikeekips/mitum)
 

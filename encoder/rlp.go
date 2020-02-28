@@ -456,7 +456,7 @@ func (re *RLPEncoder) unpackValueArray(reader interface{}, i interface{}) (inter
 	elem := reflect.ValueOf(i).Elem()
 	kind := elem.Type().Kind()
 
-	//var rv, elem reflect.Value
+	// var rv, elem reflect.Value
 	if kind != reflect.Array && kind != reflect.Slice {
 		return nil, xerrors.Errorf("not array target: %T", i)
 	} else if kind == reflect.Array && elem.Len() < 1 {
@@ -645,8 +645,10 @@ func (re RLPEncoder) loadHint(reader interface{}) (hint.Hint, error) {
 	return rh.H, nil
 }
 
-type rlpPackFunc func(interface{}) (interface{}, error)
-type rlpUnpackFunc func(interface{}, interface{}) (interface{}, error)
+type (
+	rlpPackFunc   func(interface{}) (interface{}, error)
+	rlpUnpackFunc func(interface{}, interface{}) (interface{}, error)
+)
 
 type RLPPackable interface {
 	PackRLP(*RLPEncoder) (interface{}, error)

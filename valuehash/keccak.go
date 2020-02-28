@@ -8,16 +8,22 @@ import (
 	"github.com/spikeekips/mitum/hint"
 )
 
-const sha256Size int = 32
-const sha512Size int = 64
+const (
+	sha256Size int = 32
+	sha512Size int = 64
+)
 
-var emptySHA256 [sha256Size]byte
-var emptySHA512 [sha512Size]byte
-var nilSHA256 [sha256Size]byte
-var nilSHA512 [sha512Size]byte
+var (
+	emptySHA256 [sha256Size]byte
+	emptySHA512 [sha512Size]byte
+	nilSHA256   [sha256Size]byte
+	nilSHA512   [sha512Size]byte
+)
 
-var sha256Hint = hint.MustHint(hint.Type{0x07, 0x00}, "0.1")
-var sha512Hint = hint.MustHint(hint.Type{0x07, 0x01}, "0.1")
+var (
+	sha256Hint = hint.MustHint(hint.Type{0x07, 0x00}, "0.1")
+	sha512Hint = hint.MustHint(hint.Type{0x07, 0x01}, "0.1")
+)
 
 func init() {
 	nilSHA256 = sha3.Sum256(nil)

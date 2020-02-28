@@ -122,10 +122,14 @@ func (t *testJSON) TestEncodeNatives() {
 		{name: "slice", v: []int{3, 33, 333, 3333}},
 		{name: "empty slice", v: []int{}},
 		{name: "slice ptr", v: &([]int{3, 33, 333, 3333})},
-		{name: "map",
-			v: map[string]int{util.UUID().String(): 1, util.UUID().String(): 2}},
-		{name: "map ptr",
-			v: &map[string]int{util.UUID().String(): 1, util.UUID().String(): 2}},
+		{
+			name: "map",
+			v:    map[string]int{util.UUID().String(): 1, util.UUID().String(): 2},
+		},
+		{
+			name: "map ptr",
+			v:    &map[string]int{util.UUID().String(): 1, util.UUID().String(): 2},
+		},
 		{name: "empty map", v: map[string]int{}},
 		{name: "empty map ptr", v: &map[string]int{}},
 	}

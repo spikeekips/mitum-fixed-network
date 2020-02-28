@@ -8,9 +8,7 @@ import (
 	"github.com/spikeekips/mitum/isvalid"
 )
 
-var (
-	EmptyAddressError = errors.NewError("empty address")
-)
+var EmptyAddressError = errors.NewError("empty address")
 
 // Address represents the address of account.
 type Address interface {

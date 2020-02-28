@@ -59,12 +59,12 @@ func (t *testVoteproofJSON) TestMajorityButNot() {
 			n1.Address(): valuehash.RandomSHA256(),
 		},
 		votes: map[Address]VoteproofNodeFact{
-			n0.Address(): VoteproofNodeFact{
+			n0.Address(): {
 				fact:          factHash0,
 				factSignature: factSignature0,
 				signer:        n0.Publickey(),
 			},
-			n1.Address(): VoteproofNodeFact{
+			n1.Address(): {
 				fact:          factHash0,
 				factSignature: factSignature1,
 				signer:        n1.Publickey(),

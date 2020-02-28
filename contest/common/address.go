@@ -12,9 +12,7 @@ import (
 	"github.com/spikeekips/mitum/util"
 )
 
-var (
-	ContestAddressHint hint.Hint = hint.MustHint(hint.Type{0xd0, 0x00}, "0.1")
-)
+var ContestAddressHint hint.Hint = hint.MustHint(hint.Type{0xd0, 0x00}, "0.1")
 
 type ContestAddress string
 

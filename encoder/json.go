@@ -11,9 +11,11 @@ import (
 	"github.com/spikeekips/mitum/util"
 )
 
-var jsonNULL []byte = []byte("null")
-var jsonNULLLength int = len(jsonNULL)
-var jsonHint hint.Hint = hint.MustHint(hint.Type{0x01, 0x01}, "0.1")
+var (
+	jsonNULL       []byte    = []byte("null")
+	jsonNULLLength int       = len(jsonNULL)
+	jsonHint       hint.Hint = hint.MustHint(hint.Type{0x01, 0x01}, "0.1")
+)
 
 type JSONEncoder struct {
 	cache   *cache
@@ -313,8 +315,10 @@ func (je JSONEncoder) loadHint(b []byte) (hint.Hint, error) {
 	return m.H, nil
 }
 
-type jsonPackFunc func(interface{}) (interface{}, error)
-type jsonUnpackFunc func([]byte, interface{}) (interface{}, error)
+type (
+	jsonPackFunc   func(interface{}) (interface{}, error)
+	jsonUnpackFunc func([]byte, interface{}) (interface{}, error)
+)
 
 type JSONPackable interface {
 	PackJSON(*JSONEncoder) (interface{}, error)

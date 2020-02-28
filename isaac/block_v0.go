@@ -182,6 +182,7 @@ func (bm BlockV0) SetINITVoteproof(voteproof Voteproof) Block {
 
 	return bm
 }
+
 func (bm BlockV0) SetACCEPTVoteproof(voteproof Voteproof) Block {
 	bm.acceptVoteproof = voteproof
 

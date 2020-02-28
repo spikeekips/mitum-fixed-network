@@ -4,9 +4,7 @@ import (
 	"github.com/spikeekips/mitum/errors"
 )
 
-var (
-	InvalidProcessStateError = errors.NewError("invalid ProcessState")
-)
+var InvalidProcessStateError = errors.NewError("invalid ProcessState")
 
 type ProcessState uint8
 

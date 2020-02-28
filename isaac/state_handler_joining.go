@@ -75,7 +75,7 @@ func NewStateJoiningHandler(
 
 	if timer, err := cs.TimerBroadcastingINITBallot(
 		func() time.Duration { return localstate.Policy().IntervalBroadcastingINITBallot() },
-		func() Round { return cs.currentRound() },
+		cs.currentRound,
 		nil,
 	); err != nil {
 		return nil, err

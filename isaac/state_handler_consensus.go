@@ -222,7 +222,7 @@ func (cs *StateConsensusHandler) handleProposal(proposal Proposal) error {
 		}
 	}
 
-	return cs.readyToACCEPTBallot(proposal, block)
+	return cs.readyToACCEPTBallot(block)
 }
 
 func (cs *StateConsensusHandler) readyToSIGNBallot(proposal Proposal, newBlock Block) error {
@@ -242,7 +242,7 @@ func (cs *StateConsensusHandler) readyToSIGNBallot(proposal Proposal, newBlock B
 	return nil
 }
 
-func (cs *StateConsensusHandler) readyToACCEPTBallot(proposal Proposal, newBlock Block) error {
+func (cs *StateConsensusHandler) readyToACCEPTBallot(newBlock Block) error {
 	// NOTE if not in acting suffrage, broadcast ACCEPT Ballot after interval.
 	if timer, err := cs.TimerBroadcastingACCEPTBallot(newBlock, nil); err != nil {
 		return err
@@ -311,7 +311,6 @@ func (cs *StateConsensusHandler) startNextRound(vp Voteproof) error {
 	}
 
 	return cs.timers.StartTimers([]string{TimerIDBroadcastingINITBallot}, true)
-
 }
 
 func (cs *StateConsensusHandler) checkReceivedProposal(height Height, round Round) error {

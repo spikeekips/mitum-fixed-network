@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/suite"
+	"golang.org/x/xerrors"
 
 	"github.com/spikeekips/mitum/seal"
 	"github.com/spikeekips/mitum/valuehash"
@@ -85,16 +86,18 @@ func (t *testStateConsensusHandler) TestWaitingProposalButTimedOut() {
 		_ = cs.Deactivate(StateChangeContext{})
 	}()
 
-	<-time.After(time.Millisecond * 10)
+	select {
+	case <-time.After(time.Millisecond * 10):
+		t.NoError(xerrors.Errorf("failed to get INITBallot for next round"))
+	case r := <-sealChan:
+		t.NotNil(r)
 
-	r := <-sealChan
-	t.NotNil(r)
+		rb := r.(INITBallotV0)
 
-	rb := r.(INITBallotV0)
-
-	t.Equal(StageINIT, rb.Stage())
-	t.Equal(vp.Height(), rb.Height())
-	t.Equal(vp.Round()+1, rb.Round()) // means that handler moves to next round
+		t.Equal(StageINIT, rb.Stage())
+		t.Equal(vp.Height(), rb.Height())
+		t.Equal(vp.Round()+1, rb.Round()) // means that handler moves to next round
+	}
 }
 
 // with Proposal, ACCEPTBallot will be broadcasted with newly processed

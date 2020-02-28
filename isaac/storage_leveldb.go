@@ -6,6 +6,7 @@ import (
 	"github.com/rs/zerolog"
 	"github.com/spikeekips/avl"
 	"github.com/syndtr/goleveldb/leveldb"
+	leveldbErrors "github.com/syndtr/goleveldb/leveldb/errors"
 	leveldbStorage "github.com/syndtr/goleveldb/leveldb/storage"
 	leveldbutil "github.com/syndtr/goleveldb/leveldb/util"
 	"golang.org/x/xerrors"
@@ -78,7 +79,7 @@ func (st *LeveldbStorage) LastBlock() (Block, error) {
 		return nil, nil
 	}
 
-	raw, err := st.db.Get(key, nil)
+	raw, err := st.get(key)
 	if err != nil {
 		return nil, err
 	}
@@ -86,8 +87,14 @@ func (st *LeveldbStorage) LastBlock() (Block, error) {
 	return st.loadBlock(raw)
 }
 
+func (st *LeveldbStorage) get(key []byte) ([]byte, error) {
+	b, err := st.db.Get(key, nil)
+
+	return b, WrapLeveldbErorr(err)
+}
+
 func (st *LeveldbStorage) Block(h valuehash.Hash) (Block, error) {
-	raw, err := st.db.Get(leveldbBlockHashKey(h), nil)
+	raw, err := st.get(leveldbBlockHashKey(h))
 	if err != nil {
 		return nil, err
 	}
@@ -96,12 +103,12 @@ func (st *LeveldbStorage) Block(h valuehash.Hash) (Block, error) {
 }
 
 func (st *LeveldbStorage) BlockByHeight(height Height) (Block, error) {
-	key, err := st.db.Get(leveldbBlockHeightKey(height), nil)
+	key, err := st.get(leveldbBlockHeightKey(height))
 	if err != nil {
 		return nil, err
 	}
 
-	raw, err := st.db.Get(key, nil)
+	raw, err := st.get(key)
 	if err != nil {
 		return nil, err
 	}
@@ -212,7 +219,7 @@ func (st *LeveldbStorage) Seal(h valuehash.Hash) (seal.Seal, error) {
 }
 
 func (st *LeveldbStorage) sealByKey(key []byte) (seal.Seal, error) {
-	raw, err := st.db.Get(key, nil)
+	raw, err := st.get(key)
 	if err != nil {
 		return nil, err
 	}
@@ -421,7 +428,7 @@ func (st *LeveldbStorage) NewProposal(proposal Proposal) error {
 }
 
 func (st *LeveldbStorage) Proposal(height Height, round Round) (Proposal, error) {
-	sealKey, err := st.db.Get(st.proposalKey(height, round), nil)
+	sealKey, err := st.get(st.proposalKey(height, round))
 	if err != nil {
 		return nil, err
 	}
@@ -550,4 +557,16 @@ func leveldbBlockStatesKey(block Block) []byte {
 		leveldbBlockStatesPrefix,
 		[]byte(fmt.Sprintf("%020d", block.Height().Int64())),
 	})
+}
+
+func WrapLeveldbErorr(err error) error {
+	if err == nil {
+		return nil
+	}
+
+	if err == leveldbErrors.ErrNotFound {
+		return storage.NotFoundError.Wrap(err)
+	}
+
+	return err
 }

@@ -2,12 +2,21 @@ package isaac
 
 import (
 	"sync"
+	"sync/atomic"
+	"time"
 
 	"github.com/rs/zerolog"
 	"golang.org/x/xerrors"
 
+	"github.com/spikeekips/mitum/localtime"
 	"github.com/spikeekips/mitum/logging"
 	"github.com/spikeekips/mitum/seal"
+)
+
+const (
+	TimerIDBroadcastingINITBallot   = "broadcasting-init-ballot"
+	TimerIDBroadcastingACCEPTBallot = "broadcasting-accept-ballot"
+	TimerIDTimedoutMoveNextRound    = "timedout-move-to-next-round"
 )
 
 type StateHandler interface {
@@ -56,6 +65,7 @@ type BaseStateHandler struct {
 	state             State
 	stateChan         chan<- StateChangeContext
 	sealChan          chan<- seal.Seal
+	timers            *localtime.Timers
 }
 
 func NewBaseStateHandler(
@@ -171,4 +181,100 @@ func (bs *BaseStateHandler) StoreNewBlockByVoteproof(acceptVoteproof Voteproof) 
 		Msg("new block stored")
 
 	return nil
+}
+
+func (bs *BaseStateHandler) TimerBroadcastingINITBallot(
+	intervalFunc func() time.Duration,
+	roundFunc func() Round,
+	b []byte,
+) (*localtime.CallbackTimer, error) {
+	return localtime.NewCallbackTimer(
+		TimerIDBroadcastingINITBallot,
+		func() (bool, error) {
+			ib, err := NewINITBallotV0FromLocalstate(bs.localstate, roundFunc(), b)
+			if err != nil {
+				bs.Log().Error().Err(err).Msg("failed to broadcast INIT ballot; will keep trying")
+				return true, nil
+			}
+
+			bs.BroadcastSeal(ib)
+
+			return true, nil
+		},
+		0,
+		intervalFunc,
+	)
+}
+
+func (bs *BaseStateHandler) TimerBroadcastingACCEPTBallot(
+	newBlock Block,
+	b []byte,
+) (*localtime.CallbackTimer, error) {
+	var called int64
+
+	return localtime.NewCallbackTimer(
+		TimerIDBroadcastingACCEPTBallot,
+		func() (bool, error) {
+			// TODO ACCEPTBallot should include the received SIGN Ballots.
+
+			ab, err := NewACCEPTBallotV0FromLocalstate(bs.localstate, newBlock.Round(), newBlock, b)
+			if err != nil {
+				bs.Log().Error().Err(err).Msg("failed to create ACCEPTBallot, but will keep trying")
+				return true, nil
+			}
+
+			bs.BroadcastSeal(ab)
+
+			return true, nil
+		},
+		0,
+		func() time.Duration {
+			// NOTE at 1st time, wait timeout duration, after then, periodically
+			// broadcast ACCEPT Ballot.
+			if atomic.LoadInt64(&called) < 1 {
+				atomic.AddInt64(&called, 1)
+				return bs.localstate.Policy().WaitBroadcastingACCEPTBallot()
+			}
+
+			return bs.localstate.Policy().IntervalBroadcastingACCEPTBallot()
+		},
+	)
+}
+
+func (bs *BaseStateHandler) TimerTimedoutMoveNextRound(
+	round Round,
+) (*localtime.CallbackTimer, error) {
+	var called int64
+
+	return localtime.NewCallbackTimer(
+		TimerIDTimedoutMoveNextRound,
+		func() (bool, error) {
+			bs.Log().Debug().
+				Dur("timeout", bs.localstate.Policy().TimeoutWaitingProposal()).
+				Uint64("next_round", round.Uint64()).
+				Msg("timeout; waiting Proposal; trying to move next round")
+
+			ib, err := NewINITBallotV0FromLocalstate(bs.localstate, round, nil)
+			if err != nil {
+				bs.Log().Error().Err(err).Msg("failed to move next round; will keep trying")
+
+				return true, nil
+			}
+
+			bs.BroadcastSeal(ib)
+
+			return true, nil
+		},
+		0,
+		func() time.Duration {
+			// NOTE at 1st time, wait timeout duration, after then, periodically
+			// broadcast INIT Ballot.
+			if atomic.LoadInt64(&called) < 1 {
+				atomic.AddInt64(&called, 1)
+				return bs.localstate.Policy().TimeoutWaitingProposal()
+			}
+
+			return bs.localstate.Policy().IntervalBroadcastingINITBallot()
+		},
+	)
 }

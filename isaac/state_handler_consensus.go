@@ -10,7 +10,7 @@ import (
 	"github.com/spikeekips/mitum/localtime"
 	"github.com/spikeekips/mitum/logging"
 	"github.com/spikeekips/mitum/seal"
-	"github.com/spikeekips/mitum/util"
+	"github.com/spikeekips/mitum/storage"
 )
 
 /*
@@ -27,7 +27,6 @@ type StateConsensusHandler struct {
 	*BaseStateHandler
 	suffrage      Suffrage
 	proposalMaker *ProposalMaker
-	ballotTimer   util.Daemon
 }
 
 func NewStateConsensusHandler(
@@ -48,18 +47,21 @@ func NewStateConsensusHandler(
 	cs.BaseStateHandler.Logger = logging.NewLogger(func(c zerolog.Context) zerolog.Context {
 		return c.Str("module", "consensus-state-consensus-handler")
 	})
+	cs.timers = localtime.NewTimers(
+		[]string{
+			TimerIDBroadcastingINITBallot,
+			TimerIDBroadcastingACCEPTBallot,
+			TimerIDTimedoutMoveNextRound,
+		},
+		false,
+	)
 
 	return cs, nil
 }
 
 func (cs *StateConsensusHandler) SetLogger(l zerolog.Logger) *logging.Logger {
 	_ = cs.Logger.SetLogger(l)
-
-	if cs.ballotTimer != nil {
-		if logger, ok := cs.ballotTimer.(logging.SetLogger); ok {
-			logger.SetLogger(l)
-		}
-	}
+	_ = cs.timers.SetLogger(l)
 
 	return cs.Logger
 }
@@ -91,46 +93,11 @@ func (cs *StateConsensusHandler) Activate(ctx StateChangeContext) error {
 func (cs *StateConsensusHandler) Deactivate(ctx StateChangeContext) error {
 	l := loggerWithStateChangeContext(ctx, cs.Log())
 
-	if err := cs.stopBallotTimer(); err != nil {
+	if err := cs.timers.Stop(); err != nil {
 		return err
 	}
 
 	l.Debug().Msg("deactivated")
-
-	return nil
-}
-
-func (cs *StateConsensusHandler) startBallotTimer(timer util.Daemon) error {
-	if err := cs.stopBallotTimer(); err != nil {
-		return err
-	}
-
-	cs.Lock()
-	defer cs.Unlock()
-
-	if logger, ok := timer.(logging.SetLogger); ok {
-		_ = logger.SetLogger(*cs.Log())
-	}
-
-	cs.ballotTimer = timer
-
-	if err := cs.ballotTimer.Start(); err != nil {
-		return err
-	}
-
-	return nil
-}
-
-func (cs *StateConsensusHandler) stopBallotTimer() error {
-	cs.Lock()
-	defer cs.Unlock()
-
-	if cs.ballotTimer != nil {
-		if err := cs.ballotTimer.Stop(); err != nil {
-			return err
-		}
-		cs.ballotTimer = nil
-	}
 
 	return nil
 }
@@ -144,85 +111,17 @@ func (cs *StateConsensusHandler) waitProposal(vp Voteproof) error { // nolint
 		return nil
 	}
 
-	var timers []*localtime.CallbackTimer
-
-	{ // check received Proposal; will be executed only onece.
-		timer, err := localtime.NewCallbackTimer(
-			"consensus-checking-proposal",
-			func() (bool, error) {
-				l := loggerWithVoteproof(vp, cs.Log())
-				l.Debug().Msg("trying to check already received Proposal")
-
-				// if Proposal already received, find and processing it.
-				if proposal, err := cs.localstate.Storage().Proposal(vp.Height(), vp.Round()); err != nil {
-					l.Error().Err(err).Msg("failed to check the received Proposal, but keep trying")
-				} else {
-					go func() {
-						if err := cs.handleProposal(proposal); err != nil {
-							l.Error().Err(err).Msg("processing already received proposal, but")
-						}
-					}()
-				}
-
-				return false, nil
-			},
-			time.Millisecond*100,
-			nil,
-		)
-		if err != nil {
-			return err
-		}
-
-		timers = append(timers, timer)
+	if err := cs.checkReceivedProposal(vp.Height(), vp.Round()); err != nil {
+		return err
 	}
 
-	{ // waiting timer
-		var calledCount int64
-		timer, err := localtime.NewCallbackTimer(
-			"consensus-next-round-if-waiting-proposal-timeout",
-			func() (bool, error) {
-				vp := cs.localstate.LastINITVoteproof()
-
-				l := loggerWithVoteproof(vp, cs.Log())
-
-				round := vp.Round() + 1
-
-				l.Debug().
-					Dur("timeout", cs.localstate.Policy().TimeoutWaitingProposal()).
-					Uint64("next_round", round.Uint64()).
-					Msg("timeout; waiting Proposal; trying to move next round")
-
-				ib, err := NewINITBallotV0FromLocalstate(cs.localstate, round, nil)
-				if err != nil {
-					l.Error().Err(err).Msg("failed to move next round; will keep trying")
-					return true, nil
-				}
-
-				cs.BroadcastSeal(ib)
-
-				return true, nil
-			},
-			0,
-			func() time.Duration {
-				defer atomic.AddInt64(&calledCount, 1)
-
-				// NOTE at 1st time, wait timeout duration, after then, periodically
-				// broadcast INIT Ballot.
-				if atomic.LoadInt64(&calledCount) < 1 {
-					return cs.localstate.Policy().TimeoutWaitingProposal()
-				}
-
-				return cs.localstate.Policy().IntervalBroadcastingINITBallot()
-			},
-		)
-		if err != nil {
-			return err
-		}
-
-		timers = append(timers, timer)
+	if timer, err := cs.TimerTimedoutMoveNextRound(vp.Round() + 1); err != nil {
+		return err
+	} else if err := cs.timers.SetTimer(TimerIDTimedoutMoveNextRound, timer); err != nil {
+		return err
 	}
 
-	return cs.startBallotTimer(localtime.NewCallbackTimerset(timers))
+	return cs.timers.StartTimers([]string{TimerIDTimedoutMoveNextRound}, true)
 }
 
 func (cs *StateConsensusHandler) NewSeal(sl seal.Seal) error {
@@ -235,7 +134,7 @@ func (cs *StateConsensusHandler) NewSeal(sl seal.Seal) error {
 }
 
 func (cs *StateConsensusHandler) NewVoteproof(vp Voteproof) error {
-	if err := cs.stopBallotTimer(); err != nil {
+	if err := cs.timers.StopTimers([]string{TimerIDTimedoutMoveNextRound}); err != nil {
 		return err
 	}
 
@@ -277,33 +176,17 @@ func (cs *StateConsensusHandler) handleINITVoteproof(vp Voteproof) error {
 }
 
 func (cs *StateConsensusHandler) keepBroadcastingINITBallotForNextBlock() error {
-	timer, err := localtime.NewCallbackTimer(
-		"consensus-broadcasting-init-ballot-for-next-block",
-		func() (bool, error) {
-			vp := cs.localstate.LastINITVoteproof()
-
-			l := loggerWithVoteproof(vp, cs.Log())
-
-			l.Debug().Msg("trying to broadcast INIT Ballot for next block")
-
-			ib, err := NewINITBallotV0FromLocalstate(cs.localstate, Round(0), nil)
-			if err != nil {
-				l.Error().Err(err).Msg("trying to broadcast INIT Ballot for next block; will keep trying")
-				return true, nil
-			}
-
-			cs.BroadcastSeal(ib)
-
-			return true, nil
-		},
-		cs.localstate.Policy().IntervalBroadcastingINITBallot(),
+	if timer, err := cs.TimerBroadcastingINITBallot(
+		func() time.Duration { return cs.localstate.Policy().IntervalBroadcastingINITBallot() },
+		func() Round { return Round(0) },
 		nil,
-	)
-	if err != nil {
+	); err != nil {
+		return err
+	} else if err := cs.timers.SetTimer(TimerIDBroadcastingINITBallot, timer); err != nil {
 		return err
 	}
 
-	return cs.startBallotTimer(timer)
+	return cs.timers.StartTimers([]string{TimerIDBroadcastingINITBallot}, true)
 }
 
 func (cs *StateConsensusHandler) handleProposal(proposal Proposal) error {
@@ -321,7 +204,7 @@ func (cs *StateConsensusHandler) handleProposal(proposal Proposal) error {
 		return err
 	}
 
-	if err := cs.stopBallotTimer(); err != nil {
+	if err := cs.timers.StopTimers([]string{TimerIDTimedoutMoveNextRound}); err != nil {
 		return err
 	}
 
@@ -361,43 +244,13 @@ func (cs *StateConsensusHandler) readyToSIGNBallot(proposal Proposal, newBlock B
 
 func (cs *StateConsensusHandler) readyToACCEPTBallot(proposal Proposal, newBlock Block) error {
 	// NOTE if not in acting suffrage, broadcast ACCEPT Ballot after interval.
-	var calledCount int64
-	timer, err := localtime.NewCallbackTimer(
-		"consensus-broadcasting-accept-ballot",
-		func() (bool, error) {
-			// TODO ACCEPTBallot should include the received SIGN Ballots.
-
-			ab, err := NewACCEPTBallotV0FromLocalstate(cs.localstate, proposal.Round(), newBlock, nil)
-			if err != nil {
-				cs.Log().Error().Err(err).Msg("failed to create ACCEPTBallot; will keep trying")
-				return true, nil
-			}
-
-			l := loggerWithBallot(ab, cs.Log())
-			cs.BroadcastSeal(ab)
-
-			l.Debug().Msg("ACCEPTBallot was broadcasted")
-
-			return true, nil
-		},
-		0,
-		func() time.Duration {
-			defer atomic.AddInt64(&calledCount, 1)
-
-			// NOTE at 1st time, wait timeout duration, after then, periodically
-			// broadcast ACCEPT Ballot.
-			if atomic.LoadInt64(&calledCount) < 1 {
-				return cs.localstate.Policy().WaitBroadcastingACCEPTBallot()
-			}
-
-			return cs.localstate.Policy().IntervalBroadcastingACCEPTBallot()
-		},
-	)
-	if err != nil {
+	if timer, err := cs.TimerBroadcastingACCEPTBallot(newBlock, nil); err != nil {
+		return err
+	} else if err := cs.timers.SetTimer(TimerIDBroadcastingACCEPTBallot, timer); err != nil {
 		return err
 	}
 
-	return cs.startBallotTimer(timer)
+	return cs.timers.StartTimers([]string{TimerIDBroadcastingACCEPTBallot}, true)
 }
 
 func (cs *StateConsensusHandler) proposal(vp Voteproof) (bool, error) {
@@ -437,41 +290,49 @@ func (cs *StateConsensusHandler) startNextRound(vp Voteproof) error {
 		round = vp.Round() + 1
 	}
 
-	var calledCount int64
-	timer, err := localtime.NewCallbackTimer(
-		"consensus-next-round",
-		func() (bool, error) {
-			l := loggerWithVoteproof(vp, cs.Log()).With().
-				Dur("timeout", cs.localstate.Policy().TimeoutWaitingProposal()).
-				Uint64("next_round", round.Uint64()).
-				Logger()
-
-			ib, err := NewINITBallotV0FromLocalstate(cs.localstate, round, nil)
-			if err != nil {
-				l.Error().Err(err).Msg("failed to move next round; will keep trying")
-				return true, nil
-			}
-
-			cs.BroadcastSeal(ib)
-
-			return true, nil
-		},
-		0,
+	var called int64
+	if timer, err := cs.TimerBroadcastingINITBallot(
 		func() time.Duration {
-			defer atomic.AddInt64(&calledCount, 1)
-
 			// NOTE at 1st time, wait timeout duration, after then, periodically
 			// broadcast INIT Ballot.
-			if atomic.LoadInt64(&calledCount) < 1 {
+			if atomic.LoadInt64(&called) < 1 {
+				atomic.AddInt64(&called, 1)
 				return time.Nanosecond
 			}
 
 			return cs.localstate.Policy().IntervalBroadcastingINITBallot()
 		},
-	)
-	if err != nil {
+		func() Round { return round },
+		nil,
+	); err != nil {
+		return err
+	} else if err := cs.timers.SetTimer(TimerIDBroadcastingINITBallot, timer); err != nil {
 		return err
 	}
 
-	return cs.startBallotTimer(timer)
+	return cs.timers.StartTimers([]string{TimerIDBroadcastingINITBallot}, true)
+
+}
+
+func (cs *StateConsensusHandler) checkReceivedProposal(height Height, round Round) error {
+	cs.Log().Debug().Msg("trying to check already received Proposal")
+
+	// if Proposal already received, find and processing it.
+	proposal, err := cs.localstate.Storage().Proposal(height, round)
+	if err != nil {
+		if xerrors.Is(err, storage.NotFoundError) {
+			return nil
+		}
+
+		cs.Log().Error().Err(err).Msg("expected Proposal not found, but keep trying")
+		return err
+	}
+
+	go func() {
+		if err := cs.handleProposal(proposal); err != nil {
+			cs.Log().Error().Err(err).Msg("processing already received proposal, but")
+		}
+	}()
+
+	return nil
 }

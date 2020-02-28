@@ -3,6 +3,7 @@ package localtime
 import (
 	"sync"
 
+	"github.com/rs/zerolog"
 	"github.com/spikeekips/mitum/logging"
 	"github.com/spikeekips/mitum/util"
 	"golang.org/x/xerrors"
@@ -23,7 +24,31 @@ func NewTimers(ids []string, allowNew bool) *Timers {
 		timers[id] = nil
 	}
 
-	return &Timers{timers: timers, allowNew: allowNew}
+	return &Timers{
+		Logger: logging.NewLogger(func(c zerolog.Context) zerolog.Context {
+			return c.Str("module", "timers")
+		}),
+		timers:   timers,
+		allowNew: allowNew,
+	}
+}
+
+func (ts *Timers) SetLogger(l zerolog.Logger) *logging.Logger {
+	ts.Lock()
+	defer ts.Unlock()
+
+	_ = ts.Logger.SetLogger(l)
+
+	for id := range ts.timers {
+		timer := ts.timers[id]
+		if timer == nil {
+			continue
+		}
+
+		_ = timer.SetLogger(l)
+	}
+
+	return ts.Logger
 }
 
 // Start of Timers does nothing
@@ -40,14 +65,19 @@ func (ts *Timers) Stop() error {
 	wg.Add(len(ts.timers))
 
 	for id := range ts.timers {
-		t := ts.timers[id]
+		timer := ts.timers[id]
+		if timer == nil {
+			wg.Done()
+			continue
+		}
+
 		go func(t *CallbackTimer) {
 			defer wg.Done()
 
 			if err := t.Stop(); err != nil {
 				ts.Log().Error().Err(err).Str("timer", t.Name()).Msg("failed to stop timer")
 			}
-		}(t)
+		}(timer)
 	}
 
 	wg.Wait()
@@ -74,6 +104,7 @@ func (ts *Timers) SetTimer(id string, timer *CallbackTimer) error {
 	}
 
 	ts.timers[id] = timer
+	_ = ts.timers[id].SetLogger(*ts.Log())
 
 	return nil
 }

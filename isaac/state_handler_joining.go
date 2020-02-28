@@ -1,13 +1,14 @@
 package isaac
 
 import (
+	"time"
+
 	"github.com/rs/zerolog"
 	"golang.org/x/xerrors"
 
 	"github.com/spikeekips/mitum/localtime"
 	"github.com/spikeekips/mitum/logging"
 	"github.com/spikeekips/mitum/seal"
-	"github.com/spikeekips/mitum/util"
 )
 
 /*
@@ -53,8 +54,7 @@ strategy,
 */
 type StateJoiningHandler struct {
 	*BaseStateHandler
-	broadcastingINITBallotTimer *localtime.CallbackTimer
-	cr                          Round
+	cr Round
 }
 
 func NewStateJoiningHandler(
@@ -71,31 +71,31 @@ func NewStateJoiningHandler(
 	cs.BaseStateHandler.Logger = logging.NewLogger(func(c zerolog.Context) zerolog.Context {
 		return c.Str("module", "consensus-state-joining-handler")
 	})
+	cs.BaseStateHandler.timers = localtime.NewTimers([]string{TimerIDBroadcastingINITBallot}, false)
 
-	bt, err := localtime.NewCallbackTimer(
-		"joining-broadcasting-init-ballot",
-		cs.broadcastingINITBallot,
-		localstate.Policy().IntervalBroadcastingINITBallot(),
+	if timer, err := cs.TimerBroadcastingINITBallot(
+		func() time.Duration { return localstate.Policy().IntervalBroadcastingINITBallot() },
+		func() Round { return cs.currentRound() },
 		nil,
-	)
-	if err != nil {
+	); err != nil {
+		return nil, err
+	} else if err := cs.timers.SetTimer(TimerIDBroadcastingINITBallot, timer); err != nil {
 		return nil, err
 	}
-	cs.broadcastingINITBallotTimer = bt
 
 	return cs, nil
 }
 
 func (cs *StateJoiningHandler) SetLogger(l zerolog.Logger) *logging.Logger {
 	_ = cs.Logger.SetLogger(l)
-	_ = cs.broadcastingINITBallotTimer.SetLogger(l)
+	_ = cs.timers.SetLogger(l)
 
 	return cs.Logger
 }
 
 func (cs *StateJoiningHandler) Activate(ctx StateChangeContext) error {
 	// starts to keep broadcasting INIT Ballot
-	if err := cs.startbroadcastingINITBallotTimer(); err != nil {
+	if err := cs.timers.StartTimers([]string{TimerIDBroadcastingINITBallot}, true); err != nil {
 		return err
 	}
 
@@ -109,12 +109,12 @@ func (cs *StateJoiningHandler) Activate(ctx StateChangeContext) error {
 }
 
 func (cs *StateJoiningHandler) Deactivate(ctx StateChangeContext) error {
-	if err := cs.stopbroadcastingINITBallotTimer(); err != nil {
-		return err
-	}
-
 	cs.Lock()
 	defer cs.Unlock()
+
+	if err := cs.timers.Stop(); err != nil {
+		return err
+	}
 
 	l := loggerWithStateChangeContext(ctx, cs.Log())
 	l.Debug().Msg("deactivated")
@@ -134,40 +134,6 @@ func (cs *StateJoiningHandler) setCurrentRound(round Round) {
 	defer cs.Unlock()
 
 	cs.cr = round
-}
-
-func (cs *StateJoiningHandler) startbroadcastingINITBallotTimer() error {
-	if err := cs.stopbroadcastingINITBallotTimer(); err != nil {
-		return err
-	}
-
-	cs.Lock()
-	defer cs.Unlock()
-
-	return cs.broadcastingINITBallotTimer.Start()
-}
-
-func (cs *StateJoiningHandler) stopbroadcastingINITBallotTimer() error {
-	cs.Lock()
-	defer cs.Unlock()
-
-	if err := cs.broadcastingINITBallotTimer.Stop(); err != nil && !xerrors.Is(err, util.DaemonAlreadyStoppedError) {
-		return err
-	}
-
-	return nil
-}
-
-func (cs *StateJoiningHandler) broadcastingINITBallot() (bool, error) {
-	ib, err := NewINITBallotV0FromLocalstate(cs.localstate, cs.currentRound(), nil)
-	if err != nil {
-		cs.Log().Error().Err(err).Msg("failed to broadcast INIT ballot; will keep trying")
-		return true, nil
-	}
-
-	cs.BroadcastSeal(ib)
-
-	return true, nil
 }
 
 // NewSeal only cares on INIT ballot and it's Voteproof.
@@ -348,12 +314,8 @@ func (cs *StateJoiningHandler) handleACCEPTBallotAndINITVoteproof(ballot ACCEPTB
 	}
 }
 
-// NewVoteproof receives Voteproof. If received, stop broadcasting INIT ballot.
+// NewVoteproof receives Voteproof.
 func (cs *StateJoiningHandler) NewVoteproof(vp Voteproof) error {
-	if err := cs.stopbroadcastingINITBallotTimer(); err != nil {
-		return err
-	}
-
 	l := loggerWithVoteproof(vp, cs.Log())
 
 	l.Debug().Msg("got Voteproof")

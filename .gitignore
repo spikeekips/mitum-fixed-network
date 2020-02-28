@@ -16,3 +16,4 @@ tests/*/*/coverage/
 .*vimrc
 .*.go
 /*.log
+.*.yaml

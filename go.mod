@@ -20,7 +20,6 @@ require (
 	github.com/onsi/ginkgo v1.12.0 // indirect
 	github.com/pkg/errors v0.9.1 // indirect
 	github.com/rs/zerolog v1.18.0
-	github.com/sanity-io/litter v1.2.0
 	github.com/satori/go.uuid v1.2.0
 	github.com/spikeekips/avl v0.0.0-20191218024138-87d874c0c032
 	github.com/stellar/go v0.0.0-20200226233544-b4fe8efa472b

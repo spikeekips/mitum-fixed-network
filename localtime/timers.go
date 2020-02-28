@@ -10,7 +10,6 @@ import (
 )
 
 // Timers handles the multiple timers and controls them selectively.
-// TODO Timers will replace CallbackTimerset
 type Timers struct {
 	*logging.Logger
 	sync.RWMutex

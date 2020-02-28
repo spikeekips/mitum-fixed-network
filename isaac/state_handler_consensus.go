@@ -51,6 +51,7 @@ func NewStateConsensusHandler(
 		[]string{
 			TimerIDBroadcastingINITBallot,
 			TimerIDBroadcastingACCEPTBallot,
+			TimerIDBroadcastingProposal,
 			TimerIDTimedoutMoveNextRound,
 		},
 		false,
@@ -121,7 +122,10 @@ func (cs *StateConsensusHandler) waitProposal(vp Voteproof) error { // nolint
 		return err
 	}
 
-	return cs.timers.StartTimers([]string{TimerIDTimedoutMoveNextRound}, true)
+	return cs.timers.StartTimers([]string{
+		TimerIDTimedoutMoveNextRound,
+		TimerIDBroadcastingINITBallot, // keep broadcasting when waiting
+	}, true)
 }
 
 func (cs *StateConsensusHandler) NewSeal(sl seal.Seal) error {
@@ -152,8 +156,6 @@ func (cs *StateConsensusHandler) NewVoteproof(vp Voteproof) error {
 		if err := cs.StoreNewBlockByVoteproof(vp); err != nil {
 			l.Error().Err(err).Msg("failed to store accept voteproof")
 		}
-
-		cs.proposalMaker.Clean() // NOTE clean proposed Proposal
 
 		return cs.keepBroadcastingINITBallotForNextBlock()
 	case StageINIT:
@@ -186,7 +188,10 @@ func (cs *StateConsensusHandler) keepBroadcastingINITBallotForNextBlock() error 
 		return err
 	}
 
-	return cs.timers.StartTimers([]string{TimerIDBroadcastingINITBallot}, true)
+	return cs.timers.StartTimers([]string{
+		TimerIDBroadcastingINITBallot,
+		TimerIDBroadcastingACCEPTBallot,
+	}, true)
 }
 
 func (cs *StateConsensusHandler) handleProposal(proposal Proposal) error {
@@ -275,7 +280,15 @@ func (cs *StateConsensusHandler) proposal(vp Voteproof) (bool, error) {
 
 	l.Debug().Interface("proposal", proposal).Msg("trying to broadcast Proposal")
 
-	cs.BroadcastSeal(proposal)
+	if timer, err := cs.TimerBroadcastingProposal(proposal); err != nil {
+		return false, err
+	} else if err := cs.timers.SetTimer(TimerIDBroadcastingProposal, timer); err != nil {
+		return false, err
+	} else if err := cs.timers.StartTimers(
+		[]string{TimerIDBroadcastingProposal, TimerIDBroadcastingINITBallot}, true,
+	); err != nil {
+		return false, err
+	}
 
 	return true, nil
 }
@@ -310,7 +323,10 @@ func (cs *StateConsensusHandler) startNextRound(vp Voteproof) error {
 		return err
 	}
 
-	return cs.timers.StartTimers([]string{TimerIDBroadcastingINITBallot}, true)
+	return cs.timers.StartTimers([]string{
+		TimerIDBroadcastingINITBallot,
+		TimerIDBroadcastingACCEPTBallot,
+	}, true)
 }
 
 func (cs *StateConsensusHandler) checkReceivedProposal(height Height, round Round) error {

@@ -128,6 +128,7 @@ type LocalPolicy struct {
 	threshold                        *util.LockedItem
 	timeoutWaitingProposal           *util.LockedItem
 	intervalBroadcastingINITBallot   *util.LockedItem
+	intervalBroadcastingProposal     *util.LockedItem
 	waitBroadcastingACCEPTBallot     *util.LockedItem
 	intervalBroadcastingACCEPTBallot *util.LockedItem
 	numberOfActingSuffrageNodes      *util.LockedItem
@@ -144,6 +145,7 @@ func NewLocalPolicy(Storage) (*LocalPolicy, error) {
 		threshold:                        util.NewLockedItem(threshold),
 		timeoutWaitingProposal:           util.NewLockedItem(time.Second * 5),
 		intervalBroadcastingINITBallot:   util.NewLockedItem(time.Second * 1),
+		intervalBroadcastingProposal:     util.NewLockedItem(time.Second * 1),
 		waitBroadcastingACCEPTBallot:     util.NewLockedItem(time.Second * 2),
 		intervalBroadcastingACCEPTBallot: util.NewLockedItem(time.Second * 1),
 		numberOfActingSuffrageNodes:      util.NewLockedItem(uint(1)),
@@ -185,6 +187,20 @@ func (lp *LocalPolicy) SetIntervalBroadcastingINITBallot(d time.Duration) (*Loca
 	}
 
 	_ = lp.intervalBroadcastingINITBallot.SetValue(d)
+
+	return lp, nil
+}
+
+func (lp *LocalPolicy) IntervalBroadcastingProposal() time.Duration {
+	return lp.intervalBroadcastingProposal.Value().(time.Duration)
+}
+
+func (lp *LocalPolicy) SetIntervalBroadcastingProposal(d time.Duration) (*LocalPolicy, error) {
+	if d < 1 {
+		return nil, xerrors.Errorf("IntervalBroadcastingProposal too short; %v", d)
+	}
+
+	_ = lp.intervalBroadcastingProposal.SetValue(d)
 
 	return lp, nil
 }

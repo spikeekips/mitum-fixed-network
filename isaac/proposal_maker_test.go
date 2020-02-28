@@ -36,11 +36,7 @@ func (t *testProposalMaker) TestClean() {
 	t.NoError(err)
 	_ = localstate.SetLastBlock(newBlock)
 
-	t.Equal(1, len(proposalMaker.proposed))
-
-	proposalMaker.Clean()
-
-	t.Equal(0, len(proposalMaker.proposed))
+	t.NotNil(proposalMaker.proposed)
 }
 
 func TestProposalMaker(t *testing.T) {

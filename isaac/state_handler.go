@@ -16,6 +16,7 @@ import (
 const (
 	TimerIDBroadcastingINITBallot   = "broadcasting-init-ballot"
 	TimerIDBroadcastingACCEPTBallot = "broadcasting-accept-ballot"
+	TimerIDBroadcastingProposal     = "broadcasting-proposal"
 	TimerIDTimedoutMoveNextRound    = "timedout-move-to-next-round"
 )
 
@@ -254,6 +255,10 @@ func (bs *BaseStateHandler) TimerTimedoutMoveNextRound(
 				Uint64("next_round", round.Uint64()).
 				Msg("timeout; waiting Proposal; trying to move next round")
 
+			if err := bs.timers.StopTimers([]string{TimerIDBroadcastingINITBallot}); err != nil {
+				bs.Log().Error().Err(err).Str("timer", TimerIDBroadcastingINITBallot).Msg("failed to stop")
+			}
+
 			ib, err := NewINITBallotV0FromLocalstate(bs.localstate, round, nil)
 			if err != nil {
 				bs.Log().Error().Err(err).Msg("failed to move next round; will keep trying")
@@ -275,6 +280,30 @@ func (bs *BaseStateHandler) TimerTimedoutMoveNextRound(
 			}
 
 			return bs.localstate.Policy().IntervalBroadcastingINITBallot()
+		},
+	)
+}
+
+func (bs *BaseStateHandler) TimerBroadcastingProposal(proposal Proposal) (*localtime.CallbackTimer, error) {
+	var called int64
+
+	return localtime.NewCallbackTimer(
+		TimerIDBroadcastingProposal,
+		func() (bool, error) {
+			bs.BroadcastSeal(proposal)
+
+			return true, nil
+		},
+		0,
+		func() time.Duration {
+			// NOTE at 1st time, wait timeout duration, after then, periodically
+			// broadcast.
+			if atomic.LoadInt64(&called) < 1 {
+				atomic.AddInt64(&called, 1)
+				return time.Nanosecond
+			}
+
+			return bs.localstate.Policy().IntervalBroadcastingProposal()
 		},
 	)
 }

@@ -1,7 +1,6 @@
 package isaac
 
 import (
-	"fmt"
 	"sync"
 
 	"github.com/spikeekips/mitum/valuehash"
@@ -10,11 +9,11 @@ import (
 type ProposalMaker struct {
 	sync.Mutex
 	localstate *Localstate
-	proposed   map[string]Proposal
+	proposed   Proposal
 }
 
 func NewProposalMaker(localstate *Localstate) *ProposalMaker {
-	return &ProposalMaker{localstate: localstate, proposed: map[string]Proposal{}}
+	return &ProposalMaker{localstate: localstate}
 }
 
 func (pm *ProposalMaker) seals() []valuehash.Hash {
@@ -28,10 +27,11 @@ func (pm *ProposalMaker) Proposal(round Round, b []byte) (Proposal, error) {
 	lastBlock := pm.localstate.LastBlock()
 
 	height := lastBlock.Height() + 1
-	key := fmt.Sprintf("%d-%d", height.Int64(), round)
 
-	if p, found := pm.proposed[key]; found {
-		return p, nil
+	if pm.proposed != nil {
+		if pm.proposed.Height() == height && pm.proposed.Round() == round {
+			return pm.proposed, nil
+		}
 	}
 
 	proposal, err := NewProposal(pm.localstate, height, round, pm.seals(), b)
@@ -39,30 +39,7 @@ func (pm *ProposalMaker) Proposal(round Round, b []byte) (Proposal, error) {
 		return nil, err
 	}
 
-	pm.proposed[key] = proposal
+	pm.proposed = proposal
 
 	return proposal, nil
-}
-
-func (pm *ProposalMaker) Clean() {
-	pm.Lock()
-	defer pm.Unlock()
-
-	lastBlock := pm.localstate.LastBlock()
-
-	var remove []string
-	for key := range pm.proposed {
-		var height int64
-		var round uint64
-		if n, err := fmt.Sscanf(key, "%d-%d", &height, &round); err != nil || n != 2 {
-			remove = append(remove, key)
-		}
-		if height <= lastBlock.Height().Int64() {
-			remove = append(remove, key)
-		}
-	}
-
-	for _, key := range remove {
-		delete(pm.proposed, key)
-	}
 }

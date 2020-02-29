@@ -140,6 +140,7 @@ func (cs *StateBootingHandler) checkVoteproof() error {
 	if err != nil {
 		return err
 	}
+	_ = vpc.SetLogger(*cs.Log())
 
 	return util.NewChecker("voteproof-booting-checker", []util.CheckerFunc{
 		vpc.CheckACCEPTVoteproofHeight,

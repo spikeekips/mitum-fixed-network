@@ -81,6 +81,10 @@ func (ts *Timers) Stop() error {
 
 	wg.Wait()
 
+	for id := range ts.timers {
+		ts.timers[id] = nil
+	}
+
 	return nil
 }
 
@@ -103,7 +107,10 @@ func (ts *Timers) SetTimer(id string, timer *CallbackTimer) error {
 	}
 
 	ts.timers[id] = timer
-	_ = ts.timers[id].SetLogger(*ts.Log())
+
+	if timer != nil {
+		_ = ts.timers[id].SetLogger(*ts.Log())
+	}
 
 	return nil
 }
@@ -161,7 +168,15 @@ func (ts *Timers) stopTimers(ids []string) error {
 		}
 	}
 
-	return ts.traverse(callback, ids)
+	if err := ts.traverse(callback, ids); err != nil {
+		return err
+	}
+
+	for _, id := range ids {
+		ts.timers[id] = nil
+	}
+
+	return nil
 }
 
 func (ts *Timers) Started() []string {

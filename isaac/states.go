@@ -242,18 +242,15 @@ func (css *ConsensusStates) broadcastSeal(sl seal.Seal, errChan chan<- error) {
 }
 
 func (css *ConsensusStates) newVoteproof(vp Voteproof) error {
-	vpc := VoteproofValidationChecker{
-		Logger: logging.NewLogger(func(c zerolog.Context) zerolog.Context {
-			return c.Str("module", "consensus-states-voteproof-checker")
-		}),
-		lastBlock:         css.localstate.LastBlock(),
-		lastINITVoteproof: css.localstate.LastINITVoteproof(),
-		voteproof:         vp,
-		css:               css,
-	}
+	vpc := NewVoteproofValidationChecker(
+		css.localstate.LastBlock(),
+		css.localstate.LastINITVoteproof(),
+		vp,
+		css,
+	)
 	_ = vpc.SetLogger(*css.Log())
 
-	err := util.NewChecker("voteproof-checker", []util.CheckerFunc{
+	err := util.NewChecker("voteproof-validation-checker", []util.CheckerFunc{
 		vpc.CheckHeight,
 		vpc.CheckINITVoteproof,
 	}).Check()
@@ -343,42 +340,14 @@ func (css *ConsensusStates) validateBallot(_ Ballot) error {
 }
 
 func (css *ConsensusStates) validateProposal(proposal Proposal) error {
-	l := loggerWithBallot(proposal, css.Log())
+	pvc := NewProposalValidationChecker(css.localstate, css.suffrage, proposal)
 
-	if !css.suffrage.IsProposer(proposal.Height(), proposal.Round(), proposal.Node()) {
-		err := xerrors.Errorf("proposal has wrong proposer")
-
-		if css.Log().GetLevel() == zerolog.DebugLevel {
-			l.Error().Err(err).
-				Dict("proposal", zerolog.Dict().
-					Int64("height", proposal.Height().Int64()).
-					Uint64("round", proposal.Round().Uint64()).
-					Str("node", proposal.Node().String()),
-				).
-				Str("expected", css.suffrage.Acting(proposal.Height(), proposal.Round()).Proposer().Address().String()).
-				Send()
-		}
-
-		l.Error().Err(err).Msg("wrong proposer found")
-
-		return err
-	}
-
-	if err := css.localstate.Storage().NewProposal(proposal); err != nil {
-		return err
-	}
-
-	ivp := css.localstate.LastINITVoteproof()
-	l = loggerWithVoteproof(ivp, l)
-	if proposal.Height() != ivp.Height() || proposal.Round() != ivp.Round() {
-		err := xerrors.Errorf("unexpected Proposal received")
-
-		l.Error().Err(err).Msg("invalid proposal found")
-
-		return err
-	}
-
-	return nil
+	return util.NewChecker("proposal-validation-checker", []util.CheckerFunc{
+		pvc.IsKnown,
+		pvc.IsProposer,
+		pvc.SaveProposal,
+		pvc.IsOld,
+	}).Check()
 }
 
 func (css *ConsensusStates) vote(ballot Ballot) error {

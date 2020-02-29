@@ -1,6 +1,7 @@
 package isaac
 
 import (
+	"sync"
 	"sync/atomic"
 	"time"
 
@@ -24,6 +25,7 @@ What does consensus state means?
 Consensus state is started by new INIT Voteproof and waits next Proposal.
 */
 type StateConsensusHandler struct {
+	proposalLock sync.Mutex
 	*BaseStateHandler
 	suffrage          Suffrage
 	proposalMaker     *ProposalMaker
@@ -105,7 +107,17 @@ func (cs *StateConsensusHandler) Deactivate(ctx StateChangeContext) error {
 }
 
 func (cs *StateConsensusHandler) waitProposal(vp Voteproof) error { // nolint
+	cs.proposalLock.Lock()
+	defer cs.proposalLock.Unlock()
+
 	cs.Log().Debug().Msg("waiting proposal")
+
+	if cs.processedProposal != nil {
+		if vp.Height() == cs.processedProposal.Height() && vp.Round() == cs.processedProposal.Round() {
+			cs.Log().Debug().Msg("proposal is already processed")
+			return nil
+		}
+	}
 
 	if proposed, err := cs.proposal(vp); err != nil {
 		return err
@@ -126,13 +138,22 @@ func (cs *StateConsensusHandler) waitProposal(vp Voteproof) error { // nolint
 	return cs.timers.StartTimers([]string{
 		TimerIDTimedoutMoveNextRound,
 		TimerIDBroadcastingINITBallot, // keep broadcasting when waiting
+		TimerIDBroadcastingACCEPTBallot,
 	}, true)
 }
 
 func (cs *StateConsensusHandler) NewSeal(sl seal.Seal) error {
 	switch t := sl.(type) {
 	case Proposal:
-		return cs.handleProposal(t)
+		go func(proposal Proposal) {
+			if err := cs.handleProposal(proposal); err != nil {
+				cs.Log().Error().Err(err).
+					Str("proposal", proposal.Hash().String()).
+					Msg("failed to handle proposal")
+			}
+		}(t)
+
+		return nil
 	default:
 		return nil
 	}
@@ -196,6 +217,9 @@ func (cs *StateConsensusHandler) keepBroadcastingINITBallotForNextBlock() error 
 }
 
 func (cs *StateConsensusHandler) handleProposal(proposal Proposal) error {
+	cs.proposalLock.Lock()
+	defer cs.proposalLock.Unlock()
+
 	l := loggerWithBallot(proposal, cs.Log())
 	// l := cs.Log()
 

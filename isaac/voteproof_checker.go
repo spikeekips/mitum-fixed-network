@@ -3,6 +3,7 @@ package isaac
 import (
 	"golang.org/x/xerrors"
 
+	"github.com/rs/zerolog"
 	"github.com/spikeekips/mitum/errors"
 	"github.com/spikeekips/mitum/logging"
 )
@@ -41,6 +42,23 @@ type VoteproofValidationChecker struct {
 	lastINITVoteproof Voteproof
 	voteproof         Voteproof
 	css               *ConsensusStates
+}
+
+func NewVoteproofValidationChecker(
+	lastBlock Block,
+	lastINITVoteproof Voteproof,
+	voteproof Voteproof,
+	css *ConsensusStates,
+) *VoteproofValidationChecker {
+	return &VoteproofValidationChecker{
+		Logger: logging.NewLogger(func(c zerolog.Context) zerolog.Context {
+			return c.Str("module", "voteproof-validation-checker")
+		}),
+		lastBlock:         lastBlock,
+		lastINITVoteproof: lastINITVoteproof,
+		voteproof:         voteproof,
+		css:               css,
+	}
 }
 
 func (vpc *VoteproofValidationChecker) CheckHeight() (bool, error) {
@@ -132,6 +150,9 @@ func NewVoteproofBootingChecker(localstate *Localstate) (*VoteproofBootingChecke
 	}
 
 	return &VoteproofBootingChecker{
+		Logger: logging.NewLogger(func(c zerolog.Context) zerolog.Context {
+			return c.Str("module", "voteproof-booting-checker")
+		}),
 		lastBlock:       localstate.LastBlock(),
 		initVoteproof:   initVoteproof,
 		acceptVoteproof: acceptVoteproof,

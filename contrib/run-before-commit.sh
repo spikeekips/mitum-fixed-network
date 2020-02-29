@@ -1,24 +1,44 @@
 #!/bin/bash
 
 set -e
-set -x
 
 echo "Running checking"
 
-# go test
+curdir=$(cd $(dirname ${BASH_SOURCE})/..; pwd)
+
+{
+    set +e
+
+    echo -n 'BLOCK: '
+    go run $curdir/contrib/parse_comment/main.go $curdir 2> /dev/null | grep '\<BLOCK\>'
+    if [ $? -eq 0 ];then
+        echo 'found, exit'
+    else
+        echo 'not found'
+    fi
+
+    set -e
+}
+
+echo
+echo 'go test:'
 go clean -testcache
 go test -timeout 5s -tags test -race ./... -run .
 
-# go vet
+echo
+echo 'go vet:'
 go vet -tags test ./...
 
-# errcheck
+echo
+echo 'errcheck:'
 errcheck -tags test -ignoretests ./...
 
-# golangci-run
+echo
+echo 'golangci-run:'
 golangci-lint run --build-tags test
 
-# nargs
+echo
+echo 'nargs:'
 nargs ./...
 
 exit 0

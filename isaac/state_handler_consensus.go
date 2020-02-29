@@ -25,8 +25,9 @@ Consensus state is started by new INIT Voteproof and waits next Proposal.
 */
 type StateConsensusHandler struct {
 	*BaseStateHandler
-	suffrage      Suffrage
-	proposalMaker *ProposalMaker
+	suffrage          Suffrage
+	proposalMaker     *ProposalMaker
+	processedProposal Proposal
 }
 
 func NewStateConsensusHandler(
@@ -196,8 +197,16 @@ func (cs *StateConsensusHandler) keepBroadcastingINITBallotForNextBlock() error 
 
 func (cs *StateConsensusHandler) handleProposal(proposal Proposal) error {
 	l := loggerWithBallot(proposal, cs.Log())
+	// l := cs.Log()
 
 	l.Debug().Msg("got proposal")
+
+	if cs.processedProposal != nil {
+		if proposal.Height() == cs.processedProposal.Height() && proposal.Round() == cs.processedProposal.Round() {
+			l.Debug().Msg("proposal is already processed")
+			return nil
+		}
+	}
 
 	// TODO if processing takes too long?
 	block, err := cs.proposalProcessor.ProcessINIT(
@@ -211,6 +220,8 @@ func (cs *StateConsensusHandler) handleProposal(proposal Proposal) error {
 
 	if err := cs.timers.StopTimers([]string{TimerIDTimedoutMoveNextRound}); err != nil {
 		return err
+	} else {
+		cs.processedProposal = proposal
 	}
 
 	acting := cs.suffrage.Acting(proposal.Height(), proposal.Round())

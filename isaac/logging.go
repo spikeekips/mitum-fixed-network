@@ -8,7 +8,8 @@ import (
 )
 
 func loggerWithSeal(sl seal.Seal, l *zerolog.Logger) *zerolog.Logger {
-	ll := l.With().Str("seal_hash", sl.Hash().String()).CallerWithSkipFrameCount(3).Logger()
+	ll := l.With().
+		Str("seal_hash", sl.Hash().String()).CallerWithSkipFrameCount(3).Logger()
 
 	var event *zerolog.Event
 	if ls, ok := sl.(zerolog.LogObjectMarshaler); ok {
@@ -27,7 +28,9 @@ func loggerWithSeal(sl seal.Seal, l *zerolog.Logger) *zerolog.Logger {
 }
 
 func loggerWithBallot(ballot Ballot, l *zerolog.Logger) *zerolog.Logger {
-	ll := l.With().Str("seal_hash", ballot.Hash().String()).CallerWithSkipFrameCount(3).Logger()
+	nl := l
+	ll := nl.With().
+		Str("seal_hash", ballot.Hash().String()).CallerWithSkipFrameCount(3).Logger()
 
 	var event *zerolog.Event
 	if lb, ok := ballot.(zerolog.LogObjectMarshaler); ok {
@@ -52,7 +55,8 @@ func loggerWithVoteproof(vp Voteproof, l *zerolog.Logger) *zerolog.Logger {
 		return l
 	}
 
-	ll := l.With().Str("voteproof_id", util.UUID().String()).CallerWithSkipFrameCount(3).Logger()
+	ll := l.With().
+		Str("voteproof_id", util.UUID().String()).CallerWithSkipFrameCount(3).Logger()
 
 	var event *zerolog.Event
 	if lvp, ok := vp.(zerolog.LogObjectMarshaler); ok {
@@ -73,7 +77,9 @@ func loggerWithLocalstate(localstate *Localstate, l *zerolog.Logger) *zerolog.Lo
 		return l
 	}
 
-	l.Debug().
+	ll := l
+
+	ll.Debug().
 		Dict("local_state", zerolog.Dict().
 			Dict("block", zerolog.Dict().
 				Str("hash", lastBlock.Hash().String()).
@@ -82,7 +88,7 @@ func loggerWithLocalstate(localstate *Localstate, l *zerolog.Logger) *zerolog.Lo
 			),
 		).Msg("localstate")
 
-	return l
+	return ll
 }
 
 func loggerWithStateChangeContext(ctx StateChangeContext, l *zerolog.Logger) *zerolog.Logger {

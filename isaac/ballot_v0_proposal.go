@@ -71,7 +71,6 @@ func (prf ProposalFactV0) Seals() []valuehash.Hash {
 type ProposalV0 struct {
 	BaseBallotV0
 	ProposalFactV0
-	h             valuehash.Hash
 	bodyHash      valuehash.Hash
 	factHash      valuehash.Hash
 	factSignature key.Signature
@@ -137,16 +136,16 @@ func NewProposalFromLocalstate(
 	return pr, nil
 }
 
+func (pr ProposalV0) Hash() valuehash.Hash {
+	return pr.BaseBallotV0.Hash()
+}
+
 func (pr ProposalV0) Hint() hint.Hint {
 	return ProposalV0Hint
 }
 
 func (pr ProposalV0) Stage() Stage {
 	return StageProposal
-}
-
-func (pr ProposalV0) Hash() valuehash.Hash {
-	return pr.h
 }
 
 func (pr ProposalV0) BodyHash() valuehash.Hash {
@@ -245,7 +244,7 @@ func (pr *ProposalV0) Sign(pk key.Privatekey, b []byte) error { // nolint
 	if h, err := pr.GenerateHash(b); err != nil {
 		return err
 	} else {
-		pr.h = h
+		pr.BaseBallotV0 = pr.BaseBallotV0.SetHash(h)
 	}
 
 	return nil

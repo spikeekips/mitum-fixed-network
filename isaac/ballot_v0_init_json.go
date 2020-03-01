@@ -44,7 +44,7 @@ func (ib *INITBallotV0) UnpackJSON(b []byte, enc *encoder.JSONEncoder) error {
 		return err
 	}
 
-	eh, ebh, efh, efsg, bb, bf, err := UnpackBaseBallotV0JSON(nib.BaseBallotV0UnpackerJSON, enc)
+	ebh, efh, efsg, bb, bf, err := UnpackBaseBallotV0JSON(nib.BaseBallotV0UnpackerJSON, enc)
 	if err != nil {
 		return err
 	}
@@ -67,7 +67,6 @@ func (ib *INITBallotV0) UnpackJSON(b []byte, enc *encoder.JSONEncoder) error {
 	}
 
 	ib.BaseBallotV0 = bb
-	ib.h = eh
 	ib.bodyHash = ebh
 	ib.factHash = efh
 	ib.factSignature = efsg

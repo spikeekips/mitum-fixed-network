@@ -75,7 +75,6 @@ func (ibf INITBallotFactV0) PreviousRound() Round {
 type INITBallotV0 struct {
 	BaseBallotV0
 	INITBallotFactV0
-	h             valuehash.Hash
 	bodyHash      valuehash.Hash
 	voteproof     Voteproof
 	factHash      valuehash.Hash
@@ -146,16 +145,16 @@ func NewINITBallotV0FromLocalstate(localstate *Localstate, round Round, b []byte
 	return ib, nil
 }
 
+func (ib INITBallotV0) Hash() valuehash.Hash {
+	return ib.BaseBallotV0.Hash()
+}
+
 func (ib INITBallotV0) Hint() hint.Hint {
 	return INITBallotV0Hint
 }
 
 func (ib INITBallotV0) Stage() Stage {
 	return StageINIT
-}
-
-func (ib INITBallotV0) Hash() valuehash.Hash {
-	return ib.h
 }
 
 func (ib INITBallotV0) BodyHash() valuehash.Hash {
@@ -287,7 +286,7 @@ func (ib *INITBallotV0) Sign(pk key.Privatekey, b []byte) error { // nolint
 	if h, err := ib.GenerateHash(b); err != nil {
 		return err
 	} else {
-		ib.h = h
+		ib.BaseBallotV0 = ib.BaseBallotV0.SetHash(h)
 	}
 
 	return nil

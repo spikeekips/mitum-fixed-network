@@ -64,7 +64,6 @@ func (abf ACCEPTBallotFactV0) NewBlock() valuehash.Hash {
 type ACCEPTBallotV0 struct {
 	BaseBallotV0
 	ACCEPTBallotFactV0
-	h             valuehash.Hash
 	bodyHash      valuehash.Hash
 	voteproof     Voteproof
 	factHash      valuehash.Hash
@@ -136,16 +135,16 @@ func NewACCEPTBallotV0FromLocalstate(
 	return ab, nil
 }
 
+func (ab ACCEPTBallotV0) Hash() valuehash.Hash {
+	return ab.BaseBallotV0.Hash()
+}
+
 func (ab ACCEPTBallotV0) Hint() hint.Hint {
 	return ACCEPTBallotV0Hint
 }
 
 func (ab ACCEPTBallotV0) Stage() Stage {
 	return StageACCEPT
-}
-
-func (ab ACCEPTBallotV0) Hash() valuehash.Hash {
-	return ab.h
 }
 
 func (ab ACCEPTBallotV0) BodyHash() valuehash.Hash {
@@ -255,7 +254,7 @@ func (ab *ACCEPTBallotV0) Sign(pk key.Privatekey, b []byte) error { // nolint
 	if h, err := ab.GenerateHash(b); err != nil {
 		return err
 	} else {
-		ab.h = h
+		ab.BaseBallotV0 = ab.BaseBallotV0.SetHash(h)
 	}
 
 	return nil

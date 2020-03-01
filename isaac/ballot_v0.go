@@ -8,6 +8,7 @@ import (
 	"github.com/spikeekips/mitum/key"
 	"github.com/spikeekips/mitum/localtime"
 	"github.com/spikeekips/mitum/util"
+	"github.com/spikeekips/mitum/valuehash"
 )
 
 type BaseBallotFactV0 struct {
@@ -54,6 +55,7 @@ func (bf BaseBallotFactV0) Round() Round {
 }
 
 type BaseBallotV0 struct {
+	h         valuehash.Hash
 	signer    key.Publickey
 	signature key.Signature
 	signedAt  time.Time
@@ -64,6 +66,16 @@ func NewBaseBallotV0(node Address) BaseBallotV0 {
 	return BaseBallotV0{
 		node: node,
 	}
+}
+
+func (bb BaseBallotV0) Hash() valuehash.Hash {
+	return bb.h
+}
+
+func (bb BaseBallotV0) SetHash(h valuehash.Hash) BaseBallotV0 {
+	bb.h = h
+
+	return bb
 }
 
 func (bb BaseBallotV0) Signer() key.Publickey {

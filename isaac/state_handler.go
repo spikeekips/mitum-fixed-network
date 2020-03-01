@@ -145,7 +145,7 @@ func (bs *BaseStateHandler) StoreNewBlockByVoteproof(acceptVoteproof Voteproof) 
 
 	l.Debug().Msg("trying to store new block")
 
-	blockStorage, err := bs.proposalProcessor.ProcessACCEPT(fact.Proposal(), acceptVoteproof, nil)
+	blockStorage, err := bs.proposalProcessor.ProcessACCEPT(fact.Proposal(), acceptVoteproof)
 	if err != nil {
 		return err
 	}
@@ -187,18 +187,16 @@ func (bs *BaseStateHandler) StoreNewBlockByVoteproof(acceptVoteproof Voteproof) 
 func (bs *BaseStateHandler) TimerBroadcastingINITBallot(
 	intervalFunc func() time.Duration,
 	roundFunc func() Round,
-	b []byte,
 ) (*localtime.CallbackTimer, error) {
 	return localtime.NewCallbackTimer(
 		TimerIDBroadcastingINITBallot,
 		func() (bool, error) {
-			ib, err := NewINITBallotV0FromLocalstate(bs.localstate, roundFunc(), b)
-			if err != nil {
+			if ib, err := NewINITBallotV0FromLocalstate(bs.localstate, roundFunc()); err != nil {
 				bs.Log().Error().Err(err).Msg("failed to broadcast INIT ballot; will keep trying")
 				return true, nil
+			} else {
+				bs.BroadcastSeal(ib)
 			}
-
-			bs.BroadcastSeal(ib)
 
 			return true, nil
 		},
@@ -207,10 +205,7 @@ func (bs *BaseStateHandler) TimerBroadcastingINITBallot(
 	)
 }
 
-func (bs *BaseStateHandler) TimerBroadcastingACCEPTBallot(
-	newBlock Block,
-	b []byte,
-) (*localtime.CallbackTimer, error) {
+func (bs *BaseStateHandler) TimerBroadcastingACCEPTBallot(newBlock Block) (*localtime.CallbackTimer, error) {
 	var called int64
 
 	return localtime.NewCallbackTimer(
@@ -218,13 +213,12 @@ func (bs *BaseStateHandler) TimerBroadcastingACCEPTBallot(
 		func() (bool, error) {
 			// TODO ACCEPTBallot should include the received SIGN Ballots.
 
-			ab, err := NewACCEPTBallotV0FromLocalstate(bs.localstate, newBlock.Round(), newBlock, b)
-			if err != nil {
+			if ab, err := NewACCEPTBallotV0FromLocalstate(bs.localstate, newBlock.Round(), newBlock); err != nil {
 				bs.Log().Error().Err(err).Msg("failed to create ACCEPTBallot, but will keep trying")
 				return true, nil
+			} else {
+				bs.BroadcastSeal(ab)
 			}
-
-			bs.BroadcastSeal(ab)
 
 			return true, nil
 		},
@@ -259,14 +253,13 @@ func (bs *BaseStateHandler) TimerTimedoutMoveNextRound(
 				bs.Log().Error().Err(err).Str("timer", TimerIDBroadcastingINITBallot).Msg("failed to stop")
 			}
 
-			ib, err := NewINITBallotV0FromLocalstate(bs.localstate, round, nil)
-			if err != nil {
+			if ib, err := NewINITBallotV0FromLocalstate(bs.localstate, round); err != nil {
 				bs.Log().Error().Err(err).Msg("failed to move next round; will keep trying")
 
 				return true, nil
+			} else {
+				bs.BroadcastSeal(ib)
 			}
-
-			bs.BroadcastSeal(ib)
 
 			return true, nil
 		},

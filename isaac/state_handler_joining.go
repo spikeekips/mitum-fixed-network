@@ -76,7 +76,6 @@ func NewStateJoiningHandler(
 	if timer, err := cs.TimerBroadcastingINITBallot(
 		func() time.Duration { return localstate.Policy().IntervalBroadcastingINITBallot() },
 		cs.currentRound,
-		nil,
 	); err != nil {
 		return nil, err
 	} else if err := cs.timers.SetTimer(TimerIDBroadcastingINITBallot, timer); err != nil {
@@ -283,22 +282,20 @@ func (cs *StateJoiningHandler) handleACCEPTBallotAndINITVoteproof(ballot ACCEPTB
 		// INIT Voteproof and broadcast new ACCEPT Ballot.
 		_ = cs.localstate.SetLastINITVoteproof(vp)
 
-		block, err := cs.proposalProcessor.ProcessINIT(ballot.Proposal(), vp, nil)
+		block, err := cs.proposalProcessor.ProcessINIT(ballot.Proposal(), vp)
 		if err != nil {
 			l.Debug().Err(err).Msg("tried to process Proposal, but it is not yet received")
 			return err
 		}
 
-		ab, err := NewACCEPTBallotV0FromLocalstate(cs.localstate, vp.Round(), block, nil)
-		if err != nil {
+		if ab, err := NewACCEPTBallotV0FromLocalstate(cs.localstate, vp.Round(), block); err != nil {
 			cs.Log().Error().Err(err).Msg("failed to create ACCEPTBallot; will keep trying")
 			return nil
+		} else {
+			al := loggerWithBallot(ab, l)
+			cs.BroadcastSeal(ab)
+			al.Debug().Msg("ACCEPTBallot was broadcasted")
 		}
-
-		al := loggerWithBallot(ab, l)
-		cs.BroadcastSeal(ab)
-
-		al.Debug().Msg("ACCEPTBallot was broadcasted")
 
 		return nil
 	case d > 0:

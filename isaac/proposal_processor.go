@@ -11,8 +11,8 @@ import (
 )
 
 type ProposalProcessor interface {
-	ProcessINIT(valuehash.Hash /* Proposal.Hash() */, Voteproof /* INIT Voteproof */, []byte) (Block, error)
-	ProcessACCEPT(valuehash.Hash /* Proposal.Hash() */, Voteproof /* ACCEPT Voteproof */, []byte) (BlockStorage, error)
+	ProcessINIT(valuehash.Hash /* Proposal.Hash() */, Voteproof /* INIT Voteproof */) (Block, error)
+	ProcessACCEPT(valuehash.Hash /* Proposal.Hash() */, Voteproof /* ACCEPT Voteproof */) (BlockStorage, error)
 }
 
 type ProposalProcessorV0 struct {
@@ -31,7 +31,7 @@ func NewProposalProcessorV0(localstate *Localstate) *ProposalProcessorV0 {
 	}
 }
 
-func (dp *ProposalProcessorV0) ProcessINIT(ph valuehash.Hash, initVoteproof Voteproof, b []byte) (Block, error) {
+func (dp *ProposalProcessorV0) ProcessINIT(ph valuehash.Hash, initVoteproof Voteproof) (Block, error) {
 	if i, found := dp.blocks.Load(ph); found {
 		return i.(Block), nil
 	}
@@ -65,12 +65,12 @@ func (dp *ProposalProcessorV0) ProcessINIT(ph valuehash.Hash, initVoteproof Vote
 		return nil, xerrors.Errorf("last block is empty")
 	}
 
-	blockOperations, err := dp.processSeals(proposal, b)
+	blockOperations, err := dp.processSeals(proposal)
 	if err != nil {
 		return nil, err
 	}
 
-	blockStates, err := dp.processStates(proposal, b)
+	blockStates, err := dp.processStates(proposal)
 	if err != nil {
 		return nil, err
 	}
@@ -79,7 +79,7 @@ func (dp *ProposalProcessorV0) ProcessINIT(ph valuehash.Hash, initVoteproof Vote
 	if b, err := NewBlockV0(
 		proposal.Height(), proposal.Round(), proposal.Hash(), lastBlock.Hash(),
 		blockOperations, blockStates,
-		b,
+		dp.localstate.Policy().NetworkID(),
 	); err != nil {
 		return nil, err
 	} else {
@@ -91,9 +91,8 @@ func (dp *ProposalProcessorV0) ProcessINIT(ph valuehash.Hash, initVoteproof Vote
 	return block, nil
 }
 
-// TODO b is NetworkID
 func (dp *ProposalProcessorV0) ProcessACCEPT(
-	ph valuehash.Hash, acceptVoteproof Voteproof, _ []byte,
+	ph valuehash.Hash, acceptVoteproof Voteproof,
 ) (BlockStorage, error) {
 	var block Block
 	if i, found := dp.blocks.Load(ph); !found {
@@ -105,10 +104,10 @@ func (dp *ProposalProcessorV0) ProcessACCEPT(
 	return dp.localstate.Storage().OpenBlockStorage(block)
 }
 
-func (dp *ProposalProcessorV0) processSeals(Proposal, []byte) (valuehash.Hash, error) {
+func (dp *ProposalProcessorV0) processSeals(Proposal) (valuehash.Hash, error) {
 	return nil, nil
 }
 
-func (dp *ProposalProcessorV0) processStates(Proposal, []byte) (valuehash.Hash, error) {
+func (dp *ProposalProcessorV0) processStates(Proposal) (valuehash.Hash, error) {
 	return nil, nil
 }

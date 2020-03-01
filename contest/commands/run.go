@@ -48,7 +48,6 @@ func (cm RunCommand) generateBlocks(ns []*isaac.Localstate) error {
 	if bg, err := isaac.NewDummyBlocksV0Generator(
 		ns[0],
 		3,
-		nil,
 		common.NewSuffrage(ns[0]),
 		ns,
 	); err != nil {

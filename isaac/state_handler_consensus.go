@@ -203,7 +203,6 @@ func (cs *StateConsensusHandler) keepBroadcastingINITBallotForNextBlock() error 
 	if timer, err := cs.TimerBroadcastingINITBallot(
 		func() time.Duration { return cs.localstate.Policy().IntervalBroadcastingINITBallot() },
 		func() Round { return Round(0) },
-		nil,
 	); err != nil {
 		return err
 	} else if err := cs.timers.SetTimer(TimerIDBroadcastingINITBallot, timer); err != nil {
@@ -233,11 +232,7 @@ func (cs *StateConsensusHandler) handleProposal(proposal Proposal) error {
 	}
 
 	// TODO if processing takes too long?
-	block, err := cs.proposalProcessor.ProcessINIT(
-		proposal.Hash(),
-		cs.localstate.LastINITVoteproof(),
-		nil,
-	)
+	block, err := cs.proposalProcessor.ProcessINIT(proposal.Hash(), cs.localstate.LastINITVoteproof())
 	if err != nil {
 		return err
 	}
@@ -269,22 +264,21 @@ func (cs *StateConsensusHandler) readyToSIGNBallot(proposal Proposal, newBlock B
 	// NOTE not like broadcasting ACCEPT Ballot, SIGN Ballot will be broadcasted
 	// withtout waiting.
 
-	sb, err := NewSIGNBallotV0FromLocalstate(cs.localstate, proposal.Round(), newBlock, nil)
-	if err != nil {
+	if sb, err := NewSIGNBallotV0FromLocalstate(cs.localstate, proposal.Round(), newBlock); err != nil {
 		cs.Log().Error().Err(err).Msg("failed to create SIGNBallot")
 		return err
+	} else {
+		cs.BroadcastSeal(sb)
+
+		loggerWithBallot(sb, cs.Log()).Debug().Msg("SIGNBallot was broadcasted")
 	}
-
-	cs.BroadcastSeal(sb)
-
-	loggerWithBallot(sb, cs.Log()).Debug().Msg("SIGNBallot was broadcasted")
 
 	return nil
 }
 
 func (cs *StateConsensusHandler) readyToACCEPTBallot(newBlock Block) error {
 	// NOTE if not in acting suffrage, broadcast ACCEPT Ballot after interval.
-	if timer, err := cs.TimerBroadcastingACCEPTBallot(newBlock, nil); err != nil {
+	if timer, err := cs.TimerBroadcastingACCEPTBallot(newBlock); err != nil {
 		return err
 	} else if err := cs.timers.SetTimer(TimerIDBroadcastingACCEPTBallot, timer); err != nil {
 		return err
@@ -308,7 +302,7 @@ func (cs *StateConsensusHandler) proposal(vp Voteproof) (bool, error) {
 		return false, nil
 	}
 
-	proposal, err := cs.proposalMaker.Proposal(vp.Round(), nil)
+	proposal, err := cs.proposalMaker.Proposal(vp.Round())
 	if err != nil {
 		return false, err
 	}
@@ -351,7 +345,6 @@ func (cs *StateConsensusHandler) startNextRound(vp Voteproof) error {
 			return cs.localstate.Policy().IntervalBroadcastingINITBallot()
 		},
 		func() Round { return round },
-		nil,
 	); err != nil {
 		return err
 	} else if err := cs.timers.SetTimer(TimerIDBroadcastingINITBallot, timer); err != nil {

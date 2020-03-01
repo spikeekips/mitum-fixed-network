@@ -51,7 +51,7 @@ func (t *testStateJoiningHandler) TestKeepBroadcastingINITBallot() {
 
 	ballot := received.(INITBallotV0)
 
-	t.NoError(ballot.IsValid(nil))
+	t.NoError(ballot.IsValid(t.localstate.Policy().NetworkID()))
 
 	t.True(t.localstate.Node().Publickey().Equal(ballot.Signer()))
 	t.Equal(StageINIT, ballot.Stage())
@@ -84,7 +84,7 @@ func (t *testStateJoiningHandler) TestINITBallotWithACCEPTVoteproofExpectedHeigh
 	}()
 
 	lastBlock := t.localstate.LastBlock()
-	ib, err := NewINITBallotV0FromLocalstate(t.localstate, cs.currentRound(), nil)
+	ib, err := NewINITBallotV0FromLocalstate(t.localstate, cs.currentRound())
 	t.NoError(err)
 
 	// ACCEPT Voteproof; 2 node(local and remote) vote with same AcceptFact.
@@ -128,7 +128,7 @@ func (t *testStateJoiningHandler) TestINITBallotWithACCEPTVoteproofLowerHeight()
 		_ = cs.Deactivate(StateChangeContext{})
 	}()
 
-	ib, err := NewINITBallotV0FromLocalstate(t.remoteState, cs.currentRound(), nil)
+	ib, err := NewINITBallotV0FromLocalstate(t.remoteState, cs.currentRound())
 	t.NoError(err)
 
 	ib.INITBallotFactV0.height = t.remoteState.LastBlock().Height() - 1
@@ -175,7 +175,7 @@ func (t *testStateJoiningHandler) TestINITBallotWithACCEPTVoteproofHigherHeight(
 		_ = cs.Deactivate(StateChangeContext{})
 	}()
 
-	ib, err := NewINITBallotV0FromLocalstate(t.remoteState, cs.currentRound(), nil)
+	ib, err := NewINITBallotV0FromLocalstate(t.remoteState, cs.currentRound())
 	t.NoError(err)
 
 	ib.INITBallotFactV0.height = t.remoteState.LastBlock().Height() + 2
@@ -241,7 +241,7 @@ func (t *testStateJoiningHandler) TestINITBallotWithINITVoteproofExpectedHeight(
 
 	cs.setCurrentRound(Round(1))
 	lastBlock := t.localstate.LastBlock()
-	ib, err := NewINITBallotV0FromLocalstate(t.remoteState, cs.currentRound(), nil)
+	ib, err := NewINITBallotV0FromLocalstate(t.remoteState, cs.currentRound())
 	t.NoError(err)
 
 	initFact := INITBallotFactV0{
@@ -289,7 +289,7 @@ func (t *testStateJoiningHandler) TestINITBallotWithINITVoteproofLowerHeight() {
 
 	cs.setCurrentRound(Round(1))
 	lastBlock := t.localstate.LastBlock()
-	ib, err := NewINITBallotV0FromLocalstate(t.remoteState, cs.currentRound(), nil)
+	ib, err := NewINITBallotV0FromLocalstate(t.remoteState, cs.currentRound())
 	t.NoError(err)
 
 	ib.INITBallotFactV0.height = t.remoteState.LastBlock().Height() - 1
@@ -341,7 +341,7 @@ func (t *testStateJoiningHandler) TestINITBallotWithINITVoteproofHigherHeight() 
 	cs.setCurrentRound(Round(1))
 
 	lastBlock := t.localstate.LastBlock()
-	ib, err := NewINITBallotV0FromLocalstate(t.remoteState, cs.currentRound(), nil)
+	ib, err := NewINITBallotV0FromLocalstate(t.remoteState, cs.currentRound())
 	t.NoError(err)
 
 	ib.INITBallotFactV0.height = t.remoteState.LastBlock().Height() + 3

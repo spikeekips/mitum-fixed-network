@@ -27,7 +27,7 @@ func (t *testStateConsensusHandler) TestNew() {
 	t.NoError(err)
 	t.NotNil(cs)
 
-	ib, err := NewINITBallotV0FromLocalstate(t.localstate, Round(0), nil)
+	ib, err := NewINITBallotV0FromLocalstate(t.localstate, Round(0))
 	t.NoError(err)
 	initFact := ib.INITBallotFactV0
 
@@ -69,7 +69,7 @@ func (t *testStateConsensusHandler) TestWaitingProposalButTimedOut() {
 	sealChan := make(chan seal.Seal)
 	cs.SetSealChan(sealChan)
 
-	ib, err := NewINITBallotV0FromLocalstate(t.localstate, Round(0), nil)
+	ib, err := NewINITBallotV0FromLocalstate(t.localstate, Round(0))
 	t.NoError(err)
 	initFact := ib.INITBallotFactV0
 
@@ -105,7 +105,7 @@ func (t *testStateConsensusHandler) TestWaitingProposalButTimedOut() {
 func (t *testStateConsensusHandler) TestWithProposalWaitACCEPTBallot() {
 	t.localstate.Policy().SetWaitBroadcastingACCEPTBallot(time.Millisecond * 1)
 
-	ib, err := NewINITBallotV0FromLocalstate(t.localstate, Round(0), nil)
+	ib, err := NewINITBallotV0FromLocalstate(t.localstate, Round(0))
 	t.NoError(err)
 	initFact := ib.INITBallotFactV0
 
@@ -135,7 +135,7 @@ func (t *testStateConsensusHandler) TestWithProposalWaitACCEPTBallot() {
 		_ = cs.Deactivate(StateChangeContext{})
 	}()
 
-	pr, err := NewProposalFromLocalstate(t.remoteState, initFact.round, nil, nil)
+	pr, err := NewProposalFromLocalstate(t.remoteState, initFact.round, nil)
 	t.NoError(err)
 
 	returnedBlock, err := NewTestBlockV0(initFact.Height(), initFact.Round(), pr.Hash(), valuehash.RandomSHA256())
@@ -159,7 +159,7 @@ func (t *testStateConsensusHandler) TestWithProposalWaitACCEPTBallot() {
 // with Proposal, ACCEPTBallot will be broadcasted with newly processed
 // Proposal.
 func (t *testStateConsensusHandler) TestWithProposalWaitSIGNBallot() {
-	ib, err := NewINITBallotV0FromLocalstate(t.localstate, Round(0), nil)
+	ib, err := NewINITBallotV0FromLocalstate(t.localstate, Round(0))
 	t.NoError(err)
 	initFact := ib.INITBallotFactV0
 
@@ -189,7 +189,7 @@ func (t *testStateConsensusHandler) TestWithProposalWaitSIGNBallot() {
 		_ = cs.Deactivate(StateChangeContext{})
 	}()
 
-	pr, err := NewProposalFromLocalstate(t.remoteState, initFact.round, nil, nil)
+	pr, err := NewProposalFromLocalstate(t.remoteState, initFact.round, nil)
 	t.NoError(err)
 
 	returnedBlock, err := NewTestBlockV0(initFact.Height(), initFact.Round(), pr.Hash(), valuehash.RandomSHA256())
@@ -226,7 +226,7 @@ func (t *testStateConsensusHandler) TestDraw() {
 
 	var vp Voteproof
 	{
-		ib, err := NewINITBallotV0FromLocalstate(t.localstate, Round(0), nil)
+		ib, err := NewINITBallotV0FromLocalstate(t.localstate, Round(0))
 		t.NoError(err)
 		fact := ib.INITBallotFactV0
 
@@ -247,7 +247,7 @@ func (t *testStateConsensusHandler) TestDraw() {
 	{
 		dummyBlock, _ := NewTestBlockV0(vp.Height(), vp.Round(), valuehash.RandomSHA256(), valuehash.RandomSHA256())
 
-		ab, err := NewACCEPTBallotV0FromLocalstate(t.localstate, vp.Round(), dummyBlock, nil)
+		ab, err := NewACCEPTBallotV0FromLocalstate(t.localstate, vp.Round(), dummyBlock)
 		t.NoError(err)
 		fact := ab.ACCEPTBallotFactV0
 

@@ -25,7 +25,7 @@ func (t *testGenesisBlockV0) SetupTest() {
 }
 
 func (t *testGenesisBlockV0) TestNewGenesisBlock() {
-	gg, err := NewGenesisBlockV0Generator(t.localstate, nil)
+	gg, err := NewGenesisBlockV0Generator(t.localstate)
 	t.NoError(err)
 
 	block, err := gg.Generate()

@@ -74,7 +74,7 @@ func NewACCEPTBallotV0(
 	round Round,
 	newBlock Block,
 	initVoteproof Voteproof,
-	b []byte,
+	networkID []byte,
 ) (ACCEPTBallotV0, error) {
 	ab := ACCEPTBallotV0{
 		BaseBallotV0: BaseBallotV0{
@@ -91,8 +91,7 @@ func NewACCEPTBallotV0(
 		voteproof: initVoteproof,
 	}
 
-	// TODO NetworkID must be given.
-	if err := ab.Sign(localstate.Node().Privatekey(), b); err != nil {
+	if err := ab.Sign(localstate.Node().Privatekey(), networkID); err != nil {
 		return ACCEPTBallotV0{}, err
 	}
 
@@ -103,7 +102,6 @@ func NewACCEPTBallotV0FromLocalstate(
 	localstate *Localstate,
 	round Round,
 	newBlock Block,
-	b []byte,
 ) (ACCEPTBallotV0, error) {
 	lastBlock := localstate.LastBlock()
 	if lastBlock == nil {
@@ -125,8 +123,7 @@ func NewACCEPTBallotV0FromLocalstate(
 		voteproof: localstate.LastINITVoteproof(),
 	}
 
-	// TODO NetworkID must be given.
-	if err := ab.Sign(localstate.Node().Privatekey(), b); err != nil {
+	if err := ab.Sign(localstate.Node().Privatekey(), localstate.Policy().NetworkID()); err != nil {
 		return ACCEPTBallotV0{}, err
 	}
 

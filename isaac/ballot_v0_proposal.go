@@ -79,7 +79,7 @@ func NewProposal(
 	height Height,
 	round Round,
 	seals []valuehash.Hash,
-	b []byte,
+	networkID []byte,
 ) (Proposal, error) {
 	pr := ProposalV0{
 		BaseBallotV0: BaseBallotV0{
@@ -94,8 +94,7 @@ func NewProposal(
 		},
 	}
 
-	// TODO NetworkID must be given.
-	if err := pr.Sign(localstate.Node().Privatekey(), b); err != nil {
+	if err := pr.Sign(localstate.Node().Privatekey(), networkID); err != nil {
 		return ProposalV0{}, err
 	}
 
@@ -106,7 +105,6 @@ func NewProposalFromLocalstate(
 	localstate *Localstate,
 	round Round,
 	seals []valuehash.Hash,
-	b []byte,
 ) (Proposal, error) {
 	lastBlock := localstate.LastBlock()
 	if lastBlock == nil {
@@ -126,8 +124,7 @@ func NewProposalFromLocalstate(
 		},
 	}
 
-	// TODO NetworkID must be given.
-	if err := pr.Sign(localstate.Node().Privatekey(), b); err != nil {
+	if err := pr.Sign(localstate.Node().Privatekey(), localstate.Policy().NetworkID()); err != nil {
 		return ProposalV0{}, err
 	}
 

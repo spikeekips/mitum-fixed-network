@@ -15,10 +15,10 @@ func (t *testProposalMaker) TestCached() {
 	proposalMaker := NewProposalMaker(t.localstate)
 
 	round := Round(1)
-	proposal, err := proposalMaker.Proposal(round, nil)
+	proposal, err := proposalMaker.Proposal(round)
 	t.NoError(err)
 
-	newProposal, err := proposalMaker.Proposal(round, nil)
+	newProposal, err := proposalMaker.Proposal(round)
 	t.NoError(err)
 
 	t.True(proposal.Hash().Equal(newProposal.Hash()))
@@ -29,7 +29,7 @@ func (t *testProposalMaker) TestClean() {
 	proposalMaker := NewProposalMaker(localstate)
 
 	round := Round(1)
-	_, err := proposalMaker.Proposal(round, nil)
+	_, err := proposalMaker.Proposal(round)
 	t.NoError(err)
 
 	newBlock, err := NewTestBlockV0(localstate.LastBlock().Height()+1, Round(0), nil, valuehash.RandomSHA256())

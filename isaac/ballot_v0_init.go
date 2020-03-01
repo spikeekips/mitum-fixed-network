@@ -86,7 +86,7 @@ func NewINITBallotV0(
 	previousBlock valuehash.Hash,
 	previousRound Round,
 	voteproof Voteproof,
-	b []byte,
+	networkID []byte,
 ) (INITBallotV0, error) {
 	ib := INITBallotV0{
 		BaseBallotV0: BaseBallotV0{
@@ -101,15 +101,14 @@ func NewINITBallotV0(
 		voteproof: voteproof,
 	}
 
-	// TODO NetworkID must be given.
-	if err := ib.Sign(localstate.Node().Privatekey(), b); err != nil {
+	if err := ib.Sign(localstate.Node().Privatekey(), networkID); err != nil {
 		return INITBallotV0{}, err
 	}
 
 	return ib, nil
 }
 
-func NewINITBallotV0FromLocalstate(localstate *Localstate, round Round, b []byte) (INITBallotV0, error) {
+func NewINITBallotV0FromLocalstate(localstate *Localstate, round Round) (INITBallotV0, error) {
 	lastBlock := localstate.LastBlock()
 	if lastBlock == nil {
 		return INITBallotV0{}, xerrors.Errorf("lastBlock is empty")
@@ -135,8 +134,7 @@ func NewINITBallotV0FromLocalstate(localstate *Localstate, round Round, b []byte
 	}
 	ib.voteproof = voteproof
 
-	// TODO NetworkID must be given.
-	if err := ib.Sign(localstate.Node().Privatekey(), b); err != nil {
+	if err := ib.Sign(localstate.Node().Privatekey(), localstate.Policy().NetworkID()); err != nil {
 		return INITBallotV0{}, err
 	}
 

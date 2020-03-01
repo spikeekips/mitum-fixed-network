@@ -20,7 +20,7 @@ func (pm *ProposalMaker) seals() []valuehash.Hash {
 	return nil
 }
 
-func (pm *ProposalMaker) Proposal(round Round, b []byte) (Proposal, error) {
+func (pm *ProposalMaker) Proposal(round Round) (Proposal, error) {
 	pm.Lock()
 	defer pm.Unlock()
 
@@ -34,7 +34,7 @@ func (pm *ProposalMaker) Proposal(round Round, b []byte) (Proposal, error) {
 		}
 	}
 
-	proposal, err := NewProposal(pm.localstate, height, round, pm.seals(), b)
+	proposal, err := NewProposal(pm.localstate, height, round, pm.seals(), pm.localstate.Policy().NetworkID())
 	if err != nil {
 		return nil, err
 	}

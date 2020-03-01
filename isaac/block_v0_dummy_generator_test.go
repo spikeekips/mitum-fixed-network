@@ -62,7 +62,7 @@ func (t *testBlockV0DummyGenerator) TestCreate() {
 	}
 
 	lastHeight := Height(10)
-	bg, err := NewDummyBlocksV0Generator(t.localstate, lastHeight, nil, suffrage, all)
+	bg, err := NewDummyBlocksV0Generator(t.localstate, lastHeight, suffrage, all)
 	t.NoError(err)
 
 	t.NoError(bg.Generate())

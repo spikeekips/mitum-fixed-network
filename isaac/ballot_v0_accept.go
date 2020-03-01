@@ -38,10 +38,8 @@ func (abf ACCEPTBallotFactV0) IsValid(b []byte) error {
 	return nil
 }
 
-func (abf ACCEPTBallotFactV0) Hash(b []byte) (valuehash.Hash, error) {
-	e := util.ConcatSlice([][]byte{abf.Bytes(), b})
-
-	return valuehash.NewSHA256(e), nil
+func (abf ACCEPTBallotFactV0) Hash() valuehash.Hash {
+	return valuehash.NewSHA256(abf.Bytes())
 }
 
 func (abf ACCEPTBallotFactV0) Bytes() []byte {
@@ -164,6 +162,10 @@ func (ab ACCEPTBallotV0) IsValid(b []byte) error {
 		return err
 	}
 
+	if err := IsValidBallot(ab, b); err != nil {
+		return err
+	}
+
 	return nil
 }
 
@@ -172,10 +174,6 @@ func (ab ACCEPTBallotV0) Voteproof() Voteproof {
 }
 
 func (ab ACCEPTBallotV0) GenerateHash(b []byte) (valuehash.Hash, error) {
-	if err := ab.IsValid(b); err != nil {
-		return nil, err
-	}
-
 	e := util.ConcatSlice([][]byte{
 		ab.BaseBallotV0.Bytes(),
 		ab.ACCEPTBallotFactV0.Bytes(),
@@ -232,13 +230,7 @@ func (ab *ACCEPTBallotV0) Sign(pk key.Privatekey, b []byte) error { // nolint
 		sig = s
 	}
 
-	var factHash valuehash.Hash
-	if h, err := ab.ACCEPTBallotFactV0.Hash(b); err != nil {
-		return err
-	} else {
-		factHash = h
-	}
-
+	factHash := ab.ACCEPTBallotFactV0.Hash()
 	factSig, err := pk.Sign(util.ConcatSlice([][]byte{factHash.Bytes(), b}))
 	if err != nil {
 		return err

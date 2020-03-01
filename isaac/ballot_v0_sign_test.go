@@ -67,8 +67,7 @@ func (t *testBallotV0SIGN) TestFact() {
 
 	_ = (interface{})(fact).(Fact)
 
-	factHash, err := fact.Hash(nil)
-	t.NoError(err)
+	factHash := fact.Hash()
 	t.NotNil(factHash)
 	t.NoError(fact.IsValid(nil))
 

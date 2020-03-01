@@ -50,10 +50,8 @@ func (ibf INITBallotFactV0) IsValid(b []byte) error {
 	return nil
 }
 
-func (ibf INITBallotFactV0) Hash(b []byte) (valuehash.Hash, error) {
-	e := util.ConcatSlice([][]byte{ibf.Bytes(), b})
-
-	return valuehash.NewSHA256(e), nil
+func (ibf INITBallotFactV0) Hash() valuehash.Hash {
+	return valuehash.NewSHA256(ibf.Bytes())
 }
 
 func (ibf INITBallotFactV0) Bytes() []byte {
@@ -187,6 +185,10 @@ func (ib INITBallotV0) IsValid(b []byte) error {
 		}
 	}
 
+	if err := IsValidBallot(ib, b); err != nil {
+		return err
+	}
+
 	return nil
 }
 
@@ -195,10 +197,6 @@ func (ib INITBallotV0) Voteproof() Voteproof {
 }
 
 func (ib INITBallotV0) GenerateHash(b []byte) (valuehash.Hash, error) {
-	if err := ib.IsValid(b); err != nil {
-		return nil, err
-	}
-
 	return valuehash.NewSHA256(
 		util.ConcatSlice([][]byte{
 			ib.BaseBallotV0.Bytes(),
@@ -264,13 +262,7 @@ func (ib *INITBallotV0) Sign(pk key.Privatekey, b []byte) error { // nolint
 	}
 
 	// fact signature
-	var factHash valuehash.Hash
-	if h, err := ib.INITBallotFactV0.Hash(b); err != nil {
-		return err
-	} else {
-		factHash = h
-	}
-
+	factHash := ib.INITBallotFactV0.Hash()
 	factSig, err := pk.Sign(util.ConcatSlice([][]byte{factHash.Bytes(), b}))
 	if err != nil {
 		return err

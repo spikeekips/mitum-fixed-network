@@ -110,10 +110,7 @@ func (t *baseTestStateHandler) SetupTest() {
 func (t *baseTestStateHandler) newVoteproof(
 	stage Stage, fact Fact, states ...*Localstate,
 ) (VoteproofV0, error) {
-	factHash, err := fact.Hash(nil)
-	if err != nil {
-		return VoteproofV0{}, err
-	}
+	factHash := fact.Hash()
 
 	ballots := map[Address]valuehash.Hash{}
 	votes := map[Address]VoteproofNodeFact{}

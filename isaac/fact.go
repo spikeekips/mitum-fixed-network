@@ -11,7 +11,7 @@ import (
 type Fact interface {
 	isvalid.IsValider
 	hint.Hinter
-	Hash([]byte) (valuehash.Hash, error)
+	Hash() valuehash.Hash
 	Bytes() []byte
 }
 

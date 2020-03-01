@@ -89,10 +89,10 @@ func (vp VoteproofV0) IsValid(b []byte) error {
 		return nil
 	}
 
-	return vp.isValidCheckMajority(b)
+	return vp.isValidCheckMajority()
 }
 
-func (vp VoteproofV0) isValidCheckMajority(b []byte) error {
+func (vp VoteproofV0) isValidCheckMajority() error {
 	counts := map[valuehash.Hash]uint{}
 	for _, f := range vp.votes { // nolint
 		counts[f.fact]++
@@ -131,11 +131,7 @@ func (vp VoteproofV0) isValidCheckMajority(b []byte) error {
 			return xerrors.Errorf("result should be nil, but not")
 		}
 	} else {
-		mhash, err := vp.majority.Hash(b)
-		if err != nil {
-			return err
-		}
-
+		mhash := vp.majority.Hash()
 		if !mhash.Equal(factHash) {
 			return xerrors.Errorf("fact hash mismatch; vp.majority=%s != fact=%s", mhash, factHash)
 		}
@@ -215,9 +211,7 @@ func (vp VoteproofV0) isValidFacts(b []byte) error {
 		if err := isvalid.Check([]isvalid.IsValider{k, v}, b, false); err != nil {
 			return err
 		}
-		if h, err := v.Hash(b); err != nil {
-			return err
-		} else if !h.Equal(k) {
+		if h := v.Hash(); !h.Equal(k) {
 			return xerrors.Errorf(
 				"factHash and Fact.Hash() does not match: factHash=%v != Fact.Hash()=%v",
 				k.String(), h.String(),

@@ -40,7 +40,7 @@ func (t *testVoteproofJSON) TestMajorityButNot() {
 	n1 := RandomLocalNode("n1", nil)
 
 	fact0 := tinyFact{A: "fact0"}
-	factHash0, _ := fact0.Hash(nil)
+	factHash0 := fact0.Hash()
 	factSignature0, _ := n0.Privatekey().Sign(factHash0.Bytes())
 	factSignature1, _ := n1.Privatekey().Sign(factHash0.Bytes())
 

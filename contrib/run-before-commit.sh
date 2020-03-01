@@ -18,4 +18,7 @@ errcheck -tags test -ignoretests ./...
 # golangci-run
 golangci-lint run --build-tags test
 
+# nargs
+nargs ./...
+
 exit 0

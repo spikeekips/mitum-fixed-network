@@ -20,6 +20,7 @@ func (t *testBlockV0DummyGenerator) SetupTest() {
 	localstate, err := NewLocalstate(
 		NewMemStorage(baseLocalstate.Storage().Encoders(), baseLocalstate.Storage().Encoder()),
 		baseLocalstate.Node(),
+		TestNetworkID,
 	)
 	t.NoError(err)
 	t.localstate = localstate

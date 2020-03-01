@@ -14,7 +14,8 @@ import (
 )
 
 type RunCommand struct {
-	Nodes uint `args:"" default:"${nodes}" help:"number of suffrage nodes"`
+	Nodes     uint   `args:"" default:"${nodes}" help:"number of suffrage nodes"`
+	NetworkID string `args:"" default:"${networkID}" help:"network id"`
 }
 
 func (cm RunCommand) registerTypes() error {
@@ -124,7 +125,7 @@ func (cm RunCommand) Run(_ *CommonFlags, log *zerolog.Logger, exitHooks *[]func(
 
 	var ns []*isaac.Localstate
 	for i := 0; i < int(cm.Nodes); i++ {
-		if nl, err := common.NewNode(i, "quic"); err != nil {
+		if nl, err := common.NewNode(i, []byte(cm.NetworkID), "quic"); err != nil {
 			return err
 		} else {
 			ns = append(ns, nl)

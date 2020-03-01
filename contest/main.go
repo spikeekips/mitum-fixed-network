@@ -16,6 +16,7 @@ import (
 
 	"github.com/spikeekips/mitum/contest/commands"
 	"github.com/spikeekips/mitum/contest/common"
+	"github.com/spikeekips/mitum/util"
 )
 
 var (
@@ -132,6 +133,7 @@ func main() {
 			"log_level":  "debug",
 			"log_format": "terminal",
 			"nodes":      "1",
+			"networkID":  fmt.Sprintf("contest-network-id-%s", util.UUID().String()),
 		},
 	)
 

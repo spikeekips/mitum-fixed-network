@@ -29,7 +29,7 @@ func (t *testBallotbox) SetupSuite() {
 }
 
 func (t *testBallotbox) thresholdFunc(total uint, percent float64) func() Threshold {
-	ls, err := NewLocalstate(nil, nil)
+	ls, err := NewLocalstate(nil, nil, TestNetworkID)
 	t.NoError(err)
 
 	threshold, _ := NewThreshold(total, percent)

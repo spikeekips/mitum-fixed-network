@@ -68,13 +68,13 @@ func (t *baseTestStateHandler) states() (*Localstate, *Localstate) {
 
 	lst := NewMemStorage(t.encs, t.enc)
 	localNode := RandomLocalNode(util.UUID().String(), nil)
-	localstate, err := NewLocalstate(lst, localNode)
+	localstate, err := NewLocalstate(lst, localNode, TestNetworkID)
 	t.NoError(err)
 	_ = localstate.SetLastBlock(lastBlock)
 
 	rst := NewMemStorage(t.encs, t.enc)
 	remoteNode := RandomLocalNode(util.UUID().String(), nil)
-	remoteState, err := NewLocalstate(rst, remoteNode)
+	remoteState, err := NewLocalstate(rst, remoteNode, TestNetworkID)
 	t.NoError(err)
 	_ = remoteState.SetLastBlock(lastBlock)
 

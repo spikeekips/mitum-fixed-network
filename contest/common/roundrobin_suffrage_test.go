@@ -14,7 +14,7 @@ type testRoundrobinSuffrage struct {
 
 func (t *testRoundrobinSuffrage) localstate() *isaac.Localstate {
 	localNode := isaac.RandomLocalNode("local", nil)
-	localstate, err := isaac.NewLocalstate(nil, localNode)
+	localstate, err := isaac.NewLocalstate(nil, localNode, isaac.TestNetworkID)
 	t.NoError(err)
 
 	return localstate

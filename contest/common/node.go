@@ -60,7 +60,7 @@ func NewNodeChannel(encs *encoder.Encoders, enc encoder.Encoder, netType string)
 	return channel
 }
 
-func NewNode(id int, netType string) (*isaac.Localstate, error) {
+func NewNode(id int, networkID []byte, netType string) (*isaac.Localstate, error) {
 	// encoder
 	encs := encoder.NewEncoders()
 	enc := encoder.NewJSONEncoder()
@@ -84,7 +84,7 @@ func NewNode(id int, netType string) (*isaac.Localstate, error) {
 	st := isaac.NewLeveldbStorage(db, encs, enc)
 
 	localNode := NewLocalNode(id)
-	localstate, err := isaac.NewLocalstate(st, localNode)
+	localstate, err := isaac.NewLocalstate(st, localNode, networkID)
 	if err != nil {
 		return nil, err
 	}

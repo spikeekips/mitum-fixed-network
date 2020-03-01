@@ -4,24 +4,6 @@ import (
 	"github.com/spikeekips/mitum/util"
 )
 
-func (lp LocalPolicy) MarshalJSON() ([]byte, error) {
-	return util.JSONMarshal(struct {
-		TH Threshold `json:"threshold"`
-		TP string    `json:"timeout_waiting_proposal"`
-		II string    `json:"interval_broadcasting_init_ballot"`
-		WB string    `json:"wait_broadcasting_accept_ballot"`
-		IA string    `json:"interval_broadcasting_accept_ballot"`
-		NA uint      `json:"number_of_acting_suffrage_nodes"`
-	}{
-		TH: lp.Threshold(),
-		TP: lp.TimeoutWaitingProposal().String(),
-		II: lp.IntervalBroadcastingINITBallot().String(),
-		WB: lp.WaitBroadcastingACCEPTBallot().String(),
-		IA: lp.IntervalBroadcastingACCEPTBallot().String(),
-		NA: lp.NumberOfActingSuffrageNodes(),
-	})
-}
-
 func (ls Localstate) MarshalJSON() ([]byte, error) {
 	var nodes []Node
 	ls.Nodes().Traverse(func(n Node) bool {

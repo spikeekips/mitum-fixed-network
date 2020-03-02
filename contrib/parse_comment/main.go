@@ -63,7 +63,7 @@ func main() {
 	for d := range directories {
 		go func(d string) {
 			fset := token.NewFileSet()
-			if err := parse(ch, fset, d); err != nil {
+			if err := parse(ch, fset, d, directory); err != nil {
 				printError(err)
 			}
 			wg.Done()
@@ -84,7 +84,7 @@ func main() {
 	os.Exit(1)
 }
 
-func parse(ch chan string, fset *token.FileSet, directory string) error {
+func parse(ch chan string, fset *token.FileSet, directory, base string) error {
 	packages, err := parser.ParseDir(
 		fset,
 		directory,
@@ -98,22 +98,13 @@ func parse(ch chan string, fset *token.FileSet, directory string) error {
 	}
 
 	for _, p := range packages {
-		for _, f := range p.Files {
+		for filename, f := range p.Files {
 			for _, cg := range f.Comments {
 				for _, c := range cg.List {
-					s := c.Text
-					if strings.HasPrefix(s, "//") {
-						s = strings.Replace(s, "//", "", 1)
-					} else if strings.HasPrefix(s, "/*") {
-						s = strings.Replace(
-							strings.Replace(s, "/*", "", 1),
-							"*/",
-							"",
-							1,
-						)
-					}
+					s := strings.Replace(c.Text, "\n", " ", -1)
 
-					ch <- strings.TrimSpace(s)
+					rel, _ := filepath.Rel(base, filename)
+					ch <- fmt.Sprintf("%s: %s", rel, strings.TrimSpace(s))
 				}
 			}
 		}

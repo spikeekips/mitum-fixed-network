@@ -1,4 +1,4 @@
-package isaac
+package operation
 
 import (
 	"golang.org/x/xerrors"

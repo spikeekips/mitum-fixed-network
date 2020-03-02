@@ -66,25 +66,25 @@ func UnpackBaseBallotV0JSON(nib BaseBallotV0UnpackerJSON, enc *encoder.JSONEncod
 
 	// signer
 	var signer key.Publickey
-	if signer, err = decodePublickey(enc, nib.SN); err != nil {
+	if signer, err = key.DecodePublickey(enc, nib.SN); err != nil {
 		return nil, nil, nil, BaseBallotV0{}, BaseBallotFactV0{}, err
 	}
 
 	var eh, ebh, efh valuehash.Hash
-	if eh, err = decodeHash(enc, nib.H); err != nil {
+	if eh, err = valuehash.Decode(enc, nib.H); err != nil {
 		return nil, nil, nil, BaseBallotV0{}, BaseBallotFactV0{}, err
 	}
 
-	if ebh, err = decodeHash(enc, nib.BH); err != nil {
+	if ebh, err = valuehash.Decode(enc, nib.BH); err != nil {
 		return nil, nil, nil, BaseBallotV0{}, BaseBallotFactV0{}, err
 	}
 
-	if efh, err = decodeHash(enc, nib.FH); err != nil {
+	if efh, err = valuehash.Decode(enc, nib.FH); err != nil {
 		return nil, nil, nil, BaseBallotV0{}, BaseBallotFactV0{}, err
 	}
 
 	var node Address
-	if node, err = decodeAddress(enc, nib.N); err != nil {
+	if node, err = DecodeAddress(enc, nib.N); err != nil {
 		return nil, nil, nil, BaseBallotV0{}, BaseBallotFactV0{}, err
 	}
 

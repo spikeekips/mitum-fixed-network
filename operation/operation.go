@@ -1,11 +1,12 @@
-package isaac
+package operation
 
 import (
+	"golang.org/x/xerrors"
+
 	"github.com/spikeekips/mitum/hint"
 	"github.com/spikeekips/mitum/isvalid"
 	"github.com/spikeekips/mitum/key"
 	"github.com/spikeekips/mitum/valuehash"
-	"golang.org/x/xerrors"
 )
 
 const MaxTokenSize = 100

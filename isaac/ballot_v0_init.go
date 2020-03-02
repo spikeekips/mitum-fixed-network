@@ -7,6 +7,7 @@ import (
 	"github.com/spikeekips/mitum/isvalid"
 	"github.com/spikeekips/mitum/key"
 	"github.com/spikeekips/mitum/localtime"
+	"github.com/spikeekips/mitum/operation"
 	"github.com/spikeekips/mitum/util"
 	"github.com/spikeekips/mitum/valuehash"
 )
@@ -224,7 +225,7 @@ func (ib INITBallotV0) GenerateBodyHash(b []byte) (valuehash.Hash, error) {
 	), nil
 }
 
-func (ib INITBallotV0) Fact() Fact {
+func (ib INITBallotV0) Fact() operation.Fact {
 	return ib.INITBallotFactV0
 }
 

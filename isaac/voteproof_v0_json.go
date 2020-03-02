@@ -8,6 +8,7 @@ import (
 	"github.com/spikeekips/mitum/encoder"
 	"github.com/spikeekips/mitum/key"
 	"github.com/spikeekips/mitum/localtime"
+	"github.com/spikeekips/mitum/operation"
 	"github.com/spikeekips/mitum/util"
 	"github.com/spikeekips/mitum/valuehash"
 )
@@ -19,7 +20,7 @@ type VoteproofV0PackJSON struct {
 	TH Threshold           `json:"threshold"`
 	RS VoteproofResultType `json:"result"`
 	ST Stage               `json:"stage"`
-	MJ Fact                `json:"majority"`
+	MJ operation.Fact      `json:"majority"`
 	FS [][2]interface{}    `json:"facts"`
 	BS [][2]interface{}    `json:"ballots"`
 	VS [][2]interface{}    `json:"votes"`
@@ -87,14 +88,14 @@ func (vp *VoteproofV0) UnpackJSON(b []byte, enc *encoder.JSONEncoder) error { //
 	}
 
 	var err error
-	var majority Fact
+	var majority operation.Fact
 	if vpp.MJ != nil {
-		if majority, err = decodeFact(enc, vpp.MJ); err != nil {
+		if majority, err = operation.DecodeFact(enc, vpp.MJ); err != nil {
 			return err
 		}
 	}
 
-	facts := map[valuehash.Hash]Fact{}
+	facts := map[valuehash.Hash]operation.Fact{}
 	for i := range vpp.FS {
 		l := vpp.FS[i]
 		if len(l) != 2 {
@@ -102,12 +103,12 @@ func (vp *VoteproofV0) UnpackJSON(b []byte, enc *encoder.JSONEncoder) error { //
 		}
 
 		var factHash valuehash.Hash
-		if factHash, err = decodeHash(enc, l[0]); err != nil {
+		if factHash, err = valuehash.Decode(enc, l[0]); err != nil {
 			return err
 		}
 
-		var fact Fact
-		if fact, err = decodeFact(enc, l[1]); err != nil {
+		var fact operation.Fact
+		if fact, err = operation.DecodeFact(enc, l[1]); err != nil {
 			return err
 		}
 
@@ -122,12 +123,12 @@ func (vp *VoteproofV0) UnpackJSON(b []byte, enc *encoder.JSONEncoder) error { //
 		}
 
 		var address Address
-		if address, err = decodeAddress(enc, l[0]); err != nil {
+		if address, err = DecodeAddress(enc, l[0]); err != nil {
 			return err
 		}
 
 		var ballot valuehash.Hash
-		if ballot, err = decodeHash(enc, l[1]); err != nil {
+		if ballot, err = valuehash.Decode(enc, l[1]); err != nil {
 			return err
 		}
 
@@ -142,7 +143,7 @@ func (vp *VoteproofV0) UnpackJSON(b []byte, enc *encoder.JSONEncoder) error { //
 		}
 
 		var address Address
-		if address, err = decodeAddress(enc, l[0]); err != nil {
+		if address, err = DecodeAddress(enc, l[0]); err != nil {
 			return err
 		}
 
@@ -196,14 +197,14 @@ func (vf *VoteproofNodeFact) UnpackJSON(b []byte, enc *encoder.JSONEncoder) erro
 	}
 
 	var fact valuehash.Hash
-	if h, err := decodeHash(enc, vpp.FC); err != nil {
+	if h, err := valuehash.Decode(enc, vpp.FC); err != nil {
 		return err
 	} else {
 		fact = h
 	}
 
 	var signer key.Publickey
-	if h, err := decodePublickey(enc, vpp.SG); err != nil {
+	if h, err := key.DecodePublickey(enc, vpp.SG); err != nil {
 		return err
 	} else {
 		signer = h

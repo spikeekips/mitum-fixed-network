@@ -5,12 +5,13 @@ import (
 	"sync"
 
 	"github.com/spikeekips/mitum/localtime"
+	"github.com/spikeekips/mitum/operation"
 	"github.com/spikeekips/mitum/valuehash"
 )
 
 type VoteRecords struct {
 	sync.RWMutex
-	facts     map[valuehash.Hash]Fact
+	facts     map[valuehash.Hash]operation.Fact
 	votes     map[Address]valuehash.Hash // key: node Address, value: fact hash
 	factCount map[valuehash.Hash]uint
 	ballots   map[Address]Ballot
@@ -19,7 +20,7 @@ type VoteRecords struct {
 
 func NewVoteRecords(ballot Ballot, threshold Threshold) *VoteRecords {
 	return &VoteRecords{
-		facts:     map[valuehash.Hash]Fact{},
+		facts:     map[valuehash.Hash]operation.Fact{},
 		votes:     map[Address]valuehash.Hash{},
 		factCount: map[valuehash.Hash]uint{},
 		ballots:   map[Address]Ballot{},
@@ -29,7 +30,7 @@ func NewVoteRecords(ballot Ballot, threshold Threshold) *VoteRecords {
 			stage:     ballot.Stage(),
 			threshold: threshold,
 			result:    VoteproofNotYet,
-			facts:     map[valuehash.Hash]Fact{},
+			facts:     map[valuehash.Hash]operation.Fact{},
 			ballots:   map[Address]valuehash.Hash{},
 			votes:     map[Address]VoteproofNodeFact{},
 		},
@@ -65,7 +66,7 @@ func (vrs *VoteRecords) Vote(ballot Ballot) Voteproof {
 	}
 
 	{
-		facts := map[valuehash.Hash]Fact{}
+		facts := map[valuehash.Hash]operation.Fact{}
 		for k, v := range vrs.facts {
 			facts[k] = v
 		}
@@ -109,7 +110,7 @@ func (vrs *VoteRecords) vote(ballot Ballot) bool {
 		return false
 	}
 
-	byCount := map[uint]Fact{}
+	byCount := map[uint]operation.Fact{}
 	set := make([]uint, len(vrs.factCount))
 	for factHash, c := range vrs.factCount {
 		set = append(set, c)
@@ -120,7 +121,7 @@ func (vrs *VoteRecords) vote(ballot Ballot) bool {
 		sort.Slice(set, func(i, j int) bool { return set[i] > set[j] })
 	}
 
-	var fact Fact
+	var fact operation.Fact
 	var result VoteproofResultType
 	switch index := FindMajority(vrs.vp.threshold.Total, vrs.vp.threshold.Threshold, set...); index {
 	case -1:

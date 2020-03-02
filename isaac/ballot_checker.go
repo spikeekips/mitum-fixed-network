@@ -1,6 +1,7 @@
 package isaac
 
 import (
+	"github.com/spikeekips/mitum/operation"
 	"github.com/spikeekips/mitum/seal"
 )
 
@@ -21,5 +22,5 @@ func IsValidBallot(ballot Ballot, b []byte) error {
 		return err
 	}
 
-	return IsValidEmbededFact(ballot.Signer(), ballot, b)
+	return operation.IsValidEmbededFact(ballot.Signer(), ballot, b)
 }

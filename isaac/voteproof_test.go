@@ -10,6 +10,7 @@ import (
 	"github.com/spikeekips/mitum/hint"
 	"github.com/spikeekips/mitum/isvalid"
 	"github.com/spikeekips/mitum/localtime"
+	"github.com/spikeekips/mitum/operation"
 	"github.com/spikeekips/mitum/util"
 	"github.com/spikeekips/mitum/valuehash"
 )
@@ -131,7 +132,7 @@ func (t *testVoteproof) TestEmptyBallots() {
 		threshold: threshold,
 		result:    VoteproofNotYet,
 		majority:  fact,
-		facts:     map[valuehash.Hash]Fact{factHash: fact},
+		facts:     map[valuehash.Hash]operation.Fact{factHash: fact},
 	}
 	err := vp.IsValid(nil)
 	t.True(xerrors.Is(err, isvalid.InvalidError))
@@ -147,7 +148,7 @@ func (t *testVoteproof) TestEmptyVotes() {
 		threshold: threshold,
 		result:    VoteproofNotYet,
 		majority:  fact,
-		facts:     map[valuehash.Hash]Fact{factHash: fact},
+		facts:     map[valuehash.Hash]operation.Fact{factHash: fact},
 		ballots: map[Address]valuehash.Hash{
 			NewShortAddress("n0"): valuehash.RandomSHA256(),
 		},
@@ -170,7 +171,7 @@ func (t *testVoteproof) TestWrongVotesCount() {
 		threshold: threshold,
 		result:    VoteproofNotYet,
 		majority:  fact,
-		facts:     map[valuehash.Hash]Fact{factHash: fact},
+		facts:     map[valuehash.Hash]operation.Fact{factHash: fact},
 		ballots: map[Address]valuehash.Hash{
 			n0.Address(): valuehash.RandomSHA256(),
 			n1.Address(): valuehash.RandomSHA256(),
@@ -200,7 +201,7 @@ func (t *testVoteproof) TestInvalidFactHash() {
 		threshold: threshold,
 		result:    VoteproofMajority,
 		majority:  fact,
-		facts:     map[valuehash.Hash]Fact{invalidFactHash: fact},
+		facts:     map[valuehash.Hash]operation.Fact{invalidFactHash: fact},
 		ballots: map[Address]valuehash.Hash{
 			n0.Address(): valuehash.RandomSHA256(),
 		},
@@ -232,7 +233,7 @@ func (t *testVoteproof) TestUnknownFactHash() {
 		threshold: threshold,
 		result:    VoteproofMajority,
 		majority:  fact,
-		facts:     map[valuehash.Hash]Fact{unknownFactHash: fact},
+		facts:     map[valuehash.Hash]operation.Fact{unknownFactHash: fact},
 		ballots: map[Address]valuehash.Hash{
 			n0.Address(): valuehash.RandomSHA256(),
 		},
@@ -262,7 +263,7 @@ func (t *testVoteproof) TestFactNotFound() {
 		threshold: threshold,
 		result:    VoteproofMajority,
 		majority:  fact,
-		facts:     map[valuehash.Hash]Fact{factHash: fact},
+		facts:     map[valuehash.Hash]operation.Fact{factHash: fact},
 		ballots: map[Address]valuehash.Hash{
 			n0: valuehash.RandomSHA256(),
 		},
@@ -289,7 +290,7 @@ func (t *testVoteproof) TestUnknownNodeFound() {
 		threshold: threshold,
 		result:    VoteproofMajority,
 		majority:  fact,
-		facts: map[valuehash.Hash]Fact{
+		facts: map[valuehash.Hash]operation.Fact{
 			factHash: fact,
 		},
 		ballots: map[Address]valuehash.Hash{
@@ -321,7 +322,7 @@ func (t *testVoteproof) TestSuplusFacts() {
 		threshold: threshold,
 		result:    VoteproofMajority,
 		majority:  fact,
-		facts: map[valuehash.Hash]Fact{
+		facts: map[valuehash.Hash]operation.Fact{
 			factHash:                 fact,
 			valuehash.RandomSHA256(): fact,
 		},
@@ -353,7 +354,7 @@ func (t *testVoteproof) TestNotYetButNot() {
 		threshold: threshold,
 		result:    VoteproofDraw,
 		majority:  fact,
-		facts: map[valuehash.Hash]Fact{
+		facts: map[valuehash.Hash]operation.Fact{
 			factHash: fact,
 		},
 		ballots: map[Address]valuehash.Hash{
@@ -391,7 +392,7 @@ func (t *testVoteproof) TestDrawButNot() {
 		threshold: threshold,
 		result:    VoteproofMajority,
 		majority:  fact0,
-		facts: map[valuehash.Hash]Fact{
+		facts: map[valuehash.Hash]operation.Fact{
 			factHash0: fact0,
 			factHash1: fact1,
 		},
@@ -433,7 +434,7 @@ func (t *testVoteproof) TestMajorityButNot() {
 		stage:     StageINIT,
 		threshold: threshold,
 		result:    VoteproofDraw,
-		facts: map[valuehash.Hash]Fact{
+		facts: map[valuehash.Hash]operation.Fact{
 			factHash0: fact0,
 		},
 		ballots: map[Address]valuehash.Hash{

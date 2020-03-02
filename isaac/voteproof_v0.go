@@ -7,6 +7,7 @@ import (
 
 	"github.com/spikeekips/mitum/hint"
 	"github.com/spikeekips/mitum/isvalid"
+	"github.com/spikeekips/mitum/operation"
 	"github.com/spikeekips/mitum/valuehash"
 )
 
@@ -19,10 +20,10 @@ type VoteproofV0 struct {
 	result     VoteproofResultType
 	closed     bool
 	stage      Stage
-	majority   Fact
-	facts      map[valuehash.Hash]Fact       // key: Fact.Hash(), value: Fact
-	ballots    map[Address]valuehash.Hash    // key: node Address, value: ballot hash
-	votes      map[Address]VoteproofNodeFact // key: node Address, value: VoteproofNodeFact
+	majority   operation.Fact
+	facts      map[valuehash.Hash]operation.Fact // key: Fact.Hash(), value: Fact
+	ballots    map[Address]valuehash.Hash        // key: node Address, value: ballot hash
+	votes      map[Address]VoteproofNodeFact     // key: node Address, value: VoteproofNodeFact
 	finishedAt time.Time
 }
 
@@ -58,7 +59,7 @@ func (vp VoteproofV0) Result() VoteproofResultType {
 	return vp.result
 }
 
-func (vp VoteproofV0) Majority() Fact {
+func (vp VoteproofV0) Majority() operation.Fact {
 	return vp.majority
 }
 
@@ -108,7 +109,7 @@ func (vp VoteproofV0) isValidCheckMajority() error {
 		byCount[c] = h
 	}
 
-	var fact Fact
+	var fact operation.Fact
 	var factHash valuehash.Hash
 	var result VoteproofResultType
 	switch index := FindMajority(vp.threshold.Total, vp.threshold.Threshold, set...); index {

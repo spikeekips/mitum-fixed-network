@@ -5,6 +5,7 @@ import (
 
 	"github.com/spikeekips/mitum/hint"
 	"github.com/spikeekips/mitum/isvalid"
+	"github.com/spikeekips/mitum/operation"
 	"github.com/spikeekips/mitum/valuehash"
 )
 
@@ -38,7 +39,7 @@ type BlockOperations interface {
 	hint.Hinter
 	Bytes() []byte
 	Hash() valuehash.Hash
-	Operations() []Operation
+	Operations() []operation.Operation
 }
 
 type BlockStates interface {

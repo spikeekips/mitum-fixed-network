@@ -25,6 +25,13 @@ func NewThreshold(total uint, percent float64) (Threshold, error) {
 	return thr, thr.IsValid(nil)
 }
 
+func (thr Threshold) Bytes() []byte {
+	return util.ConcatSlice([][]byte{
+		util.UintToBytes(thr.Total),
+		util.Float64ToBytes(thr.Percent),
+	})
+}
+
 func (thr Threshold) String() string {
 	b, _ := util.JSONMarshal(thr)
 	return string(b)

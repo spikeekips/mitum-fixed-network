@@ -9,6 +9,7 @@ import (
 	"github.com/spikeekips/mitum/hint"
 	"github.com/spikeekips/mitum/key"
 	"github.com/spikeekips/mitum/localtime"
+	"github.com/spikeekips/mitum/operation"
 	"github.com/spikeekips/mitum/util"
 	"github.com/spikeekips/mitum/valuehash"
 )
@@ -50,7 +51,7 @@ func (t *testVoteproofJSON) TestMajorityButNot() {
 		stage:     StageINIT,
 		threshold: threshold,
 		result:    VoteproofMajority,
-		facts: map[valuehash.Hash]Fact{
+		facts: map[valuehash.Hash]operation.Fact{
 			factHash0: fact0,
 		},
 		majority: fact0,

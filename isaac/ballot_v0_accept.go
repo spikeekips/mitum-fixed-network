@@ -7,6 +7,7 @@ import (
 	"github.com/spikeekips/mitum/isvalid"
 	"github.com/spikeekips/mitum/key"
 	"github.com/spikeekips/mitum/localtime"
+	"github.com/spikeekips/mitum/operation"
 	"github.com/spikeekips/mitum/util"
 	"github.com/spikeekips/mitum/valuehash"
 )
@@ -59,6 +60,7 @@ func (abf ACCEPTBallotFactV0) NewBlock() valuehash.Hash {
 }
 
 // TODO ACCEPTBallot should have SIGNBallots
+// TODO move factHash and factSignature to BaseBallotV0
 type ACCEPTBallotV0 struct {
 	BaseBallotV0
 	ACCEPTBallotFactV0
@@ -196,7 +198,7 @@ func (ab ACCEPTBallotV0) GenerateBodyHash(b []byte) (valuehash.Hash, error) {
 	return valuehash.NewSHA256(e), nil
 }
 
-func (ab ACCEPTBallotV0) Fact() Fact {
+func (ab ACCEPTBallotV0) Fact() operation.Fact {
 	return ab.ACCEPTBallotFactV0
 }
 

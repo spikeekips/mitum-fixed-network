@@ -8,6 +8,7 @@ import (
 	"github.com/spikeekips/mitum/hint"
 	"github.com/spikeekips/mitum/isvalid"
 	"github.com/spikeekips/mitum/key"
+	"github.com/spikeekips/mitum/operation"
 	"github.com/spikeekips/mitum/valuehash"
 )
 
@@ -24,7 +25,7 @@ type Voteproof interface {
 	Round() Round
 	Stage() Stage
 	Result() VoteproofResultType
-	Majority() Fact
+	Majority() operation.Fact
 	Ballots() map[Address]valuehash.Hash
 }
 

@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	"github.com/spikeekips/mitum/key"
+	"github.com/spikeekips/mitum/operation"
 	"github.com/stretchr/testify/suite"
 )
 
@@ -39,9 +40,9 @@ func (t *testSetPolicyOperation) TestNew() {
 	}
 
 	t.NoError(spo.IsValid(nil))
-	t.NoError(IsValidOperation(spo, nil))
+	t.NoError(operation.IsValidOperation(spo, nil))
 
-	t.Implements((*Operation)(nil), spo)
+	t.Implements((*operation.Operation)(nil), spo)
 	t.NotNil(spo.Hash())
 }
 
@@ -66,7 +67,7 @@ func (t *testSetPolicyOperation) TestBadToken() {
 	}
 
 	{ // over MaxTokenSize
-		token := [MaxTokenSize + 1]byte{}
+		token := [operation.MaxTokenSize + 1]byte{}
 		spo, err := NewSetPolicyOperationV0(t.pk, token[:], nil)
 		t.NoError(err)
 		err = spo.IsValid(nil)

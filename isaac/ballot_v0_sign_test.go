@@ -9,6 +9,7 @@ import (
 	"github.com/spikeekips/mitum/hint"
 	"github.com/spikeekips/mitum/key"
 	"github.com/spikeekips/mitum/localtime"
+	"github.com/spikeekips/mitum/operation"
 	"github.com/spikeekips/mitum/valuehash"
 )
 
@@ -61,11 +62,11 @@ func (t *testBallotV0SIGN) TestFact() {
 			newBlock: valuehash.RandomSHA256(),
 		},
 	}
-	t.Implements((*FactSeal)(nil), ib)
+	t.Implements((*operation.FactSeal)(nil), ib)
 
 	fact := ib.Fact()
 
-	_ = (interface{})(fact).(Fact)
+	_ = (interface{})(fact).(operation.Fact)
 
 	factHash := fact.Hash()
 	t.NotNil(factHash)

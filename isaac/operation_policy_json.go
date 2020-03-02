@@ -73,14 +73,14 @@ func (spo *SetPolicyOperationV0) UnpackJSON(b []byte, enc *encoder.JSONEncoder) 
 	var err error
 
 	var h, factHash valuehash.Hash
-	if h, err = decodeHash(enc, usp.H); err != nil {
+	if h, err = valuehash.Decode(enc, usp.H); err != nil {
 		return err
 	}
-	if factHash, err = decodeHash(enc, usp.FH); err != nil {
+	if factHash, err = valuehash.Decode(enc, usp.FH); err != nil {
 		return err
 	}
 	var signer key.Publickey
-	if signer, err = decodePublickey(enc, usp.SN); err != nil {
+	if signer, err = key.DecodePublickey(enc, usp.SN); err != nil {
 		return err
 	}
 

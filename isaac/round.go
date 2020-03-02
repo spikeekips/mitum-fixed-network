@@ -1,8 +1,7 @@
 package isaac
 
 import (
-	"bytes"
-	"encoding/binary"
+	"github.com/spikeekips/mitum/util"
 )
 
 // Round is used to vote by ballot.
@@ -14,8 +13,5 @@ func (rn Round) Uint64() uint64 {
 }
 
 func (rn Round) Bytes() []byte {
-	b := new(bytes.Buffer)
-	_ = binary.Write(b, binary.LittleEndian, uint64(rn))
-
-	return b.Bytes()
+	return util.Uint64ToBytes(uint64(rn))
 }

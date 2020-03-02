@@ -7,6 +7,7 @@ import (
 	"github.com/spikeekips/mitum/isvalid"
 	"github.com/spikeekips/mitum/key"
 	"github.com/spikeekips/mitum/localtime"
+	"github.com/spikeekips/mitum/operation"
 	"github.com/spikeekips/mitum/util"
 	"github.com/spikeekips/mitum/valuehash"
 )
@@ -148,7 +149,7 @@ func (sb SIGNBallotV0) GenerateBodyHash(b []byte) (valuehash.Hash, error) {
 	return valuehash.NewSHA256(e), nil
 }
 
-func (sb SIGNBallotV0) Fact() Fact {
+func (sb SIGNBallotV0) Fact() operation.Fact {
 	return sb.SIGNBallotFactV0
 }
 

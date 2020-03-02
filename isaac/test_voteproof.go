@@ -7,6 +7,7 @@ import (
 
 	"github.com/spikeekips/mitum/encoder"
 	"github.com/spikeekips/mitum/hint"
+	"github.com/spikeekips/mitum/operation"
 	"github.com/spikeekips/mitum/util"
 	"github.com/spikeekips/mitum/valuehash"
 )
@@ -69,7 +70,7 @@ func (vp DummyVoteproof) Result() VoteproofResultType {
 	return vp.result
 }
 
-func (vp DummyVoteproof) Majority() Fact {
+func (vp DummyVoteproof) Majority() operation.Fact {
 	return nil
 }
 

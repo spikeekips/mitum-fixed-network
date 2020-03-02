@@ -7,6 +7,7 @@ import (
 
 	"github.com/spikeekips/mitum/hint"
 	"github.com/spikeekips/mitum/key"
+	"github.com/spikeekips/mitum/operation"
 	"github.com/spikeekips/mitum/util"
 	"github.com/spikeekips/mitum/valuehash"
 )
@@ -75,6 +76,14 @@ func (spof SetPolicyOperationFactV0) Bytes() []byte {
 	return util.ConcatSlice([][]byte{
 		[]byte(spof.signer.String()),
 		spof.token,
+		spof.Threshold.Bytes(),
+		util.DurationToBytes(spof.TimeoutWaitingProposal),
+		util.DurationToBytes(spof.IntervalBroadcastingINITBallot),
+		util.DurationToBytes(spof.IntervalBroadcastingProposal),
+		util.DurationToBytes(spof.WaitBroadcastingACCEPTBallot),
+		util.DurationToBytes(spof.IntervalBroadcastingACCEPTBallot),
+		util.UintToBytes(spof.NumberOfActingSuffrageNodes),
+		util.DurationToBytes(spof.TimespanValidBallot),
 	})
 }
 
@@ -130,7 +139,7 @@ func NewSetPolicyOperationV0(
 }
 
 func (spo SetPolicyOperationV0) IsValid(b []byte) error {
-	if err := IsValidOperation(spo, b); err != nil {
+	if err := operation.IsValidOperation(spo, b); err != nil {
 		return err
 	}
 
@@ -141,7 +150,7 @@ func (spo SetPolicyOperationV0) Hint() hint.Hint {
 	return SetPolicyOperationV0Hint
 }
 
-func (spo SetPolicyOperationV0) Fact() Fact {
+func (spo SetPolicyOperationV0) Fact() operation.Fact {
 	return spo.SetPolicyOperationFactV0
 }
 

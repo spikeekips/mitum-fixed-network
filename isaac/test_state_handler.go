@@ -9,6 +9,7 @@ import (
 	"github.com/spikeekips/mitum/hint"
 	"github.com/spikeekips/mitum/key"
 	"github.com/spikeekips/mitum/localtime"
+	"github.com/spikeekips/mitum/operation"
 	"github.com/spikeekips/mitum/util"
 	"github.com/spikeekips/mitum/valuehash"
 )
@@ -108,7 +109,7 @@ func (t *baseTestStateHandler) SetupTest() {
 }
 
 func (t *baseTestStateHandler) newVoteproof(
-	stage Stage, fact Fact, states ...*Localstate,
+	stage Stage, fact operation.Fact, states ...*Localstate,
 ) (VoteproofV0, error) {
 	factHash := fact.Hash()
 
@@ -147,7 +148,7 @@ func (t *baseTestStateHandler) newVoteproof(
 		threshold: states[0].Policy().Threshold(),
 		result:    VoteproofMajority,
 		majority:  fact,
-		facts: map[valuehash.Hash]Fact{
+		facts: map[valuehash.Hash]operation.Fact{
 			factHash: fact,
 		},
 		ballots:    ballots,

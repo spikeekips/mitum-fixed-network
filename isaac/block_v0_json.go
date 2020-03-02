@@ -61,19 +61,19 @@ func (bm *BlockV0) UnpackJSON(b []byte, enc *encoder.JSONEncoder) error {
 
 	var h, pr, pb, bo, bs valuehash.Hash
 	var err error
-	if h, err = decodeHash(enc, nbm.H); err != nil {
+	if h, err = valuehash.Decode(enc, nbm.H); err != nil {
 		return err
 	}
-	if pr, err = decodeHash(enc, nbm.PR); err != nil {
+	if pr, err = valuehash.Decode(enc, nbm.PR); err != nil {
 		return err
 	}
-	if pb, err = decodeHash(enc, nbm.PB); err != nil {
+	if pb, err = valuehash.Decode(enc, nbm.PB); err != nil {
 		return err
 	}
-	if bo, err = decodeHash(enc, nbm.BO); err != nil {
+	if bo, err = valuehash.Decode(enc, nbm.BO); err != nil {
 		return err
 	}
-	if bs, err = decodeHash(enc, nbm.BS); err != nil {
+	if bs, err = valuehash.Decode(enc, nbm.BS); err != nil {
 		return err
 	}
 

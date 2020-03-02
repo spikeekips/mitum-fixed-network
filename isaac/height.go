@@ -1,11 +1,10 @@
 package isaac
 
 import (
-	"bytes"
-	"encoding/binary"
 	"fmt"
 
 	"github.com/spikeekips/mitum/isvalid"
+	"github.com/spikeekips/mitum/util"
 )
 
 // Height stands for height of Block
@@ -26,10 +25,7 @@ func (ht Height) Int64() int64 {
 }
 
 func (ht Height) Bytes() []byte {
-	b := new(bytes.Buffer)
-	_ = binary.Write(b, binary.LittleEndian, int64(ht))
-
-	return b.Bytes()
+	return util.Int64ToBytes(int64(ht))
 }
 
 func (ht Height) String() string {

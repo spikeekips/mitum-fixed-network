@@ -12,6 +12,7 @@ import (
 	"github.com/spikeekips/mitum/valuehash"
 )
 
+// TODO use it's own Type
 var BlockV0Hint hint.Hint = hint.MustHint(BlockType, "0.1")
 
 type BlockV0 struct {

@@ -31,10 +31,11 @@ var Hinters = [][2]interface{}{
 	{"hash-sha256", valuehash.SHA256{}},
 	{"hash-sha512", valuehash.SHA512{}},
 	{"hash-dummy", valuehash.Dummy{}},
+	{"set-policy-operation", isaac.SetPolicyOperationV0{}},
+	{"set-policy-operation-fact", isaac.SetPolicyOperationFactV0{}},
 }
 
 var HintTypes = [][2]interface{}{
-	{"operation", isaac.OperationType},
 	{"block-operations", isaac.BlockOperationType},
 	{"block=states", isaac.BlockStatesType},
 	{"block-state", isaac.BlockStateType},

@@ -2,7 +2,6 @@ package isaac
 
 import (
 	"github.com/spikeekips/mitum/seal"
-	"github.com/spikeekips/mitum/util"
 )
 
 type BallotValidationChecker struct {
@@ -22,12 +21,5 @@ func IsValidBallot(ballot Ballot, b []byte) error {
 		return err
 	}
 
-	if err := ballot.Signer().Verify(
-		util.ConcatSlice([][]byte{ballot.FactHash().Bytes(), b}),
-		ballot.FactSignature(),
-	); err != nil {
-		return err
-	}
-
-	return nil
+	return IsValidEmbededFact(ballot.Signer(), ballot, b)
 }

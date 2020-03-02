@@ -32,10 +32,10 @@ func (thr Threshold) String() string {
 
 func (thr Threshold) IsValid([]byte) error {
 	if thr.Total < 1 {
-		return xerrors.Errorf("0 total")
+		return xerrors.Errorf("zero total found")
 	}
 	if thr.Percent < 1 {
-		return isvalid.InvalidError.Wrapf("0 percent: %v", thr.Percent)
+		return isvalid.InvalidError.Wrapf("0 percent found: %v", thr.Percent)
 	} else if thr.Percent > 100 {
 		return isvalid.InvalidError.Wrapf("over 100 percent: %v", thr.Percent)
 	}

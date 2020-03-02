@@ -8,7 +8,7 @@ import (
 )
 
 type LocalPolicy struct {
-	networkID                        *util.LockedItem // NOTE networkID should be string
+	networkID                        *util.LockedItem // NOTE networkID should be string, internally []byte
 	threshold                        *util.LockedItem
 	timeoutWaitingProposal           *util.LockedItem
 	intervalBroadcastingINITBallot   *util.LockedItem

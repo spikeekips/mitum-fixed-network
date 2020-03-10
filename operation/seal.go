@@ -28,6 +28,10 @@ type Seal struct {
 }
 
 func NewSeal(pk key.Privatekey, ops []Operation, b []byte) (Seal, error) {
+	if len(ops) < 1 {
+		return Seal{}, xerrors.Errorf("seal can not be generated without Operations")
+	}
+
 	sl := Seal{ops: ops}
 	if err := sl.Sign(pk, b); err != nil {
 		return Seal{}, err

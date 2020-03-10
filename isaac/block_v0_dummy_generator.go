@@ -42,7 +42,7 @@ func NewDummyBlocksV0Generator(
 }
 
 func (bg *DummyBlocksV0Generator) Generate() error {
-	genesis, err := NewGenesisBlockV0Generator(bg.genesisNode)
+	genesis, err := NewGenesisBlockV0Generator(bg.genesisNode, nil)
 	if err != nil {
 		return err
 	} else if block, err := genesis.Generate(); err != nil {

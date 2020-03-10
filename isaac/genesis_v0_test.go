@@ -4,6 +4,8 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/suite"
+
+	"github.com/spikeekips/mitum/operation"
 )
 
 type testGenesisBlockV0 struct {
@@ -25,7 +27,16 @@ func (t *testGenesisBlockV0) SetupTest() {
 }
 
 func (t *testGenesisBlockV0) TestNewGenesisBlock() {
-	gg, err := NewGenesisBlockV0Generator(t.localstate)
+	op, err := NewKVOperation(
+		t.localstate.Node().Privatekey(),
+		[]byte("this-is-token"),
+		"showme",
+		[]byte("findme"),
+		nil,
+	)
+	t.NoError(err)
+
+	gg, err := NewGenesisBlockV0Generator(t.localstate, []operation.Operation{op})
 	t.NoError(err)
 
 	block, err := gg.Generate()
@@ -37,6 +48,12 @@ func (t *testGenesisBlockV0) TestNewGenesisBlock() {
 	pr, err := t.localstate.Storage().Seal(block.Proposal())
 	t.NoError(err)
 	t.NotNil(pr)
+
+	st, found, err := t.localstate.Storage().State(op.Key)
+	t.NoError(err)
+	t.True(found)
+
+	t.Equal(st.Key(), op.Key)
 }
 
 func TestGenesisBlockV0(t *testing.T) {

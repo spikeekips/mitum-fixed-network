@@ -10,6 +10,8 @@ import (
 	"github.com/spikeekips/mitum/key"
 	"github.com/spikeekips/mitum/localtime"
 	"github.com/spikeekips/mitum/operation"
+	"github.com/spikeekips/mitum/state"
+	"github.com/spikeekips/mitum/tree"
 	"github.com/spikeekips/mitum/util"
 	"github.com/spikeekips/mitum/valuehash"
 )
@@ -22,7 +24,7 @@ type baseTestStateHandler struct { // nolint
 	enc         encoder.Encoder
 }
 
-func (t *baseTestStateHandler) SetupSuite() {
+func (t *baseTestStateHandler) SetupSuite() { // nolint
 	_ = hint.RegisterType(key.BTCPrivatekey{}.Hint().Type(), "btc-privatekey")
 	_ = hint.RegisterType(key.BTCPublickey{}.Hint().Type(), "btc-publickey")
 	_ = hint.RegisterType(valuehash.SHA256{}.Hint().Type(), "sha256")
@@ -39,9 +41,15 @@ func (t *baseTestStateHandler) SetupSuite() {
 	_ = hint.RegisterType(ACCEPTBallotFactType, "accept-ballot-fact")
 	_ = hint.RegisterType(VoteproofType, "voteproof")
 	_ = hint.RegisterType(BlockType, "block")
-	_ = hint.RegisterType(BlockOperationType, "block-operation")
-	_ = hint.RegisterType(BlockStatesType, "block-states")
-	_ = hint.RegisterType(BlockStateType, "block-state")
+	_ = hint.RegisterType(operation.Seal{}.Hint().Type(), "operation-seal")
+	_ = hint.RegisterType(operation.KVOperation{}.Hint().Type(), "kvoperation")
+	_ = hint.RegisterType(operation.KVOperationFact{}.Hint().Type(), "kvoperation-fact")
+	_ = hint.RegisterType(KVOperation{}.Hint().Type(), "kvoperation-isaac")
+	_ = hint.RegisterType(tree.AVLTree{}.Hint().Type(), "avl-tree")
+	_ = hint.RegisterType(operation.OperationAVLNode{}.Hint().Type(), "operation-avl-node")
+	_ = hint.RegisterType(state.StateV0{}.Hint().Type(), "state")
+	_ = hint.RegisterType(state.OperationInfoV0{}.Hint().Type(), "state-operation-info")
+	_ = hint.RegisterType(state.StateV0AVLNode{}.Hint().Type(), "state-avlnode")
 
 	t.encs = encoder.NewEncoders()
 	t.enc = encoder.NewJSONEncoder()
@@ -61,6 +69,15 @@ func (t *baseTestStateHandler) SetupSuite() {
 	_ = t.encs.AddHinter(ACCEPTBallotFactV0{})
 	_ = t.encs.AddHinter(VoteproofV0{})
 	_ = t.encs.AddHinter(BlockV0{})
+	_ = t.encs.AddHinter(operation.Seal{})
+	_ = t.encs.AddHinter(operation.KVOperationFact{})
+	_ = t.encs.AddHinter(operation.KVOperation{})
+	_ = t.encs.AddHinter(KVOperation{})
+	_ = t.encs.AddHinter(tree.AVLTree{})
+	_ = t.encs.AddHinter(operation.OperationAVLNode{})
+	_ = t.encs.AddHinter(state.StateV0{})
+	_ = t.encs.AddHinter(state.OperationInfoV0{})
+	_ = t.encs.AddHinter(state.StateV0AVLNode{})
 }
 
 func (t *baseTestStateHandler) states() (*Localstate, *Localstate) {
@@ -188,4 +205,18 @@ func (t *baseTestStateHandler) newINITBallot(localstate *Localstate, round Round
 
 func (t *baseTestStateHandler) proposalMaker(localstate *Localstate) *ProposalMaker {
 	return NewProposalMaker(localstate)
+}
+
+func (t *baseTestStateHandler) newOperationSeal(localstate *Localstate) operation.Seal {
+	pk := localstate.Node().Privatekey()
+
+	token := []byte("this-is-token")
+	op, err := NewKVOperation(pk, token, util.UUID().String(), []byte(util.UUID().String()), nil)
+	t.NoError(err)
+
+	sl, err := operation.NewSeal(pk, []operation.Operation{op}, nil)
+	t.NoError(err)
+	t.NoError(sl.IsValid(nil))
+
+	return sl
 }

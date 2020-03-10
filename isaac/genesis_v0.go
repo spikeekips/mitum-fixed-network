@@ -1,16 +1,19 @@
 package isaac
 
 import (
-	"github.com/spikeekips/mitum/valuehash"
 	"golang.org/x/xerrors"
+
+	"github.com/spikeekips/mitum/operation"
+	"github.com/spikeekips/mitum/valuehash"
 )
 
 type GenesisBlockV0Generator struct {
 	localstate *Localstate
 	ballotbox  *Ballotbox
+	ops        []operation.Operation
 }
 
-func NewGenesisBlockV0Generator(localstate *Localstate) (*GenesisBlockV0Generator, error) {
+func NewGenesisBlockV0Generator(localstate *Localstate, ops []operation.Operation) (*GenesisBlockV0Generator, error) {
 	threshold, _ := NewThreshold(1, 100)
 
 	return &GenesisBlockV0Generator{
@@ -18,6 +21,7 @@ func NewGenesisBlockV0Generator(localstate *Localstate) (*GenesisBlockV0Generato
 		ballotbox: NewBallotbox(func() Threshold {
 			return threshold
 		}),
+		ops: ops,
 	}, nil
 }
 
@@ -30,8 +34,15 @@ func (gg *GenesisBlockV0Generator) Generate() (Block, error) {
 		return nil, err
 	}
 
+	var seals []operation.Seal
+	if sls, err := gg.generateOperationSeal(); err != nil {
+		return nil, err
+	} else {
+		seals = sls
+	}
+
 	var proposal Proposal
-	if pr, err := gg.generateProposal(); err != nil {
+	if pr, err := gg.generateProposal(seals); err != nil {
 		return nil, err
 	} else {
 		proposal = pr
@@ -42,6 +53,8 @@ func (gg *GenesisBlockV0Generator) Generate() (Block, error) {
 	var block Block
 
 	pm := NewProposalProcessorV0(gg.localstate)
+	pm.SetLogger(log)
+
 	if bk, err := pm.ProcessINIT(proposal.Hash(), initVoteproof); err != nil {
 		return nil, err
 	} else if err := gg.generateACCEPTVoteproof(bk); err != nil {
@@ -60,6 +73,27 @@ func (gg *GenesisBlockV0Generator) Generate() (Block, error) {
 	}
 
 	return block, nil
+}
+
+func (gg *GenesisBlockV0Generator) generateOperationSeal() ([]operation.Seal, error) {
+	if len(gg.ops) < 1 {
+		return nil, nil
+	}
+
+	var seals []operation.Seal
+	if sl, err := operation.NewSeal(
+		gg.localstate.Node().Privatekey(),
+		gg.ops,
+		gg.localstate.Policy().NetworkID(),
+	); err != nil {
+		return nil, err
+	} else if err := gg.localstate.Storage().NewSeal(sl); err != nil {
+		return nil, err
+	} else {
+		seals = append(seals, sl)
+	}
+
+	return seals, nil
 }
 
 func (gg *GenesisBlockV0Generator) generatePreviousBlock() error {
@@ -96,9 +130,21 @@ func (gg *GenesisBlockV0Generator) generatePreviousBlock() error {
 	return nil
 }
 
-func (gg *GenesisBlockV0Generator) generateProposal() (Proposal, error) {
+func (gg *GenesisBlockV0Generator) generateProposal(seals []operation.Seal) (Proposal, error) {
+	hs := make([]valuehash.Hash, len(seals))
+
+	for i := range seals {
+		hs[i] = seals[i].Hash()
+	}
+
 	var proposal Proposal
-	if pr, err := NewProposal(gg.localstate, Height(0), Round(0), nil, gg.localstate.Policy().NetworkID()); err != nil {
+	if pr, err := NewProposal(
+		gg.localstate,
+		Height(0),
+		Round(0),
+		hs,
+		gg.localstate.Policy().NetworkID(),
+	); err != nil {
 		return nil, err
 	} else if err := gg.localstate.Storage().NewProposal(pr); err != nil {
 		return nil, err

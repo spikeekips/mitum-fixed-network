@@ -5,16 +5,10 @@ import (
 
 	"github.com/spikeekips/mitum/hint"
 	"github.com/spikeekips/mitum/isvalid"
-	"github.com/spikeekips/mitum/operation"
 	"github.com/spikeekips/mitum/valuehash"
 )
 
-var (
-	BlockType          hint.Type = hint.Type{0x05, 0x00}
-	BlockOperationType hint.Type = hint.Type{0x05, 0x02}
-	BlockStatesType    hint.Type = hint.Type{0x05, 0x03}
-	BlockStateType     hint.Type = hint.Type{0x05, 0x04}
-)
+var BlockType hint.Type = hint.Type{0x05, 0x00}
 
 type Block interface {
 	isvalid.IsValider
@@ -32,29 +26,4 @@ type Block interface {
 	SetINITVoteproof(Voteproof) Block
 	SetACCEPTVoteproof(Voteproof) Block
 	CreatedAt() time.Time
-}
-
-type BlockOperations interface {
-	isvalid.IsValider
-	hint.Hinter
-	Bytes() []byte
-	Hash() valuehash.Hash
-	Operations() []operation.Operation
-}
-
-type BlockStates interface {
-	isvalid.IsValider
-	hint.Hinter
-	Bytes() []byte
-	Hash() valuehash.Hash
-	States() []BlockState
-}
-
-type BlockState interface {
-	isvalid.IsValider
-	hint.Hinter
-	Bytes() []byte
-	Hash() valuehash.Hash
-	Value() interface{} // TODO BlockStateValue interface{}
-	PreviousBlock() valuehash.Hash
 }

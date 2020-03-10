@@ -4,6 +4,8 @@ import (
 	"github.com/spikeekips/mitum/encoder"
 	"github.com/spikeekips/mitum/isaac"
 	"github.com/spikeekips/mitum/key"
+	"github.com/spikeekips/mitum/operation"
+	"github.com/spikeekips/mitum/tree"
 	"github.com/spikeekips/mitum/valuehash"
 )
 
@@ -33,10 +35,11 @@ var Hinters = [][2]interface{}{
 	{"hash-dummy", valuehash.Dummy{}},
 	{"set-policy-operation", isaac.SetPolicyOperationV0{}},
 	{"set-policy-operation-fact", isaac.SetPolicyOperationFactV0{}},
+	{"operation-seal", operation.Seal{}},
+	{"operation-kv", operation.KVOperation{}},
+	{"operation-kv-fact", operation.KVOperationFact{}},
+	{"avltree", tree.AVLTree{}},
+	{"avltree-node", operation.OperationAVLNode{}},
 }
 
-var HintTypes = [][2]interface{}{
-	{"block-operations", isaac.BlockOperationType},
-	{"block=states", isaac.BlockStatesType},
-	{"block-state", isaac.BlockStateType},
-}
+var HintTypes = [][2]interface{}{}

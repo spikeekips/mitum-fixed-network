@@ -1,5 +1,7 @@
 #!/bin/bash
 
+[ -z "${GIT_PRE_COMMIT_SKIP}" ] || exit 0
+
 set -e
 
 echo "Running checking"
@@ -26,7 +28,8 @@ curdir=$(cd $(dirname ${BASH_SOURCE})/..; pwd)
 echo
 echo 'go test:'
 go clean -testcache
-go test -timeout 5s -tags test -race ./... -run .
+#go test -timeout 1m -tags test -race ./... -run .
+go clean -testcache; for i in $(find . -type d -d 1 | grep -v '.git\|.circleci'); do go test -timeout 10s -tags test -race ./$i... -run .; done
 
 echo
 echo 'go vet:'

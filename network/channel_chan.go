@@ -2,6 +2,7 @@ package network
 
 import (
 	"github.com/rs/zerolog"
+	"golang.org/x/xerrors"
 
 	"github.com/spikeekips/mitum/logging"
 	"github.com/spikeekips/mitum/seal"
@@ -24,6 +25,10 @@ func NewChanChannel(bufsize uint) *ChanChannel {
 }
 
 func (gs *ChanChannel) Seals(h []valuehash.Hash) ([]seal.Seal, error) {
+	if gs.getSealHandler == nil {
+		return nil, xerrors.Errorf("getSealHandler is missing")
+	}
+
 	return gs.getSealHandler(h)
 }
 

@@ -3,28 +3,40 @@
 package isaac
 
 import (
-	"github.com/spikeekips/avl"
+	"github.com/spikeekips/mitum/tree"
+
+	"github.com/spikeekips/mitum/valuehash"
 )
 
 type DummyBlockStorage struct {
 	block      Block
-	operations *avl.Tree
-	states     *avl.Tree
+	operations *tree.AVLTree
+	states     *tree.AVLTree
 }
 
 func (dst *DummyBlockStorage) Block() Block {
 	return dst.block
 }
 
-func (dst *DummyBlockStorage) SetOperations(tree *avl.Tree) error {
+func (dst *DummyBlockStorage) SetBlock(block Block) error {
+	dst.block = block
+
+	return nil
+}
+
+func (dst *DummyBlockStorage) SetOperations(tree *tree.AVLTree) error {
 	dst.operations = tree
 
 	return nil
 }
 
-func (dst *DummyBlockStorage) SetStates(tree *avl.Tree) error {
+func (dst *DummyBlockStorage) SetStates(tree *tree.AVLTree) error {
 	dst.states = tree
 
+	return nil
+}
+
+func (dst *DummyBlockStorage) UnstageOperationSeals([]valuehash.Hash) error {
 	return nil
 }
 

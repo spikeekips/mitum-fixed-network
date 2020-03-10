@@ -2,17 +2,22 @@ package isaac
 
 import (
 	"bytes"
+	"math/rand"
 	"sort"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/suite"
+	"golang.org/x/xerrors"
 
 	"github.com/spikeekips/mitum/encoder"
 	"github.com/spikeekips/mitum/hint"
 	"github.com/spikeekips/mitum/key"
 	"github.com/spikeekips/mitum/localtime"
+	"github.com/spikeekips/mitum/operation"
 	"github.com/spikeekips/mitum/seal"
 	"github.com/spikeekips/mitum/storage"
+	"github.com/spikeekips/mitum/util"
 	"github.com/spikeekips/mitum/valuehash"
 )
 
@@ -22,6 +27,7 @@ type testLeveldbStorage struct {
 	encs      *encoder.Encoders
 	enc       encoder.Encoder
 	storage   *LeveldbStorage
+	pk        key.BTCPrivatekey
 }
 
 func (t *testLeveldbStorage) SetupSuite() {
@@ -33,14 +39,24 @@ func (t *testLeveldbStorage) SetupSuite() {
 	_ = hint.RegisterType(BlockType, "block")
 	_ = hint.RegisterType(VoteproofType, "voteproof")
 	_ = hint.RegisterType(seal.DummySeal{}.Hint().Type(), "dummy-seal")
+	_ = hint.RegisterType(operation.Seal{}.Hint().Type(), "operation-seal")
+	_ = hint.RegisterType(operation.KVOperation{}.Hint().Type(), "KVOperation")
+	_ = hint.RegisterType(operation.KVOperationFact{}.Hint().Type(), "KVOperation-fact")
 
 	t.encs = encoder.NewEncoders()
 	t.enc = encoder.NewJSONEncoder()
 	_ = t.encs.AddEncoder(t.enc)
+
+	_ = t.encs.AddHinter(key.BTCPublickey{})
 	_ = t.encs.AddHinter(BlockV0{})
 	_ = t.encs.AddHinter(valuehash.SHA256{})
 	_ = t.encs.AddHinter(VoteproofV0{})
 	_ = t.encs.AddHinter(seal.DummySeal{})
+	_ = t.encs.AddHinter(operation.Seal{})
+	_ = t.encs.AddHinter(operation.KVOperation{})
+	_ = t.encs.AddHinter(operation.KVOperationFact{})
+
+	t.pk, _ = key.NewBTCPrivatekey()
 }
 
 func (t *testLeveldbStorage) SetupTest() {
@@ -315,6 +331,132 @@ func (t *testLeveldbStorage) TestSealsLimit() {
 
 	for i, sl := range collected {
 		t.True(seals[i].Hash().Equal(sl.Hash()))
+	}
+}
+
+func (t *testLeveldbStorage) newOperationSeal() operation.Seal {
+	token := []byte("this-is-token")
+	op, err := operation.NewKVOperation(t.pk, token, util.UUID().String(), []byte(util.UUID().String()), nil)
+	t.NoError(err)
+
+	sl, err := operation.NewSeal(t.pk, []operation.Operation{op}, nil)
+	t.NoError(err)
+	t.NoError(sl.IsValid(nil))
+
+	return sl
+}
+
+func (t *testLeveldbStorage) TestStagedOperationSeals() {
+	var seals []seal.Seal
+
+	// 10 seal.Seal
+	for i := 0; i < 10; i++ {
+		sl := seal.NewDummySeal(t.pk)
+		t.NoError(t.storage.NewSeal(sl))
+
+		seals = append(seals, sl)
+	}
+
+	ops := map[valuehash.Hash]operation.Seal{}
+	// 10 operation.Seal
+	for i := 0; i < 10; i++ {
+		sl := t.newOperationSeal()
+		t.NoError(t.storage.NewSeal(sl))
+
+		seals = append(seals, sl)
+		ops[sl.Hash()] = sl
+	}
+
+	var collected []seal.Seal
+	t.NoError(t.storage.StagedOperationSeals(
+		func(sl operation.Seal) (bool, error) {
+			collected = append(collected, sl)
+
+			return true, nil
+		},
+		true,
+	))
+
+	t.Equal(len(ops), len(collected))
+
+	for _, sl := range collected {
+		t.IsType(operation.Seal{}, sl)
+
+		_, found := ops[sl.Hash()]
+		t.True(found)
+	}
+}
+
+func (t *testLeveldbStorage) TestUnStagedOperationSeals() {
+	// 10 seal.Seal
+	for i := 0; i < 10; i++ {
+		sl := seal.NewDummySeal(t.pk)
+		t.NoError(t.storage.NewSeal(sl))
+	}
+
+	var ops []operation.Seal
+	// 10 operation.Seal
+	for i := 0; i < 10; i++ {
+		sl := t.newOperationSeal()
+		t.NoError(t.storage.NewSeal(sl))
+
+		ops = append(ops, sl)
+	}
+
+	var unstaged []valuehash.Hash
+
+	rs := rand.New(rand.NewSource(time.Now().Unix()))
+	selected := map[valuehash.Hash]struct{}{}
+	for i := 0; i < 5; i++ {
+		var sl seal.Seal
+		for {
+			sl = ops[rs.Intn(len(ops))]
+			if _, found := selected[sl.Hash()]; !found {
+				selected[sl.Hash()] = struct{}{}
+				break
+			}
+		}
+		unstaged = append(unstaged, sl.Hash())
+	}
+
+	block, err := NewTestBlockV0(Height(33), Round(0), valuehash.RandomSHA256(), valuehash.RandomSHA256())
+	t.NoError(err)
+
+	bs, err := t.storage.OpenBlockStorage(block)
+	t.NoError(err)
+
+	// unstage
+	t.NoError(bs.UnstageOperationSeals(unstaged))
+	t.NoError(bs.Commit())
+
+	var collected []seal.Seal
+	t.NoError(t.storage.StagedOperationSeals(
+		func(sl operation.Seal) (bool, error) {
+			collected = append(collected, sl)
+
+			return true, nil
+		},
+		true,
+	))
+
+	t.Equal(len(ops)-len(unstaged), len(collected))
+
+	for _, sl := range collected {
+		var found bool
+		for _, usl := range unstaged {
+			if sl.Hash().Equal(usl) {
+				found = true
+				break
+			}
+		}
+
+		t.False(found)
+	}
+
+	// reverse key also will be removed
+	for _, h := range unstaged {
+		_, err := t.storage.get(t.storage.newStagedOperationSealReverseKey(h))
+		t.True(xerrors.Is(err, storage.NotFoundError))
 	}
 }
 

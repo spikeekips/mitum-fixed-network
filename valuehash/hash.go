@@ -11,7 +11,7 @@ import (
 var EmptyHashError = errors.NewError("empty hash")
 
 type Hash interface {
-	fmt.Stringer
+	fmt.Stringer // TODO remove 'string' or 'hash' from json
 	hint.Hinter
 	isvalid.IsValider
 	Size() int

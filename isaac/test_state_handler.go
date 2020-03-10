@@ -6,7 +6,6 @@ import (
 	"github.com/stretchr/testify/suite"
 
 	"github.com/spikeekips/mitum/encoder"
-	"github.com/spikeekips/mitum/hint"
 	"github.com/spikeekips/mitum/key"
 	"github.com/spikeekips/mitum/localtime"
 	"github.com/spikeekips/mitum/operation"
@@ -25,32 +24,6 @@ type baseTestStateHandler struct { // nolint
 }
 
 func (t *baseTestStateHandler) SetupSuite() { // nolint
-	_ = hint.RegisterType(key.BTCPrivatekey{}.Hint().Type(), "btc-privatekey")
-	_ = hint.RegisterType(key.BTCPublickey{}.Hint().Type(), "btc-publickey")
-	_ = hint.RegisterType(valuehash.SHA256{}.Hint().Type(), "sha256")
-	_ = hint.RegisterType(valuehash.Dummy{}.Hint().Type(), "dummy")
-	_ = hint.RegisterType(encoder.JSONEncoder{}.Hint().Type(), "json-encoder")
-	_ = hint.RegisterType((NewShortAddress("")).Hint().Type(), "short-address")
-	_ = hint.RegisterType(INITBallotType, "init-ballot")
-	_ = hint.RegisterType(INITBallotFactType, "init-ballot-fact")
-	_ = hint.RegisterType(ProposalBallotType, "proposal")
-	_ = hint.RegisterType(ProposalBallotFactType, "proposal-fact")
-	_ = hint.RegisterType(SIGNBallotType, "sign-ballot")
-	_ = hint.RegisterType(SIGNBallotFactType, "sign-ballot-fact")
-	_ = hint.RegisterType(ACCEPTBallotType, "accept-ballot")
-	_ = hint.RegisterType(ACCEPTBallotFactType, "accept-ballot-fact")
-	_ = hint.RegisterType(VoteproofType, "voteproof")
-	_ = hint.RegisterType(BlockV0{}.Hint().Type(), "block")
-	_ = hint.RegisterType(operation.Seal{}.Hint().Type(), "operation-seal")
-	_ = hint.RegisterType(operation.KVOperation{}.Hint().Type(), "kvoperation")
-	_ = hint.RegisterType(operation.KVOperationFact{}.Hint().Type(), "kvoperation-fact")
-	_ = hint.RegisterType(KVOperation{}.Hint().Type(), "kvoperation-isaac")
-	_ = hint.RegisterType(tree.AVLTree{}.Hint().Type(), "avl-tree")
-	_ = hint.RegisterType(operation.OperationAVLNode{}.Hint().Type(), "operation-avl-node")
-	_ = hint.RegisterType(state.StateV0{}.Hint().Type(), "state")
-	_ = hint.RegisterType(state.OperationInfoV0{}.Hint().Type(), "state-operation-info")
-	_ = hint.RegisterType(state.StateV0AVLNode{}.Hint().Type(), "state-avlnode")
-
 	t.encs = encoder.NewEncoders()
 	t.enc = encoder.NewJSONEncoder()
 	_ = t.encs.AddEncoder(t.enc)

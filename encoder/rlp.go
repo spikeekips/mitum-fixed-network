@@ -14,7 +14,10 @@ import (
 	"github.com/spikeekips/mitum/hint"
 )
 
-var rlpHint hint.Hint = hint.MustHint(hint.Type{0x01, 0x00}, "0.0.1")
+var (
+	rlpType = hint.MustNewType(0x01, 0x00, "rlp")
+	rlpHint = hint.MustHint(rlpType, "0.0.1")
+)
 
 type RLPEncoder struct {
 	cache   *cache

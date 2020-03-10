@@ -7,7 +7,6 @@ import (
 
 	"github.com/stretchr/testify/suite"
 
-	"github.com/spikeekips/mitum/hint"
 	"github.com/spikeekips/mitum/key"
 	"github.com/spikeekips/mitum/valuehash"
 )
@@ -19,12 +18,6 @@ type testBallotbox struct {
 }
 
 func (t *testBallotbox) SetupSuite() {
-	_ = hint.RegisterType(INITBallotType, "init-ballot")
-	_ = hint.RegisterType(ProposalBallotType, "proposal")
-	_ = hint.RegisterType(SIGNBallotType, "sign-ballot")
-	_ = hint.RegisterType(ACCEPTBallotType, "accept-ballot")
-	_ = hint.RegisterType((valuehash.SHA256{}).Hint().Type(), "sha256")
-
 	t.pk, _ = key.NewBTCPrivatekey()
 }
 

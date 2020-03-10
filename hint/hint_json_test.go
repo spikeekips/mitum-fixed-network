@@ -6,7 +6,7 @@ func (t *testHint) TestMarshalJSON() {
 	ty := Type{0xff, 0xf0}
 	v := Version("0.1")
 
-	_ = RegisterType(ty, "0xfff0")
+	_ = registerType(ty, "0xfff0")
 
 	h, err := NewHint(ty, v)
 	t.NoError(err)

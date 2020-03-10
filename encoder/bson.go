@@ -10,7 +10,10 @@ import (
 	"github.com/spikeekips/mitum/hint"
 )
 
-var bsonHint hint.Hint = hint.MustHint(hint.Type{0x01, 0x02}, "0.0.1")
+var (
+	bsonType = hint.MustNewType(0x01, 0x02, "bson")
+	bsonHint = hint.MustHint(bsonType, "0.0.1")
+)
 
 type BSONEncoder struct {
 	cache   *cache

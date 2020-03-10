@@ -47,7 +47,7 @@ func (t *testHintsetMarshal) TestAddRemove() {
 
 	h, err := NewHint(Type{0xff, 0x20}, "0.1.1")
 	t.NoError(err)
-	t.NoError(RegisterType(h.Type(), "0xff20-0.1.1"))
+	t.NoError(registerType(h.Type(), "0xff20-0.1.1"))
 
 	fh := fieldHinted{H: h} // Create primitive instance
 
@@ -68,7 +68,7 @@ func (t *testHintsetMarshal) TestJSONMarshalFieldHinted() {
 
 	h, err := NewHint(Type{0xff, 0x21}, "0.1.1")
 	t.NoError(err)
-	t.NoError(RegisterType(h.Type(), "0xff21-0.1.1"))
+	t.NoError(registerType(h.Type(), "0xff21-0.1.1"))
 
 	hm, err := newHintedMarshalInfo(fieldHinted{H: h})
 	t.NoError(err)
@@ -108,7 +108,7 @@ func (t *testHintsetMarshal) TestJSONMarshalMethodHinted() {
 	hm, err := newHintedMarshalInfo(methodHinted{})
 	t.NoError(err)
 
-	_ = RegisterType(methodHinted{}.Hint().Type(), "0xff11-v0.0.2")
+	_ = registerType(methodHinted{}.Hint().Type(), "0xff11-v0.0.2")
 
 	err = hintset.Add(hm)
 	t.NoError(err)
@@ -145,7 +145,7 @@ func (t *testHintsetMarshal) TestJSONMarshalCustomMarshalHinted() {
 	hm, err := newHintedMarshalInfo(customMarshalHinted{})
 	t.NoError(err)
 
-	_ = RegisterType(customMarshalHinted{}.Hint().Type(), "0xff12-v0.0.3")
+	_ = registerType(customMarshalHinted{}.Hint().Type(), "0xff12-v0.0.3")
 
 	err = hintset.Add(hm)
 	t.NoError(err)

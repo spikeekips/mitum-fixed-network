@@ -12,6 +12,8 @@ import (
 	"github.com/spikeekips/mitum/util"
 )
 
+var sh0Hint = hint.MustHintWithType(hint.Type{0xff, 0x31}, "0.1", "sh0")
+
 // s0 is simple struct
 type s0 struct {
 	A string
@@ -99,7 +101,7 @@ type sh0 struct {
 }
 
 func (s0 sh0) Hint() hint.Hint {
-	return hint.MustHint(hint.Type{0xff, 0x31}, "0.1")
+	return sh0Hint
 }
 
 type testRLP struct {

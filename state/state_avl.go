@@ -8,7 +8,10 @@ import (
 	"github.com/spikeekips/mitum/hint"
 )
 
-var StateV0AVLNodeHint hint.Hint = hint.MustHint(hint.Type{0x10, 0x02}, "0.0.1")
+var (
+	StateV0AVLNodeType = hint.MustNewType(0x10, 0x02, "steate-v0-avlnode")
+	StateV0AVLNodeHint = hint.MustHint(StateV0AVLNodeType, "0.0.1")
+)
 
 type StateV0AVLNode struct {
 	height int16

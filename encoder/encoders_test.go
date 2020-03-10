@@ -14,13 +14,6 @@ type testEncoders struct {
 	suite.Suite
 }
 
-func (t *testEncoders) SetupSuite() {
-	_ = hint.RegisterType(NewJSONEncoder().Hint().Type(), "1st-json-encoder")
-	_ = hint.RegisterType(NewBSONEncoder().Hint().Type(), "1st-bson-encoder")
-	_ = hint.RegisterType(NewRLPEncoder().Hint().Type(), "1st-rlp-encoder")
-	_ = hint.RegisterType(sh0{}.Hint().Type(), "sh0")
-}
-
 func (t *testEncoders) TestAddEncoder() {
 	encs := NewEncoders()
 

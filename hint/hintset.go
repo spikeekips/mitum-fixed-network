@@ -46,7 +46,7 @@ func (st Hintset) key(t Type, v Version) string {
 // Add adds new Hint. The same hints will be sorted by version.
 func (st *Hintset) Add(hd Hinter) error {
 	h := hd.Hint()
-	if !IsRegisteredType(h.Type()) {
+	if !isRegisteredType(h.Type()) {
 		return NotRegisteredTypeFoundError.Wrapf("type=%s", h.Type().Verbose())
 	}
 

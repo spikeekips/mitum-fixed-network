@@ -11,7 +11,10 @@ import (
 	"github.com/spikeekips/mitum/valuehash"
 )
 
-var VoteproofV0Hint hint.Hint = hint.MustHint(VoteproofType, "0.0.1")
+var (
+	VoteproofV0Type           = hint.MustNewType(0x04, 0x00, "voteproof")
+	VoteproofV0Hint hint.Hint = hint.MustHint(VoteproofV0Type, "0.0.1")
+)
 
 type VoteproofV0 struct {
 	height     Height

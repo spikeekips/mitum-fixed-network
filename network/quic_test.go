@@ -12,7 +12,6 @@ import (
 	"golang.org/x/xerrors"
 
 	"github.com/spikeekips/mitum/encoder"
-	"github.com/spikeekips/mitum/hint"
 	"github.com/spikeekips/mitum/key"
 	"github.com/spikeekips/mitum/localtime"
 	"github.com/spikeekips/mitum/seal"
@@ -31,12 +30,6 @@ type testQuicSever struct {
 }
 
 func (t *testQuicSever) SetupTest() {
-	_ = hint.RegisterType(key.BTCPrivatekey{}.Hint().Type(), "btc-privatekey")
-	_ = hint.RegisterType(key.BTCPublickey{}.Hint().Type(), "btc-publickey")
-	_ = hint.RegisterType(valuehash.SHA256{}.Hint().Type(), "sha256")
-	_ = hint.RegisterType(encoder.JSONEncoder{}.Hint().Type(), "json-encoder")
-	_ = hint.RegisterType(seal.DummySeal{}.Hint().Type(), "dummy-seal")
-
 	t.encs = encoder.NewEncoders()
 	t.enc = encoder.NewJSONEncoder()
 	_ = t.encs.AddEncoder(t.enc)

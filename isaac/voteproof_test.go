@@ -15,12 +15,14 @@ import (
 	"github.com/spikeekips/mitum/valuehash"
 )
 
+var tinyFactHint = hint.MustHintWithType(hint.Type{0xff, 0xf4}, "0.1", "tiny-fact")
+
 type tinyFact struct {
 	A string
 }
 
 func (tf tinyFact) Hint() hint.Hint {
-	return hint.MustHint(hint.Type{0xff, 0xf4}, "0.1")
+	return tinyFactHint
 }
 
 func (tf tinyFact) IsValid([]byte) error {

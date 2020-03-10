@@ -5,7 +5,6 @@ import (
 
 	"github.com/stretchr/testify/suite"
 
-	"github.com/spikeekips/mitum/hint"
 	"github.com/spikeekips/mitum/key"
 	"github.com/spikeekips/mitum/localtime"
 )
@@ -17,10 +16,6 @@ type testBaseBallotV0 struct {
 }
 
 func (t *testBaseBallotV0) SetupSuite() {
-	_ = hint.RegisterType(key.BTCPrivatekey{}.Hint().Type(), "btc-privatekey")
-	_ = hint.RegisterType(key.BTCPublickey{}.Hint().Type(), "btc-publickey")
-	_ = hint.RegisterType(INITBallotType, "init-ballot")
-
 	t.pk, _ = key.NewBTCPrivatekey()
 }
 

@@ -15,6 +15,8 @@ import (
 	"github.com/spikeekips/mitum/util"
 )
 
+var testAddressHint = hint.MustHintWithType(hint.Type{0xff, 0x40}, "0.1", "test-address")
+
 type ShortAddress string
 
 func NewShortAddress(s string) ShortAddress {
@@ -33,15 +35,7 @@ func (sa ShortAddress) String() string {
 }
 
 func (sa ShortAddress) Hint() hint.Hint {
-	h, err := hint.NewHint(
-		hint.Type{0xff, 0x40},
-		"0.1",
-	)
-	if err != nil {
-		panic(err)
-	}
-
-	return h
+	return testAddressHint
 }
 
 func (sa ShortAddress) IsValid([]byte) error {

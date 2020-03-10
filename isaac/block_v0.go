@@ -12,8 +12,10 @@ import (
 	"github.com/spikeekips/mitum/valuehash"
 )
 
-// TODO use it's own Type
-var BlockV0Hint hint.Hint = hint.MustHint(hint.Type{0x05, 0x00}, "0.0.1")
+var (
+	BlockV0Type = hint.MustNewType(0x05, 0x00, "block-v0")
+	BlockV0Hint = hint.MustHint(BlockV0Type, "0.0.1")
+)
 
 type BlockV0 struct {
 	h               valuehash.Hash

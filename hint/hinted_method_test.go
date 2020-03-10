@@ -41,7 +41,7 @@ func (t *testMethodHinted) TestNew() {
 func (t *testMethodHinted) TestHintFromJSONMarshaled() {
 	mh := methodHinted{A: 33, B: "findme"}
 
-	_ = RegisterType(mh.Hint().Type(), "0xff11-v0.0.2")
+	_ = registerType(mh.Hint().Type(), "0xff11-v0.0.2")
 
 	b, err := jsoni.Marshal(mh)
 	t.NoError(err)

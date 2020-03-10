@@ -19,6 +19,13 @@ var (
 	MaxValueKVOperation int = 100
 )
 
+var (
+	KVOperationFactType = hint.MustNewType(0xff, 0xf9, "kv-operation-fact")
+	KVOperationFactHint = hint.MustHint(KVOperationFactType, "0.0.1")
+	KVOperationType     = hint.MustNewType(0xff, 0xfa, "kv-operation")
+	KVOperationHint     = hint.MustHint(KVOperationType, "0.0.1")
+)
+
 type KVOperationFact struct {
 	signer key.Publickey
 	token  []byte
@@ -50,7 +57,7 @@ func (kvof KVOperationFact) IsValid(b []byte) error {
 }
 
 func (kvof KVOperationFact) Hint() hint.Hint {
-	return hint.MustHint(hint.Type{0xff, 0xf9}, "0.0.1")
+	return KVOperationFactHint
 }
 
 func (kvof KVOperationFact) Hash() valuehash.Hash {
@@ -130,7 +137,7 @@ func (kvo KVOperation) IsValid(b []byte) error {
 }
 
 func (kvo KVOperation) Hint() hint.Hint {
-	return hint.MustHint(hint.Type{0xff, 0xfa}, "0.0.1")
+	return KVOperationHint
 }
 
 func (kvo KVOperation) Fact() Fact {

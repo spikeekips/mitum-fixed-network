@@ -38,7 +38,7 @@ func (ty *Type) UnmarshalJSON(b []byte) error {
 
 	nt := Type(n)
 
-	if t, err := TypeByName(o.N); err != nil {
+	if t, err := typeByName(o.N); err != nil {
 		return err
 	} else if !nt.Equal(t) {
 		return NewTypeDoesNotMatchError(t, nt)

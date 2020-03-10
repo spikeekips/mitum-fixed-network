@@ -21,12 +21,6 @@ type testVoteproofJSON struct {
 }
 
 func (t *testVoteproofJSON) SetupSuite() {
-	_ = hint.RegisterType(valuehash.SHA256{}.Hint().Type(), "sha256")
-	_ = hint.RegisterType(key.BTCPublickey{}.Hint().Type(), "btc-publickey")
-	_ = hint.RegisterType((ShortAddress("")).Hint().Type(), "short-address")
-	_ = hint.RegisterType(VoteproofV0{}.Hint().Type(), "voteproof")
-	_ = hint.RegisterType(tinyFact{}.Hint().Type(), "tiny-fact")
-
 	t.hs = hint.NewHintset()
 	t.hs.Add(valuehash.SHA256{})
 	t.hs.Add(ShortAddress(""))

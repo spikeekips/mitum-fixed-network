@@ -9,7 +9,10 @@ import (
 	"github.com/spikeekips/mitum/valuehash"
 )
 
-var OperationAVLNodeHint hint.Hint = hint.MustHint(hint.Type{0x09, 0x01}, "0.0.1")
+var (
+	OperationAVLNodeType = hint.MustNewType(0x09, 0x01, "operation-avlnode")
+	OperationAVLNodeHint = hint.MustHint(OperationAVLNodeType, "0.0.1")
+)
 
 type OperationAVLNode struct {
 	key    []byte // Operation.Hash().Bytes()

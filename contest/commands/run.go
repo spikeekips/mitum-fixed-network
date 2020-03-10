@@ -8,7 +8,6 @@ import (
 	"golang.org/x/xerrors"
 
 	"github.com/spikeekips/mitum/contest/common"
-	"github.com/spikeekips/mitum/hint"
 	"github.com/spikeekips/mitum/isaac"
 	"github.com/spikeekips/mitum/util"
 )
@@ -16,32 +15,6 @@ import (
 type RunCommand struct {
 	Nodes     uint   `args:"" default:"${nodes}" help:"number of suffrage nodes"`
 	NetworkID string `args:"" default:"${networkID}" help:"network id"`
-}
-
-func (cm RunCommand) registerTypes() error {
-	for i := range common.Hinters {
-		hinter, ok := common.Hinters[i][1].(hint.Hinter)
-		if !ok {
-			return xerrors.Errorf("not hint.Hinter: %T", common.Hinters[i])
-		}
-
-		if err := hint.RegisterType(hinter.Hint().Type(), common.Hinters[i][0].(string)); err != nil {
-			return err
-		}
-	}
-
-	for i := range common.HintTypes {
-		ty, ok := common.HintTypes[i][1].(hint.Type)
-		if !ok {
-			return xerrors.Errorf("not hint.Type: %T", common.HintTypes[i])
-		}
-
-		if err := hint.RegisterType(ty, common.HintTypes[i][0].(string)); err != nil {
-			return err
-		}
-	}
-
-	return nil
 }
 
 func (cm RunCommand) generateBlocks(ns []*isaac.Localstate) error {
@@ -118,10 +91,6 @@ func (cm RunCommand) startNodes(nodeProcesses []*common.NodeProcess, exitHooks *
 }
 
 func (cm RunCommand) Run(_ *CommonFlags, log *zerolog.Logger, exitHooks *[]func()) error {
-	if err := cm.registerTypes(); err != nil {
-		return err
-	}
-
 	var ns []*isaac.Localstate
 	for i := 0; i < int(cm.Nodes); i++ {
 		if nl, err := common.NewNode(i, []byte(cm.NetworkID), "quic"); err != nil {

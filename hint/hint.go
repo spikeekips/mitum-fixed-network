@@ -84,7 +84,7 @@ func (ht Hint) IsValid([]byte) error {
 }
 
 func (ht Hint) IsRegistered() error {
-	if !IsRegisteredType(ht.Type()) {
+	if !isRegisteredType(ht.Type()) {
 		return NotRegisteredTypeFoundError.Wrapf("hint=%s", ht.Verbose())
 	}
 

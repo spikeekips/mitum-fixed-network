@@ -51,7 +51,7 @@ func (t *testFeildHinted) TestHintFromJSONMarshaled() {
 
 	// NOTE to marshal Hint, especially Type, it's Type should be registered
 	// before.
-	_ = RegisterType(h.Type(), "0xff00-v0.0.1")
+	_ = registerType(h.Type(), "0xff00-v0.0.1")
 
 	fh := fieldHinted{
 		H: h,

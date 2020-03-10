@@ -7,7 +7,6 @@ import (
 	"github.com/stretchr/testify/suite"
 
 	"github.com/spikeekips/mitum/encoder"
-	"github.com/spikeekips/mitum/hint"
 	"github.com/spikeekips/mitum/key"
 	"github.com/spikeekips/mitum/util"
 	"github.com/spikeekips/mitum/valuehash"
@@ -23,13 +22,6 @@ type testSealJSON struct {
 
 func (t *testSealJSON) SetupSuite() {
 	t.pk, _ = key.NewBTCPrivatekey()
-
-	_ = hint.RegisterType(key.BTCPublickey{}.Hint().Type(), "btc-publickey")
-	_ = hint.RegisterType(valuehash.SHA256{}.Hint().Type(), "sha256")
-	_ = hint.RegisterType(encoder.JSONEncoder{}.Hint().Type(), "json-encoder")
-	_ = hint.RegisterType(Seal{}.Hint().Type(), "operation-seal")
-	_ = hint.RegisterType(KVOperation{}.Hint().Type(), "KVOperation")
-	_ = hint.RegisterType(KVOperationFact{}.Hint().Type(), "KVOperation-fact")
 
 	t.encs = encoder.NewEncoders()
 	t.enc = encoder.NewJSONEncoder()

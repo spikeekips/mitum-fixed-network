@@ -14,6 +14,8 @@ import (
 	"github.com/spikeekips/mitum/util"
 )
 
+var s1Hint = hint.MustHintWithType(hint.Type{0xff, 0x32}, "0.1", "s1")
+
 func (s0 sp0) PackJSON(_ *JSONEncoder) (interface{}, error) {
 	return sp0{
 		A: s0.A,
@@ -90,7 +92,7 @@ type s1 struct {
 
 // s1 does not PackJSON without JSONPackHintedHead
 func (s0 s1) Hint() hint.Hint {
-	return hint.MustHint(hint.Type{0xff, 0x32}, "0.1")
+	return s1Hint
 }
 
 type testJSON struct {
@@ -280,8 +282,6 @@ func (t *testJSON) TestAnalyzePack() {
 }
 
 func (t *testJSON) TestEncodeHinter() {
-	_ = hint.RegisterType(sh0{}.Hint().Type(), "sh0")
-
 	s := sh0{B: util.UUID().String()}
 
 	je := NewJSONEncoder()
@@ -296,8 +296,6 @@ func (t *testJSON) TestEncodeHinter() {
 }
 
 func (t *testJSON) TestEncodeHinterWithHead() {
-	_ = hint.RegisterType(s1{}.Hint().Type(), "sh1")
-
 	s := s1{C: rand.Int()}
 
 	je := NewJSONEncoder()
@@ -312,8 +310,6 @@ func (t *testJSON) TestEncodeHinterWithHead() {
 }
 
 func (t *testJSON) TestEncodeHinterNotCompatible() {
-	_ = hint.RegisterType(sh0{}.Hint().Type(), "sh0")
-
 	s := sh0{B: util.UUID().String()}
 
 	je := NewJSONEncoder()

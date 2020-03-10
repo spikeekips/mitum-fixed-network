@@ -5,17 +5,10 @@ import (
 
 	"github.com/stretchr/testify/suite"
 	"golang.org/x/xerrors"
-
-	"github.com/spikeekips/mitum/hint"
 )
 
 type testEtherKeypair struct {
 	suite.Suite
-}
-
-func (t *testEtherKeypair) SetupTest() {
-	_ = hint.RegisterType(EtherPrivatekey{}.Hint().Type(), "Ether-privatekey")
-	_ = hint.RegisterType(EtherPublickey{}.Hint().Type(), "Ether-publickey")
 }
 
 func (t *testEtherKeypair) TestNew() {

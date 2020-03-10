@@ -11,7 +11,6 @@ import (
 	"golang.org/x/xerrors"
 
 	"github.com/spikeekips/mitum/encoder"
-	"github.com/spikeekips/mitum/hint"
 	"github.com/spikeekips/mitum/key"
 	"github.com/spikeekips/mitum/localtime"
 	"github.com/spikeekips/mitum/operation"
@@ -31,18 +30,6 @@ type testLeveldbStorage struct {
 }
 
 func (t *testLeveldbStorage) SetupSuite() {
-	_ = hint.RegisterType(key.BTCPrivatekey{}.Hint().Type(), "btc-privatekey")
-	_ = hint.RegisterType(key.BTCPublickey{}.Hint().Type(), "btc-publickey")
-	_ = hint.RegisterType(valuehash.SHA256{}.Hint().Type(), "sha256")
-	_ = hint.RegisterType(encoder.JSONEncoder{}.Hint().Type(), "json-encoder")
-	_ = hint.RegisterType((NewShortAddress("")).Hint().Type(), "short-address")
-	_ = hint.RegisterType(BlockV0{}.Hint().Type(), "block")
-	_ = hint.RegisterType(VoteproofType, "voteproof")
-	_ = hint.RegisterType(seal.DummySeal{}.Hint().Type(), "dummy-seal")
-	_ = hint.RegisterType(operation.Seal{}.Hint().Type(), "operation-seal")
-	_ = hint.RegisterType(operation.KVOperation{}.Hint().Type(), "KVOperation")
-	_ = hint.RegisterType(operation.KVOperationFact{}.Hint().Type(), "KVOperation-fact")
-
 	t.encs = encoder.NewEncoders()
 	t.enc = encoder.NewJSONEncoder()
 	_ = t.encs.AddEncoder(t.enc)

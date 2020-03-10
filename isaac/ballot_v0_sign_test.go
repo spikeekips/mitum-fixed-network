@@ -6,7 +6,6 @@ import (
 	"github.com/stretchr/testify/suite"
 	"golang.org/x/xerrors"
 
-	"github.com/spikeekips/mitum/hint"
 	"github.com/spikeekips/mitum/key"
 	"github.com/spikeekips/mitum/localtime"
 	"github.com/spikeekips/mitum/operation"
@@ -20,10 +19,6 @@ type testBallotV0SIGN struct {
 }
 
 func (t *testBallotV0SIGN) SetupSuite() {
-	_ = hint.RegisterType(key.BTCPrivatekey{}.Hint().Type(), "btc-privatekey")
-	_ = hint.RegisterType(key.BTCPublickey{}.Hint().Type(), "btc-publickey")
-	_ = hint.RegisterType(SIGNBallotType, "sign-ballot")
-
 	t.pk, _ = key.NewBTCPrivatekey()
 }
 

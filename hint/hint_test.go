@@ -85,7 +85,7 @@ func (t *testHint) TestBytes() {
 
 func (t *testHint) TestString() {
 	ty := Type{0xff, 0xf0}
-	_ = RegisterType(ty, "dummy")
+	_ = registerType(ty, "dummy")
 	v := Version("0.1")
 
 	hint, err := NewHint(ty, v)

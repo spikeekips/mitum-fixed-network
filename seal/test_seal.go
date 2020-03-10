@@ -11,6 +11,8 @@ import (
 	"github.com/spikeekips/mitum/valuehash"
 )
 
+var dummySealHint = hint.MustHintWithType(hint.Type{0xff, 0x35}, "0.1", "dummy-seal")
+
 type DummySeal struct {
 	PK        key.BTCPrivatekey
 	H         valuehash.SHA256
@@ -34,7 +36,7 @@ func (ds DummySeal) IsValid([]byte) error {
 }
 
 func (ds DummySeal) Hint() hint.Hint {
-	return hint.MustHint(hint.Type{0xff, 0x30}, "0.1")
+	return dummySealHint
 }
 
 func (ds DummySeal) Hash() valuehash.Hash {

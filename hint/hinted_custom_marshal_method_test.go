@@ -73,7 +73,7 @@ func (t *testCustomMarshalHinted) TestNew() {
 func (t *testCustomMarshalHinted) TestHintFromJSONMarshaled() {
 	mh := customMarshalHinted{A: 33, B: "findme"}
 
-	_ = RegisterType(mh.Hint().Type(), "0xff12-v0.0.3")
+	_ = registerType(mh.Hint().Type(), "0xff12-v0.0.3")
 
 	b, err := jsoni.Marshal(mh)
 	t.NoError(err)

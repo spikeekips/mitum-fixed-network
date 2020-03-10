@@ -5,17 +5,10 @@ import (
 
 	"github.com/stretchr/testify/suite"
 	"golang.org/x/xerrors"
-
-	"github.com/spikeekips/mitum/hint"
 )
 
 type testStellarKeypair struct {
 	suite.Suite
-}
-
-func (t *testStellarKeypair) SetupTest() {
-	_ = hint.RegisterType(StellarPrivatekey{}.Hint().Type(), "stellar-privatekey")
-	_ = hint.RegisterType(StellarPublickey{}.Hint().Type(), "stellar-publickey")
 }
 
 func (t *testStellarKeypair) TestNew() {

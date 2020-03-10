@@ -7,14 +7,14 @@ import (
 )
 
 var (
-	INITBallotType         hint.Type = hint.Type{0x03, 0x00}
-	ProposalBallotType     hint.Type = hint.Type{0x03, 0x01}
-	SIGNBallotType         hint.Type = hint.Type{0x03, 0x02}
-	ACCEPTBallotType       hint.Type = hint.Type{0x03, 0x03}
-	INITBallotFactType     hint.Type = hint.Type{0x03, 0x04}
-	ProposalBallotFactType hint.Type = hint.Type{0x03, 0x05}
-	SIGNBallotFactType     hint.Type = hint.Type{0x03, 0x06}
-	ACCEPTBallotFactType   hint.Type = hint.Type{0x03, 0x07}
+	INITBallotType         = hint.MustNewType(0x03, 0x00, "init-ballot")
+	ProposalBallotType     = hint.MustNewType(0x03, 0x01, "proposal")
+	SIGNBallotType         = hint.MustNewType(0x03, 0x02, "sign-ballot")
+	ACCEPTBallotType       = hint.MustNewType(0x03, 0x03, "accept-ballot")
+	INITBallotFactType     = hint.MustNewType(0x03, 0x04, "init-ballot-fact")
+	ProposalBallotFactType = hint.MustNewType(0x03, 0x05, "proposal-fact")
+	SIGNBallotFactType     = hint.MustNewType(0x03, 0x06, "sign-ballot-fact")
+	ACCEPTBallotFactType   = hint.MustNewType(0x03, 0x07, "accept-ballot-fact")
 )
 
 type Ballot interface {

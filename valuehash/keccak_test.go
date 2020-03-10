@@ -5,16 +5,10 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/suite"
-
-	"github.com/spikeekips/mitum/hint"
 )
 
 type testKeccak512 struct {
 	suite.Suite
-}
-
-func (t *testKeccak512) SetupTest() {
-	_ = hint.RegisterType(SHA512{}.Hint().Type(), "keccak-512-v0.1")
 }
 
 func (t *testKeccak512) TestEmpty() {
@@ -79,10 +73,6 @@ func TestKeccak512(t *testing.T) {
 
 type testKeccak256 struct {
 	suite.Suite
-}
-
-func (t *testKeccak256) SetupTest() {
-	_ = hint.RegisterType(SHA256{}.Hint().Type(), "keccak-256-v0.1")
 }
 
 func (t *testKeccak256) TestEmpty() {

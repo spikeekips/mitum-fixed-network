@@ -16,7 +16,10 @@ import (
 // TODO MaxOperationsInSeal will be managed by Policy.
 var MaxOperationsInSeal int = 100
 
-var SealHint hint.Hint = hint.MustHint(hint.Type{0x09, 0x00}, "0.0.1")
+var (
+	SealType = hint.MustNewType(0x09, 0x00, "seal")
+	SealHint = hint.MustHint(SealType, "0.0.1")
+)
 
 type Seal struct {
 	h         valuehash.Hash

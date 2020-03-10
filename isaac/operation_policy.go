@@ -13,8 +13,10 @@ import (
 )
 
 var (
-	SetPolicyOperationV0Hint     = hint.MustHint(hint.Type{0x08, 0x00}, "0.0.1")
-	SetPolicyOperationFactV0Hint = hint.MustHint(hint.Type{0x08, 0x01}, "0.0.1")
+	SetPolicyOperationFactV0Type = hint.MustNewType(0x08, 0x01, "set-policy-operation-fact-v0")
+	SetPolicyOperationFactV0Hint = hint.MustHint(SetPolicyOperationFactV0Type, "0.0.1")
+	SetPolicyOperationV0Type     = hint.MustNewType(0x08, 0x00, "set-policy-operation-v0")
+	SetPolicyOperationV0Hint     = hint.MustHint(SetPolicyOperationV0Type, "0.0.1")
 )
 
 type SetPolicyOperationFactV0 struct {

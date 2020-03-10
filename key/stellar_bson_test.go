@@ -4,13 +4,10 @@ import (
 	"encoding/hex"
 
 	"github.com/spikeekips/mitum/encoder"
-	"github.com/spikeekips/mitum/hint"
 )
 
 func (t *testStellarKeypair) TestPrivatekeyBSONMarshal() {
 	be := encoder.NewBSONEncoder()
-	_ = hint.RegisterType(be.Hint().Type(), "bson-encoder")
-	_ = hint.RegisterType((StellarPrivatekey{}).Hint().Type(), "stellar-privatekey")
 
 	encs := encoder.NewEncoders()
 	_ = encs.AddEncoder(be)
@@ -31,8 +28,6 @@ func (t *testStellarKeypair) TestPrivatekeyBSONMarshal() {
 
 func (t *testStellarKeypair) TestPublickeyBSONMarshal() {
 	be := encoder.NewBSONEncoder()
-	_ = hint.RegisterType(be.Hint().Type(), "bson-encoder")
-	_ = hint.RegisterType((StellarPrivatekey{}).Hint().Type(), "stellar-privatekey")
 
 	encs := encoder.NewEncoders()
 	_ = encs.AddEncoder(be)

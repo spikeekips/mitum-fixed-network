@@ -51,7 +51,7 @@ func (t *testHintset) TestNewUnRegisteredType() {
 
 func (t *testHintset) TestAdd() {
 	ty := Type{0xff, 0xf1}
-	t.NoError(RegisterType(ty, "findme"))
+	t.NoError(registerType(ty, "findme"))
 
 	sh := newSomethingHinted(ty, "2019.10", 10)
 
@@ -62,7 +62,7 @@ func (t *testHintset) TestAdd() {
 
 func (t *testHintset) TestRemove() {
 	ty := Type{0xff, 0xf2}
-	_ = RegisterType(ty, "showme")
+	_ = registerType(ty, "showme")
 
 	sh := newSomethingHinted(ty, "2019.10", 10)
 
@@ -79,7 +79,7 @@ func (t *testHintset) TestRemove() {
 
 func (t *testHintset) TestRemoveCached() {
 	ty := Type{0xff, 0xf2}
-	_ = RegisterType(ty, "showme")
+	_ = registerType(ty, "showme")
 
 	hs := NewHintset()
 
@@ -111,7 +111,7 @@ func (t *testHintset) TestRemoveCached() {
 
 func (t *testHintset) TestGetHint() {
 	ty := Type{0xff, 0xf2}
-	_ = RegisterType(ty, "showme")
+	_ = registerType(ty, "showme")
 
 	sh := newSomethingHinted(ty, "2019.10", 10)
 
@@ -125,7 +125,7 @@ func (t *testHintset) TestGetHint() {
 
 func (t *testHintset) TestGetHintWithEmptyVersion() {
 	ty := Type{0xff, 0xf2}
-	_ = RegisterType(ty, "showme")
+	_ = registerType(ty, "showme")
 
 	hs := NewHintset()
 

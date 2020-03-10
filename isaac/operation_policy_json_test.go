@@ -4,7 +4,6 @@ import (
 	"testing"
 
 	"github.com/spikeekips/mitum/encoder"
-	"github.com/spikeekips/mitum/hint"
 	"github.com/spikeekips/mitum/key"
 	"github.com/spikeekips/mitum/util"
 	"github.com/spikeekips/mitum/valuehash"
@@ -20,12 +19,6 @@ type testSetPolicyOperationJSON struct {
 }
 
 func (t *testSetPolicyOperationJSON) SetupSuite() {
-	_ = hint.RegisterType(key.BTCPublickey{}.Hint().Type(), "btc-publickey")
-	_ = hint.RegisterType(valuehash.SHA256{}.Hint().Type(), "sha256")
-	_ = hint.RegisterType(encoder.JSONEncoder{}.Hint().Type(), "json-encoder")
-	_ = hint.RegisterType(SetPolicyOperationV0Hint.Type(), "set-policy-operation")
-	_ = hint.RegisterType(SetPolicyOperationFactV0Hint.Type(), "set-policy-operation-fact")
-
 	t.pk, _ = key.NewBTCPrivatekey()
 
 	t.encs = encoder.NewEncoders()

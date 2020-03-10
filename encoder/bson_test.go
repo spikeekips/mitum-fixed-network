@@ -266,8 +266,6 @@ func (t *testBSON) TestAnalyzePack() {
 }
 
 func (t *testBSON) TestEncodeHinter() {
-	_ = hint.RegisterType(sh0{}.Hint().Type(), "sh0")
-
 	s := sh0{B: util.UUID().String()}
 
 	je := NewBSONEncoder()
@@ -282,8 +280,6 @@ func (t *testBSON) TestEncodeHinter() {
 }
 
 func (t *testBSON) TestEncodeHinterWithHead() {
-	_ = hint.RegisterType(s1{}.Hint().Type(), "sh1")
-
 	s := s1{C: rand.Int()}
 
 	je := NewBSONEncoder()
@@ -298,8 +294,6 @@ func (t *testBSON) TestEncodeHinterWithHead() {
 }
 
 func (t *testBSON) TestEncodeHinterNotCompatible() {
-	_ = hint.RegisterType(sh0{}.Hint().Type(), "sh0")
-
 	s := sh0{B: util.UUID().String()}
 
 	je := NewBSONEncoder()

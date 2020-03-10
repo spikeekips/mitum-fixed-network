@@ -10,7 +10,10 @@ import (
 	"github.com/spikeekips/mitum/valuehash"
 )
 
-var AVLTreeHint hint.Hint = hint.MustHint(hint.Type{0x10, 0x00}, "0.0.1")
+var (
+	AVLTreeType = hint.MustNewType(0x10, 0x00, "avltree")
+	AVLTreeHint = hint.MustHint(AVLTreeType, "0.0.1")
+)
 
 type AVLTree struct {
 	*avl.Tree

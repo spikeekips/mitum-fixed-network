@@ -6,7 +6,6 @@ import (
 	"github.com/stretchr/testify/suite"
 
 	"github.com/spikeekips/mitum/encoder"
-	"github.com/spikeekips/mitum/hint"
 	"github.com/spikeekips/mitum/key"
 	"github.com/spikeekips/mitum/localtime"
 	"github.com/spikeekips/mitum/valuehash"
@@ -19,14 +18,6 @@ type testBallotV0ACCEPTJSON struct {
 }
 
 func (t *testBallotV0ACCEPTJSON) SetupSuite() {
-	_ = hint.RegisterType(key.BTCPrivatekey{}.Hint().Type(), "btc-privatekey")
-	_ = hint.RegisterType(key.BTCPublickey{}.Hint().Type(), "btc-publickey")
-	_ = hint.RegisterType(valuehash.SHA256{}.Hint().Type(), "sha256")
-	_ = hint.RegisterType(encoder.JSONEncoder{}.Hint().Type(), "json-encoder")
-	_ = hint.RegisterType((NewShortAddress("")).Hint().Type(), "short-address")
-	_ = hint.RegisterType(ACCEPTBallotType, "accept-ballot")
-	_ = hint.RegisterType(DummyVoteproof{}.Hint().Type(), "dummy-voteproof")
-
 	t.pk, _ = key.NewBTCPrivatekey()
 }
 

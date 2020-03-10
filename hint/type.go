@@ -32,6 +32,15 @@ func init() {
 // NOTE '0xff' of first element of Type is reserved for testing.
 type Type [2]byte
 
+func MustNewType(a, b byte, name string) Type {
+	t := Type{a, b}
+	if err := registerType(t, name); err != nil {
+		panic(err)
+	}
+
+	return t
+}
+
 // String returns the name of Type.
 func (ty Type) String() string {
 	if _, found := typeNames[ty]; !found {
@@ -65,19 +74,19 @@ func (ty Type) Verbose() string {
 	return fmt.Sprintf("%x", [2]byte(ty))
 }
 
-func IsRegisteredType(t Type) bool {
+func isRegisteredType(t Type) bool {
 	_, found := typeNames[t]
 	return found
 }
 
-// IsRegisteredTypeName checks the given name is registered or not
-func IsRegisteredTypeName(name string) bool {
+// isRegisteredTypeName checks the given name is registered or not
+func isRegisteredTypeName(name string) bool { // nolint
 	_, found := nameTypes[name]
 	return found
 }
 
-// RegisterType registers the givven Type in globals
-func RegisterType(t Type, name string) error {
+// registerType registers the givven Type in globals
+func registerType(t Type, name string) error {
 	if err := t.IsValid(nil); err != nil {
 		return err
 	}
@@ -97,7 +106,7 @@ func RegisterType(t Type, name string) error {
 }
 
 // typeNames returns the name of the given Type
-func TypeByName(name string) (Type, error) {
+func typeByName(name string) (Type, error) {
 	t, found := nameTypes[name]
 	if !found {
 		return Type{}, NotRegisteredTypeFoundError.Wrapf("no Type found; name=%s", name)

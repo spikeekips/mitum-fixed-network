@@ -5,17 +5,10 @@ import (
 
 	"github.com/stretchr/testify/suite"
 	"golang.org/x/xerrors"
-
-	"github.com/spikeekips/mitum/hint"
 )
 
 type testBTCKeypair struct {
 	suite.Suite
-}
-
-func (t *testBTCKeypair) SetupTest() {
-	_ = hint.RegisterType(BTCPrivatekey{}.Hint().Type(), "btc-privatekey")
-	_ = hint.RegisterType(BTCPublickey{}.Hint().Type(), "btc-publickey")
 }
 
 func (t *testBTCKeypair) TestNew() {

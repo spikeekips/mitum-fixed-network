@@ -10,6 +10,8 @@ import (
 	"github.com/spikeekips/mitum/valuehash"
 )
 
+var KVOperationHint = hint.MustHintWithType(hint.Type{0xff, 0xfb}, "0.0.1", "kv-operation-isaac")
+
 type KVOperation struct {
 	operation.KVOperation
 }
@@ -32,7 +34,7 @@ func NewKVOperation(
 }
 
 func (kvo KVOperation) Hint() hint.Hint {
-	return hint.MustHint(hint.Type{0xff, 0xfb}, "0.0.1")
+	return KVOperationHint
 }
 
 func (kvo KVOperation) MarshalJSON() ([]byte, error) {

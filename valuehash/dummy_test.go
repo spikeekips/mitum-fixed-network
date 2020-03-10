@@ -5,16 +5,10 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/suite"
-
-	"github.com/spikeekips/mitum/hint"
 )
 
 type testDummy struct {
 	suite.Suite
-}
-
-func (t *testDummy) SetupTest() {
-	_ = hint.RegisterType(Dummy{}.Hint().Type(), "dummy")
 }
 
 func (t *testDummy) TestEmpty() {

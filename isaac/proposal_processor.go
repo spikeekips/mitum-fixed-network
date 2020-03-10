@@ -149,7 +149,8 @@ func (pp *proposalProcessorV0) processINIT(initVoteproof Voteproof) (Block, erro
 	var block Block
 	if b, err := NewBlockV0(
 		pp.proposal.Height(), pp.proposal.Round(), pp.proposal.Hash(), pp.lastBlock.Hash(),
-		blockOperations, blockStates,
+		blockOperations,
+		blockStates,
 		pp.localstate.Policy().NetworkID(),
 	); err != nil {
 		return nil, err
@@ -170,6 +171,10 @@ func (pp *proposalProcessorV0) processINIT(initVoteproof Voteproof) (Block, erro
 	}
 
 	if stateTree != nil {
+		if err := pp.updateStates(stateTree, block); err != nil {
+			return nil, err
+		}
+
 		if err := pp.bs.SetStates(stateTree); err != nil {
 			return nil, err
 		}
@@ -309,8 +314,7 @@ func (pp *proposalProcessorV0) processStates() (valuehash.Hash, *tree.AVLTree, e
 			return nil, nil, err
 		}
 
-		sv := s.(*state.StateV0)
-		n := state.NewStateV0AVLNode(*sv)
+		n := state.NewStateV0AVLNode(s.(*state.StateV0))
 		if _, err := tg.Add(n); err != nil {
 			return nil, nil, err
 		}
@@ -415,4 +419,21 @@ func (pp *proposalProcessorV0) validateTree(tg *avl.TreeGenerator) (valuehash.Ha
 	}
 
 	return rootHash, tr, nil
+}
+
+func (pp *proposalProcessorV0) updateStates(tr *tree.AVLTree, block Block) error {
+	return tr.Traverse(func(node tree.Node) (bool, error) {
+		var st state.StateUpdater
+		if s, ok := node.(*state.StateV0AVLNode); !ok {
+			return false, xerrors.Errorf("not state.StateV0AVLNode: %T", node)
+		} else {
+			st = s.State().(state.StateUpdater)
+		}
+
+		if err := st.SetCurrentBlock(block.Hash()); err != nil {
+			return false, err
+		}
+
+		return true, nil
+	})
 }

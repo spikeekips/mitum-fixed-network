@@ -15,10 +15,10 @@ type StateV0AVLNode struct {
 	left   avlHashable.HashableMutableNode
 	right  avlHashable.HashableMutableNode
 	h      []byte
-	state  StateV0 // State
+	state  *StateV0 // State
 }
 
-func NewStateV0AVLNode(st StateV0) *StateV0AVLNode {
+func NewStateV0AVLNode(st *StateV0) *StateV0AVLNode {
 	return &StateV0AVLNode{state: st}
 }
 

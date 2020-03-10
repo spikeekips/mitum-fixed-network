@@ -33,16 +33,18 @@ func (sp *StatePool) Get(key string) (state.StateUpdater, error) {
 
 	var value interface{}
 	var valueHash valuehash.Hash
+	var previousBlock valuehash.Hash
 
 	if s, _, err := sp.st.State(key); err != nil {
 		return nil, err
 	} else if s != nil {
 		value = s.Value()
 		valueHash = s.ValueHash()
+		previousBlock = s.CurrentBlock()
 	}
 
 	var st state.StateUpdater
-	if su, err := state.NewStateV0(key, value, valueHash, nil); err != nil {
+	if su, err := state.NewStateV0(key, value, valueHash, previousBlock); err != nil {
 		return nil, err
 	} else {
 		st = su

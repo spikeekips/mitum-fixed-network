@@ -20,6 +20,7 @@ type StateV0 struct {
 	valueHash     valuehash.Hash
 	previousBlock valuehash.Hash
 	operations    []OperationInfo
+	currentBlock  valuehash.Hash
 }
 
 func NewStateV0(
@@ -49,6 +50,12 @@ func (st StateV0) IsValid([]byte) error {
 
 	if err := st.previousBlock.IsValid(nil); err != nil {
 		return err
+	}
+
+	if st.currentBlock != nil {
+		if err := st.currentBlock.IsValid(nil); err != nil {
+			return err
+		}
 	}
 
 	for i := range st.operations {
@@ -125,6 +132,20 @@ func (st *StateV0) SetPreviousBlock(h valuehash.Hash) error {
 	}
 
 	st.previousBlock = h
+
+	return nil
+}
+
+func (st StateV0) CurrentBlock() valuehash.Hash {
+	return st.currentBlock
+}
+
+func (st *StateV0) SetCurrentBlock(h valuehash.Hash) error {
+	if err := h.IsValid(nil); err != nil {
+		return err
+	}
+
+	st.currentBlock = h
 
 	return nil
 }

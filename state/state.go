@@ -24,6 +24,7 @@ type State interface {
 	GenerateHash() valuehash.Hash
 	PreviousBlock() valuehash.Hash
 	Operations() []OperationInfo
+	CurrentBlock() valuehash.Hash
 }
 
 type StateUpdater interface {
@@ -32,4 +33,5 @@ type StateUpdater interface {
 	SetHash(valuehash.Hash) error
 	SetPreviousBlock(valuehash.Hash) error
 	AddOperationInfo(OperationInfo) error
+	SetCurrentBlock(valuehash.Hash) error
 }

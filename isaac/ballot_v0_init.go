@@ -40,11 +40,11 @@ func (ibf INITBallotFactV0) Hint() hint.Hint {
 	return INITBallotFactV0Hint
 }
 
-func (ibf INITBallotFactV0) IsValid(b []byte) error {
+func (ibf INITBallotFactV0) IsValid([]byte) error {
 	if err := isvalid.Check([]isvalid.IsValider{
 		ibf.BaseBallotFactV0,
 		ibf.previousBlock,
-	}, b, false); err != nil {
+	}, nil, false); err != nil {
 		return err
 	}
 
@@ -195,19 +195,18 @@ func (ib INITBallotV0) Voteproof() Voteproof {
 	return ib.voteproof
 }
 
-func (ib INITBallotV0) GenerateHash(b []byte) (valuehash.Hash, error) {
+func (ib INITBallotV0) GenerateHash() (valuehash.Hash, error) {
 	return valuehash.NewSHA256(
 		util.ConcatSlice([][]byte{
 			ib.BaseBallotV0.Bytes(),
 			ib.INITBallotFactV0.Bytes(),
 			ib.bodyHash.Bytes(),
-			b,
 		}),
 	), nil
 }
 
-func (ib INITBallotV0) GenerateBodyHash(b []byte) (valuehash.Hash, error) {
-	if err := ib.INITBallotFactV0.IsValid(b); err != nil {
+func (ib INITBallotV0) GenerateBodyHash() (valuehash.Hash, error) {
+	if err := ib.INITBallotFactV0.IsValid(nil); err != nil {
 		return nil, err
 	}
 
@@ -220,7 +219,6 @@ func (ib INITBallotV0) GenerateBodyHash(b []byte) (valuehash.Hash, error) {
 		util.ConcatSlice([][]byte{
 			ib.INITBallotFactV0.Bytes(),
 			vb,
-			b,
 		}),
 	), nil
 }
@@ -247,7 +245,7 @@ func (ib *INITBallotV0) Sign(pk key.Privatekey, b []byte) error { // nolint
 
 	// body signature
 	var bodyHash valuehash.Hash
-	if h, err := ib.GenerateBodyHash(b); err != nil {
+	if h, err := ib.GenerateBodyHash(); err != nil {
 		return err
 	} else {
 		bodyHash = h
@@ -274,7 +272,7 @@ func (ib *INITBallotV0) Sign(pk key.Privatekey, b []byte) error { // nolint
 	ib.factHash = factHash
 	ib.factSignature = factSig
 
-	if h, err := ib.GenerateHash(b); err != nil {
+	if h, err := ib.GenerateHash(); err != nil {
 		return err
 	} else {
 		ib.BaseBallotV0 = ib.BaseBallotV0.SetHash(h)

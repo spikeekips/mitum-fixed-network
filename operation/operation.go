@@ -22,11 +22,11 @@ type Operation interface {
 	hint.Hinter
 	BaseOperationFact
 	Hash() valuehash.Hash
-	GenerateHash([]byte) (valuehash.Hash, error)
+	GenerateHash() (valuehash.Hash, error)
 }
 
 func IsValidOperation(op Operation, b []byte) error {
-	if err := op.Hint().IsValid(b); err != nil {
+	if err := op.Hint().IsValid(nil); err != nil {
 		return err
 	}
 
@@ -44,7 +44,7 @@ func IsValidOperation(op Operation, b []byte) error {
 		return err
 	}
 
-	if h, err := op.GenerateHash(b); err != nil {
+	if h, err := op.GenerateHash(); err != nil {
 		return err
 	} else if !h.Equal(op.Hash()) {
 		return xerrors.Errorf("wrong Opeartion hash")

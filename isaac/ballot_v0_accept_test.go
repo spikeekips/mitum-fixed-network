@@ -124,12 +124,12 @@ func (t *testBallotV0ACCEPT) TestGenerateHash() {
 		voteproof: vp,
 	}
 
-	h, err := ib.GenerateBodyHash(nil)
+	h, err := ib.GenerateBodyHash()
 	t.NoError(err)
 	t.NotNil(h)
 	t.NotEmpty(h)
 
-	bh, err := ib.GenerateBodyHash(nil)
+	bh, err := ib.GenerateBodyHash()
 	t.NoError(err)
 	t.NotNil(bh)
 	t.NotEmpty(bh)

@@ -151,7 +151,6 @@ func (pp *proposalProcessorV0) processINIT(initVoteproof Voteproof) (Block, erro
 		pp.proposal.Height(), pp.proposal.Round(), pp.proposal.Hash(), pp.lastBlock.Hash(),
 		blockOperations,
 		blockStates,
-		pp.localstate.Policy().NetworkID(),
 	); err != nil {
 		return nil, err
 	} else {

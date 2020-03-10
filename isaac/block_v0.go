@@ -35,7 +35,6 @@ func NewBlockV0(
 	previousBlock valuehash.Hash,
 	blockOperations valuehash.Hash,
 	blockStates valuehash.Hash,
-	b []byte,
 ) (BlockV0, error) {
 	root, err := GenerateBlockV0Hash(
 		height,
@@ -44,7 +43,6 @@ func NewBlockV0(
 		previousBlock,
 		blockOperations,
 		blockStates,
-		b,
 	)
 	if err != nil {
 		return BlockV0{}, err
@@ -69,7 +67,6 @@ func GenerateBlockV0Hash(
 	previousBlock valuehash.Hash,
 	blockOperations valuehash.Hash,
 	blockStates valuehash.Hash,
-	b []byte,
 ) (valuehash.Hash, error) {
 	var blockOperationsBytes []byte
 	if blockOperations != nil {
@@ -88,19 +85,18 @@ func GenerateBlockV0Hash(
 		previousBlock.Bytes(),
 		blockOperationsBytes,
 		blockStatesBytes,
-		b,
 	})
 
 	return valuehash.NewSHA256(e), nil
 }
 
-func (bm BlockV0) IsValid(b []byte) error {
+func (bm BlockV0) IsValid([]byte) error {
 	if err := isvalid.Check([]isvalid.IsValider{
 		bm.h,
 		bm.height,
 		bm.proposal,
 		bm.previousBlock,
-	}, b, false); err != nil {
+	}, nil, false); err != nil {
 		return err
 	}
 
@@ -108,7 +104,7 @@ func (bm BlockV0) IsValid(b []byte) error {
 	if err := isvalid.Check([]isvalid.IsValider{
 		bm.blockOperations,
 		bm.blockStates,
-	}, b, true); err != nil && !xerrors.Is(err, valuehash.EmptyHashError) {
+	}, nil, true); err != nil && !xerrors.Is(err, valuehash.EmptyHashError) {
 		return err
 	}
 
@@ -119,7 +115,6 @@ func (bm BlockV0) IsValid(b []byte) error {
 		bm.previousBlock,
 		bm.blockOperations,
 		bm.blockStates,
-		b,
 	)
 	if err != nil {
 		return err

@@ -163,28 +163,22 @@ func (pr ProposalV0) IsValid(b []byte) error {
 	return nil
 }
 
-func (pr ProposalV0) GenerateHash(b []byte) (valuehash.Hash, error) {
+func (pr ProposalV0) GenerateHash() (valuehash.Hash, error) {
 	e := util.ConcatSlice([][]byte{
 		pr.BaseBallotV0.Bytes(),
 		pr.ProposalFactV0.Bytes(),
 		pr.bodyHash.Bytes(),
-		b,
 	})
 
 	return valuehash.NewSHA256(e), nil
 }
 
-func (pr ProposalV0) GenerateBodyHash(b []byte) (valuehash.Hash, error) {
-	if err := pr.ProposalFactV0.IsValid(b); err != nil {
+func (pr ProposalV0) GenerateBodyHash() (valuehash.Hash, error) {
+	if err := pr.ProposalFactV0.IsValid(nil); err != nil {
 		return nil, err
 	}
 
-	e := util.ConcatSlice([][]byte{
-		pr.ProposalFactV0.Bytes(),
-		b,
-	})
-
-	return valuehash.NewSHA256(e), nil
+	return valuehash.NewSHA256(pr.ProposalFactV0.Bytes()), nil
 }
 
 func (pr ProposalV0) Fact() operation.Fact {
@@ -205,7 +199,7 @@ func (pr *ProposalV0) Sign(pk key.Privatekey, b []byte) error { // nolint
 	}
 
 	var bodyHash valuehash.Hash
-	if h, err := pr.GenerateBodyHash(b); err != nil {
+	if h, err := pr.GenerateBodyHash(); err != nil {
 		return err
 	} else {
 		bodyHash = h
@@ -231,7 +225,7 @@ func (pr *ProposalV0) Sign(pk key.Privatekey, b []byte) error { // nolint
 	pr.factHash = factHash
 	pr.factSignature = factSig
 
-	if h, err := pr.GenerateHash(b); err != nil {
+	if h, err := pr.GenerateHash(); err != nil {
 		return err
 	} else {
 		pr.BaseBallotV0 = pr.BaseBallotV0.SetHash(h)

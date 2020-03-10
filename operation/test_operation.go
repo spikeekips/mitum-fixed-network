@@ -112,7 +112,7 @@ func NewKVOperation(
 		factSignature:   factSignature,
 	}
 
-	if h, err := kvo.GenerateHash(b); err != nil {
+	if h, err := kvo.GenerateHash(); err != nil {
 		return KVOperation{}, err
 	} else {
 		kvo.h = h
@@ -141,11 +141,10 @@ func (kvo KVOperation) Hash() valuehash.Hash {
 	return kvo.h
 }
 
-func (kvo KVOperation) GenerateHash(b []byte) (valuehash.Hash, error) {
+func (kvo KVOperation) GenerateHash() (valuehash.Hash, error) {
 	e := util.ConcatSlice([][]byte{
 		kvo.factHash.Bytes(),
 		kvo.factSignature.Bytes(),
-		b,
 	})
 
 	return valuehash.NewSHA256(e), nil

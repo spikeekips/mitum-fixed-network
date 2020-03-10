@@ -41,7 +41,7 @@ func (ds DummySeal) Hash() valuehash.Hash {
 	return ds.H
 }
 
-func (ds DummySeal) GenerateHash([]byte) (valuehash.Hash, error) {
+func (ds DummySeal) GenerateHash() (valuehash.Hash, error) {
 	return ds.H, nil
 }
 
@@ -49,7 +49,7 @@ func (ds DummySeal) BodyHash() valuehash.Hash {
 	return ds.BH
 }
 
-func (ds DummySeal) GenerateBodyHash([]byte) (valuehash.Hash, error) {
+func (ds DummySeal) GenerateBodyHash() (valuehash.Hash, error) {
 	return ds.BH, nil
 }
 

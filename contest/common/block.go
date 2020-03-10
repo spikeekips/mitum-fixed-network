@@ -15,8 +15,5 @@ func NewContestBlock(
 		proposal = valuehash.RandomSHA256()
 	}
 
-	return isaac.NewBlockV0(
-		height, round, proposal, previousBlock,
-		nil, nil, nil,
-	)
+	return isaac.NewBlockV0(height, round, proposal, previousBlock, nil, nil)
 }

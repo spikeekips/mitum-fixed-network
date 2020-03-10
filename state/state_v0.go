@@ -182,12 +182,12 @@ func (oi OperationInfoV0) Hint() hint.Hint {
 	return OperationInfoV0Hint
 }
 
-func (oi OperationInfoV0) IsValid(b []byte) error {
-	if err := oi.oh.IsValid(b); err != nil {
+func (oi OperationInfoV0) IsValid([]byte) error {
+	if err := oi.oh.IsValid(nil); err != nil {
 		return err
 	}
 
-	if err := oi.sh.IsValid(b); err != nil {
+	if err := oi.sh.IsValid(nil); err != nil {
 		return err
 	}
 

@@ -9,6 +9,7 @@ import (
 	"github.com/spikeekips/mitum/isvalid"
 	"github.com/spikeekips/mitum/key"
 	"github.com/spikeekips/mitum/operation"
+	"github.com/spikeekips/mitum/util"
 	"github.com/spikeekips/mitum/valuehash"
 )
 
@@ -92,9 +93,12 @@ func (vf VoteproofNodeFact) IsValid(b []byte) error {
 		vf.fact,
 		vf.factSignature,
 		vf.signer,
-	}, b, false); err != nil {
+	}, nil, false); err != nil {
 		return err
 	}
 
-	return vf.signer.Verify(vf.fact.Bytes(), vf.factSignature)
+	return vf.signer.Verify(
+		util.ConcatSlice([][]byte{vf.fact.Bytes(), b}),
+		vf.factSignature,
+	)
 }

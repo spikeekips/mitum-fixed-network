@@ -68,13 +68,11 @@ func (sl Seal) Hash() valuehash.Hash {
 	return sl.h
 }
 
-func (sl Seal) GenerateHash(b []byte) (valuehash.Hash, error) {
+func (sl Seal) GenerateHash() (valuehash.Hash, error) {
 	bl := [][]byte{
 		sl.bodyHash.Bytes(),
 		sl.signature.Bytes(),
 	}
-
-	bl = append(bl, b)
 
 	return valuehash.NewSHA256(util.ConcatSlice(bl)), nil
 }
@@ -83,7 +81,7 @@ func (sl Seal) BodyHash() valuehash.Hash {
 	return sl.bodyHash
 }
 
-func (sl Seal) GenerateBodyHash(b []byte) (valuehash.Hash, error) {
+func (sl Seal) GenerateBodyHash() (valuehash.Hash, error) {
 	bl := [][]byte{
 		[]byte(sl.signer.String()),
 		[]byte(localtime.RFC3339(sl.signedAt)),
@@ -92,8 +90,6 @@ func (sl Seal) GenerateBodyHash(b []byte) (valuehash.Hash, error) {
 	for _, op := range sl.ops {
 		bl = append(bl, op.Hash().Bytes())
 	}
-
-	bl = append(bl, b)
 
 	return valuehash.NewSHA256(util.ConcatSlice(bl)), nil
 }
@@ -119,7 +115,7 @@ func (sl *Seal) Sign(pk key.Privatekey, b []byte) error {
 	sl.signedAt = localtime.Now()
 
 	var bodyHash valuehash.Hash
-	if h, err := sl.GenerateBodyHash(b); err != nil {
+	if h, err := sl.GenerateBodyHash(); err != nil {
 		return err
 	} else {
 		bodyHash = h
@@ -135,7 +131,7 @@ func (sl *Seal) Sign(pk key.Privatekey, b []byte) error {
 	sl.signature = sig
 	sl.bodyHash = bodyHash
 
-	if h, err := sl.GenerateHash(b); err != nil {
+	if h, err := sl.GenerateHash(); err != nil {
 		return err
 	} else {
 		sl.h = h

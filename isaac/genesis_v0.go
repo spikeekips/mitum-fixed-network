@@ -106,15 +106,7 @@ func (gg *GenesisBlockV0Generator) generatePreviousBlock() error {
 		genesisHash = valuehash.NewDummy(sig)
 	}
 
-	block, err := NewBlockV0(
-		Height(-1),
-		Round(0),
-		genesisHash,
-		genesisHash,
-		nil,
-		nil,
-		gg.localstate.Policy().NetworkID(),
-	)
+	block, err := NewBlockV0(Height(-1), Round(0), genesisHash, genesisHash, nil, nil)
 	if err != nil {
 		return err
 	}

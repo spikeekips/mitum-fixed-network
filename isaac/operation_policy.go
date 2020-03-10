@@ -32,11 +32,11 @@ type SetPolicyOperationFactV0 struct {
 	TimespanValidBallot              time.Duration `json:"timespan_valid_ballot"`
 }
 
-func (spof SetPolicyOperationFactV0) IsValid(b []byte) error {
+func (spof SetPolicyOperationFactV0) IsValid([]byte) error {
 	if spof.signer == nil {
 		return xerrors.Errorf("fact has empty signer")
 	}
-	if err := spof.Hint().IsValid(b); err != nil {
+	if err := spof.Hint().IsValid(nil); err != nil {
 		return err
 	}
 
@@ -57,7 +57,7 @@ func (spof SetPolicyOperationFactV0) IsValid(b []byte) error {
 		return xerrors.Errorf("NumberOfActingSuffrageNodes must be over 0; %d", spof.NumberOfActingSuffrageNodes)
 	}
 
-	if err := spof.Threshold.IsValid(b); err != nil {
+	if err := spof.Threshold.IsValid(nil); err != nil {
 		return err
 	}
 
@@ -129,7 +129,7 @@ func NewSetPolicyOperationV0(
 		factSignature:            factSignature,
 	}
 
-	if h, err := spo.GenerateHash(b); err != nil {
+	if h, err := spo.GenerateHash(); err != nil {
 		return SetPolicyOperationV0{}, err
 	} else {
 		spo.h = h
@@ -158,11 +158,10 @@ func (spo SetPolicyOperationV0) Hash() valuehash.Hash {
 	return spo.h
 }
 
-func (spo SetPolicyOperationV0) GenerateHash(b []byte) (valuehash.Hash, error) {
+func (spo SetPolicyOperationV0) GenerateHash() (valuehash.Hash, error) {
 	e := util.ConcatSlice([][]byte{
 		spo.factHash.Bytes(),
 		spo.factSignature.Bytes(),
-		b,
 	})
 
 	return valuehash.NewSHA256(e), nil
@@ -175,3 +174,5 @@ func (spo SetPolicyOperationV0) FactHash() valuehash.Hash {
 func (spo SetPolicyOperationV0) FactSignature() key.Signature {
 	return spo.factSignature
 }
+
+// TODO operation.ProcessOperaton

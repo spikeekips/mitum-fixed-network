@@ -23,16 +23,16 @@ func NewBaseBallotFactV0(height Height, round Round) BaseBallotFactV0 {
 	}
 }
 
-func (bf BaseBallotFactV0) IsReadyToSign(b []byte) error {
-	if err := bf.height.IsValid(b); err != nil {
+func (bf BaseBallotFactV0) IsReadyToSign([]byte) error {
+	if err := bf.height.IsValid(nil); err != nil {
 		return err
 	}
 
 	return nil
 }
 
-func (bf BaseBallotFactV0) IsValid(b []byte) error {
-	if err := bf.IsReadyToSign(b); err != nil {
+func (bf BaseBallotFactV0) IsValid([]byte) error {
+	if err := bf.IsReadyToSign(nil); err != nil {
 		return err
 	}
 
@@ -94,8 +94,8 @@ func (bb BaseBallotV0) Node() Address {
 	return bb.node
 }
 
-func (bb BaseBallotV0) IsValid(b []byte) error {
-	if err := bb.IsReadyToSign(b); err != nil {
+func (bb BaseBallotV0) IsValid([]byte) error {
+	if err := bb.IsReadyToSign(nil); err != nil {
 		return err
 	}
 
@@ -105,21 +105,21 @@ func (bb BaseBallotV0) IsValid(b []byte) error {
 
 	if bb.signer == nil {
 		return xerrors.Errorf("empty Signer")
-	} else if err := bb.signer.IsValid(b); err != nil {
+	} else if err := bb.signer.IsValid(nil); err != nil {
 		return err
 	}
 
 	if bb.signature == nil {
 		return xerrors.Errorf("empty Signature")
-	} else if err := bb.signature.IsValid(b); err != nil {
+	} else if err := bb.signature.IsValid(nil); err != nil {
 		return err
 	}
 
 	return nil
 }
 
-func (bb BaseBallotV0) IsReadyToSign(b []byte) error {
-	if err := bb.node.IsValid(b); err != nil {
+func (bb BaseBallotV0) IsReadyToSign([]byte) error {
+	if err := bb.node.IsValid(nil); err != nil {
 		return err
 	}
 

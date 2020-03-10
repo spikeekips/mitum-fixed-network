@@ -34,7 +34,7 @@ func NewQuicClient(insecure bool, timeout time.Duration, retries int, quicConfig
 	if quicConfig == nil {
 		quicConfig = &quic.Config{
 			HandshakeTimeout: time.Second * 5, // long enough
-			IdleTimeout:      time.Second * 5,
+			MaxIdleTimeout:   time.Second * 5,
 		}
 	}
 

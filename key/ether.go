@@ -15,8 +15,8 @@ import (
 )
 
 var (
-	etherPrivatekeyHint = hint.MustHint(hint.Type{0x02, 0x04}, "0.1")
-	etherPublickeyHint  = hint.MustHint(hint.Type{0x02, 0x05}, "0.1")
+	etherPrivatekeyHint = hint.MustHint(hint.Type{0x02, 0x04}, "0.0.1")
+	etherPublickeyHint  = hint.MustHint(hint.Type{0x02, 0x05}, "0.0.1")
 )
 
 type EtherPrivatekey struct {

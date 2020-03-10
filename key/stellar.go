@@ -7,8 +7,8 @@ import (
 )
 
 var (
-	stellarPrivatekeyHint = hint.MustHint(hint.Type{0x02, 0x00}, "0.1")
-	stellarPublickeyHint  = hint.MustHint(hint.Type{0x02, 0x01}, "0.1")
+	stellarPrivatekeyHint = hint.MustHint(hint.Type{0x02, 0x00}, "0.0.1")
+	stellarPublickeyHint  = hint.MustHint(hint.Type{0x02, 0x01}, "0.0.1")
 )
 
 type StellarPrivatekey struct {

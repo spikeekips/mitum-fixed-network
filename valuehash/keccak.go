@@ -22,8 +22,8 @@ var (
 )
 
 var (
-	sha256Hint = hint.MustHint(hint.Type{0x07, 0x00}, "0.1")
-	sha512Hint = hint.MustHint(hint.Type{0x07, 0x01}, "0.1")
+	sha256Hint = hint.MustHint(hint.Type{0x07, 0x00}, "0.0.1")
+	sha512Hint = hint.MustHint(hint.Type{0x07, 0x01}, "0.0.1")
 )
 
 func init() {

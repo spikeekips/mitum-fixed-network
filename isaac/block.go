@@ -8,8 +8,6 @@ import (
 	"github.com/spikeekips/mitum/valuehash"
 )
 
-var BlockType hint.Type = hint.Type{0x05, 0x00}
-
 type Block interface {
 	isvalid.IsValider
 	hint.Hinter

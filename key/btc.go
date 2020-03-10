@@ -12,8 +12,8 @@ import (
 )
 
 var (
-	btcPrivatekeyHint hint.Hint = hint.MustHint(hint.Type{0x02, 0x02}, "0.1")
-	btcPublickeyHint  hint.Hint = hint.MustHint(hint.Type{0x02, 0x03}, "0.1")
+	btcPrivatekeyHint hint.Hint = hint.MustHint(hint.Type{0x02, 0x02}, "0.0.1")
+	btcPublickeyHint  hint.Hint = hint.MustHint(hint.Type{0x02, 0x03}, "0.0.1")
 )
 
 type BTCPrivatekey struct {

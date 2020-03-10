@@ -13,8 +13,8 @@ import (
 )
 
 var (
-	INITBallotV0Hint     hint.Hint = hint.MustHint(INITBallotType, "0.1")
-	INITBallotFactV0Hint hint.Hint = hint.MustHint(INITBallotFactType, "0.1")
+	INITBallotV0Hint     hint.Hint = hint.MustHint(INITBallotType, "0.0.1")
+	INITBallotFactV0Hint hint.Hint = hint.MustHint(INITBallotFactType, "0.0.1")
 )
 
 type INITBallotFactV0 struct {

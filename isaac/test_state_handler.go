@@ -40,7 +40,7 @@ func (t *baseTestStateHandler) SetupSuite() { // nolint
 	_ = hint.RegisterType(ACCEPTBallotType, "accept-ballot")
 	_ = hint.RegisterType(ACCEPTBallotFactType, "accept-ballot-fact")
 	_ = hint.RegisterType(VoteproofType, "voteproof")
-	_ = hint.RegisterType(BlockType, "block")
+	_ = hint.RegisterType(BlockV0{}.Hint().Type(), "block")
 	_ = hint.RegisterType(operation.Seal{}.Hint().Type(), "operation-seal")
 	_ = hint.RegisterType(operation.KVOperation{}.Hint().Type(), "kvoperation")
 	_ = hint.RegisterType(operation.KVOperationFact{}.Hint().Type(), "kvoperation-fact")

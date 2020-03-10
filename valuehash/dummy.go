@@ -7,7 +7,7 @@ import (
 	"github.com/spikeekips/mitum/hint"
 )
 
-var dummyHint = hint.MustHint(hint.Type{0x07, 0x02}, "0.1")
+var dummyHint = hint.MustHint(hint.Type{0x07, 0x02}, "0.0.1")
 
 type Dummy struct {
 	b []byte

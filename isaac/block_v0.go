@@ -13,7 +13,7 @@ import (
 )
 
 // TODO use it's own Type
-var BlockV0Hint hint.Hint = hint.MustHint(BlockType, "0.1")
+var BlockV0Hint hint.Hint = hint.MustHint(hint.Type{0x05, 0x00}, "0.0.1")
 
 type BlockV0 struct {
 	h               valuehash.Hash

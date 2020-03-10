@@ -13,8 +13,8 @@ import (
 )
 
 var (
-	SIGNBallotV0Hint     hint.Hint = hint.MustHint(SIGNBallotType, "0.1")
-	SIGNBallotFactV0Hint hint.Hint = hint.MustHint(SIGNBallotFactType, "0.1")
+	SIGNBallotV0Hint     hint.Hint = hint.MustHint(SIGNBallotType, "0.0.1")
+	SIGNBallotFactV0Hint hint.Hint = hint.MustHint(SIGNBallotFactType, "0.0.1")
 )
 
 type SIGNBallotFactV0 struct {

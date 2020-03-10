@@ -36,7 +36,7 @@ func (t *testLeveldbStorage) SetupSuite() {
 	_ = hint.RegisterType(valuehash.SHA256{}.Hint().Type(), "sha256")
 	_ = hint.RegisterType(encoder.JSONEncoder{}.Hint().Type(), "json-encoder")
 	_ = hint.RegisterType((NewShortAddress("")).Hint().Type(), "short-address")
-	_ = hint.RegisterType(BlockType, "block")
+	_ = hint.RegisterType(BlockV0{}.Hint().Type(), "block")
 	_ = hint.RegisterType(VoteproofType, "voteproof")
 	_ = hint.RegisterType(seal.DummySeal{}.Hint().Type(), "dummy-seal")
 	_ = hint.RegisterType(operation.Seal{}.Hint().Type(), "operation-seal")

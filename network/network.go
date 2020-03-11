@@ -13,7 +13,7 @@ type (
 
 type Server interface {
 	util.Daemon
-	SetGetSealHandler(GetSealsHandler)
+	SetGetSealsHandler(GetSealsHandler)
 	SetNewSealHandler(NewSealHandler)
 }
 

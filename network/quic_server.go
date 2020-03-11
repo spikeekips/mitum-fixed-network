@@ -31,14 +31,14 @@ var (
 type QuicServer struct {
 	*logging.Logger
 	*util.FunctionDaemon
-	encs           *encoder.Encoders
-	enc            encoder.Encoder // NOTE default encoder.Encoder
-	bind           string
-	tlsConfig      *tls.Config
-	stoppedChan    chan struct{}
-	router         *mux.Router
-	getSealHandler GetSealsHandler
-	newSealHandler NewSealHandler
+	encs            *encoder.Encoders
+	enc             encoder.Encoder // NOTE default encoder.Encoder
+	bind            string
+	tlsConfig       *tls.Config
+	stoppedChan     chan struct{}
+	router          *mux.Router
+	getSealsHandler GetSealsHandler
+	newSealHandler  NewSealHandler
 }
 
 func NewQuicServer(
@@ -72,8 +72,8 @@ func NewQuicServer(
 	return qs, nil
 }
 
-func (qs *QuicServer) SetGetSealHandler(fn GetSealsHandler) {
-	qs.getSealHandler = fn
+func (qs *QuicServer) SetGetSealsHandler(fn GetSealsHandler) {
+	qs.getSealsHandler = fn
 }
 
 func (qs *QuicServer) SetNewSealHandler(fn NewSealHandler) {
@@ -181,7 +181,7 @@ func (qs *QuicServer) setHandlers() error {
 }
 
 func (qs *QuicServer) handleGetSeals(w http.ResponseWriter, r *http.Request) {
-	if qs.getSealHandler == nil {
+	if qs.getSealsHandler == nil {
 		HTTPError(w, http.StatusInternalServerError)
 		return
 	}
@@ -227,7 +227,7 @@ func (qs *QuicServer) handleGetSeals(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var output []byte
-	if sls, err := qs.getSealHandler(hashes); err != nil {
+	if sls, err := qs.getSealsHandler(hashes); err != nil {
 		qs.Log().Error().Err(err).Msg("failed to get seals")
 		HTTPError(w, http.StatusBadRequest)
 		return

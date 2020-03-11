@@ -123,7 +123,7 @@ func (t *testQuicSever) TestGetSeals() {
 		hs = append(hs, sl.Hash())
 	}
 
-	qn.SetGetSealHandler(func(hs []valuehash.Hash) ([]seal.Seal, error) {
+	qn.SetGetSealsHandler(func(hs []valuehash.Hash) ([]seal.Seal, error) {
 		var sls []seal.Seal
 
 		for _, h := range hs {

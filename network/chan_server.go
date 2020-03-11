@@ -11,9 +11,9 @@ import (
 type ChanServer struct {
 	*logging.Logger
 	*util.FunctionDaemon
-	getSealHandler GetSealsHandler
-	newSealHandler NewSealHandler
-	ch             *ChanChannel
+	getSealsHandler GetSealsHandler
+	newSealHandler  NewSealHandler
+	ch              *ChanChannel
 }
 
 func NewChanServer(ch *ChanChannel) *ChanServer {
@@ -36,8 +36,8 @@ func (cs *ChanServer) SetLogger(l zerolog.Logger) *logging.Logger {
 	return cs.Logger
 }
 
-func (cs *ChanServer) SetGetSealHandler(fn GetSealsHandler) {
-	cs.getSealHandler = fn
+func (cs *ChanServer) SetGetSealsHandler(fn GetSealsHandler) {
+	cs.getSealsHandler = fn
 }
 
 func (cs *ChanServer) SetNewSealHandler(fn NewSealHandler) {

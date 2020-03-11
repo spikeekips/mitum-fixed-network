@@ -93,6 +93,11 @@ func (vp VoteproofV0) IsValid(b []byte) error {
 		return nil
 	}
 
+	// TODO check voted node is in suffrage
+
+	// TODO Threshold in Voteproof should be checked whether it has correct
+	// value at that block height.
+
 	return vp.isValidCheckMajority()
 }
 

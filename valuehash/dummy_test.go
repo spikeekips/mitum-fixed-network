@@ -47,14 +47,14 @@ func (t *testDummy) TestJSONMarshal() {
 	dm := NewDummy(b)
 
 	{
-		b, err := MarshalJSON(dm)
+		b, err := marshalJSON(dm)
 		t.NoError(err)
 
 		var jh JSONHash
 		t.NoError(err, json.Unmarshal(b, &jh))
 
 		t.Equal(dm.Hint(), jh.JSONPackHintedHead.H)
-		t.Equal(dm.Bytes(), jh.Bytes())
+		t.Equal(dm.String(), jh.Hash)
 	}
 
 	{
@@ -65,7 +65,7 @@ func (t *testDummy) TestJSONMarshal() {
 		t.NoError(err, json.Unmarshal(b, &jh))
 
 		t.Equal(dm.Hint(), jh.JSONPackHintedHead.H)
-		t.Equal(dm.Bytes(), jh.Bytes())
+		t.Equal(dm.String(), jh.Hash)
 	}
 }
 

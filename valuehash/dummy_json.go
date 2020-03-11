@@ -7,11 +7,11 @@ import (
 )
 
 func (dm Dummy) MarshalJSON() ([]byte, error) {
-	return MarshalJSON(dm)
+	return marshalJSON(dm)
 }
 
 func (dm *Dummy) UnmarshalJSON(b []byte) error {
-	h, err := UnmarshalJSON(b)
+	h, err := unmarshalJSON(b)
 	if err != nil {
 		return err
 	}

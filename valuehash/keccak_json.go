@@ -1,47 +1,39 @@
 package valuehash
 
-import (
-	"github.com/btcsuite/btcutil/base58"
-
-	"github.com/spikeekips/mitum/hint"
-)
-
 func (s256 SHA256) MarshalJSON() ([]byte, error) {
-	return MarshalJSON(s256)
+	return marshalJSON(s256)
 }
 
 func (s256 *SHA256) UnmarshalJSON(b []byte) error {
-	h, err := UnmarshalJSON(b)
+	h, err := unmarshalJSON(b)
 	if err != nil {
 		return err
 	}
 
-	ht := h.JSONPackHintedHead.H
-	if s256.Hint().Type() != ht.Type() {
-		return hint.TypeDoesNotMatchError.Wrapf("a=%s b=%s", s256.Hint().Verbose(), ht.Verbose())
+	if h, err := LoadSHA256FromString(h.Hash); err != nil {
+		return err
+	} else {
+		*s256 = h.(SHA256)
 	}
-
-	copy(s256.b[:], base58.Decode(h.Hash))
 
 	return nil
 }
 
 func (s512 SHA512) MarshalJSON() ([]byte, error) {
-	return MarshalJSON(s512)
+	return marshalJSON(s512)
 }
 
 func (s512 *SHA512) UnmarshalJSON(b []byte) error {
-	h, err := UnmarshalJSON(b)
+	h, err := unmarshalJSON(b)
 	if err != nil {
 		return err
 	}
 
-	ht := h.JSONPackHintedHead.H
-	if s512.Hint().Type() != ht.Type() {
-		return hint.TypeDoesNotMatchError.Wrapf("a=%s b=%s", s512.Hint().Verbose(), ht.Verbose())
+	if h, err := LoadSHA512FromString(h.Hash); err != nil {
+		return err
+	} else {
+		*s512 = h.(SHA512)
 	}
-
-	copy(s512.b[:], base58.Decode(h.Hash))
 
 	return nil
 }

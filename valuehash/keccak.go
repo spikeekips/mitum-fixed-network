@@ -1,11 +1,10 @@
 package valuehash
 
 import (
-	"encoding/hex"
-
 	"golang.org/x/crypto/sha3"
 	"golang.org/x/xerrors"
 
+	"github.com/btcsuite/btcutil/base58"
 	"github.com/spikeekips/mitum/hint"
 )
 
@@ -52,8 +51,12 @@ func LoadSHA512FromBytes(b []byte) (Hash, error) {
 	return SHA512{b: n}, nil
 }
 
+func LoadSHA512FromString(s string) (Hash, error) {
+	return LoadSHA512FromBytes(base58.Decode(s))
+}
+
 func (s512 SHA512) String() string {
-	return hex.EncodeToString(s512.Bytes())
+	return base58.Encode(s512.Bytes())
 }
 
 func (s512 SHA512) Hint() hint.Hint {
@@ -106,8 +109,12 @@ func LoadSHA256FromBytes(b []byte) (Hash, error) {
 	return SHA256{b: n}, nil
 }
 
+func LoadSHA256FromString(s string) (Hash, error) {
+	return LoadSHA256FromBytes(base58.Decode(s))
+}
+
 func (s256 SHA256) String() string {
-	return hex.EncodeToString(s256.Bytes())
+	return base58.Encode(s256.Bytes())
 }
 
 func (s256 SHA256) Hint() hint.Hint {

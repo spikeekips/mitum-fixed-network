@@ -40,19 +40,40 @@ func (t *testKeccak512) TestNew() {
 	t.Equal(s512.Bytes(), newS512.Bytes())
 }
 
+func (t *testKeccak512) TestLoadFromBytes() {
+	h := NewSHA512([]byte("showme"))
+
+	b := h.Bytes()
+
+	uh, err := LoadSHA512FromBytes(b)
+	t.NoError(err)
+	t.True(h.Equal(uh))
+}
+
+func (t *testKeccak512) TestLoadFromString() {
+	b := []byte("showme")
+	h := NewSHA512(b)
+
+	s := h.String()
+
+	uh, err := LoadSHA512FromString(s)
+	t.NoError(err)
+	t.True(h.Equal(uh))
+}
+
 func (t *testKeccak512) TestJSONMarshal() {
 	b := []byte("killme")
 	s512 := NewSHA512(b)
 
 	{
-		b, err := MarshalJSON(s512)
+		b, err := marshalJSON(s512)
 		t.NoError(err)
 
 		var jh JSONHash
 		t.NoError(err, json.Unmarshal(b, &jh))
 
 		t.Equal(s512.Hint(), jh.JSONPackHintedHead.H)
-		t.Equal(s512.Bytes(), jh.Bytes())
+		t.Equal(s512.String(), jh.Hash)
 	}
 
 	{
@@ -63,7 +84,7 @@ func (t *testKeccak512) TestJSONMarshal() {
 		t.NoError(err, json.Unmarshal(b, &jh))
 
 		t.Equal(s512.Hint(), jh.JSONPackHintedHead.H)
-		t.Equal(s512.Bytes(), jh.Bytes())
+		t.Equal(s512.String(), jh.Hash)
 	}
 }
 
@@ -109,14 +130,14 @@ func (t *testKeccak256) TestJSONMarshal() {
 	s256 := NewSHA256(b)
 
 	{
-		b, err := MarshalJSON(s256)
+		b, err := marshalJSON(s256)
 		t.NoError(err)
 
 		var jh JSONHash
 		t.NoError(err, json.Unmarshal(b, &jh))
 
 		t.Equal(s256.Hint(), jh.JSONPackHintedHead.H)
-		t.Equal(s256.Bytes(), jh.Bytes())
+		t.Equal(s256.String(), jh.Hash)
 	}
 
 	{
@@ -127,8 +148,29 @@ func (t *testKeccak256) TestJSONMarshal() {
 		t.NoError(err, json.Unmarshal(b, &jh))
 
 		t.Equal(s256.Hint(), jh.JSONPackHintedHead.H)
-		t.Equal(s256.Bytes(), jh.Bytes())
+		t.Equal(s256.String(), jh.Hash)
 	}
+}
+
+func (t *testKeccak256) TestLoadFromBytes() {
+	h := NewSHA256([]byte("showme"))
+
+	b := h.Bytes()
+
+	uh, err := LoadSHA256FromBytes(b)
+	t.NoError(err)
+	t.True(h.Equal(uh))
+}
+
+func (t *testKeccak256) TestLoadFromString() {
+	b := []byte("showme")
+	h := NewSHA256(b)
+
+	s := h.String()
+
+	uh, err := LoadSHA256FromString(s)
+	t.NoError(err)
+	t.True(h.Equal(uh))
 }
 
 func TestKeccak256(t *testing.T) {

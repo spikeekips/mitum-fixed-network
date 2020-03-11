@@ -12,6 +12,7 @@ import (
 )
 
 type PolicyOperationBodyV0PackerJSON struct {
+	encoder.JSONPackHintedHead
 	Threshold                        []float64     `json:"threshold"`
 	TimeoutWaitingProposal           time.Duration `json:"timeout_waiting_proposal"`
 	IntervalBroadcastingINITBallot   time.Duration `json:"interval_broadcasting_init_ballot"`
@@ -24,6 +25,7 @@ type PolicyOperationBodyV0PackerJSON struct {
 
 func (po PolicyOperationBodyV0) MarshalJSON() ([]byte, error) {
 	return util.JSONMarshal(PolicyOperationBodyV0PackerJSON{
+		JSONPackHintedHead: encoder.NewJSONPackHintedHead(po.Hint()),
 		Threshold: []float64{
 			float64(po.Threshold.Total),
 			po.Threshold.Percent,

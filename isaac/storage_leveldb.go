@@ -536,8 +536,27 @@ func (st *LeveldbStorage) State(key string) (state.State, bool, error) {
 	return stt, st != nil, err
 }
 
+func (st *LeveldbStorage) NewState(sta state.State) error {
+	if b, err := st.marshal(sta); err != nil {
+		return err
+	} else if err := st.db.Put(leveldbStateKey(sta.Key()), b, nil); err != nil {
+		return err
+	}
+
+	return nil
+}
+
 func (st *LeveldbStorage) OpenBlockStorage(block Block) (BlockStorage, error) {
 	return NewLeveldbBlockStorage(st, block)
+}
+
+func (st *LeveldbStorage) marshal(i interface{}) ([]byte, error) {
+	b, err := st.defaultEnc.Encode(i)
+	if err != nil {
+		return nil, err
+	}
+
+	return storage.LeveldbDataWithEncoder(st.defaultEnc, b), nil
 }
 
 type LeveldbBlockStorage struct {
@@ -589,7 +608,7 @@ func (bst *LeveldbBlockStorage) SetOperations(tr *tree.AVLTree) error {
 		return nil
 	}
 
-	if b, err := bst.marshal(tr); err != nil { // block 1st
+	if b, err := bst.st.marshal(tr); err != nil { // block 1st
 		return err
 	} else {
 		bst.batch.Put(leveldbBlockOperationsKey(bst.block), b)
@@ -605,7 +624,7 @@ func (bst *LeveldbBlockStorage) SetStates(tr *tree.AVLTree) error {
 		return nil
 	}
 
-	if b, err := bst.marshal(tr); err != nil { // block 1st
+	if b, err := bst.st.marshal(tr); err != nil { // block 1st
 		return err
 	} else {
 		bst.batch.Put(leveldbBlockStatesKey(bst.block), b)
@@ -619,7 +638,7 @@ func (bst *LeveldbBlockStorage) SetStates(tr *tree.AVLTree) error {
 			st = s.State()
 		}
 
-		if b, err := bst.marshal(st); err != nil {
+		if b, err := bst.st.marshal(st); err != nil {
 			return false, err
 		} else {
 			bst.batch.Put(leveldbStateKey(st.Key()), b)
@@ -658,17 +677,8 @@ func (bst *LeveldbBlockStorage) UnstageOperationSeals(hs []valuehash.Hash) error
 	return nil
 }
 
-func (bst *LeveldbBlockStorage) marshal(i interface{}) ([]byte, error) {
-	b, err := bst.st.defaultEnc.Encode(i)
-	if err != nil {
-		return nil, err
-	}
-
-	return storage.LeveldbDataWithEncoder(bst.st.defaultEnc, b), nil
-}
-
 func (bst *LeveldbBlockStorage) Commit() error {
-	if b, err := bst.marshal(bst.block); err != nil { // block 1st
+	if b, err := bst.st.marshal(bst.block); err != nil { // block 1st
 		return err
 	} else {
 		key := leveldbBlockHashKey(bst.block.Hash())

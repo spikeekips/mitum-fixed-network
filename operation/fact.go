@@ -40,8 +40,15 @@ func IsValidEmbededFact(signer key.Publickey, ef EmbededFact, b []byte) error {
 		return xerrors.Errorf("EmbdedFact has empty FactSignature()")
 	}
 
-	return signer.Verify(
+	if err := signer.Verify(
 		util.ConcatSlice([][]byte{ef.FactHash().Bytes(), b}),
+		ef.FactSignature(),
+	); err != nil {
+		return err
+	}
+
+	return signer.Verify(
+		util.ConcatSlice([][]byte{ef.Fact().Hash().Bytes(), b}),
 		ef.FactSignature(),
 	)
 }

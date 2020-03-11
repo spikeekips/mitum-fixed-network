@@ -21,20 +21,32 @@ type LocalPolicy struct {
 	timespanValidBallot *util.LockedItem
 }
 
-func NewLocalPolicy(_ Storage, networkID []byte) (*LocalPolicy, error) {
-	// TODO load last data from storage, especially Policies
-	threshold, _ := NewThreshold(1, 100)
+func NewLocalPolicy(storage Storage, networkID []byte) (*LocalPolicy, error) {
+	var loaded PolicyOperationBodyV0
+	if storage == nil {
+		loaded = DefaultPolicy()
+	} else {
+		if l, found, err := storage.State(PolicyOperationKey); err != nil {
+			return nil, err
+		} else if !found || l.Value() == nil { // set default
+			loaded = DefaultPolicy()
+		} else if s, err := NewPolicyOperationBodyV0FromBytes(l.Value().Bytes()); err != nil {
+			return nil, xerrors.Errorf("failed to load PolicyOperationBodyV0: %w", err)
+		} else {
+			loaded = s
+		}
+	}
+
 	return &LocalPolicy{
-		// NOTE default threshold assumes only one node exists, it means the network is just booted.
 		networkID:                        util.NewLockedItem(networkID),
-		threshold:                        util.NewLockedItem(threshold),
-		timeoutWaitingProposal:           util.NewLockedItem(time.Second * 5),
-		intervalBroadcastingINITBallot:   util.NewLockedItem(time.Second * 1),
-		intervalBroadcastingProposal:     util.NewLockedItem(time.Second * 1),
-		waitBroadcastingACCEPTBallot:     util.NewLockedItem(time.Second * 2),
-		intervalBroadcastingACCEPTBallot: util.NewLockedItem(time.Second * 1),
-		numberOfActingSuffrageNodes:      util.NewLockedItem(uint(1)),
-		timespanValidBallot:              util.NewLockedItem(time.Minute * 1),
+		threshold:                        util.NewLockedItem(loaded.Threshold),
+		timeoutWaitingProposal:           util.NewLockedItem(loaded.TimeoutWaitingProposal),
+		intervalBroadcastingINITBallot:   util.NewLockedItem(loaded.IntervalBroadcastingINITBallot),
+		intervalBroadcastingProposal:     util.NewLockedItem(loaded.IntervalBroadcastingProposal),
+		waitBroadcastingACCEPTBallot:     util.NewLockedItem(loaded.WaitBroadcastingACCEPTBallot),
+		intervalBroadcastingACCEPTBallot: util.NewLockedItem(loaded.IntervalBroadcastingACCEPTBallot),
+		numberOfActingSuffrageNodes:      util.NewLockedItem(loaded.NumberOfActingSuffrageNodes),
+		timespanValidBallot:              util.NewLockedItem(loaded.TimespanValidBallot),
 	}, nil
 }
 

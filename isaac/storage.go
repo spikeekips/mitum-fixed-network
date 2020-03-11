@@ -40,6 +40,7 @@ type Storage interface {
 
 	OpenBlockStorage(Block) (BlockStorage, error)
 	State(key string) (state.State, bool, error)
+	NewState(state.State) error
 }
 
 type BlockStorage interface {

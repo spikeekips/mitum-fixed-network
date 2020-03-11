@@ -73,7 +73,7 @@ func (kvo KVOperation) ProcessOperation(
 	var st state.StateUpdater
 	if s, err := getState(kvo.Key); err != nil {
 		return nil, err
-	} else if err := s.SetValue(kvo.Value, valueHash); err != nil {
+	} else if err := s.SetValue(util.NewByter(kvo.Value), valueHash); err != nil {
 		return nil, err
 	} else {
 		st = s

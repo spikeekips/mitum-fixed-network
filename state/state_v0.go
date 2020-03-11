@@ -18,7 +18,7 @@ var (
 type StateV0 struct {
 	h             valuehash.Hash
 	key           string
-	value         interface{}
+	value         util.Byter
 	valueHash     valuehash.Hash
 	previousBlock valuehash.Hash
 	operations    []OperationInfo
@@ -27,10 +27,14 @@ type StateV0 struct {
 
 func NewStateV0(
 	key string,
-	value interface{},
+	value util.Byter,
 	valueHash valuehash.Hash,
 	previousBlock valuehash.Hash,
 ) (*StateV0, error) {
+	if value != nil {
+		value = util.NewByter(value.Bytes())
+	}
+
 	st := &StateV0{
 		key:           key,
 		value:         value,
@@ -109,7 +113,7 @@ func (st StateV0) Key() string {
 	return st.key
 }
 
-func (st StateV0) Value() interface{} {
+func (st StateV0) Value() util.Byter {
 	return st.value
 }
 
@@ -117,7 +121,7 @@ func (st StateV0) ValueHash() valuehash.Hash {
 	return st.valueHash
 }
 
-func (st *StateV0) SetValue(value interface{}, valueHash valuehash.Hash) error {
+func (st *StateV0) SetValue(value util.Byter, valueHash valuehash.Hash) error {
 	st.value = value
 	st.valueHash = valueHash
 

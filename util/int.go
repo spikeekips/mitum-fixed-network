@@ -3,6 +3,7 @@ package util
 import (
 	"bytes"
 	"encoding/binary"
+	"math"
 )
 
 func IntToBytes(i int) []byte {
@@ -34,8 +35,15 @@ func Uint64ToBytes(i uint64) []byte {
 }
 
 func Float64ToBytes(i float64) []byte {
-	b := new(bytes.Buffer)
-	_ = binary.Write(b, binary.LittleEndian, i)
+	bt := math.Float64bits(i)
+	bytes := make([]byte, 8)
+	binary.LittleEndian.PutUint64(bytes, bt)
 
-	return b.Bytes()
+	return bytes
+}
+
+func BytesToFloat64(b []byte) float64 {
+	bt := binary.LittleEndian.Uint64(b)
+
+	return math.Float64frombits(bt)
 }

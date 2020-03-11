@@ -34,16 +34,15 @@ func (t *testSetPolicyOperationJSON) SetupSuite() {
 
 func (t *testSetPolicyOperationJSON) TestEncode() {
 	token := []byte("findme")
-	spo, err := NewSetPolicyOperationV0(t.pk, token, nil)
-	t.NoError(err)
 
-	spo.NumberOfActingSuffrageNodes = 1
-
+	policies := DefaultPolicy()
 	threshold, err := NewThreshold(3, 99.99)
 	t.NoError(err)
-	spo.Threshold = threshold
+	policies.Threshold = threshold
+	policies.NumberOfActingSuffrageNodes = 1
 
-	t.NoError(spo.IsValid(nil))
+	spo, err := NewSetPolicyOperationV0(t.pk, token, policies, nil)
+	t.NoError(err)
 
 	b, err := util.JSONMarshal(spo)
 	t.NoError(err)

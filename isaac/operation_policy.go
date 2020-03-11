@@ -3,6 +3,7 @@ package isaac
 import (
 	"time"
 
+	"github.com/ethereum/go-ethereum/rlp"
 	"golang.org/x/xerrors"
 
 	"github.com/spikeekips/mitum/hint"
@@ -14,13 +15,29 @@ import (
 )
 
 var (
-	SetPolicyOperationFactV0Type = hint.MustNewType(0x08, 0x01, "set-policy-operation-fact-v0")
+	PolicyOperationBodyV0Type    = hint.MustNewType(0x08, 0x01, "policy-body-v0")
+	PolicyOperationBodyV0Hint    = hint.MustHint(PolicyOperationBodyV0Type, "0.0.1")
+	SetPolicyOperationFactV0Type = hint.MustNewType(0x08, 0x02, "set-policy-operation-fact-v0")
 	SetPolicyOperationFactV0Hint = hint.MustHint(SetPolicyOperationFactV0Type, "0.0.1")
-	SetPolicyOperationV0Type     = hint.MustNewType(0x08, 0x00, "set-policy-operation-v0")
+	SetPolicyOperationV0Type     = hint.MustNewType(0x08, 0x03, "set-policy-operation-v0")
 	SetPolicyOperationV0Hint     = hint.MustHint(SetPolicyOperationV0Type, "0.0.1")
 )
 
 const PolicyOperationKey = "network_policy"
+
+func DefaultPolicy() PolicyOperationBodyV0 {
+	return PolicyOperationBodyV0{
+		// NOTE default threshold assumes only one node exists, it means the network is just booted.
+		Threshold:                        MustNewThreshold(1, 100),
+		TimeoutWaitingProposal:           time.Second * 5,
+		IntervalBroadcastingINITBallot:   time.Second * 1,
+		IntervalBroadcastingProposal:     time.Second * 1,
+		WaitBroadcastingACCEPTBallot:     time.Second * 2,
+		IntervalBroadcastingACCEPTBallot: time.Second * 1,
+		NumberOfActingSuffrageNodes:      uint(1),
+		TimespanValidBallot:              time.Minute * 1,
+	}
+}
 
 type PolicyOperationBodyV0 struct {
 	Threshold                        Threshold     `json:"threshold"`
@@ -33,26 +50,71 @@ type PolicyOperationBodyV0 struct {
 	TimespanValidBallot              time.Duration `json:"timespan_valid_ballot"`
 }
 
+func (po PolicyOperationBodyV0) Hint() hint.Hint {
+	return PolicyOperationBodyV0Hint
+}
+
+func NewPolicyOperationBodyV0FromBytes(b []byte) (PolicyOperationBodyV0, error) {
+	var up PolicyOperationBodyV0
+	if err := rlp.DecodeBytes(b, &up); err != nil {
+		return PolicyOperationBodyV0{}, err
+	}
+
+	return up, nil
+}
+
 func (po PolicyOperationBodyV0) Bytes() []byte {
-	return util.ConcatSlice([][]byte{
-		po.Threshold.Bytes(),
-		util.DurationToBytes(po.TimeoutWaitingProposal),
-		util.DurationToBytes(po.IntervalBroadcastingINITBallot),
-		util.DurationToBytes(po.IntervalBroadcastingProposal),
-		util.DurationToBytes(po.WaitBroadcastingACCEPTBallot),
-		util.DurationToBytes(po.IntervalBroadcastingACCEPTBallot),
-		util.UintToBytes(po.NumberOfActingSuffrageNodes),
-		util.DurationToBytes(po.TimespanValidBallot),
-	})
+	b, err := rlp.EncodeToBytes(po)
+	if err != nil {
+		panic(err)
+	}
+
+	return b
+	/*
+		return util.ConcatSlice([][]byte{
+			po.Threshold.Bytes(),
+			util.DurationToBytes(po.TimeoutWaitingProposal),
+			util.DurationToBytes(po.IntervalBroadcastingINITBallot),
+			util.DurationToBytes(po.IntervalBroadcastingProposal),
+			util.DurationToBytes(po.WaitBroadcastingACCEPTBallot),
+			util.DurationToBytes(po.IntervalBroadcastingACCEPTBallot),
+			util.UintToBytes(po.NumberOfActingSuffrageNodes),
+			util.DurationToBytes(po.TimespanValidBallot),
+		})
+	*/
 }
 
 func (po PolicyOperationBodyV0) Hash() valuehash.Hash {
 	return valuehash.NewSHA256(po.Bytes())
 }
 
+func (po PolicyOperationBodyV0) IsValid([]byte) error {
+	for k, d := range map[string]time.Duration{
+		"TimeoutWaitingProposal":           po.TimeoutWaitingProposal,
+		"IntervalBroadcastingINITBallot":   po.IntervalBroadcastingINITBallot,
+		"IntervalBroadcastingProposal":     po.IntervalBroadcastingProposal,
+		"WaitBroadcastingACCEPTBallot":     po.WaitBroadcastingACCEPTBallot,
+		"IntervalBroadcastingACCEPTBallot": po.IntervalBroadcastingACCEPTBallot,
+		"TimespanValidBallot":              po.TimespanValidBallot,
+	} {
+		if d < 0 {
+			return xerrors.Errorf("%s is too narrow; duration=%v", k, d)
+		}
+	}
+
+	if po.NumberOfActingSuffrageNodes < 1 {
+		return xerrors.Errorf("NumberOfActingSuffrageNodes must be over 0; %d", po.NumberOfActingSuffrageNodes)
+	}
+
+	if err := po.Threshold.IsValid(nil); err != nil {
+		return err
+	}
+
+	return nil
+}
+
 type SetPolicyOperationFactV0 struct {
 	PolicyOperationBodyV0
-
 	signer key.Publickey
 	token  []byte
 }
@@ -65,24 +127,7 @@ func (spof SetPolicyOperationFactV0) IsValid([]byte) error {
 		return err
 	}
 
-	for k, d := range map[string]time.Duration{
-		"TimeoutWaitingProposal":           spof.TimeoutWaitingProposal,
-		"IntervalBroadcastingINITBallot":   spof.IntervalBroadcastingINITBallot,
-		"IntervalBroadcastingProposal":     spof.IntervalBroadcastingProposal,
-		"WaitBroadcastingACCEPTBallot":     spof.WaitBroadcastingACCEPTBallot,
-		"IntervalBroadcastingACCEPTBallot": spof.IntervalBroadcastingACCEPTBallot,
-		"TimespanValidBallot":              spof.TimespanValidBallot,
-	} {
-		if d < 0 {
-			return xerrors.Errorf("%s is too narrow; duration=%v", k, d)
-		}
-	}
-
-	if spof.NumberOfActingSuffrageNodes < 1 {
-		return xerrors.Errorf("NumberOfActingSuffrageNodes must be over 0; %d", spof.NumberOfActingSuffrageNodes)
-	}
-
-	if err := spof.Threshold.IsValid(nil); err != nil {
+	if err := spof.PolicyOperationBodyV0.IsValid(nil); err != nil {
 		return err
 	}
 
@@ -123,6 +168,7 @@ type SetPolicyOperationV0 struct {
 func NewSetPolicyOperationV0(
 	signer key.Privatekey,
 	token []byte,
+	policies PolicyOperationBodyV0,
 	b []byte,
 ) (SetPolicyOperationV0, error) {
 	if signer == nil {
@@ -130,8 +176,9 @@ func NewSetPolicyOperationV0(
 	}
 
 	fact := SetPolicyOperationFactV0{
-		signer: signer.Publickey(),
-		token:  token,
+		PolicyOperationBodyV0: policies,
+		signer:                signer.Publickey(),
+		token:                 token,
 	}
 	factHash := fact.Hash()
 	var factSignature key.Signature

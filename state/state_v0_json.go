@@ -11,7 +11,7 @@ import (
 type StateV0PackerJSON struct {
 	encoder.JSONPackHintedHead
 	K   string          `json:"key"`
-	V   interface{}     `json:"value"`
+	V   []byte          `json:"value"`
 	VH  valuehash.Hash  `json:"value_hash"`
 	PB  valuehash.Hash  `json:"previous_block"`
 	OPS []OperationInfo `json:"operation_infos"`
@@ -21,7 +21,7 @@ func (st StateV0) MarshalJSON() ([]byte, error) {
 	return util.JSONMarshal(StateV0PackerJSON{
 		JSONPackHintedHead: encoder.NewJSONPackHintedHead(st.Hint()),
 		K:                  st.key,
-		V:                  st.value,
+		V:                  st.value.Bytes(),
 		VH:                 st.valueHash,
 		PB:                 st.previousBlock,
 		OPS:                st.operations,
@@ -30,7 +30,7 @@ func (st StateV0) MarshalJSON() ([]byte, error) {
 
 type StateV0UnpackerJSON struct {
 	K   string            `json:"key"`
-	V   json.RawMessage   `json:"value"`
+	V   []byte            `json:"value"`
 	VH  json.RawMessage   `json:"value_hash"`
 	PB  json.RawMessage   `json:"previous_block"`
 	OPS []json.RawMessage `json:"operation_infos"`
@@ -65,7 +65,7 @@ func (st *StateV0) UnpackJSON(b []byte, enc *encoder.JSONEncoder) error {
 	}
 
 	st.key = ust.K
-	st.value = ust.V
+	st.value = util.NewByter(ust.V)
 	st.valueHash = valueHash
 	st.previousBlock = previousBlock
 	st.operations = ops

@@ -25,6 +25,15 @@ func NewThreshold(total uint, percent float64) (Threshold, error) {
 	return thr, thr.IsValid(nil)
 }
 
+func MustNewThreshold(total uint, percent float64) Threshold {
+	thr, err := NewThreshold(total, percent)
+	if err != nil {
+		panic(err)
+	}
+
+	return thr
+}
+
 func (thr Threshold) Bytes() []byte {
 	return util.ConcatSlice([][]byte{
 		util.UintToBytes(thr.Total),

@@ -20,47 +20,57 @@ func (t *testSetPolicyOperation) SetupSuite() {
 
 func (t *testSetPolicyOperation) TestNew() {
 	token := []byte("findme")
-	spo, err := NewSetPolicyOperationV0(t.pk, token, nil)
-	t.NoError(err)
 
 	{
+		policies := DefaultPolicy()
+		policies.NumberOfActingSuffrageNodes = 0
+
+		spo, err := NewSetPolicyOperationV0(t.pk, token, policies, nil)
+		t.NoError(err)
+
 		err = spo.IsValid(nil)
 		t.Contains(err.Error(), "NumberOfActingSuffrageNodes")
-
-		spo.NumberOfActingSuffrageNodes = 1
 	}
 
 	{
+		policies := DefaultPolicy()
+
+		policies.Threshold.Total = 0
+
+		spo, err := NewSetPolicyOperationV0(t.pk, token, policies, nil)
+		t.NoError(err)
+
 		err = spo.IsValid(nil)
 		t.Contains(err.Error(), "zero total found")
-
-		threshold, err := NewThreshold(3, 100)
-		t.NoError(err)
-		spo.Threshold = threshold
 	}
 
-	t.NoError(spo.IsValid(nil))
-	t.NoError(operation.IsValidOperation(spo, nil))
+	{
+		spo, err := NewSetPolicyOperationV0(t.pk, token, DefaultPolicy(), nil)
+		t.NoError(err)
 
-	t.Implements((*operation.Operation)(nil), spo)
-	t.NotNil(spo.Hash())
+		t.NoError(spo.IsValid(nil))
+		t.NoError(operation.IsValidOperation(spo, nil))
+
+		t.Implements((*operation.Operation)(nil), spo)
+		t.NotNil(spo.Hash())
+	}
 }
 
 func (t *testSetPolicyOperation) TestNilSigner() {
-	_, err := NewSetPolicyOperationV0(nil, []byte("a"), nil)
+	_, err := NewSetPolicyOperationV0(nil, []byte("a"), DefaultPolicy(), nil)
 	t.Contains(err.Error(), "empty privatekey")
 }
 
 func (t *testSetPolicyOperation) TestBadToken() {
 	{ // nil
-		spo, err := NewSetPolicyOperationV0(t.pk, nil, nil)
+		spo, err := NewSetPolicyOperationV0(t.pk, nil, DefaultPolicy(), nil)
 		t.NoError(err)
 		err = spo.IsValid(nil)
 		t.Contains(err.Error(), "empty token")
 	}
 
 	{ // zero
-		spo, err := NewSetPolicyOperationV0(t.pk, []byte{}, nil)
+		spo, err := NewSetPolicyOperationV0(t.pk, []byte{}, DefaultPolicy(), nil)
 		t.NoError(err)
 		err = spo.IsValid(nil)
 		t.Contains(err.Error(), "empty token")
@@ -68,7 +78,7 @@ func (t *testSetPolicyOperation) TestBadToken() {
 
 	{ // over MaxTokenSize
 		token := [operation.MaxTokenSize + 1]byte{}
-		spo, err := NewSetPolicyOperationV0(t.pk, token[:], nil)
+		spo, err := NewSetPolicyOperationV0(t.pk, token[:], DefaultPolicy(), nil)
 		t.NoError(err)
 		err = spo.IsValid(nil)
 		t.Contains(err.Error(), "token size too large")

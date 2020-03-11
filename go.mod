@@ -3,6 +3,7 @@ module github.com/spikeekips/mitum
 go 1.14
 
 require (
+	github.com/Workiva/go-datastructures v1.0.52
 	github.com/alecthomas/kong v0.2.4
 	github.com/beevik/ntp v0.2.0
 	github.com/btcsuite/btcd v0.20.1-beta

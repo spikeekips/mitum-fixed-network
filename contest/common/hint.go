@@ -40,6 +40,9 @@ var Hinters = [][2]interface{}{
 	{"operation-kv-fact", operation.KVOperationFact{}},
 	{"avltree", tree.AVLTree{}},
 	{"avltree-node", operation.OperationAVLNode{}},
+	{"policy-body-v0", isaac.PolicyOperationBodyV0{}},
+	{"set-policy-operation-v0", isaac.SetPolicyOperationV0{}},
+	{"set-policy-operation-fact-v0", isaac.SetPolicyOperationFactV0{}},
 }
 
 var HintTypes = [][2]interface{}{}

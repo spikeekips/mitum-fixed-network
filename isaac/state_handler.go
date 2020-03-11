@@ -211,8 +211,6 @@ func (bs *BaseStateHandler) TimerBroadcastingACCEPTBallot(newBlock Block) (*loca
 	return localtime.NewCallbackTimer(
 		TimerIDBroadcastingACCEPTBallot,
 		func() (bool, error) {
-			// TODO ACCEPTBallot should include the received SIGN Ballots.
-
 			if ab, err := NewACCEPTBallotV0FromLocalstate(bs.localstate, newBlock.Round(), newBlock); err != nil {
 				bs.Log().Error().Err(err).Msg("failed to create ACCEPTBallot, but will keep trying")
 				return true, nil

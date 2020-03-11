@@ -8,6 +8,7 @@ import (
 	"github.com/spikeekips/mitum/hint"
 	"github.com/spikeekips/mitum/key"
 	"github.com/spikeekips/mitum/operation"
+	"github.com/spikeekips/mitum/state"
 	"github.com/spikeekips/mitum/util"
 	"github.com/spikeekips/mitum/valuehash"
 )
@@ -19,11 +20,9 @@ var (
 	SetPolicyOperationV0Hint     = hint.MustHint(SetPolicyOperationV0Type, "0.0.1")
 )
 
-type SetPolicyOperationFactV0 struct {
-	signer key.Publickey
-	token  []byte
+const PolicyOperationKey = "network_policy"
 
-	// policies
+type PolicyOperationBodyV0 struct {
 	Threshold                        Threshold     `json:"threshold"`
 	TimeoutWaitingProposal           time.Duration `json:"timeout_waiting_proposal"`
 	IntervalBroadcastingINITBallot   time.Duration `json:"interval_broadcasting_init_ballot"`
@@ -32,6 +31,30 @@ type SetPolicyOperationFactV0 struct {
 	IntervalBroadcastingACCEPTBallot time.Duration `json:"interval_broadcasting_accept_ballot"`
 	NumberOfActingSuffrageNodes      uint          `json:"number_of_acting_suffrage_nodes"`
 	TimespanValidBallot              time.Duration `json:"timespan_valid_ballot"`
+}
+
+func (po PolicyOperationBodyV0) Bytes() []byte {
+	return util.ConcatSlice([][]byte{
+		po.Threshold.Bytes(),
+		util.DurationToBytes(po.TimeoutWaitingProposal),
+		util.DurationToBytes(po.IntervalBroadcastingINITBallot),
+		util.DurationToBytes(po.IntervalBroadcastingProposal),
+		util.DurationToBytes(po.WaitBroadcastingACCEPTBallot),
+		util.DurationToBytes(po.IntervalBroadcastingACCEPTBallot),
+		util.UintToBytes(po.NumberOfActingSuffrageNodes),
+		util.DurationToBytes(po.TimespanValidBallot),
+	})
+}
+
+func (po PolicyOperationBodyV0) Hash() valuehash.Hash {
+	return valuehash.NewSHA256(po.Bytes())
+}
+
+type SetPolicyOperationFactV0 struct {
+	PolicyOperationBodyV0
+
+	signer key.Publickey
+	token  []byte
 }
 
 func (spof SetPolicyOperationFactV0) IsValid([]byte) error {
@@ -78,14 +101,7 @@ func (spof SetPolicyOperationFactV0) Bytes() []byte {
 	return util.ConcatSlice([][]byte{
 		[]byte(spof.signer.String()),
 		spof.token,
-		spof.Threshold.Bytes(),
-		util.DurationToBytes(spof.TimeoutWaitingProposal),
-		util.DurationToBytes(spof.IntervalBroadcastingINITBallot),
-		util.DurationToBytes(spof.IntervalBroadcastingProposal),
-		util.DurationToBytes(spof.WaitBroadcastingACCEPTBallot),
-		util.DurationToBytes(spof.IntervalBroadcastingACCEPTBallot),
-		util.UintToBytes(spof.NumberOfActingSuffrageNodes),
-		util.DurationToBytes(spof.TimespanValidBallot),
+		spof.PolicyOperationBodyV0.Bytes(),
 	})
 }
 
@@ -177,4 +193,20 @@ func (spo SetPolicyOperationV0) FactSignature() key.Signature {
 	return spo.factSignature
 }
 
-// TODO operation.ProcessOperaton
+func (spo SetPolicyOperationV0) ProcessOperation(
+	getState func(key string) (state.StateUpdater, error),
+	setState func(state.StateUpdater) error,
+) (state.StateUpdater, error) {
+	value := spo.SetPolicyOperationFactV0.PolicyOperationBodyV0
+
+	var st state.StateUpdater
+	if s, err := getState(PolicyOperationKey); err != nil {
+		return nil, err
+	} else if err := s.SetValue(value, value.Hash()); err != nil {
+		return nil, err
+	} else {
+		st = s
+	}
+
+	return st, setState(st)
+}

@@ -37,19 +37,19 @@ var (
 
 type LeveldbStorage struct {
 	*logging.Logger
-	db         *leveldb.DB
-	encs       *encoder.Encoders
-	defaultEnc encoder.Encoder
+	db   *leveldb.DB
+	encs *encoder.Encoders
+	enc  encoder.Encoder
 }
 
-func NewLeveldbStorage(db *leveldb.DB, encs *encoder.Encoders, defaultEnc encoder.Encoder) *LeveldbStorage {
+func NewLeveldbStorage(db *leveldb.DB, encs *encoder.Encoders, enc encoder.Encoder) *LeveldbStorage {
 	return &LeveldbStorage{
 		Logger: logging.NewLogger(func(c zerolog.Context) zerolog.Context {
 			return c.Str("module", "leveldb-storage")
 		}),
-		db:         db,
-		encs:       encs,
-		defaultEnc: defaultEnc,
+		db:   db,
+		encs: encs,
+		enc:  enc,
 	}
 }
 
@@ -59,7 +59,7 @@ func NewMemStorage(encs *encoder.Encoders, enc encoder.Encoder) *LeveldbStorage 
 }
 
 func (st *LeveldbStorage) Encoder() encoder.Encoder {
-	return st.defaultEnc
+	return st.enc
 }
 
 func (st *LeveldbStorage) Encoders() *encoder.Encoders {
@@ -132,12 +132,12 @@ func (st *LeveldbStorage) newVoteproof(voteproof Voteproof) error {
 		Str("stage", voteproof.Stage().String()).
 		Msg("voteproof stored")
 
-	raw, err := st.defaultEnc.Encode(voteproof)
+	raw, err := st.enc.Encode(voteproof)
 	if err != nil {
 		return err
 	}
 
-	hb := storage.LeveldbDataWithEncoder(st.defaultEnc, raw)
+	hb := storage.LeveldbDataWithEncoder(st.enc, raw)
 	return st.db.Put(leveldbVoteproofKey(voteproof), hb, nil)
 }
 
@@ -265,13 +265,13 @@ func (st *LeveldbStorage) sealByKey(key []byte) (seal.Seal, error) {
 }
 
 func (st *LeveldbStorage) NewSeal(sl seal.Seal) error {
-	raw, err := st.defaultEnc.Encode(sl)
+	raw, err := st.enc.Encode(sl)
 	if err != nil {
 		return err
 	}
 
 	key := st.sealKey(sl.Hash())
-	hb := storage.LeveldbDataWithEncoder(st.defaultEnc, raw)
+	hb := storage.LeveldbDataWithEncoder(st.enc, raw)
 
 	if _, ok := sl.(operation.Seal); !ok {
 		return st.db.Put(key, hb, nil)
@@ -551,12 +551,12 @@ func (st *LeveldbStorage) OpenBlockStorage(block Block) (BlockStorage, error) {
 }
 
 func (st *LeveldbStorage) marshal(i interface{}) ([]byte, error) {
-	b, err := st.defaultEnc.Encode(i)
+	b, err := st.enc.Encode(i)
 	if err != nil {
 		return nil, err
 	}
 
-	return storage.LeveldbDataWithEncoder(st.defaultEnc, b), nil
+	return storage.LeveldbDataWithEncoder(st.enc, b), nil
 }
 
 type LeveldbBlockStorage struct {

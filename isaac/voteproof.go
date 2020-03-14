@@ -16,7 +16,7 @@ import (
 type Voteproof interface {
 	hint.Hinter
 	isvalid.IsValider
-	Bytes() []byte
+	util.Byter // TODO Bytes() use util.Byter
 	IsFinished() bool
 	FinishedAt() time.Time
 	IsClosed() bool
@@ -35,6 +35,10 @@ const (
 	VoteproofDraw
 	VoteproofMajority
 )
+
+func (vrt VoteproofResultType) Bytes() []byte {
+	return util.Uint8ToBytes(uint8(vrt))
+}
 
 func (vrt VoteproofResultType) String() string {
 	switch vrt {

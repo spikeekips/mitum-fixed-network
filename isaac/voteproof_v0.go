@@ -7,7 +7,9 @@ import (
 
 	"github.com/spikeekips/mitum/hint"
 	"github.com/spikeekips/mitum/isvalid"
+	"github.com/spikeekips/mitum/localtime"
 	"github.com/spikeekips/mitum/operation"
+	"github.com/spikeekips/mitum/util"
 	"github.com/spikeekips/mitum/valuehash"
 )
 
@@ -71,8 +73,25 @@ func (vp VoteproofV0) Ballots() map[Address]valuehash.Hash {
 }
 
 func (vp VoteproofV0) Bytes() []byte {
-	// TODO returns proper bytes
-	return nil
+	bs := make([][]byte, len(vp.ballots))
+	{
+		var i int
+		for _, h := range vp.ballots {
+			bs[i] = h.Bytes()
+			i++
+		}
+	}
+
+	return util.ConcatSlice([][]byte{
+		vp.height.Bytes(),
+		vp.round.Bytes(),
+		vp.threshold.Bytes(),
+		vp.result.Bytes(),
+		vp.stage.Bytes(),
+		vp.majority.Bytes(),
+		util.ConcatSlice(bs),
+		[]byte(localtime.RFC3339(vp.finishedAt)),
+	})
 }
 
 func (vp VoteproofV0) IsValid(b []byte) error {

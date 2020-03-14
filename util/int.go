@@ -56,6 +56,13 @@ func BytesToUint(b []byte) (uint, error) {
 	return uint(i), nil
 }
 
+func Uint8ToBytes(i uint8) []byte {
+	b := new(bytes.Buffer)
+	_ = binary.Write(b, binary.LittleEndian, i)
+
+	return b.Bytes()
+}
+
 func Uint64ToBytes(i uint64) []byte {
 	b := new(bytes.Buffer)
 	_ = binary.Write(b, binary.LittleEndian, i)

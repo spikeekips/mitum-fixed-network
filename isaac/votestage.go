@@ -4,6 +4,7 @@ import (
 	"golang.org/x/xerrors"
 
 	"github.com/spikeekips/mitum/isvalid"
+	"github.com/spikeekips/mitum/util"
 )
 
 type Stage uint8
@@ -15,6 +16,10 @@ const (
 	StageACCEPT
 	StageProposal
 )
+
+func (st Stage) Bytes() []byte {
+	return util.Uint8ToBytes(uint8(st))
+}
 
 func (st Stage) String() string {
 	switch st {

@@ -15,6 +15,7 @@ import (
 type RunCommand struct {
 	Nodes     uint   `args:"" default:"${nodes}" help:"number of suffrage nodes"`
 	NetworkID string `args:"" default:"${networkID}" help:"network id"`
+	// TODO select network type
 }
 
 func (cm RunCommand) generateBlocks(ns []*isaac.Localstate) error {

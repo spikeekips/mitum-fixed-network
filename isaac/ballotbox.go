@@ -37,16 +37,16 @@ func (bb *Ballotbox) Vote(ballot Ballot) (Voteproof, error) {
 
 	vrs := bb.loadVoteRecords(ballot, true)
 
-	vp := vrs.Vote(ballot)
+	voteproof := vrs.Vote(ballot)
 
-	if vp.IsFinished() && !vp.IsClosed() {
+	if voteproof.IsFinished() && !voteproof.IsClosed() {
 		// TODO Cleaning VoteRecords may take too long time.
-		if err := bb.clean(vp.Height(), vp.Round()); err != nil {
+		if err := bb.clean(voteproof.Height(), voteproof.Round()); err != nil {
 			return nil, err
 		}
 	}
 
-	return vp, nil
+	return voteproof, nil
 }
 
 func (bb *Ballotbox) loadVoteRecords(ballot Ballot, ifNotCreate bool) *VoteRecords {

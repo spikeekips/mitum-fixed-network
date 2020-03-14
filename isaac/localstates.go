@@ -82,16 +82,16 @@ func (ls *Localstate) SetLastBlock(block Block) error {
 }
 
 func (ls *Localstate) LastINITVoteproof() Voteproof {
-	vp := ls.lastINITVoteproof.Value()
-	if vp == nil {
+	voteproof := ls.lastINITVoteproof.Value()
+	if voteproof == nil {
 		return nil
 	}
 
-	return vp.(Voteproof)
+	return voteproof.(Voteproof)
 }
 
-func (ls *Localstate) SetLastINITVoteproof(vp Voteproof) error {
-	_ = ls.lastINITVoteproof.SetValue(vp)
+func (ls *Localstate) SetLastINITVoteproof(voteproof Voteproof) error {
+	_ = ls.lastINITVoteproof.SetValue(voteproof)
 
 	return nil
 }
@@ -105,8 +105,8 @@ func (ls *Localstate) LastACCEPTVoteproof() Voteproof {
 	return v.(Voteproof)
 }
 
-func (ls *Localstate) SetLastACCEPTVoteproof(vp Voteproof) error {
-	_ = ls.lastACCEPTVoteproof.SetValue(vp)
+func (ls *Localstate) SetLastACCEPTVoteproof(voteproof Voteproof) error {
+	_ = ls.lastACCEPTVoteproof.SetValue(voteproof)
 
 	return nil
 }

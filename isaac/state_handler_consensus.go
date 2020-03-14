@@ -106,30 +106,30 @@ func (cs *StateConsensusHandler) Deactivate(ctx StateChangeContext) error {
 	return nil
 }
 
-func (cs *StateConsensusHandler) waitProposal(vp Voteproof) error { // nolint
+func (cs *StateConsensusHandler) waitProposal(voteproof Voteproof) error { // nolint
 	cs.proposalLock.Lock()
 	defer cs.proposalLock.Unlock()
 
 	cs.Log().Debug().Msg("waiting proposal")
 
 	if cs.processedProposal != nil {
-		if vp.Height() == cs.processedProposal.Height() && vp.Round() == cs.processedProposal.Round() {
+		if voteproof.Height() == cs.processedProposal.Height() && voteproof.Round() == cs.processedProposal.Round() {
 			cs.Log().Debug().Msg("proposal is already processed")
 			return nil
 		}
 	}
 
-	if proposed, err := cs.proposal(vp); err != nil {
+	if proposed, err := cs.proposal(voteproof); err != nil {
 		return err
 	} else if proposed {
 		return nil
 	}
 
-	if err := cs.checkReceivedProposal(vp.Height(), vp.Round()); err != nil {
+	if err := cs.checkReceivedProposal(voteproof.Height(), voteproof.Round()); err != nil {
 		return err
 	}
 
-	if timer, err := cs.TimerTimedoutMoveNextRound(vp.Round() + 1); err != nil {
+	if timer, err := cs.TimerTimedoutMoveNextRound(voteproof.Round() + 1); err != nil {
 		return err
 	} else if err := cs.timers.SetTimer(TimerIDTimedoutMoveNextRound, timer); err != nil {
 		return err
@@ -159,29 +159,29 @@ func (cs *StateConsensusHandler) NewSeal(sl seal.Seal) error {
 	}
 }
 
-func (cs *StateConsensusHandler) NewVoteproof(vp Voteproof) error {
+func (cs *StateConsensusHandler) NewVoteproof(voteproof Voteproof) error {
 	if err := cs.timers.StopTimers([]string{TimerIDTimedoutMoveNextRound}); err != nil {
 		return err
 	}
 
-	l := loggerWithVoteproof(vp, cs.Log())
+	l := loggerWithVoteproof(voteproof, cs.Log())
 
 	l.Debug().Msg("Voteproof received")
 
 	// NOTE if drew, goes to next round.
-	if vp.Result() == VoteproofDraw {
-		return cs.startNextRound(vp)
+	if voteproof.Result() == VoteproofDraw {
+		return cs.startNextRound(voteproof)
 	}
 
-	switch vp.Stage() {
+	switch voteproof.Stage() {
 	case StageACCEPT:
-		if err := cs.StoreNewBlockByVoteproof(vp); err != nil {
+		if err := cs.StoreNewBlockByVoteproof(voteproof); err != nil {
 			l.Error().Err(err).Msg("failed to store accept voteproof")
 		}
 
 		return cs.keepBroadcastingINITBallotForNextBlock()
 	case StageINIT:
-		return cs.handleINITVoteproof(vp)
+		return cs.handleINITVoteproof(voteproof)
 	default:
 		err := xerrors.Errorf("invalid Voteproof received")
 
@@ -191,12 +191,12 @@ func (cs *StateConsensusHandler) NewVoteproof(vp Voteproof) error {
 	}
 }
 
-func (cs *StateConsensusHandler) handleINITVoteproof(vp Voteproof) error {
-	l := loggerWithLocalstate(cs.localstate, loggerWithVoteproof(vp, cs.Log()))
+func (cs *StateConsensusHandler) handleINITVoteproof(voteproof Voteproof) error {
+	l := loggerWithLocalstate(cs.localstate, loggerWithVoteproof(voteproof, cs.Log()))
 
 	l.Debug().Msg("expected Voteproof received; will wait Proposal")
 
-	return cs.waitProposal(vp)
+	return cs.waitProposal(voteproof)
 }
 
 func (cs *StateConsensusHandler) keepBroadcastingINITBallotForNextBlock() error {
@@ -287,14 +287,14 @@ func (cs *StateConsensusHandler) readyToACCEPTBallot(newBlock Block) error {
 	return cs.timers.StartTimers([]string{TimerIDBroadcastingACCEPTBallot}, true)
 }
 
-func (cs *StateConsensusHandler) proposal(vp Voteproof) (bool, error) {
-	l := loggerWithVoteproof(vp, cs.Log())
+func (cs *StateConsensusHandler) proposal(voteproof Voteproof) (bool, error) {
+	l := loggerWithVoteproof(voteproof, cs.Log())
 
 	l.Debug().Msg("prepare to broadcast Proposal")
-	isProposer := cs.suffrage.IsProposer(vp.Height(), vp.Round(), cs.localstate.Node().Address())
+	isProposer := cs.suffrage.IsProposer(voteproof.Height(), voteproof.Round(), cs.localstate.Node().Address())
 	l.Debug().
-		Object("acting_suffrag", cs.suffrage.Acting(vp.Height(), vp.Round())).
-		Bool("is_acting", cs.suffrage.IsActing(vp.Height(), vp.Round(), cs.localstate.Node().Address())).
+		Object("acting_suffrag", cs.suffrage.Acting(voteproof.Height(), voteproof.Round())).
+		Bool("is_acting", cs.suffrage.IsActing(voteproof.Height(), voteproof.Round(), cs.localstate.Node().Address())).
 		Bool("is_proposer", isProposer).
 		Msgf("node is proposer? %v", isProposer)
 
@@ -302,7 +302,7 @@ func (cs *StateConsensusHandler) proposal(vp Voteproof) (bool, error) {
 		return false, nil
 	}
 
-	proposal, err := cs.proposalMaker.Proposal(vp.Round())
+	proposal, err := cs.proposalMaker.Proposal(voteproof.Round())
 	if err != nil {
 		return false, err
 	}
@@ -322,14 +322,14 @@ func (cs *StateConsensusHandler) proposal(vp Voteproof) (bool, error) {
 	return true, nil
 }
 
-func (cs *StateConsensusHandler) startNextRound(vp Voteproof) error {
+func (cs *StateConsensusHandler) startNextRound(voteproof Voteproof) error {
 	cs.Log().Debug().Msg("trying to start next round")
 
 	var round Round
-	if vp.Stage() == StageACCEPT {
+	if voteproof.Stage() == StageACCEPT {
 		round = 0
 	} else {
-		round = vp.Round() + 1
+		round = voteproof.Round() + 1
 	}
 
 	var called int64

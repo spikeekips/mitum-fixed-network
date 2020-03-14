@@ -64,8 +64,8 @@ func (cs *StateBootingHandler) NewSeal(sl seal.Seal) error {
 	return nil
 }
 
-func (cs *StateBootingHandler) NewVoteproof(vp Voteproof) error {
-	l := loggerWithVoteproof(vp, cs.Log())
+func (cs *StateBootingHandler) NewVoteproof(voteproof Voteproof) error {
+	l := loggerWithVoteproof(voteproof, cs.Log())
 
 	l.Debug().Msg("got Voteproof")
 

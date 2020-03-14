@@ -91,7 +91,7 @@ func (bs *BaseStateHandler) SetSealChan(sealChan chan<- seal.Seal) {
 	bs.sealChan = sealChan
 }
 
-func (bs *BaseStateHandler) ChangeState(newState State, vp Voteproof) error {
+func (bs *BaseStateHandler) ChangeState(newState State, voteproof Voteproof) error {
 	if bs.stateChan == nil {
 		return nil
 	}
@@ -103,7 +103,7 @@ func (bs *BaseStateHandler) ChangeState(newState State, vp Voteproof) error {
 	}
 
 	go func() {
-		bs.stateChan <- NewStateChangeContext(bs.state, newState, vp)
+		bs.stateChan <- NewStateChangeContext(bs.state, newState, voteproof)
 	}()
 
 	return nil
@@ -129,7 +129,6 @@ func (bs *BaseStateHandler) StoreNewBlock(blockStorage BlockStorage) error {
 	return nil
 }
 
-// TODO rename 'vp' to 'voteproof'
 func (bs *BaseStateHandler) StoreNewBlockByVoteproof(acceptVoteproof Voteproof) error {
 	fact, ok := acceptVoteproof.Majority().(ACCEPTBallotFact)
 	if !ok {

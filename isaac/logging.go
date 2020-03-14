@@ -50,8 +50,8 @@ func loggerWithBallot(ballot Ballot, l *zerolog.Logger) *zerolog.Logger {
 	return &ll
 }
 
-func loggerWithVoteproof(vp Voteproof, l *zerolog.Logger) *zerolog.Logger {
-	if vp == nil {
+func loggerWithVoteproof(voteproof Voteproof, l *zerolog.Logger) *zerolog.Logger {
+	if voteproof == nil {
 		return l
 	}
 
@@ -59,10 +59,10 @@ func loggerWithVoteproof(vp Voteproof, l *zerolog.Logger) *zerolog.Logger {
 		Str("voteproof_id", util.UUID().String()).CallerWithSkipFrameCount(3).Logger()
 
 	var event *zerolog.Event
-	if lvp, ok := vp.(zerolog.LogObjectMarshaler); ok {
+	if lvp, ok := voteproof.(zerolog.LogObjectMarshaler); ok {
 		event = ll.Debug().EmbedObject(lvp)
 	} else if l.GetLevel() == zerolog.DebugLevel {
-		rvp, _ := util.JSONMarshal(vp)
+		rvp, _ := util.JSONMarshal(voteproof)
 		event = ll.Debug().RawJSON("voteproof", rvp)
 	}
 

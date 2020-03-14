@@ -241,11 +241,11 @@ func (css *ConsensusStates) broadcastSeal(sl seal.Seal, errChan chan<- error) {
 	})
 }
 
-func (css *ConsensusStates) newVoteproof(vp Voteproof) error {
+func (css *ConsensusStates) newVoteproof(voteproof Voteproof) error {
 	vpc := NewVoteproofValidationChecker(
 		css.localstate.LastBlock(),
 		css.localstate.LastINITVoteproof(),
-		vp,
+		voteproof,
 		css,
 	)
 	_ = vpc.SetLogger(*css.Log())
@@ -270,14 +270,14 @@ func (css *ConsensusStates) newVoteproof(vp Voteproof) error {
 		return err
 	}
 
-	switch vp.Stage() {
+	switch voteproof.Stage() {
 	case StageACCEPT:
-		_ = css.localstate.SetLastACCEPTVoteproof(vp)
+		_ = css.localstate.SetLastACCEPTVoteproof(voteproof)
 	case StageINIT:
-		_ = css.localstate.SetLastINITVoteproof(vp)
+		_ = css.localstate.SetLastINITVoteproof(voteproof)
 	}
 
-	return css.ActiveHandler().NewVoteproof(vp)
+	return css.ActiveHandler().NewVoteproof(voteproof)
 }
 
 // NewSeal receives Seal and hand it over to handler;
@@ -370,11 +370,11 @@ func (css *ConsensusStates) vote(ballot Ballot) error {
 	return css.newVoteproof(voteproof)
 }
 
-func checkBlockWithINITVoteproof(block Block, vp Voteproof) error {
-	// check vp.PreviousBlock with local block
-	fact, ok := vp.Majority().(INITBallotFact)
+func checkBlockWithINITVoteproof(block Block, voteproof Voteproof) error {
+	// check voteproof.PreviousBlock with local block
+	fact, ok := voteproof.Majority().(INITBallotFact)
 	if !ok {
-		return xerrors.Errorf("needs INITTBallotFact: fact=%T", vp.Majority())
+		return xerrors.Errorf("needs INITTBallotFact: fact=%T", voteproof.Majority())
 	}
 
 	if !fact.PreviousBlock().Equal(block.Hash()) {

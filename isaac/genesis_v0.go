@@ -160,19 +160,19 @@ func (gg *GenesisBlockV0Generator) generateINITVoteproof() error {
 		gg.localstate.Policy().NetworkID(),
 	); err != nil {
 		return err
-	} else if vp, err := gg.ballotbox.Vote(ib); err != nil {
+	} else if voteproof, err := gg.ballotbox.Vote(ib); err != nil {
 		return err
 	} else {
-		if !vp.IsFinished() {
+		if !voteproof.IsFinished() {
 			return xerrors.Errorf("something wrong, INITVoteproof should be finished, but not")
 		} else {
 			if err := gg.localstate.Storage().NewSeal(ib); err != nil {
 				return err
-			} else if err := gg.localstate.Storage().NewINITVoteproof(vp); err != nil {
+			} else if err := gg.localstate.Storage().NewINITVoteproof(voteproof); err != nil {
 				return err
 			}
 
-			_ = gg.localstate.SetLastINITVoteproof(vp)
+			_ = gg.localstate.SetLastINITVoteproof(voteproof)
 		}
 	}
 
@@ -193,19 +193,19 @@ func (gg *GenesisBlockV0Generator) generateACCEPTVoteproof(newBlock Block) error
 		return err
 	} else if err := gg.localstate.Storage().NewSeal(ab); err != nil {
 		return err
-	} else if vp, err := gg.ballotbox.Vote(ab); err != nil {
+	} else if voteproof, err := gg.ballotbox.Vote(ab); err != nil {
 		return err
 	} else {
-		if !vp.IsFinished() {
+		if !voteproof.IsFinished() {
 			return xerrors.Errorf("something wrong, ACCEPTVoteproof should be finished, but not")
 		} else {
 			if err := gg.localstate.Storage().NewSeal(ab); err != nil {
 				return err
-			} else if err := gg.localstate.Storage().NewACCEPTVoteproof(vp); err != nil {
+			} else if err := gg.localstate.Storage().NewACCEPTVoteproof(voteproof); err != nil {
 				return err
 			}
 
-			_ = gg.localstate.SetLastACCEPTVoteproof(vp)
+			_ = gg.localstate.SetLastACCEPTVoteproof(voteproof)
 		}
 	}
 

@@ -62,11 +62,11 @@ func (ab *ACCEPTBallotV0) UnpackJSON(b []byte, enc *encoder.JSONEncoder) error {
 		enb = i
 	}
 
-	var vp Voteproof
+	var voteproof Voteproof
 	if i, err := decodeVoteproof(enc, nab.VR); err != nil {
 		return err
 	} else {
-		vp = i
+		voteproof = i
 	}
 
 	ab.BaseBallotV0 = bb
@@ -75,7 +75,7 @@ func (ab *ACCEPTBallotV0) UnpackJSON(b []byte, enc *encoder.JSONEncoder) error {
 		proposal:         epr,
 		newBlock:         enb,
 	}
-	ab.voteproof = vp
+	ab.voteproof = voteproof
 
 	return nil
 }

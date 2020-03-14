@@ -251,10 +251,10 @@ func (bg *DummyBlocksV0Generator) createINITVoteproof(round Round) error {
 				return err
 			}
 
-			if vp, err := bg.ballotboxes[l.Node().Address()].Vote(ballot); err != nil {
+			if voteproof, err := bg.ballotboxes[l.Node().Address()].Vote(ballot); err != nil {
 				return err
-			} else if vp.IsFinished() && !vp.IsClosed() {
-				_ = l.SetLastINITVoteproof(vp)
+			} else if voteproof.IsFinished() && !voteproof.IsClosed() {
+				_ = l.SetLastINITVoteproof(voteproof)
 			}
 		}
 	}
@@ -339,10 +339,10 @@ func (bg *DummyBlocksV0Generator) createACCEPTVoteproof(proposal Proposal) error
 				return err
 			}
 
-			if vp, err := bg.ballotboxes[l.Node().Address()].Vote(ballot); err != nil {
+			if voteproof, err := bg.ballotboxes[l.Node().Address()].Vote(ballot); err != nil {
 				return err
-			} else if vp.IsFinished() && !vp.IsClosed() {
-				_ = l.SetLastACCEPTVoteproof(vp)
+			} else if voteproof.IsFinished() && !voteproof.IsClosed() {
+				_ = l.SetLastACCEPTVoteproof(voteproof)
 			}
 		}
 	}

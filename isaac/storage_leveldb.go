@@ -240,28 +240,12 @@ func (st *LeveldbStorage) Seal(h valuehash.Hash) (seal.Seal, error) {
 }
 
 func (st *LeveldbStorage) sealByKey(key []byte) (seal.Seal, error) {
-	raw, err := st.get(key)
+	b, err := st.get(key)
 	if err != nil {
 		return nil, err
 	}
 
-	var ht hint.Hint
-	ht, data, err := storage.LeveldbLoadHint(raw)
-	if err != nil {
-		return nil, err
-	}
-
-	enc, err := st.encs.Encoder(ht.Type(), ht.Version())
-	if err != nil {
-		return nil, err
-	}
-
-	hinter, err := enc.DecodeByHint(data)
-	if err != nil {
-		return nil, err
-	}
-
-	return hinter.(seal.Seal), nil
+	return st.loadSeal(b)
 }
 
 func (st *LeveldbStorage) NewSeal(sl seal.Seal) error {
@@ -288,13 +272,13 @@ func (st *LeveldbStorage) NewSeal(sl seal.Seal) error {
 	return st.db.Write(batch, nil)
 }
 
-func (st *LeveldbStorage) loadVoteproof(b []byte) (Voteproof, error) {
+func (st *LeveldbStorage) loadHinter(b []byte) (hint.Hinter, error) {
 	if b == nil {
 		return nil, nil
 	}
 
 	var ht hint.Hint
-	ht, data, err := storage.LeveldbLoadHint(b)
+	ht, raw, err := storage.LeveldbLoadHint(b)
 	if err != nil {
 		return nil, err
 	}
@@ -304,101 +288,55 @@ func (st *LeveldbStorage) loadVoteproof(b []byte) (Voteproof, error) {
 		return nil, err
 	}
 
-	var voteproof Voteproof
-	if hinter, err := enc.DecodeByHint(data); err != nil {
+	return enc.DecodeByHint(raw)
+}
+
+func (st *LeveldbStorage) loadVoteproof(b []byte) (Voteproof, error) {
+	if hinter, err := st.loadHinter(b); err != nil {
 		return nil, err
+	} else if hinter == nil {
+		return nil, nil
 	} else if i, ok := hinter.(Voteproof); !ok {
 		return nil, xerrors.Errorf("not Voteproof: %T", hinter)
 	} else {
-		voteproof = i
+		return i, nil
 	}
-
-	return voteproof, nil
 }
 
 func (st *LeveldbStorage) loadBlock(b []byte) (Block, error) {
-	if b == nil {
+	if hinter, err := st.loadHinter(b); err != nil {
+		return nil, err
+	} else if hinter == nil {
 		return nil, nil
-	}
-
-	var ht hint.Hint
-	ht, data, err := storage.LeveldbLoadHint(b)
-	if err != nil {
-		return nil, err
-	}
-
-	enc, err := st.encs.Encoder(ht.Type(), ht.Version())
-	if err != nil {
-		return nil, err
-	}
-
-	var block Block
-	if hinter, err := enc.DecodeByHint(data); err != nil {
-		return nil, err
-	} else if bl, ok := hinter.(Block); !ok {
+	} else if i, ok := hinter.(Block); !ok {
 		return nil, xerrors.Errorf("not Block: %T", hinter)
 	} else {
-		block = bl
+		return i, nil
 	}
-
-	return block, nil
 }
 
 func (st *LeveldbStorage) loadSeal(b []byte) (seal.Seal, error) {
-	if b == nil {
+	if hinter, err := st.loadHinter(b); err != nil {
+		return nil, err
+	} else if hinter == nil {
 		return nil, nil
-	}
-
-	var ht hint.Hint
-	ht, data, err := storage.LeveldbLoadHint(b)
-	if err != nil {
-		return nil, err
-	}
-
-	enc, err := st.encs.Encoder(ht.Type(), ht.Version())
-	if err != nil {
-		return nil, err
-	}
-
-	hinter, err := enc.DecodeByHint(data)
-	if err != nil {
-		return nil, err
-	}
-
-	sl, ok := hinter.(seal.Seal)
-	if !ok {
+	} else if i, ok := hinter.(seal.Seal); !ok {
 		return nil, xerrors.Errorf("not Seal: %T", hinter)
+	} else {
+		return i, nil
 	}
-
-	return sl, nil
 }
 
 func (st *LeveldbStorage) loadState(b []byte) (state.State, error) {
-	if b == nil {
+	if hinter, err := st.loadHinter(b); err != nil {
+		return nil, err
+	} else if hinter == nil {
 		return nil, nil
-	}
-
-	var ht hint.Hint
-	ht, data, err := storage.LeveldbLoadHint(b)
-	if err != nil {
-		return nil, err
-	}
-
-	enc, err := st.encs.Encoder(ht.Type(), ht.Version())
-	if err != nil {
-		return nil, err
-	}
-
-	var stt state.State
-	if hinter, err := enc.DecodeByHint(data); err != nil {
-		return nil, err
-	} else if s, ok := hinter.(state.State); !ok {
+	} else if i, ok := hinter.(state.State); !ok {
 		return nil, xerrors.Errorf("not state.State: %T", hinter)
 	} else {
-		stt = s
+		return i, nil
 	}
-
-	return stt, nil
 }
 
 func (st *LeveldbStorage) iter(

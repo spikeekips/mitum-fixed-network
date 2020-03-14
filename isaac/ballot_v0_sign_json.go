@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 
 	"github.com/spikeekips/mitum/encoder"
-	"github.com/spikeekips/mitum/errors"
 	"github.com/spikeekips/mitum/util"
 	"github.com/spikeekips/mitum/valuehash"
 )
@@ -48,20 +47,16 @@ func (sb *SIGNBallotV0) UnpackJSON(b []byte, enc *encoder.JSONEncoder) error { /
 	}
 
 	var epr, enb valuehash.Hash
-	if i, err := enc.DecodeByHint(nib.PR); err != nil {
+	if i, err := valuehash.Decode(enc, nib.PR); err != nil {
 		return err
-	} else if v, ok := i.(valuehash.Hash); !ok {
-		return errors.InvalidTypeError.Wrapf("not valuehash.Hash; type=%T", i)
 	} else {
-		epr = v
+		epr = i
 	}
 
-	if i, err := enc.DecodeByHint(nib.NB); err != nil {
+	if i, err := valuehash.Decode(enc, nib.NB); err != nil {
 		return err
-	} else if v, ok := i.(valuehash.Hash); !ok {
-		return errors.InvalidTypeError.Wrapf("not valuehash.Hash; type=%T", i)
 	} else {
-		enb = v
+		enb = i
 	}
 
 	sb.BaseBallotV0 = bb

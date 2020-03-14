@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 
 	"github.com/spikeekips/mitum/encoder"
-	"github.com/spikeekips/mitum/errors"
 	"github.com/spikeekips/mitum/util"
 	"github.com/spikeekips/mitum/valuehash"
 )
@@ -50,22 +49,17 @@ func (ab *ACCEPTBallotV0) UnpackJSON(b []byte, enc *encoder.JSONEncoder) error {
 		return err
 	}
 
-	// TODO use decodehash
 	var epr, enb valuehash.Hash
-	if i, err := enc.DecodeByHint(nab.PR); err != nil {
+	if i, err := valuehash.Decode(enc, nab.PR); err != nil {
 		return err
-	} else if v, ok := i.(valuehash.Hash); !ok {
-		return errors.InvalidTypeError.Wrapf("not valuehash.Hash; type=%T", i)
 	} else {
-		epr = v
+		epr = i
 	}
 
-	if i, err := enc.DecodeByHint(nab.NB); err != nil {
+	if i, err := valuehash.Decode(enc, nab.NB); err != nil {
 		return err
-	} else if v, ok := i.(valuehash.Hash); !ok {
-		return errors.InvalidTypeError.Wrapf("not valuehash.Hash; type=%T", i)
 	} else {
-		enb = v
+		enb = i
 	}
 
 	var vp Voteproof

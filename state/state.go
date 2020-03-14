@@ -14,7 +14,6 @@ type OperationInfo interface {
 	Bytes() []byte
 }
 
-// TODO the target of value should provide Bytes() and NewXXFromBytes()
 type State interface {
 	isvalid.IsValider
 	hint.Hinter

@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 
 	"github.com/spikeekips/mitum/encoder"
-	"github.com/spikeekips/mitum/errors"
 	"github.com/spikeekips/mitum/util"
 	"github.com/spikeekips/mitum/valuehash"
 )
@@ -51,12 +50,10 @@ func (pr *ProposalV0) UnpackJSON(b []byte, enc *encoder.JSONEncoder) error {
 
 	var esl []valuehash.Hash
 	for _, r := range sl {
-		if i, err := enc.DecodeByHint(r); err != nil {
+		if i, err := valuehash.Decode(enc, r); err != nil {
 			return err
-		} else if v, ok := i.(valuehash.Hash); !ok {
-			return errors.InvalidTypeError.Wrapf("not valuehash.Hash; type=%T", i)
 		} else {
-			esl = append(esl, v)
+			esl = append(esl, i)
 		}
 	}
 

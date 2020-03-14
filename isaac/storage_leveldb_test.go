@@ -260,10 +260,10 @@ func (t *testLeveldbStorage) TestSeals() {
 	for i := 0; i < 10; i++ {
 		pk, _ := key.NewBTCPrivatekey()
 		sl := seal.NewDummySeal(pk)
-		t.NoError(t.storage.NewSeal(sl))
 
 		seals = append(seals, sl)
 	}
+	t.NoError(t.storage.NewSeals(seals))
 
 	sort.Slice(seals, func(i, j int) bool {
 		return bytes.Compare(seals[i].Hash().Bytes(), seals[j].Hash().Bytes()) < 0
@@ -291,10 +291,10 @@ func (t *testLeveldbStorage) TestSealsLimit() {
 	for i := 0; i < 10; i++ {
 		pk, _ := key.NewBTCPrivatekey()
 		sl := seal.NewDummySeal(pk)
-		t.NoError(t.storage.NewSeal(sl))
 
 		seals = append(seals, sl)
 	}
+	t.NoError(t.storage.NewSeals(seals))
 
 	sort.Slice(seals, func(i, j int) bool {
 		return bytes.Compare(seals[i].Hash().Bytes(), seals[j].Hash().Bytes()) < 0
@@ -339,20 +339,20 @@ func (t *testLeveldbStorage) TestStagedOperationSeals() {
 	// 10 seal.Seal
 	for i := 0; i < 10; i++ {
 		sl := seal.NewDummySeal(t.pk)
-		t.NoError(t.storage.NewSeal(sl))
 
 		seals = append(seals, sl)
 	}
+	t.NoError(t.storage.NewSeals(seals))
 
 	ops := map[valuehash.Hash]operation.Seal{}
 	// 10 operation.Seal
 	for i := 0; i < 10; i++ {
 		sl := t.newOperationSeal()
-		t.NoError(t.storage.NewSeal(sl))
 
 		seals = append(seals, sl)
 		ops[sl.Hash()] = sl
 	}
+	t.NoError(t.storage.NewSeals(seals))
 
 	var collected []seal.Seal
 	t.NoError(t.storage.StagedOperationSeals(
@@ -378,14 +378,14 @@ func (t *testLeveldbStorage) TestUnStagedOperationSeals() {
 	// 10 seal.Seal
 	for i := 0; i < 10; i++ {
 		sl := seal.NewDummySeal(t.pk)
-		t.NoError(t.storage.NewSeal(sl))
+		t.NoError(t.storage.NewSeals([]seal.Seal{sl}))
 	}
 
 	var ops []operation.Seal
 	// 10 operation.Seal
 	for i := 0; i < 10; i++ {
 		sl := t.newOperationSeal()
-		t.NoError(t.storage.NewSeal(sl))
+		t.NoError(t.storage.NewSeals([]seal.Seal{sl}))
 
 		ops = append(ops, sl)
 	}

@@ -286,7 +286,7 @@ func (css *ConsensusStates) newVoteproof(voteproof Voteproof) error {
 func (css *ConsensusStates) NewSeal(sl seal.Seal) error {
 	css.Log().Debug().Interface("seal", sl).Msgf("seal received: %T", sl)
 
-	if err := css.localstate.Storage().NewSeal(sl); err != nil {
+	if err := css.localstate.Storage().NewSeals([]seal.Seal{sl}); err != nil {
 		return err
 	}
 

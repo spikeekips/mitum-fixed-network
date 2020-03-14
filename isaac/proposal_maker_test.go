@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	"github.com/spikeekips/mitum/operation"
+	"github.com/spikeekips/mitum/seal"
 	"github.com/spikeekips/mitum/valuehash"
 	"github.com/stretchr/testify/suite"
 )
@@ -44,13 +45,15 @@ func (t *testProposalMaker) TestSeals() {
 	localstate, _ := t.states()
 
 	var ops []operation.Seal
+	var seals []seal.Seal
 	// 10 operation.Seal
 	for i := 0; i < 10; i++ {
 		sl := t.newOperationSeal(localstate)
-		t.NoError(localstate.Storage().NewSeal(sl))
 
 		ops = append(ops, sl)
+		seals = append(seals, sl)
 	}
+	t.NoError(localstate.Storage().NewSeals(seals))
 
 	proposalMaker := NewProposalMaker(localstate)
 

@@ -364,11 +364,11 @@ func (pp *proposalProcessorV0) getOperationsThruChannel(
 		return nil, err
 	}
 
-	for _, sl := range received {
-		if err := pp.localstate.Storage().NewSeal(sl); err != nil {
-			return nil, err
-		}
+	if err := pp.localstate.Storage().NewSeals(received); err != nil {
+		return nil, err
+	}
 
+	for _, sl := range received {
 		if os, ok := sl.(operation.Seal); !ok {
 			return nil, xerrors.Errorf("not operation.Seal: %T", sl)
 		} else {

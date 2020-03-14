@@ -248,7 +248,25 @@ func (st *LeveldbStorage) sealByKey(key []byte) (seal.Seal, error) {
 	return st.loadSeal(b)
 }
 
-func (st *LeveldbStorage) NewSeal(sl seal.Seal) error {
+func (st *LeveldbStorage) NewSeals(seals []seal.Seal) error {
+	batch := &leveldb.Batch{}
+
+	inserted := map[valuehash.Hash]struct{}{}
+	for _, sl := range seals {
+		if _, found := inserted[sl.Hash()]; found {
+			continue
+		}
+
+		if err := st.newSeals(batch, sl); err != nil {
+			return err
+		}
+		inserted[sl.Hash()] = struct{}{}
+	}
+
+	return st.db.Write(batch, nil)
+}
+
+func (st *LeveldbStorage) newSeals(batch *leveldb.Batch, sl seal.Seal) error {
 	raw, err := st.enc.Encode(sl)
 	if err != nil {
 		return err
@@ -258,10 +276,9 @@ func (st *LeveldbStorage) NewSeal(sl seal.Seal) error {
 	hb := storage.LeveldbDataWithEncoder(st.enc, raw)
 
 	if _, ok := sl.(operation.Seal); !ok {
-		return st.db.Put(key, hb, nil)
+		batch.Put(key, hb)
+		return nil
 	}
-
-	batch := &leveldb.Batch{}
 
 	batch.Put(key, hb)
 
@@ -269,7 +286,7 @@ func (st *LeveldbStorage) NewSeal(sl seal.Seal) error {
 	batch.Put(okey, key)
 	batch.Put(st.newStagedOperationSealReverseKey(sl.Hash()), okey)
 
-	return st.db.Write(batch, nil)
+	return nil
 }
 
 func (st *LeveldbStorage) loadHinter(b []byte) (hint.Hinter, error) {
@@ -433,7 +450,7 @@ func (st *LeveldbStorage) NewProposal(proposal Proposal) error {
 	if found, err := st.db.Has(sealKey, nil); err != nil {
 		return err
 	} else if !found {
-		if err := st.NewSeal(proposal); err != nil {
+		if err := st.NewSeals([]seal.Seal{proposal}); err != nil {
 			return err
 		}
 	}

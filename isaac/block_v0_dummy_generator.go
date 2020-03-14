@@ -126,10 +126,8 @@ func (bg *DummyBlocksV0Generator) syncSeals(from *Localstate) error {
 			continue
 		}
 
-		for _, sl := range seals {
-			if err := l.Storage().NewSeal(sl); err != nil {
-				return err
-			}
+		if err := l.Storage().NewSeals(seals); err != nil {
+			return err
 		}
 	}
 
@@ -237,20 +235,22 @@ func (bg *DummyBlocksV0Generator) finish() error {
 
 func (bg *DummyBlocksV0Generator) createINITVoteproof(round Round) error {
 	var ballots []INITBallot
+	var seals []seal.Seal
 	for _, l := range bg.allNodes {
 		if ib, err := bg.createINITBallot(l, round); err != nil {
 			return err
 		} else {
 			ballots = append(ballots, ib)
+			seals = append(seals, ib)
 		}
 	}
 
 	for _, l := range bg.allNodes {
-		for _, ballot := range ballots {
-			if err := l.Storage().NewSeal(ballot); err != nil {
-				return err
-			}
+		if err := l.Storage().NewSeals(seals); err != nil {
+			return err
+		}
 
+		for _, ballot := range ballots {
 			if voteproof, err := bg.ballotboxes[l.Node().Address()].Vote(ballot); err != nil {
 				return err
 			} else if voteproof.IsFinished() && !voteproof.IsClosed() {
@@ -280,7 +280,7 @@ func (bg *DummyBlocksV0Generator) createINITBallot(localstate *Localstate, round
 		initBallot = ib
 	}
 
-	if err := localstate.Storage().NewSeal(initBallot); err != nil {
+	if err := localstate.Storage().NewSeals([]seal.Seal{initBallot}); err != nil {
 		return nil, err
 	}
 
@@ -309,6 +309,7 @@ func (bg *DummyBlocksV0Generator) createProposal() (Proposal, error) {
 
 func (bg *DummyBlocksV0Generator) createACCEPTVoteproof(proposal Proposal) error {
 	var ballots []ACCEPTBallot
+	var seals []seal.Seal
 	for _, l := range bg.allNodes {
 		var newBlock Block
 
@@ -330,15 +331,16 @@ func (bg *DummyBlocksV0Generator) createACCEPTVoteproof(proposal Proposal) error
 			return err
 		} else {
 			ballots = append(ballots, ab)
+			seals = append(seals, ab)
 		}
 	}
 
 	for _, l := range bg.allNodes {
-		for _, ballot := range ballots {
-			if err := l.Storage().NewSeal(ballot); err != nil {
-				return err
-			}
+		if err := l.Storage().NewSeals(seals); err != nil {
+			return err
+		}
 
+		for _, ballot := range ballots {
 			if voteproof, err := bg.ballotboxes[l.Node().Address()].Vote(ballot); err != nil {
 				return err
 			} else if voteproof.IsFinished() && !voteproof.IsClosed() {

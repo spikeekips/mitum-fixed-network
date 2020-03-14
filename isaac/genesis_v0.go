@@ -4,6 +4,7 @@ import (
 	"golang.org/x/xerrors"
 
 	"github.com/spikeekips/mitum/operation"
+	"github.com/spikeekips/mitum/seal"
 	"github.com/spikeekips/mitum/valuehash"
 )
 
@@ -87,7 +88,7 @@ func (gg *GenesisBlockV0Generator) generateOperationSeal() ([]operation.Seal, er
 		gg.localstate.Policy().NetworkID(),
 	); err != nil {
 		return nil, err
-	} else if err := gg.localstate.Storage().NewSeal(sl); err != nil {
+	} else if err := gg.localstate.Storage().NewSeals([]seal.Seal{sl}); err != nil {
 		return nil, err
 	} else {
 		seals = append(seals, sl)
@@ -166,7 +167,7 @@ func (gg *GenesisBlockV0Generator) generateINITVoteproof() error {
 		if !voteproof.IsFinished() {
 			return xerrors.Errorf("something wrong, INITVoteproof should be finished, but not")
 		} else {
-			if err := gg.localstate.Storage().NewSeal(ib); err != nil {
+			if err := gg.localstate.Storage().NewSeals([]seal.Seal{ib}); err != nil {
 				return err
 			} else if err := gg.localstate.Storage().NewINITVoteproof(voteproof); err != nil {
 				return err
@@ -191,7 +192,7 @@ func (gg *GenesisBlockV0Generator) generateACCEPTVoteproof(newBlock Block) error
 		gg.localstate.Policy().NetworkID(),
 	); err != nil {
 		return err
-	} else if err := gg.localstate.Storage().NewSeal(ab); err != nil {
+	} else if err := gg.localstate.Storage().NewSeals([]seal.Seal{ab}); err != nil {
 		return err
 	} else if voteproof, err := gg.ballotbox.Vote(ab); err != nil {
 		return err
@@ -199,7 +200,7 @@ func (gg *GenesisBlockV0Generator) generateACCEPTVoteproof(newBlock Block) error
 		if !voteproof.IsFinished() {
 			return xerrors.Errorf("something wrong, ACCEPTVoteproof should be finished, but not")
 		} else {
-			if err := gg.localstate.Storage().NewSeal(ab); err != nil {
+			if err := gg.localstate.Storage().NewSeals([]seal.Seal{ab}); err != nil {
 				return err
 			} else if err := gg.localstate.Storage().NewACCEPTVoteproof(voteproof); err != nil {
 				return err

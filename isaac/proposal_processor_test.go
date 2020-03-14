@@ -49,7 +49,7 @@ func (t *testProposalProcessor) TestBlockOperations() {
 		t.NoError(err)
 
 		opl := t.newOperationSeal(t.localstate)
-		t.NoError(t.localstate.Storage().NewSeal(opl))
+		t.NoError(t.localstate.Storage().NewSeals([]seal.Seal{opl}))
 
 		newSeals := []valuehash.Hash{opl.Hash()}
 

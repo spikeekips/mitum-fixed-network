@@ -25,8 +25,7 @@ type Storage interface {
 	LastACCEPTVoteproofOfHeight(Height) (Voteproof, error)
 	Voteproofs(func(Voteproof) (bool, error), bool /* sort */) error
 
-	NewSeal(seal.Seal) error
-	// TODO needs NewSeals, it will return []seal.Seal with []valuehash.Hash
+	NewSeals([]seal.Seal) error
 	Seal(valuehash.Hash) (seal.Seal, error)
 	// TODO Seals should returns []seal.Seals with []valuehash.Hash. The
 	// existing Seals should have another name like 'TraverseSeals'?

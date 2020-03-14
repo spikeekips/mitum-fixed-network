@@ -51,6 +51,12 @@ func (t *baseTestStateHandler) SetupSuite() { // nolint
 	_ = t.encs.AddHinter(state.StateV0{})
 	_ = t.encs.AddHinter(state.OperationInfoV0{})
 	_ = t.encs.AddHinter(state.StateV0AVLNode{})
+	_ = t.encs.AddHinter(state.BytesValue{})
+	_ = t.encs.AddHinter(state.DurationValue{})
+	_ = t.encs.AddHinter(state.HintedValue{})
+	_ = t.encs.AddHinter(state.NumberValue{})
+	_ = t.encs.AddHinter(state.SliceValue{})
+	_ = t.encs.AddHinter(state.StringValue{})
 }
 
 func (t *baseTestStateHandler) states() (*Localstate, *Localstate) {

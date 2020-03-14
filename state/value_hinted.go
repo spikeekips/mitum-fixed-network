@@ -1,0 +1,73 @@
+package state
+
+import (
+	"golang.org/x/xerrors"
+
+	"github.com/spikeekips/mitum/hint"
+	"github.com/spikeekips/mitum/isvalid"
+	"github.com/spikeekips/mitum/util"
+	"github.com/spikeekips/mitum/valuehash"
+)
+
+var (
+	HintedValueType = hint.MustNewType(0x12, 0x04, "state-hinted-value")
+	HintedValueHint = hint.MustHint(HintedValueType, "0.0.1")
+)
+
+type HintedValue struct {
+	v hint.Hinter
+}
+
+func NewHintedValue(v hint.Hinter) (HintedValue, error) {
+	hv := HintedValue{}
+	nhv, err := hv.Set(v)
+	if err != nil {
+		return HintedValue{}, err
+	}
+
+	return nhv.(HintedValue), nil
+}
+
+func (hv HintedValue) IsValid([]byte) error {
+	if is, ok := hv.v.(isvalid.IsValider); ok {
+		if err := is.IsValid(nil); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func (hv HintedValue) Bytes() []byte {
+	return hv.v.(util.Byter).Bytes()
+}
+
+func (hv HintedValue) Hint() hint.Hint {
+	return HintedValueHint
+}
+
+func (hv HintedValue) Hash() valuehash.Hash {
+	return hv.v.(valuehash.Hasher).Hash()
+}
+
+func (hv HintedValue) Interface() interface{} {
+	return hv.v
+}
+
+func (hv HintedValue) Equal(v Value) bool {
+	return hv.Hash().Equal(v.Hash())
+}
+
+func (hv HintedValue) Set(v interface{}) (Value, error) {
+	if _, ok := v.(hint.Hinter); !ok {
+		return nil, xerrors.Errorf("not hint.Hinter: %T", v)
+	} else if _, ok := v.(util.Byter); !ok {
+		return nil, xerrors.Errorf("not util.Byter: %T", v)
+	} else if _, ok := v.(valuehash.Hasher); !ok {
+		return nil, xerrors.Errorf("not valuehash.Hasher: %T", v)
+	}
+
+	hv.v = v.(hint.Hinter)
+
+	return hv, nil
+}

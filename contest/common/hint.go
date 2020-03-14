@@ -5,6 +5,7 @@ import (
 	"github.com/spikeekips/mitum/isaac"
 	"github.com/spikeekips/mitum/key"
 	"github.com/spikeekips/mitum/operation"
+	"github.com/spikeekips/mitum/state"
 	"github.com/spikeekips/mitum/tree"
 	"github.com/spikeekips/mitum/valuehash"
 )
@@ -43,6 +44,12 @@ var Hinters = [][2]interface{}{
 	{"policy-body-v0", isaac.PolicyOperationBodyV0{}},
 	{"set-policy-operation-v0", isaac.SetPolicyOperationV0{}},
 	{"set-policy-operation-fact-v0", isaac.SetPolicyOperationFactV0{}},
+	{"state-bytes-value", state.BytesValue{}},
+	{"state-duration-value", state.DurationValue{}},
+	{"state-hinted-value", state.HintedValue{}},
+	{"state-number-value", state.NumberValue{}},
+	{"state-slice-value", state.SliceValue{}},
+	{"state-string-value", state.StringValue{}},
 }
 
 var HintTypes = [][2]interface{}{}

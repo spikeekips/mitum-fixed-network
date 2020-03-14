@@ -47,6 +47,7 @@ func (t *testPolicy) TestLoadFromStorage() {
 	_ = encs.AddHinter(PolicyOperationBodyV0{})
 	_ = encs.AddHinter(SetPolicyOperationV0{})
 	_ = encs.AddHinter(SetPolicyOperationFactV0{})
+	_ = encs.AddHinter(state.HintedValue{})
 
 	storage := NewMemStorage(encs, enc)
 	statepool := NewStatePool(storage)

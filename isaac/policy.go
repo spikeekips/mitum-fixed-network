@@ -30,10 +30,12 @@ func NewLocalPolicy(storage Storage, networkID []byte) (*LocalPolicy, error) {
 			return nil, err
 		} else if !found || l.Value() == nil { // set default
 			loaded = DefaultPolicy()
-		} else if s, err := NewPolicyOperationBodyV0FromBytes(l.Value().Bytes()); err != nil {
-			return nil, xerrors.Errorf("failed to load PolicyOperationBodyV0: %w", err)
+		} else if i := l.Value().Interface(); i == nil {
+			loaded = DefaultPolicy()
+		} else if p, ok := i.(PolicyOperationBodyV0); !ok {
+			loaded = DefaultPolicy()
 		} else {
-			loaded = s
+			loaded = p
 		}
 	}
 

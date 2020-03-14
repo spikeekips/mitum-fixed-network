@@ -18,8 +18,7 @@ var (
 type StateV0 struct {
 	h             valuehash.Hash
 	key           string
-	value         util.Byter
-	valueHash     valuehash.Hash
+	value         Value
 	previousBlock valuehash.Hash
 	operations    []OperationInfo
 	currentBlock  valuehash.Hash
@@ -27,18 +26,12 @@ type StateV0 struct {
 
 func NewStateV0(
 	key string,
-	value util.Byter,
-	valueHash valuehash.Hash,
+	value Value,
 	previousBlock valuehash.Hash,
 ) (*StateV0, error) {
-	if value != nil {
-		value = util.NewByter(value.Bytes())
-	}
-
 	st := &StateV0{
 		key:           key,
 		value:         value,
-		valueHash:     valueHash,
 		previousBlock: previousBlock,
 	}
 
@@ -50,7 +43,7 @@ func (st StateV0) IsValid([]byte) error {
 		return xerrors.Errorf("empty key")
 	}
 
-	if err := st.valueHash.IsValid(nil); err != nil {
+	if err := st.value.IsValid(nil); err != nil {
 		return err
 	}
 
@@ -97,7 +90,7 @@ func (st StateV0) GenerateHash() valuehash.Hash {
 		be,
 		[]byte(st.key),
 		st.previousBlock.Bytes(),
-		st.valueHash.Bytes(),
+		st.value.Hash().Bytes(),
 	)
 
 	for _, oi := range st.operations {
@@ -113,17 +106,12 @@ func (st StateV0) Key() string {
 	return st.key
 }
 
-func (st StateV0) Value() util.Byter {
+func (st StateV0) Value() Value {
 	return st.value
 }
 
-func (st StateV0) ValueHash() valuehash.Hash {
-	return st.valueHash
-}
-
-func (st *StateV0) SetValue(value util.Byter, valueHash valuehash.Hash) error {
+func (st *StateV0) SetValue(value Value) error {
 	st.value = value
-	st.valueHash = valueHash
 
 	return nil
 }

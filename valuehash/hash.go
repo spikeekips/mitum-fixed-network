@@ -19,3 +19,7 @@ type Hash interface {
 	Bytes() []byte
 	Equal(Hash) bool
 }
+
+type Hasher interface {
+	Hash() Hash
+}

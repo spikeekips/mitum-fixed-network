@@ -7,7 +7,6 @@ import (
 	"github.com/spikeekips/mitum/operation"
 	"github.com/spikeekips/mitum/state"
 	"github.com/spikeekips/mitum/util"
-	"github.com/spikeekips/mitum/valuehash"
 )
 
 var KVOperationHint = hint.MustHintWithType(hint.Type{0xff, 0xfb}, "0.0.1", "kv-operation-isaac")
@@ -68,12 +67,15 @@ func (kvo KVOperation) ProcessOperation(
 	getState func(key string) (state.StateUpdater, error),
 	setState func(state.StateUpdater) error,
 ) (state.StateUpdater, error) {
-	valueHash := valuehash.NewSHA256(kvo.Value)
+	value, err := state.NewBytesValue(kvo.Value)
+	if err != nil {
+		return nil, err
+	}
 
 	var st state.StateUpdater
 	if s, err := getState(kvo.Key); err != nil {
 		return nil, err
-	} else if err := s.SetValue(util.NewByter(kvo.Value), valueHash); err != nil {
+	} else if err := s.SetValue(value); err != nil {
 		return nil, err
 	} else {
 		st = s

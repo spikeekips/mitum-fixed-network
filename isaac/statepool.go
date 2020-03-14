@@ -4,7 +4,6 @@ import (
 	"sync"
 
 	"github.com/spikeekips/mitum/state"
-	"github.com/spikeekips/mitum/util"
 	"github.com/spikeekips/mitum/valuehash"
 )
 
@@ -32,20 +31,18 @@ func (sp *StatePool) Get(key string) (state.StateUpdater, error) {
 		return s, nil
 	}
 
-	var value util.Byter
-	var valueHash valuehash.Hash
+	var value state.Value
 	var previousBlock valuehash.Hash
 
 	if s, _, err := sp.st.State(key); err != nil {
 		return nil, err
 	} else if s != nil {
 		value = s.Value()
-		valueHash = s.ValueHash()
 		previousBlock = s.CurrentBlock()
 	}
 
 	var st state.StateUpdater
-	if su, err := state.NewStateV0(key, value, valueHash, previousBlock); err != nil {
+	if su, err := state.NewStateV0(key, value, previousBlock); err != nil {
 		return nil, err
 	} else {
 		st = su

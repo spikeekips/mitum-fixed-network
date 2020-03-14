@@ -244,12 +244,15 @@ func (spo SetPolicyOperationV0) ProcessOperation(
 	getState func(key string) (state.StateUpdater, error),
 	setState func(state.StateUpdater) error,
 ) (state.StateUpdater, error) {
-	value := spo.SetPolicyOperationFactV0.PolicyOperationBodyV0
+	value, err := state.NewHintedValue(spo.SetPolicyOperationFactV0.PolicyOperationBodyV0)
+	if err != nil {
+		return nil, err
+	}
 
 	var st state.StateUpdater
 	if s, err := getState(PolicyOperationKey); err != nil {
 		return nil, err
-	} else if err := s.SetValue(value, value.Hash()); err != nil {
+	} else if err := s.SetValue(value); err != nil {
 		return nil, err
 	} else {
 		st = s

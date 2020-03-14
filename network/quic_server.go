@@ -112,12 +112,13 @@ func (qs *QuicServer) run(stopChan chan struct{}) error {
 	errChan := make(chan error)
 	go func() {
 		if err := server.ListenAndServe(); err != http.ErrServerClosed {
-			// TODO monkey patch
+			// TODO monkey patch; see https://github.com/lucas-clemente/quic-go/issues/1778
 			if err.Error() == "server closed" {
 				return
 			}
 
-			qs.Log().Error().Err(err).Msg("failed to start server")
+			qs.Log().Error().Err(err).Msg("server failed")
+
 			errChan <- err
 		}
 	}()

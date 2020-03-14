@@ -1,6 +1,9 @@
 package isaac
 
-import "github.com/spikeekips/mitum/seal"
+import (
+	"github.com/spikeekips/mitum/seal"
+	"github.com/spikeekips/mitum/valuehash"
+)
 
 type DummyBlocksV0Generator struct {
 	genesisNode *Localstate
@@ -113,10 +116,11 @@ func (bg *DummyBlocksV0Generator) syncBlocks(from *Localstate) error {
 func (bg *DummyBlocksV0Generator) syncSeals(from *Localstate) error {
 	var seals []seal.Seal
 	if err := from.Storage().Seals(
-		func(sl seal.Seal) (bool, error) {
+		func(_ valuehash.Hash, sl seal.Seal) (bool, error) {
 			seals = append(seals, sl)
 			return true, nil
 		},
+		true,
 		true,
 	); err != nil {
 		return err

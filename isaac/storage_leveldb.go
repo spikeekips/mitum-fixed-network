@@ -27,12 +27,13 @@ var (
 	leveldbBlockHashPrefix                  []byte = []byte{0x00, 0x02}
 	leveldbVoteproofHeightPrefix            []byte = []byte{0x00, 0x03}
 	leveldbSealPrefix                       []byte = []byte{0x00, 0x04}
-	leveldbProposalPrefix                   []byte = []byte{0x00, 0x05}
-	leveldbBlockOperationsPrefix            []byte = []byte{0x00, 0x06}
-	leveldbBlockStatesPrefix                []byte = []byte{0x00, 0x07}
-	leveldbStagedOperationSealPrefix        []byte = []byte{0x00, 0x08}
-	leveldbStagedOperationSealReversePrefix []byte = []byte{0x00, 0x09}
-	leveldbStatePrefix                      []byte = []byte{0x00, 0x10}
+	leveldbSealHashPrefix                   []byte = []byte{0x00, 0x05}
+	leveldbProposalPrefix                   []byte = []byte{0x00, 0x06}
+	leveldbBlockOperationsPrefix            []byte = []byte{0x00, 0x07}
+	leveldbBlockStatesPrefix                []byte = []byte{0x00, 0x08}
+	leveldbStagedOperationSealPrefix        []byte = []byte{0x00, 0x09}
+	leveldbStagedOperationSealReversePrefix []byte = []byte{0x00, 0x10}
+	leveldbStatePrefix                      []byte = []byte{0x00, 0x11}
 )
 
 type LeveldbStorage struct {
@@ -219,6 +220,10 @@ func (st *LeveldbStorage) sealKey(h valuehash.Hash) []byte {
 	return util.ConcatSlice([][]byte{leveldbSealPrefix, h.Bytes()})
 }
 
+func (st *LeveldbStorage) sealHashKey(h valuehash.Hash) []byte {
+	return util.ConcatSlice([][]byte{leveldbSealHashPrefix, h.Bytes()})
+}
+
 func (st *LeveldbStorage) newStagedOperationSealKey(h valuehash.Hash) []byte {
 	return util.ConcatSlice([][]byte{
 		leveldbStagedOperationSealPrefix,
@@ -257,7 +262,7 @@ func (st *LeveldbStorage) NewSeals(seals []seal.Seal) error {
 			continue
 		}
 
-		if err := st.newSeals(batch, sl); err != nil {
+		if err := st.newSeal(batch, sl); err != nil {
 			return err
 		}
 		inserted[sl.Hash()] = struct{}{}
@@ -266,15 +271,23 @@ func (st *LeveldbStorage) NewSeals(seals []seal.Seal) error {
 	return st.db.Write(batch, nil)
 }
 
-func (st *LeveldbStorage) newSeals(batch *leveldb.Batch, sl seal.Seal) error {
+func (st *LeveldbStorage) newSeal(batch *leveldb.Batch, sl seal.Seal) error {
 	raw, err := st.enc.Encode(sl)
 	if err != nil {
 		return err
 	}
+	rawHash, err := st.enc.Encode(sl.Hash())
+	if err != nil {
+		return err
+	}
+
+	batch.Put(
+		st.sealHashKey(sl.Hash()),
+		storage.LeveldbDataWithEncoder(st.enc, rawHash),
+	)
 
 	key := st.sealKey(sl.Hash())
 	hb := storage.LeveldbDataWithEncoder(st.enc, raw)
-
 	if _, ok := sl.(operation.Seal); !ok {
 		batch.Put(key, hb)
 		return nil
@@ -344,6 +357,18 @@ func (st *LeveldbStorage) loadSeal(b []byte) (seal.Seal, error) {
 	}
 }
 
+func (st *LeveldbStorage) loadHash(b []byte) (valuehash.Hash, error) {
+	if hinter, err := st.loadHinter(b); err != nil {
+		return nil, err
+	} else if hinter == nil {
+		return nil, nil
+	} else if i, ok := hinter.(valuehash.Hash); !ok {
+		return nil, xerrors.Errorf("not Seal: %T", hinter)
+	} else {
+		return i, nil
+	}
+}
+
 func (st *LeveldbStorage) loadState(b []byte) (state.State, error) {
 	if hinter, err := st.loadHinter(b); err != nil {
 		return nil, err
@@ -392,19 +417,33 @@ func (st *LeveldbStorage) iter(
 	return iter.Error()
 }
 
-func (st *LeveldbStorage) Seals(callback func(seal.Seal) (bool, error), sort bool) error {
-	return st.iter(
-		leveldbSealPrefix,
-		func(_, value []byte) (bool, error) {
+func (st *LeveldbStorage) Seals(callback func(valuehash.Hash, seal.Seal) (bool, error), sort bool, load bool) error {
+	var prefix []byte
+	var iterFunc func([]byte, []byte) (bool, error)
+
+	if load {
+		prefix = leveldbSealPrefix
+		iterFunc = func(_, value []byte) (bool, error) {
 			sl, err := st.loadSeal(value)
 			if err != nil {
 				return false, err
 			}
 
-			return callback(sl)
-		},
-		sort,
-	)
+			return callback(sl.Hash(), sl)
+		}
+	} else {
+		prefix = leveldbSealHashPrefix
+		iterFunc = func(_, value []byte) (bool, error) {
+			h, err := st.loadHash(value)
+			if err != nil {
+				return false, err
+			}
+
+			return callback(h, nil)
+		}
+	}
+
+	return st.iter(prefix, iterFunc, sort)
 }
 
 func (st *LeveldbStorage) StagedOperationSeals(callback func(operation.Seal) (bool, error), sort bool) error {

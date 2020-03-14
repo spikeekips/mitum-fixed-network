@@ -271,11 +271,12 @@ func (t *testLeveldbStorage) TestSeals() {
 
 	var collected []seal.Seal
 	t.NoError(t.storage.Seals(
-		func(sl seal.Seal) (bool, error) {
+		func(_ valuehash.Hash, sl seal.Seal) (bool, error) {
 			collected = append(collected, sl)
 
 			return true, nil
 		},
+		true,
 		true,
 	))
 
@@ -283,6 +284,39 @@ func (t *testLeveldbStorage) TestSeals() {
 
 	for i, sl := range collected {
 		t.True(seals[i].Hash().Equal(sl.Hash()))
+	}
+}
+
+func (t *testLeveldbStorage) TestSealsOnlyHash() {
+	var seals []seal.Seal
+	for i := 0; i < 10; i++ {
+		pk, _ := key.NewBTCPrivatekey()
+		sl := seal.NewDummySeal(pk)
+
+		seals = append(seals, sl)
+	}
+	t.NoError(t.storage.NewSeals(seals))
+
+	sort.Slice(seals, func(i, j int) bool {
+		return bytes.Compare(seals[i].Hash().Bytes(), seals[j].Hash().Bytes()) < 0
+	})
+
+	var collected []valuehash.Hash
+	t.NoError(t.storage.Seals(
+		func(h valuehash.Hash, sl seal.Seal) (bool, error) {
+			t.Nil(sl)
+			collected = append(collected, h)
+
+			return true, nil
+		},
+		true,
+		false,
+	))
+
+	t.Equal(len(seals), len(collected))
+
+	for i, h := range collected {
+		t.True(seals[i].Hash().Equal(h))
 	}
 }
 
@@ -302,7 +336,7 @@ func (t *testLeveldbStorage) TestSealsLimit() {
 
 	var collected []seal.Seal
 	t.NoError(t.storage.Seals(
-		func(sl seal.Seal) (bool, error) {
+		func(_ valuehash.Hash, sl seal.Seal) (bool, error) {
 			if len(collected) == 3 {
 				return false, nil
 			}
@@ -311,6 +345,7 @@ func (t *testLeveldbStorage) TestSealsLimit() {
 
 			return true, nil
 		},
+		true,
 		true,
 	))
 

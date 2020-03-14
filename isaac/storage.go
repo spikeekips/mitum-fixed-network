@@ -27,9 +27,7 @@ type Storage interface {
 
 	NewSeals([]seal.Seal) error
 	Seal(valuehash.Hash) (seal.Seal, error)
-	// TODO Seals should returns []seal.Seals with []valuehash.Hash. The
-	// existing Seals should have another name like 'TraverseSeals'?
-	Seals(func(seal.Seal) (bool, error), bool /* sort */) error
+	Seals(func(valuehash.Hash, seal.Seal) (bool, error), bool /* sort */, bool /* load Seal? */) error
 	// NOTE StagedOperationSeals returns the new(staged) operation.Seal by incoming order.
 	StagedOperationSeals(func(operation.Seal) (bool, error), bool /* sort */) error
 

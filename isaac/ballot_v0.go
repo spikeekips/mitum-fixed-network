@@ -55,11 +55,14 @@ func (bf BaseBallotFactV0) Round() Round {
 }
 
 type BaseBallotV0 struct {
-	h         valuehash.Hash
-	signer    key.Publickey
-	signature key.Signature
-	signedAt  time.Time
-	node      Address
+	h             valuehash.Hash
+	bodyHash      valuehash.Hash
+	signer        key.Publickey
+	signature     key.Signature
+	signedAt      time.Time
+	node          Address
+	factHash      valuehash.Hash
+	factSignature key.Signature
 }
 
 func NewBaseBallotV0(node Address) BaseBallotV0 {
@@ -78,6 +81,10 @@ func (bb BaseBallotV0) SetHash(h valuehash.Hash) BaseBallotV0 {
 	return bb
 }
 
+func (bb BaseBallotV0) BodyHash() valuehash.Hash {
+	return bb.bodyHash
+}
+
 func (bb BaseBallotV0) Signer() key.Publickey {
 	return bb.signer
 }
@@ -88,6 +95,14 @@ func (bb BaseBallotV0) Signature() key.Signature {
 
 func (bb BaseBallotV0) SignedAt() time.Time {
 	return bb.signedAt
+}
+
+func (bb BaseBallotV0) FactHash() valuehash.Hash {
+	return bb.factHash
+}
+
+func (bb BaseBallotV0) FactSignature() key.Signature {
+	return bb.factSignature
 }
 
 func (bb BaseBallotV0) Node() Address {
@@ -128,6 +143,7 @@ func (bb BaseBallotV0) IsReadyToSign([]byte) error {
 
 func (bb BaseBallotV0) Bytes() []byte {
 	return util.ConcatSlice([][]byte{
+		bb.bodyHash.Bytes(),
 		[]byte(bb.signer.String()),
 		bb.signature.Bytes(),
 		[]byte(localtime.RFC3339(bb.signedAt)),

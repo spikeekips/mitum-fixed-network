@@ -70,9 +70,6 @@ func (prf ProposalFactV0) Seals() []valuehash.Hash {
 type ProposalV0 struct {
 	BaseBallotV0
 	ProposalFactV0
-	bodyHash      valuehash.Hash
-	factHash      valuehash.Hash
-	factSignature key.Signature
 }
 
 func NewProposal(
@@ -144,10 +141,6 @@ func (pr ProposalV0) Stage() Stage {
 	return StageProposal
 }
 
-func (pr ProposalV0) BodyHash() valuehash.Hash {
-	return pr.bodyHash
-}
-
 func (pr ProposalV0) IsValid(b []byte) error {
 	if err := isvalid.Check([]isvalid.IsValider{
 		pr.BaseBallotV0,
@@ -167,7 +160,6 @@ func (pr ProposalV0) GenerateHash() (valuehash.Hash, error) {
 	e := util.ConcatSlice([][]byte{
 		pr.BaseBallotV0.Bytes(),
 		pr.ProposalFactV0.Bytes(),
-		pr.bodyHash.Bytes(),
 	})
 
 	return valuehash.NewSHA256(e), nil
@@ -183,14 +175,6 @@ func (pr ProposalV0) GenerateBodyHash() (valuehash.Hash, error) {
 
 func (pr ProposalV0) Fact() operation.Fact {
 	return pr.ProposalFactV0
-}
-
-func (pr ProposalV0) FactHash() valuehash.Hash {
-	return pr.factHash
-}
-
-func (pr ProposalV0) FactSignature() key.Signature {
-	return pr.factSignature
 }
 
 func (pr *ProposalV0) Sign(pk key.Privatekey, b []byte) error { // nolint
@@ -221,9 +205,9 @@ func (pr *ProposalV0) Sign(pk key.Privatekey, b []byte) error { // nolint
 	pr.BaseBallotV0.signer = pk.Publickey()
 	pr.BaseBallotV0.signature = sig
 	pr.BaseBallotV0.signedAt = localtime.Now()
-	pr.bodyHash = bodyHash
-	pr.factHash = factHash
-	pr.factSignature = factSig
+	pr.BaseBallotV0.bodyHash = bodyHash
+	pr.BaseBallotV0.factHash = factHash
+	pr.BaseBallotV0.factSignature = factSig
 
 	if h, err := pr.GenerateHash(); err != nil {
 		return err

@@ -62,9 +62,6 @@ func (sbf SIGNBallotFactV0) NewBlock() valuehash.Hash {
 type SIGNBallotV0 struct {
 	BaseBallotV0
 	SIGNBallotFactV0
-	bodyHash      valuehash.Hash
-	factHash      valuehash.Hash
-	factSignature key.Signature
 }
 
 func NewSIGNBallotV0FromLocalstate(localstate *Localstate, round Round, newBlock Block) (SIGNBallotV0, error) {
@@ -106,10 +103,6 @@ func (sb SIGNBallotV0) Stage() Stage {
 	return StageSIGN
 }
 
-func (sb SIGNBallotV0) BodyHash() valuehash.Hash {
-	return sb.bodyHash
-}
-
 func (sb SIGNBallotV0) IsValid(b []byte) error {
 	if err := isvalid.Check([]isvalid.IsValider{
 		sb.BaseBallotV0,
@@ -129,7 +122,6 @@ func (sb SIGNBallotV0) GenerateHash() (valuehash.Hash, error) {
 	e := util.ConcatSlice([][]byte{
 		sb.BaseBallotV0.Bytes(),
 		sb.SIGNBallotFactV0.Bytes(),
-		sb.bodyHash.Bytes(),
 	})
 
 	return valuehash.NewSHA256(e), nil
@@ -145,14 +137,6 @@ func (sb SIGNBallotV0) GenerateBodyHash() (valuehash.Hash, error) {
 
 func (sb SIGNBallotV0) Fact() operation.Fact {
 	return sb.SIGNBallotFactV0
-}
-
-func (sb SIGNBallotV0) FactHash() valuehash.Hash {
-	return sb.factHash
-}
-
-func (sb SIGNBallotV0) FactSignature() key.Signature {
-	return sb.factSignature
 }
 
 func (sb *SIGNBallotV0) Sign(pk key.Privatekey, b []byte) error { // nolint
@@ -183,9 +167,9 @@ func (sb *SIGNBallotV0) Sign(pk key.Privatekey, b []byte) error { // nolint
 	sb.BaseBallotV0.signer = pk.Publickey()
 	sb.BaseBallotV0.signature = sig
 	sb.BaseBallotV0.signedAt = localtime.Now()
-	sb.bodyHash = bodyHash
-	sb.factHash = factHash
-	sb.factSignature = factSig
+	sb.BaseBallotV0.bodyHash = bodyHash
+	sb.BaseBallotV0.factHash = factHash
+	sb.BaseBallotV0.factSignature = factSig
 
 	if h, err := sb.GenerateHash(); err != nil {
 		return err

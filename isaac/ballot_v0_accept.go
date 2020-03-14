@@ -60,14 +60,10 @@ func (abf ACCEPTBallotFactV0) NewBlock() valuehash.Hash {
 }
 
 // TODO ACCEPTBallot should have SIGNBallots
-// TODO move factHash and factSignature to BaseBallotV0
 type ACCEPTBallotV0 struct {
 	BaseBallotV0
 	ACCEPTBallotFactV0
-	bodyHash      valuehash.Hash
-	voteproof     Voteproof
-	factHash      valuehash.Hash
-	factSignature key.Signature
+	voteproof Voteproof
 }
 
 func NewACCEPTBallotV0(
@@ -144,10 +140,6 @@ func (ab ACCEPTBallotV0) Stage() Stage {
 	return StageACCEPT
 }
 
-func (ab ACCEPTBallotV0) BodyHash() valuehash.Hash {
-	return ab.bodyHash
-}
-
 func (ab ACCEPTBallotV0) IsValid(b []byte) error {
 	if ab.voteproof == nil {
 		return xerrors.Errorf("empty Voteproof")
@@ -176,7 +168,6 @@ func (ab ACCEPTBallotV0) GenerateHash() (valuehash.Hash, error) {
 	e := util.ConcatSlice([][]byte{
 		ab.BaseBallotV0.Bytes(),
 		ab.ACCEPTBallotFactV0.Bytes(),
-		ab.bodyHash.Bytes(),
 		ab.voteproof.Bytes(),
 	})
 
@@ -198,14 +189,6 @@ func (ab ACCEPTBallotV0) GenerateBodyHash() (valuehash.Hash, error) {
 
 func (ab ACCEPTBallotV0) Fact() operation.Fact {
 	return ab.ACCEPTBallotFactV0
-}
-
-func (ab ACCEPTBallotV0) FactHash() valuehash.Hash {
-	return ab.factHash
-}
-
-func (ab ACCEPTBallotV0) FactSignature() key.Signature {
-	return ab.factSignature
 }
 
 func (ab *ACCEPTBallotV0) Sign(pk key.Privatekey, b []byte) error { // nolint
@@ -236,9 +219,9 @@ func (ab *ACCEPTBallotV0) Sign(pk key.Privatekey, b []byte) error { // nolint
 	ab.BaseBallotV0.signer = pk.Publickey()
 	ab.BaseBallotV0.signature = sig
 	ab.BaseBallotV0.signedAt = localtime.Now()
-	ab.bodyHash = bodyHash
-	ab.factHash = factHash
-	ab.factSignature = factSig
+	ab.BaseBallotV0.bodyHash = bodyHash
+	ab.BaseBallotV0.factHash = factHash
+	ab.BaseBallotV0.factSignature = factSig
 
 	if h, err := ab.GenerateHash(); err != nil {
 		return err

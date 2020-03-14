@@ -6,6 +6,7 @@ import (
 	"github.com/spikeekips/mitum/errors"
 	"github.com/spikeekips/mitum/hint"
 	"github.com/spikeekips/mitum/isvalid"
+	"github.com/spikeekips/mitum/util"
 )
 
 var EmptyHashError = errors.NewError("empty hash")
@@ -15,11 +16,15 @@ type Hash interface {
 	fmt.Stringer
 	hint.Hinter
 	isvalid.IsValider
+	util.Byter
 	Size() int
-	Bytes() []byte
 	Equal(Hash) bool
 }
 
 type Hasher interface {
 	Hash() Hash
+}
+
+type HashGenerator interface {
+	GenerateHash() (Hash, error)
 }

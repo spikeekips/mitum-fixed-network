@@ -51,19 +51,19 @@ type ACCEPTBallot interface {
 }
 
 type INITBallotFact interface {
-	Hash() valuehash.Hash
+	valuehash.Hasher
 	PreviousBlock() valuehash.Hash
 	PreviousRound() Round
 }
 
 type SIGNBallotFact interface {
-	Hash() valuehash.Hash
+	valuehash.Hasher
 	Proposal() valuehash.Hash
 	NewBlock() valuehash.Hash
 }
 
 type ACCEPTBallotFact interface {
-	Hash() valuehash.Hash
+	valuehash.Hasher
 	Proposal() valuehash.Hash
 	NewBlock() valuehash.Hash
 }

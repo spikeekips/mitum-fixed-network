@@ -3,21 +3,22 @@ package state
 import (
 	"github.com/spikeekips/mitum/hint"
 	"github.com/spikeekips/mitum/isvalid"
+	"github.com/spikeekips/mitum/util"
 	"github.com/spikeekips/mitum/valuehash"
 )
 
 type OperationInfo interface {
 	isvalid.IsValider
 	hint.Hinter
+	util.Byter
 	Operation() valuehash.Hash
 	Seal() valuehash.Hash
-	Bytes() []byte
 }
 
 type State interface {
 	isvalid.IsValider
 	hint.Hinter
-	Hash() valuehash.Hash
+	valuehash.Hasher
 	Key() string
 	Value() Value
 	GenerateHash() valuehash.Hash

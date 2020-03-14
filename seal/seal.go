@@ -17,8 +17,8 @@ type Signer interface {
 type Seal interface {
 	isvalid.IsValider
 	hint.Hinter
+	valuehash.HashGenerator                    // geneate new hash of seal
 	Hash() valuehash.Hash                      // hash of seal
-	GenerateHash() (valuehash.Hash, error)     // geneate new hash of seal
 	BodyHash() valuehash.Hash                  // hash of seal body
 	GenerateBodyHash() (valuehash.Hash, error) // geneate new hash of seal body
 	Signer() key.Publickey                     // signer's PublicKey

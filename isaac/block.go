@@ -5,13 +5,14 @@ import (
 
 	"github.com/spikeekips/mitum/hint"
 	"github.com/spikeekips/mitum/isvalid"
+	"github.com/spikeekips/mitum/util"
 	"github.com/spikeekips/mitum/valuehash"
 )
 
 type Block interface {
 	isvalid.IsValider
 	hint.Hinter
-	Bytes() []byte
+	util.Byter
 	Hash() valuehash.Hash // root hash
 	PreviousBlock() valuehash.Hash
 	Height() Height

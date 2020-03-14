@@ -23,6 +23,6 @@ type Client interface {
 }
 
 type Response interface {
+	util.Byter
 	OK() bool
-	Bytes() []byte
 }

@@ -20,9 +20,9 @@ type BaseOperationFact interface {
 type Operation interface {
 	isvalid.IsValider
 	hint.Hinter
+	valuehash.Hasher
+	valuehash.HashGenerator
 	BaseOperationFact
-	Hash() valuehash.Hash
-	GenerateHash() (valuehash.Hash, error)
 }
 
 func IsValidOperation(op Operation, b []byte) error {

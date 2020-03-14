@@ -14,8 +14,8 @@ import (
 type Fact interface {
 	isvalid.IsValider
 	hint.Hinter
-	Hash() valuehash.Hash
-	Bytes() []byte
+	util.Byter
+	valuehash.Hasher
 }
 
 type EmbededFact interface {

@@ -14,6 +14,8 @@ type SetLogger interface {
 	SetLogger(zerolog.Logger) *Logger
 }
 
+// TODO Logger should handle Verbose()
+
 // Logger provides message logging with github.com/rs/zerolog. Logger can be
 // embedded into struct.
 type Logger struct {

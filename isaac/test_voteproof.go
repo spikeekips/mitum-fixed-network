@@ -81,6 +81,10 @@ func (vp DummyVoteproof) Ballots() map[Address]valuehash.Hash {
 	return nil
 }
 
+func (vp DummyVoteproof) Threshold() Threshold {
+	return Threshold{}
+}
+
 func (vp DummyVoteproof) MarshalJSON() ([]byte, error) {
 	return util.JSONMarshal(struct {
 		encoder.JSONPackHintedHead

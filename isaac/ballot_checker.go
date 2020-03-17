@@ -1,11 +1,15 @@
 package isaac
 
 import (
+	"github.com/rs/zerolog"
+	"github.com/spikeekips/mitum/logging"
 	"github.com/spikeekips/mitum/operation"
 	"github.com/spikeekips/mitum/seal"
+	"github.com/spikeekips/mitum/util"
 )
 
 type BallotChecker struct {
+	*logging.Logger
 	suffrage   Suffrage
 	localstate *Localstate
 	ballot     Ballot
@@ -13,6 +17,9 @@ type BallotChecker struct {
 
 func NewBallotChecker(ballot Ballot, localstate *Localstate, suffrage Suffrage) *BallotChecker {
 	return &BallotChecker{
+		Logger: logging.NewLogger(func(c zerolog.Context) zerolog.Context {
+			return c.Str("module", "ballot-checker")
+		}),
 		suffrage:   suffrage,
 		localstate: localstate,
 		ballot:     ballot,
@@ -35,6 +42,31 @@ func (bc *BallotChecker) CheckWithLastBlock() (bool, error) {
 	block := bc.localstate.LastBlock()
 	if bc.ballot.Height() <= block.Height() {
 		return false, nil
+	}
+
+	return true, nil
+}
+
+func (bc *BallotChecker) CheckVoteproof() (bool, error) {
+	var voteproof Voteproof
+	switch t := bc.ballot.(type) {
+	case INITBallot:
+		voteproof = t.Voteproof()
+	case ACCEPTBallot:
+		voteproof = t.Voteproof()
+	default:
+		return true, nil
+	}
+
+	vc := NewVoteProofChecker(voteproof, bc.localstate, bc.suffrage)
+	_ = vc.SetLogger(*bc.Log())
+
+	if err := util.NewChecker("ballot-voteproof-checker", []util.CheckerFunc{
+		vc.CheckIsValid,
+		vc.CheckNodeIsInSuffrage,
+		vc.CheckThreshold,
+	}).Check(); err != nil {
+		return false, err
 	}
 
 	return true, nil

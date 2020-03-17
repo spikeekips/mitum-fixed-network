@@ -26,6 +26,7 @@ type Voteproof interface {
 	Result() VoteproofResultType
 	Majority() operation.Fact
 	Ballots() map[Address]valuehash.Hash
+	Threshold() Threshold
 }
 
 type VoteproofResultType uint8

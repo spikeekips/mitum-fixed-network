@@ -72,6 +72,10 @@ func (vp VoteproofV0) Ballots() map[Address]valuehash.Hash {
 	return vp.ballots
 }
 
+func (vp VoteproofV0) Threshold() Threshold {
+	return vp.threshold
+}
+
 func (vp VoteproofV0) Bytes() []byte {
 	bs := make([][]byte, len(vp.ballots))
 	{
@@ -111,11 +115,6 @@ func (vp VoteproofV0) IsValid(b []byte) error {
 
 		return nil
 	}
-
-	// TODO check voted node is in suffrage
-
-	// TODO Threshold in Voteproof should be checked whether it has correct
-	// value at that block height.
 
 	return vp.isValidCheckMajority()
 }
@@ -174,7 +173,7 @@ func (vp VoteproofV0) isValidFields(b []byte) error {
 		vp.stage,
 		vp.threshold,
 		vp.result,
-	}, b, false); err != nil {
+	}, nil, false); err != nil {
 		return err
 	}
 	if vp.finishedAt.IsZero() {

@@ -36,7 +36,64 @@ func NewStateToBeChangeError(
 	}
 }
 
-type VoteproofValidationChecker struct {
+type VoteProofChecker struct {
+	*logging.Logger
+	voteproof  Voteproof
+	suffrage   Suffrage
+	localstate *Localstate
+}
+
+// NOTE VoteProofChecker should check the signer of VoteproofNodeFact is valid
+// Ballot.Signer(), but it takes a little bit time to gather the Ballots from
+// the other node, so this will be ignored at this time for performance reason.
+
+func NewVoteProofChecker(voteproof Voteproof, localstate *Localstate, suffrage Suffrage) *VoteProofChecker {
+	return &VoteProofChecker{
+		Logger: logging.NewLogger(func(c zerolog.Context) zerolog.Context {
+			return c.Str("module", "voteproof-checker")
+		}),
+		voteproof:  voteproof,
+		suffrage:   suffrage,
+		localstate: localstate,
+	}
+}
+
+func (vc *VoteProofChecker) CheckIsValid() (bool, error) {
+	networkID := vc.localstate.Policy().NetworkID()
+	if err := vc.voteproof.IsValid(networkID); err != nil {
+		return false, err
+	}
+
+	return true, nil
+}
+
+func (vc *VoteProofChecker) CheckNodeIsInSuffrage() (bool, error) {
+	for n := range vc.voteproof.Ballots() {
+		if !vc.suffrage.IsInside(n) {
+			vc.Log().Debug().Str("node", n.String()).Msg("voteproof has the vote from unknown node")
+			return false, nil
+		}
+	}
+
+	return true, nil
+}
+
+// TODO CheckThreshold checks Threshold in Voteproof should be checked whether
+// it has correct value at that block height.
+func (vc *VoteProofChecker) CheckThreshold() (bool, error) {
+	threshold := vc.localstate.Policy().Threshold()
+	if !threshold.Equal(vc.voteproof.Threshold()) {
+		vc.Log().Debug().
+			Interface("threshold", vc.voteproof.Threshold()).
+			Interface("expected", threshold).
+			Msg("voteproof has different threshold")
+		return false, nil
+	}
+
+	return true, nil
+}
+
+type VoteproofConsensusStateChecker struct {
 	*logging.Logger
 	lastBlock         Block
 	lastINITVoteproof Voteproof
@@ -44,13 +101,13 @@ type VoteproofValidationChecker struct {
 	css               *ConsensusStates
 }
 
-func NewVoteproofValidationChecker(
+func NewVoteproofConsensusStateChecker(
 	lastBlock Block,
 	lastINITVoteproof Voteproof,
 	voteproof Voteproof,
 	css *ConsensusStates,
-) *VoteproofValidationChecker {
-	return &VoteproofValidationChecker{
+) *VoteproofConsensusStateChecker {
+	return &VoteproofConsensusStateChecker{
 		Logger: logging.NewLogger(func(c zerolog.Context) zerolog.Context {
 			return c.Str("module", "voteproof-validation-checker")
 		}),
@@ -61,7 +118,7 @@ func NewVoteproofValidationChecker(
 	}
 }
 
-func (vpc *VoteproofValidationChecker) CheckHeight() (bool, error) {
+func (vpc *VoteproofConsensusStateChecker) CheckHeight() (bool, error) {
 	l := loggerWithVoteproof(vpc.voteproof, vpc.Log())
 
 	d := vpc.voteproof.Height() - (vpc.lastBlock.Height() + 1)
@@ -90,7 +147,7 @@ func (vpc *VoteproofValidationChecker) CheckHeight() (bool, error) {
 	return true, nil
 }
 
-func (vpc *VoteproofValidationChecker) CheckINITVoteproof() (bool, error) {
+func (vpc *VoteproofConsensusStateChecker) CheckINITVoteproof() (bool, error) {
 	if vpc.voteproof.Stage() != StageINIT {
 		return true, nil
 	}
@@ -111,7 +168,7 @@ func (vpc *VoteproofValidationChecker) CheckINITVoteproof() (bool, error) {
 	return true, nil
 }
 
-func (vpc *VoteproofValidationChecker) CheckACCEPTVoteproof() (bool, error) {
+func (vpc *VoteproofConsensusStateChecker) CheckACCEPTVoteproof() (bool, error) {
 	if vpc.voteproof.Stage() != StageACCEPT {
 		return true, nil
 	}
@@ -124,9 +181,6 @@ func (vpc *VoteproofValidationChecker) CheckACCEPTVoteproof() (bool, error) {
 
 	return true, nil
 }
-
-// TODO check, signer is inside suffrage
-// TODO check, signer of VoteproofNodeFact is valid Ballot.Signer()
 
 var StopBootingError = errors.NewError("stop booting process")
 

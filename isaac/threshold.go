@@ -46,6 +46,20 @@ func (thr Threshold) String() string {
 	return string(b)
 }
 
+func (thr Threshold) Equal(b Threshold) bool {
+	if thr.Total != b.Total {
+		return false
+	}
+	if thr.Percent != b.Percent {
+		return false
+	}
+	if thr.Threshold != b.Threshold {
+		return false
+	}
+
+	return true
+}
+
 func (thr Threshold) IsValid([]byte) error {
 	if thr.Total < 1 {
 		return xerrors.Errorf("zero total found")

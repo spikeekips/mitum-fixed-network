@@ -6,7 +6,6 @@ import (
 	"golang.org/x/xerrors"
 
 	"github.com/spikeekips/mitum/hint"
-	"github.com/spikeekips/mitum/valuehash"
 )
 
 var (
@@ -20,11 +19,11 @@ type OperationAVLNode struct {
 	left   avlHashable.HashableMutableNode
 	right  avlHashable.HashableMutableNode
 	h      []byte
-	op     valuehash.Hash // Operation.Hash()
+	op     Operation // Operation
 }
 
 func NewOperationAVLNode(op Operation) *OperationAVLNode {
-	return &OperationAVLNode{key: []byte(op.Hash().String()), op: op.Hash()}
+	return &OperationAVLNode{key: []byte(op.Hash().String()), op: op}
 }
 
 func (em OperationAVLNode) Hint() hint.Hint {
@@ -148,9 +147,9 @@ func (em *OperationAVLNode) RightHash() []byte {
 }
 
 func (em *OperationAVLNode) ValueHash() []byte {
-	return em.op.Bytes()
+	return em.op.Hash().Bytes()
 }
 
-func (em *OperationAVLNode) Operation() valuehash.Hash {
+func (em *OperationAVLNode) Operation() Operation {
 	return em.op
 }

@@ -35,6 +35,11 @@ func (ff *FixedSuffrage) Name() string {
 	return "fixed-suffrage"
 }
 
+func (ff *FixedSuffrage) IsInside(a isaac.Address) bool {
+	_, found := ff.nodes[a]
+	return found
+}
+
 func (ff *FixedSuffrage) Acting(height isaac.Height, round isaac.Round) isaac.ActingSuffrage {
 	return isaac.NewActingSuffrage(height, round, ff.proposer, ff.nodeSlice)
 }

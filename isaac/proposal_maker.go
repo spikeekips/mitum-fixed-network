@@ -23,6 +23,7 @@ func (pm *ProposalMaker) seals() ([]valuehash.Hash, error) {
 	var seals []valuehash.Hash
 	if err := pm.localstate.Storage().StagedOperationSeals(
 		func(sl operation.Seal) (bool, error) {
+			// TODO check the duplication of Operation.Hash
 			seals = append(seals, sl.Hash())
 
 			return len(seals) != operation.MaxOperationsInSeal, nil
@@ -31,8 +32,6 @@ func (pm *ProposalMaker) seals() ([]valuehash.Hash, error) {
 	); err != nil {
 		return nil, err
 	}
-
-	// TODO check the duplication of Operation.Hash
 
 	return seals, nil
 }

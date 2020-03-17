@@ -226,7 +226,6 @@ func (pp *proposalProcessorV0) processOperations() (valuehash.Hash, *tree.AVLTre
 		return nil, nil, nil
 	}
 
-	// TODO operations should not be duplicated
 	var operations []state.OperationInfoV0
 
 	if ops, err := pp.extractOperations(); err != nil {
@@ -234,13 +233,18 @@ func (pp *proposalProcessorV0) processOperations() (valuehash.Hash, *tree.AVLTre
 	} else {
 		founds := map[valuehash.Hash]struct{}{}
 
-		// NOTE check the duplication of Operation.Hash. If found, the latter
-		// will be ignored.
 		for i := range ops {
 			op := ops[i]
 			if _, found := founds[op.Operation()]; found {
 				continue
+			} else if found, err := pp.localstate.Storage().HasOperation(op.Operation()); err != nil {
+				// NOTE check the duplication of Operation.Hash. If found, the
+				// latter will be ignored.
+				return nil, nil, err
+			} else if found { // already stored Operation
+				continue
 			}
+
 			operations = append(operations, op)
 			founds[op.Operation()] = struct{}{}
 		}

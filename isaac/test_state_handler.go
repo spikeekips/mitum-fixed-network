@@ -60,7 +60,7 @@ func (t *baseTestStateHandler) SetupSuite() { // nolint
 }
 
 func (t *baseTestStateHandler) states() (*Localstate, *Localstate) {
-	lastBlock, err := NewTestBlockV0(Height(33), Round(0), nil, valuehash.RandomSHA256())
+	lastBlock, err := NewTestBlockV0(Height(33), Round(9), nil, valuehash.RandomSHA256())
 	t.NoError(err)
 
 	lst := NewMemStorage(t.encs, t.enc)

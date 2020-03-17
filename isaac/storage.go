@@ -38,6 +38,8 @@ type Storage interface {
 	OpenBlockStorage(Block) (BlockStorage, error)
 	State(key string) (state.State, bool, error)
 	NewState(state.State) error
+
+	HasOperation(valuehash.Hash) (bool, error)
 }
 
 type BlockStorage interface {

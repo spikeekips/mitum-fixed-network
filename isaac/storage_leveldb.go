@@ -34,6 +34,7 @@ var (
 	leveldbStagedOperationSealPrefix        []byte = []byte{0x00, 0x09}
 	leveldbStagedOperationSealReversePrefix []byte = []byte{0x00, 0x10}
 	leveldbStatePrefix                      []byte = []byte{0x00, 0x11}
+	leveldbOperationHashPrefix              []byte = []byte{0x00, 0x12}
 )
 
 type LeveldbStorage struct {
@@ -540,6 +541,10 @@ func (st *LeveldbStorage) NewState(sta state.State) error {
 	return nil
 }
 
+func (st *LeveldbStorage) HasOperation(h valuehash.Hash) (bool, error) {
+	return st.db.Has(leveldbOperationHashKey(h), nil)
+}
+
 func (st *LeveldbStorage) OpenBlockStorage(block Block) (BlockStorage, error) {
 	return NewLeveldbBlockStorage(st, block)
 }
@@ -606,6 +611,25 @@ func (bst *LeveldbBlockStorage) SetOperations(tr *tree.AVLTree) error {
 		return err
 	} else {
 		bst.batch.Put(leveldbBlockOperationsKey(bst.block), b)
+	}
+
+	// store operation hashes
+	if err := tr.Traverse(func(node tree.Node) (bool, error) {
+		op := node.(*operation.OperationAVLNode).Operation()
+
+		raw, err := bst.st.enc.Encode(op.Hash())
+		if err != nil {
+			return false, err
+		}
+
+		bst.batch.Put(
+			leveldbOperationHashKey(op.Hash()),
+			storage.LeveldbDataWithEncoder(bst.st.enc, raw),
+		)
+
+		return true, nil
+	}); err != nil {
+		return err
 	}
 
 	bst.operations = tr
@@ -733,6 +757,13 @@ func leveldbBlockStatesKey(block Block) []byte {
 
 func leveldbStateKey(key string) []byte {
 	return util.ConcatSlice([][]byte{leveldbStatePrefix, []byte(key)})
+}
+
+func leveldbOperationHashKey(h valuehash.Hash) []byte {
+	return util.ConcatSlice([][]byte{
+		leveldbOperationHashPrefix,
+		h.Bytes(),
+	})
 }
 
 func WrapLeveldbErorr(err error) error {

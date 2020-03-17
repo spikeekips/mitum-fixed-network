@@ -37,6 +37,19 @@ func (sf *RoundrobinSuffrage) Name() string {
 	return "roundrobin-suffrage"
 }
 
+func (sf *RoundrobinSuffrage) IsInside(a isaac.Address) bool {
+	var found bool
+	sf.localstate.Nodes().Traverse(func(n isaac.Node) bool {
+		if n.Address().Equal(a) {
+			found = true
+			return false
+		}
+		return true
+	})
+
+	return found
+}
+
 func (sf *RoundrobinSuffrage) cacheKey(height isaac.Height, round isaac.Round) string {
 	return fmt.Sprintf("%d-%d", height.Int64(), round.Uint64())
 }

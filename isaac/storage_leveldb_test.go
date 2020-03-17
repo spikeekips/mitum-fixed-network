@@ -482,6 +482,32 @@ func (t *testLeveldbStorage) TestUnStagedOperationSeals() {
 	}
 }
 
+func (t *testLeveldbStorage) TestHasOperation() {
+	op := valuehash.RandomSHA256()
+
+	{ // store
+		raw, err := t.storage.enc.Encode(op)
+		t.NoError(err)
+		t.storage.db.Put(
+			leveldbOperationHashKey(op),
+			storage.LeveldbDataWithEncoder(t.storage.enc, raw),
+			nil,
+		)
+	}
+
+	{
+		found, err := t.storage.HasOperation(op)
+		t.NoError(err)
+		t.True(found)
+	}
+
+	{ // unknown
+		found, err := t.storage.HasOperation(valuehash.RandomSHA256())
+		t.NoError(err)
+		t.False(found)
+	}
+}
+
 func TestLeveldbStorage(t *testing.T) {
 	suite.Run(t, new(testLeveldbStorage))
 }

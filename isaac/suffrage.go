@@ -3,6 +3,7 @@ package isaac
 type Suffrage interface {
 	Name() string
 	Acting(Height, Round) ActingSuffrage
+	IsInside(Address) bool
 	IsActing(Height, Round, Address /* node */) bool
 	IsProposer(Height, Round, Address /* node */) bool
 }

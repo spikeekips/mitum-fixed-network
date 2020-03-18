@@ -6,9 +6,11 @@ import (
 	"os"
 
 	"github.com/rs/zerolog"
+
+	"github.com/spikeekips/mitum/logging"
 )
 
-var log *zerolog.Logger // nolint
+var log logging.Logger // nolint
 
 func init() {
 	l := zerolog.
@@ -18,5 +20,5 @@ func init() {
 		Caller().
 		Stack().
 		Logger().Level(zerolog.DebugLevel)
-	log = &l
+	log = logging.NewLogger(&l, true)
 }

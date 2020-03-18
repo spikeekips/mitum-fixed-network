@@ -95,7 +95,7 @@ func NewNode(id int, networkID []byte, netType string) (*isaac.Localstate, error
 }
 
 type NodeProcess struct {
-	*logging.Logger
+	*logging.Logging
 	Localstate        *isaac.Localstate
 	Ballotbox         *isaac.Ballotbox
 	Suffrage          isaac.Suffrage
@@ -150,7 +150,7 @@ func NewNodeProcess(localstate *isaac.Localstate) (*NodeProcess, error) {
 	)
 
 	np := &NodeProcess{
-		Logger: logging.NewLogger(func(c zerolog.Context) zerolog.Context {
+		Logging: logging.NewLogging(func(c zerolog.Context) zerolog.Context {
 			return c
 		}),
 		Localstate:        localstate,
@@ -234,8 +234,8 @@ func (np *NodeProcess) Stop() error {
 	return np.ConsensusStates.Stop()
 }
 
-func (np *NodeProcess) SetLogger(l zerolog.Logger) *logging.Logger {
-	_ = np.Logger.SetLogger(l)
+func (np *NodeProcess) SetLogger(l logging.Logger) logging.Logger {
+	_ = np.Logging.SetLogger(l)
 
 	np.setLogger(np.NetworkServer, l)
 	np.setLogger(np.Localstate.Node().Channel(), l)
@@ -244,10 +244,10 @@ func (np *NodeProcess) SetLogger(l zerolog.Logger) *logging.Logger {
 	np.setLogger(np.Ballotbox, l)
 	np.setLogger(np.Suffrage, l)
 
-	return np.Logger
+	return np.Log()
 }
 
-func (np *NodeProcess) setLogger(i interface{}, l zerolog.Logger) {
+func (np *NodeProcess) setLogger(i interface{}, l logging.Logger) {
 	lo, ok := i.(logging.SetLogger)
 	if !ok {
 		np.Log().Warn().Str("instance", fmt.Sprintf("%T", i)).Msg("failed to SetLogger")

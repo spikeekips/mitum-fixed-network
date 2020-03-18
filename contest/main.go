@@ -16,11 +16,12 @@ import (
 
 	"github.com/spikeekips/mitum/contest/commands"
 	"github.com/spikeekips/mitum/contest/common"
+	"github.com/spikeekips/mitum/logging"
 	"github.com/spikeekips/mitum/util"
 )
 
 var (
-	log       zerolog.Logger
+	log       logging.Logger
 	exitHooks []func()
 )
 
@@ -35,7 +36,7 @@ func printError(err error) {
 	fmt.Fprintf(os.Stderr, "error: %+v\n", err)
 }
 
-func setupLogging(flags Flags) (zerolog.Logger, error) {
+func setupLogging(flags Flags) (logging.Logger, error) {
 	zerolog.TimestampFieldName = "t"
 	zerolog.TimeFieldFormat = time.RFC3339Nano
 	zerolog.MessageFieldName = "m"
@@ -48,7 +49,7 @@ func setupLogging(flags Flags) (zerolog.Logger, error) {
 	} else {
 		f, err := os.OpenFile(filepath.Join(*flags.Log, "all.log"), os.O_CREATE|os.O_RDWR|os.O_APPEND, 0600)
 		if err != nil {
-			return zerolog.Logger{}, err
+			return logging.Logger{}, err
 		}
 
 		output = diode.NewWriter(
@@ -84,7 +85,9 @@ func setupLogging(flags Flags) (zerolog.Logger, error) {
 		lc = lc.Caller().Stack()
 	}
 
-	return lc.Logger().Level(level), nil
+	l := lc.Logger().Level(level)
+
+	return logging.NewLogger(&l, true), nil // TODO set verbose
 }
 
 func connectSignal() {

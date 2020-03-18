@@ -29,7 +29,7 @@ var (
 )
 
 type QuicServer struct {
-	*logging.Logger
+	*logging.Logging
 	*util.FunctionDaemon
 	encs            *encoder.Encoders
 	enc             encoder.Encoder // NOTE default encoder.Encoder
@@ -46,7 +46,7 @@ func NewQuicServer(
 ) (*QuicServer, error) {
 	// TODO ratelimit
 	qs := &QuicServer{
-		Logger: logging.NewLogger(func(c zerolog.Context) zerolog.Context {
+		Logging: logging.NewLogging(func(c zerolog.Context) zerolog.Context {
 			return c.Str("module", "network-quic-server")
 		}),
 		bind: bind,
@@ -84,11 +84,11 @@ func (qs *QuicServer) setHandler(prefix string, handler HTTPHandlerFunc) *mux.Ro
 	return qs.router.HandleFunc(prefix, handler)
 }
 
-func (qs *QuicServer) SetLogger(l zerolog.Logger) *logging.Logger {
-	_ = qs.Logger.SetLogger(l)
+func (qs *QuicServer) SetLogger(l logging.Logger) logging.Logger {
+	_ = qs.Logging.SetLogger(l)
 	_ = qs.FunctionDaemon.SetLogger(l)
 
-	return qs.Logger
+	return qs.Log()
 }
 
 func (qs *QuicServer) StoppedChan() <-chan struct{} {

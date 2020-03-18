@@ -13,7 +13,7 @@ import (
 )
 
 type RoundrobinSuffrage struct {
-	*logging.Logger
+	*logging.Logging
 	localstate *isaac.Localstate
 	cache      *lru.TwoQueueCache
 }
@@ -25,7 +25,7 @@ func NewRoundrobinSuffrage(localstate *isaac.Localstate, cacheSize int) *Roundro
 	}
 
 	return &RoundrobinSuffrage{
-		Logger: logging.NewLogger(func(c zerolog.Context) zerolog.Context {
+		Logging: logging.NewLogging(func(c zerolog.Context) zerolog.Context {
 			return c.Str("module", "roundrobin-suffrage")
 		}),
 		localstate: localstate,

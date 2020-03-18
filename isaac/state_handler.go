@@ -60,7 +60,7 @@ func (csc StateChangeContext) Voteproof() Voteproof {
 
 type BaseStateHandler struct {
 	sync.RWMutex
-	*logging.Logger
+	*logging.Logging
 	localstate        *Localstate
 	proposalProcessor ProposalProcessor
 	state             State

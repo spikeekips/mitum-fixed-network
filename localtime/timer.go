@@ -12,7 +12,7 @@ import (
 )
 
 type CallbackTimer struct {
-	*logging.Logger
+	*logging.Logging
 	*util.FunctionDaemon
 	name         string
 	intervalFunc func() time.Duration
@@ -35,7 +35,7 @@ func NewCallbackTimer(
 	}
 
 	ct := &CallbackTimer{
-		Logger: logging.NewLogger(func(c zerolog.Context) zerolog.Context {
+		Logging: logging.NewLogging(func(c zerolog.Context) zerolog.Context {
 			return c.
 				Str("module", "callback-timer").
 				Str("name", name)
@@ -48,11 +48,11 @@ func NewCallbackTimer(
 	return ct, nil
 }
 
-func (ct *CallbackTimer) SetLogger(l zerolog.Logger) *logging.Logger {
-	_ = ct.Logger.SetLogger(l)
+func (ct *CallbackTimer) SetLogger(l logging.Logger) logging.Logger {
+	_ = ct.Logging.SetLogger(l)
 	_ = ct.FunctionDaemon.SetLogger(l)
 
-	return ct.Logger
+	return ct.Log()
 }
 
 func (ct *CallbackTimer) Start() error {
@@ -135,12 +135,12 @@ func NewCallbackTimerset(timers []*CallbackTimer) *CallbackTimerset {
 	}
 }
 
-func (ct *CallbackTimerset) SetLogger(l zerolog.Logger) *logging.Logger {
+func (ct *CallbackTimerset) SetLogger(l logging.Logger) logging.Logger {
 	for _, t := range ct.timers {
 		_ = t.SetLogger(l)
 	}
 
-	return nil
+	return logging.Logger{}
 }
 
 func (ct *CallbackTimerset) Start() error {

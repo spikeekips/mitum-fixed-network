@@ -47,7 +47,7 @@ func NewStateConsensusHandler(
 		suffrage:         suffrage,
 		proposalMaker:    proposalMaker,
 	}
-	cs.BaseStateHandler.Logger = logging.NewLogger(func(c zerolog.Context) zerolog.Context {
+	cs.BaseStateHandler.Logging = logging.NewLogging(func(c zerolog.Context) zerolog.Context {
 		return c.Str("module", "consensus-state-consensus-handler")
 	})
 	cs.timers = localtime.NewTimers(
@@ -63,11 +63,11 @@ func NewStateConsensusHandler(
 	return cs, nil
 }
 
-func (cs *StateConsensusHandler) SetLogger(l zerolog.Logger) *logging.Logger {
-	_ = cs.Logger.SetLogger(l)
+func (cs *StateConsensusHandler) SetLogger(l logging.Logger) logging.Logger {
+	_ = cs.Logging.SetLogger(l)
 	_ = cs.timers.SetLogger(l)
 
-	return cs.Logger
+	return cs.Log()
 }
 
 func (cs *StateConsensusHandler) Activate(ctx StateChangeContext) error {

@@ -1,88 +1,101 @@
 package logging
 
-import "github.com/rs/zerolog"
+import (
+	"github.com/rs/zerolog"
+)
 
-// NilLog is nil logger.
-var NilLog *zerolog.Logger
-
-func init() {
-	n := zerolog.Nop()
-	NilLog = &n
-}
+var NilLog zerolog.Logger = zerolog.Nop()
 
 type SetLogger interface {
-	SetLogger(zerolog.Logger) *Logger
+	SetLogger(Logger) Logger
 }
 
-// TODO Logger should handle Verbose()
+type Logging struct {
+	logger       Logger
+	contextFuncs []func(zerolog.Context) zerolog.Context
+}
 
-// Logger provides message logging with github.com/rs/zerolog. Logger can be
-// embedded into struct.
+func NewLogging(f func(zerolog.Context) zerolog.Context) *Logging {
+	var fs []func(zerolog.Context) zerolog.Context
+	if f != nil {
+		fs = append(fs, f)
+	}
+
+	return &Logging{
+		logger:       Logger{Logger: &NilLog},
+		contextFuncs: fs,
+	}
+}
+
+func (l *Logging) Log() Logger {
+	return l.logger
+}
+
+func (l *Logging) SetLogger(nl Logger) Logger {
+	if nl.IsNilLogger() {
+		return l.logger
+	}
+
+	logger := nl.Clone()
+	for _, f := range l.contextFuncs {
+		logger.UpdateContext(f)
+	}
+
+	l.logger = logger
+
+	return l.logger
+}
+
 type Logger struct {
-	l           *zerolog.Logger
-	contextFunc []func(zerolog.Context) zerolog.Context
+	*zerolog.Logger
+	orig    *zerolog.Logger
+	verbose bool
 }
 
-// NewLogger creates new Logger.
-func NewLogger(cf func(zerolog.Context) zerolog.Context) *Logger {
-	zl := &Logger{l: NilLog}
-	if cf != nil {
-		zl.contextFunc = append(zl.contextFunc, cf)
-	}
-
-	return zl
+func NewLogger(l *zerolog.Logger, verbose bool) Logger {
+	return Logger{Logger: cp(l), orig: l, verbose: verbose}
 }
 
-// SetLogger does not support asynchronous access, so it must be called at a
-// created time.
-func (zl *Logger) SetLogger(l zerolog.Logger) *Logger {
-	if len(zl.contextFunc) > 0 {
-		for _, cf := range zl.contextFunc {
-			l = cf(l.With()).Logger()
-		}
-	}
-
-	zl.l = &l
-
-	return zl
+func (l Logger) Level() zerolog.Level {
+	return l.Logger.GetLevel()
 }
 
-// NewLogger creates new Logger with existing contexts from Logger.
-func (zl *Logger) NewLogger(cf func(zerolog.Context) zerolog.Context) *Logger {
-	contextFunc := zl.contextFunc
-	contextFunc = append(contextFunc, cf)
-
-	var l zerolog.Logger
-	if zl.l != NilLog {
-		l = *zl.l
-		if cf != nil {
-			l = cf(l.With()).Logger()
-		}
-
-		for _, f := range zl.contextFunc {
-			l = f(l.With()).Logger()
-		}
-	}
-
-	return &Logger{
-		l:           &l,
-		contextFunc: contextFunc,
-	}
+func (l Logger) IsVerbose() bool {
+	return l.verbose
 }
 
-// Log returns Logger.
-func (zl *Logger) Log() *zerolog.Logger {
-	if zl.l == nil {
-		return NilLog
-	}
-
-	return zl.l
+func (l Logger) Clone() Logger {
+	return NewLogger(l.orig, l.verbose)
 }
 
-func (zl *Logger) IsDebug() bool {
-	if zl.l == nil {
-		return false
+func (l Logger) IsNilLogger() bool {
+	if l.Logger == nil {
+		return true
 	}
 
-	return zl.l.GetLevel() == zerolog.DebugLevel
+	return l.Logger.GetLevel() == zerolog.Disabled
+}
+
+func (l Logger) Verbose() *zerolog.Event {
+	if !l.verbose {
+		return NilLog.Debug()
+	}
+
+	nl := l.Logger.With().Bool("verbose", l.verbose).Logger()
+
+	return nl.Debug()
+}
+
+func (l Logger) VerboseFunc(f func(*zerolog.Event) *zerolog.Event) *zerolog.Event {
+	if !l.verbose {
+		return NilLog.Debug()
+	}
+
+	return f(l.Verbose())
+}
+
+func cp(c *zerolog.Logger) *zerolog.Logger {
+	n := *c
+
+	return &n
 }

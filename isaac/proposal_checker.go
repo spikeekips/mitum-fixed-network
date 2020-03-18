@@ -8,7 +8,7 @@ import (
 )
 
 type ProposalValidationChecker struct {
-	*logging.Logger
+	*logging.Logging
 	localstate *Localstate
 	suffrage   Suffrage
 	proposal   Proposal
@@ -18,7 +18,7 @@ func NewProposalValidationChecker(
 	localstate *Localstate, suffrage Suffrage, proposal Proposal,
 ) *ProposalValidationChecker {
 	return &ProposalValidationChecker{
-		Logger: logging.NewLogger(func(c zerolog.Context) zerolog.Context {
+		Logging: logging.NewLogging(func(c zerolog.Context) zerolog.Context {
 			return c.
 				Str("module", "proposal-validation-checker").
 				Dict("proposal", zerolog.Dict().

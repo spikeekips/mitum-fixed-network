@@ -3,12 +3,12 @@ package commands
 import (
 	"sync"
 
-	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 	"golang.org/x/xerrors"
 
 	"github.com/spikeekips/mitum/contest/common"
 	"github.com/spikeekips/mitum/isaac"
+	"github.com/spikeekips/mitum/logging"
 	"github.com/spikeekips/mitum/util"
 )
 
@@ -35,16 +35,18 @@ func (cm RunCommand) generateBlocks(ns []*isaac.Localstate) error {
 
 func (cm RunCommand) createNodeProcess(
 	localstate *isaac.Localstate,
-	log *zerolog.Logger,
+	log logging.Logger,
 ) (*common.NodeProcess, error) {
 	np, err := common.NewNodeProcess(localstate)
 	if err != nil {
 		return nil, err
 	}
 
-	_ = np.SetLogger(log.With().
+	l := log.With().
 		Str("node", np.Localstate.Node().Address().String()).
-		Logger())
+		Logger()
+
+	_ = np.SetLogger(logging.NewLogger(&l, true)) // TODO set verbose
 
 	{
 		b, err := util.JSONMarshal(np.Localstate)
@@ -91,7 +93,7 @@ func (cm RunCommand) startNodes(nodeProcesses []*common.NodeProcess, exitHooks *
 	return nil
 }
 
-func (cm RunCommand) Run(_ *CommonFlags, log *zerolog.Logger, exitHooks *[]func()) error {
+func (cm RunCommand) Run(_ *CommonFlags, log logging.Logger, exitHooks *[]func()) error {
 	var ns []*isaac.Localstate
 	for i := 0; i < int(cm.Nodes); i++ {
 		if nl, err := common.NewNode(i, []byte(cm.NetworkID), "quic"); err != nil {

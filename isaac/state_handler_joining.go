@@ -68,7 +68,7 @@ func NewStateJoiningHandler(
 	cs := &StateJoiningHandler{
 		BaseStateHandler: NewBaseStateHandler(localstate, proposalProcessor, StateJoining),
 	}
-	cs.BaseStateHandler.Logger = logging.NewLogger(func(c zerolog.Context) zerolog.Context {
+	cs.BaseStateHandler.Logging = logging.NewLogging(func(c zerolog.Context) zerolog.Context {
 		return c.Str("module", "consensus-state-joining-handler")
 	})
 	cs.BaseStateHandler.timers = localtime.NewTimers([]string{TimerIDBroadcastingINITBallot}, false)
@@ -85,11 +85,11 @@ func NewStateJoiningHandler(
 	return cs, nil
 }
 
-func (cs *StateJoiningHandler) SetLogger(l zerolog.Logger) *logging.Logger {
-	_ = cs.Logger.SetLogger(l)
+func (cs *StateJoiningHandler) SetLogger(l logging.Logger) logging.Logger {
+	_ = cs.Logging.SetLogger(l)
 	_ = cs.timers.SetLogger(l)
 
-	return cs.Logger
+	return cs.Log()
 }
 
 func (cs *StateJoiningHandler) Activate(ctx StateChangeContext) error {

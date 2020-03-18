@@ -11,7 +11,7 @@ import (
 
 // Timers handles the multiple timers and controls them selectively.
 type Timers struct {
-	*logging.Logger
+	*logging.Logging
 	sync.RWMutex
 	timers   map[ /* timer id */ string]*CallbackTimer
 	allowNew bool // if allowNew is true, new timer can be added.
@@ -24,7 +24,7 @@ func NewTimers(ids []string, allowNew bool) *Timers {
 	}
 
 	return &Timers{
-		Logger: logging.NewLogger(func(c zerolog.Context) zerolog.Context {
+		Logging: logging.NewLogging(func(c zerolog.Context) zerolog.Context {
 			return c.Str("module", "timers")
 		}),
 		timers:   timers,
@@ -32,11 +32,11 @@ func NewTimers(ids []string, allowNew bool) *Timers {
 	}
 }
 
-func (ts *Timers) SetLogger(l zerolog.Logger) *logging.Logger {
+func (ts *Timers) SetLogger(l logging.Logger) logging.Logger {
 	ts.Lock()
 	defer ts.Unlock()
 
-	_ = ts.Logger.SetLogger(l)
+	_ = ts.Logging.SetLogger(l)
 
 	for id := range ts.timers {
 		timer := ts.timers[id]
@@ -47,7 +47,7 @@ func (ts *Timers) SetLogger(l zerolog.Logger) *logging.Logger {
 		_ = timer.SetLogger(l)
 	}
 
-	return ts.Logger
+	return ts.Log()
 }
 
 // Start of Timers does nothing
@@ -109,7 +109,7 @@ func (ts *Timers) SetTimer(id string, timer *CallbackTimer) error {
 	ts.timers[id] = timer
 
 	if timer != nil {
-		_ = ts.timers[id].SetLogger(*ts.Log())
+		_ = ts.timers[id].SetLogger(ts.Log())
 	}
 
 	return nil

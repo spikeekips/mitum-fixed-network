@@ -37,7 +37,7 @@ func NewStateToBeChangeError(
 }
 
 type VoteProofChecker struct {
-	*logging.Logger
+	*logging.Logging
 	voteproof  Voteproof
 	suffrage   Suffrage
 	localstate *Localstate
@@ -49,7 +49,7 @@ type VoteProofChecker struct {
 
 func NewVoteProofChecker(voteproof Voteproof, localstate *Localstate, suffrage Suffrage) *VoteProofChecker {
 	return &VoteProofChecker{
-		Logger: logging.NewLogger(func(c zerolog.Context) zerolog.Context {
+		Logging: logging.NewLogging(func(c zerolog.Context) zerolog.Context {
 			return c.Str("module", "voteproof-checker")
 		}),
 		voteproof:  voteproof,
@@ -94,7 +94,7 @@ func (vc *VoteProofChecker) CheckThreshold() (bool, error) {
 }
 
 type VoteproofConsensusStateChecker struct {
-	*logging.Logger
+	*logging.Logging
 	lastBlock         Block
 	lastINITVoteproof Voteproof
 	voteproof         Voteproof
@@ -108,7 +108,7 @@ func NewVoteproofConsensusStateChecker(
 	css *ConsensusStates,
 ) *VoteproofConsensusStateChecker {
 	return &VoteproofConsensusStateChecker{
-		Logger: logging.NewLogger(func(c zerolog.Context) zerolog.Context {
+		Logging: logging.NewLogging(func(c zerolog.Context) zerolog.Context {
 			return c.Str("module", "voteproof-validation-checker")
 		}),
 		lastBlock:         lastBlock,
@@ -185,7 +185,7 @@ func (vpc *VoteproofConsensusStateChecker) CheckACCEPTVoteproof() (bool, error) 
 var StopBootingError = errors.NewError("stop booting process")
 
 type VoteproofBootingChecker struct {
-	*logging.Logger
+	*logging.Logging
 	localstate      *Localstate // nolint
 	lastBlock       Block
 	initVoteproof   Voteproof // NOTE these Voteproof are from last block
@@ -204,7 +204,7 @@ func NewVoteproofBootingChecker(localstate *Localstate) (*VoteproofBootingChecke
 	}
 
 	return &VoteproofBootingChecker{
-		Logger: logging.NewLogger(func(c zerolog.Context) zerolog.Context {
+		Logging: logging.NewLogging(func(c zerolog.Context) zerolog.Context {
 			return c.Str("module", "voteproof-booting-checker")
 		}),
 		lastBlock:       localstate.LastBlock(),

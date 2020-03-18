@@ -38,7 +38,7 @@ var (
 )
 
 type LeveldbStorage struct {
-	*logging.Logger
+	*logging.Logging
 	db   *leveldb.DB
 	encs *encoder.Encoders
 	enc  encoder.Encoder
@@ -46,7 +46,7 @@ type LeveldbStorage struct {
 
 func NewLeveldbStorage(db *leveldb.DB, encs *encoder.Encoders, enc encoder.Encoder) *LeveldbStorage {
 	return &LeveldbStorage{
-		Logger: logging.NewLogger(func(c zerolog.Context) zerolog.Context {
+		Logging: logging.NewLogging(func(c zerolog.Context) zerolog.Context {
 			return c.Str("module", "leveldb-storage")
 		}),
 		db:   db,

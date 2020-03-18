@@ -22,14 +22,14 @@ type ProposalProcessor interface {
 }
 
 type ProposalProcessorV0 struct {
-	*logging.Logger
+	*logging.Logging
 	localstate *Localstate
 	processors *sync.Map
 }
 
 func NewProposalProcessorV0(localstate *Localstate) *ProposalProcessorV0 {
 	return &ProposalProcessorV0{
-		Logger: logging.NewLogger(func(c zerolog.Context) zerolog.Context {
+		Logging: logging.NewLogging(func(c zerolog.Context) zerolog.Context {
 			return c.Str("module", "proposal-processor-v0")
 		}),
 		localstate: localstate,
@@ -72,7 +72,7 @@ func (dp *ProposalProcessorV0) ProcessINIT(ph valuehash.Hash, initVoteproof Vote
 		return nil, err
 	}
 
-	_ = processor.SetLogger(*dp.Log())
+	_ = processor.SetLogger(dp.Log())
 
 	block, err := processor.processINIT(initVoteproof)
 	if err != nil {
@@ -106,7 +106,7 @@ func (dp *ProposalProcessorV0) ProcessACCEPT(
 }
 
 type proposalProcessorV0 struct {
-	*logging.Logger
+	*logging.Logging
 	localstate *Localstate
 	lastBlock  Block
 	block      Block
@@ -122,7 +122,7 @@ func newProposalProcessorV0(localstate *Localstate, proposal Proposal) (*proposa
 	}
 
 	return &proposalProcessorV0{
-		Logger: logging.NewLogger(func(c zerolog.Context) zerolog.Context {
+		Logging: logging.NewLogging(func(c zerolog.Context) zerolog.Context {
 			return c.Str("module", "internal-proposal-processor-inside-v0")
 		}),
 		localstate: localstate,

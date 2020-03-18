@@ -19,7 +19,7 @@ import (
 const QuicEncoderHintHeader string = "x-mitum-encoder-hint"
 
 type QuicChannel struct {
-	*logging.Logger
+	*logging.Logging
 	recvChan    chan seal.Seal
 	addr        *url.URL
 	encs        *encoder.Encoders
@@ -40,7 +40,7 @@ func NewQuicChannel(
 	enc encoder.Encoder,
 ) (*QuicChannel, error) {
 	qc := &QuicChannel{
-		Logger: logging.NewLogger(func(c zerolog.Context) zerolog.Context {
+		Logging: logging.NewLogging(func(c zerolog.Context) zerolog.Context {
 			return c.Str("module", "quic-network")
 		}),
 		recvChan: make(chan seal.Seal, bufsize),
@@ -74,11 +74,11 @@ func NewQuicChannel(
 	return qc, nil
 }
 
-func (qc *QuicChannel) SetLogger(l zerolog.Logger) *logging.Logger {
-	_ = qc.Logger.SetLogger(l)
+func (qc *QuicChannel) SetLogger(l logging.Logger) logging.Logger {
+	_ = qc.Logging.SetLogger(l)
 	_ = qc.client.SetLogger(l)
 
-	return qc.Logger
+	return qc.Log()
 }
 
 func (qc *QuicChannel) URL() *url.URL {
@@ -91,7 +91,7 @@ func (qc *QuicChannel) Seals(hs []valuehash.Hash) ([]seal.Seal, error) {
 		return nil, err
 	}
 
-	if qc.Logger.IsDebug() {
+	if qc.Log().IsVerbose() {
 		var l []string
 		for _, h := range hs {
 			l = append(l, h.String())

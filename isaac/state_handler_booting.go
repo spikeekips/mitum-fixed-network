@@ -24,7 +24,7 @@ func NewStateBootingHandler(
 	cs := &StateBootingHandler{
 		BaseStateHandler: NewBaseStateHandler(localstate, proposalProcessor, StateBooting),
 	}
-	cs.BaseStateHandler.Logger = logging.NewLogger(func(c zerolog.Context) zerolog.Context {
+	cs.BaseStateHandler.Logging = logging.NewLogging(func(c zerolog.Context) zerolog.Context {
 		return c.Str("module", "consensus-state-booting-handler")
 	})
 
@@ -140,7 +140,7 @@ func (cs *StateBootingHandler) checkVoteproof() error {
 	if err != nil {
 		return err
 	}
-	_ = vpc.SetLogger(*cs.Log())
+	_ = vpc.SetLogger(cs.Log())
 
 	return util.NewChecker("voteproof-booting-checker", []util.CheckerFunc{
 		vpc.CheckACCEPTVoteproofHeight,

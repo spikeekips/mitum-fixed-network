@@ -21,7 +21,7 @@ type Daemon interface {
 
 type FunctionDaemon struct {
 	sync.RWMutex
-	*logging.Logger
+	*logging.Logging
 	fn           func(chan struct{}) error
 	stoppingChan chan struct{}
 	stopChan     chan struct{}
@@ -31,7 +31,7 @@ type FunctionDaemon struct {
 
 func NewFunctionDaemon(fn func(chan struct{}) error, isDebug bool) *FunctionDaemon {
 	dm := &FunctionDaemon{
-		Logger: logging.NewLogger(func(c zerolog.Context) zerolog.Context {
+		Logging: logging.NewLogging(func(c zerolog.Context) zerolog.Context {
 			return c.Str("module", "functondaemon")
 		}),
 		fn:       fn,

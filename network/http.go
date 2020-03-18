@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/justinas/alice"
+	"github.com/spikeekips/mitum/logging"
 
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/hlog"
@@ -13,9 +14,9 @@ import (
 
 type HTTPHandlerFunc func(http.ResponseWriter, *http.Request)
 
-func HTTPLogHandler(handler http.Handler, log *zerolog.Logger) http.Handler {
+func HTTPLogHandler(handler http.Handler, logger logging.Logger) http.Handler {
 	c := alice.New().
-		Append(hlog.NewHandler(*log)).
+		Append(hlog.NewHandler(*logger.Logger)).
 		Append(hlog.RemoteAddrHandler("ip")).
 		Append(hlog.UserAgentHandler("user_agent")).
 		Append(hlog.RefererHandler("referer")).

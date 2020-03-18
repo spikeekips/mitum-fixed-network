@@ -9,7 +9,7 @@ import (
 )
 
 type ChanServer struct {
-	*logging.Logger
+	*logging.Logging
 	*util.FunctionDaemon
 	getSealsHandler GetSealsHandler
 	newSealHandler  NewSealHandler
@@ -18,7 +18,7 @@ type ChanServer struct {
 
 func NewChanServer(ch *ChanChannel) *ChanServer {
 	cs := &ChanServer{
-		Logger: logging.NewLogger(func(c zerolog.Context) zerolog.Context {
+		Logging: logging.NewLogging(func(c zerolog.Context) zerolog.Context {
 			return c.Str("module", "network-chan-server")
 		}),
 		ch: ch,
@@ -29,11 +29,11 @@ func NewChanServer(ch *ChanChannel) *ChanServer {
 	return cs
 }
 
-func (cs *ChanServer) SetLogger(l zerolog.Logger) *logging.Logger {
-	_ = cs.Logger.SetLogger(l)
+func (cs *ChanServer) SetLogger(l logging.Logger) logging.Logger {
+	_ = cs.Logging.SetLogger(l)
 	_ = cs.FunctionDaemon.SetLogger(l)
 
-	return cs.Logger
+	return cs.Log()
 }
 
 func (cs *ChanServer) SetGetSealsHandler(fn GetSealsHandler) {

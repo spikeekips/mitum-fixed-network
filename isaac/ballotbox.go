@@ -13,14 +13,14 @@ import (
 // Ballotbox collects ballots and keeps track of majority.
 type Ballotbox struct {
 	sync.RWMutex
-	*logging.Logger
+	*logging.Logging
 	vrs           *sync.Map
 	thresholdFunc func() Threshold
 }
 
 func NewBallotbox(thresholdFunc func() Threshold) *Ballotbox {
 	return &Ballotbox{
-		Logger: logging.NewLogger(func(c zerolog.Context) zerolog.Context {
+		Logging: logging.NewLogging(func(c zerolog.Context) zerolog.Context {
 			return c.Str("module", "ballotbox")
 		}),
 		vrs:           &sync.Map{},

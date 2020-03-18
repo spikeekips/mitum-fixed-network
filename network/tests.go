@@ -6,16 +6,20 @@ import (
 	"os"
 
 	"github.com/rs/zerolog"
+
+	"github.com/spikeekips/mitum/logging"
 )
 
-var log zerolog.Logger // nolint
+var log logging.Logger // nolint
 
 func init() {
-	log = zerolog.
+	l := zerolog.
 		New(os.Stderr).
 		With().
 		Timestamp().
 		Caller().
 		Stack().
 		Logger().Level(zerolog.DebugLevel)
+
+	log = logging.NewLogger(&l, true)
 }

@@ -10,7 +10,7 @@ import (
 
 // FixedSuffrage will be used only for testing.
 type FixedSuffrage struct {
-	*logging.Logger
+	*logging.Logging
 	proposer  Node
 	nodes     map[Address]Node
 	nodeSlice []Node
@@ -23,7 +23,7 @@ func NewFixedSuffrage(proposer Node, nodes []Node) *FixedSuffrage {
 	}
 
 	return &FixedSuffrage{
-		Logger: logging.NewLogger(func(c zerolog.Context) zerolog.Context {
+		Logging: logging.NewLogging(func(c zerolog.Context) zerolog.Context {
 			return c.Str("module", "fixed-suffrage")
 		}),
 		proposer:  proposer,

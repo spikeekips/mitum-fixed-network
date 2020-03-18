@@ -9,7 +9,7 @@ import (
 )
 
 type BallotChecker struct {
-	*logging.Logger
+	*logging.Logging
 	suffrage   Suffrage
 	localstate *Localstate
 	ballot     Ballot
@@ -17,7 +17,7 @@ type BallotChecker struct {
 
 func NewBallotChecker(ballot Ballot, localstate *Localstate, suffrage Suffrage) *BallotChecker {
 	return &BallotChecker{
-		Logger: logging.NewLogger(func(c zerolog.Context) zerolog.Context {
+		Logging: logging.NewLogging(func(c zerolog.Context) zerolog.Context {
 			return c.Str("module", "ballot-checker")
 		}),
 		suffrage:   suffrage,
@@ -59,7 +59,7 @@ func (bc *BallotChecker) CheckVoteproof() (bool, error) {
 	}
 
 	vc := NewVoteProofChecker(voteproof, bc.localstate, bc.suffrage)
-	_ = vc.SetLogger(*bc.Log())
+	_ = vc.SetLogger(bc.Log())
 
 	if err := util.NewChecker("ballot-voteproof-checker", []util.CheckerFunc{
 		vc.CheckIsValid,

@@ -9,7 +9,7 @@ import (
 
 // FixedSuffrage will be used only for testing.
 type FixedSuffrage struct {
-	*logging.Logger
+	*logging.Logging
 	proposer  isaac.Node
 	nodes     map[isaac.Address]isaac.Node
 	nodeSlice []isaac.Node
@@ -22,7 +22,7 @@ func NewFixedSuffrage(proposer isaac.Node, nodes []isaac.Node) *FixedSuffrage {
 	}
 
 	return &FixedSuffrage{
-		Logger: logging.NewLogger(func(c zerolog.Context) zerolog.Context {
+		Logging: logging.NewLogging(func(c zerolog.Context) zerolog.Context {
 			return c.Str("module", "fixed-suffrage")
 		}),
 		proposer:  proposer,

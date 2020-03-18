@@ -16,7 +16,7 @@ import (
 )
 
 type QuicClient struct {
-	*logging.Logger
+	*logging.Logging
 	insecure   bool
 	timeout    time.Duration
 	retries    int
@@ -39,7 +39,7 @@ func NewQuicClient(insecure bool, timeout time.Duration, retries int, quicConfig
 	}
 
 	return &QuicClient{
-		Logger: logging.NewLogger(func(c zerolog.Context) zerolog.Context {
+		Logging: logging.NewLogging(func(c zerolog.Context) zerolog.Context {
 			return c.Str("module", "network-quic-client")
 		}),
 		insecure:   insecure,

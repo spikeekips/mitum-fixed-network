@@ -10,14 +10,14 @@ import (
 )
 
 type ChanChannel struct {
-	*logging.Logger
+	*logging.Logging
 	recvChan       chan seal.Seal
 	getSealHandler GetSealsHandler
 }
 
 func NewChanChannel(bufsize uint) *ChanChannel {
 	return &ChanChannel{
-		Logger: logging.NewLogger(func(c zerolog.Context) zerolog.Context {
+		Logging: logging.NewLogging(func(c zerolog.Context) zerolog.Context {
 			return c.Str("module", "chan-network")
 		}),
 		recvChan: make(chan seal.Seal, bufsize),

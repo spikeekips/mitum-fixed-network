@@ -19,7 +19,7 @@ var (
 // TimeSyncer tries to sync time to time server.
 type TimeSyncer struct {
 	sync.RWMutex
-	*logging.Logger
+	*logging.Logging
 	server   string
 	offset   time.Duration
 	stopChan chan bool
@@ -34,7 +34,7 @@ func NewTimeSyncer(server string, checkInterval time.Duration) (*TimeSyncer, err
 	}
 
 	ts := &TimeSyncer{
-		Logger: logging.NewLogger(func(c zerolog.Context) zerolog.Context {
+		Logging: logging.NewLogging(func(c zerolog.Context) zerolog.Context {
 			return c.
 				Str("module", "time-syncer").
 				Str("server", server).

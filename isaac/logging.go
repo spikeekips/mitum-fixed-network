@@ -3,11 +3,12 @@ package isaac
 import (
 	"github.com/rs/zerolog"
 
+	"github.com/spikeekips/mitum/logging"
 	"github.com/spikeekips/mitum/seal"
 	"github.com/spikeekips/mitum/util"
 )
 
-func loggerWithSeal(sl seal.Seal, l *zerolog.Logger) *zerolog.Logger {
+func loggerWithSeal(sl seal.Seal, l logging.Logger) logging.Logger {
 	ll := l.With().
 		Str("seal_hash", sl.Hash().String()).CallerWithSkipFrameCount(3).Logger()
 
@@ -24,12 +25,11 @@ func loggerWithSeal(sl seal.Seal, l *zerolog.Logger) *zerolog.Logger {
 
 	event.Msg("seal")
 
-	return &ll
+	return logging.NewLogger(&ll, l.IsVerbose())
 }
 
-func loggerWithBallot(ballot Ballot, l *zerolog.Logger) *zerolog.Logger {
-	nl := l
-	ll := nl.With().
+func loggerWithBallot(ballot Ballot, l logging.Logger) logging.Logger {
+	ll := l.With().
 		Str("seal_hash", ballot.Hash().String()).CallerWithSkipFrameCount(3).Logger()
 
 	var event *zerolog.Event
@@ -47,10 +47,10 @@ func loggerWithBallot(ballot Ballot, l *zerolog.Logger) *zerolog.Logger {
 
 	event.Msg("ballot")
 
-	return &ll
+	return logging.NewLogger(&ll, l.IsVerbose())
 }
 
-func loggerWithVoteproof(voteproof Voteproof, l *zerolog.Logger) *zerolog.Logger {
+func loggerWithVoteproof(voteproof Voteproof, l logging.Logger) logging.Logger {
 	if voteproof == nil {
 		return l
 	}
@@ -68,18 +68,16 @@ func loggerWithVoteproof(voteproof Voteproof, l *zerolog.Logger) *zerolog.Logger
 
 	event.Msg("voteproof")
 
-	return &ll
+	return logging.NewLogger(&ll, l.IsVerbose())
 }
 
-func loggerWithLocalstate(localstate *Localstate, l *zerolog.Logger) *zerolog.Logger {
+func loggerWithLocalstate(localstate *Localstate, l logging.Logger) logging.Logger {
 	lastBlock := localstate.LastBlock()
 	if lastBlock == nil {
 		return l
 	}
 
-	ll := l
-
-	ll.Debug().
+	l.Debug().
 		Dict("local_state", zerolog.Dict().
 			Dict("block", zerolog.Dict().
 				Str("hash", lastBlock.Hash().String()).
@@ -88,10 +86,10 @@ func loggerWithLocalstate(localstate *Localstate, l *zerolog.Logger) *zerolog.Lo
 			),
 		).Msg("localstate")
 
-	return ll
+	return l
 }
 
-func loggerWithStateChangeContext(ctx StateChangeContext, l *zerolog.Logger) *zerolog.Logger {
+func loggerWithStateChangeContext(ctx StateChangeContext, l logging.Logger) logging.Logger {
 	e := zerolog.Dict().
 		Str("from_state", ctx.From().String()).
 		Str("to_state", ctx.To().String())
@@ -108,10 +106,13 @@ func loggerWithStateChangeContext(ctx StateChangeContext, l *zerolog.Logger) *ze
 
 	ll := l.With().
 		Str("change_state_context_id", util.UUID().String()).
-		CallerWithSkipFrameCount(3).
 		Logger()
 
-	ll.Debug().Dict("change_state_context", e).Msg("state_change_context")
+	li := ll.With().
+		CallerWithSkipFrameCount(4).
+		Logger()
 
-	return loggerWithVoteproof(ctx.voteproof, &ll)
+	li.Debug().Dict("change_state_context", e).Msg("state_change_context")
+
+	return loggerWithVoteproof(ctx.voteproof, logging.NewLogger(&ll, l.IsVerbose()))
 }

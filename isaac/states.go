@@ -13,7 +13,7 @@ import (
 
 type ConsensusStates struct {
 	sync.RWMutex
-	*logging.Logger
+	*logging.Logging
 	*util.FunctionDaemon
 	localstate    *Localstate
 	ballotbox     *Ballotbox
@@ -35,7 +35,7 @@ func NewConsensusStates(
 	broken StateHandler,
 ) *ConsensusStates {
 	css := &ConsensusStates{
-		Logger: logging.NewLogger(func(c zerolog.Context) zerolog.Context {
+		Logging: logging.NewLogging(func(c zerolog.Context) zerolog.Context {
 			return c.Str("module", "consensus-states")
 		}),
 		localstate: localstate,
@@ -56,8 +56,8 @@ func NewConsensusStates(
 	return css
 }
 
-func (css *ConsensusStates) SetLogger(l zerolog.Logger) *logging.Logger {
-	_ = css.Logger.SetLogger(l)
+func (css *ConsensusStates) SetLogger(l logging.Logger) logging.Logger {
+	_ = css.Logging.SetLogger(l)
 	_ = css.FunctionDaemon.SetLogger(l)
 
 	for _, handler := range css.states {
@@ -68,7 +68,7 @@ func (css *ConsensusStates) SetLogger(l zerolog.Logger) *logging.Logger {
 		_ = handler.(logging.SetLogger).SetLogger(l)
 	}
 
-	return css.Logger
+	return css.Log()
 }
 
 func (css *ConsensusStates) Start() error {
@@ -248,7 +248,7 @@ func (css *ConsensusStates) newVoteproof(voteproof Voteproof) error {
 		voteproof,
 		css,
 	)
-	_ = vpc.SetLogger(*css.Log())
+	_ = vpc.SetLogger(css.Log())
 
 	err := util.NewChecker("voteproof-validation-checker", []util.CheckerFunc{
 		vpc.CheckHeight,

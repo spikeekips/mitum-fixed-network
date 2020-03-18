@@ -42,6 +42,8 @@ func (t *baseTestStateHandler) SetupSuite() { // nolint
 	_ = t.encs.AddHinter(ACCEPTBallotFactV0{})
 	_ = t.encs.AddHinter(VoteproofV0{})
 	_ = t.encs.AddHinter(BlockV0{})
+	_ = t.encs.AddHinter(BlockManifestV0{})
+	_ = t.encs.AddHinter(BlockConsensusInfoV0{})
 	_ = t.encs.AddHinter(operation.Seal{})
 	_ = t.encs.AddHinter(operation.KVOperationFact{})
 	_ = t.encs.AddHinter(operation.KVOperation{})

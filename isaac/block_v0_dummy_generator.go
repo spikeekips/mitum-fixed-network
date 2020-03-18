@@ -318,10 +318,10 @@ func (bg *DummyBlocksV0Generator) createACCEPTVoteproof(proposal Proposal) error
 		var newBlock Block
 
 		initVoteproof := l.LastINITVoteproof()
-		if networkID, err := bg.pms[l.Node().Address()].ProcessINIT(proposal.Hash(), initVoteproof); err != nil {
+		if b, err := bg.pms[l.Node().Address()].ProcessINIT(proposal.Hash(), initVoteproof); err != nil {
 			return err
 		} else if newBlock == nil {
-			newBlock = networkID
+			newBlock = b
 		}
 
 		if ab, err := NewACCEPTBallotV0(

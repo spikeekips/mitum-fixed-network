@@ -5,11 +5,11 @@ package isaac
 import "github.com/spikeekips/mitum/valuehash"
 
 type DummyProposalProcessor struct {
-	returnBlock Block
+	returnBlock BlockUpdater
 	err         error
 }
 
-func NewDummyProposalProcessor(returnBlock Block, err error) DummyProposalProcessor {
+func NewDummyProposalProcessor(returnBlock BlockUpdater, err error) DummyProposalProcessor {
 	return DummyProposalProcessor{returnBlock: returnBlock, err: err}
 }
 

@@ -36,6 +36,8 @@ func (t *testLeveldbStorage) SetupSuite() {
 
 	_ = t.encs.AddHinter(key.BTCPublickey{})
 	_ = t.encs.AddHinter(BlockV0{})
+	_ = t.encs.AddHinter(BlockManifestV0{})
+	_ = t.encs.AddHinter(BlockConsensusInfoV0{})
 	_ = t.encs.AddHinter(valuehash.SHA256{})
 	_ = t.encs.AddHinter(VoteproofV0{})
 	_ = t.encs.AddHinter(seal.DummySeal{})

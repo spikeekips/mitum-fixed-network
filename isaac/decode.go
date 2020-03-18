@@ -28,3 +28,27 @@ func decodeVoteproof(enc encoder.Encoder, b []byte) (Voteproof, error) {
 		return v, nil
 	}
 }
+
+func decodeBlockManifest(enc encoder.Encoder, b []byte) (BlockManifest, error) {
+	if i, err := enc.DecodeByHint(b); err != nil {
+		return nil, err
+	} else if i == nil {
+		return nil, nil
+	} else if v, ok := i.(BlockManifest); !ok {
+		return nil, errors.InvalidTypeError.Wrapf("not BlockManifest; type=%T", i)
+	} else {
+		return v, nil
+	}
+}
+
+func decodeBlockConsensusInfo(enc encoder.Encoder, b []byte) (BlockConsensusInfo, error) {
+	if i, err := enc.DecodeByHint(b); err != nil {
+		return nil, err
+	} else if i == nil {
+		return nil, nil
+	} else if v, ok := i.(BlockConsensusInfo); !ok {
+		return nil, errors.InvalidTypeError.Wrapf("not ConsensusInfoifest; type=%T", i)
+	} else {
+		return v, nil
+	}
+}

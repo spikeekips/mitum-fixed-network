@@ -1,10 +1,6 @@
 package isaac
 
 import (
-	"time"
-
-	"golang.org/x/xerrors"
-
 	"github.com/spikeekips/mitum/hint"
 	"github.com/spikeekips/mitum/isvalid"
 	"github.com/spikeekips/mitum/localtime"
@@ -13,21 +9,17 @@ import (
 )
 
 var (
-	BlockV0Type = hint.MustNewType(0x05, 0x00, "block-v0")
-	BlockV0Hint = hint.MustHint(BlockV0Type, "0.0.1")
+	BlockV0Type              = hint.MustNewType(0x05, 0x00, "block-v0")
+	BlockV0Hint              = hint.MustHint(BlockV0Type, "0.0.1")
+	BlockManifestV0Type      = hint.MustNewType(0x05, 0x01, "block-manifest-v0")
+	BlockManifestV0Hint      = hint.MustHint(BlockManifestV0Type, "0.0.1")
+	BlockConsensusInfoV0Type = hint.MustNewType(0x05, 0x02, "block-consensus-info-v0")
+	BlockConsensusInfoV0Hint = hint.MustHint(BlockConsensusInfoV0Type, "0.0.1")
 )
 
 type BlockV0 struct {
-	h               valuehash.Hash
-	height          Height
-	round           Round
-	proposal        valuehash.Hash
-	previousBlock   valuehash.Hash
-	blockOperations valuehash.Hash
-	blockStates     valuehash.Hash
-	initVoteproof   Voteproof
-	acceptVoteproof Voteproof
-	createdAt       time.Time
+	BlockManifestV0
+	BlockConsensusInfoV0
 }
 
 func NewBlockV0(
@@ -38,20 +30,7 @@ func NewBlockV0(
 	blockOperations valuehash.Hash,
 	blockStates valuehash.Hash,
 ) (BlockV0, error) {
-	root, err := GenerateBlockV0Hash(
-		height,
-		round,
-		proposal,
-		previousBlock,
-		blockOperations,
-		blockStates,
-	)
-	if err != nil {
-		return BlockV0{}, err
-	}
-
-	return BlockV0{
-		h:               root,
+	bm := BlockManifestV0{
 		previousBlock:   previousBlock,
 		height:          height,
 		round:           round,
@@ -59,69 +38,25 @@ func NewBlockV0(
 		blockOperations: blockOperations,
 		blockStates:     blockStates,
 		createdAt:       localtime.Now(),
+	}
+	if h, err := bm.GenerateHash(); err != nil {
+		return BlockV0{}, err
+	} else {
+		bm.h = h
+	}
+
+	return BlockV0{
+		BlockManifestV0:      bm,
+		BlockConsensusInfoV0: BlockConsensusInfoV0{},
 	}, nil
-}
-
-func GenerateBlockV0Hash(
-	height Height,
-	round Round,
-	proposal valuehash.Hash,
-	previousBlock valuehash.Hash,
-	blockOperations valuehash.Hash,
-	blockStates valuehash.Hash,
-) (valuehash.Hash, error) {
-	var blockOperationsBytes []byte
-	if blockOperations != nil {
-		blockOperationsBytes = blockOperations.Bytes()
-	}
-
-	var blockStatesBytes []byte
-	if blockStatesBytes != nil {
-		blockStatesBytes = blockStates.Bytes()
-	}
-
-	e := util.ConcatSlice([][]byte{
-		height.Bytes(),
-		round.Bytes(),
-		proposal.Bytes(),
-		previousBlock.Bytes(),
-		blockOperationsBytes,
-		blockStatesBytes,
-	})
-
-	return valuehash.NewSHA256(e), nil
 }
 
 func (bm BlockV0) IsValid([]byte) error {
 	if err := isvalid.Check([]isvalid.IsValider{
-		bm.h,
-		bm.height,
-		bm.proposal,
-		bm.previousBlock,
+		bm.BlockManifestV0,
+		bm.BlockConsensusInfoV0,
 	}, nil, false); err != nil {
 		return err
-	}
-
-	// NOTE blockOperations and blockStates are allowed to be empty.
-	if err := isvalid.Check([]isvalid.IsValider{
-		bm.blockOperations,
-		bm.blockStates,
-	}, nil, true); err != nil && !xerrors.Is(err, valuehash.EmptyHashError) {
-		return err
-	}
-
-	gh, err := GenerateBlockV0Hash(
-		bm.height,
-		bm.round,
-		bm.proposal,
-		bm.previousBlock,
-		bm.blockOperations,
-		bm.blockStates,
-	)
-	if err != nil {
-		return err
-	} else if !bm.h.Equal(gh) {
-		return xerrors.Errorf("incorrect hash; hash=%s != generated=%s", bm.h, gh)
 	}
 
 	return nil
@@ -132,57 +67,20 @@ func (bm BlockV0) Hint() hint.Hint {
 }
 
 func (bm BlockV0) Bytes() []byte {
-	return nil
+	return util.ConcatSlice([][]byte{
+		bm.BlockManifestV0.Bytes(),
+		bm.BlockConsensusInfoV0.Bytes(),
+	})
 }
 
-func (bm BlockV0) Hash() valuehash.Hash {
-	return bm.h
-}
-
-func (bm BlockV0) Height() Height {
-	return bm.height
-}
-
-func (bm BlockV0) Round() Round {
-	return bm.round
-}
-
-func (bm BlockV0) Proposal() valuehash.Hash {
-	return bm.proposal
-}
-
-func (bm BlockV0) PreviousBlock() valuehash.Hash {
-	return bm.previousBlock
-}
-
-func (bm BlockV0) Operations() valuehash.Hash {
-	return bm.blockOperations
-}
-
-func (bm BlockV0) States() valuehash.Hash {
-	return bm.blockStates
-}
-
-func (bm BlockV0) INITVoteproof() Voteproof {
-	return bm.initVoteproof
-}
-
-func (bm BlockV0) ACCEPTVoteproof() Voteproof {
-	return bm.acceptVoteproof
-}
-
-func (bm BlockV0) CreatedAt() time.Time {
-	return bm.createdAt
-}
-
-func (bm BlockV0) SetINITVoteproof(voteproof Voteproof) Block {
-	bm.initVoteproof = voteproof
+func (bm BlockV0) SetINITVoteproof(voteproof Voteproof) BlockUpdater {
+	bm.BlockConsensusInfoV0.initVoteproof = voteproof
 
 	return bm
 }
 
-func (bm BlockV0) SetACCEPTVoteproof(voteproof Voteproof) Block {
-	bm.acceptVoteproof = voteproof
+func (bm BlockV0) SetACCEPTVoteproof(voteproof Voteproof) BlockUpdater {
+	bm.BlockConsensusInfoV0.acceptVoteproof = voteproof
 
 	return bm
 }

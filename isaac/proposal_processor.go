@@ -109,7 +109,7 @@ type proposalProcessorV0 struct {
 	*logging.Logging
 	localstate         *Localstate
 	lastBlock          Block
-	block              Block
+	block              BlockUpdater
 	proposal           Proposal
 	proposedOperations map[valuehash.Hash]struct{}
 	operations         []state.OperationInfoV0
@@ -153,7 +153,7 @@ func (pp *proposalProcessorV0) processINIT(initVoteproof Voteproof) (Block, erro
 		return nil, err
 	}
 
-	var block Block
+	var block BlockUpdater
 	if b, err := NewBlockV0(
 		pp.proposal.Height(), pp.proposal.Round(), pp.proposal.Hash(), pp.lastBlock.Hash(),
 		blockOperations,

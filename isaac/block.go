@@ -9,20 +9,35 @@ import (
 	"github.com/spikeekips/mitum/valuehash"
 )
 
-type Block interface {
+type BlockManifest interface {
 	isvalid.IsValider
 	hint.Hinter
 	util.Byter
-	Hash() valuehash.Hash // root hash
+	valuehash.Hasher
 	PreviousBlock() valuehash.Hash
 	Height() Height
 	Round() Round
 	Proposal() valuehash.Hash
 	Operations() valuehash.Hash
 	States() valuehash.Hash
+	CreatedAt() time.Time
+}
+
+type BlockConsensusInfo interface {
+	isvalid.IsValider
+	hint.Hinter
+	util.Byter
 	INITVoteproof() Voteproof
 	ACCEPTVoteproof() Voteproof
-	SetINITVoteproof(Voteproof) Block
-	SetACCEPTVoteproof(Voteproof) Block
-	CreatedAt() time.Time
+}
+
+type Block interface {
+	BlockManifest
+	BlockConsensusInfo
+}
+
+type BlockUpdater interface {
+	Block
+	SetINITVoteproof(Voteproof) BlockUpdater
+	SetACCEPTVoteproof(Voteproof) BlockUpdater
 }

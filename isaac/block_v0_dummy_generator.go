@@ -297,7 +297,7 @@ func (bg *DummyBlocksV0Generator) createProposal() (Proposal, error) {
 	acting := bg.suffrage.Acting(initVoteproof.Height(), initVoteproof.Round())
 	proposer := bg.allNodes[acting.Proposer().Address()]
 
-	pr, err := NewProposal(proposer, initVoteproof.Height(), initVoteproof.Round(), nil, bg.networkID)
+	pr, err := NewProposal(proposer, initVoteproof.Height(), initVoteproof.Round(), nil, nil, bg.networkID)
 	if err != nil {
 		return nil, err
 	}

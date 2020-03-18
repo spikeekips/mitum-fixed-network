@@ -30,6 +30,7 @@ type Storage interface {
 	Seals(func(valuehash.Hash, seal.Seal) (bool, error), bool /* sort */, bool /* load Seal? */) error
 	// NOTE StagedOperationSeals returns the new(staged) operation.Seal by incoming order.
 	StagedOperationSeals(func(operation.Seal) (bool, error), bool /* sort */) error
+	UnstagedOperationSeals([]valuehash.Hash /* seal.Hash()s */) error
 
 	NewProposal(Proposal) error
 	Proposal(Height, Round) (Proposal, error)

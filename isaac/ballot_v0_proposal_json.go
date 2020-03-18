@@ -10,6 +10,7 @@ import (
 
 type ProposalV0PackerJSON struct {
 	BaseBallotV0PackerJSON
+	OP []valuehash.Hash `json:"operations"`
 	SL []valuehash.Hash `json:"seals"`
 }
 
@@ -22,12 +23,14 @@ func (pr ProposalV0) MarshalJSON() ([]byte, error) {
 	return util.JSONMarshal(ProposalV0PackerJSON{
 		BaseBallotV0PackerJSON: bb,
 		SL:                     pr.seals,
+		OP:                     pr.operations,
 	})
 }
 
 type ProposalV0UnpackerJSON struct {
 	BaseBallotV0UnpackerJSON
-	SL json.RawMessage `json:"seals"`
+	OP []json.RawMessage `json:"operations"`
+	SL []json.RawMessage `json:"seals"`
 }
 
 func (pr *ProposalV0) UnpackJSON(b []byte, enc *encoder.JSONEncoder) error {
@@ -43,24 +46,28 @@ func (pr *ProposalV0) UnpackJSON(b []byte, enc *encoder.JSONEncoder) error {
 		return err
 	}
 
-	var sl []json.RawMessage
-	if err := enc.Unmarshal(npb.SL, &sl); err != nil {
-		return err
-	}
-
-	var esl []valuehash.Hash
-	for _, r := range sl {
-		if i, err := valuehash.Decode(enc, r); err != nil {
+	var ol, sl []valuehash.Hash
+	for _, r := range npb.OP {
+		if h, err := valuehash.Decode(enc, r); err != nil {
 			return err
 		} else {
-			esl = append(esl, i)
+			ol = append(ol, h)
+		}
+	}
+
+	for _, r := range npb.SL {
+		if h, err := valuehash.Decode(enc, r); err != nil {
+			return err
+		} else {
+			sl = append(sl, h)
 		}
 	}
 
 	pr.BaseBallotV0 = bb
 	pr.ProposalFactV0 = ProposalFactV0{
 		BaseBallotFactV0: bf,
-		seals:            esl,
+		operations:       ol,
+		seals:            sl,
 	}
 
 	return nil

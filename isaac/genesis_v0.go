@@ -124,10 +124,14 @@ func (gg *GenesisBlockV0Generator) generatePreviousBlock() error {
 }
 
 func (gg *GenesisBlockV0Generator) generateProposal(seals []operation.Seal) (Proposal, error) {
-	hs := make([]valuehash.Hash, len(seals))
-
+	var operations []valuehash.Hash
+	sealHashes := make([]valuehash.Hash, len(seals))
 	for i := range seals {
-		hs[i] = seals[i].Hash()
+		sl := seals[i]
+		sealHashes[i] = sl.Hash()
+		for _, op := range sl.Operations() {
+			operations = append(operations, op.Hash())
+		}
 	}
 
 	var proposal Proposal
@@ -135,7 +139,8 @@ func (gg *GenesisBlockV0Generator) generateProposal(seals []operation.Seal) (Pro
 		gg.localstate,
 		Height(0),
 		Round(0),
-		hs,
+		operations,
+		sealHashes,
 		gg.localstate.Policy().NetworkID(),
 	); err != nil {
 		return nil, err

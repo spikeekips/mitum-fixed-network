@@ -51,13 +51,12 @@ func (t *testProposalProcessor) TestBlockOperations() {
 		opl := t.newOperationSeal(t.localstate)
 		t.NoError(t.localstate.Storage().NewSeals([]seal.Seal{opl}))
 
-		newSeals := []valuehash.Hash{opl.Hash()}
-
 		newpr, err := NewProposal(
 			t.localstate,
 			pr.Height(),
 			pr.Round(),
-			newSeals,
+			opl.OperationHashes(),
+			[]valuehash.Hash{opl.Hash()},
 			t.localstate.Policy().NetworkID(),
 		)
 		t.NoError(err)
@@ -67,7 +66,6 @@ func (t *testProposalProcessor) TestBlockOperations() {
 	}
 
 	dp := NewProposalProcessorV0(t.localstate)
-	dp.SetLogger(log)
 
 	block, err := dp.ProcessINIT(proposal.Hash(), ivp)
 	t.NoError(err)
@@ -99,13 +97,12 @@ func (t *testProposalProcessor) TestNotFoundInProposal() {
 			},
 		)
 
-		newSeals := []valuehash.Hash{op.Hash()}
-
 		newpr, err := NewProposal(
 			t.remoteState,
 			pr.Height(),
 			pr.Round(),
-			newSeals,
+			op.OperationHashes(),
+			[]valuehash.Hash{op.Hash()},
 			t.remoteState.Policy().NetworkID(),
 		)
 		t.NoError(err)

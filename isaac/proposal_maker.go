@@ -17,23 +17,54 @@ func NewProposalMaker(localstate *Localstate) *ProposalMaker {
 	return &ProposalMaker{localstate: localstate}
 }
 
-func (pm *ProposalMaker) seals() ([]valuehash.Hash, error) {
+func (pm *ProposalMaker) operations() ([]valuehash.Hash, []valuehash.Hash, error) {
 	// TODO to reduce the marshal/unmarshal, consider to get the hashes for
 	// staged like 'StagedOperationSealHashes'.
-	var seals []valuehash.Hash
+
+	mo := map[ /* Operation.Hash() */ valuehash.Hash]struct{}{}
+
+	var operations, seals, uselessSeals []valuehash.Hash
 	if err := pm.localstate.Storage().StagedOperationSeals(
 		func(sl operation.Seal) (bool, error) {
-			// TODO check the duplication of Operation.Hash
-			seals = append(seals, sl.Hash())
+			var hasOperations bool
+			for _, op := range sl.OperationHashes() {
+				if _, found := mo[op]; found {
+					continue
+				} else if found, err := pm.localstate.Storage().HasOperation(op); err != nil {
+					return false, err
+				} else if found {
+					continue
+				}
 
-			return len(seals) != operation.MaxOperationsInSeal, nil
+				operations = append(operations, op)
+				mo[op] = struct{}{}
+				hasOperations = true
+
+				if len(operations) == operation.MaxOperationsInSeal {
+					return false, nil
+				}
+			}
+
+			if hasOperations {
+				seals = append(seals, sl.Hash())
+			} else {
+				uselessSeals = append(uselessSeals, sl.Hash())
+			}
+
+			return true, nil
 		},
 		true,
 	); err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
-	return seals, nil
+	if len(uselessSeals) > 0 {
+		if err := pm.localstate.Storage().UnstagedOperationSeals(uselessSeals); err != nil {
+			return nil, nil, err
+		}
+	}
+
+	return operations, seals, nil
 }
 
 func (pm *ProposalMaker) Proposal(round Round) (Proposal, error) {
@@ -50,12 +81,12 @@ func (pm *ProposalMaker) Proposal(round Round) (Proposal, error) {
 		}
 	}
 
-	seals, err := pm.seals()
+	operations, seals, err := pm.operations()
 	if err != nil {
 		return nil, err
 	}
 
-	proposal, err := NewProposal(pm.localstate, height, round, seals, pm.localstate.Policy().NetworkID())
+	proposal, err := NewProposal(pm.localstate, height, round, operations, seals, pm.localstate.Policy().NetworkID())
 	if err != nil {
 		return nil, err
 	}

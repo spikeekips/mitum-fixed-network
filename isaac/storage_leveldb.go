@@ -465,6 +465,16 @@ func (st *LeveldbStorage) StagedOperationSeals(callback func(operation.Seal) (bo
 	)
 }
 
+func (st *LeveldbStorage) UnstagedOperationSeals(seals []valuehash.Hash) error {
+	batch := &leveldb.Batch{}
+
+	if err := leveldbUnstageOperationSeals(st, batch, seals); err != nil {
+		return err
+	}
+
+	return st.db.Write(batch, nil)
+}
+
 func (st *LeveldbStorage) Proposals(callback func(Proposal) (bool, error), sort bool) error {
 	return st.iter(
 		leveldbProposalPrefix,
@@ -673,26 +683,7 @@ func (bst *LeveldbBlockStorage) SetStates(tr *tree.AVLTree) error {
 }
 
 func (bst *LeveldbBlockStorage) UnstageOperationSeals(hs []valuehash.Hash) error {
-	if len(hs) < 1 {
-		return nil
-	}
-
-	hashMap := map[string]struct{}{}
-	for _, h := range hs {
-		hashMap[h.String()] = struct{}{}
-	}
-
-	for _, h := range hs {
-		rkey := bst.st.newStagedOperationSealReverseKey(h)
-		if key, err := bst.st.get(rkey); err != nil {
-			return err
-		} else {
-			bst.batch.Delete(key)
-			bst.batch.Delete(rkey)
-		}
-	}
-
-	return nil
+	return leveldbUnstageOperationSeals(bst.st, bst.batch, hs)
 }
 
 func (bst *LeveldbBlockStorage) Commit() error {
@@ -776,4 +767,27 @@ func WrapLeveldbErorr(err error) error {
 	}
 
 	return err
+}
+
+func leveldbUnstageOperationSeals(st *LeveldbStorage, batch *leveldb.Batch, seals []valuehash.Hash) error {
+	if len(seals) < 1 {
+		return nil
+	}
+
+	hashMap := map[string]struct{}{}
+	for _, h := range seals {
+		hashMap[h.String()] = struct{}{}
+	}
+
+	for _, h := range seals {
+		rkey := st.newStagedOperationSealReverseKey(h)
+		if key, err := st.get(rkey); err != nil {
+			return err
+		} else {
+			batch.Delete(key)
+			batch.Delete(rkey)
+		}
+	}
+
+	return nil
 }

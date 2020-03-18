@@ -34,7 +34,8 @@ type INITBallot interface {
 
 type Proposal interface {
 	Ballot
-	Seals() []valuehash.Hash // collection of received Seals
+	Operations() []valuehash.Hash // collection of proposed Operations
+	Seals() []valuehash.Hash      // NOTE collection of received Seals, which must have Operations()
 }
 
 type SIGNBallot interface {

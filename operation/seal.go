@@ -113,6 +113,15 @@ func (sl Seal) Operations() []Operation {
 	return sl.ops
 }
 
+func (sl Seal) OperationHashes() []valuehash.Hash {
+	hs := make([]valuehash.Hash, len(sl.ops))
+	for i := range sl.ops {
+		hs[i] = sl.ops[i].Hash()
+	}
+
+	return hs
+}
+
 func (sl *Seal) Sign(pk key.Privatekey, b []byte) error {
 	sl.signer = pk.Publickey()
 	sl.signedAt = localtime.Now()

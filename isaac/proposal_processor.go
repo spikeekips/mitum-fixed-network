@@ -107,12 +107,13 @@ func (dp *ProposalProcessorV0) ProcessACCEPT(
 
 type proposalProcessorV0 struct {
 	*logging.Logging
-	localstate *Localstate
-	lastBlock  Block
-	block      Block
-	proposal   Proposal
-	operations []state.OperationInfoV0
-	bs         BlockStorage
+	localstate         *Localstate
+	lastBlock          Block
+	block              Block
+	proposal           Proposal
+	proposedOperations map[valuehash.Hash]struct{}
+	operations         []state.OperationInfoV0
+	bs                 BlockStorage
 }
 
 func newProposalProcessorV0(localstate *Localstate, proposal Proposal) (*proposalProcessorV0, error) {
@@ -121,13 +122,19 @@ func newProposalProcessorV0(localstate *Localstate, proposal Proposal) (*proposa
 		return nil, xerrors.Errorf("last block is empty")
 	}
 
+	proposedOperations := map[valuehash.Hash]struct{}{}
+	for _, h := range proposal.Operations() {
+		proposedOperations[h] = struct{}{}
+	}
+
 	return &proposalProcessorV0{
 		Logging: logging.NewLogging(func(c zerolog.Context) zerolog.Context {
 			return c.Str("module", "internal-proposal-processor-inside-v0")
 		}),
-		localstate: localstate,
-		proposal:   proposal,
-		lastBlock:  lastBlock,
+		localstate:         localstate,
+		proposal:           proposal,
+		lastBlock:          lastBlock,
+		proposedOperations: proposedOperations,
 	}, nil
 }
 
@@ -187,35 +194,47 @@ func (pp *proposalProcessorV0) processINIT(initVoteproof Voteproof) (Block, erro
 func (pp *proposalProcessorV0) extractOperations() ([]state.OperationInfoV0, error) {
 	// NOTE the order of operation should be kept by the order of
 	// Proposal.Seals()
-	seals := map[valuehash.Hash][]state.OperationInfoV0{}
+	founds := map[valuehash.Hash]state.OperationInfoV0{}
 
 	var notFounds []valuehash.Hash
 	for _, h := range pp.proposal.Seals() {
-		if ops, err := pp.getOperationsFromStorage(h); err != nil {
+		ops, err := pp.getOperationsFromStorage(h)
+		if err != nil {
 			if xerrors.Is(err, storage.NotFoundError) {
 				notFounds = append(notFounds, h)
 				continue
 			}
 
 			return nil, err
-		} else {
-			seals[h] = ops
+		} else if len(ops) < 1 {
+			continue
+		}
+
+		for i := range ops {
+			op := ops[i]
+			founds[op.Operation()] = op
 		}
 	}
 
 	if len(notFounds) > 0 {
-		if sos, err := pp.getOperationsThruChannel(pp.proposal.Node(), notFounds); err != nil {
+		ops, err := pp.getOperationsThruChannel(pp.proposal.Node(), notFounds, founds)
+		if err != nil {
 			return nil, err
-		} else {
-			for h := range sos {
-				seals[h] = sos[h]
-			}
+		}
+
+		for i := range ops {
+			op := ops[i]
+			founds[op.Operation()] = op
 		}
 	}
 
 	var operations []state.OperationInfoV0 // nolint
-	for _, h := range pp.proposal.Seals() {
-		operations = append(operations, seals[h]...)
+	for _, h := range pp.proposal.Operations() {
+		if oi, found := founds[h]; !found {
+			return nil, xerrors.Errorf("failed to fetch Operation from Proposal: operation=%s", h)
+		} else {
+			operations = append(operations, oi)
+		}
 	}
 
 	return operations, nil
@@ -235,11 +254,10 @@ func (pp *proposalProcessorV0) processOperations() (valuehash.Hash, *tree.AVLTre
 
 		for i := range ops {
 			op := ops[i]
+			// NOTE Duplicated Operation.Hash, the latter will be ignored.
 			if _, found := founds[op.Operation()]; found {
 				continue
 			} else if found, err := pp.localstate.Storage().HasOperation(op.Operation()); err != nil {
-				// NOTE check the duplication of Operation.Hash. If found, the
-				// latter will be ignored.
 				return nil, nil, err
 			} else if found { // already stored Operation
 				continue
@@ -343,6 +361,10 @@ func (pp *proposalProcessorV0) getOperationsFromStorage(h valuehash.Hash) ([]sta
 
 	var ops []state.OperationInfoV0 // nolint
 	for _, op := range osl.Operations() {
+		if _, found := pp.proposedOperations[op.Hash()]; !found {
+			continue
+		}
+
 		ops = append(ops, state.NewOperationInfoV0(op, h))
 	}
 
@@ -352,7 +374,8 @@ func (pp *proposalProcessorV0) getOperationsFromStorage(h valuehash.Hash) ([]sta
 func (pp *proposalProcessorV0) getOperationsThruChannel(
 	proposer Address,
 	notFounds []valuehash.Hash,
-) (map[valuehash.Hash][]state.OperationInfoV0, error) {
+	founds map[valuehash.Hash]state.OperationInfoV0,
+) ([]state.OperationInfoV0, error) {
 	if pp.localstate.Node().Address().Equal(proposer) {
 		pp.Log().Warn().Msg("proposer is local node, but local node should have seals. Hmmm")
 	}
@@ -362,7 +385,6 @@ func (pp *proposalProcessorV0) getOperationsThruChannel(
 		return nil, xerrors.Errorf("unknown proposer: %v", proposer)
 	}
 
-	sos := map[valuehash.Hash][]state.OperationInfoV0{}
 	received, err := node.Channel().Seals(notFounds)
 	if err != nil {
 		return nil, err
@@ -372,20 +394,24 @@ func (pp *proposalProcessorV0) getOperationsThruChannel(
 		return nil, err
 	}
 
+	var ops []state.OperationInfoV0
 	for _, sl := range received {
 		if os, ok := sl.(operation.Seal); !ok {
 			return nil, xerrors.Errorf("not operation.Seal: %T", sl)
 		} else {
-			var ops []state.OperationInfoV0
 			for _, op := range os.Operations() {
+				if _, found := pp.proposedOperations[op.Hash()]; !found {
+					continue
+				} else if _, found := founds[op.Hash()]; found {
+					continue
+				}
+
 				ops = append(ops, state.NewOperationInfoV0(op, sl.Hash()))
 			}
-
-			sos[sl.Hash()] = ops
 		}
 	}
 
-	return sos, nil
+	return ops, nil
 }
 
 func (pp *proposalProcessorV0) setACCEPTVoteproof(acceptVoteproof Voteproof) error {

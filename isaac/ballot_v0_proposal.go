@@ -19,7 +19,8 @@ var (
 
 type ProposalFactV0 struct {
 	BaseBallotFactV0
-	seals []valuehash.Hash
+	operations []valuehash.Hash
+	seals      []valuehash.Hash
 }
 
 func (prf ProposalFactV0) Hint() hint.Hint {
@@ -32,14 +33,40 @@ func (prf ProposalFactV0) IsValid(b []byte) error {
 	}
 
 	if err := isvalid.Check(func() []isvalid.IsValider {
-		var sl []isvalid.IsValider
+		var vs []isvalid.IsValider
+		for _, s := range prf.operations {
+			vs = append(vs, s)
+		}
 		for _, s := range prf.seals {
-			sl = append(sl, s)
+			vs = append(vs, s)
 		}
 
-		return sl
+		return vs
 	}(), b, false); err != nil {
 		return err
+	}
+
+	// NOTE duplicated operations or seals will not be allowed
+	{
+		mo := map[valuehash.Hash]struct{}{}
+		for _, h := range prf.operations {
+			if _, found := mo[h]; found {
+				return xerrors.Errorf("duplicated Operation found in Proposal")
+			}
+
+			mo[h] = struct{}{}
+		}
+	}
+
+	{
+		mo := map[valuehash.Hash]struct{}{}
+		for _, h := range prf.seals {
+			if _, found := mo[h]; found {
+				return xerrors.Errorf("duplicated Seal found in Proposal")
+			}
+
+			mo[h] = struct{}{}
+		}
 	}
 
 	return nil
@@ -54,6 +81,9 @@ func (prf ProposalFactV0) Bytes() []byte {
 		prf.BaseBallotFactV0.Bytes(),
 		func() []byte {
 			var hl [][]byte
+			for _, h := range prf.operations {
+				hl = append(hl, h.Bytes())
+			}
 			for _, h := range prf.seals {
 				hl = append(hl, h.Bytes())
 			}
@@ -61,6 +91,10 @@ func (prf ProposalFactV0) Bytes() []byte {
 			return util.ConcatSlice(hl)
 		}(),
 	})
+}
+
+func (prf ProposalFactV0) Operations() []valuehash.Hash {
+	return prf.operations
 }
 
 func (prf ProposalFactV0) Seals() []valuehash.Hash {
@@ -76,6 +110,7 @@ func NewProposal(
 	localstate *Localstate,
 	height Height,
 	round Round,
+	operations []valuehash.Hash,
 	seals []valuehash.Hash,
 	networkID []byte,
 ) (Proposal, error) {
@@ -88,7 +123,8 @@ func NewProposal(
 				height: height,
 				round:  round,
 			},
-			seals: seals,
+			operations: operations,
+			seals:      seals,
 		},
 	}
 
@@ -102,6 +138,7 @@ func NewProposal(
 func NewProposalFromLocalstate(
 	localstate *Localstate,
 	round Round,
+	operations []valuehash.Hash,
 	seals []valuehash.Hash,
 ) (Proposal, error) {
 	lastBlock := localstate.LastBlock()
@@ -118,7 +155,8 @@ func NewProposalFromLocalstate(
 				height: lastBlock.Height() + 1,
 				round:  round,
 			},
-			seals: seals,
+			operations: operations,
+			seals:      seals,
 		},
 	}
 

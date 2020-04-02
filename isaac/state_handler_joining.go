@@ -32,7 +32,7 @@ strategy,
 	- if height is the next of local block, keeps broadcasts INIT ballot with Voteproof's round
 
 	- if not,
-		-> moves to sync.
+		-> moves to syncing.
 
 - if Voteproof is ACCEPT
 	- if height is not the next of local block,
@@ -42,7 +42,7 @@ strategy,
 		1. processes Proposal.
 		1. check the result of new block of Proposal.
 		1. if not,
-			-> moves to sync.
+			-> moves to syncing.
 		1. waits next INIT voteproof
 
 * With consensused INIT Voteproof received,
@@ -213,7 +213,7 @@ func (cs *StateJoiningHandler) handleINITBallotAndACCEPTVoteproof(ballot INITBal
 		l.Debug().
 			Msgf("Ballot.Height() is higher than expected, %d + 1; moves to syncing", lastBlock.Height())
 
-		return cs.ChangeState(StateSyncing, voteproof)
+		return cs.ChangeState(StateSyncing, voteproof, ballot)
 	case d == 0:
 		l.Debug().Msg("same height; keep waiting CVP")
 
@@ -255,7 +255,7 @@ func (cs *StateJoiningHandler) handleINITBallotAndINITVoteproof(ballot INITBallo
 		l.Debug().
 			Msgf("ballotVoteproof.Height() is higher than expected, %d + 1; moves to syncing", lastBlock.Height())
 
-		return cs.ChangeState(StateSyncing, voteproof)
+		return cs.ChangeState(StateSyncing, voteproof, ballot)
 	default:
 		l.Debug().
 			Msgf("ballotVoteproof.Height() is lower than expected, %d + 1; ignore it", lastBlock.Height())
@@ -302,7 +302,7 @@ func (cs *StateJoiningHandler) handleACCEPTBallotAndINITVoteproof(ballot ACCEPTB
 		l.Debug().
 			Msgf("Ballot.Height() is higher than expected, %d + 1; moves to syncing", lastBlock.Height())
 
-		return cs.ChangeState(StateSyncing, voteproof)
+		return cs.ChangeState(StateSyncing, voteproof, ballot)
 	default:
 		l.Debug().
 			Msgf("Ballot.Height() is lower than expected, %d + 1; ignore it", lastBlock.Height())
@@ -336,5 +336,5 @@ func (cs *StateJoiningHandler) handleINITVoteproof(voteproof Voteproof) error {
 
 	l.Debug().Msg("expected height; moves to consensus state")
 
-	return cs.ChangeState(StateConsensus, voteproof)
+	return cs.ChangeState(StateConsensus, voteproof, nil)
 }

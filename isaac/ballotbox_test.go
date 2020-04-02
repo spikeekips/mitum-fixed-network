@@ -47,7 +47,7 @@ func (t *testBallotbox) newINITBallot(height Height, round Round, node Address) 
 		height-1,
 		Round(0),
 		StageACCEPT,
-		VoteproofMajority,
+		VoteResultMajority,
 	)
 
 	ib := INITBallotV0{
@@ -81,7 +81,7 @@ func (t *testBallotbox) TestVoteRace() {
 			case error:
 				t.NoError(c)
 			case Voteproof:
-				t.Equal(VoteproofNotYet, c.Result())
+				t.Equal(VoteResultNotYet, c.Result())
 			}
 		}
 		checkDone <- true
@@ -108,13 +108,13 @@ func (t *testBallotbox) TestVoteRace() {
 	<-checkDone
 }
 
-func (t *testBallotbox) TestINITVoteproofNotYet() {
+func (t *testBallotbox) TestINITVoteResultNotYet() {
 	bb := NewBallotbox(t.thresholdFunc(2, 67))
 	ba := t.newINITBallot(Height(10), Round(0), NewShortAddress("test-for-init-ballot"))
 
 	vp, err := bb.Vote(ba)
 	t.NoError(err)
-	t.Equal(VoteproofNotYet, vp.Result())
+	t.Equal(VoteResultNotYet, vp.Result())
 
 	t.Equal(ba.Height(), vp.Height())
 	t.Equal(ba.Round(), vp.Round())
@@ -132,7 +132,7 @@ func (t *testBallotbox) TestINITVoteproofNotYet() {
 	t.Equal(ba.PreviousRound(), iba.PreviousRound())
 }
 
-func (t *testBallotbox) TestINITVoteproofDraw() {
+func (t *testBallotbox) TestINITVoteResultDraw() {
 	bb := NewBallotbox(t.thresholdFunc(2, 67))
 
 	// 2 ballot have the differnt previousBlock hash
@@ -140,13 +140,13 @@ func (t *testBallotbox) TestINITVoteproofDraw() {
 		ba := t.newINITBallot(Height(10), Round(0), NewShortAddress("node0"))
 		vp, err := bb.Vote(ba)
 		t.NoError(err)
-		t.Equal(VoteproofNotYet, vp.Result())
+		t.Equal(VoteResultNotYet, vp.Result())
 	}
 	{
 		ba := t.newINITBallot(Height(10), Round(0), NewShortAddress("node1"))
 		vp, err := bb.Vote(ba)
 		t.NoError(err)
-		t.Equal(VoteproofDraw, vp.Result())
+		t.Equal(VoteResultDraw, vp.Result())
 		t.True(vp.IsFinished())
 		t.NotNil(vp.FinishedAt())
 		t.True(time.Now().Sub(vp.FinishedAt()) < time.Second)
@@ -156,13 +156,13 @@ func (t *testBallotbox) TestINITVoteproofDraw() {
 		ba := t.newINITBallot(Height(10), Round(0), NewShortAddress("node2"))
 		vp, err := bb.Vote(ba)
 		t.NoError(err)
-		t.Equal(VoteproofDraw, vp.Result())
+		t.Equal(VoteResultDraw, vp.Result())
 		t.True(vp.IsFinished())
 		t.True(vp.IsClosed())
 	}
 }
 
-func (t *testBallotbox) TestINITVoteproofMajority() {
+func (t *testBallotbox) TestINITVoteResultMajority() {
 	bb := NewBallotbox(t.thresholdFunc(3, 66))
 
 	// 2 ballot have the differnt previousBlock hash
@@ -179,12 +179,12 @@ func (t *testBallotbox) TestINITVoteproofMajority() {
 	{
 		vp, err := bb.Vote(ba0)
 		t.NoError(err)
-		t.Equal(VoteproofNotYet, vp.Result())
+		t.Equal(VoteResultNotYet, vp.Result())
 	}
 	{
 		vp, err := bb.Vote(ba1)
 		t.NoError(err)
-		t.Equal(VoteproofMajority, vp.Result())
+		t.Equal(VoteResultMajority, vp.Result())
 	}
 }
 
@@ -206,7 +206,7 @@ func (t *testBallotbox) TestINITVoteproofClean() {
 	{
 		vp, err := bb.Vote(ba0)
 		t.NoError(err)
-		t.Equal(VoteproofNotYet, vp.Result())
+		t.Equal(VoteResultNotYet, vp.Result())
 	}
 
 	{
@@ -217,7 +217,7 @@ func (t *testBallotbox) TestINITVoteproofClean() {
 	{
 		vp, err := bb.Vote(ba1)
 		t.NoError(err)
-		t.Equal(VoteproofMajority, vp.Result())
+		t.Equal(VoteResultMajority, vp.Result())
 	}
 
 	var remains []string
@@ -242,7 +242,7 @@ func (t *testBallotbox) newACCEPTBallot(height Height, round Round, node Address
 		height,
 		round,
 		StageINIT,
-		VoteproofMajority,
+		VoteResultMajority,
 	)
 
 	ib := ACCEPTBallotV0{
@@ -264,13 +264,13 @@ func (t *testBallotbox) newACCEPTBallot(height Height, round Round, node Address
 	return ib
 }
 
-func (t *testBallotbox) TestACCEPTVoteproofNotYet() {
+func (t *testBallotbox) TestACCEPTVoteResultNotYet() {
 	bb := NewBallotbox(t.thresholdFunc(2, 67))
 	ba := t.newACCEPTBallot(Height(10), Round(0), NewShortAddress("test-for-accept-ballot"))
 
 	vp, err := bb.Vote(ba)
 	t.NoError(err)
-	t.Equal(VoteproofNotYet, vp.Result())
+	t.Equal(VoteResultNotYet, vp.Result())
 
 	t.Equal(ba.Height(), vp.Height())
 	t.Equal(ba.Round(), vp.Round())
@@ -288,7 +288,7 @@ func (t *testBallotbox) TestACCEPTVoteproofNotYet() {
 	t.Equal(ba.NewBlock(), iba.NewBlock())
 }
 
-func (t *testBallotbox) TestACCEPTVoteproofDraw() {
+func (t *testBallotbox) TestACCEPTVoteResultDraw() {
 	bb := NewBallotbox(t.thresholdFunc(2, 67))
 
 	// 2 ballot have the differnt previousBlock hash
@@ -298,16 +298,16 @@ func (t *testBallotbox) TestACCEPTVoteproofDraw() {
 	{
 		vp, err := bb.Vote(ba0)
 		t.NoError(err)
-		t.Equal(VoteproofNotYet, vp.Result())
+		t.Equal(VoteResultNotYet, vp.Result())
 	}
 	{
 		vp, err := bb.Vote(ba1)
 		t.NoError(err)
-		t.Equal(VoteproofDraw, vp.Result())
+		t.Equal(VoteResultDraw, vp.Result())
 	}
 }
 
-func (t *testBallotbox) TestACCEPTVoteproofMajority() {
+func (t *testBallotbox) TestACCEPTVoteResultMajority() {
 	bb := NewBallotbox(t.thresholdFunc(3, 66))
 
 	// 2 ballot have the differnt previousBlock hash
@@ -324,16 +324,16 @@ func (t *testBallotbox) TestACCEPTVoteproofMajority() {
 	{
 		vp, err := bb.Vote(ba0)
 		t.NoError(err)
-		t.Equal(VoteproofNotYet, vp.Result())
+		t.Equal(VoteResultNotYet, vp.Result())
 	}
 	{
 		vp, err := bb.Vote(ba1)
 		t.NoError(err)
-		t.Equal(VoteproofMajority, vp.Result())
+		t.Equal(VoteResultMajority, vp.Result())
 	}
 }
 
-func (t *testBallotbox) TestINITVoteproofMajorityClosed() {
+func (t *testBallotbox) TestINITVoteResultMajorityClosed() {
 	bb := NewBallotbox(t.thresholdFunc(3, 66))
 
 	// 2 ballot have the differnt previousBlock hash
@@ -351,21 +351,21 @@ func (t *testBallotbox) TestINITVoteproofMajorityClosed() {
 	{
 		vp, err := bb.Vote(ba0)
 		t.NoError(err)
-		t.Equal(VoteproofNotYet, vp.Result())
+		t.Equal(VoteResultNotYet, vp.Result())
 		t.False(vp.IsClosed())
 	}
 
 	{
 		vp, err := bb.Vote(ba1)
 		t.NoError(err)
-		t.Equal(VoteproofMajority, vp.Result())
+		t.Equal(VoteResultMajority, vp.Result())
 		t.False(vp.IsClosed())
 	}
 
 	{
 		vp, err := bb.Vote(ba2)
 		t.NoError(err)
-		t.Equal(VoteproofMajority, vp.Result())
+		t.Equal(VoteResultMajority, vp.Result())
 		t.True(vp.IsClosed())
 	}
 }

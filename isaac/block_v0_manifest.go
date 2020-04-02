@@ -11,14 +11,14 @@ import (
 )
 
 type BlockManifestV0 struct {
-	h               valuehash.Hash
-	height          Height
-	round           Round
-	proposal        valuehash.Hash
-	previousBlock   valuehash.Hash
-	blockOperations valuehash.Hash
-	blockStates     valuehash.Hash
-	createdAt       time.Time
+	h              valuehash.Hash
+	height         Height
+	round          Round
+	proposal       valuehash.Hash
+	previousBlock  valuehash.Hash
+	operationsHash valuehash.Hash
+	statesHash     valuehash.Hash
+	createdAt      time.Time
 }
 
 func (bm BlockManifestV0) GenerateHash() (valuehash.Hash, error) {
@@ -35,10 +35,10 @@ func (bm BlockManifestV0) IsValid([]byte) error {
 		return err
 	}
 
-	// NOTE blockOperations and blockStates are allowed to be empty.
+	// NOTE operationsHash and statesHash are allowed to be empty.
 	if err := isvalid.Check([]isvalid.IsValider{
-		bm.blockOperations,
-		bm.blockStates,
+		bm.operationsHash,
+		bm.statesHash,
 	}, nil, true); err != nil && !xerrors.Is(err, valuehash.EmptyHashError) {
 		return err
 	}
@@ -61,14 +61,14 @@ func (bm BlockManifestV0) Hash() valuehash.Hash {
 }
 
 func (bm BlockManifestV0) Bytes() []byte {
-	var blockOperationsBytes []byte
-	if bm.blockOperations != nil {
-		blockOperationsBytes = bm.blockOperations.Bytes()
+	var operationsHashBytes []byte
+	if bm.operationsHash != nil {
+		operationsHashBytes = bm.operationsHash.Bytes()
 	}
 
-	var blockStatesBytes []byte
-	if bm.blockStates != nil {
-		blockStatesBytes = bm.blockStates.Bytes()
+	var statesHashBytes []byte
+	if bm.statesHash != nil {
+		statesHashBytes = bm.statesHash.Bytes()
 	}
 
 	return util.ConcatSlice([][]byte{
@@ -76,8 +76,8 @@ func (bm BlockManifestV0) Bytes() []byte {
 		bm.round.Bytes(),
 		bm.proposal.Bytes(),
 		bm.previousBlock.Bytes(),
-		blockOperationsBytes,
-		blockStatesBytes,
+		operationsHashBytes,
+		statesHashBytes,
 		// NOTE createdAt does not included for Bytes(), because Bytes() is used
 		// for Hash().
 	})
@@ -99,12 +99,12 @@ func (bm BlockManifestV0) PreviousBlock() valuehash.Hash {
 	return bm.previousBlock
 }
 
-func (bm BlockManifestV0) Operations() valuehash.Hash {
-	return bm.blockOperations
+func (bm BlockManifestV0) OperationsHash() valuehash.Hash {
+	return bm.operationsHash
 }
 
-func (bm BlockManifestV0) States() valuehash.Hash {
-	return bm.blockStates
+func (bm BlockManifestV0) StatesHash() valuehash.Hash {
+	return bm.statesHash
 }
 
 func (bm BlockManifestV0) CreatedAt() time.Time {

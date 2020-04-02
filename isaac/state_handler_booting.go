@@ -81,7 +81,7 @@ func (cs *StateBootingHandler) initialize() error {
 
 	cs.Log().Debug().Msg("initialized; moves to joining")
 
-	return cs.ChangeState(StateJoining, nil)
+	return cs.ChangeState(StateJoining, nil, nil)
 }
 
 func (cs *StateBootingHandler) check() error {
@@ -91,7 +91,7 @@ func (cs *StateBootingHandler) check() error {
 	if err := cs.checkBlock(); err != nil {
 		cs.Log().Error().Err(err).Msg("checked block")
 
-		if err0 := cs.ChangeState(StateSyncing, nil); err0 != nil {
+		if err0 := cs.ChangeState(StateSyncing, nil, nil); err0 != nil {
 			// TODO wrap err
 			return err0
 		}
@@ -104,7 +104,7 @@ func (cs *StateBootingHandler) check() error {
 
 		var ctx StateToBeChangeError
 		if xerrors.As(err, &ctx) {
-			if err0 := cs.ChangeState(ctx.ToState, ctx.Voteproof); err0 != nil {
+			if err0 := cs.ChangeState(ctx.ToState, ctx.Voteproof, nil); err0 != nil {
 				// TODO wrap err
 				return err0
 			}

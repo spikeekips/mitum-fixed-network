@@ -27,7 +27,7 @@ func (t *testBallotV0ACCEPT) TestNew() {
 		Height(10),
 		Round(0),
 		StageINIT,
-		VoteproofMajority,
+		VoteResultMajority,
 	)
 
 	ib := ACCEPTBallotV0{
@@ -56,7 +56,7 @@ func (t *testBallotV0ACCEPT) TestFact() {
 		Height(10),
 		Round(0),
 		StageINIT,
-		VoteproofMajority,
+		VoteResultMajority,
 	)
 
 	ib := ACCEPTBallotV0{
@@ -101,7 +101,7 @@ func (t *testBallotV0ACCEPT) TestGenerateHash() {
 		Height(10),
 		Round(0),
 		StageINIT,
-		VoteproofMajority,
+		VoteResultMajority,
 	)
 
 	ib := ACCEPTBallotV0{
@@ -135,7 +135,7 @@ func (t *testBallotV0ACCEPT) TestSign() {
 		Height(10),
 		Round(0),
 		StageINIT,
-		VoteproofMajority,
+		VoteResultMajority,
 	)
 
 	ib := ACCEPTBallotV0{

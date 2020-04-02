@@ -15,17 +15,17 @@ import (
 
 type VoteproofV0PackJSON struct {
 	encoder.JSONPackHintedHead
-	HT Height              `json:"height"`
-	RD Round               `json:"round"`
-	TH Threshold           `json:"threshold"`
-	RS VoteproofResultType `json:"result"`
-	ST Stage               `json:"stage"`
-	MJ operation.Fact      `json:"majority"`
-	FS [][2]interface{}    `json:"facts"`
-	BS [][2]interface{}    `json:"ballots"`
-	VS [][2]interface{}    `json:"votes"`
-	FA localtime.JSONTime  `json:"finished_at"`
-	CL string              `json:"is_closed"`
+	HT Height             `json:"height"`
+	RD Round              `json:"round"`
+	TH Threshold          `json:"threshold"`
+	RS VoteResultType     `json:"result"`
+	ST Stage              `json:"stage"`
+	MJ operation.Fact     `json:"majority"`
+	FS [][2]interface{}   `json:"facts"`
+	BS [][2]interface{}   `json:"ballots"`
+	VS [][2]interface{}   `json:"votes"`
+	FA localtime.JSONTime `json:"finished_at"`
+	CL string             `json:"is_closed"`
 }
 
 func (vp VoteproofV0) MarshalJSON() ([]byte, error) {
@@ -71,7 +71,7 @@ type VoteproofV0UnpackJSON struct {
 	HT Height               `json:"height"`
 	RD Round                `json:"round"`
 	TH Threshold            `json:"threshold"`
-	RS VoteproofResultType  `json:"result"`
+	RS VoteResultType       `json:"result"`
 	ST Stage                `json:"stage"`
 	MJ json.RawMessage      `json:"majority"`
 	FS [][2]json.RawMessage `json:"facts"`

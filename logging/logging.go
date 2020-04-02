@@ -11,6 +11,7 @@ type SetLogger interface {
 }
 
 type Logging struct {
+	// TODO should handle Logger.With()...Logger()
 	logger       Logger
 	contextFuncs []func(zerolog.Context) zerolog.Context
 }
@@ -53,7 +54,8 @@ type Logger struct {
 }
 
 func NewLogger(l *zerolog.Logger, verbose bool) Logger {
-	return Logger{Logger: cp(l), orig: l, verbose: verbose}
+	n := l.With().Logger()
+	return Logger{Logger: &n, orig: l, verbose: verbose}
 }
 
 func (l Logger) Level() zerolog.Level {
@@ -88,14 +90,8 @@ func (l Logger) Verbose() *zerolog.Event {
 
 func (l Logger) VerboseFunc(f func(*zerolog.Event) *zerolog.Event) *zerolog.Event {
 	if !l.verbose {
-		return NilLog.Debug()
+		return l.Debug()
 	}
 
 	return f(l.Verbose())
-}
-
-func cp(c *zerolog.Logger) *zerolog.Logger {
-	n := *c
-
-	return &n
 }

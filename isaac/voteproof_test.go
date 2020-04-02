@@ -79,7 +79,7 @@ func (t *testVoteproof) TestInvalidResult() {
 	vp := VoteproofV0{
 		stage:     StageINIT,
 		threshold: threshold,
-		result:    VoteproofResultType(10),
+		result:    VoteResultType(10),
 	}
 	err := vp.IsValid(nil)
 	t.True(xerrors.Is(err, isvalid.InvalidError))
@@ -90,7 +90,7 @@ func (t *testVoteproof) TestEmptyMajority() {
 	vp := VoteproofV0{
 		stage:      StageINIT,
 		threshold:  threshold,
-		result:     VoteproofMajority,
+		result:     VoteResultMajority,
 		majority:   nil,
 		finishedAt: localtime.Now(),
 	}
@@ -104,7 +104,7 @@ func (t *testVoteproof) TestInvalidMajority() {
 	vp := VoteproofV0{
 		stage:     StageINIT,
 		threshold: threshold,
-		result:    VoteproofNotYet,
+		result:    VoteResultNotYet,
 		majority:  tinyFact{A: ""},
 	}
 	err := vp.IsValid(nil)
@@ -117,7 +117,7 @@ func (t *testVoteproof) TestEmptyFacts() {
 	vp := VoteproofV0{
 		stage:     StageINIT,
 		threshold: threshold,
-		result:    VoteproofNotYet,
+		result:    VoteResultNotYet,
 		majority:  tinyFact{A: "showme"},
 	}
 	err := vp.IsValid(nil)
@@ -132,7 +132,7 @@ func (t *testVoteproof) TestEmptyBallots() {
 	vp := VoteproofV0{
 		stage:     StageINIT,
 		threshold: threshold,
-		result:    VoteproofNotYet,
+		result:    VoteResultNotYet,
 		majority:  fact,
 		facts:     map[valuehash.Hash]operation.Fact{factHash: fact},
 	}
@@ -148,7 +148,7 @@ func (t *testVoteproof) TestEmptyVotes() {
 	vp := VoteproofV0{
 		stage:     StageINIT,
 		threshold: threshold,
-		result:    VoteproofNotYet,
+		result:    VoteResultNotYet,
 		majority:  fact,
 		facts:     map[valuehash.Hash]operation.Fact{factHash: fact},
 		ballots: map[Address]valuehash.Hash{
@@ -171,7 +171,7 @@ func (t *testVoteproof) TestWrongVotesCount() {
 	vp := VoteproofV0{
 		stage:     StageINIT,
 		threshold: threshold,
-		result:    VoteproofNotYet,
+		result:    VoteResultNotYet,
 		majority:  fact,
 		facts:     map[valuehash.Hash]operation.Fact{factHash: fact},
 		ballots: map[Address]valuehash.Hash{
@@ -201,7 +201,7 @@ func (t *testVoteproof) TestInvalidFactHash() {
 	vp := VoteproofV0{
 		stage:     StageINIT,
 		threshold: threshold,
-		result:    VoteproofMajority,
+		result:    VoteResultMajority,
 		majority:  fact,
 		facts:     map[valuehash.Hash]operation.Fact{invalidFactHash: fact},
 		ballots: map[Address]valuehash.Hash{
@@ -233,7 +233,7 @@ func (t *testVoteproof) TestUnknownFactHash() {
 	vp := VoteproofV0{
 		stage:     StageINIT,
 		threshold: threshold,
-		result:    VoteproofMajority,
+		result:    VoteResultMajority,
 		majority:  fact,
 		facts:     map[valuehash.Hash]operation.Fact{unknownFactHash: fact},
 		ballots: map[Address]valuehash.Hash{
@@ -263,7 +263,7 @@ func (t *testVoteproof) TestFactNotFound() {
 	vp := VoteproofV0{
 		stage:     StageINIT,
 		threshold: threshold,
-		result:    VoteproofMajority,
+		result:    VoteResultMajority,
 		majority:  fact,
 		facts:     map[valuehash.Hash]operation.Fact{factHash: fact},
 		ballots: map[Address]valuehash.Hash{
@@ -290,7 +290,7 @@ func (t *testVoteproof) TestUnknownNodeFound() {
 	vp := VoteproofV0{
 		stage:     StageINIT,
 		threshold: threshold,
-		result:    VoteproofMajority,
+		result:    VoteResultMajority,
 		majority:  fact,
 		facts: map[valuehash.Hash]operation.Fact{
 			factHash: fact,
@@ -322,7 +322,7 @@ func (t *testVoteproof) TestSuplusFacts() {
 	vp := VoteproofV0{
 		stage:     StageINIT,
 		threshold: threshold,
-		result:    VoteproofMajority,
+		result:    VoteResultMajority,
 		majority:  fact,
 		facts: map[valuehash.Hash]operation.Fact{
 			factHash:                 fact,
@@ -354,7 +354,7 @@ func (t *testVoteproof) TestNotYetButNot() {
 	vp := VoteproofV0{
 		stage:     StageINIT,
 		threshold: threshold,
-		result:    VoteproofDraw,
+		result:    VoteResultDraw,
 		majority:  fact,
 		facts: map[valuehash.Hash]operation.Fact{
 			factHash: fact,
@@ -392,7 +392,7 @@ func (t *testVoteproof) TestDrawButNot() {
 	vp := VoteproofV0{
 		stage:     StageINIT,
 		threshold: threshold,
-		result:    VoteproofMajority,
+		result:    VoteResultMajority,
 		majority:  fact0,
 		facts: map[valuehash.Hash]operation.Fact{
 			factHash0: fact0,
@@ -435,7 +435,7 @@ func (t *testVoteproof) TestMajorityButNot() {
 	vp := VoteproofV0{
 		stage:     StageINIT,
 		threshold: threshold,
-		result:    VoteproofDraw,
+		result:    VoteResultDraw,
 		facts: map[valuehash.Hash]operation.Fact{
 			factHash0: fact0,
 		},

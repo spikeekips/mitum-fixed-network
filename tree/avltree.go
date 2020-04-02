@@ -31,6 +31,10 @@ func (at *AVLTree) Root() Node {
 	return at.Tree.Root().(Node)
 }
 
+func (at *AVLTree) RootHash() (valuehash.Hash, error) {
+	return valuehash.LoadSHA256FromBytes(at.Root().Hash())
+}
+
 func (at *AVLTree) IsValid() error {
 	if err := at.Tree.IsValid(); err != nil {
 		return err
@@ -52,6 +56,10 @@ func (at *AVLTree) IsValid() error {
 	}
 
 	return nil
+}
+
+func (at *AVLTree) Empty() bool {
+	return at.Tree == nil
 }
 
 func (at *AVLTree) Traverse(f func(Node) (keep bool, err error)) error {

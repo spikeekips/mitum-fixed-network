@@ -252,7 +252,7 @@ func (t *testStateConsensusHandler) TestDraw() {
 		fact := ab.ACCEPTBallotFactV0
 
 		drew, _ = t.newVoteproof(StageINIT, fact, t.localstate, t.remoteState)
-		drew.result = VoteproofDraw
+		drew.result = VoteResultDraw
 	}
 
 	t.NoError(cs.NewVoteproof(drew))

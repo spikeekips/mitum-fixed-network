@@ -3,6 +3,7 @@ module github.com/spikeekips/mitum
 go 1.14
 
 require (
+	github.com/Azure/go-autorest/autorest/to v0.3.0
 	github.com/alecthomas/kong v0.2.4
 	github.com/beevik/ntp v0.2.0
 	github.com/btcsuite/btcd v0.20.1-beta

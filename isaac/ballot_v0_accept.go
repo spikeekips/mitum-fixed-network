@@ -60,6 +60,7 @@ func (abf ACCEPTBallotFactV0) NewBlock() valuehash.Hash {
 }
 
 // TODO ACCEPTBallot should have SIGNBallots
+
 type ACCEPTBallotV0 struct {
 	BaseBallotV0
 	ACCEPTBallotFactV0

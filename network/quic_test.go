@@ -1,9 +1,12 @@
 package network
 
 import (
+	"bytes"
 	"crypto/tls"
 	"fmt"
+	"io"
 	"net"
+	"net/http"
 	"net/url"
 	"testing"
 	"time"
@@ -11,18 +14,11 @@ import (
 	"github.com/stretchr/testify/suite"
 	"golang.org/x/xerrors"
 
-	"github.com/spikeekips/mitum/encoder"
-	"github.com/spikeekips/mitum/key"
-	"github.com/spikeekips/mitum/localtime"
-	"github.com/spikeekips/mitum/seal"
 	"github.com/spikeekips/mitum/util"
-	"github.com/spikeekips/mitum/valuehash"
 )
 
 type testQuicSever struct {
 	suite.Suite
-	encs  *encoder.Encoders
-	enc   encoder.Encoder
 	bind  string
 	certs []tls.Certificate
 	url   *url.URL
@@ -30,14 +26,6 @@ type testQuicSever struct {
 }
 
 func (t *testQuicSever) SetupTest() {
-	t.encs = encoder.NewEncoders()
-	t.enc = encoder.NewJSONEncoder()
-	_ = t.encs.AddEncoder(t.enc)
-	_ = t.encs.AddHinter(key.BTCPrivatekey{})
-	_ = t.encs.AddHinter(key.BTCPublickey{})
-	_ = t.encs.AddHinter(valuehash.SHA256{})
-	_ = t.encs.AddHinter(seal.DummySeal{})
-
 	port, err := util.FreePort("udp")
 	t.NoError(err)
 
@@ -53,9 +41,13 @@ func (t *testQuicSever) SetupTest() {
 	t.url = &url.URL{Scheme: "https", Host: t.bind}
 }
 
-func (t *testQuicSever) readyServer() *QuicServer {
-	qn, err := NewQuicServer(t.bind, t.certs, t.encs, t.enc)
+func (t *testQuicSever) readyServer(handlers map[string]HTTPHandlerFunc) *QuicServer {
+	qn, err := NewQuicServer(t.bind, t.certs)
 	t.NoError(err)
+
+	for prefix, handler := range handlers {
+		qn.SetHandler(prefix, handler)
+	}
 
 	t.NoError(qn.Start())
 
@@ -80,110 +72,63 @@ func (t *testQuicSever) readyServer() *QuicServer {
 	return qn
 }
 
-func (t *testQuicSever) TestSendSeal() {
-	qn := t.readyServer()
+func (t *testQuicSever) TestGet() {
+	handlers := map[string]HTTPHandlerFunc{}
+
+	var data int = 33
+	handlers["/get"] = func(w http.ResponseWriter, r *http.Request) {
+		_, _ = w.Write(util.IntToBytes(data))
+	}
+
+	qn := t.readyServer(handlers)
 	defer qn.Stop()
 
-	received := make(chan seal.Seal, 10)
-	qn.SetNewSealHandler(func(sl seal.Seal) error {
-		received <- sl
-		return nil
-	})
-
-	qc, err := NewQuicChannel(t.url.String(), 2, true, time.Millisecond*500, 3, nil, t.encs, t.enc)
+	client, err := NewQuicClient(true, time.Second, 1, nil)
 	t.NoError(err)
 
-	sl := seal.NewDummySeal(key.MustNewBTCPrivatekey())
+	response, err := client.Request(t.url.String()+"/get", nil, nil)
+	t.NoError(err)
+	t.True(response.OK())
 
-	t.NoError(qc.SendSeal(sl))
+	received, err := util.BytesToInt(response.Bytes())
+	t.NoError(err)
+	t.Equal(data, received)
+}
+
+func (t *testQuicSever) TestSend() {
+	handlers := map[string]HTTPHandlerFunc{}
+
+	received := make(chan int, 10)
+	handlers["/send"] = func(w http.ResponseWriter, r *http.Request) {
+		body := &bytes.Buffer{}
+		if _, err := io.Copy(body, r.Body); err != nil {
+			HTTPError(w, http.StatusInternalServerError)
+			return
+		}
+
+		i, err := util.BytesToInt(body.Bytes())
+		if err != nil {
+			HTTPError(w, http.StatusInternalServerError)
+			return
+		}
+
+		received <- i
+	}
+
+	qn := t.readyServer(handlers)
+	defer qn.Stop()
+
+	client, err := NewQuicClient(true, time.Second, 1, nil)
+	t.NoError(err)
+
+	var data int = 33
+	t.NoError(client.Send(t.url.String()+"/send", util.IntToBytes(data), nil))
 
 	select {
 	case <-time.After(time.Second):
 		t.NoError(xerrors.Errorf("failed to receive respond"))
 	case r := <-received:
-		t.Equal(sl.Hint(), r.Hint())
-		t.Equal(sl.Hash(), r.Hash())
-		t.Equal(sl.BodyHash(), r.BodyHash())
-		t.Equal(sl.Signer(), r.Signer())
-		t.Equal(sl.Signature(), r.Signature())
-		t.Equal(localtime.RFC3339(sl.SignedAt()), localtime.RFC3339(r.SignedAt()))
-	}
-}
-
-func (t *testQuicSever) TestGetSeals() {
-	qn := t.readyServer()
-	defer qn.Stop()
-
-	var hs []valuehash.Hash
-	seals := map[valuehash.Hash]seal.Seal{}
-	for i := 0; i < 3; i++ {
-		sl := seal.NewDummySeal(key.MustNewBTCPrivatekey())
-
-		seals[sl.Hash()] = sl
-		hs = append(hs, sl.Hash())
-	}
-
-	qn.SetGetSealsHandler(func(hs []valuehash.Hash) ([]seal.Seal, error) {
-		var sls []seal.Seal
-
-		for _, h := range hs {
-			if sl, found := seals[h]; found {
-				sls = append(sls, sl)
-			}
-		}
-
-		return sls, nil
-	})
-
-	qc, err := NewQuicChannel(t.url.String(), 2, true, time.Millisecond*500, 3, nil, t.encs, t.enc)
-	t.NoError(err)
-
-	{ // get all
-		l, err := qc.Seals(hs)
-		t.NoError(err)
-		t.Equal(len(hs), len(l))
-
-		sm := map[valuehash.Hash]seal.Seal{}
-		for _, s := range l {
-			sm[s.Hash()] = s
-		}
-
-		for h, sl := range seals {
-			t.True(sl.Hash().Equal(sm[h].Hash()))
-		}
-	}
-
-	{ // some of them
-		l, err := qc.Seals(hs[:2])
-		t.NoError(err)
-		t.Equal(len(hs[:2]), len(l))
-
-		sm := map[valuehash.Hash]seal.Seal{}
-		for _, s := range l {
-			sm[s.Hash()] = s
-		}
-
-		for _, h := range hs[:2] {
-			t.True(seals[h].Hash().Equal(sm[h].Hash()))
-		}
-	}
-
-	{ // with unknown
-		bad := hs[:2]
-		bad = append(bad, valuehash.RandomSHA256())
-
-		l, err := qc.Seals(bad)
-		t.NoError(err)
-		t.Equal(len(hs[:2]), len(l))
-
-		sm := map[valuehash.Hash]seal.Seal{}
-		for _, s := range l {
-			sm[s.Hash()] = s
-		}
-
-		for _, h := range hs[:2] {
-			t.True(seals[h].Hash().Equal(sm[h].Hash()))
-		}
+		t.Equal(data, r)
 	}
 }
 

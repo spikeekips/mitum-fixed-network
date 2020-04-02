@@ -3,6 +3,9 @@
 package isaac
 
 import (
+	"bytes"
+	"sort"
+
 	"github.com/stretchr/testify/suite"
 
 	"github.com/spikeekips/mitum/encoder"
@@ -50,9 +53,11 @@ func (t *baseTestStateHandler) SetupSuite() { // nolint
 	_ = t.encs.AddHinter(KVOperation{})
 	_ = t.encs.AddHinter(tree.AVLTree{})
 	_ = t.encs.AddHinter(operation.OperationAVLNode{})
+	_ = t.encs.AddHinter(operation.OperationAVLNodeMutable{})
 	_ = t.encs.AddHinter(state.StateV0{})
 	_ = t.encs.AddHinter(state.OperationInfoV0{})
 	_ = t.encs.AddHinter(state.StateV0AVLNode{})
+	_ = t.encs.AddHinter(state.StateV0AVLNodeMutable{})
 	_ = t.encs.AddHinter(state.BytesValue{})
 	_ = t.encs.AddHinter(state.DurationValue{})
 	_ = t.encs.AddHinter(state.HintedValue{})
@@ -62,7 +67,7 @@ func (t *baseTestStateHandler) SetupSuite() { // nolint
 }
 
 func (t *baseTestStateHandler) states() (*Localstate, *Localstate) {
-	lastBlock, err := NewTestBlockV0(Height(33), Round(9), nil, valuehash.RandomSHA256())
+	lastBlock, err := NewTestBlockV0(Height(2), Round(9), nil, valuehash.RandomSHA256())
 	t.NoError(err)
 
 	lst := NewMemStorage(t.encs, t.enc)
@@ -84,7 +89,7 @@ func (t *baseTestStateHandler) states() (*Localstate, *Localstate) {
 		localstate.LastBlock().Height(),
 		localstate.LastBlock().Round(),
 		StageINIT,
-		VoteproofMajority,
+		VoteResultMajority,
 	)
 	_ = localstate.SetLastINITVoteproof(lastINITVoteproof)
 	_ = remoteState.SetLastINITVoteproof(lastINITVoteproof)
@@ -92,7 +97,7 @@ func (t *baseTestStateHandler) states() (*Localstate, *Localstate) {
 		localstate.LastBlock().Height(),
 		localstate.LastBlock().Round(),
 		StageACCEPT,
-		VoteproofMajority,
+		VoteResultMajority,
 	)
 	_ = localstate.SetLastACCEPTVoteproof(lastACCEPTVoteproof)
 	_ = remoteState.SetLastACCEPTVoteproof(lastACCEPTVoteproof)
@@ -144,7 +149,7 @@ func (t *baseTestStateHandler) newVoteproof(
 		round:     round,
 		stage:     stage,
 		threshold: states[0].Policy().Threshold(),
-		result:    VoteproofMajority,
+		result:    VoteResultMajority,
 		majority:  fact,
 		facts: map[valuehash.Hash]operation.Fact{
 			factHash: fact,
@@ -200,4 +205,81 @@ func (t *baseTestStateHandler) newOperationSeal(localstate *Localstate) operatio
 	t.NoError(sl.IsValid(nil))
 
 	return sl
+}
+
+func (t *baseTestStateHandler) compareBlockManifest(a, b BlockManifest) {
+	t.Equal(a.Height(), b.Height())
+	t.Equal(a.Round(), b.Round())
+	t.True(a.Proposal().Equal(b.Proposal()))
+	t.True(a.PreviousBlock().Equal(b.PreviousBlock()))
+	t.True(a.OperationsHash().Equal(b.OperationsHash()))
+	t.True(a.StatesHash().Equal(b.StatesHash()))
+}
+
+func (t *baseTestStateHandler) compareBlock(a, b Block) {
+	t.compareBlockManifest(a, b)
+	t.compareAVLTree(a.States(), b.States())
+	t.compareAVLTree(a.Operations(), b.Operations())
+	t.compareVoteproof(a.INITVoteproof(), b.INITVoteproof())
+	t.compareVoteproof(a.ACCEPTVoteproof(), b.ACCEPTVoteproof())
+}
+
+func (t *baseTestStateHandler) compareVoteproof(a, b Voteproof) {
+	t.True(a.Hint().Equal(b.Hint()))
+	t.Equal(a.IsFinished(), b.IsFinished())
+	t.Equal(localtime.RFC3339(a.FinishedAt()), localtime.RFC3339(b.FinishedAt()))
+	t.Equal(a.IsClosed(), b.IsClosed())
+	t.Equal(a.Height(), b.Height())
+	t.Equal(a.Round(), b.Round())
+	t.Equal(a.Stage(), b.Stage())
+	t.Equal(a.Result(), b.Result())
+	t.Equal(a.Majority(), b.Majority())
+	t.Equal(a.Ballots(), b.Ballots())
+	t.Equal(a.Threshold(), b.Threshold())
+}
+
+func (t *baseTestStateHandler) compareAVLTree(a, b *tree.AVLTree) {
+	t.True(a.Hint().Equal(b.Hint()))
+	{
+		ah, err := a.RootHash()
+		t.NoError(err)
+		bh, err := b.RootHash()
+		t.NoError(err)
+
+		t.True(ah.Equal(bh))
+	}
+
+	var nodesA, nodesB []tree.Node
+	t.NoError(a.Traverse(func(node tree.Node) (bool, error) {
+		nodesA = append(nodesA, node)
+		return true, nil
+	}))
+	t.NoError(b.Traverse(func(node tree.Node) (bool, error) {
+		nodesB = append(nodesB, node)
+		return true, nil
+	}))
+
+	sort.Slice(nodesA, func(i, j int) bool {
+		return bytes.Compare(nodesA[i].Key(), nodesA[j].Key()) < 0
+	})
+	sort.Slice(nodesB, func(i, j int) bool {
+		return bytes.Compare(nodesB[i].Key(), nodesB[j].Key()) < 0
+	})
+
+	t.Equal(len(nodesA), len(nodesB))
+
+	for i := range nodesA {
+		t.compareAVLTreeNode(nodesA[i].Immutable(), nodesB[i].Immutable())
+	}
+}
+
+func (t *baseTestStateHandler) compareAVLTreeNode(a, b tree.Node) {
+	t.Equal(a.Hint(), b.Hint())
+	t.Equal(a.Key(), b.Key())
+	t.Equal(a.Hash(), b.Hash())
+	t.Equal(a.LeftKey(), b.LeftHash())
+	t.Equal(a.LeftHash(), b.LeftHash())
+	t.Equal(a.RightKey(), b.RightHash())
+	t.Equal(a.RightHash(), b.RightHash())
+	t.Equal(a.ValueHash(), b.ValueHash())
 }

@@ -23,61 +23,61 @@ type Voteproof interface {
 	Height() Height
 	Round() Round
 	Stage() Stage
-	Result() VoteproofResultType
+	Result() VoteResultType
 	Majority() operation.Fact
 	Ballots() map[Address]valuehash.Hash
 	Threshold() Threshold
 }
 
-type VoteproofResultType uint8
+type VoteResultType uint8
 
 const (
-	VoteproofNotYet VoteproofResultType = iota
-	VoteproofDraw
-	VoteproofMajority
+	VoteResultNotYet VoteResultType = iota
+	VoteResultDraw
+	VoteResultMajority
 )
 
-func (vrt VoteproofResultType) Bytes() []byte {
+func (vrt VoteResultType) Bytes() []byte {
 	return util.Uint8ToBytes(uint8(vrt))
 }
 
-func (vrt VoteproofResultType) String() string {
+func (vrt VoteResultType) String() string {
 	switch vrt {
-	case VoteproofNotYet:
+	case VoteResultNotYet:
 		return "NOT-YET"
-	case VoteproofDraw:
+	case VoteResultDraw:
 		return "DRAW"
-	case VoteproofMajority:
+	case VoteResultMajority:
 		return "MAJORITY"
 	default:
-		return "<unknown VoteproofResultType>"
+		return "<unknown VoteResultType>"
 	}
 }
 
-func (vrt VoteproofResultType) IsValid([]byte) error {
+func (vrt VoteResultType) IsValid([]byte) error {
 	switch vrt {
-	case VoteproofNotYet, VoteproofDraw, VoteproofMajority:
+	case VoteResultNotYet, VoteResultDraw, VoteResultMajority:
 		return nil
 	}
 
-	return isvalid.InvalidError.Wrapf("VoteproofResultType=%d", vrt)
+	return isvalid.InvalidError.Wrapf("VoteResultType=%d", vrt)
 }
 
-func (vrt VoteproofResultType) MarshalText() ([]byte, error) {
+func (vrt VoteResultType) MarshalText() ([]byte, error) {
 	return []byte(vrt.String()), nil
 }
 
-func (vrt *VoteproofResultType) UnmarshalText(b []byte) error {
-	var t VoteproofResultType
+func (vrt *VoteResultType) UnmarshalText(b []byte) error {
+	var t VoteResultType
 	switch string(b) {
 	case "NOT-YET":
-		t = VoteproofNotYet
+		t = VoteResultNotYet
 	case "DRAW":
-		t = VoteproofDraw
+		t = VoteResultDraw
 	case "MAJORITY":
-		t = VoteproofMajority
+		t = VoteResultMajority
 	default:
-		return xerrors.Errorf("<unknown VoteproofResultType>")
+		return xerrors.Errorf("<unknown VoteResultType>")
 	}
 
 	*vrt = t

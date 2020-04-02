@@ -44,22 +44,39 @@ func NewDummyBlocksV0Generator(
 	}, nil
 }
 
-func (bg *DummyBlocksV0Generator) Generate() error {
-	genesis, err := NewGenesisBlockV0Generator(bg.genesisNode, nil)
-	if err != nil {
-		return err
-	} else if block, err := genesis.Generate(); err != nil {
-		return err
-	} else {
-		for _, l := range bg.allNodes {
-			if err := l.SetLastBlock(block); err != nil {
-				return err
-			}
+func (bg *DummyBlocksV0Generator) Generate(ignoreExists bool) error {
+	lastHeight := NilHeight
+	if !ignoreExists {
+		lastBlock, err := bg.genesisNode.Storage().LastBlock()
+		if err != nil {
+			return err
+		} else if err := lastBlock.Manifest().IsValid(bg.genesisNode.Policy().NetworkID()); err != nil {
+			return err
+		}
+		lastHeight = lastBlock.Height()
+
+		if lastHeight >= bg.lastHeight {
+			return nil
 		}
 	}
 
-	if err := bg.syncBlocks(bg.genesisNode); err != nil {
-		return err
+	if lastHeight == NilHeight {
+		genesis, err := NewGenesisBlockV0Generator(bg.genesisNode, nil)
+		if err != nil {
+			return err
+		} else if block, err := genesis.Generate(); err != nil {
+			return err
+		} else {
+			for _, l := range bg.allNodes {
+				if err := l.SetLastBlock(block); err != nil {
+					return err
+				}
+			}
+		}
+
+		if err := bg.syncBlocks(bg.genesisNode); err != nil {
+			return err
+		}
 	}
 
 	for {
@@ -95,6 +112,8 @@ func (bg *DummyBlocksV0Generator) syncBlocks(from *Localstate) error {
 			}
 
 			if bs, err := l.Storage().OpenBlockStorage(block); err != nil {
+				return err
+			} else if err := bs.SetBlock(block); err != nil {
 				return err
 			} else if err := bs.Commit(); err != nil {
 				return err
@@ -225,9 +244,9 @@ func (bg *DummyBlocksV0Generator) finish() error {
 		pm := bg.pms[l.Node().Address()]
 		if bs, err := pm.ProcessACCEPT(proposal, acceptVoteproof); err != nil {
 			return err
-		} else if err := bs.Commit(); err != nil {
-			return err
 		} else if err := bs.Block().IsValid(bg.networkID); err != nil {
+			return err
+		} else if err := bs.Commit(); err != nil {
 			return err
 		} else if err := l.SetLastBlock(bs.Block()); err != nil {
 			return err

@@ -36,13 +36,15 @@ type StateChangeContext struct {
 	fromState State
 	toState   State
 	voteproof Voteproof
+	ballot    Ballot
 }
 
-func NewStateChangeContext(from, to State, voteproof Voteproof) StateChangeContext {
+func NewStateChangeContext(from, to State, voteproof Voteproof, ballot Ballot) StateChangeContext {
 	return StateChangeContext{
 		fromState: from,
 		toState:   to,
 		voteproof: voteproof,
+		ballot:    ballot,
 	}
 }
 
@@ -56,6 +58,10 @@ func (csc StateChangeContext) To() State {
 
 func (csc StateChangeContext) Voteproof() Voteproof {
 	return csc.voteproof
+}
+
+func (csc StateChangeContext) Ballot() Ballot {
+	return csc.ballot
 }
 
 type BaseStateHandler struct {
@@ -91,7 +97,7 @@ func (bs *BaseStateHandler) SetSealChan(sealChan chan<- seal.Seal) {
 	bs.sealChan = sealChan
 }
 
-func (bs *BaseStateHandler) ChangeState(newState State, voteproof Voteproof) error {
+func (bs *BaseStateHandler) ChangeState(newState State, voteproof Voteproof, ballot Ballot) error {
 	if bs.stateChan == nil {
 		return nil
 	}
@@ -103,7 +109,7 @@ func (bs *BaseStateHandler) ChangeState(newState State, voteproof Voteproof) err
 	}
 
 	go func() {
-		bs.stateChan <- NewStateChangeContext(bs.state, newState, voteproof)
+		bs.stateChan <- NewStateChangeContext(bs.state, newState, voteproof, ballot)
 	}()
 
 	return nil

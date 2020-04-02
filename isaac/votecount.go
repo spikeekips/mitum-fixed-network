@@ -1,6 +1,8 @@
 package isaac
 
-import "sort"
+import (
+	"sort"
+)
 
 // FindMajority finds the majority(over threshold) set between the given sets.
 // The returned value means,
@@ -46,4 +48,30 @@ func FindMajority(total, threshold uint, set ...uint) int {
 	}
 
 	return -1 // not yet
+}
+
+func FindMajorityFromSlice(total, threshold uint, s []string) (VoteResultType, string) {
+	keys := map[uint]string{}
+	counts := map[string]uint{}
+	for _, k := range s {
+		counts[k]++
+	}
+
+	set := make([]uint, len(counts))
+	var i int
+	for k, c := range counts {
+		keys[c] = k
+		set[i] = c
+		i++
+	}
+
+	sort.Slice(set, func(i, j int) bool { return set[i] > set[j] })
+	switch index := FindMajority(total, threshold, set...); index {
+	case -1:
+		return VoteResultNotYet, ""
+	case -2:
+		return VoteResultDraw, ""
+	default:
+		return VoteResultMajority, keys[set[index]]
+	}
 }

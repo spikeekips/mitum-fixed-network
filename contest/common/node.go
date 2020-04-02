@@ -29,8 +29,8 @@ func NewLocalNode(id int) *isaac.LocalNode {
 	return ln
 }
 
-func NewNodeChannel(encs *encoder.Encoders, enc encoder.Encoder, netType string) network.Channel {
-	var channel network.Channel
+func NewNodeChannel(encs *encoder.Encoders, enc encoder.Encoder, netType string) isaac.NetworkChannel {
+	var channel isaac.NetworkChannel
 
 	switch netType {
 	case "quic":
@@ -39,7 +39,7 @@ func NewNodeChannel(encs *encoder.Encoders, enc encoder.Encoder, netType string)
 			panic(err)
 		}
 
-		ch, err := network.NewQuicChannel(
+		ch, err := isaac.NewQuicChannel(
 			fmt.Sprintf("https://localhost:%d", port),
 			100,
 			true,
@@ -54,7 +54,7 @@ func NewNodeChannel(encs *encoder.Encoders, enc encoder.Encoder, netType string)
 		}
 		channel = ch
 	case "chan":
-		channel = network.NewChanChannel(100000000)
+		channel = isaac.NewNetworkChanChannel(100000000)
 	}
 
 	return channel
@@ -101,7 +101,7 @@ type NodeProcess struct {
 	Suffrage          isaac.Suffrage
 	ProposalProcessor isaac.ProposalProcessor
 	ConsensusStates   *isaac.ConsensusStates
-	NetworkServer     network.Server
+	NetworkServer     isaac.Server
 	AllNodes          []*isaac.Localstate
 	stopChan          chan struct{}
 }
@@ -122,7 +122,17 @@ func NewNodeProcess(localstate *isaac.Localstate) (*NodeProcess, error) {
 		return nil, err
 	}
 
+	cshandlerSyncing, err := isaac.NewStateSyncingHandler(localstate, suffrage)
+	if err != nil {
+		return nil, err
+	}
+
 	cshandlerJoining, err := isaac.NewStateJoiningHandler(localstate, proposalProcessor)
+	if err != nil {
+		return nil, err
+	}
+
+	cshandlerBroken, err := isaac.NewStateBrokenHandler(localstate)
 	if err != nil {
 		return nil, err
 	}
@@ -145,8 +155,8 @@ func NewNodeProcess(localstate *isaac.Localstate) (*NodeProcess, error) {
 		cshandlerBooting,
 		cshandlerJoining,
 		cshandlerConsensus,
-		nil,
-		nil,
+		cshandlerSyncing,
+		cshandlerBooting,
 	)
 
 	np := &NodeProcess{
@@ -172,12 +182,12 @@ func NewNodeProcess(localstate *isaac.Localstate) (*NodeProcess, error) {
 	return np, nil
 }
 
-func (np *NodeProcess) networkServer() (network.Server, error) {
-	var server network.Server
+func (np *NodeProcess) networkServer() (isaac.Server, error) {
+	var server isaac.Server
 	switch ch := np.Localstate.Node().Channel().(type) {
-	case *network.ChanChannel:
-		server = network.NewChanServer(ch)
-	case *network.QuicChannel:
+	case *isaac.NetworkChanChannel:
+		server = isaac.NewNetworkChanServer(ch)
+	case *isaac.QuicChannel:
 		priv, err := util.GenerateED25519Privatekey()
 		if err != nil {
 			return nil, err
@@ -199,10 +209,12 @@ func (np *NodeProcess) networkServer() (network.Server, error) {
 			return nil, err
 		}
 
-		if s, err := network.NewQuicServer(bind, certs, encs, enc); err != nil {
+		if qs, err := network.NewQuicServer(bind, certs); err != nil {
+			return nil, err
+		} else if nqs, err := isaac.NewQuicServer(qs, encs, enc); err != nil {
 			return nil, err
 		} else {
-			server = s
+			server = nqs
 		}
 	default:
 		return nil, xerrors.Errorf("unknown network found")

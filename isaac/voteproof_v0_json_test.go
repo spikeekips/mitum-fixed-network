@@ -44,7 +44,7 @@ func (t *testVoteproofJSON) TestMajorityButNot() {
 		round:     Round(3),
 		stage:     StageINIT,
 		threshold: threshold,
-		result:    VoteproofMajority,
+		result:    VoteResultMajority,
 		facts: map[valuehash.Hash]operation.Fact{
 			factHash0: fact0,
 		},

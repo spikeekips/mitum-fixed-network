@@ -93,3 +93,32 @@ func (abf ACCEPTBallotFactV0) MarshalJSON() ([]byte, error) {
 		NB:                         abf.newBlock,
 	})
 }
+
+type ACCEPTBallotFactV0UnpackerJSON struct {
+	BaseBallotFactV0PackerJSON
+	PR json.RawMessage `json:"proposal"`
+	NB json.RawMessage `json:"new_block"`
+}
+
+func (abf *ACCEPTBallotFactV0) UnpackJSON(b []byte, enc *encoder.JSONEncoder) error {
+	var ubf ACCEPTBallotFactV0UnpackerJSON
+	if err := enc.Unmarshal(b, &ubf); err != nil {
+		return err
+	}
+
+	var err error
+	var pr, nb valuehash.Hash
+	if pr, err = valuehash.Decode(enc, ubf.PR); err != nil {
+		return err
+	}
+	if nb, err = valuehash.Decode(enc, ubf.NB); err != nil {
+		return err
+	}
+
+	abf.BaseBallotFactV0.height = ubf.HT
+	abf.BaseBallotFactV0.round = ubf.RD
+	abf.proposal = pr
+	abf.newBlock = nb
+
+	return nil
+}

@@ -3,7 +3,6 @@ package isaac
 import (
 	"testing"
 
-	"github.com/spikeekips/mitum/network"
 	"github.com/spikeekips/mitum/seal"
 	"github.com/spikeekips/mitum/storage"
 	"github.com/spikeekips/mitum/valuehash"
@@ -72,6 +71,26 @@ func (t *testProposalProcessor) TestBlockOperations() {
 
 	t.NotNil(block.Operations())
 	t.NotNil(block.States())
+
+	acceptFact := ACCEPTBallotFactV0{
+		BaseBallotFactV0: BaseBallotFactV0{
+			height: ivp.Height(),
+			round:  ivp.Round(),
+		},
+		proposal: proposal.Hash(),
+		newBlock: block.Hash(),
+	}
+
+	avp, err := t.newVoteproof(StageACCEPT, acceptFact, t.localstate, t.remoteState)
+
+	bs, err := dp.ProcessACCEPT(proposal.Hash(), avp)
+	t.NoError(err)
+	t.NoError(bs.Commit())
+
+	loaded, err := t.localstate.Storage().Block(block.Hash())
+	t.NoError(err)
+
+	t.compareBlock(bs.Block(), loaded)
 }
 
 func (t *testProposalProcessor) TestNotFoundInProposal() {
@@ -91,7 +110,7 @@ func (t *testProposalProcessor) TestNotFoundInProposal() {
 		op := t.newOperationSeal(t.remoteState)
 
 		// add getSealHandler
-		t.remoteState.Node().Channel().(*network.ChanChannel).SetGetSealHandler(
+		t.remoteState.Node().Channel().(*NetworkChanChannel).SetGetSealHandler(
 			func(hs []valuehash.Hash) ([]seal.Seal, error) {
 				return []seal.Seal{op}, nil
 			},

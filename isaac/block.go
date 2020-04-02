@@ -5,6 +5,7 @@ import (
 
 	"github.com/spikeekips/mitum/hint"
 	"github.com/spikeekips/mitum/isvalid"
+	"github.com/spikeekips/mitum/tree"
 	"github.com/spikeekips/mitum/util"
 	"github.com/spikeekips/mitum/valuehash"
 )
@@ -18,8 +19,8 @@ type BlockManifest interface {
 	Height() Height
 	Round() Round
 	Proposal() valuehash.Hash
-	Operations() valuehash.Hash
-	States() valuehash.Hash
+	OperationsHash() valuehash.Hash
+	StatesHash() valuehash.Hash
 	CreatedAt() time.Time
 }
 
@@ -34,10 +35,16 @@ type BlockConsensusInfo interface {
 type Block interface {
 	BlockManifest
 	BlockConsensusInfo
+	Manifest() BlockManifest
+	ConsensusInfo() BlockConsensusInfo
+	Operations() *tree.AVLTree
+	States() *tree.AVLTree
 }
 
 type BlockUpdater interface {
 	Block
 	SetINITVoteproof(Voteproof) BlockUpdater
 	SetACCEPTVoteproof(Voteproof) BlockUpdater
+	SetOperations(*tree.AVLTree) BlockUpdater
+	SetStates(*tree.AVLTree) BlockUpdater
 }

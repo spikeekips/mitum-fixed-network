@@ -169,7 +169,7 @@ func (cs *StateConsensusHandler) NewVoteproof(voteproof Voteproof) error {
 	l.Debug().Msg("Voteproof received")
 
 	// NOTE if drew, goes to next round.
-	if voteproof.Result() == VoteproofDraw {
+	if voteproof.Result() == VoteResultDraw {
 		return cs.startNextRound(voteproof)
 	}
 

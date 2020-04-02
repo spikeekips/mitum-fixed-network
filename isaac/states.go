@@ -28,11 +28,11 @@ func NewConsensusStates(
 	localstate *Localstate,
 	ballotbox *Ballotbox,
 	suffrage Suffrage,
-	booting StateHandler,
-	joining StateHandler,
-	consensus StateHandler,
-	syncing StateHandler,
-	broken StateHandler,
+	booting *StateBootingHandler,
+	joining *StateJoiningHandler,
+	consensus *StateConsensusHandler,
+	syncing *StateSyncingHandler,
+	broken *StateBrokenHandler,
 ) *ConsensusStates {
 	css := &ConsensusStates{
 		Logging: logging.NewLogging(func(c zerolog.Context) zerolog.Context {
@@ -94,7 +94,7 @@ func (css *ConsensusStates) Start() error {
 		return err
 	}
 
-	css.ActivateHandler(NewStateChangeContext(StateStopped, StateBooting, nil))
+	css.ActivateHandler(NewStateChangeContext(StateStopped, StateBooting, nil, nil))
 
 	return nil
 }
@@ -108,7 +108,7 @@ func (css *ConsensusStates) Stop() error {
 	}
 
 	if css.activeHandler != nil {
-		ctx := NewStateChangeContext(css.activeHandler.State(), StateStopped, nil)
+		ctx := NewStateChangeContext(css.activeHandler.State(), StateStopped, nil, nil)
 		if err := css.activeHandler.Deactivate(ctx); err != nil {
 			return err
 		}
@@ -160,7 +160,7 @@ end:
 	}
 }
 
-// ActiveHandler returns the current activated handler.
+// ActivateHandler returns the current activated handler.
 func (css *ConsensusStates) ActivateHandler(ctx StateChangeContext) {
 	css.stateChan <- ctx
 }

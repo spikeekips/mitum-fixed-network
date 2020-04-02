@@ -65,7 +65,7 @@ func (t *testBlockV0DummyGenerator) TestCreate() {
 	bg, err := NewDummyBlocksV0Generator(t.localstate, lastHeight, suffrage, all)
 	t.NoError(err)
 
-	t.NoError(bg.Generate())
+	t.NoError(bg.Generate(true))
 
 	for i := int64(0); i < lastHeight.Int64(); i++ {
 		hashes := map[valuehash.Hash]struct{}{}
@@ -73,6 +73,7 @@ func (t *testBlockV0DummyGenerator) TestCreate() {
 			block, err := l.Storage().BlockByHeight(Height(i))
 			t.NoError(err, "node=%d height=%d", nodeid, i)
 			t.NotNil(block, "node=%d height=%d", nodeid, i)
+			t.NoError(block.IsValid(nil))
 
 			hashes[block.Hash()] = struct{}{}
 		}

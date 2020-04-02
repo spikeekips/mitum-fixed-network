@@ -36,7 +36,7 @@ func (t *testBallotV0ACCEPTJSON) TestEncode() {
 		Height(10),
 		Round(0),
 		StageINIT,
-		VoteproofMajority,
+		VoteResultMajority,
 	)
 
 	ab := ACCEPTBallotV0{

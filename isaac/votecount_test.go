@@ -106,3 +106,49 @@ func TestFindMajority(t *testing.T) {
 		)
 	}
 }
+
+func TestFindMajorityFromSlice(t *testing.T) {
+	cases := []struct {
+		name      string
+		total     uint
+		threshold uint
+		s         []string
+		expected  string
+		result    VoteResultType
+	}{
+		{
+			name:  "over threshold",
+			total: 3, threshold: 2,
+			s:        []string{"c", "a", "a"},
+			expected: "a",
+			result:   VoteResultMajority,
+		},
+		{
+			name:  "draw",
+			total: 3, threshold: 2,
+			s:        []string{"c", "a", "b"},
+			expected: "",
+			result:   VoteResultDraw,
+		},
+		{
+			name:  "not yet",
+			total: 3, threshold: 2,
+			s:        []string{"c", "a"},
+			expected: "",
+			result:   VoteResultNotYet,
+		},
+	}
+
+	for i, c := range cases {
+		i := i
+		c := c
+		t.Run(
+			c.name,
+			func(*testing.T) {
+				result, key := FindMajorityFromSlice(c.total, c.threshold, c.s)
+				assert.Equal(t, c.expected, key, "%d: %v; %v != %v", i, c.name, c.expected, key)
+				assert.Equal(t, c.result, result, "%d: %v; %v != %v", i, c.name, c.expected, result)
+			},
+		)
+	}
+}

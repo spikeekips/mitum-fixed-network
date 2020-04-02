@@ -22,7 +22,7 @@ type VoteproofV0 struct {
 	height     Height
 	round      Round
 	threshold  Threshold
-	result     VoteproofResultType
+	result     VoteResultType
 	closed     bool
 	stage      Stage
 	majority   operation.Fact
@@ -37,7 +37,7 @@ func (vp VoteproofV0) Hint() hint.Hint {
 }
 
 func (vp VoteproofV0) IsFinished() bool {
-	return vp.result != VoteproofNotYet
+	return vp.result != VoteResultNotYet
 }
 
 func (vp VoteproofV0) FinishedAt() time.Time {
@@ -60,7 +60,7 @@ func (vp VoteproofV0) Stage() Stage {
 	return vp.stage
 }
 
-func (vp VoteproofV0) Result() VoteproofResultType {
+func (vp VoteproofV0) Result() VoteResultType {
 	return vp.result
 }
 
@@ -109,7 +109,7 @@ func (vp VoteproofV0) IsValid(b []byte) error {
 
 	// check majority
 	if len(vp.votes) < int(vp.threshold.Threshold) {
-		if vp.result != VoteproofNotYet {
+		if vp.result != VoteResultNotYet {
 			return xerrors.Errorf("result should be not-yet: %s", vp.result)
 		}
 
@@ -137,14 +137,14 @@ func (vp VoteproofV0) isValidCheckMajority() error {
 
 	var fact operation.Fact
 	var factHash valuehash.Hash
-	var result VoteproofResultType
+	var result VoteResultType
 	switch index := FindMajority(vp.threshold.Total, vp.threshold.Threshold, set...); index {
 	case -1:
-		result = VoteproofNotYet
+		result = VoteResultNotYet
 	case -2:
-		result = VoteproofDraw
+		result = VoteResultDraw
 	default:
-		result = VoteproofMajority
+		result = VoteResultMajority
 		factHash = byCount[set[index]]
 		fact = vp.facts[factHash]
 	}
@@ -180,12 +180,12 @@ func (vp VoteproofV0) isValidFields(b []byte) error {
 		return isvalid.InvalidError.Wrapf("empty finishedAt")
 	}
 
-	if vp.result != VoteproofMajority && vp.result != VoteproofDraw {
+	if vp.result != VoteResultMajority && vp.result != VoteResultDraw {
 		return isvalid.InvalidError.Wrapf("invalid result; result=%v", vp.result)
 	}
 
 	if vp.majority == nil {
-		if vp.result != VoteproofDraw {
+		if vp.result != VoteResultDraw {
 			return isvalid.InvalidError.Wrapf("empty majority, but result is not draw; result=%v", vp.result)
 		}
 	} else if err := vp.majority.IsValid(b); err != nil {

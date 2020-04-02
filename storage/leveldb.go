@@ -23,3 +23,12 @@ func LeveldbDataWithEncoder(enc encoder.Encoder, b []byte) []byte {
 
 	return util.ConcatSlice([][]byte{h, b})
 }
+
+func LeveldbMarshal(enc encoder.Encoder, i interface{}) ([]byte, error) {
+	b, err := enc.Encode(i)
+	if err != nil {
+		return nil, err
+	}
+
+	return LeveldbDataWithEncoder(enc, b), nil
+}

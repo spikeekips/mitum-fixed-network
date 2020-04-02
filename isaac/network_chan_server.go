@@ -1,4 +1,4 @@
-package network
+package isaac
 
 import (
 	"github.com/rs/zerolog"
@@ -8,16 +8,15 @@ import (
 	"github.com/spikeekips/mitum/util"
 )
 
-type ChanServer struct {
+type NetworkChanServer struct {
 	*logging.Logging
 	*util.FunctionDaemon
-	getSealsHandler GetSealsHandler
-	newSealHandler  NewSealHandler
-	ch              *ChanChannel
+	newSealHandler NewSealHandler
+	ch             *NetworkChanChannel
 }
 
-func NewChanServer(ch *ChanChannel) *ChanServer {
-	cs := &ChanServer{
+func NewNetworkChanServer(ch *NetworkChanChannel) *NetworkChanServer {
+	cs := &NetworkChanServer{
 		Logging: logging.NewLogging(func(c zerolog.Context) zerolog.Context {
 			return c.Str("module", "network-chan-server")
 		}),
@@ -29,22 +28,23 @@ func NewChanServer(ch *ChanChannel) *ChanServer {
 	return cs
 }
 
-func (cs *ChanServer) SetLogger(l logging.Logger) logging.Logger {
+func (cs *NetworkChanServer) SetLogger(l logging.Logger) logging.Logger {
 	_ = cs.Logging.SetLogger(l)
 	_ = cs.FunctionDaemon.SetLogger(l)
 
 	return cs.Log()
 }
 
-func (cs *ChanServer) SetGetSealsHandler(fn GetSealsHandler) {
-	cs.getSealsHandler = fn
+func (cs *NetworkChanServer) SetGetSealsHandler(GetSealsHandler) {}
+
+func (cs *NetworkChanServer) SetNewSealHandler(f NewSealHandler) {
+	cs.newSealHandler = f
 }
 
-func (cs *ChanServer) SetNewSealHandler(fn NewSealHandler) {
-	cs.newSealHandler = fn
-}
+func (cs *NetworkChanServer) SetGetBlockManifests(GetBlockManifestsHandler) {}
+func (cs *NetworkChanServer) SetGetBlocks(GetBlocksHandler)                 {}
 
-func (cs *ChanServer) run(stopChan chan struct{}) error {
+func (cs *NetworkChanServer) run(stopChan chan struct{}) error {
 end:
 	for {
 		select {

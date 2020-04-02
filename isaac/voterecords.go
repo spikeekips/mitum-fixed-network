@@ -1,7 +1,6 @@
 package isaac
 
 import (
-	"sort"
 	"sync"
 
 	"github.com/spikeekips/mitum/localtime"
@@ -13,23 +12,21 @@ type VoteRecords struct {
 	sync.RWMutex
 	facts     map[valuehash.Hash]operation.Fact
 	votes     map[Address]valuehash.Hash // key: node Address, value: fact hash
-	factCount map[valuehash.Hash]uint
 	ballots   map[Address]Ballot
 	voteproof VoteproofV0
 }
 
 func NewVoteRecords(ballot Ballot, threshold Threshold) *VoteRecords {
 	return &VoteRecords{
-		facts:     map[valuehash.Hash]operation.Fact{},
-		votes:     map[Address]valuehash.Hash{},
-		factCount: map[valuehash.Hash]uint{},
-		ballots:   map[Address]Ballot{},
+		facts:   map[valuehash.Hash]operation.Fact{},
+		votes:   map[Address]valuehash.Hash{},
+		ballots: map[Address]Ballot{},
 		voteproof: VoteproofV0{
 			height:    ballot.Height(),
 			round:     ballot.Round(),
 			stage:     ballot.Stage(),
 			threshold: threshold,
-			result:    VoteproofNotYet,
+			result:    VoteResultNotYet,
 			facts:     map[valuehash.Hash]operation.Fact{},
 			ballots:   map[Address]valuehash.Hash{},
 			votes:     map[Address]VoteproofNodeFact{},
@@ -50,7 +47,6 @@ func (vrs *VoteRecords) addBallot(ballot Ballot) bool {
 	if _, found := vrs.facts[factHash]; !found {
 		vrs.facts[factHash] = ballot.Fact()
 	}
-	vrs.factCount[factHash]++
 
 	return false
 }
@@ -110,27 +106,24 @@ func (vrs *VoteRecords) vote(ballot Ballot) bool {
 		return false
 	}
 
-	byCount := map[uint]operation.Fact{}
-	set := make([]uint, len(vrs.factCount))
-	for factHash, c := range vrs.factCount {
-		set = append(set, c)
-		byCount[c] = vrs.facts[factHash]
-	}
+	set := make([]string, len(vrs.votes))
+	facts := map[string]operation.Fact{}
 
-	if len(set) > 0 {
-		sort.Slice(set, func(i, j int) bool { return set[i] > set[j] })
+	var i int
+	for n := range vrs.votes {
+		factHash := vrs.votes[n]
+		key := factHash.String()
+		set[i] = key
+		facts[key] = vrs.facts[factHash]
+		i++
 	}
 
 	var fact operation.Fact
-	var result VoteproofResultType
-	switch index := FindMajority(vrs.voteproof.threshold.Total, vrs.voteproof.threshold.Threshold, set...); index {
-	case -1:
-		result = VoteproofNotYet
-	case -2:
-		result = VoteproofDraw
-	default:
-		result = VoteproofMajority
-		fact = byCount[set[index]]
+	var result VoteResultType
+
+	result, key := FindMajorityFromSlice(vrs.voteproof.threshold.Total, vrs.voteproof.threshold.Threshold, set)
+	if result == VoteResultMajority {
+		fact = facts[key]
 	}
 
 	vrs.voteproof.result = result

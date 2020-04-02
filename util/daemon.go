@@ -96,6 +96,10 @@ func (dm *FunctionDaemon) kill() {
 	dm.Lock()
 	dm.stoppingChan = nil
 	dm.Unlock()
+
+	if dm.isDebug {
+		dm.Log().Debug().Msg("stopped")
+	}
 }
 
 func (dm *FunctionDaemon) Stop() error {

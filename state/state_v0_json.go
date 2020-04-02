@@ -10,6 +10,7 @@ import (
 
 type StateV0PackerJSON struct {
 	encoder.JSONPackHintedHead
+	H   valuehash.Hash  `json:"hash"`
 	K   string          `json:"key"`
 	V   Value           `json:"value"`
 	PB  valuehash.Hash  `json:"previous_block"`
@@ -19,6 +20,7 @@ type StateV0PackerJSON struct {
 func (st StateV0) MarshalJSON() ([]byte, error) {
 	return util.JSONMarshal(StateV0PackerJSON{
 		JSONPackHintedHead: encoder.NewJSONPackHintedHead(st.Hint()),
+		H:                  st.h,
 		K:                  st.key,
 		V:                  st.value,
 		PB:                 st.previousBlock,
@@ -27,6 +29,7 @@ func (st StateV0) MarshalJSON() ([]byte, error) {
 }
 
 type StateV0UnpackerJSON struct {
+	H   json.RawMessage   `json:"hash"`
 	K   string            `json:"key"`
 	V   json.RawMessage   `json:"value"`
 	PB  json.RawMessage   `json:"previous_block"`
@@ -39,11 +42,17 @@ func (st *StateV0) UnpackJSON(b []byte, enc *encoder.JSONEncoder) error {
 		return err
 	}
 
-	var previousBlock valuehash.Hash
-	if h, err := valuehash.Decode(enc, ust.PB); err != nil {
+	var h, previousBlock valuehash.Hash
+	if i, err := valuehash.Decode(enc, ust.H); err != nil {
 		return err
 	} else {
-		previousBlock = h
+		h = i
+	}
+
+	if i, err := valuehash.Decode(enc, ust.PB); err != nil {
+		return err
+	} else {
+		previousBlock = i
 	}
 
 	var value Value
@@ -62,6 +71,7 @@ func (st *StateV0) UnpackJSON(b []byte, enc *encoder.JSONEncoder) error {
 		}
 	}
 
+	st.h = h
 	st.key = ust.K
 	st.value = value
 	st.previousBlock = previousBlock

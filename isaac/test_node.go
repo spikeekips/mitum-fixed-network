@@ -6,10 +6,9 @@ import (
 	"fmt"
 
 	"github.com/spikeekips/mitum/key"
-	"github.com/spikeekips/mitum/network"
 )
 
-func RandomLocalNode(name string, channel network.Channel) *LocalNode {
+func RandomLocalNode(name string, channel NetworkChannel) *LocalNode {
 	pk, _ := key.NewBTCPrivatekey()
 
 	ln := NewLocalNode(
@@ -18,7 +17,7 @@ func RandomLocalNode(name string, channel network.Channel) *LocalNode {
 	)
 
 	if channel == nil {
-		channel = network.NewChanChannel(0)
+		channel = NewNetworkChanChannel(0)
 	}
 
 	return ln.SetChannel(channel)

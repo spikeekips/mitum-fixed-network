@@ -160,8 +160,10 @@ func (t *testLogging) TestVerboseFunc() {
 		}).Msg("showme")
 
 		t.False(called)
-		t.Empty(t.buf.Bytes())
+		t.NotContains(string(t.buf.Bytes()), "eatme")
 	}
+
+	t.buf.Reset()
 
 	{ // verbose
 		logger := NewLogger(t.l, true)

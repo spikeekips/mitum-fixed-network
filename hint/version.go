@@ -20,7 +20,7 @@ func (vs Version) String() string {
 	return string(vs)
 }
 
-// VersionGO returns golang style semver string. It does not check IsValid().
+// GO returns golang style semver string. It does not check IsValid().
 func (vs Version) GO() string {
 	s := string(vs)
 	if strings.HasPrefix(s, "v") {
@@ -30,8 +30,8 @@ func (vs Version) GO() string {
 	return "v" + s
 }
 
-// IsVersionCompatible checks if the check version is compatible to the target.
-// The compatible conditions are,
+// IsCompatible checks if the check version is compatible to the target. The
+// compatible conditions are,
 // - major matches
 // - minor of the check version is same or lower than target
 // - patch of the check version is same or lower than target

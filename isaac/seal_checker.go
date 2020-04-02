@@ -3,6 +3,7 @@ package isaac
 import "github.com/spikeekips/mitum/seal"
 
 // NOTE SealValidationChecker should be done before ConsensusStates
+
 type SealValidationChecker struct {
 	seal seal.Seal
 	b    []byte

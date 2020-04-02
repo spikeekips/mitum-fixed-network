@@ -1,14 +1,9 @@
 package network
 
 import (
-	"bytes"
 	"context"
 	"crypto/tls"
-	"encoding/json"
-	"io"
 	"net/http"
-	"net/url"
-	"path"
 	"time"
 
 	"github.com/gorilla/mux"
@@ -18,40 +13,27 @@ import (
 	"github.com/spikeekips/mitum/encoder"
 	"github.com/spikeekips/mitum/hint"
 	"github.com/spikeekips/mitum/logging"
-	"github.com/spikeekips/mitum/seal"
 	"github.com/spikeekips/mitum/util"
-	"github.com/spikeekips/mitum/valuehash"
 )
 
-var (
-	QuicHandlerPathSendSeal = "/seal"
-	QuicHandlerPathGetSeals = "/seals"
-)
+const QuicEncoderHintHeader string = "x-mitum-encoder-hint"
 
 type QuicServer struct {
 	*logging.Logging
 	*util.FunctionDaemon
-	encs            *encoder.Encoders
-	enc             encoder.Encoder // NOTE default encoder.Encoder
-	bind            string
-	tlsConfig       *tls.Config
-	stoppedChan     chan struct{}
-	router          *mux.Router
-	getSealsHandler GetSealsHandler
-	newSealHandler  NewSealHandler
+	bind        string
+	tlsConfig   *tls.Config
+	stoppedChan chan struct{}
+	router      *mux.Router
 }
 
-func NewQuicServer(
-	bind string, certs []tls.Certificate, encs *encoder.Encoders, enc encoder.Encoder,
-) (*QuicServer, error) {
+func NewQuicServer(bind string, certs []tls.Certificate) (*QuicServer, error) {
 	// TODO ratelimit
 	qs := &QuicServer{
 		Logging: logging.NewLogging(func(c zerolog.Context) zerolog.Context {
 			return c.Str("module", "network-quic-server")
 		}),
 		bind: bind,
-		encs: encs,
-		enc:  enc,
 		tlsConfig: &tls.Config{
 			Certificates: certs,
 			// NextProtos:   []string{""}, // TODO set unique strings
@@ -72,15 +54,7 @@ func NewQuicServer(
 	return qs, nil
 }
 
-func (qs *QuicServer) SetGetSealsHandler(fn GetSealsHandler) {
-	qs.getSealsHandler = fn
-}
-
-func (qs *QuicServer) SetNewSealHandler(fn NewSealHandler) {
-	qs.newSealHandler = fn
-}
-
-func (qs *QuicServer) setHandler(prefix string, handler HTTPHandlerFunc) *mux.Route {
+func (qs *QuicServer) SetHandler(prefix string, handler HTTPHandlerFunc) *mux.Route {
 	return qs.router.HandleFunc(prefix, handler)
 }
 
@@ -104,9 +78,6 @@ func (qs *QuicServer) run(stopChan chan struct{}) error {
 			TLSConfig: qs.tlsConfig,
 			Handler:   HTTPLogHandler(qs.router, qs.Log()),
 		},
-	}
-	if err := qs.setHandlers(); err != nil {
-		return err
 	}
 
 	errChan := make(chan error)
@@ -153,160 +124,6 @@ func (qs *QuicServer) stop(server *http3.Server) error {
 	}
 
 	return nil
-}
-
-func (qs *QuicServer) setHandlers() error {
-	// seal handler
-	_ = qs.setHandler(
-		QuicHandlerPathGetSeals,
-		func(w http.ResponseWriter, r *http.Request) {
-			qs.handleGetSeals(w, r)
-		},
-	).Methods("POST")
-
-	_ = qs.setHandler(
-		QuicHandlerPathSendSeal,
-		func(w http.ResponseWriter, r *http.Request) {
-			qs.handleNewSeal(w, r)
-		},
-	).Methods("POST")
-
-	_ = qs.setHandler(
-		"/",
-		func(w http.ResponseWriter, r *http.Request) {
-			w.WriteHeader(http.StatusOK)
-		},
-	)
-
-	return nil
-}
-
-func (qs *QuicServer) handleGetSeals(w http.ResponseWriter, r *http.Request) {
-	if qs.getSealsHandler == nil {
-		HTTPError(w, http.StatusInternalServerError)
-		return
-	}
-
-	body := &bytes.Buffer{}
-	if _, err := io.Copy(body, r.Body); err != nil {
-		qs.Log().Error().Err(err).Msg("failed to read post body")
-
-		HTTPError(w, http.StatusInternalServerError)
-		return
-	}
-
-	var enc encoder.Encoder
-	if e, err := EncoderFromHeader(r.Header, qs.encs, qs.enc); err != nil {
-		qs.Log().Error().Err(err).Msg("failed to read encoder hint")
-		HTTPError(w, http.StatusBadRequest)
-		return
-	} else {
-		enc = e
-	}
-
-	// TODO encoder.Encoder should handle slice
-	var hs []json.RawMessage
-	if err := enc.Unmarshal(body.Bytes(), &hs); err != nil {
-		qs.Log().Error().Err(err).Msg("failed to unmarshal hash slice")
-		HTTPError(w, http.StatusInternalServerError)
-		return
-	}
-
-	var hashes []valuehash.Hash
-	for _, r := range hs {
-		if hinter, err := enc.DecodeByHint(r); err != nil {
-			qs.Log().Error().Err(err).Msg("failed to decode")
-			HTTPError(w, http.StatusBadRequest)
-			return
-		} else if h, ok := hinter.(valuehash.Hash); !ok {
-			qs.Log().Error().Err(err).Msg("not hash")
-			HTTPError(w, http.StatusBadRequest)
-			return
-		} else {
-			hashes = append(hashes, h)
-		}
-	}
-
-	var output []byte
-	if sls, err := qs.getSealsHandler(hashes); err != nil {
-		qs.Log().Error().Err(err).Msg("failed to get seals")
-		HTTPError(w, http.StatusBadRequest)
-		return
-	} else if b, err := qs.enc.Marshal(sls); err != nil {
-		qs.Log().Error().Err(err).Msg("failed to encode seals")
-		HTTPError(w, http.StatusBadRequest)
-		return
-	} else {
-		output = b
-	}
-
-	w.Header().Set(QuicEncoderHintHeader, qs.enc.Hint().String())
-	_, _ = w.Write(output)
-}
-
-func (qs *QuicServer) handleNewSeal(w http.ResponseWriter, r *http.Request) {
-	if qs.newSealHandler == nil {
-		HTTPError(w, http.StatusInternalServerError)
-		return
-	}
-
-	body := &bytes.Buffer{}
-	if _, err := io.Copy(body, r.Body); err != nil {
-		qs.Log().Error().Err(err).Msg("failed to read post body")
-
-		HTTPError(w, http.StatusInternalServerError)
-		return
-	}
-
-	var enc encoder.Encoder
-	if e, err := EncoderFromHeader(r.Header, qs.encs, qs.enc); err != nil {
-		HTTPError(w, http.StatusBadRequest)
-		return
-	} else {
-		enc = e
-	}
-
-	var sl seal.Seal
-	if hinter, err := enc.DecodeByHint(body.Bytes()); err != nil {
-		HTTPError(w, http.StatusBadRequest)
-		return
-	} else if s, ok := hinter.(seal.Seal); !ok {
-		HTTPError(w, http.StatusBadRequest)
-		return
-	} else {
-		sl = s
-	}
-
-	if err := qs.newSealHandler(sl); err != nil {
-		qs.Log().Error().Err(err).Msg("failed to receive new seal")
-
-		HTTPError(w, http.StatusInternalServerError)
-		return
-	}
-
-	w.WriteHeader(http.StatusOK)
-}
-
-func QuicGetSealsURL(u string) (string, error) {
-	uu, err := url.Parse(u)
-	if err != nil {
-		return "", err
-	}
-
-	uu.Path = path.Join(uu.Path, QuicHandlerPathGetSeals)
-
-	return uu.String(), nil
-}
-
-func QuicSendSealURL(u string) (string, error) {
-	uu, err := url.Parse(u)
-	if err != nil {
-		return "", err
-	}
-
-	uu.Path = path.Join(uu.Path, QuicHandlerPathSendSeal)
-
-	return uu.String(), nil
 }
 
 func EncoderFromHeader(header http.Header, encs *encoder.Encoders, enc encoder.Encoder) (encoder.Encoder, error) {

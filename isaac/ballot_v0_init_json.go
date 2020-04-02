@@ -87,3 +87,29 @@ func (ibf INITBallotFactV0) MarshalJSON() ([]byte, error) {
 		PR:                         ibf.previousRound,
 	})
 }
+
+type INITBallotFactV0UnpackerJSON struct {
+	BaseBallotFactV0PackerJSON
+	PB json.RawMessage `json:"previous_block"`
+	PR Round           `json:"previous_round"`
+}
+
+func (ibf *INITBallotFactV0) UnpackJSON(b []byte, enc *encoder.JSONEncoder) error {
+	var ubf INITBallotFactV0UnpackerJSON
+	if err := enc.Unmarshal(b, &ubf); err != nil {
+		return err
+	}
+
+	var err error
+	var pb valuehash.Hash
+	if pb, err = valuehash.Decode(enc, ubf.PB); err != nil {
+		return err
+	}
+
+	ibf.BaseBallotFactV0.height = ubf.HT
+	ibf.BaseBallotFactV0.round = ubf.RD
+	ibf.previousBlock = pb
+	ibf.previousRound = ubf.PR
+
+	return nil
+}

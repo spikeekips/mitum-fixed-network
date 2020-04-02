@@ -1,9 +1,9 @@
 package isaac
 
 import (
+	"github.com/rs/zerolog"
 	"golang.org/x/xerrors"
 
-	"github.com/rs/zerolog"
 	"github.com/spikeekips/mitum/errors"
 	"github.com/spikeekips/mitum/logging"
 )
@@ -15,6 +15,7 @@ type StateToBeChangeError struct {
 	FromState State
 	ToState   State
 	Voteproof Voteproof
+	Ballot    Ballot
 }
 
 func (ce StateToBeChangeError) Error() string {
@@ -22,17 +23,18 @@ func (ce StateToBeChangeError) Error() string {
 }
 
 func (ce StateToBeChangeError) StateChangeContext() StateChangeContext {
-	return NewStateChangeContext(ce.FromState, ce.ToState, ce.Voteproof)
+	return NewStateChangeContext(ce.FromState, ce.ToState, ce.Voteproof, ce.Ballot)
 }
 
 func NewStateToBeChangeError(
-	fromState, toState State, voteproof Voteproof,
+	fromState, toState State, voteproof Voteproof, ballot Ballot,
 ) StateToBeChangeError {
 	return StateToBeChangeError{
 		CError:    errors.NewError("State needs to be changed"),
 		FromState: fromState,
 		ToState:   toState,
 		Voteproof: voteproof,
+		Ballot:    ballot,
 	}
 }
 
@@ -80,6 +82,7 @@ func (vc *VoteProofChecker) CheckNodeIsInSuffrage() (bool, error) {
 
 // TODO CheckThreshold checks Threshold in Voteproof should be checked whether
 // it has correct value at that block height.
+
 func (vc *VoteProofChecker) CheckThreshold() (bool, error) {
 	threshold := vc.localstate.Policy().Threshold()
 	if !threshold.Equal(vc.voteproof.Threshold()) {
@@ -133,7 +136,7 @@ func (vpc *VoteproofConsensusStateChecker) CheckHeight() (bool, error) {
 			fromState = vpc.css.ActiveHandler().State()
 		}
 
-		return false, NewStateToBeChangeError(fromState, StateSyncing, vpc.voteproof)
+		return false, NewStateToBeChangeError(fromState, StateSyncing, vpc.voteproof, nil)
 	}
 
 	if d < 0 {
@@ -162,7 +165,7 @@ func (vpc *VoteproofConsensusStateChecker) CheckINITVoteproof() (bool, error) {
 			fromState = vpc.css.ActiveHandler().State()
 		}
 
-		return false, NewStateToBeChangeError(fromState, StateSyncing, vpc.voteproof)
+		return false, NewStateToBeChangeError(fromState, StateSyncing, vpc.voteproof, nil)
 	}
 
 	return true, nil

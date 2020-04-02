@@ -18,6 +18,7 @@ func NewError(s string, a ...interface{}) CError {
 }
 
 // TODO something wrong, needs rewriting
+
 // Wrap put error inside Error.
 func (we CError) Wrap(err error) error {
 	return CError{

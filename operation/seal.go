@@ -14,6 +14,7 @@ import (
 )
 
 // TODO MaxOperationsInSeal will be managed by Policy.
+
 var MaxOperationsInSeal int = 100
 
 var (

@@ -29,8 +29,8 @@ func (bm BlockManifestV0) MarshalJSON() ([]byte, error) {
 		RD:                 bm.round,
 		PR:                 bm.proposal,
 		PB:                 bm.previousBlock,
-		BO:                 bm.blockOperations,
-		BS:                 bm.blockStates,
+		BO:                 bm.operationsHash,
+		BS:                 bm.statesHash,
 		CA:                 localtime.NewJSONTime(bm.createdAt),
 	})
 }
@@ -76,8 +76,8 @@ func (bm *BlockManifestV0) UnpackJSON(b []byte, enc *encoder.JSONEncoder) error 
 	bm.round = nbm.RD
 	bm.proposal = pr
 	bm.previousBlock = pb
-	bm.blockOperations = bo
-	bm.blockStates = bs
+	bm.operationsHash = bo
+	bm.statesHash = bs
 	bm.createdAt = nbm.CA.Time
 
 	return nil

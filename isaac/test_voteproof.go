@@ -21,10 +21,10 @@ type DummyVoteproof struct {
 	height Height
 	round  Round
 	stage  Stage
-	result VoteproofResultType
+	result VoteResultType
 }
 
-func NewDummyVoteproof(height Height, round Round, stage Stage, result VoteproofResultType) DummyVoteproof {
+func NewDummyVoteproof(height Height, round Round, stage Stage, result VoteResultType) DummyVoteproof {
 	return DummyVoteproof{
 		height: height,
 		round:  round,
@@ -46,7 +46,7 @@ func (vp DummyVoteproof) FinishedAt() time.Time {
 }
 
 func (vp DummyVoteproof) IsFinished() bool {
-	return vp.result != VoteproofNotYet
+	return vp.result != VoteResultNotYet
 }
 
 func (vp DummyVoteproof) IsClosed() bool {
@@ -69,7 +69,7 @@ func (vp DummyVoteproof) Stage() Stage {
 	return vp.stage
 }
 
-func (vp DummyVoteproof) Result() VoteproofResultType {
+func (vp DummyVoteproof) Result() VoteResultType {
 	return vp.result
 }
 
@@ -91,7 +91,7 @@ func (vp DummyVoteproof) MarshalJSON() ([]byte, error) {
 		HT Height
 		RD Round
 		SG Stage
-		RS VoteproofResultType
+		RS VoteResultType
 	}{
 		JSONPackHintedHead: encoder.NewJSONPackHintedHead(vp.Hint()),
 		HT:                 vp.height,
@@ -106,7 +106,7 @@ func (vp *DummyVoteproof) UnpackJSON(b []byte, enc *encoder.JSONEncoder) error {
 		HT Height
 		RD Round
 		SG Stage
-		RS VoteproofResultType
+		RS VoteResultType
 	}
 
 	if err := enc.Unmarshal(b, &uvp); err != nil {

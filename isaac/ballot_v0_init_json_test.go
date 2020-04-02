@@ -36,7 +36,7 @@ func (t *testBallotV0INITJSON) TestEncode() {
 		Height(10),
 		Round(0),
 		StageACCEPT,
-		VoteproofMajority,
+		VoteResultMajority,
 	)
 
 	ib := INITBallotV0{

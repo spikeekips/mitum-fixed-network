@@ -7,6 +7,8 @@ import (
 	"github.com/spikeekips/mitum/util"
 )
 
+var NilHeight = Height(-2)
+
 // Height stands for height of Block
 type Height int64
 

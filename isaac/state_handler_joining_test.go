@@ -66,7 +66,7 @@ func (t *testStateJoiningHandler) TestKeepBroadcastingINITBallot() {
 // INIT Ballot, which,
 // - ballot.Height() == local.Height() + 1
 // - has ACCEPT vp(Voteproof)
-// - vp.Result == VoteproofMajority
+// - vp.Result == VoteResultMajority
 //
 // StateJoiningHandler will ignore this ballot and keep broadcasting it's INIT Ballot.
 func (t *testStateJoiningHandler) TestINITBallotWithACCEPTVoteproofExpectedHeight() {
@@ -111,7 +111,7 @@ func (t *testStateJoiningHandler) TestINITBallotWithACCEPTVoteproofExpectedHeigh
 // INIT Ballot, which,
 // - ballot.Height() < local.Height() + 1
 // - has ACCEPT vp(Voteproof)
-// - vp.Result == VoteproofMajority
+// - vp.Result == VoteResultMajority
 //
 // StateJoiningHandler will ignore this ballot and keep broadcasting it's INIT Ballot.
 func (t *testStateJoiningHandler) TestINITBallotWithACCEPTVoteproofLowerHeight() {
@@ -157,7 +157,7 @@ func (t *testStateJoiningHandler) TestINITBallotWithACCEPTVoteproofLowerHeight()
 // INIT Ballot, which,
 // - ballot.Height() > local.Height() + 1
 // - has ACCEPT vp(Voteproof)
-// - vp.Result == VoteproofMajority
+// - vp.Result == VoteResultMajority
 //
 // StateJoiningHandler will stop broadcasting it's INIT Ballot and
 // moves to syncing.
@@ -222,7 +222,7 @@ func (t *testStateJoiningHandler) TestINITBallotWithACCEPTVoteproofHigherHeight(
 // - ballot.Height() == local.Height() + 1
 // - has INIT vp(Voteproof)
 // - ballot.Round == vp.Round + 1
-// - vp.Result == VoteproofDraw || vp.Result == VoteproofMajority
+// - vp.Result == VoteResultDraw || vp.Result == VoteResultMajority
 //
 // StateJoiningHandler will ignore this ballot and keep broadcasting it's INIT Ballot.
 func (t *testStateJoiningHandler) TestINITBallotWithINITVoteproofExpectedHeight() {
@@ -270,7 +270,7 @@ func (t *testStateJoiningHandler) TestINITBallotWithINITVoteproofExpectedHeight(
 // INIT Ballot, which,
 // - ballot.Height() < local.Height() + 1
 // - has INIT vp(Voteproof)
-// - vp.Result == VoteproofDraw || vp.Result == VoteproofMajority
+// - vp.Result == VoteResultDraw || vp.Result == VoteResultMajority
 //
 // StateJoiningHandler will ignore this ballot and keep broadcasting it's INIT Ballot.
 func (t *testStateJoiningHandler) TestINITBallotWithINITVoteproofLowerHeight() {
@@ -320,7 +320,7 @@ func (t *testStateJoiningHandler) TestINITBallotWithINITVoteproofLowerHeight() {
 // INIT Ballot, which,
 // - ballot.Height() > local.Height() + 1
 // - has INIT vp(Voteproof)
-// - vp.Result == VoteproofDraw || vp.Result == VoteproofMajority
+// - vp.Result == VoteResultDraw || vp.Result == VoteResultMajority
 //
 // StateJoiningHandler will stop broadcasting it's INIT Ballot and
 // moves to syncing.

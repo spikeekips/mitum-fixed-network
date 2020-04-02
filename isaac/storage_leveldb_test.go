@@ -52,6 +52,21 @@ func (t *testLeveldbStorage) SetupTest() {
 	t.storage = NewMemStorage(t.encs, t.enc)
 }
 
+func (t *testLeveldbStorage) compareBlockManifest(a, b BlockManifest) {
+	t.Equal(a.Height(), b.Height())
+	t.Equal(a.Round(), b.Round())
+	t.True(a.Proposal().Equal(b.Proposal()))
+	t.True(a.PreviousBlock().Equal(b.PreviousBlock()))
+	t.True(a.OperationsHash().Equal(b.OperationsHash()))
+	t.True(a.StatesHash().Equal(b.StatesHash()))
+}
+
+func (t *testLeveldbStorage) compareBlock(a, b Block) {
+	t.compareBlockManifest(a, b)
+	t.Equal(a.INITVoteproof(), b.INITVoteproof())
+	t.Equal(a.ACCEPTVoteproof(), b.ACCEPTVoteproof())
+}
+
 func (t *testLeveldbStorage) TestNew() {
 	t.Implements((*Storage)(nil), t.storage)
 }
@@ -63,28 +78,15 @@ func (t *testLeveldbStorage) TestLastBlock() {
 
 	t.NotNil(t.storage)
 
-	{
-		b, err := t.enc.Marshal(block)
-		t.NoError(err)
-
-		hb := storage.LeveldbDataWithEncoder(t.enc, b)
-
-		key := leveldbBlockHashKey(block.Hash())
-		t.NoError(t.storage.db.Put(key, hb, nil))
-		t.NoError(t.storage.db.Put(leveldbBlockHeightKey(block.Height()), key, nil))
-	}
+	bs, err := t.storage.OpenBlockStorage(block)
+	t.NoError(err)
+	t.NoError(bs.SetBlock(block))
+	t.NoError(bs.Commit())
 
 	loaded, err := t.storage.LastBlock()
 	t.NoError(err)
 
-	t.Equal(block.Height(), loaded.Height())
-	t.Equal(block.Round(), loaded.Round())
-	t.True(block.Proposal().Equal(loaded.Proposal()))
-	t.True(block.PreviousBlock().Equal(loaded.PreviousBlock()))
-	t.True(block.Operations().Equal(loaded.Operations()))
-	t.True(block.States().Equal(loaded.States()))
-	t.Equal(block.INITVoteproof(), loaded.INITVoteproof())
-	t.Equal(block.ACCEPTVoteproof(), loaded.ACCEPTVoteproof())
+	t.compareBlock(block, loaded)
 }
 
 func (t *testLeveldbStorage) TestLoadBlockByHash() {
@@ -108,14 +110,49 @@ func (t *testLeveldbStorage) TestLoadBlockByHash() {
 	loaded, err := t.storage.Block(block.Hash())
 	t.NoError(err)
 
-	t.Equal(block.Height(), loaded.Height())
-	t.Equal(block.Round(), loaded.Round())
-	t.True(block.Proposal().Equal(loaded.Proposal()))
-	t.True(block.PreviousBlock().Equal(loaded.PreviousBlock()))
-	t.True(block.Operations().Equal(loaded.Operations()))
-	t.True(block.States().Equal(loaded.States()))
-	t.Equal(block.INITVoteproof(), loaded.INITVoteproof())
-	t.Equal(block.ACCEPTVoteproof(), loaded.ACCEPTVoteproof())
+	t.compareBlock(block, loaded)
+}
+
+func (t *testLeveldbStorage) TestLoadBlockManifestByHash() {
+	// store first
+	block, err := NewTestBlockV0(Height(33), Round(0), nil, valuehash.RandomSHA256())
+	t.NoError(err)
+
+	t.NotNil(t.storage)
+
+	bs, err := t.storage.OpenBlockStorage(block)
+	t.NoError(err)
+	t.NoError(bs.SetBlock(block))
+	t.NoError(bs.Commit())
+
+	loaded, err := t.storage.BlockManifest(block.Hash())
+	t.NoError(err)
+	t.Implements((*BlockManifest)(nil), loaded)
+	_, isBlock := loaded.(Block)
+	t.False(isBlock)
+
+	t.compareBlockManifest(block, loaded)
+}
+
+func (t *testLeveldbStorage) TestLoadBlockManifestByHeight() {
+	// store first
+	block, err := NewTestBlockV0(Height(33), Round(0), nil, valuehash.RandomSHA256())
+	t.NoError(err)
+
+	t.NotNil(t.storage)
+
+	bs, err := t.storage.OpenBlockStorage(block)
+	t.NoError(err)
+	t.NoError(bs.SetBlock(block))
+	t.NoError(bs.Commit())
+
+	loaded, err := t.storage.BlockManifestByHeight(block.Height())
+	t.NoError(err)
+	t.Implements((*BlockManifest)(nil), loaded)
+	_, isBlock := loaded.(Block)
+	t.False(isBlock)
+
+	t.compareBlockManifest(block, loaded)
 }
 
 func (t *testLeveldbStorage) TestLoadBlockByHeight() {
@@ -125,28 +162,15 @@ func (t *testLeveldbStorage) TestLoadBlockByHeight() {
 
 	t.NotNil(t.storage)
 
-	{
-		b, err := t.enc.Marshal(block)
-		t.NoError(err)
-
-		hb := storage.LeveldbDataWithEncoder(t.enc, b)
-
-		key := leveldbBlockHashKey(block.Hash())
-		t.NoError(t.storage.db.Put(key, hb, nil))
-		t.NoError(t.storage.db.Put(leveldbBlockHeightKey(block.Height()), key, nil))
-	}
+	bs, err := t.storage.OpenBlockStorage(block)
+	t.NoError(err)
+	t.NoError(bs.SetBlock(block))
+	t.NoError(bs.Commit())
 
 	loaded, err := t.storage.BlockByHeight(block.Height())
 	t.NoError(err)
 
-	t.Equal(block.Height(), loaded.Height())
-	t.Equal(block.Round(), loaded.Round())
-	t.True(block.Proposal().Equal(loaded.Proposal()))
-	t.True(block.PreviousBlock().Equal(loaded.PreviousBlock()))
-	t.True(block.Operations().Equal(loaded.Operations()))
-	t.True(block.States().Equal(loaded.States()))
-	t.Equal(block.INITVoteproof(), loaded.INITVoteproof())
-	t.Equal(block.ACCEPTVoteproof(), loaded.ACCEPTVoteproof())
+	t.compareBlock(block, loaded)
 }
 
 func (t *testLeveldbStorage) TestLoadINITVoteproof() {
@@ -160,7 +184,7 @@ func (t *testLeveldbStorage) TestLoadINITVoteproof() {
 	voteproof := VoteproofV0{
 		height:     Height(33),
 		round:      Round(3),
-		result:     VoteproofMajority,
+		result:     VoteResultMajority,
 		stage:      StageINIT,
 		finishedAt: localtime.Now(),
 	}
@@ -189,7 +213,7 @@ func (t *testLeveldbStorage) TestLoadACCEPTVoteproof() {
 	ivp := VoteproofV0{
 		height:     Height(33),
 		round:      Round(3),
-		result:     VoteproofMajority,
+		result:     VoteResultMajority,
 		stage:      StageINIT,
 		finishedAt: localtime.Now(),
 	}
@@ -199,7 +223,7 @@ func (t *testLeveldbStorage) TestLoadACCEPTVoteproof() {
 	avp := VoteproofV0{
 		height:     Height(33),
 		round:      Round(3),
-		result:     VoteproofMajority,
+		result:     VoteResultMajority,
 		stage:      StageACCEPT,
 		finishedAt: localtime.Now(),
 	}
@@ -227,7 +251,7 @@ func (t *testLeveldbStorage) TestLoadVoteproofs() {
 	ivp := VoteproofV0{
 		height:     Height(33),
 		round:      Round(3),
-		result:     VoteproofMajority,
+		result:     VoteResultMajority,
 		stage:      StageINIT,
 		finishedAt: localtime.Now(),
 	}
@@ -237,7 +261,7 @@ func (t *testLeveldbStorage) TestLoadVoteproofs() {
 	avp := VoteproofV0{
 		height:     Height(33),
 		round:      Round(3),
-		result:     VoteproofMajority,
+		result:     VoteResultMajority,
 		stage:      StageACCEPT,
 		finishedAt: localtime.Now(),
 	}

@@ -1,4 +1,4 @@
-package network
+package isaac
 
 import (
 	"encoding/json"
@@ -12,11 +12,10 @@ import (
 
 	"github.com/spikeekips/mitum/encoder"
 	"github.com/spikeekips/mitum/logging"
+	"github.com/spikeekips/mitum/network"
 	"github.com/spikeekips/mitum/seal"
 	"github.com/spikeekips/mitum/valuehash"
 )
-
-const QuicEncoderHintHeader string = "x-mitum-encoder-hint"
 
 type QuicChannel struct {
 	*logging.Logging
@@ -26,7 +25,7 @@ type QuicChannel struct {
 	enc         encoder.Encoder
 	sendSealURL string
 	getSealsURL string
-	client      *QuicClient
+	client      *network.QuicClient
 }
 
 func NewQuicChannel(
@@ -65,7 +64,7 @@ func NewQuicChannel(
 		qc.getSealsURL = u
 	}
 
-	if client, err := NewQuicClient(insecure, timeout, retries, quicConfig); err != nil {
+	if client, err := network.NewQuicClient(insecure, timeout, retries, quicConfig); err != nil {
 		return qc, nil
 	} else {
 		qc.client = client
@@ -101,7 +100,7 @@ func (qc *QuicChannel) Seals(hs []valuehash.Hash) ([]seal.Seal, error) {
 	}
 
 	headers := http.Header{}
-	headers.Set(QuicEncoderHintHeader, qc.enc.Hint().String())
+	headers.Set(network.QuicEncoderHintHeader, qc.enc.Hint().String())
 
 	response, err := qc.client.Request(qc.getSealsURL, b, headers)
 	if err != nil {
@@ -109,7 +108,7 @@ func (qc *QuicChannel) Seals(hs []valuehash.Hash) ([]seal.Seal, error) {
 	}
 
 	var enc encoder.Encoder
-	if e, err := EncoderFromHeader(response.Header(), qc.encs, qc.enc); err != nil {
+	if e, err := network.EncoderFromHeader(response.Header(), qc.encs, qc.enc); err != nil {
 		return nil, err
 	} else {
 		enc = e
@@ -144,7 +143,7 @@ func (qc *QuicChannel) SendSeal(sl seal.Seal) error {
 	qc.Log().Debug().Str("seal_hash", sl.Hash().String()).Msg("sent seal")
 
 	headers := http.Header{}
-	headers.Set(QuicEncoderHintHeader, qc.enc.Hint().String())
+	headers.Set(network.QuicEncoderHintHeader, qc.enc.Hint().String())
 
 	return qc.client.Send(qc.sendSealURL, b, headers)
 }

@@ -143,47 +143,56 @@ func (pp *proposalProcessorV0) processINIT(initVoteproof Voteproof) (Block, erro
 		return pp.block, nil
 	}
 
-	blockOperations, operationTree, err := pp.processOperations()
-	if err != nil {
+	var operationsTree, statesTree *tree.AVLTree
+	var operationsHash, statesHash valuehash.Hash
+	if tr, err := pp.processOperations(); err != nil {
 		return nil, err
+	} else if tr != nil {
+		if h, err := tr.RootHash(); err != nil {
+			return nil, err
+		} else {
+			operationsTree = tr
+			operationsHash = h
+		}
 	}
 
-	blockStates, stateTree, err := pp.processStates()
-	if err != nil {
+	if tr, err := pp.processStates(); err != nil {
 		return nil, err
+	} else if tr != nil {
+		if h, err := tr.RootHash(); err != nil {
+			return nil, err
+		} else {
+			statesTree = tr
+			statesHash = h
+		}
 	}
 
 	var block BlockUpdater
 	if b, err := NewBlockV0(
 		pp.proposal.Height(), pp.proposal.Round(), pp.proposal.Hash(), pp.lastBlock.Hash(),
-		blockOperations,
-		blockStates,
+		operationsHash,
+		statesHash,
 	); err != nil {
 		return nil, err
 	} else {
-		block = b.SetINITVoteproof(initVoteproof)
+		block = b
 	}
+
+	if statesTree != nil {
+		if err := pp.updateStates(statesTree, block); err != nil {
+			return nil, err
+		}
+	}
+
+	block = block.
+		SetOperations(operationsTree).
+		SetStates(statesTree).
+		SetINITVoteproof(initVoteproof)
 
 	if bs, err := pp.localstate.Storage().OpenBlockStorage(block); err != nil {
 		return nil, err
 	} else {
 		pp.bs = bs
-	}
-
-	if operationTree != nil {
-		if err := pp.bs.SetOperations(operationTree); err != nil {
-			return nil, err
-		}
-	}
-
-	if stateTree != nil {
-		if err := pp.updateStates(stateTree, block); err != nil {
-			return nil, err
-		}
-
-		if err := pp.bs.SetStates(stateTree); err != nil {
-			return nil, err
-		}
 	}
 
 	pp.block = block
@@ -240,15 +249,15 @@ func (pp *proposalProcessorV0) extractOperations() ([]state.OperationInfoV0, err
 	return operations, nil
 }
 
-func (pp *proposalProcessorV0) processOperations() (valuehash.Hash, *tree.AVLTree, error) {
+func (pp *proposalProcessorV0) processOperations() (*tree.AVLTree, error) {
 	if len(pp.proposal.Seals()) < 1 {
-		return nil, nil, nil
+		return nil, nil
 	}
 
 	var operations []state.OperationInfoV0
 
 	if ops, err := pp.extractOperations(); err != nil {
-		return nil, nil, err
+		return nil, err
 	} else {
 		founds := map[valuehash.Hash]struct{}{}
 
@@ -258,7 +267,7 @@ func (pp *proposalProcessorV0) processOperations() (valuehash.Hash, *tree.AVLTre
 			if _, found := founds[op.Operation()]; found {
 				continue
 			} else if found, err := pp.localstate.Storage().HasOperation(op.Operation()); err != nil {
-				return nil, nil, err
+				return nil, err
 			} else if found { // already stored Operation
 				continue
 			}
@@ -269,29 +278,29 @@ func (pp *proposalProcessorV0) processOperations() (valuehash.Hash, *tree.AVLTre
 	}
 
 	if len(operations) < 1 {
-		return nil, nil, nil
+		return nil, nil
 	}
 
 	tg := avl.NewTreeGenerator()
 	for i := range operations {
 		op := operations[i]
-		n := operation.NewOperationAVLNode(op.RawOperation())
+		n := operation.NewOperationAVLNodeMutable(op.RawOperation())
 		if _, err := tg.Add(n); err != nil {
-			return nil, nil, err
+			return nil, err
 		}
 	}
 
-	boh, tr, err := pp.validateTree(tg)
+	tr, err := pp.validateTree(tg)
 	if err != nil {
-		return nil, nil, err
+		return nil, err
 	}
 
 	pp.operations = operations
 
-	return boh, tr, nil
+	return tr, nil
 }
 
-func (pp *proposalProcessorV0) processStates() (valuehash.Hash, *tree.AVLTree, error) {
+func (pp *proposalProcessorV0) processStates() (*tree.AVLTree, error) {
 	pool := NewStatePool(pp.localstate.Storage())
 
 	for i := range pp.operations {
@@ -312,41 +321,36 @@ func (pp *proposalProcessorV0) processStates() (valuehash.Hash, *tree.AVLTree, e
 			continue
 		} else if st != nil {
 			if err := st.SetPreviousBlock(pp.lastBlock.Hash()); err != nil {
-				return nil, nil, err
+				return nil, err
 			}
 			if err := st.AddOperationInfo(opi); err != nil {
-				return nil, nil, err
+				return nil, err
 			}
 		}
 	}
 
 	updated := pool.Updated()
 	if len(updated) < 1 {
-		return nil, nil, nil
+		return nil, nil
 	}
 
 	tg := avl.NewTreeGenerator()
 	for _, s := range updated {
 		if err := s.SetHash(s.GenerateHash()); err != nil {
-			return nil, nil, err
+			return nil, err
 		}
 
 		if err := s.IsValid(nil); err != nil {
-			return nil, nil, err
+			return nil, err
 		}
 
-		n := state.NewStateV0AVLNode(s.(*state.StateV0))
+		n := state.NewStateV0AVLNodeMutable(s.(*state.StateV0))
 		if _, err := tg.Add(n); err != nil {
-			return nil, nil, err
+			return nil, err
 		}
 	}
 
-	boh, tr, err := pp.validateTree(tg)
-	if err != nil {
-		return nil, nil, err
-	}
-
-	return boh, tr, nil
+	return pp.validateTree(tg)
 }
 
 func (pp *proposalProcessorV0) getOperationsFromStorage(h valuehash.Hash) ([]state.OperationInfoV0, error) {
@@ -428,32 +432,25 @@ func (pp *proposalProcessorV0) setACCEPTVoteproof(acceptVoteproof Voteproof) err
 	return nil
 }
 
-func (pp *proposalProcessorV0) validateTree(tg *avl.TreeGenerator) (valuehash.Hash, *tree.AVLTree, error) {
+func (pp *proposalProcessorV0) validateTree(tg *avl.TreeGenerator) (*tree.AVLTree, error) {
 	var tr *tree.AVLTree
 	if t, err := tg.Tree(); err != nil {
-		return nil, nil, err
+		return nil, err
 	} else if at, err := tree.NewAVLTree(t); err != nil {
-		return nil, nil, err
+		return nil, err
 	} else if err := at.IsValid(); err != nil {
-		return nil, nil, err
+		return nil, err
 	} else {
 		tr = at
 	}
 
-	var rootHash valuehash.Hash
-	if h, err := valuehash.LoadSHA256FromBytes(tr.Root().Hash()); err != nil {
-		return nil, nil, err
-	} else {
-		rootHash = h
-	}
-
-	return rootHash, tr, nil
+	return tr, nil
 }
 
 func (pp *proposalProcessorV0) updateStates(tr *tree.AVLTree, block Block) error {
 	return tr.Traverse(func(node tree.Node) (bool, error) {
 		var st state.StateUpdater
-		if s, ok := node.(*state.StateV0AVLNode); !ok {
+		if s, ok := node.(*state.StateV0AVLNodeMutable); !ok {
 			return false, xerrors.Errorf("not state.StateV0AVLNode: %T", node)
 		} else {
 			st = s.State().(state.StateUpdater)

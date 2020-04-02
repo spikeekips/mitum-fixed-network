@@ -14,7 +14,11 @@ echo
 echo 'go test:'
 go clean -testcache
 #go test -timeout 1m -tags test -race ./... -run .
-go clean -testcache; for i in $(find . -type d -d 1 | grep -v '.git\|.circleci'); do go test -timeout 10s -tags test -race ./$i... -run .; done
+go clean -testcache
+for i in $(find . -type d -d 1 | grep -v '.git\|.circleci')
+do
+    go test -timeout 30s -tags test -race ./$i... -run .
+done
 
 echo
 echo 'go vet:'

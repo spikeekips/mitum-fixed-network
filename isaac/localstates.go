@@ -75,6 +75,7 @@ func (ls *Localstate) LastBlock() Block {
 }
 
 // NOTE for debugging and testing only
+
 func (ls *Localstate) SetLastBlock(block Block) error {
 	_ = ls.lastBlock.SetValue(block)
 

@@ -388,7 +388,7 @@ func (t *testGeneralSyncer) TestSyncingHandlerFromBallot() {
 	target := base.Height() + 5
 	t.generateBlocks([]*Localstate{rn0, rn1, rn2}, target)
 
-	cs, err := NewStateSyncingHandler(localstate)
+	cs, err := NewStateSyncingHandler(localstate, nil)
 	t.NoError(err)
 
 	var ballot Ballot
@@ -441,7 +441,7 @@ func (t *testGeneralSyncer) TestSyncingHandlerFromINITVoteproof() {
 	target := base.Height() + 5
 	t.generateBlocks([]*Localstate{rn0, rn1, rn2}, target)
 
-	cs, err := NewStateSyncingHandler(localstate)
+	cs, err := NewStateSyncingHandler(localstate, nil)
 	t.NoError(err)
 
 	var voteproof Voteproof
@@ -497,7 +497,7 @@ func (t *testGeneralSyncer) TestSyncingHandlerFromACCEPTVoteproof() {
 	target := base.Height() + 5
 	t.generateBlocks([]*Localstate{rn0, rn1, rn2}, target)
 
-	cs, err := NewStateSyncingHandler(localstate)
+	cs, err := NewStateSyncingHandler(localstate, nil)
 	t.NoError(err)
 
 	var voteproof Voteproof

@@ -79,8 +79,6 @@ func (cs *StateConsensusHandler) Activate(ctx StateChangeContext) error {
 		return xerrors.Errorf("consensus handler got invalid Voteproof: %w", err)
 	}
 
-	_ = cs.localstate.SetLastINITVoteproof(ctx.Voteproof())
-
 	l := loggerWithStateChangeContext(ctx, cs.Log())
 
 	go func() {
@@ -224,6 +222,7 @@ func (cs *StateConsensusHandler) handleProposal(proposal Proposal) error {
 
 	l.Debug().Msg("got proposal")
 
+	// TODO don't need to remember processedProposal?
 	if cs.processedProposal != nil {
 		if proposal.Height() == cs.processedProposal.Height() && proposal.Round() == cs.processedProposal.Round() {
 			l.Debug().Msg("proposal is already processed")

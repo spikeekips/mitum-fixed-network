@@ -22,7 +22,7 @@ func (t *testStateConsensusHandler) TestNew() {
 
 	proposalMaker := NewProposalMaker(t.localstate)
 	cs, err := NewStateConsensusHandler(
-		t.localstate, DummyProposalProcessor{}, suffrage, proposalMaker,
+		t.localstate, NewDummyProposalProcessor(nil, nil), suffrage, proposalMaker,
 	)
 	t.NoError(err)
 	t.NotNil(cs)
@@ -34,6 +34,8 @@ func (t *testStateConsensusHandler) TestNew() {
 	vp, err := t.newVoteproof(StageINIT, initFact, t.localstate, t.remoteState)
 	t.NoError(err)
 
+	_ = t.localstate.SetLastINITVoteproof(vp)
+
 	t.NoError(cs.Activate(StateChangeContext{
 		fromState: StateJoining,
 		toState:   StateJoining,
@@ -44,7 +46,7 @@ func (t *testStateConsensusHandler) TestNew() {
 		_ = cs.Deactivate(StateChangeContext{})
 	}()
 
-	lb := cs.localstate.LastINITVoteproof()
+	lb := t.localstate.LastINITVoteproof()
 
 	t.Equal(vp.Height(), lb.Height())
 	t.Equal(vp.Round(), lb.Round())
@@ -62,7 +64,7 @@ func (t *testStateConsensusHandler) TestWaitingProposalButTimedOut() {
 	suffrage := t.suffrage(t.remoteState, t.localstate)
 
 	proposalMaker := NewProposalMaker(t.localstate)
-	cs, err := NewStateConsensusHandler(t.localstate, DummyProposalProcessor{}, suffrage, proposalMaker)
+	cs, err := NewStateConsensusHandler(t.localstate, NewDummyProposalProcessor(nil, nil), suffrage, proposalMaker)
 	t.NoError(err)
 	t.NotNil(cs)
 
@@ -112,7 +114,7 @@ func (t *testStateConsensusHandler) TestWithProposalWaitACCEPTBallot() {
 	proposalMaker := NewProposalMaker(t.localstate)
 	cs, err := NewStateConsensusHandler(
 		t.localstate,
-		DummyProposalProcessor{},
+		NewDummyProposalProcessor(nil, nil),
 		t.suffrage(t.remoteState, t.remoteState), // localnode is not in ActingSuffrage.
 		proposalMaker,
 	)
@@ -166,7 +168,7 @@ func (t *testStateConsensusHandler) TestWithProposalWaitSIGNBallot() {
 	proposalMaker := NewProposalMaker(t.localstate)
 	cs, err := NewStateConsensusHandler(
 		t.localstate,
-		DummyProposalProcessor{},
+		NewDummyProposalProcessor(nil, nil),
 		t.suffrage(t.remoteState, t.localstate, t.remoteState), // localnode is not in ActingSuffrage.
 		proposalMaker,
 	)
@@ -214,7 +216,7 @@ func (t *testStateConsensusHandler) TestDraw() {
 	proposalMaker := NewProposalMaker(t.localstate)
 	cs, err := NewStateConsensusHandler(
 		t.localstate,
-		DummyProposalProcessor{},
+		NewDummyProposalProcessor(nil, nil),
 		t.suffrage(t.remoteState, t.localstate, t.remoteState), // localnode is not in ActingSuffrage.
 		proposalMaker,
 	)

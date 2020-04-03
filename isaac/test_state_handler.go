@@ -239,6 +239,10 @@ func (t *baseTestStateHandler) compareVoteproof(a, b Voteproof) {
 }
 
 func (t *baseTestStateHandler) compareAVLTree(a, b *tree.AVLTree) {
+	if a == nil && b == nil {
+		return
+	}
+
 	t.True(a.Hint().Equal(b.Hint()))
 	{
 		ah, err := a.RootHash()

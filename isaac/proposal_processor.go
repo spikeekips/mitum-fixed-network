@@ -17,6 +17,7 @@ import (
 )
 
 type ProposalProcessor interface {
+	IsProcessed(valuehash.Hash /* proposal.Hash() */) bool
 	ProcessINIT(valuehash.Hash /* Proposal.Hash() */, Voteproof /* INIT Voteproof */) (Block, error)
 	ProcessACCEPT(valuehash.Hash /* Proposal.Hash() */, Voteproof /* ACCEPT Voteproof */) (BlockStorage, error)
 }
@@ -35,6 +36,12 @@ func NewProposalProcessorV0(localstate *Localstate) *ProposalProcessorV0 {
 		localstate: localstate,
 		processors: &sync.Map{},
 	}
+}
+
+func (dp *ProposalProcessorV0) IsProcessed(ph valuehash.Hash) bool {
+	_, found := dp.processors.Load(ph)
+
+	return found
 }
 
 func (dp *ProposalProcessorV0) ProcessINIT(ph valuehash.Hash, initVoteproof Voteproof) (Block, error) {

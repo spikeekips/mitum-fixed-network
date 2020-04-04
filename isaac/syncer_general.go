@@ -401,7 +401,7 @@ func (cs *GeneralSyncer) fetchBlocksByNodes() error {
 	}
 
 	var received uint
-	for err := range worker.ErrChan() {
+	for err := range worker.Errors() {
 		received++
 		if err = cs.handleSyncerFetchBlockError(err); err != nil {
 			return err

@@ -16,7 +16,7 @@ import (
 type Voteproof interface {
 	hint.Hinter
 	isvalid.IsValider
-	util.Byter // TODO Bytes() use util.Byter
+	util.Byter
 	IsFinished() bool
 	FinishedAt() time.Time
 	IsClosed() bool

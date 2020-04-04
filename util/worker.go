@@ -91,7 +91,7 @@ func (wk *Worker) NewJob(j interface{}) {
 	wk.jobChan <- j
 }
 
-func (wk *Worker) ErrChan() <-chan error { // TODO rename to Errors()
+func (wk *Worker) Errors() <-chan error {
 	return wk.errChan
 }
 

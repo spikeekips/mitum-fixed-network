@@ -42,7 +42,7 @@ func (t *testWorker) TestRun() {
 	t.Equal(numJob, int(wk.Jobs()))
 
 	var errs []int
-	for err := range wk.ErrChan() {
+	for err := range wk.Errors() {
 		var i int
 		_, err := fmt.Sscanf(err.Error(), "%d", &i)
 		t.NoError(err)
@@ -79,7 +79,7 @@ func (t *testWorker) TestMultipleCallbacks() {
 	}
 
 	var called []int
-	for err := range wk.ErrChan() {
+	for err := range wk.Errors() {
 		var i int
 		_, err := fmt.Sscanf(err.Error(), "%d", &i)
 		t.NoError(err)

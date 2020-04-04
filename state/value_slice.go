@@ -50,7 +50,7 @@ func (sv SliceValue) set(v interface{}) (SliceValue, error) {
 		}
 	}
 
-	b := util.ConcatSlice(bs)
+	b := util.ConcatBytesSlice(bs...)
 
 	return SliceValue{
 		v: items,

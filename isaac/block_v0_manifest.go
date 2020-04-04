@@ -71,7 +71,7 @@ func (bm ManifestV0) Bytes() []byte {
 		statesHashBytes = bm.statesHash.Bytes()
 	}
 
-	return util.ConcatSlice([][]byte{
+	return util.ConcatBytesSlice(
 		bm.height.Bytes(),
 		bm.round.Bytes(),
 		bm.proposal.Bytes(),
@@ -80,7 +80,7 @@ func (bm ManifestV0) Bytes() []byte {
 		statesHashBytes,
 		// NOTE createdAt does not included for Bytes(), because Bytes() is used
 		// for Hash().
-	})
+	)
 }
 
 func (bm ManifestV0) Height() Height {

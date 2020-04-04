@@ -252,27 +252,24 @@ func (st *LeveldbStorage) Voteproofs(callback func(Voteproof) (bool, error), sor
 }
 
 func (st *LeveldbStorage) sealKey(h valuehash.Hash) []byte {
-	return util.ConcatSlice([][]byte{leveldbSealPrefix, h.Bytes()})
+	return util.ConcatBytesSlice(leveldbSealPrefix, h.Bytes())
 }
 
 func (st *LeveldbStorage) sealHashKey(h valuehash.Hash) []byte {
-	return util.ConcatSlice([][]byte{leveldbSealHashPrefix, h.Bytes()})
+	return util.ConcatBytesSlice(leveldbSealHashPrefix, h.Bytes())
 }
 
 func (st *LeveldbStorage) newStagedOperationSealKey(h valuehash.Hash) []byte {
-	return util.ConcatSlice([][]byte{
+	return util.ConcatBytesSlice(
 		leveldbStagedOperationSealPrefix,
 		util.ULIDBytes(),
 		[]byte("-"), // delimiter
 		h.Bytes(),
-	})
+	)
 }
 
 func (st *LeveldbStorage) newStagedOperationSealReverseKey(h valuehash.Hash) []byte {
-	return util.ConcatSlice([][]byte{
-		leveldbStagedOperationSealReversePrefix,
-		h.Bytes(),
-	})
+	return util.ConcatBytesSlice(leveldbStagedOperationSealReversePrefix, h.Bytes())
 }
 
 func (st *LeveldbStorage) Seal(h valuehash.Hash) (seal.Seal, error) {
@@ -538,7 +535,7 @@ func (st *LeveldbStorage) Proposals(callback func(Proposal) (bool, error), sort 
 }
 
 func (st *LeveldbStorage) proposalKey(height Height, round Round) []byte {
-	return util.ConcatSlice([][]byte{leveldbProposalPrefix, height.Bytes(), round.Bytes()})
+	return util.ConcatBytesSlice(leveldbProposalPrefix, height.Bytes(), round.Bytes())
 }
 
 func (st *LeveldbStorage) NewProposal(proposal Proposal) error {
@@ -755,35 +752,35 @@ func (bst *LeveldbBlockStorage) Commit() error {
 }
 
 func leveldbBlockHeightKey(height Height) []byte {
-	return util.ConcatSlice([][]byte{
+	return util.ConcatBytesSlice(
 		leveldbBlockHeightPrefix,
 		[]byte(fmt.Sprintf("%020d", height.Int64())),
-	})
+	)
 }
 
 func leveldbManifestHeightKey(height Height) []byte {
-	return util.ConcatSlice([][]byte{
+	return util.ConcatBytesSlice(
 		leveldbManifestHeightPrefix,
 		[]byte(fmt.Sprintf("%020d", height.Int64())),
-	})
+	)
 }
 
 func leveldbBlockHashKey(h valuehash.Hash) []byte {
-	return util.ConcatSlice([][]byte{
+	return util.ConcatBytesSlice(
 		leveldbBlockHashPrefix,
 		h.Bytes(),
-	})
+	)
 }
 
 func leveldbManifestKey(h valuehash.Hash) []byte {
-	return util.ConcatSlice([][]byte{
+	return util.ConcatBytesSlice(
 		leveldbManifestPrefix,
 		h.Bytes(),
-	})
+	)
 }
 
 func leveldbVoteproofKey(voteproof Voteproof) []byte {
-	return util.ConcatSlice([][]byte{
+	return util.ConcatBytesSlice(
 		leveldbVoteproofHeightPrefix,
 		[]byte(fmt.Sprintf(
 			"%020d-%020d-%d",
@@ -791,39 +788,42 @@ func leveldbVoteproofKey(voteproof Voteproof) []byte {
 			voteproof.Round().Uint64(),
 			voteproof.Stage(),
 		)),
-	})
+	)
 }
 
 func leveldbVoteproofKeyByHeight(height Height) []byte {
-	return util.ConcatSlice([][]byte{
+	return util.ConcatBytesSlice(
 		leveldbVoteproofHeightPrefix,
 		[]byte(fmt.Sprintf("%020d-", height.Int64())),
-	})
+	)
 }
 
 func leveldbBlockOperationsKey(block Block) []byte {
-	return util.ConcatSlice([][]byte{
+	return util.ConcatBytesSlice(
 		leveldbBlockOperationsPrefix,
 		[]byte(fmt.Sprintf("%020d", block.Height().Int64())),
-	})
+	)
 }
 
 func leveldbBlockStatesKey(block Block) []byte {
-	return util.ConcatSlice([][]byte{
+	return util.ConcatBytesSlice(
 		leveldbBlockStatesPrefix,
 		[]byte(fmt.Sprintf("%020d", block.Height().Int64())),
-	})
+	)
 }
 
 func leveldbStateKey(key string) []byte {
-	return util.ConcatSlice([][]byte{leveldbStatePrefix, []byte(key)})
+	return util.ConcatBytesSlice(
+		leveldbStatePrefix,
+		[]byte(key),
+	)
 }
 
 func leveldbOperationHashKey(h valuehash.Hash) []byte {
-	return util.ConcatSlice([][]byte{
+	return util.ConcatBytesSlice(
 		leveldbOperationHashPrefix,
 		h.Bytes(),
-	})
+	)
 }
 
 func WrapLeveldbErorr(err error) error {

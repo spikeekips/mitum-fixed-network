@@ -27,10 +27,10 @@ func (bc BlockConsensusInfoV0) Hint() hint.Hint {
 }
 
 func (bc BlockConsensusInfoV0) Bytes() []byte {
-	return util.ConcatSlice([][]byte{
+	return util.ConcatBytesSlice(
 		bc.initVoteproof.Bytes(),
 		bc.acceptVoteproof.Bytes(),
-	})
+	)
 }
 
 func (bc BlockConsensusInfoV0) INITVoteproof() Voteproof {

@@ -65,12 +65,12 @@ func (kvof KVOperationFact) Hash() valuehash.Hash {
 }
 
 func (kvof KVOperationFact) Bytes() []byte {
-	return util.ConcatSlice([][]byte{
+	return util.ConcatBytesSlice(
 		[]byte(kvof.signer.String()),
 		kvof.token,
 		[]byte(kvof.Key),
 		kvof.Value,
-	})
+	)
 }
 
 func (kvof KVOperationFact) Signer() key.Publickey {
@@ -107,7 +107,7 @@ func NewKVOperation(
 	}
 	factHash := fact.Hash()
 	var factSignature key.Signature
-	if fs, err := signer.Sign(util.ConcatSlice([][]byte{factHash.Bytes(), b})); err != nil {
+	if fs, err := signer.Sign(util.ConcatBytesSlice(factHash.Bytes(), b)); err != nil {
 		return KVOperation{}, err
 	} else {
 		factSignature = fs
@@ -149,10 +149,7 @@ func (kvo KVOperation) Hash() valuehash.Hash {
 }
 
 func (kvo KVOperation) GenerateHash() (valuehash.Hash, error) {
-	e := util.ConcatSlice([][]byte{
-		kvo.factHash.Bytes(),
-		kvo.factSignature.Bytes(),
-	})
+	e := util.ConcatBytesSlice(kvo.factHash.Bytes(), kvo.factSignature.Bytes())
 
 	return valuehash.NewSHA256(e), nil
 }

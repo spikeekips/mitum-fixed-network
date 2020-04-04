@@ -95,10 +95,7 @@ func (bm BlockV0) Hint() hint.Hint {
 }
 
 func (bm BlockV0) Bytes() []byte {
-	return util.ConcatSlice([][]byte{
-		bm.ManifestV0.Bytes(),
-		bm.BlockConsensusInfoV0.Bytes(),
-	})
+	return util.ConcatBytesSlice(bm.ManifestV0.Bytes(), bm.BlockConsensusInfoV0.Bytes())
 }
 
 func (bm BlockV0) SetINITVoteproof(voteproof Voteproof) BlockUpdater {

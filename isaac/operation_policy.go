@@ -3,7 +3,6 @@ package isaac
 import (
 	"time"
 
-	"github.com/ethereum/go-ethereum/rlp"
 	"golang.org/x/xerrors"
 
 	"github.com/spikeekips/mitum/hint"
@@ -54,34 +53,17 @@ func (po PolicyOperationBodyV0) Hint() hint.Hint {
 	return PolicyOperationBodyV0Hint
 }
 
-func NewPolicyOperationBodyV0FromBytes(b []byte) (PolicyOperationBodyV0, error) {
-	var up PolicyOperationBodyV0
-	if err := rlp.DecodeBytes(b, &up); err != nil {
-		return PolicyOperationBodyV0{}, err
-	}
-
-	return up, nil
-}
-
 func (po PolicyOperationBodyV0) Bytes() []byte {
-	b, err := rlp.EncodeToBytes(po)
-	if err != nil {
-		panic(err)
-	}
-
-	return b
-	/*
-		return util.ConcatSlice([][]byte{
-			po.Threshold.Bytes(),
-			util.DurationToBytes(po.TimeoutWaitingProposal),
-			util.DurationToBytes(po.IntervalBroadcastingINITBallot),
-			util.DurationToBytes(po.IntervalBroadcastingProposal),
-			util.DurationToBytes(po.WaitBroadcastingACCEPTBallot),
-			util.DurationToBytes(po.IntervalBroadcastingACCEPTBallot),
-			util.UintToBytes(po.NumberOfActingSuffrageNodes),
-			util.DurationToBytes(po.TimespanValidBallot),
-		})
-	*/
+	return util.ConcatBytesSlice(
+		po.Threshold.Bytes(),
+		util.DurationToBytes(po.TimeoutWaitingProposal),
+		util.DurationToBytes(po.IntervalBroadcastingINITBallot),
+		util.DurationToBytes(po.IntervalBroadcastingProposal),
+		util.DurationToBytes(po.WaitBroadcastingACCEPTBallot),
+		util.DurationToBytes(po.IntervalBroadcastingACCEPTBallot),
+		util.UintToBytes(po.NumberOfActingSuffrageNodes),
+		util.DurationToBytes(po.TimespanValidBallot),
+	)
 }
 
 func (po PolicyOperationBodyV0) Hash() valuehash.Hash {
@@ -143,11 +125,11 @@ func (spof SetPolicyOperationFactV0) Hash() valuehash.Hash {
 }
 
 func (spof SetPolicyOperationFactV0) Bytes() []byte {
-	return util.ConcatSlice([][]byte{
+	return util.ConcatBytesSlice(
 		[]byte(spof.signer.String()),
 		spof.token,
 		spof.PolicyOperationBodyV0.Bytes(),
-	})
+	)
 }
 
 func (spof SetPolicyOperationFactV0) Signer() key.Publickey {
@@ -182,7 +164,7 @@ func NewSetPolicyOperationV0(
 	}
 	factHash := fact.Hash()
 	var factSignature key.Signature
-	if fs, err := signer.Sign(util.ConcatSlice([][]byte{factHash.Bytes(), b})); err != nil {
+	if fs, err := signer.Sign(util.ConcatBytesSlice(factHash.Bytes(), b)); err != nil {
 		return SetPolicyOperationV0{}, err
 	} else {
 		factSignature = fs
@@ -224,12 +206,7 @@ func (spo SetPolicyOperationV0) Hash() valuehash.Hash {
 }
 
 func (spo SetPolicyOperationV0) GenerateHash() (valuehash.Hash, error) {
-	e := util.ConcatSlice([][]byte{
-		spo.factHash.Bytes(),
-		spo.factSignature.Bytes(),
-	})
-
-	return valuehash.NewSHA256(e), nil
+	return valuehash.NewSHA256(util.ConcatBytesSlice(spo.factHash.Bytes(), spo.factSignature.Bytes())), nil
 }
 
 func (spo SetPolicyOperationV0) FactHash() valuehash.Hash {

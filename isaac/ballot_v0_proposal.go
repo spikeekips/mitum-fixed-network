@@ -77,7 +77,7 @@ func (prf ProposalFactV0) Hash() valuehash.Hash {
 }
 
 func (prf ProposalFactV0) Bytes() []byte {
-	return util.ConcatSlice([][]byte{
+	return util.ConcatBytesSlice(
 		prf.BaseBallotFactV0.Bytes(),
 		func() []byte {
 			var hl [][]byte
@@ -88,9 +88,9 @@ func (prf ProposalFactV0) Bytes() []byte {
 				hl = append(hl, h.Bytes())
 			}
 
-			return util.ConcatSlice(hl)
+			return util.ConcatBytesSlice(hl...)
 		}(),
-	})
+	)
 }
 
 func (prf ProposalFactV0) Operations() []valuehash.Hash {
@@ -195,12 +195,7 @@ func (pr ProposalV0) IsValid(b []byte) error {
 }
 
 func (pr ProposalV0) GenerateHash() (valuehash.Hash, error) {
-	e := util.ConcatSlice([][]byte{
-		pr.BaseBallotV0.Bytes(),
-		pr.ProposalFactV0.Bytes(),
-	})
-
-	return valuehash.NewSHA256(e), nil
+	return valuehash.NewSHA256(util.ConcatBytesSlice(pr.BaseBallotV0.Bytes(), pr.ProposalFactV0.Bytes())), nil
 }
 
 func (pr ProposalV0) GenerateBodyHash() (valuehash.Hash, error) {
@@ -228,14 +223,14 @@ func (pr *ProposalV0) Sign(pk key.Privatekey, b []byte) error { // nolint
 	}
 
 	var sig key.Signature
-	if s, err := pk.Sign(util.ConcatSlice([][]byte{bodyHash.Bytes(), b})); err != nil {
+	if s, err := pk.Sign(util.ConcatBytesSlice(bodyHash.Bytes(), b)); err != nil {
 		return err
 	} else {
 		sig = s
 	}
 
 	factHash := pr.ProposalFactV0.Hash()
-	factSig, err := pk.Sign(util.ConcatSlice([][]byte{factHash.Bytes(), b}))
+	factSig, err := pk.Sign(util.ConcatBytesSlice(factHash.Bytes(), b))
 	if err != nil {
 		return err
 	}

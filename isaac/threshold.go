@@ -35,10 +35,10 @@ func MustNewThreshold(total uint, percent float64) Threshold {
 }
 
 func (thr Threshold) Bytes() []byte {
-	return util.ConcatSlice([][]byte{
+	return util.ConcatBytesSlice(
 		util.UintToBytes(thr.Total),
 		util.Float64ToBytes(thr.Percent),
-	})
+	)
 }
 
 func (thr Threshold) String() string {

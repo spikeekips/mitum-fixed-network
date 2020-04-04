@@ -32,10 +32,10 @@ func NewLeveldbSyncerStorage(main *LeveldbStorage) *LeveldbSyncerStorage {
 }
 
 func (st *LeveldbSyncerStorage) manifestKey(height Height) []byte {
-	return util.ConcatSlice([][]byte{
+	return util.ConcatBytesSlice(
 		leveldbTmpPrefix,
 		leveldbManifestHeightKey(height),
-	})
+	)
 }
 
 func (st *LeveldbSyncerStorage) Manifest(height Height) (Manifest, error) {

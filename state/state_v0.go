@@ -97,7 +97,7 @@ func (st StateV0) GenerateHash() valuehash.Hash {
 		be = append(be, oi.Bytes())
 	}
 
-	e := util.ConcatSlice(be)
+	e := util.ConcatBytesSlice(be...)
 
 	return valuehash.NewSHA256(e)
 }
@@ -201,8 +201,5 @@ func (oi OperationInfoV0) Seal() valuehash.Hash {
 }
 
 func (oi OperationInfoV0) Bytes() []byte {
-	return util.ConcatSlice([][]byte{
-		oi.oh.Bytes(),
-		oi.sh.Bytes(),
-	})
+	return util.ConcatBytesSlice(oi.oh.Bytes(), oi.sh.Bytes())
 }

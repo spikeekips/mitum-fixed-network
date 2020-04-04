@@ -1,6 +1,6 @@
 package util
 
-func ConcatSlice(sl [][]byte) []byte {
+func ConcatBytesSlice(sl ...[]byte) []byte {
 	var t int
 	for _, s := range sl {
 		t += len(s)

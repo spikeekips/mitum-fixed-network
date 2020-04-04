@@ -13,7 +13,7 @@ func IsValidSeal(seal Seal, b []byte) error {
 	}
 
 	if err := seal.Signer().Verify(
-		util.ConcatSlice([][]byte{seal.BodyHash().Bytes(), b}),
+		util.ConcatBytesSlice(seal.BodyHash().Bytes(), b),
 		seal.Signature(),
 	); err != nil {
 		return err

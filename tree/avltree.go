@@ -92,13 +92,13 @@ func (at *AVLTree) GetWithParents(key []byte) (Node, []Node, error) {
 }
 
 func GenerateNodeHash(node avlHashable.HashableNode) ([]byte, error) {
-	e := util.ConcatSlice([][]byte{
+	e := util.ConcatBytesSlice(
 		node.Key(),
 		util.Int64ToBytes(int64(node.Height())),
 		node.ValueHash(),
 		node.LeftHash(),
 		node.RightHash(),
-	})
+	)
 
 	return valuehash.NewSHA256(e).Bytes(), nil
 }

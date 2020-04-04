@@ -40,10 +40,10 @@ func (bf BaseBallotFactV0) IsValid([]byte) error {
 }
 
 func (bf BaseBallotFactV0) Bytes() []byte {
-	return util.ConcatSlice([][]byte{
+	return util.ConcatBytesSlice(
 		bf.height.Bytes(),
 		bf.round.Bytes(),
-	})
+	)
 }
 
 func (bf BaseBallotFactV0) Height() Height {
@@ -142,11 +142,11 @@ func (bb BaseBallotV0) IsReadyToSign([]byte) error {
 }
 
 func (bb BaseBallotV0) Bytes() []byte {
-	return util.ConcatSlice([][]byte{
+	return util.ConcatBytesSlice(
 		bb.bodyHash.Bytes(),
 		[]byte(bb.signer.String()),
 		bb.signature.Bytes(),
 		[]byte(localtime.RFC3339(bb.signedAt)),
 		bb.node.Bytes(),
-	})
+	)
 }

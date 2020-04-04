@@ -73,12 +73,7 @@ func (sl Seal) Hash() valuehash.Hash {
 }
 
 func (sl Seal) GenerateHash() (valuehash.Hash, error) {
-	bl := [][]byte{
-		sl.bodyHash.Bytes(),
-		sl.signature.Bytes(),
-	}
-
-	return valuehash.NewSHA256(util.ConcatSlice(bl)), nil
+	return valuehash.NewSHA256(util.ConcatBytesSlice(sl.bodyHash.Bytes(), sl.signature.Bytes())), nil
 }
 
 func (sl Seal) BodyHash() valuehash.Hash {
@@ -95,7 +90,7 @@ func (sl Seal) GenerateBodyHash() (valuehash.Hash, error) {
 		bl = append(bl, op.Hash().Bytes())
 	}
 
-	return valuehash.NewSHA256(util.ConcatSlice(bl)), nil
+	return valuehash.NewSHA256(util.ConcatBytesSlice(bl...)), nil
 }
 
 func (sl Seal) Signer() key.Publickey {
@@ -135,7 +130,7 @@ func (sl *Seal) Sign(pk key.Privatekey, b []byte) error {
 	}
 
 	var sig key.Signature
-	if s, err := pk.Sign(util.ConcatSlice([][]byte{bodyHash.Bytes(), b})); err != nil {
+	if s, err := pk.Sign(util.ConcatBytesSlice(bodyHash.Bytes(), b)); err != nil {
 		return err
 	} else {
 		sig = s

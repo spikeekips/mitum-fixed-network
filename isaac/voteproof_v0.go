@@ -78,24 +78,22 @@ func (vp VoteproofV0) Threshold() Threshold {
 
 func (vp VoteproofV0) Bytes() []byte {
 	bs := make([][]byte, len(vp.ballots))
-	{
-		var i int
-		for _, h := range vp.ballots {
-			bs[i] = h.Bytes()
-			i++
-		}
+	var i int
+	for _, h := range vp.ballots {
+		bs[i] = h.Bytes()
+		i++
 	}
 
-	return util.ConcatSlice([][]byte{
+	return util.ConcatBytesSlice(
 		vp.height.Bytes(),
 		vp.round.Bytes(),
 		vp.threshold.Bytes(),
 		vp.result.Bytes(),
 		vp.stage.Bytes(),
 		vp.majority.Bytes(),
-		util.ConcatSlice(bs),
+		util.ConcatBytesSlice(bs...),
 		[]byte(localtime.RFC3339(vp.finishedAt)),
-	})
+	)
 }
 
 func (vp VoteproofV0) IsValid(b []byte) error {

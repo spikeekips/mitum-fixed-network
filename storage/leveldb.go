@@ -21,7 +21,7 @@ func LeveldbDataWithEncoder(enc encoder.Encoder, b []byte) []byte {
 	h := make([]byte, hint.MaxHintSize)
 	copy(h, enc.Hint().Bytes())
 
-	return util.ConcatSlice([][]byte{h, b})
+	return util.ConcatBytesSlice(h, b)
 }
 
 func LeveldbMarshal(enc encoder.Encoder, i interface{}) ([]byte, error) {

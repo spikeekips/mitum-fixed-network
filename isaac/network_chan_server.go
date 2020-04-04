@@ -41,8 +41,8 @@ func (cs *NetworkChanServer) SetNewSealHandler(f NewSealHandler) {
 	cs.newSealHandler = f
 }
 
-func (cs *NetworkChanServer) SetGetBlockManifests(GetBlockManifestsHandler) {}
-func (cs *NetworkChanServer) SetGetBlocks(GetBlocksHandler)                 {}
+func (cs *NetworkChanServer) SetGetManifests(GetManifestsHandler) {}
+func (cs *NetworkChanServer) SetGetBlocks(GetBlocksHandler)       {}
 
 func (cs *NetworkChanServer) run(stopChan chan struct{}) error {
 end:

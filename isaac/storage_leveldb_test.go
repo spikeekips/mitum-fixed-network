@@ -36,7 +36,7 @@ func (t *testLeveldbStorage) SetupSuite() {
 
 	_ = t.encs.AddHinter(key.BTCPublickey{})
 	_ = t.encs.AddHinter(BlockV0{})
-	_ = t.encs.AddHinter(BlockManifestV0{})
+	_ = t.encs.AddHinter(ManifestV0{})
 	_ = t.encs.AddHinter(BlockConsensusInfoV0{})
 	_ = t.encs.AddHinter(valuehash.SHA256{})
 	_ = t.encs.AddHinter(VoteproofV0{})
@@ -52,7 +52,7 @@ func (t *testLeveldbStorage) SetupTest() {
 	t.storage = NewMemStorage(t.encs, t.enc)
 }
 
-func (t *testLeveldbStorage) compareBlockManifest(a, b BlockManifest) {
+func (t *testLeveldbStorage) compareManifest(a, b Manifest) {
 	t.Equal(a.Height(), b.Height())
 	t.Equal(a.Round(), b.Round())
 	t.True(a.Proposal().Equal(b.Proposal()))
@@ -62,7 +62,7 @@ func (t *testLeveldbStorage) compareBlockManifest(a, b BlockManifest) {
 }
 
 func (t *testLeveldbStorage) compareBlock(a, b Block) {
-	t.compareBlockManifest(a, b)
+	t.compareManifest(a, b)
 	t.Equal(a.INITVoteproof(), b.INITVoteproof())
 	t.Equal(a.ACCEPTVoteproof(), b.ACCEPTVoteproof())
 }
@@ -113,7 +113,7 @@ func (t *testLeveldbStorage) TestLoadBlockByHash() {
 	t.compareBlock(block, loaded)
 }
 
-func (t *testLeveldbStorage) TestLoadBlockManifestByHash() {
+func (t *testLeveldbStorage) TestLoadManifestByHash() {
 	// store first
 	block, err := NewTestBlockV0(Height(33), Round(0), nil, valuehash.RandomSHA256())
 	t.NoError(err)
@@ -125,16 +125,16 @@ func (t *testLeveldbStorage) TestLoadBlockManifestByHash() {
 	t.NoError(bs.SetBlock(block))
 	t.NoError(bs.Commit())
 
-	loaded, err := t.storage.BlockManifest(block.Hash())
+	loaded, err := t.storage.Manifest(block.Hash())
 	t.NoError(err)
-	t.Implements((*BlockManifest)(nil), loaded)
+	t.Implements((*Manifest)(nil), loaded)
 	_, isBlock := loaded.(Block)
 	t.False(isBlock)
 
-	t.compareBlockManifest(block, loaded)
+	t.compareManifest(block, loaded)
 }
 
-func (t *testLeveldbStorage) TestLoadBlockManifestByHeight() {
+func (t *testLeveldbStorage) TestLoadManifestByHeight() {
 	// store first
 	block, err := NewTestBlockV0(Height(33), Round(0), nil, valuehash.RandomSHA256())
 	t.NoError(err)
@@ -146,13 +146,13 @@ func (t *testLeveldbStorage) TestLoadBlockManifestByHeight() {
 	t.NoError(bs.SetBlock(block))
 	t.NoError(bs.Commit())
 
-	loaded, err := t.storage.BlockManifestByHeight(block.Height())
+	loaded, err := t.storage.ManifestByHeight(block.Height())
 	t.NoError(err)
-	t.Implements((*BlockManifest)(nil), loaded)
+	t.Implements((*Manifest)(nil), loaded)
 	_, isBlock := loaded.(Block)
 	t.False(isBlock)
 
-	t.compareBlockManifest(block, loaded)
+	t.compareManifest(block, loaded)
 }
 
 func (t *testLeveldbStorage) TestLoadBlockByHeight() {

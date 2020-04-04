@@ -9,7 +9,7 @@ import (
 	"github.com/spikeekips/mitum/valuehash"
 )
 
-type BlockManifestV0PackJSON struct {
+type ManifestV0PackJSON struct {
 	encoder.JSONPackHintedHead
 	H  valuehash.Hash     `json:"hash"`
 	HT Height             `json:"height"`
@@ -21,8 +21,8 @@ type BlockManifestV0PackJSON struct {
 	CA localtime.JSONTime `json:"created_at"`
 }
 
-func (bm BlockManifestV0) MarshalJSON() ([]byte, error) {
-	return util.JSONMarshal(BlockManifestV0PackJSON{
+func (bm ManifestV0) MarshalJSON() ([]byte, error) {
+	return util.JSONMarshal(ManifestV0PackJSON{
 		JSONPackHintedHead: encoder.NewJSONPackHintedHead(bm.Hint()),
 		H:                  bm.h,
 		HT:                 bm.height,
@@ -35,7 +35,7 @@ func (bm BlockManifestV0) MarshalJSON() ([]byte, error) {
 	})
 }
 
-type BlockManifestV0UnpackJSON struct {
+type ManifestV0UnpackJSON struct {
 	encoder.JSONPackHintedHead
 	H  json.RawMessage    `json:"hash"`
 	HT Height             `json:"height"`
@@ -47,8 +47,8 @@ type BlockManifestV0UnpackJSON struct {
 	CA localtime.JSONTime `json:"created_at"`
 }
 
-func (bm *BlockManifestV0) UnpackJSON(b []byte, enc *encoder.JSONEncoder) error {
-	var nbm BlockManifestV0UnpackJSON
+func (bm *ManifestV0) UnpackJSON(b []byte, enc *encoder.JSONEncoder) error {
+	var nbm ManifestV0UnpackJSON
 	if err := enc.Unmarshal(b, &nbm); err != nil {
 		return err
 	}

@@ -26,7 +26,7 @@ var (
 	leveldbTmpPrefix                        []byte = []byte{0x00, 0x00}
 	leveldbBlockHeightPrefix                []byte = []byte{0x00, 0x01}
 	leveldbBlockHashPrefix                  []byte = []byte{0x00, 0x02}
-	leveldbBlockManifestPrefix              []byte = []byte{0x00, 0x03}
+	leveldbManifestPrefix                   []byte = []byte{0x00, 0x03}
 	leveldbVoteproofHeightPrefix            []byte = []byte{0x00, 0x04}
 	leveldbSealPrefix                       []byte = []byte{0x00, 0x05}
 	leveldbSealHashPrefix                   []byte = []byte{0x00, 0x06}
@@ -37,7 +37,7 @@ var (
 	leveldbStagedOperationSealReversePrefix []byte = []byte{0x00, 0x11}
 	leveldbStatePrefix                      []byte = []byte{0x00, 0x12}
 	leveldbOperationHashPrefix              []byte = []byte{0x00, 0x13}
-	leveldbBlockManifestHeightPrefix        []byte = []byte{0x00, 0x14}
+	leveldbManifestHeightPrefix             []byte = []byte{0x00, 0x14}
 )
 
 type LeveldbStorage struct {
@@ -134,16 +134,16 @@ func (st *LeveldbStorage) BlockByHeight(height Height) (Block, error) {
 	return st.Block(bh)
 }
 
-func (st *LeveldbStorage) BlockManifest(h valuehash.Hash) (BlockManifest, error) {
-	raw, err := st.get(leveldbBlockManifestKey(h))
+func (st *LeveldbStorage) Manifest(h valuehash.Hash) (Manifest, error) {
+	raw, err := st.get(leveldbManifestKey(h))
 	if err != nil {
 		return nil, err
 	}
 
-	return st.loadBlockManifest(raw)
+	return st.loadManifest(raw)
 }
 
-func (st *LeveldbStorage) BlockManifestByHeight(height Height) (BlockManifest, error) {
+func (st *LeveldbStorage) ManifestByHeight(height Height) (Manifest, error) {
 	var bh valuehash.Hash
 
 	if raw, err := st.get(leveldbBlockHeightKey(height)); err != nil {
@@ -154,7 +154,7 @@ func (st *LeveldbStorage) BlockManifestByHeight(height Height) (BlockManifest, e
 		bh = h
 	}
 
-	return st.BlockManifest(bh)
+	return st.Manifest(bh)
 }
 
 func (st *LeveldbStorage) loadLastVoteproof(stage Stage) (Voteproof, error) {
@@ -380,12 +380,12 @@ func (st *LeveldbStorage) loadBlock(b []byte) (Block, error) {
 	}
 }
 
-func (st *LeveldbStorage) loadBlockManifest(b []byte) (BlockManifest, error) {
+func (st *LeveldbStorage) loadManifest(b []byte) (Manifest, error) {
 	if hinter, err := st.loadHinter(b); err != nil {
 		return nil, err
 	} else if hinter == nil {
 		return nil, nil
-	} else if i, ok := hinter.(BlockManifest); !ok {
+	} else if i, ok := hinter.(Manifest); !ok {
 		return nil, xerrors.Errorf("not Block: %T", hinter)
 	} else {
 		return i, nil
@@ -653,7 +653,7 @@ func (bst *LeveldbBlockStorage) SetBlock(block Block) error {
 	if b, err := storage.LeveldbMarshal(bst.st.enc, block.Manifest()); err != nil {
 		return err
 	} else {
-		key := leveldbBlockManifestKey(block.Hash())
+		key := leveldbManifestKey(block.Hash())
 		bst.batch.Put(key, b)
 	}
 
@@ -761,9 +761,9 @@ func leveldbBlockHeightKey(height Height) []byte {
 	})
 }
 
-func leveldbBlockManifestHeightKey(height Height) []byte {
+func leveldbManifestHeightKey(height Height) []byte {
 	return util.ConcatSlice([][]byte{
-		leveldbBlockManifestHeightPrefix,
+		leveldbManifestHeightPrefix,
 		[]byte(fmt.Sprintf("%020d", height.Int64())),
 	})
 }
@@ -775,9 +775,9 @@ func leveldbBlockHashKey(h valuehash.Hash) []byte {
 	})
 }
 
-func leveldbBlockManifestKey(h valuehash.Hash) []byte {
+func leveldbManifestKey(h valuehash.Hash) []byte {
 	return util.ConcatSlice([][]byte{
-		leveldbBlockManifestPrefix,
+		leveldbManifestPrefix,
 		h.Bytes(),
 	})
 }

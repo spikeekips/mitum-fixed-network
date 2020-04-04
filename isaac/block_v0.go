@@ -13,14 +13,14 @@ import (
 var (
 	BlockV0Type              = hint.MustNewType(0x05, 0x00, "block-v0")
 	BlockV0Hint              = hint.MustHint(BlockV0Type, "0.0.1")
-	BlockManifestV0Type      = hint.MustNewType(0x05, 0x01, "block-manifest-v0")
-	BlockManifestV0Hint      = hint.MustHint(BlockManifestV0Type, "0.0.1")
+	ManifestV0Type           = hint.MustNewType(0x05, 0x01, "block-manifest-v0")
+	ManifestV0Hint           = hint.MustHint(ManifestV0Type, "0.0.1")
 	BlockConsensusInfoV0Type = hint.MustNewType(0x05, 0x02, "block-consensus-info-v0")
 	BlockConsensusInfoV0Hint = hint.MustHint(BlockConsensusInfoV0Type, "0.0.1")
 )
 
 type BlockV0 struct {
-	BlockManifestV0
+	ManifestV0
 	BlockConsensusInfoV0
 	operations *tree.AVLTree
 	states     *tree.AVLTree
@@ -34,7 +34,7 @@ func NewBlockV0(
 	operationsHash valuehash.Hash,
 	statesHash valuehash.Hash,
 ) (BlockV0, error) {
-	bm := BlockManifestV0{
+	bm := ManifestV0{
 		previousBlock:  previousBlock,
 		height:         height,
 		round:          round,
@@ -50,14 +50,14 @@ func NewBlockV0(
 	}
 
 	return BlockV0{
-		BlockManifestV0:      bm,
+		ManifestV0:           bm,
 		BlockConsensusInfoV0: BlockConsensusInfoV0{},
 	}, nil
 }
 
 func (bm BlockV0) IsValid([]byte) error {
 	if err := isvalid.Check([]isvalid.IsValider{
-		bm.BlockManifestV0,
+		bm.ManifestV0,
 		bm.BlockConsensusInfoV0,
 	}, nil, false); err != nil {
 		return err
@@ -96,7 +96,7 @@ func (bm BlockV0) Hint() hint.Hint {
 
 func (bm BlockV0) Bytes() []byte {
 	return util.ConcatSlice([][]byte{
-		bm.BlockManifestV0.Bytes(),
+		bm.ManifestV0.Bytes(),
 		bm.BlockConsensusInfoV0.Bytes(),
 	})
 }
@@ -113,8 +113,8 @@ func (bm BlockV0) SetACCEPTVoteproof(voteproof Voteproof) BlockUpdater {
 	return bm
 }
 
-func (bm BlockV0) Manifest() BlockManifest {
-	return bm.BlockManifestV0
+func (bm BlockV0) Manifest() Manifest {
+	return bm.ManifestV0
 }
 
 func (bm BlockV0) ConsensusInfo() BlockConsensusInfo {

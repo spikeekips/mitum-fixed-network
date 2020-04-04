@@ -12,11 +12,11 @@ type baseBlocksValidationChecker struct {
 	networkID  NetworkID
 }
 
-func (bc *baseBlocksValidationChecker) checkIsValid(block BlockManifest) error {
+func (bc *baseBlocksValidationChecker) checkIsValid(block Manifest) error {
 	return block.IsValid(bc.networkID)
 }
 
-func (bc *baseBlocksValidationChecker) checkPreviousBlock(current, next BlockManifest) error {
+func (bc *baseBlocksValidationChecker) checkPreviousBlock(current, next Manifest) error {
 	if next.Height() != current.Height()+1 {
 		return xerrors.Errorf("wrong height: current=%v next=%s", current.Height(), next.Height())
 	}
@@ -33,18 +33,18 @@ func (bc *baseBlocksValidationChecker) checkPreviousBlock(current, next BlockMan
 	return nil
 }
 
-type BlockManifestsValidationChecker struct {
+type ManifestsValidationChecker struct {
 	baseBlocksValidationChecker
-	manifests []BlockManifest
+	manifests []Manifest
 }
 
-func NewBlockManifestsValidationChecker(
+func NewManifestsValidationChecker(
 	localstate *Localstate,
-	manifests []BlockManifest,
-) *BlockManifestsValidationChecker {
+	manifests []Manifest,
+) *ManifestsValidationChecker {
 	networkID := localstate.Policy().NetworkID()
 
-	return &BlockManifestsValidationChecker{
+	return &ManifestsValidationChecker{
 		baseBlocksValidationChecker: baseBlocksValidationChecker{
 			Logging: logging.NewLogging(func(c zerolog.Context) zerolog.Context {
 				return c.
@@ -59,7 +59,7 @@ func NewBlockManifestsValidationChecker(
 	}
 }
 
-func (bc *BlockManifestsValidationChecker) CheckSerialized() (bool, error) {
+func (bc *ManifestsValidationChecker) CheckSerialized() (bool, error) {
 	bc.Log().Debug().Msg("trying to validate serialized manifests")
 
 	i := 0

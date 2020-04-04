@@ -43,7 +43,7 @@ type GeneralSyncer struct { // nolint; maligned
 	limitBlocksPerOnce      int
 	pn                      []Address
 	st                      SyncerState
-	baseManifest            BlockManifest
+	baseManifest            Manifest
 	willSave                bool
 	stateChan               chan<- Syncer
 }
@@ -206,7 +206,7 @@ func (cs *GeneralSyncer) provedNodes() []Address {
 	return cs.pn
 }
 
-func (cs *GeneralSyncer) Prepare(baseManifest BlockManifest) error {
+func (cs *GeneralSyncer) Prepare(baseManifest Manifest) error {
 	if cs.State() >= SyncerPrepared {
 		cs.Log().Debug().Msg("already prepared")
 		return nil
@@ -283,14 +283,14 @@ func (cs *GeneralSyncer) headAndTailManifests() error {
 		heights = []Height{cs.heightFrom, cs.heightTo}
 	}
 
-	var fetched map[Address][]BlockManifest
+	var fetched map[Address][]Manifest
 	if bs := cs.fetchManifestsByNodes(heights); len(bs) < 1 {
 		return xerrors.Errorf("failed to fetch manifests from all of source nodes")
 	} else {
 		fetched = bs
 	}
 
-	var manifests []BlockManifest
+	var manifests []Manifest
 	var provedNodes []Address
 	switch ms, pn, err := cs.checkThresholdByHeights(heights, fetched); {
 	case err != nil:
@@ -303,7 +303,7 @@ func (cs *GeneralSyncer) headAndTailManifests() error {
 	}
 
 	if cs.baseManifest != nil {
-		checker := NewBlockManifestsValidationChecker(cs.localstate, []BlockManifest{cs.baseManifest, manifests[0]})
+		checker := NewManifestsValidationChecker(cs.localstate, []Manifest{cs.baseManifest, manifests[0]})
 		_ = checker.SetLogger(cs.Log())
 
 		if err := util.NewChecker("sync-manifests-validation-checker", []util.CheckerFunc{
@@ -316,7 +316,7 @@ func (cs *GeneralSyncer) headAndTailManifests() error {
 	for i, height := range heights {
 		b := manifests[i]
 		if height != b.Height() {
-			return xerrors.Errorf("invalid BlockManifest found; height does not match")
+			return xerrors.Errorf("invalid Manifest found; height does not match")
 		}
 	}
 
@@ -343,7 +343,7 @@ func (cs *GeneralSyncer) fillManifests() error {
 		heights[i-from] = Height(i)
 	}
 
-	var fetched map[Address][]BlockManifest
+	var fetched map[Address][]Manifest
 	if bs := cs.fetchManifestsByNodes(heights); len(bs) < 1 {
 		return xerrors.Errorf("failed to fetch manifests from all of source nodes")
 	} else {
@@ -359,7 +359,7 @@ func (cs *GeneralSyncer) fillManifests() error {
 		for i, height := range heights {
 			b := ms[i]
 			if height != b.Height() {
-				return xerrors.Errorf("invalid BlockManifest found; height does not match")
+				return xerrors.Errorf("invalid Manifest found; height does not match")
 			}
 		}
 
@@ -497,22 +497,22 @@ func (cs *GeneralSyncer) distributeBlocksJob(worker *util.Worker) error {
 	return nil
 }
 
-func (cs *GeneralSyncer) fetchManifestsByNodes(heights []Height) map[Address][]BlockManifest {
+func (cs *GeneralSyncer) fetchManifestsByNodes(heights []Height) map[Address][]Manifest {
 	cs.Log().Debug().
 		Int64("height_from", heights[0].Int64()).
 		Int64("height_to", heights[len(heights)-1].Int64()).
 		Msg("trying to fetch manifest")
 
-	resultChan := make(chan map[Address][]BlockManifest, len(cs.provedNodes()))
+	resultChan := make(chan map[Address][]Manifest, len(cs.provedNodes()))
 
 	for _, address := range cs.provedNodes() {
 		go func(address Address) {
 			manifests := cs.callbackFetchManifests(cs.sourceNodes[address], heights)
-			resultChan <- map[Address][]BlockManifest{address: manifests}
+			resultChan <- map[Address][]Manifest{address: manifests}
 		}(address)
 	}
 
-	fetched := map[Address][]BlockManifest{}
+	fetched := map[Address][]Manifest{}
 	for result := range resultChan {
 		for address, manifests := range result {
 			fetched[address] = manifests
@@ -528,10 +528,10 @@ func (cs *GeneralSyncer) fetchManifestsByNodes(heights []Height) map[Address][]B
 	return fetched
 }
 
-func (cs *GeneralSyncer) callbackFetchManifests(node Node, heights []Height) []BlockManifest {
-	manifests := make([]BlockManifest, len(heights))
+func (cs *GeneralSyncer) callbackFetchManifests(node Node, heights []Height) []Manifest {
+	manifests := make([]Manifest, len(heights))
 
-	updateManifests := func(fetched []BlockManifest) {
+	updateManifests := func(fetched []Manifest) {
 		sort.SliceStable(fetched, func(i, j int) bool {
 			return fetched[i].Height() < fetched[j].Height()
 		})
@@ -571,7 +571,7 @@ func (cs *GeneralSyncer) callbackFetchManifests(node Node, heights []Height) []B
 	return manifests
 }
 
-func (cs *GeneralSyncer) callbackFetchManifestsSlice(node Node, heights []Height) []BlockManifest {
+func (cs *GeneralSyncer) callbackFetchManifestsSlice(node Node, heights []Height) []Manifest {
 	var retries uint = 3
 
 	l := cs.Log().With().
@@ -582,7 +582,7 @@ func (cs *GeneralSyncer) callbackFetchManifestsSlice(node Node, heights []Height
 
 	l.Debug().Msg("trying to fetch manifest of node")
 
-	var manifests []BlockManifest
+	var manifests []Manifest
 
 	missing := heights
 	_ = util.Retry(retries, time.Millisecond*300, func() error { // TODO retry count should be configurable
@@ -591,7 +591,7 @@ func (cs *GeneralSyncer) callbackFetchManifestsSlice(node Node, heights []Height
 			return err
 		}
 
-		if ss, ms, err := cs.sanitizeBlockManifests(heights, bs); err != nil {
+		if ss, ms, err := cs.sanitizeManifests(heights, bs); err != nil {
 			return err
 		} else {
 			manifests = ss
@@ -610,13 +610,13 @@ func (cs *GeneralSyncer) callbackFetchManifestsSlice(node Node, heights []Height
 	return manifests
 }
 
-func (cs *GeneralSyncer) checkThresholdByHeights(heights []Height, fetched map[Address][]BlockManifest) (
-	[]BlockManifest, // major manifests
+func (cs *GeneralSyncer) checkThresholdByHeights(heights []Height, fetched map[Address][]Manifest) (
+	[]Manifest, // major manifests
 	[]Address, // nodes, which have over threshold manifests
 	error,
 ) {
 	threshold := cs.localstate.Policy().Threshold()
-	manifests := make([]BlockManifest, len(heights))
+	manifests := make([]Manifest, len(heights))
 
 	var pn []Address = cs.provedNodes()
 	for index := range heights {
@@ -642,13 +642,13 @@ func (cs *GeneralSyncer) checkThresholdByHeights(heights []Height, fetched map[A
 func (cs *GeneralSyncer) checkThreshold(
 	index int,
 	heights []Height,
-	fetched map[Address][]BlockManifest,
+	fetched map[Address][]Manifest,
 	provedNodes map[Address]Node,
 	threshold Threshold,
-) (BlockManifest, []Address, error) {
+) (Manifest, []Address, error) {
 	height := heights[index]
 	hashByNode := map[string][]Address{}
-	ms := map[string]BlockManifest{}
+	ms := map[string]Manifest{}
 
 	var set []string // nolint
 	for node := range fetched {
@@ -700,7 +700,7 @@ func (cs *GeneralSyncer) checkThreshold(
 	return ms[key], hashByNode[key], nil
 }
 
-func (cs *GeneralSyncer) fetchManifests(node Node, heights []Height) ([]BlockManifest, error) { // nolint
+func (cs *GeneralSyncer) fetchManifests(node Node, heights []Height) ([]Manifest, error) { // nolint
 	l := cs.Log().With().
 		Str("source_node", node.Address().String()).
 		Int64("height_from", heights[0].Int64()).
@@ -709,8 +709,8 @@ func (cs *GeneralSyncer) fetchManifests(node Node, heights []Height) ([]BlockMan
 
 	l.Debug().Msg("trying to fetch manifests")
 
-	var fetched []BlockManifest
-	if bs, err := node.Channel().BlockManifests(heights); err != nil {
+	var fetched []Manifest
+	if bs, err := node.Channel().Manifests(heights); err != nil {
 		return nil, err
 	} else {
 		sort.SliceStable(bs, func(i, j int) bool {
@@ -724,32 +724,32 @@ func (cs *GeneralSyncer) fetchManifests(node Node, heights []Height) ([]BlockMan
 	return fetched, nil
 }
 
-// sanitizeBlockManifests checks and filter the fetched BlockManifests. NOTE the
+// sanitizeManifests checks and filter the fetched Manifests. NOTE the
 // input heights should be sorted by it's Height.
-func (cs *GeneralSyncer) sanitizeBlockManifests(heights []Height, l interface{}) (
-	[]BlockManifest, []Height, error,
+func (cs *GeneralSyncer) sanitizeManifests(heights []Height, l interface{}) (
+	[]Manifest, []Height, error,
 ) {
-	var bs []BlockManifest
+	var bs []Manifest
 	switch t := l.(type) {
 	case []Block:
 		for _, b := range t {
 			bs = append(bs, b)
 		}
-	case []BlockManifest:
+	case []Manifest:
 		bs = t
 	default:
-		return nil, nil, xerrors.Errorf("not BlockManifest like: %T", l)
+		return nil, nil, xerrors.Errorf("not Manifest like: %T", l)
 	}
 
-	var checked []BlockManifest
+	var checked []Manifest
 	var missing []Height
 	{
 		head := heights[0]
 		tail := heights[len(heights)-1]
 
-		a := map[Height]BlockManifest{}
+		a := map[Height]Manifest{}
 		for _, i := range bs {
-			b := i.(BlockManifest)
+			b := i.(Manifest)
 			if b.Height() < head || b.Height() > tail {
 				continue
 			} else if _, found := a[b.Height()]; found {
@@ -788,12 +788,12 @@ func (cs *GeneralSyncer) workerCallbackFetchBlocks(node Node) util.WorkerCallbac
 		l.Debug().Msg("trying to fetch blocks")
 		defer l.Debug().Msg("fetched blocks")
 
-		var manifests []BlockManifest
+		var manifests []Manifest
 		var missing []Height
 		var err error
 		if bs, e := cs.fetchBlocks(node, heights); err != nil {
 			err = e
-		} else if manifests, missing, err = cs.sanitizeBlockManifests(heights, bs); err != nil {
+		} else if manifests, missing, err = cs.sanitizeManifests(heights, bs); err != nil {
 		}
 
 		blocks := make([]Block, len(manifests))
@@ -876,7 +876,7 @@ func (cs *GeneralSyncer) HeightTo() Height {
 	return cs.heightTo
 }
 
-func (cs *GeneralSyncer) TailManifest() BlockManifest {
+func (cs *GeneralSyncer) TailManifest() Manifest {
 	b, err := cs.storage.Manifest(cs.heightTo)
 	if err != nil {
 		return nil

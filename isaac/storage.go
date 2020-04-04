@@ -18,8 +18,8 @@ type Storage interface {
 	LastBlock() (Block, error)
 	Block(valuehash.Hash) (Block, error)
 	BlockByHeight(Height) (Block, error)
-	BlockManifest(valuehash.Hash) (BlockManifest, error)
-	BlockManifestByHeight(Height) (BlockManifest, error)
+	Manifest(valuehash.Hash) (Manifest, error)
+	ManifestByHeight(Height) (Manifest, error)
 
 	NewINITVoteproof(Voteproof) error
 	LastINITVoteproof() (Voteproof, error)

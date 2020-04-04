@@ -10,7 +10,7 @@ import (
 	"github.com/spikeekips/mitum/valuehash"
 )
 
-type BlockManifest interface {
+type Manifest interface {
 	isvalid.IsValider
 	hint.Hinter
 	util.Byter
@@ -33,9 +33,9 @@ type BlockConsensusInfo interface {
 }
 
 type Block interface {
-	BlockManifest
+	Manifest
 	BlockConsensusInfo
-	Manifest() BlockManifest
+	Manifest() Manifest
 	ConsensusInfo() BlockConsensusInfo
 	Operations() *tree.AVLTree
 	States() *tree.AVLTree

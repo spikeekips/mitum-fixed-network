@@ -41,10 +41,10 @@ func (t *testGeneralSyncer) setup(local *Localstate, localstates []*Localstate) 
 
 	for _, st := range nodes {
 		nch := st.Node().Channel().(*NetworkChanChannel)
-		nch.SetGetBlockManifests(func(heights []Height) ([]BlockManifest, error) {
-			var bs []BlockManifest
+		nch.SetGetManifests(func(heights []Height) ([]Manifest, error) {
+			var bs []Manifest
 			for _, h := range heights {
-				m, err := st.Storage().BlockManifestByHeight(h)
+				m, err := st.Storage().ManifestByHeight(h)
 				if err != nil {
 					if xerrors.Is(err, storage.NotFoundError) {
 						break
@@ -551,9 +551,9 @@ func (t *testGeneralSyncer) TestMissingHead() {
 
 	head := base.Height() + 1
 	ch := rn0.Node().Channel().(*NetworkChanChannel)
-	orig := ch.getBlockManifests
-	ch.SetGetBlockManifests(func(heights []Height) ([]BlockManifest, error) {
-		var bs []BlockManifest
+	orig := ch.getManifests
+	ch.SetGetManifests(func(heights []Height) ([]Manifest, error) {
+		var bs []Manifest
 		if l, err := orig(heights); err != nil {
 			return nil, err
 		} else {
@@ -588,9 +588,9 @@ func (t *testGeneralSyncer) TestMissingTail() {
 
 	tail := target
 	ch := rn0.Node().Channel().(*NetworkChanChannel)
-	orig := ch.getBlockManifests
-	ch.SetGetBlockManifests(func(heights []Height) ([]BlockManifest, error) {
-		var bs []BlockManifest
+	orig := ch.getManifests
+	ch.SetGetManifests(func(heights []Height) ([]Manifest, error) {
+		var bs []Manifest
 		if l, err := orig(heights); err != nil {
 			return nil, err
 		} else {
@@ -625,9 +625,9 @@ func (t *testGeneralSyncer) TestMissingManifests() {
 
 	missing := target - 1
 	ch := rn0.Node().Channel().(*NetworkChanChannel)
-	orig := ch.getBlockManifests
-	ch.SetGetBlockManifests(func(heights []Height) ([]BlockManifest, error) {
-		var bs []BlockManifest
+	orig := ch.getManifests
+	ch.SetGetManifests(func(heights []Height) ([]Manifest, error) {
+		var bs []Manifest
 		if l, err := orig(heights); err != nil {
 			return nil, err
 		} else {

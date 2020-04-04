@@ -34,21 +34,21 @@ func NewLeveldbSyncerStorage(main *LeveldbStorage) *LeveldbSyncerStorage {
 func (st *LeveldbSyncerStorage) manifestKey(height Height) []byte {
 	return util.ConcatSlice([][]byte{
 		leveldbTmpPrefix,
-		leveldbBlockManifestHeightKey(height),
+		leveldbManifestHeightKey(height),
 	})
 }
 
-func (st *LeveldbSyncerStorage) Manifest(height Height) (BlockManifest, error) {
+func (st *LeveldbSyncerStorage) Manifest(height Height) (Manifest, error) {
 	raw, err := st.storage.DB().Get(st.manifestKey(height), nil)
 	if err != nil {
 		return nil, err
 	}
 
-	return st.storage.loadBlockManifest(raw)
+	return st.storage.loadManifest(raw)
 }
 
-func (st *LeveldbSyncerStorage) Manifests(heights []Height) ([]BlockManifest, error) {
-	var bs []BlockManifest
+func (st *LeveldbSyncerStorage) Manifests(heights []Height) ([]Manifest, error) {
+	var bs []Manifest
 	for i := range heights {
 		if b, err := st.Manifest(heights[i]); err != nil {
 			return nil, err
@@ -60,7 +60,7 @@ func (st *LeveldbSyncerStorage) Manifests(heights []Height) ([]BlockManifest, er
 	return bs, nil
 }
 
-func (st *LeveldbSyncerStorage) SetManifests(manifests []BlockManifest) error {
+func (st *LeveldbSyncerStorage) SetManifests(manifests []Manifest) error {
 	st.Log().VerboseFunc(func(e *zerolog.Event) *zerolog.Event {
 		var heights []Height
 		for i := range manifests {

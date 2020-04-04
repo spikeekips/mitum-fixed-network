@@ -11,10 +11,10 @@ import (
 
 type NetworkChanChannel struct {
 	*logging.Logging
-	recvChan          chan seal.Seal
-	getSealHandler    GetSealsHandler
-	getBlockManifests GetBlockManifestsHandler
-	getBlocks         GetBlocksHandler
+	recvChan       chan seal.Seal
+	getSealHandler GetSealsHandler
+	getManifests   GetManifestsHandler
+	getBlocks      GetBlocksHandler
 }
 
 func NewNetworkChanChannel(bufsize uint) *NetworkChanChannel {
@@ -48,12 +48,12 @@ func (gs *NetworkChanChannel) SetGetSealHandler(f GetSealsHandler) {
 	gs.getSealHandler = f
 }
 
-func (gs *NetworkChanChannel) BlockManifests(hs []Height) ([]BlockManifest, error) {
-	return gs.getBlockManifests(hs)
+func (gs *NetworkChanChannel) Manifests(hs []Height) ([]Manifest, error) {
+	return gs.getManifests(hs)
 }
 
-func (gs *NetworkChanChannel) SetGetBlockManifests(f GetBlockManifestsHandler) {
-	gs.getBlockManifests = f
+func (gs *NetworkChanChannel) SetGetManifests(f GetManifestsHandler) {
+	gs.getManifests = f
 }
 
 func (gs *NetworkChanChannel) Blocks(hs []Height) ([]Block, error) {

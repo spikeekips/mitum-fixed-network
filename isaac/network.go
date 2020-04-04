@@ -7,10 +7,10 @@ import (
 )
 
 type (
-	GetSealsHandler          func([]valuehash.Hash) ([]seal.Seal, error)
-	NewSealHandler           func(seal.Seal) error
-	GetBlockManifestsHandler func([]Height) ([]BlockManifest, error)
-	GetBlocksHandler         func([]Height) ([]Block, error)
+	GetSealsHandler     func([]valuehash.Hash) ([]seal.Seal, error)
+	NewSealHandler      func(seal.Seal) error
+	GetManifestsHandler func([]Height) ([]Manifest, error)
+	GetBlocksHandler    func([]Height) ([]Block, error)
 )
 
 // TODO GetXXX should have limit
@@ -19,7 +19,7 @@ type Server interface {
 	util.Daemon
 	SetGetSealsHandler(GetSealsHandler)
 	SetNewSealHandler(NewSealHandler)
-	SetGetBlockManifests(GetBlockManifestsHandler)
+	SetGetManifests(GetManifestsHandler)
 	SetGetBlocks(GetBlocksHandler)
 }
 
@@ -31,6 +31,6 @@ type Response interface {
 type NetworkChannel interface {
 	Seals([]valuehash.Hash) ([]seal.Seal, error)
 	SendSeal(seal.Seal) error
-	BlockManifests([]Height) ([]BlockManifest, error)
+	Manifests([]Height) ([]Manifest, error)
 	Blocks([]Height) ([]Block, error)
 }

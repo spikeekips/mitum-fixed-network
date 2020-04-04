@@ -29,13 +29,13 @@ func decodeVoteproof(enc encoder.Encoder, b []byte) (Voteproof, error) {
 	}
 }
 
-func decodeBlockManifest(enc encoder.Encoder, b []byte) (BlockManifest, error) {
+func decodeManifest(enc encoder.Encoder, b []byte) (Manifest, error) {
 	if i, err := enc.DecodeByHint(b); err != nil {
 		return nil, err
 	} else if i == nil {
 		return nil, nil
-	} else if v, ok := i.(BlockManifest); !ok {
-		return nil, errors.InvalidTypeError.Wrapf("not BlockManifest; type=%T", i)
+	} else if v, ok := i.(Manifest); !ok {
+		return nil, errors.InvalidTypeError.Wrapf("not Manifest; type=%T", i)
 	} else {
 		return v, nil
 	}

@@ -45,7 +45,7 @@ func (t *baseTestStateHandler) SetupSuite() { // nolint
 	_ = t.encs.AddHinter(ACCEPTBallotFactV0{})
 	_ = t.encs.AddHinter(VoteproofV0{})
 	_ = t.encs.AddHinter(BlockV0{})
-	_ = t.encs.AddHinter(BlockManifestV0{})
+	_ = t.encs.AddHinter(ManifestV0{})
 	_ = t.encs.AddHinter(BlockConsensusInfoV0{})
 	_ = t.encs.AddHinter(operation.Seal{})
 	_ = t.encs.AddHinter(operation.KVOperationFact{})
@@ -207,7 +207,7 @@ func (t *baseTestStateHandler) newOperationSeal(localstate *Localstate) operatio
 	return sl
 }
 
-func (t *baseTestStateHandler) compareBlockManifest(a, b BlockManifest) {
+func (t *baseTestStateHandler) compareManifest(a, b Manifest) {
 	t.Equal(a.Height(), b.Height())
 	t.Equal(a.Round(), b.Round())
 	t.True(a.Proposal().Equal(b.Proposal()))
@@ -217,7 +217,7 @@ func (t *baseTestStateHandler) compareBlockManifest(a, b BlockManifest) {
 }
 
 func (t *baseTestStateHandler) compareBlock(a, b Block) {
-	t.compareBlockManifest(a, b)
+	t.compareManifest(a, b)
 	t.compareAVLTree(a.States(), b.States())
 	t.compareAVLTree(a.Operations(), b.Operations())
 	t.compareVoteproof(a.INITVoteproof(), b.INITVoteproof())

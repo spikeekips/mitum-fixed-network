@@ -49,14 +49,14 @@ func (t *testNetworkChanChannel) TestGetSeal() {
 	t.True(sl.Hash().Equal(gsls[0].Hash()))
 }
 
-func (t *testNetworkChanChannel) TestBlockManifests() {
+func (t *testNetworkChanChannel) TestManifests() {
 	gs := NewNetworkChanChannel(0)
 
 	block, err := NewTestBlockV0(Height(33), Round(9), nil, valuehash.RandomSHA256())
 	t.NoError(err)
 
-	gs.SetGetBlockManifests(func(heights []Height) ([]BlockManifest, error) {
-		var blocks []BlockManifest
+	gs.SetGetManifests(func(heights []Height) ([]Manifest, error) {
+		var blocks []Manifest
 		for _, h := range heights {
 			if h != block.Height() {
 				continue
@@ -69,7 +69,7 @@ func (t *testNetworkChanChannel) TestBlockManifests() {
 	})
 
 	{
-		blocks, err := gs.BlockManifests([]Height{block.Height()})
+		blocks, err := gs.Manifests([]Height{block.Height()})
 		t.NoError(err)
 		t.Equal(1, len(blocks))
 
@@ -82,7 +82,7 @@ func (t *testNetworkChanChannel) TestBlockManifests() {
 	}
 
 	{ // with unknown height
-		blocks, err := gs.BlockManifests([]Height{block.Height(), block.Height() + 1})
+		blocks, err := gs.Manifests([]Height{block.Height(), block.Height() + 1})
 		t.NoError(err)
 		t.Equal(1, len(blocks))
 

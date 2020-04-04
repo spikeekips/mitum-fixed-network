@@ -29,12 +29,12 @@ func (ss SyncerState) String() string {
 }
 
 type Syncer interface {
-	Prepare(BlockManifest /* base manifest */) error
+	Prepare(Manifest /* base manifest */) error
 	Save() error
 	HeightFrom() Height
 	HeightTo() Height
 	State() SyncerState
-	TailManifest() BlockManifest
+	TailManifest() Manifest
 	Close() error
 }
 

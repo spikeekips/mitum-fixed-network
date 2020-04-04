@@ -11,7 +11,7 @@ import (
 
 type BlockV0PackJSON struct {
 	encoder.JSONPackHintedHead
-	MF BlockManifestV0      `json:"manifest"`
+	MF ManifestV0           `json:"manifest"`
 	CI BlockConsensusInfoV0 `json:"consensus"`
 	OP *tree.AVLTree        `json:"operations"`
 	ST *tree.AVLTree        `json:"states"`
@@ -20,7 +20,7 @@ type BlockV0PackJSON struct {
 func (bm BlockV0) MarshalJSON() ([]byte, error) {
 	return util.JSONMarshal(BlockV0PackJSON{
 		JSONPackHintedHead: encoder.NewJSONPackHintedHead(bm.Hint()),
-		MF:                 bm.BlockManifestV0,
+		MF:                 bm.ManifestV0,
 		CI:                 bm.BlockConsensusInfoV0,
 		OP:                 bm.operations,
 		ST:                 bm.states,
@@ -41,11 +41,11 @@ func (bm *BlockV0) UnpackJSON(b []byte, enc *encoder.JSONEncoder) error {
 		return err
 	}
 
-	var mf BlockManifestV0
-	if m, err := decodeBlockManifest(enc, nbm.MF); err != nil {
+	var mf ManifestV0
+	if m, err := decodeManifest(enc, nbm.MF); err != nil {
 		return err
-	} else if mv, ok := m.(BlockManifestV0); !ok {
-		return xerrors.Errorf("not BlockManifestV0: type=%T", m)
+	} else if mv, ok := m.(ManifestV0); !ok {
+		return xerrors.Errorf("not ManifestV0: type=%T", m)
 	} else {
 		mf = mv
 	}
@@ -72,7 +72,7 @@ func (bm *BlockV0) UnpackJSON(b []byte, enc *encoder.JSONEncoder) error {
 		states = tr
 	}
 
-	bm.BlockManifestV0 = mf
+	bm.ManifestV0 = mf
 	bm.BlockConsensusInfoV0 = ci
 	bm.operations = &operations
 	bm.states = &states

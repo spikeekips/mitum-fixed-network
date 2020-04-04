@@ -10,7 +10,7 @@ import (
 	"golang.org/x/xerrors"
 )
 
-type BlockManifestV0 struct {
+type ManifestV0 struct {
 	h              valuehash.Hash
 	height         Height
 	round          Round
@@ -21,11 +21,11 @@ type BlockManifestV0 struct {
 	createdAt      time.Time
 }
 
-func (bm BlockManifestV0) GenerateHash() (valuehash.Hash, error) {
+func (bm ManifestV0) GenerateHash() (valuehash.Hash, error) {
 	return valuehash.NewSHA256(bm.Bytes()), nil
 }
 
-func (bm BlockManifestV0) IsValid([]byte) error {
+func (bm ManifestV0) IsValid([]byte) error {
 	if err := isvalid.Check([]isvalid.IsValider{
 		bm.h,
 		bm.height,
@@ -52,15 +52,15 @@ func (bm BlockManifestV0) IsValid([]byte) error {
 	return nil
 }
 
-func (bm BlockManifestV0) Hint() hint.Hint {
-	return BlockManifestV0Hint
+func (bm ManifestV0) Hint() hint.Hint {
+	return ManifestV0Hint
 }
 
-func (bm BlockManifestV0) Hash() valuehash.Hash {
+func (bm ManifestV0) Hash() valuehash.Hash {
 	return bm.h
 }
 
-func (bm BlockManifestV0) Bytes() []byte {
+func (bm ManifestV0) Bytes() []byte {
 	var operationsHashBytes []byte
 	if bm.operationsHash != nil {
 		operationsHashBytes = bm.operationsHash.Bytes()
@@ -83,30 +83,30 @@ func (bm BlockManifestV0) Bytes() []byte {
 	})
 }
 
-func (bm BlockManifestV0) Height() Height {
+func (bm ManifestV0) Height() Height {
 	return bm.height
 }
 
-func (bm BlockManifestV0) Round() Round {
+func (bm ManifestV0) Round() Round {
 	return bm.round
 }
 
-func (bm BlockManifestV0) Proposal() valuehash.Hash {
+func (bm ManifestV0) Proposal() valuehash.Hash {
 	return bm.proposal
 }
 
-func (bm BlockManifestV0) PreviousBlock() valuehash.Hash {
+func (bm ManifestV0) PreviousBlock() valuehash.Hash {
 	return bm.previousBlock
 }
 
-func (bm BlockManifestV0) OperationsHash() valuehash.Hash {
+func (bm ManifestV0) OperationsHash() valuehash.Hash {
 	return bm.operationsHash
 }
 
-func (bm BlockManifestV0) StatesHash() valuehash.Hash {
+func (bm ManifestV0) StatesHash() valuehash.Hash {
 	return bm.statesHash
 }
 
-func (bm BlockManifestV0) CreatedAt() time.Time {
+func (bm ManifestV0) CreatedAt() time.Time {
 	return bm.createdAt
 }

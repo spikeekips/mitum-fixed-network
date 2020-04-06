@@ -141,10 +141,13 @@ func (bs *BaseStateHandler) StoreNewBlockByVoteproof(acceptVoteproof Voteproof) 
 		return xerrors.Errorf("needs ACCEPTBallotFact: fact=%T", acceptVoteproof.Majority())
 	}
 
-	l := loggerWithVoteproof(acceptVoteproof, bs.Log()).With().
-		Str("proposal", fact.Proposal().String()).
-		Str("new_block", fact.NewBlock().String()).
-		Logger()
+	l := loggerWithVoteproof(
+		acceptVoteproof,
+		bs.Log().WithLogger(func(ctx zerolog.Context) zerolog.Context {
+			return ctx.Str("proposal", fact.Proposal().String()).
+				Str("new_block", fact.NewBlock().String())
+		}),
+	)
 
 	_ = bs.localstate.SetLastACCEPTVoteproof(acceptVoteproof)
 

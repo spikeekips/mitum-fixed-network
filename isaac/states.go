@@ -220,9 +220,9 @@ func (css *ConsensusStates) broadcastSeal(sl seal.Seal, errChan chan<- error) {
 
 	css.localstate.Nodes().Traverse(func(n Node) bool {
 		go func(n Node) {
-			lt := l.With().
-				Str("target_node", n.Address().String()).
-				Logger()
+			lt := l.WithLogger(func(ctx zerolog.Context) zerolog.Context {
+				return ctx.Str("target_node", n.Address().String())
+			})
 
 			if err := n.Channel().SendSeal(sl); err != nil {
 				lt.Error().Err(err).Msg("failed to broadcast")
@@ -292,9 +292,9 @@ func (css *ConsensusStates) NewSeal(sl seal.Seal) error {
 		return xerrors.Errorf("no activated handler")
 	}
 
-	l := loggerWithSeal(sl, css.Log()).With().
-		Str("handler", css.ActiveHandler().State().String()).
-		Logger()
+	l := loggerWithSeal(sl, css.Log()).WithLogger(func(ctx zerolog.Context) zerolog.Context {
+		return ctx.Str("handler", css.ActiveHandler().State().String())
+	})
 
 	isFromLocal := sl.Signer().Equal(css.localstate.Node().Publickey())
 

@@ -4,6 +4,7 @@ import (
 	"github.com/spikeekips/mitum/encoder"
 	"github.com/spikeekips/mitum/hint"
 	"github.com/spikeekips/mitum/util"
+	leveldbErrors "github.com/syndtr/goleveldb/leveldb/errors"
 )
 
 func LeveldbLoadHint(b []byte) (hint.Hint, []byte, error) {
@@ -31,4 +32,16 @@ func LeveldbMarshal(enc encoder.Encoder, i interface{}) ([]byte, error) {
 	}
 
 	return LeveldbDataWithEncoder(enc, b), nil
+}
+
+func LeveldbWrapError(err error) error {
+	if err == nil {
+		return nil
+	}
+
+	if err == leveldbErrors.ErrNotFound {
+		return NotFoundError.Wrap(err)
+	}
+
+	return WrapError(err)
 }

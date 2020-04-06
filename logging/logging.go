@@ -11,7 +11,6 @@ type SetLogger interface {
 }
 
 type Logging struct {
-	// TODO should handle Logger.With()...Logger()
 	logger       Logger
 	contextFuncs []func(zerolog.Context) zerolog.Context
 }
@@ -94,4 +93,9 @@ func (l Logger) VerboseFunc(f func(*zerolog.Event) *zerolog.Event) *zerolog.Even
 	}
 
 	return f(l.Verbose())
+}
+
+func (l Logger) WithLogger(f func(zerolog.Context) zerolog.Context) Logger {
+	n := f(l.With()).Logger()
+	return Logger{Logger: &n, orig: l.orig, verbose: l.verbose}
 }

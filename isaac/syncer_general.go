@@ -574,11 +574,11 @@ func (cs *GeneralSyncer) callbackFetchManifests(node Node, heights []Height) []M
 func (cs *GeneralSyncer) callbackFetchManifestsSlice(node Node, heights []Height) []Manifest {
 	var retries uint = 3
 
-	l := cs.Log().With().
-		Uint("retries", retries).
-		Str("source_node", node.Address().String()).
-		Interface("heights", heights).
-		Logger()
+	l := cs.Log().WithLogger(func(ctx zerolog.Context) zerolog.Context {
+		return ctx.Uint("retries", retries).
+			Str("source_node", node.Address().String()).
+			Interface("heights", heights)
+	})
 
 	l.Debug().Msg("trying to fetch manifest of node")
 
@@ -679,7 +679,7 @@ func (cs *GeneralSyncer) checkThreshold(
 	}
 	result, key := FindMajorityFromSlice(threshold.Total, threshold.Threshold, set)
 
-	if cs.Log().IsVerbose() { // TODO use Log().Trace()
+	if cs.Log().IsVerbose() {
 		var ns []string
 		for n := range provedNodes {
 			ns = append(ns, provedNodes[n].Address().String())
@@ -701,11 +701,11 @@ func (cs *GeneralSyncer) checkThreshold(
 }
 
 func (cs *GeneralSyncer) fetchManifests(node Node, heights []Height) ([]Manifest, error) { // nolint
-	l := cs.Log().With().
-		Str("source_node", node.Address().String()).
-		Int64("height_from", heights[0].Int64()).
-		Int64("height_to", heights[len(heights)-1].Int64()).
-		Logger()
+	l := cs.Log().WithLogger(func(ctx zerolog.Context) zerolog.Context {
+		return ctx.Str("source_node", node.Address().String()).
+			Int64("height_from", heights[0].Int64()).
+			Int64("height_to", heights[len(heights)-1].Int64())
+	})
 
 	l.Debug().Msg("trying to fetch manifests")
 
@@ -780,10 +780,10 @@ func (cs *GeneralSyncer) workerCallbackFetchBlocks(node Node) util.WorkerCallbac
 			heights = h
 		}
 
-		l := cs.Log().With().
-			Str("source_node", node.Address().String()).
-			Interface("heights", heights).
-			Logger()
+		l := cs.Log().WithLogger(func(ctx zerolog.Context) zerolog.Context {
+			return ctx.Str("source_node", node.Address().String()).
+				Interface("heights", heights)
+		})
 
 		l.Debug().Msg("trying to fetch blocks")
 		defer l.Debug().Msg("fetched blocks")
@@ -841,11 +841,11 @@ func (cs *GeneralSyncer) checkFetchedBlocks(fetched []Block) ([]Height, error) {
 }
 
 func (cs *GeneralSyncer) fetchBlocks(node Node, heights []Height) ([]Block, error) { // nolint
-	l := cs.Log().With().
-		Str("source_node", node.Address().String()).
-		Int64("height_from", heights[0].Int64()).
-		Int64("height_to", heights[len(heights)-1].Int64()).
-		Logger()
+	l := cs.Log().WithLogger(func(ctx zerolog.Context) zerolog.Context {
+		return ctx.Str("source_node", node.Address().String()).
+			Int64("height_from", heights[0].Int64()).
+			Int64("height_to", heights[len(heights)-1].Int64())
+	})
 
 	l.Debug().Msg("trying to fetch blocks")
 

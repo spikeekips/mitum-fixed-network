@@ -191,11 +191,11 @@ func (cs *StateJoiningHandler) NewSeal(sl seal.Seal) error {
 }
 
 func (cs *StateJoiningHandler) handleProposal(proposal Proposal) error {
-	l := cs.Log().With().
-		Str("proposal_hash", proposal.Hash().String()).
-		Int64("proposal_height", proposal.Height().Int64()).
-		Uint64("proposal_round", proposal.Round().Uint64()).
-		Logger()
+	l := cs.Log().WithLogger(func(ctx zerolog.Context) zerolog.Context {
+		return ctx.Str("proposal_hash", proposal.Hash().String()).
+			Int64("proposal_height", proposal.Height().Int64()).
+			Uint64("proposal_round", proposal.Round().Uint64())
+	})
 
 	l.Debug().Msg("got proposal")
 

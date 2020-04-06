@@ -3,6 +3,7 @@ package commands
 import (
 	"sync"
 
+	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 	"golang.org/x/xerrors"
 
@@ -42,9 +43,9 @@ func (cm RunCommand) createNodeProcess(
 		return nil, err
 	}
 
-	l := log.With().
-		Str("node", np.Localstate.Node().Address().String()).
-		Logger()
+	l := log.WithLogger(func(ctx zerolog.Context) zerolog.Context {
+		return ctx.Str("node", np.Localstate.Node().Address().String())
+	})
 
 	_ = np.SetLogger(logging.NewLogger(&l, true)) // TODO set verbose
 

@@ -106,11 +106,11 @@ func (ss *StateSyncingHandler) NewVoteproof(voteproof Voteproof) error {
 }
 
 func (ss *StateSyncingHandler) handleProposal(proposal Proposal) error {
-	l := ss.Log().With().
-		Str("proposal_hash", proposal.Hash().String()).
-		Int64("proposal_height", proposal.Height().Int64()).
-		Uint64("proposal_round", proposal.Round().Uint64()).
-		Logger()
+	l := ss.Log().WithLogger(func(ctx zerolog.Context) zerolog.Context {
+		return ctx.Str("proposal_hash", proposal.Hash().String()).
+			Int64("proposal_height", proposal.Height().Int64()).
+			Uint64("proposal_round", proposal.Round().Uint64())
+	})
 
 	l.Debug().Msg("got proposal")
 
@@ -331,11 +331,11 @@ func (ss *StateSyncingHandler) syncerStateChanged(syncer Syncer) {
 }
 
 func (ss *StateSyncingHandler) processProposal(proposal Proposal) error {
-	l := ss.Log().With().
-		Int64("proposal_height", proposal.Height().Int64()).
-		Uint64("proposal_round", proposal.Round().Uint64()).
-		Str("proposal_hash", proposal.Hash().String()).
-		Logger()
+	l := ss.Log().WithLogger(func(ctx zerolog.Context) zerolog.Context {
+		return ctx.Int64("proposal_height", proposal.Height().Int64()).
+			Uint64("proposal_round", proposal.Round().Uint64()).
+			Str("proposal_hash", proposal.Hash().String())
+	})
 
 	iv := ss.localstate.LastINITVoteproof()
 	if iv == nil {
@@ -361,13 +361,13 @@ func (ss *StateSyncingHandler) processProposal(proposal Proposal) error {
 func (ss *StateSyncingHandler) handleVoteproof(voteproof Voteproof) error {
 	base := ss.localstate.LastBlock()
 
-	l := ss.Log().With().
-		Str("voteproof_stage", voteproof.Stage().String()).
-		Int64("voteproof_height", voteproof.Height().Int64()).
-		Uint64("voteproof_round", voteproof.Round().Uint64()).
-		Int64("local_height", base.Height().Int64()).
-		Uint64("local_round", base.Round().Uint64()).
-		Logger()
+	l := ss.Log().WithLogger(func(ctx zerolog.Context) zerolog.Context {
+		return ctx.Str("voteproof_stage", voteproof.Stage().String()).
+			Int64("voteproof_height", voteproof.Height().Int64()).
+			Uint64("voteproof_round", voteproof.Round().Uint64()).
+			Int64("local_height", base.Height().Int64()).
+			Uint64("local_round", base.Round().Uint64())
+	})
 
 	l.Debug().Msg("got voteproof")
 

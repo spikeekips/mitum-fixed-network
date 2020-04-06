@@ -70,11 +70,11 @@ func (qc *QuicClient) newClient() (*http.Client, func() error /* close func */) 
 }
 
 func (qc *QuicClient) Send(url string, b []byte, headers http.Header) error {
-	l := qc.Log().With().
-		Str("to", url).
-		Int("content_length", len(b)).
-		Str("request", "send").
-		Logger()
+	l := qc.Log().WithLogger(func(ctx zerolog.Context) zerolog.Context {
+		return ctx.Str("to", url).
+			Int("content_length", len(b)).
+			Str("request", "send")
+	})
 
 	var err error
 	for i := 0; i < qc.retries; i++ {
@@ -89,11 +89,11 @@ func (qc *QuicClient) Send(url string, b []byte, headers http.Header) error {
 }
 
 func (qc *QuicClient) send(url string, b []byte, headers http.Header) error {
-	l := qc.Log().With().
-		Str("to", url).
-		Int("content_length", len(b)).
-		Str("request", "send").
-		Logger()
+	l := qc.Log().WithLogger(func(ctx zerolog.Context) zerolog.Context {
+		return ctx.Str("to", url).
+			Int("content_length", len(b)).
+			Str("request", "send")
+	})
 
 	var request *http.Request
 	if req, err := http.NewRequest("POST", url, bytes.NewBuffer(b)); err != nil {
@@ -133,11 +133,11 @@ func (qc *QuicClient) send(url string, b []byte, headers http.Header) error {
 }
 
 func (qc *QuicClient) Request(url string, b []byte, headers http.Header) (QuicResponse, error) {
-	l := qc.Log().With().
-		Str("to", url).
-		Int("content_length", len(b)).
-		Str("request", "request").
-		Logger()
+	l := qc.Log().WithLogger(func(ctx zerolog.Context) zerolog.Context {
+		return ctx.Str("to", url).
+			Int("content_length", len(b)).
+			Str("request", "request")
+	})
 
 	var response QuicResponse
 	var err error
@@ -153,11 +153,11 @@ func (qc *QuicClient) Request(url string, b []byte, headers http.Header) (QuicRe
 }
 
 func (qc *QuicClient) request(url string, b []byte, headers http.Header) (QuicResponse, error) {
-	l := qc.Log().With().
-		Str("to", url).
-		Int("content_length", len(b)).
-		Str("request", "request").
-		Logger()
+	l := qc.Log().WithLogger(func(ctx zerolog.Context) zerolog.Context {
+		return ctx.Str("to", url).
+			Int("content_length", len(b)).
+			Str("request", "request")
+	})
 
 	var request *http.Request
 	{

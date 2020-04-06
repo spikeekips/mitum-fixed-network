@@ -9,8 +9,10 @@ import (
 )
 
 func loggerWithSeal(sl seal.Seal, l logging.Logger) logging.Logger {
-	ll := l.With().
-		Str("seal_hash", sl.Hash().String()).CallerWithSkipFrameCount(3).Logger()
+	ll := l.WithLogger(func(ctx zerolog.Context) zerolog.Context {
+		return ctx.Str("seal_hash", sl.Hash().String()).
+			CallerWithSkipFrameCount(3)
+	})
 
 	var event *zerolog.Event
 	if ls, ok := sl.(zerolog.LogObjectMarshaler); ok {
@@ -25,12 +27,14 @@ func loggerWithSeal(sl seal.Seal, l logging.Logger) logging.Logger {
 
 	event.Msg("seal")
 
-	return logging.NewLogger(&ll, l.IsVerbose())
+	return ll
 }
 
 func loggerWithBallot(ballot Ballot, l logging.Logger) logging.Logger {
-	ll := l.With().
-		Str("seal_hash", ballot.Hash().String()).CallerWithSkipFrameCount(3).Logger()
+	ll := l.WithLogger(func(ctx zerolog.Context) zerolog.Context {
+		return ctx.Str("seal_hash", ballot.Hash().String()).
+			CallerWithSkipFrameCount(3)
+	})
 
 	var event *zerolog.Event
 	if lb, ok := ballot.(zerolog.LogObjectMarshaler); ok {
@@ -47,7 +51,7 @@ func loggerWithBallot(ballot Ballot, l logging.Logger) logging.Logger {
 
 	event.Msg("ballot")
 
-	return logging.NewLogger(&ll, l.IsVerbose())
+	return ll
 }
 
 func loggerWithVoteproof(voteproof Voteproof, l logging.Logger) logging.Logger {
@@ -55,8 +59,9 @@ func loggerWithVoteproof(voteproof Voteproof, l logging.Logger) logging.Logger {
 		return l
 	}
 
-	ll := l.With().
-		Str("voteproof_id", util.UUID().String()).CallerWithSkipFrameCount(3).Logger()
+	ll := l.WithLogger(func(ctx zerolog.Context) zerolog.Context {
+		return ctx.Str("voteproof_id", util.UUID().String()).CallerWithSkipFrameCount(3)
+	})
 
 	var event *zerolog.Event
 	if lvp, ok := voteproof.(zerolog.LogObjectMarshaler); ok {
@@ -68,7 +73,7 @@ func loggerWithVoteproof(voteproof Voteproof, l logging.Logger) logging.Logger {
 
 	event.Msg("voteproof")
 
-	return logging.NewLogger(&ll, l.IsVerbose())
+	return ll
 }
 
 func loggerWithLocalstate(localstate *Localstate, l logging.Logger) logging.Logger {
@@ -104,15 +109,12 @@ func loggerWithStateChangeContext(ctx StateChangeContext, l logging.Logger) logg
 		}
 	}
 
-	ll := l.With().
-		Str("change_state_context_id", util.UUID().String()).
-		Logger()
+	ll := l.WithLogger(func(ctx zerolog.Context) zerolog.Context {
+		return ctx.Str("change_state_context_id", util.UUID().String()).
+			CallerWithSkipFrameCount(4)
+	})
 
-	li := ll.With().
-		CallerWithSkipFrameCount(4).
-		Logger()
+	ll.Debug().Dict("change_state_context", e).Msg("state_change_context")
 
-	li.Debug().Dict("change_state_context", e).Msg("state_change_context")
-
-	return loggerWithVoteproof(ctx.voteproof, logging.NewLogger(&ll, l.IsVerbose()))
+	return loggerWithVoteproof(ctx.voteproof, ll)
 }

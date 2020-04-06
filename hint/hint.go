@@ -75,9 +75,9 @@ func (ht Hint) IsValid([]byte) error {
 	}
 
 	if len(ht.version) > MaxVersionSize {
-		return InvalidVersionError.Wrapf("oversized version; len=%d", len(ht.version))
+		return InvalidVersionError.Errorf("oversized version; len=%d", len(ht.version))
 	} else if !semver.IsValid(ht.version.GO()) {
-		return InvalidVersionError.Wrapf("version=%s", ht.version)
+		return InvalidVersionError.Errorf("version=%s", ht.version)
 	}
 
 	return nil
@@ -85,7 +85,7 @@ func (ht Hint) IsValid([]byte) error {
 
 func (ht Hint) IsRegistered() error {
 	if !isRegisteredType(ht.Type()) {
-		return NotRegisteredTypeFoundError.Wrapf("hint=%s", ht.Verbose())
+		return UnknownTypeError.Errorf("hint=%s", ht.Verbose())
 	}
 
 	return nil
@@ -127,7 +127,7 @@ func (ht Hint) Bytes() []byte {
 }
 
 func (ht Hint) Verbose() string {
-	return fmt.Sprintf("type=%s version=%s", ht.Type().Verbose(), ht.version)
+	return fmt.Sprintf("%s(%s)", ht.Type().Verbose(), ht.version)
 }
 
 func (ht Hint) String() string {

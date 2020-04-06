@@ -6,6 +6,7 @@ import (
 	"golang.org/x/xerrors"
 
 	"github.com/spikeekips/mitum/hint"
+	"github.com/spikeekips/mitum/isvalid"
 	"github.com/spikeekips/mitum/key"
 	"github.com/spikeekips/mitum/localtime"
 	"github.com/spikeekips/mitum/seal"
@@ -46,9 +47,9 @@ func NewSeal(pk key.Privatekey, ops []Operation, b []byte) (Seal, error) {
 
 func (sl Seal) IsValid(b []byte) error {
 	if l := len(sl.ops); l < 1 {
-		return xerrors.Errorf("empty operations")
+		return isvalid.InvalidError.Errorf("empty operations")
 	} else if l > MaxOperationsInSeal {
-		return xerrors.Errorf("operations over limit; %d > %d", l, MaxOperationsInSeal)
+		return isvalid.InvalidError.Errorf("operations over limit; %d > %d", l, MaxOperationsInSeal)
 	}
 
 	if err := seal.IsValidSeal(sl, b); err != nil {

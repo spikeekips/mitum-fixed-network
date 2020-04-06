@@ -431,7 +431,7 @@ func (cs *GeneralSyncer) handleSyncerFetchBlockError(err error) error {
 		return nil
 	}
 
-	var fm syncerFetchBlockError
+	var fm *syncerFetchBlockError
 	if !xerrors.As(err, &fm) {
 		cs.Log().Error().Err(err).Msg("something wrong to fetch blocks")
 		return nil
@@ -801,7 +801,7 @@ func (cs *GeneralSyncer) workerCallbackFetchBlocks(node Node) util.WorkerCallbac
 			blocks[i] = manifests[i].(Block)
 		}
 
-		return syncerFetchBlockError{
+		return &syncerFetchBlockError{
 			node:    node.Address(),
 			heights: heights,
 			err:     err,

@@ -2,7 +2,7 @@ package operation
 
 import (
 	"github.com/spikeekips/mitum/encoder"
-	"github.com/spikeekips/mitum/errors"
+	"github.com/spikeekips/mitum/hint"
 )
 
 func DecodeFact(enc encoder.Encoder, b []byte) (Fact, error) {
@@ -11,7 +11,7 @@ func DecodeFact(enc encoder.Encoder, b []byte) (Fact, error) {
 	} else if i == nil {
 		return nil, nil
 	} else if v, ok := i.(Fact); !ok {
-		return nil, errors.InvalidTypeError.Wrapf("not Fact; type=%T", i)
+		return nil, hint.InvalidTypeError.Errorf("not Fact; type=%T", i)
 	} else {
 		return v, nil
 	}
@@ -23,7 +23,7 @@ func DecodeOperation(enc encoder.Encoder, b []byte) (Operation, error) {
 	} else if i == nil {
 		return nil, nil
 	} else if v, ok := i.(Operation); !ok {
-		return nil, errors.InvalidTypeError.Wrapf("not Fact; type=%T", i)
+		return nil, hint.InvalidTypeError.Errorf("not Fact; type=%T", i)
 	} else {
 		return v, nil
 	}

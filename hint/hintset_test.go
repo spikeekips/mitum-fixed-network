@@ -46,7 +46,7 @@ func (t *testHintset) TestNewUnRegisteredType() {
 	)
 	hs := NewHintset()
 	err := hs.Add(sh)
-	t.True(xerrors.Is(err, NotRegisteredTypeFoundError))
+	t.True(xerrors.Is(err, UnknownTypeError))
 }
 
 func (t *testHintset) TestAdd() {

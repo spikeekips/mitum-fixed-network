@@ -1,6 +1,6 @@
 package isaac
 
-import "github.com/spikeekips/mitum/errors"
+import "golang.org/x/xerrors"
 
 // NetworkID will be used to separate mitum network with the other network. For
 // exampke, with different NetworkID, same Seal messsage will have different
@@ -9,11 +9,13 @@ type NetworkID []byte
 
 const maxNetworkIDLength = 300
 
-var NetworkIDLengthTooLongError = errors.NewError("length of NetworkID too long: max=%d", maxNetworkIDLength)
-
 func (ni NetworkID) IsValid([]byte) error {
 	if len(ni) > maxNetworkIDLength {
-		return NetworkIDLengthTooLongError.Wrapf("len=%d", len(ni))
+		return xerrors.Errorf(
+			"length of NetworkID too long; max=%d, but len=%d",
+			maxNetworkIDLength,
+			len(ni),
+		)
 	}
 
 	return nil

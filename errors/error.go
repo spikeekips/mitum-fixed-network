@@ -6,64 +6,67 @@ import (
 	"golang.org/x/xerrors"
 )
 
-// CError is simple wrapper for xerror.Is and xerror.As.
-type CError struct {
-	S     string
-	Err   error
-	Frame xerrors.Frame
+type NError struct {
+	s     string
+	err   error
+	frame xerrors.Frame
 }
 
-func NewError(s string, a ...interface{}) CError {
-	return CError{S: fmt.Sprintf(s, a...)}
+func NewError(s string, a ...interface{}) *NError {
+	return &NError{s: fmt.Sprintf(s, a...)}
 }
 
-// TODO something wrong, needs rewriting
+func (ne *NError) Unwrap() error {
+	return ne.err
+}
 
-// Wrap put error inside Error.
-func (we CError) Wrap(err error) error {
-	return CError{
-		S:     we.S,
-		Err:   err,
-		Frame: xerrors.Caller(1),
+func (ne *NError) Format(s fmt.State, v rune) {
+	xerrors.FormatError(ne, s, v)
+}
+
+func (ne *NError) FormatError(p xerrors.Printer) error {
+	p.Print(ne.s)
+	ne.frame.Format(p)
+
+	return ne.err
+}
+
+func (ne *NError) Error() string {
+	if ne.err == nil {
+		return ne.s
 	}
+
+	return fmt.Sprintf("%s; %+v", ne.s, ne.err)
 }
 
-// Wrapf acts like `fmt.Errorf()`.
-func (we CError) Wrapf(s string, a ...interface{}) error {
-	return CError{
-		S:     we.S,
-		Err:   xerrors.Errorf(s, a...),
-		Frame: xerrors.Caller(1),
-	}
-}
-
-// Is is for `xerrors.Is()`.
-func (we CError) Is(err error) bool {
+func (ne *NError) Is(err error) bool {
 	if err == nil {
 		return false
 	}
 
-	e, ok := err.(CError)
-	if !ok {
+	if e, ok := err.(*NError); !ok {
 		return false
+	} else {
+		return e.s == ne.s
 	}
-
-	return e.S == we.S
 }
 
-func (we CError) Unwrap() error {
-	return we.Err
+func (ne *NError) New() *NError {
+	return NewError(ne.s)
 }
 
-func (we CError) FormatError(p xerrors.Printer) error {
-	we.Frame.Format(p)
-	return we.Unwrap()
-}
-
-func (we CError) Error() string {
-	if we.Err == nil {
-		return we.S
+func (ne *NError) Wrap(err error) *NError {
+	return &NError{
+		s:     ne.s,
+		err:   err,
+		frame: xerrors.Caller(1),
 	}
+}
 
-	return fmt.Sprintf("%s; %+v", we.S, we.Err)
+func (ne *NError) Errorf(s string, a ...interface{}) *NError {
+	return &NError{
+		s:     ne.s,
+		err:   xerrors.Errorf(s, a...),
+		frame: xerrors.Caller(1),
+	}
 }

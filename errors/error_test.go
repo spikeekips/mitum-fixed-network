@@ -1,6 +1,7 @@
 package errors
 
 import (
+	"fmt"
 	"os"
 	"testing"
 
@@ -13,40 +14,50 @@ type testError struct {
 }
 
 func (t *testError) TestNew() {
-	error0 := NewError("0 error")
-	t.True(error0.Is(error0))
-	t.True(xerrors.Is(error0, error0))
+	e0 := NewError("showme")
+	t.Implements((*(interface{ Error() string }))(nil), e0)
 
-	error01 := error0.Wrapf("findme")
-	t.True(error0.Is(error01))
-	t.True(error01.(CError).Is(error0))
-	t.True(xerrors.Is(error01, error0))
+	t.Equal("showme", e0.Error())
+
+	t.True(xerrors.Is(e0, e0))
+	t.True(xerrors.Is(e0, NewError("showme")))
+	t.False(xerrors.Is(e0, NewError("findme")))
+
+	var e1 *NError
+	t.True(xerrors.As(e0, &e1))
 }
 
-func (t *testError) TestAs0() {
-	error0 := NewError("0 error")
+func (t *testError) TestWrap() {
+	e0 := NewError("showme")
 
-	var error01 CError
-	t.True(xerrors.As(error0, &error01))
+	pe := &os.PathError{Err: fmt.Errorf("path error")}
+	e1 := e0.Wrap(pe)
+
+	t.True(xerrors.Is(e1, NewError("showme")))
+	t.True(xerrors.Is(e1, pe))
+
+	var e2 *NError
+	t.True(xerrors.As(e0, &e2))
+	t.True(xerrors.As(e1, &e2))
+
+	var npe *os.PathError
+	t.True(xerrors.As(e1, &npe))
 }
 
-func (t *testError) TestAs1() {
-	error0 := NewError("0 error")
-	error1 := error0.Wrap(os.ErrClosed)
+func (t *testError) TestErrorf() {
+	e0 := NewError("showme")
+	pe := &os.PathError{Err: fmt.Errorf("path error")}
+	e1 := e0.Wrap(pe)
 
-	t.Equal(os.ErrClosed, error1.(CError).Unwrap())
+	var e2 *NError
+	t.True(xerrors.As(e0, &e2))
+	t.True(xerrors.As(e1, &e2))
 
-	var error2 error
-	t.True(xerrors.As(error1, &error2))
-}
+	t.True(xerrors.Is(e0, e1))
+	t.True(xerrors.Is(e1, e1))
 
-func (t *testError) TestIs() {
-	error0 := NewError("0 error")
-	error1 := error0.Wrap(os.ErrClosed)
-
-	t.True(xerrors.Is(error1, error0))
-	t.True(xerrors.Is(error1, os.ErrClosed))
-	t.False(xerrors.Is(error1, os.ErrNotExist))
+	var npe *os.PathError
+	t.True(xerrors.As(e1, &npe))
 }
 
 func TestError(t *testing.T) {

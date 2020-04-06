@@ -2,7 +2,7 @@ package isaac
 
 import (
 	"github.com/spikeekips/mitum/encoder"
-	"github.com/spikeekips/mitum/errors"
+	"github.com/spikeekips/mitum/hint"
 )
 
 func DecodeAddress(enc encoder.Encoder, b []byte) (Address, error) {
@@ -11,7 +11,7 @@ func DecodeAddress(enc encoder.Encoder, b []byte) (Address, error) {
 	} else if i == nil {
 		return nil, nil
 	} else if v, ok := i.(Address); !ok {
-		return nil, errors.InvalidTypeError.Wrapf("not Address; type=%T", i)
+		return nil, hint.InvalidTypeError.Errorf("not Address; type=%T", i)
 	} else {
 		return v, nil
 	}
@@ -23,7 +23,7 @@ func decodeVoteproof(enc encoder.Encoder, b []byte) (Voteproof, error) {
 	} else if i == nil {
 		return nil, nil
 	} else if v, ok := i.(Voteproof); !ok {
-		return nil, errors.InvalidTypeError.Wrapf("not Voteproof; type=%T", i)
+		return nil, hint.InvalidTypeError.Errorf("not Voteproof; type=%T", i)
 	} else {
 		return v, nil
 	}
@@ -35,7 +35,7 @@ func decodeManifest(enc encoder.Encoder, b []byte) (Manifest, error) {
 	} else if i == nil {
 		return nil, nil
 	} else if v, ok := i.(Manifest); !ok {
-		return nil, errors.InvalidTypeError.Wrapf("not Manifest; type=%T", i)
+		return nil, hint.InvalidTypeError.Errorf("not Manifest; type=%T", i)
 	} else {
 		return v, nil
 	}
@@ -47,7 +47,7 @@ func decodeBlockConsensusInfo(enc encoder.Encoder, b []byte) (BlockConsensusInfo
 	} else if i == nil {
 		return nil, nil
 	} else if v, ok := i.(BlockConsensusInfo); !ok {
-		return nil, errors.InvalidTypeError.Wrapf("not ConsensusInfoifest; type=%T", i)
+		return nil, hint.InvalidTypeError.Errorf("not ConsensusInfoifest; type=%T", i)
 	} else {
 		return v, nil
 	}

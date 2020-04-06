@@ -1,8 +1,6 @@
 package operation
 
 import (
-	"golang.org/x/xerrors"
-
 	"github.com/spikeekips/mitum/hint"
 	"github.com/spikeekips/mitum/isvalid"
 	"github.com/spikeekips/mitum/key"
@@ -31,13 +29,13 @@ type FactSeal interface {
 
 func IsValidEmbededFact(signer key.Publickey, ef EmbededFact, b []byte) error {
 	if ef.Fact() == nil {
-		return xerrors.Errorf("EmbdedFact has empty Fact()")
+		return isvalid.InvalidError.Errorf("EmbdedFact has empty Fact()")
 	}
 	if ef.FactHash() == nil {
-		return xerrors.Errorf("EmbdedFact has empty FactHash()")
+		return isvalid.InvalidError.Errorf("EmbdedFact has empty FactHash()")
 	}
 	if ef.FactSignature() == nil {
-		return xerrors.Errorf("EmbdedFact has empty FactSignature()")
+		return isvalid.InvalidError.Errorf("EmbdedFact has empty FactSignature()")
 	}
 
 	if err := signer.Verify(util.ConcatBytesSlice(ef.FactHash().Bytes(), b), ef.FactSignature()); err != nil {

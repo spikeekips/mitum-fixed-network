@@ -2,7 +2,7 @@ package state
 
 import (
 	"github.com/spikeekips/mitum/encoder"
-	"github.com/spikeekips/mitum/errors"
+	"github.com/spikeekips/mitum/hint"
 )
 
 func DecodeOperationInfo(enc encoder.Encoder, b []byte) (OperationInfo, error) {
@@ -11,7 +11,7 @@ func DecodeOperationInfo(enc encoder.Encoder, b []byte) (OperationInfo, error) {
 	} else if i == nil {
 		return nil, nil
 	} else if v, ok := i.(OperationInfo); !ok {
-		return nil, errors.InvalidTypeError.Wrapf("not state.OperationInfo; type=%T", i)
+		return nil, hint.InvalidTypeError.Errorf("not state.OperationInfo; type=%T", i)
 	} else {
 		return v, nil
 	}
@@ -23,7 +23,7 @@ func DecodeValue(enc encoder.Encoder, b []byte) (Value, error) {
 	} else if i == nil {
 		return nil, nil
 	} else if v, ok := i.(Value); !ok {
-		return nil, errors.InvalidTypeError.Wrapf("not state.Value; type=%T", i)
+		return nil, hint.InvalidTypeError.Errorf("not state.Value; type=%T", i)
 	} else {
 		return v, nil
 	}
@@ -35,7 +35,7 @@ func DecodeState(enc encoder.Encoder, b []byte) (State, error) {
 	} else if i == nil {
 		return nil, nil
 	} else if v, ok := i.(State); !ok {
-		return nil, errors.InvalidTypeError.Wrapf("not state.State; type=%T", i)
+		return nil, hint.InvalidTypeError.Errorf("not state.State; type=%T", i)
 	} else {
 		return v, nil
 	}

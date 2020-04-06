@@ -16,7 +16,7 @@ type UnsignedBigInt struct {
 
 func (us *UnsignedBigInt) IsValid() error {
 	if ZeroInt.Cmp(us.BigInt()) > 0 {
-		return InvalidUnsignedIntError.Wrapf("int=%v", us)
+		return InvalidUnsignedIntError.Errorf("int=%v", us)
 	}
 
 	return nil
@@ -29,7 +29,7 @@ func (us UnsignedBigInt) BigInt() *big.Int {
 func NewUnsignedIntFromString(s string) (UnsignedBigInt, error) {
 	i, ok := big.NewInt(0).SetString(s, 10)
 	if !ok {
-		return UnsignedBigInt{}, InvalidUnsignedIntError.Wrapf("string=%s", s)
+		return UnsignedBigInt{}, InvalidUnsignedIntError.Errorf("string=%s", s)
 	}
 
 	us := UnsignedBigInt{Int: i}

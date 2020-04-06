@@ -14,7 +14,7 @@ type typeJSON struct {
 func (ty Type) MarshalJSON() ([]byte, error) {
 	name := ty.String()
 	if len(name) < 1 {
-		return nil, xerrors.Errorf("Type does not have name: %v", ty.Verbose())
+		return nil, xerrors.Errorf("Type does not have name: %s", ty.Verbose())
 	}
 
 	return jsoni.Marshal(typeJSON{

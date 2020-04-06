@@ -2,7 +2,7 @@ package valuehash
 
 import (
 	"github.com/spikeekips/mitum/encoder"
-	"github.com/spikeekips/mitum/errors"
+	"github.com/spikeekips/mitum/hint"
 )
 
 func Decode(enc encoder.Encoder, b []byte) (Hash, error) {
@@ -11,7 +11,7 @@ func Decode(enc encoder.Encoder, b []byte) (Hash, error) {
 	} else if i == nil {
 		return nil, nil
 	} else if v, ok := i.(Hash); !ok {
-		return nil, errors.InvalidTypeError.Wrapf("not valuehash.Hash; type=%T", i)
+		return nil, hint.InvalidTypeError.Errorf("not valuehash.Hash; type=%T", i)
 	} else {
 		return v, nil
 	}

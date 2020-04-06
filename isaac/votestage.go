@@ -42,7 +42,7 @@ func (st Stage) IsValid([]byte) error {
 		return nil
 	}
 
-	return isvalid.InvalidError.Wrapf("stage=%d", st)
+	return isvalid.InvalidError.Errorf("stage=%d", st)
 }
 
 func (st Stage) MarshalText() ([]byte, error) {

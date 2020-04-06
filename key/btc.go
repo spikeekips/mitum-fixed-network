@@ -42,7 +42,7 @@ func NewBTCPrivatekeyFromString(s string) (BTCPrivatekey, error) {
 		return BTCPrivatekey{}, err
 	}
 	if !wif.IsForNet(&chaincfg.MainNetParams) {
-		return BTCPrivatekey{}, InvalidKeyError.Wrapf("unsupported BTC network")
+		return BTCPrivatekey{}, InvalidKeyError.Errorf("unsupported BTC network")
 	}
 
 	return BTCPrivatekey{wif: wif}, nil
@@ -58,9 +58,9 @@ func (bt BTCPrivatekey) Hint() hint.Hint {
 
 func (bt BTCPrivatekey) IsValid([]byte) error {
 	if bt.wif == nil {
-		return InvalidKeyError.Wrapf("empty btc wif")
+		return InvalidKeyError.Errorf("empty btc wif")
 	} else if bt.wif.PrivKey == nil {
-		return InvalidKeyError.Wrapf("empty btc wif.PrivKey")
+		return InvalidKeyError.Errorf("empty btc wif.PrivKey")
 	}
 
 	return nil
@@ -122,7 +122,7 @@ func (bt BTCPublickey) Hint() hint.Hint {
 
 func (bt BTCPublickey) IsValid([]byte) error {
 	if bt.pk == nil {
-		return InvalidKeyError.Wrapf("empty btc PublicKey")
+		return InvalidKeyError.Errorf("empty btc PublicKey")
 	}
 
 	return nil

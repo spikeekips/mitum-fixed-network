@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 
 	"github.com/spikeekips/mitum/encoder"
-	"github.com/spikeekips/mitum/errors"
+	"github.com/spikeekips/mitum/hint"
 	"github.com/spikeekips/mitum/util"
 )
 
@@ -54,7 +54,7 @@ func (stav *StateV0AVLNode) UnpackJSON(b []byte, enc *encoder.JSONEncoder) error
 	if s, err := DecodeState(enc, us.ST); err != nil {
 		return err
 	} else if sv, ok := s.(StateV0); !ok {
-		return errors.InvalidTypeError.Wrapf("not state.StateV0; type=%T", s)
+		return hint.InvalidTypeError.Errorf("not state.StateV0; type=%T", s)
 	} else {
 		state = sv
 	}

@@ -46,7 +46,7 @@ type syncerFetchBlockError struct {
 	blocks  []Block
 }
 
-func (fm syncerFetchBlockError) Error() string {
+func (fm *syncerFetchBlockError) Error() string {
 	if fm.err == nil {
 		return ""
 	}

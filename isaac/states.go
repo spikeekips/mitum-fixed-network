@@ -255,7 +255,7 @@ func (css *ConsensusStates) newVoteproof(voteproof Voteproof) error {
 		vpc.CheckINITVoteproof,
 	}).Check()
 
-	var ctx StateToBeChangeError
+	var ctx *StateToBeChangeError
 	if xerrors.As(err, &ctx) {
 		go func() {
 			css.stateChan <- ctx.StateChangeContext()

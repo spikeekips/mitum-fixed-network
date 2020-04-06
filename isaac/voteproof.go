@@ -60,7 +60,7 @@ func (vrt VoteResultType) IsValid([]byte) error {
 		return nil
 	}
 
-	return isvalid.InvalidError.Wrapf("VoteResultType=%d", vrt)
+	return isvalid.InvalidError.Errorf("VoteResultType=%d", vrt)
 }
 
 func (vrt VoteResultType) MarshalText() ([]byte, error) {

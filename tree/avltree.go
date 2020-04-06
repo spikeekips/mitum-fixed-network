@@ -3,9 +3,9 @@ package tree
 import (
 	"github.com/spikeekips/avl"
 	avlHashable "github.com/spikeekips/avl/hashable"
-	"golang.org/x/xerrors"
 
 	"github.com/spikeekips/mitum/hint"
+	"github.com/spikeekips/mitum/isvalid"
 	"github.com/spikeekips/mitum/util"
 	"github.com/spikeekips/mitum/valuehash"
 )
@@ -42,9 +42,9 @@ func (at *AVLTree) IsValid() error {
 
 	var root Node
 	if h, ok := at.Tree.Root().(avlHashable.HashableMutableNode); !ok {
-		return xerrors.Errorf("root node is not hashable.HashableMutableNode type: %T", at.Tree.Root())
+		return isvalid.InvalidError.Errorf("root node is not hashable.HashableMutableNode type: %T", at.Tree.Root())
 	} else if r, ok := h.(Node); !ok {
-		return xerrors.Errorf("root node is not Node type: %T", at.Tree.Root())
+		return isvalid.InvalidError.Errorf("root node is not Node type: %T", at.Tree.Root())
 	} else {
 		root = r
 	}

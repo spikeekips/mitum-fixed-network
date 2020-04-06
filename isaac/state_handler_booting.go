@@ -91,9 +91,9 @@ func (cs *StateBootingHandler) check() error {
 	if err := cs.checkBlock(); err != nil {
 		cs.Log().Error().Err(err).Msg("checked block")
 
+		// TODO syncing handler should support syncing without voteproof and ballot
 		if err0 := cs.ChangeState(StateSyncing, nil, nil); err0 != nil {
-			// TODO wrap err
-			return err0
+			return xerrors.Errorf("failed to change state; %w", err0)
 		}
 
 		return err
@@ -102,11 +102,10 @@ func (cs *StateBootingHandler) check() error {
 	if err := cs.checkVoteproof(); err != nil {
 		cs.Log().Error().Err(err).Msg("checked voteproof")
 
-		var ctx StateToBeChangeError
+		var ctx *StateToBeChangeError
 		if xerrors.As(err, &ctx) {
 			if err0 := cs.ChangeState(ctx.ToState, ctx.Voteproof, nil); err0 != nil {
-				// TODO wrap err
-				return err0
+				return xerrors.Errorf("failed to change state; %w", err0)
 			}
 
 			return nil

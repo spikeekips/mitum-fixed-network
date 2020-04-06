@@ -9,7 +9,7 @@ import (
 
 var (
 	InvalidTypeError             = errors.NewError("invalid Type")
-	NotRegisteredTypeFoundError  = errors.NewError("unknown Type")
+	UnknownTypeError             = errors.NewError("unknown Type")
 	TypeAlreadyRegisteredError   = errors.NewError("Type already registered")
 	DuplicatedTypeNameFoundError = errors.NewError("same Type name already registered")
 	TypeDoesNotMatchError        = errors.NewError("type does not match")
@@ -53,7 +53,7 @@ func (ty Type) String() string {
 // IsValid checks Type
 func (ty Type) IsValid([]byte) error {
 	if ty == NullType {
-		return InvalidTypeError.Wrapf("empty Type")
+		return InvalidTypeError.Errorf("empty Type")
 	}
 
 	return nil
@@ -71,7 +71,12 @@ func (ty Type) Bytes() []byte {
 
 // Verbose shows the detailed Type info
 func (ty Type) Verbose() string {
-	return fmt.Sprintf("%x", [2]byte(ty))
+	name := ty.String()
+	if len(name) > 0 {
+		name = fmt.Sprintf("(%s)", name)
+	}
+
+	return fmt.Sprintf("%x%s", [2]byte(ty), name)
 }
 
 func isRegisteredType(t Type) bool {
@@ -94,9 +99,9 @@ func registerType(t Type, name string) error {
 	name = strings.TrimSpace(name)
 
 	if _, found := typeNames[t]; found {
-		return TypeAlreadyRegisteredError.Wrapf("type=%s", t.Verbose())
+		return TypeAlreadyRegisteredError.Errorf("type=%s", t.Verbose())
 	} else if _, found := nameTypes[name]; found {
-		return DuplicatedTypeNameFoundError.Wrapf("type=%s name=%s", t.Verbose(), name)
+		return DuplicatedTypeNameFoundError.Errorf("type=%s", t.Verbose())
 	}
 
 	typeNames[t] = name
@@ -109,12 +114,12 @@ func registerType(t Type, name string) error {
 func typeByName(name string) (Type, error) {
 	t, found := nameTypes[name]
 	if !found {
-		return Type{}, NotRegisteredTypeFoundError.Wrapf("no Type found; name=%s", name)
+		return Type{}, UnknownTypeError.Errorf("name=%s", name)
 	}
 
 	return t, nil
 }
 
 func NewTypeDoesNotMatchError(target, check Type) error {
-	return TypeDoesNotMatchError.Wrapf("target=%s != check=%s", target.Verbose(), check.Verbose())
+	return TypeDoesNotMatchError.Errorf("target=%s != check=%s", target.Verbose(), check.Verbose())
 }

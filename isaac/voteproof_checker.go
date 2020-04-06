@@ -8,29 +8,28 @@ import (
 	"github.com/spikeekips/mitum/logging"
 )
 
-var IgnoreVoteproofError = errors.NewError("Voteproof should be ignored")
+var (
+	IgnoreVoteproofError = errors.NewError("Voteproof should be ignored")
+	StopBootingError     = errors.NewError("stop booting process")
+)
 
 type StateToBeChangeError struct {
-	errors.CError
+	*errors.NError
 	FromState State
 	ToState   State
 	Voteproof Voteproof
 	Ballot    Ballot
 }
 
-func (ce StateToBeChangeError) Error() string {
-	return ce.CError.Error()
-}
-
-func (ce StateToBeChangeError) StateChangeContext() StateChangeContext {
+func (ce *StateToBeChangeError) StateChangeContext() StateChangeContext {
 	return NewStateChangeContext(ce.FromState, ce.ToState, ce.Voteproof, ce.Ballot)
 }
 
 func NewStateToBeChangeError(
 	fromState, toState State, voteproof Voteproof, ballot Ballot,
-) StateToBeChangeError {
-	return StateToBeChangeError{
-		CError:    errors.NewError("State needs to be changed"),
+) *StateToBeChangeError {
+	return &StateToBeChangeError{
+		NError:    errors.NewError("State needs to be changed"),
 		FromState: fromState,
 		ToState:   toState,
 		Voteproof: voteproof,
@@ -185,8 +184,6 @@ func (vpc *VoteproofConsensusStateChecker) CheckACCEPTVoteproof() (bool, error) 
 	return true, nil
 }
 
-var StopBootingError = errors.NewError("stop booting process")
-
 type VoteproofBootingChecker struct {
 	*logging.Logging
 	localstate      *Localstate // nolint
@@ -222,14 +219,14 @@ func (vpc *VoteproofBootingChecker) CheckACCEPTVoteproofHeight() (bool, error) {
 	default:
 		// TODO needs self-correction by syncing
 		// wrong ACCEPTVoteproof of last block, something wrong
-		return false, StopBootingError.Wrapf(
+		return false, StopBootingError.Errorf(
 			"missing ACCEPTVoteproof found: voteproof.Height()=%d != block.Height()=%d",
 			vpc.acceptVoteproof.Height(), vpc.lastBlock.Height(),
 		)
 	}
 
 	if vpc.acceptVoteproof.Round() != vpc.lastBlock.Round() {
-		return false, StopBootingError.Wrapf(
+		return false, StopBootingError.Errorf(
 			"round of ACCEPTVoteproof of same height not matched: voteproof.Round()=%d block.Round()=%d",
 			vpc.acceptVoteproof.Round(), vpc.lastBlock.Round(),
 		)
@@ -237,7 +234,7 @@ func (vpc *VoteproofBootingChecker) CheckACCEPTVoteproofHeight() (bool, error) {
 
 	fact := vpc.acceptVoteproof.Majority().(ACCEPTBallotFact)
 	if !vpc.lastBlock.Hash().Equal(fact.NewBlock()) {
-		return false, StopBootingError.Wrapf(
+		return false, StopBootingError.Errorf(
 			"block hash of ACCEPTVoteproof of same height not matched: voteproof.Block()=%s block.Block()=%s",
 			fact.NewBlock(), vpc.lastBlock.Hash(),
 		)
@@ -250,14 +247,14 @@ func (vpc *VoteproofBootingChecker) CheckINITVoteproofHeight() (bool, error) {
 	switch d := vpc.initVoteproof.Height() - vpc.lastBlock.Height(); {
 	case d == 0:
 	default:
-		return false, StopBootingError.Wrapf(
+		return false, StopBootingError.Errorf(
 			"missing INITVoteproof found: voteproof.Height()=%d != block.Height()=%d",
 			vpc.initVoteproof.Height(), vpc.lastBlock.Height(),
 		)
 	}
 
 	if vpc.initVoteproof.Round() != vpc.lastBlock.Round() {
-		return false, StopBootingError.Wrapf(
+		return false, StopBootingError.Errorf(
 			"round of INITVoteproof of same height not matched: voteproof.Round()=%d block.Round()=%d",
 			vpc.initVoteproof.Round(), vpc.lastBlock.Round(),
 		)
@@ -265,7 +262,7 @@ func (vpc *VoteproofBootingChecker) CheckINITVoteproofHeight() (bool, error) {
 
 	fact := vpc.initVoteproof.Majority().(INITBallotFact)
 	if !vpc.lastBlock.PreviousBlock().Equal(fact.PreviousBlock()) {
-		return false, StopBootingError.Wrapf(
+		return false, StopBootingError.Errorf(
 			"previous block hash of INITVoteproof of same height not matched: voteproof.Block()=%s block.Block()=%s",
 			fact.PreviousBlock(), vpc.lastBlock.Hash(),
 		)

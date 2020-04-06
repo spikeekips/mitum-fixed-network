@@ -27,7 +27,7 @@ func (tf tinyFact) Hint() hint.Hint {
 
 func (tf tinyFact) IsValid([]byte) error {
 	if len(tf.A) < 1 {
-		return isvalid.InvalidError.Wrapf("empty A")
+		return isvalid.InvalidError.Errorf("empty A")
 	}
 
 	return nil

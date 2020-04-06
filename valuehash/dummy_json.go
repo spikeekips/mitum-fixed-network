@@ -18,7 +18,7 @@ func (dm *Dummy) UnmarshalJSON(b []byte) error {
 
 	ht := h.JSONPackHintedHead.H
 	if dm.Hint().Type() != ht.Type() {
-		return hint.TypeDoesNotMatchError.Wrapf("a=%s b=%s", dm.Hint().Verbose(), ht.Verbose())
+		return hint.TypeDoesNotMatchError.Errorf("a=%s b=%s", dm.Hint().Verbose(), ht.Verbose())
 	}
 
 	copy(dm.b, base58.Decode(h.Hash))

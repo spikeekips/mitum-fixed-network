@@ -9,7 +9,7 @@ func IsValidSeal(seal Seal, b []byte) error {
 	if h, err := seal.GenerateHash(); err != nil {
 		return err
 	} else if !seal.Hash().Equal(h) {
-		return isvalid.InvalidError.Wrapf("hash does not match")
+		return isvalid.InvalidError.Errorf("hash does not match")
 	}
 
 	if err := seal.Signer().Verify(

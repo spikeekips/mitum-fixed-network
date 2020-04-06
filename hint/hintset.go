@@ -11,9 +11,8 @@ import (
 )
 
 var (
-	HintAlreadyAddedError  = errors.NewError("hint already added in Hintset")
-	HintNotFoundError      = errors.NewError("Hint not found in Hintset")
-	InvalidHInterTypeError = errors.NewError("invalid Hinter type found")
+	HintAlreadyAddedError = errors.NewError("hint already added in Hintset")
+	HintNotFoundError     = errors.NewError("Hint not found in Hintset")
 )
 
 // Hintset is the collection of Hinter. It supports to compare semver for
@@ -47,12 +46,12 @@ func (st Hintset) key(t Type, v Version) string {
 func (st *Hintset) Add(hd Hinter) error {
 	h := hd.Hint()
 	if !isRegisteredType(h.Type()) {
-		return NotRegisteredTypeFoundError.Wrapf("type=%s", h.Type().Verbose())
+		return UnknownTypeError.Errorf("type=%s", h.Type().Verbose())
 	}
 
 	key := st.key(h.Type(), h.Version())
 	if _, found := st.known.Load(key); found {
-		return HintAlreadyAddedError.Wrapf("type=%s version=%s", h.Type().Verbose(), h.Version())
+		return HintAlreadyAddedError.Errorf("type=%s version=%s", h.Type().Verbose(), h.Version())
 	}
 
 	st.known.Store(key, hd)
@@ -78,7 +77,7 @@ func (st *Hintset) Add(hd Hinter) error {
 func (st *Hintset) Remove(t Type, version Version) error {
 	key := st.key(t, version)
 	if _, found := st.known.Load(key); !found {
-		return HintNotFoundError.Wrapf("type=%s version=%s", t.Verbose(), version)
+		return HintNotFoundError.Errorf("type=%s version=%s", t.Verbose(), version)
 	}
 
 	st.known.Delete(key)
@@ -120,7 +119,7 @@ func (st *Hintset) Hinter(t Type, version Version) (Hinter, error) {
 	} else if e, found := st.cache.Load(key); found {
 		return e.(Hinter), nil
 	} else if _, found := st.unknown.Load(key); found {
-		return nil, HintNotFoundError.Wrapf("failed to find; type=%s version=%s", t.Verbose(), version)
+		return nil, HintNotFoundError.Errorf("failed to find; type=%s version=%s", t.Verbose(), version)
 	}
 
 	var hd Hinter
@@ -147,7 +146,7 @@ func (st *Hintset) Hinter(t Type, version Version) (Hinter, error) {
 
 	if hd == nil {
 		st.unknown.Store(key, hd)
-		return nil, HintNotFoundError.Wrapf("failed to find; type=%s version=%s", t.Verbose(), version)
+		return nil, HintNotFoundError.Errorf("failed to find; type=%s version=%s", t.Verbose(), version)
 	}
 
 	st.cache.Store(key, hd)

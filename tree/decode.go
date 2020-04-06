@@ -2,7 +2,7 @@ package tree
 
 import (
 	"github.com/spikeekips/mitum/encoder"
-	"github.com/spikeekips/mitum/errors"
+	"github.com/spikeekips/mitum/hint"
 )
 
 func DecodeAVLTree(enc encoder.Encoder, b []byte) (AVLTree, error) {
@@ -11,7 +11,7 @@ func DecodeAVLTree(enc encoder.Encoder, b []byte) (AVLTree, error) {
 	} else if i == nil {
 		return AVLTree{}, nil
 	} else if v, ok := i.(AVLTree); !ok {
-		return AVLTree{}, errors.InvalidTypeError.Wrapf("not AVLTree; type=%T", i)
+		return AVLTree{}, hint.InvalidTypeError.Errorf("not AVLTree; type=%T", i)
 	} else {
 		return v, nil
 	}
@@ -23,7 +23,7 @@ func DecodeNode(enc encoder.Encoder, b []byte) (Node, error) {
 	} else if i == nil {
 		return nil, nil
 	} else if v, ok := i.(Node); !ok {
-		return nil, errors.InvalidTypeError.Wrapf("not Node; type=%T", i)
+		return nil, hint.InvalidTypeError.Errorf("not Node; type=%T", i)
 	} else {
 		return v, nil
 	}

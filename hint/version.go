@@ -10,7 +10,6 @@ import (
 
 var (
 	InvalidVersionError       = errors.NewError("invalid version found")
-	VersionDoesNotMatchError  = errors.NewError("version does not match")
 	VersionNotCompatibleError = errors.NewError("versions not compatible")
 )
 
@@ -40,20 +39,20 @@ func (vs Version) IsCompatible(check Version) error {
 	b := check.GO()
 
 	if !semver.IsValid(a) {
-		return InvalidVersionError.Wrapf("version=%s", a)
+		return InvalidVersionError.Errorf("version=%s", a)
 	}
 	if !semver.IsValid(b) {
-		return InvalidVersionError.Wrapf("version=%s", b)
+		return InvalidVersionError.Errorf("version=%s", b)
 	}
 
 	if semver.Major(a) != semver.Major(b) {
-		return VersionNotCompatibleError.Wrapf("target=%s != check=%s", semver.Major(a), semver.Major(b))
+		return VersionNotCompatibleError.Errorf("target=%s != check=%s", semver.Major(a), semver.Major(b))
 	}
 	if semver.Compare(semver.MajorMinor(a), semver.MajorMinor(b)) < 0 {
-		return VersionNotCompatibleError.Wrapf("target=%s < check=%s", semver.MajorMinor(a), semver.MajorMinor(b))
+		return VersionNotCompatibleError.Errorf("target=%s < check=%s", semver.MajorMinor(a), semver.MajorMinor(b))
 	}
 	if semver.Compare(a, b) < 0 {
-		return VersionNotCompatibleError.Wrapf("target=%s < check=%s", a, b)
+		return VersionNotCompatibleError.Errorf("target=%s < check=%s", a, b)
 	}
 
 	return nil

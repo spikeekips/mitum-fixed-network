@@ -34,7 +34,7 @@ func NewStellarPrivatekeyFromString(s string) (StellarPrivatekey, error) {
 
 	full, ok := kp.(*stellarKeypair.Full)
 	if !ok {
-		return StellarPrivatekey{}, InvalidKeyError.Wrapf("not stellar private key; type=%T", kp)
+		return StellarPrivatekey{}, InvalidKeyError.Errorf("not stellar private key; type=%T", kp)
 	}
 
 	return StellarPrivatekey{kp: full}, nil
@@ -54,13 +54,13 @@ func (sp StellarPrivatekey) Hint() hint.Hint {
 
 func (sp StellarPrivatekey) IsValid([]byte) error {
 	if sp.kp == nil {
-		return InvalidKeyError.Wrapf("empty stellar Privatekey")
+		return InvalidKeyError.Errorf("empty stellar Privatekey")
 	}
 
 	if kp, err := stellarKeypair.Parse(sp.kp.Seed()); err != nil {
 		return InvalidKeyError.Wrap(err)
 	} else if _, ok := kp.(*stellarKeypair.Full); !ok {
-		return InvalidKeyError.Wrapf("not stellar private key; type=%T", kp)
+		return InvalidKeyError.Errorf("not stellar private key; type=%T", kp)
 	}
 
 	return nil
@@ -125,7 +125,7 @@ func (sp StellarPublickey) Hint() hint.Hint {
 
 func (sp StellarPublickey) IsValid([]byte) error {
 	if sp.kp == nil {
-		return InvalidKeyError.Wrapf("empty stellar Publickey")
+		return InvalidKeyError.Errorf("empty stellar Publickey")
 	}
 
 	return nil

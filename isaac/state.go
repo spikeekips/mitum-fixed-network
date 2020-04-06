@@ -1,10 +1,8 @@
 package isaac
 
 import (
-	"github.com/spikeekips/mitum/errors"
+	"golang.org/x/xerrors"
 )
-
-var InvalidStateError = errors.NewError("invalid State")
 
 type State uint8
 
@@ -53,7 +51,7 @@ func (st State) IsValid([]byte) error {
 		return nil
 	}
 
-	return InvalidStateError.Wrapf("State=%d", st)
+	return xerrors.Errorf("invalid state found; state=%d", st)
 }
 
 func (st State) MarshalText() ([]byte, error) {

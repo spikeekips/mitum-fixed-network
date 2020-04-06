@@ -1,8 +1,6 @@
 package operation
 
 import (
-	"golang.org/x/xerrors"
-
 	"github.com/spikeekips/mitum/hint"
 	"github.com/spikeekips/mitum/isvalid"
 	"github.com/spikeekips/mitum/key"
@@ -31,9 +29,9 @@ func IsValidOperation(op Operation, b []byte) error {
 	}
 
 	if l := len(op.Token()); l < 1 {
-		return xerrors.Errorf("Operation has empty token")
+		return isvalid.InvalidError.Errorf("Operation has empty token")
 	} else if l > MaxTokenSize {
-		return xerrors.Errorf("Operation token size too large: %d > %d", l, MaxTokenSize)
+		return isvalid.InvalidError.Errorf("Operation token size too large: %d > %d", l, MaxTokenSize)
 	}
 
 	if err := op.Fact().IsValid(b); err != nil {
@@ -47,7 +45,7 @@ func IsValidOperation(op Operation, b []byte) error {
 	if h, err := op.GenerateHash(); err != nil {
 		return err
 	} else if !h.Equal(op.Hash()) {
-		return xerrors.Errorf("wrong Opeartion hash")
+		return isvalid.InvalidError.Errorf("wrong Opeartion hash")
 	}
 
 	return nil

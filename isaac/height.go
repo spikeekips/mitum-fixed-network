@@ -15,7 +15,7 @@ type Height int64
 // IsValid checks Height.
 func (ht Height) IsValid([]byte) error {
 	if ht < 0 {
-		return isvalid.InvalidError.Wrapf("height must be greater than 0; height=%d", ht)
+		return isvalid.InvalidError.Errorf("height must be greater than 0; height=%d", ht)
 	}
 
 	return nil

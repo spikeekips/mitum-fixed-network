@@ -62,7 +62,7 @@ func (ep EtherPrivatekey) Hint() hint.Hint {
 
 func (ep EtherPrivatekey) IsValid([]byte) error {
 	if ep.pk == nil {
-		return InvalidKeyError.Wrapf("empty ether Privatekey")
+		return InvalidKeyError.Errorf("empty ether Privatekey")
 	}
 
 	return nil
@@ -140,7 +140,7 @@ func (ep EtherPublickey) Hint() hint.Hint {
 
 func (ep EtherPublickey) IsValid([]byte) error {
 	if ep.pk == nil {
-		return InvalidKeyError.Wrapf("empty ether Publickey")
+		return InvalidKeyError.Errorf("empty ether Publickey")
 	}
 
 	return nil
@@ -168,7 +168,7 @@ func (ep EtherPublickey) Equal(key Key) bool {
 
 func (ep EtherPublickey) Verify(input []byte, sig Signature) error {
 	if len(sig) < 4 {
-		return SignatureVerificationFailedError.Wrapf("invalid signature: length=%d signature=%x", len(sig), sig)
+		return SignatureVerificationFailedError.Errorf("invalid signature: length=%d signature=%x", len(sig), sig)
 	}
 	rlength := int(binary.LittleEndian.Uint32(sig[:4]))
 

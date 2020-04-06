@@ -41,7 +41,7 @@ func (st *LeveldbSyncerStorage) manifestKey(height Height) []byte {
 func (st *LeveldbSyncerStorage) Manifest(height Height) (Manifest, error) {
 	raw, err := st.storage.DB().Get(st.manifestKey(height), nil)
 	if err != nil {
-		return nil, err
+		return nil, storage.LeveldbWrapError(err)
 	}
 
 	return st.storage.loadManifest(raw)
@@ -84,7 +84,7 @@ func (st *LeveldbSyncerStorage) SetManifests(manifests []Manifest) error {
 		}
 	}
 
-	return st.storage.DB().Write(batch, nil)
+	return storage.LeveldbWrapError(st.storage.DB().Write(batch, nil))
 }
 
 func (st *LeveldbSyncerStorage) HasBlock(height Height) (bool, error) {
@@ -185,5 +185,5 @@ func (st *LeveldbSyncerStorage) checkHeight(height Height) {
 }
 
 func (st *LeveldbSyncerStorage) Close() error {
-	return st.storage.DB().Close()
+	return storage.LeveldbWrapError(st.storage.DB().Close())
 }

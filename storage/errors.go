@@ -1,5 +1,26 @@
 package storage
 
-import "github.com/spikeekips/mitum/errors"
+import (
+	"golang.org/x/xerrors"
 
-var NotFoundError = errors.NewError("not found")
+	"github.com/spikeekips/mitum/errors"
+)
+
+var (
+	NotFoundError = errors.NewError("not found")
+	StorageError  = errors.NewError("storage error")
+)
+
+func WrapError(err error) error {
+	if err == nil {
+		return nil
+	}
+
+	if xerrors.Is(err, NotFoundError) {
+		return err
+	} else if xerrors.Is(err, StorageError) {
+		return err
+	}
+
+	return StorageError.Wrap(err)
+}

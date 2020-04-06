@@ -5,7 +5,6 @@ import (
 
 	"github.com/rs/zerolog"
 	"github.com/syndtr/goleveldb/leveldb"
-	leveldbErrors "github.com/syndtr/goleveldb/leveldb/errors"
 	leveldbStorage "github.com/syndtr/goleveldb/leveldb/storage"
 	leveldbutil "github.com/syndtr/goleveldb/leveldb/util"
 	"golang.org/x/xerrors"
@@ -108,7 +107,7 @@ func (st *LeveldbStorage) LastBlock() (Block, error) {
 func (st *LeveldbStorage) get(key []byte) ([]byte, error) {
 	b, err := st.db.Get(key, nil)
 
-	return b, WrapLeveldbErorr(err)
+	return b, storage.LeveldbWrapError(err)
 }
 
 func (st *LeveldbStorage) Block(h valuehash.Hash) (Block, error) {
@@ -174,7 +173,8 @@ func (st *LeveldbStorage) newVoteproof(voteproof Voteproof) error {
 	}
 
 	hb := storage.LeveldbDataWithEncoder(st.enc, raw)
-	return st.db.Put(leveldbVoteproofKey(voteproof), hb, nil)
+
+	return storage.LeveldbWrapError(st.db.Put(leveldbVoteproofKey(voteproof), hb, nil))
 }
 
 func (st *LeveldbStorage) LastINITVoteproof() (Voteproof, error) {
@@ -300,7 +300,7 @@ func (st *LeveldbStorage) NewSeals(seals []seal.Seal) error {
 		inserted[sl.Hash()] = struct{}{}
 	}
 
-	return st.db.Write(batch, nil)
+	return storage.LeveldbWrapError(st.db.Write(batch, nil))
 }
 
 func (st *LeveldbStorage) newSeal(batch *leveldb.Batch, sl seal.Seal) error {
@@ -458,7 +458,7 @@ func (st *LeveldbStorage) iter(
 		}
 	}
 
-	return iter.Error()
+	return storage.LeveldbWrapError(iter.Error())
 }
 
 func (st *LeveldbStorage) Seals(callback func(valuehash.Hash, seal.Seal) (bool, error), sort bool, load bool) error {
@@ -515,7 +515,7 @@ func (st *LeveldbStorage) UnstagedOperationSeals(seals []valuehash.Hash) error {
 		return err
 	}
 
-	return st.db.Write(batch, nil)
+	return storage.LeveldbWrapError(st.db.Write(batch, nil))
 }
 
 func (st *LeveldbStorage) Proposals(callback func(Proposal) (bool, error), sort bool) error {
@@ -541,7 +541,7 @@ func (st *LeveldbStorage) proposalKey(height Height, round Round) []byte {
 func (st *LeveldbStorage) NewProposal(proposal Proposal) error {
 	sealKey := st.sealKey(proposal.Hash())
 	if found, err := st.db.Has(sealKey, nil); err != nil {
-		return err
+		return storage.LeveldbWrapError(err)
 	} else if !found {
 		if err := st.NewSeals([]seal.Seal{proposal}); err != nil {
 			return err
@@ -549,7 +549,7 @@ func (st *LeveldbStorage) NewProposal(proposal Proposal) error {
 	}
 
 	if err := st.db.Put(st.proposalKey(proposal.Height(), proposal.Round()), sealKey, nil); err != nil {
-		return err
+		return storage.LeveldbWrapError(err)
 	}
 
 	return nil
@@ -588,14 +588,16 @@ func (st *LeveldbStorage) NewState(sta state.State) error {
 	if b, err := storage.LeveldbMarshal(st.enc, sta); err != nil {
 		return err
 	} else if err := st.db.Put(leveldbStateKey(sta.Key()), b, nil); err != nil {
-		return err
+		return storage.LeveldbWrapError(err)
 	}
 
 	return nil
 }
 
 func (st *LeveldbStorage) HasOperation(h valuehash.Hash) (bool, error) {
-	return st.db.Has(leveldbOperationHashKey(h), nil)
+	found, err := st.db.Has(leveldbOperationHashKey(h), nil)
+
+	return found, storage.LeveldbWrapError(err)
 }
 
 func (st *LeveldbStorage) OpenBlockStorage(block Block) (BlockStorage, error) {
@@ -748,7 +750,7 @@ func (bst *LeveldbBlockStorage) UnstageOperationSeals(hs []valuehash.Hash) error
 }
 
 func (bst *LeveldbBlockStorage) Commit() error {
-	return bst.st.db.Write(bst.batch, nil)
+	return storage.LeveldbWrapError(bst.st.db.Write(bst.batch, nil))
 }
 
 func leveldbBlockHeightKey(height Height) []byte {
@@ -824,18 +826,6 @@ func leveldbOperationHashKey(h valuehash.Hash) []byte {
 		leveldbOperationHashPrefix,
 		h.Bytes(),
 	)
-}
-
-func WrapLeveldbErorr(err error) error {
-	if err == nil {
-		return nil
-	}
-
-	if err == leveldbErrors.ErrNotFound {
-		return storage.NotFoundError.Wrap(err)
-	}
-
-	return err
 }
 
 func leveldbUnstageOperationSeals(st *LeveldbStorage, batch *leveldb.Batch, seals []valuehash.Hash) error {

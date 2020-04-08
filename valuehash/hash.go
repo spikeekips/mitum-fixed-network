@@ -6,6 +6,7 @@ import (
 	"github.com/spikeekips/mitum/errors"
 	"github.com/spikeekips/mitum/hint"
 	"github.com/spikeekips/mitum/isvalid"
+	"github.com/spikeekips/mitum/logging"
 	"github.com/spikeekips/mitum/util"
 )
 
@@ -19,6 +20,7 @@ type Hash interface {
 	util.Byter
 	Size() int
 	Equal(Hash) bool
+	logging.LogHintedMarshaler
 }
 
 type Hasher interface {

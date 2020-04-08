@@ -4,7 +4,6 @@ import (
 	"sync"
 	"time"
 
-	"github.com/rs/zerolog"
 	"golang.org/x/xerrors"
 
 	"github.com/spikeekips/mitum/logging"
@@ -35,9 +34,8 @@ func NewCallbackTimer(
 	}
 
 	ct := &CallbackTimer{
-		Logging: logging.NewLogging(func(c zerolog.Context) zerolog.Context {
-			return c.
-				Str("module", "callback-timer").
+		Logging: logging.NewLogging(func(c logging.Context) logging.Emitter {
+			return c.Str("module", "callback-timer").
 				Str("name", name)
 		}),
 		name:         name,

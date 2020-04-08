@@ -1,8 +1,6 @@
 package isaac
 
 import (
-	"github.com/rs/zerolog"
-
 	"github.com/spikeekips/mitum/logging"
 	"github.com/spikeekips/mitum/seal"
 )
@@ -15,7 +13,7 @@ func NewStateBrokenHandler(localstate *Localstate) (*StateBrokenHandler, error) 
 	ss := &StateBrokenHandler{
 		BaseStateHandler: NewBaseStateHandler(localstate, nil, StateBroken),
 	}
-	ss.BaseStateHandler.Logging = logging.NewLogging(func(c zerolog.Context) zerolog.Context {
+	ss.BaseStateHandler.Logging = logging.NewLogging(func(c logging.Context) logging.Emitter {
 		return c.Str("module", "consensus-state-broken-handler")
 	})
 

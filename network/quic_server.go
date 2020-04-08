@@ -8,7 +8,6 @@ import (
 
 	"github.com/gorilla/mux"
 	"github.com/lucas-clemente/quic-go/http3"
-	"github.com/rs/zerolog"
 
 	"github.com/spikeekips/mitum/encoder"
 	"github.com/spikeekips/mitum/hint"
@@ -30,7 +29,7 @@ type QuicServer struct {
 func NewQuicServer(bind string, certs []tls.Certificate) (*QuicServer, error) {
 	// TODO ratelimit
 	qs := &QuicServer{
-		Logging: logging.NewLogging(func(c zerolog.Context) zerolog.Context {
+		Logging: logging.NewLogging(func(c logging.Context) logging.Emitter {
 			return c.Str("module", "network-quic-server")
 		}),
 		bind: bind,

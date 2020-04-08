@@ -1,7 +1,6 @@
 package isaac
 
 import (
-	"github.com/rs/zerolog"
 	"golang.org/x/xerrors"
 
 	"github.com/spikeekips/mitum/logging"
@@ -18,14 +17,14 @@ func NewProposalValidationChecker(
 	localstate *Localstate, suffrage Suffrage, proposal Proposal,
 ) *ProposalValidationChecker {
 	return &ProposalValidationChecker{
-		Logging: logging.NewLogging(func(c zerolog.Context) zerolog.Context {
+		Logging: logging.NewLogging(func(c logging.Context) logging.Emitter {
 			return c.
 				Str("module", "proposal-validation-checker").
-				Dict("proposal", zerolog.Dict().
-					Str("hash", proposal.Hash().String()).
-					Int64("height", proposal.Height().Int64()).
-					Uint64("round", proposal.Round().Uint64()).
-					Str("node", proposal.Node().String()),
+				Dict("proposal", logging.Dict().
+					Hinted("hash", proposal.Hash()).
+					Hinted("height", proposal.Height()).
+					Hinted("round", proposal.Round()).
+					Hinted("node", proposal.Node()),
 				)
 		}),
 		localstate: localstate,
@@ -58,7 +57,7 @@ func (pvc *ProposalValidationChecker) IsProposer() (bool, error) {
 	err := xerrors.Errorf("proposal has wrong proposer")
 
 	pvc.Log().Error().Err(err).
-		Str("expected_proposer", pvc.suffrage.Acting(height, round).Proposer().Address().String()).
+		Hinted("expected_proposer", pvc.suffrage.Acting(height, round).Proposer().Address()).
 		Send()
 
 	pvc.Log().Error().Err(err).Msg("wrong proposer found")
@@ -82,9 +81,9 @@ func (pvc *ProposalValidationChecker) IsOld() (bool, error) {
 	if height != ivp.Height() || round != ivp.Round() {
 		err := xerrors.Errorf("old Proposal received")
 		pvc.Log().Error().Err(err).
-			Dict("current", zerolog.Dict().
-				Int64("height", ivp.Height().Int64()).
-				Uint64("round", ivp.Round().Uint64()),
+			Dict("current", logging.Dict().
+				Hinted("height", ivp.Height()).
+				Hinted("round", ivp.Round()),
 			).
 			Msg("old proposal received")
 

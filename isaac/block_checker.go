@@ -1,7 +1,6 @@
 package isaac
 
 import (
-	"github.com/rs/zerolog"
 	"github.com/spikeekips/mitum/logging"
 	"golang.org/x/xerrors"
 )
@@ -46,10 +45,10 @@ func NewManifestsValidationChecker(
 
 	return &ManifestsValidationChecker{
 		baseBlocksValidationChecker: baseBlocksValidationChecker{
-			Logging: logging.NewLogging(func(c zerolog.Context) zerolog.Context {
+			Logging: logging.NewLogging(func(c logging.Context) logging.Emitter {
 				return c.
-					Int64("from_manifest", manifests[0].Height().Int64()).
-					Int64("to_manifest", manifests[len(manifests)-1].Height().Int64()).
+					Hinted("from_manifest", manifests[0].Height()).
+					Hinted("to_manifest", manifests[len(manifests)-1].Height()).
 					Str("module", "manifests-validation-checker")
 			}),
 			localstate: localstate,
@@ -96,10 +95,10 @@ func NewBlocksValidationChecker(localstate *Localstate, blocks []Block) *BlocksV
 
 	return &BlocksValidationChecker{
 		baseBlocksValidationChecker: baseBlocksValidationChecker{
-			Logging: logging.NewLogging(func(c zerolog.Context) zerolog.Context {
+			Logging: logging.NewLogging(func(c logging.Context) logging.Emitter {
 				return c.
-					Int64("from_block", blocks[0].Height().Int64()).
-					Int64("to_block", blocks[len(blocks)-1].Height().Int64()).
+					Hinted("from_block", blocks[0].Height()).
+					Hinted("to_block", blocks[len(blocks)-1].Height()).
 					Str("module", "blocks-validation-checker")
 			}),
 			localstate: localstate,

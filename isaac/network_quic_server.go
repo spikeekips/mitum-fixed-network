@@ -8,8 +8,6 @@ import (
 	"net/url"
 	"path"
 
-	"github.com/rs/zerolog"
-
 	"github.com/spikeekips/mitum/encoder"
 	"github.com/spikeekips/mitum/logging"
 	"github.com/spikeekips/mitum/network"
@@ -36,7 +34,7 @@ func NewQuicServer(
 ) (*QuicServer, error) {
 	// TODO ratelimit
 	nqs := &QuicServer{
-		Logging: logging.NewLogging(func(c zerolog.Context) zerolog.Context {
+		Logging: logging.NewLogging(func(c logging.Context) logging.Emitter {
 			return c.Str("module", "network-quic-server")
 		}),
 		QuicServer: qs,

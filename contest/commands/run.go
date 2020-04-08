@@ -44,7 +44,7 @@ func (cm RunCommand) createNodeProcess(
 	}
 
 	l := log.WithLogger(func(ctx zerolog.Context) zerolog.Context {
-		return ctx.Str("node", np.Localstate.Node().Address().String())
+		return ctx.Hinted("node", np.Localstate.Node().Address())
 	})
 
 	_ = np.SetLogger(logging.NewLogger(&l, true)) // TODO set verbose

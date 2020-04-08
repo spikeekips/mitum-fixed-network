@@ -12,6 +12,7 @@ import (
 
 	"github.com/spikeekips/mitum/encoder"
 	"github.com/spikeekips/mitum/hint"
+	"github.com/spikeekips/mitum/logging"
 	"github.com/spikeekips/mitum/util"
 )
 
@@ -84,4 +85,15 @@ func (sa *ShortAddress) UnpackJSON(b []byte, _ *encoder.JSONEncoder) error {
 	*sa = ShortAddress(s.A[8:])
 
 	return nil
+}
+
+func (sa ShortAddress) MarshalLog(key string, e logging.Emitter, verbose bool) logging.Emitter {
+	if !verbose {
+		return e.Str(key, sa.String())
+	}
+
+	return e.Dict(key, logging.Dict().
+		Str("address", sa.String()).
+		HintedVerbose("hint", sa.Hint(), true),
+	)
 }

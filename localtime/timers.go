@@ -3,7 +3,6 @@ package localtime
 import (
 	"sync"
 
-	"github.com/rs/zerolog"
 	"github.com/spikeekips/mitum/logging"
 	"github.com/spikeekips/mitum/util"
 	"golang.org/x/xerrors"
@@ -24,7 +23,7 @@ func NewTimers(ids []string, allowNew bool) *Timers {
 	}
 
 	return &Timers{
-		Logging: logging.NewLogging(func(c zerolog.Context) zerolog.Context {
+		Logging: logging.NewLogging(func(c logging.Context) logging.Emitter {
 			return c.Str("module", "timers")
 		}),
 		timers:   timers,

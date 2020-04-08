@@ -1,7 +1,6 @@
 package isaac
 
 import (
-	"github.com/rs/zerolog"
 	"github.com/spikeekips/mitum/logging"
 	"github.com/spikeekips/mitum/operation"
 	"github.com/spikeekips/mitum/seal"
@@ -17,7 +16,7 @@ type BallotChecker struct {
 
 func NewBallotChecker(ballot Ballot, localstate *Localstate, suffrage Suffrage) *BallotChecker {
 	return &BallotChecker{
-		Logging: logging.NewLogging(func(c zerolog.Context) zerolog.Context {
+		Logging: logging.NewLogging(func(c logging.Context) logging.Emitter {
 			return c.Str("module", "ballot-checker")
 		}),
 		suffrage:   suffrage,

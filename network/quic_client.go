@@ -10,7 +10,6 @@ import (
 
 	"github.com/lucas-clemente/quic-go"
 	"github.com/lucas-clemente/quic-go/http3"
-	"github.com/rs/zerolog"
 
 	"github.com/spikeekips/mitum/logging"
 )
@@ -39,7 +38,7 @@ func NewQuicClient(insecure bool, timeout time.Duration, retries int, quicConfig
 	}
 
 	return &QuicClient{
-		Logging: logging.NewLogging(func(c zerolog.Context) zerolog.Context {
+		Logging: logging.NewLogging(func(c logging.Context) logging.Emitter {
 			return c.Str("module", "network-quic-client")
 		}),
 		insecure:   insecure,
@@ -70,7 +69,7 @@ func (qc *QuicClient) newClient() (*http.Client, func() error /* close func */) 
 }
 
 func (qc *QuicClient) Send(url string, b []byte, headers http.Header) error {
-	l := qc.Log().WithLogger(func(ctx zerolog.Context) zerolog.Context {
+	l := qc.Log().WithLogger(func(ctx logging.Context) logging.Emitter {
 		return ctx.Str("to", url).
 			Int("content_length", len(b)).
 			Str("request", "send")
@@ -89,7 +88,7 @@ func (qc *QuicClient) Send(url string, b []byte, headers http.Header) error {
 }
 
 func (qc *QuicClient) send(url string, b []byte, headers http.Header) error {
-	l := qc.Log().WithLogger(func(ctx zerolog.Context) zerolog.Context {
+	l := qc.Log().WithLogger(func(ctx logging.Context) logging.Emitter {
 		return ctx.Str("to", url).
 			Int("content_length", len(b)).
 			Str("request", "send")
@@ -133,7 +132,7 @@ func (qc *QuicClient) send(url string, b []byte, headers http.Header) error {
 }
 
 func (qc *QuicClient) Request(url string, b []byte, headers http.Header) (QuicResponse, error) {
-	l := qc.Log().WithLogger(func(ctx zerolog.Context) zerolog.Context {
+	l := qc.Log().WithLogger(func(ctx logging.Context) logging.Emitter {
 		return ctx.Str("to", url).
 			Int("content_length", len(b)).
 			Str("request", "request")
@@ -153,7 +152,7 @@ func (qc *QuicClient) Request(url string, b []byte, headers http.Header) (QuicRe
 }
 
 func (qc *QuicClient) request(url string, b []byte, headers http.Header) (QuicResponse, error) {
-	l := qc.Log().WithLogger(func(ctx zerolog.Context) zerolog.Context {
+	l := qc.Log().WithLogger(func(ctx logging.Context) logging.Emitter {
 		return ctx.Str("to", url).
 			Int("content_length", len(b)).
 			Str("request", "request")

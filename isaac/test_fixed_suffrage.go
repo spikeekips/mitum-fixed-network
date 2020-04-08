@@ -3,8 +3,6 @@
 package isaac
 
 import (
-	"github.com/rs/zerolog"
-
 	"github.com/spikeekips/mitum/logging"
 )
 
@@ -23,7 +21,7 @@ func NewFixedSuffrage(proposer Node, nodes []Node) *FixedSuffrage {
 	}
 
 	return &FixedSuffrage{
-		Logging: logging.NewLogging(func(c zerolog.Context) zerolog.Context {
+		Logging: logging.NewLogging(func(c logging.Context) logging.Emitter {
 			return c.Str("module", "fixed-suffrage")
 		}),
 		proposer:  proposer,

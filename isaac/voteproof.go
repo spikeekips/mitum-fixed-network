@@ -8,6 +8,7 @@ import (
 	"github.com/spikeekips/mitum/hint"
 	"github.com/spikeekips/mitum/isvalid"
 	"github.com/spikeekips/mitum/key"
+	"github.com/spikeekips/mitum/logging"
 	"github.com/spikeekips/mitum/operation"
 	"github.com/spikeekips/mitum/util"
 	"github.com/spikeekips/mitum/valuehash"
@@ -17,6 +18,7 @@ type Voteproof interface {
 	hint.Hinter
 	isvalid.IsValider
 	util.Byter
+	logging.LogHintedMarshaler
 	IsFinished() bool
 	FinishedAt() time.Time
 	IsClosed() bool

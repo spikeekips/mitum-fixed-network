@@ -3,8 +3,6 @@ package util
 import (
 	"sync"
 
-	"github.com/rs/zerolog"
-
 	"github.com/spikeekips/mitum/errors"
 	"github.com/spikeekips/mitum/logging"
 )
@@ -31,7 +29,7 @@ type FunctionDaemon struct {
 
 func NewFunctionDaemon(fn func(chan struct{}) error, isDebug bool) *FunctionDaemon {
 	dm := &FunctionDaemon{
-		Logging: logging.NewLogging(func(c zerolog.Context) zerolog.Context {
+		Logging: logging.NewLogging(func(c logging.Context) logging.Emitter {
 			return c.Str("module", "functondaemon")
 		}),
 		fn:       fn,

@@ -4,7 +4,6 @@ import (
 	"sync"
 	"time"
 
-	"github.com/rs/zerolog"
 	"golang.org/x/xerrors"
 
 	"github.com/spikeekips/mitum/logging"
@@ -45,7 +44,7 @@ func NewStateSyncingHandler(
 		BaseStateHandler: NewBaseStateHandler(localstate, proposalProcessor, StateSyncing),
 		stateChan:        make(chan Syncer),
 	}
-	ss.BaseStateHandler.Logging = logging.NewLogging(func(c zerolog.Context) zerolog.Context {
+	ss.BaseStateHandler.Logging = logging.NewLogging(func(c logging.Context) logging.Emitter {
 		return c.Str("module", "consensus-state-syncing-handler")
 	})
 
@@ -93,8 +92,8 @@ func (ss *StateSyncingHandler) NewSeal(sl seal.Seal) error {
 		return ss.handleProposal(t)
 	default:
 		ss.Log().Debug().
-			Str("seal_hint", sl.Hint().Verbose()).
-			Str("seal_hash", sl.Hash().String()).
+			Hinted("seal_hint", sl.Hint()).
+			Hinted("seal_hash", sl.Hash()).
 			Msg("this type of Seal will be ignored")
 
 		return nil
@@ -106,10 +105,10 @@ func (ss *StateSyncingHandler) NewVoteproof(voteproof Voteproof) error {
 }
 
 func (ss *StateSyncingHandler) handleProposal(proposal Proposal) error {
-	l := ss.Log().WithLogger(func(ctx zerolog.Context) zerolog.Context {
-		return ctx.Str("proposal_hash", proposal.Hash().String()).
-			Int64("proposal_height", proposal.Height().Int64()).
-			Uint64("proposal_round", proposal.Round().Uint64())
+	l := ss.Log().WithLogger(func(ctx logging.Context) logging.Emitter {
+		return ctx.Hinted("proposal_hash", proposal.Hash()).
+			Hinted("proposal_height", proposal.Height()).
+			Hinted("proposal_round", proposal.Round())
 	})
 
 	l.Debug().Msg("got proposal")
@@ -129,8 +128,8 @@ func (ss *StateSyncingHandler) handleProposal(proposal Proposal) error {
 		}
 	default:
 		ss.Log().Debug().
-			Int64("proposal_height", proposal.Height().Int64()).
-			Int64("block_height", base.Int64()).
+			Hinted("proposal_height", proposal.Height()).
+			Hinted("block_height", base).
 			Msg("no expected proposal found")
 	}
 
@@ -157,7 +156,7 @@ func (ss *StateSyncingHandler) newSyncer(to Height, sourceNodes []Node) error {
 	}
 
 	if lastSyncer != nil && to <= lastSyncer.HeightTo() {
-		ss.Log().Debug().Int64("height_to", to.Int64()).Msg("already started to sync")
+		ss.Log().Debug().Hinted("height_to", to).Msg("already started to sync")
 		return nil
 	}
 
@@ -199,7 +198,7 @@ func (ss *StateSyncingHandler) newSyncerFromBallot(ballot Ballot) error {
 		sourceNodes = append(sourceNodes, n)
 	}
 
-	ss.Log().VerboseFunc(func(e *zerolog.Event) *zerolog.Event {
+	ss.Log().VerboseFunc(func(e *logging.Event) logging.Emitter {
 		var addresses []string
 		for _, n := range sourceNodes {
 			addresses = append(addresses, n.Address().String())
@@ -207,8 +206,8 @@ func (ss *StateSyncingHandler) newSyncerFromBallot(ballot Ballot) error {
 
 		return e.Strs("source_nodes", addresses)
 	}).
-		Str("ballot", ballot.Hash().String()).
-		Int64("height_to", to.Int64()).
+		Hinted("ballot", ballot.Hash()).
+		Hinted("height_to", to).
 		Msg("will sync to the height from ballot")
 
 	return ss.newSyncer(to, sourceNodes)
@@ -234,7 +233,7 @@ func (ss *StateSyncingHandler) newSyncerFromVoteproof(voteproof Voteproof) error
 		}
 	}
 
-	ss.Log().VerboseFunc(func(e *zerolog.Event) *zerolog.Event {
+	ss.Log().VerboseFunc(func(e *logging.Event) logging.Emitter {
 		var addresses []string
 		for _, n := range sourceNodes {
 			addresses = append(addresses, n.Address().String())
@@ -242,9 +241,9 @@ func (ss *StateSyncingHandler) newSyncerFromVoteproof(voteproof Voteproof) error
 
 		return e.Strs("source_nodes", addresses)
 	}).
-		Int64("voteproof_height", voteproof.Height().Int64()).
-		Uint64("voteproof_round", voteproof.Round().Uint64()).
-		Int64("height_to", to.Int64()).
+		Hinted("voteproof_height", voteproof.Height()).
+		Hinted("voteproof_round", voteproof.Round()).
+		Hinted("height_to", to).
 		Msg("will sync to the height")
 
 	return ss.newSyncer(to, sourceNodes)
@@ -331,10 +330,10 @@ func (ss *StateSyncingHandler) syncerStateChanged(syncer Syncer) {
 }
 
 func (ss *StateSyncingHandler) processProposal(proposal Proposal) error {
-	l := ss.Log().WithLogger(func(ctx zerolog.Context) zerolog.Context {
-		return ctx.Int64("proposal_height", proposal.Height().Int64()).
-			Uint64("proposal_round", proposal.Round().Uint64()).
-			Str("proposal_hash", proposal.Hash().String())
+	l := ss.Log().WithLogger(func(ctx logging.Context) logging.Emitter {
+		return ctx.Hinted("proposal_height", proposal.Height()).
+			Hinted("proposal_round", proposal.Round()).
+			Hinted("proposal_hash", proposal.Hash())
 	})
 
 	iv := ss.localstate.LastINITVoteproof()
@@ -345,8 +344,8 @@ func (ss *StateSyncingHandler) processProposal(proposal Proposal) error {
 
 	if iv.Height() != proposal.Height() || iv.Round() != proposal.Round() {
 		l.Debug().
-			Int64("voteproof_height", iv.Height().Int64()).
-			Uint64("voteproof_round", iv.Round().Uint64()).
+			Hinted("voteproof_height", iv.Height()).
+			Hinted("voteproof_round", iv.Round()).
 			Msg("last INITVoteproof is not for proposal; proposal will be ignored")
 		return nil
 	}
@@ -361,12 +360,12 @@ func (ss *StateSyncingHandler) processProposal(proposal Proposal) error {
 func (ss *StateSyncingHandler) handleVoteproof(voteproof Voteproof) error {
 	base := ss.localstate.LastBlock()
 
-	l := ss.Log().WithLogger(func(ctx zerolog.Context) zerolog.Context {
-		return ctx.Str("voteproof_stage", voteproof.Stage().String()).
-			Int64("voteproof_height", voteproof.Height().Int64()).
-			Uint64("voteproof_round", voteproof.Round().Uint64()).
-			Int64("local_height", base.Height().Int64()).
-			Uint64("local_round", base.Round().Uint64())
+	l := ss.Log().WithLogger(func(ctx logging.Context) logging.Emitter {
+		return ctx.Hinted("voteproof_stage", voteproof.Stage()).
+			Hinted("voteproof_height", voteproof.Height()).
+			Hinted("voteproof_round", voteproof.Round()).
+			Hinted("local_height", base.Height()).
+			Hinted("local_round", base.Round())
 	})
 
 	l.Debug().Msg("got voteproof")
@@ -403,7 +402,7 @@ func (ss *StateSyncingHandler) handleVoteproof(voteproof Voteproof) error {
 		}
 	default:
 		l.Debug().
-			Int64("block_height", base.Height().Int64()).
+			Hinted("block_height", base.Height()).
 			Msg("something wrong, behind voteproof received")
 	}
 

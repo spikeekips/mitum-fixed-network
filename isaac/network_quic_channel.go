@@ -7,7 +7,6 @@ import (
 	"time"
 
 	"github.com/lucas-clemente/quic-go"
-	"github.com/rs/zerolog"
 	"golang.org/x/xerrors"
 
 	"github.com/spikeekips/mitum/encoder"
@@ -39,7 +38,7 @@ func NewQuicChannel(
 	enc encoder.Encoder,
 ) (*QuicChannel, error) {
 	qc := &QuicChannel{
-		Logging: logging.NewLogging(func(c zerolog.Context) zerolog.Context {
+		Logging: logging.NewLogging(func(c logging.Context) logging.Emitter {
 			return c.Str("module", "quic-network")
 		}),
 		recvChan: make(chan seal.Seal, bufsize),
@@ -140,7 +139,7 @@ func (qc *QuicChannel) SendSeal(sl seal.Seal) error {
 		return err
 	}
 
-	qc.Log().Debug().Str("seal_hash", sl.Hash().String()).Msg("sent seal")
+	qc.Log().Debug().Hinted("seal_hash", sl.Hash()).Msg("sent seal")
 
 	headers := http.Header{}
 	headers.Set(network.QuicEncoderHintHeader, qc.enc.Hint().String())

@@ -55,7 +55,7 @@ func (t *testLogging) TestNilLog() {
 func (t *testLogging) TestContext() {
 	logger := NewLogger(t.l, false)
 
-	logging := NewLogging(func(ctx zerolog.Context) zerolog.Context {
+	logging := NewLogging(func(ctx Context) Emitter {
 		return ctx.Int("findme", 33)
 	})
 
@@ -73,7 +73,7 @@ func (t *testLogging) TestContext() {
 func (t *testLogging) TestContextHandOver() {
 	logger := NewLogger(t.l, false)
 
-	oldLogging := NewLogging(func(ctx zerolog.Context) zerolog.Context {
+	oldLogging := NewLogging(func(ctx Context) Emitter {
 		return ctx.Int("findme", 33)
 	})
 	_ = oldLogging.SetLogger(logger)
@@ -96,12 +96,12 @@ func (t *testLogging) TestContextHandOver() {
 func (t *testLogging) TestContextHandOverOverride() {
 	logger := NewLogger(t.l, false)
 
-	oldLogging := NewLogging(func(ctx zerolog.Context) zerolog.Context {
+	oldLogging := NewLogging(func(ctx Context) Emitter {
 		return ctx.Int("findme", 33)
 	})
 	_ = oldLogging.SetLogger(logger)
 
-	logging := NewLogging(func(ctx zerolog.Context) zerolog.Context {
+	logging := NewLogging(func(ctx Context) Emitter {
 		return ctx.Int("findme", 44)
 	})
 
@@ -119,7 +119,7 @@ func (t *testLogging) TestContextHandOverOverride() {
 func (t *testLogging) TestNotVerbose() {
 	logger := NewLogger(t.l, false)
 
-	logging := NewLogging(func(ctx zerolog.Context) zerolog.Context {
+	logging := NewLogging(func(ctx Context) Emitter {
 		return ctx.Int("findme", 33)
 	})
 
@@ -153,7 +153,7 @@ func (t *testLogging) TestVerboseFunc() {
 		_ = logging.SetLogger(logger)
 
 		var called bool
-		logging.Log().VerboseFunc(func(e *zerolog.Event) *zerolog.Event {
+		logging.Log().VerboseFunc(func(e *Event) Emitter {
 			called = true
 
 			return e.Int("eatme", 44)
@@ -173,7 +173,7 @@ func (t *testLogging) TestVerboseFunc() {
 		_ = logging.SetLogger(logger)
 
 		var called bool
-		logging.Log().VerboseFunc(func(e *zerolog.Event) *zerolog.Event {
+		logging.Log().VerboseFunc(func(e *Event) Emitter {
 			called = true
 			return e.Int("eatme", 44)
 		}).Msg("showme")
@@ -185,6 +185,74 @@ func (t *testLogging) TestVerboseFunc() {
 
 		t.Equal(float64(44), m["eatme"])
 	}
+}
+
+type simpleHintedLogObject struct {
+	a string
+}
+
+func (h simpleHintedLogObject) MarshalLog(key string, e Emitter, _ bool) Emitter {
+	return e.Str(key, h.a)
+}
+
+type hintedLogObject struct {
+	a string
+	b int
+}
+
+func (h hintedLogObject) MarshalLog(key string, e Emitter, verbose bool) Emitter {
+	if verbose {
+		return e.Dict(key, Dict().Str("a", h.a).Int("b", h.b+1)) // in verbose, b will be b + 1
+	} else {
+		return e.Dict(key, Dict().Str("a", h.a).Int("b", h.b))
+	}
+}
+
+func (t *testLogging) TestHintedObjectSimple() {
+	logger := NewLogger(t.l, true)
+
+	logging := NewLogging(nil)
+
+	_ = logging.SetLogger(logger)
+
+	logging.Log().Debug().Hinted("findme", simpleHintedLogObject{a: "eatme"}).Msg("showme")
+
+	var m map[string]interface{}
+	t.NoError(json.Unmarshal(t.buf.Bytes(), &m))
+
+	t.Equal("eatme", m["findme"])
+}
+
+func (t *testLogging) TestHintedObject() {
+	logger := NewLogger(t.l, true)
+
+	logging := NewLogging(nil)
+
+	_ = logging.SetLogger(logger)
+
+	logging.Log().Debug().Hinted("findme", hintedLogObject{a: "eatme", b: 33}).Msg("showme")
+
+	var m map[string]interface{}
+	t.NoError(json.Unmarshal(t.buf.Bytes(), &m))
+
+	t.Equal("eatme", m["findme"].(map[string]interface{})["a"])
+	t.Equal(float64(33), m["findme"].(map[string]interface{})["b"])
+}
+
+func (t *testLogging) TestHintedObjectVerbose() {
+	logger := NewLogger(t.l, true)
+
+	logging := NewLogging(nil)
+
+	_ = logging.SetLogger(logger)
+
+	logging.Log().Debug().HintedVerbose("findme", hintedLogObject{a: "eatme", b: 33}, true).Msg("showme")
+
+	var m map[string]interface{}
+	t.NoError(json.Unmarshal(t.buf.Bytes(), &m))
+
+	t.Equal("eatme", m["findme"].(map[string]interface{})["a"])
+	t.Equal(float64(33+1), m["findme"].(map[string]interface{})["b"])
 }
 
 func TestLogging(t *testing.T) {

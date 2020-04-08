@@ -1,7 +1,6 @@
 package isaac
 
 import (
-	"github.com/rs/zerolog"
 	"golang.org/x/xerrors"
 
 	"github.com/spikeekips/mitum/logging"
@@ -24,7 +23,7 @@ func NewStateBootingHandler(
 	cs := &StateBootingHandler{
 		BaseStateHandler: NewBaseStateHandler(localstate, proposalProcessor, StateBooting),
 	}
-	cs.BaseStateHandler.Logging = logging.NewLogging(func(c zerolog.Context) zerolog.Context {
+	cs.BaseStateHandler.Logging = logging.NewLogging(func(c logging.Context) logging.Emitter {
 		return c.Str("module", "consensus-state-booting-handler")
 	})
 

@@ -2,6 +2,7 @@ package isaac
 
 import (
 	"github.com/spikeekips/mitum/hint"
+	"github.com/spikeekips/mitum/logging"
 	"github.com/spikeekips/mitum/operation"
 	"github.com/spikeekips/mitum/valuehash"
 )
@@ -19,6 +20,7 @@ var (
 
 type Ballot interface {
 	operation.FactSeal
+	logging.LogHintedMarshaler
 	Stage() Stage
 	Height() Height
 	Round() Round

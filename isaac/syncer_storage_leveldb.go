@@ -3,7 +3,6 @@ package isaac
 import (
 	"sync"
 
-	"github.com/rs/zerolog"
 	"github.com/syndtr/goleveldb/leveldb"
 
 	"github.com/spikeekips/mitum/logging"
@@ -22,7 +21,7 @@ type LeveldbSyncerStorage struct {
 
 func NewLeveldbSyncerStorage(main *LeveldbStorage) *LeveldbSyncerStorage {
 	return &LeveldbSyncerStorage{
-		Logging: logging.NewLogging(func(c zerolog.Context) zerolog.Context {
+		Logging: logging.NewLogging(func(c logging.Context) logging.Emitter {
 			return c.Str("module", "leveldb-syncer-storage")
 		}),
 		main:       main,
@@ -61,7 +60,7 @@ func (st *LeveldbSyncerStorage) Manifests(heights []Height) ([]Manifest, error) 
 }
 
 func (st *LeveldbSyncerStorage) SetManifests(manifests []Manifest) error {
-	st.Log().VerboseFunc(func(e *zerolog.Event) *zerolog.Event {
+	st.Log().VerboseFunc(func(e *logging.Event) logging.Emitter {
 		var heights []Height
 		for i := range manifests {
 			heights = append(heights, manifests[i].Height())
@@ -109,7 +108,7 @@ func (st *LeveldbSyncerStorage) Blocks(heights []Height) ([]Block, error) {
 }
 
 func (st *LeveldbSyncerStorage) SetBlocks(blocks []Block) error {
-	st.Log().VerboseFunc(func(e *zerolog.Event) *zerolog.Event {
+	st.Log().VerboseFunc(func(e *logging.Event) logging.Emitter {
 		var heights []Height
 		for i := range blocks {
 			heights = append(heights, blocks[i].Height())
@@ -139,8 +138,8 @@ func (st *LeveldbSyncerStorage) SetBlocks(blocks []Block) error {
 
 func (st *LeveldbSyncerStorage) Commit() error {
 	st.Log().Debug().
-		Int64("from_height", st.heightFrom.Int64()).
-		Int64("to_height", st.heightTo.Int64()).
+		Hinted("from_height", st.heightFrom).
+		Hinted("to_height", st.heightTo).
 		Msg("trying to commit blocks")
 
 	for i := st.heightFrom.Int64(); i <= st.heightTo.Int64(); i++ {

@@ -1,7 +1,6 @@
 package isaac
 
 import (
-	"github.com/rs/zerolog"
 	"golang.org/x/xerrors"
 
 	"github.com/spikeekips/mitum/logging"
@@ -19,7 +18,7 @@ type NetworkChanChannel struct {
 
 func NewNetworkChanChannel(bufsize uint) *NetworkChanChannel {
 	return &NetworkChanChannel{
-		Logging: logging.NewLogging(func(c zerolog.Context) zerolog.Context {
+		Logging: logging.NewLogging(func(c logging.Context) logging.Emitter {
 			return c.Str("module", "chan-network")
 		}),
 		recvChan: make(chan seal.Seal, bufsize),

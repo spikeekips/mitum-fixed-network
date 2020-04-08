@@ -5,7 +5,6 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/rs/zerolog"
 	"golang.org/x/xerrors"
 
 	"github.com/spikeekips/mitum/localtime"
@@ -47,7 +46,7 @@ func NewStateConsensusHandler(
 		suffrage:         suffrage,
 		proposalMaker:    proposalMaker,
 	}
-	cs.BaseStateHandler.Logging = logging.NewLogging(func(c zerolog.Context) zerolog.Context {
+	cs.BaseStateHandler.Logging = logging.NewLogging(func(c logging.Context) logging.Emitter {
 		return c.Str("module", "consensus-state-consensus-handler")
 	})
 	cs.timers = localtime.NewTimers(
@@ -146,7 +145,7 @@ func (cs *StateConsensusHandler) NewSeal(sl seal.Seal) error {
 		go func(proposal Proposal) {
 			if err := cs.handleProposal(proposal); err != nil {
 				cs.Log().Error().Err(err).
-					Str("proposal", proposal.Hash().String()).
+					Hinted("proposal", proposal.Hash()).
 					Msg("failed to handle proposal")
 			}
 		}(t)
@@ -246,7 +245,7 @@ func (cs *StateConsensusHandler) handleProposal(proposal Proposal) error {
 	isActing := acting.Exists(cs.localstate.Node().Address())
 
 	l.Debug().
-		Object("acting_suffrag", acting).
+		Hinted("acting_suffrag", acting).
 		Bool("is_acting", isActing).
 		Msgf("node is in acting suffrage? %v", isActing)
 
@@ -292,7 +291,7 @@ func (cs *StateConsensusHandler) proposal(voteproof Voteproof) (bool, error) {
 	l.Debug().Msg("prepare to broadcast Proposal")
 	isProposer := cs.suffrage.IsProposer(voteproof.Height(), voteproof.Round(), cs.localstate.Node().Address())
 	l.Debug().
-		Object("acting_suffrag", cs.suffrage.Acting(voteproof.Height(), voteproof.Round())).
+		Hinted("acting_suffrag", cs.suffrage.Acting(voteproof.Height(), voteproof.Round())).
 		Bool("is_acting", cs.suffrage.IsActing(voteproof.Height(), voteproof.Round(), cs.localstate.Node().Address())).
 		Bool("is_proposer", isProposer).
 		Msgf("node is proposer? %v", isProposer)

@@ -5,7 +5,6 @@ import (
 	"sync"
 	"time"
 
-	"github.com/rs/zerolog"
 	"golang.org/x/xerrors"
 
 	"github.com/spikeekips/mitum/logging"
@@ -82,10 +81,10 @@ func NewGeneralSyncer(
 	}
 
 	cs := &GeneralSyncer{
-		Logging: logging.NewLogging(func(c zerolog.Context) zerolog.Context {
+		Logging: logging.NewLogging(func(c logging.Context) logging.Emitter {
 			return c.
-				Int64("from", from.Int64()).
-				Int64("to", to.Int64()).
+				Hinted("from", from).
+				Hinted("to", to).
 				Str("module", "general-syncer")
 		}),
 		localstate:              localstate,
@@ -439,14 +438,14 @@ func (cs *GeneralSyncer) handleSyncerFetchBlockError(err error) error {
 
 	if fm.err != nil {
 		cs.Log().Error().Err(err).
-			Str("source_node", fm.node.String()).Msg("something wrong to fetch blocks from node")
+			Hinted("source_node", fm.node).Msg("something wrong to fetch blocks from node")
 
 		return xerrors.Errorf("failed to fetch blocks; %w", fm.err)
 	}
 
 	if len(fm.blocks) < 1 {
 		cs.Log().Error().Err(err).
-			Str("source_node", fm.node.String()).Msg("empty blocks; something wrong to fetch blocks from node")
+			Hinted("source_node", fm.node).Msg("empty blocks; something wrong to fetch blocks from node")
 
 		return xerrors.Errorf("empty blocks; failed to fetch blocks")
 	}
@@ -499,8 +498,8 @@ func (cs *GeneralSyncer) distributeBlocksJob(worker *util.Worker) error {
 
 func (cs *GeneralSyncer) fetchManifestsByNodes(heights []Height) map[Address][]Manifest {
 	cs.Log().Debug().
-		Int64("height_from", heights[0].Int64()).
-		Int64("height_to", heights[len(heights)-1].Int64()).
+		Hinted("height_from", heights[0]).
+		Hinted("height_to", heights[len(heights)-1]).
 		Msg("trying to fetch manifest")
 
 	resultChan := make(chan map[Address][]Manifest, len(cs.provedNodes()))
@@ -574,9 +573,9 @@ func (cs *GeneralSyncer) callbackFetchManifests(node Node, heights []Height) []M
 func (cs *GeneralSyncer) callbackFetchManifestsSlice(node Node, heights []Height) []Manifest {
 	var retries uint = 3
 
-	l := cs.Log().WithLogger(func(ctx zerolog.Context) zerolog.Context {
+	l := cs.Log().WithLogger(func(ctx logging.Context) logging.Emitter {
 		return ctx.Uint("retries", retries).
-			Str("source_node", node.Address().String()).
+			Hinted("source_node", node.Address()).
 			Interface("heights", heights)
 	})
 
@@ -688,7 +687,7 @@ func (cs *GeneralSyncer) checkThreshold(
 		cs.Log().Debug().
 			Str("result", result.String()).
 			Str("majority_block_hash", key).
-			Int64("height", height.Int64()).
+			Hinted("height", height).
 			Strs("target_nodes", ns).
 			Msg("check majority of manifests")
 	}
@@ -701,10 +700,10 @@ func (cs *GeneralSyncer) checkThreshold(
 }
 
 func (cs *GeneralSyncer) fetchManifests(node Node, heights []Height) ([]Manifest, error) { // nolint
-	l := cs.Log().WithLogger(func(ctx zerolog.Context) zerolog.Context {
-		return ctx.Str("source_node", node.Address().String()).
-			Int64("height_from", heights[0].Int64()).
-			Int64("height_to", heights[len(heights)-1].Int64())
+	l := cs.Log().WithLogger(func(ctx logging.Context) logging.Emitter {
+		return ctx.Hinted("source_node", node.Address()).
+			Hinted("height_from", heights[0]).
+			Hinted("height_to", heights[len(heights)-1])
 	})
 
 	l.Debug().Msg("trying to fetch manifests")
@@ -780,8 +779,8 @@ func (cs *GeneralSyncer) workerCallbackFetchBlocks(node Node) util.WorkerCallbac
 			heights = h
 		}
 
-		l := cs.Log().WithLogger(func(ctx zerolog.Context) zerolog.Context {
-			return ctx.Str("source_node", node.Address().String()).
+		l := cs.Log().WithLogger(func(ctx logging.Context) logging.Emitter {
+			return ctx.Hinted("source_node", node.Address()).
 				Interface("heights", heights)
 		})
 
@@ -841,10 +840,10 @@ func (cs *GeneralSyncer) checkFetchedBlocks(fetched []Block) ([]Height, error) {
 }
 
 func (cs *GeneralSyncer) fetchBlocks(node Node, heights []Height) ([]Block, error) { // nolint
-	l := cs.Log().WithLogger(func(ctx zerolog.Context) zerolog.Context {
-		return ctx.Str("source_node", node.Address().String()).
-			Int64("height_from", heights[0].Int64()).
-			Int64("height_to", heights[len(heights)-1].Int64())
+	l := cs.Log().WithLogger(func(ctx logging.Context) logging.Emitter {
+		return ctx.Hinted("source_node", node.Address()).
+			Hinted("height_from", heights[0]).
+			Hinted("height_to", heights[len(heights)-1])
 	})
 
 	l.Debug().Msg("trying to fetch blocks")

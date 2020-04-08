@@ -7,6 +7,7 @@ import (
 
 	"github.com/spikeekips/mitum/encoder"
 	"github.com/spikeekips/mitum/hint"
+	"github.com/spikeekips/mitum/logging"
 	"github.com/spikeekips/mitum/operation"
 	"github.com/spikeekips/mitum/util"
 	"github.com/spikeekips/mitum/valuehash"
@@ -119,4 +120,18 @@ func (vp *DummyVoteproof) UnpackJSON(b []byte, enc *encoder.JSONEncoder) error {
 	vp.result = uvp.RS
 
 	return nil
+}
+
+func (vp DummyVoteproof) MarshalLog(key string, e logging.Emitter, verbose bool) logging.Emitter {
+	if !verbose {
+		return e.Dict(key, logging.Dict().
+			Hinted("height", vp.height).
+			Hinted("round", vp.round).
+			Hinted("stage", vp.stage).
+			Str("result", vp.result.String()))
+	}
+
+	r, _ := util.JSONMarshal(vp)
+
+	return e.RawJSON(key, r)
 }

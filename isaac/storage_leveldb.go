@@ -3,7 +3,6 @@ package isaac
 import (
 	"fmt"
 
-	"github.com/rs/zerolog"
 	"github.com/syndtr/goleveldb/leveldb"
 	leveldbStorage "github.com/syndtr/goleveldb/leveldb/storage"
 	leveldbutil "github.com/syndtr/goleveldb/leveldb/util"
@@ -48,7 +47,7 @@ type LeveldbStorage struct {
 
 func NewLeveldbStorage(db *leveldb.DB, encs *encoder.Encoders, enc encoder.Encoder) *LeveldbStorage {
 	return &LeveldbStorage{
-		Logging: logging.NewLogging(func(c zerolog.Context) zerolog.Context {
+		Logging: logging.NewLogging(func(c logging.Context) logging.Emitter {
 			return c.Str("module", "leveldb-storage")
 		}),
 		db:   db,
@@ -162,9 +161,9 @@ func (st *LeveldbStorage) loadLastVoteproof(stage Stage) (Voteproof, error) {
 
 func (st *LeveldbStorage) newVoteproof(voteproof Voteproof) error {
 	st.Log().Debug().
-		Int64("height", voteproof.Height().Int64()).
-		Uint64("round", voteproof.Round().Uint64()).
-		Str("stage", voteproof.Stage().String()).
+		Hinted("height", voteproof.Height()).
+		Hinted("round", voteproof.Round()).
+		Hinted("stage", voteproof.Stage()).
 		Msg("voteproof stored")
 
 	raw, err := st.enc.Encode(voteproof)

@@ -1,31 +1,32 @@
 package isaac
 
 import (
-	"github.com/rs/zerolog"
-
+	"github.com/spikeekips/mitum/logging"
 	"github.com/spikeekips/mitum/util"
 )
 
-func (ib INITBallotV0) MarshalZerologObject(e *zerolog.Event) {
-	r, _ := util.JSONMarshal(ib)
+func marshalBallotLog(ballot Ballot, key string, e logging.Emitter, verbose bool) logging.Emitter {
+	if !verbose {
+		return e.Hinted(key, ballot.Hash())
+	}
 
-	e.RawJSON("ballot", r)
+	r, _ := util.JSONMarshal(ballot)
+
+	return e.RawJSON(key, r)
 }
 
-func (pr ProposalV0) MarshalZerologObject(e *zerolog.Event) {
-	r, _ := util.JSONMarshal(pr)
-
-	e.RawJSON("proposal", r)
+func (ib INITBallotV0) MarshalLog(key string, e logging.Emitter, verbose bool) logging.Emitter {
+	return marshalBallotLog(ib, key, e, verbose)
 }
 
-func (sb SIGNBallotV0) MarshalZerologObject(e *zerolog.Event) {
-	r, _ := util.JSONMarshal(sb)
-
-	e.RawJSON("ballot", r)
+func (pr ProposalV0) MarshalLog(key string, e logging.Emitter, verbose bool) logging.Emitter {
+	return marshalBallotLog(pr, key, e, verbose)
 }
 
-func (ab ACCEPTBallotV0) MarshalZerologObject(e *zerolog.Event) {
-	r, _ := util.JSONMarshal(ab)
+func (sb SIGNBallotV0) MarshalLog(key string, e logging.Emitter, verbose bool) logging.Emitter {
+	return marshalBallotLog(sb, key, e, verbose)
+}
 
-	e.RawJSON("ballot", r)
+func (ab ACCEPTBallotV0) MarshalLog(key string, e logging.Emitter, verbose bool) logging.Emitter {
+	return marshalBallotLog(ab, key, e, verbose)
 }

@@ -1,27 +1,24 @@
 package isaac
 
 import (
-	"github.com/rs/zerolog"
-
 	"github.com/spikeekips/mitum/logging"
 	"github.com/spikeekips/mitum/seal"
-	"github.com/spikeekips/mitum/util"
 )
 
 func loggerWithSeal(sl seal.Seal, l logging.Logger) logging.Logger {
-	ll := l.WithLogger(func(ctx zerolog.Context) zerolog.Context {
-		return ctx.Str("seal_hash", sl.Hash().String()).
+	ll := l.WithLogger(func(ctx logging.Context) logging.Emitter {
+		return ctx.Hinted("seal_hash", sl.Hash()).(logging.Context).
 			CallerWithSkipFrameCount(3)
 	})
 
-	var event *zerolog.Event
-	if ls, ok := sl.(zerolog.LogObjectMarshaler); ok {
-		event = ll.Debug().EmbedObject(ls)
+	var event logging.Emitter
+	if ls, ok := sl.(logging.LogHintedMarshaler); ok {
+		event = ll.Debug().HintedVerbose("seal", ls, l.IsVerbose())
 	} else {
 		event = ll.Debug().
-			Dict("seal", zerolog.Dict().
-				Str("hint", sl.Hint().Verbose()).
-				Str("hash", sl.Hash().String()),
+			Dict("seal", logging.Dict().
+				Hinted("hint", sl.Hint()).
+				Hinted("hash", sl.Hash()).(*logging.Event),
 			)
 	}
 
@@ -31,25 +28,12 @@ func loggerWithSeal(sl seal.Seal, l logging.Logger) logging.Logger {
 }
 
 func loggerWithBallot(ballot Ballot, l logging.Logger) logging.Logger {
-	ll := l.WithLogger(func(ctx zerolog.Context) zerolog.Context {
-		return ctx.Str("seal_hash", ballot.Hash().String()).
+	ll := l.WithLogger(func(ctx logging.Context) logging.Emitter {
+		return ctx.Hinted("ballot_hash", ballot.Hash()).(logging.Context).
 			CallerWithSkipFrameCount(3)
 	})
 
-	var event *zerolog.Event
-	if lb, ok := ballot.(zerolog.LogObjectMarshaler); ok {
-		event = ll.Debug().EmbedObject(lb)
-	} else {
-		event = ll.Debug().
-			Dict("ballot", zerolog.Dict().
-				Int64("height", ballot.Height().Int64()).
-				Uint64("round", ballot.Round().Uint64()).
-				Str("stage", ballot.Stage().String()).
-				Str("node", ballot.Node().String()),
-			)
-	}
-
-	event.Msg("ballot")
+	ll.Debug().HintedVerbose("ballot", ballot, l.IsVerbose()).Msg("ballot")
 
 	return ll
 }
@@ -59,19 +43,12 @@ func loggerWithVoteproof(voteproof Voteproof, l logging.Logger) logging.Logger {
 		return l
 	}
 
-	ll := l.WithLogger(func(ctx zerolog.Context) zerolog.Context {
-		return ctx.Str("voteproof_id", util.UUID().String()).CallerWithSkipFrameCount(3)
+	ll := l.WithLogger(func(ctx logging.Context) logging.Emitter {
+		return ctx.Hinted("voteproof", voteproof).(logging.Context).
+			CallerWithSkipFrameCount(3)
 	})
 
-	var event *zerolog.Event
-	if lvp, ok := voteproof.(zerolog.LogObjectMarshaler); ok {
-		event = ll.Debug().EmbedObject(lvp)
-	} else if l.GetLevel() == zerolog.DebugLevel {
-		rvp, _ := util.JSONMarshal(voteproof)
-		event = ll.Debug().RawJSON("voteproof", rvp)
-	}
-
-	event.Msg("voteproof")
+	ll.Debug().HintedVerbose("voteproof", voteproof, true).Msg("voteproof")
 
 	return ll
 }
@@ -82,39 +59,18 @@ func loggerWithLocalstate(localstate *Localstate, l logging.Logger) logging.Logg
 		return l
 	}
 
-	l.Debug().
-		Dict("local_state", zerolog.Dict().
-			Dict("block", zerolog.Dict().
-				Str("hash", lastBlock.Hash().String()).
-				Int64("height", lastBlock.Height().Int64()).
-				Uint64("round", lastBlock.Round().Uint64()),
-			),
-		).Msg("localstate")
-
-	return l
+	return l.WithLogger(func(ctx logging.Context) logging.Emitter {
+		return ctx.Dict("local_state", logging.Dict().
+			Hinted("block", lastBlock),
+		)
+	})
 }
 
-func loggerWithStateChangeContext(ctx StateChangeContext, l logging.Logger) logging.Logger {
-	e := zerolog.Dict().
-		Str("from_state", ctx.From().String()).
-		Str("to_state", ctx.To().String())
-
-	if ctx.voteproof != nil {
-		if lvp, ok := ctx.voteproof.(zerolog.LogObjectMarshaler); ok {
-			e.EmbedObject(lvp)
-		} else {
-			rvp, _ := util.JSONMarshal(ctx.voteproof)
-
-			e.RawJSON("voteproof", rvp)
-		}
-	}
-
-	ll := l.WithLogger(func(ctx zerolog.Context) zerolog.Context {
-		return ctx.Str("change_state_context_id", util.UUID().String()).
+func loggerWithStateChangeContext(sctx StateChangeContext, l logging.Logger) logging.Logger {
+	ll := l.WithLogger(func(ctx logging.Context) logging.Emitter {
+		return ctx.Hinted("change_state_context", sctx).(logging.Context).
 			CallerWithSkipFrameCount(4)
 	})
 
-	ll.Debug().Dict("change_state_context", e).Msg("state_change_context")
-
-	return loggerWithVoteproof(ctx.voteproof, ll)
+	return loggerWithVoteproof(sctx.voteproof, ll)
 }

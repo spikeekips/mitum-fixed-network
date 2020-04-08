@@ -5,6 +5,7 @@ import (
 
 	"github.com/spikeekips/mitum/hint"
 	"github.com/spikeekips/mitum/isvalid"
+	"github.com/spikeekips/mitum/logging"
 	"github.com/spikeekips/mitum/util"
 )
 
@@ -14,5 +15,6 @@ type Address interface {
 	isvalid.IsValider
 	hint.Hinter
 	util.Byter
+	logging.LogHintedMarshaler
 	Equal(Address) bool
 }

@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"sync"
 
-	"github.com/rs/zerolog"
 	"golang.org/x/xerrors"
 
 	"github.com/spikeekips/mitum/logging"
@@ -20,7 +19,7 @@ type Ballotbox struct {
 
 func NewBallotbox(thresholdFunc func() Threshold) *Ballotbox {
 	return &Ballotbox{
-		Logging: logging.NewLogging(func(c zerolog.Context) zerolog.Context {
+		Logging: logging.NewLogging(func(c logging.Context) logging.Emitter {
 			return c.Str("module", "ballotbox")
 		}),
 		vrs:           &sync.Map{},

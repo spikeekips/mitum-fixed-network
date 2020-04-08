@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"sync"
 
-	"github.com/rs/zerolog"
 	"github.com/spikeekips/mitum/logging"
 )
 
@@ -24,7 +23,7 @@ type Worker struct {
 
 func NewWorker(name string, bufsize uint) *Worker {
 	wk := &Worker{
-		Logging: logging.NewLogging(func(c zerolog.Context) zerolog.Context {
+		Logging: logging.NewLogging(func(c logging.Context) logging.Emitter {
 			return c.Str("module", fmt.Sprintf("worker-%s", name))
 		}),
 		bufsize:    bufsize,

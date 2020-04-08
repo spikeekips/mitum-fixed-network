@@ -84,7 +84,6 @@ func (t *testStateSyncingHandler) TestProcessProposal() {
 
 	dp := NewDummyProposalProcessor(returnedBlock, nil)
 	cs, err := NewStateSyncingHandler(t.localstate, dp)
-
 	t.NoError(err)
 	t.NotNil(cs)
 

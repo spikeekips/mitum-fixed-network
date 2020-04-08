@@ -3,7 +3,6 @@ package isaac
 import (
 	"time"
 
-	"github.com/rs/zerolog"
 	"golang.org/x/xerrors"
 
 	"github.com/spikeekips/mitum/localtime"
@@ -68,7 +67,7 @@ func NewStateJoiningHandler(
 	cs := &StateJoiningHandler{
 		BaseStateHandler: NewBaseStateHandler(localstate, proposalProcessor, StateJoining),
 	}
-	cs.BaseStateHandler.Logging = logging.NewLogging(func(c zerolog.Context) zerolog.Context {
+	cs.BaseStateHandler.Logging = logging.NewLogging(func(c logging.Context) logging.Emitter {
 		return c.Str("module", "consensus-state-joining-handler")
 	})
 	cs.BaseStateHandler.timers = localtime.NewTimers([]string{TimerIDBroadcastingINITBallot}, false)
@@ -144,8 +143,8 @@ func (cs *StateJoiningHandler) NewSeal(sl seal.Seal) error {
 		return cs.handleProposal(t)
 	default:
 		cs.Log().Debug().
-			Str("seal_hint", sl.Hint().Verbose()).
-			Str("seal_hash", sl.Hash().String()).
+			Hinted("seal_hint", sl.Hint()).
+			Hinted("seal_hash", sl.Hash()).
 			Str("seal_signer", sl.Signer().String()).
 			Msg("this type of Seal will be ignored")
 		return nil
@@ -191,10 +190,10 @@ func (cs *StateJoiningHandler) NewSeal(sl seal.Seal) error {
 }
 
 func (cs *StateJoiningHandler) handleProposal(proposal Proposal) error {
-	l := cs.Log().WithLogger(func(ctx zerolog.Context) zerolog.Context {
-		return ctx.Str("proposal_hash", proposal.Hash().String()).
-			Int64("proposal_height", proposal.Height().Int64()).
-			Uint64("proposal_round", proposal.Round().Uint64())
+	l := cs.Log().WithLogger(func(ctx logging.Context) logging.Emitter {
+		return ctx.Hinted("proposal_hash", proposal.Hash()).
+			Hinted("proposal_height", proposal.Height()).
+			Hinted("proposal_round", proposal.Round())
 	})
 
 	l.Debug().Msg("got proposal")
@@ -242,7 +241,7 @@ func (cs *StateJoiningHandler) handleINITBallotAndINITVoteproof(ballot INITBallo
 
 		if ballot.Round() > cs.currentRound() {
 			l.Debug().
-				Uint64("current_round", cs.currentRound().Uint64()).
+				Hinted("current_round", cs.currentRound()).
 				Msg("Voteproof.Round() is same or greater than currentRound; use this round")
 
 			cs.setCurrentRound(ballot.Round())

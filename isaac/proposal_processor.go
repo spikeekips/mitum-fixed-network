@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"sync"
 
-	"github.com/rs/zerolog"
 	"golang.org/x/xerrors"
 
 	"github.com/spikeekips/avl"
@@ -30,7 +29,7 @@ type ProposalProcessorV0 struct {
 
 func NewProposalProcessorV0(localstate *Localstate) *ProposalProcessorV0 {
 	return &ProposalProcessorV0{
-		Logging: logging.NewLogging(func(c zerolog.Context) zerolog.Context {
+		Logging: logging.NewLogging(func(c logging.Context) logging.Emitter {
 			return c.Str("module", "proposal-processor-v0")
 		}),
 		localstate: localstate,
@@ -135,7 +134,7 @@ func newProposalProcessorV0(localstate *Localstate, proposal Proposal) (*proposa
 	}
 
 	return &proposalProcessorV0{
-		Logging: logging.NewLogging(func(c zerolog.Context) zerolog.Context {
+		Logging: logging.NewLogging(func(c logging.Context) logging.Emitter {
 			return c.Str("module", "internal-proposal-processor-inside-v0")
 		}),
 		localstate:         localstate,

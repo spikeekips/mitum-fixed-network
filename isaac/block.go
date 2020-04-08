@@ -5,6 +5,7 @@ import (
 
 	"github.com/spikeekips/mitum/hint"
 	"github.com/spikeekips/mitum/isvalid"
+	"github.com/spikeekips/mitum/logging"
 	"github.com/spikeekips/mitum/tree"
 	"github.com/spikeekips/mitum/util"
 	"github.com/spikeekips/mitum/valuehash"
@@ -15,6 +16,7 @@ type Manifest interface {
 	hint.Hinter
 	util.Byter
 	valuehash.Hasher
+	logging.LogHintedMarshaler
 	PreviousBlock() valuehash.Hash
 	Height() Height
 	Round() Round

@@ -1,8 +1,6 @@
 package isaac
 
 import (
-	"github.com/rs/zerolog"
-
 	"github.com/spikeekips/mitum/logging"
 	"github.com/spikeekips/mitum/seal"
 	"github.com/spikeekips/mitum/util"
@@ -17,7 +15,7 @@ type NetworkChanServer struct {
 
 func NewNetworkChanServer(ch *NetworkChanChannel) *NetworkChanServer {
 	cs := &NetworkChanServer{
-		Logging: logging.NewLogging(func(c zerolog.Context) zerolog.Context {
+		Logging: logging.NewLogging(func(c logging.Context) logging.Emitter {
 			return c.Str("module", "network-chan-server")
 		}),
 		ch: ch,

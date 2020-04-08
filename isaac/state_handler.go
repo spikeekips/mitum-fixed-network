@@ -5,7 +5,6 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/rs/zerolog"
 	"golang.org/x/xerrors"
 
 	"github.com/spikeekips/mitum/localtime"
@@ -62,6 +61,13 @@ func (csc StateChangeContext) Voteproof() Voteproof {
 
 func (csc StateChangeContext) Ballot() Ballot {
 	return csc.ballot
+}
+
+func (csc StateChangeContext) MarshalLog(key string, e logging.Emitter, _ bool) logging.Emitter {
+	return e.Dict(key, logging.Dict().
+		Hinted("from_state", csc.From()).
+		Hinted("to_state", csc.To()),
+	)
 }
 
 type BaseStateHandler struct {
@@ -143,9 +149,9 @@ func (bs *BaseStateHandler) StoreNewBlockByVoteproof(acceptVoteproof Voteproof) 
 
 	l := loggerWithVoteproof(
 		acceptVoteproof,
-		bs.Log().WithLogger(func(ctx zerolog.Context) zerolog.Context {
-			return ctx.Str("proposal", fact.Proposal().String()).
-				Str("new_block", fact.NewBlock().String())
+		bs.Log().WithLogger(func(ctx logging.Context) logging.Emitter {
+			return ctx.Hinted("proposal", fact.Proposal()).
+				Hinted("new_block", fact.NewBlock())
 		}),
 	)
 
@@ -181,11 +187,11 @@ func (bs *BaseStateHandler) StoreNewBlockByVoteproof(acceptVoteproof Voteproof) 
 		return err
 	}
 
-	l.Info().Dict("block", zerolog.Dict().
-		Str("proposal", blockStorage.Block().Proposal().String()).
-		Str("hash", blockStorage.Block().Hash().String()).
-		Int64("height", blockStorage.Block().Height().Int64()).
-		Uint64("round", blockStorage.Block().Round().Uint64()),
+	l.Info().Dict("block", logging.Dict().
+		Hinted("proposal", blockStorage.Block().Proposal()).
+		Hinted("hash", blockStorage.Block().Hash()).
+		Hinted("height", blockStorage.Block().Height()).
+		Hinted("round", blockStorage.Block().Round()),
 	).
 		Msg("new block stored")
 
@@ -252,7 +258,7 @@ func (bs *BaseStateHandler) TimerTimedoutMoveNextRound(
 		func() (bool, error) {
 			bs.Log().Debug().
 				Dur("timeout", bs.localstate.Policy().TimeoutWaitingProposal()).
-				Uint64("next_round", round.Uint64()).
+				Hinted("next_round", round).
 				Msg("timeout; waiting Proposal; trying to move next round")
 
 			if err := bs.timers.StopTimers([]string{TimerIDBroadcastingINITBallot}); err != nil {

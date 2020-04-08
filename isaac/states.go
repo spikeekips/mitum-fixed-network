@@ -3,7 +3,6 @@ package isaac
 import (
 	"sync"
 
-	"github.com/rs/zerolog"
 	"golang.org/x/xerrors"
 
 	"github.com/spikeekips/mitum/logging"
@@ -35,7 +34,7 @@ func NewConsensusStates(
 	broken *StateBrokenHandler,
 ) *ConsensusStates {
 	css := &ConsensusStates{
-		Logging: logging.NewLogging(func(c zerolog.Context) zerolog.Context {
+		Logging: logging.NewLogging(func(c logging.Context) logging.Emitter {
 			return c.Str("module", "consensus-states")
 		}),
 		localstate: localstate,
@@ -80,14 +79,14 @@ func (css *ConsensusStates) Start() error {
 
 	for state, handler := range css.states {
 		if handler == nil {
-			css.Log().Warn().Str("state_handler", state.String()).Msg("empty state handler found")
+			css.Log().Warn().Hinted("state_handler", state).Msg("empty state handler found")
 			continue
 		}
 
 		handler.SetStateChan(css.stateChan)
 		handler.SetSealChan(css.sealChan)
 
-		css.Log().Debug().Str("state_handler", state.String()).Msg("state handler registered")
+		css.Log().Debug().Hinted("state_handler", state).Msg("state handler registered")
 	}
 
 	if err := css.FunctionDaemon.Start(); err != nil {
@@ -187,13 +186,13 @@ func (css *ConsensusStates) activateHandler(ctx StateChangeContext) error {
 		if err := handler.Deactivate(ctx); err != nil {
 			return err
 		}
-		l.Info().Str("handler", handler.State().String()).Msgf("deactivated: %s", handler.State())
+		l.Info().Hinted("handler", handler.State()).Msgf("deactivated: %s", handler.State())
 	}
 
 	if err := toHandler.Activate(ctx); err != nil {
 		return err
 	}
-	l.Info().Str("handler", toHandler.State().String()).Msgf("activated: %s", toHandler.State())
+	l.Info().Hinted("handler", toHandler.State()).Msgf("activated: %s", toHandler.State())
 
 	css.activeHandler = toHandler
 
@@ -220,8 +219,8 @@ func (css *ConsensusStates) broadcastSeal(sl seal.Seal, errChan chan<- error) {
 
 	css.localstate.Nodes().Traverse(func(n Node) bool {
 		go func(n Node) {
-			lt := l.WithLogger(func(ctx zerolog.Context) zerolog.Context {
-				return ctx.Str("target_node", n.Address().String())
+			lt := l.WithLogger(func(ctx logging.Context) logging.Emitter {
+				return ctx.Hinted("target_node", n.Address())
 			})
 
 			if err := n.Channel().SendSeal(sl); err != nil {
@@ -292,8 +291,8 @@ func (css *ConsensusStates) NewSeal(sl seal.Seal) error {
 		return xerrors.Errorf("no activated handler")
 	}
 
-	l := loggerWithSeal(sl, css.Log()).WithLogger(func(ctx zerolog.Context) zerolog.Context {
-		return ctx.Str("handler", css.ActiveHandler().State().String())
+	l := loggerWithSeal(sl, css.Log()).WithLogger(func(ctx logging.Context) logging.Emitter {
+		return ctx.Hinted("handler", css.ActiveHandler().State())
 	})
 
 	isFromLocal := sl.Signer().Equal(css.localstate.Node().Publickey())
@@ -363,7 +362,11 @@ func (css *ConsensusStates) vote(ballot Ballot) error {
 	}
 
 	l := loggerWithVoteproof(voteproof, css.Log())
-	l.Debug().Msgf("new voteproof: %d-%d-%s", voteproof.Height().Int64(), voteproof.Round().Uint64(), voteproof.Stage())
+	l.Debug().
+		Hinted("height", voteproof.Height()).
+		Hinted("round", voteproof.Round()).
+		Hinted("stage", voteproof.Stage()).
+		Msg("new voteproof")
 
 	return css.newVoteproof(voteproof)
 }

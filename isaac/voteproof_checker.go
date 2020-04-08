@@ -1,7 +1,6 @@
 package isaac
 
 import (
-	"github.com/rs/zerolog"
 	"golang.org/x/xerrors"
 
 	"github.com/spikeekips/mitum/errors"
@@ -50,7 +49,7 @@ type VoteProofChecker struct {
 
 func NewVoteProofChecker(voteproof Voteproof, localstate *Localstate, suffrage Suffrage) *VoteProofChecker {
 	return &VoteProofChecker{
-		Logging: logging.NewLogging(func(c zerolog.Context) zerolog.Context {
+		Logging: logging.NewLogging(func(c logging.Context) logging.Emitter {
 			return c.Str("module", "voteproof-checker")
 		}),
 		voteproof:  voteproof,
@@ -110,7 +109,7 @@ func NewVoteproofConsensusStateChecker(
 	css *ConsensusStates,
 ) *VoteproofConsensusStateChecker {
 	return &VoteproofConsensusStateChecker{
-		Logging: logging.NewLogging(func(c zerolog.Context) zerolog.Context {
+		Logging: logging.NewLogging(func(c logging.Context) logging.Emitter {
 			return c.Str("module", "voteproof-validation-checker")
 		}),
 		lastBlock:         lastBlock,
@@ -127,7 +126,7 @@ func (vpc *VoteproofConsensusStateChecker) CheckHeight() (bool, error) {
 
 	if d > 0 {
 		l.Debug().
-			Int64("local_block_height", vpc.lastBlock.Height().Int64()).
+			Hinted("local_block_height", vpc.lastBlock.Height()).
 			Msg("Voteproof has higher height from local block")
 
 		var fromState State
@@ -140,7 +139,7 @@ func (vpc *VoteproofConsensusStateChecker) CheckHeight() (bool, error) {
 
 	if d < 0 {
 		l.Debug().
-			Int64("local_block_height", vpc.lastBlock.Height().Int64()).
+			Hinted("local_block_height", vpc.lastBlock.Height()).
 			Msg("Voteproof has lower height from local block; ignore it")
 
 		return false, IgnoreVoteproofError
@@ -204,7 +203,7 @@ func NewVoteproofBootingChecker(localstate *Localstate) (*VoteproofBootingChecke
 	}
 
 	return &VoteproofBootingChecker{
-		Logging: logging.NewLogging(func(c zerolog.Context) zerolog.Context {
+		Logging: logging.NewLogging(func(c logging.Context) logging.Emitter {
 			return c.Str("module", "voteproof-booting-checker")
 		}),
 		lastBlock:       localstate.LastBlock(),

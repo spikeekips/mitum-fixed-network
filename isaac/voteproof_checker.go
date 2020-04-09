@@ -3,8 +3,9 @@ package isaac
 import (
 	"golang.org/x/xerrors"
 
-	"github.com/spikeekips/mitum/errors"
-	"github.com/spikeekips/mitum/logging"
+	"github.com/spikeekips/mitum/base"
+	"github.com/spikeekips/mitum/util/errors"
+	"github.com/spikeekips/mitum/util/logging"
 )
 
 var (
@@ -14,9 +15,9 @@ var (
 
 type StateToBeChangeError struct {
 	*errors.NError
-	FromState State
-	ToState   State
-	Voteproof Voteproof
+	FromState base.State
+	ToState   base.State
+	Voteproof base.Voteproof
 	Ballot    Ballot
 }
 
@@ -25,7 +26,7 @@ func (ce *StateToBeChangeError) StateChangeContext() StateChangeContext {
 }
 
 func NewStateToBeChangeError(
-	fromState, toState State, voteproof Voteproof, ballot Ballot,
+	fromState, toState base.State, voteproof base.Voteproof, ballot Ballot,
 ) *StateToBeChangeError {
 	return &StateToBeChangeError{
 		NError:    errors.NewError("State needs to be changed"),
@@ -38,8 +39,8 @@ func NewStateToBeChangeError(
 
 type VoteProofChecker struct {
 	*logging.Logging
-	voteproof  Voteproof
-	suffrage   Suffrage
+	voteproof  base.Voteproof
+	suffrage   base.Suffrage
 	localstate *Localstate
 }
 
@@ -47,7 +48,7 @@ type VoteProofChecker struct {
 // Ballot.Signer(), but it takes a little bit time to gather the Ballots from
 // the other node, so this will be ignored at this time for performance reason.
 
-func NewVoteProofChecker(voteproof Voteproof, localstate *Localstate, suffrage Suffrage) *VoteProofChecker {
+func NewVoteProofChecker(voteproof base.Voteproof, localstate *Localstate, suffrage base.Suffrage) *VoteProofChecker {
 	return &VoteProofChecker{
 		Logging: logging.NewLogging(func(c logging.Context) logging.Emitter {
 			return c.Str("module", "voteproof-checker")
@@ -97,15 +98,15 @@ func (vc *VoteProofChecker) CheckThreshold() (bool, error) {
 type VoteproofConsensusStateChecker struct {
 	*logging.Logging
 	lastBlock         Block
-	lastINITVoteproof Voteproof
-	voteproof         Voteproof
+	lastINITVoteproof base.Voteproof
+	voteproof         base.Voteproof
 	css               *ConsensusStates
 }
 
 func NewVoteproofConsensusStateChecker(
 	lastBlock Block,
-	lastINITVoteproof Voteproof,
-	voteproof Voteproof,
+	lastINITVoteproof base.Voteproof,
+	voteproof base.Voteproof,
 	css *ConsensusStates,
 ) *VoteproofConsensusStateChecker {
 	return &VoteproofConsensusStateChecker{
@@ -129,12 +130,12 @@ func (vpc *VoteproofConsensusStateChecker) CheckHeight() (bool, error) {
 			Hinted("local_block_height", vpc.lastBlock.Height()).
 			Msg("Voteproof has higher height from local block")
 
-		var fromState State
+		var fromState base.State
 		if vpc.css.ActiveHandler() != nil {
 			fromState = vpc.css.ActiveHandler().State()
 		}
 
-		return false, NewStateToBeChangeError(fromState, StateSyncing, vpc.voteproof, nil)
+		return false, NewStateToBeChangeError(fromState, base.StateSyncing, vpc.voteproof, nil)
 	}
 
 	if d < 0 {
@@ -149,7 +150,7 @@ func (vpc *VoteproofConsensusStateChecker) CheckHeight() (bool, error) {
 }
 
 func (vpc *VoteproofConsensusStateChecker) CheckINITVoteproof() (bool, error) {
-	if vpc.voteproof.Stage() != StageINIT {
+	if vpc.voteproof.Stage() != base.StageINIT {
 		return true, nil
 	}
 
@@ -158,19 +159,19 @@ func (vpc *VoteproofConsensusStateChecker) CheckINITVoteproof() (bool, error) {
 	if err := checkBlockWithINITVoteproof(vpc.lastBlock, vpc.voteproof); err != nil {
 		l.Error().Err(err).Msg("invalid init voteproof")
 
-		var fromState State
+		var fromState base.State
 		if vpc.css.ActiveHandler() != nil {
 			fromState = vpc.css.ActiveHandler().State()
 		}
 
-		return false, NewStateToBeChangeError(fromState, StateSyncing, vpc.voteproof, nil)
+		return false, NewStateToBeChangeError(fromState, base.StateSyncing, vpc.voteproof, nil)
 	}
 
 	return true, nil
 }
 
 func (vpc *VoteproofConsensusStateChecker) CheckACCEPTVoteproof() (bool, error) {
-	if vpc.voteproof.Stage() != StageACCEPT {
+	if vpc.voteproof.Stage() != base.StageACCEPT {
 		return true, nil
 	}
 
@@ -187,8 +188,8 @@ type VoteproofBootingChecker struct {
 	*logging.Logging
 	localstate      *Localstate // nolint
 	lastBlock       Block
-	initVoteproof   Voteproof // NOTE these Voteproof are from last block
-	acceptVoteproof Voteproof
+	initVoteproof   base.Voteproof // NOTE these Voteproof are from last block
+	acceptVoteproof base.Voteproof
 }
 
 func NewVoteproofBootingChecker(localstate *Localstate) (*VoteproofBootingChecker, error) {

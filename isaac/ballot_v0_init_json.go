@@ -3,16 +3,17 @@ package isaac
 import (
 	"encoding/json"
 
-	"github.com/spikeekips/mitum/encoder"
+	"github.com/spikeekips/mitum/base"
+	"github.com/spikeekips/mitum/base/valuehash"
 	"github.com/spikeekips/mitum/util"
-	"github.com/spikeekips/mitum/valuehash"
+	"github.com/spikeekips/mitum/util/encoder"
 )
 
 type INITBallotV0PackerJSON struct {
 	BaseBallotV0PackerJSON
 	PB valuehash.Hash `json:"previous_block"`
-	PR Round          `json:"previous_round"`
-	VR Voteproof      `json:"voteproof"`
+	PR base.Round     `json:"previous_round"`
+	VR base.Voteproof `json:"voteproof"`
 }
 
 func (ib INITBallotV0) MarshalJSON() ([]byte, error) {
@@ -31,7 +32,7 @@ func (ib INITBallotV0) MarshalJSON() ([]byte, error) {
 type INITBallotV0UnpackerJSON struct {
 	BaseBallotV0UnpackerJSON
 	PB json.RawMessage `json:"previous_block"`
-	PR Round           `json:"previous_round"`
+	PR base.Round      `json:"previous_round"`
 	VR json.RawMessage `json:"voteproof"`
 }
 
@@ -56,8 +57,8 @@ func (ib *INITBallotV0) UnpackJSON(b []byte, enc *encoder.JSONEncoder) error {
 		epb = i
 	}
 
-	var voteproof Voteproof
-	if i, err := decodeVoteproof(enc, nib.VR); err != nil {
+	var voteproof base.Voteproof
+	if i, err := base.DecodeVoteproof(enc, nib.VR); err != nil {
 		return err
 	} else {
 		voteproof = i
@@ -77,7 +78,7 @@ func (ib *INITBallotV0) UnpackJSON(b []byte, enc *encoder.JSONEncoder) error {
 type INITBallotFactV0PackerJSON struct {
 	BaseBallotFactV0PackerJSON
 	PB valuehash.Hash `json:"previous_block"`
-	PR Round          `json:"previous_round"`
+	PR base.Round     `json:"previous_round"`
 }
 
 func (ibf INITBallotFactV0) MarshalJSON() ([]byte, error) {
@@ -91,7 +92,7 @@ func (ibf INITBallotFactV0) MarshalJSON() ([]byte, error) {
 type INITBallotFactV0UnpackerJSON struct {
 	BaseBallotFactV0PackerJSON
 	PB json.RawMessage `json:"previous_block"`
-	PR Round           `json:"previous_round"`
+	PR base.Round      `json:"previous_round"`
 }
 
 func (ibf *INITBallotFactV0) UnpackJSON(b []byte, enc *encoder.JSONEncoder) error {

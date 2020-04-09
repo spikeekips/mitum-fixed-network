@@ -11,13 +11,13 @@ import (
 	"github.com/stretchr/testify/suite"
 	"golang.org/x/xerrors"
 
-	"github.com/spikeekips/mitum/encoder"
-	"github.com/spikeekips/mitum/key"
-	"github.com/spikeekips/mitum/localtime"
+	"github.com/spikeekips/mitum/base/key"
+	"github.com/spikeekips/mitum/base/seal"
+	"github.com/spikeekips/mitum/base/valuehash"
 	"github.com/spikeekips/mitum/network"
-	"github.com/spikeekips/mitum/seal"
 	"github.com/spikeekips/mitum/util"
-	"github.com/spikeekips/mitum/valuehash"
+	"github.com/spikeekips/mitum/util/encoder"
+	"github.com/spikeekips/mitum/util/localtime"
 )
 
 type testQuicSever struct {

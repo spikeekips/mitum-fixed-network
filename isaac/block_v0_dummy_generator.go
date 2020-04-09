@@ -1,32 +1,33 @@
 package isaac
 
 import (
-	"github.com/spikeekips/mitum/seal"
-	"github.com/spikeekips/mitum/valuehash"
+	"github.com/spikeekips/mitum/base"
+	"github.com/spikeekips/mitum/base/seal"
+	"github.com/spikeekips/mitum/base/valuehash"
 )
 
 type DummyBlocksV0Generator struct {
 	genesisNode *Localstate
 	localstates []*Localstate
-	lastHeight  Height
-	suffrage    Suffrage
+	lastHeight  base.Height
+	suffrage    base.Suffrage
 	networkID   []byte
-	allNodes    map[Address]*Localstate
-	ballotboxes map[Address]*Ballotbox
-	pms         map[Address]ProposalProcessor
+	allNodes    map[base.Address]*Localstate
+	ballotboxes map[base.Address]*Ballotbox
+	pms         map[base.Address]ProposalProcessor
 }
 
 func NewDummyBlocksV0Generator(
-	genesisNode *Localstate, lastHeight Height, suffrage Suffrage, localstates []*Localstate,
+	genesisNode *Localstate, lastHeight base.Height, suffrage base.Suffrage, localstates []*Localstate,
 ) (*DummyBlocksV0Generator, error) {
-	allNodes := map[Address]*Localstate{}
-	ballotboxes := map[Address]*Ballotbox{}
-	pms := map[Address]ProposalProcessor{}
+	allNodes := map[base.Address]*Localstate{}
+	ballotboxes := map[base.Address]*Ballotbox{}
+	pms := map[base.Address]ProposalProcessor{}
 
-	threshold, _ := NewThreshold(uint(len(localstates)), 67)
+	threshold, _ := base.NewThreshold(uint(len(localstates)), 67)
 	for _, l := range localstates {
 		allNodes[l.Node().Address()] = l
-		ballotboxes[l.Node().Address()] = NewBallotbox(func() Threshold {
+		ballotboxes[l.Node().Address()] = NewBallotbox(func() base.Threshold {
 			return threshold
 		})
 		pms[l.Node().Address()] = NewProposalProcessorV0(l)
@@ -45,7 +46,7 @@ func NewDummyBlocksV0Generator(
 }
 
 func (bg *DummyBlocksV0Generator) Generate(ignoreExists bool) error {
-	lastHeight := NilHeight
+	lastHeight := base.NilHeight
 	if !ignoreExists {
 		lastBlock, err := bg.genesisNode.Storage().LastBlock()
 		if err != nil {
@@ -60,7 +61,7 @@ func (bg *DummyBlocksV0Generator) Generate(ignoreExists bool) error {
 		}
 	}
 
-	if lastHeight == NilHeight {
+	if lastHeight == base.NilHeight {
 		genesis, err := NewGenesisBlockV0Generator(bg.genesisNode, nil)
 		if err != nil {
 			return err
@@ -94,7 +95,7 @@ func (bg *DummyBlocksV0Generator) Generate(ignoreExists bool) error {
 
 func (bg *DummyBlocksV0Generator) syncBlocks(from *Localstate) error {
 	var blocks []Block
-	height := Height(0)
+	height := base.Height(0)
 	for {
 		if block, err := from.Storage().BlockByHeight(height); err != nil {
 			break
@@ -180,9 +181,9 @@ func (bg *DummyBlocksV0Generator) syncSeals(from *Localstate) error {
 }
 
 func (bg *DummyBlocksV0Generator) syncVoteproofs(from *Localstate) error {
-	var voteproofs []Voteproof
+	var voteproofs []base.Voteproof
 	if err := from.Storage().Voteproofs(
-		func(voteproof Voteproof) (bool, error) {
+		func(voteproof base.Voteproof) (bool, error) {
 			voteproofs = append(voteproofs, voteproof)
 			return true, nil
 		},
@@ -196,7 +197,7 @@ func (bg *DummyBlocksV0Generator) syncVoteproofs(from *Localstate) error {
 		}
 
 		for _, voteproof := range voteproofs {
-			if voteproof.Stage() == StageINIT {
+			if voteproof.Stage() == base.StageINIT {
 				if err := l.Storage().NewINITVoteproof(voteproof); err != nil {
 					return err
 				}
@@ -212,7 +213,7 @@ func (bg *DummyBlocksV0Generator) syncVoteproofs(from *Localstate) error {
 }
 
 func (bg *DummyBlocksV0Generator) createNextBlock() error {
-	round := Round(0)
+	round := base.Round(0)
 
 	if err := bg.createINITVoteproof(round); err != nil {
 		return err
@@ -256,7 +257,7 @@ func (bg *DummyBlocksV0Generator) finish() error {
 	return nil
 }
 
-func (bg *DummyBlocksV0Generator) createINITVoteproof(round Round) error {
+func (bg *DummyBlocksV0Generator) createINITVoteproof(round base.Round) error {
 	var ballots []INITBallot
 	var seals []seal.Seal
 	for _, l := range bg.allNodes {
@@ -285,7 +286,7 @@ func (bg *DummyBlocksV0Generator) createINITVoteproof(round Round) error {
 	return nil
 }
 
-func (bg *DummyBlocksV0Generator) createINITBallot(localstate *Localstate, round Round) (INITBallot, error) {
+func (bg *DummyBlocksV0Generator) createINITBallot(localstate *Localstate, round base.Round) (INITBallot, error) {
 	previousBlock := localstate.LastBlock()
 
 	var initBallot INITBallot

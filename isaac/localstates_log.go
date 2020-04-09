@@ -1,6 +1,6 @@
 package isaac
 
-import "github.com/spikeekips/mitum/logging"
+import "github.com/spikeekips/mitum/util/logging"
 
 func (ls *Localstate) MarshalLog(key string, e logging.Emitter, verbose bool) logging.Emitter {
 	lastBlock := ls.LastBlock()

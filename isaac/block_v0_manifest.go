@@ -3,17 +3,18 @@ package isaac
 import (
 	"time"
 
-	"github.com/spikeekips/mitum/hint"
-	"github.com/spikeekips/mitum/isvalid"
+	"github.com/spikeekips/mitum/base"
+	"github.com/spikeekips/mitum/base/valuehash"
 	"github.com/spikeekips/mitum/util"
-	"github.com/spikeekips/mitum/valuehash"
+	"github.com/spikeekips/mitum/util/hint"
+	"github.com/spikeekips/mitum/util/isvalid"
 	"golang.org/x/xerrors"
 )
 
 type ManifestV0 struct {
 	h              valuehash.Hash
-	height         Height
-	round          Round
+	height         base.Height
+	round          base.Round
 	proposal       valuehash.Hash
 	previousBlock  valuehash.Hash
 	operationsHash valuehash.Hash
@@ -83,11 +84,11 @@ func (bm ManifestV0) Bytes() []byte {
 	)
 }
 
-func (bm ManifestV0) Height() Height {
+func (bm ManifestV0) Height() base.Height {
 	return bm.height
 }
 
-func (bm ManifestV0) Round() Round {
+func (bm ManifestV0) Round() base.Round {
 	return bm.round
 }
 

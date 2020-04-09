@@ -3,7 +3,7 @@ package storage
 import (
 	"golang.org/x/xerrors"
 
-	"github.com/spikeekips/mitum/errors"
+	"github.com/spikeekips/mitum/util/errors"
 )
 
 var (

@@ -6,9 +6,10 @@ import (
 	"github.com/stretchr/testify/suite"
 	"golang.org/x/xerrors"
 
-	"github.com/spikeekips/mitum/key"
-	"github.com/spikeekips/mitum/operation"
-	"github.com/spikeekips/mitum/valuehash"
+	"github.com/spikeekips/mitum/base"
+	"github.com/spikeekips/mitum/base/key"
+	"github.com/spikeekips/mitum/base/operation"
+	"github.com/spikeekips/mitum/base/valuehash"
 )
 
 type testBallotV0Proposal struct {
@@ -24,12 +25,12 @@ func (t *testBallotV0Proposal) SetupSuite() {
 func (t *testBallotV0Proposal) TestNew() {
 	ib := ProposalV0{
 		BaseBallotV0: BaseBallotV0{
-			node: NewShortAddress("test-for-proposal"),
+			node: base.NewShortAddress("test-for-proposal"),
 		},
 		ProposalFactV0: ProposalFactV0{
 			BaseBallotFactV0: BaseBallotFactV0{
-				height: Height(10),
-				round:  Round(0),
+				height: base.Height(10),
+				round:  base.Round(0),
 			},
 		},
 	}
@@ -43,12 +44,12 @@ func (t *testBallotV0Proposal) TestNew() {
 func (t *testBallotV0Proposal) TestFact() {
 	ib := ProposalV0{
 		BaseBallotV0: BaseBallotV0{
-			node: NewShortAddress("test-for-proposal"),
+			node: base.NewShortAddress("test-for-proposal"),
 		},
 		ProposalFactV0: ProposalFactV0{
 			BaseBallotFactV0: BaseBallotFactV0{
-				height: Height(10),
-				round:  Round(0),
+				height: base.Height(10),
+				round:  base.Round(0),
 			},
 		},
 	}
@@ -57,7 +58,7 @@ func (t *testBallotV0Proposal) TestFact() {
 
 	fact := ib.Fact()
 
-	_ = (interface{})(fact).(operation.Fact)
+	_ = (interface{})(fact).(base.Fact)
 
 	factHash := fact.Hash()
 	t.NotNil(factHash)
@@ -78,12 +79,12 @@ func (t *testBallotV0Proposal) TestFact() {
 func (t *testBallotV0Proposal) TestGenerateHash() {
 	ib := ProposalV0{
 		BaseBallotV0: BaseBallotV0{
-			node: NewShortAddress("test-for-proposal"),
+			node: base.NewShortAddress("test-for-proposal"),
 		},
 		ProposalFactV0: ProposalFactV0{
 			BaseBallotFactV0: BaseBallotFactV0{
-				height: Height(10),
-				round:  Round(0),
+				height: base.Height(10),
+				round:  base.Round(0),
 			},
 			seals: []valuehash.Hash{
 				valuehash.RandomSHA256(),
@@ -107,12 +108,12 @@ func (t *testBallotV0Proposal) TestGenerateHash() {
 func (t *testBallotV0Proposal) TestSign() {
 	ib := ProposalV0{
 		BaseBallotV0: BaseBallotV0{
-			node: NewShortAddress("test-for-proposal"),
+			node: base.NewShortAddress("test-for-proposal"),
 		},
 		ProposalFactV0: ProposalFactV0{
 			BaseBallotFactV0: BaseBallotFactV0{
-				height: Height(10),
-				round:  Round(0),
+				height: base.Height(10),
+				round:  base.Round(0),
 			},
 			seals: []valuehash.Hash{
 				valuehash.RandomSHA256(),

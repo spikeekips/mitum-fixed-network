@@ -4,11 +4,13 @@ import (
 	"encoding/json"
 	"time"
 
-	"github.com/spikeekips/mitum/encoder"
-	"github.com/spikeekips/mitum/key"
-	"github.com/spikeekips/mitum/util"
-	"github.com/spikeekips/mitum/valuehash"
 	"golang.org/x/xerrors"
+
+	"github.com/spikeekips/mitum/base"
+	"github.com/spikeekips/mitum/base/key"
+	"github.com/spikeekips/mitum/base/valuehash"
+	"github.com/spikeekips/mitum/util"
+	"github.com/spikeekips/mitum/util/encoder"
 )
 
 type PolicyOperationBodyV0PackerJSON struct {
@@ -52,14 +54,14 @@ func (po *PolicyOperationBodyV0) UnpackJSON(b []byte, enc *encoder.JSONEncoder) 
 
 	var err error
 
-	var threshold Threshold
+	var threshold base.Threshold
 	if len(up.Threshold) != 2 {
 		return xerrors.Errorf("invalid formatted Threshold found: %v", up.Threshold)
 	} else if total := up.Threshold[0]; total < 0 {
 		return xerrors.Errorf("invalid total number of Threshold found: %v", up.Threshold)
 	} else if percent := up.Threshold[1]; percent < 0 {
 		return xerrors.Errorf("invalid percent number of Threshold found: %v", up.Threshold)
-	} else if threshold, err = NewThreshold(uint(total), percent); err != nil {
+	} else if threshold, err = base.NewThreshold(uint(total), percent); err != nil {
 		return err
 	}
 

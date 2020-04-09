@@ -1,6 +1,6 @@
 package isaac
 
-import "github.com/spikeekips/mitum/seal"
+import "github.com/spikeekips/mitum/base/seal"
 
 // NOTE SealValidationChecker should be done before ConsensusStates
 

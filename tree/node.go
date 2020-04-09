@@ -3,7 +3,7 @@ package tree
 import (
 	avlHashable "github.com/spikeekips/avl/hashable"
 
-	"github.com/spikeekips/mitum/hint"
+	"github.com/spikeekips/mitum/util/hint"
 )
 
 type Node interface {

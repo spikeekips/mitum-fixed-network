@@ -3,8 +3,8 @@ package util
 import (
 	"sync"
 
-	"github.com/spikeekips/mitum/errors"
-	"github.com/spikeekips/mitum/logging"
+	"github.com/spikeekips/mitum/util/errors"
+	"github.com/spikeekips/mitum/util/logging"
 )
 
 var (

@@ -6,11 +6,11 @@ import (
 
 	"golang.org/x/xerrors"
 
-	"github.com/spikeekips/mitum/encoder"
-	"github.com/spikeekips/mitum/hint"
-	"github.com/spikeekips/mitum/isaac"
-	"github.com/spikeekips/mitum/logging"
+	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/util"
+	"github.com/spikeekips/mitum/util/encoder"
+	"github.com/spikeekips/mitum/util/hint"
+	"github.com/spikeekips/mitum/util/logging"
 )
 
 var (
@@ -40,7 +40,7 @@ func (sa ContestAddress) IsValid([]byte) error {
 	return nil
 }
 
-func (sa ContestAddress) Equal(a isaac.Address) bool {
+func (sa ContestAddress) Equal(a base.Address) bool {
 	if sa.Hint().Type() != a.Hint().Type() {
 		return false
 	}

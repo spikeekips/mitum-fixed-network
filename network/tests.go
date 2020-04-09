@@ -7,7 +7,7 @@ import (
 
 	"github.com/rs/zerolog"
 
-	"github.com/spikeekips/mitum/logging"
+	"github.com/spikeekips/mitum/util/logging"
 )
 
 var log logging.Logger // nolint

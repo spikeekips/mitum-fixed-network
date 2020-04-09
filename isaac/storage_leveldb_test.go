@@ -10,14 +10,15 @@ import (
 	"github.com/stretchr/testify/suite"
 	"golang.org/x/xerrors"
 
-	"github.com/spikeekips/mitum/encoder"
-	"github.com/spikeekips/mitum/key"
-	"github.com/spikeekips/mitum/localtime"
-	"github.com/spikeekips/mitum/operation"
-	"github.com/spikeekips/mitum/seal"
+	"github.com/spikeekips/mitum/base"
+	"github.com/spikeekips/mitum/base/key"
+	"github.com/spikeekips/mitum/base/operation"
+	"github.com/spikeekips/mitum/base/seal"
+	"github.com/spikeekips/mitum/base/valuehash"
 	"github.com/spikeekips/mitum/storage"
 	"github.com/spikeekips/mitum/util"
-	"github.com/spikeekips/mitum/valuehash"
+	"github.com/spikeekips/mitum/util/encoder"
+	"github.com/spikeekips/mitum/util/localtime"
 )
 
 type testLeveldbStorage struct {
@@ -39,7 +40,7 @@ func (t *testLeveldbStorage) SetupSuite() {
 	_ = t.encs.AddHinter(ManifestV0{})
 	_ = t.encs.AddHinter(BlockConsensusInfoV0{})
 	_ = t.encs.AddHinter(valuehash.SHA256{})
-	_ = t.encs.AddHinter(VoteproofV0{})
+	_ = t.encs.AddHinter(base.VoteproofV0{})
 	_ = t.encs.AddHinter(seal.DummySeal{})
 	_ = t.encs.AddHinter(operation.Seal{})
 	_ = t.encs.AddHinter(operation.KVOperation{})
@@ -73,7 +74,7 @@ func (t *testLeveldbStorage) TestNew() {
 
 func (t *testLeveldbStorage) TestLastBlock() {
 	// store first
-	block, err := NewTestBlockV0(Height(33), Round(0), nil, valuehash.RandomSHA256())
+	block, err := NewTestBlockV0(base.Height(33), base.Round(0), nil, valuehash.RandomSHA256())
 	t.NoError(err)
 
 	t.NotNil(t.storage)
@@ -91,7 +92,7 @@ func (t *testLeveldbStorage) TestLastBlock() {
 
 func (t *testLeveldbStorage) TestLoadBlockByHash() {
 	// store first
-	block, err := NewTestBlockV0(Height(33), Round(0), nil, valuehash.RandomSHA256())
+	block, err := NewTestBlockV0(base.Height(33), base.Round(0), nil, valuehash.RandomSHA256())
 	t.NoError(err)
 
 	t.NotNil(t.storage)
@@ -115,7 +116,7 @@ func (t *testLeveldbStorage) TestLoadBlockByHash() {
 
 func (t *testLeveldbStorage) TestLoadManifestByHash() {
 	// store first
-	block, err := NewTestBlockV0(Height(33), Round(0), nil, valuehash.RandomSHA256())
+	block, err := NewTestBlockV0(base.Height(33), base.Round(0), nil, valuehash.RandomSHA256())
 	t.NoError(err)
 
 	t.NotNil(t.storage)
@@ -136,7 +137,7 @@ func (t *testLeveldbStorage) TestLoadManifestByHash() {
 
 func (t *testLeveldbStorage) TestLoadManifestByHeight() {
 	// store first
-	block, err := NewTestBlockV0(Height(33), Round(0), nil, valuehash.RandomSHA256())
+	block, err := NewTestBlockV0(base.Height(33), base.Round(0), nil, valuehash.RandomSHA256())
 	t.NoError(err)
 
 	t.NotNil(t.storage)
@@ -157,7 +158,7 @@ func (t *testLeveldbStorage) TestLoadManifestByHeight() {
 
 func (t *testLeveldbStorage) TestLoadBlockByHeight() {
 	// store first
-	block, err := NewTestBlockV0(Height(33), Round(0), nil, valuehash.RandomSHA256())
+	block, err := NewTestBlockV0(base.Height(33), base.Round(0), nil, valuehash.RandomSHA256())
 	t.NoError(err)
 
 	t.NotNil(t.storage)
@@ -181,13 +182,14 @@ func (t *testLeveldbStorage) TestLoadINITVoteproof() {
 	}
 
 	// store first
-	voteproof := VoteproofV0{
-		height:     Height(33),
-		round:      Round(3),
-		result:     VoteResultMajority,
-		stage:      StageINIT,
-		finishedAt: localtime.Now(),
-	}
+	threshold, _ := base.NewThreshold(2, 67)
+	voteproof := base.NewVoteproofV0(
+		base.Height(33),
+		base.Round(3),
+		threshold,
+		base.StageINIT,
+	)
+	voteproof.SetResult(base.VoteResultMajority).Finish()
 
 	t.NoError(t.storage.NewINITVoteproof(voteproof))
 
@@ -195,7 +197,7 @@ func (t *testLeveldbStorage) TestLoadINITVoteproof() {
 	t.NoError(err)
 	t.NotNil(loaded)
 
-	t.Equal(voteproof.Stage(), StageINIT)
+	t.Equal(voteproof.Stage(), base.StageINIT)
 	t.Equal(voteproof.Height(), loaded.Height())
 	t.Equal(voteproof.Round(), loaded.Round())
 	t.Equal(voteproof.Result(), loaded.Result())
@@ -210,30 +212,33 @@ func (t *testLeveldbStorage) TestLoadACCEPTVoteproof() {
 	}
 
 	// store first
-	ivp := VoteproofV0{
-		height:     Height(33),
-		round:      Round(3),
-		result:     VoteResultMajority,
-		stage:      StageINIT,
-		finishedAt: localtime.Now(),
-	}
+	threshold, _ := base.NewThreshold(2, 67)
+	ivp := base.NewVoteproofV0(
+		base.Height(33),
+		base.Round(3),
+		threshold,
+		base.StageINIT,
+	)
+
+	ivp.SetResult(base.VoteResultMajority).Finish()
 
 	t.NoError(t.storage.NewINITVoteproof(ivp))
 
-	avp := VoteproofV0{
-		height:     Height(33),
-		round:      Round(3),
-		result:     VoteResultMajority,
-		stage:      StageACCEPT,
-		finishedAt: localtime.Now(),
-	}
+	avp := base.NewVoteproofV0(
+		base.Height(33),
+		base.Round(3),
+		threshold,
+		base.StageACCEPT,
+	)
+	avp.SetResult(base.VoteResultMajority).Finish()
+
 	t.NoError(t.storage.NewACCEPTVoteproof(avp))
 
 	loaded, err := t.storage.LastACCEPTVoteproof()
 	t.NoError(err)
 	t.NotNil(loaded)
 
-	t.Equal(avp.Stage(), StageACCEPT)
+	t.Equal(avp.Stage(), base.StageACCEPT)
 	t.Equal(avp.Height(), loaded.Height())
 	t.Equal(avp.Round(), loaded.Round())
 	t.Equal(avp.Result(), loaded.Result())
@@ -248,31 +253,33 @@ func (t *testLeveldbStorage) TestLoadVoteproofs() {
 	}
 
 	// store first
-	ivp := VoteproofV0{
-		height:     Height(33),
-		round:      Round(3),
-		result:     VoteResultMajority,
-		stage:      StageINIT,
-		finishedAt: localtime.Now(),
-	}
+	threshold, _ := base.NewThreshold(2, 67)
+	ivp := base.NewVoteproofV0(
+		base.Height(33),
+		base.Round(3),
+		threshold,
+		base.StageINIT,
+	)
+	ivp.SetResult(base.VoteResultMajority).Finish()
 
 	t.NoError(t.storage.NewINITVoteproof(ivp))
 
-	avp := VoteproofV0{
-		height:     Height(33),
-		round:      Round(3),
-		result:     VoteResultMajority,
-		stage:      StageACCEPT,
-		finishedAt: localtime.Now(),
-	}
+	avp := base.NewVoteproofV0(
+		base.Height(33),
+		base.Round(3),
+		threshold,
+		base.StageACCEPT,
+	)
+	avp.SetResult(base.VoteResultMajority).Finish()
+
 	t.NoError(t.storage.NewACCEPTVoteproof(avp))
 
 	loaded, err := t.storage.LastACCEPTVoteproof()
 	t.NoError(err)
 	t.NotNil(loaded)
 
-	var voteproofs []Voteproof
-	t.storage.Voteproofs(func(voteproof Voteproof) (bool, error) {
+	var voteproofs []base.Voteproof
+	t.storage.Voteproofs(func(voteproof base.Voteproof) (bool, error) {
 		voteproofs = append(voteproofs, voteproof)
 
 		return true, nil
@@ -467,7 +474,7 @@ func (t *testLeveldbStorage) TestUnStagedOperationSeals() {
 		unstaged = append(unstaged, sl.Hash())
 	}
 
-	block, err := NewTestBlockV0(Height(33), Round(0), valuehash.RandomSHA256(), valuehash.RandomSHA256())
+	block, err := NewTestBlockV0(base.Height(33), base.Round(0), valuehash.RandomSHA256(), valuehash.RandomSHA256())
 	t.NoError(err)
 
 	bs, err := t.storage.OpenBlockStorage(block)

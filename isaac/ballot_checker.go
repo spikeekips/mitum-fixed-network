@@ -1,20 +1,21 @@
 package isaac
 
 import (
-	"github.com/spikeekips/mitum/logging"
-	"github.com/spikeekips/mitum/operation"
-	"github.com/spikeekips/mitum/seal"
+	"github.com/spikeekips/mitum/base"
+	"github.com/spikeekips/mitum/base/operation"
+	"github.com/spikeekips/mitum/base/seal"
 	"github.com/spikeekips/mitum/util"
+	"github.com/spikeekips/mitum/util/logging"
 )
 
 type BallotChecker struct {
 	*logging.Logging
-	suffrage   Suffrage
+	suffrage   base.Suffrage
 	localstate *Localstate
 	ballot     Ballot
 }
 
-func NewBallotChecker(ballot Ballot, localstate *Localstate, suffrage Suffrage) *BallotChecker {
+func NewBallotChecker(ballot Ballot, localstate *Localstate, suffrage base.Suffrage) *BallotChecker {
 	return &BallotChecker{
 		Logging: logging.NewLogging(func(c logging.Context) logging.Emitter {
 			return c.Str("module", "ballot-checker")
@@ -47,7 +48,7 @@ func (bc *BallotChecker) CheckWithLastBlock() (bool, error) {
 }
 
 func (bc *BallotChecker) CheckVoteproof() (bool, error) {
-	var voteproof Voteproof
+	var voteproof base.Voteproof
 	switch t := bc.ballot.(type) {
 	case INITBallot:
 		voteproof = t.Voteproof()

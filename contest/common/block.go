@@ -1,13 +1,14 @@
 package common
 
 import (
+	"github.com/spikeekips/mitum/base"
+	"github.com/spikeekips/mitum/base/valuehash"
 	"github.com/spikeekips/mitum/isaac"
-	"github.com/spikeekips/mitum/valuehash"
 )
 
 func NewContestBlock(
-	height isaac.Height,
-	round isaac.Round,
+	height base.Height,
+	round base.Round,
 	proposal,
 	previousBlock valuehash.Hash,
 ) (isaac.BlockV0, error) {

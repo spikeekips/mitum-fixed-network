@@ -5,18 +5,19 @@ import (
 
 	"golang.org/x/xerrors"
 
-	"github.com/spikeekips/mitum/key"
-	"github.com/spikeekips/mitum/localtime"
+	"github.com/spikeekips/mitum/base"
+	"github.com/spikeekips/mitum/base/key"
+	"github.com/spikeekips/mitum/base/valuehash"
 	"github.com/spikeekips/mitum/util"
-	"github.com/spikeekips/mitum/valuehash"
+	"github.com/spikeekips/mitum/util/localtime"
 )
 
 type BaseBallotFactV0 struct {
-	height Height
-	round  Round
+	height base.Height
+	round  base.Round
 }
 
-func NewBaseBallotFactV0(height Height, round Round) BaseBallotFactV0 {
+func NewBaseBallotFactV0(height base.Height, round base.Round) BaseBallotFactV0 {
 	return BaseBallotFactV0{
 		height: height,
 		round:  round,
@@ -46,11 +47,11 @@ func (bf BaseBallotFactV0) Bytes() []byte {
 	)
 }
 
-func (bf BaseBallotFactV0) Height() Height {
+func (bf BaseBallotFactV0) Height() base.Height {
 	return bf.height
 }
 
-func (bf BaseBallotFactV0) Round() Round {
+func (bf BaseBallotFactV0) Round() base.Round {
 	return bf.round
 }
 
@@ -60,12 +61,12 @@ type BaseBallotV0 struct {
 	signer        key.Publickey
 	signature     key.Signature
 	signedAt      time.Time
-	node          Address
+	node          base.Address
 	factHash      valuehash.Hash
 	factSignature key.Signature
 }
 
-func NewBaseBallotV0(node Address) BaseBallotV0 {
+func NewBaseBallotV0(node base.Address) BaseBallotV0 {
 	return BaseBallotV0{
 		node: node,
 	}
@@ -105,7 +106,7 @@ func (bb BaseBallotV0) FactSignature() key.Signature {
 	return bb.factSignature
 }
 
-func (bb BaseBallotV0) Node() Address {
+func (bb BaseBallotV0) Node() base.Address {
 	return bb.node
 }
 

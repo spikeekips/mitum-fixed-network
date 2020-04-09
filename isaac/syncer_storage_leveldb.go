@@ -5,9 +5,10 @@ import (
 
 	"github.com/syndtr/goleveldb/leveldb"
 
-	"github.com/spikeekips/mitum/logging"
+	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/storage"
 	"github.com/spikeekips/mitum/util"
+	"github.com/spikeekips/mitum/util/logging"
 )
 
 type LeveldbSyncerStorage struct {
@@ -15,8 +16,8 @@ type LeveldbSyncerStorage struct {
 	*logging.Logging
 	main       *LeveldbStorage
 	storage    *LeveldbStorage
-	heightFrom Height
-	heightTo   Height
+	heightFrom base.Height
+	heightTo   base.Height
 }
 
 func NewLeveldbSyncerStorage(main *LeveldbStorage) *LeveldbSyncerStorage {
@@ -26,18 +27,18 @@ func NewLeveldbSyncerStorage(main *LeveldbStorage) *LeveldbSyncerStorage {
 		}),
 		main:       main,
 		storage:    NewMemStorage(main.Encoders(), main.Encoder()),
-		heightFrom: Height(-1),
+		heightFrom: base.Height(-1),
 	}
 }
 
-func (st *LeveldbSyncerStorage) manifestKey(height Height) []byte {
+func (st *LeveldbSyncerStorage) manifestKey(height base.Height) []byte {
 	return util.ConcatBytesSlice(
 		leveldbTmpPrefix,
 		leveldbManifestHeightKey(height),
 	)
 }
 
-func (st *LeveldbSyncerStorage) Manifest(height Height) (Manifest, error) {
+func (st *LeveldbSyncerStorage) Manifest(height base.Height) (Manifest, error) {
 	raw, err := st.storage.DB().Get(st.manifestKey(height), nil)
 	if err != nil {
 		return nil, storage.LeveldbWrapError(err)
@@ -46,7 +47,7 @@ func (st *LeveldbSyncerStorage) Manifest(height Height) (Manifest, error) {
 	return st.storage.loadManifest(raw)
 }
 
-func (st *LeveldbSyncerStorage) Manifests(heights []Height) ([]Manifest, error) {
+func (st *LeveldbSyncerStorage) Manifests(heights []base.Height) ([]Manifest, error) {
 	var bs []Manifest
 	for i := range heights {
 		if b, err := st.Manifest(heights[i]); err != nil {
@@ -61,7 +62,7 @@ func (st *LeveldbSyncerStorage) Manifests(heights []Height) ([]Manifest, error) 
 
 func (st *LeveldbSyncerStorage) SetManifests(manifests []Manifest) error {
 	st.Log().VerboseFunc(func(e *logging.Event) logging.Emitter {
-		var heights []Height
+		var heights []base.Height
 		for i := range manifests {
 			heights = append(heights, manifests[i].Height())
 		}
@@ -86,15 +87,15 @@ func (st *LeveldbSyncerStorage) SetManifests(manifests []Manifest) error {
 	return storage.LeveldbWrapError(st.storage.DB().Write(batch, nil))
 }
 
-func (st *LeveldbSyncerStorage) HasBlock(height Height) (bool, error) {
+func (st *LeveldbSyncerStorage) HasBlock(height base.Height) (bool, error) {
 	return st.storage.db.Has(leveldbBlockHeightKey(height), nil)
 }
 
-func (st *LeveldbSyncerStorage) Block(height Height) (Block, error) {
+func (st *LeveldbSyncerStorage) Block(height base.Height) (Block, error) {
 	return st.storage.BlockByHeight(height)
 }
 
-func (st *LeveldbSyncerStorage) Blocks(heights []Height) ([]Block, error) {
+func (st *LeveldbSyncerStorage) Blocks(heights []base.Height) ([]Block, error) {
 	var bs []Block
 	for i := range heights {
 		if b, err := st.storage.BlockByHeight(heights[i]); err != nil {
@@ -109,7 +110,7 @@ func (st *LeveldbSyncerStorage) Blocks(heights []Height) ([]Block, error) {
 
 func (st *LeveldbSyncerStorage) SetBlocks(blocks []Block) error {
 	st.Log().VerboseFunc(func(e *logging.Event) logging.Emitter {
-		var heights []Height
+		var heights []base.Height
 		for i := range blocks {
 			heights = append(heights, blocks[i].Height())
 		}
@@ -143,7 +144,7 @@ func (st *LeveldbSyncerStorage) Commit() error {
 		Msg("trying to commit blocks")
 
 	for i := st.heightFrom.Int64(); i <= st.heightTo.Int64(); i++ {
-		if block, err := st.Block(Height(i)); err != nil {
+		if block, err := st.Block(base.Height(i)); err != nil {
 			return err
 		} else if err := st.commitBlock(block); err != nil {
 			st.Log().Error().Err(err).Int64("height", i).Msg("failed to commit block")
@@ -168,7 +169,7 @@ func (st *LeveldbSyncerStorage) commitBlock(block Block) error {
 	return nil
 }
 
-func (st *LeveldbSyncerStorage) checkHeight(height Height) {
+func (st *LeveldbSyncerStorage) checkHeight(height base.Height) {
 	st.Lock()
 	defer st.Unlock()
 

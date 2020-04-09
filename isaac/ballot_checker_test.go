@@ -3,6 +3,7 @@ package isaac
 import (
 	"testing"
 
+	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/util"
 	"github.com/stretchr/testify/suite"
 )
@@ -10,7 +11,7 @@ import (
 type testBallotChecker struct {
 	baseTestStateHandler
 
-	suf Suffrage
+	suf base.Suffrage
 }
 
 func (t *testBallotChecker) SetupTest() {
@@ -22,7 +23,7 @@ func (t *testBallotChecker) SetupTest() {
 func (t *testBallotChecker) TestNew() {
 	t.True(t.suf.IsInside(t.localstate.Node().Address()))
 
-	ib, err := NewINITBallotV0FromLocalstate(t.localstate, Round(0))
+	ib, err := NewINITBallotV0FromLocalstate(t.localstate, base.Round(0))
 	t.NoError(err)
 
 	bc := NewBallotChecker(ib, t.localstate, t.suf)
@@ -36,7 +37,7 @@ func (t *testBallotChecker) TestIsInSuffrage() {
 	{ // from localstate
 		t.True(t.suf.IsInside(t.localstate.Node().Address()))
 
-		ib, err := NewINITBallotV0FromLocalstate(t.localstate, Round(0))
+		ib, err := NewINITBallotV0FromLocalstate(t.localstate, base.Round(0))
 		t.NoError(err)
 
 		bc := NewBallotChecker(ib, t.localstate, t.suf)
@@ -59,7 +60,7 @@ func (t *testBallotChecker) TestIsInSuffrage() {
 		unknown, _ := t.states()
 		t.False(t.suf.IsInside(unknown.Node().Address()))
 
-		ib, err := NewINITBallotV0FromLocalstate(unknown, Round(0))
+		ib, err := NewINITBallotV0FromLocalstate(unknown, base.Round(0))
 		t.NoError(err)
 
 		bc := NewBallotChecker(ib, t.localstate, t.suf)
@@ -103,7 +104,7 @@ func (t *testBallotChecker) TestCheckWithLastBlock() {
 	}
 
 	{ // lower Height
-		ib, err := NewINITBallotV0FromLocalstate(t.localstate, Round(0))
+		ib, err := NewINITBallotV0FromLocalstate(t.localstate, base.Round(0))
 		t.NoError(err)
 
 		ib.INITBallotFactV0.height = ib.INITBallotFactV0.height - 1

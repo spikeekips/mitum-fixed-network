@@ -5,12 +5,13 @@ import (
 
 	"golang.org/x/xerrors"
 
-	"github.com/spikeekips/mitum/hint"
-	"github.com/spikeekips/mitum/key"
-	"github.com/spikeekips/mitum/operation"
+	"github.com/spikeekips/mitum/base"
+	"github.com/spikeekips/mitum/base/key"
+	"github.com/spikeekips/mitum/base/operation"
+	"github.com/spikeekips/mitum/base/valuehash"
 	"github.com/spikeekips/mitum/state"
 	"github.com/spikeekips/mitum/util"
-	"github.com/spikeekips/mitum/valuehash"
+	"github.com/spikeekips/mitum/util/hint"
 )
 
 var (
@@ -27,7 +28,7 @@ const PolicyOperationKey = "network_policy"
 func DefaultPolicy() PolicyOperationBodyV0 {
 	return PolicyOperationBodyV0{
 		// NOTE default threshold assumes only one node exists, it means the network is just booted.
-		Threshold:                        MustNewThreshold(1, 100),
+		Threshold:                        base.MustNewThreshold(1, 100),
 		TimeoutWaitingProposal:           time.Second * 5,
 		IntervalBroadcastingINITBallot:   time.Second * 1,
 		IntervalBroadcastingProposal:     time.Second * 1,
@@ -39,14 +40,14 @@ func DefaultPolicy() PolicyOperationBodyV0 {
 }
 
 type PolicyOperationBodyV0 struct {
-	Threshold                        Threshold     `json:"threshold"`
-	TimeoutWaitingProposal           time.Duration `json:"timeout_waiting_proposal"`
-	IntervalBroadcastingINITBallot   time.Duration `json:"interval_broadcasting_init_ballot"`
-	IntervalBroadcastingProposal     time.Duration `json:"interval_broadcasting_proposal"`
-	WaitBroadcastingACCEPTBallot     time.Duration `json:"wait_broadcasting_accept_ballot"`
-	IntervalBroadcastingACCEPTBallot time.Duration `json:"interval_broadcasting_accept_ballot"`
-	NumberOfActingSuffrageNodes      uint          `json:"number_of_acting_suffrage_nodes"`
-	TimespanValidBallot              time.Duration `json:"timespan_valid_ballot"`
+	Threshold                        base.Threshold `json:"threshold"`
+	TimeoutWaitingProposal           time.Duration  `json:"timeout_waiting_proposal"`
+	IntervalBroadcastingINITBallot   time.Duration  `json:"interval_broadcasting_init_ballot"`
+	IntervalBroadcastingProposal     time.Duration  `json:"interval_broadcasting_proposal"`
+	WaitBroadcastingACCEPTBallot     time.Duration  `json:"wait_broadcasting_accept_ballot"`
+	IntervalBroadcastingACCEPTBallot time.Duration  `json:"interval_broadcasting_accept_ballot"`
+	NumberOfActingSuffrageNodes      uint           `json:"number_of_acting_suffrage_nodes"`
+	TimespanValidBallot              time.Duration  `json:"timespan_valid_ballot"`
 }
 
 func (po PolicyOperationBodyV0) Hint() hint.Hint {
@@ -197,7 +198,7 @@ func (spo SetPolicyOperationV0) Hint() hint.Hint {
 	return SetPolicyOperationV0Hint
 }
 
-func (spo SetPolicyOperationV0) Fact() operation.Fact {
+func (spo SetPolicyOperationV0) Fact() base.Fact {
 	return spo.SetPolicyOperationFactV0
 }
 

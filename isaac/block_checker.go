@@ -1,7 +1,7 @@
 package isaac
 
 import (
-	"github.com/spikeekips/mitum/logging"
+	"github.com/spikeekips/mitum/util/logging"
 	"golang.org/x/xerrors"
 )
 

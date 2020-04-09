@@ -3,13 +3,13 @@ package isaac
 import (
 	"golang.org/x/xerrors"
 
-	"github.com/spikeekips/mitum/hint"
-	"github.com/spikeekips/mitum/isvalid"
-	"github.com/spikeekips/mitum/key"
-	"github.com/spikeekips/mitum/localtime"
-	"github.com/spikeekips/mitum/operation"
+	"github.com/spikeekips/mitum/base"
+	"github.com/spikeekips/mitum/base/key"
+	"github.com/spikeekips/mitum/base/valuehash"
 	"github.com/spikeekips/mitum/util"
-	"github.com/spikeekips/mitum/valuehash"
+	"github.com/spikeekips/mitum/util/hint"
+	"github.com/spikeekips/mitum/util/isvalid"
+	"github.com/spikeekips/mitum/util/localtime"
 )
 
 var (
@@ -20,14 +20,14 @@ var (
 type INITBallotFactV0 struct {
 	BaseBallotFactV0
 	previousBlock valuehash.Hash
-	previousRound Round
+	previousRound base.Round
 }
 
 func NewINITBallotFactV0(
-	height Height,
-	round Round,
+	height base.Height,
+	round base.Round,
 	previousBlock valuehash.Hash,
-	previousRound Round,
+	previousRound base.Round,
 ) INITBallotFactV0 {
 	return INITBallotFactV0{
 		BaseBallotFactV0: NewBaseBallotFactV0(height, round),
@@ -67,23 +67,23 @@ func (ibf INITBallotFactV0) PreviousBlock() valuehash.Hash {
 	return ibf.previousBlock
 }
 
-func (ibf INITBallotFactV0) PreviousRound() Round {
+func (ibf INITBallotFactV0) PreviousRound() base.Round {
 	return ibf.previousRound
 }
 
 type INITBallotV0 struct {
 	BaseBallotV0
 	INITBallotFactV0
-	voteproof Voteproof
+	voteproof base.Voteproof
 }
 
 func NewINITBallotV0(
 	localstate *Localstate,
-	height Height,
-	round Round,
+	height base.Height,
+	round base.Round,
 	previousBlock valuehash.Hash,
-	previousRound Round,
-	voteproof Voteproof,
+	previousRound base.Round,
+	voteproof base.Voteproof,
 	networkID []byte,
 ) (INITBallotV0, error) {
 	ib := INITBallotV0{
@@ -106,7 +106,7 @@ func NewINITBallotV0(
 	return ib, nil
 }
 
-func NewINITBallotV0FromLocalstate(localstate *Localstate, round Round) (INITBallotV0, error) {
+func NewINITBallotV0FromLocalstate(localstate *Localstate, round base.Round) (INITBallotV0, error) {
 	lastBlock := localstate.LastBlock()
 	if lastBlock == nil {
 		return INITBallotV0{}, xerrors.Errorf("lastBlock is empty")
@@ -124,7 +124,7 @@ func NewINITBallotV0FromLocalstate(localstate *Localstate, round Round) (INITBal
 		),
 	}
 
-	var voteproof Voteproof
+	var voteproof base.Voteproof
 	if round == 0 {
 		voteproof = localstate.LastACCEPTVoteproof()
 	} else {
@@ -147,12 +147,12 @@ func (ib INITBallotV0) Hint() hint.Hint {
 	return INITBallotV0Hint
 }
 
-func (ib INITBallotV0) Stage() Stage {
-	return StageINIT
+func (ib INITBallotV0) Stage() base.Stage {
+	return base.StageINIT
 }
 
 func (ib INITBallotV0) IsValid(b []byte) error {
-	if ib.Height() == Height(0) {
+	if ib.Height() == base.Height(0) {
 		if ib.voteproof != nil {
 			return xerrors.Errorf("not empty Voteproof for genesis INITBallot")
 		}
@@ -184,7 +184,7 @@ func (ib INITBallotV0) IsValid(b []byte) error {
 	return nil
 }
 
-func (ib INITBallotV0) Voteproof() Voteproof {
+func (ib INITBallotV0) Voteproof() base.Voteproof {
 	return ib.voteproof
 }
 
@@ -198,14 +198,14 @@ func (ib INITBallotV0) GenerateBodyHash() (valuehash.Hash, error) {
 	}
 
 	var vb []byte
-	if ib.Height() != Height(0) {
+	if ib.Height() != base.Height(0) {
 		vb = ib.voteproof.Bytes()
 	}
 
 	return valuehash.NewSHA256(util.ConcatBytesSlice(ib.INITBallotFactV0.Bytes(), vb)), nil
 }
 
-func (ib INITBallotV0) Fact() operation.Fact {
+func (ib INITBallotV0) Fact() base.Fact {
 	return ib.INITBallotFactV0
 }
 

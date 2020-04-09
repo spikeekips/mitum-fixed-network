@@ -3,17 +3,18 @@ package isaac
 import (
 	"encoding/json"
 
-	"github.com/spikeekips/mitum/encoder"
-	"github.com/spikeekips/mitum/localtime"
+	"github.com/spikeekips/mitum/base"
+	"github.com/spikeekips/mitum/base/valuehash"
 	"github.com/spikeekips/mitum/util"
-	"github.com/spikeekips/mitum/valuehash"
+	"github.com/spikeekips/mitum/util/encoder"
+	"github.com/spikeekips/mitum/util/localtime"
 )
 
 type ManifestV0PackJSON struct {
 	encoder.JSONPackHintedHead
 	H  valuehash.Hash     `json:"hash"`
-	HT Height             `json:"height"`
-	RD Round              `json:"round"`
+	HT base.Height        `json:"height"`
+	RD base.Round         `json:"round"`
 	PR valuehash.Hash     `json:"proposal"`
 	PB valuehash.Hash     `json:"previous_block"`
 	BO valuehash.Hash     `json:"block_operations"`
@@ -38,8 +39,8 @@ func (bm ManifestV0) MarshalJSON() ([]byte, error) {
 type ManifestV0UnpackJSON struct {
 	encoder.JSONPackHintedHead
 	H  json.RawMessage    `json:"hash"`
-	HT Height             `json:"height"`
-	RD Round              `json:"round"`
+	HT base.Height        `json:"height"`
+	RD base.Round         `json:"round"`
 	PR json.RawMessage    `json:"proposal"`
 	PB json.RawMessage    `json:"previous_block"`
 	BO json.RawMessage    `json:"block_operations"`

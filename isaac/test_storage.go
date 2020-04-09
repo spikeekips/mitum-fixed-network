@@ -5,7 +5,7 @@ package isaac
 import (
 	"github.com/spikeekips/mitum/tree"
 
-	"github.com/spikeekips/mitum/valuehash"
+	"github.com/spikeekips/mitum/base/valuehash"
 )
 
 type DummyBlockStorage struct {

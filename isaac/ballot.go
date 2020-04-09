@@ -1,10 +1,11 @@
 package isaac
 
 import (
-	"github.com/spikeekips/mitum/hint"
-	"github.com/spikeekips/mitum/logging"
-	"github.com/spikeekips/mitum/operation"
-	"github.com/spikeekips/mitum/valuehash"
+	"github.com/spikeekips/mitum/base"
+	"github.com/spikeekips/mitum/base/operation"
+	"github.com/spikeekips/mitum/base/valuehash"
+	"github.com/spikeekips/mitum/util/hint"
+	"github.com/spikeekips/mitum/util/logging"
 )
 
 var (
@@ -21,17 +22,17 @@ var (
 type Ballot interface {
 	operation.FactSeal
 	logging.LogHintedMarshaler
-	Stage() Stage
-	Height() Height
-	Round() Round
-	Node() Address
+	Stage() base.Stage
+	Height() base.Height
+	Round() base.Round
+	Node() base.Address
 }
 
 type INITBallot interface {
 	Ballot
 	PreviousBlock() valuehash.Hash
-	PreviousRound() Round
-	Voteproof() Voteproof
+	PreviousRound() base.Round
+	Voteproof() base.Voteproof
 }
 
 type Proposal interface {
@@ -50,13 +51,13 @@ type ACCEPTBallot interface {
 	Ballot
 	Proposal() valuehash.Hash
 	NewBlock() valuehash.Hash
-	Voteproof() Voteproof
+	Voteproof() base.Voteproof
 }
 
 type INITBallotFact interface {
 	valuehash.Hasher
 	PreviousBlock() valuehash.Hash
-	PreviousRound() Round
+	PreviousRound() base.Round
 }
 
 type SIGNBallotFact interface {

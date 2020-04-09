@@ -3,8 +3,9 @@ package isaac
 import (
 	"sync"
 
-	"github.com/spikeekips/mitum/operation"
-	"github.com/spikeekips/mitum/valuehash"
+	"github.com/spikeekips/mitum/base"
+	"github.com/spikeekips/mitum/base/operation"
+	"github.com/spikeekips/mitum/base/valuehash"
 )
 
 type ProposalMaker struct {
@@ -67,7 +68,7 @@ func (pm *ProposalMaker) operations() ([]valuehash.Hash, []valuehash.Hash, error
 	return operations, seals, nil
 }
 
-func (pm *ProposalMaker) Proposal(round Round) (Proposal, error) {
+func (pm *ProposalMaker) Proposal(round base.Round) (Proposal, error) {
 	pm.Lock()
 	defer pm.Unlock()
 

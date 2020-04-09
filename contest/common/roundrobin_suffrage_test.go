@@ -5,6 +5,7 @@ import (
 
 	"github.com/stretchr/testify/suite"
 
+	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/isaac"
 )
 
@@ -25,7 +26,7 @@ func (t *testRoundrobinSuffrage) TestNew() {
 	sf := NewRoundrobinSuffrage(localstate, 10)
 	t.NotNil(sf)
 
-	t.Implements((*isaac.Suffrage)(nil), sf)
+	t.Implements((*base.Suffrage)(nil), sf)
 }
 
 func (t *testRoundrobinSuffrage) TestActingSuffrage() {
@@ -43,7 +44,7 @@ func (t *testRoundrobinSuffrage) TestActingSuffrage() {
 
 	sf := NewRoundrobinSuffrage(localstate, 10)
 
-	af := sf.Acting(isaac.Height(33), isaac.Round(0))
+	af := sf.Acting(base.Height(33), base.Round(0))
 	t.NotNil(af)
 	t.Equal(int(localstate.Policy().NumberOfActingSuffrageNodes()), len(af.Nodes()))
 
@@ -62,10 +63,10 @@ func (t *testRoundrobinSuffrage) TestActingSuffrage() {
 		t.True(found)
 	}
 
-	t.False(sf.IsActing(isaac.Height(33), isaac.Round(0), nodes[0].Address()))
-	t.False(sf.IsActing(isaac.Height(33), isaac.Round(0), nodes[1].Address()))
-	t.True(sf.IsActing(isaac.Height(33), isaac.Round(0), nodes[2].Address()))
-	t.True(sf.IsProposer(isaac.Height(33), isaac.Round(0), nodes[2].Address()))
+	t.False(sf.IsActing(base.Height(33), base.Round(0), nodes[0].Address()))
+	t.False(sf.IsActing(base.Height(33), base.Round(0), nodes[1].Address()))
+	t.True(sf.IsActing(base.Height(33), base.Round(0), nodes[2].Address()))
+	t.True(sf.IsProposer(base.Height(33), base.Round(0), nodes[2].Address()))
 }
 
 func (t *testRoundrobinSuffrage) TestActingSuffrageNotSufficient() {
@@ -80,7 +81,7 @@ func (t *testRoundrobinSuffrage) TestActingSuffrageNotSufficient() {
 
 	sf := NewRoundrobinSuffrage(localstate, 10)
 
-	af := sf.Acting(isaac.Height(33), isaac.Round(0))
+	af := sf.Acting(base.Height(33), base.Round(0))
 	t.NotNil(af)
 	t.Equal(len(nodes)+1, len(af.Nodes()))
 

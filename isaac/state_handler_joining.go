@@ -5,9 +5,10 @@ import (
 
 	"golang.org/x/xerrors"
 
-	"github.com/spikeekips/mitum/localtime"
-	"github.com/spikeekips/mitum/logging"
-	"github.com/spikeekips/mitum/seal"
+	"github.com/spikeekips/mitum/base"
+	"github.com/spikeekips/mitum/base/seal"
+	"github.com/spikeekips/mitum/util/localtime"
+	"github.com/spikeekips/mitum/util/logging"
 )
 
 /*
@@ -53,7 +54,7 @@ strategy,
 */
 type StateJoiningHandler struct {
 	*BaseStateHandler
-	cr Round
+	cr base.Round
 }
 
 func NewStateJoiningHandler(
@@ -65,7 +66,7 @@ func NewStateJoiningHandler(
 	}
 
 	cs := &StateJoiningHandler{
-		BaseStateHandler: NewBaseStateHandler(localstate, proposalProcessor, StateJoining),
+		BaseStateHandler: NewBaseStateHandler(localstate, proposalProcessor, base.StateJoining),
 	}
 	cs.BaseStateHandler.Logging = logging.NewLogging(func(c logging.Context) logging.Emitter {
 		return c.Str("module", "consensus-state-joining-handler")
@@ -120,14 +121,14 @@ func (cs *StateJoiningHandler) Deactivate(ctx StateChangeContext) error {
 	return nil
 }
 
-func (cs *StateJoiningHandler) currentRound() Round {
+func (cs *StateJoiningHandler) currentRound() base.Round {
 	cs.RLock()
 	defer cs.RUnlock()
 
 	return cs.cr
 }
 
-func (cs *StateJoiningHandler) setCurrentRound(round Round) {
+func (cs *StateJoiningHandler) setCurrentRound(round base.Round) {
 	cs.Lock()
 	defer cs.Unlock()
 
@@ -137,7 +138,7 @@ func (cs *StateJoiningHandler) setCurrentRound(round Round) {
 // NewSeal only cares on INIT ballot and it's Voteproof.
 func (cs *StateJoiningHandler) NewSeal(sl seal.Seal) error {
 	var ballot Ballot
-	var voteproof Voteproof
+	var voteproof base.Voteproof
 	switch t := sl.(type) {
 	case Proposal:
 		return cs.handleProposal(t)
@@ -159,11 +160,11 @@ func (cs *StateJoiningHandler) NewSeal(sl seal.Seal) error {
 	l := loggerWithVoteproof(voteproof, loggerWithBallot(ballot, cs.Log()))
 	l.Debug().Msg("got ballot")
 
-	if ballot.Stage() == StageINIT {
+	if ballot.Stage() == base.StageINIT {
 		switch voteproof.Stage() {
-		case StageACCEPT:
+		case base.StageACCEPT:
 			return cs.handleINITBallotAndACCEPTVoteproof(ballot.(INITBallot), voteproof)
-		case StageINIT:
+		case base.StageINIT:
 			return cs.handleINITBallotAndINITVoteproof(ballot.(INITBallot), voteproof)
 		default:
 			err := xerrors.Errorf("invalid Voteproof stage found")
@@ -171,9 +172,9 @@ func (cs *StateJoiningHandler) NewSeal(sl seal.Seal) error {
 
 			return err
 		}
-	} else if ballot.Stage() == StageACCEPT {
+	} else if ballot.Stage() == base.StageACCEPT {
 		switch voteproof.Stage() {
-		case StageINIT:
+		case base.StageINIT:
 			return cs.handleACCEPTBallotAndINITVoteproof(ballot.(ACCEPTBallot), voteproof)
 		default:
 			err := xerrors.Errorf("invalid Voteproof stage found")
@@ -201,7 +202,7 @@ func (cs *StateJoiningHandler) handleProposal(proposal Proposal) error {
 	return nil
 }
 
-func (cs *StateJoiningHandler) handleINITBallotAndACCEPTVoteproof(ballot INITBallot, voteproof Voteproof) error {
+func (cs *StateJoiningHandler) handleINITBallotAndACCEPTVoteproof(ballot INITBallot, voteproof base.Voteproof) error {
 	l := loggerWithVoteproof(voteproof, loggerWithBallot(ballot, cs.Log()))
 	l.Debug().Msg("INIT Ballot + ACCEPT Voteproof")
 
@@ -212,7 +213,7 @@ func (cs *StateJoiningHandler) handleINITBallotAndACCEPTVoteproof(ballot INITBal
 		l.Debug().
 			Msgf("Ballot.Height() is higher than expected, %d + 1; moves to syncing", lastBlock.Height())
 
-		return cs.ChangeState(StateSyncing, voteproof, ballot)
+		return cs.ChangeState(base.StateSyncing, voteproof, ballot)
 	case d == 0:
 		l.Debug().Msg("same height; keep waiting CVP")
 
@@ -225,7 +226,7 @@ func (cs *StateJoiningHandler) handleINITBallotAndACCEPTVoteproof(ballot INITBal
 	}
 }
 
-func (cs *StateJoiningHandler) handleINITBallotAndINITVoteproof(ballot INITBallot, voteproof Voteproof) error {
+func (cs *StateJoiningHandler) handleINITBallotAndINITVoteproof(ballot INITBallot, voteproof base.Voteproof) error {
 	l := loggerWithVoteproof(voteproof, loggerWithBallot(ballot, cs.Log()))
 	l.Debug().Msg("INIT Ballot + INIT Voteproof")
 
@@ -254,7 +255,7 @@ func (cs *StateJoiningHandler) handleINITBallotAndINITVoteproof(ballot INITBallo
 		l.Debug().
 			Msgf("ballotVoteproof.Height() is higher than expected, %d + 1; moves to syncing", lastBlock.Height())
 
-		return cs.ChangeState(StateSyncing, voteproof, ballot)
+		return cs.ChangeState(base.StateSyncing, voteproof, ballot)
 	default:
 		l.Debug().
 			Msgf("ballotVoteproof.Height() is lower than expected, %d + 1; ignore it", lastBlock.Height())
@@ -263,7 +264,7 @@ func (cs *StateJoiningHandler) handleINITBallotAndINITVoteproof(ballot INITBallo
 	}
 }
 
-func (cs *StateJoiningHandler) handleACCEPTBallotAndINITVoteproof(ballot ACCEPTBallot, voteproof Voteproof) error {
+func (cs *StateJoiningHandler) handleACCEPTBallotAndINITVoteproof(ballot ACCEPTBallot, voteproof base.Voteproof) error {
 	l := loggerWithVoteproof(voteproof, loggerWithBallot(ballot, cs.Log()))
 	l.Debug().Msg("ACCEPT Ballot + INIT Voteproof")
 
@@ -301,7 +302,7 @@ func (cs *StateJoiningHandler) handleACCEPTBallotAndINITVoteproof(ballot ACCEPTB
 		l.Debug().
 			Msgf("Ballot.Height() is higher than expected, %d + 1; moves to syncing", lastBlock.Height())
 
-		return cs.ChangeState(StateSyncing, voteproof, ballot)
+		return cs.ChangeState(base.StateSyncing, voteproof, ballot)
 	default:
 		l.Debug().
 			Msgf("Ballot.Height() is lower than expected, %d + 1; ignore it", lastBlock.Height())
@@ -311,17 +312,17 @@ func (cs *StateJoiningHandler) handleACCEPTBallotAndINITVoteproof(ballot ACCEPTB
 }
 
 // NewVoteproof receives Voteproof.
-func (cs *StateJoiningHandler) NewVoteproof(voteproof Voteproof) error {
+func (cs *StateJoiningHandler) NewVoteproof(voteproof base.Voteproof) error {
 	l := loggerWithVoteproof(voteproof, cs.Log())
 
 	l.Debug().Msg("got Voteproof")
 
 	switch voteproof.Stage() {
-	case StageACCEPT:
+	case base.StageACCEPT:
 		// TODO ACCEPT Voteproof is next block of local, try to process
 		// Voteproof.
 		return nil
-	case StageINIT:
+	case base.StageINIT:
 		return cs.handleINITVoteproof(voteproof)
 	default:
 		err := xerrors.Errorf("unknown stage Voteproof received")
@@ -330,10 +331,10 @@ func (cs *StateJoiningHandler) NewVoteproof(voteproof Voteproof) error {
 	}
 }
 
-func (cs *StateJoiningHandler) handleINITVoteproof(voteproof Voteproof) error {
+func (cs *StateJoiningHandler) handleINITVoteproof(voteproof base.Voteproof) error {
 	l := loggerWithLocalstate(cs.localstate, loggerWithVoteproof(voteproof, cs.Log()))
 
 	l.Debug().Msg("expected height; moves to consensus state")
 
-	return cs.ChangeState(StateConsensus, voteproof, nil)
+	return cs.ChangeState(base.StateConsensus, voteproof, nil)
 }

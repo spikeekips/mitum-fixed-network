@@ -5,12 +5,13 @@ import (
 	"time"
 
 	"github.com/ethereum/go-ethereum/rlp"
-	"github.com/spikeekips/mitum/hint"
+	"github.com/spikeekips/mitum/base"
+	"github.com/spikeekips/mitum/util/hint"
 )
 
 type PolicyOperationBodyV0RLPPacker struct {
 	H                                hint.Hint
-	Threshold                        Threshold
+	Threshold                        base.Threshold
 	TimeoutWaitingProposal           uint64
 	IntervalBroadcastingINITBallot   uint64
 	IntervalBroadcastingProposal     uint64

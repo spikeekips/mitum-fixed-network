@@ -5,7 +5,8 @@ import (
 
 	"github.com/stretchr/testify/suite"
 
-	"github.com/spikeekips/mitum/valuehash"
+	"github.com/spikeekips/mitum/base"
+	"github.com/spikeekips/mitum/base/valuehash"
 )
 
 type testBlockV0DummyGenerator struct {
@@ -51,17 +52,17 @@ func (t *testBlockV0DummyGenerator) TestCreate() {
 	all := []*Localstate{t.localstate}
 	all = append(all, t.localstates(2)...)
 
-	var suffrage Suffrage
+	var suffrage base.Suffrage
 	{
-		nodes := make([]Node, len(all))
+		nodes := make([]base.Node, len(all))
 		for i, o := range all {
 			nodes[i] = o.Node()
 		}
 
-		suffrage = NewFixedSuffrage(t.localstate.Node(), nodes)
+		suffrage = base.NewFixedSuffrage(t.localstate.Node(), nodes)
 	}
 
-	lastHeight := Height(10)
+	lastHeight := base.Height(10)
 	bg, err := NewDummyBlocksV0Generator(t.localstate, lastHeight, suffrage, all)
 	t.NoError(err)
 
@@ -70,7 +71,7 @@ func (t *testBlockV0DummyGenerator) TestCreate() {
 	for i := int64(0); i < lastHeight.Int64(); i++ {
 		hashes := map[valuehash.Hash]struct{}{}
 		for nodeid, l := range all {
-			block, err := l.Storage().BlockByHeight(Height(i))
+			block, err := l.Storage().BlockByHeight(base.Height(i))
 			t.NoError(err, "node=%d height=%d", nodeid, i)
 			t.NotNil(block, "node=%d height=%d", nodeid, i)
 			t.NoError(block.IsValid(nil))

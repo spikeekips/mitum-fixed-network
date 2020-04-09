@@ -3,12 +3,13 @@ package isaac
 import (
 	"time"
 
-	"github.com/spikeekips/mitum/hint"
-	"github.com/spikeekips/mitum/isvalid"
-	"github.com/spikeekips/mitum/logging"
+	"github.com/spikeekips/mitum/base"
+	"github.com/spikeekips/mitum/base/valuehash"
 	"github.com/spikeekips/mitum/tree"
 	"github.com/spikeekips/mitum/util"
-	"github.com/spikeekips/mitum/valuehash"
+	"github.com/spikeekips/mitum/util/hint"
+	"github.com/spikeekips/mitum/util/isvalid"
+	"github.com/spikeekips/mitum/util/logging"
 )
 
 type Manifest interface {
@@ -18,8 +19,8 @@ type Manifest interface {
 	valuehash.Hasher
 	logging.LogHintedMarshaler
 	PreviousBlock() valuehash.Hash
-	Height() Height
-	Round() Round
+	Height() base.Height
+	Round() base.Round
 	Proposal() valuehash.Hash
 	OperationsHash() valuehash.Hash
 	StatesHash() valuehash.Hash
@@ -30,8 +31,8 @@ type BlockConsensusInfo interface {
 	isvalid.IsValider
 	hint.Hinter
 	util.Byter
-	INITVoteproof() Voteproof
-	ACCEPTVoteproof() Voteproof
+	INITVoteproof() base.Voteproof
+	ACCEPTVoteproof() base.Voteproof
 }
 
 type Block interface {
@@ -45,8 +46,8 @@ type Block interface {
 
 type BlockUpdater interface {
 	Block
-	SetINITVoteproof(Voteproof) BlockUpdater
-	SetACCEPTVoteproof(Voteproof) BlockUpdater
+	SetINITVoteproof(base.Voteproof) BlockUpdater
+	SetACCEPTVoteproof(base.Voteproof) BlockUpdater
 	SetOperations(*tree.AVLTree) BlockUpdater
 	SetStates(*tree.AVLTree) BlockUpdater
 }

@@ -9,12 +9,13 @@ import (
 	"github.com/lucas-clemente/quic-go"
 	"golang.org/x/xerrors"
 
-	"github.com/spikeekips/mitum/encoder"
-	"github.com/spikeekips/mitum/hint"
-	"github.com/spikeekips/mitum/logging"
+	"github.com/spikeekips/mitum/base"
+	"github.com/spikeekips/mitum/base/seal"
+	"github.com/spikeekips/mitum/base/valuehash"
 	"github.com/spikeekips/mitum/network"
-	"github.com/spikeekips/mitum/seal"
-	"github.com/spikeekips/mitum/valuehash"
+	"github.com/spikeekips/mitum/util/encoder"
+	"github.com/spikeekips/mitum/util/hint"
+	"github.com/spikeekips/mitum/util/logging"
 )
 
 type QuicChannel struct {
@@ -176,7 +177,7 @@ func (qc *QuicChannel) requestHinters(u string, b []byte) ([]hint.Hinter, error)
 	return hs, nil
 }
 
-func (qc *QuicChannel) Manifests(heights []Height) ([]Manifest, error) { // nolint
+func (qc *QuicChannel) Manifests(heights []base.Height) ([]Manifest, error) { // nolint
 	b, err := qc.enc.Marshal(heights)
 	if err != nil {
 		return nil, err
@@ -208,7 +209,7 @@ func (qc *QuicChannel) Manifests(heights []Height) ([]Manifest, error) { // noli
 	return manifests, nil
 }
 
-func (qc *QuicChannel) Blocks(heights []Height) ([]Block, error) { // nolint
+func (qc *QuicChannel) Blocks(heights []base.Height) ([]Block, error) { // nolint
 	b, err := qc.enc.Marshal(heights)
 	if err != nil {
 		return nil, err

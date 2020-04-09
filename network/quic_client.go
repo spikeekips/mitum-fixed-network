@@ -11,7 +11,7 @@ import (
 	"github.com/lucas-clemente/quic-go"
 	"github.com/lucas-clemente/quic-go/http3"
 
-	"github.com/spikeekips/mitum/logging"
+	"github.com/spikeekips/mitum/util/logging"
 )
 
 type QuicClient struct {

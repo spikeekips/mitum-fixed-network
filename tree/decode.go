@@ -1,8 +1,8 @@
 package tree
 
 import (
-	"github.com/spikeekips/mitum/encoder"
-	"github.com/spikeekips/mitum/hint"
+	"github.com/spikeekips/mitum/util/encoder"
+	"github.com/spikeekips/mitum/util/hint"
 )
 
 func DecodeAVLTree(enc encoder.Encoder, b []byte) (AVLTree, error) {

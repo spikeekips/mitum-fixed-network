@@ -6,10 +6,11 @@ import (
 	"github.com/stretchr/testify/suite"
 	"golang.org/x/xerrors"
 
-	"github.com/spikeekips/mitum/key"
-	"github.com/spikeekips/mitum/localtime"
-	"github.com/spikeekips/mitum/operation"
-	"github.com/spikeekips/mitum/valuehash"
+	"github.com/spikeekips/mitum/base"
+	"github.com/spikeekips/mitum/base/key"
+	"github.com/spikeekips/mitum/base/operation"
+	"github.com/spikeekips/mitum/base/valuehash"
+	"github.com/spikeekips/mitum/util/localtime"
 )
 
 type testBallotV0ACCEPT struct {
@@ -24,15 +25,15 @@ func (t *testBallotV0ACCEPT) SetupSuite() {
 
 func (t *testBallotV0ACCEPT) TestNew() {
 	vp := NewDummyVoteproof(
-		Height(10),
-		Round(0),
-		StageINIT,
-		VoteResultMajority,
+		base.Height(10),
+		base.Round(0),
+		base.StageINIT,
+		base.VoteResultMajority,
 	)
 
 	ib := ACCEPTBallotV0{
 		BaseBallotV0: BaseBallotV0{
-			node: NewShortAddress("test-for-accept-ballot"),
+			node: base.NewShortAddress("test-for-accept-ballot"),
 		},
 		ACCEPTBallotFactV0: ACCEPTBallotFactV0{
 			BaseBallotFactV0: BaseBallotFactV0{
@@ -53,15 +54,15 @@ func (t *testBallotV0ACCEPT) TestNew() {
 
 func (t *testBallotV0ACCEPT) TestFact() {
 	vp := NewDummyVoteproof(
-		Height(10),
-		Round(0),
-		StageINIT,
-		VoteResultMajority,
+		base.Height(10),
+		base.Round(0),
+		base.StageINIT,
+		base.VoteResultMajority,
 	)
 
 	ib := ACCEPTBallotV0{
 		BaseBallotV0: BaseBallotV0{
-			node: NewShortAddress("test-for-accept-ballot"),
+			node: base.NewShortAddress("test-for-accept-ballot"),
 		},
 		ACCEPTBallotFactV0: ACCEPTBallotFactV0{
 			BaseBallotFactV0: BaseBallotFactV0{
@@ -78,7 +79,7 @@ func (t *testBallotV0ACCEPT) TestFact() {
 
 	fact := ib.Fact()
 
-	_ = (interface{})(fact).(operation.Fact)
+	_ = (interface{})(fact).(base.Fact)
 
 	factHash := fact.Hash()
 	t.NotNil(factHash)
@@ -98,15 +99,15 @@ func (t *testBallotV0ACCEPT) TestFact() {
 
 func (t *testBallotV0ACCEPT) TestGenerateHash() {
 	vp := NewDummyVoteproof(
-		Height(10),
-		Round(0),
-		StageINIT,
-		VoteResultMajority,
+		base.Height(10),
+		base.Round(0),
+		base.StageINIT,
+		base.VoteResultMajority,
 	)
 
 	ib := ACCEPTBallotV0{
 		BaseBallotV0: BaseBallotV0{
-			node: NewShortAddress("test-for-accept-ballot"),
+			node: base.NewShortAddress("test-for-accept-ballot"),
 		},
 		ACCEPTBallotFactV0: ACCEPTBallotFactV0{
 			BaseBallotFactV0: BaseBallotFactV0{
@@ -132,15 +133,15 @@ func (t *testBallotV0ACCEPT) TestGenerateHash() {
 
 func (t *testBallotV0ACCEPT) TestSign() {
 	vp := NewDummyVoteproof(
-		Height(10),
-		Round(0),
-		StageINIT,
-		VoteResultMajority,
+		base.Height(10),
+		base.Round(0),
+		base.StageINIT,
+		base.VoteResultMajority,
 	)
 
 	ib := ACCEPTBallotV0{
 		BaseBallotV0: BaseBallotV0{
-			node: NewShortAddress("test-for-accept-ballot"),
+			node: base.NewShortAddress("test-for-accept-ballot"),
 		},
 		ACCEPTBallotFactV0: ACCEPTBallotFactV0{
 			BaseBallotFactV0: BaseBallotFactV0{
@@ -178,7 +179,7 @@ func (t *testBallotV0ACCEPT) TestSign() {
 func (t *testBallotV0ACCEPT) TestIsValid() {
 	{ // empty signedAt
 		bb := BaseBallotV0{
-			node: NewShortAddress("test-for-accept-ballot"),
+			node: base.NewShortAddress("test-for-accept-ballot"),
 		}
 		err := bb.IsValid(nil)
 		t.Contains(err.Error(), "empty SignedAt")
@@ -186,7 +187,7 @@ func (t *testBallotV0ACCEPT) TestIsValid() {
 
 	{ // empty signer
 		bb := BaseBallotV0{
-			node:     NewShortAddress("test-for-accept-ballot"),
+			node:     base.NewShortAddress("test-for-accept-ballot"),
 			signedAt: localtime.Now(),
 		}
 		err := bb.IsValid(nil)
@@ -195,7 +196,7 @@ func (t *testBallotV0ACCEPT) TestIsValid() {
 
 	{ // empty signature
 		bb := BaseBallotV0{
-			node:     NewShortAddress("test-for-accept-ballot"),
+			node:     base.NewShortAddress("test-for-accept-ballot"),
 			signedAt: localtime.Now(),
 			signer:   t.pk.Publickey(),
 		}

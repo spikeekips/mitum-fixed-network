@@ -3,10 +3,11 @@
 package isaac
 
 import (
-	"github.com/spikeekips/mitum/valuehash"
+	"github.com/spikeekips/mitum/base"
+	"github.com/spikeekips/mitum/base/valuehash"
 )
 
-func NewTestBlockV0(height Height, round Round, proposal, previousBlock valuehash.Hash) (BlockV0, error) {
+func NewTestBlockV0(height base.Height, round base.Round, proposal, previousBlock valuehash.Hash) (BlockV0, error) {
 	if proposal == nil {
 		proposal = valuehash.RandomSHA256()
 	}

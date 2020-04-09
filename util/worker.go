@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"sync"
 
-	"github.com/spikeekips/mitum/logging"
+	"github.com/spikeekips/mitum/util/logging"
 )
 
 type WorkerCallback func( /* job id */ uint, interface{} /* arguments */) error

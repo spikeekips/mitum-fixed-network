@@ -6,7 +6,8 @@ import (
 
 	"golang.org/x/xerrors"
 
-	"github.com/spikeekips/mitum/logging"
+	"github.com/spikeekips/mitum/base"
+	"github.com/spikeekips/mitum/util/logging"
 )
 
 // Ballotbox collects ballots and keeps track of majority.
@@ -14,10 +15,10 @@ type Ballotbox struct {
 	sync.RWMutex
 	*logging.Logging
 	vrs           *sync.Map
-	thresholdFunc func() Threshold
+	thresholdFunc func() base.Threshold
 }
 
-func NewBallotbox(thresholdFunc func() Threshold) *Ballotbox {
+func NewBallotbox(thresholdFunc func() base.Threshold) *Ballotbox {
 	return &Ballotbox{
 		Logging: logging.NewLogging(func(c logging.Context) logging.Emitter {
 			return c.Str("module", "ballotbox")
@@ -29,7 +30,7 @@ func NewBallotbox(thresholdFunc func() Threshold) *Ballotbox {
 
 // Vote receives Ballot and returns VoteRecords, which has VoteRecords.Result()
 // and VoteRecords.Majority().
-func (bb *Ballotbox) Vote(ballot Ballot) (Voteproof, error) {
+func (bb *Ballotbox) Vote(ballot Ballot) (base.Voteproof, error) {
 	if !ballot.Stage().CanVote() {
 		return nil, xerrors.Errorf("this ballot is not for voting; stage=%s", ballot.Stage())
 	}
@@ -65,7 +66,7 @@ func (bb *Ballotbox) loadVoteRecords(ballot Ballot, ifNotCreate bool) *VoteRecor
 	return vrs
 }
 
-func (bb *Ballotbox) clean(height Height, round Round) error {
+func (bb *Ballotbox) clean(height base.Height, round base.Round) error {
 	gh := height.Int64()
 	gr := round.Uint64()
 

@@ -3,9 +3,9 @@ package state
 import (
 	"encoding/json"
 
-	"github.com/spikeekips/mitum/encoder"
-	"github.com/spikeekips/mitum/hint"
 	"github.com/spikeekips/mitum/util"
+	"github.com/spikeekips/mitum/util/encoder"
+	"github.com/spikeekips/mitum/util/hint"
 )
 
 type StateV0AVLNodePackerJSON struct {

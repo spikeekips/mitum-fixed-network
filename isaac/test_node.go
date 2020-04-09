@@ -5,14 +5,15 @@ package isaac
 import (
 	"fmt"
 
-	"github.com/spikeekips/mitum/key"
+	"github.com/spikeekips/mitum/base"
+	"github.com/spikeekips/mitum/base/key"
 )
 
 func RandomLocalNode(name string, channel NetworkChannel) *LocalNode {
 	pk, _ := key.NewBTCPrivatekey()
 
 	ln := NewLocalNode(
-		NewShortAddress(fmt.Sprintf("n-%s", name)),
+		base.NewShortAddress(fmt.Sprintf("n-%s", name)),
 		pk,
 	)
 

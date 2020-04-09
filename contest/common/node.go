@@ -8,14 +8,15 @@ import (
 	leveldbStorage "github.com/syndtr/goleveldb/leveldb/storage"
 	"golang.org/x/xerrors"
 
-	"github.com/spikeekips/mitum/encoder"
-	"github.com/spikeekips/mitum/hint"
+	"github.com/spikeekips/mitum/base"
+	"github.com/spikeekips/mitum/base/key"
+	"github.com/spikeekips/mitum/base/seal"
 	"github.com/spikeekips/mitum/isaac"
-	"github.com/spikeekips/mitum/key"
-	"github.com/spikeekips/mitum/logging"
 	"github.com/spikeekips/mitum/network"
-	"github.com/spikeekips/mitum/seal"
 	"github.com/spikeekips/mitum/util"
+	"github.com/spikeekips/mitum/util/encoder"
+	"github.com/spikeekips/mitum/util/hint"
+	"github.com/spikeekips/mitum/util/logging"
 )
 
 var ports []int
@@ -97,7 +98,7 @@ type NodeProcess struct {
 	*logging.Logging
 	Localstate        *isaac.Localstate
 	Ballotbox         *isaac.Ballotbox
-	Suffrage          isaac.Suffrage
+	Suffrage          base.Suffrage
 	ProposalProcessor isaac.ProposalProcessor
 	ConsensusStates   *isaac.ConsensusStates
 	NetworkServer     isaac.Server
@@ -105,12 +106,12 @@ type NodeProcess struct {
 	stopChan          chan struct{}
 }
 
-func NewSuffrage(localstate *isaac.Localstate) isaac.Suffrage {
+func NewSuffrage(localstate *isaac.Localstate) base.Suffrage {
 	return NewRoundrobinSuffrage(localstate, 100)
 }
 
 func NewNodeProcess(localstate *isaac.Localstate) (*NodeProcess, error) {
-	ballotbox := isaac.NewBallotbox(func() isaac.Threshold {
+	ballotbox := isaac.NewBallotbox(func() base.Threshold {
 		return localstate.Policy().Threshold()
 	})
 	suffrage := NewSuffrage(localstate)

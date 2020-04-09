@@ -5,10 +5,11 @@ import (
 
 	"golang.org/x/xerrors"
 
+	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/contest/common"
 	"github.com/spikeekips/mitum/isaac"
-	"github.com/spikeekips/mitum/logging"
 	"github.com/spikeekips/mitum/util"
+	"github.com/spikeekips/mitum/util/logging"
 )
 
 type RunCommand struct {
@@ -112,7 +113,7 @@ func (cm RunCommand) Run(_ *CommonFlags, log logging.Logger, exitHooks *[]func()
 			}
 		}
 
-		threshold, err := isaac.NewThreshold(uint(nl.Nodes().Len()+1), 67)
+		threshold, err := base.NewThreshold(uint(nl.Nodes().Len()+1), 67)
 		if err != nil {
 			return err
 		}

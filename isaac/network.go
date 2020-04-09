@@ -1,16 +1,17 @@
 package isaac
 
 import (
-	"github.com/spikeekips/mitum/seal"
+	"github.com/spikeekips/mitum/base"
+	"github.com/spikeekips/mitum/base/seal"
+	"github.com/spikeekips/mitum/base/valuehash"
 	"github.com/spikeekips/mitum/util"
-	"github.com/spikeekips/mitum/valuehash"
 )
 
 type (
 	GetSealsHandler     func([]valuehash.Hash) ([]seal.Seal, error)
 	NewSealHandler      func(seal.Seal) error
-	GetManifestsHandler func([]Height) ([]Manifest, error)
-	GetBlocksHandler    func([]Height) ([]Block, error)
+	GetManifestsHandler func([]base.Height) ([]Manifest, error)
+	GetBlocksHandler    func([]base.Height) ([]Block, error)
 )
 
 // TODO GetXXX should have limit
@@ -31,6 +32,6 @@ type Response interface {
 type NetworkChannel interface {
 	Seals([]valuehash.Hash) ([]seal.Seal, error)
 	SendSeal(seal.Seal) error
-	Manifests([]Height) ([]Manifest, error)
-	Blocks([]Height) ([]Block, error)
+	Manifests([]base.Height) ([]Manifest, error)
+	Blocks([]base.Height) ([]Block, error)
 }

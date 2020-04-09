@@ -1,11 +1,12 @@
 package isaac
 
 import (
-	"github.com/spikeekips/mitum/encoder"
-	"github.com/spikeekips/mitum/operation"
-	"github.com/spikeekips/mitum/seal"
+	"github.com/spikeekips/mitum/base"
+	"github.com/spikeekips/mitum/base/operation"
+	"github.com/spikeekips/mitum/base/seal"
+	"github.com/spikeekips/mitum/base/valuehash"
 	"github.com/spikeekips/mitum/state"
-	"github.com/spikeekips/mitum/valuehash"
+	"github.com/spikeekips/mitum/util/encoder"
 )
 
 type Storage interface {
@@ -17,24 +18,24 @@ type Storage interface {
 
 	LastBlock() (Block, error)
 	Block(valuehash.Hash) (Block, error)
-	BlockByHeight(Height) (Block, error)
+	BlockByHeight(base.Height) (Block, error)
 	Manifest(valuehash.Hash) (Manifest, error)
-	ManifestByHeight(Height) (Manifest, error)
+	ManifestByHeight(base.Height) (Manifest, error)
 
-	NewINITVoteproof(Voteproof) error
-	LastINITVoteproof() (Voteproof, error)
-	LastINITVoteproofOfHeight(Height) (Voteproof, error)
-	NewACCEPTVoteproof(Voteproof) error
-	LastACCEPTVoteproof() (Voteproof, error)
-	LastACCEPTVoteproofOfHeight(Height) (Voteproof, error)
-	Voteproofs(func(Voteproof) (bool, error), bool /* sort */) error
+	NewINITVoteproof(base.Voteproof) error
+	LastINITVoteproof() (base.Voteproof, error)
+	LastINITVoteproofOfHeight(base.Height) (base.Voteproof, error)
+	NewACCEPTVoteproof(base.Voteproof) error
+	LastACCEPTVoteproof() (base.Voteproof, error)
+	LastACCEPTVoteproofOfHeight(base.Height) (base.Voteproof, error)
+	Voteproofs(func(base.Voteproof) (bool, error), bool /* sort */) error
 
 	NewSeals([]seal.Seal) error
 	Seal(valuehash.Hash) (seal.Seal, error)
 	Seals(func(valuehash.Hash, seal.Seal) (bool, error), bool /* sort */, bool /* load Seal? */) error
 
 	NewProposal(Proposal) error
-	Proposal(Height, Round) (Proposal, error)
+	Proposal(base.Height, base.Round) (Proposal, error)
 	Proposals(func(Proposal) (bool, error), bool /* sort */) error
 
 	State(key string) (state.State, bool, error)

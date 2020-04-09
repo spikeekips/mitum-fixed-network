@@ -8,16 +8,17 @@ import (
 	leveldbutil "github.com/syndtr/goleveldb/leveldb/util"
 	"golang.org/x/xerrors"
 
-	"github.com/spikeekips/mitum/encoder"
-	"github.com/spikeekips/mitum/hint"
-	"github.com/spikeekips/mitum/logging"
-	"github.com/spikeekips/mitum/operation"
-	"github.com/spikeekips/mitum/seal"
+	"github.com/spikeekips/mitum/base"
+	"github.com/spikeekips/mitum/base/operation"
+	"github.com/spikeekips/mitum/base/seal"
+	"github.com/spikeekips/mitum/base/valuehash"
 	"github.com/spikeekips/mitum/state"
 	"github.com/spikeekips/mitum/storage"
 	"github.com/spikeekips/mitum/tree"
 	"github.com/spikeekips/mitum/util"
-	"github.com/spikeekips/mitum/valuehash"
+	"github.com/spikeekips/mitum/util/encoder"
+	"github.com/spikeekips/mitum/util/hint"
+	"github.com/spikeekips/mitum/util/logging"
 )
 
 var (
@@ -118,7 +119,7 @@ func (st *LeveldbStorage) Block(h valuehash.Hash) (Block, error) {
 	return st.loadBlock(raw)
 }
 
-func (st *LeveldbStorage) BlockByHeight(height Height) (Block, error) {
+func (st *LeveldbStorage) BlockByHeight(height base.Height) (Block, error) {
 	var bh valuehash.Hash
 
 	if raw, err := st.get(leveldbBlockHeightKey(height)); err != nil {
@@ -141,7 +142,7 @@ func (st *LeveldbStorage) Manifest(h valuehash.Hash) (Manifest, error) {
 	return st.loadManifest(raw)
 }
 
-func (st *LeveldbStorage) ManifestByHeight(height Height) (Manifest, error) {
+func (st *LeveldbStorage) ManifestByHeight(height base.Height) (Manifest, error) {
 	var bh valuehash.Hash
 
 	if raw, err := st.get(leveldbBlockHeightKey(height)); err != nil {
@@ -155,11 +156,11 @@ func (st *LeveldbStorage) ManifestByHeight(height Height) (Manifest, error) {
 	return st.Manifest(bh)
 }
 
-func (st *LeveldbStorage) loadLastVoteproof(stage Stage) (Voteproof, error) {
+func (st *LeveldbStorage) loadLastVoteproof(stage base.Stage) (base.Voteproof, error) {
 	return st.filterVoteproof(leveldbVoteproofHeightPrefix, stage)
 }
 
-func (st *LeveldbStorage) newVoteproof(voteproof Voteproof) error {
+func (st *LeveldbStorage) newVoteproof(voteproof base.Voteproof) error {
 	st.Log().Debug().
 		Hinted("height", voteproof.Height()).
 		Hinted("round", voteproof.Round()).
@@ -176,15 +177,15 @@ func (st *LeveldbStorage) newVoteproof(voteproof Voteproof) error {
 	return storage.LeveldbWrapError(st.db.Put(leveldbVoteproofKey(voteproof), hb, nil))
 }
 
-func (st *LeveldbStorage) LastINITVoteproof() (Voteproof, error) {
-	return st.loadLastVoteproof(StageINIT)
+func (st *LeveldbStorage) LastINITVoteproof() (base.Voteproof, error) {
+	return st.loadLastVoteproof(base.StageINIT)
 }
 
-func (st *LeveldbStorage) NewINITVoteproof(voteproof Voteproof) error {
+func (st *LeveldbStorage) NewINITVoteproof(voteproof base.Voteproof) error {
 	return st.newVoteproof(voteproof)
 }
 
-func (st *LeveldbStorage) filterVoteproof(prefix []byte, stage Stage) (Voteproof, error) {
+func (st *LeveldbStorage) filterVoteproof(prefix []byte, stage base.Stage) (base.Voteproof, error) {
 	var raw []byte
 	if err := st.iter(
 		prefix,
@@ -204,7 +205,7 @@ func (st *LeveldbStorage) filterVoteproof(prefix []byte, stage Stage) (Voteproof
 				return false, xerrors.Errorf("invalid formatted key found: key=%q", string(key))
 			}
 
-			if Stage(stg) != stage {
+			if base.Stage(stg) != stage {
 				return true, nil
 			}
 
@@ -219,23 +220,23 @@ func (st *LeveldbStorage) filterVoteproof(prefix []byte, stage Stage) (Voteproof
 	return st.loadVoteproof(raw)
 }
 
-func (st *LeveldbStorage) LastINITVoteproofOfHeight(height Height) (Voteproof, error) {
-	return st.filterVoteproof(leveldbVoteproofKeyByHeight(height), StageINIT)
+func (st *LeveldbStorage) LastINITVoteproofOfHeight(height base.Height) (base.Voteproof, error) {
+	return st.filterVoteproof(leveldbVoteproofKeyByHeight(height), base.StageINIT)
 }
 
-func (st *LeveldbStorage) LastACCEPTVoteproofOfHeight(height Height) (Voteproof, error) {
-	return st.filterVoteproof(leveldbVoteproofKeyByHeight(height), StageACCEPT)
+func (st *LeveldbStorage) LastACCEPTVoteproofOfHeight(height base.Height) (base.Voteproof, error) {
+	return st.filterVoteproof(leveldbVoteproofKeyByHeight(height), base.StageACCEPT)
 }
 
-func (st *LeveldbStorage) LastACCEPTVoteproof() (Voteproof, error) {
-	return st.loadLastVoteproof(StageACCEPT)
+func (st *LeveldbStorage) LastACCEPTVoteproof() (base.Voteproof, error) {
+	return st.loadLastVoteproof(base.StageACCEPT)
 }
 
-func (st *LeveldbStorage) NewACCEPTVoteproof(voteproof Voteproof) error {
+func (st *LeveldbStorage) NewACCEPTVoteproof(voteproof base.Voteproof) error {
 	return st.newVoteproof(voteproof)
 }
 
-func (st *LeveldbStorage) Voteproofs(callback func(Voteproof) (bool, error), sort bool) error {
+func (st *LeveldbStorage) Voteproofs(callback func(base.Voteproof) (bool, error), sort bool) error {
 	return st.iter(
 		leveldbVoteproofHeightPrefix,
 		func(_, value []byte) (bool, error) {
@@ -352,13 +353,13 @@ func (st *LeveldbStorage) loadHinter(b []byte) (hint.Hinter, error) {
 	return enc.DecodeByHint(raw)
 }
 
-func (st *LeveldbStorage) loadVoteproof(b []byte) (Voteproof, error) {
+func (st *LeveldbStorage) loadVoteproof(b []byte) (base.Voteproof, error) {
 	if hinter, err := st.loadHinter(b); err != nil {
 		return nil, err
 	} else if hinter == nil {
 		return nil, nil
-	} else if i, ok := hinter.(Voteproof); !ok {
-		return nil, xerrors.Errorf("not Voteproof: %T", hinter)
+	} else if i, ok := hinter.(base.Voteproof); !ok {
+		return nil, xerrors.Errorf("not base.Voteproof: %T", hinter)
 	} else {
 		return i, nil
 	}
@@ -533,7 +534,7 @@ func (st *LeveldbStorage) Proposals(callback func(Proposal) (bool, error), sort 
 	)
 }
 
-func (st *LeveldbStorage) proposalKey(height Height, round Round) []byte {
+func (st *LeveldbStorage) proposalKey(height base.Height, round base.Round) []byte {
 	return util.ConcatBytesSlice(leveldbProposalPrefix, height.Bytes(), round.Bytes())
 }
 
@@ -554,7 +555,7 @@ func (st *LeveldbStorage) NewProposal(proposal Proposal) error {
 	return nil
 }
 
-func (st *LeveldbStorage) Proposal(height Height, round Round) (Proposal, error) {
+func (st *LeveldbStorage) Proposal(height base.Height, round base.Round) (Proposal, error) {
 	sealKey, err := st.get(st.proposalKey(height, round))
 	if err != nil {
 		return nil, err
@@ -752,14 +753,14 @@ func (bst *LeveldbBlockStorage) Commit() error {
 	return storage.LeveldbWrapError(bst.st.db.Write(bst.batch, nil))
 }
 
-func leveldbBlockHeightKey(height Height) []byte {
+func leveldbBlockHeightKey(height base.Height) []byte {
 	return util.ConcatBytesSlice(
 		leveldbBlockHeightPrefix,
 		[]byte(fmt.Sprintf("%020d", height.Int64())),
 	)
 }
 
-func leveldbManifestHeightKey(height Height) []byte {
+func leveldbManifestHeightKey(height base.Height) []byte {
 	return util.ConcatBytesSlice(
 		leveldbManifestHeightPrefix,
 		[]byte(fmt.Sprintf("%020d", height.Int64())),
@@ -780,7 +781,7 @@ func leveldbManifestKey(h valuehash.Hash) []byte {
 	)
 }
 
-func leveldbVoteproofKey(voteproof Voteproof) []byte {
+func leveldbVoteproofKey(voteproof base.Voteproof) []byte {
 	return util.ConcatBytesSlice(
 		leveldbVoteproofHeightPrefix,
 		[]byte(fmt.Sprintf(
@@ -792,7 +793,7 @@ func leveldbVoteproofKey(voteproof Voteproof) []byte {
 	)
 }
 
-func leveldbVoteproofKeyByHeight(height Height) []byte {
+func leveldbVoteproofKeyByHeight(height base.Height) []byte {
 	return util.ConcatBytesSlice(
 		leveldbVoteproofHeightPrefix,
 		[]byte(fmt.Sprintf("%020d-", height.Int64())),

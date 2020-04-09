@@ -5,9 +5,10 @@ import (
 
 	"github.com/stretchr/testify/suite"
 
-	"github.com/spikeekips/mitum/key"
-	"github.com/spikeekips/mitum/seal"
-	"github.com/spikeekips/mitum/valuehash"
+	"github.com/spikeekips/mitum/base"
+	"github.com/spikeekips/mitum/base/key"
+	"github.com/spikeekips/mitum/base/seal"
+	"github.com/spikeekips/mitum/base/valuehash"
 )
 
 type testNetworkChanChannel struct {
@@ -52,10 +53,10 @@ func (t *testNetworkChanChannel) TestGetSeal() {
 func (t *testNetworkChanChannel) TestManifests() {
 	gs := NewNetworkChanChannel(0)
 
-	block, err := NewTestBlockV0(Height(33), Round(9), nil, valuehash.RandomSHA256())
+	block, err := NewTestBlockV0(base.Height(33), base.Round(9), nil, valuehash.RandomSHA256())
 	t.NoError(err)
 
-	gs.SetGetManifests(func(heights []Height) ([]Manifest, error) {
+	gs.SetGetManifests(func(heights []base.Height) ([]Manifest, error) {
 		var blocks []Manifest
 		for _, h := range heights {
 			if h != block.Height() {
@@ -69,7 +70,7 @@ func (t *testNetworkChanChannel) TestManifests() {
 	})
 
 	{
-		blocks, err := gs.Manifests([]Height{block.Height()})
+		blocks, err := gs.Manifests([]base.Height{block.Height()})
 		t.NoError(err)
 		t.Equal(1, len(blocks))
 
@@ -82,7 +83,7 @@ func (t *testNetworkChanChannel) TestManifests() {
 	}
 
 	{ // with unknown height
-		blocks, err := gs.Manifests([]Height{block.Height(), block.Height() + 1})
+		blocks, err := gs.Manifests([]base.Height{block.Height(), block.Height() + 1})
 		t.NoError(err)
 		t.Equal(1, len(blocks))
 
@@ -98,10 +99,10 @@ func (t *testNetworkChanChannel) TestManifests() {
 func (t *testNetworkChanChannel) TestBlocks() {
 	gs := NewNetworkChanChannel(0)
 
-	block, err := NewTestBlockV0(Height(33), Round(9), nil, valuehash.RandomSHA256())
+	block, err := NewTestBlockV0(base.Height(33), base.Round(9), nil, valuehash.RandomSHA256())
 	t.NoError(err)
 
-	gs.SetGetBlocks(func(heights []Height) ([]Block, error) {
+	gs.SetGetBlocks(func(heights []base.Height) ([]Block, error) {
 		var blocks []Block
 		for _, h := range heights {
 			if h != block.Height() {
@@ -115,7 +116,7 @@ func (t *testNetworkChanChannel) TestBlocks() {
 	})
 
 	{
-		blocks, err := gs.Blocks([]Height{block.Height()})
+		blocks, err := gs.Blocks([]base.Height{block.Height()})
 		t.NoError(err)
 		t.Equal(1, len(blocks))
 
@@ -123,7 +124,7 @@ func (t *testNetworkChanChannel) TestBlocks() {
 	}
 
 	{ // with unknown height
-		blocks, err := gs.Blocks([]Height{block.Height(), block.Height() + 1})
+		blocks, err := gs.Blocks([]base.Height{block.Height(), block.Height() + 1})
 		t.NoError(err)
 		t.Equal(1, len(blocks))
 

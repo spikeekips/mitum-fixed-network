@@ -3,7 +3,7 @@ package state
 import (
 	"testing"
 
-	"github.com/spikeekips/mitum/hint"
+	"github.com/spikeekips/mitum/util/hint"
 	"github.com/stretchr/testify/suite"
 	"golang.org/x/xerrors"
 )

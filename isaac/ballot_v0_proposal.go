@@ -3,13 +3,13 @@ package isaac
 import (
 	"golang.org/x/xerrors"
 
-	"github.com/spikeekips/mitum/hint"
-	"github.com/spikeekips/mitum/isvalid"
-	"github.com/spikeekips/mitum/key"
-	"github.com/spikeekips/mitum/localtime"
-	"github.com/spikeekips/mitum/operation"
+	"github.com/spikeekips/mitum/base"
+	"github.com/spikeekips/mitum/base/key"
+	"github.com/spikeekips/mitum/base/valuehash"
 	"github.com/spikeekips/mitum/util"
-	"github.com/spikeekips/mitum/valuehash"
+	"github.com/spikeekips/mitum/util/hint"
+	"github.com/spikeekips/mitum/util/isvalid"
+	"github.com/spikeekips/mitum/util/localtime"
 )
 
 var (
@@ -108,8 +108,8 @@ type ProposalV0 struct {
 
 func NewProposal(
 	localstate *Localstate,
-	height Height,
-	round Round,
+	height base.Height,
+	round base.Round,
 	operations []valuehash.Hash,
 	seals []valuehash.Hash,
 	networkID []byte,
@@ -137,7 +137,7 @@ func NewProposal(
 
 func NewProposalFromLocalstate(
 	localstate *Localstate,
-	round Round,
+	round base.Round,
 	operations []valuehash.Hash,
 	seals []valuehash.Hash,
 ) (Proposal, error) {
@@ -175,8 +175,8 @@ func (pr ProposalV0) Hint() hint.Hint {
 	return ProposalV0Hint
 }
 
-func (pr ProposalV0) Stage() Stage {
-	return StageProposal
+func (pr ProposalV0) Stage() base.Stage {
+	return base.StageProposal
 }
 
 func (pr ProposalV0) IsValid(b []byte) error {
@@ -206,7 +206,7 @@ func (pr ProposalV0) GenerateBodyHash() (valuehash.Hash, error) {
 	return valuehash.NewSHA256(pr.ProposalFactV0.Bytes()), nil
 }
 
-func (pr ProposalV0) Fact() operation.Fact {
+func (pr ProposalV0) Fact() base.Fact {
 	return pr.ProposalFactV0
 }
 

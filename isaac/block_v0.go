@@ -1,12 +1,13 @@
 package isaac
 
 import (
-	"github.com/spikeekips/mitum/hint"
-	"github.com/spikeekips/mitum/isvalid"
-	"github.com/spikeekips/mitum/localtime"
+	"github.com/spikeekips/mitum/base"
+	"github.com/spikeekips/mitum/base/valuehash"
 	"github.com/spikeekips/mitum/tree"
 	"github.com/spikeekips/mitum/util"
-	"github.com/spikeekips/mitum/valuehash"
+	"github.com/spikeekips/mitum/util/hint"
+	"github.com/spikeekips/mitum/util/isvalid"
+	"github.com/spikeekips/mitum/util/localtime"
 	"golang.org/x/xerrors"
 )
 
@@ -27,8 +28,8 @@ type BlockV0 struct {
 }
 
 func NewBlockV0(
-	height Height,
-	round Round,
+	height base.Height,
+	round base.Round,
 	proposal valuehash.Hash,
 	previousBlock valuehash.Hash,
 	operationsHash valuehash.Hash,
@@ -98,13 +99,13 @@ func (bm BlockV0) Bytes() []byte {
 	return util.ConcatBytesSlice(bm.ManifestV0.Bytes(), bm.BlockConsensusInfoV0.Bytes())
 }
 
-func (bm BlockV0) SetINITVoteproof(voteproof Voteproof) BlockUpdater {
+func (bm BlockV0) SetINITVoteproof(voteproof base.Voteproof) BlockUpdater {
 	bm.BlockConsensusInfoV0.initVoteproof = voteproof
 
 	return bm
 }
 
-func (bm BlockV0) SetACCEPTVoteproof(voteproof Voteproof) BlockUpdater {
+func (bm BlockV0) SetACCEPTVoteproof(voteproof base.Voteproof) BlockUpdater {
 	bm.BlockConsensusInfoV0.acceptVoteproof = voteproof
 
 	return bm

@@ -3,13 +3,13 @@ package isaac
 import (
 	"golang.org/x/xerrors"
 
-	"github.com/spikeekips/mitum/hint"
-	"github.com/spikeekips/mitum/isvalid"
-	"github.com/spikeekips/mitum/key"
-	"github.com/spikeekips/mitum/localtime"
-	"github.com/spikeekips/mitum/operation"
+	"github.com/spikeekips/mitum/base"
+	"github.com/spikeekips/mitum/base/key"
+	"github.com/spikeekips/mitum/base/valuehash"
 	"github.com/spikeekips/mitum/util"
-	"github.com/spikeekips/mitum/valuehash"
+	"github.com/spikeekips/mitum/util/hint"
+	"github.com/spikeekips/mitum/util/isvalid"
+	"github.com/spikeekips/mitum/util/localtime"
 )
 
 var (
@@ -64,15 +64,15 @@ func (abf ACCEPTBallotFactV0) NewBlock() valuehash.Hash {
 type ACCEPTBallotV0 struct {
 	BaseBallotV0
 	ACCEPTBallotFactV0
-	voteproof Voteproof
+	voteproof base.Voteproof
 }
 
 func NewACCEPTBallotV0(
 	localstate *Localstate,
-	height Height,
-	round Round,
+	height base.Height,
+	round base.Round,
 	newBlock Block,
-	initVoteproof Voteproof,
+	initVoteproof base.Voteproof,
 	networkID []byte,
 ) (ACCEPTBallotV0, error) {
 	ab := ACCEPTBallotV0{
@@ -99,7 +99,7 @@ func NewACCEPTBallotV0(
 
 func NewACCEPTBallotV0FromLocalstate(
 	localstate *Localstate,
-	round Round,
+	round base.Round,
 	newBlock Block,
 ) (ACCEPTBallotV0, error) {
 	lastBlock := localstate.LastBlock()
@@ -137,8 +137,8 @@ func (ab ACCEPTBallotV0) Hint() hint.Hint {
 	return ACCEPTBallotV0Hint
 }
 
-func (ab ACCEPTBallotV0) Stage() Stage {
-	return StageACCEPT
+func (ab ACCEPTBallotV0) Stage() base.Stage {
+	return base.StageACCEPT
 }
 
 func (ab ACCEPTBallotV0) IsValid(b []byte) error {
@@ -161,7 +161,7 @@ func (ab ACCEPTBallotV0) IsValid(b []byte) error {
 	return nil
 }
 
-func (ab ACCEPTBallotV0) Voteproof() Voteproof {
+func (ab ACCEPTBallotV0) Voteproof() base.Voteproof {
 	return ab.voteproof
 }
 
@@ -188,7 +188,7 @@ func (ab ACCEPTBallotV0) GenerateBodyHash() (valuehash.Hash, error) {
 	return valuehash.NewSHA256(e), nil
 }
 
-func (ab ACCEPTBallotV0) Fact() operation.Fact {
+func (ab ACCEPTBallotV0) Fact() base.Fact {
 	return ab.ACCEPTBallotFactV0
 }
 

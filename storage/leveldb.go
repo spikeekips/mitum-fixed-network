@@ -1,9 +1,9 @@
 package storage
 
 import (
-	"github.com/spikeekips/mitum/encoder"
-	"github.com/spikeekips/mitum/hint"
 	"github.com/spikeekips/mitum/util"
+	"github.com/spikeekips/mitum/util/encoder"
+	"github.com/spikeekips/mitum/util/hint"
 	leveldbErrors "github.com/syndtr/goleveldb/leveldb/errors"
 )
 

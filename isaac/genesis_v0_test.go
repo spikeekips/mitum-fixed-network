@@ -5,7 +5,8 @@ import (
 
 	"github.com/stretchr/testify/suite"
 
-	"github.com/spikeekips/mitum/operation"
+	"github.com/spikeekips/mitum/base"
+	"github.com/spikeekips/mitum/base/operation"
 )
 
 type testGenesisBlockV0 struct {
@@ -42,8 +43,8 @@ func (t *testGenesisBlockV0) TestNewGenesisBlock() {
 	block, err := gg.Generate()
 	t.NoError(err)
 
-	t.Equal(Height(0), block.Height())
-	t.Equal(Round(0), block.Round())
+	t.Equal(base.Height(0), block.Height())
+	t.Equal(base.Round(0), block.Round())
 
 	pr, err := t.localstate.Storage().Seal(block.Proposal())
 	t.NoError(err)

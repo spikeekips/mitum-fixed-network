@@ -3,11 +3,12 @@ package isaac
 import (
 	"encoding/json"
 
-	"github.com/spikeekips/mitum/encoder"
-	"github.com/spikeekips/mitum/hint"
-	"github.com/spikeekips/mitum/key"
-	"github.com/spikeekips/mitum/localtime"
-	"github.com/spikeekips/mitum/valuehash"
+	"github.com/spikeekips/mitum/base"
+	"github.com/spikeekips/mitum/base/key"
+	"github.com/spikeekips/mitum/base/valuehash"
+	"github.com/spikeekips/mitum/util/encoder"
+	"github.com/spikeekips/mitum/util/hint"
+	"github.com/spikeekips/mitum/util/localtime"
 )
 
 type BaseBallotV0PackerJSON struct {
@@ -16,9 +17,9 @@ type BaseBallotV0PackerJSON struct {
 	SN  key.Publickey      `json:"signer"`
 	SG  key.Signature      `json:"signature"`
 	SA  localtime.JSONTime `json:"signed_at"`
-	HT  Height             `json:"height"`
-	RD  Round              `json:"round"`
-	N   Address            `json:"node"`
+	HT  base.Height        `json:"height"`
+	RD  base.Round         `json:"round"`
+	N   base.Address       `json:"node"`
 	BH  valuehash.Hash     `json:"body_hash"`
 	FH  valuehash.Hash     `json:"fact_hash"`
 	FSG key.Signature      `json:"fact_signature"`
@@ -46,8 +47,8 @@ type BaseBallotV0UnpackerJSON struct {
 	SN  json.RawMessage    `json:"signer"`
 	SG  key.Signature      `json:"signature"`
 	SA  localtime.JSONTime `json:"signed_at"`
-	HT  Height             `json:"height"`
-	RD  Round              `json:"round"`
+	HT  base.Height        `json:"height"`
+	RD  base.Round         `json:"round"`
 	N   json.RawMessage    `json:"node"`
 	BH  json.RawMessage    `json:"body_hash"`
 	FH  json.RawMessage    `json:"fact_hash"`
@@ -80,8 +81,8 @@ func UnpackBaseBallotV0JSON(nib BaseBallotV0UnpackerJSON, enc *encoder.JSONEncod
 		return BaseBallotV0{}, BaseBallotFactV0{}, err
 	}
 
-	var node Address
-	if node, err = DecodeAddress(enc, nib.N); err != nil {
+	var node base.Address
+	if node, err = base.DecodeAddress(enc, nib.N); err != nil {
 		return BaseBallotV0{}, BaseBallotFactV0{}, err
 	}
 
@@ -103,8 +104,8 @@ func UnpackBaseBallotV0JSON(nib BaseBallotV0UnpackerJSON, enc *encoder.JSONEncod
 
 type BaseBallotFactV0PackerJSON struct {
 	encoder.JSONPackHintedHead
-	HT Height `json:"height"`
-	RD Round  `json:"round"`
+	HT base.Height `json:"height"`
+	RD base.Round  `json:"round"`
 }
 
 func NewBaseBallotFactV0PackerJSON(bbf BaseBallotFactV0, ht hint.Hint) BaseBallotFactV0PackerJSON {

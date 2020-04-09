@@ -1,9 +1,10 @@
 package isaac
 
 import (
-	"github.com/spikeekips/mitum/seal"
+	"github.com/spikeekips/mitum/base"
+	"github.com/spikeekips/mitum/base/seal"
+	"github.com/spikeekips/mitum/base/valuehash"
 	"github.com/spikeekips/mitum/util"
-	"github.com/spikeekips/mitum/valuehash"
 )
 
 type Localstate struct {
@@ -19,8 +20,8 @@ type Localstate struct {
 func NewLocalstate(st Storage, node *LocalNode, networkID []byte) (*Localstate, error) {
 	// load last states from storage.
 	var lastBlock Block
-	var lastINITVoteproof Voteproof
-	var lastACCEPTVoteproof Voteproof
+	var lastINITVoteproof base.Voteproof
+	var lastACCEPTVoteproof base.Voteproof
 	if st != nil {
 		var err error
 		if lastBlock, err = st.LastBlock(); err != nil {
@@ -82,31 +83,31 @@ func (ls *Localstate) SetLastBlock(block Block) error {
 	return nil
 }
 
-func (ls *Localstate) LastINITVoteproof() Voteproof {
+func (ls *Localstate) LastINITVoteproof() base.Voteproof {
 	voteproof := ls.lastINITVoteproof.Value()
 	if voteproof == nil {
 		return nil
 	}
 
-	return voteproof.(Voteproof)
+	return voteproof.(base.Voteproof)
 }
 
-func (ls *Localstate) SetLastINITVoteproof(voteproof Voteproof) error {
+func (ls *Localstate) SetLastINITVoteproof(voteproof base.Voteproof) error {
 	_ = ls.lastINITVoteproof.SetValue(voteproof)
 
 	return nil
 }
 
-func (ls *Localstate) LastACCEPTVoteproof() Voteproof {
+func (ls *Localstate) LastACCEPTVoteproof() base.Voteproof {
 	v := ls.lastACCEPTVoteproof.Value()
 	if v == nil {
 		return nil
 	}
 
-	return v.(Voteproof)
+	return v.(base.Voteproof)
 }
 
-func (ls *Localstate) SetLastACCEPTVoteproof(voteproof Voteproof) error {
+func (ls *Localstate) SetLastACCEPTVoteproof(voteproof base.Voteproof) error {
 	_ = ls.lastACCEPTVoteproof.SetValue(voteproof)
 
 	return nil

@@ -3,24 +3,24 @@ package isaac
 import (
 	"sync"
 
-	"github.com/spikeekips/mitum/key"
+	"github.com/spikeekips/mitum/base"
+	"github.com/spikeekips/mitum/base/key"
 )
 
 type Node interface {
-	Address() Address
-	Publickey() key.Publickey
+	base.Node
 	Channel() NetworkChannel
 }
 
 type LocalNode struct {
 	sync.RWMutex
-	address    Address
+	address    base.Address
 	publickey  key.Publickey
 	privatekey key.Privatekey
 	channel    NetworkChannel
 }
 
-func NewLocalNode(address Address, privatekey key.Privatekey) *LocalNode {
+func NewLocalNode(address base.Address, privatekey key.Privatekey) *LocalNode {
 	return &LocalNode{
 		address:    address,
 		publickey:  privatekey.Publickey(),
@@ -28,7 +28,7 @@ func NewLocalNode(address Address, privatekey key.Privatekey) *LocalNode {
 	}
 }
 
-func (ln *LocalNode) Address() Address {
+func (ln *LocalNode) Address() base.Address {
 	return ln.address
 }
 
@@ -64,19 +64,19 @@ func (ln *LocalNode) SetChannel(channel NetworkChannel) *LocalNode {
 
 type RemoteNode struct {
 	sync.RWMutex
-	address   Address
+	address   base.Address
 	publickey key.Publickey
 	channel   NetworkChannel
 }
 
-func NewRemoteNode(address Address, publickey key.Publickey) *RemoteNode {
+func NewRemoteNode(address base.Address, publickey key.Publickey) *RemoteNode {
 	return &RemoteNode{
 		address:   address,
 		publickey: publickey,
 	}
 }
 
-func (ln *RemoteNode) Address() Address {
+func (ln *RemoteNode) Address() base.Address {
 	return ln.address
 }
 

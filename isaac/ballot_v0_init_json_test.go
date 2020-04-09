@@ -5,10 +5,11 @@ import (
 
 	"github.com/stretchr/testify/suite"
 
-	"github.com/spikeekips/mitum/encoder"
-	"github.com/spikeekips/mitum/key"
-	"github.com/spikeekips/mitum/localtime"
-	"github.com/spikeekips/mitum/valuehash"
+	"github.com/spikeekips/mitum/base"
+	"github.com/spikeekips/mitum/base/key"
+	"github.com/spikeekips/mitum/base/valuehash"
+	"github.com/spikeekips/mitum/util/encoder"
+	"github.com/spikeekips/mitum/util/localtime"
 )
 
 type testBallotV0INITJSON struct {
@@ -27,26 +28,26 @@ func (t *testBallotV0INITJSON) TestEncode() {
 	encs := encoder.NewEncoders()
 	t.NoError(encs.AddEncoder(je))
 	t.NoError(encs.AddHinter(valuehash.SHA256{}))
-	t.NoError(encs.AddHinter(NewShortAddress("")))
+	t.NoError(encs.AddHinter(base.NewShortAddress("")))
 	t.NoError(encs.AddHinter(key.BTCPublickey{}))
 	t.NoError(encs.AddHinter(INITBallotV0{}))
 	t.NoError(encs.AddHinter(DummyVoteproof{}))
 
 	vp := NewDummyVoteproof(
-		Height(10),
-		Round(0),
-		StageACCEPT,
-		VoteResultMajority,
+		base.Height(10),
+		base.Round(0),
+		base.StageACCEPT,
+		base.VoteResultMajority,
 	)
 
 	ib := INITBallotV0{
 		BaseBallotV0: BaseBallotV0{
-			node: NewShortAddress("test-for-init-ballot"),
+			node: base.NewShortAddress("test-for-init-ballot"),
 		},
 		INITBallotFactV0: INITBallotFactV0{
 			BaseBallotFactV0: BaseBallotFactV0{
 				height: vp.Height() + 1,
-				round:  Round(0),
+				round:  base.Round(0),
 			},
 			previousBlock: valuehash.RandomSHA256(),
 			previousRound: vp.Round(),

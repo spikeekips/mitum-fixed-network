@@ -1,8 +1,8 @@
 package isaac
 
 import (
-	"github.com/spikeekips/mitum/logging"
 	"github.com/spikeekips/mitum/util"
+	"github.com/spikeekips/mitum/util/logging"
 )
 
 func marshalBallotLog(ballot Ballot, key string, e logging.Emitter, verbose bool) logging.Emitter {

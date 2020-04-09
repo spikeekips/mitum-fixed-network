@@ -3,18 +3,19 @@ package isaac
 import (
 	"golang.org/x/xerrors"
 
-	"github.com/spikeekips/mitum/logging"
+	"github.com/spikeekips/mitum/base"
+	"github.com/spikeekips/mitum/util/logging"
 )
 
 type ProposalValidationChecker struct {
 	*logging.Logging
 	localstate *Localstate
-	suffrage   Suffrage
+	suffrage   base.Suffrage
 	proposal   Proposal
 }
 
 func NewProposalValidationChecker(
-	localstate *Localstate, suffrage Suffrage, proposal Proposal,
+	localstate *Localstate, suffrage base.Suffrage, proposal Proposal,
 ) *ProposalValidationChecker {
 	return &ProposalValidationChecker{
 		Logging: logging.NewLogging(func(c logging.Context) logging.Emitter {

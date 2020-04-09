@@ -4,9 +4,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/spikeekips/mitum/encoder"
+	"github.com/spikeekips/mitum/base/valuehash"
 	"github.com/spikeekips/mitum/util"
-	"github.com/spikeekips/mitum/valuehash"
+	"github.com/spikeekips/mitum/util/encoder"
 	"github.com/stretchr/testify/suite"
 )
 

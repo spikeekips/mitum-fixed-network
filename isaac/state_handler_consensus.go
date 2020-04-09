@@ -7,10 +7,11 @@ import (
 
 	"golang.org/x/xerrors"
 
-	"github.com/spikeekips/mitum/localtime"
-	"github.com/spikeekips/mitum/logging"
-	"github.com/spikeekips/mitum/seal"
+	"github.com/spikeekips/mitum/base"
+	"github.com/spikeekips/mitum/base/seal"
 	"github.com/spikeekips/mitum/storage"
+	"github.com/spikeekips/mitum/util/localtime"
+	"github.com/spikeekips/mitum/util/logging"
 )
 
 /*
@@ -26,7 +27,7 @@ Consensus state is started by new INIT Voteproof and waits next Proposal.
 type StateConsensusHandler struct {
 	proposalLock sync.Mutex
 	*BaseStateHandler
-	suffrage          Suffrage
+	suffrage          base.Suffrage
 	proposalMaker     *ProposalMaker
 	processedProposal Proposal
 }
@@ -34,7 +35,7 @@ type StateConsensusHandler struct {
 func NewStateConsensusHandler(
 	localstate *Localstate,
 	proposalProcessor ProposalProcessor,
-	suffrage Suffrage,
+	suffrage base.Suffrage,
 	proposalMaker *ProposalMaker,
 ) (*StateConsensusHandler, error) {
 	if lastBlock := localstate.LastBlock(); lastBlock == nil {
@@ -42,7 +43,7 @@ func NewStateConsensusHandler(
 	}
 
 	cs := &StateConsensusHandler{
-		BaseStateHandler: NewBaseStateHandler(localstate, proposalProcessor, StateConsensus),
+		BaseStateHandler: NewBaseStateHandler(localstate, proposalProcessor, base.StateConsensus),
 		suffrage:         suffrage,
 		proposalMaker:    proposalMaker,
 	}
@@ -72,7 +73,7 @@ func (cs *StateConsensusHandler) SetLogger(l logging.Logger) logging.Logger {
 func (cs *StateConsensusHandler) Activate(ctx StateChangeContext) error {
 	if ctx.Voteproof() == nil {
 		return xerrors.Errorf("consensus handler got empty Voteproof")
-	} else if ctx.Voteproof().Stage() != StageINIT {
+	} else if ctx.Voteproof().Stage() != base.StageINIT {
 		return xerrors.Errorf("consensus handler starts with INIT Voteproof: %s", ctx.Voteproof().Stage())
 	} else if err := ctx.Voteproof().IsValid(nil); err != nil {
 		return xerrors.Errorf("consensus handler got invalid Voteproof: %w", err)
@@ -103,7 +104,7 @@ func (cs *StateConsensusHandler) Deactivate(ctx StateChangeContext) error {
 	return nil
 }
 
-func (cs *StateConsensusHandler) waitProposal(voteproof Voteproof) error { // nolint
+func (cs *StateConsensusHandler) waitProposal(voteproof base.Voteproof) error { // nolint
 	cs.proposalLock.Lock()
 	defer cs.proposalLock.Unlock()
 
@@ -156,7 +157,7 @@ func (cs *StateConsensusHandler) NewSeal(sl seal.Seal) error {
 	}
 }
 
-func (cs *StateConsensusHandler) NewVoteproof(voteproof Voteproof) error {
+func (cs *StateConsensusHandler) NewVoteproof(voteproof base.Voteproof) error {
 	if err := cs.timers.StopTimers([]string{TimerIDTimedoutMoveNextRound}); err != nil {
 		return err
 	}
@@ -166,18 +167,18 @@ func (cs *StateConsensusHandler) NewVoteproof(voteproof Voteproof) error {
 	l.Debug().Msg("Voteproof received")
 
 	// NOTE if drew, goes to next round.
-	if voteproof.Result() == VoteResultDraw {
+	if voteproof.Result() == base.VoteResultDraw {
 		return cs.startNextRound(voteproof)
 	}
 
 	switch voteproof.Stage() {
-	case StageACCEPT:
+	case base.StageACCEPT:
 		if err := cs.StoreNewBlockByVoteproof(voteproof); err != nil {
 			l.Error().Err(err).Msg("failed to store accept voteproof")
 		}
 
 		return cs.keepBroadcastingINITBallotForNextBlock()
-	case StageINIT:
+	case base.StageINIT:
 		return cs.handleINITVoteproof(voteproof)
 	default:
 		err := xerrors.Errorf("invalid Voteproof received")
@@ -188,7 +189,7 @@ func (cs *StateConsensusHandler) NewVoteproof(voteproof Voteproof) error {
 	}
 }
 
-func (cs *StateConsensusHandler) handleINITVoteproof(voteproof Voteproof) error {
+func (cs *StateConsensusHandler) handleINITVoteproof(voteproof base.Voteproof) error {
 	l := loggerWithLocalstate(cs.localstate, loggerWithVoteproof(voteproof, cs.Log()))
 
 	l.Debug().Msg("expected Voteproof received; will wait Proposal")
@@ -199,7 +200,7 @@ func (cs *StateConsensusHandler) handleINITVoteproof(voteproof Voteproof) error 
 func (cs *StateConsensusHandler) keepBroadcastingINITBallotForNextBlock() error {
 	if timer, err := cs.TimerBroadcastingINITBallot(
 		func() time.Duration { return cs.localstate.Policy().IntervalBroadcastingINITBallot() },
-		func() Round { return Round(0) },
+		func() base.Round { return base.Round(0) },
 	); err != nil {
 		return err
 	} else if err := cs.timers.SetTimer(TimerIDBroadcastingINITBallot, timer); err != nil {
@@ -285,7 +286,7 @@ func (cs *StateConsensusHandler) readyToACCEPTBallot(newBlock Block) error {
 	return cs.timers.StartTimers([]string{TimerIDBroadcastingACCEPTBallot}, true)
 }
 
-func (cs *StateConsensusHandler) proposal(voteproof Voteproof) (bool, error) {
+func (cs *StateConsensusHandler) proposal(voteproof base.Voteproof) (bool, error) {
 	l := loggerWithVoteproof(voteproof, cs.Log())
 
 	l.Debug().Msg("prepare to broadcast Proposal")
@@ -320,11 +321,11 @@ func (cs *StateConsensusHandler) proposal(voteproof Voteproof) (bool, error) {
 	return true, nil
 }
 
-func (cs *StateConsensusHandler) startNextRound(voteproof Voteproof) error {
+func (cs *StateConsensusHandler) startNextRound(voteproof base.Voteproof) error {
 	cs.Log().Debug().Msg("trying to start next round")
 
-	var round Round
-	if voteproof.Stage() == StageACCEPT {
+	var round base.Round
+	if voteproof.Stage() == base.StageACCEPT {
 		round = 0
 	} else {
 		round = voteproof.Round() + 1
@@ -342,7 +343,7 @@ func (cs *StateConsensusHandler) startNextRound(voteproof Voteproof) error {
 
 			return cs.localstate.Policy().IntervalBroadcastingINITBallot()
 		},
-		func() Round { return round },
+		func() base.Round { return round },
 	); err != nil {
 		return err
 	} else if err := cs.timers.SetTimer(TimerIDBroadcastingINITBallot, timer); err != nil {
@@ -355,7 +356,7 @@ func (cs *StateConsensusHandler) startNextRound(voteproof Voteproof) error {
 	}, true)
 }
 
-func (cs *StateConsensusHandler) checkReceivedProposal(height Height, round Round) error {
+func (cs *StateConsensusHandler) checkReceivedProposal(height base.Height, round base.Round) error {
 	cs.Log().Debug().Msg("trying to check already received Proposal")
 
 	// if Proposal already received, find and processing it.

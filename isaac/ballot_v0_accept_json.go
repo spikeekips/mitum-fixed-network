@@ -3,16 +3,17 @@ package isaac
 import (
 	"encoding/json"
 
-	"github.com/spikeekips/mitum/encoder"
+	"github.com/spikeekips/mitum/base"
+	"github.com/spikeekips/mitum/base/valuehash"
 	"github.com/spikeekips/mitum/util"
-	"github.com/spikeekips/mitum/valuehash"
+	"github.com/spikeekips/mitum/util/encoder"
 )
 
 type ACCEPTBallotV0PackerJSON struct {
 	BaseBallotV0PackerJSON
 	PR valuehash.Hash `json:"proposal"`
 	NB valuehash.Hash `json:"new_block"`
-	VR Voteproof      `json:"voteproof"`
+	VR base.Voteproof `json:"voteproof"`
 }
 
 func (ab ACCEPTBallotV0) MarshalJSON() ([]byte, error) {
@@ -62,8 +63,8 @@ func (ab *ACCEPTBallotV0) UnpackJSON(b []byte, enc *encoder.JSONEncoder) error {
 		enb = i
 	}
 
-	var voteproof Voteproof
-	if i, err := decodeVoteproof(enc, nab.VR); err != nil {
+	var voteproof base.Voteproof
+	if i, err := base.DecodeVoteproof(enc, nab.VR); err != nil {
 		return err
 	} else {
 		voteproof = i

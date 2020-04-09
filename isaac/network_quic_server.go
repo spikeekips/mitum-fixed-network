@@ -8,11 +8,12 @@ import (
 	"net/url"
 	"path"
 
-	"github.com/spikeekips/mitum/encoder"
-	"github.com/spikeekips/mitum/logging"
+	"github.com/spikeekips/mitum/base"
+	"github.com/spikeekips/mitum/base/seal"
+	"github.com/spikeekips/mitum/base/valuehash"
 	"github.com/spikeekips/mitum/network"
-	"github.com/spikeekips/mitum/seal"
-	"github.com/spikeekips/mitum/valuehash"
+	"github.com/spikeekips/mitum/util/encoder"
+	"github.com/spikeekips/mitum/util/logging"
 	"golang.org/x/xerrors"
 )
 
@@ -220,7 +221,7 @@ func (qs *QuicServer) handleNewSeal(w http.ResponseWriter, r *http.Request) {
 func (qs *QuicServer) handleGetByHeights(
 	w http.ResponseWriter,
 	r *http.Request,
-	getHandler func([]Height) (interface{}, error),
+	getHandler func([]base.Height) (interface{}, error),
 ) error {
 	body := &bytes.Buffer{}
 	if _, err := io.Copy(body, r.Body); err != nil {
@@ -239,7 +240,7 @@ func (qs *QuicServer) handleGetByHeights(
 		enc = e
 	}
 
-	var heights []Height
+	var heights []base.Height
 	if err := enc.Unmarshal(body.Bytes(), &heights); err != nil {
 		network.HTTPError(w, http.StatusInternalServerError)
 
@@ -273,7 +274,7 @@ func (qs *QuicServer) handleGetManifests(w http.ResponseWriter, r *http.Request)
 
 	if err := qs.handleGetByHeights(
 		w, r,
-		func(heights []Height) (interface{}, error) {
+		func(heights []base.Height) (interface{}, error) {
 			return qs.getManifestsHandler(heights)
 		},
 	); err != nil {
@@ -290,7 +291,7 @@ func (qs *QuicServer) handleGetBlocks(w http.ResponseWriter, r *http.Request) {
 
 	if err := qs.handleGetByHeights(
 		w, r,
-		func(heights []Height) (interface{}, error) {
+		func(heights []base.Height) (interface{}, error) {
 			return qs.getBlocksHandler(heights)
 		}); err != nil {
 		qs.Log().Error().Err(err).Msg("failed to get blocks")

@@ -5,10 +5,11 @@ import (
 
 	"github.com/stretchr/testify/suite"
 
-	"github.com/spikeekips/mitum/encoder"
-	"github.com/spikeekips/mitum/key"
-	"github.com/spikeekips/mitum/localtime"
-	"github.com/spikeekips/mitum/valuehash"
+	"github.com/spikeekips/mitum/base"
+	"github.com/spikeekips/mitum/base/key"
+	"github.com/spikeekips/mitum/base/valuehash"
+	"github.com/spikeekips/mitum/util/encoder"
+	"github.com/spikeekips/mitum/util/localtime"
 )
 
 type testBallotProposalV0JSON struct {
@@ -27,18 +28,18 @@ func (t *testBallotProposalV0JSON) TestEncode() {
 	encs := encoder.NewEncoders()
 	t.NoError(encs.AddEncoder(je))
 	t.NoError(encs.AddHinter(valuehash.SHA256{}))
-	t.NoError(encs.AddHinter(NewShortAddress("")))
+	t.NoError(encs.AddHinter(base.NewShortAddress("")))
 	t.NoError(encs.AddHinter(key.BTCPublickey{}))
 	t.NoError(encs.AddHinter(ProposalV0{}))
 
 	ib := ProposalV0{
 		BaseBallotV0: BaseBallotV0{
-			node: NewShortAddress("test-for-proposal"),
+			node: base.NewShortAddress("test-for-proposal"),
 		},
 		ProposalFactV0: ProposalFactV0{
 			BaseBallotFactV0: BaseBallotFactV0{
-				height: Height(10),
-				round:  Round(0),
+				height: base.Height(10),
+				round:  base.Round(0),
 			},
 			seals: []valuehash.Hash{
 				valuehash.RandomSHA256(),

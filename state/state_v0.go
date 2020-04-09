@@ -1,10 +1,10 @@
 package state
 
 import (
-	"github.com/spikeekips/mitum/hint"
-	"github.com/spikeekips/mitum/operation"
+	"github.com/spikeekips/mitum/base/operation"
+	"github.com/spikeekips/mitum/base/valuehash"
 	"github.com/spikeekips/mitum/util"
-	"github.com/spikeekips/mitum/valuehash"
+	"github.com/spikeekips/mitum/util/hint"
 	"golang.org/x/xerrors"
 )
 

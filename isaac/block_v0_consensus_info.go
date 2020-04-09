@@ -1,14 +1,15 @@
 package isaac
 
 import (
-	"github.com/spikeekips/mitum/hint"
-	"github.com/spikeekips/mitum/isvalid"
+	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/util"
+	"github.com/spikeekips/mitum/util/hint"
+	"github.com/spikeekips/mitum/util/isvalid"
 )
 
 type BlockConsensusInfoV0 struct {
-	initVoteproof   Voteproof
-	acceptVoteproof Voteproof
+	initVoteproof   base.Voteproof
+	acceptVoteproof base.Voteproof
 }
 
 func (bc BlockConsensusInfoV0) IsValid([]byte) error {
@@ -33,10 +34,10 @@ func (bc BlockConsensusInfoV0) Bytes() []byte {
 	)
 }
 
-func (bc BlockConsensusInfoV0) INITVoteproof() Voteproof {
+func (bc BlockConsensusInfoV0) INITVoteproof() base.Voteproof {
 	return bc.initVoteproof
 }
 
-func (bc BlockConsensusInfoV0) ACCEPTVoteproof() Voteproof {
+func (bc BlockConsensusInfoV0) ACCEPTVoteproof() base.Voteproof {
 	return bc.acceptVoteproof
 }

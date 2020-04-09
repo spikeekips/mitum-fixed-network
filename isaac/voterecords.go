@@ -3,34 +3,29 @@ package isaac
 import (
 	"sync"
 
-	"github.com/spikeekips/mitum/localtime"
-	"github.com/spikeekips/mitum/operation"
-	"github.com/spikeekips/mitum/valuehash"
+	"github.com/spikeekips/mitum/base"
+	"github.com/spikeekips/mitum/base/valuehash"
 )
 
 type VoteRecords struct {
 	sync.RWMutex
-	facts     map[valuehash.Hash]operation.Fact
-	votes     map[Address]valuehash.Hash // key: node Address, value: fact hash
-	ballots   map[Address]Ballot
-	voteproof VoteproofV0
+	facts     map[valuehash.Hash]base.Fact
+	votes     map[base.Address]valuehash.Hash // key: node Address, value: fact hash
+	ballots   map[base.Address]Ballot
+	voteproof base.VoteproofV0
 }
 
-func NewVoteRecords(ballot Ballot, threshold Threshold) *VoteRecords {
+func NewVoteRecords(ballot Ballot, threshold base.Threshold) *VoteRecords {
 	return &VoteRecords{
-		facts:   map[valuehash.Hash]operation.Fact{},
-		votes:   map[Address]valuehash.Hash{},
-		ballots: map[Address]Ballot{},
-		voteproof: VoteproofV0{
-			height:    ballot.Height(),
-			round:     ballot.Round(),
-			stage:     ballot.Stage(),
-			threshold: threshold,
-			result:    VoteResultNotYet,
-			facts:     map[valuehash.Hash]operation.Fact{},
-			ballots:   map[Address]valuehash.Hash{},
-			votes:     map[Address]VoteproofNodeFact{},
-		},
+		facts:   map[valuehash.Hash]base.Fact{},
+		votes:   map[base.Address]valuehash.Hash{},
+		ballots: map[base.Address]Ballot{},
+		voteproof: base.NewVoteproofV0(
+			ballot.Height(),
+			ballot.Round(),
+			threshold,
+			ballot.Stage(),
+		),
 	}
 }
 
@@ -53,61 +48,67 @@ func (vrs *VoteRecords) addBallot(ballot Ballot) bool {
 
 // Vote votes by Ballot and keep track the vote records. If getting result is
 // done, Voteproof will not be updated.
-func (vrs *VoteRecords) Vote(ballot Ballot) Voteproof {
+func (vrs *VoteRecords) Vote(ballot Ballot) base.Voteproof {
 	vrs.Lock()
 	defer vrs.Unlock()
 
-	if !vrs.vote(ballot) {
+	vp := &vrs.voteproof
+	if !vrs.vote(ballot, vp) {
+		vrs.voteproof = *vp
+
 		return vrs.voteproof
 	}
 
 	{
-		facts := map[valuehash.Hash]operation.Fact{}
+		facts := map[valuehash.Hash]base.Fact{}
 		for k, v := range vrs.facts {
 			facts[k] = v
 		}
-		vrs.voteproof.facts = facts
+		vp.SetFacts(facts)
 	}
 
 	{
-		ballots := map[Address]valuehash.Hash{}
+		ballots := map[base.Address]valuehash.Hash{}
 		for k, v := range vrs.ballots {
 			ballots[k] = v.Hash()
 		}
-		vrs.voteproof.ballots = ballots
+		vp.SetBallots(ballots)
 	}
 
 	{
-		votes := map[Address]VoteproofNodeFact{}
+		votes := map[base.Address]base.VoteproofNodeFact{}
 		for node, ballot := range vrs.ballots {
-			votes[node] = VoteproofNodeFact{
-				fact:          ballot.FactHash(),
-				factSignature: ballot.FactSignature(),
-				signer:        ballot.Signer(),
-			}
+			votes[node] = base.NewVoteproofNodeFact(
+				ballot.FactHash(),
+				ballot.FactSignature(),
+				ballot.Signer(),
+			)
 		}
-		vrs.voteproof.votes = votes
+		vp.SetVotes(votes)
 	}
 
-	vrs.voteproof.finishedAt = localtime.Now()
+	_ = vp.Finish()
+
+	vrs.voteproof = *vp
 
 	return vrs.voteproof
 }
 
-func (vrs *VoteRecords) vote(ballot Ballot) bool {
+func (vrs *VoteRecords) vote(ballot Ballot, voteproof *base.VoteproofV0) bool {
 	if vrs.addBallot(ballot) {
 		return false
 	}
 
-	if vrs.voteproof.IsFinished() {
-		vrs.voteproof.closed = true
+	if voteproof.IsFinished() {
+		_ = voteproof.Close()
+
 		return false
-	} else if len(vrs.votes) < int(vrs.voteproof.threshold.Threshold) {
+	} else if len(vrs.votes) < int(voteproof.Threshold().Threshold) {
 		return false
 	}
 
 	set := make([]string, len(vrs.votes))
-	facts := map[string]operation.Fact{}
+	facts := map[string]base.Fact{}
 
 	var i int
 	for n := range vrs.votes {
@@ -118,16 +119,17 @@ func (vrs *VoteRecords) vote(ballot Ballot) bool {
 		i++
 	}
 
-	var fact operation.Fact
-	var result VoteResultType
+	var fact base.Fact
+	var result base.VoteResultType
 
-	result, key := FindMajorityFromSlice(vrs.voteproof.threshold.Total, vrs.voteproof.threshold.Threshold, set)
-	if result == VoteResultMajority {
+	threshold := voteproof.Threshold()
+	result, key := base.FindMajorityFromSlice(threshold.Total, threshold.Threshold, set)
+	if result == base.VoteResultMajority {
 		fact = facts[key]
 	}
 
-	vrs.voteproof.result = result
-	vrs.voteproof.majority = fact
+	_ = voteproof.SetResult(result).
+		SetMajority(fact)
 
 	return true
 }

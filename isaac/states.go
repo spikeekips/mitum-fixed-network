@@ -5,9 +5,10 @@ import (
 
 	"golang.org/x/xerrors"
 
-	"github.com/spikeekips/mitum/logging"
-	"github.com/spikeekips/mitum/seal"
+	"github.com/spikeekips/mitum/base"
+	"github.com/spikeekips/mitum/base/seal"
 	"github.com/spikeekips/mitum/util"
+	"github.com/spikeekips/mitum/util/logging"
 )
 
 type ConsensusStates struct {
@@ -16,8 +17,8 @@ type ConsensusStates struct {
 	*util.FunctionDaemon
 	localstate    *Localstate
 	ballotbox     *Ballotbox
-	suffrage      Suffrage
-	states        map[State]StateHandler
+	suffrage      base.Suffrage
+	states        map[base.State]StateHandler
 	activeHandler StateHandler
 	stateChan     chan StateChangeContext
 	sealChan      chan seal.Seal
@@ -26,7 +27,7 @@ type ConsensusStates struct {
 func NewConsensusStates(
 	localstate *Localstate,
 	ballotbox *Ballotbox,
-	suffrage Suffrage,
+	suffrage base.Suffrage,
 	booting *StateBootingHandler,
 	joining *StateJoiningHandler,
 	consensus *StateConsensusHandler,
@@ -40,12 +41,12 @@ func NewConsensusStates(
 		localstate: localstate,
 		ballotbox:  ballotbox,
 		suffrage:   suffrage,
-		states: map[State]StateHandler{
-			StateBooting:   booting,
-			StateJoining:   joining,
-			StateConsensus: consensus,
-			StateSyncing:   syncing,
-			StateBroken:    broken,
+		states: map[base.State]StateHandler{
+			base.StateBooting:   booting,
+			base.StateJoining:   joining,
+			base.StateConsensus: consensus,
+			base.StateSyncing:   syncing,
+			base.StateBroken:    broken,
 		},
 		stateChan: make(chan StateChangeContext),
 		sealChan:  make(chan seal.Seal),
@@ -93,7 +94,7 @@ func (css *ConsensusStates) Start() error {
 		return err
 	}
 
-	css.ActivateHandler(NewStateChangeContext(StateStopped, StateBooting, nil, nil))
+	css.ActivateHandler(NewStateChangeContext(base.StateStopped, base.StateBooting, nil, nil))
 
 	return nil
 }
@@ -107,7 +108,7 @@ func (css *ConsensusStates) Stop() error {
 	}
 
 	if css.activeHandler != nil {
-		ctx := NewStateChangeContext(css.activeHandler.State(), StateStopped, nil, nil)
+		ctx := NewStateChangeContext(css.activeHandler.State(), base.StateStopped, nil, nil)
 		if err := css.activeHandler.Deactivate(ctx); err != nil {
 			return err
 		}
@@ -240,7 +241,7 @@ func (css *ConsensusStates) broadcastSeal(sl seal.Seal, errChan chan<- error) {
 	})
 }
 
-func (css *ConsensusStates) newVoteproof(voteproof Voteproof) error {
+func (css *ConsensusStates) newVoteproof(voteproof base.Voteproof) error {
 	vpc := NewVoteproofConsensusStateChecker(
 		css.localstate.LastBlock(),
 		css.localstate.LastINITVoteproof(),
@@ -270,9 +271,9 @@ func (css *ConsensusStates) newVoteproof(voteproof Voteproof) error {
 	}
 
 	switch voteproof.Stage() {
-	case StageACCEPT:
+	case base.StageACCEPT:
 		_ = css.localstate.SetLastACCEPTVoteproof(voteproof)
-	case StageINIT:
+	case base.StageINIT:
 		_ = css.localstate.SetLastINITVoteproof(voteproof)
 	}
 
@@ -371,7 +372,7 @@ func (css *ConsensusStates) vote(ballot Ballot) error {
 	return css.newVoteproof(voteproof)
 }
 
-func checkBlockWithINITVoteproof(block Block, voteproof Voteproof) error {
+func checkBlockWithINITVoteproof(block Block, voteproof base.Voteproof) error {
 	// check voteproof.PreviousBlock with local block
 	fact, ok := voteproof.Majority().(INITBallotFact)
 	if !ok {

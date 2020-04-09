@@ -3,7 +3,7 @@ package util
 import (
 	"math/big"
 
-	"github.com/spikeekips/mitum/errors"
+	"github.com/spikeekips/mitum/util/errors"
 )
 
 var InvalidUnsignedIntError = errors.NewError("invalid UnsignedInt")

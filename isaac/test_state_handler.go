@@ -8,14 +8,15 @@ import (
 
 	"github.com/stretchr/testify/suite"
 
-	"github.com/spikeekips/mitum/encoder"
-	"github.com/spikeekips/mitum/key"
-	"github.com/spikeekips/mitum/localtime"
-	"github.com/spikeekips/mitum/operation"
+	"github.com/spikeekips/mitum/base"
+	"github.com/spikeekips/mitum/base/key"
+	"github.com/spikeekips/mitum/base/operation"
+	"github.com/spikeekips/mitum/base/valuehash"
 	"github.com/spikeekips/mitum/state"
 	"github.com/spikeekips/mitum/tree"
 	"github.com/spikeekips/mitum/util"
-	"github.com/spikeekips/mitum/valuehash"
+	"github.com/spikeekips/mitum/util/encoder"
+	"github.com/spikeekips/mitum/util/localtime"
 )
 
 type baseTestStateHandler struct { // nolint
@@ -34,7 +35,7 @@ func (t *baseTestStateHandler) SetupSuite() { // nolint
 	_ = t.encs.AddHinter(key.BTCPublickey{})
 	_ = t.encs.AddHinter(valuehash.SHA256{})
 	_ = t.encs.AddHinter(valuehash.Dummy{})
-	_ = t.encs.AddHinter(NewShortAddress(""))
+	_ = t.encs.AddHinter(base.NewShortAddress(""))
 	_ = t.encs.AddHinter(INITBallotV0{})
 	_ = t.encs.AddHinter(INITBallotFactV0{})
 	_ = t.encs.AddHinter(ProposalV0{})
@@ -43,7 +44,7 @@ func (t *baseTestStateHandler) SetupSuite() { // nolint
 	_ = t.encs.AddHinter(SIGNBallotFactV0{})
 	_ = t.encs.AddHinter(ACCEPTBallotV0{})
 	_ = t.encs.AddHinter(ACCEPTBallotFactV0{})
-	_ = t.encs.AddHinter(VoteproofV0{})
+	_ = t.encs.AddHinter(base.VoteproofV0{})
 	_ = t.encs.AddHinter(BlockV0{})
 	_ = t.encs.AddHinter(ManifestV0{})
 	_ = t.encs.AddHinter(BlockConsensusInfoV0{})
@@ -67,7 +68,7 @@ func (t *baseTestStateHandler) SetupSuite() { // nolint
 }
 
 func (t *baseTestStateHandler) states() (*Localstate, *Localstate) {
-	lastBlock, err := NewTestBlockV0(Height(2), Round(9), nil, valuehash.RandomSHA256())
+	lastBlock, err := NewTestBlockV0(base.Height(2), base.Round(9), nil, valuehash.RandomSHA256())
 	t.NoError(err)
 
 	lst := NewMemStorage(t.encs, t.enc)
@@ -88,16 +89,16 @@ func (t *baseTestStateHandler) states() (*Localstate, *Localstate) {
 	lastINITVoteproof := NewDummyVoteproof(
 		localstate.LastBlock().Height(),
 		localstate.LastBlock().Round(),
-		StageINIT,
-		VoteResultMajority,
+		base.StageINIT,
+		base.VoteResultMajority,
 	)
 	_ = localstate.SetLastINITVoteproof(lastINITVoteproof)
 	_ = remoteState.SetLastINITVoteproof(lastINITVoteproof)
 	lastACCEPTVoteproof := NewDummyVoteproof(
 		localstate.LastBlock().Height(),
 		localstate.LastBlock().Round(),
-		StageACCEPT,
-		VoteResultMajority,
+		base.StageACCEPT,
+		base.VoteResultMajority,
 	)
 	_ = localstate.SetLastACCEPTVoteproof(lastACCEPTVoteproof)
 	_ = remoteState.SetLastACCEPTVoteproof(lastACCEPTVoteproof)
@@ -112,29 +113,29 @@ func (t *baseTestStateHandler) SetupTest() {
 }
 
 func (t *baseTestStateHandler) newVoteproof(
-	stage Stage, fact operation.Fact, states ...*Localstate,
-) (VoteproofV0, error) {
+	stage base.Stage, fact base.Fact, states ...*Localstate,
+) (base.VoteproofV0, error) {
 	factHash := fact.Hash()
 
-	ballots := map[Address]valuehash.Hash{}
-	votes := map[Address]VoteproofNodeFact{}
+	ballots := map[base.Address]valuehash.Hash{}
+	votes := map[base.Address]base.VoteproofNodeFact{}
 
 	for _, state := range states {
 		factSignature, err := state.Node().Privatekey().Sign(factHash.Bytes())
 		if err != nil {
-			return VoteproofV0{}, err
+			return base.VoteproofV0{}, err
 		}
 
 		ballots[state.Node().Address()] = valuehash.RandomSHA256()
-		votes[state.Node().Address()] = VoteproofNodeFact{
-			fact:          factHash,
-			factSignature: factSignature,
-			signer:        state.Node().Publickey(),
-		}
+		votes[state.Node().Address()] = base.NewVoteproofNodeFact(
+			factHash,
+			factSignature,
+			state.Node().Publickey(),
+		)
 	}
 
-	var height Height
-	var round Round
+	var height base.Height
+	var round base.Round
 	switch f := fact.(type) {
 	case ACCEPTBallotFactV0:
 		height = f.Height()
@@ -144,34 +145,35 @@ func (t *baseTestStateHandler) newVoteproof(
 		round = f.Round()
 	}
 
-	vp := VoteproofV0{
-		height:    height,
-		round:     round,
-		stage:     stage,
-		threshold: states[0].Policy().Threshold(),
-		result:    VoteResultMajority,
-		majority:  fact,
-		facts: map[valuehash.Hash]operation.Fact{
+	vp := base.NewTestVoteproofV0(
+		height,
+		round,
+		states[0].Policy().Threshold(),
+		base.VoteResultMajority,
+		false,
+		stage,
+		fact,
+		map[valuehash.Hash]base.Fact{
 			factHash: fact,
 		},
-		ballots:    ballots,
-		votes:      votes,
-		finishedAt: localtime.Now(),
-	}
+		ballots,
+		votes,
+		localtime.Now(),
+	)
 
 	return vp, nil
 }
 
-func (t *baseTestStateHandler) suffrage(proposerState *Localstate, states ...*Localstate) Suffrage {
-	nodes := make([]Node, len(states))
+func (t *baseTestStateHandler) suffrage(proposerState *Localstate, states ...*Localstate) base.Suffrage {
+	nodes := make([]base.Node, len(states))
 	for i, s := range states {
 		nodes[i] = s.Node()
 	}
 
-	return NewFixedSuffrage(proposerState.Node(), nodes)
+	return base.NewFixedSuffrage(proposerState.Node(), nodes)
 }
 
-func (t *baseTestStateHandler) newINITBallot(localstate *Localstate, round Round) INITBallotV0 {
+func (t *baseTestStateHandler) newINITBallot(localstate *Localstate, round base.Round) INITBallotV0 {
 	ib := INITBallotV0{
 		BaseBallotV0: BaseBallotV0{
 			node: localstate.Node().Address(),
@@ -224,7 +226,7 @@ func (t *baseTestStateHandler) compareBlock(a, b Block) {
 	t.compareVoteproof(a.ACCEPTVoteproof(), b.ACCEPTVoteproof())
 }
 
-func (t *baseTestStateHandler) compareVoteproof(a, b Voteproof) {
+func (t *baseTestStateHandler) compareVoteproof(a, b base.Voteproof) {
 	t.True(a.Hint().Equal(b.Hint()))
 	t.Equal(a.IsFinished(), b.IsFinished())
 	t.Equal(localtime.RFC3339(a.FinishedAt()), localtime.RFC3339(b.FinishedAt()))

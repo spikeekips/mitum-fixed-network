@@ -5,8 +5,8 @@ import (
 	avlHashable "github.com/spikeekips/avl/hashable"
 	"golang.org/x/xerrors"
 
-	"github.com/spikeekips/mitum/hint"
 	"github.com/spikeekips/mitum/tree"
+	"github.com/spikeekips/mitum/util/hint"
 )
 
 var (

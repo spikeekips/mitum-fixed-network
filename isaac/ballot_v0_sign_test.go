@@ -6,10 +6,11 @@ import (
 	"github.com/stretchr/testify/suite"
 	"golang.org/x/xerrors"
 
-	"github.com/spikeekips/mitum/key"
-	"github.com/spikeekips/mitum/localtime"
-	"github.com/spikeekips/mitum/operation"
-	"github.com/spikeekips/mitum/valuehash"
+	"github.com/spikeekips/mitum/base"
+	"github.com/spikeekips/mitum/base/key"
+	"github.com/spikeekips/mitum/base/operation"
+	"github.com/spikeekips/mitum/base/valuehash"
+	"github.com/spikeekips/mitum/util/localtime"
 )
 
 type testBallotV0SIGN struct {
@@ -25,12 +26,12 @@ func (t *testBallotV0SIGN) SetupSuite() {
 func (t *testBallotV0SIGN) TestNew() {
 	ib := SIGNBallotV0{
 		BaseBallotV0: BaseBallotV0{
-			node: NewShortAddress("test-for-sign-ballot"),
+			node: base.NewShortAddress("test-for-sign-ballot"),
 		},
 		SIGNBallotFactV0: SIGNBallotFactV0{
 			BaseBallotFactV0: BaseBallotFactV0{
-				height: Height(10),
-				round:  Round(0),
+				height: base.Height(10),
+				round:  base.Round(0),
 			},
 			proposal: valuehash.RandomSHA256(),
 			newBlock: valuehash.RandomSHA256(),
@@ -46,12 +47,12 @@ func (t *testBallotV0SIGN) TestNew() {
 func (t *testBallotV0SIGN) TestFact() {
 	ib := SIGNBallotV0{
 		BaseBallotV0: BaseBallotV0{
-			node: NewShortAddress("test-for-sign-ballot"),
+			node: base.NewShortAddress("test-for-sign-ballot"),
 		},
 		SIGNBallotFactV0: SIGNBallotFactV0{
 			BaseBallotFactV0: BaseBallotFactV0{
-				height: Height(10),
-				round:  Round(0),
+				height: base.Height(10),
+				round:  base.Round(0),
 			},
 			proposal: valuehash.RandomSHA256(),
 			newBlock: valuehash.RandomSHA256(),
@@ -61,7 +62,7 @@ func (t *testBallotV0SIGN) TestFact() {
 
 	fact := ib.Fact()
 
-	_ = (interface{})(fact).(operation.Fact)
+	_ = (interface{})(fact).(base.Fact)
 
 	factHash := fact.Hash()
 	t.NotNil(factHash)
@@ -82,12 +83,12 @@ func (t *testBallotV0SIGN) TestFact() {
 func (t *testBallotV0SIGN) TestGenerateHash() {
 	ib := SIGNBallotV0{
 		BaseBallotV0: BaseBallotV0{
-			node: NewShortAddress("test-for-sign-ballot"),
+			node: base.NewShortAddress("test-for-sign-ballot"),
 		},
 		SIGNBallotFactV0: SIGNBallotFactV0{
 			BaseBallotFactV0: BaseBallotFactV0{
-				height: Height(10),
-				round:  Round(0),
+				height: base.Height(10),
+				round:  base.Round(0),
 			},
 			proposal: valuehash.RandomSHA256(),
 			newBlock: valuehash.RandomSHA256(),
@@ -108,12 +109,12 @@ func (t *testBallotV0SIGN) TestGenerateHash() {
 func (t *testBallotV0SIGN) TestSign() {
 	ib := SIGNBallotV0{
 		BaseBallotV0: BaseBallotV0{
-			node: NewShortAddress("test-for-sign-ballot"),
+			node: base.NewShortAddress("test-for-sign-ballot"),
 		},
 		SIGNBallotFactV0: SIGNBallotFactV0{
 			BaseBallotFactV0: BaseBallotFactV0{
-				height: Height(10),
-				round:  Round(0),
+				height: base.Height(10),
+				round:  base.Round(0),
 			},
 			proposal: valuehash.RandomSHA256(),
 			newBlock: valuehash.RandomSHA256(),
@@ -145,7 +146,7 @@ func (t *testBallotV0SIGN) TestSign() {
 func (t *testBallotV0SIGN) TestIsValid() {
 	{ // empty signedAt
 		bb := BaseBallotV0{
-			node: NewShortAddress("test-for-sign-ballot"),
+			node: base.NewShortAddress("test-for-sign-ballot"),
 		}
 		err := bb.IsValid(nil)
 		t.Contains(err.Error(), "empty SignedAt")
@@ -153,7 +154,7 @@ func (t *testBallotV0SIGN) TestIsValid() {
 
 	{ // empty signer
 		bb := BaseBallotV0{
-			node:     NewShortAddress("test-for-sign-ballot"),
+			node:     base.NewShortAddress("test-for-sign-ballot"),
 			signedAt: localtime.Now(),
 		}
 		err := bb.IsValid(nil)
@@ -162,7 +163,7 @@ func (t *testBallotV0SIGN) TestIsValid() {
 
 	{ // empty signature
 		bb := BaseBallotV0{
-			node:     NewShortAddress("test-for-sign-ballot"),
+			node:     base.NewShortAddress("test-for-sign-ballot"),
 			signedAt: localtime.Now(),
 			signer:   t.pk.Publickey(),
 		}

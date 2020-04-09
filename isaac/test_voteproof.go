@@ -5,12 +5,12 @@ package isaac
 import (
 	"time"
 
-	"github.com/spikeekips/mitum/encoder"
-	"github.com/spikeekips/mitum/hint"
-	"github.com/spikeekips/mitum/logging"
-	"github.com/spikeekips/mitum/operation"
+	"github.com/spikeekips/mitum/base"
+	"github.com/spikeekips/mitum/base/valuehash"
 	"github.com/spikeekips/mitum/util"
-	"github.com/spikeekips/mitum/valuehash"
+	"github.com/spikeekips/mitum/util/encoder"
+	"github.com/spikeekips/mitum/util/hint"
+	"github.com/spikeekips/mitum/util/logging"
 )
 
 var (
@@ -19,13 +19,15 @@ var (
 )
 
 type DummyVoteproof struct {
-	height Height
-	round  Round
-	stage  Stage
-	result VoteResultType
+	height base.Height
+	round  base.Round
+	stage  base.Stage
+	result base.VoteResultType
 }
 
-func NewDummyVoteproof(height Height, round Round, stage Stage, result VoteResultType) DummyVoteproof {
+func NewDummyVoteproof(
+	height base.Height, round base.Round, stage base.Stage, result base.VoteResultType,
+) DummyVoteproof {
 	return DummyVoteproof{
 		height: height,
 		round:  round,
@@ -47,7 +49,7 @@ func (vp DummyVoteproof) FinishedAt() time.Time {
 }
 
 func (vp DummyVoteproof) IsFinished() bool {
-	return vp.result != VoteResultNotYet
+	return vp.result != base.VoteResultNotYet
 }
 
 func (vp DummyVoteproof) IsClosed() bool {
@@ -58,41 +60,41 @@ func (vp DummyVoteproof) Bytes() []byte {
 	return nil
 }
 
-func (vp DummyVoteproof) Height() Height {
+func (vp DummyVoteproof) Height() base.Height {
 	return vp.height
 }
 
-func (vp DummyVoteproof) Round() Round {
+func (vp DummyVoteproof) Round() base.Round {
 	return vp.round
 }
 
-func (vp DummyVoteproof) Stage() Stage {
+func (vp DummyVoteproof) Stage() base.Stage {
 	return vp.stage
 }
 
-func (vp DummyVoteproof) Result() VoteResultType {
+func (vp DummyVoteproof) Result() base.VoteResultType {
 	return vp.result
 }
 
-func (vp DummyVoteproof) Majority() operation.Fact {
+func (vp DummyVoteproof) Majority() base.Fact {
 	return nil
 }
 
-func (vp DummyVoteproof) Ballots() map[Address]valuehash.Hash {
+func (vp DummyVoteproof) Ballots() map[base.Address]valuehash.Hash {
 	return nil
 }
 
-func (vp DummyVoteproof) Threshold() Threshold {
-	return Threshold{}
+func (vp DummyVoteproof) Threshold() base.Threshold {
+	return base.Threshold{}
 }
 
 func (vp DummyVoteproof) MarshalJSON() ([]byte, error) {
 	return util.JSONMarshal(struct {
 		encoder.JSONPackHintedHead
-		HT Height
-		RD Round
-		SG Stage
-		RS VoteResultType
+		HT base.Height
+		RD base.Round
+		SG base.Stage
+		RS base.VoteResultType
 	}{
 		JSONPackHintedHead: encoder.NewJSONPackHintedHead(vp.Hint()),
 		HT:                 vp.height,
@@ -104,10 +106,10 @@ func (vp DummyVoteproof) MarshalJSON() ([]byte, error) {
 
 func (vp *DummyVoteproof) UnpackJSON(b []byte, enc *encoder.JSONEncoder) error {
 	var uvp struct {
-		HT Height
-		RD Round
-		SG Stage
-		RS VoteResultType
+		HT base.Height
+		RD base.Round
+		SG base.Stage
+		RS base.VoteResultType
 	}
 
 	if err := enc.Unmarshal(b, &uvp); err != nil {

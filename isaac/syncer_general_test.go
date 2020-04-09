@@ -8,6 +8,7 @@ import (
 	"github.com/stretchr/testify/suite"
 	"golang.org/x/xerrors"
 
+	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/storage"
 	"github.com/spikeekips/mitum/util"
 )
@@ -16,7 +17,7 @@ type testGeneralSyncer struct {
 	sync.Mutex
 	baseTestStateHandler
 
-	sf Suffrage
+	sf base.Suffrage
 }
 
 func TestGeneralSyncer(t *testing.T) {
@@ -41,7 +42,7 @@ func (t *testGeneralSyncer) setup(local *Localstate, localstates []*Localstate) 
 
 	for _, st := range nodes {
 		nch := st.Node().Channel().(*NetworkChanChannel)
-		nch.SetGetManifests(func(heights []Height) ([]Manifest, error) {
+		nch.SetGetManifests(func(heights []base.Height) ([]Manifest, error) {
 			var bs []Manifest
 			for _, h := range heights {
 				m, err := st.Storage().ManifestByHeight(h)
@@ -59,7 +60,7 @@ func (t *testGeneralSyncer) setup(local *Localstate, localstates []*Localstate) 
 			return bs, nil
 		})
 
-		nch.SetGetBlocks(func(heights []Height) ([]Block, error) {
+		nch.SetGetBlocks(func(heights []base.Height) ([]Block, error) {
 			var bs []Block
 			for _, h := range heights {
 				m, err := st.Storage().BlockByHeight(h)
@@ -79,7 +80,7 @@ func (t *testGeneralSyncer) setup(local *Localstate, localstates []*Localstate) 
 	}
 }
 
-func (t *testGeneralSyncer) generateBlocks(localstates []*Localstate, targetHeight Height) {
+func (t *testGeneralSyncer) generateBlocks(localstates []*Localstate, targetHeight base.Height) {
 	bg, err := NewDummyBlocksV0Generator(
 		localstates[0],
 		targetHeight,
@@ -193,19 +194,19 @@ func (t *testGeneralSyncer) TestFillManifests() {
 	rn1, rn2 := t.states()
 	t.setup(localstate, []*Localstate{rn0, rn1, rn2})
 
-	base := localstate.LastBlock()
-	target := base.Height() + 5
+	baseBlock := localstate.LastBlock()
+	target := baseBlock.Height() + 5
 	t.generateBlocks([]*Localstate{rn0, rn1, rn2}, target)
 
-	cs, err := NewGeneralSyncer(localstate, []Node{rn0.Node(), rn1.Node(), rn2.Node()}, base.Height()+1, target)
+	cs, err := NewGeneralSyncer(localstate, []Node{rn0.Node(), rn1.Node(), rn2.Node()}, baseBlock.Height()+1, target)
 	t.NoError(err)
 
 	cs.reset()
-	cs.baseManifest = base
+	cs.baseManifest = baseBlock
 	t.NoError(cs.prepare())
 
-	for i := base.Height().Int64() + 1; i < target.Int64()+1; i++ {
-		b, err := cs.storage.Manifest(Height(i))
+	for i := baseBlock.Height().Int64() + 1; i < target.Int64()+1; i++ {
+		b, err := cs.storage.Manifest(base.Height(i))
 		t.NoError(err)
 
 		t.Equal(i, b.Height().Int64())
@@ -219,11 +220,11 @@ func (t *testGeneralSyncer) TestFetchBlocks() {
 	rn1, rn2 := t.states()
 	t.setup(localstate, []*Localstate{rn0, rn1, rn2})
 
-	base := localstate.LastBlock().Height()
-	target := base + 5
+	baseHeight := localstate.LastBlock().Height()
+	target := baseHeight + 5
 	t.generateBlocks([]*Localstate{rn0, rn1, rn2}, target)
 
-	cs, err := NewGeneralSyncer(localstate, []Node{rn0.Node(), rn1.Node(), rn2.Node()}, base+1, target)
+	cs, err := NewGeneralSyncer(localstate, []Node{rn0.Node(), rn1.Node(), rn2.Node()}, baseHeight+1, target)
 	t.NoError(err)
 
 	cs.reset()
@@ -231,17 +232,17 @@ func (t *testGeneralSyncer) TestFetchBlocks() {
 	t.NoError(cs.fillManifests())
 	t.NoError(cs.startBlocks())
 
-	for i := base.Int64() + 1; i < target.Int64()+1; i++ {
-		b, err := cs.storage.Manifest(Height(i))
+	for i := baseHeight.Int64() + 1; i < target.Int64()+1; i++ {
+		b, err := cs.storage.Manifest(base.Height(i))
 		t.NoError(err)
 
 		t.Equal(i, b.Height().Int64())
 	}
 
-	for i := base.Int64() + 1; i < target.Int64()+1; i++ {
-		b, err := cs.storage.Block(Height(i))
+	for i := baseHeight.Int64() + 1; i < target.Int64()+1; i++ {
+		b, err := cs.storage.Block(base.Height(i))
 		t.NoError(err)
-		t.Equal(b.Height(), Height(i))
+		t.Equal(b.Height(), base.Height(i))
 	}
 }
 
@@ -250,18 +251,18 @@ func (t *testGeneralSyncer) TestSaveBlocks() {
 	rn1, rn2 := t.states()
 	t.setup(localstate, []*Localstate{rn0, rn1, rn2})
 
-	base := localstate.LastBlock().Height()
-	target := base + 5
+	baseHeight := localstate.LastBlock().Height()
+	target := baseHeight + 5
 	t.generateBlocks([]*Localstate{rn0, rn1, rn2}, target)
 
-	cs, err := NewGeneralSyncer(localstate, []Node{rn0.Node(), rn1.Node(), rn2.Node()}, base+1, target)
+	cs, err := NewGeneralSyncer(localstate, []Node{rn0.Node(), rn1.Node(), rn2.Node()}, baseHeight+1, target)
 	t.NoError(err)
 
 	cs.reset()
 	t.NoError(cs.prepare())
 
-	for i := base.Int64() + 1; i < target.Int64()+1; i++ {
-		b, err := cs.storage.Manifest(Height(i))
+	for i := baseHeight.Int64() + 1; i < target.Int64()+1; i++ {
+		b, err := cs.storage.Manifest(base.Height(i))
 		t.NoError(err)
 
 		t.Equal(i, b.Height().Int64())
@@ -271,21 +272,21 @@ func (t *testGeneralSyncer) TestSaveBlocks() {
 
 	t.NoError(cs.startBlocks())
 
-	for i := base.Int64() + 1; i < target.Int64()+1; i++ {
-		b, err := cs.storage.Block(Height(i))
+	for i := baseHeight.Int64() + 1; i < target.Int64()+1; i++ {
+		b, err := cs.storage.Block(base.Height(i))
 		t.NoError(err)
-		t.Equal(b.Height(), Height(i))
+		t.Equal(b.Height(), base.Height(i))
 
-		_, err = localstate.Storage().BlockByHeight(Height(i))
+		_, err = localstate.Storage().BlockByHeight(base.Height(i))
 		t.True(xerrors.Is(err, storage.NotFoundError))
 	}
 
 	t.NoError(cs.commit())
 
-	for i := base.Int64() + 1; i < target.Int64()+1; i++ {
-		b, err := localstate.Storage().BlockByHeight(Height(i))
+	for i := baseHeight.Int64() + 1; i < target.Int64()+1; i++ {
+		b, err := localstate.Storage().BlockByHeight(base.Height(i))
 		t.NoError(err)
-		t.Equal(b.Height(), Height(i))
+		t.Equal(b.Height(), base.Height(i))
 	}
 }
 
@@ -294,11 +295,11 @@ func (t *testGeneralSyncer) TestFinishedChan() {
 	rn1, rn2 := t.states()
 	t.setup(localstate, []*Localstate{rn0, rn1, rn2})
 
-	base := localstate.LastBlock()
-	target := base.Height() + 5
+	baseBlock := localstate.LastBlock()
+	target := baseBlock.Height() + 5
 	t.generateBlocks([]*Localstate{rn0, rn1, rn2}, target)
 
-	cs, err := NewGeneralSyncer(localstate, []Node{rn0.Node(), rn1.Node(), rn2.Node()}, base.Height()+1, target)
+	cs, err := NewGeneralSyncer(localstate, []Node{rn0.Node(), rn1.Node(), rn2.Node()}, baseBlock.Height()+1, target)
 	t.NoError(err)
 
 	stateChan := make(chan Syncer)
@@ -321,7 +322,7 @@ func (t *testGeneralSyncer) TestFinishedChan() {
 
 	cs.SetStateChan(stateChan)
 
-	t.NoError(cs.Prepare(base))
+	t.NoError(cs.Prepare(baseBlock))
 	t.NoError(cs.Save())
 
 	select {
@@ -329,7 +330,7 @@ func (t *testGeneralSyncer) TestFinishedChan() {
 		t.NoError(xerrors.Errorf("timeout to wait to be finished"))
 	case ss := <-finishedChan:
 		t.Equal(SyncerSaved, ss.State())
-		t.Equal(base.Height()+1, ss.HeightFrom())
+		t.Equal(baseBlock.Height()+1, ss.HeightFrom())
 		t.Equal(target, ss.HeightTo())
 	}
 }
@@ -374,7 +375,7 @@ func (t *testGeneralSyncer) TestFromGenesis() {
 		t.NoError(xerrors.Errorf("timeout to wait to be finished"))
 	case ss := <-finishedChan:
 		t.Equal(SyncerSaved, ss.State())
-		t.Equal(Height(0), ss.HeightFrom())
+		t.Equal(base.Height(0), ss.HeightFrom())
 		t.Equal(target.Height(), ss.HeightTo())
 	}
 }
@@ -384,8 +385,8 @@ func (t *testGeneralSyncer) TestSyncingHandlerFromBallot() {
 	rn1, rn2 := t.states()
 	t.setup(localstate, []*Localstate{rn0, rn1, rn2})
 
-	base := localstate.LastBlock()
-	target := base.Height() + 5
+	baseBlock := localstate.LastBlock()
+	target := baseBlock.Height() + 5
 	t.generateBlocks([]*Localstate{rn0, rn1, rn2}, target)
 
 	cs, err := NewStateSyncingHandler(localstate, nil)
@@ -393,7 +394,7 @@ func (t *testGeneralSyncer) TestSyncingHandlerFromBallot() {
 
 	var ballot Ballot
 	{
-		b := t.newINITBallot(rn0, Round(0))
+		b := t.newINITBallot(rn0, base.Round(0))
 
 		vp, err := t.newVoteproof(b.Stage(), b.INITBallotFactV0, rn0, rn1, rn2)
 		t.NoError(err)
@@ -404,7 +405,7 @@ func (t *testGeneralSyncer) TestSyncingHandlerFromBallot() {
 		ballot = b
 	}
 
-	t.NoError(cs.Activate(NewStateChangeContext(StateJoining, StateSyncing, nil, ballot)))
+	t.NoError(cs.Activate(NewStateChangeContext(base.StateJoining, base.StateSyncing, nil, ballot)))
 
 	finishedChan := make(chan struct{})
 	go func() {
@@ -437,16 +438,16 @@ func (t *testGeneralSyncer) TestSyncingHandlerFromINITVoteproof() {
 	t.NoError(localstate.Nodes().Add(rn1.Node()))
 	t.NoError(localstate.Nodes().Add(rn2.Node()))
 
-	base := localstate.LastBlock()
-	target := base.Height() + 5
+	baseBlock := localstate.LastBlock()
+	target := baseBlock.Height() + 5
 	t.generateBlocks([]*Localstate{rn0, rn1, rn2}, target)
 
 	cs, err := NewStateSyncingHandler(localstate, nil)
 	t.NoError(err)
 
-	var voteproof Voteproof
+	var voteproof base.Voteproof
 	{
-		b := t.newINITBallot(rn0, Round(0))
+		b := t.newINITBallot(rn0, base.Round(0))
 
 		vp, err := t.newVoteproof(b.Stage(), b.INITBallotFactV0, rn0, rn1, rn2)
 		t.NoError(err)
@@ -454,7 +455,7 @@ func (t *testGeneralSyncer) TestSyncingHandlerFromINITVoteproof() {
 		voteproof = vp
 	}
 
-	t.NoError(cs.Activate(NewStateChangeContext(StateJoining, StateSyncing, voteproof, nil)))
+	t.NoError(cs.Activate(NewStateChangeContext(base.StateJoining, base.StateSyncing, voteproof, nil)))
 
 	stopChan := make(chan struct{})
 	finishedChan := make(chan struct{})
@@ -493,16 +494,16 @@ func (t *testGeneralSyncer) TestSyncingHandlerFromACCEPTVoteproof() {
 	t.NoError(localstate.Nodes().Add(rn1.Node()))
 	t.NoError(localstate.Nodes().Add(rn2.Node()))
 
-	base := localstate.LastBlock()
-	target := base.Height() + 5
+	baseBlock := localstate.LastBlock()
+	target := baseBlock.Height() + 5
 	t.generateBlocks([]*Localstate{rn0, rn1, rn2}, target)
 
 	cs, err := NewStateSyncingHandler(localstate, nil)
 	t.NoError(err)
 
-	var voteproof Voteproof
+	var voteproof base.Voteproof
 	{
-		ab, err := NewACCEPTBallotV0FromLocalstate(rn0, Round(0), rn0.LastBlock())
+		ab, err := NewACCEPTBallotV0FromLocalstate(rn0, base.Round(0), rn0.LastBlock())
 		ab.height = rn0.LastBlock().Height()
 		vp, err := t.newVoteproof(ab.Stage(), ab.ACCEPTBallotFactV0, rn0, rn1, rn2)
 		t.NoError(err)
@@ -510,7 +511,7 @@ func (t *testGeneralSyncer) TestSyncingHandlerFromACCEPTVoteproof() {
 		voteproof = vp
 	}
 
-	t.NoError(cs.Activate(NewStateChangeContext(StateJoining, StateSyncing, voteproof, nil)))
+	t.NoError(cs.Activate(NewStateChangeContext(base.StateJoining, base.StateSyncing, voteproof, nil)))
 
 	stopChan := make(chan struct{})
 	finishedChan := make(chan struct{})
@@ -545,14 +546,14 @@ func (t *testGeneralSyncer) TestMissingHead() {
 	localstate, rn0 := t.states()
 	t.setup(localstate, []*Localstate{rn0})
 
-	base := localstate.LastBlock()
-	target := base.Height() + 5
+	baseBlock := localstate.LastBlock()
+	target := baseBlock.Height() + 5
 	t.generateBlocks([]*Localstate{rn0}, target)
 
-	head := base.Height() + 1
+	head := baseBlock.Height() + 1
 	ch := rn0.Node().Channel().(*NetworkChanChannel)
 	orig := ch.getManifests
-	ch.SetGetManifests(func(heights []Height) ([]Manifest, error) {
+	ch.SetGetManifests(func(heights []base.Height) ([]Manifest, error) {
 		var bs []Manifest
 		if l, err := orig(heights); err != nil {
 			return nil, err
@@ -569,7 +570,7 @@ func (t *testGeneralSyncer) TestMissingHead() {
 		return bs, nil
 	})
 
-	cs, err := NewGeneralSyncer(localstate, []Node{rn0.Node()}, base.Height()+1, target)
+	cs, err := NewGeneralSyncer(localstate, []Node{rn0.Node()}, baseBlock.Height()+1, target)
 	t.NoError(err)
 
 	cs.reset()
@@ -582,14 +583,14 @@ func (t *testGeneralSyncer) TestMissingTail() {
 	localstate, rn0 := t.states()
 	t.setup(localstate, []*Localstate{rn0})
 
-	base := localstate.LastBlock()
-	target := base.Height() + 5
+	baseBlock := localstate.LastBlock()
+	target := baseBlock.Height() + 5
 	t.generateBlocks([]*Localstate{rn0}, target)
 
 	tail := target
 	ch := rn0.Node().Channel().(*NetworkChanChannel)
 	orig := ch.getManifests
-	ch.SetGetManifests(func(heights []Height) ([]Manifest, error) {
+	ch.SetGetManifests(func(heights []base.Height) ([]Manifest, error) {
 		var bs []Manifest
 		if l, err := orig(heights); err != nil {
 			return nil, err
@@ -606,7 +607,7 @@ func (t *testGeneralSyncer) TestMissingTail() {
 		return bs, nil
 	})
 
-	cs, err := NewGeneralSyncer(localstate, []Node{rn0.Node()}, base.Height()+1, target)
+	cs, err := NewGeneralSyncer(localstate, []Node{rn0.Node()}, baseBlock.Height()+1, target)
 	t.NoError(err)
 
 	cs.reset()
@@ -619,14 +620,14 @@ func (t *testGeneralSyncer) TestMissingManifests() {
 	localstate, rn0 := t.states()
 	t.setup(localstate, []*Localstate{rn0})
 
-	base := localstate.LastBlock()
-	target := base.Height() + 5
+	baseBlock := localstate.LastBlock()
+	target := baseBlock.Height() + 5
 	t.generateBlocks([]*Localstate{rn0}, target)
 
 	missing := target - 1
 	ch := rn0.Node().Channel().(*NetworkChanChannel)
 	orig := ch.getManifests
-	ch.SetGetManifests(func(heights []Height) ([]Manifest, error) {
+	ch.SetGetManifests(func(heights []base.Height) ([]Manifest, error) {
 		var bs []Manifest
 		if l, err := orig(heights); err != nil {
 			return nil, err
@@ -643,7 +644,7 @@ func (t *testGeneralSyncer) TestMissingManifests() {
 		return bs, nil
 	})
 
-	cs, err := NewGeneralSyncer(localstate, []Node{rn0.Node()}, base.Height()+1, target)
+	cs, err := NewGeneralSyncer(localstate, []Node{rn0.Node()}, baseBlock.Height()+1, target)
 	t.NoError(err)
 
 	cs.reset()
@@ -656,14 +657,14 @@ func (t *testGeneralSyncer) TestMissingBlocks() {
 	localstate, rn0 := t.states()
 	t.setup(localstate, []*Localstate{rn0})
 
-	base := localstate.LastBlock()
-	target := base.Height() + 5
+	baseBlock := localstate.LastBlock()
+	target := baseBlock.Height() + 5
 	t.generateBlocks([]*Localstate{rn0}, target)
 
 	missing := target - 1
 	ch := rn0.Node().Channel().(*NetworkChanChannel)
 	orig := ch.getBlocks
-	ch.SetGetBlocks(func(heights []Height) ([]Block, error) {
+	ch.SetGetBlocks(func(heights []base.Height) ([]Block, error) {
 		var bs []Block
 		if l, err := orig(heights); err != nil {
 			return nil, err
@@ -680,12 +681,12 @@ func (t *testGeneralSyncer) TestMissingBlocks() {
 		return bs, nil
 	})
 
-	cs, err := NewGeneralSyncer(localstate, []Node{rn0.Node()}, base.Height()+1, target)
+	cs, err := NewGeneralSyncer(localstate, []Node{rn0.Node()}, baseBlock.Height()+1, target)
 	t.NoError(err)
 
 	cs.reset()
 
-	t.NoError(cs.Prepare(base))
+	t.NoError(cs.Prepare(baseBlock))
 
 	err = cs.fetchBlocksByNodes()
 	t.Error(err)

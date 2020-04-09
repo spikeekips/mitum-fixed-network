@@ -7,8 +7,9 @@ import (
 	"github.com/stretchr/testify/suite"
 	"golang.org/x/xerrors"
 
-	"github.com/spikeekips/mitum/seal"
-	"github.com/spikeekips/mitum/valuehash"
+	"github.com/spikeekips/mitum/base"
+	"github.com/spikeekips/mitum/base/seal"
+	"github.com/spikeekips/mitum/base/valuehash"
 )
 
 type testStateJoiningHandler struct {
@@ -54,9 +55,9 @@ func (t *testStateJoiningHandler) TestKeepBroadcastingINITBallot() {
 	t.NoError(ballot.IsValid(t.localstate.Policy().NetworkID()))
 
 	t.True(t.localstate.Node().Publickey().Equal(ballot.Signer()))
-	t.Equal(StageINIT, ballot.Stage())
+	t.Equal(base.StageINIT, ballot.Stage())
 	t.Equal(t.localstate.LastBlock().Height()+1, ballot.Height())
-	t.Equal(Round(0), ballot.Round())
+	t.Equal(base.Round(0), ballot.Round())
 	t.True(t.localstate.Node().Address().Equal(ballot.Node()))
 
 	t.True(t.localstate.LastBlock().Hash().Equal(ballot.PreviousBlock()))
@@ -70,7 +71,7 @@ func (t *testStateJoiningHandler) TestKeepBroadcastingINITBallot() {
 //
 // StateJoiningHandler will ignore this ballot and keep broadcasting it's INIT Ballot.
 func (t *testStateJoiningHandler) TestINITBallotWithACCEPTVoteproofExpectedHeight() {
-	thr, _ := NewThreshold(2, 67)
+	thr, _ := base.NewThreshold(2, 67)
 	_ = t.localstate.Policy().SetThreshold(thr)
 	_ = t.remoteState.Policy().SetThreshold(thr)
 
@@ -97,7 +98,7 @@ func (t *testStateJoiningHandler) TestINITBallotWithACCEPTVoteproofExpectedHeigh
 		newBlock: valuehash.RandomSHA256(),
 	}
 
-	vp, err := t.newVoteproof(StageACCEPT, acceptFact, t.localstate, t.remoteState)
+	vp, err := t.newVoteproof(base.StageACCEPT, acceptFact, t.localstate, t.remoteState)
 	t.NoError(err)
 
 	ib.voteproof = vp
@@ -115,7 +116,7 @@ func (t *testStateJoiningHandler) TestINITBallotWithACCEPTVoteproofExpectedHeigh
 //
 // StateJoiningHandler will ignore this ballot and keep broadcasting it's INIT Ballot.
 func (t *testStateJoiningHandler) TestINITBallotWithACCEPTVoteproofLowerHeight() {
-	thr, _ := NewThreshold(2, 67)
+	thr, _ := base.NewThreshold(2, 67)
 	_ = t.localstate.Policy().SetThreshold(thr)
 	_ = t.remoteState.Policy().SetThreshold(thr)
 
@@ -137,13 +138,13 @@ func (t *testStateJoiningHandler) TestINITBallotWithACCEPTVoteproofLowerHeight()
 	acceptFact := ACCEPTBallotFactV0{
 		BaseBallotFactV0: BaseBallotFactV0{
 			height: ib.INITBallotFactV0.height - 1,
-			round:  Round(0),
+			round:  base.Round(0),
 		},
 		proposal: valuehash.RandomSHA256(),
 		newBlock: valuehash.RandomSHA256(),
 	}
 
-	vp, err := t.newVoteproof(StageACCEPT, acceptFact, t.localstate, t.remoteState)
+	vp, err := t.newVoteproof(base.StageACCEPT, acceptFact, t.localstate, t.remoteState)
 	t.NoError(err)
 
 	ib.voteproof = vp
@@ -162,7 +163,7 @@ func (t *testStateJoiningHandler) TestINITBallotWithACCEPTVoteproofLowerHeight()
 // StateJoiningHandler will stop broadcasting it's INIT Ballot and
 // moves to syncing.
 func (t *testStateJoiningHandler) TestINITBallotWithACCEPTVoteproofHigherHeight() {
-	thr, _ := NewThreshold(2, 67)
+	thr, _ := base.NewThreshold(2, 67)
 	_ = t.localstate.Policy().SetThreshold(thr)
 	_ = t.remoteState.Policy().SetThreshold(thr)
 
@@ -180,19 +181,19 @@ func (t *testStateJoiningHandler) TestINITBallotWithACCEPTVoteproofHigherHeight(
 
 	ib.INITBallotFactV0.height = t.remoteState.LastBlock().Height() + 2
 	ib.INITBallotFactV0.previousBlock = valuehash.RandomSHA256()
-	ib.INITBallotFactV0.previousRound = Round(0)
+	ib.INITBallotFactV0.previousRound = base.Round(0)
 
 	// ACCEPT Voteproof; 2 node(local and remote) vote with same AcceptFact.
 	acceptFact := ACCEPTBallotFactV0{
 		BaseBallotFactV0: BaseBallotFactV0{
 			height: ib.INITBallotFactV0.height - 1,
-			round:  Round(0),
+			round:  base.Round(0),
 		},
 		proposal: valuehash.RandomSHA256(),
 		newBlock: valuehash.RandomSHA256(),
 	}
 
-	vp, err := t.newVoteproof(StageACCEPT, acceptFact, t.localstate, t.remoteState)
+	vp, err := t.newVoteproof(base.StageACCEPT, acceptFact, t.localstate, t.remoteState)
 	t.NoError(err)
 
 	ib.voteproof = vp
@@ -212,9 +213,9 @@ func (t *testStateJoiningHandler) TestINITBallotWithACCEPTVoteproofHigherHeight(
 		t.NoError(xerrors.Errorf("failed to change state to syncing"))
 	}
 
-	t.Equal(StateJoining, ctx.fromState)
-	t.Equal(StateSyncing, ctx.toState)
-	t.Equal(StageACCEPT, ctx.voteproof.Stage())
+	t.Equal(base.StateJoining, ctx.fromState)
+	t.Equal(base.StateSyncing, ctx.toState)
+	t.Equal(base.StageACCEPT, ctx.voteproof.Stage())
 	t.Equal(acceptFact, ctx.voteproof.Majority())
 }
 
@@ -226,7 +227,7 @@ func (t *testStateJoiningHandler) TestINITBallotWithACCEPTVoteproofHigherHeight(
 //
 // StateJoiningHandler will ignore this ballot and keep broadcasting it's INIT Ballot.
 func (t *testStateJoiningHandler) TestINITBallotWithINITVoteproofExpectedHeight() {
-	thr, _ := NewThreshold(2, 67)
+	thr, _ := base.NewThreshold(2, 67)
 	_ = t.localstate.Policy().SetThreshold(thr)
 	_ = t.remoteState.Policy().SetThreshold(thr)
 
@@ -239,7 +240,7 @@ func (t *testStateJoiningHandler) TestINITBallotWithINITVoteproofExpectedHeight(
 		_ = cs.Deactivate(StateChangeContext{})
 	}()
 
-	cs.setCurrentRound(Round(1))
+	cs.setCurrentRound(base.Round(1))
 	lastBlock := t.localstate.LastBlock()
 	ib, err := NewINITBallotV0FromLocalstate(t.remoteState, cs.currentRound())
 	t.NoError(err)
@@ -253,7 +254,7 @@ func (t *testStateJoiningHandler) TestINITBallotWithINITVoteproofExpectedHeight(
 		previousRound: lastBlock.Round(),
 	}
 
-	vp, err := t.newVoteproof(StageINIT, initFact, t.localstate, t.remoteState)
+	vp, err := t.newVoteproof(base.StageINIT, initFact, t.localstate, t.remoteState)
 	t.NoError(err)
 
 	ib.voteproof = vp
@@ -274,7 +275,7 @@ func (t *testStateJoiningHandler) TestINITBallotWithINITVoteproofExpectedHeight(
 //
 // StateJoiningHandler will ignore this ballot and keep broadcasting it's INIT Ballot.
 func (t *testStateJoiningHandler) TestINITBallotWithINITVoteproofLowerHeight() {
-	thr, _ := NewThreshold(2, 67)
+	thr, _ := base.NewThreshold(2, 67)
 	_ = t.localstate.Policy().SetThreshold(thr)
 	_ = t.remoteState.Policy().SetThreshold(thr)
 
@@ -287,7 +288,7 @@ func (t *testStateJoiningHandler) TestINITBallotWithINITVoteproofLowerHeight() {
 		_ = cs.Deactivate(StateChangeContext{})
 	}()
 
-	cs.setCurrentRound(Round(1))
+	cs.setCurrentRound(base.Round(1))
 	lastBlock := t.localstate.LastBlock()
 	ib, err := NewINITBallotV0FromLocalstate(t.remoteState, cs.currentRound())
 	t.NoError(err)
@@ -297,13 +298,13 @@ func (t *testStateJoiningHandler) TestINITBallotWithINITVoteproofLowerHeight() {
 	initFact := INITBallotFactV0{
 		BaseBallotFactV0: BaseBallotFactV0{
 			height: ib.INITBallotFactV0.height - 1,
-			round:  Round(0),
+			round:  base.Round(0),
 		},
 		previousBlock: lastBlock.Hash(),
 		previousRound: lastBlock.Round(),
 	}
 
-	vp, err := t.newVoteproof(StageINIT, initFact, t.localstate, t.remoteState)
+	vp, err := t.newVoteproof(base.StageINIT, initFact, t.localstate, t.remoteState)
 	t.NoError(err)
 
 	ib.voteproof = vp
@@ -325,7 +326,7 @@ func (t *testStateJoiningHandler) TestINITBallotWithINITVoteproofLowerHeight() {
 // StateJoiningHandler will stop broadcasting it's INIT Ballot and
 // moves to syncing.
 func (t *testStateJoiningHandler) TestINITBallotWithINITVoteproofHigherHeight() {
-	thr, _ := NewThreshold(2, 67)
+	thr, _ := base.NewThreshold(2, 67)
 	_ = t.localstate.Policy().SetThreshold(thr)
 	_ = t.remoteState.Policy().SetThreshold(thr)
 
@@ -338,7 +339,7 @@ func (t *testStateJoiningHandler) TestINITBallotWithINITVoteproofHigherHeight() 
 		_ = cs.Deactivate(StateChangeContext{})
 	}()
 
-	cs.setCurrentRound(Round(1))
+	cs.setCurrentRound(base.Round(1))
 
 	lastBlock := t.localstate.LastBlock()
 	ib, err := NewINITBallotV0FromLocalstate(t.remoteState, cs.currentRound())
@@ -349,13 +350,13 @@ func (t *testStateJoiningHandler) TestINITBallotWithINITVoteproofHigherHeight() 
 	initFact := INITBallotFactV0{
 		BaseBallotFactV0: BaseBallotFactV0{
 			height: ib.INITBallotFactV0.height,
-			round:  Round(0),
+			round:  base.Round(0),
 		},
 		previousBlock: lastBlock.Hash(),
 		previousRound: lastBlock.Round(),
 	}
 
-	vp, err := t.newVoteproof(StageINIT, initFact, t.localstate, t.remoteState)
+	vp, err := t.newVoteproof(base.StageINIT, initFact, t.localstate, t.remoteState)
 	t.NoError(err)
 
 	ib.voteproof = vp
@@ -370,7 +371,7 @@ func (t *testStateJoiningHandler) TestINITBallotWithINITVoteproofHigherHeight() 
 // - vp.Height() == local + 1
 // StateJoiningHandler will moves to consensus state.
 func (t *testStateJoiningHandler) TestINITVoteproofExpected() {
-	thr, _ := NewThreshold(2, 67)
+	thr, _ := base.NewThreshold(2, 67)
 	_ = t.localstate.Policy().SetThreshold(thr)
 	_ = t.remoteState.Policy().SetThreshold(thr)
 
@@ -386,13 +387,13 @@ func (t *testStateJoiningHandler) TestINITVoteproofExpected() {
 	initFact := INITBallotFactV0{
 		BaseBallotFactV0: BaseBallotFactV0{
 			height: t.localstate.LastBlock().Height() + 1,
-			round:  Round(2), // round is not important to go
+			round:  base.Round(2), // round is not important to go
 		},
 		previousBlock: t.localstate.LastBlock().Hash(),
 		previousRound: t.localstate.LastBlock().Round(),
 	}
 
-	vp, err := t.newVoteproof(StageINIT, initFact, t.localstate, t.remoteState)
+	vp, err := t.newVoteproof(base.StageINIT, initFact, t.localstate, t.remoteState)
 	t.NoError(err)
 
 	stateChan := make(chan StateChangeContext)
@@ -407,9 +408,9 @@ func (t *testStateJoiningHandler) TestINITVoteproofExpected() {
 		t.NoError(xerrors.Errorf("failed to change state to syncing"))
 	}
 
-	t.Equal(StateJoining, ctx.fromState)
-	t.Equal(StateConsensus, ctx.toState)
-	t.Equal(StageINIT, ctx.voteproof.Stage())
+	t.Equal(base.StateJoining, ctx.fromState)
+	t.Equal(base.StateConsensus, ctx.toState)
+	t.Equal(base.StageINIT, ctx.voteproof.Stage())
 	t.Equal(initFact, ctx.voteproof.Majority())
 }
 
@@ -417,7 +418,7 @@ func (t *testStateJoiningHandler) TestINITVoteproofExpected() {
 // - vp.Height() < local + 1
 // StateJoiningHandler will wait another Voteproof
 func (t *testStateJoiningHandler) TestINITVoteproofLowerHeight() {
-	thr, _ := NewThreshold(2, 67)
+	thr, _ := base.NewThreshold(2, 67)
 	_ = t.localstate.Policy().SetThreshold(thr)
 	_ = t.remoteState.Policy().SetThreshold(thr)
 
@@ -433,13 +434,13 @@ func (t *testStateJoiningHandler) TestINITVoteproofLowerHeight() {
 	initFact := INITBallotFactV0{
 		BaseBallotFactV0: BaseBallotFactV0{
 			height: t.localstate.LastBlock().Height(),
-			round:  Round(2), // round is not important to go
+			round:  base.Round(2), // round is not important to go
 		},
 		previousBlock: t.localstate.LastBlock().Hash(),
 		previousRound: t.localstate.LastBlock().Round(),
 	}
 
-	vp, err := t.newVoteproof(StageINIT, initFact, t.localstate, t.remoteState)
+	vp, err := t.newVoteproof(base.StageINIT, initFact, t.localstate, t.remoteState)
 	t.NoError(err)
 
 	stateChan := make(chan StateChangeContext)
@@ -452,13 +453,13 @@ func (t *testStateJoiningHandler) TestINITVoteproofLowerHeight() {
 // - vp.Height() == local + 1
 // StateJoiningHandler will processing Proposal.
 func (t *testStateJoiningHandler) TestACCEPTVoteproofExpected() {
-	thr, _ := NewThreshold(2, 67)
+	thr, _ := base.NewThreshold(2, 67)
 	_ = t.localstate.Policy().SetThreshold(thr)
 	_ = t.remoteState.Policy().SetThreshold(thr)
 
 	returnedBlock, err := NewTestBlockV0(
 		t.localstate.LastBlock().Height()+1,
-		Round(2),
+		base.Round(2),
 		valuehash.RandomSHA256(),
 		valuehash.RandomSHA256(),
 	)
@@ -483,7 +484,7 @@ func (t *testStateJoiningHandler) TestACCEPTVoteproofExpected() {
 		newBlock: returnedBlock.Hash(),
 	}
 
-	vp, err := t.newVoteproof(StageACCEPT, acceptFact, t.localstate, t.remoteState)
+	vp, err := t.newVoteproof(base.StageACCEPT, acceptFact, t.localstate, t.remoteState)
 	t.NoError(err)
 
 	stateChan := make(chan StateChangeContext)
@@ -496,7 +497,7 @@ func (t *testStateJoiningHandler) TestACCEPTVoteproofExpected() {
 // - vp.Height() < local + 1
 // StateJoiningHandler will wait another Voteproof
 func (t *testStateJoiningHandler) TestACCEPTVoteproofLowerHeight() {
-	thr, _ := NewThreshold(2, 67)
+	thr, _ := base.NewThreshold(2, 67)
 	_ = t.localstate.Policy().SetThreshold(thr)
 	_ = t.remoteState.Policy().SetThreshold(thr)
 
@@ -512,13 +513,13 @@ func (t *testStateJoiningHandler) TestACCEPTVoteproofLowerHeight() {
 	acceptFact := ACCEPTBallotFactV0{
 		BaseBallotFactV0: BaseBallotFactV0{
 			height: t.localstate.LastBlock().Height(),
-			round:  Round(2), // round is not important to go
+			round:  base.Round(2), // round is not important to go
 		},
 		proposal: valuehash.RandomSHA256(),
 		newBlock: valuehash.RandomSHA256(),
 	}
 
-	vp, err := t.newVoteproof(StageACCEPT, acceptFact, t.localstate, t.remoteState)
+	vp, err := t.newVoteproof(base.StageACCEPT, acceptFact, t.localstate, t.remoteState)
 	t.NoError(err)
 
 	stateChan := make(chan StateChangeContext)

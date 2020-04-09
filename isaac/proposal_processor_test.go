@@ -3,9 +3,10 @@ package isaac
 import (
 	"testing"
 
-	"github.com/spikeekips/mitum/seal"
+	"github.com/spikeekips/mitum/base"
+	"github.com/spikeekips/mitum/base/seal"
+	"github.com/spikeekips/mitum/base/valuehash"
 	"github.com/spikeekips/mitum/storage"
-	"github.com/spikeekips/mitum/valuehash"
 	"github.com/stretchr/testify/suite"
 	"golang.org/x/xerrors"
 )
@@ -17,11 +18,11 @@ type testProposalProcessor struct {
 func (t *testProposalProcessor) TestProcess() {
 	pm := NewProposalMaker(t.localstate)
 
-	ib, err := NewINITBallotV0FromLocalstate(t.localstate, Round(0))
+	ib, err := NewINITBallotV0FromLocalstate(t.localstate, base.Round(0))
 	t.NoError(err)
 	initFact := ib.INITBallotFactV0
 
-	ivp, err := t.newVoteproof(StageINIT, initFact, t.localstate, t.remoteState)
+	ivp, err := t.newVoteproof(base.StageINIT, initFact, t.localstate, t.remoteState)
 	proposal, err := pm.Proposal(ivp.Round())
 
 	_ = t.localstate.Storage().NewProposal(proposal)
@@ -36,11 +37,11 @@ func (t *testProposalProcessor) TestProcess() {
 func (t *testProposalProcessor) TestBlockOperations() {
 	pm := NewProposalMaker(t.localstate)
 
-	ib, err := NewINITBallotV0FromLocalstate(t.localstate, Round(0))
+	ib, err := NewINITBallotV0FromLocalstate(t.localstate, base.Round(0))
 	t.NoError(err)
 	initFact := ib.INITBallotFactV0
 
-	ivp, err := t.newVoteproof(StageINIT, initFact, t.localstate, t.remoteState)
+	ivp, err := t.newVoteproof(base.StageINIT, initFact, t.localstate, t.remoteState)
 
 	var proposal Proposal
 	{
@@ -81,7 +82,7 @@ func (t *testProposalProcessor) TestBlockOperations() {
 		newBlock: block.Hash(),
 	}
 
-	avp, err := t.newVoteproof(StageACCEPT, acceptFact, t.localstate, t.remoteState)
+	avp, err := t.newVoteproof(base.StageACCEPT, acceptFact, t.localstate, t.remoteState)
 
 	bs, err := dp.ProcessACCEPT(proposal.Hash(), avp)
 	t.NoError(err)
@@ -96,11 +97,11 @@ func (t *testProposalProcessor) TestBlockOperations() {
 func (t *testProposalProcessor) TestNotFoundInProposal() {
 	pm := NewProposalMaker(t.localstate)
 
-	ib, err := NewINITBallotV0FromLocalstate(t.localstate, Round(0))
+	ib, err := NewINITBallotV0FromLocalstate(t.localstate, base.Round(0))
 	t.NoError(err)
 	initFact := ib.INITBallotFactV0
 
-	ivp, err := t.newVoteproof(StageINIT, initFact, t.localstate, t.remoteState)
+	ivp, err := t.newVoteproof(base.StageINIT, initFact, t.localstate, t.remoteState)
 
 	var proposal Proposal
 	{

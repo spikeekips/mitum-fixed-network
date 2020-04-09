@@ -3,6 +3,7 @@ package isaac
 import (
 	"testing"
 
+	"github.com/spikeekips/mitum/base"
 	"github.com/stretchr/testify/suite"
 )
 
@@ -11,7 +12,7 @@ type testConsensusStates struct {
 }
 
 func (t *testConsensusStates) TestINITVoteproofHigherHeight() {
-	thr, _ := NewThreshold(2, 67)
+	thr, _ := base.NewThreshold(2, 67)
 	_ = t.localstate.Policy().SetThreshold(thr)
 	_ = t.remoteState.Policy().SetThreshold(thr)
 
@@ -21,21 +22,21 @@ func (t *testConsensusStates) TestINITVoteproofHigherHeight() {
 	initFact := INITBallotFactV0{
 		BaseBallotFactV0: BaseBallotFactV0{
 			height: t.localstate.LastBlock().Height() + 3,
-			round:  Round(2), // round is not important to go
+			round:  base.Round(2), // round is not important to go
 		},
 		previousBlock: t.localstate.LastBlock().Hash(),
 		previousRound: t.localstate.LastBlock().Round(),
 	}
 
-	vp, err := t.newVoteproof(StageINIT, initFact, t.localstate, t.remoteState)
+	vp, err := t.newVoteproof(base.StageINIT, initFact, t.localstate, t.remoteState)
 	t.NoError(err)
 
 	t.NoError(css.newVoteproof(vp))
 
 	ctx := <-css.stateChan
 
-	t.Equal(StateSyncing, ctx.toState)
-	t.Equal(StageINIT, ctx.voteproof.Stage())
+	t.Equal(base.StateSyncing, ctx.toState)
+	t.Equal(base.StageINIT, ctx.voteproof.Stage())
 	t.Equal(initFact, ctx.voteproof.Majority())
 }
 

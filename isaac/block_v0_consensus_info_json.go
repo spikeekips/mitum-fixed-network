@@ -3,14 +3,15 @@ package isaac
 import (
 	"encoding/json"
 
-	"github.com/spikeekips/mitum/encoder"
+	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/util"
+	"github.com/spikeekips/mitum/util/encoder"
 )
 
 type BlockConsensusInfoV0PackJSON struct {
 	encoder.JSONPackHintedHead
-	IV Voteproof `json:"init_voteproof,omitempty"`
-	AV Voteproof `json:"accept_voteproof,omitempty"`
+	IV base.Voteproof `json:"init_voteproof,omitempty"`
+	AV base.Voteproof `json:"accept_voteproof,omitempty"`
 }
 
 func (bc BlockConsensusInfoV0) MarshalJSON() ([]byte, error) {
@@ -33,14 +34,14 @@ func (bc *BlockConsensusInfoV0) UnpackJSON(b []byte, enc *encoder.JSONEncoder) e
 	}
 
 	var err error
-	var iv, av Voteproof
+	var iv, av base.Voteproof
 	if nbc.IV != nil {
-		if iv, err = decodeVoteproof(enc, nbc.IV); err != nil {
+		if iv, err = base.DecodeVoteproof(enc, nbc.IV); err != nil {
 			return err
 		}
 	}
 	if nbc.AV != nil {
-		if av, err = decodeVoteproof(enc, nbc.AV); err != nil {
+		if av, err = base.DecodeVoteproof(enc, nbc.AV); err != nil {
 			return err
 		}
 	}

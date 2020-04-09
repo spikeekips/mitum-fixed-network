@@ -3,10 +3,11 @@ package isaac
 import (
 	"testing"
 
-	"github.com/spikeekips/mitum/encoder"
-	"github.com/spikeekips/mitum/key"
+	"github.com/spikeekips/mitum/base"
+	"github.com/spikeekips/mitum/base/key"
+	"github.com/spikeekips/mitum/base/valuehash"
 	"github.com/spikeekips/mitum/util"
-	"github.com/spikeekips/mitum/valuehash"
+	"github.com/spikeekips/mitum/util/encoder"
 	"github.com/stretchr/testify/suite"
 )
 
@@ -36,7 +37,7 @@ func (t *testSetPolicyOperationJSON) TestEncode() {
 	token := []byte("findme")
 
 	policies := DefaultPolicy()
-	threshold, err := NewThreshold(3, 99.99)
+	threshold, err := base.NewThreshold(3, 99.99)
 	t.NoError(err)
 	policies.Threshold = threshold
 	policies.NumberOfActingSuffrageNodes = 1

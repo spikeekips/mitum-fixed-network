@@ -16,8 +16,8 @@ import (
 
 	"github.com/spikeekips/mitum/contest/commands"
 	"github.com/spikeekips/mitum/contest/common"
-	"github.com/spikeekips/mitum/logging"
 	"github.com/spikeekips/mitum/util"
+	"github.com/spikeekips/mitum/util/logging"
 )
 
 var (

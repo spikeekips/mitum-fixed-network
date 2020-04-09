@@ -5,6 +5,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/spikeekips/mitum/base"
 	"github.com/stretchr/testify/suite"
 )
 
@@ -84,7 +85,7 @@ func (t *testNodesState) TestRemove() {
 	ns := NewNodesState(t.localNode, nodes)
 
 	{ // try to remove, but nothing
-		err := ns.Remove(NewShortAddress("hehe"))
+		err := ns.Remove(base.NewShortAddress("hehe"))
 		t.Contains(err.Error(), "does not exist")
 		t.Equal(len(nodes), ns.Len())
 	}

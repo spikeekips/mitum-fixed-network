@@ -3,9 +3,10 @@ package isaac
 import (
 	"golang.org/x/xerrors"
 
-	"github.com/spikeekips/mitum/operation"
-	"github.com/spikeekips/mitum/seal"
-	"github.com/spikeekips/mitum/valuehash"
+	"github.com/spikeekips/mitum/base"
+	"github.com/spikeekips/mitum/base/operation"
+	"github.com/spikeekips/mitum/base/seal"
+	"github.com/spikeekips/mitum/base/valuehash"
 )
 
 type GenesisBlockV0Generator struct {
@@ -15,11 +16,11 @@ type GenesisBlockV0Generator struct {
 }
 
 func NewGenesisBlockV0Generator(localstate *Localstate, ops []operation.Operation) (*GenesisBlockV0Generator, error) {
-	threshold, _ := NewThreshold(1, 100)
+	threshold, _ := base.NewThreshold(1, 100)
 
 	return &GenesisBlockV0Generator{
 		localstate: localstate,
-		ballotbox: NewBallotbox(func() Threshold {
+		ballotbox: NewBallotbox(func() base.Threshold {
 			return threshold
 		}),
 		ops: ops,
@@ -107,7 +108,7 @@ func (gg *GenesisBlockV0Generator) generatePreviousBlock() error {
 		genesisHash = valuehash.NewDummy(sig)
 	}
 
-	block, err := NewBlockV0(Height(-1), Round(0), genesisHash, genesisHash, nil, nil)
+	block, err := NewBlockV0(base.Height(-1), base.Round(0), genesisHash, genesisHash, nil, nil)
 	if err != nil {
 		return err
 	}
@@ -137,8 +138,8 @@ func (gg *GenesisBlockV0Generator) generateProposal(seals []operation.Seal) (Pro
 	var proposal Proposal
 	if pr, err := NewProposal(
 		gg.localstate,
-		Height(0),
-		Round(0),
+		base.Height(0),
+		base.Round(0),
 		operations,
 		sealHashes,
 		gg.localstate.Policy().NetworkID(),
@@ -158,10 +159,10 @@ func (gg *GenesisBlockV0Generator) generateINITVoteproof() error {
 
 	if ib, err := NewINITBallotV0(
 		gg.localstate,
-		Height(0),
-		Round(0),
+		base.Height(0),
+		base.Round(0),
 		previousBlock.Hash(),
-		Round(0),
+		base.Round(0),
 		nil,
 		gg.localstate.Policy().NetworkID(),
 	); err != nil {
@@ -190,8 +191,8 @@ func (gg *GenesisBlockV0Generator) generateACCEPTVoteproof(newBlock Block) error
 
 	if ab, err := NewACCEPTBallotV0(
 		gg.localstate,
-		Height(0),
-		Round(0),
+		base.Height(0),
+		base.Round(0),
 		newBlock,
 		initVoteproof,
 		gg.localstate.Policy().NetworkID(),

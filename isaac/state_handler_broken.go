@@ -1,8 +1,9 @@
 package isaac
 
 import (
-	"github.com/spikeekips/mitum/logging"
-	"github.com/spikeekips/mitum/seal"
+	"github.com/spikeekips/mitum/base"
+	"github.com/spikeekips/mitum/base/seal"
+	"github.com/spikeekips/mitum/util/logging"
 )
 
 type StateBrokenHandler struct {
@@ -11,7 +12,7 @@ type StateBrokenHandler struct {
 
 func NewStateBrokenHandler(localstate *Localstate) (*StateBrokenHandler, error) {
 	ss := &StateBrokenHandler{
-		BaseStateHandler: NewBaseStateHandler(localstate, nil, StateBroken),
+		BaseStateHandler: NewBaseStateHandler(localstate, nil, base.StateBroken),
 	}
 	ss.BaseStateHandler.Logging = logging.NewLogging(func(c logging.Context) logging.Emitter {
 		return c.Str("module", "consensus-state-broken-handler")
@@ -38,6 +39,6 @@ func (ss *StateBrokenHandler) NewSeal(seal.Seal) error {
 	return nil
 }
 
-func (ss *StateBrokenHandler) NewVoteproof(Voteproof) error {
+func (ss *StateBrokenHandler) NewVoteproof(base.Voteproof) error {
 	return nil
 }

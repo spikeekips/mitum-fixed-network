@@ -3,6 +3,7 @@ package isaac
 import (
 	"time"
 
+	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/util"
 	"golang.org/x/xerrors"
 )
@@ -56,11 +57,11 @@ func (lp *LocalPolicy) NetworkID() []byte {
 	return lp.networkID.Value().([]byte)
 }
 
-func (lp *LocalPolicy) Threshold() Threshold {
-	return lp.threshold.Value().(Threshold)
+func (lp *LocalPolicy) Threshold() base.Threshold {
+	return lp.threshold.Value().(base.Threshold)
 }
 
-func (lp *LocalPolicy) SetThreshold(threshold Threshold) *LocalPolicy {
+func (lp *LocalPolicy) SetThreshold(threshold base.Threshold) *LocalPolicy {
 	_ = lp.threshold.SetValue(threshold)
 
 	return lp

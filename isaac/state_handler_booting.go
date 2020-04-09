@@ -3,9 +3,10 @@ package isaac
 import (
 	"golang.org/x/xerrors"
 
-	"github.com/spikeekips/mitum/logging"
-	"github.com/spikeekips/mitum/seal"
+	"github.com/spikeekips/mitum/base"
+	"github.com/spikeekips/mitum/base/seal"
 	"github.com/spikeekips/mitum/util"
+	"github.com/spikeekips/mitum/util/logging"
 )
 
 type StateBootingHandler struct {
@@ -21,7 +22,7 @@ func NewStateBootingHandler(
 	}
 
 	cs := &StateBootingHandler{
-		BaseStateHandler: NewBaseStateHandler(localstate, proposalProcessor, StateBooting),
+		BaseStateHandler: NewBaseStateHandler(localstate, proposalProcessor, base.StateBooting),
 	}
 	cs.BaseStateHandler.Logging = logging.NewLogging(func(c logging.Context) logging.Emitter {
 		return c.Str("module", "consensus-state-booting-handler")
@@ -63,7 +64,7 @@ func (cs *StateBootingHandler) NewSeal(sl seal.Seal) error {
 	return nil
 }
 
-func (cs *StateBootingHandler) NewVoteproof(voteproof Voteproof) error {
+func (cs *StateBootingHandler) NewVoteproof(voteproof base.Voteproof) error {
 	l := loggerWithVoteproof(voteproof, cs.Log())
 
 	l.Debug().Msg("got Voteproof")
@@ -80,7 +81,7 @@ func (cs *StateBootingHandler) initialize() error {
 
 	cs.Log().Debug().Msg("initialized; moves to joining")
 
-	return cs.ChangeState(StateJoining, nil, nil)
+	return cs.ChangeState(base.StateJoining, nil, nil)
 }
 
 func (cs *StateBootingHandler) check() error {
@@ -91,7 +92,7 @@ func (cs *StateBootingHandler) check() error {
 		cs.Log().Error().Err(err).Msg("checked block")
 
 		// TODO syncing handler should support syncing without voteproof and ballot
-		if err0 := cs.ChangeState(StateSyncing, nil, nil); err0 != nil {
+		if err0 := cs.ChangeState(base.StateSyncing, nil, nil); err0 != nil {
 			return xerrors.Errorf("failed to change state; %w", err0)
 		}
 

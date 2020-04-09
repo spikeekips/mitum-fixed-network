@@ -7,18 +7,19 @@ import (
 	"golang.org/x/xerrors"
 
 	"github.com/spikeekips/avl"
-	"github.com/spikeekips/mitum/logging"
-	"github.com/spikeekips/mitum/operation"
+	"github.com/spikeekips/mitum/base"
+	"github.com/spikeekips/mitum/base/operation"
+	"github.com/spikeekips/mitum/base/valuehash"
 	"github.com/spikeekips/mitum/state"
 	"github.com/spikeekips/mitum/storage"
 	"github.com/spikeekips/mitum/tree"
-	"github.com/spikeekips/mitum/valuehash"
+	"github.com/spikeekips/mitum/util/logging"
 )
 
 type ProposalProcessor interface {
 	IsProcessed(valuehash.Hash /* proposal.Hash() */) bool
-	ProcessINIT(valuehash.Hash /* Proposal.Hash() */, Voteproof /* INIT Voteproof */) (Block, error)
-	ProcessACCEPT(valuehash.Hash /* Proposal.Hash() */, Voteproof /* ACCEPT Voteproof */) (BlockStorage, error)
+	ProcessINIT(valuehash.Hash /* Proposal.Hash() */, base.Voteproof /* INIT Voteproof */) (Block, error)
+	ProcessACCEPT(valuehash.Hash /* Proposal.Hash() */, base.Voteproof /* ACCEPT Voteproof */) (BlockStorage, error)
 }
 
 type ProposalProcessorV0 struct {
@@ -43,14 +44,14 @@ func (dp *ProposalProcessorV0) IsProcessed(ph valuehash.Hash) bool {
 	return found
 }
 
-func (dp *ProposalProcessorV0) ProcessINIT(ph valuehash.Hash, initVoteproof Voteproof) (Block, error) {
+func (dp *ProposalProcessorV0) ProcessINIT(ph valuehash.Hash, initVoteproof base.Voteproof) (Block, error) {
 	if i, found := dp.processors.Load(ph); found {
 		processor := i.(*proposalProcessorV0)
 
 		return processor.block, nil
 	}
 
-	if initVoteproof.Stage() != StageINIT {
+	if initVoteproof.Stage() != base.StageINIT {
 		return nil, xerrors.Errorf("ProcessINIT needs INIT Voteproof")
 	}
 
@@ -91,9 +92,9 @@ func (dp *ProposalProcessorV0) ProcessINIT(ph valuehash.Hash, initVoteproof Vote
 }
 
 func (dp *ProposalProcessorV0) ProcessACCEPT(
-	ph valuehash.Hash, acceptVoteproof Voteproof,
+	ph valuehash.Hash, acceptVoteproof base.Voteproof,
 ) (BlockStorage, error) {
-	if acceptVoteproof.Stage() != StageACCEPT {
+	if acceptVoteproof.Stage() != base.StageACCEPT {
 		return nil, xerrors.Errorf("Processaccept needs ACCEPT Voteproof")
 	}
 
@@ -144,7 +145,7 @@ func newProposalProcessorV0(localstate *Localstate, proposal Proposal) (*proposa
 	}, nil
 }
 
-func (pp *proposalProcessorV0) processINIT(initVoteproof Voteproof) (Block, error) {
+func (pp *proposalProcessorV0) processINIT(initVoteproof base.Voteproof) (Block, error) {
 	if pp.block != nil {
 		return pp.block, nil
 	}
@@ -382,7 +383,7 @@ func (pp *proposalProcessorV0) getOperationsFromStorage(h valuehash.Hash) ([]sta
 }
 
 func (pp *proposalProcessorV0) getOperationsThruChannel(
-	proposer Address,
+	proposer base.Address,
 	notFounds []valuehash.Hash,
 	founds map[valuehash.Hash]state.OperationInfoV0,
 ) ([]state.OperationInfoV0, error) {
@@ -424,7 +425,7 @@ func (pp *proposalProcessorV0) getOperationsThruChannel(
 	return ops, nil
 }
 
-func (pp *proposalProcessorV0) setACCEPTVoteproof(acceptVoteproof Voteproof) error {
+func (pp *proposalProcessorV0) setACCEPTVoteproof(acceptVoteproof base.Voteproof) error {
 	if pp.bs == nil {
 		return xerrors.Errorf("not yet processed")
 	}

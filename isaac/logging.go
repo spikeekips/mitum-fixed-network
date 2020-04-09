@@ -1,8 +1,9 @@
 package isaac
 
 import (
-	"github.com/spikeekips/mitum/logging"
-	"github.com/spikeekips/mitum/seal"
+	"github.com/spikeekips/mitum/base"
+	"github.com/spikeekips/mitum/base/seal"
+	"github.com/spikeekips/mitum/util/logging"
 )
 
 func loggerWithSeal(sl seal.Seal, l logging.Logger) logging.Logger {
@@ -38,7 +39,7 @@ func loggerWithBallot(ballot Ballot, l logging.Logger) logging.Logger {
 	return ll
 }
 
-func loggerWithVoteproof(voteproof Voteproof, l logging.Logger) logging.Logger {
+func loggerWithVoteproof(voteproof base.Voteproof, l logging.Logger) logging.Logger {
 	if voteproof == nil {
 		return l
 	}

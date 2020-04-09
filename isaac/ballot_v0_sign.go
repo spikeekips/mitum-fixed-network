@@ -3,13 +3,13 @@ package isaac
 import (
 	"golang.org/x/xerrors"
 
-	"github.com/spikeekips/mitum/hint"
-	"github.com/spikeekips/mitum/isvalid"
-	"github.com/spikeekips/mitum/key"
-	"github.com/spikeekips/mitum/localtime"
-	"github.com/spikeekips/mitum/operation"
+	"github.com/spikeekips/mitum/base"
+	"github.com/spikeekips/mitum/base/key"
+	"github.com/spikeekips/mitum/base/valuehash"
 	"github.com/spikeekips/mitum/util"
-	"github.com/spikeekips/mitum/valuehash"
+	"github.com/spikeekips/mitum/util/hint"
+	"github.com/spikeekips/mitum/util/isvalid"
+	"github.com/spikeekips/mitum/util/localtime"
 )
 
 var (
@@ -64,7 +64,7 @@ type SIGNBallotV0 struct {
 	SIGNBallotFactV0
 }
 
-func NewSIGNBallotV0FromLocalstate(localstate *Localstate, round Round, newBlock Block) (SIGNBallotV0, error) {
+func NewSIGNBallotV0FromLocalstate(localstate *Localstate, round base.Round, newBlock Block) (SIGNBallotV0, error) {
 	lastBlock := localstate.LastBlock()
 	if lastBlock == nil {
 		return SIGNBallotV0{}, xerrors.Errorf("lastBlock is empty")
@@ -99,8 +99,8 @@ func (sb SIGNBallotV0) Hint() hint.Hint {
 	return SIGNBallotV0Hint
 }
 
-func (sb SIGNBallotV0) Stage() Stage {
-	return StageSIGN
+func (sb SIGNBallotV0) Stage() base.Stage {
+	return base.StageSIGN
 }
 
 func (sb SIGNBallotV0) IsValid(b []byte) error {
@@ -130,7 +130,7 @@ func (sb SIGNBallotV0) GenerateBodyHash() (valuehash.Hash, error) {
 	return valuehash.NewSHA256(sb.SIGNBallotFactV0.Bytes()), nil
 }
 
-func (sb SIGNBallotV0) Fact() operation.Fact {
+func (sb SIGNBallotV0) Fact() base.Fact {
 	return sb.SIGNBallotFactV0
 }
 

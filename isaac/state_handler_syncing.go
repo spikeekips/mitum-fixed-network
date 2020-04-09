@@ -6,9 +6,10 @@ import (
 
 	"golang.org/x/xerrors"
 
-	"github.com/spikeekips/mitum/logging"
-	"github.com/spikeekips/mitum/seal"
+	"github.com/spikeekips/mitum/base"
+	"github.com/spikeekips/mitum/base/seal"
 	"github.com/spikeekips/mitum/util"
+	"github.com/spikeekips/mitum/util/logging"
 )
 
 /*
@@ -41,7 +42,7 @@ func NewStateSyncingHandler(
 	proposalProcessor ProposalProcessor,
 ) (*StateSyncingHandler, error) {
 	ss := &StateSyncingHandler{
-		BaseStateHandler: NewBaseStateHandler(localstate, proposalProcessor, StateSyncing),
+		BaseStateHandler: NewBaseStateHandler(localstate, proposalProcessor, base.StateSyncing),
 		stateChan:        make(chan Syncer),
 	}
 	ss.BaseStateHandler.Logging = logging.NewLogging(func(c logging.Context) logging.Emitter {
@@ -100,7 +101,7 @@ func (ss *StateSyncingHandler) NewSeal(sl seal.Seal) error {
 	}
 }
 
-func (ss *StateSyncingHandler) NewVoteproof(voteproof Voteproof) error {
+func (ss *StateSyncingHandler) NewVoteproof(voteproof base.Voteproof) error {
 	return ss.handleVoteproof(voteproof)
 }
 
@@ -136,14 +137,14 @@ func (ss *StateSyncingHandler) handleProposal(proposal Proposal) error {
 	return nil
 }
 
-func (ss *StateSyncingHandler) newSyncer(to Height, sourceNodes []Node) error {
+func (ss *StateSyncingHandler) newSyncer(to base.Height, sourceNodes []Node) error {
 	ss.Lock()
 	defer ss.Unlock()
 
 	lastBlock := ss.localstate.LastBlock()
 
 	var lastSyncer Syncer
-	var from Height
+	var from base.Height
 	if len(ss.scs) < 1 {
 		if lastBlock == nil {
 			from = 0
@@ -213,12 +214,12 @@ func (ss *StateSyncingHandler) newSyncerFromBallot(ballot Ballot) error {
 	return ss.newSyncer(to, sourceNodes)
 }
 
-func (ss *StateSyncingHandler) newSyncerFromVoteproof(voteproof Voteproof) error {
-	var to Height
+func (ss *StateSyncingHandler) newSyncerFromVoteproof(voteproof base.Voteproof) error {
+	var to base.Height
 	switch voteproof.Stage() {
-	case StageINIT:
+	case base.StageINIT:
 		to = voteproof.Height() - 1
-	case StageACCEPT:
+	case base.StageACCEPT:
 		to = voteproof.Height()
 	default:
 		return xerrors.Errorf("invalid Voteproof received")
@@ -357,29 +358,29 @@ func (ss *StateSyncingHandler) processProposal(proposal Proposal) error {
 	return nil
 }
 
-func (ss *StateSyncingHandler) handleVoteproof(voteproof Voteproof) error {
-	base := ss.localstate.LastBlock()
+func (ss *StateSyncingHandler) handleVoteproof(voteproof base.Voteproof) error {
+	baseBlock := ss.localstate.LastBlock()
 
 	l := ss.Log().WithLogger(func(ctx logging.Context) logging.Emitter {
 		return ctx.Hinted("voteproof_stage", voteproof.Stage()).
 			Hinted("voteproof_height", voteproof.Height()).
 			Hinted("voteproof_round", voteproof.Round()).
-			Hinted("local_height", base.Height()).
-			Hinted("local_round", base.Round())
+			Hinted("local_height", baseBlock.Height()).
+			Hinted("local_round", baseBlock.Round())
 	})
 
 	l.Debug().Msg("got voteproof")
 
-	d := voteproof.Height() - base.Height()
+	d := voteproof.Height() - baseBlock.Height()
 	switch {
 	// NOTE next voteproof of current
 	case d == 1:
 		switch voteproof.Stage() {
-		case StageINIT:
+		case base.StageINIT:
 			// NOTE with INIT voteproof, moves to consensus
 			l.Debug().Msg("init voteproof, expected; moves to consensus")
-			return ss.ChangeState(StateConsensus, voteproof, nil)
-		case StageACCEPT:
+			return ss.ChangeState(base.StateConsensus, voteproof, nil)
+		case base.StageACCEPT:
 			// NOTE if proposal of Voteproof is already processed, store new
 			// block from Voteproof. And then will wait next INIT voteproof.
 			acceptFact := voteproof.Majority().(ACCEPTBallotFact)
@@ -402,7 +403,7 @@ func (ss *StateSyncingHandler) handleVoteproof(voteproof Voteproof) error {
 		}
 	default:
 		l.Debug().
-			Hinted("block_height", base.Height()).
+			Hinted("block_height", baseBlock.Height()).
 			Msg("something wrong, behind voteproof received")
 	}
 

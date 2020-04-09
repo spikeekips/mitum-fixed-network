@@ -5,11 +5,11 @@ import (
 	"strings"
 	"time"
 
-	"github.com/justinas/alice"
-	"github.com/spikeekips/mitum/logging"
-
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/hlog"
+
+	"github.com/justinas/alice"
+	"github.com/spikeekips/mitum/util/logging"
 )
 
 type HTTPHandlerFunc func(http.ResponseWriter, *http.Request)

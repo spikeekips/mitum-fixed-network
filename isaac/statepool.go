@@ -3,8 +3,8 @@ package isaac
 import (
 	"sync"
 
+	"github.com/spikeekips/mitum/base/valuehash"
 	"github.com/spikeekips/mitum/state"
-	"github.com/spikeekips/mitum/valuehash"
 )
 
 type StatePool struct {

@@ -3,17 +3,18 @@ package isaac
 import (
 	"sync"
 
+	"github.com/spikeekips/mitum/base"
 	"golang.org/x/xerrors"
 )
 
 type NodesState struct {
 	sync.RWMutex
 	localNode *LocalNode
-	nodes     map[Address]Node
+	nodes     map[base.Address]Node
 }
 
 func NewNodesState(localNode *LocalNode, nodes []Node) *NodesState {
-	m := map[Address]Node{}
+	m := map[base.Address]Node{}
 	for _, n := range nodes {
 		if n.Address().Equal(localNode.Address()) {
 			continue
@@ -27,7 +28,7 @@ func NewNodesState(localNode *LocalNode, nodes []Node) *NodesState {
 	return &NodesState{localNode: localNode, nodes: m}
 }
 
-func (ns *NodesState) Node(address Address) (Node, bool) {
+func (ns *NodesState) Node(address base.Address) (Node, bool) {
 	ns.RLock()
 	defer ns.RUnlock()
 	n, found := ns.nodes[address]
@@ -35,14 +36,14 @@ func (ns *NodesState) Node(address Address) (Node, bool) {
 	return n, found
 }
 
-func (ns *NodesState) Exists(address Address) bool {
+func (ns *NodesState) Exists(address base.Address) bool {
 	ns.RLock()
 	defer ns.RUnlock()
 
 	return ns.exists(address)
 }
 
-func (ns *NodesState) exists(address Address) bool {
+func (ns *NodesState) exists(address base.Address) bool {
 	_, found := ns.nodes[address]
 
 	return found
@@ -69,7 +70,7 @@ func (ns *NodesState) Add(nl ...Node) error {
 	return nil
 }
 
-func (ns *NodesState) Remove(addresses ...Address) error {
+func (ns *NodesState) Remove(addresses ...base.Address) error {
 	ns.Lock()
 	defer ns.Unlock()
 

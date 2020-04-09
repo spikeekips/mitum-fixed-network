@@ -7,9 +7,10 @@ import (
 
 	"golang.org/x/xerrors"
 
-	"github.com/spikeekips/mitum/localtime"
-	"github.com/spikeekips/mitum/logging"
-	"github.com/spikeekips/mitum/seal"
+	"github.com/spikeekips/mitum/base"
+	"github.com/spikeekips/mitum/base/seal"
+	"github.com/spikeekips/mitum/util/localtime"
+	"github.com/spikeekips/mitum/util/logging"
 )
 
 const (
@@ -20,7 +21,7 @@ const (
 )
 
 type StateHandler interface {
-	State() State
+	State() base.State
 	SetStateChan(chan<- StateChangeContext)
 	SetSealChan(chan<- seal.Seal)
 	Activate(StateChangeContext) error
@@ -28,17 +29,17 @@ type StateHandler interface {
 	// NewSeal receives Seal.
 	NewSeal(seal.Seal) error
 	// NewVoteproof receives the finished Voteproof.
-	NewVoteproof(Voteproof) error
+	NewVoteproof(base.Voteproof) error
 }
 
 type StateChangeContext struct {
-	fromState State
-	toState   State
-	voteproof Voteproof
+	fromState base.State
+	toState   base.State
+	voteproof base.Voteproof
 	ballot    Ballot
 }
 
-func NewStateChangeContext(from, to State, voteproof Voteproof, ballot Ballot) StateChangeContext {
+func NewStateChangeContext(from, to base.State, voteproof base.Voteproof, ballot Ballot) StateChangeContext {
 	return StateChangeContext{
 		fromState: from,
 		toState:   to,
@@ -47,15 +48,15 @@ func NewStateChangeContext(from, to State, voteproof Voteproof, ballot Ballot) S
 	}
 }
 
-func (csc StateChangeContext) From() State {
+func (csc StateChangeContext) From() base.State {
 	return csc.fromState
 }
 
-func (csc StateChangeContext) To() State {
+func (csc StateChangeContext) To() base.State {
 	return csc.toState
 }
 
-func (csc StateChangeContext) Voteproof() Voteproof {
+func (csc StateChangeContext) Voteproof() base.Voteproof {
 	return csc.voteproof
 }
 
@@ -75,14 +76,14 @@ type BaseStateHandler struct {
 	*logging.Logging
 	localstate        *Localstate
 	proposalProcessor ProposalProcessor
-	state             State
+	state             base.State
 	stateChan         chan<- StateChangeContext
 	sealChan          chan<- seal.Seal
 	timers            *localtime.Timers
 }
 
 func NewBaseStateHandler(
-	localstate *Localstate, proposalProcessor ProposalProcessor, state State,
+	localstate *Localstate, proposalProcessor ProposalProcessor, state base.State,
 ) *BaseStateHandler {
 	return &BaseStateHandler{
 		localstate:        localstate,
@@ -91,7 +92,7 @@ func NewBaseStateHandler(
 	}
 }
 
-func (bs *BaseStateHandler) State() State {
+func (bs *BaseStateHandler) State() base.State {
 	return bs.state
 }
 
@@ -103,7 +104,7 @@ func (bs *BaseStateHandler) SetSealChan(sealChan chan<- seal.Seal) {
 	bs.sealChan = sealChan
 }
 
-func (bs *BaseStateHandler) ChangeState(newState State, voteproof Voteproof, ballot Ballot) error {
+func (bs *BaseStateHandler) ChangeState(newState base.State, voteproof base.Voteproof, ballot Ballot) error {
 	if bs.stateChan == nil {
 		return nil
 	}
@@ -141,7 +142,7 @@ func (bs *BaseStateHandler) StoreNewBlock(blockStorage BlockStorage) error {
 	return nil
 }
 
-func (bs *BaseStateHandler) StoreNewBlockByVoteproof(acceptVoteproof Voteproof) error {
+func (bs *BaseStateHandler) StoreNewBlockByVoteproof(acceptVoteproof base.Voteproof) error {
 	fact, ok := acceptVoteproof.Majority().(ACCEPTBallotFact)
 	if !ok {
 		return xerrors.Errorf("needs ACCEPTBallotFact: fact=%T", acceptVoteproof.Majority())
@@ -200,7 +201,7 @@ func (bs *BaseStateHandler) StoreNewBlockByVoteproof(acceptVoteproof Voteproof) 
 
 func (bs *BaseStateHandler) TimerBroadcastingINITBallot(
 	intervalFunc func() time.Duration,
-	roundFunc func() Round,
+	roundFunc func() base.Round,
 ) (*localtime.CallbackTimer, error) {
 	return localtime.NewCallbackTimer(
 		TimerIDBroadcastingINITBallot,
@@ -249,7 +250,7 @@ func (bs *BaseStateHandler) TimerBroadcastingACCEPTBallot(newBlock Block) (*loca
 }
 
 func (bs *BaseStateHandler) TimerTimedoutMoveNextRound(
-	round Round,
+	round base.Round,
 ) (*localtime.CallbackTimer, error) {
 	var called int64
 

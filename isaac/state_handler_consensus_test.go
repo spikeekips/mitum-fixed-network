@@ -67,6 +67,7 @@ func (t *testStateConsensusHandler) TestWaitingProposalButTimedOut() {
 	cs, err := NewStateConsensusHandler(t.localstate, NewDummyProposalProcessor(nil, nil), suffrage, proposalMaker)
 	t.NoError(err)
 	t.NotNil(cs)
+	cs.SetLogger(log)
 
 	sealChan := make(chan seal.Seal)
 	cs.SetSealChan(sealChan)
@@ -89,7 +90,7 @@ func (t *testStateConsensusHandler) TestWaitingProposalButTimedOut() {
 	}()
 
 	select {
-	case <-time.After(time.Millisecond * 10):
+	case <-time.After(time.Millisecond * 100):
 		t.NoError(xerrors.Errorf("failed to get INITBallot for next round"))
 	case r := <-sealChan:
 		t.NotNil(r)

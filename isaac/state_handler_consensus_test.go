@@ -67,7 +67,6 @@ func (t *testStateConsensusHandler) TestWaitingProposalButTimedOut() {
 	cs, err := NewStateConsensusHandler(t.localstate, NewDummyProposalProcessor(nil, nil), suffrage, proposalMaker)
 	t.NoError(err)
 	t.NotNil(cs)
-	cs.SetLogger(log)
 
 	sealChan := make(chan seal.Seal)
 	cs.SetSealChan(sealChan)

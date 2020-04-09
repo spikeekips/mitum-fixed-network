@@ -9,6 +9,7 @@ import (
 	"github.com/spikeekips/mitum/encoder"
 	"github.com/spikeekips/mitum/hint"
 	"github.com/spikeekips/mitum/isaac"
+	"github.com/spikeekips/mitum/logging"
 	"github.com/spikeekips/mitum/util"
 )
 
@@ -77,4 +78,15 @@ func (sa *ContestAddress) UnpackJSON(b []byte, _ *encoder.JSONEncoder) error {
 	*sa = ContestAddress(s.A)
 
 	return nil
+}
+
+func (sa ContestAddress) MarshalLog(key string, e logging.Emitter, verbose bool) logging.Emitter {
+	if !verbose {
+		return e.Str(key, sa.String())
+	}
+
+	return e.Dict(key, logging.Dict().
+		Str("address", sa.String()).
+		HintedVerbose("hint", sa.Hint(), true),
+	)
 }

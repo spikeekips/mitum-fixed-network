@@ -3,8 +3,6 @@ package commands
 import (
 	"sync"
 
-	"github.com/rs/zerolog"
-	"github.com/rs/zerolog/log"
 	"golang.org/x/xerrors"
 
 	"github.com/spikeekips/mitum/contest/common"
@@ -27,7 +25,7 @@ func (cm RunCommand) generateBlocks(ns []*isaac.Localstate) error {
 		ns,
 	); err != nil {
 		return xerrors.Errorf("failed new DummyBlocksV0Generator: %w", err)
-	} else if err := bg.Generate(); err != nil {
+	} else if err := bg.Generate(true); err != nil {
 		return xerrors.Errorf("failed to generate initial blocks: %w", err)
 	}
 
@@ -43,11 +41,11 @@ func (cm RunCommand) createNodeProcess(
 		return nil, err
 	}
 
-	l := log.WithLogger(func(ctx zerolog.Context) zerolog.Context {
+	l := log.WithLogger(func(ctx logging.Context) logging.Emitter {
 		return ctx.Hinted("node", np.Localstate.Node().Address())
 	})
 
-	_ = np.SetLogger(logging.NewLogger(&l, true)) // TODO set verbose
+	_ = np.SetLogger(l) // TODO set verbose
 
 	{
 		b, err := util.JSONMarshal(np.Localstate)
@@ -60,7 +58,7 @@ func (cm RunCommand) createNodeProcess(
 	return np, nil
 }
 
-func (cm RunCommand) startNodes(nodeProcesses []*common.NodeProcess, exitHooks *[]func()) error {
+func (cm RunCommand) startNodes(nodeProcesses []*common.NodeProcess, exitHooks *[]func(), log logging.Logger) error {
 	var wg sync.WaitGroup
 	wg.Add(len(nodeProcesses))
 
@@ -143,7 +141,7 @@ func (cm RunCommand) Run(_ *CommonFlags, log logging.Logger, exitHooks *[]func()
 		np.AllNodes = nodes
 	}
 
-	if err := cm.startNodes(nps, exitHooks); err != nil {
+	if err := cm.startNodes(nps, exitHooks, log); err != nil {
 		return err
 	}
 

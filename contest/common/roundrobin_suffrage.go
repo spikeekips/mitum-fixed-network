@@ -6,7 +6,6 @@ import (
 	"strings"
 
 	lru "github.com/hashicorp/golang-lru"
-	"github.com/rs/zerolog"
 
 	"github.com/spikeekips/mitum/isaac"
 	"github.com/spikeekips/mitum/logging"
@@ -25,7 +24,7 @@ func NewRoundrobinSuffrage(localstate *isaac.Localstate, cacheSize int) *Roundro
 	}
 
 	return &RoundrobinSuffrage{
-		Logging: logging.NewLogging(func(c zerolog.Context) zerolog.Context {
+		Logging: logging.NewLogging(func(c logging.Context) logging.Emitter {
 			return c.Str("module", "roundrobin-suffrage")
 		}),
 		localstate: localstate,

@@ -8,7 +8,7 @@ func (ls *Localstate) MarshalLog(key string, e logging.Emitter, verbose bool) lo
 		return e
 	}
 
-	return e.Dict("localstate", logging.Dict().
+	return e.Dict(key, logging.Dict().
 		HintedVerbose("last_block", lastBlock, verbose),
 	)
 }

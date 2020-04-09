@@ -13,20 +13,25 @@ import (
 	"github.com/spikeekips/mitum/network"
 	"github.com/spikeekips/mitum/seal"
 	"github.com/spikeekips/mitum/valuehash"
+	"golang.org/x/xerrors"
 )
 
 var (
-	QuicHandlerPathSendSeal = "/seal"
-	QuicHandlerPathGetSeals = "/seals"
+	QuicHandlerPathSendSeal     = "/seal"
+	QuicHandlerPathGetSeals     = "/seals"
+	QuicHandlerPathGetBlocks    = "/blocks"
+	QuicHandlerPathGetManifests = "/manifests"
 )
 
 type QuicServer struct {
 	*logging.Logging
 	*network.QuicServer
-	encs            *encoder.Encoders
-	enc             encoder.Encoder // NOTE default encoder.Encoder
-	getSealsHandler GetSealsHandler
-	newSealHandler  NewSealHandler
+	encs                *encoder.Encoders
+	enc                 encoder.Encoder // NOTE default encoder.Encoder
+	getSealsHandler     GetSealsHandler
+	newSealHandler      NewSealHandler
+	getManifestsHandler GetManifestsHandler
+	getBlocksHandler    GetBlocksHandler
 }
 
 func NewQuicServer(
@@ -60,6 +65,14 @@ func (qs *QuicServer) SetNewSealHandler(fn NewSealHandler) {
 	qs.newSealHandler = fn
 }
 
+func (qs *QuicServer) SetGetManifests(fn GetManifestsHandler) {
+	qs.getManifestsHandler = fn
+}
+
+func (qs *QuicServer) SetGetBlocks(fn GetBlocksHandler) {
+	qs.getBlocksHandler = fn
+}
+
 func (qs *QuicServer) setHandlers() {
 	// seal handler
 	_ = qs.SetHandler(
@@ -73,6 +86,20 @@ func (qs *QuicServer) setHandlers() {
 		QuicHandlerPathSendSeal,
 		func(w http.ResponseWriter, r *http.Request) {
 			qs.handleNewSeal(w, r)
+		},
+	).Methods("POST")
+
+	_ = qs.SetHandler(
+		QuicHandlerPathGetManifests,
+		func(w http.ResponseWriter, r *http.Request) {
+			qs.handleGetManifests(w, r)
+		},
+	).Methods("POST")
+
+	_ = qs.SetHandler(
+		QuicHandlerPathGetBlocks,
+		func(w http.ResponseWriter, r *http.Request) {
+			qs.handleGetBlocks(w, r)
 		},
 	).Methods("POST")
 
@@ -190,24 +217,94 @@ func (qs *QuicServer) handleNewSeal(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
 }
 
-func QuicGetSealsURL(u string) (string, error) {
-	uu, err := url.Parse(u)
-	if err != nil {
-		return "", err
+func (qs *QuicServer) handleGetByHeights(
+	w http.ResponseWriter,
+	r *http.Request,
+	getHandler func([]Height) (interface{}, error),
+) error {
+	body := &bytes.Buffer{}
+	if _, err := io.Copy(body, r.Body); err != nil {
+		qs.Log().Error().Err(err).Msg("failed to read post body")
+		network.HTTPError(w, http.StatusInternalServerError)
+
+		return err
 	}
 
-	uu.Path = path.Join(uu.Path, QuicHandlerPathGetSeals)
+	var enc encoder.Encoder
+	if e, err := network.EncoderFromHeader(r.Header, qs.encs, qs.enc); err != nil {
+		network.HTTPError(w, http.StatusBadRequest)
 
-	return uu.String(), nil
+		return xerrors.Errorf("failed to read encoder hint: %w", err)
+	} else {
+		enc = e
+	}
+
+	var heights []Height
+	if err := enc.Unmarshal(body.Bytes(), &heights); err != nil {
+		network.HTTPError(w, http.StatusInternalServerError)
+
+		return xerrors.Errorf("failed to unmarshal hash slice: %w", err)
+	}
+
+	var output []byte
+	if sls, err := getHandler(heights); err != nil {
+		network.HTTPError(w, http.StatusBadRequest)
+
+		return err
+	} else if b, err := qs.enc.Marshal(sls); err != nil {
+		network.HTTPError(w, http.StatusBadRequest)
+
+		return xerrors.Errorf("failed to encode: %w", err)
+	} else {
+		output = b
+	}
+
+	w.Header().Set(network.QuicEncoderHintHeader, qs.enc.Hint().String())
+	_, _ = w.Write(output)
+
+	return nil
 }
 
-func QuicSendSealURL(u string) (string, error) {
+func (qs *QuicServer) handleGetManifests(w http.ResponseWriter, r *http.Request) {
+	if qs.getManifestsHandler == nil {
+		network.HTTPError(w, http.StatusInternalServerError)
+		return
+	}
+
+	if err := qs.handleGetByHeights(
+		w, r,
+		func(heights []Height) (interface{}, error) {
+			return qs.getManifestsHandler(heights)
+		},
+	); err != nil {
+		qs.Log().Error().Err(err).Msg("failed to get manifests")
+		return
+	}
+}
+
+func (qs *QuicServer) handleGetBlocks(w http.ResponseWriter, r *http.Request) {
+	if qs.getBlocksHandler == nil {
+		network.HTTPError(w, http.StatusInternalServerError)
+		return
+	}
+
+	if err := qs.handleGetByHeights(
+		w, r,
+		func(heights []Height) (interface{}, error) {
+			return qs.getBlocksHandler(heights)
+		}); err != nil {
+		qs.Log().Error().Err(err).Msg("failed to get blocks")
+		return
+	}
+}
+
+func quicURL(u, p string) (string, error) {
 	uu, err := url.Parse(u)
 	if err != nil {
 		return "", err
 	}
 
-	uu.Path = path.Join(uu.Path, QuicHandlerPathSendSeal)
+	uu.Path = path.Join(uu.Path, p)
 
 	return uu.String(), nil
 }

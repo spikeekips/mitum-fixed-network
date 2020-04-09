@@ -10,6 +10,7 @@ import (
 	"golang.org/x/xerrors"
 
 	"github.com/spikeekips/mitum/encoder"
+	"github.com/spikeekips/mitum/hint"
 	"github.com/spikeekips/mitum/logging"
 	"github.com/spikeekips/mitum/network"
 	"github.com/spikeekips/mitum/seal"
@@ -18,13 +19,15 @@ import (
 
 type QuicChannel struct {
 	*logging.Logging
-	recvChan    chan seal.Seal
-	addr        *url.URL
-	encs        *encoder.Encoders
-	enc         encoder.Encoder
-	sendSealURL string
-	getSealsURL string
-	client      *network.QuicClient
+	recvChan        chan seal.Seal
+	addr            *url.URL
+	encs            *encoder.Encoders
+	enc             encoder.Encoder
+	sendSealURL     string
+	getSealsURL     string
+	getManifestsURL string
+	getBlocksURL    string
+	client          *network.QuicClient
 }
 
 func NewQuicChannel(
@@ -52,15 +55,25 @@ func NewQuicChannel(
 		qc.addr = u
 	}
 
-	if u, err := QuicSendSealURL(qc.addr.String()); err != nil {
+	if u, err := quicURL(qc.addr.String(), QuicHandlerPathSendSeal); err != nil {
 		return nil, err
 	} else {
 		qc.sendSealURL = u
 	}
-	if u, err := QuicGetSealsURL(qc.addr.String()); err != nil {
+	if u, err := quicURL(qc.addr.String(), QuicHandlerPathGetSeals); err != nil {
 		return nil, err
 	} else {
 		qc.getSealsURL = u
+	}
+	if u, err := quicURL(qc.addr.String(), QuicHandlerPathGetBlocks); err != nil {
+		return nil, err
+	} else {
+		qc.getBlocksURL = u
+	}
+	if u, err := quicURL(qc.addr.String(), QuicHandlerPathGetManifests); err != nil {
+		return nil, err
+	} else {
+		qc.getManifestsURL = u
 	}
 
 	if client, err := network.NewQuicClient(insecure, timeout, retries, quicConfig); err != nil {
@@ -89,42 +102,24 @@ func (qc *QuicChannel) Seals(hs []valuehash.Hash) ([]seal.Seal, error) {
 		return nil, err
 	}
 
-	if qc.Log().IsVerbose() {
+	qc.Log().VerboseFunc(func(e *logging.Event) logging.Emitter {
 		var l []string
 		for _, h := range hs {
 			l = append(l, h.String())
 		}
 
-		qc.Log().Debug().Strs("seal_hashes", l).Msg("request seals")
-	}
+		return e.Strs("seal_hashes", l)
+	}).Msg("request seals")
 
-	headers := http.Header{}
-	headers.Set(network.QuicEncoderHintHeader, qc.enc.Hint().String())
-
-	response, err := qc.client.Request(qc.getSealsURL, b, headers)
+	ss, err := qc.requestHinters(qc.getSealsURL, b)
 	if err != nil {
 		return nil, err
 	}
 
-	var enc encoder.Encoder
-	if e, err := network.EncoderFromHeader(response.Header(), qc.encs, qc.enc); err != nil {
-		return nil, err
-	} else {
-		enc = e
-	}
-
-	var ss []json.RawMessage
-	if err := enc.Unmarshal(response.Bytes(), &ss); err != nil {
-		qc.Log().Error().Err(err).Msg("failed to unmarshal seal slice")
-		return nil, err
-	}
-
 	var seals []seal.Seal
-	for _, r := range ss {
-		if hinter, err := enc.DecodeByHint(r); err != nil {
-			return nil, err
-		} else if s, ok := hinter.(seal.Seal); !ok {
-			return nil, xerrors.Errorf("decoded, but not seal.Seal; %T", hinter)
+	for _, h := range ss {
+		if s, ok := h.(seal.Seal); !ok {
+			return nil, xerrors.Errorf("decoded, but not seal.Seal; %T", h)
 		} else {
 			seals = append(seals, s)
 		}
@@ -145,4 +140,102 @@ func (qc *QuicChannel) SendSeal(sl seal.Seal) error {
 	headers.Set(network.QuicEncoderHintHeader, qc.enc.Hint().String())
 
 	return qc.client.Send(qc.sendSealURL, b, headers)
+}
+
+func (qc *QuicChannel) requestHinters(u string, b []byte) ([]hint.Hinter, error) {
+	headers := http.Header{}
+	headers.Set(network.QuicEncoderHintHeader, qc.enc.Hint().String())
+
+	response, err := qc.client.Request(u, b, headers)
+	if err != nil {
+		return nil, err
+	}
+
+	var enc encoder.Encoder
+	if e, err := network.EncoderFromHeader(response.Header(), qc.encs, qc.enc); err != nil {
+		return nil, err
+	} else {
+		enc = e
+	}
+
+	var ss []json.RawMessage
+	if err := enc.Unmarshal(response.Bytes(), &ss); err != nil {
+		qc.Log().Error().Err(err).Msg("failed to unmarshal manifest slice")
+		return nil, err
+	}
+
+	var hs []hint.Hinter
+	for _, r := range ss {
+		if hinter, err := enc.DecodeByHint(r); err != nil {
+			return nil, err
+		} else {
+			hs = append(hs, hinter)
+		}
+	}
+
+	return hs, nil
+}
+
+func (qc *QuicChannel) Manifests(heights []Height) ([]Manifest, error) { // nolint
+	b, err := qc.enc.Marshal(heights)
+	if err != nil {
+		return nil, err
+	}
+
+	qc.Log().VerboseFunc(func(e *logging.Event) logging.Emitter {
+		var l []string
+		for _, h := range heights {
+			l = append(l, h.String())
+		}
+
+		return e.Strs("manifest_height", l)
+	}).Msg("request manfests")
+
+	hs, err := qc.requestHinters(qc.getManifestsURL, b)
+	if err != nil {
+		return nil, err
+	}
+
+	var manifests []Manifest
+	for _, h := range hs {
+		if s, ok := h.(Manifest); !ok {
+			return nil, xerrors.Errorf("decoded, but not Manifest; %T", h)
+		} else {
+			manifests = append(manifests, s)
+		}
+	}
+
+	return manifests, nil
+}
+
+func (qc *QuicChannel) Blocks(heights []Height) ([]Block, error) { // nolint
+	b, err := qc.enc.Marshal(heights)
+	if err != nil {
+		return nil, err
+	}
+
+	qc.Log().VerboseFunc(func(e *logging.Event) logging.Emitter {
+		var l []string
+		for _, h := range heights {
+			l = append(l, h.String())
+		}
+
+		return e.Strs("block_heights", l)
+	}).Msg("request blocks")
+
+	hs, err := qc.requestHinters(qc.getBlocksURL, b)
+	if err != nil {
+		return nil, err
+	}
+
+	var blocks []Block
+	for _, h := range hs {
+		if s, ok := h.(Block); !ok {
+			return nil, xerrors.Errorf("decoded, but not Block; %T", h)
+		} else {
+			blocks = append(blocks, s)
+		}
+	}
+
+	return blocks, nil
 }

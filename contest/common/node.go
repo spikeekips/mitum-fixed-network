@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/rs/zerolog"
 	"github.com/syndtr/goleveldb/leveldb"
 	leveldbStorage "github.com/syndtr/goleveldb/leveldb/storage"
 	"golang.org/x/xerrors"
@@ -116,51 +115,40 @@ func NewNodeProcess(localstate *isaac.Localstate) (*NodeProcess, error) {
 	})
 	suffrage := NewSuffrage(localstate)
 	proposalProcessor := isaac.NewProposalProcessorV0(localstate)
-
-	cshandlerBooting, err := isaac.NewStateBootingHandler(localstate, proposalProcessor)
-	if err != nil {
-		return nil, err
-	}
-
-	cshandlerSyncing, err := isaac.NewStateSyncingHandler(localstate, suffrage)
-	if err != nil {
-		return nil, err
-	}
-
-	cshandlerJoining, err := isaac.NewStateJoiningHandler(localstate, proposalProcessor)
-	if err != nil {
-		return nil, err
-	}
-
-	cshandlerBroken, err := isaac.NewStateBrokenHandler(localstate)
-	if err != nil {
-		return nil, err
-	}
-
 	proposalMaker := isaac.NewProposalMaker(localstate)
-	cshandlerConsensus, err := isaac.NewStateConsensusHandler(
-		localstate,
-		proposalProcessor,
-		suffrage,
-		proposalMaker,
-	)
-	if err != nil {
-		return nil, err
+
+	var cshandlerBooting, cshandlerJoining, cshandlerConsensus, cshandlerSyncing, cshandlerBroken isaac.StateHandler
+	{
+		var err error
+		if cshandlerBooting, err = isaac.NewStateBootingHandler(localstate, proposalProcessor); err != nil {
+			return nil, err
+		}
+		if cshandlerSyncing, err = isaac.NewStateSyncingHandler(localstate, proposalProcessor); err != nil {
+			return nil, err
+		}
+		if cshandlerJoining, err = isaac.NewStateJoiningHandler(localstate, proposalProcessor); err != nil {
+			return nil, err
+		}
+		if cshandlerBroken, err = isaac.NewStateBrokenHandler(localstate); err != nil {
+			return nil, err
+		}
+		if cshandlerConsensus, err = isaac.NewStateConsensusHandler(
+			localstate, proposalProcessor, suffrage, proposalMaker); err != nil {
+			return nil, err
+		}
 	}
 
 	css := isaac.NewConsensusStates(
-		localstate,
-		ballotbox,
-		suffrage,
-		cshandlerBooting,
-		cshandlerJoining,
-		cshandlerConsensus,
-		cshandlerSyncing,
-		cshandlerBooting,
+		localstate, ballotbox, suffrage,
+		cshandlerBooting.(*isaac.StateBootingHandler),
+		cshandlerJoining.(*isaac.StateJoiningHandler),
+		cshandlerConsensus.(*isaac.StateConsensusHandler),
+		cshandlerSyncing.(*isaac.StateSyncingHandler),
+		cshandlerBroken.(*isaac.StateBrokenHandler),
 	)
 
 	np := &NodeProcess{
-		Logging: logging.NewLogging(func(c zerolog.Context) zerolog.Context {
+		Logging: logging.NewLogging(func(c logging.Context) logging.Emitter {
 			return c
 		}),
 		Localstate:        localstate,

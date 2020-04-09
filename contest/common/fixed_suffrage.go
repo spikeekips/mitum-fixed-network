@@ -1,8 +1,6 @@
 package common
 
 import (
-	"github.com/rs/zerolog"
-
 	"github.com/spikeekips/mitum/isaac"
 	"github.com/spikeekips/mitum/logging"
 )
@@ -22,7 +20,7 @@ func NewFixedSuffrage(proposer isaac.Node, nodes []isaac.Node) *FixedSuffrage {
 	}
 
 	return &FixedSuffrage{
-		Logging: logging.NewLogging(func(c zerolog.Context) zerolog.Context {
+		Logging: logging.NewLogging(func(c logging.Context) logging.Emitter {
 			return c.Str("module", "fixed-suffrage")
 		}),
 		proposer:  proposer,

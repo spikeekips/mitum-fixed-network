@@ -4,8 +4,6 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/syndtr/goleveldb/leveldb"
-	leveldbStorage "github.com/syndtr/goleveldb/leveldb/storage"
 	"golang.org/x/xerrors"
 
 	"github.com/spikeekips/mitum/base"
@@ -13,6 +11,7 @@ import (
 	"github.com/spikeekips/mitum/base/seal"
 	"github.com/spikeekips/mitum/isaac"
 	"github.com/spikeekips/mitum/network"
+	leveldbstorage "github.com/spikeekips/mitum/storage/leveldb"
 	"github.com/spikeekips/mitum/util"
 	"github.com/spikeekips/mitum/util/encoder"
 	"github.com/spikeekips/mitum/util/hint"
@@ -80,8 +79,7 @@ func NewNode(id int, networkID []byte, netType string) (*isaac.Localstate, error
 	}
 
 	// create new node
-	db, _ := leveldb.Open(leveldbStorage.NewMemStorage(), nil)
-	st := isaac.NewLeveldbStorage(db, encs, enc)
+	st := leveldbstorage.NewMemStorage(encs, enc)
 
 	localNode := NewLocalNode(id)
 	localstate, err := isaac.NewLocalstate(st, localNode, networkID)

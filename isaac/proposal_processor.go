@@ -21,7 +21,9 @@ import (
 type ProposalProcessor interface {
 	IsProcessed(valuehash.Hash /* proposal.Hash() */) bool
 	ProcessINIT(valuehash.Hash /* Proposal.Hash() */, base.Voteproof /* INIT Voteproof */) (block.Block, error)
-	ProcessACCEPT(valuehash.Hash /* Proposal.Hash() */, base.Voteproof /* ACCEPT Voteproof */) (BlockStorage, error)
+	ProcessACCEPT(
+		valuehash.Hash /* Proposal.Hash() */, base.Voteproof, /* ACCEPT Voteproof */
+	) (storage.BlockStorage, error)
 }
 
 type ProposalProcessorV0 struct {
@@ -95,7 +97,7 @@ func (dp *ProposalProcessorV0) ProcessINIT(ph valuehash.Hash, initVoteproof base
 
 func (dp *ProposalProcessorV0) ProcessACCEPT(
 	ph valuehash.Hash, acceptVoteproof base.Voteproof,
-) (BlockStorage, error) {
+) (storage.BlockStorage, error) {
 	if acceptVoteproof.Stage() != base.StageACCEPT {
 		return nil, xerrors.Errorf("Processaccept needs ACCEPT Voteproof")
 	}
@@ -122,7 +124,7 @@ type proposalProcessorV0 struct {
 	proposal           ballot.Proposal
 	proposedOperations map[valuehash.Hash]struct{}
 	operations         []state.OperationInfoV0
-	bs                 BlockStorage
+	bs                 storage.BlockStorage
 }
 
 func newProposalProcessorV0(localstate *Localstate, proposal ballot.Proposal) (*proposalProcessorV0, error) {

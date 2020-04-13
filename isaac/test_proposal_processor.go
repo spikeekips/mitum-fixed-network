@@ -6,6 +6,7 @@ import (
 	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/base/block"
 	"github.com/spikeekips/mitum/base/valuehash"
+	"github.com/spikeekips/mitum/storage"
 )
 
 type DummyProposalProcessor struct {
@@ -37,9 +38,10 @@ func (dp *DummyProposalProcessor) ProcessINIT(h valuehash.Hash, initVoteproof ba
 
 func (dp *DummyProposalProcessor) ProcessACCEPT(
 	h valuehash.Hash, acceptVoteproof base.Voteproof,
-) (BlockStorage, error) {
+) (storage.BlockStorage, error) {
 	dp.completed[h] = true
 
 	dp.returnBlock = dp.returnBlock.SetACCEPTVoteproof(acceptVoteproof)
-	return &DummyBlockStorage{block: dp.returnBlock}, dp.err
+
+	return storage.NewDummyBlockStorage(dp.returnBlock, nil, nil), dp.err
 }

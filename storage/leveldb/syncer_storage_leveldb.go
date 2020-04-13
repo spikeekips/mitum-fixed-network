@@ -1,4 +1,4 @@
-package isaac
+package leveldbstorage
 
 import (
 	"sync"

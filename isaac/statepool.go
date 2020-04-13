@@ -5,16 +5,17 @@ import (
 
 	"github.com/spikeekips/mitum/base/state"
 	"github.com/spikeekips/mitum/base/valuehash"
+	"github.com/spikeekips/mitum/storage"
 )
 
 type StatePool struct {
 	sync.RWMutex
-	st      Storage
+	st      storage.Storage
 	cached  map[string]state.StateUpdater
 	updated map[string]state.StateUpdater
 }
 
-func NewStatePool(st Storage) *StatePool {
+func NewStatePool(st storage.Storage) *StatePool {
 	return &StatePool{
 		st:      st,
 		cached:  map[string]state.StateUpdater{},

@@ -5,11 +5,12 @@ import (
 	"github.com/spikeekips/mitum/base/block"
 	"github.com/spikeekips/mitum/base/seal"
 	"github.com/spikeekips/mitum/base/valuehash"
+	"github.com/spikeekips/mitum/storage"
 	"github.com/spikeekips/mitum/util"
 )
 
 type Localstate struct {
-	storage             Storage
+	storage             storage.Storage
 	node                *LocalNode
 	policy              *LocalPolicy
 	nodes               *NodesState
@@ -18,7 +19,7 @@ type Localstate struct {
 	lastACCEPTVoteproof *util.LockedItem
 }
 
-func NewLocalstate(st Storage, node *LocalNode, networkID []byte) (*Localstate, error) {
+func NewLocalstate(st storage.Storage, node *LocalNode, networkID []byte) (*Localstate, error) {
 	// load last states from storage.
 	var lastBlock block.Block
 	var lastINITVoteproof base.Voteproof
@@ -51,7 +52,7 @@ func NewLocalstate(st Storage, node *LocalNode, networkID []byte) (*Localstate, 
 	}, nil
 }
 
-func (ls *Localstate) Storage() Storage {
+func (ls *Localstate) Storage() storage.Storage {
 	return ls.storage
 }
 

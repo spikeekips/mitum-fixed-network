@@ -1,4 +1,4 @@
-package isaac
+package leveldbstorage
 
 import (
 	"fmt"
@@ -64,7 +64,7 @@ func NewMemStorage(encs *encoder.Encoders, enc encoder.Encoder) *LeveldbStorage 
 	return NewLeveldbStorage(db, encs, enc)
 }
 
-func (st *LeveldbStorage) SyncerStorage() SyncerStorage {
+func (st *LeveldbStorage) SyncerStorage() storage.SyncerStorage {
 	return NewLeveldbSyncerStorage(st)
 }
 
@@ -602,7 +602,7 @@ func (st *LeveldbStorage) HasOperation(h valuehash.Hash) (bool, error) {
 	return found, storage.LeveldbWrapError(err)
 }
 
-func (st *LeveldbStorage) OpenBlockStorage(blk block.Block) (BlockStorage, error) {
+func (st *LeveldbStorage) OpenBlockStorage(blk block.Block) (storage.BlockStorage, error) {
 	return NewLeveldbBlockStorage(st, blk)
 }
 

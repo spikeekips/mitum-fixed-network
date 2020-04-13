@@ -16,6 +16,7 @@ import (
 	"github.com/spikeekips/mitum/base/state"
 	"github.com/spikeekips/mitum/base/tree"
 	"github.com/spikeekips/mitum/base/valuehash"
+	leveldbstorage "github.com/spikeekips/mitum/storage/leveldb"
 	"github.com/spikeekips/mitum/util"
 	"github.com/spikeekips/mitum/util/encoder"
 	"github.com/spikeekips/mitum/util/localtime"
@@ -73,13 +74,13 @@ func (t *baseTestStateHandler) states() (*Localstate, *Localstate) {
 	lastBlock, err := block.NewTestBlockV0(base.Height(2), base.Round(9), nil, valuehash.RandomSHA256())
 	t.NoError(err)
 
-	lst := NewMemStorage(t.encs, t.enc)
+	lst := leveldbstorage.NewMemStorage(t.encs, t.enc)
 	localNode := RandomLocalNode(util.UUID().String(), nil)
 	localstate, err := NewLocalstate(lst, localNode, TestNetworkID)
 	t.NoError(err)
 	_ = localstate.SetLastBlock(lastBlock)
 
-	rst := NewMemStorage(t.encs, t.enc)
+	rst := leveldbstorage.NewMemStorage(t.encs, t.enc)
 	remoteNode := RandomLocalNode(util.UUID().String(), nil)
 	remoteState, err := NewLocalstate(rst, remoteNode, TestNetworkID)
 	t.NoError(err)

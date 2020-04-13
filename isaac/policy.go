@@ -3,9 +3,11 @@ package isaac
 import (
 	"time"
 
-	"github.com/spikeekips/mitum/base"
-	"github.com/spikeekips/mitum/util"
 	"golang.org/x/xerrors"
+
+	"github.com/spikeekips/mitum/base"
+	"github.com/spikeekips/mitum/storage"
+	"github.com/spikeekips/mitum/util"
 )
 
 type LocalPolicy struct {
@@ -22,12 +24,12 @@ type LocalPolicy struct {
 	timespanValidBallot *util.LockedItem
 }
 
-func NewLocalPolicy(storage Storage, networkID []byte) (*LocalPolicy, error) {
+func NewLocalPolicy(st storage.Storage, networkID []byte) (*LocalPolicy, error) {
 	var loaded PolicyOperationBodyV0
-	if storage == nil {
+	if st == nil {
 		loaded = DefaultPolicy()
 	} else {
-		if l, found, err := storage.State(PolicyOperationKey); err != nil {
+		if l, found, err := st.State(PolicyOperationKey); err != nil {
 			return nil, err
 		} else if !found || l.Value() == nil { // set default
 			loaded = DefaultPolicy()

@@ -12,6 +12,7 @@ import (
 	"github.com/spikeekips/mitum/base/ballot"
 	"github.com/spikeekips/mitum/base/block"
 	"github.com/spikeekips/mitum/storage"
+	leveldbstorage "github.com/spikeekips/mitum/storage/leveldb"
 	"github.com/spikeekips/mitum/util"
 )
 
@@ -94,7 +95,7 @@ func (t *testGeneralSyncer) generateBlocks(localstates []*Localstate, targetHeig
 }
 
 func (t *testGeneralSyncer) emptyLocalstate() *Localstate {
-	lst := NewMemStorage(t.encs, t.enc)
+	lst := leveldbstorage.NewMemStorage(t.encs, t.enc)
 	localNode := RandomLocalNode(util.UUID().String(), nil)
 	localstate, err := NewLocalstate(lst, localNode, TestNetworkID)
 	t.NoError(err)

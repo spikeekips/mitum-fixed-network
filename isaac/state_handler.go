@@ -11,6 +11,7 @@ import (
 	"github.com/spikeekips/mitum/base/ballot"
 	"github.com/spikeekips/mitum/base/block"
 	"github.com/spikeekips/mitum/base/seal"
+	"github.com/spikeekips/mitum/storage"
 	"github.com/spikeekips/mitum/util/localtime"
 	"github.com/spikeekips/mitum/util/logging"
 )
@@ -134,7 +135,7 @@ func (bs *BaseStateHandler) BroadcastSeal(sl seal.Seal) {
 	}()
 }
 
-func (bs *BaseStateHandler) StoreNewBlock(blockStorage BlockStorage) error {
+func (bs *BaseStateHandler) StoreNewBlock(blockStorage storage.BlockStorage) error {
 	if err := blockStorage.Commit(); err != nil {
 		return err
 	}

@@ -3,11 +3,13 @@ package isaac
 import (
 	"testing"
 
+	"github.com/stretchr/testify/suite"
+
 	"github.com/spikeekips/mitum/base/key"
 	"github.com/spikeekips/mitum/base/state"
 	"github.com/spikeekips/mitum/base/valuehash"
+	leveldbstorage "github.com/spikeekips/mitum/storage/leveldb"
 	"github.com/spikeekips/mitum/util/encoder"
-	"github.com/stretchr/testify/suite"
 )
 
 type testPolicy struct {
@@ -49,8 +51,8 @@ func (t *testPolicy) TestLoadFromStorage() {
 	_ = encs.AddHinter(SetPolicyOperationFactV0{})
 	_ = encs.AddHinter(state.HintedValue{})
 
-	storage := NewMemStorage(encs, enc)
-	statepool := NewStatePool(storage)
+	st := leveldbstorage.NewMemStorage(encs, enc)
+	statepool := NewStatePool(st)
 
 	policies := DefaultPolicy()
 	policies.TimeoutWaitingProposal = policies.TimeoutWaitingProposal * 3
@@ -62,9 +64,9 @@ func (t *testPolicy) TestLoadFromStorage() {
 	newState, err := spo.ProcessOperation(statepool.Get, statepool.Set)
 	t.NoError(err)
 
-	t.NoError(storage.NewState(newState))
+	t.NoError(st.NewState(newState))
 
-	p, err := NewLocalPolicy(storage, nil)
+	p, err := NewLocalPolicy(st, nil)
 	t.NoError(err)
 	t.NotNil(p)
 

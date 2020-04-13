@@ -1,4 +1,4 @@
-package isaac
+package leveldbstorage
 
 import (
 	"bytes"
@@ -24,11 +24,10 @@ import (
 
 type testLeveldbStorage struct {
 	suite.Suite
-	localNode *LocalNode
-	encs      *encoder.Encoders
-	enc       encoder.Encoder
-	storage   *LeveldbStorage
-	pk        key.BTCPrivatekey
+	encs    *encoder.Encoders
+	enc     encoder.Encoder
+	storage *LeveldbStorage
+	pk      key.BTCPrivatekey
 }
 
 func (t *testLeveldbStorage) SetupSuite() {
@@ -70,7 +69,7 @@ func (t *testLeveldbStorage) compareBlock(a, b block.Block) {
 }
 
 func (t *testLeveldbStorage) TestNew() {
-	t.Implements((*Storage)(nil), t.storage)
+	t.Implements((*storage.Storage)(nil), t.storage)
 }
 
 func (t *testLeveldbStorage) TestLastBlock() {

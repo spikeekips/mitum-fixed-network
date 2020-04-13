@@ -1,4 +1,4 @@
-package isaac
+package storage
 
 import (
 	"github.com/spikeekips/mitum/base"

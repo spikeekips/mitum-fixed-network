@@ -1,6 +1,6 @@
 // +build test
 
-package isaac
+package storage
 
 import (
 	"github.com/spikeekips/mitum/base/block"
@@ -12,6 +12,14 @@ type DummyBlockStorage struct {
 	block      block.Block
 	operations *tree.AVLTree
 	states     *tree.AVLTree
+}
+
+func NewDummyBlockStorage(
+	blk block.Block,
+	operations *tree.AVLTree,
+	states *tree.AVLTree,
+) *DummyBlockStorage {
+	return &DummyBlockStorage{block: blk, operations: operations, states: states}
 }
 
 func (dst *DummyBlockStorage) Block() block.Block {

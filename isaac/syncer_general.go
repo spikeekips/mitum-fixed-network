@@ -9,6 +9,7 @@ import (
 
 	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/base/block"
+	"github.com/spikeekips/mitum/storage"
 	"github.com/spikeekips/mitum/util"
 	"github.com/spikeekips/mitum/util/logging"
 )
@@ -36,7 +37,7 @@ type GeneralSyncer struct { // nolint; maligned
 	sync.RWMutex
 	*logging.Logging
 	localstate              *Localstate
-	storage                 SyncerStorage
+	storage                 storage.SyncerStorage
 	sourceNodes             map[base.Address]Node
 	heightFrom              base.Height
 	heightTo                base.Height

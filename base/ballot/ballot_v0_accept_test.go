@@ -1,4 +1,4 @@
-package isaac
+package ballot
 
 import (
 	"testing"
@@ -13,29 +13,37 @@ import (
 	"github.com/spikeekips/mitum/util/localtime"
 )
 
-type testBallotV0SIGN struct {
+type testBallotV0ACCEPT struct {
 	suite.Suite
 
 	pk key.BTCPrivatekey
 }
 
-func (t *testBallotV0SIGN) SetupSuite() {
+func (t *testBallotV0ACCEPT) SetupSuite() {
 	t.pk, _ = key.NewBTCPrivatekey()
 }
 
-func (t *testBallotV0SIGN) TestNew() {
-	ib := SIGNBallotV0{
+func (t *testBallotV0ACCEPT) TestNew() {
+	vp := base.NewDummyVoteproof(
+		base.Height(10),
+		base.Round(0),
+		base.StageINIT,
+		base.VoteResultMajority,
+	)
+
+	ib := ACCEPTBallotV0{
 		BaseBallotV0: BaseBallotV0{
-			node: base.NewShortAddress("test-for-sign-ballot"),
+			node: base.NewShortAddress("test-for-accept-ballot"),
 		},
-		SIGNBallotFactV0: SIGNBallotFactV0{
+		ACCEPTBallotFactV0: ACCEPTBallotFactV0{
 			BaseBallotFactV0: BaseBallotFactV0{
-				height: base.Height(10),
-				round:  base.Round(0),
+				height: vp.Height(),
+				round:  vp.Round(),
 			},
 			proposal: valuehash.RandomSHA256(),
 			newBlock: valuehash.RandomSHA256(),
 		},
+		voteproof: vp,
 	}
 
 	t.NotEmpty(ib)
@@ -44,20 +52,29 @@ func (t *testBallotV0SIGN) TestNew() {
 	t.Implements((*Ballot)(nil), ib)
 }
 
-func (t *testBallotV0SIGN) TestFact() {
-	ib := SIGNBallotV0{
+func (t *testBallotV0ACCEPT) TestFact() {
+	vp := base.NewDummyVoteproof(
+		base.Height(10),
+		base.Round(0),
+		base.StageINIT,
+		base.VoteResultMajority,
+	)
+
+	ib := ACCEPTBallotV0{
 		BaseBallotV0: BaseBallotV0{
-			node: base.NewShortAddress("test-for-sign-ballot"),
+			node: base.NewShortAddress("test-for-accept-ballot"),
 		},
-		SIGNBallotFactV0: SIGNBallotFactV0{
+		ACCEPTBallotFactV0: ACCEPTBallotFactV0{
 			BaseBallotFactV0: BaseBallotFactV0{
-				height: base.Height(10),
-				round:  base.Round(0),
+				height: vp.Height(),
+				round:  vp.Round(),
 			},
 			proposal: valuehash.RandomSHA256(),
 			newBlock: valuehash.RandomSHA256(),
 		},
+		voteproof: vp,
 	}
+
 	t.Implements((*operation.FactSeal)(nil), ib)
 
 	fact := ib.Fact()
@@ -80,19 +97,27 @@ func (t *testBallotV0SIGN) TestFact() {
 	t.NoError(ib.Signer().Verify(ib.FactHash().Bytes(), ib.FactSignature()))
 }
 
-func (t *testBallotV0SIGN) TestGenerateHash() {
-	ib := SIGNBallotV0{
+func (t *testBallotV0ACCEPT) TestGenerateHash() {
+	vp := base.NewDummyVoteproof(
+		base.Height(10),
+		base.Round(0),
+		base.StageINIT,
+		base.VoteResultMajority,
+	)
+
+	ib := ACCEPTBallotV0{
 		BaseBallotV0: BaseBallotV0{
-			node: base.NewShortAddress("test-for-sign-ballot"),
+			node: base.NewShortAddress("test-for-accept-ballot"),
 		},
-		SIGNBallotFactV0: SIGNBallotFactV0{
+		ACCEPTBallotFactV0: ACCEPTBallotFactV0{
 			BaseBallotFactV0: BaseBallotFactV0{
-				height: base.Height(10),
-				round:  base.Round(0),
+				height: vp.Height(),
+				round:  vp.Round(),
 			},
 			proposal: valuehash.RandomSHA256(),
 			newBlock: valuehash.RandomSHA256(),
 		},
+		voteproof: vp,
 	}
 
 	h, err := ib.GenerateBodyHash()
@@ -106,19 +131,27 @@ func (t *testBallotV0SIGN) TestGenerateHash() {
 	t.NotEmpty(bh)
 }
 
-func (t *testBallotV0SIGN) TestSign() {
-	ib := SIGNBallotV0{
+func (t *testBallotV0ACCEPT) TestSign() {
+	vp := base.NewDummyVoteproof(
+		base.Height(10),
+		base.Round(0),
+		base.StageINIT,
+		base.VoteResultMajority,
+	)
+
+	ib := ACCEPTBallotV0{
 		BaseBallotV0: BaseBallotV0{
-			node: base.NewShortAddress("test-for-sign-ballot"),
+			node: base.NewShortAddress("test-for-accept-ballot"),
 		},
-		SIGNBallotFactV0: SIGNBallotFactV0{
+		ACCEPTBallotFactV0: ACCEPTBallotFactV0{
 			BaseBallotFactV0: BaseBallotFactV0{
-				height: base.Height(10),
-				round:  base.Round(0),
+				height: vp.Height(),
+				round:  vp.Round(),
 			},
 			proposal: valuehash.RandomSHA256(),
 			newBlock: valuehash.RandomSHA256(),
 		},
+		voteproof: vp,
 	}
 
 	t.Nil(ib.Hash())
@@ -143,10 +176,10 @@ func (t *testBallotV0SIGN) TestSign() {
 	t.True(xerrors.Is(err, key.SignatureVerificationFailedError))
 }
 
-func (t *testBallotV0SIGN) TestIsValid() {
+func (t *testBallotV0ACCEPT) TestIsValid() {
 	{ // empty signedAt
 		bb := BaseBallotV0{
-			node: base.NewShortAddress("test-for-sign-ballot"),
+			node: base.NewShortAddress("test-for-accept-ballot"),
 		}
 		err := bb.IsValid(nil)
 		t.Contains(err.Error(), "empty SignedAt")
@@ -154,7 +187,7 @@ func (t *testBallotV0SIGN) TestIsValid() {
 
 	{ // empty signer
 		bb := BaseBallotV0{
-			node:     base.NewShortAddress("test-for-sign-ballot"),
+			node:     base.NewShortAddress("test-for-accept-ballot"),
 			signedAt: localtime.Now(),
 		}
 		err := bb.IsValid(nil)
@@ -163,7 +196,7 @@ func (t *testBallotV0SIGN) TestIsValid() {
 
 	{ // empty signature
 		bb := BaseBallotV0{
-			node:     base.NewShortAddress("test-for-sign-ballot"),
+			node:     base.NewShortAddress("test-for-accept-ballot"),
 			signedAt: localtime.Now(),
 			signer:   t.pk.Publickey(),
 		}
@@ -172,6 +205,6 @@ func (t *testBallotV0SIGN) TestIsValid() {
 	}
 }
 
-func TestBallotV0SIGN(t *testing.T) {
-	suite.Run(t, new(testBallotV0SIGN))
+func TestBallotV0ACCEPT(t *testing.T) {
+	suite.Run(t, new(testBallotV0ACCEPT))
 }

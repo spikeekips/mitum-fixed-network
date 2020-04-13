@@ -225,12 +225,20 @@ func (e *Event) Uints8(key string, i []uint8) Emitter {
 }
 
 func (e *Event) Hinted(key string, obj LogHintedMarshaler) Emitter {
+	if obj == nil {
+		return e.Str(key, "")
+	}
+
 	_ = obj.MarshalLog(key, e, false)
 
 	return e
 }
 
 func (e *Event) HintedVerbose(key string, obj LogHintedMarshaler, verbose bool) Emitter {
+	if obj == nil {
+		return e.Str(key, "")
+	}
+
 	_ = obj.MarshalLog(key, e, verbose)
 
 	return e

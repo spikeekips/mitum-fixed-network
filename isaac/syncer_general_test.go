@@ -9,6 +9,7 @@ import (
 	"golang.org/x/xerrors"
 
 	"github.com/spikeekips/mitum/base"
+	"github.com/spikeekips/mitum/base/ballot"
 	"github.com/spikeekips/mitum/storage"
 	"github.com/spikeekips/mitum/util"
 )
@@ -392,27 +393,16 @@ func (t *testGeneralSyncer) TestSyncingHandlerFromBallot() {
 	cs, err := NewStateSyncingHandler(localstate, nil)
 	t.NoError(err)
 
-	var ballot Ballot
-	{
-		b := t.newINITBallot(rn0, base.Round(0))
+	blt := t.newINITBallot(rn0, base.Round(0))
 
-		vp, err := t.newVoteproof(b.Stage(), b.INITBallotFactV0, rn0, rn1, rn2)
-		t.NoError(err)
-		b.voteproof = vp
-
-		t.NoError(b.Sign(rn0.Node().Privatekey(), nil))
-
-		ballot = b
-	}
-
-	t.NoError(cs.Activate(NewStateChangeContext(base.StateJoining, base.StateSyncing, nil, ballot)))
+	t.NoError(cs.Activate(NewStateChangeContext(base.StateJoining, base.StateSyncing, nil, blt)))
 
 	finishedChan := make(chan struct{})
 	go func() {
 		for {
 			b, err := localstate.Storage().LastBlock()
 			t.NoError(err)
-			if b.Height() == ballot.Height()-1 {
+			if b.Height() == blt.Height()-1 {
 				finishedChan <- struct{}{}
 				break
 			}
@@ -503,8 +493,15 @@ func (t *testGeneralSyncer) TestSyncingHandlerFromACCEPTVoteproof() {
 
 	var voteproof base.Voteproof
 	{
-		ab, err := NewACCEPTBallotV0FromLocalstate(rn0, base.Round(0), rn0.LastBlock())
-		ab.height = rn0.LastBlock().Height()
+		ab := ballot.NewACCEPTBallotV0(
+			rn0.Node().Address(),
+			rn0.LastBlock().Height(),
+			base.Round(0),
+			rn0.LastBlock().Proposal(),
+			rn0.LastBlock().Hash(),
+			nil,
+		)
+
 		vp, err := t.newVoteproof(ab.Stage(), ab.ACCEPTBallotFactV0, rn0, rn1, rn2)
 		t.NoError(err)
 

@@ -2,6 +2,7 @@ package isaac
 
 import (
 	"github.com/spikeekips/mitum/base"
+	"github.com/spikeekips/mitum/base/ballot"
 	"github.com/spikeekips/mitum/base/seal"
 	"github.com/spikeekips/mitum/base/valuehash"
 )
@@ -155,9 +156,9 @@ func (bg *DummyBlocksV0Generator) syncSeals(from *Localstate) error {
 		}
 	}
 
-	var proposals []Proposal
+	var proposals []ballot.Proposal
 	if err := from.Storage().Proposals(
-		func(proposal Proposal) (bool, error) {
+		func(proposal ballot.Proposal) (bool, error) {
 			proposals = append(proposals, proposal)
 			return true, nil
 		},
@@ -219,7 +220,7 @@ func (bg *DummyBlocksV0Generator) createNextBlock() error {
 		return err
 	}
 
-	var proposal Proposal
+	var proposal ballot.Proposal
 	if pr, err := bg.createProposal(); err != nil {
 		return err
 	} else {
@@ -240,7 +241,7 @@ func (bg *DummyBlocksV0Generator) createNextBlock() error {
 func (bg *DummyBlocksV0Generator) finish() error {
 	for _, l := range bg.allNodes {
 		acceptVoteproof := bg.genesisNode.LastACCEPTVoteproof()
-		proposal := acceptVoteproof.Majority().(ACCEPTBallotFact).Proposal()
+		proposal := acceptVoteproof.Majority().(ballot.ACCEPTBallotFact).Proposal()
 
 		pm := bg.pms[l.Node().Address()]
 		if bs, err := pm.ProcessACCEPT(proposal, acceptVoteproof); err != nil {
@@ -258,7 +259,7 @@ func (bg *DummyBlocksV0Generator) finish() error {
 }
 
 func (bg *DummyBlocksV0Generator) createINITVoteproof(round base.Round) error {
-	var ballots []INITBallot
+	var ballots []ballot.INITBallot
 	var seals []seal.Seal
 	for _, l := range bg.allNodes {
 		if ib, err := bg.createINITBallot(l, round); err != nil {
@@ -274,8 +275,8 @@ func (bg *DummyBlocksV0Generator) createINITVoteproof(round base.Round) error {
 			return err
 		}
 
-		for _, ballot := range ballots {
-			if voteproof, err := bg.ballotboxes[l.Node().Address()].Vote(ballot); err != nil {
+		for _, blt := range ballots {
+			if voteproof, err := bg.ballotboxes[l.Node().Address()].Vote(blt); err != nil {
 				return err
 			} else if voteproof.IsFinished() && !voteproof.IsClosed() {
 				_ = l.SetLastINITVoteproof(voteproof)
@@ -286,10 +287,12 @@ func (bg *DummyBlocksV0Generator) createINITVoteproof(round base.Round) error {
 	return nil
 }
 
-func (bg *DummyBlocksV0Generator) createINITBallot(localstate *Localstate, round base.Round) (INITBallot, error) {
+func (bg *DummyBlocksV0Generator) createINITBallot(
+	localstate *Localstate, round base.Round,
+) (ballot.INITBallot, error) {
 	previousBlock := localstate.LastBlock()
 
-	var initBallot INITBallot
+	var initBallot ballot.INITBallot
 	if ib, err := NewINITBallotV0(
 		localstate,
 		previousBlock.Height()+1,
@@ -311,7 +314,7 @@ func (bg *DummyBlocksV0Generator) createINITBallot(localstate *Localstate, round
 	return initBallot, nil
 }
 
-func (bg *DummyBlocksV0Generator) createProposal() (Proposal, error) {
+func (bg *DummyBlocksV0Generator) createProposal() (ballot.Proposal, error) {
 	initVoteproof := bg.genesisNode.LastINITVoteproof()
 
 	acting := bg.suffrage.Acting(initVoteproof.Height(), initVoteproof.Round())
@@ -331,8 +334,8 @@ func (bg *DummyBlocksV0Generator) createProposal() (Proposal, error) {
 	return pr, nil
 }
 
-func (bg *DummyBlocksV0Generator) createACCEPTVoteproof(proposal Proposal) error {
-	var ballots []ACCEPTBallot
+func (bg *DummyBlocksV0Generator) createACCEPTVoteproof(proposal ballot.Proposal) error {
+	var ballots []ballot.ACCEPTBallot
 	var seals []seal.Seal
 	for _, l := range bg.allNodes {
 		var newBlock Block
@@ -364,8 +367,8 @@ func (bg *DummyBlocksV0Generator) createACCEPTVoteproof(proposal Proposal) error
 			return err
 		}
 
-		for _, ballot := range ballots {
-			if voteproof, err := bg.ballotboxes[l.Node().Address()].Vote(ballot); err != nil {
+		for _, blt := range ballots {
+			if voteproof, err := bg.ballotboxes[l.Node().Address()].Vote(blt); err != nil {
 				return err
 			} else if voteproof.IsFinished() && !voteproof.IsClosed() {
 				_ = l.SetLastACCEPTVoteproof(voteproof)

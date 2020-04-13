@@ -2,6 +2,7 @@ package common
 
 import (
 	"github.com/spikeekips/mitum/base"
+	"github.com/spikeekips/mitum/base/ballot"
 	"github.com/spikeekips/mitum/base/key"
 	"github.com/spikeekips/mitum/base/operation"
 	"github.com/spikeekips/mitum/base/valuehash"
@@ -16,14 +17,14 @@ var Hinters = [][2]interface{}{
 	{"encoder-bson", encoder.BSONEncoder{}},
 	{"encoder-rlp", encoder.RLPEncoder{}},
 	{"encoder-json", encoder.JSONEncoder{}},
-	{"ballot-init", isaac.INITBallotV0{}},
-	{"ballot=proposal", isaac.ProposalV0{}},
-	{"ballot-sign", isaac.SIGNBallotV0{}},
-	{"ballot-accept", isaac.ACCEPTBallotV0{}},
-	{"ballot-init-fact", isaac.INITBallotFactV0{}},
-	{"ballot-proposal-fact", isaac.ProposalFactV0{}},
-	{"ballot-sign-fact", isaac.SIGNBallotFactV0{}},
-	{"ballot-accept-fact", isaac.ACCEPTBallotFactV0{}},
+	{"ballot-init", ballot.INITBallotV0{}},
+	{"ballot=proposal", ballot.ProposalV0{}},
+	{"ballot-sign", ballot.SIGNBallotV0{}},
+	{"ballot-accept", ballot.ACCEPTBallotV0{}},
+	{"ballot-init-fact", ballot.INITBallotFactV0{}},
+	{"ballot-proposal-fact", ballot.ProposalFactV0{}},
+	{"ballot-sign-fact", ballot.SIGNBallotFactV0{}},
+	{"ballot-accept-fact", ballot.ACCEPTBallotFactV0{}},
 	{"voteproof", base.VoteproofV0{}},
 	{"block", isaac.BlockV0{}},
 	{"privatekey-ether", key.EtherPrivatekey{}},

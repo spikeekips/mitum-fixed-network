@@ -1,8 +1,6 @@
-package isaac
+package ballot
 
 import (
-	"golang.org/x/xerrors"
-
 	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/base/key"
 	"github.com/spikeekips/mitum/base/valuehash"
@@ -64,31 +62,26 @@ type SIGNBallotV0 struct {
 	SIGNBallotFactV0
 }
 
-func NewSIGNBallotV0FromLocalstate(localstate *Localstate, round base.Round, newBlock Block) (SIGNBallotV0, error) {
-	lastBlock := localstate.LastBlock()
-	if lastBlock == nil {
-		return SIGNBallotV0{}, xerrors.Errorf("lastBlock is empty")
-	}
-
-	sb := SIGNBallotV0{
+func NewSIGNBallotV0(
+	node base.Address,
+	height base.Height,
+	round base.Round,
+	proposal valuehash.Hash,
+	newBlock valuehash.Hash,
+) SIGNBallotV0 {
+	return SIGNBallotV0{
 		BaseBallotV0: BaseBallotV0{
-			node: localstate.Node().Address(),
+			node: node,
 		},
 		SIGNBallotFactV0: SIGNBallotFactV0{
 			BaseBallotFactV0: BaseBallotFactV0{
-				height: lastBlock.Height() + 1,
+				height: height,
 				round:  round,
 			},
-			proposal: newBlock.Proposal(),
-			newBlock: newBlock.Hash(),
+			proposal: proposal,
+			newBlock: newBlock,
 		},
 	}
-
-	if err := sb.Sign(localstate.Node().Privatekey(), localstate.Policy().NetworkID()); err != nil {
-		return SIGNBallotV0{}, err
-	}
-
-	return sb, nil
 }
 
 func (sb SIGNBallotV0) Hash() valuehash.Hash {

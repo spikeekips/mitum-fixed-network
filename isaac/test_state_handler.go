@@ -9,6 +9,7 @@ import (
 	"github.com/stretchr/testify/suite"
 
 	"github.com/spikeekips/mitum/base"
+	"github.com/spikeekips/mitum/base/ballot"
 	"github.com/spikeekips/mitum/base/key"
 	"github.com/spikeekips/mitum/base/operation"
 	"github.com/spikeekips/mitum/base/valuehash"
@@ -36,14 +37,14 @@ func (t *baseTestStateHandler) SetupSuite() { // nolint
 	_ = t.encs.AddHinter(valuehash.SHA256{})
 	_ = t.encs.AddHinter(valuehash.Dummy{})
 	_ = t.encs.AddHinter(base.NewShortAddress(""))
-	_ = t.encs.AddHinter(INITBallotV0{})
-	_ = t.encs.AddHinter(INITBallotFactV0{})
-	_ = t.encs.AddHinter(ProposalV0{})
-	_ = t.encs.AddHinter(ProposalFactV0{})
-	_ = t.encs.AddHinter(SIGNBallotV0{})
-	_ = t.encs.AddHinter(SIGNBallotFactV0{})
-	_ = t.encs.AddHinter(ACCEPTBallotV0{})
-	_ = t.encs.AddHinter(ACCEPTBallotFactV0{})
+	_ = t.encs.AddHinter(ballot.INITBallotV0{})
+	_ = t.encs.AddHinter(ballot.INITBallotFactV0{})
+	_ = t.encs.AddHinter(ballot.ProposalV0{})
+	_ = t.encs.AddHinter(ballot.ProposalFactV0{})
+	_ = t.encs.AddHinter(ballot.SIGNBallotV0{})
+	_ = t.encs.AddHinter(ballot.SIGNBallotFactV0{})
+	_ = t.encs.AddHinter(ballot.ACCEPTBallotV0{})
+	_ = t.encs.AddHinter(ballot.ACCEPTBallotFactV0{})
 	_ = t.encs.AddHinter(base.VoteproofV0{})
 	_ = t.encs.AddHinter(BlockV0{})
 	_ = t.encs.AddHinter(ManifestV0{})
@@ -86,7 +87,7 @@ func (t *baseTestStateHandler) states() (*Localstate, *Localstate) {
 	t.NoError(localstate.Nodes().Add(remoteNode))
 	t.NoError(remoteState.Nodes().Add(localNode))
 
-	lastINITVoteproof := NewDummyVoteproof(
+	lastINITVoteproof := base.NewDummyVoteproof(
 		localstate.LastBlock().Height(),
 		localstate.LastBlock().Round(),
 		base.StageINIT,
@@ -94,7 +95,7 @@ func (t *baseTestStateHandler) states() (*Localstate, *Localstate) {
 	)
 	_ = localstate.SetLastINITVoteproof(lastINITVoteproof)
 	_ = remoteState.SetLastINITVoteproof(lastINITVoteproof)
-	lastACCEPTVoteproof := NewDummyVoteproof(
+	lastACCEPTVoteproof := base.NewDummyVoteproof(
 		localstate.LastBlock().Height(),
 		localstate.LastBlock().Round(),
 		base.StageACCEPT,
@@ -137,10 +138,10 @@ func (t *baseTestStateHandler) newVoteproof(
 	var height base.Height
 	var round base.Round
 	switch f := fact.(type) {
-	case ACCEPTBallotFactV0:
+	case ballot.ACCEPTBallotFactV0:
 		height = f.Height()
 		round = f.Round()
-	case INITBallotFactV0:
+	case ballot.INITBallotFactV0:
 		height = f.Height()
 		round = f.Round()
 	}
@@ -173,20 +174,17 @@ func (t *baseTestStateHandler) suffrage(proposerState *Localstate, states ...*Lo
 	return base.NewFixedSuffrage(proposerState.Node(), nodes)
 }
 
-func (t *baseTestStateHandler) newINITBallot(localstate *Localstate, round base.Round) INITBallotV0 {
-	ib := INITBallotV0{
-		BaseBallotV0: BaseBallotV0{
-			node: localstate.Node().Address(),
-		},
-		INITBallotFactV0: INITBallotFactV0{
-			BaseBallotFactV0: BaseBallotFactV0{
-				height: localstate.LastBlock().Height() + 1,
-				round:  round,
-			},
-			previousBlock: localstate.LastBlock().Hash(),
-			previousRound: localstate.LastBlock().Round(),
-		},
-	}
+func (t *baseTestStateHandler) newINITBallot(localstate *Localstate, round base.Round) ballot.INITBallotV0 {
+	ib := ballot.NewINITBallotV0(
+		localstate.Node().Address(),
+		localstate.LastBlock().Height()+1,
+		round,
+		localstate.LastBlock().Hash(),
+		localstate.LastBlock().Round(),
+		nil,
+	)
+
+	_ = ib.Sign(localstate.Node().Privatekey(), localstate.Policy().NetworkID())
 
 	return ib
 }

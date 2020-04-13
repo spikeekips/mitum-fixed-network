@@ -2,6 +2,7 @@ package isaac
 
 import (
 	"github.com/spikeekips/mitum/base"
+	"github.com/spikeekips/mitum/base/ballot"
 	"github.com/spikeekips/mitum/base/operation"
 	"github.com/spikeekips/mitum/base/seal"
 	"github.com/spikeekips/mitum/base/valuehash"
@@ -34,9 +35,9 @@ type Storage interface {
 	Seal(valuehash.Hash) (seal.Seal, error)
 	Seals(func(valuehash.Hash, seal.Seal) (bool, error), bool /* sort */, bool /* load Seal? */) error
 
-	NewProposal(Proposal) error
-	Proposal(base.Height, base.Round) (Proposal, error)
-	Proposals(func(Proposal) (bool, error), bool /* sort */) error
+	NewProposal(ballot.Proposal) error
+	Proposal(base.Height, base.Round) (ballot.Proposal, error)
+	Proposals(func(ballot.Proposal) (bool, error), bool /* sort */) error
 
 	State(key string) (state.State, bool, error)
 	NewState(state.State) error

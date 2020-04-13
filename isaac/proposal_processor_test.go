@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	"github.com/spikeekips/mitum/base"
+	"github.com/spikeekips/mitum/base/ballot"
 	"github.com/spikeekips/mitum/base/seal"
 	"github.com/spikeekips/mitum/base/valuehash"
 	"github.com/spikeekips/mitum/storage"
@@ -43,7 +44,7 @@ func (t *testProposalProcessor) TestBlockOperations() {
 
 	ivp, err := t.newVoteproof(base.StageINIT, initFact, t.localstate, t.remoteState)
 
-	var proposal Proposal
+	var proposal ballot.Proposal
 	{
 		pr, err := pm.Proposal(ivp.Round())
 		t.NoError(err)
@@ -73,14 +74,14 @@ func (t *testProposalProcessor) TestBlockOperations() {
 	t.NotNil(block.Operations())
 	t.NotNil(block.States())
 
-	acceptFact := ACCEPTBallotFactV0{
-		BaseBallotFactV0: BaseBallotFactV0{
-			height: ivp.Height(),
-			round:  ivp.Round(),
-		},
-		proposal: proposal.Hash(),
-		newBlock: block.Hash(),
-	}
+	acceptFact := ballot.NewACCEPTBallotV0(
+		nil,
+		ivp.Height(),
+		ivp.Round(),
+		proposal.Hash(),
+		block.Hash(),
+		nil,
+	).Fact()
 
 	avp, err := t.newVoteproof(base.StageACCEPT, acceptFact, t.localstate, t.remoteState)
 
@@ -103,7 +104,7 @@ func (t *testProposalProcessor) TestNotFoundInProposal() {
 
 	ivp, err := t.newVoteproof(base.StageINIT, initFact, t.localstate, t.remoteState)
 
-	var proposal Proposal
+	var proposal ballot.Proposal
 	{
 		pr, err := pm.Proposal(ivp.Round())
 		t.NoError(err)

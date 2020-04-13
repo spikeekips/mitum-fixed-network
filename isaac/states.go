@@ -6,6 +6,7 @@ import (
 	"golang.org/x/xerrors"
 
 	"github.com/spikeekips/mitum/base"
+	"github.com/spikeekips/mitum/base/ballot"
 	"github.com/spikeekips/mitum/base/seal"
 	"github.com/spikeekips/mitum/util"
 	"github.com/spikeekips/mitum/util/logging"
@@ -306,8 +307,8 @@ func (css *ConsensusStates) NewSeal(sl seal.Seal) error {
 		}
 	}
 
-	if ballot, ok := sl.(Ballot); ok && ballot.Stage().CanVote() {
-		if err := css.vote(ballot); err != nil {
+	if blt, ok := sl.(ballot.Ballot); ok && blt.Stage().CanVote() {
+		if err := css.vote(blt); err != nil {
 			return err
 		}
 	}
@@ -324,20 +325,20 @@ func (css *ConsensusStates) NewSeal(sl seal.Seal) error {
 
 func (css *ConsensusStates) validateSeal(sl seal.Seal) error {
 	switch t := sl.(type) {
-	case Proposal:
+	case ballot.Proposal:
 		return css.validateProposal(t)
-	case Ballot:
+	case ballot.Ballot:
 		return css.validateBallot(t)
 	}
 
 	return nil
 }
 
-func (css *ConsensusStates) validateBallot(_ Ballot) error {
+func (css *ConsensusStates) validateBallot(_ ballot.Ballot) error {
 	return nil
 }
 
-func (css *ConsensusStates) validateProposal(proposal Proposal) error {
+func (css *ConsensusStates) validateProposal(proposal ballot.Proposal) error {
 	pvc := NewProposalValidationChecker(css.localstate, css.suffrage, proposal)
 
 	return util.NewChecker("proposal-validation-checker", []util.CheckerFunc{
@@ -348,8 +349,8 @@ func (css *ConsensusStates) validateProposal(proposal Proposal) error {
 	}).Check()
 }
 
-func (css *ConsensusStates) vote(ballot Ballot) error {
-	voteproof, err := css.ballotbox.Vote(ballot)
+func (css *ConsensusStates) vote(blt ballot.Ballot) error {
+	voteproof, err := css.ballotbox.Vote(blt)
 	if err != nil {
 		return err
 	}
@@ -374,7 +375,7 @@ func (css *ConsensusStates) vote(ballot Ballot) error {
 
 func checkBlockWithINITVoteproof(block Block, voteproof base.Voteproof) error {
 	// check voteproof.PreviousBlock with local block
-	fact, ok := voteproof.Majority().(INITBallotFact)
+	fact, ok := voteproof.Majority().(ballot.INITBallotFact)
 	if !ok {
 		return xerrors.Errorf("needs INITTBallotFact: fact=%T", voteproof.Majority())
 	}

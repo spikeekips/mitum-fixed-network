@@ -1,4 +1,4 @@
-package isaac
+package ballot
 
 import (
 	"testing"
@@ -13,28 +13,28 @@ import (
 	"github.com/spikeekips/mitum/util/localtime"
 )
 
-type testBallotV0INIT struct {
+type testBallotV0SIGN struct {
 	suite.Suite
 
 	pk key.BTCPrivatekey
 }
 
-func (t *testBallotV0INIT) SetupSuite() {
+func (t *testBallotV0SIGN) SetupSuite() {
 	t.pk, _ = key.NewBTCPrivatekey()
 }
 
-func (t *testBallotV0INIT) TestNew() {
-	ib := INITBallotV0{
+func (t *testBallotV0SIGN) TestNew() {
+	ib := SIGNBallotV0{
 		BaseBallotV0: BaseBallotV0{
-			node: base.NewShortAddress("test-for-init-ballot"),
+			node: base.NewShortAddress("test-for-sign-ballot"),
 		},
-		INITBallotFactV0: INITBallotFactV0{
+		SIGNBallotFactV0: SIGNBallotFactV0{
 			BaseBallotFactV0: BaseBallotFactV0{
 				height: base.Height(10),
 				round:  base.Round(0),
 			},
-			previousBlock: valuehash.RandomSHA256(),
-			previousRound: base.Round(0),
+			proposal: valuehash.RandomSHA256(),
+			newBlock: valuehash.RandomSHA256(),
 		},
 	}
 
@@ -44,27 +44,19 @@ func (t *testBallotV0INIT) TestNew() {
 	t.Implements((*Ballot)(nil), ib)
 }
 
-func (t *testBallotV0INIT) TestFact() {
-	vp := NewDummyVoteproof(
-		base.Height(10),
-		base.Round(0),
-		base.StageACCEPT,
-		base.VoteResultMajority,
-	)
-
-	ib := INITBallotV0{
+func (t *testBallotV0SIGN) TestFact() {
+	ib := SIGNBallotV0{
 		BaseBallotV0: BaseBallotV0{
-			node: base.NewShortAddress("test-for-init-ballot"),
+			node: base.NewShortAddress("test-for-sign-ballot"),
 		},
-		INITBallotFactV0: INITBallotFactV0{
+		SIGNBallotFactV0: SIGNBallotFactV0{
 			BaseBallotFactV0: BaseBallotFactV0{
-				height: vp.Height() + 1,
+				height: base.Height(10),
 				round:  base.Round(0),
 			},
-			previousBlock: valuehash.RandomSHA256(),
-			previousRound: vp.Round(),
+			proposal: valuehash.RandomSHA256(),
+			newBlock: valuehash.RandomSHA256(),
 		},
-		voteproof: vp,
 	}
 	t.Implements((*operation.FactSeal)(nil), ib)
 
@@ -88,27 +80,19 @@ func (t *testBallotV0INIT) TestFact() {
 	t.NoError(ib.Signer().Verify(ib.FactHash().Bytes(), ib.FactSignature()))
 }
 
-func (t *testBallotV0INIT) TestGenerateHash() {
-	vp := NewDummyVoteproof(
-		base.Height(10),
-		base.Round(0),
-		base.StageACCEPT,
-		base.VoteResultMajority,
-	)
-
-	ib := INITBallotV0{
+func (t *testBallotV0SIGN) TestGenerateHash() {
+	ib := SIGNBallotV0{
 		BaseBallotV0: BaseBallotV0{
-			node: base.NewShortAddress("test-for-init-ballot"),
+			node: base.NewShortAddress("test-for-sign-ballot"),
 		},
-		INITBallotFactV0: INITBallotFactV0{
+		SIGNBallotFactV0: SIGNBallotFactV0{
 			BaseBallotFactV0: BaseBallotFactV0{
-				height: vp.Height() + 1,
+				height: base.Height(10),
 				round:  base.Round(0),
 			},
-			previousBlock: valuehash.RandomSHA256(),
-			previousRound: base.Round(0),
+			proposal: valuehash.RandomSHA256(),
+			newBlock: valuehash.RandomSHA256(),
 		},
-		voteproof: vp,
 	}
 
 	h, err := ib.GenerateBodyHash()
@@ -122,27 +106,19 @@ func (t *testBallotV0INIT) TestGenerateHash() {
 	t.NotEmpty(bh)
 }
 
-func (t *testBallotV0INIT) TestSign() {
-	vp := NewDummyVoteproof(
-		base.Height(10),
-		base.Round(0),
-		base.StageACCEPT,
-		base.VoteResultMajority,
-	)
-
-	ib := INITBallotV0{
+func (t *testBallotV0SIGN) TestSign() {
+	ib := SIGNBallotV0{
 		BaseBallotV0: BaseBallotV0{
-			node: base.NewShortAddress("test-for-init-ballot"),
+			node: base.NewShortAddress("test-for-sign-ballot"),
 		},
-		INITBallotFactV0: INITBallotFactV0{
+		SIGNBallotFactV0: SIGNBallotFactV0{
 			BaseBallotFactV0: BaseBallotFactV0{
-				height: vp.Height() + 1,
+				height: base.Height(10),
 				round:  base.Round(0),
 			},
-			previousBlock: valuehash.RandomSHA256(),
-			previousRound: base.Round(0),
+			proposal: valuehash.RandomSHA256(),
+			newBlock: valuehash.RandomSHA256(),
 		},
-		voteproof: vp,
 	}
 
 	t.Nil(ib.Hash())
@@ -167,10 +143,10 @@ func (t *testBallotV0INIT) TestSign() {
 	t.True(xerrors.Is(err, key.SignatureVerificationFailedError))
 }
 
-func (t *testBallotV0INIT) TestIsValid() {
+func (t *testBallotV0SIGN) TestIsValid() {
 	{ // empty signedAt
 		bb := BaseBallotV0{
-			node: base.NewShortAddress("test-for-init-ballot"),
+			node: base.NewShortAddress("test-for-sign-ballot"),
 		}
 		err := bb.IsValid(nil)
 		t.Contains(err.Error(), "empty SignedAt")
@@ -178,7 +154,7 @@ func (t *testBallotV0INIT) TestIsValid() {
 
 	{ // empty signer
 		bb := BaseBallotV0{
-			node:     base.NewShortAddress("test-for-init-ballot"),
+			node:     base.NewShortAddress("test-for-sign-ballot"),
 			signedAt: localtime.Now(),
 		}
 		err := bb.IsValid(nil)
@@ -187,7 +163,7 @@ func (t *testBallotV0INIT) TestIsValid() {
 
 	{ // empty signature
 		bb := BaseBallotV0{
-			node:     base.NewShortAddress("test-for-init-ballot"),
+			node:     base.NewShortAddress("test-for-sign-ballot"),
 			signedAt: localtime.Now(),
 			signer:   t.pk.Publickey(),
 		}
@@ -196,6 +172,6 @@ func (t *testBallotV0INIT) TestIsValid() {
 	}
 }
 
-func TestBallotV0INIT(t *testing.T) {
-	suite.Run(t, new(testBallotV0INIT))
+func TestBallotV0SIGN(t *testing.T) {
+	suite.Run(t, new(testBallotV0SIGN))
 }

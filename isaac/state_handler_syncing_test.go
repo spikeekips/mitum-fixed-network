@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/spikeekips/mitum/base"
+	"github.com/spikeekips/mitum/base/ballot"
 	"github.com/spikeekips/mitum/base/valuehash"
 	"github.com/stretchr/testify/suite"
 	"golang.org/x/xerrors"
@@ -67,17 +68,12 @@ func (t *testStateSyncingHandler) TestINITMovesToConsensus() {
 func (t *testStateSyncingHandler) TestProcessProposal() {
 	t.localstate.Policy().SetTimeoutWaitingProposal(time.Millisecond * 10)
 
-	proposal := ProposalV0{
-		BaseBallotV0: BaseBallotV0{
-			node: base.NewShortAddress("test-for-proposal"),
-		},
-		ProposalFactV0: ProposalFactV0{
-			BaseBallotFactV0: BaseBallotFactV0{
-				height: t.localstate.LastBlock().Height() + 1,
-				round:  base.Round(0),
-			},
-		},
-	}
+	proposal := ballot.NewProposalV0(
+		base.NewShortAddress("test-for-proposal"),
+		t.localstate.LastBlock().Height()+1,
+		base.Round(0),
+		nil, nil,
+	)
 	t.NoError(proposal.Sign(t.remoteState.Node().Privatekey(), nil))
 
 	returnedBlock, err := NewTestBlockV0(t.localstate.LastBlock().Height()+1, base.Round(0), proposal.Hash(), valuehash.RandomSHA256())

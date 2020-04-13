@@ -8,6 +8,7 @@ import (
 	"golang.org/x/xerrors"
 
 	"github.com/spikeekips/mitum/base"
+	"github.com/spikeekips/mitum/base/ballot"
 	"github.com/spikeekips/mitum/base/seal"
 	"github.com/spikeekips/mitum/base/valuehash"
 )
@@ -95,7 +96,7 @@ func (t *testStateConsensusHandler) TestWaitingProposalButTimedOut() {
 	case r := <-sealChan:
 		t.NotNil(r)
 
-		rb := r.(INITBallotV0)
+		rb := r.(ballot.INITBallotV0)
 
 		t.Equal(base.StageINIT, rb.Stage())
 		t.Equal(vp.Height(), rb.Height())
@@ -138,7 +139,7 @@ func (t *testStateConsensusHandler) TestWithProposalWaitACCEPTBallot() {
 		_ = cs.Deactivate(StateChangeContext{})
 	}()
 
-	pr, err := NewProposalFromLocalstate(t.remoteState, initFact.round, nil, nil)
+	pr, err := NewProposalFromLocalstate(t.remoteState, initFact.Round(), nil, nil)
 	t.NoError(err)
 
 	returnedBlock, err := NewTestBlockV0(initFact.Height(), initFact.Round(), pr.Hash(), valuehash.RandomSHA256())
@@ -150,7 +151,7 @@ func (t *testStateConsensusHandler) TestWithProposalWaitACCEPTBallot() {
 	r := <-sealChan
 	t.NotNil(r)
 
-	rb := r.(ACCEPTBallotV0)
+	rb := r.(ballot.ACCEPTBallotV0)
 	t.Equal(base.StageACCEPT, rb.Stage())
 
 	t.Equal(pr.Height(), rb.Height())
@@ -192,7 +193,7 @@ func (t *testStateConsensusHandler) TestWithProposalWaitSIGNBallot() {
 		_ = cs.Deactivate(StateChangeContext{})
 	}()
 
-	pr, err := NewProposalFromLocalstate(t.remoteState, initFact.round, nil, nil)
+	pr, err := NewProposalFromLocalstate(t.remoteState, initFact.Round(), nil, nil)
 	t.NoError(err)
 
 	returnedBlock, err := NewTestBlockV0(initFact.Height(), initFact.Round(), pr.Hash(), valuehash.RandomSHA256())
@@ -204,7 +205,7 @@ func (t *testStateConsensusHandler) TestWithProposalWaitSIGNBallot() {
 	r := <-sealChan
 	t.NotNil(r)
 
-	rb := r.(SIGNBallotV0)
+	rb := r.(ballot.SIGNBallotV0)
 	t.Equal(base.StageSIGN, rb.Stage())
 
 	t.Equal(pr.Height(), rb.Height())
@@ -262,9 +263,9 @@ func (t *testStateConsensusHandler) TestDraw() {
 
 	r := <-sealChan
 	t.NotNil(r)
-	t.Implements((*INITBallot)(nil), r)
+	t.Implements((*ballot.INITBallot)(nil), r)
 
-	ib := r.(INITBallotV0)
+	ib := r.(ballot.INITBallotV0)
 	t.Equal(base.StageINIT, ib.Stage())
 	t.Equal(vp.Height(), ib.Height())
 	t.Equal(vp.Round()+1, ib.Round())

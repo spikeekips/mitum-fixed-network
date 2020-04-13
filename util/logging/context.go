@@ -225,9 +225,17 @@ func (c Context) Msgf(string, ...interface{}) {}
 func (c Context) Send()                       {}
 
 func (c Context) Hinted(key string, obj LogHintedMarshaler) Emitter {
+	if obj == nil {
+		return c.Str(key, "")
+	}
+
 	return obj.MarshalLog(key, c, false)
 }
 
 func (c Context) HintedVerbose(key string, obj LogHintedMarshaler, verbose bool) Emitter {
+	if obj == nil {
+		return c.Str(key, "")
+	}
+
 	return obj.MarshalLog(key, c, verbose)
 }

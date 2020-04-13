@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	"github.com/spikeekips/mitum/base"
+	"github.com/spikeekips/mitum/base/ballot"
 	"github.com/stretchr/testify/suite"
 )
 
@@ -19,14 +20,14 @@ func (t *testConsensusStates) TestINITVoteproofHigherHeight() {
 	css := NewConsensusStates(t.localstate, nil, nil, nil, nil, nil, nil, nil)
 	t.NotNil(css)
 
-	initFact := INITBallotFactV0{
-		BaseBallotFactV0: BaseBallotFactV0{
-			height: t.localstate.LastBlock().Height() + 3,
-			round:  base.Round(2), // round is not important to go
-		},
-		previousBlock: t.localstate.LastBlock().Hash(),
-		previousRound: t.localstate.LastBlock().Round(),
-	}
+	initFact := ballot.NewINITBallotV0(
+		nil,
+		t.localstate.LastBlock().Height()+3,
+		base.Round(2), // round is not important to go
+		t.localstate.LastBlock().Hash(),
+		t.localstate.LastBlock().Round(),
+		nil,
+	).Fact()
 
 	vp, err := t.newVoteproof(base.StageINIT, initFact, t.localstate, t.remoteState)
 	t.NoError(err)

@@ -7,6 +7,7 @@ import (
 	"golang.org/x/xerrors"
 
 	"github.com/spikeekips/mitum/base"
+	"github.com/spikeekips/mitum/base/ballot"
 	"github.com/spikeekips/mitum/base/seal"
 	"github.com/spikeekips/mitum/util"
 	"github.com/spikeekips/mitum/util/logging"
@@ -65,12 +66,12 @@ func (ss *StateSyncingHandler) Activate(ctx StateChangeContext) error {
 	// TODO also compare the hash of target block with height
 
 	switch {
-	case ctx.Ballot() != nil:
-		if err := ss.handleBallot(ctx.Ballot()); err != nil {
-			return err
-		}
 	case ctx.Voteproof() != nil:
 		if err := ss.handleVoteproof(ctx.Voteproof()); err != nil {
+			return err
+		}
+	case ctx.Ballot() != nil:
+		if err := ss.handleBallot(ctx.Ballot()); err != nil {
 			return err
 		}
 	default:
@@ -89,7 +90,7 @@ func (ss *StateSyncingHandler) Deactivate(ctx StateChangeContext) error {
 
 func (ss *StateSyncingHandler) NewSeal(sl seal.Seal) error {
 	switch t := sl.(type) {
-	case Proposal:
+	case ballot.Proposal:
 		return ss.handleProposal(t)
 	default:
 		ss.Log().Debug().
@@ -105,7 +106,7 @@ func (ss *StateSyncingHandler) NewVoteproof(voteproof base.Voteproof) error {
 	return ss.handleVoteproof(voteproof)
 }
 
-func (ss *StateSyncingHandler) handleProposal(proposal Proposal) error {
+func (ss *StateSyncingHandler) handleProposal(proposal ballot.Proposal) error {
 	l := ss.Log().WithLogger(func(ctx logging.Context) logging.Emitter {
 		return ctx.Hinted("proposal_hash", proposal.Hash()).
 			Hinted("proposal_height", proposal.Height()).
@@ -189,11 +190,11 @@ func (ss *StateSyncingHandler) newSyncer(to base.Height, sourceNodes []Node) err
 	return nil
 }
 
-func (ss *StateSyncingHandler) newSyncerFromBallot(ballot Ballot) error {
-	to := ballot.Height() - 1
+func (ss *StateSyncingHandler) newSyncerFromBallot(blt ballot.Ballot) error {
+	to := blt.Height() - 1
 
 	var sourceNodes []Node
-	if n, found := ss.localstate.Nodes().Node(ballot.Node()); !found {
+	if n, found := ss.localstate.Nodes().Node(blt.Node()); !found {
 		return xerrors.Errorf("Ballot().Node() is not known node")
 	} else {
 		sourceNodes = append(sourceNodes, n)
@@ -207,7 +208,7 @@ func (ss *StateSyncingHandler) newSyncerFromBallot(ballot Ballot) error {
 
 		return e.Strs("source_nodes", addresses)
 	}).
-		Hinted("ballot", ballot.Hash()).
+		Hinted("ballot", blt.Hash()).
 		Hinted("height_to", to).
 		Msg("will sync to the height from ballot")
 
@@ -330,7 +331,7 @@ func (ss *StateSyncingHandler) syncerStateChanged(syncer Syncer) {
 	}
 }
 
-func (ss *StateSyncingHandler) processProposal(proposal Proposal) error {
+func (ss *StateSyncingHandler) processProposal(proposal ballot.Proposal) error {
 	l := ss.Log().WithLogger(func(ctx logging.Context) logging.Emitter {
 		return ctx.Hinted("proposal_height", proposal.Height()).
 			Hinted("proposal_round", proposal.Round()).
@@ -383,7 +384,7 @@ func (ss *StateSyncingHandler) handleVoteproof(voteproof base.Voteproof) error {
 		case base.StageACCEPT:
 			// NOTE if proposal of Voteproof is already processed, store new
 			// block from Voteproof. And then will wait next INIT voteproof.
-			acceptFact := voteproof.Majority().(ACCEPTBallotFact)
+			acceptFact := voteproof.Majority().(ballot.ACCEPTBallotFact)
 			if ss.proposalProcessor != nil && ss.proposalProcessor.IsProcessed(acceptFact.Proposal()) {
 				l.Debug().Msg("proposal of voteproof is already processed, finish processing")
 				return ss.StoreNewBlockByVoteproof(voteproof)
@@ -410,8 +411,8 @@ func (ss *StateSyncingHandler) handleVoteproof(voteproof base.Voteproof) error {
 	return nil
 }
 
-func (ss *StateSyncingHandler) handleBallot(ballot Ballot) error {
-	if err := ss.newSyncerFromBallot(ballot); err != nil {
+func (ss *StateSyncingHandler) handleBallot(blt ballot.Ballot) error {
+	if err := ss.newSyncerFromBallot(blt); err != nil {
 		return err
 	}
 

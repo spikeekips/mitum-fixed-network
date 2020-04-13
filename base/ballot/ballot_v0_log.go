@@ -1,4 +1,4 @@
-package isaac
+package ballot
 
 import (
 	"github.com/spikeekips/mitum/util"

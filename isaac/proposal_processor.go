@@ -8,6 +8,7 @@ import (
 
 	"github.com/spikeekips/avl"
 	"github.com/spikeekips/mitum/base"
+	"github.com/spikeekips/mitum/base/ballot"
 	"github.com/spikeekips/mitum/base/operation"
 	"github.com/spikeekips/mitum/base/valuehash"
 	"github.com/spikeekips/mitum/state"
@@ -55,10 +56,10 @@ func (dp *ProposalProcessorV0) ProcessINIT(ph valuehash.Hash, initVoteproof base
 		return nil, xerrors.Errorf("ProcessINIT needs INIT Voteproof")
 	}
 
-	var proposal Proposal
+	var proposal ballot.Proposal
 	if sl, err := dp.localstate.Storage().Seal(ph); err != nil {
 		return nil, err
-	} else if pr, ok := sl.(Proposal); !ok {
+	} else if pr, ok := sl.(ballot.Proposal); !ok {
 		return nil, xerrors.Errorf("seal is not Proposal: %T", sl)
 	} else {
 		proposal = pr
@@ -117,13 +118,13 @@ type proposalProcessorV0 struct {
 	localstate         *Localstate
 	lastBlock          Block
 	block              BlockUpdater
-	proposal           Proposal
+	proposal           ballot.Proposal
 	proposedOperations map[valuehash.Hash]struct{}
 	operations         []state.OperationInfoV0
 	bs                 BlockStorage
 }
 
-func newProposalProcessorV0(localstate *Localstate, proposal Proposal) (*proposalProcessorV0, error) {
+func newProposalProcessorV0(localstate *Localstate, proposal ballot.Proposal) (*proposalProcessorV0, error) {
 	lastBlock := localstate.LastBlock()
 	if lastBlock == nil {
 		return nil, xerrors.Errorf("last block is empty")

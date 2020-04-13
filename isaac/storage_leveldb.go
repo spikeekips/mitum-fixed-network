@@ -9,6 +9,7 @@ import (
 	"golang.org/x/xerrors"
 
 	"github.com/spikeekips/mitum/base"
+	"github.com/spikeekips/mitum/base/ballot"
 	"github.com/spikeekips/mitum/base/operation"
 	"github.com/spikeekips/mitum/base/seal"
 	"github.com/spikeekips/mitum/base/valuehash"
@@ -518,13 +519,13 @@ func (st *LeveldbStorage) UnstagedOperationSeals(seals []valuehash.Hash) error {
 	return storage.LeveldbWrapError(st.db.Write(batch, nil))
 }
 
-func (st *LeveldbStorage) Proposals(callback func(Proposal) (bool, error), sort bool) error {
+func (st *LeveldbStorage) Proposals(callback func(ballot.Proposal) (bool, error), sort bool) error {
 	return st.iter(
 		leveldbProposalPrefix,
 		func(_, value []byte) (bool, error) {
 			if sl, err := st.sealByKey(value); err != nil {
 				return false, err
-			} else if pr, ok := sl.(Proposal); !ok {
+			} else if pr, ok := sl.(ballot.Proposal); !ok {
 				return false, xerrors.Errorf("not Proposal: %T", sl)
 			} else {
 				return callback(pr)
@@ -538,7 +539,7 @@ func (st *LeveldbStorage) proposalKey(height base.Height, round base.Round) []by
 	return util.ConcatBytesSlice(leveldbProposalPrefix, height.Bytes(), round.Bytes())
 }
 
-func (st *LeveldbStorage) NewProposal(proposal Proposal) error {
+func (st *LeveldbStorage) NewProposal(proposal ballot.Proposal) error {
 	sealKey := st.sealKey(proposal.Hash())
 	if found, err := st.db.Has(sealKey, nil); err != nil {
 		return storage.LeveldbWrapError(err)
@@ -555,7 +556,7 @@ func (st *LeveldbStorage) NewProposal(proposal Proposal) error {
 	return nil
 }
 
-func (st *LeveldbStorage) Proposal(height base.Height, round base.Round) (Proposal, error) {
+func (st *LeveldbStorage) Proposal(height base.Height, round base.Round) (ballot.Proposal, error) {
 	sealKey, err := st.get(st.proposalKey(height, round))
 	if err != nil {
 		return nil, err
@@ -566,7 +567,7 @@ func (st *LeveldbStorage) Proposal(height base.Height, round base.Round) (Propos
 		return nil, err
 	}
 
-	return sl.(Proposal), nil
+	return sl.(ballot.Proposal), nil
 }
 
 func (st *LeveldbStorage) State(key string) (state.State, bool, error) {

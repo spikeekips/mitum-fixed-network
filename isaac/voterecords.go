@@ -4,6 +4,7 @@ import (
 	"sync"
 
 	"github.com/spikeekips/mitum/base"
+	"github.com/spikeekips/mitum/base/ballot"
 	"github.com/spikeekips/mitum/base/valuehash"
 )
 
@@ -11,36 +12,36 @@ type VoteRecords struct {
 	sync.RWMutex
 	facts     map[valuehash.Hash]base.Fact
 	votes     map[base.Address]valuehash.Hash // key: node Address, value: fact hash
-	ballots   map[base.Address]Ballot
+	ballots   map[base.Address]ballot.Ballot
 	voteproof base.VoteproofV0
 }
 
-func NewVoteRecords(ballot Ballot, threshold base.Threshold) *VoteRecords {
+func NewVoteRecords(blt ballot.Ballot, threshold base.Threshold) *VoteRecords {
 	return &VoteRecords{
 		facts:   map[valuehash.Hash]base.Fact{},
 		votes:   map[base.Address]valuehash.Hash{},
-		ballots: map[base.Address]Ballot{},
+		ballots: map[base.Address]ballot.Ballot{},
 		voteproof: base.NewVoteproofV0(
-			ballot.Height(),
-			ballot.Round(),
+			blt.Height(),
+			blt.Round(),
 			threshold,
-			ballot.Stage(),
+			blt.Stage(),
 		),
 	}
 }
 
-func (vrs *VoteRecords) addBallot(ballot Ballot) bool {
-	if _, found := vrs.votes[ballot.Node()]; found {
+func (vrs *VoteRecords) addBallot(blt ballot.Ballot) bool {
+	if _, found := vrs.votes[blt.Node()]; found {
 		return true
 	}
 
-	vrs.ballots[ballot.Node()] = ballot
+	vrs.ballots[blt.Node()] = blt
 
-	factHash := ballot.FactHash()
-	vrs.votes[ballot.Node()] = factHash
+	factHash := blt.FactHash()
+	vrs.votes[blt.Node()] = factHash
 
 	if _, found := vrs.facts[factHash]; !found {
-		vrs.facts[factHash] = ballot.Fact()
+		vrs.facts[factHash] = blt.Fact()
 	}
 
 	return false
@@ -48,12 +49,12 @@ func (vrs *VoteRecords) addBallot(ballot Ballot) bool {
 
 // Vote votes by Ballot and keep track the vote records. If getting result is
 // done, Voteproof will not be updated.
-func (vrs *VoteRecords) Vote(ballot Ballot) base.Voteproof {
+func (vrs *VoteRecords) Vote(blt ballot.Ballot) base.Voteproof {
 	vrs.Lock()
 	defer vrs.Unlock()
 
 	vp := &vrs.voteproof
-	if !vrs.vote(ballot, vp) {
+	if !vrs.vote(blt, vp) {
 		vrs.voteproof = *vp
 
 		return vrs.voteproof
@@ -77,11 +78,11 @@ func (vrs *VoteRecords) Vote(ballot Ballot) base.Voteproof {
 
 	{
 		votes := map[base.Address]base.VoteproofNodeFact{}
-		for node, ballot := range vrs.ballots {
+		for node, blt := range vrs.ballots {
 			votes[node] = base.NewVoteproofNodeFact(
-				ballot.FactHash(),
-				ballot.FactSignature(),
-				ballot.Signer(),
+				blt.FactHash(),
+				blt.FactSignature(),
+				blt.Signer(),
 			)
 		}
 		vp.SetVotes(votes)
@@ -94,8 +95,8 @@ func (vrs *VoteRecords) Vote(ballot Ballot) base.Voteproof {
 	return vrs.voteproof
 }
 
-func (vrs *VoteRecords) vote(ballot Ballot, voteproof *base.VoteproofV0) bool {
-	if vrs.addBallot(ballot) {
+func (vrs *VoteRecords) vote(blt ballot.Ballot, voteproof *base.VoteproofV0) bool {
+	if vrs.addBallot(blt) {
 		return false
 	}
 

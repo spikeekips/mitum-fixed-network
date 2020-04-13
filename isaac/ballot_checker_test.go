@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	"github.com/spikeekips/mitum/base"
+	"github.com/spikeekips/mitum/base/ballot"
 	"github.com/spikeekips/mitum/util"
 	"github.com/stretchr/testify/suite"
 )
@@ -104,19 +105,24 @@ func (t *testBallotChecker) TestCheckWithLastBlock() {
 	}
 
 	{ // lower Height
-		ib, err := NewINITBallotV0FromLocalstate(t.localstate, base.Round(0))
-		t.NoError(err)
+		lastBlock := t.localstate.LastBlock()
+		t.NotNil(lastBlock)
 
-		ib.INITBallotFactV0.height = ib.INITBallotFactV0.height - 1
-		t.NoError(ib.Sign(
-			t.localstate.Node().Privatekey(),
-			t.localstate.Policy().NetworkID(),
-		))
+		ib := ballot.NewINITBallotV0(
+			t.localstate.Node().Address(),
+			lastBlock.Height(),
+			base.Round(0),
+			lastBlock.Hash(),
+			lastBlock.Round(),
+			t.localstate.LastACCEPTVoteproof(),
+		)
+
+		t.NoError(ib.Sign(t.localstate.Node().Privatekey(), t.localstate.Policy().NetworkID()))
 
 		bc := NewBallotChecker(ib, t.localstate, t.suf)
 
 		var finished bool
-		err = util.NewChecker("test-ballot-checker", []util.CheckerFunc{
+		err := util.NewChecker("test-ballot-checker", []util.CheckerFunc{
 			bc.CheckWithLastBlock,
 			func() (bool, error) {
 				finished = true

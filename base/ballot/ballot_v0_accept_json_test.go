@@ -1,4 +1,4 @@
-package isaac
+package ballot
 
 import (
 	"testing"
@@ -31,9 +31,9 @@ func (t *testBallotV0ACCEPTJSON) TestEncode() {
 	t.NoError(encs.AddHinter(base.NewShortAddress("")))
 	t.NoError(encs.AddHinter(key.BTCPublickey{}))
 	t.NoError(encs.AddHinter(ACCEPTBallotV0{}))
-	t.NoError(encs.AddHinter(DummyVoteproof{}))
+	t.NoError(encs.AddHinter(base.DummyVoteproof{}))
 
-	vp := NewDummyVoteproof(
+	vp := base.NewDummyVoteproof(
 		base.Height(10),
 		base.Round(0),
 		base.StageINIT,

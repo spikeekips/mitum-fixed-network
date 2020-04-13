@@ -4,6 +4,7 @@ import (
 	"golang.org/x/xerrors"
 
 	"github.com/spikeekips/mitum/base"
+	"github.com/spikeekips/mitum/base/ballot"
 	"github.com/spikeekips/mitum/util/errors"
 	"github.com/spikeekips/mitum/util/logging"
 )
@@ -18,7 +19,7 @@ type StateToBeChangeError struct {
 	FromState base.State
 	ToState   base.State
 	Voteproof base.Voteproof
-	Ballot    Ballot
+	Ballot    ballot.Ballot
 }
 
 func (ce *StateToBeChangeError) StateChangeContext() StateChangeContext {
@@ -26,14 +27,14 @@ func (ce *StateToBeChangeError) StateChangeContext() StateChangeContext {
 }
 
 func NewStateToBeChangeError(
-	fromState, toState base.State, voteproof base.Voteproof, ballot Ballot,
+	fromState, toState base.State, voteproof base.Voteproof, blt ballot.Ballot,
 ) *StateToBeChangeError {
 	return &StateToBeChangeError{
 		NError:    errors.NewError("State needs to be changed"),
 		FromState: fromState,
 		ToState:   toState,
 		Voteproof: voteproof,
-		Ballot:    ballot,
+		Ballot:    blt,
 	}
 }
 
@@ -232,7 +233,7 @@ func (vpc *VoteproofBootingChecker) CheckACCEPTVoteproofHeight() (bool, error) {
 		)
 	}
 
-	fact := vpc.acceptVoteproof.Majority().(ACCEPTBallotFact)
+	fact := vpc.acceptVoteproof.Majority().(ballot.ACCEPTBallotFact)
 	if !vpc.lastBlock.Hash().Equal(fact.NewBlock()) {
 		return false, StopBootingError.Errorf(
 			"block hash of ACCEPTVoteproof of same height not matched: voteproof.Block()=%s block.Block()=%s",
@@ -260,7 +261,7 @@ func (vpc *VoteproofBootingChecker) CheckINITVoteproofHeight() (bool, error) {
 		)
 	}
 
-	fact := vpc.initVoteproof.Majority().(INITBallotFact)
+	fact := vpc.initVoteproof.Majority().(ballot.INITBallotFact)
 	if !vpc.lastBlock.PreviousBlock().Equal(fact.PreviousBlock()) {
 		return false, StopBootingError.Errorf(
 			"previous block hash of INITVoteproof of same height not matched: voteproof.Block()=%s block.Block()=%s",

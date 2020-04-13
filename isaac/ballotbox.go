@@ -7,6 +7,7 @@ import (
 	"golang.org/x/xerrors"
 
 	"github.com/spikeekips/mitum/base"
+	"github.com/spikeekips/mitum/base/ballot"
 	"github.com/spikeekips/mitum/util/logging"
 )
 
@@ -30,14 +31,14 @@ func NewBallotbox(thresholdFunc func() base.Threshold) *Ballotbox {
 
 // Vote receives Ballot and returns VoteRecords, which has VoteRecords.Result()
 // and VoteRecords.Majority().
-func (bb *Ballotbox) Vote(ballot Ballot) (base.Voteproof, error) {
-	if !ballot.Stage().CanVote() {
-		return nil, xerrors.Errorf("this ballot is not for voting; stage=%s", ballot.Stage())
+func (bb *Ballotbox) Vote(blt ballot.Ballot) (base.Voteproof, error) {
+	if !blt.Stage().CanVote() {
+		return nil, xerrors.Errorf("this ballot is not for voting; stage=%s", blt.Stage())
 	}
 
-	vrs := bb.loadVoteRecords(ballot, true)
+	vrs := bb.loadVoteRecords(blt, true)
 
-	voteproof := vrs.Vote(ballot)
+	voteproof := vrs.Vote(blt)
 
 	if voteproof.IsFinished() && !voteproof.IsClosed() {
 		// TODO Cleaning VoteRecords may take too long time.
@@ -49,17 +50,17 @@ func (bb *Ballotbox) Vote(ballot Ballot) (base.Voteproof, error) {
 	return voteproof, nil
 }
 
-func (bb *Ballotbox) loadVoteRecords(ballot Ballot, ifNotCreate bool) *VoteRecords {
+func (bb *Ballotbox) loadVoteRecords(blt ballot.Ballot, ifNotCreate bool) *VoteRecords {
 	bb.Lock()
 	defer bb.Unlock()
 
-	key := bb.vrsKey(ballot)
+	key := bb.vrsKey(blt)
 
 	var vrs *VoteRecords
 	if i, found := bb.vrs.Load(key); found {
 		vrs = i.(*VoteRecords)
 	} else if ifNotCreate {
-		vrs = NewVoteRecords(ballot, bb.thresholdFunc())
+		vrs = NewVoteRecords(blt, bb.thresholdFunc())
 		bb.vrs.Store(key, vrs)
 	}
 
@@ -111,6 +112,6 @@ func (bb *Ballotbox) clean(height base.Height, round base.Round) error {
 	return nil
 }
 
-func (bb *Ballotbox) vrsKey(ballot Ballot) string {
-	return fmt.Sprintf("%d-%d-%d", ballot.Height(), ballot.Round(), ballot.Stage())
+func (bb *Ballotbox) vrsKey(blt ballot.Ballot) string {
+	return fmt.Sprintf("%d-%d-%d", blt.Height(), blt.Round(), blt.Stage())
 }

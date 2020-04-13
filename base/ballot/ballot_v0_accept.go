@@ -1,4 +1,4 @@
-package isaac
+package ballot
 
 import (
 	"golang.org/x/xerrors"
@@ -68,65 +68,27 @@ type ACCEPTBallotV0 struct {
 }
 
 func NewACCEPTBallotV0(
-	localstate *Localstate,
+	node base.Address,
 	height base.Height,
 	round base.Round,
-	newBlock Block,
-	initVoteproof base.Voteproof,
-	networkID []byte,
-) (ACCEPTBallotV0, error) {
-	ab := ACCEPTBallotV0{
+	proposal valuehash.Hash,
+	newBlock valuehash.Hash,
+	voteproof base.Voteproof,
+) ACCEPTBallotV0 {
+	return ACCEPTBallotV0{
 		BaseBallotV0: BaseBallotV0{
-			node: localstate.Node().Address(),
+			node: node,
 		},
 		ACCEPTBallotFactV0: ACCEPTBallotFactV0{
 			BaseBallotFactV0: BaseBallotFactV0{
 				height: height,
 				round:  round,
 			},
-			proposal: newBlock.Proposal(),
-			newBlock: newBlock.Hash(),
+			proposal: proposal,
+			newBlock: newBlock,
 		},
-		voteproof: initVoteproof,
+		voteproof: voteproof,
 	}
-
-	if err := ab.Sign(localstate.Node().Privatekey(), networkID); err != nil {
-		return ACCEPTBallotV0{}, err
-	}
-
-	return ab, nil
-}
-
-func NewACCEPTBallotV0FromLocalstate(
-	localstate *Localstate,
-	round base.Round,
-	newBlock Block,
-) (ACCEPTBallotV0, error) {
-	lastBlock := localstate.LastBlock()
-	if lastBlock == nil {
-		return ACCEPTBallotV0{}, xerrors.Errorf("lastBlock is empty")
-	}
-
-	ab := ACCEPTBallotV0{
-		BaseBallotV0: BaseBallotV0{
-			node: localstate.Node().Address(),
-		},
-		ACCEPTBallotFactV0: ACCEPTBallotFactV0{
-			BaseBallotFactV0: BaseBallotFactV0{
-				height: lastBlock.Height() + 1,
-				round:  round,
-			},
-			proposal: newBlock.Proposal(),
-			newBlock: newBlock.Hash(),
-		},
-		voteproof: localstate.LastINITVoteproof(),
-	}
-
-	if err := ab.Sign(localstate.Node().Privatekey(), localstate.Policy().NetworkID()); err != nil {
-		return ACCEPTBallotV0{}, err
-	}
-
-	return ab, nil
 }
 
 func (ab ACCEPTBallotV0) Hash() valuehash.Hash {

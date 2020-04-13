@@ -8,6 +8,7 @@ import (
 	"golang.org/x/xerrors"
 
 	"github.com/spikeekips/mitum/base"
+	"github.com/spikeekips/mitum/base/ballot"
 	"github.com/spikeekips/mitum/base/seal"
 	"github.com/spikeekips/mitum/storage"
 	"github.com/spikeekips/mitum/util/localtime"
@@ -29,7 +30,7 @@ type StateConsensusHandler struct {
 	*BaseStateHandler
 	suffrage          base.Suffrage
 	proposalMaker     *ProposalMaker
-	processedProposal Proposal
+	processedProposal ballot.Proposal
 }
 
 func NewStateConsensusHandler(
@@ -142,8 +143,8 @@ func (cs *StateConsensusHandler) waitProposal(voteproof base.Voteproof) error { 
 
 func (cs *StateConsensusHandler) NewSeal(sl seal.Seal) error {
 	switch t := sl.(type) {
-	case Proposal:
-		go func(proposal Proposal) {
+	case ballot.Proposal:
+		go func(proposal ballot.Proposal) {
 			if err := cs.handleProposal(proposal); err != nil {
 				cs.Log().Error().Err(err).
 					Hinted("proposal", proposal.Hash()).
@@ -213,7 +214,7 @@ func (cs *StateConsensusHandler) keepBroadcastingINITBallotForNextBlock() error 
 	}, true)
 }
 
-func (cs *StateConsensusHandler) handleProposal(proposal Proposal) error {
+func (cs *StateConsensusHandler) handleProposal(proposal ballot.Proposal) error {
 	cs.proposalLock.Lock()
 	defer cs.proposalLock.Unlock()
 
@@ -259,7 +260,7 @@ func (cs *StateConsensusHandler) handleProposal(proposal Proposal) error {
 	return cs.readyToACCEPTBallot(block)
 }
 
-func (cs *StateConsensusHandler) readyToSIGNBallot(proposal Proposal, newBlock Block) error {
+func (cs *StateConsensusHandler) readyToSIGNBallot(proposal ballot.Proposal, newBlock Block) error {
 	// NOTE not like broadcasting ACCEPT Ballot, SIGN Ballot will be broadcasted
 	// withtout waiting.
 

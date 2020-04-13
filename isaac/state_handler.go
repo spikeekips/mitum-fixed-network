@@ -8,6 +8,7 @@ import (
 	"golang.org/x/xerrors"
 
 	"github.com/spikeekips/mitum/base"
+	"github.com/spikeekips/mitum/base/ballot"
 	"github.com/spikeekips/mitum/base/seal"
 	"github.com/spikeekips/mitum/util/localtime"
 	"github.com/spikeekips/mitum/util/logging"
@@ -36,15 +37,15 @@ type StateChangeContext struct {
 	fromState base.State
 	toState   base.State
 	voteproof base.Voteproof
-	ballot    Ballot
+	ballot    ballot.Ballot
 }
 
-func NewStateChangeContext(from, to base.State, voteproof base.Voteproof, ballot Ballot) StateChangeContext {
+func NewStateChangeContext(from, to base.State, voteproof base.Voteproof, blt ballot.Ballot) StateChangeContext {
 	return StateChangeContext{
 		fromState: from,
 		toState:   to,
 		voteproof: voteproof,
-		ballot:    ballot,
+		ballot:    blt,
 	}
 }
 
@@ -60,7 +61,7 @@ func (csc StateChangeContext) Voteproof() base.Voteproof {
 	return csc.voteproof
 }
 
-func (csc StateChangeContext) Ballot() Ballot {
+func (csc StateChangeContext) Ballot() ballot.Ballot {
 	return csc.ballot
 }
 
@@ -104,7 +105,7 @@ func (bs *BaseStateHandler) SetSealChan(sealChan chan<- seal.Seal) {
 	bs.sealChan = sealChan
 }
 
-func (bs *BaseStateHandler) ChangeState(newState base.State, voteproof base.Voteproof, ballot Ballot) error {
+func (bs *BaseStateHandler) ChangeState(newState base.State, voteproof base.Voteproof, blt ballot.Ballot) error {
 	if bs.stateChan == nil {
 		return nil
 	}
@@ -116,7 +117,7 @@ func (bs *BaseStateHandler) ChangeState(newState base.State, voteproof base.Vote
 	}
 
 	go func() {
-		bs.stateChan <- NewStateChangeContext(bs.state, newState, voteproof, ballot)
+		bs.stateChan <- NewStateChangeContext(bs.state, newState, voteproof, blt)
 	}()
 
 	return nil
@@ -143,7 +144,7 @@ func (bs *BaseStateHandler) StoreNewBlock(blockStorage BlockStorage) error {
 }
 
 func (bs *BaseStateHandler) StoreNewBlockByVoteproof(acceptVoteproof base.Voteproof) error {
-	fact, ok := acceptVoteproof.Majority().(ACCEPTBallotFact)
+	fact, ok := acceptVoteproof.Majority().(ballot.ACCEPTBallotFact)
 	if !ok {
 		return xerrors.Errorf("needs ACCEPTBallotFact: fact=%T", acceptVoteproof.Majority())
 	}
@@ -290,7 +291,7 @@ func (bs *BaseStateHandler) TimerTimedoutMoveNextRound(
 	)
 }
 
-func (bs *BaseStateHandler) TimerBroadcastingProposal(proposal Proposal) (*localtime.CallbackTimer, error) {
+func (bs *BaseStateHandler) TimerBroadcastingProposal(proposal ballot.Proposal) (*localtime.CallbackTimer, error) {
 	var called int64
 
 	return localtime.NewCallbackTimer(

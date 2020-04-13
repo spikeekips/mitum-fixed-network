@@ -4,6 +4,7 @@ import (
 	"sync"
 
 	"github.com/spikeekips/mitum/base"
+	"github.com/spikeekips/mitum/base/ballot"
 	"github.com/spikeekips/mitum/base/operation"
 	"github.com/spikeekips/mitum/base/valuehash"
 )
@@ -11,7 +12,7 @@ import (
 type ProposalMaker struct {
 	sync.Mutex
 	localstate *Localstate
-	proposed   Proposal
+	proposed   ballot.Proposal
 }
 
 func NewProposalMaker(localstate *Localstate) *ProposalMaker {
@@ -68,7 +69,7 @@ func (pm *ProposalMaker) operations() ([]valuehash.Hash, []valuehash.Hash, error
 	return operations, seals, nil
 }
 
-func (pm *ProposalMaker) Proposal(round base.Round) (Proposal, error) {
+func (pm *ProposalMaker) Proposal(round base.Round) (ballot.Proposal, error) {
 	pm.Lock()
 	defer pm.Unlock()
 

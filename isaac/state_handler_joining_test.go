@@ -8,6 +8,7 @@ import (
 	"golang.org/x/xerrors"
 
 	"github.com/spikeekips/mitum/base"
+	"github.com/spikeekips/mitum/base/ballot"
 	"github.com/spikeekips/mitum/base/seal"
 	"github.com/spikeekips/mitum/base/valuehash"
 )
@@ -48,9 +49,9 @@ func (t *testStateJoiningHandler) TestKeepBroadcastingINITBallot() {
 	t.NotNil(received)
 
 	t.Implements((*seal.Seal)(nil), received)
-	t.IsType(INITBallotV0{}, received)
+	t.IsType(ballot.INITBallotV0{}, received)
 
-	ballot := received.(INITBallotV0)
+	ballot := received.(ballot.INITBallotV0)
 
 	t.NoError(ballot.IsValid(t.localstate.Policy().NetworkID()))
 
@@ -85,26 +86,29 @@ func (t *testStateJoiningHandler) TestINITBallotWithACCEPTVoteproofExpectedHeigh
 	}()
 
 	lastBlock := t.localstate.LastBlock()
-	ib, err := NewINITBallotV0FromLocalstate(t.localstate, cs.currentRound())
-	t.NoError(err)
 
 	// ACCEPT Voteproof; 2 node(local and remote) vote with same AcceptFact.
-	acceptFact := ACCEPTBallotFactV0{
-		BaseBallotFactV0: BaseBallotFactV0{
-			height: lastBlock.Height(),
-			round:  lastBlock.Round(),
-		},
-		proposal: valuehash.RandomSHA256(),
-		newBlock: valuehash.RandomSHA256(),
-	}
+	acceptFact := ballot.NewACCEPTBallotV0(
+		nil,
+		lastBlock.Height(),
+		lastBlock.Round(),
+		valuehash.RandomSHA256(),
+		valuehash.RandomSHA256(),
+		nil,
+	).Fact()
 
 	vp, err := t.newVoteproof(base.StageACCEPT, acceptFact, t.localstate, t.remoteState)
 	t.NoError(err)
 
-	ib.voteproof = vp
-
-	err = ib.Sign(t.remoteState.Node().Privatekey(), nil)
-	t.NoError(err)
+	ib := ballot.NewINITBallotV0(
+		t.localstate.Node().Address(),
+		lastBlock.Height()+1,
+		cs.currentRound(),
+		lastBlock.Hash(),
+		lastBlock.Round(),
+		vp,
+	)
+	t.NoError(ib.Sign(t.remoteState.Node().Privatekey(), t.remoteState.Policy().NetworkID()))
 
 	t.NoError(cs.NewSeal(ib))
 }
@@ -129,28 +133,30 @@ func (t *testStateJoiningHandler) TestINITBallotWithACCEPTVoteproofLowerHeight()
 		_ = cs.Deactivate(StateChangeContext{})
 	}()
 
-	ib, err := NewINITBallotV0FromLocalstate(t.remoteState, cs.currentRound())
-	t.NoError(err)
-
-	ib.INITBallotFactV0.height = t.remoteState.LastBlock().Height() - 1
+	lastBlock := t.remoteState.LastBlock()
 
 	// ACCEPT Voteproof; 2 node(local and remote) vote with same AcceptFact.
-	acceptFact := ACCEPTBallotFactV0{
-		BaseBallotFactV0: BaseBallotFactV0{
-			height: ib.INITBallotFactV0.height - 1,
-			round:  base.Round(0),
-		},
-		proposal: valuehash.RandomSHA256(),
-		newBlock: valuehash.RandomSHA256(),
-	}
+	acceptFact := ballot.NewACCEPTBallotV0(
+		nil,
+		lastBlock.Height()-1,
+		base.Round(0),
+		valuehash.RandomSHA256(),
+		valuehash.RandomSHA256(),
+		nil,
+	).Fact()
 
 	vp, err := t.newVoteproof(base.StageACCEPT, acceptFact, t.localstate, t.remoteState)
 	t.NoError(err)
 
-	ib.voteproof = vp
-
-	err = ib.Sign(t.remoteState.Node().Privatekey(), nil)
-	t.NoError(err)
+	ib := ballot.NewINITBallotV0(
+		t.remoteState.Node().Address(),
+		lastBlock.Height()-1,
+		cs.currentRound(),
+		lastBlock.Hash(),
+		lastBlock.Round(),
+		vp,
+	)
+	t.NoError(ib.Sign(t.remoteState.Node().Privatekey(), t.remoteState.Policy().NetworkID()))
 
 	t.NoError(cs.NewSeal(ib))
 }
@@ -176,30 +182,30 @@ func (t *testStateJoiningHandler) TestINITBallotWithACCEPTVoteproofHigherHeight(
 		_ = cs.Deactivate(StateChangeContext{})
 	}()
 
-	ib, err := NewINITBallotV0FromLocalstate(t.remoteState, cs.currentRound())
-	t.NoError(err)
-
-	ib.INITBallotFactV0.height = t.remoteState.LastBlock().Height() + 2
-	ib.INITBallotFactV0.previousBlock = valuehash.RandomSHA256()
-	ib.INITBallotFactV0.previousRound = base.Round(0)
+	lastBlock := t.remoteState.LastBlock()
 
 	// ACCEPT Voteproof; 2 node(local and remote) vote with same AcceptFact.
-	acceptFact := ACCEPTBallotFactV0{
-		BaseBallotFactV0: BaseBallotFactV0{
-			height: ib.INITBallotFactV0.height - 1,
-			round:  base.Round(0),
-		},
-		proposal: valuehash.RandomSHA256(),
-		newBlock: valuehash.RandomSHA256(),
-	}
+	acceptFact := ballot.NewACCEPTBallotV0(
+		nil,
+		lastBlock.Height()+1,
+		base.Round(0),
+		valuehash.RandomSHA256(),
+		valuehash.RandomSHA256(),
+		nil,
+	).Fact()
 
 	vp, err := t.newVoteproof(base.StageACCEPT, acceptFact, t.localstate, t.remoteState)
 	t.NoError(err)
 
-	ib.voteproof = vp
-
-	err = ib.Sign(t.remoteState.Node().Privatekey(), nil)
-	t.NoError(err)
+	ib := ballot.NewINITBallotV0(
+		t.remoteState.Node().Address(),
+		lastBlock.Height()+2,
+		cs.currentRound(),
+		valuehash.RandomSHA256(),
+		base.Round(0),
+		vp,
+	)
+	t.NoError(ib.Sign(t.remoteState.Node().Privatekey(), t.remoteState.Policy().NetworkID()))
 
 	stateChan := make(chan StateChangeContext)
 	cs.SetStateChan(stateChan)
@@ -241,26 +247,29 @@ func (t *testStateJoiningHandler) TestINITBallotWithINITVoteproofExpectedHeight(
 	}()
 
 	cs.setCurrentRound(base.Round(1))
-	lastBlock := t.localstate.LastBlock()
-	ib, err := NewINITBallotV0FromLocalstate(t.remoteState, cs.currentRound())
-	t.NoError(err)
+	lastBlock := t.remoteState.LastBlock()
 
-	initFact := INITBallotFactV0{
-		BaseBallotFactV0: BaseBallotFactV0{
-			height: ib.INITBallotFactV0.height,
-			round:  ib.INITBallotFactV0.round - 1,
-		},
-		previousBlock: lastBlock.Hash(),
-		previousRound: lastBlock.Round(),
-	}
+	initFact := ballot.NewINITBallotV0(
+		nil,
+		lastBlock.Height()+1,
+		cs.currentRound()-1,
+		lastBlock.Hash(),
+		lastBlock.Round(),
+		nil,
+	).Fact().(ballot.INITBallotFactV0)
 
 	vp, err := t.newVoteproof(base.StageINIT, initFact, t.localstate, t.remoteState)
 	t.NoError(err)
 
-	ib.voteproof = vp
-
-	err = ib.Sign(t.remoteState.Node().Privatekey(), nil)
-	t.NoError(err)
+	ib := ballot.NewINITBallotV0(
+		t.remoteState.Node().Address(),
+		initFact.Height(),
+		initFact.Round()+1,
+		lastBlock.Hash(),
+		lastBlock.Round(),
+		vp,
+	)
+	t.NoError(ib.Sign(t.remoteState.Node().Privatekey(), t.remoteState.Policy().NetworkID()))
 
 	stateChan := make(chan StateChangeContext)
 	cs.SetStateChan(stateChan)
@@ -289,28 +298,29 @@ func (t *testStateJoiningHandler) TestINITBallotWithINITVoteproofLowerHeight() {
 	}()
 
 	cs.setCurrentRound(base.Round(1))
-	lastBlock := t.localstate.LastBlock()
-	ib, err := NewINITBallotV0FromLocalstate(t.remoteState, cs.currentRound())
-	t.NoError(err)
+	lastBlock := t.remoteState.LastBlock()
 
-	ib.INITBallotFactV0.height = t.remoteState.LastBlock().Height() - 1
-
-	initFact := INITBallotFactV0{
-		BaseBallotFactV0: BaseBallotFactV0{
-			height: ib.INITBallotFactV0.height - 1,
-			round:  base.Round(0),
-		},
-		previousBlock: lastBlock.Hash(),
-		previousRound: lastBlock.Round(),
-	}
+	initFact := ballot.NewINITBallotV0(
+		nil,
+		lastBlock.Height()-2,
+		base.Round(0),
+		lastBlock.Hash(),
+		lastBlock.Round(),
+		nil,
+	).Fact()
 
 	vp, err := t.newVoteproof(base.StageINIT, initFact, t.localstate, t.remoteState)
 	t.NoError(err)
 
-	ib.voteproof = vp
-
-	err = ib.Sign(t.remoteState.Node().Privatekey(), nil)
-	t.NoError(err)
+	ib := ballot.NewINITBallotV0(
+		t.remoteState.Node().Address(),
+		lastBlock.Height()-1,
+		cs.currentRound(),
+		lastBlock.Hash(),
+		lastBlock.Round(),
+		vp,
+	)
+	t.NoError(ib.Sign(t.remoteState.Node().Privatekey(), t.remoteState.Policy().NetworkID()))
 
 	stateChan := make(chan StateChangeContext)
 	cs.SetStateChan(stateChan)
@@ -342,27 +352,28 @@ func (t *testStateJoiningHandler) TestINITBallotWithINITVoteproofHigherHeight() 
 	cs.setCurrentRound(base.Round(1))
 
 	lastBlock := t.localstate.LastBlock()
-	ib, err := NewINITBallotV0FromLocalstate(t.remoteState, cs.currentRound())
-	t.NoError(err)
 
-	ib.INITBallotFactV0.height = t.remoteState.LastBlock().Height() + 3
-
-	initFact := INITBallotFactV0{
-		BaseBallotFactV0: BaseBallotFactV0{
-			height: ib.INITBallotFactV0.height,
-			round:  base.Round(0),
-		},
-		previousBlock: lastBlock.Hash(),
-		previousRound: lastBlock.Round(),
-	}
+	initFact := ballot.NewINITBallotV0(
+		nil,
+		lastBlock.Height()+3,
+		base.Round(0),
+		lastBlock.Hash(),
+		lastBlock.Round(),
+		nil,
+	).Fact()
 
 	vp, err := t.newVoteproof(base.StageINIT, initFact, t.localstate, t.remoteState)
 	t.NoError(err)
 
-	ib.voteproof = vp
-
-	err = ib.Sign(t.remoteState.Node().Privatekey(), nil)
-	t.NoError(err)
+	ib := ballot.NewINITBallotV0(
+		t.remoteState.Node().Address(),
+		lastBlock.Height()+3,
+		cs.currentRound(),
+		lastBlock.Hash(),
+		lastBlock.Round(),
+		vp,
+	)
+	t.NoError(ib.Sign(t.remoteState.Node().Privatekey(), t.remoteState.Policy().NetworkID()))
 
 	t.NoError(cs.NewSeal(ib))
 }
@@ -384,14 +395,14 @@ func (t *testStateJoiningHandler) TestINITVoteproofExpected() {
 		_ = cs.Deactivate(StateChangeContext{})
 	}()
 
-	initFact := INITBallotFactV0{
-		BaseBallotFactV0: BaseBallotFactV0{
-			height: t.localstate.LastBlock().Height() + 1,
-			round:  base.Round(2), // round is not important to go
-		},
-		previousBlock: t.localstate.LastBlock().Hash(),
-		previousRound: t.localstate.LastBlock().Round(),
-	}
+	initFact := ballot.NewINITBallotV0(
+		nil,
+		t.localstate.LastBlock().Height()+1,
+		base.Round(2), // round is not important to go
+		t.localstate.LastBlock().Hash(),
+		t.localstate.LastBlock().Round(),
+		nil,
+	).Fact()
 
 	vp, err := t.newVoteproof(base.StageINIT, initFact, t.localstate, t.remoteState)
 	t.NoError(err)
@@ -431,14 +442,14 @@ func (t *testStateJoiningHandler) TestINITVoteproofLowerHeight() {
 		_ = cs.Deactivate(StateChangeContext{})
 	}()
 
-	initFact := INITBallotFactV0{
-		BaseBallotFactV0: BaseBallotFactV0{
-			height: t.localstate.LastBlock().Height(),
-			round:  base.Round(2), // round is not important to go
-		},
-		previousBlock: t.localstate.LastBlock().Hash(),
-		previousRound: t.localstate.LastBlock().Round(),
-	}
+	initFact := ballot.NewINITBallotV0(
+		nil,
+		t.localstate.LastBlock().Height(),
+		base.Round(2), // round is not important to go
+		t.localstate.LastBlock().Hash(),
+		t.localstate.LastBlock().Round(),
+		nil,
+	).Fact()
 
 	vp, err := t.newVoteproof(base.StageINIT, initFact, t.localstate, t.remoteState)
 	t.NoError(err)
@@ -475,14 +486,14 @@ func (t *testStateJoiningHandler) TestACCEPTVoteproofExpected() {
 		_ = cs.Deactivate(StateChangeContext{})
 	}()
 
-	acceptFact := ACCEPTBallotFactV0{
-		BaseBallotFactV0: BaseBallotFactV0{
-			height: returnedBlock.Height(),
-			round:  returnedBlock.Round(), // round is not important to go
-		},
-		proposal: returnedBlock.Proposal(),
-		newBlock: returnedBlock.Hash(),
-	}
+	acceptFact := ballot.NewACCEPTBallotV0(
+		nil,
+		returnedBlock.Height(),
+		returnedBlock.Round(), // round is not important to go
+		returnedBlock.Proposal(),
+		returnedBlock.Hash(),
+		nil,
+	).Fact()
 
 	vp, err := t.newVoteproof(base.StageACCEPT, acceptFact, t.localstate, t.remoteState)
 	t.NoError(err)
@@ -510,14 +521,14 @@ func (t *testStateJoiningHandler) TestACCEPTVoteproofLowerHeight() {
 		_ = cs.Deactivate(StateChangeContext{})
 	}()
 
-	acceptFact := ACCEPTBallotFactV0{
-		BaseBallotFactV0: BaseBallotFactV0{
-			height: t.localstate.LastBlock().Height(),
-			round:  base.Round(2), // round is not important to go
-		},
-		proposal: valuehash.RandomSHA256(),
-		newBlock: valuehash.RandomSHA256(),
-	}
+	acceptFact := ballot.NewACCEPTBallotV0(
+		nil,
+		t.localstate.LastBlock().Height(),
+		base.Round(2), // round is not important to go
+		valuehash.RandomSHA256(),
+		valuehash.RandomSHA256(),
+		nil,
+	).Fact()
 
 	vp, err := t.newVoteproof(base.StageACCEPT, acceptFact, t.localstate, t.remoteState)
 	t.NoError(err)

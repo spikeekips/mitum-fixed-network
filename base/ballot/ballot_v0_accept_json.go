@@ -1,4 +1,4 @@
-package isaac
+package ballot
 
 import (
 	"encoding/json"

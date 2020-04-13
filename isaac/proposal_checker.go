@@ -4,6 +4,7 @@ import (
 	"golang.org/x/xerrors"
 
 	"github.com/spikeekips/mitum/base"
+	"github.com/spikeekips/mitum/base/ballot"
 	"github.com/spikeekips/mitum/util/logging"
 )
 
@@ -11,11 +12,11 @@ type ProposalValidationChecker struct {
 	*logging.Logging
 	localstate *Localstate
 	suffrage   base.Suffrage
-	proposal   Proposal
+	proposal   ballot.Proposal
 }
 
 func NewProposalValidationChecker(
-	localstate *Localstate, suffrage base.Suffrage, proposal Proposal,
+	localstate *Localstate, suffrage base.Suffrage, proposal ballot.Proposal,
 ) *ProposalValidationChecker {
 	return &ProposalValidationChecker{
 		Logging: logging.NewLogging(func(c logging.Context) logging.Emitter {

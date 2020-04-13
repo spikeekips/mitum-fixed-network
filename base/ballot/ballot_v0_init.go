@@ -1,4 +1,4 @@
-package isaac
+package ballot
 
 import (
 	"golang.org/x/xerrors"
@@ -78,18 +78,15 @@ type INITBallotV0 struct {
 }
 
 func NewINITBallotV0(
-	localstate *Localstate,
+	node base.Address,
 	height base.Height,
 	round base.Round,
 	previousBlock valuehash.Hash,
 	previousRound base.Round,
 	voteproof base.Voteproof,
-	networkID []byte,
-) (INITBallotV0, error) {
-	ib := INITBallotV0{
-		BaseBallotV0: BaseBallotV0{
-			node: localstate.Node().Address(),
-		},
+) INITBallotV0 {
+	return INITBallotV0{
+		BaseBallotV0: NewBaseBallotV0(node),
 		INITBallotFactV0: NewINITBallotFactV0(
 			height,
 			round,
@@ -98,45 +95,6 @@ func NewINITBallotV0(
 		),
 		voteproof: voteproof,
 	}
-
-	if err := ib.Sign(localstate.Node().Privatekey(), networkID); err != nil {
-		return INITBallotV0{}, err
-	}
-
-	return ib, nil
-}
-
-func NewINITBallotV0FromLocalstate(localstate *Localstate, round base.Round) (INITBallotV0, error) {
-	lastBlock := localstate.LastBlock()
-	if lastBlock == nil {
-		return INITBallotV0{}, xerrors.Errorf("lastBlock is empty")
-	}
-
-	ib := INITBallotV0{
-		BaseBallotV0: BaseBallotV0{
-			node: localstate.Node().Address(),
-		},
-		INITBallotFactV0: NewINITBallotFactV0(
-			lastBlock.Height()+1,
-			round,
-			lastBlock.Hash(),
-			lastBlock.Round(),
-		),
-	}
-
-	var voteproof base.Voteproof
-	if round == 0 {
-		voteproof = localstate.LastACCEPTVoteproof()
-	} else {
-		voteproof = localstate.LastINITVoteproof()
-	}
-	ib.voteproof = voteproof
-
-	if err := ib.Sign(localstate.Node().Privatekey(), localstate.Policy().NetworkID()); err != nil {
-		return INITBallotV0{}, err
-	}
-
-	return ib, nil
 }
 
 func (ib INITBallotV0) Hash() valuehash.Hash {
@@ -198,7 +156,7 @@ func (ib INITBallotV0) GenerateBodyHash() (valuehash.Hash, error) {
 	}
 
 	var vb []byte
-	if ib.Height() != base.Height(0) {
+	if ib.Height() != base.Height(0) && ib.voteproof != nil {
 		vb = ib.voteproof.Bytes()
 	}
 

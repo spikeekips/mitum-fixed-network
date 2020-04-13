@@ -1,4 +1,4 @@
-package isaac
+package ballot
 
 import (
 	"golang.org/x/xerrors"
@@ -106,17 +106,16 @@ type ProposalV0 struct {
 	ProposalFactV0
 }
 
-func NewProposal(
-	localstate *Localstate,
+func NewProposalV0(
+	node base.Address,
 	height base.Height,
 	round base.Round,
 	operations []valuehash.Hash,
 	seals []valuehash.Hash,
-	networkID []byte,
-) (Proposal, error) {
-	pr := ProposalV0{
+) ProposalV0 {
+	return ProposalV0{
 		BaseBallotV0: BaseBallotV0{
-			node: localstate.Node().Address(),
+			node: node,
 		},
 		ProposalFactV0: ProposalFactV0{
 			BaseBallotFactV0: BaseBallotFactV0{
@@ -127,44 +126,6 @@ func NewProposal(
 			seals:      seals,
 		},
 	}
-
-	if err := pr.Sign(localstate.Node().Privatekey(), networkID); err != nil {
-		return ProposalV0{}, err
-	}
-
-	return pr, nil
-}
-
-func NewProposalFromLocalstate(
-	localstate *Localstate,
-	round base.Round,
-	operations []valuehash.Hash,
-	seals []valuehash.Hash,
-) (Proposal, error) {
-	lastBlock := localstate.LastBlock()
-	if lastBlock == nil {
-		return ProposalV0{}, xerrors.Errorf("lastBlock is empty")
-	}
-
-	pr := ProposalV0{
-		BaseBallotV0: BaseBallotV0{
-			node: localstate.Node().Address(),
-		},
-		ProposalFactV0: ProposalFactV0{
-			BaseBallotFactV0: BaseBallotFactV0{
-				height: lastBlock.Height() + 1,
-				round:  round,
-			},
-			operations: operations,
-			seals:      seals,
-		},
-	}
-
-	if err := pr.Sign(localstate.Node().Privatekey(), localstate.Policy().NetworkID()); err != nil {
-		return ProposalV0{}, err
-	}
-
-	return pr, nil
 }
 
 func (pr ProposalV0) Hash() valuehash.Hash {

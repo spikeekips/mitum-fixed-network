@@ -4,6 +4,7 @@ import (
 	"golang.org/x/xerrors"
 
 	"github.com/spikeekips/mitum/base"
+	"github.com/spikeekips/mitum/base/ballot"
 	"github.com/spikeekips/mitum/base/operation"
 	"github.com/spikeekips/mitum/base/seal"
 	"github.com/spikeekips/mitum/base/valuehash"
@@ -43,7 +44,7 @@ func (gg *GenesisBlockV0Generator) Generate() (Block, error) {
 		seals = sls
 	}
 
-	var proposal Proposal
+	var proposal ballot.Proposal
 	if pr, err := gg.generateProposal(seals); err != nil {
 		return nil, err
 	} else {
@@ -124,7 +125,7 @@ func (gg *GenesisBlockV0Generator) generatePreviousBlock() error {
 	return nil
 }
 
-func (gg *GenesisBlockV0Generator) generateProposal(seals []operation.Seal) (Proposal, error) {
+func (gg *GenesisBlockV0Generator) generateProposal(seals []operation.Seal) (ballot.Proposal, error) {
 	var operations []valuehash.Hash
 	sealHashes := make([]valuehash.Hash, len(seals))
 	for i := range seals {
@@ -135,7 +136,7 @@ func (gg *GenesisBlockV0Generator) generateProposal(seals []operation.Seal) (Pro
 		}
 	}
 
-	var proposal Proposal
+	var proposal ballot.Proposal
 	if pr, err := NewProposal(
 		gg.localstate,
 		base.Height(0),

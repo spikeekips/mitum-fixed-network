@@ -3,12 +3,13 @@ package isaac
 import (
 	"time"
 
+	"golang.org/x/xerrors"
+
 	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/base/valuehash"
 	"github.com/spikeekips/mitum/util"
 	"github.com/spikeekips/mitum/util/hint"
 	"github.com/spikeekips/mitum/util/isvalid"
-	"golang.org/x/xerrors"
 )
 
 type ManifestV0 struct {

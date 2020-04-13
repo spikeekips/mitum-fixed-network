@@ -3,10 +3,11 @@ package isaac
 import (
 	"encoding/json"
 
-	"github.com/spikeekips/mitum/tree"
+	"golang.org/x/xerrors"
+
+	"github.com/spikeekips/mitum/base/tree"
 	"github.com/spikeekips/mitum/util"
 	"github.com/spikeekips/mitum/util/encoder"
-	"golang.org/x/xerrors"
 )
 
 type BlockV0PackJSON struct {

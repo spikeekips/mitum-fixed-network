@@ -1,4 +1,4 @@
-version: 2.1
+version: 2
 
 defaults: &defaults
   docker:
@@ -9,9 +9,6 @@ workspace: &workspace
   attach_workspace:
     at: /
 
-orbs:
-  codecov: codecov/codecov@1.0.2
-
 jobs:
   build:
     <<: *defaults
@@ -19,13 +16,16 @@ jobs:
       - checkout
       - restore_cache:
           key: dependency-cache-mod-{{ checksum "go.sum" }}
+
       - run:
           name: Download dependencies
           command: go mod download
+
       - save_cache:
           key: dependency-cache-mod-{{ checksum "go.sum" }}
           paths:
             - /go/pkg/mod/
+
       - persist_to_workspace:
           root: /
           paths:
@@ -39,6 +39,7 @@ jobs:
       - run:
           name: Install golangci-lint
           command: curl -sfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh| sh -s -- -b $(go env GOPATH)/bin v1.21.0
+
       - run:
          name: Run golangci-lint
          command: golangci-lint run
@@ -46,6 +47,7 @@ jobs:
       - run:
          name: Install nargs
          command: go get -u github.com/alexkohler/nargs/cmd/nargs
+
       - run:
          name: Run nargs
          command: nargs -set_exit_status -named_returns -tests ./...
@@ -56,10 +58,11 @@ jobs:
       - <<: *workspace
       - run:
          name: unit test
-         command: go test -race -tags test -timeout 1m -v -coverprofile=/tmp/coverage.txt -covermode=atomic ./...
+         command: go test -race -tags test -timeout 1m -v -coverprofile=coverage.txt -covermode=atomic ./...
 
-      - codecov/upload:
-          file: /tmp/coverage.txt
+      - run:
+         name: codecov
+         command: bash <(curl -s https://codecov.io/bash)
 
 workflows:
   version: 2

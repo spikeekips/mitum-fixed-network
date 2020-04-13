@@ -6,10 +6,10 @@ import (
 	"github.com/spikeekips/mitum/base/block"
 	"github.com/spikeekips/mitum/base/key"
 	"github.com/spikeekips/mitum/base/operation"
+	"github.com/spikeekips/mitum/base/state"
 	"github.com/spikeekips/mitum/base/tree"
 	"github.com/spikeekips/mitum/base/valuehash"
 	"github.com/spikeekips/mitum/isaac"
-	"github.com/spikeekips/mitum/state"
 	"github.com/spikeekips/mitum/util/encoder"
 )
 

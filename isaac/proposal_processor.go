@@ -11,9 +11,9 @@ import (
 	"github.com/spikeekips/mitum/base/ballot"
 	"github.com/spikeekips/mitum/base/block"
 	"github.com/spikeekips/mitum/base/operation"
+	"github.com/spikeekips/mitum/base/state"
 	"github.com/spikeekips/mitum/base/tree"
 	"github.com/spikeekips/mitum/base/valuehash"
-	"github.com/spikeekips/mitum/state"
 	"github.com/spikeekips/mitum/storage"
 	"github.com/spikeekips/mitum/util/logging"
 )

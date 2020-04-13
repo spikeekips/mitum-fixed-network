@@ -9,6 +9,9 @@ workspace: &workspace
   attach_workspace:
     at: /
 
+orbs:
+  codecov: codecov/codecov@1.0.2
+
 jobs:
   build:
     <<: *defaults
@@ -53,7 +56,9 @@ jobs:
       - <<: *workspace
       - run:
          name: unit test
-         command: go test -race -tags test -timeout 1m -v ./...
+         command: go test -race -tags test -timeout 1m -v -coverprofile=/tmp/coverage.txt -covermode=atomic ./...
+      - codecov/upload:
+          file: /tmp/coverage.txt
 
 workflows:
   version: 2

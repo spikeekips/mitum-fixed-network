@@ -1,4 +1,4 @@
-package isaac
+package channetwork
 
 import (
 	"golang.org/x/xerrors"
@@ -7,15 +7,16 @@ import (
 	"github.com/spikeekips/mitum/base/block"
 	"github.com/spikeekips/mitum/base/seal"
 	"github.com/spikeekips/mitum/base/valuehash"
+	"github.com/spikeekips/mitum/network"
 	"github.com/spikeekips/mitum/util/logging"
 )
 
 type NetworkChanChannel struct {
 	*logging.Logging
 	recvChan       chan seal.Seal
-	getSealHandler GetSealsHandler
-	getManifests   GetManifestsHandler
-	getBlocks      GetBlocksHandler
+	getSealHandler network.GetSealsHandler
+	getManifests   network.GetManifestsHandler
+	getBlocks      network.GetBlocksHandler
 }
 
 func NewNetworkChanChannel(bufsize uint) *NetworkChanChannel {
@@ -45,7 +46,7 @@ func (gs *NetworkChanChannel) ReceiveSeal() <-chan seal.Seal {
 	return gs.recvChan
 }
 
-func (gs *NetworkChanChannel) SetGetSealHandler(f GetSealsHandler) {
+func (gs *NetworkChanChannel) SetGetSealHandler(f network.GetSealsHandler) {
 	gs.getSealHandler = f
 }
 
@@ -53,7 +54,7 @@ func (gs *NetworkChanChannel) Manifests(hs []base.Height) ([]block.Manifest, err
 	return gs.getManifests(hs)
 }
 
-func (gs *NetworkChanChannel) SetGetManifests(f GetManifestsHandler) {
+func (gs *NetworkChanChannel) SetGetManifests(f network.GetManifestsHandler) {
 	gs.getManifests = f
 }
 
@@ -61,6 +62,6 @@ func (gs *NetworkChanChannel) Blocks(hs []base.Height) ([]block.Block, error) {
 	return gs.getBlocks(hs)
 }
 
-func (gs *NetworkChanChannel) SetGetBlocks(f GetBlocksHandler) {
+func (gs *NetworkChanChannel) SetGetBlocks(f network.GetBlocksHandler) {
 	gs.getBlocks = f
 }

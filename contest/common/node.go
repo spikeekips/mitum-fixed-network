@@ -11,6 +11,8 @@ import (
 	"github.com/spikeekips/mitum/base/seal"
 	"github.com/spikeekips/mitum/isaac"
 	"github.com/spikeekips/mitum/network"
+	channetwork "github.com/spikeekips/mitum/network/gochan"
+	quicnetwork "github.com/spikeekips/mitum/network/quic"
 	leveldbstorage "github.com/spikeekips/mitum/storage/leveldb"
 	"github.com/spikeekips/mitum/util"
 	"github.com/spikeekips/mitum/util/encoder"
@@ -28,8 +30,8 @@ func NewLocalNode(id int) *isaac.LocalNode {
 	return ln
 }
 
-func NewNodeChannel(encs *encoder.Encoders, enc encoder.Encoder, netType string) isaac.NetworkChannel {
-	var channel isaac.NetworkChannel
+func NewNodeChannel(encs *encoder.Encoders, enc encoder.Encoder, netType string) network.NetworkChannel {
+	var channel network.NetworkChannel
 
 	switch netType {
 	case "quic":
@@ -38,7 +40,7 @@ func NewNodeChannel(encs *encoder.Encoders, enc encoder.Encoder, netType string)
 			panic(err)
 		}
 
-		ch, err := isaac.NewQuicChannel(
+		ch, err := quicnetwork.NewQuicChannel(
 			fmt.Sprintf("https://localhost:%d", port),
 			100,
 			true,
@@ -53,7 +55,7 @@ func NewNodeChannel(encs *encoder.Encoders, enc encoder.Encoder, netType string)
 		}
 		channel = ch
 	case "chan":
-		channel = isaac.NewNetworkChanChannel(100000000)
+		channel = channetwork.NewNetworkChanChannel(100000000)
 	}
 
 	return channel
@@ -99,7 +101,7 @@ type NodeProcess struct {
 	Suffrage          base.Suffrage
 	ProposalProcessor isaac.ProposalProcessor
 	ConsensusStates   *isaac.ConsensusStates
-	NetworkServer     isaac.Server
+	NetworkServer     network.Server
 	AllNodes          []*isaac.Localstate
 	stopChan          chan struct{}
 }
@@ -169,12 +171,12 @@ func NewNodeProcess(localstate *isaac.Localstate) (*NodeProcess, error) {
 	return np, nil
 }
 
-func (np *NodeProcess) networkServer() (isaac.Server, error) {
-	var server isaac.Server
+func (np *NodeProcess) networkServer() (network.Server, error) {
+	var server network.Server
 	switch ch := np.Localstate.Node().Channel().(type) {
-	case *isaac.NetworkChanChannel:
-		server = isaac.NewNetworkChanServer(ch)
-	case *isaac.QuicChannel:
+	case *channetwork.NetworkChanChannel:
+		server = channetwork.NewNetworkChanServer(ch)
+	case *quicnetwork.QuicChannel:
 		priv, err := util.GenerateED25519Privatekey()
 		if err != nil {
 			return nil, err
@@ -196,9 +198,9 @@ func (np *NodeProcess) networkServer() (isaac.Server, error) {
 			return nil, err
 		}
 
-		if qs, err := network.NewQuicServer(bind, certs); err != nil {
+		if qs, err := quicnetwork.NewPrimitiveQuicServer(bind, certs); err != nil {
 			return nil, err
-		} else if nqs, err := isaac.NewQuicServer(qs, encs, enc); err != nil {
+		} else if nqs, err := quicnetwork.NewQuicServer(qs, encs, enc); err != nil {
 			return nil, err
 		} else {
 			server = nqs

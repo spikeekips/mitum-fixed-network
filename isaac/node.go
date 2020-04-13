@@ -5,11 +5,12 @@ import (
 
 	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/base/key"
+	"github.com/spikeekips/mitum/network"
 )
 
 type Node interface {
 	base.Node
-	Channel() NetworkChannel
+	Channel() network.NetworkChannel
 }
 
 type LocalNode struct {
@@ -17,7 +18,7 @@ type LocalNode struct {
 	address    base.Address
 	publickey  key.Publickey
 	privatekey key.Privatekey
-	channel    NetworkChannel
+	channel    network.NetworkChannel
 }
 
 func NewLocalNode(address base.Address, privatekey key.Privatekey) *LocalNode {
@@ -46,14 +47,14 @@ func (ln *LocalNode) Privatekey() key.Privatekey {
 	return ln.privatekey
 }
 
-func (ln *LocalNode) Channel() NetworkChannel {
+func (ln *LocalNode) Channel() network.NetworkChannel {
 	ln.RLock()
 	defer ln.RUnlock()
 
 	return ln.channel
 }
 
-func (ln *LocalNode) SetChannel(channel NetworkChannel) *LocalNode {
+func (ln *LocalNode) SetChannel(channel network.NetworkChannel) *LocalNode {
 	ln.Lock()
 	defer ln.Unlock()
 
@@ -66,7 +67,7 @@ type RemoteNode struct {
 	sync.RWMutex
 	address   base.Address
 	publickey key.Publickey
-	channel   NetworkChannel
+	channel   network.NetworkChannel
 }
 
 func NewRemoteNode(address base.Address, publickey key.Publickey) *RemoteNode {
@@ -84,14 +85,14 @@ func (ln *RemoteNode) Publickey() key.Publickey {
 	return ln.publickey
 }
 
-func (ln *RemoteNode) Channel() NetworkChannel {
+func (ln *RemoteNode) Channel() network.NetworkChannel {
 	ln.RLock()
 	defer ln.RUnlock()
 
 	return ln.channel
 }
 
-func (ln *RemoteNode) SetChannel(channel NetworkChannel) *RemoteNode {
+func (ln *RemoteNode) SetChannel(channel network.NetworkChannel) *RemoteNode {
 	ln.Lock()
 	defer ln.Unlock()
 

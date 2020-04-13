@@ -3,13 +3,15 @@ package isaac
 import (
 	"testing"
 
+	"github.com/stretchr/testify/suite"
+	"golang.org/x/xerrors"
+
 	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/base/ballot"
 	"github.com/spikeekips/mitum/base/seal"
 	"github.com/spikeekips/mitum/base/valuehash"
+	channetwork "github.com/spikeekips/mitum/network/gochan"
 	"github.com/spikeekips/mitum/storage"
-	"github.com/stretchr/testify/suite"
-	"golang.org/x/xerrors"
 )
 
 type testProposalProcessor struct {
@@ -112,7 +114,7 @@ func (t *testProposalProcessor) TestNotFoundInProposal() {
 		op := t.newOperationSeal(t.remoteState)
 
 		// add getSealHandler
-		t.remoteState.Node().Channel().(*NetworkChanChannel).SetGetSealHandler(
+		t.remoteState.Node().Channel().(*channetwork.NetworkChanChannel).SetGetSealHandler(
 			func(hs []valuehash.Hash) ([]seal.Seal, error) {
 				return []seal.Seal{op}, nil
 			},

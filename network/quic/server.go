@@ -1,4 +1,4 @@
-package isaac
+package quicnetwork
 
 import (
 	"bytes"
@@ -26,26 +26,26 @@ var (
 
 type QuicServer struct {
 	*logging.Logging
-	*network.QuicServer
+	*PrimitiveQuicServer
 	encs                *encoder.Encoders
 	enc                 encoder.Encoder // NOTE default encoder.Encoder
-	getSealsHandler     GetSealsHandler
-	newSealHandler      NewSealHandler
-	getManifestsHandler GetManifestsHandler
-	getBlocksHandler    GetBlocksHandler
+	getSealsHandler     network.GetSealsHandler
+	newSealHandler      network.NewSealHandler
+	getManifestsHandler network.GetManifestsHandler
+	getBlocksHandler    network.GetBlocksHandler
 }
 
 func NewQuicServer(
-	qs *network.QuicServer, encs *encoder.Encoders, enc encoder.Encoder,
+	prim *PrimitiveQuicServer, encs *encoder.Encoders, enc encoder.Encoder,
 ) (*QuicServer, error) {
 	// TODO ratelimit
 	nqs := &QuicServer{
 		Logging: logging.NewLogging(func(c logging.Context) logging.Emitter {
 			return c.Str("module", "network-quic-server")
 		}),
-		QuicServer: qs,
-		encs:       encs,
-		enc:        enc,
+		PrimitiveQuicServer: prim,
+		encs:                encs,
+		enc:                 enc,
 	}
 	nqs.setHandlers()
 
@@ -53,24 +53,24 @@ func NewQuicServer(
 }
 
 func (qs *QuicServer) SetLogger(l logging.Logger) logging.Logger {
-	_ = qs.QuicServer.SetLogger(l)
+	_ = qs.PrimitiveQuicServer.SetLogger(l)
 
 	return qs.Logging.SetLogger(l)
 }
 
-func (qs *QuicServer) SetGetSealsHandler(fn GetSealsHandler) {
+func (qs *QuicServer) SetGetSealsHandler(fn network.GetSealsHandler) {
 	qs.getSealsHandler = fn
 }
 
-func (qs *QuicServer) SetNewSealHandler(fn NewSealHandler) {
+func (qs *QuicServer) SetNewSealHandler(fn network.NewSealHandler) {
 	qs.newSealHandler = fn
 }
 
-func (qs *QuicServer) SetGetManifests(fn GetManifestsHandler) {
+func (qs *QuicServer) SetGetManifests(fn network.GetManifestsHandler) {
 	qs.getManifestsHandler = fn
 }
 
-func (qs *QuicServer) SetGetBlocks(fn GetBlocksHandler) {
+func (qs *QuicServer) SetGetBlocks(fn network.GetBlocksHandler) {
 	qs.getBlocksHandler = fn
 }
 
@@ -127,7 +127,7 @@ func (qs *QuicServer) handleGetSeals(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var enc encoder.Encoder
-	if e, err := network.EncoderFromHeader(r.Header, qs.encs, qs.enc); err != nil {
+	if e, err := EncoderFromHeader(r.Header, qs.encs, qs.enc); err != nil {
 		qs.Log().Error().Err(err).Msg("failed to read encoder hint")
 		network.HTTPError(w, http.StatusBadRequest)
 		return
@@ -171,7 +171,7 @@ func (qs *QuicServer) handleGetSeals(w http.ResponseWriter, r *http.Request) {
 		output = b
 	}
 
-	w.Header().Set(network.QuicEncoderHintHeader, qs.enc.Hint().String())
+	w.Header().Set(QuicEncoderHintHeader, qs.enc.Hint().String())
 	_, _ = w.Write(output)
 }
 
@@ -190,7 +190,7 @@ func (qs *QuicServer) handleNewSeal(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var enc encoder.Encoder
-	if e, err := network.EncoderFromHeader(r.Header, qs.encs, qs.enc); err != nil {
+	if e, err := EncoderFromHeader(r.Header, qs.encs, qs.enc); err != nil {
 		network.HTTPError(w, http.StatusBadRequest)
 		return
 	} else {
@@ -232,7 +232,7 @@ func (qs *QuicServer) handleGetByHeights(
 	}
 
 	var enc encoder.Encoder
-	if e, err := network.EncoderFromHeader(r.Header, qs.encs, qs.enc); err != nil {
+	if e, err := EncoderFromHeader(r.Header, qs.encs, qs.enc); err != nil {
 		network.HTTPError(w, http.StatusBadRequest)
 
 		return xerrors.Errorf("failed to read encoder hint: %w", err)
@@ -260,7 +260,7 @@ func (qs *QuicServer) handleGetByHeights(
 		output = b
 	}
 
-	w.Header().Set(network.QuicEncoderHintHeader, qs.enc.Hint().String())
+	w.Header().Set(QuicEncoderHintHeader, qs.enc.Hint().String())
 	_, _ = w.Write(output)
 
 	return nil

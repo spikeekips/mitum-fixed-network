@@ -1,7 +1,8 @@
-package isaac
+package channetwork
 
 import (
 	"github.com/spikeekips/mitum/base/seal"
+	"github.com/spikeekips/mitum/network"
 	"github.com/spikeekips/mitum/util"
 	"github.com/spikeekips/mitum/util/logging"
 )
@@ -9,7 +10,7 @@ import (
 type NetworkChanServer struct {
 	*logging.Logging
 	*util.FunctionDaemon
-	newSealHandler NewSealHandler
+	newSealHandler network.NewSealHandler
 	ch             *NetworkChanChannel
 }
 
@@ -33,14 +34,14 @@ func (cs *NetworkChanServer) SetLogger(l logging.Logger) logging.Logger {
 	return cs.Log()
 }
 
-func (cs *NetworkChanServer) SetGetSealsHandler(GetSealsHandler) {}
+func (cs *NetworkChanServer) SetGetSealsHandler(network.GetSealsHandler) {}
 
-func (cs *NetworkChanServer) SetNewSealHandler(f NewSealHandler) {
+func (cs *NetworkChanServer) SetNewSealHandler(f network.NewSealHandler) {
 	cs.newSealHandler = f
 }
 
-func (cs *NetworkChanServer) SetGetManifests(GetManifestsHandler) {}
-func (cs *NetworkChanServer) SetGetBlocks(GetBlocksHandler)       {}
+func (cs *NetworkChanServer) SetGetManifests(network.GetManifestsHandler) {}
+func (cs *NetworkChanServer) SetGetBlocks(network.GetBlocksHandler)       {}
 
 func (cs *NetworkChanServer) run(stopChan chan struct{}) error {
 end:

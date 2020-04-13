@@ -1,4 +1,4 @@
-package isaac
+package quicnetwork
 
 import (
 	"crypto/tls"
@@ -14,7 +14,6 @@ import (
 	"github.com/spikeekips/mitum/base/key"
 	"github.com/spikeekips/mitum/base/seal"
 	"github.com/spikeekips/mitum/base/valuehash"
-	"github.com/spikeekips/mitum/network"
 	"github.com/spikeekips/mitum/util"
 	"github.com/spikeekips/mitum/util/encoder"
 	"github.com/spikeekips/mitum/util/localtime"
@@ -55,7 +54,7 @@ func (t *testQuicSever) SetupTest() {
 }
 
 func (t *testQuicSever) readyServer() *QuicServer {
-	qs, err := network.NewQuicServer(t.bind, t.certs)
+	qs, err := NewPrimitiveQuicServer(t.bind, t.certs)
 	t.NoError(err)
 
 	qn, err := NewQuicServer(qs, t.encs, t.enc)

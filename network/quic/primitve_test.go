@@ -1,4 +1,4 @@
-package network
+package quicnetwork
 
 import (
 	"bytes"
@@ -14,18 +14,19 @@ import (
 	"github.com/stretchr/testify/suite"
 	"golang.org/x/xerrors"
 
+	"github.com/spikeekips/mitum/network"
 	"github.com/spikeekips/mitum/util"
 )
 
-type testQuicSever struct {
+type testPrimitiveQuicSever struct {
 	suite.Suite
 	bind  string
 	certs []tls.Certificate
 	url   *url.URL
-	qn    *QuicServer
+	qn    *PrimitiveQuicServer
 }
 
-func (t *testQuicSever) SetupTest() {
+func (t *testPrimitiveQuicSever) SetupTest() {
 	port, err := util.FreePort("udp")
 	t.NoError(err)
 
@@ -41,8 +42,8 @@ func (t *testQuicSever) SetupTest() {
 	t.url = &url.URL{Scheme: "https", Host: t.bind}
 }
 
-func (t *testQuicSever) readyServer(handlers map[string]HTTPHandlerFunc) *QuicServer {
-	qn, err := NewQuicServer(t.bind, t.certs)
+func (t *testPrimitiveQuicSever) readyServer(handlers map[string]network.HTTPHandlerFunc) *PrimitiveQuicServer {
+	qn, err := NewPrimitiveQuicServer(t.bind, t.certs)
 	t.NoError(err)
 
 	for prefix, handler := range handlers {
@@ -72,8 +73,8 @@ func (t *testQuicSever) readyServer(handlers map[string]HTTPHandlerFunc) *QuicSe
 	return qn
 }
 
-func (t *testQuicSever) TestGet() {
-	handlers := map[string]HTTPHandlerFunc{}
+func (t *testPrimitiveQuicSever) TestGet() {
+	handlers := map[string]network.HTTPHandlerFunc{}
 
 	var data int = 33
 	handlers["/get"] = func(w http.ResponseWriter, r *http.Request) {
@@ -95,20 +96,20 @@ func (t *testQuicSever) TestGet() {
 	t.Equal(data, received)
 }
 
-func (t *testQuicSever) TestSend() {
-	handlers := map[string]HTTPHandlerFunc{}
+func (t *testPrimitiveQuicSever) TestSend() {
+	handlers := map[string]network.HTTPHandlerFunc{}
 
 	received := make(chan int, 10)
 	handlers["/send"] = func(w http.ResponseWriter, r *http.Request) {
 		body := &bytes.Buffer{}
 		if _, err := io.Copy(body, r.Body); err != nil {
-			HTTPError(w, http.StatusInternalServerError)
+			network.HTTPError(w, http.StatusInternalServerError)
 			return
 		}
 
 		i, err := util.BytesToInt(body.Bytes())
 		if err != nil {
-			HTTPError(w, http.StatusInternalServerError)
+			network.HTTPError(w, http.StatusInternalServerError)
 			return
 		}
 
@@ -132,6 +133,6 @@ func (t *testQuicSever) TestSend() {
 	}
 }
 
-func TestQuicSever(t *testing.T) {
-	suite.Run(t, new(testQuicSever))
+func TestPrimitiveQuicSever(t *testing.T) {
+	suite.Run(t, new(testPrimitiveQuicSever))
 }

@@ -1,4 +1,4 @@
-package network
+package quicnetwork
 
 import (
 	"context"
@@ -9,6 +9,7 @@ import (
 	"github.com/gorilla/mux"
 	"github.com/lucas-clemente/quic-go/http3"
 
+	"github.com/spikeekips/mitum/network"
 	"github.com/spikeekips/mitum/util"
 	"github.com/spikeekips/mitum/util/encoder"
 	"github.com/spikeekips/mitum/util/hint"
@@ -17,7 +18,7 @@ import (
 
 const QuicEncoderHintHeader string = "x-mitum-encoder-hint"
 
-type QuicServer struct {
+type PrimitiveQuicServer struct {
 	*logging.Logging
 	*util.FunctionDaemon
 	bind        string
@@ -26,9 +27,9 @@ type QuicServer struct {
 	router      *mux.Router
 }
 
-func NewQuicServer(bind string, certs []tls.Certificate) (*QuicServer, error) {
+func NewPrimitiveQuicServer(bind string, certs []tls.Certificate) (*PrimitiveQuicServer, error) {
 	// TODO ratelimit
-	qs := &QuicServer{
+	qs := &PrimitiveQuicServer{
 		Logging: logging.NewLogging(func(c logging.Context) logging.Emitter {
 			return c.Str("module", "network-quic-server")
 		}),
@@ -53,29 +54,29 @@ func NewQuicServer(bind string, certs []tls.Certificate) (*QuicServer, error) {
 	return qs, nil
 }
 
-func (qs *QuicServer) SetHandler(prefix string, handler HTTPHandlerFunc) *mux.Route {
+func (qs *PrimitiveQuicServer) SetHandler(prefix string, handler network.HTTPHandlerFunc) *mux.Route {
 	return qs.router.HandleFunc(prefix, handler)
 }
 
-func (qs *QuicServer) SetLogger(l logging.Logger) logging.Logger {
+func (qs *PrimitiveQuicServer) SetLogger(l logging.Logger) logging.Logger {
 	_ = qs.Logging.SetLogger(l)
 	_ = qs.FunctionDaemon.SetLogger(l)
 
 	return qs.Log()
 }
 
-func (qs *QuicServer) StoppedChan() <-chan struct{} {
+func (qs *PrimitiveQuicServer) StoppedChan() <-chan struct{} {
 	return qs.stoppedChan
 }
 
-func (qs *QuicServer) run(stopChan chan struct{}) error {
+func (qs *PrimitiveQuicServer) run(stopChan chan struct{}) error {
 	qs.Log().Debug().Str("bind", qs.bind).Msg("trying to start server")
 
 	server := &http3.Server{
 		Server: &http.Server{
 			Addr:      qs.bind,
 			TLSConfig: qs.tlsConfig,
-			Handler:   HTTPLogHandler(qs.router, qs.Log()),
+			Handler:   network.HTTPLogHandler(qs.router, qs.Log()),
 		},
 	}
 
@@ -110,7 +111,7 @@ func (qs *QuicServer) run(stopChan chan struct{}) error {
 	return nil
 }
 
-func (qs *QuicServer) stop(server *http3.Server) error {
+func (qs *PrimitiveQuicServer) stop(server *http3.Server) error {
 	if err := server.Close(); err != nil {
 		return err
 	}

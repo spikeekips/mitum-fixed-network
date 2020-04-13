@@ -1,6 +1,9 @@
 package isaac
 
-import "github.com/spikeekips/mitum/base"
+import (
+	"github.com/spikeekips/mitum/base"
+	"github.com/spikeekips/mitum/base/block"
+)
 
 type SyncerState uint8
 
@@ -31,12 +34,12 @@ func (ss SyncerState) String() string {
 }
 
 type Syncer interface {
-	Prepare(Manifest /* base manifest */) error
+	Prepare(block.Manifest /* base manifest */) error
 	Save() error
 	HeightFrom() base.Height
 	HeightTo() base.Height
 	State() SyncerState
-	TailManifest() Manifest
+	TailManifest() block.Manifest
 	Close() error
 }
 
@@ -45,7 +48,7 @@ type syncerFetchBlockError struct {
 	heights []base.Height
 	node    base.Address
 	missing []base.Height
-	blocks  []Block
+	blocks  []block.Block
 }
 
 func (fm *syncerFetchBlockError) Error() string {

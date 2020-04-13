@@ -4,6 +4,7 @@ import (
 	"golang.org/x/xerrors"
 
 	"github.com/spikeekips/mitum/base"
+	"github.com/spikeekips/mitum/base/block"
 	"github.com/spikeekips/mitum/base/seal"
 	"github.com/spikeekips/mitum/base/valuehash"
 	"github.com/spikeekips/mitum/util/logging"
@@ -48,7 +49,7 @@ func (gs *NetworkChanChannel) SetGetSealHandler(f GetSealsHandler) {
 	gs.getSealHandler = f
 }
 
-func (gs *NetworkChanChannel) Manifests(hs []base.Height) ([]Manifest, error) {
+func (gs *NetworkChanChannel) Manifests(hs []base.Height) ([]block.Manifest, error) {
 	return gs.getManifests(hs)
 }
 
@@ -56,7 +57,7 @@ func (gs *NetworkChanChannel) SetGetManifests(f GetManifestsHandler) {
 	gs.getManifests = f
 }
 
-func (gs *NetworkChanChannel) Blocks(hs []base.Height) ([]Block, error) {
+func (gs *NetworkChanChannel) Blocks(hs []base.Height) ([]block.Block, error) {
 	return gs.getBlocks(hs)
 }
 

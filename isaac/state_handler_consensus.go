@@ -9,6 +9,7 @@ import (
 
 	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/base/ballot"
+	"github.com/spikeekips/mitum/base/block"
 	"github.com/spikeekips/mitum/base/seal"
 	"github.com/spikeekips/mitum/storage"
 	"github.com/spikeekips/mitum/util/localtime"
@@ -232,7 +233,7 @@ func (cs *StateConsensusHandler) handleProposal(proposal ballot.Proposal) error 
 	}
 
 	// TODO if processing takes too long?
-	block, err := cs.proposalProcessor.ProcessINIT(proposal.Hash(), cs.localstate.LastINITVoteproof())
+	blk, err := cs.proposalProcessor.ProcessINIT(proposal.Hash(), cs.localstate.LastINITVoteproof())
 	if err != nil {
 		return err
 	}
@@ -252,15 +253,15 @@ func (cs *StateConsensusHandler) handleProposal(proposal ballot.Proposal) error 
 		Msgf("node is in acting suffrage? %v", isActing)
 
 	if isActing {
-		if err := cs.readyToSIGNBallot(proposal, block); err != nil {
+		if err := cs.readyToSIGNBallot(proposal, blk); err != nil {
 			return err
 		}
 	}
 
-	return cs.readyToACCEPTBallot(block)
+	return cs.readyToACCEPTBallot(blk)
 }
 
-func (cs *StateConsensusHandler) readyToSIGNBallot(proposal ballot.Proposal, newBlock Block) error {
+func (cs *StateConsensusHandler) readyToSIGNBallot(proposal ballot.Proposal, newBlock block.Block) error {
 	// NOTE not like broadcasting ACCEPT Ballot, SIGN Ballot will be broadcasted
 	// withtout waiting.
 
@@ -276,7 +277,7 @@ func (cs *StateConsensusHandler) readyToSIGNBallot(proposal ballot.Proposal, new
 	return nil
 }
 
-func (cs *StateConsensusHandler) readyToACCEPTBallot(newBlock Block) error {
+func (cs *StateConsensusHandler) readyToACCEPTBallot(newBlock block.Block) error {
 	// NOTE if not in acting suffrage, broadcast ACCEPT Ballot after interval.
 	if timer, err := cs.TimerBroadcastingACCEPTBallot(newBlock); err != nil {
 		return err

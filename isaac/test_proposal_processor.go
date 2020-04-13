@@ -4,17 +4,18 @@ package isaac
 
 import (
 	"github.com/spikeekips/mitum/base"
+	"github.com/spikeekips/mitum/base/block"
 	"github.com/spikeekips/mitum/base/valuehash"
 )
 
 type DummyProposalProcessor struct {
-	returnBlock BlockUpdater
+	returnBlock block.BlockUpdater
 	err         error
 	processed   map[valuehash.Hash]bool
 	completed   map[valuehash.Hash]bool
 }
 
-func NewDummyProposalProcessor(returnBlock BlockUpdater, err error) *DummyProposalProcessor {
+func NewDummyProposalProcessor(returnBlock block.BlockUpdater, err error) *DummyProposalProcessor {
 	return &DummyProposalProcessor{
 		returnBlock: returnBlock,
 		err:         err,
@@ -27,7 +28,7 @@ func (dp *DummyProposalProcessor) IsProcessed(h valuehash.Hash) bool {
 	return dp.processed[h]
 }
 
-func (dp *DummyProposalProcessor) ProcessINIT(h valuehash.Hash, initVoteproof base.Voteproof) (Block, error) {
+func (dp *DummyProposalProcessor) ProcessINIT(h valuehash.Hash, initVoteproof base.Voteproof) (block.Block, error) {
 	dp.processed[h] = true
 
 	dp.returnBlock = dp.returnBlock.SetINITVoteproof(initVoteproof)

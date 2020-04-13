@@ -5,6 +5,7 @@ import (
 
 	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/base/ballot"
+	"github.com/spikeekips/mitum/base/block"
 	"github.com/spikeekips/mitum/util/errors"
 	"github.com/spikeekips/mitum/util/logging"
 )
@@ -98,14 +99,14 @@ func (vc *VoteProofChecker) CheckThreshold() (bool, error) {
 
 type VoteproofConsensusStateChecker struct {
 	*logging.Logging
-	lastBlock         Block
+	lastBlock         block.Block
 	lastINITVoteproof base.Voteproof
 	voteproof         base.Voteproof
 	css               *ConsensusStates
 }
 
 func NewVoteproofConsensusStateChecker(
-	lastBlock Block,
+	lastBlock block.Block,
 	lastINITVoteproof base.Voteproof,
 	voteproof base.Voteproof,
 	css *ConsensusStates,
@@ -188,7 +189,7 @@ func (vpc *VoteproofConsensusStateChecker) CheckACCEPTVoteproof() (bool, error) 
 type VoteproofBootingChecker struct {
 	*logging.Logging
 	localstate      *Localstate // nolint
-	lastBlock       Block
+	lastBlock       block.Block
 	initVoteproof   base.Voteproof // NOTE these Voteproof are from last block
 	acceptVoteproof base.Voteproof
 }

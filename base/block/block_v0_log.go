@@ -1,4 +1,4 @@
-package isaac
+package block
 
 import "github.com/spikeekips/mitum/util/logging"
 

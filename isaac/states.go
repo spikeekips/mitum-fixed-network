@@ -7,6 +7,7 @@ import (
 
 	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/base/ballot"
+	"github.com/spikeekips/mitum/base/block"
 	"github.com/spikeekips/mitum/base/seal"
 	"github.com/spikeekips/mitum/util"
 	"github.com/spikeekips/mitum/util/logging"
@@ -373,19 +374,19 @@ func (css *ConsensusStates) vote(blt ballot.Ballot) error {
 	return css.newVoteproof(voteproof)
 }
 
-func checkBlockWithINITVoteproof(block Block, voteproof base.Voteproof) error {
+func checkBlockWithINITVoteproof(blk block.Block, voteproof base.Voteproof) error {
 	// check voteproof.PreviousBlock with local block
 	fact, ok := voteproof.Majority().(ballot.INITBallotFact)
 	if !ok {
 		return xerrors.Errorf("needs INITTBallotFact: fact=%T", voteproof.Majority())
 	}
 
-	if !fact.PreviousBlock().Equal(block.Hash()) {
+	if !fact.PreviousBlock().Equal(blk.Hash()) {
 		return xerrors.Errorf(
 			"INIT Voteproof of ACCEPT Ballot has different PreviousBlock with local: previousRound=%s local=%s",
 
 			fact.PreviousBlock(),
-			block.Hash(),
+			blk.Hash(),
 		)
 	}
 

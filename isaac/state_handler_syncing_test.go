@@ -6,6 +6,7 @@ import (
 
 	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/base/ballot"
+	"github.com/spikeekips/mitum/base/block"
 	"github.com/spikeekips/mitum/base/valuehash"
 	"github.com/stretchr/testify/suite"
 	"golang.org/x/xerrors"
@@ -76,7 +77,7 @@ func (t *testStateSyncingHandler) TestProcessProposal() {
 	)
 	t.NoError(proposal.Sign(t.remoteState.Node().Privatekey(), nil))
 
-	returnedBlock, err := NewTestBlockV0(t.localstate.LastBlock().Height()+1, base.Round(0), proposal.Hash(), valuehash.RandomSHA256())
+	returnedBlock, err := block.NewTestBlockV0(t.localstate.LastBlock().Height()+1, base.Round(0), proposal.Hash(), valuehash.RandomSHA256())
 	t.NoError(err)
 
 	dp := NewDummyProposalProcessor(returnedBlock, nil)

@@ -3,6 +3,7 @@ package isaac
 import (
 	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/base/ballot"
+	"github.com/spikeekips/mitum/base/block"
 	"github.com/spikeekips/mitum/base/operation"
 	"github.com/spikeekips/mitum/base/seal"
 	"github.com/spikeekips/mitum/base/valuehash"
@@ -14,14 +15,14 @@ type Storage interface {
 	Encoder() encoder.Encoder
 	Encoders() *encoder.Encoders
 
-	OpenBlockStorage(Block) (BlockStorage, error)
+	OpenBlockStorage(block.Block) (BlockStorage, error)
 	SyncerStorage() SyncerStorage
 
-	LastBlock() (Block, error)
-	Block(valuehash.Hash) (Block, error)
-	BlockByHeight(base.Height) (Block, error)
-	Manifest(valuehash.Hash) (Manifest, error)
-	ManifestByHeight(base.Height) (Manifest, error)
+	LastBlock() (block.Block, error)
+	Block(valuehash.Hash) (block.Block, error)
+	BlockByHeight(base.Height) (block.Block, error)
+	Manifest(valuehash.Hash) (block.Manifest, error)
+	ManifestByHeight(base.Height) (block.Manifest, error)
 
 	NewINITVoteproof(base.Voteproof) error
 	LastINITVoteproof() (base.Voteproof, error)
@@ -50,8 +51,8 @@ type Storage interface {
 }
 
 type BlockStorage interface {
-	Block() Block
-	SetBlock(Block) error
+	Block() block.Block
+	SetBlock(block.Block) error
 	// NOTE UnstageOperationSeals cleans staged operation.Seals
 	UnstageOperationSeals([]valuehash.Hash) error
 	Commit() error

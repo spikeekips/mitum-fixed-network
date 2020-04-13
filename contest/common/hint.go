@@ -3,6 +3,7 @@ package common
 import (
 	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/base/ballot"
+	"github.com/spikeekips/mitum/base/block"
 	"github.com/spikeekips/mitum/base/key"
 	"github.com/spikeekips/mitum/base/operation"
 	"github.com/spikeekips/mitum/base/tree"
@@ -26,7 +27,8 @@ var Hinters = [][2]interface{}{
 	{"ballot-sign-fact", ballot.SIGNBallotFactV0{}},
 	{"ballot-accept-fact", ballot.ACCEPTBallotFactV0{}},
 	{"voteproof", base.VoteproofV0{}},
-	{"block", isaac.BlockV0{}},
+	{"block", block.BlockV0{}},
+	{"manifest", block.ManifestV0{}},
 	{"privatekey-ether", key.EtherPrivatekey{}},
 	{"publickey-ether", key.EtherPublickey{}},
 	{"privatekey-btc", key.BTCPrivatekey{}},

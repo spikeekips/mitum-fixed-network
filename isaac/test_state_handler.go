@@ -10,6 +10,7 @@ import (
 
 	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/base/ballot"
+	"github.com/spikeekips/mitum/base/block"
 	"github.com/spikeekips/mitum/base/key"
 	"github.com/spikeekips/mitum/base/operation"
 	"github.com/spikeekips/mitum/base/tree"
@@ -46,9 +47,9 @@ func (t *baseTestStateHandler) SetupSuite() { // nolint
 	_ = t.encs.AddHinter(ballot.ACCEPTBallotV0{})
 	_ = t.encs.AddHinter(ballot.ACCEPTBallotFactV0{})
 	_ = t.encs.AddHinter(base.VoteproofV0{})
-	_ = t.encs.AddHinter(BlockV0{})
-	_ = t.encs.AddHinter(ManifestV0{})
-	_ = t.encs.AddHinter(BlockConsensusInfoV0{})
+	_ = t.encs.AddHinter(block.BlockV0{})
+	_ = t.encs.AddHinter(block.ManifestV0{})
+	_ = t.encs.AddHinter(block.BlockConsensusInfoV0{})
 	_ = t.encs.AddHinter(operation.Seal{})
 	_ = t.encs.AddHinter(operation.KVOperationFact{})
 	_ = t.encs.AddHinter(operation.KVOperation{})
@@ -69,7 +70,7 @@ func (t *baseTestStateHandler) SetupSuite() { // nolint
 }
 
 func (t *baseTestStateHandler) states() (*Localstate, *Localstate) {
-	lastBlock, err := NewTestBlockV0(base.Height(2), base.Round(9), nil, valuehash.RandomSHA256())
+	lastBlock, err := block.NewTestBlockV0(base.Height(2), base.Round(9), nil, valuehash.RandomSHA256())
 	t.NoError(err)
 
 	lst := NewMemStorage(t.encs, t.enc)
@@ -207,7 +208,7 @@ func (t *baseTestStateHandler) newOperationSeal(localstate *Localstate) operatio
 	return sl
 }
 
-func (t *baseTestStateHandler) compareManifest(a, b Manifest) {
+func (t *baseTestStateHandler) compareManifest(a, b block.Manifest) {
 	t.Equal(a.Height(), b.Height())
 	t.Equal(a.Round(), b.Round())
 	t.True(a.Proposal().Equal(b.Proposal()))
@@ -216,7 +217,7 @@ func (t *baseTestStateHandler) compareManifest(a, b Manifest) {
 	t.True(a.StatesHash().Equal(b.StatesHash()))
 }
 
-func (t *baseTestStateHandler) compareBlock(a, b Block) {
+func (t *baseTestStateHandler) compareBlock(a, b block.Block) {
 	t.compareManifest(a, b)
 	t.compareAVLTree(a.States(), b.States())
 	t.compareAVLTree(a.Operations(), b.Operations())

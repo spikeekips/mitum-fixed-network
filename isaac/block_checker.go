@@ -1,6 +1,7 @@
 package isaac
 
 import (
+	"github.com/spikeekips/mitum/base/block"
 	"github.com/spikeekips/mitum/util/logging"
 	"golang.org/x/xerrors"
 )
@@ -11,11 +12,11 @@ type baseBlocksValidationChecker struct {
 	networkID  NetworkID
 }
 
-func (bc *baseBlocksValidationChecker) checkIsValid(block Manifest) error {
-	return block.IsValid(bc.networkID)
+func (bc *baseBlocksValidationChecker) checkIsValid(blk block.Manifest) error {
+	return blk.IsValid(bc.networkID)
 }
 
-func (bc *baseBlocksValidationChecker) checkPreviousBlock(current, next Manifest) error {
+func (bc *baseBlocksValidationChecker) checkPreviousBlock(current, next block.Manifest) error {
 	if next.Height() != current.Height()+1 {
 		return xerrors.Errorf("wrong height: current=%v next=%s", current.Height(), next.Height())
 	}
@@ -34,12 +35,12 @@ func (bc *baseBlocksValidationChecker) checkPreviousBlock(current, next Manifest
 
 type ManifestsValidationChecker struct {
 	baseBlocksValidationChecker
-	manifests []Manifest
+	manifests []block.Manifest
 }
 
 func NewManifestsValidationChecker(
 	localstate *Localstate,
-	manifests []Manifest,
+	manifests []block.Manifest,
 ) *ManifestsValidationChecker {
 	networkID := localstate.Policy().NetworkID()
 
@@ -87,10 +88,10 @@ func (bc *ManifestsValidationChecker) CheckSerialized() (bool, error) {
 
 type BlocksValidationChecker struct {
 	baseBlocksValidationChecker
-	blocks []Block
+	blocks []block.Block
 }
 
-func NewBlocksValidationChecker(localstate *Localstate, blocks []Block) *BlocksValidationChecker {
+func NewBlocksValidationChecker(localstate *Localstate, blocks []block.Block) *BlocksValidationChecker {
 	networkID := localstate.Policy().NetworkID()
 
 	return &BlocksValidationChecker{

@@ -9,6 +9,7 @@ import (
 	"github.com/spikeekips/avl"
 	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/base/ballot"
+	"github.com/spikeekips/mitum/base/block"
 	"github.com/spikeekips/mitum/base/operation"
 	"github.com/spikeekips/mitum/base/tree"
 	"github.com/spikeekips/mitum/base/valuehash"
@@ -19,7 +20,7 @@ import (
 
 type ProposalProcessor interface {
 	IsProcessed(valuehash.Hash /* proposal.Hash() */) bool
-	ProcessINIT(valuehash.Hash /* Proposal.Hash() */, base.Voteproof /* INIT Voteproof */) (Block, error)
+	ProcessINIT(valuehash.Hash /* Proposal.Hash() */, base.Voteproof /* INIT Voteproof */) (block.Block, error)
 	ProcessACCEPT(valuehash.Hash /* Proposal.Hash() */, base.Voteproof /* ACCEPT Voteproof */) (BlockStorage, error)
 }
 
@@ -45,7 +46,7 @@ func (dp *ProposalProcessorV0) IsProcessed(ph valuehash.Hash) bool {
 	return found
 }
 
-func (dp *ProposalProcessorV0) ProcessINIT(ph valuehash.Hash, initVoteproof base.Voteproof) (Block, error) {
+func (dp *ProposalProcessorV0) ProcessINIT(ph valuehash.Hash, initVoteproof base.Voteproof) (block.Block, error) {
 	if i, found := dp.processors.Load(ph); found {
 		processor := i.(*proposalProcessorV0)
 
@@ -82,14 +83,14 @@ func (dp *ProposalProcessorV0) ProcessINIT(ph valuehash.Hash, initVoteproof base
 
 	_ = processor.SetLogger(dp.Log())
 
-	block, err := processor.processINIT(initVoteproof)
+	blk, err := processor.processINIT(initVoteproof)
 	if err != nil {
 		return nil, err
 	}
 
 	dp.processors.Store(ph, processor)
 
-	return block, nil
+	return blk, nil
 }
 
 func (dp *ProposalProcessorV0) ProcessACCEPT(
@@ -116,8 +117,8 @@ func (dp *ProposalProcessorV0) ProcessACCEPT(
 type proposalProcessorV0 struct {
 	*logging.Logging
 	localstate         *Localstate
-	lastBlock          Block
-	block              BlockUpdater
+	lastBlock          block.Block
+	block              block.BlockUpdater
 	proposal           ballot.Proposal
 	proposedOperations map[valuehash.Hash]struct{}
 	operations         []state.OperationInfoV0
@@ -146,7 +147,7 @@ func newProposalProcessorV0(localstate *Localstate, proposal ballot.Proposal) (*
 	}, nil
 }
 
-func (pp *proposalProcessorV0) processINIT(initVoteproof base.Voteproof) (Block, error) {
+func (pp *proposalProcessorV0) processINIT(initVoteproof base.Voteproof) (block.Block, error) {
 	if pp.block != nil {
 		return pp.block, nil
 	}
@@ -175,37 +176,37 @@ func (pp *proposalProcessorV0) processINIT(initVoteproof base.Voteproof) (Block,
 		}
 	}
 
-	var block BlockUpdater
-	if b, err := NewBlockV0(
+	var blk block.BlockUpdater
+	if b, err := block.NewBlockV0(
 		pp.proposal.Height(), pp.proposal.Round(), pp.proposal.Hash(), pp.lastBlock.Hash(),
 		operationsHash,
 		statesHash,
 	); err != nil {
 		return nil, err
 	} else {
-		block = b
+		blk = b
 	}
 
 	if statesTree != nil {
-		if err := pp.updateStates(statesTree, block); err != nil {
+		if err := pp.updateStates(statesTree, blk); err != nil {
 			return nil, err
 		}
 	}
 
-	block = block.
+	blk = blk.
 		SetOperations(operationsTree).
 		SetStates(statesTree).
 		SetINITVoteproof(initVoteproof)
 
-	if bs, err := pp.localstate.Storage().OpenBlockStorage(block); err != nil {
+	if bs, err := pp.localstate.Storage().OpenBlockStorage(blk); err != nil {
 		return nil, err
 	} else {
 		pp.bs = bs
 	}
 
-	pp.block = block
+	pp.block = blk
 
-	return block, nil
+	return blk, nil
 }
 
 func (pp *proposalProcessorV0) extractOperations() ([]state.OperationInfoV0, error) {
@@ -431,11 +432,11 @@ func (pp *proposalProcessorV0) setACCEPTVoteproof(acceptVoteproof base.Voteproof
 		return xerrors.Errorf("not yet processed")
 	}
 
-	block := pp.block.SetACCEPTVoteproof(acceptVoteproof)
-	if err := pp.bs.SetBlock(block); err != nil {
+	blk := pp.block.SetACCEPTVoteproof(acceptVoteproof)
+	if err := pp.bs.SetBlock(blk); err != nil {
 		return err
 	}
-	pp.block = block
+	pp.block = blk
 
 	return nil
 }
@@ -455,7 +456,7 @@ func (pp *proposalProcessorV0) validateTree(tg *avl.TreeGenerator) (*tree.AVLTre
 	return tr, nil
 }
 
-func (pp *proposalProcessorV0) updateStates(tr *tree.AVLTree, block Block) error {
+func (pp *proposalProcessorV0) updateStates(tr *tree.AVLTree, blk block.Block) error {
 	return tr.Traverse(func(node tree.Node) (bool, error) {
 		var st state.StateUpdater
 		if s, ok := node.(*state.StateV0AVLNodeMutable); !ok {
@@ -464,7 +465,7 @@ func (pp *proposalProcessorV0) updateStates(tr *tree.AVLTree, block Block) error
 			st = s.State().(state.StateUpdater)
 		}
 
-		if err := st.SetCurrentBlock(block.Hash()); err != nil {
+		if err := st.SetCurrentBlock(blk.Hash()); err != nil {
 			return false, err
 		}
 

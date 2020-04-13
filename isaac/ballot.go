@@ -5,6 +5,7 @@ import (
 
 	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/base/ballot"
+	"github.com/spikeekips/mitum/base/block"
 	"github.com/spikeekips/mitum/base/valuehash"
 )
 
@@ -112,7 +113,7 @@ func NewProposalFromLocalstate(
 }
 
 func NewSIGNBallotV0FromLocalstate(
-	localstate *Localstate, round base.Round, newBlock Block,
+	localstate *Localstate, round base.Round, newBlock block.Block,
 ) (ballot.SIGNBallotV0, error) {
 	lastBlock := localstate.LastBlock()
 	if lastBlock == nil {
@@ -138,7 +139,7 @@ func NewACCEPTBallotV0(
 	localstate *Localstate,
 	height base.Height,
 	round base.Round,
-	newBlock Block,
+	newBlock block.Block,
 	initVoteproof base.Voteproof,
 	networkID []byte,
 ) (ballot.ACCEPTBallotV0, error) {
@@ -161,7 +162,7 @@ func NewACCEPTBallotV0(
 func NewACCEPTBallotV0FromLocalstate(
 	localstate *Localstate,
 	round base.Round,
-	newBlock Block,
+	newBlock block.Block,
 ) (ballot.ACCEPTBallotV0, error) {
 	lastBlock := localstate.LastBlock()
 	if lastBlock == nil {

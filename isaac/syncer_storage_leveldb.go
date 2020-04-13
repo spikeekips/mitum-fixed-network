@@ -6,6 +6,7 @@ import (
 	"github.com/syndtr/goleveldb/leveldb"
 
 	"github.com/spikeekips/mitum/base"
+	"github.com/spikeekips/mitum/base/block"
 	"github.com/spikeekips/mitum/storage"
 	"github.com/spikeekips/mitum/util"
 	"github.com/spikeekips/mitum/util/logging"
@@ -38,7 +39,7 @@ func (st *LeveldbSyncerStorage) manifestKey(height base.Height) []byte {
 	)
 }
 
-func (st *LeveldbSyncerStorage) Manifest(height base.Height) (Manifest, error) {
+func (st *LeveldbSyncerStorage) Manifest(height base.Height) (block.Manifest, error) {
 	raw, err := st.storage.DB().Get(st.manifestKey(height), nil)
 	if err != nil {
 		return nil, storage.LeveldbWrapError(err)
@@ -47,8 +48,8 @@ func (st *LeveldbSyncerStorage) Manifest(height base.Height) (Manifest, error) {
 	return st.storage.loadManifest(raw)
 }
 
-func (st *LeveldbSyncerStorage) Manifests(heights []base.Height) ([]Manifest, error) {
-	var bs []Manifest
+func (st *LeveldbSyncerStorage) Manifests(heights []base.Height) ([]block.Manifest, error) {
+	var bs []block.Manifest
 	for i := range heights {
 		if b, err := st.Manifest(heights[i]); err != nil {
 			return nil, err
@@ -60,7 +61,7 @@ func (st *LeveldbSyncerStorage) Manifests(heights []base.Height) ([]Manifest, er
 	return bs, nil
 }
 
-func (st *LeveldbSyncerStorage) SetManifests(manifests []Manifest) error {
+func (st *LeveldbSyncerStorage) SetManifests(manifests []block.Manifest) error {
 	st.Log().VerboseFunc(func(e *logging.Event) logging.Emitter {
 		var heights []base.Height
 		for i := range manifests {
@@ -91,12 +92,12 @@ func (st *LeveldbSyncerStorage) HasBlock(height base.Height) (bool, error) {
 	return st.storage.db.Has(leveldbBlockHeightKey(height), nil)
 }
 
-func (st *LeveldbSyncerStorage) Block(height base.Height) (Block, error) {
+func (st *LeveldbSyncerStorage) Block(height base.Height) (block.Block, error) {
 	return st.storage.BlockByHeight(height)
 }
 
-func (st *LeveldbSyncerStorage) Blocks(heights []base.Height) ([]Block, error) {
-	var bs []Block
+func (st *LeveldbSyncerStorage) Blocks(heights []base.Height) ([]block.Block, error) {
+	var bs []block.Block
 	for i := range heights {
 		if b, err := st.storage.BlockByHeight(heights[i]); err != nil {
 			return nil, err
@@ -108,7 +109,7 @@ func (st *LeveldbSyncerStorage) Blocks(heights []base.Height) ([]Block, error) {
 	return bs, nil
 }
 
-func (st *LeveldbSyncerStorage) SetBlocks(blocks []Block) error {
+func (st *LeveldbSyncerStorage) SetBlocks(blocks []block.Block) error {
 	st.Log().VerboseFunc(func(e *logging.Event) logging.Emitter {
 		var heights []base.Height
 		for i := range blocks {
@@ -121,13 +122,13 @@ func (st *LeveldbSyncerStorage) SetBlocks(blocks []Block) error {
 		Msg("set blocks")
 
 	for i := range blocks {
-		block := blocks[i]
+		blk := blocks[i]
 
-		st.checkHeight(block.Height())
+		st.checkHeight(blk.Height())
 
-		if bs, err := st.storage.OpenBlockStorage(block); err != nil {
+		if bs, err := st.storage.OpenBlockStorage(blk); err != nil {
 			return err
-		} else if err := bs.SetBlock(block); err != nil {
+		} else if err := bs.SetBlock(blk); err != nil {
 			return err
 		} else if err := bs.Commit(); err != nil {
 			return err
@@ -144,9 +145,9 @@ func (st *LeveldbSyncerStorage) Commit() error {
 		Msg("trying to commit blocks")
 
 	for i := st.heightFrom.Int64(); i <= st.heightTo.Int64(); i++ {
-		if block, err := st.Block(base.Height(i)); err != nil {
+		if blk, err := st.Block(base.Height(i)); err != nil {
 			return err
-		} else if err := st.commitBlock(block); err != nil {
+		} else if err := st.commitBlock(blk); err != nil {
 			st.Log().Error().Err(err).Int64("height", i).Msg("failed to commit block")
 			return err
 		}
@@ -157,10 +158,10 @@ func (st *LeveldbSyncerStorage) Commit() error {
 	return nil
 }
 
-func (st *LeveldbSyncerStorage) commitBlock(block Block) error {
-	if bs, err := st.main.OpenBlockStorage(block); err != nil {
+func (st *LeveldbSyncerStorage) commitBlock(blk block.Block) error {
+	if bs, err := st.main.OpenBlockStorage(blk); err != nil {
 		return err
-	} else if err := bs.SetBlock(block); err != nil {
+	} else if err := bs.SetBlock(blk); err != nil {
 		return err
 	} else if err := bs.Commit(); err != nil {
 		return err

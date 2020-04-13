@@ -38,8 +38,7 @@ func (bc *BallotChecker) CheckIsInSuffrage() (bool, error) {
 // last Block.
 // - If Height is same or lower than last, Ballot will be ignored.
 func (bc *BallotChecker) CheckWithLastBlock() (bool, error) {
-	block := bc.localstate.LastBlock()
-	if bc.blt.Height() <= block.Height() {
+	if bc.blt.Height() <= bc.localstate.LastBlock().Height() {
 		return false, nil
 	}
 

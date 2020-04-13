@@ -2,6 +2,7 @@ package isaac
 
 import (
 	"github.com/spikeekips/mitum/base"
+	"github.com/spikeekips/mitum/base/block"
 	"github.com/spikeekips/mitum/base/seal"
 	"github.com/spikeekips/mitum/base/valuehash"
 	"github.com/spikeekips/mitum/util"
@@ -19,7 +20,7 @@ type Localstate struct {
 
 func NewLocalstate(st Storage, node *LocalNode, networkID []byte) (*Localstate, error) {
 	// load last states from storage.
-	var lastBlock Block
+	var lastBlock block.Block
 	var lastINITVoteproof base.Voteproof
 	var lastACCEPTVoteproof base.Voteproof
 	if st != nil {
@@ -66,19 +67,19 @@ func (ls *Localstate) Nodes() *NodesState {
 	return ls.nodes
 }
 
-func (ls *Localstate) LastBlock() Block {
+func (ls *Localstate) LastBlock() block.Block {
 	v := ls.lastBlock.Value()
 	if v == nil {
 		return nil
 	}
 
-	return v.(Block)
+	return v.(block.Block)
 }
 
 // NOTE for debugging and testing only
 
-func (ls *Localstate) SetLastBlock(block Block) error {
-	_ = ls.lastBlock.SetValue(block)
+func (ls *Localstate) SetLastBlock(blk block.Block) error {
+	_ = ls.lastBlock.SetValue(blk)
 
 	return nil
 }

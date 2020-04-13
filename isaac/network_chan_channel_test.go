@@ -6,6 +6,7 @@ import (
 	"github.com/stretchr/testify/suite"
 
 	"github.com/spikeekips/mitum/base"
+	"github.com/spikeekips/mitum/base/block"
 	"github.com/spikeekips/mitum/base/key"
 	"github.com/spikeekips/mitum/base/seal"
 	"github.com/spikeekips/mitum/base/valuehash"
@@ -53,82 +54,82 @@ func (t *testNetworkChanChannel) TestGetSeal() {
 func (t *testNetworkChanChannel) TestManifests() {
 	gs := NewNetworkChanChannel(0)
 
-	block, err := NewTestBlockV0(base.Height(33), base.Round(9), nil, valuehash.RandomSHA256())
+	blk, err := block.NewTestBlockV0(base.Height(33), base.Round(9), nil, valuehash.RandomSHA256())
 	t.NoError(err)
 
-	gs.SetGetManifests(func(heights []base.Height) ([]Manifest, error) {
-		var blocks []Manifest
+	gs.SetGetManifests(func(heights []base.Height) ([]block.Manifest, error) {
+		var blocks []block.Manifest
 		for _, h := range heights {
-			if h != block.Height() {
+			if h != blk.Height() {
 				continue
 			}
 
-			blocks = append(blocks, block.Manifest())
+			blocks = append(blocks, blk.Manifest())
 		}
 
 		return blocks, nil
 	})
 
 	{
-		blocks, err := gs.Manifests([]base.Height{block.Height()})
+		blocks, err := gs.Manifests([]base.Height{blk.Height()})
 		t.NoError(err)
 		t.Equal(1, len(blocks))
 
 		for _, b := range blocks {
-			_, ok := b.(Block)
+			_, ok := b.(block.Block)
 			t.False(ok)
 		}
 
-		t.True(block.Hash().Equal(blocks[0].Hash()))
+		t.True(blk.Hash().Equal(blocks[0].Hash()))
 	}
 
 	{ // with unknown height
-		blocks, err := gs.Manifests([]base.Height{block.Height(), block.Height() + 1})
+		blocks, err := gs.Manifests([]base.Height{blk.Height(), blk.Height() + 1})
 		t.NoError(err)
 		t.Equal(1, len(blocks))
 
 		for _, b := range blocks {
-			_, ok := b.(Block)
+			_, ok := b.(block.Block)
 			t.False(ok)
 		}
 
-		t.True(block.Hash().Equal(blocks[0].Hash()))
+		t.True(blk.Hash().Equal(blocks[0].Hash()))
 	}
 }
 
 func (t *testNetworkChanChannel) TestBlocks() {
 	gs := NewNetworkChanChannel(0)
 
-	block, err := NewTestBlockV0(base.Height(33), base.Round(9), nil, valuehash.RandomSHA256())
+	blk, err := block.NewTestBlockV0(base.Height(33), base.Round(9), nil, valuehash.RandomSHA256())
 	t.NoError(err)
 
-	gs.SetGetBlocks(func(heights []base.Height) ([]Block, error) {
-		var blocks []Block
+	gs.SetGetBlocks(func(heights []base.Height) ([]block.Block, error) {
+		var blocks []block.Block
 		for _, h := range heights {
-			if h != block.Height() {
+			if h != blk.Height() {
 				continue
 			}
 
-			blocks = append(blocks, block)
+			blocks = append(blocks, blk)
 		}
 
 		return blocks, nil
 	})
 
 	{
-		blocks, err := gs.Blocks([]base.Height{block.Height()})
+		blocks, err := gs.Blocks([]base.Height{blk.Height()})
 		t.NoError(err)
 		t.Equal(1, len(blocks))
 
-		t.True(block.Hash().Equal(blocks[0].Hash()))
+		t.True(blk.Hash().Equal(blocks[0].Hash()))
 	}
 
 	{ // with unknown height
-		blocks, err := gs.Blocks([]base.Height{block.Height(), block.Height() + 1})
+		blocks, err := gs.Blocks([]base.Height{blk.Height(), blk.Height() + 1})
 		t.NoError(err)
 		t.Equal(1, len(blocks))
 
-		t.True(block.Hash().Equal(blocks[0].Hash()))
+		t.True(blk.Hash().Equal(blocks[0].Hash()))
 	}
 }
 

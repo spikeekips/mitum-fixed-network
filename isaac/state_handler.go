@@ -9,6 +9,7 @@ import (
 
 	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/base/ballot"
+	"github.com/spikeekips/mitum/base/block"
 	"github.com/spikeekips/mitum/base/seal"
 	"github.com/spikeekips/mitum/util/localtime"
 	"github.com/spikeekips/mitum/util/logging"
@@ -221,7 +222,7 @@ func (bs *BaseStateHandler) TimerBroadcastingINITBallot(
 	)
 }
 
-func (bs *BaseStateHandler) TimerBroadcastingACCEPTBallot(newBlock Block) (*localtime.CallbackTimer, error) {
+func (bs *BaseStateHandler) TimerBroadcastingACCEPTBallot(newBlock block.Block) (*localtime.CallbackTimer, error) {
 	var called int64
 
 	return localtime.NewCallbackTimer(

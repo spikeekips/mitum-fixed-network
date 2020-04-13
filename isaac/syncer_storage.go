@@ -1,15 +1,18 @@
 package isaac
 
-import "github.com/spikeekips/mitum/base"
+import (
+	"github.com/spikeekips/mitum/base"
+	"github.com/spikeekips/mitum/base/block"
+)
 
 type SyncerStorage interface {
-	Manifest(base.Height) (Manifest, error)
-	Manifests([]base.Height) ([]Manifest, error)
-	SetManifests([]Manifest) error
+	Manifest(base.Height) (block.Manifest, error)
+	Manifests([]base.Height) ([]block.Manifest, error)
+	SetManifests([]block.Manifest) error
 	HasBlock(base.Height) (bool, error)
-	Block(base.Height) (Block, error)
-	Blocks([]base.Height) ([]Block, error)
-	SetBlocks([]Block) error
+	Block(base.Height) (block.Block, error)
+	Blocks([]base.Height) ([]block.Block, error)
+	SetBlocks([]block.Block) error
 	Commit() error
 	Close() error
 }

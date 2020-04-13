@@ -2,6 +2,7 @@ package isaac
 
 import (
 	"github.com/spikeekips/mitum/base"
+	"github.com/spikeekips/mitum/base/block"
 	"github.com/spikeekips/mitum/util"
 )
 
@@ -16,7 +17,7 @@ func (ls Localstate) MarshalJSON() ([]byte, error) {
 		ND *LocalNode     `json:"node"`
 		PL *LocalPolicy   `json:"policy"`
 		NS []Node         `json:"nodes"`
-		LB Block          `json:"last_block"`
+		LB block.Block    `json:"last_block"`
 		IV base.Voteproof `json:"last_init_voteproof"`
 		AV base.Voteproof `json:"last_accept_voteproof"`
 	}{

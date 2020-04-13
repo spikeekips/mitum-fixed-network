@@ -10,6 +10,7 @@ import (
 	"golang.org/x/xerrors"
 
 	"github.com/spikeekips/mitum/base"
+	"github.com/spikeekips/mitum/base/block"
 	"github.com/spikeekips/mitum/base/seal"
 	"github.com/spikeekips/mitum/base/valuehash"
 	"github.com/spikeekips/mitum/network"
@@ -97,7 +98,7 @@ func (qc *QuicChannel) URL() *url.URL {
 	return qc.addr
 }
 
-func (qc *QuicChannel) Seals(hs []valuehash.Hash) ([]seal.Seal, error) {
+func (qc *QuicChannel) Seals(hs []valuehash.Hash) ([]seal.Seal, error) { // nolint
 	b, err := qc.enc.Marshal(hs)
 	if err != nil {
 		return nil, err
@@ -177,7 +178,7 @@ func (qc *QuicChannel) requestHinters(u string, b []byte) ([]hint.Hinter, error)
 	return hs, nil
 }
 
-func (qc *QuicChannel) Manifests(heights []base.Height) ([]Manifest, error) { // nolint
+func (qc *QuicChannel) Manifests(heights []base.Height) ([]block.Manifest, error) { // nolint
 	b, err := qc.enc.Marshal(heights)
 	if err != nil {
 		return nil, err
@@ -197,9 +198,9 @@ func (qc *QuicChannel) Manifests(heights []base.Height) ([]Manifest, error) { //
 		return nil, err
 	}
 
-	var manifests []Manifest
+	var manifests []block.Manifest
 	for _, h := range hs {
-		if s, ok := h.(Manifest); !ok {
+		if s, ok := h.(block.Manifest); !ok {
 			return nil, xerrors.Errorf("decoded, but not Manifest; %T", h)
 		} else {
 			manifests = append(manifests, s)
@@ -209,7 +210,7 @@ func (qc *QuicChannel) Manifests(heights []base.Height) ([]Manifest, error) { //
 	return manifests, nil
 }
 
-func (qc *QuicChannel) Blocks(heights []base.Height) ([]Block, error) { // nolint
+func (qc *QuicChannel) Blocks(heights []base.Height) ([]block.Block, error) { // nolint
 	b, err := qc.enc.Marshal(heights)
 	if err != nil {
 		return nil, err
@@ -229,9 +230,9 @@ func (qc *QuicChannel) Blocks(heights []base.Height) ([]Block, error) { // nolin
 		return nil, err
 	}
 
-	var blocks []Block
+	var blocks []block.Block
 	for _, h := range hs {
-		if s, ok := h.(Block); !ok {
+		if s, ok := h.(block.Block); !ok {
 			return nil, xerrors.Errorf("decoded, but not Block; %T", h)
 		} else {
 			blocks = append(blocks, s)

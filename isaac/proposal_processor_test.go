@@ -30,9 +30,9 @@ func (t *testProposalProcessor) TestProcess() {
 
 	dp := NewProposalProcessorV0(t.localstate)
 
-	block, err := dp.ProcessINIT(proposal.Hash(), ivp)
+	blk, err := dp.ProcessINIT(proposal.Hash(), ivp)
 	t.NoError(err)
-	t.NotNil(block)
+	t.NotNil(blk)
 }
 
 func (t *testProposalProcessor) TestBlockOperations() {
@@ -68,18 +68,18 @@ func (t *testProposalProcessor) TestBlockOperations() {
 
 	dp := NewProposalProcessorV0(t.localstate)
 
-	block, err := dp.ProcessINIT(proposal.Hash(), ivp)
+	blk, err := dp.ProcessINIT(proposal.Hash(), ivp)
 	t.NoError(err)
 
-	t.NotNil(block.Operations())
-	t.NotNil(block.States())
+	t.NotNil(blk.Operations())
+	t.NotNil(blk.States())
 
 	acceptFact := ballot.NewACCEPTBallotV0(
 		nil,
 		ivp.Height(),
 		ivp.Round(),
 		proposal.Hash(),
-		block.Hash(),
+		blk.Hash(),
 		nil,
 	).Fact()
 
@@ -89,7 +89,7 @@ func (t *testProposalProcessor) TestBlockOperations() {
 	t.NoError(err)
 	t.NoError(bs.Commit())
 
-	loaded, err := t.localstate.Storage().Block(block.Hash())
+	loaded, err := t.localstate.Storage().Block(blk.Hash())
 	t.NoError(err)
 
 	t.compareBlock(bs.Block(), loaded)

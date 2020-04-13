@@ -40,13 +40,13 @@ func (t *testGenesisBlockV0) TestNewGenesisBlock() {
 	gg, err := NewGenesisBlockV0Generator(t.localstate, []operation.Operation{op})
 	t.NoError(err)
 
-	block, err := gg.Generate()
+	blk, err := gg.Generate()
 	t.NoError(err)
 
-	t.Equal(base.Height(0), block.Height())
-	t.Equal(base.Round(0), block.Round())
+	t.Equal(base.Height(0), blk.Height())
+	t.Equal(base.Round(0), blk.Round())
 
-	pr, err := t.localstate.Storage().Seal(block.Proposal())
+	pr, err := t.localstate.Storage().Seal(blk.Proposal())
 	t.NoError(err)
 	t.NotNil(pr)
 

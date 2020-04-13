@@ -1,4 +1,4 @@
-package isaac
+package block
 
 import (
 	"golang.org/x/xerrors"

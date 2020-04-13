@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	"github.com/spikeekips/mitum/base"
+	"github.com/spikeekips/mitum/base/block"
 	"github.com/spikeekips/mitum/base/operation"
 	"github.com/spikeekips/mitum/base/seal"
 	"github.com/spikeekips/mitum/base/valuehash"
@@ -35,7 +36,7 @@ func (t *testProposalMaker) TestClean() {
 	_, err := proposalMaker.Proposal(round)
 	t.NoError(err)
 
-	newBlock, err := NewTestBlockV0(localstate.LastBlock().Height()+1, base.Round(0), nil, valuehash.RandomSHA256())
+	newBlock, err := block.NewTestBlockV0(localstate.LastBlock().Height()+1, base.Round(0), nil, valuehash.RandomSHA256())
 	t.NoError(err)
 	_ = localstate.SetLastBlock(newBlock)
 

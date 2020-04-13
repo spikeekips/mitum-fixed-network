@@ -121,10 +121,10 @@ func (cs *StateBootingHandler) checkBlock() error {
 	cs.Log().Debug().Msg("trying to check block")
 	defer cs.Log().Debug().Msg("complete to check block")
 
-	block := cs.localstate.LastBlock()
-	if block == nil {
+	blk := cs.localstate.LastBlock()
+	if blk == nil {
 		return xerrors.Errorf("empty Block")
-	} else if err := block.IsValid(nil); err != nil {
+	} else if err := blk.IsValid(nil); err != nil {
 		return err
 	}
 

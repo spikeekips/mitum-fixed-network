@@ -10,6 +10,7 @@ import (
 
 	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/base/ballot"
+	"github.com/spikeekips/mitum/base/block"
 	"github.com/spikeekips/mitum/base/operation"
 	"github.com/spikeekips/mitum/base/seal"
 	"github.com/spikeekips/mitum/base/tree"
@@ -79,7 +80,7 @@ func (st *LeveldbStorage) Encoders() *encoder.Encoders {
 	return st.encs
 }
 
-func (st *LeveldbStorage) LastBlock() (Block, error) {
+func (st *LeveldbStorage) LastBlock() (block.Block, error) {
 	var raw []byte
 
 	if err := st.iter(
@@ -111,7 +112,7 @@ func (st *LeveldbStorage) get(key []byte) ([]byte, error) {
 	return b, storage.LeveldbWrapError(err)
 }
 
-func (st *LeveldbStorage) Block(h valuehash.Hash) (Block, error) {
+func (st *LeveldbStorage) Block(h valuehash.Hash) (block.Block, error) {
 	raw, err := st.get(leveldbBlockHashKey(h))
 	if err != nil {
 		return nil, err
@@ -120,7 +121,7 @@ func (st *LeveldbStorage) Block(h valuehash.Hash) (Block, error) {
 	return st.loadBlock(raw)
 }
 
-func (st *LeveldbStorage) BlockByHeight(height base.Height) (Block, error) {
+func (st *LeveldbStorage) BlockByHeight(height base.Height) (block.Block, error) {
 	var bh valuehash.Hash
 
 	if raw, err := st.get(leveldbBlockHeightKey(height)); err != nil {
@@ -134,7 +135,7 @@ func (st *LeveldbStorage) BlockByHeight(height base.Height) (Block, error) {
 	return st.Block(bh)
 }
 
-func (st *LeveldbStorage) Manifest(h valuehash.Hash) (Manifest, error) {
+func (st *LeveldbStorage) Manifest(h valuehash.Hash) (block.Manifest, error) {
 	raw, err := st.get(leveldbManifestKey(h))
 	if err != nil {
 		return nil, err
@@ -143,7 +144,7 @@ func (st *LeveldbStorage) Manifest(h valuehash.Hash) (Manifest, error) {
 	return st.loadManifest(raw)
 }
 
-func (st *LeveldbStorage) ManifestByHeight(height base.Height) (Manifest, error) {
+func (st *LeveldbStorage) ManifestByHeight(height base.Height) (block.Manifest, error) {
 	var bh valuehash.Hash
 
 	if raw, err := st.get(leveldbBlockHeightKey(height)); err != nil {
@@ -366,24 +367,24 @@ func (st *LeveldbStorage) loadVoteproof(b []byte) (base.Voteproof, error) {
 	}
 }
 
-func (st *LeveldbStorage) loadBlock(b []byte) (Block, error) {
+func (st *LeveldbStorage) loadBlock(b []byte) (block.Block, error) {
 	if hinter, err := st.loadHinter(b); err != nil {
 		return nil, err
 	} else if hinter == nil {
 		return nil, nil
-	} else if i, ok := hinter.(Block); !ok {
+	} else if i, ok := hinter.(block.Block); !ok {
 		return nil, xerrors.Errorf("not Block: %T", hinter)
 	} else {
 		return i, nil
 	}
 }
 
-func (st *LeveldbStorage) loadManifest(b []byte) (Manifest, error) {
+func (st *LeveldbStorage) loadManifest(b []byte) (block.Manifest, error) {
 	if hinter, err := st.loadHinter(b); err != nil {
 		return nil, err
 	} else if hinter == nil {
 		return nil, nil
-	} else if i, ok := hinter.(Manifest); !ok {
+	} else if i, ok := hinter.(block.Manifest); !ok {
 		return nil, xerrors.Errorf("not Block: %T", hinter)
 	} else {
 		return i, nil
@@ -601,77 +602,77 @@ func (st *LeveldbStorage) HasOperation(h valuehash.Hash) (bool, error) {
 	return found, storage.LeveldbWrapError(err)
 }
 
-func (st *LeveldbStorage) OpenBlockStorage(block Block) (BlockStorage, error) {
-	return NewLeveldbBlockStorage(st, block)
+func (st *LeveldbStorage) OpenBlockStorage(blk block.Block) (BlockStorage, error) {
+	return NewLeveldbBlockStorage(st, blk)
 }
 
 type LeveldbBlockStorage struct {
 	st         *LeveldbStorage
-	block      Block
+	block      block.Block
 	operations *tree.AVLTree
 	states     *tree.AVLTree
 	batch      *leveldb.Batch
 }
 
-func NewLeveldbBlockStorage(st *LeveldbStorage, block Block) (*LeveldbBlockStorage, error) {
+func NewLeveldbBlockStorage(st *LeveldbStorage, blk block.Block) (*LeveldbBlockStorage, error) {
 	bst := &LeveldbBlockStorage{
 		st:    st,
-		block: block,
+		block: blk,
 		batch: &leveldb.Batch{},
 	}
 
 	return bst, nil
 }
 
-func (bst *LeveldbBlockStorage) Block() Block {
+func (bst *LeveldbBlockStorage) Block() block.Block {
 	return bst.block
 }
 
-func (bst *LeveldbBlockStorage) SetBlock(block Block) error {
-	if bst.block.Height() != block.Height() {
+func (bst *LeveldbBlockStorage) SetBlock(blk block.Block) error {
+	if bst.block.Height() != blk.Height() {
 		return xerrors.Errorf(
 			"block has different height from initial block; initial=%d != block=%d",
 			bst.block.Height(),
-			block.Height(),
+			blk.Height(),
 		)
 	}
 
-	if bst.block.Round() != block.Round() {
+	if bst.block.Round() != blk.Round() {
 		return xerrors.Errorf(
 			"block has different round from initial block; initial=%d != block=%d",
 			bst.block.Round(),
-			block.Round(),
+			blk.Round(),
 		)
 	}
 
-	if b, err := storage.LeveldbMarshal(bst.st.enc, block); err != nil {
+	if b, err := storage.LeveldbMarshal(bst.st.enc, blk); err != nil {
 		return err
 	} else {
-		bst.batch.Put(leveldbBlockHashKey(block.Hash()), b)
+		bst.batch.Put(leveldbBlockHashKey(blk.Hash()), b)
 	}
 
-	if b, err := storage.LeveldbMarshal(bst.st.enc, block.Manifest()); err != nil {
+	if b, err := storage.LeveldbMarshal(bst.st.enc, blk.Manifest()); err != nil {
 		return err
 	} else {
-		key := leveldbManifestKey(block.Hash())
+		key := leveldbManifestKey(blk.Hash())
 		bst.batch.Put(key, b)
 	}
 
-	if b, err := storage.LeveldbMarshal(bst.st.enc, block.Hash()); err != nil {
+	if b, err := storage.LeveldbMarshal(bst.st.enc, blk.Hash()); err != nil {
 		return err
 	} else {
-		bst.batch.Put(leveldbBlockHeightKey(block.Height()), b)
+		bst.batch.Put(leveldbBlockHeightKey(blk.Height()), b)
 	}
 
-	if err := bst.setOperations(block.Operations()); err != nil {
+	if err := bst.setOperations(blk.Operations()); err != nil {
 		return err
 	}
 
-	if err := bst.setStates(block.States()); err != nil {
+	if err := bst.setStates(blk.States()); err != nil {
 		return err
 	}
 
-	bst.block = block
+	bst.block = blk
 
 	return nil
 }
@@ -801,17 +802,17 @@ func leveldbVoteproofKeyByHeight(height base.Height) []byte {
 	)
 }
 
-func leveldbBlockOperationsKey(block Block) []byte {
+func leveldbBlockOperationsKey(blk block.Block) []byte {
 	return util.ConcatBytesSlice(
 		leveldbBlockOperationsPrefix,
-		[]byte(fmt.Sprintf("%020d", block.Height().Int64())),
+		[]byte(fmt.Sprintf("%020d", blk.Height().Int64())),
 	)
 }
 
-func leveldbBlockStatesKey(block Block) []byte {
+func leveldbBlockStatesKey(blk block.Block) []byte {
 	return util.ConcatBytesSlice(
 		leveldbBlockStatesPrefix,
-		[]byte(fmt.Sprintf("%020d", block.Height().Int64())),
+		[]byte(fmt.Sprintf("%020d", blk.Height().Int64())),
 	)
 }
 

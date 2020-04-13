@@ -11,6 +11,7 @@ import (
 	"golang.org/x/xerrors"
 
 	"github.com/spikeekips/mitum/base"
+	"github.com/spikeekips/mitum/base/block"
 	"github.com/spikeekips/mitum/base/key"
 	"github.com/spikeekips/mitum/base/operation"
 	"github.com/spikeekips/mitum/base/seal"
@@ -36,9 +37,9 @@ func (t *testLeveldbStorage) SetupSuite() {
 	_ = t.encs.AddEncoder(t.enc)
 
 	_ = t.encs.AddHinter(key.BTCPublickey{})
-	_ = t.encs.AddHinter(BlockV0{})
-	_ = t.encs.AddHinter(ManifestV0{})
-	_ = t.encs.AddHinter(BlockConsensusInfoV0{})
+	_ = t.encs.AddHinter(block.BlockV0{})
+	_ = t.encs.AddHinter(block.ManifestV0{})
+	_ = t.encs.AddHinter(block.BlockConsensusInfoV0{})
 	_ = t.encs.AddHinter(valuehash.SHA256{})
 	_ = t.encs.AddHinter(base.VoteproofV0{})
 	_ = t.encs.AddHinter(seal.DummySeal{})
@@ -53,7 +54,7 @@ func (t *testLeveldbStorage) SetupTest() {
 	t.storage = NewMemStorage(t.encs, t.enc)
 }
 
-func (t *testLeveldbStorage) compareManifest(a, b Manifest) {
+func (t *testLeveldbStorage) compareManifest(a, b block.Manifest) {
 	t.Equal(a.Height(), b.Height())
 	t.Equal(a.Round(), b.Round())
 	t.True(a.Proposal().Equal(b.Proposal()))
@@ -62,7 +63,7 @@ func (t *testLeveldbStorage) compareManifest(a, b Manifest) {
 	t.True(a.StatesHash().Equal(b.StatesHash()))
 }
 
-func (t *testLeveldbStorage) compareBlock(a, b Block) {
+func (t *testLeveldbStorage) compareBlock(a, b block.Block) {
 	t.compareManifest(a, b)
 	t.Equal(a.INITVoteproof(), b.INITVoteproof())
 	t.Equal(a.ACCEPTVoteproof(), b.ACCEPTVoteproof())
@@ -74,104 +75,104 @@ func (t *testLeveldbStorage) TestNew() {
 
 func (t *testLeveldbStorage) TestLastBlock() {
 	// store first
-	block, err := NewTestBlockV0(base.Height(33), base.Round(0), nil, valuehash.RandomSHA256())
+	blk, err := block.NewTestBlockV0(base.Height(33), base.Round(0), nil, valuehash.RandomSHA256())
 	t.NoError(err)
 
 	t.NotNil(t.storage)
 
-	bs, err := t.storage.OpenBlockStorage(block)
+	bs, err := t.storage.OpenBlockStorage(blk)
 	t.NoError(err)
-	t.NoError(bs.SetBlock(block))
+	t.NoError(bs.SetBlock(blk))
 	t.NoError(bs.Commit())
 
 	loaded, err := t.storage.LastBlock()
 	t.NoError(err)
 
-	t.compareBlock(block, loaded)
+	t.compareBlock(blk, loaded)
 }
 
 func (t *testLeveldbStorage) TestLoadBlockByHash() {
 	// store first
-	block, err := NewTestBlockV0(base.Height(33), base.Round(0), nil, valuehash.RandomSHA256())
+	blk, err := block.NewTestBlockV0(base.Height(33), base.Round(0), nil, valuehash.RandomSHA256())
 	t.NoError(err)
 
 	t.NotNil(t.storage)
 
 	{
-		b, err := t.enc.Marshal(block)
+		b, err := t.enc.Marshal(blk)
 		t.NoError(err)
 
 		hb := storage.LeveldbDataWithEncoder(t.enc, b)
 
-		key := leveldbBlockHashKey(block.Hash())
+		key := leveldbBlockHashKey(blk.Hash())
 		t.NoError(t.storage.db.Put(key, hb, nil))
-		t.NoError(t.storage.db.Put(leveldbBlockHeightKey(block.Height()), key, nil))
+		t.NoError(t.storage.db.Put(leveldbBlockHeightKey(blk.Height()), key, nil))
 	}
 
-	loaded, err := t.storage.Block(block.Hash())
+	loaded, err := t.storage.Block(blk.Hash())
 	t.NoError(err)
 
-	t.compareBlock(block, loaded)
+	t.compareBlock(blk, loaded)
 }
 
 func (t *testLeveldbStorage) TestLoadManifestByHash() {
 	// store first
-	block, err := NewTestBlockV0(base.Height(33), base.Round(0), nil, valuehash.RandomSHA256())
+	blk, err := block.NewTestBlockV0(base.Height(33), base.Round(0), nil, valuehash.RandomSHA256())
 	t.NoError(err)
 
 	t.NotNil(t.storage)
 
-	bs, err := t.storage.OpenBlockStorage(block)
+	bs, err := t.storage.OpenBlockStorage(blk)
 	t.NoError(err)
-	t.NoError(bs.SetBlock(block))
+	t.NoError(bs.SetBlock(blk))
 	t.NoError(bs.Commit())
 
-	loaded, err := t.storage.Manifest(block.Hash())
+	loaded, err := t.storage.Manifest(blk.Hash())
 	t.NoError(err)
-	t.Implements((*Manifest)(nil), loaded)
-	_, isBlock := loaded.(Block)
+	t.Implements((*block.Manifest)(nil), loaded)
+	_, isBlock := loaded.(block.Block)
 	t.False(isBlock)
 
-	t.compareManifest(block, loaded)
+	t.compareManifest(blk, loaded)
 }
 
 func (t *testLeveldbStorage) TestLoadManifestByHeight() {
 	// store first
-	block, err := NewTestBlockV0(base.Height(33), base.Round(0), nil, valuehash.RandomSHA256())
+	blk, err := block.NewTestBlockV0(base.Height(33), base.Round(0), nil, valuehash.RandomSHA256())
 	t.NoError(err)
 
 	t.NotNil(t.storage)
 
-	bs, err := t.storage.OpenBlockStorage(block)
+	bs, err := t.storage.OpenBlockStorage(blk)
 	t.NoError(err)
-	t.NoError(bs.SetBlock(block))
+	t.NoError(bs.SetBlock(blk))
 	t.NoError(bs.Commit())
 
-	loaded, err := t.storage.ManifestByHeight(block.Height())
+	loaded, err := t.storage.ManifestByHeight(blk.Height())
 	t.NoError(err)
-	t.Implements((*Manifest)(nil), loaded)
-	_, isBlock := loaded.(Block)
+	t.Implements((*block.Manifest)(nil), loaded)
+	_, isBlock := loaded.(block.Block)
 	t.False(isBlock)
 
-	t.compareManifest(block, loaded)
+	t.compareManifest(blk, loaded)
 }
 
 func (t *testLeveldbStorage) TestLoadBlockByHeight() {
 	// store first
-	block, err := NewTestBlockV0(base.Height(33), base.Round(0), nil, valuehash.RandomSHA256())
+	blk, err := block.NewTestBlockV0(base.Height(33), base.Round(0), nil, valuehash.RandomSHA256())
 	t.NoError(err)
 
 	t.NotNil(t.storage)
 
-	bs, err := t.storage.OpenBlockStorage(block)
+	bs, err := t.storage.OpenBlockStorage(blk)
 	t.NoError(err)
-	t.NoError(bs.SetBlock(block))
+	t.NoError(bs.SetBlock(blk))
 	t.NoError(bs.Commit())
 
-	loaded, err := t.storage.BlockByHeight(block.Height())
+	loaded, err := t.storage.BlockByHeight(blk.Height())
 	t.NoError(err)
 
-	t.compareBlock(block, loaded)
+	t.compareBlock(blk, loaded)
 }
 
 func (t *testLeveldbStorage) TestLoadINITVoteproof() {
@@ -474,10 +475,10 @@ func (t *testLeveldbStorage) TestUnStagedOperationSeals() {
 		unstaged = append(unstaged, sl.Hash())
 	}
 
-	block, err := NewTestBlockV0(base.Height(33), base.Round(0), valuehash.RandomSHA256(), valuehash.RandomSHA256())
+	blk, err := block.NewTestBlockV0(base.Height(33), base.Round(0), valuehash.RandomSHA256(), valuehash.RandomSHA256())
 	t.NoError(err)
 
-	bs, err := t.storage.OpenBlockStorage(block)
+	bs, err := t.storage.OpenBlockStorage(blk)
 	t.NoError(err)
 
 	// unstage

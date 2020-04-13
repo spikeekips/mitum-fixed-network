@@ -1,4 +1,4 @@
-package isaac
+package block
 
 import (
 	"encoding/json"

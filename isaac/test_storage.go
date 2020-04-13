@@ -3,23 +3,23 @@
 package isaac
 
 import (
+	"github.com/spikeekips/mitum/base/block"
 	"github.com/spikeekips/mitum/base/tree"
-
 	"github.com/spikeekips/mitum/base/valuehash"
 )
 
 type DummyBlockStorage struct {
-	block      Block
+	block      block.Block
 	operations *tree.AVLTree
 	states     *tree.AVLTree
 }
 
-func (dst *DummyBlockStorage) Block() Block {
+func (dst *DummyBlockStorage) Block() block.Block {
 	return dst.block
 }
 
-func (dst *DummyBlockStorage) SetBlock(block Block) error {
-	dst.block = block
+func (dst *DummyBlockStorage) SetBlock(blk block.Block) error {
+	dst.block = blk
 
 	return nil
 }

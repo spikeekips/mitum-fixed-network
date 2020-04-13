@@ -8,6 +8,7 @@ import (
 
 	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/base/ballot"
+	"github.com/spikeekips/mitum/base/block"
 	"github.com/spikeekips/mitum/base/seal"
 	"github.com/spikeekips/mitum/util"
 	"github.com/spikeekips/mitum/util/logging"
@@ -311,12 +312,12 @@ func (ss *StateSyncingHandler) syncerStateChanged(syncer Syncer) {
 			ss.scs = ss.scs[:len(ss.scs)-1]
 		}
 
-		var block Block
+		var blk block.Block
 		if err := util.Retry(3, time.Millisecond*300, func() error {
 			if b, err := ss.localstate.Storage().LastBlock(); err != nil {
 				return err
 			} else {
-				block = b
+				blk = b
 			}
 
 			return nil
@@ -325,7 +326,7 @@ func (ss *StateSyncingHandler) syncerStateChanged(syncer Syncer) {
 			return
 		}
 
-		if err := ss.localstate.SetLastBlock(block); err != nil {
+		if err := ss.localstate.SetLastBlock(blk); err != nil {
 			ss.Log().Error().Err(err).Msg("failed to set last block after synced")
 		}
 	}

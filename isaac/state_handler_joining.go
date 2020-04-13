@@ -287,13 +287,13 @@ func (cs *StateJoiningHandler) handleACCEPTBallotAndINITVoteproof(
 		// INIT Voteproof and broadcast new ACCEPT Ballot.
 		_ = cs.localstate.SetLastINITVoteproof(voteproof)
 
-		block, err := cs.proposalProcessor.ProcessINIT(blt.Proposal(), voteproof)
+		blk, err := cs.proposalProcessor.ProcessINIT(blt.Proposal(), voteproof)
 		if err != nil {
 			l.Debug().Err(err).Msg("tried to process Proposal, but it is not yet received")
 			return err
 		}
 
-		if ab, err := NewACCEPTBallotV0FromLocalstate(cs.localstate, voteproof.Round(), block); err != nil {
+		if ab, err := NewACCEPTBallotV0FromLocalstate(cs.localstate, voteproof.Round(), blk); err != nil {
 			cs.Log().Error().Err(err).Msg("failed to create ACCEPTBallot; will keep trying")
 			return nil
 		} else {

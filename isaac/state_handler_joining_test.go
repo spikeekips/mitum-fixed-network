@@ -9,6 +9,7 @@ import (
 
 	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/base/ballot"
+	"github.com/spikeekips/mitum/base/block"
 	"github.com/spikeekips/mitum/base/seal"
 	"github.com/spikeekips/mitum/base/valuehash"
 )
@@ -468,7 +469,7 @@ func (t *testStateJoiningHandler) TestACCEPTVoteproofExpected() {
 	_ = t.localstate.Policy().SetThreshold(thr)
 	_ = t.remoteState.Policy().SetThreshold(thr)
 
-	returnedBlock, err := NewTestBlockV0(
+	returnedBlock, err := block.NewTestBlockV0(
 		t.localstate.LastBlock().Height()+1,
 		base.Round(2),
 		valuehash.RandomSHA256(),

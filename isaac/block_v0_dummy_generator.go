@@ -3,6 +3,7 @@ package isaac
 import (
 	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/base/ballot"
+	"github.com/spikeekips/mitum/base/block"
 	"github.com/spikeekips/mitum/base/seal"
 	"github.com/spikeekips/mitum/base/valuehash"
 )
@@ -66,11 +67,11 @@ func (bg *DummyBlocksV0Generator) Generate(ignoreExists bool) error {
 		genesis, err := NewGenesisBlockV0Generator(bg.genesisNode, nil)
 		if err != nil {
 			return err
-		} else if block, err := genesis.Generate(); err != nil {
+		} else if blk, err := genesis.Generate(); err != nil {
 			return err
 		} else {
 			for _, l := range bg.allNodes {
-				if err := l.SetLastBlock(block); err != nil {
+				if err := l.SetLastBlock(blk); err != nil {
 					return err
 				}
 			}
@@ -95,27 +96,27 @@ func (bg *DummyBlocksV0Generator) Generate(ignoreExists bool) error {
 }
 
 func (bg *DummyBlocksV0Generator) syncBlocks(from *Localstate) error {
-	var blocks []Block
+	var blocks []block.Block
 	height := base.Height(0)
 	for {
-		if block, err := from.Storage().BlockByHeight(height); err != nil {
+		if blk, err := from.Storage().BlockByHeight(height); err != nil {
 			break
 		} else {
-			blocks = append(blocks, block)
+			blocks = append(blocks, blk)
 		}
 
 		height++
 	}
 
-	for _, block := range blocks {
+	for _, blk := range blocks {
 		for _, l := range bg.allNodes {
 			if l.Node().Address().Equal(from.Node().Address()) {
 				continue
 			}
 
-			if bs, err := l.Storage().OpenBlockStorage(block); err != nil {
+			if bs, err := l.Storage().OpenBlockStorage(blk); err != nil {
 				return err
-			} else if err := bs.SetBlock(block); err != nil {
+			} else if err := bs.SetBlock(blk); err != nil {
 				return err
 			} else if err := bs.Commit(); err != nil {
 				return err
@@ -338,7 +339,7 @@ func (bg *DummyBlocksV0Generator) createACCEPTVoteproof(proposal ballot.Proposal
 	var ballots []ballot.ACCEPTBallot
 	var seals []seal.Seal
 	for _, l := range bg.allNodes {
-		var newBlock Block
+		var newBlock block.Block
 
 		initVoteproof := l.LastINITVoteproof()
 		if b, err := bg.pms[l.Node().Address()].ProcessINIT(proposal.Hash(), initVoteproof); err != nil {

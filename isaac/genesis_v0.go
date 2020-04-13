@@ -5,6 +5,7 @@ import (
 
 	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/base/ballot"
+	"github.com/spikeekips/mitum/base/block"
 	"github.com/spikeekips/mitum/base/operation"
 	"github.com/spikeekips/mitum/base/seal"
 	"github.com/spikeekips/mitum/base/valuehash"
@@ -28,7 +29,7 @@ func NewGenesisBlockV0Generator(localstate *Localstate, ops []operation.Operatio
 	}, nil
 }
 
-func (gg *GenesisBlockV0Generator) Generate() (Block, error) {
+func (gg *GenesisBlockV0Generator) Generate() (block.Block, error) {
 	if err := gg.generatePreviousBlock(); err != nil {
 		return nil, err
 	}
@@ -53,7 +54,7 @@ func (gg *GenesisBlockV0Generator) Generate() (Block, error) {
 
 	initVoteproof := gg.localstate.LastINITVoteproof()
 
-	var block Block
+	var blk block.Block
 
 	pm := NewProposalProcessorV0(gg.localstate)
 	pm.SetLogger(log)
@@ -71,11 +72,11 @@ func (gg *GenesisBlockV0Generator) Generate() (Block, error) {
 		} else {
 			_ = gg.localstate.SetLastBlock(bs.Block())
 
-			block = bs.Block()
+			blk = bs.Block()
 		}
 	}
 
-	return block, nil
+	return blk, nil
 }
 
 func (gg *GenesisBlockV0Generator) generateOperationSeal() ([]operation.Seal, error) {
@@ -109,18 +110,18 @@ func (gg *GenesisBlockV0Generator) generatePreviousBlock() error {
 		genesisHash = valuehash.NewDummy(sig)
 	}
 
-	block, err := NewBlockV0(base.Height(-1), base.Round(0), genesisHash, genesisHash, nil, nil)
+	blk, err := block.NewBlockV0(base.Height(-1), base.Round(0), genesisHash, genesisHash, nil, nil)
 	if err != nil {
 		return err
 	}
 
-	if bs, err := gg.localstate.Storage().OpenBlockStorage(block); err != nil {
+	if bs, err := gg.localstate.Storage().OpenBlockStorage(blk); err != nil {
 		return err
 	} else if err := bs.Commit(); err != nil {
 		return err
 	}
 
-	_ = gg.localstate.SetLastBlock(block)
+	_ = gg.localstate.SetLastBlock(blk)
 
 	return nil
 }
@@ -187,7 +188,7 @@ func (gg *GenesisBlockV0Generator) generateINITVoteproof() error {
 	return nil
 }
 
-func (gg *GenesisBlockV0Generator) generateACCEPTVoteproof(newBlock Block) error {
+func (gg *GenesisBlockV0Generator) generateACCEPTVoteproof(newBlock block.Block) error {
 	initVoteproof := gg.localstate.LastINITVoteproof()
 
 	if ab, err := NewACCEPTBallotV0(

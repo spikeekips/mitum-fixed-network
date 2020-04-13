@@ -71,12 +71,12 @@ func (t *testBlockV0DummyGenerator) TestCreate() {
 	for i := int64(0); i < lastHeight.Int64(); i++ {
 		hashes := map[valuehash.Hash]struct{}{}
 		for nodeid, l := range all {
-			block, err := l.Storage().BlockByHeight(base.Height(i))
+			blk, err := l.Storage().BlockByHeight(base.Height(i))
 			t.NoError(err, "node=%d height=%d", nodeid, i)
-			t.NotNil(block, "node=%d height=%d", nodeid, i)
-			t.NoError(block.IsValid(nil))
+			t.NotNil(blk, "node=%d height=%d", nodeid, i)
+			t.NoError(blk.IsValid(nil))
 
-			hashes[block.Hash()] = struct{}{}
+			hashes[blk.Hash()] = struct{}{}
 		}
 
 		t.Equal(1, len(hashes), "check block hashes are matched")

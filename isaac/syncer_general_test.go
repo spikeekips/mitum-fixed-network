@@ -10,6 +10,7 @@ import (
 
 	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/base/ballot"
+	"github.com/spikeekips/mitum/base/block"
 	"github.com/spikeekips/mitum/storage"
 	"github.com/spikeekips/mitum/util"
 )
@@ -43,8 +44,8 @@ func (t *testGeneralSyncer) setup(local *Localstate, localstates []*Localstate) 
 
 	for _, st := range nodes {
 		nch := st.Node().Channel().(*NetworkChanChannel)
-		nch.SetGetManifests(func(heights []base.Height) ([]Manifest, error) {
-			var bs []Manifest
+		nch.SetGetManifests(func(heights []base.Height) ([]block.Manifest, error) {
+			var bs []block.Manifest
 			for _, h := range heights {
 				m, err := st.Storage().ManifestByHeight(h)
 				if err != nil {
@@ -61,8 +62,8 @@ func (t *testGeneralSyncer) setup(local *Localstate, localstates []*Localstate) 
 			return bs, nil
 		})
 
-		nch.SetGetBlocks(func(heights []base.Height) ([]Block, error) {
-			var bs []Block
+		nch.SetGetBlocks(func(heights []base.Height) ([]block.Block, error) {
+			var bs []block.Block
 			for _, h := range heights {
 				m, err := st.Storage().BlockByHeight(h)
 				if err != nil {
@@ -550,8 +551,8 @@ func (t *testGeneralSyncer) TestMissingHead() {
 	head := baseBlock.Height() + 1
 	ch := rn0.Node().Channel().(*NetworkChanChannel)
 	orig := ch.getManifests
-	ch.SetGetManifests(func(heights []base.Height) ([]Manifest, error) {
-		var bs []Manifest
+	ch.SetGetManifests(func(heights []base.Height) ([]block.Manifest, error) {
+		var bs []block.Manifest
 		if l, err := orig(heights); err != nil {
 			return nil, err
 		} else {
@@ -587,8 +588,8 @@ func (t *testGeneralSyncer) TestMissingTail() {
 	tail := target
 	ch := rn0.Node().Channel().(*NetworkChanChannel)
 	orig := ch.getManifests
-	ch.SetGetManifests(func(heights []base.Height) ([]Manifest, error) {
-		var bs []Manifest
+	ch.SetGetManifests(func(heights []base.Height) ([]block.Manifest, error) {
+		var bs []block.Manifest
 		if l, err := orig(heights); err != nil {
 			return nil, err
 		} else {
@@ -624,8 +625,8 @@ func (t *testGeneralSyncer) TestMissingManifests() {
 	missing := target - 1
 	ch := rn0.Node().Channel().(*NetworkChanChannel)
 	orig := ch.getManifests
-	ch.SetGetManifests(func(heights []base.Height) ([]Manifest, error) {
-		var bs []Manifest
+	ch.SetGetManifests(func(heights []base.Height) ([]block.Manifest, error) {
+		var bs []block.Manifest
 		if l, err := orig(heights); err != nil {
 			return nil, err
 		} else {
@@ -661,8 +662,8 @@ func (t *testGeneralSyncer) TestMissingBlocks() {
 	missing := target - 1
 	ch := rn0.Node().Channel().(*NetworkChanChannel)
 	orig := ch.getBlocks
-	ch.SetGetBlocks(func(heights []base.Height) ([]Block, error) {
-		var bs []Block
+	ch.SetGetBlocks(func(heights []base.Height) ([]block.Block, error) {
+		var bs []block.Block
 		if l, err := orig(heights); err != nil {
 			return nil, err
 		} else {

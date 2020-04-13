@@ -9,6 +9,7 @@ import (
 
 	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/base/ballot"
+	"github.com/spikeekips/mitum/base/block"
 	"github.com/spikeekips/mitum/base/seal"
 	"github.com/spikeekips/mitum/base/valuehash"
 )
@@ -142,7 +143,7 @@ func (t *testStateConsensusHandler) TestWithProposalWaitACCEPTBallot() {
 	pr, err := NewProposalFromLocalstate(t.remoteState, initFact.Round(), nil, nil)
 	t.NoError(err)
 
-	returnedBlock, err := NewTestBlockV0(initFact.Height(), initFact.Round(), pr.Hash(), valuehash.RandomSHA256())
+	returnedBlock, err := block.NewTestBlockV0(initFact.Height(), initFact.Round(), pr.Hash(), valuehash.RandomSHA256())
 	t.NoError(err)
 	cs.proposalProcessor = NewDummyProposalProcessor(returnedBlock, nil)
 
@@ -196,7 +197,7 @@ func (t *testStateConsensusHandler) TestWithProposalWaitSIGNBallot() {
 	pr, err := NewProposalFromLocalstate(t.remoteState, initFact.Round(), nil, nil)
 	t.NoError(err)
 
-	returnedBlock, err := NewTestBlockV0(initFact.Height(), initFact.Round(), pr.Hash(), valuehash.RandomSHA256())
+	returnedBlock, err := block.NewTestBlockV0(initFact.Height(), initFact.Round(), pr.Hash(), valuehash.RandomSHA256())
 	t.NoError(err)
 	cs.proposalProcessor = NewDummyProposalProcessor(returnedBlock, nil)
 
@@ -249,7 +250,7 @@ func (t *testStateConsensusHandler) TestDraw() {
 
 	var drew base.VoteproofV0
 	{
-		dummyBlock, _ := NewTestBlockV0(vp.Height(), vp.Round(), valuehash.RandomSHA256(), valuehash.RandomSHA256())
+		dummyBlock, _ := block.NewTestBlockV0(vp.Height(), vp.Round(), valuehash.RandomSHA256(), valuehash.RandomSHA256())
 
 		ab, err := NewACCEPTBallotV0FromLocalstate(t.localstate, vp.Round(), dummyBlock)
 		t.NoError(err)

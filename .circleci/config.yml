@@ -57,6 +57,7 @@ jobs:
       - run:
          name: unit test
          command: go test -race -tags test -timeout 1m -v -coverprofile=/tmp/coverage.txt -covermode=atomic ./...
+
       - codecov/upload:
           file: /tmp/coverage.txt
 

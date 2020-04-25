@@ -81,6 +81,7 @@ func NewNode(id int, networkID []byte, netType string) (*isaac.Localstate, error
 	}
 
 	// create new node
+	// TODO select db type by configuration
 	st := leveldbstorage.NewMemStorage(encs, enc)
 
 	localNode := NewLocalNode(id)

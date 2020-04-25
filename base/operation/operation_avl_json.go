@@ -50,21 +50,5 @@ func (em *OperationAVLNode) UnpackJSON(b []byte, enc *encoder.JSONEncoder) error
 		return err
 	}
 
-	var op Operation
-	if o, err := DecodeOperation(enc, ue.OP); err != nil {
-		return err
-	} else {
-		op = o
-	}
-
-	em.key = ue.K
-	em.height = ue.HT
-	em.left = ue.LF
-	em.leftHash = ue.LFH
-	em.right = ue.RG
-	em.rightHash = ue.RGH
-	em.h = ue.H
-	em.op = op
-
-	return nil
+	return em.unpack(enc, ue.K, ue.HT, ue.LF, ue.LFH, ue.RG, ue.RGH, ue.H, ue.OP)
 }

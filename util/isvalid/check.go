@@ -9,7 +9,7 @@ func Check(vs []IsValider, b []byte, allowNil bool) error {
 				return nil
 			}
 
-			return xerrors.Errorf("%ith: nil can not be checked: type=%T", i, v)
+			return xerrors.Errorf("%dth: nil can not be checked: type=%T", i, v)
 		}
 		if err := v.IsValid(b); err != nil {
 			return err

@@ -4,9 +4,6 @@ import (
 	"encoding/json"
 	"time"
 
-	"golang.org/x/xerrors"
-
-	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/base/key"
 	"github.com/spikeekips/mitum/base/valuehash"
 	"github.com/spikeekips/mitum/util"
@@ -52,29 +49,16 @@ func (po *PolicyOperationBodyV0) UnpackJSON(b []byte, enc *encoder.JSONEncoder) 
 		return err
 	}
 
-	var err error
-
-	var threshold base.Threshold
-	if len(up.Threshold) != 2 {
-		return xerrors.Errorf("invalid formatted Threshold found: %v", up.Threshold)
-	} else if total := up.Threshold[0]; total < 0 {
-		return xerrors.Errorf("invalid total number of Threshold found: %v", up.Threshold)
-	} else if percent := up.Threshold[1]; percent < 0 {
-		return xerrors.Errorf("invalid percent number of Threshold found: %v", up.Threshold)
-	} else if threshold, err = base.NewThreshold(uint(total), percent); err != nil {
-		return err
-	}
-
-	po.Threshold = threshold
-	po.TimeoutWaitingProposal = up.TimeoutWaitingProposal
-	po.IntervalBroadcastingINITBallot = up.IntervalBroadcastingINITBallot
-	po.IntervalBroadcastingProposal = up.IntervalBroadcastingProposal
-	po.WaitBroadcastingACCEPTBallot = up.WaitBroadcastingACCEPTBallot
-	po.IntervalBroadcastingACCEPTBallot = up.IntervalBroadcastingACCEPTBallot
-	po.NumberOfActingSuffrageNodes = up.NumberOfActingSuffrageNodes
-	po.TimespanValidBallot = up.TimespanValidBallot
-
-	return nil
+	return po.unpack(
+		up.Threshold,
+		up.TimeoutWaitingProposal,
+		up.IntervalBroadcastingINITBallot,
+		up.IntervalBroadcastingProposal,
+		up.WaitBroadcastingACCEPTBallot,
+		up.IntervalBroadcastingACCEPTBallot,
+		up.NumberOfActingSuffrageNodes,
+		up.TimespanValidBallot,
+	)
 }
 
 func (spo SetPolicyOperationV0) MarshalJSON() ([]byte, error) {
@@ -97,7 +81,7 @@ func (spo SetPolicyOperationV0) MarshalJSON() ([]byte, error) {
 	})
 }
 
-type SetPolicyOperationV0Unpacker struct {
+type SetPolicyOperationV0UnpackerJSON struct {
 	H  json.RawMessage `json:"hash"`
 	FH json.RawMessage `json:"fact_hash"`
 	FS key.Signature   `json:"fact_signature"`
@@ -107,38 +91,10 @@ type SetPolicyOperationV0Unpacker struct {
 }
 
 func (spo *SetPolicyOperationV0) UnpackJSON(b []byte, enc *encoder.JSONEncoder) error {
-	var usp SetPolicyOperationV0Unpacker
+	var usp SetPolicyOperationV0UnpackerJSON
 	if err := enc.Unmarshal(b, &usp); err != nil {
 		return err
 	}
 
-	var err error
-
-	var h, factHash valuehash.Hash
-	if h, err = valuehash.Decode(enc, usp.H); err != nil {
-		return err
-	}
-	if factHash, err = valuehash.Decode(enc, usp.FH); err != nil {
-		return err
-	}
-	var signer key.Publickey
-	if signer, err = key.DecodePublickey(enc, usp.SN); err != nil {
-		return err
-	}
-
-	var body PolicyOperationBodyV0
-	if err := enc.Decode(usp.PO, &body); err != nil {
-		return err
-	}
-
-	spo.h = h
-	spo.factHash = factHash
-	spo.factSignature = usp.FS
-	spo.SetPolicyOperationFactV0 = SetPolicyOperationFactV0{
-		PolicyOperationBodyV0: body,
-		signer:                signer,
-		token:                 usp.TK,
-	}
-
-	return nil
+	return spo.unpack(enc, usp.H, usp.FH, usp.FS, usp.SN, usp.TK, usp.PO)
 }

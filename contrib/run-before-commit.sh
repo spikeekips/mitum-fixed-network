@@ -17,7 +17,7 @@ go clean -testcache
 go clean -testcache
 for i in $(find . -type d -d 1 | grep -v '.git\|.circleci')
 do
-    go test -timeout 30s -tags test -race ./$i... -run .
+    go test -timeout 3m -tags 'test mongodb' -race ./$i... -run . -v
 done
 
 echo

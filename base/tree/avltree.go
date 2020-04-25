@@ -59,7 +59,7 @@ func (at *AVLTree) IsValid() error {
 }
 
 func (at *AVLTree) Empty() bool {
-	return at.Tree == nil
+	return at == nil || at.Tree == nil
 }
 
 func (at *AVLTree) Traverse(f func(Node) (keep bool, err error)) error {

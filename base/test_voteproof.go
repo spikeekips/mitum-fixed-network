@@ -10,6 +10,7 @@ import (
 	"github.com/spikeekips/mitum/util/encoder"
 	"github.com/spikeekips/mitum/util/hint"
 	"github.com/spikeekips/mitum/util/logging"
+	"go.mongodb.org/mongo-driver/bson"
 )
 
 func NewTestVoteproofV0(
@@ -137,6 +138,36 @@ func (vp *DummyVoteproof) UnpackJSON(b []byte, enc *encoder.JSONEncoder) error {
 		RD Round
 		SG Stage
 		RS VoteResultType
+	}
+
+	if err := enc.Unmarshal(b, &uvp); err != nil {
+		return err
+	}
+
+	vp.height = uvp.HT
+	vp.round = uvp.RD
+	vp.stage = uvp.SG
+	vp.result = uvp.RS
+
+	return nil
+}
+
+func (vp DummyVoteproof) MarshalBSON() ([]byte, error) {
+	return bson.Marshal(bson.M{
+		"_hint":  vp.Hint(),
+		"height": vp.height,
+		"round":  vp.round,
+		"stage":  vp.stage,
+		"result": vp.result,
+	})
+}
+
+func (vp *DummyVoteproof) UnpackBSON(b []byte, enc *encoder.BSONEncoder) error {
+	var uvp struct {
+		HT Height         `bson:"height"`
+		RD Round          `bson:"round"`
+		SG Stage          `bson:"stage"`
+		RS VoteResultType `bson:"result"`
 	}
 
 	if err := enc.Unmarshal(b, &uvp); err != nil {

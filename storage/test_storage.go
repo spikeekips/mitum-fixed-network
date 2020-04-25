@@ -3,9 +3,16 @@
 package storage
 
 import (
+	"github.com/stretchr/testify/suite"
+
+	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/base/block"
+	"github.com/spikeekips/mitum/base/key"
+	"github.com/spikeekips/mitum/base/operation"
+	"github.com/spikeekips/mitum/base/seal"
 	"github.com/spikeekips/mitum/base/tree"
 	"github.com/spikeekips/mitum/base/valuehash"
+	"github.com/spikeekips/mitum/util/encoder"
 )
 
 type DummyBlockStorage struct {
@@ -50,4 +57,49 @@ func (dst *DummyBlockStorage) UnstageOperationSeals([]valuehash.Hash) error {
 
 func (dst *DummyBlockStorage) Commit() error {
 	return nil
+}
+
+type BaseTestStorage struct {
+	suite.Suite
+	PK      key.BTCPrivatekey
+	Encs    *encoder.Encoders
+	JSONEnc encoder.Encoder
+	BSONEnc encoder.Encoder
+}
+
+func (t *BaseTestStorage) SetupSuite() {
+	t.Encs = encoder.NewEncoders()
+	t.JSONEnc = encoder.NewJSONEncoder()
+	t.BSONEnc = encoder.NewBSONEncoder()
+
+	t.NoError(t.Encs.AddEncoder(t.JSONEnc))
+	t.NoError(t.Encs.AddEncoder(t.BSONEnc))
+
+	_ = t.Encs.AddHinter(key.BTCPublickey{})
+	_ = t.Encs.AddHinter(block.BlockV0{})
+	_ = t.Encs.AddHinter(block.ManifestV0{})
+	_ = t.Encs.AddHinter(block.BlockConsensusInfoV0{})
+	_ = t.Encs.AddHinter(valuehash.SHA256{})
+	_ = t.Encs.AddHinter(base.VoteproofV0{})
+	_ = t.Encs.AddHinter(seal.DummySeal{})
+	_ = t.Encs.AddHinter(operation.Seal{})
+	_ = t.Encs.AddHinter(operation.KVOperation{})
+	_ = t.Encs.AddHinter(operation.KVOperationFact{})
+
+	t.PK, _ = key.NewBTCPrivatekey()
+}
+
+func (t *BaseTestStorage) CompareManifest(a, b block.Manifest) {
+	t.Equal(a.Height(), b.Height())
+	t.Equal(a.Round(), b.Round())
+	t.True(a.Proposal().Equal(b.Proposal()))
+	t.True(a.PreviousBlock().Equal(b.PreviousBlock()))
+	t.True(a.OperationsHash().Equal(b.OperationsHash()))
+	t.True(a.StatesHash().Equal(b.StatesHash()))
+}
+
+func (t *BaseTestStorage) CompareBlock(a, b block.Block) {
+	t.CompareManifest(a, b)
+	t.Equal(a.INITVoteproof(), b.INITVoteproof())
+	t.Equal(a.ACCEPTVoteproof(), b.ACCEPTVoteproof())
 }

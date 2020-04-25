@@ -147,6 +147,7 @@ func (bg *DummyBlocksV0Generator) syncSeals(from *Localstate) error {
 	); err != nil {
 		return err
 	}
+
 	for _, l := range bg.allNodes {
 		if l.Node().Address().Equal(from.Node().Address()) {
 			continue
@@ -167,6 +168,7 @@ func (bg *DummyBlocksV0Generator) syncSeals(from *Localstate) error {
 	); err != nil {
 		return err
 	}
+
 	for _, l := range bg.allNodes {
 		if l.Node().Address().Equal(from.Node().Address()) {
 			continue

@@ -1,4 +1,4 @@
-package ballot
+package ballot // nolint
 
 import (
 	"encoding/json"
@@ -37,42 +37,17 @@ type INITBallotV0UnpackerJSON struct {
 }
 
 func (ib *INITBallotV0) UnpackJSON(b []byte, enc *encoder.JSONEncoder) error {
-	var nib INITBallotV0UnpackerJSON
-	if err := enc.Unmarshal(b, &nib); err != nil {
-		return err
-	} else if err := ib.Hint().IsCompatible(nib.JSONPackHintedHead.H); err != nil {
-		return err
-	}
-
-	bb, bf, err := UnpackBaseBallotV0JSON(nib.BaseBallotV0UnpackerJSON, enc)
+	bb, bf, err := ib.BaseBallotV0.unpackJSON(b, enc)
 	if err != nil {
 		return err
 	}
 
-	// previousblock
-	var epb valuehash.Hash
-	if i, err := valuehash.Decode(enc, nib.PB); err != nil {
+	var nib INITBallotV0UnpackerJSON
+	if err := enc.Unmarshal(b, &nib); err != nil {
 		return err
-	} else {
-		epb = i
 	}
 
-	var voteproof base.Voteproof
-	if i, err := base.DecodeVoteproof(enc, nib.VR); err != nil {
-		return err
-	} else {
-		voteproof = i
-	}
-
-	ib.BaseBallotV0 = bb
-	ib.INITBallotFactV0 = INITBallotFactV0{
-		BaseBallotFactV0: bf,
-		previousBlock:    epb,
-		previousRound:    nib.PR,
-	}
-	ib.voteproof = voteproof
-
-	return nil
+	return ib.unpack(enc, bb, bf, nib.PB, nib.PR, nib.VR)
 }
 
 type INITBallotFactV0PackerJSON struct {
@@ -96,21 +71,17 @@ type INITBallotFactV0UnpackerJSON struct {
 }
 
 func (ibf *INITBallotFactV0) UnpackJSON(b []byte, enc *encoder.JSONEncoder) error {
+	var err error
+
+	var bf BaseBallotFactV0
+	if bf, err = ibf.BaseBallotFactV0.unpackJSON(b, enc); err != nil {
+		return err
+	}
+
 	var ubf INITBallotFactV0UnpackerJSON
 	if err := enc.Unmarshal(b, &ubf); err != nil {
 		return err
 	}
 
-	var err error
-	var pb valuehash.Hash
-	if pb, err = valuehash.Decode(enc, ubf.PB); err != nil {
-		return err
-	}
-
-	ibf.BaseBallotFactV0.height = ubf.HT
-	ibf.BaseBallotFactV0.round = ubf.RD
-	ibf.previousBlock = pb
-	ibf.previousRound = ubf.PR
-
-	return nil
+	return ibf.unpack(enc, bf, ubf.PB, ubf.PR)
 }

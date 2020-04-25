@@ -49,3 +49,14 @@ func (as ActingSuffrage) Exists(node Address) bool {
 func (as ActingSuffrage) Proposer() Node {
 	return as.proposer
 }
+
+func (as ActingSuffrage) NodesSlice() []string {
+	nodes := make([]string, len(as.nodes))
+	var index int
+	for n := range as.nodes {
+		nodes[index] = n.String()
+		index++
+	}
+
+	return nodes
+}

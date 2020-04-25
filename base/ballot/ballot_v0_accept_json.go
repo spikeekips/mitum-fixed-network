@@ -1,4 +1,4 @@
-package ballot
+package ballot // nolint
 
 import (
 	"encoding/json"
@@ -38,47 +38,17 @@ type ACCEPTBallotV0UnpackerJSON struct {
 }
 
 func (ab *ACCEPTBallotV0) UnpackJSON(b []byte, enc *encoder.JSONEncoder) error { // nolint
-	var nab ACCEPTBallotV0UnpackerJSON
-	if err := enc.Unmarshal(b, &nab); err != nil {
-		return err
-	} else if err := ab.Hint().IsCompatible(nab.JSONPackHintedHead.H); err != nil {
-		return err
-	}
-
-	bb, bf, err := UnpackBaseBallotV0JSON(nab.BaseBallotV0UnpackerJSON, enc)
+	bb, bf, err := ab.BaseBallotV0.unpackJSON(b, enc)
 	if err != nil {
 		return err
 	}
 
-	var epr, enb valuehash.Hash
-	if i, err := valuehash.Decode(enc, nab.PR); err != nil {
+	var nab ACCEPTBallotV0UnpackerJSON
+	if err := enc.Unmarshal(b, &nab); err != nil {
 		return err
-	} else {
-		epr = i
 	}
 
-	if i, err := valuehash.Decode(enc, nab.NB); err != nil {
-		return err
-	} else {
-		enb = i
-	}
-
-	var voteproof base.Voteproof
-	if i, err := base.DecodeVoteproof(enc, nab.VR); err != nil {
-		return err
-	} else {
-		voteproof = i
-	}
-
-	ab.BaseBallotV0 = bb
-	ab.ACCEPTBallotFactV0 = ACCEPTBallotFactV0{
-		BaseBallotFactV0: bf,
-		proposal:         epr,
-		newBlock:         enb,
-	}
-	ab.voteproof = voteproof
-
-	return nil
+	return ab.unpack(enc, bb, bf, nab.PR, nab.NB, nab.VR)
 }
 
 type ACCEPTBallotFactV0PackerJSON struct {
@@ -102,24 +72,17 @@ type ACCEPTBallotFactV0UnpackerJSON struct {
 }
 
 func (abf *ACCEPTBallotFactV0) UnpackJSON(b []byte, enc *encoder.JSONEncoder) error {
+	var err error
+
+	var bf BaseBallotFactV0
+	if bf, err = abf.BaseBallotFactV0.unpackJSON(b, enc); err != nil {
+		return err
+	}
+
 	var ubf ACCEPTBallotFactV0UnpackerJSON
 	if err := enc.Unmarshal(b, &ubf); err != nil {
 		return err
 	}
 
-	var err error
-	var pr, nb valuehash.Hash
-	if pr, err = valuehash.Decode(enc, ubf.PR); err != nil {
-		return err
-	}
-	if nb, err = valuehash.Decode(enc, ubf.NB); err != nil {
-		return err
-	}
-
-	abf.BaseBallotFactV0.height = ubf.HT
-	abf.BaseBallotFactV0.round = ubf.RD
-	abf.proposal = pr
-	abf.newBlock = nb
-
-	return nil
+	return abf.unpack(enc, bf, ubf.PR, ubf.NB)
 }

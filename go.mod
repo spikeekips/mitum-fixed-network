@@ -3,7 +3,6 @@ module github.com/spikeekips/mitum
 go 1.14
 
 require (
-	github.com/Azure/go-autorest/autorest/to v0.3.0
 	github.com/alecthomas/kong v0.2.4
 	github.com/beevik/ntp v0.2.0
 	github.com/btcsuite/btcd v0.20.1-beta
@@ -26,7 +25,7 @@ require (
 	github.com/stellar/go-xdr v0.0.0-20191118232123-3aa35463cbdb // indirect
 	github.com/stretchr/testify v1.5.1
 	github.com/syndtr/goleveldb v1.0.1-0.20190923125748-758128399b1d
-	go.mongodb.org/mongo-driver v1.3.1
+	go.mongodb.org/mongo-driver v1.3.2
 	golang.org/x/crypto v0.0.0-20200311171314-f7b00557c8c4
 	golang.org/x/mod v0.2.0
 	golang.org/x/net v0.0.0-20200301022130-244492dfa37a // indirect

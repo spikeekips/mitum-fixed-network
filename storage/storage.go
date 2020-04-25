@@ -16,7 +16,7 @@ type Storage interface {
 	Encoders() *encoder.Encoders
 
 	OpenBlockStorage(block.Block) (BlockStorage, error)
-	SyncerStorage() SyncerStorage
+	SyncerStorage() (SyncerStorage, error)
 
 	LastBlock() (block.Block, error)
 	Block(valuehash.Hash) (block.Block, error)

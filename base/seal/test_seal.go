@@ -9,6 +9,7 @@ import (
 	"github.com/spikeekips/mitum/util/encoder"
 	"github.com/spikeekips/mitum/util/hint"
 	"github.com/spikeekips/mitum/util/localtime"
+	"go.mongodb.org/mongo-driver/bson"
 )
 
 var dummySealHint = hint.MustHintWithType(hint.Type{0xff, 0x35}, "0.1", "dummy-seal")
@@ -98,6 +99,42 @@ func (ds *DummySeal) UnmarshalJSON(b []byte) error {
 	ds.BH = uds.BH
 	ds.S = uds.S
 	ds.CreatedAt = uds.CreatedAt.Time
+
+	return nil
+}
+
+func (ds DummySeal) MarshalBSON() ([]byte, error) {
+	return bson.Marshal(encoder.MergeBSONM(
+		encoder.NewBSONHintedDoc(ds.Hint()),
+		bson.M{
+			"PK":        ds.PK,
+			"H":         ds.H,
+			"BH":        ds.BH,
+			"S":         ds.S,
+			"CreatedAt": ds.CreatedAt,
+		},
+	))
+}
+
+type DummySealBSONPacker struct {
+	PK        key.BTCPrivatekey
+	H         valuehash.SHA256
+	BH        valuehash.SHA256
+	S         string
+	CreatedAt time.Time
+}
+
+func (ds *DummySeal) UnmarshalBSON(b []byte) error {
+	var uds DummySealBSONPacker
+	if err := bson.Unmarshal(b, &uds); err != nil {
+		return err
+	}
+
+	ds.PK = uds.PK
+	ds.H = uds.H
+	ds.BH = uds.BH
+	ds.S = uds.S
+	ds.CreatedAt = uds.CreatedAt
 
 	return nil
 }

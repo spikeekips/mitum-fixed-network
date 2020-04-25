@@ -1,10 +1,12 @@
-package storage
+package leveldbstorage
 
 import (
+	leveldbErrors "github.com/syndtr/goleveldb/leveldb/errors"
+
+	"github.com/spikeekips/mitum/storage"
 	"github.com/spikeekips/mitum/util"
 	"github.com/spikeekips/mitum/util/encoder"
 	"github.com/spikeekips/mitum/util/hint"
-	leveldbErrors "github.com/syndtr/goleveldb/leveldb/errors"
 )
 
 func LeveldbLoadHint(b []byte) (hint.Hint, []byte, error) {
@@ -40,8 +42,8 @@ func LeveldbWrapError(err error) error {
 	}
 
 	if err == leveldbErrors.ErrNotFound {
-		return NotFoundError.Wrap(err)
+		return storage.NotFoundError.Wrap(err)
 	}
 
-	return WrapError(err)
+	return storage.WrapError(err)
 }

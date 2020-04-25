@@ -1,57 +1,25 @@
-package key
+package key // nolint
 
-import (
-	"github.com/spikeekips/mitum/util/encoder"
-)
-
-func (sp StellarPrivatekey) PackBSON(_ *encoder.BSONEncoder) (interface{}, error) {
-	return &struct {
-		K string `bson:"key"`
-	}{
-		K: sp.String(),
-	}, nil
+func (sp StellarPrivatekey) MarshalBSON() ([]byte, error) {
+	return MarshalBSONKey(sp)
 }
 
-func (sp *StellarPrivatekey) UnpackBSON(b []byte, enc *encoder.BSONEncoder) error {
-	var k struct {
-		K string `bson:"key"`
-	}
-	if err := enc.Unmarshal(b, &k); err != nil {
+func (sp *StellarPrivatekey) UnmarshalBSON(b []byte) error {
+	if _, s, err := UnmarshalBSONKey(b); err != nil {
 		return err
+	} else {
+		return sp.unpack(s)
 	}
-
-	kp, err := NewStellarPrivatekeyFromString(k.K)
-	if err != nil {
-		return err
-	}
-
-	sp.kp = kp.kp
-
-	return nil
 }
 
-func (sp StellarPublickey) PackBSON(_ *encoder.BSONEncoder) (interface{}, error) {
-	return &struct {
-		K string `bson:"key"`
-	}{
-		K: sp.String(),
-	}, nil
+func (sp StellarPublickey) MarshalBSON() ([]byte, error) {
+	return MarshalBSONKey(sp)
 }
 
-func (sp *StellarPublickey) UnpackBSON(b []byte, enc *encoder.BSONEncoder) error {
-	var k struct {
-		K string `bson:"key"`
-	}
-	if err := enc.Unmarshal(b, &k); err != nil {
+func (sp *StellarPublickey) UnmarshalBSON(b []byte) error {
+	if _, s, err := UnmarshalBSONKey(b); err != nil {
 		return err
+	} else {
+		return sp.unpack(s)
 	}
-
-	kp, err := NewStellarPublickeyFromString(k.K)
-	if err != nil {
-		return err
-	}
-
-	sp.kp = kp.kp
-
-	return nil
 }

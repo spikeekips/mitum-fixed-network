@@ -4,23 +4,18 @@ import (
 	"github.com/spikeekips/mitum/util"
 )
 
-func (as ActingSuffrage) MarshalJSON() ([]byte, error) {
-	nodes := make([]string, len(as.nodes))
-	var index int
-	for n := range as.nodes {
-		nodes[index] = n.String()
-		index++
-	}
+type ActingSuffragePacker struct {
+	H Height   `json:"height" bson:"height"`
+	R Round    `json:"round" bson:"round"`
+	P string   `json:"proposer" bson:"proposer"`
+	N []string `json:"nodes" bson:"nodes"`
+}
 
-	return util.JSONMarshal(struct {
-		H Height   `json:"height"`
-		R Round    `json:"round"`
-		P string   `json:"proposer"`
-		N []string `json:"nodes"`
-	}{
+func (as ActingSuffrage) MarshalJSON() ([]byte, error) {
+	return util.JSONMarshal(ActingSuffragePacker{
 		H: as.height,
 		R: as.round,
 		P: as.proposer.Address().String(),
-		N: nodes,
+		N: as.NodesSlice(),
 	})
 }

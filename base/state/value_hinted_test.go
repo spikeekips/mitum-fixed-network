@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/suite"
+	"go.mongodb.org/mongo-driver/bson"
 
 	"github.com/spikeekips/mitum/base/valuehash"
 	"github.com/spikeekips/mitum/util"
@@ -53,6 +54,26 @@ func (dv dummy) MarshalJSON() ([]byte, error) {
 
 func (dv *dummy) UnpackJSON(b []byte, enc *encoder.JSONEncoder) error {
 	var u struct{ V int }
+	if err := enc.Unmarshal(b, &u); err != nil {
+		return err
+	}
+
+	dv.v = u.V
+
+	return nil
+}
+
+func (dv dummy) MarshalBSON() ([]byte, error) {
+	return bson.Marshal(bson.M{
+		"_hint": dv.Hint(),
+		"value": dv.v,
+	})
+}
+
+func (dv *dummy) UnpackBSON(b []byte, enc *encoder.BSONEncoder) error {
+	var u struct {
+		V int `bson:"value"`
+	}
 	if err := enc.Unmarshal(b, &u); err != nil {
 		return err
 	}

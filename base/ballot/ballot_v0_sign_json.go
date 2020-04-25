@@ -34,37 +34,15 @@ type SIGNBallotV0UnpackerJSON struct {
 }
 
 func (sb *SIGNBallotV0) UnpackJSON(b []byte, enc *encoder.JSONEncoder) error { // nolint
-	var nib SIGNBallotV0UnpackerJSON
-	if err := enc.Unmarshal(b, &nib); err != nil {
-		return err
-	} else if err := sb.Hint().IsCompatible(nib.JSONPackHintedHead.H); err != nil {
-		return err
-	}
-
-	bb, bf, err := UnpackBaseBallotV0JSON(nib.BaseBallotV0UnpackerJSON, enc)
+	bb, bf, err := sb.BaseBallotV0.unpackJSON(b, enc)
 	if err != nil {
 		return err
 	}
 
-	var epr, enb valuehash.Hash
-	if i, err := valuehash.Decode(enc, nib.PR); err != nil {
+	var nib SIGNBallotV0UnpackerJSON
+	if err := enc.Unmarshal(b, &nib); err != nil {
 		return err
-	} else {
-		epr = i
 	}
 
-	if i, err := valuehash.Decode(enc, nib.NB); err != nil {
-		return err
-	} else {
-		enb = i
-	}
-
-	sb.BaseBallotV0 = bb
-	sb.SIGNBallotFactV0 = SIGNBallotFactV0{
-		BaseBallotFactV0: bf,
-		proposal:         epr,
-		newBlock:         enb,
-	}
-
-	return nil
+	return sb.unpack(enc, bb, bf, nib.PR, nib.NB)
 }

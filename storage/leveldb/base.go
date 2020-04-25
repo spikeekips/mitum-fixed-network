@@ -14,7 +14,6 @@ import (
 	"github.com/spikeekips/mitum/base/operation"
 	"github.com/spikeekips/mitum/base/seal"
 	"github.com/spikeekips/mitum/base/state"
-	"github.com/spikeekips/mitum/base/tree"
 	"github.com/spikeekips/mitum/base/valuehash"
 	"github.com/spikeekips/mitum/storage"
 	"github.com/spikeekips/mitum/util"
@@ -64,8 +63,8 @@ func NewMemStorage(encs *encoder.Encoders, enc encoder.Encoder) *LeveldbStorage 
 	return NewLeveldbStorage(db, encs, enc)
 }
 
-func (st *LeveldbStorage) SyncerStorage() storage.SyncerStorage {
-	return NewLeveldbSyncerStorage(st)
+func (st *LeveldbStorage) SyncerStorage() (storage.SyncerStorage, error) {
+	return NewLeveldbSyncerStorage(st), nil
 }
 
 func (st *LeveldbStorage) DB() *leveldb.DB {
@@ -109,7 +108,7 @@ func (st *LeveldbStorage) LastBlock() (block.Block, error) {
 func (st *LeveldbStorage) get(key []byte) ([]byte, error) {
 	b, err := st.db.Get(key, nil)
 
-	return b, storage.LeveldbWrapError(err)
+	return b, LeveldbWrapError(err)
 }
 
 func (st *LeveldbStorage) Block(h valuehash.Hash) (block.Block, error) {
@@ -174,9 +173,9 @@ func (st *LeveldbStorage) newVoteproof(voteproof base.Voteproof) error {
 		return err
 	}
 
-	hb := storage.LeveldbDataWithEncoder(st.enc, raw)
+	hb := LeveldbDataWithEncoder(st.enc, raw)
 
-	return storage.LeveldbWrapError(st.db.Put(leveldbVoteproofKey(voteproof), hb, nil))
+	return LeveldbWrapError(st.db.Put(leveldbVoteproofKey(voteproof), hb, nil))
 }
 
 func (st *LeveldbStorage) LastINITVoteproof() (base.Voteproof, error) {
@@ -302,7 +301,7 @@ func (st *LeveldbStorage) NewSeals(seals []seal.Seal) error {
 		inserted[sl.Hash()] = struct{}{}
 	}
 
-	return storage.LeveldbWrapError(st.db.Write(batch, nil))
+	return LeveldbWrapError(st.db.Write(batch, nil))
 }
 
 func (st *LeveldbStorage) newSeal(batch *leveldb.Batch, sl seal.Seal) error {
@@ -317,11 +316,11 @@ func (st *LeveldbStorage) newSeal(batch *leveldb.Batch, sl seal.Seal) error {
 
 	batch.Put(
 		st.sealHashKey(sl.Hash()),
-		storage.LeveldbDataWithEncoder(st.enc, rawHash),
+		LeveldbDataWithEncoder(st.enc, rawHash),
 	)
 
 	key := st.sealKey(sl.Hash())
-	hb := storage.LeveldbDataWithEncoder(st.enc, raw)
+	hb := LeveldbDataWithEncoder(st.enc, raw)
 	if _, ok := sl.(operation.Seal); !ok {
 		batch.Put(key, hb)
 		return nil
@@ -342,7 +341,7 @@ func (st *LeveldbStorage) loadHinter(b []byte) (hint.Hinter, error) {
 	}
 
 	var ht hint.Hint
-	ht, raw, err := storage.LeveldbLoadHint(b)
+	ht, raw, err := LeveldbLoadHint(b)
 	if err != nil {
 		return nil, err
 	}
@@ -460,7 +459,7 @@ func (st *LeveldbStorage) iter(
 		}
 	}
 
-	return storage.LeveldbWrapError(iter.Error())
+	return LeveldbWrapError(iter.Error())
 }
 
 func (st *LeveldbStorage) Seals(callback func(valuehash.Hash, seal.Seal) (bool, error), sort bool, load bool) error {
@@ -517,7 +516,7 @@ func (st *LeveldbStorage) UnstagedOperationSeals(seals []valuehash.Hash) error {
 		return err
 	}
 
-	return storage.LeveldbWrapError(st.db.Write(batch, nil))
+	return LeveldbWrapError(st.db.Write(batch, nil))
 }
 
 func (st *LeveldbStorage) Proposals(callback func(ballot.Proposal) (bool, error), sort bool) error {
@@ -543,7 +542,7 @@ func (st *LeveldbStorage) proposalKey(height base.Height, round base.Round) []by
 func (st *LeveldbStorage) NewProposal(proposal ballot.Proposal) error {
 	sealKey := st.sealKey(proposal.Hash())
 	if found, err := st.db.Has(sealKey, nil); err != nil {
-		return storage.LeveldbWrapError(err)
+		return LeveldbWrapError(err)
 	} else if !found {
 		if err := st.NewSeals([]seal.Seal{proposal}); err != nil {
 			return err
@@ -551,7 +550,7 @@ func (st *LeveldbStorage) NewProposal(proposal ballot.Proposal) error {
 	}
 
 	if err := st.db.Put(st.proposalKey(proposal.Height(), proposal.Round()), sealKey, nil); err != nil {
-		return storage.LeveldbWrapError(err)
+		return LeveldbWrapError(err)
 	}
 
 	return nil
@@ -587,10 +586,10 @@ func (st *LeveldbStorage) State(key string) (state.State, bool, error) {
 }
 
 func (st *LeveldbStorage) NewState(sta state.State) error {
-	if b, err := storage.LeveldbMarshal(st.enc, sta); err != nil {
+	if b, err := LeveldbMarshal(st.enc, sta); err != nil {
 		return err
 	} else if err := st.db.Put(leveldbStateKey(sta.Key()), b, nil); err != nil {
-		return storage.LeveldbWrapError(err)
+		return LeveldbWrapError(err)
 	}
 
 	return nil
@@ -599,160 +598,11 @@ func (st *LeveldbStorage) NewState(sta state.State) error {
 func (st *LeveldbStorage) HasOperation(h valuehash.Hash) (bool, error) {
 	found, err := st.db.Has(leveldbOperationHashKey(h), nil)
 
-	return found, storage.LeveldbWrapError(err)
+	return found, LeveldbWrapError(err)
 }
 
 func (st *LeveldbStorage) OpenBlockStorage(blk block.Block) (storage.BlockStorage, error) {
 	return NewLeveldbBlockStorage(st, blk)
-}
-
-type LeveldbBlockStorage struct {
-	st         *LeveldbStorage
-	block      block.Block
-	operations *tree.AVLTree
-	states     *tree.AVLTree
-	batch      *leveldb.Batch
-}
-
-func NewLeveldbBlockStorage(st *LeveldbStorage, blk block.Block) (*LeveldbBlockStorage, error) {
-	bst := &LeveldbBlockStorage{
-		st:    st,
-		block: blk,
-		batch: &leveldb.Batch{},
-	}
-
-	return bst, nil
-}
-
-func (bst *LeveldbBlockStorage) Block() block.Block {
-	return bst.block
-}
-
-func (bst *LeveldbBlockStorage) SetBlock(blk block.Block) error {
-	if bst.block.Height() != blk.Height() {
-		return xerrors.Errorf(
-			"block has different height from initial block; initial=%d != block=%d",
-			bst.block.Height(),
-			blk.Height(),
-		)
-	}
-
-	if bst.block.Round() != blk.Round() {
-		return xerrors.Errorf(
-			"block has different round from initial block; initial=%d != block=%d",
-			bst.block.Round(),
-			blk.Round(),
-		)
-	}
-
-	if b, err := storage.LeveldbMarshal(bst.st.enc, blk); err != nil {
-		return err
-	} else {
-		bst.batch.Put(leveldbBlockHashKey(blk.Hash()), b)
-	}
-
-	if b, err := storage.LeveldbMarshal(bst.st.enc, blk.Manifest()); err != nil {
-		return err
-	} else {
-		key := leveldbManifestKey(blk.Hash())
-		bst.batch.Put(key, b)
-	}
-
-	if b, err := storage.LeveldbMarshal(bst.st.enc, blk.Hash()); err != nil {
-		return err
-	} else {
-		bst.batch.Put(leveldbBlockHeightKey(blk.Height()), b)
-	}
-
-	if err := bst.setOperations(blk.Operations()); err != nil {
-		return err
-	}
-
-	if err := bst.setStates(blk.States()); err != nil {
-		return err
-	}
-
-	bst.block = blk
-
-	return nil
-}
-
-func (bst *LeveldbBlockStorage) setOperations(tr *tree.AVLTree) error {
-	if tr == nil || tr.Empty() {
-		return nil
-	}
-
-	if b, err := storage.LeveldbMarshal(bst.st.enc, tr); err != nil { // block 1st
-		return err
-	} else {
-		bst.batch.Put(leveldbBlockOperationsKey(bst.block), b)
-	}
-
-	// store operation hashes
-	if err := tr.Traverse(func(node tree.Node) (bool, error) {
-		op := node.Immutable().(operation.OperationAVLNode).Operation()
-
-		raw, err := bst.st.enc.Encode(op.Hash())
-		if err != nil {
-			return false, err
-		}
-
-		bst.batch.Put(
-			leveldbOperationHashKey(op.Hash()),
-			storage.LeveldbDataWithEncoder(bst.st.enc, raw),
-		)
-
-		return true, nil
-	}); err != nil {
-		return err
-	}
-
-	bst.operations = tr
-
-	return nil
-}
-
-func (bst *LeveldbBlockStorage) setStates(tr *tree.AVLTree) error {
-	if tr == nil || tr.Empty() {
-		return nil
-	}
-
-	if b, err := storage.LeveldbMarshal(bst.st.enc, tr); err != nil { // block 1st
-		return err
-	} else {
-		bst.batch.Put(leveldbBlockStatesKey(bst.block), b)
-	}
-
-	if err := tr.Traverse(func(node tree.Node) (bool, error) {
-		var st state.State
-		if s, ok := node.Immutable().(state.StateV0AVLNode); !ok {
-			return false, xerrors.Errorf("not state.StateV0AVLNode: %T", node)
-		} else {
-			st = s.State()
-		}
-
-		if b, err := storage.LeveldbMarshal(bst.st.enc, st); err != nil {
-			return false, err
-		} else {
-			bst.batch.Put(leveldbStateKey(st.Key()), b)
-		}
-
-		return true, nil
-	}); err != nil {
-		return err
-	}
-
-	bst.states = tr
-
-	return nil
-}
-
-func (bst *LeveldbBlockStorage) UnstageOperationSeals(hs []valuehash.Hash) error {
-	return leveldbUnstageOperationSeals(bst.st, bst.batch, hs)
-}
-
-func (bst *LeveldbBlockStorage) Commit() error {
-	return storage.LeveldbWrapError(bst.st.db.Write(bst.batch, nil))
 }
 
 func leveldbBlockHeightKey(height base.Height) []byte {

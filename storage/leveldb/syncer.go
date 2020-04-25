@@ -7,7 +7,6 @@ import (
 
 	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/base/block"
-	"github.com/spikeekips/mitum/storage"
 	"github.com/spikeekips/mitum/util"
 	"github.com/spikeekips/mitum/util/logging"
 )
@@ -42,7 +41,7 @@ func (st *LeveldbSyncerStorage) manifestKey(height base.Height) []byte {
 func (st *LeveldbSyncerStorage) Manifest(height base.Height) (block.Manifest, error) {
 	raw, err := st.storage.DB().Get(st.manifestKey(height), nil)
 	if err != nil {
-		return nil, storage.LeveldbWrapError(err)
+		return nil, LeveldbWrapError(err)
 	}
 
 	return st.storage.loadManifest(raw)
@@ -77,7 +76,7 @@ func (st *LeveldbSyncerStorage) SetManifests(manifests []block.Manifest) error {
 
 	for i := range manifests {
 		m := manifests[i]
-		if b, err := storage.LeveldbMarshal(st.storage.Encoder(), m); err != nil {
+		if b, err := LeveldbMarshal(st.storage.Encoder(), m); err != nil {
 			return err
 		} else {
 			key := st.manifestKey(m.Height())
@@ -85,7 +84,7 @@ func (st *LeveldbSyncerStorage) SetManifests(manifests []block.Manifest) error {
 		}
 	}
 
-	return storage.LeveldbWrapError(st.storage.DB().Write(batch, nil))
+	return LeveldbWrapError(st.storage.DB().Write(batch, nil))
 }
 
 func (st *LeveldbSyncerStorage) HasBlock(height base.Height) (bool, error) {
@@ -186,5 +185,5 @@ func (st *LeveldbSyncerStorage) checkHeight(height base.Height) {
 }
 
 func (st *LeveldbSyncerStorage) Close() error {
-	return storage.LeveldbWrapError(st.storage.DB().Close())
+	return LeveldbWrapError(st.storage.DB().Close())
 }

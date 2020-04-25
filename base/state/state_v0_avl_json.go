@@ -5,7 +5,6 @@ import (
 
 	"github.com/spikeekips/mitum/util"
 	"github.com/spikeekips/mitum/util/encoder"
-	"github.com/spikeekips/mitum/util/hint"
 )
 
 type StateV0AVLNodePackerJSON struct {
@@ -50,23 +49,5 @@ func (stav *StateV0AVLNode) UnpackJSON(b []byte, enc *encoder.JSONEncoder) error
 		return err
 	}
 
-	var state StateV0
-	if s, err := DecodeState(enc, us.ST); err != nil {
-		return err
-	} else if sv, ok := s.(StateV0); !ok {
-		return hint.InvalidTypeError.Errorf("not state.StateV0; type=%T", s)
-	} else {
-		state = sv
-	}
-
-	stav.h = us.H
-	stav.height = us.HT
-	stav.h = us.H
-	stav.left = us.LF
-	stav.leftHash = us.LFH
-	stav.right = us.RG
-	stav.rightHash = us.RGH
-	stav.state = &state
-
-	return nil
+	return stav.unpack(enc, us.H, us.HT, us.LF, us.LFH, us.RG, us.RGH, us.ST)
 }

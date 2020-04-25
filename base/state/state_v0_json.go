@@ -42,42 +42,12 @@ func (st *StateV0) UnpackJSON(b []byte, enc *encoder.JSONEncoder) error {
 		return err
 	}
 
-	var h, previousBlock valuehash.Hash
-	if i, err := valuehash.Decode(enc, ust.H); err != nil {
-		return err
-	} else {
-		h = i
+	ops := make([][]byte, len(ust.OPS))
+	for i, b := range ust.OPS {
+		ops[i] = b
 	}
 
-	if i, err := valuehash.Decode(enc, ust.PB); err != nil {
-		return err
-	} else {
-		previousBlock = i
-	}
-
-	var value Value
-	if v, err := DecodeValue(enc, ust.V); err != nil {
-		return err
-	} else {
-		value = v
-	}
-
-	ops := make([]OperationInfo, len(ust.OPS))
-	for i := range ust.OPS {
-		if oi, err := DecodeOperationInfo(enc, ust.OPS[i]); err != nil {
-			return err
-		} else {
-			ops[i] = oi
-		}
-	}
-
-	st.h = h
-	st.key = ust.K
-	st.value = value
-	st.previousBlock = previousBlock
-	st.operations = ops
-
-	return nil
+	return st.unpack(enc, ust.H, ust.K, ust.V, ust.PB, ops)
 }
 
 type OperationInfoV0PackerJSON struct {
@@ -105,21 +75,5 @@ func (oi *OperationInfoV0) UnpackJSON(b []byte, enc *encoder.JSONEncoder) error 
 		return err
 	}
 
-	var oh, sh valuehash.Hash
-	if h, err := valuehash.Decode(enc, uoi.OH); err != nil {
-		return err
-	} else {
-		oh = h
-	}
-
-	if h, err := valuehash.Decode(enc, uoi.SH); err != nil {
-		return err
-	} else {
-		sh = h
-	}
-
-	oi.oh = oh
-	oi.sh = sh
-
-	return nil
+	return oi.unpack(enc, uoi.OH, uoi.SH)
 }

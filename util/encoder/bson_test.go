@@ -7,23 +7,19 @@ import (
 
 	"github.com/stretchr/testify/suite"
 	"go.mongodb.org/mongo-driver/bson"
+	"go.mongodb.org/mongo-driver/bson/primitive"
 	"golang.org/x/xerrors"
 
 	"github.com/spikeekips/mitum/util"
 	"github.com/spikeekips/mitum/util/hint"
 )
 
-func (s0 sp0) PackBSON(_ *BSONEncoder) (interface{}, error) {
-	return sp0{
-		A: s0.A,
-		B: []byte(s0.A),
-	}, nil
-}
-
-func (s0 sup0) PackBSON(_ *BSONEncoder) (interface{}, error) {
-	return sup0{
+func (s0 sup0) MarshalBSON() ([]byte, error) {
+	return bson.Marshal(struct {
+		A string
+	}{
 		A: s0.A + "-packed",
-	}, nil
+	})
 }
 
 func (s0 *sup0) UnpackBSON(b []byte, _ *BSONEncoder) error {
@@ -37,44 +33,57 @@ func (s0 *sup0) UnpackBSON(b []byte, _ *BSONEncoder) error {
 	return nil
 }
 
-// NOTE embed struct must have PackBSON and UnpackBSON.
-func (s0 se0) PackBSON(rp *BSONEncoder) (interface{}, error) {
-	s, err := rp.Pack(s0.S)
-	if err != nil {
-		return nil, err
-	}
-
-	return struct {
-		A string
-		S interface{}
-	}{
-		A: s0.A,
-		S: s,
-	}, nil
+type dummyBSONStruct struct {
+	A string
+	B int
 }
 
-func (s0 *se0) UnpackBSON(b []byte, rp *BSONEncoder) error {
-	var se struct {
-		A string
-		S bson.Raw
-	}
-	if err := bson.Unmarshal(b, &se); err != nil {
-		return err
-	}
+var dummyHintedNotBSONMarshalerHint = hint.MustHintWithType(hint.Type{0xff, 0x33}, "0.1", "dummyHintedNotBSONMarshaler")
 
-	var sup sup0
-	if err := rp.Unpack(se.S, &sup); err != nil {
-		return err
-	}
-
-	s0.A = se.A
-	s0.S = sup
-
-	return nil
+type dummyHintedNotBSONMarshaler struct {
+	A string
+	B int
 }
 
-func (s0 sh0) PackBSON(_ *BSONEncoder) (interface{}, error) {
-	return s0, nil
+func (d dummyHintedNotBSONMarshaler) Hint() hint.Hint {
+	return dummyHintedNotBSONMarshalerHint
+}
+
+var dummyHintedBSONMarshalerWithoutHintInfoHint = hint.MustHintWithType(hint.Type{0xff, 0x34}, "0.1", "dummyHintedBSONMarshalerWithoutHintInfo")
+
+type dummyHintedBSONMarshalerWithoutHintInfo struct {
+	A string
+	B int
+}
+
+func (d dummyHintedBSONMarshalerWithoutHintInfo) Hint() hint.Hint {
+	return dummyHintedBSONMarshalerWithoutHintInfoHint
+}
+
+func (d dummyHintedBSONMarshalerWithoutHintInfo) MarshalBSON() ([]byte, error) {
+	return bson.Marshal(struct {
+		A string
+		B int
+	}{A: d.A, B: d.B})
+}
+
+var dummyHintedBSONMarshalerWithHintInfoHint = hint.MustHintWithType(hint.Type{0xff, 0x35}, "0.1", "dummyHintedBSONMarshalerWithHintInfo")
+
+type dummyHintedBSONMarshalerWithHintInfo struct {
+	A string
+	B int
+}
+
+func (d dummyHintedBSONMarshalerWithHintInfo) Hint() hint.Hint {
+	return dummyHintedBSONMarshalerWithHintInfoHint
+}
+
+func (d dummyHintedBSONMarshalerWithHintInfo) MarshalBSON() ([]byte, error) {
+	return bson.Marshal(struct {
+		H hint.Hint `bson:"_hint"`
+		A string
+		B int
+	}{H: d.Hint(), A: d.A, B: d.B})
 }
 
 type testBSON struct {
@@ -180,7 +189,7 @@ func (t *testBSON) TestEncodeRLPPackable() {
 	var us sp0
 	t.NoError(je.Decode(b, &us))
 	t.Equal(s.A, us.A)
-	t.Equal([]byte(s.A), us.B)
+	t.Nil(us.B)
 }
 
 func (t *testBSON) TestEncodeRLPUnpackable() {
@@ -211,7 +220,7 @@ func (t *testBSON) TestEncodeEmbed() {
 	t.NoError(je.Decode(b, &us))
 
 	t.Equal(s.A, us.A)
-	t.Equal(s.S.A+"-packed-unpacked", us.S.A)
+	t.Equal(s.S.A+"-packed", us.S.A)
 }
 
 func (t *testBSON) TestAnalyzePack() {
@@ -227,7 +236,7 @@ func (t *testBSON) TestAnalyzePack() {
 		t.NoError(err)
 		t.NotNil(cp.Pack)
 		t.NotNil(cp.Unpack)
-		t.Equal("BSONPackable+BSONUnpackable", name)
+		t.Equal("default", name)
 	}
 
 	{ // don't have PackRLP
@@ -322,6 +331,123 @@ func (t *testBSON) TestEncodeHinterNotCompatible() {
 		err := je.Decode(c, &us)
 		t.Error(err)
 	}
+}
+
+func (t *testBSON) TestAnonymousObject() {
+	s := dummyBSONStruct{A: util.UUID().String(), B: 33}
+
+	be := NewBSONEncoder()
+	b, err := be.Encode(s)
+	t.NoError(err)
+	t.NotNil(b)
+
+	var encoded []byte
+	{
+		b, err := be.Encode(s)
+		t.NoError(err)
+
+		encoded = b
+	}
+
+	var decoded dummyBSONStruct
+	t.NoError(be.Decode(encoded, &decoded))
+
+	t.Equal(s.A, decoded.A)
+	t.Equal(s.B, decoded.B)
+}
+
+func (t *testBSON) TestHintedNotMarshaler() {
+	encs := NewEncoders()
+	be := NewBSONEncoder()
+	t.NoError(encs.AddEncoder(be))
+	t.NoError(encs.AddHinter(dummyHintedNotBSONMarshaler{}))
+
+	s := dummyHintedNotBSONMarshaler{A: util.UUID().String(), B: 33}
+
+	b, err := be.Encode(s)
+	t.NoError(err)
+	t.NotNil(b)
+
+	var encoded []byte
+	{
+		b, err := be.Encode(s)
+		t.NoError(err)
+
+		encoded = b
+	}
+
+	hinter, err := be.DecodeByHint(encoded)
+	t.NoError(err)
+	t.IsType(dummyHintedNotBSONMarshaler{}, hinter)
+}
+
+func (t *testBSON) TestHintedMarshalerWithoutHint() {
+	encs := NewEncoders()
+	be := NewBSONEncoder()
+	t.NoError(encs.AddEncoder(be))
+	t.NoError(encs.AddHinter(dummyHintedBSONMarshalerWithoutHintInfo{}))
+
+	s := dummyHintedBSONMarshalerWithoutHintInfo{A: util.UUID().String(), B: 33}
+
+	encoded, err := be.Encode(s)
+	t.NoError(err)
+	t.NotNil(encoded)
+
+	var decoded dummyHintedBSONMarshalerWithoutHintInfo
+	t.NoError(be.Decode(encoded, &decoded))
+
+	t.Equal(s.A, decoded.A)
+	t.Equal(s.B, decoded.B)
+}
+
+func (t *testBSON) TestHintedMarshalerWithHint() {
+	encs := NewEncoders()
+	be := NewBSONEncoder()
+	t.NoError(encs.AddEncoder(be))
+	t.NoError(encs.AddHinter(dummyHintedBSONMarshalerWithHintInfo{}))
+
+	s := dummyHintedBSONMarshalerWithHintInfo{A: util.UUID().String(), B: 33}
+
+	encoded, err := be.Encode(s)
+	t.NoError(err)
+	t.NotNil(encoded)
+
+	hinter, err := be.DecodeByHint(encoded)
+	t.NoError(err)
+	t.IsType(dummyHintedBSONMarshalerWithHintInfo{}, hinter)
+
+	decoded := hinter.(dummyHintedBSONMarshalerWithHintInfo)
+
+	t.Equal(s.A, decoded.A)
+	t.Equal(s.B, decoded.B)
+}
+
+func (t *testBSON) TestMarshalWithJSON() {
+	s := dummyBSONStruct{A: util.UUID().String(), B: 33}
+
+	d := bson.M{}
+	{
+		b, err := bson.MarshalExtJSON(s, true, true)
+		t.NoError(err)
+
+		d["showme"] = util.UUID().String()
+		d["json"] = b
+	}
+
+	b, err := bson.Marshal(d)
+	t.NoError(err)
+
+	var decoded bson.M
+	t.NoError(bson.Unmarshal(b, &decoded))
+
+	t.Equal(d["showme"], decoded["showme"])
+
+	var ud dummyBSONStruct
+	t.NoError(bson.UnmarshalExtJSON(decoded["json"].(primitive.Binary).Data, true, &ud))
+
+	t.Equal(s, ud)
+	t.Equal(s.A, ud.A)
+	t.Equal(s.B, ud.B)
 }
 
 func TestBSON(t *testing.T) {

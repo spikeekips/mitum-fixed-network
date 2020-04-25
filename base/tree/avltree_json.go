@@ -2,9 +2,6 @@ package tree
 
 import (
 	"encoding/json"
-	"sync"
-
-	"github.com/spikeekips/avl"
 
 	"github.com/spikeekips/mitum/base/valuehash"
 	"github.com/spikeekips/mitum/util"
@@ -60,24 +57,10 @@ func (at *AVLTree) UnpackJSON(b []byte, enc *encoder.JSONEncoder) error {
 		return err
 	}
 
-	var tr *avl.Tree
-	np := avl.NewSyncMapNodePool(&sync.Map{})
-
-	for _, r := range uat.NS {
-		if n, err := DecodeNode(enc, r); err != nil {
-			return err
-		} else if err := np.Set(n); err != nil {
-			return err
-		}
+	ns := make([][]byte, len(uat.NS))
+	for i, b := range uat.NS {
+		ns[i] = b
 	}
 
-	if t, err := avl.NewTree([]byte(uat.RT), np); err != nil {
-		return err
-	} else {
-		tr = t
-	}
-
-	at.Tree = tr
-
-	return nil
+	return at.unpack(enc, uat.RT, ns)
 }

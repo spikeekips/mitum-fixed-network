@@ -33,21 +33,5 @@ func (bc *BlockConsensusInfoV0) UnpackJSON(b []byte, enc *encoder.JSONEncoder) e
 		return err
 	}
 
-	var err error
-	var iv, av base.Voteproof
-	if nbc.IV != nil {
-		if iv, err = base.DecodeVoteproof(enc, nbc.IV); err != nil {
-			return err
-		}
-	}
-	if nbc.AV != nil {
-		if av, err = base.DecodeVoteproof(enc, nbc.AV); err != nil {
-			return err
-		}
-	}
-
-	bc.initVoteproof = iv
-	bc.acceptVoteproof = av
-
-	return nil
+	return bc.unpack(enc, nbc.IV, nbc.AV)
 }

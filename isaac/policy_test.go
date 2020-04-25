@@ -5,21 +5,32 @@ import (
 
 	"github.com/stretchr/testify/suite"
 
+	"github.com/spikeekips/mitum/base"
+	"github.com/spikeekips/mitum/base/block"
 	"github.com/spikeekips/mitum/base/key"
 	"github.com/spikeekips/mitum/base/state"
 	"github.com/spikeekips/mitum/base/valuehash"
-	leveldbstorage "github.com/spikeekips/mitum/storage/leveldb"
-	"github.com/spikeekips/mitum/util/encoder"
 )
 
 type testPolicy struct {
 	suite.Suite
+	StorageSupportTest
 
 	pk key.BTCPrivatekey
 }
 
 func (t *testPolicy) SetupSuite() {
+	t.StorageSupportTest.SetupSuite()
+
 	t.pk, _ = key.NewBTCPrivatekey()
+
+	_ = t.Encs.AddHinter(valuehash.SHA256{})
+	_ = t.Encs.AddHinter(state.StateV0{})
+	_ = t.Encs.AddHinter(state.OperationInfoV0{})
+	_ = t.Encs.AddHinter(PolicyOperationBodyV0{})
+	_ = t.Encs.AddHinter(SetPolicyOperationV0{})
+	_ = t.Encs.AddHinter(SetPolicyOperationFactV0{})
+	_ = t.Encs.AddHinter(state.HintedValue{})
 }
 
 func (t *testPolicy) TestLoadWithoutStorage() {
@@ -39,19 +50,7 @@ func (t *testPolicy) TestLoadWithoutStorage() {
 }
 
 func (t *testPolicy) TestLoadFromStorage() {
-	encs := encoder.NewEncoders()
-	enc := encoder.NewJSONEncoder()
-	_ = encs.AddEncoder(enc)
-
-	_ = encs.AddHinter(valuehash.SHA256{})
-	_ = encs.AddHinter(state.StateV0{})
-	_ = encs.AddHinter(state.OperationInfoV0{})
-	_ = encs.AddHinter(PolicyOperationBodyV0{})
-	_ = encs.AddHinter(SetPolicyOperationV0{})
-	_ = encs.AddHinter(SetPolicyOperationFactV0{})
-	_ = encs.AddHinter(state.HintedValue{})
-
-	st := leveldbstorage.NewMemStorage(encs, enc)
+	st := t.Storage(nil, nil)
 	statepool := NewStatePool(st)
 
 	policies := DefaultPolicy()
@@ -61,8 +60,28 @@ func (t *testPolicy) TestLoadFromStorage() {
 	t.NoError(err)
 	t.NoError(spo.IsValid(nil))
 
+	previousBlock, err := block.NewTestBlockV0(
+		base.Height(33),
+		base.Round(2),
+		valuehash.RandomSHA256(),
+		valuehash.RandomSHA256(),
+	)
+	t.NoError(err)
+
+	currentBlock, err := block.NewTestBlockV0(
+		previousBlock.Height()+1,
+		base.Round(0),
+		valuehash.RandomSHA256(),
+		previousBlock.Hash(),
+	)
+	t.NoError(err)
+
 	newState, err := spo.ProcessOperation(statepool.Get, statepool.Set)
 	t.NoError(err)
+
+	t.NoError(newState.SetPreviousBlock(previousBlock.Hash()))
+	t.NoError(newState.SetCurrentBlock(currentBlock.Hash()))
+	t.NoError(newState.SetHash(newState.GenerateHash()))
 
 	t.NoError(st.NewState(newState))
 

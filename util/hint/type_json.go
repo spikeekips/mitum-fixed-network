@@ -29,22 +29,5 @@ func (ty *Type) UnmarshalJSON(b []byte) error {
 		return err
 	}
 
-	var n [2]byte
-	if d, err := hex.DecodeString(o.C); err != nil {
-		return err
-	} else {
-		copy(n[:], d)
-	}
-
-	nt := Type(n)
-
-	if t, err := typeByName(o.N); err != nil {
-		return err
-	} else if !nt.Equal(t) {
-		return NewTypeDoesNotMatchError(t, nt)
-	}
-
-	*ty = nt
-
-	return nil
+	return ty.unpack(o.C, o.N)
 }

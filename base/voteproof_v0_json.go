@@ -3,8 +3,6 @@ package base
 import (
 	"encoding/json"
 
-	"golang.org/x/xerrors"
-
 	"github.com/spikeekips/mitum/base/key"
 	"github.com/spikeekips/mitum/base/valuehash"
 	"github.com/spikeekips/mitum/util"
@@ -86,87 +84,38 @@ func (vp *VoteproofV0) UnpackJSON(b []byte, enc *encoder.JSONEncoder) error { //
 		return err
 	}
 
-	var err error
-	var majority Fact
-	if vpp.MJ != nil {
-		if majority, err = DecodeFact(enc, vpp.MJ); err != nil {
-			return err
-		}
-	}
-
-	facts := map[valuehash.Hash]Fact{}
+	fs := make([][2][]byte, len(vpp.FS))
 	for i := range vpp.FS {
-		l := vpp.FS[i]
-		if len(l) != 2 {
-			return xerrors.Errorf("invalid raw of facts; not [2]json.RawMessage")
-		}
-
-		var factHash valuehash.Hash
-		if factHash, err = valuehash.Decode(enc, l[0]); err != nil {
-			return err
-		}
-
-		var fact Fact
-		if fact, err = DecodeFact(enc, l[1]); err != nil {
-			return err
-		}
-
-		facts[factHash] = fact
+		r := vpp.FS[i]
+		fs[i] = [2][]byte{r[0], r[1]}
 	}
 
-	ballots := map[Address]valuehash.Hash{}
+	bs := make([][2][]byte, len(vpp.BS))
 	for i := range vpp.BS {
-		l := vpp.BS[i]
-		if len(l) != 2 {
-			return xerrors.Errorf("invalid raw of ballots; not [2]json.RawMessage")
-		}
-
-		var address Address
-		if address, err = DecodeAddress(enc, l[0]); err != nil {
-			return err
-		}
-
-		var ballot valuehash.Hash
-		if ballot, err = valuehash.Decode(enc, l[1]); err != nil {
-			return err
-		}
-
-		ballots[address] = ballot
+		r := vpp.BS[i]
+		bs[i] = [2][]byte{r[0], r[1]}
 	}
 
-	votes := map[Address]VoteproofNodeFact{}
+	vs := make([][2][]byte, len(vpp.VS))
 	for i := range vpp.VS {
-		l := vpp.VS[i]
-		if len(l) != 2 {
-			return xerrors.Errorf("invalid raw of votes; not [2]json.RawMessage")
-		}
-
-		var address Address
-		if address, err = DecodeAddress(enc, l[0]); err != nil {
-			return err
-		}
-
-		var nodeFact VoteproofNodeFact
-		if err = enc.Decode(l[1], &nodeFact); err != nil {
-			return err
-		}
-
-		votes[address] = nodeFact
+		r := vpp.VS[i]
+		vs[i] = [2][]byte{r[0], r[1]}
 	}
 
-	vp.height = vpp.HT
-	vp.round = vpp.RD
-	vp.threshold = vpp.TH
-	vp.result = vpp.RS
-	vp.stage = vpp.ST
-	vp.majority = majority
-	vp.facts = facts
-	vp.ballots = ballots
-	vp.votes = votes
-	vp.finishedAt = vpp.FA.Time
-	vp.closed = vpp.CL == "true"
-
-	return nil
+	return vp.unpack(
+		enc,
+		vpp.HT,
+		vpp.RD,
+		vpp.TH,
+		vpp.RS,
+		vpp.ST,
+		vpp.MJ,
+		fs,
+		bs,
+		vs,
+		vpp.FA.Time,
+		vpp.CL == "true",
+	)
 }
 
 type VoteproofNodeFactPackJSON struct {
@@ -195,23 +144,5 @@ func (vf *VoteproofNodeFact) UnpackJSON(b []byte, enc *encoder.JSONEncoder) erro
 		return err
 	}
 
-	var fact valuehash.Hash
-	if h, err := valuehash.Decode(enc, vpp.FC); err != nil {
-		return err
-	} else {
-		fact = h
-	}
-
-	var signer key.Publickey
-	if h, err := key.DecodePublickey(enc, vpp.SG); err != nil {
-		return err
-	} else {
-		signer = h
-	}
-
-	vf.fact = fact
-	vf.factSignature = vpp.FS
-	vf.signer = signer
-
-	return nil
+	return vf.unpack(enc, vpp.FC, vpp.FS, vpp.SG)
 }

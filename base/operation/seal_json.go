@@ -47,35 +47,10 @@ func (sl *Seal) UnpackJSON(b []byte, enc *encoder.JSONEncoder) error {
 		return err
 	}
 
-	var err error
-	var h, bodyHash valuehash.Hash
-	if h, err = valuehash.Decode(enc, usl.H); err != nil {
-		return err
-	}
-	if bodyHash, err = valuehash.Decode(enc, usl.BH); err != nil {
-		return err
+	ops := make([][]byte, len(usl.OPS))
+	for i, b := range usl.OPS {
+		ops[i] = b
 	}
 
-	var signer key.Publickey
-	if signer, err = key.DecodePublickey(enc, usl.SN); err != nil {
-		return err
-	}
-
-	var ops []Operation
-	for _, r := range usl.OPS {
-		if op, err := DecodeOperation(enc, r); err != nil {
-			return err
-		} else {
-			ops = append(ops, op)
-		}
-	}
-
-	sl.h = h
-	sl.bodyHash = bodyHash
-	sl.signer = signer
-	sl.signature = usl.SG
-	sl.signedAt = usl.SA.Time
-	sl.ops = ops
-
-	return nil
+	return sl.unpack(enc, usl.H, usl.BH, usl.SN, usl.SG, usl.SA.Time, ops)
 }

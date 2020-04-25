@@ -3,6 +3,7 @@ version: 2
 defaults: &defaults
   docker:
     - image: circleci/golang:1.14
+    - image: circleci/mongo:4.2
   working_directory: /go/src/github.com/spikeekips/mitum
 
 workspace: &workspace
@@ -45,6 +46,10 @@ jobs:
          command: golangci-lint run
 
       - run:
+         name: Run govet
+         command: go vet -tags 'test mongodb' ./...
+
+      - run:
          name: Install nargs
          command: go get -u github.com/alexkohler/nargs/cmd/nargs
 
@@ -58,7 +63,7 @@ jobs:
       - <<: *workspace
       - run:
          name: unit test
-         command: go test -race -tags test -timeout 1m -v -coverprofile=coverage.txt -covermode=atomic ./...
+         command: go test -race -tags 'test mongodb' -timeout 5m -v -coverprofile=coverage.txt -covermode=atomic ./...
 
       - run:
          name: codecov

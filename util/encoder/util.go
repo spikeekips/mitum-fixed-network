@@ -1,6 +1,8 @@
 package encoder
 
-import "reflect"
+import (
+	"reflect"
+)
 
 func ExtractPtr(i interface{}) (reflect.Value, reflect.Value) {
 	var ptr reflect.Value = reflect.ValueOf(i)

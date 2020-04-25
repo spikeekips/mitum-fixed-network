@@ -90,8 +90,8 @@ func NewGeneralSyncer(
 				Hinted("to", to).
 				Str("module", "general-syncer")
 		}),
-		localstate:              localstate,
-		storage:                 localstate.Storage().SyncerStorage(),
+		localstate: localstate,
+		//storage:                 localstate.Storage().SyncerStorage(),
 		sourceNodes:             sn,
 		heightFrom:              from,
 		heightTo:                to,
@@ -136,6 +136,8 @@ func (cs *GeneralSyncer) setState(state SyncerState) {
 	cs.Lock()
 	defer cs.Unlock()
 
+	cs.Log().Debug().Str("new_state", state.String()).Msg("state changed")
+
 	cs.st = state
 
 	if cs.stateChan != nil {
@@ -161,25 +163,24 @@ func (cs *GeneralSyncer) Save() error {
 
 func (cs *GeneralSyncer) save() error {
 	cs.setState(SyncerSaving)
+	defer cs.setState(SyncerSaved)
 
-	err := func() error {
-		if err := cs.startBlocks(); err != nil {
-			return err
-		}
+	if err := cs.startBlocks(); err != nil {
+		return err
+	}
 
-		if err := cs.commit(); err != nil {
-			return err
-		}
+	if err := cs.commit(); err != nil {
+		return err
+	}
 
-		return nil
-	}()
+	if err := cs.storage.Close(); err != nil {
+		return err
+	}
 
-	cs.setState(SyncerSaved)
-
-	return err
+	return nil
 }
 
-func (cs *GeneralSyncer) reset() {
+func (cs *GeneralSyncer) reset() error {
 	cs.Lock()
 	defer cs.Unlock()
 
@@ -195,10 +196,17 @@ func (cs *GeneralSyncer) reset() {
 	cs.pn = provedNodes
 	cs.baseManifest = nil
 
-	cs.storage = cs.localstate.Storage().SyncerStorage()
+	if s, err := cs.localstate.Storage().SyncerStorage(); err != nil {
+		return err
+	} else {
+		cs.storage = s
+	}
+
 	if sl, ok := cs.storage.(logging.SetLogger); ok {
 		_ = sl.SetLogger(cs.Log())
 	}
+
+	return nil
 }
 
 func (cs *GeneralSyncer) provedNodes() []base.Address {
@@ -221,18 +229,23 @@ func (cs *GeneralSyncer) Prepare(baseManifest block.Manifest) error {
 	go func() {
 		// NOTE do forever unless successfully done
 		_ = util.Retry(0, time.Millisecond*500, func() error {
-			cs.reset()
+			if err := cs.reset(); err != nil {
+				cs.Log().Error().Err(err).Msg("failed to reset for syncing")
+
+				return err
+			}
 
 			if len(cs.provedNodes()) < 1 {
 				return xerrors.Errorf("empty proved nodes")
 			}
 
-			err := cs.prepare()
-			if err != nil {
+			if err := cs.prepare(); err != nil {
 				cs.Log().Error().Err(err).Msg("failed to prepare for syncing")
+
+				return err
 			}
 
-			return err
+			return nil
 		})
 	}()
 
@@ -381,7 +394,14 @@ func (cs *GeneralSyncer) startBlocks() error {
 	cs.Log().Debug().Msg("start to fetch blocks")
 	defer cs.Log().Debug().Msg("fetched blocks")
 
-	_ = util.Retry(0, time.Second, cs.fetchBlocksByNodes)
+	_ = util.Retry(0, time.Second, func() error {
+		err := cs.fetchBlocksByNodes()
+		if err != nil {
+			cs.Log().Error().Err(err).Msg("failed to fetch blocks by nodes")
+		}
+
+		return err
+	})
 
 	return nil
 }

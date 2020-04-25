@@ -1,6 +1,8 @@
 package isaac
 
 import (
+	"go.mongodb.org/mongo-driver/bson"
+
 	"github.com/spikeekips/mitum/base/key"
 	"github.com/spikeekips/mitum/base/operation"
 	"github.com/spikeekips/mitum/base/state"
@@ -55,6 +57,33 @@ func (kvo KVOperation) MarshalJSON() ([]byte, error) {
 func (kvo *KVOperation) UnpackJSON(b []byte, enc *encoder.JSONEncoder) error {
 	okvo := &operation.KVOperation{}
 	if err := okvo.UnpackJSON(b, enc); err != nil {
+		return err
+	}
+
+	kvo.KVOperation = *okvo
+
+	return nil
+}
+
+func (kvo KVOperation) MarshalBSON() ([]byte, error) {
+	b, err := bson.Marshal(kvo.KVOperation)
+	if err != nil {
+		return nil, err
+	}
+
+	var m bson.M
+	if err := bson.Unmarshal(b, &m); err != nil {
+		return nil, err
+	} else {
+		m["_hint"] = kvo.Hint()
+	}
+
+	return bson.Marshal(m)
+}
+
+func (kvo *KVOperation) UnpackBSON(b []byte, enc *encoder.BSONEncoder) error {
+	okvo := &operation.KVOperation{}
+	if err := okvo.UnpackBSON(b, enc); err != nil {
 		return err
 	}
 

@@ -54,32 +54,5 @@ func (bm *ManifestV0) UnpackJSON(b []byte, enc *encoder.JSONEncoder) error {
 		return err
 	}
 
-	var h, pr, pb, bo, bs valuehash.Hash
-	var err error
-	if h, err = valuehash.Decode(enc, nbm.H); err != nil {
-		return err
-	}
-	if pr, err = valuehash.Decode(enc, nbm.PR); err != nil {
-		return err
-	}
-	if pb, err = valuehash.Decode(enc, nbm.PB); err != nil {
-		return err
-	}
-	if bo, err = valuehash.Decode(enc, nbm.BO); err != nil {
-		return err
-	}
-	if bs, err = valuehash.Decode(enc, nbm.BS); err != nil {
-		return err
-	}
-
-	bm.h = h
-	bm.height = nbm.HT
-	bm.round = nbm.RD
-	bm.proposal = pr
-	bm.previousBlock = pb
-	bm.operationsHash = bo
-	bm.statesHash = bs
-	bm.createdAt = nbm.CA.Time
-
-	return nil
+	return bm.unpack(enc, nbm.H, nbm.HT, nbm.RD, nbm.PR, nbm.PB, nbm.BO, nbm.BS, nbm.CA.Time)
 }

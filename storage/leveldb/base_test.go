@@ -18,54 +18,16 @@ import (
 	"github.com/spikeekips/mitum/base/valuehash"
 	"github.com/spikeekips/mitum/storage"
 	"github.com/spikeekips/mitum/util"
-	"github.com/spikeekips/mitum/util/encoder"
 	"github.com/spikeekips/mitum/util/localtime"
 )
 
 type testLeveldbStorage struct {
-	suite.Suite
-	encs    *encoder.Encoders
-	enc     encoder.Encoder
+	storage.BaseTestStorage
 	storage *LeveldbStorage
-	pk      key.BTCPrivatekey
-}
-
-func (t *testLeveldbStorage) SetupSuite() {
-	t.encs = encoder.NewEncoders()
-	t.enc = encoder.NewJSONEncoder()
-	_ = t.encs.AddEncoder(t.enc)
-
-	_ = t.encs.AddHinter(key.BTCPublickey{})
-	_ = t.encs.AddHinter(block.BlockV0{})
-	_ = t.encs.AddHinter(block.ManifestV0{})
-	_ = t.encs.AddHinter(block.BlockConsensusInfoV0{})
-	_ = t.encs.AddHinter(valuehash.SHA256{})
-	_ = t.encs.AddHinter(base.VoteproofV0{})
-	_ = t.encs.AddHinter(seal.DummySeal{})
-	_ = t.encs.AddHinter(operation.Seal{})
-	_ = t.encs.AddHinter(operation.KVOperation{})
-	_ = t.encs.AddHinter(operation.KVOperationFact{})
-
-	t.pk, _ = key.NewBTCPrivatekey()
 }
 
 func (t *testLeveldbStorage) SetupTest() {
-	t.storage = NewMemStorage(t.encs, t.enc)
-}
-
-func (t *testLeveldbStorage) compareManifest(a, b block.Manifest) {
-	t.Equal(a.Height(), b.Height())
-	t.Equal(a.Round(), b.Round())
-	t.True(a.Proposal().Equal(b.Proposal()))
-	t.True(a.PreviousBlock().Equal(b.PreviousBlock()))
-	t.True(a.OperationsHash().Equal(b.OperationsHash()))
-	t.True(a.StatesHash().Equal(b.StatesHash()))
-}
-
-func (t *testLeveldbStorage) compareBlock(a, b block.Block) {
-	t.compareManifest(a, b)
-	t.Equal(a.INITVoteproof(), b.INITVoteproof())
-	t.Equal(a.ACCEPTVoteproof(), b.ACCEPTVoteproof())
+	t.storage = NewMemStorage(t.Encs, t.JSONEnc)
 }
 
 func (t *testLeveldbStorage) TestNew() {
@@ -77,8 +39,6 @@ func (t *testLeveldbStorage) TestLastBlock() {
 	blk, err := block.NewTestBlockV0(base.Height(33), base.Round(0), nil, valuehash.RandomSHA256())
 	t.NoError(err)
 
-	t.NotNil(t.storage)
-
 	bs, err := t.storage.OpenBlockStorage(blk)
 	t.NoError(err)
 	t.NoError(bs.SetBlock(blk))
@@ -87,7 +47,7 @@ func (t *testLeveldbStorage) TestLastBlock() {
 	loaded, err := t.storage.LastBlock()
 	t.NoError(err)
 
-	t.compareBlock(blk, loaded)
+	t.CompareBlock(blk, loaded)
 }
 
 func (t *testLeveldbStorage) TestLoadBlockByHash() {
@@ -95,13 +55,11 @@ func (t *testLeveldbStorage) TestLoadBlockByHash() {
 	blk, err := block.NewTestBlockV0(base.Height(33), base.Round(0), nil, valuehash.RandomSHA256())
 	t.NoError(err)
 
-	t.NotNil(t.storage)
-
 	{
-		b, err := t.enc.Marshal(blk)
+		b, err := t.JSONEnc.Marshal(blk)
 		t.NoError(err)
 
-		hb := storage.LeveldbDataWithEncoder(t.enc, b)
+		hb := LeveldbDataWithEncoder(t.JSONEnc, b)
 
 		key := leveldbBlockHashKey(blk.Hash())
 		t.NoError(t.storage.db.Put(key, hb, nil))
@@ -111,15 +69,13 @@ func (t *testLeveldbStorage) TestLoadBlockByHash() {
 	loaded, err := t.storage.Block(blk.Hash())
 	t.NoError(err)
 
-	t.compareBlock(blk, loaded)
+	t.CompareBlock(blk, loaded)
 }
 
 func (t *testLeveldbStorage) TestLoadManifestByHash() {
 	// store first
 	blk, err := block.NewTestBlockV0(base.Height(33), base.Round(0), nil, valuehash.RandomSHA256())
 	t.NoError(err)
-
-	t.NotNil(t.storage)
 
 	bs, err := t.storage.OpenBlockStorage(blk)
 	t.NoError(err)
@@ -132,15 +88,13 @@ func (t *testLeveldbStorage) TestLoadManifestByHash() {
 	_, isBlock := loaded.(block.Block)
 	t.False(isBlock)
 
-	t.compareManifest(blk, loaded)
+	t.CompareManifest(blk, loaded)
 }
 
 func (t *testLeveldbStorage) TestLoadManifestByHeight() {
 	// store first
 	blk, err := block.NewTestBlockV0(base.Height(33), base.Round(0), nil, valuehash.RandomSHA256())
 	t.NoError(err)
-
-	t.NotNil(t.storage)
 
 	bs, err := t.storage.OpenBlockStorage(blk)
 	t.NoError(err)
@@ -153,15 +107,13 @@ func (t *testLeveldbStorage) TestLoadManifestByHeight() {
 	_, isBlock := loaded.(block.Block)
 	t.False(isBlock)
 
-	t.compareManifest(blk, loaded)
+	t.CompareManifest(blk, loaded)
 }
 
 func (t *testLeveldbStorage) TestLoadBlockByHeight() {
 	// store first
 	blk, err := block.NewTestBlockV0(base.Height(33), base.Round(0), nil, valuehash.RandomSHA256())
 	t.NoError(err)
-
-	t.NotNil(t.storage)
 
 	bs, err := t.storage.OpenBlockStorage(blk)
 	t.NoError(err)
@@ -171,7 +123,7 @@ func (t *testLeveldbStorage) TestLoadBlockByHeight() {
 	loaded, err := t.storage.BlockByHeight(blk.Height())
 	t.NoError(err)
 
-	t.compareBlock(blk, loaded)
+	t.CompareBlock(blk, loaded)
 }
 
 func (t *testLeveldbStorage) TestLoadINITVoteproof() {
@@ -391,10 +343,10 @@ func (t *testLeveldbStorage) TestSealsLimit() {
 
 func (t *testLeveldbStorage) newOperationSeal() operation.Seal {
 	token := []byte("this-is-token")
-	op, err := operation.NewKVOperation(t.pk, token, util.UUID().String(), []byte(util.UUID().String()), nil)
+	op, err := operation.NewKVOperation(t.PK, token, util.UUID().String(), []byte(util.UUID().String()), nil)
 	t.NoError(err)
 
-	sl, err := operation.NewSeal(t.pk, []operation.Operation{op}, nil)
+	sl, err := operation.NewSeal(t.PK, []operation.Operation{op}, nil)
 	t.NoError(err)
 	t.NoError(sl.IsValid(nil))
 
@@ -406,7 +358,7 @@ func (t *testLeveldbStorage) TestStagedOperationSeals() {
 
 	// 10 seal.Seal
 	for i := 0; i < 10; i++ {
-		sl := seal.NewDummySeal(t.pk)
+		sl := seal.NewDummySeal(t.PK)
 
 		seals = append(seals, sl)
 	}
@@ -445,7 +397,7 @@ func (t *testLeveldbStorage) TestStagedOperationSeals() {
 func (t *testLeveldbStorage) TestUnStagedOperationSeals() {
 	// 10 seal.Seal
 	for i := 0; i < 10; i++ {
-		sl := seal.NewDummySeal(t.pk)
+		sl := seal.NewDummySeal(t.PK)
 		t.NoError(t.storage.NewSeals([]seal.Seal{sl}))
 	}
 
@@ -523,7 +475,7 @@ func (t *testLeveldbStorage) TestHasOperation() {
 		t.NoError(err)
 		t.storage.db.Put(
 			leveldbOperationHashKey(op),
-			storage.LeveldbDataWithEncoder(t.storage.enc, raw),
+			LeveldbDataWithEncoder(t.storage.enc, raw),
 			nil,
 		)
 	}

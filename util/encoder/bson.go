@@ -71,6 +71,7 @@ func (be *BSONEncoder) DecodeByHint(b []byte) (hint.Hinter, error) {
 	if err != nil {
 		return nil, err
 	}
+
 	hinter, err := be.hintset.Hinter(h.Type(), h.Version())
 	if err != nil {
 		return nil, err
@@ -104,16 +105,42 @@ func (be *BSONEncoder) Analyze(i interface{}) error {
 func (be *BSONEncoder) analyze(i interface{}) (string, CachedPacker, error) { // nolint
 	name, pack, unpack := be.analyzeInstance(i)
 
-	// hint
-	_, elem := ExtractPtr(i)
-	if elem.Kind() == reflect.Struct {
-		var hinter hint.Hinter
-		if ht, ok := elem.Interface().(hint.Hinter); ok {
-			hinter = ht
-		}
+	// NOTE
+	// - f pack is set and unpack is not set, unpack will be bson.Unmarshal
+	// - if pack is not set and unpack is set, pack will be
+	// be.unpackValueDefault with hint
 
-		pack = be.wrapPackerHinter(hinter, pack)
-		unpack = be.wrapUnpackerHinter(hinter, unpack)
+	if pack != nil && unpack == nil {
+		unpack = be.unpackValueDefault
+	} else if pack == nil && unpack != nil {
+		pack = be.packValueDefault
+	}
+
+	_, elem := ExtractPtr(i)
+
+	if pack == nil || unpack != nil {
+		if elem.Kind() == reflect.Struct {
+			var hinter hint.Hinter
+			if ht, ok := elem.Interface().(hint.Hinter); ok {
+				hinter = ht
+			}
+
+			if pack == nil {
+				pack = be.wrapPackerHinter(hinter, be.packValueDefault)
+			}
+
+			if unpack == nil {
+				unpack = be.wrapUnpackerHinter(hinter, be.unpackValueDefault)
+			}
+		}
+	}
+
+	if pack == nil {
+		pack = be.packValueDefault
+	}
+
+	if unpack == nil {
+		unpack = be.unpackValueDefault
 	}
 
 	return name, NewCachedPacker(elem.Type(), pack, unpack), nil
@@ -126,14 +153,23 @@ func (be *BSONEncoder) analyzeInstance(i interface{}) (string, bsonPackFunc, bso
 
 	ptr, elem := ExtractPtr(i)
 
-	if _, ok := elem.Interface().(BSONPackable); ok {
-		names = append(names, "BSONPackable")
+	if _, ok := elem.Interface().(bson.Marshaler); ok {
+		names = append(names, "BSONMarshaler")
 		pf = func(i interface{}) (interface{}, error) {
-			return i.(BSONPackable).PackBSON(be)
+			return i, nil
 		}
 	}
 
-	if _, ok := ptr.Interface().(BSONUnpackable); ok {
+	if _, ok := ptr.Interface().(bson.Unmarshaler); ok {
+		names = append(names, "BSONUnmarshaler")
+		upf = func(b []byte, i interface{}) (interface{}, error) {
+			if err := i.(bson.Unmarshaler).UnmarshalBSON(b); err != nil {
+				return nil, err
+			}
+
+			return reflect.ValueOf(i).Elem().Interface(), nil
+		}
+	} else if _, ok := ptr.Interface().(BSONUnpackable); ok {
 		names = append(names, "BSONUnpackable")
 		upf = func(b []byte, i interface{}) (interface{}, error) {
 			if err := i.(BSONUnpackable).UnpackBSON(b, be); err != nil {
@@ -144,21 +180,14 @@ func (be *BSONEncoder) analyzeInstance(i interface{}) (string, bsonPackFunc, bso
 		}
 	}
 
+	var name string
 	if pf != nil || upf != nil {
-		if pf == nil {
-			pf = be.packValueDefault
-		}
-		if upf == nil {
-			upf = be.unpackValueDefault
-		}
-
-		return strings.Join(names, "+"), pf, upf
+		name = strings.Join(names, "+")
+	} else {
+		name = encoderAnalyzedTypeDefault
 	}
 
-	pf = be.packValueDefault
-	upf = be.unpackValueDefault
-
-	return encoderAnalyzedTypeDefault, pf, upf
+	return name, pf, upf
 }
 
 func (be *BSONEncoder) Pack(i interface{}) (interface{}, error) {
@@ -280,7 +309,7 @@ func (be BSONEncoder) wrapUnpackerHinter(hinter hint.Hinter, fn bsonUnpackFunc) 
 }
 
 func (be BSONEncoder) loadHint(b []byte) (hint.Hint, error) {
-	var o BSONUnpackHinted
+	var o BSONPackHintedHead
 	if err := bson.Unmarshal(b, &o); err != nil {
 		return hint.Hint{}, err
 	}
@@ -293,12 +322,12 @@ type (
 	bsonUnpackFunc func([]byte, interface{}) (interface{}, error)
 )
 
-type BSONPackable interface {
-	PackBSON(*BSONEncoder) (interface{}, error)
-}
-
 type BSONUnpackable interface {
 	UnpackBSON([]byte, *BSONEncoder) error
+}
+
+type BSONPackHintedHead struct {
+	H hint.Hint `bson:"_hint"`
 }
 
 type BSONPackHinted struct {
@@ -309,4 +338,18 @@ type BSONPackHinted struct {
 type BSONUnpackHinted struct {
 	H hint.Hint `bson:"_hint"`
 	D bson.Raw  `bson:"_data,omitempty"`
+}
+
+func NewBSONHintedDoc(h hint.Hint) bson.M {
+	return bson.M{"_hint": h}
+}
+
+func MergeBSONM(a bson.M, b ...bson.M) bson.M {
+	for _, c := range b {
+		for k, v := range c {
+			a[k] = v
+		}
+	}
+
+	return a
 }

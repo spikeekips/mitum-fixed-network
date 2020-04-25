@@ -184,7 +184,6 @@ func (gg *GenesisBlockV0Generator) generateINITVoteproof() error {
 			_ = gg.localstate.SetLastINITVoteproof(voteproof)
 		}
 	}
-
 	return nil
 }
 

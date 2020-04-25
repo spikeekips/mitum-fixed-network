@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/suite"
+	"go.mongodb.org/mongo-driver/bson"
 	"golang.org/x/xerrors"
 
 	"github.com/spikeekips/mitum/base/valuehash"
@@ -47,6 +48,16 @@ func (tf tinyFact) MarshalJSON() ([]byte, error) {
 	}{
 		JSONPackHintedHead: encoder.NewJSONPackHintedHead(tf.Hint()),
 		A:                  tf.A,
+	})
+}
+
+func (tf tinyFact) MarshalBSON() ([]byte, error) {
+	return bson.Marshal(struct {
+		HI hint.Hint `bson:"_hint"`
+		A  string
+	}{
+		HI: tf.Hint(),
+		A:  tf.A,
 	})
 }
 

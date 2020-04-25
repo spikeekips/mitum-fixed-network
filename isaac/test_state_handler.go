@@ -16,7 +16,6 @@ import (
 	"github.com/spikeekips/mitum/base/state"
 	"github.com/spikeekips/mitum/base/tree"
 	"github.com/spikeekips/mitum/base/valuehash"
-	leveldbstorage "github.com/spikeekips/mitum/storage/leveldb"
 	"github.com/spikeekips/mitum/util"
 	"github.com/spikeekips/mitum/util/encoder"
 	"github.com/spikeekips/mitum/util/localtime"
@@ -24,6 +23,7 @@ import (
 
 type baseTestStateHandler struct { // nolint
 	suite.Suite
+	StorageSupportTest
 	localstate  *Localstate
 	remoteState *Localstate
 	encs        *encoder.Encoders
@@ -31,56 +31,55 @@ type baseTestStateHandler struct { // nolint
 }
 
 func (t *baseTestStateHandler) SetupSuite() { // nolint
-	t.encs = encoder.NewEncoders()
-	t.enc = encoder.NewJSONEncoder()
-	_ = t.encs.AddEncoder(t.enc)
-	_ = t.encs.AddHinter(key.BTCPrivatekey{})
-	_ = t.encs.AddHinter(key.BTCPublickey{})
-	_ = t.encs.AddHinter(valuehash.SHA256{})
-	_ = t.encs.AddHinter(valuehash.Dummy{})
-	_ = t.encs.AddHinter(base.NewShortAddress(""))
-	_ = t.encs.AddHinter(ballot.INITBallotV0{})
-	_ = t.encs.AddHinter(ballot.INITBallotFactV0{})
-	_ = t.encs.AddHinter(ballot.ProposalV0{})
-	_ = t.encs.AddHinter(ballot.ProposalFactV0{})
-	_ = t.encs.AddHinter(ballot.SIGNBallotV0{})
-	_ = t.encs.AddHinter(ballot.SIGNBallotFactV0{})
-	_ = t.encs.AddHinter(ballot.ACCEPTBallotV0{})
-	_ = t.encs.AddHinter(ballot.ACCEPTBallotFactV0{})
-	_ = t.encs.AddHinter(base.VoteproofV0{})
-	_ = t.encs.AddHinter(block.BlockV0{})
-	_ = t.encs.AddHinter(block.ManifestV0{})
-	_ = t.encs.AddHinter(block.BlockConsensusInfoV0{})
-	_ = t.encs.AddHinter(operation.Seal{})
-	_ = t.encs.AddHinter(operation.KVOperationFact{})
-	_ = t.encs.AddHinter(operation.KVOperation{})
-	_ = t.encs.AddHinter(KVOperation{})
-	_ = t.encs.AddHinter(tree.AVLTree{})
-	_ = t.encs.AddHinter(operation.OperationAVLNode{})
-	_ = t.encs.AddHinter(operation.OperationAVLNodeMutable{})
-	_ = t.encs.AddHinter(state.StateV0{})
-	_ = t.encs.AddHinter(state.OperationInfoV0{})
-	_ = t.encs.AddHinter(state.StateV0AVLNode{})
-	_ = t.encs.AddHinter(state.StateV0AVLNodeMutable{})
-	_ = t.encs.AddHinter(state.BytesValue{})
-	_ = t.encs.AddHinter(state.DurationValue{})
-	_ = t.encs.AddHinter(state.HintedValue{})
-	_ = t.encs.AddHinter(state.NumberValue{})
-	_ = t.encs.AddHinter(state.SliceValue{})
-	_ = t.encs.AddHinter(state.StringValue{})
+	t.StorageSupportTest.SetupSuite()
+
+	_ = t.Encs.AddHinter(key.BTCPrivatekey{})
+	_ = t.Encs.AddHinter(key.BTCPublickey{})
+	_ = t.Encs.AddHinter(valuehash.SHA256{})
+	_ = t.Encs.AddHinter(valuehash.Dummy{})
+	_ = t.Encs.AddHinter(base.NewShortAddress(""))
+	_ = t.Encs.AddHinter(ballot.INITBallotV0{})
+	_ = t.Encs.AddHinter(ballot.INITBallotFactV0{})
+	_ = t.Encs.AddHinter(ballot.ProposalV0{})
+	_ = t.Encs.AddHinter(ballot.ProposalFactV0{})
+	_ = t.Encs.AddHinter(ballot.SIGNBallotV0{})
+	_ = t.Encs.AddHinter(ballot.SIGNBallotFactV0{})
+	_ = t.Encs.AddHinter(ballot.ACCEPTBallotV0{})
+	_ = t.Encs.AddHinter(ballot.ACCEPTBallotFactV0{})
+	_ = t.Encs.AddHinter(base.VoteproofV0{})
+	_ = t.Encs.AddHinter(block.BlockV0{})
+	_ = t.Encs.AddHinter(block.ManifestV0{})
+	_ = t.Encs.AddHinter(block.BlockConsensusInfoV0{})
+	_ = t.Encs.AddHinter(operation.Seal{})
+	_ = t.Encs.AddHinter(operation.KVOperationFact{})
+	_ = t.Encs.AddHinter(operation.KVOperation{})
+	_ = t.Encs.AddHinter(KVOperation{})
+	_ = t.Encs.AddHinter(tree.AVLTree{})
+	_ = t.Encs.AddHinter(operation.OperationAVLNode{})
+	_ = t.Encs.AddHinter(operation.OperationAVLNodeMutable{})
+	_ = t.Encs.AddHinter(state.StateV0{})
+	_ = t.Encs.AddHinter(state.OperationInfoV0{})
+	_ = t.Encs.AddHinter(state.StateV0AVLNode{})
+	_ = t.Encs.AddHinter(state.StateV0AVLNodeMutable{})
+	_ = t.Encs.AddHinter(state.BytesValue{})
+	_ = t.Encs.AddHinter(state.DurationValue{})
+	_ = t.Encs.AddHinter(state.HintedValue{})
+	_ = t.Encs.AddHinter(state.NumberValue{})
+	_ = t.Encs.AddHinter(state.SliceValue{})
+	_ = t.Encs.AddHinter(state.StringValue{})
 }
 
 func (t *baseTestStateHandler) states() (*Localstate, *Localstate) {
 	lastBlock, err := block.NewTestBlockV0(base.Height(2), base.Round(9), nil, valuehash.RandomSHA256())
 	t.NoError(err)
 
-	lst := leveldbstorage.NewMemStorage(t.encs, t.enc)
+	lst := t.Storage(nil, nil)
 	localNode := RandomLocalNode(util.UUID().String(), nil)
 	localstate, err := NewLocalstate(lst, localNode, TestNetworkID)
 	t.NoError(err)
 	_ = localstate.SetLastBlock(lastBlock)
 
-	rst := leveldbstorage.NewMemStorage(t.encs, t.enc)
+	rst := t.Storage(nil, nil)
 	remoteNode := RandomLocalNode(util.UUID().String(), nil)
 	remoteState, err := NewLocalstate(rst, remoteNode, TestNetworkID)
 	t.NoError(err)
@@ -229,7 +228,7 @@ func (t *baseTestStateHandler) compareBlock(a, b block.Block) {
 func (t *baseTestStateHandler) compareVoteproof(a, b base.Voteproof) {
 	t.True(a.Hint().Equal(b.Hint()))
 	t.Equal(a.IsFinished(), b.IsFinished())
-	t.Equal(localtime.RFC3339(a.FinishedAt()), localtime.RFC3339(b.FinishedAt()))
+	t.Equal(localtime.Normalize(a.FinishedAt()), localtime.Normalize(b.FinishedAt()))
 	t.Equal(a.IsClosed(), b.IsClosed())
 	t.Equal(a.Height(), b.Height())
 	t.Equal(a.Round(), b.Round())

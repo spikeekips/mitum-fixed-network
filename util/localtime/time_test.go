@@ -2,28 +2,24 @@ package localtime
 
 import (
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/suite"
 )
 
-type testRFC3339 struct {
+type testTime struct {
 	suite.Suite
 }
 
-func (t *testRFC3339) TestNew() {
-	s := "2019-12-26T14:21:00+09:00"
-	rf, err := ParseTimeFromRFC3339(s)
-	t.NoError(err)
-	t.Equal(s, RFC3339(rf))
+func (t *testTime) TestNormalize() {
+	tn := time.Now()
+
+	n := Normalize(tn)
+
+	t.Equal(time.UTC, n.Location())
+	t.Equal((tn.Nanosecond()/1000000)*1000000, n.Nanosecond())
 }
 
-func (t *testRFC3339) TestNewFromExtra() {
-	s := "2019-12-26T14:21:00.382503+09:00"
-	rf, err := ParseTimeFromRFC3339(s)
-	t.NoError(err)
-	t.Equal(s, RFC3339(rf))
-}
-
-func TestRFC3339(t *testing.T) {
-	suite.Run(t, new(testRFC3339))
+func TestTime(t *testing.T) {
+	suite.Run(t, new(testTime))
 }

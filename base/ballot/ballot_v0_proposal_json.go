@@ -34,41 +34,25 @@ type ProposalV0UnpackerJSON struct {
 }
 
 func (pr *ProposalV0) UnpackJSON(b []byte, enc *encoder.JSONEncoder) error {
-	var npb ProposalV0UnpackerJSON
-	if err := enc.Unmarshal(b, &npb); err != nil {
-		return err
-	} else if err := pr.Hint().IsCompatible(npb.JSONPackHintedHead.H); err != nil {
-		return err
-	}
-
-	bb, bf, err := UnpackBaseBallotV0JSON(npb.BaseBallotV0UnpackerJSON, enc)
+	bb, bf, err := pr.BaseBallotV0.unpackJSON(b, enc)
 	if err != nil {
 		return err
 	}
 
-	var ol, sl []valuehash.Hash
-	for _, r := range npb.OP {
-		if h, err := valuehash.Decode(enc, r); err != nil {
-			return err
-		} else {
-			ol = append(ol, h)
-		}
+	var npb ProposalV0UnpackerJSON
+	if err := enc.Unmarshal(b, &npb); err != nil {
+		return err
 	}
 
-	for _, r := range npb.SL {
-		if h, err := valuehash.Decode(enc, r); err != nil {
-			return err
-		} else {
-			sl = append(sl, h)
-		}
+	ops := make([][]byte, len(npb.OP))
+	for i, r := range npb.OP {
+		ops[i] = r
 	}
 
-	pr.BaseBallotV0 = bb
-	pr.ProposalFactV0 = ProposalFactV0{
-		BaseBallotFactV0: bf,
-		operations:       ol,
-		seals:            sl,
+	seals := make([][]byte, len(npb.SL))
+	for i, r := range npb.SL {
+		seals[i] = r
 	}
 
-	return nil
+	return pr.unpack(enc, bb, bf, ops, seals)
 }

@@ -7,7 +7,6 @@ import (
 
 	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/base/operation"
-	leveldbstorage "github.com/spikeekips/mitum/storage/leveldb"
 )
 
 type testGenesisBlockV0 struct {
@@ -20,7 +19,7 @@ func (t *testGenesisBlockV0) SetupTest() {
 	baseLocalstate := t.baseTestStateHandler.localstate
 
 	localstate, err := NewLocalstate(
-		leveldbstorage.NewMemStorage(baseLocalstate.Storage().Encoders(), baseLocalstate.Storage().Encoder()),
+		t.Storage(nil, nil),
 		baseLocalstate.Node(),
 		TestNetworkID,
 	)

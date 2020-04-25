@@ -10,9 +10,9 @@ import (
 )
 
 type Threshold struct {
-	Total     uint    `json:"total"`
-	Threshold uint    `json:"threshold"`
-	Percent   float64 `json:"percent"` // NOTE 67.0 ~ 100.0
+	Total     uint    `json:"total" bson:"total"`
+	Threshold uint    `json:"threshold" bson:"threshold"`
+	Percent   float64 `json:"percent" bson:"percent"` // NOTE 67.0 ~ 100.0
 }
 
 func NewThreshold(total uint, percent float64) (Threshold, error) {

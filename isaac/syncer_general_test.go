@@ -13,7 +13,6 @@ import (
 	"github.com/spikeekips/mitum/base/block"
 	channetwork "github.com/spikeekips/mitum/network/gochan"
 	"github.com/spikeekips/mitum/storage"
-	leveldbstorage "github.com/spikeekips/mitum/storage/leveldb"
 	"github.com/spikeekips/mitum/util"
 )
 
@@ -22,10 +21,6 @@ type testGeneralSyncer struct {
 	baseTestStateHandler
 
 	sf base.Suffrage
-}
-
-func TestGeneralSyncer(t *testing.T) {
-	suite.Run(t, new(testGeneralSyncer))
 }
 
 func (t *testGeneralSyncer) setup(local *Localstate, localstates []*Localstate) {
@@ -96,7 +91,7 @@ func (t *testGeneralSyncer) generateBlocks(localstates []*Localstate, targetHeig
 }
 
 func (t *testGeneralSyncer) emptyLocalstate() *Localstate {
-	lst := leveldbstorage.NewMemStorage(t.encs, t.enc)
+	lst := t.Storage(nil, nil)
 	localNode := RandomLocalNode(util.UUID().String(), nil)
 	localstate, err := NewLocalstate(lst, localNode, TestNetworkID)
 	t.NoError(err)
@@ -690,4 +685,8 @@ func (t *testGeneralSyncer) TestMissingBlocks() {
 
 	err = cs.fetchBlocksByNodes()
 	t.Error(err)
+}
+
+func TestGeneralSyncer(t *testing.T) {
+	suite.Run(t, new(testGeneralSyncer))
 }

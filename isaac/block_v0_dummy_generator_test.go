@@ -7,7 +7,6 @@ import (
 
 	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/base/valuehash"
-	leveldbstorage "github.com/spikeekips/mitum/storage/leveldb"
 )
 
 type testBlockV0DummyGenerator struct {
@@ -20,7 +19,7 @@ func (t *testBlockV0DummyGenerator) SetupTest() {
 	baseLocalstate := t.baseTestStateHandler.localstate
 
 	localstate, err := NewLocalstate(
-		leveldbstorage.NewMemStorage(baseLocalstate.Storage().Encoders(), baseLocalstate.Storage().Encoder()),
+		t.Storage(nil, nil),
 		baseLocalstate.Node(),
 		TestNetworkID,
 	)

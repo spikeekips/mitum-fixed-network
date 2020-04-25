@@ -59,7 +59,7 @@ func (ne *NError) Wrap(err error) *NError {
 	return &NError{
 		s:     ne.s,
 		err:   err,
-		frame: xerrors.Caller(1),
+		frame: xerrors.Caller(2),
 	}
 }
 

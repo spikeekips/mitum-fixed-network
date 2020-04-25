@@ -5,6 +5,7 @@ package operation
 import (
 	"encoding/json"
 
+	"go.mongodb.org/mongo-driver/bson"
 	"golang.org/x/xerrors"
 
 	"github.com/spikeekips/mitum/base"
@@ -194,6 +195,72 @@ func (kvo *KVOperation) UnpackJSON(b []byte, enc *encoder.JSONEncoder) error {
 		H  json.RawMessage `json:"hash"`
 		FH json.RawMessage `json:"fact_hash"`
 		FS key.Signature   `json:"fact_signature"`
+	}
+
+	if err := enc.Unmarshal(b, &ukvo); err != nil {
+		return err
+	}
+
+	var err error
+
+	var signer key.Publickey
+	if signer, err = key.DecodePublickey(enc, ukvo.SG); err != nil {
+		return err
+	}
+
+	var h, factHash valuehash.Hash
+	if h, err = valuehash.Decode(enc, ukvo.H); err != nil {
+		return err
+	}
+	if factHash, err = valuehash.Decode(enc, ukvo.FH); err != nil {
+		return err
+	}
+
+	kvo.KVOperationFact = KVOperationFact{
+		signer: signer,
+		token:  ukvo.TK,
+		Key:    ukvo.K,
+		Value:  ukvo.V,
+	}
+
+	kvo.h = h
+	kvo.factHash = factHash
+	kvo.factSignature = ukvo.FS
+
+	return nil
+}
+
+func (kvo KVOperation) MarshalBSON() ([]byte, error) {
+	return bson.Marshal(struct {
+		HI hint.Hint      `bson:"_hint"`
+		SG key.Publickey  `bson:"signer"`
+		TK []byte         `bson:"token"`
+		K  string         `bson:"key"`
+		V  []byte         `bson:"value"`
+		H  valuehash.Hash `bson:"hash"`
+		FH valuehash.Hash `bson:"fact_hash"`
+		FS key.Signature  `bson:"fact_signature"`
+	}{
+		HI: kvo.Hint(),
+		SG: kvo.signer,
+		TK: kvo.token,
+		K:  kvo.Key,
+		V:  kvo.Value,
+		H:  kvo.h,
+		FH: kvo.factHash,
+		FS: kvo.factSignature,
+	})
+}
+
+func (kvo *KVOperation) UnpackBSON(b []byte, enc *encoder.BSONEncoder) error {
+	var ukvo struct {
+		SG bson.Raw      `bson:"signer"`
+		TK []byte        `bson:"token"`
+		K  string        `bson:"key"`
+		V  []byte        `bson:"value"`
+		H  bson.Raw      `bson:"hash"`
+		FH bson.Raw      `bson:"fact_hash"`
+		FS key.Signature `bson:"fact_signature"`
 	}
 
 	if err := enc.Unmarshal(b, &ukvo); err != nil {

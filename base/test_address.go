@@ -8,6 +8,7 @@ import (
 	"encoding/json"
 	"fmt"
 
+	"go.mongodb.org/mongo-driver/bson"
 	"golang.org/x/xerrors"
 
 	"github.com/spikeekips/mitum/util"
@@ -83,6 +84,30 @@ func (sa *ShortAddress) UnpackJSON(b []byte, _ *encoder.JSONEncoder) error {
 	}
 
 	*sa = ShortAddress(s.A[8:])
+
+	return nil
+}
+
+func (sa ShortAddress) MarshalBSON() ([]byte, error) {
+	return bson.Marshal(struct {
+		HI hint.Hint `bson:"_hint"`
+		A  string    `bson:"address"`
+	}{
+		HI: sa.Hint(),
+		A:  sa.String(),
+	})
+}
+
+func (sa *ShortAddress) UnmarshalBSON(b []byte) error {
+	var us struct {
+		A string `bson:"address"`
+	}
+
+	if err := bson.Unmarshal(b, &us); err != nil {
+		return err
+	}
+
+	*sa = ShortAddress(us.A[8:])
 
 	return nil
 }

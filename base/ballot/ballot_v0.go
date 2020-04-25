@@ -147,7 +147,7 @@ func (bb BaseBallotV0) Bytes() []byte {
 		bb.bodyHash.Bytes(),
 		[]byte(bb.signer.String()),
 		bb.signature.Bytes(),
-		[]byte(localtime.RFC3339(bb.signedAt)),
+		[]byte(localtime.String(localtime.Normalize(bb.signedAt))),
 		bb.node.Bytes(),
 	)
 }

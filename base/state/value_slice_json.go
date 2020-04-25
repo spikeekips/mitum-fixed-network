@@ -31,29 +31,10 @@ func (sv *SliceValue) UnpackJSON(b []byte, enc *encoder.JSONEncoder) error {
 		return err
 	}
 
-	if i, err := valuehash.Decode(enc, uv.H); err != nil {
-		return err
-	} else {
-		sv.h = i
+	bValue := make([][]byte, len(uv.V))
+	for i, v := range uv.V {
+		bValue[i] = v
 	}
 
-	v := make([]hint.Hinter, len(uv.V))
-	for i, r := range uv.V {
-		decoded, err := enc.DecodeByHint(r)
-		if err != nil {
-			return err
-		}
-
-		v[i] = decoded
-	}
-
-	if usv, err := (SliceValue{}).set(v); err != nil {
-		return err
-	} else {
-		sv.b = usv.b
-	}
-
-	sv.v = v
-
-	return nil
+	return sv.unpack(enc, uv.H, bValue)
 }

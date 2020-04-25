@@ -6,22 +6,13 @@ func (bt BTCPrivatekey) MarshalJSON() ([]byte, error) {
 
 func (bt *BTCPrivatekey) UnmarshalJSON(b []byte) error {
 	var key string
-	if h, s, err := UnmarshalJSONKey(b); err != nil {
-		return err
-	} else if err := bt.Hint().IsCompatible(h); err != nil {
+	if _, s, err := UnmarshalJSONKey(b); err != nil {
 		return err
 	} else {
 		key = s
 	}
 
-	kp, err := NewBTCPrivatekeyFromString(key)
-	if err != nil {
-		return err
-	}
-
-	bt.wif = kp.wif
-
-	return nil
+	return bt.unpack(key)
 }
 
 func (bt BTCPublickey) MarshalJSON() ([]byte, error) {
@@ -30,20 +21,11 @@ func (bt BTCPublickey) MarshalJSON() ([]byte, error) {
 
 func (bt *BTCPublickey) UnmarshalJSON(b []byte) error {
 	var key string
-	if h, s, err := UnmarshalJSONKey(b); err != nil {
-		return err
-	} else if err := bt.Hint().IsCompatible(h); err != nil {
+	if _, s, err := UnmarshalJSONKey(b); err != nil {
 		return err
 	} else {
 		key = s
 	}
 
-	kp, err := NewBTCPublickeyFromString(key)
-	if err != nil {
-		return err
-	}
-
-	bt.pk = kp.pk
-
-	return nil
+	return bt.unpack(key)
 }

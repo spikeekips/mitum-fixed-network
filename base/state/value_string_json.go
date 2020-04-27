@@ -4,23 +4,22 @@ import (
 	"encoding/json"
 
 	"github.com/spikeekips/mitum/base/valuehash"
-	"github.com/spikeekips/mitum/util"
-	"github.com/spikeekips/mitum/util/encoder"
+	jsonencoder "github.com/spikeekips/mitum/util/encoder/json"
 )
 
 func (sv StringValue) MarshalJSON() ([]byte, error) {
-	return util.JSONMarshal(struct {
-		encoder.JSONPackHintedHead
+	return jsonencoder.Marshal(struct {
+		jsonencoder.HintedHead
 		H valuehash.Hash `json:"hash"`
 		V string         `json:"value"`
 	}{
-		JSONPackHintedHead: encoder.NewJSONPackHintedHead(sv.Hint()),
-		H:                  sv.Hash(),
-		V:                  sv.v,
+		HintedHead: jsonencoder.NewHintedHead(sv.Hint()),
+		H:          sv.Hash(),
+		V:          sv.v,
 	})
 }
 
-func (sv *StringValue) UnpackJSON(b []byte, enc *encoder.JSONEncoder) error {
+func (sv *StringValue) UnpackJSON(b []byte, enc *jsonencoder.Encoder) error {
 	var uv struct {
 		H json.RawMessage `json:"hash"`
 		V string          `json:"value"`

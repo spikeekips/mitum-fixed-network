@@ -6,13 +6,13 @@ import (
 	"github.com/rs/zerolog"
 	"golang.org/x/xerrors"
 
-	"github.com/spikeekips/mitum/util"
+	jsonencoder "github.com/spikeekips/mitum/util/encoder/json"
 )
 
 type LogLevel zerolog.Level
 
 func (ll LogLevel) MarshalJSON() ([]byte, error) {
-	return util.JSONMarshal(zerolog.Level(ll).String())
+	return jsonencoder.Marshal(zerolog.Level(ll).String())
 }
 
 func (ll *LogLevel) UnmarshalText(b []byte) error {

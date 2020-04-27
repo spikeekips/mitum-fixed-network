@@ -11,22 +11,24 @@ import (
 	leveldbstorage "github.com/spikeekips/mitum/storage/leveldb"
 	mongodbstorage "github.com/spikeekips/mitum/storage/mongodb"
 	"github.com/spikeekips/mitum/util/encoder"
+	bsonencoder "github.com/spikeekips/mitum/util/encoder/bson"
+	jsonencoder "github.com/spikeekips/mitum/util/encoder/json"
 )
 
 type StorageSupportTest struct {
 	DBType  string
 	Encs    *encoder.Encoders
-	JSONEnc *encoder.JSONEncoder
-	BSONEnc *encoder.BSONEncoder
+	JSONEnc *jsonencoder.Encoder
+	BSONEnc *bsonencoder.Encoder
 }
 
 func (ss *StorageSupportTest) SetupSuite() {
 	ss.Encs = encoder.NewEncoders()
 
-	ss.JSONEnc = encoder.NewJSONEncoder()
+	ss.JSONEnc = jsonencoder.NewEncoder()
 	_ = ss.Encs.AddEncoder(ss.JSONEnc)
 
-	ss.BSONEnc = encoder.NewBSONEncoder()
+	ss.BSONEnc = bsonencoder.NewEncoder()
 	_ = ss.Encs.AddEncoder(ss.BSONEnc)
 }
 

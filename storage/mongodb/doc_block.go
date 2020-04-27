@@ -6,6 +6,7 @@ import (
 
 	"github.com/spikeekips/mitum/base/block"
 	"github.com/spikeekips/mitum/util/encoder"
+	bsonencoder "github.com/spikeekips/mitum/util/encoder/bson"
 )
 
 type BlockDoc struct {
@@ -34,7 +35,7 @@ func (bd BlockDoc) MarshalBSON() ([]byte, error) {
 	m["height"] = bd.block.Height()
 	m["hash"] = bd.block.Hash()
 
-	return bson.Marshal(m)
+	return bsonencoder.Marshal(m)
 }
 
 type ManifestDoc struct {
@@ -63,7 +64,7 @@ func (md ManifestDoc) MarshalBSON() ([]byte, error) {
 	m["height"] = md.manifest.Height()
 	m["hash"] = md.manifest.Hash()
 
-	return bson.Marshal(m)
+	return bsonencoder.Marshal(m)
 }
 
 func loadBlockFromDecoder(decoder func(interface{}) error, encs *encoder.Encoders) (block.Block, error) {

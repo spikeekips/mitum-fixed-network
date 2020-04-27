@@ -6,12 +6,11 @@ import (
 
 	"github.com/spikeekips/mitum/base/key"
 	"github.com/spikeekips/mitum/base/valuehash"
-	"github.com/spikeekips/mitum/util"
-	"github.com/spikeekips/mitum/util/encoder"
+	jsonencoder "github.com/spikeekips/mitum/util/encoder/json"
 )
 
 type PolicyOperationBodyV0PackerJSON struct {
-	encoder.JSONPackHintedHead
+	jsonencoder.HintedHead
 	Threshold                        []float64     `json:"threshold"`
 	TimeoutWaitingProposal           time.Duration `json:"timeout_waiting_proposal"`
 	IntervalBroadcastingINITBallot   time.Duration `json:"interval_broadcasting_init_ballot"`
@@ -23,8 +22,8 @@ type PolicyOperationBodyV0PackerJSON struct {
 }
 
 func (po PolicyOperationBodyV0) MarshalJSON() ([]byte, error) {
-	return util.JSONMarshal(PolicyOperationBodyV0PackerJSON{
-		JSONPackHintedHead: encoder.NewJSONPackHintedHead(po.Hint()),
+	return jsonencoder.Marshal(PolicyOperationBodyV0PackerJSON{
+		HintedHead: jsonencoder.NewHintedHead(po.Hint()),
 		Threshold: []float64{
 			float64(po.Threshold.Total),
 			po.Threshold.Percent,
@@ -43,7 +42,7 @@ type PolicyOperationBodyV0UnpackerJSON struct {
 	PolicyOperationBodyV0PackerJSON
 }
 
-func (po *PolicyOperationBodyV0) UnpackJSON(b []byte, enc *encoder.JSONEncoder) error {
+func (po *PolicyOperationBodyV0) UnpackJSON(b []byte, enc *jsonencoder.Encoder) error {
 	var up PolicyOperationBodyV0UnpackerJSON
 	if err := enc.Unmarshal(b, &up); err != nil {
 		return err
@@ -62,8 +61,8 @@ func (po *PolicyOperationBodyV0) UnpackJSON(b []byte, enc *encoder.JSONEncoder) 
 }
 
 func (spo SetPolicyOperationV0) MarshalJSON() ([]byte, error) {
-	return util.JSONMarshal(struct {
-		encoder.JSONPackHintedHead
+	return jsonencoder.Marshal(struct {
+		jsonencoder.HintedHead
 		H  valuehash.Hash        `json:"hash"`
 		FH valuehash.Hash        `json:"fact_hash"`
 		FS key.Signature         `json:"fact_signature"`
@@ -71,13 +70,13 @@ func (spo SetPolicyOperationV0) MarshalJSON() ([]byte, error) {
 		TK []byte                `json:"token"`
 		PO PolicyOperationBodyV0 `json:"policies"`
 	}{
-		JSONPackHintedHead: encoder.NewJSONPackHintedHead(spo.Hint()),
-		H:                  spo.h,
-		FH:                 spo.factHash,
-		FS:                 spo.factSignature,
-		SN:                 spo.signer,
-		TK:                 spo.token,
-		PO:                 spo.SetPolicyOperationFactV0.PolicyOperationBodyV0,
+		HintedHead: jsonencoder.NewHintedHead(spo.Hint()),
+		H:          spo.h,
+		FH:         spo.factHash,
+		FS:         spo.factSignature,
+		SN:         spo.signer,
+		TK:         spo.token,
+		PO:         spo.SetPolicyOperationFactV0.PolicyOperationBodyV0,
 	})
 }
 
@@ -90,7 +89,7 @@ type SetPolicyOperationV0UnpackerJSON struct {
 	PO json.RawMessage `json:"policies"`
 }
 
-func (spo *SetPolicyOperationV0) UnpackJSON(b []byte, enc *encoder.JSONEncoder) error {
+func (spo *SetPolicyOperationV0) UnpackJSON(b []byte, enc *jsonencoder.Encoder) error {
 	var usp SetPolicyOperationV0UnpackerJSON
 	if err := enc.Unmarshal(b, &usp); err != nil {
 		return err

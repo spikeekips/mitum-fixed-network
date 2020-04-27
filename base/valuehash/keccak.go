@@ -1,10 +1,10 @@
 package valuehash
 
 import (
+	"github.com/btcsuite/btcutil/base58"
 	"golang.org/x/crypto/sha3"
 	"golang.org/x/xerrors"
 
-	"github.com/btcsuite/btcutil/base58"
 	"github.com/spikeekips/mitum/util/hint"
 )
 

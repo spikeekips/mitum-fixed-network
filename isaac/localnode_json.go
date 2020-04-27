@@ -3,11 +3,11 @@ package isaac
 import (
 	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/base/key"
-	"github.com/spikeekips/mitum/util"
+	jsonencoder "github.com/spikeekips/mitum/util/encoder/json"
 )
 
 func (ln *LocalNode) MarshalJSON() ([]byte, error) {
-	return util.JSONMarshal(struct {
+	return jsonencoder.Marshal(struct {
 		AD  base.Address   `json:"address"`
 		PUK key.Publickey  `json:"publickey"`
 		PRK key.Privatekey `json:"privatekey"`

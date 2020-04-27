@@ -72,7 +72,7 @@ func (t *testKeccak512) TestJSONMarshal() {
 		var jh JSONHash
 		t.NoError(err, json.Unmarshal(b, &jh))
 
-		t.Equal(s512.Hint(), jh.JSONPackHintedHead.H)
+		t.Equal(s512.Hint(), jh.HintedHead.H)
 		t.Equal(s512.String(), jh.Hash)
 	}
 
@@ -83,7 +83,7 @@ func (t *testKeccak512) TestJSONMarshal() {
 		var jh JSONHash
 		t.NoError(err, json.Unmarshal(b, &jh))
 
-		t.Equal(s512.Hint(), jh.JSONPackHintedHead.H)
+		t.Equal(s512.Hint(), jh.HintedHead.H)
 		t.Equal(s512.String(), jh.Hash)
 	}
 }
@@ -136,7 +136,7 @@ func (t *testKeccak256) TestJSONMarshal() {
 		var jh JSONHash
 		t.NoError(err, json.Unmarshal(b, &jh))
 
-		t.Equal(s256.Hint(), jh.JSONPackHintedHead.H)
+		t.Equal(s256.Hint(), jh.HintedHead.H)
 		t.Equal(s256.String(), jh.Hash)
 	}
 
@@ -147,7 +147,7 @@ func (t *testKeccak256) TestJSONMarshal() {
 		var jh JSONHash
 		t.NoError(err, json.Unmarshal(b, &jh))
 
-		t.Equal(s256.Hint(), jh.JSONPackHintedHead.H)
+		t.Equal(s256.Hint(), jh.HintedHead.H)
 		t.Equal(s256.String(), jh.Hash)
 	}
 }

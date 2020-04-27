@@ -1,9 +1,9 @@
 package base
 
-import "go.mongodb.org/mongo-driver/bson"
+import bsonencoder "github.com/spikeekips/mitum/util/encoder/bson"
 
 func (as ActingSuffrage) MarshalBSON() ([]byte, error) {
-	return bson.Marshal(ActingSuffragePacker{
+	return bsonencoder.Marshal(ActingSuffragePacker{
 		H: as.height,
 		R: as.round,
 		P: as.proposer.Address().String(),

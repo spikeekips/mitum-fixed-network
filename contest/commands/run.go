@@ -8,7 +8,7 @@ import (
 	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/contest/common"
 	"github.com/spikeekips/mitum/isaac"
-	"github.com/spikeekips/mitum/util"
+	jsonencoder "github.com/spikeekips/mitum/util/encoder/json"
 	"github.com/spikeekips/mitum/util/logging"
 )
 
@@ -49,7 +49,7 @@ func (cm RunCommand) createNodeProcess(
 	_ = np.SetLogger(l) // TODO set verbose
 
 	{
-		b, err := util.JSONMarshal(np.Localstate)
+		b, err := jsonencoder.Marshal(np.Localstate)
 		if err != nil {
 			return nil, err
 		}

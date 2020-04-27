@@ -4,8 +4,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/spikeekips/mitum/util"
 	"github.com/stretchr/testify/suite"
+
+	"github.com/spikeekips/mitum/util"
 )
 
 type testTimers struct {

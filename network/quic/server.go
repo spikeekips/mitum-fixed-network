@@ -8,13 +8,14 @@ import (
 	"net/url"
 	"path"
 
+	"golang.org/x/xerrors"
+
 	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/base/seal"
 	"github.com/spikeekips/mitum/base/valuehash"
 	"github.com/spikeekips/mitum/network"
 	"github.com/spikeekips/mitum/util/encoder"
 	"github.com/spikeekips/mitum/util/logging"
-	"golang.org/x/xerrors"
 )
 
 var (

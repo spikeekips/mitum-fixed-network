@@ -3,9 +3,11 @@ package mongodbstorage
 import (
 	"golang.org/x/xerrors"
 
+	"go.mongodb.org/mongo-driver/bson"
+
 	"github.com/spikeekips/mitum/base/operation"
 	"github.com/spikeekips/mitum/util/encoder"
-	"go.mongodb.org/mongo-driver/bson"
+	bsonencoder "github.com/spikeekips/mitum/util/encoder/bson"
 )
 
 type OperationDoc struct {
@@ -33,7 +35,7 @@ func (od OperationDoc) MarshalBSON() ([]byte, error) {
 
 	m["hash"] = od.op.Hash()
 
-	return bson.Marshal(m)
+	return bsonencoder.Marshal(m)
 }
 
 func loadOperationFromDecoder(decoder func(interface{}) error, encs *encoder.Encoders) (

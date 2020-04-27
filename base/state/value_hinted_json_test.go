@@ -3,10 +3,11 @@ package state
 import (
 	"testing"
 
-	"github.com/spikeekips/mitum/base/valuehash"
-	"github.com/spikeekips/mitum/util"
-	"github.com/spikeekips/mitum/util/encoder"
 	"github.com/stretchr/testify/suite"
+
+	"github.com/spikeekips/mitum/base/valuehash"
+	"github.com/spikeekips/mitum/util/encoder"
+	jsonencoder "github.com/spikeekips/mitum/util/encoder/json"
 )
 
 type testStateHintedValueJSON struct {
@@ -18,7 +19,7 @@ type testStateHintedValueJSON struct {
 
 func (t *testStateHintedValueJSON) SetupSuite() {
 	t.encs = encoder.NewEncoders()
-	t.enc = encoder.NewJSONEncoder()
+	t.enc = jsonencoder.NewEncoder()
 	_ = t.encs.AddEncoder(t.enc)
 
 	_ = t.encs.AddHinter(valuehash.SHA256{})
@@ -33,7 +34,7 @@ func (t *testStateHintedValueJSON) TestEncode() {
 	bv, err := NewHintedValue(d)
 	t.NoError(err)
 
-	b, err := util.JSONMarshal(bv)
+	b, err := jsonencoder.Marshal(bv)
 	t.NoError(err)
 
 	decoded, err := t.enc.DecodeByHint(b)
@@ -52,7 +53,7 @@ func (t *testStateHintedValueJSON) TestEmpty() {
 	bv, err := NewHintedValue(d)
 	t.NoError(err)
 
-	b, err := util.JSONMarshal(bv)
+	b, err := jsonencoder.Marshal(bv)
 	t.NoError(err)
 
 	decoded, err := t.enc.DecodeByHint(b)

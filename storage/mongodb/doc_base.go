@@ -4,6 +4,7 @@ import (
 	"go.mongodb.org/mongo-driver/bson"
 
 	"github.com/spikeekips/mitum/util/encoder"
+	bsonencoder "github.com/spikeekips/mitum/util/encoder/bson"
 	"github.com/spikeekips/mitum/util/hint"
 )
 
@@ -52,7 +53,7 @@ type BaseDocUnpacker struct {
 
 func loadWithEncoder(b []byte, encs *encoder.Encoders) (bson.Raw /* id */, interface{} /* data */, error) {
 	var bd BaseDocUnpacker
-	if err := bson.Unmarshal(b, &bd); err != nil {
+	if err := bsonencoder.Unmarshal(b, &bd); err != nil {
 		return nil, nil, err
 	}
 

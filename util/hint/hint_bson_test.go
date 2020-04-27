@@ -21,8 +21,8 @@ func (t *testHint) TestMarshalBSON() {
 	var m bson.M
 	t.NoError(bson.Unmarshal(b, &m))
 
-	t.Contains(fmt.Sprintf("%v", m["t"]), h.Type().String())
-	t.Equal(h.Version().String(), m["v"])
+	t.Contains(fmt.Sprintf("%v", m["type"]), h.Type().String())
+	t.Equal(h.Version().String(), m["version"])
 
 	// unmarshal
 	var uh Hint

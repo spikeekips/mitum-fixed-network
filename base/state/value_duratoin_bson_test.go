@@ -4,10 +4,11 @@ import (
 	"testing"
 	"time"
 
+	"github.com/stretchr/testify/suite"
+
 	"github.com/spikeekips/mitum/base/valuehash"
 	"github.com/spikeekips/mitum/util/encoder"
-	"github.com/stretchr/testify/suite"
-	"go.mongodb.org/mongo-driver/bson"
+	bsonencoder "github.com/spikeekips/mitum/util/encoder/bson"
 )
 
 type testStateDurationValueBSON struct {
@@ -19,7 +20,7 @@ type testStateDurationValueBSON struct {
 
 func (t *testStateDurationValueBSON) SetupSuite() {
 	t.encs = encoder.NewEncoders()
-	t.enc = encoder.NewBSONEncoder()
+	t.enc = bsonencoder.NewEncoder()
 	_ = t.encs.AddEncoder(t.enc)
 
 	_ = t.encs.AddHinter(valuehash.SHA256{})
@@ -48,7 +49,7 @@ func (t *testStateDurationValueBSON) TestCases() {
 				iv, err := NewDurationValue(c.v)
 				t.NoError(err, "%d: name=%s value=%s", i, c.name, c.v)
 
-				b, err := bson.Marshal(iv)
+				b, err := bsonencoder.Marshal(iv)
 				t.NoError(err, "%d: name=%s value=%s", i, c.name, c.v)
 
 				decoded, err := t.enc.DecodeByHint(b)

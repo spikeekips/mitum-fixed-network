@@ -10,32 +10,10 @@ import (
 
 	"github.com/spikeekips/mitum/storage"
 	"github.com/spikeekips/mitum/util"
-	"github.com/spikeekips/mitum/util/encoder"
 )
 
 type Doc interface {
 	ID() interface{}
-}
-
-func encodeWithEncoder(enc encoder.Encoder, i interface{}) (bson.M, error) {
-	var data []byte
-	if b, err := enc.Encode(i); err != nil {
-		return nil, err
-	} else {
-		data = b
-	}
-
-	var h []byte
-	if b, err := util.JSONMarshal(enc.Hint()); err != nil {
-		return nil, err
-	} else {
-		h = b
-	}
-
-	return bson.M{
-		"encoder": h,
-		"data":    data,
-	}, nil
 }
 
 func checkURI(uri string) (connstring.ConnString, error) {

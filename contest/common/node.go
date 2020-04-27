@@ -16,6 +16,7 @@ import (
 	leveldbstorage "github.com/spikeekips/mitum/storage/leveldb"
 	"github.com/spikeekips/mitum/util"
 	"github.com/spikeekips/mitum/util/encoder"
+	jsonencoder "github.com/spikeekips/mitum/util/encoder/json"
 	"github.com/spikeekips/mitum/util/hint"
 	"github.com/spikeekips/mitum/util/logging"
 )
@@ -64,7 +65,7 @@ func NewNodeChannel(encs *encoder.Encoders, enc encoder.Encoder, netType string)
 func NewNode(id int, networkID []byte, netType string) (*isaac.Localstate, error) {
 	// encoder
 	encs := encoder.NewEncoders()
-	enc := encoder.NewJSONEncoder()
+	enc := jsonencoder.NewEncoder()
 	if err := encs.AddEncoder(enc); err != nil {
 		return nil, err
 	}
@@ -192,8 +193,8 @@ func (np *NodeProcess) networkServer() (network.Server, error) {
 
 		encs := np.Localstate.Storage().Encoders()
 		enc, err := encs.Encoder(
-			encoder.JSONEncoder{}.Hint().Type(),
-			encoder.JSONEncoder{}.Hint().Version(),
+			jsonencoder.Encoder{}.Hint().Type(),
+			jsonencoder.Encoder{}.Hint().Version(),
 		)
 		if err != nil {
 			return nil, err

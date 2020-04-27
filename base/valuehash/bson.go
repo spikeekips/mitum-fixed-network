@@ -1,8 +1,8 @@
 package valuehash
 
 import (
+	bsonencoder "github.com/spikeekips/mitum/util/encoder/bson"
 	"github.com/spikeekips/mitum/util/hint"
-	"go.mongodb.org/mongo-driver/bson"
 )
 
 type BSONHash struct {
@@ -11,7 +11,7 @@ type BSONHash struct {
 }
 
 func marshalBSON(h Hash) ([]byte, error) {
-	return bson.Marshal(BSONHash{
+	return bsonencoder.Marshal(BSONHash{
 		HI:   h.Hint(),
 		Hash: h.String(),
 	})
@@ -19,7 +19,7 @@ func marshalBSON(h Hash) ([]byte, error) {
 
 func unmarshalBSON(b []byte) (BSONHash, error) {
 	var bh BSONHash
-	if err := bson.Unmarshal(b, &bh); err != nil {
+	if err := bsonencoder.Unmarshal(b, &bh); err != nil {
 		return BSONHash{}, err
 	}
 

@@ -3,10 +3,11 @@ package state
 import (
 	"reflect"
 
+	"golang.org/x/xerrors"
+
 	"github.com/spikeekips/mitum/base/valuehash"
 	"github.com/spikeekips/mitum/util"
 	"github.com/spikeekips/mitum/util/encoder"
-	"golang.org/x/xerrors"
 )
 
 func (nv *NumberValue) unpack(enc encoder.Encoder, bHash, bValue []byte, t reflect.Kind) error {

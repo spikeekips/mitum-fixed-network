@@ -5,11 +5,11 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/suite"
-	"go.mongodb.org/mongo-driver/bson"
 
 	"github.com/spikeekips/mitum/base/key"
 	"github.com/spikeekips/mitum/base/valuehash"
 	"github.com/spikeekips/mitum/util/encoder"
+	bsonencoder "github.com/spikeekips/mitum/util/encoder/bson"
 )
 
 type testSealBSON struct {
@@ -24,7 +24,7 @@ func (t *testSealBSON) SetupSuite() {
 	t.pk, _ = key.NewBTCPrivatekey()
 
 	t.encs = encoder.NewEncoders()
-	t.enc = encoder.NewBSONEncoder()
+	t.enc = bsonencoder.NewEncoder()
 	_ = t.encs.AddEncoder(t.enc)
 
 	_ = t.encs.AddHinter(key.BTCPublickey{})
@@ -48,7 +48,7 @@ func (t *testSealBSON) TestSign() {
 	t.NoError(err)
 
 	var raw []byte
-	raw, err = bson.Marshal(sl)
+	raw, err = bsonencoder.Marshal(sl)
 	t.NoError(err)
 
 	hinter, err := t.enc.DecodeByHint(raw)

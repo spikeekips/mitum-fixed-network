@@ -1,8 +1,9 @@
 package operation
 
 import (
-	"github.com/spikeekips/mitum/util/encoder"
 	"go.mongodb.org/mongo-driver/bson"
+
+	bsonencoder "github.com/spikeekips/mitum/util/encoder/bson"
 )
 
 type OperationAVLNodePackerBSON struct {
@@ -10,7 +11,7 @@ type OperationAVLNodePackerBSON struct {
 }
 
 func (em OperationAVLNode) MarshalBSON() ([]byte, error) {
-	return bson.Marshal(bson.M{
+	return bsonencoder.Marshal(bson.M{
 		"_hint":      em.Hint(),
 		"key":        em.key,
 		"height":     em.height,
@@ -34,7 +35,7 @@ type OperationAVLNodeUnpackerBSON struct {
 	OP  bson.Raw `bson:"operation"`
 }
 
-func (em *OperationAVLNode) UnpackBSON(b []byte, enc *encoder.BSONEncoder) error {
+func (em *OperationAVLNode) UnpackBSON(b []byte, enc *bsonencoder.Encoder) error {
 	var ue OperationAVLNodeUnpackerBSON
 	if err := enc.Unmarshal(b, &ue); err != nil {
 		return err

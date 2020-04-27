@@ -1,8 +1,9 @@
 package ballot
 
 import (
-	"github.com/spikeekips/mitum/util/encoder"
 	"go.mongodb.org/mongo-driver/bson"
+
+	bsonencoder "github.com/spikeekips/mitum/util/encoder/bson"
 )
 
 func (sb SIGNBallotV0) MarshalBSON() ([]byte, error) {
@@ -11,7 +12,7 @@ func (sb SIGNBallotV0) MarshalBSON() ([]byte, error) {
 	m["proposal"] = sb.proposal
 	m["new_block"] = sb.newBlock
 
-	return bson.Marshal(m)
+	return bsonencoder.Marshal(m)
 }
 
 type SIGNBallotV0UnpackerBSON struct {
@@ -19,7 +20,7 @@ type SIGNBallotV0UnpackerBSON struct {
 	NB bson.Raw `bson:"new_block"`
 }
 
-func (sb *SIGNBallotV0) UnpackBSON(b []byte, enc *encoder.BSONEncoder) error { // nolint
+func (sb *SIGNBallotV0) UnpackBSON(b []byte, enc *bsonencoder.Encoder) error { // nolint
 	bb, bf, err := sb.BaseBallotV0.unpackBSON(b, enc)
 	if err != nil {
 		return err

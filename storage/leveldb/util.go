@@ -28,7 +28,7 @@ func LeveldbDataWithEncoder(enc encoder.Encoder, b []byte) []byte {
 }
 
 func LeveldbMarshal(enc encoder.Encoder, i interface{}) ([]byte, error) {
-	b, err := enc.Encode(i)
+	b, err := enc.Marshal(i)
 	if err != nil {
 		return nil, err
 	}

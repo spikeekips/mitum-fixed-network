@@ -5,32 +5,31 @@ import (
 	"sync"
 )
 
-type cache struct {
+type Cache struct {
 	c *sync.Map
 }
 
-func newCache() *cache {
-	return &cache{c: &sync.Map{}}
+func NewCache() *Cache {
+	return &Cache{c: &sync.Map{}}
 }
 
-func (ec *cache) Get(key interface{}) (interface{}, bool) {
+func (ec *Cache) Get(key interface{}) (interface{}, bool) {
 	return ec.c.Load(key)
 }
 
-func (ec *cache) Set(key, value interface{}) {
+func (ec *Cache) Set(key, value interface{}) {
 	ec.c.Store(key, value)
 }
 
-func (ec *cache) Delete(key interface{}) {
+func (ec *Cache) Delete(key interface{}) {
 	ec.c.Delete(key)
 }
 
 type CachedPacker struct {
 	Type   reflect.Type
-	Pack   interface{}
 	Unpack interface{}
 }
 
-func NewCachedPacker(t reflect.Type, pack, unpack interface{}) CachedPacker {
-	return CachedPacker{Type: t, Pack: pack, Unpack: unpack}
+func NewCachedPacker(t reflect.Type, unpack interface{}) CachedPacker {
+	return CachedPacker{Type: t, Unpack: unpack}
 }

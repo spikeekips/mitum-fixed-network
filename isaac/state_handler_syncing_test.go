@@ -4,12 +4,13 @@ import (
 	"testing"
 	"time"
 
+	"github.com/stretchr/testify/suite"
+	"golang.org/x/xerrors"
+
 	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/base/ballot"
 	"github.com/spikeekips/mitum/base/block"
 	"github.com/spikeekips/mitum/base/valuehash"
-	"github.com/stretchr/testify/suite"
-	"golang.org/x/xerrors"
 )
 
 type testStateSyncingHandler struct {

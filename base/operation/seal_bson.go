@@ -3,14 +3,15 @@ package operation
 import (
 	"time"
 
-	"github.com/spikeekips/mitum/base/key"
-	"github.com/spikeekips/mitum/util/encoder"
 	"go.mongodb.org/mongo-driver/bson"
+
+	"github.com/spikeekips/mitum/base/key"
+	bsonencoder "github.com/spikeekips/mitum/util/encoder/bson"
 )
 
 func (sl Seal) MarshalBSON() ([]byte, error) {
-	return bson.Marshal(encoder.MergeBSONM(
-		encoder.NewBSONHintedDoc(sl.Hint()),
+	return bsonencoder.Marshal(bsonencoder.MergeBSONM(
+		bsonencoder.NewHintedDoc(sl.Hint()),
 		bson.M{
 			"hash":       sl.h,
 			"body_hash":  sl.bodyHash,
@@ -31,7 +32,7 @@ type SealBSONUnpack struct {
 	OPS []bson.Raw    `bson:"operations"`
 }
 
-func (sl *Seal) UnpackBSON(b []byte, enc *encoder.BSONEncoder) error {
+func (sl *Seal) UnpackBSON(b []byte, enc *bsonencoder.Encoder) error {
 	var usl SealBSONUnpack
 	if err := enc.Unmarshal(b, &usl); err != nil {
 		return err

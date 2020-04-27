@@ -1,4 +1,4 @@
-package encoder
+package jsonencoder
 
 import (
 	"bytes"
@@ -11,25 +11,37 @@ import (
 	"golang.org/x/xerrors"
 
 	"github.com/spikeekips/mitum/util"
+	"github.com/spikeekips/mitum/util/encoder"
 	"github.com/spikeekips/mitum/util/hint"
 )
 
+// sp0 has PackRLP
+type sp0 struct {
+	A string
+	B []byte
+}
+
 var s1Hint = hint.MustHintWithType(hint.Type{0xff, 0x32}, "0.1", "s1")
 
-func (s0 sp0) PackJSON(_ *JSONEncoder) (interface{}, error) {
-	return sp0{
+func (s0 sp0) MarshalJSON() ([]byte, error) {
+	return Marshal(struct {
+		A string
+		B []byte
+	}{
 		A: s0.A,
 		B: []byte(s0.A),
-	}, nil
+	})
 }
 
-func (s0 sup0) PackJSON(_ *JSONEncoder) (interface{}, error) {
-	return sup0{
+func (s0 sup0) MarshalJSON() ([]byte, error) {
+	return Marshal(struct {
+		A string
+	}{
 		A: s0.A + "-packed",
-	}, nil
+	})
 }
 
-func (s0 *sup0) UnpackJSON(b []byte, _ *JSONEncoder) error {
+func (s0 *sup0) UnpackJSON(b []byte, _ *Encoder) error {
 	var us sup0
 	if err := json.Unmarshal(b, &us); err != nil {
 		return err
@@ -41,22 +53,22 @@ func (s0 *sup0) UnpackJSON(b []byte, _ *JSONEncoder) error {
 }
 
 // NOTE embed struct must have PackJSON and UnpackJSON.
-func (s0 se0) PackJSON(rp *JSONEncoder) (interface{}, error) {
-	s, err := rp.Pack(s0.S)
+func (s0 se0) MarshalJSON() ([]byte, error) {
+	s, err := Marshal(s0.S)
 	if err != nil {
 		return nil, err
 	}
 
-	return struct {
+	return Marshal(struct {
 		A string
-		S interface{}
+		S json.RawMessage
 	}{
 		A: s0.A,
 		S: s,
-	}, nil
+	})
 }
 
-func (s0 *se0) UnpackJSON(b []byte, rp *JSONEncoder) error {
+func (s0 *se0) UnpackJSON(b []byte, rp *Encoder) error {
 	var se struct {
 		A string
 		S json.RawMessage
@@ -76,23 +88,59 @@ func (s0 *se0) UnpackJSON(b []byte, rp *JSONEncoder) error {
 	return nil
 }
 
-func (s0 sh0) PackJSON(_ *JSONEncoder) (interface{}, error) {
-	return struct {
-		JSONPackHintedHead
-		sh0
-	}{
-		JSONPackHintedHead: NewJSONPackHintedHead(s0.Hint()),
-		sh0:                s0,
-	}, nil
-}
-
 type s1 struct {
 	C int
 }
 
-// s1 does not PackJSON without JSONPackHintedHead
+// s1 does not PackJSON without HintedHead
 func (s0 s1) Hint() hint.Hint {
 	return s1Hint
+}
+
+func (s0 s1) MarshalJSON() ([]byte, error) {
+	return Marshal(struct {
+		HintedHead
+		C int
+	}{
+		HintedHead: NewHintedHead(s0.Hint()),
+		C:          s0.C,
+	})
+}
+
+// sup0 has UnpackRLP
+type sup0 struct {
+	A string
+}
+
+// se0 embeds sup0
+type se0 struct {
+	A string
+	S sup0
+}
+
+var sh0Hint = hint.MustHintWithType(hint.Type{0xff, 0x31}, "0.1", "sh0")
+
+type sh0 struct {
+	B string
+}
+
+func (s0 sh0) Hint() hint.Hint {
+	return sh0Hint
+}
+
+func (s0 sh0) MarshalJSON() ([]byte, error) {
+	return Marshal(struct {
+		HintedHead
+		B string
+	}{
+		HintedHead: NewHintedHead(s0.Hint()),
+		B:          s0.B,
+	})
+}
+
+// s0 is simple struct
+type s0 struct {
+	A string
 }
 
 type testJSON struct {
@@ -136,7 +184,7 @@ func (t *testJSON) TestEncodeNatives() {
 		{name: "empty map ptr", v: &map[string]int{}},
 	}
 
-	je := NewJSONEncoder()
+	je := NewEncoder()
 
 	for i, c := range cases {
 		i := i
@@ -144,7 +192,7 @@ func (t *testJSON) TestEncodeNatives() {
 		tested := t.Run(
 			c.name,
 			func() {
-				b, err := je.Encode(c.v)
+				b, err := Marshal(c.v)
 				t.NoError(err, "encode: %d: %v; error=%v", i, c.name, err)
 
 				if c.v == nil {
@@ -175,8 +223,8 @@ func (t *testJSON) TestEncodeNatives() {
 func (t *testJSON) TestEncodeSimpleStruct() {
 	s := s0{A: util.UUID().String()}
 
-	je := NewJSONEncoder()
-	b, err := je.Encode(s)
+	je := NewEncoder()
+	b, err := Marshal(s)
 	t.NoError(err)
 	t.NotNil(b)
 
@@ -188,8 +236,8 @@ func (t *testJSON) TestEncodeSimpleStruct() {
 func (t *testJSON) TestEncodeRLPPackable() {
 	s := sp0{A: util.UUID().String()}
 
-	je := NewJSONEncoder()
-	b, err := je.Encode(s)
+	je := NewEncoder()
+	b, err := Marshal(s)
 	t.NoError(err)
 	t.NotNil(b)
 
@@ -202,8 +250,8 @@ func (t *testJSON) TestEncodeRLPPackable() {
 func (t *testJSON) TestEncodeRLPUnpackable() {
 	s := sup0{A: util.UUID().String()}
 
-	je := NewJSONEncoder()
-	b, err := je.Encode(s)
+	je := NewEncoder()
+	b, err := Marshal(s)
 	t.NoError(err)
 	t.NotNil(b)
 
@@ -218,8 +266,8 @@ func (t *testJSON) TestEncodeEmbed() {
 		S: sup0{A: util.UUID().String()},
 	}
 
-	je := NewJSONEncoder()
-	b, err := je.Encode(s)
+	je := NewEncoder()
+	b, err := Marshal(s)
 	t.NoError(err)
 	t.NotNil(b)
 
@@ -231,7 +279,7 @@ func (t *testJSON) TestEncodeEmbed() {
 }
 
 func (t *testJSON) TestAnalyzePack() {
-	je := NewJSONEncoder()
+	je := NewEncoder()
 
 	{ // has PackRLP
 		s := se0{
@@ -241,9 +289,8 @@ func (t *testJSON) TestAnalyzePack() {
 
 		name, cp, err := je.analyze(s)
 		t.NoError(err)
-		t.NotNil(cp.Pack)
 		t.NotNil(cp.Unpack)
-		t.Equal([]string{"JSONPackable", "JSONUnpackable"}, name)
+		t.Equal("JSONUnpackable", name)
 	}
 
 	{ // don't have PackRLP
@@ -251,41 +298,37 @@ func (t *testJSON) TestAnalyzePack() {
 
 		name, cp, err := je.analyze(s)
 		t.NoError(err)
-		t.NotNil(cp.Pack)
 		t.NotNil(cp.Unpack)
-		t.Equal([]string{encoderAnalyzedTypeDefault, encoderAnalyzedTypeDefault}, name)
+		t.Equal(encoder.EncoderAnalyzedTypeDefault, name)
 	}
 
 	{ // int-like
 		name, cp, err := je.analyze(int(0))
 		t.NoError(err)
-		t.NotNil(cp.Pack)
 		t.NotNil(cp.Unpack)
-		t.Equal([]string{encoderAnalyzedTypeDefault, encoderAnalyzedTypeDefault}, name)
+		t.Equal(encoder.EncoderAnalyzedTypeDefault, name)
 	}
 
 	{ // array
 		name, cp, err := je.analyze([]int{1, 2})
 		t.NoError(err)
-		t.NotNil(cp.Pack)
 		t.NotNil(cp.Unpack)
-		t.Equal([]string{encoderAnalyzedTypeDefault, encoderAnalyzedTypeDefault}, name)
+		t.Equal(encoder.EncoderAnalyzedTypeDefault, name)
 	}
 
 	{ // map
 		name, cp, err := je.analyze(map[int]int{1: 1, 2: 2})
 		t.NoError(err)
-		t.NotNil(cp.Pack)
 		t.NotNil(cp.Unpack)
-		t.Equal([]string{encoderAnalyzedTypeDefault, encoderAnalyzedTypeDefault}, name)
+		t.Equal(encoder.EncoderAnalyzedTypeDefault, name)
 	}
 }
 
 func (t *testJSON) TestEncodeHinter() {
 	s := sh0{B: util.UUID().String()}
 
-	je := NewJSONEncoder()
-	b, err := je.Encode(s)
+	je := NewEncoder()
+	b, err := Marshal(s)
 	t.NoError(err)
 	t.NotNil(b)
 
@@ -298,8 +341,8 @@ func (t *testJSON) TestEncodeHinter() {
 func (t *testJSON) TestEncodeHinterWithHead() {
 	s := s1{C: rand.Int()}
 
-	je := NewJSONEncoder()
-	b, err := je.Encode(s)
+	je := NewEncoder()
+	b, err := Marshal(s)
 	t.NoError(err)
 	t.NotNil(b)
 
@@ -312,25 +355,29 @@ func (t *testJSON) TestEncodeHinterWithHead() {
 func (t *testJSON) TestEncodeHinterNotCompatible() {
 	s := sh0{B: util.UUID().String()}
 
-	je := NewJSONEncoder()
-	b, err := je.Encode(s)
+	je := NewEncoder()
+
+	encs := encoder.NewEncoders()
+	_ = encs.AddEncoder(je)
+
+	encs.AddHinter(sh0{})
+
+	b, err := Marshal(s)
 	t.NoError(err)
 	t.NotNil(b)
 
 	{ // wrong major version
 		c := bytes.Replace(b, []byte(`"version":"0.1"`), []byte(`"version":"1.1"`), -1)
 
-		var us sh0
-		err := je.Decode(c, &us)
-		t.True(xerrors.Is(err, hint.VersionNotCompatibleError))
+		_, err := je.DecodeByHint(c)
+		t.True(xerrors.Is(err, hint.HintNotFoundError))
 	}
 
-	{ // wrong type version
-		c := bytes.Replace(b, []byte(`"type":{"name":"sh0"`), []byte(`"type":{"name":"sh1"`), -1)
+	{ // wrong type code
+		c := bytes.Replace(b, []byte(`"code":"ff31"`), []byte(`"code":"ffaa"`), -1)
 
-		var us sh0
-		err := je.Decode(c, &us)
-		t.Error(err)
+		_, err := je.DecodeByHint(c)
+		t.Contains(err.Error(), "type does not match")
 	}
 }
 

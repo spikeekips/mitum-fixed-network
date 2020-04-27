@@ -13,6 +13,8 @@ import (
 	"github.com/spikeekips/mitum/base/tree"
 	"github.com/spikeekips/mitum/base/valuehash"
 	"github.com/spikeekips/mitum/util/encoder"
+	bsonencoder "github.com/spikeekips/mitum/util/encoder/bson"
+	jsonencoder "github.com/spikeekips/mitum/util/encoder/json"
 )
 
 type DummyBlockStorage struct {
@@ -69,8 +71,8 @@ type BaseTestStorage struct {
 
 func (t *BaseTestStorage) SetupSuite() {
 	t.Encs = encoder.NewEncoders()
-	t.JSONEnc = encoder.NewJSONEncoder()
-	t.BSONEnc = encoder.NewBSONEncoder()
+	t.JSONEnc = jsonencoder.NewEncoder()
+	t.BSONEnc = bsonencoder.NewEncoder()
 
 	t.NoError(t.Encs.AddEncoder(t.JSONEnc))
 	t.NoError(t.Encs.AddEncoder(t.BSONEnc))

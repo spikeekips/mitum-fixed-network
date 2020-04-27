@@ -4,12 +4,11 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/suite"
-	"go.mongodb.org/mongo-driver/bson"
 	"golang.org/x/xerrors"
 
 	"github.com/spikeekips/mitum/base/valuehash"
-	"github.com/spikeekips/mitum/util"
-	"github.com/spikeekips/mitum/util/encoder"
+	bsonencoder "github.com/spikeekips/mitum/util/encoder/bson"
+	jsonencoder "github.com/spikeekips/mitum/util/encoder/json"
 	"github.com/spikeekips/mitum/util/hint"
 	"github.com/spikeekips/mitum/util/isvalid"
 	"github.com/spikeekips/mitum/util/localtime"
@@ -42,17 +41,17 @@ func (tf tinyFact) Bytes() []byte {
 }
 
 func (tf tinyFact) MarshalJSON() ([]byte, error) {
-	return util.JSONMarshal(struct {
-		encoder.JSONPackHintedHead
+	return jsonencoder.Marshal(struct {
+		jsonencoder.HintedHead
 		A string
 	}{
-		JSONPackHintedHead: encoder.NewJSONPackHintedHead(tf.Hint()),
-		A:                  tf.A,
+		HintedHead: jsonencoder.NewHintedHead(tf.Hint()),
+		A:          tf.A,
 	})
 }
 
 func (tf tinyFact) MarshalBSON() ([]byte, error) {
-	return bson.Marshal(struct {
+	return bsonencoder.Marshal(struct {
 		HI hint.Hint `bson:"_hint"`
 		A  string
 	}{

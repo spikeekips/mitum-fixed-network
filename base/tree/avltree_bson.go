@@ -4,7 +4,7 @@ import (
 	"go.mongodb.org/mongo-driver/bson"
 
 	"github.com/spikeekips/mitum/base/valuehash"
-	"github.com/spikeekips/mitum/util/encoder"
+	bsonencoder "github.com/spikeekips/mitum/util/encoder/bson"
 )
 
 func (at *AVLTree) MarshalBSON() ([]byte, error) {
@@ -24,8 +24,8 @@ func (at *AVLTree) MarshalBSON() ([]byte, error) {
 		rh = h
 	}
 
-	return bson.Marshal(encoder.MergeBSONM(
-		encoder.NewBSONHintedDoc(at.Hint()),
+	return bsonencoder.Marshal(bsonencoder.MergeBSONM(
+		bsonencoder.NewHintedDoc(at.Hint()),
 		bson.M{
 			"tree_type": "avl hashable tree",
 			"root_key":  string(at.Root().Key()),
@@ -40,7 +40,7 @@ type AVLTreeBSONUnpacker struct {
 	NS []bson.Raw `bson:"nodes"`
 }
 
-func (at *AVLTree) UnpackBSON(b []byte, enc *encoder.BSONEncoder) error {
+func (at *AVLTree) UnpackBSON(b []byte, enc *bsonencoder.Encoder) error {
 	var uat AVLTreeBSONUnpacker
 	if err := enc.Unmarshal(b, &uat); err != nil {
 		return err

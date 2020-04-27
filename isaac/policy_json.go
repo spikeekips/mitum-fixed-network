@@ -2,11 +2,11 @@ package isaac
 
 import (
 	"github.com/spikeekips/mitum/base"
-	"github.com/spikeekips/mitum/util"
+	jsonencoder "github.com/spikeekips/mitum/util/encoder/json"
 )
 
 func (lp LocalPolicy) MarshalJSON() ([]byte, error) {
-	return util.JSONMarshal(struct {
+	return jsonencoder.Marshal(struct {
 		NID string         `json:"network_id"`
 		TH  base.Threshold `json:"threshold"`
 		TP  string         `json:"timeout_waiting_proposal"`

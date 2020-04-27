@@ -3,7 +3,7 @@ package ballot
 import (
 	"go.mongodb.org/mongo-driver/bson"
 
-	"github.com/spikeekips/mitum/util/encoder"
+	bsonencoder "github.com/spikeekips/mitum/util/encoder/bson"
 )
 
 func (pr ProposalV0) MarshalBSON() ([]byte, error) {
@@ -12,7 +12,7 @@ func (pr ProposalV0) MarshalBSON() ([]byte, error) {
 	m["operations"] = pr.operations
 	m["seals"] = pr.seals
 
-	return bson.Marshal(m)
+	return bsonencoder.Marshal(m)
 }
 
 type ProposalV0UnpackerBSON struct {
@@ -20,7 +20,7 @@ type ProposalV0UnpackerBSON struct {
 	SL []bson.Raw `bson:"seals"`
 }
 
-func (pr *ProposalV0) UnpackBSON(b []byte, enc *encoder.BSONEncoder) error {
+func (pr *ProposalV0) UnpackBSON(b []byte, enc *bsonencoder.Encoder) error {
 	bb, bf, err := pr.BaseBallotV0.unpackBSON(b, enc)
 	if err != nil {
 		return err

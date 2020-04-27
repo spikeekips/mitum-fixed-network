@@ -12,7 +12,8 @@ import (
 	"github.com/spikeekips/mitum/base/key"
 	"github.com/spikeekips/mitum/base/valuehash"
 	"github.com/spikeekips/mitum/util"
-	"github.com/spikeekips/mitum/util/encoder"
+	bsonencoder "github.com/spikeekips/mitum/util/encoder/bson"
+	jsonencoder "github.com/spikeekips/mitum/util/encoder/json"
 	"github.com/spikeekips/mitum/util/hint"
 )
 
@@ -165,8 +166,8 @@ func (kvo KVOperation) FactSignature() key.Signature {
 }
 
 func (kvo KVOperation) MarshalJSON() ([]byte, error) {
-	return util.JSONMarshal(struct {
-		encoder.JSONPackHintedHead
+	return jsonencoder.Marshal(struct {
+		jsonencoder.HintedHead
 		SG key.Publickey  `json:"signer"`
 		TK []byte         `json:"token"`
 		K  string         `json:"key"`
@@ -175,18 +176,18 @@ func (kvo KVOperation) MarshalJSON() ([]byte, error) {
 		FH valuehash.Hash `json:"fact_hash"`
 		FS key.Signature  `json:"fact_signature"`
 	}{
-		JSONPackHintedHead: encoder.NewJSONPackHintedHead(kvo.Hint()),
-		SG:                 kvo.signer,
-		TK:                 kvo.token,
-		K:                  kvo.Key,
-		V:                  kvo.Value,
-		H:                  kvo.h,
-		FH:                 kvo.factHash,
-		FS:                 kvo.factSignature,
+		HintedHead: jsonencoder.NewHintedHead(kvo.Hint()),
+		SG:         kvo.signer,
+		TK:         kvo.token,
+		K:          kvo.Key,
+		V:          kvo.Value,
+		H:          kvo.h,
+		FH:         kvo.factHash,
+		FS:         kvo.factSignature,
 	})
 }
 
-func (kvo *KVOperation) UnpackJSON(b []byte, enc *encoder.JSONEncoder) error {
+func (kvo *KVOperation) UnpackJSON(b []byte, enc *jsonencoder.Encoder) error {
 	var ukvo struct {
 		SG json.RawMessage `json:"signer"`
 		TK []byte          `json:"token"`
@@ -231,7 +232,7 @@ func (kvo *KVOperation) UnpackJSON(b []byte, enc *encoder.JSONEncoder) error {
 }
 
 func (kvo KVOperation) MarshalBSON() ([]byte, error) {
-	return bson.Marshal(struct {
+	return bsonencoder.Marshal(struct {
 		HI hint.Hint      `bson:"_hint"`
 		SG key.Publickey  `bson:"signer"`
 		TK []byte         `bson:"token"`
@@ -252,7 +253,7 @@ func (kvo KVOperation) MarshalBSON() ([]byte, error) {
 	})
 }
 
-func (kvo *KVOperation) UnpackBSON(b []byte, enc *encoder.BSONEncoder) error {
+func (kvo *KVOperation) UnpackBSON(b []byte, enc *bsonencoder.Encoder) error {
 	var ukvo struct {
 		SG bson.Raw      `bson:"signer"`
 		TK []byte        `bson:"token"`

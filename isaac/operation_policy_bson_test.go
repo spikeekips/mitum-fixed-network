@@ -3,13 +3,14 @@ package isaac
 import (
 	"testing"
 
+	"github.com/stretchr/testify/suite"
+
 	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/base/key"
 	"github.com/spikeekips/mitum/base/valuehash"
-	"github.com/spikeekips/mitum/util"
 	"github.com/spikeekips/mitum/util/encoder"
-	"github.com/stretchr/testify/suite"
-	"go.mongodb.org/mongo-driver/bson"
+	bsonencoder "github.com/spikeekips/mitum/util/encoder/bson"
+	jsonencoder "github.com/spikeekips/mitum/util/encoder/json"
 )
 
 type testSetPolicyOperationBSON struct {
@@ -24,7 +25,7 @@ func (t *testSetPolicyOperationBSON) SetupSuite() {
 	t.pk, _ = key.NewBTCPrivatekey()
 
 	t.encs = encoder.NewEncoders()
-	t.enc = encoder.NewBSONEncoder()
+	t.enc = bsonencoder.NewEncoder()
 	_ = t.encs.AddEncoder(t.enc)
 
 	_ = t.encs.AddHinter(key.BTCPrivatekey{})
@@ -46,7 +47,7 @@ func (t *testSetPolicyOperationBSON) TestEncode() {
 	spo, err := NewSetPolicyOperationV0(t.pk, token, policies, nil)
 	t.NoError(err)
 
-	b, err := bson.Marshal(spo)
+	b, err := bsonencoder.Marshal(spo)
 	t.NoError(err)
 
 	hinter, err := t.enc.DecodeByHint(b)
@@ -60,7 +61,7 @@ func (t *testSetPolicyOperationBSON) TestEncode() {
 	t.True(spo.Hash().Equal(uspo.Hash()))
 	t.Equal(spo.Threshold, uspo.Threshold)
 
-	t.Equal(util.ToString(spo), util.ToString(uspo))
+	t.Equal(jsonencoder.ToString(spo), jsonencoder.ToString(uspo))
 }
 
 func TestSetPolicyOperationBSON(t *testing.T) {

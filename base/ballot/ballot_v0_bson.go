@@ -7,13 +7,13 @@ import (
 
 	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/base/key"
-	"github.com/spikeekips/mitum/util/encoder"
+	bsonencoder "github.com/spikeekips/mitum/util/encoder/bson"
 	"github.com/spikeekips/mitum/util/hint"
 )
 
 func PackBaseBallotV0BSON(ballot Ballot) bson.M {
-	return encoder.MergeBSONM(
-		encoder.NewBSONHintedDoc(ballot.Hint()),
+	return bsonencoder.MergeBSONM(
+		bsonencoder.NewHintedDoc(ballot.Hint()),
 		bson.M{
 			"hash":           ballot.Hash(),
 			"signer":         ballot.Signer(),
@@ -43,8 +43,8 @@ type BaseBallotV0UnpackerBSON struct {
 }
 
 func NewBaseBallotFactV0PackerBSON(bbf BaseBallotFactV0, ht hint.Hint) bson.M {
-	return encoder.MergeBSONM(
-		encoder.NewBSONHintedDoc(ht),
+	return bsonencoder.MergeBSONM(
+		bsonencoder.NewHintedDoc(ht),
 		bson.M{
 			"height": bbf.height,
 			"round":  bbf.round,

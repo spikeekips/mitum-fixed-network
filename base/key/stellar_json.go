@@ -5,10 +5,8 @@ func (sp StellarPrivatekey) MarshalJSON() ([]byte, error) {
 }
 
 func (sp *StellarPrivatekey) UnmarshalJSON(b []byte) error {
-	h, s, err := UnmarshalJSONKey(b)
+	_, s, err := UnmarshalJSONKey(b)
 	if err != nil {
-		return err
-	} else if err := sp.Hint().IsCompatible(h); err != nil {
 		return err
 	}
 
@@ -26,10 +24,8 @@ func (sp StellarPublickey) MarshalJSON() ([]byte, error) {
 }
 
 func (sp *StellarPublickey) UnmarshalJSON(b []byte) error {
-	h, s, err := UnmarshalJSONKey(b)
+	_, s, err := UnmarshalJSONKey(b)
 	if err != nil {
-		return err
-	} else if err := sp.Hint().IsCompatible(h); err != nil {
 		return err
 	}
 

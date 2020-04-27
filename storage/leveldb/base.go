@@ -168,7 +168,7 @@ func (st *LeveldbStorage) newVoteproof(voteproof base.Voteproof) error {
 		Hinted("stage", voteproof.Stage()).
 		Msg("voteproof stored")
 
-	raw, err := st.enc.Encode(voteproof)
+	raw, err := st.enc.Marshal(voteproof)
 	if err != nil {
 		return err
 	}
@@ -305,11 +305,11 @@ func (st *LeveldbStorage) NewSeals(seals []seal.Seal) error {
 }
 
 func (st *LeveldbStorage) newSeal(batch *leveldb.Batch, sl seal.Seal) error {
-	raw, err := st.enc.Encode(sl)
+	raw, err := st.enc.Marshal(sl)
 	if err != nil {
 		return err
 	}
-	rawHash, err := st.enc.Encode(sl.Hash())
+	rawHash, err := st.enc.Marshal(sl.Hash())
 	if err != nil {
 		return err
 	}

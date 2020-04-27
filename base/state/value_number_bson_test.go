@@ -3,10 +3,11 @@ package state
 import (
 	"testing"
 
+	"github.com/stretchr/testify/suite"
+
 	"github.com/spikeekips/mitum/base/valuehash"
 	"github.com/spikeekips/mitum/util/encoder"
-	"github.com/stretchr/testify/suite"
-	"go.mongodb.org/mongo-driver/bson"
+	bsonencoder "github.com/spikeekips/mitum/util/encoder/bson"
 )
 
 type testStateNumberValueBSON struct {
@@ -18,7 +19,7 @@ type testStateNumberValueBSON struct {
 
 func (t *testStateNumberValueBSON) SetupSuite() {
 	t.encs = encoder.NewEncoders()
-	t.enc = encoder.NewBSONEncoder()
+	t.enc = bsonencoder.NewEncoder()
 	_ = t.encs.AddEncoder(t.enc)
 
 	_ = t.encs.AddHinter(valuehash.SHA256{})
@@ -30,7 +31,7 @@ func (t *testStateNumberValueBSON) TestEncode() {
 	iv, err := NewNumberValue(int64(33))
 	t.NoError(err)
 
-	b, err := bson.Marshal(iv)
+	b, err := bsonencoder.Marshal(iv)
 	t.NoError(err)
 
 	decoded, err := t.enc.DecodeByHint(b)
@@ -72,7 +73,7 @@ func (t *testStateNumberValueBSON) TestCases() {
 				iv, err := NewNumberValue(c.v)
 				t.NoError(err, "%d: name=%s value=%s", i, c.name, c.v)
 
-				b, err := bson.Marshal(iv)
+				b, err := bsonencoder.Marshal(iv)
 				t.NoError(err, "%d: name=%s value=%s", i, c.name, c.v)
 
 				decoded, err := t.enc.DecodeByHint(b)

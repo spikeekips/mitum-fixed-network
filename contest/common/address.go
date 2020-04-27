@@ -7,8 +7,7 @@ import (
 	"golang.org/x/xerrors"
 
 	"github.com/spikeekips/mitum/base"
-	"github.com/spikeekips/mitum/util"
-	"github.com/spikeekips/mitum/util/encoder"
+	jsonencoder "github.com/spikeekips/mitum/util/encoder/json"
 	"github.com/spikeekips/mitum/util/hint"
 	"github.com/spikeekips/mitum/util/logging"
 )
@@ -53,18 +52,18 @@ func (sa ContestAddress) Bytes() []byte {
 }
 
 func (sa ContestAddress) MarshalJSON() ([]byte, error) {
-	return util.JSONMarshal(struct {
-		encoder.JSONPackHintedHead
+	return jsonencoder.Marshal(struct {
+		jsonencoder.HintedHead
 		A string `json:"address"`
 	}{
-		JSONPackHintedHead: encoder.NewJSONPackHintedHead(sa.Hint()),
-		A:                  sa.String(),
+		HintedHead: jsonencoder.NewHintedHead(sa.Hint()),
+		A:          sa.String(),
 	})
 }
 
-func (sa *ContestAddress) UnpackJSON(b []byte, _ *encoder.JSONEncoder) error {
+func (sa *ContestAddress) UnpackJSON(b []byte, _ *jsonencoder.Encoder) error {
 	var s struct {
-		encoder.JSONPackHintedHead
+		jsonencoder.HintedHead
 		A string `json:"address"`
 	}
 	if err := json.Unmarshal(b, &s); err != nil {

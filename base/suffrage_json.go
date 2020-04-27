@@ -1,8 +1,6 @@
 package base
 
-import (
-	"github.com/spikeekips/mitum/util"
-)
+import jsonencoder "github.com/spikeekips/mitum/util/encoder/json"
 
 type ActingSuffragePacker struct {
 	H Height   `json:"height" bson:"height"`
@@ -12,7 +10,7 @@ type ActingSuffragePacker struct {
 }
 
 func (as ActingSuffrage) MarshalJSON() ([]byte, error) {
-	return util.JSONMarshal(ActingSuffragePacker{
+	return jsonencoder.Marshal(ActingSuffragePacker{
 		H: as.height,
 		R: as.round,
 		P: as.proposer.Address().String(),

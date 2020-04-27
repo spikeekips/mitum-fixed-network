@@ -5,12 +5,13 @@ package base
 import (
 	"time"
 
+	"go.mongodb.org/mongo-driver/bson"
+
 	"github.com/spikeekips/mitum/base/valuehash"
-	"github.com/spikeekips/mitum/util"
-	"github.com/spikeekips/mitum/util/encoder"
+	bsonencoder "github.com/spikeekips/mitum/util/encoder/bson"
+	jsonencoder "github.com/spikeekips/mitum/util/encoder/json"
 	"github.com/spikeekips/mitum/util/hint"
 	"github.com/spikeekips/mitum/util/logging"
-	"go.mongodb.org/mongo-driver/bson"
 )
 
 func NewTestVoteproofV0(
@@ -117,22 +118,22 @@ func (vp DummyVoteproof) Threshold() Threshold {
 }
 
 func (vp DummyVoteproof) MarshalJSON() ([]byte, error) {
-	return util.JSONMarshal(struct {
-		encoder.JSONPackHintedHead
+	return jsonencoder.Marshal(struct {
+		jsonencoder.HintedHead
 		HT Height
 		RD Round
 		SG Stage
 		RS VoteResultType
 	}{
-		JSONPackHintedHead: encoder.NewJSONPackHintedHead(vp.Hint()),
-		HT:                 vp.height,
-		RD:                 vp.round,
-		SG:                 vp.stage,
-		RS:                 vp.result,
+		HintedHead: jsonencoder.NewHintedHead(vp.Hint()),
+		HT:         vp.height,
+		RD:         vp.round,
+		SG:         vp.stage,
+		RS:         vp.result,
 	})
 }
 
-func (vp *DummyVoteproof) UnpackJSON(b []byte, enc *encoder.JSONEncoder) error {
+func (vp *DummyVoteproof) UnpackJSON(b []byte, enc *jsonencoder.Encoder) error {
 	var uvp struct {
 		HT Height
 		RD Round
@@ -153,7 +154,7 @@ func (vp *DummyVoteproof) UnpackJSON(b []byte, enc *encoder.JSONEncoder) error {
 }
 
 func (vp DummyVoteproof) MarshalBSON() ([]byte, error) {
-	return bson.Marshal(bson.M{
+	return bsonencoder.Marshal(bson.M{
 		"_hint":  vp.Hint(),
 		"height": vp.height,
 		"round":  vp.round,
@@ -162,7 +163,7 @@ func (vp DummyVoteproof) MarshalBSON() ([]byte, error) {
 	})
 }
 
-func (vp *DummyVoteproof) UnpackBSON(b []byte, enc *encoder.BSONEncoder) error {
+func (vp *DummyVoteproof) UnpackBSON(b []byte, enc *bsonencoder.Encoder) error {
 	var uvp struct {
 		HT Height         `bson:"height"`
 		RD Round          `bson:"round"`
@@ -191,7 +192,7 @@ func (vp DummyVoteproof) MarshalLog(key string, e logging.Emitter, verbose bool)
 			Str("result", vp.result.String()))
 	}
 
-	r, _ := util.JSONMarshal(vp)
+	r, _ := jsonencoder.Marshal(vp)
 
 	return e.RawJSON(key, r)
 }

@@ -9,6 +9,7 @@ import (
 	"github.com/spikeekips/mitum/base/key"
 	"github.com/spikeekips/mitum/base/valuehash"
 	"github.com/spikeekips/mitum/util/encoder"
+	bsonencoder "github.com/spikeekips/mitum/util/encoder/bson"
 	"github.com/spikeekips/mitum/util/localtime"
 )
 
@@ -23,7 +24,7 @@ func (t *testBallotProposalV0BSON) SetupSuite() {
 }
 
 func (t *testBallotProposalV0BSON) TestEncode() {
-	je := encoder.NewBSONEncoder()
+	je := bsonencoder.NewEncoder()
 
 	encs := encoder.NewEncoders()
 	t.NoError(encs.AddEncoder(je))
@@ -51,7 +52,7 @@ func (t *testBallotProposalV0BSON) TestEncode() {
 
 	t.NoError(ib.Sign(t.pk, nil))
 
-	b, err := je.Encode(ib)
+	b, err := je.Marshal(ib)
 	t.NoError(err)
 
 	ht, err := je.DecodeByHint(b)

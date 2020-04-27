@@ -3,8 +3,9 @@ package isaac
 import (
 	"sync"
 
-	"github.com/spikeekips/mitum/base"
 	"golang.org/x/xerrors"
+
+	"github.com/spikeekips/mitum/base"
 )
 
 type NodesState struct {

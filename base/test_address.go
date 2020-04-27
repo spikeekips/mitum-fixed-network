@@ -8,11 +8,10 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"go.mongodb.org/mongo-driver/bson"
 	"golang.org/x/xerrors"
 
-	"github.com/spikeekips/mitum/util"
-	"github.com/spikeekips/mitum/util/encoder"
+	bsonencoder "github.com/spikeekips/mitum/util/encoder/bson"
+	jsonencoder "github.com/spikeekips/mitum/util/encoder/json"
 	"github.com/spikeekips/mitum/util/hint"
 	"github.com/spikeekips/mitum/util/logging"
 )
@@ -61,18 +60,18 @@ func (sa ShortAddress) Bytes() []byte {
 }
 
 func (sa ShortAddress) MarshalJSON() ([]byte, error) {
-	return util.JSONMarshal(struct {
-		encoder.JSONPackHintedHead
+	return jsonencoder.Marshal(struct {
+		jsonencoder.HintedHead
 		A string `json:"address"`
 	}{
-		JSONPackHintedHead: encoder.NewJSONPackHintedHead(sa.Hint()),
-		A:                  sa.String(),
+		HintedHead: jsonencoder.NewHintedHead(sa.Hint()),
+		A:          sa.String(),
 	})
 }
 
-func (sa *ShortAddress) UnpackJSON(b []byte, _ *encoder.JSONEncoder) error {
+func (sa *ShortAddress) UnpackJSON(b []byte, _ *jsonencoder.Encoder) error {
 	var s struct {
-		encoder.JSONPackHintedHead
+		jsonencoder.HintedHead
 		A string `json:"address"`
 	}
 	if err := json.Unmarshal(b, &s); err != nil {
@@ -89,7 +88,7 @@ func (sa *ShortAddress) UnpackJSON(b []byte, _ *encoder.JSONEncoder) error {
 }
 
 func (sa ShortAddress) MarshalBSON() ([]byte, error) {
-	return bson.Marshal(struct {
+	return bsonencoder.Marshal(struct {
 		HI hint.Hint `bson:"_hint"`
 		A  string    `bson:"address"`
 	}{
@@ -103,7 +102,7 @@ func (sa *ShortAddress) UnmarshalBSON(b []byte) error {
 		A string `bson:"address"`
 	}
 
-	if err := bson.Unmarshal(b, &us); err != nil {
+	if err := bsonencoder.Unmarshal(b, &us); err != nil {
 		return err
 	}
 

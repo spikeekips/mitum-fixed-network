@@ -5,7 +5,7 @@ import (
 	"golang.org/x/xerrors"
 
 	"github.com/spikeekips/mitum/base/tree"
-	"github.com/spikeekips/mitum/util/encoder"
+	bsonencoder "github.com/spikeekips/mitum/util/encoder/bson"
 )
 
 func (bm BlockV0) MarshalBSON() ([]byte, error) {
@@ -22,7 +22,7 @@ func (bm BlockV0) MarshalBSON() ([]byte, error) {
 		m["states"] = bm.states
 	}
 
-	return bson.Marshal(encoder.MergeBSONM(encoder.NewBSONHintedDoc(bm.Hint()), m))
+	return bsonencoder.Marshal(bsonencoder.MergeBSONM(bsonencoder.NewHintedDoc(bm.Hint()), m))
 }
 
 type BlockV0UnpackBSON struct {
@@ -32,7 +32,7 @@ type BlockV0UnpackBSON struct {
 	ST bson.Raw `bson:"states,omitempty"`
 }
 
-func (bm *BlockV0) UnpackBSON(b []byte, enc *encoder.BSONEncoder) error {
+func (bm *BlockV0) UnpackBSON(b []byte, enc *bsonencoder.Encoder) error {
 	var nbm BlockV0UnpackBSON
 	if err := enc.Unmarshal(b, &nbm); err != nil {
 		return err

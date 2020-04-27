@@ -5,8 +5,8 @@ import (
 	"time"
 
 	"github.com/spikeekips/mitum/base/valuehash"
-	"github.com/spikeekips/mitum/util"
 	"github.com/spikeekips/mitum/util/encoder"
+	jsonencoder "github.com/spikeekips/mitum/util/encoder/json"
 	"github.com/stretchr/testify/suite"
 )
 
@@ -19,7 +19,7 @@ type testStateDurationValueJSON struct {
 
 func (t *testStateDurationValueJSON) SetupSuite() {
 	t.encs = encoder.NewEncoders()
-	t.enc = encoder.NewJSONEncoder()
+	t.enc = jsonencoder.NewEncoder()
 	_ = t.encs.AddEncoder(t.enc)
 
 	_ = t.encs.AddHinter(valuehash.SHA256{})
@@ -48,7 +48,7 @@ func (t *testStateDurationValueJSON) TestCases() {
 				iv, err := NewDurationValue(c.v)
 				t.NoError(err, "%d: name=%s value=%s", i, c.name, c.v)
 
-				b, err := util.JSONMarshal(iv)
+				b, err := jsonencoder.Marshal(iv)
 				t.NoError(err, "%d: name=%s value=%s", i, c.name, c.v)
 
 				decoded, err := t.enc.DecodeByHint(b)

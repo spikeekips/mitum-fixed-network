@@ -4,21 +4,20 @@ import (
 	"encoding/json"
 
 	"github.com/spikeekips/mitum/base"
-	"github.com/spikeekips/mitum/util"
-	"github.com/spikeekips/mitum/util/encoder"
+	jsonencoder "github.com/spikeekips/mitum/util/encoder/json"
 )
 
 type BlockConsensusInfoV0PackJSON struct {
-	encoder.JSONPackHintedHead
+	jsonencoder.HintedHead
 	IV base.Voteproof `json:"init_voteproof,omitempty"`
 	AV base.Voteproof `json:"accept_voteproof,omitempty"`
 }
 
 func (bc BlockConsensusInfoV0) MarshalJSON() ([]byte, error) {
-	return util.JSONMarshal(BlockConsensusInfoV0PackJSON{
-		JSONPackHintedHead: encoder.NewJSONPackHintedHead(bc.Hint()),
-		IV:                 bc.initVoteproof,
-		AV:                 bc.acceptVoteproof,
+	return jsonencoder.Marshal(BlockConsensusInfoV0PackJSON{
+		HintedHead: jsonencoder.NewHintedHead(bc.Hint()),
+		IV:         bc.initVoteproof,
+		AV:         bc.acceptVoteproof,
 	})
 }
 
@@ -27,7 +26,7 @@ type BlockConsensusInfoV0UnpackJSON struct {
 	AV json.RawMessage `json:"accept_voteproof"`
 }
 
-func (bc *BlockConsensusInfoV0) UnpackJSON(b []byte, enc *encoder.JSONEncoder) error {
+func (bc *BlockConsensusInfoV0) UnpackJSON(b []byte, enc *jsonencoder.Encoder) error {
 	var nbc BlockConsensusInfoV0UnpackJSON
 	if err := enc.Unmarshal(b, &nbc); err != nil {
 		return err

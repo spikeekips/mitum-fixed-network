@@ -3,12 +3,13 @@ package isaac
 import (
 	"testing"
 
+	"github.com/stretchr/testify/suite"
+
 	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/base/key"
 	"github.com/spikeekips/mitum/base/valuehash"
-	"github.com/spikeekips/mitum/util"
 	"github.com/spikeekips/mitum/util/encoder"
-	"github.com/stretchr/testify/suite"
+	jsonencoder "github.com/spikeekips/mitum/util/encoder/json"
 )
 
 type testSetPolicyOperationJSON struct {
@@ -23,7 +24,7 @@ func (t *testSetPolicyOperationJSON) SetupSuite() {
 	t.pk, _ = key.NewBTCPrivatekey()
 
 	t.encs = encoder.NewEncoders()
-	t.enc = encoder.NewJSONEncoder()
+	t.enc = jsonencoder.NewEncoder()
 	_ = t.encs.AddEncoder(t.enc)
 
 	_ = t.encs.AddHinter(key.BTCPrivatekey{})
@@ -45,7 +46,7 @@ func (t *testSetPolicyOperationJSON) TestEncode() {
 	spo, err := NewSetPolicyOperationV0(t.pk, token, policies, nil)
 	t.NoError(err)
 
-	b, err := util.JSONMarshal(spo)
+	b, err := jsonencoder.Marshal(spo)
 	t.NoError(err)
 
 	hinter, err := t.enc.DecodeByHint(b)
@@ -59,7 +60,7 @@ func (t *testSetPolicyOperationJSON) TestEncode() {
 	t.True(spo.Hash().Equal(uspo.Hash()))
 	t.Equal(spo.Threshold, uspo.Threshold)
 
-	t.Equal(util.ToString(spo), util.ToString(uspo))
+	t.Equal(jsonencoder.ToString(spo), jsonencoder.ToString(uspo))
 }
 
 func TestSetPolicyOperationJSON(t *testing.T) {

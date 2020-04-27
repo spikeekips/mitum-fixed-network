@@ -10,14 +10,14 @@ import (
 	"github.com/spikeekips/mitum/base/tree"
 	"github.com/spikeekips/mitum/base/valuehash"
 	"github.com/spikeekips/mitum/isaac"
-	"github.com/spikeekips/mitum/util/encoder"
+	bsonencoder "github.com/spikeekips/mitum/util/encoder/bson"
+	jsonencoder "github.com/spikeekips/mitum/util/encoder/json"
 )
 
 var Hinters = [][2]interface{}{
 	{"contest-address", ContestAddress("")},
-	{"encoder-bson", encoder.BSONEncoder{}},
-	{"encoder-rlp", encoder.RLPEncoder{}},
-	{"encoder-json", encoder.JSONEncoder{}},
+	{"encoder-bson", bsonencoder.Encoder{}},
+	{"encoder-json", jsonencoder.Encoder{}},
 	{"ballot-init", ballot.INITBallotV0{}},
 	{"ballot=proposal", ballot.ProposalV0{}},
 	{"ballot-sign", ballot.SIGNBallotV0{}},

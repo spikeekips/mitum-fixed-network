@@ -521,7 +521,6 @@ func (st *MongodbStorage) Initialize() error {
 		}
 
 		if _, err := iv.CreateMany(context.TODO(), models); err != nil {
-			println("01")
 			return storage.WrapError(err)
 		}
 	}

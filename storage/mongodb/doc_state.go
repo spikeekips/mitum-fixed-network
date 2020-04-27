@@ -3,9 +3,11 @@ package mongodbstorage
 import (
 	"golang.org/x/xerrors"
 
+	"go.mongodb.org/mongo-driver/bson"
+
 	"github.com/spikeekips/mitum/base/state"
 	"github.com/spikeekips/mitum/util/encoder"
-	"go.mongodb.org/mongo-driver/bson"
+	bsonencoder "github.com/spikeekips/mitum/util/encoder/bson"
 )
 
 type StateDoc struct {
@@ -33,7 +35,7 @@ func (sd StateDoc) MarshalBSON() ([]byte, error) {
 
 	m["key"] = sd.state.Key()
 
-	return bson.Marshal(m)
+	return bsonencoder.Marshal(m)
 }
 
 func loadStateFromDecoder(decoder func(interface{}) error, encs *encoder.Encoders) (

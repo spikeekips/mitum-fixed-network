@@ -471,7 +471,7 @@ func (t *testLeveldbStorage) TestHasOperation() {
 	op := valuehash.RandomSHA256()
 
 	{ // store
-		raw, err := t.storage.enc.Encode(op)
+		raw, err := t.storage.enc.Marshal(op)
 		t.NoError(err)
 		t.storage.db.Put(
 			leveldbOperationHashKey(op),

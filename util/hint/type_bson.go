@@ -8,8 +8,8 @@ import (
 )
 
 type typeBSON struct {
-	N string `bson:"n"`
-	C string `bson:"c"`
+	N string `bson:"name"`
+	C string `bson:"code"`
 }
 
 func (ty Type) MarshalBSON() ([]byte, error) {

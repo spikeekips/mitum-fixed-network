@@ -4,9 +4,9 @@ import (
 	"fmt"
 	"sync"
 
+	"github.com/spikeekips/avl"
 	"golang.org/x/xerrors"
 
-	"github.com/spikeekips/avl"
 	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/base/ballot"
 	"github.com/spikeekips/mitum/base/block"

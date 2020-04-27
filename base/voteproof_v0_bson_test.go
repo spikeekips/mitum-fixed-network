@@ -4,11 +4,10 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/suite"
-	"go.mongodb.org/mongo-driver/bson"
 
 	"github.com/spikeekips/mitum/base/key"
 	"github.com/spikeekips/mitum/base/valuehash"
-	"github.com/spikeekips/mitum/util/encoder"
+	bsonencoder "github.com/spikeekips/mitum/util/encoder/bson"
 	"github.com/spikeekips/mitum/util/hint"
 	"github.com/spikeekips/mitum/util/localtime"
 )
@@ -68,11 +67,11 @@ func (t *testVoteproofBSON) TestMarshal() {
 	}
 	t.NoError(vp.IsValid(nil))
 
-	b, err := bson.Marshal(vp)
+	b, err := bsonencoder.Marshal(vp)
 	t.NoError(err)
 	t.NotNil(b)
 
-	be := encoder.NewBSONEncoder()
+	be := bsonencoder.NewEncoder()
 	be.SetHintset(t.hs)
 
 	var uvp VoteproofV0

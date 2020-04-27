@@ -6,8 +6,8 @@ import (
 	"github.com/spikeekips/mitum/base/key"
 	"github.com/spikeekips/mitum/base/operation"
 	"github.com/spikeekips/mitum/base/state"
-	"github.com/spikeekips/mitum/util"
-	"github.com/spikeekips/mitum/util/encoder"
+	bsonencoder "github.com/spikeekips/mitum/util/encoder/bson"
+	jsonencoder "github.com/spikeekips/mitum/util/encoder/json"
 	"github.com/spikeekips/mitum/util/hint"
 )
 
@@ -39,22 +39,22 @@ func (kvo KVOperation) Hint() hint.Hint {
 }
 
 func (kvo KVOperation) MarshalJSON() ([]byte, error) {
-	b, err := util.JSONMarshal(kvo.KVOperation)
+	b, err := jsonencoder.Marshal(kvo.KVOperation)
 	if err != nil {
 		return nil, err
 	}
 
 	var m map[string]interface{}
-	if err := util.JSONUnmarshal(b, &m); err != nil {
+	if err := jsonencoder.Unmarshal(b, &m); err != nil {
 		return nil, err
 	} else {
 		m["_hint"] = kvo.Hint()
 	}
 
-	return util.JSONMarshal(m)
+	return jsonencoder.Marshal(m)
 }
 
-func (kvo *KVOperation) UnpackJSON(b []byte, enc *encoder.JSONEncoder) error {
+func (kvo *KVOperation) UnpackJSON(b []byte, enc *jsonencoder.Encoder) error {
 	okvo := &operation.KVOperation{}
 	if err := okvo.UnpackJSON(b, enc); err != nil {
 		return err
@@ -66,22 +66,22 @@ func (kvo *KVOperation) UnpackJSON(b []byte, enc *encoder.JSONEncoder) error {
 }
 
 func (kvo KVOperation) MarshalBSON() ([]byte, error) {
-	b, err := bson.Marshal(kvo.KVOperation)
+	b, err := bsonencoder.Marshal(kvo.KVOperation)
 	if err != nil {
 		return nil, err
 	}
 
 	var m bson.M
-	if err := bson.Unmarshal(b, &m); err != nil {
+	if err := bsonencoder.Unmarshal(b, &m); err != nil {
 		return nil, err
 	} else {
 		m["_hint"] = kvo.Hint()
 	}
 
-	return bson.Marshal(m)
+	return bsonencoder.Marshal(m)
 }
 
-func (kvo *KVOperation) UnpackBSON(b []byte, enc *encoder.BSONEncoder) error {
+func (kvo *KVOperation) UnpackBSON(b []byte, enc *bsonencoder.Encoder) error {
 	okvo := &operation.KVOperation{}
 	if err := okvo.UnpackBSON(b, enc); err != nil {
 		return err

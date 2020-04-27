@@ -6,13 +6,13 @@ import (
 	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/base/key"
 	"github.com/spikeekips/mitum/base/valuehash"
-	"github.com/spikeekips/mitum/util/encoder"
+	jsonencoder "github.com/spikeekips/mitum/util/encoder/json"
 	"github.com/spikeekips/mitum/util/hint"
 	"github.com/spikeekips/mitum/util/localtime"
 )
 
 type BaseBallotV0PackerJSON struct {
-	encoder.JSONPackHintedHead
+	jsonencoder.HintedHead
 	H   valuehash.Hash     `json:"hash"`
 	SN  key.Publickey      `json:"signer"`
 	SG  key.Signature      `json:"signature"`
@@ -27,22 +27,22 @@ type BaseBallotV0PackerJSON struct {
 
 func PackBaseBallotV0JSON(ballot Ballot) (BaseBallotV0PackerJSON, error) {
 	return BaseBallotV0PackerJSON{
-		JSONPackHintedHead: encoder.NewJSONPackHintedHead(ballot.Hint()),
-		H:                  ballot.Hash(),
-		SN:                 ballot.Signer(),
-		SG:                 ballot.Signature(),
-		SA:                 localtime.NewJSONTime(ballot.SignedAt()),
-		HT:                 ballot.Height(),
-		RD:                 ballot.Round(),
-		N:                  ballot.Node(),
-		BH:                 ballot.BodyHash(),
-		FH:                 ballot.FactHash(),
-		FSG:                ballot.FactSignature(),
+		HintedHead: jsonencoder.NewHintedHead(ballot.Hint()),
+		H:          ballot.Hash(),
+		SN:         ballot.Signer(),
+		SG:         ballot.Signature(),
+		SA:         localtime.NewJSONTime(ballot.SignedAt()),
+		HT:         ballot.Height(),
+		RD:         ballot.Round(),
+		N:          ballot.Node(),
+		BH:         ballot.BodyHash(),
+		FH:         ballot.FactHash(),
+		FSG:        ballot.FactSignature(),
 	}, nil
 }
 
 type BaseBallotV0UnpackerJSON struct {
-	encoder.JSONPackHintedHead
+	jsonencoder.HintedHead
 	H   json.RawMessage    `json:"hash"`
 	SN  json.RawMessage    `json:"signer"`
 	SG  key.Signature      `json:"signature"`
@@ -55,7 +55,7 @@ type BaseBallotV0UnpackerJSON struct {
 	FSG key.Signature      `json:"fact_signature"`
 }
 
-func UnpackBaseBallotV0JSON(nib BaseBallotV0UnpackerJSON, enc *encoder.JSONEncoder) (
+func UnpackBaseBallotV0JSON(nib BaseBallotV0UnpackerJSON, enc *jsonencoder.Encoder) (
 	BaseBallotV0,
 	BaseBallotFactV0,
 	error,
@@ -103,15 +103,15 @@ func UnpackBaseBallotV0JSON(nib BaseBallotV0UnpackerJSON, enc *encoder.JSONEncod
 }
 
 type BaseBallotFactV0PackerJSON struct {
-	encoder.JSONPackHintedHead
+	jsonencoder.HintedHead
 	HT base.Height `json:"height"`
 	RD base.Round  `json:"round"`
 }
 
 func NewBaseBallotFactV0PackerJSON(bbf BaseBallotFactV0, ht hint.Hint) BaseBallotFactV0PackerJSON {
 	return BaseBallotFactV0PackerJSON{
-		JSONPackHintedHead: encoder.NewJSONPackHintedHead(ht),
-		HT:                 bbf.height,
-		RD:                 bbf.round,
+		HintedHead: jsonencoder.NewHintedHead(ht),
+		HT:         bbf.height,
+		RD:         bbf.round,
 	}
 }

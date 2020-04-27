@@ -3,11 +3,12 @@ package state
 import (
 	"testing"
 
-	"github.com/spikeekips/mitum/base/valuehash"
-	"github.com/spikeekips/mitum/util"
-	"github.com/spikeekips/mitum/util/encoder"
-	"github.com/spikeekips/mitum/util/hint"
 	"github.com/stretchr/testify/suite"
+
+	"github.com/spikeekips/mitum/base/valuehash"
+	"github.com/spikeekips/mitum/util/encoder"
+	jsonencoder "github.com/spikeekips/mitum/util/encoder/json"
+	"github.com/spikeekips/mitum/util/hint"
 )
 
 type testStateSliceValueJSON struct {
@@ -19,7 +20,7 @@ type testStateSliceValueJSON struct {
 
 func (t *testStateSliceValueJSON) SetupSuite() {
 	t.encs = encoder.NewEncoders()
-	t.enc = encoder.NewJSONEncoder()
+	t.enc = jsonencoder.NewEncoder()
 	_ = t.encs.AddEncoder(t.enc)
 
 	_ = t.encs.AddHinter(valuehash.SHA256{})
@@ -34,7 +35,7 @@ func (t *testStateSliceValueJSON) TestEncode() {
 	bv, err := NewSliceValue([]hint.Hinter{d})
 	t.NoError(err)
 
-	b, err := util.JSONMarshal(bv)
+	b, err := jsonencoder.Marshal(bv)
 	t.NoError(err)
 
 	decoded, err := t.enc.DecodeByHint(b)

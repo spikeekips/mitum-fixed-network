@@ -1,10 +1,12 @@
 package mongodbstorage
 
 import (
-	"github.com/spikeekips/mitum/base"
-	"github.com/spikeekips/mitum/util/encoder"
 	"go.mongodb.org/mongo-driver/bson"
 	"golang.org/x/xerrors"
+
+	"github.com/spikeekips/mitum/base"
+	"github.com/spikeekips/mitum/util/encoder"
+	bsonencoder "github.com/spikeekips/mitum/util/encoder/bson"
 )
 
 type VoteproofDoc struct {
@@ -34,7 +36,7 @@ func (vd VoteproofDoc) MarshalBSON() ([]byte, error) {
 	m["height"] = vd.voteproof.Height()
 	m["round"] = vd.voteproof.Round()
 
-	return bson.Marshal(m)
+	return bsonencoder.Marshal(m)
 }
 
 func loadVoteproofFromDecoder(decoder func(interface{}) error, encs *encoder.Encoders) (base.Voteproof, error) {

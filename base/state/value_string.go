@@ -3,9 +3,10 @@ package state
 import (
 	"fmt"
 
+	"golang.org/x/xerrors"
+
 	"github.com/spikeekips/mitum/base/valuehash"
 	"github.com/spikeekips/mitum/util/hint"
-	"golang.org/x/xerrors"
 )
 
 var (

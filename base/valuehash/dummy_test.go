@@ -53,7 +53,7 @@ func (t *testDummy) TestJSONMarshal() {
 		var jh JSONHash
 		t.NoError(err, json.Unmarshal(b, &jh))
 
-		t.Equal(dm.Hint(), jh.JSONPackHintedHead.H)
+		t.Equal(dm.Hint(), jh.HintedHead.H)
 		t.Equal(dm.String(), jh.Hash)
 	}
 
@@ -64,7 +64,7 @@ func (t *testDummy) TestJSONMarshal() {
 		var jh JSONHash
 		t.NoError(err, json.Unmarshal(b, &jh))
 
-		t.Equal(dm.Hint(), jh.JSONPackHintedHead.H)
+		t.Equal(dm.Hint(), jh.HintedHead.H)
 		t.Equal(dm.String(), jh.Hash)
 	}
 }

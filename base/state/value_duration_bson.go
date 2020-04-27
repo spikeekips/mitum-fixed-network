@@ -6,12 +6,12 @@ import (
 	"go.mongodb.org/mongo-driver/bson"
 
 	"github.com/spikeekips/mitum/base/valuehash"
-	"github.com/spikeekips/mitum/util/encoder"
+	bsonencoder "github.com/spikeekips/mitum/util/encoder/bson"
 )
 
 func (dv DurationValue) MarshalBSON() ([]byte, error) {
-	return bson.Marshal(encoder.MergeBSONM(
-		encoder.NewBSONHintedDoc(dv.Hint()),
+	return bsonencoder.Marshal(bsonencoder.MergeBSONM(
+		bsonencoder.NewHintedDoc(dv.Hint()),
 		bson.M{
 			"hash":  dv.Hash(),
 			"value": dv.v.Nanoseconds(),
@@ -24,7 +24,7 @@ type DurationValueUnpackerBSON struct {
 	V int64    `bson:"value"`
 }
 
-func (dv *DurationValue) UnpackBSON(b []byte, enc *encoder.BSONEncoder) error {
+func (dv *DurationValue) UnpackBSON(b []byte, enc *bsonencoder.Encoder) error {
 	var uv DurationValueUnpackerBSON
 	if err := enc.Unmarshal(b, &uv); err != nil {
 		return err

@@ -7,8 +7,7 @@ import (
 
 	"github.com/spikeekips/mitum/base/key"
 	"github.com/spikeekips/mitum/base/valuehash"
-	"github.com/spikeekips/mitum/util"
-	"github.com/spikeekips/mitum/util/encoder"
+	jsonencoder "github.com/spikeekips/mitum/util/encoder/json"
 	"github.com/spikeekips/mitum/util/hint"
 	"github.com/spikeekips/mitum/util/localtime"
 )
@@ -68,11 +67,11 @@ func (t *testVoteproofJSON) TestMajorityButNot() {
 	}
 	t.NoError(vp.IsValid(nil))
 
-	b, err := util.JSONMarshal(vp)
+	b, err := jsonencoder.Marshal(vp)
 	t.NoError(err)
 	t.NotNil(b)
 
-	je := encoder.NewJSONEncoder()
+	je := jsonencoder.NewEncoder()
 	je.SetHintset(t.hs)
 
 	var uvp VoteproofV0

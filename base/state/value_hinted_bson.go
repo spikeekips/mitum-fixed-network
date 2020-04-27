@@ -3,12 +3,12 @@ package state
 import (
 	"go.mongodb.org/mongo-driver/bson"
 
-	"github.com/spikeekips/mitum/util/encoder"
+	bsonencoder "github.com/spikeekips/mitum/util/encoder/bson"
 )
 
 func (hv HintedValue) MarshalBSON() ([]byte, error) {
-	return bson.Marshal(encoder.MergeBSONM(
-		encoder.NewBSONHintedDoc(hv.Hint()),
+	return bsonencoder.Marshal(bsonencoder.MergeBSONM(
+		bsonencoder.NewHintedDoc(hv.Hint()),
 		bson.M{
 			"hash":  hv.Hash(),
 			"value": hv.v,
@@ -21,7 +21,7 @@ type HintedValueUnpackerBSON struct {
 	V bson.Raw `bson:"value"`
 }
 
-func (hv *HintedValue) UnpackBSON(b []byte, enc *encoder.BSONEncoder) error {
+func (hv *HintedValue) UnpackBSON(b []byte, enc *bsonencoder.Encoder) error {
 	var uv HintedValueUnpackerBSON
 	if err := enc.Unmarshal(b, &uv); err != nil {
 		return err

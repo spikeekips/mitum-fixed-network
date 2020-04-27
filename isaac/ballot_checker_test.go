@@ -3,10 +3,11 @@ package isaac
 import (
 	"testing"
 
+	"github.com/stretchr/testify/suite"
+
 	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/base/ballot"
 	"github.com/spikeekips/mitum/util"
-	"github.com/stretchr/testify/suite"
 )
 
 type testBallotChecker struct {

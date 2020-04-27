@@ -3,9 +3,10 @@ package isaac
 import (
 	"testing"
 
+	"github.com/stretchr/testify/suite"
+
 	"github.com/spikeekips/mitum/base/key"
 	"github.com/spikeekips/mitum/base/operation"
-	"github.com/stretchr/testify/suite"
 )
 
 type testSetPolicyOperation struct {

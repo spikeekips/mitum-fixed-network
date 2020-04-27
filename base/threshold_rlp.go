@@ -4,6 +4,7 @@ import (
 	"io"
 
 	"github.com/ethereum/go-ethereum/rlp"
+
 	"github.com/spikeekips/mitum/util"
 )
 

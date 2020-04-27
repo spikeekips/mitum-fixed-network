@@ -9,6 +9,7 @@ import (
 	"github.com/spikeekips/mitum/base/key"
 	"github.com/spikeekips/mitum/base/valuehash"
 	"github.com/spikeekips/mitum/util/encoder"
+	jsonencoder "github.com/spikeekips/mitum/util/encoder/json"
 	"github.com/spikeekips/mitum/util/localtime"
 )
 
@@ -23,7 +24,7 @@ func (t *testBallotProposalV0JSON) SetupSuite() {
 }
 
 func (t *testBallotProposalV0JSON) TestEncode() {
-	je := encoder.NewJSONEncoder()
+	je := jsonencoder.NewEncoder()
 
 	encs := encoder.NewEncoders()
 	t.NoError(encs.AddEncoder(je))
@@ -51,7 +52,7 @@ func (t *testBallotProposalV0JSON) TestEncode() {
 
 	t.NoError(ib.Sign(t.pk, nil))
 
-	b, err := je.Encode(ib)
+	b, err := je.Marshal(ib)
 	t.NoError(err)
 
 	ht, err := je.DecodeByHint(b)

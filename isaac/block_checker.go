@@ -1,9 +1,10 @@
 package isaac
 
 import (
+	"golang.org/x/xerrors"
+
 	"github.com/spikeekips/mitum/base/block"
 	"github.com/spikeekips/mitum/util/logging"
-	"golang.org/x/xerrors"
 )
 
 type baseBlocksValidationChecker struct {

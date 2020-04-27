@@ -1,12 +1,12 @@
 package key
 
 import (
-	"github.com/spikeekips/mitum/util"
 	"github.com/spikeekips/mitum/util/encoder"
+	jsonencoder "github.com/spikeekips/mitum/util/encoder/json"
 )
 
 func (t *testStellarKeypair) TestPrivatekeyJSONMarshal() {
-	je := encoder.NewJSONEncoder()
+	je := jsonencoder.NewEncoder()
 
 	encs := encoder.NewEncoders()
 	_ = encs.AddEncoder(je)
@@ -15,7 +15,7 @@ func (t *testStellarKeypair) TestPrivatekeyJSONMarshal() {
 	seed := "SCD6GQMWGDQT33QOCNKYKRJZL3YWFSLBVQSL6ICVWBUYQZCBFYUQY673"
 	kp, _ := NewStellarPrivatekeyFromString(seed)
 
-	b, err := je.Encode(kp)
+	b, err := jsonencoder.Marshal(kp)
 	t.NoError(err)
 	t.Equal(`{"_hint":{"type":{"name":"stellar-privatekey","code":"0200"},"version":"0.0.1"},"key":"SCD6GQMWGDQT33QOCNKYKRJZL3YWFSLBVQSL6ICVWBUYQZCBFYUQY673"}`, string(b))
 
@@ -27,16 +27,16 @@ func (t *testStellarKeypair) TestPrivatekeyJSONMarshal() {
 func (t *testStellarKeypair) TestPrivatekeyNativeJSONMarshal() {
 	kp, _ := NewStellarPrivatekeyFromString("SCD6GQMWGDQT33QOCNKYKRJZL3YWFSLBVQSL6ICVWBUYQZCBFYUQY673")
 
-	b, err := util.JSONMarshal(kp)
+	b, err := jsonencoder.Marshal(kp)
 	t.NoError(err)
 
 	var ukp StellarPrivatekey
-	t.NoError(util.JSONUnmarshal(b, &ukp))
+	t.NoError(jsonencoder.Unmarshal(b, &ukp))
 	t.True(kp.Equal(ukp))
 }
 
 func (t *testStellarKeypair) TestPublickeyJSONMarshal() {
-	je := encoder.NewJSONEncoder()
+	je := jsonencoder.NewEncoder()
 	encs := encoder.NewEncoders()
 	_ = encs.AddEncoder(je)
 	_ = encs.AddHinter(StellarPrivatekey{})
@@ -45,7 +45,7 @@ func (t *testStellarKeypair) TestPublickeyJSONMarshal() {
 	kp, _ := NewStellarPrivatekeyFromString(seed)
 	pb := kp.Publickey()
 
-	b, err := je.Encode(pb)
+	b, err := jsonencoder.Marshal(pb)
 	t.NoError(err)
 	t.Equal(`{"_hint":{"type":{"name":"stellar-publickey","code":"0201"},"version":"0.0.1"},"key":"GAVAONBETT4MVPV2IYN2T7OB7ZTYXGNN4BFGZHUYBUYR6G4ACHZMDOQ6"}`, string(b))
 
@@ -59,10 +59,10 @@ func (t *testStellarKeypair) TestPublickeyNativeJSONMarshal() {
 
 	pb := kp.Publickey()
 
-	b, err := util.JSONMarshal(pb)
+	b, err := jsonencoder.Marshal(pb)
 	t.NoError(err)
 
 	var upb StellarPublickey
-	t.NoError(util.JSONUnmarshal(b, &upb))
+	t.NoError(jsonencoder.Unmarshal(b, &upb))
 	t.True(pb.Equal(upb))
 }

@@ -1,9 +1,10 @@
 package ballot // nolint
 
 import (
-	"github.com/spikeekips/mitum/base"
-	"github.com/spikeekips/mitum/util/encoder"
 	"go.mongodb.org/mongo-driver/bson"
+
+	"github.com/spikeekips/mitum/base"
+	bsonencoder "github.com/spikeekips/mitum/util/encoder/bson"
 )
 
 func (ib INITBallotV0) MarshalBSON() ([]byte, error) {
@@ -16,7 +17,7 @@ func (ib INITBallotV0) MarshalBSON() ([]byte, error) {
 		m["voteproof"] = ib.voteproof
 	}
 
-	return bson.Marshal(m)
+	return bsonencoder.Marshal(m)
 }
 
 type INITBallotV0UnpackerBSON struct {
@@ -25,7 +26,7 @@ type INITBallotV0UnpackerBSON struct {
 	VR bson.Raw   `bson:"voteproof,omitempty"`
 }
 
-func (ib *INITBallotV0) UnpackBSON(b []byte, enc *encoder.BSONEncoder) error {
+func (ib *INITBallotV0) UnpackBSON(b []byte, enc *bsonencoder.Encoder) error {
 	bb, bf, err := ib.BaseBallotV0.unpackBSON(b, enc)
 	if err != nil {
 		return err
@@ -45,7 +46,7 @@ func (ibf INITBallotFactV0) MarshalBSON() ([]byte, error) {
 	m["previous_block"] = ibf.previousBlock
 	m["previous_round"] = ibf.previousRound
 
-	return bson.Marshal(m)
+	return bsonencoder.Marshal(m)
 }
 
 type INITBallotFactV0UnpackerBSON struct {
@@ -53,7 +54,7 @@ type INITBallotFactV0UnpackerBSON struct {
 	PR base.Round `bson:"previous_round"`
 }
 
-func (ibf *INITBallotFactV0) UnpackBSON(b []byte, enc *encoder.BSONEncoder) error {
+func (ibf *INITBallotFactV0) UnpackBSON(b []byte, enc *bsonencoder.Encoder) error {
 	var err error
 
 	var bf BaseBallotFactV0

@@ -4,12 +4,11 @@ import (
 	"encoding/json"
 
 	"github.com/spikeekips/mitum/base/valuehash"
-	"github.com/spikeekips/mitum/util"
-	"github.com/spikeekips/mitum/util/encoder"
+	jsonencoder "github.com/spikeekips/mitum/util/encoder/json"
 )
 
 type StateV0PackerJSON struct {
-	encoder.JSONPackHintedHead
+	jsonencoder.HintedHead
 	H   valuehash.Hash  `json:"hash"`
 	K   string          `json:"key"`
 	V   Value           `json:"value"`
@@ -18,13 +17,13 @@ type StateV0PackerJSON struct {
 }
 
 func (st StateV0) MarshalJSON() ([]byte, error) {
-	return util.JSONMarshal(StateV0PackerJSON{
-		JSONPackHintedHead: encoder.NewJSONPackHintedHead(st.Hint()),
-		H:                  st.h,
-		K:                  st.key,
-		V:                  st.value,
-		PB:                 st.previousBlock,
-		OPS:                st.operations,
+	return jsonencoder.Marshal(StateV0PackerJSON{
+		HintedHead: jsonencoder.NewHintedHead(st.Hint()),
+		H:          st.h,
+		K:          st.key,
+		V:          st.value,
+		PB:         st.previousBlock,
+		OPS:        st.operations,
 	})
 }
 
@@ -36,7 +35,7 @@ type StateV0UnpackerJSON struct {
 	OPS []json.RawMessage `json:"operation_infos"`
 }
 
-func (st *StateV0) UnpackJSON(b []byte, enc *encoder.JSONEncoder) error {
+func (st *StateV0) UnpackJSON(b []byte, enc *jsonencoder.Encoder) error {
 	var ust StateV0UnpackerJSON
 	if err := enc.Unmarshal(b, &ust); err != nil {
 		return err
@@ -51,16 +50,16 @@ func (st *StateV0) UnpackJSON(b []byte, enc *encoder.JSONEncoder) error {
 }
 
 type OperationInfoV0PackerJSON struct {
-	encoder.JSONPackHintedHead
+	jsonencoder.HintedHead
 	OH valuehash.Hash `json:"operation"`
 	SH valuehash.Hash `json:"seal"`
 }
 
 func (oi OperationInfoV0) MarshalJSON() ([]byte, error) {
-	return util.JSONMarshal(OperationInfoV0PackerJSON{
-		JSONPackHintedHead: encoder.NewJSONPackHintedHead(oi.Hint()),
-		OH:                 oi.oh,
-		SH:                 oi.sh,
+	return jsonencoder.Marshal(OperationInfoV0PackerJSON{
+		HintedHead: jsonencoder.NewHintedHead(oi.Hint()),
+		OH:         oi.oh,
+		SH:         oi.sh,
 	})
 }
 
@@ -69,7 +68,7 @@ type OperationInfoV0UnpackerJSON struct {
 	SH json.RawMessage `json:"seal"`
 }
 
-func (oi *OperationInfoV0) UnpackJSON(b []byte, enc *encoder.JSONEncoder) error {
+func (oi *OperationInfoV0) UnpackJSON(b []byte, enc *jsonencoder.Encoder) error {
 	var uoi OperationInfoV0UnpackerJSON
 	if err := enc.Unmarshal(b, &uoi); err != nil {
 		return err

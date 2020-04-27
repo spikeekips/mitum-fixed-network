@@ -1,12 +1,14 @@
 package mongodbstorage
 
 import (
+	"go.mongodb.org/mongo-driver/bson"
+	"golang.org/x/xerrors"
+
 	"github.com/spikeekips/mitum/base/seal"
 	"github.com/spikeekips/mitum/base/valuehash"
 	"github.com/spikeekips/mitum/util/encoder"
+	bsonencoder "github.com/spikeekips/mitum/util/encoder/bson"
 	"github.com/spikeekips/mitum/util/localtime"
-	"go.mongodb.org/mongo-driver/bson"
-	"golang.org/x/xerrors"
 )
 
 type SealDoc struct {
@@ -35,7 +37,7 @@ func (sd SealDoc) MarshalBSON() ([]byte, error) {
 	m["hash"] = sd.seal.Hash()
 	m["inserted_at"] = localtime.Now()
 
-	return bson.Marshal(m)
+	return bsonencoder.Marshal(m)
 }
 
 func loadSealFromDecoder(decoder func(interface{}) error, encs *encoder.Encoders) (seal.Seal, error) {

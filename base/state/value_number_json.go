@@ -5,23 +5,22 @@ import (
 	"reflect"
 
 	"github.com/spikeekips/mitum/base/valuehash"
-	"github.com/spikeekips/mitum/util"
-	"github.com/spikeekips/mitum/util/encoder"
+	jsonencoder "github.com/spikeekips/mitum/util/encoder/json"
 )
 
 type NumberValueJSONPacker struct {
-	encoder.JSONPackHintedHead
+	jsonencoder.HintedHead
 	H valuehash.Hash `json:"hash"`
 	V []byte         `json:"value"`
 	T reflect.Kind   `json:"type"`
 }
 
 func (nv NumberValue) MarshalJSON() ([]byte, error) {
-	return util.JSONMarshal(NumberValueJSONPacker{
-		JSONPackHintedHead: encoder.NewJSONPackHintedHead(nv.Hint()),
-		H:                  nv.Hash(),
-		V:                  nv.b,
-		T:                  nv.t,
+	return jsonencoder.Marshal(NumberValueJSONPacker{
+		HintedHead: jsonencoder.NewHintedHead(nv.Hint()),
+		H:          nv.Hash(),
+		V:          nv.b,
+		T:          nv.t,
 	})
 }
 
@@ -31,7 +30,7 @@ type NumberValueJSONUnpacker struct {
 	T reflect.Kind    `json:"type"`
 }
 
-func (nv *NumberValue) UnpackJSON(b []byte, enc *encoder.JSONEncoder) error {
+func (nv *NumberValue) UnpackJSON(b []byte, enc *jsonencoder.Encoder) error {
 	var uv NumberValueJSONUnpacker
 	if err := enc.Unmarshal(b, &uv); err != nil {
 		return err

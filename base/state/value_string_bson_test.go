@@ -3,10 +3,11 @@ package state
 import (
 	"testing"
 
+	"github.com/stretchr/testify/suite"
+
 	"github.com/spikeekips/mitum/base/valuehash"
 	"github.com/spikeekips/mitum/util/encoder"
-	"github.com/stretchr/testify/suite"
-	"go.mongodb.org/mongo-driver/bson"
+	bsonencoder "github.com/spikeekips/mitum/util/encoder/bson"
 )
 
 type testStateStringValueBSON struct {
@@ -18,7 +19,7 @@ type testStateStringValueBSON struct {
 
 func (t *testStateStringValueBSON) SetupSuite() {
 	t.encs = encoder.NewEncoders()
-	t.enc = encoder.NewBSONEncoder()
+	t.enc = bsonencoder.NewEncoder()
 	_ = t.encs.AddEncoder(t.enc)
 
 	_ = t.encs.AddHinter(valuehash.SHA256{})
@@ -29,7 +30,7 @@ func (t *testStateStringValueBSON) TestEncode() {
 	sv, err := NewStringValue("showme")
 	t.NoError(err)
 
-	b, err := bson.Marshal(sv)
+	b, err := bsonencoder.Marshal(sv)
 	t.NoError(err)
 
 	decoded, err := t.enc.DecodeByHint(b)

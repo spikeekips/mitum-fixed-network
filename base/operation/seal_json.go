@@ -5,13 +5,12 @@ import (
 
 	"github.com/spikeekips/mitum/base/key"
 	"github.com/spikeekips/mitum/base/valuehash"
-	"github.com/spikeekips/mitum/util"
-	"github.com/spikeekips/mitum/util/encoder"
+	jsonencoder "github.com/spikeekips/mitum/util/encoder/json"
 	"github.com/spikeekips/mitum/util/localtime"
 )
 
 type SealJSONPack struct {
-	encoder.JSONPackHintedHead
+	jsonencoder.HintedHead
 	H   valuehash.Hash     `json:"hash"`
 	BH  valuehash.Hash     `json:"body_hash"`
 	SN  key.Publickey      `json:"signer"`
@@ -21,14 +20,14 @@ type SealJSONPack struct {
 }
 
 func (sl Seal) MarshalJSON() ([]byte, error) {
-	return util.JSONMarshal(SealJSONPack{
-		JSONPackHintedHead: encoder.NewJSONPackHintedHead(sl.Hint()),
-		H:                  sl.h,
-		BH:                 sl.bodyHash,
-		SN:                 sl.signer,
-		SG:                 sl.signature,
-		SA:                 localtime.NewJSONTime(sl.signedAt),
-		OPS:                sl.ops,
+	return jsonencoder.Marshal(SealJSONPack{
+		HintedHead: jsonencoder.NewHintedHead(sl.Hint()),
+		H:          sl.h,
+		BH:         sl.bodyHash,
+		SN:         sl.signer,
+		SG:         sl.signature,
+		SA:         localtime.NewJSONTime(sl.signedAt),
+		OPS:        sl.ops,
 	})
 }
 
@@ -41,7 +40,7 @@ type SealJSONUnpack struct {
 	OPS []json.RawMessage  `json:"operations"`
 }
 
-func (sl *Seal) UnpackJSON(b []byte, enc *encoder.JSONEncoder) error {
+func (sl *Seal) UnpackJSON(b []byte, enc *jsonencoder.Encoder) error {
 	var usl SealJSONUnpack
 	if err := enc.Unmarshal(b, &usl); err != nil {
 		return err

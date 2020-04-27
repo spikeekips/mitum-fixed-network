@@ -5,13 +5,12 @@ import (
 
 	"github.com/spikeekips/mitum/base/key"
 	"github.com/spikeekips/mitum/base/valuehash"
-	"github.com/spikeekips/mitum/util"
-	"github.com/spikeekips/mitum/util/encoder"
+	jsonencoder "github.com/spikeekips/mitum/util/encoder/json"
 	"github.com/spikeekips/mitum/util/localtime"
 )
 
 type VoteproofV0PackJSON struct {
-	encoder.JSONPackHintedHead
+	jsonencoder.HintedHead
 	HT Height             `json:"height"`
 	RD Round              `json:"round"`
 	TH Threshold          `json:"threshold"`
@@ -48,19 +47,19 @@ func (vp VoteproofV0) MarshalJSON() ([]byte, error) {
 		isClosed = "false"
 	}
 
-	return util.JSONMarshal(VoteproofV0PackJSON{
-		JSONPackHintedHead: encoder.NewJSONPackHintedHead(vp.Hint()),
-		HT:                 vp.height,
-		RD:                 vp.round,
-		TH:                 vp.threshold,
-		RS:                 vp.result,
-		ST:                 vp.stage,
-		MJ:                 vp.majority,
-		FS:                 facts,
-		BS:                 ballots,
-		VS:                 votes,
-		FA:                 localtime.NewJSONTime(vp.finishedAt),
-		CL:                 isClosed,
+	return jsonencoder.Marshal(VoteproofV0PackJSON{
+		HintedHead: jsonencoder.NewHintedHead(vp.Hint()),
+		HT:         vp.height,
+		RD:         vp.round,
+		TH:         vp.threshold,
+		RS:         vp.result,
+		ST:         vp.stage,
+		MJ:         vp.majority,
+		FS:         facts,
+		BS:         ballots,
+		VS:         votes,
+		FA:         localtime.NewJSONTime(vp.finishedAt),
+		CL:         isClosed,
 	})
 }
 
@@ -78,7 +77,7 @@ type VoteproofV0UnpackJSON struct {
 	CL string               `json:"is_closed"`
 }
 
-func (vp *VoteproofV0) UnpackJSON(b []byte, enc *encoder.JSONEncoder) error { // nolint
+func (vp *VoteproofV0) UnpackJSON(b []byte, enc *jsonencoder.Encoder) error { // nolint
 	var vpp VoteproofV0UnpackJSON
 	if err := enc.Unmarshal(b, &vpp); err != nil {
 		return err
@@ -125,7 +124,7 @@ type VoteproofNodeFactPackJSON struct {
 }
 
 func (vf VoteproofNodeFact) MarshalJSON() ([]byte, error) {
-	return util.JSONMarshal(VoteproofNodeFactPackJSON{
+	return jsonencoder.Marshal(VoteproofNodeFactPackJSON{
 		FC: vf.fact,
 		FS: vf.factSignature,
 		SG: vf.signer,
@@ -138,7 +137,7 @@ type VoteproofNodeFactUnpackJSON struct {
 	SG json.RawMessage `json:"signer"`
 }
 
-func (vf *VoteproofNodeFact) UnpackJSON(b []byte, enc *encoder.JSONEncoder) error {
+func (vf *VoteproofNodeFact) UnpackJSON(b []byte, enc *jsonencoder.Encoder) error {
 	var vpp VoteproofNodeFactUnpackJSON
 	if err := enc.Unmarshal(b, &vpp); err != nil {
 		return err

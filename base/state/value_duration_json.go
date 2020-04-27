@@ -5,23 +5,22 @@ import (
 	"time"
 
 	"github.com/spikeekips/mitum/base/valuehash"
-	"github.com/spikeekips/mitum/util"
-	"github.com/spikeekips/mitum/util/encoder"
+	jsonencoder "github.com/spikeekips/mitum/util/encoder/json"
 )
 
 func (dv DurationValue) MarshalJSON() ([]byte, error) {
-	return util.JSONMarshal(struct {
-		encoder.JSONPackHintedHead
+	return jsonencoder.Marshal(struct {
+		jsonencoder.HintedHead
 		H valuehash.Hash `json:"hash"`
 		V int64          `json:"value"`
 	}{
-		JSONPackHintedHead: encoder.NewJSONPackHintedHead(dv.Hint()),
-		H:                  dv.Hash(),
-		V:                  dv.v.Nanoseconds(),
+		HintedHead: jsonencoder.NewHintedHead(dv.Hint()),
+		H:          dv.Hash(),
+		V:          dv.v.Nanoseconds(),
 	})
 }
 
-func (dv *DurationValue) UnpackJSON(b []byte, enc *encoder.JSONEncoder) error {
+func (dv *DurationValue) UnpackJSON(b []byte, enc *jsonencoder.Encoder) error {
 	var uv struct {
 		H json.RawMessage `json:"hash"`
 		V int64           `json:"value"`

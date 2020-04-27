@@ -5,10 +5,10 @@ import (
 	"strings"
 	"time"
 
+	"github.com/justinas/alice"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/hlog"
 
-	"github.com/justinas/alice"
 	"github.com/spikeekips/mitum/util/logging"
 )
 

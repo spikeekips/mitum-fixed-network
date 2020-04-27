@@ -4,8 +4,7 @@ import (
 	"encoding/json"
 
 	"github.com/spikeekips/mitum/base/valuehash"
-	"github.com/spikeekips/mitum/util"
-	"github.com/spikeekips/mitum/util/encoder"
+	jsonencoder "github.com/spikeekips/mitum/util/encoder/json"
 )
 
 type ProposalV0PackerJSON struct {
@@ -20,7 +19,7 @@ func (pr ProposalV0) MarshalJSON() ([]byte, error) {
 		return nil, err
 	}
 
-	return util.JSONMarshal(ProposalV0PackerJSON{
+	return jsonencoder.Marshal(ProposalV0PackerJSON{
 		BaseBallotV0PackerJSON: bb,
 		SL:                     pr.seals,
 		OP:                     pr.operations,
@@ -33,7 +32,7 @@ type ProposalV0UnpackerJSON struct {
 	SL []json.RawMessage `json:"seals"`
 }
 
-func (pr *ProposalV0) UnpackJSON(b []byte, enc *encoder.JSONEncoder) error {
+func (pr *ProposalV0) UnpackJSON(b []byte, enc *jsonencoder.Encoder) error {
 	bb, bf, err := pr.BaseBallotV0.unpackJSON(b, enc)
 	if err != nil {
 		return err

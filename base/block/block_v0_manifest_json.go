@@ -5,13 +5,12 @@ import (
 
 	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/base/valuehash"
-	"github.com/spikeekips/mitum/util"
-	"github.com/spikeekips/mitum/util/encoder"
+	jsonencoder "github.com/spikeekips/mitum/util/encoder/json"
 	"github.com/spikeekips/mitum/util/localtime"
 )
 
 type ManifestV0PackJSON struct {
-	encoder.JSONPackHintedHead
+	jsonencoder.HintedHead
 	H  valuehash.Hash     `json:"hash"`
 	HT base.Height        `json:"height"`
 	RD base.Round         `json:"round"`
@@ -23,21 +22,21 @@ type ManifestV0PackJSON struct {
 }
 
 func (bm ManifestV0) MarshalJSON() ([]byte, error) {
-	return util.JSONMarshal(ManifestV0PackJSON{
-		JSONPackHintedHead: encoder.NewJSONPackHintedHead(bm.Hint()),
-		H:                  bm.h,
-		HT:                 bm.height,
-		RD:                 bm.round,
-		PR:                 bm.proposal,
-		PB:                 bm.previousBlock,
-		BO:                 bm.operationsHash,
-		BS:                 bm.statesHash,
-		CA:                 localtime.NewJSONTime(bm.createdAt),
+	return jsonencoder.Marshal(ManifestV0PackJSON{
+		HintedHead: jsonencoder.NewHintedHead(bm.Hint()),
+		H:          bm.h,
+		HT:         bm.height,
+		RD:         bm.round,
+		PR:         bm.proposal,
+		PB:         bm.previousBlock,
+		BO:         bm.operationsHash,
+		BS:         bm.statesHash,
+		CA:         localtime.NewJSONTime(bm.createdAt),
 	})
 }
 
 type ManifestV0UnpackJSON struct {
-	encoder.JSONPackHintedHead
+	jsonencoder.HintedHead
 	H  json.RawMessage    `json:"hash"`
 	HT base.Height        `json:"height"`
 	RD base.Round         `json:"round"`
@@ -48,7 +47,7 @@ type ManifestV0UnpackJSON struct {
 	CA localtime.JSONTime `json:"created_at"`
 }
 
-func (bm *ManifestV0) UnpackJSON(b []byte, enc *encoder.JSONEncoder) error {
+func (bm *ManifestV0) UnpackJSON(b []byte, enc *jsonencoder.Encoder) error {
 	var nbm ManifestV0UnpackJSON
 	if err := enc.Unmarshal(b, &nbm); err != nil {
 		return err

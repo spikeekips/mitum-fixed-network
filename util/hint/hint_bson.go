@@ -1,10 +1,12 @@
 package hint
 
-import "go.mongodb.org/mongo-driver/bson"
+import (
+	"go.mongodb.org/mongo-driver/bson"
+)
 
 type hintBSON struct {
-	T Type    `bson:"t"`
-	V Version `bson:"v"`
+	T Type    `bson:"type"`
+	V Version `bson:"version"`
 }
 
 func (ht Hint) MarshalBSON() ([]byte, error) {

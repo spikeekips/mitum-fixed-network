@@ -1,28 +1,30 @@
 package key
 
-import "github.com/spikeekips/mitum/util"
+import (
+	jsonencoder "github.com/spikeekips/mitum/util/encoder/json"
+)
 
 func (t *testEtherKeypair) TestJSON() {
 	kp, err := NewEtherPrivatekey()
 	t.NoError(err)
 
 	{
-		b, err := util.JSONMarshal(kp)
+		b, err := jsonencoder.Marshal(kp)
 		t.NoError(err)
 
 		var decoded EtherPrivatekey
-		t.NoError(util.JSONUnmarshal(b, &decoded))
+		t.NoError(jsonencoder.Unmarshal(b, &decoded))
 		t.True(kp.Equal(decoded))
 	}
 
 	{
 		pub := kp.Publickey()
 
-		b, err := util.JSONMarshal(pub)
+		b, err := jsonencoder.Marshal(pub)
 		t.NoError(err)
 
 		var decoded EtherPublickey
-		t.NoError(util.JSONUnmarshal(b, &decoded))
+		t.NoError(jsonencoder.Unmarshal(b, &decoded))
 		t.True(pub.Equal(decoded))
 	}
 }

@@ -3,13 +3,14 @@ package state
 import (
 	"reflect"
 
-	"github.com/spikeekips/mitum/util/encoder"
 	"go.mongodb.org/mongo-driver/bson"
+
+	bsonencoder "github.com/spikeekips/mitum/util/encoder/bson"
 )
 
 func (nv NumberValue) MarshalBSON() ([]byte, error) {
-	return bson.Marshal(encoder.MergeBSONM(
-		encoder.NewBSONHintedDoc(nv.Hint()),
+	return bsonencoder.Marshal(bsonencoder.MergeBSONM(
+		bsonencoder.NewHintedDoc(nv.Hint()),
 		bson.M{
 			"hash":  nv.Hash(),
 			"value": nv.b,
@@ -24,7 +25,7 @@ type NumberValueBSONUnpacker struct {
 	T reflect.Kind `bson:"type"`
 }
 
-func (nv *NumberValue) UnpackBSON(b []byte, enc *encoder.BSONEncoder) error {
+func (nv *NumberValue) UnpackBSON(b []byte, enc *bsonencoder.Encoder) error {
 	var uv NumberValueBSONUnpacker
 	if err := enc.Unmarshal(b, &uv); err != nil {
 		return err

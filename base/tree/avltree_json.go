@@ -4,12 +4,11 @@ import (
 	"encoding/json"
 
 	"github.com/spikeekips/mitum/base/valuehash"
-	"github.com/spikeekips/mitum/util"
-	"github.com/spikeekips/mitum/util/encoder"
+	jsonencoder "github.com/spikeekips/mitum/util/encoder/json"
 )
 
 type AVLTreeJSONPacker struct {
-	encoder.JSONPackHintedHead
+	jsonencoder.HintedHead
 	TY string         `json:"tree_type"`
 	RT string         `json:"root_key"`
 	RH valuehash.Hash `json:"root_hash"`
@@ -18,7 +17,7 @@ type AVLTreeJSONPacker struct {
 
 func (at *AVLTree) MarshalJSON() ([]byte, error) {
 	if at == nil || at.Empty() {
-		return util.JSONMarshal(nil)
+		return jsonencoder.Marshal(nil)
 	}
 
 	var nodes []Node
@@ -37,12 +36,12 @@ func (at *AVLTree) MarshalJSON() ([]byte, error) {
 		rh = h
 	}
 
-	return util.JSONMarshal(AVLTreeJSONPacker{
-		JSONPackHintedHead: encoder.NewJSONPackHintedHead(at.Hint()),
-		TY:                 "avl hashable tree",
-		RT:                 string(at.Root().Key()),
-		RH:                 rh,
-		NS:                 nodes,
+	return jsonencoder.Marshal(AVLTreeJSONPacker{
+		HintedHead: jsonencoder.NewHintedHead(at.Hint()),
+		TY:         "avl hashable tree",
+		RT:         string(at.Root().Key()),
+		RH:         rh,
+		NS:         nodes,
 	})
 }
 
@@ -51,7 +50,7 @@ type AVLTreeJSONUnpacker struct {
 	NS []json.RawMessage `json:"nodes"`
 }
 
-func (at *AVLTree) UnpackJSON(b []byte, enc *encoder.JSONEncoder) error {
+func (at *AVLTree) UnpackJSON(b []byte, enc *jsonencoder.Encoder) error {
 	var uat AVLTreeJSONUnpacker
 	if err := enc.Unmarshal(b, &uat); err != nil {
 		return err

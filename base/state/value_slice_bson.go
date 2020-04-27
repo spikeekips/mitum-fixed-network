@@ -1,13 +1,14 @@
 package state
 
 import (
-	"github.com/spikeekips/mitum/util/encoder"
 	"go.mongodb.org/mongo-driver/bson"
+
+	bsonencoder "github.com/spikeekips/mitum/util/encoder/bson"
 )
 
 func (sv SliceValue) MarshalBSON() ([]byte, error) {
-	return bson.Marshal(encoder.MergeBSONM(
-		encoder.NewBSONHintedDoc(sv.Hint()),
+	return bsonencoder.Marshal(bsonencoder.MergeBSONM(
+		bsonencoder.NewHintedDoc(sv.Hint()),
 		bson.M{
 			"hash":  sv.Hash(),
 			"value": sv.v,
@@ -15,7 +16,7 @@ func (sv SliceValue) MarshalBSON() ([]byte, error) {
 	))
 }
 
-func (sv *SliceValue) UnpackBSON(b []byte, enc *encoder.BSONEncoder) error {
+func (sv *SliceValue) UnpackBSON(b []byte, enc *bsonencoder.Encoder) error {
 	var uv struct {
 		H bson.Raw   `bson:"hash"`
 		V []bson.Raw `bson:"value"`

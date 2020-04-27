@@ -3,13 +3,15 @@ package seal
 import (
 	"time"
 
+	"go.mongodb.org/mongo-driver/bson"
+
 	"github.com/spikeekips/mitum/base/key"
 	"github.com/spikeekips/mitum/base/valuehash"
 	"github.com/spikeekips/mitum/util"
-	"github.com/spikeekips/mitum/util/encoder"
+	bsonencoder "github.com/spikeekips/mitum/util/encoder/bson"
+	jsonencoder "github.com/spikeekips/mitum/util/encoder/json"
 	"github.com/spikeekips/mitum/util/hint"
 	"github.com/spikeekips/mitum/util/localtime"
-	"go.mongodb.org/mongo-driver/bson"
 )
 
 var dummySealHint = hint.MustHintWithType(hint.Type{0xff, 0x35}, "0.1", "dummy-seal")
@@ -69,7 +71,7 @@ func (ds DummySeal) SignedAt() time.Time {
 }
 
 type DummySealJSONPacker struct {
-	encoder.JSONPackHintedHead
+	jsonencoder.HintedHead
 	PK        key.BTCPrivatekey
 	H         valuehash.SHA256
 	BH        valuehash.SHA256
@@ -78,19 +80,19 @@ type DummySealJSONPacker struct {
 }
 
 func (ds DummySeal) MarshalJSON() ([]byte, error) {
-	return util.JSONMarshal(DummySealJSONPacker{
-		JSONPackHintedHead: encoder.NewJSONPackHintedHead(ds.Hint()),
-		PK:                 ds.PK,
-		H:                  ds.H,
-		BH:                 ds.BH,
-		S:                  ds.S,
-		CreatedAt:          localtime.NewJSONTime(ds.CreatedAt),
+	return jsonencoder.Marshal(DummySealJSONPacker{
+		HintedHead: jsonencoder.NewHintedHead(ds.Hint()),
+		PK:         ds.PK,
+		H:          ds.H,
+		BH:         ds.BH,
+		S:          ds.S,
+		CreatedAt:  localtime.NewJSONTime(ds.CreatedAt),
 	})
 }
 
 func (ds *DummySeal) UnmarshalJSON(b []byte) error {
 	var uds DummySealJSONPacker
-	if err := util.JSONUnmarshal(b, &uds); err != nil {
+	if err := jsonencoder.Unmarshal(b, &uds); err != nil {
 		return err
 	}
 
@@ -104,8 +106,8 @@ func (ds *DummySeal) UnmarshalJSON(b []byte) error {
 }
 
 func (ds DummySeal) MarshalBSON() ([]byte, error) {
-	return bson.Marshal(encoder.MergeBSONM(
-		encoder.NewBSONHintedDoc(ds.Hint()),
+	return bsonencoder.Marshal(bsonencoder.MergeBSONM(
+		bsonencoder.NewHintedDoc(ds.Hint()),
 		bson.M{
 			"PK":        ds.PK,
 			"H":         ds.H,
@@ -126,7 +128,7 @@ type DummySealBSONPacker struct {
 
 func (ds *DummySeal) UnmarshalBSON(b []byte) error {
 	var uds DummySealBSONPacker
-	if err := bson.Unmarshal(b, &uds); err != nil {
+	if err := bsonencoder.Unmarshal(b, &uds); err != nil {
 		return err
 	}
 

@@ -97,7 +97,7 @@ func (bst *LeveldbBlockStorage) setOperations(tr *tree.AVLTree) error {
 	if err := tr.Traverse(func(node tree.Node) (bool, error) {
 		op := node.Immutable().(operation.OperationAVLNode).Operation()
 
-		raw, err := bst.st.enc.Encode(op.Hash())
+		raw, err := bst.st.enc.Marshal(op.Hash())
 		if err != nil {
 			return false, err
 		}

@@ -11,16 +11,16 @@ import (
 	"github.com/spikeekips/mitum/base/valuehash"
 )
 
-type LeveldbBlockStorage struct {
-	st         *LeveldbStorage
+type BlockStorage struct {
+	st         *Storage
 	block      block.Block
 	operations *tree.AVLTree
 	states     *tree.AVLTree
 	batch      *leveldb.Batch
 }
 
-func NewLeveldbBlockStorage(st *LeveldbStorage, blk block.Block) (*LeveldbBlockStorage, error) {
-	bst := &LeveldbBlockStorage{
+func NewBlockStorage(st *Storage, blk block.Block) (*BlockStorage, error) {
+	bst := &BlockStorage{
 		st:    st,
 		block: blk,
 		batch: &leveldb.Batch{},
@@ -29,11 +29,11 @@ func NewLeveldbBlockStorage(st *LeveldbStorage, blk block.Block) (*LeveldbBlockS
 	return bst, nil
 }
 
-func (bst *LeveldbBlockStorage) Block() block.Block {
+func (bst *BlockStorage) Block() block.Block {
 	return bst.block
 }
 
-func (bst *LeveldbBlockStorage) SetBlock(blk block.Block) error {
+func (bst *BlockStorage) SetBlock(blk block.Block) error {
 	if bst.block.Height() != blk.Height() {
 		return xerrors.Errorf(
 			"block has different height from initial block; initial=%d != block=%d",
@@ -50,20 +50,20 @@ func (bst *LeveldbBlockStorage) SetBlock(blk block.Block) error {
 		)
 	}
 
-	if b, err := LeveldbMarshal(bst.st.enc, blk); err != nil {
+	if b, err := marshal(bst.st.enc, blk); err != nil {
 		return err
 	} else {
 		bst.batch.Put(leveldbBlockHashKey(blk.Hash()), b)
 	}
 
-	if b, err := LeveldbMarshal(bst.st.enc, blk.Manifest()); err != nil {
+	if b, err := marshal(bst.st.enc, blk.Manifest()); err != nil {
 		return err
 	} else {
 		key := leveldbManifestKey(blk.Hash())
 		bst.batch.Put(key, b)
 	}
 
-	if b, err := LeveldbMarshal(bst.st.enc, blk.Hash()); err != nil {
+	if b, err := marshal(bst.st.enc, blk.Hash()); err != nil {
 		return err
 	} else {
 		bst.batch.Put(leveldbBlockHeightKey(blk.Height()), b)
@@ -82,12 +82,12 @@ func (bst *LeveldbBlockStorage) SetBlock(blk block.Block) error {
 	return nil
 }
 
-func (bst *LeveldbBlockStorage) setOperations(tr *tree.AVLTree) error {
+func (bst *BlockStorage) setOperations(tr *tree.AVLTree) error {
 	if tr == nil || tr.Empty() {
 		return nil
 	}
 
-	if b, err := LeveldbMarshal(bst.st.enc, tr); err != nil { // block 1st
+	if b, err := marshal(bst.st.enc, tr); err != nil { // block 1st
 		return err
 	} else {
 		bst.batch.Put(leveldbBlockOperationsKey(bst.block), b)
@@ -104,7 +104,7 @@ func (bst *LeveldbBlockStorage) setOperations(tr *tree.AVLTree) error {
 
 		bst.batch.Put(
 			leveldbOperationHashKey(op.Hash()),
-			LeveldbDataWithEncoder(bst.st.enc, raw),
+			encodeWithEncoder(bst.st.enc, raw),
 		)
 
 		return true, nil
@@ -117,12 +117,12 @@ func (bst *LeveldbBlockStorage) setOperations(tr *tree.AVLTree) error {
 	return nil
 }
 
-func (bst *LeveldbBlockStorage) setStates(tr *tree.AVLTree) error {
+func (bst *BlockStorage) setStates(tr *tree.AVLTree) error {
 	if tr == nil || tr.Empty() {
 		return nil
 	}
 
-	if b, err := LeveldbMarshal(bst.st.enc, tr); err != nil { // block 1st
+	if b, err := marshal(bst.st.enc, tr); err != nil { // block 1st
 		return err
 	} else {
 		bst.batch.Put(leveldbBlockStatesKey(bst.block), b)
@@ -136,7 +136,7 @@ func (bst *LeveldbBlockStorage) setStates(tr *tree.AVLTree) error {
 			st = s.State()
 		}
 
-		if b, err := LeveldbMarshal(bst.st.enc, st); err != nil {
+		if b, err := marshal(bst.st.enc, st); err != nil {
 			return false, err
 		} else {
 			bst.batch.Put(leveldbStateKey(st.Key()), b)
@@ -152,10 +152,10 @@ func (bst *LeveldbBlockStorage) setStates(tr *tree.AVLTree) error {
 	return nil
 }
 
-func (bst *LeveldbBlockStorage) UnstageOperationSeals(hs []valuehash.Hash) error {
+func (bst *BlockStorage) UnstageOperationSeals(hs []valuehash.Hash) error {
 	return leveldbUnstageOperationSeals(bst.st, bst.batch, hs)
 }
 
-func (bst *LeveldbBlockStorage) Commit() error {
-	return LeveldbWrapError(bst.st.db.Write(bst.batch, nil))
+func (bst *BlockStorage) Commit() error {
+	return wrapError(bst.st.db.Write(bst.batch, nil))
 }

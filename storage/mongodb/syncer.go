@@ -12,18 +12,19 @@ import (
 	"github.com/spikeekips/mitum/util/logging"
 )
 
-type MongodbSyncerStorage struct {
+type SyncerStorage struct {
 	sync.RWMutex
 	*logging.Logging
-	main            *MongodbStorage
-	manifestStorage *MongodbStorage
-	blockStorage    *MongodbStorage
+	main            *Storage
+	manifestStorage *Storage
+	blockStorage    *Storage
 	heightFrom      base.Height
 	heightTo        base.Height
 }
 
-func NewMongodbSyncerStorage(main *MongodbStorage) (*MongodbSyncerStorage, error) {
-	var manifestStorage, blockStorage *MongodbStorage
+func NewSyncerStorage(main *Storage) (*SyncerStorage, error) {
+	var manifestStorage, blockStorage *Storage
+	// TODO manifest collection needs to create indices
 	if s, err := newTempStorage(main, "manifest"); err != nil {
 		return nil, err
 	} else {
@@ -35,7 +36,7 @@ func NewMongodbSyncerStorage(main *MongodbStorage) (*MongodbSyncerStorage, error
 		blockStorage = s
 	}
 
-	return &MongodbSyncerStorage{
+	return &SyncerStorage{
 		Logging: logging.NewLogging(func(c logging.Context) logging.Emitter {
 			return c.Str("module", "mongodb-syncer-storage")
 		}),
@@ -46,11 +47,11 @@ func NewMongodbSyncerStorage(main *MongodbStorage) (*MongodbSyncerStorage, error
 	}, nil
 }
 
-func (st *MongodbSyncerStorage) Manifest(height base.Height) (block.Manifest, error) {
+func (st *SyncerStorage) Manifest(height base.Height) (block.Manifest, error) {
 	return st.manifestStorage.ManifestByHeight(height)
 }
 
-func (st *MongodbSyncerStorage) Manifests(heights []base.Height) ([]block.Manifest, error) {
+func (st *SyncerStorage) Manifests(heights []base.Height) ([]block.Manifest, error) {
 	var bs []block.Manifest
 	for i := range heights {
 		if b, err := st.manifestStorage.ManifestByHeight(heights[i]); err != nil {
@@ -63,7 +64,7 @@ func (st *MongodbSyncerStorage) Manifests(heights []base.Height) ([]block.Manife
 	return bs, nil
 }
 
-func (st *MongodbSyncerStorage) SetManifests(manifests []block.Manifest) error {
+func (st *SyncerStorage) SetManifests(manifests []block.Manifest) error {
 	st.Log().VerboseFunc(func(e *logging.Event) logging.Emitter {
 		var heights []base.Height
 		for i := range manifests {
@@ -89,15 +90,15 @@ func (st *MongodbSyncerStorage) SetManifests(manifests []block.Manifest) error {
 	return st.manifestStorage.client.Bulk("manifest", models)
 }
 
-func (st *MongodbSyncerStorage) HasBlock(height base.Height) (bool, error) {
+func (st *SyncerStorage) HasBlock(height base.Height) (bool, error) {
 	return st.blockStorage.client.Exists("block", NewFilter("height", height).D())
 }
 
-func (st *MongodbSyncerStorage) Block(height base.Height) (block.Block, error) {
+func (st *SyncerStorage) Block(height base.Height) (block.Block, error) {
 	return st.blockStorage.BlockByHeight(height)
 }
 
-func (st *MongodbSyncerStorage) Blocks(heights []base.Height) ([]block.Block, error) {
+func (st *SyncerStorage) Blocks(heights []base.Height) ([]block.Block, error) {
 	var bs []block.Block
 	for i := range heights {
 		if b, err := st.blockStorage.BlockByHeight(heights[i]); err != nil {
@@ -110,7 +111,7 @@ func (st *MongodbSyncerStorage) Blocks(heights []base.Height) ([]block.Block, er
 	return bs, nil
 }
 
-func (st *MongodbSyncerStorage) SetBlocks(blocks []block.Block) error {
+func (st *SyncerStorage) SetBlocks(blocks []block.Block) error {
 	st.Log().VerboseFunc(func(e *logging.Event) logging.Emitter {
 		var heights []base.Height
 		for i := range blocks {
@@ -139,7 +140,7 @@ func (st *MongodbSyncerStorage) SetBlocks(blocks []block.Block) error {
 	return nil
 }
 
-func (st *MongodbSyncerStorage) Commit() error {
+func (st *SyncerStorage) Commit() error {
 	st.Log().Debug().
 		Hinted("from_height", st.heightFrom).
 		Hinted("to_height", st.heightTo).
@@ -159,7 +160,7 @@ func (st *MongodbSyncerStorage) Commit() error {
 	return nil
 }
 
-func (st *MongodbSyncerStorage) commitBlock(blk block.Block) error {
+func (st *SyncerStorage) commitBlock(blk block.Block) error {
 	if bs, err := st.main.OpenBlockStorage(blk); err != nil {
 		return err
 	} else if err := bs.SetBlock(blk); err != nil {
@@ -171,7 +172,7 @@ func (st *MongodbSyncerStorage) commitBlock(blk block.Block) error {
 	return nil
 }
 
-func (st *MongodbSyncerStorage) checkHeight(height base.Height) {
+func (st *SyncerStorage) checkHeight(height base.Height) {
 	st.Lock()
 	defer st.Unlock()
 
@@ -186,7 +187,7 @@ func (st *MongodbSyncerStorage) checkHeight(height base.Height) {
 	}
 }
 
-func (st *MongodbSyncerStorage) Close() error {
+func (st *SyncerStorage) Close() error {
 	// NOTE drop tmp database
 	if err := st.manifestStorage.client.DropDatabase(); err != nil {
 		return err
@@ -198,7 +199,7 @@ func (st *MongodbSyncerStorage) Close() error {
 	return st.blockStorage.client.Close()
 }
 
-func newTempStorage(main *MongodbStorage, prefix string) (*MongodbStorage, error) {
+func newTempStorage(main *Storage, prefix string) (*Storage, error) {
 	// NOTE create new mongodb client
 	var tmpClient *Client
 	if uri, err := NewTempURI(main.client.uri, fmt.Sprintf("sync-%s", prefix)); err != nil {
@@ -209,5 +210,5 @@ func newTempStorage(main *MongodbStorage, prefix string) (*MongodbStorage, error
 		tmpClient = c
 	}
 
-	return NewMongodbStorage(tmpClient, main.Encoders(), main.Encoder()), nil
+	return NewStorage(tmpClient, main.Encoders(), main.Encoder()), nil
 }

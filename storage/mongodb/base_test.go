@@ -22,22 +22,22 @@ import (
 	"github.com/spikeekips/mitum/util/localtime"
 )
 
-type testMongodbStorage struct {
+type testStorage struct {
 	storage.BaseTestStorage
-	storage *MongodbStorage
+	storage *Storage
 }
 
-func (t *testMongodbStorage) SetupTest() {
+func (t *testStorage) SetupTest() {
 	client, err := NewClient(TestMongodbURI(), time.Second*2, time.Second*2)
 	t.NoError(err)
-	t.storage = NewMongodbStorage(client, t.Encs, t.BSONEnc)
+	t.storage = NewStorage(client, t.Encs, t.BSONEnc)
 }
 
-func (t *testMongodbStorage) TestNew() {
+func (t *testStorage) TestNew() {
 	t.Implements((*storage.Storage)(nil), t.storage)
 }
 
-func (t *testMongodbStorage) saveNewBlock(height base.Height) block.Block {
+func (t *testStorage) saveNewBlock(height base.Height) block.Block {
 	blk, err := block.NewTestBlockV0(height, base.Round(0), nil, valuehash.RandomSHA256())
 	t.NoError(err)
 
@@ -50,7 +50,7 @@ func (t *testMongodbStorage) saveNewBlock(height base.Height) block.Block {
 	return blk
 }
 
-func (t *testMongodbStorage) TestLastBlock() {
+func (t *testStorage) TestLastBlock() {
 	blk := t.saveNewBlock(base.Height(33))
 
 	loaded, err := t.storage.LastBlock()
@@ -59,7 +59,7 @@ func (t *testMongodbStorage) TestLastBlock() {
 	t.CompareBlock(blk, loaded)
 }
 
-func (t *testMongodbStorage) TestLoadBlockByHash() {
+func (t *testStorage) TestLoadBlockByHash() {
 	blk := t.saveNewBlock(base.Height(33))
 
 	loaded, err := t.storage.Block(blk.Hash())
@@ -68,7 +68,7 @@ func (t *testMongodbStorage) TestLoadBlockByHash() {
 	t.CompareBlock(blk, loaded)
 }
 
-func (t *testMongodbStorage) TestLoadBlockByHeight() {
+func (t *testStorage) TestLoadBlockByHeight() {
 	blk := t.saveNewBlock(base.Height(33))
 
 	loaded, err := t.storage.BlockByHeight(blk.Height())
@@ -77,7 +77,7 @@ func (t *testMongodbStorage) TestLoadBlockByHeight() {
 	t.CompareBlock(blk, loaded)
 }
 
-func (t *testMongodbStorage) TestLoadManifestByHash() {
+func (t *testStorage) TestLoadManifestByHash() {
 	blk := t.saveNewBlock(base.Height(33))
 
 	loaded, err := t.storage.Manifest(blk.Hash())
@@ -89,7 +89,7 @@ func (t *testMongodbStorage) TestLoadManifestByHash() {
 	t.CompareManifest(blk, loaded)
 }
 
-func (t *testMongodbStorage) TestLoadManifestByHeight() {
+func (t *testStorage) TestLoadManifestByHeight() {
 	blk := t.saveNewBlock(base.Height(33))
 
 	loaded, err := t.storage.ManifestByHeight(blk.Height())
@@ -101,7 +101,7 @@ func (t *testMongodbStorage) TestLoadManifestByHeight() {
 	t.CompareManifest(blk, loaded)
 }
 
-func (t *testMongodbStorage) TestLoadINITVoteproof() {
+func (t *testStorage) TestLoadINITVoteproof() {
 	{
 		loaded, err := t.storage.LastINITVoteproof()
 		t.Nil(err)
@@ -131,7 +131,7 @@ func (t *testMongodbStorage) TestLoadINITVoteproof() {
 	t.Equal(localtime.Normalize(voteproof.FinishedAt()), localtime.Normalize(loaded.FinishedAt()))
 }
 
-func (t *testMongodbStorage) TestLoadACCEPTVoteproof() {
+func (t *testStorage) TestLoadACCEPTVoteproof() {
 	{
 		loaded, err := t.storage.LastINITVoteproof()
 		t.Nil(err)
@@ -172,7 +172,7 @@ func (t *testMongodbStorage) TestLoadACCEPTVoteproof() {
 	t.Equal(localtime.Normalize(avp.FinishedAt()), localtime.Normalize(loaded.FinishedAt()))
 }
 
-func (t *testMongodbStorage) TestLoadVoteproofs() {
+func (t *testStorage) TestLoadVoteproofs() {
 	{
 		loaded, err := t.storage.LastINITVoteproof()
 		t.Nil(err)
@@ -215,7 +215,7 @@ func (t *testMongodbStorage) TestLoadVoteproofs() {
 	t.Equal(2, len(voteproofs))
 }
 
-func (t *testMongodbStorage) TestSeals() {
+func (t *testStorage) TestSeals() {
 	var seals []seal.Seal
 	for i := 0; i < 10; i++ {
 		pk, _ := key.NewBTCPrivatekey()
@@ -250,7 +250,7 @@ func (t *testMongodbStorage) TestSeals() {
 	}
 }
 
-func (t *testMongodbStorage) TestSealsOnlyHash() {
+func (t *testStorage) TestSealsOnlyHash() {
 	var seals []seal.Seal
 	for i := 0; i < 10; i++ {
 		pk, _ := key.NewBTCPrivatekey()
@@ -286,7 +286,7 @@ func (t *testMongodbStorage) TestSealsOnlyHash() {
 	}
 }
 
-func (t *testMongodbStorage) TestSealsLimit() {
+func (t *testStorage) TestSealsLimit() {
 	var seals []seal.Seal
 	for i := 0; i < 10; i++ {
 		pk, _ := key.NewBTCPrivatekey()
@@ -325,7 +325,7 @@ func (t *testMongodbStorage) TestSealsLimit() {
 	}
 }
 
-func (t *testMongodbStorage) newOperationSeal() operation.Seal {
+func (t *testStorage) newOperationSeal() operation.Seal {
 	token := []byte("this-is-token")
 	op, err := operation.NewKVOperation(t.PK, token, util.UUID().String(), []byte(util.UUID().String()), nil)
 	t.NoError(err)
@@ -337,7 +337,7 @@ func (t *testMongodbStorage) newOperationSeal() operation.Seal {
 	return sl
 }
 
-func (t *testMongodbStorage) TestStagedOperationSeals() {
+func (t *testStorage) TestStagedOperationSeals() {
 	var seals []seal.Seal
 
 	// 10 seal.Seal
@@ -378,7 +378,7 @@ func (t *testMongodbStorage) TestStagedOperationSeals() {
 	}
 }
 
-func (t *testMongodbStorage) TestUnStagedOperationSeals() {
+func (t *testStorage) TestUnStagedOperationSeals() {
 	// 10 seal.Seal
 	for i := 0; i < 10; i++ {
 		sl := seal.NewDummySeal(t.PK)
@@ -445,7 +445,7 @@ func (t *testMongodbStorage) TestUnStagedOperationSeals() {
 	}
 }
 
-func (t *testMongodbStorage) TestHasOperation() {
+func (t *testStorage) TestHasOperation() {
 	op, err := operation.NewKVOperation(t.PK, []byte("showme"), "key", []byte("value"), nil)
 	t.NoError(err)
 
@@ -469,6 +469,6 @@ func (t *testMongodbStorage) TestHasOperation() {
 	}
 }
 
-func TestMongodbStorage(t *testing.T) {
-	suite.Run(t, new(testMongodbStorage))
+func TestStorage(t *testing.T) {
+	suite.Run(t, new(testStorage))
 }

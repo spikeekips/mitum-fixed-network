@@ -9,7 +9,7 @@ import (
 	"github.com/spikeekips/mitum/util/hint"
 )
 
-func LeveldbLoadHint(b []byte) (hint.Hint, []byte, error) {
+func loadHint(b []byte) (hint.Hint, []byte, error) {
 	var ht hint.Hint
 	if h, err := hint.NewHintFromBytes(b[:hint.MaxHintSize]); err != nil {
 		return hint.Hint{}, nil, err
@@ -20,23 +20,23 @@ func LeveldbLoadHint(b []byte) (hint.Hint, []byte, error) {
 	return ht, b[hint.MaxHintSize:], nil
 }
 
-func LeveldbDataWithEncoder(enc encoder.Encoder, b []byte) []byte {
+func encodeWithEncoder(enc encoder.Encoder, b []byte) []byte {
 	h := make([]byte, hint.MaxHintSize)
 	copy(h, enc.Hint().Bytes())
 
 	return util.ConcatBytesSlice(h, b)
 }
 
-func LeveldbMarshal(enc encoder.Encoder, i interface{}) ([]byte, error) {
+func marshal(enc encoder.Encoder, i interface{}) ([]byte, error) {
 	b, err := enc.Marshal(i)
 	if err != nil {
 		return nil, err
 	}
 
-	return LeveldbDataWithEncoder(enc, b), nil
+	return encodeWithEncoder(enc, b), nil
 }
 
-func LeveldbWrapError(err error) error {
+func wrapError(err error) error {
 	if err == nil {
 		return nil
 	}

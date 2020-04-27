@@ -20,15 +20,15 @@ import (
 	"github.com/spikeekips/mitum/util/logging"
 )
 
-type MongodbStorage struct {
+type Storage struct {
 	*logging.Logging
 	client *Client
 	encs   *encoder.Encoders
 	enc    encoder.Encoder
 }
 
-func NewMongodbStorage(client *Client, encs *encoder.Encoders, enc encoder.Encoder) *MongodbStorage {
-	st := &MongodbStorage{
+func NewStorage(client *Client, encs *encoder.Encoders, enc encoder.Encoder) *Storage {
+	st := &Storage{
 		Logging: logging.NewLogging(func(c logging.Context) logging.Emitter {
 			return c.Str("module", "mongodb-storage")
 		}),
@@ -44,23 +44,23 @@ func NewMongodbStorage(client *Client, encs *encoder.Encoders, enc encoder.Encod
 	return st
 }
 
-func (st *MongodbStorage) SyncerStorage() (storage.SyncerStorage, error) {
-	return NewMongodbSyncerStorage(st)
+func (st *Storage) SyncerStorage() (storage.SyncerStorage, error) {
+	return NewSyncerStorage(st)
 }
 
-func (st *MongodbStorage) Client() *Client {
+func (st *Storage) Client() *Client {
 	return st.client
 }
 
-func (st *MongodbStorage) Encoder() encoder.Encoder {
+func (st *Storage) Encoder() encoder.Encoder {
 	return st.enc
 }
 
-func (st *MongodbStorage) Encoders() *encoder.Encoders {
+func (st *Storage) Encoders() *encoder.Encoders {
 	return st.encs
 }
 
-func (st *MongodbStorage) LastBlock() (block.Block, error) {
+func (st *Storage) LastBlock() (block.Block, error) {
 	var blk block.Block
 
 	if err := st.client.Find(
@@ -83,7 +83,7 @@ func (st *MongodbStorage) LastBlock() (block.Block, error) {
 	return blk, nil
 }
 
-func (st *MongodbStorage) blockByFilter(filter bson.D) (block.Block, error) {
+func (st *Storage) blockByFilter(filter bson.D) (block.Block, error) {
 	var blk block.Block
 
 	if err := st.client.GetByFilter(
@@ -105,15 +105,15 @@ func (st *MongodbStorage) blockByFilter(filter bson.D) (block.Block, error) {
 	return blk, nil
 }
 
-func (st *MongodbStorage) Block(h valuehash.Hash) (block.Block, error) {
+func (st *Storage) Block(h valuehash.Hash) (block.Block, error) {
 	return st.blockByFilter(NewFilter("_id", h.String()).D())
 }
 
-func (st *MongodbStorage) BlockByHeight(height base.Height) (block.Block, error) {
+func (st *Storage) BlockByHeight(height base.Height) (block.Block, error) {
 	return st.blockByFilter(NewFilter("height", height).D())
 }
 
-func (st *MongodbStorage) manifestByFilter(filter bson.D) (block.Manifest, error) {
+func (st *Storage) manifestByFilter(filter bson.D) (block.Manifest, error) {
 	var manifest block.Manifest
 
 	if err := st.client.GetByFilter(
@@ -135,15 +135,15 @@ func (st *MongodbStorage) manifestByFilter(filter bson.D) (block.Manifest, error
 	return manifest, nil
 }
 
-func (st *MongodbStorage) Manifest(h valuehash.Hash) (block.Manifest, error) {
+func (st *Storage) Manifest(h valuehash.Hash) (block.Manifest, error) {
 	return st.manifestByFilter(NewFilter("_id", h.String()).D())
 }
 
-func (st *MongodbStorage) ManifestByHeight(height base.Height) (block.Manifest, error) {
+func (st *Storage) ManifestByHeight(height base.Height) (block.Manifest, error) {
 	return st.manifestByFilter(NewFilter("height", height).D())
 }
 
-func (st *MongodbStorage) filterVoteproof(filter bson.D, opts ...*options.FindOptions) (base.Voteproof, error) {
+func (st *Storage) filterVoteproof(filter bson.D, opts ...*options.FindOptions) (base.Voteproof, error) {
 	var voteproof base.Voteproof
 
 	if err := st.client.Find(
@@ -166,14 +166,14 @@ func (st *MongodbStorage) filterVoteproof(filter bson.D, opts ...*options.FindOp
 	return voteproof, nil
 }
 
-func (st *MongodbStorage) LastINITVoteproof() (base.Voteproof, error) {
+func (st *Storage) LastINITVoteproof() (base.Voteproof, error) {
 	return st.filterVoteproof(
 		NewFilter("stage", base.StageINIT).D(),
 		options.Find().SetSort(NewFilter("height", -1).D()),
 	)
 }
 
-func (st *MongodbStorage) NewINITVoteproof(voteproof base.Voteproof) error {
+func (st *Storage) NewINITVoteproof(voteproof base.Voteproof) error {
 	if doc, err := NewVoteproofDoc(voteproof, st.enc); err != nil {
 		return err
 	} else if _, err := st.client.Set("voteproof", doc); err != nil {
@@ -183,28 +183,28 @@ func (st *MongodbStorage) NewINITVoteproof(voteproof base.Voteproof) error {
 	return nil
 }
 
-func (st *MongodbStorage) LastINITVoteproofOfHeight(height base.Height) (base.Voteproof, error) {
+func (st *Storage) LastINITVoteproofOfHeight(height base.Height) (base.Voteproof, error) {
 	return st.filterVoteproof(
 		NewFilter("height", height).Add("stage", base.StageINIT).D(),
 		nil,
 	)
 }
 
-func (st *MongodbStorage) LastACCEPTVoteproofOfHeight(height base.Height) (base.Voteproof, error) {
+func (st *Storage) LastACCEPTVoteproofOfHeight(height base.Height) (base.Voteproof, error) {
 	return st.filterVoteproof(
 		NewFilter("height", height).Add("stage", base.StageACCEPT).D(),
 		nil,
 	)
 }
 
-func (st *MongodbStorage) LastACCEPTVoteproof() (base.Voteproof, error) {
+func (st *Storage) LastACCEPTVoteproof() (base.Voteproof, error) {
 	return st.filterVoteproof(
 		NewFilter("stage", base.StageACCEPT).D(),
 		options.Find().SetSort(NewFilter("height", -1).D()),
 	)
 }
 
-func (st *MongodbStorage) NewACCEPTVoteproof(voteproof base.Voteproof) error {
+func (st *Storage) NewACCEPTVoteproof(voteproof base.Voteproof) error {
 	if doc, err := NewVoteproofDoc(voteproof, st.enc); err != nil {
 		return err
 	} else if _, err := st.client.Set("voteproof", doc); err != nil {
@@ -214,7 +214,7 @@ func (st *MongodbStorage) NewACCEPTVoteproof(voteproof base.Voteproof) error {
 	return nil
 }
 
-func (st *MongodbStorage) Voteproofs(callback func(base.Voteproof) (bool, error), sort bool) error {
+func (st *Storage) Voteproofs(callback func(base.Voteproof) (bool, error), sort bool) error {
 	var dir int
 	if sort {
 		dir = 1
@@ -239,7 +239,7 @@ func (st *MongodbStorage) Voteproofs(callback func(base.Voteproof) (bool, error)
 	)
 }
 
-func (st *MongodbStorage) Seal(h valuehash.Hash) (seal.Seal, error) {
+func (st *Storage) Seal(h valuehash.Hash) (seal.Seal, error) {
 	var sl seal.Seal
 
 	if err := st.client.GetByID(
@@ -261,7 +261,7 @@ func (st *MongodbStorage) Seal(h valuehash.Hash) (seal.Seal, error) {
 	return sl, nil
 }
 
-func (st *MongodbStorage) NewSeals(seals []seal.Seal) error {
+func (st *Storage) NewSeals(seals []seal.Seal) error {
 	var models []mongo.WriteModel
 	var operationModels []mongo.WriteModel
 
@@ -304,7 +304,7 @@ func (st *MongodbStorage) NewSeals(seals []seal.Seal) error {
 	return st.client.Bulk("operation_seal", operationModels)
 }
 
-func (st *MongodbStorage) Seals(callback func(valuehash.Hash, seal.Seal) (bool, error), sort bool, load bool) error {
+func (st *Storage) Seals(callback func(valuehash.Hash, seal.Seal) (bool, error), sort bool, load bool) error {
 	var dir int
 	if sort {
 		dir = 1
@@ -343,7 +343,7 @@ func (st *MongodbStorage) Seals(callback func(valuehash.Hash, seal.Seal) (bool, 
 	)
 }
 
-func (st *MongodbStorage) StagedOperationSeals(callback func(operation.Seal) (bool, error), sort bool) error {
+func (st *Storage) StagedOperationSeals(callback func(operation.Seal) (bool, error), sort bool) error {
 	var dir int
 	if sort {
 		dir = 1
@@ -373,7 +373,7 @@ func (st *MongodbStorage) StagedOperationSeals(callback func(operation.Seal) (bo
 	)
 }
 
-func (st *MongodbStorage) UnstagedOperationSeals(seals []valuehash.Hash) error {
+func (st *Storage) UnstagedOperationSeals(seals []valuehash.Hash) error {
 	var models []mongo.WriteModel
 
 	for _, h := range seals {
@@ -385,7 +385,7 @@ func (st *MongodbStorage) UnstagedOperationSeals(seals []valuehash.Hash) error {
 	return st.client.Bulk("operation_seal", models)
 }
 
-func (st *MongodbStorage) Proposals(callback func(ballot.Proposal) (bool, error), sort bool) error {
+func (st *Storage) Proposals(callback func(ballot.Proposal) (bool, error), sort bool) error {
 	var dir int
 	if sort {
 		dir = 1
@@ -413,7 +413,7 @@ func (st *MongodbStorage) Proposals(callback func(ballot.Proposal) (bool, error)
 	)
 }
 
-func (st *MongodbStorage) NewProposal(proposal ballot.Proposal) error {
+func (st *Storage) NewProposal(proposal ballot.Proposal) error {
 	if doc, err := NewProposalDoc(proposal, st.enc); err != nil {
 		return err
 	} else if _, err := st.client.Set("proposal", doc); err != nil {
@@ -424,7 +424,7 @@ func (st *MongodbStorage) NewProposal(proposal ballot.Proposal) error {
 	return st.NewSeals([]seal.Seal{proposal})
 }
 
-func (st *MongodbStorage) Proposal(height base.Height, round base.Round) (ballot.Proposal, error) {
+func (st *Storage) Proposal(height base.Height, round base.Round) (ballot.Proposal, error) {
 	var proposal ballot.Proposal
 
 	if err := st.client.Find(
@@ -451,7 +451,7 @@ func (st *MongodbStorage) Proposal(height base.Height, round base.Round) (ballot
 	return proposal, nil
 }
 
-func (st *MongodbStorage) State(key string) (state.State, bool, error) {
+func (st *Storage) State(key string) (state.State, bool, error) {
 	var sta state.State
 
 	if err := st.client.GetByID(
@@ -477,7 +477,7 @@ func (st *MongodbStorage) State(key string) (state.State, bool, error) {
 	return sta, sta != nil, nil
 }
 
-func (st *MongodbStorage) NewState(sta state.State) error {
+func (st *Storage) NewState(sta state.State) error {
 	if doc, err := NewStateDoc(sta, st.enc); err != nil {
 		return err
 	} else if _, err := st.client.Set("state", doc); err != nil {
@@ -487,15 +487,15 @@ func (st *MongodbStorage) NewState(sta state.State) error {
 	return nil
 }
 
-func (st *MongodbStorage) HasOperation(h valuehash.Hash) (bool, error) {
+func (st *Storage) HasOperation(h valuehash.Hash) (bool, error) {
 	return st.client.Exists("operation", NewFilter("_id", h.String()).D())
 }
 
-func (st *MongodbStorage) OpenBlockStorage(blk block.Block) (storage.BlockStorage, error) {
-	return NewMongodbBlockStorage(st, blk)
+func (st *Storage) OpenBlockStorage(blk block.Block) (storage.BlockStorage, error) {
+	return NewBlockStorage(st, blk)
 }
 
-func (st *MongodbStorage) Initialize() error {
+func (st *Storage) Initialize() error {
 	// TODO drop the index, which has same name
 	for col, models := range defaultIndexes {
 		iv := st.client.Collection(col).Indexes()

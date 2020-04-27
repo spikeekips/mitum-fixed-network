@@ -16,8 +16,8 @@ import (
 	"github.com/spikeekips/mitum/storage"
 )
 
-type MongodbBlockStorage struct {
-	st                  *MongodbStorage
+type BlockStorage struct {
+	st                  *Storage
 	block               block.Block
 	operations          *tree.AVLTree
 	states              *tree.AVLTree
@@ -28,8 +28,8 @@ type MongodbBlockStorage struct {
 	stateModels         []mongo.WriteModel
 }
 
-func NewMongodbBlockStorage(st *MongodbStorage, blk block.Block) (*MongodbBlockStorage, error) {
-	bst := &MongodbBlockStorage{
+func NewBlockStorage(st *Storage, blk block.Block) (*BlockStorage, error) {
+	bst := &BlockStorage{
 		st:    st,
 		block: blk,
 	}
@@ -37,11 +37,11 @@ func NewMongodbBlockStorage(st *MongodbStorage, blk block.Block) (*MongodbBlockS
 	return bst, nil
 }
 
-func (bst *MongodbBlockStorage) Block() block.Block {
+func (bst *BlockStorage) Block() block.Block {
 	return bst.block
 }
 
-func (bst *MongodbBlockStorage) SetBlock(blk block.Block) error {
+func (bst *BlockStorage) SetBlock(blk block.Block) error {
 	if bst.block.Height() != blk.Height() {
 		return xerrors.Errorf(
 			"block has different height from initial block; initial=%d != block=%d",
@@ -85,7 +85,7 @@ func (bst *MongodbBlockStorage) SetBlock(blk block.Block) error {
 	return nil
 }
 
-func (bst *MongodbBlockStorage) UnstageOperationSeals(seals []valuehash.Hash) error {
+func (bst *BlockStorage) UnstageOperationSeals(seals []valuehash.Hash) error {
 	for _, h := range seals {
 		bst.operationSealModels = append(bst.operationSealModels,
 			mongo.NewDeleteOneModel().SetFilter(NewFilter("_id", h.String()).D()),
@@ -95,7 +95,7 @@ func (bst *MongodbBlockStorage) UnstageOperationSeals(seals []valuehash.Hash) er
 	return nil
 }
 
-func (bst *MongodbBlockStorage) Commit() error {
+func (bst *BlockStorage) Commit() error {
 	if res, err := bst.writeModels("block", bst.blockModels); err != nil {
 		return storage.WrapError(err)
 	} else if res != nil && res.InsertedCount < 1 {
@@ -127,7 +127,7 @@ func (bst *MongodbBlockStorage) Commit() error {
 	return nil
 }
 
-func (bst *MongodbBlockStorage) setOperations(tr *tree.AVLTree) error {
+func (bst *BlockStorage) setOperations(tr *tree.AVLTree) error {
 	if tr == nil || tr.Empty() {
 		return nil
 	}
@@ -153,7 +153,7 @@ func (bst *MongodbBlockStorage) setOperations(tr *tree.AVLTree) error {
 	return nil
 }
 
-func (bst *MongodbBlockStorage) setStates(tr *tree.AVLTree) error {
+func (bst *BlockStorage) setStates(tr *tree.AVLTree) error {
 	if tr == nil || tr.Empty() {
 		return nil
 	}
@@ -183,7 +183,7 @@ func (bst *MongodbBlockStorage) setStates(tr *tree.AVLTree) error {
 	return nil
 }
 
-func (bst *MongodbBlockStorage) writeModels(col string, models []mongo.WriteModel) (*mongo.BulkWriteResult, error) {
+func (bst *BlockStorage) writeModels(col string, models []mongo.WriteModel) (*mongo.BulkWriteResult, error) {
 	if len(models) < 1 {
 		return nil, nil
 	}

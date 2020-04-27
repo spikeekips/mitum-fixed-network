@@ -11,17 +11,17 @@ import (
 	"github.com/spikeekips/mitum/util/logging"
 )
 
-type LeveldbSyncerStorage struct {
+type SyncerStorage struct {
 	sync.RWMutex
 	*logging.Logging
-	main       *LeveldbStorage
-	storage    *LeveldbStorage
+	main       *Storage
+	storage    *Storage
 	heightFrom base.Height
 	heightTo   base.Height
 }
 
-func NewLeveldbSyncerStorage(main *LeveldbStorage) *LeveldbSyncerStorage {
-	return &LeveldbSyncerStorage{
+func NewSyncerStorage(main *Storage) *SyncerStorage {
+	return &SyncerStorage{
 		Logging: logging.NewLogging(func(c logging.Context) logging.Emitter {
 			return c.Str("module", "leveldb-syncer-storage")
 		}),
@@ -31,23 +31,23 @@ func NewLeveldbSyncerStorage(main *LeveldbStorage) *LeveldbSyncerStorage {
 	}
 }
 
-func (st *LeveldbSyncerStorage) manifestKey(height base.Height) []byte {
+func (st *SyncerStorage) manifestKey(height base.Height) []byte {
 	return util.ConcatBytesSlice(
-		leveldbTmpPrefix,
+		keyPrefixTmp,
 		leveldbManifestHeightKey(height),
 	)
 }
 
-func (st *LeveldbSyncerStorage) Manifest(height base.Height) (block.Manifest, error) {
+func (st *SyncerStorage) Manifest(height base.Height) (block.Manifest, error) {
 	raw, err := st.storage.DB().Get(st.manifestKey(height), nil)
 	if err != nil {
-		return nil, LeveldbWrapError(err)
+		return nil, wrapError(err)
 	}
 
 	return st.storage.loadManifest(raw)
 }
 
-func (st *LeveldbSyncerStorage) Manifests(heights []base.Height) ([]block.Manifest, error) {
+func (st *SyncerStorage) Manifests(heights []base.Height) ([]block.Manifest, error) {
 	var bs []block.Manifest
 	for i := range heights {
 		if b, err := st.Manifest(heights[i]); err != nil {
@@ -60,7 +60,7 @@ func (st *LeveldbSyncerStorage) Manifests(heights []base.Height) ([]block.Manife
 	return bs, nil
 }
 
-func (st *LeveldbSyncerStorage) SetManifests(manifests []block.Manifest) error {
+func (st *SyncerStorage) SetManifests(manifests []block.Manifest) error {
 	st.Log().VerboseFunc(func(e *logging.Event) logging.Emitter {
 		var heights []base.Height
 		for i := range manifests {
@@ -76,7 +76,7 @@ func (st *LeveldbSyncerStorage) SetManifests(manifests []block.Manifest) error {
 
 	for i := range manifests {
 		m := manifests[i]
-		if b, err := LeveldbMarshal(st.storage.Encoder(), m); err != nil {
+		if b, err := marshal(st.storage.Encoder(), m); err != nil {
 			return err
 		} else {
 			key := st.manifestKey(m.Height())
@@ -84,18 +84,18 @@ func (st *LeveldbSyncerStorage) SetManifests(manifests []block.Manifest) error {
 		}
 	}
 
-	return LeveldbWrapError(st.storage.DB().Write(batch, nil))
+	return wrapError(st.storage.DB().Write(batch, nil))
 }
 
-func (st *LeveldbSyncerStorage) HasBlock(height base.Height) (bool, error) {
+func (st *SyncerStorage) HasBlock(height base.Height) (bool, error) {
 	return st.storage.db.Has(leveldbBlockHeightKey(height), nil)
 }
 
-func (st *LeveldbSyncerStorage) Block(height base.Height) (block.Block, error) {
+func (st *SyncerStorage) Block(height base.Height) (block.Block, error) {
 	return st.storage.BlockByHeight(height)
 }
 
-func (st *LeveldbSyncerStorage) Blocks(heights []base.Height) ([]block.Block, error) {
+func (st *SyncerStorage) Blocks(heights []base.Height) ([]block.Block, error) {
 	var bs []block.Block
 	for i := range heights {
 		if b, err := st.storage.BlockByHeight(heights[i]); err != nil {
@@ -108,7 +108,7 @@ func (st *LeveldbSyncerStorage) Blocks(heights []base.Height) ([]block.Block, er
 	return bs, nil
 }
 
-func (st *LeveldbSyncerStorage) SetBlocks(blocks []block.Block) error {
+func (st *SyncerStorage) SetBlocks(blocks []block.Block) error {
 	st.Log().VerboseFunc(func(e *logging.Event) logging.Emitter {
 		var heights []base.Height
 		for i := range blocks {
@@ -137,7 +137,7 @@ func (st *LeveldbSyncerStorage) SetBlocks(blocks []block.Block) error {
 	return nil
 }
 
-func (st *LeveldbSyncerStorage) Commit() error {
+func (st *SyncerStorage) Commit() error {
 	st.Log().Debug().
 		Hinted("from_height", st.heightFrom).
 		Hinted("to_height", st.heightTo).
@@ -157,7 +157,7 @@ func (st *LeveldbSyncerStorage) Commit() error {
 	return nil
 }
 
-func (st *LeveldbSyncerStorage) commitBlock(blk block.Block) error {
+func (st *SyncerStorage) commitBlock(blk block.Block) error {
 	if bs, err := st.main.OpenBlockStorage(blk); err != nil {
 		return err
 	} else if err := bs.SetBlock(blk); err != nil {
@@ -169,7 +169,7 @@ func (st *LeveldbSyncerStorage) commitBlock(blk block.Block) error {
 	return nil
 }
 
-func (st *LeveldbSyncerStorage) checkHeight(height base.Height) {
+func (st *SyncerStorage) checkHeight(height base.Height) {
 	st.Lock()
 	defer st.Unlock()
 
@@ -184,6 +184,6 @@ func (st *LeveldbSyncerStorage) checkHeight(height base.Height) {
 	}
 }
 
-func (st *LeveldbSyncerStorage) Close() error {
-	return LeveldbWrapError(st.storage.DB().Close())
+func (st *SyncerStorage) Close() error {
+	return wrapError(st.storage.DB().Close())
 }

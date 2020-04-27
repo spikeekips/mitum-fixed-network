@@ -23,7 +23,7 @@ import (
 
 type testLeveldbStorage struct {
 	storage.BaseTestStorage
-	storage *LeveldbStorage
+	storage *Storage
 }
 
 func (t *testLeveldbStorage) SetupTest() {
@@ -59,7 +59,7 @@ func (t *testLeveldbStorage) TestLoadBlockByHash() {
 		b, err := t.JSONEnc.Marshal(blk)
 		t.NoError(err)
 
-		hb := LeveldbDataWithEncoder(t.JSONEnc, b)
+		hb := encodeWithEncoder(t.JSONEnc, b)
 
 		key := leveldbBlockHashKey(blk.Hash())
 		t.NoError(t.storage.db.Put(key, hb, nil))
@@ -475,7 +475,7 @@ func (t *testLeveldbStorage) TestHasOperation() {
 		t.NoError(err)
 		t.storage.db.Put(
 			leveldbOperationHashKey(op),
-			LeveldbDataWithEncoder(t.storage.enc, raw),
+			encodeWithEncoder(t.storage.enc, raw),
 			nil,
 		)
 	}

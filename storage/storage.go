@@ -14,6 +14,7 @@ import (
 type Storage interface {
 	Encoder() encoder.Encoder
 	Encoders() *encoder.Encoders
+	Close() error
 
 	OpenBlockStorage(block.Block) (BlockStorage, error)
 	SyncerStorage() (SyncerStorage, error)

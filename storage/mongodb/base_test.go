@@ -33,6 +33,11 @@ func (t *testStorage) SetupTest() {
 	t.storage = NewStorage(client, t.Encs, t.BSONEnc)
 }
 
+func (t *testStorage) TearDownTest() {
+	t.storage.Client().DropDatabase()
+	t.storage.Close()
+}
+
 func (t *testStorage) TestNew() {
 	t.Implements((*storage.Storage)(nil), t.storage)
 }

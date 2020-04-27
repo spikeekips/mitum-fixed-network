@@ -29,5 +29,10 @@ func init() {
 }
 
 func TestMongodbURI() string {
-	return fmt.Sprintf("%s/t_%s", BaseTestMongodbURI, util.UUID().String())
+	uri := "localhost"
+	if s := os.Getenv("MITUM_TEST_MONGODB_URI"); len(s) > 0 {
+		uri = s
+	}
+
+	return fmt.Sprintf("mongodb://%s/t_%s", uri, util.UUID().String())
 }

@@ -30,7 +30,9 @@ func (t *testProposalMaker) TestCached() {
 }
 
 func (t *testProposalMaker) TestClean() {
-	localstate, _ := t.states()
+	localstate, rn0 := t.states()
+	defer t.closeStates(localstate, rn0)
+
 	proposalMaker := NewProposalMaker(localstate)
 
 	round := base.Round(1)
@@ -45,7 +47,8 @@ func (t *testProposalMaker) TestClean() {
 }
 
 func (t *testProposalMaker) TestSeals() {
-	localstate, _ := t.states()
+	localstate, rn0 := t.states()
+	defer t.closeStates(localstate, rn0)
 
 	var ops []operation.Seal
 	var seals []seal.Seal

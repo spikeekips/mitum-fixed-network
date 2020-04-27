@@ -27,6 +27,12 @@ func (t *testGenesisBlockV0) SetupTest() {
 	t.localstate = localstate
 }
 
+func (t *testGenesisBlockV0) TearDownTest() {
+	t.baseTestStateHandler.TearDownTest()
+
+	t.closeStates(t.localstate)
+}
+
 func (t *testGenesisBlockV0) TestNewGenesisBlock() {
 	op, err := NewKVOperation(
 		t.localstate.Node().Privatekey(),

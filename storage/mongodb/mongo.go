@@ -46,7 +46,7 @@ func NewClient(uri string, connectTimeout time.Duration, execTimeout time.Durati
 		defer cancel()
 
 		if c, err := mongo.Connect(ctx, clientOpts); err != nil {
-			return nil, storage.WrapError(err)
+			return nil, storage.WrapError(xerrors.Errorf("connect timeout: %w", err))
 		} else {
 			client = c
 		}
@@ -57,7 +57,7 @@ func NewClient(uri string, connectTimeout time.Duration, execTimeout time.Durati
 		defer cancel()
 
 		if err := client.Ping(ctx, readpref.Primary()); err != nil {
-			return nil, storage.WrapError(err)
+			return nil, storage.WrapError(xerrors.Errorf("ping timeout: %w", err))
 		}
 	}
 

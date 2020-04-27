@@ -71,6 +71,10 @@ func (st *Storage) DB() *leveldb.DB {
 	return st.db
 }
 
+func (st *Storage) Close() error {
+	return st.db.Close()
+}
+
 func (st *Storage) Encoder() encoder.Encoder {
 	return st.enc
 }

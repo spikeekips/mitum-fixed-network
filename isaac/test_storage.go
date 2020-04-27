@@ -58,8 +58,20 @@ func (ss *StorageSupportTest) Storage(encs *encoder.Encoders, enc encoder.Encode
 			enc = ss.BSONEnc
 		}
 
-		return mongodbstorage.NewStorage(client, encs, enc)
+		return DummyMongodbStorage{mongodbstorage.NewStorage(client, encs, enc)}
 	default:
 		panic(xerrors.Errorf("unknown db type: %v", ss.DBType))
 	}
+}
+
+type DummyMongodbStorage struct {
+	*mongodbstorage.Storage
+}
+
+func (dm DummyMongodbStorage) Close() error {
+	if err := dm.Client().DropDatabase(); err != nil {
+		return err
+	}
+
+	return dm.Storage.Close()
 }

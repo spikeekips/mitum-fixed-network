@@ -52,6 +52,8 @@ func (t *testBlockV0DummyGenerator) TestCreate() {
 	all := []*Localstate{t.localstate}
 	all = append(all, t.localstates(2)...)
 
+	defer t.closeStates(all...)
+
 	var suffrage base.Suffrage
 	{
 		nodes := make([]base.Node, len(all))

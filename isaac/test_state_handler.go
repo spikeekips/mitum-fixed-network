@@ -114,6 +114,16 @@ func (t *baseTestStateHandler) SetupTest() {
 	t.localstate, t.remoteState = t.states()
 }
 
+func (t *baseTestStateHandler) TearDownTest() {
+	t.closeStates(t.localstate, t.remoteState)
+}
+
+func (t *baseTestStateHandler) closeStates(states ...*Localstate) {
+	for _, s := range states {
+		s.Storage().Close()
+	}
+}
+
 func (t *baseTestStateHandler) newVoteproof(
 	stage base.Stage, fact base.Fact, states ...*Localstate,
 ) (base.VoteproofV0, error) {

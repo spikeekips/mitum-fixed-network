@@ -16,5 +16,5 @@ This is the third prototype for MITUM. The previous prototype, `proto2` can be f
 ## Test
 
 ```sh
-$ go clean -testcache; go test -timeout 10s -tags test -race -v ./... -run .
+$ go clean -testcache; go test -timeout 10m -tags test -race -v ./... -run .
 ```

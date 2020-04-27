@@ -52,6 +52,10 @@ func (st *Storage) Client() *Client {
 	return st.client
 }
 
+func (st *Storage) Close() error {
+	return st.client.Close()
+}
+
 func (st *Storage) Encoder() encoder.Encoder {
 	return st.enc
 }

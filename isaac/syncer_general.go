@@ -90,8 +90,7 @@ func NewGeneralSyncer(
 				Hinted("to", to).
 				Str("module", "general-syncer")
 		}),
-		localstate: localstate,
-		//storage:                 localstate.Storage().SyncerStorage(),
+		localstate:              localstate,
 		sourceNodes:             sn,
 		heightFrom:              from,
 		heightTo:                to,
@@ -112,11 +111,14 @@ func (cs *GeneralSyncer) SetLogger(l logging.Logger) logging.Logger {
 }
 
 func (cs *GeneralSyncer) Close() error {
-	if err := cs.storage.Close(); err != nil {
-		return err
+	cs.RLock()
+	defer cs.RUnlock()
+
+	if cs.storage == nil {
+		return nil
 	}
 
-	return nil
+	return cs.storage.Close()
 }
 
 func (cs *GeneralSyncer) SetStateChan(stateChan chan<- Syncer) *GeneralSyncer {
@@ -195,6 +197,12 @@ func (cs *GeneralSyncer) reset() error {
 
 	cs.pn = provedNodes
 	cs.baseManifest = nil
+
+	if cs.storage != nil {
+		if err := cs.storage.Close(); err != nil {
+			return err
+		}
+	}
 
 	if s, err := cs.localstate.Storage().SyncerStorage(); err != nil {
 		return err

@@ -77,6 +77,10 @@ func (t *testMongodbClient) SetupTest() {
 	t.client = client
 }
 
+func (t *testMongodbClient) TearDownTest() {
+	t.client.DropDatabase()
+}
+
 func (t *testMongodbClient) TestClient() {
 	_, err := NewClient(TestMongodbURI(), time.Second*2, 0)
 	t.NoError(err)

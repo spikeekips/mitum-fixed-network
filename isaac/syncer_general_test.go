@@ -118,7 +118,8 @@ func (t *testGeneralSyncer) TestInvalidFrom() {
 }
 
 func (t *testGeneralSyncer) TestInvalidSourceNodes() {
-	localstate, _ := t.states()
+	localstate, rn0 := t.states()
+	defer t.closeStates(localstate, rn0)
 	t.setup(localstate, nil)
 
 	base := localstate.LastBlock().Height()
@@ -136,6 +137,8 @@ func (t *testGeneralSyncer) TestInvalidSourceNodes() {
 
 func (t *testGeneralSyncer) TestNew() {
 	localstate, remoteState := t.states()
+	defer t.closeStates(localstate, remoteState)
+
 	t.setup(localstate, []*Localstate{remoteState})
 
 	target := localstate.LastBlock().Height() + 1
@@ -143,6 +146,8 @@ func (t *testGeneralSyncer) TestNew() {
 
 	cs, err := NewGeneralSyncer(localstate, []Node{remoteState.Node()}, target, target)
 	t.NoError(err)
+
+	defer cs.Close()
 
 	_ = (interface{})(cs).(Syncer)
 	t.Implements((*Syncer)(nil), cs)
@@ -155,6 +160,8 @@ func (t *testGeneralSyncer) TestNew() {
 func (t *testGeneralSyncer) TestHeadAndTailManifests() {
 	localstate, rn0 := t.states()
 	rn1, rn2 := t.states()
+	defer t.closeStates(localstate, rn0, rn1, rn2)
+
 	t.setup(localstate, []*Localstate{rn0, rn1, rn2})
 
 	base := localstate.LastBlock().Height()
@@ -163,6 +170,8 @@ func (t *testGeneralSyncer) TestHeadAndTailManifests() {
 
 	cs, err := NewGeneralSyncer(localstate, []Node{rn0.Node(), rn1.Node(), rn2.Node()}, base+1, target)
 	t.NoError(err)
+
+	defer cs.Close()
 
 	cs.reset()
 	t.NoError(cs.headAndTailManifests())
@@ -191,6 +200,8 @@ func (t *testGeneralSyncer) TestHeadAndTailManifests() {
 func (t *testGeneralSyncer) TestFillManifests() {
 	localstate, rn0 := t.states()
 	rn1, rn2 := t.states()
+	defer t.closeStates(localstate, rn0, rn1, rn2)
+
 	t.setup(localstate, []*Localstate{rn0, rn1, rn2})
 
 	baseBlock := localstate.LastBlock()
@@ -199,6 +210,8 @@ func (t *testGeneralSyncer) TestFillManifests() {
 
 	cs, err := NewGeneralSyncer(localstate, []Node{rn0.Node(), rn1.Node(), rn2.Node()}, baseBlock.Height()+1, target)
 	t.NoError(err)
+
+	defer cs.Close()
 
 	cs.reset()
 	cs.baseManifest = baseBlock
@@ -217,7 +230,10 @@ func (t *testGeneralSyncer) TestFillManifests() {
 func (t *testGeneralSyncer) TestFetchBlocks() {
 	localstate, rn0 := t.states()
 	rn1, rn2 := t.states()
-	t.setup(localstate, []*Localstate{rn0, rn1, rn2})
+	defer t.closeStates(localstate, rn0, rn1, rn2)
+
+	t.setup(localstate, []*Localstate{localstate, rn0, rn1, rn2})
+	defer t.closeStates(localstate, rn0, rn1, rn2)
 
 	baseHeight := localstate.LastBlock().Height()
 	target := baseHeight + 5
@@ -225,6 +241,8 @@ func (t *testGeneralSyncer) TestFetchBlocks() {
 
 	cs, err := NewGeneralSyncer(localstate, []Node{rn0.Node(), rn1.Node(), rn2.Node()}, baseHeight+1, target)
 	t.NoError(err)
+
+	defer cs.Close()
 
 	cs.reset()
 	t.NoError(cs.headAndTailManifests())
@@ -248,6 +266,8 @@ func (t *testGeneralSyncer) TestFetchBlocks() {
 func (t *testGeneralSyncer) TestSaveBlocks() {
 	localstate, rn0 := t.states()
 	rn1, rn2 := t.states()
+	defer t.closeStates(localstate, rn0, rn1, rn2)
+
 	t.setup(localstate, []*Localstate{rn0, rn1, rn2})
 
 	baseHeight := localstate.LastBlock().Height()
@@ -256,6 +276,8 @@ func (t *testGeneralSyncer) TestSaveBlocks() {
 
 	cs, err := NewGeneralSyncer(localstate, []Node{rn0.Node(), rn1.Node(), rn2.Node()}, baseHeight+1, target)
 	t.NoError(err)
+
+	defer cs.Close()
 
 	cs.reset()
 	t.NoError(cs.prepare())
@@ -292,6 +314,8 @@ func (t *testGeneralSyncer) TestSaveBlocks() {
 func (t *testGeneralSyncer) TestFinishedChan() {
 	localstate, rn0 := t.states()
 	rn1, rn2 := t.states()
+	defer t.closeStates(localstate, rn0, rn1, rn2)
+
 	t.setup(localstate, []*Localstate{rn0, rn1, rn2})
 
 	baseBlock := localstate.LastBlock()
@@ -300,6 +324,8 @@ func (t *testGeneralSyncer) TestFinishedChan() {
 
 	cs, err := NewGeneralSyncer(localstate, []Node{rn0.Node(), rn1.Node(), rn2.Node()}, baseBlock.Height()+1, target)
 	t.NoError(err)
+
+	defer cs.Close()
 
 	stateChan := make(chan Syncer)
 	finishedChan := make(chan Syncer)
@@ -335,16 +361,21 @@ func (t *testGeneralSyncer) TestFinishedChan() {
 }
 
 func (t *testGeneralSyncer) TestFromGenesis() {
-	localstate, _ := t.states()
+	localstate, rn0 := t.states()
+	defer t.closeStates(localstate, rn0)
+
 	t.setup(localstate, nil)
 
 	syncNode := t.emptyLocalstate()
 	t.NoError(localstate.Nodes().Add(syncNode.Node()))
+	defer t.closeStates(syncNode)
 
 	target := localstate.LastBlock()
 
 	cs, err := NewGeneralSyncer(syncNode, []Node{localstate.Node()}, 0, target.Height())
 	t.NoError(err)
+
+	defer cs.Close()
 
 	stateChan := make(chan Syncer)
 	finishedChan := make(chan Syncer)
@@ -382,6 +413,8 @@ func (t *testGeneralSyncer) TestFromGenesis() {
 func (t *testGeneralSyncer) TestSyncingHandlerFromBallot() {
 	localstate, rn0 := t.states()
 	rn1, rn2 := t.states()
+	defer t.closeStates(localstate, rn0, rn1, rn2)
+
 	t.setup(localstate, []*Localstate{rn0, rn1, rn2})
 
 	baseBlock := localstate.LastBlock()
@@ -421,6 +454,8 @@ func (t *testGeneralSyncer) TestSyncingHandlerFromBallot() {
 func (t *testGeneralSyncer) TestSyncingHandlerFromINITVoteproof() {
 	localstate, rn0 := t.states()
 	rn1, rn2 := t.states()
+	defer t.closeStates(localstate, rn0, rn1, rn2)
+
 	t.setup(localstate, []*Localstate{rn0, rn1, rn2})
 
 	t.NoError(localstate.Nodes().Add(rn1.Node()))
@@ -477,6 +512,8 @@ func (t *testGeneralSyncer) TestSyncingHandlerFromINITVoteproof() {
 func (t *testGeneralSyncer) TestSyncingHandlerFromACCEPTVoteproof() {
 	localstate, rn0 := t.states()
 	rn1, rn2 := t.states()
+	defer t.closeStates(localstate, rn0, rn1, rn2)
+
 	t.setup(localstate, []*Localstate{rn0, rn1, rn2})
 
 	t.NoError(localstate.Nodes().Add(rn1.Node()))
@@ -539,6 +576,8 @@ func (t *testGeneralSyncer) TestSyncingHandlerFromACCEPTVoteproof() {
 
 func (t *testGeneralSyncer) TestMissingHead() {
 	localstate, rn0 := t.states()
+	defer t.closeStates(localstate, rn0)
+
 	t.setup(localstate, []*Localstate{rn0})
 
 	baseBlock := localstate.LastBlock()
@@ -568,6 +607,8 @@ func (t *testGeneralSyncer) TestMissingHead() {
 	cs, err := NewGeneralSyncer(localstate, []Node{rn0.Node()}, baseBlock.Height()+1, target)
 	t.NoError(err)
 
+	defer cs.Close()
+
 	cs.reset()
 
 	err = cs.headAndTailManifests()
@@ -576,6 +617,8 @@ func (t *testGeneralSyncer) TestMissingHead() {
 
 func (t *testGeneralSyncer) TestMissingTail() {
 	localstate, rn0 := t.states()
+	defer t.closeStates(localstate, rn0)
+
 	t.setup(localstate, []*Localstate{rn0})
 
 	baseBlock := localstate.LastBlock()
@@ -605,6 +648,8 @@ func (t *testGeneralSyncer) TestMissingTail() {
 	cs, err := NewGeneralSyncer(localstate, []Node{rn0.Node()}, baseBlock.Height()+1, target)
 	t.NoError(err)
 
+	defer cs.Close()
+
 	cs.reset()
 
 	err = cs.headAndTailManifests()
@@ -613,6 +658,8 @@ func (t *testGeneralSyncer) TestMissingTail() {
 
 func (t *testGeneralSyncer) TestMissingManifests() {
 	localstate, rn0 := t.states()
+	defer t.closeStates(localstate, rn0)
+
 	t.setup(localstate, []*Localstate{rn0})
 
 	baseBlock := localstate.LastBlock()
@@ -642,6 +689,8 @@ func (t *testGeneralSyncer) TestMissingManifests() {
 	cs, err := NewGeneralSyncer(localstate, []Node{rn0.Node()}, baseBlock.Height()+1, target)
 	t.NoError(err)
 
+	defer cs.Close()
+
 	cs.reset()
 
 	err = cs.fillManifests()
@@ -650,6 +699,8 @@ func (t *testGeneralSyncer) TestMissingManifests() {
 
 func (t *testGeneralSyncer) TestMissingBlocks() {
 	localstate, rn0 := t.states()
+	defer t.closeStates(localstate, rn0)
+
 	t.setup(localstate, []*Localstate{rn0})
 
 	baseBlock := localstate.LastBlock()
@@ -678,6 +729,8 @@ func (t *testGeneralSyncer) TestMissingBlocks() {
 
 	cs, err := NewGeneralSyncer(localstate, []Node{rn0.Node()}, baseBlock.Height()+1, target)
 	t.NoError(err)
+
+	defer cs.Close()
 
 	cs.reset()
 

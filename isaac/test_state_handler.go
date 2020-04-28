@@ -120,7 +120,7 @@ func (t *baseTestStateHandler) TearDownTest() {
 
 func (t *baseTestStateHandler) closeStates(states ...*Localstate) {
 	for _, s := range states {
-		s.Storage().Close()
+		_ = s.Storage().Close()
 	}
 }
 

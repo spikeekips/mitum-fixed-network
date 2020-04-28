@@ -20,6 +20,17 @@ import (
 	"github.com/spikeekips/mitum/util/logging"
 )
 
+const (
+	defaultColNameBlock         = "block"
+	defaultColNameManifest      = "manifest"
+	defaultColNameVoteproof     = "voteproof"
+	defaultColNameSeal          = "seal"
+	defaultColNameOperation     = "operation"
+	defaultColNameOperationSeal = "operation_seal"
+	defaultColNameProposal      = "proposal"
+	defaultColNameState         = "state"
+)
+
 type Storage struct {
 	*logging.Logging
 	client *Client
@@ -28,7 +39,8 @@ type Storage struct {
 }
 
 func NewStorage(client *Client, encs *encoder.Encoders, enc encoder.Encoder) *Storage {
-	st := &Storage{
+	// NOTE call Initialize() later.
+	return &Storage{
 		Logging: logging.NewLogging(func(c logging.Context) logging.Emitter {
 			return c.Str("module", "mongodb-storage")
 		}),
@@ -36,12 +48,6 @@ func NewStorage(client *Client, encs *encoder.Encoders, enc encoder.Encoder) *St
 		encs:   encs,
 		enc:    enc,
 	}
-
-	if err := st.Initialize(); err != nil {
-		panic(err)
-	}
-
-	return st
 }
 
 func (st *Storage) SyncerStorage() (storage.SyncerStorage, error) {
@@ -68,7 +74,7 @@ func (st *Storage) LastBlock() (block.Block, error) {
 	var blk block.Block
 
 	if err := st.client.Find(
-		"block",
+		defaultColNameBlock,
 		bson.D{},
 		func(_ interface{}, decoder func(interface{}) error) (bool, error) {
 			if i, err := loadBlockFromDecoder(decoder, st.encs); err != nil {
@@ -91,7 +97,7 @@ func (st *Storage) blockByFilter(filter bson.D) (block.Block, error) {
 	var blk block.Block
 
 	if err := st.client.GetByFilter(
-		"block",
+		defaultColNameBlock,
 		filter,
 		func(decoder func(interface{}) error) error {
 			if i, err := loadBlockFromDecoder(decoder, st.encs); err != nil {
@@ -121,7 +127,7 @@ func (st *Storage) manifestByFilter(filter bson.D) (block.Manifest, error) {
 	var manifest block.Manifest
 
 	if err := st.client.GetByFilter(
-		"manifest",
+		defaultColNameManifest,
 		filter,
 		func(decoder func(interface{}) error) error {
 			if i, err := loadManifestFromDecoder(decoder, st.encs); err != nil {
@@ -151,7 +157,7 @@ func (st *Storage) filterVoteproof(filter bson.D, opts ...*options.FindOptions) 
 	var voteproof base.Voteproof
 
 	if err := st.client.Find(
-		"voteproof",
+		defaultColNameVoteproof,
 		filter,
 		func(_ interface{}, decoder func(interface{}) error) (bool, error) {
 			if i, err := loadVoteproofFromDecoder(decoder, st.encs); err != nil {
@@ -180,7 +186,7 @@ func (st *Storage) LastINITVoteproof() (base.Voteproof, error) {
 func (st *Storage) NewINITVoteproof(voteproof base.Voteproof) error {
 	if doc, err := NewVoteproofDoc(voteproof, st.enc); err != nil {
 		return err
-	} else if _, err := st.client.Set("voteproof", doc); err != nil {
+	} else if _, err := st.client.Set(defaultColNameVoteproof, doc); err != nil {
 		return err
 	}
 
@@ -211,7 +217,7 @@ func (st *Storage) LastACCEPTVoteproof() (base.Voteproof, error) {
 func (st *Storage) NewACCEPTVoteproof(voteproof base.Voteproof) error {
 	if doc, err := NewVoteproofDoc(voteproof, st.enc); err != nil {
 		return err
-	} else if _, err := st.client.Set("voteproof", doc); err != nil {
+	} else if _, err := st.client.Set(defaultColNameVoteproof, doc); err != nil {
 		return err
 	}
 
@@ -230,7 +236,7 @@ func (st *Storage) Voteproofs(callback func(base.Voteproof) (bool, error), sort 
 	opt.SetSort(NewFilter("height", dir).D())
 
 	return st.client.Find(
-		"voteproof",
+		defaultColNameVoteproof,
 		bson.D{},
 		func(_ interface{}, decoder func(interface{}) error) (bool, error) {
 			if i, err := loadVoteproofFromDecoder(decoder, st.encs); err != nil {
@@ -247,7 +253,7 @@ func (st *Storage) Seal(h valuehash.Hash) (seal.Seal, error) {
 	var sl seal.Seal
 
 	if err := st.client.GetByID(
-		"seal",
+		defaultColNameSeal,
 		h.String(),
 		func(decoder func(interface{}) error) error {
 			if i, err := loadSealFromDecoder(decoder, st.encs); err != nil {
@@ -297,7 +303,7 @@ func (st *Storage) NewSeals(seals []seal.Seal) error {
 		)
 	}
 
-	if err := st.client.Bulk("seal", models); err != nil {
+	if err := st.client.Bulk(defaultColNameSeal, models); err != nil {
 		return err
 	}
 
@@ -305,7 +311,7 @@ func (st *Storage) NewSeals(seals []seal.Seal) error {
 		return nil
 	}
 
-	return st.client.Bulk("operation_seal", operationModels)
+	return st.client.Bulk(defaultColNameOperationSeal, operationModels)
 }
 
 func (st *Storage) Seals(callback func(valuehash.Hash, seal.Seal) (bool, error), sort bool, load bool) error {
@@ -320,7 +326,7 @@ func (st *Storage) Seals(callback func(valuehash.Hash, seal.Seal) (bool, error),
 	opt.SetSort(NewFilter("hash", dir).D())
 
 	return st.client.Find(
-		"seal",
+		defaultColNameSeal,
 		bson.D{},
 		func(_ interface{}, decoder func(interface{}) error) (bool, error) {
 			var h valuehash.Hash
@@ -359,7 +365,7 @@ func (st *Storage) StagedOperationSeals(callback func(operation.Seal) (bool, err
 	opt.SetSort(NewFilter("inserted_at", dir).D())
 
 	return st.client.Find(
-		"operation_seal",
+		defaultColNameOperationSeal,
 		bson.D{},
 		func(_ interface{}, decoder func(interface{}) error) (bool, error) {
 			var sl operation.Seal
@@ -386,7 +392,7 @@ func (st *Storage) UnstagedOperationSeals(seals []valuehash.Hash) error {
 		)
 	}
 
-	return st.client.Bulk("operation_seal", models)
+	return st.client.Bulk(defaultColNameOperationSeal, models)
 }
 
 func (st *Storage) Proposals(callback func(ballot.Proposal) (bool, error), sort bool) error {
@@ -401,7 +407,7 @@ func (st *Storage) Proposals(callback func(ballot.Proposal) (bool, error), sort 
 	opt.SetSort(NewFilter("height", dir).D())
 
 	return st.client.Find(
-		"proposal",
+		defaultColNameProposal,
 		bson.D{},
 		func(_ interface{}, decoder func(interface{}) error) (bool, error) {
 			var proposal ballot.Proposal
@@ -420,7 +426,7 @@ func (st *Storage) Proposals(callback func(ballot.Proposal) (bool, error), sort 
 func (st *Storage) NewProposal(proposal ballot.Proposal) error {
 	if doc, err := NewProposalDoc(proposal, st.enc); err != nil {
 		return err
-	} else if _, err := st.client.Set("proposal", doc); err != nil {
+	} else if _, err := st.client.Set(defaultColNameProposal, doc); err != nil {
 		return err
 	}
 
@@ -432,7 +438,7 @@ func (st *Storage) Proposal(height base.Height, round base.Round) (ballot.Propos
 	var proposal ballot.Proposal
 
 	if err := st.client.Find(
-		"proposal",
+		defaultColNameProposal,
 		NewFilter("height", height).Add("round", round).D(),
 		func(_ interface{}, decoder func(interface{}) error) (bool, error) {
 			if i, err := loadProposalFromDecoder(decoder, st.encs); err != nil {
@@ -459,7 +465,7 @@ func (st *Storage) State(key string) (state.State, bool, error) {
 	var sta state.State
 
 	if err := st.client.GetByID(
-		"state",
+		defaultColNameState,
 		key,
 		func(decoder func(interface{}) error) error {
 			if i, err := loadStateFromDecoder(decoder, st.encs); err != nil {
@@ -484,7 +490,7 @@ func (st *Storage) State(key string) (state.State, bool, error) {
 func (st *Storage) NewState(sta state.State) error {
 	if doc, err := NewStateDoc(sta, st.enc); err != nil {
 		return err
-	} else if _, err := st.client.Set("state", doc); err != nil {
+	} else if _, err := st.client.Set(defaultColNameState, doc); err != nil {
 		return err
 	}
 
@@ -492,7 +498,7 @@ func (st *Storage) NewState(sta state.State) error {
 }
 
 func (st *Storage) HasOperation(h valuehash.Hash) (bool, error) {
-	return st.client.Exists("operation", NewFilter("_id", h.String()).D())
+	return st.client.Exists(defaultColNameOperation, NewFilter("_id", h.String()).D())
 }
 
 func (st *Storage) OpenBlockStorage(blk block.Block) (storage.BlockStorage, error) {

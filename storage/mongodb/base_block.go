@@ -96,31 +96,31 @@ func (bst *BlockStorage) UnstageOperationSeals(seals []valuehash.Hash) error {
 }
 
 func (bst *BlockStorage) Commit() error {
-	if res, err := bst.writeModels("block", bst.blockModels); err != nil {
+	if res, err := bst.writeModels(defaultColNameBlock, bst.blockModels); err != nil {
 		return storage.WrapError(err)
 	} else if res != nil && res.InsertedCount < 1 {
 		return xerrors.Errorf("block not inserted")
 	}
 
-	if res, err := bst.writeModels("manifest", bst.manifestModels); err != nil {
+	if res, err := bst.writeModels(defaultColNameManifest, bst.manifestModels); err != nil {
 		return storage.WrapError(err)
 	} else if res != nil && res.InsertedCount < 1 {
 		return xerrors.Errorf("manifest not inserted")
 	}
 
-	if res, err := bst.writeModels("operation", bst.operationModels); err != nil {
+	if res, err := bst.writeModels(defaultColNameOperation, bst.operationModels); err != nil {
 		return storage.WrapError(err)
 	} else if res != nil && res.InsertedCount < 1 {
 		return xerrors.Errorf("operation not inserted")
 	}
 
-	if res, err := bst.writeModels("state", bst.stateModels); err != nil {
+	if res, err := bst.writeModels(defaultColNameState, bst.stateModels); err != nil {
 		return storage.WrapError(err)
 	} else if res != nil && res.InsertedCount < 1 {
 		return xerrors.Errorf("state not inserted")
 	}
 
-	if _, err := bst.writeModels("operation_seal", bst.operationSealModels); err != nil {
+	if _, err := bst.writeModels(defaultColNameOperationSeal, bst.operationSealModels); err != nil {
 		return storage.WrapError(err)
 	}
 

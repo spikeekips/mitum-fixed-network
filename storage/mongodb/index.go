@@ -61,10 +61,10 @@ var voteproofIndexModels = []mongo.IndexModel{
 }
 
 var defaultIndexes = map[string] /* collection */ []mongo.IndexModel{
-	"block":     blockIndexModels,
-	"manifest":  manifestIndexModels,
-	"operation": operationIndexModels,
-	"proposal":  proposalIndexModels,
-	"seal":      sealIndexModels,
-	"voteproof": voteproofIndexModels,
+	defaultColNameBlock:     blockIndexModels,
+	defaultColNameManifest:  manifestIndexModels,
+	defaultColNameOperation: operationIndexModels,
+	defaultColNameProposal:  proposalIndexModels,
+	defaultColNameSeal:      sealIndexModels,
+	defaultColNameVoteproof: voteproofIndexModels,
 }

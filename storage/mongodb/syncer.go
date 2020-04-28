@@ -87,11 +87,11 @@ func (st *SyncerStorage) SetManifests(manifests []block.Manifest) error {
 		}
 	}
 
-	return st.manifestStorage.client.Bulk("manifest", models)
+	return st.manifestStorage.client.Bulk(defaultColNameManifest, models)
 }
 
 func (st *SyncerStorage) HasBlock(height base.Height) (bool, error) {
-	return st.blockStorage.client.Exists("block", NewFilter("height", height).D())
+	return st.blockStorage.client.Exists(defaultColNameBlock, NewFilter("height", height).D())
 }
 
 func (st *SyncerStorage) Block(height base.Height) (block.Block, error) {

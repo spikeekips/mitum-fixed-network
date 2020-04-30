@@ -76,6 +76,13 @@ func (st *SyncerStorage) SetManifests(manifests []block.Manifest) error {
 		Int("manifests", len(manifests)).
 		Msg("set manifests")
 
+	var lastHeight base.Height
+	for _, m := range manifests {
+		if m.Height() > lastHeight {
+			lastHeight = m.Height()
+		}
+	}
+
 	var models []mongo.WriteModel
 	for i := range manifests {
 		if doc, err := NewManifestDoc(manifests[i], st.blockStorage.Encoder()); err != nil {
@@ -87,7 +94,13 @@ func (st *SyncerStorage) SetManifests(manifests []block.Manifest) error {
 		}
 	}
 
-	return st.manifestStorage.client.Bulk(defaultColNameManifest, models)
+	if err := st.manifestStorage.client.Bulk(defaultColNameManifest, models); err != nil {
+		return err
+	}
+
+	st.manifestStorage.SetConfirmedBlock(lastHeight)
+
+	return nil
 }
 
 func (st *SyncerStorage) HasBlock(height base.Height) (bool, error) {
@@ -123,6 +136,7 @@ func (st *SyncerStorage) SetBlocks(blocks []block.Block) error {
 		Int("blocks", len(blocks)).
 		Msg("set blocks")
 
+	var lastHeight base.Height
 	for i := range blocks {
 		blk := blocks[i]
 
@@ -135,7 +149,13 @@ func (st *SyncerStorage) SetBlocks(blocks []block.Block) error {
 		} else if err := bs.Commit(); err != nil {
 			return err
 		}
+
+		if blk.Height() > lastHeight {
+			lastHeight = blk.Height()
+		}
 	}
+
+	st.blockStorage.SetConfirmedBlock(lastHeight)
 
 	return nil
 }
@@ -210,5 +230,5 @@ func newTempStorage(main *Storage, prefix string) (*Storage, error) {
 		tmpClient = c
 	}
 
-	return NewStorage(tmpClient, main.Encoders(), main.Encoder()), nil
+	return NewStorage(tmpClient, main.Encoders(), main.Encoder())
 }

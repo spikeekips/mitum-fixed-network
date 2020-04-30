@@ -467,7 +467,7 @@ func (pp *proposalProcessorV0) updateStates(tr *tree.AVLTree, blk block.Block) e
 			st = s.State().(state.StateUpdater)
 		}
 
-		if err := st.SetCurrentBlock(blk.Hash()); err != nil {
+		if err := st.SetCurrentBlock(blk.Height(), blk.Hash()); err != nil {
 			return false, err
 		}
 

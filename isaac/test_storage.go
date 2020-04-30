@@ -58,7 +58,11 @@ func (ss *StorageSupportTest) Storage(encs *encoder.Encoders, enc encoder.Encode
 			enc = ss.BSONEnc
 		}
 
-		return DummyMongodbStorage{mongodbstorage.NewStorage(client, encs, enc)}
+		st, err := mongodbstorage.NewStorage(client, encs, enc)
+		if err != nil {
+			panic(err)
+		}
+		return DummyMongodbStorage{st}
 	default:
 		panic(xerrors.Errorf("unknown db type: %v", ss.DBType))
 	}

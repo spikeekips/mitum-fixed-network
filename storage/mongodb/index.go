@@ -24,7 +24,31 @@ var manifestIndexModels = []mongo.IndexModel{
 	},
 }
 
-var operationIndexModels []mongo.IndexModel
+var operationIndexModels = []mongo.IndexModel{
+	{
+		Keys: bson.D{bson.E{Key: "hash_string", Value: 1}, bson.E{Key: "height", Value: 1}},
+		Options: options.Index().
+			SetName("operation_hash_and_height"),
+	},
+	{
+		Keys: bson.D{bson.E{Key: "height", Value: 1}},
+		Options: options.Index().
+			SetName("operation_height"),
+	},
+}
+
+var stateIndexModels = []mongo.IndexModel{
+	{
+		Keys: bson.D{bson.E{Key: "key", Value: 1}, bson.E{Key: "height", Value: 1}},
+		Options: options.Index().
+			SetName("state_key_and_height"),
+	},
+	{
+		Keys: bson.D{bson.E{Key: "height", Value: 1}},
+		Options: options.Index().
+			SetName("state_height"),
+	},
+}
 
 var proposalIndexModels = []mongo.IndexModel{
 	{
@@ -67,4 +91,5 @@ var defaultIndexes = map[string] /* collection */ []mongo.IndexModel{
 	defaultColNameProposal:  proposalIndexModels,
 	defaultColNameSeal:      sealIndexModels,
 	defaultColNameVoteproof: voteproofIndexModels,
+	defaultColNameState:     stateIndexModels,
 }

@@ -30,7 +30,10 @@ type testStorage struct {
 func (t *testStorage) SetupTest() {
 	client, err := NewClient(TestMongodbURI(), time.Second*2, time.Second*2)
 	t.NoError(err)
-	t.storage = NewStorage(client, t.Encs, t.BSONEnc)
+
+	st, err := NewStorage(client, t.Encs, t.BSONEnc)
+	t.NoError(err)
+	t.storage = st
 }
 
 func (t *testStorage) TearDownTest() {
@@ -451,11 +454,13 @@ func (t *testStorage) TestUnStagedOperationSeals() {
 }
 
 func (t *testStorage) TestHasOperation() {
+	t.storage.SetConfirmedBlock(base.Height(33))
+
 	op, err := operation.NewKVOperation(t.PK, []byte("showme"), "key", []byte("value"), nil)
 	t.NoError(err)
 
 	{ // store
-		doc, err := NewOperationDoc(op, t.storage.enc)
+		doc, err := NewOperationDoc(op, t.storage.enc, base.Height(33))
 		t.NoError(err)
 		_, err = t.storage.client.Set("operation", doc)
 		t.NoError(err)

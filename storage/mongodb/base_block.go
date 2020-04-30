@@ -124,6 +124,14 @@ func (bst *BlockStorage) Commit() error {
 		return storage.WrapError(err)
 	}
 
+	if cb, err := NewConfirmedBlockDoc(bst.block.Height(), bst.st.enc); err != nil {
+		return err
+	} else if _, err := bst.st.client.Set(defaultColNameInfo, cb); err != nil {
+		return err
+	} else {
+		bst.st.SetConfirmedBlock(bst.block.Height())
+	}
+
 	return nil
 }
 
@@ -136,7 +144,7 @@ func (bst *BlockStorage) setOperations(tr *tree.AVLTree) error {
 	if err := tr.Traverse(func(node tree.Node) (bool, error) {
 		op := node.Immutable().(operation.OperationAVLNode).Operation()
 
-		doc, err := NewOperationDoc(op, bst.st.enc)
+		doc, err := NewOperationDoc(op, bst.st.enc, bst.block.Height())
 		if err != nil {
 			return false, err
 		}

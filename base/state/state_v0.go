@@ -3,6 +3,7 @@ package state
 import (
 	"golang.org/x/xerrors"
 
+	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/base/operation"
 	"github.com/spikeekips/mitum/base/valuehash"
 	"github.com/spikeekips/mitum/util"
@@ -22,6 +23,7 @@ type StateV0 struct {
 	value         Value
 	previousBlock valuehash.Hash
 	operations    []OperationInfo
+	currentHeight base.Height
 	currentBlock  valuehash.Hash
 }
 
@@ -131,15 +133,20 @@ func (st *StateV0) SetPreviousBlock(h valuehash.Hash) error {
 	return nil
 }
 
+func (st StateV0) Height() base.Height {
+	return st.currentHeight
+}
+
 func (st StateV0) CurrentBlock() valuehash.Hash {
 	return st.currentBlock
 }
 
-func (st *StateV0) SetCurrentBlock(h valuehash.Hash) error {
+func (st *StateV0) SetCurrentBlock(height base.Height, h valuehash.Hash) error {
 	if err := h.IsValid(nil); err != nil {
 		return err
 	}
 
+	st.currentHeight = height
 	st.currentBlock = h
 
 	return nil

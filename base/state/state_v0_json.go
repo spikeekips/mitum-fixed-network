@@ -3,6 +3,7 @@ package state
 import (
 	"encoding/json"
 
+	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/base/valuehash"
 	jsonencoder "github.com/spikeekips/mitum/util/encoder/json"
 )
@@ -13,6 +14,8 @@ type StateV0PackerJSON struct {
 	K   string          `json:"key"`
 	V   Value           `json:"value"`
 	PB  valuehash.Hash  `json:"previous_block"`
+	HT  base.Height     `json:"height"`
+	CB  valuehash.Hash  `json:"current_block"`
 	OPS []OperationInfo `json:"operation_infos"`
 }
 
@@ -23,6 +26,8 @@ func (st StateV0) MarshalJSON() ([]byte, error) {
 		K:          st.key,
 		V:          st.value,
 		PB:         st.previousBlock,
+		HT:         st.currentHeight,
+		CB:         st.currentBlock,
 		OPS:        st.operations,
 	})
 }
@@ -32,6 +37,8 @@ type StateV0UnpackerJSON struct {
 	K   string            `json:"key"`
 	V   json.RawMessage   `json:"value"`
 	PB  json.RawMessage   `json:"previous_block"`
+	HT  base.Height       `json:"height"`
+	CB  json.RawMessage   `json:"current_block"`
 	OPS []json.RawMessage `json:"operation_infos"`
 }
 
@@ -46,7 +53,7 @@ func (st *StateV0) UnpackJSON(b []byte, enc *jsonencoder.Encoder) error {
 		ops[i] = b
 	}
 
-	return st.unpack(enc, ust.H, ust.K, ust.V, ust.PB, ops)
+	return st.unpack(enc, ust.H, ust.K, ust.V, ust.PB, ust.HT, ust.CB, ops)
 }
 
 type OperationInfoV0PackerJSON struct {

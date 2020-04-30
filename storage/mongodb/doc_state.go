@@ -16,7 +16,7 @@ type StateDoc struct {
 }
 
 func NewStateDoc(st state.State, enc encoder.Encoder) (StateDoc, error) {
-	b, err := NewBaseDoc(st.Key(), st, enc)
+	b, err := NewBaseDoc(nil, st, enc)
 	if err != nil {
 		return StateDoc{}, err
 	}
@@ -34,6 +34,7 @@ func (sd StateDoc) MarshalBSON() ([]byte, error) {
 	}
 
 	m["key"] = sd.state.Key()
+	m["height"] = sd.state.Height()
 
 	return bsonencoder.Marshal(m)
 }

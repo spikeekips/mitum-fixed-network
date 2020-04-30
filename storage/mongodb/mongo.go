@@ -227,6 +227,13 @@ func (cl *Client) Count(col string, filter bson.D, opts ...*options.CountOptions
 	return count, storage.WrapError(err)
 }
 
+func (cl *Client) Delete(col string, filter bson.D, opts ...*options.DeleteOptions) (*mongo.DeleteResult, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), cl.execTimeout)
+	defer cancel()
+
+	return cl.db.Collection(col).DeleteMany(ctx, filter, opts...)
+}
+
 func (cl *Client) Exists(col string, filter bson.D) (bool, error) {
 	count, err := cl.Count(col, filter, options.Count().SetLimit(1))
 

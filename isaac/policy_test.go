@@ -82,10 +82,14 @@ func (t *testPolicy) TestLoadFromStorage() {
 	t.NoError(err)
 
 	t.NoError(newState.SetPreviousBlock(previousBlock.Hash()))
-	t.NoError(newState.SetCurrentBlock(currentBlock.Hash()))
+	t.NoError(newState.SetCurrentBlock(currentBlock.Height(), currentBlock.Hash()))
 	t.NoError(newState.SetHash(newState.GenerateHash()))
 
 	t.NoError(st.NewState(newState))
+
+	if mst, ok := st.(DummyMongodbStorage); ok {
+		mst.SetConfirmedBlock(currentBlock.Height())
+	}
 
 	p, err := NewLocalPolicy(st, nil)
 	t.NoError(err)

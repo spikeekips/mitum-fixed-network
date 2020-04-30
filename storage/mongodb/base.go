@@ -2,6 +2,7 @@ package mongodbstorage
 
 import (
 	"context"
+	"sync"
 
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
@@ -21,6 +22,7 @@ import (
 )
 
 const (
+	defaultColNameInfo          = "info"
 	defaultColNameBlock         = "block"
 	defaultColNameManifest      = "manifest"
 	defaultColNameVoteproof     = "voteproof"
@@ -32,15 +34,18 @@ const (
 )
 
 type Storage struct {
+	sync.RWMutex
 	*logging.Logging
-	client *Client
-	encs   *encoder.Encoders
-	enc    encoder.Encoder
+	client         *Client
+	encs           *encoder.Encoders
+	enc            encoder.Encoder
+	confirmedBlock base.Height
 }
 
-func NewStorage(client *Client, encs *encoder.Encoders, enc encoder.Encoder) *Storage {
+func NewStorage(client *Client, encs *encoder.Encoders, enc encoder.Encoder) (*Storage, error) {
 	// NOTE call Initialize() later.
-	return &Storage{
+
+	st := &Storage{
 		Logging: logging.NewLogging(func(c logging.Context) logging.Emitter {
 			return c.Str("module", "mongodb-storage")
 		}),
@@ -48,6 +53,53 @@ func NewStorage(client *Client, encs *encoder.Encoders, enc encoder.Encoder) *St
 		encs:   encs,
 		enc:    enc,
 	}
+
+	if cb, err := st.loadConfirmedBlock(); err != nil {
+		if !xerrors.Is(err, storage.NotFoundError) {
+			return nil, err
+		}
+	} else {
+		st.confirmedBlock = cb
+	}
+
+	return st, nil
+}
+
+func (st *Storage) loadConfirmedBlock() (base.Height, error) {
+	var height base.Height
+	if err := st.client.GetByID(defaultColNameInfo, confirmedBlockDocID,
+		func(decoder func(interface{}) error) error {
+			if i, err := loadConfirmedBlock(decoder, st.encs); err != nil {
+				return err
+			} else {
+				height = i
+			}
+
+			return nil
+		},
+	); err != nil {
+		return base.Height(0), err
+	}
+
+	return height, nil
+}
+
+func (st *Storage) ConfirmedBlock() base.Height {
+	st.RLock()
+	defer st.RUnlock()
+
+	return st.confirmedBlock
+}
+
+func (st *Storage) SetConfirmedBlock(height base.Height) {
+	st.Lock()
+	defer st.Unlock()
+
+	if height <= st.confirmedBlock {
+		return
+	}
+
+	st.confirmedBlock = height
 }
 
 func (st *Storage) SyncerStorage() (storage.SyncerStorage, error) {
@@ -75,7 +127,7 @@ func (st *Storage) LastBlock() (block.Block, error) {
 
 	if err := st.client.Find(
 		defaultColNameBlock,
-		bson.D{},
+		bson.D{{"height", bson.D{{"$lte", st.ConfirmedBlock()}}}},
 		func(_ interface{}, decoder func(interface{}) error) (bool, error) {
 			if i, err := loadBlockFromDecoder(decoder, st.encs); err != nil {
 				return false, err
@@ -85,7 +137,7 @@ func (st *Storage) LastBlock() (block.Block, error) {
 
 			return false, nil
 		},
-		options.Find().SetSort(NewFilter("height", -1).D()),
+		options.Find().SetSort(NewFilter("height", -1).D()).SetLimit(1),
 	); err != nil {
 		return nil, err
 	}
@@ -96,6 +148,7 @@ func (st *Storage) LastBlock() (block.Block, error) {
 func (st *Storage) blockByFilter(filter bson.D) (block.Block, error) {
 	var blk block.Block
 
+	filter = append(filter, bson.E{"height", bson.D{{"$lte", st.ConfirmedBlock()}}})
 	if err := st.client.GetByFilter(
 		defaultColNameBlock,
 		filter,
@@ -108,6 +161,7 @@ func (st *Storage) blockByFilter(filter bson.D) (block.Block, error) {
 
 			return nil
 		},
+		options.FindOne().SetSort(NewFilter("height", -1).D()),
 	); err != nil {
 		return nil, err
 	}
@@ -126,6 +180,7 @@ func (st *Storage) BlockByHeight(height base.Height) (block.Block, error) {
 func (st *Storage) manifestByFilter(filter bson.D) (block.Manifest, error) {
 	var manifest block.Manifest
 
+	filter = append(filter, bson.E{"height", bson.D{{"$lte", st.ConfirmedBlock()}}})
 	if err := st.client.GetByFilter(
 		defaultColNameManifest,
 		filter,
@@ -138,6 +193,7 @@ func (st *Storage) manifestByFilter(filter bson.D) (block.Manifest, error) {
 
 			return nil
 		},
+		options.FindOne().SetSort(NewFilter("height", -1).D()),
 	); err != nil {
 		return nil, err
 	}
@@ -314,7 +370,7 @@ func (st *Storage) NewSeals(seals []seal.Seal) error {
 	return st.client.Bulk(defaultColNameOperationSeal, operationModels)
 }
 
-func (st *Storage) Seals(callback func(valuehash.Hash, seal.Seal) (bool, error), sort bool, load bool) error {
+func (st *Storage) Seals(callback func(valuehash.Hash, seal.Seal) (bool, error), sort, load bool) error {
 	var dir int
 	if sort {
 		dir = 1
@@ -464,18 +520,19 @@ func (st *Storage) Proposal(height base.Height, round base.Round) (ballot.Propos
 func (st *Storage) State(key string) (state.State, bool, error) {
 	var sta state.State
 
-	if err := st.client.GetByID(
+	if err := st.client.Find(
 		defaultColNameState,
-		key,
-		func(decoder func(interface{}) error) error {
+		bson.D{{"key", key}, {"height", bson.D{{"$lte", st.ConfirmedBlock()}}}},
+		func(_ interface{}, decoder func(interface{}) error) (bool, error) {
 			if i, err := loadStateFromDecoder(decoder, st.encs); err != nil {
-				return err
+				return false, err
 			} else {
 				sta = i
 			}
 
-			return nil
+			return false, nil
 		},
+		options.Find().SetSort(NewFilter("height", -1).D()).SetLimit(1),
 	); err != nil {
 		if xerrors.Is(err, storage.NotFoundError) {
 			return nil, false, nil
@@ -498,7 +555,19 @@ func (st *Storage) NewState(sta state.State) error {
 }
 
 func (st *Storage) HasOperation(h valuehash.Hash) (bool, error) {
-	return st.client.Exists(defaultColNameOperation, NewFilter("_id", h.String()).D())
+	count, err := st.client.Count(
+		defaultColNameOperation,
+		bson.D{
+			{"hash_string", h.String()},
+			{"height", bson.D{{"$lte", st.ConfirmedBlock()}}},
+		},
+		options.Count().SetLimit(1),
+	)
+	if err != nil {
+		return false, err
+	}
+
+	return count > 0, nil
 }
 
 func (st *Storage) OpenBlockStorage(blk block.Block) (storage.BlockStorage, error) {
@@ -533,6 +602,42 @@ func (st *Storage) Initialize() error {
 		if _, err := iv.CreateMany(context.TODO(), models); err != nil {
 			return storage.WrapError(err)
 		}
+	}
+
+	return nil
+}
+
+func (st *Storage) CleanupIncompleteData() error {
+	// block
+	if _, err := st.client.Delete(
+		defaultColNameBlock,
+		bson.D{{"height", bson.D{{"$gt", st.ConfirmedBlock()}}}},
+	); err != nil {
+		return err
+	}
+
+	// manifest
+	if _, err := st.client.Delete(
+		defaultColNameManifest,
+		bson.D{{"height", bson.D{{"$gt", st.ConfirmedBlock()}}}},
+	); err != nil {
+		return err
+	}
+
+	// operation
+	if _, err := st.client.Delete(
+		defaultColNameOperation,
+		bson.D{{"height", bson.D{{"$gt", st.ConfirmedBlock()}}}},
+	); err != nil {
+		return err
+	}
+
+	// state
+	if _, err := st.client.Delete(
+		defaultColNameState,
+		bson.D{{"height", bson.D{{"$gt", st.ConfirmedBlock()}}}},
+	); err != nil {
+		return err
 	}
 
 	return nil

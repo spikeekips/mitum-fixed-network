@@ -1,6 +1,7 @@
 package state
 
 import (
+	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/base/valuehash"
 	"github.com/spikeekips/mitum/util/encoder"
 )
@@ -11,9 +12,11 @@ func (st *StateV0) unpack(
 	key string,
 	bValue,
 	bPreviousBlock []byte,
+	height base.Height,
+	bCurrentBlock []byte,
 	bOperationInfos [][]byte,
 ) error {
-	var h, previousBlock valuehash.Hash
+	var h, previousBlock, currentBlock valuehash.Hash
 	if i, err := valuehash.Decode(enc, bH); err != nil {
 		return err
 	} else {
@@ -24,6 +27,12 @@ func (st *StateV0) unpack(
 		return err
 	} else {
 		previousBlock = i
+	}
+
+	if i, err := valuehash.Decode(enc, bCurrentBlock); err != nil {
+		return err
+	} else {
+		currentBlock = i
 	}
 
 	var value Value
@@ -46,6 +55,8 @@ func (st *StateV0) unpack(
 	st.key = key
 	st.value = value
 	st.previousBlock = previousBlock
+	st.currentHeight = height
+	st.currentBlock = currentBlock
 	st.operations = ops
 
 	return nil

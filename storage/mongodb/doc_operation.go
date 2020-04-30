@@ -5,6 +5,7 @@ import (
 
 	"go.mongodb.org/mongo-driver/bson"
 
+	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/base/operation"
 	"github.com/spikeekips/mitum/util/encoder"
 	bsonencoder "github.com/spikeekips/mitum/util/encoder/bson"
@@ -12,11 +13,12 @@ import (
 
 type OperationDoc struct {
 	BaseDoc
-	op operation.Operation
+	op     operation.Operation
+	height base.Height
 }
 
-func NewOperationDoc(op operation.Operation, enc encoder.Encoder) (OperationDoc, error) {
-	b, err := NewBaseDoc(op.Hash().String(), op, enc)
+func NewOperationDoc(op operation.Operation, enc encoder.Encoder, height base.Height) (OperationDoc, error) {
+	b, err := NewBaseDoc(nil, op, enc)
 	if err != nil {
 		return OperationDoc{}, err
 	}
@@ -24,6 +26,7 @@ func NewOperationDoc(op operation.Operation, enc encoder.Encoder) (OperationDoc,
 	return OperationDoc{
 		BaseDoc: b,
 		op:      op,
+		height:  height,
 	}, nil
 }
 
@@ -33,7 +36,9 @@ func (od OperationDoc) MarshalBSON() ([]byte, error) {
 		return nil, err
 	}
 
+	m["hash_string"] = od.op.Hash().String()
 	m["hash"] = od.op.Hash()
+	m["height"] = od.height
 
 	return bsonencoder.Marshal(m)
 }

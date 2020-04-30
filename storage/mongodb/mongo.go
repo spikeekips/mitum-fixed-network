@@ -16,8 +16,8 @@ import (
 )
 
 type (
-	getRecordCallback  func(func(interface{}) error /* decoder */) error
-	getRecordsCallback func(interface{} /* doc id */, func(interface{}) error /* decoder */) (bool, error)
+	getRecordCallback  func(*mongo.SingleResult) error
+	getRecordsCallback func(*mongo.Cursor) (bool, error)
 )
 
 type Client struct {
@@ -102,7 +102,7 @@ func (cl *Client) Find(
 
 	var err error
 	for next() {
-		if keep, e := callback(cursor.ID(), cursor.Decode); e != nil {
+		if keep, e := callback(cursor); e != nil {
 			err = e
 			break
 		} else if !keep {
@@ -128,7 +128,7 @@ func (cl *Client) GetByID(
 		return nil
 	}
 
-	return callback(res.Decode)
+	return callback(res)
 }
 
 func (cl *Client) GetByFilter(
@@ -146,7 +146,7 @@ func (cl *Client) GetByFilter(
 		return nil
 	}
 
-	return callback(res.Decode)
+	return callback(res)
 }
 
 func (cl *Client) getByFilter(col string, filter bson.D, opts ...*options.FindOneOptions) (*mongo.SingleResult, error) {
@@ -185,6 +185,18 @@ func (cl *Client) setWithID(col string, doc Doc) (interface{}, error) {
 	}
 
 	return doc.ID(), nil
+}
+
+func (cl *Client) SetRaw(col string, raw bson.Raw) (interface{}, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), cl.execTimeout)
+	defer cancel()
+
+	res, err := cl.db.Collection(col).InsertOne(ctx, raw)
+	if err != nil {
+		return nil, storage.WrapError(err)
+	}
+
+	return res.InsertedID, nil
 }
 
 func (cl *Client) setWithoutID(col string, doc interface{}) (interface{}, error) {

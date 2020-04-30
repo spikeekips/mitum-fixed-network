@@ -68,8 +68,8 @@ func NewStorage(client *Client, encs *encoder.Encoders, enc encoder.Encoder) (*S
 func (st *Storage) loadConfirmedBlock() (base.Height, error) {
 	var height base.Height
 	if err := st.client.GetByID(defaultColNameInfo, confirmedBlockDocID,
-		func(decoder func(interface{}) error) error {
-			if i, err := loadConfirmedBlock(decoder, st.encs); err != nil {
+		func(res *mongo.SingleResult) error {
+			if i, err := loadConfirmedBlock(res.Decode, st.encs); err != nil {
 				return err
 			} else {
 				height = i
@@ -128,8 +128,8 @@ func (st *Storage) LastBlock() (block.Block, error) {
 	if err := st.client.Find(
 		defaultColNameBlock,
 		bson.D{{"height", bson.D{{"$lte", st.ConfirmedBlock()}}}},
-		func(_ interface{}, decoder func(interface{}) error) (bool, error) {
-			if i, err := loadBlockFromDecoder(decoder, st.encs); err != nil {
+		func(cursor *mongo.Cursor) (bool, error) {
+			if i, err := loadBlockFromDecoder(cursor.Decode, st.encs); err != nil {
 				return false, err
 			} else {
 				blk = i
@@ -152,8 +152,8 @@ func (st *Storage) blockByFilter(filter bson.D) (block.Block, error) {
 	if err := st.client.GetByFilter(
 		defaultColNameBlock,
 		filter,
-		func(decoder func(interface{}) error) error {
-			if i, err := loadBlockFromDecoder(decoder, st.encs); err != nil {
+		func(res *mongo.SingleResult) error {
+			if i, err := loadBlockFromDecoder(res.Decode, st.encs); err != nil {
 				return err
 			} else {
 				blk = i
@@ -184,8 +184,8 @@ func (st *Storage) manifestByFilter(filter bson.D) (block.Manifest, error) {
 	if err := st.client.GetByFilter(
 		defaultColNameManifest,
 		filter,
-		func(decoder func(interface{}) error) error {
-			if i, err := loadManifestFromDecoder(decoder, st.encs); err != nil {
+		func(res *mongo.SingleResult) error {
+			if i, err := loadManifestFromDecoder(res.Decode, st.encs); err != nil {
 				return err
 			} else {
 				manifest = i
@@ -215,8 +215,8 @@ func (st *Storage) filterVoteproof(filter bson.D, opts ...*options.FindOptions) 
 	if err := st.client.Find(
 		defaultColNameVoteproof,
 		filter,
-		func(_ interface{}, decoder func(interface{}) error) (bool, error) {
-			if i, err := loadVoteproofFromDecoder(decoder, st.encs); err != nil {
+		func(cursor *mongo.Cursor) (bool, error) {
+			if i, err := loadVoteproofFromDecoder(cursor.Decode, st.encs); err != nil {
 				return false, err
 			} else {
 				voteproof = i
@@ -294,8 +294,8 @@ func (st *Storage) Voteproofs(callback func(base.Voteproof) (bool, error), sort 
 	return st.client.Find(
 		defaultColNameVoteproof,
 		bson.D{},
-		func(_ interface{}, decoder func(interface{}) error) (bool, error) {
-			if i, err := loadVoteproofFromDecoder(decoder, st.encs); err != nil {
+		func(cursor *mongo.Cursor) (bool, error) {
+			if i, err := loadVoteproofFromDecoder(cursor.Decode, st.encs); err != nil {
 				return false, err
 			} else {
 				return callback(i)
@@ -311,8 +311,8 @@ func (st *Storage) Seal(h valuehash.Hash) (seal.Seal, error) {
 	if err := st.client.GetByID(
 		defaultColNameSeal,
 		h.String(),
-		func(decoder func(interface{}) error) error {
-			if i, err := loadSealFromDecoder(decoder, st.encs); err != nil {
+		func(res *mongo.SingleResult) error {
+			if i, err := loadSealFromDecoder(res.Decode, st.encs); err != nil {
 				return err
 			} else {
 				sl = i
@@ -384,19 +384,19 @@ func (st *Storage) Seals(callback func(valuehash.Hash, seal.Seal) (bool, error),
 	return st.client.Find(
 		defaultColNameSeal,
 		bson.D{},
-		func(_ interface{}, decoder func(interface{}) error) (bool, error) {
+		func(cursor *mongo.Cursor) (bool, error) {
 			var h valuehash.Hash
 			var sl seal.Seal
 
 			if load {
-				if i, err := loadSealFromDecoder(decoder, st.encs); err != nil {
+				if i, err := loadSealFromDecoder(cursor.Decode, st.encs); err != nil {
 					return false, err
 				} else {
 					h = i.Hash()
 					sl = i
 				}
 			} else {
-				if i, err := loadSealHashFromDecoder(decoder, st.encs); err != nil {
+				if i, err := loadSealHashFromDecoder(cursor.Decode, st.encs); err != nil {
 					return false, err
 				} else {
 					h = i
@@ -423,9 +423,9 @@ func (st *Storage) StagedOperationSeals(callback func(operation.Seal) (bool, err
 	return st.client.Find(
 		defaultColNameOperationSeal,
 		bson.D{},
-		func(_ interface{}, decoder func(interface{}) error) (bool, error) {
+		func(cursor *mongo.Cursor) (bool, error) {
 			var sl operation.Seal
-			if i, err := loadSealFromDecoder(decoder, st.encs); err != nil {
+			if i, err := loadSealFromDecoder(cursor.Decode, st.encs); err != nil {
 				return false, err
 			} else if v, ok := i.(operation.Seal); !ok {
 				return false, xerrors.Errorf("not operation.Seal: %T", i)
@@ -465,9 +465,9 @@ func (st *Storage) Proposals(callback func(ballot.Proposal) (bool, error), sort 
 	return st.client.Find(
 		defaultColNameProposal,
 		bson.D{},
-		func(_ interface{}, decoder func(interface{}) error) (bool, error) {
+		func(cursor *mongo.Cursor) (bool, error) {
 			var proposal ballot.Proposal
-			if i, err := loadProposalFromDecoder(decoder, st.encs); err != nil {
+			if i, err := loadProposalFromDecoder(cursor.Decode, st.encs); err != nil {
 				return false, err
 			} else {
 				proposal = i
@@ -496,8 +496,8 @@ func (st *Storage) Proposal(height base.Height, round base.Round) (ballot.Propos
 	if err := st.client.Find(
 		defaultColNameProposal,
 		NewFilter("height", height).Add("round", round).D(),
-		func(_ interface{}, decoder func(interface{}) error) (bool, error) {
-			if i, err := loadProposalFromDecoder(decoder, st.encs); err != nil {
+		func(cursor *mongo.Cursor) (bool, error) {
+			if i, err := loadProposalFromDecoder(cursor.Decode, st.encs); err != nil {
 				return false, err
 			} else {
 				proposal = i
@@ -523,8 +523,8 @@ func (st *Storage) State(key string) (state.State, bool, error) {
 	if err := st.client.Find(
 		defaultColNameState,
 		bson.D{{"key", key}, {"height", bson.D{{"$lte", st.ConfirmedBlock()}}}},
-		func(_ interface{}, decoder func(interface{}) error) (bool, error) {
-			if i, err := loadStateFromDecoder(decoder, st.encs); err != nil {
+		func(cursor *mongo.Cursor) (bool, error) {
+			if i, err := loadStateFromDecoder(cursor.Decode, st.encs); err != nil {
 				return false, err
 			} else {
 				sta = i

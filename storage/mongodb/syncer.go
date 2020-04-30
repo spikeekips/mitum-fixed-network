@@ -5,10 +5,12 @@ import (
 	"sync"
 	"time"
 
+	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
 
 	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/base/block"
+	"github.com/spikeekips/mitum/util"
 	"github.com/spikeekips/mitum/util/logging"
 )
 
@@ -94,7 +96,7 @@ func (st *SyncerStorage) SetManifests(manifests []block.Manifest) error {
 		}
 	}
 
-	if err := st.manifestStorage.client.Bulk(defaultColNameManifest, models); err != nil {
+	if err := st.manifestStorage.Client().Bulk(defaultColNameManifest, models); err != nil {
 		return err
 	}
 
@@ -166,16 +168,22 @@ func (st *SyncerStorage) Commit() error {
 		Hinted("to_height", st.heightTo).
 		Msg("trying to commit blocks")
 
-	for i := st.heightFrom.Int64(); i <= st.heightTo.Int64(); i++ {
-		if blk, err := st.Block(base.Height(i)); err != nil {
-			return err
-		} else if err := st.commitBlock(blk); err != nil {
-			st.Log().Error().Err(err).Int64("height", i).Msg("failed to commit block")
+	for _, col := range []string{
+		defaultColNameBlock,
+		defaultColNameManifest,
+		defaultColNameVoteproof,
+		defaultColNameSeal,
+		defaultColNameOperation,
+		defaultColNameOperationSeal,
+		defaultColNameProposal,
+		defaultColNameState,
+	} {
+		if err := moveWithinCol(st.blockStorage, col, st.main, col, bson.D{}); err != nil {
 			return err
 		}
-
-		st.Log().Debug().Int64("height", i).Msg("committed block")
 	}
+
+	st.main.SetConfirmedBlock(st.heightTo)
 
 	return nil
 }
@@ -231,4 +239,34 @@ func newTempStorage(main *Storage, prefix string) (*Storage, error) {
 	}
 
 	return NewStorage(tmpClient, main.Encoders(), main.Encoder())
+}
+
+func moveWithinCol(from *Storage, fromCol string, to *Storage, toCol string, filter bson.D) error {
+	var limit int = 100
+	var models []mongo.WriteModel
+	err := from.Client().Find(fromCol, filter, func(cursor *mongo.Cursor) (bool, error) {
+		if len(models) == limit {
+			if err := to.Client().Bulk(toCol, models); err != nil {
+				return false, err
+			} else {
+				models = nil
+			}
+		}
+
+		raw := util.CopyBytes(cursor.Current)
+		models = append(models, mongo.NewInsertOneModel().SetDocument(bson.Raw(raw)))
+
+		return true, nil
+	})
+	if err != nil {
+		return err
+	}
+
+	if len(models) > 0 {
+		if err := to.Client().Bulk(toCol, models); err != nil {
+			return err
+		}
+	}
+
+	return nil
 }

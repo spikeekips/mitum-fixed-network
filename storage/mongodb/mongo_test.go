@@ -10,6 +10,7 @@ import (
 	"github.com/stretchr/testify/suite"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
+	"go.mongodb.org/mongo-driver/mongo"
 
 	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/base/block"
@@ -102,9 +103,9 @@ func (t *testMongodbClient) TestFindUnknown() {
 	err := t.client.Find(
 		"showme",
 		NewFilter("findme", 1).D(),
-		func(_ interface{}, decoder func(interface{}) error) (bool, error) {
+		func(cursor *mongo.Cursor) (bool, error) {
 			var record bson.M
-			if err := decoder(&record); err != nil {
+			if err := cursor.Decode(&record); err != nil {
 				return false, err
 			} else {
 				records = append(records, record)
@@ -128,9 +129,9 @@ func (t *testMongodbClient) TestInsertOne() {
 
 	var rs []bson.M
 	err = t.client.Find("showme", NewFilter("findme", int64(3)).D(),
-		func(_ interface{}, decoder func(interface{}) error) (bool, error) {
+		func(cursor *mongo.Cursor) (bool, error) {
 			var record bson.M
-			if err := decoder(&record); err != nil {
+			if err := cursor.Decode(&record); err != nil {
 				return false, err
 			} else {
 				rs = append(rs, record)
@@ -164,9 +165,9 @@ func (t *testMongodbClient) TestOverwrite() {
 	{ // existing one should be removed
 		var rs []bson.M
 		err := t.client.Find("showme", NewFilter("findme", int64(3)).D(),
-			func(_ interface{}, decoder func(interface{}) error) (bool, error) {
+			func(cursor *mongo.Cursor) (bool, error) {
 				var record bson.M
-				if err := decoder(&record); err != nil {
+				if err := cursor.Decode(&record); err != nil {
 					return false, err
 				} else {
 					rs = append(rs, record)
@@ -182,9 +183,9 @@ func (t *testMongodbClient) TestOverwrite() {
 
 	var rs []bson.M
 	err = t.client.Find("showme", NewFilter("findme", int64(33)).D(),
-		func(_ interface{}, decoder func(interface{}) error) (bool, error) {
+		func(cursor *mongo.Cursor) (bool, error) {
 			var record bson.M
-			if err := decoder(&record); err != nil {
+			if err := cursor.Decode(&record); err != nil {
 				return false, err
 			} else {
 				rs = append(rs, record)
@@ -212,9 +213,9 @@ func (t *testMongodbClient) TestInsertWithObjectID() {
 
 	var rs []bson.M
 	err = t.client.Find("showme", NewFilter("_id", id).D(),
-		func(_ interface{}, decoder func(interface{}) error) (bool, error) {
+		func(cursor *mongo.Cursor) (bool, error) {
 			var record bson.M
-			if err := decoder(&record); err != nil {
+			if err := cursor.Decode(&record); err != nil {
 				return false, err
 			} else {
 				rs = append(rs, record)
@@ -227,6 +228,32 @@ func (t *testMongodbClient) TestInsertWithObjectID() {
 
 	t.Equal(id, rs[0]["_id"])
 	t.Equal(doc.Doc()["findme"], rs[0]["findme"])
+}
+
+func (t *testMongodbClient) TestMoveRawBytes() {
+	doc := NewDocNilID(nil, bson.M{"findme": int64(3)})
+	insertedID, err := t.client.Set("showme", doc)
+	t.NoError(err)
+
+	var newIsertedID interface{}
+	t.client.Find("showme", bson.D{}, func(cursor *mongo.Cursor) (bool, error) {
+		i, err := t.client.SetRaw("new_showme", cursor.Current)
+		t.NoError(err)
+
+		newIsertedID = i
+
+		return false, nil
+	})
+
+	var newDoc bson.M
+	err = t.client.GetByID("new_showme", newIsertedID,
+		func(res *mongo.SingleResult) error {
+			return res.Decode(&newDoc)
+		})
+	t.NoError(err)
+
+	t.Equal(insertedID, newDoc["_id"])
+	t.Equal(doc.Doc()["findme"], newDoc["findme"])
 }
 
 func TestMongodbClient(t *testing.T) {

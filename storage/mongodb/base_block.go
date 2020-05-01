@@ -14,6 +14,7 @@ import (
 	"github.com/spikeekips/mitum/base/tree"
 	"github.com/spikeekips/mitum/base/valuehash"
 	"github.com/spikeekips/mitum/storage"
+	"github.com/spikeekips/mitum/util"
 )
 
 type BlockStorage struct {
@@ -88,7 +89,7 @@ func (bst *BlockStorage) SetBlock(blk block.Block) error {
 func (bst *BlockStorage) UnstageOperationSeals(seals []valuehash.Hash) error {
 	for _, h := range seals {
 		bst.operationSealModels = append(bst.operationSealModels,
-			mongo.NewDeleteOneModel().SetFilter(NewFilter("_id", h.String()).D()),
+			mongo.NewDeleteOneModel().SetFilter(util.NewBSONFilter("_id", h.String()).D()),
 		)
 	}
 
@@ -176,7 +177,7 @@ func (bst *BlockStorage) setStates(tr *tree.AVLTree) error {
 		}
 		models = append(models,
 			// NOTE state is managed by it's Key()
-			mongo.NewDeleteOneModel().SetFilter(NewFilter("_id", doc.ID()).D()),
+			mongo.NewDeleteOneModel().SetFilter(util.NewBSONFilter("_id", doc.ID()).D()),
 			mongo.NewInsertOneModel().SetDocument(doc),
 		)
 

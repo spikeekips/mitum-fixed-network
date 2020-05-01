@@ -106,7 +106,7 @@ func (st *SyncerStorage) SetManifests(manifests []block.Manifest) error {
 }
 
 func (st *SyncerStorage) HasBlock(height base.Height) (bool, error) {
-	return st.blockStorage.client.Exists(defaultColNameBlock, NewFilter("height", height).D())
+	return st.blockStorage.client.Exists(defaultColNameBlock, util.NewBSONFilter("height", height).D())
 }
 
 func (st *SyncerStorage) Block(height base.Height) (block.Block, error) {

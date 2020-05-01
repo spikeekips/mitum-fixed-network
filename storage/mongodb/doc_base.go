@@ -8,6 +8,10 @@ import (
 	"github.com/spikeekips/mitum/util/hint"
 )
 
+type Doc interface {
+	ID() interface{}
+}
+
 type BaseDoc struct {
 	id          interface{}
 	encoderHint hint.Hint

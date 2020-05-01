@@ -17,6 +17,7 @@ import (
 	"github.com/spikeekips/mitum/base/state"
 	"github.com/spikeekips/mitum/base/valuehash"
 	"github.com/spikeekips/mitum/storage"
+	"github.com/spikeekips/mitum/util"
 	"github.com/spikeekips/mitum/util/encoder"
 	"github.com/spikeekips/mitum/util/logging"
 )
@@ -127,7 +128,7 @@ func (st *Storage) LastBlock() (block.Block, error) {
 
 	if err := st.client.Find(
 		defaultColNameBlock,
-		bson.D{{"height", bson.D{{"$lte", st.ConfirmedBlock()}}}},
+		util.EmptyBSONFilter().AddOp("height", st.ConfirmedBlock(), "$lte").D(),
 		func(cursor *mongo.Cursor) (bool, error) {
 			if i, err := loadBlockFromDecoder(cursor.Decode, st.encs); err != nil {
 				return false, err
@@ -137,7 +138,7 @@ func (st *Storage) LastBlock() (block.Block, error) {
 
 			return false, nil
 		},
-		options.Find().SetSort(NewFilter("height", -1).D()).SetLimit(1),
+		options.Find().SetSort(util.NewBSONFilter("height", -1).D()).SetLimit(1),
 	); err != nil {
 		return nil, err
 	}
@@ -148,10 +149,9 @@ func (st *Storage) LastBlock() (block.Block, error) {
 func (st *Storage) blockByFilter(filter bson.D) (block.Block, error) {
 	var blk block.Block
 
-	filter = append(filter, bson.E{"height", bson.D{{"$lte", st.ConfirmedBlock()}}})
 	if err := st.client.GetByFilter(
 		defaultColNameBlock,
-		filter,
+		util.NewBSONFilterFromD(filter).AddOp("height", st.ConfirmedBlock(), "$lte").D(),
 		func(res *mongo.SingleResult) error {
 			if i, err := loadBlockFromDecoder(res.Decode, st.encs); err != nil {
 				return err
@@ -161,7 +161,7 @@ func (st *Storage) blockByFilter(filter bson.D) (block.Block, error) {
 
 			return nil
 		},
-		options.FindOne().SetSort(NewFilter("height", -1).D()),
+		options.FindOne().SetSort(util.NewBSONFilter("height", -1).D()),
 	); err != nil {
 		return nil, err
 	}
@@ -170,20 +170,19 @@ func (st *Storage) blockByFilter(filter bson.D) (block.Block, error) {
 }
 
 func (st *Storage) Block(h valuehash.Hash) (block.Block, error) {
-	return st.blockByFilter(NewFilter("_id", h.String()).D())
+	return st.blockByFilter(util.NewBSONFilter("_id", h.String()).D())
 }
 
 func (st *Storage) BlockByHeight(height base.Height) (block.Block, error) {
-	return st.blockByFilter(NewFilter("height", height).D())
+	return st.blockByFilter(util.NewBSONFilter("height", height).D())
 }
 
 func (st *Storage) manifestByFilter(filter bson.D) (block.Manifest, error) {
 	var manifest block.Manifest
 
-	filter = append(filter, bson.E{"height", bson.D{{"$lte", st.ConfirmedBlock()}}})
 	if err := st.client.GetByFilter(
 		defaultColNameManifest,
-		filter,
+		util.NewBSONFilterFromD(filter).AddOp("height", st.ConfirmedBlock(), "$lte").D(),
 		func(res *mongo.SingleResult) error {
 			if i, err := loadManifestFromDecoder(res.Decode, st.encs); err != nil {
 				return err
@@ -193,7 +192,7 @@ func (st *Storage) manifestByFilter(filter bson.D) (block.Manifest, error) {
 
 			return nil
 		},
-		options.FindOne().SetSort(NewFilter("height", -1).D()),
+		options.FindOne().SetSort(util.NewBSONFilter("height", -1).D()),
 	); err != nil {
 		return nil, err
 	}
@@ -202,11 +201,11 @@ func (st *Storage) manifestByFilter(filter bson.D) (block.Manifest, error) {
 }
 
 func (st *Storage) Manifest(h valuehash.Hash) (block.Manifest, error) {
-	return st.manifestByFilter(NewFilter("_id", h.String()).D())
+	return st.manifestByFilter(util.NewBSONFilter("_id", h.String()).D())
 }
 
 func (st *Storage) ManifestByHeight(height base.Height) (block.Manifest, error) {
-	return st.manifestByFilter(NewFilter("height", height).D())
+	return st.manifestByFilter(util.NewBSONFilter("height", height).D())
 }
 
 func (st *Storage) filterVoteproof(filter bson.D, opts ...*options.FindOptions) (base.Voteproof, error) {
@@ -234,8 +233,8 @@ func (st *Storage) filterVoteproof(filter bson.D, opts ...*options.FindOptions) 
 
 func (st *Storage) LastINITVoteproof() (base.Voteproof, error) {
 	return st.filterVoteproof(
-		NewFilter("stage", base.StageINIT).D(),
-		options.Find().SetSort(NewFilter("height", -1).D()),
+		util.NewBSONFilter("stage", base.StageINIT).D(),
+		options.Find().SetSort(util.NewBSONFilter("height", -1).D()),
 	)
 }
 
@@ -251,22 +250,22 @@ func (st *Storage) NewINITVoteproof(voteproof base.Voteproof) error {
 
 func (st *Storage) LastINITVoteproofOfHeight(height base.Height) (base.Voteproof, error) {
 	return st.filterVoteproof(
-		NewFilter("height", height).Add("stage", base.StageINIT).D(),
+		util.NewBSONFilter("height", height).Add("stage", base.StageINIT).D(),
 		nil,
 	)
 }
 
 func (st *Storage) LastACCEPTVoteproofOfHeight(height base.Height) (base.Voteproof, error) {
 	return st.filterVoteproof(
-		NewFilter("height", height).Add("stage", base.StageACCEPT).D(),
+		util.NewBSONFilter("height", height).Add("stage", base.StageACCEPT).D(),
 		nil,
 	)
 }
 
 func (st *Storage) LastACCEPTVoteproof() (base.Voteproof, error) {
 	return st.filterVoteproof(
-		NewFilter("stage", base.StageACCEPT).D(),
-		options.Find().SetSort(NewFilter("height", -1).D()),
+		util.NewBSONFilter("stage", base.StageACCEPT).D(),
+		options.Find().SetSort(util.NewBSONFilter("height", -1).D()),
 	)
 }
 
@@ -289,7 +288,7 @@ func (st *Storage) Voteproofs(callback func(base.Voteproof) (bool, error), sort 
 	}
 
 	opt := options.Find()
-	opt.SetSort(NewFilter("height", dir).D())
+	opt.SetSort(util.NewBSONFilter("height", dir).D())
 
 	return st.client.Find(
 		defaultColNameVoteproof,
@@ -345,7 +344,7 @@ func (st *Storage) NewSeals(seals []seal.Seal) error {
 		}
 
 		models = append(models,
-			mongo.NewDeleteOneModel().SetFilter(NewFilter("_id", doc.ID()).D()),
+			mongo.NewDeleteOneModel().SetFilter(util.NewBSONFilter("_id", doc.ID()).D()),
 			mongo.NewInsertOneModel().SetDocument(doc),
 		)
 
@@ -354,7 +353,7 @@ func (st *Storage) NewSeals(seals []seal.Seal) error {
 		}
 
 		operationModels = append(operationModels,
-			mongo.NewDeleteOneModel().SetFilter(NewFilter("_id", doc.ID()).D()),
+			mongo.NewDeleteOneModel().SetFilter(util.NewBSONFilter("_id", doc.ID()).D()),
 			mongo.NewInsertOneModel().SetDocument(doc),
 		)
 	}
@@ -379,7 +378,7 @@ func (st *Storage) Seals(callback func(valuehash.Hash, seal.Seal) (bool, error),
 	}
 
 	opt := options.Find()
-	opt.SetSort(NewFilter("hash", dir).D())
+	opt.SetSort(util.NewBSONFilter("hash", dir).D())
 
 	return st.client.Find(
 		defaultColNameSeal,
@@ -418,7 +417,7 @@ func (st *Storage) StagedOperationSeals(callback func(operation.Seal) (bool, err
 	}
 
 	opt := options.Find()
-	opt.SetSort(NewFilter("inserted_at", dir).D())
+	opt.SetSort(util.NewBSONFilter("inserted_at", dir).D())
 
 	return st.client.Find(
 		defaultColNameOperationSeal,
@@ -444,7 +443,7 @@ func (st *Storage) UnstagedOperationSeals(seals []valuehash.Hash) error {
 
 	for _, h := range seals {
 		models = append(models,
-			mongo.NewDeleteOneModel().SetFilter(NewFilter("_id", h.String()).D()),
+			mongo.NewDeleteOneModel().SetFilter(util.NewBSONFilter("_id", h.String()).D()),
 		)
 	}
 
@@ -460,7 +459,7 @@ func (st *Storage) Proposals(callback func(ballot.Proposal) (bool, error), sort 
 	}
 
 	opt := options.Find()
-	opt.SetSort(NewFilter("height", dir).D())
+	opt.SetSort(util.NewBSONFilter("height", dir).D())
 
 	return st.client.Find(
 		defaultColNameProposal,
@@ -495,7 +494,7 @@ func (st *Storage) Proposal(height base.Height, round base.Round) (ballot.Propos
 
 	if err := st.client.Find(
 		defaultColNameProposal,
-		NewFilter("height", height).Add("round", round).D(),
+		util.NewBSONFilter("height", height).Add("round", round).D(),
 		func(cursor *mongo.Cursor) (bool, error) {
 			if i, err := loadProposalFromDecoder(cursor.Decode, st.encs); err != nil {
 				return false, err
@@ -505,7 +504,7 @@ func (st *Storage) Proposal(height base.Height, round base.Round) (ballot.Propos
 
 			return false, nil
 		},
-		options.Find().SetSort(NewFilter("height", -1).Add("round", -1).D()),
+		options.Find().SetSort(util.NewBSONFilter("height", -1).Add("round", -1).D()),
 	); err != nil {
 		return nil, err
 	}
@@ -522,7 +521,7 @@ func (st *Storage) State(key string) (state.State, bool, error) {
 
 	if err := st.client.Find(
 		defaultColNameState,
-		bson.D{{"key", key}, {"height", bson.D{{"$lte", st.ConfirmedBlock()}}}},
+		util.NewBSONFilter("key", key).AddOp("height", st.ConfirmedBlock(), "$lte").D(),
 		func(cursor *mongo.Cursor) (bool, error) {
 			if i, err := loadStateFromDecoder(cursor.Decode, st.encs); err != nil {
 				return false, err
@@ -532,7 +531,7 @@ func (st *Storage) State(key string) (state.State, bool, error) {
 
 			return false, nil
 		},
-		options.Find().SetSort(NewFilter("height", -1).D()).SetLimit(1),
+		options.Find().SetSort(util.NewBSONFilter("height", -1).D()).SetLimit(1),
 	); err != nil {
 		if xerrors.Is(err, storage.NotFoundError) {
 			return nil, false, nil
@@ -557,10 +556,7 @@ func (st *Storage) NewState(sta state.State) error {
 func (st *Storage) HasOperation(h valuehash.Hash) (bool, error) {
 	count, err := st.client.Count(
 		defaultColNameOperation,
-		bson.D{
-			{"hash_string", h.String()},
-			{"height", bson.D{{"$lte", st.ConfirmedBlock()}}},
-		},
+		util.NewBSONFilter("hash_string", h.String()).AddOp("height", st.ConfirmedBlock(), "$lte").D(),
 		options.Count().SetLimit(1),
 	)
 	if err != nil {
@@ -608,35 +604,25 @@ func (st *Storage) Initialize() error {
 }
 
 func (st *Storage) CleanupIncompleteData() error {
+	filter := util.EmptyBSONFilter().AddOp("height", st.ConfirmedBlock(), "$gt").D()
+
 	// block
-	if _, err := st.client.Delete(
-		defaultColNameBlock,
-		bson.D{{"height", bson.D{{"$gt", st.ConfirmedBlock()}}}},
-	); err != nil {
+	if _, err := st.client.Delete(defaultColNameBlock, filter); err != nil {
 		return err
 	}
 
 	// manifest
-	if _, err := st.client.Delete(
-		defaultColNameManifest,
-		bson.D{{"height", bson.D{{"$gt", st.ConfirmedBlock()}}}},
-	); err != nil {
+	if _, err := st.client.Delete(defaultColNameManifest, filter); err != nil {
 		return err
 	}
 
 	// operation
-	if _, err := st.client.Delete(
-		defaultColNameOperation,
-		bson.D{{"height", bson.D{{"$gt", st.ConfirmedBlock()}}}},
-	); err != nil {
+	if _, err := st.client.Delete(defaultColNameOperation, filter); err != nil {
 		return err
 	}
 
 	// state
-	if _, err := st.client.Delete(
-		defaultColNameState,
-		bson.D{{"height", bson.D{{"$gt", st.ConfirmedBlock()}}}},
-	); err != nil {
+	if _, err := st.client.Delete(defaultColNameState, filter); err != nil {
 		return err
 	}
 

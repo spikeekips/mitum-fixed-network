@@ -18,6 +18,7 @@ import (
 	"github.com/spikeekips/mitum/base/operation"
 	"github.com/spikeekips/mitum/base/seal"
 	"github.com/spikeekips/mitum/base/valuehash"
+	"github.com/spikeekips/mitum/util"
 	"github.com/spikeekips/mitum/util/encoder"
 	bsonencoder "github.com/spikeekips/mitum/util/encoder/bson"
 )
@@ -102,7 +103,7 @@ func (t *testMongodbClient) TestFindUnknown() {
 
 	err := t.client.Find(
 		"showme",
-		NewFilter("findme", 1).D(),
+		util.NewBSONFilter("findme", 1).D(),
 		func(cursor *mongo.Cursor) (bool, error) {
 			var record bson.M
 			if err := cursor.Decode(&record); err != nil {
@@ -128,7 +129,7 @@ func (t *testMongodbClient) TestInsertOne() {
 	t.False(inserted.(primitive.ObjectID).IsZero())
 
 	var rs []bson.M
-	err = t.client.Find("showme", NewFilter("findme", int64(3)).D(),
+	err = t.client.Find("showme", util.NewBSONFilter("findme", int64(3)).D(),
 		func(cursor *mongo.Cursor) (bool, error) {
 			var record bson.M
 			if err := cursor.Decode(&record); err != nil {
@@ -164,7 +165,7 @@ func (t *testMongodbClient) TestOverwrite() {
 
 	{ // existing one should be removed
 		var rs []bson.M
-		err := t.client.Find("showme", NewFilter("findme", int64(3)).D(),
+		err := t.client.Find("showme", util.NewBSONFilter("findme", int64(3)).D(),
 			func(cursor *mongo.Cursor) (bool, error) {
 				var record bson.M
 				if err := cursor.Decode(&record); err != nil {
@@ -182,7 +183,7 @@ func (t *testMongodbClient) TestOverwrite() {
 	}
 
 	var rs []bson.M
-	err = t.client.Find("showme", NewFilter("findme", int64(33)).D(),
+	err = t.client.Find("showme", util.NewBSONFilter("findme", int64(33)).D(),
 		func(cursor *mongo.Cursor) (bool, error) {
 			var record bson.M
 			if err := cursor.Decode(&record); err != nil {
@@ -212,7 +213,7 @@ func (t *testMongodbClient) TestInsertWithObjectID() {
 	t.Equal(id, inserted)
 
 	var rs []bson.M
-	err = t.client.Find("showme", NewFilter("_id", id).D(),
+	err = t.client.Find("showme", util.NewBSONFilter("_id", id).D(),
 		func(cursor *mongo.Cursor) (bool, error) {
 			var record bson.M
 			if err := cursor.Decode(&record); err != nil {

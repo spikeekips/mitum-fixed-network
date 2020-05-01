@@ -13,6 +13,7 @@ import (
 	"golang.org/x/xerrors"
 
 	"github.com/spikeekips/mitum/storage"
+	"github.com/spikeekips/mitum/util"
 )
 
 type (
@@ -119,7 +120,7 @@ func (cl *Client) GetByID(
 	callback getRecordCallback,
 	opts ...*options.FindOneOptions,
 ) error {
-	res, err := cl.getByFilter(col, NewFilter("_id", id).D(), opts...)
+	res, err := cl.getByFilter(col, util.NewBSONFilter("_id", id).D(), opts...)
 	if err != nil {
 		return err
 	}
@@ -176,7 +177,7 @@ func (cl *Client) Set(col string, doc Doc) (interface{}, error) {
 func (cl *Client) setWithID(col string, doc Doc) (interface{}, error) {
 	// NOTE remove existing one
 	models := []mongo.WriteModel{
-		mongo.NewDeleteOneModel().SetFilter(NewFilter("_id", doc.ID()).D()),
+		mongo.NewDeleteOneModel().SetFilter(util.NewBSONFilter("_id", doc.ID()).D()),
 		mongo.NewInsertOneModel().SetDocument(doc),
 	}
 

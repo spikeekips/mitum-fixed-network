@@ -4,17 +4,12 @@ import (
 	"fmt"
 	"net/url"
 
-	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/x/mongo/driver/connstring"
 	"golang.org/x/xerrors"
 
 	"github.com/spikeekips/mitum/storage"
 	"github.com/spikeekips/mitum/util"
 )
-
-type Doc interface {
-	ID() interface{}
-}
 
 func checkURI(uri string) (connstring.ConnString, error) {
 	cs, err := connstring.Parse(uri)
@@ -54,32 +49,4 @@ func NewTempURI(uri, prefix string) (string, error) {
 	}
 
 	return cs, nil
-}
-
-func BSONE(key string, value interface{}) bson.E {
-	return bson.E{Key: key, Value: value}
-}
-
-type Filter struct {
-	d bson.D
-}
-
-func EmptyFilter() *Filter {
-	return &Filter{d: bson.D{}}
-}
-
-func NewFilter(key string, value interface{}) *Filter {
-	ft := EmptyFilter()
-
-	return ft.Add(key, value)
-}
-
-func (ft *Filter) Add(key string, value interface{}) *Filter {
-	ft.d = append(ft.d, bson.E{Key: key, Value: value})
-
-	return ft
-}
-
-func (ft *Filter) D() bson.D {
-	return ft.d
 }

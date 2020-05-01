@@ -6,6 +6,8 @@ import (
 	"github.com/spikeekips/mitum/base/block"
 	"github.com/spikeekips/mitum/base/seal"
 	"github.com/spikeekips/mitum/base/valuehash"
+	"github.com/spikeekips/mitum/storage"
+	"golang.org/x/xerrors"
 )
 
 type DummyBlocksV0Generator struct {
@@ -100,12 +102,19 @@ func (bg *DummyBlocksV0Generator) syncBlocks(from *Localstate) error {
 	height := base.Height(0)
 	for {
 		if blk, err := from.Storage().BlockByHeight(height); err != nil {
-			break
+			if xerrors.Is(err, storage.NotFoundError) {
+				break
+			}
+			return err
 		} else {
 			blocks = append(blocks, blk)
 		}
 
 		height++
+	}
+
+	if len(blocks) < 1 {
+		return xerrors.Errorf("empty blocks for syncing blocks")
 	}
 
 	for _, blk := range blocks {

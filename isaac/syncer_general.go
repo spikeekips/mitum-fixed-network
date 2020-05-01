@@ -37,15 +37,15 @@ type GeneralSyncer struct { // nolint; maligned
 	sync.RWMutex
 	*logging.Logging
 	localstate              *Localstate
-	storage                 storage.SyncerStorage
+	st                      storage.SyncerStorage
 	sourceNodes             map[base.Address]Node
 	heightFrom              base.Height
 	heightTo                base.Height
 	limitManifestsPerWorker int
 	limitBlocksPerOnce      int
 	pn                      []base.Address
-	st                      SyncerState
-	baseManifest            block.Manifest
+	state                   SyncerState
+	bm                      block.Manifest
 	willSave                bool
 	stateChan               chan<- Syncer
 }
@@ -96,14 +96,14 @@ func NewGeneralSyncer(
 		heightTo:                to,
 		limitManifestsPerWorker: 100, // set default
 		limitBlocksPerOnce:      100, // set default
-		st:                      SyncerCreated,
+		state:                   SyncerCreated,
 	}
 
 	return cs, nil
 }
 
 func (cs *GeneralSyncer) SetLogger(l logging.Logger) logging.Logger {
-	if sl, ok := cs.storage.(logging.SetLogger); ok {
+	if sl, ok := cs.storage().(logging.SetLogger); ok {
 		_ = sl.SetLogger(l)
 	}
 
@@ -111,14 +111,11 @@ func (cs *GeneralSyncer) SetLogger(l logging.Logger) logging.Logger {
 }
 
 func (cs *GeneralSyncer) Close() error {
-	cs.RLock()
-	defer cs.RUnlock()
-
-	if cs.storage == nil {
+	if cs.storage() == nil {
 		return nil
 	}
 
-	return cs.storage.Close()
+	return cs.storage().Close()
 }
 
 func (cs *GeneralSyncer) SetStateChan(stateChan chan<- Syncer) *GeneralSyncer {
@@ -127,11 +124,18 @@ func (cs *GeneralSyncer) SetStateChan(stateChan chan<- Syncer) *GeneralSyncer {
 	return cs
 }
 
-func (cs *GeneralSyncer) State() SyncerState {
+func (cs *GeneralSyncer) storage() storage.SyncerStorage {
 	cs.RLock()
 	defer cs.RUnlock()
 
 	return cs.st
+}
+
+func (cs *GeneralSyncer) State() SyncerState {
+	cs.RLock()
+	defer cs.RUnlock()
+
+	return cs.state
 }
 
 func (cs *GeneralSyncer) setState(state SyncerState) {
@@ -140,7 +144,7 @@ func (cs *GeneralSyncer) setState(state SyncerState) {
 
 	cs.Log().Debug().Str("new_state", state.String()).Msg("state changed")
 
-	cs.st = state
+	cs.state = state
 
 	if cs.stateChan != nil {
 		go func() {
@@ -175,7 +179,7 @@ func (cs *GeneralSyncer) save() error {
 		return err
 	}
 
-	if err := cs.storage.Close(); err != nil {
+	if err := cs.storage().Close(); err != nil {
 		return err
 	}
 
@@ -185,6 +189,22 @@ func (cs *GeneralSyncer) save() error {
 func (cs *GeneralSyncer) reset() error {
 	cs.Lock()
 	defer cs.Unlock()
+
+	if cs.st != nil {
+		if err := cs.st.Close(); err != nil {
+			return err
+		}
+	}
+
+	if st, err := cs.localstate.Storage().SyncerStorage(); err != nil {
+		return err
+	} else {
+		cs.st = st
+	}
+
+	if sl, ok := cs.st.(logging.SetLogger); ok {
+		_ = sl.SetLogger(cs.Log())
+	}
 
 	provedNodes := make([]base.Address, len(cs.sourceNodes))
 	{
@@ -196,25 +216,23 @@ func (cs *GeneralSyncer) reset() error {
 	}
 
 	cs.pn = provedNodes
-	cs.baseManifest = nil
-
-	if cs.storage != nil {
-		if err := cs.storage.Close(); err != nil {
-			return err
-		}
-	}
-
-	if s, err := cs.localstate.Storage().SyncerStorage(); err != nil {
-		return err
-	} else {
-		cs.storage = s
-	}
-
-	if sl, ok := cs.storage.(logging.SetLogger); ok {
-		_ = sl.SetLogger(cs.Log())
-	}
+	cs.bm = nil
 
 	return nil
+}
+
+func (cs *GeneralSyncer) baseManifest() block.Manifest {
+	cs.RLock()
+	defer cs.RUnlock()
+
+	return cs.bm
+}
+
+func (cs *GeneralSyncer) setBaseManifest(bm block.Manifest) {
+	cs.Lock()
+	defer cs.Unlock()
+
+	cs.bm = bm
 }
 
 func (cs *GeneralSyncer) provedNodes() []base.Address {
@@ -224,15 +242,20 @@ func (cs *GeneralSyncer) provedNodes() []base.Address {
 	return cs.pn
 }
 
-func (cs *GeneralSyncer) Prepare(baseManifest block.Manifest) error {
+func (cs *GeneralSyncer) setProvedNodes(pn []base.Address) {
+	cs.Lock()
+	defer cs.Unlock()
+
+	cs.pn = pn
+}
+
+func (cs *GeneralSyncer) Prepare(bm block.Manifest) error {
 	if cs.State() >= SyncerPrepared {
 		cs.Log().Debug().Msg("already prepared")
 		return nil
 	}
 
-	cs.Lock()
-	cs.baseManifest = baseManifest
-	cs.Unlock()
+	cs.setBaseManifest(bm)
 
 	go func() {
 		// NOTE do forever unless successfully done
@@ -325,8 +348,8 @@ func (cs *GeneralSyncer) headAndTailManifests() error {
 		provedNodes = pn
 	}
 
-	if cs.baseManifest != nil {
-		checker := NewManifestsValidationChecker(cs.localstate, []block.Manifest{cs.baseManifest, manifests[0]})
+	if cs.baseManifest() != nil {
+		checker := NewManifestsValidationChecker(cs.localstate, []block.Manifest{cs.baseManifest(), manifests[0]})
 		_ = checker.SetLogger(cs.Log())
 
 		if err := util.NewChecker("sync-manifests-validation-checker", []util.CheckerFunc{
@@ -343,11 +366,9 @@ func (cs *GeneralSyncer) headAndTailManifests() error {
 		}
 	}
 
-	cs.Lock()
-	cs.pn = provedNodes
-	cs.Unlock()
+	cs.setProvedNodes(provedNodes)
 
-	if err := cs.storage.SetManifests(manifests); err != nil {
+	if err := cs.storage().SetManifests(manifests); err != nil {
 		return err
 	}
 
@@ -386,11 +407,9 @@ func (cs *GeneralSyncer) fillManifests() error {
 			}
 		}
 
-		cs.Lock()
-		cs.pn = pn
-		cs.Unlock()
+		cs.setProvedNodes(pn)
 
-		if err := cs.storage.SetManifests(ms); err != nil {
+		if err := cs.storage().SetManifests(ms); err != nil {
 			return err
 		}
 	}
@@ -446,7 +465,7 @@ func (cs *GeneralSyncer) fetchBlocksByNodes() error {
 
 	// check fetched blocks
 	for i := cs.heightFrom.Int64(); i <= cs.heightTo.Int64(); i++ {
-		if found, err := cs.storage.HasBlock(base.Height(i)); err != nil {
+		if found, err := cs.storage().HasBlock(base.Height(i)); err != nil {
 			return xerrors.Errorf("some block not found after fetching blocks: height=%d; %w", i, err)
 		} else if !found {
 			return xerrors.Errorf("some block not found after fetching blocks: height=%d", i)
@@ -506,7 +525,7 @@ func (cs *GeneralSyncer) distributeBlocksJob(worker *util.Worker) error {
 
 	var heights []base.Height
 	for i := from; i <= to; i++ {
-		if found, err := cs.storage.HasBlock(base.Height(i)); err != nil {
+		if found, err := cs.storage().HasBlock(base.Height(i)); err != nil {
 			return err
 		} else if found {
 			continue
@@ -853,7 +872,7 @@ func (cs *GeneralSyncer) checkFetchedBlocks(fetched []block.Block) ([]base.Heigh
 			continue
 		}
 
-		if manifest, err := cs.storage.Manifest(blk.Height()); err != nil {
+		if manifest, err := cs.storage().Manifest(blk.Height()); err != nil {
 			return nil, err
 		} else if !manifest.Hash().Equal(blk.Hash()) {
 			missing = append(missing, blk.Height())
@@ -863,7 +882,7 @@ func (cs *GeneralSyncer) checkFetchedBlocks(fetched []block.Block) ([]base.Heigh
 		filtered = append(filtered, blk)
 	}
 
-	if err := cs.storage.SetBlocks(filtered); err != nil {
+	if err := cs.storage().SetBlocks(filtered); err != nil {
 		return nil, err
 	}
 
@@ -895,7 +914,7 @@ func (cs *GeneralSyncer) fetchBlocks(node Node, heights []base.Height) ([]block.
 }
 
 func (cs *GeneralSyncer) commit() error {
-	return cs.storage.Commit()
+	return cs.storage().Commit()
 }
 
 func (cs *GeneralSyncer) HeightFrom() base.Height {
@@ -907,7 +926,7 @@ func (cs *GeneralSyncer) HeightTo() base.Height {
 }
 
 func (cs *GeneralSyncer) TailManifest() block.Manifest {
-	b, err := cs.storage.Manifest(cs.heightTo)
+	b, err := cs.storage().Manifest(cs.heightTo)
 	if err != nil {
 		return nil
 	}

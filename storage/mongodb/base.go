@@ -174,6 +174,10 @@ func (st *Storage) Block(h valuehash.Hash) (block.Block, error) {
 }
 
 func (st *Storage) BlockByHeight(height base.Height) (block.Block, error) {
+	if height > st.ConfirmedBlock() {
+		return nil, storage.NotFoundError
+	}
+
 	return st.blockByFilter(util.NewBSONFilter("height", height).D())
 }
 

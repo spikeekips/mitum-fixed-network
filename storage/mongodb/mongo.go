@@ -76,7 +76,7 @@ func (cl *Client) Collection(col string) *mongo.Collection {
 
 func (cl *Client) Find(
 	col string,
-	query bson.D,
+	query interface{},
 	callback getRecordsCallback,
 	opts ...*options.FindOptions,
 ) error {

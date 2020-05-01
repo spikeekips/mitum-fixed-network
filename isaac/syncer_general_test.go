@@ -177,13 +177,13 @@ func (t *testGeneralSyncer) TestHeadAndTailManifests() {
 	t.NoError(cs.headAndTailManifests())
 
 	{
-		b, err := cs.storage.Manifest(base + 1)
+		b, err := cs.storage().Manifest(base + 1)
 		t.NoError(err)
 		t.Equal(base+1, b.Height())
 	}
 
 	{
-		b, err := cs.storage.Manifest(target)
+		b, err := cs.storage().Manifest(target)
 		t.NoError(err)
 		t.Equal(base+5, b.Height())
 	}
@@ -214,11 +214,11 @@ func (t *testGeneralSyncer) TestFillManifests() {
 	defer cs.Close()
 
 	cs.reset()
-	cs.baseManifest = baseBlock
+	cs.setBaseManifest(baseBlock)
 	t.NoError(cs.prepare())
 
 	for i := baseBlock.Height().Int64() + 1; i < target.Int64()+1; i++ {
-		b, err := cs.storage.Manifest(base.Height(i))
+		b, err := cs.storage().Manifest(base.Height(i))
 		t.NoError(err)
 
 		t.Equal(i, b.Height().Int64())
@@ -250,14 +250,14 @@ func (t *testGeneralSyncer) TestFetchBlocks() {
 	t.NoError(cs.startBlocks())
 
 	for i := baseHeight.Int64() + 1; i < target.Int64()+1; i++ {
-		b, err := cs.storage.Manifest(base.Height(i))
+		b, err := cs.storage().Manifest(base.Height(i))
 		t.NoError(err)
 
 		t.Equal(i, b.Height().Int64())
 	}
 
 	for i := baseHeight.Int64() + 1; i < target.Int64()+1; i++ {
-		b, err := cs.storage.Block(base.Height(i))
+		b, err := cs.storage().Block(base.Height(i))
 		t.NoError(err)
 		t.Equal(b.Height(), base.Height(i))
 	}
@@ -283,7 +283,7 @@ func (t *testGeneralSyncer) TestSaveBlocks() {
 	t.NoError(cs.prepare())
 
 	for i := baseHeight.Int64() + 1; i < target.Int64()+1; i++ {
-		b, err := cs.storage.Manifest(base.Height(i))
+		b, err := cs.storage().Manifest(base.Height(i))
 		t.NoError(err)
 
 		t.Equal(i, b.Height().Int64())
@@ -294,7 +294,7 @@ func (t *testGeneralSyncer) TestSaveBlocks() {
 	t.NoError(cs.startBlocks())
 
 	for i := baseHeight.Int64() + 1; i < target.Int64()+1; i++ {
-		b, err := cs.storage.Block(base.Height(i))
+		b, err := cs.storage().Block(base.Height(i))
 		t.NoError(err)
 		t.Equal(b.Height(), base.Height(i))
 

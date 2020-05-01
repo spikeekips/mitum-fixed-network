@@ -29,7 +29,7 @@ func (ft *BSONFilter) Add(key string, value interface{}) *BSONFilter {
 }
 
 func (ft *BSONFilter) AddOp(key string, value interface{}, op string) *BSONFilter {
-	return ft.Add(key, bson.E{Key: op, Value: value})
+	return ft.Add(key, bson.D{bson.E{Key: op, Value: value}})
 }
 
 func (ft *BSONFilter) D() bson.D {

@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/suite"
+	"go.uber.org/goleak"
 )
 
 type testTime struct {
@@ -21,5 +22,7 @@ func (t *testTime) TestNormalize() {
 }
 
 func TestTime(t *testing.T) {
+	defer goleak.VerifyNone(t)
+
 	suite.Run(t, new(testTime))
 }

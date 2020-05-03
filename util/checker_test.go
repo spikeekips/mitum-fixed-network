@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"testing"
 
+	"go.uber.org/goleak"
 	"github.com/stretchr/testify/suite"
 )
 
@@ -89,5 +90,7 @@ func (t *testChecker) TestError() {
 }
 
 func TestChecker(t *testing.T) {
+	defer goleak.VerifyNone(t)
+
 	suite.Run(t, new(testChecker))
 }

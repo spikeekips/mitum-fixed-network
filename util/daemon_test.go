@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/suite"
+	"go.uber.org/goleak"
 	"golang.org/x/xerrors"
 )
 
@@ -210,5 +211,7 @@ func (t *testDaemon) TestMultipleTimer() {
 }
 
 func TestDaemon(t *testing.T) {
+	defer goleak.VerifyNone(t)
+
 	suite.Run(t, new(testDaemon))
 }

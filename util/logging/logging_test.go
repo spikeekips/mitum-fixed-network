@@ -7,6 +7,7 @@ import (
 
 	"github.com/rs/zerolog"
 	"github.com/stretchr/testify/suite"
+	"go.uber.org/goleak"
 )
 
 type testLogging struct {
@@ -256,5 +257,7 @@ func (t *testLogging) TestHintedObjectVerbose() {
 }
 
 func TestLogging(t *testing.T) {
+	defer goleak.VerifyNone(t)
+
 	suite.Run(t, new(testLogging))
 }

@@ -5,9 +5,9 @@ import (
 	"sort"
 	"sync"
 	"testing"
-	"time"
 
 	"github.com/stretchr/testify/suite"
+	"go.uber.org/goleak"
 )
 
 type testWorker struct {
@@ -104,8 +104,9 @@ func (t *testWorker) TestDoneBeforeRun() {
 func (t *testWorker) TestStopBeforeFinish() {
 	wk := NewWorker("test-worker", 1)
 
+	longrunningChan := make(chan struct{})
 	wk.Run(func(_ uint, job interface{}) error {
-		<-time.After(time.Second * 100)
+		<-longrunningChan
 		return fmt.Errorf("%d", job)
 	})
 
@@ -129,8 +130,19 @@ func (t *testWorker) TestStopBeforeFinish() {
 	t.Equal(numJob, int(wk.Jobs()))
 
 	wk.Done()
+	for i := 0; i < numJob; i++ {
+		longrunningChan <- struct{}{}
+	}
+
+	for _ = range wk.Errors() {
+		if wk.FinishedJobs() == numJob {
+			break
+		}
+	}
 }
 
 func TestWorker(t *testing.T) {
+	defer goleak.VerifyNone(t)
+
 	suite.Run(t, new(testWorker))
 }

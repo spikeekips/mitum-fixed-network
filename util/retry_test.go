@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/suite"
+	"go.uber.org/goleak"
 )
 
 type testRetry struct {
@@ -53,5 +54,7 @@ func (t *testRetry) TestError() {
 }
 
 func TestRetry(t *testing.T) {
+	defer goleak.VerifyNone(t)
+
 	suite.Run(t, new(testRetry))
 }

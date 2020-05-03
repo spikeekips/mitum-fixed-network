@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/suite"
+	"go.uber.org/goleak"
 	"golang.org/x/xerrors"
 
 	"github.com/spikeekips/mitum/util"
@@ -237,5 +238,7 @@ func (t *testCallbackTimer) TestLongInterval() {
 }
 
 func TestCallbackTimer(t *testing.T) {
+	defer goleak.VerifyNone(t)
+
 	suite.Run(t, new(testCallbackTimer))
 }

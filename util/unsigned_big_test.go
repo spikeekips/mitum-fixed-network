@@ -5,6 +5,7 @@ import (
 	"math/big"
 	"testing"
 
+	"go.uber.org/goleak"
 	"github.com/stretchr/testify/suite"
 	"golang.org/x/xerrors"
 )
@@ -48,5 +49,7 @@ func (t *testUnsignedInt) TestUnderZero() {
 }
 
 func TestUnsignedInt(t *testing.T) {
+	defer goleak.VerifyNone(t)
+
 	suite.Run(t, new(testUnsignedInt))
 }

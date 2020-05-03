@@ -4,21 +4,22 @@ type Suffrage interface {
 	Name() string
 	Acting(Height, Round) ActingSuffrage
 	IsInside(Address) bool
-	IsActing(Height, Round, Address /* node */) bool
-	IsProposer(Height, Round, Address /* node */) bool
+	IsActing(Height, Round, Address /* node address */) bool
+	IsProposer(Height, Round, Address /* node address */) bool
 }
 
 type ActingSuffrage struct {
 	height   Height
 	round    Round
-	proposer Node
-	nodes    map[Address]Node
+	proposer Address
+	nodes    map[Address]struct{}
+	nodeList []Address
 }
 
-func NewActingSuffrage(height Height, round Round, proposer Node, selected []Node) ActingSuffrage {
-	nodes := map[Address]Node{}
+func NewActingSuffrage(height Height, round Round, proposer Address, selected []Address) ActingSuffrage {
+	nodes := map[Address]struct{}{}
 	for _, n := range selected {
-		nodes[n.Address()] = n
+		nodes[n] = struct{}{}
 	}
 
 	return ActingSuffrage{
@@ -26,6 +27,7 @@ func NewActingSuffrage(height Height, round Round, proposer Node, selected []Nod
 		round:    round,
 		proposer: proposer,
 		nodes:    nodes,
+		nodeList: selected,
 	}
 }
 
@@ -37,8 +39,8 @@ func (as ActingSuffrage) Round() Round {
 	return as.round
 }
 
-func (as ActingSuffrage) Nodes() map[Address]Node {
-	return as.nodes
+func (as ActingSuffrage) Nodes() []Address {
+	return as.nodeList
 }
 
 func (as ActingSuffrage) Exists(node Address) bool {
@@ -46,17 +48,6 @@ func (as ActingSuffrage) Exists(node Address) bool {
 	return found
 }
 
-func (as ActingSuffrage) Proposer() Node {
+func (as ActingSuffrage) Proposer() Address {
 	return as.proposer
-}
-
-func (as ActingSuffrage) NodesSlice() []string {
-	nodes := make([]string, len(as.nodes))
-	var index int
-	for n := range as.nodes {
-		nodes[index] = n.String()
-		index++
-	}
-
-	return nodes
 }

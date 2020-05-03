@@ -6,7 +6,7 @@ func (as ActingSuffrage) MarshalBSON() ([]byte, error) {
 	return bsonencoder.Marshal(ActingSuffragePacker{
 		H: as.height,
 		R: as.round,
-		P: as.proposer.Address().String(),
-		N: as.NodesSlice(),
+		P: as.proposer.String(),
+		N: as.Nodes(),
 	})
 }

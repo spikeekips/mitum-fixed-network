@@ -134,8 +134,10 @@ func (t *testWorker) TestStopBeforeFinish() {
 		longrunningChan <- struct{}{}
 	}
 
+	var count int
 	for _ = range wk.Errors() {
-		if wk.FinishedJobs() == numJob {
+		count++
+		if count == numJob {
 			break
 		}
 	}

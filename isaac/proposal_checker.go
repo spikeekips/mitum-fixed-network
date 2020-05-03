@@ -59,7 +59,7 @@ func (pvc *ProposalValidationChecker) IsProposer() (bool, error) {
 	err := xerrors.Errorf("proposal has wrong proposer")
 
 	pvc.Log().Error().Err(err).
-		Hinted("expected_proposer", pvc.suffrage.Acting(height, round).Proposer().Address()).
+		Hinted("expected_proposer", pvc.suffrage.Acting(height, round).Proposer()).
 		Send()
 
 	pvc.Log().Error().Err(err).Msg("wrong proposer found")

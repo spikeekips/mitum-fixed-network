@@ -97,21 +97,28 @@ func (sf *RoundrobinSuffrage) acting(height base.Height, round base.Round) base.
 
 	pos := sf.pos(height, round, len(all))
 
-	var selected []base.Node
+	var selected []base.Address
 	if len(all) == numberOfActingSuffrageNodes {
-		selected = all
+		for _, n := range all {
+			selected = append(selected, n.Address())
+		}
 	} else {
-		selected = append(selected, all[pos])
-		selected = append(selected, all[pos+1:]...)
+		selected = append(selected, all[pos].Address())
+
+		for _, n := range all[pos+1:] {
+			selected = append(selected, n.Address())
+		}
 
 		if len(selected) > numberOfActingSuffrageNodes {
 			selected = selected[:numberOfActingSuffrageNodes]
 		} else if len(selected) < numberOfActingSuffrageNodes {
-			selected = append(selected, all[:numberOfActingSuffrageNodes-len(selected)]...)
+			for _, n := range all[:numberOfActingSuffrageNodes-len(selected)] {
+				selected = append(selected, n.Address())
+			}
 		}
 	}
 
-	return base.NewActingSuffrage(height, round, all[pos], selected)
+	return base.NewActingSuffrage(height, round, all[pos].Address(), selected)
 }
 
 func (sf *RoundrobinSuffrage) pos(height base.Height, round base.Round, all int) int {
@@ -129,5 +136,5 @@ func (sf *RoundrobinSuffrage) IsActing(height base.Height, round base.Round, nod
 func (sf *RoundrobinSuffrage) IsProposer(height base.Height, round base.Round, node base.Address) bool {
 	af := sf.Acting(height, round)
 
-	return af.Proposer().Address().Equal(node)
+	return af.Proposer().Equal(node)
 }

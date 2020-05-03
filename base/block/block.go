@@ -31,6 +31,7 @@ type BlockConsensusInfo interface {
 	isvalid.IsValider
 	hint.Hinter
 	util.Byter
+	// TODO add the address list of consensus nodes.
 	INITVoteproof() base.Voteproof
 	ACCEPTVoteproof() base.Voteproof
 }

@@ -49,13 +49,13 @@ func (t *testRoundrobinSuffrage) TestActingSuffrage() {
 	t.Equal(int(localstate.Policy().NumberOfActingSuffrageNodes()), len(af.Nodes()))
 
 	expectedProposer := nodes[2]
-	t.True(expectedProposer.Address().Equal(af.Proposer().Address()))
+	t.True(expectedProposer.Address().Equal(af.Proposer()))
 
 	expected := nodes[2:5]
 	for _, n := range af.Nodes() {
 		var found bool
 		for _, e := range expected {
-			if e.Address().Equal(n.Address()) {
+			if e.Address().Equal(n) {
 				found = true
 				break
 			}
@@ -86,14 +86,14 @@ func (t *testRoundrobinSuffrage) TestActingSuffrageNotSufficient() {
 	t.Equal(len(nodes)+1, len(af.Nodes()))
 
 	expectedProposer := localstate.Node()
-	t.True(expectedProposer.Address().Equal(af.Proposer().Address()))
+	t.True(expectedProposer.Address().Equal(af.Proposer()))
 
 	expected := []isaac.Node{localstate.Node()}
 	expected = append(expected, nodes...)
 	for _, n := range af.Nodes() {
 		var found bool
 		for _, e := range expected {
-			if e.Address().Equal(n.Address()) {
+			if e.Address().Equal(n) {
 				found = true
 				break
 			}

@@ -39,6 +39,7 @@ type StateSyncingHandler struct {
 	stateChan chan Syncer
 }
 
+// TODO if already synced and no voteproof, should go to the consensus state.
 func NewStateSyncingHandler(
 	localstate *Localstate,
 	proposalProcessor ProposalProcessor,

@@ -1,4 +1,4 @@
-# Contest for mitum
+# Contest for mitum: DEPRECATED
 
 contest is the tool for simulating consensus processes of mitum.
 

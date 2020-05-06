@@ -9,9 +9,11 @@ import (
 	"github.com/spikeekips/mitum/base/operation"
 	"github.com/spikeekips/mitum/base/seal"
 	"github.com/spikeekips/mitum/base/valuehash"
+	"github.com/spikeekips/mitum/util/logging"
 )
 
 type GenesisBlockV0Generator struct {
+	*logging.Logging
 	localstate *Localstate
 	ballotbox  *Ballotbox
 	ops        []operation.Operation
@@ -21,6 +23,9 @@ func NewGenesisBlockV0Generator(localstate *Localstate, ops []operation.Operatio
 	threshold, _ := base.NewThreshold(1, 100)
 
 	return &GenesisBlockV0Generator{
+		Logging: logging.NewLogging(func(c logging.Context) logging.Emitter {
+			return c.Str("module", "genesis-block-generator")
+		}),
 		localstate: localstate,
 		ballotbox: NewBallotbox(func() base.Threshold {
 			return threshold
@@ -57,7 +62,7 @@ func (gg *GenesisBlockV0Generator) Generate() (block.Block, error) {
 	var blk block.Block
 
 	pm := NewProposalProcessorV0(gg.localstate)
-	pm.SetLogger(log)
+	_ = pm.SetLogger(gg.Log())
 
 	if bk, err := pm.ProcessINIT(proposal.Hash(), initVoteproof); err != nil {
 		return nil, err

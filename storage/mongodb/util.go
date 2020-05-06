@@ -18,7 +18,7 @@ func checkURI(uri string) (connstring.ConnString, error) {
 	}
 
 	if len(cs.Database) < 1 {
-		return connstring.ConnString{}, storage.WrapError(xerrors.Errorf("empty database name in mongodb uri"))
+		return connstring.ConnString{}, storage.WrapError(xerrors.Errorf("empty database name in mongodb uri: '%v'", uri))
 	}
 
 	return cs, nil

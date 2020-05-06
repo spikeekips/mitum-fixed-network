@@ -13,8 +13,8 @@ import (
 var (
 	jsonNULL       []byte = []byte("null")
 	jsonNULLLength int    = len(jsonNULL)
-	jsonType              = hint.MustNewType(0x01, 0x01, "json")
-	jsonHint              = hint.MustHint(jsonType, "0.0.1")
+	JSONType              = hint.MustNewType(0x01, 0x01, "json")
+	jsonHint              = hint.MustHint(JSONType, "0.0.1")
 )
 
 type Encoder struct {

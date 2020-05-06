@@ -11,8 +11,8 @@ import (
 )
 
 var (
-	bsonType = hint.MustNewType(0x01, 0x02, "bson")
-	bsonHint = hint.MustHint(bsonType, "0.0.1")
+	BSONType = hint.MustNewType(0x01, 0x02, "bson")
+	bsonHint = hint.MustHint(BSONType, "0.0.1")
 )
 
 type Encoder struct {

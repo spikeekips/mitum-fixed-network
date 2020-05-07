@@ -69,6 +69,7 @@ func (ls *Localstate) Nodes() *NodesState {
 }
 
 func (ls *Localstate) LastBlock() block.Block {
+	// TODO remove LastBlock(), instead using storage.LastBlock().
 	v := ls.lastBlock.Value()
 	if v == nil {
 		return nil

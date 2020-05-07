@@ -2,6 +2,7 @@ package mongodbstorage
 
 import (
 	"go.mongodb.org/mongo-driver/bson"
+	"golang.org/x/xerrors"
 
 	"github.com/spikeekips/mitum/util/encoder"
 	bsonencoder "github.com/spikeekips/mitum/util/encoder/bson"
@@ -49,10 +50,10 @@ func (do BaseDoc) M() (bson.M, error) {
 }
 
 type BaseDocUnpacker struct {
-	I bson.Raw  `bson:"_id,omitempty"`
-	E hint.Hint `bson:"_e"`
-	D bson.Raw  `bson:"d"`
-	H bool      `bson:"_hinted"`
+	I bson.Raw      `bson:"_id,omitempty"`
+	E hint.Hint     `bson:"_e"`
+	D bson.RawValue `bson:"d"`
+	H bool          `bson:"_hinted"`
 }
 
 func loadWithEncoder(b []byte, encs *encoder.Encoders) (bson.Raw /* id */, interface{} /* data */, error) {
@@ -70,12 +71,21 @@ func loadWithEncoder(b []byte, encs *encoder.Encoders) (bson.Raw /* id */, inter
 		return bd.I, bd.D, nil
 	}
 
-	hinter, err := enc.DecodeByHint(bd.D)
-	if err != nil {
-		return nil, nil, err
+	var doc bson.Raw
+	if d, ok := bd.D.DocumentOK(); !ok {
+		return nil, nil, xerrors.Errorf("hinted should be mongodb Document")
+	} else {
+		doc = d
 	}
 
-	return bd.I, hinter, nil
+	var data hint.Hinter
+	if i, err := enc.DecodeByHint([]byte(doc)); err != nil {
+		return nil, nil, err
+	} else {
+		data = i
+	}
+
+	return bd.I, data, nil
 }
 
 type HashIDDoc struct {

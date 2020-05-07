@@ -236,18 +236,18 @@ func (t *testMongodbClient) TestMoveRawBytes() {
 	insertedID, err := t.client.Set("showme", doc)
 	t.NoError(err)
 
-	var newIsertedID interface{}
+	var newInsertedID interface{}
 	t.client.Find("showme", bson.D{}, func(cursor *mongo.Cursor) (bool, error) {
 		i, err := t.client.SetRaw("new_showme", cursor.Current)
 		t.NoError(err)
 
-		newIsertedID = i
+		newInsertedID = i
 
 		return false, nil
 	})
 
 	var newDoc bson.M
-	err = t.client.GetByID("new_showme", newIsertedID,
+	err = t.client.GetByID("new_showme", newInsertedID,
 		func(res *mongo.SingleResult) error {
 			return res.Decode(&newDoc)
 		})
@@ -255,6 +255,38 @@ func (t *testMongodbClient) TestMoveRawBytes() {
 
 	t.Equal(insertedID, newDoc["_id"])
 	t.Equal(doc.Doc()["findme"], newDoc["findme"])
+}
+
+type docIntRaw struct {
+	I int64
+}
+
+func (doc docIntRaw) ID() interface{} {
+	return nil
+}
+
+func (t *testMongodbClient) TestMarshalRaw() {
+	doc := docIntRaw{I: 33}
+
+	insertedID, err := t.client.Set("showme", doc)
+	t.NoError(err)
+
+	var decoded struct {
+		I bson.RawValue
+	}
+
+	err = t.client.GetByID("showme", insertedID,
+		func(res *mongo.SingleResult) error {
+			return res.Decode(&decoded)
+		})
+	t.NoError(err)
+	t.NotEmpty(decoded.I)
+
+	t.NoError(decoded.I.Validate())
+
+	var i int64
+	t.NoError(decoded.I.Unmarshal(&i))
+	t.Equal(doc.I, i)
 }
 
 func TestMongodbClient(t *testing.T) {

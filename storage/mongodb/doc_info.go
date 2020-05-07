@@ -45,9 +45,9 @@ func loadConfirmedBlock(decoder func(interface{}) error, encs *encoder.Encoders)
 	_, d, err := loadWithEncoder(b, encs)
 	if err != nil {
 		return base.Height(0), err
-	} else if r, ok := d.(bson.Raw); !ok {
+	} else if r, ok := d.(bson.RawValue); !ok {
 		return base.Height(0), xerrors.Errorf("invalid height: %T", d)
-	} else if err := bsonencoder.Unmarshal(r, &height); err != nil {
+	} else if err := r.Unmarshal(&height); err != nil {
 		return base.Height(0), err
 	}
 

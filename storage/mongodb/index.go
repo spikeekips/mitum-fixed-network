@@ -26,6 +26,12 @@ var manifestIndexModels = []mongo.IndexModel{
 
 var operationIndexModels = []mongo.IndexModel{
 	{
+		Keys: bson.D{bson.E{Key: "hash_string", Value: 1}},
+		Options: options.Index().
+			SetName("operation_hash").
+			SetUnique(true),
+	},
+	{
 		Keys: bson.D{bson.E{Key: "hash_string", Value: 1}, bson.E{Key: "height", Value: 1}},
 		Options: options.Index().
 			SetName("operation_hash_and_height"),
@@ -41,7 +47,8 @@ var stateIndexModels = []mongo.IndexModel{
 	{
 		Keys: bson.D{bson.E{Key: "key", Value: 1}, bson.E{Key: "height", Value: 1}},
 		Options: options.Index().
-			SetName("state_key_and_height"),
+			SetName("state_key_and_height").
+			SetUnique(true),
 	},
 	{
 		Keys: bson.D{bson.E{Key: "height", Value: 1}},
@@ -52,6 +59,12 @@ var stateIndexModels = []mongo.IndexModel{
 
 var proposalIndexModels = []mongo.IndexModel{
 	{
+		Keys: bson.D{bson.E{Key: "hash_string", Value: 1}},
+		Options: options.Index().
+			SetName("proposal_hash").
+			SetUnique(true),
+	},
+	{
 		Keys: bson.D{bson.E{Key: "height", Value: 1}, bson.E{Key: "round", Value: 1}},
 		Options: options.Index().
 			SetName("proposal_height_and_round"),
@@ -59,6 +72,12 @@ var proposalIndexModels = []mongo.IndexModel{
 }
 
 var sealIndexModels = []mongo.IndexModel{
+	{
+		Keys: bson.D{bson.E{Key: "hash_string", Value: 1}},
+		Options: options.Index().
+			SetName("seal_hash").
+			SetUnique(true),
+	},
 	{
 		Keys: bson.D{bson.E{Key: "inserted_at", Value: -1}},
 		Options: options.Index().

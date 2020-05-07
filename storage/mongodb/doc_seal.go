@@ -34,6 +34,7 @@ func (sd SealDoc) MarshalBSON() ([]byte, error) {
 		return nil, err
 	}
 
+	m["hash_string"] = sd.seal.Hash().String()
 	m["hash"] = sd.seal.Hash()
 	m["inserted_at"] = localtime.Now()
 

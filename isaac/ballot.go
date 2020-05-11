@@ -16,7 +16,6 @@ func NewINITBallotV0(
 	previousBlock valuehash.Hash,
 	previousRound base.Round,
 	voteproof base.Voteproof,
-	networkID []byte,
 ) (ballot.INITBallotV0, error) {
 	ib := ballot.NewINITBallotV0(
 		localstate.Node().Address(),
@@ -27,7 +26,7 @@ func NewINITBallotV0(
 		voteproof,
 	)
 
-	if err := ib.Sign(localstate.Node().Privatekey(), networkID); err != nil {
+	if err := ib.Sign(localstate.Node().Privatekey(), localstate.Policy().NetworkID()); err != nil {
 		return ballot.INITBallotV0{}, err
 	}
 

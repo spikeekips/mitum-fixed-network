@@ -14,26 +14,27 @@ require (
 	github.com/json-iterator/go v1.1.9
 	github.com/justinas/alice v1.2.0
 	github.com/klauspost/compress v1.10.5 // indirect
-	github.com/lib/pq v1.5.1 // indirect
+	github.com/lib/pq v1.5.2 // indirect
 	github.com/lucas-clemente/quic-go v0.15.7
+	github.com/mattn/go-isatty v0.0.12
 	github.com/oklog/ulid v1.3.1
 	github.com/onsi/ginkgo v1.12.0 // indirect
 	github.com/pkg/errors v0.9.1 // indirect
 	github.com/rs/zerolog v1.18.0
 	github.com/satori/go.uuid v1.2.0
 	github.com/spikeekips/avl v0.0.0-20191218024138-87d874c0c032
-	github.com/stellar/go v0.0.0-20200505162244-7c4596db1ad1
+	github.com/stellar/go v0.0.0-20200508225842-40f71acdda7c
 	github.com/stellar/go-xdr v0.0.0-20200331223602-71a1e6d555f2 // indirect
 	github.com/stretchr/testify v1.5.1
 	github.com/syndtr/goleveldb v1.0.1-0.20190923125748-758128399b1d
 	go.mongodb.org/mongo-driver v1.3.3
 	go.uber.org/goleak v1.0.0
-	golang.org/x/crypto v0.0.0-20200429183012-4b2356b1ed79
+	golang.org/x/crypto v0.0.0-20200510223506-06a226fb4e37
 	golang.org/x/lint v0.0.0-20200302205851-738671d3881b // indirect
 	golang.org/x/mod v0.2.0
-	golang.org/x/net v0.0.0-20200505041828-1ed23360d12c // indirect
+	golang.org/x/net v0.0.0-20200506145744-7e3656a0809f // indirect
 	golang.org/x/sync v0.0.0-20200317015054-43a5402ce75a // indirect
-	golang.org/x/sys v0.0.0-20200501145240-bc7a7d42d5c3 // indirect
+	golang.org/x/sys v0.0.0-20200509044756-6aff5f38e54f // indirect
 	golang.org/x/tools v0.0.0-20200502202811-ed308ab3e770 // indirect
 	golang.org/x/xerrors v0.0.0-20191204190536-9bdfabe68543
 	gopkg.in/yaml.v2 v2.2.8

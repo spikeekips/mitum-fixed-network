@@ -312,7 +312,6 @@ func (bg *DummyBlocksV0Generator) createINITBallot(
 		previousBlock.Hash(),
 		previousBlock.Round(),
 		previousBlock.ACCEPTVoteproof(),
-		bg.networkID,
 	); err != nil {
 		return nil, err
 	} else {

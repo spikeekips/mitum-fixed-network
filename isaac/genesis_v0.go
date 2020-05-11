@@ -171,7 +171,6 @@ func (gg *GenesisBlockV0Generator) generateINITVoteproof() error {
 		previousBlock.Hash(),
 		base.Round(0),
 		nil,
-		gg.localstate.Policy().NetworkID(),
 	); err != nil {
 		return err
 	} else if voteproof, err := gg.ballotbox.Vote(ib); err != nil {

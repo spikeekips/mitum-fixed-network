@@ -200,6 +200,21 @@ func (t *baseTestStateHandler) newINITBallot(localstate *Localstate, round base.
 	return ib
 }
 
+func (t *baseTestStateHandler) newACCEPTBallot(localstate *Localstate, round base.Round, proposal, newBlock valuehash.Hash) ballot.ACCEPTBallotV0 {
+	ab := ballot.NewACCEPTBallotV0(
+		localstate.Node().Address(),
+		localstate.LastBlock().Height()+1,
+		round,
+		proposal,
+		newBlock,
+		nil,
+	)
+
+	_ = ab.Sign(localstate.Node().Privatekey(), localstate.Policy().NetworkID())
+
+	return ab
+}
+
 func (t *baseTestStateHandler) proposalMaker(localstate *Localstate) *ProposalMaker {
 	return NewProposalMaker(localstate)
 }

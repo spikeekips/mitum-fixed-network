@@ -212,7 +212,7 @@ func (css *ConsensusStates) ActiveHandler() StateHandler {
 
 func (css *ConsensusStates) broadcastSeal(sl seal.Seal, errChan chan<- error) {
 	l := loggerWithSeal(sl, css.Log())
-	l.Debug().Msg("trying to broadcast")
+	l.Debug().Msg("trying to broadcast seal")
 
 	go func() {
 		if err := css.NewSeal(sl); err != nil {
@@ -284,7 +284,11 @@ func (css *ConsensusStates) newVoteproof(voteproof base.Voteproof) error {
 
 // NewSeal receives Seal and hand it over to handler;
 func (css *ConsensusStates) NewSeal(sl seal.Seal) error {
-	css.Log().Debug().Interface("seal", sl).Msgf("seal received: %T", sl)
+	l := loggerWithSeal(sl, css.Log()).WithLogger(func(ctx logging.Context) logging.Emitter {
+		return ctx.Hinted("handler", css.ActiveHandler().State())
+	})
+
+	l.Debug().Msg("seal received")
 
 	if err := css.localstate.Storage().NewSeals([]seal.Seal{sl}); err != nil {
 		return err
@@ -293,10 +297,6 @@ func (css *ConsensusStates) NewSeal(sl seal.Seal) error {
 	if css.ActiveHandler() == nil {
 		return xerrors.Errorf("no activated handler")
 	}
-
-	l := loggerWithSeal(sl, css.Log()).WithLogger(func(ctx logging.Context) logging.Emitter {
-		return ctx.Hinted("handler", css.ActiveHandler().State())
-	})
 
 	isFromLocal := sl.Signer().Equal(css.localstate.Node().Publickey())
 
@@ -336,6 +336,7 @@ func (css *ConsensusStates) validateSeal(sl seal.Seal) error {
 }
 
 func (css *ConsensusStates) validateBallot(_ ballot.Ballot) error {
+	// BLOCK valite seal
 	return nil
 }
 
@@ -344,6 +345,7 @@ func (css *ConsensusStates) validateProposal(proposal ballot.Proposal) error {
 
 	return util.NewChecker("proposal-validation-checker", []util.CheckerFunc{
 		pvc.IsKnown,
+		pvc.CheckSigning,
 		pvc.IsProposer,
 		pvc.SaveProposal,
 		pvc.IsOld,

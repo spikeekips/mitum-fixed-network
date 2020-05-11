@@ -166,7 +166,7 @@ func (cs *StateConsensusHandler) NewVoteproof(voteproof base.Voteproof) error {
 
 	l := loggerWithVoteproof(voteproof, cs.Log())
 
-	l.Debug().Msg("Voteproof received")
+	l.Debug().Msg("got Voteproof")
 
 	// NOTE if drew, goes to next round.
 	if voteproof.Result() == base.VoteResultDraw {

@@ -94,7 +94,7 @@ func (cs *StateJoiningHandler) SetLogger(l logging.Logger) logging.Logger {
 }
 
 func (cs *StateJoiningHandler) Activate(ctx StateChangeContext) error {
-	// starts to keep broadcasting INIT Ballot
+	// NOTE starts to keep broadcasting INIT Ballot
 	if err := cs.timers.StartTimers([]string{TimerIDBroadcastingINITBallot}, true); err != nil {
 		return err
 	}

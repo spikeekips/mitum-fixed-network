@@ -128,10 +128,15 @@ func (ab ACCEPTBallotV0) Voteproof() base.Voteproof {
 }
 
 func (ab ACCEPTBallotV0) GenerateHash() (valuehash.Hash, error) {
+	var vb []byte
+	if ab.voteproof != nil {
+		vb = ab.voteproof.Bytes()
+	}
+
 	e := util.ConcatBytesSlice(
 		ab.BaseBallotV0.Bytes(),
 		ab.ACCEPTBallotFactV0.Bytes(),
-		ab.voteproof.Bytes(),
+		vb,
 	)
 
 	return valuehash.NewSHA256(e), nil
@@ -142,12 +147,12 @@ func (ab ACCEPTBallotV0) GenerateBodyHash() (valuehash.Hash, error) {
 		return nil, err
 	}
 
-	e := util.ConcatBytesSlice(
-		ab.ACCEPTBallotFactV0.Bytes(),
-		ab.voteproof.Bytes(),
-	)
+	var vb []byte
+	if ab.voteproof != nil {
+		vb = ab.voteproof.Bytes()
+	}
 
-	return valuehash.NewSHA256(e), nil
+	return valuehash.NewSHA256(util.ConcatBytesSlice(ab.ACCEPTBallotFactV0.Bytes(), vb)), nil
 }
 
 func (ab ACCEPTBallotV0) Fact() base.Fact {

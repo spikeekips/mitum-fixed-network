@@ -7,6 +7,9 @@ import (
 
 	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/base/ballot"
+	"github.com/spikeekips/mitum/base/key"
+	"github.com/spikeekips/mitum/base/seal"
+	"github.com/spikeekips/mitum/base/valuehash"
 	"github.com/spikeekips/mitum/util"
 )
 
@@ -135,6 +138,84 @@ func (t *testBallotChecker) TestCheckWithLastBlock() {
 
 		t.False(finished)
 	}
+}
+
+func (t *testBallotChecker) TestCheckInvalidProposal() {
+	var proposal ballot.Proposal
+	{
+		pr := ballot.NewProposalV0(
+			t.localstate.Node().Address(),
+			t.localstate.LastBlock().Height(), // wrong height
+			base.Round(0),
+			nil, nil,
+		)
+
+		// signed by unknown node
+		pk, _ := key.NewBTCPrivatekey()
+		_ = pr.Sign(pk, t.localstate.Policy().NetworkID())
+		t.NoError(t.localstate.Storage().NewSeals([]seal.Seal{pr}))
+
+		proposal = pr
+	}
+
+	ab := t.newACCEPTBallot(t.localstate, base.Round(0), proposal.Hash(), valuehash.RandomSHA256())
+
+	bc := NewBallotChecker(ab, t.localstate, t.suf)
+
+	err := util.NewChecker("test-ballot-checker", []util.CheckerFunc{
+		bc.CheckProposal,
+	}).Check()
+	t.Contains(err.Error(), "publickey not matched")
+}
+
+func (t *testBallotChecker) TestCheckWrongHeightProposal() {
+	var proposal ballot.Proposal
+	{
+		pr := ballot.NewProposalV0(
+			t.remoteState.Node().Address(),
+			t.remoteState.LastBlock().Height()+100, // wrong height
+			base.Round(0),
+			nil, nil,
+		)
+		_ = pr.Sign(t.remoteState.Node().Privatekey(), t.remoteState.Policy().NetworkID())
+		t.NoError(t.localstate.Storage().NewSeals([]seal.Seal{pr}))
+
+		proposal = pr
+	}
+
+	ab := t.newACCEPTBallot(t.localstate, base.Round(0), proposal.Hash(), valuehash.RandomSHA256())
+
+	bc := NewBallotChecker(ab, t.localstate, t.suf)
+
+	err := util.NewChecker("test-ballot-checker", []util.CheckerFunc{
+		bc.CheckProposal,
+	}).Check()
+	t.Contains(err.Error(), "proposal in ACCEPTBallot is invalid; different height")
+}
+
+func (t *testBallotChecker) TestCheckWrongRoundProposal() {
+	var proposal ballot.Proposal
+	{
+		pr := ballot.NewProposalV0(
+			t.remoteState.Node().Address(),
+			t.localstate.LastBlock().Height()+1,
+			base.Round(33), // wrong round
+			nil, nil,
+		)
+		_ = pr.Sign(t.remoteState.Node().Privatekey(), t.localstate.Policy().NetworkID())
+		t.NoError(t.localstate.Storage().NewSeals([]seal.Seal{pr}))
+
+		proposal = pr
+	}
+
+	ab := t.newACCEPTBallot(t.localstate, base.Round(0), proposal.Hash(), valuehash.RandomSHA256())
+
+	bc := NewBallotChecker(ab, t.localstate, t.suf)
+
+	err := util.NewChecker("test-ballot-checker", []util.CheckerFunc{
+		bc.CheckProposal,
+	}).Check()
+	t.Contains(err.Error(), "proposal in ACCEPTBallot is invalid; different round")
 }
 
 func TestBallotChecker(t *testing.T) {

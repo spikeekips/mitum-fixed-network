@@ -61,6 +61,7 @@ func (dp *ProposalProcessorV0) ProcessINIT(ph valuehash.Hash, initVoteproof base
 
 	var proposal ballot.Proposal
 	if sl, err := dp.localstate.Storage().Seal(ph); err != nil {
+		// BLOCK if not found, request proposal from proposer
 		return nil, err
 	} else if pr, ok := sl.(ballot.Proposal); !ok {
 		return nil, xerrors.Errorf("seal is not Proposal: %T", sl)

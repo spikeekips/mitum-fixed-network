@@ -2,9 +2,8 @@ package main
 
 import (
 	"fmt"
+	"io"
 	"os"
-	"os/signal"
-	"syscall"
 
 	"github.com/alecthomas/kong"
 
@@ -14,11 +13,6 @@ import (
 )
 
 var Version string
-
-var (
-	log       logging.Logger
-	exitHooks []func()
-)
 
 type mainFlags struct {
 	*contestlib.LogFlags
@@ -51,13 +45,22 @@ func main() {
 		},
 	)
 
-	if l, err := contestlib.SetupLogging(flags.LogFlags, exitHooks); err != nil {
+	var log logging.Logger
+	var exitHooks []func()
+	var consoleOutput io.Writer
+	if o, err := contestlib.SetupLoggingOutput(flags.Log, flags.LogFormat, flags.LogColor, &exitHooks); err != nil {
+		ctx.FatalIfErrorf(err)
+	} else {
+		consoleOutput = o
+	}
+
+	if l, err := contestlib.SetupLogging(consoleOutput, flags.LogFlags); err != nil {
 		ctx.FatalIfErrorf(err)
 	} else {
 		log = l
 	}
 
-	connectSignal()
+	contestlib.ConnectSignal(&exitHooks, log)
 
 	log.Info().Msg("contest started")
 	log.Debug().Interface("flags", flags).Msg("flags parsed")
@@ -74,27 +77,4 @@ func main() {
 	log.Info().Msg("contest finished")
 
 	os.Exit(0)
-}
-
-func connectSignal() {
-	sigc := make(chan os.Signal, 1)
-	signal.Notify(sigc,
-		syscall.SIGINT,
-		syscall.SIGTERM,
-		syscall.SIGQUIT,
-	)
-
-	go func() {
-		s := <-sigc
-
-		for _, h := range exitHooks {
-			h()
-		}
-
-		log.Fatal().
-			Str("sig", s.String()).
-			Msg("contest stopped by force")
-
-		os.Exit(1)
-	}()
 }

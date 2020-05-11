@@ -97,10 +97,14 @@ func (vrs *VoteRecords) Vote(blt ballot.Ballot) base.Voteproof {
 
 func (vrs *VoteRecords) vote(blt ballot.Ballot, voteproof *base.VoteproofV0) bool {
 	if vrs.addBallot(blt) {
+		if voteproof.IsFinished() && !voteproof.IsClosed() {
+			_ = voteproof.Close()
+		}
+
 		return false
 	}
 
-	if voteproof.IsFinished() {
+	if voteproof.IsFinished() && !voteproof.IsClosed() {
 		_ = voteproof.Close()
 
 		return false

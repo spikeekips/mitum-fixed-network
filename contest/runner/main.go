@@ -1,12 +1,11 @@
 package main
 
 import (
-	"fmt"
+	"io"
 	"os"
-	"os/signal"
-	"syscall"
 
 	"github.com/alecthomas/kong"
+	"github.com/rs/zerolog"
 
 	contestlib "github.com/spikeekips/mitum/contest/lib"
 	"github.com/spikeekips/mitum/isaac"
@@ -15,14 +14,10 @@ import (
 
 var Version string
 
-var (
-	log       logging.Logger
-	exitHooks []func()
-)
-
 type mainFlags struct {
 	*contestlib.LogFlags
-	Design string `arg name:"node design file" help:"node design file" type:"existingfile"`
+	EventLog string `help:"event log file (default: ${event_log})" default:"${event_log}"`
+	Design   string `arg name:"node design file" help:"node design file" type:"existingfile"`
 }
 
 func main() {
@@ -41,23 +36,27 @@ func main() {
 			Tree:         true,
 		}),
 		kong.Vars{
-			"log":        "",
+			"log":        "", // NOTE if empty, os.Stdout will be used.
 			"log_level":  "debug",
 			"log_format": "terminal",
 			"verbose":    "false",
+			"log_color":  "false",
+			"event_log":  "",
 		},
 	)
 
-	if l, err := contestlib.SetupLogging(flags.LogFlags, exitHooks); err != nil {
+	var log logging.Logger
+	var exitHooks []func()
+	if l, err := setupLogging(flags, &exitHooks); err != nil {
 		ctx.FatalIfErrorf(err)
 	} else {
 		log = l
 	}
 
-	connectSignal()
-
 	log.Info().Msg("contest node started")
 	log.Debug().Interface("flags", flags).Msg("flags parsed")
+
+	contestlib.ConnectSignal(&exitHooks, log)
 
 	var design *contestlib.NodeDesign
 	if d, err := contestlib.LoadDesignFromFile(flags.Design); err != nil {
@@ -83,7 +82,6 @@ func main() {
 	}
 	log.Debug().Msg("NodeRunner generated")
 
-	fmt.Println(">>>>>>>")
 	if gg, err := isaac.NewGenesisBlockV0Generator(nr.Localstate(), nil); err != nil {
 		log.Error().Err(err).Msg("failed to create genesis block generator")
 
@@ -93,9 +91,8 @@ func main() {
 
 		os.Exit(1)
 	} else {
-		fmt.Println("block", blk.Height(), blk.Hash())
+		log.Info().Interface("block", blk).Msg("genesis block created")
 	}
-	fmt.Println("<<<<<<")
 
 	if err := nr.Start(); err != nil {
 		log.Error().Err(err).Msg("failed to start")
@@ -106,25 +103,27 @@ func main() {
 	select {}
 }
 
-func connectSignal() {
-	sigc := make(chan os.Signal, 1)
-	signal.Notify(sigc,
-		syscall.SIGINT,
-		syscall.SIGTERM,
-		syscall.SIGQUIT,
-	)
+func setupLogging(
+	flags *mainFlags,
+	exitHooks *[]func(),
+) (logging.Logger, error) {
+	var eventOutput, consoleOutput io.Writer
+	if o, err := contestlib.SetupLoggingOutput(flags.Log, flags.LogFormat, flags.LogColor, exitHooks); err != nil {
+		return logging.Logger{}, err
+	} else {
+		consoleOutput = contestlib.NewConsoleWriter(o, zerolog.Level(flags.LogLevel))
+	}
 
-	go func() {
-		s := <-sigc
+	if o, err := contestlib.SetupLoggingOutput(flags.EventLog, "json", false, exitHooks); err != nil {
+		return logging.Logger{}, err
+	} else {
+		eventOutput = o
+	}
 
-		for _, h := range exitHooks {
-			h()
-		}
-
-		log.Fatal().
-			Str("sig", s.String()).
-			Msg("contest stopped by force")
-
-		os.Exit(1)
-	}()
+	output := zerolog.MultiLevelWriter(eventOutput, consoleOutput)
+	if l, err := contestlib.SetupLogging(output, flags.LogFlags); err != nil {
+		return logging.Logger{}, err
+	} else {
+		return l, nil
+	}
 }

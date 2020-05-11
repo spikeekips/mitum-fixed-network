@@ -152,7 +152,7 @@ func (nr *NodeRunner) attachStorage() error {
 		return xerrors.Errorf("failed to find storage by uri")
 	}
 
-	_ = nr.setupLogging(st)
+	nr.setupLogging(st)
 	nr.storage = st
 
 	l.Debug().Msg("attached")
@@ -193,7 +193,7 @@ func (nr *NodeRunner) attachNetwork() error {
 		nt = nqs
 	}
 
-	_ = nr.setupLogging(nt)
+	nr.setupLogging(nt)
 	nr.network = nt
 
 	l.Debug().Msg("attached")
@@ -234,7 +234,7 @@ func (nr *NodeRunner) attachNodeChannel() error {
 		}
 	}
 
-	_ = nr.setupLogging(channel)
+	nr.setupLogging(channel)
 	_ = nr.localstate.Node().SetChannel(channel)
 
 	l.Debug().Msg("attached")
@@ -252,7 +252,7 @@ func (nr *NodeRunner) attachBallotbox() error {
 		return nr.localstate.Policy().Threshold()
 	})
 
-	_ = nr.setupLogging(bb)
+	nr.setupLogging(bb)
 	nr.ballotbox = bb
 
 	l.Debug().Msg("attached")
@@ -268,7 +268,7 @@ func (nr *NodeRunner) attachSuffrage() error {
 
 	sf := NewRoundrobinSuffrage(nr.localstate, 100)
 
-	_ = nr.setupLogging(sf)
+	nr.setupLogging(sf)
 	nr.suffrage = sf
 
 	l.Debug().Msg("attached")
@@ -284,7 +284,7 @@ func (nr *NodeRunner) attachProposalProcessor() error {
 
 	pp := isaac.NewProposalProcessorV0(nr.localstate)
 
-	_ = nr.setupLogging(pp)
+	nr.setupLogging(pp)
 	nr.proposalProcessor = pp
 
 	l.Debug().Msg("attached")
@@ -300,7 +300,7 @@ func (nr *NodeRunner) attachProposalMaker() error {
 
 	pm := isaac.NewProposalMaker(nr.localstate)
 
-	_ = nr.setupLogging(pm)
+	nr.setupLogging(pm)
 	nr.proposalMaker = pm
 
 	l.Debug().Msg("attached")
@@ -341,10 +341,10 @@ func (nr *NodeRunner) attachConsensusStates() error {
 		}
 	}
 	for _, h := range []interface{}{booting, joining, consensus, syncing, broken} {
-		_ = nr.setupLogging(h)
+		nr.setupLogging(h)
 	}
 
-	nr.consensusStates = isaac.NewConsensusStates(
+	ss := isaac.NewConsensusStates(
 		nr.localstate,
 		nr.ballotbox,
 		nr.suffrage,
@@ -354,6 +354,10 @@ func (nr *NodeRunner) attachConsensusStates() error {
 		syncing.(*isaac.StateSyncingHandler),
 		broken.(*isaac.StateBrokenHandler),
 	)
+
+	nr.setupLogging(ss)
+
+	nr.consensusStates = ss
 
 	l.Debug().Msg("attached")
 
@@ -380,12 +384,10 @@ func (nr *NodeRunner) Start() error {
 	return nil
 }
 
-func (nr *NodeRunner) setupLogging(i interface{}) interface{} {
+func (nr *NodeRunner) setupLogging(i interface{}) {
 	if l, ok := i.(logging.SetLogger); ok {
 		_ = l.SetLogger(nr.Log())
 	}
-
-	return i
 }
 
 func parseDurationFromQuery(query url.Values, key string, v time.Duration) (time.Duration, error) {

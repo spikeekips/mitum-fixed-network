@@ -209,6 +209,7 @@ func (cs *StateConsensusHandler) keepBroadcastingINITBallotForNextBlock() error 
 		return err
 	}
 
+	// BLOCK stop all the previous running timers
 	return cs.timers.StartTimers([]string{
 		TimerIDBroadcastingINITBallot,
 		TimerIDBroadcastingACCEPTBallot,
@@ -248,7 +249,7 @@ func (cs *StateConsensusHandler) handleProposal(proposal ballot.Proposal) error 
 	isActing := acting.Exists(cs.localstate.Node().Address())
 
 	l.Debug().
-		Hinted("acting_suffrag", acting).
+		Hinted("acting_suffrage", acting).
 		Bool("is_acting", isActing).
 		Msgf("node is in acting suffrage? %v", isActing)
 
@@ -294,7 +295,7 @@ func (cs *StateConsensusHandler) proposal(voteproof base.Voteproof) (bool, error
 	l.Debug().Msg("prepare to broadcast Proposal")
 	isProposer := cs.suffrage.IsProposer(voteproof.Height(), voteproof.Round(), cs.localstate.Node().Address())
 	l.Debug().
-		Hinted("acting_suffrag", cs.suffrage.Acting(voteproof.Height(), voteproof.Round())).
+		Hinted("acting_suffrage", cs.suffrage.Acting(voteproof.Height(), voteproof.Round())).
 		Bool("is_acting", cs.suffrage.IsActing(voteproof.Height(), voteproof.Round(), cs.localstate.Node().Address())).
 		Bool("is_proposer", isProposer).
 		Msgf("node is proposer? %v", isProposer)

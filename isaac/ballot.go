@@ -140,7 +140,6 @@ func NewACCEPTBallotV0(
 	round base.Round,
 	newBlock block.Block,
 	initVoteproof base.Voteproof,
-	networkID []byte,
 ) (ballot.ACCEPTBallotV0, error) {
 	ab := ballot.NewACCEPTBallotV0(
 		localstate.Node().Address(),
@@ -151,7 +150,7 @@ func NewACCEPTBallotV0(
 		initVoteproof,
 	)
 
-	if err := ab.Sign(localstate.Node().Privatekey(), networkID); err != nil {
+	if err := ab.Sign(localstate.Node().Privatekey(), localstate.Policy().NetworkID()); err != nil {
 		return ballot.ACCEPTBallotV0{}, err
 	}
 

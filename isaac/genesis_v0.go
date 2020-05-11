@@ -200,7 +200,6 @@ func (gg *GenesisBlockV0Generator) generateACCEPTVoteproof(newBlock block.Block)
 		base.Round(0),
 		newBlock,
 		initVoteproof,
-		gg.localstate.Policy().NetworkID(),
 	); err != nil {
 		return err
 	} else if err := gg.localstate.Storage().NewSeals([]seal.Seal{ab}); err != nil {

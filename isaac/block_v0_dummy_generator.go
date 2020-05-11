@@ -364,7 +364,6 @@ func (bg *DummyBlocksV0Generator) createACCEPTVoteproof(proposal ballot.Proposal
 			newBlock.Round(),
 			newBlock,
 			initVoteproof,
-			bg.networkID,
 		); err != nil {
 			return err
 		} else {

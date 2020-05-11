@@ -5,6 +5,7 @@ import (
 
 	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/base/ballot"
+	"github.com/spikeekips/mitum/storage"
 	"github.com/spikeekips/mitum/util/logging"
 )
 
@@ -40,11 +41,32 @@ func (pvc *ProposalValidationChecker) IsKnown() (bool, error) {
 	height := pvc.proposal.Height()
 	round := pvc.proposal.Round()
 
-	if _, err := pvc.localstate.Storage().Proposal(height, round); err != nil {
-		return false, err
-	} else {
-		return false, nil
+	_, err := pvc.localstate.Storage().Proposal(height, round)
+	if err != nil {
+		if !xerrors.Is(err, storage.NotFoundError) {
+			return false, err
+		}
 	}
+
+	return true, nil
+}
+
+// CheckSigning checks node signed by it's valid key.
+func (pvc *ProposalValidationChecker) CheckSigning() (bool, error) {
+	var node base.Node
+	if pvc.proposal.Node().Equal(pvc.localstate.Node().Address()) {
+		node = pvc.localstate.Node()
+	} else if n, found := pvc.localstate.Nodes().Node(pvc.proposal.Node()); !found {
+		return false, xerrors.Errorf("node not found")
+	} else {
+		node = n
+	}
+
+	if !pvc.proposal.Signer().Equal(node.Publickey()) {
+		return false, xerrors.Errorf("publickey not matched")
+	}
+
+	return true, nil
 }
 
 func (pvc *ProposalValidationChecker) IsProposer() (bool, error) {
@@ -80,7 +102,7 @@ func (pvc *ProposalValidationChecker) IsOld() (bool, error) {
 	round := pvc.proposal.Round()
 
 	ivp := pvc.localstate.LastINITVoteproof()
-	if height != ivp.Height() || round != ivp.Round() {
+	if height < ivp.Height() || round != ivp.Round() {
 		err := xerrors.Errorf("old Proposal received")
 		pvc.Log().Error().Err(err).
 			Dict("current", logging.Dict().

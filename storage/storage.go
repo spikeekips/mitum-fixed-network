@@ -22,8 +22,10 @@ type Storage interface {
 	LastBlock() (block.Block, error)
 	Block(valuehash.Hash) (block.Block, error)
 	BlockByHeight(base.Height) (block.Block, error)
+	// TODO add BlocksByHeight([]base.Height) ([]block.Block, error)
 	Manifest(valuehash.Hash) (block.Manifest, error)
 	ManifestByHeight(base.Height) (block.Manifest, error)
+	// TODO add ManifestsByHeight([]base.Height) ([]block.Manifest, error)
 
 	NewINITVoteproof(base.Voteproof) error
 	LastINITVoteproof() (base.Voteproof, error)

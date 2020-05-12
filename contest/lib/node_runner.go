@@ -4,13 +4,17 @@ import (
 	"crypto/tls"
 	"fmt"
 	"net/url"
+	"sort"
 	"strings"
 	"time"
 
 	"golang.org/x/xerrors"
 
 	"github.com/spikeekips/mitum/base"
-	"github.com/spikeekips/mitum/base/key"
+	"github.com/spikeekips/mitum/base/ballot"
+	"github.com/spikeekips/mitum/base/block"
+	"github.com/spikeekips/mitum/base/seal"
+	"github.com/spikeekips/mitum/base/valuehash"
 	"github.com/spikeekips/mitum/isaac"
 	"github.com/spikeekips/mitum/network"
 	quicnetwork "github.com/spikeekips/mitum/network/quic"
@@ -20,15 +24,15 @@ import (
 	"github.com/spikeekips/mitum/util/encoder"
 	bsonencoder "github.com/spikeekips/mitum/util/encoder/bson"
 	jsonencoder "github.com/spikeekips/mitum/util/encoder/json"
-	"github.com/spikeekips/mitum/util/hint"
 	"github.com/spikeekips/mitum/util/logging"
 )
 
 type NodeRunner struct {
 	*logging.Logging
 	design            *NodeDesign
-	localstate        *isaac.Localstate
 	encs              *encoder.Encoders
+	je                encoder.Encoder
+	localstate        *isaac.Localstate
 	storage           storage.Storage
 	network           network.Server
 	ballotbox         *isaac.Ballotbox
@@ -38,13 +42,22 @@ type NodeRunner struct {
 	consensusStates   *isaac.ConsensusStates
 }
 
-func NewNodeRunnerFromDesign(design *NodeDesign) *NodeRunner {
+func NewNodeRunnerFromDesign(design *NodeDesign, encs *encoder.Encoders) (*NodeRunner, error) {
+	var je encoder.Encoder
+	if e, err := encs.Encoder(jsonencoder.JSONType, ""); err != nil { // NOTE get latest bson encoder
+		return nil, xerrors.Errorf("json encoder needs for quic-network", err)
+	} else {
+		je = e
+	}
+
 	return &NodeRunner{
 		Logging: logging.NewLogging(func(c logging.Context) logging.Emitter {
 			return c.Str("module", "contest-node-runner")
 		}),
 		design: design,
-	}
+		encs:   encs,
+		je:     je,
+	}, nil
 }
 
 func (nr *NodeRunner) Localstate() *isaac.Localstate {
@@ -53,15 +66,15 @@ func (nr *NodeRunner) Localstate() *isaac.Localstate {
 
 func (nr *NodeRunner) Initialize() error {
 	for _, f := range []func() error{
-		nr.attachEncoder,
 		nr.attachStorage,
 		nr.attachLocalstate,
-		nr.attachNetwork,
 		nr.attachNodeChannel,
+		nr.attachRemoteNodes,
 		nr.attachBallotbox,
 		nr.attachSuffrage,
 		nr.attachProposalProcessor,
 		nr.attachProposalMaker,
+		nr.attachNetwork,
 	} {
 		if err := f(); err != nil {
 			return err
@@ -75,10 +88,8 @@ func (nr *NodeRunner) attachLocalstate() error {
 	var localnode *isaac.LocalNode
 	if ca, err := NewContestAddress(nr.design.Address); err != nil {
 		return err
-	} else if pk, err := key.NewBTCPrivatekey(); err != nil {
-		return err
 	} else {
-		localnode = isaac.NewLocalNode(ca, pk)
+		localnode = isaac.NewLocalNode(ca, nr.design.Privatekey())
 	}
 
 	if ls, err := isaac.NewLocalstate(nr.storage, localnode, nr.design.NetworkID()); err != nil {
@@ -88,45 +99,6 @@ func (nr *NodeRunner) attachLocalstate() error {
 
 		return nil
 	}
-}
-
-func (nr *NodeRunner) attachEncoder() error {
-	l := nr.Log().WithLogger(func(ctx logging.Context) logging.Emitter {
-		return ctx.Str("target", "encoders")
-	})
-	l.Debug().Msg("trying to attach")
-
-	encs := encoder.NewEncoders()
-	{
-		enc := jsonencoder.NewEncoder()
-		if err := encs.AddEncoder(enc); err != nil {
-			return err
-		}
-	}
-
-	{
-		enc := bsonencoder.NewEncoder()
-		if err := encs.AddEncoder(enc); err != nil {
-			return err
-		}
-	}
-
-	for i := range hinters {
-		hinter, ok := hinters[i][1].(hint.Hinter)
-		if !ok {
-			return xerrors.Errorf("not hint.Hinter: %T", hinters[i])
-		}
-
-		if err := encs.AddHinter(hinter); err != nil {
-			return err
-		}
-	}
-
-	nr.encs = encs
-
-	l.Debug().Msg("attached")
-
-	return nil
 }
 
 func (nr *NodeRunner) attachStorage() error {
@@ -177,17 +149,10 @@ func (nr *NodeRunner) attachNetwork() error {
 		certs = ct
 	}
 
-	var je encoder.Encoder
-	if e, err := nr.encs.Encoder(jsonencoder.JSONType, ""); err != nil { // NOTE get latest bson encoder
-		return xerrors.Errorf("json encoder needs for quic-network", err)
-	} else {
-		je = e
-	}
-
 	var nt network.Server
 	if qs, err := quicnetwork.NewPrimitiveQuicServer(nd.Bind, certs); err != nil {
 		return err
-	} else if nqs, err := quicnetwork.NewQuicServer(qs, nr.encs, je); err != nil {
+	} else if nqs, err := quicnetwork.NewQuicServer(qs, nr.encs, nr.je); err != nil {
 		return err
 	} else {
 		nt = nqs
@@ -201,43 +166,228 @@ func (nr *NodeRunner) attachNetwork() error {
 	return nil
 }
 
+func (nr *NodeRunner) attachNetworkHandlers() error {
+	nr.network.SetGetSealsHandler(func(hs []valuehash.Hash) ([]seal.Seal, error) {
+		var sls []seal.Seal
+
+		if err := nr.storage.Seals(func(_ valuehash.Hash, sl seal.Seal) (bool, error) {
+			sls = append(sls, sl)
+
+			return true, nil
+		}, true, true); err != nil {
+			return nil, err
+		}
+
+		return sls, nil
+	})
+
+	nr.network.SetNewSealHandler(func(sl seal.Seal) error {
+		sealChecker := isaac.NewSealValidationChecker(sl, nr.localstate.Policy().NetworkID())
+		if err := util.NewChecker("network-new-seal-checker", []util.CheckerFunc{
+			sealChecker.CheckIsValid,
+		}).Check(); err != nil {
+			return err
+		}
+
+		// NOTE stores seal regardless further checkings.
+		if err := nr.storage.NewSeals([]seal.Seal{sl}); err != nil {
+			return err
+		}
+
+		switch t := sl.(type) {
+		case ballot.Ballot:
+			checker := isaac.NewBallotChecker(t, nr.localstate, nr.suffrage)
+
+			if err := util.NewChecker("network-new-ballot-checker", []util.CheckerFunc{
+				checker.CheckIsInSuffrage,
+				checker.CheckSigning,
+				checker.CheckWithLastBlock,
+				checker.CheckProposal,
+				checker.CheckVoteproof,
+			}).Check(); err != nil {
+				return err
+			}
+		}
+
+		if err := nr.consensusStates.NewSeal(sl); err != nil {
+			nr.Log().Error().Err(err).Msg("failed to receive seal by consensus states")
+
+			return err
+		}
+
+		return nil
+	})
+
+	nr.network.SetGetManifests(func(heights []base.Height) ([]block.Manifest, error) {
+		sort.Slice(heights, func(i, j int) bool {
+			return heights[i] < heights[j]
+		})
+
+		var manifests []block.Manifest
+		fetched := map[base.Height]struct{}{}
+		for _, h := range heights {
+			if _, found := fetched[h]; found {
+				continue
+			}
+
+			fetched[h] = struct{}{}
+
+			if m, err := nr.storage.ManifestByHeight(h); err != nil {
+				if !xerrors.Is(err, storage.NotFoundError) {
+					return nil, err
+				}
+			} else {
+				manifests = append(manifests, m)
+			}
+		}
+
+		return manifests, nil
+	})
+
+	nr.network.SetGetBlocks(func(heights []base.Height) ([]block.Block, error) {
+		sort.Slice(heights, func(i, j int) bool {
+			return heights[i] < heights[j]
+		})
+
+		var blocks []block.Block
+		fetched := map[base.Height]struct{}{}
+		for _, h := range heights {
+			if _, found := fetched[h]; found {
+				continue
+			}
+
+			fetched[h] = struct{}{}
+
+			if m, err := nr.storage.BlockByHeight(h); err != nil {
+				if !xerrors.Is(err, storage.NotFoundError) {
+					return nil, err
+				}
+			} else {
+				blocks = append(blocks, m)
+			}
+		}
+
+		return blocks, nil
+	})
+
+	return nil
+}
+
 func (nr *NodeRunner) attachNodeChannel() error {
 	l := nr.Log().WithLogger(func(ctx logging.Context) logging.Emitter {
 		return ctx.Str("target", "node-channel")
 	})
 	l.Debug().Msg("trying to attach")
 
+	/*
+		var channel network.NetworkChannel
+
+		switch nr.design.Network.PublishURL().Scheme {
+		case "quic":
+			var je encoder.Encoder
+			if e, err := nr.encs.Encoder(jsonencoder.JSONType, ""); err != nil { // NOTE get latest bson encoder
+				return xerrors.Errorf("json encoder needs for quic-network", err)
+			} else {
+				je = e
+			}
+
+			if ch, err := quicnetwork.NewQuicChannel(
+				fmt.Sprintf("https://localhost:%d", nr.design.Network.PublishURL().Port()),
+				100,
+				true,
+				time.Second*1,
+				3,
+				nil,
+				nr.encs,
+				je,
+			); err != nil {
+				return err
+			} else {
+				channel = ch
+			}
+		}
+	*/
+
+	nu := new(url.URL)
+	*nu = *nr.design.Network.PublishURL()
+	nu.Host = fmt.Sprintf("localhost:%s", nu.Port())
+
 	var channel network.NetworkChannel
-
-	switch nr.design.Network.PublishURL().Scheme {
-	case "quic":
-		var je encoder.Encoder
-		if e, err := nr.encs.Encoder(jsonencoder.JSONType, ""); err != nil { // NOTE get latest bson encoder
-			return xerrors.Errorf("json encoder needs for quic-network", err)
-		} else {
-			je = e
-		}
-
-		if ch, err := quicnetwork.NewQuicChannel(
-			fmt.Sprintf("https://localhost:%d", nr.design.Network.BindPort()),
-			100,
-			true,
-			time.Second*1,
-			3,
-			nil,
-			nr.encs,
-			je,
-		); err != nil {
-			return err
-		} else {
-			channel = ch
-		}
+	if ch, err := createNodeChannel(nu, nr.encs, nr.je); err != nil {
+		return err
+	} else {
+		channel = ch
 	}
 
 	nr.setupLogging(channel)
 	_ = nr.localstate.Node().SetChannel(channel)
 
 	l.Debug().Msg("attached")
+
+	return nil
+}
+
+func createNodeChannel(publish *url.URL, encs *encoder.Encoders, enc encoder.Encoder) (network.NetworkChannel, error) {
+	var channel network.NetworkChannel
+
+	nu := new(url.URL)
+	*nu = *publish
+	nu.Scheme = "https"
+
+	switch publish.Scheme {
+	case "quic":
+		if ch, err := quicnetwork.NewQuicChannel(
+			nu.String(),
+			100,
+			true,
+			time.Second*1,
+			3,
+			nil,
+			encs,
+			enc,
+		); err != nil {
+			return nil, err
+		} else {
+			channel = ch
+		}
+	default:
+		return nil, xerrors.Errorf("unsupported publish URL, %v", publish.String())
+	}
+
+	return channel, nil
+}
+
+func (nr *NodeRunner) attachRemoteNodes() error {
+	var nodes []isaac.Node
+	for _, r := range nr.design.Nodes {
+		l := nr.Log().WithLogger(func(ctx logging.Context) logging.Emitter {
+			return ctx.Str("address", r.Address)
+		})
+
+		l.Debug().Msg("trying to create remote node")
+
+		var n *isaac.RemoteNode
+		if ca, err := NewContestAddress(r.Address); err != nil {
+			return err
+		} else {
+			n = isaac.NewRemoteNode(ca, r.Publickey())
+		}
+
+		if ch, err := createNodeChannel(r.NetworkURL(), nr.encs, nr.je); err != nil {
+			return err
+		} else {
+			nr.setupLogging(ch)
+
+			_ = n.SetChannel(ch)
+		}
+		l.Debug().Msg("created")
+
+		nodes = append(nodes, n)
+	}
+
+	if err := nr.localstate.Nodes().Add(nodes...); err != nil {
+		return err
+	}
 
 	return nil
 }
@@ -367,8 +517,13 @@ func (nr *NodeRunner) attachConsensusStates() error {
 func (nr *NodeRunner) Start() error {
 	nr.Log().Info().Msg("NodeRunner trying to start")
 
-	if err := nr.attachConsensusStates(); err != nil {
-		return err
+	for _, f := range []func() error{
+		nr.attachConsensusStates,
+		nr.attachNetworkHandlers,
+	} {
+		if err := f(); err != nil {
+			return err
+		}
 	}
 
 	if err := nr.network.Start(); err != nil {

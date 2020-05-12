@@ -114,6 +114,8 @@ func (dp *ProposalProcessorV0) ProcessACCEPT(
 		return nil, err
 	}
 
+	defer dp.processors.Delete(ph)
+
 	return processor.bs, nil
 }
 

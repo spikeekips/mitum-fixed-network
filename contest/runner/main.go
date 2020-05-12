@@ -6,9 +6,13 @@ import (
 
 	"github.com/alecthomas/kong"
 	"github.com/rs/zerolog"
+	"golang.org/x/xerrors"
 
 	contestlib "github.com/spikeekips/mitum/contest/lib"
-	"github.com/spikeekips/mitum/isaac"
+	"github.com/spikeekips/mitum/util/encoder"
+	bsonencoder "github.com/spikeekips/mitum/util/encoder/bson"
+	jsonencoder "github.com/spikeekips/mitum/util/encoder/json"
+	"github.com/spikeekips/mitum/util/hint"
 	"github.com/spikeekips/mitum/util/logging"
 )
 
@@ -58,8 +62,19 @@ func main() {
 
 	contestlib.ConnectSignal(&exitHooks, log)
 
+	var encs *encoder.Encoders
+	if e, err := loadEncoder(); err != nil {
+		log.Error().Err(err).Msg("failed to load encoders")
+
+		os.Exit(1)
+	} else {
+		log.Debug().Msg("encoders loaded")
+
+		encs = e
+	}
+
 	var design *contestlib.NodeDesign
-	if d, err := contestlib.LoadDesignFromFile(flags.Design); err != nil {
+	if d, err := contestlib.LoadDesignFromFile(flags.Design, encs); err != nil {
 		log.Error().Err(err).Msg("failed to load design file")
 
 		os.Exit(1)
@@ -72,26 +87,21 @@ func main() {
 		log.Debug().Interface("design", d).Msg("design loaded")
 	}
 
-	nr := contestlib.NewNodeRunnerFromDesign(design)
+	var nr *contestlib.NodeRunner
+	if n, err := contestlib.NewNodeRunnerFromDesign(design, encs); err != nil {
+		log.Error().Err(err).Msg("failed to create node runner")
+
+		os.Exit(1)
+	} else {
+		nr = n
+	}
+
 	_ = nr.SetLogger(log)
 
 	if err := nr.Initialize(); err != nil {
 		log.Error().Err(err).Msg("failed to generate node from design")
 
 		os.Exit(1)
-	}
-	log.Debug().Msg("NodeRunner generated")
-
-	if gg, err := isaac.NewGenesisBlockV0Generator(nr.Localstate(), nil); err != nil {
-		log.Error().Err(err).Msg("failed to create genesis block generator")
-
-		os.Exit(1)
-	} else if blk, err := gg.Generate(); err != nil {
-		log.Error().Err(err).Msg("failed to generate genesis block")
-
-		os.Exit(1)
-	} else {
-		log.Info().Interface("block", blk).Msg("genesis block created")
 	}
 
 	if err := nr.Start(); err != nil {
@@ -126,4 +136,34 @@ func setupLogging(
 	} else {
 		return l, nil
 	}
+}
+
+func loadEncoder() (*encoder.Encoders, error) {
+	encs := encoder.NewEncoders()
+	{
+		enc := jsonencoder.NewEncoder()
+		if err := encs.AddEncoder(enc); err != nil {
+			return nil, err
+		}
+	}
+
+	{
+		enc := bsonencoder.NewEncoder()
+		if err := encs.AddEncoder(enc); err != nil {
+			return nil, err
+		}
+	}
+
+	for i := range contestlib.Hinters {
+		hinter, ok := contestlib.Hinters[i][1].(hint.Hinter)
+		if !ok {
+			return nil, xerrors.Errorf("not hint.Hinter: %T", contestlib.Hinters[i])
+		}
+
+		if err := encs.AddHinter(hinter); err != nil {
+			return nil, err
+		}
+	}
+
+	return encs, nil
 }

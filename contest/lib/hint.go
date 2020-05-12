@@ -14,7 +14,7 @@ import (
 	jsonencoder "github.com/spikeekips/mitum/util/encoder/json"
 )
 
-var hinters = [][2]interface{}{
+var Hinters = [][2]interface{}{
 	{"contest-address", ContestAddress("")},
 	{"encoder-bson", bsonencoder.Encoder{}},
 	{"encoder-json", jsonencoder.Encoder{}},

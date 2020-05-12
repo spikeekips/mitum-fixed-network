@@ -66,7 +66,7 @@ func main() {
 	log.Debug().Interface("flags", flags).Msg("flags parsed")
 
 	if ctx.Command() == "version" {
-		fmt.Fprintln(os.Stdout, Version)
+		_, _ = fmt.Fprintln(os.Stdout, Version)
 
 		os.Exit(0)
 	}

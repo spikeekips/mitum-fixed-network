@@ -177,13 +177,16 @@ func (nr *NodeRunner) attachNetworkHandlers() error {
 
 func (nr *NodeRunner) networkHandlerGetSeal(hs []valuehash.Hash) ([]seal.Seal, error) {
 	var sls []seal.Seal
+	for _, h := range hs {
+		if sl, err := nr.storage.Seal(h); err != nil {
+			if !xerrors.Is(err, storage.NotFoundError) {
+				continue
+			}
 
-	if err := nr.storage.Seals(func(_ valuehash.Hash, sl seal.Seal) (bool, error) {
-		sls = append(sls, sl)
-
-		return true, nil
-	}, true, true); err != nil {
-		return nil, err
+			return nil, err
+		} else {
+			sls = append(sls, sl)
+		}
 	}
 
 	return sls, nil

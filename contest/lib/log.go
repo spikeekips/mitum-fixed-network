@@ -24,10 +24,10 @@ func init() {
 
 type LogFlags struct {
 	Log       string    `help:"log file (default: ${log})" default:"${log}"`
-	LogLevel  LogLevel  `help:"log level {debug error warn info crit} (default: ${log_level})" default:"${log_level}"`
-	LogFormat LogFormat `help:"log format {json terminal} (default: ${log_format})" default:"${log_format}"`
 	Verbose   bool      `help:"verbose log output (default: false)" default:"${verbose}"`
 	LogColor  bool      `help:"show color log" default:"${log_color}"`
+	LogLevel  LogLevel  `help:"log level {debug error warn info crit} (default: ${log_level})" default:"${log_level}"`
+	LogFormat LogFormat `help:"log format {json terminal} (default: ${log_format})" default:"${log_format}"`
 }
 
 func SetupLoggingOutput(f string, format LogFormat, forceColor bool, exitHooks *[]func()) (io.Writer, error) {
@@ -45,7 +45,7 @@ func SetupLoggingOutput(f string, format LogFormat, forceColor bool, exitHooks *
 		output = o
 	} else {
 		var outputFile *os.File
-		if f, err := os.OpenFile(logFile, os.O_CREATE|os.O_RDWR|os.O_APPEND, 0644); err != nil {
+		if f, err := os.OpenFile(logFile, os.O_CREATE|os.O_RDWR|os.O_APPEND, 0600); err != nil {
 			return nil, err
 		} else {
 			outputFile = f
@@ -71,10 +71,8 @@ func SetupLoggingOutput(f string, format LogFormat, forceColor bool, exitHooks *
 		var useColor bool
 		if forceColor {
 			useColor = true
-		} else {
-			if isatty.IsTerminal(os.Stdout.Fd()) {
-				useColor = true
-			}
+		} else if isatty.IsTerminal(os.Stdout.Fd()) {
+			useColor = true
 		}
 
 		output = zerolog.ConsoleWriter{

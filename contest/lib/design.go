@@ -4,6 +4,7 @@ import (
 	"io/ioutil"
 	"net"
 	"net/url"
+	"path/filepath"
 	"strconv"
 	"strings"
 
@@ -29,9 +30,9 @@ type NodeDesign struct {
 
 func LoadDesignFromFile(f string, encs *encoder.Encoders) (*NodeDesign, error) {
 	var design NodeDesign
-	if b, err := ioutil.ReadFile(f); err != nil {
+	if b, err := ioutil.ReadFile(filepath.Clean(f)); err != nil {
 		return nil, err
-	} else if err := yaml.Unmarshal([]byte(b), &design); err != nil {
+	} else if err := yaml.Unmarshal(b, &design); err != nil {
 		return nil, err
 	}
 
@@ -65,7 +66,7 @@ func (nd *NodeDesign) IsValid([]byte) error {
 	}
 
 	addrs := map[string]struct{}{
-		nd.Address: struct{}{},
+		nd.Address: {},
 	}
 	for _, r := range nd.Nodes {
 		r.encs = nd.encs
@@ -108,16 +109,10 @@ func (nd *NetworkDesign) IsValid([]byte) error {
 		nd.bindPort = int(i)
 	}
 
-	if u, err := url.Parse(nd.Publish); err != nil {
-		return xerrors.Errorf("invalid publish url, '%v': %w", nd.Publish, err)
+	if u, err := isvalidNetworkURL(nd.Publish); err != nil {
+		return err
 	} else {
 		nd.publishURL = u
-	}
-
-	switch nd.publishURL.Scheme {
-	case "quic":
-	default:
-		return xerrors.Errorf("unsupported network type found: %v", nd.Publish)
 	}
 
 	return nil
@@ -150,16 +145,10 @@ func (rd *RemoteDesign) IsValid([]byte) error {
 		rd.publickey = pk
 	}
 
-	if u, err := url.Parse(rd.Network); err != nil {
-		return xerrors.Errorf("invalid network url, '%v': %w", rd.Network, err)
+	if u, err := isvalidNetworkURL(rd.Network); err != nil {
+		return err
 	} else {
 		rd.networkURL = u
-	}
-
-	switch rd.networkURL.Scheme {
-	case "quic":
-	default:
-		return xerrors.Errorf("unsupported network type found: %v", rd.networkURL)
 	}
 
 	return nil
@@ -171,4 +160,21 @@ func (rd *RemoteDesign) Publickey() key.Publickey {
 
 func (rd *RemoteDesign) NetworkURL() *url.URL {
 	return rd.networkURL
+}
+
+func isvalidNetworkURL(n string) (*url.URL, error) {
+	var ur *url.URL
+	if u, err := url.Parse(n); err != nil {
+		return nil, xerrors.Errorf("invalid network url, '%v': %w", n, err)
+	} else {
+		ur = u
+	}
+
+	switch ur.Scheme {
+	case "quic":
+	default:
+		return nil, xerrors.Errorf("unsupported network type found: %v", n)
+	}
+
+	return ur, nil
 }

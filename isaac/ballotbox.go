@@ -42,7 +42,7 @@ func (bb *Ballotbox) Vote(blt ballot.Ballot) (base.Voteproof, error) {
 
 	if voteproof.IsFinished() && !voteproof.IsClosed() {
 		// TODO Cleaning VoteRecords may take too long time.
-		// BLOCK cleaning immediatly occurs doubling voting problem
+		// BLOCK cleaning immediately occurs doubling voting problem
 		//if err := bb.clean(voteproof.Height(), voteproof.Round()); err != nil {
 		//return nil, err
 		//}
@@ -68,11 +68,10 @@ func (bb *Ballotbox) loadVoteRecords(blt ballot.Ballot, ifNotCreate bool) *VoteR
 	return vrs
 }
 
-func (bb *Ballotbox) clean(height base.Height, round base.Round) error {
-	bb.Log().Debug().Hinted("height", height).Hinted("round", round).Msg("trying to clean unused records")
+func (bb *Ballotbox) Clean(height base.Height) error {
+	bb.Log().Debug().Hinted("height", height).Msg("trying to clean unused records")
 
 	gh := height.Int64()
-	gr := round.Uint64()
 
 	var err error
 	var removes []interface{}
@@ -91,12 +90,12 @@ func (bb *Ballotbox) clean(height base.Height, round base.Round) error {
 			return false
 		}
 
-		if h != gh {
-			removes = append(removes, k)
+		if h > gh {
+			return true
 		}
-		if r != gr {
-			removes = append(removes, k)
-		}
+
+		removes = append(removes, k)
+
 		bb.Log().Debug().
 			Int64("height", h).Uint64("round", r).Str("stage", base.Stage(s).String()).
 			Msg("records will be removed")

@@ -216,7 +216,7 @@ func (t *testBallotbox) TestINITVoteproofClean() {
 	t.NoError(err)
 	t.Equal(base.VoteResultMajority, vp.Result())
 
-	t.NoError(bb.clean(vp.Height(), vp.Round()))
+	t.NoError(bb.Clean(vp.Height() - 1))
 
 	var remains []string
 	bb.vrs.Range(func(k, v interface{}) bool {

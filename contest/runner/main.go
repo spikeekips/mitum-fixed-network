@@ -16,12 +16,26 @@ import (
 	"github.com/spikeekips/mitum/util/logging"
 )
 
-var Version string
+var mainHelpOptions = kong.HelpOptions{
+	NoAppSummary: false,
+	Compact:      true,
+	Summary:      true,
+	Tree:         true,
+}
+
+var mainDefaultVars = kong.Vars{
+	"log":        "", // NOTE if empty, os.Stdout will be used.
+	"log_level":  "debug",
+	"log_format": "terminal",
+	"verbose":    "false",
+	"log_color":  "false",
+	"event_log":  "",
+}
 
 type mainFlags struct {
 	*contestlib.LogFlags
 	EventLog string `help:"event log file (default: ${event_log})" default:"${event_log}"`
-	Design   string `arg name:"node design file" help:"node design file" type:"existingfile"`
+	Design   string `arg:"" name:"node design file" help:"node design file" type:"existingfile"`
 }
 
 func main() {
@@ -33,20 +47,8 @@ func main() {
 		kong.Name("contest node"),
 		kong.Description("contest node"),
 		kong.UsageOnError(),
-		kong.ConfigureHelp(kong.HelpOptions{
-			NoAppSummary: false,
-			Compact:      true,
-			Summary:      true,
-			Tree:         true,
-		}),
-		kong.Vars{
-			"log":        "", // NOTE if empty, os.Stdout will be used.
-			"log_level":  "debug",
-			"log_format": "terminal",
-			"verbose":    "false",
-			"log_color":  "false",
-			"event_log":  "",
-		},
+		kong.ConfigureHelp(mainHelpOptions),
+		mainDefaultVars,
 	)
 
 	var log logging.Logger
@@ -62,41 +64,16 @@ func main() {
 
 	contestlib.ConnectSignal(&exitHooks, log)
 
-	var encs *encoder.Encoders
-	if e, err := loadEncoder(); err != nil {
-		log.Error().Err(err).Msg("failed to load encoders")
-
-		os.Exit(1)
-	} else {
-		log.Debug().Msg("encoders loaded")
-
-		encs = e
-	}
-
-	var design *contestlib.NodeDesign
-	if d, err := contestlib.LoadDesignFromFile(flags.Design, encs); err != nil {
-		log.Error().Err(err).Msg("failed to load design file")
-
-		os.Exit(1)
-	} else if err := d.IsValid(nil); err != nil {
-		log.Error().Err(err).Msg("invalid design file")
-
-		os.Exit(1)
-	} else {
-		design = d
-		log.Debug().Interface("design", d).Msg("design loaded")
-	}
-
 	var nr *contestlib.NodeRunner
-	if n, err := contestlib.NewNodeRunnerFromDesign(design, encs); err != nil {
+	if n, err := loadNodeRunner(flags.Design); err != nil {
 		log.Error().Err(err).Msg("failed to create node runner")
 
 		os.Exit(1)
 	} else {
 		nr = n
-	}
 
-	_ = nr.SetLogger(log)
+		_ = nr.SetLogger(log)
+	}
 
 	if err := nr.Initialize(); err != nil {
 		log.Error().Err(err).Msg("failed to generate node from design")
@@ -138,6 +115,16 @@ func setupLogging(
 	}
 }
 
+func loadDesign(f string, encs *encoder.Encoders) (*contestlib.NodeDesign, error) {
+	if d, err := contestlib.LoadDesignFromFile(f, encs); err != nil {
+		return nil, xerrors.Errorf("failed to load design file: %w", err)
+	} else if err := d.IsValid(nil); err != nil {
+		return nil, xerrors.Errorf("invalid design file: %w", err)
+	} else {
+		return d, nil
+	}
+}
+
 func loadEncoder() (*encoder.Encoders, error) {
 	encs := encoder.NewEncoders()
 	{
@@ -166,4 +153,29 @@ func loadEncoder() (*encoder.Encoders, error) {
 	}
 
 	return encs, nil
+}
+
+func loadNodeRunner(f string) (*contestlib.NodeRunner, error) {
+	var encs *encoder.Encoders
+	if e, err := loadEncoder(); err != nil {
+		return nil, xerrors.Errorf("failed to load encoders: %w", err)
+	} else {
+		encs = e
+	}
+
+	var design *contestlib.NodeDesign
+	if d, err := loadDesign(f, encs); err != nil {
+		return nil, xerrors.Errorf("failed to load design: %w", err)
+	} else {
+		design = d
+	}
+
+	var nr *contestlib.NodeRunner
+	if n, err := contestlib.NewNodeRunnerFromDesign(design, encs); err != nil {
+		return nil, xerrors.Errorf("failed to create node runner: %w", err)
+	} else {
+		nr = n
+	}
+
+	return nr, nil
 }

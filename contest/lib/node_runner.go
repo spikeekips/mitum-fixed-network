@@ -167,110 +167,114 @@ func (nr *NodeRunner) attachNetwork() error {
 }
 
 func (nr *NodeRunner) attachNetworkHandlers() error {
-	nr.network.SetGetSealsHandler(func(hs []valuehash.Hash) ([]seal.Seal, error) {
-		var sls []seal.Seal
+	nr.network.SetGetSealsHandler(nr.networkHandlerGetSeal)
+	nr.network.SetNewSealHandler(nr.networkhandlerNewSeal)
+	nr.network.SetGetManifests(nr.networkhandlerGetManifests)
+	nr.network.SetGetBlocks(nr.networkhandlerGetBlocks)
 
-		if err := nr.storage.Seals(func(_ valuehash.Hash, sl seal.Seal) (bool, error) {
-			sls = append(sls, sl)
+	return nil
+}
 
-			return true, nil
-		}, true, true); err != nil {
-			return nil, err
-		}
+func (nr *NodeRunner) networkHandlerGetSeal(hs []valuehash.Hash) ([]seal.Seal, error) {
+	var sls []seal.Seal
 
-		return sls, nil
-	})
+	if err := nr.storage.Seals(func(_ valuehash.Hash, sl seal.Seal) (bool, error) {
+		sls = append(sls, sl)
 
-	nr.network.SetNewSealHandler(func(sl seal.Seal) error {
-		sealChecker := isaac.NewSealValidationChecker(sl, nr.localstate.Policy().NetworkID())
-		if err := util.NewChecker("network-new-seal-checker", []util.CheckerFunc{
-			sealChecker.CheckIsValid,
+		return true, nil
+	}, true, true); err != nil {
+		return nil, err
+	}
+
+	return sls, nil
+}
+
+func (nr *NodeRunner) networkhandlerNewSeal(sl seal.Seal) error {
+	sealChecker := isaac.NewSealValidationChecker(sl, nr.localstate.Policy().NetworkID())
+	if err := util.NewChecker("network-new-seal-checker", []util.CheckerFunc{
+		sealChecker.CheckIsValid,
+	}).Check(); err != nil {
+		return err
+	}
+
+	// NOTE stores seal regardless further checkings.
+	if err := nr.storage.NewSeals([]seal.Seal{sl}); err != nil {
+		return err
+	}
+
+	if t, ok := sl.(ballot.Ballot); ok {
+		checker := isaac.NewBallotChecker(t, nr.localstate, nr.suffrage)
+
+		if err := util.NewChecker("network-new-ballot-checker", []util.CheckerFunc{
+			checker.CheckIsInSuffrage,
+			checker.CheckSigning,
+			checker.CheckWithLastBlock,
+			checker.CheckProposal,
+			checker.CheckVoteproof,
 		}).Check(); err != nil {
 			return err
 		}
+	}
 
-		// NOTE stores seal regardless further checkings.
-		if err := nr.storage.NewSeals([]seal.Seal{sl}); err != nil {
-			return err
-		}
+	if err := nr.consensusStates.NewSeal(sl); err != nil {
+		nr.Log().Error().Err(err).Msg("failed to receive seal by consensus states")
 
-		switch t := sl.(type) {
-		case ballot.Ballot:
-			checker := isaac.NewBallotChecker(t, nr.localstate, nr.suffrage)
-
-			if err := util.NewChecker("network-new-ballot-checker", []util.CheckerFunc{
-				checker.CheckIsInSuffrage,
-				checker.CheckSigning,
-				checker.CheckWithLastBlock,
-				checker.CheckProposal,
-				checker.CheckVoteproof,
-			}).Check(); err != nil {
-				return err
-			}
-		}
-
-		if err := nr.consensusStates.NewSeal(sl); err != nil {
-			nr.Log().Error().Err(err).Msg("failed to receive seal by consensus states")
-
-			return err
-		}
-
-		return nil
-	})
-
-	nr.network.SetGetManifests(func(heights []base.Height) ([]block.Manifest, error) {
-		sort.Slice(heights, func(i, j int) bool {
-			return heights[i] < heights[j]
-		})
-
-		var manifests []block.Manifest
-		fetched := map[base.Height]struct{}{}
-		for _, h := range heights {
-			if _, found := fetched[h]; found {
-				continue
-			}
-
-			fetched[h] = struct{}{}
-
-			if m, err := nr.storage.ManifestByHeight(h); err != nil {
-				if !xerrors.Is(err, storage.NotFoundError) {
-					return nil, err
-				}
-			} else {
-				manifests = append(manifests, m)
-			}
-		}
-
-		return manifests, nil
-	})
-
-	nr.network.SetGetBlocks(func(heights []base.Height) ([]block.Block, error) {
-		sort.Slice(heights, func(i, j int) bool {
-			return heights[i] < heights[j]
-		})
-
-		var blocks []block.Block
-		fetched := map[base.Height]struct{}{}
-		for _, h := range heights {
-			if _, found := fetched[h]; found {
-				continue
-			}
-
-			fetched[h] = struct{}{}
-
-			if m, err := nr.storage.BlockByHeight(h); err != nil {
-				if !xerrors.Is(err, storage.NotFoundError) {
-					return nil, err
-				}
-			} else {
-				blocks = append(blocks, m)
-			}
-		}
-
-		return blocks, nil
-	})
+		return err
+	}
 
 	return nil
+}
+
+func (nr *NodeRunner) networkhandlerGetManifests(heights []base.Height) ([]block.Manifest, error) {
+	sort.Slice(heights, func(i, j int) bool {
+		return heights[i] < heights[j]
+	})
+
+	var manifests []block.Manifest
+	fetched := map[base.Height]struct{}{}
+	for _, h := range heights {
+		if _, found := fetched[h]; found {
+			continue
+		}
+
+		fetched[h] = struct{}{}
+
+		if m, err := nr.storage.ManifestByHeight(h); err != nil {
+			if !xerrors.Is(err, storage.NotFoundError) {
+				return nil, err
+			}
+		} else {
+			manifests = append(manifests, m)
+		}
+	}
+
+	return manifests, nil
+}
+
+func (nr *NodeRunner) networkhandlerGetBlocks(heights []base.Height) ([]block.Block, error) {
+	sort.Slice(heights, func(i, j int) bool {
+		return heights[i] < heights[j]
+	})
+
+	var blocks []block.Block
+	fetched := map[base.Height]struct{}{}
+	for _, h := range heights {
+		if _, found := fetched[h]; found {
+			continue
+		}
+
+		fetched[h] = struct{}{}
+
+		if m, err := nr.storage.BlockByHeight(h); err != nil {
+			if !xerrors.Is(err, storage.NotFoundError) {
+				return nil, err
+			}
+		} else {
+			blocks = append(blocks, m)
+		}
+	}
+
+	return blocks, nil
 }
 
 func (nr *NodeRunner) attachNodeChannel() error {
@@ -278,35 +282,6 @@ func (nr *NodeRunner) attachNodeChannel() error {
 		return ctx.Str("target", "node-channel")
 	})
 	l.Debug().Msg("trying to attach")
-
-	/*
-		var channel network.NetworkChannel
-
-		switch nr.design.Network.PublishURL().Scheme {
-		case "quic":
-			var je encoder.Encoder
-			if e, err := nr.encs.Encoder(jsonencoder.JSONType, ""); err != nil { // NOTE get latest bson encoder
-				return xerrors.Errorf("json encoder needs for quic-network", err)
-			} else {
-				je = e
-			}
-
-			if ch, err := quicnetwork.NewQuicChannel(
-				fmt.Sprintf("https://localhost:%d", nr.design.Network.PublishURL().Port()),
-				100,
-				true,
-				time.Second*1,
-				3,
-				nil,
-				nr.encs,
-				je,
-			); err != nil {
-				return err
-			} else {
-				channel = ch
-			}
-		}
-	*/
 
 	nu := new(url.URL)
 	*nu = *nr.design.Network.PublishURL()
@@ -358,8 +333,10 @@ func createNodeChannel(publish *url.URL, encs *encoder.Encoders, enc encoder.Enc
 }
 
 func (nr *NodeRunner) attachRemoteNodes() error {
-	var nodes []isaac.Node
-	for _, r := range nr.design.Nodes {
+	nodes := make([]isaac.Node, len(nr.design.Nodes))
+
+	for i, r := range nr.design.Nodes {
+		r := r
 		l := nr.Log().WithLogger(func(ctx logging.Context) logging.Emitter {
 			return ctx.Str("address", r.Address)
 		})
@@ -382,7 +359,7 @@ func (nr *NodeRunner) attachRemoteNodes() error {
 		}
 		l.Debug().Msg("created")
 
-		nodes = append(nodes, n)
+		nodes[i] = n
 	}
 
 	if err := nr.localstate.Nodes().Add(nodes...); err != nil {

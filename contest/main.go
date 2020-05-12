@@ -15,9 +15,9 @@ import (
 var Version string
 
 type mainFlags struct {
+	Start   cmds.StartCommand `cmd:"" help:"start contest"`
+	Version struct{}          `cmd:"" help:"Print version"`
 	*contestlib.LogFlags
-	Version struct{}          `cmd help:"Print version"`
-	Start   cmds.StartCommand `cmd help:"start contest"`
 }
 
 func main() {
@@ -65,8 +65,7 @@ func main() {
 	log.Info().Msg("contest started")
 	log.Debug().Interface("flags", flags).Msg("flags parsed")
 
-	switch ctx.Command() {
-	case "version":
+	if ctx.Command() == "version" {
 		fmt.Fprintln(os.Stdout, Version)
 
 		os.Exit(0)

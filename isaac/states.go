@@ -2,6 +2,7 @@ package isaac
 
 import (
 	"sync"
+	"time"
 
 	"golang.org/x/xerrors"
 
@@ -24,6 +25,7 @@ type ConsensusStates struct {
 	activeHandler StateHandler
 	stateChan     chan StateChangeContext
 	sealChan      chan seal.Seal
+	stopHooks     []func() error
 }
 
 func NewConsensusStates(
@@ -98,6 +100,13 @@ func (css *ConsensusStates) Start() error {
 
 	css.ActivateHandler(NewStateChangeContext(base.StateStopped, base.StateBooting, nil, nil))
 
+	ticker := css.cleanBallotbox()
+	css.stopHooks = append(css.stopHooks, func() error {
+		ticker.Stop()
+
+		return nil
+	})
+
 	return nil
 }
 
@@ -109,6 +118,12 @@ func (css *ConsensusStates) Stop() error {
 		return err
 	}
 
+	for _, h := range css.stopHooks {
+		if err := h(); err != nil {
+			return err
+		}
+	}
+
 	if css.activeHandler != nil {
 		ctx := NewStateChangeContext(css.activeHandler.State(), base.StateStopped, nil, nil)
 		if err := css.activeHandler.Deactivate(ctx); err != nil {
@@ -117,6 +132,26 @@ func (css *ConsensusStates) Stop() error {
 	}
 
 	return nil
+}
+
+func (css *ConsensusStates) cleanBallotbox() *time.Ticker {
+	ticker := time.NewTicker(time.Second * 10)
+
+	go func() {
+		for range ticker.C {
+			lastBlock := css.localstate.LastBlock()
+			height := lastBlock.Height() - 3
+			if height < 1 {
+				continue
+			}
+
+			if err := css.ballotbox.Clean(height); err != nil {
+				css.Log().Error().Err(err).Msg("something wrong to clean Ballotbox")
+			}
+		}
+	}()
+
+	return ticker
 }
 
 func (css *ConsensusStates) start(stopChan chan struct{}) error {
@@ -220,7 +255,7 @@ func (css *ConsensusStates) broadcastSeal(sl seal.Seal, errChan chan<- error) {
 		}
 	}()
 
-	css.localstate.Nodes().Traverse(func(n Node) bool {
+	css.localstate.Nodes().Traverse(func(m Node) bool {
 		go func(n Node) {
 			lt := l.WithLogger(func(ctx logging.Context) logging.Emitter {
 				return ctx.Hinted("target_node", n.Address())
@@ -237,7 +272,7 @@ func (css *ConsensusStates) broadcastSeal(sl seal.Seal, errChan chan<- error) {
 			}
 
 			lt.Debug().Msgf("seal broadcasted: %T", sl)
-		}(n)
+		}(m)
 
 		return true
 	})

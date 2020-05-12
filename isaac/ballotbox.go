@@ -38,17 +38,7 @@ func (bb *Ballotbox) Vote(blt ballot.Ballot) (base.Voteproof, error) {
 
 	vrs := bb.loadVoteRecords(blt, true)
 
-	voteproof := vrs.Vote(blt)
-
-	if voteproof.IsFinished() && !voteproof.IsClosed() {
-		// TODO Cleaning VoteRecords may take too long time.
-		// BLOCK cleaning immediately occurs doubling voting problem
-		//if err := bb.clean(voteproof.Height(), voteproof.Round()); err != nil {
-		//return nil, err
-		//}
-	}
-
-	return voteproof, nil
+	return vrs.Vote(blt), nil
 }
 
 func (bb *Ballotbox) loadVoteRecords(blt ballot.Ballot, ifNotCreate bool) *VoteRecords {

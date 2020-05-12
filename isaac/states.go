@@ -371,7 +371,6 @@ func (css *ConsensusStates) validateSeal(sl seal.Seal) error {
 }
 
 func (css *ConsensusStates) validateBallot(_ ballot.Ballot) error {
-	// BLOCK valite seal
 	return nil
 }
 

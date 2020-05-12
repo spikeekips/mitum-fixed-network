@@ -209,7 +209,6 @@ func (cs *StateConsensusHandler) keepBroadcastingINITBallotForNextBlock() error 
 		return err
 	}
 
-	// BLOCK stop all the previous running timers
 	return cs.timers.StartTimers([]string{
 		TimerIDBroadcastingINITBallot,
 		TimerIDBroadcastingACCEPTBallot,

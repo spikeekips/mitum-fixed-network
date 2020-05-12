@@ -9,7 +9,6 @@ func (cmd *StartCommand) Run() error {
 	// create docker env
 
 	// generate genesis block and others
-	// BLOCK moves to contest/main.go
 	// BLOCK set basic policy
 	/*{
 		log.Debug().Msg("NodeRunner generated")

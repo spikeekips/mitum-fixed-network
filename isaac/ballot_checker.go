@@ -4,6 +4,7 @@ import (
 	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/base/ballot"
 	"github.com/spikeekips/mitum/base/valuehash"
+	"github.com/spikeekips/mitum/storage"
 	"github.com/spikeekips/mitum/util"
 	"github.com/spikeekips/mitum/util/logging"
 	"golang.org/x/xerrors"
@@ -77,8 +78,14 @@ func (bc *BallotChecker) CheckProposal() (bool, error) {
 
 	var proposal ballot.Proposal
 	if sl, err := bc.localstate.Storage().Seal(ph); err != nil {
-		// BLOCK if not found, request proposal from proposer
-		return false, err
+		if !xerrors.Is(err, storage.NotFoundError) {
+			return false, err
+		} else if pr, err := bc.requestProposal(bc.ballot.Node(), ph); err != nil {
+			// NOTE if not found, request proposal from node of ballot
+			return false, err
+		} else {
+			proposal = pr
+		}
 	} else if pr, ok := sl.(ballot.Proposal); !ok {
 		return false, xerrors.Errorf("seal is not Proposal: %T", sl)
 	} else {
@@ -140,4 +147,27 @@ func (bc *BallotChecker) CheckVoteproof() (bool, error) {
 	}
 
 	return true, nil
+}
+
+func (bc *BallotChecker) requestProposal(address base.Address, h valuehash.Hash) (ballot.Proposal, error) {
+	if n, found := bc.localstate.Nodes().Node(address); !found {
+		return nil, xerrors.Errorf("unknown node of ballot; %v", address)
+	} else if r, err := n.Channel().Seals([]valuehash.Hash{h}); err != nil {
+		return nil, err
+	} else if len(r) < 1 {
+		return nil, xerrors.Errorf(
+			"failed to receive Proposal, %v from %s",
+			h.String(),
+			address,
+		)
+	} else if pr, ok := r[0].(ballot.Proposal); !ok {
+		return nil, xerrors.Errorf(
+			"failed to receive Proposal, %v from %s; not ballot.Proposal, %T",
+			h.String(),
+			address,
+			r[0],
+		)
+	} else {
+		return pr, nil
+	}
 }

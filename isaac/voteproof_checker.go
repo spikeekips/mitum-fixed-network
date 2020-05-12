@@ -123,7 +123,7 @@ func NewVoteproofConsensusStateChecker(
 }
 
 func (vpc *VoteproofConsensusStateChecker) CheckHeight() (bool, error) {
-	// BLOCK reduce the duplicated voteproof.
+	// TODO reduce the duplicated voteproof.
 	l := loggerWithVoteproof(vpc.voteproof, vpc.Log())
 
 	d := vpc.voteproof.Height() - (vpc.lastBlock.Height() + 1)

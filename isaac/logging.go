@@ -10,7 +10,7 @@ import (
 func loggerWithSeal(sl seal.Seal, l logging.Logger) logging.Logger {
 	ll := l.WithLogger(func(ctx logging.Context) logging.Emitter {
 		return ctx.Hinted("seal_hash", sl.Hash()).(logging.Context).
-			CallerWithSkipFrameCount(3) // BLOCK too deep!
+			CallerWithSkipFrameCount(3) // TODO too deep!
 	})
 
 	var event logging.Emitter

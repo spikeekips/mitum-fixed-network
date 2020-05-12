@@ -221,13 +221,15 @@ func (cs *StateConsensusHandler) handleProposal(proposal ballot.Proposal) error 
 	defer cs.proposalLock.Unlock()
 
 	l := loggerWithBallot(proposal, cs.Log())
-	// l := cs.Log()
 
 	l.Debug().Msg("got proposal")
 
 	// TODO don't need to remember processedProposal?
 	if cs.processedProposal != nil {
-		if proposal.Height() == cs.processedProposal.Height() && proposal.Round() == cs.processedProposal.Round() {
+		if proposal.Height() <= cs.processedProposal.Height() {
+			l.Debug().Msg("proposal is already processed")
+			return nil
+		} else if proposal.Height() == cs.processedProposal.Height() && proposal.Round() <= cs.processedProposal.Round() {
 			l.Debug().Msg("proposal is already processed")
 			return nil
 		}

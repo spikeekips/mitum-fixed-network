@@ -9,7 +9,11 @@ type SealValidationChecker struct {
 	b    []byte
 }
 
-func (svc SealValidationChecker) CheckValidation() (bool, error) {
+func NewSealValidationChecker(sl seal.Seal, b []byte) SealValidationChecker {
+	return SealValidationChecker{seal: sl, b: b}
+}
+
+func (svc SealValidationChecker) CheckIsValid() (bool, error) {
 	if err := svc.seal.IsValid(svc.b); err != nil {
 		return false, err
 	}

@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"io"
 	"os"
 
@@ -10,32 +11,31 @@ import (
 
 	contestlib "github.com/spikeekips/mitum/contest/lib"
 	"github.com/spikeekips/mitum/util/encoder"
-	bsonencoder "github.com/spikeekips/mitum/util/encoder/bson"
-	jsonencoder "github.com/spikeekips/mitum/util/encoder/json"
-	"github.com/spikeekips/mitum/util/hint"
 	"github.com/spikeekips/mitum/util/logging"
 )
 
+var Version string = "v0.1-proto3"
+
 var mainHelpOptions = kong.HelpOptions{
 	NoAppSummary: false,
-	Compact:      true,
+	Compact:      false,
 	Summary:      true,
 	Tree:         true,
 }
 
 var mainDefaultVars = kong.Vars{
-	"log":        "", // NOTE if empty, os.Stdout will be used.
-	"log_level":  "debug",
-	"log_format": "terminal",
-	"verbose":    "false",
-	"log_color":  "false",
-	"event_log":  "",
+	"log":           "", // NOTE if empty, os.Stdout will be used.
+	"log_level":     "debug",
+	"log_format":    "terminal",
+	"verbose":       "false",
+	"log_color":     "false",
+	"run_event_log": "",
 }
 
 type mainFlags struct {
+	Run     RunCommand `cmd:"" help:"run contest node runner"`
+	Version struct{}   `cmd:"" help:"print version"`
 	*contestlib.LogFlags
-	EventLog string `help:"event log file (default: ${event_log})" default:"${event_log}"`
-	Design   string `arg:"" name:"node design file" help:"node design file" type:"existingfile"`
 }
 
 func main() {
@@ -44,17 +44,47 @@ func main() {
 	}
 	ctx := kong.Parse(
 		flags,
-		kong.Name("contest node"),
-		kong.Description("contest node"),
+		kong.Name(os.Args[0]),
+		kong.Description("contest node runner"),
 		kong.UsageOnError(),
 		kong.ConfigureHelp(mainHelpOptions),
 		mainDefaultVars,
 	)
 
+	exitHooks := contestlib.NewExitHooks()
+	defer contestlib.RunExitHooks(exitHooks)
+
 	var log logging.Logger
-	var exitHooks []func()
-	if l, err := setupLogging(flags, &exitHooks); err != nil {
+	if o, err := contestlib.SetupLoggingOutput(flags.Log, flags.LogFormat, flags.LogColor, exitHooks); err != nil {
 		ctx.FatalIfErrorf(err)
+	} else if l, err := contestlib.SetupLogging(o, flags.LogFlags); err != nil {
+		ctx.FatalIfErrorf(err)
+	} else {
+		log = l
+	}
+
+	contestlib.ConnectSignal(exitHooks, log)
+
+	if ctx.Command() == "version" {
+		_, _ = fmt.Fprintln(os.Stdout, Version)
+
+		os.Exit(0)
+	}
+
+	ctx.FatalIfErrorf(ctx.Run(flags, exitHooks))
+
+	os.Exit(0)
+}
+
+type RunCommand struct {
+	EventLog string `help:"event log file (default: ${run_event_log})" default:"${run_event_log}"`
+	Design   string `arg:"" name:"node design file" help:"node design file" type:"existingfile"`
+}
+
+func (cmd *RunCommand) Run(flags *mainFlags, exitHooks *[]func()) error {
+	var log logging.Logger
+	if l, err := setupLogging(flags, cmd.EventLog, exitHooks); err != nil {
+		return err
 	} else {
 		log = l
 	}
@@ -62,13 +92,9 @@ func main() {
 	log.Info().Msg("contest node started")
 	log.Debug().Interface("flags", flags).Msg("flags parsed")
 
-	contestlib.ConnectSignal(&exitHooks, log)
-
 	var nr *contestlib.NodeRunner
-	if n, err := loadNodeRunner(flags.Design); err != nil {
-		log.Error().Err(err).Msg("failed to create node runner")
-
-		os.Exit(1)
+	if n, err := loadNodeRunner(cmd.Design); err != nil {
+		return xerrors.Errorf("failed to create node runner: %w", err)
 	} else {
 		nr = n
 
@@ -76,24 +102,17 @@ func main() {
 	}
 
 	if err := nr.Initialize(); err != nil {
-		log.Error().Err(err).Msg("failed to generate node from design")
-
-		os.Exit(1)
+		return xerrors.Errorf("failed to generate node from design: %w", err)
 	}
 
 	if err := nr.Start(); err != nil {
-		log.Error().Err(err).Msg("failed to start")
-
-		os.Exit(1)
+		return xerrors.Errorf("failed to start: %w", err)
 	}
 
 	select {}
 }
 
-func setupLogging(
-	flags *mainFlags,
-	exitHooks *[]func(),
-) (logging.Logger, error) {
+func setupLogging(flags *mainFlags, eventLog string, exitHooks *[]func()) (logging.Logger, error) {
 	var eventOutput, consoleOutput io.Writer
 	if o, err := contestlib.SetupLoggingOutput(flags.Log, flags.LogFormat, flags.LogColor, exitHooks); err != nil {
 		return logging.Logger{}, err
@@ -101,7 +120,7 @@ func setupLogging(
 		consoleOutput = contestlib.NewConsoleWriter(o, zerolog.Level(flags.LogLevel))
 	}
 
-	if o, err := contestlib.SetupLoggingOutput(flags.EventLog, "json", false, exitHooks); err != nil {
+	if o, err := contestlib.SetupLoggingOutput(eventLog, "json", false, exitHooks); err != nil {
 		return logging.Logger{}, err
 	} else {
 		eventOutput = o
@@ -116,7 +135,7 @@ func setupLogging(
 }
 
 func loadDesign(f string, encs *encoder.Encoders) (*contestlib.NodeDesign, error) {
-	if d, err := contestlib.LoadDesignFromFile(f, encs); err != nil {
+	if d, err := contestlib.LoadNodeDesignFromFile(f, encs); err != nil {
 		return nil, xerrors.Errorf("failed to load design file: %w", err)
 	} else if err := d.IsValid(nil); err != nil {
 		return nil, xerrors.Errorf("invalid design file: %w", err)
@@ -125,39 +144,9 @@ func loadDesign(f string, encs *encoder.Encoders) (*contestlib.NodeDesign, error
 	}
 }
 
-func loadEncoder() (*encoder.Encoders, error) {
-	encs := encoder.NewEncoders()
-	{
-		enc := jsonencoder.NewEncoder()
-		if err := encs.AddEncoder(enc); err != nil {
-			return nil, err
-		}
-	}
-
-	{
-		enc := bsonencoder.NewEncoder()
-		if err := encs.AddEncoder(enc); err != nil {
-			return nil, err
-		}
-	}
-
-	for i := range contestlib.Hinters {
-		hinter, ok := contestlib.Hinters[i][1].(hint.Hinter)
-		if !ok {
-			return nil, xerrors.Errorf("not hint.Hinter: %T", contestlib.Hinters[i])
-		}
-
-		if err := encs.AddHinter(hinter); err != nil {
-			return nil, err
-		}
-	}
-
-	return encs, nil
-}
-
 func loadNodeRunner(f string) (*contestlib.NodeRunner, error) {
 	var encs *encoder.Encoders
-	if e, err := loadEncoder(); err != nil {
+	if e, err := contestlib.LoadEncoder(); err != nil {
 		return nil, xerrors.Errorf("failed to load encoders: %w", err)
 	} else {
 		encs = e

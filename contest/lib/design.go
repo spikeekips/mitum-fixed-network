@@ -17,18 +17,56 @@ import (
 	"github.com/spikeekips/mitum/util/isvalid"
 )
 
+type ContestDesign struct {
+	encs  *encoder.Encoders
+	Nodes []*ContestNodeDesign
+}
+
+func LoadContestDesignFromFile(f string, encs *encoder.Encoders) (*ContestDesign, error) {
+	var design ContestDesign
+	if b, err := ioutil.ReadFile(filepath.Clean(f)); err != nil {
+		return nil, err
+	} else if err := yaml.Unmarshal(b, &design); err != nil {
+		return nil, err
+	}
+
+	design.encs = encs
+
+	return &design, nil
+}
+
+func (cd *ContestDesign) IsValid([]byte) error {
+	if len(cd.Nodes) < 1 {
+		return xerrors.Errorf("empty nodes")
+	}
+
+	addrs := map[string]struct{}{}
+	for _, r := range cd.Nodes {
+		if _, found := addrs[r.Address]; found {
+			return xerrors.Errorf("duplicated address found: '%v'", r.Address)
+		}
+		addrs[r.Address] = struct{}{}
+	}
+
+	return nil
+}
+
+type ContestNodeDesign struct {
+	Address string
+}
+
 type NodeDesign struct {
 	encs             *encoder.Encoders
 	Address          string
 	PrivatekeyString string `yaml:"privatekey"`
 	Storage          string
-	NetworkIDString  string `yaml:"network-id"`
+	NetworkIDString  string `yaml:"network-id,omitempty"`
 	Network          *NetworkDesign
 	privatekey       key.Privatekey
 	Nodes            []*RemoteDesign
 }
 
-func LoadDesignFromFile(f string, encs *encoder.Encoders) (*NodeDesign, error) {
+func LoadNodeDesignFromFile(f string, encs *encoder.Encoders) (*NodeDesign, error) {
 	var design NodeDesign
 	if b, err := ioutil.ReadFile(filepath.Clean(f)); err != nil {
 		return nil, err

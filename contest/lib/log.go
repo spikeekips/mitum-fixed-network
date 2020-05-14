@@ -31,14 +31,12 @@ type LogFlags struct {
 }
 
 func SetupLoggingOutput(f string, format LogFormat, forceColor bool, exitHooks *[]func()) (io.Writer, error) {
-	eh := *exitHooks
-
 	logFile := strings.TrimSpace(f)
 
 	var output io.Writer
 	if len(logFile) < 1 {
 		o := os.Stdout
-		eh = append(eh, func() {
+		AddExitHook(exitHooks, func() {
 			_ = o.Sync()
 		})
 
@@ -60,11 +58,11 @@ func SetupLoggingOutput(f string, format LogFormat, forceColor bool, exitHooks *
 			},
 		)
 
-		eh = append(eh, func() {
-			if l, ok := output.(diode.Writer); ok {
+		if l, ok := output.(diode.Writer); ok {
+			AddExitHook(exitHooks, func() {
 				_ = l.Close()
-			}
-		})
+			})
+		}
 	}
 
 	if format == "terminal" {
@@ -81,8 +79,6 @@ func SetupLoggingOutput(f string, format LogFormat, forceColor bool, exitHooks *
 			NoColor:    !useColor,
 		}
 	}
-
-	*exitHooks = eh
 
 	return output, nil
 }

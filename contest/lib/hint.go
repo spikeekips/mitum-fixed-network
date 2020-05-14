@@ -1,6 +1,8 @@
 package contestlib
 
 import (
+	"golang.org/x/xerrors"
+
 	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/base/ballot"
 	"github.com/spikeekips/mitum/base/block"
@@ -10,11 +12,13 @@ import (
 	"github.com/spikeekips/mitum/base/tree"
 	"github.com/spikeekips/mitum/base/valuehash"
 	"github.com/spikeekips/mitum/isaac"
+	"github.com/spikeekips/mitum/util/encoder"
 	bsonencoder "github.com/spikeekips/mitum/util/encoder/bson"
 	jsonencoder "github.com/spikeekips/mitum/util/encoder/json"
+	"github.com/spikeekips/mitum/util/hint"
 )
 
-var Hinters = [][2]interface{}{
+var hinters = [][2]interface{}{
 	{"contest-address", ContestAddress("")},
 	{"encoder-bson", bsonencoder.Encoder{}},
 	{"encoder-json", jsonencoder.Encoder{}},
@@ -50,4 +54,34 @@ var Hinters = [][2]interface{}{
 	{"state-number-value", state.NumberValue{}},
 	{"state-slice-value", state.SliceValue{}},
 	{"state-string-value", state.StringValue{}},
+}
+
+func LoadEncoder() (*encoder.Encoders, error) {
+	encs := encoder.NewEncoders()
+	{
+		enc := jsonencoder.NewEncoder()
+		if err := encs.AddEncoder(enc); err != nil {
+			return nil, err
+		}
+	}
+
+	{
+		enc := bsonencoder.NewEncoder()
+		if err := encs.AddEncoder(enc); err != nil {
+			return nil, err
+		}
+	}
+
+	for i := range hinters {
+		hinter, ok := hinters[i][1].(hint.Hinter)
+		if !ok {
+			return nil, xerrors.Errorf("not hint.Hinter: %T", hinters[i])
+		}
+
+		if err := encs.AddHinter(hinter); err != nil {
+			return nil, err
+		}
+	}
+
+	return encs, nil
 }

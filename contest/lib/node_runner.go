@@ -45,7 +45,7 @@ type NodeRunner struct {
 func NewNodeRunnerFromDesign(design *NodeDesign, encs *encoder.Encoders) (*NodeRunner, error) {
 	var je encoder.Encoder
 	if e, err := encs.Encoder(jsonencoder.JSONType, ""); err != nil { // NOTE get latest bson encoder
-		return nil, xerrors.Errorf("json encoder needs for quic-network", err)
+		return nil, xerrors.Errorf("json encoder needs for quic-network: %w", err)
 	} else {
 		je = e
 	}
@@ -561,7 +561,7 @@ func newMongodbStorage(uri string, encs *encoder.Encoders) (storage.Storage, err
 
 	var be encoder.Encoder
 	if e, err := encs.Encoder(bsonencoder.BSONType, ""); err != nil { // NOTE get latest bson encoder
-		return nil, xerrors.Errorf("bson encoder needs for mongodb", err)
+		return nil, xerrors.Errorf("bson encoder needs for mongodb: %w", err)
 	} else {
 		be = e
 	}

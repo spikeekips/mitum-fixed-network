@@ -2,7 +2,6 @@ package main
 
 import (
 	"fmt"
-	"io"
 	"os"
 
 	"github.com/alecthomas/kong"
@@ -12,7 +11,25 @@ import (
 	"github.com/spikeekips/mitum/util/logging"
 )
 
-var Version string
+var (
+	Version     string = "v0.1-proto3"
+	mainOptions        = kong.HelpOptions{
+		NoAppSummary: false,
+		Compact:      true,
+		Summary:      false,
+		Tree:         true,
+	}
+)
+
+var mainVars = kong.Vars{
+	"log":             "",
+	"log_level":       "debug",
+	"log_format":      "terminal",
+	"log_color":       "false",
+	"verbose":         "false",
+	"start_image":     "golang:latest",
+	"start_not_clean": "false",
+}
 
 type mainFlags struct {
 	Start   cmds.StartCommand `cmd:"" help:"start contest"`
@@ -29,41 +46,9 @@ func main() {
 		kong.Name("contest"),
 		kong.Description("Consensus tester"),
 		kong.UsageOnError(),
-		kong.ConfigureHelp(kong.HelpOptions{
-			NoAppSummary: false,
-			Compact:      true,
-			Summary:      false,
-			Tree:         true,
-		}),
-		kong.Vars{
-			"log":        "",
-			"log_level":  "debug",
-			"log_format": "terminal",
-			"verbose":    "false",
-			"nodes":      "1",                               // TODO set optional
-			"networkID":  fmt.Sprintf("contest-network-id"), // TODO set optional
-		},
+		kong.ConfigureHelp(mainOptions),
+		mainVars,
 	)
-
-	var log logging.Logger
-	var exitHooks []func()
-	var consoleOutput io.Writer
-	if o, err := contestlib.SetupLoggingOutput(flags.Log, flags.LogFormat, flags.LogColor, &exitHooks); err != nil {
-		ctx.FatalIfErrorf(err)
-	} else {
-		consoleOutput = o
-	}
-
-	if l, err := contestlib.SetupLogging(consoleOutput, flags.LogFlags); err != nil {
-		ctx.FatalIfErrorf(err)
-	} else {
-		log = l
-	}
-
-	contestlib.ConnectSignal(&exitHooks, log)
-
-	log.Info().Msg("contest started")
-	log.Debug().Interface("flags", flags).Msg("flags parsed")
 
 	if ctx.Command() == "version" {
 		_, _ = fmt.Fprintln(os.Stdout, Version)
@@ -71,9 +56,31 @@ func main() {
 		os.Exit(0)
 	}
 
-	ctx.FatalIfErrorf(ctx.Run())
+	exitHooks := contestlib.NewExitHooks()
+
+	var log logging.Logger
+	if o, err := contestlib.SetupLoggingOutput(flags.Log, flags.LogFormat, flags.LogColor, exitHooks); err != nil {
+		ctx.FatalIfErrorf(err)
+	} else if l, err := contestlib.SetupLogging(o, flags.LogFlags); err != nil {
+		ctx.FatalIfErrorf(err)
+	} else {
+		log = l
+	}
+
+	contestlib.ConnectSignal(exitHooks, log)
+
+	log.Info().Msg("contest started")
+	log.Debug().Interface("flags", flags).Msg("flags parsed")
+
+	if err := run(ctx, log, exitHooks); err != nil {
+		ctx.FatalIfErrorf(err)
+	}
 
 	log.Info().Msg("contest finished")
+}
 
-	os.Exit(0)
+func run(ctx *kong.Context, log logging.Logger, exitHooks *[]func()) error {
+	defer contestlib.RunExitHooks(exitHooks)
+
+	return ctx.Run(log, exitHooks)
 }

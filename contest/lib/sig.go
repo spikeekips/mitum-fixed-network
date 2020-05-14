@@ -23,10 +23,27 @@ func ConnectSignal(exitHooks *[]func(), log logging.Logger) {
 			Str("sig", s.String()).
 			Msg("contest stopped by force")
 
-		for _, h := range *exitHooks {
-			h()
-		}
+		RunExitHooks(exitHooks)
 
 		os.Exit(1)
 	}()
+}
+
+func NewExitHooks() *[]func() {
+	var eh []func()
+
+	return &eh
+}
+
+func AddExitHook(exitHooks *[]func(), f ...func()) {
+	eh := *exitHooks
+	eh = append(eh, f...)
+
+	*exitHooks = eh
+}
+
+func RunExitHooks(exitHooks *[]func()) {
+	for _, h := range *exitHooks {
+		h()
+	}
 }

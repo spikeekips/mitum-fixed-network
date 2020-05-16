@@ -629,24 +629,76 @@ func PullImage(dc *dockerClient.Client, image string) error {
 	return nil
 }
 
-func CleanContainers(dc *dockerClient.Client, log logging.Logger) error {
-	log.Debug().Msg("trying to clean containers")
-
-	opt := types.ContainerListOptions{
-		All: true,
-	}
-
-	containers, err := dc.ContainerList(context.Background(), opt)
+func FindLabeledContainers(dc *dockerClient.Client, label string) ([]string, error) {
+	containers, err := dc.ContainerList(context.Background(), types.ContainerListOptions{All: true})
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	var founds []string
 	for i := range containers {
 		c := containers[i]
-		if _, found := c.Labels[ContainerLabel]; found {
+		if _, found := c.Labels[label]; found {
 			founds = append(founds, c.ID)
 		}
+	}
+
+	return founds, nil
+}
+
+func StopContainers(dc *dockerClient.Client, log logging.Logger) error {
+	log.Debug().Msg("trying to stop containers")
+
+	var founds []string
+	if l, err := FindLabeledContainers(dc, ContainerLabel); err != nil {
+		return err
+	} else {
+		founds = l
+	}
+
+	log.Debug().Msgf("found %d containers for contest", len(founds))
+
+	if len(founds) < 1 {
+		log.Debug().Msg("nothing to be stopped")
+
+		return nil
+	}
+
+	for _, id := range founds {
+		if err := StopContainer(dc, id, log); err != nil {
+			return err
+		}
+	}
+
+	log.Debug().Msg("containers stopped")
+
+	return nil
+}
+
+func StopContainer(dc *dockerClient.Client, id string, log logging.Logger) error {
+	l := log.WithLogger(func(ctx logging.Context) logging.Emitter {
+		return ctx.Str("id", id)
+	})
+
+	l.Debug().Msg("trying to stop container")
+
+	if err := dc.ContainerStop(context.Background(), id, nil); err != nil {
+		return err
+	}
+
+	l.Debug().Msg("container stopped")
+
+	return nil
+}
+
+func CleanContainers(dc *dockerClient.Client, log logging.Logger) error {
+	log.Debug().Msg("trying to clean containers")
+
+	var founds []string
+	if l, err := FindLabeledContainers(dc, ContainerLabel); err != nil {
+		return err
+	} else {
+		founds = l
 	}
 
 	log.Debug().Msgf("found %d containers for contest", len(founds))

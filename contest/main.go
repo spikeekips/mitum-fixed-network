@@ -33,6 +33,7 @@ var mainVars = kong.Vars{
 
 type mainFlags struct {
 	Start   cmds.StartCommand `cmd:"" help:"start contest"`
+	Clean   cmds.CleanCommand `cmd:"" help:"clean contest"`
 	Version struct{}          `cmd:"" help:"Print version"`
 	*contestlib.LogFlags
 }

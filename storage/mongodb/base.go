@@ -493,7 +493,6 @@ func (st *Storage) StagedOperationSeals(callback func(operation.Seal) (bool, err
 
 func (st *Storage) UnstagedOperationSeals(seals []valuehash.Hash) error {
 	var models []mongo.WriteModel
-
 	for _, h := range seals {
 		models = append(models,
 			mongo.NewDeleteOneModel().SetFilter(util.NewBSONFilter("_id", h.String()).D()),

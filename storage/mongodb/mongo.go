@@ -217,11 +217,8 @@ func (cl *Client) bulk(col string, models []mongo.WriteModel) error {
 	defer cancel()
 
 	opts := options.BulkWrite().SetOrdered(true)
-	res, err := cl.db.Collection(col).BulkWrite(ctx, models, opts)
-	if err != nil {
+	if _, err := cl.db.Collection(col).BulkWrite(ctx, models, opts); err != nil {
 		return storage.WrapError(err)
-	} else if res.InsertedCount < 1 {
-		return storage.WrapError(xerrors.Errorf("not inserted"))
 	}
 
 	return nil

@@ -48,5 +48,6 @@ func (dm Dummy) Equal(h Hash) bool {
 	if dm.Hint().Type() != h.Hint().Type() {
 		return false
 	}
+
 	return bytes.Equal(dm.b, h.Bytes())
 }

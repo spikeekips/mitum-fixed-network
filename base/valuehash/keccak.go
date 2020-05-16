@@ -15,8 +15,8 @@ const (
 
 var (
 	emptySHA256 [sha256Size]byte
-	emptySHA512 [sha512Size]byte
 	nilSHA256   [sha256Size]byte
+	emptySHA512 [sha512Size]byte
 	nilSHA512   [sha512Size]byte
 )
 

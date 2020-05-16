@@ -210,9 +210,14 @@ func (qs *QuicServer) handleNewSeal(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if err := qs.newSealHandler(sl); err != nil {
-		qs.Log().Error().Err(err).Msg("failed to receive new seal")
+		seal.LoggerWithSeal(
+			sl,
+			qs.Log().Error().Err(err),
+			qs.Log().IsVerbose(),
+		).Msg("failed to receive new seal")
 
 		network.HTTPError(w, http.StatusInternalServerError)
+
 		return
 	}
 

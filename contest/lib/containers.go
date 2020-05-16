@@ -74,7 +74,7 @@ func NewContainers(
 	dockerNetworkID string,
 	design *ContestDesign,
 ) (*Containers, error) {
-	tmp, err := ioutil.TempDir("/tmp", "prefix")
+	tmp, err := ioutil.TempDir("/tmp", "contest")
 	if err != nil {
 		return nil, xerrors.Errorf("failed to create temp directory", err)
 	}

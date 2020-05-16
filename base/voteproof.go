@@ -53,3 +53,11 @@ func (vf VoteproofNodeFact) IsValid(b []byte) error {
 
 	return vf.signer.Verify(util.ConcatBytesSlice(vf.fact.Bytes(), b), vf.factSignature)
 }
+
+func (vf VoteproofNodeFact) Bytes() []byte {
+	return util.ConcatBytesSlice(
+		vf.fact.Bytes(),
+		vf.factSignature.Bytes(),
+		[]byte(vf.signer.String()),
+	)
+}

@@ -26,6 +26,6 @@ GOOS=linux GOARCH=amd64 go build \
     -ldflags="-X 'main.Version=${version}'" \
     -v \
     -o $1 \
-    ./contest/runner/main.go
+    ./contest/main.go
 
 echo 'build finished:' $1

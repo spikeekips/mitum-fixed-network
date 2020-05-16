@@ -66,7 +66,13 @@ func (ne *NError) Wrap(err error) *NError {
 func (ne *NError) Errorf(s string, a ...interface{}) *NError {
 	return &NError{
 		s:     ne.s,
-		err:   xerrors.Errorf(s, a...),
-		frame: xerrors.Caller(1),
+		err:   NewError(s, a...).SetFrame(2),
+		frame: xerrors.Caller(2),
 	}
+}
+
+func (ne *NError) SetFrame(n int) *NError {
+	ne.frame = xerrors.Caller(n)
+
+	return ne
 }

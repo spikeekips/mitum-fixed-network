@@ -8,8 +8,8 @@ import (
 func IsValidSeal(seal Seal, b []byte) error {
 	if h, err := seal.GenerateHash(); err != nil {
 		return err
-	} else if !seal.Hash().Equal(h) {
-		return isvalid.InvalidError.Errorf("hash does not match")
+	} else if sh := seal.Hash(); !sh.Equal(h) {
+		return isvalid.InvalidError.Errorf("hash does not match: seal=%s(%v) generated=%s(%v)", sh, sh.Hint(), h, h.Hint())
 	}
 
 	if err := seal.Signer().Verify(

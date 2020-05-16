@@ -1,6 +1,8 @@
 package base
 
 import (
+	"bytes"
+	"sort"
 	"time"
 
 	"golang.org/x/xerrors"
@@ -143,14 +145,79 @@ func (vp *VoteproofV0) Close() *VoteproofV0 {
 	return vp
 }
 
-func (vp VoteproofV0) Bytes() []byte {
-	bs := make([][]byte, len(vp.ballots))
+func (vp VoteproofV0) ballotsBytes() []byte {
+	keys := make([]Address, len(vp.ballots))
 	var i int
-	for _, h := range vp.ballots {
-		bs[i] = h.Bytes()
+	for a := range vp.ballots {
+		keys[i] = a
 		i++
 	}
 
+	// NOTE without ordering, the bytes values will be varies.
+	sort.Slice(keys, func(i, j int) bool {
+		return bytes.Compare(
+			keys[i].Bytes(),
+			keys[j].Bytes(),
+		) < 0
+	})
+
+	bs := make([][]byte, len(keys))
+	for i, a := range keys {
+		bs[i] = vp.ballots[a].Bytes()
+	}
+
+	return util.ConcatBytesSlice(bs...)
+}
+
+func (vp VoteproofV0) factsBytes() []byte {
+	keys := make([]valuehash.Hash, len(vp.facts))
+	var i int
+	for a := range vp.facts {
+		keys[i] = a
+		i++
+	}
+
+	// NOTE without ordering, the bytes values will be varies.
+	sort.Slice(keys, func(i, j int) bool {
+		return bytes.Compare(
+			keys[i].Bytes(),
+			keys[j].Bytes(),
+		) < 0
+	})
+
+	bs := make([][]byte, len(keys))
+	for i, a := range keys {
+		bs[i] = vp.facts[a].Bytes()
+	}
+
+	return util.ConcatBytesSlice(bs...)
+}
+
+func (vp VoteproofV0) votesBytes() []byte {
+	keys := make([]Address, len(vp.votes))
+	var i int
+	for a := range vp.votes {
+		keys[i] = a
+		i++
+	}
+
+	// NOTE without ordering, the bytes values will be varies.
+	sort.Slice(keys, func(i, j int) bool {
+		return bytes.Compare(
+			keys[i].Bytes(),
+			keys[j].Bytes(),
+		) < 0
+	})
+
+	bs := make([][]byte, len(keys))
+	for i, a := range keys {
+		bs[i] = vp.votes[a].Bytes()
+	}
+
+	return util.ConcatBytesSlice(bs...)
+}
+
+func (vp VoteproofV0) Bytes() []byte {
 	return util.ConcatBytesSlice(
 		vp.height.Bytes(),
 		vp.round.Bytes(),
@@ -158,7 +225,9 @@ func (vp VoteproofV0) Bytes() []byte {
 		vp.result.Bytes(),
 		vp.stage.Bytes(),
 		vp.majority.Bytes(),
-		util.ConcatBytesSlice(bs...),
+		vp.ballotsBytes(),
+		vp.factsBytes(),
+		vp.votesBytes(),
 		[]byte(localtime.RFC3339(vp.finishedAt)),
 	)
 }

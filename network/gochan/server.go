@@ -57,7 +57,12 @@ end:
 				}
 
 				if err := cs.newSealHandler(sl); err != nil {
-					cs.Log().Error().Err(err).Msg("failed to receive new seal")
+					seal.LoggerWithSeal(
+						sl,
+						cs.Log().Error().Err(err),
+						cs.Log().IsVerbose(),
+					).Msg("failed to receive new seal")
+
 					return
 				}
 			}(sl)

@@ -54,7 +54,7 @@ func (qc *QuicClient) newClient() (*http.Client, func() error /* close func */) 
 			InsecureSkipVerify: qc.insecure, // nolint
 			// KeyLogWriter:       nil, // TODO set cert key writer
 		},
-		QuicConfig: qc.quicConfig,
+		QuicConfig: CloneConfig(qc.quicConfig),
 	}
 
 	return &http.Client{
@@ -235,4 +235,10 @@ func (qr QuicResponse) Header() http.Header {
 
 func (qr QuicResponse) Bytes() []byte {
 	return qr.body
+}
+
+func CloneConfig(c *quic.Config) *quic.Config {
+	cp := *c
+
+	return &cp
 }

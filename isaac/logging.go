@@ -13,18 +13,7 @@ func loggerWithSeal(sl seal.Seal, l logging.Logger) logging.Logger {
 			CallerWithSkipFrameCount(3) // TODO too deep!
 	})
 
-	var event logging.Emitter
-	if ls, ok := sl.(logging.LogHintedMarshaler); ok {
-		event = ll.Debug().HintedVerbose("seal", ls, l.IsVerbose())
-	} else {
-		event = ll.Debug().
-			Dict("seal", logging.Dict().
-				Hinted("hint", sl.Hint()).
-				Hinted("hash", sl.Hash()).(*logging.Event),
-			)
-	}
-
-	event.Msg("seal")
+	seal.LoggerWithSeal(sl, ll.Debug(), ll.IsVerbose()).Msg("seal")
 
 	return ll
 }

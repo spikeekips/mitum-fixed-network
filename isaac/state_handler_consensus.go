@@ -307,7 +307,7 @@ func (cs *StateConsensusHandler) proposal(voteproof base.Voteproof) (bool, error
 
 	proposal, err := cs.proposalMaker.Proposal(voteproof.Round())
 	if err != nil {
-		return false, err
+		return false, xerrors.Errorf("failed to make proposal: %w", err)
 	}
 
 	l.Debug().Interface("proposal", proposal).Msg("trying to broadcast Proposal")

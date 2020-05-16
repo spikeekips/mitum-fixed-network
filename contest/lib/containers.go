@@ -199,13 +199,13 @@ func (cts *Containers) create() error {
 			c.designFile = designFile
 		}
 
-		baseLogFile := filepath.Join(cts.tmp, fmt.Sprintf("base-%s.yml", c.name))
+		baseLogFile := filepath.Join(cts.tmp, fmt.Sprintf("base-%s.log", c.name))
 		if err := ioutil.WriteFile(baseLogFile, nil, 0600); err != nil {
 			return err
 		}
 		c.baseLogFile = baseLogFile
 
-		eventLogFile := filepath.Join(cts.tmp, fmt.Sprintf("event-%s.yml", c.name))
+		eventLogFile := filepath.Join(cts.tmp, fmt.Sprintf("event-%s.log", c.name))
 		if err := ioutil.WriteFile(eventLogFile, nil, 0600); err != nil {
 			return err
 		}

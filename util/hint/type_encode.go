@@ -4,7 +4,7 @@ import (
 	"encoding/hex"
 )
 
-func (ty *Type) unpack(c, n string) error {
+func (ty *Type) unpack(c string) error {
 	var t [2]byte
 	if d, err := hex.DecodeString(c); err != nil {
 		return err
@@ -13,12 +13,6 @@ func (ty *Type) unpack(c, n string) error {
 	}
 
 	nt := Type(t)
-
-	if t, err := typeByName(n); err != nil {
-		return err
-	} else if !nt.Equal(t) {
-		return NewTypeDoesNotMatchError(t, nt)
-	}
 
 	*ty = nt
 

@@ -1,6 +1,7 @@
 package contestlib
 
 import (
+	"bufio"
 	"bytes"
 	"context"
 	"fmt"
@@ -21,31 +22,56 @@ import (
 	"gopkg.in/yaml.v2"
 
 	"github.com/spikeekips/mitum/base/key"
+	"github.com/spikeekips/mitum/storage"
 	"github.com/spikeekips/mitum/util"
+	"github.com/spikeekips/mitum/util/encoder"
 	jsonencoder "github.com/spikeekips/mitum/util/encoder/json"
 	"github.com/spikeekips/mitum/util/logging"
 )
 
+var (
+	MongodbImage         = "mongo:latest"
+	MongodbContainerName = "contest-mongodb"
+	MongodbExternalPort  = "37017"
+	ContainerLabel       = "contest"
+)
+
+var policyBody = `{
+  "_hint": {
+    "type": { "name": "policy-body-v0", "code": "0801" },
+    "version": "0.0.1"
+  },
+  "threshold": [ %d, %f ],
+  "timeout_waiting_proposal": 5000000000,
+  "interval_broadcasting_init_ballot": 1000000000,
+  "interval_broadcasting_proposal": 1000000000,
+  "wait_broadcasting_accept_ballot": 2000000000,
+  "interval_broadcasting_accept_ballot": 1000000000,
+  "number_of_acting_suffrage_nodes": 1,
+  "timespan_valid_ballot": 60000000000
+}`
+
 type Containers struct {
 	*logging.Logging
+	encs            *encoder.Encoders
 	client          *dockerClient.Client
 	image           string
 	runner          string
 	networkName     string
 	dockerNetworkID string
-	label           string
 	design          *ContestDesign
 	tmp             string
 	containers      []*Container
+	mongodbIP       string
 }
 
 func NewContainers(
 	dc *dockerClient.Client,
+	encs *encoder.Encoders,
 	image,
 	runner,
 	networkName,
-	dockerNetworkID,
-	label string,
+	dockerNetworkID string,
 	design *ContestDesign,
 ) (*Containers, error) {
 	tmp, err := ioutil.TempDir("/tmp", "prefix")
@@ -58,11 +84,11 @@ func NewContainers(
 			return c.Str("module", "contest-containers")
 		}),
 		client:          dc,
+		encs:            encs,
 		image:           image,
 		runner:          runner,
 		networkName:     networkName,
 		dockerNetworkID: dockerNetworkID,
-		label:           label,
 		design:          design,
 		tmp:             tmp,
 	}, nil
@@ -127,7 +153,6 @@ func (cts *Containers) createContainers() ([]*Container, error) {
 			privatekey:      pk,
 			networkName:     cts.networkName,
 			dockerNetworkID: cts.dockerNetworkID,
-			label:           cts.label,
 		}
 
 		address := d.Address
@@ -161,10 +186,10 @@ func (cts *Containers) create() error {
 		}
 	}
 
-	for _, c := range cs {
+	for i, c := range cs {
 		c.rds = rds
 
-		if b, err := yaml.Marshal(c.nodeDesign()); err != nil {
+		if b, err := yaml.Marshal(c.nodeDesign(i == 0)); err != nil {
 			return xerrors.Errorf("failed to create node design: %w", err)
 		} else {
 			designFile := filepath.Join(cts.tmp, fmt.Sprintf("design-%s.yml", c.name))
@@ -173,6 +198,18 @@ func (cts *Containers) create() error {
 			}
 			c.designFile = designFile
 		}
+
+		baseLogFile := filepath.Join(cts.tmp, fmt.Sprintf("base-%s.yml", c.name))
+		if err := ioutil.WriteFile(baseLogFile, nil, 0600); err != nil {
+			return err
+		}
+		c.baseLogFile = baseLogFile
+
+		eventLogFile := filepath.Join(cts.tmp, fmt.Sprintf("event-%s.yml", c.name))
+		if err := ioutil.WriteFile(eventLogFile, nil, 0600); err != nil {
+			return err
+		}
+		c.eventLogFile = eventLogFile
 	}
 
 	cts.containers = cs
@@ -183,6 +220,14 @@ func (cts *Containers) create() error {
 func (cts *Containers) Run() error {
 	if err := cts.create(); err != nil {
 		return xerrors.Errorf("failed to create containers: %w", err)
+	}
+
+	if err := cts.runStorage(); err != nil {
+		return xerrors.Errorf("failed to run storage: %w", err)
+	}
+
+	if err := cts.initializeByGenesisNode(); err != nil {
+		return xerrors.Errorf("failed to initilaize by genesis node: %w", err)
 	}
 
 	errChan := make(chan error)
@@ -207,7 +252,7 @@ func (cts *Containers) Run() error {
 
 	for _, c := range cts.containers {
 		go func(c *Container) {
-			err := c.run()
+			err := c.run(false)
 			if err != nil {
 				cts.Log().Error().Err(err).Str("address", c.name).Msg("ended")
 			} else {
@@ -226,6 +271,97 @@ func (cts *Containers) Run() error {
 	return xerrors.Errorf("failed to run containers")
 }
 
+func (cts *Containers) initializeByGenesisNode() error {
+	cts.Log().Debug().Msg("trying to initialize")
+
+	gnode := cts.containers[0]
+
+	if err := gnode.run(true); err != nil {
+		return err
+	} else if err := CleanContainer(cts.client, gnode.id, cts.Log()); err != nil {
+		return err
+	}
+
+	var gstorage storage.Storage
+	if st, err := gnode.Storage(cts.encs); err != nil {
+		return err
+	} else {
+		gstorage = st
+	}
+
+	cts.Log().Debug().Msg("sync storage")
+	for _, c := range cts.containers {
+		if c.name == gnode.name {
+			continue
+		}
+
+		cts.Log().Debug().Str("from", gnode.name).Str("to", c.name).Msg("trying to sync storage")
+		if st, err := c.Storage(cts.encs); err != nil {
+			return err
+		} else if err := st.Copy(gstorage); err != nil {
+			return err
+		}
+
+		cts.Log().Debug().Str("from", gnode.name).Str("to", c.name).Msg("storage synced")
+	}
+
+	cts.Log().Debug().Msg("initialized")
+
+	return nil
+}
+
+func (cts *Containers) runStorage() error {
+	cts.Log().Debug().Msg("trying to run mongodb")
+
+	var id string
+	if r, err := cts.client.ContainerCreate(context.Background(),
+		&container.Config{
+			Image:        MongodbImage,
+			Labels:       map[string]string{ContainerLabel: "mongodb"},
+			ExposedPorts: nat.PortSet{"27017/tcp": struct{}{}},
+		},
+		&container.HostConfig{
+			PortBindings: nat.PortMap{
+				"27017/tcp": []nat.PortBinding{
+					{HostIP: "", HostPort: MongodbExternalPort},
+				},
+			},
+		},
+		&dockerNetwork.NetworkingConfig{
+			EndpointsConfig: map[string]*dockerNetwork.EndpointSettings{
+				cts.networkName: {NetworkID: cts.dockerNetworkID},
+			},
+		},
+		MongodbContainerName,
+	); err != nil {
+		return xerrors.Errorf("failed to create mongodb container: %w", err)
+	} else {
+		id = r.ID
+	}
+
+	if err := cts.client.ContainerStart(context.Background(), id, types.ContainerStartOptions{}); err != nil {
+		return xerrors.Errorf("failed to run mongodb container: %w", err)
+	}
+
+	if r, err := ContainerInspect(cts.client, id); err != nil {
+		return err
+	} else {
+		cts.mongodbIP = r.NetworkSettings.IPAddress
+
+		for _, c := range cts.containers {
+			c.mongodbIP = cts.mongodbIP
+		}
+	}
+
+	if err := ContainerWaitCheck(cts.client, id, "waiting for connections on port", 100); err != nil {
+		return xerrors.Errorf("failed to run mongodb container: %w", err)
+	}
+
+	cts.Log().Debug().Msg("mongodb launched")
+
+	return nil
+}
+
 type Container struct {
 	*logging.Logging
 	name            string
@@ -237,9 +373,11 @@ type Container struct {
 	id              string
 	networkName     string
 	dockerNetworkID string
-	label           string
 	rds             []*RemoteDesign
 	designFile      string
+	eventLogFile    string
+	baseLogFile     string
+	mongodbIP       string
 }
 
 func (ct *Container) Name() string {
@@ -249,7 +387,15 @@ func (ct *Container) Name() string {
 func (ct *Container) create() error {
 	r, err := ct.client.ContainerCreate(
 		context.Background(),
-		ct.configCreate(),
+		ct.configCreate([]string{
+			"/contest-runner",
+			"--log", "/base.log",
+			"--log-level", "info",
+			"run",
+			"--event-log", "/event.log",
+			"--verbose",
+			"/design.yml",
+		}),
 		ct.configHost(),
 		ct.configNetworking(),
 		ct.Name(),
@@ -263,33 +409,68 @@ func (ct *Container) create() error {
 	return nil
 }
 
-func (ct *Container) run() error {
-	ct.Log().Debug().Msg("trying to run")
+func (ct *Container) createInitialize() error {
+	r, err := ct.client.ContainerCreate(
+		context.Background(),
+		ct.configCreate([]string{
+			"/contest-runner",
+			"--log-level", "info",
+			"init",
+			"--verbose",
+			"/design.yml",
+		}),
+		ct.configHost(),
+		ct.configNetworking(),
+		ct.Name(),
+	)
+	if err != nil {
+		return xerrors.Errorf("failed to create container: %w", err)
+	}
 
-	if err := ct.create(); err != nil {
+	ct.id = r.ID
+
+	return nil
+}
+
+func (ct *Container) run(initialize bool) error {
+	l := ct.Log().WithLogger(func(ctx logging.Context) logging.Emitter {
+		return ctx.Bool("initialize", initialize)
+	})
+	l.Debug().Msg("trying to run")
+
+	var createFunc func() error
+	if initialize {
+		createFunc = ct.createInitialize
+	} else {
+		createFunc = ct.create
+	}
+
+	if err := createFunc(); err != nil {
 		return err
 	}
-	ct.Log().Debug().Msg("container created")
+	l.Debug().Msg("container created")
 
 	if err := ct.client.ContainerStart(context.Background(), ct.id, types.ContainerStartOptions{}); err != nil {
 		return xerrors.Errorf("failed to run container: %w", err)
 	}
-	ct.Log().Debug().Msg("container started")
+	l.Debug().Msg("container started")
 
 	logChan := make(chan []byte)
 	defer close(logChan)
 
 	go func() {
 		for b := range logChan {
-			ct.Log().Debug().Str("msg", string(b)).Msg("container log")
+			l.Debug().Str("msg", string(b)).Msg("container log")
 		}
 	}()
 
 	if status, err := ContainerWait(ct.client, ct.id, logChan); err != nil {
 		return err
 	} else if status != 0 {
-		return xerrors.Errorf("container exited abnormaly: statuscode=%d", status)
+		return xerrors.Errorf("container exited abnormally: statuscode=%d", status)
 	}
+
+	l.Debug().Msg("ended")
 
 	return nil
 }
@@ -301,7 +482,7 @@ func (ct *Container) networkDesign() *NetworkDesign {
 	}
 }
 
-func (ct *Container) nodeDesign() NodeDesign {
+func (ct *Container) nodeDesign(isGenesisNode bool) NodeDesign {
 	var nodes []*RemoteDesign // nolint
 	for _, d := range ct.rds {
 		if d.Address == ct.name {
@@ -311,30 +492,46 @@ func (ct *Container) nodeDesign() NodeDesign {
 		nodes = append(nodes, d)
 	}
 
-	return NodeDesign{
+	nd := NodeDesign{
 		Address:          ct.name,
 		PrivatekeyString: jsonencoder.ToString(ct.privatekey),
-		Storage:          fmt.Sprintf("mongodb://contest-mongodb:27017/contest_%s", ct.name),
+		Storage:          ct.storageURIInternal(),
 		Network:          ct.networkDesign(),
 		Nodes:            nodes,
 	}
+
+	nd.GenesisOperations = ct.genesisOperationDesign(isGenesisNode)
+
+	return nd
 }
 
-func (ct *Container) configCreate() *container.Config {
+func (ct *Container) genesisOperationDesign(isGenesisNode bool) []*OperationDesign {
+	if !isGenesisNode {
+		return nil
+	}
+
+	var ops []*OperationDesign
+	if isGenesisNode {
+		ops = append(ops, &OperationDesign{
+			BodyString: fmt.Sprintf(
+				policyBody,
+				len(ct.rds),
+				67.0,
+			),
+		})
+	}
+
+	return ops
+}
+
+func (ct *Container) configCreate(cmd []string) *container.Config {
 	return &container.Config{
-		Cmd: []string{
-			"/contest-runner",
-			"--log-level", "info",
-			"run",
-			"--event-log", "/tmp/e.log",
-			"--verbose",
-			"/design.yml",
-		},
+		Cmd:        cmd,
 		WorkingDir: "/",
 		Tty:        false,
 		Image:      ct.image,
 		Labels: map[string]string{
-			ct.label: ct.name,
+			ContainerLabel: ct.name,
 		},
 		ExposedPorts: nat.PortSet{
 			"54321/udp": struct{}{},
@@ -355,10 +552,15 @@ func (ct *Container) configHost() *container.HostConfig {
 				Source: ct.designFile,
 				Target: "/design.yml",
 			},
-			{ // BLOCK remove
+			{
 				Type:   mount.TypeBind,
-				Source: "/usr/bin/nc",
-				Target: "/nc",
+				Source: ct.baseLogFile,
+				Target: "/base.log",
+			},
+			{
+				Type:   mount.TypeBind,
+				Source: ct.eventLogFile,
+				Target: "/event.log",
 			},
 		},
 		PortBindings: nat.PortMap{
@@ -380,6 +582,18 @@ func (ct *Container) configNetworking() *dockerNetwork.NetworkingConfig {
 			},
 		},
 	}
+}
+
+func (ct *Container) storageURIInternal() string {
+	return fmt.Sprintf("mongodb://%s:27017/contest_%s", MongodbContainerName, ct.name)
+}
+
+func (ct *Container) storageURIExternal() string {
+	return fmt.Sprintf("mongodb://%s:%s/contest_%s", ct.mongodbIP, MongodbExternalPort, ct.name)
+}
+
+func (ct *Container) Storage(encs *encoder.Encoders) (storage.Storage, error) {
+	return LoadStorage(ct.storageURIExternal(), encs)
 }
 
 func PullImages(dc *dockerClient.Client, images ...string) error {
@@ -415,8 +629,8 @@ func PullImage(dc *dockerClient.Client, image string) error {
 	return nil
 }
 
-func CleanContainers(dc *dockerClient.Client, label string, log logging.Logger) error {
-	log.Debug().Msg("trying to clean")
+func CleanContainers(dc *dockerClient.Client, log logging.Logger) error {
+	log.Debug().Msg("trying to clean containers")
 
 	opt := types.ContainerListOptions{
 		All: true,
@@ -430,23 +644,45 @@ func CleanContainers(dc *dockerClient.Client, label string, log logging.Logger) 
 	var founds []string
 	for i := range containers {
 		c := containers[i]
-		if _, found := c.Labels[label]; found {
+		if _, found := c.Labels[ContainerLabel]; found {
 			founds = append(founds, c.ID)
 		}
 	}
 
 	log.Debug().Msgf("found %d containers for contest", len(founds))
 
-	optRemove := types.ContainerRemoveOptions{
-		Force: true,
+	if len(founds) < 1 {
+		log.Debug().Msg("nothing to be cleaned")
+
+		return nil
 	}
-	for _, c := range founds {
-		if err := dc.ContainerRemove(context.Background(), c, optRemove); err != nil {
+
+	for _, id := range founds {
+		if err := CleanContainer(dc, id, log); err != nil {
 			return err
 		}
 	}
 
-	log.Debug().Msg("cleaned")
+	log.Debug().Msg("containers cleaned")
+
+	return nil
+}
+
+func CleanContainer(dc *dockerClient.Client, id string, log logging.Logger) error {
+	l := log.WithLogger(func(ctx logging.Context) logging.Emitter {
+		return ctx.Str("id", id)
+	})
+
+	l.Debug().Msg("trying to clean container")
+
+	optRemove := types.ContainerRemoveOptions{
+		Force: true,
+	}
+	if err := dc.ContainerRemove(context.Background(), id, optRemove); err != nil {
+		return err
+	}
+
+	l.Debug().Msg("container cleaned")
 
 	return nil
 }
@@ -486,16 +722,12 @@ func ContainerWait(dc *dockerClient.Client, id string, logChan chan []byte /* lo
 	int64 /* status code */, error,
 ) {
 	var out io.ReadCloser
-	if o, err := dc.ContainerLogs(
-		context.Background(),
-		id,
-		types.ContainerLogsOptions{
-			ShowStdout: true,
-			ShowStderr: true,
-			Tail:       "all",
-			Follow:     true,
-		},
-	); err != nil {
+	if o, err := dc.ContainerLogs(context.Background(), id, types.ContainerLogsOptions{
+		ShowStdout: true,
+		ShowStderr: true,
+		Tail:       "all",
+		Follow:     true,
+	}); err != nil {
 		return 1, err
 	} else {
 		out = o
@@ -507,7 +739,7 @@ func ContainerWait(dc *dockerClient.Client, id string, logChan chan []byte /* lo
 	}()
 
 	go func() {
-		buf := make([]byte, 1024)
+		reader := bufio.NewReader(out)
 
 	end:
 		for {
@@ -515,13 +747,15 @@ func ContainerWait(dc *dockerClient.Client, id string, logChan chan []byte /* lo
 			case <-endedChan:
 				break end
 			default:
-				n, err := out.Read(buf)
-				if n > 7 {
-					logChan <- bytes.TrimSpace(buf[8:n])
-				}
+				for {
+					l, err := reader.ReadBytes('\n')
+					if len(l) > 7 {
+						logChan <- bytes.TrimSpace(l[8:])
+					}
 
-				if err == io.EOF {
-					break end
+					if err != nil {
+						break end
+					}
 				}
 			}
 		}
@@ -534,34 +768,60 @@ func ContainerWait(dc *dockerClient.Client, id string, logChan chan []byte /* lo
 			return 1, err
 		}
 	case sb := <-statusCh:
+		var err error
 		if sb.Error != nil {
-			return 1, xerrors.Errorf(sb.Error.Message)
-		} else {
-			return sb.StatusCode, nil
+			err = xerrors.Errorf(sb.Error.Message)
 		}
+
+		return sb.StatusCode, err
 	}
 
 	return 0, nil
 }
 
-// BLOCK generate genesis block and others
-// BLOCK set basic policy
-/*{
-	log.Debug().Msg("NodeRunner generated")
+func ContainerInspect(dc *dockerClient.Client, id string) (types.ContainerJSON, error) {
+	return dc.ContainerInspect(context.Background(), id)
+}
 
-	if gg, err := isaac.NewGenesisBlockV0Generator(nr.Localstate(), nil); err != nil {
-		log.Error().Err(err).Msg("failed to create genesis block generator")
-
-		os.Exit(1)
-	} else if blk, err := gg.Generate(); err != nil {
-		log.Error().Err(err).Msg("failed to generate genesis block")
-
-		os.Exit(1)
-	} else {
-		log.Info().Interface("block", blk).Msg("genesis block created")
+func ContainerWaitCheck(dc *dockerClient.Client, id, s string, limit int) error {
+	if limit < 1 {
+		limit = 100
 	}
-}*/
 
-// distribute blocks to other nodes
+	nd := []byte(s)
 
-// start nodes
+	var out io.ReadCloser
+
+	opt := types.ContainerLogsOptions{ShowStdout: true, Follow: true}
+	if o, err := dc.ContainerLogs(context.Background(), id, opt); err != nil {
+		return xerrors.Errorf("failed to get container logs: %w", err)
+	} else {
+		out = o
+	}
+
+	var found bool
+	var count int
+	buf := make([]byte, 1024)
+	for {
+		if count > limit {
+			break
+		}
+
+		n, err := out.Read(buf)
+		count++
+		if bytes.Contains(buf[:n], nd) {
+			found = true
+			break
+		}
+
+		if err == io.EOF {
+			break
+		}
+	}
+
+	if !found {
+		return xerrors.Errorf("not found from logs")
+	}
+
+	return nil
+}

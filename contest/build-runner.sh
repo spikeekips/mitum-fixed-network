@@ -3,6 +3,15 @@
 set -e
 #set -x
 
+root=$(cd $(dirname ${BASH_SOURCE})/../; pwd)
+
+cd $root
+
+if [ -z $1 ];then
+    echo "Usage: $0 <output file>"
+    exit 1
+fi
+
 echo 'starting to  build:' $1
 
 version="v0.0.1-proto3+commit.$(git rev-parse --short HEAD)"

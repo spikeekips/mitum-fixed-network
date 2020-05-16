@@ -10,9 +10,9 @@ import (
 )
 
 var (
-	StateV0AVLNodeType        = hint.MustNewType(0x10, 0x02, "steate-v0-avlnode")
+	StateV0AVLNodeType        = hint.MustNewType(0x10, 0x02, "state-v0-avlnode")
 	StateV0AVLNodeHint        = hint.MustHint(StateV0AVLNodeType, "0.0.1")
-	StateV0AVLNodeMutableType = hint.MustNewType(0x10, 0x03, "steate-v0-avlnode-mutable")
+	StateV0AVLNodeMutableType = hint.MustNewType(0x10, 0x03, "state-v0-avlnode-mutable")
 	StateV0AVLNodeMutableHint = hint.MustHint(StateV0AVLNodeMutableType, "0.0.1")
 )
 

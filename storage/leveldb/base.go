@@ -75,6 +75,62 @@ func (st *Storage) Close() error {
 	return st.db.Close()
 }
 
+func (st *Storage) Clean() error {
+	batch := &leveldb.Batch{}
+
+	if err := st.iter(
+		nil,
+		func(key, _ []byte) (bool, error) {
+			batch.Delete(key)
+
+			return true, nil
+		},
+		false,
+	); err != nil {
+		return err
+	}
+
+	return wrapError(st.db.Write(batch, nil))
+}
+
+func (st *Storage) Copy(source storage.Storage) error {
+	var sst *Storage
+	if s, ok := source.(*Storage); !ok {
+		return xerrors.Errorf("only leveldbstorage.Storage can be allowed: %T", source)
+	} else {
+		sst = s
+	}
+
+	batch := &leveldb.Batch{}
+
+	limit := 500
+	if err := sst.iter(
+		nil,
+		func(key, value []byte) (bool, error) {
+			batch.Put(key, value)
+
+			if batch.Len() == limit {
+				if err := wrapError(st.db.Write(batch, nil)); err != nil {
+					return false, err
+				}
+
+				batch = &leveldb.Batch{}
+			}
+
+			return true, nil
+		},
+		false,
+	); err != nil {
+		return err
+	}
+
+	if batch.Len() < 1 {
+		return nil
+	}
+
+	return wrapError(st.db.Write(batch, nil))
+}
+
 func (st *Storage) Encoder() encoder.Encoder {
 	return st.enc
 }
@@ -88,7 +144,7 @@ func (st *Storage) LastBlock() (block.Block, error) {
 
 	if err := st.iter(
 		keyPrefixBlockHeight,
-		func(_ []byte, value []byte) (bool, error) {
+		func(_, value []byte) (bool, error) {
 			raw = value
 			return false, nil
 		},
@@ -466,7 +522,7 @@ func (st *Storage) iter(
 	return wrapError(iter.Error())
 }
 
-func (st *Storage) Seals(callback func(valuehash.Hash, seal.Seal) (bool, error), sort bool, load bool) error {
+func (st *Storage) Seals(callback func(valuehash.Hash, seal.Seal) (bool, error), sort, load bool) error {
 	var prefix []byte
 	var iterFunc func([]byte, []byte) (bool, error)
 

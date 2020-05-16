@@ -28,7 +28,7 @@ type Client struct {
 	execTimeout time.Duration
 }
 
-func NewClient(uri string, connectTimeout time.Duration, execTimeout time.Duration) (*Client, error) {
+func NewClient(uri string, connectTimeout, execTimeout time.Duration) (*Client, error) {
 	var cs connstring.ConnString
 	if c, err := checkURI(uri); err != nil {
 		return nil, storage.WrapError(err)
@@ -294,4 +294,32 @@ func (cl *Client) Close() error {
 
 func (cl *Client) Raw() *mongo.Client {
 	return cl.client
+}
+
+func (cl *Client) CopyCollection(source *Client, fromCol, toCol string) error {
+	var limit int = 100
+	var models []mongo.WriteModel
+	err := source.Find(fromCol, bson.D{}, func(cursor *mongo.Cursor) (bool, error) {
+		if len(models) == limit {
+			if err := cl.Bulk(toCol, models); err != nil {
+				return false, err
+			} else {
+				models = nil
+			}
+		}
+
+		raw := util.CopyBytes(cursor.Current)
+		models = append(models, mongo.NewInsertOneModel().SetDocument(bson.Raw(raw)))
+
+		return true, nil
+	})
+	if err != nil {
+		return err
+	}
+
+	if len(models) < 1 {
+		return nil
+	}
+
+	return cl.Bulk(toCol, models)
 }

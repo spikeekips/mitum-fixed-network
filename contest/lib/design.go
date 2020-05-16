@@ -56,14 +56,15 @@ type ContestNodeDesign struct {
 }
 
 type NodeDesign struct {
-	encs             *encoder.Encoders
-	Address          string
-	PrivatekeyString string `yaml:"privatekey"`
-	Storage          string
-	NetworkIDString  string `yaml:"network-id,omitempty"`
-	Network          *NetworkDesign
-	privatekey       key.Privatekey
-	Nodes            []*RemoteDesign
+	encs              *encoder.Encoders
+	Address           string
+	PrivatekeyString  string `yaml:"privatekey"`
+	Storage           string
+	NetworkIDString   string `yaml:"network-id,omitempty"`
+	Network           *NetworkDesign
+	privatekey        key.Privatekey
+	Nodes             []*RemoteDesign
+	GenesisOperations []*OperationDesign `yaml:"genesis-operations,omitempty"`
 }
 
 func LoadNodeDesignFromFile(f string, encs *encoder.Encoders) (*NodeDesign, error) {
@@ -118,6 +119,14 @@ func (nd *NodeDesign) IsValid([]byte) error {
 		addrs[r.Address] = struct{}{}
 	}
 
+	for _, o := range nd.GenesisOperations {
+		o.encs = nd.encs
+
+		if err := o.IsValid(nil); err != nil {
+			return err
+		}
+	}
+
 	return nil
 }
 
@@ -138,6 +147,10 @@ type NetworkDesign struct {
 }
 
 func (nd *NetworkDesign) IsValid([]byte) error {
+	if nd == nil {
+		return xerrors.Errorf("empty network design")
+	}
+
 	if h, p, err := net.SplitHostPort(nd.Bind); err != nil {
 		return xerrors.Errorf("invalid bind value, '%v': %w", nd.Bind, err)
 	} else if i, err := strconv.ParseUint(p, 10, 64); err != nil {
@@ -215,4 +228,31 @@ func isvalidNetworkURL(n string) (*url.URL, error) {
 	}
 
 	return ur, nil
+}
+
+type OperationDesign struct {
+	BodyString string `yaml:"body"`
+	encs       *encoder.Encoders
+	body       interface{}
+}
+
+func (od *OperationDesign) IsValid([]byte) error {
+	var je encoder.Encoder
+	if e, err := od.encs.Encoder(jsonencoder.JSONType, ""); err != nil {
+		return xerrors.Errorf("json encoder needs for load design", err)
+	} else {
+		je = e
+	}
+
+	if hinter, err := je.DecodeByHint([]byte(od.BodyString)); err != nil {
+		return err
+	} else {
+		od.body = hinter
+	}
+
+	return nil
+}
+
+func (od *OperationDesign) Body() interface{} {
+	return od.body
 }

@@ -3,6 +3,7 @@ package mongodbstorage
 import (
 	"context"
 	"sync"
+	"time"
 
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
@@ -33,6 +34,18 @@ const (
 	defaultColNameProposal      = "proposal"
 	defaultColNameState         = "state"
 )
+
+var allCollections = []string{
+	defaultColNameInfo,
+	defaultColNameBlock,
+	defaultColNameManifest,
+	defaultColNameVoteproof,
+	defaultColNameSeal,
+	defaultColNameOperation,
+	defaultColNameOperationSeal,
+	defaultColNameProposal,
+	defaultColNameState,
+}
 
 type Storage struct {
 	sync.RWMutex
@@ -113,6 +126,42 @@ func (st *Storage) Client() *Client {
 
 func (st *Storage) Close() error {
 	return st.client.Close()
+}
+
+// Clean will drop the existing collections. To keep safe the another
+// collections by user, drop collections instead of drop database.
+func (st *Storage) Clean() error {
+	drop := func(c string) error {
+		ctx, cancel := context.WithTimeout(context.Background(), time.Second*10)
+		defer cancel()
+
+		return st.client.Collection(c).Drop(ctx)
+	}
+
+	for _, c := range allCollections {
+		if err := drop(c); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func (st *Storage) Copy(source storage.Storage) error {
+	var sst *Storage
+	if s, ok := source.(*Storage); !ok {
+		return xerrors.Errorf("only mongodbstorage.Storage can be allowed: %T", source)
+	} else {
+		sst = s
+	}
+
+	for _, c := range allCollections {
+		if err := st.Client().CopyCollection(sst.Client(), c, c); err != nil {
+			return err
+		}
+	}
+
+	return nil
 }
 
 func (st *Storage) Encoder() encoder.Encoder {

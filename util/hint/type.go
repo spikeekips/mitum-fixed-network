@@ -110,16 +110,6 @@ func registerType(t Type, name string) error {
 	return nil
 }
 
-// typeNames returns the name of the given Type
-func typeByName(name string) (Type, error) {
-	t, found := nameTypes[name]
-	if !found {
-		return Type{}, UnknownTypeError.Errorf("name=%s", name)
-	}
-
-	return t, nil
-}
-
 func NewTypeDoesNotMatchError(target, check Type) error {
 	return TypeDoesNotMatchError.Errorf("target=%s != check=%s", target.Verbose(), check.Verbose())
 }

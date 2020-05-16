@@ -376,7 +376,7 @@ func (t *testBSON) TestEncodeHinterNotCompatible() {
 		}
 
 		_, err := be.DecodeByHint(decoded)
-		t.Contains(err.Error(), "type does not match")
+		t.Contains(err.Error(), "Hint not found in Hintset")
 	}
 }
 

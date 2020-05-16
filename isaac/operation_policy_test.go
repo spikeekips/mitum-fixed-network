@@ -26,10 +26,7 @@ func (t *testSetPolicyOperation) TestNew() {
 		policies := DefaultPolicy()
 		policies.NumberOfActingSuffrageNodes = 0
 
-		spo, err := NewSetPolicyOperationV0(t.pk, token, policies, nil)
-		t.NoError(err)
-
-		err = spo.IsValid(nil)
+		_, err := NewSetPolicyOperationV0(t.pk, token, policies, nil)
 		t.Contains(err.Error(), "NumberOfActingSuffrageNodes")
 	}
 
@@ -38,10 +35,7 @@ func (t *testSetPolicyOperation) TestNew() {
 
 		policies.Threshold.Total = 0
 
-		spo, err := NewSetPolicyOperationV0(t.pk, token, policies, nil)
-		t.NoError(err)
-
-		err = spo.IsValid(nil)
+		_, err := NewSetPolicyOperationV0(t.pk, token, policies, nil)
 		t.Contains(err.Error(), "zero total found")
 	}
 

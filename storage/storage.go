@@ -15,6 +15,8 @@ type Storage interface {
 	Encoder() encoder.Encoder
 	Encoders() *encoder.Encoders
 	Close() error
+	Clean() error
+	Copy(Storage /* source */) error
 
 	OpenBlockStorage(block.Block) (BlockStorage, error)
 	SyncerStorage() (SyncerStorage, error)

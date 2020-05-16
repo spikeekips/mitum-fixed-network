@@ -377,7 +377,7 @@ func (t *testJSON) TestEncodeHinterNotCompatible() {
 		c := bytes.Replace(b, []byte(`"code":"ff31"`), []byte(`"code":"ffaa"`), -1)
 
 		_, err := je.DecodeByHint(c)
-		t.Contains(err.Error(), "type does not match")
+		t.Contains(err.Error(), "Hint not found in Hintset")
 	}
 }
 

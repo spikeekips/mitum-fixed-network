@@ -60,8 +60,16 @@ func NewNodeRunnerFromDesign(design *NodeDesign, encs *encoder.Encoders) (*NodeR
 	}, nil
 }
 
+func (nr *NodeRunner) Design() *NodeDesign {
+	return nr.design
+}
+
 func (nr *NodeRunner) Localstate() *isaac.Localstate {
 	return nr.localstate
+}
+
+func (nr *NodeRunner) Storage() storage.Storage {
+	return nr.storage
 }
 
 func (nr *NodeRunner) Initialize() error {
@@ -107,25 +115,13 @@ func (nr *NodeRunner) attachStorage() error {
 	})
 	l.Debug().Msg("trying to attach")
 
-	parsed, err := url.Parse(nr.design.Storage)
-	if err != nil {
-		return xerrors.Errorf("invalid storge uri: %w", err)
+	if st, err := LoadStorage(nr.design.Storage, nr.encs); err != nil {
+		return err
+	} else {
+		nr.storage = st
 	}
 
-	var st storage.Storage
-	switch strings.ToLower(parsed.Scheme) {
-	case "mongodb":
-		if s, err := newMongodbStorage(nr.design.Storage, nr.encs); err != nil {
-			return err
-		} else {
-			st = s
-		}
-	default:
-		return xerrors.Errorf("failed to find storage by uri")
-	}
-
-	nr.setupLogging(st)
-	nr.storage = st
+	nr.setupLogging(nr.storage)
 
 	l.Debug().Msg("attached")
 

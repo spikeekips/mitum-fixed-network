@@ -29,5 +29,5 @@ func (ty *Type) UnmarshalJSON(b []byte) error {
 		return err
 	}
 
-	return ty.unpack(o.C, o.N)
+	return ty.unpack(o.C)
 }

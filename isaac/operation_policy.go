@@ -102,6 +102,22 @@ type SetPolicyOperationFactV0 struct {
 	token  []byte
 }
 
+func NewSetPolicyOperationFactV0(
+	signer key.Publickey,
+	token []byte,
+	policies PolicyOperationBodyV0,
+) (SetPolicyOperationFactV0, error) {
+	if signer == nil {
+		return SetPolicyOperationFactV0{}, xerrors.Errorf("fact has empty signer")
+	}
+
+	return SetPolicyOperationFactV0{
+		PolicyOperationBodyV0: policies,
+		signer:                signer,
+		token:                 token,
+	}, nil
+}
+
 func (spof SetPolicyOperationFactV0) IsValid([]byte) error {
 	if spof.signer == nil {
 		return xerrors.Errorf("fact has empty signer")
@@ -158,11 +174,27 @@ func NewSetPolicyOperationV0(
 		return SetPolicyOperationV0{}, xerrors.Errorf("empty privatekey")
 	}
 
-	fact := SetPolicyOperationFactV0{
-		PolicyOperationBodyV0: policies,
-		signer:                signer.Publickey(),
-		token:                 token,
+	fact, err := NewSetPolicyOperationFactV0(signer.Publickey(), token, policies)
+	if err != nil {
+		return SetPolicyOperationV0{}, err
 	}
+
+	return NewSetPolicyOperationV0FromFact(signer, fact, b)
+}
+
+func NewSetPolicyOperationV0FromFact(
+	signer key.Privatekey,
+	fact SetPolicyOperationFactV0,
+	b []byte,
+) (SetPolicyOperationV0, error) {
+	if signer == nil {
+		return SetPolicyOperationV0{}, xerrors.Errorf("empty privatekey")
+	}
+
+	if err := fact.IsValid(b); err != nil {
+		return SetPolicyOperationV0{}, err
+	}
+
 	factHash := fact.Hash()
 	var factSignature key.Signature
 	if fs, err := signer.Sign(util.ConcatBytesSlice(factHash.Bytes(), b)); err != nil {

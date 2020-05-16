@@ -1,15 +1,7 @@
 package cmds
 
 import (
-	"bytes"
-	"context"
-	"io"
-
-	"github.com/docker/docker/api/types"
-	"github.com/docker/docker/api/types/container"
-	dockerNetwork "github.com/docker/docker/api/types/network"
 	dockerClient "github.com/docker/docker/client"
-	"github.com/docker/go-connections/nat"
 	"golang.org/x/xerrors"
 
 	contestlib "github.com/spikeekips/mitum/contest/lib"
@@ -17,11 +9,7 @@ import (
 	"github.com/spikeekips/mitum/util/logging"
 )
 
-var (
-	networkName  = "contest-network"
-	label        = "contest"
-	mongodbImgae = "mongo:latest"
-)
+var networkName = "contest-network"
 
 type StartCommand struct {
 	Image      string `help:"docker image for node runner (default: ${start_image})" default:"${start_image}"`
@@ -56,61 +44,69 @@ func (cmd *StartCommand) Run(log logging.Logger, exitHooks *[]func()) error {
 		dc = c
 	}
 
-	log.Debug().Strs("image", []string{cmd.Image, mongodbImgae}).Msg("trying to pull image")
-	if err := contestlib.PullImages(dc, cmd.Image, mongodbImgae); err != nil {
+	log.Debug().Strs("image", []string{cmd.Image, contestlib.MongodbImage}).Msg("trying to pull image")
+	if err := contestlib.PullImages(dc, cmd.Image, contestlib.MongodbImage); err != nil {
 		return err
 	}
 
 	log.Debug().Msg("trying to create docker network")
 
-	if err := contestlib.CleanContainers(dc, label, log); err != nil {
+	if err := contestlib.CleanContainers(dc, log); err != nil {
 		return err
 	}
 
-	return cmd.runContainer(design, dc, log, exitHooks)
+	log.Debug().Msg("trying to create containers")
+	var cts *contestlib.Containers
+	if c, err := cmd.createContainers(design, encs, dc, log, exitHooks); err != nil {
+		return err
+	} else {
+		cts = c
+		log.Debug().Msg("containers created")
+	}
+
+	log.Debug().Msg("trying to run containers")
+
+	return cts.Run()
 }
 
-func (cmd *StartCommand) runContainer(
+func (cmd *StartCommand) createContainers(
 	design *contestlib.ContestDesign,
+	encs *encoder.Encoders,
 	dc *dockerClient.Client,
 	log logging.Logger,
 	exitHooks *[]func(),
-) error {
+) (*contestlib.Containers, error) {
 	var dockerNetworkID string
 	if i, err := contestlib.CreateDockerNetwork(dc, networkName, false); err != nil {
-		return xerrors.Errorf("failed to create new docker network: %w", err)
+		return nil, xerrors.Errorf("failed to create new docker network: %w", err)
 	} else {
 		dockerNetworkID = i
-	}
-
-	if err := runMongodb(dc, dockerNetworkID, log); err != nil {
-		return err
 	}
 
 	var cts *contestlib.Containers
 	if c, err := contestlib.NewContainers(
 		dc,
+		encs,
 		cmd.Image,
 		cmd.RunnerPath,
 		networkName,
 		dockerNetworkID,
-		label,
 		design,
 	); err != nil {
-		return err
+		return nil, err
 	} else {
 		cts = c
 		_ = cts.SetLogger(log)
 
 		if !cmd.NotClean {
 			contestlib.AddExitHook(exitHooks, func() {
-				_ = contestlib.CleanContainers(dc, label, log)
+				_ = contestlib.CleanContainers(dc, log)
 				_ = cts.Clean()
 			})
 		}
 	}
 
-	return cts.Run()
+	return cts, nil
 }
 
 func loadDesign(f string, encs *encoder.Encoders) (*contestlib.ContestDesign, error) {
@@ -121,59 +117,4 @@ func loadDesign(f string, encs *encoder.Encoders) (*contestlib.ContestDesign, er
 	} else {
 		return d, nil
 	}
-}
-
-func runMongodb(dc *dockerClient.Client, dockerNetworkID string, log logging.Logger) error {
-	log.Debug().Msg("trying to run mongodb")
-
-	var id string
-	if r, err := dc.ContainerCreate(context.Background(),
-		&container.Config{
-			Image:        mongodbImgae,
-			Labels:       map[string]string{label: "mongodb"},
-			ExposedPorts: nat.PortSet{"27017/tcp": struct{}{}},
-		},
-		&container.HostConfig{
-			PortBindings: nat.PortMap{
-				"27017/tcp": []nat.PortBinding{
-					{HostIP: "", HostPort: "37017"},
-				},
-			},
-		},
-		&dockerNetwork.NetworkingConfig{
-			EndpointsConfig: map[string]*dockerNetwork.EndpointSettings{
-				networkName: {NetworkID: dockerNetworkID},
-			},
-		},
-		"contest-mongodb",
-	); err != nil {
-		return xerrors.Errorf("failed to create mongodb container: %w", err)
-	} else {
-		id = r.ID
-	}
-
-	if err := dc.ContainerStart(context.Background(), id, types.ContainerStartOptions{}); err != nil {
-		return xerrors.Errorf("failed to run mongodb container: %w", err)
-	}
-
-	opt := types.ContainerLogsOptions{ShowStdout: true, Follow: true}
-	if out, err := dc.ContainerLogs(context.Background(), id, opt); err != nil {
-		return xerrors.Errorf("failed to run mongodb container: %w", err)
-	} else {
-		buf := make([]byte, 1024)
-		for {
-			n, err := out.Read(buf)
-			if bytes.Contains(buf[:n], []byte("waiting for connections on port ")) {
-				break
-			}
-
-			if err == io.EOF {
-				break
-			}
-		}
-	}
-
-	log.Debug().Msg("mongodb launched")
-
-	return nil
 }

@@ -54,7 +54,7 @@ func (qc *QuicClient) newClient() (*http.Client, func() error /* close func */) 
 			InsecureSkipVerify: qc.insecure, // nolint
 			// KeyLogWriter:       nil, // TODO set cert key writer
 		},
-		// QuicConfig: qc.quicConfig,
+		QuicConfig: qc.quicConfig,
 	}
 
 	return &http.Client{

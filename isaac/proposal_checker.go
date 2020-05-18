@@ -41,11 +41,12 @@ func (pvc *ProposalValidationChecker) IsKnown() (bool, error) {
 	height := pvc.proposal.Height()
 	round := pvc.proposal.Round()
 
-	_, err := pvc.localstate.Storage().Proposal(height, round)
-	if err != nil {
-		if !xerrors.Is(err, storage.NotFoundError) {
-			return false, err
+	if _, err := pvc.localstate.Storage().Proposal(height, round); err != nil {
+		if xerrors.Is(err, storage.NotFoundError) {
+			return false, nil
 		}
+
+		return false, err
 	}
 
 	return true, nil
@@ -91,7 +92,7 @@ func (pvc *ProposalValidationChecker) IsProposer() (bool, error) {
 
 func (pvc *ProposalValidationChecker) SaveProposal() (bool, error) {
 	if err := pvc.localstate.Storage().NewProposal(pvc.proposal); err != nil {
-		return false, err
+		return false, xerrors.Errorf("failed to save proposal: %w", err)
 	}
 
 	return true, nil

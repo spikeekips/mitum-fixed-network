@@ -42,11 +42,11 @@ func (pvc *ProposalValidationChecker) IsKnown() (bool, error) {
 	round := pvc.proposal.Round()
 
 	if _, err := pvc.localstate.Storage().Proposal(height, round); err != nil {
-		if xerrors.Is(err, storage.NotFoundError) {
-			return false, nil
+		if !xerrors.Is(err, storage.NotFoundError) {
+			return false, err
 		}
-
-		return false, err
+	} else {
+		return false, nil // NOTE the already saved will be passed
 	}
 
 	return true, nil

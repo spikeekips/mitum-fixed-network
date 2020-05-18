@@ -145,7 +145,7 @@ func (t *testBallotChecker) TestCheckInvalidProposal() {
 	{
 		pr := ballot.NewProposalV0(
 			t.localstate.Node().Address(),
-			t.localstate.LastBlock().Height(), // wrong height
+			t.localstate.LastBlock().Height()+1,
 			base.Round(0),
 			nil, nil,
 		)

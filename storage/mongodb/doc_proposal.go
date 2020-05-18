@@ -14,7 +14,7 @@ type ProposalDoc struct {
 }
 
 func NewProposalDoc(proposal ballot.Proposal, enc encoder.Encoder) (ProposalDoc, error) {
-	b, err := NewBaseDoc(proposal.Hash(), proposal, enc)
+	b, err := NewBaseDoc(proposal.Hash().String(), proposal, enc)
 	if err != nil {
 		return ProposalDoc{}, err
 	}

@@ -14,7 +14,7 @@ var mainOptions = kong.HelpOptions{NoAppSummary: false, Compact: true, Summary: 
 
 var mainVars = kong.Vars{
 	"log":             "",
-	"log_level":       "debug",
+	"log_level":       "info",
 	"log_format":      "terminal",
 	"log_color":       "false",
 	"verbose":         "false",

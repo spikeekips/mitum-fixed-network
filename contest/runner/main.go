@@ -27,7 +27,7 @@ var mainHelpOptions = kong.HelpOptions{
 
 var mainDefaultVars = kong.Vars{
 	"log":           "", // NOTE if empty, os.Stdout will be used.
-	"log_level":     "debug",
+	"log_level":     "info",
 	"log_format":    "terminal",
 	"verbose":       "false",
 	"log_color":     "false",

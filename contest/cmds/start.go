@@ -1,6 +1,10 @@
 package cmds
 
 import (
+	"os"
+	"path/filepath"
+	"time"
+
 	dockerClient "github.com/docker/docker/client"
 	"golang.org/x/xerrors"
 
@@ -16,24 +20,26 @@ type StartCommand struct {
 	Design     string `arg:"" name:"node design file" help:"contest design file" type:"existingfile"`
 	RunnerPath string `arg:"" name:"runner-path" help:"mitum node runner, 'mitum-runner' path" type:"existingfile"`
 	NotClean   bool   `help:"don't clean containers (default: ${start_not_clean})" default:"${start_not_clean}"`
+	Output     string `help:"output directory" type:"existingdir"`
+	log        logging.Logger
+	exitHooks  *[]func()
+	design     *contestlib.ContestDesign
+	encs       *encoder.Encoders
 }
 
 func (cmd *StartCommand) Run(log logging.Logger, exitHooks *[]func()) error {
-	var encs *encoder.Encoders
+	cmd.log = log
+	cmd.exitHooks = exitHooks
+
 	if e, err := contestlib.LoadEncoder(); err != nil {
 		return xerrors.Errorf("failed to load encoders: %w", err)
 	} else {
-		encs = e
+		cmd.encs = e
 	}
 
 	// load design file
-	var design *contestlib.ContestDesign
-	if d, err := loadDesign(cmd.Design, encs); err != nil {
+	if err := cmd.loadDesign(cmd.Design); err != nil {
 		return err
-	} else {
-		design = d
-
-		log.Debug().Interface("design", design).Msg("design loaded")
 	}
 
 	// create docker env
@@ -44,38 +50,32 @@ func (cmd *StartCommand) Run(log logging.Logger, exitHooks *[]func()) error {
 		dc = c
 	}
 
-	log.Debug().Strs("image", []string{cmd.Image, contestlib.MongodbImage}).Msg("trying to pull image")
+	cmd.log.Debug().Strs("image", []string{cmd.Image, contestlib.MongodbImage}).Msg("trying to pull image")
 	if err := contestlib.PullImages(dc, cmd.Image, contestlib.MongodbImage); err != nil {
 		return err
 	}
 
-	log.Debug().Msg("trying to create docker network")
+	cmd.log.Debug().Msg("trying to create docker network")
 
-	if err := contestlib.CleanContainers(dc, log); err != nil {
+	if err := contestlib.CleanContainers(dc, cmd.log); err != nil {
 		return err
 	}
 
-	log.Debug().Msg("trying to create containers")
+	cmd.log.Debug().Msg("trying to create containers")
 	var cts *contestlib.Containers
-	if c, err := cmd.createContainers(design, encs, dc, log, exitHooks); err != nil {
+	if c, err := cmd.createContainers(dc); err != nil {
 		return err
 	} else {
 		cts = c
-		log.Debug().Msg("containers created")
+		cmd.log.Debug().Msg("containers created")
 	}
 
-	log.Debug().Msg("trying to run containers")
+	cmd.log.Debug().Msg("trying to run containers")
 
 	return cts.Run()
 }
 
-func (cmd *StartCommand) createContainers(
-	design *contestlib.ContestDesign,
-	encs *encoder.Encoders,
-	dc *dockerClient.Client,
-	log logging.Logger,
-	exitHooks *[]func(),
-) (*contestlib.Containers, error) {
+func (cmd *StartCommand) createContainers(dc *dockerClient.Client) (*contestlib.Containers, error) {
 	var dockerNetworkID string
 	if i, err := contestlib.CreateDockerNetwork(dc, networkName, false); err != nil {
 		return nil, xerrors.Errorf("failed to create new docker network: %w", err)
@@ -83,24 +83,30 @@ func (cmd *StartCommand) createContainers(
 		dockerNetworkID = i
 	}
 
+	output := filepath.Join(cmd.Output, Version, time.Now().Format("2006-01-02T15-04-05"))
+	if err := os.MkdirAll(output, 0700); err != nil {
+		return nil, err
+	}
+
 	var cts *contestlib.Containers
 	if c, err := contestlib.NewContainers(
 		dc,
-		encs,
+		cmd.encs,
 		cmd.Image,
 		cmd.RunnerPath,
 		networkName,
 		dockerNetworkID,
-		design,
+		cmd.design,
+		output,
 	); err != nil {
 		return nil, err
 	} else {
 		cts = c
-		_ = cts.SetLogger(log)
+		_ = cts.SetLogger(cmd.log)
 
 		if !cmd.NotClean {
-			contestlib.AddExitHook(exitHooks, func() {
-				_ = contestlib.CleanContainers(dc, log)
+			contestlib.AddExitHook(cmd.exitHooks, func() {
+				_ = contestlib.CleanContainers(dc, cmd.log)
 				_ = cts.Clean()
 			})
 		}
@@ -109,12 +115,16 @@ func (cmd *StartCommand) createContainers(
 	return cts, nil
 }
 
-func loadDesign(f string, encs *encoder.Encoders) (*contestlib.ContestDesign, error) {
-	if d, err := contestlib.LoadContestDesignFromFile(f, encs); err != nil {
-		return nil, xerrors.Errorf("failed to load design file: %w", err)
+func (cmd *StartCommand) loadDesign(f string) error {
+	if d, err := contestlib.LoadContestDesignFromFile(f, cmd.encs); err != nil {
+		return xerrors.Errorf("failed to load design file: %w", err)
 	} else if err := d.IsValid(nil); err != nil {
-		return nil, xerrors.Errorf("invalid design file: %w", err)
+		return xerrors.Errorf("invalid design file: %w", err)
 	} else {
-		return d, nil
+		cmd.log.Debug().Interface("design", d).Msg("design loaded")
+
+		cmd.design = d
+
+		return nil
 	}
 }

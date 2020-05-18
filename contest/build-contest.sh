@@ -21,9 +21,10 @@ if [ ! -z "${diff}" ];then
     version="$version-patched.$(git diff -b | md5sum -t - | awk '{print $1}')"
 fi
 
+echo $version
 GOOS=linux GOARCH=amd64 go build \
     -race \
-    -ldflags="-X 'main.Version=${version}'" \
+    -ldflags "-X github.com/spikeekips/mitum/contest/cmds.Version=${version}" \
     -v \
     -o $1 \
     ./contest/main.go

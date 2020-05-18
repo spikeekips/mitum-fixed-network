@@ -60,7 +60,7 @@ type Containers struct {
 	networkName     string
 	dockerNetworkID string
 	design          *ContestDesign
-	tmp             string
+	outputDir       string
 	containers      []*Container
 	mongodbIP       string
 }
@@ -73,12 +73,8 @@ func NewContainers(
 	networkName,
 	dockerNetworkID string,
 	design *ContestDesign,
+	outputDir string,
 ) (*Containers, error) {
-	tmp, err := ioutil.TempDir("/tmp", "contest")
-	if err != nil {
-		return nil, xerrors.Errorf("failed to create temp directory", err)
-	}
-
 	return &Containers{
 		Logging: logging.NewLogging(func(c logging.Context) logging.Emitter {
 			return c.Str("module", "contest-containers")
@@ -90,14 +86,12 @@ func NewContainers(
 		networkName:     networkName,
 		dockerNetworkID: dockerNetworkID,
 		design:          design,
-		tmp:             tmp,
+		outputDir:       outputDir,
 	}, nil
 }
 
 func (cts *Containers) Clean() error {
 	cts.Log().Debug().Msg("trying to clean")
-
-	_ = os.RemoveAll(cts.tmp)
 
 	return nil
 }
@@ -130,7 +124,7 @@ func (cts *Containers) ports() ([]int, error) {
 }
 
 func (cts *Containers) createContainers() ([]*Container, error) {
-	cts.Log().Debug().Str("tmp", cts.tmp).Msg("trying to create containers")
+	cts.Log().Debug().Str("outputDir", cts.outputDir).Msg("trying to create containers")
 
 	var ports []int
 	if p, err := cts.ports(); err != nil {
@@ -192,20 +186,20 @@ func (cts *Containers) create() error {
 		if b, err := yaml.Marshal(c.nodeDesign(i == 0)); err != nil {
 			return xerrors.Errorf("failed to create node design: %w", err)
 		} else {
-			designFile := filepath.Join(cts.tmp, fmt.Sprintf("design-%s.yml", c.name))
+			designFile := filepath.Join(cts.outputDir, fmt.Sprintf("design-%s.yml", c.name))
 			if err := ioutil.WriteFile(designFile, b, 0600); err != nil {
 				return err
 			}
 			c.designFile = designFile
 		}
 
-		baseLogFile := filepath.Join(cts.tmp, fmt.Sprintf("base-%s.log", c.name))
+		baseLogFile := filepath.Join(cts.outputDir, fmt.Sprintf("base-%s.log", c.name))
 		if err := ioutil.WriteFile(baseLogFile, nil, 0600); err != nil {
 			return err
 		}
 		c.baseLogFile = baseLogFile
 
-		eventLogFile := filepath.Join(cts.tmp, fmt.Sprintf("event-%s.log", c.name))
+		eventLogFile := filepath.Join(cts.outputDir, fmt.Sprintf("event-%s.log", c.name))
 		if err := ioutil.WriteFile(eventLogFile, nil, 0600); err != nil {
 			return err
 		}

@@ -1,7 +1,6 @@
 package main
 
 import (
-	"fmt"
 	"os"
 
 	"github.com/alecthomas/kong"
@@ -11,15 +10,7 @@ import (
 	"github.com/spikeekips/mitum/util/logging"
 )
 
-var (
-	Version     string = "v0.1-proto3"
-	mainOptions        = kong.HelpOptions{
-		NoAppSummary: false,
-		Compact:      true,
-		Summary:      false,
-		Tree:         true,
-	}
-)
+var mainOptions = kong.HelpOptions{NoAppSummary: false, Compact: true, Summary: false, Tree: true}
 
 var mainVars = kong.Vars{
 	"log":             "",
@@ -32,9 +23,9 @@ var mainVars = kong.Vars{
 }
 
 type mainFlags struct {
-	Start   cmds.StartCommand `cmd:"" help:"start contest"`
-	Clean   cmds.CleanCommand `cmd:"" help:"clean contest"`
-	Version struct{}          `cmd:"" help:"Print version"`
+	Start   cmds.StartCommand   `cmd:"" help:"start contest"`
+	Clean   cmds.CleanCommand   `cmd:"" help:"clean contest"`
+	Version cmds.VersionCommand `cmd:"" help:"Print version"`
 	*contestlib.LogFlags
 }
 
@@ -52,7 +43,9 @@ func main() {
 	)
 
 	if ctx.Command() == "version" {
-		_, _ = fmt.Fprintln(os.Stdout, Version)
+		if err := ctx.Run(); err != nil {
+			ctx.FatalIfErrorf(err)
+		}
 
 		os.Exit(0)
 	}

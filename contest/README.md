@@ -20,8 +20,24 @@ $ go get -u github.com/spikeekips/contest
 
 ## Deployment
 
+This is example design file, `contest-example.yml`
 ```
-$ contest start design.yml
+nodes:
+    - address: n0
+    - address: n1
+    - address: n2
 ```
 
 * `design.yml` is the configuration file of shape of testing.
+
+```
+$ bash ./contest/build-contest.sh /tmp/contest
+$ bash ./contest/build-runner.sh /tmp/runner
+
+$ /tmp/contest \
+    --log-level debug --log-color --verbose \
+    start \
+        --output /tmp/contest-shared \
+        ./contest-example.yml \
+        /tmp/runner
+```

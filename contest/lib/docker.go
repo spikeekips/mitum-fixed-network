@@ -230,6 +230,14 @@ func ContainerWait(dc *dockerClient.Client, id string) (
 	return 0, nil
 }
 
+func ContainerIsRunning(dc *dockerClient.Client, id string) (bool, error) {
+	if res, err := ContainerInspect(dc, id); err != nil {
+		return false, err
+	} else {
+		return res.State.Running, nil
+	}
+}
+
 func ContainerInspect(dc *dockerClient.Client, id string) (types.ContainerJSON, error) {
 	return dc.ContainerInspect(context.Background(), id)
 }

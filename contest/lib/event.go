@@ -1,10 +1,13 @@
 package contestlib
 
 import (
+	"time"
+
 	"go.mongodb.org/mongo-driver/bson"
 	"golang.org/x/xerrors"
 
 	jsonencoder "github.com/spikeekips/mitum/util/encoder/json"
+	"github.com/spikeekips/mitum/util/localtime"
 )
 
 type Event struct {
@@ -12,10 +15,21 @@ type Event struct {
 	m map[string]interface{}
 }
 
+func EmptyEvent() *Event {
+	return &Event{
+		m: map[string]interface{}{
+			"level": "info",
+			"t":     localtime.Now().Format(time.RFC3339Nano),
+		},
+	}
+}
+
 func NewEvent(b []byte) (*Event, error) {
 	m := map[string]interface{}{}
-	if err := jsonencoder.Unmarshal(b, &m); err != nil {
-		return nil, err
+	if b != nil {
+		if err := jsonencoder.Unmarshal(b, &m); err != nil {
+			return nil, err
+		}
 	}
 
 	return &Event{b: b, m: m}, nil

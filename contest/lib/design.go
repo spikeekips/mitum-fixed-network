@@ -21,9 +21,13 @@ type ContestDesign struct {
 	encs       *encoder.Encoders
 	Nodes      []*ContestNodeDesign
 	Conditions []*Condition
+	actions    map[string]ConditionActionLoader
 }
 
-func LoadContestDesignFromFile(f string, encs *encoder.Encoders) (*ContestDesign, error) {
+func LoadContestDesignFromFile(
+	f string, encs *encoder.Encoders,
+	actions map[string]ConditionActionLoader,
+) (*ContestDesign, error) {
 	var design ContestDesign
 	if b, err := ioutil.ReadFile(filepath.Clean(f)); err != nil {
 		return nil, err
@@ -32,6 +36,7 @@ func LoadContestDesignFromFile(f string, encs *encoder.Encoders) (*ContestDesign
 	}
 
 	design.encs = encs
+	design.actions = actions
 
 	return &design, nil
 }
@@ -41,10 +46,8 @@ func (cd *ContestDesign) IsValid([]byte) error {
 		return xerrors.Errorf("empty nodes")
 	}
 
-	for _, c := range cd.Conditions {
-		if err := c.IsValid(nil); err != nil {
-			return err
-		}
+	if err := cd.loadConditionActions(); err != nil {
+		return err
 	}
 
 	for _, n := range cd.Nodes {
@@ -59,6 +62,28 @@ func (cd *ContestDesign) IsValid([]byte) error {
 			return xerrors.Errorf("duplicated address found: '%v'", r.Address())
 		}
 		addrs[r.Address()] = struct{}{}
+	}
+
+	return nil
+}
+
+func (cd *ContestDesign) loadConditionActions() error {
+	for _, c := range cd.Conditions {
+		if err := c.IsValid(nil); err != nil {
+			return err
+		}
+
+		if len(c.ActionString) < 1 {
+			continue
+		} else if f, found := cd.actions[c.ActionString]; !found {
+			return xerrors.Errorf("action not found: %q", c.ActionString)
+		} else {
+			ca := NewConditionAction(c.ActionString, f, c.Args, c.IfError)
+			if err := ca.IsValid(nil); err != nil {
+				return xerrors.Errorf("invalid actions: %w", err)
+			}
+			c.action = ca
+		}
 	}
 
 	return nil

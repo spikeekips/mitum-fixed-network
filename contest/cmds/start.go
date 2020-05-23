@@ -16,6 +16,8 @@ import (
 
 var networkName = "contest-network"
 
+var conditionActions = map[string]contestlib.ConditionActionLoader{}
+
 type StartCommand struct {
 	Image      string        `help:"docker image for node runner (default: ${start_image})" default:"${start_image}"`
 	Design     string        `arg:"" name:"node design file" help:"contest design file" type:"existingfile"`
@@ -25,6 +27,7 @@ type StartCommand struct {
 	log        logging.Logger
 	design     *contestlib.ContestDesign
 	encs       *encoder.Encoders
+	containers *contestlib.Containers
 }
 
 func (cmd *StartCommand) Run(log logging.Logger) error {
@@ -61,65 +64,66 @@ func (cmd *StartCommand) Run(log logging.Logger) error {
 	}
 
 	cmd.log.Debug().Msg("trying to create containers")
-	var cts *contestlib.Containers
-	if c, err := cmd.createContainers(dc); err != nil {
+	if err := cmd.createContainers(dc); err != nil {
 		return err
 	} else {
-		cts = c
 		cmd.log.Debug().Msg("containers created")
 
 		contestlib.ExitHooks.Add(func() {
-			if err := cts.Kill("HUP"); err != nil {
+			if err := cmd.containers.Kill("HUP"); err != nil {
 				// cmd.log.Error().Err(err).Msg("failed to kill containers") // NOTE ignore error
 			}
 		})
 	}
 
-	return cmd.run(cts)
+	return cmd.run()
 }
 
-func (cmd *StartCommand) run(cts *contestlib.Containers) error {
+func (cmd *StartCommand) run() error {
 	eventChan := make(chan *contestlib.Event, 10000)
-	cts.SetEventChan(eventChan)
+	cmd.containers.SetEventChan(eventChan)
 
-	if err := cts.Create(); err != nil {
-		return xerrors.Errorf("failed to create containers: %w", err)
-	} else if err := cts.RunStorage(); err != nil {
-		return xerrors.Errorf("failed to run storage: %w", err)
+	if err := cmd.containers.Ready(); err != nil {
+		return xerrors.Errorf("failed to ready containers: %w", err)
 	}
 
-	exitChan := make(chan error, 10)
-	go func() {
-		cmd.log.Debug().Msg("trying to run containers")
-
-		exitChan <- cts.Run()
-	}()
-
-	if client, err := mongodbstorage.NewClient(cts.StorageURI("events"), time.Second*2, time.Second*2); err != nil {
+	var mongodbClient *mongodbstorage.Client
+	if client, err := mongodbstorage.NewClient(
+		cmd.containers.StorageURI("events"), time.Second*2, time.Second*2,
+	); err != nil {
 		return xerrors.Errorf("failed to connect mongodb storage: %w", err)
 	} else {
-		if len(cmd.design.Conditions) < 1 {
-			return <-exitChan
-		}
-
-		return cmd.checkConditions(client, eventChan, exitChan)
+		mongodbClient = client
 	}
+
+	go cmd.handleEventChan(mongodbClient, eventChan)
+
+	cmd.log.Debug().Msg("trying to run containers")
+
+	if err := cmd.containers.Run(); err != nil {
+		return err
+	}
+
+	if len(cmd.design.Conditions) < 1 {
+		cmd.log.Debug().Msg("no conditions found")
+	}
+
+	return cmd.checkConditions(mongodbClient)
 }
 
-func (cmd *StartCommand) createContainers(dc *dockerClient.Client) (*contestlib.Containers, error) {
+func (cmd *StartCommand) createContainers(dc *dockerClient.Client) error {
 	var dockerNetworkID string
 	if i, err := contestlib.CreateDockerNetwork(dc, networkName, false); err != nil {
-		return nil, xerrors.Errorf("failed to create new docker network: %w", err)
+		return xerrors.Errorf("failed to create new docker network: %w", err)
 	} else {
 		dockerNetworkID = i
 	}
 
 	output := filepath.Join(cmd.Output, Version, time.Now().Format("2006-01-02T15-04-05"))
 	if err := os.MkdirAll(output, 0o700); err != nil {
-		return nil, err
+		return err
 	}
 
-	var cts *contestlib.Containers
 	if c, err := contestlib.NewContainers(
 		dc,
 		cmd.encs,
@@ -131,17 +135,19 @@ func (cmd *StartCommand) createContainers(dc *dockerClient.Client) (*contestlib.
 		output,
 		cmd.ExitAfter,
 	); err != nil {
-		return nil, err
+		return err
 	} else {
-		cts = c
-		_ = cts.SetLogger(cmd.log)
+		cmd.containers = c
+		_ = cmd.containers.SetLogger(cmd.log)
 	}
 
-	return cts, nil
+	return nil
 }
 
 func (cmd *StartCommand) loadDesign(f string) error {
-	if d, err := contestlib.LoadContestDesignFromFile(f, cmd.encs); err != nil {
+	conditionActions["start-node"] = cmd.defaultActionStartNode
+
+	if d, err := contestlib.LoadContestDesignFromFile(f, cmd.encs, conditionActions); err != nil {
 		return xerrors.Errorf("failed to load design file: %w", err)
 	} else if err := d.IsValid(nil); err != nil {
 		return xerrors.Errorf("invalid design file: %w", err)
@@ -154,39 +160,71 @@ func (cmd *StartCommand) loadDesign(f string) error {
 	}
 }
 
-func (cmd *StartCommand) checkConditions(
+func (cmd *StartCommand) handleEventChan(
 	client *mongodbstorage.Client,
 	eventChan chan *contestlib.Event,
-	exitChan chan error,
-) error {
-	go func() {
-		for e := range eventChan {
-			if r, err := e.Raw(); err != nil {
-				cmd.log.Error().Err(err).Str("event", e.String()).Msg("malformed event found")
+) {
+	for e := range eventChan {
+		if r, err := e.Raw(); err != nil {
+			cmd.log.Error().Err(err).Str("event", e.String()).Msg("malformed event found")
 
-				continue
-			} else if _, err := client.SetRaw("event", r); err != nil {
-				cmd.log.Error().Err(err).Msg("failed to store event")
+			continue
+		} else if _, err := client.SetRaw("event", r); err != nil {
+			cmd.log.Error().Err(err).Msg("failed to store event")
 
-				continue
-			}
+			continue
 		}
+	}
+}
 
-		for range eventChan { // NOTE not blocking eventChan
+func (cmd *StartCommand) checkContainersIsRunning() chan struct{} {
+	allEndedChan := make(chan struct{})
+	go func() {
+		var runnings bool
+
+		ticker := time.NewTicker(time.Second)
+		defer ticker.Stop()
+
+		for range ticker.C {
+			rs, err := cmd.containers.Runnings()
+			if err != nil {
+				cmd.log.Error().Err(err).Msg("failed to check running containers")
+			} else if len(rs) < 1 && runnings {
+				allEndedChan <- struct{}{}
+			}
+
+			runnings = len(rs) > 0
 		}
 	}()
 
-	cs := make([]contestlib.Condition, len(cmd.design.Conditions))
+	return allEndedChan
+}
+
+func (cmd *StartCommand) checkConditions(client *mongodbstorage.Client) error {
+	if cmd.log.IsVerbose() {
+		for _, c := range cmd.design.Conditions {
+			if c.Action() == nil {
+				continue
+			}
+
+			if l, ok := c.Action().(logging.SetLogger); ok {
+				_ = l.SetLogger(cmd.log)
+			}
+		}
+	}
+
+	exitChan := make(chan error, 10)
+	allEndedChan := cmd.checkContainersIsRunning()
+
+	cs := make([]*contestlib.Condition, len(cmd.design.Conditions))
 	for i := range cmd.design.Conditions {
-		cs[i] = *(cmd.design.Conditions[i])
+		cs[i] = cmd.design.Conditions[i]
 	}
 
 	cc := contestlib.NewConditionsChecker(client, "event", cs)
-	if cmd.log.IsVerbose() {
-		_ = cc.SetLogger(cmd.log)
-	}
+	_ = cc.SetLogger(cmd.log)
 
-	ticker := time.NewTicker(time.Second)
+	ticker := time.NewTicker(time.Millisecond * 100)
 	defer ticker.Stop()
 
 end:
@@ -194,8 +232,12 @@ end:
 		select {
 		case err := <-exitChan:
 			return err
+		case <-allEndedChan:
+			cmd.log.Debug().Msg("all containers ended")
+
+			return nil
 		case <-ticker.C:
-			if passed, err := cc.Check(); err != nil {
+			if passed, err := cc.Check(exitChan); err != nil {
 				cmd.log.Error().Err(err).Msg("something wrong to check")
 			} else if passed {
 				cmd.log.Info().Msg("all conditions satisfied")
@@ -206,4 +248,27 @@ end:
 	}
 
 	return nil
+}
+
+func (cmd *StartCommand) defaultActionStartNode(nodes []string) (func() error, error) {
+	if len(nodes) < 1 {
+		return nil, xerrors.Errorf("empty nodes to start")
+	}
+
+	return func() error {
+		for _, n := range nodes {
+			var found bool
+			for _, d := range cmd.design.Nodes {
+				if n == d.Address() {
+					found = true
+				}
+			}
+
+			if !found {
+				return xerrors.Errorf("container name, %q not found", n)
+			}
+		}
+
+		return cmd.containers.RunNodes(nodes)
+	}, nil
 }

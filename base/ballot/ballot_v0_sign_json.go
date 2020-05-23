@@ -32,7 +32,7 @@ type SIGNBallotV0UnpackerJSON struct {
 	NB json.RawMessage `json:"new_block"`
 }
 
-func (sb *SIGNBallotV0) UnpackJSON(b []byte, enc *jsonencoder.Encoder) error { // nolint
+func (sb *SIGNBallotV0) UnpackJSON(b []byte, enc *jsonencoder.Encoder) error {
 	bb, bf, err := sb.BaseBallotV0.unpackJSON(b, enc)
 	if err != nil {
 		return err

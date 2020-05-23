@@ -25,19 +25,26 @@ type VoteproofV0PackJSON struct {
 }
 
 func (vp VoteproofV0) MarshalJSON() ([]byte, error) {
-	var facts [][2]interface{} // nolint
-	for h, f := range vp.facts {
-		facts = append(facts, [2]interface{}{h, f})
+	var i int
+
+	facts := make([][2]interface{}, len(vp.facts))
+	for h := range vp.facts {
+		facts[i] = [2]interface{}{h, vp.facts[h]}
+		i++
 	}
 
-	var ballots [][2]interface{} // nolint
-	for a, h := range vp.ballots {
-		ballots = append(ballots, [2]interface{}{a, h})
+	i = 0
+	ballots := make([][2]interface{}, len(vp.ballots))
+	for a := range vp.ballots {
+		ballots[i] = [2]interface{}{a, vp.ballots[a]}
+		i++
 	}
 
-	var votes [][2]interface{} // nolint
+	i = 0
+	votes := make([][2]interface{}, len(vp.votes))
 	for a := range vp.votes {
-		votes = append(votes, [2]interface{}{a, vp.votes[a]})
+		votes[i] = [2]interface{}{a, vp.votes[a]}
+		i++
 	}
 
 	var isClosed string
@@ -77,7 +84,7 @@ type VoteproofV0UnpackJSON struct {
 	CL string               `json:"is_closed"`
 }
 
-func (vp *VoteproofV0) UnpackJSON(b []byte, enc *jsonencoder.Encoder) error { // nolint
+func (vp *VoteproofV0) UnpackJSON(b []byte, enc *jsonencoder.Encoder) error {
 	var vpp VoteproofV0UnpackJSON
 	if err := enc.Unmarshal(b, &vpp); err != nil {
 		return err

@@ -1,4 +1,4 @@
-package key // nolint
+package key
 
 func (sp StellarPrivatekey) MarshalJSON() ([]byte, error) {
 	return MarshalJSONKey(sp)

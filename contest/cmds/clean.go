@@ -11,7 +11,7 @@ type CleanCommand struct {
 	Stop bool `help:"just stop containers instead of cleaning"`
 }
 
-func (cmd *CleanCommand) Run(log logging.Logger, _ *[]func()) error {
+func (cmd *CleanCommand) Run(log logging.Logger) error {
 	// create docker env
 	var dc *dockerClient.Client
 	if c, err := dockerClient.NewClientWithOpts(dockerClient.FromEnv); err != nil {
@@ -21,8 +21,25 @@ func (cmd *CleanCommand) Run(log logging.Logger, _ *[]func()) error {
 	}
 
 	if cmd.Stop {
-		return contestlib.StopContainers(dc, log)
+		log.Info().Msg("containers stopped")
+		return contestlib.StopContainers(dc)
 	}
 
-	return contestlib.CleanContainers(dc, log)
+	log.Info().Msg("containers cleaned")
+
+	if err := contestlib.CleanContainers(dc, log); err != nil {
+		return err
+	}
+
+	log.Info().Msg("containers pruned")
+	if err := contestlib.ContainersPrune(dc); err != nil {
+		return err
+	}
+
+	log.Info().Msg("volumes pruned")
+	if err := contestlib.VolumesPrune(dc); err != nil {
+		return err
+	}
+
+	return nil
 }

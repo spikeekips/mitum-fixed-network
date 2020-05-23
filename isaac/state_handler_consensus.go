@@ -106,7 +106,7 @@ func (cs *StateConsensusHandler) Deactivate(ctx StateChangeContext) error {
 	return nil
 }
 
-func (cs *StateConsensusHandler) waitProposal(voteproof base.Voteproof) error { // nolint
+func (cs *StateConsensusHandler) waitProposal(voteproof base.Voteproof) error {
 	cs.proposalLock.Lock()
 	defer cs.proposalLock.Unlock()
 

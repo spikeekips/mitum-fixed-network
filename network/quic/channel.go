@@ -97,12 +97,7 @@ func (qc *QuicChannel) URL() *url.URL {
 	return qc.addr
 }
 
-func (qc *QuicChannel) Seals(hs []valuehash.Hash) ([]seal.Seal, error) { // nolint
-	b, err := qc.enc.Marshal(hs)
-	if err != nil {
-		return nil, err
-	}
-
+func (qc *QuicChannel) Seals(hs []valuehash.Hash) ([]seal.Seal, error) {
 	qc.Log().VerboseFunc(func(e *logging.Event) logging.Emitter {
 		var l []string
 		for _, h := range hs {
@@ -112,7 +107,7 @@ func (qc *QuicChannel) Seals(hs []valuehash.Hash) ([]seal.Seal, error) { // noli
 		return e.Strs("seal_hashes", l)
 	}).Msg("request seals")
 
-	ss, err := qc.requestHinters(qc.getSealsURL, b)
+	ss, err := qc.requestHinters(qc.getSealsURL, hs)
 	if err != nil {
 		return nil, err
 	}
@@ -143,7 +138,12 @@ func (qc *QuicChannel) SendSeal(sl seal.Seal) error {
 	return qc.client.Send(qc.sendSealURL, b, headers)
 }
 
-func (qc *QuicChannel) requestHinters(u string, b []byte) ([]hint.Hinter, error) {
+func (qc *QuicChannel) requestHinters(u string, hs interface{}) ([]hint.Hinter, error) {
+	b, err := qc.enc.Marshal(hs)
+	if err != nil {
+		return nil, err
+	}
+
 	headers := http.Header{}
 	headers.Set(QuicEncoderHintHeader, qc.enc.Hint().String())
 
@@ -165,24 +165,19 @@ func (qc *QuicChannel) requestHinters(u string, b []byte) ([]hint.Hinter, error)
 		return nil, err
 	}
 
-	var hs []hint.Hinter
+	var hinters []hint.Hinter
 	for _, r := range ss {
 		if hinter, err := enc.DecodeByHint(r); err != nil {
 			return nil, err
 		} else {
-			hs = append(hs, hinter)
+			hinters = append(hinters, hinter)
 		}
 	}
 
-	return hs, nil
+	return hinters, nil
 }
 
-func (qc *QuicChannel) Manifests(heights []base.Height) ([]block.Manifest, error) { // nolint
-	b, err := qc.enc.Marshal(heights)
-	if err != nil {
-		return nil, err
-	}
-
+func (qc *QuicChannel) Manifests(heights []base.Height) ([]block.Manifest, error) {
 	qc.Log().VerboseFunc(func(e *logging.Event) logging.Emitter {
 		var l []string
 		for _, h := range heights {
@@ -192,13 +187,13 @@ func (qc *QuicChannel) Manifests(heights []base.Height) ([]block.Manifest, error
 		return e.Strs("manifest_height", l)
 	}).Msg("request manfests")
 
-	hs, err := qc.requestHinters(qc.getManifestsURL, b)
+	hinters, err := qc.requestHinters(qc.getManifestsURL, heights)
 	if err != nil {
 		return nil, err
 	}
 
 	var manifests []block.Manifest
-	for _, h := range hs {
+	for _, h := range hinters {
 		if s, ok := h.(block.Manifest); !ok {
 			return nil, xerrors.Errorf("decoded, but not Manifest; %T", h)
 		} else {
@@ -209,12 +204,7 @@ func (qc *QuicChannel) Manifests(heights []base.Height) ([]block.Manifest, error
 	return manifests, nil
 }
 
-func (qc *QuicChannel) Blocks(heights []base.Height) ([]block.Block, error) { // nolint
-	b, err := qc.enc.Marshal(heights)
-	if err != nil {
-		return nil, err
-	}
-
+func (qc *QuicChannel) Blocks(heights []base.Height) ([]block.Block, error) {
 	qc.Log().VerboseFunc(func(e *logging.Event) logging.Emitter {
 		var l []string
 		for _, h := range heights {
@@ -224,7 +214,7 @@ func (qc *QuicChannel) Blocks(heights []base.Height) ([]block.Block, error) { //
 		return e.Strs("block_heights", l)
 	}).Msg("request blocks")
 
-	hs, err := qc.requestHinters(qc.getBlocksURL, b)
+	hs, err := qc.requestHinters(qc.getBlocksURL, heights)
 	if err != nil {
 		return nil, err
 	}

@@ -1,4 +1,4 @@
-package key // nolint
+package key
 
 func (sp *StellarPrivatekey) unpack(s string) error {
 	if kp, err := NewStellarPrivatekeyFromString(s); err != nil {

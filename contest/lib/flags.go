@@ -11,6 +11,10 @@ import (
 
 type LogLevel zerolog.Level
 
+func (ll LogLevel) Zero() zerolog.Level {
+	return zerolog.Level(ll)
+}
+
 func (ll LogLevel) MarshalJSON() ([]byte, error) {
 	return jsonencoder.Marshal(zerolog.Level(ll).String())
 }

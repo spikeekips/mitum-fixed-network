@@ -172,6 +172,7 @@ func (pr ProposalV0) Fact() base.Fact {
 }
 
 func (pr *ProposalV0) Sign(pk key.Privatekey, b []byte) error { // nolint
+	// TODO generalize BaseBallotV0 stuffs.
 	if err := pr.BaseBallotV0.IsReadyToSign(b); err != nil {
 		return err
 	}

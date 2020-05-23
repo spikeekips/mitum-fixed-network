@@ -9,7 +9,7 @@ import (
 	"strings"
 
 	"golang.org/x/xerrors"
-	"gopkg.in/yaml.v2"
+	"gopkg.in/yaml.v3"
 
 	"github.com/spikeekips/mitum/base/key"
 	"github.com/spikeekips/mitum/util/encoder"
@@ -18,8 +18,9 @@ import (
 )
 
 type ContestDesign struct {
-	encs  *encoder.Encoders
-	Nodes []*ContestNodeDesign
+	encs       *encoder.Encoders
+	Nodes      []*ContestNodeDesign
+	Conditions []*Condition
 }
 
 func LoadContestDesignFromFile(f string, encs *encoder.Encoders) (*ContestDesign, error) {
@@ -40,19 +41,43 @@ func (cd *ContestDesign) IsValid([]byte) error {
 		return xerrors.Errorf("empty nodes")
 	}
 
+	for _, c := range cd.Conditions {
+		if err := c.IsValid(nil); err != nil {
+			return err
+		}
+	}
+
+	for _, n := range cd.Nodes {
+		if err := n.IsValid(nil); err != nil {
+			return err
+		}
+	}
+
 	addrs := map[string]struct{}{}
 	for _, r := range cd.Nodes {
-		if _, found := addrs[r.Address]; found {
-			return xerrors.Errorf("duplicated address found: '%v'", r.Address)
+		if _, found := addrs[r.Address()]; found {
+			return xerrors.Errorf("duplicated address found: '%v'", r.Address())
 		}
-		addrs[r.Address] = struct{}{}
+		addrs[r.Address()] = struct{}{}
 	}
 
 	return nil
 }
 
 type ContestNodeDesign struct {
-	Address string
+	AddressString string `yaml:"address"`
+}
+
+func (cn *ContestNodeDesign) Address() string {
+	return cn.AddressString
+}
+
+func (cn *ContestNodeDesign) IsValid([]byte) error {
+	if _, err := NewContestAddress(cn.AddressString); err != nil {
+		return err
+	}
+
+	return nil
 }
 
 type NodeDesign struct {
@@ -93,7 +118,7 @@ func (nd *NodeDesign) IsValid([]byte) error {
 
 	var je encoder.Encoder
 	if e, err := nd.encs.Encoder(jsonencoder.JSONType, ""); err != nil {
-		return xerrors.Errorf("json encoder needs for load design", err)
+		return xerrors.Errorf("json encoder needs for load design: %w", err)
 	} else {
 		je = e
 	}
@@ -185,7 +210,7 @@ type RemoteDesign struct {
 func (rd *RemoteDesign) IsValid([]byte) error {
 	var je encoder.Encoder
 	if e, err := rd.encs.Encoder(jsonencoder.JSONType, ""); err != nil {
-		return xerrors.Errorf("json encoder needs for load design", err)
+		return xerrors.Errorf("json encoder needs for load design: %w", err)
 	} else {
 		je = e
 	}
@@ -239,7 +264,7 @@ type OperationDesign struct {
 func (od *OperationDesign) IsValid([]byte) error {
 	var je encoder.Encoder
 	if e, err := od.encs.Encoder(jsonencoder.JSONType, ""); err != nil {
-		return xerrors.Errorf("json encoder needs for load design", err)
+		return xerrors.Errorf("json encoder needs for load design: %w", err)
 	} else {
 		je = e
 	}

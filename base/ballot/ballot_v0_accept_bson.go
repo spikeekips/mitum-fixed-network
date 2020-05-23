@@ -25,7 +25,7 @@ type ACCEPTBallotV0UnpackerBSON struct {
 	VR bson.Raw `bson:"voteproof,omitempty"`
 }
 
-func (ab *ACCEPTBallotV0) UnpackBSON(b []byte, enc *bsonencoder.Encoder) error { // nolint
+func (ab *ACCEPTBallotV0) UnpackBSON(b []byte, enc *bsonencoder.Encoder) error {
 	bb, bf, err := ab.BaseBallotV0.unpackBSON(b, enc)
 	if err != nil {
 		return err

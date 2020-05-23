@@ -91,8 +91,7 @@ func (bb BaseBallotV0) unpackBSON(b []byte, enc *bsonencoder.Encoder) (
 }
 
 func (bf BaseBallotFactV0) unpack(_ encoder.Encoder, height base.Height, round base.Round) (
-	BaseBallotFactV0,
-	error, // nolint
+	BaseBallotFactV0, error,
 ) {
 	return NewBaseBallotFactV0(height, round), nil
 }

@@ -14,7 +14,7 @@ import (
 
 var BaseTestMongodbURI = "mongodb://localhost:27017"
 
-var log logging.Logger // nolint
+var log logging.Logger
 
 func init() {
 	l := zerolog.

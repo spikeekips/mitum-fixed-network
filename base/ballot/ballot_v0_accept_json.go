@@ -36,7 +36,7 @@ type ACCEPTBallotV0UnpackerJSON struct {
 	VR json.RawMessage `json:"voteproof"`
 }
 
-func (ab *ACCEPTBallotV0) UnpackJSON(b []byte, enc *jsonencoder.Encoder) error { // nolint
+func (ab *ACCEPTBallotV0) UnpackJSON(b []byte, enc *jsonencoder.Encoder) error {
 	bb, bf, err := ab.BaseBallotV0.unpackJSON(b, enc)
 	if err != nil {
 		return err

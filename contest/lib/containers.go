@@ -1,25 +1,22 @@
 package contestlib
 
 import (
-	"bufio"
-	"bytes"
 	"context"
 	"fmt"
 	"io"
 	"io/ioutil"
 	"os"
 	"path/filepath"
+	"time"
 
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/container"
-	"github.com/docker/docker/api/types/filters"
 	"github.com/docker/docker/api/types/mount"
 	dockerNetwork "github.com/docker/docker/api/types/network"
 	dockerClient "github.com/docker/docker/client"
-	"github.com/docker/docker/pkg/jsonmessage"
 	"github.com/docker/go-connections/nat"
 	"golang.org/x/xerrors"
-	"gopkg.in/yaml.v2"
+	"gopkg.in/yaml.v3"
 
 	"github.com/spikeekips/mitum/base/key"
 	"github.com/spikeekips/mitum/storage"
@@ -45,8 +42,8 @@ var policyBody = `{
   "timeout_waiting_proposal": 5000000000,
   "interval_broadcasting_init_ballot": 1000000000,
   "interval_broadcasting_proposal": 1000000000,
-  "wait_broadcasting_accept_ballot": 2000000000,
-  "interval_broadcasting_accept_ballot": 1000000000,
+  "wait_broadcasting_accept_ballot": 5000000000,
+  "interval_broadcasting_accept_ballot": 5000000000,
   "number_of_acting_suffrage_nodes": 1,
   "timespan_valid_ballot": 60000000000
 }`
@@ -63,6 +60,8 @@ type Containers struct {
 	outputDir       string
 	containers      []*Container
 	mongodbIP       string
+	exitAfter       time.Duration
+	eventChan       chan *Event
 }
 
 func NewContainers(
@@ -74,6 +73,7 @@ func NewContainers(
 	dockerNetworkID string,
 	design *ContestDesign,
 	outputDir string,
+	exitAfter time.Duration,
 ) (*Containers, error) {
 	return &Containers{
 		Logging: logging.NewLogging(func(c logging.Context) logging.Emitter {
@@ -87,11 +87,54 @@ func NewContainers(
 		dockerNetworkID: dockerNetworkID,
 		design:          design,
 		outputDir:       outputDir,
+		exitAfter:       exitAfter,
 	}, nil
+}
+
+func (cts *Containers) Kill(sig string) error {
+	cts.Log().Debug().Msg("trying to kill")
+
+	if err := KillContainers(cts.client, sig); err != nil {
+		return err
+	}
+	cts.Log().Debug().Msg("containers killed")
+
+	return nil
+}
+
+func (cts *Containers) Stop() error {
+	cts.Log().Debug().Msg("trying to stop")
+
+	if err := StopContainers(cts.client); err != nil {
+		return err
+	}
+	cts.Log().Debug().Msg("containers stoped")
+
+	return nil
 }
 
 func (cts *Containers) Clean() error {
 	cts.Log().Debug().Msg("trying to clean")
+
+	if err := StopContainers(cts.client); err != nil {
+		return err
+	}
+	cts.Log().Debug().Msg("containers stoped")
+
+	if err := CleanContainers(cts.client, cts.Log()); err != nil {
+		return err
+	}
+	cts.Log().Debug().Msg("containers cleaned")
+
+	if err := ContainersPrune(cts.client); err != nil {
+		return err
+	}
+	cts.Log().Debug().Msg("containers pruned")
+
+	if err := VolumesPrune(cts.client); err != nil {
+		return err
+	}
+	cts.Log().Debug().Msg("volumes pruned")
 
 	return nil
 }
@@ -139,7 +182,7 @@ func (cts *Containers) createContainers() ([]*Container, error) {
 		pk, _ := key.NewBTCPrivatekey()
 
 		container := &Container{
-			name:            d.Address,
+			name:            d.Address(),
 			image:           cts.image,
 			client:          cts.client,
 			port:            ports[i],
@@ -147,15 +190,15 @@ func (cts *Containers) createContainers() ([]*Container, error) {
 			privatekey:      pk,
 			networkName:     cts.networkName,
 			dockerNetworkID: cts.dockerNetworkID,
+			exitAfter:       cts.exitAfter,
+			eventChan:       cts.eventChan,
 		}
 
-		address := d.Address
+		address := d.Address()
 		container.Logging = logging.NewLogging(func(c logging.Context) logging.Emitter {
 			return c.Str("module", "contest-container").Str("address", address)
 		})
 		_ = container.SetLogger(cts.Log())
-
-		cts.Log().Debug().Str("address", d.Address).Msg("container created")
 
 		cs[i] = container
 	}
@@ -163,7 +206,11 @@ func (cts *Containers) createContainers() ([]*Container, error) {
 	return cs, nil
 }
 
-func (cts *Containers) create() error {
+func (cts *Containers) Create() error {
+	if err := CopyFile(cts.runner, filepath.Join(cts.outputDir, "runner"), 10000); err != nil {
+		return err
+	}
+
 	var cs []*Container
 	if c, err := cts.createContainers(); err != nil {
 		return err
@@ -187,23 +234,20 @@ func (cts *Containers) create() error {
 			return xerrors.Errorf("failed to create node design: %w", err)
 		} else {
 			designFile := filepath.Join(cts.outputDir, fmt.Sprintf("design-%s.yml", c.name))
-			if err := ioutil.WriteFile(designFile, b, 0600); err != nil {
+			if err := ioutil.WriteFile(designFile, b, 0o600); err != nil {
 				return err
 			}
 			c.designFile = designFile
 		}
 
-		baseLogFile := filepath.Join(cts.outputDir, fmt.Sprintf("base-%s.log", c.name))
-		if err := ioutil.WriteFile(baseLogFile, nil, 0600); err != nil {
-			return err
-		}
-		c.baseLogFile = baseLogFile
+		c.shareDir = cts.outputDir
 
-		eventLogFile := filepath.Join(cts.outputDir, fmt.Sprintf("event-%s.log", c.name))
-		if err := ioutil.WriteFile(eventLogFile, nil, 0600); err != nil {
-			return err
+		errWriter := filepath.Join(cts.outputDir, fmt.Sprintf("error-%s.log", c.name))
+		if f, err := os.Create(errWriter); err != nil {
+			return xerrors.Errorf("failed to create error log file: %w", err)
+		} else {
+			c.errWriter = f
 		}
-		c.eventLogFile = eventLogFile
 	}
 
 	cts.containers = cs
@@ -212,14 +256,6 @@ func (cts *Containers) create() error {
 }
 
 func (cts *Containers) Run() error {
-	if err := cts.create(); err != nil {
-		return xerrors.Errorf("failed to create containers: %w", err)
-	}
-
-	if err := cts.runStorage(); err != nil {
-		return xerrors.Errorf("failed to run storage: %w", err)
-	}
-
 	if err := cts.initializeByGenesisNode(); err != nil {
 		return xerrors.Errorf("failed to initilaize by genesis node: %w", err)
 	}
@@ -304,7 +340,7 @@ func (cts *Containers) initializeByGenesisNode() error {
 	return nil
 }
 
-func (cts *Containers) runStorage() error {
+func (cts *Containers) RunStorage() error {
 	cts.Log().Debug().Msg("trying to run mongodb")
 
 	var id string
@@ -356,6 +392,14 @@ func (cts *Containers) runStorage() error {
 	return nil
 }
 
+func (cts *Containers) SetEventChan(ch chan *Event) {
+	cts.eventChan = ch
+}
+
+func (cts *Containers) StorageURI(db string) string {
+	return fmt.Sprintf("mongodb://%s:%s/%s", cts.mongodbIP, MongodbExternalPort, db)
+}
+
 type Container struct {
 	*logging.Logging
 	name            string
@@ -369,9 +413,11 @@ type Container struct {
 	dockerNetworkID string
 	rds             []*RemoteDesign
 	designFile      string
-	eventLogFile    string
-	baseLogFile     string
+	errWriter       io.Writer
 	mongodbIP       string
+	shareDir        string
+	exitAfter       time.Duration
+	eventChan       chan *Event
 }
 
 func (ct *Container) Name() string {
@@ -382,13 +428,15 @@ func (ct *Container) create() error {
 	r, err := ct.client.ContainerCreate(
 		context.Background(),
 		ct.configCreate([]string{
-			"/contest-runner",
-			"--log", "/base.log",
-			"--log-level", "info",
+			"/runner",
+			"--log", "/dev/stdout",
+			"--log", fmt.Sprintf("/share/base-%s.log", ct.name),
 			"run",
-			"--event-log", "/event.log",
-			"--verbose",
-			"/design.yml",
+			"--mem-prof", fmt.Sprintf("/share/%s-mem.prof", ct.name),
+			"--cpu-prof", fmt.Sprintf("/share/%s-cpu.prof", ct.name),
+			"--trace-prof", fmt.Sprintf("/share/%s-trace.prof", ct.name),
+			"--exit-after", ct.exitAfter.String(),
+			fmt.Sprintf("/share/design-%s.yml", ct.name),
 		}),
 		ct.configHost(),
 		ct.configNetworking(),
@@ -407,11 +455,9 @@ func (ct *Container) createInitialize() error {
 	r, err := ct.client.ContainerCreate(
 		context.Background(),
 		ct.configCreate([]string{
-			"/contest-runner",
-			"--log-level", "info",
+			"/runner",
 			"init",
-			"--verbose",
-			"/design.yml",
+			fmt.Sprintf("/share/design-%s.yml", ct.name),
 		}),
 		ct.configHost(),
 		ct.configNetworking(),
@@ -449,16 +495,19 @@ func (ct *Container) run(initialize bool) error {
 	}
 	l.Debug().Msg("container started")
 
-	logChan := make(chan []byte)
-	defer close(logChan)
+	if cancel, err := ct.containerErr(); err != nil {
+		return err
+	} else {
+		defer cancel()
+	}
 
-	go func() {
-		for b := range logChan {
-			l.Debug().Str("msg", string(b)).Msg("container log")
-		}
-	}()
+	if cancel, err := ct.containerLog(); err != nil {
+		return err
+	} else {
+		defer cancel()
+	}
 
-	if status, err := ContainerWait(ct.client, ct.id, logChan); err != nil {
+	if status, err := ContainerWait(ct.client, ct.id); err != nil {
 		return err
 	} else if status != 0 {
 		return xerrors.Errorf("container exited abnormally: statuscode=%d", status)
@@ -467,6 +516,66 @@ func (ct *Container) run(initialize bool) error {
 	l.Debug().Msg("ended")
 
 	return nil
+}
+
+func (ct *Container) containerLog() (func(), error) {
+	if ct.eventChan == nil {
+		return func() {}, nil
+	}
+
+	logChan := make(chan []byte)
+
+	// stdout: event log
+	var cancel func()
+	if c, err := ContainerLogs(ct.client, ct.id, logChan, true, false); err != nil {
+		return nil, err
+	} else {
+		cancel = func() {
+			c()
+			close(logChan)
+		}
+	}
+
+	go func() {
+		for b := range logChan {
+			if e, err := NewEvent(b); err != nil {
+				ct.Log().Error().Err(err).Msg("failed to parse event log")
+			} else {
+				ct.eventChan <- e.Add("_node", ct.name)
+			}
+		}
+	}()
+
+	return cancel, nil
+}
+
+func (ct *Container) containerErr() (func(), error) {
+	errChan := make(chan []byte)
+	var cancel func()
+	if c, err := ContainerLogs(ct.client, ct.id, errChan, false, true); err != nil {
+		return nil, err
+	} else {
+		cancel = func() {
+			c()
+			close(errChan)
+		}
+	}
+
+	var errWriter io.Writer = ct.errWriter
+	if ct.errWriter == nil {
+		errWriter = ioutil.Discard
+	}
+
+	go func() {
+		for b := range errChan {
+			ct.Log().Error().Str("msg", string(b)).Msg("container error")
+			if _, err := fmt.Fprintln(errWriter, string(b)); err != nil {
+				ct.Log().Error().Err(err).Msg("failed to write error log")
+			}
+		}
+	}()
+
+	return cancel, nil
 }
 
 func (ct *Container) networkDesign() *NetworkDesign {
@@ -537,24 +646,15 @@ func (ct *Container) configHost() *container.HostConfig {
 	return &container.HostConfig{
 		Mounts: []mount.Mount{
 			{
-				Type:   mount.TypeBind,
-				Source: ct.runner,
-				Target: "/contest-runner",
+				Type:     mount.TypeBind,
+				Source:   filepath.Join(ct.shareDir, "runner"),
+				Target:   "/runner",
+				ReadOnly: true,
 			},
 			{
 				Type:   mount.TypeBind,
-				Source: ct.designFile,
-				Target: "/design.yml",
-			},
-			{
-				Type:   mount.TypeBind,
-				Source: ct.baseLogFile,
-				Target: "/base.log",
-			},
-			{
-				Type:   mount.TypeBind,
-				Source: ct.eventLogFile,
-				Target: "/event.log",
+				Source: ct.shareDir,
+				Target: "/share",
 			},
 		},
 		PortBindings: nat.PortMap{
@@ -588,286 +688,4 @@ func (ct *Container) storageURIExternal() string {
 
 func (ct *Container) Storage(encs *encoder.Encoders) (storage.Storage, error) {
 	return LoadStorage(ct.storageURIExternal(), encs)
-}
-
-func PullImages(dc *dockerClient.Client, images ...string) error {
-	for _, i := range images {
-		if err := PullImage(dc, i); err != nil {
-			return err
-		}
-	}
-
-	return nil
-}
-
-func PullImage(dc *dockerClient.Client, image string) error {
-	opt := types.ImageListOptions{
-		Filters: filters.NewArgs(
-			filters.Arg("reference", image),
-		),
-	}
-
-	if s, err := dc.ImageList(context.Background(), opt); err != nil {
-		return err
-	} else if len(s) > 0 {
-		return nil
-	}
-
-	r, err := dc.ImagePull(context.Background(), image, types.ImagePullOptions{})
-	if err != nil {
-		return xerrors.Errorf("failed to pull image: %w", err)
-	}
-
-	_ = jsonmessage.DisplayJSONMessagesStream(r, os.Stderr, os.Stderr.Fd(), true, nil)
-
-	return nil
-}
-
-func FindLabeledContainers(dc *dockerClient.Client, label string) ([]string, error) {
-	containers, err := dc.ContainerList(context.Background(), types.ContainerListOptions{All: true})
-	if err != nil {
-		return nil, err
-	}
-
-	var founds []string
-	for i := range containers {
-		c := containers[i]
-		if _, found := c.Labels[label]; found {
-			founds = append(founds, c.ID)
-		}
-	}
-
-	return founds, nil
-}
-
-func StopContainers(dc *dockerClient.Client, log logging.Logger) error {
-	log.Debug().Msg("trying to stop containers")
-
-	var founds []string
-	if l, err := FindLabeledContainers(dc, ContainerLabel); err != nil {
-		return err
-	} else {
-		founds = l
-	}
-
-	log.Debug().Msgf("found %d containers for contest", len(founds))
-
-	if len(founds) < 1 {
-		log.Debug().Msg("nothing to be stopped")
-
-		return nil
-	}
-
-	for _, id := range founds {
-		if err := StopContainer(dc, id, log); err != nil {
-			return err
-		}
-	}
-
-	log.Debug().Msg("containers stopped")
-
-	return nil
-}
-
-func StopContainer(dc *dockerClient.Client, id string, log logging.Logger) error {
-	l := log.WithLogger(func(ctx logging.Context) logging.Emitter {
-		return ctx.Str("id", id)
-	})
-
-	l.Debug().Msg("trying to stop container")
-
-	if err := dc.ContainerStop(context.Background(), id, nil); err != nil {
-		return err
-	}
-
-	l.Debug().Msg("container stopped")
-
-	return nil
-}
-
-func CleanContainers(dc *dockerClient.Client, log logging.Logger) error {
-	log.Debug().Msg("trying to clean containers")
-
-	var founds []string
-	if l, err := FindLabeledContainers(dc, ContainerLabel); err != nil {
-		return err
-	} else {
-		founds = l
-	}
-
-	log.Debug().Msgf("found %d containers for contest", len(founds))
-
-	if len(founds) < 1 {
-		log.Debug().Msg("nothing to be cleaned")
-
-		return nil
-	}
-
-	for _, id := range founds {
-		if err := CleanContainer(dc, id, log); err != nil {
-			return err
-		}
-	}
-
-	log.Debug().Msg("containers cleaned")
-
-	return nil
-}
-
-func CleanContainer(dc *dockerClient.Client, id string, log logging.Logger) error {
-	l := log.WithLogger(func(ctx logging.Context) logging.Emitter {
-		return ctx.Str("id", id)
-	})
-
-	l.Debug().Msg("trying to clean container")
-
-	optRemove := types.ContainerRemoveOptions{
-		Force: true,
-	}
-	if err := dc.ContainerRemove(context.Background(), id, optRemove); err != nil {
-		return err
-	}
-
-	l.Debug().Msg("container cleaned")
-
-	return nil
-}
-
-func CreateDockerNetwork(dc *dockerClient.Client, networkName string, createNew bool) (string, error) {
-	var found string
-	if l, err := dc.NetworkList(context.Background(), types.NetworkListOptions{}); err != nil {
-		return "", err
-	} else {
-		for i := range l {
-			n := l[i]
-			if n.Name == networkName {
-				found = n.ID
-				break
-			}
-		}
-	}
-
-	if len(found) > 0 {
-		if !createNew {
-			return found, nil
-		}
-
-		if err := dc.NetworkRemove(context.Background(), found); err != nil {
-			return "", err
-		}
-	}
-
-	if r, err := dc.NetworkCreate(context.Background(), networkName, types.NetworkCreate{}); err != nil {
-		return "", err
-	} else {
-		return r.ID, nil
-	}
-}
-
-func ContainerWait(dc *dockerClient.Client, id string, logChan chan []byte /* log output chan */) (
-	int64 /* status code */, error,
-) {
-	var out io.ReadCloser
-	if o, err := dc.ContainerLogs(context.Background(), id, types.ContainerLogsOptions{
-		ShowStdout: true,
-		ShowStderr: true,
-		Tail:       "all",
-		Follow:     true,
-	}); err != nil {
-		return 1, err
-	} else {
-		out = o
-	}
-
-	endedChan := make(chan struct{}, 1)
-	defer func() {
-		endedChan <- struct{}{}
-	}()
-
-	go func() {
-		reader := bufio.NewReader(out)
-
-	end:
-		for {
-			select {
-			case <-endedChan:
-				break end
-			default:
-				for {
-					l, err := reader.ReadBytes('\n')
-					if len(l) > 7 {
-						logChan <- bytes.TrimSpace(l[8:])
-					}
-
-					if err != nil {
-						break end
-					}
-				}
-			}
-		}
-	}()
-
-	statusCh, errCh := dc.ContainerWait(context.Background(), id, container.WaitConditionNotRunning)
-	select {
-	case err := <-errCh:
-		if err != nil {
-			return 1, err
-		}
-	case sb := <-statusCh:
-		var err error
-		if sb.Error != nil {
-			err = xerrors.Errorf(sb.Error.Message)
-		}
-
-		return sb.StatusCode, err
-	}
-
-	return 0, nil
-}
-
-func ContainerInspect(dc *dockerClient.Client, id string) (types.ContainerJSON, error) {
-	return dc.ContainerInspect(context.Background(), id)
-}
-
-func ContainerWaitCheck(dc *dockerClient.Client, id, s string, limit int) error {
-	if limit < 1 {
-		limit = 100
-	}
-
-	nd := []byte(s)
-
-	var out io.ReadCloser
-
-	opt := types.ContainerLogsOptions{ShowStdout: true, Follow: true}
-	if o, err := dc.ContainerLogs(context.Background(), id, opt); err != nil {
-		return xerrors.Errorf("failed to get container logs: %w", err)
-	} else {
-		out = o
-	}
-
-	var found bool
-	var count int
-	buf := make([]byte, 1024)
-	for {
-		if count > limit {
-			break
-		}
-
-		n, err := out.Read(buf)
-		count++
-		if bytes.Contains(buf[:n], nd) {
-			found = true
-			break
-		}
-
-		if err == io.EOF {
-			break
-		}
-	}
-
-	if !found {
-		return xerrors.Errorf("not found from logs")
-	}
-
-	return nil
 }

@@ -189,7 +189,6 @@ func (vpc *VoteproofConsensusStateChecker) CheckACCEPTVoteproof() (bool, error) 
 
 type VoteproofBootingChecker struct {
 	*logging.Logging
-	localstate      *Localstate // nolint
 	lastBlock       block.Block
 	initVoteproof   base.Voteproof // NOTE these Voteproof are from last block
 	acceptVoteproof base.Voteproof

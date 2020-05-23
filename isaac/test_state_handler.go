@@ -21,7 +21,7 @@ import (
 	"github.com/spikeekips/mitum/util/localtime"
 )
 
-type baseTestStateHandler struct { // nolint
+type baseTestStateHandler struct {
 	suite.Suite
 	StorageSupportTest
 	localstate  *Localstate
@@ -30,7 +30,7 @@ type baseTestStateHandler struct { // nolint
 	enc         encoder.Encoder
 }
 
-func (t *baseTestStateHandler) SetupSuite() { // nolint
+func (t *baseTestStateHandler) SetupSuite() {
 	t.StorageSupportTest.SetupSuite()
 
 	_ = t.Encs.AddHinter(key.BTCPrivatekey{})

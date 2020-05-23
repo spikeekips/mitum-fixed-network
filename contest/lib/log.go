@@ -30,20 +30,20 @@ type LogFlags struct {
 	LogFormat LogFormat `help:"log format {json terminal} (default: ${log_format})" default:"${log_format}"`
 }
 
-func SetupLoggingOutput(f string, format LogFormat, forceColor bool, exitHooks *[]func()) (io.Writer, error) {
+func SetupLoggingOutput(f string, format LogFormat, forceColor bool) (io.Writer, error) {
 	logFile := strings.TrimSpace(f)
 
 	var output io.Writer
 	if len(logFile) < 1 {
 		o := os.Stdout
-		AddExitHook(exitHooks, func() {
+		ExitHooks.Add(func() {
 			_ = o.Sync()
 		})
 
 		output = o
 	} else {
 		var outputFile *os.File
-		if f, err := os.OpenFile(logFile, os.O_CREATE|os.O_RDWR|os.O_APPEND, 0600); err != nil {
+		if f, err := os.OpenFile(logFile, os.O_CREATE|os.O_RDWR|os.O_APPEND, 0644); err != nil { // nolint
 			return nil, err
 		} else {
 			outputFile = f
@@ -59,7 +59,7 @@ func SetupLoggingOutput(f string, format LogFormat, forceColor bool, exitHooks *
 		)
 
 		if l, ok := output.(diode.Writer); ok {
-			AddExitHook(exitHooks, func() {
+			ExitHooks.Add(func() {
 				_ = l.Close()
 			})
 		}
@@ -83,21 +83,20 @@ func SetupLoggingOutput(f string, format LogFormat, forceColor bool, exitHooks *
 	return output, nil
 }
 
-func SetupLogging(output io.Writer, flags *LogFlags) (logging.Logger, error) {
+func SetupLogging(output io.Writer, level zerolog.Level, verbose bool) (logging.Logger, error) {
 	lc := zerolog.New(output).With().Timestamp()
 
-	if flags.Verbose {
-		flags.LogLevel = LogLevel(zerolog.TraceLevel)
+	if verbose {
+		level = zerolog.TraceLevel
 	}
 
-	level := zerolog.Level(flags.LogLevel)
-	if level == zerolog.DebugLevel {
+	if level <= zerolog.DebugLevel {
 		lc = lc.Caller().Stack()
 	}
 
 	l := lc.Logger().Level(level)
 
-	return logging.NewLogger(&l, flags.Verbose), nil
+	return logging.NewLogger(&l, verbose), nil
 }
 
 type ConsoleWriter struct {

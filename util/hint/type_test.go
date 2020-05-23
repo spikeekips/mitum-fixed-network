@@ -8,6 +8,12 @@ import (
 	"golang.org/x/xerrors"
 )
 
+// isRegisteredTypeName checks the given name is registered or not
+func isRegisteredTypeName(name string) bool {
+	_, found := nameTypes[name]
+	return found
+}
+
 type testType struct {
 	suite.Suite
 }

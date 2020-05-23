@@ -233,6 +233,10 @@ func (pp *proposalProcessorV0) extractOperations() ([]state.OperationInfoV0, err
 		}
 
 		for i := range ops {
+			if ops[i].Operation() == nil {
+				continue
+			}
+
 			op := ops[i]
 			founds[op.Operation()] = op
 		}
@@ -250,7 +254,7 @@ func (pp *proposalProcessorV0) extractOperations() ([]state.OperationInfoV0, err
 		}
 	}
 
-	var operations []state.OperationInfoV0 // nolint
+	var operations []state.OperationInfoV0
 	for _, h := range pp.proposal.Operations() {
 		if oi, found := founds[h]; !found {
 			return nil, xerrors.Errorf("failed to fetch Operation from Proposal: operation=%s", h)
@@ -376,13 +380,13 @@ func (pp *proposalProcessorV0) getOperationsFromStorage(h valuehash.Hash) ([]sta
 		osl = os
 	}
 
-	var ops []state.OperationInfoV0 // nolint
-	for _, op := range osl.Operations() {
+	ops := make([]state.OperationInfoV0, len(osl.Operations()))
+	for i, op := range osl.Operations() {
 		if _, found := pp.proposedOperations[op.Hash()]; !found {
 			continue
 		}
 
-		ops = append(ops, state.NewOperationInfoV0(op, h))
+		ops[i] = state.NewOperationInfoV0(op, h)
 	}
 
 	return ops, nil

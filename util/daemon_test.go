@@ -197,12 +197,8 @@ func (t *testDaemon) TestMultipleTimer() {
 	time.Sleep(time.Millisecond * 40)
 
 	for _, tr := range timers {
-		isTrue := t.True // NOTE testify suite occurs DATA RACE when called inside goroutine :(
-		noError := t.NoError
-		go func(ed *emptyDaemon) {
-			noError(ed.Stop())
-			isTrue(ed.IsStopped())
-		}(tr)
+		t.NoError(tr.Stop())
+		t.True(tr.IsStopped())
 	}
 
 	wgStopped.Wait()

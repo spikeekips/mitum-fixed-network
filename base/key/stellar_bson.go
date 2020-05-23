@@ -1,4 +1,4 @@
-package key // nolint
+package key
 
 func (sp StellarPrivatekey) MarshalBSON() ([]byte, error) {
 	return MarshalBSONKey(sp)

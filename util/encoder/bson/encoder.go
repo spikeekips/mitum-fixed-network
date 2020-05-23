@@ -94,7 +94,7 @@ func (be *Encoder) analyze(i interface{}) (string, encoder.CachedPacker, error) 
 	return name, encoder.NewCachedPacker(elem.Type(), unpack), nil
 }
 
-func (be *Encoder) analyzeInstance(i interface{}) (string, unpackFunc) { // nolint
+func (be *Encoder) analyzeInstance(i interface{}) (string, unpackFunc) {
 	var name string
 	var upf unpackFunc
 

@@ -99,7 +99,7 @@ func (je *Encoder) analyze(i interface{}) (string, encoder.CachedPacker, error) 
 	return name, encoder.NewCachedPacker(elem.Type(), unpack), nil
 }
 
-func (je *Encoder) analyzeInstance(i interface{}) (string, unpackFunc) { // nolint
+func (je *Encoder) analyzeInstance(i interface{}) (string, unpackFunc) {
 	ptr, _ := encoder.ExtractPtr(i)
 
 	if _, ok := ptr.Interface().(json.Unmarshaler); ok {

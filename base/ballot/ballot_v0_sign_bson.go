@@ -20,7 +20,7 @@ type SIGNBallotV0UnpackerBSON struct {
 	NB bson.Raw `bson:"new_block"`
 }
 
-func (sb *SIGNBallotV0) UnpackBSON(b []byte, enc *bsonencoder.Encoder) error { // nolint
+func (sb *SIGNBallotV0) UnpackBSON(b []byte, enc *bsonencoder.Encoder) error {
 	bb, bf, err := sb.BaseBallotV0.unpackBSON(b, enc)
 	if err != nil {
 		return err

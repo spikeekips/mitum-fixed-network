@@ -1,49 +1,70 @@
 package contestlib
 
 import (
+	"fmt"
 	"os"
 	"os/signal"
+	"sync"
 	"syscall"
-
-	"github.com/spikeekips/mitum/util/logging"
 )
 
-func ConnectSignal(exitHooks *[]func(), log logging.Logger) {
+var ExitHooks *exitHooks
+
+type exitHooks struct {
+	sync.RWMutex
+	hooks []func()
+}
+
+func (eh *exitHooks) Add(f ...func()) *exitHooks {
+	eh.Lock()
+	defer eh.Unlock()
+
+	eh.hooks = append(eh.hooks, f...)
+
+	return eh
+}
+
+func (eh *exitHooks) Hooks() []func() {
+	eh.RLock()
+	defer eh.RUnlock()
+
+	return eh.hooks
+}
+
+func (eh *exitHooks) Run() {
+	eh.RLock()
+	defer eh.RUnlock()
+
+	for _, h := range eh.hooks {
+		h()
+	}
+}
+
+func init() {
+	ExitHooks = &exitHooks{}
+}
+
+func ConnectSignal() {
 	sigc := make(chan os.Signal, 1)
 	signal.Notify(sigc,
 		syscall.SIGINT,
 		syscall.SIGTERM,
 		syscall.SIGQUIT,
+		syscall.SIGHUP,
 	)
 
 	go func() {
 		s := <-sigc
 
-		log.Warn().
-			Str("sig", s.String()).
-			Msg("contest stopped by force")
+		ExitHooks.Run()
 
-		RunExitHooks(exitHooks)
+		_, _ = fmt.Fprintf(os.Stderr, "contest stopped by force: %v\n", s)
 
-		os.Exit(1)
+		var exit int = 1
+		if s == syscall.SIGHUP {
+			exit = 0
+		}
+
+		os.Exit(exit)
 	}()
-}
-
-func NewExitHooks() *[]func() {
-	var eh []func()
-
-	return &eh
-}
-
-func AddExitHook(exitHooks *[]func(), f ...func()) {
-	eh := *exitHooks
-	eh = append(eh, f...)
-
-	*exitHooks = eh
-}
-
-func RunExitHooks(exitHooks *[]func()) {
-	for _, h := range *exitHooks {
-		h()
-	}
 }

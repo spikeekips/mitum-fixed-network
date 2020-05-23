@@ -1,4 +1,4 @@
-package key // nolint
+package key
 
 func (bt BTCPrivatekey) MarshalJSON() ([]byte, error) {
 	return MarshalJSONKey(bt)

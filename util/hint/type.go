@@ -84,12 +84,6 @@ func isRegisteredType(t Type) bool {
 	return found
 }
 
-// isRegisteredTypeName checks the given name is registered or not
-func isRegisteredTypeName(name string) bool { // nolint
-	_, found := nameTypes[name]
-	return found
-}
-
 // registerType registers the givven Type in globals
 func registerType(t Type, name string) error {
 	if err := t.IsValid(nil); err != nil {

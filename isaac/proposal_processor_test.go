@@ -21,8 +21,7 @@ type testProposalProcessor struct {
 func (t *testProposalProcessor) TestProcess() {
 	pm := NewProposalMaker(t.localstate)
 
-	ib, err := NewINITBallotV0FromLocalstate(t.localstate, base.Round(0))
-	t.NoError(err)
+	ib := t.newINITBallot(t.localstate, base.Round(0))
 	initFact := ib.INITBallotFactV0
 
 	ivp, err := t.newVoteproof(base.StageINIT, initFact, t.localstate, t.remoteState)
@@ -40,13 +39,12 @@ func (t *testProposalProcessor) TestProcess() {
 func (t *testProposalProcessor) TestBlockOperations() {
 	pm := NewProposalMaker(t.localstate)
 
-	ib, err := NewINITBallotV0FromLocalstate(t.localstate, base.Round(0))
-	t.NoError(err)
+	ib := t.newINITBallot(t.localstate, base.Round(0))
 	initFact := ib.INITBallotFactV0
 
 	ivp, err := t.newVoteproof(base.StageINIT, initFact, t.localstate, t.remoteState)
 
-	var proposal ballot.Proposal
+	var proposal ballot.ProposalV0
 	{
 		pr, err := pm.Proposal(ivp.Round())
 		t.NoError(err)
@@ -54,17 +52,15 @@ func (t *testProposalProcessor) TestBlockOperations() {
 		opl := t.newOperationSeal(t.localstate)
 		t.NoError(t.localstate.Storage().NewSeals([]seal.Seal{opl}))
 
-		newpr, err := NewProposal(
-			t.localstate,
+		proposal = ballot.NewProposalV0(
+			t.localstate.Node().Address(),
 			pr.Height(),
 			pr.Round(),
 			opl.OperationHashes(),
 			[]valuehash.Hash{opl.Hash()},
-			t.localstate.Policy().NetworkID(),
 		)
-		t.NoError(err)
+		t.NoError(SignSeal(&proposal, t.localstate))
 
-		proposal = newpr
 		_ = t.localstate.Storage().NewProposal(proposal)
 	}
 
@@ -100,13 +96,12 @@ func (t *testProposalProcessor) TestBlockOperations() {
 func (t *testProposalProcessor) TestNotFoundInProposal() {
 	pm := NewProposalMaker(t.localstate)
 
-	ib, err := NewINITBallotV0FromLocalstate(t.localstate, base.Round(0))
-	t.NoError(err)
+	ib := t.newINITBallot(t.localstate, base.Round(0))
 	initFact := ib.INITBallotFactV0
 
 	ivp, err := t.newVoteproof(base.StageINIT, initFact, t.localstate, t.remoteState)
 
-	var proposal ballot.Proposal
+	var proposal ballot.ProposalV0
 	{
 		pr, err := pm.Proposal(ivp.Round())
 		t.NoError(err)
@@ -120,17 +115,14 @@ func (t *testProposalProcessor) TestNotFoundInProposal() {
 			},
 		)
 
-		newpr, err := NewProposal(
-			t.remoteState,
+		proposal = ballot.NewProposalV0(
+			t.remoteState.Node().Address(),
 			pr.Height(),
 			pr.Round(),
 			op.OperationHashes(),
 			[]valuehash.Hash{op.Hash()},
-			t.remoteState.Policy().NetworkID(),
 		)
-		t.NoError(err)
-
-		proposal = newpr
+		t.NoError(SignSeal(&proposal, t.remoteState))
 	}
 
 	for _, h := range proposal.Seals() {

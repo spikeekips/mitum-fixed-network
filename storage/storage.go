@@ -22,6 +22,7 @@ type Storage interface {
 	SyncerStorage() (SyncerStorage, error)
 
 	LastBlock() (block.Block, error)
+	LastManifest() (block.Manifest, error)
 	Block(valuehash.Hash) (block.Block, error)
 	BlockByHeight(base.Height) (block.Block, error)
 	// TODO add BlocksByHeight([]base.Height) ([]block.Block, error)

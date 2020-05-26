@@ -17,8 +17,8 @@ func NewStateBootingHandler(
 	localstate *Localstate,
 	proposalProcessor ProposalProcessor,
 ) (*StateBootingHandler, error) {
-	if lastBlock := localstate.LastBlock(); lastBlock == nil {
-		return nil, xerrors.Errorf("last block is empty")
+	if _, err := localstate.Storage().LastManifest(); err != nil {
+		return nil, xerrors.Errorf("last manifest is empty")
 	}
 
 	cs := &StateBootingHandler{
@@ -121,8 +121,7 @@ func (cs *StateBootingHandler) checkBlock() error {
 	cs.Log().Debug().Msg("trying to check block")
 	defer cs.Log().Debug().Msg("complete to check block")
 
-	blk := cs.localstate.LastBlock()
-	if blk == nil {
+	if blk, err := cs.localstate.Storage().LastBlock(); err != nil {
 		return xerrors.Errorf("empty Block")
 	} else if err := blk.IsValid(nil); err != nil {
 		return err

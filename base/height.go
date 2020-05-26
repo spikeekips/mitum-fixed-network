@@ -7,7 +7,10 @@ import (
 	"github.com/spikeekips/mitum/util/isvalid"
 )
 
-var NilHeight = Height(-2)
+var (
+	NilHeight        = Height(-2)
+	PreGenesisHeight = Height(-1)
+)
 
 // Height stands for height of Block
 type Height int64

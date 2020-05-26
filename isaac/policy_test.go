@@ -88,7 +88,7 @@ func (t *testPolicy) TestLoadFromStorage() {
 	t.NoError(st.NewState(newState))
 
 	if mst, ok := st.(DummyMongodbStorage); ok {
-		mst.SetConfirmedBlock(currentBlock.Height())
+		mst.SetLastManifest(currentBlock.Manifest())
 	}
 
 	p, err := NewLocalPolicy(st, nil)

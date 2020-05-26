@@ -97,6 +97,12 @@ func (bst *BlockStorage) UnstageOperationSeals(seals []valuehash.Hash) error {
 }
 
 func (bst *BlockStorage) Commit() error {
+	if bst.blockModels == nil || bst.manifestModels == nil {
+		if err := bst.SetBlock(bst.block); err != nil {
+			return err
+		}
+	}
+
 	if res, err := bst.writeModels(defaultColNameBlock, bst.blockModels); err != nil {
 		return storage.WrapError(err)
 	} else if res != nil && res.InsertedCount < 1 {
@@ -125,12 +131,12 @@ func (bst *BlockStorage) Commit() error {
 		return storage.WrapError(err)
 	}
 
-	if cb, err := NewConfirmedBlockDoc(bst.block.Height(), bst.st.enc); err != nil {
+	if cb, err := NewLastManifestDoc(bst.block.Height(), bst.st.enc); err != nil {
 		return err
 	} else if _, err := bst.st.client.Set(defaultColNameInfo, cb); err != nil {
 		return err
 	} else {
-		bst.st.SetConfirmedBlock(bst.block.Height())
+		bst.st.setLastManifest(bst.block.Manifest())
 	}
 
 	return nil

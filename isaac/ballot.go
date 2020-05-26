@@ -6,179 +6,125 @@ import (
 	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/base/ballot"
 	"github.com/spikeekips/mitum/base/block"
+	"github.com/spikeekips/mitum/base/seal"
 	"github.com/spikeekips/mitum/base/valuehash"
+	"github.com/spikeekips/mitum/storage"
 )
 
-func NewINITBallotV0(
-	localstate *Localstate,
-	height base.Height,
-	round base.Round,
-	previousBlock valuehash.Hash,
-	previousRound base.Round,
-	voteproof base.Voteproof,
-) (ballot.INITBallotV0, error) {
-	ib := ballot.NewINITBallotV0(
-		localstate.Node().Address(),
+func NewINITBallotV0Round0(st storage.Storage, node base.Address) (ballot.INITBallotV0, error) {
+	var lb block.Block
+	switch l, err := st.LastBlock(); {
+	case err != nil:
+		return ballot.INITBallotV0{}, xerrors.Errorf("last block not found: %w", err)
+	default:
+		lb = l
+	}
+
+	return ballot.NewINITBallotV0(
+		node,
+		lb.Height()+1,
+		base.Round(0),
+		lb.Hash(),
+		lb.ACCEPTVoteproof(),
+	), nil
+}
+
+func NewINITBallotV0WithVoteproof(st storage.Storage, node base.Address, round base.Round, voteproof base.Voteproof) (
+	ballot.INITBallotV0, error,
+) {
+	var manifest block.Manifest
+	switch l, err := st.LastManifest(); {
+	case err != nil:
+		return ballot.INITBallotV0{}, xerrors.Errorf("last block not found: %w", err)
+	default:
+		manifest = l
+	}
+
+	return ballot.NewINITBallotV0(
+		node,
+		manifest.Height()+1,
+		round,
+		manifest.Hash(),
+		voteproof,
+	), nil
+}
+
+func NewINITBallotV0(node base.Address, voteproof base.Voteproof) (ballot.INITBallotV0, error) {
+	var height base.Height
+	var round base.Round
+	var previousBlock valuehash.Hash
+	switch voteproof.Stage() {
+	case base.StageACCEPT:
+		if fact, ok := voteproof.Majority().(ballot.ACCEPTBallotFact); !ok {
+			return ballot.INITBallotV0{}, xerrors.Errorf(
+				"invalid accept voteproof found; majority fact is not accept ballot fact")
+		} else {
+			previousBlock = fact.NewBlock()
+		}
+
+		height = voteproof.Height() + 1
+		round = base.Round(0)
+	case base.StageINIT:
+		if fact, ok := voteproof.Majority().(ballot.INITBallotFact); !ok {
+			return ballot.INITBallotV0{}, xerrors.Errorf(
+				"invalid init voteproof found; majority fact is not init ballot fact")
+		} else {
+			previousBlock = fact.PreviousBlock()
+		}
+
+		height = voteproof.Height()
+		round = voteproof.Round() + 1
+	}
+
+	return ballot.NewINITBallotV0(
+		node,
 		height,
 		round,
 		previousBlock,
-		previousRound,
 		voteproof,
-	)
-
-	if err := ib.Sign(localstate.Node().Privatekey(), localstate.Policy().NetworkID()); err != nil {
-		return ballot.INITBallotV0{}, err
-	}
-
-	return ib, nil
+	), nil
 }
 
-func NewINITBallotV0FromLocalstate(localstate *Localstate, round base.Round) (ballot.INITBallotV0, error) {
-	lastBlock := localstate.LastBlock()
-	if lastBlock == nil {
-		return ballot.INITBallotV0{}, xerrors.Errorf("lastBlock is empty")
-	}
-
-	var voteproof base.Voteproof
-	if round == 0 {
-		voteproof = localstate.LastACCEPTVoteproof()
+func NewProposalV0(st storage.Storage, node base.Address, round base.Round, operations, seals []valuehash.Hash) (
+	ballot.ProposalV0, error,
+) {
+	var manifest block.Manifest
+	if l, err := st.LastManifest(); err != nil {
+		return ballot.ProposalV0{}, err
 	} else {
-		voteproof = localstate.LastINITVoteproof()
+		manifest = l
 	}
 
-	ib := ballot.NewINITBallotV0(
-		localstate.Node().Address(),
-		lastBlock.Height()+1,
+	return ballot.NewProposalV0(
+		node,
+		manifest.Height()+1,
 		round,
-		lastBlock.Hash(),
-		lastBlock.Round(),
+		operations,
+		seals,
+	), nil
+}
+
+func NewSIGNBallotV0(node base.Address, newBlock block.Block) ballot.SIGNBallotV0 {
+	return ballot.NewSIGNBallotV0(
+		node,
+		newBlock.Height(),
+		newBlock.Round(),
+		newBlock.Proposal(),
+		newBlock.Hash(),
+	)
+}
+
+func NewACCEPTBallotV0(node base.Address, newBlock block.Block, voteproof base.Voteproof) ballot.ACCEPTBallotV0 {
+	return ballot.NewACCEPTBallotV0(
+		node,
+		newBlock.Height(),
+		newBlock.Round(),
+		newBlock.Proposal(),
+		newBlock.Hash(),
 		voteproof,
 	)
-
-	if err := ib.Sign(localstate.Node().Privatekey(), localstate.Policy().NetworkID()); err != nil {
-		return ballot.INITBallotV0{}, err
-	}
-
-	return ib, nil
 }
 
-func NewProposal(
-	localstate *Localstate,
-	height base.Height,
-	round base.Round,
-	operations []valuehash.Hash,
-	seals []valuehash.Hash,
-	networkID []byte,
-) (ballot.Proposal, error) {
-	pr := ballot.NewProposalV0(
-		localstate.Node().Address(),
-		height,
-		round,
-		operations,
-		seals,
-	)
-
-	if err := pr.Sign(localstate.Node().Privatekey(), networkID); err != nil {
-		return ballot.ProposalV0{}, err
-	}
-
-	return pr, nil
-}
-
-func NewProposalFromLocalstate(
-	localstate *Localstate,
-	round base.Round,
-	operations []valuehash.Hash,
-	seals []valuehash.Hash,
-) (ballot.Proposal, error) {
-	lastBlock := localstate.LastBlock()
-	if lastBlock == nil {
-		return ballot.ProposalV0{}, xerrors.Errorf("lastBlock is empty")
-	}
-
-	pr := ballot.NewProposalV0(
-		localstate.Node().Address(),
-		lastBlock.Height()+1,
-		round,
-		operations,
-		seals,
-	)
-
-	if err := pr.Sign(localstate.Node().Privatekey(), localstate.Policy().NetworkID()); err != nil {
-		return ballot.ProposalV0{}, err
-	}
-
-	return pr, nil
-}
-
-func NewSIGNBallotV0FromLocalstate(
-	localstate *Localstate, round base.Round, newBlock block.Block,
-) (ballot.SIGNBallotV0, error) {
-	lastBlock := localstate.LastBlock()
-	if lastBlock == nil {
-		return ballot.SIGNBallotV0{}, xerrors.Errorf("lastBlock is empty")
-	}
-
-	sb := ballot.NewSIGNBallotV0(
-		localstate.Node().Address(),
-		lastBlock.Height()+1,
-		round,
-		newBlock.Proposal(),
-		newBlock.Hash(),
-	)
-
-	if err := sb.Sign(localstate.Node().Privatekey(), localstate.Policy().NetworkID()); err != nil {
-		return ballot.SIGNBallotV0{}, err
-	}
-
-	return sb, nil
-}
-
-func NewACCEPTBallotV0(
-	localstate *Localstate,
-	height base.Height,
-	round base.Round,
-	newBlock block.Block,
-	initVoteproof base.Voteproof,
-) (ballot.ACCEPTBallotV0, error) {
-	ab := ballot.NewACCEPTBallotV0(
-		localstate.Node().Address(),
-		height,
-		round,
-		newBlock.Proposal(),
-		newBlock.Hash(),
-		initVoteproof,
-	)
-
-	if err := ab.Sign(localstate.Node().Privatekey(), localstate.Policy().NetworkID()); err != nil {
-		return ballot.ACCEPTBallotV0{}, err
-	}
-
-	return ab, nil
-}
-
-func NewACCEPTBallotV0FromLocalstate(
-	localstate *Localstate,
-	round base.Round,
-	newBlock block.Block,
-) (ballot.ACCEPTBallotV0, error) {
-	lastBlock := localstate.LastBlock()
-	if lastBlock == nil {
-		return ballot.ACCEPTBallotV0{}, xerrors.Errorf("lastBlock is empty")
-	}
-
-	ab := ballot.NewACCEPTBallotV0(
-		localstate.Node().Address(),
-		lastBlock.Height()+1,
-		round,
-		newBlock.Proposal(),
-		newBlock.Hash(),
-		localstate.LastINITVoteproof(),
-	)
-
-	if err := ab.Sign(localstate.Node().Privatekey(), localstate.Policy().NetworkID()); err != nil {
-		return ballot.ACCEPTBallotV0{}, err
-	}
-
-	return ab, nil
+func SignSeal(b seal.Signer, localstate *Localstate) error {
+	return b.Sign(localstate.Node().Privatekey(), localstate.Policy().NetworkID())
 }

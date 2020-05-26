@@ -7,6 +7,7 @@ import (
 
 	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/base/ballot"
+	"github.com/spikeekips/mitum/base/block"
 	"github.com/spikeekips/mitum/base/seal"
 	"github.com/spikeekips/mitum/util/localtime"
 	"github.com/spikeekips/mitum/util/logging"
@@ -62,8 +63,8 @@ func NewStateJoiningHandler(
 	localstate *Localstate,
 	proposalProcessor ProposalProcessor,
 ) (*StateJoiningHandler, error) {
-	if lastBlock := localstate.LastBlock(); lastBlock == nil {
-		return nil, xerrors.Errorf("last block is empty")
+	if _, err := localstate.Storage().LastManifest(); err != nil {
+		return nil, xerrors.Errorf("last manifest is empty")
 	}
 
 	cs := &StateJoiningHandler{
@@ -209,12 +210,17 @@ func (cs *StateJoiningHandler) handleINITBallotAndACCEPTVoteproof(
 	l := loggerWithVoteproof(voteproof, loggerWithBallot(blt, cs.Log()))
 	l.Debug().Msg("INIT Ballot + ACCEPT Voteproof")
 
-	lastBlock := cs.localstate.LastBlock()
+	var height base.Height
+	if m, err := cs.localstate.Storage().LastManifest(); err != nil {
+		return err
+	} else {
+		height = m.Height()
+	}
 
-	switch d := blt.Height() - (lastBlock.Height() + 1); {
+	switch d := blt.Height() - (height + 1); {
 	case d > 0:
 		l.Debug().
-			Msgf("Ballot.Height() is higher than expected, %d + 1; moves to syncing", lastBlock.Height())
+			Msgf("Ballot.Height() is higher than expected, %d + 1; moves to syncing", height)
 
 		return cs.ChangeState(base.StateSyncing, voteproof, blt)
 	case d == 0:
@@ -223,7 +229,7 @@ func (cs *StateJoiningHandler) handleINITBallotAndACCEPTVoteproof(
 		return nil
 	default:
 		l.Debug().
-			Msgf("Ballot.Height() is lower than expected, %d + 1; ignore it", lastBlock.Height())
+			Msgf("Ballot.Height() is lower than expected, %d + 1; ignore it", height)
 
 		return nil
 	}
@@ -233,11 +239,16 @@ func (cs *StateJoiningHandler) handleINITBallotAndINITVoteproof(blt ballot.INITB
 	l := loggerWithVoteproof(voteproof, loggerWithBallot(blt, cs.Log()))
 	l.Debug().Msg("INIT Ballot + INIT Voteproof")
 
-	lastBlock := cs.localstate.LastBlock()
+	var manifest block.Manifest
+	if m, err := cs.localstate.Storage().LastManifest(); err != nil {
+		return err
+	} else {
+		manifest = m
+	}
 
-	switch d := blt.Height() - (lastBlock.Height() + 1); {
+	switch d := blt.Height() - (manifest.Height() + 1); {
 	case d == 0:
-		if err := checkBlockWithINITVoteproof(lastBlock, voteproof); err != nil {
+		if err := checkBlockWithINITVoteproof(manifest, voteproof); err != nil {
 			l.Error().Err(err).Msg("expected height, checked voteproof with block")
 
 			return err
@@ -256,12 +267,12 @@ func (cs *StateJoiningHandler) handleINITBallotAndINITVoteproof(blt ballot.INITB
 		return nil
 	case d > 0:
 		l.Debug().
-			Msgf("ballotVoteproof.Height() is higher than expected, %d + 1; moves to syncing", lastBlock.Height())
+			Msgf("ballotVoteproof.Height() is higher than expected, %d + 1; moves to syncing", manifest.Height())
 
 		return cs.ChangeState(base.StateSyncing, voteproof, blt)
 	default:
 		l.Debug().
-			Msgf("ballotVoteproof.Height() is lower than expected, %d + 1; ignore it", lastBlock.Height())
+			Msgf("ballotVoteproof.Height() is lower than expected, %d + 1; ignore it", manifest.Height())
 
 		return nil
 	}
@@ -273,11 +284,16 @@ func (cs *StateJoiningHandler) handleACCEPTBallotAndINITVoteproof(
 	l := loggerWithVoteproof(voteproof, loggerWithBallot(blt, cs.Log()))
 	l.Debug().Msg("ACCEPT Ballot + INIT Voteproof")
 
-	lastBlock := cs.localstate.LastBlock()
+	var manifest block.Manifest
+	if m, err := cs.localstate.Storage().LastManifest(); err != nil {
+		return err
+	} else {
+		manifest = m
+	}
 
-	switch d := blt.Height() - (lastBlock.Height() + 1); {
+	switch d := blt.Height() - (manifest.Height() + 1); {
 	case d == 0:
-		if err := checkBlockWithINITVoteproof(lastBlock, voteproof); err != nil {
+		if err := checkBlockWithINITVoteproof(manifest, voteproof); err != nil {
 			l.Error().Err(err).Msg("expected height, checked voteproof with block")
 
 			return err
@@ -293,9 +309,10 @@ func (cs *StateJoiningHandler) handleACCEPTBallotAndINITVoteproof(
 			return err
 		}
 
-		if ab, err := NewACCEPTBallotV0FromLocalstate(cs.localstate, voteproof.Round(), blk); err != nil {
-			cs.Log().Error().Err(err).Msg("failed to create ACCEPTBallot; will keep trying")
-			return nil
+		ab := NewACCEPTBallotV0(cs.localstate.Node().Address(), blk, cs.localstate.LastINITVoteproof())
+		if err := SignSeal(&ab, cs.localstate); err != nil {
+			cs.Log().Error().Err(err).Msg("failed to sign ACCEPTBallot; will keep trying")
+			return err
 		} else {
 			al := loggerWithBallot(ab, l)
 			cs.BroadcastSeal(ab)
@@ -305,12 +322,12 @@ func (cs *StateJoiningHandler) handleACCEPTBallotAndINITVoteproof(
 		return nil
 	case d > 0:
 		l.Debug().
-			Msgf("Ballot.Height() is higher than expected, %d + 1; moves to syncing", lastBlock.Height())
+			Msgf("Ballot.Height() is higher than expected, %d + 1; moves to syncing", manifest.Height())
 
 		return cs.ChangeState(base.StateSyncing, voteproof, blt)
 	default:
 		l.Debug().
-			Msgf("Ballot.Height() is lower than expected, %d + 1; ignore it", lastBlock.Height())
+			Msgf("Ballot.Height() is lower than expected, %d + 1; ignore it", manifest.Height())
 
 		return nil
 	}

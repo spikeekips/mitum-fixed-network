@@ -37,7 +37,7 @@ func (t *testBallotbox) thresholdFunc(total uint, percent float64) func() base.T
 
 func (t *testBallotbox) TestNew() {
 	bb := NewBallotbox(t.thresholdFunc(2, 67))
-	ba := t.newINITBallot(base.Height(10), base.Round(0), base.NewShortAddress("test-for-init-ballot"), nil, 0)
+	ba := t.newINITBallot(base.Height(10), base.Round(0), base.NewShortAddress("test-for-init-ballot"), nil)
 
 	vp, err := bb.Vote(ba)
 	t.NoError(err)
@@ -49,7 +49,6 @@ func (t *testBallotbox) newINITBallot(
 	round base.Round,
 	node base.Address,
 	previousBlock valuehash.Hash,
-	previousRound base.Round,
 ) ballot.INITBallotV0 {
 	vp := base.NewDummyVoteproof(
 		height-1,
@@ -67,7 +66,6 @@ func (t *testBallotbox) newINITBallot(
 		height,
 		round,
 		previousBlock,
-		previousRound,
 		vp,
 	)
 	t.NoError(ib.Sign(t.pk, nil))
@@ -98,7 +96,7 @@ func (t *testBallotbox) TestVoteRace() {
 	for i := 0; i < 49; i++ {
 		go func() {
 			defer wg.Done()
-			ba := t.newINITBallot(base.Height(10), base.Round(0), base.RandomShortAddress(), nil, 0)
+			ba := t.newINITBallot(base.Height(10), base.Round(0), base.RandomShortAddress(), nil)
 
 			vp, err := bb.Vote(ba)
 			if err != nil {
@@ -116,7 +114,7 @@ func (t *testBallotbox) TestVoteRace() {
 
 func (t *testBallotbox) TestINITVoteResultNotYet() {
 	bb := NewBallotbox(t.thresholdFunc(2, 67))
-	ba := t.newINITBallot(base.Height(10), base.Round(0), base.NewShortAddress("test-for-init-ballot"), nil, 0)
+	ba := t.newINITBallot(base.Height(10), base.Round(0), base.NewShortAddress("test-for-init-ballot"), nil)
 
 	vp, err := bb.Vote(ba)
 	t.NoError(err)
@@ -135,7 +133,6 @@ func (t *testBallotbox) TestINITVoteResultNotYet() {
 	iba := ib.(ballot.INITBallotV0)
 	t.True(ba.PreviousBlock().Equal(iba.PreviousBlock()))
 	t.Equal(ba.Node(), iba.Node())
-	t.Equal(ba.PreviousRound(), iba.PreviousRound())
 }
 
 func (t *testBallotbox) TestINITVoteResultDraw() {
@@ -143,13 +140,13 @@ func (t *testBallotbox) TestINITVoteResultDraw() {
 
 	// 2 ballot have the differnt previousBlock hash
 	{
-		ba := t.newINITBallot(base.Height(10), base.Round(0), base.NewShortAddress("node0"), nil, 0)
+		ba := t.newINITBallot(base.Height(10), base.Round(0), base.NewShortAddress("node0"), nil)
 		vp, err := bb.Vote(ba)
 		t.NoError(err)
 		t.Equal(base.VoteResultNotYet, vp.Result())
 	}
 	{
-		ba := t.newINITBallot(base.Height(10), base.Round(0), base.NewShortAddress("node1"), nil, 0)
+		ba := t.newINITBallot(base.Height(10), base.Round(0), base.NewShortAddress("node1"), nil)
 		vp, err := bb.Vote(ba)
 		t.NoError(err)
 		t.Equal(base.VoteResultDraw, vp.Result())
@@ -159,7 +156,7 @@ func (t *testBallotbox) TestINITVoteResultDraw() {
 	}
 
 	{ // already finished
-		ba := t.newINITBallot(base.Height(10), base.Round(0), base.NewShortAddress("node2"), nil, 0)
+		ba := t.newINITBallot(base.Height(10), base.Round(0), base.NewShortAddress("node2"), nil)
 		vp, err := bb.Vote(ba)
 		t.NoError(err)
 		t.Equal(base.VoteResultDraw, vp.Result())
@@ -172,11 +169,10 @@ func (t *testBallotbox) TestINITVoteResultMajority() {
 	bb := NewBallotbox(t.thresholdFunc(3, 66))
 
 	previousBlock := valuehash.RandomSHA256()
-	previousRound := base.Round(0)
 
 	// 2 ballot have the differnt previousBlock hash
-	ba0 := t.newINITBallot(base.Height(10), base.Round(0), base.NewShortAddress("node0"), previousBlock, previousRound)
-	ba1 := t.newINITBallot(base.Height(10), base.Round(0), base.NewShortAddress("node1"), previousBlock, previousRound)
+	ba0 := t.newINITBallot(base.Height(10), base.Round(0), base.NewShortAddress("node0"), previousBlock)
+	ba1 := t.newINITBallot(base.Height(10), base.Round(0), base.NewShortAddress("node1"), previousBlock)
 
 	{
 		vp, err := bb.Vote(ba0)
@@ -194,12 +190,11 @@ func (t *testBallotbox) TestINITVoteproofClean() {
 	bb := NewBallotbox(t.thresholdFunc(3, 66))
 
 	previousBlock := valuehash.RandomSHA256()
-	previousRound := base.Round(0)
 
 	// 2 ballot have the differnt previousBlock hash
-	ba0 := t.newINITBallot(base.Height(10), base.Round(0), base.NewShortAddress("node0"), previousBlock, previousRound)
-	ba1 := t.newINITBallot(base.Height(10), base.Round(0), base.NewShortAddress("node1"), previousBlock, previousRound)
-	bar := t.newINITBallot(base.Height(9), base.Round(0), base.NewShortAddress("node0"), nil, 0)
+	ba0 := t.newINITBallot(base.Height(10), base.Round(0), base.NewShortAddress("node0"), previousBlock)
+	ba1 := t.newINITBallot(base.Height(10), base.Round(0), base.NewShortAddress("node1"), previousBlock)
+	bar := t.newINITBallot(base.Height(9), base.Round(0), base.NewShortAddress("node0"), nil)
 
 	{
 		vp, err := bb.Vote(ba0)
@@ -338,12 +333,11 @@ func (t *testBallotbox) TestINITVoteResultMajorityClosed() {
 	bb := NewBallotbox(t.thresholdFunc(3, 66))
 
 	previousBlock := valuehash.RandomSHA256()
-	previousRound := base.Round(0)
 
 	// 2 ballot have the differnt previousBlock hash
-	ba0 := t.newINITBallot(base.Height(10), base.Round(0), base.NewShortAddress("n0"), previousBlock, previousRound)
-	ba1 := t.newINITBallot(base.Height(10), base.Round(0), base.NewShortAddress("n1"), previousBlock, previousRound)
-	ba2 := t.newINITBallot(base.Height(10), base.Round(0), base.NewShortAddress("n2"), nil, 0)
+	ba0 := t.newINITBallot(base.Height(10), base.Round(0), base.NewShortAddress("n0"), previousBlock)
+	ba1 := t.newINITBallot(base.Height(10), base.Round(0), base.NewShortAddress("n1"), previousBlock)
+	ba2 := t.newINITBallot(base.Height(10), base.Round(0), base.NewShortAddress("n2"), nil)
 
 	{
 		vp, err := bb.Vote(ba0)

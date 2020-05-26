@@ -21,12 +21,12 @@ func (t *testConsensusStates) TestINITVoteproofHigherHeight() {
 	css := NewConsensusStates(t.localstate, nil, nil, nil, nil, nil, nil, nil)
 	t.NotNil(css)
 
+	manifest := t.lastManifest(t.localstate.Storage())
 	initFact := ballot.NewINITBallotV0(
 		nil,
-		t.localstate.LastBlock().Height()+3,
+		manifest.Height()+3,
 		base.Round(2), // round is not important to go
-		t.localstate.LastBlock().Hash(),
-		t.localstate.LastBlock().Round(),
+		manifest.Hash(),
 		nil,
 	).Fact()
 

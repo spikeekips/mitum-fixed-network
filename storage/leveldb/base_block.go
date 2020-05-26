@@ -67,6 +67,7 @@ func (bst *BlockStorage) SetBlock(blk block.Block) error {
 		return err
 	} else {
 		bst.batch.Put(leveldbBlockHeightKey(blk.Height()), b)
+		bst.batch.Put(leveldbManifestHeightKey(blk.Height()), b)
 	}
 
 	if err := bst.setOperations(blk.Operations()); err != nil {
@@ -157,5 +158,11 @@ func (bst *BlockStorage) UnstageOperationSeals(hs []valuehash.Hash) error {
 }
 
 func (bst *BlockStorage) Commit() error {
+	if bst.batch.Len() < 1 {
+		if err := bst.SetBlock(bst.block); err != nil {
+			return err
+		}
+	}
+
 	return wrapError(bst.st.db.Write(bst.batch, nil))
 }

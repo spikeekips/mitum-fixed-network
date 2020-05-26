@@ -140,8 +140,6 @@ func (bs *BaseStateHandler) StoreNewBlock(blockStorage storage.BlockStorage) err
 		return err
 	}
 
-	_ = bs.localstate.SetLastBlock(blockStorage.Block())
-
 	return nil
 }
 
@@ -206,18 +204,33 @@ func (bs *BaseStateHandler) TimerBroadcastingINITBallot(
 	intervalFunc func() time.Duration,
 	roundFunc func() base.Round,
 ) (*localtime.CallbackTimer, error) {
-	baseBallot, err := NewINITBallotV0FromLocalstate(bs.localstate, roundFunc())
-	if err != nil {
-		bs.Log().Error().Err(err).Msg("failed to make INIT ballot for keeping broadcast")
+	var baseBallot ballot.INITBallotV0
 
-		return nil, err
+	round := roundFunc()
+	if round == 0 {
+		if b, err := NewINITBallotV0Round0(bs.localstate.Storage(), bs.localstate.Node().Address()); err != nil {
+			return nil, err
+		} else {
+			baseBallot = b
+		}
+	} else {
+		if b, err := NewINITBallotV0WithVoteproof(
+			bs.localstate.Storage(),
+			bs.localstate.Node().Address(),
+			round,
+			bs.localstate.LastINITVoteproof(),
+		); err != nil {
+			return nil, err
+		} else {
+			baseBallot = b
+		}
 	}
 
 	return localtime.NewCallbackTimer(
 		TimerIDBroadcastingINITBallot,
 		func() (bool, error) {
 			ib := baseBallot
-			if err := ib.Sign(bs.localstate.Node().Privatekey(), bs.localstate.Policy().NetworkID()); err != nil {
+			if err := SignSeal(&ib, bs.localstate); err != nil {
 				bs.Log().Error().Err(err).Msg("failed to re-sign INITBallot, but will keep trying")
 
 				return true, nil
@@ -233,12 +246,7 @@ func (bs *BaseStateHandler) TimerBroadcastingINITBallot(
 }
 
 func (bs *BaseStateHandler) TimerBroadcastingACCEPTBallot(newBlock block.Block) (*localtime.CallbackTimer, error) {
-	baseBallot, err := NewACCEPTBallotV0FromLocalstate(bs.localstate, newBlock.Round(), newBlock)
-	if err != nil {
-		bs.Log().Error().Err(err).Msg("failed to make ACCEPTBallot for keeping broadcast")
-
-		return nil, err
-	}
+	baseBallot := NewACCEPTBallotV0(bs.localstate.Node().Address(), newBlock, bs.localstate.LastINITVoteproof())
 
 	var called int64
 
@@ -246,7 +254,7 @@ func (bs *BaseStateHandler) TimerBroadcastingACCEPTBallot(newBlock block.Block) 
 		TimerIDBroadcastingACCEPTBallot,
 		func() (bool, error) {
 			ab := baseBallot
-			if err := ab.Sign(bs.localstate.Node().Privatekey(), bs.localstate.Policy().NetworkID()); err != nil {
+			if err := SignSeal(&ab, bs.localstate); err != nil {
 				bs.Log().Error().Err(err).Msg("failed to re-sign ACCEPTBallot, but will keep trying")
 
 				return true, nil
@@ -273,11 +281,24 @@ func (bs *BaseStateHandler) TimerBroadcastingACCEPTBallot(newBlock block.Block) 
 func (bs *BaseStateHandler) TimerTimedoutMoveNextRound(
 	round base.Round,
 ) (*localtime.CallbackTimer, error) {
-	baseBallot, err := NewINITBallotV0FromLocalstate(bs.localstate, round)
-	if err != nil {
-		bs.Log().Error().Err(err).Msg("failed to make INITBallotV0 for moving next round")
-
-		return nil, err
+	var baseBallot ballot.INITBallotV0
+	if round == 0 {
+		if b, err := NewINITBallotV0Round0(bs.localstate.Storage(), bs.localstate.Node().Address()); err != nil {
+			return nil, err
+		} else {
+			baseBallot = b
+		}
+	} else {
+		if b, err := NewINITBallotV0WithVoteproof(
+			bs.localstate.Storage(),
+			bs.localstate.Node().Address(),
+			round,
+			bs.localstate.LastINITVoteproof(),
+		); err != nil {
+			return nil, err
+		} else {
+			baseBallot = b
+		}
 	}
 
 	var called int64
@@ -295,7 +316,7 @@ func (bs *BaseStateHandler) TimerTimedoutMoveNextRound(
 			}
 
 			ib := baseBallot
-			if err := ib.Sign(bs.localstate.Node().Privatekey(), bs.localstate.Policy().NetworkID()); err != nil {
+			if err := SignSeal(&ib, bs.localstate); err != nil {
 				bs.Log().Error().Err(err).Msg("failed to re-sign ACCEPTBallot, but will keep trying")
 
 				return true, nil

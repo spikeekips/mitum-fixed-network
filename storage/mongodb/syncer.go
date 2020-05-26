@@ -7,6 +7,7 @@ import (
 
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
+	"golang.org/x/xerrors"
 
 	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/base/block"
@@ -78,10 +79,12 @@ func (st *SyncerStorage) SetManifests(manifests []block.Manifest) error {
 		Int("manifests", len(manifests)).
 		Msg("set manifests")
 
-	var lastHeight base.Height
+	var lastManifest block.Manifest
 	for _, m := range manifests {
-		if m.Height() > lastHeight {
-			lastHeight = m.Height()
+		if lastManifest == nil {
+			lastManifest = m
+		} else if m.Height() > lastManifest.Height() {
+			lastManifest = m
 		}
 	}
 
@@ -100,7 +103,7 @@ func (st *SyncerStorage) SetManifests(manifests []block.Manifest) error {
 		return err
 	}
 
-	st.manifestStorage.SetConfirmedBlock(lastHeight)
+	st.manifestStorage.setLastManifest(lastManifest)
 
 	return nil
 }
@@ -138,7 +141,7 @@ func (st *SyncerStorage) SetBlocks(blocks []block.Block) error {
 		Int("blocks", len(blocks)).
 		Msg("set blocks")
 
-	var lastHeight base.Height
+	var lastManifest block.Manifest
 	for i := range blocks {
 		blk := blocks[i]
 
@@ -152,12 +155,14 @@ func (st *SyncerStorage) SetBlocks(blocks []block.Block) error {
 			return err
 		}
 
-		if blk.Height() > lastHeight {
-			lastHeight = blk.Height()
+		if lastManifest == nil {
+			lastManifest = blk.Manifest()
+		} else if blk.Height() > lastManifest.Height() {
+			lastManifest = blk.Manifest()
 		}
 	}
 
-	st.blockStorage.SetConfirmedBlock(lastHeight)
+	st.blockStorage.setLastManifest(lastManifest)
 
 	return nil
 }
@@ -167,6 +172,13 @@ func (st *SyncerStorage) Commit() error {
 		Hinted("from_height", st.heightFrom).
 		Hinted("to_height", st.heightTo).
 		Msg("trying to commit blocks")
+
+	var lastManifest block.Manifest
+	if l, err := st.blockStorage.LastManifest(); err != nil || l == nil {
+		return xerrors.Errorf("failed to get last manifest fromm storage: %w", err)
+	} else {
+		lastManifest = l
+	}
 
 	for _, col := range []string{
 		defaultColNameBlock,
@@ -183,7 +195,7 @@ func (st *SyncerStorage) Commit() error {
 		}
 	}
 
-	st.main.SetConfirmedBlock(st.heightTo)
+	st.main.setLastManifest(lastManifest)
 
 	return nil
 }
@@ -219,12 +231,16 @@ func (st *SyncerStorage) Close() error {
 	// NOTE drop tmp database
 	if err := st.manifestStorage.client.DropDatabase(); err != nil {
 		return err
+	} else if err := st.manifestStorage.client.Close(); err != nil {
+		return err
 	}
 	if err := st.blockStorage.client.DropDatabase(); err != nil {
 		return err
+	} else if err := st.blockStorage.client.Close(); err != nil {
+		return err
 	}
 
-	return st.blockStorage.client.Close()
+	return nil
 }
 
 func newTempStorage(main *Storage, prefix string) (*Storage, error) {

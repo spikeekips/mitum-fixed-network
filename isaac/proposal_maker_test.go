@@ -6,7 +6,6 @@ import (
 	"github.com/stretchr/testify/suite"
 
 	"github.com/spikeekips/mitum/base"
-	"github.com/spikeekips/mitum/base/block"
 	"github.com/spikeekips/mitum/base/operation"
 	"github.com/spikeekips/mitum/base/seal"
 	"github.com/spikeekips/mitum/base/valuehash"
@@ -30,8 +29,7 @@ func (t *testProposalMaker) TestCached() {
 }
 
 func (t *testProposalMaker) TestClean() {
-	localstate, rn0 := t.states()
-	defer t.closeStates(localstate, rn0)
+	localstate := t.localstates(1)[0]
 
 	proposalMaker := NewProposalMaker(localstate)
 
@@ -39,16 +37,11 @@ func (t *testProposalMaker) TestClean() {
 	_, err := proposalMaker.Proposal(round)
 	t.NoError(err)
 
-	newBlock, err := block.NewTestBlockV0(localstate.LastBlock().Height()+1, base.Round(0), nil, valuehash.RandomSHA256())
-	t.NoError(err)
-	_ = localstate.SetLastBlock(newBlock)
-
 	t.NotNil(proposalMaker.proposed)
 }
 
 func (t *testProposalMaker) TestSeals() {
-	localstate, rn0 := t.states()
-	defer t.closeStates(localstate, rn0)
+	localstate := t.localstates(1)[0]
 
 	var ops []operation.Seal
 	var seals []seal.Seal

@@ -73,9 +73,12 @@ func (pm *ProposalMaker) Proposal(round base.Round) (ballot.Proposal, error) {
 	pm.Lock()
 	defer pm.Unlock()
 
-	lastBlock := pm.localstate.LastBlock()
-
-	height := lastBlock.Height() + 1
+	var height base.Height
+	if m, err := pm.localstate.Storage().LastManifest(); err != nil {
+		return nil, err
+	} else {
+		height = m.Height() + 1
+	}
 
 	if pm.proposed != nil {
 		if pm.proposed.Height() == height && pm.proposed.Round() == round {
@@ -88,12 +91,18 @@ func (pm *ProposalMaker) Proposal(round base.Round) (ballot.Proposal, error) {
 		return nil, err
 	}
 
-	proposal, err := NewProposal(pm.localstate, height, round, operations, seals, pm.localstate.Policy().NetworkID())
-	if err != nil {
+	pr := ballot.NewProposalV0(
+		pm.localstate.Node().Address(),
+		height,
+		round,
+		operations,
+		seals,
+	)
+	if err := SignSeal(&pr, pm.localstate); err != nil {
 		return nil, err
 	}
 
-	pm.proposed = proposal
+	pm.proposed = pr
 
-	return proposal, nil
+	return pr, nil
 }

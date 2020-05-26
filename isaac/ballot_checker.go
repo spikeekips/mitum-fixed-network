@@ -3,6 +3,7 @@ package isaac
 import (
 	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/base/ballot"
+	"github.com/spikeekips/mitum/base/block"
 	"github.com/spikeekips/mitum/base/valuehash"
 	"github.com/spikeekips/mitum/storage"
 	"github.com/spikeekips/mitum/util"
@@ -12,20 +13,29 @@ import (
 
 type BallotChecker struct {
 	*logging.Logging
-	suffrage   base.Suffrage
-	localstate *Localstate
-	ballot     ballot.Ballot
+	suffrage     base.Suffrage
+	localstate   *Localstate
+	ballot       ballot.Ballot
+	lastManifest block.Manifest
 }
 
-func NewBallotChecker(blt ballot.Ballot, localstate *Localstate, suffrage base.Suffrage) *BallotChecker {
+func NewBallotChecker(blt ballot.Ballot, localstate *Localstate, suffrage base.Suffrage) (*BallotChecker, error) {
+	var manifest block.Manifest
+	if m, err := localstate.Storage().LastManifest(); err != nil {
+		return nil, err
+	} else {
+		manifest = m
+	}
+
 	return &BallotChecker{
 		Logging: logging.NewLogging(func(c logging.Context) logging.Emitter {
 			return c.Str("module", "ballot-checker")
 		}),
-		suffrage:   suffrage,
-		localstate: localstate,
-		ballot:     blt,
-	}
+		suffrage:     suffrage,
+		localstate:   localstate,
+		ballot:       blt,
+		lastManifest: manifest,
+	}, nil
 }
 
 // CheckIsInSuffrage checks Ballot.Node() is inside suffrage
@@ -59,7 +69,7 @@ func (bc *BallotChecker) CheckSigning() (bool, error) {
 // last Block.
 // - If Height is same or lower than last, Ballot will be ignored.
 func (bc *BallotChecker) CheckWithLastBlock() (bool, error) {
-	if bc.ballot.Height() <= bc.localstate.LastBlock().Height() {
+	if bc.ballot.Height() <= bc.lastManifest.Height() {
 		return false, nil
 	}
 

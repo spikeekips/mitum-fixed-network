@@ -34,7 +34,6 @@ func (t *testBallotV0INIT) TestNew() {
 				round:  base.Round(0),
 			},
 			previousBlock: valuehash.RandomSHA256(),
-			previousRound: base.Round(0),
 		},
 	}
 
@@ -62,7 +61,6 @@ func (t *testBallotV0INIT) TestFact() {
 				round:  base.Round(0),
 			},
 			previousBlock: valuehash.RandomSHA256(),
-			previousRound: vp.Round(),
 		},
 		voteproof: vp,
 	}
@@ -106,7 +104,6 @@ func (t *testBallotV0INIT) TestGenerateHash() {
 				round:  base.Round(0),
 			},
 			previousBlock: valuehash.RandomSHA256(),
-			previousRound: base.Round(0),
 		},
 		voteproof: vp,
 	}
@@ -140,7 +137,6 @@ func (t *testBallotV0INIT) TestSign() {
 				round:  base.Round(0),
 			},
 			previousBlock: valuehash.RandomSHA256(),
-			previousRound: base.Round(0),
 		},
 		voteproof: vp,
 	}

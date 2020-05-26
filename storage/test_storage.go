@@ -21,6 +21,7 @@ type DummyBlockStorage struct {
 	block      block.Block
 	operations *tree.AVLTree
 	states     *tree.AVLTree
+	commited   bool
 }
 
 func NewDummyBlockStorage(
@@ -58,7 +59,13 @@ func (dst *DummyBlockStorage) UnstageOperationSeals([]valuehash.Hash) error {
 }
 
 func (dst *DummyBlockStorage) Commit() error {
+	dst.commited = true
+
 	return nil
+}
+
+func (dst *DummyBlockStorage) Committed() bool {
+	return dst.commited
 }
 
 type BaseTestStorage struct {

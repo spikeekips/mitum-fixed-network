@@ -24,6 +24,10 @@ type DummyBlocksV0Generator struct {
 func NewDummyBlocksV0Generator(
 	genesisNode *Localstate, lastHeight base.Height, suffrage base.Suffrage, localstates []*Localstate,
 ) (*DummyBlocksV0Generator, error) {
+	if lastHeight <= base.NilHeight {
+		return nil, xerrors.Errorf("last height must not be nil height, %v", base.NilHeight)
+	}
+
 	allNodes := map[base.Address]*Localstate{}
 	ballotboxes := map[base.Address]*Ballotbox{}
 	pms := map[base.Address]ProposalProcessor{}
@@ -52,13 +56,13 @@ func NewDummyBlocksV0Generator(
 func (bg *DummyBlocksV0Generator) Generate(ignoreExists bool) error {
 	lastHeight := base.NilHeight
 	if !ignoreExists {
-		lastBlock, err := bg.genesisNode.Storage().LastBlock()
-		if err != nil {
+		if l, err := bg.genesisNode.Storage().LastManifest(); err != nil {
 			return err
-		} else if err := lastBlock.Manifest().IsValid(bg.genesisNode.Policy().NetworkID()); err != nil {
+		} else if err := l.IsValid(bg.genesisNode.Policy().NetworkID()); err != nil {
 			return err
+		} else {
+			lastHeight = l.Height()
 		}
-		lastHeight = lastBlock.Height()
 
 		if lastHeight >= bg.lastHeight {
 			return nil
@@ -69,14 +73,8 @@ func (bg *DummyBlocksV0Generator) Generate(ignoreExists bool) error {
 		genesis, err := NewGenesisBlockV0Generator(bg.genesisNode, nil)
 		if err != nil {
 			return err
-		} else if blk, err := genesis.Generate(); err != nil {
+		} else if _, err := genesis.Generate(); err != nil {
 			return err
-		} else {
-			for _, l := range bg.allNodes {
-				if err := l.SetLastBlock(blk); err != nil {
-					return err
-				}
-			}
 		}
 
 		if err := bg.syncBlocks(bg.genesisNode); err != nil {
@@ -89,7 +87,9 @@ func (bg *DummyBlocksV0Generator) Generate(ignoreExists bool) error {
 			return err
 		}
 
-		if bg.genesisNode.LastBlock().Height() == bg.lastHeight {
+		if l, err := bg.genesisNode.Storage().LastManifest(); err != nil {
+			return err
+		} else if l.Height() == bg.lastHeight {
 			break
 		}
 	}
@@ -226,9 +226,7 @@ func (bg *DummyBlocksV0Generator) syncVoteproofs(from *Localstate) error {
 }
 
 func (bg *DummyBlocksV0Generator) createNextBlock() error {
-	round := base.Round(0)
-
-	if err := bg.createINITVoteproof(round); err != nil {
+	if err := bg.createINITVoteproof(); err != nil {
 		return err
 	}
 
@@ -262,19 +260,17 @@ func (bg *DummyBlocksV0Generator) finish() error {
 			return err
 		} else if err := bs.Commit(); err != nil {
 			return err
-		} else if err := l.SetLastBlock(bs.Block()); err != nil {
-			return err
 		}
 	}
 
 	return nil
 }
 
-func (bg *DummyBlocksV0Generator) createINITVoteproof(round base.Round) error {
+func (bg *DummyBlocksV0Generator) createINITVoteproof() error {
 	var ballots []ballot.INITBallot
 	var seals []seal.Seal
 	for _, l := range bg.allNodes {
-		if ib, err := bg.createINITBallot(l, round); err != nil {
+		if ib, err := bg.createINITBallot(l); err != nil {
 			return err
 		} else {
 			ballots = append(ballots, ib)
@@ -299,30 +295,21 @@ func (bg *DummyBlocksV0Generator) createINITVoteproof(round base.Round) error {
 	return nil
 }
 
-func (bg *DummyBlocksV0Generator) createINITBallot(
-	localstate *Localstate, round base.Round,
-) (ballot.INITBallot, error) {
-	previousBlock := localstate.LastBlock()
-
-	var initBallot ballot.INITBallot
-	if ib, err := NewINITBallotV0(
-		localstate,
-		previousBlock.Height()+1,
-		round,
-		previousBlock.Hash(),
-		previousBlock.Round(),
-		previousBlock.ACCEPTVoteproof(),
-	); err != nil {
+func (bg *DummyBlocksV0Generator) createINITBallot(localstate *Localstate) (ballot.INITBallot, error) {
+	var baseBallot ballot.INITBallotV0
+	if b, err := NewINITBallotV0Round0(localstate.Storage(), localstate.Node().Address()); err != nil {
+		return nil, err
+	} else if err := SignSeal(&b, localstate); err != nil {
 		return nil, err
 	} else {
-		initBallot = ib
+		baseBallot = b
 	}
 
-	if err := localstate.Storage().NewSeals([]seal.Seal{initBallot}); err != nil {
+	if err := localstate.Storage().NewSeals([]seal.Seal{baseBallot}); err != nil {
 		return nil, err
 	}
 
-	return initBallot, nil
+	return baseBallot, nil
 }
 
 func (bg *DummyBlocksV0Generator) createProposal() (ballot.Proposal, error) {
@@ -331,8 +318,14 @@ func (bg *DummyBlocksV0Generator) createProposal() (ballot.Proposal, error) {
 	acting := bg.suffrage.Acting(initVoteproof.Height(), initVoteproof.Round())
 	proposer := bg.allNodes[acting.Proposer()]
 
-	pr, err := NewProposal(proposer, initVoteproof.Height(), initVoteproof.Round(), nil, nil, bg.networkID)
-	if err != nil {
+	pr := ballot.NewProposalV0(
+		proposer.Node().Address(),
+		initVoteproof.Height(),
+		initVoteproof.Round(),
+		nil,
+		nil,
+	)
+	if err := SignSeal(&pr, proposer); err != nil {
 		return nil, err
 	}
 
@@ -358,13 +351,8 @@ func (bg *DummyBlocksV0Generator) createACCEPTVoteproof(proposal ballot.Proposal
 			newBlock = b
 		}
 
-		if ab, err := NewACCEPTBallotV0(
-			l,
-			newBlock.Height(),
-			newBlock.Round(),
-			newBlock,
-			initVoteproof,
-		); err != nil {
+		ab := NewACCEPTBallotV0(l.Node().Address(), newBlock, initVoteproof)
+		if err := SignSeal(&ab, l); err != nil {
 			return err
 		} else {
 			ballots = append(ballots, ab)

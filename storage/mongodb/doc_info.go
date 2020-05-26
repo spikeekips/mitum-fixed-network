@@ -10,23 +10,23 @@ import (
 	bsonencoder "github.com/spikeekips/mitum/util/encoder/bson"
 )
 
-const confirmedBlockDocID = "confirmed_block"
+const lastManifestDocID = "confirmed_block"
 
-type ConfirmedBlockDoc struct {
+type lastManifestDoc struct {
 	BaseDoc
 	block block.Block
 }
 
-func NewConfirmedBlockDoc(height base.Height, enc encoder.Encoder) (ConfirmedBlockDoc, error) {
-	b, err := NewBaseDoc(confirmedBlockDocID, height, enc)
+func NewLastManifestDoc(height base.Height, enc encoder.Encoder) (lastManifestDoc, error) {
+	b, err := NewBaseDoc(lastManifestDocID, height, enc)
 	if err != nil {
-		return ConfirmedBlockDoc{}, err
+		return lastManifestDoc{}, err
 	}
 
-	return ConfirmedBlockDoc{BaseDoc: b}, nil
+	return lastManifestDoc{BaseDoc: b}, nil
 }
 
-func (bd ConfirmedBlockDoc) MarshalBSON() ([]byte, error) {
+func (bd lastManifestDoc) MarshalBSON() ([]byte, error) {
 	m, err := bd.BaseDoc.M()
 	if err != nil {
 		return nil, err
@@ -35,7 +35,7 @@ func (bd ConfirmedBlockDoc) MarshalBSON() ([]byte, error) {
 	return bsonencoder.Marshal(m)
 }
 
-func loadConfirmedBlock(decoder func(interface{}) error, encs *encoder.Encoders) (base.Height, error) {
+func loadLastManifest(decoder func(interface{}) error, encs *encoder.Encoders) (base.Height, error) {
 	var b bson.Raw
 	if err := decoder(&b); err != nil {
 		return base.Height(0), err

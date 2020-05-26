@@ -139,8 +139,15 @@ func (css *ConsensusStates) cleanBallotbox() *time.Ticker {
 
 	go func() {
 		for range ticker.C {
-			lastBlock := css.localstate.LastBlock()
-			height := lastBlock.Height() - 3
+			var height base.Height
+			if m, err := css.localstate.Storage().LastManifest(); err != nil {
+				css.Log().Error().Err(err).Msg("something wrong to clean Ballotbox; failed to get last manifest")
+
+				continue
+			} else {
+				height = m.Height() - 3
+			}
+
 			if height < 1 {
 				continue
 			}
@@ -279,8 +286,15 @@ func (css *ConsensusStates) broadcastSeal(sl seal.Seal, errChan chan<- error) {
 }
 
 func (css *ConsensusStates) newVoteproof(voteproof base.Voteproof) error {
+	var manifest block.Manifest
+	if m, err := css.localstate.Storage().LastManifest(); err != nil {
+		return err
+	} else {
+		manifest = m
+	}
+
 	vpc := NewVoteproofConsensusStateChecker(
-		css.localstate.LastBlock(),
+		manifest,
 		css.localstate.LastINITVoteproof(),
 		voteproof,
 		css,
@@ -410,19 +424,19 @@ func (css *ConsensusStates) vote(blt ballot.Ballot) error {
 	return css.newVoteproof(voteproof)
 }
 
-func checkBlockWithINITVoteproof(blk block.Block, voteproof base.Voteproof) error {
+func checkBlockWithINITVoteproof(manifest block.Manifest, voteproof base.Voteproof) error {
 	// check voteproof.PreviousBlock with local block
 	fact, ok := voteproof.Majority().(ballot.INITBallotFact)
 	if !ok {
 		return xerrors.Errorf("needs INITTBallotFact: fact=%T", voteproof.Majority())
 	}
 
-	if !fact.PreviousBlock().Equal(blk.Hash()) {
+	if !fact.PreviousBlock().Equal(manifest.Hash()) {
 		return xerrors.Errorf(
-			"INIT Voteproof of ACCEPT Ballot has different PreviousBlock with local: previousRound=%s local=%s",
+			"INIT Voteproof of ACCEPT Ballot has different PreviousBlock with local: previousBlock=%s local=%s",
 
 			fact.PreviousBlock(),
-			blk.Hash(),
+			manifest.Hash(),
 		)
 	}
 

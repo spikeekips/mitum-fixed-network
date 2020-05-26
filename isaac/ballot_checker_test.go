@@ -28,10 +28,10 @@ func (t *testBallotChecker) SetupTest() {
 func (t *testBallotChecker) TestNew() {
 	t.True(t.suf.IsInside(t.localstate.Node().Address()))
 
-	ib, err := NewINITBallotV0FromLocalstate(t.localstate, base.Round(0))
-	t.NoError(err)
+	ib := t.newINITBallot(t.localstate, base.Round(0))
 
-	bc := NewBallotChecker(ib, t.localstate, t.suf)
+	bc, err := NewBallotChecker(ib, t.localstate, t.suf)
+	t.NoError(err)
 	err = util.NewChecker("test-ballot-checker", []util.CheckerFunc{
 		bc.CheckIsInSuffrage,
 	}).Check()
@@ -42,10 +42,10 @@ func (t *testBallotChecker) TestIsInSuffrage() {
 	{ // from localstate
 		t.True(t.suf.IsInside(t.localstate.Node().Address()))
 
-		ib, err := NewINITBallotV0FromLocalstate(t.localstate, base.Round(0))
-		t.NoError(err)
+		ib := t.newINITBallot(t.localstate, base.Round(0))
 
-		bc := NewBallotChecker(ib, t.localstate, t.suf)
+		bc, err := NewBallotChecker(ib, t.localstate, t.suf)
+		t.NoError(err)
 
 		var finished bool
 		err = util.NewChecker("test-ballot-checker", []util.CheckerFunc{
@@ -62,13 +62,13 @@ func (t *testBallotChecker) TestIsInSuffrage() {
 	}
 
 	{ // from unknown
-		unknown, _ := t.states()
+		unknown := t.localstates(1)[0]
 		t.False(t.suf.IsInside(unknown.Node().Address()))
 
-		ib, err := NewINITBallotV0FromLocalstate(unknown, base.Round(0))
-		t.NoError(err)
+		ib := t.newINITBallot(unknown, base.Round(0))
 
-		bc := NewBallotChecker(ib, t.localstate, t.suf)
+		bc, err := NewBallotChecker(ib, t.localstate, t.suf)
+		t.NoError(err)
 
 		var finished bool
 		err = util.NewChecker("test-ballot-checker", []util.CheckerFunc{
@@ -89,10 +89,10 @@ func (t *testBallotChecker) TestCheckWithLastBlock() {
 	ivp := t.localstate.LastACCEPTVoteproof()
 
 	{ // same height and next round
-		ib, err := NewINITBallotV0FromLocalstate(t.localstate, ivp.Round()+1)
-		t.NoError(err)
+		ib := t.newINITBallot(t.localstate, ivp.Round()+1)
 
-		bc := NewBallotChecker(ib, t.localstate, t.suf)
+		bc, err := NewBallotChecker(ib, t.localstate, t.suf)
+		t.NoError(err)
 
 		var finished bool
 		err = util.NewChecker("test-ballot-checker", []util.CheckerFunc{
@@ -109,24 +109,23 @@ func (t *testBallotChecker) TestCheckWithLastBlock() {
 	}
 
 	{ // lower Height
-		lastBlock := t.localstate.LastBlock()
-		t.NotNil(lastBlock)
+		lastManifest := t.lastManifest(t.localstate.Storage())
 
 		ib := ballot.NewINITBallotV0(
 			t.localstate.Node().Address(),
-			lastBlock.Height(),
+			lastManifest.Height(),
 			base.Round(0),
-			lastBlock.Hash(),
-			lastBlock.Round(),
+			lastManifest.Hash(),
 			t.localstate.LastACCEPTVoteproof(),
 		)
 
 		t.NoError(ib.Sign(t.localstate.Node().Privatekey(), t.localstate.Policy().NetworkID()))
 
-		bc := NewBallotChecker(ib, t.localstate, t.suf)
+		bc, err := NewBallotChecker(ib, t.localstate, t.suf)
+		t.NoError(err)
 
 		var finished bool
-		err := util.NewChecker("test-ballot-checker", []util.CheckerFunc{
+		err = util.NewChecker("test-ballot-checker", []util.CheckerFunc{
 			bc.CheckWithLastBlock,
 			func() (bool, error) {
 				finished = true
@@ -145,7 +144,7 @@ func (t *testBallotChecker) TestCheckInvalidProposal() {
 	{
 		pr := ballot.NewProposalV0(
 			t.localstate.Node().Address(),
-			t.localstate.LastBlock().Height()+1,
+			t.lastManifest(t.localstate.Storage()).Height()+1,
 			base.Round(0),
 			nil, nil,
 		)
@@ -160,9 +159,10 @@ func (t *testBallotChecker) TestCheckInvalidProposal() {
 
 	ab := t.newACCEPTBallot(t.localstate, base.Round(0), proposal.Hash(), valuehash.RandomSHA256())
 
-	bc := NewBallotChecker(ab, t.localstate, t.suf)
+	bc, err := NewBallotChecker(ab, t.localstate, t.suf)
+	t.NoError(err)
 
-	err := util.NewChecker("test-ballot-checker", []util.CheckerFunc{
+	err = util.NewChecker("test-ballot-checker", []util.CheckerFunc{
 		bc.CheckProposal,
 	}).Check()
 	t.Contains(err.Error(), "publickey not matched")
@@ -173,7 +173,7 @@ func (t *testBallotChecker) TestCheckWrongHeightProposal() {
 	{
 		pr := ballot.NewProposalV0(
 			t.remoteState.Node().Address(),
-			t.remoteState.LastBlock().Height()+100, // wrong height
+			t.lastManifest(t.remoteState.Storage()).Height()+100, // wrong height
 			base.Round(0),
 			nil, nil,
 		)
@@ -185,9 +185,10 @@ func (t *testBallotChecker) TestCheckWrongHeightProposal() {
 
 	ab := t.newACCEPTBallot(t.localstate, base.Round(0), proposal.Hash(), valuehash.RandomSHA256())
 
-	bc := NewBallotChecker(ab, t.localstate, t.suf)
+	bc, err := NewBallotChecker(ab, t.localstate, t.suf)
+	t.NoError(err)
 
-	err := util.NewChecker("test-ballot-checker", []util.CheckerFunc{
+	err = util.NewChecker("test-ballot-checker", []util.CheckerFunc{
 		bc.CheckProposal,
 	}).Check()
 	t.Contains(err.Error(), "proposal in ACCEPTBallot is invalid; different height")
@@ -198,7 +199,7 @@ func (t *testBallotChecker) TestCheckWrongRoundProposal() {
 	{
 		pr := ballot.NewProposalV0(
 			t.remoteState.Node().Address(),
-			t.localstate.LastBlock().Height()+1,
+			t.lastManifest(t.localstate.Storage()).Height()+1,
 			base.Round(33), // wrong round
 			nil, nil,
 		)
@@ -210,9 +211,10 @@ func (t *testBallotChecker) TestCheckWrongRoundProposal() {
 
 	ab := t.newACCEPTBallot(t.localstate, base.Round(0), proposal.Hash(), valuehash.RandomSHA256())
 
-	bc := NewBallotChecker(ab, t.localstate, t.suf)
+	bc, err := NewBallotChecker(ab, t.localstate, t.suf)
+	t.NoError(err)
 
-	err := util.NewChecker("test-ballot-checker", []util.CheckerFunc{
+	err = util.NewChecker("test-ballot-checker", []util.CheckerFunc{
 		bc.CheckProposal,
 	}).Check()
 	t.Contains(err.Error(), "proposal in ACCEPTBallot is invalid; different round")

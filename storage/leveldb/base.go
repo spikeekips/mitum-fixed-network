@@ -139,6 +139,32 @@ func (st *Storage) Encoders() *encoder.Encoders {
 	return st.encs
 }
 
+func (st *Storage) LastManifest() (block.Manifest, error) {
+	var raw []byte
+
+	if err := st.iter(
+		keyPrefixManifestHeight,
+		func(_, value []byte) (bool, error) {
+			raw = value
+			return false, nil
+		},
+		false,
+	); err != nil {
+		return nil, err
+	}
+
+	if raw == nil {
+		return nil, storage.NotFoundError.Errorf("manifest not found")
+	}
+
+	h, err := st.loadHash(raw)
+	if err != nil {
+		return nil, err
+	}
+
+	return st.Manifest(h)
+}
+
 func (st *Storage) LastBlock() (block.Block, error) {
 	var raw []byte
 
@@ -154,7 +180,7 @@ func (st *Storage) LastBlock() (block.Block, error) {
 	}
 
 	if raw == nil {
-		return nil, nil
+		return nil, storage.NotFoundError.Errorf("block not found")
 	}
 
 	h, err := st.loadHash(raw)

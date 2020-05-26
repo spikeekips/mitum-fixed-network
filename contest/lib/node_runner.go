@@ -202,9 +202,9 @@ func (nr *NodeRunner) networkhandlerNewSeal(sl seal.Seal) error {
 	}
 
 	if t, ok := sl.(ballot.Ballot); ok {
-		checker := isaac.NewBallotChecker(t, nr.localstate, nr.suffrage)
-
-		if err := util.NewChecker("network-new-ballot-checker", []util.CheckerFunc{
+		if checker, err := isaac.NewBallotChecker(t, nr.localstate, nr.suffrage); err != nil {
+			return err
+		} else if err := util.NewChecker("network-new-ballot-checker", []util.CheckerFunc{
 			checker.CheckIsInSuffrage,
 			checker.CheckSigning,
 			checker.CheckWithLastBlock,

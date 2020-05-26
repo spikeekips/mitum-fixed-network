@@ -11,7 +11,6 @@ import (
 type INITBallotV0PackerJSON struct {
 	BaseBallotV0PackerJSON
 	PB valuehash.Hash `json:"previous_block"`
-	PR base.Round     `json:"previous_round"`
 	VR base.Voteproof `json:"voteproof"`
 }
 
@@ -23,7 +22,6 @@ func (ib INITBallotV0) MarshalJSON() ([]byte, error) {
 	return jsonencoder.Marshal(INITBallotV0PackerJSON{
 		BaseBallotV0PackerJSON: bb,
 		PB:                     ib.previousBlock,
-		PR:                     ib.previousRound,
 		VR:                     ib.voteproof,
 	})
 }
@@ -31,7 +29,6 @@ func (ib INITBallotV0) MarshalJSON() ([]byte, error) {
 type INITBallotV0UnpackerJSON struct {
 	BaseBallotV0UnpackerJSON
 	PB json.RawMessage `json:"previous_block"`
-	PR base.Round      `json:"previous_round"`
 	VR json.RawMessage `json:"voteproof"`
 }
 
@@ -46,27 +43,24 @@ func (ib *INITBallotV0) UnpackJSON(b []byte, enc *jsonencoder.Encoder) error {
 		return err
 	}
 
-	return ib.unpack(enc, bb, bf, nib.PB, nib.PR, nib.VR)
+	return ib.unpack(enc, bb, bf, nib.PB, nib.VR)
 }
 
 type INITBallotFactV0PackerJSON struct {
 	BaseBallotFactV0PackerJSON
 	PB valuehash.Hash `json:"previous_block"`
-	PR base.Round     `json:"previous_round"`
 }
 
 func (ibf INITBallotFactV0) MarshalJSON() ([]byte, error) {
 	return jsonencoder.Marshal(INITBallotFactV0PackerJSON{
 		BaseBallotFactV0PackerJSON: NewBaseBallotFactV0PackerJSON(ibf.BaseBallotFactV0, ibf.Hint()),
 		PB:                         ibf.previousBlock,
-		PR:                         ibf.previousRound,
 	})
 }
 
 type INITBallotFactV0UnpackerJSON struct {
 	BaseBallotFactV0PackerJSON
 	PB json.RawMessage `json:"previous_block"`
-	PR base.Round      `json:"previous_round"`
 }
 
 func (ibf *INITBallotFactV0) UnpackJSON(b []byte, enc *jsonencoder.Encoder) error {
@@ -82,5 +76,5 @@ func (ibf *INITBallotFactV0) UnpackJSON(b []byte, enc *jsonencoder.Encoder) erro
 		return err
 	}
 
-	return ibf.unpack(enc, bf, ubf.PB, ubf.PR)
+	return ibf.unpack(enc, bf, ubf.PB)
 }

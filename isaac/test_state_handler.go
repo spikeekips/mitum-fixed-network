@@ -16,6 +16,7 @@ import (
 	"github.com/spikeekips/mitum/base/state"
 	"github.com/spikeekips/mitum/base/tree"
 	"github.com/spikeekips/mitum/base/valuehash"
+	"github.com/spikeekips/mitum/storage"
 	"github.com/spikeekips/mitum/util"
 	"github.com/spikeekips/mitum/util/encoder"
 	"github.com/spikeekips/mitum/util/localtime"
@@ -28,6 +29,7 @@ type baseTestStateHandler struct {
 	remoteState *Localstate
 	encs        *encoder.Encoders
 	enc         encoder.Encoder
+	ls          []*Localstate
 }
 
 func (t *baseTestStateHandler) SetupSuite() {
@@ -69,53 +71,51 @@ func (t *baseTestStateHandler) SetupSuite() {
 	_ = t.Encs.AddHinter(state.StringValue{})
 }
 
-func (t *baseTestStateHandler) states() (*Localstate, *Localstate) {
-	lastBlock, err := block.NewTestBlockV0(base.Height(2), base.Round(9), nil, valuehash.RandomSHA256())
-	t.NoError(err)
+func (t *baseTestStateHandler) localstates(n int) []*Localstate {
+	var ls []*Localstate
+	for i := 0; i < n; i++ {
+		lst := t.Storage(t.Encs, t.JSONEnc)
+		localNode := RandomLocalNode(util.UUID().String(), nil)
+		localstate, err := NewLocalstate(lst, localNode, TestNetworkID)
+		if err != nil {
+			panic(err)
+		}
 
-	lst := t.Storage(nil, nil)
-	localNode := RandomLocalNode(util.UUID().String(), nil)
-	localstate, err := NewLocalstate(lst, localNode, TestNetworkID)
-	t.NoError(err)
-	_ = localstate.SetLastBlock(lastBlock)
+		ls = append(ls, localstate)
+	}
 
-	rst := t.Storage(nil, nil)
-	remoteNode := RandomLocalNode(util.UUID().String(), nil)
-	remoteState, err := NewLocalstate(rst, remoteNode, TestNetworkID)
-	t.NoError(err)
-	_ = remoteState.SetLastBlock(lastBlock)
+	for _, l := range ls {
+		for _, r := range ls {
+			if l.Node().Address() == r.Node().Address() {
+				continue
+			}
 
-	t.NoError(localstate.Nodes().Add(remoteNode))
-	t.NoError(remoteState.Nodes().Add(localNode))
+			if err := l.Nodes().Add(r.Node()); err != nil {
+				panic(err)
+			}
+		}
+	}
 
-	lastINITVoteproof := base.NewDummyVoteproof(
-		localstate.LastBlock().Height(),
-		localstate.LastBlock().Round(),
-		base.StageINIT,
-		base.VoteResultMajority,
-	)
-	_ = localstate.SetLastINITVoteproof(lastINITVoteproof)
-	_ = remoteState.SetLastINITVoteproof(lastINITVoteproof)
-	lastACCEPTVoteproof := base.NewDummyVoteproof(
-		localstate.LastBlock().Height(),
-		localstate.LastBlock().Round(),
-		base.StageACCEPT,
-		base.VoteResultMajority,
-	)
-	_ = localstate.SetLastACCEPTVoteproof(lastACCEPTVoteproof)
-	_ = remoteState.SetLastACCEPTVoteproof(lastACCEPTVoteproof)
+	suffrage := t.suffrage(ls[0], ls...)
 
-	// TODO close up node's Network
+	if bg, err := NewDummyBlocksV0Generator(ls[0], base.Height(2), suffrage, ls); err != nil {
+		panic(err)
+	} else if err := bg.Generate(true); err != nil {
+		panic(err)
+	}
 
-	return localstate, remoteState
+	t.ls = append(t.ls, ls...)
+
+	return ls
 }
 
 func (t *baseTestStateHandler) SetupTest() {
-	t.localstate, t.remoteState = t.states()
+	ls := t.localstates(2)
+	t.localstate, t.remoteState = ls[0], ls[1]
 }
 
 func (t *baseTestStateHandler) TearDownTest() {
-	t.closeStates(t.localstate, t.remoteState)
+	t.closeStates(t.ls...)
 }
 
 func (t *baseTestStateHandler) closeStates(states ...*Localstate) {
@@ -186,31 +186,58 @@ func (t *baseTestStateHandler) suffrage(proposerState *Localstate, states ...*Lo
 }
 
 func (t *baseTestStateHandler) newINITBallot(localstate *Localstate, round base.Round) ballot.INITBallotV0 {
-	ib := ballot.NewINITBallotV0(
-		localstate.Node().Address(),
-		localstate.LastBlock().Height()+1,
-		round,
-		localstate.LastBlock().Hash(),
-		localstate.LastBlock().Round(),
-		nil,
-	)
+	var ib ballot.INITBallotV0
+	if round == 0 {
+		if b, err := NewINITBallotV0Round0(localstate.Storage(), localstate.Node().Address()); err != nil {
+			panic(err)
+		} else {
+			ib = b
+		}
+	} else {
+		if b, err := NewINITBallotV0WithVoteproof(
+			localstate.Storage(),
+			localstate.Node().Address(),
+			round,
+			localstate.LastINITVoteproof(),
+		); err != nil {
+			panic(err)
+		} else {
+			ib = b
+		}
+	}
 
 	_ = ib.Sign(localstate.Node().Privatekey(), localstate.Policy().NetworkID())
 
 	return ib
 }
 
+func (t *baseTestStateHandler) newProposal(localstate *Localstate, round base.Round, operations, seals []valuehash.Hash) ballot.Proposal {
+	pr, err := NewProposalV0(localstate.Storage(), localstate.Node().Address(), round, operations, seals)
+	if err != nil {
+		panic(err)
+	}
+	if err := SignSeal(&pr, localstate); err != nil {
+		panic(err)
+	}
+
+	return pr
+}
+
 func (t *baseTestStateHandler) newACCEPTBallot(localstate *Localstate, round base.Round, proposal, newBlock valuehash.Hash) ballot.ACCEPTBallotV0 {
+	manifest := t.lastManifest(localstate.Storage())
+
 	ab := ballot.NewACCEPTBallotV0(
 		localstate.Node().Address(),
-		localstate.LastBlock().Height()+1,
+		manifest.Height()+1,
 		round,
 		proposal,
 		newBlock,
 		nil,
 	)
 
-	_ = ab.Sign(localstate.Node().Privatekey(), localstate.Policy().NetworkID())
+	if err := ab.Sign(localstate.Node().Privatekey(), localstate.Policy().NetworkID()); err != nil {
+		panic(err)
+	}
 
 	return ab
 }
@@ -312,4 +339,20 @@ func (t *baseTestStateHandler) compareAVLTreeNode(a, b tree.Node) {
 	t.Equal(a.RightKey(), b.RightHash())
 	t.Equal(a.RightHash(), b.RightHash())
 	t.Equal(a.ValueHash(), b.ValueHash())
+}
+
+func (t *baseTestStateHandler) lastManifest(st storage.Storage) block.Manifest {
+	if m, err := st.LastManifest(); err != nil {
+		panic(err)
+	} else {
+		return m
+	}
+}
+
+func (t *baseTestStateHandler) lastBlock(st storage.Storage) block.Block {
+	if m, err := st.LastBlock(); err != nil {
+		panic(err)
+	} else {
+		return m
+	}
 }

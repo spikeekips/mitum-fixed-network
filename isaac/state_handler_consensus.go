@@ -40,8 +40,8 @@ func NewStateConsensusHandler(
 	suffrage base.Suffrage,
 	proposalMaker *ProposalMaker,
 ) (*StateConsensusHandler, error) {
-	if lastBlock := localstate.LastBlock(); lastBlock == nil {
-		return nil, xerrors.Errorf("last block is empty")
+	if _, err := localstate.Storage().LastManifest(); err != nil {
+		return nil, xerrors.Errorf("last manifest is empty")
 	}
 
 	cs := &StateConsensusHandler{
@@ -255,7 +255,7 @@ func (cs *StateConsensusHandler) handleProposal(proposal ballot.Proposal) error 
 		Msgf("node is in acting suffrage? %v", isActing)
 
 	if isActing {
-		if err := cs.readyToSIGNBallot(proposal, blk); err != nil {
+		if err := cs.readyToSIGNBallot(blk); err != nil {
 			return err
 		}
 	}
@@ -263,12 +263,12 @@ func (cs *StateConsensusHandler) handleProposal(proposal ballot.Proposal) error 
 	return cs.readyToACCEPTBallot(blk)
 }
 
-func (cs *StateConsensusHandler) readyToSIGNBallot(proposal ballot.Proposal, newBlock block.Block) error {
+func (cs *StateConsensusHandler) readyToSIGNBallot(newBlock block.Block) error {
 	// NOTE not like broadcasting ACCEPT Ballot, SIGN Ballot will be broadcasted
 	// withtout waiting.
 
-	if sb, err := NewSIGNBallotV0FromLocalstate(cs.localstate, proposal.Round(), newBlock); err != nil {
-		cs.Log().Error().Err(err).Msg("failed to create SIGNBallot")
+	sb := NewSIGNBallotV0(cs.localstate.Node().Address(), newBlock)
+	if err := SignSeal(&sb, cs.localstate); err != nil {
 		return err
 	} else {
 		cs.BroadcastSeal(sb)

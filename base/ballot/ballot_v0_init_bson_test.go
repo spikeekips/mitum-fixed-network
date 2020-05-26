@@ -51,7 +51,6 @@ func (t *testBallotV0INITBSON) TestEncode() {
 				round:  base.Round(0),
 			},
 			previousBlock: valuehash.RandomSHA256(),
-			previousRound: vp.Round(),
 		},
 		voteproof: vp,
 	}
@@ -72,7 +71,6 @@ func (t *testBallotV0INITBSON) TestEncode() {
 	t.Equal(ib.Signature(), nib.Signature())
 	t.Equal(ib.Height(), nib.Height())
 	t.Equal(ib.Round(), nib.Round())
-	t.Equal(ib.PreviousRound(), nib.PreviousRound())
 	t.Equal(localtime.Normalize(ib.SignedAt()), localtime.Normalize(nib.SignedAt()))
 	t.True(ib.Signer().Equal(nib.Signer()))
 	t.True(ib.Hash().Equal(nib.Hash()))

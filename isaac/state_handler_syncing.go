@@ -2,7 +2,6 @@ package isaac
 
 import (
 	"sync"
-	"time"
 
 	"golang.org/x/xerrors"
 
@@ -10,7 +9,7 @@ import (
 	"github.com/spikeekips/mitum/base/ballot"
 	"github.com/spikeekips/mitum/base/block"
 	"github.com/spikeekips/mitum/base/seal"
-	"github.com/spikeekips/mitum/util"
+	"github.com/spikeekips/mitum/storage"
 	"github.com/spikeekips/mitum/util/logging"
 )
 
@@ -118,8 +117,14 @@ func (ss *StateSyncingHandler) handleProposal(proposal ballot.Proposal) error {
 	l.Debug().Msg("got proposal")
 
 	// NOTE if proposal is the expected, process it
-	base := ss.localstate.LastBlock().Height()
-	switch d := proposal.Height() - base; {
+	var manifest block.Manifest
+	if m, err := ss.localstate.Storage().LastManifest(); err != nil {
+		return err
+	} else {
+		manifest = m
+	}
+
+	switch d := proposal.Height() - manifest.Height(); {
 	case d == 1:
 		ss.Log().Debug().Msg("expected proposal received; it will be processed")
 
@@ -133,7 +138,7 @@ func (ss *StateSyncingHandler) handleProposal(proposal ballot.Proposal) error {
 	default:
 		ss.Log().Debug().
 			Hinted("proposal_height", proposal.Height()).
-			Hinted("block_height", base).
+			Hinted("block_height", manifest.Height()).
 			Msg("no expected proposal found")
 	}
 
@@ -144,15 +149,22 @@ func (ss *StateSyncingHandler) newSyncer(to base.Height, sourceNodes []Node) err
 	ss.Lock()
 	defer ss.Unlock()
 
-	lastBlock := ss.localstate.LastBlock()
+	var lastManifest block.Manifest
+	if m, err := ss.localstate.Storage().LastManifest(); err != nil {
+		if !xerrors.Is(err, storage.NotFoundError) {
+			return err
+		}
+	} else {
+		lastManifest = m
+	}
 
 	var lastSyncer Syncer
 	var from base.Height
 	if len(ss.scs) < 1 {
-		if lastBlock == nil {
+		if lastManifest == nil {
 			from = 0
 		} else {
-			from = lastBlock.Height() + 1
+			from = lastManifest.Height() + 1
 		}
 	} else {
 		lastSyncer = ss.scs[len(ss.scs)-1]
@@ -176,7 +188,7 @@ func (ss *StateSyncingHandler) newSyncer(to base.Height, sourceNodes []Node) err
 	}
 
 	if lastSyncer == nil {
-		if err := syncer.Prepare(lastBlock.Manifest()); err != nil {
+		if err := syncer.Prepare(lastManifest); err != nil {
 			return err
 		}
 	} else {
@@ -312,24 +324,6 @@ func (ss *StateSyncingHandler) syncerStateChanged(syncer Syncer) {
 			ss.scs[len(ss.scs)-1] = nil
 			ss.scs = ss.scs[:len(ss.scs)-1]
 		}
-
-		var blk block.Block
-		if err := util.Retry(3, time.Millisecond*300, func() error {
-			if b, err := ss.localstate.Storage().LastBlock(); err != nil {
-				return err
-			} else {
-				blk = b
-			}
-
-			return nil
-		}); err != nil {
-			ss.Log().Error().Err(err).Msg("failed to get last block after synced")
-			return
-		}
-
-		if err := ss.localstate.SetLastBlock(blk); err != nil {
-			ss.Log().Error().Err(err).Msg("failed to set last block after synced")
-		}
 	}
 }
 
@@ -362,7 +356,12 @@ func (ss *StateSyncingHandler) processProposal(proposal ballot.Proposal) error {
 }
 
 func (ss *StateSyncingHandler) handleVoteproof(voteproof base.Voteproof) error {
-	baseBlock := ss.localstate.LastBlock()
+	var baseBlock block.Manifest
+	if m, err := ss.localstate.Storage().LastManifest(); err != nil {
+		return err
+	} else {
+		baseBlock = m
+	}
 
 	l := ss.Log().WithLogger(func(ctx logging.Context) logging.Emitter {
 		return ctx.Hinted("voteproof_stage", voteproof.Stage()).
@@ -389,6 +388,7 @@ func (ss *StateSyncingHandler) handleVoteproof(voteproof base.Voteproof) error {
 			acceptFact := voteproof.Majority().(ballot.ACCEPTBallotFact)
 			if ss.proposalProcessor != nil && ss.proposalProcessor.IsProcessed(acceptFact.Proposal()) {
 				l.Debug().Msg("proposal of voteproof is already processed, finish processing")
+
 				return ss.StoreNewBlockByVoteproof(voteproof)
 			}
 

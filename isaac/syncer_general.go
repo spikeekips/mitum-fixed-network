@@ -62,9 +62,9 @@ func NewGeneralSyncer(
 		return nil, xerrors.Errorf("empty source nodes")
 	}
 
-	if lastBlock := localstate.LastBlock(); lastBlock != nil {
-		if from <= lastBlock.Height() {
-			return nil, xerrors.Errorf("from height is same or lower than last block; from=%d last=%d", from, lastBlock.Height())
+	if m, err := localstate.Storage().LastManifest(); err == nil {
+		if from <= m.Height() {
+			return nil, xerrors.Errorf("from height is same or lower than last block; from=%d last=%d", from, m.Height())
 		}
 	}
 

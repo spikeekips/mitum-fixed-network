@@ -75,8 +75,6 @@ func (gg *GenesisBlockV0Generator) Generate() (block.Block, error) {
 		} else if err := bs.Commit(); err != nil {
 			return nil, err
 		} else {
-			_ = gg.localstate.SetLastBlock(bs.Block())
-
 			blk = bs.Block()
 		}
 	}
@@ -115,7 +113,7 @@ func (gg *GenesisBlockV0Generator) generatePreviousBlock() error {
 		genesisHash = valuehash.NewDummy(sig)
 	}
 
-	blk, err := block.NewBlockV0(base.Height(-1), base.Round(0), genesisHash, genesisHash, nil, nil)
+	blk, err := block.NewBlockV0(base.PreGenesisHeight, base.Round(0), genesisHash, genesisHash, nil, nil)
 	if err != nil {
 		return err
 	}
@@ -125,8 +123,6 @@ func (gg *GenesisBlockV0Generator) generatePreviousBlock() error {
 	} else if err := bs.Commit(); err != nil {
 		return err
 	}
-
-	_ = gg.localstate.SetLastBlock(blk)
 
 	return nil
 }
@@ -143,14 +139,14 @@ func (gg *GenesisBlockV0Generator) generateProposal(seals []operation.Seal) (bal
 	}
 
 	var proposal ballot.Proposal
-	if pr, err := NewProposal(
-		gg.localstate,
+	pr := ballot.NewProposalV0(
+		gg.localstate.Node().Address(),
 		base.Height(0),
 		base.Round(0),
 		operations,
 		sealHashes,
-		gg.localstate.Policy().NetworkID(),
-	); err != nil {
+	)
+	if err := SignSeal(&pr, gg.localstate); err != nil {
 		return nil, err
 	} else if err := gg.localstate.Storage().NewProposal(pr); err != nil {
 		return nil, err
@@ -162,18 +158,16 @@ func (gg *GenesisBlockV0Generator) generateProposal(seals []operation.Seal) (bal
 }
 
 func (gg *GenesisBlockV0Generator) generateINITVoteproof() error {
-	previousBlock := gg.localstate.LastBlock()
-
-	if ib, err := NewINITBallotV0(
-		gg.localstate,
-		base.Height(0),
-		base.Round(0),
-		previousBlock.Hash(),
-		base.Round(0),
-		nil,
-	); err != nil {
+	var ib ballot.INITBallotV0
+	if b, err := NewINITBallotV0Round0(gg.localstate.Storage(), gg.localstate.Node().Address()); err != nil {
 		return err
-	} else if voteproof, err := gg.ballotbox.Vote(ib); err != nil {
+	} else if err := SignSeal(&b, gg.localstate); err != nil {
+		return err
+	} else {
+		ib = b
+	}
+
+	if voteproof, err := gg.ballotbox.Vote(ib); err != nil {
 		return err
 	} else {
 		if !voteproof.IsFinished() {
@@ -188,21 +182,19 @@ func (gg *GenesisBlockV0Generator) generateINITVoteproof() error {
 			_ = gg.localstate.SetLastINITVoteproof(voteproof)
 		}
 	}
+
 	return nil
 }
 
 func (gg *GenesisBlockV0Generator) generateACCEPTVoteproof(newBlock block.Block) error {
 	initVoteproof := gg.localstate.LastINITVoteproof()
 
-	if ab, err := NewACCEPTBallotV0(
-		gg.localstate,
-		base.Height(0),
-		base.Round(0),
-		newBlock,
-		initVoteproof,
-	); err != nil {
+	ab := NewACCEPTBallotV0(gg.localstate.Node().Address(), newBlock, initVoteproof)
+	if err := SignSeal(&ab, gg.localstate); err != nil {
 		return err
-	} else if err := gg.localstate.Storage().NewSeals([]seal.Seal{ab}); err != nil {
+	}
+
+	if err := gg.localstate.Storage().NewSeals([]seal.Seal{ab}); err != nil {
 		return err
 	} else if voteproof, err := gg.ballotbox.Vote(ab); err != nil {
 		return err

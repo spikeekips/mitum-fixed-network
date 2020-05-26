@@ -2,11 +2,11 @@ package isaac
 
 import (
 	"github.com/spikeekips/mitum/base"
-	"github.com/spikeekips/mitum/base/block"
 	"github.com/spikeekips/mitum/base/seal"
 	"github.com/spikeekips/mitum/base/valuehash"
 	"github.com/spikeekips/mitum/storage"
 	"github.com/spikeekips/mitum/util"
+	"golang.org/x/xerrors"
 )
 
 type Localstate struct {
@@ -14,23 +14,22 @@ type Localstate struct {
 	node                *LocalNode
 	policy              *LocalPolicy
 	nodes               *NodesState
-	lastBlock           *util.LockedItem
 	lastINITVoteproof   *util.LockedItem
 	lastACCEPTVoteproof *util.LockedItem
 }
 
 func NewLocalstate(st storage.Storage, node *LocalNode, networkID []byte) (*Localstate, error) {
 	// load last states from storage.
-	var lastBlock block.Block
 	var lastINITVoteproof base.Voteproof
 	var lastACCEPTVoteproof base.Voteproof
 	if st != nil {
-		var err error
-		if lastBlock, err = st.LastBlock(); err != nil {
-			return nil, err
-		} else if lastBlock != nil {
-			lastINITVoteproof = lastBlock.INITVoteproof()
-			lastACCEPTVoteproof = lastBlock.ACCEPTVoteproof()
+		if l, err := st.LastBlock(); err != nil {
+			if !xerrors.Is(err, storage.NotFoundError) {
+				return nil, err
+			}
+		} else {
+			lastINITVoteproof = l.INITVoteproof()
+			lastACCEPTVoteproof = l.ACCEPTVoteproof()
 		}
 	}
 
@@ -46,7 +45,6 @@ func NewLocalstate(st storage.Storage, node *LocalNode, networkID []byte) (*Loca
 		node:                node,
 		policy:              policy,
 		nodes:               NewNodesState(node, nil),
-		lastBlock:           util.NewLockedItem(lastBlock),
 		lastINITVoteproof:   util.NewLockedItem(lastINITVoteproof),
 		lastACCEPTVoteproof: util.NewLockedItem(lastACCEPTVoteproof),
 	}, nil
@@ -66,24 +64,6 @@ func (ls *Localstate) Policy() *LocalPolicy {
 
 func (ls *Localstate) Nodes() *NodesState {
 	return ls.nodes
-}
-
-func (ls *Localstate) LastBlock() block.Block {
-	// TODO remove LastBlock(), instead using storage.LastBlock().
-	v := ls.lastBlock.Value()
-	if v == nil {
-		return nil
-	}
-
-	return v.(block.Block)
-}
-
-// NOTE for debugging and testing only
-
-func (ls *Localstate) SetLastBlock(blk block.Block) error {
-	_ = ls.lastBlock.SetValue(blk)
-
-	return nil
 }
 
 func (ls *Localstate) LastINITVoteproof() base.Voteproof {

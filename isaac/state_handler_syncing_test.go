@@ -70,15 +70,19 @@ func (t *testStateSyncingHandler) TestINITMovesToConsensus() {
 func (t *testStateSyncingHandler) TestProcessProposal() {
 	t.localstate.Policy().SetTimeoutWaitingProposal(time.Millisecond * 10)
 
+	lastManifest := t.lastManifest(t.localstate.Storage())
+
 	proposal := ballot.NewProposalV0(
 		base.NewShortAddress("test-for-proposal"),
-		t.localstate.LastBlock().Height()+1,
+		lastManifest.Height()+1,
 		base.Round(0),
 		nil, nil,
 	)
 	t.NoError(proposal.Sign(t.remoteState.Node().Privatekey(), nil))
 
-	returnedBlock, err := block.NewTestBlockV0(t.localstate.LastBlock().Height()+1, base.Round(0), proposal.Hash(), valuehash.RandomSHA256())
+	returnedBlock, err := block.NewTestBlockV0(
+		lastManifest.Height()+1,
+		base.Round(0), proposal.Hash(), valuehash.RandomSHA256())
 	t.NoError(err)
 
 	dp := NewDummyProposalProcessor(returnedBlock, nil)
@@ -123,10 +127,10 @@ func (t *testStateSyncingHandler) TestProcessProposal() {
 	t.NoError(cs.NewSeal(proposal))
 	t.True(dp.IsProcessed(proposal.Hash()))
 
-	// and the, with the expected ACCEPT Voteproof, the block will be saved.}
+	// and then, with the expected ACCEPT Voteproof, the block will be saved.}
 	var acceptVoteproof base.Voteproof
 	{
-		ab, err := NewACCEPTBallotV0FromLocalstate(t.remoteState, base.Round(0), returnedBlock)
+		ab := t.newACCEPTBallot(t.remoteState, base.Round(0), returnedBlock.Proposal(), returnedBlock.Hash())
 		vp, err := t.newVoteproof(ab.Stage(), ab.ACCEPTBallotFactV0, t.remoteState)
 		t.NoError(err)
 
@@ -135,7 +139,7 @@ func (t *testStateSyncingHandler) TestProcessProposal() {
 
 	t.NoError(cs.NewVoteproof(acceptVoteproof))
 
-	t.compareBlock(dp.returnBlock, t.localstate.LastBlock())
+	t.True(dp.BlockStorages(returnedBlock.Proposal()).Committed())
 }
 
 func TestStateSyncingHandler(t *testing.T) {

@@ -7,6 +7,7 @@ import (
 
 	"golang.org/x/xerrors"
 
+	"github.com/spikeekips/mitum/base/block"
 	"github.com/spikeekips/mitum/storage"
 	leveldbstorage "github.com/spikeekips/mitum/storage/leveldb"
 	mongodbstorage "github.com/spikeekips/mitum/storage/mongodb"
@@ -54,7 +55,7 @@ func (ss *StorageSupportTest) Storage(encs *encoder.Encoders, enc encoder.Encode
 			panic(err)
 		}
 
-		if enc == nil {
+		if enc == nil || enc.Hint().Type() != bsonencoder.BSONType {
 			enc = ss.BSONEnc
 		}
 
@@ -62,10 +63,25 @@ func (ss *StorageSupportTest) Storage(encs *encoder.Encoders, enc encoder.Encode
 		if err != nil {
 			panic(err)
 		}
-		return DummyMongodbStorage{st}
+
+		d := DummyMongodbStorage{st}
+
+		_ = d.Initialize()
+
+		return d
 	default:
 		panic(xerrors.Errorf("unknown db type: %v", ss.DBType))
 	}
+}
+
+func (ss *StorageSupportTest) SetBlock(st storage.Storage, blk block.Block) error {
+	if bs, err := st.OpenBlockStorage(blk); err != nil {
+		return err
+	} else if err := bs.Commit(); err != nil {
+		return err
+	}
+
+	return nil
 }
 
 type DummyMongodbStorage struct {

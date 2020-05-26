@@ -121,7 +121,7 @@ func (dp *ProposalProcessorV0) ProcessACCEPT(
 type proposalProcessorV0 struct {
 	*logging.Logging
 	localstate         *Localstate
-	lastBlock          block.Block
+	lastManifest       block.Manifest
 	block              block.BlockUpdater
 	proposal           ballot.Proposal
 	proposedOperations map[valuehash.Hash]struct{}
@@ -130,9 +130,11 @@ type proposalProcessorV0 struct {
 }
 
 func newProposalProcessorV0(localstate *Localstate, proposal ballot.Proposal) (*proposalProcessorV0, error) {
-	lastBlock := localstate.LastBlock()
-	if lastBlock == nil {
-		return nil, xerrors.Errorf("last block is empty")
+	var lastManifest block.Manifest
+	if m, err := localstate.Storage().LastManifest(); err != nil {
+		return nil, xerrors.Errorf("last manifest is empty")
+	} else {
+		lastManifest = m
 	}
 
 	proposedOperations := map[valuehash.Hash]struct{}{}
@@ -146,7 +148,7 @@ func newProposalProcessorV0(localstate *Localstate, proposal ballot.Proposal) (*
 		}),
 		localstate:         localstate,
 		proposal:           proposal,
-		lastBlock:          lastBlock,
+		lastManifest:       lastManifest,
 		proposedOperations: proposedOperations,
 	}, nil
 }
@@ -182,7 +184,7 @@ func (pp *proposalProcessorV0) processINIT(initVoteproof base.Voteproof) (block.
 
 	var blk block.BlockUpdater
 	if b, err := block.NewBlockV0(
-		pp.proposal.Height(), pp.proposal.Round(), pp.proposal.Hash(), pp.lastBlock.Hash(),
+		pp.proposal.Height(), pp.proposal.Round(), pp.proposal.Hash(), pp.lastManifest.Hash(),
 		operationsHash,
 		statesHash,
 	); err != nil {
@@ -337,7 +339,7 @@ func (pp *proposalProcessorV0) processStates() (*tree.AVLTree, error) {
 				Msg("failed to process operation")
 			continue
 		} else if st != nil {
-			if err := st.SetPreviousBlock(pp.lastBlock.Hash()); err != nil {
+			if err := st.SetPreviousBlock(pp.lastManifest.Hash()); err != nil {
 				return nil, err
 			}
 			if err := st.AddOperationInfo(opi); err != nil {

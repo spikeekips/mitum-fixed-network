@@ -32,7 +32,6 @@ type Ballot interface {
 type INITBallot interface {
 	Ballot
 	PreviousBlock() valuehash.Hash
-	PreviousRound() base.Round
 	Voteproof() base.Voteproof
 }
 
@@ -58,7 +57,6 @@ type ACCEPTBallot interface {
 type INITBallotFact interface {
 	valuehash.Hasher
 	PreviousBlock() valuehash.Hash
-	PreviousRound() base.Round
 }
 
 type SIGNBallotFact interface {

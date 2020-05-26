@@ -99,14 +99,14 @@ func (vc *VoteProofChecker) CheckThreshold() (bool, error) {
 
 type VoteproofConsensusStateChecker struct {
 	*logging.Logging
-	lastBlock         block.Block
+	lastManifest      block.Manifest
 	lastINITVoteproof base.Voteproof
 	voteproof         base.Voteproof
 	css               *ConsensusStates
 }
 
 func NewVoteproofConsensusStateChecker(
-	lastBlock block.Block,
+	lastManifest block.Manifest,
 	lastINITVoteproof base.Voteproof,
 	voteproof base.Voteproof,
 	css *ConsensusStates,
@@ -115,7 +115,7 @@ func NewVoteproofConsensusStateChecker(
 		Logging: logging.NewLogging(func(c logging.Context) logging.Emitter {
 			return c.Str("module", "voteproof-validation-checker")
 		}),
-		lastBlock:         lastBlock,
+		lastManifest:      lastManifest,
 		lastINITVoteproof: lastINITVoteproof,
 		voteproof:         voteproof,
 		css:               css,
@@ -126,11 +126,11 @@ func (vpc *VoteproofConsensusStateChecker) CheckHeight() (bool, error) {
 	// TODO reduce the duplicated voteproof.
 	l := loggerWithVoteproof(vpc.voteproof, vpc.Log())
 
-	d := vpc.voteproof.Height() - (vpc.lastBlock.Height() + 1)
+	d := vpc.voteproof.Height() - (vpc.lastManifest.Height() + 1)
 
 	if d > 0 {
 		l.Debug().
-			Hinted("local_block_height", vpc.lastBlock.Height()).
+			Hinted("local_block_height", vpc.lastManifest.Height()).
 			Msg("Voteproof has higher height from local block")
 
 		var fromState base.State
@@ -143,7 +143,7 @@ func (vpc *VoteproofConsensusStateChecker) CheckHeight() (bool, error) {
 
 	if d < 0 {
 		l.Debug().
-			Hinted("local_block_height", vpc.lastBlock.Height()).
+			Hinted("local_block_height", vpc.lastManifest.Height()).
 			Msg("Voteproof has lower height from local block; ignore it")
 
 		return false, IgnoreVoteproofError
@@ -159,7 +159,7 @@ func (vpc *VoteproofConsensusStateChecker) CheckINITVoteproof() (bool, error) {
 
 	l := loggerWithVoteproof(vpc.voteproof, vpc.Log())
 
-	if err := checkBlockWithINITVoteproof(vpc.lastBlock, vpc.voteproof); err != nil {
+	if err := checkBlockWithINITVoteproof(vpc.lastManifest, vpc.voteproof); err != nil {
 		l.Error().Err(err).Msg("invalid init voteproof")
 
 		var fromState base.State
@@ -189,7 +189,7 @@ func (vpc *VoteproofConsensusStateChecker) CheckACCEPTVoteproof() (bool, error) 
 
 type VoteproofBootingChecker struct {
 	*logging.Logging
-	lastBlock       block.Block
+	lastManifest    block.Manifest
 	initVoteproof   base.Voteproof // NOTE these Voteproof are from last block
 	acceptVoteproof base.Voteproof
 }
@@ -205,40 +205,47 @@ func NewVoteproofBootingChecker(localstate *Localstate) (*VoteproofBootingChecke
 		return nil, err
 	}
 
+	var manifest block.Manifest
+	if m, err := localstate.Storage().LastManifest(); err != nil {
+		return nil, err
+	} else {
+		manifest = m
+	}
+
 	return &VoteproofBootingChecker{
 		Logging: logging.NewLogging(func(c logging.Context) logging.Emitter {
 			return c.Str("module", "voteproof-booting-checker")
 		}),
-		lastBlock:       localstate.LastBlock(),
+		lastManifest:    manifest,
 		initVoteproof:   initVoteproof,
 		acceptVoteproof: acceptVoteproof,
 	}, nil
 }
 
 func (vpc *VoteproofBootingChecker) CheckACCEPTVoteproofHeight() (bool, error) {
-	switch d := vpc.acceptVoteproof.Height() - vpc.lastBlock.Height(); {
+	switch d := vpc.acceptVoteproof.Height() - vpc.lastManifest.Height(); {
 	case d == 0:
 	default:
 		// TODO needs self-correction by syncing
 		// wrong ACCEPTVoteproof of last block, something wrong
 		return false, StopBootingError.Errorf(
 			"missing ACCEPTVoteproof found: voteproof.Height()=%d != block.Height()=%d",
-			vpc.acceptVoteproof.Height(), vpc.lastBlock.Height(),
+			vpc.acceptVoteproof.Height(), vpc.lastManifest.Height(),
 		)
 	}
 
-	if vpc.acceptVoteproof.Round() != vpc.lastBlock.Round() {
+	if vpc.acceptVoteproof.Round() != vpc.lastManifest.Round() {
 		return false, StopBootingError.Errorf(
 			"round of ACCEPTVoteproof of same height not matched: voteproof.Round()=%d block.Round()=%d",
-			vpc.acceptVoteproof.Round(), vpc.lastBlock.Round(),
+			vpc.acceptVoteproof.Round(), vpc.lastManifest.Round(),
 		)
 	}
 
 	fact := vpc.acceptVoteproof.Majority().(ballot.ACCEPTBallotFact)
-	if !vpc.lastBlock.Hash().Equal(fact.NewBlock()) {
+	if !vpc.lastManifest.Hash().Equal(fact.NewBlock()) {
 		return false, StopBootingError.Errorf(
 			"block hash of ACCEPTVoteproof of same height not matched: voteproof.Block()=%s block.Block()=%s",
-			fact.NewBlock(), vpc.lastBlock.Hash(),
+			fact.NewBlock(), vpc.lastManifest.Hash(),
 		)
 	}
 
@@ -246,27 +253,27 @@ func (vpc *VoteproofBootingChecker) CheckACCEPTVoteproofHeight() (bool, error) {
 }
 
 func (vpc *VoteproofBootingChecker) CheckINITVoteproofHeight() (bool, error) {
-	switch d := vpc.initVoteproof.Height() - vpc.lastBlock.Height(); {
+	switch d := vpc.initVoteproof.Height() - vpc.lastManifest.Height(); {
 	case d == 0:
 	default:
 		return false, StopBootingError.Errorf(
 			"missing INITVoteproof found: voteproof.Height()=%d != block.Height()=%d",
-			vpc.initVoteproof.Height(), vpc.lastBlock.Height(),
+			vpc.initVoteproof.Height(), vpc.lastManifest.Height(),
 		)
 	}
 
-	if vpc.initVoteproof.Round() != vpc.lastBlock.Round() {
+	if vpc.initVoteproof.Round() != vpc.lastManifest.Round() {
 		return false, StopBootingError.Errorf(
 			"round of INITVoteproof of same height not matched: voteproof.Round()=%d block.Round()=%d",
-			vpc.initVoteproof.Round(), vpc.lastBlock.Round(),
+			vpc.initVoteproof.Round(), vpc.lastManifest.Round(),
 		)
 	}
 
 	fact := vpc.initVoteproof.Majority().(ballot.INITBallotFact)
-	if !vpc.lastBlock.PreviousBlock().Equal(fact.PreviousBlock()) {
+	if !vpc.lastManifest.PreviousBlock().Equal(fact.PreviousBlock()) {
 		return false, StopBootingError.Errorf(
 			"previous block hash of INITVoteproof of same height not matched: voteproof.Block()=%s block.Block()=%s",
-			fact.PreviousBlock(), vpc.lastBlock.Hash(),
+			fact.PreviousBlock(), vpc.lastManifest.Hash(),
 		)
 	}
 

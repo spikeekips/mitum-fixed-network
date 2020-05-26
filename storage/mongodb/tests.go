@@ -8,9 +8,14 @@ import (
 
 	"github.com/rs/zerolog"
 
+	"github.com/spikeekips/mitum/base/block"
 	"github.com/spikeekips/mitum/util"
 	"github.com/spikeekips/mitum/util/logging"
 )
+
+func (st *Storage) SetLastManifest(m block.Manifest) {
+	st.setLastManifest(m)
+}
 
 var BaseTestMongodbURI = "mongodb://localhost:27017"
 

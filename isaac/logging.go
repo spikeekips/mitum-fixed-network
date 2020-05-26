@@ -3,6 +3,7 @@ package isaac
 import (
 	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/base/ballot"
+	"github.com/spikeekips/mitum/base/block"
 	"github.com/spikeekips/mitum/base/seal"
 	"github.com/spikeekips/mitum/util/logging"
 )
@@ -42,14 +43,16 @@ func loggerWithVoteproof(voteproof base.Voteproof, l logging.Logger) logging.Log
 }
 
 func loggerWithLocalstate(localstate *Localstate, l logging.Logger) logging.Logger {
-	lastBlock := localstate.LastBlock()
-	if lastBlock == nil {
+	var manifest block.Manifest
+	if m, err := localstate.Storage().LastManifest(); err != nil {
 		return l
+	} else {
+		manifest = m
 	}
 
 	return l.WithLogger(func(ctx logging.Context) logging.Emitter {
 		return ctx.Dict("local_state", logging.Dict().
-			Hinted("block", lastBlock),
+			Hinted("block", manifest),
 		)
 	})
 }

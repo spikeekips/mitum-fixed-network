@@ -50,10 +50,11 @@ var allCollections = []string{
 type Storage struct {
 	sync.RWMutex
 	*logging.Logging
-	client         *Client
-	encs           *encoder.Encoders
-	enc            encoder.Encoder
-	confirmedBlock base.Height
+	client             *Client
+	encs               *encoder.Encoders
+	enc                encoder.Encoder
+	lastManifest       block.Manifest
+	lastManifestHeight base.Height
 }
 
 func NewStorage(client *Client, encs *encoder.Encoders, enc encoder.Encoder) (*Storage, error) {
@@ -63,27 +64,30 @@ func NewStorage(client *Client, encs *encoder.Encoders, enc encoder.Encoder) (*S
 		Logging: logging.NewLogging(func(c logging.Context) logging.Emitter {
 			return c.Str("module", "mongodb-storage")
 		}),
-		client: client,
-		encs:   encs,
-		enc:    enc,
+		client:             client,
+		encs:               encs,
+		enc:                enc,
+		lastManifestHeight: base.NilHeight,
 	}
 
-	if cb, err := st.loadConfirmedBlock(); err != nil {
+	if err := st.loadLastManifest(); err != nil {
 		if !xerrors.Is(err, storage.NotFoundError) {
 			return nil, err
 		}
-	} else {
-		st.confirmedBlock = cb
+	}
+
+	if err := st.cleanupIncompleteData(); err != nil {
+		return nil, err
 	}
 
 	return st, nil
 }
 
-func (st *Storage) loadConfirmedBlock() (base.Height, error) {
+func (st *Storage) loadLastManifest() error {
 	var height base.Height
-	if err := st.client.GetByID(defaultColNameInfo, confirmedBlockDocID,
+	if err := st.client.GetByID(defaultColNameInfo, lastManifestDocID,
 		func(res *mongo.SingleResult) error {
-			if i, err := loadConfirmedBlock(res.Decode, st.encs); err != nil {
+			if i, err := loadLastManifest(res.Decode, st.encs); err != nil {
 				return err
 			} else {
 				height = i
@@ -92,28 +96,47 @@ func (st *Storage) loadConfirmedBlock() (base.Height, error) {
 			return nil
 		},
 	); err != nil {
-		return base.Height(0), err
+		return err
 	}
 
-	return height, nil
+	if m, err := st.ManifestByHeight(height); err != nil {
+		return err
+	} else {
+		st.lastManifest = m
+		st.lastManifestHeight = m.Height()
+	}
+
+	return nil
 }
 
-func (st *Storage) ConfirmedBlock() base.Height {
+func (st *Storage) lastHeight() base.Height {
 	st.RLock()
 	defer st.RUnlock()
 
-	return st.confirmedBlock
+	return st.lastManifestHeight
 }
 
-func (st *Storage) SetConfirmedBlock(height base.Height) {
+func (st *Storage) LastManifest() (block.Manifest, error) {
+	st.RLock()
+	defer st.RUnlock()
+
+	if st.lastManifest == nil {
+		return nil, storage.NotFoundError.Errorf("manifest not found")
+	}
+
+	return st.lastManifest, nil
+}
+
+func (st *Storage) setLastManifest(m block.Manifest) {
 	st.Lock()
 	defer st.Unlock()
 
-	if height <= st.confirmedBlock {
+	if m.Height() <= st.lastManifestHeight {
 		return
 	}
 
-	st.confirmedBlock = height
+	st.lastManifest = m
+	st.lastManifestHeight = m.Height()
 }
 
 func (st *Storage) SyncerStorage() (storage.SyncerStorage, error) {
@@ -144,6 +167,12 @@ func (st *Storage) Clean() error {
 		}
 	}
 
+	st.Lock()
+	defer st.Unlock()
+
+	st.lastManifest = nil
+	st.lastManifestHeight = base.NilHeight
+
 	return nil
 }
 
@@ -173,26 +202,7 @@ func (st *Storage) Encoders() *encoder.Encoders {
 }
 
 func (st *Storage) LastBlock() (block.Block, error) {
-	var blk block.Block
-
-	if err := st.client.Find(
-		defaultColNameBlock,
-		util.EmptyBSONFilter().AddOp("height", st.ConfirmedBlock(), "$lte").D(),
-		func(cursor *mongo.Cursor) (bool, error) {
-			if i, err := loadBlockFromDecoder(cursor.Decode, st.encs); err != nil {
-				return false, err
-			} else {
-				blk = i
-			}
-
-			return false, nil
-		},
-		options.Find().SetSort(util.NewBSONFilter("height", -1).D()).SetLimit(1),
-	); err != nil {
-		return nil, err
-	}
-
-	return blk, nil
+	return st.blockByFilter(util.NewBSONFilter("height", st.lastHeight()).D())
 }
 
 func (st *Storage) blockByFilter(filter bson.D) (block.Block, error) {
@@ -200,7 +210,7 @@ func (st *Storage) blockByFilter(filter bson.D) (block.Block, error) {
 
 	if err := st.client.GetByFilter(
 		defaultColNameBlock,
-		util.NewBSONFilterFromD(filter).AddOp("height", st.ConfirmedBlock(), "$lte").D(),
+		util.NewBSONFilterFromD(filter).AddOp("height", st.lastHeight(), "$lte").D(),
 		func(res *mongo.SingleResult) error {
 			if i, err := loadBlockFromDecoder(res.Decode, st.encs); err != nil {
 				return err
@@ -223,7 +233,7 @@ func (st *Storage) Block(h valuehash.Hash) (block.Block, error) {
 }
 
 func (st *Storage) BlockByHeight(height base.Height) (block.Block, error) {
-	if height > st.ConfirmedBlock() {
+	if height > st.lastHeight() {
 		return nil, storage.NotFoundError
 	}
 
@@ -235,7 +245,7 @@ func (st *Storage) manifestByFilter(filter bson.D) (block.Manifest, error) {
 
 	if err := st.client.GetByFilter(
 		defaultColNameManifest,
-		util.NewBSONFilterFromD(filter).AddOp("height", st.ConfirmedBlock(), "$lte").D(),
+		util.NewBSONFilterFromD(filter).AddOp("height", st.lastHeight(), "$lte").D(),
 		func(res *mongo.SingleResult) error {
 			if i, err := loadManifestFromDecoder(res.Decode, st.encs); err != nil {
 				return err
@@ -573,7 +583,7 @@ func (st *Storage) State(key string) (state.State, bool, error) {
 
 	if err := st.client.Find(
 		defaultColNameState,
-		util.NewBSONFilter("key", key).AddOp("height", st.ConfirmedBlock(), "$lte").D(),
+		util.NewBSONFilter("key", key).AddOp("height", st.lastHeight(), "$lte").D(),
 		func(cursor *mongo.Cursor) (bool, error) {
 			if i, err := loadStateFromDecoder(cursor.Decode, st.encs); err != nil {
 				return false, err
@@ -608,7 +618,7 @@ func (st *Storage) NewState(sta state.State) error {
 func (st *Storage) HasOperation(h valuehash.Hash) (bool, error) {
 	count, err := st.client.Count(
 		defaultColNameOperation,
-		util.NewBSONFilter("hash_string", h.String()).AddOp("height", st.ConfirmedBlock(), "$lte").D(),
+		util.NewBSONFilter("hash_string", h.String()).AddOp("height", st.lastHeight(), "$lte").D(),
 		options.Count().SetLimit(1),
 	)
 	if err != nil {
@@ -655,8 +665,8 @@ func (st *Storage) Initialize() error {
 	return nil
 }
 
-func (st *Storage) CleanupIncompleteData() error {
-	filter := util.EmptyBSONFilter().AddOp("height", st.ConfirmedBlock(), "$gt").D()
+func (st *Storage) cleanByHeight(height base.Height) error {
+	filter := util.EmptyBSONFilter().AddOp("height", height, "$gt").D()
 
 	// block
 	if _, err := st.client.Delete(defaultColNameBlock, filter); err != nil {
@@ -679,4 +689,8 @@ func (st *Storage) CleanupIncompleteData() error {
 	}
 
 	return nil
+}
+
+func (st *Storage) cleanupIncompleteData() error {
+	return st.cleanByHeight(st.lastHeight())
 }

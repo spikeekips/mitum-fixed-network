@@ -158,16 +158,16 @@ func (cmd *InitCommand) run(log logging.Logger) error {
 
 	// check the existing blocks
 	log.Debug().Msg("checking existing blocks")
-	if blk, err := nr.Storage().LastBlock(); err != nil {
+	if manifest, err := nr.Storage().LastManifest(); err != nil {
 		return err
 	} else {
-		if blk == nil {
+		if manifest == nil {
 			log.Debug().Msg("not found existing blocks")
 		} else {
-			log.Debug().Msgf("found existing blocks: block=%d", blk.Height())
+			log.Debug().Msgf("found existing blocks: block=%d", manifest.Height())
 
 			if !cmd.Force {
-				return xerrors.Errorf("environment already exists: block=%d", blk.Height())
+				return xerrors.Errorf("environment already exists: block=%d", manifest.Height())
 			}
 
 			if err := nr.Storage().Clean(); err != nil {

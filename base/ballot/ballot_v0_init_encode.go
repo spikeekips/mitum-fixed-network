@@ -11,7 +11,6 @@ func (ib *INITBallotV0) unpack(
 	bb BaseBallotV0,
 	bf BaseBallotFactV0,
 	bPreviousBlock []byte,
-	previousRound base.Round,
 	bVoteproof []byte,
 ) error {
 	var epb valuehash.Hash
@@ -34,7 +33,6 @@ func (ib *INITBallotV0) unpack(
 	ib.INITBallotFactV0 = INITBallotFactV0{
 		BaseBallotFactV0: bf,
 		previousBlock:    epb,
-		previousRound:    previousRound,
 	}
 	ib.voteproof = voteproof
 
@@ -45,7 +43,6 @@ func (ibf *INITBallotFactV0) unpack(
 	enc encoder.Encoder,
 	bf BaseBallotFactV0,
 	bPreviousBlock []byte,
-	previousRound base.Round,
 ) error {
 	var err error
 
@@ -56,7 +53,6 @@ func (ibf *INITBallotFactV0) unpack(
 
 	ibf.BaseBallotFactV0 = bf
 	ibf.previousBlock = pb
-	ibf.previousRound = previousRound
 
 	return nil
 }

@@ -14,43 +14,12 @@ type testBlockV0DummyGenerator struct {
 	localstate *Localstate
 }
 
-func (t *testBlockV0DummyGenerator) SetupTest() {
-	t.baseTestStateHandler.SetupTest()
-	baseLocalstate := t.baseTestStateHandler.localstate
-
-	localstate, err := NewLocalstate(
-		t.Storage(nil, nil),
-		baseLocalstate.Node(),
-		TestNetworkID,
-	)
-	t.NoError(err)
-	t.localstate = localstate
-}
-
-func (t *testBlockV0DummyGenerator) localstates(n int) []*Localstate {
-	ls := make([]*Localstate, n)
-
-	var i int
-	for {
-		a, b := t.states()
-		ls[i] = a
-		i++
-		if i == n {
-			break
-		}
-		ls[i] = b
-		i++
-		if i == n {
-			break
-		}
-	}
-
-	return ls
-}
-
 func (t *testBlockV0DummyGenerator) TestCreate() {
-	all := []*Localstate{t.localstate}
-	all = append(all, t.localstates(2)...)
+	all := t.localstates(3)
+
+	for _, l := range all {
+		t.NoError(l.Storage().Clean())
+	}
 
 	defer t.closeStates(all...)
 
@@ -61,11 +30,11 @@ func (t *testBlockV0DummyGenerator) TestCreate() {
 			nodes[i] = o.Node()
 		}
 
-		suffrage = base.NewFixedSuffrage(t.localstate.Node(), nodes)
+		suffrage = base.NewFixedSuffrage(all[0].Node(), nodes)
 	}
 
 	lastHeight := base.Height(10)
-	bg, err := NewDummyBlocksV0Generator(t.localstate, lastHeight, suffrage, all)
+	bg, err := NewDummyBlocksV0Generator(all[0], lastHeight, suffrage, all)
 	t.NoError(err)
 
 	t.NoError(bg.Generate(true))

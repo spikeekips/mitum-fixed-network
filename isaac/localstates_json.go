@@ -24,7 +24,6 @@ func (ls Localstate) MarshalJSON() ([]byte, error) {
 		ND: ls.Node(),
 		PL: ls.Policy(),
 		NS: nodes,
-		LB: ls.LastBlock(),
 		IV: ls.LastINITVoteproof(),
 		AV: ls.LastACCEPTVoteproof(),
 	})

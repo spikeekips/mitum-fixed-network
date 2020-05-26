@@ -20,19 +20,16 @@ var (
 type INITBallotFactV0 struct {
 	BaseBallotFactV0
 	previousBlock valuehash.Hash
-	previousRound base.Round
 }
 
 func NewINITBallotFactV0(
 	height base.Height,
 	round base.Round,
 	previousBlock valuehash.Hash,
-	previousRound base.Round,
 ) INITBallotFactV0 {
 	return INITBallotFactV0{
 		BaseBallotFactV0: NewBaseBallotFactV0(height, round),
 		previousBlock:    previousBlock,
-		previousRound:    previousRound,
 	}
 }
 
@@ -59,16 +56,11 @@ func (ibf INITBallotFactV0) Bytes() []byte {
 	return util.ConcatBytesSlice(
 		ibf.BaseBallotFactV0.Bytes(),
 		ibf.previousBlock.Bytes(),
-		ibf.previousRound.Bytes(),
 	)
 }
 
 func (ibf INITBallotFactV0) PreviousBlock() valuehash.Hash {
 	return ibf.previousBlock
-}
-
-func (ibf INITBallotFactV0) PreviousRound() base.Round {
-	return ibf.previousRound
 }
 
 type INITBallotV0 struct {
@@ -82,7 +74,6 @@ func NewINITBallotV0(
 	height base.Height,
 	round base.Round,
 	previousBlock valuehash.Hash,
-	previousRound base.Round,
 	voteproof base.Voteproof,
 ) INITBallotV0 {
 	return INITBallotV0{
@@ -91,7 +82,6 @@ func NewINITBallotV0(
 			height,
 			round,
 			previousBlock,
-			previousRound,
 		),
 		voteproof: voteproof,
 	}

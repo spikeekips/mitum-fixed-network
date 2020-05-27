@@ -1,9 +1,9 @@
 package contestlib
 
 import (
-	"bufio"
 	"bytes"
 	"context"
+	"encoding/binary"
 	"io"
 	"os"
 
@@ -299,24 +299,24 @@ func ContainerLogs(
 	endedChan := make(chan struct{}, 1)
 
 	go func() {
-		reader := bufio.NewReader(out)
-
 	end:
 		for {
 			select {
 			case <-endedChan:
 				break end
 			default:
-				for {
-					l, err := reader.ReadBytes('\n')
-					if len(l) > 7 {
-						outChan <- bytes.TrimSpace(l[8:])
-					}
-
-					if err != nil {
-						break end
-					}
+				h := make([]byte, 8)
+				if _, err := out.Read(h); err != nil {
+					break end
 				}
+
+				count := binary.BigEndian.Uint32(h[4:])
+				l := make([]byte, count)
+				if _, err := out.Read(l); err != nil {
+					break end
+				}
+
+				outChan <- bytes.TrimSpace(l)
 			}
 		}
 	}()

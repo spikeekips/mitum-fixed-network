@@ -224,7 +224,7 @@ func (cs *StateJoiningHandler) handleINITBallotAndACCEPTVoteproof(
 
 		return cs.ChangeState(base.StateSyncing, voteproof, blt)
 	case d == 0:
-		l.Debug().Msg("same height; keep waiting CVP")
+		l.Debug().Msg("same height; keep waiting another voteproof")
 
 		return nil
 	default:
@@ -262,7 +262,7 @@ func (cs *StateJoiningHandler) handleINITBallotAndINITVoteproof(blt ballot.INITB
 			cs.setCurrentRound(blt.Round())
 		}
 
-		l.Debug().Msg("same height; keep waiting CVP")
+		l.Debug().Msg("same height; keep waiting another voteproof")
 
 		return nil
 	case d > 0:

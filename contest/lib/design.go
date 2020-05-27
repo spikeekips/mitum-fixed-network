@@ -17,94 +17,6 @@ import (
 	"github.com/spikeekips/mitum/util/isvalid"
 )
 
-type ContestDesign struct {
-	encs       *encoder.Encoders
-	Nodes      []*ContestNodeDesign
-	Conditions []*Condition
-	actions    map[string]ConditionActionLoader
-}
-
-func LoadContestDesignFromFile(
-	f string, encs *encoder.Encoders,
-	actions map[string]ConditionActionLoader,
-) (*ContestDesign, error) {
-	var design ContestDesign
-	if b, err := ioutil.ReadFile(filepath.Clean(f)); err != nil {
-		return nil, err
-	} else if err := yaml.Unmarshal(b, &design); err != nil {
-		return nil, err
-	}
-
-	design.encs = encs
-	design.actions = actions
-
-	return &design, nil
-}
-
-func (cd *ContestDesign) IsValid([]byte) error {
-	if len(cd.Nodes) < 1 {
-		return xerrors.Errorf("empty nodes")
-	}
-
-	if err := cd.loadConditionActions(); err != nil {
-		return err
-	}
-
-	for _, n := range cd.Nodes {
-		if err := n.IsValid(nil); err != nil {
-			return err
-		}
-	}
-
-	addrs := map[string]struct{}{}
-	for _, r := range cd.Nodes {
-		if _, found := addrs[r.Address()]; found {
-			return xerrors.Errorf("duplicated address found: '%v'", r.Address())
-		}
-		addrs[r.Address()] = struct{}{}
-	}
-
-	return nil
-}
-
-func (cd *ContestDesign) loadConditionActions() error {
-	for _, c := range cd.Conditions {
-		if err := c.IsValid(nil); err != nil {
-			return err
-		}
-
-		if len(c.ActionString) < 1 {
-			continue
-		} else if f, found := cd.actions[c.ActionString]; !found {
-			return xerrors.Errorf("action not found: %q", c.ActionString)
-		} else {
-			ca := NewConditionAction(c.ActionString, f, c.Args, c.IfError)
-			if err := ca.IsValid(nil); err != nil {
-				return xerrors.Errorf("invalid actions: %w", err)
-			}
-			c.action = ca
-		}
-	}
-
-	return nil
-}
-
-type ContestNodeDesign struct {
-	AddressString string `yaml:"address"`
-}
-
-func (cn *ContestNodeDesign) Address() string {
-	return cn.AddressString
-}
-
-func (cn *ContestNodeDesign) IsValid([]byte) error {
-	if _, err := NewContestAddress(cn.AddressString); err != nil {
-		return err
-	}
-
-	return nil
-}
-
 type NodeDesign struct {
 	encs              *encoder.Encoders
 	Address           string
@@ -112,9 +24,10 @@ type NodeDesign struct {
 	Storage           string
 	NetworkIDString   string `yaml:"network-id,omitempty"`
 	Network           *NetworkDesign
+	GenesisOperations []*OperationDesign `yaml:"genesis-operations,omitempty"`
+	Component         *ContestComponentDesign
 	privatekey        key.Privatekey
 	Nodes             []*RemoteDesign
-	GenesisOperations []*OperationDesign `yaml:"genesis-operations,omitempty"`
 }
 
 func LoadNodeDesignFromFile(f string, encs *encoder.Encoders) (*NodeDesign, error) {
@@ -175,6 +88,13 @@ func (nd *NodeDesign) IsValid([]byte) error {
 		if err := o.IsValid(nil); err != nil {
 			return err
 		}
+	}
+
+	if nd.Component == nil {
+		nd.Component = NewContestComponentDesign()
+	}
+	if err := nd.Component.IsValid(nil); err != nil {
+		return err
 	}
 
 	return nil

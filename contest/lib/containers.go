@@ -34,6 +34,7 @@ var (
 	ContainerLabel       = "contest"
 )
 
+// TODO use golang string template
 var policyBody = `{
   "_hint": {
     "type": { "name": "policy-body-v0", "code": "0801" },
@@ -43,7 +44,7 @@ var policyBody = `{
   "timeout_waiting_proposal": 5000000000,
   "interval_broadcasting_init_ballot": 1000000000,
   "interval_broadcasting_proposal": 1000000000,
-  "wait_broadcasting_accept_ballot": 5000000000,
+  "wait_broadcasting_accept_ballot": %d,
   "interval_broadcasting_accept_ballot": 5000000000,
   "number_of_acting_suffrage_nodes": 1,
   "timespan_valid_ballot": 60000000000
@@ -191,6 +192,7 @@ func (cts *Containers) createContainer(d *ContestNodeDesign) (*Container, error)
 	}
 
 	container := &Container{
+		contestDesign:   cts.design,
 		design:          d,
 		name:            d.Address(),
 		image:           cts.image,
@@ -478,6 +480,7 @@ func (cts *Containers) Runnings() ([]string, error) {
 type Container struct {
 	sync.RWMutex
 	*logging.Logging
+	contestDesign   *ContestDesign
 	design          *ContestNodeDesign
 	name            string
 	image           string
@@ -656,7 +659,7 @@ func (ct *Container) containerLog() (func(), error) {
 	go func() {
 		for b := range logChan {
 			if e, err := NewEvent(b); err != nil {
-				ct.Log().Error().Err(err).Msg("failed to parse event log")
+				ct.Log().Error().Err(err).Str("raw", string(b)).Msg("failed to parse event log")
 			} else {
 				ct.eventChan <- e.Add("_node", ct.name)
 			}
@@ -725,6 +728,7 @@ func (ct *Container) nodeDesign(isGenesisNode bool) NodeDesign {
 		Storage:          ct.storageURIInternal(),
 		Network:          ct.networkDesign(),
 		Nodes:            nodes,
+		Component:        ct.design.Component,
 	}
 
 	nd.GenesisOperations = ct.genesisOperationDesign(isGenesisNode)
@@ -743,7 +747,8 @@ func (ct *Container) genesisOperationDesign(isGenesisNode bool) []*OperationDesi
 			BodyString: fmt.Sprintf(
 				policyBody,
 				len(ct.rds),
-				67.0,
+				ct.contestDesign.Config.Threshold,
+				ct.contestDesign.Config.WaitBroadcastingACCEPTBallot,
 			),
 		})
 	}

@@ -392,7 +392,12 @@ func (nr *NodeRunner) attachSuffrage() error {
 	})
 	l.Debug().Msg("trying to attach")
 
-	sf := NewRoundrobinSuffrage(nr.localstate, 100)
+	var sf base.Suffrage
+	if s, err := nr.design.Component.Suffrage.New(nr.localstate); err != nil {
+		return xerrors.Errorf("failed to create new suffrage component: %w", err)
+	} else {
+		sf = s
+	}
 
 	nr.setupLogging(sf)
 	nr.suffrage = sf

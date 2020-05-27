@@ -914,6 +914,23 @@ func (cs *GeneralSyncer) fetchBlocks(node Node, heights []base.Height) ([]block.
 }
 
 func (cs *GeneralSyncer) commit() error {
+	from := cs.heightFrom.Int64()
+	to := cs.heightTo.Int64()
+
+	for i := from; i <= to; i++ {
+		if m, err := cs.storage().Manifest(base.Height(i)); err != nil {
+			return err
+		} else {
+			cs.Log().Info().Dict("block", logging.Dict().
+				Hinted("proposal", m.Proposal()).
+				Hinted("hash", m.Hash()).
+				Hinted("height", m.Height()).
+				Hinted("round", m.Round()),
+			).
+				Msg("new block stored")
+		}
+	}
+
 	return cs.storage().Commit()
 }
 

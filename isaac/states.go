@@ -214,7 +214,9 @@ func (css *ConsensusStates) activateHandler(ctx StateChangeContext) error {
 
 	handler := css.ActiveHandler()
 	if handler != nil && handler.State() == ctx.toState {
-		return xerrors.Errorf("%s already activated", ctx.toState)
+		l.Debug().Msgf("%s already activated", ctx.toState)
+
+		return nil
 	}
 
 	toHandler, found := css.states[ctx.toState]

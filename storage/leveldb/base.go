@@ -421,6 +421,12 @@ func (st *Storage) newSeal(batch *leveldb.Batch, sl seal.Seal) error {
 	return nil
 }
 
+func (st *Storage) HasSeal(h valuehash.Hash) (bool, error) {
+	found, err := st.db.Has(st.sealKey(h), nil)
+
+	return found, wrapError(err)
+}
+
 func (st *Storage) loadHinter(b []byte) (hint.Hinter, error) {
 	if b == nil {
 		return nil, nil

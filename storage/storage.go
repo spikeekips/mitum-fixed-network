@@ -41,6 +41,7 @@ type Storage interface {
 	NewSeals([]seal.Seal) error
 	Seal(valuehash.Hash) (seal.Seal, error)
 	Seals(func(valuehash.Hash, seal.Seal) (bool, error), bool /* sort */, bool /* load Seal? */) error
+	HasSeal(valuehash.Hash) (bool, error)
 	// TODO add get Seals by []valuehash.Hash
 
 	NewProposal(ballot.Proposal) error

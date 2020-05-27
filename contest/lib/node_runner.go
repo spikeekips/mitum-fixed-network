@@ -189,15 +189,29 @@ func (nr *NodeRunner) networkHandlerGetSeal(hs []valuehash.Hash) ([]seal.Seal, e
 }
 
 func (nr *NodeRunner) networkhandlerNewSeal(sl seal.Seal) error {
-	sealChecker := isaac.NewSealValidationChecker(sl, nr.localstate.Policy().NetworkID())
+	sealChecker := isaac.NewSealValidationChecker(
+		sl,
+		nr.localstate.Policy().NetworkID(),
+		nr.storage,
+	)
 	if err := util.NewChecker("network-new-seal-checker", []util.CheckerFunc{
 		sealChecker.CheckIsValid,
-	}).Check(); err != nil {
-		return err
-	}
+		sealChecker.CheckIsKnown,
+		func() (bool, error) {
+			// NOTE stores seal regardless further checkings.
+			if err := nr.storage.NewSeals([]seal.Seal{sl}); err != nil {
+				return false, err
+			}
 
-	// NOTE stores seal regardless further checkings.
-	if err := nr.storage.NewSeals([]seal.Seal{sl}); err != nil {
+			return true, nil
+		},
+	}).Check(); err != nil {
+		if xerrors.Is(err, util.CheckerNilError) {
+			nr.Log().Debug().Msg(err.Error())
+
+			return nil
+		}
+
 		return err
 	}
 

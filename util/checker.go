@@ -1,5 +1,9 @@
 package util
 
+import "github.com/spikeekips/mitum/util/errors"
+
+var CheckerNilError = errors.NewError("")
+
 type CheckerFunc func() (bool, error)
 
 type Checker struct {

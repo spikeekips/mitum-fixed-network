@@ -233,6 +233,12 @@ func (t *testStorage) TestSeals() {
 	}
 	t.NoError(t.storage.NewSeals(seals))
 
+	for _, sl := range seals {
+		found, err := t.storage.HasSeal(sl.Hash())
+		t.NoError(err)
+		t.True(found)
+	}
+
 	sort.Slice(seals, func(i, j int) bool {
 		return bytes.Compare(
 			[]byte(seals[i].Hash().String()),

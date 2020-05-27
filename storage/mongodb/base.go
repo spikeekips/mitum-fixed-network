@@ -473,6 +473,10 @@ func (st *Storage) Seals(callback func(valuehash.Hash, seal.Seal) (bool, error),
 	)
 }
 
+func (st *Storage) HasSeal(h valuehash.Hash) (bool, error) {
+	return st.client.Exists(defaultColNameSeal, util.NewBSONFilter("_id", h.String()).D())
+}
+
 func (st *Storage) StagedOperationSeals(callback func(operation.Seal) (bool, error), sort bool) error {
 	var dir int
 	if sort {

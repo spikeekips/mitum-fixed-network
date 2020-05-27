@@ -27,7 +27,7 @@ type StartCommand struct {
 	Image      string        `help:"docker image for node runner (default: ${start_image})" default:"${start_image}"`
 	RunnerPath string        `arg:"" name:"runner-path" help:"mitum node runner, 'mitum-runner' path" type:"existingfile"`
 	Design     string        `arg:"" name:"node design file" help:"contest design file" type:"existingfile"`
-	Alias      string        `arg:"" name:"alias of this test" help:"prefix of output directory" default:"{alias}" optional:""`
+	Alias      string        `arg:"" name:"alias of this test" help:"name of test" default:"{alias}" optional:""`
 	Output     string        `help:"output directory" type:"existingdir"`
 	ExitAfter  time.Duration `help:"exit after the given duration (default: ${exit_after})" default:"${exit_after}"`
 	log        logging.Logger

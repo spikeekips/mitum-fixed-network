@@ -17,6 +17,9 @@ func NewFixedSuffrage(proposer base.Address, nodes []base.Address) *FixedSuffrag
 	for _, a := range nodes {
 		ns[a] = struct{}{}
 	}
+	if _, found := ns[proposer]; !found {
+		ns[proposer] = struct{}{}
+	}
 
 	return &FixedSuffrage{
 		Logging: logging.NewLogging(func(c logging.Context) logging.Emitter {

@@ -142,7 +142,11 @@ func (cc *ConditionsChecker) check(c *Condition) (bool, error) {
 		cc.current++
 		cc.Unlock()
 
-		cc.Log().Debug().Str("condition", c.String()).Msg("current condition")
+		if n, found := cc.next(); found {
+			cc.Log().Debug().Str("condition", n.String()).Msg("current condition")
+		} else {
+			cc.Log().Debug().Msg("no more condition")
+		}
 	}
 
 	return passed, nil

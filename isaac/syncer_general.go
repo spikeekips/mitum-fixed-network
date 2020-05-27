@@ -726,7 +726,7 @@ func (cs *GeneralSyncer) checkThreshold(
 		ms[key] = bs[index]
 		hashByNode[key] = append(hashByNode[key], node)
 	}
-	result, key := base.FindMajorityFromSlice(threshold.Total, threshold.Threshold, set)
+	result, key := base.FindMajorityFromSlice(uint(len(provedNodes)), threshold.Threshold, set)
 
 	if cs.Log().IsVerbose() {
 		var ns []string

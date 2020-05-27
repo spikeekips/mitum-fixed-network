@@ -15,9 +15,7 @@ import (
 )
 
 func init() {
-	zerolog.TimestampFieldName = "t"
 	zerolog.TimeFieldFormat = time.RFC3339Nano
-	zerolog.MessageFieldName = "m"
 
 	zerolog.DisableSampling(true)
 }
@@ -43,7 +41,7 @@ func SetupLoggingOutput(f string, format LogFormat, forceColor bool) (io.Writer,
 		output = o
 	} else {
 		var outputFile *os.File
-		if f, err := os.OpenFile(logFile, os.O_CREATE|os.O_RDWR|os.O_APPEND, 0644); err != nil { // nolint
+		if f, err := os.OpenFile(logFile, os.O_CREATE|os.O_RDWR|os.O_APPEND, 0o644); err != nil { // nolint
 			return nil, err
 		} else {
 			outputFile = f

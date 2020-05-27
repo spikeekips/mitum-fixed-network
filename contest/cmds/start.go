@@ -71,7 +71,7 @@ func (cmd *StartCommand) Run(log logging.Logger) error {
 
 		contestlib.ExitHooks.Add(func() {
 			if err := cmd.containers.Kill("HUP"); err != nil {
-				// cmd.log.Error().Err(err).Msg("failed to kill containers") // NOTE ignore error
+				cmd.log.Error().Err(err).Msg("failed to kill containers") // NOTE ignore error
 			}
 		})
 	}
@@ -124,6 +124,10 @@ func (cmd *StartCommand) createContainers(dc *dockerClient.Client) error {
 		return err
 	}
 
+	if err := cmd.copyFiles(output); err != nil {
+		return xerrors.Errorf("failed to copy files: %w", err)
+	}
+
 	if c, err := contestlib.NewContainers(
 		dc,
 		cmd.encs,
@@ -139,6 +143,21 @@ func (cmd *StartCommand) createContainers(dc *dockerClient.Client) error {
 	} else {
 		cmd.containers = c
 		_ = cmd.containers.SetLogger(cmd.log)
+	}
+
+	return nil
+}
+
+func (cmd *StartCommand) copyFiles(output string) error {
+	files := [][]string{
+		{cmd.RunnerPath, "runner"},
+		{os.Args[0], "contest"},
+	}
+
+	for _, f := range files {
+		if err := contestlib.CopyFile(f[0], filepath.Join(output, f[1]), 10000); err != nil {
+			return err
+		}
 	}
 
 	return nil

@@ -216,10 +216,6 @@ func (cts *Containers) createContainer(d *ContestNodeDesign) (*Container, error)
 }
 
 func (cts *Containers) Create() error {
-	if err := CopyFile(cts.runner, filepath.Join(cts.outputDir, "runner"), 10000); err != nil {
-		return err
-	}
-
 	var cs []*Container
 	if c, err := cts.createContainers(); err != nil {
 		return err

@@ -1,8 +1,10 @@
 package cmds
 
 import (
+	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 	"time"
 
 	dockerClient "github.com/docker/docker/client"
@@ -14,7 +16,10 @@ import (
 	"github.com/spikeekips/mitum/util/logging"
 )
 
-var networkName = "contest-network"
+var (
+	networkName  = "contest-network"
+	DefaultAlias = "test"
+)
 
 var conditionActions = map[string]contestlib.ConditionActionLoader{}
 
@@ -22,6 +27,7 @@ type StartCommand struct {
 	Image      string        `help:"docker image for node runner (default: ${start_image})" default:"${start_image}"`
 	RunnerPath string        `arg:"" name:"runner-path" help:"mitum node runner, 'mitum-runner' path" type:"existingfile"`
 	Design     string        `arg:"" name:"node design file" help:"contest design file" type:"existingfile"`
+	Alias      string        `arg:"" name:"alias of this test" help:"prefix of output directory" default:"{alias}" optional:""`
 	Output     string        `help:"output directory" type:"existingdir"`
 	ExitAfter  time.Duration `help:"exit after the given duration (default: ${exit_after})" default:"${exit_after}"`
 	log        logging.Logger
@@ -119,7 +125,16 @@ func (cmd *StartCommand) createContainers(dc *dockerClient.Client) error {
 		dockerNetworkID = i
 	}
 
-	output := filepath.Join(cmd.Output, Version, time.Now().Format("2006-01-02T15-04-05"))
+	cmd.Alias = strings.TrimSpace(cmd.Alias)
+	if len(cmd.Alias) < 1 {
+		cmd.Alias = DefaultAlias
+	}
+
+	output := filepath.Join(
+		cmd.Output,
+		cmd.Alias,
+		fmt.Sprintf("%s-%s", time.Now().Format("2006-01-02T15-04-05"), Version),
+	)
 	if err := os.MkdirAll(output, 0o700); err != nil {
 		return err
 	}

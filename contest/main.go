@@ -20,6 +20,7 @@ var mainVars = kong.Vars{
 	"verbose":     "false",
 	"start_image": "golang:latest",
 	"exit_after":  "5m",
+	"alias":       cmds.DefaultAlias,
 }
 
 type mainFlags struct {

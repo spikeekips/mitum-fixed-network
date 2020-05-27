@@ -99,6 +99,8 @@ func (st *Storage) loadLastManifest() error {
 		return err
 	}
 
+	st.lastManifestHeight = height
+
 	if m, err := st.ManifestByHeight(height); err != nil {
 		return err
 	} else {

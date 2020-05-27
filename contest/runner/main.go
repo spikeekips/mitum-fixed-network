@@ -10,9 +10,11 @@ import (
 	"github.com/rs/zerolog"
 	"golang.org/x/xerrors"
 
+	"github.com/spikeekips/mitum/base/block"
 	"github.com/spikeekips/mitum/base/operation"
 	contestlib "github.com/spikeekips/mitum/contest/lib"
 	"github.com/spikeekips/mitum/isaac"
+	"github.com/spikeekips/mitum/storage"
 	"github.com/spikeekips/mitum/util/encoder"
 	"github.com/spikeekips/mitum/util/logging"
 )
@@ -156,25 +158,10 @@ func (cmd *InitCommand) run(log logging.Logger) error {
 		return xerrors.Errorf("failed to generate node from design: %w", err)
 	}
 
-	// check the existing blocks
 	log.Debug().Msg("checking existing blocks")
-	if manifest, err := nr.Storage().LastManifest(); err != nil {
+
+	if err := cmd.checkExisting(nr, log); err != nil {
 		return err
-	} else {
-		if manifest == nil {
-			log.Debug().Msg("not found existing blocks")
-		} else {
-			log.Debug().Msgf("found existing blocks: block=%d", manifest.Height())
-
-			if !cmd.Force {
-				return xerrors.Errorf("environment already exists: block=%d", manifest.Height())
-			}
-
-			if err := nr.Storage().Clean(); err != nil {
-				return err
-			}
-			log.Debug().Msg("existing environment cleaned")
-		}
 	}
 
 	log.Debug().Msg("trying to create genesis block")
@@ -190,6 +177,36 @@ func (cmd *InitCommand) run(log logging.Logger) error {
 
 	log.Info().Msg("genesis block created")
 	log.Info().Msg("iniialized")
+
+	return nil
+}
+
+func (cmd *InitCommand) checkExisting(nr *contestlib.NodeRunner, log logging.Logger) error {
+	log.Debug().Msg("checking existing blocks")
+
+	var manifest block.Manifest
+	if m, err := nr.Storage().LastManifest(); err != nil {
+		if !xerrors.Is(err, storage.NotFoundError) {
+			return err
+		}
+	} else {
+		manifest = m
+	}
+
+	if manifest == nil {
+		log.Debug().Msg("not found existing blocks")
+	} else {
+		log.Debug().Msgf("found existing blocks: block=%d", manifest.Height())
+
+		if !cmd.Force {
+			return xerrors.Errorf("environment already exists: block=%d", manifest.Height())
+		}
+
+		if err := nr.Storage().Clean(); err != nil {
+			return err
+		}
+		log.Debug().Msg("existing environment cleaned")
+	}
 
 	return nil
 }

@@ -16,6 +16,8 @@ import (
 
 func init() {
 	zerolog.TimeFieldFormat = time.RFC3339Nano
+	zerolog.TimestampFieldName = "t"
+	zerolog.MessageFieldName = "m"
 
 	zerolog.DisableSampling(true)
 }

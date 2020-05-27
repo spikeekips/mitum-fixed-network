@@ -20,8 +20,8 @@ var conditionActions = map[string]contestlib.ConditionActionLoader{}
 
 type StartCommand struct {
 	Image      string        `help:"docker image for node runner (default: ${start_image})" default:"${start_image}"`
-	Design     string        `arg:"" name:"node design file" help:"contest design file" type:"existingfile"`
 	RunnerPath string        `arg:"" name:"runner-path" help:"mitum node runner, 'mitum-runner' path" type:"existingfile"`
+	Design     string        `arg:"" name:"node design file" help:"contest design file" type:"existingfile"`
 	Output     string        `help:"output directory" type:"existingdir"`
 	ExitAfter  time.Duration `help:"exit after the given duration (default: ${exit_after})" default:"${exit_after}"`
 	log        logging.Logger
@@ -174,9 +174,15 @@ func (cmd *StartCommand) loadDesign(f string) error {
 		cmd.log.Debug().Interface("design", d).Msg("design loaded")
 
 		cmd.design = d
-
-		return nil
 	}
+
+	if cmd.design.Config.Threshold < 67.0 {
+		cmd.log.Warn().
+			Float64("threshold", cmd.design.Config.Threshold).
+			Msg("threshold is too low, recommend over 67.0")
+	}
+
+	return nil
 }
 
 func (cmd *StartCommand) handleEventChan(

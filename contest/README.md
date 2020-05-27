@@ -65,8 +65,8 @@ $ /tmp/contest \
     start \
         --output /tmp/contest-shared \
         --exit-after 3m \
-        ./contest-example.yml \
         /tmp/runner
+        ./contest-example.yml \
 ```
 
 * contest will be stopped after 3 minutes(`3m`).

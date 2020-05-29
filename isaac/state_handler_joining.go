@@ -144,19 +144,20 @@ func (cs *StateJoiningHandler) NewSeal(sl seal.Seal) error {
 	switch t := sl.(type) {
 	case ballot.Proposal:
 		return cs.handleProposal(t)
-	default:
-		cs.Log().Debug().
-			Hinted("seal_hint", sl.Hint()).
-			Hinted("seal_hash", sl.Hash()).
-			Str("seal_signer", sl.Signer().String()).
-			Msg("this type of Seal will be ignored")
-		return nil
 	case ballot.INITBallot:
 		blt = t
 		voteproof = t.Voteproof()
 	case ballot.ACCEPTBallot:
 		blt = t
 		voteproof = t.Voteproof()
+	default:
+		cs.Log().Debug().
+			Hinted("seal_hint", sl.Hint()).
+			Hinted("seal_hash", sl.Hash()).
+			Str("seal_signer", sl.Signer().String()).
+			Msg("this type of seal will be ignored; in joining only ballots will be handled")
+
+		return nil
 	}
 
 	l := loggerWithVoteproof(voteproof, loggerWithBallot(blt, cs.Log()))

@@ -66,7 +66,7 @@ func (ne *NError) Wrap(err error) *NError {
 func (ne *NError) Errorf(s string, a ...interface{}) *NError {
 	return &NError{
 		s:     ne.s,
-		err:   NewError(s, a...).SetFrame(2),
+		err:   NewError(fmt.Sprintf("%s; %s", ne.s, s), a...).SetFrame(2),
 		frame: xerrors.Caller(2),
 	}
 }

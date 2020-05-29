@@ -11,8 +11,11 @@ import (
 	"github.com/spikeekips/mitum/base/block"
 	"github.com/spikeekips/mitum/base/seal"
 	"github.com/spikeekips/mitum/util"
+	"github.com/spikeekips/mitum/util/errors"
 	"github.com/spikeekips/mitum/util/logging"
 )
+
+var FailedToActivateHandler = errors.NewError("failed to activate handler")
 
 type ConsensusStates struct {
 	sync.RWMutex
@@ -32,11 +35,7 @@ func NewConsensusStates(
 	localstate *Localstate,
 	ballotbox *Ballotbox,
 	suffrage base.Suffrage,
-	booting *StateBootingHandler,
-	joining *StateJoiningHandler,
-	consensus *StateConsensusHandler,
-	syncing *StateSyncingHandler,
-	broken *StateBrokenHandler,
+	booting, joining, consensus, syncing, broken StateHandler,
 ) *ConsensusStates {
 	css := &ConsensusStates{
 		Logging: logging.NewLogging(func(c logging.Context) logging.Emitter {
@@ -76,9 +75,6 @@ func (css *ConsensusStates) SetLogger(l logging.Logger) logging.Logger {
 }
 
 func (css *ConsensusStates) Start() error {
-	css.Lock()
-	defer css.Unlock()
-
 	css.Log().Debug().Msg("trying to start")
 	defer css.Log().Debug().Msg("started")
 
@@ -98,7 +94,9 @@ func (css *ConsensusStates) Start() error {
 		return err
 	}
 
-	css.ActivateHandler(NewStateChangeContext(base.StateStopped, base.StateBooting, nil, nil))
+	if err := css.activateHandler(NewStateChangeContext(base.StateStopped, base.StateBooting, nil, nil)); err != nil {
+		return err
+	}
 
 	ticker := css.cleanBallotbox()
 	css.stopHooks = append(css.stopHooks, func() error {
@@ -182,11 +180,8 @@ end:
 		case <-stopChan:
 			break end
 		case ctx := <-css.stateChan:
-			l := loggerWithStateChangeContext(ctx, css.Log())
-			l.Debug().Msgf("changing state requested: %s -> %s", ctx.From(), ctx.To())
-
 			if err := css.activateHandler(ctx); err != nil {
-				l.Error().Err(err).Msg("failed to activate handler")
+				css.Log().Error().Err(err).Msg("failed to activate handler")
 			}
 		}
 	}
@@ -204,44 +199,50 @@ end:
 	}
 }
 
-// ActivateHandler returns the current activated handler.
 func (css *ConsensusStates) ActivateHandler(ctx StateChangeContext) {
 	css.stateChan <- ctx
 }
 
 func (css *ConsensusStates) activateHandler(ctx StateChangeContext) error {
 	l := loggerWithStateChangeContext(ctx, css.Log())
+	l.Debug().Msgf("activating state requested: %s -> %s", ctx.From(), ctx.To())
 
 	handler := css.ActiveHandler()
 	if handler != nil && handler.State() == ctx.toState {
-		l.Debug().Msgf("%s already activated", ctx.toState)
+		l.Debug().Msgf("handler, %s already activated", ctx.toState)
 
 		return nil
-	}
-
-	toHandler, found := css.states[ctx.toState]
-	if !found {
-		return xerrors.Errorf("unknown state found: %s", ctx.toState)
-	} else if toHandler == nil {
-		return xerrors.Errorf("state handler not registered: %s", ctx.toState)
 	}
 
 	css.Lock()
 	defer css.Unlock()
 
+	var toHandler StateHandler
+	if h, found := css.states[ctx.toState]; !found {
+		return FailedToActivateHandler.Errorf("unknown state found: %s", ctx.toState)
+	} else {
+		toHandler = h
+	}
+
+	if toHandler == nil {
+		return FailedToActivateHandler.Errorf("state handler not registered: %s", ctx.toState)
+	}
+
 	if handler != nil {
 		if err := handler.Deactivate(ctx); err != nil {
-			return err
+			return FailedToActivateHandler.Errorf("failed to deactivate previous handler: %w", err)
 		}
+
 		l.Info().Hinted("handler", handler.State()).Msgf("deactivated: %s", handler.State())
 	}
 
 	if err := toHandler.Activate(ctx); err != nil {
-		return err
+		return FailedToActivateHandler.Wrap(err)
 	}
-	l.Info().Hinted("handler", toHandler.State()).Msgf("activated: %s", toHandler.State())
 
 	css.activeHandler = toHandler
+
+	l.Info().Hinted("new_handler", toHandler.State()).Msgf("state changed: %s -> %s", ctx.From(), ctx.To())
 
 	return nil
 }
@@ -309,17 +310,14 @@ func (css *ConsensusStates) newVoteproof(voteproof base.Voteproof) error {
 	}).Check()
 
 	var ctx *StateToBeChangeError
-	if xerrors.As(err, &ctx) {
-		go func() {
-			css.stateChan <- ctx.StateChangeContext()
-		}()
-
+	switch {
+	case xerrors.As(err, &ctx):
+		if err0 := css.activateHandler(ctx.StateChangeContext()); err0 != nil {
+			return err0
+		}
+	case xerrors.Is(err, IgnoreVoteproofError):
 		return nil
-	} else if xerrors.Is(err, IgnoreVoteproofError) {
-		return nil
-	}
-
-	if err != nil {
+	case err != nil:
 		return err
 	}
 
@@ -328,6 +326,10 @@ func (css *ConsensusStates) newVoteproof(voteproof base.Voteproof) error {
 		_ = css.localstate.SetLastACCEPTVoteproof(voteproof)
 	case base.StageINIT:
 		_ = css.localstate.SetLastINITVoteproof(voteproof)
+	}
+
+	if css.ActiveHandler() == nil {
+		return nil
 	}
 
 	return css.ActiveHandler().NewVoteproof(voteproof)
@@ -386,7 +388,7 @@ func (css *ConsensusStates) validateSeal(sl seal.Seal) error {
 	return nil
 }
 
-func (css *ConsensusStates) validateBallot(_ ballot.Ballot) error {
+func (css *ConsensusStates) validateBallot(ballot.Ballot) error {
 	return nil
 }
 

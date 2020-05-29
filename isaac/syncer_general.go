@@ -917,6 +917,10 @@ func (cs *GeneralSyncer) commit() error {
 	from := cs.heightFrom.Int64()
 	to := cs.heightTo.Int64()
 
+	if err := cs.storage().Commit(); err != nil {
+		return err
+	}
+
 	for i := from; i <= to; i++ {
 		if m, err := cs.storage().Manifest(base.Height(i)); err != nil {
 			return err
@@ -931,7 +935,7 @@ func (cs *GeneralSyncer) commit() error {
 		}
 	}
 
-	return cs.storage().Commit()
+	return nil
 }
 
 func (cs *GeneralSyncer) HeightFrom() base.Height {

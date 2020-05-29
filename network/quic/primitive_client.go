@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"crypto/tls"
+	"fmt"
 	"io"
 	"net/http"
 	"time"
@@ -185,7 +186,10 @@ func (qc *QuicClient) request(url string, b []byte, headers http.Header) (QuicRe
 		l.Error().Err(err).Msgf("failed to send")
 		return QuicResponse{}, err
 	} else {
-		l.Debug().Msgf("got response: %#v", res)
+		l.Debug().
+			Str("response", fmt.Sprintf("%v", res)).
+			Msgf("got response")
+
 		response = res
 	}
 

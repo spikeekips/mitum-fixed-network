@@ -176,7 +176,7 @@ func (e *Event) Time(key string, t time.Time) Emitter {
 	return e.event(e.Event.Time(key, t))
 }
 
-func (e *Event) TimeDiff(key string, t time.Time, start time.Time) Emitter {
+func (e *Event) TimeDiff(key string, t, start time.Time) Emitter {
 	return e.event(e.Event.TimeDiff(key, t, start))
 }
 

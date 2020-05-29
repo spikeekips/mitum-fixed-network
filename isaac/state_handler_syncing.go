@@ -36,11 +36,12 @@ type StateSyncingHandler struct {
 	*BaseStateHandler
 	scs       []Syncer
 	stateChan chan Syncer
+	lv        base.Voteproof
 }
 
 func NewStateSyncingHandler(
 	localstate *Localstate,
-	proposalProcessor ProposalProcessor,
+	proposalProcessor ProposalProcessor, // BLOCK remove
 ) (*StateSyncingHandler, error) {
 	// TODO if already synced and no voteproof, should go to the consensus state.
 	ss := &StateSyncingHandler{
@@ -63,6 +64,14 @@ func (ss *StateSyncingHandler) Activate(ctx StateChangeContext) error {
 			ss.syncerStateChanged(syncer)
 		}
 	}()
+
+	if m, err := ss.localstate.Storage().LastBlock(); err != nil {
+		if !xerrors.Is(err, storage.NotFoundError) {
+			return err
+		}
+	} else {
+		ss.setLastVoteproof(m.ACCEPTVoteproof())
+	}
 
 	// TODO also compare the hash of target block with height
 
@@ -89,60 +98,12 @@ func (ss *StateSyncingHandler) Deactivate(ctx StateChangeContext) error {
 	return nil
 }
 
-func (ss *StateSyncingHandler) NewSeal(sl seal.Seal) error {
-	switch t := sl.(type) {
-	case ballot.Proposal:
-		return ss.handleProposal(t)
-	default:
-		ss.Log().Debug().
-			Hinted("seal_hint", sl.Hint()).
-			Hinted("seal_hash", sl.Hash()).
-			Msg("this type of Seal will be ignored")
-
-		return nil
-	}
+func (ss *StateSyncingHandler) NewSeal(seal.Seal) error {
+	return nil
 }
 
 func (ss *StateSyncingHandler) NewVoteproof(voteproof base.Voteproof) error {
 	return ss.handleVoteproof(voteproof)
-}
-
-func (ss *StateSyncingHandler) handleProposal(proposal ballot.Proposal) error {
-	l := ss.Log().WithLogger(func(ctx logging.Context) logging.Emitter {
-		return ctx.Hinted("proposal_hash", proposal.Hash()).
-			Hinted("proposal_height", proposal.Height()).
-			Hinted("proposal_round", proposal.Round())
-	})
-
-	l.Debug().Msg("got proposal")
-
-	// NOTE if proposal is the expected, process it
-	var manifest block.Manifest
-	if m, err := ss.localstate.Storage().LastManifest(); err != nil {
-		return err
-	} else {
-		manifest = m
-	}
-
-	switch d := proposal.Height() - manifest.Height(); {
-	case d == 1:
-		ss.Log().Debug().Msg("expected proposal received; it will be processed")
-
-		if err := ss.processProposal(proposal); err != nil {
-			return err
-		}
-	case d > 1:
-		if err := ss.newSyncerFromBallot(proposal); err != nil {
-			return err
-		}
-	default:
-		ss.Log().Debug().
-			Hinted("proposal_height", proposal.Height()).
-			Hinted("block_height", manifest.Height()).
-			Msg("no expected proposal found")
-	}
-
-	return nil
 }
 
 func (ss *StateSyncingHandler) newSyncer(to base.Height, sourceNodes []Node) error {
@@ -204,31 +165,6 @@ func (ss *StateSyncingHandler) newSyncer(to base.Height, sourceNodes []Node) err
 	return nil
 }
 
-func (ss *StateSyncingHandler) newSyncerFromBallot(blt ballot.Ballot) error {
-	to := blt.Height() - 1
-
-	var sourceNodes []Node
-	if n, found := ss.localstate.Nodes().Node(blt.Node()); !found {
-		return xerrors.Errorf("Ballot().Node() is not known node")
-	} else {
-		sourceNodes = append(sourceNodes, n)
-	}
-
-	ss.Log().VerboseFunc(func(e *logging.Event) logging.Emitter {
-		var addresses []string
-		for _, n := range sourceNodes {
-			addresses = append(addresses, n.Address().String())
-		}
-
-		return e.Strs("source_nodes", addresses)
-	}).
-		Hinted("ballot", blt.Hash()).
-		Hinted("height_to", to).
-		Msg("will sync to the height from ballot")
-
-	return ss.newSyncer(to, sourceNodes)
-}
-
 func (ss *StateSyncingHandler) newSyncerFromVoteproof(voteproof base.Voteproof) error {
 	var to base.Height
 	switch voteproof.Stage() {
@@ -242,7 +178,9 @@ func (ss *StateSyncingHandler) newSyncerFromVoteproof(voteproof base.Voteproof) 
 
 	var sourceNodes []Node
 	for address := range voteproof.Ballots() {
-		if n, found := ss.localstate.Nodes().Node(address); !found {
+		if ss.localstate.Node().Address().Equal(address) {
+			continue
+		} else if n, found := ss.localstate.Nodes().Node(address); !found {
 			return xerrors.Errorf("node in Voteproof is not known node")
 		} else {
 			sourceNodes = append(sourceNodes, n)
@@ -327,34 +265,6 @@ func (ss *StateSyncingHandler) syncerStateChanged(syncer Syncer) {
 	}
 }
 
-func (ss *StateSyncingHandler) processProposal(proposal ballot.Proposal) error {
-	l := ss.Log().WithLogger(func(ctx logging.Context) logging.Emitter {
-		return ctx.Hinted("proposal_height", proposal.Height()).
-			Hinted("proposal_round", proposal.Round()).
-			Hinted("proposal_hash", proposal.Hash())
-	})
-
-	iv := ss.localstate.LastINITVoteproof()
-	if iv == nil {
-		l.Debug().Msg("empty last INITVoteproof; proposal will be ignored")
-		return nil
-	}
-
-	if iv.Height() != proposal.Height() || iv.Round() != proposal.Round() {
-		l.Debug().
-			Hinted("voteproof_height", iv.Height()).
-			Hinted("voteproof_round", iv.Round()).
-			Msg("last INITVoteproof is not for proposal; proposal will be ignored")
-		return nil
-	}
-
-	if _, err := ss.proposalProcessor.ProcessINIT(proposal.Hash(), iv); err != nil {
-		return err
-	}
-
-	return nil
-}
-
 func (ss *StateSyncingHandler) handleVoteproof(voteproof base.Voteproof) error {
 	var baseBlock block.Manifest
 	if m, err := ss.localstate.Storage().LastManifest(); err != nil {
@@ -371,52 +281,85 @@ func (ss *StateSyncingHandler) handleVoteproof(voteproof base.Voteproof) error {
 			Hinted("local_round", baseBlock.Round())
 	})
 
-	l.Debug().Msg("got voteproof")
+	l.Debug().Msg("got voteproof for syncing")
 
-	d := voteproof.Height() - baseBlock.Height()
-	switch {
-	// NOTE next voteproof of current
-	case d == 1:
-		switch voteproof.Stage() {
-		case base.StageINIT:
-			// NOTE with INIT voteproof, moves to consensus
-			l.Debug().Msg("init voteproof, expected; moves to consensus")
-			return ss.ChangeState(base.StateConsensus, voteproof, nil)
-		case base.StageACCEPT:
-			// NOTE if proposal of Voteproof is already processed, store new
-			// block from Voteproof. And then will wait next INIT voteproof.
-			acceptFact := voteproof.Majority().(ballot.ACCEPTBallotFact)
-			if ss.proposalProcessor != nil && ss.proposalProcessor.IsProcessed(acceptFact.Proposal()) {
-				l.Debug().Msg("proposal of voteproof is already processed, finish processing")
+	var to base.Height
+	if h, err := ss.getExpectedHeightFromoteproof(voteproof); err != nil {
+		return err
+	} else {
+		to = h
+	}
 
-				return ss.StoreNewBlockByVoteproof(voteproof)
-			}
-
-			l.Debug().Msg("accept voteproof, ahead of local; sync")
-			if err := ss.newSyncerFromVoteproof(voteproof); err != nil {
-				return err
-			}
-
-			return nil
+	// NOTE old voteproof should be ignored
+	if lv := ss.lastVoteproof(); to <= lv.Height() {
+		if to != lv.Height() || voteproof.Stage() != base.StageINIT {
+			return xerrors.Errorf("known voteproof received: height=%v", voteproof.Height())
 		}
-	case d > 1:
+	} else {
+		ss.setLastVoteproof(voteproof)
+	}
+
+	d := to - baseBlock.Height()
+	switch {
+	case d == 0:
+		l.Debug().Msg("init voteproof, expected; moves to consensus")
+		return ss.ChangeState(base.StateConsensus, voteproof, nil)
+	default:
 		l.Debug().Msg("voteproof, ahead of local; sync")
 		if err := ss.newSyncerFromVoteproof(voteproof); err != nil {
 			return err
 		}
-	default:
-		l.Debug().
-			Hinted("block_height", baseBlock.Height()).
-			Msg("something wrong, behind voteproof received")
 	}
 
 	return nil
 }
 
 func (ss *StateSyncingHandler) handleBallot(blt ballot.Ballot) error {
-	if err := ss.newSyncerFromBallot(blt); err != nil {
-		return err
+	var voteproof base.Voteproof
+	switch t := blt.(type) {
+	case ballot.Proposal:
+		ss.Log().Debug().Hinted("seal_hash", blt.Hash()).Msg("ignore proposal ballot for syncing")
+		return nil
+	case ballot.INITBallot:
+		voteproof = t.Voteproof()
+	case ballot.ACCEPTBallot:
+		voteproof = t.Voteproof()
 	}
 
-	return nil
+	return ss.newSyncerFromVoteproof(voteproof)
+}
+
+func (ss *StateSyncingHandler) lastVoteproof() base.Voteproof {
+	ss.RLock()
+	defer ss.RUnlock()
+
+	return ss.lv
+}
+
+func (ss *StateSyncingHandler) setLastVoteproof(voteproof base.Voteproof) {
+	ss.Lock()
+	defer ss.Unlock()
+
+	if ss.lv != nil && ss.lv.Height() <= voteproof.Height() {
+		return
+	}
+
+	ss.Log().Debug().
+		Hinted("voteproof_stage", voteproof.Stage()).
+		Hinted("voteproof_height", voteproof.Height()).
+		Hinted("voteproof_round", voteproof.Round()).
+		Msg("new last voteproof")
+
+	ss.lv = voteproof
+}
+
+func (ss *StateSyncingHandler) getExpectedHeightFromoteproof(voteproof base.Voteproof) (base.Height, error) {
+	switch voteproof.Stage() {
+	case base.StageINIT:
+		return voteproof.Height() - 1, nil
+	case base.StageACCEPT:
+		return voteproof.Height(), nil
+	default:
+		return base.NilHeight, xerrors.Errorf("invalid Voteproof received")
+	}
 }

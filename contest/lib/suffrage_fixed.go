@@ -19,6 +19,7 @@ func NewFixedSuffrage(proposer base.Address, nodes []base.Address) *FixedSuffrag
 	}
 	if _, found := ns[proposer]; !found {
 		ns[proposer] = struct{}{}
+		nodes = append(nodes, proposer)
 	}
 
 	return &FixedSuffrage{

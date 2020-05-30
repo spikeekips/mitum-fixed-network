@@ -3,17 +3,19 @@ package errors
 import (
 	"fmt"
 
+	uuid "github.com/satori/go.uuid"
 	"golang.org/x/xerrors"
 )
 
 type NError struct {
+	id    string
 	s     string
 	err   error
 	frame xerrors.Frame
 }
 
 func NewError(s string, a ...interface{}) *NError {
-	return &NError{s: fmt.Sprintf(s, a...)}
+	return &NError{id: uuid.Must(uuid.NewV4(), nil).String(), s: fmt.Sprintf(s, a...)}
 }
 
 func (ne *NError) Unwrap() error {
@@ -47,16 +49,20 @@ func (ne *NError) Is(err error) bool {
 	if e, ok := err.(*NError); !ok {
 		return false
 	} else {
-		return e.s == ne.s
+		return e.id == ne.id
 	}
 }
 
 func (ne *NError) New() *NError {
-	return NewError(ne.s)
+	n := NewError(ne.s)
+	n.id = ne.id
+
+	return n
 }
 
 func (ne *NError) Wrap(err error) *NError {
 	return &NError{
+		id:    ne.id,
 		s:     ne.s,
 		err:   err,
 		frame: xerrors.Caller(2),
@@ -65,6 +71,7 @@ func (ne *NError) Wrap(err error) *NError {
 
 func (ne *NError) Errorf(s string, a ...interface{}) *NError {
 	return &NError{
+		id:    ne.id,
 		s:     ne.s,
 		err:   NewError(fmt.Sprintf("%s; %s", ne.s, s), a...).SetFrame(2),
 		frame: xerrors.Caller(2),

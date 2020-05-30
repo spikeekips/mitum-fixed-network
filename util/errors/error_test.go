@@ -20,8 +20,9 @@ func (t *testError) TestNew() {
 	t.Equal("showme", e0.Error())
 
 	t.True(xerrors.Is(e0, e0))
-	t.True(xerrors.Is(e0, NewError("showme")))
+	t.False(xerrors.Is(e0, NewError("showme")))
 	t.False(xerrors.Is(e0, NewError("findme")))
+	t.True(xerrors.Is(e0, e0.Errorf("showme")))
 
 	var e1 *NError
 	t.True(xerrors.As(e0, &e1))
@@ -33,7 +34,8 @@ func (t *testError) TestWrap() {
 	pe := &os.PathError{Err: fmt.Errorf("path error")}
 	e1 := e0.Wrap(pe)
 
-	t.True(xerrors.Is(e1, NewError("showme")))
+	t.False(xerrors.Is(e1, NewError("showme")))
+	t.True(xerrors.Is(e1, e1.Errorf("showme")))
 	t.True(xerrors.Is(e1, pe))
 
 	var e2 *NError

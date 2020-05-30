@@ -1,11 +1,15 @@
 package valuehash
 
 import (
-	"github.com/btcsuite/btcutil/base58"
+	"encoding/hex"
 )
 
 func (dm *Dummy) unpack(s string) error {
-	copy(dm.b, base58.Decode(s))
+	if b, err := hex.DecodeString(s); err != nil {
+		return err
+	} else {
+		dm.b = b
+	}
 
 	return nil
 }

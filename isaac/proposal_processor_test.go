@@ -21,7 +21,7 @@ type testProposalProcessor struct {
 func (t *testProposalProcessor) TestProcess() {
 	pm := NewProposalMaker(t.localstate)
 
-	ib := t.newINITBallot(t.localstate, base.Round(0))
+	ib := t.newINITBallot(t.localstate, base.Round(0), nil)
 	initFact := ib.INITBallotFactV0
 
 	ivp, err := t.newVoteproof(base.StageINIT, initFact, t.localstate, t.remoteState)
@@ -39,7 +39,7 @@ func (t *testProposalProcessor) TestProcess() {
 func (t *testProposalProcessor) TestBlockOperations() {
 	pm := NewProposalMaker(t.localstate)
 
-	ib := t.newINITBallot(t.localstate, base.Round(0))
+	ib := t.newINITBallot(t.localstate, base.Round(0), nil)
 	initFact := ib.INITBallotFactV0
 
 	ivp, err := t.newVoteproof(base.StageINIT, initFact, t.localstate, t.remoteState)
@@ -96,7 +96,7 @@ func (t *testProposalProcessor) TestBlockOperations() {
 func (t *testProposalProcessor) TestNotFoundInProposal() {
 	pm := NewProposalMaker(t.localstate)
 
-	ib := t.newINITBallot(t.localstate, base.Round(0))
+	ib := t.newINITBallot(t.localstate, base.Round(0), nil)
 	initFact := ib.INITBallotFactV0
 
 	ivp, err := t.newVoteproof(base.StageINIT, initFact, t.localstate, t.remoteState)

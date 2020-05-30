@@ -179,7 +179,7 @@ func (cs *StateConsensusHandler) NewVoteproof(voteproof base.Voteproof) error {
 			l.Error().Err(err).Msg("failed to store accept voteproof")
 		}
 
-		return cs.keepBroadcastingINITBallotForNextBlock()
+		return cs.keepBroadcastingINITBallotForNextBlock(voteproof)
 	case base.StageINIT:
 		return cs.handleINITVoteproof(voteproof)
 	default:
@@ -199,10 +199,11 @@ func (cs *StateConsensusHandler) handleINITVoteproof(voteproof base.Voteproof) e
 	return cs.waitProposal(voteproof)
 }
 
-func (cs *StateConsensusHandler) keepBroadcastingINITBallotForNextBlock() error {
+func (cs *StateConsensusHandler) keepBroadcastingINITBallotForNextBlock(voteproof base.Voteproof) error {
 	if timer, err := cs.TimerBroadcastingINITBallot(
 		func() time.Duration { return cs.localstate.Policy().IntervalBroadcastingINITBallot() },
 		func() base.Round { return base.Round(0) },
+		voteproof,
 	); err != nil {
 		return err
 	} else if err := cs.timers.SetTimer(TimerIDBroadcastingINITBallot, timer); err != nil {
@@ -235,7 +236,7 @@ func (cs *StateConsensusHandler) handleProposal(proposal ballot.Proposal) error 
 	}
 
 	// TODO if processing takes too long?
-	blk, err := cs.proposalProcessor.ProcessINIT(proposal.Hash(), cs.localstate.LastINITVoteproof())
+	blk, err := cs.proposalProcessor.ProcessINIT(proposal.Hash(), cs.LastINITVoteproof())
 	if err != nil {
 		return err
 	}
@@ -348,6 +349,7 @@ func (cs *StateConsensusHandler) startNextRound(voteproof base.Voteproof) error 
 			return cs.localstate.Policy().IntervalBroadcastingINITBallot()
 		},
 		func() base.Round { return round },
+		voteproof,
 	); err != nil {
 		return err
 	} else if err := cs.timers.SetTimer(TimerIDBroadcastingINITBallot, timer); err != nil {

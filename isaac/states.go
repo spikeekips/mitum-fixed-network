@@ -30,6 +30,7 @@ type ConsensusStates struct {
 	stateChan     chan StateChangeContext
 	sealChan      chan seal.Seal
 	stopHooks     []func() error
+	livp          base.Voteproof
 }
 
 func NewConsensusStates(
@@ -38,6 +39,11 @@ func NewConsensusStates(
 	suffrage base.Suffrage,
 	booting, joining, consensus, syncing, broken StateHandler,
 ) *ConsensusStates {
+	var livp base.Voteproof
+	if blk, err := localstate.Storage().LastBlock(); err == nil {
+		livp = blk.INITVoteproof()
+	}
+
 	css := &ConsensusStates{
 		Logging: logging.NewLogging(func(c logging.Context) logging.Emitter {
 			return c.Str("module", "consensus-states")
@@ -54,6 +60,7 @@ func NewConsensusStates(
 		},
 		stateChan: make(chan StateChangeContext),
 		sealChan:  make(chan seal.Seal),
+		livp:      livp,
 	}
 	css.FunctionDaemon = util.NewFunctionDaemon(css.start, false)
 
@@ -242,6 +249,7 @@ func (css *ConsensusStates) activateHandler(ctx StateChangeContext) error {
 	}
 
 	css.activeHandler = toHandler
+	css.activeHandler.SetLastINITVoteproof(css.livp)
 
 	l.Info().Hinted("new_handler", toHandler.State()).Msgf("state changed: %s -> %s", ctx.From(), ctx.To())
 
@@ -301,7 +309,7 @@ func (css *ConsensusStates) newVoteproof(voteproof base.Voteproof) error {
 
 	vpc := NewVoteproofConsensusStateChecker(
 		manifest,
-		css.localstate.LastINITVoteproof(),
+		css.lastINITVoteproof(),
 		voteproof,
 		css,
 	)
@@ -324,13 +332,11 @@ func (css *ConsensusStates) newVoteproof(voteproof base.Voteproof) error {
 		return err
 	}
 
-	if css.ActiveHandler() != nil && css.ActiveHandler().State() == base.StateSyncing {
-	} else {
-		switch voteproof.Stage() {
-		case base.StageACCEPT:
-			_ = css.localstate.SetLastACCEPTVoteproof(voteproof)
-		case base.StageINIT:
-			_ = css.localstate.SetLastINITVoteproof(voteproof)
+	if css.ActiveHandler() != nil {
+		switch {
+		case css.ActiveHandler().State() == base.StateSyncing:
+		case voteproof.Stage() == base.StageINIT:
+			css.setLastINITVoteproof(voteproof)
 		}
 	}
 
@@ -396,7 +402,7 @@ func (css *ConsensusStates) validateBallot(ballot.Ballot) error {
 }
 
 func (css *ConsensusStates) validateProposal(proposal ballot.Proposal) error {
-	pvc := NewProposalValidationChecker(css.localstate, css.suffrage, proposal)
+	pvc := NewProposalValidationChecker(css.localstate, css.suffrage, proposal, css.lastINITVoteproof())
 	_ = pvc.SetLogger(css.Log())
 
 	return util.NewChecker("proposal-validation-checker", []util.CheckerFunc{
@@ -430,6 +436,24 @@ func (css *ConsensusStates) vote(blt ballot.Ballot) error {
 		Msg("new voteproof")
 
 	return css.newVoteproof(voteproof)
+}
+
+func (css *ConsensusStates) lastINITVoteproof() base.Voteproof {
+	css.RLock()
+	defer css.RUnlock()
+
+	return css.livp
+}
+
+func (css *ConsensusStates) setLastINITVoteproof(voteproof base.Voteproof) {
+	css.Lock()
+	defer css.Unlock()
+
+	css.livp = voteproof
+
+	if css.activeHandler != nil {
+		css.activeHandler.SetLastINITVoteproof(voteproof)
+	}
 }
 
 func checkBlockWithINITVoteproof(manifest block.Manifest, voteproof base.Voteproof) error {

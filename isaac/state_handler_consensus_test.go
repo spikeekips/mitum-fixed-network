@@ -30,13 +30,13 @@ func (t *testStateConsensusHandler) TestNew() {
 	t.NoError(err)
 	t.NotNil(cs)
 
-	ib := t.newINITBallot(t.localstate, base.Round(0))
+	ib := t.newINITBallot(t.localstate, base.Round(0), nil)
 	initFact := ib.INITBallotFactV0
 
 	vp, err := t.newVoteproof(base.StageINIT, initFact, t.localstate, t.remoteState)
 	t.NoError(err)
 
-	_ = t.localstate.SetLastINITVoteproof(vp)
+	cs.SetLastINITVoteproof(vp)
 
 	t.NoError(cs.Activate(StateChangeContext{
 		fromState: base.StateJoining,
@@ -48,7 +48,7 @@ func (t *testStateConsensusHandler) TestNew() {
 		_ = cs.Deactivate(StateChangeContext{})
 	}()
 
-	lb := t.localstate.LastINITVoteproof()
+	lb := cs.LastINITVoteproof()
 
 	t.Equal(vp.Height(), lb.Height())
 	t.Equal(vp.Round(), lb.Round())
@@ -73,7 +73,7 @@ func (t *testStateConsensusHandler) TestWaitingProposalButTimedOut() {
 	sealChan := make(chan seal.Seal)
 	cs.SetSealChan(sealChan)
 
-	ib := t.newINITBallot(t.localstate, base.Round(0))
+	ib := t.newINITBallot(t.localstate, base.Round(0), nil)
 	initFact := ib.INITBallotFactV0
 
 	vp, err := t.newVoteproof(base.StageINIT, initFact, t.localstate, t.remoteState)
@@ -108,7 +108,7 @@ func (t *testStateConsensusHandler) TestWaitingProposalButTimedOut() {
 func (t *testStateConsensusHandler) TestWithProposalWaitACCEPTBallot() {
 	t.localstate.Policy().SetWaitBroadcastingACCEPTBallot(time.Millisecond * 1)
 
-	ib := t.newINITBallot(t.localstate, base.Round(0))
+	ib := t.newINITBallot(t.localstate, base.Round(0), nil)
 	initFact := ib.INITBallotFactV0
 
 	proposalMaker := NewProposalMaker(t.localstate)
@@ -160,7 +160,7 @@ func (t *testStateConsensusHandler) TestWithProposalWaitACCEPTBallot() {
 // with Proposal, ACCEPTBallot will be broadcasted with newly processed
 // Proposal.
 func (t *testStateConsensusHandler) TestWithProposalWaitSIGNBallot() {
-	ib := t.newINITBallot(t.localstate, base.Round(0))
+	ib := t.newINITBallot(t.localstate, base.Round(0), nil)
 	initFact := ib.INITBallotFactV0
 
 	proposalMaker := NewProposalMaker(t.localstate)
@@ -225,7 +225,7 @@ func (t *testStateConsensusHandler) TestDraw() {
 
 	var vp base.Voteproof
 	{
-		ib := t.newINITBallot(t.localstate, base.Round(0))
+		ib := t.newINITBallot(t.localstate, base.Round(0), nil)
 		fact := ib.INITBallotFactV0
 
 		vp, _ = t.newVoteproof(base.StageINIT, fact, t.localstate, t.remoteState)

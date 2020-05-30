@@ -1,8 +1,6 @@
 package isaac
 
 import (
-	"github.com/spikeekips/mitum/base"
-	"github.com/spikeekips/mitum/base/block"
 	jsonencoder "github.com/spikeekips/mitum/util/encoder/json"
 )
 
@@ -14,17 +12,12 @@ func (ls Localstate) MarshalJSON() ([]byte, error) {
 	})
 
 	return jsonencoder.Marshal(struct {
-		ND *LocalNode     `json:"node"`
-		PL *LocalPolicy   `json:"policy"`
-		NS []Node         `json:"nodes"`
-		LB block.Block    `json:"last_block"`
-		IV base.Voteproof `json:"last_init_voteproof"`
-		AV base.Voteproof `json:"last_accept_voteproof"`
+		ND *LocalNode   `json:"node"`
+		PL *LocalPolicy `json:"policy"`
+		NS []Node       `json:"nodes"`
 	}{
 		ND: ls.Node(),
 		PL: ls.Policy(),
 		NS: nodes,
-		IV: ls.LastINITVoteproof(),
-		AV: ls.LastACCEPTVoteproof(),
 	})
 }

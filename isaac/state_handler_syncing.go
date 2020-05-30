@@ -312,6 +312,7 @@ func (ss *StateSyncingHandler) handleVoteproof(voteproof base.Voteproof) error {
 	switch {
 	case d == 0:
 		l.Debug().Msg("init voteproof, expected; moves to consensus")
+		// TODO load latest policies
 		return ss.ChangeState(base.StateConsensus, voteproof, nil)
 	default:
 		l.Debug().Msg("voteproof, ahead of local; sync")

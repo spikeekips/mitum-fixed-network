@@ -11,13 +11,17 @@ import (
 
 type ProposalValidationChecker struct {
 	*logging.Logging
-	localstate *Localstate
-	suffrage   base.Suffrage
-	proposal   ballot.Proposal
+	localstate    *Localstate
+	suffrage      base.Suffrage
+	proposal      ballot.Proposal
+	initVoteproof base.Voteproof
 }
 
 func NewProposalValidationChecker(
-	localstate *Localstate, suffrage base.Suffrage, proposal ballot.Proposal,
+	localstate *Localstate,
+	suffrage base.Suffrage,
+	proposal ballot.Proposal,
+	initVoteproof base.Voteproof,
 ) *ProposalValidationChecker {
 	return &ProposalValidationChecker{
 		Logging: logging.NewLogging(func(c logging.Context) logging.Emitter {
@@ -30,9 +34,10 @@ func NewProposalValidationChecker(
 					Hinted("node", proposal.Node()),
 				)
 		}),
-		localstate: localstate,
-		suffrage:   suffrage,
-		proposal:   proposal,
+		localstate:    localstate,
+		suffrage:      suffrage,
+		proposal:      proposal,
+		initVoteproof: initVoteproof,
 	}
 }
 
@@ -102,13 +107,12 @@ func (pvc *ProposalValidationChecker) IsOld() (bool, error) {
 	height := pvc.proposal.Height()
 	round := pvc.proposal.Round()
 
-	ivp := pvc.localstate.LastINITVoteproof()
-	if height < ivp.Height() || round != ivp.Round() {
+	if height < pvc.initVoteproof.Height() || round != pvc.initVoteproof.Round() {
 		err := xerrors.Errorf("old Proposal received")
 		pvc.Log().Error().Err(err).
 			Dict("current", logging.Dict().
-				Hinted("height", ivp.Height()).
-				Hinted("round", ivp.Round()),
+				Hinted("height", pvc.initVoteproof.Height()).
+				Hinted("round", pvc.initVoteproof.Round()),
 			).
 			Msg("old proposal received")
 

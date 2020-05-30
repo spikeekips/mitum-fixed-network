@@ -40,6 +40,7 @@ func NewINITBallotV0WithVoteproof(st storage.Storage, node base.Address, round b
 		manifest = l
 	}
 
+	// TODO height and round should rely on voteproof
 	return ballot.NewINITBallotV0(
 		node,
 		manifest.Height()+1,

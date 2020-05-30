@@ -39,8 +39,11 @@ func (gg *GenesisBlockV0Generator) Generate() (block.Block, error) {
 		return nil, err
 	}
 
-	if err := gg.generateINITVoteproof(); err != nil {
+	var ivp base.Voteproof
+	if vp, err := gg.generateINITVoteproof(); err != nil {
 		return nil, err
+	} else {
+		ivp = vp
 	}
 
 	var seals []operation.Seal
@@ -57,20 +60,17 @@ func (gg *GenesisBlockV0Generator) Generate() (block.Block, error) {
 		proposal = pr
 	}
 
-	initVoteproof := gg.localstate.LastINITVoteproof()
-
 	var blk block.Block
 
 	pm := NewProposalProcessorV0(gg.localstate)
 	_ = pm.SetLogger(gg.Log())
 
-	if bk, err := pm.ProcessINIT(proposal.Hash(), initVoteproof); err != nil {
+	if bk, err := pm.ProcessINIT(proposal.Hash(), ivp); err != nil {
 		return nil, err
-	} else if err := gg.generateACCEPTVoteproof(bk); err != nil {
+	} else if vp, err := gg.generateACCEPTVoteproof(bk, ivp); err != nil {
 		return nil, err
 	} else {
-		acceptVoteproof := gg.localstate.LastACCEPTVoteproof()
-		if bs, err := pm.ProcessACCEPT(proposal.Hash(), acceptVoteproof); err != nil {
+		if bs, err := pm.ProcessACCEPT(proposal.Hash(), vp); err != nil {
 			return nil, err
 		} else if err := bs.Commit(); err != nil {
 			return nil, err
@@ -157,60 +157,59 @@ func (gg *GenesisBlockV0Generator) generateProposal(seals []operation.Seal) (bal
 	return proposal, nil
 }
 
-func (gg *GenesisBlockV0Generator) generateINITVoteproof() error {
+func (gg *GenesisBlockV0Generator) generateINITVoteproof() (base.Voteproof, error) {
 	var ib ballot.INITBallotV0
 	if b, err := NewINITBallotV0Round0(gg.localstate.Storage(), gg.localstate.Node().Address()); err != nil {
-		return err
+		return nil, err
 	} else if err := SignSeal(&b, gg.localstate); err != nil {
-		return err
+		return nil, err
 	} else {
 		ib = b
 	}
 
+	var vp base.Voteproof
 	if voteproof, err := gg.ballotbox.Vote(ib); err != nil {
-		return err
+		return nil, err
 	} else {
 		if !voteproof.IsFinished() {
-			return xerrors.Errorf("something wrong, INITVoteproof should be finished, but not")
+			return nil, xerrors.Errorf("something wrong, INITVoteproof should be finished, but not")
 		} else {
 			if err := gg.localstate.Storage().NewSeals([]seal.Seal{ib}); err != nil {
-				return err
+				return nil, err
 			} else if err := gg.localstate.Storage().NewINITVoteproof(voteproof); err != nil {
-				return err
+				return nil, err
 			}
 
-			_ = gg.localstate.SetLastINITVoteproof(voteproof)
+			vp = voteproof
 		}
 	}
 
-	return nil
+	return vp, nil
 }
 
-func (gg *GenesisBlockV0Generator) generateACCEPTVoteproof(newBlock block.Block) error {
-	initVoteproof := gg.localstate.LastINITVoteproof()
-
-	ab := NewACCEPTBallotV0(gg.localstate.Node().Address(), newBlock, initVoteproof)
+func (gg *GenesisBlockV0Generator) generateACCEPTVoteproof(newBlock block.Block, ivp base.Voteproof) (
+	base.Voteproof, error,
+) {
+	ab := NewACCEPTBallotV0(gg.localstate.Node().Address(), newBlock, ivp)
 	if err := SignSeal(&ab, gg.localstate); err != nil {
-		return err
+		return nil, err
 	}
 
 	if err := gg.localstate.Storage().NewSeals([]seal.Seal{ab}); err != nil {
-		return err
+		return nil, err
 	} else if voteproof, err := gg.ballotbox.Vote(ab); err != nil {
-		return err
+		return nil, err
 	} else {
 		if !voteproof.IsFinished() {
-			return xerrors.Errorf("something wrong, ACCEPTVoteproof should be finished, but not")
-		} else {
-			if err := gg.localstate.Storage().NewSeals([]seal.Seal{ab}); err != nil {
-				return err
-			} else if err := gg.localstate.Storage().NewACCEPTVoteproof(voteproof); err != nil {
-				return err
-			}
-
-			_ = gg.localstate.SetLastACCEPTVoteproof(voteproof)
+			return nil, xerrors.Errorf("something wrong, ACCEPTVoteproof should be finished, but not")
 		}
-	}
 
-	return nil
+		if err := gg.localstate.Storage().NewSeals([]seal.Seal{ab}); err != nil {
+			return nil, err
+		} else if err := gg.localstate.Storage().NewACCEPTVoteproof(voteproof); err != nil {
+			return nil, err
+		}
+
+		return voteproof, nil
+	}
 }

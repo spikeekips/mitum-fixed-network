@@ -83,13 +83,19 @@ func (cs *StateJoiningHandler) SetLogger(l logging.Logger) logging.Logger {
 }
 
 func (cs *StateJoiningHandler) Activate(ctx StateChangeContext) error {
-	if _, err := cs.localstate.Storage().LastManifest(); err != nil {
+	var avp base.Voteproof // NOTE ACCEPT Voteproof of last block
+	if blk, err := cs.localstate.Storage().LastBlock(); err != nil {
 		return xerrors.Errorf("last manifest is empty")
+	} else {
+		avp = blk.ACCEPTVoteproof()
 	}
 
 	if timer, err := cs.TimerBroadcastingINITBallot(
-		func() time.Duration { return cs.localstate.Policy().IntervalBroadcastingINITBallot() },
+		func() time.Duration {
+			return cs.localstate.Policy().IntervalBroadcastingINITBallot()
+		},
 		cs.currentRound,
+		avp,
 	); err != nil {
 		return err
 	} else if err := cs.timers.SetTimer(TimerIDBroadcastingINITBallot, timer); err != nil {
@@ -300,15 +306,13 @@ func (cs *StateJoiningHandler) handleACCEPTBallotAndINITVoteproof(
 
 		// NOTE expected ACCEPT Ballot received, so will process Proposal of
 		// INIT Voteproof and broadcast new ACCEPT Ballot.
-		_ = cs.localstate.SetLastINITVoteproof(voteproof)
-
 		blk, err := cs.proposalProcessor.ProcessINIT(blt.Proposal(), voteproof)
 		if err != nil {
 			l.Debug().Err(err).Msg("tried to process Proposal, but it is not yet received")
 			return err
 		}
 
-		ab := NewACCEPTBallotV0(cs.localstate.Node().Address(), blk, cs.localstate.LastINITVoteproof())
+		ab := NewACCEPTBallotV0(cs.localstate.Node().Address(), blk, cs.LastINITVoteproof())
 		if err := SignSeal(&ab, cs.localstate); err != nil {
 			cs.Log().Error().Err(err).Msg("failed to sign ACCEPTBallot; will keep trying")
 			return err

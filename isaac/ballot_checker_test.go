@@ -28,7 +28,7 @@ func (t *testBallotChecker) SetupTest() {
 func (t *testBallotChecker) TestNew() {
 	t.True(t.suf.IsInside(t.localstate.Node().Address()))
 
-	ib := t.newINITBallot(t.localstate, base.Round(0))
+	ib := t.newINITBallot(t.localstate, base.Round(0), nil)
 
 	bc, err := NewBallotChecker(ib, t.localstate, t.suf)
 	t.NoError(err)
@@ -42,7 +42,7 @@ func (t *testBallotChecker) TestIsInSuffrage() {
 	{ // from localstate
 		t.True(t.suf.IsInside(t.localstate.Node().Address()))
 
-		ib := t.newINITBallot(t.localstate, base.Round(0))
+		ib := t.newINITBallot(t.localstate, base.Round(0), nil)
 
 		bc, err := NewBallotChecker(ib, t.localstate, t.suf)
 		t.NoError(err)
@@ -65,7 +65,7 @@ func (t *testBallotChecker) TestIsInSuffrage() {
 		unknown := t.localstates(1)[0]
 		t.False(t.suf.IsInside(unknown.Node().Address()))
 
-		ib := t.newINITBallot(unknown, base.Round(0))
+		ib := t.newINITBallot(unknown, base.Round(0), nil)
 
 		bc, err := NewBallotChecker(ib, t.localstate, t.suf)
 		t.NoError(err)
@@ -86,10 +86,16 @@ func (t *testBallotChecker) TestIsInSuffrage() {
 }
 
 func (t *testBallotChecker) TestCheckWithLastBlock() {
-	ivp := t.localstate.LastACCEPTVoteproof()
+	var avp base.Voteproof
+
+	{
+		blk, err := t.localstate.Storage().LastBlock()
+		t.NoError(err)
+		avp = blk.ACCEPTVoteproof()
+	}
 
 	{ // same height and next round
-		ib := t.newINITBallot(t.localstate, ivp.Round()+1)
+		ib := t.newINITBallot(t.localstate, avp.Round()+1, t.lastINITVoteproof(t.localstate))
 
 		bc, err := NewBallotChecker(ib, t.localstate, t.suf)
 		t.NoError(err)
@@ -116,7 +122,7 @@ func (t *testBallotChecker) TestCheckWithLastBlock() {
 			lastManifest.Height(),
 			base.Round(0),
 			lastManifest.Hash(),
-			t.localstate.LastACCEPTVoteproof(),
+			avp,
 		)
 
 		t.NoError(ib.Sign(t.localstate.Node().Privatekey(), t.localstate.Policy().NetworkID()))

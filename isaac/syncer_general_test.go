@@ -419,7 +419,7 @@ func (t *testGeneralSyncer) TestSyncingHandlerFromBallot() {
 	cs, err := NewStateSyncingHandler(localstate, nil)
 	t.NoError(err)
 
-	blt := t.newINITBallot(rn0, base.Round(0))
+	blt := t.newINITBallot(rn0, base.Round(0), t.lastINITVoteproof(rn0))
 
 	t.NoError(cs.Activate(NewStateChangeContext(base.StateJoining, base.StateSyncing, nil, blt)))
 
@@ -461,7 +461,7 @@ func (t *testGeneralSyncer) TestSyncingHandlerFromINITVoteproof() {
 
 	var voteproof base.Voteproof
 	{
-		b := t.newINITBallot(rn0, base.Round(0))
+		b := t.newINITBallot(rn0, base.Round(0), t.lastINITVoteproof(rn0))
 
 		vp, err := t.newVoteproof(b.Stage(), b.INITBallotFactV0, rn0, rn1, rn2)
 		t.NoError(err)

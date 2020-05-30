@@ -33,6 +33,7 @@ type StateHandler interface {
 	NewSeal(seal.Seal) error
 	// NewVoteproof receives the finished Voteproof.
 	NewVoteproof(base.Voteproof) error
+	SetLastINITVoteproof(base.Voteproof)
 }
 
 type StateChangeContext struct {
@@ -83,6 +84,7 @@ type BaseStateHandler struct {
 	stateChan         chan<- StateChangeContext
 	sealChan          chan<- seal.Seal
 	timers            *localtime.Timers
+	livp              base.Voteproof
 }
 
 func NewBaseStateHandler(
@@ -163,8 +165,6 @@ func (bs *BaseStateHandler) StoreNewBlockByVoteproof(acceptVoteproof base.Votepr
 		}),
 	)
 
-	_ = bs.localstate.SetLastACCEPTVoteproof(acceptVoteproof)
-
 	l.Debug().Msg("trying to store new block")
 
 	blockStorage, err := bs.proposalProcessor.ProcessACCEPT(fact.Proposal(), acceptVoteproof)
@@ -209,6 +209,7 @@ func (bs *BaseStateHandler) StoreNewBlockByVoteproof(acceptVoteproof base.Votepr
 func (bs *BaseStateHandler) TimerBroadcastingINITBallot(
 	intervalFunc func() time.Duration,
 	roundFunc func() base.Round,
+	voteproof base.Voteproof,
 ) (*localtime.CallbackTimer, error) {
 	var baseBallot ballot.INITBallotV0
 
@@ -224,7 +225,7 @@ func (bs *BaseStateHandler) TimerBroadcastingINITBallot(
 			bs.localstate.Storage(),
 			bs.localstate.Node().Address(),
 			round,
-			bs.localstate.LastINITVoteproof(),
+			voteproof,
 		); err != nil {
 			return nil, err
 		} else {
@@ -252,7 +253,7 @@ func (bs *BaseStateHandler) TimerBroadcastingINITBallot(
 }
 
 func (bs *BaseStateHandler) TimerBroadcastingACCEPTBallot(newBlock block.Block) (*localtime.CallbackTimer, error) {
-	baseBallot := NewACCEPTBallotV0(bs.localstate.Node().Address(), newBlock, bs.localstate.LastINITVoteproof())
+	baseBallot := NewACCEPTBallotV0(bs.localstate.Node().Address(), newBlock, bs.LastINITVoteproof())
 
 	var called int64
 
@@ -299,7 +300,7 @@ func (bs *BaseStateHandler) TimerTimedoutMoveNextRound(
 			bs.localstate.Storage(),
 			bs.localstate.Node().Address(),
 			round,
-			bs.localstate.LastINITVoteproof(),
+			bs.LastINITVoteproof(),
 		); err != nil {
 			return nil, err
 		} else {
@@ -368,4 +369,22 @@ func (bs *BaseStateHandler) TimerBroadcastingProposal(proposal ballot.Proposal) 
 			return bs.localstate.Policy().IntervalBroadcastingProposal()
 		},
 	)
+}
+
+func (bs *BaseStateHandler) LastINITVoteproof() base.Voteproof {
+	bs.RLock()
+	defer bs.RUnlock()
+
+	return bs.livp
+}
+
+func (bs *BaseStateHandler) SetLastINITVoteproof(voteproof base.Voteproof) {
+	bs.Lock()
+	defer bs.Unlock()
+
+	if voteproof != nil && voteproof.Stage() != base.StageINIT {
+		panic(xerrors.Errorf("invalid voteproof, %v for init", voteproof.Stage()))
+	}
+
+	bs.livp = voteproof
 }

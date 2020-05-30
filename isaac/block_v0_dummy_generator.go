@@ -226,35 +226,47 @@ func (bg *DummyBlocksV0Generator) syncVoteproofs(from *Localstate) error {
 }
 
 func (bg *DummyBlocksV0Generator) createNextBlock() error {
-	if err := bg.createINITVoteproof(); err != nil {
+	var ivm map[base.Address]base.Voteproof
+	if v, err := bg.createINITVoteproof(); err != nil {
 		return err
+	} else {
+		ivm = v
 	}
 
 	var proposal ballot.Proposal
-	if pr, err := bg.createProposal(); err != nil {
+	if pr, err := bg.createProposal(ivm[bg.genesisNode.Node().Address()]); err != nil {
 		return err
 	} else {
 		proposal = pr
 	}
 
-	if err := bg.createACCEPTVoteproof(proposal); err != nil {
+	var avm map[base.Address]base.Voteproof
+	if v, err := bg.createACCEPTVoteproof(proposal, ivm); err != nil {
 		return err
+	} else {
+		avm = v
 	}
 
-	if err := bg.finish(); err != nil {
+	if err := bg.finish(avm); err != nil {
 		return err
 	}
 
 	return nil
 }
 
-func (bg *DummyBlocksV0Generator) finish() error {
+func (bg *DummyBlocksV0Generator) finish(vm map[base.Address]base.Voteproof) error {
 	for _, l := range bg.allNodes {
-		acceptVoteproof := bg.genesisNode.LastACCEPTVoteproof()
-		proposal := acceptVoteproof.Majority().(ballot.ACCEPTBallotFact).Proposal()
+		var vp base.Voteproof
+		if v, found := vm[l.Node().Address()]; !found {
+			return xerrors.Errorf("failed to find voteproofs for all nodes")
+		} else {
+			vp = v
+		}
+
+		proposal := vp.Majority().(ballot.ACCEPTBallotFact).Proposal()
 
 		pm := bg.pms[l.Node().Address()]
-		if bs, err := pm.ProcessACCEPT(proposal, acceptVoteproof); err != nil {
+		if bs, err := pm.ProcessACCEPT(proposal, vp); err != nil {
 			return err
 		} else if err := bs.Block().IsValid(bg.networkID); err != nil {
 			return err
@@ -266,33 +278,38 @@ func (bg *DummyBlocksV0Generator) finish() error {
 	return nil
 }
 
-func (bg *DummyBlocksV0Generator) createINITVoteproof() error {
+func (bg *DummyBlocksV0Generator) createINITVoteproof() (map[base.Address]base.Voteproof, error) {
 	var ballots []ballot.INITBallot
 	var seals []seal.Seal
 	for _, l := range bg.allNodes {
 		if ib, err := bg.createINITBallot(l); err != nil {
-			return err
+			return nil, err
 		} else {
 			ballots = append(ballots, ib)
 			seals = append(seals, ib)
 		}
 	}
 
+	vm := map[base.Address]base.Voteproof{}
 	for _, l := range bg.allNodes {
 		if err := l.Storage().NewSeals(seals); err != nil {
-			return err
+			return nil, err
 		}
 
 		for _, blt := range ballots {
 			if voteproof, err := bg.ballotboxes[l.Node().Address()].Vote(blt); err != nil {
-				return err
+				return nil, err
 			} else if voteproof.IsFinished() && !voteproof.IsClosed() {
-				_ = l.SetLastINITVoteproof(voteproof)
+				vm[l.Node().Address()] = voteproof
 			}
 		}
 	}
 
-	return nil
+	if len(vm) != len(bg.allNodes) {
+		return nil, xerrors.Errorf("failed to create INIT Voteproof")
+	}
+
+	return vm, nil
 }
 
 func (bg *DummyBlocksV0Generator) createINITBallot(localstate *Localstate) (ballot.INITBallot, error) {
@@ -312,16 +329,14 @@ func (bg *DummyBlocksV0Generator) createINITBallot(localstate *Localstate) (ball
 	return baseBallot, nil
 }
 
-func (bg *DummyBlocksV0Generator) createProposal() (ballot.Proposal, error) {
-	initVoteproof := bg.genesisNode.LastINITVoteproof()
-
-	acting := bg.suffrage.Acting(initVoteproof.Height(), initVoteproof.Round())
+func (bg *DummyBlocksV0Generator) createProposal(voteproof base.Voteproof) (ballot.Proposal, error) {
+	acting := bg.suffrage.Acting(voteproof.Height(), voteproof.Round())
 	proposer := bg.allNodes[acting.Proposer()]
 
 	pr := ballot.NewProposalV0(
 		proposer.Node().Address(),
-		initVoteproof.Height(),
-		initVoteproof.Round(),
+		voteproof.Height(),
+		voteproof.Round(),
 		nil,
 		nil,
 	)
@@ -338,41 +353,48 @@ func (bg *DummyBlocksV0Generator) createProposal() (ballot.Proposal, error) {
 	return pr, nil
 }
 
-func (bg *DummyBlocksV0Generator) createACCEPTVoteproof(proposal ballot.Proposal) error {
+func (bg *DummyBlocksV0Generator) createACCEPTVoteproof(proposal ballot.Proposal, ivm map[base.Address]base.Voteproof) (
+	map[base.Address]base.Voteproof, error,
+) {
 	var ballots []ballot.ACCEPTBallot
 	var seals []seal.Seal
 	for _, l := range bg.allNodes {
 		var newBlock block.Block
 
-		initVoteproof := l.LastINITVoteproof()
-		if b, err := bg.pms[l.Node().Address()].ProcessINIT(proposal.Hash(), initVoteproof); err != nil {
-			return err
+		ivp := ivm[l.Node().Address()]
+		if b, err := bg.pms[l.Node().Address()].ProcessINIT(proposal.Hash(), ivp); err != nil {
+			return nil, err
 		} else if newBlock == nil {
 			newBlock = b
 		}
 
-		ab := NewACCEPTBallotV0(l.Node().Address(), newBlock, initVoteproof)
+		ab := NewACCEPTBallotV0(l.Node().Address(), newBlock, ivp)
 		if err := SignSeal(&ab, l); err != nil {
-			return err
+			return nil, err
 		} else {
 			ballots = append(ballots, ab)
 			seals = append(seals, ab)
 		}
 	}
 
+	vm := map[base.Address]base.Voteproof{}
 	for _, l := range bg.allNodes {
 		if err := l.Storage().NewSeals(seals); err != nil {
-			return err
+			return nil, err
 		}
 
 		for _, blt := range ballots {
 			if voteproof, err := bg.ballotboxes[l.Node().Address()].Vote(blt); err != nil {
-				return err
+				return nil, err
 			} else if voteproof.IsFinished() && !voteproof.IsClosed() {
-				_ = l.SetLastACCEPTVoteproof(voteproof)
+				vm[l.Node().Address()] = voteproof
 			}
 		}
 	}
 
-	return nil
+	if len(vm) != len(bg.allNodes) {
+		return nil, xerrors.Errorf("failed to create voteproofs for all nodes")
+	}
+
+	return vm, nil
 }

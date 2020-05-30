@@ -118,6 +118,15 @@ func (t *baseTestStateHandler) TearDownTest() {
 	t.closeStates(t.ls...)
 }
 
+func (t *baseTestStateHandler) lastINITVoteproof(localstate *Localstate) base.Voteproof {
+	var vp base.Voteproof
+	if blk, err := localstate.Storage().LastBlock(); err == nil {
+		vp = blk.INITVoteproof()
+	}
+
+	return vp
+}
+
 func (t *baseTestStateHandler) closeStates(states ...*Localstate) {
 	for _, s := range states {
 		_ = s.Storage().Close()
@@ -185,7 +194,7 @@ func (t *baseTestStateHandler) suffrage(proposerState *Localstate, states ...*Lo
 	return base.NewFixedSuffrage(proposerState.Node(), nodes)
 }
 
-func (t *baseTestStateHandler) newINITBallot(localstate *Localstate, round base.Round) ballot.INITBallotV0 {
+func (t *baseTestStateHandler) newINITBallot(localstate *Localstate, round base.Round, voteproof base.Voteproof) ballot.INITBallotV0 {
 	var ib ballot.INITBallotV0
 	if round == 0 {
 		if b, err := NewINITBallotV0Round0(localstate.Storage(), localstate.Node().Address()); err != nil {
@@ -198,7 +207,7 @@ func (t *baseTestStateHandler) newINITBallot(localstate *Localstate, round base.
 			localstate.Storage(),
 			localstate.Node().Address(),
 			round,
-			localstate.LastINITVoteproof(),
+			voteproof,
 		); err != nil {
 			panic(err)
 		} else {

@@ -6,7 +6,6 @@ import (
 	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/base/seal"
 	"github.com/spikeekips/mitum/storage"
-	"github.com/spikeekips/mitum/util"
 	"github.com/spikeekips/mitum/util/logging"
 )
 
@@ -97,21 +96,6 @@ func (cs *StateBootingHandler) check() error {
 		return err
 	}
 
-	if err := cs.checkVoteproof(); err != nil {
-		cs.Log().Error().Err(err).Msg("checked voteproof")
-
-		var ctx *StateToBeChangeError
-		if xerrors.As(err, &ctx) {
-			if err0 := cs.ChangeState(ctx.ToState, ctx.Voteproof, nil); err0 != nil {
-				return xerrors.Errorf("failed to change state; %w", err0)
-			}
-
-			return nil
-		} else if xerrors.Is(err, StopBootingError) {
-			return err
-		}
-	}
-
 	return nil
 }
 
@@ -137,20 +121,4 @@ func (cs *StateBootingHandler) checkBlock() error {
 	}
 
 	return foundError
-}
-
-func (cs *StateBootingHandler) checkVoteproof() error {
-	cs.Log().Debug().Msg("trying to check Voteproofs")
-	defer cs.Log().Debug().Msg("trying to check Voteproofs")
-
-	vpc, err := NewVoteproofBootingChecker(cs.localstate)
-	if err != nil {
-		return err
-	}
-	_ = vpc.SetLogger(cs.Log())
-
-	return util.NewChecker("voteproof-booting-checker", []util.CheckerFunc{
-		vpc.CheckACCEPTVoteproofHeight,
-		vpc.CheckINITVoteproofHeight,
-	}).Check()
 }

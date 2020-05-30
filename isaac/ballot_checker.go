@@ -108,7 +108,7 @@ func (bc *BallotChecker) CheckProposal() (bool, error) {
 	if err := proposal.IsValid(bc.localstate.Policy().NetworkID()); err != nil {
 		return false, err
 	} else {
-		pvc := NewProposalValidationChecker(bc.localstate, bc.suffrage, proposal)
+		pvc := NewProposalValidationChecker(bc.localstate, bc.suffrage, proposal, nil)
 		if err := util.NewChecker("proposal-validation-checker", []util.CheckerFunc{
 			pvc.IsKnown,
 			pvc.CheckSigning,

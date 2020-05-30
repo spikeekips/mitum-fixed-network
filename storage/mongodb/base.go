@@ -48,11 +48,13 @@ var allCollections = []string{
 type Storage struct {
 	sync.RWMutex
 	*logging.Logging
-	client             *Client
-	encs               *encoder.Encoders
-	enc                encoder.Encoder
-	lastManifest       block.Manifest
-	lastManifestHeight base.Height
+	client              *Client
+	encs                *encoder.Encoders
+	enc                 encoder.Encoder
+	lastManifest        block.Manifest
+	lastManifestHeight  base.Height
+	lastINITVoteproof   base.Voteproof
+	lastACCEPTVoteproof base.Voteproof
 }
 
 func NewStorage(client *Client, encs *encoder.Encoders, enc encoder.Encoder) (*Storage, error) {
@@ -68,7 +70,7 @@ func NewStorage(client *Client, encs *encoder.Encoders, enc encoder.Encoder) (*S
 		lastManifestHeight: base.NilHeight,
 	}
 
-	if err := st.loadLastManifest(); err != nil {
+	if err := st.loadLastBlock(); err != nil {
 		if !xerrors.Is(err, storage.NotFoundError) {
 			return nil, err
 		}
@@ -81,7 +83,7 @@ func NewStorage(client *Client, encs *encoder.Encoders, enc encoder.Encoder) (*S
 	return st, nil
 }
 
-func (st *Storage) loadLastManifest() error {
+func (st *Storage) loadLastBlock() error {
 	var height base.Height
 	if err := st.client.GetByID(defaultColNameInfo, lastManifestDocID,
 		func(res *mongo.SingleResult) error {
@@ -97,13 +99,10 @@ func (st *Storage) loadLastManifest() error {
 		return err
 	}
 
-	st.lastManifestHeight = height
-
-	if m, err := st.ManifestByHeight(height); err != nil {
+	if blk, err := st.rawBlockByFilter(util.NewBSONFilter("height", height).D()); err != nil {
 		return err
 	} else {
-		st.lastManifest = m
-		st.lastManifestHeight = m.Height()
+		st.setLastBlock(blk)
 	}
 
 	return nil
@@ -144,6 +143,50 @@ func (st *Storage) setLastManifest(m block.Manifest) {
 
 	st.lastManifest = m
 	st.lastManifestHeight = m.Height()
+}
+
+func (st *Storage) setLastBlock(blk block.Block) {
+	st.Lock()
+	defer st.Unlock()
+
+	if blk == nil {
+		st.lastManifest = nil
+		st.lastManifestHeight = base.PreGenesisHeight
+		st.lastINITVoteproof = nil
+		st.lastACCEPTVoteproof = nil
+
+		return
+	}
+
+	if blk.Height() <= st.lastManifestHeight {
+		return
+	}
+
+	st.lastManifest = blk.Manifest()
+	st.lastManifestHeight = blk.Height()
+	st.lastINITVoteproof = blk.INITVoteproof()
+	st.lastACCEPTVoteproof = blk.ACCEPTVoteproof()
+}
+
+func (st *Storage) LastVoteproof(stage base.Stage) (base.Voteproof, error) {
+	st.RLock()
+	defer st.RUnlock()
+
+	var vp base.Voteproof
+	switch stage {
+	case base.StageINIT:
+		vp = st.lastINITVoteproof
+	case base.StageACCEPT:
+		vp = st.lastACCEPTVoteproof
+	default:
+		return nil, xerrors.Errorf("invalid stage: %v", stage)
+	}
+
+	if vp == nil {
+		return nil, storage.NotFoundError.Errorf("voteproof not found")
+	}
+
+	return vp, nil
 }
 
 func (st *Storage) SyncerStorage() (storage.SyncerStorage, error) {
@@ -213,11 +256,17 @@ func (st *Storage) LastBlock() (block.Block, error) {
 }
 
 func (st *Storage) blockByFilter(filter bson.D) (block.Block, error) {
+	return st.rawBlockByFilter(
+		util.NewBSONFilterFromD(filter).AddOp("height", st.lastHeight(), "$lte").D(),
+	)
+}
+
+func (st *Storage) rawBlockByFilter(filter bson.D) (block.Block, error) {
 	var blk block.Block
 
 	if err := st.client.GetByFilter(
 		defaultColNameBlock,
-		util.NewBSONFilterFromD(filter).AddOp("height", st.lastHeight(), "$lte").D(),
+		filter,
 		func(res *mongo.SingleResult) error {
 			if i, err := loadBlockFromDecoder(res.Decode, st.encs); err != nil {
 				return err

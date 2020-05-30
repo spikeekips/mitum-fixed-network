@@ -164,6 +164,27 @@ func (st *Storage) LastManifest() (block.Manifest, error) {
 	return st.Manifest(h)
 }
 
+func (st *Storage) LastVoteproof(stage base.Stage) (base.Voteproof, error) {
+	switch {
+	case stage == base.StageINIT, stage == base.StageACCEPT:
+	default:
+		return nil, xerrors.Errorf("invalid stage: %v", stage)
+	}
+
+	if blk, err := st.LastBlock(); err != nil {
+		return nil, err
+	} else {
+		switch {
+		case stage == base.StageINIT:
+			return blk.INITVoteproof(), nil
+		case stage == base.StageACCEPT:
+			return blk.ACCEPTVoteproof(), nil
+		}
+	}
+
+	return nil, nil
+}
+
 func (st *Storage) LastBlock() (block.Block, error) {
 	var raw []byte
 

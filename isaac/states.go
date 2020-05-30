@@ -40,8 +40,8 @@ func NewConsensusStates(
 	booting, joining, consensus, syncing, broken StateHandler,
 ) *ConsensusStates {
 	var livp base.Voteproof
-	if blk, err := localstate.Storage().LastBlock(); err == nil {
-		livp = blk.INITVoteproof()
+	if vp, err := localstate.Storage().LastVoteproof(base.StageINIT); err == nil {
+		livp = vp
 	}
 
 	css := &ConsensusStates{

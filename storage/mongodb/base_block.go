@@ -136,7 +136,7 @@ func (bst *BlockStorage) Commit() error {
 	} else if _, err := bst.st.client.Set(defaultColNameInfo, cb); err != nil {
 		return err
 	} else {
-		bst.st.setLastManifest(bst.block.Manifest())
+		bst.st.setLastBlock(bst.block)
 	}
 
 	return nil

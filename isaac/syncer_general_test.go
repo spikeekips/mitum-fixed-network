@@ -419,7 +419,7 @@ func (t *testGeneralSyncer) TestSyncingHandlerFromBallot() {
 	cs, err := NewStateSyncingHandler(localstate, nil)
 	t.NoError(err)
 
-	blt := t.newINITBallot(rn0, base.Round(0), t.lastINITVoteproof(rn0))
+	blt := t.newINITBallot(rn0, base.Round(0), nil)
 
 	t.NoError(cs.Activate(NewStateChangeContext(base.StateJoining, base.StateSyncing, nil, blt)))
 
@@ -433,12 +433,12 @@ func (t *testGeneralSyncer) TestSyncingHandlerFromBallot() {
 				break
 			}
 
-			<-time.After(time.Millisecond * 10)
+			<-time.After(time.Millisecond * 100)
 		}
 	}()
 
 	select {
-	case <-time.After(time.Second * 3):
+	case <-time.After(time.Second * 10):
 		t.NoError(xerrors.Errorf("timeout to wait to be finished"))
 		break
 	case <-finishedChan:

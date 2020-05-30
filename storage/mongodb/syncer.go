@@ -141,7 +141,7 @@ func (st *SyncerStorage) SetBlocks(blocks []block.Block) error {
 		Int("blocks", len(blocks)).
 		Msg("set blocks")
 
-	var lastManifest block.Manifest
+	var lastBlock block.Block
 	for i := range blocks {
 		blk := blocks[i]
 
@@ -155,14 +155,14 @@ func (st *SyncerStorage) SetBlocks(blocks []block.Block) error {
 			return err
 		}
 
-		if lastManifest == nil {
-			lastManifest = blk.Manifest()
-		} else if blk.Height() > lastManifest.Height() {
-			lastManifest = blk.Manifest()
+		if lastBlock == nil {
+			lastBlock = blk
+		} else if blk.Height() > lastBlock.Height() {
+			lastBlock = blk
 		}
 	}
 
-	st.blockStorage.setLastManifest(lastManifest)
+	st.blockStorage.setLastBlock(lastBlock)
 
 	return nil
 }
@@ -173,11 +173,11 @@ func (st *SyncerStorage) Commit() error {
 		Hinted("to_height", st.heightTo).
 		Msg("trying to commit blocks")
 
-	var lastManifest block.Manifest
-	if l, err := st.blockStorage.LastManifest(); err != nil || l == nil {
+	var lastBlock block.Block
+	if l, err := st.blockStorage.LastBlock(); err != nil || l == nil {
 		return xerrors.Errorf("failed to get last manifest fromm storage: %w", err)
 	} else {
-		lastManifest = l
+		lastBlock = l
 	}
 
 	for _, col := range []string{
@@ -194,7 +194,7 @@ func (st *SyncerStorage) Commit() error {
 		}
 	}
 
-	st.main.setLastManifest(lastManifest)
+	st.main.setLastBlock(lastBlock)
 
 	return nil
 }

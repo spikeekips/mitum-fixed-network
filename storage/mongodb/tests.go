@@ -13,8 +13,8 @@ import (
 	"github.com/spikeekips/mitum/util/logging"
 )
 
-func (st *Storage) SetLastManifest(m block.Manifest) {
-	st.setLastManifest(m)
+func (st *Storage) SetLastBlock(m block.Block) {
+	st.setLastBlock(m)
 }
 
 var BaseTestMongodbURI = "mongodb://localhost:27017"

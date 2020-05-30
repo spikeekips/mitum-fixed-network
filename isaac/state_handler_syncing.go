@@ -65,12 +65,8 @@ func (ss *StateSyncingHandler) Activate(ctx StateChangeContext) error {
 		}
 	}()
 
-	if m, err := ss.localstate.Storage().LastBlock(); err != nil {
-		if !xerrors.Is(err, storage.NotFoundError) {
-			return err
-		}
-	} else {
-		ss.setLastVoteproof(m.ACCEPTVoteproof())
+	if vp, err := ss.localstate.Storage().LastVoteproof(base.StageACCEPT); err == nil {
+		ss.setLastVoteproof(vp)
 	}
 
 	// TODO also compare the hash of target block with height
@@ -265,10 +261,10 @@ func (ss *StateSyncingHandler) syncerStateChanged(syncer Syncer) {
 			ss.scs = ss.scs[:len(ss.scs)-1]
 		}
 
-		if next != nil {
-			if err := next.Save(); err != nil {
-				ss.Log().Error().Err(err).Msg("failed to next syncer.Save()")
-			}
+		if next == nil {
+			ss.Log().Debug().Msg("no more syncers")
+		} else if err := next.Save(); err != nil {
+			ss.Log().Error().Err(err).Msg("failed to next syncer.Save()")
 		}
 	}
 }

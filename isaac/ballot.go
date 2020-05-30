@@ -12,20 +12,31 @@ import (
 )
 
 func NewINITBallotV0Round0(st storage.Storage, node base.Address) (ballot.INITBallotV0, error) {
-	var lb block.Block
-	switch l, err := st.LastBlock(); {
+	var m block.Manifest
+	switch l, err := st.LastManifest(); {
 	case err != nil:
 		return ballot.INITBallotV0{}, xerrors.Errorf("last block not found: %w", err)
 	default:
-		lb = l
+		m = l
+	}
+
+	var avp base.Voteproof
+	if vp, err := st.LastVoteproof(base.StageACCEPT); err != nil {
+		if !xerrors.Is(err, storage.NotFoundError) {
+			return ballot.INITBallotV0{}, xerrors.Errorf("last voteproof not found: %w", err)
+		} else if m.Height() != base.PreGenesisHeight {
+			return ballot.INITBallotV0{}, xerrors.Errorf("failed to get last voteproof: %w", err)
+		}
+	} else {
+		avp = vp
 	}
 
 	return ballot.NewINITBallotV0(
 		node,
-		lb.Height()+1,
+		m.Height()+1,
 		base.Round(0),
-		lb.Hash(),
-		lb.ACCEPTVoteproof(),
+		m.Hash(),
+		avp,
 	), nil
 }
 

@@ -29,6 +29,7 @@ type Storage interface {
 	Manifest(valuehash.Hash) (block.Manifest, error)
 	ManifestByHeight(base.Height) (block.Manifest, error)
 	// TODO add ManifestsByHeight([]base.Height) ([]block.Manifest, error)
+	LastVoteproof(base.Stage) (base.Voteproof, error)
 
 	NewSeals([]seal.Seal) error
 	Seal(valuehash.Hash) (seal.Seal, error)

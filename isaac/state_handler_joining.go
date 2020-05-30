@@ -84,10 +84,10 @@ func (cs *StateJoiningHandler) SetLogger(l logging.Logger) logging.Logger {
 
 func (cs *StateJoiningHandler) Activate(ctx StateChangeContext) error {
 	var avp base.Voteproof // NOTE ACCEPT Voteproof of last block
-	if blk, err := cs.localstate.Storage().LastBlock(); err != nil {
+	if vp, err := cs.localstate.Storage().LastVoteproof(base.StageACCEPT); err != nil {
 		return xerrors.Errorf("last manifest is empty")
 	} else {
-		avp = blk.ACCEPTVoteproof()
+		avp = vp
 	}
 
 	if timer, err := cs.TimerBroadcastingINITBallot(

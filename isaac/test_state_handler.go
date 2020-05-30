@@ -119,10 +119,7 @@ func (t *baseTestStateHandler) TearDownTest() {
 }
 
 func (t *baseTestStateHandler) lastINITVoteproof(localstate *Localstate) base.Voteproof {
-	var vp base.Voteproof
-	if blk, err := localstate.Storage().LastBlock(); err == nil {
-		vp = blk.INITVoteproof()
-	}
+	vp, _ := localstate.Storage().LastVoteproof(base.StageINIT)
 
 	return vp
 }

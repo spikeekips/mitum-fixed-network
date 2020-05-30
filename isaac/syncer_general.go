@@ -168,6 +168,8 @@ func (cs *GeneralSyncer) Save() error {
 }
 
 func (cs *GeneralSyncer) save() error {
+	cs.Log().Debug().Msg("trying to save")
+
 	cs.setState(SyncerSaving)
 
 	if err := cs.startBlocks(); err != nil {
@@ -916,6 +918,9 @@ func (cs *GeneralSyncer) fetchBlocks(node Node, heights []base.Height) ([]block.
 }
 
 func (cs *GeneralSyncer) commit() error {
+	cs.Log().Debug().Msg("trying to commit")
+	defer cs.Log().Debug().Msg("committed")
+
 	from := cs.heightFrom.Int64()
 	to := cs.heightTo.Int64()
 

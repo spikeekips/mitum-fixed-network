@@ -5,6 +5,7 @@ import (
 
 	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/base/seal"
+	"github.com/spikeekips/mitum/storage"
 	"github.com/spikeekips/mitum/util"
 	"github.com/spikeekips/mitum/util/logging"
 )
@@ -15,14 +16,9 @@ type StateBootingHandler struct {
 
 func NewStateBootingHandler(
 	localstate *Localstate,
-	proposalProcessor ProposalProcessor,
 ) (*StateBootingHandler, error) {
-	if _, err := localstate.Storage().LastManifest(); err != nil {
-		return nil, xerrors.Errorf("last manifest is empty")
-	}
-
 	cs := &StateBootingHandler{
-		BaseStateHandler: NewBaseStateHandler(localstate, proposalProcessor, base.StateBooting),
+		BaseStateHandler: NewBaseStateHandler(localstate, nil, base.StateBooting),
 	}
 	cs.BaseStateHandler.Logging = logging.NewLogging(func(c logging.Context) logging.Emitter {
 		return c.Str("module", "consensus-state-booting-handler")
@@ -86,14 +82,16 @@ func (cs *StateBootingHandler) initialize() error {
 
 func (cs *StateBootingHandler) check() error {
 	cs.Log().Debug().Msg("trying to check")
-	defer cs.Log().Debug().Msg("complete to check")
+	defer cs.Log().Debug().Msg("checked")
 
 	if err := cs.checkBlock(); err != nil {
 		cs.Log().Error().Err(err).Msg("checked block")
 
-		// TODO syncing handler should support syncing without voteproof and ballot
-		if err0 := cs.ChangeState(base.StateSyncing, nil, nil); err0 != nil {
-			return xerrors.Errorf("failed to change state; %w", err0)
+		if xerrors.Is(err, storage.NotFoundError) {
+			// TODO syncing handler should support syncing without voteproof and ballot
+			if err0 := cs.ChangeState(base.StateSyncing, nil, nil); err0 != nil {
+				return err0
+			}
 		}
 
 		return err
@@ -119,15 +117,26 @@ func (cs *StateBootingHandler) check() error {
 
 func (cs *StateBootingHandler) checkBlock() error {
 	cs.Log().Debug().Msg("trying to check block")
-	defer cs.Log().Debug().Msg("complete to check block")
+	defer cs.Log().Debug().Msg("checked block")
 
+	var foundError error
 	if blk, err := cs.localstate.Storage().LastBlock(); err != nil {
-		return xerrors.Errorf("empty Block")
+		if xerrors.Is(err, storage.NotFoundError) {
+			foundError = storage.NotFoundError.Errorf("empty Block")
+		} else {
+			foundError = err
+		}
 	} else if err := blk.IsValid(nil); err != nil {
-		return err
+		foundError = err
+	} else {
+		cs.Log().Debug().Hinted("block", blk.Manifest()).Msg("initial block found")
 	}
 
-	return nil
+	if foundError != nil {
+		cs.Log().Debug().Err(foundError).Msg("initial block not found")
+	}
+
+	return foundError
 }
 
 func (cs *StateBootingHandler) checkVoteproof() error {

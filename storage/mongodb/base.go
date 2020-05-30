@@ -133,6 +133,13 @@ func (st *Storage) setLastManifest(m block.Manifest) {
 	st.Lock()
 	defer st.Unlock()
 
+	if m == nil {
+		st.lastManifest = nil
+		st.lastManifestHeight = base.PreGenesisHeight
+
+		return
+	}
+
 	if m.Height() <= st.lastManifestHeight {
 		return
 	}

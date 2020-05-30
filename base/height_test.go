@@ -27,7 +27,7 @@ func (t *testHeight) TestInvalid() {
 	h10 := Height(10)
 	t.NoError(h10.IsValid(nil))
 
-	hu1 := Height(-1)
+	hu1 := Height(NilHeight)
 	t.True(xerrors.Is(isvalid.InvalidError, hu1.IsValid(nil)))
 }
 

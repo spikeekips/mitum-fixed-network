@@ -169,7 +169,6 @@ func (cs *GeneralSyncer) Save() error {
 
 func (cs *GeneralSyncer) save() error {
 	cs.setState(SyncerSaving)
-	defer cs.setState(SyncerSaved)
 
 	if err := cs.startBlocks(); err != nil {
 		return err
@@ -182,6 +181,8 @@ func (cs *GeneralSyncer) save() error {
 	if err := cs.storage().Close(); err != nil {
 		return err
 	}
+
+	cs.setState(SyncerSaved)
 
 	return nil
 }
@@ -249,13 +250,13 @@ func (cs *GeneralSyncer) setProvedNodes(pn []base.Address) {
 	cs.pn = pn
 }
 
-func (cs *GeneralSyncer) Prepare(bm block.Manifest) error {
+func (cs *GeneralSyncer) Prepare(manifest block.Manifest) error {
 	if cs.State() >= SyncerPrepared {
 		cs.Log().Debug().Msg("already prepared")
 		return nil
 	}
 
-	cs.setBaseManifest(bm)
+	cs.setBaseManifest(manifest)
 
 	go func() {
 		// NOTE do forever unless successfully done
@@ -869,6 +870,7 @@ func (cs *GeneralSyncer) checkFetchedBlocks(fetched []block.Block) ([]base.Heigh
 		blk := fetched[i].(block.Block)
 		if err := blk.IsValid(networkID); err != nil {
 			missing = append(missing, blk.Height())
+
 			continue
 		}
 

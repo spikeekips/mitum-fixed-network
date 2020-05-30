@@ -84,6 +84,8 @@ func (ss *StateSyncingHandler) Activate(ctx StateChangeContext) error {
 		if err := ss.handleBallot(ctx.Ballot()); err != nil {
 			return err
 		}
+	case ctx.From() == base.StateBooting:
+		ss.Log().Debug().Msg("syncing started from booting wihout initial block")
 	default:
 		return xerrors.Errorf("empty voteproof or ballot in StateChangeContext")
 	}
@@ -123,7 +125,7 @@ func (ss *StateSyncingHandler) newSyncer(to base.Height, sourceNodes []Node) err
 	var from base.Height
 	if len(ss.scs) < 1 {
 		if lastManifest == nil {
-			from = 0
+			from = base.PreGenesisHeight
 		} else {
 			from = lastManifest.Height() + 1
 		}
@@ -246,15 +248,15 @@ func (ss *StateSyncingHandler) syncerStateChanged(syncer Syncer) {
 		// - the next syncer will do Save()
 		// - remove syncer
 		index, next := ss.nextSyncer(syncer)
-		if next != nil {
-			if err := next.Save(); err != nil {
-				ss.Log().Error().Err(err).Msg("failed to next syncer.Save()")
-			}
-		}
+		ss.Log().Debug().
+			Int("scs", len(ss.scs)).
+			Int("index", index).
+			Bool("has_next", next != nil).
+			Msg("trying to find next syncer")
 
 		if len(ss.scs) < 2 {
 			ss.scs = nil
-		} else { // NOTE remove syncer; index can not be 0
+		} else if index > 0 { // NOTE remove previous syncer
 			i := index - 1
 			if i < len(ss.scs)-1 {
 				copy(ss.scs[i:], ss.scs[i+1:])
@@ -262,23 +264,30 @@ func (ss *StateSyncingHandler) syncerStateChanged(syncer Syncer) {
 			ss.scs[len(ss.scs)-1] = nil
 			ss.scs = ss.scs[:len(ss.scs)-1]
 		}
+
+		if next != nil {
+			if err := next.Save(); err != nil {
+				ss.Log().Error().Err(err).Msg("failed to next syncer.Save()")
+			}
+		}
 	}
 }
 
 func (ss *StateSyncingHandler) handleVoteproof(voteproof base.Voteproof) error {
-	var baseBlock block.Manifest
+	baseHeight := base.PreGenesisHeight
 	if m, err := ss.localstate.Storage().LastManifest(); err != nil {
-		return err
+		if !xerrors.Is(err, storage.NotFoundError) {
+			return err
+		}
 	} else {
-		baseBlock = m
+		baseHeight = m.Height()
 	}
 
 	l := ss.Log().WithLogger(func(ctx logging.Context) logging.Emitter {
 		return ctx.Hinted("voteproof_stage", voteproof.Stage()).
 			Hinted("voteproof_height", voteproof.Height()).
 			Hinted("voteproof_round", voteproof.Round()).
-			Hinted("local_height", baseBlock.Height()).
-			Hinted("local_round", baseBlock.Round())
+			Hinted("local_height", baseHeight)
 	})
 
 	l.Debug().Msg("got voteproof for syncing")
@@ -291,15 +300,15 @@ func (ss *StateSyncingHandler) handleVoteproof(voteproof base.Voteproof) error {
 	}
 
 	// NOTE old voteproof should be ignored
-	if lv := ss.lastVoteproof(); to <= lv.Height() {
+	if lv := ss.lastVoteproof(); lv != nil && to <= lv.Height() {
 		if to != lv.Height() || voteproof.Stage() != base.StageINIT {
 			return xerrors.Errorf("known voteproof received: height=%v", voteproof.Height())
 		}
-	} else {
+	} else if lv != nil {
 		ss.setLastVoteproof(voteproof)
 	}
 
-	d := to - baseBlock.Height()
+	d := to - baseHeight
 	switch {
 	case d == 0:
 		l.Debug().Msg("init voteproof, expected; moves to consensus")

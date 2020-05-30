@@ -10,6 +10,7 @@ import (
 	"github.com/spikeekips/mitum/base/ballot"
 	"github.com/spikeekips/mitum/base/block"
 	"github.com/spikeekips/mitum/base/seal"
+	"github.com/spikeekips/mitum/storage"
 	"github.com/spikeekips/mitum/util"
 	"github.com/spikeekips/mitum/util/errors"
 	"github.com/spikeekips/mitum/util/logging"
@@ -291,7 +292,9 @@ func (css *ConsensusStates) broadcastSeal(sl seal.Seal, errChan chan<- error) {
 func (css *ConsensusStates) newVoteproof(voteproof base.Voteproof) error {
 	var manifest block.Manifest
 	if m, err := css.localstate.Storage().LastManifest(); err != nil {
-		return err
+		if !xerrors.Is(err, storage.NotFoundError) {
+			return err
+		}
 	} else {
 		manifest = m
 	}
@@ -321,11 +324,14 @@ func (css *ConsensusStates) newVoteproof(voteproof base.Voteproof) error {
 		return err
 	}
 
-	switch voteproof.Stage() {
-	case base.StageACCEPT:
-		_ = css.localstate.SetLastACCEPTVoteproof(voteproof)
-	case base.StageINIT:
-		_ = css.localstate.SetLastINITVoteproof(voteproof)
+	if css.ActiveHandler() != nil && css.ActiveHandler().State() == base.StateSyncing {
+	} else {
+		switch voteproof.Stage() {
+		case base.StageACCEPT:
+			_ = css.localstate.SetLastACCEPTVoteproof(voteproof)
+		case base.StageINIT:
+			_ = css.localstate.SetLastINITVoteproof(voteproof)
+		}
 	}
 
 	if css.ActiveHandler() == nil {
@@ -351,9 +357,7 @@ func (css *ConsensusStates) NewSeal(sl seal.Seal) error {
 		return xerrors.Errorf("no activated handler")
 	}
 
-	isFromLocal := sl.Signer().Equal(css.localstate.Node().Publickey())
-
-	if !isFromLocal {
+	if !sl.Signer().Equal(css.localstate.Node().Publickey()) {
 		if err := css.validateSeal(sl); err != nil {
 			l.Error().Err(err).Msg("seal validation failed")
 
@@ -363,14 +367,13 @@ func (css *ConsensusStates) NewSeal(sl seal.Seal) error {
 
 	if blt, ok := sl.(ballot.Ballot); ok && blt.Stage().CanVote() {
 		if err := css.vote(blt); err != nil {
-			return err
+			return xerrors.Errorf("failed to vote: %w", err)
 		}
 	}
 
 	go func() {
 		if err := css.ActiveHandler().NewSeal(sl); err != nil {
-			l.Error().
-				Err(err).Msg("activated handler can not receive Seal")
+			l.Error().Err(err).Msg("activated handler can not receive Seal")
 		}
 	}()
 
@@ -394,6 +397,7 @@ func (css *ConsensusStates) validateBallot(ballot.Ballot) error {
 
 func (css *ConsensusStates) validateProposal(proposal ballot.Proposal) error {
 	pvc := NewProposalValidationChecker(css.localstate, css.suffrage, proposal)
+	_ = pvc.SetLogger(css.Log())
 
 	return util.NewChecker("proposal-validation-checker", []util.CheckerFunc{
 		pvc.IsKnown,
@@ -429,6 +433,10 @@ func (css *ConsensusStates) vote(blt ballot.Ballot) error {
 }
 
 func checkBlockWithINITVoteproof(manifest block.Manifest, voteproof base.Voteproof) error {
+	if manifest == nil {
+		return nil
+	}
+
 	// check voteproof.PreviousBlock with local block
 	fact, ok := voteproof.Majority().(ballot.INITBallotFact)
 	if !ok {

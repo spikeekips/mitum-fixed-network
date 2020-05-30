@@ -463,7 +463,7 @@ func (nr *NodeRunner) attachConsensusStates() error {
 	{
 		l.Debug().Str("state", "booting").Msg("trying to attach")
 		var err error
-		if booting, err = isaac.NewStateBootingHandler(nr.localstate, nr.proposalProcessor); err != nil {
+		if booting, err = isaac.NewStateBootingHandler(nr.localstate); err != nil {
 			return err
 		}
 		l.Debug().Str("state", "syncing").Msg("trying to attach")

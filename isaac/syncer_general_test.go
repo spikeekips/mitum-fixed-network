@@ -368,7 +368,7 @@ func (t *testGeneralSyncer) TestFromGenesis() {
 
 	target := t.lastManifest(localstate.Storage())
 
-	cs, err := NewGeneralSyncer(syncNode, []Node{localstate.Node()}, 0, target.Height())
+	cs, err := NewGeneralSyncer(syncNode, []Node{localstate.Node()}, base.PreGenesisHeight, target.Height())
 	t.NoError(err)
 
 	defer cs.Close()
@@ -401,7 +401,7 @@ func (t *testGeneralSyncer) TestFromGenesis() {
 		t.NoError(xerrors.Errorf("timeout to wait to be finished"))
 	case ss := <-finishedChan:
 		t.Equal(SyncerSaved, ss.State())
-		t.Equal(base.Height(0), ss.HeightFrom())
+		t.Equal(base.PreGenesisHeight, ss.HeightFrom())
 		t.Equal(target.Height(), ss.HeightTo())
 	}
 }

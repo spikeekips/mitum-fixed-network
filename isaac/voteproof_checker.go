@@ -98,6 +98,7 @@ func (vc *VoteProofChecker) CheckThreshold() (bool, error) {
 }
 
 type VoteproofConsensusStateChecker struct {
+	// TODO rename; it is not only used for consensus state
 	*logging.Logging
 	lastManifest      block.Manifest
 	lastINITVoteproof base.Voteproof
@@ -126,11 +127,18 @@ func (vpc *VoteproofConsensusStateChecker) CheckHeight() (bool, error) {
 	// TODO reduce the duplicated voteproof.
 	l := loggerWithVoteproof(vpc.voteproof, vpc.Log())
 
-	d := vpc.voteproof.Height() - (vpc.lastManifest.Height() + 1)
+	var height base.Height
+	if vpc.lastManifest == nil {
+		height = base.NilHeight
+	} else {
+		height = vpc.lastManifest.Height()
+	}
+
+	d := vpc.voteproof.Height() - (height + 1)
 
 	if d > 0 {
 		l.Debug().
-			Hinted("local_block_height", vpc.lastManifest.Height()).
+			Hinted("local_block_height", height).
 			Msg("Voteproof has higher height from local block")
 
 		var fromState base.State
@@ -143,7 +151,7 @@ func (vpc *VoteproofConsensusStateChecker) CheckHeight() (bool, error) {
 
 	if d < 0 {
 		l.Debug().
-			Hinted("local_block_height", vpc.lastManifest.Height()).
+			Hinted("local_block_height", height).
 			Msg("Voteproof has lower height from local block; ignore it")
 
 		return false, IgnoreVoteproofError

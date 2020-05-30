@@ -63,26 +63,14 @@ func NewStateJoiningHandler(
 	localstate *Localstate,
 	proposalProcessor ProposalProcessor,
 ) (*StateJoiningHandler, error) {
-	if _, err := localstate.Storage().LastManifest(); err != nil {
-		return nil, xerrors.Errorf("last manifest is empty")
-	}
-
 	cs := &StateJoiningHandler{
 		BaseStateHandler: NewBaseStateHandler(localstate, proposalProcessor, base.StateJoining),
 	}
 	cs.BaseStateHandler.Logging = logging.NewLogging(func(c logging.Context) logging.Emitter {
 		return c.Str("module", "consensus-state-joining-handler")
 	})
-	cs.BaseStateHandler.timers = localtime.NewTimers([]string{TimerIDBroadcastingINITBallot}, false)
 
-	if timer, err := cs.TimerBroadcastingINITBallot(
-		func() time.Duration { return localstate.Policy().IntervalBroadcastingINITBallot() },
-		cs.currentRound,
-	); err != nil {
-		return nil, err
-	} else if err := cs.timers.SetTimer(TimerIDBroadcastingINITBallot, timer); err != nil {
-		return nil, err
-	}
+	cs.BaseStateHandler.timers = localtime.NewTimers([]string{TimerIDBroadcastingINITBallot}, false)
 
 	return cs, nil
 }
@@ -95,13 +83,23 @@ func (cs *StateJoiningHandler) SetLogger(l logging.Logger) logging.Logger {
 }
 
 func (cs *StateJoiningHandler) Activate(ctx StateChangeContext) error {
+	if _, err := cs.localstate.Storage().LastManifest(); err != nil {
+		return xerrors.Errorf("last manifest is empty")
+	}
+
+	if timer, err := cs.TimerBroadcastingINITBallot(
+		func() time.Duration { return cs.localstate.Policy().IntervalBroadcastingINITBallot() },
+		cs.currentRound,
+	); err != nil {
+		return err
+	} else if err := cs.timers.SetTimer(TimerIDBroadcastingINITBallot, timer); err != nil {
+		return err
+	}
+
 	// NOTE starts to keep broadcasting INIT Ballot
 	if err := cs.timers.StartTimers([]string{TimerIDBroadcastingINITBallot}, true); err != nil {
 		return err
 	}
-
-	cs.Lock()
-	defer cs.Unlock()
 
 	l := loggerWithStateChangeContext(ctx, cs.Log())
 	l.Debug().Msg("activated")

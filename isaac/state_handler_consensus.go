@@ -40,10 +40,6 @@ func NewStateConsensusHandler(
 	suffrage base.Suffrage,
 	proposalMaker *ProposalMaker,
 ) (*StateConsensusHandler, error) {
-	if _, err := localstate.Storage().LastManifest(); err != nil {
-		return nil, xerrors.Errorf("last manifest is empty")
-	}
-
 	cs := &StateConsensusHandler{
 		BaseStateHandler: NewBaseStateHandler(localstate, proposalProcessor, base.StateConsensus),
 		suffrage:         suffrage,
@@ -73,6 +69,10 @@ func (cs *StateConsensusHandler) SetLogger(l logging.Logger) logging.Logger {
 }
 
 func (cs *StateConsensusHandler) Activate(ctx StateChangeContext) error {
+	if _, err := cs.localstate.Storage().LastManifest(); err != nil {
+		return xerrors.Errorf("last manifest is empty")
+	}
+
 	if ctx.Voteproof() == nil {
 		return xerrors.Errorf("consensus handler got empty Voteproof")
 	} else if ctx.Voteproof().Stage() != base.StageINIT {

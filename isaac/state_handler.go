@@ -144,6 +144,12 @@ func (bs *BaseStateHandler) StoreNewBlock(blockStorage storage.BlockStorage) err
 }
 
 func (bs *BaseStateHandler) StoreNewBlockByVoteproof(acceptVoteproof base.Voteproof) error {
+	if bs.proposalProcessor == nil {
+		bs.Log().Debug().Msg("this state not support store new block")
+
+		return nil
+	}
+
 	fact, ok := acceptVoteproof.Majority().(ballot.ACCEPTBallotFact)
 	if !ok {
 		return xerrors.Errorf("needs ACCEPTBallotFact: fact=%T", acceptVoteproof.Majority())

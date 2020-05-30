@@ -58,11 +58,17 @@ func NewBlockV0(
 }
 
 func (bm BlockV0) IsValid([]byte) error {
-	if err := isvalid.Check([]isvalid.IsValider{
-		bm.ManifestV0,
-		bm.BlockConsensusInfoV0,
-	}, nil, false); err != nil {
-		return err
+	if bm.height == base.PreGenesisHeight {
+		if err := isvalid.Check([]isvalid.IsValider{bm.ManifestV0}, nil, false); err != nil {
+			return err
+		}
+	} else {
+		if err := isvalid.Check([]isvalid.IsValider{
+			bm.ManifestV0,
+			bm.BlockConsensusInfoV0,
+		}, nil, false); err != nil {
+			return err
+		}
 	}
 
 	if bm.OperationsHash() != nil {

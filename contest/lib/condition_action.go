@@ -70,7 +70,7 @@ func (ca *BaseConditionAction) Run() error {
 		return nil
 	case ca.iferror == ConditionActionIfErrorIgnore:
 		return nil
-	case ca.iferror == ConditionActionIfErrorStopProcess:
+	case ca.iferror == ConditionActionIfErrorStopContest:
 		return err
 	default:
 		return err

@@ -12,15 +12,15 @@ type ConditionActionIfError uint8
 
 const (
 	ConditionActionIfErrorIgnore ConditionActionIfError = iota
-	ConditionActionIfErrorStopProcess
+	ConditionActionIfErrorStopContest
 )
 
 func (st ConditionActionIfError) String() string {
 	switch st {
 	case ConditionActionIfErrorIgnore:
 		return "ignore"
-	case ConditionActionIfErrorStopProcess:
-		return "stop-process"
+	case ConditionActionIfErrorStopContest:
+		return "stop-contest"
 	default:
 		return "<unknown ConditionActionIfError>"
 	}
@@ -29,7 +29,7 @@ func (st ConditionActionIfError) String() string {
 func (st ConditionActionIfError) IsValid([]byte) error {
 	switch st {
 	case ConditionActionIfErrorIgnore,
-		ConditionActionIfErrorStopProcess:
+		ConditionActionIfErrorStopContest:
 		return nil
 	}
 
@@ -51,8 +51,8 @@ func (st *ConditionActionIfError) UnmarshalYAML(value *yaml.Node) error {
 		*st = ConditionActionIfErrorIgnore
 
 		return nil
-	case "stop-process":
-		*st = ConditionActionIfErrorStopProcess
+	case "stop-contest":
+		*st = ConditionActionIfErrorStopContest
 
 		return nil
 	default:

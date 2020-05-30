@@ -37,7 +37,7 @@ conditions:
           - n0
           - n1
           - n2
-      if-error: stop-process
+      if-error: stop-contest
     - query: >
         {"_node": "n0", "m": "new block stored", "block.height": 9, "block.round": 0}
     - query: >

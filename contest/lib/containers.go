@@ -477,6 +477,21 @@ func (cts *Containers) Runnings() ([]string, error) {
 	return rs, nil
 }
 
+func (cts *Containers) Container(name string) (*Container, bool) {
+	c, found := cts.containers[name]
+
+	return c, found
+}
+
+func (cts *Containers) ContainerStorage(name string) (storage.Storage, error) {
+	c, found := cts.containers[name]
+	if !found {
+		return nil, xerrors.Errorf("container, %s not found", name)
+	}
+
+	return c.Storage(cts.encs)
+}
+
 type Container struct {
 	sync.RWMutex
 	*logging.Logging

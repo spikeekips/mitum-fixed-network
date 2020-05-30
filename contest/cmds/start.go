@@ -11,6 +11,7 @@ import (
 	"golang.org/x/xerrors"
 
 	contestlib "github.com/spikeekips/mitum/contest/lib"
+	"github.com/spikeekips/mitum/storage"
 	mongodbstorage "github.com/spikeekips/mitum/storage/mongodb"
 	"github.com/spikeekips/mitum/util/encoder"
 	"github.com/spikeekips/mitum/util/logging"
@@ -180,6 +181,7 @@ func (cmd *StartCommand) copyFiles(output string) error {
 
 func (cmd *StartCommand) loadDesign(f string) error {
 	conditionActions["start-node"] = cmd.defaultActionStartNode
+	conditionActions["clean-storage"] = cmd.defaultActionCleanStorage
 
 	if d, err := contestlib.LoadContestDesignFromFile(f, cmd.encs, conditionActions); err != nil {
 		return xerrors.Errorf("failed to load design file: %w", err)
@@ -310,5 +312,44 @@ func (cmd *StartCommand) defaultActionStartNode(nodes []string) (func() error, e
 		}
 
 		return cmd.containers.RunNodes(nodes)
+	}, nil
+}
+
+func (cmd *StartCommand) defaultActionCleanStorage(nodes []string) (func() error, error) {
+	if len(nodes) < 1 {
+		return nil, xerrors.Errorf("empty nodes to clean storage")
+	}
+
+	return func() error {
+		for _, n := range nodes {
+			var found bool
+			for _, d := range cmd.design.Nodes {
+				if n == d.Address() {
+					found = true
+				}
+			}
+
+			if !found {
+				return xerrors.Errorf("container name, %q not found", n)
+			}
+		}
+
+		for _, node := range nodes {
+			var st storage.Storage
+			if s, err := cmd.containers.ContainerStorage(node); err != nil {
+				return err
+			} else {
+				st = s
+			}
+
+			cmd.log.Debug().Str("node", node).Msg("trying to clean storage")
+			if err := st.Clean(); err != nil {
+				return err
+			}
+
+			cmd.log.Debug().Str("node", node).Msg("cleaned storage")
+		}
+
+		return nil
 	}, nil
 }

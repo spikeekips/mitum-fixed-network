@@ -183,7 +183,6 @@ func (st *SyncerStorage) Commit() error {
 	for _, col := range []string{
 		defaultColNameBlock,
 		defaultColNameManifest,
-		defaultColNameVoteproof,
 		defaultColNameSeal,
 		defaultColNameOperation,
 		defaultColNameOperationSeal,

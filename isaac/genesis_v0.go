@@ -176,8 +176,6 @@ func (gg *GenesisBlockV0Generator) generateINITVoteproof() (base.Voteproof, erro
 		} else {
 			if err := gg.localstate.Storage().NewSeals([]seal.Seal{ib}); err != nil {
 				return nil, err
-			} else if err := gg.localstate.Storage().NewINITVoteproof(voteproof); err != nil {
-				return nil, err
 			}
 
 			vp = voteproof
@@ -205,8 +203,6 @@ func (gg *GenesisBlockV0Generator) generateACCEPTVoteproof(newBlock block.Block,
 		}
 
 		if err := gg.localstate.Storage().NewSeals([]seal.Seal{ab}); err != nil {
-			return nil, err
-		} else if err := gg.localstate.Storage().NewACCEPTVoteproof(voteproof); err != nil {
 			return nil, err
 		}
 

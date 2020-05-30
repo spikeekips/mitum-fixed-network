@@ -27,7 +27,6 @@ const (
 	defaultColNameInfo          = "info"
 	defaultColNameBlock         = "block"
 	defaultColNameManifest      = "manifest"
-	defaultColNameVoteproof     = "voteproof"
 	defaultColNameSeal          = "seal"
 	defaultColNameOperation     = "operation"
 	defaultColNameOperationSeal = "operation_seal"
@@ -39,7 +38,6 @@ var allCollections = []string{
 	defaultColNameInfo,
 	defaultColNameBlock,
 	defaultColNameManifest,
-	defaultColNameVoteproof,
 	defaultColNameSeal,
 	defaultColNameOperation,
 	defaultColNameOperationSeal,
@@ -278,102 +276,6 @@ func (st *Storage) Manifest(h valuehash.Hash) (block.Manifest, error) {
 
 func (st *Storage) ManifestByHeight(height base.Height) (block.Manifest, error) {
 	return st.manifestByFilter(util.NewBSONFilter("height", height).D())
-}
-
-func (st *Storage) filterVoteproof(filter bson.D, opts ...*options.FindOptions) (base.Voteproof, error) {
-	var voteproof base.Voteproof
-
-	if err := st.client.Find(
-		defaultColNameVoteproof,
-		filter,
-		func(cursor *mongo.Cursor) (bool, error) {
-			if i, err := loadVoteproofFromDecoder(cursor.Decode, st.encs); err != nil {
-				return false, err
-			} else {
-				voteproof = i
-			}
-
-			return false, nil
-		},
-		opts...,
-	); err != nil {
-		return nil, err
-	}
-
-	return voteproof, nil
-}
-
-func (st *Storage) LastINITVoteproof() (base.Voteproof, error) {
-	return st.filterVoteproof(
-		util.NewBSONFilter("stage", base.StageINIT).D(),
-		options.Find().SetSort(util.NewBSONFilter("height", -1).D()),
-	)
-}
-
-func (st *Storage) NewINITVoteproof(voteproof base.Voteproof) error {
-	if doc, err := NewVoteproofDoc(voteproof, st.enc); err != nil {
-		return err
-	} else if _, err := st.client.Set(defaultColNameVoteproof, doc); err != nil {
-		return err
-	}
-
-	return nil
-}
-
-func (st *Storage) LastINITVoteproofOfHeight(height base.Height) (base.Voteproof, error) {
-	return st.filterVoteproof(
-		util.NewBSONFilter("height", height).Add("stage", base.StageINIT).D(),
-		nil,
-	)
-}
-
-func (st *Storage) LastACCEPTVoteproofOfHeight(height base.Height) (base.Voteproof, error) {
-	return st.filterVoteproof(
-		util.NewBSONFilter("height", height).Add("stage", base.StageACCEPT).D(),
-		nil,
-	)
-}
-
-func (st *Storage) LastACCEPTVoteproof() (base.Voteproof, error) {
-	return st.filterVoteproof(
-		util.NewBSONFilter("stage", base.StageACCEPT).D(),
-		options.Find().SetSort(util.NewBSONFilter("height", -1).D()),
-	)
-}
-
-func (st *Storage) NewACCEPTVoteproof(voteproof base.Voteproof) error {
-	if doc, err := NewVoteproofDoc(voteproof, st.enc); err != nil {
-		return err
-	} else if _, err := st.client.Set(defaultColNameVoteproof, doc); err != nil {
-		return err
-	}
-
-	return nil
-}
-
-func (st *Storage) Voteproofs(callback func(base.Voteproof) (bool, error), sort bool) error {
-	var dir int
-	if sort {
-		dir = 1
-	} else {
-		dir = -1
-	}
-
-	opt := options.Find()
-	opt.SetSort(util.NewBSONFilter("height", dir).D())
-
-	return st.client.Find(
-		defaultColNameVoteproof,
-		bson.D{},
-		func(cursor *mongo.Cursor) (bool, error) {
-			if i, err := loadVoteproofFromDecoder(cursor.Decode, st.encs); err != nil {
-				return false, err
-			} else {
-				return callback(i)
-			}
-		},
-		opt,
-	)
 }
 
 func (st *Storage) Seal(h valuehash.Hash) (seal.Seal, error) {

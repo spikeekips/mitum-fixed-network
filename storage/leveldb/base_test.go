@@ -18,7 +18,6 @@ import (
 	"github.com/spikeekips/mitum/base/valuehash"
 	"github.com/spikeekips/mitum/storage"
 	"github.com/spikeekips/mitum/util"
-	"github.com/spikeekips/mitum/util/localtime"
 )
 
 type testLeveldbStorage struct {
@@ -124,120 +123,6 @@ func (t *testLeveldbStorage) TestLoadBlockByHeight() {
 	t.NoError(err)
 
 	t.CompareBlock(blk, loaded)
-}
-
-func (t *testLeveldbStorage) TestLoadINITVoteproof() {
-	{
-		loaded, err := t.storage.LastINITVoteproof()
-		t.Nil(err)
-		t.Nil(loaded)
-	}
-
-	// store first
-	threshold, _ := base.NewThreshold(2, 67)
-	voteproof := base.NewVoteproofV0(
-		base.Height(33),
-		base.Round(3),
-		threshold,
-		base.StageINIT,
-	)
-	voteproof.SetResult(base.VoteResultMajority).Finish()
-
-	t.NoError(t.storage.NewINITVoteproof(voteproof))
-
-	loaded, err := t.storage.LastINITVoteproof()
-	t.NoError(err)
-	t.NotNil(loaded)
-
-	t.Equal(voteproof.Stage(), base.StageINIT)
-	t.Equal(voteproof.Height(), loaded.Height())
-	t.Equal(voteproof.Round(), loaded.Round())
-	t.Equal(voteproof.Result(), loaded.Result())
-	t.Equal(localtime.RFC3339(voteproof.FinishedAt()), localtime.RFC3339(loaded.FinishedAt()))
-}
-
-func (t *testLeveldbStorage) TestLoadACCEPTVoteproof() {
-	{
-		loaded, err := t.storage.LastINITVoteproof()
-		t.Nil(err)
-		t.Nil(loaded)
-	}
-
-	// store first
-	threshold, _ := base.NewThreshold(2, 67)
-	ivp := base.NewVoteproofV0(
-		base.Height(33),
-		base.Round(3),
-		threshold,
-		base.StageINIT,
-	)
-
-	ivp.SetResult(base.VoteResultMajority).Finish()
-
-	t.NoError(t.storage.NewINITVoteproof(ivp))
-
-	avp := base.NewVoteproofV0(
-		base.Height(33),
-		base.Round(3),
-		threshold,
-		base.StageACCEPT,
-	)
-	avp.SetResult(base.VoteResultMajority).Finish()
-
-	t.NoError(t.storage.NewACCEPTVoteproof(avp))
-
-	loaded, err := t.storage.LastACCEPTVoteproof()
-	t.NoError(err)
-	t.NotNil(loaded)
-
-	t.Equal(avp.Stage(), base.StageACCEPT)
-	t.Equal(avp.Height(), loaded.Height())
-	t.Equal(avp.Round(), loaded.Round())
-	t.Equal(avp.Result(), loaded.Result())
-	t.Equal(localtime.RFC3339(avp.FinishedAt()), localtime.RFC3339(loaded.FinishedAt()))
-}
-
-func (t *testLeveldbStorage) TestLoadVoteproofs() {
-	{
-		loaded, err := t.storage.LastINITVoteproof()
-		t.Nil(err)
-		t.Nil(loaded)
-	}
-
-	// store first
-	threshold, _ := base.NewThreshold(2, 67)
-	ivp := base.NewVoteproofV0(
-		base.Height(33),
-		base.Round(3),
-		threshold,
-		base.StageINIT,
-	)
-	ivp.SetResult(base.VoteResultMajority).Finish()
-
-	t.NoError(t.storage.NewINITVoteproof(ivp))
-
-	avp := base.NewVoteproofV0(
-		base.Height(33),
-		base.Round(3),
-		threshold,
-		base.StageACCEPT,
-	)
-	avp.SetResult(base.VoteResultMajority).Finish()
-
-	t.NoError(t.storage.NewACCEPTVoteproof(avp))
-
-	loaded, err := t.storage.LastACCEPTVoteproof()
-	t.NoError(err)
-	t.NotNil(loaded)
-
-	var voteproofs []base.Voteproof
-	t.storage.Voteproofs(func(voteproof base.Voteproof) (bool, error) {
-		voteproofs = append(voteproofs, voteproof)
-
-		return true, nil
-	}, false)
-
-	t.Equal(2, len(voteproofs))
 }
 
 func (t *testLeveldbStorage) TestSeals() {

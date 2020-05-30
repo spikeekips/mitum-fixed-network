@@ -30,14 +30,6 @@ type Storage interface {
 	ManifestByHeight(base.Height) (block.Manifest, error)
 	// TODO add ManifestsByHeight([]base.Height) ([]block.Manifest, error)
 
-	NewINITVoteproof(base.Voteproof) error
-	LastINITVoteproof() (base.Voteproof, error)
-	LastINITVoteproofOfHeight(base.Height) (base.Voteproof, error)
-	NewACCEPTVoteproof(base.Voteproof) error
-	LastACCEPTVoteproof() (base.Voteproof, error)
-	LastACCEPTVoteproofOfHeight(base.Height) (base.Voteproof, error)
-	Voteproofs(func(base.Voteproof) (bool, error), bool /* sort */) error
-
 	NewSeals([]seal.Seal) error
 	Seal(valuehash.Hash) (seal.Seal, error)
 	Seals(func(valuehash.Hash, seal.Seal) (bool, error), bool /* sort */, bool /* load Seal? */) error

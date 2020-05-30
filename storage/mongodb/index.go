@@ -85,30 +85,11 @@ var sealIndexModels = []mongo.IndexModel{
 	},
 }
 
-var voteproofIndexModels = []mongo.IndexModel{
-	{
-		Keys: bson.D{bson.E{Key: "height", Value: -1}},
-		Options: options.Index().
-			SetName("voteproof_height"),
-	},
-	{
-		Keys: bson.D{bson.E{Key: "stage", Value: 1}},
-		Options: options.Index().
-			SetName("voteproof_stage"),
-	},
-	{
-		Keys: bson.D{bson.E{Key: "height", Value: -1}, bson.E{Key: "stage", Value: 1}},
-		Options: options.Index().
-			SetName("voteproof_height_and_stage"),
-	},
-}
-
 var defaultIndexes = map[string] /* collection */ []mongo.IndexModel{
 	defaultColNameBlock:     blockIndexModels,
 	defaultColNameManifest:  manifestIndexModels,
 	defaultColNameOperation: operationIndexModels,
 	defaultColNameProposal:  proposalIndexModels,
 	defaultColNameSeal:      sealIndexModels,
-	defaultColNameVoteproof: voteproofIndexModels,
 	defaultColNameState:     stateIndexModels,
 }

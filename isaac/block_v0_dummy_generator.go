@@ -137,10 +137,6 @@ func (bg *DummyBlocksV0Generator) syncBlocks(from *Localstate) error {
 		return err
 	}
 
-	if err := bg.syncVoteproofs(from); err != nil {
-		return err
-	}
-
 	return nil
 }
 
@@ -186,38 +182,6 @@ func (bg *DummyBlocksV0Generator) syncSeals(from *Localstate) error {
 		for _, proposal := range proposals {
 			if err := l.Storage().NewProposal(proposal); err != nil {
 				return err
-			}
-		}
-	}
-
-	return nil
-}
-
-func (bg *DummyBlocksV0Generator) syncVoteproofs(from *Localstate) error {
-	var voteproofs []base.Voteproof
-	if err := from.Storage().Voteproofs(
-		func(voteproof base.Voteproof) (bool, error) {
-			voteproofs = append(voteproofs, voteproof)
-			return true, nil
-		},
-		true,
-	); err != nil {
-		return err
-	}
-	for _, l := range bg.allNodes {
-		if l.Node().Address().Equal(from.Node().Address()) {
-			continue
-		}
-
-		for _, voteproof := range voteproofs {
-			if voteproof.Stage() == base.StageINIT {
-				if err := l.Storage().NewINITVoteproof(voteproof); err != nil {
-					return err
-				}
-			} else {
-				if err := l.Storage().NewACCEPTVoteproof(voteproof); err != nil {
-					return err
-				}
 			}
 		}
 	}

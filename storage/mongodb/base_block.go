@@ -131,15 +131,7 @@ func (bst *BlockStorage) Commit() error {
 		return storage.WrapError(err)
 	}
 
-	if cb, err := NewLastManifestDoc(bst.block.Height(), bst.st.enc); err != nil {
-		return err
-	} else if _, err := bst.st.client.Set(defaultColNameInfo, cb); err != nil {
-		return err
-	} else {
-		bst.st.setLastBlock(bst.block)
-	}
-
-	return nil
+	return bst.st.setLastBlock(bst.block, true)
 }
 
 func (bst *BlockStorage) setOperations(tr *tree.AVLTree) error {

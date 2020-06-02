@@ -21,7 +21,7 @@ type Storage interface {
 	OpenBlockStorage(block.Block) (BlockStorage, error)
 	SyncerStorage() (SyncerStorage, error)
 
-	LastBlock() (block.Block, error)
+	LastBlock() (block.Block, error) // TODO return found bool instead of storage.NotFoundError
 	LastManifest() (block.Manifest, error)
 	Block(valuehash.Hash) (block.Block, error)
 	BlockByHeight(base.Height) (block.Block, error)
@@ -57,4 +57,8 @@ type BlockStorage interface {
 	// NOTE UnstageOperationSeals cleans staged operation.Seals
 	UnstageOperationSeals([]valuehash.Hash) error
 	Commit() error
+}
+
+type LastBlockSaver interface {
+	SaveLastBlock(base.Height) error
 }

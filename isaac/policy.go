@@ -1,6 +1,7 @@
 package isaac
 
 import (
+	"sync"
 	"time"
 
 	"golang.org/x/xerrors"
@@ -11,6 +12,8 @@ import (
 )
 
 type LocalPolicy struct {
+	sync.RWMutex
+	st                               storage.Storage
 	networkID                        *util.LockedItem // NOTE networkID should be string, internally []byte
 	threshold                        *util.LockedItem
 	timeoutWaitingProposal           *util.LockedItem
@@ -25,12 +28,25 @@ type LocalPolicy struct {
 }
 
 func NewLocalPolicy(st storage.Storage, networkID []byte) (*LocalPolicy, error) {
+	lp := &LocalPolicy{
+		st:        st,
+		networkID: util.NewLockedItem(networkID),
+	}
+
+	if err := lp.load(); err != nil {
+		return nil, err
+	}
+
+	return lp, nil
+}
+
+func (lp *LocalPolicy) load() error {
 	var loaded PolicyOperationBodyV0
-	if st == nil {
+	if lp.st == nil {
 		loaded = DefaultPolicy()
 	} else {
-		if l, found, err := st.State(PolicyOperationKey); err != nil {
-			return nil, err
+		if l, found, err := lp.st.State(PolicyOperationKey); err != nil {
+			return err
 		} else if !found || l.Value() == nil { // set default
 			loaded = DefaultPolicy()
 		} else if i := l.Value().Interface(); i == nil {
@@ -42,17 +58,23 @@ func NewLocalPolicy(st storage.Storage, networkID []byte) (*LocalPolicy, error) 
 		}
 	}
 
-	return &LocalPolicy{
-		networkID:                        util.NewLockedItem(networkID),
-		threshold:                        util.NewLockedItem(loaded.Threshold),
-		timeoutWaitingProposal:           util.NewLockedItem(loaded.TimeoutWaitingProposal),
-		intervalBroadcastingINITBallot:   util.NewLockedItem(loaded.IntervalBroadcastingINITBallot),
-		intervalBroadcastingProposal:     util.NewLockedItem(loaded.IntervalBroadcastingProposal),
-		waitBroadcastingACCEPTBallot:     util.NewLockedItem(loaded.WaitBroadcastingACCEPTBallot),
-		intervalBroadcastingACCEPTBallot: util.NewLockedItem(loaded.IntervalBroadcastingACCEPTBallot),
-		numberOfActingSuffrageNodes:      util.NewLockedItem(loaded.NumberOfActingSuffrageNodes),
-		timespanValidBallot:              util.NewLockedItem(loaded.TimespanValidBallot),
-	}, nil
+	lp.threshold = util.NewLockedItem(loaded.Threshold)
+	lp.timeoutWaitingProposal = util.NewLockedItem(loaded.TimeoutWaitingProposal)
+	lp.intervalBroadcastingINITBallot = util.NewLockedItem(loaded.IntervalBroadcastingINITBallot)
+	lp.intervalBroadcastingProposal = util.NewLockedItem(loaded.IntervalBroadcastingProposal)
+	lp.waitBroadcastingACCEPTBallot = util.NewLockedItem(loaded.WaitBroadcastingACCEPTBallot)
+	lp.intervalBroadcastingACCEPTBallot = util.NewLockedItem(loaded.IntervalBroadcastingACCEPTBallot)
+	lp.numberOfActingSuffrageNodes = util.NewLockedItem(loaded.NumberOfActingSuffrageNodes)
+	lp.timespanValidBallot = util.NewLockedItem(loaded.TimespanValidBallot)
+
+	return nil
+}
+
+func (lp *LocalPolicy) Reload() error {
+	lp.Lock()
+	defer lp.Unlock()
+
+	return lp.load()
 }
 
 func (lp *LocalPolicy) NetworkID() []byte {

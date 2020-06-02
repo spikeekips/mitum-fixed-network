@@ -30,8 +30,7 @@ func (t *testConsensusStates) TestINITVoteproofHigherHeight() {
 	_ = t.localstate.Policy().SetThreshold(thr)
 	_ = t.remoteState.Policy().SetThreshold(thr)
 
-	cs, err := NewStateSyncingHandler(t.localstate, nil)
-	t.NoError(err)
+	cs := NewStateSyncingHandler(t.localstate)
 
 	css := NewConsensusStates(t.localstate, nil, nil, nil, nil, nil, &dummySyncingStateHandler{cs}, nil)
 	t.NotNil(css)

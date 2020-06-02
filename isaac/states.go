@@ -244,12 +244,12 @@ func (css *ConsensusStates) activateHandler(ctx StateChangeContext) error {
 		l.Info().Hinted("handler", handler.State()).Msgf("deactivated: %s", handler.State())
 	}
 
+	toHandler.SetLastINITVoteproof(css.livp)
 	if err := toHandler.Activate(ctx); err != nil {
 		return FailedToActivateHandler.Wrap(err)
 	}
 
 	css.activeHandler = toHandler
-	css.activeHandler.SetLastINITVoteproof(css.livp)
 
 	l.Info().Hinted("new_handler", toHandler.State()).Msgf("state changed: %s -> %s", ctx.From(), ctx.To())
 
@@ -333,9 +333,7 @@ func (css *ConsensusStates) newVoteproof(voteproof base.Voteproof) error {
 	}
 
 	if css.ActiveHandler() != nil {
-		switch {
-		case css.ActiveHandler().State() == base.StateSyncing:
-		case voteproof.Stage() == base.StageINIT:
+		if voteproof.Stage() == base.StageINIT {
 			css.setLastINITVoteproof(voteproof)
 		}
 	}

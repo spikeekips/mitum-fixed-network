@@ -101,8 +101,18 @@ func (st *Storage) loadLastBlock() error {
 
 	if blk, err := st.rawBlockByFilter(util.NewBSONFilter("height", height).D()); err != nil {
 		return err
-	} else {
-		st.setLastBlock(blk)
+	} else if err := st.setLastBlock(blk, false); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (st *Storage) SaveLastBlock(height base.Height) error {
+	if cb, err := NewLastManifestDoc(height, st.enc); err != nil {
+		return err
+	} else if _, err := st.client.Set(defaultColNameInfo, cb); err != nil {
+		return err
 	}
 
 	return nil
@@ -141,31 +151,49 @@ func (st *Storage) setLastManifest(m block.Manifest) {
 		return
 	}
 
+	st.Log().Debug().Hinted("manifest_height", m.Height()).Msg("new last manifest")
+
 	st.lastManifest = m
 	st.lastManifestHeight = m.Height()
 }
 
-func (st *Storage) setLastBlock(blk block.Block) {
+func (st *Storage) setLastBlock(blk block.Block, save bool) error {
 	st.Lock()
 	defer st.Unlock()
 
 	if blk == nil {
+		if save {
+			if err := st.SaveLastBlock(base.NilHeight); err != nil {
+				return err
+			}
+		}
+
 		st.lastManifest = nil
 		st.lastManifestHeight = base.PreGenesisHeight
 		st.lastINITVoteproof = nil
 		st.lastACCEPTVoteproof = nil
 
-		return
+		return nil
 	}
 
 	if blk.Height() <= st.lastManifestHeight {
-		return
+		return nil
 	}
+
+	if save {
+		if err := st.SaveLastBlock(blk.Height()); err != nil {
+			return err
+		}
+	}
+
+	st.Log().Debug().Hinted("block_height", blk.Height()).Msg("new last block")
 
 	st.lastManifest = blk.Manifest()
 	st.lastManifestHeight = blk.Height()
 	st.lastINITVoteproof = blk.INITVoteproof()
 	st.lastACCEPTVoteproof = blk.ACCEPTVoteproof()
+
+	return nil
 }
 
 func (st *Storage) LastVoteproof(stage base.Stage) (base.Voteproof, error) {

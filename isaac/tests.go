@@ -4,6 +4,7 @@ package isaac
 
 import (
 	"os"
+	"time"
 
 	"github.com/rs/zerolog"
 
@@ -13,6 +14,8 @@ import (
 var log logging.Logger // nolint
 
 func init() {
+	zerolog.TimeFieldFormat = time.RFC3339Nano
+
 	l := zerolog.
 		New(os.Stderr).
 		With().

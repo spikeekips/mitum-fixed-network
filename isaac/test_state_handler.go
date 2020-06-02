@@ -271,8 +271,17 @@ func (t *baseTestStateHandler) compareManifest(a, b block.Manifest) {
 	t.Equal(a.Round(), b.Round())
 	t.True(a.Proposal().Equal(b.Proposal()))
 	t.True(a.PreviousBlock().Equal(b.PreviousBlock()))
-	t.True(a.OperationsHash().Equal(b.OperationsHash()))
-	t.True(a.StatesHash().Equal(b.StatesHash()))
+	if a.OperationsHash() == nil {
+		t.Nil(b.OperationsHash())
+	} else {
+		t.True(a.OperationsHash().Equal(b.OperationsHash()))
+	}
+
+	if a.StatesHash() == nil {
+		t.Nil(b.StatesHash())
+	} else {
+		t.True(a.StatesHash().Equal(b.StatesHash()))
+	}
 }
 
 func (t *baseTestStateHandler) compareBlock(a, b block.Block) {

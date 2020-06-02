@@ -12,92 +12,10 @@ import (
 	"github.com/spikeekips/mitum/base/block"
 	channetwork "github.com/spikeekips/mitum/network/gochan"
 	"github.com/spikeekips/mitum/storage"
-	"github.com/spikeekips/mitum/util"
 )
 
 type testGeneralSyncer struct {
-	baseTestStateHandler
-
-	sf base.Suffrage
-}
-
-func (t *testGeneralSyncer) setup(local *Localstate, others []*Localstate) {
-	var nodes []*Localstate = []*Localstate{local}
-	nodes = append(nodes, others...)
-
-	lastHeight := t.lastManifest(local.Storage()).Height()
-
-	for _, l := range nodes {
-		t.NoError(l.Storage().Clean())
-	}
-
-	bg, err := NewDummyBlocksV0Generator(
-		local,
-		lastHeight,
-		t.suffrage(local, nodes...),
-		nodes,
-	)
-	t.NoError(err)
-	t.NoError(bg.Generate(true))
-
-	for _, st := range nodes {
-		nch := st.Node().Channel().(*channetwork.NetworkChanChannel)
-		nch.SetGetManifests(func(heights []base.Height) ([]block.Manifest, error) {
-			var bs []block.Manifest
-			for _, h := range heights {
-				m, err := st.Storage().ManifestByHeight(h)
-				if err != nil {
-					if xerrors.Is(err, storage.NotFoundError) {
-						break
-					}
-
-					return nil, err
-				}
-
-				bs = append(bs, m)
-			}
-
-			return bs, nil
-		})
-
-		nch.SetGetBlocks(func(heights []base.Height) ([]block.Block, error) {
-			var bs []block.Block
-			for _, h := range heights {
-				m, err := st.Storage().BlockByHeight(h)
-				if err != nil {
-					if xerrors.Is(err, storage.NotFoundError) {
-						break
-					}
-
-					return nil, err
-				}
-
-				bs = append(bs, m)
-			}
-
-			return bs, nil
-		})
-	}
-}
-
-func (t *testGeneralSyncer) generateBlocks(localstates []*Localstate, targetHeight base.Height) {
-	bg, err := NewDummyBlocksV0Generator(
-		localstates[0],
-		targetHeight,
-		t.suffrage(localstates[0], localstates...),
-		localstates,
-	)
-	t.NoError(err)
-	t.NoError(bg.Generate(false))
-}
-
-func (t *testGeneralSyncer) emptyLocalstate() *Localstate {
-	lst := t.Storage(nil, nil)
-	localNode := RandomLocalNode(util.UUID().String(), nil)
-	localstate, err := NewLocalstate(lst, localNode, TestNetworkID)
-	t.NoError(err)
-
-	return localstate
+	baseTestSyncer
 }
 
 func (t *testGeneralSyncer) TestInvalidFrom() {
@@ -175,6 +93,8 @@ func (t *testGeneralSyncer) TestHeadAndTailManifests() {
 	defer cs.Close()
 
 	cs.reset()
+
+	cs.setState(SyncerPreparing)
 	t.NoError(cs.headAndTailManifests())
 
 	{
@@ -243,8 +163,12 @@ func (t *testGeneralSyncer) TestFetchBlocks() {
 	defer cs.Close()
 
 	cs.reset()
+
+	cs.setState(SyncerPreparing)
 	t.NoError(cs.headAndTailManifests())
 	t.NoError(cs.fillManifests())
+
+	cs.setState(SyncerSaving)
 	t.NoError(cs.startBlocks())
 
 	for i := baseHeight.Int64() + 1; i < target.Int64()+1; i++ {
@@ -277,7 +201,11 @@ func (t *testGeneralSyncer) TestSaveBlocks() {
 	defer cs.Close()
 
 	cs.reset()
-	t.NoError(cs.prepare())
+
+	cs.setState(SyncerPreparing)
+	t.NoError(cs.headAndTailManifests())
+	t.NoError(cs.fillManifests())
+	cs.setState(SyncerPrepared)
 
 	for i := baseHeight.Int64() + 1; i < target.Int64()+1; i++ {
 		b, err := cs.storage().Manifest(base.Height(i))
@@ -286,7 +214,7 @@ func (t *testGeneralSyncer) TestSaveBlocks() {
 		t.Equal(i, b.Height().Int64())
 	}
 
-	t.Equal(SyncerPrepared, cs.State())
+	cs.setState(SyncerSaving)
 
 	t.NoError(cs.startBlocks())
 
@@ -323,19 +251,19 @@ func (t *testGeneralSyncer) TestFinishedChan() {
 
 	defer cs.Close()
 
-	stateChan := make(chan Syncer)
-	finishedChan := make(chan Syncer)
+	stateChan := make(chan SyncerStateChangedContext)
+	finishedChan := make(chan SyncerStateChangedContext)
 
 	go func() {
 	end:
 		for {
 			select {
-			case ss := <-stateChan:
-				if ss.State() != SyncerSaved {
+			case ctx := <-stateChan:
+				if ctx.State() != SyncerSaved {
 					continue
 				}
 
-				finishedChan <- ss
+				finishedChan <- ctx
 				break end
 			}
 		}
@@ -344,15 +272,14 @@ func (t *testGeneralSyncer) TestFinishedChan() {
 	cs.SetStateChan(stateChan)
 
 	t.NoError(cs.Prepare(baseBlock))
-	t.NoError(cs.Save())
 
 	select {
 	case <-time.After(time.Second * 5):
 		t.NoError(xerrors.Errorf("timeout to wait to be finished"))
-	case ss := <-finishedChan:
-		t.Equal(SyncerSaved, ss.State())
-		t.Equal(baseBlock.Height()+1, ss.HeightFrom())
-		t.Equal(target, ss.HeightTo())
+	case ctx := <-finishedChan:
+		t.Equal(SyncerSaved, ctx.State())
+		t.Equal(baseBlock.Height()+1, ctx.Syncer().HeightFrom())
+		t.Equal(target, ctx.Syncer().HeightTo())
 	}
 }
 
@@ -373,19 +300,19 @@ func (t *testGeneralSyncer) TestFromGenesis() {
 
 	defer cs.Close()
 
-	stateChan := make(chan Syncer)
-	finishedChan := make(chan Syncer)
+	stateChan := make(chan SyncerStateChangedContext)
+	finishedChan := make(chan SyncerStateChangedContext)
 
 	go func() {
 	end:
 		for {
 			select {
-			case ss := <-stateChan:
-				if ss.State() != SyncerSaved {
+			case ctx := <-stateChan:
+				if ctx.State() != SyncerSaved {
 					continue
 				}
 
-				finishedChan <- ss
+				finishedChan <- ctx
 				break end
 			}
 		}
@@ -394,15 +321,14 @@ func (t *testGeneralSyncer) TestFromGenesis() {
 	cs.SetStateChan(stateChan)
 
 	t.NoError(cs.Prepare(nil))
-	t.NoError(cs.Save())
 
 	select {
 	case <-time.After(time.Second * 5):
 		t.NoError(xerrors.Errorf("timeout to wait to be finished"))
-	case ss := <-finishedChan:
-		t.Equal(SyncerSaved, ss.State())
-		t.Equal(base.PreGenesisHeight, ss.HeightFrom())
-		t.Equal(target.Height(), ss.HeightTo())
+	case ctx := <-finishedChan:
+		t.Equal(SyncerSaved, ctx.State())
+		t.Equal(base.PreGenesisHeight, ctx.Syncer().HeightFrom())
+		t.Equal(target.Height(), ctx.Syncer().HeightTo())
 	}
 }
 
@@ -416,8 +342,7 @@ func (t *testGeneralSyncer) TestSyncingHandlerFromBallot() {
 	target := baseBlock.Height() + 5
 	t.generateBlocks([]*Localstate{rn0, rn1, rn2}, target)
 
-	cs, err := NewStateSyncingHandler(localstate, nil)
-	t.NoError(err)
+	cs := NewStateSyncingHandler(localstate)
 
 	blt := t.newINITBallot(rn0, base.Round(0), nil)
 
@@ -456,8 +381,7 @@ func (t *testGeneralSyncer) TestSyncingHandlerFromINITVoteproof() {
 	target := baseBlock.Height() + 5
 	t.generateBlocks([]*Localstate{rn0, rn1, rn2}, target)
 
-	cs, err := NewStateSyncingHandler(localstate, nil)
-	t.NoError(err)
+	cs := NewStateSyncingHandler(localstate)
 
 	var voteproof base.Voteproof
 	{
@@ -510,8 +434,7 @@ func (t *testGeneralSyncer) TestSyncingHandlerFromACCEPTVoteproof() {
 	target := baseBlock.Height() + 5
 	t.generateBlocks([]*Localstate{rn0, rn1, rn2}, target)
 
-	cs, err := NewStateSyncingHandler(localstate, nil)
-	t.NoError(err)
+	cs := NewStateSyncingHandler(localstate)
 
 	var voteproof base.Voteproof
 	{

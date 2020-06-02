@@ -5,7 +5,7 @@ import (
 	jsonencoder "github.com/spikeekips/mitum/util/encoder/json"
 )
 
-func (lp LocalPolicy) MarshalJSON() ([]byte, error) {
+func (lp *LocalPolicy) MarshalJSON() ([]byte, error) {
 	return jsonencoder.Marshal(struct {
 		NID string         `json:"network_id"`
 		TH  base.Threshold `json:"threshold"`

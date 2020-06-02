@@ -1,6 +1,7 @@
 package isaac
 
 import (
+	"fmt"
 	"sort"
 	"sync"
 	"time"
@@ -46,8 +47,7 @@ type GeneralSyncer struct { // nolint; maligned
 	pn                      []base.Address
 	state                   SyncerState
 	bm                      block.Manifest
-	willSave                bool
-	stateChan               chan<- Syncer
+	stateChan               chan<- SyncerStateChangedContext
 }
 
 func NewGeneralSyncer(
@@ -110,15 +110,20 @@ func (cs *GeneralSyncer) SetLogger(l logging.Logger) logging.Logger {
 	return cs.Logging.SetLogger(l)
 }
 
+func (cs *GeneralSyncer) ID() string {
+	return fmt.Sprintf("%v-%v", cs.heightFrom, cs.heightTo)
+}
+
 func (cs *GeneralSyncer) Close() error {
 	if cs.storage() == nil {
 		return nil
 	}
 
+	defer cs.Log().Debug().Msg("closed")
 	return cs.storage().Close()
 }
 
-func (cs *GeneralSyncer) SetStateChan(stateChan chan<- Syncer) *GeneralSyncer {
+func (cs *GeneralSyncer) SetStateChan(stateChan chan<- SyncerStateChangedContext) *GeneralSyncer {
 	cs.stateChan = stateChan
 
 	return cs
@@ -144,30 +149,30 @@ func (cs *GeneralSyncer) setState(state SyncerState) {
 
 	cs.Log().Debug().Str("new_state", state.String()).Msg("state changed")
 
+	if cs.state >= state {
+		return
+	}
+
 	cs.state = state
 
 	if cs.stateChan != nil {
 		go func() {
-			cs.stateChan <- cs
+			cs.stateChan <- NewSyncerStateChangedContext(cs, state)
 		}()
 	}
 }
 
-func (cs *GeneralSyncer) Save() error {
-	if cs.State() == SyncerSaved {
-		return nil
-	}
-
-	cs.readyToSave()
-
-	if cs.State() != SyncerPrepared {
-		return nil
-	}
-
-	return cs.save()
-}
-
 func (cs *GeneralSyncer) save() error {
+	if cs.State() != SyncerPrepared {
+		cs.Log().Debug().Msg("not yet prepared")
+
+		return nil
+	} else if cs.State() == SyncerSaved {
+		cs.Log().Debug().Msg("already saved")
+
+		return nil
+	}
+
 	cs.Log().Debug().Msg("trying to save")
 
 	cs.setState(SyncerSaving)
@@ -180,9 +185,7 @@ func (cs *GeneralSyncer) save() error {
 		return err
 	}
 
-	if err := cs.storage().Close(); err != nil {
-		return err
-	}
+	cs.Log().Debug().Msg("saved")
 
 	cs.setState(SyncerSaved)
 
@@ -192,6 +195,8 @@ func (cs *GeneralSyncer) save() error {
 func (cs *GeneralSyncer) reset() error {
 	cs.Lock()
 	defer cs.Unlock()
+
+	cs.Log().Debug().Msg("syncer will be reset")
 
 	if cs.st != nil {
 		if err := cs.st.Close(); err != nil {
@@ -231,11 +236,17 @@ func (cs *GeneralSyncer) baseManifest() block.Manifest {
 	return cs.bm
 }
 
-func (cs *GeneralSyncer) setBaseManifest(bm block.Manifest) {
+func (cs *GeneralSyncer) setBaseManifest(manifest block.Manifest) error {
 	cs.Lock()
 	defer cs.Unlock()
 
-	cs.bm = bm
+	if manifest != nil && cs.heightFrom != manifest.Height()+1 {
+		return xerrors.Errorf("invalid base manifest found: expected=%v manifest=%v", cs.heightFrom, manifest.Height())
+	}
+
+	cs.bm = manifest
+
+	return nil
 }
 
 func (cs *GeneralSyncer) provedNodes() []base.Address {
@@ -258,7 +269,9 @@ func (cs *GeneralSyncer) Prepare(manifest block.Manifest) error {
 		return nil
 	}
 
-	cs.setBaseManifest(manifest)
+	if err := cs.setBaseManifest(manifest); err != nil {
+		return err
+	}
 
 	go func() {
 		// NOTE do forever unless successfully done
@@ -299,32 +312,18 @@ func (cs *GeneralSyncer) prepare() error {
 		return err
 	}
 
+	cs.Log().Debug().Msg("prepared")
+
 	cs.setState(SyncerPrepared)
 
-	if cs.isReadyToSave() {
-		if err := cs.save(); err != nil {
-			return err
-		}
-	}
-
-	return nil
-}
-
-func (cs *GeneralSyncer) isReadyToSave() bool {
-	cs.RLock()
-	defer cs.RUnlock()
-
-	return cs.willSave
-}
-
-func (cs *GeneralSyncer) readyToSave() {
-	cs.Lock()
-	defer cs.Unlock()
-
-	cs.willSave = true
+	return cs.save()
 }
 
 func (cs *GeneralSyncer) headAndTailManifests() error {
+	if cs.State() != SyncerPreparing {
+		return xerrors.Errorf("not preparing state: %v", cs.State())
+	}
+
 	var heights []base.Height
 	if cs.heightFrom == cs.heightTo {
 		heights = []base.Height{cs.heightFrom}
@@ -379,6 +378,10 @@ func (cs *GeneralSyncer) headAndTailManifests() error {
 }
 
 func (cs *GeneralSyncer) fillManifests() error {
+	if cs.State() != SyncerPreparing {
+		return xerrors.Errorf("not preparing state: %v", cs.State())
+	}
+
 	if cs.heightFrom == cs.heightTo || cs.heightTo == cs.heightFrom+1 {
 		return nil
 	}
@@ -421,6 +424,10 @@ func (cs *GeneralSyncer) fillManifests() error {
 }
 
 func (cs *GeneralSyncer) startBlocks() error {
+	if cs.State() != SyncerSaving {
+		return xerrors.Errorf("not saving state: %v", cs.State())
+	}
+
 	cs.Log().Debug().Msg("start to fetch blocks")
 	defer cs.Log().Debug().Msg("fetched blocks")
 

@@ -17,8 +17,7 @@ type testStateSyncingHandler struct {
 func (t *testStateSyncingHandler) TestINITMovesToConsensus() {
 	t.localstate.Policy().SetTimeoutWaitingProposal(time.Millisecond * 10)
 
-	cs, err := NewStateSyncingHandler(t.localstate, NewDummyProposalProcessor(nil, nil))
-	t.NoError(err)
+	cs := NewStateSyncingHandler(t.localstate)
 	t.NotNil(cs)
 
 	stateChan := make(chan StateChangeContext)
@@ -26,17 +25,11 @@ func (t *testStateSyncingHandler) TestINITMovesToConsensus() {
 
 	doneChan := make(chan struct{})
 	go func() {
-	end:
-		for {
-			select {
-			case <-time.After(time.Second):
-				break end
-			case ctx := <-stateChan:
-				if ctx.To() == base.StateConsensus {
-					doneChan <- struct{}{}
+		for ctx := range stateChan {
+			if ctx.To() == base.StateConsensus {
+				doneChan <- struct{}{}
 
-					break end
-				}
+				break
 			}
 		}
 	}()
@@ -58,6 +51,42 @@ func (t *testStateSyncingHandler) TestINITMovesToConsensus() {
 
 	select {
 	case <-time.After(time.Second):
+		t.NoError(xerrors.Errorf("timeout to wait to be finished"))
+	case <-doneChan:
+		break
+	}
+}
+
+func (t *testStateSyncingHandler) TestWaitMovesToJoining() {
+	t.localstate.Policy().SetTimeoutWaitingProposal(time.Millisecond * 10)
+
+	cs := NewStateSyncingHandler(t.localstate)
+	cs.waitVoteproofTimeout = time.Millisecond * 10
+	t.NotNil(cs)
+
+	stateChan := make(chan StateChangeContext)
+	cs.SetStateChan(stateChan)
+
+	doneChan := make(chan struct{})
+	go func() {
+		for ctx := range stateChan {
+			if ctx.To() == base.StateJoining {
+				doneChan <- struct{}{}
+
+				break
+			}
+		}
+	}()
+
+	t.NoError(cs.Activate(NewStateChangeContext(base.StateBooting, base.StateSyncing, nil, nil)))
+	defer func() {
+		_ = cs.Deactivate(StateChangeContext{})
+	}()
+
+	cs.whenFinished(base.NilHeight)
+
+	select {
+	case <-time.After(time.Second * 2):
 		t.NoError(xerrors.Errorf("timeout to wait to be finished"))
 	case <-doneChan:
 		break

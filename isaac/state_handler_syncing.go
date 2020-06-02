@@ -2,6 +2,7 @@ package isaac
 
 import (
 	"sync"
+	"time"
 
 	"golang.org/x/xerrors"
 
@@ -10,8 +11,12 @@ import (
 	"github.com/spikeekips/mitum/base/block"
 	"github.com/spikeekips/mitum/base/seal"
 	"github.com/spikeekips/mitum/storage"
+	"github.com/spikeekips/mitum/util"
+	"github.com/spikeekips/mitum/util/localtime"
 	"github.com/spikeekips/mitum/util/logging"
 )
+
+const TimerIDWaitVoteproof = "wait-voteproof-for-syncing-to-joining"
 
 /*
 StateSyncingHandler will sync the block states to the latest. Usually state is transited to syncing,
@@ -34,36 +39,80 @@ Voteproof received within a given time, states will be changed to joining state.
 type StateSyncingHandler struct {
 	sync.RWMutex
 	*BaseStateHandler
-	scs       []Syncer
-	stateChan chan Syncer
-	lv        base.Voteproof
+	lv                   base.Voteproof
+	syncs                *Syncers
+	waitVoteproofTimeout time.Duration
 }
 
-func NewStateSyncingHandler(
-	localstate *Localstate,
-	proposalProcessor ProposalProcessor, // BLOCK remove
-) (*StateSyncingHandler, error) {
+func NewStateSyncingHandler(localstate *Localstate) *StateSyncingHandler {
 	// TODO if already synced and no voteproof, should go to the consensus state.
 	ss := &StateSyncingHandler{
-		BaseStateHandler: NewBaseStateHandler(localstate, proposalProcessor, base.StateSyncing),
-		stateChan:        make(chan Syncer),
+		BaseStateHandler:     NewBaseStateHandler(localstate, nil, base.StateSyncing),
+		waitVoteproofTimeout: time.Second * 5, // NOTE long enough time
 	}
 	ss.BaseStateHandler.Logging = logging.NewLogging(func(c logging.Context) logging.Emitter {
 		return c.Str("module", "consensus-state-syncing-handler")
 	})
+	ss.timers = localtime.NewTimers([]string{TimerIDWaitVoteproof}, false)
 
-	return ss, nil
+	return ss
+}
+
+func (ss *StateSyncingHandler) syncers() *Syncers {
+	ss.RLock()
+	defer ss.RUnlock()
+
+	return ss.syncs
+}
+
+func (ss *StateSyncingHandler) newSyncers() error {
+	ss.Lock()
+	defer ss.Unlock()
+
+	if syncs := ss.syncs; syncs != nil {
+		if !syncs.isFinished() {
+			return xerrors.Errorf("syncers still running")
+		} else if err := syncs.Stop(); err != nil {
+			if !xerrors.Is(err, util.DaemonAlreadyStoppedError) {
+				return err
+			}
+		}
+	}
+
+	var baseManifest block.Manifest
+	if m, err := ss.localstate.Storage().LastManifest(); err != nil {
+		if !xerrors.Is(err, storage.NotFoundError) {
+			return err
+		}
+	} else {
+		baseManifest = m
+	}
+
+	ss.syncs = NewSyncers(ss.localstate, baseManifest)
+	ss.syncs.WhenFinished(ss.whenFinished)
+	_ = ss.syncs.SetLogger(ss.Log())
+
+	if err := ss.syncs.Start(); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (ss *StateSyncingHandler) SetLogger(l logging.Logger) logging.Logger {
+	_ = ss.Logging.SetLogger(l)
+	_ = ss.timers.SetLogger(l)
+
+	return ss.Log()
 }
 
 func (ss *StateSyncingHandler) Activate(ctx StateChangeContext) error {
+	if err := ss.newSyncers(); err != nil {
+		return err
+	}
+
 	l := loggerWithStateChangeContext(ctx, ss.Log())
 	l.Debug().Msg("activated")
-
-	go func() {
-		for syncer := range ss.stateChan {
-			ss.syncerStateChanged(syncer)
-		}
-	}()
 
 	if vp, err := ss.localstate.Storage().LastVoteproof(base.StageACCEPT); err == nil {
 		ss.setLastVoteproof(vp)
@@ -93,6 +142,16 @@ func (ss *StateSyncingHandler) Deactivate(ctx StateChangeContext) error {
 	l := loggerWithStateChangeContext(ctx, ss.Log())
 	l.Debug().Msg("deactivated")
 
+	if syncs := ss.syncers(); syncs != nil {
+		if err := syncs.Stop(); err != nil {
+			return err
+		}
+	}
+
+	if err := ss.timers.Stop(); err != nil {
+		return err
+	}
+
 	return nil
 }
 
@@ -104,66 +163,7 @@ func (ss *StateSyncingHandler) NewVoteproof(voteproof base.Voteproof) error {
 	return ss.handleVoteproof(voteproof)
 }
 
-func (ss *StateSyncingHandler) newSyncer(to base.Height, sourceNodes []Node) error {
-	ss.Lock()
-	defer ss.Unlock()
-
-	var lastManifest block.Manifest
-	if m, err := ss.localstate.Storage().LastManifest(); err != nil {
-		if !xerrors.Is(err, storage.NotFoundError) {
-			return err
-		}
-	} else {
-		lastManifest = m
-	}
-
-	var lastSyncer Syncer
-	var from base.Height
-	if len(ss.scs) < 1 {
-		if lastManifest == nil {
-			from = base.PreGenesisHeight
-		} else {
-			from = lastManifest.Height() + 1
-		}
-	} else {
-		lastSyncer = ss.scs[len(ss.scs)-1]
-		from = lastSyncer.HeightTo() + 1
-	}
-
-	if lastSyncer != nil && to <= lastSyncer.HeightTo() {
-		ss.Log().Debug().Hinted("height_to", to).Msg("already started to sync")
-		return nil
-	}
-
-	var syncer Syncer
-	if s, err := NewGeneralSyncer(ss.localstate, sourceNodes, from, to); err != nil {
-		return err
-	} else {
-		syncer = s.SetStateChan(ss.stateChan)
-	}
-
-	if l, ok := syncer.(logging.SetLogger); ok {
-		_ = l.SetLogger(ss.Log())
-	}
-
-	if lastSyncer == nil {
-		if err := syncer.Prepare(lastManifest); err != nil {
-			return err
-		}
-	} else {
-		if lastSyncer.State() >= SyncerPrepared {
-			if err := syncer.Prepare(lastSyncer.TailManifest()); err != nil {
-				return err
-			}
-		}
-	}
-
-	ss.scs = append(ss.scs, syncer)
-
-	return nil
-}
-
-func (ss *StateSyncingHandler) newSyncerFromVoteproof(voteproof base.Voteproof) error {
+func (ss *StateSyncingHandler) fromVoteproof(voteproof base.Voteproof) error {
 	var to base.Height
 	switch voteproof.Stage() {
 	case base.StageINIT:
@@ -198,75 +198,7 @@ func (ss *StateSyncingHandler) newSyncerFromVoteproof(voteproof base.Voteproof) 
 		Hinted("height_to", to).
 		Msg("will sync to the height")
 
-	return ss.newSyncer(to, sourceNodes)
-}
-
-func (ss *StateSyncingHandler) nextSyncer(syncer Syncer) (int, Syncer) {
-	var index int
-	var next Syncer
-	for i := range ss.scs {
-		n := ss.scs[i]
-		if n.HeightFrom() == syncer.HeightFrom() {
-			continue
-		}
-
-		index = i
-		next = n
-		break
-	}
-
-	return index, next
-}
-
-func (ss *StateSyncingHandler) syncerStateChanged(syncer Syncer) {
-	ss.Lock()
-	defer ss.Unlock()
-
-	switch syncer.State() {
-	case SyncerPrepared:
-		// after syncer is prepared
-		// - do Save()
-		// - the next syncer will do Prepare()
-
-		go func() {
-			if err := syncer.Save(); err != nil {
-				ss.Log().Error().Err(err).Msg("failed to syncer.Save()")
-			}
-		}()
-
-		if _, next := ss.nextSyncer(syncer); next != nil {
-			if err := next.Prepare(syncer.TailManifest()); err != nil {
-				ss.Log().Error().Err(err).Msg("failed to next syncer.Prepare()")
-			}
-		}
-	case SyncerSaved:
-		// after syncer saves blocks,
-		// - the next syncer will do Save()
-		// - remove syncer
-		index, next := ss.nextSyncer(syncer)
-		ss.Log().Debug().
-			Int("scs", len(ss.scs)).
-			Int("index", index).
-			Bool("has_next", next != nil).
-			Msg("trying to find next syncer")
-
-		if len(ss.scs) < 2 {
-			ss.scs = nil
-		} else if index > 0 { // NOTE remove previous syncer
-			i := index - 1
-			if i < len(ss.scs)-1 {
-				copy(ss.scs[i:], ss.scs[i+1:])
-			}
-			ss.scs[len(ss.scs)-1] = nil
-			ss.scs = ss.scs[:len(ss.scs)-1]
-		}
-
-		if next == nil {
-			ss.Log().Debug().Msg("no more syncers")
-		} else if err := next.Save(); err != nil {
-			ss.Log().Error().Err(err).Msg("failed to next syncer.Save()")
-		}
-	}
+	return ss.syncers().Add(to, sourceNodes)
 }
 
 func (ss *StateSyncingHandler) handleVoteproof(voteproof base.Voteproof) error {
@@ -304,20 +236,31 @@ func (ss *StateSyncingHandler) handleVoteproof(voteproof base.Voteproof) error {
 		ss.setLastVoteproof(voteproof)
 	}
 
-	d := to - baseHeight
-	switch {
-	case d == 0:
-		l.Debug().Msg("init voteproof, expected; moves to consensus")
-		// TODO load latest policies
-		return ss.ChangeState(base.StateConsensus, voteproof, nil)
-	default:
-		l.Debug().Msg("voteproof, ahead of local; sync")
-		if err := ss.newSyncerFromVoteproof(voteproof); err != nil {
-			return err
+	if to-baseHeight == 0 {
+		l.Debug().Msg("init voteproof, expected")
+
+		if !ss.syncers().isFinished() {
+			l.Debug().Msg("init voteproof, expected; but syncing is not finished")
+
+			return nil
 		}
+
+		if err := ss.timers.StopTimers([]string{TimerIDWaitVoteproof}); err != nil {
+			ss.Log().Error().Err(err).Str("timer", TimerIDWaitVoteproof).Msg("failed to stop")
+		}
+
+		l.Debug().Msg("init voteproof, expected; moves to consensus")
+
+		return ss.ChangeState(base.StateConsensus, voteproof, nil)
 	}
 
-	return nil
+	l.Debug().Msg("voteproof, ahead of local; sync")
+
+	if err := ss.timers.StopTimers([]string{TimerIDWaitVoteproof}); err != nil {
+		ss.Log().Error().Err(err).Str("timer", TimerIDWaitVoteproof).Msg("failed to stop")
+	}
+
+	return ss.fromVoteproof(voteproof)
 }
 
 func (ss *StateSyncingHandler) handleBallot(blt ballot.Ballot) error {
@@ -332,7 +275,7 @@ func (ss *StateSyncingHandler) handleBallot(blt ballot.Ballot) error {
 		voteproof = t.Voteproof()
 	}
 
-	return ss.newSyncerFromVoteproof(voteproof)
+	return ss.fromVoteproof(voteproof)
 }
 
 func (ss *StateSyncingHandler) lastVoteproof() base.Voteproof {
@@ -368,4 +311,40 @@ func (ss *StateSyncingHandler) getExpectedHeightFromoteproof(voteproof base.Vote
 	default:
 		return base.NilHeight, xerrors.Errorf("invalid Voteproof received")
 	}
+}
+
+func (ss *StateSyncingHandler) whenFinished(height base.Height) {
+	ss.Log().Debug().Hinted("height", height).Msg("syncing finished; start timer")
+
+	if timer, err := ss.timerWaitVoteproof(); err != nil {
+		ss.Log().Error().Err(err).Str("timer", TimerIDWaitVoteproof).Msg("failed to make timer")
+
+		return
+	} else if err := ss.timers.SetTimer(TimerIDWaitVoteproof, timer); err != nil {
+		ss.Log().Error().Err(err).Str("timer", TimerIDWaitVoteproof).Msg("failed to set timer")
+
+		return
+	}
+
+	if err := ss.timers.StartTimers([]string{TimerIDWaitVoteproof}, true); err != nil {
+		ss.Log().Error().Err(err).Str("timer", TimerIDWaitVoteproof).Msg("failed to start timer")
+
+		return
+	}
+}
+
+func (ss *StateSyncingHandler) timerWaitVoteproof() (*localtime.CallbackTimer, error) {
+	return localtime.NewCallbackTimer(
+		TimerIDWaitVoteproof,
+		func() (bool, error) {
+			ss.Log().Debug().Msg("syncing finished, but no more Voteproof; moves to Joining state")
+			if err := ss.ChangeState(base.StateJoining, nil, nil); err != nil {
+				return false, err
+			}
+
+			return false, nil
+		},
+		ss.waitVoteproofTimeout,
+		nil,
+	)
 }

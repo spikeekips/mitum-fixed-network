@@ -34,8 +34,8 @@ func (ss SyncerState) String() string {
 }
 
 type Syncer interface {
+	ID() string
 	Prepare(block.Manifest /* base manifest */) error
-	Save() error
 	HeightFrom() base.Height
 	HeightTo() base.Height
 	State() SyncerState
@@ -57,4 +57,21 @@ func (fm *syncerFetchBlockError) Error() string {
 	}
 
 	return fm.err.Error()
+}
+
+type SyncerStateChangedContext struct {
+	syncer Syncer
+	state  SyncerState
+}
+
+func NewSyncerStateChangedContext(syncer Syncer, state SyncerState) SyncerStateChangedContext {
+	return SyncerStateChangedContext{syncer: syncer, state: state}
+}
+
+func (ss SyncerStateChangedContext) Syncer() Syncer {
+	return ss.syncer
+}
+
+func (ss SyncerStateChangedContext) State() SyncerState {
+	return ss.state
 }

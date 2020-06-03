@@ -44,8 +44,7 @@ type Emitter interface {
 	Str(string, string) Emitter
 	Strs(string, []string) Emitter
 	Time(string, time.Time) Emitter
-	// TimeDiff( string, t time.Time, start time.Time) Emitter // TODO
-	// context doest have TimeDiff
+	TimeDiff(string, time.Time, time.Time) Emitter
 	Times(string, []time.Time) Emitter
 	Uint(string, uint) Emitter
 	Uint16(string, uint16) Emitter

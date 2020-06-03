@@ -172,12 +172,12 @@ func (e *Event) Strs(key string, vals []string) Emitter {
 	return e.event(e.Event.Strs(key, vals))
 }
 
-func (e *Event) Time(key string, t time.Time) Emitter {
-	return e.event(e.Event.Time(key, t))
-}
-
 func (e *Event) TimeDiff(key string, t, start time.Time) Emitter {
 	return e.event(e.Event.TimeDiff(key, t, start))
+}
+
+func (e *Event) Time(key string, t time.Time) Emitter {
+	return e.event(e.Event.Time(key, t))
 }
 
 func (e *Event) Times(key string, t []time.Time) Emitter {

@@ -172,6 +172,10 @@ func (c Context) Time(key string, t time.Time) Emitter {
 	return newContext(c.Context.Time(key, t), c.verbose)
 }
 
+func (c Context) TimeDiff(_ string, _, _ time.Time) Emitter {
+	return c
+}
+
 func (c Context) Times(key string, t []time.Time) Emitter {
 	return newContext(c.Context.Times(key, t), c.verbose)
 }

@@ -639,7 +639,7 @@ func (st *Storage) NewProposal(proposal ballot.Proposal) error {
 		return err
 	}
 
-	// TODO proposal is saved in 2 collections for performance reason.
+	// NOTE proposal is saved in 2 collections for performance reason.
 	return st.NewSeals([]seal.Seal{proposal})
 }
 

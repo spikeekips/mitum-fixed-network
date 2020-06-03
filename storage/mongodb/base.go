@@ -334,6 +334,42 @@ func (st *Storage) BlockByHeight(height base.Height) (block.Block, bool, error) 
 	return st.blockByFilter(util.NewBSONFilter("height", height).D())
 }
 
+func (st *Storage) BlocksByHeight(heights []base.Height) ([]block.Block, error) {
+	var filtered []base.Height
+	given := map[base.Height]struct{}{}
+	for _, h := range heights {
+		if _, found := given[h]; found {
+			continue
+		}
+
+		given[h] = struct{}{}
+		filtered = append(filtered, h)
+	}
+
+	opt := options.Find().
+		SetSort(util.NewBSONFilter("height", 1).D())
+
+	var blocks []block.Block
+	if err := st.client.Find(
+		defaultColNameBlock,
+		bson.M{"height": bson.M{"$in": filtered}},
+		func(cursor *mongo.Cursor) (bool, error) {
+			if blk, err := loadBlockFromDecoder(cursor.Decode, st.encs); err != nil {
+				return false, err
+			} else {
+				blocks = append(blocks, blk)
+			}
+
+			return true, nil
+		},
+		opt,
+	); err != nil {
+		return nil, err
+	}
+
+	return blocks, nil
+}
+
 func (st *Storage) manifestByFilter(filter bson.D) (block.Manifest, bool, error) {
 	var manifest block.Manifest
 
@@ -456,6 +492,47 @@ func (st *Storage) Seals(callback func(valuehash.Hash, seal.Seal) (bool, error),
 	return st.client.Find(
 		defaultColNameSeal,
 		bson.D{},
+		func(cursor *mongo.Cursor) (bool, error) {
+			var h valuehash.Hash
+			var sl seal.Seal
+
+			if load {
+				if i, err := loadSealFromDecoder(cursor.Decode, st.encs); err != nil {
+					return false, err
+				} else {
+					h = i.Hash()
+					sl = i
+				}
+			} else {
+				if i, err := loadSealHashFromDecoder(cursor.Decode, st.encs); err != nil {
+					return false, err
+				} else {
+					h = i
+				}
+			}
+
+			return callback(h, sl)
+		},
+		opt,
+	)
+}
+
+func (st *Storage) SealsByHash(
+	hashes []valuehash.Hash,
+	callback func(valuehash.Hash, seal.Seal) (bool, error),
+	load bool,
+) error {
+	var hashStrings []string
+	for _, h := range hashes {
+		hashStrings = append(hashStrings, h.String())
+	}
+
+	opt := options.Find().
+		SetSort(util.NewBSONFilter("hash", 1).D())
+
+	return st.client.Find(
+		defaultColNameSeal,
+		bson.M{"hash_string": bson.M{"$in": hashStrings}},
 		func(cursor *mongo.Cursor) (bool, error) {
 			var h valuehash.Hash
 			var sl seal.Seal

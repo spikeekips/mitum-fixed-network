@@ -173,15 +173,13 @@ func (nr *NodeRunner) attachNetworkHandlers() error {
 
 func (nr *NodeRunner) networkHandlerGetSeal(hs []valuehash.Hash) ([]seal.Seal, error) {
 	var sls []seal.Seal
-	for _, h := range hs {
-		switch sl, found, err := nr.storage.Seal(h); {
-		case !found:
-			continue
-		case err != nil:
-			return nil, err
-		default:
-			sls = append(sls, sl)
-		}
+
+	if err := nr.storage.SealsByHash(hs, func(_ valuehash.Hash, sl seal.Seal) (bool, error) {
+		sls = append(sls, sl)
+
+		return true, nil
+	}, true); err != nil {
+		return nil, err
 	}
 
 	return sls, nil
@@ -269,26 +267,7 @@ func (nr *NodeRunner) networkhandlerGetBlocks(heights []base.Height) ([]block.Bl
 		return heights[i] < heights[j]
 	})
 
-	var blocks []block.Block
-	fetched := map[base.Height]struct{}{}
-	for _, h := range heights {
-		if _, found := fetched[h]; found {
-			continue
-		}
-
-		fetched[h] = struct{}{}
-
-		switch m, found, err := nr.storage.BlockByHeight(h); {
-		case !found:
-			continue
-		case err != nil:
-			return nil, err
-		default:
-			blocks = append(blocks, m)
-		}
-	}
-
-	return blocks, nil
+	return nr.storage.BlocksByHeight(heights)
 }
 
 func (nr *NodeRunner) attachNodeChannel() error {

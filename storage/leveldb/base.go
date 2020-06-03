@@ -245,6 +245,30 @@ func (st *Storage) BlockByHeight(height base.Height) (block.Block, bool, error) 
 	}
 }
 
+func (st *Storage) BlocksByHeight(heights []base.Height) ([]block.Block, error) {
+	var blocks []block.Block
+
+	fetched := map[base.Height]struct{}{}
+	for _, h := range heights {
+		if _, found := fetched[h]; found {
+			continue
+		}
+
+		fetched[h] = struct{}{}
+
+		switch m, found, err := st.BlockByHeight(h); {
+		case !found:
+			continue
+		case err != nil:
+			return nil, err
+		default:
+			blocks = append(blocks, m)
+		}
+	}
+
+	return blocks, nil
+}
+
 func (st *Storage) Manifest(h valuehash.Hash) (block.Manifest, bool, error) {
 	if raw, err := st.get(leveldbManifestKey(h)); err != nil {
 		if storage.IsNotFoundError(err) {
@@ -512,6 +536,26 @@ func (st *Storage) Seals(callback func(valuehash.Hash, seal.Seal) (bool, error),
 	}
 
 	return st.iter(prefix, iterFunc, sort)
+}
+
+func (st *Storage) SealsByHash(
+	hashes []valuehash.Hash,
+	callback func(valuehash.Hash, seal.Seal) (bool, error),
+	_ bool,
+) error {
+	for _, h := range hashes {
+		if sl, found, err := st.Seal(h); !found {
+			continue
+		} else if err != nil {
+			return err
+		} else if keep, err := callback(h, sl); err != nil {
+			return err
+		} else if !keep {
+			break
+		}
+	}
+
+	return nil
 }
 
 func (st *Storage) StagedOperationSeals(callback func(operation.Seal) (bool, error), sort bool) error {

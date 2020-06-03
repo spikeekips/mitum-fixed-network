@@ -91,6 +91,8 @@ func NewINITBallotV0(node base.Address, voteproof base.Voteproof) (ballot.INITBa
 
 		height = voteproof.Height()
 		round = voteproof.Round() + 1
+	default:
+		return ballot.INITBallotV0{}, xerrors.Errorf("invalid voteproof stage, %v found", voteproof.Stage())
 	}
 
 	return ballot.NewINITBallotV0(

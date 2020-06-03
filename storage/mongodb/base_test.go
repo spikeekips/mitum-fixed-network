@@ -97,6 +97,25 @@ func (t *testStorage) TestLoadBlockByHeight() {
 	t.CompareBlock(blk, loaded)
 }
 
+func (t *testStorage) TestLoadBlocksByHeight() {
+	var blocks []block.Block
+	heights := []base.Height{base.Height(33), base.Height(34)}
+	for _, h := range heights {
+		blk := t.saveNewBlock(h)
+
+		blocks = append(blocks, blk)
+	}
+
+	loaded, err := t.storage.BlocksByHeight(heights)
+	t.NoError(err)
+
+	t.Equal(len(heights), len(blocks))
+
+	for i := range heights {
+		t.CompareBlock(blocks[i], loaded[i])
+	}
+}
+
 func (t *testStorage) TestLoadManifestByHash() {
 	blk := t.saveNewBlock(base.Height(33))
 
@@ -163,6 +182,31 @@ func (t *testStorage) TestSeals() {
 
 	for i, sl := range collected {
 		t.True(seals[i].Hash().Equal(sl.Hash()))
+	}
+}
+
+func (t *testStorage) TestSealsByHash() {
+	var seals []seal.Seal
+	var hashes []valuehash.Hash
+	for i := 0; i < 10; i++ {
+		pk, _ := key.NewBTCPrivatekey()
+		sl := seal.NewDummySeal(pk)
+		hashes = append(hashes, sl.Hash())
+
+		seals = append(seals, sl)
+	}
+	t.NoError(t.storage.NewSeals(seals))
+
+	loaded := map[valuehash.Hash]seal.Seal{}
+	t.NoError(t.storage.SealsByHash(hashes, func(_ valuehash.Hash, sl seal.Seal) (bool, error) {
+		loaded[sl.Hash()] = sl
+
+		return true, nil
+	}, true))
+
+	for _, h := range hashes {
+		_, found := loaded[h]
+		t.True(found)
 	}
 }
 

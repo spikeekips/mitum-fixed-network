@@ -25,17 +25,16 @@ type Storage interface {
 	LastManifest() (block.Manifest, bool, error)
 	Block(valuehash.Hash) (block.Block, bool, error)
 	BlockByHeight(base.Height) (block.Block, bool, error)
-	// TODO add BlocksByHeight([]base.Height) ([]block.Block, error)
+	BlocksByHeight([]base.Height) ([]block.Block, error)
 	Manifest(valuehash.Hash) (block.Manifest, bool, error)
 	ManifestByHeight(base.Height) (block.Manifest, bool, error)
-	// TODO add ManifestsByHeight([]base.Height) ([]block.Manifest, error)
 	LastVoteproof(base.Stage) (base.Voteproof, bool, error)
 
 	NewSeals([]seal.Seal) error
 	Seal(valuehash.Hash) (seal.Seal, bool, error)
 	Seals(func(valuehash.Hash, seal.Seal) (bool, error), bool /* sort */, bool /* load Seal? */) error
 	HasSeal(valuehash.Hash) (bool, error)
-	// TODO add get Seals by []valuehash.Hash
+	SealsByHash([]valuehash.Hash, func(valuehash.Hash, seal.Seal) (bool, error), bool /* load Seal? */) error
 
 	NewProposal(ballot.Proposal) error
 	Proposal(base.Height, base.Round) (ballot.Proposal, bool, error)

@@ -4,12 +4,16 @@ package mongodbstorage
 
 import (
 	"bytes"
+	"context"
 	"math/rand"
 	"sort"
 	"testing"
 	"time"
 
 	"github.com/stretchr/testify/suite"
+	"go.mongodb.org/mongo-driver/bson"
+	"go.mongodb.org/mongo-driver/mongo"
+	"go.mongodb.org/mongo-driver/mongo/options"
 
 	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/base/block"
@@ -432,6 +436,49 @@ func (t *testStorage) TestHasOperation() {
 		t.NoError(err)
 		t.False(found)
 	}
+}
+
+func (t *testStorage) TestCreateIndexNew() {
+	allIndexes := func(col string) []string {
+		iv := t.storage.client.Collection(col).Indexes()
+
+		cursor, err := iv.List(context.TODO())
+		t.NoError(err)
+
+		var results []bson.M
+		t.NoError(cursor.All(context.TODO(), &results))
+
+		var names []string
+		for _, r := range results {
+			names = append(names, r["name"].(string))
+		}
+
+		return names
+	}
+
+	oldIndexes := []mongo.IndexModel{
+		{
+			Keys:    bson.D{bson.E{Key: "showme", Value: 1}},
+			Options: options.Index().SetName("mitum_showme"),
+		},
+	}
+
+	t.NoError(t.storage.createIndex(defaultColNameManifest, oldIndexes))
+
+	existings := allIndexes(defaultColNameManifest)
+
+	newIndexes := []mongo.IndexModel{
+		{
+			Keys:    bson.D{bson.E{Key: "findme", Value: 1}},
+			Options: options.Index().SetName("mitum_findme"),
+		},
+	}
+
+	t.NoError(t.storage.createIndex(defaultColNameManifest, newIndexes))
+	created := allIndexes(defaultColNameManifest)
+
+	t.Equal(existings, []string{"_id_", "mitum_showme"})
+	t.Equal(created, []string{"_id_", "mitum_findme"})
 }
 
 func TestStorage(t *testing.T) {

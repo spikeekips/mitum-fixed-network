@@ -6,11 +6,13 @@ import (
 	"go.mongodb.org/mongo-driver/mongo/options"
 )
 
+var indexPrefix = "mitum_"
+
 var blockIndexModels = []mongo.IndexModel{
 	{
 		Keys: bson.D{bson.E{Key: "height", Value: 1}},
 		Options: options.Index().
-			SetName("block_height").
+			SetName("mitum_block_height").
 			SetUnique(true),
 	},
 }
@@ -19,7 +21,7 @@ var manifestIndexModels = []mongo.IndexModel{
 	{
 		Keys: bson.D{bson.E{Key: "height", Value: 1}},
 		Options: options.Index().
-			SetName("manifest_height").
+			SetName("mitum_manifest_height").
 			SetUnique(true),
 	},
 }
@@ -28,18 +30,18 @@ var operationIndexModels = []mongo.IndexModel{
 	{
 		Keys: bson.D{bson.E{Key: "hash_string", Value: 1}},
 		Options: options.Index().
-			SetName("operation_hash").
+			SetName("mitum_operation_hash").
 			SetUnique(true),
 	},
 	{
 		Keys: bson.D{bson.E{Key: "hash_string", Value: 1}, bson.E{Key: "height", Value: 1}},
 		Options: options.Index().
-			SetName("operation_hash_and_height"),
+			SetName("mitum_operation_hash_and_height"),
 	},
 	{
 		Keys: bson.D{bson.E{Key: "height", Value: 1}},
 		Options: options.Index().
-			SetName("operation_height"),
+			SetName("mitum_operation_height"),
 	},
 }
 
@@ -47,13 +49,13 @@ var stateIndexModels = []mongo.IndexModel{
 	{
 		Keys: bson.D{bson.E{Key: "key", Value: 1}, bson.E{Key: "height", Value: 1}},
 		Options: options.Index().
-			SetName("state_key_and_height").
+			SetName("mitum_state_key_and_height").
 			SetUnique(true),
 	},
 	{
 		Keys: bson.D{bson.E{Key: "height", Value: 1}},
 		Options: options.Index().
-			SetName("state_height"),
+			SetName("mitum_state_height"),
 	},
 }
 
@@ -61,13 +63,13 @@ var proposalIndexModels = []mongo.IndexModel{
 	{
 		Keys: bson.D{bson.E{Key: "hash_string", Value: 1}},
 		Options: options.Index().
-			SetName("proposal_hash").
+			SetName("mitum_proposal_hash").
 			SetUnique(true),
 	},
 	{
 		Keys: bson.D{bson.E{Key: "height", Value: 1}, bson.E{Key: "round", Value: 1}},
 		Options: options.Index().
-			SetName("proposal_height_and_round"),
+			SetName("mitum_proposal_height_and_round"),
 	},
 }
 
@@ -75,13 +77,13 @@ var sealIndexModels = []mongo.IndexModel{
 	{
 		Keys: bson.D{bson.E{Key: "hash_string", Value: 1}},
 		Options: options.Index().
-			SetName("seal_hash").
+			SetName("mitum_seal_hash").
 			SetUnique(true),
 	},
 	{
 		Keys: bson.D{bson.E{Key: "inserted_at", Value: -1}},
 		Options: options.Index().
-			SetName("seal_inserted_at"),
+			SetName("mitum_seal_inserted_at"),
 	},
 }
 

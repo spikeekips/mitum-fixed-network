@@ -28,13 +28,17 @@ type SyncerStorage struct {
 
 func NewSyncerStorage(main *Storage) (*SyncerStorage, error) {
 	var manifestStorage, blockStorage *Storage
-	// TODO manifest collection needs to create indices
+
 	if s, err := newTempStorage(main, "manifest"); err != nil {
+		return nil, err
+	} else if err := s.createIndex(defaultColNameManifest, manifestIndexModels); err != nil {
 		return nil, err
 	} else {
 		manifestStorage = s
 	}
 	if s, err := newTempStorage(main, "block"); err != nil {
+		return nil, err
+	} else if err := s.createIndex(defaultColNameBlock, blockIndexModels); err != nil {
 		return nil, err
 	} else {
 		blockStorage = s

@@ -2,6 +2,7 @@ package mongodbstorage
 
 import (
 	"context"
+	"strings"
 	"sync"
 	"time"
 
@@ -720,32 +721,9 @@ func (st *Storage) OpenBlockStorage(blk block.Block) (storage.BlockStorage, erro
 }
 
 func (st *Storage) Initialize() error {
-	// TODO drop the index, which has same name
 	for col, models := range defaultIndexes {
-		iv := st.client.Collection(col).Indexes()
-
-		cursor, err := iv.List(context.TODO())
-		if err != nil {
+		if err := st.createIndex(col, models); err != nil {
 			return err
-		}
-
-		var results []bson.M
-		if err = cursor.All(context.TODO(), &results); err != nil {
-			return err
-		}
-
-		if len(results) > 0 {
-			if _, err := iv.DropAll(context.TODO()); err != nil {
-				return storage.WrapError(err)
-			}
-		}
-
-		if len(models) < 1 {
-			continue
-		}
-
-		if _, err := iv.CreateMany(context.TODO(), models); err != nil {
-			return storage.WrapError(err)
 		}
 	}
 
@@ -780,4 +758,46 @@ func (st *Storage) cleanByHeight(height base.Height) error {
 
 func (st *Storage) cleanupIncompleteData() error {
 	return st.cleanByHeight(st.lastHeight())
+}
+
+func (st *Storage) createIndex(col string, models []mongo.IndexModel) error {
+	iv := st.client.Collection(col).Indexes()
+
+	cursor, err := iv.List(context.TODO())
+	if err != nil {
+		return err
+	}
+
+	var existings []string
+	var results []bson.M
+	if err = cursor.All(context.TODO(), &results); err != nil {
+		return err
+	} else {
+		for _, r := range results {
+			name := r["name"].(string)
+			if !strings.HasPrefix(name, indexPrefix) {
+				continue
+			}
+
+			existings = append(existings, name)
+		}
+	}
+
+	if len(existings) > 0 {
+		for _, name := range existings {
+			if _, err := iv.DropOne(context.TODO(), name); err != nil {
+				return storage.WrapError(err)
+			}
+		}
+	}
+
+	if len(models) < 1 {
+		return nil
+	}
+
+	if _, err := iv.CreateMany(context.TODO(), models); err != nil {
+		return storage.WrapError(err)
+	}
+
+	return nil
 }

@@ -12,7 +12,6 @@ import (
 	"golang.org/x/xerrors"
 
 	"github.com/spikeekips/mitum/base/seal"
-	contestlib "github.com/spikeekips/mitum/contest/lib"
 	"github.com/spikeekips/mitum/contrib"
 	"github.com/spikeekips/mitum/util/encoder"
 	jsonencoder "github.com/spikeekips/mitum/util/encoder/json"
@@ -108,18 +107,9 @@ func parse(flags *mainFlags) error {
 		}
 	}
 
-	extraHinters := []hint.Hinter{
-		contestlib.ContestAddress(""), // contest-address
-	}
-
-	if encs, err := contrib.LoadEncoder(extraHinters...); err != nil {
+	flags.encoder = jsonencoder.NewEncoder()
+	if _, err := encoder.LoadEncoders([]encoder.Encoder{flags.encoder}, contrib.Hinters...); err != nil {
 		return xerrors.Errorf("failed to load encoders: %w", err)
-	} else {
-		if e, err := encs.Encoder(jsonencoder.JSONType, ""); err != nil {
-			return xerrors.Errorf("json encoder needs for quic-network: %w", err)
-		} else {
-			flags.encoder = e
-		}
 	}
 
 	var content []byte

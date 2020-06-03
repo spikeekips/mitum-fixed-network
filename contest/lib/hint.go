@@ -1,8 +1,6 @@
 package contestlib
 
 import (
-	"golang.org/x/xerrors"
-
 	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/base/ballot"
 	"github.com/spikeekips/mitum/base/block"
@@ -12,80 +10,49 @@ import (
 	"github.com/spikeekips/mitum/base/tree"
 	"github.com/spikeekips/mitum/base/valuehash"
 	"github.com/spikeekips/mitum/isaac"
-	"github.com/spikeekips/mitum/util/encoder"
 	bsonencoder "github.com/spikeekips/mitum/util/encoder/bson"
 	jsonencoder "github.com/spikeekips/mitum/util/encoder/json"
 	"github.com/spikeekips/mitum/util/hint"
 )
 
-var hinters = [][2]interface{}{
-	{"contest-address", ContestAddress("")},
-	{"encoder-bson", bsonencoder.Encoder{}},
-	{"encoder-json", jsonencoder.Encoder{}},
-	{"ballot-init", ballot.INITBallotV0{}},
-	{"ballot=proposal", ballot.ProposalV0{}},
-	{"ballot-sign", ballot.SIGNBallotV0{}},
-	{"ballot-accept", ballot.ACCEPTBallotV0{}},
-	{"ballot-init-fact", ballot.INITBallotFactV0{}},
-	{"ballot-proposal-fact", ballot.ProposalFactV0{}},
-	{"ballot-sign-fact", ballot.SIGNBallotFactV0{}},
-	{"ballot-accept-fact", ballot.ACCEPTBallotFactV0{}},
-	{"voteproof", base.VoteproofV0{}},
-	{"block", block.BlockV0{}},
-	{"manifest", block.ManifestV0{}},
-	{"block-consensus-info", block.BlockConsensusInfoV0{}},
-	{"privatekey-ether", key.EtherPrivatekey{}},
-	{"publickey-ether", key.EtherPublickey{}},
-	{"privatekey-btc", key.BTCPrivatekey{}},
-	{"publickey-btc", key.BTCPublickey{}},
-	{"privatekey-stellar", key.StellarPrivatekey{}},
-	{"publickey-stellar", key.StellarPublickey{}},
-	{"hash-sha256", valuehash.SHA256{}},
-	{"hash-sha512", valuehash.SHA512{}},
-	{"hash-dummy", valuehash.Dummy{}},
-	{"operation-seal", operation.Seal{}},
-	{"avltree", tree.AVLTree{}},
-	{"avltree-node", operation.OperationAVLNode{}},
-	{"policy-body-v0", isaac.PolicyOperationBodyV0{}},
-	{"set-policy-operation-v0", isaac.SetPolicyOperationV0{}},
-	{"set-policy-operation-fact-v0", isaac.SetPolicyOperationFactV0{}},
-	{"state-v0", state.StateV0{}},
-	{"operation-info-v0", state.OperationInfoV0{}},
-	{"state-v0-avlnode", state.StateV0AVLNode{}},
-	{"state-bytes-value", state.BytesValue{}},
-	{"state-duration-value", state.DurationValue{}},
-	{"state-hinted-value", state.HintedValue{}},
-	{"state-number-value", state.NumberValue{}},
-	{"state-slice-value", state.SliceValue{}},
-	{"state-string-value", state.StringValue{}},
-}
-
-func LoadEncoder() (*encoder.Encoders, error) {
-	encs := encoder.NewEncoders()
-	{
-		enc := jsonencoder.NewEncoder()
-		if err := encs.AddEncoder(enc); err != nil {
-			return nil, err
-		}
-	}
-
-	{
-		enc := bsonencoder.NewEncoder()
-		if err := encs.AddEncoder(enc); err != nil {
-			return nil, err
-		}
-	}
-
-	for i := range hinters {
-		hinter, ok := hinters[i][1].(hint.Hinter)
-		if !ok {
-			return nil, xerrors.Errorf("not hint.Hinter: %T", hinters[i])
-		}
-
-		if err := encs.AddHinter(hinter); err != nil {
-			return nil, err
-		}
-	}
-
-	return encs, nil
+var Hinters = []hint.Hinter{
+	ContestAddress(""),
+	bsonencoder.Encoder{},
+	jsonencoder.Encoder{},
+	ballot.INITBallotV0{},
+	ballot.ProposalV0{},
+	ballot.SIGNBallotV0{},
+	ballot.ACCEPTBallotV0{},
+	ballot.INITBallotFactV0{},
+	ballot.ProposalFactV0{},
+	ballot.SIGNBallotFactV0{},
+	ballot.ACCEPTBallotFactV0{},
+	base.VoteproofV0{},
+	block.BlockV0{},
+	block.ManifestV0{},
+	block.BlockConsensusInfoV0{},
+	key.EtherPrivatekey{},
+	key.EtherPublickey{},
+	key.BTCPrivatekey{},
+	key.BTCPublickey{},
+	key.StellarPrivatekey{},
+	key.StellarPublickey{},
+	valuehash.SHA256{},
+	valuehash.SHA512{},
+	valuehash.Dummy{},
+	operation.Seal{},
+	tree.AVLTree{},
+	operation.OperationAVLNode{},
+	isaac.PolicyOperationBodyV0{},
+	isaac.SetPolicyOperationV0{},
+	isaac.SetPolicyOperationFactV0{},
+	state.StateV0{},
+	state.OperationInfoV0{},
+	state.StateV0AVLNode{},
+	state.BytesValue{},
+	state.DurationValue{},
+	state.HintedValue{},
+	state.NumberValue{},
+	state.SliceValue{},
+	state.StringValue{},
 }

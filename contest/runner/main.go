@@ -15,6 +15,8 @@ import (
 	contestlib "github.com/spikeekips/mitum/contest/lib"
 	"github.com/spikeekips/mitum/isaac"
 	"github.com/spikeekips/mitum/util/encoder"
+	bsonencoder "github.com/spikeekips/mitum/util/encoder/bson"
+	jsonencoder "github.com/spikeekips/mitum/util/encoder/json"
 	"github.com/spikeekips/mitum/util/logging"
 )
 
@@ -237,7 +239,10 @@ func (cmd *InitCommand) loadOperationBody(body interface{}, design *contestlib.N
 
 func createNodeRunnerFromDesign(f string, log logging.Logger) (*contestlib.NodeRunner, error) {
 	var encs *encoder.Encoders
-	if e, err := contestlib.LoadEncoder(); err != nil {
+	if e, err := encoder.LoadEncoders(
+		[]encoder.Encoder{jsonencoder.NewEncoder(), bsonencoder.NewEncoder()},
+		contestlib.Hinters...,
+	); err != nil {
 		return nil, xerrors.Errorf("failed to load encoders: %w", err)
 	} else {
 		encs = e

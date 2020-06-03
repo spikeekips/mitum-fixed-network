@@ -298,14 +298,10 @@ func (nr *NodeRunner) attachNodeChannel() error {
 func createNodeChannel(publish *url.URL, encs *encoder.Encoders, enc encoder.Encoder) (network.NetworkChannel, error) {
 	var channel network.NetworkChannel
 
-	nu := new(url.URL)
-	*nu = *publish
-	nu.Scheme = "https"
-
 	switch publish.Scheme {
 	case "quic":
 		if ch, err := quicnetwork.NewQuicChannel(
-			nu.String(),
+			publish.String(),
 			100,
 			true,
 			time.Second*1,

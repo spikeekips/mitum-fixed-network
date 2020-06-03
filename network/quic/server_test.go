@@ -51,7 +51,7 @@ func (t *testQuicSever) SetupTest() {
 	t.NoError(err)
 	t.certs = certs
 
-	t.url = &url.URL{Scheme: "https", Host: t.bind}
+	t.url = &url.URL{Scheme: "quic", Host: t.bind}
 }
 
 func (t *testQuicSever) readyServer() *QuicServer {

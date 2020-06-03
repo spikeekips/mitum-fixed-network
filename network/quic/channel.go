@@ -32,7 +32,7 @@ type QuicChannel struct {
 }
 
 func NewQuicChannel(
-	addr string, // TODO use "quic" scheme
+	addr string,
 	bufsize uint,
 	insecure bool,
 	timeout time.Duration,
@@ -53,6 +53,10 @@ func NewQuicChannel(
 	if u, err := url.Parse(addr); err != nil {
 		return nil, err
 	} else {
+		if u.Scheme == "quic" {
+			u.Scheme = "https"
+		}
+
 		qc.addr = u
 	}
 

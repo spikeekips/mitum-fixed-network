@@ -60,7 +60,9 @@ func (dp *ProposalProcessorV0) ProcessINIT(ph valuehash.Hash, initVoteproof base
 	}
 
 	var proposal ballot.Proposal
-	if sl, err := dp.localstate.Storage().Seal(ph); err != nil {
+	if sl, found, err := dp.localstate.Storage().Seal(ph); !found {
+		return nil, storage.NotFoundError.Errorf("seal not found")
+	} else if err != nil {
 		return nil, err
 	} else if pr, ok := sl.(ballot.Proposal); !ok {
 		return nil, xerrors.Errorf("seal is not Proposal: %T", sl)
@@ -131,9 +133,12 @@ type proposalProcessorV0 struct {
 
 func newProposalProcessorV0(localstate *Localstate, proposal ballot.Proposal) (*proposalProcessorV0, error) {
 	var lastManifest block.Manifest
-	if m, err := localstate.Storage().LastManifest(); err != nil {
-		return nil, xerrors.Errorf("last manifest is empty")
-	} else {
+	switch m, found, err := localstate.Storage().LastManifest(); {
+	case !found:
+		return nil, storage.NotFoundError.Errorf("last manifest is empty")
+	case err != nil:
+		return nil, err
+	default:
 		lastManifest = m
 	}
 
@@ -374,7 +379,9 @@ func (pp *proposalProcessorV0) processStates() (*tree.AVLTree, error) {
 
 func (pp *proposalProcessorV0) getOperationsFromStorage(h valuehash.Hash) ([]state.OperationInfoV0, error) {
 	var osl operation.Seal
-	if sl, err := pp.localstate.Storage().Seal(h); err != nil {
+	if sl, found, err := pp.localstate.Storage().Seal(h); !found {
+		return nil, storage.NotFoundError.Errorf("seal not found")
+	} else if err != nil {
 		return nil, err
 	} else if os, ok := sl.(operation.Seal); !ok {
 		return nil, xerrors.Errorf("not operation.Seal: %T", sl)

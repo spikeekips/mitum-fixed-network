@@ -14,7 +14,6 @@ import (
 	"github.com/spikeekips/mitum/base/operation"
 	contestlib "github.com/spikeekips/mitum/contest/lib"
 	"github.com/spikeekips/mitum/isaac"
-	"github.com/spikeekips/mitum/storage"
 	"github.com/spikeekips/mitum/util/encoder"
 	"github.com/spikeekips/mitum/util/logging"
 )
@@ -185,11 +184,9 @@ func (cmd *InitCommand) checkExisting(nr *contestlib.NodeRunner, log logging.Log
 	log.Debug().Msg("checking existing blocks")
 
 	var manifest block.Manifest
-	if m, err := nr.Storage().LastManifest(); err != nil {
-		if !xerrors.Is(err, storage.NotFoundError) {
-			return err
-		}
-	} else {
+	if m, found, err := nr.Storage().LastManifest(); err != nil {
+		return err
+	} else if found {
 		manifest = m
 	}
 

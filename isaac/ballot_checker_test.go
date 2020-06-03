@@ -88,8 +88,9 @@ func (t *testBallotChecker) TestIsInSuffrage() {
 func (t *testBallotChecker) TestCheckWithLastBlock() {
 	var avp base.Voteproof
 
-	avp, err := t.localstate.Storage().LastVoteproof(base.StageACCEPT)
+	avp, found, err := t.localstate.Storage().LastVoteproof(base.StageACCEPT)
 	t.NoError(err)
+	t.True(found)
 
 	{ // same height and next round
 		ib := t.newINITBallot(t.localstate, avp.Round()+1, t.lastINITVoteproof(t.localstate))

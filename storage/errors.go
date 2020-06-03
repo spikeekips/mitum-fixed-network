@@ -24,3 +24,7 @@ func WrapError(err error) error {
 
 	return StorageError.Wrap(err)
 }
+
+func IsNotFoundError(err error) bool {
+	return xerrors.Is(err, NotFoundError)
+}

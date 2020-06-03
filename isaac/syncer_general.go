@@ -62,10 +62,10 @@ func NewGeneralSyncer(
 		return nil, xerrors.Errorf("empty source nodes")
 	}
 
-	if m, err := localstate.Storage().LastManifest(); err == nil {
-		if from <= m.Height() {
-			return nil, xerrors.Errorf("from height is same or lower than last block; from=%d last=%d", from, m.Height())
-		}
+	if m, found, err := localstate.Storage().LastManifest(); err != nil {
+		return nil, err
+	} else if found && from <= m.Height() {
+		return nil, xerrors.Errorf("from height is same or lower than last block; from=%d last=%d", from, m.Height())
 	}
 
 	sn := map[base.Address]Node{}
@@ -883,10 +883,14 @@ func (cs *GeneralSyncer) checkFetchedBlocks(fetched []block.Block) ([]base.Heigh
 			continue
 		}
 
-		if manifest, err := cs.storage().Manifest(blk.Height()); err != nil {
+		switch manifest, found, err := cs.storage().Manifest(blk.Height()); {
+		case !found:
+			return nil, storage.NotFoundError.Errorf("manifest not found")
+		case err != nil:
 			return nil, err
-		} else if !manifest.Hash().Equal(blk.Hash()) {
+		case !manifest.Hash().Equal(blk.Hash()):
 			missing = append(missing, blk.Height())
+
 			continue
 		}
 
@@ -936,9 +940,12 @@ func (cs *GeneralSyncer) commit() error {
 	}
 
 	for i := from; i <= to; i++ {
-		if m, err := cs.storage().Manifest(base.Height(i)); err != nil {
+		switch m, found, err := cs.storage().Manifest(base.Height(i)); {
+		case !found:
+			return storage.NotFoundError.Errorf("block, %v guessed to be stored, but not found", base.Height(i))
+		case err != nil:
 			return err
-		} else {
+		default:
 			cs.Log().Info().Dict("block", logging.Dict().
 				Hinted("proposal", m.Proposal()).
 				Hinted("hash", m.Hash()).
@@ -960,11 +967,10 @@ func (cs *GeneralSyncer) HeightTo() base.Height {
 	return cs.heightTo
 }
 
-func (cs *GeneralSyncer) TailManifest() block.Manifest {
-	b, err := cs.storage().Manifest(cs.heightTo)
-	if err != nil {
+func (cs *GeneralSyncer) TailManifest() block.Manifest { // TODO should error also returned
+	if b, found, err := cs.storage().Manifest(cs.heightTo); err != nil || !found {
 		return nil
+	} else {
+		return b
 	}
-
-	return b
 }

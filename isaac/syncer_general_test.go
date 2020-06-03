@@ -11,7 +11,6 @@ import (
 	"github.com/spikeekips/mitum/base/ballot"
 	"github.com/spikeekips/mitum/base/block"
 	channetwork "github.com/spikeekips/mitum/network/gochan"
-	"github.com/spikeekips/mitum/storage"
 )
 
 type testGeneralSyncer struct {
@@ -98,13 +97,15 @@ func (t *testGeneralSyncer) TestHeadAndTailManifests() {
 	t.NoError(cs.headAndTailManifests())
 
 	{
-		b, err := cs.storage().Manifest(base + 1)
+		b, found, err := cs.storage().Manifest(base + 1)
+		t.True(found)
 		t.NoError(err)
 		t.Equal(base+1, b.Height())
 	}
 
 	{
-		b, err := cs.storage().Manifest(target)
+		b, found, err := cs.storage().Manifest(target)
+		t.True(found)
 		t.NoError(err)
 		t.Equal(base+5, b.Height())
 	}
@@ -138,7 +139,8 @@ func (t *testGeneralSyncer) TestFillManifests() {
 	t.NoError(cs.prepare())
 
 	for i := baseBlock.Height().Int64() + 1; i < target.Int64()+1; i++ {
-		b, err := cs.storage().Manifest(base.Height(i))
+		b, found, err := cs.storage().Manifest(base.Height(i))
+		t.True(found)
 		t.NoError(err)
 
 		t.Equal(i, b.Height().Int64())
@@ -172,14 +174,16 @@ func (t *testGeneralSyncer) TestFetchBlocks() {
 	t.NoError(cs.startBlocks())
 
 	for i := baseHeight.Int64() + 1; i < target.Int64()+1; i++ {
-		b, err := cs.storage().Manifest(base.Height(i))
+		b, found, err := cs.storage().Manifest(base.Height(i))
+		t.True(found)
 		t.NoError(err)
 
 		t.Equal(i, b.Height().Int64())
 	}
 
 	for i := baseHeight.Int64() + 1; i < target.Int64()+1; i++ {
-		b, err := cs.storage().Block(base.Height(i))
+		b, found, err := cs.storage().Block(base.Height(i))
+		t.True(found)
 		t.NoError(err)
 		t.Equal(b.Height(), base.Height(i))
 	}
@@ -208,7 +212,8 @@ func (t *testGeneralSyncer) TestSaveBlocks() {
 	cs.setState(SyncerPrepared)
 
 	for i := baseHeight.Int64() + 1; i < target.Int64()+1; i++ {
-		b, err := cs.storage().Manifest(base.Height(i))
+		b, found, err := cs.storage().Manifest(base.Height(i))
+		t.True(found)
 		t.NoError(err)
 
 		t.Equal(i, b.Height().Int64())
@@ -219,19 +224,22 @@ func (t *testGeneralSyncer) TestSaveBlocks() {
 	t.NoError(cs.startBlocks())
 
 	for i := baseHeight.Int64() + 1; i < target.Int64()+1; i++ {
-		b, err := cs.storage().Block(base.Height(i))
+		b, found, err := cs.storage().Block(base.Height(i))
+		t.True(found)
 		t.NoError(err)
 		t.Equal(b.Height(), base.Height(i))
 
-		_, err = localstate.Storage().BlockByHeight(base.Height(i))
-		t.True(xerrors.Is(err, storage.NotFoundError))
+		_, found, err = localstate.Storage().BlockByHeight(base.Height(i))
+		t.False(found)
+		t.Nil(err)
 	}
 
 	t.NoError(cs.commit())
 
 	for i := baseHeight.Int64() + 1; i < target.Int64()+1; i++ {
-		b, err := localstate.Storage().BlockByHeight(base.Height(i))
+		b, found, err := localstate.Storage().BlockByHeight(base.Height(i))
 		t.NoError(err)
+		t.True(found)
 		t.Equal(b.Height(), base.Height(i))
 	}
 }
@@ -351,8 +359,10 @@ func (t *testGeneralSyncer) TestSyncingHandlerFromBallot() {
 	finishedChan := make(chan struct{})
 	go func() {
 		for {
-			b, err := localstate.Storage().LastManifest()
+			b, found, err := localstate.Storage().LastManifest()
 			t.NoError(err)
+			t.True(found)
+
 			if b.Height() == blt.Height()-1 {
 				finishedChan <- struct{}{}
 				break

@@ -56,7 +56,9 @@ func NewDummyBlocksV0Generator(
 func (bg *DummyBlocksV0Generator) Generate(ignoreExists bool) error {
 	lastHeight := base.NilHeight
 	if !ignoreExists {
-		if l, err := bg.genesisNode.Storage().LastManifest(); err != nil {
+		if l, found, err := bg.genesisNode.Storage().LastManifest(); !found {
+			return storage.NotFoundError.Errorf("last manifest not found")
+		} else if err != nil {
 			return err
 		} else if err := l.IsValid(bg.genesisNode.Policy().NetworkID()); err != nil {
 			return err
@@ -82,15 +84,19 @@ func (bg *DummyBlocksV0Generator) Generate(ignoreExists bool) error {
 		}
 	}
 
+end:
 	for {
 		if err := bg.createNextBlock(); err != nil {
 			return err
 		}
 
-		if l, err := bg.genesisNode.Storage().LastManifest(); err != nil {
+		switch l, found, err := bg.genesisNode.Storage().LastManifest(); {
+		case !found:
+			return storage.NotFoundError.Errorf("last manifest not found")
+		case err != nil:
 			return err
-		} else if l.Height() == bg.lastHeight {
-			break
+		case l.Height() == bg.lastHeight:
+			break end
 		}
 	}
 
@@ -100,13 +106,15 @@ func (bg *DummyBlocksV0Generator) Generate(ignoreExists bool) error {
 func (bg *DummyBlocksV0Generator) syncBlocks(from *Localstate) error {
 	var blocks []block.Block
 	height := base.Height(0)
+
+end:
 	for {
-		if blk, err := from.Storage().BlockByHeight(height); err != nil {
-			if xerrors.Is(err, storage.NotFoundError) {
-				break
-			}
+		switch blk, found, err := from.Storage().BlockByHeight(height); {
+		case !found:
+			break end
+		case err != nil:
 			return err
-		} else {
+		default:
 			blocks = append(blocks, blk)
 		}
 

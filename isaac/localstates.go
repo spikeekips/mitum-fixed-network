@@ -1,8 +1,6 @@
 package isaac
 
 import (
-	"github.com/spikeekips/mitum/base/seal"
-	"github.com/spikeekips/mitum/base/valuehash"
 	"github.com/spikeekips/mitum/storage"
 )
 
@@ -43,12 +41,4 @@ func (ls *Localstate) Policy() *LocalPolicy {
 
 func (ls *Localstate) Nodes() *NodesState {
 	return ls.nodes
-}
-
-func (ls *Localstate) Seal(h valuehash.Hash) (seal.Seal, error) {
-	if ls.storage != nil {
-		return ls.storage.Seal(h)
-	}
-
-	return nil, nil
 }

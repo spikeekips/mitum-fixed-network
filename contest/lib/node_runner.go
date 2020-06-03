@@ -174,13 +174,12 @@ func (nr *NodeRunner) attachNetworkHandlers() error {
 func (nr *NodeRunner) networkHandlerGetSeal(hs []valuehash.Hash) ([]seal.Seal, error) {
 	var sls []seal.Seal
 	for _, h := range hs {
-		if sl, err := nr.storage.Seal(h); err != nil {
-			if !xerrors.Is(err, storage.NotFoundError) {
-				continue
-			}
-
+		switch sl, found, err := nr.storage.Seal(h); {
+		case !found:
+			continue
+		case err != nil:
 			return nil, err
-		} else {
+		default:
 			sls = append(sls, sl)
 		}
 	}
@@ -252,11 +251,12 @@ func (nr *NodeRunner) networkhandlerGetManifests(heights []base.Height) ([]block
 
 		fetched[h] = struct{}{}
 
-		if m, err := nr.storage.ManifestByHeight(h); err != nil {
-			if !xerrors.Is(err, storage.NotFoundError) {
-				return nil, err
-			}
-		} else {
+		switch m, found, err := nr.storage.ManifestByHeight(h); {
+		case !found:
+			continue
+		case err != nil:
+			return nil, err
+		default:
 			manifests = append(manifests, m)
 		}
 	}
@@ -278,11 +278,12 @@ func (nr *NodeRunner) networkhandlerGetBlocks(heights []base.Height) ([]block.Bl
 
 		fetched[h] = struct{}{}
 
-		if m, err := nr.storage.BlockByHeight(h); err != nil {
-			if !xerrors.Is(err, storage.NotFoundError) {
-				return nil, err
-			}
-		} else {
+		switch m, found, err := nr.storage.BlockByHeight(h); {
+		case !found:
+			continue
+		case err != nil:
+			return nil, err
+		default:
 			blocks = append(blocks, m)
 		}
 	}
@@ -488,7 +489,7 @@ func (nr *NodeRunner) attachConsensusStates() error {
 		nr.setupLogging(h)
 	}
 
-	ss := isaac.NewConsensusStates(
+	ss, err := isaac.NewConsensusStates(
 		nr.localstate,
 		nr.ballotbox,
 		nr.suffrage,
@@ -498,6 +499,9 @@ func (nr *NodeRunner) attachConsensusStates() error {
 		syncing.(*isaac.StateSyncingHandler),
 		broken.(*isaac.StateBrokenHandler),
 	)
+	if err != nil {
+		return err
+	}
 
 	nr.setupLogging(ss)
 

@@ -9,6 +9,7 @@ import (
 	"github.com/spikeekips/mitum/base/ballot"
 	"github.com/spikeekips/mitum/base/block"
 	"github.com/spikeekips/mitum/base/seal"
+	"github.com/spikeekips/mitum/storage"
 	"github.com/spikeekips/mitum/util/localtime"
 	"github.com/spikeekips/mitum/util/logging"
 )
@@ -84,9 +85,12 @@ func (cs *StateJoiningHandler) SetLogger(l logging.Logger) logging.Logger {
 
 func (cs *StateJoiningHandler) Activate(ctx StateChangeContext) error {
 	var avp base.Voteproof // NOTE ACCEPT Voteproof of last block
-	if vp, err := cs.localstate.Storage().LastVoteproof(base.StageACCEPT); err != nil {
-		return xerrors.Errorf("last manifest is empty")
-	} else {
+	switch vp, found, err := cs.localstate.Storage().LastVoteproof(base.StageACCEPT); {
+	case !found:
+		return storage.NotFoundError.Errorf("last voteproof not found")
+	case err != nil:
+		return xerrors.Errorf("failed to get last voteproof: %w", err)
+	default:
 		avp = vp
 	}
 
@@ -216,9 +220,12 @@ func (cs *StateJoiningHandler) handleINITBallotAndACCEPTVoteproof(
 	l.Debug().Msg("INIT Ballot + ACCEPT Voteproof")
 
 	var height base.Height
-	if m, err := cs.localstate.Storage().LastManifest(); err != nil {
+	switch m, found, err := cs.localstate.Storage().LastManifest(); {
+	case !found:
+		return storage.NotFoundError.Errorf("last manifest not found")
+	case err != nil:
 		return err
-	} else {
+	default:
 		height = m.Height()
 	}
 
@@ -245,9 +252,12 @@ func (cs *StateJoiningHandler) handleINITBallotAndINITVoteproof(blt ballot.INITB
 	l.Debug().Msg("INIT Ballot + INIT Voteproof")
 
 	var manifest block.Manifest
-	if m, err := cs.localstate.Storage().LastManifest(); err != nil {
+	switch m, found, err := cs.localstate.Storage().LastManifest(); {
+	case !found:
+		return storage.NotFoundError.Errorf("last manifest not found")
+	case err != nil:
 		return err
-	} else {
+	default:
 		manifest = m
 	}
 
@@ -290,9 +300,12 @@ func (cs *StateJoiningHandler) handleACCEPTBallotAndINITVoteproof(
 	l.Debug().Msg("ACCEPT Ballot + INIT Voteproof")
 
 	var manifest block.Manifest
-	if m, err := cs.localstate.Storage().LastManifest(); err != nil {
+	switch m, found, err := cs.localstate.Storage().LastManifest(); {
+	case !found:
+		return storage.NotFoundError.Errorf("last manifest not found")
+	case err != nil:
 		return err
-	} else {
+	default:
 		manifest = m
 	}
 

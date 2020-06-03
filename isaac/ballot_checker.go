@@ -4,7 +4,6 @@ import (
 	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/base/ballot"
 	"github.com/spikeekips/mitum/base/valuehash"
-	"github.com/spikeekips/mitum/storage"
 	"github.com/spikeekips/mitum/util"
 	"github.com/spikeekips/mitum/util/logging"
 	"golang.org/x/xerrors"
@@ -20,13 +19,12 @@ type BallotChecker struct {
 
 func NewBallotChecker(blt ballot.Ballot, localstate *Localstate, suffrage base.Suffrage) (*BallotChecker, error) {
 	var height base.Height
-	if m, err := localstate.Storage().LastManifest(); err != nil {
-		if !xerrors.Is(err, storage.NotFoundError) {
-			return nil, err
-		}
-
+	switch m, found, err := localstate.Storage().LastManifest(); {
+	case err != nil:
+		return nil, err
+	case !found:
 		height = base.NilHeight
-	} else {
+	default:
 		height = m.Height()
 	}
 
@@ -90,15 +88,15 @@ func (bc *BallotChecker) CheckProposal() (bool, error) {
 	}
 
 	var proposal ballot.Proposal
-	if sl, err := bc.localstate.Storage().Seal(ph); err != nil {
-		if !xerrors.Is(err, storage.NotFoundError) {
-			return false, err
-		} else if pr, err := bc.requestProposal(bc.ballot.Node(), ph); err != nil {
+	if sl, found, err := bc.localstate.Storage().Seal(ph); !found {
+		if pr, err0 := bc.requestProposal(bc.ballot.Node(), ph); err0 != nil {
 			// NOTE if not found, request proposal from node of ballot
-			return false, err
+			return false, err0
 		} else {
 			proposal = pr
 		}
+	} else if err != nil {
+		return false, err
 	} else if pr, ok := sl.(ballot.Proposal); !ok {
 		return false, xerrors.Errorf("seal is not Proposal: %T", sl)
 	} else {

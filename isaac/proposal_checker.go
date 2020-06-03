@@ -5,7 +5,6 @@ import (
 
 	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/base/ballot"
-	"github.com/spikeekips/mitum/storage"
 	"github.com/spikeekips/mitum/util/logging"
 )
 
@@ -46,11 +45,9 @@ func (pvc *ProposalValidationChecker) IsKnown() (bool, error) {
 	height := pvc.proposal.Height()
 	round := pvc.proposal.Round()
 
-	if _, err := pvc.localstate.Storage().Proposal(height, round); err != nil {
-		if !xerrors.Is(err, storage.NotFoundError) {
-			return false, err
-		}
-	} else {
+	if _, found, err := pvc.localstate.Storage().Proposal(height, round); err != nil {
+		return false, err
+	} else if found {
 		return false, nil // NOTE the already saved will be passed
 	}
 

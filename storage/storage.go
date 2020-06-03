@@ -21,24 +21,24 @@ type Storage interface {
 	OpenBlockStorage(block.Block) (BlockStorage, error)
 	SyncerStorage() (SyncerStorage, error)
 
-	LastBlock() (block.Block, error) // TODO return found bool instead of storage.NotFoundError
-	LastManifest() (block.Manifest, error)
-	Block(valuehash.Hash) (block.Block, error)
-	BlockByHeight(base.Height) (block.Block, error)
+	LastBlock() (block.Block, bool, error)
+	LastManifest() (block.Manifest, bool, error)
+	Block(valuehash.Hash) (block.Block, bool, error)
+	BlockByHeight(base.Height) (block.Block, bool, error)
 	// TODO add BlocksByHeight([]base.Height) ([]block.Block, error)
-	Manifest(valuehash.Hash) (block.Manifest, error)
-	ManifestByHeight(base.Height) (block.Manifest, error)
+	Manifest(valuehash.Hash) (block.Manifest, bool, error)
+	ManifestByHeight(base.Height) (block.Manifest, bool, error)
 	// TODO add ManifestsByHeight([]base.Height) ([]block.Manifest, error)
-	LastVoteproof(base.Stage) (base.Voteproof, error)
+	LastVoteproof(base.Stage) (base.Voteproof, bool, error)
 
 	NewSeals([]seal.Seal) error
-	Seal(valuehash.Hash) (seal.Seal, error)
+	Seal(valuehash.Hash) (seal.Seal, bool, error)
 	Seals(func(valuehash.Hash, seal.Seal) (bool, error), bool /* sort */, bool /* load Seal? */) error
 	HasSeal(valuehash.Hash) (bool, error)
 	// TODO add get Seals by []valuehash.Hash
 
 	NewProposal(ballot.Proposal) error
-	Proposal(base.Height, base.Round) (ballot.Proposal, error)
+	Proposal(base.Height, base.Round) (ballot.Proposal, bool, error)
 	Proposals(func(ballot.Proposal) (bool, error), bool /* sort */) error
 
 	State(key string) (state.State, bool, error)

@@ -32,7 +32,8 @@ func (t *testConsensusStates) TestINITVoteproofHigherHeight() {
 
 	cs := NewStateSyncingHandler(t.localstate)
 
-	css := NewConsensusStates(t.localstate, nil, nil, nil, nil, nil, &dummySyncingStateHandler{cs}, nil)
+	css, err := NewConsensusStates(t.localstate, nil, nil, nil, nil, nil, &dummySyncingStateHandler{cs}, nil)
+	t.NoError(err)
 	t.NotNil(css)
 
 	manifest := t.lastManifest(t.localstate.Storage())

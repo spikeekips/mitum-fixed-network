@@ -104,20 +104,14 @@ func (cs *StateBootingHandler) checkBlock() error {
 	defer cs.Log().Debug().Msg("checked block")
 
 	var foundError error
-	if blk, err := cs.localstate.Storage().LastBlock(); err != nil {
-		if xerrors.Is(err, storage.NotFoundError) {
-			foundError = storage.NotFoundError.Errorf("empty Block")
-		} else {
-			foundError = err
-		}
-	} else if err := blk.IsValid(nil); err != nil {
-		foundError = err
+	if blk, found, err := cs.localstate.Storage().LastBlock(); !found {
+		return storage.NotFoundError.Errorf("empty block")
+	} else if err != nil {
+		return err
+	} else if err := blk.IsValid(nil); err != nil { // TODO if invalid block, it should be re-synced.
+		return err
 	} else {
 		cs.Log().Debug().Hinted("block", blk.Manifest()).Msg("initial block found")
-	}
-
-	if foundError != nil {
-		cs.Log().Debug().Err(foundError).Msg("initial block not found")
 	}
 
 	return foundError

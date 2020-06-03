@@ -11,6 +11,7 @@ import (
 
 	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/base/block"
+	"github.com/spikeekips/mitum/storage"
 	"github.com/spikeekips/mitum/util"
 	"github.com/spikeekips/mitum/util/logging"
 )
@@ -50,14 +51,16 @@ func NewSyncerStorage(main *Storage) (*SyncerStorage, error) {
 	}, nil
 }
 
-func (st *SyncerStorage) Manifest(height base.Height) (block.Manifest, error) {
+func (st *SyncerStorage) Manifest(height base.Height) (block.Manifest, bool, error) {
 	return st.manifestStorage.ManifestByHeight(height)
 }
 
 func (st *SyncerStorage) Manifests(heights []base.Height) ([]block.Manifest, error) {
 	var bs []block.Manifest
 	for i := range heights {
-		if b, err := st.manifestStorage.ManifestByHeight(heights[i]); err != nil {
+		if b, found, err := st.manifestStorage.ManifestByHeight(heights[i]); !found {
+			return nil, storage.NotFoundError.Errorf("manifest not found")
+		} else if err != nil {
 			return nil, err
 		} else {
 			bs = append(bs, b)
@@ -112,14 +115,16 @@ func (st *SyncerStorage) HasBlock(height base.Height) (bool, error) {
 	return st.blockStorage.client.Exists(defaultColNameBlock, util.NewBSONFilter("height", height).D())
 }
 
-func (st *SyncerStorage) Block(height base.Height) (block.Block, error) {
+func (st *SyncerStorage) Block(height base.Height) (block.Block, bool, error) {
 	return st.blockStorage.BlockByHeight(height)
 }
 
 func (st *SyncerStorage) Blocks(heights []base.Height) ([]block.Block, error) {
 	var bs []block.Block
 	for i := range heights {
-		if b, err := st.blockStorage.BlockByHeight(heights[i]); err != nil {
+		if b, found, err := st.blockStorage.BlockByHeight(heights[i]); !found {
+			return nil, storage.NotFoundError.Errorf("block not found")
+		} else if err != nil {
 			return nil, err
 		} else {
 			bs = append(bs, b)
@@ -172,7 +177,7 @@ func (st *SyncerStorage) Commit() error {
 		Msg("trying to commit blocks")
 
 	var lastBlock block.Block
-	if l, err := st.blockStorage.LastBlock(); err != nil || l == nil {
+	if l, found, err := st.blockStorage.LastBlock(); err != nil || !found {
 		return xerrors.Errorf("failed to get last manifest fromm storage: %w", err)
 	} else {
 		lastBlock = l

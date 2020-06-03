@@ -10,7 +10,6 @@ import (
 	"github.com/spikeekips/mitum/base/ballot"
 	"github.com/spikeekips/mitum/base/block"
 	"github.com/spikeekips/mitum/base/seal"
-	"github.com/spikeekips/mitum/storage"
 	"github.com/spikeekips/mitum/util"
 	"github.com/spikeekips/mitum/util/errors"
 	"github.com/spikeekips/mitum/util/logging"
@@ -38,9 +37,11 @@ func NewConsensusStates(
 	ballotbox *Ballotbox,
 	suffrage base.Suffrage,
 	booting, joining, consensus, syncing, broken StateHandler,
-) *ConsensusStates {
+) (*ConsensusStates, error) {
 	var livp base.Voteproof
-	if vp, err := localstate.Storage().LastVoteproof(base.StageINIT); err == nil {
+	if vp, found, err := localstate.Storage().LastVoteproof(base.StageINIT); err != nil {
+		return nil, err
+	} else if found {
 		livp = vp
 	}
 
@@ -64,7 +65,7 @@ func NewConsensusStates(
 	}
 	css.FunctionDaemon = util.NewFunctionDaemon(css.start, false)
 
-	return css
+	return css, nil
 }
 
 func (css *ConsensusStates) SetLogger(l logging.Logger) logging.Logger {
@@ -146,11 +147,16 @@ func (css *ConsensusStates) cleanBallotbox() *time.Ticker {
 	go func() {
 		for range ticker.C {
 			var height base.Height
-			if m, err := css.localstate.Storage().LastManifest(); err != nil {
+			switch m, found, err := css.localstate.Storage().LastManifest(); {
+			case !found:
+				css.Log().Error().Msg("something wrong to clean Ballotbox; last manifest not found")
+
+				continue
+			case err != nil:
 				css.Log().Error().Err(err).Msg("something wrong to clean Ballotbox; failed to get last manifest")
 
 				continue
-			} else {
+			default:
 				height = m.Height() - 3
 			}
 
@@ -299,11 +305,9 @@ func (css *ConsensusStates) broadcastSeal(sl seal.Seal, errChan chan<- error) {
 
 func (css *ConsensusStates) newVoteproof(voteproof base.Voteproof) error {
 	var manifest block.Manifest
-	if m, err := css.localstate.Storage().LastManifest(); err != nil {
-		if !xerrors.Is(err, storage.NotFoundError) {
-			return err
-		}
-	} else {
+	if m, found, err := css.localstate.Storage().LastManifest(); err != nil {
+		return err
+	} else if found {
 		manifest = m
 	}
 

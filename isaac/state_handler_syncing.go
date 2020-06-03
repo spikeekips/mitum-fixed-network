@@ -10,7 +10,6 @@ import (
 	"github.com/spikeekips/mitum/base/ballot"
 	"github.com/spikeekips/mitum/base/block"
 	"github.com/spikeekips/mitum/base/seal"
-	"github.com/spikeekips/mitum/storage"
 	"github.com/spikeekips/mitum/util"
 	"github.com/spikeekips/mitum/util/localtime"
 	"github.com/spikeekips/mitum/util/logging"
@@ -80,11 +79,9 @@ func (ss *StateSyncingHandler) newSyncers() error {
 	}
 
 	var baseManifest block.Manifest
-	if m, err := ss.localstate.Storage().LastManifest(); err != nil {
-		if !xerrors.Is(err, storage.NotFoundError) {
-			return err
-		}
-	} else {
+	if m, found, err := ss.localstate.Storage().LastManifest(); err != nil {
+		return err
+	} else if found {
 		baseManifest = m
 	}
 
@@ -114,7 +111,7 @@ func (ss *StateSyncingHandler) Activate(ctx StateChangeContext) error {
 	l := loggerWithStateChangeContext(ctx, ss.Log())
 	l.Debug().Msg("activated")
 
-	if vp, err := ss.localstate.Storage().LastVoteproof(base.StageACCEPT); err == nil {
+	if vp, found, _ := ss.localstate.Storage().LastVoteproof(base.StageACCEPT); found {
 		ss.setLastVoteproof(vp)
 	}
 
@@ -203,11 +200,9 @@ func (ss *StateSyncingHandler) fromVoteproof(voteproof base.Voteproof) error {
 
 func (ss *StateSyncingHandler) handleVoteproof(voteproof base.Voteproof) error {
 	baseHeight := base.PreGenesisHeight
-	if m, err := ss.localstate.Storage().LastManifest(); err != nil {
-		if !xerrors.Is(err, storage.NotFoundError) {
-			return err
-		}
-	} else {
+	if m, found, err := ss.localstate.Storage().LastManifest(); err != nil {
+		return err
+	} else if found {
 		baseHeight = m.Height()
 	}
 

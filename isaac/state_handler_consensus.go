@@ -69,8 +69,10 @@ func (cs *StateConsensusHandler) SetLogger(l logging.Logger) logging.Logger {
 }
 
 func (cs *StateConsensusHandler) Activate(ctx StateChangeContext) error {
-	if _, err := cs.localstate.Storage().LastManifest(); err != nil {
-		return xerrors.Errorf("last manifest is empty")
+	if _, found, err := cs.localstate.Storage().LastManifest(); !found {
+		return storage.NotFoundError.Errorf("last manifest is empty")
+	} else if err != nil {
+		return xerrors.Errorf("failed to get last manifest: %w", err)
 	}
 
 	if ctx.Voteproof() == nil {
@@ -366,13 +368,12 @@ func (cs *StateConsensusHandler) checkReceivedProposal(height base.Height, round
 	cs.Log().Debug().Msg("trying to check already received Proposal")
 
 	// if Proposal already received, find and processing it.
-	proposal, err := cs.localstate.Storage().Proposal(height, round)
-	if err != nil {
-		if xerrors.Is(err, storage.NotFoundError) {
-			return nil
-		}
-
+	proposal, found, err := cs.localstate.Storage().Proposal(height, round)
+	if !found {
+		return nil
+	} else if err != nil {
 		cs.Log().Error().Err(err).Msg("expected Proposal not found, but keep trying")
+
 		return err
 	}
 

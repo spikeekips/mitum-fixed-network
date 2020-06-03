@@ -119,7 +119,7 @@ func (t *baseTestStateHandler) TearDownTest() {
 }
 
 func (t *baseTestStateHandler) lastINITVoteproof(localstate *Localstate) base.Voteproof {
-	vp, _ := localstate.Storage().LastVoteproof(base.StageINIT)
+	vp, _, _ := localstate.Storage().LastVoteproof(base.StageINIT)
 
 	return vp
 }
@@ -357,7 +357,9 @@ func (t *baseTestStateHandler) compareAVLTreeNode(a, b tree.Node) {
 }
 
 func (t *baseTestStateHandler) lastManifest(st storage.Storage) block.Manifest {
-	if m, err := st.LastManifest(); err != nil {
+	if m, found, err := st.LastManifest(); !found {
+		panic(storage.NotFoundError.Errorf("last manifest not found"))
+	} else if err != nil {
 		panic(err)
 	} else {
 		return m
@@ -365,7 +367,9 @@ func (t *baseTestStateHandler) lastManifest(st storage.Storage) block.Manifest {
 }
 
 func (t *baseTestStateHandler) lastBlock(st storage.Storage) block.Block {
-	if m, err := st.LastBlock(); err != nil {
+	if m, found, err := st.LastBlock(); !found {
+		panic(storage.NotFoundError.Errorf("last block not found"))
+	} else if err != nil {
 		panic(err)
 	} else {
 		return m

@@ -26,8 +26,9 @@ func (t *testSyncers) TestSaveLastBlock() {
 	target := t.lastManifest(localstate.Storage()).Height() + 2
 	t.generateBlocks([]*Localstate{remoteState}, target)
 
-	baseManifest, err := localstate.Storage().LastManifest()
+	baseManifest, found, err := localstate.Storage().LastManifest()
 	t.NoError(err)
+	t.True(found)
 
 	finishedChan := make(chan base.Height)
 
@@ -49,10 +50,13 @@ func (t *testSyncers) TestSaveLastBlock() {
 		break
 	}
 
-	rm, err := remoteState.Storage().LastManifest()
+	rm, found, err := remoteState.Storage().LastManifest()
 	t.NoError(err)
-	lm, err := localstate.Storage().LastManifest()
+	t.True(found)
+
+	lm, found, err := localstate.Storage().LastManifest()
 	t.NoError(err)
+	t.True(found)
 
 	t.compareManifest(rm, lm)
 
@@ -62,8 +66,10 @@ func (t *testSyncers) TestSaveLastBlock() {
 	t.NoError(err)
 	d := DummyMongodbStorage{st}
 
-	dlm, err := d.LastManifest()
+	dlm, found, err := d.LastManifest()
 	t.NoError(err)
+	t.True(found)
+
 	t.compareManifest(rm, dlm)
 }
 

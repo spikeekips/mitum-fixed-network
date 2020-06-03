@@ -3,12 +3,9 @@
 package isaac
 
 import (
-	"golang.org/x/xerrors"
-
 	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/base/block"
 	channetwork "github.com/spikeekips/mitum/network/gochan"
-	"github.com/spikeekips/mitum/storage"
 	"github.com/spikeekips/mitum/util"
 )
 
@@ -60,12 +57,10 @@ func (t *baseTestStateHandler) setup(local *Localstate, others []*Localstate) {
 		nch.SetGetManifests(func(heights []base.Height) ([]block.Manifest, error) {
 			var bs []block.Manifest
 			for _, h := range heights {
-				m, err := st.Storage().ManifestByHeight(h)
-				if err != nil {
-					if xerrors.Is(err, storage.NotFoundError) {
-						break
-					}
-
+				m, found, err := st.Storage().ManifestByHeight(h)
+				if !found {
+					break
+				} else if err != nil {
 					return nil, err
 				}
 
@@ -78,12 +73,10 @@ func (t *baseTestStateHandler) setup(local *Localstate, others []*Localstate) {
 		nch.SetGetBlocks(func(heights []base.Height) ([]block.Block, error) {
 			var bs []block.Block
 			for _, h := range heights {
-				m, err := st.Storage().BlockByHeight(h)
-				if err != nil {
-					if xerrors.Is(err, storage.NotFoundError) {
-						break
-					}
-
+				m, found, err := st.Storage().BlockByHeight(h)
+				if !found {
+					break
+				} else if err != nil {
 					return nil, err
 				}
 

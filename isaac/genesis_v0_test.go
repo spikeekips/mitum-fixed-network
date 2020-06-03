@@ -52,7 +52,8 @@ func (t *testGenesisBlockV0) TestNewGenesisBlock() {
 	t.Equal(base.Height(0), blk.Height())
 	t.Equal(base.Round(0), blk.Round())
 
-	pr, err := t.localstate.Storage().Seal(blk.Proposal())
+	pr, found, err := t.localstate.Storage().Seal(blk.Proposal())
+	t.True(found)
 	t.NoError(err)
 	t.NotNil(pr)
 

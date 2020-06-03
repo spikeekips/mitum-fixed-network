@@ -70,10 +70,8 @@ func NewStorage(client *Client, encs *encoder.Encoders, enc encoder.Encoder) (*S
 		lastManifestHeight: base.NilHeight,
 	}
 
-	if err := st.loadLastBlock(); err != nil {
-		if !xerrors.Is(err, storage.NotFoundError) {
-			return nil, err
-		}
+	if err := st.loadLastBlock(); err != nil && !storage.IsNotFoundError(err) {
+		return nil, err
 	}
 
 	if err := st.cleanupIncompleteData(); err != nil {
@@ -125,15 +123,15 @@ func (st *Storage) lastHeight() base.Height {
 	return st.lastManifestHeight
 }
 
-func (st *Storage) LastManifest() (block.Manifest, error) {
+func (st *Storage) LastManifest() (block.Manifest, bool, error) {
 	st.RLock()
 	defer st.RUnlock()
 
 	if st.lastManifest == nil {
-		return nil, storage.NotFoundError.Errorf("manifest not found")
+		return nil, false, nil
 	}
 
-	return st.lastManifest, nil
+	return st.lastManifest, true, nil
 }
 
 func (st *Storage) setLastManifest(m block.Manifest) {
@@ -196,7 +194,7 @@ func (st *Storage) setLastBlock(blk block.Block, save bool) error {
 	return nil
 }
 
-func (st *Storage) LastVoteproof(stage base.Stage) (base.Voteproof, error) {
+func (st *Storage) LastVoteproof(stage base.Stage) (base.Voteproof, bool, error) {
 	st.RLock()
 	defer st.RUnlock()
 
@@ -207,14 +205,14 @@ func (st *Storage) LastVoteproof(stage base.Stage) (base.Voteproof, error) {
 	case base.StageACCEPT:
 		vp = st.lastACCEPTVoteproof
 	default:
-		return nil, xerrors.Errorf("invalid stage: %v", stage)
+		return nil, false, xerrors.Errorf("invalid stage: %v", stage)
 	}
 
 	if vp == nil {
-		return nil, storage.NotFoundError.Errorf("voteproof not found")
+		return nil, false, nil
 	}
 
-	return vp, nil
+	return vp, true, nil
 }
 
 func (st *Storage) SyncerStorage() (storage.SyncerStorage, error) {
@@ -279,14 +277,22 @@ func (st *Storage) Encoders() *encoder.Encoders {
 	return st.encs
 }
 
-func (st *Storage) LastBlock() (block.Block, error) {
+func (st *Storage) LastBlock() (block.Block, bool, error) {
 	return st.blockByFilter(util.NewBSONFilter("height", st.lastHeight()).D())
 }
 
-func (st *Storage) blockByFilter(filter bson.D) (block.Block, error) {
-	return st.rawBlockByFilter(
+func (st *Storage) blockByFilter(filter bson.D) (block.Block, bool, error) {
+	if blk, err := st.rawBlockByFilter(
 		util.NewBSONFilterFromD(filter).AddOp("height", st.lastHeight(), "$lte").D(),
-	)
+	); err != nil {
+		if storage.IsNotFoundError(err) {
+			return nil, false, nil
+		}
+
+		return nil, false, err
+	} else {
+		return blk, true, nil
+	}
 }
 
 func (st *Storage) rawBlockByFilter(filter bson.D) (block.Block, error) {
@@ -309,22 +315,26 @@ func (st *Storage) rawBlockByFilter(filter bson.D) (block.Block, error) {
 		return nil, err
 	}
 
+	if blk == nil {
+		return nil, storage.NotFoundError.Errorf("block not found; filter=%q", filter)
+	}
+
 	return blk, nil
 }
 
-func (st *Storage) Block(h valuehash.Hash) (block.Block, error) {
+func (st *Storage) Block(h valuehash.Hash) (block.Block, bool, error) {
 	return st.blockByFilter(util.NewBSONFilter("_id", h.String()).D())
 }
 
-func (st *Storage) BlockByHeight(height base.Height) (block.Block, error) {
+func (st *Storage) BlockByHeight(height base.Height) (block.Block, bool, error) {
 	if height > st.lastHeight() {
-		return nil, storage.NotFoundError
+		return nil, false, nil
 	}
 
 	return st.blockByFilter(util.NewBSONFilter("height", height).D())
 }
 
-func (st *Storage) manifestByFilter(filter bson.D) (block.Manifest, error) {
+func (st *Storage) manifestByFilter(filter bson.D) (block.Manifest, bool, error) {
 	var manifest block.Manifest
 
 	if err := st.client.GetByFilter(
@@ -341,21 +351,25 @@ func (st *Storage) manifestByFilter(filter bson.D) (block.Manifest, error) {
 		},
 		options.FindOne().SetSort(util.NewBSONFilter("height", -1).D()),
 	); err != nil {
-		return nil, err
+		return nil, false, err
 	}
 
-	return manifest, nil
+	if manifest == nil {
+		return nil, false, nil
+	}
+
+	return manifest, true, nil
 }
 
-func (st *Storage) Manifest(h valuehash.Hash) (block.Manifest, error) {
+func (st *Storage) Manifest(h valuehash.Hash) (block.Manifest, bool, error) {
 	return st.manifestByFilter(util.NewBSONFilter("_id", h.String()).D())
 }
 
-func (st *Storage) ManifestByHeight(height base.Height) (block.Manifest, error) {
+func (st *Storage) ManifestByHeight(height base.Height) (block.Manifest, bool, error) {
 	return st.manifestByFilter(util.NewBSONFilter("height", height).D())
 }
 
-func (st *Storage) Seal(h valuehash.Hash) (seal.Seal, error) {
+func (st *Storage) Seal(h valuehash.Hash) (seal.Seal, bool, error) {
 	var sl seal.Seal
 
 	if err := st.client.GetByID(
@@ -371,10 +385,18 @@ func (st *Storage) Seal(h valuehash.Hash) (seal.Seal, error) {
 			return nil
 		},
 	); err != nil {
-		return nil, err
+		if xerrors.Is(err, storage.NotFoundError) {
+			return nil, false, nil
+		}
+
+		return nil, false, err
 	}
 
-	return sl, nil
+	if sl == nil {
+		return nil, false, nil
+	}
+
+	return sl, true, nil
 }
 
 func (st *Storage) NewSeals(seals []seal.Seal) error {
@@ -543,7 +565,7 @@ func (st *Storage) NewProposal(proposal ballot.Proposal) error {
 	return st.NewSeals([]seal.Seal{proposal})
 }
 
-func (st *Storage) Proposal(height base.Height, round base.Round) (ballot.Proposal, error) {
+func (st *Storage) Proposal(height base.Height, round base.Round) (ballot.Proposal, bool, error) {
 	var proposal ballot.Proposal
 
 	if err := st.client.Find(
@@ -560,14 +582,14 @@ func (st *Storage) Proposal(height base.Height, round base.Round) (ballot.Propos
 		},
 		options.Find().SetSort(util.NewBSONFilter("height", -1).Add("round", -1).D()),
 	); err != nil {
-		return nil, err
+		return nil, false, err
 	}
 
 	if proposal == nil {
-		return nil, storage.NotFoundError.Errorf("proposal not found; height=%v round=%v", height, round)
+		return nil, false, nil
 	}
 
-	return proposal, nil
+	return proposal, true, nil
 }
 
 func (st *Storage) State(key string) (state.State, bool, error) {
@@ -587,10 +609,6 @@ func (st *Storage) State(key string) (state.State, bool, error) {
 		},
 		options.Find().SetSort(util.NewBSONFilter("height", -1).D()).SetLimit(1),
 	); err != nil {
-		if xerrors.Is(err, storage.NotFoundError) {
-			return nil, false, nil
-		}
-
 		return nil, false, err
 	}
 

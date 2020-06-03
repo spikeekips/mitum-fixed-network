@@ -7,6 +7,7 @@ import (
 
 	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/base/block"
+	"github.com/spikeekips/mitum/storage"
 	"github.com/spikeekips/mitum/util"
 	"github.com/spikeekips/mitum/util/logging"
 )
@@ -38,19 +39,33 @@ func (st *SyncerStorage) manifestKey(height base.Height) []byte {
 	)
 }
 
-func (st *SyncerStorage) Manifest(height base.Height) (block.Manifest, error) {
+func (st *SyncerStorage) Manifest(height base.Height) (block.Manifest, bool, error) {
 	raw, err := st.storage.DB().Get(st.manifestKey(height), nil)
 	if err != nil {
-		return nil, wrapError(err)
+		if storage.IsNotFoundError(err) {
+			return nil, false, nil
+		}
+
+		return nil, false, wrapError(err)
 	}
 
-	return st.storage.loadManifest(raw)
+	m, err := st.storage.loadManifest(raw)
+	if err != nil {
+		if storage.IsNotFoundError(err) {
+			return nil, false, nil
+		}
+		return nil, false, err
+	}
+
+	return m, true, nil
 }
 
 func (st *SyncerStorage) Manifests(heights []base.Height) ([]block.Manifest, error) {
 	var bs []block.Manifest
 	for i := range heights {
-		if b, err := st.Manifest(heights[i]); err != nil {
+		if b, found, err := st.Manifest(heights[i]); !found {
+			return nil, storage.NotFoundError.Errorf("manifest not found by height")
+		} else if err != nil {
 			return nil, err
 		} else {
 			bs = append(bs, b)
@@ -91,14 +106,16 @@ func (st *SyncerStorage) HasBlock(height base.Height) (bool, error) {
 	return st.storage.db.Has(leveldbBlockHeightKey(height), nil)
 }
 
-func (st *SyncerStorage) Block(height base.Height) (block.Block, error) {
+func (st *SyncerStorage) Block(height base.Height) (block.Block, bool, error) {
 	return st.storage.BlockByHeight(height)
 }
 
 func (st *SyncerStorage) Blocks(heights []base.Height) ([]block.Block, error) {
 	var bs []block.Block
 	for i := range heights {
-		if b, err := st.storage.BlockByHeight(heights[i]); err != nil {
+		if b, found, err := st.storage.BlockByHeight(heights[i]); !found {
+			return nil, storage.NotFoundError.Errorf("block not found by height")
+		} else if err != nil {
 			return nil, err
 		} else {
 			bs = append(bs, b)
@@ -144,7 +161,9 @@ func (st *SyncerStorage) Commit() error {
 		Msg("trying to commit blocks")
 
 	for i := st.heightFrom.Int64(); i <= st.heightTo.Int64(); i++ {
-		if blk, err := st.Block(base.Height(i)); err != nil {
+		if blk, found, err := st.Block(base.Height(i)); !found {
+			return storage.NotFoundError.Errorf("block not found")
+		} else if err != nil {
 			return err
 		} else if err := st.commitBlock(blk); err != nil {
 			st.Log().Error().Err(err).Int64("height", i).Msg("failed to commit block")

@@ -7,7 +7,7 @@ import (
 
 func (ls *Localstate) MarshalLog(key string, e logging.Emitter, verbose bool) logging.Emitter {
 	var manifest block.Manifest
-	if m, err := ls.Storage().LastManifest(); err != nil {
+	if m, found, err := ls.Storage().LastManifest(); !found || err != nil {
 		return e
 	} else {
 		manifest = m

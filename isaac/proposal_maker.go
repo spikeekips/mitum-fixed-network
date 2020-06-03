@@ -7,6 +7,7 @@ import (
 	"github.com/spikeekips/mitum/base/ballot"
 	"github.com/spikeekips/mitum/base/operation"
 	"github.com/spikeekips/mitum/base/valuehash"
+	"github.com/spikeekips/mitum/storage"
 )
 
 type ProposalMaker struct {
@@ -74,9 +75,12 @@ func (pm *ProposalMaker) Proposal(round base.Round) (ballot.Proposal, error) {
 	defer pm.Unlock()
 
 	var height base.Height
-	if m, err := pm.localstate.Storage().LastManifest(); err != nil {
+	switch m, found, err := pm.localstate.Storage().LastManifest(); {
+	case !found:
+		return nil, storage.NotFoundError.Errorf("last manifest not found")
+	case err != nil:
 		return nil, err
-	} else {
+	default:
 		height = m.Height() + 1
 	}
 

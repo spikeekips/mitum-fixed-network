@@ -4,14 +4,12 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/suite"
-	"golang.org/x/xerrors"
 
 	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/base/ballot"
 	"github.com/spikeekips/mitum/base/seal"
 	"github.com/spikeekips/mitum/base/valuehash"
 	channetwork "github.com/spikeekips/mitum/network/gochan"
-	"github.com/spikeekips/mitum/storage"
 )
 
 type testProposalProcessor struct {
@@ -87,8 +85,9 @@ func (t *testProposalProcessor) TestBlockOperations() {
 	t.NoError(err)
 	t.NoError(bs.Commit())
 
-	loaded, err := t.localstate.Storage().Block(blk.Hash())
+	loaded, found, err := t.localstate.Storage().Block(blk.Hash())
 	t.NoError(err)
+	t.True(found)
 
 	t.compareBlock(bs.Block(), loaded)
 }
@@ -126,8 +125,9 @@ func (t *testProposalProcessor) TestNotFoundInProposal() {
 	}
 
 	for _, h := range proposal.Seals() {
-		_, err = t.localstate.Storage().Seal(h)
-		t.True(xerrors.Is(err, storage.NotFoundError))
+		_, found, err := t.localstate.Storage().Seal(h)
+		t.False(found)
+		t.Nil(err)
 	}
 
 	_ = t.localstate.Storage().NewProposal(proposal)
@@ -138,8 +138,9 @@ func (t *testProposalProcessor) TestNotFoundInProposal() {
 
 	// local node should have the missing seals
 	for _, h := range proposal.Seals() {
-		_, err = t.localstate.Storage().Seal(h)
+		_, found, err := t.localstate.Storage().Seal(h)
 		t.NoError(err)
+		t.True(found)
 	}
 }
 

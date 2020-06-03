@@ -13,21 +13,24 @@ import (
 
 func NewINITBallotV0Round0(st storage.Storage, node base.Address) (ballot.INITBallotV0, error) {
 	var m block.Manifest
-	switch l, err := st.LastManifest(); {
+	switch l, found, err := st.LastManifest(); {
+	case !found:
+		return ballot.INITBallotV0{}, xerrors.Errorf("last block not found")
 	case err != nil:
-		return ballot.INITBallotV0{}, xerrors.Errorf("last block not found: %w", err)
+		return ballot.INITBallotV0{}, xerrors.Errorf("failed to get last block: %w", err)
 	default:
 		m = l
 	}
 
 	var avp base.Voteproof
-	if vp, err := st.LastVoteproof(base.StageACCEPT); err != nil {
-		if !xerrors.Is(err, storage.NotFoundError) {
-			return ballot.INITBallotV0{}, xerrors.Errorf("last voteproof not found: %w", err)
-		} else if m.Height() != base.PreGenesisHeight {
+	switch vp, found, err := st.LastVoteproof(base.StageACCEPT); {
+	case !found:
+		if m.Height() != base.PreGenesisHeight {
 			return ballot.INITBallotV0{}, xerrors.Errorf("failed to get last voteproof: %w", err)
 		}
-	} else {
+	case err != nil:
+		return ballot.INITBallotV0{}, xerrors.Errorf("failed to get last voteproof: %w", err)
+	default:
 		avp = vp
 	}
 
@@ -44,9 +47,11 @@ func NewINITBallotV0WithVoteproof(st storage.Storage, node base.Address, round b
 	ballot.INITBallotV0, error,
 ) {
 	var manifest block.Manifest
-	switch l, err := st.LastManifest(); {
-	case err != nil:
+	switch l, found, err := st.LastManifest(); {
+	case !found:
 		return ballot.INITBallotV0{}, xerrors.Errorf("last block not found: %w", err)
+	case err != nil:
+		return ballot.INITBallotV0{}, xerrors.Errorf("failed to get last block: %w", err)
 	default:
 		manifest = l
 	}
@@ -101,9 +106,12 @@ func NewProposalV0(st storage.Storage, node base.Address, round base.Round, oper
 	ballot.ProposalV0, error,
 ) {
 	var manifest block.Manifest
-	if l, err := st.LastManifest(); err != nil {
+	switch l, found, err := st.LastManifest(); {
+	case !found:
+		return ballot.ProposalV0{}, storage.NotFoundError.Errorf("last manifest not found for NewProposalV0")
+	case err != nil:
 		return ballot.ProposalV0{}, err
-	} else {
+	default:
 		manifest = l
 	}
 

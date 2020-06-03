@@ -138,7 +138,7 @@ func (st *Storage) Encoders() *encoder.Encoders {
 	return st.encs
 }
 
-func (st *Storage) LastManifest() (block.Manifest, error) {
+func (st *Storage) LastManifest() (block.Manifest, bool, error) {
 	var raw []byte
 
 	if err := st.iter(
@@ -149,43 +149,43 @@ func (st *Storage) LastManifest() (block.Manifest, error) {
 		},
 		false,
 	); err != nil {
-		return nil, err
+		return nil, false, err
 	}
 
 	if raw == nil {
-		return nil, storage.NotFoundError.Errorf("manifest not found")
+		return nil, false, nil
 	}
 
 	h, err := st.loadHash(raw)
 	if err != nil {
-		return nil, err
+		return nil, false, err
 	}
 
 	return st.Manifest(h)
 }
 
-func (st *Storage) LastVoteproof(stage base.Stage) (base.Voteproof, error) {
+func (st *Storage) LastVoteproof(stage base.Stage) (base.Voteproof, bool, error) {
 	switch {
 	case stage == base.StageINIT, stage == base.StageACCEPT:
 	default:
-		return nil, xerrors.Errorf("invalid stage: %v", stage)
+		return nil, false, xerrors.Errorf("invalid stage: %v", stage)
 	}
 
-	if blk, err := st.LastBlock(); err != nil {
-		return nil, err
+	if blk, found, err := st.LastBlock(); err != nil || !found {
+		return nil, false, err
 	} else {
 		switch {
 		case stage == base.StageINIT:
-			return blk.INITVoteproof(), nil
+			return blk.INITVoteproof(), true, nil
 		case stage == base.StageACCEPT:
-			return blk.ACCEPTVoteproof(), nil
+			return blk.ACCEPTVoteproof(), true, nil
+		default:
+			return nil, false, nil
 		}
 	}
-
-	return nil, nil
 }
 
-func (st *Storage) LastBlock() (block.Block, error) {
+func (st *Storage) LastBlock() (block.Block, bool, error) {
 	var raw []byte
 
 	if err := st.iter(
@@ -196,16 +196,16 @@ func (st *Storage) LastBlock() (block.Block, error) {
 		},
 		false,
 	); err != nil {
-		return nil, err
+		return nil, false, err
 	}
 
 	if raw == nil {
-		return nil, storage.NotFoundError.Errorf("block not found")
+		return nil, false, nil
 	}
 
 	h, err := st.loadHash(raw)
 	if err != nil {
-		return nil, err
+		return nil, false, err
 	}
 
 	return st.Block(h)
@@ -217,50 +217,60 @@ func (st *Storage) get(key []byte) ([]byte, error) {
 	return b, wrapError(err)
 }
 
-func (st *Storage) Block(h valuehash.Hash) (block.Block, error) {
-	raw, err := st.get(leveldbBlockHashKey(h))
-	if err != nil {
-		return nil, err
-	}
+func (st *Storage) Block(h valuehash.Hash) (block.Block, bool, error) {
+	if raw, err := st.get(leveldbBlockHashKey(h)); err != nil {
+		if storage.IsNotFoundError(err) {
+			return nil, false, nil
+		}
 
-	return st.loadBlock(raw)
-}
-
-func (st *Storage) BlockByHeight(height base.Height) (block.Block, error) {
-	var bh valuehash.Hash
-
-	if raw, err := st.get(leveldbBlockHeightKey(height)); err != nil {
-		return nil, err
-	} else if h, err := st.loadHash(raw); err != nil {
-		return nil, err
+		return nil, false, err
+	} else if blk, err := st.loadBlock(raw); err != nil {
+		return nil, false, err
 	} else {
-		bh = h
+		return blk, true, nil
 	}
-
-	return st.Block(bh)
 }
 
-func (st *Storage) Manifest(h valuehash.Hash) (block.Manifest, error) {
-	raw, err := st.get(leveldbManifestKey(h))
-	if err != nil {
-		return nil, err
-	}
-
-	return st.loadManifest(raw)
-}
-
-func (st *Storage) ManifestByHeight(height base.Height) (block.Manifest, error) {
-	var bh valuehash.Hash
-
+func (st *Storage) BlockByHeight(height base.Height) (block.Block, bool, error) {
 	if raw, err := st.get(leveldbBlockHeightKey(height)); err != nil {
-		return nil, err
-	} else if h, err := st.loadHash(raw); err != nil {
-		return nil, err
-	} else {
-		bh = h
-	}
+		if storage.IsNotFoundError(err) {
+			return nil, false, nil
+		}
 
-	return st.Manifest(bh)
+		return nil, false, err
+	} else if h, err := st.loadHash(raw); err != nil {
+		return nil, false, err
+	} else {
+		return st.Block(h)
+	}
+}
+
+func (st *Storage) Manifest(h valuehash.Hash) (block.Manifest, bool, error) {
+	if raw, err := st.get(leveldbManifestKey(h)); err != nil {
+		if storage.IsNotFoundError(err) {
+			return nil, false, nil
+		}
+
+		return nil, false, err
+	} else if m, err := st.loadManifest(raw); err != nil {
+		return nil, false, err
+	} else {
+		return m, true, nil
+	}
+}
+
+func (st *Storage) ManifestByHeight(height base.Height) (block.Manifest, bool, error) {
+	if raw, err := st.get(leveldbBlockHeightKey(height)); err != nil {
+		if storage.IsNotFoundError(err) {
+			return nil, false, nil
+		}
+
+		return nil, false, err
+	} else if h, err := st.loadHash(raw); err != nil {
+		return nil, false, err
+	} else {
+		return st.Manifest(h)
+	}
 }
 
 func (st *Storage) sealKey(h valuehash.Hash) []byte {
@@ -284,17 +294,25 @@ func (st *Storage) newStagedOperationSealReverseKey(h valuehash.Hash) []byte {
 	return util.ConcatBytesSlice(keyPrefixStagedOperationSealReverse, h.Bytes())
 }
 
-func (st *Storage) Seal(h valuehash.Hash) (seal.Seal, error) {
+func (st *Storage) Seal(h valuehash.Hash) (seal.Seal, bool, error) {
 	return st.sealByKey(st.sealKey(h))
 }
 
-func (st *Storage) sealByKey(key []byte) (seal.Seal, error) {
+func (st *Storage) sealByKey(key []byte) (seal.Seal, bool, error) {
 	b, err := st.get(key)
 	if err != nil {
-		return nil, err
+		if storage.IsNotFoundError(err) {
+			return nil, false, nil
+		}
+
+		return nil, false, err
 	}
 
-	return st.loadSeal(b)
+	if sl, err := st.loadSeal(b); err != nil {
+		return nil, false, err
+	} else {
+		return sl, true, nil
+	}
 }
 
 func (st *Storage) NewSeals(seals []seal.Seal) error {
@@ -501,7 +519,7 @@ func (st *Storage) StagedOperationSeals(callback func(operation.Seal) (bool, err
 		keyPrefixStagedOperationSeal,
 		func(_, value []byte) (bool, error) {
 			var osl operation.Seal
-			if v, err := st.sealByKey(value); err != nil {
+			if v, found, err := st.sealByKey(value); err != nil || !found {
 				return false, err
 			} else if sl, ok := v.(operation.Seal); !ok {
 				return false, xerrors.Errorf("not operation.Seal: %T", v)
@@ -528,7 +546,7 @@ func (st *Storage) Proposals(callback func(ballot.Proposal) (bool, error), sort 
 	return st.iter(
 		keyPrefixProposal,
 		func(_, value []byte) (bool, error) {
-			if sl, err := st.sealByKey(value); err != nil {
+			if sl, found, err := st.sealByKey(value); err != nil || !found {
 				return false, err
 			} else if pr, ok := sl.(ballot.Proposal); !ok {
 				return false, xerrors.Errorf("not Proposal: %T", sl)
@@ -561,24 +579,27 @@ func (st *Storage) NewProposal(proposal ballot.Proposal) error {
 	return nil
 }
 
-func (st *Storage) Proposal(height base.Height, round base.Round) (ballot.Proposal, error) {
+func (st *Storage) Proposal(height base.Height, round base.Round) (ballot.Proposal, bool, error) {
 	sealKey, err := st.get(st.proposalKey(height, round))
 	if err != nil {
-		return nil, err
+		if storage.IsNotFoundError(err) {
+			return nil, false, nil
+		}
+
+		return nil, false, err
 	}
 
-	sl, err := st.sealByKey(sealKey)
-	if err != nil {
-		return nil, err
+	if sl, found, err := st.sealByKey(sealKey); err != nil || !found {
+		return nil, false, err
+	} else {
+		return sl.(ballot.Proposal), true, nil
 	}
-
-	return sl.(ballot.Proposal), nil
 }
 
 func (st *Storage) State(key string) (state.State, bool, error) {
 	b, err := st.get(leveldbStateKey(key))
 	if err != nil {
-		if xerrors.Is(err, storage.NotFoundError) {
+		if storage.IsNotFoundError(err) {
 			return nil, false, nil
 		}
 

@@ -88,7 +88,10 @@ func (cl *Client) Find(
 		return err
 	} else {
 		defer func() {
-			_ = c.Close(context.TODO()) // TODO logging
+			ctx, cancel := context.WithTimeout(context.Background(), cl.execTimeout)
+			defer cancel()
+
+			_ = c.Close(ctx)
 		}()
 
 		cursor = c

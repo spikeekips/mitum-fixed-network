@@ -2,10 +2,13 @@ package ballot
 
 import (
 	"github.com/spikeekips/mitum/base"
+	"github.com/spikeekips/mitum/base/key"
 	"github.com/spikeekips/mitum/base/operation"
 	"github.com/spikeekips/mitum/base/seal"
 	"github.com/spikeekips/mitum/base/valuehash"
+	"github.com/spikeekips/mitum/util"
 	"github.com/spikeekips/mitum/util/hint"
+	"github.com/spikeekips/mitum/util/localtime"
 	"github.com/spikeekips/mitum/util/logging"
 )
 
@@ -77,4 +80,51 @@ func IsValidBallot(ballot Ballot, b []byte) error {
 	}
 
 	return operation.IsValidEmbededFact(ballot.Signer(), ballot, b)
+}
+
+func SignBaseBallotV0(blt Ballot, bb BaseBallotV0, pk key.Privatekey, b []byte) (BaseBallotV0, error) {
+	if err := bb.IsReadyToSign(b); err != nil {
+		return BaseBallotV0{}, err
+	}
+
+	var bodyHash valuehash.Hash
+	if h, err := blt.GenerateBodyHash(); err != nil {
+		return BaseBallotV0{}, err
+	} else {
+		bodyHash = h
+	}
+
+	var sig key.Signature
+	if s, err := pk.Sign(util.ConcatBytesSlice(bodyHash.Bytes(), b)); err != nil {
+		return BaseBallotV0{}, err
+	} else {
+		sig = s
+	}
+
+	factHash := blt.Fact().Hash()
+	factSig, err := pk.Sign(util.ConcatBytesSlice(factHash.Bytes(), b))
+	if err != nil {
+		return BaseBallotV0{}, err
+	}
+
+	bb.signer = pk.Publickey()
+	bb.signature = sig
+	bb.signedAt = localtime.Now()
+	bb.bodyHash = bodyHash
+	bb.factHash = factHash
+	bb.factSignature = factSig
+
+	return bb, nil
+}
+
+func GenerateHash(blt Ballot, bb BaseBallotV0, bs ...[]byte) (valuehash.Hash, error) {
+	bl := util.ConcatBytesSlice(bb.Bytes(), blt.Fact().Bytes())
+	if len(bs) > 0 {
+		bl = util.ConcatBytesSlice(
+			bl,
+			util.ConcatBytesSlice(bs...),
+		)
+	}
+
+	return valuehash.NewSHA256(bl), nil
 }

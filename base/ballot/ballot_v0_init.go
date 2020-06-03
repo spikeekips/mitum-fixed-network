@@ -9,7 +9,6 @@ import (
 	"github.com/spikeekips/mitum/util"
 	"github.com/spikeekips/mitum/util/hint"
 	"github.com/spikeekips/mitum/util/isvalid"
-	"github.com/spikeekips/mitum/util/localtime"
 )
 
 var (
@@ -137,7 +136,7 @@ func (ib INITBallotV0) Voteproof() base.Voteproof {
 }
 
 func (ib INITBallotV0) GenerateHash() (valuehash.Hash, error) {
-	return valuehash.NewSHA256(util.ConcatBytesSlice(ib.BaseBallotV0.Bytes(), ib.INITBallotFactV0.Bytes())), nil
+	return GenerateHash(ib, ib.BaseBallotV0)
 }
 
 func (ib INITBallotV0) GenerateBodyHash() (valuehash.Hash, error) {
@@ -157,47 +156,16 @@ func (ib INITBallotV0) Fact() base.Fact {
 	return ib.INITBallotFactV0
 }
 
-func (ib *INITBallotV0) Sign(pk key.Privatekey, b []byte) error { // nolint
-	if err := ib.BaseBallotV0.IsReadyToSign(b); err != nil {
-		return err
-	}
-	if err := ib.INITBallotFactV0.IsValid(b); err != nil {
-		return err
-	}
-
-	// body signature
-	var bodyHash valuehash.Hash
-	if h, err := ib.GenerateBodyHash(); err != nil {
+func (ib *INITBallotV0) Sign(pk key.Privatekey, b []byte) error {
+	if newBase, err := SignBaseBallotV0(ib, ib.BaseBallotV0, pk, b); err != nil {
 		return err
 	} else {
-		bodyHash = h
-	}
-
-	var sig key.Signature
-	if s, err := pk.Sign(util.ConcatBytesSlice(bodyHash.Bytes(), b)); err != nil {
-		return err
-	} else {
-		sig = s
-	}
-
-	// fact signature
-	factHash := ib.INITBallotFactV0.Hash()
-	factSig, err := pk.Sign(util.ConcatBytesSlice(factHash.Bytes(), b))
-	if err != nil {
-		return err
-	}
-
-	ib.BaseBallotV0.signer = pk.Publickey()
-	ib.BaseBallotV0.signature = sig
-	ib.BaseBallotV0.signedAt = localtime.Now()
-	ib.BaseBallotV0.bodyHash = bodyHash
-	ib.BaseBallotV0.factHash = factHash
-	ib.BaseBallotV0.factSignature = factSig
-
-	if h, err := ib.GenerateHash(); err != nil {
-		return err
-	} else {
-		ib.BaseBallotV0 = ib.BaseBallotV0.SetHash(h)
+		ib.BaseBallotV0 = newBase
+		if h, err := ib.GenerateHash(); err != nil {
+			return err
+		} else {
+			ib.BaseBallotV0 = ib.BaseBallotV0.SetHash(h)
+		}
 	}
 
 	return nil

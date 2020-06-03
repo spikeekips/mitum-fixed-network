@@ -9,7 +9,6 @@ import (
 	"github.com/spikeekips/mitum/util"
 	"github.com/spikeekips/mitum/util/hint"
 	"github.com/spikeekips/mitum/util/isvalid"
-	"github.com/spikeekips/mitum/util/localtime"
 )
 
 var (
@@ -59,7 +58,7 @@ func (abf ACCEPTBallotFactV0) NewBlock() valuehash.Hash {
 	return abf.newBlock
 }
 
-// TODO ACCEPTBallot should have SIGNBallots
+// FUTURE ACCEPTBallot should have SIGNBallots
 
 type ACCEPTBallotV0 struct {
 	BaseBallotV0
@@ -133,13 +132,7 @@ func (ab ACCEPTBallotV0) GenerateHash() (valuehash.Hash, error) {
 		vb = ab.voteproof.Bytes()
 	}
 
-	e := util.ConcatBytesSlice(
-		ab.BaseBallotV0.Bytes(),
-		ab.ACCEPTBallotFactV0.Bytes(),
-		vb,
-	)
-
-	return valuehash.NewSHA256(e), nil
+	return GenerateHash(ab, ab.BaseBallotV0, vb)
 }
 
 func (ab ACCEPTBallotV0) GenerateBodyHash() (valuehash.Hash, error) {
@@ -159,42 +152,16 @@ func (ab ACCEPTBallotV0) Fact() base.Fact {
 	return ab.ACCEPTBallotFactV0
 }
 
-func (ab *ACCEPTBallotV0) Sign(pk key.Privatekey, b []byte) error { // nolint
-	if err := ab.BaseBallotV0.IsReadyToSign(b); err != nil {
-		return err
-	}
-
-	var bodyHash valuehash.Hash
-	if h, err := ab.GenerateBodyHash(); err != nil {
+func (ab *ACCEPTBallotV0) Sign(pk key.Privatekey, b []byte) error {
+	if newBase, err := SignBaseBallotV0(ab, ab.BaseBallotV0, pk, b); err != nil {
 		return err
 	} else {
-		bodyHash = h
-	}
-
-	var sig key.Signature
-	if s, err := pk.Sign(util.ConcatBytesSlice(bodyHash.Bytes(), b)); err != nil {
-		return err
-	} else {
-		sig = s
-	}
-
-	factHash := ab.ACCEPTBallotFactV0.Hash()
-	factSig, err := pk.Sign(util.ConcatBytesSlice(factHash.Bytes(), b))
-	if err != nil {
-		return err
-	}
-
-	ab.BaseBallotV0.signer = pk.Publickey()
-	ab.BaseBallotV0.signature = sig
-	ab.BaseBallotV0.signedAt = localtime.Now()
-	ab.BaseBallotV0.bodyHash = bodyHash
-	ab.BaseBallotV0.factHash = factHash
-	ab.BaseBallotV0.factSignature = factSig
-
-	if h, err := ab.GenerateHash(); err != nil {
-		return err
-	} else {
-		ab.BaseBallotV0 = ab.BaseBallotV0.SetHash(h)
+		ab.BaseBallotV0 = newBase
+		if h, err := ab.GenerateHash(); err != nil {
+			return err
+		} else {
+			ab.BaseBallotV0 = ab.BaseBallotV0.SetHash(h)
+		}
 	}
 
 	return nil

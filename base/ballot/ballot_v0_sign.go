@@ -7,7 +7,6 @@ import (
 	"github.com/spikeekips/mitum/util"
 	"github.com/spikeekips/mitum/util/hint"
 	"github.com/spikeekips/mitum/util/isvalid"
-	"github.com/spikeekips/mitum/util/localtime"
 )
 
 var (
@@ -112,7 +111,7 @@ func (sb SIGNBallotV0) IsValid(b []byte) error {
 }
 
 func (sb SIGNBallotV0) GenerateHash() (valuehash.Hash, error) {
-	return valuehash.NewSHA256(util.ConcatBytesSlice(sb.BaseBallotV0.Bytes(), sb.SIGNBallotFactV0.Bytes())), nil
+	return GenerateHash(sb, sb.BaseBallotV0)
 }
 
 func (sb SIGNBallotV0) GenerateBodyHash() (valuehash.Hash, error) {
@@ -127,42 +126,16 @@ func (sb SIGNBallotV0) Fact() base.Fact {
 	return sb.SIGNBallotFactV0
 }
 
-func (sb *SIGNBallotV0) Sign(pk key.Privatekey, b []byte) error { // nolint
-	if err := sb.BaseBallotV0.IsReadyToSign(b); err != nil {
-		return err
-	}
-
-	var bodyHash valuehash.Hash
-	if h, err := sb.GenerateBodyHash(); err != nil {
+func (sb *SIGNBallotV0) Sign(pk key.Privatekey, b []byte) error {
+	if newBase, err := SignBaseBallotV0(sb, sb.BaseBallotV0, pk, b); err != nil {
 		return err
 	} else {
-		bodyHash = h
-	}
-
-	var sig key.Signature
-	if s, err := pk.Sign(util.ConcatBytesSlice(bodyHash.Bytes(), b)); err != nil {
-		return err
-	} else {
-		sig = s
-	}
-
-	factHash := sb.SIGNBallotFactV0.Hash()
-	factSig, err := pk.Sign(util.ConcatBytesSlice(factHash.Bytes(), b))
-	if err != nil {
-		return err
-	}
-
-	sb.BaseBallotV0.signer = pk.Publickey()
-	sb.BaseBallotV0.signature = sig
-	sb.BaseBallotV0.signedAt = localtime.Now()
-	sb.BaseBallotV0.bodyHash = bodyHash
-	sb.BaseBallotV0.factHash = factHash
-	sb.BaseBallotV0.factSignature = factSig
-
-	if h, err := sb.GenerateHash(); err != nil {
-		return err
-	} else {
-		sb.BaseBallotV0 = sb.BaseBallotV0.SetHash(h)
+		sb.BaseBallotV0 = newBase
+		if h, err := sb.GenerateHash(); err != nil {
+			return err
+		} else {
+			sb.BaseBallotV0 = sb.BaseBallotV0.SetHash(h)
+		}
 	}
 
 	return nil

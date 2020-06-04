@@ -25,17 +25,25 @@ type Voteproof interface {
 	Result() VoteResultType
 	Majority() Fact
 	Ballots() map[Address]valuehash.Hash
+	Votes() map[Address]VoteproofNodeFact
 	Threshold() Threshold
 }
 
 type VoteproofNodeFact struct {
+	address       Address
 	fact          valuehash.Hash
 	factSignature key.Signature
 	signer        key.Publickey
 }
 
-func NewVoteproofNodeFact(fact valuehash.Hash, factSignature key.Signature, signer key.Publickey) VoteproofNodeFact {
+func NewVoteproofNodeFact(
+	address Address,
+	fact valuehash.Hash,
+	factSignature key.Signature,
+	signer key.Publickey,
+) VoteproofNodeFact {
 	return VoteproofNodeFact{
+		address:       address,
 		fact:          fact,
 		factSignature: factSignature,
 		signer:        signer,
@@ -44,6 +52,7 @@ func NewVoteproofNodeFact(fact valuehash.Hash, factSignature key.Signature, sign
 
 func (vf VoteproofNodeFact) IsValid(b []byte) error {
 	if err := isvalid.Check([]isvalid.IsValider{
+		vf.address,
 		vf.fact,
 		vf.factSignature,
 		vf.signer,
@@ -56,6 +65,7 @@ func (vf VoteproofNodeFact) IsValid(b []byte) error {
 
 func (vf VoteproofNodeFact) Bytes() []byte {
 	return util.ConcatBytesSlice(
+		vf.address.Bytes(),
 		vf.fact.Bytes(),
 		vf.factSignature.Bytes(),
 		[]byte(vf.signer.String()),

@@ -80,6 +80,7 @@ func (vrs *VoteRecords) Vote(blt ballot.Ballot) base.Voteproof {
 		votes := map[base.Address]base.VoteproofNodeFact{}
 		for node, blt := range vrs.ballots {
 			votes[node] = base.NewVoteproofNodeFact(
+				node,
 				blt.FactHash(),
 				blt.FactSignature(),
 				blt.Signer(),

@@ -113,6 +113,10 @@ func (vp DummyVoteproof) Ballots() map[Address]valuehash.Hash {
 	return nil
 }
 
+func (vp DummyVoteproof) Votes() map[Address]VoteproofNodeFact {
+	return nil
+}
+
 func (vp DummyVoteproof) Threshold() Threshold {
 	return Threshold{}
 }

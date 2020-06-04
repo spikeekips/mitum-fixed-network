@@ -109,10 +109,19 @@ func (vp *VoteproofV0) unpack( // nolint
 
 func (vf *VoteproofNodeFact) unpack(
 	enc encoder.Encoder,
+	bAddress []byte,
 	bFact []byte,
 	factSignature key.Signature,
 	bSigner []byte,
 ) error {
+	var address Address
+	if h, err := DecodeAddress(enc, bAddress); err != nil {
+		println("0000000000", string(bAddress))
+		return err
+	} else {
+		address = h
+	}
+
 	var fact valuehash.Hash
 	if h, err := valuehash.Decode(enc, bFact); err != nil {
 		return err
@@ -127,6 +136,7 @@ func (vf *VoteproofNodeFact) unpack(
 		signer = h
 	}
 
+	vf.address = address
 	vf.fact = fact
 	vf.factSignature = factSignature
 	vf.signer = signer

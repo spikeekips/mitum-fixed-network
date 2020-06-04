@@ -111,6 +111,7 @@ func (vp *VoteproofV0) UnpackBSON(b []byte, enc *bsonencoder.Encoder) error {
 }
 
 type VoteproofNodeFactPackBSON struct {
+	AD Address        `bson:"address"`
 	FC valuehash.Hash `bson:"fact"`
 	FS key.Signature  `bson:"fact_signature"`
 	SG key.Publickey  `bson:"signer"`
@@ -118,6 +119,7 @@ type VoteproofNodeFactPackBSON struct {
 
 func (vf VoteproofNodeFact) MarshalBSON() ([]byte, error) {
 	return bsonencoder.Marshal(VoteproofNodeFactPackBSON{
+		AD: vf.address,
 		FC: vf.fact,
 		FS: vf.factSignature,
 		SG: vf.signer,
@@ -125,6 +127,7 @@ func (vf VoteproofNodeFact) MarshalBSON() ([]byte, error) {
 }
 
 type VoteproofNodeFactUnpackBSON struct {
+	AD bson.Raw      `bson:"address"`
 	FC bson.Raw      `bson:"fact"`
 	FS key.Signature `bson:"fact_signature"`
 	SG bson.Raw      `bson:"signer"`
@@ -136,5 +139,5 @@ func (vf *VoteproofNodeFact) UnpackBSON(b []byte, enc *bsonencoder.Encoder) erro
 		return err
 	}
 
-	return vf.unpack(enc, vpp.FC, vpp.FS, vpp.SG)
+	return vf.unpack(enc, vpp.AD, vpp.FC, vpp.FS, vpp.SG)
 }

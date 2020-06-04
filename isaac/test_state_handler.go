@@ -146,6 +146,7 @@ func (t *baseTestStateHandler) newVoteproof(
 
 		ballots[state.Node().Address()] = valuehash.RandomSHA256()
 		votes[state.Node().Address()] = base.NewVoteproofNodeFact(
+			state.Node().Address(),
 			factHash,
 			factSignature,
 			state.Node().Publickey(),

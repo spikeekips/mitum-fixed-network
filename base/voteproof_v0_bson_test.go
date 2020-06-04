@@ -53,11 +53,13 @@ func (t *testVoteproofBSON) TestMarshal() {
 		},
 		votes: map[Address]VoteproofNodeFact{
 			n0.Address(): {
+				address:       n0.Address(),
 				fact:          factHash0,
 				factSignature: factSignature0,
 				signer:        n0.Publickey(),
 			},
 			n1.Address(): {
+				address:       n1.Address(),
 				fact:          factHash0,
 				factSignature: factSignature1,
 				signer:        n1.Publickey(),

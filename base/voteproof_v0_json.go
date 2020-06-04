@@ -125,6 +125,7 @@ func (vp *VoteproofV0) UnpackJSON(b []byte, enc *jsonencoder.Encoder) error {
 }
 
 type VoteproofNodeFactPackJSON struct {
+	AD Address        `json:"address"`
 	FC valuehash.Hash `json:"fact"`
 	FS key.Signature  `json:"fact_signature"`
 	SG key.Publickey  `json:"signer"`
@@ -132,6 +133,7 @@ type VoteproofNodeFactPackJSON struct {
 
 func (vf VoteproofNodeFact) MarshalJSON() ([]byte, error) {
 	return jsonencoder.Marshal(VoteproofNodeFactPackJSON{
+		AD: vf.address,
 		FC: vf.fact,
 		FS: vf.factSignature,
 		SG: vf.signer,
@@ -139,6 +141,7 @@ func (vf VoteproofNodeFact) MarshalJSON() ([]byte, error) {
 }
 
 type VoteproofNodeFactUnpackJSON struct {
+	AD json.RawMessage `json:"address"`
 	FC json.RawMessage `json:"fact"`
 	FS key.Signature   `json:"fact_signature"`
 	SG json.RawMessage `json:"signer"`
@@ -150,5 +153,5 @@ func (vf *VoteproofNodeFact) UnpackJSON(b []byte, enc *jsonencoder.Encoder) erro
 		return err
 	}
 
-	return vf.unpack(enc, vpp.FC, vpp.FS, vpp.SG)
+	return vf.unpack(enc, vpp.AD, vpp.FC, vpp.FS, vpp.SG)
 }

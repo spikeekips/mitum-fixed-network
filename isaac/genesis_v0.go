@@ -17,6 +17,7 @@ type GenesisBlockV0Generator struct {
 	localstate *Localstate
 	ballotbox  *Ballotbox
 	ops        []operation.Operation
+	suffrage   base.Suffrage
 }
 
 func NewGenesisBlockV0Generator(localstate *Localstate, ops []operation.Operation) (*GenesisBlockV0Generator, error) {
@@ -30,7 +31,8 @@ func NewGenesisBlockV0Generator(localstate *Localstate, ops []operation.Operatio
 		ballotbox: NewBallotbox(func() base.Threshold {
 			return threshold
 		}),
-		ops: ops,
+		ops:      ops,
+		suffrage: base.NewFixedSuffrage(localstate.Node().Address(), nil),
 	}, nil
 }
 
@@ -62,7 +64,7 @@ func (gg *GenesisBlockV0Generator) Generate() (block.Block, error) {
 
 	var blk block.Block
 
-	pm := NewProposalProcessorV0(gg.localstate)
+	pm := NewProposalProcessorV0(gg.localstate, gg.suffrage)
 	_ = pm.SetLogger(gg.Log())
 
 	if bk, err := pm.ProcessINIT(proposal.Hash(), ivp); err != nil {
@@ -113,7 +115,18 @@ func (gg *GenesisBlockV0Generator) generatePreviousBlock() error {
 		genesisHash = valuehash.NewDummy(sig)
 	}
 
-	blk, err := block.NewBlockV0(base.PreGenesisHeight, base.Round(0), genesisHash, genesisHash, nil, nil)
+	blk, err := block.NewBlockV0(
+		block.NewSuffrageInfoV0(
+			gg.localstate.Node().Address(),
+			[]base.Node{gg.localstate.Node()},
+		),
+		base.PreGenesisHeight,
+		base.Round(0),
+		genesisHash,
+		genesisHash,
+		nil,
+		nil,
+	)
 	if err != nil {
 		return err
 	}

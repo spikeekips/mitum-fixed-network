@@ -1,3 +1,5 @@
+// +build test
+
 package isaac
 
 import (
@@ -8,12 +10,14 @@ import (
 
 func (ln *LocalNode) MarshalJSON() ([]byte, error) {
 	return jsonencoder.Marshal(struct {
+		jsonencoder.HintedHead
 		AD  base.Address   `json:"address"`
 		PUK key.Publickey  `json:"publickey"`
 		PRK key.Privatekey `json:"privatekey"`
 	}{
-		AD:  ln.address,
-		PUK: ln.publickey,
-		PRK: ln.privatekey,
+		HintedHead: jsonencoder.NewHintedHead(ln.Hint()),
+		AD:         ln.Address(),
+		PUK:        ln.Publickey(),
+		PRK:        ln.privatekey,
 	})
 }

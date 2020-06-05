@@ -38,7 +38,7 @@ func NewDummyBlocksV0Generator(
 		ballotboxes[l.Node().Address()] = NewBallotbox(func() base.Threshold {
 			return threshold
 		})
-		pms[l.Node().Address()] = NewProposalProcessorV0(l)
+		pms[l.Node().Address()] = NewProposalProcessorV0(l, suffrage)
 	}
 
 	return &DummyBlocksV0Generator{
@@ -105,15 +105,15 @@ end:
 
 func (bg *DummyBlocksV0Generator) syncBlocks(from *Localstate) error {
 	var blocks []block.Block
-	height := base.Height(0)
+	height := base.PreGenesisHeight
 
 end:
 	for {
 		switch blk, found, err := from.Storage().BlockByHeight(height); {
-		case !found:
-			break end
 		case err != nil:
 			return err
+		case !found:
+			break end
 		default:
 			blocks = append(blocks, blk)
 		}

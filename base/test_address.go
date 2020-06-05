@@ -52,7 +52,7 @@ func (sa ShortAddress) Equal(a Address) bool {
 		return false
 	}
 
-	return sa == a.(ShortAddress)
+	return string(sa) == string(a.(ShortAddress))
 }
 
 func (sa ShortAddress) Bytes() []byte {

@@ -30,10 +30,9 @@ type Manifest interface {
 type BlockConsensusInfo interface {
 	isvalid.IsValider
 	hint.Hinter
-	util.Byter
-	// TODO add the address list of consensus nodes.
 	INITVoteproof() base.Voteproof
 	ACCEPTVoteproof() base.Voteproof
+	SuffrageInfo() SuffrageInfo
 }
 
 type Block interface {
@@ -51,4 +50,12 @@ type BlockUpdater interface {
 	SetACCEPTVoteproof(base.Voteproof) BlockUpdater
 	SetOperations(*tree.AVLTree) BlockUpdater
 	SetStates(*tree.AVLTree) BlockUpdater
+}
+
+type SuffrageInfo interface {
+	// TODO ActingSuffrage info should be inclufed
+	isvalid.IsValider
+	hint.Hinter
+	Proposer() base.Address
+	Nodes() []base.Node
 }

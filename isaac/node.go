@@ -15,29 +15,23 @@ type Node interface {
 
 type LocalNode struct {
 	sync.RWMutex
-	address    base.Address
-	publickey  key.Publickey
+	base.BaseNodeV0
 	privatekey key.Privatekey
 	channel    network.NetworkChannel
 }
 
 func NewLocalNode(address base.Address, privatekey key.Privatekey) *LocalNode {
 	return &LocalNode{
-		address:    address,
-		publickey:  privatekey.Publickey(),
+		BaseNodeV0: base.NewBaseNodeV0(address, privatekey.Publickey()),
 		privatekey: privatekey,
 	}
-}
-
-func (ln *LocalNode) Address() base.Address {
-	return ln.address
 }
 
 func (ln *LocalNode) Publickey() key.Publickey {
 	ln.RLock()
 	defer ln.RUnlock()
 
-	return ln.publickey
+	return ln.BaseNodeV0.Publickey()
 }
 
 func (ln *LocalNode) Privatekey() key.Privatekey {
@@ -65,24 +59,14 @@ func (ln *LocalNode) SetChannel(channel network.NetworkChannel) *LocalNode {
 
 type RemoteNode struct {
 	sync.RWMutex
-	address   base.Address
-	publickey key.Publickey
-	channel   network.NetworkChannel
+	base.BaseNodeV0
+	channel network.NetworkChannel
 }
 
 func NewRemoteNode(address base.Address, publickey key.Publickey) *RemoteNode {
 	return &RemoteNode{
-		address:   address,
-		publickey: publickey,
+		BaseNodeV0: base.NewBaseNodeV0(address, publickey),
 	}
-}
-
-func (ln *RemoteNode) Address() base.Address {
-	return ln.address
-}
-
-func (ln *RemoteNode) Publickey() key.Publickey {
-	return ln.publickey
 }
 
 func (ln *RemoteNode) Channel() network.NetworkChannel {

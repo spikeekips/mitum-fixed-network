@@ -6,7 +6,6 @@ import (
 	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/base/tree"
 	"github.com/spikeekips/mitum/base/valuehash"
-	"github.com/spikeekips/mitum/util"
 	"github.com/spikeekips/mitum/util/hint"
 	"github.com/spikeekips/mitum/util/isvalid"
 	"github.com/spikeekips/mitum/util/localtime"
@@ -19,6 +18,8 @@ var (
 	ManifestV0Hint           = hint.MustHint(ManifestV0Type, "0.0.1")
 	BlockConsensusInfoV0Type = hint.MustNewType(0x05, 0x02, "block-consensus-info-v0")
 	BlockConsensusInfoV0Hint = hint.MustHint(BlockConsensusInfoV0Type, "0.0.1")
+	SuffrageInfoV0Type       = hint.MustNewType(0x05, 0x03, "block-suffrage-info-v0")
+	SuffrageInfoV0Hint       = hint.MustHint(SuffrageInfoV0Type, "0.0.1")
 )
 
 type BlockV0 struct {
@@ -29,6 +30,7 @@ type BlockV0 struct {
 }
 
 func NewBlockV0(
+	si SuffrageInfoV0,
 	height base.Height,
 	round base.Round,
 	proposal valuehash.Hash,
@@ -52,8 +54,10 @@ func NewBlockV0(
 	}
 
 	return BlockV0{
-		ManifestV0:           bm,
-		BlockConsensusInfoV0: BlockConsensusInfoV0{},
+		ManifestV0: bm,
+		BlockConsensusInfoV0: BlockConsensusInfoV0{
+			suffrageInfo: si,
+		},
 	}, nil
 }
 
@@ -103,7 +107,7 @@ func (bm BlockV0) Hint() hint.Hint {
 }
 
 func (bm BlockV0) Bytes() []byte {
-	return util.ConcatBytesSlice(bm.ManifestV0.Bytes(), bm.BlockConsensusInfoV0.Bytes())
+	return nil
 }
 
 func (bm BlockV0) SetINITVoteproof(voteproof base.Voteproof) BlockUpdater {

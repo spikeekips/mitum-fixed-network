@@ -1,5 +1,8 @@
 package contestlib
 
+/*
+BLOCK remove
+
 import (
 	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/util/logging"
@@ -53,3 +56,4 @@ func (ff *FixedSuffrage) IsActing(_ base.Height, _ base.Round, node base.Address
 func (ff *FixedSuffrage) IsProposer(_ base.Height, _ base.Round, node base.Address) bool {
 	return ff.proposer.Equal(node)
 }
+*/

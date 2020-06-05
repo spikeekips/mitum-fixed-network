@@ -49,9 +49,11 @@ func (t *baseTestStateHandler) SetupSuite() {
 	_ = t.Encs.AddHinter(ballot.ACCEPTBallotV0{})
 	_ = t.Encs.AddHinter(ballot.ACCEPTBallotFactV0{})
 	_ = t.Encs.AddHinter(base.VoteproofV0{})
+	_ = t.Encs.AddHinter(base.BaseNodeV0{})
 	_ = t.Encs.AddHinter(block.BlockV0{})
 	_ = t.Encs.AddHinter(block.ManifestV0{})
 	_ = t.Encs.AddHinter(block.BlockConsensusInfoV0{})
+	_ = t.Encs.AddHinter(block.SuffrageInfoV0{})
 	_ = t.Encs.AddHinter(operation.Seal{})
 	_ = t.Encs.AddHinter(operation.KVOperationFact{})
 	_ = t.Encs.AddHinter(operation.KVOperation{})
@@ -184,12 +186,12 @@ func (t *baseTestStateHandler) newVoteproof(
 }
 
 func (t *baseTestStateHandler) suffrage(proposerState *Localstate, states ...*Localstate) base.Suffrage {
-	nodes := make([]base.Node, len(states))
+	nodes := make([]base.Address, len(states))
 	for i, s := range states {
-		nodes[i] = s.Node()
+		nodes[i] = s.Node().Address()
 	}
 
-	return base.NewFixedSuffrage(proposerState.Node(), nodes)
+	return base.NewFixedSuffrage(proposerState.Node().Address(), nodes)
 }
 
 func (t *baseTestStateHandler) newINITBallot(localstate *Localstate, round base.Round, voteproof base.Voteproof) ballot.INITBallotV0 {

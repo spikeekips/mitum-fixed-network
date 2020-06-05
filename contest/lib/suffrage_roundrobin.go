@@ -138,3 +138,14 @@ func (sf *RoundrobinSuffrage) IsProposer(height base.Height, round base.Round, n
 
 	return af.Proposer().Equal(node)
 }
+
+func (sf *RoundrobinSuffrage) Nodes() []base.Address {
+	var ns []base.Address
+	sf.localstate.Nodes().Traverse(func(n isaac.Node) bool {
+		ns = append(ns, n.Address())
+
+		return true
+	})
+
+	return ns
+}

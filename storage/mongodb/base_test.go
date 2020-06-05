@@ -49,7 +49,7 @@ func (t *testStorage) TestNew() {
 }
 
 func (t *testStorage) saveNewBlock(height base.Height) block.Block {
-	blk, err := block.NewTestBlockV0(height, base.Round(0), nil, valuehash.RandomSHA256())
+	blk, err := block.NewTestBlockV0(height, base.Round(0), valuehash.RandomSHA256(), valuehash.RandomSHA256())
 	t.NoError(err)
 
 	bs, err := t.storage.OpenBlockStorage(blk)
@@ -410,7 +410,7 @@ func (t *testStorage) TestUnStagedOperationSeals() {
 }
 
 func (t *testStorage) TestHasOperation() {
-	blk, err := block.NewTestBlockV0(base.Height(33), base.Round(0), nil, valuehash.RandomSHA256())
+	blk, err := block.NewTestBlockV0(base.Height(33), base.Round(0), valuehash.RandomSHA256(), valuehash.RandomSHA256())
 	t.NoError(err)
 
 	t.storage.setLastBlock(blk, true)

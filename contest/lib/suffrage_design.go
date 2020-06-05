@@ -108,7 +108,7 @@ func (fs FixedSuffrageDesign) New(localstate *isaac.Localstate) (base.Suffrage, 
 		return true
 	})
 
-	return NewFixedSuffrage(proposer, nodes), nil
+	return base.NewFixedSuffrage(proposer, nodes), nil
 }
 
 type RoundrobinSuffrageDesign struct {

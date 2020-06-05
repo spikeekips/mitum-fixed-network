@@ -25,12 +25,12 @@ func (t *testBlockV0DummyGenerator) TestCreate() {
 
 	var suffrage base.Suffrage
 	{
-		nodes := make([]base.Node, len(all))
-		for i, o := range all {
-			nodes[i] = o.Node()
+		nodes := make([]base.Address, len(all))
+		for i := range all {
+			nodes[i] = all[i].Node().Address()
 		}
 
-		suffrage = base.NewFixedSuffrage(all[0].Node(), nodes)
+		suffrage = base.NewFixedSuffrage(all[0].Node().Address(), nodes)
 	}
 
 	lastHeight := base.Height(10)

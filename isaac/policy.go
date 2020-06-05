@@ -33,6 +33,15 @@ func NewLocalPolicy(st storage.Storage, networkID []byte) (*LocalPolicy, error) 
 		networkID: util.NewLockedItem(networkID),
 	}
 
+	lp.threshold = util.NewLockedItem(nil)
+	lp.timeoutWaitingProposal = util.NewLockedItem(nil)
+	lp.intervalBroadcastingINITBallot = util.NewLockedItem(nil)
+	lp.intervalBroadcastingProposal = util.NewLockedItem(nil)
+	lp.waitBroadcastingACCEPTBallot = util.NewLockedItem(nil)
+	lp.intervalBroadcastingACCEPTBallot = util.NewLockedItem(nil)
+	lp.numberOfActingSuffrageNodes = util.NewLockedItem(nil)
+	lp.timespanValidBallot = util.NewLockedItem(nil)
+
 	if err := lp.load(); err != nil {
 		return nil, err
 	}
@@ -58,14 +67,14 @@ func (lp *LocalPolicy) load() error {
 		}
 	}
 
-	lp.threshold = util.NewLockedItem(loaded.Threshold)
-	lp.timeoutWaitingProposal = util.NewLockedItem(loaded.TimeoutWaitingProposal)
-	lp.intervalBroadcastingINITBallot = util.NewLockedItem(loaded.IntervalBroadcastingINITBallot)
-	lp.intervalBroadcastingProposal = util.NewLockedItem(loaded.IntervalBroadcastingProposal)
-	lp.waitBroadcastingACCEPTBallot = util.NewLockedItem(loaded.WaitBroadcastingACCEPTBallot)
-	lp.intervalBroadcastingACCEPTBallot = util.NewLockedItem(loaded.IntervalBroadcastingACCEPTBallot)
-	lp.numberOfActingSuffrageNodes = util.NewLockedItem(loaded.NumberOfActingSuffrageNodes)
-	lp.timespanValidBallot = util.NewLockedItem(loaded.TimespanValidBallot)
+	lp.threshold.SetValue(loaded.Threshold)
+	lp.timeoutWaitingProposal.SetValue(loaded.TimeoutWaitingProposal)
+	lp.intervalBroadcastingINITBallot.SetValue(loaded.IntervalBroadcastingINITBallot)
+	lp.intervalBroadcastingProposal.SetValue(loaded.IntervalBroadcastingProposal)
+	lp.waitBroadcastingACCEPTBallot.SetValue(loaded.WaitBroadcastingACCEPTBallot)
+	lp.intervalBroadcastingACCEPTBallot.SetValue(loaded.IntervalBroadcastingACCEPTBallot)
+	lp.numberOfActingSuffrageNodes.SetValue(loaded.NumberOfActingSuffrageNodes)
+	lp.timespanValidBallot.SetValue(loaded.TimespanValidBallot)
 
 	return nil
 }

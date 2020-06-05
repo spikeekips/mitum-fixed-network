@@ -35,7 +35,7 @@ func (t *testStorage) TestNew() {
 
 func (t *testStorage) TestLastBlock() {
 	// store first
-	blk, err := block.NewTestBlockV0(base.Height(33), base.Round(0), nil, valuehash.RandomSHA256())
+	blk, err := block.NewTestBlockV0(base.Height(33), base.Round(0), valuehash.RandomSHA256(), valuehash.RandomSHA256())
 	t.NoError(err)
 
 	bs, err := t.storage.OpenBlockStorage(blk)
@@ -52,7 +52,7 @@ func (t *testStorage) TestLastBlock() {
 
 func (t *testStorage) TestLastManifest() {
 	// store first
-	blk, err := block.NewTestBlockV0(base.Height(33), base.Round(0), nil, valuehash.RandomSHA256())
+	blk, err := block.NewTestBlockV0(base.Height(33), base.Round(0), valuehash.RandomSHA256(), valuehash.RandomSHA256())
 	t.NoError(err)
 
 	bs, err := t.storage.OpenBlockStorage(blk)
@@ -69,7 +69,7 @@ func (t *testStorage) TestLastManifest() {
 
 func (t *testStorage) TestLoadBlockByHash() {
 	// store first
-	blk, err := block.NewTestBlockV0(base.Height(33), base.Round(0), nil, valuehash.RandomSHA256())
+	blk, err := block.NewTestBlockV0(base.Height(33), base.Round(0), valuehash.RandomSHA256(), valuehash.RandomSHA256())
 	t.NoError(err)
 
 	{
@@ -92,7 +92,7 @@ func (t *testStorage) TestLoadBlockByHash() {
 
 func (t *testStorage) TestLoadManifestByHash() {
 	// store first
-	blk, err := block.NewTestBlockV0(base.Height(33), base.Round(0), nil, valuehash.RandomSHA256())
+	blk, err := block.NewTestBlockV0(base.Height(33), base.Round(0), valuehash.RandomSHA256(), valuehash.RandomSHA256())
 	t.NoError(err)
 
 	bs, err := t.storage.OpenBlockStorage(blk)
@@ -113,7 +113,7 @@ func (t *testStorage) TestLoadManifestByHash() {
 
 func (t *testStorage) TestLoadManifestByHeight() {
 	// store first
-	blk, err := block.NewTestBlockV0(base.Height(33), base.Round(0), nil, valuehash.RandomSHA256())
+	blk, err := block.NewTestBlockV0(base.Height(33), base.Round(0), valuehash.RandomSHA256(), valuehash.RandomSHA256())
 	t.NoError(err)
 
 	bs, err := t.storage.OpenBlockStorage(blk)
@@ -134,7 +134,7 @@ func (t *testStorage) TestLoadManifestByHeight() {
 
 func (t *testStorage) TestLoadBlockByHeight() {
 	// store first
-	blk, err := block.NewTestBlockV0(base.Height(33), base.Round(0), nil, valuehash.RandomSHA256())
+	blk, err := block.NewTestBlockV0(base.Height(33), base.Round(0), valuehash.RandomSHA256(), valuehash.RandomSHA256())
 	t.NoError(err)
 
 	bs, err := t.storage.OpenBlockStorage(blk)

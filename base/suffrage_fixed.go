@@ -1,12 +1,10 @@
-// +build test
-
 package base
 
 import (
 	"github.com/spikeekips/mitum/util/logging"
 )
 
-// FixedSuffrage will be used only for testing.
+// FixedSuffrage will be used for creating genesis block or testing.
 type FixedSuffrage struct {
 	*logging.Logging
 	proposer Address
@@ -14,19 +12,25 @@ type FixedSuffrage struct {
 	nodeList []Address
 }
 
-func NewFixedSuffrage(proposer Node, nodes []Node) *FixedSuffrage {
-	ns := map[Address]struct{}{}
-	var nodeList []Address
+func NewFixedSuffrage(proposer Address, nodes []Address) *FixedSuffrage {
+	ns := map[Address]struct{}{
+		proposer: struct{}{},
+	}
+	nodeList := []Address{proposer}
 	for _, n := range nodes {
-		ns[n.Address()] = struct{}{}
-		nodeList = append(nodeList, n.Address())
+		if _, found := ns[n]; found {
+			continue
+		}
+
+		ns[n] = struct{}{}
+		nodeList = append(nodeList, n)
 	}
 
 	return &FixedSuffrage{
 		Logging: logging.NewLogging(func(c logging.Context) logging.Emitter {
 			return c.Str("module", "fixed-suffrage")
 		}),
-		proposer: proposer.Address(),
+		proposer: proposer,
 		nodes:    ns,
 		nodeList: nodeList,
 	}
@@ -52,4 +56,8 @@ func (ff *FixedSuffrage) IsActing(_ Height, _ Round, node Address) bool {
 
 func (ff *FixedSuffrage) IsProposer(_ Height, _ Round, node Address) bool {
 	return ff.proposer.Equal(node)
+}
+
+func (ff *FixedSuffrage) Nodes() []Address {
+	return ff.nodeList
 }

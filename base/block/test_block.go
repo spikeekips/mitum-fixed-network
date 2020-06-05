@@ -5,14 +5,14 @@ package block
 import (
 	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/base/valuehash"
+	"github.com/spikeekips/mitum/util"
 )
 
 func NewTestBlockV0(height base.Height, round base.Round, proposal, previousBlock valuehash.Hash) (BlockV0, error) {
-	if proposal == nil {
-		proposal = valuehash.RandomSHA256()
-	}
+	nodes := []base.Node{base.RandomNode(util.UUID().String())}
 
 	return NewBlockV0(
+		NewSuffrageInfoV0(nodes[0].Address(), nodes),
 		height,
 		round,
 		proposal,

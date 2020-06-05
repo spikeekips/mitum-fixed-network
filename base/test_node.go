@@ -9,25 +9,15 @@ import (
 )
 
 type DummyNode struct {
-	address    Address
-	publickey  key.Publickey
+	BaseNodeV0
 	privatekey key.Privatekey
 }
 
 func NewDummyNode(address Address, privatekey key.Privatekey) *DummyNode {
 	return &DummyNode{
-		address:    address,
-		publickey:  privatekey.Publickey(),
+		BaseNodeV0: NewBaseNodeV0(address, privatekey.Publickey()),
 		privatekey: privatekey,
 	}
-}
-
-func (ln *DummyNode) Address() Address {
-	return ln.address
-}
-
-func (ln *DummyNode) Publickey() key.Publickey {
-	return ln.publickey
 }
 
 func (ln *DummyNode) Privatekey() key.Privatekey {

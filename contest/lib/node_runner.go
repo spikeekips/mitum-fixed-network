@@ -403,7 +403,7 @@ func (nr *NodeRunner) attachProposalProcessor() error {
 	})
 	l.Debug().Msg("trying to attach")
 
-	pp := isaac.NewProposalProcessorV0(nr.localstate)
+	pp := isaac.NewProposalProcessorV0(nr.localstate, nr.suffrage)
 
 	nr.setupLogging(pp)
 	nr.proposalProcessor = pp

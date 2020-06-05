@@ -54,7 +54,7 @@ func (t *testNetworkChanChannel) TestGetSeal() {
 func (t *testNetworkChanChannel) TestManifests() {
 	gs := NewNetworkChanChannel(0)
 
-	blk, err := block.NewTestBlockV0(base.Height(33), base.Round(9), nil, valuehash.RandomSHA256())
+	blk, err := block.NewTestBlockV0(base.Height(33), base.Round(9), valuehash.RandomSHA256(), valuehash.RandomSHA256())
 	t.NoError(err)
 
 	gs.SetGetManifests(func(heights []base.Height) ([]block.Manifest, error) {
@@ -100,7 +100,7 @@ func (t *testNetworkChanChannel) TestManifests() {
 func (t *testNetworkChanChannel) TestBlocks() {
 	gs := NewNetworkChanChannel(0)
 
-	blk, err := block.NewTestBlockV0(base.Height(33), base.Round(9), nil, valuehash.RandomSHA256())
+	blk, err := block.NewTestBlockV0(base.Height(33), base.Round(9), valuehash.RandomSHA256(), valuehash.RandomSHA256())
 	t.NoError(err)
 
 	gs.SetGetBlocks(func(heights []base.Height) ([]block.Block, error) {

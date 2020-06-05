@@ -6,6 +6,7 @@ type Suffrage interface {
 	IsInside(Address) bool
 	IsActing(Height, Round, Address /* node address */) bool
 	IsProposer(Height, Round, Address /* node address */) bool
+	Nodes() []Address
 }
 
 type ActingSuffrage struct {

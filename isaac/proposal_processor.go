@@ -30,14 +30,16 @@ type ProposalProcessorV0 struct {
 	*logging.Logging
 	localstate *Localstate
 	processors *sync.Map
+	suffrage   base.Suffrage
 }
 
-func NewProposalProcessorV0(localstate *Localstate) *ProposalProcessorV0 {
+func NewProposalProcessorV0(localstate *Localstate, suffrage base.Suffrage) *ProposalProcessorV0 {
 	return &ProposalProcessorV0{
 		Logging: logging.NewLogging(func(c logging.Context) logging.Emitter {
 			return c.Str("module", "proposal-processor-v0")
 		}),
 		localstate: localstate,
+		suffrage:   suffrage,
 		processors: &sync.Map{},
 	}
 }
@@ -80,7 +82,7 @@ func (dp *ProposalProcessorV0) ProcessINIT(ph valuehash.Hash, initVoteproof base
 		}
 	}
 
-	processor, err := newProposalProcessorV0(dp.localstate, proposal)
+	processor, err := newProposalProcessorV0(dp.localstate, dp.suffrage, proposal)
 	if err != nil {
 		return nil, err
 	}
@@ -123,6 +125,7 @@ func (dp *ProposalProcessorV0) ProcessACCEPT(
 type proposalProcessorV0 struct {
 	*logging.Logging
 	localstate         *Localstate
+	suffrage           base.Suffrage
 	lastManifest       block.Manifest
 	block              block.BlockUpdater
 	proposal           ballot.Proposal
@@ -131,7 +134,11 @@ type proposalProcessorV0 struct {
 	bs                 storage.BlockStorage
 }
 
-func newProposalProcessorV0(localstate *Localstate, proposal ballot.Proposal) (*proposalProcessorV0, error) {
+func newProposalProcessorV0(
+	localstate *Localstate,
+	suffrage base.Suffrage,
+	proposal ballot.Proposal,
+) (*proposalProcessorV0, error) {
 	var lastManifest block.Manifest
 	switch m, found, err := localstate.Storage().LastManifest(); {
 	case !found:
@@ -152,15 +159,38 @@ func newProposalProcessorV0(localstate *Localstate, proposal ballot.Proposal) (*
 			return c.Str("module", "internal-proposal-processor-inside-v0")
 		}),
 		localstate:         localstate,
+		suffrage:           suffrage,
 		proposal:           proposal,
 		lastManifest:       lastManifest,
 		proposedOperations: proposedOperations,
 	}, nil
 }
 
+func (pp *proposalProcessorV0) suffrageNodes() ([]base.Node, error) {
+	var ns []base.Node
+	for _, address := range pp.suffrage.Nodes() {
+		if address.Equal(pp.localstate.Node().Address()) {
+			ns = append(ns, pp.localstate.Node())
+		} else if n, found := pp.localstate.Nodes().Node(address); !found {
+			return nil, xerrors.Errorf("suffrage node, %s not found in NodePool(Localstate)", address)
+		} else {
+			ns = append(ns, n)
+		}
+	}
+
+	return ns, nil
+}
+
 func (pp *proposalProcessorV0) processINIT(initVoteproof base.Voteproof) (block.Block, error) {
 	if pp.block != nil {
 		return pp.block, nil
+	}
+
+	var si block.SuffrageInfoV0
+	if ns, err := pp.suffrageNodes(); err != nil {
+		return nil, err
+	} else {
+		si = block.NewSuffrageInfoV0(pp.proposal.Node(), ns)
 	}
 
 	var operationsTree, statesTree *tree.AVLTree
@@ -189,6 +219,7 @@ func (pp *proposalProcessorV0) processINIT(initVoteproof base.Voteproof) (block.
 
 	var blk block.BlockUpdater
 	if b, err := block.NewBlockV0(
+		si,
 		pp.proposal.Height(), pp.proposal.Round(), pp.proposal.Hash(), pp.lastManifest.Hash(),
 		operationsHash,
 		statesHash,

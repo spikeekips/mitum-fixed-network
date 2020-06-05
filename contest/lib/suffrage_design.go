@@ -97,7 +97,7 @@ func (fs FixedSuffrageDesign) New(localstate *isaac.Localstate) (base.Suffrage, 
 		proposer = p
 	}
 
-	nodes := make([]base.Address, localstate.Nodes().Len())
+	nodes := make([]base.Address, localstate.Nodes().Len()+1)
 
 	var i int
 	localstate.Nodes().Traverse(func(n isaac.Node) bool {
@@ -107,6 +107,7 @@ func (fs FixedSuffrageDesign) New(localstate *isaac.Localstate) (base.Suffrage, 
 
 		return true
 	})
+	nodes[i] = localstate.Node().Address()
 
 	return base.NewFixedSuffrage(proposer, nodes), nil
 }

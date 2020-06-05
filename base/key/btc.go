@@ -5,6 +5,7 @@ import (
 
 	"github.com/btcsuite/btcd/btcec"
 	"github.com/btcsuite/btcd/chaincfg"
+	"github.com/btcsuite/btcd/chaincfg/chainhash"
 	"github.com/btcsuite/btcutil"
 	"github.com/btcsuite/btcutil/base58"
 
@@ -91,7 +92,7 @@ func (bt BTCPrivatekey) Publickey() Publickey {
 }
 
 func (bt BTCPrivatekey) Sign(input []byte) (Signature, error) {
-	sig, err := bt.wif.PrivKey.Sign(input)
+	sig, err := bt.wif.PrivKey.Sign(chainhash.DoubleHashB(input))
 	if err != nil {
 		return nil, err
 	}
@@ -151,7 +152,7 @@ func (bt BTCPublickey) Verify(input []byte, sig Signature) error {
 		return err
 	}
 
-	if !signature.Verify(input, bt.pk) {
+	if !signature.Verify(chainhash.DoubleHashB(input), bt.pk) {
 		return SignatureVerificationFailedError
 	}
 

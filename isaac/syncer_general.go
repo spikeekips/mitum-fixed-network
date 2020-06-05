@@ -853,6 +853,7 @@ func (cs *GeneralSyncer) workerCallbackFetchBlocks(node Node) util.WorkerCallbac
 		if bs, e := cs.fetchBlocks(node, heights); err != nil {
 			err = e
 		} else if manifests, missing, err = cs.sanitizeManifests(heights, bs); err != nil {
+			err = e
 		}
 
 		blocks := make([]block.Block, len(manifests))
@@ -878,7 +879,10 @@ func (cs *GeneralSyncer) checkFetchedBlocks(fetched []block.Block) ([]base.Heigh
 	for i := range fetched {
 		blk := fetched[i].(block.Block)
 		if err := blk.IsValid(networkID); err != nil {
-			cs.Log().Error().Err(err).Hinted("height", blk.Height()).Msg("found invalid block")
+			cs.Log().Error().Err(err).
+				Hinted("height", blk.Height()).
+				Interface("block", blk).
+				Msg("found invalid block")
 
 			missing = append(missing, blk.Height())
 

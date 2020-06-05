@@ -60,7 +60,7 @@ func (bg *DummyBlocksV0Generator) Generate(ignoreExists bool) error {
 			return storage.NotFoundError.Errorf("last manifest not found")
 		} else if err != nil {
 			return err
-		} else if err := l.IsValid(bg.genesisNode.Policy().NetworkID()); err != nil {
+		} else if err := l.IsValid(bg.networkID); err != nil {
 			return err
 		} else {
 			lastHeight = l.Height()

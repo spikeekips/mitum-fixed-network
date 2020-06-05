@@ -108,7 +108,8 @@ func (cs *StateBootingHandler) checkBlock() error {
 		return storage.NotFoundError.Errorf("empty block")
 	} else if err != nil {
 		return err
-	} else if err := blk.IsValid(nil); err != nil { // TODO if invalid block, it should be re-synced.
+	} else if err := blk.IsValid(cs.localstate.Policy().NetworkID()); err != nil {
+		// TODO if invalid block, it should be re-synced.
 		return err
 	} else {
 		cs.Log().Debug().Hinted("block", blk.Manifest()).Msg("initial block found")

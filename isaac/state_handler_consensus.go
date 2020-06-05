@@ -79,7 +79,7 @@ func (cs *StateConsensusHandler) Activate(ctx StateChangeContext) error {
 		return xerrors.Errorf("consensus handler got empty Voteproof")
 	} else if ctx.Voteproof().Stage() != base.StageINIT {
 		return xerrors.Errorf("consensus handler starts with INIT Voteproof: %s", ctx.Voteproof().Stage())
-	} else if err := ctx.Voteproof().IsValid(nil); err != nil {
+	} else if err := ctx.Voteproof().IsValid(cs.localstate.Policy().NetworkID()); err != nil {
 		return xerrors.Errorf("consensus handler got invalid Voteproof: %w", err)
 	}
 

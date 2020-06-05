@@ -47,7 +47,7 @@ func (t *testBlockV0DummyGenerator) TestCreate() {
 
 			t.NoError(err, "node=%d height=%d", nodeid, i)
 			t.NotNil(blk, "node=%d height=%d", nodeid, i)
-			t.NoError(blk.IsValid(nil))
+			t.NoError(blk.IsValid(all[0].Policy().NetworkID()))
 
 			hashes[blk.Hash()] = struct{}{}
 		}

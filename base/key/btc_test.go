@@ -3,6 +3,7 @@ package key
 import (
 	"testing"
 
+	"github.com/spikeekips/mitum/util"
 	"github.com/stretchr/testify/suite"
 	"golang.org/x/xerrors"
 )
@@ -94,6 +95,32 @@ func (t *testBTCKeypair) TestSign() {
 	// verify
 	err = kp.Publickey().Verify(input, sig)
 	t.NoError(err)
+}
+
+func (t *testBTCKeypair) TestSignInvalidInput() {
+	kp, _ := NewBTCPrivatekey()
+
+	b := []byte(util.UUID().String())
+
+	input := b
+	input = append(input, []byte("findme000")...)
+
+	sig, err := kp.Sign(input)
+	t.NoError(err)
+	t.NotNil(sig)
+
+	{
+		err = kp.Publickey().Verify(input, sig)
+		t.NoError(err)
+	}
+
+	{
+		newInput := b
+		newInput = append(newInput, []byte("showme")...)
+
+		err = kp.Publickey().Verify(newInput, sig)
+		t.True(xerrors.Is(err, SignatureVerificationFailedError))
+	}
 }
 
 func TestBTCKeypair(t *testing.T) {

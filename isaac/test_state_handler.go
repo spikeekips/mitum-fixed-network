@@ -141,7 +141,12 @@ func (t *baseTestStateHandler) newVoteproof(
 	votes := map[base.Address]base.VoteproofNodeFact{}
 
 	for _, state := range states {
-		factSignature, err := state.Node().Privatekey().Sign(factHash.Bytes())
+		factSignature, err := state.Node().Privatekey().Sign(
+			util.ConcatBytesSlice(
+				factHash.Bytes(),
+				state.Policy().NetworkID(),
+			),
+		)
 		if err != nil {
 			return base.VoteproofV0{}, err
 		}

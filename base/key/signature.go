@@ -1,6 +1,8 @@
 package key
 
 import (
+	"bytes"
+
 	"github.com/btcsuite/btcutil/base58"
 	"golang.org/x/xerrors"
 )
@@ -28,11 +30,5 @@ func (sg Signature) Equal(ns Signature) bool {
 		return false
 	}
 
-	for i, b := range sg {
-		if b != ns[i] {
-			return false
-		}
-	}
-
-	return true
+	return bytes.Equal(sg, ns)
 }

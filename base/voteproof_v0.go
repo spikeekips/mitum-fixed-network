@@ -359,6 +359,10 @@ func (vp VoteproofV0) isValidFacts(b []byte) error {
 		}
 
 		f := vp.votes[node]
+		if err := isvalid.Check([]isvalid.IsValider{f}, b, false); err != nil {
+			return err
+		}
+
 		if _, found := vp.facts[f.fact]; !found {
 			return xerrors.Errorf("missing fact found in facts: %s", f.fact.String())
 		}
@@ -370,14 +374,14 @@ func (vp VoteproofV0) isValidFacts(b []byte) error {
 	}
 
 	for k, v := range vp.facts {
-		if err := isvalid.Check([]isvalid.IsValider{k, v}, b, false); err != nil {
-			return err
-		}
 		if h := v.Hash(); !h.Equal(k) {
 			return xerrors.Errorf(
 				"factHash and Fact.Hash() does not match: factHash=%v != Fact.Hash()=%v",
 				k.String(), h.String(),
 			)
+		}
+		if err := isvalid.Check([]isvalid.IsValider{k, v}, b, false); err != nil {
+			return err
 		}
 	}
 

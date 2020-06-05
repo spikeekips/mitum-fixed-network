@@ -3,6 +3,7 @@ package key
 import (
 	"testing"
 
+	"github.com/spikeekips/mitum/util"
 	"github.com/stretchr/testify/suite"
 	"golang.org/x/xerrors"
 )
@@ -95,6 +96,32 @@ func (t *testEtherKeypair) TestSign() {
 	// verify
 	err = kp.Publickey().Verify(input, sig)
 	t.NoError(err)
+}
+
+func (t *testEtherKeypair) TestSignInvalidInput() {
+	kp, _ := NewEtherPrivatekey()
+
+	b := []byte(util.UUID().String())
+
+	input := b
+	input = append(input, []byte("findme000")...)
+
+	sig, err := kp.Sign(input)
+	t.NoError(err)
+	t.NotNil(sig)
+
+	{
+		err = kp.Publickey().Verify(input, sig)
+		t.NoError(err)
+	}
+
+	{
+		newInput := b
+		newInput = append(newInput, []byte("showme")...)
+
+		err = kp.Publickey().Verify(newInput, sig)
+		t.True(xerrors.Is(err, SignatureVerificationFailedError))
+	}
 }
 
 func TestEtherKeypair(t *testing.T) {

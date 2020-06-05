@@ -197,8 +197,7 @@ func (pp *proposalProcessorV0) processINIT(initVoteproof base.Voteproof) (block.
 		if h, err := tr.RootHash(); err != nil {
 			return nil, err
 		} else {
-			operationsTree = tr
-			operationsHash = h
+			operationsTree, operationsHash = tr, h
 		}
 	}
 
@@ -208,8 +207,7 @@ func (pp *proposalProcessorV0) processINIT(initVoteproof base.Voteproof) (block.
 		if h, err := tr.RootHash(); err != nil {
 			return nil, err
 		} else {
-			statesTree = tr
-			statesHash = h
+			statesTree, statesHash = tr, h
 		}
 	}
 

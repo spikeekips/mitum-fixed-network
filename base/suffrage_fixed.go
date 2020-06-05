@@ -14,7 +14,7 @@ type FixedSuffrage struct {
 
 func NewFixedSuffrage(proposer Address, nodes []Address) *FixedSuffrage {
 	ns := map[Address]struct{}{
-		proposer: struct{}{},
+		proposer: {},
 	}
 	nodeList := []Address{proposer}
 	for _, n := range nodes {

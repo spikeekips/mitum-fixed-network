@@ -14,15 +14,58 @@ type BlockConsensusInfoV0 struct {
 	suffrageInfo    SuffrageInfo
 }
 
-func (bc BlockConsensusInfoV0) IsValid([]byte) error {
-	return isvalid.Check(
+func (bc BlockConsensusInfoV0) IsValid(b []byte) error {
+	if err := isvalid.Check(
 		[]isvalid.IsValider{
 			bc.initVoteproof,
 			bc.acceptVoteproof,
 			bc.suffrageInfo,
 		},
-		nil, false,
-	)
+		b, false,
+	); err != nil {
+		return err
+	}
+
+	if bc.initVoteproof.Stage() != base.StageINIT {
+		return xerrors.Errorf("invalid initVoteproof, %v found in ConsensusInfo", bc.initVoteproof.Stage())
+	} else if bc.acceptVoteproof.Stage() != base.StageACCEPT {
+		return xerrors.Errorf("invalid acceptVoteproof, %v found in ConsensusInfo", bc.acceptVoteproof.Stage())
+	}
+
+	sn := map[base.Address]base.Node{}
+	for _, node := range bc.suffrageInfo.Nodes() {
+		sn[node.Address()] = node
+	}
+
+	if err := bc.isValidVoteproof(nil, sn, bc.initVoteproof); err != nil {
+		return err
+	} else if err := bc.isValidVoteproof(nil, sn, bc.acceptVoteproof); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (bc BlockConsensusInfoV0) isValidVoteproof(
+	_ []byte,
+	sn map[base.Address]base.Node,
+	voteproof base.Voteproof,
+) error {
+	for address := range voteproof.Ballots() {
+		if _, found := sn[address]; !found {
+			return xerrors.Errorf("unknown node, %s voted in %v voteproof.Ballots()", address, voteproof.Stage())
+		}
+	}
+
+	for address := range voteproof.Votes() {
+		if node, found := sn[address]; !found {
+			return xerrors.Errorf("unknown node, %s voted in init voteproof.Votes()", address)
+		} else if !voteproof.Votes()[address].Signer().Equal(node.Publickey()) {
+			return xerrors.Errorf("node, %s has invalid Publickey in %v voteproof", address, voteproof.Stage())
+		}
+	}
+
+	return nil
 }
 
 func (bc BlockConsensusInfoV0) Hint() hint.Hint {
@@ -53,23 +96,23 @@ func NewSuffrageInfoV0(proposer base.Address, nodes []base.Node) SuffrageInfoV0 
 	}
 }
 
-func (bn SuffrageInfoV0) Hint() hint.Hint {
+func (si SuffrageInfoV0) Hint() hint.Hint {
 	return SuffrageInfoV0Hint
 }
 
-func (bn SuffrageInfoV0) Proposer() base.Address {
-	return bn.proposer
+func (si SuffrageInfoV0) Proposer() base.Address {
+	return si.proposer
 }
 
-func (bn SuffrageInfoV0) Nodes() []base.Node {
-	return bn.nodes
+func (si SuffrageInfoV0) Nodes() []base.Node {
+	return si.nodes
 }
 
-func (bn SuffrageInfoV0) IsValid([]byte) error {
+func (si SuffrageInfoV0) IsValid([]byte) error {
 	var found bool
-	vs := []isvalid.IsValider{bn.proposer}
-	for _, n := range bn.nodes {
-		if !found && bn.proposer.Equal(n.Address()) {
+	vs := []isvalid.IsValider{si.proposer}
+	for _, n := range si.nodes {
+		if !found && si.proposer.Equal(n.Address()) {
 			found = true
 		}
 

@@ -132,6 +132,7 @@ type proposalProcessorV0 struct {
 	proposedOperations map[valuehash.Hash]struct{}
 	operations         []state.OperationInfoV0
 	bs                 storage.BlockStorage
+	si                 block.SuffrageInfoV0
 }
 
 func newProposalProcessorV0(
@@ -154,6 +155,22 @@ func newProposalProcessorV0(
 		proposedOperations[h] = struct{}{}
 	}
 
+	var si block.SuffrageInfoV0
+	{
+		var ns []base.Node
+		for _, address := range suffrage.Nodes() {
+			if address.Equal(localstate.Node().Address()) {
+				ns = append(ns, localstate.Node())
+			} else if n, found := localstate.Nodes().Node(address); !found {
+				return nil, xerrors.Errorf("suffrage node, %s not found in NodePool(Localstate)", address)
+			} else {
+				ns = append(ns, n)
+			}
+		}
+
+		si = block.NewSuffrageInfoV0(proposal.Node(), ns)
+	}
+
 	return &proposalProcessorV0{
 		Logging: logging.NewLogging(func(c logging.Context) logging.Emitter {
 			return c.Str("module", "internal-proposal-processor-inside-v0")
@@ -163,34 +180,13 @@ func newProposalProcessorV0(
 		proposal:           proposal,
 		lastManifest:       lastManifest,
 		proposedOperations: proposedOperations,
+		si:                 si,
 	}, nil
-}
-
-func (pp *proposalProcessorV0) suffrageNodes() ([]base.Node, error) {
-	var ns []base.Node
-	for _, address := range pp.suffrage.Nodes() {
-		if address.Equal(pp.localstate.Node().Address()) {
-			ns = append(ns, pp.localstate.Node())
-		} else if n, found := pp.localstate.Nodes().Node(address); !found {
-			return nil, xerrors.Errorf("suffrage node, %s not found in NodePool(Localstate)", address)
-		} else {
-			ns = append(ns, n)
-		}
-	}
-
-	return ns, nil
 }
 
 func (pp *proposalProcessorV0) processINIT(initVoteproof base.Voteproof) (block.Block, error) {
 	if pp.block != nil {
 		return pp.block, nil
-	}
-
-	var si block.SuffrageInfoV0
-	if ns, err := pp.suffrageNodes(); err != nil {
-		return nil, err
-	} else {
-		si = block.NewSuffrageInfoV0(pp.proposal.Node(), ns)
 	}
 
 	var operationsTree, statesTree *tree.AVLTree
@@ -219,7 +215,7 @@ func (pp *proposalProcessorV0) processINIT(initVoteproof base.Voteproof) (block.
 
 	var blk block.BlockUpdater
 	if b, err := block.NewBlockV0(
-		si,
+		pp.si,
 		pp.proposal.Height(), pp.proposal.Round(), pp.proposal.Hash(), pp.lastManifest.Hash(),
 		operationsHash,
 		statesHash,

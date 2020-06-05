@@ -58,9 +58,9 @@ func (si *SuffrageInfoV0) UnpackBSON(b []byte, enc *bsonencoder.Encoder) error {
 		return err
 	}
 
-	var bsn [][]byte
-	for _, n := range nsi.NS {
-		bsn = append(bsn, n)
+	bsn := make([][]byte, len(nsi.NS))
+	for i := range nsi.NS {
+		bsn[i] = nsi.NS[i]
 	}
 
 	return si.unpack(enc, nsi.PR, bsn)

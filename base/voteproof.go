@@ -71,3 +71,11 @@ func (vf VoteproofNodeFact) Bytes() []byte {
 		[]byte(vf.signer.String()),
 	)
 }
+
+func (vf VoteproofNodeFact) Node() Address {
+	return vf.address
+}
+
+func (vf VoteproofNodeFact) Signer() key.Publickey {
+	return vf.signer
+}

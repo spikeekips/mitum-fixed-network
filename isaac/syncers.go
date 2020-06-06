@@ -5,6 +5,7 @@ import (
 
 	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/base/block"
+	"github.com/spikeekips/mitum/network"
 	"github.com/spikeekips/mitum/storage"
 	"github.com/spikeekips/mitum/util"
 	"github.com/spikeekips/mitum/util/logging"
@@ -187,7 +188,7 @@ func (sy *Syncers) stateChanged(ctx SyncerStateChangedContext) error {
 	return nil
 }
 
-func (sy *Syncers) Add(to base.Height, sourceNodes []Node) error {
+func (sy *Syncers) Add(to base.Height, sourceNodes []network.Node) error {
 	l := sy.Log().WithLogger(func(ctx logging.Context) logging.Emitter {
 		return ctx.Hinted("to", to)
 	})
@@ -204,7 +205,7 @@ func (sy *Syncers) Add(to base.Height, sourceNodes []Node) error {
 	return nil
 }
 
-func (sy *Syncers) add(to base.Height, sourceNodes []Node) error {
+func (sy *Syncers) add(to base.Height, sourceNodes []network.Node) error {
 	if len(sourceNodes) < 1 {
 		return xerrors.Errorf("empty source nodes")
 	}

@@ -4,11 +4,13 @@ import (
 	"fmt"
 
 	"go.mongodb.org/mongo-driver/bson"
+
+	"github.com/spikeekips/mitum/util"
 )
 
 func (t *testHint) TestMarshalBSON() {
 	ty := Type{0xff, 0x36}
-	v := Version("0.1")
+	v := util.Version("0.1")
 
 	_ = registerType(ty, "0xff36")
 

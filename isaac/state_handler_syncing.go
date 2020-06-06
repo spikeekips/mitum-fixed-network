@@ -10,6 +10,7 @@ import (
 	"github.com/spikeekips/mitum/base/ballot"
 	"github.com/spikeekips/mitum/base/block"
 	"github.com/spikeekips/mitum/base/seal"
+	"github.com/spikeekips/mitum/network"
 	"github.com/spikeekips/mitum/util"
 	"github.com/spikeekips/mitum/util/localtime"
 	"github.com/spikeekips/mitum/util/logging"
@@ -171,7 +172,7 @@ func (ss *StateSyncingHandler) fromVoteproof(voteproof base.Voteproof) error {
 		return xerrors.Errorf("invalid Voteproof received")
 	}
 
-	var sourceNodes []Node
+	var sourceNodes []network.Node
 	for address := range voteproof.Ballots() {
 		if ss.localstate.Node().Address().Equal(address) {
 			continue

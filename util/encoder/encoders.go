@@ -1,6 +1,7 @@
 package encoder
 
 import (
+	"github.com/spikeekips/mitum/util"
 	"github.com/spikeekips/mitum/util/hint"
 )
 
@@ -30,7 +31,7 @@ func (es *Encoders) AddEncoder(ec Encoder) error {
 }
 
 // Encoder returns Encoder by Hint.
-func (es *Encoders) Encoder(t hint.Type, version hint.Version) (Encoder, error) {
+func (es *Encoders) Encoder(t hint.Type, version util.Version) (Encoder, error) {
 	h, err := es.Hintset.Hinter(t, version)
 
 	return h.(Encoder), err
@@ -53,6 +54,6 @@ func (es *Encoders) AddHinter(hinter hint.Hinter) error {
 	return nil
 }
 
-func (es *Encoders) Hinter(t hint.Type, version hint.Version) (hint.Hinter, error) {
+func (es *Encoders) Hinter(t hint.Type, version util.Version) (hint.Hinter, error) {
 	return es.hintset.Hinter(t, version)
 }

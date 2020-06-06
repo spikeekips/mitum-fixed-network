@@ -8,11 +8,6 @@ import (
 	"github.com/spikeekips/mitum/network"
 )
 
-type Node interface {
-	base.Node
-	Channel() network.NetworkChannel
-}
-
 type LocalNode struct {
 	sync.RWMutex
 	base.BaseNodeV0

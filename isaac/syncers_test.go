@@ -8,6 +8,7 @@ import (
 	"golang.org/x/xerrors"
 
 	"github.com/spikeekips/mitum/base"
+	"github.com/spikeekips/mitum/network"
 )
 
 type testSyncers struct {
@@ -37,7 +38,7 @@ func (t *testSyncers) TestNew() {
 
 	defer ss.Stop()
 
-	t.NoError(ss.Add(target, []Node{remoteState.Node()}))
+	t.NoError(ss.Add(target, []network.Node{remoteState.Node()}))
 
 	select {
 	case <-time.After(time.Second * 3):
@@ -81,7 +82,7 @@ func (t *testSyncers) TestMultipleSyncers() {
 	defer ss.Stop()
 
 	for i := baseManifest.Height().Int64() + 1; i <= target.Int64(); i++ {
-		t.NoError(ss.Add(base.Height(i), []Node{remoteState.Node()}))
+		t.NoError(ss.Add(base.Height(i), []network.Node{remoteState.Node()}))
 	}
 
 	select {
@@ -117,8 +118,8 @@ func (t *testSyncers) TestMangledFinishedOrder() {
 
 	defer ss.Stop()
 
-	t.NoError(ss.Add(target-1, []Node{remoteState.Node()}))
-	t.NoError(ss.Add(target, []Node{remoteState.Node()}))
+	t.NoError(ss.Add(target-1, []network.Node{remoteState.Node()}))
+	t.NoError(ss.Add(target, []network.Node{remoteState.Node()}))
 
 	select {
 	case <-time.After(time.Second * 3):
@@ -152,7 +153,7 @@ func (t *testSyncers) TestAddAfterFinished() {
 
 	defer ss.Stop()
 
-	t.NoError(ss.Add(target-3, []Node{remoteState.Node()}))
+	t.NoError(ss.Add(target-3, []network.Node{remoteState.Node()}))
 
 	select {
 	case <-time.After(time.Second * 3):
@@ -162,7 +163,7 @@ func (t *testSyncers) TestAddAfterFinished() {
 		break
 	}
 
-	t.NoError(ss.Add(target, []Node{remoteState.Node()}))
+	t.NoError(ss.Add(target, []network.Node{remoteState.Node()}))
 
 	select {
 	case <-time.After(time.Second * 3):

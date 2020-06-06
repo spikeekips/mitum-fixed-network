@@ -6,16 +6,17 @@ import (
 	"golang.org/x/xerrors"
 
 	"github.com/spikeekips/mitum/base"
+	"github.com/spikeekips/mitum/network"
 )
 
 type NodesState struct {
 	sync.RWMutex
 	localNode *LocalNode
-	nodes     map[base.Address]Node
+	nodes     map[base.Address]network.Node
 }
 
-func NewNodesState(localNode *LocalNode, nodes []Node) *NodesState {
-	m := map[base.Address]Node{}
+func NewNodesState(localNode *LocalNode, nodes []network.Node) *NodesState {
+	m := map[base.Address]network.Node{}
 	for _, n := range nodes {
 		if n.Address().Equal(localNode.Address()) {
 			continue
@@ -29,7 +30,7 @@ func NewNodesState(localNode *LocalNode, nodes []Node) *NodesState {
 	return &NodesState{localNode: localNode, nodes: m}
 }
 
-func (ns *NodesState) Node(address base.Address) (Node, bool) {
+func (ns *NodesState) Node(address base.Address) (network.Node, bool) {
 	ns.RLock()
 	defer ns.RUnlock()
 	n, found := ns.nodes[address]
@@ -50,7 +51,7 @@ func (ns *NodesState) exists(address base.Address) bool {
 	return found
 }
 
-func (ns *NodesState) Add(nl ...Node) error {
+func (ns *NodesState) Add(nl ...network.Node) error {
 	ns.Lock()
 	defer ns.Unlock()
 
@@ -92,8 +93,8 @@ func (ns *NodesState) Len() int {
 	return len(ns.nodes)
 }
 
-func (ns *NodesState) Traverse(callback func(Node) bool) {
-	var nodes []Node
+func (ns *NodesState) Traverse(callback func(network.Node) bool) {
+	var nodes []network.Node
 	ns.RLock()
 	{
 		if len(ns.nodes) < 1 {

@@ -2,6 +2,8 @@ package hint
 
 import (
 	jsoniter "github.com/json-iterator/go"
+
+	"github.com/spikeekips/mitum/util"
 )
 
 var jsoni = jsoniter.Config{
@@ -11,8 +13,8 @@ var jsoni = jsoniter.Config{
 }.Froze()
 
 type hintJSON struct {
-	Type    Type    `json:"type"`
-	Version Version `json:"version"`
+	Type    Type         `json:"type"`
+	Version util.Version `json:"version"`
 }
 
 func (ht Hint) MarshalJSON() ([]byte, error) {

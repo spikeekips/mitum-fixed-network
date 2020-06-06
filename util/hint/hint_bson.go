@@ -2,11 +2,13 @@ package hint
 
 import (
 	"go.mongodb.org/mongo-driver/bson"
+
+	"github.com/spikeekips/mitum/util"
 )
 
 type hintBSON struct {
-	T Type    `bson:"type"`
-	V Version `bson:"version"`
+	T Type         `bson:"type"`
+	V util.Version `bson:"version"`
 }
 
 func (ht Hint) MarshalBSON() ([]byte, error) {

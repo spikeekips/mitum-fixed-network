@@ -9,6 +9,7 @@ import (
 
 	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/isaac"
+	"github.com/spikeekips/mitum/network"
 	"github.com/spikeekips/mitum/util/logging"
 )
 
@@ -39,7 +40,7 @@ func (sf *RoundrobinSuffrage) Name() string {
 
 func (sf *RoundrobinSuffrage) IsInside(a base.Address) bool {
 	var found bool
-	sf.localstate.Nodes().Traverse(func(n isaac.Node) bool {
+	sf.localstate.Nodes().Traverse(func(n network.Node) bool {
 		if n.Address().Equal(a) {
 			found = true
 			return false
@@ -72,7 +73,7 @@ func (sf *RoundrobinSuffrage) Acting(height base.Height, round base.Round) base.
 
 func (sf *RoundrobinSuffrage) acting(height base.Height, round base.Round) base.ActingSuffrage {
 	all := []base.Node{sf.localstate.Node()}
-	sf.localstate.Nodes().Traverse(func(n isaac.Node) bool {
+	sf.localstate.Nodes().Traverse(func(n network.Node) bool {
 		all = append(all, n)
 
 		return true
@@ -141,7 +142,7 @@ func (sf *RoundrobinSuffrage) IsProposer(height base.Height, round base.Round, n
 
 func (sf *RoundrobinSuffrage) Nodes() []base.Address {
 	ns := []base.Address{sf.localstate.Node().Address()}
-	sf.localstate.Nodes().Traverse(func(n isaac.Node) bool {
+	sf.localstate.Nodes().Traverse(func(n network.Node) bool {
 		ns = append(ns, n.Address())
 
 		return true

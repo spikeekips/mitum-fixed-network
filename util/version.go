@@ -1,4 +1,4 @@
-package hint
+package util
 
 import (
 	"strings"
@@ -27,6 +27,14 @@ func (vs Version) GO() string {
 	}
 
 	return "v" + s
+}
+
+func (vs Version) IsValid([]byte) error {
+	if !semver.IsValid(vs.GO()) {
+		return InvalidVersionError.Errorf("version=%s", vs)
+	}
+
+	return nil
 }
 
 // IsCompatible checks if the check version is compatible to the target. The

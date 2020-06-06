@@ -7,6 +7,7 @@ import (
 
 	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/isaac"
+	"github.com/spikeekips/mitum/network"
 )
 
 type testRoundrobinSuffrage struct {
@@ -33,7 +34,7 @@ func (t *testRoundrobinSuffrage) TestActingSuffrage() {
 	localstate := t.localstate()
 	_, _ = localstate.Policy().SetNumberOfActingSuffrageNodes(3)
 
-	nodes := []isaac.Node{
+	nodes := []network.Node{
 		isaac.RandomLocalNode("n0", nil),
 		isaac.RandomLocalNode("n1", nil),
 		isaac.RandomLocalNode("n2", nil),
@@ -73,7 +74,7 @@ func (t *testRoundrobinSuffrage) TestActingSuffrageNotSufficient() {
 	localstate := t.localstate()
 	_, _ = localstate.Policy().SetNumberOfActingSuffrageNodes(4)
 
-	nodes := []isaac.Node{
+	nodes := []network.Node{
 		isaac.RandomLocalNode("n0", nil),
 		isaac.RandomLocalNode("n1", nil),
 	}
@@ -88,7 +89,7 @@ func (t *testRoundrobinSuffrage) TestActingSuffrageNotSufficient() {
 	expectedProposer := localstate.Node()
 	t.True(expectedProposer.Address().Equal(af.Proposer()))
 
-	expected := []isaac.Node{localstate.Node()}
+	expected := []network.Node{localstate.Node()}
 	expected = append(expected, nodes...)
 	for _, n := range af.Nodes() {
 		var found bool

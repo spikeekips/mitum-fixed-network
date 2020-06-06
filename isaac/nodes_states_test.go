@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"github.com/spikeekips/mitum/base"
+	"github.com/spikeekips/mitum/network"
 	"github.com/stretchr/testify/suite"
 )
 
@@ -19,13 +20,13 @@ func (t *testNodesState) SetupSuite() {
 }
 
 func (t *testNodesState) TestEmpty() {
-	var nodes []Node
+	var nodes []network.Node
 	ns := NewNodesState(t.localNode, nodes)
 	t.Equal(0, ns.Len())
 }
 
 func (t *testNodesState) TestDuplicatedAddress() {
-	nodes := []Node{
+	nodes := []network.Node{
 		RandomLocalNode("n0", nil),
 		RandomLocalNode("n0", nil), // will be ignored
 		RandomLocalNode("n1", nil),
@@ -36,7 +37,7 @@ func (t *testNodesState) TestDuplicatedAddress() {
 }
 
 func (t *testNodesState) TestAdd() {
-	nodes := []Node{
+	nodes := []network.Node{
 		RandomLocalNode("n0", nil),
 		RandomLocalNode("n1", nil),
 	}
@@ -54,8 +55,8 @@ func (t *testNodesState) TestAdd() {
 	t.NoError(err)
 	t.Equal(len(nodes)+1, ns.Len())
 
-	var added []Node
-	ns.Traverse(func(n Node) bool {
+	var added []network.Node
+	ns.Traverse(func(n network.Node) bool {
 		added = append(added, n)
 		return true
 	})
@@ -76,7 +77,7 @@ func (t *testNodesState) TestAdd() {
 }
 
 func (t *testNodesState) TestRemove() {
-	nodes := []Node{
+	nodes := []network.Node{
 		RandomLocalNode("n0", nil),
 		RandomLocalNode("n1", nil),
 		RandomLocalNode("n2", nil),
@@ -94,8 +95,8 @@ func (t *testNodesState) TestRemove() {
 	t.NoError(err)
 	t.Equal(len(nodes)-1, ns.Len())
 
-	var removed []Node
-	ns.Traverse(func(n Node) bool {
+	var removed []network.Node
+	ns.Traverse(func(n network.Node) bool {
 		removed = append(removed, n)
 		return true
 	})
@@ -115,7 +116,7 @@ func (t *testNodesState) TestRemove() {
 }
 
 func (t *testNodesState) TestTraverse() {
-	nodes := []Node{
+	nodes := []network.Node{
 		RandomLocalNode("n0", nil),
 		RandomLocalNode("n1", nil),
 		RandomLocalNode("n2", nil),
@@ -124,8 +125,8 @@ func (t *testNodesState) TestTraverse() {
 	ns := NewNodesState(t.localNode, nodes)
 
 	{ // all
-		var traversed []Node
-		ns.Traverse(func(n Node) bool {
+		var traversed []network.Node
+		ns.Traverse(func(n network.Node) bool {
 			traversed = append(traversed, n)
 			return true
 		})
@@ -145,8 +146,8 @@ func (t *testNodesState) TestTraverse() {
 	}
 
 	{ // only first one
-		var traversed []Node
-		ns.Traverse(func(n Node) bool {
+		var traversed []network.Node
+		ns.Traverse(func(n network.Node) bool {
 			if n.Address().Equal(nodes[1].Address()) {
 				traversed = append(traversed, n)
 				return false

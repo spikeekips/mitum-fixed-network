@@ -54,7 +54,7 @@ func (t *baseTestStateHandler) setup(local *Localstate, others []*Localstate) {
 
 	for _, st := range nodes {
 		nch := st.Node().Channel().(*channetwork.NetworkChanChannel)
-		nch.SetGetManifests(func(heights []base.Height) ([]block.Manifest, error) {
+		nch.SetGetManifestsHandler(func(heights []base.Height) ([]block.Manifest, error) {
 			var bs []block.Manifest
 			for _, h := range heights {
 				m, found, err := st.Storage().ManifestByHeight(h)
@@ -70,7 +70,7 @@ func (t *baseTestStateHandler) setup(local *Localstate, others []*Localstate) {
 			return bs, nil
 		})
 
-		nch.SetGetBlocks(func(heights []base.Height) ([]block.Block, error) {
+		nch.SetGetBlocksHandler(func(heights []base.Height) ([]block.Block, error) {
 			var bs []block.Block
 			for _, h := range heights {
 				m, found, err := st.Storage().BlockByHeight(h)

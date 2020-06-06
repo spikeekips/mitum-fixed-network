@@ -166,8 +166,8 @@ func (nr *NodeRunner) attachNetworkHandlers() error {
 	nr.network.SetHasSealHandler(nr.networkHandlerHasSeal)
 	nr.network.SetGetSealsHandler(nr.networkHandlerGetSeals)
 	nr.network.SetNewSealHandler(nr.networkhandlerNewSeal)
-	nr.network.SetGetManifests(nr.networkhandlerGetManifests)
-	nr.network.SetGetBlocks(nr.networkhandlerGetBlocks)
+	nr.network.SetGetManifestsHandler(nr.networkhandlerGetManifests)
+	nr.network.SetGetBlocksHandler(nr.networkhandlerGetBlocks)
 
 	return nil
 }
@@ -327,7 +327,7 @@ func createNodeChannel(publish *url.URL, encs *encoder.Encoders, enc encoder.Enc
 }
 
 func (nr *NodeRunner) attachRemoteNodes() error {
-	nodes := make([]isaac.Node, len(nr.design.Nodes))
+	nodes := make([]network.Node, len(nr.design.Nodes))
 
 	for i, r := range nr.design.Nodes {
 		r := r

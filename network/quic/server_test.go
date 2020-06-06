@@ -11,9 +11,12 @@ import (
 	"github.com/stretchr/testify/suite"
 	"golang.org/x/xerrors"
 
+	"github.com/spikeekips/mitum/base"
+	"github.com/spikeekips/mitum/base/block"
 	"github.com/spikeekips/mitum/base/key"
 	"github.com/spikeekips/mitum/base/seal"
 	"github.com/spikeekips/mitum/base/valuehash"
+	"github.com/spikeekips/mitum/network"
 	"github.com/spikeekips/mitum/util"
 	"github.com/spikeekips/mitum/util/encoder"
 	jsonencoder "github.com/spikeekips/mitum/util/encoder/json"
@@ -38,6 +41,10 @@ func (t *testQuicSever) SetupTest() {
 	_ = t.encs.AddHinter(key.BTCPublickey{})
 	_ = t.encs.AddHinter(valuehash.SHA256{})
 	_ = t.encs.AddHinter(seal.DummySeal{})
+	_ = t.encs.AddHinter(base.BaseNodeV0{})
+	_ = t.encs.AddHinter(base.ShortAddress(""))
+	_ = t.encs.AddHinter(block.ManifestV0{})
+	_ = t.encs.AddHinter(network.NodeInfoV0{})
 
 	port, err := util.FreePort("udp")
 	t.NoError(err)
@@ -196,6 +203,40 @@ func (t *testQuicSever) TestGetSeals() {
 			t.True(seals[h].Hash().Equal(sm[h].Hash()))
 		}
 	}
+}
+
+func (t *testQuicSever) TestNodeInfo() {
+	qn := t.readyServer()
+	defer qn.Stop()
+
+	nid := []byte("test-network-id")
+
+	var ni network.NodeInfo
+	{
+		blk, err := block.NewTestBlockV0(base.Height(33), base.Round(0), valuehash.RandomSHA256(), valuehash.RandomSHA256())
+		t.NoError(err)
+
+		ni = network.NewNodeInfoV0(
+			base.RandomNode("n0"),
+			nid,
+			base.StateBooting,
+			blk.Manifest(),
+			util.Version("0.1.1"),
+			"quic://local",
+		)
+	}
+
+	qn.SetNodeInfoHandler(func() (network.NodeInfo, error) {
+		return ni, nil
+	})
+
+	qc, err := NewQuicChannel(t.url.String(), 2, true, time.Millisecond*500, 3, nil, t.encs, t.enc)
+	t.NoError(err)
+
+	nni, err := qc.NodeInfo()
+	t.NoError(err)
+
+	network.CompareNodeInfo(t.T(), ni, nni)
 }
 
 func TestQuicSever(t *testing.T) {

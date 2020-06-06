@@ -10,6 +10,7 @@ import (
 	"github.com/spikeekips/mitum/base/ballot"
 	"github.com/spikeekips/mitum/base/block"
 	"github.com/spikeekips/mitum/base/seal"
+	"github.com/spikeekips/mitum/network"
 	"github.com/spikeekips/mitum/util"
 	"github.com/spikeekips/mitum/util/errors"
 	"github.com/spikeekips/mitum/util/logging"
@@ -280,8 +281,8 @@ func (css *ConsensusStates) broadcastSeal(sl seal.Seal, errChan chan<- error) {
 		}
 	}()
 
-	css.localstate.Nodes().Traverse(func(m Node) bool {
-		go func(n Node) {
+	css.localstate.Nodes().Traverse(func(m network.Node) bool {
+		go func(n network.Node) {
 			lt := l.WithLogger(func(ctx logging.Context) logging.Emitter {
 				return ctx.Hinted("target_node", n.Address())
 			})

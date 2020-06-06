@@ -116,7 +116,6 @@ func (vf *VoteproofNodeFact) unpack(
 ) error {
 	var address Address
 	if h, err := DecodeAddress(enc, bAddress); err != nil {
-		println("0000000000", string(bAddress))
 		return err
 	} else {
 		address = h

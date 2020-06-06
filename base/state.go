@@ -7,7 +7,7 @@ import (
 type State uint8
 
 const (
-	_ State = iota
+	StateUnknown State = iota
 	// StateStopped indicates node is in state, node process is
 	// finished.
 	StateStopped
@@ -45,6 +45,25 @@ func (st State) String() string {
 	}
 }
 
+func StateFromString(s string) (State, error) {
+	switch s {
+	case "STOPPED":
+		return StateStopped, nil
+	case "BOOTING":
+		return StateBooting, nil
+	case "JOINING":
+		return StateJoining, nil
+	case "CONSENSUS":
+		return StateConsensus, nil
+	case "SYNCING":
+		return StateSyncing, nil
+	case "BROKEN":
+		return StateBroken, nil
+	default:
+		return StateUnknown, xerrors.Errorf("unknown State, %q", s)
+	}
+}
+
 func (st State) IsValid([]byte) error {
 	switch st {
 	case StateStopped, StateBooting, StateJoining, StateConsensus, StateSyncing, StateBroken:
@@ -56,4 +75,15 @@ func (st State) IsValid([]byte) error {
 
 func (st State) MarshalText() ([]byte, error) {
 	return []byte(st.String()), nil
+}
+
+func (st *State) UnmarshalText(b []byte) error {
+	s, err := StateFromString(string(b))
+	if err != nil {
+		return err
+	}
+
+	*st = s
+
+	return nil
 }

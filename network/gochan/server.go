@@ -41,8 +41,9 @@ func (cs *NetworkChanServer) SetNewSealHandler(f network.NewSealHandler) {
 	cs.newSealHandler = f
 }
 
-func (cs *NetworkChanServer) SetGetManifests(network.GetManifestsHandler) {}
-func (cs *NetworkChanServer) SetGetBlocks(network.GetBlocksHandler)       {}
+func (cs *NetworkChanServer) SetGetManifestsHandler(network.GetManifestsHandler) {}
+func (cs *NetworkChanServer) SetGetBlocksHandler(network.GetBlocksHandler)       {}
+func (cs *NetworkChanServer) SetNodeInfoHandler(network.NodeInfoHandler)         {}
 
 func (cs *NetworkChanServer) run(stopChan chan struct{}) error {
 end:

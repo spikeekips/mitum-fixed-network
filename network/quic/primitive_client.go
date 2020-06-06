@@ -11,6 +11,7 @@ import (
 
 	"github.com/lucas-clemente/quic-go"
 	"github.com/lucas-clemente/quic-go/http3"
+	"golang.org/x/xerrors"
 
 	"github.com/spikeekips/mitum/util/logging"
 )
@@ -33,8 +34,8 @@ func NewQuicClient(insecure bool, timeout time.Duration, retries int, quicConfig
 
 	if quicConfig == nil {
 		quicConfig = &quic.Config{
-			HandshakeTimeout: time.Second * 5, // long enough
-			MaxIdleTimeout:   time.Second * 5,
+			HandshakeTimeout: time.Second * 3, // long enough
+			MaxIdleTimeout:   time.Second * 3,
 		}
 	}
 
@@ -239,6 +240,14 @@ func (qr QuicResponse) Header() http.Header {
 
 func (qr QuicResponse) Bytes() []byte {
 	return qr.body
+}
+
+func (qr QuicResponse) Error() error {
+	if qr.OK() {
+		return nil
+	}
+
+	return xerrors.Errorf("failed to request: %s(%d)", qr.body, qr.status)
 }
 
 func CloneConfig(c *quic.Config) *quic.Config {

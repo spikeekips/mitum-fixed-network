@@ -28,6 +28,10 @@ func NewNetworkChanChannel(bufsize uint) *NetworkChanChannel {
 	}
 }
 
+func (gs *NetworkChanChannel) URL() string {
+	return "gochan://"
+}
+
 func (gs *NetworkChanChannel) Seals(h []valuehash.Hash) ([]seal.Seal, error) {
 	if gs.getSealHandler == nil {
 		return nil, xerrors.Errorf("getSealHandler is missing")
@@ -54,7 +58,7 @@ func (gs *NetworkChanChannel) Manifests(hs []base.Height) ([]block.Manifest, err
 	return gs.getManifests(hs)
 }
 
-func (gs *NetworkChanChannel) SetGetManifests(f network.GetManifestsHandler) {
+func (gs *NetworkChanChannel) SetGetManifestsHandler(f network.GetManifestsHandler) {
 	gs.getManifests = f
 }
 
@@ -62,6 +66,10 @@ func (gs *NetworkChanChannel) Blocks(hs []base.Height) ([]block.Block, error) {
 	return gs.getBlocks(hs)
 }
 
-func (gs *NetworkChanChannel) SetGetBlocks(f network.GetBlocksHandler) {
+func (gs *NetworkChanChannel) NodeInfo() (network.NodeInfo, error) {
+	return nil, nil
+}
+
+func (gs *NetworkChanChannel) SetGetBlocksHandler(f network.GetBlocksHandler) {
 	gs.getBlocks = f
 }

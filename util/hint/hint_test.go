@@ -4,6 +4,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/spikeekips/mitum/util"
 	"github.com/stretchr/testify/suite"
 	"golang.org/x/xerrors"
 )
@@ -14,7 +15,7 @@ type testHintVersion struct {
 
 func (t *testHintVersion) TestNew() {
 	ty := Type{0xff, 0xf0}
-	v := Version("0.1")
+	v := util.Version("0.1")
 
 	h, err := NewHint(ty, v)
 	t.NoError(err)
@@ -25,9 +26,9 @@ func (t *testHintVersion) TestNew() {
 func (t *testHintVersion) TestInvalidVersion() {
 	_, err := NewHint(
 		Type{0xff, 0xf0},
-		Version("vv0.1"),
+		util.Version("vv0.1"),
 	)
-	t.True(xerrors.Is(err, InvalidVersionError))
+	t.True(xerrors.Is(err, util.InvalidVersionError))
 }
 
 func TestHintVersion(t *testing.T) {
@@ -40,7 +41,7 @@ type testHint struct {
 
 func (t *testHint) TestNew() {
 	ty := Type{0xff, 0xf0}
-	v := Version("0.1")
+	v := util.Version("0.1")
 
 	hint, err := NewHint(ty, v)
 	t.NoError(err)
@@ -51,16 +52,16 @@ func (t *testHint) TestNew() {
 
 func (t *testHint) TestWrongSizeVersion() {
 	ty := Type{0xff, 0xf0}
-	v := Version("0.1-" + strings.Repeat("k", MaxVersionSize-3))
+	v := util.Version("0.1-" + strings.Repeat("k", MaxVersionSize-3))
 
 	_, err := NewHint(ty, v)
-	t.True(xerrors.Is(err, InvalidVersionError))
+	t.True(xerrors.Is(err, util.InvalidVersionError))
 	t.Contains(err.Error(), "oversized version")
 }
 
 func (t *testHint) TestInvalidType() {
 	ty := NullType
-	v := Version("0.1")
+	v := util.Version("0.1")
 
 	_, err := NewHint(ty, v)
 	t.True(xerrors.Is(err, InvalidTypeError))
@@ -69,7 +70,7 @@ func (t *testHint) TestInvalidType() {
 
 func (t *testHint) TestBytes() {
 	ty := Type{0xff, 0xf0}
-	v := Version("0.1")
+	v := util.Version("0.1")
 
 	hint, err := NewHint(ty, v)
 	t.NoError(err)
@@ -86,7 +87,7 @@ func (t *testHint) TestBytes() {
 func (t *testHint) TestString() {
 	ty := Type{0xff, 0xf0}
 	_ = registerType(ty, "dummy")
-	v := Version("0.1")
+	v := util.Version("0.1")
 
 	hint, err := NewHint(ty, v)
 	t.NoError(err)
@@ -129,7 +130,7 @@ func (t *testHint) TestCompatible() {
 			v0:   "0.1.0",
 			t1:   [2]byte{0xff, 0xf0},
 			v1:   "0.1.1",
-			err:  VersionNotCompatibleError,
+			err:  util.VersionNotCompatibleError,
 		},
 		{
 			name: "lower minor version",
@@ -144,7 +145,7 @@ func (t *testHint) TestCompatible() {
 			v0:   "0.1.0",
 			t1:   [2]byte{0xff, 0xf0},
 			v1:   "1.0.9",
-			err:  VersionNotCompatibleError,
+			err:  util.VersionNotCompatibleError,
 		},
 		{
 			name: "different type",
@@ -162,8 +163,8 @@ func (t *testHint) TestCompatible() {
 		t.Run(
 			c.name,
 			func() {
-				target, _ := NewHint(Type(c.t0), Version(c.v0))
-				check, _ := NewHint(Type(c.t1), Version(c.v1))
+				target, _ := NewHint(Type(c.t0), util.Version(c.v0))
+				check, _ := NewHint(Type(c.t1), util.Version(c.v1))
 
 				err := target.IsCompatible(check)
 				if c.err != nil {

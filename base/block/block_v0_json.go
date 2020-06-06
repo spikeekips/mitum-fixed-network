@@ -42,7 +42,7 @@ func (bm *BlockV0) UnpackJSON(b []byte, enc *jsonencoder.Encoder) error {
 	}
 
 	var mf ManifestV0
-	if m, err := decodeManifest(enc, nbm.MF); err != nil {
+	if m, err := DecodeManifest(enc, nbm.MF); err != nil {
 		return err
 	} else if mv, ok := m.(ManifestV0); !ok {
 		return xerrors.Errorf("not ManifestV0: type=%T", m)

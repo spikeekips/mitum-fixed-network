@@ -10,6 +10,7 @@ import (
 
 	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/base/block"
+	"github.com/spikeekips/mitum/network"
 	"github.com/spikeekips/mitum/storage"
 	"github.com/spikeekips/mitum/util"
 	"github.com/spikeekips/mitum/util/logging"
@@ -39,7 +40,7 @@ type GeneralSyncer struct { // nolint; maligned
 	*logging.Logging
 	localstate              *Localstate
 	st                      storage.SyncerStorage
-	sourceNodes             map[base.Address]Node
+	sourceNodes             map[base.Address]network.Node
 	heightFrom              base.Height
 	heightTo                base.Height
 	limitManifestsPerWorker int
@@ -52,7 +53,7 @@ type GeneralSyncer struct { // nolint; maligned
 
 func NewGeneralSyncer(
 	localstate *Localstate,
-	sourceNodes []Node,
+	sourceNodes []network.Node,
 	from, to base.Height,
 ) (*GeneralSyncer, error) {
 	switch {
@@ -68,7 +69,7 @@ func NewGeneralSyncer(
 		return nil, xerrors.Errorf("from height is same or lower than last block; from=%d last=%d", from, m.Height())
 	}
 
-	sn := map[base.Address]Node{}
+	sn := map[base.Address]network.Node{}
 	{
 		for _, node := range sourceNodes {
 			if localstate.Node().Address().Equal(node.Address()) {
@@ -587,7 +588,7 @@ func (cs *GeneralSyncer) fetchManifestsByNodes(heights []base.Height) map[base.A
 	return fetched
 }
 
-func (cs *GeneralSyncer) callbackFetchManifests(node Node, heights []base.Height) []block.Manifest {
+func (cs *GeneralSyncer) callbackFetchManifests(node network.Node, heights []base.Height) []block.Manifest {
 	manifests := make([]block.Manifest, len(heights))
 
 	updateManifests := func(fetched []block.Manifest) {
@@ -630,7 +631,7 @@ func (cs *GeneralSyncer) callbackFetchManifests(node Node, heights []base.Height
 	return manifests
 }
 
-func (cs *GeneralSyncer) callbackFetchManifestsSlice(node Node, heights []base.Height) []block.Manifest {
+func (cs *GeneralSyncer) callbackFetchManifestsSlice(node network.Node, heights []base.Height) []block.Manifest {
 	var retries uint = 3
 
 	l := cs.Log().WithLogger(func(ctx logging.Context) logging.Emitter {
@@ -679,7 +680,7 @@ func (cs *GeneralSyncer) checkThresholdByHeights(heights []base.Height, fetched 
 
 	var pn []base.Address = cs.provedNodes()
 	for index := range heights {
-		provedNodes := map[base.Address]Node{}
+		provedNodes := map[base.Address]network.Node{}
 		{
 			for i := range pn {
 				node := cs.sourceNodes[pn[i]]
@@ -702,7 +703,7 @@ func (cs *GeneralSyncer) checkThreshold(
 	index int,
 	heights []base.Height,
 	fetched map[base.Address][]block.Manifest,
-	provedNodes map[base.Address]Node,
+	provedNodes map[base.Address]network.Node,
 	threshold base.Threshold,
 ) (block.Manifest, []base.Address, error) {
 	height := heights[index]
@@ -759,7 +760,7 @@ func (cs *GeneralSyncer) checkThreshold(
 	return ms[key], hashByNode[key], nil
 }
 
-func (cs *GeneralSyncer) fetchManifests(node Node, heights []base.Height) ([]block.Manifest, error) { // nolint
+func (cs *GeneralSyncer) fetchManifests(node network.Node, heights []base.Height) ([]block.Manifest, error) { // nolint
 	l := cs.Log().WithLogger(func(ctx logging.Context) logging.Emitter {
 		return ctx.Hinted("source_node", node.Address()).
 			Hinted("height_from", heights[0]).
@@ -830,7 +831,7 @@ func (cs *GeneralSyncer) sanitizeManifests(heights []base.Height, l interface{})
 	return checked, missing, nil
 }
 
-func (cs *GeneralSyncer) workerCallbackFetchBlocks(node Node) util.WorkerCallback {
+func (cs *GeneralSyncer) workerCallbackFetchBlocks(node network.Node) util.WorkerCallback {
 	return func(jobID uint, job interface{}) error {
 		var heights []base.Height
 		if h, ok := job.([]base.Height); !ok {
@@ -910,7 +911,7 @@ func (cs *GeneralSyncer) checkFetchedBlocks(fetched []block.Block) ([]base.Heigh
 	return missing, nil
 }
 
-func (cs *GeneralSyncer) fetchBlocks(node Node, heights []base.Height) ([]block.Block, error) { // nolint
+func (cs *GeneralSyncer) fetchBlocks(node network.Node, heights []base.Height) ([]block.Block, error) { // nolint
 	l := cs.Log().WithLogger(func(ctx logging.Context) logging.Emitter {
 		return ctx.Hinted("source_node", node.Address()).
 			Hinted("height_from", heights[0]).

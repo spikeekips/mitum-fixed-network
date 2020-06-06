@@ -42,8 +42,8 @@ func NewPrimitiveQuicServer(bind string, certs []tls.Certificate) (*PrimitiveQui
 		router:      mux.NewRouter(),
 	}
 
-	_ = qs.router.HandleFunc(
-		"/",
+	root := qs.router.Name("root")
+	root.Path("/").HandlerFunc(
 		func(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, http.StatusText(http.StatusServiceUnavailable), http.StatusServiceUnavailable)
 		},
@@ -55,7 +55,14 @@ func NewPrimitiveQuicServer(bind string, certs []tls.Certificate) (*PrimitiveQui
 }
 
 func (qs *PrimitiveQuicServer) SetHandler(prefix string, handler network.HTTPHandlerFunc) *mux.Route {
-	return qs.router.HandleFunc(prefix, handler)
+	var route *mux.Route
+	if prefix == "" || prefix == "/" {
+		route = qs.router.Get("root")
+	} else {
+		route = qs.router.NewRoute()
+	}
+
+	return route.Path(prefix).HandlerFunc(handler)
 }
 
 func (qs *PrimitiveQuicServer) SetLogger(l logging.Logger) logging.Logger {

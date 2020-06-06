@@ -10,6 +10,7 @@ import (
 	"golang.org/x/xerrors"
 
 	"github.com/spikeekips/mitum/base"
+	"github.com/spikeekips/mitum/network"
 	mongodbstorage "github.com/spikeekips/mitum/storage/mongodb"
 )
 
@@ -40,7 +41,7 @@ func (t *testSyncers) TestSaveLastBlock() {
 
 	defer ss.Stop()
 
-	t.NoError(ss.Add(target, []Node{remoteState.Node()}))
+	t.NoError(ss.Add(target, []network.Node{remoteState.Node()}))
 
 	select {
 	case <-time.After(time.Second * 3):

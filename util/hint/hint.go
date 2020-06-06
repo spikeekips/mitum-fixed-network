@@ -6,6 +6,8 @@ import (
 
 	"golang.org/x/mod/semver"
 	"golang.org/x/xerrors"
+
+	"github.com/spikeekips/mitum/util"
 )
 
 const (
@@ -16,16 +18,16 @@ const (
 
 type Hint struct {
 	t       Type
-	version Version
+	version util.Version
 }
 
-func NewHint(t Type, version Version) (Hint, error) {
+func NewHint(t Type, version util.Version) (Hint, error) {
 	ht := Hint{t: t, version: version}
 
 	return ht, ht.IsValid(nil)
 }
 
-func MustHint(t Type, version Version) Hint {
+func MustHint(t Type, version util.Version) Hint {
 	ht := Hint{t: t, version: version}
 	if err := ht.IsValid(nil); err != nil {
 		panic(err)
@@ -48,7 +50,7 @@ func NewHintFromString(s string) (Hint, error) {
 		return Hint{}, xerrors.Errorf("invalid formatted hint code found: hint=%q", s)
 	}
 
-	ht := Hint{t: Type([2]byte{code[0], code[1]}), version: Version(version)}
+	ht := Hint{t: Type([2]byte{code[0], code[1]}), version: util.Version(version)}
 
 	return ht, ht.IsValid(nil)
 }
@@ -63,7 +65,7 @@ func NewHintFromBytes(b []byte) (Hint, error) {
 
 	ht := Hint{
 		t:       Type(t),
-		version: Version(bytes.TrimRight(b[2:], "\x00")),
+		version: util.Version(bytes.TrimRight(b[2:], "\x00")),
 	}
 
 	return ht, ht.IsValid(nil)
@@ -75,9 +77,9 @@ func (ht Hint) IsValid([]byte) error {
 	}
 
 	if len(ht.version) > MaxVersionSize {
-		return InvalidVersionError.Errorf("oversized version; len=%d", len(ht.version))
+		return util.InvalidVersionError.Errorf("oversized version; len=%d", len(ht.version))
 	} else if !semver.IsValid(ht.version.GO()) {
-		return InvalidVersionError.Errorf("version=%s", ht.version)
+		return util.InvalidVersionError.Errorf("version=%s", ht.version)
 	}
 
 	return nil
@@ -95,7 +97,7 @@ func (ht Hint) Type() Type {
 	return ht.t
 }
 
-func (ht Hint) Version() Version {
+func (ht Hint) Version() util.Version {
 	return ht.version
 }
 

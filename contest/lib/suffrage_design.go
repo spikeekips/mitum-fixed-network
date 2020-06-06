@@ -3,6 +3,7 @@ package contestlib
 import (
 	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/isaac"
+	"github.com/spikeekips/mitum/network"
 	"golang.org/x/xerrors"
 	"gopkg.in/yaml.v3"
 )
@@ -100,7 +101,7 @@ func (fs FixedSuffrageDesign) New(localstate *isaac.Localstate) (base.Suffrage, 
 	nodes := make([]base.Address, localstate.Nodes().Len()+1)
 
 	var i int
-	localstate.Nodes().Traverse(func(n isaac.Node) bool {
+	localstate.Nodes().Traverse(func(n network.Node) bool {
 		nodes[i] = n.Address()
 
 		i++

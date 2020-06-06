@@ -7,6 +7,7 @@ import (
 
 	"golang.org/x/mod/semver"
 
+	"github.com/spikeekips/mitum/util"
 	"github.com/spikeekips/mitum/util/errors"
 )
 
@@ -34,7 +35,7 @@ func NewHintset() *Hintset {
 	}
 }
 
-func (st Hintset) key(t Type, v Version) string {
+func (st Hintset) key(t Type, v util.Version) string {
 	if len(v) < 1 {
 		return fmt.Sprintf("%x", t.Bytes())
 	}
@@ -74,7 +75,7 @@ func (st *Hintset) Add(hd Hinter) error {
 }
 
 // Remove removes Hint by it's Type() and Version().
-func (st *Hintset) Remove(t Type, version Version) error {
+func (st *Hintset) Remove(t Type, version util.Version) error {
 	key := st.key(t, version)
 	if _, found := st.known.Load(key); !found {
 		return HintNotFoundError.Errorf("type=%s version=%s", t.Verbose(), version)
@@ -112,7 +113,7 @@ func (st *Hintset) Remove(t Type, version Version) error {
 // - If version argument is empty, the latest version of same type will be
 // returned.
 // - The unknown Hinter will be cached.
-func (st *Hintset) Hinter(t Type, version Version) (Hinter, error) {
+func (st *Hintset) Hinter(t Type, version util.Version) (Hinter, error) {
 	key := st.key(t, version)
 	if e, found := st.known.Load(key); found {
 		return e.(Hinter), nil

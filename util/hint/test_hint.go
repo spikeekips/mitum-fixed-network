@@ -1,6 +1,8 @@
 package hint
 
-func MustHintWithType(t Type, version Version, name string) Hint {
+import "github.com/spikeekips/mitum/util"
+
+func MustHintWithType(t Type, version util.Version, name string) Hint {
 	if err := registerType(t, name); err != nil {
 		panic(err)
 	}

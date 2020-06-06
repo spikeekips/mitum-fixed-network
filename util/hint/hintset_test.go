@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"testing"
 
+	"github.com/spikeekips/mitum/util"
 	"github.com/stretchr/testify/suite"
 	"golang.org/x/xerrors"
 )
@@ -26,7 +27,7 @@ type somethingHinted struct {
 }
 
 func newSomethingHinted(t Type, version string, a int) somethingHinted {
-	h, _ := NewHint(t, Version(version))
+	h, _ := NewHint(t, util.Version(version))
 	return somethingHinted{H: h, a: a}
 }
 

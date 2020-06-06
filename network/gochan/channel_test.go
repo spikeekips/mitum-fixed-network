@@ -57,7 +57,7 @@ func (t *testNetworkChanChannel) TestManifests() {
 	blk, err := block.NewTestBlockV0(base.Height(33), base.Round(9), valuehash.RandomSHA256(), valuehash.RandomSHA256())
 	t.NoError(err)
 
-	gs.SetGetManifests(func(heights []base.Height) ([]block.Manifest, error) {
+	gs.SetGetManifestsHandler(func(heights []base.Height) ([]block.Manifest, error) {
 		var blocks []block.Manifest
 		for _, h := range heights {
 			if h != blk.Height() {
@@ -103,7 +103,7 @@ func (t *testNetworkChanChannel) TestBlocks() {
 	blk, err := block.NewTestBlockV0(base.Height(33), base.Round(9), valuehash.RandomSHA256(), valuehash.RandomSHA256())
 	t.NoError(err)
 
-	gs.SetGetBlocks(func(heights []base.Height) ([]block.Block, error) {
+	gs.SetGetBlocksHandler(func(heights []base.Height) ([]block.Block, error) {
 		var blocks []block.Block
 		for _, h := range heights {
 			if h != blk.Height() {

@@ -19,10 +19,11 @@ import (
 )
 
 var (
-	QuicHandlerPathSendSeal     = "/seal"
 	QuicHandlerPathGetSeals     = "/seals"
+	QuicHandlerPathSendSeal     = "/seal"
 	QuicHandlerPathGetBlocks    = "/blocks"
 	QuicHandlerPathGetManifests = "/manifests"
+	QuicHandlerPathNodeInfo     = "/"
 )
 
 type QuicServer struct {
@@ -35,6 +36,7 @@ type QuicServer struct {
 	newSealHandler      network.NewSealHandler
 	getManifestsHandler network.GetManifestsHandler
 	getBlocksHandler    network.GetBlocksHandler
+	nodeInfoHandler     network.NodeInfoHandler
 }
 
 func NewQuicServer(
@@ -72,50 +74,24 @@ func (qs *QuicServer) SetNewSealHandler(fn network.NewSealHandler) {
 	qs.newSealHandler = fn
 }
 
-func (qs *QuicServer) SetGetManifests(fn network.GetManifestsHandler) {
+func (qs *QuicServer) SetGetManifestsHandler(fn network.GetManifestsHandler) {
 	qs.getManifestsHandler = fn
 }
 
-func (qs *QuicServer) SetGetBlocks(fn network.GetBlocksHandler) {
+func (qs *QuicServer) SetGetBlocksHandler(fn network.GetBlocksHandler) {
 	qs.getBlocksHandler = fn
 }
 
+func (qs *QuicServer) SetNodeInfoHandler(fn network.NodeInfoHandler) {
+	qs.nodeInfoHandler = fn
+}
+
 func (qs *QuicServer) setHandlers() {
-	// seal handler
-	_ = qs.SetHandler(
-		QuicHandlerPathGetSeals,
-		func(w http.ResponseWriter, r *http.Request) {
-			qs.handleGetSeals(w, r)
-		},
-	).Methods("POST")
-
-	_ = qs.SetHandler(
-		QuicHandlerPathSendSeal,
-		func(w http.ResponseWriter, r *http.Request) {
-			qs.handleNewSeal(w, r)
-		},
-	).Methods("POST")
-
-	_ = qs.SetHandler(
-		QuicHandlerPathGetManifests,
-		func(w http.ResponseWriter, r *http.Request) {
-			qs.handleGetManifests(w, r)
-		},
-	).Methods("POST")
-
-	_ = qs.SetHandler(
-		QuicHandlerPathGetBlocks,
-		func(w http.ResponseWriter, r *http.Request) {
-			qs.handleGetBlocks(w, r)
-		},
-	).Methods("POST")
-
-	_ = qs.SetHandler(
-		"/",
-		func(w http.ResponseWriter, r *http.Request) {
-			w.WriteHeader(http.StatusOK)
-		},
-	)
+	_ = qs.SetHandler(QuicHandlerPathGetSeals, qs.handleGetSeals).Methods("POST")
+	_ = qs.SetHandler(QuicHandlerPathSendSeal, qs.handleNewSeal).Methods("POST")
+	_ = qs.SetHandler(QuicHandlerPathGetManifests, qs.handleGetManifests).Methods("POST")
+	_ = qs.SetHandler(QuicHandlerPathGetBlocks, qs.handleGetBlocks).Methods("POST")
+	_ = qs.SetHandler(QuicHandlerPathNodeInfo, qs.handleNodeInfo)
 }
 
 func (qs *QuicServer) handleGetSeals(w http.ResponseWriter, r *http.Request) {
@@ -171,7 +147,7 @@ func (qs *QuicServer) handleGetSeals(w http.ResponseWriter, r *http.Request) {
 		return
 	} else if b, err := qs.enc.Marshal(sls); err != nil {
 		qs.Log().Error().Err(err).Msg("failed to encode seals")
-		network.HTTPError(w, http.StatusBadRequest)
+		network.HTTPError(w, http.StatusInternalServerError)
 		return
 	} else {
 		output = b
@@ -211,7 +187,7 @@ func (qs *QuicServer) handleNewSeal(w http.ResponseWriter, r *http.Request) {
 		sl = s
 	}
 
-	// NOTE if already received seal, returns 200
+	// NOTE if already received, returns 200
 	if qs.hasSealHandler != nil {
 		if found, err := qs.hasSealHandler(sl.Hash()); err != nil {
 			network.HTTPError(w, http.StatusInternalServerError)
@@ -223,10 +199,6 @@ func (qs *QuicServer) handleNewSeal(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 	}
-
-	// TODO If node is not in consensus state, node will return
-	// 425(StatusTooEarly) for new incoming seal.
-	// https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/425
 
 	if err := qs.newSealHandler(sl); err != nil {
 		seal.LoggerWithSeal(
@@ -278,7 +250,7 @@ func (qs *QuicServer) handleGetByHeights(
 
 		return err
 	} else if b, err := qs.enc.Marshal(sls); err != nil {
-		network.HTTPError(w, http.StatusBadRequest)
+		network.HTTPError(w, http.StatusInternalServerError)
 
 		return xerrors.Errorf("failed to encode: %w", err)
 	} else {
@@ -324,13 +296,40 @@ func (qs *QuicServer) handleGetBlocks(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func quicURL(u, p string) (string, error) {
+func (qs *QuicServer) handleNodeInfo(w http.ResponseWriter, _ *http.Request) {
+	if qs.nodeInfoHandler == nil {
+		network.HTTPError(w, http.StatusInternalServerError)
+		return
+	}
+
+	var output []byte
+	if n, err := qs.nodeInfoHandler(); err != nil {
+		qs.Log().Error().Err(err).Msg("failed to get node info")
+
+		network.HTTPError(w, http.StatusInternalServerError)
+
+		return
+	} else if b, err := qs.enc.Marshal(n); err != nil {
+		qs.Log().Error().Err(err).Msg("failed to encode NodeInfo")
+
+		network.HTTPError(w, http.StatusInternalServerError)
+
+		return
+	} else {
+		output = b
+	}
+
+	w.Header().Set(QuicEncoderHintHeader, qs.enc.Hint().String())
+	_, _ = w.Write(output)
+}
+
+func mustQuicURL(u, p string) string {
 	uu, err := url.Parse(u)
 	if err != nil {
-		return "", err
+		panic(xerrors.Errorf("failed to join quic url: %w", err))
 	}
 
 	uu.Path = path.Join(uu.Path, p)
 
-	return uu.String(), nil
+	return uu.String()
 }

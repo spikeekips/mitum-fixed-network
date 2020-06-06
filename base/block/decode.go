@@ -5,7 +5,7 @@ import (
 	"github.com/spikeekips/mitum/util/hint"
 )
 
-func decodeManifest(enc encoder.Encoder, b []byte) (Manifest, error) {
+func DecodeManifest(enc encoder.Encoder, b []byte) (Manifest, error) {
 	if i, err := enc.DecodeByHint(b); err != nil {
 		return nil, err
 	} else if i == nil {

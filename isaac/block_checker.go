@@ -3,6 +3,7 @@ package isaac
 import (
 	"golang.org/x/xerrors"
 
+	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/base/block"
 	"github.com/spikeekips/mitum/util/logging"
 )
@@ -10,7 +11,7 @@ import (
 type baseBlocksValidationChecker struct {
 	*logging.Logging
 	localstate *Localstate
-	networkID  NetworkID
+	networkID  base.NetworkID
 }
 
 func (bc *baseBlocksValidationChecker) checkIsValid(blk block.Manifest) error {

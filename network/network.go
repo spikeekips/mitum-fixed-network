@@ -14,6 +14,7 @@ type (
 	NewSealHandler      func(seal.Seal) error
 	GetManifestsHandler func([]base.Height) ([]block.Manifest, error)
 	GetBlocksHandler    func([]base.Height) ([]block.Block, error)
+	NodeInfoHandler     func() (NodeInfo, error)
 )
 
 // TODO GetXXX should have limit
@@ -23,8 +24,9 @@ type Server interface {
 	SetHasSealHandler(HasSealHandler)
 	SetGetSealsHandler(GetSealsHandler)
 	SetNewSealHandler(NewSealHandler)
-	SetGetManifests(GetManifestsHandler)
-	SetGetBlocks(GetBlocksHandler)
+	SetGetManifestsHandler(GetManifestsHandler)
+	SetGetBlocksHandler(GetBlocksHandler)
+	SetNodeInfoHandler(NodeInfoHandler)
 }
 
 type Response interface {
@@ -33,10 +35,10 @@ type Response interface {
 }
 
 type NetworkChannel interface {
+	URL() string
 	Seals([]valuehash.Hash) ([]seal.Seal, error)
 	SendSeal(seal.Seal) error
 	Manifests([]base.Height) ([]block.Manifest, error)
 	Blocks([]base.Height) ([]block.Block, error)
-
-	// TODO provices Node Info
+	NodeInfo() (NodeInfo, error)
 }

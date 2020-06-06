@@ -1,4 +1,4 @@
-package hint
+package util
 
 import (
 	"testing"

@@ -31,6 +31,7 @@ type NodeRunner struct {
 	*logging.Logging
 	design            *NodeDesign
 	encs              *encoder.Encoders
+	version           util.Version
 	je                encoder.Encoder
 	localstate        *isaac.Localstate
 	storage           storage.Storage
@@ -42,7 +43,7 @@ type NodeRunner struct {
 	consensusStates   *isaac.ConsensusStates
 }
 
-func NewNodeRunnerFromDesign(design *NodeDesign, encs *encoder.Encoders) (*NodeRunner, error) {
+func NewNodeRunnerFromDesign(design *NodeDesign, encs *encoder.Encoders, version util.Version) (*NodeRunner, error) {
 	var je encoder.Encoder
 	if e, err := encs.Encoder(jsonencoder.JSONType, ""); err != nil { // NOTE get latest bson encoder
 		return nil, xerrors.Errorf("json encoder needs for quic-network: %w", err)
@@ -54,9 +55,10 @@ func NewNodeRunnerFromDesign(design *NodeDesign, encs *encoder.Encoders) (*NodeR
 		Logging: logging.NewLogging(func(c logging.Context) logging.Emitter {
 			return c.Str("module", "contest-node-runner")
 		}),
-		design: design,
-		encs:   encs,
-		je:     je,
+		design:  design,
+		encs:    encs,
+		version: version,
+		je:      je,
 	}, nil
 }
 
@@ -129,6 +131,8 @@ func (nr *NodeRunner) attachStorage() error {
 }
 
 func (nr *NodeRunner) attachNetwork() error {
+	// TODO support HTTP2 for testing
+
 	l := nr.Log().WithLogger(func(ctx logging.Context) logging.Emitter {
 		return ctx.Str("target", "network")
 	})
@@ -168,6 +172,7 @@ func (nr *NodeRunner) attachNetworkHandlers() error {
 	nr.network.SetNewSealHandler(nr.networkhandlerNewSeal)
 	nr.network.SetGetManifestsHandler(nr.networkhandlerGetManifests)
 	nr.network.SetGetBlocksHandler(nr.networkhandlerGetBlocks)
+	nr.network.SetNodeInfoHandler(nr.networkhandlerNodeInfo)
 
 	return nil
 }
@@ -273,6 +278,30 @@ func (nr *NodeRunner) networkhandlerGetBlocks(heights []base.Height) ([]block.Bl
 	})
 
 	return nr.storage.BlocksByHeight(heights)
+}
+
+func (nr *NodeRunner) networkhandlerNodeInfo() (network.NodeInfo, error) {
+	// TODO set cache
+	var state base.State = base.StateUnknown
+	if handler := nr.consensusStates.ActiveHandler(); handler != nil {
+		state = handler.State()
+	}
+
+	var manifest block.Manifest
+	if m, found, err := nr.storage.LastManifest(); err != nil {
+		return nil, err
+	} else if found {
+		manifest = m
+	}
+
+	return network.NewNodeInfoV0(
+		nr.localstate.Node(),
+		nr.localstate.Policy().NetworkID(),
+		state,
+		manifest,
+		nr.version,
+		nr.design.Network.PublishURL().String(),
+	), nil
 }
 
 func (nr *NodeRunner) attachNodeChannel() error {

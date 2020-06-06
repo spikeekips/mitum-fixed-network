@@ -25,6 +25,11 @@ func (t *testVersionGo) TestWithMultiplePrefix() {
 	t.Equal(v0.String(), v0.GO())
 }
 
+func (t *testVersionGo) TestLong() {
+	v0 := Version("v0.0.1-proto3+commit.449cdb2-patched.ed86a2a70719bef50804b3980f13c68f")
+	t.NoError(v0.IsValid(nil))
+}
+
 func TestVersionGo(t *testing.T) {
 	suite.Run(t, new(testVersionGo))
 }

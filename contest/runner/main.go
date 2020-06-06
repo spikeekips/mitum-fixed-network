@@ -15,6 +15,7 @@ import (
 	"github.com/spikeekips/mitum/base/operation"
 	contestlib "github.com/spikeekips/mitum/contest/lib"
 	"github.com/spikeekips/mitum/isaac"
+	"github.com/spikeekips/mitum/util"
 	"github.com/spikeekips/mitum/util/encoder"
 	bsonencoder "github.com/spikeekips/mitum/util/encoder/bson"
 	jsonencoder "github.com/spikeekips/mitum/util/encoder/json"
@@ -67,6 +68,11 @@ func main() {
 	log.Info().Str("version", Version).Msg("contest node started")
 	log.Debug().Interface("flags", flags).Msg("flags parsed")
 
+	// check version
+	ctx.FatalIfErrorf(func() error {
+		return util.Version(Version).IsValid(nil)
+	}())
+
 	contestlib.ConnectSignal()
 
 	if ctx.Command() == "version" {
@@ -102,7 +108,7 @@ func (cmd *RunCommand) Run(log logging.Logger) error {
 	}
 
 	var nr *contestlib.NodeRunner
-	if n, err := createNodeRunnerFromDesign(cmd.Design, log); err != nil {
+	if n, err := createNodeRunnerFromDesign(cmd.Design, util.Version(Version), log); err != nil {
 		return xerrors.Errorf("failed to create node runner: %w", err)
 	} else {
 		nr = n
@@ -138,7 +144,7 @@ func (cmd *InitCommand) Run(log logging.Logger) error {
 
 func (cmd *InitCommand) run(log logging.Logger) error {
 	var nr *contestlib.NodeRunner
-	if n, err := createNodeRunnerFromDesign(cmd.Design, log); err != nil {
+	if n, err := createNodeRunnerFromDesign(cmd.Design, util.Version(Version), log); err != nil {
 		return err
 	} else {
 		nr = n
@@ -238,7 +244,7 @@ func (cmd *InitCommand) loadOperationBody(body interface{}, design *contestlib.N
 	}
 }
 
-func createNodeRunnerFromDesign(f string, log logging.Logger) (*contestlib.NodeRunner, error) {
+func createNodeRunnerFromDesign(f string, version util.Version, log logging.Logger) (*contestlib.NodeRunner, error) {
 	var encs *encoder.Encoders
 	if e, err := encoder.LoadEncoders(
 		[]encoder.Encoder{jsonencoder.NewEncoder(), bsonencoder.NewEncoder()},
@@ -257,7 +263,7 @@ func createNodeRunnerFromDesign(f string, log logging.Logger) (*contestlib.NodeR
 	}
 
 	var nr *contestlib.NodeRunner
-	if n, err := contestlib.NewNodeRunnerFromDesign(design, encs); err != nil {
+	if n, err := contestlib.NewNodeRunnerFromDesign(design, encs, version); err != nil {
 		return nil, xerrors.Errorf("failed to create node runner: %w", err)
 	} else {
 		nr = n

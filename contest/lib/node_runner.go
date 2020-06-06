@@ -163,7 +163,8 @@ func (nr *NodeRunner) attachNetwork() error {
 }
 
 func (nr *NodeRunner) attachNetworkHandlers() error {
-	nr.network.SetGetSealsHandler(nr.networkHandlerGetSeal)
+	nr.network.SetHasSealHandler(nr.networkHandlerHasSeal)
+	nr.network.SetGetSealsHandler(nr.networkHandlerGetSeals)
 	nr.network.SetNewSealHandler(nr.networkhandlerNewSeal)
 	nr.network.SetGetManifests(nr.networkhandlerGetManifests)
 	nr.network.SetGetBlocks(nr.networkhandlerGetBlocks)
@@ -171,7 +172,11 @@ func (nr *NodeRunner) attachNetworkHandlers() error {
 	return nil
 }
 
-func (nr *NodeRunner) networkHandlerGetSeal(hs []valuehash.Hash) ([]seal.Seal, error) {
+func (nr *NodeRunner) networkHandlerHasSeal(h valuehash.Hash) (bool, error) {
+	return nr.storage.HasSeal(h)
+}
+
+func (nr *NodeRunner) networkHandlerGetSeals(hs []valuehash.Hash) ([]seal.Seal, error) {
 	var sls []seal.Seal
 
 	if err := nr.storage.SealsByHash(hs, func(_ valuehash.Hash, sl seal.Seal) (bool, error) {

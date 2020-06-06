@@ -10,6 +10,7 @@ import (
 
 type (
 	GetSealsHandler     func([]valuehash.Hash) ([]seal.Seal, error)
+	HasSealHandler      func(valuehash.Hash) (bool, error)
 	NewSealHandler      func(seal.Seal) error
 	GetManifestsHandler func([]base.Height) ([]block.Manifest, error)
 	GetBlocksHandler    func([]base.Height) ([]block.Block, error)
@@ -19,6 +20,7 @@ type (
 
 type Server interface {
 	util.Daemon
+	SetHasSealHandler(HasSealHandler)
 	SetGetSealsHandler(GetSealsHandler)
 	SetNewSealHandler(NewSealHandler)
 	SetGetManifests(GetManifestsHandler)

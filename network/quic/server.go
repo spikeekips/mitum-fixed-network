@@ -31,6 +31,7 @@ type QuicServer struct {
 	encs                *encoder.Encoders
 	enc                 encoder.Encoder // NOTE default encoder.Encoder
 	getSealsHandler     network.GetSealsHandler
+	hasSealHandler      network.HasSealHandler
 	newSealHandler      network.NewSealHandler
 	getManifestsHandler network.GetManifestsHandler
 	getBlocksHandler    network.GetBlocksHandler
@@ -57,6 +58,10 @@ func (qs *QuicServer) SetLogger(l logging.Logger) logging.Logger {
 	_ = qs.PrimitiveQuicServer.SetLogger(l)
 
 	return qs.Logging.SetLogger(l)
+}
+
+func (qs *QuicServer) SetHasSealHandler(fn network.HasSealHandler) {
+	qs.hasSealHandler = fn
 }
 
 func (qs *QuicServer) SetGetSealsHandler(fn network.GetSealsHandler) {
@@ -199,17 +204,26 @@ func (qs *QuicServer) handleNewSeal(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var sl seal.Seal
-	if hinter, err := enc.DecodeByHint(body.Bytes()); err != nil {
-		network.HTTPError(w, http.StatusBadRequest)
-		return
-	} else if s, ok := hinter.(seal.Seal); !ok {
+	if s, err := seal.DecodeSeal(enc, body.Bytes()); err != nil {
 		network.HTTPError(w, http.StatusBadRequest)
 		return
 	} else {
 		sl = s
 	}
 
-	// TODO if already received seal, returns 200
+	// NOTE if already received seal, returns 200
+	if qs.hasSealHandler != nil {
+		if found, err := qs.hasSealHandler(sl.Hash()); err != nil {
+			network.HTTPError(w, http.StatusInternalServerError)
+
+			return
+		} else if found {
+			w.WriteHeader(http.StatusOK)
+
+			return
+		}
+	}
+
 	// TODO If node is not in consensus state, node will return
 	// 425(StatusTooEarly) for new incoming seal.
 	// https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/425

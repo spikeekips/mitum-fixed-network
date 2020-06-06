@@ -34,6 +34,7 @@ func (cs *NetworkChanServer) SetLogger(l logging.Logger) logging.Logger {
 	return cs.Log()
 }
 
+func (cs *NetworkChanServer) SetHasSealHandler(network.HasSealHandler)   {}
 func (cs *NetworkChanServer) SetGetSealsHandler(network.GetSealsHandler) {}
 
 func (cs *NetworkChanServer) SetNewSealHandler(f network.NewSealHandler) {

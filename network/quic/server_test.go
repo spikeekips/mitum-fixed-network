@@ -112,6 +112,13 @@ func (t *testQuicSever) TestSendSeal() {
 		t.Equal(sl.Signature(), r.Signature())
 		t.Equal(localtime.RFC3339(sl.SignedAt()), localtime.RFC3339(r.SignedAt()))
 	}
+
+	// NOTE if already known seal received, server returns 200
+	qn.SetHasSealHandler(func(h valuehash.Hash) (bool, error) {
+		return true, nil
+	})
+
+	t.NoError(qc.SendSeal(sl))
 }
 
 func (t *testQuicSever) TestGetSeals() {

@@ -45,7 +45,7 @@ type NodeRunner struct {
 
 func NewNodeRunnerFromDesign(design *NodeDesign, encs *encoder.Encoders, version util.Version) (*NodeRunner, error) {
 	var je encoder.Encoder
-	if e, err := encs.Encoder(jsonencoder.JSONType, ""); err != nil { // NOTE get latest bson encoder
+	if e, err := encs.Encoder(jsonencoder.JSONType, ""); err != nil { // NOTE get latest json encoder
 		return nil, xerrors.Errorf("json encoder needs for quic-network: %w", err)
 	} else {
 		je = e
@@ -315,7 +315,7 @@ func (nr *NodeRunner) attachNodeChannel() error {
 	nu.Host = fmt.Sprintf("localhost:%s", nu.Port())
 
 	var channel network.NetworkChannel
-	if ch, err := createNodeChannel(nu, nr.encs, nr.je); err != nil {
+	if ch, err := CreateNodeChannel(nu, nr.encs, nr.je); err != nil {
 		return err
 	} else {
 		channel = ch
@@ -329,7 +329,7 @@ func (nr *NodeRunner) attachNodeChannel() error {
 	return nil
 }
 
-func createNodeChannel(publish *url.URL, encs *encoder.Encoders, enc encoder.Encoder) (network.NetworkChannel, error) {
+func CreateNodeChannel(publish *url.URL, encs *encoder.Encoders, enc encoder.Encoder) (network.NetworkChannel, error) {
 	var channel network.NetworkChannel
 
 	switch publish.Scheme {
@@ -373,7 +373,7 @@ func (nr *NodeRunner) attachRemoteNodes() error {
 			n = isaac.NewRemoteNode(ca, r.Publickey())
 		}
 
-		if ch, err := createNodeChannel(r.NetworkURL(), nr.encs, nr.je); err != nil {
+		if ch, err := CreateNodeChannel(r.NetworkURL(), nr.encs, nr.je); err != nil {
 			return err
 		} else {
 			nr.setupLogging(ch)

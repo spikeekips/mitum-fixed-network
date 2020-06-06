@@ -10,6 +10,7 @@ import (
 	"github.com/spikeekips/mitum/base/tree"
 	"github.com/spikeekips/mitum/base/valuehash"
 	"github.com/spikeekips/mitum/isaac"
+	"github.com/spikeekips/mitum/network"
 	bsonencoder "github.com/spikeekips/mitum/util/encoder/bson"
 	jsonencoder "github.com/spikeekips/mitum/util/encoder/json"
 	"github.com/spikeekips/mitum/util/hint"
@@ -42,6 +43,7 @@ var Hinters = []hint.Hinter{
 	key.EtherPublickey{},
 	key.StellarPrivatekey{},
 	key.StellarPublickey{},
+	network.NodeInfoV0{},
 	operation.OperationAVLNode{},
 	operation.Seal{},
 	state.BytesValue{},

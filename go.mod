@@ -22,36 +22,38 @@ require (
 	github.com/jcmturner/gokrb5/v8 v8.3.0 // indirect
 	github.com/json-iterator/go v1.1.9
 	github.com/justinas/alice v1.2.0
-	github.com/klauspost/compress v1.10.6 // indirect
+	github.com/klauspost/compress v1.10.8 // indirect
 	github.com/kr/pretty v0.2.0 // indirect
 	github.com/lib/pq v1.6.0 // indirect
-	github.com/lucas-clemente/quic-go v0.15.8
+	github.com/lucas-clemente/quic-go v0.16.1
 	github.com/mattn/go-isatty v0.0.12
 	github.com/oklog/ulid v1.3.1
 	github.com/onsi/ginkgo v1.12.0 // indirect
 	github.com/opencontainers/go-digest v1.0.0 // indirect
 	github.com/opencontainers/image-spec v1.0.1 // indirect
 	github.com/pkg/errors v0.9.1 // indirect
-	github.com/rs/zerolog v1.18.0
+	github.com/rs/zerolog v1.19.0
 	github.com/satori/go.uuid v1.2.0
 	github.com/sirupsen/logrus v1.6.0 // indirect
 	github.com/spikeekips/avl v0.0.0-20191218024138-87d874c0c032
-	github.com/stellar/go v0.0.0-20200529151100-a8d74bb25bcb
+	github.com/stellar/go v0.0.0-20200605171103-976f2f5d2a4f
 	github.com/stellar/go-xdr v0.0.0-20200331223602-71a1e6d555f2 // indirect
-	github.com/stretchr/testify v1.6.0
+	github.com/stretchr/testify v1.6.1
 	github.com/syndtr/goleveldb v1.0.1-0.20190923125748-758128399b1d
-	go.mongodb.org/mongo-driver v1.3.3
+	go.mongodb.org/mongo-driver v1.3.4
+	go.uber.org/automaxprocs v1.3.0
 	go.uber.org/goleak v1.0.0
-	golang.org/x/crypto v0.0.0-20200510223506-06a226fb4e37
+	golang.org/x/crypto v0.0.0-20200604202706-70a84ac30bf9
 	golang.org/x/lint v0.0.0-20200302205851-738671d3881b // indirect
 	golang.org/x/mod v0.3.0
-	golang.org/x/net v0.0.0-20200528225125-3c3fba18258b // indirect
+	golang.org/x/net v0.0.0-20200602114024-627f9648deb9 // indirect
 	golang.org/x/sync v0.0.0-20200317015054-43a5402ce75a // indirect
-	golang.org/x/sys v0.0.0-20200523222454-059865788121 // indirect
-	golang.org/x/tools v0.0.0-20200502202811-ed308ab3e770 // indirect
+	golang.org/x/sys v0.0.0-20200602225109-6fdc65e7d980 // indirect
+	golang.org/x/tools v0.0.0-20200606014950-c42cb6316fb6 // indirect
 	golang.org/x/xerrors v0.0.0-20191204190536-9bdfabe68543
 	google.golang.org/protobuf v1.24.0 // indirect
 	gopkg.in/check.v1 v1.0.0-20190902080502-41f04d3bba15 // indirect
 	gopkg.in/yaml.v2 v2.3.0 // indirect
-	gopkg.in/yaml.v3 v3.0.0-20200506231410-2ff61e1afc86
+	gopkg.in/yaml.v3 v3.0.0-20200605160147-a5ece683394c
+	honnef.co/go/tools v0.0.1-2020.1.4 // indirect
 )

@@ -8,6 +8,7 @@ import (
 
 	"github.com/alecthomas/kong"
 	"github.com/rs/zerolog"
+	_ "go.uber.org/automaxprocs"
 	"golang.org/x/xerrors"
 
 	"github.com/spikeekips/mitum/base/block"

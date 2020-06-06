@@ -35,4 +35,6 @@ type NetworkChannel interface {
 	SendSeal(seal.Seal) error
 	Manifests([]base.Height) ([]block.Manifest, error)
 	Blocks([]base.Height) ([]block.Block, error)
+
+	// TODO provices Node Info
 }

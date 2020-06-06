@@ -209,6 +209,11 @@ func (qs *QuicServer) handleNewSeal(w http.ResponseWriter, r *http.Request) {
 		sl = s
 	}
 
+	// TODO if already received seal, returns 200
+	// TODO If node is not in consensus state, node will return
+	// 425(StatusTooEarly) for new incoming seal.
+	// https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/425
+
 	if err := qs.newSealHandler(sl); err != nil {
 		seal.LoggerWithSeal(
 			sl,
@@ -221,7 +226,7 @@ func (qs *QuicServer) handleNewSeal(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	w.WriteHeader(http.StatusOK)
+	w.WriteHeader(http.StatusCreated)
 }
 
 func (qs *QuicServer) handleGetByHeights(

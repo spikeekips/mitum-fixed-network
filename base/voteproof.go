@@ -12,6 +12,7 @@ import (
 )
 
 type Voteproof interface {
+	// TODO should provide Hash()
 	hint.Hinter
 	isvalid.IsValider
 	util.Byter

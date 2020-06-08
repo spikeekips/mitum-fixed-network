@@ -49,6 +49,7 @@ type GeneralSyncer struct { // nolint; maligned
 	state                   SyncerState
 	bm                      block.Manifest
 	stateChan               chan<- SyncerStateChangedContext
+	tailManifest            block.Manifest
 }
 
 func NewGeneralSyncer(
@@ -374,6 +375,8 @@ func (cs *GeneralSyncer) headAndTailManifests() error {
 	if err := cs.storage().SetManifests(manifests); err != nil {
 		return err
 	}
+
+	cs.setTailManifest(manifests[len(manifests)-1])
 
 	return nil
 }
@@ -974,10 +977,16 @@ func (cs *GeneralSyncer) HeightTo() base.Height {
 	return cs.heightTo
 }
 
-func (cs *GeneralSyncer) TailManifest() block.Manifest { // TODO should error also returned
-	if b, found, err := cs.storage().Manifest(cs.heightTo); err != nil || !found {
-		return nil
-	} else {
-		return b
-	}
+func (cs *GeneralSyncer) setTailManifest(m block.Manifest) {
+	cs.Lock()
+	defer cs.Unlock()
+
+	cs.tailManifest = m
+}
+
+func (cs *GeneralSyncer) TailManifest() block.Manifest {
+	cs.RLock()
+	defer cs.RUnlock()
+
+	return cs.tailManifest
 }

@@ -357,8 +357,7 @@ func (cs *StateJoiningHandler) NewVoteproof(voteproof base.Voteproof) error {
 
 	switch voteproof.Stage() {
 	case base.StageACCEPT:
-		// TODO ACCEPT Voteproof is next block of local, try to process
-		// Voteproof.
+		// NOTE ACCEPT Voteproof is next block of local, but do nothing.
 		return nil
 	case base.StageINIT:
 		return cs.handleINITVoteproof(voteproof)

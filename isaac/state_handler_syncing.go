@@ -45,7 +45,6 @@ type StateSyncingHandler struct {
 }
 
 func NewStateSyncingHandler(localstate *Localstate) *StateSyncingHandler {
-	// TODO if already synced and no voteproof, should go to the consensus state.
 	ss := &StateSyncingHandler{
 		BaseStateHandler:     NewBaseStateHandler(localstate, nil, base.StateSyncing),
 		waitVoteproofTimeout: time.Second * 5, // NOTE long enough time
@@ -115,8 +114,6 @@ func (ss *StateSyncingHandler) Activate(ctx StateChangeContext) error {
 	if vp, found, _ := ss.localstate.Storage().LastVoteproof(base.StageACCEPT); found {
 		ss.setLastVoteproof(vp)
 	}
-
-	// TODO also compare the hash of target block with height
 
 	switch {
 	case ctx.Voteproof() != nil:

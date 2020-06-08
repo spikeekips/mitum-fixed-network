@@ -11,14 +11,14 @@ import (
 	"github.com/spikeekips/mitum/base/valuehash"
 	contestlib "github.com/spikeekips/mitum/contest/lib"
 	"github.com/spikeekips/mitum/isaac"
-	bsonencoder "github.com/spikeekips/mitum/util/encoder/bson"
-	jsonencoder "github.com/spikeekips/mitum/util/encoder/json"
+	bsonenc "github.com/spikeekips/mitum/util/encoder/bson"
+	jsonenc "github.com/spikeekips/mitum/util/encoder/json"
 	"github.com/spikeekips/mitum/util/hint"
 )
 
 var Hinters = []hint.Hinter{
-	bsonencoder.Encoder{},
-	jsonencoder.Encoder{},
+	bsonenc.Encoder{},
+	jsonenc.Encoder{},
 	ballot.INITBallotV0{},
 	ballot.ProposalV0{},
 	ballot.SIGNBallotV0{},

@@ -3,7 +3,7 @@ package block
 import (
 	"go.mongodb.org/mongo-driver/bson"
 
-	bsonencoder "github.com/spikeekips/mitum/util/encoder/bson"
+	bsonenc "github.com/spikeekips/mitum/util/encoder/bson"
 )
 
 func (bc BlockConsensusInfoV0) MarshalBSON() ([]byte, error) {
@@ -20,7 +20,7 @@ func (bc BlockConsensusInfoV0) MarshalBSON() ([]byte, error) {
 		m["suffrage_info"] = bc.suffrageInfo
 	}
 
-	return bsonencoder.Marshal(bsonencoder.MergeBSONM(bsonencoder.NewHintedDoc(bc.Hint()), m))
+	return bsonenc.Marshal(bsonenc.MergeBSONM(bsonenc.NewHintedDoc(bc.Hint()), m))
 }
 
 type BlockConsensusInfoV0UnpackBSON struct {
@@ -29,7 +29,7 @@ type BlockConsensusInfoV0UnpackBSON struct {
 	SI bson.Raw `bson:"suffrage_info,omitempty"`
 }
 
-func (bc *BlockConsensusInfoV0) UnpackBSON(b []byte, enc *bsonencoder.Encoder) error {
+func (bc *BlockConsensusInfoV0) UnpackBSON(b []byte, enc *bsonenc.Encoder) error {
 	var nbc BlockConsensusInfoV0UnpackBSON
 	if err := enc.Unmarshal(b, &nbc); err != nil {
 		return err
@@ -44,7 +44,7 @@ func (si SuffrageInfoV0) MarshalBSON() ([]byte, error) {
 		"nodes":    si.nodes,
 	}
 
-	return bsonencoder.Marshal(bsonencoder.MergeBSONM(bsonencoder.NewHintedDoc(si.Hint()), m))
+	return bsonenc.Marshal(bsonenc.MergeBSONM(bsonenc.NewHintedDoc(si.Hint()), m))
 }
 
 type SuffrageInfoV0UnpackBSON struct {
@@ -52,7 +52,7 @@ type SuffrageInfoV0UnpackBSON struct {
 	NS []bson.Raw `bson:"nodes"`
 }
 
-func (si *SuffrageInfoV0) UnpackBSON(b []byte, enc *bsonencoder.Encoder) error {
+func (si *SuffrageInfoV0) UnpackBSON(b []byte, enc *bsonenc.Encoder) error {
 	var nsi SuffrageInfoV0UnpackBSON
 	if err := enc.Unmarshal(b, &nsi); err != nil {
 		return err

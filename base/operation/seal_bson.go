@@ -6,12 +6,12 @@ import (
 	"go.mongodb.org/mongo-driver/bson"
 
 	"github.com/spikeekips/mitum/base/key"
-	bsonencoder "github.com/spikeekips/mitum/util/encoder/bson"
+	bsonenc "github.com/spikeekips/mitum/util/encoder/bson"
 )
 
 func (sl Seal) MarshalBSON() ([]byte, error) {
-	return bsonencoder.Marshal(bsonencoder.MergeBSONM(
-		bsonencoder.NewHintedDoc(sl.Hint()),
+	return bsonenc.Marshal(bsonenc.MergeBSONM(
+		bsonenc.NewHintedDoc(sl.Hint()),
 		bson.M{
 			"hash":       sl.h,
 			"body_hash":  sl.bodyHash,
@@ -32,7 +32,7 @@ type SealBSONUnpack struct {
 	OPS []bson.Raw    `bson:"operations"`
 }
 
-func (sl *Seal) UnpackBSON(b []byte, enc *bsonencoder.Encoder) error {
+func (sl *Seal) UnpackBSON(b []byte, enc *bsonenc.Encoder) error {
 	var usl SealBSONUnpack
 	if err := enc.Unmarshal(b, &usl); err != nil {
 		return err

@@ -8,8 +8,8 @@ import (
 	"go.mongodb.org/mongo-driver/bson"
 
 	"github.com/spikeekips/mitum/base/valuehash"
-	bsonencoder "github.com/spikeekips/mitum/util/encoder/bson"
-	jsonencoder "github.com/spikeekips/mitum/util/encoder/json"
+	bsonenc "github.com/spikeekips/mitum/util/encoder/bson"
+	jsonenc "github.com/spikeekips/mitum/util/encoder/json"
 	"github.com/spikeekips/mitum/util/hint"
 	"github.com/spikeekips/mitum/util/logging"
 )
@@ -122,14 +122,14 @@ func (vp DummyVoteproof) Threshold() Threshold {
 }
 
 func (vp DummyVoteproof) MarshalJSON() ([]byte, error) {
-	return jsonencoder.Marshal(struct {
-		jsonencoder.HintedHead
+	return jsonenc.Marshal(struct {
+		jsonenc.HintedHead
 		HT Height
 		RD Round
 		SG Stage
 		RS VoteResultType
 	}{
-		HintedHead: jsonencoder.NewHintedHead(vp.Hint()),
+		HintedHead: jsonenc.NewHintedHead(vp.Hint()),
 		HT:         vp.height,
 		RD:         vp.round,
 		SG:         vp.stage,
@@ -137,7 +137,7 @@ func (vp DummyVoteproof) MarshalJSON() ([]byte, error) {
 	})
 }
 
-func (vp *DummyVoteproof) UnpackJSON(b []byte, enc *jsonencoder.Encoder) error {
+func (vp *DummyVoteproof) UnpackJSON(b []byte, enc *jsonenc.Encoder) error {
 	var uvp struct {
 		HT Height
 		RD Round
@@ -158,7 +158,7 @@ func (vp *DummyVoteproof) UnpackJSON(b []byte, enc *jsonencoder.Encoder) error {
 }
 
 func (vp DummyVoteproof) MarshalBSON() ([]byte, error) {
-	return bsonencoder.Marshal(bson.M{
+	return bsonenc.Marshal(bson.M{
 		"_hint":  vp.Hint(),
 		"height": vp.height,
 		"round":  vp.round,
@@ -167,7 +167,7 @@ func (vp DummyVoteproof) MarshalBSON() ([]byte, error) {
 	})
 }
 
-func (vp *DummyVoteproof) UnpackBSON(b []byte, enc *bsonencoder.Encoder) error {
+func (vp *DummyVoteproof) UnpackBSON(b []byte, enc *bsonenc.Encoder) error {
 	var uvp struct {
 		HT Height         `bson:"height"`
 		RD Round          `bson:"round"`
@@ -196,7 +196,7 @@ func (vp DummyVoteproof) MarshalLog(key string, e logging.Emitter, verbose bool)
 			Str("result", vp.result.String()))
 	}
 
-	r, _ := jsonencoder.Marshal(vp)
+	r, _ := jsonenc.Marshal(vp)
 
 	return e.RawJSON(key, r)
 }

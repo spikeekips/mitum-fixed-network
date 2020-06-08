@@ -14,8 +14,8 @@ import (
 	"github.com/spikeekips/mitum/storage"
 	mongodbstorage "github.com/spikeekips/mitum/storage/mongodb"
 	"github.com/spikeekips/mitum/util/encoder"
-	bsonencoder "github.com/spikeekips/mitum/util/encoder/bson"
-	jsonencoder "github.com/spikeekips/mitum/util/encoder/json"
+	bsonenc "github.com/spikeekips/mitum/util/encoder/bson"
+	jsonenc "github.com/spikeekips/mitum/util/encoder/json"
 	"github.com/spikeekips/mitum/util/logging"
 )
 
@@ -43,7 +43,7 @@ func (cmd *StartCommand) Run(log logging.Logger) error {
 	cmd.log = log
 
 	if e, err := encoder.LoadEncoders(
-		[]encoder.Encoder{jsonencoder.NewEncoder(), bsonencoder.NewEncoder()},
+		[]encoder.Encoder{jsonenc.NewEncoder(), bsonenc.NewEncoder()},
 		contestlib.Hinters...,
 	); err != nil {
 		return xerrors.Errorf("failed to load encoders: %w", err)

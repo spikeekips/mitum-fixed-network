@@ -7,7 +7,7 @@ import (
 
 	"github.com/spikeekips/mitum/base/valuehash"
 	"github.com/spikeekips/mitum/util/encoder"
-	jsonencoder "github.com/spikeekips/mitum/util/encoder/json"
+	jsonenc "github.com/spikeekips/mitum/util/encoder/json"
 )
 
 type testStateNumberValueJSON struct {
@@ -19,7 +19,7 @@ type testStateNumberValueJSON struct {
 
 func (t *testStateNumberValueJSON) SetupSuite() {
 	t.encs = encoder.NewEncoders()
-	t.enc = jsonencoder.NewEncoder()
+	t.enc = jsonenc.NewEncoder()
 	_ = t.encs.AddEncoder(t.enc)
 
 	_ = t.encs.AddHinter(valuehash.SHA256{})
@@ -31,7 +31,7 @@ func (t *testStateNumberValueJSON) TestEncode() {
 	iv, err := NewNumberValue(int64(33))
 	t.NoError(err)
 
-	b, err := jsonencoder.Marshal(iv)
+	b, err := jsonenc.Marshal(iv)
 	t.NoError(err)
 
 	decoded, err := t.enc.DecodeByHint(b)
@@ -73,7 +73,7 @@ func (t *testStateNumberValueJSON) TestCases() {
 				iv, err := NewNumberValue(c.v)
 				t.NoError(err, "%d: name=%s value=%s", i, c.name, c.v)
 
-				b, err := jsonencoder.Marshal(iv)
+				b, err := jsonenc.Marshal(iv)
 				t.NoError(err, "%d: name=%s value=%s", i, c.name, c.v)
 
 				decoded, err := t.enc.DecodeByHint(b)

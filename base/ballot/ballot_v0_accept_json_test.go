@@ -9,7 +9,7 @@ import (
 	"github.com/spikeekips/mitum/base/key"
 	"github.com/spikeekips/mitum/base/valuehash"
 	"github.com/spikeekips/mitum/util/encoder"
-	jsonencoder "github.com/spikeekips/mitum/util/encoder/json"
+	jsonenc "github.com/spikeekips/mitum/util/encoder/json"
 	"github.com/spikeekips/mitum/util/localtime"
 )
 
@@ -24,7 +24,7 @@ func (t *testBallotV0ACCEPTJSON) SetupSuite() {
 }
 
 func (t *testBallotV0ACCEPTJSON) TestEncode() {
-	je := jsonencoder.NewEncoder()
+	je := jsonenc.NewEncoder()
 
 	encs := encoder.NewEncoders()
 	t.NoError(encs.AddEncoder(je))

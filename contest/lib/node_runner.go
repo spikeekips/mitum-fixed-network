@@ -22,8 +22,8 @@ import (
 	mongodbstorage "github.com/spikeekips/mitum/storage/mongodb"
 	"github.com/spikeekips/mitum/util"
 	"github.com/spikeekips/mitum/util/encoder"
-	bsonencoder "github.com/spikeekips/mitum/util/encoder/bson"
-	jsonencoder "github.com/spikeekips/mitum/util/encoder/json"
+	bsonenc "github.com/spikeekips/mitum/util/encoder/bson"
+	jsonenc "github.com/spikeekips/mitum/util/encoder/json"
 	"github.com/spikeekips/mitum/util/logging"
 )
 
@@ -45,7 +45,7 @@ type NodeRunner struct {
 
 func NewNodeRunnerFromDesign(design *NodeDesign, encs *encoder.Encoders, version util.Version) (*NodeRunner, error) {
 	var je encoder.Encoder
-	if e, err := encs.Encoder(jsonencoder.JSONType, ""); err != nil { // NOTE get latest json encoder
+	if e, err := encs.Encoder(jsonenc.JSONType, ""); err != nil { // NOTE get latest json encoder
 		return nil, xerrors.Errorf("json encoder needs for quic-network: %w", err)
 	} else {
 		je = e
@@ -587,7 +587,7 @@ func newMongodbStorage(uri string, encs *encoder.Encoders) (storage.Storage, err
 	}
 
 	var be encoder.Encoder
-	if e, err := encs.Encoder(bsonencoder.BSONType, ""); err != nil { // NOTE get latest bson encoder
+	if e, err := encs.Encoder(bsonenc.BSONType, ""); err != nil { // NOTE get latest bson encoder
 		return nil, xerrors.Errorf("bson encoder needs for mongodb: %w", err)
 	} else {
 		be = e

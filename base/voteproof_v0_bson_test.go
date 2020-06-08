@@ -7,7 +7,7 @@ import (
 
 	"github.com/spikeekips/mitum/base/key"
 	"github.com/spikeekips/mitum/base/valuehash"
-	bsonencoder "github.com/spikeekips/mitum/util/encoder/bson"
+	bsonenc "github.com/spikeekips/mitum/util/encoder/bson"
 	"github.com/spikeekips/mitum/util/hint"
 	"github.com/spikeekips/mitum/util/localtime"
 )
@@ -69,11 +69,11 @@ func (t *testVoteproofBSON) TestMarshal() {
 	}
 	t.NoError(vp.IsValid(nil))
 
-	b, err := bsonencoder.Marshal(vp)
+	b, err := bsonenc.Marshal(vp)
 	t.NoError(err)
 	t.NotNil(b)
 
-	be := bsonencoder.NewEncoder()
+	be := bsonenc.NewEncoder()
 	be.SetHintset(t.hs)
 
 	var uvp VoteproofV0

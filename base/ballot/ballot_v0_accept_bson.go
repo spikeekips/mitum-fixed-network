@@ -3,7 +3,7 @@ package ballot // nolint
 import (
 	"go.mongodb.org/mongo-driver/bson"
 
-	bsonencoder "github.com/spikeekips/mitum/util/encoder/bson"
+	bsonenc "github.com/spikeekips/mitum/util/encoder/bson"
 )
 
 func (ab ACCEPTBallotV0) MarshalBSON() ([]byte, error) {
@@ -16,7 +16,7 @@ func (ab ACCEPTBallotV0) MarshalBSON() ([]byte, error) {
 		m["voteproof"] = ab.voteproof
 	}
 
-	return bsonencoder.Marshal(m)
+	return bsonenc.Marshal(m)
 }
 
 type ACCEPTBallotV0UnpackerBSON struct {
@@ -25,7 +25,7 @@ type ACCEPTBallotV0UnpackerBSON struct {
 	VR bson.Raw `bson:"voteproof,omitempty"`
 }
 
-func (ab *ACCEPTBallotV0) UnpackBSON(b []byte, enc *bsonencoder.Encoder) error {
+func (ab *ACCEPTBallotV0) UnpackBSON(b []byte, enc *bsonenc.Encoder) error {
 	bb, bf, err := ab.BaseBallotV0.unpackBSON(b, enc)
 	if err != nil {
 		return err
@@ -45,7 +45,7 @@ func (abf ACCEPTBallotFactV0) MarshalBSON() ([]byte, error) {
 	m["proposal"] = abf.proposal
 	m["new_block"] = abf.newBlock
 
-	return bsonencoder.Marshal(m)
+	return bsonenc.Marshal(m)
 }
 
 type ACCEPTBallotFactV0UnpackerBSON struct {
@@ -53,7 +53,7 @@ type ACCEPTBallotFactV0UnpackerBSON struct {
 	NB bson.Raw `bson:"new_block"`
 }
 
-func (abf *ACCEPTBallotFactV0) UnpackBSON(b []byte, enc *bsonencoder.Encoder) error {
+func (abf *ACCEPTBallotFactV0) UnpackBSON(b []byte, enc *bsonenc.Encoder) error {
 	var err error
 
 	var bf BaseBallotFactV0

@@ -7,8 +7,8 @@ import (
 	"golang.org/x/xerrors"
 
 	"github.com/spikeekips/mitum/base/valuehash"
-	bsonencoder "github.com/spikeekips/mitum/util/encoder/bson"
-	jsonencoder "github.com/spikeekips/mitum/util/encoder/json"
+	bsonenc "github.com/spikeekips/mitum/util/encoder/bson"
+	jsonenc "github.com/spikeekips/mitum/util/encoder/json"
 	"github.com/spikeekips/mitum/util/hint"
 	"github.com/spikeekips/mitum/util/isvalid"
 	"github.com/spikeekips/mitum/util/localtime"
@@ -41,17 +41,17 @@ func (tf tinyFact) Bytes() []byte {
 }
 
 func (tf tinyFact) MarshalJSON() ([]byte, error) {
-	return jsonencoder.Marshal(struct {
-		jsonencoder.HintedHead
+	return jsonenc.Marshal(struct {
+		jsonenc.HintedHead
 		A string
 	}{
-		HintedHead: jsonencoder.NewHintedHead(tf.Hint()),
+		HintedHead: jsonenc.NewHintedHead(tf.Hint()),
 		A:          tf.A,
 	})
 }
 
 func (tf tinyFact) MarshalBSON() ([]byte, error) {
-	return bsonencoder.Marshal(struct {
+	return bsonenc.Marshal(struct {
 		HI hint.Hint `bson:"_hint"`
 		A  string
 	}{

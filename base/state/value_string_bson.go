@@ -4,12 +4,12 @@ import (
 	"go.mongodb.org/mongo-driver/bson"
 
 	"github.com/spikeekips/mitum/base/valuehash"
-	bsonencoder "github.com/spikeekips/mitum/util/encoder/bson"
+	bsonenc "github.com/spikeekips/mitum/util/encoder/bson"
 )
 
 func (sv StringValue) MarshalBSON() ([]byte, error) {
-	return bsonencoder.Marshal(bsonencoder.MergeBSONM(
-		bsonencoder.NewHintedDoc(sv.Hint()),
+	return bsonenc.Marshal(bsonenc.MergeBSONM(
+		bsonenc.NewHintedDoc(sv.Hint()),
 		bson.M{
 			"hash":  sv.Hash(),
 			"value": sv.v,
@@ -22,7 +22,7 @@ type StringValueUnpackerBSON struct {
 	V string   `bson:"value"`
 }
 
-func (sv *StringValue) UnpackBSON(b []byte, enc *bsonencoder.Encoder) error {
+func (sv *StringValue) UnpackBSON(b []byte, enc *bsonenc.Encoder) error {
 	var uv StringValueUnpackerBSON
 	if err := enc.Unmarshal(b, &uv); err != nil {
 		return err

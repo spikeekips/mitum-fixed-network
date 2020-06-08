@@ -7,7 +7,7 @@ import (
 
 	"github.com/spikeekips/mitum/base/valuehash"
 	"github.com/spikeekips/mitum/util/encoder"
-	bsonencoder "github.com/spikeekips/mitum/util/encoder/bson"
+	bsonenc "github.com/spikeekips/mitum/util/encoder/bson"
 	"github.com/spikeekips/mitum/util/hint"
 )
 
@@ -20,7 +20,7 @@ type testStateSliceValueBSON struct {
 
 func (t *testStateSliceValueBSON) SetupSuite() {
 	t.encs = encoder.NewEncoders()
-	t.enc = bsonencoder.NewEncoder()
+	t.enc = bsonenc.NewEncoder()
 	_ = t.encs.AddEncoder(t.enc)
 
 	_ = t.encs.AddHinter(valuehash.SHA256{})
@@ -35,7 +35,7 @@ func (t *testStateSliceValueBSON) TestEncode() {
 	bv, err := NewSliceValue([]hint.Hinter{d})
 	t.NoError(err)
 
-	b, err := bsonencoder.Marshal(bv)
+	b, err := bsonenc.Marshal(bv)
 	t.NoError(err)
 
 	decoded, err := t.enc.DecodeByHint(b)

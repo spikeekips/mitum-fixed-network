@@ -3,7 +3,7 @@ package operation
 import (
 	"encoding/json"
 
-	jsonencoder "github.com/spikeekips/mitum/util/encoder/json"
+	jsonenc "github.com/spikeekips/mitum/util/encoder/json"
 )
 
 type baseOperationAVLNodeJSON struct {
@@ -17,14 +17,14 @@ type baseOperationAVLNodeJSON struct {
 }
 
 type OperationAVLNodePackerJSON struct {
-	jsonencoder.HintedHead
+	jsonenc.HintedHead
 	baseOperationAVLNodeJSON
 	OP Operation `json:"operation"`
 }
 
 func (em OperationAVLNode) MarshalJSON() ([]byte, error) {
-	return jsonencoder.Marshal(OperationAVLNodePackerJSON{
-		HintedHead: jsonencoder.NewHintedHead(em.Hint()),
+	return jsonenc.Marshal(OperationAVLNodePackerJSON{
+		HintedHead: jsonenc.NewHintedHead(em.Hint()),
 		baseOperationAVLNodeJSON: baseOperationAVLNodeJSON{
 			K:   em.key,
 			HT:  em.height,
@@ -43,7 +43,7 @@ type OperationAVLNodeUnpackerJSON struct {
 	OP json.RawMessage `json:"operation"`
 }
 
-func (em *OperationAVLNode) UnpackJSON(b []byte, enc *jsonencoder.Encoder) error {
+func (em *OperationAVLNode) UnpackJSON(b []byte, enc *jsonenc.Encoder) error {
 	var ue OperationAVLNodeUnpackerJSON
 	if err := enc.Unmarshal(b, &ue); err != nil {
 		return err

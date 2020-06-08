@@ -8,8 +8,8 @@ import (
 	"golang.org/x/xerrors"
 
 	"github.com/spikeekips/mitum/base"
-	bsonencoder "github.com/spikeekips/mitum/util/encoder/bson"
-	jsonencoder "github.com/spikeekips/mitum/util/encoder/json"
+	bsonenc "github.com/spikeekips/mitum/util/encoder/bson"
+	jsonenc "github.com/spikeekips/mitum/util/encoder/json"
 	"github.com/spikeekips/mitum/util/hint"
 	"github.com/spikeekips/mitum/util/logging"
 )
@@ -56,18 +56,18 @@ func (ca ContestAddress) Bytes() []byte {
 }
 
 func (ca ContestAddress) MarshalJSON() ([]byte, error) {
-	return jsonencoder.Marshal(struct {
-		jsonencoder.HintedHead
+	return jsonenc.Marshal(struct {
+		jsonenc.HintedHead
 		A string `json:"address"`
 	}{
-		HintedHead: jsonencoder.NewHintedHead(ca.Hint()),
+		HintedHead: jsonenc.NewHintedHead(ca.Hint()),
 		A:          ca.String(),
 	})
 }
 
-func (ca *ContestAddress) UnpackJSON(b []byte, _ *jsonencoder.Encoder) error {
+func (ca *ContestAddress) UnpackJSON(b []byte, _ *jsonenc.Encoder) error {
 	var s struct {
-		jsonencoder.HintedHead
+		jsonenc.HintedHead
 		A string `json:"address"`
 	}
 	if err := json.Unmarshal(b, &s); err != nil {
@@ -82,13 +82,13 @@ func (ca *ContestAddress) UnpackJSON(b []byte, _ *jsonencoder.Encoder) error {
 }
 
 func (ca ContestAddress) MarshalBSON() ([]byte, error) {
-	return bsonencoder.Marshal(bsonencoder.MergeBSONM(
-		bsonencoder.NewHintedDoc(ca.Hint()),
+	return bsonenc.Marshal(bsonenc.MergeBSONM(
+		bsonenc.NewHintedDoc(ca.Hint()),
 		bson.M{"address": ca.String()},
 	))
 }
 
-func (ca *ContestAddress) UnpackBSON(b []byte, enc *bsonencoder.Encoder) error {
+func (ca *ContestAddress) UnpackBSON(b []byte, enc *bsonenc.Encoder) error {
 	var s struct {
 		A string `bson:"address"`
 	}

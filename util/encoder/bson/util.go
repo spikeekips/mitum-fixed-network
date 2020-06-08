@@ -1,4 +1,4 @@
-package bsonencoder
+package bsonenc
 
 import (
 	"go.mongodb.org/mongo-driver/bson"

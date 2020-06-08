@@ -5,12 +5,12 @@ import (
 
 	"github.com/spikeekips/mitum/base/key"
 	"github.com/spikeekips/mitum/base/valuehash"
-	jsonencoder "github.com/spikeekips/mitum/util/encoder/json"
+	jsonenc "github.com/spikeekips/mitum/util/encoder/json"
 	"github.com/spikeekips/mitum/util/localtime"
 )
 
 type VoteproofV0PackJSON struct {
-	jsonencoder.HintedHead
+	jsonenc.HintedHead
 	HT Height             `json:"height"`
 	RD Round              `json:"round"`
 	TH Threshold          `json:"threshold"`
@@ -54,8 +54,8 @@ func (vp VoteproofV0) MarshalJSON() ([]byte, error) {
 		isClosed = "false"
 	}
 
-	return jsonencoder.Marshal(VoteproofV0PackJSON{
-		HintedHead: jsonencoder.NewHintedHead(vp.Hint()),
+	return jsonenc.Marshal(VoteproofV0PackJSON{
+		HintedHead: jsonenc.NewHintedHead(vp.Hint()),
 		HT:         vp.height,
 		RD:         vp.round,
 		TH:         vp.threshold,
@@ -84,7 +84,7 @@ type VoteproofV0UnpackJSON struct {
 	CL string               `json:"is_closed"`
 }
 
-func (vp *VoteproofV0) UnpackJSON(b []byte, enc *jsonencoder.Encoder) error {
+func (vp *VoteproofV0) UnpackJSON(b []byte, enc *jsonenc.Encoder) error {
 	var vpp VoteproofV0UnpackJSON
 	if err := enc.Unmarshal(b, &vpp); err != nil {
 		return err
@@ -132,7 +132,7 @@ type VoteproofNodeFactPackJSON struct {
 }
 
 func (vf VoteproofNodeFact) MarshalJSON() ([]byte, error) {
-	return jsonencoder.Marshal(VoteproofNodeFactPackJSON{
+	return jsonenc.Marshal(VoteproofNodeFactPackJSON{
 		AD: vf.address,
 		FC: vf.fact,
 		FS: vf.factSignature,
@@ -147,7 +147,7 @@ type VoteproofNodeFactUnpackJSON struct {
 	SG json.RawMessage `json:"signer"`
 }
 
-func (vf *VoteproofNodeFact) UnpackJSON(b []byte, enc *jsonencoder.Encoder) error {
+func (vf *VoteproofNodeFact) UnpackJSON(b []byte, enc *jsonenc.Encoder) error {
 	var vpp VoteproofNodeFactUnpackJSON
 	if err := enc.Unmarshal(b, &vpp); err != nil {
 		return err

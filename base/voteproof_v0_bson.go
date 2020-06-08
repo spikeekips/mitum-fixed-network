@@ -7,7 +7,7 @@ import (
 
 	"github.com/spikeekips/mitum/base/key"
 	"github.com/spikeekips/mitum/base/valuehash"
-	bsonencoder "github.com/spikeekips/mitum/util/encoder/bson"
+	bsonenc "github.com/spikeekips/mitum/util/encoder/bson"
 )
 
 func (vp VoteproofV0) MarshalBSON() ([]byte, error) {
@@ -50,8 +50,8 @@ func (vp VoteproofV0) MarshalBSON() ([]byte, error) {
 		m["majority"] = vp.majority
 	}
 
-	return bsonencoder.Marshal(bsonencoder.MergeBSONM(
-		bsonencoder.NewHintedDoc(vp.Hint()),
+	return bsonenc.Marshal(bsonenc.MergeBSONM(
+		bsonenc.NewHintedDoc(vp.Hint()),
 		m,
 	))
 }
@@ -70,7 +70,7 @@ type VoteproofV0UnpackBSON struct { // nolint
 	CL bool           `bson:"is_closed"`
 }
 
-func (vp *VoteproofV0) UnpackBSON(b []byte, enc *bsonencoder.Encoder) error {
+func (vp *VoteproofV0) UnpackBSON(b []byte, enc *bsonenc.Encoder) error {
 	var vpp VoteproofV0UnpackBSON
 	if err := enc.Unmarshal(b, &vpp); err != nil {
 		return err
@@ -118,7 +118,7 @@ type VoteproofNodeFactPackBSON struct {
 }
 
 func (vf VoteproofNodeFact) MarshalBSON() ([]byte, error) {
-	return bsonencoder.Marshal(VoteproofNodeFactPackBSON{
+	return bsonenc.Marshal(VoteproofNodeFactPackBSON{
 		AD: vf.address,
 		FC: vf.fact,
 		FS: vf.factSignature,
@@ -133,7 +133,7 @@ type VoteproofNodeFactUnpackBSON struct {
 	SG bson.Raw      `bson:"signer"`
 }
 
-func (vf *VoteproofNodeFact) UnpackBSON(b []byte, enc *bsonencoder.Encoder) error {
+func (vf *VoteproofNodeFact) UnpackBSON(b []byte, enc *bsonenc.Encoder) error {
 	var vpp VoteproofNodeFactUnpackBSON
 	if err := enc.Unmarshal(b, &vpp); err != nil {
 		return err

@@ -7,7 +7,7 @@ import (
 	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/base/block"
 	"github.com/spikeekips/mitum/util/encoder"
-	bsonencoder "github.com/spikeekips/mitum/util/encoder/bson"
+	bsonenc "github.com/spikeekips/mitum/util/encoder/bson"
 )
 
 const lastManifestDocID = "confirmed_block"
@@ -32,7 +32,7 @@ func (bd lastManifestDoc) MarshalBSON() ([]byte, error) {
 		return nil, err
 	}
 
-	return bsonencoder.Marshal(m)
+	return bsonenc.Marshal(m)
 }
 
 func loadLastManifest(decoder func(interface{}) error, encs *encoder.Encoders) (base.Height, error) {

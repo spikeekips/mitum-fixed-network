@@ -6,7 +6,7 @@ import (
 	"os"
 
 	"github.com/spikeekips/mitum/network"
-	jsonencoder "github.com/spikeekips/mitum/util/encoder/json"
+	jsonenc "github.com/spikeekips/mitum/util/encoder/json"
 	"github.com/spikeekips/mitum/util/logging"
 )
 
@@ -30,7 +30,7 @@ func (cmd *NodeInfoCommand) Run(log logging.Logger) error {
 	if n, err := channel.NodeInfo(); err != nil {
 		return err
 	} else {
-		_, _ = fmt.Fprintln(os.Stdout, jsonencoder.ToString(n))
+		_, _ = fmt.Fprintln(os.Stdout, jsonenc.ToString(n))
 	}
 
 	return nil

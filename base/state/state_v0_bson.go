@@ -4,12 +4,12 @@ import (
 	"go.mongodb.org/mongo-driver/bson"
 
 	"github.com/spikeekips/mitum/base"
-	bsonencoder "github.com/spikeekips/mitum/util/encoder/bson"
+	bsonenc "github.com/spikeekips/mitum/util/encoder/bson"
 )
 
 func (st StateV0) MarshalBSON() ([]byte, error) {
-	return bsonencoder.Marshal(bsonencoder.MergeBSONM(
-		bsonencoder.NewHintedDoc(st.Hint()),
+	return bsonenc.Marshal(bsonenc.MergeBSONM(
+		bsonenc.NewHintedDoc(st.Hint()),
 		bson.M{
 			"hash":            st.h,
 			"key":             st.key,
@@ -32,7 +32,7 @@ type StateV0UnpackerBSON struct {
 	OPS []bson.Raw  `bson:"operation_infos"`
 }
 
-func (st *StateV0) UnpackBSON(b []byte, enc *bsonencoder.Encoder) error {
+func (st *StateV0) UnpackBSON(b []byte, enc *bsonenc.Encoder) error {
 	var ust StateV0UnpackerBSON
 	if err := enc.Unmarshal(b, &ust); err != nil {
 		return err
@@ -47,8 +47,8 @@ func (st *StateV0) UnpackBSON(b []byte, enc *bsonencoder.Encoder) error {
 }
 
 func (oi OperationInfoV0) MarshalBSON() ([]byte, error) {
-	return bsonencoder.Marshal(bsonencoder.MergeBSONM(
-		bsonencoder.NewHintedDoc(oi.Hint()),
+	return bsonenc.Marshal(bsonenc.MergeBSONM(
+		bsonenc.NewHintedDoc(oi.Hint()),
 		bson.M{
 			"operation": oi.oh,
 			"seal":      oi.sh,
@@ -61,7 +61,7 @@ type OperationInfoV0UnpackerBSON struct {
 	SH bson.Raw `bson:"seal"`
 }
 
-func (oi *OperationInfoV0) UnpackBSON(b []byte, enc *bsonencoder.Encoder) error {
+func (oi *OperationInfoV0) UnpackBSON(b []byte, enc *bsonenc.Encoder) error {
 	var uoi OperationInfoV0UnpackerBSON
 	if err := enc.Unmarshal(b, &uoi); err != nil {
 		return err

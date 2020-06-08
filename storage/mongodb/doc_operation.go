@@ -8,7 +8,7 @@ import (
 	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/base/operation"
 	"github.com/spikeekips/mitum/util/encoder"
-	bsonencoder "github.com/spikeekips/mitum/util/encoder/bson"
+	bsonenc "github.com/spikeekips/mitum/util/encoder/bson"
 )
 
 type OperationDoc struct {
@@ -40,7 +40,7 @@ func (od OperationDoc) MarshalBSON() ([]byte, error) {
 	m["hash"] = od.op.Hash()
 	m["height"] = od.height
 
-	return bsonencoder.Marshal(m)
+	return bsonenc.Marshal(m)
 }
 
 func loadOperationFromDecoder(decoder func(interface{}) error, encs *encoder.Encoders) (

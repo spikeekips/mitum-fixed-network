@@ -6,11 +6,11 @@ import (
 	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/base/block"
 	"github.com/spikeekips/mitum/util"
-	jsonencoder "github.com/spikeekips/mitum/util/encoder/json"
+	jsonenc "github.com/spikeekips/mitum/util/encoder/json"
 )
 
 type NodeInfoV0PackerJSON struct {
-	jsonencoder.HintedHead
+	jsonenc.HintedHead
 	ND  base.Node      `json:"node"`
 	NID base.NetworkID `json:"network_id"`
 	ST  base.State     `json:"state"`
@@ -20,8 +20,8 @@ type NodeInfoV0PackerJSON struct {
 }
 
 func (ni NodeInfoV0) MarshalJSON() ([]byte, error) {
-	return jsonencoder.Marshal(NodeInfoV0PackerJSON{
-		HintedHead: jsonencoder.NewHintedHead(ni.Hint()),
+	return jsonenc.Marshal(NodeInfoV0PackerJSON{
+		HintedHead: jsonenc.NewHintedHead(ni.Hint()),
 		ND:         ni.node,
 		NID:        ni.networkID,
 		ST:         ni.state,
@@ -40,7 +40,7 @@ type NodeInfoV0UnpackerJSON struct {
 	UL  string          `json:"url"`
 }
 
-func (ni *NodeInfoV0) UnpackJSON(b []byte, enc *jsonencoder.Encoder) error {
+func (ni *NodeInfoV0) UnpackJSON(b []byte, enc *jsonenc.Encoder) error {
 	var nni NodeInfoV0UnpackerJSON
 	if err := enc.Unmarshal(b, &nni); err != nil {
 		return err

@@ -8,8 +8,8 @@ import (
 	"github.com/spikeekips/mitum/base/key"
 	"github.com/spikeekips/mitum/base/valuehash"
 	"github.com/spikeekips/mitum/util"
-	bsonencoder "github.com/spikeekips/mitum/util/encoder/bson"
-	jsonencoder "github.com/spikeekips/mitum/util/encoder/json"
+	bsonenc "github.com/spikeekips/mitum/util/encoder/bson"
+	jsonenc "github.com/spikeekips/mitum/util/encoder/json"
 	"github.com/spikeekips/mitum/util/hint"
 	"github.com/spikeekips/mitum/util/localtime"
 )
@@ -71,7 +71,7 @@ func (ds DummySeal) SignedAt() time.Time {
 }
 
 type DummySealJSONPacker struct {
-	jsonencoder.HintedHead
+	jsonenc.HintedHead
 	PK        key.BTCPrivatekey
 	H         valuehash.SHA256
 	BH        valuehash.SHA256
@@ -80,8 +80,8 @@ type DummySealJSONPacker struct {
 }
 
 func (ds DummySeal) MarshalJSON() ([]byte, error) {
-	return jsonencoder.Marshal(DummySealJSONPacker{
-		HintedHead: jsonencoder.NewHintedHead(ds.Hint()),
+	return jsonenc.Marshal(DummySealJSONPacker{
+		HintedHead: jsonenc.NewHintedHead(ds.Hint()),
 		PK:         ds.PK,
 		H:          ds.H,
 		BH:         ds.BH,
@@ -92,7 +92,7 @@ func (ds DummySeal) MarshalJSON() ([]byte, error) {
 
 func (ds *DummySeal) UnmarshalJSON(b []byte) error {
 	var uds DummySealJSONPacker
-	if err := jsonencoder.Unmarshal(b, &uds); err != nil {
+	if err := jsonenc.Unmarshal(b, &uds); err != nil {
 		return err
 	}
 
@@ -106,8 +106,8 @@ func (ds *DummySeal) UnmarshalJSON(b []byte) error {
 }
 
 func (ds DummySeal) MarshalBSON() ([]byte, error) {
-	return bsonencoder.Marshal(bsonencoder.MergeBSONM(
-		bsonencoder.NewHintedDoc(ds.Hint()),
+	return bsonenc.Marshal(bsonenc.MergeBSONM(
+		bsonenc.NewHintedDoc(ds.Hint()),
 		bson.M{
 			"PK":        ds.PK,
 			"H":         ds.H,
@@ -128,7 +128,7 @@ type DummySealBSONPacker struct {
 
 func (ds *DummySeal) UnmarshalBSON(b []byte) error {
 	var uds DummySealBSONPacker
-	if err := bsonencoder.Unmarshal(b, &uds); err != nil {
+	if err := bsonenc.Unmarshal(b, &uds); err != nil {
 		return err
 	}
 

@@ -5,7 +5,7 @@ import (
 
 	"github.com/spikeekips/mitum/base/ballot"
 	"github.com/spikeekips/mitum/util/encoder"
-	bsonencoder "github.com/spikeekips/mitum/util/encoder/bson"
+	bsonenc "github.com/spikeekips/mitum/util/encoder/bson"
 )
 
 type ProposalDoc struct {
@@ -35,7 +35,7 @@ func (pd ProposalDoc) MarshalBSON() ([]byte, error) {
 	m["height"] = pd.proposal.Height()
 	m["round"] = pd.proposal.Round()
 
-	return bsonencoder.Marshal(m)
+	return bsonenc.Marshal(m)
 }
 
 func loadProposalFromDecoder(decoder func(interface{}) error, encs *encoder.Encoders) (ballot.Proposal, error) {

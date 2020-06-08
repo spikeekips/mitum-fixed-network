@@ -7,8 +7,8 @@ import (
 	"github.com/spikeekips/mitum/base/key"
 	"github.com/spikeekips/mitum/base/valuehash"
 	"github.com/spikeekips/mitum/util/encoder"
-	bsonencoder "github.com/spikeekips/mitum/util/encoder/bson"
-	jsonencoder "github.com/spikeekips/mitum/util/encoder/json"
+	bsonenc "github.com/spikeekips/mitum/util/encoder/bson"
+	jsonenc "github.com/spikeekips/mitum/util/encoder/json"
 )
 
 func (bb BaseBallotV0) unpack(
@@ -66,11 +66,11 @@ func (bb BaseBallotV0) unpack(
 		}, nil
 }
 
-func (bb BaseBallotV0) unpackJSON(b []byte, enc *jsonencoder.Encoder) (
+func (bb BaseBallotV0) unpackJSON(b []byte, enc *jsonenc.Encoder) (
 	BaseBallotV0, BaseBallotFactV0, error,
 ) {
 	var nbb BaseBallotV0UnpackerJSON
-	if err := jsonencoder.Unmarshal(b, &nbb); err != nil {
+	if err := jsonenc.Unmarshal(b, &nbb); err != nil {
 		return BaseBallotV0{}, BaseBallotFactV0{}, err
 	}
 
@@ -78,11 +78,11 @@ func (bb BaseBallotV0) unpackJSON(b []byte, enc *jsonencoder.Encoder) (
 		nbb.H, nbb.SN, nbb.SG, nbb.SA.Time, nbb.HT, nbb.RD, nbb.N, nbb.BH, nbb.FH, nbb.FSG)
 }
 
-func (bb BaseBallotV0) unpackBSON(b []byte, enc *bsonencoder.Encoder) (
+func (bb BaseBallotV0) unpackBSON(b []byte, enc *bsonenc.Encoder) (
 	BaseBallotV0, BaseBallotFactV0, error,
 ) {
 	var nbb BaseBallotV0UnpackerBSON
-	if err := bsonencoder.Unmarshal(b, &nbb); err != nil {
+	if err := bsonenc.Unmarshal(b, &nbb); err != nil {
 		return BaseBallotV0{}, BaseBallotFactV0{}, err
 	}
 
@@ -96,7 +96,7 @@ func (bf BaseBallotFactV0) unpack(_ encoder.Encoder, height base.Height, round b
 	return NewBaseBallotFactV0(height, round), nil
 }
 
-func (bf BaseBallotFactV0) unpackJSON(b []byte, enc *jsonencoder.Encoder) (BaseBallotFactV0, error) {
+func (bf BaseBallotFactV0) unpackJSON(b []byte, enc *jsonenc.Encoder) (BaseBallotFactV0, error) {
 	var ubbf BaseBallotFactV0PackerXSON
 	if err := enc.Unmarshal(b, &ubbf); err != nil {
 		return BaseBallotFactV0{}, err
@@ -105,7 +105,7 @@ func (bf BaseBallotFactV0) unpackJSON(b []byte, enc *jsonencoder.Encoder) (BaseB
 	return bf.unpack(enc, ubbf.HT, ubbf.RD)
 }
 
-func (bf BaseBallotFactV0) unpackBSON(b []byte, enc *bsonencoder.Encoder) (BaseBallotFactV0, error) {
+func (bf BaseBallotFactV0) unpackBSON(b []byte, enc *bsonenc.Encoder) (BaseBallotFactV0, error) {
 	var ubbf BaseBallotFactV0PackerXSON
 	if err := enc.Unmarshal(b, &ubbf); err != nil {
 		return BaseBallotFactV0{}, err

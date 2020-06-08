@@ -1,4 +1,4 @@
 /*
-Package bsonencoder support encoding and decoding instance by bson.
+Package bsonenc support encoding and decoding instance by bson.
 */
-package bsonencoder
+package bsonenc

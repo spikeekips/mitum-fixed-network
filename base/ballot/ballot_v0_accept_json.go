@@ -5,7 +5,7 @@ import (
 
 	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/base/valuehash"
-	jsonencoder "github.com/spikeekips/mitum/util/encoder/json"
+	jsonenc "github.com/spikeekips/mitum/util/encoder/json"
 )
 
 type ACCEPTBallotV0PackerJSON struct {
@@ -21,7 +21,7 @@ func (ab ACCEPTBallotV0) MarshalJSON() ([]byte, error) {
 		return nil, err
 	}
 
-	return jsonencoder.Marshal(ACCEPTBallotV0PackerJSON{
+	return jsonenc.Marshal(ACCEPTBallotV0PackerJSON{
 		BaseBallotV0PackerJSON: bb,
 		PR:                     ab.proposal,
 		NB:                     ab.newBlock,
@@ -36,7 +36,7 @@ type ACCEPTBallotV0UnpackerJSON struct {
 	VR json.RawMessage `json:"voteproof"`
 }
 
-func (ab *ACCEPTBallotV0) UnpackJSON(b []byte, enc *jsonencoder.Encoder) error {
+func (ab *ACCEPTBallotV0) UnpackJSON(b []byte, enc *jsonenc.Encoder) error {
 	bb, bf, err := ab.BaseBallotV0.unpackJSON(b, enc)
 	if err != nil {
 		return err
@@ -57,7 +57,7 @@ type ACCEPTBallotFactV0PackerJSON struct {
 }
 
 func (abf ACCEPTBallotFactV0) MarshalJSON() ([]byte, error) {
-	return jsonencoder.Marshal(ACCEPTBallotFactV0PackerJSON{
+	return jsonenc.Marshal(ACCEPTBallotFactV0PackerJSON{
 		BaseBallotFactV0PackerJSON: NewBaseBallotFactV0PackerJSON(abf.BaseBallotFactV0, abf.Hint()),
 		PR:                         abf.proposal,
 		NB:                         abf.newBlock,
@@ -70,7 +70,7 @@ type ACCEPTBallotFactV0UnpackerJSON struct {
 	NB json.RawMessage `json:"new_block"`
 }
 
-func (abf *ACCEPTBallotFactV0) UnpackJSON(b []byte, enc *jsonencoder.Encoder) error {
+func (abf *ACCEPTBallotFactV0) UnpackJSON(b []byte, enc *jsonenc.Encoder) error {
 	var err error
 
 	var bf BaseBallotFactV0

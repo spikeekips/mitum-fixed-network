@@ -1,4 +1,4 @@
-package bsonencoder
+package bsonenc
 
 import (
 	"bytes"
@@ -13,7 +13,7 @@ import (
 
 	"github.com/spikeekips/mitum/util"
 	"github.com/spikeekips/mitum/util/encoder"
-	jsonencoder "github.com/spikeekips/mitum/util/encoder/json"
+	jsonenc "github.com/spikeekips/mitum/util/encoder/json"
 	"github.com/spikeekips/mitum/util/hint"
 )
 
@@ -337,7 +337,7 @@ func (t *testBSON) TestEncodeHinterNotCompatible() {
 
 		var m0 bson.M
 		t.NoError(Unmarshal(b, &m0))
-		nb, err := jsonencoder.Marshal(m0)
+		nb, err := jsonenc.Marshal(m0)
 		t.NoError(err)
 
 		encoded = nb
@@ -349,7 +349,7 @@ func (t *testBSON) TestEncodeHinterNotCompatible() {
 			c := bytes.Replace(encoded, []byte(`"version":"0.1"`), []byte(`"version":"1.1"`), -1)
 
 			var m1 bson.M
-			t.NoError(jsonencoder.Unmarshal(c, &m1))
+			t.NoError(jsonenc.Unmarshal(c, &m1))
 
 			d, err := Marshal(m1)
 			t.NoError(err)
@@ -367,7 +367,7 @@ func (t *testBSON) TestEncodeHinterNotCompatible() {
 			c := bytes.Replace(encoded, []byte(`"code":"ff31"`), []byte(`"code":"ffaa"`), -1)
 
 			var m1 bson.M
-			t.NoError(jsonencoder.Unmarshal(c, &m1))
+			t.NoError(jsonenc.Unmarshal(c, &m1))
 
 			d, err := Marshal(m1)
 			t.NoError(err)

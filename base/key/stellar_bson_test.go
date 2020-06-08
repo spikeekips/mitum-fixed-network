@@ -1,7 +1,7 @@
 package key
 
 import (
-	bsonencoder "github.com/spikeekips/mitum/util/encoder/bson"
+	bsonenc "github.com/spikeekips/mitum/util/encoder/bson"
 )
 
 func (t *testStellarKeypair) TestBSON() {
@@ -9,22 +9,22 @@ func (t *testStellarKeypair) TestBSON() {
 	t.NoError(err)
 
 	{
-		b, err := bsonencoder.Marshal(kp)
+		b, err := bsonenc.Marshal(kp)
 		t.NoError(err)
 
 		var decoded StellarPrivatekey
-		t.NoError(bsonencoder.Unmarshal(b, &decoded))
+		t.NoError(bsonenc.Unmarshal(b, &decoded))
 		t.True(kp.Equal(decoded))
 	}
 
 	{
 		pub := kp.Publickey()
 
-		b, err := bsonencoder.Marshal(pub)
+		b, err := bsonenc.Marshal(pub)
 		t.NoError(err)
 
 		var decoded StellarPublickey
-		t.NoError(bsonencoder.Unmarshal(b, &decoded))
+		t.NoError(bsonenc.Unmarshal(b, &decoded))
 		t.True(pub.Equal(decoded))
 	}
 }

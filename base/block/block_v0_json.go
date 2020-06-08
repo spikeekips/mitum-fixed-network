@@ -6,11 +6,11 @@ import (
 	"golang.org/x/xerrors"
 
 	"github.com/spikeekips/mitum/base/tree"
-	jsonencoder "github.com/spikeekips/mitum/util/encoder/json"
+	jsonenc "github.com/spikeekips/mitum/util/encoder/json"
 )
 
 type BlockV0PackJSON struct {
-	jsonencoder.HintedHead
+	jsonenc.HintedHead
 	MF ManifestV0           `json:"manifest"`
 	CI BlockConsensusInfoV0 `json:"consensus"`
 	OP *tree.AVLTree        `json:"operations"`
@@ -18,8 +18,8 @@ type BlockV0PackJSON struct {
 }
 
 func (bm BlockV0) MarshalJSON() ([]byte, error) {
-	return jsonencoder.Marshal(BlockV0PackJSON{
-		HintedHead: jsonencoder.NewHintedHead(bm.Hint()),
+	return jsonenc.Marshal(BlockV0PackJSON{
+		HintedHead: jsonenc.NewHintedHead(bm.Hint()),
 		MF:         bm.ManifestV0,
 		CI:         bm.BlockConsensusInfoV0,
 		OP:         bm.operations,
@@ -28,14 +28,14 @@ func (bm BlockV0) MarshalJSON() ([]byte, error) {
 }
 
 type BlockV0UnpackJSON struct {
-	jsonencoder.HintedHead
+	jsonenc.HintedHead
 	MF json.RawMessage `json:"manifest"`
 	CI json.RawMessage `json:"consensus"`
 	OP json.RawMessage `json:"operations"`
 	ST json.RawMessage `json:"states"`
 }
 
-func (bm *BlockV0) UnpackJSON(b []byte, enc *jsonencoder.Encoder) error {
+func (bm *BlockV0) UnpackJSON(b []byte, enc *jsonenc.Encoder) error {
 	var nbm BlockV0UnpackJSON
 	if err := enc.Unmarshal(b, &nbm); err != nil {
 		return err

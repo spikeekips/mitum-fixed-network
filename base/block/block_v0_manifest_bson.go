@@ -6,7 +6,7 @@ import (
 	"go.mongodb.org/mongo-driver/bson"
 
 	"github.com/spikeekips/mitum/base"
-	bsonencoder "github.com/spikeekips/mitum/util/encoder/bson"
+	bsonenc "github.com/spikeekips/mitum/util/encoder/bson"
 )
 
 func (bm ManifestV0) MarshalBSON() ([]byte, error) {
@@ -26,7 +26,7 @@ func (bm ManifestV0) MarshalBSON() ([]byte, error) {
 		m["block_states"] = bm.statesHash
 	}
 
-	return bsonencoder.Marshal(bsonencoder.MergeBSONM(bsonencoder.NewHintedDoc(bm.Hint()), m))
+	return bsonenc.Marshal(bsonenc.MergeBSONM(bsonenc.NewHintedDoc(bm.Hint()), m))
 }
 
 type ManifestV0UnpackBSON struct {
@@ -40,7 +40,7 @@ type ManifestV0UnpackBSON struct {
 	CA time.Time   `bson:"created_at"`
 }
 
-func (bm *ManifestV0) UnpackBSON(b []byte, enc *bsonencoder.Encoder) error {
+func (bm *ManifestV0) UnpackBSON(b []byte, enc *bsonenc.Encoder) error {
 	var nbm ManifestV0UnpackBSON
 	if err := enc.Unmarshal(b, &nbm); err != nil {
 		return err

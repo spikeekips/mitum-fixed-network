@@ -2,7 +2,7 @@ package isaac
 
 import (
 	"github.com/spikeekips/mitum/network"
-	jsonencoder "github.com/spikeekips/mitum/util/encoder/json"
+	jsonenc "github.com/spikeekips/mitum/util/encoder/json"
 )
 
 func (ls Localstate) MarshalJSON() ([]byte, error) {
@@ -12,7 +12,7 @@ func (ls Localstate) MarshalJSON() ([]byte, error) {
 		return true
 	})
 
-	return jsonencoder.Marshal(struct {
+	return jsonenc.Marshal(struct {
 		ND *LocalNode     `json:"node"`
 		PL *LocalPolicy   `json:"policy"`
 		NS []network.Node `json:"nodes"`

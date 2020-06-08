@@ -5,12 +5,12 @@ import (
 
 	"go.mongodb.org/mongo-driver/bson"
 
-	bsonencoder "github.com/spikeekips/mitum/util/encoder/bson"
+	bsonenc "github.com/spikeekips/mitum/util/encoder/bson"
 )
 
 func (nv NumberValue) MarshalBSON() ([]byte, error) {
-	return bsonencoder.Marshal(bsonencoder.MergeBSONM(
-		bsonencoder.NewHintedDoc(nv.Hint()),
+	return bsonenc.Marshal(bsonenc.MergeBSONM(
+		bsonenc.NewHintedDoc(nv.Hint()),
 		bson.M{
 			"hash":  nv.Hash(),
 			"value": nv.b,
@@ -25,7 +25,7 @@ type NumberValueBSONUnpacker struct {
 	T reflect.Kind `bson:"type"`
 }
 
-func (nv *NumberValue) UnpackBSON(b []byte, enc *bsonencoder.Encoder) error {
+func (nv *NumberValue) UnpackBSON(b []byte, enc *bsonenc.Encoder) error {
 	var uv NumberValueBSONUnpacker
 	if err := enc.Unmarshal(b, &uv); err != nil {
 		return err

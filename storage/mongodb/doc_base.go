@@ -5,7 +5,7 @@ import (
 	"golang.org/x/xerrors"
 
 	"github.com/spikeekips/mitum/util/encoder"
-	bsonencoder "github.com/spikeekips/mitum/util/encoder/bson"
+	bsonenc "github.com/spikeekips/mitum/util/encoder/bson"
 	"github.com/spikeekips/mitum/util/hint"
 )
 
@@ -58,7 +58,7 @@ type BaseDocUnpacker struct {
 
 func loadWithEncoder(b []byte, encs *encoder.Encoders) (bson.Raw /* id */, interface{} /* data */, error) {
 	var bd BaseDocUnpacker
-	if err := bsonencoder.Unmarshal(b, &bd); err != nil {
+	if err := bsonenc.Unmarshal(b, &bd); err != nil {
 		return nil, nil, err
 	}
 

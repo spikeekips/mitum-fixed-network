@@ -14,7 +14,7 @@ import (
 	"github.com/spikeekips/mitum/base/seal"
 	"github.com/spikeekips/mitum/contrib"
 	"github.com/spikeekips/mitum/util/encoder"
-	jsonencoder "github.com/spikeekips/mitum/util/encoder/json"
+	jsonenc "github.com/spikeekips/mitum/util/encoder/json"
 	"github.com/spikeekips/mitum/util/hint"
 )
 
@@ -107,7 +107,7 @@ func parse(flags *mainFlags) error {
 		}
 	}
 
-	flags.encoder = jsonencoder.NewEncoder()
+	flags.encoder = jsonenc.NewEncoder()
 	if _, err := encoder.LoadEncoders([]encoder.Encoder{flags.encoder}, contrib.Hinters...); err != nil {
 		return xerrors.Errorf("failed to load encoders: %w", err)
 	}

@@ -9,7 +9,7 @@ import (
 	"github.com/spikeekips/mitum/base/key"
 	"github.com/spikeekips/mitum/base/valuehash"
 	"github.com/spikeekips/mitum/util/encoder"
-	jsonencoder "github.com/spikeekips/mitum/util/encoder/json"
+	jsonenc "github.com/spikeekips/mitum/util/encoder/json"
 )
 
 type testSealJSON struct {
@@ -24,7 +24,7 @@ func (t *testSealJSON) SetupSuite() {
 	t.pk, _ = key.NewBTCPrivatekey()
 
 	t.encs = encoder.NewEncoders()
-	t.enc = jsonencoder.NewEncoder()
+	t.enc = jsonenc.NewEncoder()
 	_ = t.encs.AddEncoder(t.enc)
 
 	_ = t.encs.AddHinter(key.BTCPublickey{})
@@ -48,7 +48,7 @@ func (t *testSealJSON) TestSign() {
 	t.NoError(err)
 
 	var raw []byte
-	raw, err = jsonencoder.Marshal(sl)
+	raw, err = jsonenc.Marshal(sl)
 	t.NoError(err)
 
 	hinter, err := t.enc.DecodeByHint(raw)

@@ -1,4 +1,4 @@
-package bsonencoder
+package bsonenc
 
 import (
 	"reflect"

@@ -6,7 +6,7 @@ import (
 	"golang.org/x/xerrors"
 
 	"github.com/spikeekips/mitum/util"
-	jsonencoder "github.com/spikeekips/mitum/util/encoder/json"
+	jsonenc "github.com/spikeekips/mitum/util/encoder/json"
 	"github.com/spikeekips/mitum/util/isvalid"
 )
 
@@ -43,7 +43,7 @@ func (thr Threshold) Bytes() []byte {
 }
 
 func (thr Threshold) String() string {
-	b, _ := jsonencoder.Marshal(thr)
+	b, _ := jsonenc.Marshal(thr)
 	return string(b)
 }
 

@@ -5,11 +5,11 @@ import (
 
 	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/util"
-	bsonencoder "github.com/spikeekips/mitum/util/encoder/bson"
+	bsonenc "github.com/spikeekips/mitum/util/encoder/bson"
 )
 
 func (ni NodeInfoV0) MarshalBSON() ([]byte, error) {
-	return bsonencoder.Marshal(bsonencoder.MergeBSONM(bsonencoder.NewHintedDoc(ni.Hint()), bson.M{
+	return bsonenc.Marshal(bsonenc.MergeBSONM(bsonenc.NewHintedDoc(ni.Hint()), bson.M{
 		"node":       ni.node,
 		"network_id": ni.networkID,
 		"state":      ni.state,
@@ -28,7 +28,7 @@ type NodeInfoV0UnpackerBSON struct {
 	UL  string         `bson:"url"`
 }
 
-func (ni *NodeInfoV0) UnpackBSON(b []byte, enc *bsonencoder.Encoder) error {
+func (ni *NodeInfoV0) UnpackBSON(b []byte, enc *bsonenc.Encoder) error {
 	var nni NodeInfoV0UnpackerBSON
 	if err := enc.Unmarshal(b, &nni); err != nil {
 		return err

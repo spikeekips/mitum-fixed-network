@@ -1,7 +1,7 @@
 package ballot
 
 import (
-	jsonencoder "github.com/spikeekips/mitum/util/encoder/json"
+	jsonenc "github.com/spikeekips/mitum/util/encoder/json"
 	"github.com/spikeekips/mitum/util/logging"
 )
 
@@ -10,7 +10,7 @@ func marshalBallotLog(ballot Ballot, key string, e logging.Emitter, verbose bool
 		return e.Hinted(key, ballot.Hash())
 	}
 
-	r, _ := jsonencoder.Marshal(ballot)
+	r, _ := jsonenc.Marshal(ballot)
 
 	return e.RawJSON(key, r)
 }

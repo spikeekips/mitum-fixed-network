@@ -1,4 +1,4 @@
-package jsonencoder
+package jsonenc
 
 import (
 	"bytes"

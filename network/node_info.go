@@ -8,7 +8,7 @@ import (
 	"github.com/spikeekips/mitum/base/block"
 	"github.com/spikeekips/mitum/base/key"
 	"github.com/spikeekips/mitum/util"
-	jsonencoder "github.com/spikeekips/mitum/util/encoder/json" // TODO rename to jsonenc, bsonencoder -> bsonenc too
+	jsonenc "github.com/spikeekips/mitum/util/encoder/json"
 	"github.com/spikeekips/mitum/util/hint"
 	"github.com/spikeekips/mitum/util/isvalid"
 )
@@ -58,7 +58,7 @@ func NewNodeInfoV0(
 }
 
 func (ni NodeInfoV0) String() string {
-	return jsonencoder.ToString(ni)
+	return jsonenc.ToString(ni)
 }
 
 func (ni NodeInfoV0) Bytes() []byte {

@@ -7,7 +7,7 @@ import (
 
 	"github.com/spikeekips/mitum/base/valuehash"
 	"github.com/spikeekips/mitum/util/encoder"
-	jsonencoder "github.com/spikeekips/mitum/util/encoder/json"
+	jsonenc "github.com/spikeekips/mitum/util/encoder/json"
 	"github.com/spikeekips/mitum/util/hint"
 )
 
@@ -20,7 +20,7 @@ type testStateSliceValueJSON struct {
 
 func (t *testStateSliceValueJSON) SetupSuite() {
 	t.encs = encoder.NewEncoders()
-	t.enc = jsonencoder.NewEncoder()
+	t.enc = jsonenc.NewEncoder()
 	_ = t.encs.AddEncoder(t.enc)
 
 	_ = t.encs.AddHinter(valuehash.SHA256{})
@@ -35,7 +35,7 @@ func (t *testStateSliceValueJSON) TestEncode() {
 	bv, err := NewSliceValue([]hint.Hinter{d})
 	t.NoError(err)
 
-	b, err := jsonencoder.Marshal(bv)
+	b, err := jsonenc.Marshal(bv)
 	t.NoError(err)
 
 	decoded, err := t.enc.DecodeByHint(b)

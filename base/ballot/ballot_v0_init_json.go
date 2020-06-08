@@ -5,7 +5,7 @@ import (
 
 	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/base/valuehash"
-	jsonencoder "github.com/spikeekips/mitum/util/encoder/json"
+	jsonenc "github.com/spikeekips/mitum/util/encoder/json"
 )
 
 type INITBallotV0PackerJSON struct {
@@ -19,7 +19,7 @@ func (ib INITBallotV0) MarshalJSON() ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-	return jsonencoder.Marshal(INITBallotV0PackerJSON{
+	return jsonenc.Marshal(INITBallotV0PackerJSON{
 		BaseBallotV0PackerJSON: bb,
 		PB:                     ib.previousBlock,
 		VR:                     ib.voteproof,
@@ -32,7 +32,7 @@ type INITBallotV0UnpackerJSON struct {
 	VR json.RawMessage `json:"voteproof"`
 }
 
-func (ib *INITBallotV0) UnpackJSON(b []byte, enc *jsonencoder.Encoder) error {
+func (ib *INITBallotV0) UnpackJSON(b []byte, enc *jsonenc.Encoder) error {
 	bb, bf, err := ib.BaseBallotV0.unpackJSON(b, enc)
 	if err != nil {
 		return err
@@ -52,7 +52,7 @@ type INITBallotFactV0PackerJSON struct {
 }
 
 func (ibf INITBallotFactV0) MarshalJSON() ([]byte, error) {
-	return jsonencoder.Marshal(INITBallotFactV0PackerJSON{
+	return jsonenc.Marshal(INITBallotFactV0PackerJSON{
 		BaseBallotFactV0PackerJSON: NewBaseBallotFactV0PackerJSON(ibf.BaseBallotFactV0, ibf.Hint()),
 		PB:                         ibf.previousBlock,
 	})
@@ -63,7 +63,7 @@ type INITBallotFactV0UnpackerJSON struct {
 	PB json.RawMessage `json:"previous_block"`
 }
 
-func (ibf *INITBallotFactV0) UnpackJSON(b []byte, enc *jsonencoder.Encoder) error {
+func (ibf *INITBallotFactV0) UnpackJSON(b []byte, enc *jsonenc.Encoder) error {
 	var err error
 
 	var bf BaseBallotFactV0

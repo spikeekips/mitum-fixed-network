@@ -3,12 +3,12 @@ package state
 import (
 	"go.mongodb.org/mongo-driver/bson"
 
-	bsonencoder "github.com/spikeekips/mitum/util/encoder/bson"
+	bsonenc "github.com/spikeekips/mitum/util/encoder/bson"
 )
 
 func (stav StateV0AVLNode) MarshalBSON() ([]byte, error) {
-	return bsonencoder.Marshal(bsonencoder.MergeBSONM(
-		bsonencoder.NewHintedDoc(stav.Hint()),
+	return bsonenc.Marshal(bsonenc.MergeBSONM(
+		bsonenc.NewHintedDoc(stav.Hint()),
 		bson.M{
 			"hash":       stav.h,
 			"key":        stav.Key(),
@@ -32,7 +32,7 @@ type StateV0AVLNodeUnpackerBSON struct {
 	ST  bson.Raw `bson:"state"`
 }
 
-func (stav *StateV0AVLNode) UnpackBSON(b []byte, enc *bsonencoder.Encoder) error {
+func (stav *StateV0AVLNode) UnpackBSON(b []byte, enc *bsonenc.Encoder) error {
 	var us StateV0AVLNodeUnpackerBSON
 	if err := enc.Unmarshal(b, &us); err != nil {
 		return err

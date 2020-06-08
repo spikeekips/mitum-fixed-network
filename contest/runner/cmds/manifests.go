@@ -5,7 +5,7 @@ import (
 	"net/url"
 	"os"
 
-	jsonencoder "github.com/spikeekips/mitum/util/encoder/json"
+	jsonenc "github.com/spikeekips/mitum/util/encoder/json"
 	"github.com/spikeekips/mitum/util/logging"
 )
 
@@ -22,7 +22,7 @@ func (cmd *ManifestsCommand) Run(log logging.Logger) error {
 	if i, err := requestByHeights(cmd.URL, cmd.Heights, "manifests", log); err != nil {
 		return err
 	} else {
-		_, _ = fmt.Fprintln(os.Stdout, jsonencoder.ToString(i))
+		_, _ = fmt.Fprintln(os.Stdout, jsonenc.ToString(i))
 	}
 
 	return nil

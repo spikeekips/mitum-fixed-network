@@ -1,9 +1,9 @@
 package base
 
-import bsonencoder "github.com/spikeekips/mitum/util/encoder/bson"
+import bsonenc "github.com/spikeekips/mitum/util/encoder/bson"
 
 func (as ActingSuffrage) MarshalBSON() ([]byte, error) {
-	return bsonencoder.Marshal(ActingSuffragePacker{
+	return bsonenc.Marshal(ActingSuffragePacker{
 		H: as.height,
 		R: as.round,
 		P: as.proposer.String(),

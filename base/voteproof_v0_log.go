@@ -1,7 +1,7 @@
 package base
 
 import (
-	jsonencoder "github.com/spikeekips/mitum/util/encoder/json"
+	jsonenc "github.com/spikeekips/mitum/util/encoder/json"
 	"github.com/spikeekips/mitum/util/logging"
 )
 
@@ -24,7 +24,7 @@ func (vp VoteproofV0) MarshalLog(key string, e logging.Emitter, verbose bool) lo
 		return e.Dict(key, ev)
 	}
 
-	r, _ := jsonencoder.Marshal(vp)
+	r, _ := jsonenc.Marshal(vp)
 
 	return e.RawJSON(key, r)
 }

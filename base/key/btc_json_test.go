@@ -1,7 +1,7 @@
 package key
 
 import (
-	jsonencoder "github.com/spikeekips/mitum/util/encoder/json"
+	jsonenc "github.com/spikeekips/mitum/util/encoder/json"
 )
 
 func (t *testBTCKeypair) TestJSON() {
@@ -9,22 +9,22 @@ func (t *testBTCKeypair) TestJSON() {
 	t.NoError(err)
 
 	{
-		b, err := jsonencoder.Marshal(kp)
+		b, err := jsonenc.Marshal(kp)
 		t.NoError(err)
 
 		var decoded BTCPrivatekey
-		t.NoError(jsonencoder.Unmarshal(b, &decoded))
+		t.NoError(jsonenc.Unmarshal(b, &decoded))
 		t.True(kp.Equal(decoded))
 	}
 
 	{
 		pub := kp.Publickey()
 
-		b, err := jsonencoder.Marshal(pub)
+		b, err := jsonenc.Marshal(pub)
 		t.NoError(err)
 
 		var decoded BTCPublickey
-		t.NoError(jsonencoder.Unmarshal(b, &decoded))
+		t.NoError(jsonenc.Unmarshal(b, &decoded))
 		t.True(pub.Equal(decoded))
 	}
 }

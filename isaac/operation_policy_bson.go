@@ -6,12 +6,12 @@ import (
 	"go.mongodb.org/mongo-driver/bson"
 
 	"github.com/spikeekips/mitum/base/key"
-	bsonencoder "github.com/spikeekips/mitum/util/encoder/bson"
+	bsonenc "github.com/spikeekips/mitum/util/encoder/bson"
 )
 
 func (po PolicyOperationBodyV0) MarshalBSON() ([]byte, error) {
-	return bsonencoder.Marshal(bsonencoder.MergeBSONM(
-		bsonencoder.NewHintedDoc(po.Hint()),
+	return bsonenc.Marshal(bsonenc.MergeBSONM(
+		bsonenc.NewHintedDoc(po.Hint()),
 		bson.M{
 			"threshold": []float64{
 				float64(po.Threshold.Total),
@@ -39,7 +39,7 @@ type PolicyOperationBodyV0UnpackerBSON struct {
 	TimespanValidBallot              time.Duration `bson:"timespan_valid_ballot"`
 }
 
-func (po *PolicyOperationBodyV0) UnpackBSON(b []byte, enc *bsonencoder.Encoder) error {
+func (po *PolicyOperationBodyV0) UnpackBSON(b []byte, enc *bsonenc.Encoder) error {
 	var up PolicyOperationBodyV0UnpackerBSON
 	if err := enc.Unmarshal(b, &up); err != nil {
 		return err
@@ -58,8 +58,8 @@ func (po *PolicyOperationBodyV0) UnpackBSON(b []byte, enc *bsonencoder.Encoder) 
 }
 
 func (spo SetPolicyOperationV0) MarshalBSON() ([]byte, error) {
-	return bsonencoder.Marshal(bsonencoder.MergeBSONM(
-		bsonencoder.NewHintedDoc(spo.Hint()),
+	return bsonenc.Marshal(bsonenc.MergeBSONM(
+		bsonenc.NewHintedDoc(spo.Hint()),
 		bson.M{
 			"hash":           spo.h,
 			"fact_hash":      spo.factHash,
@@ -80,7 +80,7 @@ type SetPolicyOperationV0UnpackerBSON struct {
 	PO bson.Raw      `bson:"policies"`
 }
 
-func (spo *SetPolicyOperationV0) UnpackBSON(b []byte, enc *bsonencoder.Encoder) error {
+func (spo *SetPolicyOperationV0) UnpackBSON(b []byte, enc *bsonenc.Encoder) error {
 	var usp SetPolicyOperationV0UnpackerBSON
 	if err := enc.Unmarshal(b, &usp); err != nil {
 		return err

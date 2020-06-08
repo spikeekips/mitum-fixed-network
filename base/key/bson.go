@@ -5,13 +5,13 @@ import (
 
 	"go.mongodb.org/mongo-driver/bson"
 
-	bsonencoder "github.com/spikeekips/mitum/util/encoder/bson"
+	bsonenc "github.com/spikeekips/mitum/util/encoder/bson"
 	"github.com/spikeekips/mitum/util/hint"
 )
 
 func MarshalBSONKey(k hint.Hinter) ([]byte, error) {
-	return bsonencoder.Marshal(bsonencoder.MergeBSONM(
-		bsonencoder.NewHintedDoc(k.Hint()),
+	return bsonenc.Marshal(bsonenc.MergeBSONM(
+		bsonenc.NewHintedDoc(k.Hint()),
 		bson.M{
 			"key": k.(fmt.Stringer).String(),
 		},
@@ -25,7 +25,7 @@ type keyUnpackerBSON struct {
 
 func UnmarshalBSONKey(b []byte) (hint.Hint, string, error) {
 	var k keyUnpackerBSON
-	if err := bsonencoder.Unmarshal(b, &k); err != nil {
+	if err := bsonenc.Unmarshal(b, &k); err != nil {
 		return hint.Hint{}, "", err
 	}
 

@@ -6,7 +6,7 @@ import (
 	"go.mongodb.org/mongo-driver/bson"
 	"golang.org/x/xerrors"
 
-	jsonencoder "github.com/spikeekips/mitum/util/encoder/json"
+	jsonenc "github.com/spikeekips/mitum/util/encoder/json"
 	"github.com/spikeekips/mitum/util/localtime"
 )
 
@@ -27,7 +27,7 @@ func EmptyEvent() *Event {
 func NewEvent(b []byte) (*Event, error) {
 	m := map[string]interface{}{}
 	if b != nil {
-		if err := jsonencoder.Unmarshal(b, &m); err != nil {
+		if err := jsonenc.Unmarshal(b, &m); err != nil {
 			return nil, err
 		}
 	}
@@ -50,7 +50,7 @@ func (li *Event) Bytes() []byte {
 func (li *Event) Add(key string, value interface{}) *Event {
 	li.m[key] = value
 
-	b, err := jsonencoder.Marshal(li.m)
+	b, err := jsonenc.Marshal(li.m)
 	if err != nil {
 		return nil
 	}

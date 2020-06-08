@@ -1,4 +1,4 @@
 /*
-Package jsonencoder support encoding and decoding instance by json.
+Package jsonenc support encoding and decoding instance by json.
 */
-package jsonencoder
+package jsonenc

@@ -7,7 +7,7 @@ import (
 
 	"github.com/spikeekips/mitum/base/state"
 	"github.com/spikeekips/mitum/util/encoder"
-	bsonencoder "github.com/spikeekips/mitum/util/encoder/bson"
+	bsonenc "github.com/spikeekips/mitum/util/encoder/bson"
 )
 
 type StateDoc struct {
@@ -36,7 +36,7 @@ func (sd StateDoc) MarshalBSON() ([]byte, error) {
 	m["key"] = sd.state.Key()
 	m["height"] = sd.state.Height()
 
-	return bsonencoder.Marshal(m)
+	return bsonenc.Marshal(m)
 }
 
 func loadStateFromDecoder(decoder func(interface{}) error, encs *encoder.Encoders) (

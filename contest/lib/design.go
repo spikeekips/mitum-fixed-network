@@ -13,7 +13,7 @@ import (
 
 	"github.com/spikeekips/mitum/base/key"
 	"github.com/spikeekips/mitum/util/encoder"
-	jsonencoder "github.com/spikeekips/mitum/util/encoder/json"
+	jsonenc "github.com/spikeekips/mitum/util/encoder/json"
 	"github.com/spikeekips/mitum/util/isvalid"
 )
 
@@ -55,7 +55,7 @@ func (nd *NodeDesign) IsValid([]byte) error {
 	}
 
 	var je encoder.Encoder
-	if e, err := nd.encs.Encoder(jsonencoder.JSONType, ""); err != nil {
+	if e, err := nd.encs.Encoder(jsonenc.JSONType, ""); err != nil {
 		return xerrors.Errorf("json encoder needs for load design: %w", err)
 	} else {
 		je = e
@@ -154,7 +154,7 @@ type RemoteDesign struct {
 
 func (rd *RemoteDesign) IsValid([]byte) error {
 	var je encoder.Encoder
-	if e, err := rd.encs.Encoder(jsonencoder.JSONType, ""); err != nil {
+	if e, err := rd.encs.Encoder(jsonenc.JSONType, ""); err != nil {
 		return xerrors.Errorf("json encoder needs for load design: %w", err)
 	} else {
 		je = e
@@ -208,7 +208,7 @@ type OperationDesign struct {
 
 func (od *OperationDesign) IsValid([]byte) error {
 	var je encoder.Encoder
-	if e, err := od.encs.Encoder(jsonencoder.JSONType, ""); err != nil {
+	if e, err := od.encs.Encoder(jsonenc.JSONType, ""); err != nil {
 		return xerrors.Errorf("json encoder needs for load design: %w", err)
 	} else {
 		je = e

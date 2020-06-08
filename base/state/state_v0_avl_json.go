@@ -3,11 +3,11 @@ package state
 import (
 	"encoding/json"
 
-	jsonencoder "github.com/spikeekips/mitum/util/encoder/json"
+	jsonenc "github.com/spikeekips/mitum/util/encoder/json"
 )
 
 type StateV0AVLNodePackerJSON struct {
-	jsonencoder.HintedHead
+	jsonenc.HintedHead
 	H   []byte   `json:"hash"`
 	K   []byte   `json:"key"`
 	HT  int16    `json:"height"`
@@ -19,8 +19,8 @@ type StateV0AVLNodePackerJSON struct {
 }
 
 func (stav StateV0AVLNode) MarshalJSON() ([]byte, error) {
-	return jsonencoder.Marshal(StateV0AVLNodePackerJSON{
-		HintedHead: jsonencoder.NewHintedHead(stav.Hint()),
+	return jsonenc.Marshal(StateV0AVLNodePackerJSON{
+		HintedHead: jsonenc.NewHintedHead(stav.Hint()),
 		H:          stav.h,
 		K:          stav.Key(),
 		HT:         stav.height,
@@ -42,7 +42,7 @@ type StateV0AVLNodeUnpackerJSON struct {
 	ST  json.RawMessage `json:"state"`
 }
 
-func (stav *StateV0AVLNode) UnpackJSON(b []byte, enc *jsonencoder.Encoder) error {
+func (stav *StateV0AVLNode) UnpackJSON(b []byte, enc *jsonenc.Encoder) error {
 	var us StateV0AVLNodeUnpackerJSON
 	if err := enc.Unmarshal(b, &us); err != nil {
 		return err

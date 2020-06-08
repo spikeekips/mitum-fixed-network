@@ -5,7 +5,7 @@ import (
 	"golang.org/x/xerrors"
 	"gopkg.in/yaml.v3"
 
-	jsonencoder "github.com/spikeekips/mitum/util/encoder/json"
+	jsonenc "github.com/spikeekips/mitum/util/encoder/json"
 )
 
 type ConditionActionIfError uint8
@@ -88,7 +88,7 @@ func (dc *Condition) IsValid([]byte) error {
 	}
 
 	var m bson.M
-	if err := jsonencoder.Unmarshal([]byte(dc.QueryString), &m); err != nil {
+	if err := jsonenc.Unmarshal([]byte(dc.QueryString), &m); err != nil {
 		return err
 	}
 

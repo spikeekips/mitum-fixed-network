@@ -20,7 +20,7 @@ import (
 	"github.com/spikeekips/mitum/base/valuehash"
 	"github.com/spikeekips/mitum/util"
 	"github.com/spikeekips/mitum/util/encoder"
-	bsonencoder "github.com/spikeekips/mitum/util/encoder/bson"
+	bsonenc "github.com/spikeekips/mitum/util/encoder/bson"
 )
 
 type docNilID struct {
@@ -41,7 +41,7 @@ func (doc docNilID) MarshalBSON() ([]byte, error) {
 		doc.M["_id"] = doc.id
 	}
 
-	return bsonencoder.Marshal(doc.M)
+	return bsonenc.Marshal(doc.M)
 }
 
 func (doc docNilID) Doc() bson.M {
@@ -57,7 +57,7 @@ type testMongodbClient struct {
 
 func (t *testMongodbClient) SetupSuite() {
 	t.encs = encoder.NewEncoders()
-	t.enc = bsonencoder.NewEncoder()
+	t.enc = bsonenc.NewEncoder()
 	_ = t.encs.AddEncoder(t.enc)
 
 	_ = t.encs.AddHinter(key.BTCPublickey{})

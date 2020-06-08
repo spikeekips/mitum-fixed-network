@@ -10,8 +10,8 @@ import (
 
 	"golang.org/x/xerrors"
 
-	bsonencoder "github.com/spikeekips/mitum/util/encoder/bson"
-	jsonencoder "github.com/spikeekips/mitum/util/encoder/json"
+	bsonenc "github.com/spikeekips/mitum/util/encoder/bson"
+	jsonenc "github.com/spikeekips/mitum/util/encoder/json"
 	"github.com/spikeekips/mitum/util/hint"
 	"github.com/spikeekips/mitum/util/logging"
 )
@@ -60,18 +60,18 @@ func (sa ShortAddress) Bytes() []byte {
 }
 
 func (sa ShortAddress) MarshalJSON() ([]byte, error) {
-	return jsonencoder.Marshal(struct {
-		jsonencoder.HintedHead
+	return jsonenc.Marshal(struct {
+		jsonenc.HintedHead
 		A string `json:"address"`
 	}{
-		HintedHead: jsonencoder.NewHintedHead(sa.Hint()),
+		HintedHead: jsonenc.NewHintedHead(sa.Hint()),
 		A:          sa.String(),
 	})
 }
 
-func (sa *ShortAddress) UnpackJSON(b []byte, _ *jsonencoder.Encoder) error {
+func (sa *ShortAddress) UnpackJSON(b []byte, _ *jsonenc.Encoder) error {
 	var s struct {
-		jsonencoder.HintedHead
+		jsonenc.HintedHead
 		A string `json:"address"`
 	}
 	if err := json.Unmarshal(b, &s); err != nil {
@@ -88,7 +88,7 @@ func (sa *ShortAddress) UnpackJSON(b []byte, _ *jsonencoder.Encoder) error {
 }
 
 func (sa ShortAddress) MarshalBSON() ([]byte, error) {
-	return bsonencoder.Marshal(struct {
+	return bsonenc.Marshal(struct {
 		HI hint.Hint `bson:"_hint"`
 		A  string    `bson:"address"`
 	}{
@@ -102,7 +102,7 @@ func (sa *ShortAddress) UnmarshalBSON(b []byte) error {
 		A string `bson:"address"`
 	}
 
-	if err := bsonencoder.Unmarshal(b, &us); err != nil {
+	if err := bsonenc.Unmarshal(b, &us); err != nil {
 		return err
 	}
 

@@ -5,11 +5,11 @@ import (
 
 	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/base/valuehash"
-	jsonencoder "github.com/spikeekips/mitum/util/encoder/json"
+	jsonenc "github.com/spikeekips/mitum/util/encoder/json"
 )
 
 type StateV0PackerJSON struct {
-	jsonencoder.HintedHead
+	jsonenc.HintedHead
 	H   valuehash.Hash  `json:"hash"`
 	K   string          `json:"key"`
 	V   Value           `json:"value"`
@@ -20,8 +20,8 @@ type StateV0PackerJSON struct {
 }
 
 func (st StateV0) MarshalJSON() ([]byte, error) {
-	return jsonencoder.Marshal(StateV0PackerJSON{
-		HintedHead: jsonencoder.NewHintedHead(st.Hint()),
+	return jsonenc.Marshal(StateV0PackerJSON{
+		HintedHead: jsonenc.NewHintedHead(st.Hint()),
 		H:          st.h,
 		K:          st.key,
 		V:          st.value,
@@ -42,7 +42,7 @@ type StateV0UnpackerJSON struct {
 	OPS []json.RawMessage `json:"operation_infos"`
 }
 
-func (st *StateV0) UnpackJSON(b []byte, enc *jsonencoder.Encoder) error {
+func (st *StateV0) UnpackJSON(b []byte, enc *jsonenc.Encoder) error {
 	var ust StateV0UnpackerJSON
 	if err := enc.Unmarshal(b, &ust); err != nil {
 		return err
@@ -57,14 +57,14 @@ func (st *StateV0) UnpackJSON(b []byte, enc *jsonencoder.Encoder) error {
 }
 
 type OperationInfoV0PackerJSON struct {
-	jsonencoder.HintedHead
+	jsonenc.HintedHead
 	OH valuehash.Hash `json:"operation"`
 	SH valuehash.Hash `json:"seal"`
 }
 
 func (oi OperationInfoV0) MarshalJSON() ([]byte, error) {
-	return jsonencoder.Marshal(OperationInfoV0PackerJSON{
-		HintedHead: jsonencoder.NewHintedHead(oi.Hint()),
+	return jsonenc.Marshal(OperationInfoV0PackerJSON{
+		HintedHead: jsonenc.NewHintedHead(oi.Hint()),
 		OH:         oi.oh,
 		SH:         oi.sh,
 	})
@@ -75,7 +75,7 @@ type OperationInfoV0UnpackerJSON struct {
 	SH json.RawMessage `json:"seal"`
 }
 
-func (oi *OperationInfoV0) UnpackJSON(b []byte, enc *jsonencoder.Encoder) error {
+func (oi *OperationInfoV0) UnpackJSON(b []byte, enc *jsonenc.Encoder) error {
 	var uoi OperationInfoV0UnpackerJSON
 	if err := enc.Unmarshal(b, &uoi); err != nil {
 		return err

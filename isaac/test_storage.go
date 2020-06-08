@@ -12,24 +12,24 @@ import (
 	leveldbstorage "github.com/spikeekips/mitum/storage/leveldb"
 	mongodbstorage "github.com/spikeekips/mitum/storage/mongodb"
 	"github.com/spikeekips/mitum/util/encoder"
-	bsonencoder "github.com/spikeekips/mitum/util/encoder/bson"
-	jsonencoder "github.com/spikeekips/mitum/util/encoder/json"
+	bsonenc "github.com/spikeekips/mitum/util/encoder/bson"
+	jsonenc "github.com/spikeekips/mitum/util/encoder/json"
 )
 
 type StorageSupportTest struct {
 	DBType  string
 	Encs    *encoder.Encoders
-	JSONEnc *jsonencoder.Encoder
-	BSONEnc *bsonencoder.Encoder
+	JSONEnc *jsonenc.Encoder
+	BSONEnc *bsonenc.Encoder
 }
 
 func (ss *StorageSupportTest) SetupSuite() {
 	ss.Encs = encoder.NewEncoders()
 
-	ss.JSONEnc = jsonencoder.NewEncoder()
+	ss.JSONEnc = jsonenc.NewEncoder()
 	_ = ss.Encs.AddEncoder(ss.JSONEnc)
 
-	ss.BSONEnc = bsonencoder.NewEncoder()
+	ss.BSONEnc = bsonenc.NewEncoder()
 	_ = ss.Encs.AddEncoder(ss.BSONEnc)
 }
 
@@ -55,7 +55,7 @@ func (ss *StorageSupportTest) Storage(encs *encoder.Encoders, enc encoder.Encode
 			panic(err)
 		}
 
-		if enc == nil || enc.Hint().Type() != bsonencoder.BSONType {
+		if enc == nil || enc.Hint().Type() != bsonenc.BSONType {
 			enc = ss.BSONEnc
 		}
 

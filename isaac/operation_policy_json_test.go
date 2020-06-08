@@ -9,7 +9,7 @@ import (
 	"github.com/spikeekips/mitum/base/key"
 	"github.com/spikeekips/mitum/base/valuehash"
 	"github.com/spikeekips/mitum/util/encoder"
-	jsonencoder "github.com/spikeekips/mitum/util/encoder/json"
+	jsonenc "github.com/spikeekips/mitum/util/encoder/json"
 )
 
 type testSetPolicyOperationJSON struct {
@@ -24,7 +24,7 @@ func (t *testSetPolicyOperationJSON) SetupSuite() {
 	t.pk, _ = key.NewBTCPrivatekey()
 
 	t.encs = encoder.NewEncoders()
-	t.enc = jsonencoder.NewEncoder()
+	t.enc = jsonenc.NewEncoder()
 	_ = t.encs.AddEncoder(t.enc)
 
 	_ = t.encs.AddHinter(key.BTCPrivatekey{})
@@ -46,7 +46,7 @@ func (t *testSetPolicyOperationJSON) TestEncode() {
 	spo, err := NewSetPolicyOperationV0(t.pk, token, policies, nil)
 	t.NoError(err)
 
-	b, err := jsonencoder.Marshal(spo)
+	b, err := jsonenc.Marshal(spo)
 	t.NoError(err)
 
 	hinter, err := t.enc.DecodeByHint(b)
@@ -60,7 +60,7 @@ func (t *testSetPolicyOperationJSON) TestEncode() {
 	t.True(spo.Hash().Equal(uspo.Hash()))
 	t.Equal(spo.Threshold, uspo.Threshold)
 
-	t.Equal(jsonencoder.ToString(spo), jsonencoder.ToString(uspo))
+	t.Equal(jsonenc.ToString(spo), jsonenc.ToString(uspo))
 }
 
 func TestSetPolicyOperationJSON(t *testing.T) {

@@ -13,8 +13,8 @@ import (
 	"github.com/spikeekips/mitum/base/valuehash"
 	"github.com/spikeekips/mitum/util"
 	"github.com/spikeekips/mitum/util/encoder"
-	bsonencoder "github.com/spikeekips/mitum/util/encoder/bson"
-	jsonencoder "github.com/spikeekips/mitum/util/encoder/json"
+	bsonenc "github.com/spikeekips/mitum/util/encoder/bson"
+	jsonenc "github.com/spikeekips/mitum/util/encoder/json"
 )
 
 type testNodeInfo struct {
@@ -30,8 +30,8 @@ func (t *testNodeInfo) SetupTest() {
 	t.nid = []byte("test-network-id")
 
 	t.encs = encoder.NewEncoders()
-	t.encJSON = jsonencoder.NewEncoder()
-	t.encBSON = bsonencoder.NewEncoder()
+	t.encJSON = jsonenc.NewEncoder()
+	t.encBSON = bsonenc.NewEncoder()
 
 	_ = t.encs.AddEncoder(t.encJSON)
 	_ = t.encs.AddEncoder(t.encBSON)
@@ -148,7 +148,7 @@ func (t *testNodeInfo) TestJSON() {
 	)
 	t.NoError(ni.IsValid(nil))
 
-	b, err := jsonencoder.Marshal(ni)
+	b, err := jsonenc.Marshal(ni)
 	t.NoError(err)
 
 	i, err := DecodeNodeInfo(t.encJSON, b)
@@ -173,7 +173,7 @@ func (t *testNodeInfo) TestBSON() {
 	)
 	t.NoError(ni.IsValid(nil))
 
-	b, err := bsonencoder.Marshal(ni)
+	b, err := bsonenc.Marshal(ni)
 	t.NoError(err)
 
 	i, err := DecodeNodeInfo(t.encBSON, b)

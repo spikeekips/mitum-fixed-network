@@ -8,8 +8,8 @@ import (
 
 	"github.com/spikeekips/mitum/base/valuehash"
 	"github.com/spikeekips/mitum/util"
-	bsonencoder "github.com/spikeekips/mitum/util/encoder/bson"
-	jsonencoder "github.com/spikeekips/mitum/util/encoder/json"
+	bsonenc "github.com/spikeekips/mitum/util/encoder/bson"
+	jsonenc "github.com/spikeekips/mitum/util/encoder/json"
 	"github.com/spikeekips/mitum/util/hint"
 )
 
@@ -44,16 +44,16 @@ func (dv dummy) Hash() valuehash.Hash {
 }
 
 func (dv dummy) MarshalJSON() ([]byte, error) {
-	return jsonencoder.Marshal(struct {
-		jsonencoder.HintedHead
+	return jsonenc.Marshal(struct {
+		jsonenc.HintedHead
 		V int
 	}{
-		HintedHead: jsonencoder.NewHintedHead(dv.Hint()),
+		HintedHead: jsonenc.NewHintedHead(dv.Hint()),
 		V:          dv.v,
 	})
 }
 
-func (dv *dummy) UnpackJSON(b []byte, enc *jsonencoder.Encoder) error {
+func (dv *dummy) UnpackJSON(b []byte, enc *jsonenc.Encoder) error {
 	var u struct{ V int }
 	if err := enc.Unmarshal(b, &u); err != nil {
 		return err
@@ -65,13 +65,13 @@ func (dv *dummy) UnpackJSON(b []byte, enc *jsonencoder.Encoder) error {
 }
 
 func (dv dummy) MarshalBSON() ([]byte, error) {
-	return bsonencoder.Marshal(bson.M{
+	return bsonenc.Marshal(bson.M{
 		"_hint": dv.Hint(),
 		"value": dv.v,
 	})
 }
 
-func (dv *dummy) UnpackBSON(b []byte, enc *bsonencoder.Encoder) error {
+func (dv *dummy) UnpackBSON(b []byte, enc *bsonenc.Encoder) error {
 	var u struct {
 		V int `bson:"value"`
 	}

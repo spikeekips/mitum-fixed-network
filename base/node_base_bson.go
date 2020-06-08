@@ -4,7 +4,7 @@ import (
 	"go.mongodb.org/mongo-driver/bson"
 
 	"github.com/spikeekips/mitum/base/key"
-	bsonencoder "github.com/spikeekips/mitum/util/encoder/bson"
+	bsonenc "github.com/spikeekips/mitum/util/encoder/bson"
 	"github.com/spikeekips/mitum/util/hint"
 )
 
@@ -15,7 +15,7 @@ type BaseNodeV0PackerBSON struct {
 }
 
 func (bn BaseNodeV0) MarshalBSON() ([]byte, error) {
-	return bsonencoder.Marshal(BaseNodeV0PackerBSON{
+	return bsonenc.Marshal(BaseNodeV0PackerBSON{
 		HT: bn.Hint(),
 		AD: bn.address,
 		PK: bn.publickey,
@@ -27,7 +27,7 @@ type BaseNodeV0UnpackerBSON struct {
 	PK bson.Raw `bson:"publickey"`
 }
 
-func (bn *BaseNodeV0) UnpackBSON(b []byte, enc *bsonencoder.Encoder) error {
+func (bn *BaseNodeV0) UnpackBSON(b []byte, enc *bsonenc.Encoder) error {
 	var nbn BaseNodeV0UnpackerBSON
 	if err := enc.Unmarshal(b, &nbn); err != nil {
 		return err

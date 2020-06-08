@@ -6,13 +6,13 @@ import (
 	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/base/key"
 	"github.com/spikeekips/mitum/base/valuehash"
-	jsonencoder "github.com/spikeekips/mitum/util/encoder/json"
+	jsonenc "github.com/spikeekips/mitum/util/encoder/json"
 	"github.com/spikeekips/mitum/util/hint"
 	"github.com/spikeekips/mitum/util/localtime"
 )
 
 type BaseBallotV0PackerJSON struct {
-	jsonencoder.HintedHead
+	jsonenc.HintedHead
 	H   valuehash.Hash     `json:"hash"`
 	SN  key.Publickey      `json:"signer"`
 	SG  key.Signature      `json:"signature"`
@@ -27,7 +27,7 @@ type BaseBallotV0PackerJSON struct {
 
 func PackBaseBallotV0JSON(ballot Ballot) (BaseBallotV0PackerJSON, error) {
 	return BaseBallotV0PackerJSON{
-		HintedHead: jsonencoder.NewHintedHead(ballot.Hint()),
+		HintedHead: jsonenc.NewHintedHead(ballot.Hint()),
 		H:          ballot.Hash(),
 		SN:         ballot.Signer(),
 		SG:         ballot.Signature(),
@@ -42,7 +42,7 @@ func PackBaseBallotV0JSON(ballot Ballot) (BaseBallotV0PackerJSON, error) {
 }
 
 type BaseBallotV0UnpackerJSON struct {
-	jsonencoder.HintedHead
+	jsonenc.HintedHead
 	H   json.RawMessage    `json:"hash"`
 	SN  json.RawMessage    `json:"signer"`
 	SG  key.Signature      `json:"signature"`
@@ -55,7 +55,7 @@ type BaseBallotV0UnpackerJSON struct {
 	FSG key.Signature      `json:"fact_signature"`
 }
 
-func UnpackBaseBallotV0JSON(nib BaseBallotV0UnpackerJSON, enc *jsonencoder.Encoder) (
+func UnpackBaseBallotV0JSON(nib BaseBallotV0UnpackerJSON, enc *jsonenc.Encoder) (
 	BaseBallotV0,
 	BaseBallotFactV0,
 	error,
@@ -103,14 +103,14 @@ func UnpackBaseBallotV0JSON(nib BaseBallotV0UnpackerJSON, enc *jsonencoder.Encod
 }
 
 type BaseBallotFactV0PackerJSON struct {
-	jsonencoder.HintedHead
+	jsonenc.HintedHead
 	HT base.Height `json:"height"`
 	RD base.Round  `json:"round"`
 }
 
 func NewBaseBallotFactV0PackerJSON(bbf BaseBallotFactV0, ht hint.Hint) BaseBallotFactV0PackerJSON {
 	return BaseBallotFactV0PackerJSON{
-		HintedHead: jsonencoder.NewHintedHead(ht),
+		HintedHead: jsonenc.NewHintedHead(ht),
 		HT:         bbf.height,
 		RD:         bbf.round,
 	}

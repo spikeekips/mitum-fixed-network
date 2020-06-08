@@ -10,15 +10,15 @@ import (
 	"github.com/spikeekips/mitum/network"
 	"github.com/spikeekips/mitum/util"
 	"github.com/spikeekips/mitum/util/encoder"
-	bsonencoder "github.com/spikeekips/mitum/util/encoder/bson"
-	jsonencoder "github.com/spikeekips/mitum/util/encoder/json"
+	bsonenc "github.com/spikeekips/mitum/util/encoder/bson"
+	jsonenc "github.com/spikeekips/mitum/util/encoder/json"
 	"github.com/spikeekips/mitum/util/logging"
 )
 
 func createNodeRunnerFromDesign(f string, version util.Version, log logging.Logger) (*contestlib.NodeRunner, error) {
 	var encs *encoder.Encoders
 	if e, err := encoder.LoadEncoders(
-		[]encoder.Encoder{jsonencoder.NewEncoder(), bsonencoder.NewEncoder()},
+		[]encoder.Encoder{jsonenc.NewEncoder(), bsonenc.NewEncoder()},
 		contestlib.Hinters...,
 	); err != nil {
 		return nil, xerrors.Errorf("failed to load encoders: %w", err)
@@ -58,7 +58,7 @@ func loadDesign(f string, encs *encoder.Encoders) (*contestlib.NodeDesign, error
 func loadNodeChannel(u *url.URL, log logging.Logger) (network.NetworkChannel, error) {
 	var encs *encoder.Encoders
 	if e, err := encoder.LoadEncoders(
-		[]encoder.Encoder{jsonencoder.NewEncoder(), bsonencoder.NewEncoder()},
+		[]encoder.Encoder{jsonenc.NewEncoder(), bsonenc.NewEncoder()},
 		contestlib.Hinters...,
 	); err != nil {
 		return nil, xerrors.Errorf("failed to load encoders: %w", err)
@@ -68,7 +68,7 @@ func loadNodeChannel(u *url.URL, log logging.Logger) (network.NetworkChannel, er
 	log.Debug().Msg("hinters loaded")
 
 	var je encoder.Encoder
-	if e, err := encs.Encoder(jsonencoder.JSONType, ""); err != nil { // NOTE get latest json encoder
+	if e, err := encs.Encoder(jsonenc.JSONType, ""); err != nil { // NOTE get latest json encoder
 		return nil, xerrors.Errorf("json encoder needs for quic-network: %w", err)
 	} else {
 		je = e

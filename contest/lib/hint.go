@@ -11,8 +11,8 @@ import (
 	"github.com/spikeekips/mitum/base/valuehash"
 	"github.com/spikeekips/mitum/isaac"
 	"github.com/spikeekips/mitum/network"
-	bsonencoder "github.com/spikeekips/mitum/util/encoder/bson"
-	jsonencoder "github.com/spikeekips/mitum/util/encoder/json"
+	bsonenc "github.com/spikeekips/mitum/util/encoder/bson"
+	jsonenc "github.com/spikeekips/mitum/util/encoder/json"
 	"github.com/spikeekips/mitum/util/hint"
 )
 
@@ -32,11 +32,11 @@ var Hinters = []hint.Hinter{
 	block.BlockV0{},
 	block.ManifestV0{},
 	block.SuffrageInfoV0{},
-	bsonencoder.Encoder{},
+	bsonenc.Encoder{},
 	isaac.PolicyOperationBodyV0{},
 	isaac.SetPolicyOperationFactV0{},
 	isaac.SetPolicyOperationV0{},
-	jsonencoder.Encoder{},
+	jsonenc.Encoder{},
 	key.BTCPrivatekey{},
 	key.BTCPublickey{},
 	key.EtherPrivatekey{},

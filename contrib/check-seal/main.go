@@ -14,6 +14,7 @@ import (
 	"github.com/spikeekips/mitum/base/seal"
 	"github.com/spikeekips/mitum/contrib"
 	"github.com/spikeekips/mitum/util/encoder"
+	bsonenc "github.com/spikeekips/mitum/util/encoder/bson"
 	jsonenc "github.com/spikeekips/mitum/util/encoder/json"
 	"github.com/spikeekips/mitum/util/hint"
 )
@@ -23,12 +24,11 @@ var Version string = "v0.1-proto3"
 type mainFlags struct {
 	Version         bool   `help:"print version"`
 	Input           string `arg:"" help:"seal input file; '-' is stdin" optional:""`
-	NetworkIDString string `arg:"" name:"network-id" help:"network-id" optional:""`
+	NetworkIDString string ` name:"network-id" help:"network-id"`
 	networkID       []byte
+	Encoder         string `name:"encoder" help:"encoder type, {json, bson} default:json"`
 	encoder         encoder.Encoder
 	content         []byte
-	// TODO set encoder
-	// TODO set hint
 }
 
 func (cmd *mainFlags) Run() error {
@@ -107,11 +107,6 @@ func parse(flags *mainFlags) error {
 		}
 	}
 
-	flags.encoder = jsonenc.NewEncoder()
-	if _, err := encoder.LoadEncoders([]encoder.Encoder{flags.encoder}, contrib.Hinters...); err != nil {
-		return xerrors.Errorf("failed to load encoders: %w", err)
-	}
-
 	var content []byte
 	reader := bufio.NewReader(input)
 	b := make([]byte, 1024)
@@ -128,6 +123,26 @@ func parse(flags *mainFlags) error {
 		}
 	}
 	flags.content = content
+
+	if len(flags.Encoder) < 1 {
+		flags.Encoder = "json"
+	}
+
+	var enc encoder.Encoder
+	switch flags.Encoder {
+	case "json":
+		enc = jsonenc.NewEncoder()
+	case "bson":
+		enc = bsonenc.NewEncoder()
+	default:
+		return xerrors.Errorf("invalid encoder, %s", flags.Encoder)
+	}
+
+	if _, err := encoder.LoadEncoders([]encoder.Encoder{enc}, contrib.Hinters...); err != nil {
+		return xerrors.Errorf("failed to load encoders: %w", err)
+	}
+
+	flags.encoder = enc
 
 	return nil
 }

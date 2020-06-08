@@ -40,6 +40,7 @@ func createNodeRunnerFromDesign(f string, version util.Version, log logging.Logg
 		nr = n
 	}
 
+	log.Debug().Interface("design", design).Msg("load noderunner from design")
 	_ = nr.SetLogger(log)
 
 	return nr, nil

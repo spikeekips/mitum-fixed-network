@@ -224,7 +224,6 @@ func (bs *BaseStateHandler) TimerBroadcastingINITBallot(
 		if b, err := NewINITBallotV0WithVoteproof(
 			bs.localstate.Storage(),
 			bs.localstate.Node().Address(),
-			round,
 			voteproof,
 		); err != nil {
 			return nil, err
@@ -299,7 +298,6 @@ func (bs *BaseStateHandler) TimerTimedoutMoveNextRound(
 		if b, err := NewINITBallotV0WithVoteproof(
 			bs.localstate.Storage(),
 			bs.localstate.Node().Address(),
-			round,
 			bs.LastINITVoteproof(),
 		); err != nil {
 			return nil, err

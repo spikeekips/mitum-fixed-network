@@ -124,6 +124,14 @@ func parse(flags *mainFlags) error {
 	}
 	flags.content = content
 
+	if err := getEncoder(flags); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func getEncoder(flags *mainFlags) error {
 	if len(flags.Encoder) < 1 {
 		flags.Encoder = "json"
 	}

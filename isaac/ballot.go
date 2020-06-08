@@ -34,6 +34,10 @@ func NewINITBallotV0Round0(st storage.Storage, node base.Address) (ballot.INITBa
 		avp = vp
 	}
 
+	if avp != nil {
+		return NewINITBallotV0WithVoteproof(st, node, avp)
+	}
+
 	return ballot.NewINITBallotV0(
 		node,
 		m.Height()+1,
@@ -43,25 +47,49 @@ func NewINITBallotV0Round0(st storage.Storage, node base.Address) (ballot.INITBa
 	), nil
 }
 
-func NewINITBallotV0WithVoteproof(st storage.Storage, node base.Address, round base.Round, voteproof base.Voteproof) (
+func NewINITBallotV0WithVoteproof(st storage.Storage, node base.Address, voteproof base.Voteproof) (
 	ballot.INITBallotV0, error,
 ) {
-	var manifest block.Manifest
-	switch l, found, err := st.LastManifest(); {
-	case !found:
-		return ballot.INITBallotV0{}, xerrors.Errorf("last block not found: %w", err)
-	case err != nil:
-		return ballot.INITBallotV0{}, xerrors.Errorf("failed to get last block: %w", err)
-	default:
-		manifest = l
+	var height base.Height
+	var round base.Round
+	var previousBlock valuehash.Hash
+	switch voteproof.Stage() {
+	case base.StageINIT:
+		height = voteproof.Height()
+		round = voteproof.Round() + 1
+
+		var manifest block.Manifest
+		switch l, found, err := st.LastManifest(); {
+		case !found:
+			return ballot.INITBallotV0{}, xerrors.Errorf("last block not found: %w", err)
+		case err != nil:
+			return ballot.INITBallotV0{}, xerrors.Errorf("failed to get last block: %w", err)
+		default:
+			manifest = l
+		}
+		if manifest.Height() != voteproof.Height()-1 {
+			return ballot.INITBallotV0{},
+				xerrors.Errorf("invalid init voteproof.Height(), %d; it should be lastBlock, %d + 1",
+					voteproof.Height(), manifest.Height())
+		}
+
+		previousBlock = manifest.Hash()
+	case base.StageACCEPT:
+		height = voteproof.Height() + 1
+		round = base.Round(0)
+		if f, ok := voteproof.Majority().(ballot.ACCEPTBallotFact); !ok {
+			return ballot.INITBallotV0{},
+				xerrors.Errorf("invalid voteproof found; should have ACCEPTBallotFact, not %T", voteproof.Majority())
+		} else {
+			previousBlock = f.NewBlock()
+		}
 	}
 
-	// TODO height and round should rely on voteproof
 	return ballot.NewINITBallotV0(
 		node,
-		manifest.Height()+1,
+		height,
 		round,
-		manifest.Hash(),
+		previousBlock,
 		voteproof,
 	), nil
 }

@@ -53,7 +53,6 @@ type BlockUpdater interface {
 }
 
 type SuffrageInfo interface {
-	// TODO ActingSuffrage info should be inclufed
 	isvalid.IsValider
 	hint.Hinter
 	Proposer() base.Address

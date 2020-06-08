@@ -131,7 +131,7 @@ func (nr *NodeRunner) attachStorage() error {
 }
 
 func (nr *NodeRunner) attachNetwork() error {
-	// TODO support HTTP2 for testing
+	// FUTURE support HTTP2 for testing
 
 	l := nr.Log().WithLogger(func(ctx logging.Context) logging.Emitter {
 		return ctx.Str("target", "network")

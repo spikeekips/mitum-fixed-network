@@ -79,6 +79,8 @@ func (t *testStateConsensusHandler) TestWaitingProposalButTimedOut() {
 	vp, err := t.newVoteproof(base.StageINIT, initFact, t.localstate, t.remoteState)
 	t.NoError(err)
 
+	cs.SetLastINITVoteproof(vp)
+
 	t.NoError(cs.Activate(StateChangeContext{
 		fromState: base.StateJoining,
 		toState:   base.StateConsensus,
@@ -126,6 +128,7 @@ func (t *testStateConsensusHandler) TestWithProposalWaitACCEPTBallot() {
 
 	vp, err := t.newVoteproof(base.StageINIT, initFact, t.localstate, t.remoteState)
 	t.NoError(err)
+	cs.SetLastINITVoteproof(vp)
 
 	t.NoError(cs.Activate(StateChangeContext{
 		fromState: base.StateJoining,
@@ -178,6 +181,7 @@ func (t *testStateConsensusHandler) TestWithProposalWaitSIGNBallot() {
 
 	vp, err := t.newVoteproof(base.StageINIT, initFact, t.localstate, t.remoteState)
 	t.NoError(err)
+	cs.SetLastINITVoteproof(vp)
 
 	t.NoError(cs.Activate(StateChangeContext{
 		fromState: base.StateJoining,
@@ -225,10 +229,9 @@ func (t *testStateConsensusHandler) TestDraw() {
 
 	var vp base.Voteproof
 	{
-		ib := t.newINITBallot(t.localstate, base.Round(0), nil)
-		fact := ib.INITBallotFactV0
-
-		vp, _ = t.newVoteproof(base.StageINIT, fact, t.localstate, t.remoteState)
+		ibf := t.newINITBallotFact(t.localstate, base.Round(0))
+		vp, _ = t.newVoteproof(base.StageINIT, ibf, t.localstate, t.remoteState)
+		cs.SetLastINITVoteproof(vp)
 	}
 
 	t.NoError(cs.Activate(StateChangeContext{

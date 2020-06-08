@@ -7,6 +7,7 @@ import (
 	"sort"
 
 	"github.com/stretchr/testify/suite"
+	"golang.org/x/xerrors"
 
 	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/base/ballot"
@@ -211,7 +212,6 @@ func (t *baseTestStateHandler) newINITBallot(localstate *Localstate, round base.
 		if b, err := NewINITBallotV0WithVoteproof(
 			localstate.Storage(),
 			localstate.Node().Address(),
-			round,
 			voteproof,
 		); err != nil {
 			panic(err)
@@ -223,6 +223,24 @@ func (t *baseTestStateHandler) newINITBallot(localstate *Localstate, round base.
 	_ = ib.Sign(localstate.Node().Privatekey(), localstate.Policy().NetworkID())
 
 	return ib
+}
+
+func (t *baseTestStateHandler) newINITBallotFact(localstate *Localstate, round base.Round) ballot.INITBallotFactV0 {
+	var manifest block.Manifest
+	switch l, found, err := localstate.Storage().LastManifest(); {
+	case !found:
+		panic(xerrors.Errorf("last block not found: %w", err))
+	case err != nil:
+		panic(xerrors.Errorf("failed to get last block: %w", err))
+	default:
+		manifest = l
+	}
+
+	return ballot.NewINITBallotFactV0(
+		manifest.Height()+1,
+		round,
+		manifest.Hash(),
+	)
 }
 
 func (t *baseTestStateHandler) newProposal(localstate *Localstate, round base.Round, operations, seals []valuehash.Hash) ballot.Proposal {

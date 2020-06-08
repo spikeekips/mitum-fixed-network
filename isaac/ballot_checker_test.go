@@ -93,7 +93,10 @@ func (t *testBallotChecker) TestCheckWithLastBlock() {
 	t.True(found)
 
 	{ // same height and next round
-		ib := t.newINITBallot(t.localstate, avp.Round()+1, t.lastINITVoteproof(t.localstate))
+		ibf := t.newINITBallotFact(t.localstate, base.Round(1))
+		vp, _ := t.newVoteproof(base.StageINIT, ibf, t.localstate, t.remoteState)
+
+		ib := t.newINITBallot(t.localstate, vp.Round()+1, vp)
 
 		bc, err := NewBallotChecker(ib, t.localstate, t.suf)
 		t.NoError(err)

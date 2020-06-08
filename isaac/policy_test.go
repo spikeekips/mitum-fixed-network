@@ -47,6 +47,7 @@ func (t *testPolicy) TestLoadWithoutStorage() {
 	t.Equal(df.IntervalBroadcastingACCEPTBallot, p.IntervalBroadcastingACCEPTBallot())
 	t.Equal(df.NumberOfActingSuffrageNodes, p.NumberOfActingSuffrageNodes())
 	t.Equal(df.TimespanValidBallot, p.TimespanValidBallot())
+	t.Equal(df.TimeoutProcessProposal, p.TimeoutProcessProposal())
 }
 
 func (t *testPolicy) TestLoadFromStorage() {
@@ -108,6 +109,7 @@ func (t *testPolicy) TestLoadFromStorage() {
 	t.Equal(df.IntervalBroadcastingACCEPTBallot, p.IntervalBroadcastingACCEPTBallot())
 	t.Equal(df.NumberOfActingSuffrageNodes, p.NumberOfActingSuffrageNodes())
 	t.Equal(df.TimespanValidBallot, p.TimespanValidBallot())
+	t.Equal(df.TimeoutProcessProposal, p.TimeoutProcessProposal())
 }
 
 func TestPolicy(t *testing.T) {

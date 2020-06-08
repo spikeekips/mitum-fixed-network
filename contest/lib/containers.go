@@ -47,7 +47,8 @@ var policyBody = `{
   "wait_broadcasting_accept_ballot": %d,
   "interval_broadcasting_accept_ballot": 5000000000,
   "number_of_acting_suffrage_nodes": 1,
-  "timespan_valid_ballot": 60000000000
+  "timespan_valid_ballot": 60000000000,
+  "timeout_process_proposal": 30000000000
 }`
 
 type Containers struct {

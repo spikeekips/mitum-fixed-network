@@ -24,6 +24,7 @@ func (po PolicyOperationBodyV0) MarshalBSON() ([]byte, error) {
 			"interval_broadcasting_accept_ballot": po.IntervalBroadcastingACCEPTBallot,
 			"number_of_acting_suffrage_nodes":     po.NumberOfActingSuffrageNodes,
 			"timespan_valid_ballot":               po.TimespanValidBallot,
+			"timeout_process_proposal":            po.TimeoutProcessProposal,
 		},
 	))
 }
@@ -37,6 +38,7 @@ type PolicyOperationBodyV0UnpackerBSON struct {
 	IntervalBroadcastingACCEPTBallot time.Duration `bson:"interval_broadcasting_accept_ballot"`
 	NumberOfActingSuffrageNodes      uint          `bson:"number_of_acting_suffrage_nodes"`
 	TimespanValidBallot              time.Duration `bson:"timespan_valid_ballot"`
+	TimeoutProcessProposal           time.Duration `bson:"timeout_process_proposal"`
 }
 
 func (po *PolicyOperationBodyV0) UnpackBSON(b []byte, enc *bsonenc.Encoder) error {
@@ -54,6 +56,7 @@ func (po *PolicyOperationBodyV0) UnpackBSON(b []byte, enc *bsonenc.Encoder) erro
 		up.IntervalBroadcastingACCEPTBallot,
 		up.NumberOfActingSuffrageNodes,
 		up.TimespanValidBallot,
+		up.TimeoutProcessProposal,
 	)
 }
 

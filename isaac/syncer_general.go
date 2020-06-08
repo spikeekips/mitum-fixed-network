@@ -648,7 +648,7 @@ func (cs *GeneralSyncer) callbackFetchManifestsSlice(node network.Node, heights 
 	var manifests []block.Manifest
 
 	missing := heights
-	_ = util.Retry(retries, time.Millisecond*300, func() error { // TODO retry count should be configurable
+	_ = util.Retry(retries, time.Millisecond*300, func() error {
 		bs, err := cs.fetchManifests(node, missing)
 		if err != nil {
 			return err

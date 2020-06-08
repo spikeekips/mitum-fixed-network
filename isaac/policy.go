@@ -24,7 +24,8 @@ type LocalPolicy struct {
 	numberOfActingSuffrageNodes      *util.LockedItem
 	// timespanValidBallot is used to check the SignedAt time of incoming
 	// Ballot should be within timespanValidBallot on now. By default, 1 minute.
-	timespanValidBallot *util.LockedItem
+	timespanValidBallot    *util.LockedItem
+	timeoutProcessProposal *util.LockedItem
 }
 
 func NewLocalPolicy(st storage.Storage, networkID []byte) (*LocalPolicy, error) {
@@ -41,6 +42,7 @@ func NewLocalPolicy(st storage.Storage, networkID []byte) (*LocalPolicy, error) 
 	lp.intervalBroadcastingACCEPTBallot = util.NewLockedItem(nil)
 	lp.numberOfActingSuffrageNodes = util.NewLockedItem(nil)
 	lp.timespanValidBallot = util.NewLockedItem(nil)
+	lp.timeoutProcessProposal = util.NewLockedItem(nil)
 
 	if err := lp.load(); err != nil {
 		return nil, err
@@ -75,6 +77,7 @@ func (lp *LocalPolicy) load() error {
 	lp.intervalBroadcastingACCEPTBallot.SetValue(loaded.IntervalBroadcastingACCEPTBallot)
 	lp.numberOfActingSuffrageNodes.SetValue(loaded.NumberOfActingSuffrageNodes)
 	lp.timespanValidBallot.SetValue(loaded.TimespanValidBallot)
+	lp.timeoutProcessProposal.SetValue(loaded.TimeoutProcessProposal)
 
 	return nil
 }
@@ -194,6 +197,20 @@ func (lp *LocalPolicy) SetTimespanValidBallot(d time.Duration) (*LocalPolicy, er
 	}
 
 	_ = lp.timespanValidBallot.SetValue(d)
+
+	return lp, nil
+}
+
+func (lp *LocalPolicy) TimeoutProcessProposal() time.Duration {
+	return lp.timeoutProcessProposal.Value().(time.Duration)
+}
+
+func (lp *LocalPolicy) SetTimeoutProcessProposal(d time.Duration) (*LocalPolicy, error) {
+	if d < 1 {
+		return nil, xerrors.Errorf("TimeoutProcessProposal too short; %v", d)
+	}
+
+	_ = lp.timeoutProcessProposal.SetValue(d)
 
 	return lp, nil
 }

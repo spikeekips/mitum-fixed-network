@@ -19,6 +19,7 @@ type PolicyOperationBodyV0PackerJSON struct {
 	IntervalBroadcastingACCEPTBallot time.Duration `json:"interval_broadcasting_accept_ballot"`
 	NumberOfActingSuffrageNodes      uint          `json:"number_of_acting_suffrage_nodes"`
 	TimespanValidBallot              time.Duration `json:"timespan_valid_ballot"`
+	TimeoutProcessProposal           time.Duration `json:"timeout_process_proposal"`
 }
 
 func (po PolicyOperationBodyV0) MarshalJSON() ([]byte, error) {
@@ -35,6 +36,7 @@ func (po PolicyOperationBodyV0) MarshalJSON() ([]byte, error) {
 		IntervalBroadcastingACCEPTBallot: po.IntervalBroadcastingACCEPTBallot,
 		NumberOfActingSuffrageNodes:      po.NumberOfActingSuffrageNodes,
 		TimespanValidBallot:              po.TimespanValidBallot,
+		TimeoutProcessProposal:           po.TimeoutProcessProposal,
 	})
 }
 
@@ -57,6 +59,7 @@ func (po *PolicyOperationBodyV0) UnpackJSON(b []byte, enc *jsonenc.Encoder) erro
 		up.IntervalBroadcastingACCEPTBallot,
 		up.NumberOfActingSuffrageNodes,
 		up.TimespanValidBallot,
+		up.TimeoutProcessProposal,
 	)
 }
 

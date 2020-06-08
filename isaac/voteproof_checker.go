@@ -81,9 +81,7 @@ func (vc *VoteProofChecker) CheckNodeIsInSuffrage() (bool, error) {
 	return true, nil
 }
 
-// TODO CheckThreshold checks Threshold in Voteproof should be checked whether
-// it has correct value at that block height.
-
+// CheckThreshold checks Threshold only for new incoming Voteproof.
 func (vc *VoteProofChecker) CheckThreshold() (bool, error) {
 	threshold := vc.localstate.Policy().Threshold()
 	if !threshold.Equal(vc.voteproof.Threshold()) {
@@ -98,7 +96,6 @@ func (vc *VoteProofChecker) CheckThreshold() (bool, error) {
 }
 
 type VoteproofConsensusStateChecker struct {
-	// TODO rename; it is not only used for consensus state
 	*logging.Logging
 	lastManifest      block.Manifest
 	lastINITVoteproof base.Voteproof
@@ -124,7 +121,6 @@ func NewVoteproofConsensusStateChecker(
 }
 
 func (vpc *VoteproofConsensusStateChecker) CheckHeight() (bool, error) {
-	// TODO reduce the duplicated voteproof.
 	l := loggerWithVoteproof(vpc.voteproof, vpc.Log())
 
 	var height base.Height

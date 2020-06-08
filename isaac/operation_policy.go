@@ -36,6 +36,7 @@ func DefaultPolicy() PolicyOperationBodyV0 {
 		IntervalBroadcastingACCEPTBallot: time.Second * 1,
 		NumberOfActingSuffrageNodes:      uint(1),
 		TimespanValidBallot:              time.Minute * 1,
+		TimeoutProcessProposal:           time.Second * 30,
 	}
 }
 
@@ -48,6 +49,7 @@ type PolicyOperationBodyV0 struct {
 	IntervalBroadcastingACCEPTBallot time.Duration  `json:"interval_broadcasting_accept_ballot"`
 	NumberOfActingSuffrageNodes      uint           `json:"number_of_acting_suffrage_nodes"`
 	TimespanValidBallot              time.Duration  `json:"timespan_valid_ballot"`
+	TimeoutProcessProposal           time.Duration  `json:"timeout_process_proposal"`
 }
 
 func (po PolicyOperationBodyV0) Hint() hint.Hint {
@@ -64,6 +66,7 @@ func (po PolicyOperationBodyV0) Bytes() []byte {
 		util.DurationToBytes(po.IntervalBroadcastingACCEPTBallot),
 		util.UintToBytes(po.NumberOfActingSuffrageNodes),
 		util.DurationToBytes(po.TimespanValidBallot),
+		util.DurationToBytes(po.TimeoutProcessProposal),
 	)
 }
 
@@ -79,6 +82,7 @@ func (po PolicyOperationBodyV0) IsValid([]byte) error {
 		"WaitBroadcastingACCEPTBallot":     po.WaitBroadcastingACCEPTBallot,
 		"IntervalBroadcastingACCEPTBallot": po.IntervalBroadcastingACCEPTBallot,
 		"TimespanValidBallot":              po.TimespanValidBallot,
+		"TimeoutProcessProposal":           po.TimeoutProcessProposal,
 	} {
 		if d < 0 {
 			return xerrors.Errorf("%s is too narrow; duration=%v", k, d)

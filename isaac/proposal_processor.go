@@ -3,6 +3,7 @@ package isaac
 import (
 	"fmt"
 	"sync"
+	"time"
 
 	"github.com/spikeekips/avl"
 	"golang.org/x/xerrors"
@@ -62,24 +63,10 @@ func (dp *ProposalProcessorV0) ProcessINIT(ph valuehash.Hash, initVoteproof base
 	}
 
 	var proposal ballot.Proposal
-	if sl, found, err := dp.localstate.Storage().Seal(ph); !found {
-		return nil, storage.NotFoundError.Errorf("seal not found")
-	} else if err != nil {
+	if pr, err := dp.checkProposal(ph, initVoteproof); err != nil {
 		return nil, err
-	} else if pr, ok := sl.(ballot.Proposal); !ok {
-		return nil, xerrors.Errorf("seal is not Proposal: %T", sl)
 	} else {
 		proposal = pr
-	}
-
-	{
-		timespan := dp.localstate.Policy().TimespanValidBallot()
-		if proposal.SignedAt().Before(initVoteproof.FinishedAt().Add(timespan * -1)) {
-			return nil, xerrors.Errorf(
-				"Proposal was sent before Voteproof; SignedAt=%s now=%s timespan=%s",
-				proposal.SignedAt(), initVoteproof.FinishedAt(), timespan,
-			)
-		}
 	}
 
 	processor, err := newProposalProcessorV0(dp.localstate, dp.suffrage, proposal)
@@ -120,6 +107,29 @@ func (dp *ProposalProcessorV0) ProcessACCEPT(
 	defer dp.processors.Delete(ph)
 
 	return processor.bs, nil
+}
+
+func (dp *ProposalProcessorV0) checkProposal(ph valuehash.Hash, initVoteproof base.Voteproof) (ballot.Proposal, error) {
+	var proposal ballot.Proposal
+	if sl, found, err := dp.localstate.Storage().Seal(ph); !found {
+		return nil, storage.NotFoundError.Errorf("seal not found")
+	} else if err != nil {
+		return nil, err
+	} else if pr, ok := sl.(ballot.Proposal); !ok {
+		return nil, xerrors.Errorf("seal is not Proposal: %T", sl)
+	} else {
+		proposal = pr
+	}
+
+	timespan := dp.localstate.Policy().TimespanValidBallot()
+	if proposal.SignedAt().Before(initVoteproof.FinishedAt().Add(timespan * -1)) {
+		return nil, xerrors.Errorf(
+			"Proposal was sent before Voteproof; SignedAt=%s now=%s timespan=%s",
+			proposal.SignedAt(), initVoteproof.FinishedAt(), timespan,
+		)
+	}
+
+	return proposal, nil
 }
 
 type proposalProcessorV0 struct {
@@ -185,6 +195,34 @@ func newProposalProcessorV0(
 }
 
 func (pp *proposalProcessorV0) processINIT(initVoteproof base.Voteproof) (block.Block, error) {
+	errChan := make(chan error)
+	blkChan := make(chan block.Block)
+	go func() {
+		blk, err := pp.process(initVoteproof)
+		if err != nil {
+			errChan <- err
+
+			return
+		}
+
+		blkChan <- blk
+	}()
+
+	// FUTURE if timed out, the next proposal may be able to pass the timeout.
+	// The long-taken operations should be checked and eliminated.
+	var blk block.Block
+	select {
+	case <-time.After(pp.localstate.Policy().TimeoutProcessProposal()):
+		return nil, xerrors.Errorf("timeout to process Proposal")
+	case err := <-errChan:
+		return nil, err
+	case blk = <-blkChan:
+	}
+
+	return blk, nil
+}
+
+func (pp *proposalProcessorV0) process(initVoteproof base.Voteproof) (block.Block, error) {
 	if pp.block != nil {
 		return pp.block, nil
 	}

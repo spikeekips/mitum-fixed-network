@@ -144,6 +144,25 @@ func (t *testProposalProcessor) TestNotFoundInProposal() {
 	}
 }
 
+func (t *testProposalProcessor) TestTimeoutProcessProposal() {
+	t.localstate.Policy().SetTimeoutProcessProposal(1)
+
+	pm := NewProposalMaker(t.localstate)
+
+	ib := t.newINITBallot(t.localstate, base.Round(0), nil)
+	initFact := ib.INITBallotFactV0
+
+	ivp, err := t.newVoteproof(base.StageINIT, initFact, t.localstate, t.remoteState)
+	proposal, err := pm.Proposal(ivp.Round())
+
+	_ = t.localstate.Storage().NewProposal(proposal)
+
+	dp := NewProposalProcessorV0(t.localstate, t.suffrage(t.localstate))
+
+	_, err = dp.ProcessINIT(proposal.Hash(), ivp)
+	t.Contains(err.Error(), "timeout to process Proposal")
+}
+
 func TestProposalProcessor(t *testing.T) {
 	suite.Run(t, new(testProposalProcessor))
 }

@@ -19,7 +19,8 @@ func (po *PolicyOperationBodyV0) unpack(
 	waitBroadcastingACCEPTBallot time.Duration,
 	intervalBroadcastingACCEPTBallot time.Duration,
 	numberOfActingSuffrageNodes uint,
-	timespanValidBallot time.Duration,
+	timespanValidBallot,
+	timeoutProcessProposal time.Duration,
 ) error {
 	var err error
 
@@ -42,6 +43,7 @@ func (po *PolicyOperationBodyV0) unpack(
 	po.IntervalBroadcastingACCEPTBallot = intervalBroadcastingACCEPTBallot
 	po.NumberOfActingSuffrageNodes = numberOfActingSuffrageNodes
 	po.TimespanValidBallot = timespanValidBallot
+	po.TimeoutProcessProposal = timeoutProcessProposal
 
 	return nil
 }

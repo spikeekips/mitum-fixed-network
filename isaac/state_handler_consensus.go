@@ -218,13 +218,12 @@ func (cs *StateConsensusHandler) handleProposal(proposal ballot.Proposal) error 
 
 	l.Debug().Msg("got proposal")
 
-	// TODO if processing takes too long?
-	blk, err := cs.proposalProcessor.ProcessINIT(proposal.Hash(), cs.LastINITVoteproof())
-	if err != nil {
+	if err := cs.timers.StopTimers([]string{TimerIDTimedoutMoveNextRound}); err != nil {
 		return err
 	}
 
-	if err := cs.timers.StopTimers([]string{TimerIDTimedoutMoveNextRound}); err != nil {
+	blk, err := cs.proposalProcessor.ProcessINIT(proposal.Hash(), cs.LastINITVoteproof())
+	if err != nil {
 		return err
 	}
 

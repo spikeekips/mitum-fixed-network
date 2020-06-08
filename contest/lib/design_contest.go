@@ -3,7 +3,6 @@ package contestlib
 import (
 	"io/ioutil"
 	"path/filepath"
-	"time"
 
 	"golang.org/x/xerrors"
 	"gopkg.in/yaml.v3"
@@ -102,32 +101,20 @@ func (cd *ContestDesign) loadConditionActions() error {
 }
 
 type ContestConfigDesign struct {
-	Threshold                    float64       `yaml:",omitempty"`
-	WaitBroadcastingACCEPTBallot time.Duration `yaml:"wait_broadcasting_accept_ballot,omitempty"`
+	GenesisPolicy *ContestPolicyDesign
 }
 
 func NewContestConfigDesign() *ContestConfigDesign {
 	return &ContestConfigDesign{
-		Threshold:                    67.0,
-		WaitBroadcastingACCEPTBallot: time.Second * 5,
+		GenesisPolicy: NewContestPolicyDesign(),
 	}
 }
 
 func (cc *ContestConfigDesign) IsValid([]byte) error {
-	d := NewContestConfigDesign()
-
-	if cc.Threshold < 0 {
-		return xerrors.Errorf("threshold must be over 0: %v", cc.Threshold)
-	} else if cc.Threshold < 1 {
-		cc.Threshold = d.Threshold
-	}
-
-	if cc.WaitBroadcastingACCEPTBallot < 0 {
-		return xerrors.Errorf(
-			"wait_broadcasting_accept_ballot must be over 0: %v", cc.WaitBroadcastingACCEPTBallot,
-		)
-	} else if cc.WaitBroadcastingACCEPTBallot < 1 {
-		cc.WaitBroadcastingACCEPTBallot = d.WaitBroadcastingACCEPTBallot
+	if cc.GenesisPolicy == nil {
+		cc.GenesisPolicy = NewContestPolicyDesign()
+	} else if err := cc.GenesisPolicy.IsValid(nil); err != nil {
+		return err
 	}
 
 	return nil

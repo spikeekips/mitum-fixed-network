@@ -34,23 +34,6 @@ var (
 	ContainerLabel       = "contest"
 )
 
-// TODO use golang string template
-var policyBody = `{
-  "_hint": {
-    "type": { "name": "policy-body-v0", "code": "0801" },
-    "version": "0.0.1"
-  },
-  "threshold": [ %d, %f ],
-  "timeout_waiting_proposal": 5000000000,
-  "interval_broadcasting_init_ballot": 1000000000,
-  "interval_broadcasting_proposal": 1000000000,
-  "wait_broadcasting_accept_ballot": %d,
-  "interval_broadcasting_accept_ballot": 5000000000,
-  "number_of_acting_suffrage_nodes": 1,
-  "timespan_valid_ballot": 60000000000,
-  "timeout_process_proposal": 30000000000
-}`
-
 type Containers struct {
 	sync.RWMutex
 	*logging.Logging
@@ -747,29 +730,11 @@ func (ct *Container) nodeDesign(isGenesisNode bool) NodeDesign {
 		Component:        ct.design.Component,
 	}
 
-	nd.GenesisOperations = ct.genesisOperationDesign(isGenesisNode)
+	if isGenesisNode {
+		nd.GenesisPolicy = ct.contestDesign.Config.GenesisPolicy
+	}
 
 	return nd
-}
-
-func (ct *Container) genesisOperationDesign(isGenesisNode bool) []*OperationDesign {
-	if !isGenesisNode {
-		return nil
-	}
-
-	var ops []*OperationDesign
-	if isGenesisNode {
-		ops = append(ops, &OperationDesign{
-			BodyString: fmt.Sprintf(
-				policyBody,
-				len(ct.rds),
-				ct.contestDesign.Config.Threshold,
-				ct.contestDesign.Config.WaitBroadcastingACCEPTBallot,
-			),
-		})
-	}
-
-	return ops
 }
 
 func (ct *Container) configCreate(cmd []string) *container.Config {

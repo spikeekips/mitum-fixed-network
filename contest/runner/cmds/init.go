@@ -3,6 +3,7 @@ package cmds
 import (
 	"golang.org/x/xerrors"
 
+	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/base/block"
 	"github.com/spikeekips/mitum/base/operation"
 	contestlib "github.com/spikeekips/mitum/contest/lib"
@@ -34,15 +35,12 @@ func (cmd *InitCommand) run(log logging.Logger) error {
 	}
 
 	var ops []operation.Operation
-	for _, f := range nr.Design().GenesisOperations {
-		if op, err := cmd.loadOperationBody(f.Body(), nr.Design()); err != nil {
-			return err
-		} else {
-			log.Debug().Interface("operation", op).Msg("operation loaded")
-
-			ops = append(ops, op)
-		}
+	if op, err := cmd.loadPolicyOperation(nr.Design()); err != nil {
+		return err
+	} else {
+		ops = append(ops, op)
 	}
+
 	log.Debug().Int("operations", len(ops)).Msg("operations loaded")
 
 	if err := nr.Initialize(); err != nil {
@@ -100,29 +98,31 @@ func (cmd *InitCommand) checkExisting(nr *contestlib.NodeRunner, log logging.Log
 	return nil
 }
 
-func (cmd *InitCommand) loadOperationBody(body interface{}, design *contestlib.NodeDesign) (
+func (cmd *InitCommand) loadPolicyOperation(design *contestlib.NodeDesign) (
 	operation.Operation, error,
 ) {
-	switch t := body.(type) {
-	case isaac.PolicyOperationBodyV0:
-		token := []byte("genesis-policies-from-contest")
-		var fact isaac.SetPolicyOperationFactV0
-		if f, err := isaac.NewSetPolicyOperationFactV0(design.Privatekey().Publickey(), token, t); err != nil {
-			return nil, err
-		} else {
-			fact = f
-		}
+	t := design.GenesisPolicy.PolicyOperationBodyV0
+	if r, err := base.NewThreshold(uint(len(design.Nodes)), design.GenesisPolicy.Threshold); err != nil {
+		return nil, err
+	} else {
+		t.Threshold = r
+	}
 
-		if op, err := isaac.NewSetPolicyOperationV0FromFact(
-			design.Privatekey(),
-			fact,
-			design.NetworkID(),
-		); err != nil {
-			return nil, xerrors.Errorf("failed to create SetPolicyOperation: %w", err)
-		} else {
-			return op, nil
-		}
-	default:
-		return nil, xerrors.Errorf("unsupported body for genesis operation: %T", body)
+	token := []byte("genesis-policies-from-contest")
+	var fact isaac.SetPolicyOperationFactV0
+	if f, err := isaac.NewSetPolicyOperationFactV0(design.Privatekey().Publickey(), token, t); err != nil {
+		return nil, err
+	} else {
+		fact = f
+	}
+
+	if op, err := isaac.NewSetPolicyOperationV0FromFact(
+		design.Privatekey(),
+		fact,
+		design.NetworkID(),
+	); err != nil {
+		return nil, xerrors.Errorf("failed to create SetPolicyOperation: %w", err)
+	} else {
+		return op, nil
 	}
 }

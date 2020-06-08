@@ -198,9 +198,9 @@ func (cmd *StartCommand) loadDesign(f string) error {
 		cmd.design = d
 	}
 
-	if cmd.design.Config.Threshold < 67.0 {
+	if cmd.design.Config.GenesisPolicy.Threshold < 67.0 {
 		cmd.log.Warn().
-			Float64("threshold", cmd.design.Config.Threshold).
+			Float64("threshold", cmd.design.Config.GenesisPolicy.Threshold).
 			Msg("threshold is too low, recommend over 67.0")
 	}
 

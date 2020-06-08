@@ -18,16 +18,16 @@ import (
 )
 
 type NodeDesign struct {
-	encs              *encoder.Encoders
-	Address           string
-	PrivatekeyString  string `yaml:"privatekey"`
-	Storage           string
-	NetworkIDString   string `yaml:"network-id,omitempty"`
-	Network           *NetworkDesign
-	GenesisOperations []*OperationDesign `yaml:"genesis-operations,omitempty"`
-	Component         *ContestComponentDesign
-	privatekey        key.Privatekey
-	Nodes             []*RemoteDesign
+	encs             *encoder.Encoders
+	Address          string
+	PrivatekeyString string `yaml:"privatekey"`
+	Storage          string
+	NetworkIDString  string `yaml:"network-id,omitempty"`
+	Network          *NetworkDesign
+	GenesisPolicy    *ContestPolicyDesign `yaml:"genesis-policy,omitempty"`
+	Component        *ContestComponentDesign
+	privatekey       key.Privatekey
+	Nodes            []*RemoteDesign
 }
 
 func LoadNodeDesignFromFile(f string, encs *encoder.Encoders) (*NodeDesign, error) {
@@ -82,12 +82,11 @@ func (nd *NodeDesign) IsValid([]byte) error {
 		addrs[r.Address] = struct{}{}
 	}
 
-	for _, o := range nd.GenesisOperations {
-		o.encs = nd.encs
-
-		if err := o.IsValid(nil); err != nil {
-			return err
-		}
+	if nd.GenesisPolicy == nil {
+		nd.GenesisPolicy = NewContestPolicyDesign()
+	}
+	if err := nd.GenesisPolicy.IsValid(nil); err != nil {
+		return err
 	}
 
 	if nd.Component == nil {

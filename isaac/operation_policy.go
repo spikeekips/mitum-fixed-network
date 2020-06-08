@@ -28,6 +28,7 @@ const PolicyOperationKey = "network_policy"
 func DefaultPolicy() PolicyOperationBodyV0 {
 	return PolicyOperationBodyV0{
 		// NOTE default threshold assumes only one node exists, it means the network is just booted.
+		// TODO Threshold.Total is also determined by the number of Localstate.Nodes().
 		Threshold:                        base.MustNewThreshold(1, 100),
 		TimeoutWaitingProposal:           time.Second * 5,
 		IntervalBroadcastingINITBallot:   time.Second * 1,
@@ -41,15 +42,15 @@ func DefaultPolicy() PolicyOperationBodyV0 {
 }
 
 type PolicyOperationBodyV0 struct {
-	Threshold                        base.Threshold `json:"threshold"`
-	TimeoutWaitingProposal           time.Duration  `json:"timeout_waiting_proposal"`
-	IntervalBroadcastingINITBallot   time.Duration  `json:"interval_broadcasting_init_ballot"`
-	IntervalBroadcastingProposal     time.Duration  `json:"interval_broadcasting_proposal"`
-	WaitBroadcastingACCEPTBallot     time.Duration  `json:"wait_broadcasting_accept_ballot"`
-	IntervalBroadcastingACCEPTBallot time.Duration  `json:"interval_broadcasting_accept_ballot"`
-	NumberOfActingSuffrageNodes      uint           `json:"number_of_acting_suffrage_nodes"`
-	TimespanValidBallot              time.Duration  `json:"timespan_valid_ballot"`
-	TimeoutProcessProposal           time.Duration  `json:"timeout_process_proposal"`
+	Threshold                        base.Threshold `json:"threshold" yaml:"-"`
+	TimeoutWaitingProposal           time.Duration  `json:"timeout_waiting_proposal" yaml:"timeout_waiting_proposal"`
+	IntervalBroadcastingINITBallot   time.Duration  `json:"interval_broadcasting_init_ballot" yaml:"interval_broadcasting_init_ballot"`     // nolint
+	IntervalBroadcastingProposal     time.Duration  `json:"interval_broadcasting_proposal" yaml:"interval_broadcasting_proposal"`           // nolint
+	WaitBroadcastingACCEPTBallot     time.Duration  `json:"wait_broadcasting_accept_ballot" yaml:"wait_broadcasting_accept_ballot"`         // nolint
+	IntervalBroadcastingACCEPTBallot time.Duration  `json:"interval_broadcasting_accept_ballot" yaml:"interval_broadcasting_accept_ballot"` // nolint
+	NumberOfActingSuffrageNodes      uint           `json:"number_of_acting_suffrage_nodes" yaml:"number_of_acting_suffrage_nodes"`         // nolint
+	TimespanValidBallot              time.Duration  `json:"timespan_valid_ballot" yaml:"timespan_valid_ballot"`
+	TimeoutProcessProposal           time.Duration  `json:"timeout_process_proposal" yaml:"timeout_process_proposal"`
 }
 
 func (po PolicyOperationBodyV0) Hint() hint.Hint {

@@ -63,7 +63,17 @@ jobs:
       - <<: *workspace
       - run:
          name: unit test
-         command: go test -race -tags 'test mongodb' -timeout 5m -v -coverprofile=coverage.txt -covermode=atomic ./...
+         command: >
+            for i in $(go list ./...);
+            do
+                n=$(echo $i | sed -e "s@github.com/spikeekips/mitum@.@g")
+                echo "> testing" $n
+                go test -race -tags "test mongodb" -v -timeout 5m $n -run .
+                e=$?
+                echo "< exit" $e
+                [ $e -ne 0 ] && exit $e
+            done;
+            exit 0
 
       - run:
          name: codecov

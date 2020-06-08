@@ -178,7 +178,7 @@ func (sy *Syncers) stateChanged(ctx SyncerStateChangedContext) error {
 
 				return err
 			} else {
-				sy.Log().Debug().Msg("Policy updated")
+				sy.Log().Debug().Interface("policy", sy.localstate.Policy()).Msg("Policy updated")
 			}
 
 			sy.whenFinished(sy.lastSyncer().HeightTo())

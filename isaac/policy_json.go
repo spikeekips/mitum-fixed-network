@@ -20,6 +20,7 @@ func (lp *LocalPolicy) MarshalJSON() ([]byte, error) {
 	}{
 		NID: string(lp.NetworkID()),
 		TP:  lp.TimeoutWaitingProposal().String(),
+		TH:  lp.Threshold(),
 		II:  lp.IntervalBroadcastingINITBallot().String(),
 		PR:  lp.IntervalBroadcastingProposal().String(),
 		WB:  lp.WaitBroadcastingACCEPTBallot().String(),

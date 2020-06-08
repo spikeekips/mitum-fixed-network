@@ -537,6 +537,7 @@ func (nr *NodeRunner) Start() error {
 		return err
 	}
 
+	nr.Log().Debug().Interface("policy", nr.localstate.Policy()).Msg("policies")
 	if err := nr.consensusStates.Start(); err != nil {
 		return err
 	}

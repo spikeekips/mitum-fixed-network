@@ -87,7 +87,6 @@ func (cs *StateBootingHandler) check() error {
 		cs.Log().Error().Err(err).Msg("checked block")
 
 		if xerrors.Is(err, storage.NotFoundError) {
-			// TODO syncing handler should support syncing without voteproof and ballot
 			if err0 := cs.ChangeState(base.StateSyncing, nil, nil); err0 != nil {
 				return err0
 			}

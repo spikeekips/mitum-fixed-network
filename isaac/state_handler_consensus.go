@@ -29,9 +29,8 @@ Consensus state is started by new INIT Voteproof and waits next Proposal.
 type StateConsensusHandler struct {
 	proposalLock sync.Mutex
 	*BaseStateHandler
-	suffrage          base.Suffrage
-	proposalMaker     *ProposalMaker
-	processedProposal ballot.Proposal
+	suffrage      base.Suffrage
+	proposalMaker *ProposalMaker
 }
 
 func NewStateConsensusHandler(
@@ -113,13 +112,6 @@ func (cs *StateConsensusHandler) waitProposal(voteproof base.Voteproof) error {
 	defer cs.proposalLock.Unlock()
 
 	cs.Log().Debug().Msg("waiting proposal")
-
-	if cs.processedProposal != nil {
-		if voteproof.Height() == cs.processedProposal.Height() && voteproof.Round() == cs.processedProposal.Round() {
-			cs.Log().Debug().Msg("proposal is already processed")
-			return nil
-		}
-	}
 
 	if proposed, err := cs.proposal(voteproof); err != nil {
 		return err
@@ -226,17 +218,6 @@ func (cs *StateConsensusHandler) handleProposal(proposal ballot.Proposal) error 
 
 	l.Debug().Msg("got proposal")
 
-	// TODO don't need to remember processedProposal?
-	if cs.processedProposal != nil {
-		if proposal.Height() <= cs.processedProposal.Height() {
-			l.Debug().Msg("proposal is already processed")
-			return nil
-		} else if proposal.Height() == cs.processedProposal.Height() && proposal.Round() <= cs.processedProposal.Round() {
-			l.Debug().Msg("proposal is already processed")
-			return nil
-		}
-	}
-
 	// TODO if processing takes too long?
 	blk, err := cs.proposalProcessor.ProcessINIT(proposal.Hash(), cs.LastINITVoteproof())
 	if err != nil {
@@ -245,8 +226,6 @@ func (cs *StateConsensusHandler) handleProposal(proposal ballot.Proposal) error 
 
 	if err := cs.timers.StopTimers([]string{TimerIDTimedoutMoveNextRound}); err != nil {
 		return err
-	} else {
-		cs.processedProposal = proposal
 	}
 
 	acting := cs.suffrage.Acting(proposal.Height(), proposal.Round())

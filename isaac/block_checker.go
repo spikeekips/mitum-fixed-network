@@ -137,6 +137,3 @@ func (bc *BlocksValidationChecker) CheckSerialized() (bool, error) {
 
 	return true, nil
 }
-
-// TODO Block has suffrage infor and consensus info, so it's voteproof should be
-// validated by suffrage info.

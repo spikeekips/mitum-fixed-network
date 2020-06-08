@@ -21,9 +21,6 @@ func NewProposalMaker(localstate *Localstate) *ProposalMaker {
 }
 
 func (pm *ProposalMaker) operations() ([]valuehash.Hash, []valuehash.Hash, error) {
-	// TODO to reduce the marshal/unmarshal, consider to get the hashes for
-	// staged like 'StagedOperationSealHashes'.
-
 	mo := map[ /* Operation.Hash() */ valuehash.Hash]struct{}{}
 
 	var operations, seals, uselessSeals []valuehash.Hash

@@ -175,7 +175,8 @@ func (t *baseTestStateHandler) newVoteproof(
 	vp := base.NewTestVoteproofV0(
 		height,
 		round,
-		states[0].Policy().Threshold(),
+		t.suffrage(states[0], states...).Nodes(),
+		states[0].Policy().ThresholdRatio(),
 		base.VoteResultMajority,
 		false,
 		stage,
@@ -329,7 +330,7 @@ func (t *baseTestStateHandler) compareVoteproof(a, b base.Voteproof) {
 	t.Equal(a.Result(), b.Result())
 	t.Equal(a.Majority(), b.Majority())
 	t.Equal(a.Ballots(), b.Ballots())
-	t.Equal(a.Threshold(), b.Threshold())
+	t.Equal(a.ThresholdRatio(), b.ThresholdRatio())
 }
 
 func (t *baseTestStateHandler) compareAVLTree(a, b *tree.AVLTree) {

@@ -35,9 +35,12 @@ func NewDummyBlocksV0Generator(
 	threshold, _ := base.NewThreshold(uint(len(localstates)), 67)
 	for _, l := range localstates {
 		allNodes[l.Node().Address()] = l
-		ballotboxes[l.Node().Address()] = NewBallotbox(func() base.Threshold {
-			return threshold
-		})
+		ballotboxes[l.Node().Address()] = NewBallotbox(
+			suffrage.Nodes,
+			func() base.Threshold {
+				return threshold
+			},
+		)
 		pms[l.Node().Address()] = NewProposalProcessorV0(l, suffrage)
 	}
 

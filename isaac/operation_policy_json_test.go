@@ -38,10 +38,8 @@ func (t *testSetPolicyOperationJSON) TestEncode() {
 	token := []byte("findme")
 
 	policies := DefaultPolicy()
-	threshold, err := base.NewThreshold(3, 99.99)
-	t.NoError(err)
-	policies.Threshold = threshold
-	policies.NumberOfActingSuffrageNodes = 1
+	policies.thresholdRatio = base.ThresholdRatio(99.99)
+	policies.numberOfActingSuffrageNodes = 1
 
 	spo, err := NewSetPolicyOperationV0(t.pk, token, policies, nil)
 	t.NoError(err)
@@ -58,7 +56,7 @@ func (t *testSetPolicyOperationJSON) TestEncode() {
 	t.NoError(uspo.IsValid(nil))
 
 	t.True(spo.Hash().Equal(uspo.Hash()))
-	t.Equal(spo.Threshold, uspo.Threshold)
+	t.Equal(spo.ThresholdRatio(), uspo.ThresholdRatio())
 
 	t.Equal(jsonenc.ToString(spo), jsonenc.ToString(uspo))
 }

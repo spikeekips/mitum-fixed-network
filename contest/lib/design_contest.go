@@ -101,7 +101,7 @@ func (cd *ContestDesign) loadConditionActions() error {
 }
 
 type ContestConfigDesign struct {
-	GenesisPolicy *ContestPolicyDesign
+	GenesisPolicy *ContestPolicyDesign `yaml:"genesis-policy"`
 }
 
 func NewContestConfigDesign() *ContestConfigDesign {

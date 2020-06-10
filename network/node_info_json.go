@@ -11,12 +11,13 @@ import (
 
 type NodeInfoV0PackerJSON struct {
 	jsonenc.HintedHead
-	ND  base.Node      `json:"node"`
-	NID base.NetworkID `json:"network_id"`
-	ST  base.State     `json:"state"`
-	LB  block.Manifest `json:"last_block"`
-	VS  util.Version   `json:"version"`
-	UL  string         `json:"url"`
+	ND  base.Node                `json:"node"`
+	NID base.NetworkID           `json:"network_id"`
+	ST  base.State               `json:"state"`
+	LB  block.Manifest           `json:"last_block"`
+	VS  util.Version             `json:"version"`
+	UL  string                   `json:"url"`
+	PO  base.PolicyOperationBody `json:"policy"`
 }
 
 func (ni NodeInfoV0) MarshalJSON() ([]byte, error) {
@@ -28,6 +29,7 @@ func (ni NodeInfoV0) MarshalJSON() ([]byte, error) {
 		LB:         ni.lastBlock,
 		VS:         ni.version,
 		UL:         ni.u,
+		PO:         ni.policy,
 	})
 }
 
@@ -38,6 +40,7 @@ type NodeInfoV0UnpackerJSON struct {
 	LB  json.RawMessage `json:"last_block"`
 	VS  util.Version    `json:"version"`
 	UL  string          `json:"url"`
+	PO  json.RawMessage `json:"policy"`
 }
 
 func (ni *NodeInfoV0) UnpackJSON(b []byte, enc *jsonenc.Encoder) error {
@@ -46,5 +49,5 @@ func (ni *NodeInfoV0) UnpackJSON(b []byte, enc *jsonenc.Encoder) error {
 		return err
 	}
 
-	return ni.unpack(enc, nni.ND, nni.NID, nni.ST, nni.LB, nni.VS, nni.UL)
+	return ni.unpack(enc, nni.ND, nni.NID, nni.ST, nni.LB, nni.VS, nni.UL, nni.PO)
 }

@@ -56,6 +56,7 @@ func (t *testNodeInfo) TestNew() {
 		blk.Manifest(),
 		util.Version("0.1.1"),
 		"quic://local",
+		nil,
 	)
 	t.NoError(ni.IsValid(nil))
 
@@ -73,6 +74,7 @@ func (t *testNodeInfo) TestEmptyNetworkID() {
 		blk.Manifest(),
 		util.Version("0.1.1"),
 		"quic://local",
+		nil,
 	)
 	t.Contains(ni.IsValid(nil).Error(), "empty NetworkID")
 }
@@ -88,6 +90,7 @@ func (t *testNodeInfo) TestWrongNetworkID() {
 		blk.Manifest(),
 		util.Version("0.1.1"),
 		"quic://local",
+		nil,
 	)
 	t.Contains(ni.IsValid(nil).Error(), "invalid state")
 }
@@ -100,6 +103,7 @@ func (t *testNodeInfo) TestEmptyBlock() {
 		nil,
 		util.Version("0.1.1"),
 		"quic://local",
+		nil,
 	)
 	t.NoError(ni.IsValid(nil))
 }
@@ -115,6 +119,7 @@ func (t *testNodeInfo) TestEmptyVersion() {
 		blk.Manifest(),
 		"",
 		"quic://local",
+		nil,
 	)
 	t.Contains(ni.IsValid(nil).Error(), "invalid version")
 }
@@ -130,6 +135,7 @@ func (t *testNodeInfo) TestWrongVersion() {
 		blk.Manifest(),
 		util.Version("wrong-version"),
 		"quic://local",
+		nil,
 	)
 	t.Contains(ni.IsValid(nil).Error(), "invalid version")
 }
@@ -145,6 +151,7 @@ func (t *testNodeInfo) TestJSON() {
 		blk.Manifest(),
 		util.Version("1.2.3"),
 		"quic://local",
+		nil,
 	)
 	t.NoError(ni.IsValid(nil))
 
@@ -170,6 +177,7 @@ func (t *testNodeInfo) TestBSON() {
 		blk.Manifest(),
 		util.Version("1.2.3"),
 		"quic://local",
+		nil,
 	)
 	t.NoError(ni.IsValid(nil))
 

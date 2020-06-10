@@ -292,7 +292,7 @@ func (pp *proposalProcessorV0) extractOperations() ([]state.OperationInfoV0, err
 	for _, h := range pp.proposal.Seals() {
 		ops, err := pp.getOperationsFromStorage(h)
 		if err != nil {
-			if xerrors.Is(err, storage.NotFoundError) {
+			if storage.IsNotFoundError(err) {
 				notFounds = append(notFounds, h)
 				continue
 			}

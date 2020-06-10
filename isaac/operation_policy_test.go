@@ -5,6 +5,7 @@ import (
 
 	"github.com/stretchr/testify/suite"
 
+	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/base/key"
 	"github.com/spikeekips/mitum/base/operation"
 )
@@ -24,19 +25,23 @@ func (t *testSetPolicyOperation) TestNew() {
 
 	{
 		policies := DefaultPolicy()
-		policies.NumberOfActingSuffrageNodes = 0
-
-		_, err := NewSetPolicyOperationV0(t.pk, token, policies, nil)
-		t.Contains(err.Error(), "NumberOfActingSuffrageNodes")
+		t.Implements((*base.PolicyOperationBody)(nil), policies)
 	}
 
 	{
 		policies := DefaultPolicy()
-
-		policies.Threshold.Total = 0
+		policies.numberOfActingSuffrageNodes = 0
 
 		_, err := NewSetPolicyOperationV0(t.pk, token, policies, nil)
-		t.Contains(err.Error(), "zero total found")
+		t.Contains(err.Error(), "numberOfActingSuffrageNodes")
+	}
+
+	{
+		policies := DefaultPolicy()
+		policies.thresholdRatio = 0
+
+		_, err := NewSetPolicyOperationV0(t.pk, token, policies, nil)
+		t.Contains(err.Error(), "0 ratio found")
 	}
 
 	{

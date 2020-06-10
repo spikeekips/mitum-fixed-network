@@ -3,7 +3,6 @@ package cmds
 import (
 	"golang.org/x/xerrors"
 
-	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/base/block"
 	"github.com/spikeekips/mitum/base/operation"
 	contestlib "github.com/spikeekips/mitum/contest/lib"
@@ -101,14 +100,9 @@ func (cmd *InitCommand) checkExisting(nr *contestlib.NodeRunner, log logging.Log
 func (cmd *InitCommand) loadPolicyOperation(design *contestlib.NodeDesign) (
 	operation.Operation, error,
 ) {
-	t := design.GenesisPolicy.PolicyOperationBodyV0
-	if r, err := base.NewThreshold(uint(len(design.Nodes)), design.GenesisPolicy.Threshold); err != nil {
-		return nil, err
-	} else {
-		t.Threshold = r
-	}
-
 	token := []byte("genesis-policies-from-contest")
+	t := design.GenesisPolicy.PolicyOperationBodyV0
+
 	var fact isaac.SetPolicyOperationFactV0
 	if f, err := isaac.NewSetPolicyOperationFactV0(design.Privatekey().Publickey(), token, t); err != nil {
 		return nil, err

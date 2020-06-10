@@ -16,6 +16,7 @@ func (ni NodeInfoV0) MarshalBSON() ([]byte, error) {
 		"last_block": ni.lastBlock,
 		"version":    ni.version,
 		"url":        ni.u,
+		"policy":     ni.policy,
 	}))
 }
 
@@ -26,6 +27,7 @@ type NodeInfoV0UnpackerBSON struct {
 	LB  bson.Raw       `bson:"last_block"`
 	VS  util.Version   `bson:"version"`
 	UL  string         `bson:"url"`
+	PO  bson.Raw       `bson:"policy"`
 }
 
 func (ni *NodeInfoV0) UnpackBSON(b []byte, enc *bsonenc.Encoder) error {
@@ -34,5 +36,5 @@ func (ni *NodeInfoV0) UnpackBSON(b []byte, enc *bsonenc.Encoder) error {
 		return err
 	}
 
-	return ni.unpack(enc, nni.ND, nni.NID, nni.ST, nni.LB, nni.VS, nni.UL)
+	return ni.unpack(enc, nni.ND, nni.NID, nni.ST, nni.LB, nni.VS, nni.UL, nni.PO)
 }

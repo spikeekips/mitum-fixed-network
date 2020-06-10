@@ -27,30 +27,29 @@ const PolicyOperationKey = "network_policy"
 
 func DefaultPolicy() PolicyOperationBodyV0 {
 	return PolicyOperationBodyV0{
-		// NOTE default threshold assumes only one node exists, it means the network is just booted.
-		// TODO Threshold.Total is also determined by the number of Localstate.Nodes().
-		Threshold:                        base.MustNewThreshold(1, 100),
-		TimeoutWaitingProposal:           time.Second * 5,
-		IntervalBroadcastingINITBallot:   time.Second * 1,
-		IntervalBroadcastingProposal:     time.Second * 1,
-		WaitBroadcastingACCEPTBallot:     time.Second * 2,
-		IntervalBroadcastingACCEPTBallot: time.Second * 1,
-		NumberOfActingSuffrageNodes:      uint(1),
-		TimespanValidBallot:              time.Minute * 1,
-		TimeoutProcessProposal:           time.Second * 30,
+		// NOTE default threshold ratio assumes only one node exists, it means the network is just booted.
+		thresholdRatio:                   base.ThresholdRatio(100),
+		timeoutWaitingProposal:           time.Second * 5,
+		intervalBroadcastingINITBallot:   time.Second * 1,
+		intervalBroadcastingProposal:     time.Second * 1,
+		waitBroadcastingACCEPTBallot:     time.Second * 2,
+		intervalBroadcastingACCEPTBallot: time.Second * 1,
+		numberOfActingSuffrageNodes:      uint(1),
+		timespanValidBallot:              time.Minute * 1,
+		timeoutProcessProposal:           time.Second * 30,
 	}
 }
 
 type PolicyOperationBodyV0 struct {
-	Threshold                        base.Threshold `json:"threshold" yaml:"-"`
-	TimeoutWaitingProposal           time.Duration  `json:"timeout_waiting_proposal" yaml:"timeout_waiting_proposal"`
-	IntervalBroadcastingINITBallot   time.Duration  `json:"interval_broadcasting_init_ballot" yaml:"interval_broadcasting_init_ballot"`     // nolint
-	IntervalBroadcastingProposal     time.Duration  `json:"interval_broadcasting_proposal" yaml:"interval_broadcasting_proposal"`           // nolint
-	WaitBroadcastingACCEPTBallot     time.Duration  `json:"wait_broadcasting_accept_ballot" yaml:"wait_broadcasting_accept_ballot"`         // nolint
-	IntervalBroadcastingACCEPTBallot time.Duration  `json:"interval_broadcasting_accept_ballot" yaml:"interval_broadcasting_accept_ballot"` // nolint
-	NumberOfActingSuffrageNodes      uint           `json:"number_of_acting_suffrage_nodes" yaml:"number_of_acting_suffrage_nodes"`         // nolint
-	TimespanValidBallot              time.Duration  `json:"timespan_valid_ballot" yaml:"timespan_valid_ballot"`
-	TimeoutProcessProposal           time.Duration  `json:"timeout_process_proposal" yaml:"timeout_process_proposal"`
+	thresholdRatio                   base.ThresholdRatio
+	timeoutWaitingProposal           time.Duration
+	intervalBroadcastingINITBallot   time.Duration
+	intervalBroadcastingProposal     time.Duration
+	waitBroadcastingACCEPTBallot     time.Duration
+	intervalBroadcastingACCEPTBallot time.Duration
+	numberOfActingSuffrageNodes      uint
+	timespanValidBallot              time.Duration
+	timeoutProcessProposal           time.Duration
 }
 
 func (po PolicyOperationBodyV0) Hint() hint.Hint {
@@ -59,15 +58,15 @@ func (po PolicyOperationBodyV0) Hint() hint.Hint {
 
 func (po PolicyOperationBodyV0) Bytes() []byte {
 	return util.ConcatBytesSlice(
-		po.Threshold.Bytes(),
-		util.DurationToBytes(po.TimeoutWaitingProposal),
-		util.DurationToBytes(po.IntervalBroadcastingINITBallot),
-		util.DurationToBytes(po.IntervalBroadcastingProposal),
-		util.DurationToBytes(po.WaitBroadcastingACCEPTBallot),
-		util.DurationToBytes(po.IntervalBroadcastingACCEPTBallot),
-		util.UintToBytes(po.NumberOfActingSuffrageNodes),
-		util.DurationToBytes(po.TimespanValidBallot),
-		util.DurationToBytes(po.TimeoutProcessProposal),
+		util.Float64ToBytes(po.thresholdRatio.Float64()),
+		util.DurationToBytes(po.timeoutWaitingProposal),
+		util.DurationToBytes(po.intervalBroadcastingINITBallot),
+		util.DurationToBytes(po.intervalBroadcastingProposal),
+		util.DurationToBytes(po.waitBroadcastingACCEPTBallot),
+		util.DurationToBytes(po.intervalBroadcastingACCEPTBallot),
+		util.UintToBytes(po.numberOfActingSuffrageNodes),
+		util.DurationToBytes(po.timespanValidBallot),
+		util.DurationToBytes(po.timeoutProcessProposal),
 	)
 }
 
@@ -77,28 +76,109 @@ func (po PolicyOperationBodyV0) Hash() valuehash.Hash {
 
 func (po PolicyOperationBodyV0) IsValid([]byte) error {
 	for k, d := range map[string]time.Duration{
-		"TimeoutWaitingProposal":           po.TimeoutWaitingProposal,
-		"IntervalBroadcastingINITBallot":   po.IntervalBroadcastingINITBallot,
-		"IntervalBroadcastingProposal":     po.IntervalBroadcastingProposal,
-		"WaitBroadcastingACCEPTBallot":     po.WaitBroadcastingACCEPTBallot,
-		"IntervalBroadcastingACCEPTBallot": po.IntervalBroadcastingACCEPTBallot,
-		"TimespanValidBallot":              po.TimespanValidBallot,
-		"TimeoutProcessProposal":           po.TimeoutProcessProposal,
+		"TimeoutWaitingProposal":           po.timeoutWaitingProposal,
+		"IntervalBroadcastingINITBallot":   po.intervalBroadcastingINITBallot,
+		"IntervalBroadcastingProposal":     po.intervalBroadcastingProposal,
+		"WaitBroadcastingACCEPTBallot":     po.waitBroadcastingACCEPTBallot,
+		"IntervalBroadcastingACCEPTBallot": po.intervalBroadcastingACCEPTBallot,
+		"TimespanValidBallot":              po.timespanValidBallot,
+		"TimeoutProcessProposal":           po.timeoutProcessProposal,
 	} {
 		if d < 0 {
 			return xerrors.Errorf("%s is too narrow; duration=%v", k, d)
 		}
 	}
 
-	if po.NumberOfActingSuffrageNodes < 1 {
-		return xerrors.Errorf("NumberOfActingSuffrageNodes must be over 0; %d", po.NumberOfActingSuffrageNodes)
+	if po.numberOfActingSuffrageNodes < 1 {
+		return xerrors.Errorf("numberOfActingSuffrageNodes must be over 0; %d", po.numberOfActingSuffrageNodes)
 	}
 
-	if err := po.Threshold.IsValid(nil); err != nil {
+	if err := po.thresholdRatio.IsValid(nil); err != nil {
 		return err
 	}
 
 	return nil
+}
+
+func (po PolicyOperationBodyV0) ThresholdRatio() base.ThresholdRatio {
+	return po.thresholdRatio
+}
+
+func (po PolicyOperationBodyV0) SetThresholdRatio(v base.ThresholdRatio) PolicyOperationBodyV0 {
+	po.thresholdRatio = v
+	return po
+}
+
+func (po PolicyOperationBodyV0) TimeoutWaitingProposal() time.Duration {
+	return po.timeoutWaitingProposal
+}
+
+func (po PolicyOperationBodyV0) SetTimeoutWaitingProposal(v time.Duration) PolicyOperationBodyV0 {
+	po.timeoutWaitingProposal = v
+	return po
+}
+
+func (po PolicyOperationBodyV0) IntervalBroadcastingINITBallot() time.Duration {
+	return po.intervalBroadcastingINITBallot
+}
+
+func (po PolicyOperationBodyV0) SetIntervalBroadcastingINITBallot(v time.Duration) PolicyOperationBodyV0 {
+	po.intervalBroadcastingINITBallot = v
+	return po
+}
+
+func (po PolicyOperationBodyV0) IntervalBroadcastingProposal() time.Duration {
+	return po.intervalBroadcastingProposal
+}
+
+func (po PolicyOperationBodyV0) SetIntervalBroadcastingProposal(v time.Duration) PolicyOperationBodyV0 {
+	po.intervalBroadcastingProposal = v
+	return po
+}
+
+func (po PolicyOperationBodyV0) WaitBroadcastingACCEPTBallot() time.Duration {
+	return po.waitBroadcastingACCEPTBallot
+}
+
+func (po PolicyOperationBodyV0) SetWaitBroadcastingACCEPTBallot(v time.Duration) PolicyOperationBodyV0 {
+	po.waitBroadcastingACCEPTBallot = v
+	return po
+}
+
+func (po PolicyOperationBodyV0) IntervalBroadcastingACCEPTBallot() time.Duration {
+	return po.intervalBroadcastingACCEPTBallot
+}
+
+func (po PolicyOperationBodyV0) SetIntervalBroadcastingACCEPTBallot(v time.Duration) PolicyOperationBodyV0 {
+	po.intervalBroadcastingACCEPTBallot = v
+	return po
+}
+
+func (po PolicyOperationBodyV0) NumberOfActingSuffrageNodes() uint {
+	return po.numberOfActingSuffrageNodes
+}
+
+func (po PolicyOperationBodyV0) SetNumberOfActingSuffrageNodes(v uint) PolicyOperationBodyV0 {
+	po.numberOfActingSuffrageNodes = v
+	return po
+}
+
+func (po PolicyOperationBodyV0) TimespanValidBallot() time.Duration {
+	return po.timespanValidBallot
+}
+
+func (po PolicyOperationBodyV0) SetTimespanValidBallot(v time.Duration) PolicyOperationBodyV0 {
+	po.timespanValidBallot = v
+	return po
+}
+
+func (po PolicyOperationBodyV0) TimeoutProcessProposal() time.Duration {
+	return po.timeoutProcessProposal
+}
+
+func (po PolicyOperationBodyV0) SetTimeoutProcessProposal(v time.Duration) PolicyOperationBodyV0 {
+	po.timeoutProcessProposal = v
+	return po
 }
 
 type SetPolicyOperationFactV0 struct {

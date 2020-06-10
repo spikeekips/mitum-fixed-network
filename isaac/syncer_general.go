@@ -678,7 +678,6 @@ func (cs *GeneralSyncer) checkThresholdByHeights(heights []base.Height, fetched 
 	[]base.Address, // nodes, which have over threshold manifests
 	error,
 ) {
-	threshold := cs.localstate.Policy().Threshold()
 	manifests := make([]block.Manifest, len(heights))
 
 	var pn []base.Address = cs.provedNodes()
@@ -691,7 +690,7 @@ func (cs *GeneralSyncer) checkThresholdByHeights(heights []base.Height, fetched 
 			}
 		}
 
-		if m, p, err := cs.checkThreshold(index, heights, fetched, provedNodes, threshold); err != nil {
+		if m, p, err := cs.checkThreshold(index, heights, fetched, provedNodes); err != nil {
 			return nil, nil, err
 		} else {
 			manifests[index] = m
@@ -707,8 +706,14 @@ func (cs *GeneralSyncer) checkThreshold(
 	heights []base.Height,
 	fetched map[base.Address][]block.Manifest,
 	provedNodes map[base.Address]network.Node,
-	threshold base.Threshold,
 ) (block.Manifest, []base.Address, error) {
+	var threshold base.Threshold
+	if t, err := base.NewThreshold(uint(len(provedNodes)), cs.localstate.Policy().ThresholdRatio()); err != nil {
+		return nil, nil, err
+	} else {
+		threshold = t
+	}
+
 	height := heights[index]
 	hashByNode := map[string][]base.Address{}
 	ms := map[string]block.Manifest{}
@@ -717,9 +722,7 @@ func (cs *GeneralSyncer) checkThreshold(
 	for node := range fetched {
 		bs := fetched[node]
 		if len(bs) != len(heights) {
-			cs.Log().Debug().
-				Int("expected", len(heights)).
-				Int("returned", len(bs)).
+			cs.Log().Debug().Int("expected", len(heights)).Int("returned", len(bs)).
 				Msg("failed to get the expected data from node")
 
 			continue
@@ -740,7 +743,8 @@ func (cs *GeneralSyncer) checkThreshold(
 		ms[key] = bs[index]
 		hashByNode[key] = append(hashByNode[key], node)
 	}
-	result, key := base.FindMajorityFromSlice(uint(len(provedNodes)), threshold.Threshold, set)
+
+	result, key := base.FindMajorityFromSlice(threshold.Total, threshold.Threshold, set)
 
 	if cs.Log().IsVerbose() {
 		var ns []string
@@ -749,11 +753,8 @@ func (cs *GeneralSyncer) checkThreshold(
 		}
 
 		cs.Log().Debug().
-			Str("result", result.String()).
-			Str("majority_block_hash", key).
-			Hinted("height", height).
-			Strs("target_nodes", ns).
-			Msg("check majority of manifests")
+			Str("result", result.String()).Str("majority_block_hash", key).Hinted("height", height).
+			Strs("target_nodes", ns).Msg("check majority of manifests")
 	}
 
 	if result != base.VoteResultMajority {

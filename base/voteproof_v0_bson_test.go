@@ -38,11 +38,12 @@ func (t *testVoteproofBSON) TestMarshal() {
 	factSignature1, _ := n1.Privatekey().Sign(factHash0.Bytes())
 
 	vp := VoteproofV0{
-		height:    Height(33),
-		round:     Round(3),
-		stage:     StageINIT,
-		threshold: threshold,
-		result:    VoteResultMajority,
+		height:         Height(33),
+		round:          Round(3),
+		stage:          StageINIT,
+		suffrages:      []Address{n0.Address(), n1.Address()},
+		thresholdRatio: threshold.Ratio,
+		result:         VoteResultMajority,
 		facts: map[valuehash.Hash]Fact{
 			factHash0: fact0,
 		},
@@ -81,7 +82,7 @@ func (t *testVoteproofBSON) TestMarshal() {
 
 	t.Equal(vp.Height(), uvp.Height())
 	t.Equal(vp.Round(), uvp.Round())
-	t.Equal(vp.threshold, uvp.threshold)
+	t.Equal(vp.thresholdRatio, uvp.thresholdRatio)
 	t.Equal(vp.Result(), uvp.Result())
 	t.Equal(vp.Stage(), uvp.Stage())
 

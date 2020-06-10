@@ -14,6 +14,7 @@ func (ni *NodeInfoV0) unpack(
 	blb []byte,
 	vs util.Version,
 	u string,
+	bpo []byte,
 ) error {
 	if n, err := base.DecodeNode(enc, bnode); err != nil {
 		return err
@@ -31,6 +32,14 @@ func (ni *NodeInfoV0) unpack(
 
 	ni.version = vs
 	ni.u = u
+
+	if len(bpo) > 0 {
+		if p, err := base.DecodePolicyOperationBody(enc, bpo); err != nil {
+			return err
+		} else {
+			ni.policy = p
+		}
+	}
 
 	return nil
 }

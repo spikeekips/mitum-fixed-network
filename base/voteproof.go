@@ -26,7 +26,8 @@ type Voteproof interface {
 	Majority() Fact
 	Ballots() map[Address]valuehash.Hash
 	Votes() map[Address]VoteproofNodeFact
-	Threshold() Threshold
+	ThresholdRatio() ThresholdRatio
+	Suffrages() []Address
 }
 
 type VoteproofNodeFact struct {

@@ -83,12 +83,12 @@ func (vc *VoteProofChecker) CheckNodeIsInSuffrage() (bool, error) {
 
 // CheckThreshold checks Threshold only for new incoming Voteproof.
 func (vc *VoteProofChecker) CheckThreshold() (bool, error) {
-	threshold := vc.localstate.Policy().Threshold()
-	if !threshold.Equal(vc.voteproof.Threshold()) {
+	tr := vc.localstate.Policy().ThresholdRatio()
+	if tr != vc.voteproof.ThresholdRatio() {
 		vc.Log().Debug().
-			Interface("threshold", vc.voteproof.Threshold()).
-			Interface("expected", threshold).
-			Msg("voteproof has different threshold")
+			Interface("threshold_ratio", vc.voteproof.ThresholdRatio()).
+			Interface("expected", tr).
+			Msg("voteproof has different threshold ratio")
 		return false, nil
 	}
 

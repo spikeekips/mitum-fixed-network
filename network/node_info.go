@@ -28,6 +28,7 @@ type NodeInfo interface {
 	LastBlock() block.Manifest
 	Version() util.Version
 	URL() string
+	Policy() base.PolicyOperationBody
 }
 
 type NodeInfoV0 struct {
@@ -37,6 +38,7 @@ type NodeInfoV0 struct {
 	lastBlock block.Manifest
 	version   util.Version
 	u         string
+	policy    base.PolicyOperationBody
 }
 
 func NewNodeInfoV0(
@@ -46,6 +48,7 @@ func NewNodeInfoV0(
 	lastBlock block.Manifest,
 	version util.Version,
 	u string,
+	policy base.PolicyOperationBody,
 ) NodeInfoV0 {
 	return NodeInfoV0{
 		node:      node,
@@ -54,6 +57,7 @@ func NewNodeInfoV0(
 		lastBlock: lastBlock,
 		version:   version,
 		u:         u,
+		policy:    policy,
 	}
 }
 
@@ -115,4 +119,8 @@ func (ni NodeInfoV0) Version() util.Version {
 
 func (ni NodeInfoV0) URL() string {
 	return ni.u
+}
+
+func (ni NodeInfoV0) Policy() base.PolicyOperationBody {
+	return ni.policy
 }

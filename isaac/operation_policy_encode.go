@@ -3,8 +3,6 @@ package isaac
 import (
 	"time"
 
-	"golang.org/x/xerrors"
-
 	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/base/key"
 	"github.com/spikeekips/mitum/base/valuehash"
@@ -12,7 +10,7 @@ import (
 )
 
 func (po *PolicyOperationBodyV0) unpack(
-	rawThreshold []float64,
+	thresholdRatio base.ThresholdRatio,
 	timeoutWaitingProposal time.Duration,
 	intervalBroadcastingINITBallot time.Duration,
 	intervalBroadcastingProposal time.Duration,
@@ -22,28 +20,15 @@ func (po *PolicyOperationBodyV0) unpack(
 	timespanValidBallot,
 	timeoutProcessProposal time.Duration,
 ) error {
-	var err error
-
-	var threshold base.Threshold
-	if len(rawThreshold) != 2 {
-		return xerrors.Errorf("invalid formatted Threshold found: %v", rawThreshold)
-	} else if total := rawThreshold[0]; total < 0 {
-		return xerrors.Errorf("invalid total number of Threshold found: %v", rawThreshold)
-	} else if percent := rawThreshold[1]; percent < 0 {
-		return xerrors.Errorf("invalid percent number of Threshold found: %v", rawThreshold)
-	} else if threshold, err = base.NewThreshold(uint(total), percent); err != nil {
-		return err
-	}
-
-	po.Threshold = threshold
-	po.TimeoutWaitingProposal = timeoutWaitingProposal
-	po.IntervalBroadcastingINITBallot = intervalBroadcastingINITBallot
-	po.IntervalBroadcastingProposal = intervalBroadcastingProposal
-	po.WaitBroadcastingACCEPTBallot = waitBroadcastingACCEPTBallot
-	po.IntervalBroadcastingACCEPTBallot = intervalBroadcastingACCEPTBallot
-	po.NumberOfActingSuffrageNodes = numberOfActingSuffrageNodes
-	po.TimespanValidBallot = timespanValidBallot
-	po.TimeoutProcessProposal = timeoutProcessProposal
+	po.thresholdRatio = thresholdRatio
+	po.timeoutWaitingProposal = timeoutWaitingProposal
+	po.intervalBroadcastingINITBallot = intervalBroadcastingINITBallot
+	po.intervalBroadcastingProposal = intervalBroadcastingProposal
+	po.waitBroadcastingACCEPTBallot = waitBroadcastingACCEPTBallot
+	po.intervalBroadcastingACCEPTBallot = intervalBroadcastingACCEPTBallot
+	po.numberOfActingSuffrageNodes = numberOfActingSuffrageNodes
+	po.timespanValidBallot = timespanValidBallot
+	po.timeoutProcessProposal = timeoutProcessProposal
 
 	return nil
 }

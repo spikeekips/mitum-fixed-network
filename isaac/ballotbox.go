@@ -16,15 +16,17 @@ type Ballotbox struct {
 	sync.RWMutex
 	*logging.Logging
 	vrs           *sync.Map
+	suffragesFunc func() []base.Address
 	thresholdFunc func() base.Threshold
 }
 
-func NewBallotbox(thresholdFunc func() base.Threshold) *Ballotbox {
+func NewBallotbox(suffragesFunc func() []base.Address, thresholdFunc func() base.Threshold) *Ballotbox {
 	return &Ballotbox{
 		Logging: logging.NewLogging(func(c logging.Context) logging.Emitter {
 			return c.Str("module", "ballotbox")
 		}),
 		vrs:           &sync.Map{},
+		suffragesFunc: suffragesFunc,
 		thresholdFunc: thresholdFunc,
 	}
 }
@@ -32,8 +34,8 @@ func NewBallotbox(thresholdFunc func() base.Threshold) *Ballotbox {
 // Vote receives Ballot and returns VoteRecords, which has VoteRecords.Result()
 // and VoteRecords.Majority().
 func (bb *Ballotbox) Vote(blt ballot.Ballot) (base.Voteproof, error) {
-	if !blt.Stage().CanVote() {
-		return nil, xerrors.Errorf("this ballot is not for voting; stage=%s", blt.Stage())
+	if err := bb.canVote(blt); err != nil {
+		return nil, err
 	}
 
 	vrs := bb.loadVoteRecords(blt, true)
@@ -51,7 +53,7 @@ func (bb *Ballotbox) loadVoteRecords(blt ballot.Ballot, ifNotCreate bool) *VoteR
 	if i, found := bb.vrs.Load(key); found {
 		vrs = i.(*VoteRecords)
 	} else if ifNotCreate {
-		vrs = NewVoteRecords(blt, bb.thresholdFunc())
+		vrs = NewVoteRecords(blt, bb.suffragesFunc(), bb.thresholdFunc())
 		bb.vrs.Store(key, vrs)
 	}
 
@@ -109,4 +111,24 @@ func (bb *Ballotbox) Clean(height base.Height) error {
 
 func (bb *Ballotbox) vrsKey(blt ballot.Ballot) string {
 	return fmt.Sprintf("%d-%d-%d", blt.Height(), blt.Round(), blt.Stage())
+}
+
+func (bb *Ballotbox) canVote(blt ballot.Ballot) error {
+	if !blt.Stage().CanVote() {
+		return xerrors.Errorf("this ballot is not for voting; stage=%s", blt.Stage())
+	}
+
+	var found bool
+	for _, a := range bb.suffragesFunc() {
+		if a.Equal(blt.Node()) {
+			found = true
+			break
+		}
+	}
+
+	if !found {
+		return xerrors.Errorf("this ballot is not in suffrages")
+	}
+
+	return nil
 }

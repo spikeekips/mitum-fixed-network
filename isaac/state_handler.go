@@ -21,6 +21,7 @@ const (
 	TimerIDBroadcastingACCEPTBallot = "broadcasting-accept-ballot"
 	TimerIDBroadcastingProposal     = "broadcasting-proposal"
 	TimerIDTimedoutMoveNextRound    = "timedout-move-to-next-round"
+	TimerIDNodeInfo                 = "node-info"
 )
 
 type StateHandler interface {

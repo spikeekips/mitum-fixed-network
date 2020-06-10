@@ -26,7 +26,7 @@ func (bn BaseNodeV0) String() string {
 }
 
 func (bn BaseNodeV0) Hint() hint.Hint {
-	return BaseNodeV0Hint // BLOCK add to hinters
+	return BaseNodeV0Hint
 }
 
 func (bn BaseNodeV0) IsValid([]byte) error {

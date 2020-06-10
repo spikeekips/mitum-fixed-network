@@ -17,6 +17,7 @@ type NetworkChanChannel struct {
 	getSealHandler network.GetSealsHandler
 	getManifests   network.GetManifestsHandler
 	getBlocks      network.GetBlocksHandler
+	nodeInfo       network.NodeInfoHandler
 }
 
 func NewNetworkChanChannel(bufsize uint) *NetworkChanChannel {
@@ -67,7 +68,15 @@ func (gs *NetworkChanChannel) Blocks(hs []base.Height) ([]block.Block, error) {
 }
 
 func (gs *NetworkChanChannel) NodeInfo() (network.NodeInfo, error) {
-	return nil, nil
+	if gs.nodeInfo == nil {
+		return nil, nil
+	}
+
+	return gs.nodeInfo()
+}
+
+func (gs *NetworkChanChannel) SetNodeInfoHandler(f network.NodeInfoHandler) {
+	gs.nodeInfo = f
 }
 
 func (gs *NetworkChanChannel) SetGetBlocksHandler(f network.GetBlocksHandler) {

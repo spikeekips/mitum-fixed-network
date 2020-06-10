@@ -20,34 +20,37 @@ var (
 )
 
 type VoteproofV0 struct {
-	height     Height
-	round      Round
-	threshold  Threshold
-	result     VoteResultType
-	closed     bool
-	stage      Stage
-	majority   Fact
-	facts      map[valuehash.Hash]Fact       // key: Fact.Hash(), value: Fact
-	ballots    map[Address]valuehash.Hash    // key: node Address, value: ballot hash
-	votes      map[Address]VoteproofNodeFact // key: node Address, value: VoteproofNodeFact
-	finishedAt time.Time
+	height         Height
+	round          Round
+	suffrages      []Address
+	thresholdRatio ThresholdRatio
+	result         VoteResultType
+	closed         bool
+	stage          Stage
+	majority       Fact
+	facts          map[valuehash.Hash]Fact       // key: Fact.Hash(), value: Fact
+	ballots        map[Address]valuehash.Hash    // key: node Address, value: ballot hash
+	votes          map[Address]VoteproofNodeFact // key: node Address, value: VoteproofNodeFact
+	finishedAt     time.Time
 }
 
 func NewVoteproofV0(
 	height Height,
 	round Round,
-	threshold Threshold,
+	suffrages []Address,
+	thresholdRatio ThresholdRatio,
 	stage Stage,
 ) VoteproofV0 {
 	return VoteproofV0{
-		height:    height,
-		round:     round,
-		threshold: threshold,
-		result:    VoteResultNotYet,
-		stage:     stage,
-		facts:     map[valuehash.Hash]Fact{},
-		ballots:   map[Address]valuehash.Hash{},
-		votes:     map[Address]VoteproofNodeFact{},
+		height:         height,
+		round:          round,
+		suffrages:      suffrages,
+		thresholdRatio: thresholdRatio,
+		result:         VoteResultNotYet,
+		stage:          stage,
+		facts:          map[valuehash.Hash]Fact{},
+		ballots:        map[Address]valuehash.Hash{},
+		votes:          map[Address]VoteproofNodeFact{},
 	}
 }
 
@@ -109,8 +112,12 @@ func (vp *VoteproofV0) SetBallots(ballots map[Address]valuehash.Hash) *Voteproof
 	return vp
 }
 
-func (vp VoteproofV0) Threshold() Threshold {
-	return vp.threshold
+func (vp VoteproofV0) Suffrages() []Address {
+	return vp.suffrages
+}
+
+func (vp VoteproofV0) ThresholdRatio() ThresholdRatio {
+	return vp.thresholdRatio
 }
 
 func (vp VoteproofV0) Facts() map[valuehash.Hash]Fact {
@@ -217,17 +224,27 @@ func (vp VoteproofV0) votesBytes() []byte {
 	return util.ConcatBytesSlice(bs...)
 }
 
+func (vp VoteproofV0) suffragesBytes() []byte {
+	bs := make([][]byte, len(vp.suffrages))
+	for i := range vp.suffrages {
+		bs[i] = vp.suffrages[i].Bytes()
+	}
+
+	return util.ConcatBytesSlice(bs...)
+}
+
 func (vp VoteproofV0) Bytes() []byte {
 	return util.ConcatBytesSlice(
 		vp.height.Bytes(),
 		vp.round.Bytes(),
-		vp.threshold.Bytes(),
+		util.Float64ToBytes(vp.thresholdRatio.Float64()),
 		vp.result.Bytes(),
 		vp.stage.Bytes(),
 		vp.majority.Bytes(),
 		vp.ballotsBytes(),
 		vp.factsBytes(),
 		vp.votesBytes(),
+		vp.suffragesBytes(),
 		[]byte(localtime.RFC3339(vp.finishedAt)),
 	)
 }
@@ -242,7 +259,9 @@ func (vp VoteproofV0) IsValid(b []byte) error {
 	}
 
 	// check majority
-	if len(vp.votes) < int(vp.threshold.Threshold) {
+	if t, err := NewThreshold(uint(len(vp.suffrages)), vp.thresholdRatio); err != nil {
+		return err
+	} else if len(vp.votes) < int(t.Threshold) {
 		if vp.result != VoteResultNotYet {
 			return xerrors.Errorf("result should be not-yet: %s", vp.result)
 		}
@@ -254,6 +273,13 @@ func (vp VoteproofV0) IsValid(b []byte) error {
 }
 
 func (vp VoteproofV0) isValidCheckMajority() error {
+	var threshold Threshold
+	if t, err := NewThreshold(uint(len(vp.suffrages)), vp.thresholdRatio); err != nil {
+		return err
+	} else {
+		threshold = t
+	}
+
 	counts := map[valuehash.Hash]uint{}
 	for a := range vp.votes {
 		counts[vp.votes[a].fact]++
@@ -272,7 +298,7 @@ func (vp VoteproofV0) isValidCheckMajority() error {
 	var fact Fact
 	var factHash valuehash.Hash
 	var result VoteResultType
-	switch index := FindMajority(vp.threshold.Total, vp.threshold.Threshold, set...); index {
+	switch index := FindMajority(threshold.Total, threshold.Threshold, set...); index {
 	case -1:
 		result = VoteResultNotYet
 	case -2:
@@ -305,7 +331,7 @@ func (vp VoteproofV0) isValidFields(b []byte) error {
 	if err := isvalid.Check([]isvalid.IsValider{
 		vp.height,
 		vp.stage,
-		vp.threshold,
+		vp.thresholdRatio,
 		vp.result,
 	}, nil, false); err != nil {
 		return err

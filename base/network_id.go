@@ -13,7 +13,7 @@ type NetworkID []byte
 
 const MaxNetworkIDLength = 300
 
-// BLOCK check the ussage of network id
+// TODO check the usage of network id
 
 func (ni NetworkID) IsValid([]byte) error {
 	if len(ni) < 1 {

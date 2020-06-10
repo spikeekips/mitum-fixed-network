@@ -15,7 +15,7 @@ type LocalPolicy struct {
 	sync.RWMutex
 	st                               storage.Storage
 	networkID                        *util.LockedItem // NOTE networkID should be string, internally []byte
-	threshold                        *util.LockedItem
+	thresholdRatio                   *util.LockedItem
 	timeoutWaitingProposal           *util.LockedItem
 	intervalBroadcastingINITBallot   *util.LockedItem
 	intervalBroadcastingProposal     *util.LockedItem
@@ -34,15 +34,16 @@ func NewLocalPolicy(st storage.Storage, networkID []byte) (*LocalPolicy, error) 
 		networkID: util.NewLockedItem(networkID),
 	}
 
-	lp.threshold = util.NewLockedItem(nil)
-	lp.timeoutWaitingProposal = util.NewLockedItem(nil)
-	lp.intervalBroadcastingINITBallot = util.NewLockedItem(nil)
-	lp.intervalBroadcastingProposal = util.NewLockedItem(nil)
-	lp.waitBroadcastingACCEPTBallot = util.NewLockedItem(nil)
-	lp.intervalBroadcastingACCEPTBallot = util.NewLockedItem(nil)
-	lp.numberOfActingSuffrageNodes = util.NewLockedItem(nil)
-	lp.timespanValidBallot = util.NewLockedItem(nil)
-	lp.timeoutProcessProposal = util.NewLockedItem(nil)
+	d := DefaultPolicy()
+	lp.thresholdRatio = util.NewLockedItem(d.ThresholdRatio())
+	lp.timeoutWaitingProposal = util.NewLockedItem(d.TimeoutWaitingProposal())
+	lp.intervalBroadcastingINITBallot = util.NewLockedItem(d.IntervalBroadcastingINITBallot())
+	lp.intervalBroadcastingProposal = util.NewLockedItem(d.IntervalBroadcastingProposal())
+	lp.waitBroadcastingACCEPTBallot = util.NewLockedItem(d.WaitBroadcastingACCEPTBallot())
+	lp.intervalBroadcastingACCEPTBallot = util.NewLockedItem(d.IntervalBroadcastingACCEPTBallot())
+	lp.numberOfActingSuffrageNodes = util.NewLockedItem(d.NumberOfActingSuffrageNodes())
+	lp.timespanValidBallot = util.NewLockedItem(d.TimespanValidBallot())
+	lp.timeoutProcessProposal = util.NewLockedItem(d.TimeoutProcessProposal())
 
 	if err := lp.load(); err != nil {
 		return nil, err
@@ -52,7 +53,7 @@ func NewLocalPolicy(st storage.Storage, networkID []byte) (*LocalPolicy, error) 
 }
 
 func (lp *LocalPolicy) load() error {
-	var loaded PolicyOperationBodyV0
+	var loaded base.PolicyOperationBody
 	if lp.st == nil {
 		loaded = DefaultPolicy()
 	} else {
@@ -62,24 +63,14 @@ func (lp *LocalPolicy) load() error {
 			loaded = DefaultPolicy()
 		} else if i := l.Value().Interface(); i == nil {
 			loaded = DefaultPolicy()
-		} else if p, ok := i.(PolicyOperationBodyV0); !ok {
+		} else if p, ok := i.(base.PolicyOperationBody); !ok {
 			loaded = DefaultPolicy()
 		} else {
 			loaded = p
 		}
 	}
 
-	lp.threshold.SetValue(loaded.Threshold)
-	lp.timeoutWaitingProposal.SetValue(loaded.TimeoutWaitingProposal)
-	lp.intervalBroadcastingINITBallot.SetValue(loaded.IntervalBroadcastingINITBallot)
-	lp.intervalBroadcastingProposal.SetValue(loaded.IntervalBroadcastingProposal)
-	lp.waitBroadcastingACCEPTBallot.SetValue(loaded.WaitBroadcastingACCEPTBallot)
-	lp.intervalBroadcastingACCEPTBallot.SetValue(loaded.IntervalBroadcastingACCEPTBallot)
-	lp.numberOfActingSuffrageNodes.SetValue(loaded.NumberOfActingSuffrageNodes)
-	lp.timespanValidBallot.SetValue(loaded.TimespanValidBallot)
-	lp.timeoutProcessProposal.SetValue(loaded.TimeoutProcessProposal)
-
-	return nil
+	return lp.Merge(loaded)
 }
 
 func (lp *LocalPolicy) Reload() error {
@@ -89,16 +80,48 @@ func (lp *LocalPolicy) Reload() error {
 	return lp.load()
 }
 
+func (lp *LocalPolicy) Merge(p base.PolicyOperationBody) error {
+	if v := lp.ThresholdRatio(); v != p.ThresholdRatio() {
+		_ = lp.thresholdRatio.SetValue(p.ThresholdRatio())
+	}
+	if v := lp.TimeoutWaitingProposal(); v != p.TimeoutWaitingProposal() {
+		_ = lp.timeoutWaitingProposal.SetValue(p.TimeoutWaitingProposal())
+	}
+	if v := lp.IntervalBroadcastingINITBallot(); v != p.IntervalBroadcastingINITBallot() {
+		_ = lp.intervalBroadcastingINITBallot.SetValue(p.IntervalBroadcastingINITBallot())
+	}
+	if v := lp.IntervalBroadcastingProposal(); v != p.IntervalBroadcastingProposal() {
+		_ = lp.intervalBroadcastingProposal.SetValue(p.IntervalBroadcastingProposal())
+	}
+	if v := lp.WaitBroadcastingACCEPTBallot(); v != p.WaitBroadcastingACCEPTBallot() {
+		_ = lp.waitBroadcastingACCEPTBallot.SetValue(p.WaitBroadcastingACCEPTBallot())
+	}
+	if v := lp.IntervalBroadcastingACCEPTBallot(); v != p.IntervalBroadcastingACCEPTBallot() {
+		_ = lp.intervalBroadcastingACCEPTBallot.SetValue(p.IntervalBroadcastingACCEPTBallot())
+	}
+	if v := lp.NumberOfActingSuffrageNodes(); v != p.NumberOfActingSuffrageNodes() {
+		_ = lp.numberOfActingSuffrageNodes.SetValue(p.NumberOfActingSuffrageNodes())
+	}
+	if v := lp.TimespanValidBallot(); v != p.TimespanValidBallot() {
+		_ = lp.timespanValidBallot.SetValue(p.TimespanValidBallot())
+	}
+	if v := lp.TimeoutProcessProposal(); v != p.TimeoutProcessProposal() {
+		_ = lp.timeoutProcessProposal.SetValue(p.TimeoutProcessProposal())
+	}
+
+	return nil
+}
+
 func (lp *LocalPolicy) NetworkID() []byte {
 	return lp.networkID.Value().([]byte)
 }
 
-func (lp *LocalPolicy) Threshold() base.Threshold {
-	return lp.threshold.Value().(base.Threshold)
+func (lp *LocalPolicy) ThresholdRatio() base.ThresholdRatio {
+	return lp.thresholdRatio.Value().(base.ThresholdRatio)
 }
 
-func (lp *LocalPolicy) SetThreshold(threshold base.Threshold) *LocalPolicy {
-	_ = lp.threshold.SetValue(threshold)
+func (lp *LocalPolicy) SetThresholdRatio(ratio base.ThresholdRatio) *LocalPolicy {
+	_ = lp.thresholdRatio.SetValue(ratio)
 
 	return lp
 }
@@ -213,4 +236,18 @@ func (lp *LocalPolicy) SetTimeoutProcessProposal(d time.Duration) (*LocalPolicy,
 	_ = lp.timeoutProcessProposal.SetValue(d)
 
 	return lp, nil
+}
+
+func (lp *LocalPolicy) PolicyOperationBody() base.PolicyOperationBody {
+	return PolicyOperationBodyV0{
+		thresholdRatio:                   lp.ThresholdRatio(),
+		timeoutWaitingProposal:           lp.TimeoutWaitingProposal(),
+		intervalBroadcastingINITBallot:   lp.IntervalBroadcastingINITBallot(),
+		intervalBroadcastingProposal:     lp.IntervalBroadcastingProposal(),
+		waitBroadcastingACCEPTBallot:     lp.WaitBroadcastingACCEPTBallot(),
+		intervalBroadcastingACCEPTBallot: lp.IntervalBroadcastingACCEPTBallot(),
+		numberOfActingSuffrageNodes:      lp.NumberOfActingSuffrageNodes(),
+		timespanValidBallot:              lp.TimespanValidBallot(),
+		timeoutProcessProposal:           lp.TimeoutProcessProposal(),
+	}
 }

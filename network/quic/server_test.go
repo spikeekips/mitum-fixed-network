@@ -223,6 +223,7 @@ func (t *testQuicSever) TestNodeInfo() {
 			blk.Manifest(),
 			util.Version("0.1.1"),
 			"quic://local",
+			nil,
 		)
 	}
 

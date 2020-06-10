@@ -36,7 +36,8 @@ func (vp VoteproofV0) MarshalBSON() ([]byte, error) {
 	m := bson.M{
 		"height":      vp.height,
 		"round":       vp.round,
-		"threshold":   vp.threshold,
+		"suffrages":   vp.suffrages,
+		"threshold":   vp.thresholdRatio,
 		"result":      vp.result,
 		"stage":       vp.stage,
 		"facts":       facts,
@@ -59,7 +60,8 @@ func (vp VoteproofV0) MarshalBSON() ([]byte, error) {
 type VoteproofV0UnpackBSON struct { // nolint
 	HT Height         `bson:"height"`
 	RD Round          `bson:"round"`
-	TH Threshold      `bson:"threshold"`
+	SS []bson.Raw     `bson:"suffrages"`
+	TH ThresholdRatio `bson:"threshold"`
 	RS VoteResultType `bson:"result"`
 	ST Stage          `bson:"stage"`
 	MJ bson.Raw       `bson:"majority"`
@@ -74,6 +76,11 @@ func (vp *VoteproofV0) UnpackBSON(b []byte, enc *bsonenc.Encoder) error {
 	var vpp VoteproofV0UnpackBSON
 	if err := enc.Unmarshal(b, &vpp); err != nil {
 		return err
+	}
+
+	ss := make([][]byte, len(vpp.SS))
+	for i := range vpp.SS {
+		ss[i] = vpp.SS[i]
 	}
 
 	fs := make([][2][]byte, len(vpp.FS))
@@ -98,6 +105,7 @@ func (vp *VoteproofV0) UnpackBSON(b []byte, enc *bsonenc.Encoder) error {
 		enc,
 		vpp.HT,
 		vpp.RD,
+		ss,
 		vpp.TH,
 		vpp.RS,
 		vpp.ST,

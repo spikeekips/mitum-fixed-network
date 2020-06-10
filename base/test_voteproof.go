@@ -17,7 +17,8 @@ import (
 func NewTestVoteproofV0(
 	height Height,
 	round Round,
-	threshold Threshold,
+	suffrage []Address,
+	thresholdRatio ThresholdRatio,
 	result VoteResultType,
 	closed bool,
 	stage Stage,
@@ -28,17 +29,18 @@ func NewTestVoteproofV0(
 	finishedAt time.Time,
 ) VoteproofV0 {
 	return VoteproofV0{
-		height:     height,
-		round:      round,
-		threshold:  threshold,
-		result:     result,
-		closed:     closed,
-		stage:      stage,
-		majority:   majority,
-		facts:      facts,
-		ballots:    ballots,
-		votes:      votes,
-		finishedAt: finishedAt,
+		height:         height,
+		round:          round,
+		suffrages:      suffrage,
+		thresholdRatio: thresholdRatio,
+		result:         result,
+		closed:         closed,
+		stage:          stage,
+		majority:       majority,
+		facts:          facts,
+		ballots:        ballots,
+		votes:          votes,
+		finishedAt:     finishedAt,
 	}
 }
 
@@ -117,8 +119,12 @@ func (vp DummyVoteproof) Votes() map[Address]VoteproofNodeFact {
 	return nil
 }
 
-func (vp DummyVoteproof) Threshold() Threshold {
-	return Threshold{}
+func (vp DummyVoteproof) Suffrages() []Address {
+	return nil
+}
+
+func (vp DummyVoteproof) ThresholdRatio() ThresholdRatio {
+	return ThresholdRatio(100)
 }
 
 func (vp DummyVoteproof) MarshalJSON() ([]byte, error) {

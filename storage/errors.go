@@ -16,7 +16,7 @@ func WrapError(err error) error {
 		return nil
 	}
 
-	if xerrors.Is(err, NotFoundError) {
+	if IsNotFoundError(err) {
 		return err
 	} else if xerrors.Is(err, StorageError) {
 		return err

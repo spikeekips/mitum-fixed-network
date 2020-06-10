@@ -14,9 +14,10 @@ type VoteRecords struct {
 	votes     map[base.Address]valuehash.Hash // key: node Address, value: fact hash
 	ballots   map[base.Address]ballot.Ballot
 	voteproof base.VoteproofV0
+	threshold base.Threshold
 }
 
-func NewVoteRecords(blt ballot.Ballot, threshold base.Threshold) *VoteRecords {
+func NewVoteRecords(blt ballot.Ballot, suffrages []base.Address, threshold base.Threshold) *VoteRecords {
 	return &VoteRecords{
 		facts:   map[valuehash.Hash]base.Fact{},
 		votes:   map[base.Address]valuehash.Hash{},
@@ -24,9 +25,11 @@ func NewVoteRecords(blt ballot.Ballot, threshold base.Threshold) *VoteRecords {
 		voteproof: base.NewVoteproofV0(
 			blt.Height(),
 			blt.Round(),
-			threshold,
+			suffrages,
+			threshold.Ratio,
 			blt.Stage(),
 		),
+		threshold: threshold,
 	}
 }
 
@@ -109,7 +112,7 @@ func (vrs *VoteRecords) vote(blt ballot.Ballot, voteproof *base.VoteproofV0) boo
 		_ = voteproof.Close()
 
 		return false
-	} else if len(vrs.votes) < int(voteproof.Threshold().Threshold) {
+	} else if len(vrs.votes) < int(vrs.threshold.Threshold) {
 		return false
 	}
 
@@ -128,8 +131,7 @@ func (vrs *VoteRecords) vote(blt ballot.Ballot, voteproof *base.VoteproofV0) boo
 	var fact base.Fact
 	var result base.VoteResultType
 
-	threshold := voteproof.Threshold()
-	result, key := base.FindMajorityFromSlice(threshold.Total, threshold.Threshold, set)
+	result, key := base.FindMajorityFromSlice(vrs.threshold.Total, vrs.threshold.Threshold, set)
 	if result == base.VoteResultMajority {
 		fact = facts[key]
 	}

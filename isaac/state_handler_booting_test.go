@@ -8,6 +8,11 @@ import (
 	"golang.org/x/xerrors"
 
 	"github.com/spikeekips/mitum/base"
+	"github.com/spikeekips/mitum/base/block"
+	"github.com/spikeekips/mitum/base/valuehash"
+	"github.com/spikeekips/mitum/network"
+	channetwork "github.com/spikeekips/mitum/network/gochan"
+	"github.com/spikeekips/mitum/util"
 )
 
 type testStateBootingHandler struct {
@@ -15,7 +20,7 @@ type testStateBootingHandler struct {
 }
 
 func (t *testStateBootingHandler) TestWithBlock() {
-	cs, err := NewStateBootingHandler(t.localstate)
+	cs, err := NewStateBootingHandler(t.localstate, t.suffrage(t.localstate))
 	t.NoError(err)
 
 	stateChan := make(chan StateChangeContext)
@@ -52,7 +57,29 @@ func (t *testStateBootingHandler) TestWithBlock() {
 }
 
 func (t *testStateBootingHandler) TestWithoutBlock() {
-	cs, err := NewStateBootingHandler(t.localstate)
+	blk, err := block.NewTestBlockV0(base.Height(33), base.Round(0), valuehash.RandomSHA256(), valuehash.RandomSHA256())
+	t.NoError(err)
+
+	policy := DefaultPolicy().
+		SetThresholdRatio(DefaultPolicy().ThresholdRatio() - 1).
+		SetNumberOfActingSuffrageNodes(DefaultPolicy().NumberOfActingSuffrageNodes() + 1)
+
+	ni := network.NewNodeInfoV0(
+		base.RandomNode("n0"),
+		TestNetworkID,
+		base.StateBooting,
+		blk.Manifest(),
+		util.Version("0.1.1"),
+		"quic://local",
+		policy,
+	)
+
+	nch := t.remoteState.Node().Channel().(*channetwork.NetworkChanChannel)
+	nch.SetNodeInfoHandler(func() (network.NodeInfo, error) {
+		return ni, nil
+	})
+
+	cs, err := NewStateBootingHandler(t.localstate, t.suffrage(t.localstate, t.remoteState))
 	t.NoError(err)
 	t.NoError(t.localstate.Storage().Clean())
 
@@ -87,6 +114,9 @@ func (t *testStateBootingHandler) TestWithoutBlock() {
 	case <-doneChan:
 		break
 	}
+
+	t.Equal(policy.ThresholdRatio(), t.localstate.Policy().ThresholdRatio())
+	t.Equal(policy.NumberOfActingSuffrageNodes(), t.localstate.Policy().NumberOfActingSuffrageNodes())
 }
 
 func TestStateBootingHandler(t *testing.T) {

@@ -74,9 +74,9 @@ func (t *testStateJoiningHandler) TestKeepBroadcastingINITBallot() {
 //
 // StateJoiningHandler will ignore this ballot and keep broadcasting it's INIT Ballot.
 func (t *testStateJoiningHandler) TestINITBallotWithACCEPTVoteproofExpectedHeight() {
-	thr, _ := base.NewThreshold(2, 67)
-	_ = t.localstate.Policy().SetThreshold(thr)
-	_ = t.remoteState.Policy().SetThreshold(thr)
+	r := base.ThresholdRatio(67)
+	_ = t.localstate.Policy().SetThresholdRatio(r)
+	_ = t.remoteState.Policy().SetThresholdRatio(r)
 
 	cs, err := NewStateJoiningHandler(t.localstate, nil)
 	t.NoError(err)
@@ -121,9 +121,9 @@ func (t *testStateJoiningHandler) TestINITBallotWithACCEPTVoteproofExpectedHeigh
 //
 // StateJoiningHandler will ignore this ballot and keep broadcasting it's INIT Ballot.
 func (t *testStateJoiningHandler) TestINITBallotWithACCEPTVoteproofLowerHeight() {
-	thr, _ := base.NewThreshold(2, 67)
-	_ = t.localstate.Policy().SetThreshold(thr)
-	_ = t.remoteState.Policy().SetThreshold(thr)
+	r := base.ThresholdRatio(67)
+	_ = t.localstate.Policy().SetThresholdRatio(r)
+	_ = t.remoteState.Policy().SetThresholdRatio(r)
 
 	cs, err := NewStateJoiningHandler(t.localstate, nil)
 	t.NoError(err)
@@ -169,9 +169,9 @@ func (t *testStateJoiningHandler) TestINITBallotWithACCEPTVoteproofLowerHeight()
 // StateJoiningHandler will stop broadcasting it's INIT Ballot and
 // moves to syncing.
 func (t *testStateJoiningHandler) TestINITBallotWithACCEPTVoteproofHigherHeight() {
-	thr, _ := base.NewThreshold(2, 67)
-	_ = t.localstate.Policy().SetThreshold(thr)
-	_ = t.remoteState.Policy().SetThreshold(thr)
+	r := base.ThresholdRatio(67)
+	_ = t.localstate.Policy().SetThresholdRatio(r)
+	_ = t.remoteState.Policy().SetThresholdRatio(r)
 
 	cs, err := NewStateJoiningHandler(t.localstate, nil)
 	t.NoError(err)
@@ -232,9 +232,9 @@ func (t *testStateJoiningHandler) TestINITBallotWithACCEPTVoteproofHigherHeight(
 //
 // StateJoiningHandler will ignore this ballot and keep broadcasting it's INIT Ballot.
 func (t *testStateJoiningHandler) TestINITBallotWithINITVoteproofExpectedHeight() {
-	thr, _ := base.NewThreshold(2, 67)
-	_ = t.localstate.Policy().SetThreshold(thr)
-	_ = t.remoteState.Policy().SetThreshold(thr)
+	r := base.ThresholdRatio(67)
+	_ = t.localstate.Policy().SetThresholdRatio(r)
+	_ = t.remoteState.Policy().SetThresholdRatio(r)
 
 	cs, err := NewStateJoiningHandler(t.localstate, nil)
 	t.NoError(err)
@@ -281,9 +281,9 @@ func (t *testStateJoiningHandler) TestINITBallotWithINITVoteproofExpectedHeight(
 //
 // StateJoiningHandler will ignore this ballot and keep broadcasting it's INIT Ballot.
 func (t *testStateJoiningHandler) TestINITBallotWithINITVoteproofLowerHeight() {
-	thr, _ := base.NewThreshold(2, 67)
-	_ = t.localstate.Policy().SetThreshold(thr)
-	_ = t.remoteState.Policy().SetThreshold(thr)
+	r := base.ThresholdRatio(67)
+	_ = t.localstate.Policy().SetThresholdRatio(r)
+	_ = t.remoteState.Policy().SetThresholdRatio(r)
 
 	cs, err := NewStateJoiningHandler(t.localstate, nil)
 	t.NoError(err)
@@ -331,9 +331,9 @@ func (t *testStateJoiningHandler) TestINITBallotWithINITVoteproofLowerHeight() {
 // StateJoiningHandler will stop broadcasting it's INIT Ballot and
 // moves to syncing.
 func (t *testStateJoiningHandler) TestINITBallotWithINITVoteproofHigherHeight() {
-	thr, _ := base.NewThreshold(2, 67)
-	_ = t.localstate.Policy().SetThreshold(thr)
-	_ = t.remoteState.Policy().SetThreshold(thr)
+	r := base.ThresholdRatio(67)
+	_ = t.localstate.Policy().SetThresholdRatio(r)
+	_ = t.remoteState.Policy().SetThresholdRatio(r)
 
 	cs, err := NewStateJoiningHandler(t.localstate, nil)
 	t.NoError(err)
@@ -375,9 +375,9 @@ func (t *testStateJoiningHandler) TestINITBallotWithINITVoteproofHigherHeight() 
 // - vp.Height() == local + 1
 // StateJoiningHandler will moves to consensus state.
 func (t *testStateJoiningHandler) TestINITVoteproofExpected() {
-	thr, _ := base.NewThreshold(2, 67)
-	_ = t.localstate.Policy().SetThreshold(thr)
-	_ = t.remoteState.Policy().SetThreshold(thr)
+	r := base.ThresholdRatio(67)
+	_ = t.localstate.Policy().SetThresholdRatio(r)
+	_ = t.remoteState.Policy().SetThresholdRatio(r)
 
 	cs, err := NewStateJoiningHandler(t.localstate, nil)
 	t.NoError(err)
@@ -422,9 +422,9 @@ func (t *testStateJoiningHandler) TestINITVoteproofExpected() {
 // - vp.Height() < local + 1
 // StateJoiningHandler will wait another Voteproof
 func (t *testStateJoiningHandler) TestINITVoteproofLowerHeight() {
-	thr, _ := base.NewThreshold(2, 67)
-	_ = t.localstate.Policy().SetThreshold(thr)
-	_ = t.remoteState.Policy().SetThreshold(thr)
+	r := base.ThresholdRatio(67)
+	_ = t.localstate.Policy().SetThresholdRatio(r)
+	_ = t.remoteState.Policy().SetThresholdRatio(r)
 
 	cs, err := NewStateJoiningHandler(t.localstate, nil)
 	t.NoError(err)
@@ -457,9 +457,9 @@ func (t *testStateJoiningHandler) TestINITVoteproofLowerHeight() {
 // - vp.Height() == local + 1
 // StateJoiningHandler will processing Proposal.
 func (t *testStateJoiningHandler) TestACCEPTVoteproofExpected() {
-	thr, _ := base.NewThreshold(2, 67)
-	_ = t.localstate.Policy().SetThreshold(thr)
-	_ = t.remoteState.Policy().SetThreshold(thr)
+	r := base.ThresholdRatio(67)
+	_ = t.localstate.Policy().SetThresholdRatio(r)
+	_ = t.remoteState.Policy().SetThresholdRatio(r)
 
 	manifest := t.lastManifest(t.localstate.Storage())
 	returnedBlock, err := block.NewTestBlockV0(
@@ -502,9 +502,9 @@ func (t *testStateJoiningHandler) TestACCEPTVoteproofExpected() {
 // - vp.Height() < local + 1
 // StateJoiningHandler will wait another Voteproof
 func (t *testStateJoiningHandler) TestACCEPTVoteproofLowerHeight() {
-	thr, _ := base.NewThreshold(2, 67)
-	_ = t.localstate.Policy().SetThreshold(thr)
-	_ = t.remoteState.Policy().SetThreshold(thr)
+	r := base.ThresholdRatio(67)
+	_ = t.localstate.Policy().SetThresholdRatio(r)
+	_ = t.remoteState.Policy().SetThresholdRatio(r)
 
 	cs, err := NewStateJoiningHandler(t.localstate, nil)
 	t.NoError(err)

@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"time"
 
+	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/base/key"
 	"github.com/spikeekips/mitum/base/valuehash"
 	jsonenc "github.com/spikeekips/mitum/util/encoder/json"
@@ -11,32 +12,29 @@ import (
 
 type PolicyOperationBodyV0PackerJSON struct {
 	jsonenc.HintedHead
-	Threshold                        []float64     `json:"threshold"`
-	TimeoutWaitingProposal           time.Duration `json:"timeout_waiting_proposal"`
-	IntervalBroadcastingINITBallot   time.Duration `json:"interval_broadcasting_init_ballot"`
-	IntervalBroadcastingProposal     time.Duration `json:"interval_broadcasting_proposal"`
-	WaitBroadcastingACCEPTBallot     time.Duration `json:"wait_broadcasting_accept_ballot"`
-	IntervalBroadcastingACCEPTBallot time.Duration `json:"interval_broadcasting_accept_ballot"`
-	NumberOfActingSuffrageNodes      uint          `json:"number_of_acting_suffrage_nodes"`
-	TimespanValidBallot              time.Duration `json:"timespan_valid_ballot"`
-	TimeoutProcessProposal           time.Duration `json:"timeout_process_proposal"`
+	ThresholdRatio                   base.ThresholdRatio `json:"threshold"`
+	TimeoutWaitingProposal           time.Duration       `json:"timeout_waiting_proposal"`
+	IntervalBroadcastingINITBallot   time.Duration       `json:"interval_broadcasting_init_ballot"`
+	IntervalBroadcastingProposal     time.Duration       `json:"interval_broadcasting_proposal"`
+	WaitBroadcastingACCEPTBallot     time.Duration       `json:"wait_broadcasting_accept_ballot"`
+	IntervalBroadcastingACCEPTBallot time.Duration       `json:"interval_broadcasting_accept_ballot"`
+	NumberOfActingSuffrageNodes      uint                `json:"number_of_acting_suffrage_nodes"`
+	TimespanValidBallot              time.Duration       `json:"timespan_valid_ballot"`
+	TimeoutProcessProposal           time.Duration       `json:"timeout_process_proposal"`
 }
 
 func (po PolicyOperationBodyV0) MarshalJSON() ([]byte, error) {
 	return jsonenc.Marshal(PolicyOperationBodyV0PackerJSON{
-		HintedHead: jsonenc.NewHintedHead(po.Hint()),
-		Threshold: []float64{
-			float64(po.Threshold.Total),
-			po.Threshold.Percent,
-		},
-		TimeoutWaitingProposal:           po.TimeoutWaitingProposal,
-		IntervalBroadcastingINITBallot:   po.IntervalBroadcastingINITBallot,
-		IntervalBroadcastingProposal:     po.IntervalBroadcastingProposal,
-		WaitBroadcastingACCEPTBallot:     po.WaitBroadcastingACCEPTBallot,
-		IntervalBroadcastingACCEPTBallot: po.IntervalBroadcastingACCEPTBallot,
-		NumberOfActingSuffrageNodes:      po.NumberOfActingSuffrageNodes,
-		TimespanValidBallot:              po.TimespanValidBallot,
-		TimeoutProcessProposal:           po.TimeoutProcessProposal,
+		HintedHead:                       jsonenc.NewHintedHead(po.Hint()),
+		ThresholdRatio:                   po.thresholdRatio,
+		TimeoutWaitingProposal:           po.timeoutWaitingProposal,
+		IntervalBroadcastingINITBallot:   po.intervalBroadcastingINITBallot,
+		IntervalBroadcastingProposal:     po.intervalBroadcastingProposal,
+		WaitBroadcastingACCEPTBallot:     po.waitBroadcastingACCEPTBallot,
+		IntervalBroadcastingACCEPTBallot: po.intervalBroadcastingACCEPTBallot,
+		NumberOfActingSuffrageNodes:      po.numberOfActingSuffrageNodes,
+		TimespanValidBallot:              po.timespanValidBallot,
+		TimeoutProcessProposal:           po.timeoutProcessProposal,
 	})
 }
 
@@ -51,7 +49,7 @@ func (po *PolicyOperationBodyV0) UnpackJSON(b []byte, enc *jsonenc.Encoder) erro
 	}
 
 	return po.unpack(
-		up.Threshold,
+		up.ThresholdRatio,
 		up.TimeoutWaitingProposal,
 		up.IntervalBroadcastingINITBallot,
 		up.IntervalBroadcastingProposal,

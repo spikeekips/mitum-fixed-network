@@ -80,8 +80,8 @@ func (nr *NodeRunner) Initialize() error {
 		nr.attachLocalstate,
 		nr.attachNodeChannel,
 		nr.attachRemoteNodes,
-		nr.attachBallotbox,
 		nr.attachSuffrage,
+		nr.attachBallotbox,
 		nr.attachProposalProcessor,
 		nr.attachProposalMaker,
 		nr.attachNetwork,
@@ -301,6 +301,7 @@ func (nr *NodeRunner) networkhandlerNodeInfo() (network.NodeInfo, error) {
 		manifest,
 		nr.version,
 		nr.design.Network.PublishURL().String(),
+		nr.localstate.Policy().PolicyOperationBody(),
 	), nil
 }
 
@@ -398,9 +399,21 @@ func (nr *NodeRunner) attachBallotbox() error {
 	})
 	l.Debug().Msg("trying to attach")
 
-	bb := isaac.NewBallotbox(func() base.Threshold {
-		return nr.localstate.Policy().Threshold()
-	})
+	bb := isaac.NewBallotbox(
+		func() []base.Address {
+			return nr.suffrage.Nodes()
+		},
+		func() base.Threshold {
+			if t, err := base.NewThreshold(
+				uint(len(nr.suffrage.Nodes())),
+				nr.localstate.Policy().ThresholdRatio(),
+			); err != nil {
+				panic(err)
+			} else {
+				return t
+			}
+		},
+	)
 
 	nr.setupLogging(bb)
 	nr.ballotbox = bb
@@ -473,7 +486,7 @@ func (nr *NodeRunner) attachConsensusStates() error {
 	{
 		l.Debug().Str("state", "booting").Msg("trying to attach")
 		var err error
-		if booting, err = isaac.NewStateBootingHandler(nr.localstate); err != nil {
+		if booting, err = isaac.NewStateBootingHandler(nr.localstate, nr.suffrage); err != nil {
 			return err
 		}
 		l.Debug().Str("state", "syncing").Msg("trying to attach")

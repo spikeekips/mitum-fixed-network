@@ -28,9 +28,14 @@ func NewGenesisBlockV0Generator(localstate *Localstate, ops []operation.Operatio
 			return c.Str("module", "genesis-block-generator")
 		}),
 		localstate: localstate,
-		ballotbox: NewBallotbox(func() base.Threshold {
-			return threshold
-		}),
+		ballotbox: NewBallotbox(
+			func() []base.Address {
+				return []base.Address{localstate.Node().Address()}
+			},
+			func() base.Threshold {
+				return threshold
+			},
+		),
 		ops:      ops,
 		suffrage: base.NewFixedSuffrage(localstate.Node().Address(), nil),
 	}, nil

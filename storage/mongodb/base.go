@@ -422,7 +422,7 @@ func (st *Storage) Seal(h valuehash.Hash) (seal.Seal, bool, error) {
 			return nil
 		},
 	); err != nil {
-		if xerrors.Is(err, storage.NotFoundError) {
+		if storage.IsNotFoundError(err) {
 			return nil, false, nil
 		}
 

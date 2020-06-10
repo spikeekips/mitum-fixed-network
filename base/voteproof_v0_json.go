@@ -13,7 +13,8 @@ type VoteproofV0PackJSON struct {
 	jsonenc.HintedHead
 	HT Height             `json:"height"`
 	RD Round              `json:"round"`
-	TH Threshold          `json:"threshold"`
+	SS []Address          `json:"suffrages"`
+	TH ThresholdRatio     `json:"threshold"`
 	RS VoteResultType     `json:"result"`
 	ST Stage              `json:"stage"`
 	MJ Fact               `json:"majority"`
@@ -58,7 +59,8 @@ func (vp VoteproofV0) MarshalJSON() ([]byte, error) {
 		HintedHead: jsonenc.NewHintedHead(vp.Hint()),
 		HT:         vp.height,
 		RD:         vp.round,
-		TH:         vp.threshold,
+		SS:         vp.suffrages,
+		TH:         vp.thresholdRatio,
 		RS:         vp.result,
 		ST:         vp.stage,
 		MJ:         vp.majority,
@@ -73,7 +75,8 @@ func (vp VoteproofV0) MarshalJSON() ([]byte, error) {
 type VoteproofV0UnpackJSON struct {
 	HT Height               `json:"height"`
 	RD Round                `json:"round"`
-	TH Threshold            `json:"threshold"`
+	SS []json.RawMessage    `json:"suffrages"`
+	TH ThresholdRatio       `json:"threshold"`
 	RS VoteResultType       `json:"result"`
 	ST Stage                `json:"stage"`
 	MJ json.RawMessage      `json:"majority"`
@@ -88,6 +91,11 @@ func (vp *VoteproofV0) UnpackJSON(b []byte, enc *jsonenc.Encoder) error {
 	var vpp VoteproofV0UnpackJSON
 	if err := enc.Unmarshal(b, &vpp); err != nil {
 		return err
+	}
+
+	ss := make([][]byte, len(vpp.SS))
+	for i := range vpp.SS {
+		ss[i] = vpp.SS[i]
 	}
 
 	fs := make([][2][]byte, len(vpp.FS))
@@ -112,6 +120,7 @@ func (vp *VoteproofV0) UnpackJSON(b []byte, enc *jsonenc.Encoder) error {
 		enc,
 		vpp.HT,
 		vpp.RD,
+		ss,
 		vpp.TH,
 		vpp.RS,
 		vpp.ST,

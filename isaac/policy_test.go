@@ -39,15 +39,15 @@ func (t *testPolicy) TestLoadWithoutStorage() {
 
 	df := DefaultPolicy()
 
-	t.Equal(df.Threshold, p.Threshold())
-	t.Equal(df.TimeoutWaitingProposal, p.TimeoutWaitingProposal())
-	t.Equal(df.IntervalBroadcastingINITBallot, p.IntervalBroadcastingINITBallot())
-	t.Equal(df.IntervalBroadcastingProposal, p.IntervalBroadcastingProposal())
-	t.Equal(df.WaitBroadcastingACCEPTBallot, p.WaitBroadcastingACCEPTBallot())
-	t.Equal(df.IntervalBroadcastingACCEPTBallot, p.IntervalBroadcastingACCEPTBallot())
-	t.Equal(df.NumberOfActingSuffrageNodes, p.NumberOfActingSuffrageNodes())
-	t.Equal(df.TimespanValidBallot, p.TimespanValidBallot())
-	t.Equal(df.TimeoutProcessProposal, p.TimeoutProcessProposal())
+	t.Equal(df.ThresholdRatio(), p.ThresholdRatio())
+	t.Equal(df.TimeoutWaitingProposal(), p.TimeoutWaitingProposal())
+	t.Equal(df.IntervalBroadcastingINITBallot(), p.IntervalBroadcastingINITBallot())
+	t.Equal(df.IntervalBroadcastingProposal(), p.IntervalBroadcastingProposal())
+	t.Equal(df.WaitBroadcastingACCEPTBallot(), p.WaitBroadcastingACCEPTBallot())
+	t.Equal(df.IntervalBroadcastingACCEPTBallot(), p.IntervalBroadcastingACCEPTBallot())
+	t.Equal(df.NumberOfActingSuffrageNodes(), p.NumberOfActingSuffrageNodes())
+	t.Equal(df.TimespanValidBallot(), p.TimespanValidBallot())
+	t.Equal(df.TimeoutProcessProposal(), p.TimeoutProcessProposal())
 }
 
 func (t *testPolicy) TestLoadFromStorage() {
@@ -57,7 +57,7 @@ func (t *testPolicy) TestLoadFromStorage() {
 	statepool := NewStatePool(st)
 
 	policies := DefaultPolicy()
-	policies.TimeoutWaitingProposal = policies.TimeoutWaitingProposal * 3
+	policies.timeoutWaitingProposal = policies.timeoutWaitingProposal * 3
 
 	spo, err := NewSetPolicyOperationV0(t.pk, []byte("this-is-token"), policies, nil)
 	t.NoError(err)
@@ -98,18 +98,18 @@ func (t *testPolicy) TestLoadFromStorage() {
 
 	df := DefaultPolicy()
 
-	t.Equal(df.Threshold, p.Threshold())
+	t.Equal(df.thresholdRatio, p.ThresholdRatio())
 
-	t.NotEqual(df.TimeoutWaitingProposal, p.TimeoutWaitingProposal())
-	t.Equal(policies.TimeoutWaitingProposal, p.TimeoutWaitingProposal())
+	t.NotEqual(df.timeoutWaitingProposal, p.TimeoutWaitingProposal())
+	t.Equal(policies.timeoutWaitingProposal, p.TimeoutWaitingProposal())
 
-	t.Equal(df.IntervalBroadcastingINITBallot, p.IntervalBroadcastingINITBallot())
-	t.Equal(df.IntervalBroadcastingProposal, p.IntervalBroadcastingProposal())
-	t.Equal(df.WaitBroadcastingACCEPTBallot, p.WaitBroadcastingACCEPTBallot())
-	t.Equal(df.IntervalBroadcastingACCEPTBallot, p.IntervalBroadcastingACCEPTBallot())
-	t.Equal(df.NumberOfActingSuffrageNodes, p.NumberOfActingSuffrageNodes())
-	t.Equal(df.TimespanValidBallot, p.TimespanValidBallot())
-	t.Equal(df.TimeoutProcessProposal, p.TimeoutProcessProposal())
+	t.Equal(df.intervalBroadcastingINITBallot, p.IntervalBroadcastingINITBallot())
+	t.Equal(df.intervalBroadcastingProposal, p.IntervalBroadcastingProposal())
+	t.Equal(df.waitBroadcastingACCEPTBallot, p.WaitBroadcastingACCEPTBallot())
+	t.Equal(df.intervalBroadcastingACCEPTBallot, p.IntervalBroadcastingACCEPTBallot())
+	t.Equal(df.numberOfActingSuffrageNodes, p.NumberOfActingSuffrageNodes())
+	t.Equal(df.timespanValidBallot, p.TimespanValidBallot())
+	t.Equal(df.timeoutProcessProposal, p.TimeoutProcessProposal())
 }
 
 func TestPolicy(t *testing.T) {

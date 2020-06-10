@@ -2,7 +2,6 @@ package quicnetwork
 
 import (
 	"bytes"
-	"encoding/json"
 	"io"
 	"net/http"
 	"net/url"
@@ -12,7 +11,6 @@ import (
 
 	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/base/seal"
-	"github.com/spikeekips/mitum/base/valuehash"
 	"github.com/spikeekips/mitum/network"
 	"github.com/spikeekips/mitum/util/encoder"
 	"github.com/spikeekips/mitum/util/logging"
@@ -117,31 +115,15 @@ func (qs *QuicServer) handleGetSeals(w http.ResponseWriter, r *http.Request) {
 		enc = e
 	}
 
-	// TODO encoder.Encoder should handle slice
-	var hs []json.RawMessage
-	if err := enc.Unmarshal(body.Bytes(), &hs); err != nil {
-		qs.Log().Error().Err(err).Msg("failed to unmarshal hash slice")
-		network.HTTPError(w, http.StatusInternalServerError)
+	var args HashesArgs
+	if err := enc.Decode(body.Bytes(), &args); err != nil {
+		qs.Log().Error().Err(err).Msg("failed to decode")
+		network.HTTPError(w, http.StatusBadRequest)
 		return
 	}
 
-	var hashes []valuehash.Hash
-	for _, r := range hs {
-		if hinter, err := enc.DecodeByHint(r); err != nil {
-			qs.Log().Error().Err(err).Msg("failed to decode")
-			network.HTTPError(w, http.StatusBadRequest)
-			return
-		} else if h, ok := hinter.(valuehash.Hash); !ok {
-			qs.Log().Error().Err(err).Msg("not hash")
-			network.HTTPError(w, http.StatusBadRequest)
-			return
-		} else {
-			hashes = append(hashes, h)
-		}
-	}
-
 	var output []byte
-	if sls, err := qs.getSealsHandler(hashes); err != nil {
+	if sls, err := qs.getSealsHandler(args.Hashes); err != nil {
 		qs.Log().Error().Err(err).Msg("failed to get seals")
 		network.HTTPError(w, http.StatusBadRequest)
 		return
@@ -237,15 +219,15 @@ func (qs *QuicServer) handleGetByHeights(
 		enc = e
 	}
 
-	var heights []base.Height
-	if err := enc.Unmarshal(body.Bytes(), &heights); err != nil {
-		network.HTTPError(w, http.StatusInternalServerError)
+	var args HeightsArgs
+	if err := enc.Decode(body.Bytes(), &args); err != nil {
+		network.HTTPError(w, http.StatusBadRequest)
 
-		return xerrors.Errorf("failed to unmarshal hash slice: %w", err)
+		return err
 	}
 
 	var output []byte
-	if sls, err := getHandler(heights); err != nil {
+	if sls, err := getHandler(args.Heights); err != nil {
 		network.HTTPError(w, http.StatusBadRequest)
 
 		return err

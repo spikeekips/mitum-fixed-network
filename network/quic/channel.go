@@ -100,7 +100,7 @@ func (qc *QuicChannel) Seals(hs []valuehash.Hash) ([]seal.Seal, error) {
 		return e.Strs("seal_hashes", l)
 	}).Msg("request seals")
 
-	ss, err := qc.requestHinters(qc.getSealsURL, hs)
+	ss, err := qc.requestHinters(qc.getSealsURL, NewHashesArgs(hs))
 	if err != nil {
 		return nil, err
 	}
@@ -182,7 +182,7 @@ func (qc *QuicChannel) Manifests(heights []base.Height) ([]block.Manifest, error
 		return e.Strs("manifest_height", l)
 	}).Msg("request manfests")
 
-	hinters, err := qc.requestHinters(qc.getManifestsURL, heights)
+	hinters, err := qc.requestHinters(qc.getManifestsURL, NewHeightsArgs(heights))
 	if err != nil {
 		return nil, err
 	}
@@ -209,7 +209,7 @@ func (qc *QuicChannel) Blocks(heights []base.Height) ([]block.Block, error) {
 		return e.Strs("block_heights", l)
 	}).Msg("request blocks")
 
-	hs, err := qc.requestHinters(qc.getBlocksURL, heights)
+	hs, err := qc.requestHinters(qc.getBlocksURL, NewHeightsArgs(heights))
 	if err != nil {
 		return nil, err
 	}

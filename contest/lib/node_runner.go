@@ -433,6 +433,10 @@ func (nr *NodeRunner) attachSuffrage() error {
 	if s, err := nr.design.Component.Suffrage.New(nr.localstate); err != nil {
 		return xerrors.Errorf("failed to create new suffrage component: %w", err)
 	} else {
+		l.Debug().
+			Str("type", nr.design.Component.Suffrage.Type).
+			Interface("info", nr.design.Component.Suffrage.Info).
+			Msg("suffrage loaded")
 		sf = s
 	}
 
@@ -450,7 +454,16 @@ func (nr *NodeRunner) attachProposalProcessor() error {
 	})
 	l.Debug().Msg("trying to attach")
 
-	pp := isaac.NewProposalProcessorV0(nr.localstate, nr.suffrage)
+	var pp isaac.ProposalProcessor
+	if s, err := nr.design.Component.ProposalProcessor.New(nr.localstate, nr.suffrage); err != nil {
+		return xerrors.Errorf("failed to create new proposal processor component: %w", err)
+	} else {
+		l.Debug().
+			Str("type", nr.design.Component.ProposalProcessor.Type).
+			Interface("info", nr.design.Component.ProposalProcessor.Info).
+			Msg("proposal processor loaded")
+		pp = s
+	}
 
 	nr.setupLogging(pp)
 	nr.proposalProcessor = pp

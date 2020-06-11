@@ -12,11 +12,11 @@ import (
 
 type ContestDesign struct {
 	encs       *encoder.Encoders
-	Nodes      []*ContestNodeDesign
 	Conditions []*Condition
 	Config     *ContestConfigDesign
-	Component  *ContestComponentDesign
+	Component  *ComponentDesign
 	actions    map[string]ConditionActionLoader
+	Nodes      []*ContestNodeDesign
 }
 
 func LoadContestDesignFromFile(
@@ -53,16 +53,20 @@ func (cd *ContestDesign) IsValid([]byte) error {
 	}
 
 	if cd.Component == nil {
-		cd.Component = NewContestComponentDesign()
+		cd.Component = NewComponentDesign(nil)
 	}
 	if err := cd.Component.IsValid(nil); err != nil {
 		return err
 	}
 
 	for _, n := range cd.Nodes {
-		if err := n.IsValid(nil); err != nil {
-			return err
+		if n.Component == nil {
+			n.Component = NewComponentDesign(cd.Component)
 		} else if err := n.Component.Merge(cd.Component); err != nil {
+			return err
+		}
+
+		if err := n.IsValid(nil); err != nil {
 			return err
 		}
 	}
@@ -115,36 +119,6 @@ func (cc *ContestConfigDesign) IsValid([]byte) error {
 		cc.GenesisPolicy = NewContestPolicyDesign()
 	} else if err := cc.GenesisPolicy.IsValid(nil); err != nil {
 		return err
-	}
-
-	return nil
-}
-
-type ContestComponentDesign struct {
-	Suffrage *SuffrageComponentDesign `yaml:",omitempty"`
-}
-
-func NewContestComponentDesign() *ContestComponentDesign {
-	return &ContestComponentDesign{}
-}
-
-func (cc *ContestComponentDesign) IsValid([]byte) error {
-	if cc.Suffrage != nil {
-		if err := cc.Suffrage.IsValid(nil); err != nil {
-			return err
-		}
-	}
-
-	return nil
-}
-
-func (cc *ContestComponentDesign) Merge(b *ContestComponentDesign) error {
-	if b == nil {
-		return nil
-	}
-
-	if cc.Suffrage == nil {
-		cc.Suffrage = b.Suffrage
 	}
 
 	return nil

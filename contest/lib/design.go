@@ -25,7 +25,7 @@ type NodeDesign struct {
 	NetworkIDString  string `yaml:"network-id,omitempty"`
 	Network          *NetworkDesign
 	GenesisPolicy    *ContestPolicyDesign `yaml:"genesis-policy,omitempty"`
-	Component        *ContestComponentDesign
+	Component        *ComponentDesign
 	privatekey       key.Privatekey
 	Nodes            []*RemoteDesign
 }
@@ -90,7 +90,7 @@ func (nd *NodeDesign) IsValid([]byte) error {
 	}
 
 	if nd.Component == nil {
-		nd.Component = NewContestComponentDesign()
+		nd.Component = NewComponentDesign(nil)
 	}
 	if err := nd.Component.IsValid(nil); err != nil {
 		return err

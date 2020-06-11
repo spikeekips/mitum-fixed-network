@@ -51,7 +51,6 @@ func (cmd *StartCommand) Run(log logging.Logger) error {
 		cmd.encs = e
 	}
 
-	// load design file
 	if err := cmd.loadDesign(cmd.Design); err != nil {
 		return err
 	}

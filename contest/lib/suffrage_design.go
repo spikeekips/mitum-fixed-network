@@ -1,28 +1,28 @@
 package contestlib
 
 import (
+	"golang.org/x/xerrors"
+	"gopkg.in/yaml.v3"
+
 	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/isaac"
 	"github.com/spikeekips/mitum/network"
-	"golang.org/x/xerrors"
-	"gopkg.in/yaml.v3"
 )
 
-type SuffrageComponentDesign struct {
-	Type    string
-	Info    map[string]interface{} `yaml:"-"`
-	creator SuffrageDesign
+type SuffrageDesign struct {
+	Type string
+	Info map[string]interface{} `yaml:"-"`
 }
 
-func NewSuffrageComponentDesign() *SuffrageComponentDesign {
-	return &SuffrageComponentDesign{Type: "roundrobin", Info: map[string]interface{}{"type": "roundrobin"}}
+func NewSuffrageDesign() *SuffrageDesign {
+	return &SuffrageDesign{Type: "roundrobin", Info: map[string]interface{}{"type": "roundrobin"}}
 }
 
-func (st *SuffrageComponentDesign) MarshalYAML() (interface{}, error) {
+func (st *SuffrageDesign) MarshalYAML() (interface{}, error) {
 	return st.Info, nil
 }
 
-func (st *SuffrageComponentDesign) UnmarshalYAML(value *yaml.Node) error {
+func (st *SuffrageDesign) UnmarshalYAML(value *yaml.Node) error {
 	var m map[string]interface{}
 	if err := value.Decode(&m); err != nil {
 		return err
@@ -39,23 +39,13 @@ func (st *SuffrageComponentDesign) UnmarshalYAML(value *yaml.Node) error {
 	return nil
 }
 
-func (st *SuffrageComponentDesign) IsValid([]byte) error {
-	if st == nil {
-		return nil
-	}
-
+func (st *SuffrageDesign) IsValid([]byte) error {
 	switch st.Type {
 	case "roundrobin":
-		st.creator = RoundrobinSuffrageDesign{}
 	case "fixed-proposer":
-		var proposer string
-		if i, found := st.Info["proposer"]; !found {
+		if _, found := st.Info["proposer"]; !found {
 			return xerrors.Errorf("`proposer` must be set for fixed-suffrage")
-		} else {
-			proposer = i.(string)
 		}
-
-		st.creator = FixedSuffrageDesign{proposer: proposer}
 	default:
 		return xerrors.Errorf("unknown type, %q", st.Type)
 	}
@@ -63,16 +53,22 @@ func (st *SuffrageComponentDesign) IsValid([]byte) error {
 	return nil
 }
 
-func (st *SuffrageComponentDesign) New(localstate *isaac.Localstate) (base.Suffrage, error) {
-	if st == nil || st.creator == nil {
+func (st *SuffrageDesign) New(localstate *isaac.Localstate) (base.Suffrage, error) {
+	switch st.Type {
+	case "roundrobin":
 		return (RoundrobinSuffrageDesign{}).New(localstate)
+	case "fixed-proposer":
+		var proposer string
+		if i, found := st.Info["proposer"]; !found {
+			return nil, xerrors.Errorf("`proposer` must be set for fixed-suffrage")
+		} else {
+			proposer = i.(string)
+		}
+
+		return (FixedSuffrageDesign{proposer: proposer}).New(localstate)
+	default:
+		return nil, xerrors.Errorf("unknown type found: %v", st.Type)
 	}
-
-	return st.creator.New(localstate)
-}
-
-type SuffrageDesign interface {
-	New(*isaac.Localstate) (base.Suffrage, error)
 }
 
 type FixedSuffrageDesign struct {

@@ -28,6 +28,7 @@ type ProposalProcessor interface {
 }
 
 type ProposalProcessorV0 struct {
+	// TODO rename to DefaultProposalProcessor
 	*logging.Logging
 	localstate *Localstate
 	processors *sync.Map

@@ -2,7 +2,7 @@ package contestlib
 
 type ContestNodeDesign struct {
 	AddressString string `yaml:"address"`
-	Component     *ContestComponentDesign
+	Component     *ComponentDesign
 }
 
 func (cn *ContestNodeDesign) Address() string {
@@ -11,7 +11,7 @@ func (cn *ContestNodeDesign) Address() string {
 
 func (cn *ContestNodeDesign) IsValid([]byte) error {
 	if cn.Component == nil {
-		cn.Component = NewContestComponentDesign()
+		cn.Component = NewComponentDesign(nil)
 	}
 
 	if err := cn.Component.IsValid(nil); err != nil {

@@ -23,7 +23,7 @@ type Operation interface {
 	BaseOperationFact
 }
 
-func IsValidOperation(op Operation, b []byte) error {
+func IsValidOperation(op Operation, networkID []byte) error {
 	if err := op.Hint().IsValid(nil); err != nil {
 		return err
 	}
@@ -34,11 +34,11 @@ func IsValidOperation(op Operation, b []byte) error {
 		return isvalid.InvalidError.Errorf("Operation token size too large: %d > %d", l, MaxTokenSize)
 	}
 
-	if err := op.Fact().IsValid(b); err != nil {
+	if err := op.Fact().IsValid(networkID); err != nil {
 		return err
 	}
 
-	if err := IsValidEmbededFact(op.Signer(), op, b); err != nil {
+	if err := IsValidEmbededFact(op.Signer(), op, networkID); err != nil {
 		return err
 	}
 

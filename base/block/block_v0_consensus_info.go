@@ -14,15 +14,14 @@ type BlockConsensusInfoV0 struct {
 	suffrageInfo    SuffrageInfo
 }
 
-func (bc BlockConsensusInfoV0) IsValid(b []byte) error {
+func (bc BlockConsensusInfoV0) IsValid(networkID []byte) error {
 	if err := isvalid.Check(
 		[]isvalid.IsValider{
 			bc.initVoteproof,
 			bc.acceptVoteproof,
 			bc.suffrageInfo,
 		},
-		b, false,
-	); err != nil {
+		networkID, false); err != nil {
 		return err
 	}
 

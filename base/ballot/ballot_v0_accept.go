@@ -26,16 +26,12 @@ func (abf ACCEPTBallotFactV0) Hint() hint.Hint {
 	return ACCEPTBallotFactV0Hint
 }
 
-func (abf ACCEPTBallotFactV0) IsValid([]byte) error {
-	if err := isvalid.Check([]isvalid.IsValider{
+func (abf ACCEPTBallotFactV0) IsValid(networkID []byte) error {
+	return isvalid.Check([]isvalid.IsValider{
 		abf.BaseBallotFactV0,
 		abf.proposal,
 		abf.newBlock,
-	}, nil, false); err != nil {
-		return err
-	}
-
-	return nil
+	}, networkID, false)
 }
 
 func (abf ACCEPTBallotFactV0) Hash() valuehash.Hash {
@@ -102,7 +98,7 @@ func (ab ACCEPTBallotV0) Stage() base.Stage {
 	return base.StageACCEPT
 }
 
-func (ab ACCEPTBallotV0) IsValid(b []byte) error {
+func (ab ACCEPTBallotV0) IsValid(networkID []byte) error {
 	if ab.voteproof == nil {
 		return xerrors.Errorf("empty Voteproof")
 	}
@@ -111,15 +107,11 @@ func (ab ACCEPTBallotV0) IsValid(b []byte) error {
 		ab.BaseBallotV0,
 		ab.ACCEPTBallotFactV0,
 		ab.voteproof,
-	}, b, false); err != nil {
+	}, networkID, false); err != nil {
 		return err
 	}
 
-	if err := IsValidBallot(ab, b); err != nil {
-		return err
-	}
-
-	return nil
+	return IsValidBallot(ab, networkID)
 }
 
 func (ab ACCEPTBallotV0) Voteproof() base.Voteproof {
@@ -152,8 +144,8 @@ func (ab ACCEPTBallotV0) Fact() base.Fact {
 	return ab.ACCEPTBallotFactV0
 }
 
-func (ab *ACCEPTBallotV0) Sign(pk key.Privatekey, b []byte) error {
-	if newBase, err := SignBaseBallotV0(ab, ab.BaseBallotV0, pk, b); err != nil {
+func (ab *ACCEPTBallotV0) Sign(pk key.Privatekey, networkID []byte) error {
+	if newBase, err := SignBaseBallotV0(ab, ab.BaseBallotV0, pk, networkID); err != nil {
 		return err
 	} else {
 		ab.BaseBallotV0 = newBase

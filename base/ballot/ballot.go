@@ -82,8 +82,8 @@ func IsValidBallot(ballot Ballot, b []byte) error {
 	return operation.IsValidEmbededFact(ballot.Signer(), ballot, b)
 }
 
-func SignBaseBallotV0(blt Ballot, bb BaseBallotV0, pk key.Privatekey, b []byte) (BaseBallotV0, error) {
-	if err := bb.IsReadyToSign(b); err != nil {
+func SignBaseBallotV0(blt Ballot, bb BaseBallotV0, pk key.Privatekey, networkID []byte) (BaseBallotV0, error) {
+	if err := bb.IsReadyToSign(networkID); err != nil {
 		return BaseBallotV0{}, err
 	}
 
@@ -95,14 +95,14 @@ func SignBaseBallotV0(blt Ballot, bb BaseBallotV0, pk key.Privatekey, b []byte) 
 	}
 
 	var sig key.Signature
-	if s, err := pk.Sign(util.ConcatBytesSlice(bodyHash.Bytes(), b)); err != nil {
+	if s, err := pk.Sign(util.ConcatBytesSlice(bodyHash.Bytes(), networkID)); err != nil {
 		return BaseBallotV0{}, err
 	} else {
 		sig = s
 	}
 
 	factHash := blt.Fact().Hash()
-	factSig, err := pk.Sign(util.ConcatBytesSlice(factHash.Bytes(), b))
+	factSig, err := pk.Sign(util.ConcatBytesSlice(factHash.Bytes(), networkID))
 	if err != nil {
 		return BaseBallotV0{}, err
 	}

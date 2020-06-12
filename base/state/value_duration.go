@@ -32,11 +32,7 @@ func (dv DurationValue) set(d time.Duration) (DurationValue, error) {
 }
 
 func (dv DurationValue) IsValid([]byte) error {
-	if err := dv.h.IsValid(nil); err != nil {
-		return err
-	}
-
-	return nil
+	return dv.h.IsValid(nil)
 }
 
 func (dv DurationValue) Bytes() []byte {

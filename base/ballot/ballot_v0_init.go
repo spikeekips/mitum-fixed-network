@@ -36,15 +36,11 @@ func (ibf INITBallotFactV0) Hint() hint.Hint {
 	return INITBallotFactV0Hint
 }
 
-func (ibf INITBallotFactV0) IsValid([]byte) error {
-	if err := isvalid.Check([]isvalid.IsValider{
+func (ibf INITBallotFactV0) IsValid(networkID []byte) error {
+	return isvalid.Check([]isvalid.IsValider{
 		ibf.BaseBallotFactV0,
 		ibf.previousBlock,
-	}, nil, false); err != nil {
-		return err
-	}
-
-	return nil
+	}, networkID, false)
 }
 
 func (ibf INITBallotFactV0) Hash() valuehash.Hash {
@@ -98,7 +94,7 @@ func (ib INITBallotV0) Stage() base.Stage {
 	return base.StageINIT
 }
 
-func (ib INITBallotV0) IsValid(b []byte) error {
+func (ib INITBallotV0) IsValid(networkID []byte) error {
 	if ib.Height() == base.Height(0) {
 		if ib.voteproof != nil {
 			return xerrors.Errorf("not empty Voteproof for genesis INITBallot")
@@ -107,7 +103,7 @@ func (ib INITBallotV0) IsValid(b []byte) error {
 		if err := isvalid.Check([]isvalid.IsValider{
 			ib.BaseBallotV0,
 			ib.INITBallotFactV0,
-		}, b, false); err != nil {
+		}, networkID, false); err != nil {
 			return err
 		}
 	} else {
@@ -119,16 +115,12 @@ func (ib INITBallotV0) IsValid(b []byte) error {
 			ib.BaseBallotV0,
 			ib.INITBallotFactV0,
 			ib.voteproof,
-		}, b, false); err != nil {
+		}, networkID, false); err != nil {
 			return err
 		}
 	}
 
-	if err := IsValidBallot(ib, b); err != nil {
-		return err
-	}
-
-	return nil
+	return IsValidBallot(ib, networkID)
 }
 
 func (ib INITBallotV0) Voteproof() base.Voteproof {
@@ -156,8 +148,8 @@ func (ib INITBallotV0) Fact() base.Fact {
 	return ib.INITBallotFactV0
 }
 
-func (ib *INITBallotV0) Sign(pk key.Privatekey, b []byte) error {
-	if newBase, err := SignBaseBallotV0(ib, ib.BaseBallotV0, pk, b); err != nil {
+func (ib *INITBallotV0) Sign(pk key.Privatekey, networkID []byte) error {
+	if newBase, err := SignBaseBallotV0(ib, ib.BaseBallotV0, pk, networkID); err != nil {
 		return err
 	} else {
 		ib.BaseBallotV0 = newBase

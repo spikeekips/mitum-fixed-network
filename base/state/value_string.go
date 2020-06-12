@@ -43,11 +43,7 @@ func (sv StringValue) set(v interface{}) (StringValue, error) {
 }
 
 func (sv StringValue) IsValid([]byte) error {
-	if err := sv.h.IsValid(nil); err != nil {
-		return err
-	}
-
-	return nil
+	return sv.h.IsValid(nil)
 }
 
 func (sv StringValue) Bytes() []byte {

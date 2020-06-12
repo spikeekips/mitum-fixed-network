@@ -13,8 +13,6 @@ type NetworkID []byte
 
 const MaxNetworkIDLength = 300
 
-// TODO check the usage of network id
-
 func (ni NetworkID) IsValid([]byte) error {
 	if len(ni) < 1 {
 		return xerrors.Errorf("empty NetworkID")
@@ -41,4 +39,8 @@ func (ni *NetworkID) UnmarshalText(b []byte) error {
 	*ni = NetworkID(b)
 
 	return nil
+}
+
+func (ni NetworkID) Bytes() []byte {
+	return []byte(ni)
 }

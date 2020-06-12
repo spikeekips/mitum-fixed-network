@@ -61,16 +61,16 @@ func NewBlockV0(
 	}, nil
 }
 
-func (bm BlockV0) IsValid(b []byte) error {
+func (bm BlockV0) IsValid(networkID []byte) error {
 	if bm.height == base.PreGenesisHeight {
-		if err := isvalid.Check([]isvalid.IsValider{bm.ManifestV0}, b, false); err != nil {
+		if err := isvalid.Check([]isvalid.IsValider{bm.ManifestV0}, networkID, false); err != nil {
 			return err
 		}
 	} else {
 		if err := isvalid.Check([]isvalid.IsValider{
 			bm.ManifestV0,
 			bm.BlockConsensusInfoV0,
-		}, b, false); err != nil {
+		}, networkID, false); err != nil {
 			return err
 		}
 	}

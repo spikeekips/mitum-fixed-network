@@ -59,15 +59,7 @@ func (qc *QuicClient) newClient() (*http.Client, func() error /* close func */) 
 		QuicConfig: CloneConfig(qc.quicConfig),
 	}
 
-	return &http.Client{
-			Transport: roundTripper,
-		}, func() error {
-			if err := roundTripper.Close(); err != nil {
-				return err
-			}
-
-			return nil
-		}
+	return &http.Client{Transport: roundTripper}, roundTripper.Close
 }
 
 func (qc *QuicClient) Send(url string, b []byte, headers http.Header) error {

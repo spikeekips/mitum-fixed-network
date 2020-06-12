@@ -26,8 +26,8 @@ func (prf ProposalFactV0) Hint() hint.Hint {
 	return ProposalFactV0Hint
 }
 
-func (prf ProposalFactV0) IsValid(b []byte) error {
-	if err := prf.BaseBallotFactV0.IsValid(b); err != nil {
+func (prf ProposalFactV0) IsValid(networkID []byte) error {
+	if err := prf.BaseBallotFactV0.IsValid(networkID); err != nil {
 		return err
 	}
 
@@ -41,7 +41,7 @@ func (prf ProposalFactV0) IsValid(b []byte) error {
 		}
 
 		return vs
-	}(), b, false); err != nil {
+	}(), networkID, false); err != nil {
 		return err
 	}
 
@@ -139,19 +139,15 @@ func (pr ProposalV0) Stage() base.Stage {
 	return base.StageProposal
 }
 
-func (pr ProposalV0) IsValid(b []byte) error {
+func (pr ProposalV0) IsValid(networkID []byte) error {
 	if err := isvalid.Check([]isvalid.IsValider{
 		pr.BaseBallotV0,
 		pr.ProposalFactV0,
-	}, b, false); err != nil {
+	}, networkID, false); err != nil {
 		return err
 	}
 
-	if err := IsValidBallot(pr, b); err != nil {
-		return err
-	}
-
-	return nil
+	return IsValidBallot(pr, networkID)
 }
 
 func (pr ProposalV0) GenerateHash() (valuehash.Hash, error) {
@@ -170,8 +166,8 @@ func (pr ProposalV0) Fact() base.Fact {
 	return pr.ProposalFactV0
 }
 
-func (pr *ProposalV0) Sign(pk key.Privatekey, b []byte) error {
-	if newBase, err := SignBaseBallotV0(pr, pr.BaseBallotV0, pk, b); err != nil {
+func (pr *ProposalV0) Sign(pk key.Privatekey, networkID []byte) error {
+	if newBase, err := SignBaseBallotV0(pr, pr.BaseBallotV0, pk, networkID); err != nil {
 		return err
 	} else {
 		pr.BaseBallotV0 = newBase

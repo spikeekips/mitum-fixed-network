@@ -36,11 +36,11 @@ type KVOperationFact struct {
 	Value  []byte
 }
 
-func (kvof KVOperationFact) IsValid(b []byte) error {
+func (kvof KVOperationFact) IsValid([]byte) error {
 	if kvof.signer == nil {
 		return xerrors.Errorf("fact has empty signer")
 	}
-	if err := kvof.Hint().IsValid(b); err != nil {
+	if err := kvof.Hint().IsValid(nil); err != nil {
 		return err
 	}
 
@@ -131,12 +131,8 @@ func NewKVOperation(
 	return kvo, nil
 }
 
-func (kvo KVOperation) IsValid(b []byte) error {
-	if err := IsValidOperation(kvo, b); err != nil {
-		return err
-	}
-
-	return nil
+func (kvo KVOperation) IsValid(networkID []byte) error {
+	return IsValidOperation(kvo, networkID)
 }
 
 func (kvo KVOperation) Hint() hint.Hint {

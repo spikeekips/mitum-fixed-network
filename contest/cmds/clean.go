@@ -37,9 +37,5 @@ func (cmd *CleanCommand) Run(log logging.Logger) error {
 	}
 
 	log.Info().Msg("volumes pruned")
-	if err := contestlib.VolumesPrune(dc); err != nil {
-		return err
-	}
-
-	return nil
+	return contestlib.VolumesPrune(dc)
 }

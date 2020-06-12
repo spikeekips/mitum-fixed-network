@@ -32,12 +32,8 @@ func (bf BaseBallotFactV0) IsReadyToSign([]byte) error {
 	return nil
 }
 
-func (bf BaseBallotFactV0) IsValid([]byte) error {
-	if err := bf.IsReadyToSign(nil); err != nil {
-		return err
-	}
-
-	return nil
+func (bf BaseBallotFactV0) IsValid(networkID []byte) error {
+	return bf.IsReadyToSign(networkID)
 }
 
 func (bf BaseBallotFactV0) Bytes() []byte {
@@ -110,8 +106,8 @@ func (bb BaseBallotV0) Node() base.Address {
 	return bb.node
 }
 
-func (bb BaseBallotV0) IsValid([]byte) error {
-	if err := bb.IsReadyToSign(nil); err != nil {
+func (bb BaseBallotV0) IsValid(networkID []byte) error {
+	if err := bb.IsReadyToSign(networkID); err != nil {
 		return err
 	}
 

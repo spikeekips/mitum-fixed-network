@@ -27,13 +27,13 @@ func (bm ManifestV0) GenerateHash() (valuehash.Hash, error) {
 	return valuehash.NewSHA256(bm.Bytes()), nil
 }
 
-func (bm ManifestV0) IsValid([]byte) error {
+func (bm ManifestV0) IsValid(networkID []byte) error {
 	if err := isvalid.Check([]isvalid.IsValider{
 		bm.h,
 		bm.height,
 		bm.proposal,
 		bm.previousBlock,
-	}, nil, false); err != nil {
+	}, networkID, false); err != nil {
 		return err
 	}
 
@@ -41,7 +41,7 @@ func (bm ManifestV0) IsValid([]byte) error {
 	if err := isvalid.Check([]isvalid.IsValider{
 		bm.operationsHash,
 		bm.statesHash,
-	}, nil, true); err != nil && !xerrors.Is(err, valuehash.EmptyHashError) {
+	}, networkID, true); err != nil && !xerrors.Is(err, valuehash.EmptyHashError) {
 		return err
 	}
 

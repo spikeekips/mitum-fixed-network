@@ -249,12 +249,12 @@ func (vp VoteproofV0) Bytes() []byte {
 	)
 }
 
-func (vp VoteproofV0) IsValid(b []byte) error {
-	if err := vp.isValidFields(b); err != nil {
+func (vp VoteproofV0) IsValid(networkID []byte) error {
+	if err := vp.isValidFields(networkID); err != nil {
 		return err
 	}
 
-	if err := vp.isValidFacts(b); err != nil {
+	if err := vp.isValidFacts(networkID); err != nil {
 		return err
 	}
 

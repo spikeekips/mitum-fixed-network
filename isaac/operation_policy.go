@@ -93,11 +93,7 @@ func (po PolicyOperationBodyV0) IsValid([]byte) error {
 		return xerrors.Errorf("numberOfActingSuffrageNodes must be over 0; %d", po.numberOfActingSuffrageNodes)
 	}
 
-	if err := po.thresholdRatio.IsValid(nil); err != nil {
-		return err
-	}
-
-	return nil
+	return po.thresholdRatio.IsValid(nil)
 }
 
 func (po PolicyOperationBodyV0) ThresholdRatio() base.ThresholdRatio {
@@ -211,11 +207,7 @@ func (spof SetPolicyOperationFactV0) IsValid([]byte) error {
 		return err
 	}
 
-	if err := spof.PolicyOperationBodyV0.IsValid(nil); err != nil {
-		return err
-	}
-
-	return nil
+	return spof.PolicyOperationBodyV0.IsValid(nil)
 }
 
 func (spof SetPolicyOperationFactV0) Hint() hint.Hint {
@@ -267,22 +259,20 @@ func NewSetPolicyOperationV0(
 	return NewSetPolicyOperationV0FromFact(signer, fact, b)
 }
 
-func NewSetPolicyOperationV0FromFact(
-	signer key.Privatekey,
-	fact SetPolicyOperationFactV0,
-	b []byte,
-) (SetPolicyOperationV0, error) {
+func NewSetPolicyOperationV0FromFact(signer key.Privatekey, fact SetPolicyOperationFactV0, networkID []byte) (
+	SetPolicyOperationV0, error,
+) {
 	if signer == nil {
 		return SetPolicyOperationV0{}, xerrors.Errorf("empty privatekey")
 	}
 
-	if err := fact.IsValid(b); err != nil {
+	if err := fact.IsValid(networkID); err != nil {
 		return SetPolicyOperationV0{}, err
 	}
 
 	factHash := fact.Hash()
 	var factSignature key.Signature
-	if fs, err := signer.Sign(util.ConcatBytesSlice(factHash.Bytes(), b)); err != nil {
+	if fs, err := signer.Sign(util.ConcatBytesSlice(factHash.Bytes(), networkID)); err != nil {
 		return SetPolicyOperationV0{}, err
 	} else {
 		factSignature = fs
@@ -303,12 +293,8 @@ func NewSetPolicyOperationV0FromFact(
 	return spo, nil
 }
 
-func (spo SetPolicyOperationV0) IsValid(b []byte) error {
-	if err := operation.IsValidOperation(spo, b); err != nil {
-		return err
-	}
-
-	return nil
+func (spo SetPolicyOperationV0) IsValid(networkID []byte) error {
+	return operation.IsValidOperation(spo, networkID)
 }
 
 func (spo SetPolicyOperationV0) Hint() hint.Hint {

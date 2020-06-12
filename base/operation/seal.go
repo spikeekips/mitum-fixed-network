@@ -32,32 +32,32 @@ type Seal struct {
 	ops       []Operation
 }
 
-func NewSeal(pk key.Privatekey, ops []Operation, b []byte) (Seal, error) {
+func NewSeal(pk key.Privatekey, ops []Operation, networkID []byte) (Seal, error) {
 	if len(ops) < 1 {
 		return Seal{}, xerrors.Errorf("seal can not be generated without Operations")
 	}
 
 	sl := Seal{ops: ops}
-	if err := sl.Sign(pk, b); err != nil {
+	if err := sl.Sign(pk, networkID); err != nil {
 		return Seal{}, err
 	}
 
 	return sl, nil
 }
 
-func (sl Seal) IsValid(b []byte) error {
+func (sl Seal) IsValid(networkID []byte) error {
 	if l := len(sl.ops); l < 1 {
 		return isvalid.InvalidError.Errorf("empty operations")
 	} else if l > MaxOperationsInSeal {
 		return isvalid.InvalidError.Errorf("operations over limit; %d > %d", l, MaxOperationsInSeal)
 	}
 
-	if err := seal.IsValidSeal(sl, b); err != nil {
+	if err := seal.IsValidSeal(sl, networkID); err != nil {
 		return err
 	}
 
 	for _, op := range sl.ops {
-		if err := op.IsValid(b); err != nil {
+		if err := op.IsValid(networkID); err != nil {
 			return err
 		}
 	}

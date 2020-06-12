@@ -50,11 +50,7 @@ func (bv BytesValue) set(v interface{}) (BytesValue, error) {
 }
 
 func (bv BytesValue) IsValid([]byte) error {
-	if err := bv.h.IsValid(nil); err != nil {
-		return err
-	}
-
-	return nil
+	return bv.h.IsValid(nil)
 }
 
 func (bv BytesValue) Bytes() []byte {

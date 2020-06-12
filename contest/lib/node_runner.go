@@ -386,11 +386,7 @@ func (nr *NodeRunner) attachRemoteNodes() error {
 		nodes[i] = n
 	}
 
-	if err := nr.localstate.Nodes().Add(nodes...); err != nil {
-		return err
-	}
-
-	return nil
+	return nr.localstate.Nodes().Add(nodes...)
 }
 
 func (nr *NodeRunner) attachBallotbox() error {

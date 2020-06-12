@@ -189,11 +189,7 @@ func (oi OperationInfoV0) IsValid([]byte) error {
 		return err
 	}
 
-	if err := oi.sh.IsValid(nil); err != nil {
-		return err
-	}
-
-	return nil
+	return oi.sh.IsValid(nil)
 }
 
 func (oi OperationInfoV0) Operation() valuehash.Hash {

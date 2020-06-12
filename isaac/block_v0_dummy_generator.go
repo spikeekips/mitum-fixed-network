@@ -144,11 +144,7 @@ end:
 		}
 	}
 
-	if err := bg.syncSeals(from); err != nil {
-		return err
-	}
-
-	return nil
+	return bg.syncSeals(from)
 }
 
 func (bg *DummyBlocksV0Generator) syncSeals(from *Localstate) error {
@@ -222,11 +218,7 @@ func (bg *DummyBlocksV0Generator) createNextBlock() error {
 		avm = v
 	}
 
-	if err := bg.finish(avm); err != nil {
-		return err
-	}
-
-	return nil
+	return bg.finish(avm)
 }
 
 func (bg *DummyBlocksV0Generator) finish(vm map[base.Address]base.Voteproof) error {

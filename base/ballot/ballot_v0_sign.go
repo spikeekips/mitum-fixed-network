@@ -24,16 +24,12 @@ func (sbf SIGNBallotFactV0) Hint() hint.Hint {
 	return SIGNBallotFactV0Hint
 }
 
-func (sbf SIGNBallotFactV0) IsValid([]byte) error {
-	if err := isvalid.Check([]isvalid.IsValider{
+func (sbf SIGNBallotFactV0) IsValid(networkID []byte) error {
+	return isvalid.Check([]isvalid.IsValider{
 		sbf.BaseBallotFactV0,
 		sbf.proposal,
 		sbf.newBlock,
-	}, nil, false); err != nil {
-		return err
-	}
-
-	return nil
+	}, networkID, false)
 }
 
 func (sbf SIGNBallotFactV0) Hash() valuehash.Hash {
@@ -95,19 +91,15 @@ func (sb SIGNBallotV0) Stage() base.Stage {
 	return base.StageSIGN
 }
 
-func (sb SIGNBallotV0) IsValid(b []byte) error {
+func (sb SIGNBallotV0) IsValid(networkID []byte) error {
 	if err := isvalid.Check([]isvalid.IsValider{
 		sb.BaseBallotV0,
 		sb.SIGNBallotFactV0,
-	}, b, false); err != nil {
+	}, networkID, false); err != nil {
 		return err
 	}
 
-	if err := IsValidBallot(sb, b); err != nil {
-		return err
-	}
-
-	return nil
+	return IsValidBallot(sb, networkID)
 }
 
 func (sb SIGNBallotV0) GenerateHash() (valuehash.Hash, error) {
@@ -126,8 +118,8 @@ func (sb SIGNBallotV0) Fact() base.Fact {
 	return sb.SIGNBallotFactV0
 }
 
-func (sb *SIGNBallotV0) Sign(pk key.Privatekey, b []byte) error {
-	if newBase, err := SignBaseBallotV0(sb, sb.BaseBallotV0, pk, b); err != nil {
+func (sb *SIGNBallotV0) Sign(pk key.Privatekey, networkID []byte) error {
+	if newBase, err := SignBaseBallotV0(sb, sb.BaseBallotV0, pk, networkID); err != nil {
 		return err
 	} else {
 		sb.BaseBallotV0 = newBase

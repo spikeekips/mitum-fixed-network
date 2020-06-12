@@ -52,11 +52,7 @@ func (t *testEventMongodb) TestInsert() {
 
 	var event map[string]interface{}
 	t.NoError(t.client.GetByID("test", id, func(res *mongo.SingleResult) error {
-		if err := res.Decode(&event); err != nil {
-			return err
-		}
-
-		return nil
+		return res.Decode(&event)
 	}))
 
 	t.Equal("info", event["level"].(string))

@@ -5,7 +5,7 @@ import (
 	"github.com/spikeekips/mitum/util/isvalid"
 )
 
-func IsValidSeal(seal Seal, b []byte) error {
+func IsValidSeal(seal Seal, networkID []byte) error {
 	if h, err := seal.GenerateHash(); err != nil {
 		return err
 	} else if sh := seal.Hash(); !sh.Equal(h) {
@@ -13,7 +13,7 @@ func IsValidSeal(seal Seal, b []byte) error {
 	}
 
 	if err := seal.Signer().Verify(
-		util.ConcatBytesSlice(seal.BodyHash().Bytes(), b),
+		util.ConcatBytesSlice(seal.BodyHash().Bytes(), networkID),
 		seal.Signature(),
 	); err != nil {
 		return err

@@ -11,7 +11,7 @@ import (
 )
 
 type ErrorProposalProcessor struct {
-	*isaac.ProposalProcessorV0
+	*isaac.DefaultProposalProcessor
 	initPoints   []BlockPoint
 	acceptPoints []BlockPoint
 }
@@ -23,9 +23,9 @@ func NewErrorProposalProcessor(
 	acceptPoints []BlockPoint,
 ) *ErrorProposalProcessor {
 	return &ErrorProposalProcessor{
-		ProposalProcessorV0: isaac.NewProposalProcessorV0(localstate, suffrage),
-		initPoints:          initPoints,
-		acceptPoints:        acceptPoints,
+		DefaultProposalProcessor: isaac.NewDefaultProposalProcessor(localstate, suffrage),
+		initPoints:               initPoints,
+		acceptPoints:             acceptPoints,
 	}
 }
 
@@ -38,7 +38,7 @@ func (ep *ErrorProposalProcessor) ProcessINIT(ph valuehash.Hash, initVoteproof b
 		}
 	}
 
-	return ep.ProposalProcessorV0.ProcessINIT(ph, initVoteproof)
+	return ep.DefaultProposalProcessor.ProcessINIT(ph, initVoteproof)
 }
 
 func (ep *ErrorProposalProcessor) ProcessACCEPT(ph valuehash.Hash, acceptVoteproof base.Voteproof) (
@@ -50,5 +50,5 @@ func (ep *ErrorProposalProcessor) ProcessACCEPT(ph valuehash.Hash, acceptVotepro
 		}
 	}
 
-	return ep.ProposalProcessorV0.ProcessACCEPT(ph, acceptVoteproof)
+	return ep.DefaultProposalProcessor.ProcessACCEPT(ph, acceptVoteproof)
 }

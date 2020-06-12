@@ -27,7 +27,7 @@ func (t *testProposalProcessor) TestProcess() {
 
 	_ = t.localstate.Storage().NewProposal(proposal)
 
-	dp := NewProposalProcessorV0(t.localstate, t.suffrage(t.localstate))
+	dp := NewDefaultProposalProcessor(t.localstate, t.suffrage(t.localstate))
 
 	blk, err := dp.ProcessINIT(proposal.Hash(), ivp)
 	t.NoError(err)
@@ -62,7 +62,7 @@ func (t *testProposalProcessor) TestBlockOperations() {
 		_ = t.localstate.Storage().NewProposal(proposal)
 	}
 
-	dp := NewProposalProcessorV0(t.localstate, t.suffrage(t.localstate))
+	dp := NewDefaultProposalProcessor(t.localstate, t.suffrage(t.localstate))
 
 	blk, err := dp.ProcessINIT(proposal.Hash(), ivp)
 	t.NoError(err)
@@ -132,7 +132,7 @@ func (t *testProposalProcessor) TestNotFoundInProposal() {
 
 	_ = t.localstate.Storage().NewProposal(proposal)
 
-	dp := NewProposalProcessorV0(t.localstate, t.suffrage(t.localstate))
+	dp := NewDefaultProposalProcessor(t.localstate, t.suffrage(t.localstate))
 	_, err = dp.ProcessINIT(proposal.Hash(), ivp)
 	t.NoError(err)
 
@@ -157,7 +157,7 @@ func (t *testProposalProcessor) TestTimeoutProcessProposal() {
 
 	_ = t.localstate.Storage().NewProposal(proposal)
 
-	dp := NewProposalProcessorV0(t.localstate, t.suffrage(t.localstate))
+	dp := NewDefaultProposalProcessor(t.localstate, t.suffrage(t.localstate))
 
 	_, err = dp.ProcessINIT(proposal.Hash(), ivp)
 	t.Contains(err.Error(), "timeout to process Proposal")

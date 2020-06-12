@@ -109,7 +109,7 @@ func (st *ProposalProcessorDesign) New(
 ) (isaac.ProposalProcessor, error) {
 	switch st.Type {
 	case "default":
-		return isaac.NewProposalProcessorV0(localstate, suffrage), nil
+		return isaac.NewDefaultProposalProcessor(localstate, suffrage), nil
 	case "error-when-point":
 		return NewErrorProposalProcessor(localstate, suffrage, st.errorINITPoints, st.errorACCEPTPoints), nil
 	default:

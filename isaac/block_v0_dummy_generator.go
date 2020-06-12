@@ -41,7 +41,7 @@ func NewDummyBlocksV0Generator(
 				return threshold
 			},
 		)
-		pms[l.Node().Address()] = NewProposalProcessorV0(l, suffrage)
+		pms[l.Node().Address()] = NewDefaultProposalProcessor(l, suffrage)
 	}
 
 	return &DummyBlocksV0Generator{

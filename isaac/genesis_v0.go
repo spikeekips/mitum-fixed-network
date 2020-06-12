@@ -69,7 +69,7 @@ func (gg *GenesisBlockV0Generator) Generate() (block.Block, error) {
 
 	var blk block.Block
 
-	pm := NewProposalProcessorV0(gg.localstate, gg.suffrage)
+	pm := NewDefaultProposalProcessor(gg.localstate, gg.suffrage)
 	_ = pm.SetLogger(gg.Log())
 
 	if bk, err := pm.ProcessINIT(proposal.Hash(), ivp); err != nil {

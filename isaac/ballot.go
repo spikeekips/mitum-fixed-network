@@ -35,7 +35,7 @@ func NewINITBallotV0Round0(st storage.Storage, node base.Address) (ballot.INITBa
 	}
 
 	if avp != nil {
-		return NewINITBallotV0WithVoteproof(st, node, avp)
+		return NewINITBallotV0WithVoteproof(node, avp)
 	}
 
 	return ballot.NewINITBallotV0(
@@ -47,7 +47,7 @@ func NewINITBallotV0Round0(st storage.Storage, node base.Address) (ballot.INITBa
 	), nil
 }
 
-func NewINITBallotV0WithVoteproof(st storage.Storage, node base.Address, voteproof base.Voteproof) (
+func NewINITBallotV0WithVoteproof(node base.Address, voteproof base.Voteproof) (
 	ballot.INITBallotV0, error,
 ) {
 	var height base.Height
@@ -57,23 +57,12 @@ func NewINITBallotV0WithVoteproof(st storage.Storage, node base.Address, votepro
 	case base.StageINIT:
 		height = voteproof.Height()
 		round = voteproof.Round() + 1
-
-		var manifest block.Manifest
-		switch l, found, err := st.LastManifest(); {
-		case !found:
-			return ballot.INITBallotV0{}, xerrors.Errorf("last block not found: %w", err)
-		case err != nil:
-			return ballot.INITBallotV0{}, xerrors.Errorf("failed to get last block: %w", err)
-		default:
-			manifest = l
+		switch t := voteproof.Majority().(type) {
+		case ballot.INITBallotFact:
+			previousBlock = t.PreviousBlock()
+		case ballot.ACCEPTBallotFact:
+			previousBlock = t.NewBlock()
 		}
-		if manifest.Height() != voteproof.Height()-1 {
-			return ballot.INITBallotV0{},
-				xerrors.Errorf("invalid init voteproof.Height(), %d; it should be lastBlock, %d + 1",
-					voteproof.Height(), manifest.Height())
-		}
-
-		previousBlock = manifest.Hash()
 	case base.StageACCEPT:
 		height = voteproof.Height() + 1
 		round = base.Round(0)

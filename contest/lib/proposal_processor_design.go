@@ -1,6 +1,8 @@
 package contestlib
 
 import (
+	"fmt"
+
 	"golang.org/x/xerrors"
 	"gopkg.in/yaml.v3"
 
@@ -8,11 +10,36 @@ import (
 	"github.com/spikeekips/mitum/isaac"
 )
 
+type BlockPoint struct {
+	Height base.Height
+	Round  base.Round
+}
+
+func ParseBlockPoint(s string) (BlockPoint, error) {
+	var h int64
+	var r uint64
+	if n, err := fmt.Sscanf(s, "%d,%d", &h, &r); err != nil {
+		return BlockPoint{}, xerrors.Errorf("invalid block point string: %v: %w", s, err)
+	} else if n != 2 {
+		return BlockPoint{}, xerrors.Errorf("invalid block point string: %v", s)
+	}
+
+	height := base.Height(h)
+	if err := height.IsValid(nil); err != nil {
+		return BlockPoint{}, err
+	}
+
+	return BlockPoint{
+		Height: height,
+		Round:  base.Round(r),
+	}, nil
+}
+
 type ProposalProcessorDesign struct {
-	Type               string
-	Info               map[string]interface{} `yaml:"-"`
-	errorINITTHeights  []base.Height
-	errorACCEPTHeights []base.Height
+	Type              string
+	Info              map[string]interface{} `yaml:"-"`
+	errorINITPoints   []BlockPoint
+	errorACCEPTPoints []BlockPoint
 }
 
 func NewProposalProcessorDesign() *ProposalProcessorDesign {
@@ -49,27 +76,27 @@ func (st *ProposalProcessorDesign) IsValid([]byte) error {
 
 	switch st.Type {
 	case "default":
-	case "error-when-height":
-		var initHeights, acceptHeights []base.Height
-		if i, found := st.Info["init-heights"]; !found {
-		} else if hs, err := st.parseHeights(i); err != nil {
-			return xerrors.Errorf("invalid heights for init error heights: %w", err)
+	case "error-when-point":
+		var initPoints, acceptPoints []BlockPoint
+		if i, found := st.Info["init-points"]; !found {
+		} else if hs, err := st.parseBlockPoint(i); err != nil {
+			return xerrors.Errorf("invalid points for init error points: %w", err)
 		} else {
-			initHeights = hs
+			initPoints = hs
 		}
-		if i, found := st.Info["accept-heights"]; !found {
-		} else if hs, err := st.parseHeights(i); err != nil {
-			return xerrors.Errorf("invalid heights for accept error heights: %w", err)
+		if i, found := st.Info["accept-points"]; !found {
+		} else if hs, err := st.parseBlockPoint(i); err != nil {
+			return xerrors.Errorf("invalid points for accept error points: %w", err)
 		} else {
-			acceptHeights = hs
+			acceptPoints = hs
 		}
 
-		if len(initHeights) < 1 && len(acceptHeights) < 1 {
-			return xerrors.Errorf("accept or init heights must be set for error-when-height")
+		if len(initPoints) < 1 && len(acceptPoints) < 1 {
+			return xerrors.Errorf("accept or init points must be set for error-when-point")
 		}
 
-		st.errorINITTHeights = initHeights
-		st.errorACCEPTHeights = acceptHeights
+		st.errorINITPoints = initPoints
+		st.errorACCEPTPoints = acceptPoints
 	default:
 		return xerrors.Errorf("unknown type, %q", st.Type)
 	}
@@ -83,43 +110,29 @@ func (st *ProposalProcessorDesign) New(
 	switch st.Type {
 	case "default":
 		return isaac.NewProposalProcessorV0(localstate, suffrage), nil
-	case "error-when-height":
-		return NewErrorProposalProcessor(localstate, suffrage, st.errorINITTHeights, st.errorACCEPTHeights), nil
+	case "error-when-point":
+		return NewErrorProposalProcessor(localstate, suffrage, st.errorINITPoints, st.errorACCEPTPoints), nil
 	default:
 		return nil, xerrors.Errorf("unknown type found: %v", st.Type)
 	}
 }
 
-func (st *ProposalProcessorDesign) parseHeights(hs interface{}) ([]base.Height, error) {
+func (st *ProposalProcessorDesign) parseBlockPoint(hs interface{}) ([]BlockPoint, error) {
 	l, ok := hs.([]interface{})
 	if !ok {
-		return nil, xerrors.Errorf("`heights` must be list; %T", hs)
+		return nil, xerrors.Errorf("blockpoints must be list; %T", hs)
 	}
-	heights := make([]base.Height, len(l))
+	bps := make([]BlockPoint, len(l))
 
 	for i, v := range l {
-		var j int64
-		switch t := v.(type) {
-		case int:
-			j = int64(t)
-		case int8:
-			j = int64(t)
-		case int16:
-			j = int64(t)
-		case int32:
-			j = int64(t)
-		case int64:
-			j = t
-		default:
-			return nil, xerrors.Errorf("`height` must be int-like; %T", t)
+		if s, ok := v.(string); !ok {
+			return nil, xerrors.Errorf("invalid BlockPoint string, %v", v)
+		} else if bp, err := ParseBlockPoint(s); err != nil {
+			return nil, err
+		} else {
+			bps[i] = bp
 		}
-
-		h := base.Height(j)
-		if err := h.IsValid(nil); err != nil {
-			return nil, xerrors.Errorf("invalid height value, %v", v)
-		}
-		heights[i] = h
 	}
 
-	return heights, nil
+	return bps, nil
 }

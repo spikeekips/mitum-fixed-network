@@ -144,7 +144,7 @@ func (ss *StateSyncingHandler) Deactivate(ctx StateChangeContext) error {
 	}
 
 	if err := ss.timers.Stop(); err != nil {
-		return err
+		return xerrors.Errorf("failed to stop timers of syncing handler: %w", err)
 	}
 
 	return nil

@@ -62,6 +62,10 @@ func (sy *Syncers) start(stopChan chan struct{}) error {
 
 func (sy *Syncers) Stop() error {
 	if err := sy.FunctionDaemon.Stop(); err != nil {
+		if xerrors.Is(err, util.DaemonAlreadyStoppedError) {
+			return nil
+		}
+
 		return err
 	}
 

@@ -16,6 +16,7 @@ import (
 
 func init() {
 	zerolog.TimeFieldFormat = time.RFC3339Nano
+	zerolog.LevelFieldName = "l"
 	zerolog.TimestampFieldName = "t"
 	zerolog.MessageFieldName = "m"
 

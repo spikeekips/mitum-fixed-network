@@ -123,6 +123,10 @@ func (css *ConsensusStates) Stop() error {
 	defer css.Unlock()
 
 	if err := css.FunctionDaemon.Stop(); err != nil {
+		if xerrors.Is(err, util.DaemonAlreadyStoppedError) {
+			return nil
+		}
+
 		return err
 	}
 
@@ -245,7 +249,9 @@ func (css *ConsensusStates) activateHandler(ctx StateChangeContext) error {
 
 	if handler != nil {
 		if err := handler.Deactivate(ctx); err != nil {
-			return FailedToActivateHandler.Errorf("failed to deactivate previous handler: %w", err)
+			return FailedToActivateHandler.Wrap(
+				xerrors.Errorf("failed to deactivate previous handler: %w", err),
+			)
 		}
 
 		l.Info().Hinted("handler", handler.State()).Msgf("deactivated: %s", handler.State())
@@ -431,14 +437,17 @@ func (css *ConsensusStates) vote(blt ballot.Ballot) error {
 		return nil
 	}
 
-	l := loggerWithVoteproof(voteproof, css.Log())
-	l.Debug().
-		Hinted("height", voteproof.Height()).
-		Hinted("round", voteproof.Round()).
-		Hinted("stage", voteproof.Stage()).
-		Msg("new voteproof")
+	go func() {
+		if err := css.newVoteproof(voteproof); err != nil {
+			css.Log().Error().Err(err).
+				Hinted("height", voteproof.Height()).
+				Hinted("round", voteproof.Round()).
+				Hinted("stage", voteproof.Stage()).
+				Msg("failed to handle new voteproof")
+		}
+	}()
 
-	return css.newVoteproof(voteproof)
+	return nil
 }
 
 func (css *ConsensusStates) lastINITVoteproof() base.Voteproof {

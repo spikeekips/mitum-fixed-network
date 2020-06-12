@@ -11,7 +11,6 @@ import (
 	"github.com/spikeekips/mitum/base/ballot"
 	"github.com/spikeekips/mitum/base/block"
 	"github.com/spikeekips/mitum/base/seal"
-	"github.com/spikeekips/mitum/storage"
 	"github.com/spikeekips/mitum/util/localtime"
 	"github.com/spikeekips/mitum/util/logging"
 )
@@ -138,15 +137,7 @@ func (bs *BaseStateHandler) BroadcastSeal(sl seal.Seal) {
 	}()
 }
 
-func (bs *BaseStateHandler) StoreNewBlock(blockStorage storage.BlockStorage) error {
-	if err := blockStorage.Commit(); err != nil {
-		return err
-	}
-
-	return nil
-}
-
-func (bs *BaseStateHandler) StoreNewBlockByVoteproof(acceptVoteproof base.Voteproof) error {
+func (bs *BaseStateHandler) StoreNewBlock(acceptVoteproof base.Voteproof) error {
 	if bs.proposalProcessor == nil {
 		bs.Log().Debug().Msg("this state not support store new block")
 
@@ -170,7 +161,7 @@ func (bs *BaseStateHandler) StoreNewBlockByVoteproof(acceptVoteproof base.Votepr
 
 	blockStorage, err := bs.proposalProcessor.ProcessACCEPT(fact.Proposal(), acceptVoteproof)
 	if err != nil {
-		return err
+		return xerrors.Errorf("failed to process ACCEPT Voteproof: %w", err)
 	}
 
 	if blockStorage.Block() == nil {
@@ -191,7 +182,7 @@ func (bs *BaseStateHandler) StoreNewBlockByVoteproof(acceptVoteproof base.Votepr
 		return err
 	}
 
-	if err := bs.StoreNewBlock(blockStorage); err != nil {
+	if err := blockStorage.Commit(); err != nil {
 		l.Error().Err(err).Msg("failed to store new block")
 		return err
 	}
@@ -222,11 +213,7 @@ func (bs *BaseStateHandler) TimerBroadcastingINITBallot(
 			baseBallot = b
 		}
 	} else {
-		if b, err := NewINITBallotV0WithVoteproof(
-			bs.localstate.Storage(),
-			bs.localstate.Node().Address(),
-			voteproof,
-		); err != nil {
+		if b, err := NewINITBallotV0WithVoteproof(bs.localstate.Node().Address(), voteproof); err != nil {
 			return nil, err
 		} else {
 			baseBallot = b
@@ -285,26 +272,12 @@ func (bs *BaseStateHandler) TimerBroadcastingACCEPTBallot(newBlock block.Block) 
 	)
 }
 
-func (bs *BaseStateHandler) TimerTimedoutMoveNextRound(
-	round base.Round,
-) (*localtime.CallbackTimer, error) {
+func (bs *BaseStateHandler) TimerTimedoutMoveNextRound(voteproof base.Voteproof) (*localtime.CallbackTimer, error) {
 	var baseBallot ballot.INITBallotV0
-	if round == 0 {
-		if b, err := NewINITBallotV0Round0(bs.localstate.Storage(), bs.localstate.Node().Address()); err != nil {
-			return nil, err
-		} else {
-			baseBallot = b
-		}
+	if b, err := NewINITBallotV0WithVoteproof(bs.localstate.Node().Address(), voteproof); err != nil {
+		return nil, err
 	} else {
-		if b, err := NewINITBallotV0WithVoteproof(
-			bs.localstate.Storage(),
-			bs.localstate.Node().Address(),
-			bs.LastINITVoteproof(),
-		); err != nil {
-			return nil, err
-		} else {
-			baseBallot = b
-		}
+		baseBallot = b
 	}
 
 	var called int64
@@ -314,7 +287,7 @@ func (bs *BaseStateHandler) TimerTimedoutMoveNextRound(
 		func() (bool, error) {
 			bs.Log().Debug().
 				Dur("timeout", bs.localstate.Policy().TimeoutWaitingProposal()).
-				Hinted("next_round", round).
+				Hinted("next_round", baseBallot.Round()).
 				Msg("timeout; waiting Proposal; trying to move next round")
 
 			if err := bs.timers.StopTimers([]string{TimerIDBroadcastingINITBallot}); err != nil {

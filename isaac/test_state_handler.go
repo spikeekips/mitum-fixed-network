@@ -210,11 +210,7 @@ func (t *baseTestStateHandler) newINITBallot(localstate *Localstate, round base.
 			ib = b
 		}
 	} else {
-		if b, err := NewINITBallotV0WithVoteproof(
-			localstate.Storage(),
-			localstate.Node().Address(),
-			voteproof,
-		); err != nil {
+		if b, err := NewINITBallotV0WithVoteproof(localstate.Node().Address(), voteproof); err != nil {
 			panic(err)
 		} else {
 			ib = b

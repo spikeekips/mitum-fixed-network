@@ -12,6 +12,7 @@ import (
 	"github.com/spikeekips/mitum/base/block"
 	"github.com/spikeekips/mitum/base/seal"
 	"github.com/spikeekips/mitum/storage"
+	"github.com/spikeekips/mitum/util"
 	"github.com/spikeekips/mitum/util/localtime"
 	"github.com/spikeekips/mitum/util/logging"
 )
@@ -123,7 +124,7 @@ func (cs *StateConsensusHandler) waitProposal(voteproof base.Voteproof) error {
 		return err
 	}
 
-	if timer, err := cs.TimerTimedoutMoveNextRound(voteproof.Round() + 1); err != nil {
+	if timer, err := cs.TimerTimedoutMoveNextRound(voteproof); err != nil {
 		return err
 	} else if err := cs.timers.SetTimer(TimerIDTimedoutMoveNextRound, timer); err != nil {
 		return err
@@ -154,13 +155,22 @@ func (cs *StateConsensusHandler) NewSeal(sl seal.Seal) error {
 }
 
 func (cs *StateConsensusHandler) NewVoteproof(voteproof base.Voteproof) error {
-	if err := cs.timers.StopTimers([]string{TimerIDTimedoutMoveNextRound}); err != nil {
-		return err
-	}
-
 	l := loggerWithVoteproof(voteproof, cs.Log())
 
 	l.Debug().Msg("got Voteproof")
+
+	l.Debug().Msg("got Voteproof; for restarting next round timer")
+	if timer, err := cs.TimerTimedoutMoveNextRound(voteproof); err != nil {
+		return err
+	} else if err := cs.timers.SetTimer(TimerIDTimedoutMoveNextRound, timer); err != nil {
+		return err
+	} else if err := cs.timers.StartTimers([]string{
+		TimerIDTimedoutMoveNextRound,
+		TimerIDBroadcastingINITBallot,
+		TimerIDBroadcastingACCEPTBallot,
+	}, true); err != nil {
+		return err
+	}
 
 	// NOTE if drew, goes to next round.
 	if voteproof.Result() == base.VoteResultDraw {
@@ -169,8 +179,18 @@ func (cs *StateConsensusHandler) NewVoteproof(voteproof base.Voteproof) error {
 
 	switch voteproof.Stage() {
 	case base.StageACCEPT:
-		if err := cs.StoreNewBlockByVoteproof(voteproof); err != nil {
-			l.Error().Err(err).Msg("failed to store accept voteproof")
+		if err := util.Retry(3, time.Millisecond*200, func() error {
+			if err := cs.StoreNewBlock(voteproof); err != nil {
+				l.Error().Err(err).Msg("something wrong to store accept voteproof; will retry")
+
+				return err
+			}
+
+			return nil
+		}); err != nil {
+			l.Error().Err(err).Msg("failed to store accept voteproof; moves to sync")
+
+			return cs.ChangeState(base.StateSyncing, voteproof, nil)
 		}
 
 		return cs.keepBroadcastingINITBallotForNextBlock(voteproof)
@@ -218,10 +238,6 @@ func (cs *StateConsensusHandler) handleProposal(proposal ballot.Proposal) error 
 
 	l.Debug().Msg("got proposal")
 
-	if err := cs.timers.StopTimers([]string{TimerIDTimedoutMoveNextRound}); err != nil {
-		return err
-	}
-
 	blk, err := cs.proposalProcessor.ProcessINIT(proposal.Hash(), cs.LastINITVoteproof())
 	if err != nil {
 		return err
@@ -268,7 +284,10 @@ func (cs *StateConsensusHandler) readyToACCEPTBallot(newBlock block.Block) error
 		return err
 	}
 
-	return cs.timers.StartTimers([]string{TimerIDBroadcastingACCEPTBallot}, true)
+	return cs.timers.StartTimers([]string{
+		TimerIDTimedoutMoveNextRound,
+		TimerIDBroadcastingACCEPTBallot,
+	}, true)
 }
 
 func (cs *StateConsensusHandler) proposal(voteproof base.Voteproof) (bool, error) {
@@ -298,7 +317,11 @@ func (cs *StateConsensusHandler) proposal(voteproof base.Voteproof) (bool, error
 	} else if err := cs.timers.SetTimer(TimerIDBroadcastingProposal, timer); err != nil {
 		return false, err
 	} else if err := cs.timers.StartTimers(
-		[]string{TimerIDBroadcastingProposal, TimerIDBroadcastingINITBallot}, true,
+		[]string{
+			TimerIDTimedoutMoveNextRound,
+			TimerIDBroadcastingProposal,
+			TimerIDBroadcastingINITBallot,
+		}, true,
 	); err != nil {
 		return false, err
 	}

@@ -174,11 +174,14 @@ func (vpc *VoteproofConsensusStateChecker) CheckACCEPTVoteproof() (bool, error) 
 		return true, nil
 	}
 
-	if vpc.lastINITVoteproof.Round() != vpc.voteproof.Round() {
-		// BLOCK valid voteproof should be passed without error
-		return false, xerrors.Errorf("Voteproof has different round from last init voteproof: voteproof=%d last=%d",
-			vpc.voteproof.Round(), vpc.lastINITVoteproof.Round(),
-		)
+	l := vpc.lastINITVoteproof
+	if l.Height() != vpc.voteproof.Height() || l.Round() != vpc.voteproof.Round() {
+		vpc.Log().Debug().
+			Hinted("last_init_voteproof_height", l.Height()).
+			Hinted("last_init_voteproof_round", l.Round()).
+			Hinted("voteproof_height", vpc.voteproof.Height()).
+			Hinted("voteproof_round", vpc.voteproof.Round()).
+			Msg("Voteproof has different round from last init voteproof")
 	}
 
 	return true, nil

@@ -100,7 +100,7 @@ func (st *Storage) loadLastBlock() error {
 
 	if blk, err := st.rawBlockByFilter(util.NewBSONFilter("height", height).D()); err != nil {
 		return err
-	} else if err := st.setLastBlock(blk, false); err != nil {
+	} else if err := st.setLastBlock(blk, false, false); err != nil {
 		return err
 	}
 
@@ -156,7 +156,7 @@ func (st *Storage) setLastManifest(m block.Manifest) {
 	st.lastManifestHeight = m.Height()
 }
 
-func (st *Storage) setLastBlock(blk block.Block, save bool) error {
+func (st *Storage) setLastBlock(blk block.Block, save, force bool) error {
 	st.Lock()
 	defer st.Unlock()
 
@@ -175,7 +175,7 @@ func (st *Storage) setLastBlock(blk block.Block, save bool) error {
 		return nil
 	}
 
-	if blk.Height() <= st.lastManifestHeight {
+	if !force && blk.Height() <= st.lastManifestHeight {
 		return nil
 	}
 
@@ -244,6 +244,10 @@ func (st *Storage) Clean() error {
 		}
 	}
 
+	if err := st.Initialize(); err != nil {
+		return err
+	}
+
 	st.Lock()
 	defer st.Unlock()
 
@@ -251,6 +255,50 @@ func (st *Storage) Clean() error {
 	st.lastManifestHeight = base.NilHeight
 
 	return nil
+}
+
+// cleanByHeight is only used for contest
+func (st *Storage) CleanByHeight(height base.Height) error {
+	if height <= base.PreGenesisHeight+1 {
+		return st.Clean()
+	}
+
+	var newLastBlock block.Block
+	switch blk, found, err := st.BlockByHeight(height - 1); {
+	case !found:
+		return xerrors.Errorf("failed to find block of height, %v", height-1)
+	case err != nil:
+		return xerrors.Errorf("failed to find block of height, %v: %w", height-1, err)
+	default:
+		newLastBlock = blk
+	}
+
+	opts := options.BulkWrite().SetOrdered(true)
+	removeByHeight := mongo.NewDeleteManyModel().SetFilter(bson.M{"height": bson.M{"$gte": height}})
+
+	for _, col := range []string{
+		defaultColNameInfo,
+		defaultColNameBlock,
+		defaultColNameManifest,
+		defaultColNameOperation,
+		defaultColNameOperationSeal,
+		defaultColNameProposal,
+		defaultColNameState,
+	} {
+
+		res, err := st.client.Collection(col).BulkWrite(
+			context.Background(),
+			[]mongo.WriteModel{removeByHeight},
+			opts,
+		)
+		if err != nil {
+			return storage.WrapError(err)
+		}
+
+		st.Log().Debug().Str("collection", col).Interface("result", res).Msg("clean collection by height")
+	}
+
+	return st.setLastBlock(newLastBlock, true, true)
 }
 
 func (st *Storage) Copy(source storage.Storage) error {

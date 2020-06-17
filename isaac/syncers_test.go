@@ -67,13 +67,13 @@ func (t *testSyncers) TestMultipleSyncers() {
 	target := t.lastManifest(localstate.Storage()).Height() + 2
 	t.generateBlocks([]*Localstate{remoteState}, target)
 
-	baseManifest, found, err := t.localstate.Storage().LastManifest()
+	baseManifest, found, err := localstate.Storage().LastManifest()
 	t.NoError(err)
 	t.True(found)
 
 	finishedChan := make(chan base.Height)
 
-	ss := NewSyncers(t.localstate, baseManifest)
+	ss := NewSyncers(localstate, baseManifest)
 	ss.WhenFinished(func(height base.Height) {
 		finishedChan <- height
 	})
@@ -103,13 +103,13 @@ func (t *testSyncers) TestMangledFinishedOrder() {
 	target := t.lastManifest(localstate.Storage()).Height() + 10
 	t.generateBlocks([]*Localstate{remoteState}, target)
 
-	baseManifest, found, err := t.localstate.Storage().LastManifest()
+	baseManifest, found, err := localstate.Storage().LastManifest()
 	t.NoError(err)
 	t.True(found)
 
 	finishedChan := make(chan base.Height)
 
-	ss := NewSyncers(t.localstate, baseManifest)
+	ss := NewSyncers(localstate, baseManifest)
 
 	ss.WhenFinished(func(height base.Height) {
 		finishedChan <- height
@@ -139,11 +139,11 @@ func (t *testSyncers) TestAddAfterFinished() {
 	target := t.lastManifest(localstate.Storage()).Height() + 10
 	t.generateBlocks([]*Localstate{remoteState}, target)
 
-	baseManifest, found, err := t.localstate.Storage().LastManifest()
+	baseManifest, found, err := localstate.Storage().LastManifest()
 	t.NoError(err)
 	t.True(found)
 
-	ss := NewSyncers(t.localstate, baseManifest)
+	ss := NewSyncers(localstate, baseManifest)
 
 	finishedChan := make(chan base.Height)
 	ss.WhenFinished(func(height base.Height) {

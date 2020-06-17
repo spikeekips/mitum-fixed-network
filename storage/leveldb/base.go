@@ -92,6 +92,37 @@ func (st *Storage) Clean() error {
 	return wrapError(st.db.Write(batch, nil))
 }
 
+func (st *Storage) CleanByHeight(height base.Height) error {
+	if height <= base.PreGenesisHeight+1 {
+		return st.Clean()
+	}
+
+	// NOTE not perfectly working as intended :)
+	batch := &leveldb.Batch{}
+
+	h := height
+end:
+	for {
+		switch m, found, err := st.ManifestByHeight(h); {
+		case !found:
+			break end
+		case err != nil:
+			return err
+		default:
+			batch.Delete(leveldbBlockHeightKey(h))
+			batch.Delete(leveldbBlockHashKey(m.Hash()))
+			batch.Delete(leveldbManifestHeightKey(h))
+			batch.Delete(leveldbManifestKey(m.Hash()))
+			batch.Delete(leveldbBlockOperationsKey(m))
+			batch.Delete(leveldbBlockStatesKey(m))
+		}
+
+		h++
+	}
+
+	return wrapError(st.db.Write(batch, nil))
+}
+
 func (st *Storage) Copy(source storage.Storage) error {
 	var sst *Storage
 	if s, ok := source.(*Storage); !ok {
@@ -703,14 +734,14 @@ func leveldbManifestKey(h valuehash.Hash) []byte {
 	)
 }
 
-func leveldbBlockOperationsKey(blk block.Block) []byte {
+func leveldbBlockOperationsKey(blk block.Manifest) []byte {
 	return util.ConcatBytesSlice(
 		keyPrefixBlockOperations,
 		[]byte(fmt.Sprintf("%020d", blk.Height().Int64())),
 	)
 }
 
-func leveldbBlockStatesKey(blk block.Block) []byte {
+func leveldbBlockStatesKey(blk block.Manifest) []byte {
 	return util.ConcatBytesSlice(
 		keyPrefixBlockStates,
 		[]byte(fmt.Sprintf("%020d", blk.Height().Int64())),

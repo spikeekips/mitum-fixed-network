@@ -99,11 +99,11 @@ func (nd *NodeDesign) IsValid([]byte) error {
 	return nil
 }
 
-func (nd *NodeDesign) NetworkID() []byte {
+func (nd NodeDesign) NetworkID() []byte {
 	return []byte(nd.NetworkIDString)
 }
 
-func (nd *NodeDesign) Privatekey() key.Privatekey {
+func (nd NodeDesign) Privatekey() key.Privatekey {
 	return nd.privatekey
 }
 

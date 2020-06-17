@@ -666,6 +666,197 @@ func (t *testGeneralSyncer) TestMissingBlocks() {
 	t.Error(err)
 }
 
+func (t *testGeneralSyncer) buildDifferentBlocks(local, remote *Localstate, from, to base.Height) {
+	_ = local.Storage().Clean()
+	_ = remote.Storage().Clean()
+	if from > base.PreGenesisHeight+1 {
+		t.generateBlocks([]*Localstate{local, remote}, from-1)
+	}
+
+	t.generateBlocks([]*Localstate{local}, to)
+	t.generateBlocks([]*Localstate{remote}, to)
+}
+
+func (t *testGeneralSyncer) TestRollbackFindUnmatched() {
+	cases := []struct {
+		name     string
+		from     int64
+		to       int64
+		expected int64
+		err      string
+	}{
+		{
+			name:     "genesis unmatched",
+			from:     -1,
+			to:       5,
+			expected: -1,
+		},
+		{
+			name:     "closed unmatched",
+			from:     5,
+			to:       8,
+			expected: 5,
+		},
+		{
+			name:     "inside",
+			from:     7,
+			to:       22,
+			expected: 7,
+		},
+	}
+
+	for i, c := range cases {
+		i := i
+		c := c
+		t.Run(
+			c.name,
+			func() {
+				ls := t.localstates(2)
+				local, remote := ls[0], ls[1]
+
+				t.setup(local, []*Localstate{remote})
+
+				from, to := base.Height(c.from), base.Height(c.to)
+				t.buildDifferentBlocks(local, remote, from, to)
+
+				cs, err := NewGeneralSyncer(local, []network.Node{remote.Node()}, to+1, to+2)
+				t.NoError(err, "%d: %v", i, c.name)
+
+				defer cs.Close()
+
+				unmatched, err := cs.compareBlocks(to)
+				t.NoError(err, "%d: %v", i, c.name)
+				t.Equal(
+					c.expected, unmatched.Int64(),
+					"%d: %v: %v - %v; %v != %v", i, c.name, c.to, c.from, c.expected, unmatched,
+				)
+
+				if c.expected != unmatched.Int64() {
+					panic(xerrors.Errorf("failed"))
+				}
+			},
+		)
+	}
+}
+
+func (t *testGeneralSyncer) TestRollbackWrongGenesisBlocks() {
+	ls := t.localstates(2)
+	localstate, rn0 := ls[0], ls[1]
+
+	t.setup(localstate, []*Localstate{rn0})
+
+	baseBlock := t.lastManifest(localstate.Storage())
+
+	t.generateBlocks([]*Localstate{localstate}, baseBlock.Height()+3)
+
+	target := baseBlock.Height() + 5
+
+	// NOTE build new blocks from genesis
+	bg, err := NewDummyBlocksV0Generator(rn0, target, t.suffrage(rn0, rn0), []*Localstate{rn0})
+	t.NoError(err)
+	t.NoError(bg.Generate(true))
+
+	fromManifest := t.lastManifest(localstate.Storage())
+	cs, err := NewGeneralSyncer(localstate, []network.Node{rn0.Node()}, fromManifest.Height()+1, target)
+	t.NoError(err)
+
+	defer cs.Close()
+
+	cs.reset()
+	t.NoError(cs.setBaseManifest(fromManifest))
+
+	cs.setState(SyncerPreparing)
+
+	err = cs.headAndTailManifests()
+	t.True(xerrors.Is(err, blockIntegrityError))
+
+	var rollbackCtx *BlockIntegrityError
+	t.True(xerrors.As(err, &rollbackCtx))
+	t.Equal(baseBlock.Height()+3, rollbackCtx.From.Height())
+}
+
+func (t *testGeneralSyncer) TestRollbackDetect() {
+	ls := t.localstates(2)
+	localstate, rn0 := ls[0], ls[1]
+
+	t.setup(localstate, []*Localstate{rn0})
+
+	baseBlock := t.lastManifest(localstate.Storage())
+
+	t.generateBlocks([]*Localstate{localstate}, baseBlock.Height()+3)
+
+	target := baseBlock.Height() + 5
+	t.generateBlocks([]*Localstate{rn0}, target)
+
+	fromManifest := t.lastManifest(localstate.Storage())
+	cs, err := NewGeneralSyncer(localstate, []network.Node{rn0.Node()}, fromManifest.Height()+1, target)
+	t.NoError(err)
+
+	defer cs.Close()
+
+	cs.reset()
+	t.NoError(cs.setBaseManifest(fromManifest))
+
+	err = cs.prepare()
+	t.True(xerrors.Is(err, blockIntegrityError))
+}
+
+func (t *testGeneralSyncer) TestRollback() {
+	ls := t.localstates(2)
+	local, remote := ls[0], ls[1]
+
+	t.setup(local, []*Localstate{remote})
+
+	baseBlock := t.lastManifest(local.Storage())
+
+	t.generateBlocks([]*Localstate{local}, baseBlock.Height()+3)
+
+	target := baseBlock.Height() + 5
+	t.generateBlocks([]*Localstate{remote}, target)
+
+	fromManifest := t.lastManifest(local.Storage())
+	cs, err := NewGeneralSyncer(local, []network.Node{remote.Node()}, fromManifest.Height()+1, target)
+	t.NoError(err)
+
+	defer cs.Close()
+
+	stateChan := make(chan SyncerStateChangedContext)
+	cs.SetStateChan(stateChan)
+
+	t.NoError(cs.Prepare(fromManifest))
+
+end:
+	for {
+		select {
+		case <-time.After(time.Second * 10):
+			t.NoError(xerrors.Errorf("timeout to wait to be finished"))
+
+			return
+		case ctx := <-stateChan:
+			if ctx.State() != SyncerSaved {
+				continue
+			}
+			break end
+		}
+	}
+
+	lm, _, err := local.Storage().LastManifest()
+	t.NoError(err)
+	t.Equal(target, lm.Height())
+
+	rm, _, err := remote.Storage().LastManifest()
+	t.NoError(err)
+
+	for i := base.PreGenesisHeight; i <= rm.Height(); i++ {
+		l, _, err := local.Storage().ManifestByHeight(base.Height(i))
+		t.NoError(err)
+		r, _, err := remote.Storage().ManifestByHeight(base.Height(i))
+		t.NoError(err)
+
+		t.compareManifest(r, l)
+	}
+}
+
 func TestGeneralSyncer(t *testing.T) {
 	suite.Run(t, new(testGeneralSyncer))
 }

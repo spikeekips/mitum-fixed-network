@@ -20,6 +20,7 @@ import (
 	"gopkg.in/yaml.v3"
 
 	"github.com/spikeekips/mitum/base/key"
+	"github.com/spikeekips/mitum/isaac"
 	"github.com/spikeekips/mitum/storage"
 	"github.com/spikeekips/mitum/util"
 	"github.com/spikeekips/mitum/util/encoder"
@@ -152,7 +153,7 @@ func (cts *Containers) createContainers() ([]*Container, error) {
 	for i, c := range cs {
 		c.rds = rds
 
-		if b, err := yaml.Marshal(c.nodeDesign(i == 0)); err != nil {
+		if b, err := yaml.Marshal(c.NodeDesign(i == 0)); err != nil {
 			return nil, xerrors.Errorf("failed to create node design: %w", err)
 		} else {
 			designFile := filepath.Join(cts.outputDir, fmt.Sprintf("design-%s.yml", c.name))
@@ -176,6 +177,7 @@ func (cts *Containers) createContainer(d *ContestNodeDesign) (*Container, error)
 	}
 
 	container := &Container{
+		encs:            cts.encs,
 		contestDesign:   cts.design,
 		design:          d,
 		name:            d.Address(),
@@ -305,7 +307,7 @@ func (cts *Containers) initializeByGenesisNode() error {
 	}
 
 	var gstorage storage.Storage
-	if st, err := cts.genesisNode.Storage(cts.encs); err != nil {
+	if st, err := cts.genesisNode.Storage(); err != nil {
 		return err
 	} else {
 		gstorage = st
@@ -318,7 +320,7 @@ func (cts *Containers) initializeByGenesisNode() error {
 		}
 
 		cts.Log().Debug().Str("from", cts.genesisNode.name).Str("to", c.name).Msg("trying to sync storage")
-		if st, err := c.Storage(cts.encs); err != nil {
+		if st, err := c.Storage(); err != nil {
 			return err
 		} else if err := st.Copy(gstorage); err != nil {
 			return err
@@ -461,26 +463,23 @@ func (cts *Containers) Runnings() ([]string, error) {
 	return rs, nil
 }
 
+func (cts *Containers) GenesisNode() *Container {
+	return cts.genesisNode
+}
+
 func (cts *Containers) Container(name string) (*Container, bool) {
 	c, found := cts.containers[name]
 
 	return c, found
 }
 
-func (cts *Containers) ContainerStorage(name string) (storage.Storage, error) {
-	c, found := cts.containers[name]
-	if !found {
-		return nil, xerrors.Errorf("container, %s not found", name)
-	}
-
-	return c.Storage(cts.encs)
-}
-
 type Container struct {
+	encs *encoder.Encoders
 	sync.RWMutex
 	*logging.Logging
 	contestDesign   *ContestDesign
 	design          *ContestNodeDesign
+	nodeDesign      NodeDesign
 	name            string
 	image           string
 	client          *dockerClient.Client
@@ -605,8 +604,6 @@ func (ct *Container) run(initialize bool) error {
 		defer cancel()
 	}
 
-	l.Debug().Msg("deployed")
-
 	if initialize {
 		return ct.wait()
 	} else {
@@ -711,7 +708,11 @@ func (ct *Container) RemoteDesign() *RemoteDesign {
 	}
 }
 
-func (ct *Container) nodeDesign(isGenesisNode bool) NodeDesign {
+func (ct *Container) NodeDesign(isGenesisNode bool) NodeDesign {
+	if ct.nodeDesign.Network != nil {
+		return ct.nodeDesign
+	}
+
 	var nodes []*RemoteDesign // nolint
 	for _, d := range ct.rds {
 		if d.Address == ct.name {
@@ -722,9 +723,11 @@ func (ct *Container) nodeDesign(isGenesisNode bool) NodeDesign {
 	}
 
 	nd := NodeDesign{
+		encs:             ct.encs,
 		Address:          ct.name,
 		PrivatekeyString: jsonenc.ToString(ct.privatekey),
 		Storage:          ct.storageURIInternal(),
+		NetworkIDString:  ct.contestDesign.Config.NetworkIDString,
 		Network:          ct.networkDesign(),
 		Nodes:            nodes,
 		Component:        ct.design.Component,
@@ -733,6 +736,12 @@ func (ct *Container) nodeDesign(isGenesisNode bool) NodeDesign {
 	if isGenesisNode {
 		nd.GenesisPolicy = ct.contestDesign.Config.GenesisPolicy
 	}
+
+	if err := nd.IsValid(nil); err != nil {
+		panic(err)
+	}
+
+	ct.nodeDesign = nd
 
 	return nd
 }
@@ -796,8 +805,33 @@ func (ct *Container) storageURIExternal() string {
 	return fmt.Sprintf("mongodb://%s:%s/contest_%s", ct.mongodbIP, MongodbExternalPort, ct.name)
 }
 
-func (ct *Container) Storage(encs *encoder.Encoders) (storage.Storage, error) {
-	return LoadStorage(ct.storageURIExternal(), encs)
+func (ct *Container) Storage() (storage.Storage, error) {
+	return LoadStorage(ct.storageURIExternal(), ct.encs)
+}
+
+func (ct *Container) Localstate() *isaac.Localstate {
+	address, err := NewContestAddress(ct.name)
+	if err != nil {
+		panic(err)
+	}
+	st, err := ct.Storage()
+	if err != nil {
+		panic(err)
+	}
+
+	l, err := isaac.NewLocalstate(
+		st,
+		isaac.NewLocalNode(
+			address,
+			ct.privatekey,
+		),
+		ct.NodeDesign(false).NetworkID(),
+	)
+	if err != nil {
+		panic(err)
+	}
+
+	return l
 }
 
 func (ct *Container) Reset() {

@@ -34,7 +34,7 @@ func (ep *ErrorProposalProcessor) ProcessINIT(ph valuehash.Hash, initVoteproof b
 ) {
 	for _, h := range ep.initPoints {
 		if h.Height == initVoteproof.Height() && h.Round == initVoteproof.Round() {
-			return nil, xerrors.Errorf("contest-designed-error")
+			return nil, xerrors.Errorf("contest-designed-error: occurring-error")
 		}
 	}
 
@@ -46,7 +46,7 @@ func (ep *ErrorProposalProcessor) ProcessACCEPT(ph valuehash.Hash, acceptVotepro
 ) {
 	for _, h := range ep.acceptPoints {
 		if h.Height == acceptVoteproof.Height() && h.Round == acceptVoteproof.Round() {
-			return nil, xerrors.Errorf("contest-designed-error")
+			return nil, xerrors.Errorf("contest-designed-error: occurring-error")
 		}
 	}
 

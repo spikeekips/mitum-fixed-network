@@ -59,6 +59,10 @@ func (bst *BlockStorage) SetBlock(blk block.Block) error {
 		)
 	}
 
+	if bst.blockModels != nil {
+		return nil
+	}
+
 	enc := bst.st.enc
 
 	if doc, err := NewBlockDoc(blk, enc); err != nil {
@@ -131,7 +135,7 @@ func (bst *BlockStorage) Commit() error {
 		return storage.WrapError(err)
 	}
 
-	return bst.st.setLastBlock(bst.block, true)
+	return bst.st.setLastBlock(bst.block, true, false)
 }
 
 func (bst *BlockStorage) setOperations(tr *tree.AVLTree) error {

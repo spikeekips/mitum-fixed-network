@@ -40,6 +40,7 @@ type ProposalProcessorDesign struct {
 	Info              map[string]interface{} `yaml:"-"`
 	errorINITPoints   []BlockPoint
 	errorACCEPTPoints []BlockPoint
+	wrongPoints       []BlockPoint
 }
 
 func NewProposalProcessorDesign() *ProposalProcessorDesign {
@@ -76,7 +77,21 @@ func (st *ProposalProcessorDesign) IsValid([]byte) error {
 
 	switch st.Type {
 	case "default":
-	case "error-when-point":
+	case "wrong-processing":
+		var points []BlockPoint
+		if i, found := st.Info["points"]; !found {
+		} else if hs, err := st.parseBlockPoint(i); err != nil {
+			return xerrors.Errorf("invalid points for wrong points: %w", err)
+		} else {
+			points = hs
+		}
+
+		if len(points) < 1 {
+			return xerrors.Errorf("accept or init points must be set for wrong-processing")
+		}
+
+		st.wrongPoints = points
+	case "occurring-error":
 		var initPoints, acceptPoints []BlockPoint
 		if i, found := st.Info["init-points"]; !found {
 		} else if hs, err := st.parseBlockPoint(i); err != nil {
@@ -92,7 +107,7 @@ func (st *ProposalProcessorDesign) IsValid([]byte) error {
 		}
 
 		if len(initPoints) < 1 && len(acceptPoints) < 1 {
-			return xerrors.Errorf("accept or init points must be set for error-when-point")
+			return xerrors.Errorf("accept or init points must be set for occurring-error")
 		}
 
 		st.errorINITPoints = initPoints
@@ -110,7 +125,9 @@ func (st *ProposalProcessorDesign) New(
 	switch st.Type {
 	case "default":
 		return isaac.NewDefaultProposalProcessor(localstate, suffrage), nil
-	case "error-when-point":
+	case "wrong-processing":
+		return NewWrongProposalProcessor(localstate, suffrage, st.wrongPoints), nil
+	case "occurring-error":
 		return NewErrorProposalProcessor(localstate, suffrage, st.errorINITPoints, st.errorACCEPTPoints), nil
 	default:
 		return nil, xerrors.Errorf("unknown type found: %v", st.Type)

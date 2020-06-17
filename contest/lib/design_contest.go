@@ -105,12 +105,14 @@ func (cd *ContestDesign) loadConditionActions() error {
 }
 
 type ContestConfigDesign struct {
-	GenesisPolicy *ContestPolicyDesign `yaml:"genesis-policy"`
+	NetworkIDString string               `yaml:"network-id"`
+	GenesisPolicy   *ContestPolicyDesign `yaml:"genesis-policy"`
 }
 
 func NewContestConfigDesign() *ContestConfigDesign {
 	return &ContestConfigDesign{
-		GenesisPolicy: NewContestPolicyDesign(),
+		GenesisPolicy:   NewContestPolicyDesign(),
+		NetworkIDString: "contest-network-id",
 	}
 }
 
@@ -122,4 +124,8 @@ func (cc *ContestConfigDesign) IsValid([]byte) error {
 	}
 
 	return nil
+}
+
+func (cc *ContestConfigDesign) NetworkID() []byte {
+	return []byte(cc.NetworkIDString)
 }

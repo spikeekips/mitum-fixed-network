@@ -177,9 +177,9 @@ func (bs *BaseStateHandler) StoreNewBlock(acceptVoteproof base.Voteproof) error 
 			fact.NewBlock(),
 			blockStorage.Block().Hash(),
 		)
-		l.Error().Err(err).Msg("failed to store new block")
+		l.Error().Err(err).Msg("failed to store new block; moves to sync")
 
-		return err
+		return NewStateToBeChangeError(base.StateSyncing, acceptVoteproof, nil, err)
 	}
 
 	if err := blockStorage.Commit(); err != nil {

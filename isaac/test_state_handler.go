@@ -113,7 +113,7 @@ func (t *baseTestStateHandler) localstates(n int) []*Localstate {
 }
 
 func (t *baseTestStateHandler) SetupTest() {
-	ls := t.localstates(2)
+	ls := t.localstates(2) // TODO remove
 	t.localstate, t.remoteState = ls[0], ls[1]
 }
 

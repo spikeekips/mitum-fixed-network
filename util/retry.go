@@ -1,6 +1,13 @@
 package util
 
-import "time"
+import (
+	"time"
+
+	"github.com/spikeekips/mitum/util/errors"
+	"golang.org/x/xerrors"
+)
+
+var StopRetryingError = errors.NewError("stop retrying")
 
 func Retry(max uint, interval time.Duration, callback func() error) error {
 	var err error
@@ -11,6 +18,8 @@ func Retry(max uint, interval time.Duration, callback func() error) error {
 		}
 
 		if err = callback(); err == nil {
+			return nil
+		} else if xerrors.Is(err, StopRetryingError) {
 			return nil
 		}
 

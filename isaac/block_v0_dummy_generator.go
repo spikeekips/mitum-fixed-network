@@ -57,10 +57,18 @@ func NewDummyBlocksV0Generator(
 }
 
 func (bg *DummyBlocksV0Generator) Generate(ignoreExists bool) error {
+	if ignoreExists {
+		for _, n := range bg.allNodes {
+			if err := n.Storage().Clean(); err != nil {
+				return err
+			}
+		}
+	}
+
 	lastHeight := base.NilHeight
 	if !ignoreExists {
 		if l, found, err := bg.genesisNode.Storage().LastManifest(); !found {
-			return storage.NotFoundError.Errorf("last manifest not found")
+			lastHeight = base.NilHeight
 		} else if err != nil {
 			return err
 		} else if err := l.IsValid(bg.networkID); err != nil {
@@ -85,6 +93,10 @@ func (bg *DummyBlocksV0Generator) Generate(ignoreExists bool) error {
 		if err := bg.syncBlocks(bg.genesisNode); err != nil {
 			return err
 		}
+	}
+
+	if bg.lastHeight == base.PreGenesisHeight+1 {
+		return nil
 	}
 
 end:

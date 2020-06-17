@@ -157,7 +157,9 @@ func (cs *StateConsensusHandler) NewSeal(sl seal.Seal) error {
 func (cs *StateConsensusHandler) NewVoteproof(voteproof base.Voteproof) error {
 	l := loggerWithVoteproof(voteproof, cs.Log())
 
-	l.Debug().Msg("got Voteproof")
+	if voteproof.Result() == base.VoteResultDraw { // NOTE if drew, goes to next round.
+		return cs.startNextRound(voteproof)
+	}
 
 	l.Debug().Msg("got Voteproof; for restarting next round timer")
 	if timer, err := cs.TimerTimedoutMoveNextRound(voteproof); err != nil {
@@ -172,25 +174,47 @@ func (cs *StateConsensusHandler) NewVoteproof(voteproof base.Voteproof) error {
 		return err
 	}
 
-	// NOTE if drew, goes to next round.
-	if voteproof.Result() == base.VoteResultDraw {
-		return cs.startNextRound(voteproof)
-	}
+	return cs.newVoteproof(voteproof)
+}
+
+func (cs *StateConsensusHandler) newVoteproof(voteproof base.Voteproof) error {
+	l := loggerWithVoteproof(voteproof, cs.Log())
 
 	switch voteproof.Stage() {
 	case base.StageACCEPT:
+		var ignore bool
+		var ctx *StateToBeChangeError
 		if err := util.Retry(3, time.Millisecond*200, func() error {
-			if err := cs.StoreNewBlock(voteproof); err != nil {
-				l.Error().Err(err).Msg("something wrong to store accept voteproof; will retry")
-
-				return err
+			err := cs.StoreNewBlock(voteproof)
+			if err == nil {
+				return nil
 			}
 
-			return nil
+			switch {
+			case xerrors.As(err, &ctx):
+				l.Error().Err(err).Msg("state will be moved with accept voteproof")
+
+				return nil
+			case xerrors.Is(err, IgnoreVoteproofError):
+				l.Error().Err(err).Msg("accept voteproof will be ignored")
+
+				ignore = true
+
+				return nil
+			}
+			l.Error().Err(err).Msg("something wrong to store accept voteproof; will retry")
+
+			return err
 		}); err != nil {
 			l.Error().Err(err).Msg("failed to store accept voteproof; moves to sync")
 
 			return cs.ChangeState(base.StateSyncing, voteproof, nil)
+		}
+
+		if ignore {
+			return nil
+		} else if ctx != nil {
+			return cs.ChangeState(ctx.ToState, ctx.Voteproof, ctx.Ballot)
 		}
 
 		return cs.keepBroadcastingINITBallotForNextBlock(voteproof)

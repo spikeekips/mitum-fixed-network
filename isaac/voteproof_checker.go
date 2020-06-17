@@ -12,30 +12,29 @@ import (
 
 var (
 	IgnoreVoteproofError = errors.NewError("Voteproof should be ignored")
-	StopBootingError     = errors.NewError("stop booting process")
+	stateToBeChangeError = errors.NewError("State needs to be changed")
 )
 
 type StateToBeChangeError struct {
 	*errors.NError
-	FromState base.State
 	ToState   base.State
 	Voteproof base.Voteproof
 	Ballot    ballot.Ballot
-}
-
-func (ce *StateToBeChangeError) StateChangeContext() StateChangeContext {
-	return NewStateChangeContext(ce.FromState, ce.ToState, ce.Voteproof, ce.Ballot)
+	Err       error
 }
 
 func NewStateToBeChangeError(
-	fromState, toState base.State, voteproof base.Voteproof, blt ballot.Ballot,
+	toState base.State,
+	voteproof base.Voteproof,
+	blt ballot.Ballot,
+	err error,
 ) *StateToBeChangeError {
 	return &StateToBeChangeError{
-		NError:    errors.NewError("State needs to be changed"),
-		FromState: fromState,
+		NError:    stateToBeChangeError,
 		ToState:   toState,
 		Voteproof: voteproof,
 		Ballot:    blt,
+		Err:       err,
 	}
 }
 
@@ -137,12 +136,10 @@ func (vpc *VoteproofConsensusStateChecker) CheckHeight() (bool, error) {
 			Hinted("local_block_height", height).
 			Msg("Voteproof has higher height from local block")
 
-		var fromState base.State
-		if vpc.css.ActiveHandler() != nil {
-			fromState = vpc.css.ActiveHandler().State()
-		}
-
-		return false, NewStateToBeChangeError(fromState, base.StateSyncing, vpc.voteproof, nil)
+		return false, NewStateToBeChangeError(
+			base.StateSyncing, vpc.voteproof, nil,
+			xerrors.Errorf("Voteproof has higher height from local block"),
+		)
 	}
 
 	if d < 0 {
@@ -164,14 +161,9 @@ func (vpc *VoteproofConsensusStateChecker) CheckINITVoteproof() (bool, error) {
 	l := loggerWithVoteproof(vpc.voteproof, vpc.Log())
 
 	if err := checkBlockWithINITVoteproof(vpc.lastManifest, vpc.voteproof); err != nil {
-		l.Error().Err(err).Msg("invalid init voteproof")
+		l.Error().Err(err).Msg("werid init voteproof found")
 
-		var fromState base.State
-		if vpc.css.ActiveHandler() != nil {
-			fromState = vpc.css.ActiveHandler().State()
-		}
-
-		return false, NewStateToBeChangeError(fromState, base.StateSyncing, vpc.voteproof, nil)
+		return false, NewStateToBeChangeError(base.StateSyncing, vpc.voteproof, nil, err)
 	}
 
 	return true, nil
@@ -183,6 +175,7 @@ func (vpc *VoteproofConsensusStateChecker) CheckACCEPTVoteproof() (bool, error) 
 	}
 
 	if vpc.lastINITVoteproof.Round() != vpc.voteproof.Round() {
+		// BLOCK valid voteproof should be passed without error
 		return false, xerrors.Errorf("Voteproof has different round from last init voteproof: voteproof=%d last=%d",
 			vpc.voteproof.Round(), vpc.lastINITVoteproof.Round(),
 		)

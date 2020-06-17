@@ -56,6 +56,17 @@ func (t *testBlockV0DummyGenerator) TestCreate() {
 	}
 }
 
+func (t *testBlockV0DummyGenerator) TestCleanByHeight() {
+	local := t.localstates(1)[0]
+
+	lastManifest, _, _ := local.Storage().LastManifest()
+
+	t.NoError(local.Storage().CleanByHeight(lastManifest.Height()))
+
+	l, _, _ := local.Storage().LastManifest()
+	t.Equal(lastManifest.Height()-1, l.Height())
+}
+
 func TestBlockV0DummyGenerator(t *testing.T) {
 	suite.Run(t, new(testBlockV0DummyGenerator))
 }

@@ -78,20 +78,26 @@ func (ss *StateSyncingHandler) newSyncers() error {
 		}
 	}
 
+	baseHeight := base.NilHeight
 	var baseManifest block.Manifest
 	if m, found, err := ss.localstate.Storage().LastManifest(); err != nil {
 		return err
 	} else if found {
+		baseHeight = m.Height()
 		baseManifest = m
 	}
 
-	ss.syncs = NewSyncers(ss.localstate, baseManifest)
-	ss.syncs.WhenFinished(ss.whenFinished)
-	_ = ss.syncs.SetLogger(ss.Log())
+	syncs := NewSyncers(ss.localstate, baseManifest)
+	syncs.WhenFinished(ss.whenFinished)
+	_ = syncs.SetLogger(ss.Log())
 
-	if err := ss.syncs.Start(); err != nil {
+	if err := syncs.Start(); err != nil {
 		return err
 	}
+
+	ss.Log().Debug().Hinted("base_height", baseHeight).Msg("new syncers started")
+
+	ss.syncs = syncs
 
 	return nil
 }

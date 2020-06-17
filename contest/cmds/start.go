@@ -4,14 +4,16 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"time"
 
 	dockerClient "github.com/docker/docker/client"
 	"golang.org/x/xerrors"
 
+	"github.com/spikeekips/mitum/base"
 	contestlib "github.com/spikeekips/mitum/contest/lib"
-	"github.com/spikeekips/mitum/storage"
+	"github.com/spikeekips/mitum/isaac"
 	mongodbstorage "github.com/spikeekips/mitum/storage/mongodb"
 	"github.com/spikeekips/mitum/util/encoder"
 	bsonenc "github.com/spikeekips/mitum/util/encoder/bson"
@@ -37,6 +39,8 @@ type StartCommand struct {
 	design     *contestlib.ContestDesign
 	encs       *encoder.Encoders
 	containers *contestlib.Containers
+	exitChan   chan error
+	eventChan  chan *contestlib.Event
 }
 
 func (cmd *StartCommand) Run(log logging.Logger) error {
@@ -91,8 +95,8 @@ func (cmd *StartCommand) Run(log logging.Logger) error {
 }
 
 func (cmd *StartCommand) run() error {
-	eventChan := make(chan *contestlib.Event, 10000)
-	cmd.containers.SetEventChan(eventChan)
+	cmd.eventChan = make(chan *contestlib.Event, 10000)
+	cmd.containers.SetEventChan(cmd.eventChan)
 
 	if err := cmd.containers.Ready(); err != nil {
 		return xerrors.Errorf("failed to ready containers: %w", err)
@@ -107,7 +111,7 @@ func (cmd *StartCommand) run() error {
 		mongodbClient = client
 	}
 
-	go cmd.handleEventChan(mongodbClient, eventChan)
+	go cmd.handleEventChan(mongodbClient)
 
 	cmd.log.Debug().Msg("trying to run containers")
 
@@ -118,6 +122,8 @@ func (cmd *StartCommand) run() error {
 	if len(cmd.design.Conditions) < 1 {
 		cmd.log.Debug().Msg("no conditions found")
 	}
+
+	cmd.exitChan = make(chan error, 10)
 
 	return cmd.checkConditions(mongodbClient)
 }
@@ -186,6 +192,9 @@ func (cmd *StartCommand) copyFiles(output string) error {
 func (cmd *StartCommand) loadDesign(f string) error {
 	conditionActions["start-node"] = cmd.defaultActionStartNode
 	conditionActions["clean-storage"] = cmd.defaultActionCleanStorage
+	conditionActions["stop-contest"] = cmd.defaultActionStopContest
+	conditionActions["build-blocks"] = cmd.defaultActionBuildBlocks
+	conditionActions["mangle-blocks"] = cmd.defaultActionMangleBlocks
 
 	if d, err := contestlib.LoadContestDesignFromFile(f, cmd.encs, conditionActions); err != nil {
 		return xerrors.Errorf("failed to load design file: %w", err)
@@ -206,11 +215,8 @@ func (cmd *StartCommand) loadDesign(f string) error {
 	return nil
 }
 
-func (cmd *StartCommand) handleEventChan(
-	client *mongodbstorage.Client,
-	eventChan chan *contestlib.Event,
-) {
-	for e := range eventChan {
+func (cmd *StartCommand) handleEventChan(client *mongodbstorage.Client) {
+	for e := range cmd.eventChan {
 		if r, err := e.Raw(); err != nil {
 			cmd.log.Error().Err(err).Str("event", e.String()).Msg("malformed event found")
 
@@ -259,7 +265,6 @@ func (cmd *StartCommand) checkConditions(client *mongodbstorage.Client) error {
 		}
 	}
 
-	exitChan := make(chan error, 10)
 	allEndedChan := cmd.checkContainersIsRunning()
 
 	cs := make([]*contestlib.Condition, len(cmd.design.Conditions))
@@ -276,14 +281,16 @@ func (cmd *StartCommand) checkConditions(client *mongodbstorage.Client) error {
 end:
 	for {
 		select {
-		case err := <-exitChan:
+		case err := <-cmd.exitChan:
+			cmd.log.Error().Err(err).Msg("exit by error")
+
 			return err
 		case <-allEndedChan:
 			cmd.log.Debug().Msg("all containers ended")
 
 			return nil
 		case <-ticker.C:
-			if passed, err := cc.Check(exitChan); err != nil {
+			if passed, err := cc.Check(cmd.exitChan); err != nil {
 				cmd.log.Error().Err(err).Msg("something wrong to check")
 			} else if passed {
 				cmd.log.Info().Msg("all conditions satisfied")
@@ -307,6 +314,7 @@ func (cmd *StartCommand) defaultActionStartNode(nodes []string) (func() error, e
 			for _, d := range cmd.design.Nodes {
 				if n == d.Address() {
 					found = true
+					break
 				}
 			}
 
@@ -325,35 +333,201 @@ func (cmd *StartCommand) defaultActionCleanStorage(nodes []string) (func() error
 	}
 
 	return func() error {
+		var cs []*contestlib.Container
 		for _, n := range nodes {
-			var found bool
-			for _, d := range cmd.design.Nodes {
-				if n == d.Address() {
-					found = true
-				}
-			}
-
-			if !found {
+			if ct, found := cmd.containers.Container(n); !found {
 				return xerrors.Errorf("container name, %q not found", n)
+			} else {
+				cs = append(cs, ct)
 			}
 		}
 
-		for _, node := range nodes {
-			var st storage.Storage
-			if s, err := cmd.containers.ContainerStorage(node); err != nil {
+		for _, ct := range cs {
+			if st, err := ct.Storage(); err != nil {
+				return err
+			} else if err := st.Clean(); err != nil {
 				return err
 			} else {
-				st = s
+				cmd.log.Debug().Str("node", ct.Name()).Msg("cleaned storage")
 			}
-
-			cmd.log.Debug().Str("node", node).Msg("trying to clean storage")
-			if err := st.Clean(); err != nil {
-				return err
-			}
-
-			cmd.log.Debug().Str("node", node).Msg("cleaned storage")
 		}
 
 		return nil
 	}, nil
+}
+
+func (cmd *StartCommand) defaultActionStopContest([]string) (func() error, error) {
+	return func() error {
+		cmd.exitChan <- xerrors.Errorf("stopped by design")
+
+		return nil
+	}, nil
+}
+
+func (cmd *StartCommand) defaultActionBuildBlocks(args []string) (func() error, error) {
+	var height base.Height
+	if len(args) != 1 {
+		return nil, xerrors.Errorf("one height must be given")
+	} else if h, err := parseHeightFromString(args[0]); err != nil {
+		return nil, err
+	} else {
+		height = h
+	}
+
+	return func() error {
+		cmd.log.Debug().Hinted("target_height", height).Msg("trying to build blocks")
+
+		var genesis *isaac.Localstate
+		var all []*isaac.Localstate
+		for _, d := range cmd.design.Nodes {
+			ct, found := cmd.containers.Container(d.Address())
+			if !found {
+				return xerrors.Errorf("container name, %q not found", d.Address())
+			}
+
+			l := ct.Localstate()
+			all = append(all, l)
+
+			if ct.Name() == cmd.containers.GenesisNode().Name() {
+				genesis = l
+			}
+		}
+
+		for _, l := range all {
+			for _, r := range all {
+				if l.Node().Address() == r.Node().Address() {
+					continue
+				}
+
+				if err := l.Nodes().Add(r.Node()); err != nil {
+					panic(err)
+				}
+			}
+		}
+
+		suffrage := contestlib.NewRoundrobinSuffrage(genesis, 100)
+
+		if bg, err := isaac.NewDummyBlocksV0Generator(genesis, height, suffrage, all); err != nil {
+			return err
+		} else if err := bg.Generate(false); err != nil {
+			return err
+		}
+
+		cmd.log.Debug().Hinted("target_height", height).Msg("blocks generated")
+
+		cmd.eventChan <- contestlib.EmptyEvent().
+			Add("module", "contest-build-blocks").
+			Add("height", height.Int64()).
+			Add("m", "built blocks")
+
+		return nil
+	}, nil
+}
+
+func (cmd *StartCommand) defaultActionMangleBlocks(args []string) (func() error, error) {
+	if len(args) < 3 {
+		return nil, xerrors.Errorf("height and nodes must be given")
+	}
+
+	var fromHeight, toHeight base.Height
+	if h, err := parseHeightFromString(args[0]); err != nil {
+		return nil, err
+	} else {
+		fromHeight = h
+	}
+	if h, err := parseHeightFromString(args[1]); err != nil {
+		return nil, err
+	} else {
+		toHeight = h
+	}
+
+	nodeNames := args[2:]
+
+	return func() error {
+		l := cmd.log.WithLogger(func(ctx logging.Context) logging.Emitter {
+			return ctx.Strs("nodes", nodeNames).
+				Hinted("from_height", fromHeight).
+				Hinted("to_height", toHeight)
+		})
+
+		l.Debug().Msg("trying to mangle blocks")
+
+		var all []*isaac.Localstate
+		if a, err := cmd.prepareContainersForMangle(nodeNames, fromHeight); err != nil {
+			return err
+		} else {
+			all = a
+		}
+
+		suffrage := contestlib.NewRoundrobinSuffrage(all[0], 100)
+		if bg, err := isaac.NewDummyBlocksV0Generator(all[0], toHeight, suffrage, all); err != nil {
+			return err
+		} else if err := bg.Generate(false); err != nil {
+			return err
+		}
+
+		l.Debug().Msg("blocks mangled")
+
+		cmd.eventChan <- contestlib.EmptyEvent().
+			Add("module", "contest-mangle-blocks").
+			Add("from_height", fromHeight).
+			Add("to_height", toHeight).
+			Add("nodes", nodeNames).
+			Add("m", "mangled blocks")
+
+		return nil
+	}, nil
+}
+
+func (cmd *StartCommand) prepareContainersForMangle(nodeNames []string, fromHeight base.Height) (
+	[]*isaac.Localstate,
+	error,
+) {
+	all := make([]*isaac.Localstate, len(nodeNames))
+	for i, n := range nodeNames {
+		var ct *contestlib.Container
+		if c, found := cmd.containers.Container(n); !found {
+			return nil, xerrors.Errorf("container name, %q not found", n)
+		} else {
+			ct = c
+		}
+
+		if st, err := ct.Storage(); err != nil {
+			return nil, err
+		} else if err := st.CleanByHeight(fromHeight); err != nil {
+			return nil, err
+		}
+
+		all[i] = ct.Localstate()
+	}
+
+	for _, l := range all {
+		for _, r := range all {
+			if l.Node().Address() == r.Node().Address() {
+				continue
+			}
+
+			if err := l.Nodes().Add(r.Node()); err != nil {
+				panic(err)
+			}
+		}
+	}
+
+	return all, nil
+}
+
+func parseHeightFromString(s string) (base.Height, error) {
+	n, err := strconv.ParseInt(s, 10, 64)
+	if err != nil {
+		return base.NilHeight, xerrors.Errorf("invalid height string, %v found: %w", s, err)
+	}
+
+	h := base.Height(n)
+	if err := h.IsValid(nil); err != nil {
+		return base.NilHeight, xerrors.Errorf("invalid height string, %v found: %w", s, err)
+	} else if h <= base.PreGenesisHeight+1 {
+		return base.NilHeight, xerrors.Errorf("height, %v was already built", h)
+	}
+
+	return h, nil
 }

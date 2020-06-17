@@ -13,8 +13,25 @@ import (
 	"github.com/spikeekips/mitum/network"
 	"github.com/spikeekips/mitum/storage"
 	"github.com/spikeekips/mitum/util"
+	"github.com/spikeekips/mitum/util/errors"
 	"github.com/spikeekips/mitum/util/logging"
 )
+
+var blockIntegrityError = errors.NewError("block integrity failed")
+
+type BlockIntegrityError struct {
+	*errors.NError
+	From block.Manifest
+	Err  error
+}
+
+func NewBlockIntegrityError(from block.Manifest, err error) *BlockIntegrityError {
+	return &BlockIntegrityError{
+		NError: blockIntegrityError,
+		From:   from,
+		Err:    err,
+	}
+}
 
 /*
 GeneralSyncer will sync for the closed network.
@@ -100,6 +117,7 @@ func NewGeneralSyncer(
 		limitBlocksPerOnce:      100, // set default
 		state:                   SyncerCreated,
 	}
+	cs.initializeProvedNodes()
 
 	return cs, nil
 }
@@ -195,10 +213,12 @@ func (cs *GeneralSyncer) save() error {
 }
 
 func (cs *GeneralSyncer) reset() error {
+	cs.Log().Debug().Msg("syncer will be reset")
+
+	cs.setState(SyncerCreated)
+
 	cs.Lock()
 	defer cs.Unlock()
-
-	cs.Log().Debug().Msg("syncer will be reset")
 
 	if cs.st != nil {
 		if err := cs.st.Close(); err != nil {
@@ -216,6 +236,12 @@ func (cs *GeneralSyncer) reset() error {
 		_ = sl.SetLogger(cs.Log())
 	}
 
+	cs.initializeProvedNodes()
+
+	return nil
+}
+
+func (cs *GeneralSyncer) initializeProvedNodes() {
 	provedNodes := make([]base.Address, len(cs.sourceNodes))
 	{
 		var i int
@@ -226,9 +252,6 @@ func (cs *GeneralSyncer) reset() error {
 	}
 
 	cs.pn = provedNodes
-	cs.bm = nil
-
-	return nil
 }
 
 func (cs *GeneralSyncer) baseManifest() block.Manifest {
@@ -242,7 +265,14 @@ func (cs *GeneralSyncer) setBaseManifest(manifest block.Manifest) error {
 	cs.Lock()
 	defer cs.Unlock()
 
-	if manifest != nil && cs.heightFrom != manifest.Height()+1 {
+	switch {
+	case cs.heightFrom <= base.PreGenesisHeight:
+		if manifest != nil {
+			return xerrors.Errorf("base manifest should be nil")
+		}
+	case manifest == nil:
+		return xerrors.Errorf("base manifest should not be nil")
+	case cs.heightFrom != manifest.Height()+1:
 		return xerrors.Errorf("invalid base manifest found: expected=%v manifest=%v", cs.heightFrom, manifest.Height())
 	}
 
@@ -291,7 +321,14 @@ func (cs *GeneralSyncer) Prepare(manifest block.Manifest) error {
 			if err := cs.prepare(); err != nil {
 				cs.Log().Error().Err(err).Msg("failed to prepare for syncing")
 
-				return err
+				var rollbackCtx *BlockIntegrityError
+				switch {
+				case xerrors.As(err, &rollbackCtx):
+					// NOTE will try to rollback
+					return cs.rollback(rollbackCtx)
+				default:
+					return err
+				}
 			}
 
 			return nil
@@ -333,40 +370,35 @@ func (cs *GeneralSyncer) headAndTailManifests() error {
 		heights = []base.Height{cs.heightFrom, cs.heightTo}
 	}
 
-	var fetched map[base.Address][]block.Manifest
-	if bs := cs.fetchManifestsByNodes(heights); len(bs) < 1 {
-		return xerrors.Errorf("failed to fetch manifests from all of source nodes")
-	} else {
-		fetched = bs
-	}
-
 	var manifests []block.Manifest
 	var provedNodes []base.Address
-	switch ms, pn, err := cs.checkThresholdByHeights(heights, fetched); {
+	switch ms, pn, err := cs.fetchManifestsByNodes(heights); {
 	case err != nil:
 		return err
-	case len(pn) < 1:
-		return xerrors.Errorf("empty proved nodes")
+	case len(ms) < 1:
+		return xerrors.Errorf("failed to fetch manifests from all of source nodes")
 	default:
 		manifests = ms
 		provedNodes = pn
 	}
 
 	if cs.baseManifest() != nil {
-		checker := NewManifestsValidationChecker(cs.localstate, []block.Manifest{cs.baseManifest(), manifests[0]})
+		head := manifests[0]
+		cs.Log().Debug().
+			Hinted("base_manifest_previous", cs.baseManifest().PreviousBlock()).
+			Hinted("base_manifest", cs.baseManifest().Hash()).
+			Hinted("head_previous", head.PreviousBlock()).
+			Hinted("head", head.Hash()).
+			Msg("checking base and head manifest")
+
+		checker := NewManifestsValidationChecker(cs.localstate, []block.Manifest{cs.baseManifest(), head})
 		_ = checker.SetLogger(cs.Log())
 
 		if err := util.NewChecker("sync-manifests-validation-checker", []util.CheckerFunc{
 			checker.CheckSerialized,
 		}).Check(); err != nil {
+			cs.Log().Error().Err(err).Msg("failed to verify manifests")
 			return err
-		}
-	}
-
-	for i, height := range heights {
-		b := manifests[i]
-		if height != b.Height() {
-			return xerrors.Errorf("invalid Manifest found; height does not match")
 		}
 	}
 
@@ -397,26 +429,14 @@ func (cs *GeneralSyncer) fillManifests() error {
 		heights[i-from] = base.Height(i)
 	}
 
-	var fetched map[base.Address][]block.Manifest
-	if bs := cs.fetchManifestsByNodes(heights); len(bs) < 1 {
-		return xerrors.Errorf("failed to fetch manifests from all of source nodes")
-	} else {
-		fetched = bs
-	}
-
-	switch ms, pn, err := cs.checkThresholdByHeights(heights, fetched); {
+	switch ms, pn, err := cs.fetchManifestsByNodes(heights); {
 	case err != nil:
 		return err
+	case len(ms) < 1:
+		return xerrors.Errorf("failed to fetch manifests from all of source nodes")
 	case len(pn) < 1:
 		return xerrors.Errorf("empty proved nodes")
 	default:
-		for i, height := range heights {
-			b := ms[i]
-			if height != b.Height() {
-				return xerrors.Errorf("invalid Manifest found; height does not match")
-			}
-		}
-
 		cs.setProvedNodes(pn)
 
 		if err := cs.storage().SetManifests(ms); err != nil {
@@ -450,9 +470,13 @@ func (cs *GeneralSyncer) startBlocks() error {
 func (cs *GeneralSyncer) fetchBlocksByNodes() error {
 	cs.Log().Debug().Msg("start to fetch blocks by nodes")
 
-	worker := util.NewWorker("sync-fetch-blocks", 10)
+	worker := util.NewWorker("sync-fetch-blocks", 5)
 	defer worker.Done()
 	_ = worker.SetLogger(cs.Log())
+
+	if len(cs.provedNodes()) < 1 {
+		return xerrors.Errorf("empty proved nodes")
+	}
 
 	for _, address := range cs.provedNodes() {
 		node := cs.sourceNodes[address]
@@ -560,7 +584,9 @@ func (cs *GeneralSyncer) distributeBlocksJob(worker *util.Worker) error {
 	return nil
 }
 
-func (cs *GeneralSyncer) fetchManifestsByNodes(heights []base.Height) map[base.Address][]block.Manifest {
+func (cs *GeneralSyncer) fetchManifestsByNodes(heights []base.Height) (
+	[]block.Manifest, []base.Address, error,
+) {
 	cs.Log().Debug().
 		Hinted("height_from", heights[0]).
 		Hinted("height_to", heights[len(heights)-1]).
@@ -588,7 +614,21 @@ func (cs *GeneralSyncer) fetchManifestsByNodes(heights []base.Height) map[base.A
 
 	cs.Log().Debug().Int("fetched", len(fetched)).Msg("fetched manifests")
 
-	return fetched
+	switch ms, pn, err := cs.checkThresholdByHeights(heights, fetched); {
+	case err != nil:
+		return nil, nil, err
+	case len(pn) < 1:
+		return nil, nil, xerrors.Errorf("empty proved nodes")
+	default:
+		for i, height := range heights {
+			b := ms[i]
+			if height != b.Height() {
+				return nil, nil, xerrors.Errorf("invalid Manifest found; height does not match")
+			}
+		}
+
+		return ms, pn, nil
+	}
 }
 
 func (cs *GeneralSyncer) callbackFetchManifests(node network.Node, heights []base.Height) []block.Manifest {
@@ -990,4 +1030,143 @@ func (cs *GeneralSyncer) TailManifest() block.Manifest {
 	defer cs.RUnlock()
 
 	return cs.tailManifest
+}
+
+func (cs *GeneralSyncer) rollback(rollbackCtx *BlockIntegrityError) error {
+	cs.Log().Debug().Hinted("compare_from", rollbackCtx.From.Height()).Msg("block integrity failed; will rollback")
+
+	var unmatched base.Height
+	switch u, err := cs.compareBlocks(rollbackCtx.From.Height()); {
+	case err != nil:
+		return xerrors.Errorf("failed to check blocks: %w", err)
+	case u <= base.NilHeight:
+		return xerrors.Errorf("unmatched block not found; prepare() again")
+	default:
+		unmatched = u
+	}
+
+	cs.Log().Debug().Hinted("unmatched", unmatched).Msg("found unmatched; clean blocks")
+
+	// NOTE clean block until unmatched height and start again prepare()
+	var baseManifest block.Manifest
+	if err := cs.localstate.Storage().CleanByHeight(unmatched); err != nil {
+		return err
+	} else if unmatched > base.PreGenesisHeight+1 {
+		switch m, found, err := cs.localstate.Storage().ManifestByHeight(unmatched - 1); {
+		case err != nil:
+			return err
+		case !found:
+			return xerrors.Errorf("base manifest, %d for rollback not found", unmatched-1)
+		default:
+			baseManifest = m
+		}
+	}
+
+	if err := cs.reset(); err != nil {
+		return err
+	}
+
+	{
+		cs.Lock()
+		cs.heightFrom = unmatched
+		cs.bm = baseManifest
+		cs.Unlock()
+	}
+	cs.Log().Debug().
+		Hinted("new_height_from", unmatched).
+		Msg("height from and base manifest was changed")
+
+	return cs.prepare()
+}
+
+func (cs *GeneralSyncer) compareBlocks(from base.Height) (base.Height, error) {
+	cs.Log().Debug().Hinted("compare_from", from).Msg("before rollback, check genesis blocks")
+
+	cs.Log().Debug().Msg("compare genesis blocks")
+	switch matched, err := cs.compareBlock(base.PreGenesisHeight + 1); {
+	case err != nil:
+		return base.NilHeight, xerrors.Errorf("failed to compare genesis block does not match: %w", err)
+	case !matched:
+		return base.PreGenesisHeight, nil // NOTE if genesis block does not match, will sync from PreGenesisHeight
+	default:
+		cs.Log().Debug().Msg("genesis blocks matched")
+	}
+
+	if from <= base.PreGenesisHeight+1 {
+		cs.Log().Debug().Msg("all blocks matched")
+
+		return base.NilHeight, nil
+	}
+
+	cs.Log().Debug().Int64("compare_from", from.Int64()).Msg("compare all inside blocks")
+	switch unmatched, found, err := cs.compareInsideBlocks(from); {
+	case err != nil:
+		return base.NilHeight, err
+	case found:
+		return unmatched, nil
+	}
+
+	cs.Log().Debug().Msg("all blocks matched")
+
+	return base.NilHeight, nil
+}
+
+func (cs *GeneralSyncer) compareInsideBlocks(top base.Height) (base.Height, bool, error) {
+	switch unmatched, err := cs.searchUnmatched((base.PreGenesisHeight + 2), top); {
+	case err != nil:
+		return base.NilHeight, false, err
+	case unmatched == base.NilHeight:
+		return base.NilHeight, false, nil
+	default:
+		return unmatched, true, nil
+	}
+}
+
+func (cs *GeneralSyncer) compareBlock(height base.Height) (bool, error) {
+	var local block.Manifest
+	switch m, found, err := cs.localstate.Storage().ManifestByHeight(height); {
+	case !found:
+		return false, xerrors.Errorf("local block, %d not found", height)
+	case err != nil:
+		return false, xerrors.Errorf("failed to get local block, %d: %w", height, err)
+	default:
+		local = m
+	}
+
+	switch fetched, _, err := cs.fetchManifestsByNodes([]base.Height{height}); {
+	case len(fetched) != 1:
+		return false, xerrors.Errorf("empty manifest returned")
+	case err != nil:
+		return false, err
+	default:
+		return local.Hash().Equal(fetched[0].Hash()), nil
+	}
+}
+
+func (cs *GeneralSyncer) searchUnmatched(from, to base.Height) (base.Height, error) {
+	counted := int((to - from).Int64()) + 1
+
+	var foundError error
+	found := sort.Search(counted, func(i int) bool {
+		if foundError != nil {
+			return false
+		}
+
+		h := base.Height(from.Int64() + int64(i))
+		if matched, err := cs.compareBlock(h); err != nil {
+			foundError = err
+
+			return false
+		} else {
+			return !matched
+		}
+	})
+
+	if foundError != nil {
+		return base.NilHeight, foundError
+	} else if found == counted {
+		return base.NilHeight, nil
+	}
+
+	return from + base.Height(int64(found)), nil
 }

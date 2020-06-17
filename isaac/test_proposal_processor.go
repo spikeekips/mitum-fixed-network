@@ -27,6 +27,14 @@ func NewDummyProposalProcessor(returnBlock block.BlockUpdater, err error) *Dummy
 	}
 }
 
+func (dp *DummyProposalProcessor) SetReturnBlock(blk block.BlockUpdater) {
+	dp.returnBlock = blk
+}
+
+func (dp *DummyProposalProcessor) SetError(err error) {
+	dp.err = err
+}
+
 func (dp *DummyProposalProcessor) IsProcessed(h valuehash.Hash) bool {
 	return dp.processed[h]
 }

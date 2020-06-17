@@ -413,7 +413,7 @@ func (t *testStorage) TestHasOperation() {
 	blk, err := block.NewTestBlockV0(base.Height(33), base.Round(0), valuehash.RandomSHA256(), valuehash.RandomSHA256())
 	t.NoError(err)
 
-	t.storage.setLastBlock(blk, true)
+	t.storage.setLastBlock(blk, true, false)
 
 	op, err := operation.NewKVOperation(t.PK, []byte("showme"), "key", []byte("value"), nil)
 	t.NoError(err)

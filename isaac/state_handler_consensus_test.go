@@ -267,6 +267,63 @@ func (t *testStateConsensusHandler) TestDraw() {
 	t.Equal(vp.Round()+1, ib.Round())
 }
 
+func (t *testStateConsensusHandler) TestWrongProposalProcessing() {
+	pp := NewDummyProposalProcessor(nil, nil)
+	cs, err := NewStateConsensusHandler(
+		t.localstate,
+		pp,
+		t.suffrage(t.remoteState, t.localstate, t.remoteState),
+		NewProposalMaker(t.localstate),
+	)
+	t.NoError(err)
+	t.NotNil(cs)
+
+	stateChan := make(chan StateChangeContext)
+	cs.SetStateChan(stateChan)
+
+	var ivp base.Voteproof
+	{
+		ibf := t.newINITBallotFact(t.localstate, base.Round(0))
+		ivp, _ = t.newVoteproof(base.StageINIT, ibf, t.localstate, t.remoteState)
+		cs.SetLastINITVoteproof(ivp)
+	}
+
+	t.NoError(cs.Activate(StateChangeContext{
+		fromState: base.StateJoining,
+		toState:   base.StateConsensus,
+		voteproof: ivp,
+	}))
+
+	defer func() {
+		_ = cs.Deactivate(StateChangeContext{})
+	}()
+
+	wrongBlock, _ := block.NewTestBlockV0(ivp.Height(), ivp.Round(), valuehash.RandomSHA256(), valuehash.RandomSHA256())
+	pp.SetReturnBlock(wrongBlock)
+
+	var avp base.Voteproof
+	{
+		expectedBlock, _ := block.NewTestBlockV0(ivp.Height(), ivp.Round(), valuehash.RandomSHA256(), valuehash.RandomSHA256())
+		ab := t.newACCEPTBallot(t.localstate, ivp.Round(), expectedBlock.Proposal(), expectedBlock.Hash())
+		fact := ab.ACCEPTBallotFactV0
+
+		avp, _ = t.newVoteproof(base.StageACCEPT, fact, t.localstate, t.remoteState)
+	}
+
+	t.NoError(cs.NewVoteproof(avp))
+
+	var ctx StateChangeContext
+	select {
+	case ctx = <-stateChan:
+	case <-time.After(time.Millisecond * 100):
+		t.NoError(xerrors.Errorf("failed to change state to syncing"))
+	}
+
+	t.Equal(base.StateConsensus, ctx.fromState)
+	t.Equal(base.StateSyncing, ctx.toState)
+	t.Equal(base.StageACCEPT, ctx.voteproof.Stage())
+}
+
 func TestStateConsensusHandler(t *testing.T) {
 	suite.Run(t, new(testStateConsensusHandler))
 }

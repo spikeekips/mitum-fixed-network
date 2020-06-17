@@ -171,7 +171,7 @@ func (st *SyncerStorage) SetBlocks(blocks []block.Block) error {
 		}
 	}
 
-	return st.blockStorage.setLastBlock(lastBlock, true)
+	return st.blockStorage.setLastBlock(lastBlock, true, false)
 }
 
 func (st *SyncerStorage) Commit() error {
@@ -201,7 +201,7 @@ func (st *SyncerStorage) Commit() error {
 		}
 	}
 
-	return st.main.setLastBlock(lastBlock, false)
+	return st.main.setLastBlock(lastBlock, false, false)
 }
 
 func (st *SyncerStorage) commitBlock(blk block.Block) error {

@@ -53,6 +53,22 @@ func (t *testRetry) TestError() {
 	t.Equal(3, called)
 }
 
+func (t *testRetry) TestStopRetrying() {
+	var called int = 0
+	_ = Retry(3, 0, func() error {
+		defer func() {
+			called++
+		}()
+
+		if called == 1 {
+			return StopRetryingError
+		}
+
+		return fmt.Errorf("error: %d", called+1)
+	})
+	t.Equal(2, called)
+}
+
 func TestRetry(t *testing.T) {
 	defer goleak.VerifyNone(t)
 

@@ -77,7 +77,7 @@ func (bc *ManifestsValidationChecker) CheckSerialized() (bool, error) {
 		}
 
 		if err := bc.checkPreviousBlock(current, bc.manifests[i+1]); err != nil {
-			return false, err
+			return false, NewBlockIntegrityError(current, err)
 		}
 
 		i++

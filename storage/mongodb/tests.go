@@ -14,7 +14,7 @@ import (
 )
 
 func (st *Storage) SetLastBlock(m block.Block) {
-	_ = st.setLastBlock(m, true)
+	_ = st.setLastBlock(m, true, false)
 }
 
 var BaseTestMongodbURI = "mongodb://localhost:27017"

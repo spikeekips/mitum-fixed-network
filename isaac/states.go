@@ -329,12 +329,14 @@ func (css *ConsensusStates) newVoteproof(voteproof base.Voteproof) error {
 	err := util.NewChecker("voteproof-validation-checker", []util.CheckerFunc{
 		vpc.CheckHeight,
 		vpc.CheckINITVoteproof,
+		vpc.CheckACCEPTVoteproof,
 	}).Check()
 
 	var ctx *StateToBeChangeError
 	switch {
 	case xerrors.As(err, &ctx):
-		if err0 := css.activateHandler(ctx.StateChangeContext()); err0 != nil {
+		changeCtx := NewStateChangeContext(css.ActiveHandler().State(), ctx.ToState, ctx.Voteproof, ctx.Ballot)
+		if err0 := css.activateHandler(changeCtx); err0 != nil {
 			return err0
 		}
 	case xerrors.Is(err, IgnoreVoteproofError):

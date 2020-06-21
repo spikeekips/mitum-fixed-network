@@ -6,6 +6,7 @@ import (
 
 	"github.com/beevik/ntp"
 
+	"github.com/spikeekips/mitum/util"
 	"github.com/spikeekips/mitum/util/logging"
 )
 
@@ -19,9 +20,9 @@ var (
 type TimeSyncer struct {
 	sync.RWMutex
 	*logging.Logging
+	*util.FunctionDaemon
 	server   string
 	offset   time.Duration
-	stopChan chan bool
 	interval time.Duration
 }
 
@@ -40,7 +41,6 @@ func NewTimeSyncer(server string, checkInterval time.Duration) (*TimeSyncer, err
 		}),
 		server:   server,
 		interval: checkInterval,
-		stopChan: make(chan bool),
 	}
 
 	if checkInterval < minTimeSyncCheckInterval {
@@ -50,52 +50,42 @@ func NewTimeSyncer(server string, checkInterval time.Duration) (*TimeSyncer, err
 			Msg("checkInterval too short")
 	}
 
+	ts.FunctionDaemon = util.NewFunctionDaemon(ts.schedule, true)
+
 	return ts, nil
 }
 
 // Start starts TimeSyncer
 func (ts *TimeSyncer) Start() error {
-	go ts.schedule()
-
 	ts.Log().Debug().Msg("started")
 
-	return nil
+	return ts.FunctionDaemon.Start()
 }
 
-// Stop stops TimeSyncer
-func (ts *TimeSyncer) Stop() error {
-	ts.Lock()
-	defer ts.Unlock()
-
-	ts.Log().Debug().Msg("trying to stop")
-
-	if ts.stopChan != nil {
-		ts.stopChan <- true
-		close(ts.stopChan)
-		ts.stopChan = nil
-	}
-
-	return nil
-}
-
-func (ts *TimeSyncer) schedule() {
+func (ts *TimeSyncer) schedule(stopChan chan struct{}) error {
 	ticker := time.NewTicker(ts.interval)
 
 end:
 	for {
 		select {
-		case <-ts.stopChan:
+		case <-stopChan:
 			ticker.Stop()
 			ts.Log().Debug().Msg("stopped")
+
 			break end
 		case <-ticker.C:
 			ts.check()
 		}
 	}
+
+	return nil
 }
 
 // Offset returns the latest time offset.
 func (ts *TimeSyncer) Offset() time.Duration {
+	ts.RLock()
+	defer ts.RUnlock()
+
 	return ts.offset
 }
 

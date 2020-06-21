@@ -24,6 +24,7 @@ import (
 	"github.com/spikeekips/mitum/util/encoder"
 	bsonenc "github.com/spikeekips/mitum/util/encoder/bson"
 	jsonenc "github.com/spikeekips/mitum/util/encoder/json"
+	"github.com/spikeekips/mitum/util/localtime"
 	"github.com/spikeekips/mitum/util/logging"
 )
 
@@ -75,6 +76,16 @@ func (nr *NodeRunner) Storage() storage.Storage {
 }
 
 func (nr *NodeRunner) Initialize() error {
+	if ts, err := localtime.NewTimeSyncer("kr.pool.ntp.org", time.Second*5); err != nil {
+		return err
+	} else if err := ts.Start(); err != nil {
+		return err
+	} else {
+		_ = ts.SetLogger(nr.Log())
+
+		localtime.SetTimeSyncer(ts)
+	}
+
 	for _, f := range []func() error{
 		nr.attachStorage,
 		nr.attachLocalstate,

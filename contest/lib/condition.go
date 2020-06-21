@@ -1,11 +1,19 @@
 package contestlib
 
 import (
+	"bytes"
+	"html/template"
+	"regexp"
+
+	jsonenc "github.com/spikeekips/mitum/util/encoder/json"
 	"go.mongodb.org/mongo-driver/bson"
 	"golang.org/x/xerrors"
 	"gopkg.in/yaml.v3"
+)
 
-	jsonenc "github.com/spikeekips/mitum/util/encoder/json"
+var (
+	reTemplateAssignStringFormat = `\{\{\.[a-zA-Z0-9_][a-zA-Z0-9_]*\}\}`
+	reTemplateAssignString       = regexp.MustCompile(reTemplateAssignStringFormat)
 )
 
 type ConditionActionIfError uint8
@@ -65,21 +73,14 @@ type Condition struct {
 	ActionString string                 `yaml:"action"`
 	Args         []string               `yaml:"args"`
 	IfError      ConditionActionIfError `yaml:"if-error"`
+	Register     []*ConditionRegister
 	query        bson.M
+	tmpl         *template.Template
 	action       ConditionAction
-	lastID       interface{}
 }
 
 func (dc *Condition) String() string {
-	return dc.QueryString
-}
-
-func (dc *Condition) Query() bson.M {
-	if dc.lastID != nil {
-		dc.query["_id"] = bson.M{"$gt": dc.lastID}
-	}
-
-	return dc.query
+	return jsonenc.ToString(dc.query)
 }
 
 func (dc *Condition) IsValid([]byte) error {
@@ -87,12 +88,22 @@ func (dc *Condition) IsValid([]byte) error {
 		return err
 	}
 
-	var m bson.M
-	if err := jsonenc.Unmarshal([]byte(dc.QueryString), &m); err != nil {
+	for _, r := range dc.Register {
+		if err := r.IsValid(nil); err != nil {
+			return err
+		}
+	}
+
+	n := reTemplateAssignString.ReplaceAll([]byte(dc.QueryString), []byte("1"))
+	if err := jsonenc.Unmarshal(n, &bson.M{}); err != nil {
 		return err
 	}
 
-	dc.query = m
+	if t, err := template.New("query").Parse(dc.QueryString); err != nil {
+		return err
+	} else {
+		dc.tmpl = t
+	}
 
 	return nil
 }
@@ -101,6 +112,22 @@ func (dc *Condition) Action() ConditionAction {
 	return dc.action
 }
 
-func (dc *Condition) SetLastID(id interface{}) {
-	dc.lastID = id
+func (dc *Condition) FormatQuery(m map[string]interface{}) (bson.M, error) {
+	if dc.query != nil {
+		return dc.query, nil
+	}
+
+	var bf bytes.Buffer
+	if err := dc.tmpl.Execute(&bf, m); err != nil {
+		return nil, err
+	}
+
+	var q bson.M
+	if err := bson.UnmarshalExtJSON(bf.Bytes(), false, &q); err != nil {
+		return nil, err
+	}
+
+	dc.query = q
+
+	return dc.query, nil
 }

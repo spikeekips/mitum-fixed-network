@@ -24,9 +24,12 @@ query: >
 	t.NoError(yaml.Unmarshal([]byte(y), &cm))
 	t.NoError(cm.IsValid(nil))
 
-	t.Equal("n0", cm.Query()["_node"])
-	t.Equal("ab", cm.Query()["a.b"])
-	t.Equal("cd", cm.Query()["c.d"])
+	_, err := cm.FormatQuery(nil)
+	t.NoError(err)
+
+	t.Equal("n0", cm.query["_node"])
+	t.Equal("ab", cm.query["a.b"])
+	t.Equal("cd", cm.query["c.d"])
 
 	b, err := yaml.Marshal(cm)
 	t.NoError(err)

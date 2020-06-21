@@ -57,7 +57,7 @@ func (t *testEventMongodb) TestInsert() {
 
 	t.Equal("info", event["level"].(string))
 	t.Equal("consensus-states", event["module"].(string))
-	t.Equal(int32(33), event["handler"].(int32))
+	t.Equal(float64(33), event["handler"].(float64))
 	t.Equal("2020-05-21T08:19:45.76229515Z", event["t"].(string))
 	t.Equal("activated: JOINING", event["m"].(string))
 }
@@ -84,7 +84,7 @@ func (t *testEventMongodb) TestPreseveInsertedOrder() {
 
 	var seqs []int64
 	t.client.Find("test", bson.D{}, func(cursor *mongo.Cursor) (bool, error) {
-		s := cursor.Current.Lookup("seq").Int32()
+		s := cursor.Current.Lookup("seq").Double()
 		seqs = append(seqs, int64(s))
 
 		return true, nil

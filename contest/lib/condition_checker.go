@@ -21,6 +21,7 @@ type ConditionsChecker struct {
 	conditions []*Condition
 	remains    []*Condition
 	current    int
+	registers  map[string]interface{}
 }
 
 func NewConditionsChecker(
@@ -36,6 +37,9 @@ func NewConditionsChecker(
 		collection: collection,
 		conditions: conditions,
 		remains:    conditions,
+		registers: map[string]interface{}{
+			"last_matched": "",
+		},
 	}
 }
 
@@ -47,7 +51,12 @@ func (cc *ConditionsChecker) next() (*Condition, bool) {
 		return nil, false
 	}
 
-	return cc.remains[0], true
+	c := cc.remains[0]
+	if _, err := c.FormatQuery(cc.registers); err != nil {
+		return nil, false
+	}
+
+	return c, true
 }
 
 func (cc *ConditionsChecker) Check(exitChan chan error) (bool, error) {
@@ -91,63 +100,75 @@ func (cc *ConditionsChecker) Check(exitChan chan error) (bool, error) {
 	return false, nil
 }
 
-func (cc *ConditionsChecker) lastID() (interface{}, error) {
-	var lastID interface{}
-	if err := cc.client.GetByFilter(
-		cc.collection,
-		bson.D{},
-		func(res *mongo.SingleResult) error {
-			var doc struct {
-				ID interface{} `bson:"_id"`
-			}
-			if err := res.Decode(&doc); err != nil {
-				return err
-			} else {
-				lastID = doc.ID
-			}
-
-			return nil
-		},
-		options.FindOne().SetSort(util.NewBSONFilter("_id", -1).D()),
-	); err != nil {
-		return nil, err
-	}
-
-	return lastID, nil
-}
-
 func (cc *ConditionsChecker) check(c *Condition) (bool, error) {
 	if cc.current == 0 {
 		cc.Log().Debug().Str("condition", c.String()).Msg("current condition")
 	}
 
-	if lastID, err := cc.lastID(); err != nil {
+	var record map[string]interface{}
+	switch r, err := cc.query(c); {
+	case err != nil:
 		return false, err
-	} else {
-		defer func() {
-			c.SetLastID(lastID)
-		}()
+	case r == nil:
+		return false, nil
+	default:
+		record = r
+		cc.addRegister("last_matched", record["_id"])
 	}
 
-	var passed bool
-	if count, err := cc.client.Count(cc.collection, c.Query(), options.Count().SetLimit(1)); err != nil {
-		return false, err
-	} else if count > 0 {
-		passed = true
-	}
-
-	if passed {
-		cc.Lock()
-		cc.remains = cc.remains[1:]
-		cc.current++
-		cc.Unlock()
-
-		if n, found := cc.next(); found {
-			cc.Log().Debug().Str("condition", n.String()).Msg("current condition")
-		} else {
-			cc.Log().Debug().Msg("no more condition")
+	if len(c.Register) > 0 {
+		for _, r := range c.Register {
+			if v, found := Lookup(record, r.Key); !found {
+				continue
+			} else {
+				cc.addRegister(r.Assign, v)
+			}
 		}
 	}
 
-	return passed, nil
+	cc.Lock()
+	cc.remains = cc.remains[1:]
+	cc.current++
+	cc.Unlock()
+
+	if n, found := cc.next(); found {
+		cc.Log().Debug().Str("condition", n.String()).Msg("current condition")
+	} else {
+		cc.Log().Debug().Msg("no more condition")
+	}
+
+	return true, nil
+}
+
+func (cc *ConditionsChecker) query(c *Condition) (map[string]interface{}, error) {
+	var query bson.M
+	if q, err := c.FormatQuery(cc.registers); err != nil {
+		return nil, err
+	} else {
+		query = q
+	}
+
+	var record map[string]interface{}
+	if err := cc.client.Find(cc.collection, query, func(cursor *mongo.Cursor) (bool, error) {
+		if err := cursor.Decode(&record); err != nil {
+			return false, err
+		}
+
+		return false, nil
+	},
+		options.Find().SetSort(util.NewBSONFilter("_id", -1).D()).SetLimit(1),
+	); err != nil {
+		return nil, err
+	}
+
+	return record, nil
+}
+
+func (cc *ConditionsChecker) addRegister(key string, value interface{}) {
+	cc.Lock()
+	defer cc.Unlock()
+
+	cc.registers[key] = value
+
+	cc.Log().Debug().Str("key", key).Interface("value", value).Msg("register")
 }

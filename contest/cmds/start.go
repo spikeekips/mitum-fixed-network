@@ -14,6 +14,7 @@ import (
 	"github.com/spikeekips/mitum/base"
 	contestlib "github.com/spikeekips/mitum/contest/lib"
 	"github.com/spikeekips/mitum/isaac"
+	"github.com/spikeekips/mitum/launcher"
 	mongodbstorage "github.com/spikeekips/mitum/storage/mongodb"
 	"github.com/spikeekips/mitum/util/encoder"
 	bsonenc "github.com/spikeekips/mitum/util/encoder/bson"
@@ -405,7 +406,10 @@ func (cmd *StartCommand) defaultActionBuildBlocks(args []string) (func() error, 
 			}
 		}
 
-		suffrage := contestlib.NewRoundrobinSuffrage(genesis, 100)
+		suffrage := launcher.NewRoundrobinSuffrage(genesis, 100)
+		if err := suffrage.Initialize(); err != nil {
+			return err
+		}
 
 		if bg, err := isaac.NewDummyBlocksV0Generator(genesis, height, suffrage, all); err != nil {
 			return err
@@ -459,7 +463,11 @@ func (cmd *StartCommand) defaultActionMangleBlocks(args []string) (func() error,
 			all = a
 		}
 
-		suffrage := contestlib.NewRoundrobinSuffrage(all[0], 100)
+		suffrage := launcher.NewRoundrobinSuffrage(all[0], 100)
+		if err := suffrage.Initialize(); err != nil {
+			return err
+		}
+
 		if bg, err := isaac.NewDummyBlocksV0Generator(all[0], toHeight, suffrage, all); err != nil {
 			return err
 		} else if err := bg.Generate(false); err != nil {

@@ -93,6 +93,16 @@ func (pvc *ProposalValidationChecker) IsProposer() (bool, error) {
 }
 
 func (pvc *ProposalValidationChecker) SaveProposal() (bool, error) {
+	// NOTE befor saving proposal, check again for preventing duplication error
+	height := pvc.proposal.Height()
+	round := pvc.proposal.Round()
+
+	if _, found, err := pvc.localstate.Storage().Proposal(height, round); err != nil {
+		return false, err
+	} else if found {
+		return true, nil // NOTE the already saved will be passed
+	}
+
 	if err := pvc.localstate.Storage().NewProposal(pvc.proposal); err != nil {
 		return false, xerrors.Errorf("failed to save proposal: %w", err)
 	}

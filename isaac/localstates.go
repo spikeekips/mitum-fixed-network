@@ -5,30 +5,40 @@ import (
 )
 
 type Localstate struct {
-	storage storage.Storage
-	node    *LocalNode
-	policy  *LocalPolicy
-	nodes   *NodesState
+	storage   storage.Storage
+	node      *LocalNode
+	policy    *LocalPolicy
+	nodes     *NodesState
+	networkID []byte
 }
 
 func NewLocalstate(st storage.Storage, node *LocalNode, networkID []byte) (*Localstate, error) {
-	var policy *LocalPolicy
-	if p, err := NewLocalPolicy(st, networkID); err != nil {
-		return nil, err
+	return &Localstate{
+		storage:   st,
+		node:      node,
+		nodes:     NewNodesState(node, nil),
+		networkID: networkID,
+	}, nil
+}
+
+func (ls *Localstate) Initialize() error {
+	if p, err := NewLocalPolicy(ls.storage, ls.networkID); err != nil {
+		return err
 	} else {
-		policy = p
+		ls.policy = p
 	}
 
-	return &Localstate{
-		storage: st,
-		node:    node,
-		policy:  policy,
-		nodes:   NewNodesState(node, nil),
-	}, nil
+	return nil
 }
 
 func (ls *Localstate) Storage() storage.Storage {
 	return ls.storage
+}
+
+func (ls *Localstate) SetStorage(st storage.Storage) *Localstate {
+	ls.storage = st
+
+	return ls
 }
 
 func (ls *Localstate) Node() *LocalNode {

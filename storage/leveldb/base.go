@@ -62,6 +62,10 @@ func NewMemStorage(encs *encoder.Encoders, enc encoder.Encoder) *Storage {
 	return NewStorage(db, encs, enc)
 }
 
+func (st *Storage) Initialize() error {
+	return nil
+}
+
 func (st *Storage) SyncerStorage() (storage.SyncerStorage, error) {
 	return NewSyncerStorage(st), nil
 }

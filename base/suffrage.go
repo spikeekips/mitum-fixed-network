@@ -1,6 +1,9 @@
 package base
 
+import "github.com/spikeekips/mitum/util"
+
 type Suffrage interface {
+	util.Initializer
 	Name() string
 	Acting(Height, Round) ActingSuffrage
 	IsInside(Address) bool

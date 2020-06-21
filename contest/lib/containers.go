@@ -806,7 +806,13 @@ func (ct *Container) storageURIExternal() string {
 }
 
 func (ct *Container) Storage() (storage.Storage, error) {
-	return LoadStorage(ct.storageURIExternal(), ct.encs)
+	if st, err := LoadStorage(ct.storageURIExternal(), ct.encs); err != nil {
+		return nil, err
+	} else if err := st.Initialize(); err != nil {
+		return nil, err
+	} else {
+		return st, nil
+	}
 }
 
 func (ct *Container) Localstate() *isaac.Localstate {
@@ -828,6 +834,8 @@ func (ct *Container) Localstate() *isaac.Localstate {
 		ct.NodeDesign(false).NetworkID(),
 	)
 	if err != nil {
+		panic(err)
+	} else if err := l.Initialize(); err != nil {
 		panic(err)
 	}
 

@@ -64,7 +64,7 @@ func (ss *StorageSupportTest) Storage(encs *encoder.Encoders, enc encoder.Encode
 			panic(err)
 		}
 
-		d := DummyMongodbStorage{st}
+		d := NewDummyMongodbStorage(st)
 
 		_ = d.Initialize()
 
@@ -86,6 +86,15 @@ func (ss *StorageSupportTest) SetBlock(st storage.Storage, blk block.Block) erro
 
 type DummyMongodbStorage struct {
 	*mongodbstorage.Storage
+}
+
+func NewDummyMongodbStorage(st *mongodbstorage.Storage) DummyMongodbStorage {
+	d := DummyMongodbStorage{Storage: st}
+	if err := d.Initialize(); err != nil {
+		panic(err)
+	}
+
+	return d
 }
 
 func (dm DummyMongodbStorage) Close() error {

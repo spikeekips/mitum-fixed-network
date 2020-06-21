@@ -27,6 +27,10 @@ func NewNetworkChanServer(ch *NetworkChanChannel) *NetworkChanServer {
 	return cs
 }
 
+func (cs *NetworkChanServer) Initialize() error {
+	return nil
+}
+
 func (cs *NetworkChanServer) SetLogger(l logging.Logger) logging.Logger {
 	_ = cs.Logging.SetLogger(l)
 	_ = cs.FunctionDaemon.SetLogger(l)

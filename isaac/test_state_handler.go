@@ -80,6 +80,8 @@ func (t *baseTestStateHandler) localstates(n int) []*Localstate {
 		localstate, err := NewLocalstate(lst, localNode, TestNetworkID)
 		if err != nil {
 			panic(err)
+		} else if err := localstate.Initialize(); err != nil {
+			panic(err)
 		}
 
 		ls = append(ls, localstate)
@@ -194,7 +196,13 @@ func (t *baseTestStateHandler) suffrage(proposerState *Localstate, states ...*Lo
 		nodes[i] = s.Node().Address()
 	}
 
-	return base.NewFixedSuffrage(proposerState.Node().Address(), nodes)
+	sf := base.NewFixedSuffrage(proposerState.Node().Address(), nodes)
+
+	if err := sf.Initialize(); err != nil {
+		panic(err)
+	}
+
+	return sf
 }
 
 func (t *baseTestStateHandler) newINITBallot(localstate *Localstate, round base.Round, voteproof base.Voteproof) ballot.INITBallotV0 {

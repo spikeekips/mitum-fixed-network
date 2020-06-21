@@ -65,7 +65,7 @@ func (t *testSyncers) TestSaveLastBlock() {
 
 	st, err := mongodbstorage.NewStorage(orig.Client(), t.Encs, t.BSONEnc)
 	t.NoError(err)
-	d := DummyMongodbStorage{st}
+	d := NewDummyMongodbStorage(st)
 
 	dlm, found, err := d.LastManifest()
 	t.NoError(err)

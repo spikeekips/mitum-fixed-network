@@ -29,7 +29,7 @@ func (t *testBlockV0DummyGenerator) TestCreate() {
 			nodes[i] = all[i].Node().Address()
 		}
 
-		suffrage = base.NewFixedSuffrage(all[0].Node().Address(), nodes)
+		suffrage = t.suffrage(all[0], all...)
 	}
 
 	lastHeight := base.Height(10)

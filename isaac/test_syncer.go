@@ -30,6 +30,8 @@ func (t *baseTestSyncer) emptyLocalstate() *Localstate {
 	localstate, err := NewLocalstate(lst, localNode, TestNetworkID)
 	t.NoError(err)
 
+	t.NoError(localstate.Initialize())
+
 	return localstate
 }
 

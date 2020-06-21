@@ -21,6 +21,7 @@ type (
 
 type Server interface {
 	util.Daemon
+	util.Initializer
 	SetHasSealHandler(HasSealHandler)
 	SetGetSealsHandler(GetSealsHandler)
 	SetNewSealHandler(NewSealHandler)
@@ -35,6 +36,7 @@ type Response interface {
 }
 
 type NetworkChannel interface {
+	util.Initializer
 	URL() string
 	Seals([]valuehash.Hash) ([]seal.Seal, error)
 	SendSeal(seal.Seal) error

@@ -29,6 +29,10 @@ func NewNetworkChanChannel(bufsize uint) *NetworkChanChannel {
 	}
 }
 
+func (gs *NetworkChanChannel) Initialize() error {
+	return nil
+}
+
 func (gs *NetworkChanChannel) URL() string {
 	return "gochan://"
 }

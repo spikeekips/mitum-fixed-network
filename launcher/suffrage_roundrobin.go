@@ -1,4 +1,4 @@
-package contestlib
+package launcher
 
 import (
 	"fmt"
@@ -32,6 +32,10 @@ func NewRoundrobinSuffrage(localstate *isaac.Localstate, cacheSize int) *Roundro
 		localstate: localstate,
 		cache:      cache,
 	}
+}
+
+func (sf *RoundrobinSuffrage) Initialize() error {
+	return nil
 }
 
 func (sf *RoundrobinSuffrage) Name() string {

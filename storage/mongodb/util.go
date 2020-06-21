@@ -3,6 +3,8 @@ package mongodbstorage
 import (
 	"fmt"
 	"net/url"
+	"strings"
+	"time"
 
 	"go.mongodb.org/mongo-driver/x/mongo/driver/connstring"
 	"golang.org/x/xerrors"
@@ -49,4 +51,16 @@ func NewTempURI(uri, prefix string) (string, error) {
 	}
 
 	return cs, nil
+}
+
+func parseDurationFromQuery(query url.Values, key string, v time.Duration) (time.Duration, error) {
+	if sl, found := query[key]; !found || len(sl) < 1 {
+		return v, nil
+	} else if s := sl[len(sl)-1]; len(strings.TrimSpace(s)) < 1 { // pop last one
+		return v, nil
+	} else if d, err := time.ParseDuration(s); err != nil {
+		return 0, xerrors.Errorf("invalid %s value for mongodb: %w", key, err)
+	} else {
+		return d, nil
+	}
 }

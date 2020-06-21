@@ -6,6 +6,7 @@ import (
 
 	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/isaac"
+	"github.com/spikeekips/mitum/launcher"
 	"github.com/spikeekips/mitum/network"
 )
 
@@ -106,7 +107,9 @@ func (fs FixedSuffrageDesign) New(localstate *isaac.Localstate) (base.Suffrage, 
 	})
 	nodes[i] = localstate.Node().Address()
 
-	return base.NewFixedSuffrage(proposer, nodes), nil
+	sf := base.NewFixedSuffrage(proposer, nodes)
+
+	return sf, sf.Initialize()
 }
 
 type RoundrobinSuffrageDesign struct {
@@ -117,5 +120,5 @@ func (fs RoundrobinSuffrageDesign) IsValid([]byte) error {
 }
 
 func (fs RoundrobinSuffrageDesign) New(localstate *isaac.Localstate) (base.Suffrage, error) {
-	return NewRoundrobinSuffrage(localstate, 100), nil
+	return launcher.NewRoundrobinSuffrage(localstate, 100), nil
 }

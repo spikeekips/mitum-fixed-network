@@ -79,6 +79,10 @@ func NewQuicChannel(
 	return qc, nil
 }
 
+func (qc *QuicChannel) Initialize() error {
+	return nil
+}
+
 func (qc *QuicChannel) SetLogger(l logging.Logger) logging.Logger {
 	_ = qc.Logging.SetLogger(l)
 	_ = qc.client.SetLogger(l)

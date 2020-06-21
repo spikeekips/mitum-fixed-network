@@ -34,8 +34,10 @@ func createNodeRunnerFromDesign(f string, version util.Version, log logging.Logg
 	}
 
 	var nr *contestlib.NodeRunner
-	if n, err := contestlib.NewNodeRunnerFromDesign(design, encs, version); err != nil {
+	if n, err := contestlib.NewNodeRunnerFromDesign(design, version); err != nil {
 		return nil, xerrors.Errorf("failed to create node runner: %w", err)
+	} else if err := n.AddHinters(contestlib.Hinters...); err != nil {
+		return nil, err
 	} else {
 		nr = n
 	}

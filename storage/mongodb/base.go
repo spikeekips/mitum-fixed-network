@@ -2,6 +2,7 @@ package mongodbstorage
 
 import (
 	"context"
+	"net/url"
 	"strings"
 	"sync"
 	"time"
@@ -21,6 +22,7 @@ import (
 	"github.com/spikeekips/mitum/storage"
 	"github.com/spikeekips/mitum/util"
 	"github.com/spikeekips/mitum/util/encoder"
+	bsonenc "github.com/spikeekips/mitum/util/encoder/bson"
 	"github.com/spikeekips/mitum/util/logging"
 )
 
@@ -61,7 +63,7 @@ type Storage struct {
 func NewStorage(client *Client, encs *encoder.Encoders, enc encoder.Encoder) (*Storage, error) {
 	// NOTE call Initialize() later.
 
-	st := &Storage{
+	return &Storage{
 		Logging: logging.NewLogging(func(c logging.Context) logging.Emitter {
 			return c.Str("module", "mongodb-storage")
 		}),
@@ -69,17 +71,57 @@ func NewStorage(client *Client, encs *encoder.Encoders, enc encoder.Encoder) (*S
 		encs:               encs,
 		enc:                enc,
 		lastManifestHeight: base.NilHeight,
+	}, nil
+}
+
+func NewStorageFromURI(uri string, encs *encoder.Encoders) (*Storage, error) {
+	parsed, err := url.Parse(uri)
+	if err != nil {
+		return nil, xerrors.Errorf("invalid storge uri: %w", err)
 	}
 
-	if err := st.loadLastBlock(); err != nil && !storage.IsNotFoundError(err) {
+	connectTimeout := time.Second * 2
+	execTimeout := time.Second * 2
+	{
+		query := parsed.Query()
+		if d, err := parseDurationFromQuery(query, "connectTimeout", connectTimeout); err != nil {
+			return nil, err
+		} else {
+			connectTimeout = d
+		}
+		if d, err := parseDurationFromQuery(query, "execTimeout", execTimeout); err != nil {
+			return nil, err
+		} else {
+			execTimeout = d
+		}
+	}
+
+	var be encoder.Encoder
+	if e, err := encs.Encoder(bsonenc.BSONType, ""); err != nil { // NOTE get latest bson encoder
+		return nil, xerrors.Errorf("bson encoder needs for mongodb: %w", err)
+	} else {
+		be = e
+	}
+
+	if client, err := NewClient(uri, connectTimeout, execTimeout); err != nil {
 		return nil, err
+	} else if st, err := NewStorage(client, encs, be); err != nil {
+		return nil, err
+	} else {
+		return st, nil
+	}
+}
+
+func (st *Storage) Initialize() error {
+	if err := st.loadLastBlock(); err != nil && !storage.IsNotFoundError(err) {
+		return err
 	}
 
 	if err := st.cleanupIncompleteData(); err != nil {
-		return nil, err
+		return err
 	}
 
-	return st, nil
+	return st.initialize()
 }
 
 func (st *Storage) loadLastBlock() error {
@@ -244,7 +286,7 @@ func (st *Storage) Clean() error {
 		}
 	}
 
-	if err := st.Initialize(); err != nil {
+	if err := st.initialize(); err != nil {
 		return err
 	}
 
@@ -768,7 +810,7 @@ func (st *Storage) OpenBlockStorage(blk block.Block) (storage.BlockStorage, erro
 	return NewBlockStorage(st, blk)
 }
 
-func (st *Storage) Initialize() error {
+func (st *Storage) initialize() error {
 	for col, models := range defaultIndexes {
 		if err := st.createIndex(col, models); err != nil {
 			return err

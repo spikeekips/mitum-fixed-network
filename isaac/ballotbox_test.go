@@ -26,6 +26,7 @@ func (t *testBallotbox) SetupSuite() {
 func (t *testBallotbox) thresholdFunc(total uint, ratio float64) func() base.Threshold {
 	ls, err := NewLocalstate(nil, nil, TestNetworkID)
 	t.NoError(err)
+	t.NoError(ls.Initialize())
 
 	r := base.ThresholdRatio(ratio)
 	_ = ls.Policy().SetThresholdRatio(r)

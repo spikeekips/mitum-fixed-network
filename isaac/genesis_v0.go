@@ -23,6 +23,11 @@ type GenesisBlockV0Generator struct {
 func NewGenesisBlockV0Generator(localstate *Localstate, ops []operation.Operation) (*GenesisBlockV0Generator, error) {
 	threshold, _ := base.NewThreshold(1, 100)
 
+	suffrage := base.NewFixedSuffrage(localstate.Node().Address(), nil)
+	if err := suffrage.Initialize(); err != nil {
+		return nil, err
+	}
+
 	return &GenesisBlockV0Generator{
 		Logging: logging.NewLogging(func(c logging.Context) logging.Emitter {
 			return c.Str("module", "genesis-block-generator")
@@ -37,7 +42,7 @@ func NewGenesisBlockV0Generator(localstate *Localstate, ops []operation.Operatio
 			},
 		),
 		ops:      ops,
-		suffrage: base.NewFixedSuffrage(localstate.Node().Address(), nil),
+		suffrage: suffrage,
 	}, nil
 }
 

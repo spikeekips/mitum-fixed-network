@@ -13,11 +13,21 @@ type FixedSuffrage struct {
 }
 
 func NewFixedSuffrage(proposer Address, nodes []Address) *FixedSuffrage {
-	ns := map[Address]struct{}{
-		proposer: {},
+	return &FixedSuffrage{
+		Logging: logging.NewLogging(func(c logging.Context) logging.Emitter {
+			return c.Str("module", "fixed-suffrage")
+		}),
+		proposer: proposer,
+		nodeList: nodes,
 	}
-	nodeList := []Address{proposer}
-	for _, n := range nodes {
+}
+
+func (ff *FixedSuffrage) Initialize() error {
+	ns := map[Address]struct{}{
+		ff.proposer: {},
+	}
+	nodeList := []Address{ff.proposer}
+	for _, n := range ff.nodeList {
 		if _, found := ns[n]; found {
 			continue
 		}
@@ -26,14 +36,10 @@ func NewFixedSuffrage(proposer Address, nodes []Address) *FixedSuffrage {
 		nodeList = append(nodeList, n)
 	}
 
-	return &FixedSuffrage{
-		Logging: logging.NewLogging(func(c logging.Context) logging.Emitter {
-			return c.Str("module", "fixed-suffrage")
-		}),
-		proposer: proposer,
-		nodes:    ns,
-		nodeList: nodeList,
-	}
+	ff.nodes = ns
+	ff.nodeList = nodeList
+
+	return nil
 }
 
 func (ff *FixedSuffrage) Name() string {

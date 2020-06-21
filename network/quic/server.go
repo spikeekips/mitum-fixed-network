@@ -54,6 +54,10 @@ func NewQuicServer(
 	return nqs, nil
 }
 
+func (qs *QuicServer) Initialize() error {
+	return nil
+}
+
 func (qs *QuicServer) SetLogger(l logging.Logger) logging.Logger {
 	_ = qs.PrimitiveQuicServer.SetLogger(l)
 

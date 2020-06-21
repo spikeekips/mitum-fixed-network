@@ -27,6 +27,10 @@ func NewDummyProposalProcessor(returnBlock block.BlockUpdater, err error) *Dummy
 	}
 }
 
+func (dp *DummyProposalProcessor) Initialize() error {
+	return nil
+}
+
 func (dp *DummyProposalProcessor) SetReturnBlock(blk block.BlockUpdater) {
 	dp.returnBlock = blk
 }

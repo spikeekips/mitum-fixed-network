@@ -37,6 +37,10 @@ func NewDefaultProposalProcessor(localstate *Localstate, suffrage base.Suffrage)
 	}
 }
 
+func (dp *DefaultProposalProcessor) Initialize() error {
+	return nil
+}
+
 func (dp *DefaultProposalProcessor) IsProcessed(ph valuehash.Hash) bool {
 	_, found := dp.processors.Load(ph)
 

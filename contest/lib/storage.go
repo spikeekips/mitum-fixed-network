@@ -7,6 +7,7 @@ import (
 	"golang.org/x/xerrors"
 
 	"github.com/spikeekips/mitum/storage"
+	mongodbstorage "github.com/spikeekips/mitum/storage/mongodb"
 	"github.com/spikeekips/mitum/util/encoder"
 )
 
@@ -19,7 +20,7 @@ func LoadStorage(uri string, encs *encoder.Encoders) (storage.Storage, error) {
 	var st storage.Storage
 	switch strings.ToLower(parsed.Scheme) {
 	case "mongodb":
-		if s, err := newMongodbStorage(uri, encs); err != nil {
+		if s, err := mongodbstorage.NewStorageFromURI(uri, encs); err != nil {
 			return nil, err
 		} else {
 			st = s

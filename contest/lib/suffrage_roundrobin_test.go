@@ -23,16 +23,16 @@ func (t *testRoundrobinSuffrage) localstate() *isaac.Localstate {
 }
 
 func (t *testRoundrobinSuffrage) TestNew() {
-	localstate := t.localstate()
-	sf := NewRoundrobinSuffrage(localstate, 10)
+	local := t.localstate()
+	sf := NewRoundrobinSuffrage(local, 10)
 	t.NotNil(sf)
 
 	t.Implements((*base.Suffrage)(nil), sf)
 }
 
 func (t *testRoundrobinSuffrage) TestActingSuffrage() {
-	localstate := t.localstate()
-	_, _ = localstate.Policy().SetNumberOfActingSuffrageNodes(3)
+	local := t.localstate()
+	_, _ = local.Policy().SetNumberOfActingSuffrageNodes(3)
 
 	nodes := []network.Node{
 		isaac.RandomLocalNode("n0", nil),
@@ -41,13 +41,13 @@ func (t *testRoundrobinSuffrage) TestActingSuffrage() {
 		isaac.RandomLocalNode("n3", nil),
 		isaac.RandomLocalNode("n4", nil),
 	}
-	t.NoError(localstate.Nodes().Add(nodes...))
+	t.NoError(local.Nodes().Add(nodes...))
 
-	sf := NewRoundrobinSuffrage(localstate, 10)
+	sf := NewRoundrobinSuffrage(local, 10)
 
 	af := sf.Acting(base.Height(33), base.Round(0))
 	t.NotNil(af)
-	t.Equal(int(localstate.Policy().NumberOfActingSuffrageNodes()), len(af.Nodes()))
+	t.Equal(int(local.Policy().NumberOfActingSuffrageNodes()), len(af.Nodes()))
 
 	expectedProposer := nodes[2]
 	t.True(expectedProposer.Address().Equal(af.Proposer()))
@@ -71,25 +71,25 @@ func (t *testRoundrobinSuffrage) TestActingSuffrage() {
 }
 
 func (t *testRoundrobinSuffrage) TestActingSuffrageNotSufficient() {
-	localstate := t.localstate()
-	_, _ = localstate.Policy().SetNumberOfActingSuffrageNodes(4)
+	local := t.localstate()
+	_, _ = local.Policy().SetNumberOfActingSuffrageNodes(4)
 
 	nodes := []network.Node{
 		isaac.RandomLocalNode("n0", nil),
 		isaac.RandomLocalNode("n1", nil),
 	}
-	t.NoError(localstate.Nodes().Add(nodes...))
+	t.NoError(local.Nodes().Add(nodes...))
 
-	sf := NewRoundrobinSuffrage(localstate, 10)
+	sf := NewRoundrobinSuffrage(local, 10)
 
 	af := sf.Acting(base.Height(33), base.Round(0))
 	t.NotNil(af)
 	t.Equal(len(nodes)+1, len(af.Nodes()))
 
-	expectedProposer := localstate.Node()
+	expectedProposer := local.Node()
 	t.True(expectedProposer.Address().Equal(af.Proposer()))
 
-	expected := []network.Node{localstate.Node()}
+	expected := []network.Node{local.Node()}
 	expected = append(expected, nodes...)
 	for _, n := range af.Nodes() {
 		var found bool

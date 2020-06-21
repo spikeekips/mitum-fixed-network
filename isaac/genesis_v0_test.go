@@ -11,31 +11,19 @@ import (
 
 type testGenesisBlockV0 struct {
 	baseTestStateHandler
-	localstate *Localstate
+	local *Localstate
 }
 
 func (t *testGenesisBlockV0) SetupTest() {
 	t.baseTestStateHandler.SetupTest()
-	baseLocalstate := t.baseTestStateHandler.localstate
 
-	localstate, err := NewLocalstate(
-		t.Storage(nil, nil),
-		baseLocalstate.Node(),
-		TestNetworkID,
-	)
-	t.NoError(err)
-	t.localstate = localstate
-}
-
-func (t *testGenesisBlockV0) TearDownTest() {
-	t.baseTestStateHandler.TearDownTest()
-
-	t.closeStates(t.localstate)
+	t.local = t.localstates(1)[0]
+	t.local.Storage().Clean()
 }
 
 func (t *testGenesisBlockV0) TestNewGenesisBlock() {
 	op, err := NewKVOperation(
-		t.localstate.Node().Privatekey(),
+		t.local.Node().Privatekey(),
 		[]byte("this-is-token"),
 		"showme",
 		[]byte("findme"),
@@ -43,7 +31,7 @@ func (t *testGenesisBlockV0) TestNewGenesisBlock() {
 	)
 	t.NoError(err)
 
-	gg, err := NewGenesisBlockV0Generator(t.localstate, []operation.Operation{op})
+	gg, err := NewGenesisBlockV0Generator(t.local, []operation.Operation{op})
 	t.NoError(err)
 
 	blk, err := gg.Generate()
@@ -52,12 +40,12 @@ func (t *testGenesisBlockV0) TestNewGenesisBlock() {
 	t.Equal(base.Height(0), blk.Height())
 	t.Equal(base.Round(0), blk.Round())
 
-	pr, found, err := t.localstate.Storage().Seal(blk.Proposal())
+	pr, found, err := t.local.Storage().Seal(blk.Proposal())
 	t.True(found)
 	t.NoError(err)
 	t.NotNil(pr)
 
-	st, found, err := t.localstate.Storage().State(op.Key)
+	st, found, err := t.local.Storage().State(op.Key)
 	t.NoError(err)
 	t.True(found)
 

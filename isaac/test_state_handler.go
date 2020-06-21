@@ -26,11 +26,9 @@ import (
 type baseTestStateHandler struct {
 	suite.Suite
 	StorageSupportTest
-	localstate  *Localstate
-	remoteState *Localstate
-	encs        *encoder.Encoders
-	enc         encoder.Encoder
-	ls          []*Localstate
+	encs *encoder.Encoders
+	enc  encoder.Encoder
+	ls   []*Localstate
 }
 
 func (t *baseTestStateHandler) SetupSuite() {
@@ -113,8 +111,6 @@ func (t *baseTestStateHandler) localstates(n int) []*Localstate {
 }
 
 func (t *baseTestStateHandler) SetupTest() {
-	ls := t.localstates(2) // TODO remove
-	t.localstate, t.remoteState = ls[0], ls[1]
 }
 
 func (t *baseTestStateHandler) TearDownTest() {

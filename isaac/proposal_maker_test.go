@@ -16,7 +16,7 @@ type testProposalMaker struct {
 }
 
 func (t *testProposalMaker) TestCached() {
-	proposalMaker := NewProposalMaker(t.localstate)
+	proposalMaker := NewProposalMaker(t.localstates(1)[0])
 
 	round := base.Round(1)
 	proposal, err := proposalMaker.Proposal(round)
@@ -29,9 +29,9 @@ func (t *testProposalMaker) TestCached() {
 }
 
 func (t *testProposalMaker) TestClean() {
-	localstate := t.localstates(1)[0]
+	local := t.localstates(1)[0]
 
-	proposalMaker := NewProposalMaker(localstate)
+	proposalMaker := NewProposalMaker(local)
 
 	round := base.Round(1)
 	_, err := proposalMaker.Proposal(round)
@@ -41,20 +41,20 @@ func (t *testProposalMaker) TestClean() {
 }
 
 func (t *testProposalMaker) TestSeals() {
-	localstate := t.localstates(1)[0]
+	local := t.localstates(1)[0]
 
 	var ops []operation.Seal
 	var seals []seal.Seal
 	// 10 operation.Seal
 	for i := 0; i < 10; i++ {
-		sl := t.newOperationSeal(localstate)
+		sl := t.newOperationSeal(local)
 
 		ops = append(ops, sl)
 		seals = append(seals, sl)
 	}
-	t.NoError(localstate.Storage().NewSeals(seals))
+	t.NoError(local.Storage().NewSeals(seals))
 
-	proposalMaker := NewProposalMaker(localstate)
+	proposalMaker := NewProposalMaker(local)
 
 	round := base.Round(1)
 	proposal, err := proposalMaker.Proposal(round)
@@ -63,7 +63,7 @@ func (t *testProposalMaker) TestSeals() {
 	t.Equal(len(ops), len(proposal.Seals()))
 
 	var expectedSeals []valuehash.Hash
-	err = localstate.Storage().StagedOperationSeals(func(sl operation.Seal) (bool, error) {
+	err = local.Storage().StagedOperationSeals(func(sl operation.Seal) (bool, error) {
 		expectedSeals = append(expectedSeals, sl.Hash())
 
 		return true, nil

@@ -11,7 +11,6 @@ import (
 
 type testBlockV0DummyGenerator struct {
 	baseTestStateHandler
-	localstate *Localstate
 }
 
 func (t *testBlockV0DummyGenerator) TestCreate() {

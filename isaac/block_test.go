@@ -14,12 +14,12 @@ type testBlock struct {
 }
 
 func (t *testBlock) TestBlockIsValid() {
-	localstate := t.localstates(1)[0]
-	blk, found, err := localstate.Storage().BlockByHeight(2)
+	local := t.localstates(1)[0]
+	blk, found, err := local.Storage().BlockByHeight(2)
 	t.NoError(err)
 	t.True(found)
 
-	orig := localstate.Policy().NetworkID()
+	orig := local.Policy().NetworkID()
 	t.NoError(blk.IsValid(orig))
 
 	n := []byte(util.UUID().String())

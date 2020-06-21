@@ -17,20 +17,20 @@ type testSyncers struct {
 
 func (t *testSyncers) TestNew() {
 	ls := t.localstates(2)
-	localstate, remoteState := ls[0], ls[1]
+	local, remote := ls[0], ls[1]
 
-	t.setup(localstate, []*Localstate{remoteState})
+	t.setup(local, []*Localstate{remote})
 
-	target := t.lastManifest(localstate.Storage()).Height() + 2
-	t.generateBlocks([]*Localstate{remoteState}, target)
+	target := t.lastManifest(local.Storage()).Height() + 2
+	t.generateBlocks([]*Localstate{remote}, target)
 
-	baseManifest, found, err := localstate.Storage().LastManifest()
+	baseManifest, found, err := local.Storage().LastManifest()
 	t.NoError(err)
 	t.True(found)
 
 	finishedChan := make(chan base.Height)
 
-	ss := NewSyncers(localstate, baseManifest)
+	ss := NewSyncers(local, baseManifest)
 	ss.WhenFinished(func(height base.Height) {
 		finishedChan <- height
 	})
@@ -38,7 +38,7 @@ func (t *testSyncers) TestNew() {
 
 	defer ss.Stop()
 
-	t.NoError(ss.Add(target, []network.Node{remoteState.Node()}))
+	t.NoError(ss.Add(target, []network.Node{remote.Node()}))
 
 	select {
 	case <-time.After(time.Second * 3):
@@ -48,10 +48,10 @@ func (t *testSyncers) TestNew() {
 		break
 	}
 
-	rm, found, err := remoteState.Storage().LastManifest()
+	rm, found, err := remote.Storage().LastManifest()
 	t.NoError(err)
 	t.True(found)
-	lm, found, err := localstate.Storage().LastManifest()
+	lm, found, err := local.Storage().LastManifest()
 	t.NoError(err)
 	t.True(found)
 
@@ -60,20 +60,20 @@ func (t *testSyncers) TestNew() {
 
 func (t *testSyncers) TestMultipleSyncers() {
 	ls := t.localstates(2)
-	localstate, remoteState := ls[0], ls[1]
+	local, remote := ls[0], ls[1]
 
-	t.setup(localstate, []*Localstate{remoteState})
+	t.setup(local, []*Localstate{remote})
 
-	target := t.lastManifest(localstate.Storage()).Height() + 2
-	t.generateBlocks([]*Localstate{remoteState}, target)
+	target := t.lastManifest(local.Storage()).Height() + 2
+	t.generateBlocks([]*Localstate{remote}, target)
 
-	baseManifest, found, err := localstate.Storage().LastManifest()
+	baseManifest, found, err := local.Storage().LastManifest()
 	t.NoError(err)
 	t.True(found)
 
 	finishedChan := make(chan base.Height)
 
-	ss := NewSyncers(localstate, baseManifest)
+	ss := NewSyncers(local, baseManifest)
 	ss.WhenFinished(func(height base.Height) {
 		finishedChan <- height
 	})
@@ -82,7 +82,7 @@ func (t *testSyncers) TestMultipleSyncers() {
 	defer ss.Stop()
 
 	for i := baseManifest.Height().Int64() + 1; i <= target.Int64(); i++ {
-		t.NoError(ss.Add(base.Height(i), []network.Node{remoteState.Node()}))
+		t.NoError(ss.Add(base.Height(i), []network.Node{remote.Node()}))
 	}
 
 	select {
@@ -96,20 +96,20 @@ func (t *testSyncers) TestMultipleSyncers() {
 
 func (t *testSyncers) TestMangledFinishedOrder() {
 	ls := t.localstates(2)
-	localstate, remoteState := ls[0], ls[1]
+	local, remote := ls[0], ls[1]
 
-	t.setup(localstate, []*Localstate{remoteState})
+	t.setup(local, []*Localstate{remote})
 
-	target := t.lastManifest(localstate.Storage()).Height() + 10
-	t.generateBlocks([]*Localstate{remoteState}, target)
+	target := t.lastManifest(local.Storage()).Height() + 10
+	t.generateBlocks([]*Localstate{remote}, target)
 
-	baseManifest, found, err := localstate.Storage().LastManifest()
+	baseManifest, found, err := local.Storage().LastManifest()
 	t.NoError(err)
 	t.True(found)
 
 	finishedChan := make(chan base.Height)
 
-	ss := NewSyncers(localstate, baseManifest)
+	ss := NewSyncers(local, baseManifest)
 
 	ss.WhenFinished(func(height base.Height) {
 		finishedChan <- height
@@ -118,8 +118,8 @@ func (t *testSyncers) TestMangledFinishedOrder() {
 
 	defer ss.Stop()
 
-	t.NoError(ss.Add(target-1, []network.Node{remoteState.Node()}))
-	t.NoError(ss.Add(target, []network.Node{remoteState.Node()}))
+	t.NoError(ss.Add(target-1, []network.Node{remote.Node()}))
+	t.NoError(ss.Add(target, []network.Node{remote.Node()}))
 
 	select {
 	case <-time.After(time.Second * 3):
@@ -132,18 +132,18 @@ func (t *testSyncers) TestMangledFinishedOrder() {
 
 func (t *testSyncers) TestAddAfterFinished() {
 	ls := t.localstates(2)
-	localstate, remoteState := ls[0], ls[1]
+	local, remote := ls[0], ls[1]
 
-	t.setup(localstate, []*Localstate{remoteState})
+	t.setup(local, []*Localstate{remote})
 
-	target := t.lastManifest(localstate.Storage()).Height() + 10
-	t.generateBlocks([]*Localstate{remoteState}, target)
+	target := t.lastManifest(local.Storage()).Height() + 10
+	t.generateBlocks([]*Localstate{remote}, target)
 
-	baseManifest, found, err := localstate.Storage().LastManifest()
+	baseManifest, found, err := local.Storage().LastManifest()
 	t.NoError(err)
 	t.True(found)
 
-	ss := NewSyncers(localstate, baseManifest)
+	ss := NewSyncers(local, baseManifest)
 
 	finishedChan := make(chan base.Height)
 	ss.WhenFinished(func(height base.Height) {
@@ -153,7 +153,7 @@ func (t *testSyncers) TestAddAfterFinished() {
 
 	defer ss.Stop()
 
-	t.NoError(ss.Add(target-3, []network.Node{remoteState.Node()}))
+	t.NoError(ss.Add(target-3, []network.Node{remote.Node()}))
 
 	select {
 	case <-time.After(time.Second * 3):
@@ -163,7 +163,7 @@ func (t *testSyncers) TestAddAfterFinished() {
 		break
 	}
 
-	t.NoError(ss.Add(target, []network.Node{remoteState.Node()}))
+	t.NoError(ss.Add(target, []network.Node{remote.Node()}))
 
 	select {
 	case <-time.After(time.Second * 3):

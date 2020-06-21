@@ -12,12 +12,22 @@ import (
 
 type testStateSyncingHandler struct {
 	baseTestStateHandler
+
+	local  *Localstate
+	remote *Localstate
+}
+
+func (t *testStateSyncingHandler) SetupTest() {
+	t.baseTestStateHandler.SetupTest()
+
+	ls := t.localstates(2)
+	t.local, t.remote = ls[0], ls[1]
 }
 
 func (t *testStateSyncingHandler) TestINITMovesToConsensus() {
-	t.localstate.Policy().SetTimeoutWaitingProposal(time.Millisecond * 10)
+	t.local.Policy().SetTimeoutWaitingProposal(time.Millisecond * 10)
 
-	cs := NewStateSyncingHandler(t.localstate)
+	cs := NewStateSyncingHandler(t.local)
 	t.NotNil(cs)
 
 	stateChan := make(chan StateChangeContext)
@@ -36,9 +46,9 @@ func (t *testStateSyncingHandler) TestINITMovesToConsensus() {
 
 	var voteproof base.Voteproof
 	{
-		b := t.newINITBallot(t.remoteState, base.Round(0), t.lastINITVoteproof(t.remoteState))
+		b := t.newINITBallot(t.remote, base.Round(0), t.lastINITVoteproof(t.remote))
 
-		vp, err := t.newVoteproof(b.Stage(), b.INITBallotFactV0, t.remoteState)
+		vp, err := t.newVoteproof(b.Stage(), b.INITBallotFactV0, t.remote)
 		t.NoError(err)
 
 		voteproof = vp
@@ -58,9 +68,9 @@ func (t *testStateSyncingHandler) TestINITMovesToConsensus() {
 }
 
 func (t *testStateSyncingHandler) TestWaitMovesToJoining() {
-	t.localstate.Policy().SetTimeoutWaitingProposal(time.Millisecond * 10)
+	t.local.Policy().SetTimeoutWaitingProposal(time.Millisecond * 10)
 
-	cs := NewStateSyncingHandler(t.localstate)
+	cs := NewStateSyncingHandler(t.local)
 	cs.waitVoteproofTimeout = time.Millisecond * 10
 	t.NotNil(cs)
 

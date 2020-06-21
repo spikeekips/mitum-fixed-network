@@ -17,20 +17,27 @@ type testBallotChecker struct {
 	baseTestStateHandler
 
 	suf base.Suffrage
+
+	local  *Localstate
+	remote *Localstate
 }
 
 func (t *testBallotChecker) SetupTest() {
 	t.baseTestStateHandler.SetupTest()
 
-	t.suf = t.suffrage(t.remoteState, t.localstate)
+	ls := t.localstates(2)
+
+	t.local, t.remote = ls[0], ls[1]
+
+	t.suf = t.suffrage(t.remote, t.local)
 }
 
 func (t *testBallotChecker) TestNew() {
-	t.True(t.suf.IsInside(t.localstate.Node().Address()))
+	t.True(t.suf.IsInside(t.local.Node().Address()))
 
-	ib := t.newINITBallot(t.localstate, base.Round(0), nil)
+	ib := t.newINITBallot(t.local, base.Round(0), nil)
 
-	bc, err := NewBallotChecker(ib, t.localstate, t.suf)
+	bc, err := NewBallotChecker(ib, t.local, t.suf)
 	t.NoError(err)
 	err = util.NewChecker("test-ballot-checker", []util.CheckerFunc{
 		bc.CheckIsInSuffrage,
@@ -39,12 +46,12 @@ func (t *testBallotChecker) TestNew() {
 }
 
 func (t *testBallotChecker) TestIsInSuffrage() {
-	{ // from localstate
-		t.True(t.suf.IsInside(t.localstate.Node().Address()))
+	{ // from local
+		t.True(t.suf.IsInside(t.local.Node().Address()))
 
-		ib := t.newINITBallot(t.localstate, base.Round(0), nil)
+		ib := t.newINITBallot(t.local, base.Round(0), nil)
 
-		bc, err := NewBallotChecker(ib, t.localstate, t.suf)
+		bc, err := NewBallotChecker(ib, t.local, t.suf)
 		t.NoError(err)
 
 		var finished bool
@@ -67,7 +74,7 @@ func (t *testBallotChecker) TestIsInSuffrage() {
 
 		ib := t.newINITBallot(unknown, base.Round(0), nil)
 
-		bc, err := NewBallotChecker(ib, t.localstate, t.suf)
+		bc, err := NewBallotChecker(ib, t.local, t.suf)
 		t.NoError(err)
 
 		var finished bool
@@ -88,17 +95,17 @@ func (t *testBallotChecker) TestIsInSuffrage() {
 func (t *testBallotChecker) TestCheckWithLastBlock() {
 	var avp base.Voteproof
 
-	avp, found, err := t.localstate.Storage().LastVoteproof(base.StageACCEPT)
+	avp, found, err := t.local.Storage().LastVoteproof(base.StageACCEPT)
 	t.NoError(err)
 	t.True(found)
 
 	{ // same height and next round
-		ibf := t.newINITBallotFact(t.localstate, base.Round(1))
-		vp, _ := t.newVoteproof(base.StageINIT, ibf, t.localstate, t.remoteState)
+		ibf := t.newINITBallotFact(t.local, base.Round(1))
+		vp, _ := t.newVoteproof(base.StageINIT, ibf, t.local, t.remote)
 
-		ib := t.newINITBallot(t.localstate, vp.Round()+1, vp)
+		ib := t.newINITBallot(t.local, vp.Round()+1, vp)
 
-		bc, err := NewBallotChecker(ib, t.localstate, t.suf)
+		bc, err := NewBallotChecker(ib, t.local, t.suf)
 		t.NoError(err)
 
 		var finished bool
@@ -116,19 +123,19 @@ func (t *testBallotChecker) TestCheckWithLastBlock() {
 	}
 
 	{ // lower Height
-		lastManifest := t.lastManifest(t.localstate.Storage())
+		lastManifest := t.lastManifest(t.local.Storage())
 
 		ib := ballot.NewINITBallotV0(
-			t.localstate.Node().Address(),
+			t.local.Node().Address(),
 			lastManifest.Height(),
 			base.Round(0),
 			lastManifest.Hash(),
 			avp,
 		)
 
-		t.NoError(ib.Sign(t.localstate.Node().Privatekey(), t.localstate.Policy().NetworkID()))
+		t.NoError(ib.Sign(t.local.Node().Privatekey(), t.local.Policy().NetworkID()))
 
-		bc, err := NewBallotChecker(ib, t.localstate, t.suf)
+		bc, err := NewBallotChecker(ib, t.local, t.suf)
 		t.NoError(err)
 
 		var finished bool
@@ -150,23 +157,23 @@ func (t *testBallotChecker) TestCheckInvalidProposal() {
 	var proposal ballot.Proposal
 	{
 		pr := ballot.NewProposalV0(
-			t.localstate.Node().Address(),
-			t.lastManifest(t.localstate.Storage()).Height()+1,
+			t.local.Node().Address(),
+			t.lastManifest(t.local.Storage()).Height()+1,
 			base.Round(0),
 			nil, nil,
 		)
 
 		// signed by unknown node
 		pk, _ := key.NewBTCPrivatekey()
-		_ = pr.Sign(pk, t.localstate.Policy().NetworkID())
-		t.NoError(t.localstate.Storage().NewSeals([]seal.Seal{pr}))
+		_ = pr.Sign(pk, t.local.Policy().NetworkID())
+		t.NoError(t.local.Storage().NewSeals([]seal.Seal{pr}))
 
 		proposal = pr
 	}
 
-	ab := t.newACCEPTBallot(t.localstate, base.Round(0), proposal.Hash(), valuehash.RandomSHA256())
+	ab := t.newACCEPTBallot(t.local, base.Round(0), proposal.Hash(), valuehash.RandomSHA256())
 
-	bc, err := NewBallotChecker(ab, t.localstate, t.suf)
+	bc, err := NewBallotChecker(ab, t.local, t.suf)
 	t.NoError(err)
 
 	err = util.NewChecker("test-ballot-checker", []util.CheckerFunc{
@@ -179,20 +186,20 @@ func (t *testBallotChecker) TestCheckWrongHeightProposal() {
 	var proposal ballot.Proposal
 	{
 		pr := ballot.NewProposalV0(
-			t.remoteState.Node().Address(),
-			t.lastManifest(t.remoteState.Storage()).Height()+100, // wrong height
+			t.remote.Node().Address(),
+			t.lastManifest(t.remote.Storage()).Height()+100, // wrong height
 			base.Round(0),
 			nil, nil,
 		)
-		_ = pr.Sign(t.remoteState.Node().Privatekey(), t.remoteState.Policy().NetworkID())
-		t.NoError(t.localstate.Storage().NewSeals([]seal.Seal{pr}))
+		_ = pr.Sign(t.remote.Node().Privatekey(), t.remote.Policy().NetworkID())
+		t.NoError(t.local.Storage().NewSeals([]seal.Seal{pr}))
 
 		proposal = pr
 	}
 
-	ab := t.newACCEPTBallot(t.localstate, base.Round(0), proposal.Hash(), valuehash.RandomSHA256())
+	ab := t.newACCEPTBallot(t.local, base.Round(0), proposal.Hash(), valuehash.RandomSHA256())
 
-	bc, err := NewBallotChecker(ab, t.localstate, t.suf)
+	bc, err := NewBallotChecker(ab, t.local, t.suf)
 	t.NoError(err)
 
 	err = util.NewChecker("test-ballot-checker", []util.CheckerFunc{
@@ -205,20 +212,20 @@ func (t *testBallotChecker) TestCheckWrongRoundProposal() {
 	var proposal ballot.Proposal
 	{
 		pr := ballot.NewProposalV0(
-			t.remoteState.Node().Address(),
-			t.lastManifest(t.localstate.Storage()).Height()+1,
+			t.remote.Node().Address(),
+			t.lastManifest(t.local.Storage()).Height()+1,
 			base.Round(33), // wrong round
 			nil, nil,
 		)
-		_ = pr.Sign(t.remoteState.Node().Privatekey(), t.localstate.Policy().NetworkID())
-		t.NoError(t.localstate.Storage().NewSeals([]seal.Seal{pr}))
+		_ = pr.Sign(t.remote.Node().Privatekey(), t.local.Policy().NetworkID())
+		t.NoError(t.local.Storage().NewSeals([]seal.Seal{pr}))
 
 		proposal = pr
 	}
 
-	ab := t.newACCEPTBallot(t.localstate, base.Round(0), proposal.Hash(), valuehash.RandomSHA256())
+	ab := t.newACCEPTBallot(t.local, base.Round(0), proposal.Hash(), valuehash.RandomSHA256())
 
-	bc, err := NewBallotChecker(ab, t.localstate, t.suf)
+	bc, err := NewBallotChecker(ab, t.local, t.suf)
 	t.NoError(err)
 
 	err = util.NewChecker("test-ballot-checker", []util.CheckerFunc{

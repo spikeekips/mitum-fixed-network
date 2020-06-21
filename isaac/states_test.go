@@ -26,27 +26,30 @@ func (ss *dummySyncingStateHandler) NewVoteproof(_ base.Voteproof) error {
 }
 
 func (t *testConsensusStates) TestINITVoteproofHigherHeight() {
+	ls := t.localstates(2)
+	local, remote := ls[0], ls[1]
+
 	r := base.ThresholdRatio(67)
-	_ = t.localstate.Policy().SetThresholdRatio(r)
-	_ = t.remoteState.Policy().SetThresholdRatio(r)
+	_ = local.Policy().SetThresholdRatio(r)
+	_ = remote.Policy().SetThresholdRatio(r)
 
-	cs := &dummySyncingStateHandler{NewStateSyncingHandler(t.localstate)}
+	cs := &dummySyncingStateHandler{NewStateSyncingHandler(local)}
 
-	css, err := NewConsensusStates(t.localstate, nil, nil, nil, nil, nil, cs, nil)
+	css, err := NewConsensusStates(local, nil, nil, nil, nil, nil, cs, nil)
 	t.NoError(err)
 	t.NotNil(css)
 	css.activeHandler = cs
 
-	manifest := t.lastManifest(t.localstate.Storage())
+	manifest := t.lastManifest(local.Storage())
 	initFact := ballot.NewINITBallotV0(
-		t.localstate.Node().Address(),
+		local.Node().Address(),
 		manifest.Height()+3,
 		base.Round(2), // round is not important to go
 		manifest.Hash(),
 		nil,
 	).Fact()
 
-	vp, err := t.newVoteproof(base.StageINIT, initFact, t.localstate, t.remoteState)
+	vp, err := t.newVoteproof(base.StageINIT, initFact, local, remote)
 	t.NoError(err)
 
 	t.NoError(css.newVoteproof(vp))

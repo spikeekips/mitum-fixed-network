@@ -17,10 +17,20 @@ import (
 
 type testStateBootingHandler struct {
 	baseTestStateHandler
+
+	local  *Localstate
+	remote *Localstate
+}
+
+func (t *testStateBootingHandler) SetupTest() {
+	t.baseTestStateHandler.SetupTest()
+
+	ls := t.localstates(2)
+	t.local, t.remote = ls[0], ls[1]
 }
 
 func (t *testStateBootingHandler) TestWithBlock() {
-	cs, err := NewStateBootingHandler(t.localstate, t.suffrage(t.localstate))
+	cs, err := NewStateBootingHandler(t.local, t.suffrage(t.local))
 	t.NoError(err)
 
 	stateChan := make(chan StateChangeContext)
@@ -74,14 +84,14 @@ func (t *testStateBootingHandler) TestWithoutBlock() {
 		policy,
 	)
 
-	nch := t.remoteState.Node().Channel().(*channetwork.NetworkChanChannel)
+	nch := t.remote.Node().Channel().(*channetwork.NetworkChanChannel)
 	nch.SetNodeInfoHandler(func() (network.NodeInfo, error) {
 		return ni, nil
 	})
 
-	cs, err := NewStateBootingHandler(t.localstate, t.suffrage(t.localstate, t.remoteState))
+	cs, err := NewStateBootingHandler(t.local, t.suffrage(t.local, t.remote))
 	t.NoError(err)
-	t.NoError(t.localstate.Storage().Clean())
+	t.NoError(t.local.Storage().Clean())
 
 	stateChan := make(chan StateChangeContext)
 	cs.SetStateChan(stateChan)
@@ -115,8 +125,8 @@ func (t *testStateBootingHandler) TestWithoutBlock() {
 		break
 	}
 
-	t.Equal(policy.ThresholdRatio(), t.localstate.Policy().ThresholdRatio())
-	t.Equal(policy.NumberOfActingSuffrageNodes(), t.localstate.Policy().NumberOfActingSuffrageNodes())
+	t.Equal(policy.ThresholdRatio(), t.local.Policy().ThresholdRatio())
+	t.Equal(policy.NumberOfActingSuffrageNodes(), t.local.Policy().NumberOfActingSuffrageNodes())
 }
 
 func TestStateBootingHandler(t *testing.T) {

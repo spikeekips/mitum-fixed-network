@@ -19,6 +19,8 @@ func (t *testRoundrobinSuffrage) localstate() *isaac.Localstate {
 	localstate, err := isaac.NewLocalstate(nil, localNode, isaac.TestNetworkID)
 	t.NoError(err)
 
+	t.NoError(localstate.Initialize())
+
 	return localstate
 }
 

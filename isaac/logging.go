@@ -28,14 +28,18 @@ func loggerWithBallot(blt ballot.Ballot, l logging.Logger) logging.Logger {
 	return ll
 }
 
-func loggerWithVoteproof(voteproof base.Voteproof, l logging.Logger) logging.Logger {
+func loggerWithVoteproofID(voteproof base.Voteproof, l logging.Logger) logging.Logger {
 	if voteproof == nil {
 		return l
 	}
 
-	ll := l.WithLogger(func(ctx logging.Context) logging.Emitter {
-		return ctx.Hinted("voteproof", voteproof).(logging.Context)
+	return l.WithLogger(func(ctx logging.Context) logging.Emitter {
+		return ctx.Str("voteproof_id", voteproof.ID()).(logging.Context)
 	})
+}
+
+func loggerWithVoteproof(voteproof base.Voteproof, l logging.Logger) logging.Logger {
+	ll := loggerWithVoteproofID(voteproof, l)
 
 	ll.Debug().HintedVerbose("voteproof", voteproof, true).Msg("voteproof")
 
@@ -55,12 +59,4 @@ func loggerWithLocalstate(localstate *Localstate, l logging.Logger) logging.Logg
 			Hinted("block", manifest),
 		)
 	})
-}
-
-func loggerWithStateChangeContext(sctx StateChangeContext, l logging.Logger) logging.Logger {
-	ll := l.WithLogger(func(ctx logging.Context) logging.Emitter {
-		return ctx.Hinted("change_state_context", sctx).(logging.Context)
-	})
-
-	return loggerWithVoteproof(sctx.voteproof, ll)
 }

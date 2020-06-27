@@ -16,6 +16,7 @@ type Voteproof interface {
 	isvalid.IsValider
 	util.Byter
 	logging.LogHintedMarshaler
+	ID() string // ID is only unique in local machine
 	IsFinished() bool
 	FinishedAt() time.Time
 	IsClosed() bool

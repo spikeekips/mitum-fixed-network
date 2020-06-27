@@ -261,6 +261,8 @@ func (bn *NodeRunner) Start() error {
 	if cs, err := bn.createConsensusStates(); err != nil {
 		return err
 	} else {
+		_ = cs.SetLogger(bn.Log())
+
 		bn.consensusStates = cs
 
 		if err := cs.Start(); err != nil {

@@ -21,16 +21,14 @@ func NewStateBrokenHandler(localstate *Localstate) (*StateBrokenHandler, error) 
 	return ss, nil
 }
 
-func (ss *StateBrokenHandler) Activate(ctx StateChangeContext) error {
-	l := loggerWithStateChangeContext(ctx, ss.Log())
-	l.Debug().Msg("activated")
+func (ss *StateBrokenHandler) Activate(_ StateChangeContext) error {
+	ss.Log().Debug().Msg("activated")
 
 	return nil
 }
 
-func (ss *StateBrokenHandler) Deactivate(ctx StateChangeContext) error {
-	l := loggerWithStateChangeContext(ctx, ss.Log())
-	l.Debug().Msg("deactivated")
+func (ss *StateBrokenHandler) Deactivate(_ StateChangeContext) error {
+	ss.Log().Debug().Msg("deactivated")
 
 	return nil
 }

@@ -83,7 +83,7 @@ func (cs *StateJoiningHandler) SetLogger(l logging.Logger) logging.Logger {
 	return cs.Log()
 }
 
-func (cs *StateJoiningHandler) Activate(ctx StateChangeContext) error {
+func (cs *StateJoiningHandler) Activate(_ StateChangeContext) error {
 	var avp base.Voteproof // NOTE ACCEPT Voteproof of last block
 	switch vp, found, err := cs.localstate.Storage().LastVoteproof(base.StageACCEPT); {
 	case !found:
@@ -111,13 +111,12 @@ func (cs *StateJoiningHandler) Activate(ctx StateChangeContext) error {
 		return err
 	}
 
-	l := loggerWithStateChangeContext(ctx, cs.Log())
-	l.Debug().Msg("activated")
+	cs.Log().Debug().Msg("activated")
 
 	return nil
 }
 
-func (cs *StateJoiningHandler) Deactivate(ctx StateChangeContext) error {
+func (cs *StateJoiningHandler) Deactivate(_ StateChangeContext) error {
 	cs.Lock()
 	defer cs.Unlock()
 
@@ -125,8 +124,7 @@ func (cs *StateJoiningHandler) Deactivate(ctx StateChangeContext) error {
 		return err
 	}
 
-	l := loggerWithStateChangeContext(ctx, cs.Log())
-	l.Debug().Msg("deactivated")
+	cs.Log().Debug().Msg("deactivated")
 
 	return nil
 }
@@ -178,27 +176,18 @@ func (cs *StateJoiningHandler) NewSeal(sl seal.Seal) error {
 		case base.StageINIT:
 			return cs.handleINITBallotAndINITVoteproof(blt.(ballot.INITBallot), voteproof)
 		default:
-			err := xerrors.Errorf("invalid Voteproof stage found")
-			l.Error().Err(err).Msg("invalid voteproof found in init ballot")
-
-			return err
+			return xerrors.Errorf("invalid Voteproof stage found in init ballot")
 		}
 	} else if blt.Stage() == base.StageACCEPT {
 		switch voteproof.Stage() {
 		case base.StageINIT:
 			return cs.handleACCEPTBallotAndINITVoteproof(blt.(ballot.ACCEPTBallot), voteproof)
 		default:
-			err := xerrors.Errorf("invalid Voteproof stage found")
-			l.Error().Err(err).Msg("invalid voteproof found in accept ballot")
-
-			return err
+			return xerrors.Errorf("invalid Voteproof stage found in accept ballot")
 		}
 	}
 
-	err := xerrors.Errorf("invalid ballot stage found")
-	l.Error().Err(err).Msg("invalid ballot found")
-
-	return err
+	return xerrors.Errorf("invalid ballot stage found")
 }
 
 func (cs *StateJoiningHandler) handleProposal(proposal ballot.Proposal) error {
@@ -216,7 +205,7 @@ func (cs *StateJoiningHandler) handleProposal(proposal ballot.Proposal) error {
 func (cs *StateJoiningHandler) handleINITBallotAndACCEPTVoteproof(
 	blt ballot.INITBallot, voteproof base.Voteproof,
 ) error {
-	l := loggerWithVoteproof(voteproof, loggerWithBallot(blt, cs.Log()))
+	l := loggerWithVoteproofID(voteproof, loggerWithBallot(blt, cs.Log()))
 	l.Debug().Msg("INIT Ballot + ACCEPT Voteproof")
 
 	var height base.Height
@@ -248,7 +237,7 @@ func (cs *StateJoiningHandler) handleINITBallotAndACCEPTVoteproof(
 }
 
 func (cs *StateJoiningHandler) handleINITBallotAndINITVoteproof(blt ballot.INITBallot, voteproof base.Voteproof) error {
-	l := loggerWithVoteproof(voteproof, loggerWithBallot(blt, cs.Log()))
+	l := loggerWithVoteproofID(voteproof, loggerWithBallot(blt, cs.Log()))
 	l.Debug().Msg("INIT Ballot + INIT Voteproof")
 
 	var manifest block.Manifest
@@ -296,7 +285,7 @@ func (cs *StateJoiningHandler) handleINITBallotAndINITVoteproof(blt ballot.INITB
 func (cs *StateJoiningHandler) handleACCEPTBallotAndINITVoteproof(
 	blt ballot.ACCEPTBallot, voteproof base.Voteproof,
 ) error {
-	l := loggerWithVoteproof(voteproof, loggerWithBallot(blt, cs.Log()))
+	l := loggerWithVoteproofID(voteproof, loggerWithBallot(blt, cs.Log()))
 	l.Debug().Msg("ACCEPT Ballot + INIT Voteproof")
 
 	var manifest block.Manifest
@@ -351,7 +340,7 @@ func (cs *StateJoiningHandler) handleACCEPTBallotAndINITVoteproof(
 
 // NewVoteproof receives Voteproof.
 func (cs *StateJoiningHandler) NewVoteproof(voteproof base.Voteproof) error {
-	l := loggerWithVoteproof(voteproof, cs.Log())
+	l := loggerWithVoteproofID(voteproof, cs.Log())
 
 	l.Debug().Msg("got Voteproof")
 
@@ -369,7 +358,7 @@ func (cs *StateJoiningHandler) NewVoteproof(voteproof base.Voteproof) error {
 }
 
 func (cs *StateJoiningHandler) handleINITVoteproof(voteproof base.Voteproof) error {
-	l := loggerWithLocalstate(cs.localstate, loggerWithVoteproof(voteproof, cs.Log()))
+	l := loggerWithLocalstate(cs.localstate, loggerWithVoteproofID(voteproof, cs.Log()))
 
 	l.Debug().Msg("expected height; moves to consensus state")
 

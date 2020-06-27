@@ -6,6 +6,7 @@ import (
 	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/base/ballot"
 	"github.com/spikeekips/mitum/base/valuehash"
+	"github.com/spikeekips/mitum/util"
 )
 
 type VoteRecords struct {
@@ -60,7 +61,7 @@ func (vrs *VoteRecords) Vote(blt ballot.Ballot) base.Voteproof {
 	if !vrs.vote(blt, vp) {
 		vrs.voteproof = *vp
 
-		return vrs.voteproof
+		return vrs.voteproof.SetID(util.UUID().String())
 	}
 
 	{
@@ -96,7 +97,7 @@ func (vrs *VoteRecords) Vote(blt ballot.Ballot) base.Voteproof {
 
 	vrs.voteproof = *vp
 
-	return vrs.voteproof
+	return vrs.voteproof.SetID(util.UUID().String())
 }
 
 func (vrs *VoteRecords) vote(blt ballot.Ballot, voteproof *base.VoteproofV0) bool {

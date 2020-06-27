@@ -8,6 +8,7 @@ import (
 	"go.mongodb.org/mongo-driver/bson"
 
 	"github.com/spikeekips/mitum/base/valuehash"
+	"github.com/spikeekips/mitum/util"
 	bsonenc "github.com/spikeekips/mitum/util/encoder/bson"
 	jsonenc "github.com/spikeekips/mitum/util/encoder/json"
 	"github.com/spikeekips/mitum/util/hint"
@@ -65,6 +66,10 @@ func NewDummyVoteproof(
 		stage:  stage,
 		result: result,
 	}
+}
+
+func (vp DummyVoteproof) ID() string {
+	return util.UUID().String()
 }
 
 func (vp DummyVoteproof) Hint() hint.Hint {

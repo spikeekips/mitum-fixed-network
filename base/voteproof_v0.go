@@ -20,6 +20,7 @@ var (
 )
 
 type VoteproofV0 struct {
+	id             string
 	height         Height
 	round          Round
 	suffrages      []Address
@@ -52,6 +53,10 @@ func NewVoteproofV0(
 		ballots:        map[Address]valuehash.Hash{},
 		votes:          map[Address]VoteproofNodeFact{},
 	}
+}
+
+func (vp VoteproofV0) ID() string {
+	return vp.id
 }
 
 func (vp VoteproofV0) Hint() hint.Hint {
@@ -88,6 +93,12 @@ func (vp VoteproofV0) Result() VoteResultType {
 
 func (vp *VoteproofV0) SetResult(result VoteResultType) *VoteproofV0 {
 	vp.result = result
+
+	return vp
+}
+
+func (vp VoteproofV0) SetID(id string) VoteproofV0 {
+	vp.id = id
 
 	return vp
 }

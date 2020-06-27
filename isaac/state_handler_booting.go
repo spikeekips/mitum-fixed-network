@@ -35,12 +35,11 @@ func NewStateBootingHandler(
 	return cs, nil
 }
 
-func (cs *StateBootingHandler) Activate(ctx StateChangeContext) error {
+func (cs *StateBootingHandler) Activate(_ StateChangeContext) error {
 	cs.Lock()
 	defer cs.Unlock()
 
-	l := loggerWithStateChangeContext(ctx, cs.Log())
-	l.Debug().Msg("activated")
+	cs.Log().Debug().Msg("activated")
 
 	go func() {
 		if err := cs.initialize(); err != nil {
@@ -51,7 +50,7 @@ func (cs *StateBootingHandler) Activate(ctx StateChangeContext) error {
 	return nil
 }
 
-func (cs *StateBootingHandler) Deactivate(ctx StateChangeContext) error {
+func (cs *StateBootingHandler) Deactivate(_ StateChangeContext) error {
 	cs.Lock()
 	defer cs.Unlock()
 
@@ -63,8 +62,7 @@ func (cs *StateBootingHandler) Deactivate(ctx StateChangeContext) error {
 
 	cs.policyTimer = nil
 
-	l := loggerWithStateChangeContext(ctx, cs.Log())
-	l.Debug().Msg("deactivated")
+	cs.Log().Debug().Msg("deactivated")
 
 	return nil
 }
@@ -77,7 +75,7 @@ func (cs *StateBootingHandler) NewSeal(sl seal.Seal) error {
 }
 
 func (cs *StateBootingHandler) NewVoteproof(voteproof base.Voteproof) error {
-	l := loggerWithVoteproof(voteproof, cs.Log())
+	l := loggerWithVoteproofID(voteproof, cs.Log())
 
 	l.Debug().Msg("got Voteproof")
 

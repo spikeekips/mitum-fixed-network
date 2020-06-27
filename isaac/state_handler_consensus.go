@@ -83,27 +83,23 @@ func (cs *StateConsensusHandler) Activate(ctx StateChangeContext) error {
 		return xerrors.Errorf("consensus handler got invalid Voteproof: %w", err)
 	}
 
-	l := loggerWithStateChangeContext(ctx, cs.Log())
-
 	go func() {
 		if err := cs.handleINITVoteproof(ctx.Voteproof()); err != nil {
-			l.Error().Err(err).Msg("activated, but handleINITVoteproof failed with voteproof")
+			cs.Log().Error().Err(err).Msg("activated, but handleINITVoteproof failed with voteproof")
 		}
 	}()
 
-	l.Debug().Msg("activated")
+	cs.Log().Debug().Msg("activated")
 
 	return nil
 }
 
-func (cs *StateConsensusHandler) Deactivate(ctx StateChangeContext) error {
-	l := loggerWithStateChangeContext(ctx, cs.Log())
-
+func (cs *StateConsensusHandler) Deactivate(_ StateChangeContext) error {
 	if err := cs.timers.Stop(); err != nil {
 		return err
 	}
 
-	l.Debug().Msg("deactivated")
+	cs.Log().Debug().Msg("deactivated")
 
 	return nil
 }
@@ -155,7 +151,7 @@ func (cs *StateConsensusHandler) NewSeal(sl seal.Seal) error {
 }
 
 func (cs *StateConsensusHandler) NewVoteproof(voteproof base.Voteproof) error {
-	l := loggerWithVoteproof(voteproof, cs.Log())
+	l := loggerWithVoteproofID(voteproof, cs.Log())
 
 	if voteproof.Result() == base.VoteResultDraw { // NOTE if drew, goes to next round.
 		return cs.startNextRound(voteproof)
@@ -178,7 +174,7 @@ func (cs *StateConsensusHandler) NewVoteproof(voteproof base.Voteproof) error {
 }
 
 func (cs *StateConsensusHandler) newVoteproof(voteproof base.Voteproof) error {
-	l := loggerWithVoteproof(voteproof, cs.Log())
+	l := loggerWithVoteproofID(voteproof, cs.Log())
 
 	switch voteproof.Stage() {
 	case base.StageACCEPT:
@@ -230,7 +226,7 @@ func (cs *StateConsensusHandler) newVoteproof(voteproof base.Voteproof) error {
 }
 
 func (cs *StateConsensusHandler) handleINITVoteproof(voteproof base.Voteproof) error {
-	l := loggerWithLocalstate(cs.localstate, loggerWithVoteproof(voteproof, cs.Log()))
+	l := loggerWithLocalstate(cs.localstate, loggerWithVoteproofID(voteproof, cs.Log()))
 
 	l.Debug().Msg("expected Voteproof received; will wait Proposal")
 
@@ -315,7 +311,7 @@ func (cs *StateConsensusHandler) readyToACCEPTBallot(newBlock block.Block) error
 }
 
 func (cs *StateConsensusHandler) proposal(voteproof base.Voteproof) (bool, error) {
-	l := loggerWithVoteproof(voteproof, cs.Log())
+	l := loggerWithVoteproofID(voteproof, cs.Log())
 
 	l.Debug().Msg("prepare to broadcast Proposal")
 	isProposer := cs.suffrage.IsProposer(voteproof.Height(), voteproof.Round(), cs.localstate.Node().Address())

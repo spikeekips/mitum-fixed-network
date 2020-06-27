@@ -110,7 +110,9 @@ func NewVoteproofConsensusStateChecker(
 ) *VoteproofConsensusStateChecker {
 	return &VoteproofConsensusStateChecker{
 		Logging: logging.NewLogging(func(c logging.Context) logging.Emitter {
-			return c.Str("module", "voteproof-validation-checker")
+			return c.Str("module", "voteproof-validation-checker").
+				Str("voteproof_id", voteproof.ID()).
+				Str("last_init_voteproof_id", lastINITVoteproof.ID())
 		}),
 		lastManifest:      lastManifest,
 		lastINITVoteproof: lastINITVoteproof,
@@ -120,8 +122,6 @@ func NewVoteproofConsensusStateChecker(
 }
 
 func (vpc *VoteproofConsensusStateChecker) CheckHeight() (bool, error) {
-	l := loggerWithVoteproof(vpc.voteproof, vpc.Log())
-
 	var height base.Height
 	if vpc.lastManifest == nil {
 		height = base.NilHeight
@@ -132,7 +132,7 @@ func (vpc *VoteproofConsensusStateChecker) CheckHeight() (bool, error) {
 	d := vpc.voteproof.Height() - (height + 1)
 
 	if d > 0 {
-		l.Debug().
+		vpc.Log().Debug().
 			Hinted("local_block_height", height).
 			Msg("Voteproof has higher height from local block")
 
@@ -143,7 +143,7 @@ func (vpc *VoteproofConsensusStateChecker) CheckHeight() (bool, error) {
 	}
 
 	if d < 0 {
-		l.Debug().
+		vpc.Log().Debug().
 			Hinted("local_block_height", height).
 			Msg("Voteproof has lower height from local block; ignore it")
 
@@ -158,10 +158,8 @@ func (vpc *VoteproofConsensusStateChecker) CheckINITVoteproof() (bool, error) {
 		return true, nil
 	}
 
-	l := loggerWithVoteproof(vpc.voteproof, vpc.Log())
-
 	if err := checkBlockWithINITVoteproof(vpc.lastManifest, vpc.voteproof); err != nil {
-		l.Error().Err(err).Msg("werid init voteproof found")
+		vpc.Log().Error().Err(err).Msg("werid init voteproof found")
 
 		return false, NewStateToBeChangeError(base.StateSyncing, vpc.voteproof, nil, err)
 	}
@@ -174,11 +172,11 @@ func (vpc *VoteproofConsensusStateChecker) CheckACCEPTVoteproof() (bool, error) 
 		return true, nil
 	}
 
-	l := vpc.lastINITVoteproof
-	if l.Height() != vpc.voteproof.Height() || l.Round() != vpc.voteproof.Round() {
+	ivp := vpc.lastINITVoteproof
+	if ivp.Height() != vpc.voteproof.Height() || ivp.Round() != vpc.voteproof.Round() {
 		vpc.Log().Debug().
-			Hinted("last_init_voteproof_height", l.Height()).
-			Hinted("last_init_voteproof_round", l.Round()).
+			Hinted("last_init_voteproof_height", ivp.Height()).
+			Hinted("last_init_voteproof_round", ivp.Round()).
 			Hinted("voteproof_height", vpc.voteproof.Height()).
 			Hinted("voteproof_round", vpc.voteproof.Round()).
 			Msg("Voteproof has different round from last init voteproof")

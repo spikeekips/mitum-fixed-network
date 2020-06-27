@@ -70,8 +70,8 @@ func (csc StateChangeContext) Ballot() ballot.Ballot {
 
 func (csc StateChangeContext) MarshalLog(key string, e logging.Emitter, _ bool) logging.Emitter {
 	return e.Dict(key, logging.Dict().
-		Hinted("from_state", csc.From()).
-		Hinted("to_state", csc.To()),
+		Hinted("from", csc.From()).
+		Hinted("to", csc.To()),
 	)
 }
 
@@ -149,7 +149,7 @@ func (bs *BaseStateHandler) StoreNewBlock(acceptVoteproof base.Voteproof) error 
 		return xerrors.Errorf("needs ACCEPTBallotFact: fact=%T", acceptVoteproof.Majority())
 	}
 
-	l := loggerWithVoteproof(
+	l := loggerWithVoteproofID(
 		acceptVoteproof,
 		bs.Log().WithLogger(func(ctx logging.Context) logging.Emitter {
 			return ctx.Hinted("proposal", fact.Proposal()).

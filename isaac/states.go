@@ -223,12 +223,14 @@ func (css *ConsensusStates) ActivateHandler(ctx StateChangeContext) {
 }
 
 func (css *ConsensusStates) activateHandler(ctx StateChangeContext) error {
-	l := loggerWithStateChangeContext(ctx, css.Log())
-	l.Debug().Msgf("activating state requested: %s -> %s", ctx.From(), ctx.To())
+	css.Log().Debug().
+		Hinted("states", ctx).
+		HintedVerbose("voteproof", ctx.Voteproof(), true).
+		Msg("trying to change state")
 
 	handler := css.ActiveHandler()
 	if handler != nil && handler.State() == ctx.toState {
-		l.Debug().Msgf("handler, %s already activated", ctx.toState)
+		css.Log().Debug().Msgf("handler, %s already activated", ctx.toState)
 
 		return nil
 	}
@@ -253,8 +255,6 @@ func (css *ConsensusStates) activateHandler(ctx StateChangeContext) error {
 				xerrors.Errorf("failed to deactivate previous handler: %w", err),
 			)
 		}
-
-		l.Info().Hinted("handler", handler.State()).Msgf("deactivated: %s", handler.State())
 	}
 
 	toHandler.SetLastINITVoteproof(css.livp)
@@ -264,7 +264,10 @@ func (css *ConsensusStates) activateHandler(ctx StateChangeContext) error {
 
 	css.activeHandler = toHandler
 
-	l.Info().Hinted("new_handler", toHandler.State()).Msgf("state changed: %s -> %s", ctx.From(), ctx.To())
+	css.Log().Info().
+		Hinted("states", ctx).
+		Hinted("new_handler", toHandler.State()).
+		Msg("state changed")
 
 	return nil
 }
@@ -317,6 +320,8 @@ func (css *ConsensusStates) newVoteproof(voteproof base.Voteproof) error {
 	} else if found {
 		manifest = m
 	}
+
+	_ = loggerWithVoteproof(voteproof, css.Log())
 
 	vpc := NewVoteproofConsensusStateChecker(
 		manifest,

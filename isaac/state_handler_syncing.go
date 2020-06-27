@@ -114,8 +114,7 @@ func (ss *StateSyncingHandler) Activate(ctx StateChangeContext) error {
 		return err
 	}
 
-	l := loggerWithStateChangeContext(ctx, ss.Log())
-	l.Debug().Msg("activated")
+	ss.Log().Debug().Msg("activated")
 
 	if vp, found, _ := ss.localstate.Storage().LastVoteproof(base.StageACCEPT); found {
 		ss.setLastVoteproof(vp)
@@ -139,9 +138,8 @@ func (ss *StateSyncingHandler) Activate(ctx StateChangeContext) error {
 	return nil
 }
 
-func (ss *StateSyncingHandler) Deactivate(ctx StateChangeContext) error {
-	l := loggerWithStateChangeContext(ctx, ss.Log())
-	l.Debug().Msg("deactivated")
+func (ss *StateSyncingHandler) Deactivate(_ StateChangeContext) error {
+	ss.Log().Debug().Msg("deactivated")
 
 	if syncs := ss.syncers(); syncs != nil {
 		if err := syncs.Stop(); err != nil {

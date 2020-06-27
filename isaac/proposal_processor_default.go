@@ -206,8 +206,8 @@ func (pp *internalDefaultProposalProcessor) processINIT(initVoteproof base.Votep
 		blkChan <- blk
 	}()
 
-	// FUTURE if timed out, the next proposal may be able to pass the timeout.
-	// The long-taken operations should be checked and eliminated.
+	// FUTURE if timed out, the next proposal may be able to be passed within
+	// timeout. The long-taken operations should be checked and eliminated.
 	var blk block.Block
 	select {
 	case <-time.After(pp.localstate.Policy().TimeoutProcessProposal()):

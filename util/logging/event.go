@@ -20,213 +20,255 @@ func newEvent(ze *zerolog.Event) *Event {
 	return &Event{Event: ze}
 }
 
-func newEmitterFromEvent(ze *zerolog.Event) Emitter {
-	return newEvent(ze)
-}
-
-func (e *Event) event(ze *zerolog.Event) Emitter {
-	return newEmitterFromEvent(ze)
-}
-
 func (e *Event) AnErr(key string, err error) Emitter {
-	return e.event(e.Event.AnErr(key, err))
+	e.Event.AnErr(key, err)
+	return e
 }
 
 func (e *Event) Array(key string, arr zerolog.LogArrayMarshaler) Emitter {
-	return e.event(e.Event.Array(key, arr))
+	e.Event.Array(key, arr)
+	return e
 }
 
 func (e *Event) Bool(key string, b bool) Emitter {
-	return e.event(e.Event.Bool(key, b))
+	e.Event.Bool(key, b)
+	return e
 }
 
 func (e *Event) Bools(key string, b []bool) Emitter {
-	return e.event(e.Event.Bools(key, b))
+	e.Event.Bools(key, b)
+	return e
 }
 
 func (e *Event) Bytes(key string, val []byte) Emitter {
-	return e.event(e.Event.Bytes(key, val))
+	e.Event.Bytes(key, val)
+	return e
 }
 
-func (e *Event) Caller(skip ...int) *Event {
-	return e.event(e.Event.Caller(skip...)).(*Event)
+func (e *Event) CallerWithSkipFrameCount(skip int) Emitter {
+	e.Event.Caller(skip)
+
+	return e
 }
 
 func (e *Event) Dict(key string, dict Emitter) Emitter {
-	return e.event(e.Event.Dict(key, dict.(*Event).Event))
+	e.Event.Dict(key, dict.(*Event).Event)
+	return e
 }
 
 func (e *Event) Dur(key string, d time.Duration) Emitter {
-	return e.event(e.Event.Dur(key, d))
+	e.Event.Dur(key, d)
+	return e
 }
 
 func (e *Event) Durs(key string, d []time.Duration) Emitter {
-	return e.event(e.Event.Durs(key, d))
+	e.Event.Durs(key, d)
+	return e
 }
 
 func (e *Event) EmbedObject(obj zerolog.LogObjectMarshaler) Emitter {
-	return e.event(e.Event.EmbedObject(obj))
+	e.Event.EmbedObject(obj)
+	return e
 }
 
 func (e *Event) Err(err error) Emitter {
-	return e.event(e.Event.Err(err))
+	e.Event.Err(err)
+	return e
 }
 
 func (e *Event) Errs(key string, errs []error) Emitter {
-	return e.event(e.Event.Errs(key, errs))
+	e.Event.Errs(key, errs)
+	return e
 }
 
 func (e *Event) Fields(fields map[string]interface{}) Emitter {
-	return e.event(e.Event.Fields(fields))
+	e.Event.Fields(fields)
+	return e
 }
 
 func (e *Event) Float32(key string, f float32) Emitter {
-	return e.event(e.Event.Float32(key, f))
+	e.Event.Float32(key, f)
+	return e
 }
 
 func (e *Event) Float64(key string, f float64) Emitter {
-	return e.event(e.Event.Float64(key, f))
+	e.Event.Float64(key, f)
+	return e
 }
 
 func (e *Event) Floats32(key string, f []float32) Emitter {
-	return e.event(e.Event.Floats32(key, f))
+	e.Event.Floats32(key, f)
+	return e
 }
 
 func (e *Event) Floats64(key string, f []float64) Emitter {
-	return e.event(e.Event.Floats64(key, f))
+	e.Event.Floats64(key, f)
+	return e
 }
 
 func (e *Event) Hex(key string, val []byte) Emitter {
-	return e.event(e.Event.Hex(key, val))
+	e.Event.Hex(key, val)
+	return e
 }
 
 func (e *Event) IPAddr(key string, ip net.IP) Emitter {
-	return e.event(e.Event.IPAddr(key, ip))
+	e.Event.IPAddr(key, ip)
+	return e
 }
 
 func (e *Event) IPPrefix(key string, pfx net.IPNet) Emitter {
-	return e.event(e.Event.IPPrefix(key, pfx))
+	e.Event.IPPrefix(key, pfx)
+	return e
 }
 
 func (e *Event) Int(key string, i int) Emitter {
-	return e.event(e.Event.Int(key, i))
+	e.Event.Int(key, i)
+	return e
 }
 
 func (e *Event) Int16(key string, i int16) Emitter {
-	return e.event(e.Event.Int16(key, i))
+	e.Event.Int16(key, i)
+	return e
 }
 
 func (e *Event) Int32(key string, i int32) Emitter {
-	return e.event(e.Event.Int32(key, i))
+	e.Event.Int32(key, i)
+	return e
 }
 
 func (e *Event) Int64(key string, i int64) Emitter {
-	return e.event(e.Event.Int64(key, i))
+	e.Event.Int64(key, i)
+	return e
 }
 
 func (e *Event) Int8(key string, i int8) Emitter {
-	return e.event(e.Event.Int8(key, i))
+	e.Event.Int8(key, i)
+	return e
 }
 
 func (e *Event) Interface(key string, i interface{}) Emitter {
-	return e.event(e.Event.Interface(key, i))
+	e.Event.Interface(key, i)
+	return e
 }
 
 func (e *Event) Ints(key string, i []int) Emitter {
-	return e.event(e.Event.Ints(key, i))
+	e.Event.Ints(key, i)
+	return e
 }
 
 func (e *Event) Ints16(key string, i []int16) Emitter {
-	return e.event(e.Event.Ints16(key, i))
+	e.Event.Ints16(key, i)
+	return e
 }
 
 func (e *Event) Ints32(key string, i []int32) Emitter {
-	return e.event(e.Event.Ints32(key, i))
+	e.Event.Ints32(key, i)
+	return e
 }
 
 func (e *Event) Ints64(key string, i []int64) Emitter {
-	return e.event(e.Event.Ints64(key, i))
+	e.Event.Ints64(key, i)
+	return e
 }
 
 func (e *Event) Ints8(key string, i []int8) Emitter {
-	return e.event(e.Event.Ints8(key, i))
+	e.Event.Ints8(key, i)
+	return e
 }
 
 func (e *Event) MACAddr(key string, ha net.HardwareAddr) Emitter {
-	return e.event(e.Event.MACAddr(key, ha))
+	e.Event.MACAddr(key, ha)
+	return e
 }
 
 func (e *Event) Object(key string, obj zerolog.LogObjectMarshaler) Emitter {
-	return e.event(e.Event.Object(key, obj))
+	e.Event.Object(key, obj)
+	return e
 }
 
 func (e *Event) RawJSON(key string, b []byte) Emitter {
-	return e.event(e.Event.RawJSON(key, b))
+	e.Event.RawJSON(key, b)
+	return e
 }
 
 func (e *Event) Str(key, val string) Emitter {
-	return e.event(e.Event.Str(key, val))
+	e.Event.Str(key, val)
+	return e
 }
 
 func (e *Event) Strs(key string, vals []string) Emitter {
-	return e.event(e.Event.Strs(key, vals))
+	e.Event.Strs(key, vals)
+	return e
 }
 
 func (e *Event) TimeDiff(key string, t, start time.Time) Emitter {
-	return e.event(e.Event.TimeDiff(key, t, start))
+	e.Event.TimeDiff(key, t, start)
+	return e
 }
 
 func (e *Event) Time(key string, t time.Time) Emitter {
-	return e.event(e.Event.Time(key, t))
+	e.Event.Time(key, t)
+	return e
 }
 
 func (e *Event) Times(key string, t []time.Time) Emitter {
-	return e.event(e.Event.Times(key, t))
+	e.Event.Times(key, t)
+	return e
 }
 
 func (e *Event) Uint(key string, i uint) Emitter {
-	return e.event(e.Event.Uint(key, i))
+	e.Event.Uint(key, i)
+	return e
 }
 
 func (e *Event) Uint16(key string, i uint16) Emitter {
-	return e.event(e.Event.Uint16(key, i))
+	e.Event.Uint16(key, i)
+	return e
 }
 
 func (e *Event) Uint32(key string, i uint32) Emitter {
-	return e.event(e.Event.Uint32(key, i))
+	e.Event.Uint32(key, i)
+	return e
 }
 
 func (e *Event) Uint64(key string, i uint64) Emitter {
-	return e.event(e.Event.Uint64(key, i))
+	e.Event.Uint64(key, i)
+	return e
 }
 
 func (e *Event) Uint8(key string, i uint8) Emitter {
-	return e.event(e.Event.Uint8(key, i))
+	e.Event.Uint8(key, i)
+	return e
 }
 
 func (e *Event) Uints(key string, i []uint) Emitter {
-	return e.event(e.Event.Uints(key, i))
+	e.Event.Uints(key, i)
+	return e
 }
 
 func (e *Event) Uints16(key string, i []uint16) Emitter {
-	return e.event(e.Event.Uints16(key, i))
+	e.Event.Uints16(key, i)
+	return e
 }
 
 func (e *Event) Uints32(key string, i []uint32) Emitter {
-	return e.event(e.Event.Uints32(key, i))
+	e.Event.Uints32(key, i)
+	return e
 }
 
 func (e *Event) Uints64(key string, i []uint64) Emitter {
-	return e.event(e.Event.Uints64(key, i))
+	e.Event.Uints64(key, i)
+	return e
 }
 
 func (e *Event) Uints8(key string, i []uint8) Emitter {
-	return e.event(e.Event.Uints8(key, i))
+	e.Event.Uints8(key, i)
+	return e
 }
 
 func (e *Event) Hinted(key string, obj LogHintedMarshaler) Emitter {
 	if obj == nil {
-		return e.Str(key, "")
+		return e.Interface(key, nil)
 	}
 
 	_ = obj.MarshalLog(key, e, false)
@@ -236,7 +278,7 @@ func (e *Event) Hinted(key string, obj LogHintedMarshaler) Emitter {
 
 func (e *Event) HintedVerbose(key string, obj LogHintedMarshaler, verbose bool) Emitter {
 	if obj == nil {
-		return e.Str(key, "")
+		return e.Interface(key, nil)
 	}
 
 	_ = obj.MarshalLog(key, e, verbose)

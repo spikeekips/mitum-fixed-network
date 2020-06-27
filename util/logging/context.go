@@ -40,7 +40,7 @@ func (c Context) Caller() Context {
 	return newContext(c.Context.Caller(), c.verbose)
 }
 
-func (c Context) CallerWithSkipFrameCount(skipFrameCount int) Context {
+func (c Context) CallerWithSkipFrameCount(skipFrameCount int) Emitter {
 	return newContext(c.Context.CallerWithSkipFrameCount(skipFrameCount), c.verbose)
 }
 

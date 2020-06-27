@@ -59,6 +59,7 @@ type Emitter interface {
 	Msg(string)
 	Msgf(string, ...interface{})
 	Send()
+	CallerWithSkipFrameCount(int) Emitter
 	Hinted(string, LogHintedMarshaler) Emitter
 	HintedVerbose(string, LogHintedMarshaler, bool) Emitter
 }

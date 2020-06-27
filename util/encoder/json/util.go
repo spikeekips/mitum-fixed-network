@@ -2,21 +2,13 @@ package jsonenc
 
 import (
 	"bytes"
-	"encoding/json"
 
-	jsoniter "github.com/json-iterator/go"
-
+	"github.com/spikeekips/mitum/util"
 	"github.com/spikeekips/mitum/util/hint"
 )
 
-var jsoni = jsoniter.Config{
-	EscapeHTML:             true,
-	SortMapKeys:            false,
-	ValidateJsonRawMessage: false,
-}.Froze()
-
 func Marshal(i interface{}) ([]byte, error) {
-	return jsoni.Marshal(i)
+	return util.JSON.Marshal(i)
 }
 
 func MustMarshal(i interface{}) []byte {
@@ -26,7 +18,7 @@ func MustMarshal(i interface{}) []byte {
 }
 
 func MarshalIndent(i interface{}) ([]byte, error) {
-	return json.MarshalIndent(i, "", "  ")
+	return util.JSON.MarshalIndent(i, "", "  ")
 }
 
 func MustMarshalIndent(i interface{}) []byte {
@@ -40,7 +32,7 @@ func ToString(i interface{}) string {
 }
 
 func Unmarshal(b []byte, i interface{}) error {
-	return jsoni.Unmarshal(b, i)
+	return util.JSON.Unmarshal(b, i)
 }
 
 type HintedHead struct {

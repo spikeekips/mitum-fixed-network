@@ -1,16 +1,8 @@
 package hint
 
 import (
-	jsoniter "github.com/json-iterator/go"
-
 	"github.com/spikeekips/mitum/util"
 )
-
-var jsoni = jsoniter.Config{
-	EscapeHTML:             true,
-	SortMapKeys:            false,
-	ValidateJsonRawMessage: true,
-}.Froze()
 
 type hintJSON struct {
 	Type    Type         `json:"type"`
@@ -18,7 +10,7 @@ type hintJSON struct {
 }
 
 func (ht Hint) MarshalJSON() ([]byte, error) {
-	return jsoniter.Marshal(hintJSON{
+	return util.JSON.Marshal(hintJSON{
 		Type:    ht.t,
 		Version: ht.version,
 	})
@@ -26,7 +18,7 @@ func (ht Hint) MarshalJSON() ([]byte, error) {
 
 func (ht *Hint) UnmarshalJSON(b []byte) error {
 	var h hintJSON
-	if err := jsoniter.Unmarshal(b, &h); err != nil {
+	if err := util.JSON.Unmarshal(b, &h); err != nil {
 		return err
 	}
 

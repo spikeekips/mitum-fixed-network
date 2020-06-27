@@ -4,6 +4,8 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/suite"
+
+	"github.com/spikeekips/mitum/util"
 )
 
 type methodHinted struct {
@@ -17,7 +19,7 @@ func (mh methodHinted) Hint() Hint {
 }
 
 func (mh methodHinted) MarshalJSON() ([]byte, error) {
-	return jsoni.Marshal(struct {
+	return util.JSON.Marshal(struct {
 		H Hint `json:"_hint"`
 		A int
 		B string
@@ -43,7 +45,7 @@ func (t *testMethodHinted) TestHintFromJSONMarshaled() {
 
 	_ = registerType(mh.Hint().Type(), "0xff11-v0.0.2")
 
-	b, err := jsoni.Marshal(mh)
+	b, err := util.JSON.Marshal(mh)
 	t.NoError(err)
 	t.NotNil(b)
 

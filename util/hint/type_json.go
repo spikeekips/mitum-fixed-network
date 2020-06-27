@@ -4,6 +4,8 @@ import (
 	"encoding/hex"
 
 	"golang.org/x/xerrors"
+
+	"github.com/spikeekips/mitum/util"
 )
 
 type typeJSON struct {
@@ -17,7 +19,7 @@ func (ty Type) MarshalJSON() ([]byte, error) {
 		return nil, xerrors.Errorf("Type does not have name: %s", ty.Verbose())
 	}
 
-	return jsoni.Marshal(typeJSON{
+	return util.JSON.Marshal(typeJSON{
 		N: name,
 		C: hex.EncodeToString(ty.Bytes()),
 	})
@@ -25,7 +27,7 @@ func (ty Type) MarshalJSON() ([]byte, error) {
 
 func (ty *Type) UnmarshalJSON(b []byte) error {
 	var o typeJSON
-	if err := jsoni.Unmarshal(b, &o); err != nil {
+	if err := util.JSON.Unmarshal(b, &o); err != nil {
 		return err
 	}
 

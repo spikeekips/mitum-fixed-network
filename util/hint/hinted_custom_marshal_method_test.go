@@ -4,6 +4,8 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/suite"
+
+	"github.com/spikeekips/mitum/util"
 )
 
 type customMarshalHinted struct {
@@ -17,7 +19,7 @@ func (mh customMarshalHinted) Hint() Hint {
 }
 
 func (mh customMarshalHinted) marshalJSON() ([]byte, error) {
-	return jsoni.Marshal(map[string]interface{}{
+	return util.JSON.Marshal(map[string]interface{}{
 		"c": mh.A,
 		"d": mh.B,
 	})
@@ -28,7 +30,7 @@ func (mh customMarshalHinted) MarshalJSON() ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-	hb, err := jsoni.Marshal(mh.Hint())
+	hb, err := util.JSON.Marshal(mh.Hint())
 	if err != nil {
 		return nil, err
 	}
@@ -46,7 +48,7 @@ func (mh customMarshalHinted) MarshalJSON() ([]byte, error) {
 func (mh *customMarshalHinted) unmarshalJSON(b []byte) error {
 	var m map[string]interface{}
 
-	if err := jsoni.Unmarshal(b, &m); err != nil {
+	if err := util.JSON.Unmarshal(b, &m); err != nil {
 		return err
 	}
 
@@ -75,7 +77,7 @@ func (t *testCustomMarshalHinted) TestHintFromJSONMarshaled() {
 
 	_ = registerType(mh.Hint().Type(), "0xff12-v0.0.3")
 
-	b, err := jsoni.Marshal(mh)
+	b, err := util.JSON.Marshal(mh)
 	t.NoError(err)
 	t.NotNil(b)
 

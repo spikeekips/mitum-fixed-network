@@ -4,6 +4,8 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/suite"
+
+	"github.com/spikeekips/mitum/util"
 )
 
 func HintFromJSONMarshaled(b []byte) (Hint, error) {
@@ -11,7 +13,7 @@ func HintFromJSONMarshaled(b []byte) (Hint, error) {
 		H Hint `json:"_hint"`
 	}
 
-	if err := jsoni.Unmarshal(b, &h); err != nil {
+	if err := util.JSON.Unmarshal(b, &h); err != nil {
 		return Hint{}, err
 	}
 
@@ -59,7 +61,7 @@ func (t *testFeildHinted) TestHintFromJSONMarshaled() {
 		B: "showme",
 	}
 
-	b, err := jsoni.Marshal(fh)
+	b, err := util.JSON.Marshal(fh)
 	t.NoError(err)
 	t.NotNil(b)
 

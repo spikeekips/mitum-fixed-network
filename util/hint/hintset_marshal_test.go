@@ -6,6 +6,8 @@ import (
 
 	"github.com/stretchr/testify/suite"
 	"golang.org/x/xerrors"
+
+	"github.com/spikeekips/mitum/util"
 )
 
 type hintedMarshalInfo struct {
@@ -31,7 +33,7 @@ func (hm hintedMarshalInfo) Hint() Hint {
 
 func (hm hintedMarshalInfo) unmarshalJSON(b []byte) (interface{}, error) {
 	c := reflect.New(hm.T).Interface()
-	if err := jsoni.Unmarshal(b, c); err != nil {
+	if err := util.JSON.Unmarshal(b, c); err != nil {
 		return nil, err
 	}
 
@@ -78,7 +80,7 @@ func (t *testHintsetMarshal) TestJSONMarshalFieldHinted() {
 
 	fh := fieldHinted{H: h, A: 10, B: "showme"}
 
-	b, err := jsoni.Marshal(fh)
+	b, err := util.JSON.Marshal(fh)
 	t.NoError(err)
 
 	// unmarshal
@@ -115,7 +117,7 @@ func (t *testHintsetMarshal) TestJSONMarshalMethodHinted() {
 
 	mh := methodHinted{A: 33, B: "findme"}
 
-	b, err := jsoni.Marshal(mh)
+	b, err := util.JSON.Marshal(mh)
 	t.NoError(err)
 
 	// unmarshal
@@ -152,7 +154,7 @@ func (t *testHintsetMarshal) TestJSONMarshalCustomMarshalHinted() {
 
 	mh := customMarshalHinted{A: 33, B: "findme"}
 
-	b, err := jsoni.Marshal(mh)
+	b, err := util.JSON.Marshal(mh)
 	t.NoError(err)
 
 	// unmarshal

@@ -346,7 +346,7 @@ func (t *testBSON) TestEncodeHinterNotCompatible() {
 	{ // wrong major version
 		var decoded []byte
 		{
-			c := bytes.Replace(encoded, []byte(`"version":"0.1"`), []byte(`"version":"1.1"`), -1)
+			c := bytes.Replace(encoded, []byte(`+0.1`), []byte(`+1.1`), -1)
 
 			var m1 bson.M
 			t.NoError(jsonenc.Unmarshal(c, &m1))
@@ -364,7 +364,7 @@ func (t *testBSON) TestEncodeHinterNotCompatible() {
 	{ // wrong type code
 		var decoded []byte
 		{
-			c := bytes.Replace(encoded, []byte(`"code":"ff31"`), []byte(`"code":"ffaa"`), -1)
+			c := bytes.Replace(encoded, []byte(`ff31+`), []byte(`ffaa+`), -1)
 
 			var m1 bson.M
 			t.NoError(jsonenc.Unmarshal(c, &m1))

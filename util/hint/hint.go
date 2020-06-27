@@ -2,7 +2,9 @@ package hint
 
 import (
 	"bytes"
+	"encoding/hex"
 	"fmt"
+	"regexp"
 
 	"golang.org/x/mod/semver"
 	"golang.org/x/xerrors"
@@ -11,10 +13,13 @@ import (
 )
 
 const (
-	MaxVersionSize   int    = 15
-	MaxHintSize      int    = MaxVersionSize + 2
-	HintStringFormat string = `hint{type=%q code="%x" version=%q}`
+	MaxVersionSize          int    = 15
+	MaxHintSize             int    = MaxVersionSize + 2
+	HintVerboseFormat       string = `hint{type=%q code="%x" version=%q}`
+	HintMarshalStringFormat string = "%x+%s"
 )
+
+var reHintMarshalStringFormat *regexp.Regexp = regexp.MustCompile(`^(?P<type>[a-f0-9]{4})\+(?P<version>.*)$`)
 
 type Hint struct {
 	t       Type
@@ -37,20 +42,27 @@ func MustHint(t Type, version util.Version) Hint {
 }
 
 func NewHintFromString(s string) (Hint, error) {
-	var name, version string
-	var code []byte
-	n, err := fmt.Sscanf(s, HintStringFormat, &name, &code, &version)
-	if err != nil {
-		return Hint{}, err
-	}
-	if n != 3 {
-		return Hint{}, xerrors.Errorf("invalid formatted hint string found: hint=%q", s)
-	}
-	if len(code) != 2 {
-		return Hint{}, xerrors.Errorf("invalid formatted hint code found: hint=%q", s)
+	if len(s) > MaxHintSize+1 {
+		return Hint{}, xerrors.Errorf("wrong string for Hint; len=%d", len(s))
 	}
 
-	ht := Hint{t: Type([2]byte{code[0], code[1]}), version: util.Version(version)}
+	if !reHintMarshalStringFormat.MatchString(s) {
+		return Hint{}, xerrors.Errorf("unknown format of hint: %q", s)
+	}
+
+	ms := reHintMarshalStringFormat.FindStringSubmatch(s)
+	if len(ms) != 3 {
+		return Hint{}, xerrors.Errorf("something empty of hint: %q", s)
+	}
+
+	var code [2]byte
+	if b, err := hex.DecodeString(ms[1]); err != nil {
+		return Hint{}, err
+	} else {
+		code = [2]byte{b[0], b[1]}
+	}
+
+	ht := Hint{t: Type(code), version: util.Version(ms[2])}
 
 	return ht, ht.IsValid(nil)
 }
@@ -129,13 +141,17 @@ func (ht Hint) Bytes() []byte {
 }
 
 func (ht Hint) Verbose() string {
-	return fmt.Sprintf("%s(%s)", ht.Type().Verbose(), ht.version)
+	return fmt.Sprintf(
+		HintVerboseFormat,
+		ht.Type().String(),
+		[2]byte(ht.Type()),
+		ht.version,
+	)
 }
 
 func (ht Hint) String() string {
 	return fmt.Sprintf(
-		HintStringFormat,
-		ht.Type().String(),
+		HintMarshalStringFormat,
 		[2]byte(ht.Type()),
 		ht.version,
 	)

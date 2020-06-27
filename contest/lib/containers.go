@@ -21,6 +21,7 @@ import (
 
 	"github.com/spikeekips/mitum/base/key"
 	"github.com/spikeekips/mitum/isaac"
+	"github.com/spikeekips/mitum/launcher"
 	"github.com/spikeekips/mitum/storage"
 	"github.com/spikeekips/mitum/util"
 	"github.com/spikeekips/mitum/util/encoder"
@@ -145,7 +146,7 @@ func (cts *Containers) createContainers() ([]*Container, error) {
 		}
 	}
 
-	rds := make([]*RemoteDesign, len(cs))
+	rds := make([]*launcher.RemoteDesign, len(cs))
 	for i, c := range cs {
 		rds[i] = c.RemoteDesign()
 	}
@@ -489,7 +490,7 @@ type Container struct {
 	id              string
 	networkName     string
 	dockerNetworkID string
-	rds             []*RemoteDesign
+	rds             []*launcher.RemoteDesign
 	designFile      string
 	errWriter       io.Writer
 	mongodbIP       string
@@ -693,15 +694,15 @@ func (ct *Container) containerErr() (func(), error) {
 	return cancel, nil
 }
 
-func (ct *Container) networkDesign() *NetworkDesign {
-	return &NetworkDesign{
+func (ct *Container) networkDesign() *launcher.NetworkDesign {
+	return &launcher.NetworkDesign{
 		Bind:    "0.0.0.0:54321",
 		Publish: fmt.Sprintf("quic://%s:54321", ct.Name()),
 	}
 }
 
-func (ct *Container) RemoteDesign() *RemoteDesign {
-	return &RemoteDesign{
+func (ct *Container) RemoteDesign() *launcher.RemoteDesign {
+	return &launcher.RemoteDesign{
 		Address:         ct.name,
 		PublickeyString: jsonenc.ToString(ct.privatekey.Publickey()),
 		Network:         ct.networkDesign().Publish,
@@ -709,11 +710,11 @@ func (ct *Container) RemoteDesign() *RemoteDesign {
 }
 
 func (ct *Container) NodeDesign(isGenesisNode bool) NodeDesign {
-	if ct.nodeDesign.Network != nil {
+	if !ct.nodeDesign.IsEmpty() {
 		return ct.nodeDesign
 	}
 
-	var nodes []*RemoteDesign // nolint
+	var nodes []*launcher.RemoteDesign // nolint
 	for _, d := range ct.rds {
 		if d.Address == ct.name {
 			continue
@@ -722,28 +723,33 @@ func (ct *Container) NodeDesign(isGenesisNode bool) NodeDesign {
 		nodes = append(nodes, d)
 	}
 
-	nd := NodeDesign{
-		encs:             ct.encs,
+	lnd := &launcher.NodeDesign{
 		Address:          ct.name,
 		PrivatekeyString: jsonenc.ToString(ct.privatekey),
 		Storage:          ct.storageURIInternal(),
 		NetworkIDString:  ct.contestDesign.Config.NetworkIDString,
 		Network:          ct.networkDesign(),
 		Nodes:            nodes,
-		Component:        ct.design.Component,
 	}
 
 	if isGenesisNode {
-		nd.GenesisPolicy = ct.contestDesign.Config.GenesisPolicy
+		lnd.GenesisPolicy = ct.contestDesign.Config.GenesisPolicy
+	}
+
+	lnd.SetEncoders(ct.encs)
+
+	nd := &NodeDesign{
+		NodeDesign: lnd,
+		Component:  ct.design.Component,
 	}
 
 	if err := nd.IsValid(nil); err != nil {
 		panic(err)
 	}
 
-	ct.nodeDesign = nd
+	ct.nodeDesign = *nd
 
-	return nd
+	return ct.nodeDesign
 }
 
 func (ct *Container) configCreate(cmd []string) *container.Config {

@@ -1,4 +1,4 @@
-package contestlib
+package launcher
 
 import (
 	"gopkg.in/yaml.v3"
@@ -6,21 +6,21 @@ import (
 	"github.com/spikeekips/mitum/isaac"
 )
 
-type ContestPolicyDesign struct {
+type PolicyDesign struct {
 	isaac.PolicyOperationBodyV0
 }
 
-func NewContestPolicyDesign() *ContestPolicyDesign {
-	return &ContestPolicyDesign{
+func NewPolicyDesign() *PolicyDesign {
+	return &PolicyDesign{
 		PolicyOperationBodyV0: isaac.DefaultPolicy(),
 	}
 }
 
-func (cd *ContestPolicyDesign) MarshalYAML() (interface{}, error) {
+func (cd *PolicyDesign) MarshalYAML() (interface{}, error) {
 	return cd.PolicyOperationBodyV0, nil
 }
 
-func (cd *ContestPolicyDesign) UnmarshalYAML(v *yaml.Node) error {
+func (cd *PolicyDesign) UnmarshalYAML(v *yaml.Node) error {
 	var p isaac.PolicyOperationBodyV0
 	if err := v.Decode(&p); err != nil {
 		return err
@@ -60,6 +60,6 @@ func (cd *ContestPolicyDesign) UnmarshalYAML(v *yaml.Node) error {
 	return nil
 }
 
-func (cd *ContestPolicyDesign) IsValid([]byte) error {
+func (cd *PolicyDesign) IsValid([]byte) error {
 	return cd.PolicyOperationBodyV0.IsValid(nil)
 }

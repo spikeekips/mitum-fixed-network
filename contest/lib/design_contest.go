@@ -7,6 +7,7 @@ import (
 	"golang.org/x/xerrors"
 	"gopkg.in/yaml.v3"
 
+	"github.com/spikeekips/mitum/launcher"
 	"github.com/spikeekips/mitum/util/encoder"
 )
 
@@ -105,20 +106,20 @@ func (cd *ContestDesign) loadConditionActions() error {
 }
 
 type ContestConfigDesign struct {
-	NetworkIDString string               `yaml:"network-id"`
-	GenesisPolicy   *ContestPolicyDesign `yaml:"genesis-policy"`
+	NetworkIDString string                 `yaml:"network-id"`
+	GenesisPolicy   *launcher.PolicyDesign `yaml:"genesis-policy"`
 }
 
 func NewContestConfigDesign() *ContestConfigDesign {
 	return &ContestConfigDesign{
-		GenesisPolicy:   NewContestPolicyDesign(),
+		GenesisPolicy:   launcher.NewPolicyDesign(),
 		NetworkIDString: "contest-network-id",
 	}
 }
 
 func (cc *ContestConfigDesign) IsValid([]byte) error {
 	if cc.GenesisPolicy == nil {
-		cc.GenesisPolicy = NewContestPolicyDesign()
+		cc.GenesisPolicy = launcher.NewPolicyDesign()
 	} else if err := cc.GenesisPolicy.IsValid(nil); err != nil {
 		return err
 	}

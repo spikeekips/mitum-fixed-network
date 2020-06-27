@@ -9,12 +9,13 @@ import (
 	"golang.org/x/xerrors"
 
 	contestlib "github.com/spikeekips/mitum/contest/lib"
+	"github.com/spikeekips/mitum/launcher"
 	"github.com/spikeekips/mitum/util"
 	"github.com/spikeekips/mitum/util/logging"
 )
 
 type RunCommand struct {
-	*contestlib.PprofFlags
+	*launcher.PprofFlags
 	Design    string        `arg:"" name:"node design file" help:"node design file" type:"existingfile"`
 	ExitAfter time.Duration `help:"exit after the given duration (default: ${exit_after})" default:"${exit_after}"`
 }
@@ -26,7 +27,7 @@ func (cmd *RunCommand) Run(log logging.Logger, version util.Version) error {
 		log.Debug().Msgf(f, s...)
 	}))
 
-	if cancel, err := contestlib.RunPprof(cmd.PprofFlags); err != nil {
+	if cancel, err := launcher.RunPprof(cmd.PprofFlags); err != nil {
 		return err
 	} else {
 		contestlib.ExitHooks.Add(func() {
@@ -36,8 +37,8 @@ func (cmd *RunCommand) Run(log logging.Logger, version util.Version) error {
 		})
 	}
 
-	var nr *contestlib.NodeRunner
-	if n, err := createNodeRunnerFromDesign(cmd.Design, version, log); err != nil {
+	var nr *contestlib.Launcher
+	if n, err := createLauncherFromDesign(cmd.Design, version, log); err != nil {
 		return xerrors.Errorf("failed to create node runner: %w", err)
 	} else {
 		nr = n

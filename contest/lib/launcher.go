@@ -17,21 +17,21 @@ import (
 	"golang.org/x/xerrors"
 )
 
-type NodeRunner struct {
+type Launcher struct {
 	*logging.Logging
-	*launcher.NodeRunner
+	*launcher.Launcher
 	design *NodeDesign
 }
 
-func NewNodeRunnerFromDesign(design *NodeDesign, version util.Version) (*NodeRunner, error) {
-	nr := &NodeRunner{design: design}
+func NewLauncherFromDesign(design *NodeDesign, version util.Version) (*Launcher, error) {
+	nr := &Launcher{design: design}
 
 	if ca, err := NewContestAddress(design.Address); err != nil {
 		return nil, err
-	} else if bn, err := launcher.NewNodeRunner(ca, design.Privatekey(), design.NetworkID(), version); err != nil {
+	} else if bn, err := launcher.NewLauncher(ca, design.Privatekey(), design.NetworkID(), version); err != nil {
 		return nil, err
 	} else {
-		nr.NodeRunner = bn
+		nr.Launcher = bn
 	}
 
 	nr.Logging = logging.NewLogging(func(c logging.Context) logging.Emitter {
@@ -40,18 +40,18 @@ func NewNodeRunnerFromDesign(design *NodeDesign, version util.Version) (*NodeRun
 	return nr, nil
 }
 
-func (nr *NodeRunner) SetLogger(l logging.Logger) logging.Logger {
-	_ = nr.NodeRunner.SetLogger(l)
+func (nr *Launcher) SetLogger(l logging.Logger) logging.Logger {
+	_ = nr.Launcher.SetLogger(l)
 	_ = nr.Logging.SetLogger(l)
 
 	return nr.Log()
 }
 
-func (nr *NodeRunner) Design() *NodeDesign {
+func (nr *Launcher) Design() *NodeDesign {
 	return nr.design
 }
 
-func (nr *NodeRunner) Initialize() error {
+func (nr *Launcher) Initialize() error {
 	if err := nr.attachStorage(); err != nil {
 		return err
 	}
@@ -76,10 +76,10 @@ func (nr *NodeRunner) Initialize() error {
 		return err
 	}
 
-	return nr.NodeRunner.Initialize()
+	return nr.Launcher.Initialize()
 }
 
-func (nr *NodeRunner) attachStorage() error {
+func (nr *Launcher) attachStorage() error {
 	l := nr.Log().WithLogger(func(ctx logging.Context) logging.Emitter {
 		return ctx.Str("target", "storage")
 	})
@@ -96,7 +96,7 @@ func (nr *NodeRunner) attachStorage() error {
 	return nil
 }
 
-func (nr *NodeRunner) attachNetwork() error {
+func (nr *Launcher) attachNetwork() error {
 	// TODO move under launcher
 	l := nr.Log().WithLogger(func(ctx logging.Context) logging.Emitter {
 		return ctx.Str("target", "network")
@@ -136,7 +136,7 @@ func (nr *NodeRunner) attachNetwork() error {
 	return nil
 }
 
-func (nr *NodeRunner) attachNodeChannel() error {
+func (nr *Launcher) attachNodeChannel() error {
 	l := nr.Log().WithLogger(func(ctx logging.Context) logging.Emitter {
 		return ctx.Str("target", "node-channel")
 	})
@@ -165,7 +165,7 @@ func (nr *NodeRunner) attachNodeChannel() error {
 	return nil
 }
 
-func (nr *NodeRunner) attachRemoteNodes() error {
+func (nr *Launcher) attachRemoteNodes() error {
 	var je encoder.Encoder
 	if e, err := nr.Encoders().Encoder(jsonenc.JSONType, ""); err != nil { // NOTE get latest json encoder
 		return xerrors.Errorf("json encoder needs for quic-network: %w", err)
@@ -203,7 +203,7 @@ func (nr *NodeRunner) attachRemoteNodes() error {
 	return nr.Localstate().Nodes().Add(nodes...)
 }
 
-func (nr *NodeRunner) attachSuffrage() error {
+func (nr *Launcher) attachSuffrage() error {
 	l := nr.Log().WithLogger(func(ctx logging.Context) logging.Emitter {
 		return ctx.Str("target", "suffrage")
 	})
@@ -225,7 +225,7 @@ func (nr *NodeRunner) attachSuffrage() error {
 	return nil
 }
 
-func (nr *NodeRunner) attachProposalProcessor() error {
+func (nr *Launcher) attachProposalProcessor() error {
 	l := nr.Log().WithLogger(func(ctx logging.Context) logging.Emitter {
 		return ctx.Str("target", "proposal-processor")
 	})

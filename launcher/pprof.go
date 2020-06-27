@@ -1,4 +1,4 @@
-package contestlib
+package launcher
 
 import (
 	"os"
@@ -9,12 +9,19 @@ import (
 )
 
 type PprofFlags struct {
-	MemProf   string `help:"memory prof file (default:${mem_prof_file})" default:"${mem_prof_file}"`
-	CPUProf   string `help:"CPU prof file (default:${cpu_prof_file})" default:"${cpu_prof_file}"`
-	TraceProf string `help:"trace prof file (default:${trace_prof_file})" default:"${trace_prof_file}"`
+	EnableProfiling bool   `help:"enable profiling (default:${enable_pprofiling})" default:"${enable_pprofiling}"`
+	MemProf         string `help:"memory prof file (default:${mem_prof_file})" default:"${mem_prof_file}"`
+	CPUProf         string `help:"CPU prof file (default:${cpu_prof_file})" default:"${cpu_prof_file}"`
+	TraceProf       string `help:"trace prof file (default:${trace_prof_file})" default:"${trace_prof_file}"`
 }
 
 func RunPprof(flags *PprofFlags) (func() error, error) {
+	if !flags.EnableProfiling {
+		return func() error {
+			return nil
+		}, nil
+	}
+
 	var exitHooks []func() error
 	if len(flags.TraceProf) > 0 {
 		if c, err := RunTracePprof(flags.TraceProf); err != nil {

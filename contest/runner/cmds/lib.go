@@ -15,7 +15,7 @@ import (
 	"github.com/spikeekips/mitum/util/logging"
 )
 
-func createNodeRunnerFromDesign(f string, version util.Version, log logging.Logger) (*contestlib.NodeRunner, error) {
+func createLauncherFromDesign(f string, version util.Version, log logging.Logger) (*contestlib.Launcher, error) {
 	var encs *encoder.Encoders
 	if e, err := encoder.LoadEncoders(
 		[]encoder.Encoder{jsonenc.NewEncoder(), bsonenc.NewEncoder()},
@@ -33,8 +33,8 @@ func createNodeRunnerFromDesign(f string, version util.Version, log logging.Logg
 		design = d
 	}
 
-	var nr *contestlib.NodeRunner
-	if n, err := contestlib.NewNodeRunnerFromDesign(design, version); err != nil {
+	var nr *contestlib.Launcher
+	if n, err := contestlib.NewLauncherFromDesign(design, version); err != nil {
 		return nil, xerrors.Errorf("failed to create node runner: %w", err)
 	} else if err := n.AddHinters(contestlib.Hinters...); err != nil {
 		return nil, err
@@ -42,7 +42,7 @@ func createNodeRunnerFromDesign(f string, version util.Version, log logging.Logg
 		nr = n
 	}
 
-	log.Debug().Interface("design", design).Msg("load noderunner from design")
+	log.Debug().Interface("design", design).Msg("load launcher from design")
 	_ = nr.SetLogger(log)
 
 	return nr, nil

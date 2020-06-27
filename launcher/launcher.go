@@ -24,7 +24,7 @@ import (
 	"github.com/spikeekips/mitum/util/logging"
 )
 
-type NodeRunner struct {
+type Launcher struct {
 	sync.RWMutex
 	*logging.Logging
 	encs            *encoder.Encoders
@@ -41,12 +41,12 @@ type NodeRunner struct {
 	publishURL        string
 }
 
-func NewNodeRunner(
+func NewLauncher(
 	address base.Address,
 	privateKey key.Privatekey,
 	networkID base.NetworkID,
 	version util.Version,
-) (*NodeRunner, error) {
+) (*Launcher, error) {
 	var encs *encoder.Encoders
 	if e, err := encoder.LoadEncoders(
 		[]encoder.Encoder{jsonenc.NewEncoder(), bsonenc.NewEncoder()},
@@ -56,7 +56,7 @@ func NewNodeRunner(
 		encs = e
 	}
 
-	bn := &NodeRunner{
+	bn := &Launcher{
 		Logging: logging.NewLogging(func(c logging.Context) logging.Emitter {
 			return c.Str("module", "base-node-runner")
 		}),
@@ -67,11 +67,11 @@ func NewNodeRunner(
 	return bn.SetLocalstate(address, privateKey, networkID)
 }
 
-func (bn *NodeRunner) Encoders() *encoder.Encoders {
+func (bn *Launcher) Encoders() *encoder.Encoders {
 	return bn.encs
 }
 
-func (bn *NodeRunner) AddHinters(hinters ...hint.Hinter) error {
+func (bn *Launcher) AddHinters(hinters ...hint.Hinter) error {
 	for _, h := range hinters {
 		if err := bn.encs.AddHinter(h); err != nil {
 			return err
@@ -81,11 +81,11 @@ func (bn *NodeRunner) AddHinters(hinters ...hint.Hinter) error {
 	return nil
 }
 
-func (bn *NodeRunner) SetLocalstate(
+func (bn *Launcher) SetLocalstate(
 	address base.Address,
 	privateKey key.Privatekey,
 	networkID base.NetworkID,
-) (*NodeRunner, error) {
+) (*Launcher, error) {
 	node := isaac.NewLocalNode(address, privateKey)
 
 	if ls, err := isaac.NewLocalstate(bn.storage, node, networkID); err != nil {
@@ -98,27 +98,27 @@ func (bn *NodeRunner) SetLocalstate(
 	}
 }
 
-func (bn *NodeRunner) reloadLocalstate() error {
+func (bn *Launcher) reloadLocalstate() error {
 	_ = bn.localstate.SetStorage(bn.storage)
 
 	return bn.localstate.Initialize()
 }
 
-func (bn *NodeRunner) Localstate() *isaac.Localstate {
+func (bn *Launcher) Localstate() *isaac.Localstate {
 	return bn.localstate
 }
 
-func (bn *NodeRunner) SetStorage(st storage.Storage) *NodeRunner {
+func (bn *Launcher) SetStorage(st storage.Storage) *Launcher {
 	bn.storage = st
 
 	return bn
 }
 
-func (bn *NodeRunner) Storage() storage.Storage {
+func (bn *Launcher) Storage() storage.Storage {
 	return bn.storage
 }
 
-func (bn *NodeRunner) SetNetwork(nt network.Server) *NodeRunner {
+func (bn *Launcher) SetNetwork(nt network.Server) *Launcher {
 	bn.network = nt
 
 	bn.network.SetHasSealHandler(bn.networkHandlerHasSeal)
@@ -131,47 +131,47 @@ func (bn *NodeRunner) SetNetwork(nt network.Server) *NodeRunner {
 	return bn
 }
 
-func (bn *NodeRunner) Network() network.Server {
+func (bn *Launcher) Network() network.Server {
 	return bn.network
 }
 
-func (bn *NodeRunner) SetNodeChannel(nc network.NetworkChannel) *NodeRunner {
+func (bn *Launcher) SetNodeChannel(nc network.NetworkChannel) *Launcher {
 	bn.nodeChannel = nc
 
 	return bn
 }
 
-func (bn *NodeRunner) NodeChannel() network.NetworkChannel {
+func (bn *Launcher) NodeChannel() network.NetworkChannel {
 	return bn.nodeChannel
 }
 
-func (bn *NodeRunner) SetSuffrage(sf base.Suffrage) *NodeRunner {
+func (bn *Launcher) SetSuffrage(sf base.Suffrage) *Launcher {
 	bn.suffrage = sf
 
 	return bn
 }
 
-func (bn *NodeRunner) Suffrage() base.Suffrage {
+func (bn *Launcher) Suffrage() base.Suffrage {
 	return bn.suffrage
 }
 
-func (bn *NodeRunner) SetProposalProcessor(pp isaac.ProposalProcessor) *NodeRunner {
+func (bn *Launcher) SetProposalProcessor(pp isaac.ProposalProcessor) *Launcher {
 	bn.proposalProcessor = pp
 
 	return bn
 }
 
-func (bn *NodeRunner) SetPublichURL(s string) *NodeRunner {
+func (bn *Launcher) SetPublichURL(s string) *Launcher {
 	bn.publishURL = s
 
 	return bn
 }
 
-func (bn *NodeRunner) ProposalProcessor() isaac.ProposalProcessor {
+func (bn *Launcher) ProposalProcessor() isaac.ProposalProcessor {
 	return bn.proposalProcessor
 }
 
-func (bn *NodeRunner) Initialize() error {
+func (bn *Launcher) Initialize() error {
 	bn.Log().Info().Msg("trying to initialize")
 
 	components := [][2]interface{}{
@@ -201,7 +201,7 @@ func (bn *NodeRunner) Initialize() error {
 	return nil
 }
 
-func (bn *NodeRunner) initialize(i [2]interface{}) error {
+func (bn *Launcher) initialize(i [2]interface{}) error {
 	bn.Log().Info().Msg("trying to initialize")
 
 	var name string
@@ -245,7 +245,7 @@ func (bn *NodeRunner) initialize(i [2]interface{}) error {
 	return nil
 }
 
-func (bn *NodeRunner) Start() error {
+func (bn *Launcher) Start() error {
 	bn.Log().Info().Msg("trying to start")
 
 	if bn.network == nil {
@@ -275,7 +275,7 @@ func (bn *NodeRunner) Start() error {
 	return nil
 }
 
-func (bn *NodeRunner) createConsensusStates() (*isaac.ConsensusStates, error) {
+func (bn *Launcher) createConsensusStates() (*isaac.ConsensusStates, error) {
 	proposalMaker := isaac.NewProposalMaker(bn.localstate)
 
 	var booting, joining, consensus, syncing, broken isaac.StateHandler
@@ -333,11 +333,11 @@ func (bn *NodeRunner) createConsensusStates() (*isaac.ConsensusStates, error) {
 	)
 }
 
-func (bn *NodeRunner) networkHandlerHasSeal(h valuehash.Hash) (bool, error) {
+func (bn *Launcher) networkHandlerHasSeal(h valuehash.Hash) (bool, error) {
 	return bn.storage.HasSeal(h)
 }
 
-func (bn *NodeRunner) networkHandlerGetSeals(hs []valuehash.Hash) ([]seal.Seal, error) {
+func (bn *Launcher) networkHandlerGetSeals(hs []valuehash.Hash) ([]seal.Seal, error) {
 	var sls []seal.Seal
 
 	if err := bn.storage.SealsByHash(hs, func(_ valuehash.Hash, sl seal.Seal) (bool, error) {
@@ -351,7 +351,7 @@ func (bn *NodeRunner) networkHandlerGetSeals(hs []valuehash.Hash) ([]seal.Seal, 
 	return sls, nil
 }
 
-func (bn *NodeRunner) networkhandlerNewSeal(sl seal.Seal) error {
+func (bn *Launcher) networkhandlerNewSeal(sl seal.Seal) error {
 	sealChecker := isaac.NewSealValidationChecker(
 		sl,
 		bn.localstate.Policy().NetworkID(),
@@ -401,7 +401,7 @@ func (bn *NodeRunner) networkhandlerNewSeal(sl seal.Seal) error {
 	return nil
 }
 
-func (bn *NodeRunner) networkhandlerGetManifests(heights []base.Height) ([]block.Manifest, error) {
+func (bn *Launcher) networkhandlerGetManifests(heights []base.Height) ([]block.Manifest, error) {
 	sort.Slice(heights, func(i, j int) bool {
 		return heights[i] < heights[j]
 	})
@@ -428,7 +428,7 @@ func (bn *NodeRunner) networkhandlerGetManifests(heights []base.Height) ([]block
 	return manifests, nil
 }
 
-func (bn *NodeRunner) networkhandlerGetBlocks(heights []base.Height) ([]block.Block, error) {
+func (bn *Launcher) networkhandlerGetBlocks(heights []base.Height) ([]block.Block, error) {
 	sort.Slice(heights, func(i, j int) bool {
 		return heights[i] < heights[j]
 	})
@@ -436,7 +436,7 @@ func (bn *NodeRunner) networkhandlerGetBlocks(heights []base.Height) ([]block.Bl
 	return bn.storage.BlocksByHeight(heights)
 }
 
-func (bn *NodeRunner) networkhandlerNodeInfo() (network.NodeInfo, error) {
+func (bn *Launcher) networkhandlerNodeInfo() (network.NodeInfo, error) {
 	// TODO set cache
 	var state base.State = base.StateUnknown
 	if handler := bn.consensusStates.ActiveHandler(); handler != nil {
@@ -461,7 +461,7 @@ func (bn *NodeRunner) networkhandlerNodeInfo() (network.NodeInfo, error) {
 	), nil
 }
 
-func (bn *NodeRunner) createDefaultComponent(name string) (interface{}, error) {
+func (bn *Launcher) createDefaultComponent(name string) (interface{}, error) {
 	switch name {
 	case "suffrage":
 		if err := bn.DefaultSuffrage(); err != nil {
@@ -479,7 +479,7 @@ func (bn *NodeRunner) createDefaultComponent(name string) (interface{}, error) {
 	}
 }
 
-func (bn *NodeRunner) DefaultSuffrage() error {
+func (bn *Launcher) DefaultSuffrage() error {
 	l := bn.Log().WithLogger(func(ctx logging.Context) logging.Emitter {
 		return ctx.Str("target", "default-suffrage")
 	})
@@ -492,7 +492,7 @@ func (bn *NodeRunner) DefaultSuffrage() error {
 	return nil
 }
 
-func (bn *NodeRunner) DefaultProposalProcessor() error {
+func (bn *Launcher) DefaultProposalProcessor() error {
 	l := bn.Log().WithLogger(func(ctx logging.Context) logging.Emitter {
 		return ctx.Str("target", "default-proposal-processor")
 	})

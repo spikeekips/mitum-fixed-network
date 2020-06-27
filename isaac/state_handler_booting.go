@@ -43,7 +43,8 @@ func (cs *StateBootingHandler) Activate(_ StateChangeContext) error {
 
 	go func() {
 		if err := cs.initialize(); err != nil {
-			cs.Log().Error().Err(err).Msg("failed to check")
+			// TODO node process should be stopped
+			cs.Log().Error().Err(err).Msg("failed to initialize at booting")
 		}
 	}()
 
@@ -132,6 +133,10 @@ func (cs *StateBootingHandler) checkBlock() error {
 }
 
 func (cs *StateBootingHandler) whenEmptyBlocks() error {
+	if len(cs.suffrage.Nodes()) < 2 {
+		return xerrors.Errorf("empty block, but no other nodes; can not sync")
+	}
+
 	var nodes []network.Node
 	for _, a := range cs.suffrage.Nodes() {
 		if a.Equal(cs.localstate.Node().Address()) {

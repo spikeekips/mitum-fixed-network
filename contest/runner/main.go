@@ -10,6 +10,7 @@ import (
 
 	contestlib "github.com/spikeekips/mitum/contest/lib"
 	"github.com/spikeekips/mitum/contest/runner/cmds"
+	"github.com/spikeekips/mitum/launcher"
 	"github.com/spikeekips/mitum/util"
 	"github.com/spikeekips/mitum/util/logging"
 )
@@ -24,10 +25,11 @@ var mainHelpOptions = kong.HelpOptions{
 }
 
 var mainDefaultVars = kong.Vars{
-	"mem_prof_file":   "/mem.prof",
-	"trace_prof_file": "/trace.prof",
-	"cpu_prof_file":   "/cpu.prof",
-	"exit_after":      "0",
+	"enable_pprofiling": "true",
+	"mem_prof_file":     "/mem.prof",
+	"trace_prof_file":   "/trace.prof",
+	"cpu_prof_file":     "/cpu.prof",
+	"exit_after":        "0",
 }
 
 type mainFlags struct {
@@ -40,7 +42,7 @@ type mainFlags struct {
 
 func main() {
 	flags := &mainFlags{
-		Run: cmds.RunCommand{PprofFlags: &contestlib.PprofFlags{}},
+		Run: cmds.RunCommand{PprofFlags: &launcher.PprofFlags{}},
 	}
 	ctx := kong.Parse(
 		flags,

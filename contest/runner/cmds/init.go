@@ -26,8 +26,8 @@ func (cmd *InitCommand) Run(log logging.Logger, version util.Version) error {
 }
 
 func (cmd *InitCommand) run(log logging.Logger) error {
-	var nr *contestlib.NodeRunner
-	if n, err := createNodeRunnerFromDesign(cmd.Design, cmd.version, log); err != nil {
+	var nr *contestlib.Launcher
+	if n, err := createLauncherFromDesign(cmd.Design, cmd.version, log); err != nil {
 		return err
 	} else {
 		nr = n
@@ -69,7 +69,7 @@ func (cmd *InitCommand) run(log logging.Logger) error {
 	return nil
 }
 
-func (cmd *InitCommand) checkExisting(nr *contestlib.NodeRunner, log logging.Logger) error {
+func (cmd *InitCommand) checkExisting(nr *contestlib.Launcher, log logging.Logger) error {
 	log.Debug().Msg("checking existing blocks")
 
 	var manifest block.Manifest

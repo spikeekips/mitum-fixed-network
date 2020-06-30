@@ -7,8 +7,8 @@ import (
 	"github.com/spikeekips/mitum/base/ballot"
 	"github.com/spikeekips/mitum/base/block"
 	"github.com/spikeekips/mitum/base/seal"
-	"github.com/spikeekips/mitum/base/valuehash"
 	"github.com/spikeekips/mitum/storage"
+	"github.com/spikeekips/mitum/util/valuehash"
 )
 
 func NewINITBallotV0Round0(st storage.Storage, node base.Address) (ballot.INITBallotV0, error) {

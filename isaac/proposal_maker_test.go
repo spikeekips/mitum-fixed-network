@@ -8,7 +8,7 @@ import (
 	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/base/operation"
 	"github.com/spikeekips/mitum/base/seal"
-	"github.com/spikeekips/mitum/base/valuehash"
+	"github.com/spikeekips/mitum/util/valuehash"
 )
 
 type testProposalMaker struct {

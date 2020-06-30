@@ -3,8 +3,8 @@ package tree
 import (
 	"go.mongodb.org/mongo-driver/bson"
 
-	"github.com/spikeekips/mitum/base/valuehash"
 	bsonenc "github.com/spikeekips/mitum/util/encoder/bson"
+	"github.com/spikeekips/mitum/util/valuehash"
 )
 
 func (at *AVLTree) MarshalBSON() ([]byte, error) {

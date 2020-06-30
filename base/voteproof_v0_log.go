@@ -13,8 +13,7 @@ func (vp VoteproofV0) MarshalLog(key string, e logging.Emitter, verbose bool) lo
 			Hinted("stage", vp.stage).
 			Bool("is_closed", vp.closed).
 			Str("result", vp.result.String()).
-			Int("number_of_votes", len(vp.votes)).
-			Int("number_of_ballots", len(vp.ballots))
+			Int("number_of_votes", len(vp.votes))
 
 		if vp.IsFinished() {
 			ev = ev.Hinted("fact", vp.majority.Hash()).

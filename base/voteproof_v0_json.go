@@ -4,50 +4,63 @@ import (
 	"encoding/json"
 
 	"github.com/spikeekips/mitum/base/key"
-	"github.com/spikeekips/mitum/base/valuehash"
 	jsonenc "github.com/spikeekips/mitum/util/encoder/json"
 	"github.com/spikeekips/mitum/util/localtime"
+	"github.com/spikeekips/mitum/util/valuehash"
 )
+
+type VoteproofV0FactJSONPacker struct {
+	H valuehash.Hash
+	F Fact
+}
+
+type VoteproofV0FactJSONUnpacker struct {
+	H valuehash.Bytes
+	F json.RawMessage
+}
+
+func (vv VoteproofV0FactJSONUnpacker) Hash() valuehash.Bytes {
+	return vv.H
+}
+
+func (vv VoteproofV0FactJSONUnpacker) Fact() []byte {
+	return vv.F
+}
+
+type VoteproofV0BallotJSONPacker struct {
+	H valuehash.Hash
+	A Address
+}
+
+type VoteproofV0BallotJSONUnpacker struct {
+	H valuehash.Bytes
+	A json.RawMessage
+}
+
+func (vv VoteproofV0BallotJSONUnpacker) Hash() valuehash.Bytes {
+	return vv.H
+}
+
+func (vv VoteproofV0BallotJSONUnpacker) Address() []byte {
+	return vv.A
+}
 
 type VoteproofV0PackJSON struct {
 	jsonenc.HintedHead
-	HT Height             `json:"height"`
-	RD Round              `json:"round"`
-	SS []Address          `json:"suffrages"`
-	TH ThresholdRatio     `json:"threshold"`
-	RS VoteResultType     `json:"result"`
-	ST Stage              `json:"stage"`
-	MJ Fact               `json:"majority"`
-	FS [][2]interface{}   `json:"facts"`
-	BS [][2]interface{}   `json:"ballots"`
-	VS [][2]interface{}   `json:"votes"`
-	FA localtime.JSONTime `json:"finished_at"`
-	CL string             `json:"is_closed"`
+	HT Height              `json:"height"`
+	RD Round               `json:"round"`
+	SS []Address           `json:"suffrages"`
+	TH ThresholdRatio      `json:"threshold"`
+	RS VoteResultType      `json:"result"`
+	ST Stage               `json:"stage"`
+	MJ Fact                `json:"majority"`
+	FS []Fact              `json:"facts"`
+	VS []VoteproofNodeFact `json:"votes"`
+	FA localtime.JSONTime  `json:"finished_at"`
+	CL string              `json:"is_closed"`
 }
 
 func (vp VoteproofV0) MarshalJSON() ([]byte, error) {
-	var i int
-
-	facts := make([][2]interface{}, len(vp.facts))
-	for h := range vp.facts {
-		facts[i] = [2]interface{}{h, vp.facts[h]}
-		i++
-	}
-
-	i = 0
-	ballots := make([][2]interface{}, len(vp.ballots))
-	for a := range vp.ballots {
-		ballots[i] = [2]interface{}{a, vp.ballots[a]}
-		i++
-	}
-
-	i = 0
-	votes := make([][2]interface{}, len(vp.votes))
-	for a := range vp.votes {
-		votes[i] = [2]interface{}{a, vp.votes[a]}
-		i++
-	}
-
 	var isClosed string
 	if vp.closed {
 		isClosed = "true"
@@ -64,27 +77,25 @@ func (vp VoteproofV0) MarshalJSON() ([]byte, error) {
 		RS:         vp.result,
 		ST:         vp.stage,
 		MJ:         vp.majority,
-		FS:         facts,
-		BS:         ballots,
-		VS:         votes,
+		FS:         vp.facts,
+		VS:         vp.votes,
 		FA:         localtime.NewJSONTime(vp.finishedAt),
 		CL:         isClosed,
 	})
 }
 
 type VoteproofV0UnpackJSON struct {
-	HT Height               `json:"height"`
-	RD Round                `json:"round"`
-	SS []json.RawMessage    `json:"suffrages"`
-	TH ThresholdRatio       `json:"threshold"`
-	RS VoteResultType       `json:"result"`
-	ST Stage                `json:"stage"`
-	MJ json.RawMessage      `json:"majority"`
-	FS [][2]json.RawMessage `json:"facts"`
-	BS [][2]json.RawMessage `json:"ballots"`
-	VS [][2]json.RawMessage `json:"votes"`
-	FA localtime.JSONTime   `json:"finished_at"`
-	CL string               `json:"is_closed"`
+	HT Height             `json:"height"`
+	RD Round              `json:"round"`
+	SS []json.RawMessage  `json:"suffrages"`
+	TH ThresholdRatio     `json:"threshold"`
+	RS VoteResultType     `json:"result"`
+	ST Stage              `json:"stage"`
+	MJ json.RawMessage    `json:"majority"`
+	FS []json.RawMessage  `json:"facts"`
+	VS []json.RawMessage  `json:"votes"`
+	FA localtime.JSONTime `json:"finished_at"`
+	CL string             `json:"is_closed"`
 }
 
 func (vp *VoteproofV0) UnpackJSON(b []byte, enc *jsonenc.Encoder) error {
@@ -98,22 +109,14 @@ func (vp *VoteproofV0) UnpackJSON(b []byte, enc *jsonenc.Encoder) error {
 		ss[i] = vpp.SS[i]
 	}
 
-	fs := make([][2][]byte, len(vpp.FS))
+	bFacts := make([][]byte, len(vpp.FS))
 	for i := range vpp.FS {
-		r := vpp.FS[i]
-		fs[i] = [2][]byte{r[0], r[1]}
+		bFacts[i] = vpp.FS[i]
 	}
 
-	bs := make([][2][]byte, len(vpp.BS))
-	for i := range vpp.BS {
-		r := vpp.BS[i]
-		bs[i] = [2][]byte{r[0], r[1]}
-	}
-
-	vs := make([][2][]byte, len(vpp.VS))
+	vs := make([][]byte, len(vpp.VS))
 	for i := range vpp.VS {
-		r := vpp.VS[i]
-		vs[i] = [2][]byte{r[0], r[1]}
+		vs[i] = vpp.VS[i]
 	}
 
 	return vp.unpack(
@@ -125,8 +128,7 @@ func (vp *VoteproofV0) UnpackJSON(b []byte, enc *jsonenc.Encoder) error {
 		vpp.RS,
 		vpp.ST,
 		vpp.MJ,
-		fs,
-		bs,
+		bFacts,
 		vs,
 		vpp.FA.Time,
 		vpp.CL == "true",
@@ -135,6 +137,7 @@ func (vp *VoteproofV0) UnpackJSON(b []byte, enc *jsonenc.Encoder) error {
 
 type VoteproofNodeFactPackJSON struct {
 	AD Address        `json:"address"`
+	BT valuehash.Hash `json:"ballot"`
 	FC valuehash.Hash `json:"fact"`
 	FS key.Signature  `json:"fact_signature"`
 	SG key.Publickey  `json:"signer"`
@@ -143,6 +146,7 @@ type VoteproofNodeFactPackJSON struct {
 func (vf VoteproofNodeFact) MarshalJSON() ([]byte, error) {
 	return jsonenc.Marshal(VoteproofNodeFactPackJSON{
 		AD: vf.address,
+		BT: vf.ballot,
 		FC: vf.fact,
 		FS: vf.factSignature,
 		SG: vf.signer,
@@ -151,7 +155,8 @@ func (vf VoteproofNodeFact) MarshalJSON() ([]byte, error) {
 
 type VoteproofNodeFactUnpackJSON struct {
 	AD json.RawMessage `json:"address"`
-	FC json.RawMessage `json:"fact"`
+	BT valuehash.Bytes `json:"ballot"`
+	FC valuehash.Bytes `json:"fact"`
 	FS key.Signature   `json:"fact_signature"`
 	SG json.RawMessage `json:"signer"`
 }
@@ -162,5 +167,5 @@ func (vf *VoteproofNodeFact) UnpackJSON(b []byte, enc *jsonenc.Encoder) error {
 		return err
 	}
 
-	return vf.unpack(enc, vpp.AD, vpp.FC, vpp.FS, vpp.SG)
+	return vf.unpack(enc, vpp.AD, vpp.BT, vpp.FC, vpp.FS, vpp.SG)
 }

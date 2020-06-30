@@ -6,33 +6,47 @@ import (
 	"go.mongodb.org/mongo-driver/bson"
 
 	"github.com/spikeekips/mitum/base/key"
-	"github.com/spikeekips/mitum/base/valuehash"
 	bsonenc "github.com/spikeekips/mitum/util/encoder/bson"
+	"github.com/spikeekips/mitum/util/valuehash"
 )
 
+type VoteproofV0FactBSONPacker struct {
+	H valuehash.Hash
+	F Fact
+}
+
+type VoteproofV0FactBSONUnpacker struct {
+	H valuehash.Bytes
+	F bson.Raw
+}
+
+func (vv VoteproofV0FactBSONUnpacker) Hash() valuehash.Bytes {
+	return vv.H
+}
+
+func (vv VoteproofV0FactBSONUnpacker) Fact() []byte {
+	return vv.F
+}
+
+type VoteproofV0BallotBSONPacker struct {
+	H valuehash.Hash
+	A Address
+}
+
+type VoteproofV0BallotBSONUnpacker struct {
+	H valuehash.Bytes
+	A bson.Raw
+}
+
+func (vv VoteproofV0BallotBSONUnpacker) Hash() valuehash.Bytes {
+	return vv.H
+}
+
+func (vv VoteproofV0BallotBSONUnpacker) Address() []byte {
+	return vv.A
+}
+
 func (vp VoteproofV0) MarshalBSON() ([]byte, error) {
-	var i int
-
-	facts := make([][2]interface{}, len(vp.facts))
-	for h := range vp.facts {
-		facts[i] = [2]interface{}{h, vp.facts[h]}
-		i++
-	}
-
-	i = 0
-	ballots := make([][2]interface{}, len(vp.ballots))
-	for a := range vp.ballots {
-		ballots[i] = [2]interface{}{a, vp.ballots[a]}
-		i++
-	}
-
-	i = 0
-	votes := make([][2]interface{}, len(vp.votes))
-	for a := range vp.votes {
-		votes[i] = [2]interface{}{a, vp.votes[a]}
-		i++
-	}
-
 	m := bson.M{
 		"height":      vp.height,
 		"round":       vp.round,
@@ -40,9 +54,8 @@ func (vp VoteproofV0) MarshalBSON() ([]byte, error) {
 		"threshold":   vp.thresholdRatio,
 		"result":      vp.result,
 		"stage":       vp.stage,
-		"facts":       facts,
-		"ballots":     ballots,
-		"votes":       votes,
+		"facts":       vp.facts,
+		"votes":       vp.votes,
 		"finished_at": vp.finishedAt,
 		"is_closed":   vp.closed,
 	}
@@ -65,9 +78,8 @@ type VoteproofV0UnpackBSON struct { // nolint
 	RS VoteResultType `bson:"result"`
 	ST Stage          `bson:"stage"`
 	MJ bson.Raw       `bson:"majority"`
-	FS [][2]bson.Raw  `bson:"facts"`
-	BS [][2]bson.Raw  `bson:"ballots"`
-	VS [][2]bson.Raw  `bson:"votes"`
+	FS []bson.Raw     `bson:"facts"`
+	VS []bson.Raw     `bson:"votes"`
 	FA time.Time      `bson:"finished_at"`
 	CL bool           `bson:"is_closed"`
 }
@@ -83,22 +95,14 @@ func (vp *VoteproofV0) UnpackBSON(b []byte, enc *bsonenc.Encoder) error {
 		ss[i] = vpp.SS[i]
 	}
 
-	fs := make([][2][]byte, len(vpp.FS))
+	fs := make([][]byte, len(vpp.FS))
 	for i := range vpp.FS {
-		r := vpp.FS[i]
-		fs[i] = [2][]byte{r[0], r[1]}
+		fs[i] = vpp.FS[i]
 	}
 
-	bs := make([][2][]byte, len(vpp.BS))
-	for i := range vpp.BS {
-		r := vpp.BS[i]
-		bs[i] = [2][]byte{r[0], r[1]}
-	}
-
-	vs := make([][2][]byte, len(vpp.VS))
+	vs := make([][]byte, len(vpp.VS))
 	for i := range vpp.VS {
-		r := vpp.VS[i]
-		vs[i] = [2][]byte{r[0], r[1]}
+		vs[i] = vpp.VS[i]
 	}
 
 	return vp.unpack(
@@ -111,7 +115,6 @@ func (vp *VoteproofV0) UnpackBSON(b []byte, enc *bsonenc.Encoder) error {
 		vpp.ST,
 		vpp.MJ,
 		fs,
-		bs,
 		vs,
 		vpp.FA,
 		vpp.CL,
@@ -120,6 +123,7 @@ func (vp *VoteproofV0) UnpackBSON(b []byte, enc *bsonenc.Encoder) error {
 
 type VoteproofNodeFactPackBSON struct {
 	AD Address        `bson:"address"`
+	BT valuehash.Hash `bson:"ballot"`
 	FC valuehash.Hash `bson:"fact"`
 	FS key.Signature  `bson:"fact_signature"`
 	SG key.Publickey  `bson:"signer"`
@@ -128,6 +132,7 @@ type VoteproofNodeFactPackBSON struct {
 func (vf VoteproofNodeFact) MarshalBSON() ([]byte, error) {
 	return bsonenc.Marshal(VoteproofNodeFactPackBSON{
 		AD: vf.address,
+		BT: vf.ballot,
 		FC: vf.fact,
 		FS: vf.factSignature,
 		SG: vf.signer,
@@ -135,10 +140,11 @@ func (vf VoteproofNodeFact) MarshalBSON() ([]byte, error) {
 }
 
 type VoteproofNodeFactUnpackBSON struct {
-	AD bson.Raw      `bson:"address"`
-	FC bson.Raw      `bson:"fact"`
-	FS key.Signature `bson:"fact_signature"`
-	SG bson.Raw      `bson:"signer"`
+	AD bson.Raw        `bson:"address"`
+	BT valuehash.Bytes `bson:"ballot"`
+	FC valuehash.Bytes `bson:"fact"`
+	FS key.Signature   `bson:"fact_signature"`
+	SG bson.Raw        `bson:"signer"`
 }
 
 func (vf *VoteproofNodeFact) UnpackBSON(b []byte, enc *bsonenc.Encoder) error {
@@ -147,5 +153,5 @@ func (vf *VoteproofNodeFact) UnpackBSON(b []byte, enc *bsonenc.Encoder) error {
 		return err
 	}
 
-	return vf.unpack(enc, vpp.AD, vpp.FC, vpp.FS, vpp.SG)
+	return vf.unpack(enc, vpp.AD, vpp.BT, vpp.FC, vpp.FS, vpp.SG)
 }

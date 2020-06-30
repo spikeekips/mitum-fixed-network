@@ -7,6 +7,7 @@ import (
 	"github.com/spikeekips/mitum/util/encoder"
 	bsonenc "github.com/spikeekips/mitum/util/encoder/bson"
 	"github.com/spikeekips/mitum/util/hint"
+	"github.com/spikeekips/mitum/util/valuehash"
 )
 
 type Doc interface {
@@ -89,7 +90,7 @@ func loadWithEncoder(b []byte, encs *encoder.Encoders) (bson.Raw /* id */, inter
 }
 
 type HashIDDoc struct {
-	I bson.Raw  `bson:"_id"`
-	E hint.Hint `bson:"_e"`
-	H bson.Raw  `bson:"hash"`
+	I bson.Raw        `bson:"_id"`
+	E hint.Hint       `bson:"_e"`
+	H valuehash.Bytes `bson:"hash"`
 }

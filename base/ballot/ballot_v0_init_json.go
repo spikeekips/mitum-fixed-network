@@ -4,8 +4,8 @@ import (
 	"encoding/json"
 
 	"github.com/spikeekips/mitum/base"
-	"github.com/spikeekips/mitum/base/valuehash"
 	jsonenc "github.com/spikeekips/mitum/util/encoder/json"
+	"github.com/spikeekips/mitum/util/valuehash"
 )
 
 type INITBallotV0PackerJSON struct {
@@ -28,7 +28,7 @@ func (ib INITBallotV0) MarshalJSON() ([]byte, error) {
 
 type INITBallotV0UnpackerJSON struct {
 	BaseBallotV0UnpackerJSON
-	PB json.RawMessage `json:"previous_block"`
+	PB valuehash.Bytes `json:"previous_block"`
 	VR json.RawMessage `json:"voteproof"`
 }
 
@@ -60,7 +60,7 @@ func (ibf INITBallotFactV0) MarshalJSON() ([]byte, error) {
 
 type INITBallotFactV0UnpackerJSON struct {
 	BaseBallotFactV0PackerJSON
-	PB json.RawMessage `json:"previous_block"`
+	PB valuehash.Bytes `json:"previous_block"`
 }
 
 func (ibf *INITBallotFactV0) UnpackJSON(b []byte, enc *jsonenc.Encoder) error {

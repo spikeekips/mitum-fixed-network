@@ -12,7 +12,6 @@ import (
 	"github.com/spikeekips/mitum/base/block"
 	"github.com/spikeekips/mitum/base/key"
 	"github.com/spikeekips/mitum/base/seal"
-	"github.com/spikeekips/mitum/base/valuehash"
 	"github.com/spikeekips/mitum/isaac"
 	"github.com/spikeekips/mitum/network"
 	"github.com/spikeekips/mitum/storage"
@@ -22,6 +21,7 @@ import (
 	jsonenc "github.com/spikeekips/mitum/util/encoder/json"
 	"github.com/spikeekips/mitum/util/hint"
 	"github.com/spikeekips/mitum/util/logging"
+	"github.com/spikeekips/mitum/util/valuehash"
 )
 
 type Launcher struct {

@@ -5,8 +5,8 @@ import (
 
 	"go.mongodb.org/mongo-driver/bson"
 
-	"github.com/spikeekips/mitum/base/valuehash"
 	bsonenc "github.com/spikeekips/mitum/util/encoder/bson"
+	"github.com/spikeekips/mitum/util/valuehash"
 )
 
 func (dv DurationValue) MarshalBSON() ([]byte, error) {
@@ -20,8 +20,8 @@ func (dv DurationValue) MarshalBSON() ([]byte, error) {
 }
 
 type DurationValueUnpackerBSON struct {
-	H bson.Raw `bson:"hash"`
-	V int64    `bson:"value"`
+	H valuehash.Bytes `bson:"hash"`
+	V int64           `bson:"value"`
 }
 
 func (dv *DurationValue) UnpackBSON(b []byte, enc *bsonenc.Encoder) error {
@@ -30,13 +30,7 @@ func (dv *DurationValue) UnpackBSON(b []byte, enc *bsonenc.Encoder) error {
 		return err
 	}
 
-	var err error
-	var h valuehash.Hash
-	if h, err = valuehash.Decode(enc, uv.H); err != nil {
-		return err
-	}
-
-	dv.h = h
+	dv.h = uv.H
 	dv.v = time.Duration(uv.V)
 
 	return nil

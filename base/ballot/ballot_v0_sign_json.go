@@ -1,10 +1,8 @@
 package ballot
 
 import (
-	"encoding/json"
-
-	"github.com/spikeekips/mitum/base/valuehash"
 	jsonenc "github.com/spikeekips/mitum/util/encoder/json"
+	"github.com/spikeekips/mitum/util/valuehash"
 )
 
 type SIGNBallotV0PackerJSON struct {
@@ -28,8 +26,8 @@ func (sb SIGNBallotV0) MarshalJSON() ([]byte, error) {
 
 type SIGNBallotV0UnpackerJSON struct {
 	BaseBallotV0UnpackerJSON
-	PR json.RawMessage `json:"proposal"`
-	NB json.RawMessage `json:"new_block"`
+	PR valuehash.Bytes `json:"proposal"`
+	NB valuehash.Bytes `json:"new_block"`
 }
 
 func (sb *SIGNBallotV0) UnpackJSON(b []byte, enc *jsonenc.Encoder) error {

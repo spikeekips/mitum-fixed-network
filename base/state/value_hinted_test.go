@@ -6,11 +6,11 @@ import (
 	"github.com/stretchr/testify/suite"
 	"go.mongodb.org/mongo-driver/bson"
 
-	"github.com/spikeekips/mitum/base/valuehash"
 	"github.com/spikeekips/mitum/util"
 	bsonenc "github.com/spikeekips/mitum/util/encoder/bson"
 	jsonenc "github.com/spikeekips/mitum/util/encoder/json"
 	"github.com/spikeekips/mitum/util/hint"
+	"github.com/spikeekips/mitum/util/valuehash"
 )
 
 var dummyHintedValueHint = hint.MustHintWithType(hint.Type{0xff, 0x60}, "0.0.1", "dummy-hinted-value")

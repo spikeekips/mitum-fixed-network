@@ -4,8 +4,8 @@ import (
 	"encoding/json"
 
 	"github.com/spikeekips/mitum/base"
-	"github.com/spikeekips/mitum/base/valuehash"
 	jsonenc "github.com/spikeekips/mitum/util/encoder/json"
+	"github.com/spikeekips/mitum/util/valuehash"
 )
 
 type ACCEPTBallotV0PackerJSON struct {
@@ -31,8 +31,8 @@ func (ab ACCEPTBallotV0) MarshalJSON() ([]byte, error) {
 
 type ACCEPTBallotV0UnpackerJSON struct {
 	BaseBallotV0UnpackerJSON
-	PR json.RawMessage `json:"proposal"`
-	NB json.RawMessage `json:"new_block"`
+	PR valuehash.Bytes `json:"proposal"`
+	NB valuehash.Bytes `json:"new_block"`
 	VR json.RawMessage `json:"voteproof"`
 }
 
@@ -66,8 +66,8 @@ func (abf ACCEPTBallotFactV0) MarshalJSON() ([]byte, error) {
 
 type ACCEPTBallotFactV0UnpackerJSON struct {
 	BaseBallotFactV0PackerJSON
-	PR json.RawMessage `json:"proposal"`
-	NB json.RawMessage `json:"new_block"`
+	PR valuehash.Bytes `json:"proposal"`
+	NB valuehash.Bytes `json:"new_block"`
 }
 
 func (abf *ACCEPTBallotFactV0) UnpackJSON(b []byte, enc *jsonenc.Encoder) error {

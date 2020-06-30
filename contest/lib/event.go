@@ -1,7 +1,6 @@
 package contestlib
 
 import (
-	"fmt"
 	"regexp"
 	"strings"
 	"time"
@@ -70,10 +69,6 @@ func (li *Event) Map() map[string]interface{} {
 }
 
 func (li *Event) Raw() (bson.Raw, error) {
-	if li.m["_id"] == nil {
-		fmt.Println("aaaaaaaa", li.m)
-	}
-
 	if b, err := bsonenc.Marshal(li.m); err != nil {
 		return nil, xerrors.Errorf("failed to unmarshal to bson.Raw in NewEventDoc: %w", err)
 	} else {

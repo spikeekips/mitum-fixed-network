@@ -50,17 +50,12 @@ func (bc BlockConsensusInfoV0) isValidVoteproof(
 	sn map[base.Address]base.Node,
 	voteproof base.Voteproof,
 ) error {
-	for address := range voteproof.Ballots() {
-		if _, found := sn[address]; !found {
-			return xerrors.Errorf("unknown node, %s voted in %v voteproof.Ballots()", address, voteproof.Stage())
-		}
-	}
-
-	for address := range voteproof.Votes() {
-		if node, found := sn[address]; !found {
-			return xerrors.Errorf("unknown node, %s voted in init voteproof.Votes()", address)
-		} else if !voteproof.Votes()[address].Signer().Equal(node.Publickey()) {
-			return xerrors.Errorf("node, %s has invalid Publickey in %v voteproof", address, voteproof.Stage())
+	for i := range voteproof.Votes() {
+		nf := voteproof.Votes()[i]
+		if node, found := sn[nf.Node()]; !found {
+			return xerrors.Errorf("unknown node, %s voted in %v voteproof.Votes()", nf.Node(), voteproof.Stage())
+		} else if !nf.Signer().Equal(node.Publickey()) {
+			return xerrors.Errorf("node, %s has invalid Publickey in %v voteproof", nf.Node(), voteproof.Stage())
 		}
 	}
 

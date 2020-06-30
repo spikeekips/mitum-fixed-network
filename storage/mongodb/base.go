@@ -18,12 +18,12 @@ import (
 	"github.com/spikeekips/mitum/base/operation"
 	"github.com/spikeekips/mitum/base/seal"
 	"github.com/spikeekips/mitum/base/state"
-	"github.com/spikeekips/mitum/base/valuehash"
 	"github.com/spikeekips/mitum/storage"
 	"github.com/spikeekips/mitum/util"
 	"github.com/spikeekips/mitum/util/encoder"
 	bsonenc "github.com/spikeekips/mitum/util/encoder/bson"
 	"github.com/spikeekips/mitum/util/logging"
+	"github.com/spikeekips/mitum/util/valuehash"
 )
 
 const (
@@ -530,12 +530,12 @@ func (st *Storage) NewSeals(seals []seal.Seal) error {
 	var models []mongo.WriteModel
 	var operationModels []mongo.WriteModel
 
-	inserted := map[valuehash.Hash]struct{}{}
+	inserted := map[string]struct{}{}
 	for _, sl := range seals {
-		if _, found := inserted[sl.Hash()]; found {
+		if _, found := inserted[sl.Hash().String()]; found {
 			continue
 		} else {
-			inserted[sl.Hash()] = struct{}{}
+			inserted[sl.Hash().String()] = struct{}{}
 		}
 
 		doc, err := NewSealDoc(sl, st.enc)

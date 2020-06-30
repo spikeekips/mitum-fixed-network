@@ -10,17 +10,21 @@ import (
 	"github.com/spikeekips/mitum/util/logging"
 )
 
-var EmptyHashError = errors.NewError("empty hash")
+var (
+	EmptyHashError   = errors.NewError("empty hash")
+	InvalidHashError = errors.NewError("invalid hash")
+)
 
 type Hash interface {
 	// NOTE usually String() value is the base58 encoded of Bytes()
-	fmt.Stringer
 	hint.Hinter
 	isvalid.IsValider
 	util.Byter
+	fmt.Stringer
+	logging.LogHintedMarshaler
 	Size() int
 	Equal(Hash) bool
-	logging.LogHintedMarshaler
+	Empty() bool
 }
 
 type Hasher interface {

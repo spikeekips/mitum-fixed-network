@@ -10,7 +10,7 @@ import (
 	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/base/ballot"
 	"github.com/spikeekips/mitum/base/key"
-	"github.com/spikeekips/mitum/base/valuehash"
+	"github.com/spikeekips/mitum/util/valuehash"
 )
 
 type testBallotbox struct {
@@ -150,7 +150,7 @@ func (t *testBallotbox) TestINITVoteResultNotYet() {
 	vrs := bb.loadVoteRecords(ba, false)
 	t.NotNil(vrs)
 
-	ib, found := vrs.ballots[ba.Node()]
+	ib, found := vrs.ballots[ba.Node().String()]
 	t.True(found)
 
 	iba := ib.(ballot.INITBallotV0)
@@ -316,7 +316,7 @@ func (t *testBallotbox) TestACCEPTVoteResultNotYet() {
 	vrs := bb.loadVoteRecords(ba, false)
 	t.NotNil(vrs)
 
-	ib, found := vrs.ballots[ba.Node()]
+	ib, found := vrs.ballots[ba.Node().String()]
 	t.True(found)
 
 	iba := ib.(ballot.ACCEPTBallotV0)

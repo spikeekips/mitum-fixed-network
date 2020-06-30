@@ -1,9 +1,8 @@
 package ballot
 
 import (
-	"go.mongodb.org/mongo-driver/bson"
-
 	bsonenc "github.com/spikeekips/mitum/util/encoder/bson"
+	"github.com/spikeekips/mitum/util/valuehash"
 )
 
 func (sb SIGNBallotV0) MarshalBSON() ([]byte, error) {
@@ -16,8 +15,8 @@ func (sb SIGNBallotV0) MarshalBSON() ([]byte, error) {
 }
 
 type SIGNBallotV0UnpackerBSON struct {
-	PR bson.Raw `bson:"proposal"`
-	NB bson.Raw `bson:"new_block"`
+	PR valuehash.Bytes `bson:"proposal"`
+	NB valuehash.Bytes `bson:"new_block"`
 }
 
 func (sb *SIGNBallotV0) UnpackBSON(b []byte, enc *bsonenc.Encoder) error {

@@ -5,24 +5,24 @@ import (
 
 	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/base/ballot"
-	"github.com/spikeekips/mitum/base/valuehash"
 	"github.com/spikeekips/mitum/util"
+	"github.com/spikeekips/mitum/util/valuehash"
 )
 
 type VoteRecords struct {
 	sync.RWMutex
-	facts     map[valuehash.Hash]base.Fact
-	votes     map[base.Address]valuehash.Hash // key: node Address, value: fact hash
-	ballots   map[base.Address]ballot.Ballot
+	facts     map[string]base.Fact
+	votes     map[string]valuehash.Hash // key: node Address, value: fact hash
+	ballots   map[string]ballot.Ballot
 	voteproof base.VoteproofV0
 	threshold base.Threshold
 }
 
 func NewVoteRecords(blt ballot.Ballot, suffrages []base.Address, threshold base.Threshold) *VoteRecords {
 	return &VoteRecords{
-		facts:   map[valuehash.Hash]base.Fact{},
-		votes:   map[base.Address]valuehash.Hash{},
-		ballots: map[base.Address]ballot.Ballot{},
+		facts:   map[string]base.Fact{},
+		votes:   map[string]valuehash.Hash{},
+		ballots: map[string]ballot.Ballot{},
 		voteproof: base.NewVoteproofV0(
 			blt.Height(),
 			blt.Round(),
@@ -35,20 +35,28 @@ func NewVoteRecords(blt ballot.Ballot, suffrages []base.Address, threshold base.
 }
 
 func (vrs *VoteRecords) addBallot(blt ballot.Ballot) bool {
-	if _, found := vrs.votes[blt.Node()]; found {
+	if _, found := vrs.votes[blt.Node().String()]; found {
 		return true
 	}
 
-	vrs.ballots[blt.Node()] = blt
+	vrs.ballots[blt.Node().String()] = blt
 
-	factHash := blt.FactHash()
-	vrs.votes[blt.Node()] = factHash
+	factHash := vrs.sanitizeHash(blt.FactHash())
+	vrs.votes[blt.Node().String()] = factHash
 
-	if _, found := vrs.facts[factHash]; !found {
-		vrs.facts[factHash] = blt.Fact()
+	if _, found := vrs.facts[factHash.String()]; !found {
+		vrs.facts[factHash.String()] = blt.Fact()
 	}
 
 	return false
+}
+
+func (vrs *VoteRecords) sanitizeHash(h valuehash.Hash) valuehash.Hash {
+	if _, ok := h.(valuehash.Bytes); ok {
+		return h
+	}
+
+	return valuehash.NewBytes(h.Bytes())
 }
 
 // Vote votes by Ballot and keep track the vote records. If getting result is
@@ -65,30 +73,28 @@ func (vrs *VoteRecords) Vote(blt ballot.Ballot) base.Voteproof {
 	}
 
 	{
-		facts := map[valuehash.Hash]base.Fact{}
-		for k, v := range vrs.facts {
-			facts[k] = v
+		facts := make([]base.Fact, len(vrs.facts))
+		var i int
+		for _, v := range vrs.facts {
+			facts[i] = v
+			i++
 		}
 		vp.SetFacts(facts)
 	}
 
 	{
-		ballots := map[base.Address]valuehash.Hash{}
-		for k, v := range vrs.ballots {
-			ballots[k] = v.Hash()
-		}
-		vp.SetBallots(ballots)
-	}
+		votes := make([]base.VoteproofNodeFact, len(vrs.ballots))
 
-	{
-		votes := map[base.Address]base.VoteproofNodeFact{}
-		for node, blt := range vrs.ballots {
-			votes[node] = base.NewVoteproofNodeFact(
-				node,
-				blt.FactHash(),
+		var i int
+		for _, blt := range vrs.ballots {
+			votes[i] = base.NewVoteproofNodeFact(
+				blt.Node(),
+				vrs.sanitizeHash(blt.Hash()),
+				vrs.sanitizeHash(blt.FactHash()),
 				blt.FactSignature(),
 				blt.Signer(),
 			)
+			i++
 		}
 		vp.SetVotes(votes)
 	}
@@ -117,15 +123,15 @@ func (vrs *VoteRecords) vote(blt ballot.Ballot, voteproof *base.VoteproofV0) boo
 		return false
 	}
 
+	// TODO remember the last set and facts for performance
 	set := make([]string, len(vrs.votes))
 	facts := map[string]base.Fact{}
 
 	var i int
 	for n := range vrs.votes {
-		factHash := vrs.votes[n]
-		key := factHash.String()
+		key := vrs.votes[n].String()
 		set[i] = key
-		facts[key] = vrs.facts[factHash]
+		facts[key] = vrs.facts[key]
 		i++
 	}
 

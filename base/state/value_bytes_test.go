@@ -6,7 +6,7 @@ import (
 	"github.com/stretchr/testify/suite"
 	"golang.org/x/xerrors"
 
-	"github.com/spikeekips/mitum/base/valuehash"
+	"github.com/spikeekips/mitum/util/valuehash"
 )
 
 type testStateBytesValue struct {

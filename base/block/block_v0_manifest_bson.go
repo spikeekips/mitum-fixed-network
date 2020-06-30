@@ -7,6 +7,7 @@ import (
 
 	"github.com/spikeekips/mitum/base"
 	bsonenc "github.com/spikeekips/mitum/util/encoder/bson"
+	"github.com/spikeekips/mitum/util/valuehash"
 )
 
 func (bm ManifestV0) MarshalBSON() ([]byte, error) {
@@ -30,14 +31,14 @@ func (bm ManifestV0) MarshalBSON() ([]byte, error) {
 }
 
 type ManifestV0UnpackBSON struct {
-	H  bson.Raw    `bson:"hash"`
-	HT base.Height `bson:"height"`
-	RD base.Round  `bson:"round"`
-	PR bson.Raw    `bson:"proposal"`
-	PB bson.Raw    `bson:"previous_block"`
-	BO bson.Raw    `bson:"block_operations,omitempty"`
-	BS bson.Raw    `bson:"block_states,omitempty"`
-	CA time.Time   `bson:"created_at"`
+	H  valuehash.Bytes `bson:"hash"`
+	HT base.Height     `bson:"height"`
+	RD base.Round      `bson:"round"`
+	PR valuehash.Bytes `bson:"proposal"`
+	PB valuehash.Bytes `bson:"previous_block"`
+	BO valuehash.Bytes `bson:"block_operations,omitempty"`
+	BS valuehash.Bytes `bson:"block_states,omitempty"`
+	CA time.Time       `bson:"created_at"`
 }
 
 func (bm *ManifestV0) UnpackBSON(b []byte, enc *bsonenc.Encoder) error {

@@ -6,8 +6,8 @@ import (
 	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/base/ballot"
 	"github.com/spikeekips/mitum/base/operation"
-	"github.com/spikeekips/mitum/base/valuehash"
 	"github.com/spikeekips/mitum/storage"
+	"github.com/spikeekips/mitum/util/valuehash"
 )
 
 type ProposalMaker struct {
@@ -21,14 +21,14 @@ func NewProposalMaker(localstate *Localstate) *ProposalMaker {
 }
 
 func (pm *ProposalMaker) operations() ([]valuehash.Hash, []valuehash.Hash, error) {
-	mo := map[ /* Operation.Hash() */ valuehash.Hash]struct{}{}
+	mo := map[ /* Operation.Hash() */ string]struct{}{}
 
 	var operations, seals, uselessSeals []valuehash.Hash
 	if err := pm.localstate.Storage().StagedOperationSeals(
 		func(sl operation.Seal) (bool, error) {
 			var hasOperations bool
 			for _, op := range sl.OperationHashes() {
-				if _, found := mo[op]; found {
+				if _, found := mo[op.String()]; found {
 					continue
 				} else if found, err := pm.localstate.Storage().HasOperation(op); err != nil {
 					return false, err
@@ -37,7 +37,7 @@ func (pm *ProposalMaker) operations() ([]valuehash.Hash, []valuehash.Hash, error
 				}
 
 				operations = append(operations, op)
-				mo[op] = struct{}{}
+				mo[op.String()] = struct{}{}
 				hasOperations = true
 
 				if len(operations) == operation.MaxOperationsInSeal {

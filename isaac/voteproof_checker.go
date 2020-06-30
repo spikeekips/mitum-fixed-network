@@ -70,9 +70,11 @@ func (vc *VoteProofChecker) CheckIsValid() (bool, error) {
 }
 
 func (vc *VoteProofChecker) CheckNodeIsInSuffrage() (bool, error) {
-	for n := range vc.voteproof.Ballots() {
-		if !vc.suffrage.IsInside(n) {
-			vc.Log().Debug().Str("node", n.String()).Msg("voteproof has the vote from unknown node")
+	for i := range vc.voteproof.Votes() {
+		nf := vc.voteproof.Votes()[i]
+		if !vc.suffrage.IsInside(nf.Node()) {
+			vc.Log().Debug().Str("node", nf.Node().String()).Msg("voteproof has the vote from unknown node")
+
 			return false, nil
 		}
 	}

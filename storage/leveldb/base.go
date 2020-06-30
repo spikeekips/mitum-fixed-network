@@ -14,12 +14,12 @@ import (
 	"github.com/spikeekips/mitum/base/operation"
 	"github.com/spikeekips/mitum/base/seal"
 	"github.com/spikeekips/mitum/base/state"
-	"github.com/spikeekips/mitum/base/valuehash"
 	"github.com/spikeekips/mitum/storage"
 	"github.com/spikeekips/mitum/util"
 	"github.com/spikeekips/mitum/util/encoder"
 	"github.com/spikeekips/mitum/util/hint"
 	"github.com/spikeekips/mitum/util/logging"
+	"github.com/spikeekips/mitum/util/valuehash"
 )
 
 var (
@@ -377,16 +377,16 @@ func (st *Storage) sealByKey(key []byte) (seal.Seal, bool, error) {
 func (st *Storage) NewSeals(seals []seal.Seal) error {
 	batch := &leveldb.Batch{}
 
-	inserted := map[valuehash.Hash]struct{}{}
+	inserted := map[string]struct{}{}
 	for _, sl := range seals {
-		if _, found := inserted[sl.Hash()]; found {
+		if _, found := inserted[sl.Hash().String()]; found {
 			continue
 		}
 
 		if err := st.newSeal(batch, sl); err != nil {
 			return err
 		}
-		inserted[sl.Hash()] = struct{}{}
+		inserted[sl.Hash().String()] = struct{}{}
 	}
 
 	return wrapError(st.db.Write(batch, nil))
@@ -448,6 +448,25 @@ func (st *Storage) loadHinter(b []byte) (hint.Hinter, error) {
 	return enc.DecodeByHint(raw)
 }
 
+func (st *Storage) loadValue(b []byte, i interface{}) error {
+	if b == nil {
+		return nil
+	}
+
+	var ht hint.Hint
+	ht, raw, err := loadHint(b)
+	if err != nil {
+		return err
+	}
+
+	enc, err := st.encs.Encoder(ht.Type(), ht.Version())
+	if err != nil {
+		return err
+	}
+
+	return enc.Unmarshal(raw, i)
+}
+
 func (st *Storage) loadBlock(b []byte) (block.Block, error) {
 	if hinter, err := st.loadHinter(b); err != nil {
 		return nil, err
@@ -485,15 +504,14 @@ func (st *Storage) loadSeal(b []byte) (seal.Seal, error) {
 }
 
 func (st *Storage) loadHash(b []byte) (valuehash.Hash, error) {
-	if hinter, err := st.loadHinter(b); err != nil {
+	var h valuehash.Bytes
+	if err := st.loadValue(b, &h); err != nil {
 		return nil, err
-	} else if hinter == nil {
-		return nil, nil
-	} else if i, ok := hinter.(valuehash.Hash); !ok {
-		return nil, xerrors.Errorf("not Seal: %T", hinter)
-	} else {
-		return i, nil
+	} else if h.Empty() {
+		return nil, xerrors.Errorf("empty hash found")
 	}
+
+	return h, nil
 }
 
 func (st *Storage) loadState(b []byte) (state.State, error) {

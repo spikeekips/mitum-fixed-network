@@ -5,8 +5,8 @@ import (
 
 	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/base/key"
-	"github.com/spikeekips/mitum/base/valuehash"
 	"github.com/spikeekips/mitum/util/encoder"
+	"github.com/spikeekips/mitum/util/valuehash"
 )
 
 func (po *PolicyOperationBodyV0) unpack(
@@ -35,8 +35,8 @@ func (po *PolicyOperationBodyV0) unpack(
 
 func (spo *SetPolicyOperationV0) unpack(
 	enc encoder.Encoder,
-	bHash,
-	bFactHash []byte,
+	h,
+	factHash valuehash.Hash,
 	factSignature key.Signature,
 	bSigner,
 	token,
@@ -44,13 +44,6 @@ func (spo *SetPolicyOperationV0) unpack(
 ) error {
 	var err error
 
-	var h, factHash valuehash.Hash
-	if h, err = valuehash.Decode(enc, bHash); err != nil {
-		return err
-	}
-	if factHash, err = valuehash.Decode(enc, bFactHash); err != nil {
-		return err
-	}
 	var signer key.Publickey
 	if signer, err = key.DecodePublickey(enc, bSigner); err != nil {
 		return err

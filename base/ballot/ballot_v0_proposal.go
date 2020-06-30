@@ -5,10 +5,10 @@ import (
 
 	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/base/key"
-	"github.com/spikeekips/mitum/base/valuehash"
 	"github.com/spikeekips/mitum/util"
 	"github.com/spikeekips/mitum/util/hint"
 	"github.com/spikeekips/mitum/util/isvalid"
+	"github.com/spikeekips/mitum/util/valuehash"
 )
 
 var (
@@ -47,24 +47,24 @@ func (prf ProposalFactV0) IsValid(networkID []byte) error {
 
 	// NOTE duplicated operations or seals will not be allowed
 	{
-		mo := map[valuehash.Hash]struct{}{}
+		mo := map[string]struct{}{}
 		for _, h := range prf.operations {
-			if _, found := mo[h]; found {
+			if _, found := mo[h.String()]; found {
 				return xerrors.Errorf("duplicated Operation found in Proposal")
 			}
 
-			mo[h] = struct{}{}
+			mo[h.String()] = struct{}{}
 		}
 	}
 
 	{
-		mo := map[valuehash.Hash]struct{}{}
+		mo := map[string]struct{}{}
 		for _, h := range prf.seals {
-			if _, found := mo[h]; found {
+			if _, found := mo[h.String()]; found {
 				return xerrors.Errorf("duplicated Seal found in Proposal")
 			}
 
-			mo[h] = struct{}{}
+			mo[h.String()] = struct{}{}
 		}
 	}
 

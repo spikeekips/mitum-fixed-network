@@ -14,7 +14,8 @@ fi
 
 echo 'starting to build:' $1
 
-version="v0.0.1-$(git branch -q --show-current)+commit.$(git rev-parse --short HEAD)"
+branch=$(git branch -q --show-current | sed -e 's/_//g')
+version="v0.0.1-${branch}+commit.$(git rev-parse --short HEAD)"
 
 diff=$(git diff -b)
 if [ ! -z "${diff}" ];then

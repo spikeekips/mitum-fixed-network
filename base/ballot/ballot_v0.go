@@ -7,9 +7,9 @@ import (
 
 	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/base/key"
-	"github.com/spikeekips/mitum/base/valuehash"
 	"github.com/spikeekips/mitum/util"
 	"github.com/spikeekips/mitum/util/localtime"
+	"github.com/spikeekips/mitum/util/valuehash"
 )
 
 type BaseBallotFactV0 struct {

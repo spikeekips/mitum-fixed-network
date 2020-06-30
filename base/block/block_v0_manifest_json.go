@@ -1,12 +1,10 @@
 package block
 
 import (
-	"encoding/json"
-
 	"github.com/spikeekips/mitum/base"
-	"github.com/spikeekips/mitum/base/valuehash"
 	jsonenc "github.com/spikeekips/mitum/util/encoder/json"
 	"github.com/spikeekips/mitum/util/localtime"
+	"github.com/spikeekips/mitum/util/valuehash"
 )
 
 type ManifestV0PackJSON struct {
@@ -37,13 +35,13 @@ func (bm ManifestV0) MarshalJSON() ([]byte, error) {
 
 type ManifestV0UnpackJSON struct {
 	jsonenc.HintedHead
-	H  json.RawMessage    `json:"hash"`
+	H  valuehash.Bytes    `json:"hash"`
 	HT base.Height        `json:"height"`
 	RD base.Round         `json:"round"`
-	PR json.RawMessage    `json:"proposal"`
-	PB json.RawMessage    `json:"previous_block"`
-	BO json.RawMessage    `json:"block_operations"`
-	BS json.RawMessage    `json:"block_states"`
+	PR valuehash.Bytes    `json:"proposal"`
+	PB valuehash.Bytes    `json:"previous_block"`
+	BO valuehash.Bytes    `json:"block_operations"`
+	BS valuehash.Bytes    `json:"block_states"`
 	CA localtime.JSONTime `json:"created_at"`
 }
 

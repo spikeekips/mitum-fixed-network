@@ -8,8 +8,8 @@ import (
 	"github.com/spikeekips/mitum/base/block"
 	"github.com/spikeekips/mitum/base/operation"
 	"github.com/spikeekips/mitum/base/seal"
-	"github.com/spikeekips/mitum/base/valuehash"
 	"github.com/spikeekips/mitum/util/logging"
+	"github.com/spikeekips/mitum/util/valuehash"
 )
 
 type GenesisBlockV0Generator struct {
@@ -122,7 +122,7 @@ func (gg *GenesisBlockV0Generator) generatePreviousBlock() error {
 	if sig, err := gg.localstate.Node().Privatekey().Sign(gg.localstate.Policy().NetworkID()); err != nil {
 		return err
 	} else {
-		genesisHash = valuehash.NewDummy(sig)
+		genesisHash = valuehash.NewBytes(sig.Bytes())
 	}
 
 	blk, err := block.NewBlockV0(

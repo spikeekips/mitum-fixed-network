@@ -2,10 +2,10 @@ package state
 
 import (
 	"github.com/spikeekips/mitum/base"
-	"github.com/spikeekips/mitum/base/valuehash"
 	"github.com/spikeekips/mitum/util"
 	"github.com/spikeekips/mitum/util/hint"
 	"github.com/spikeekips/mitum/util/isvalid"
+	"github.com/spikeekips/mitum/util/valuehash"
 )
 
 type OperationInfo interface {

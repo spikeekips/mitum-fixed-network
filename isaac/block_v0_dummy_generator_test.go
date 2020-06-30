@@ -6,7 +6,6 @@ import (
 	"github.com/stretchr/testify/suite"
 
 	"github.com/spikeekips/mitum/base"
-	"github.com/spikeekips/mitum/base/valuehash"
 )
 
 type testBlockV0DummyGenerator struct {
@@ -32,14 +31,14 @@ func (t *testBlockV0DummyGenerator) TestCreate() {
 		suffrage = t.suffrage(all[0], all...)
 	}
 
-	lastHeight := base.Height(10)
+	lastHeight := base.Height(3)
 	bg, err := NewDummyBlocksV0Generator(all[0], lastHeight, suffrage, all)
 	t.NoError(err)
 
 	t.NoError(bg.Generate(true))
 
 	for i := int64(0); i < lastHeight.Int64(); i++ {
-		hashes := map[valuehash.Hash]struct{}{}
+		hashes := map[string]struct{}{}
 		for nodeid, l := range all {
 			blk, found, err := l.Storage().BlockByHeight(base.Height(i))
 			t.True(found)
@@ -48,7 +47,7 @@ func (t *testBlockV0DummyGenerator) TestCreate() {
 			t.NotNil(blk, "node=%d height=%d", nodeid, i)
 			t.NoError(blk.IsValid(all[0].Policy().NetworkID()))
 
-			hashes[blk.Hash()] = struct{}{}
+			hashes[blk.Hash().String()] = struct{}{}
 		}
 
 		t.Equal(1, len(hashes), "check block hashes are matched")

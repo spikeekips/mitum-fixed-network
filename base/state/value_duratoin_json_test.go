@@ -4,9 +4,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/spikeekips/mitum/base/valuehash"
 	"github.com/spikeekips/mitum/util/encoder"
 	jsonenc "github.com/spikeekips/mitum/util/encoder/json"
+	"github.com/spikeekips/mitum/util/valuehash"
 	"github.com/stretchr/testify/suite"
 )
 

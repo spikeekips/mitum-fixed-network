@@ -2,9 +2,10 @@ package state
 
 import (
 	"go.mongodb.org/mongo-driver/bson"
+	"golang.org/x/xerrors"
 
-	"github.com/spikeekips/mitum/base/valuehash"
 	bsonenc "github.com/spikeekips/mitum/util/encoder/bson"
+	"github.com/spikeekips/mitum/util/valuehash"
 )
 
 func (sv StringValue) MarshalBSON() ([]byte, error) {
@@ -18,8 +19,8 @@ func (sv StringValue) MarshalBSON() ([]byte, error) {
 }
 
 type StringValueUnpackerBSON struct {
-	H bson.Raw `bson:"hash"`
-	V string   `bson:"value"`
+	H valuehash.Bytes `bson:"hash"`
+	V string          `bson:"value"`
 }
 
 func (sv *StringValue) UnpackBSON(b []byte, enc *bsonenc.Encoder) error {
@@ -28,13 +29,11 @@ func (sv *StringValue) UnpackBSON(b []byte, enc *bsonenc.Encoder) error {
 		return err
 	}
 
-	var err error
-	var h valuehash.Hash
-	if h, err = valuehash.Decode(enc, uv.H); err != nil {
-		return err
+	if uv.H.Empty() {
+		return xerrors.Errorf("empty previous_block hash found")
 	}
 
-	sv.h = h
+	sv.h = uv.H
 	sv.v = uv.V
 
 	return nil

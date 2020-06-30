@@ -4,8 +4,8 @@ import (
 	"encoding/json"
 
 	"github.com/spikeekips/mitum/base"
-	"github.com/spikeekips/mitum/base/valuehash"
 	jsonenc "github.com/spikeekips/mitum/util/encoder/json"
+	"github.com/spikeekips/mitum/util/valuehash"
 )
 
 type StateV0PackerJSON struct {
@@ -33,12 +33,12 @@ func (st StateV0) MarshalJSON() ([]byte, error) {
 }
 
 type StateV0UnpackerJSON struct {
-	H   json.RawMessage   `json:"hash"`
+	H   valuehash.Bytes   `json:"hash"`
 	K   string            `json:"key"`
 	V   json.RawMessage   `json:"value"`
-	PB  json.RawMessage   `json:"previous_block"`
+	PB  valuehash.Bytes   `json:"previous_block"`
 	HT  base.Height       `json:"height"`
-	CB  json.RawMessage   `json:"current_block"`
+	CB  valuehash.Bytes   `json:"current_block"`
 	OPS []json.RawMessage `json:"operation_infos"`
 }
 
@@ -71,8 +71,8 @@ func (oi OperationInfoV0) MarshalJSON() ([]byte, error) {
 }
 
 type OperationInfoV0UnpackerJSON struct {
-	OH json.RawMessage `json:"operation"`
-	SH json.RawMessage `json:"seal"`
+	OH valuehash.Bytes `json:"operation"`
+	SH valuehash.Bytes `json:"seal"`
 }
 
 func (oi *OperationInfoV0) UnpackJSON(b []byte, enc *jsonenc.Encoder) error {

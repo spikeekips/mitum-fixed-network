@@ -2,29 +2,25 @@ package ballot
 
 import (
 	"github.com/spikeekips/mitum/base"
-	"github.com/spikeekips/mitum/base/valuehash"
 	"github.com/spikeekips/mitum/util/encoder"
+	"github.com/spikeekips/mitum/util/valuehash"
+	"golang.org/x/xerrors"
 )
 
 func (ab *ACCEPTBallotV0) unpack(
 	enc encoder.Encoder,
 	bb BaseBallotV0,
 	bf BaseBallotFactV0,
-	bProposal,
-	bNewBlock,
+	proposal,
+	newBlock valuehash.Hash,
 	bVoteproof []byte,
 ) error {
-	var epr, enb valuehash.Hash
-	if i, err := valuehash.Decode(enc, bProposal); err != nil {
-		return err
-	} else {
-		epr = i
+	if proposal != nil && proposal.Empty() {
+		return xerrors.Errorf("empty proposal hash found")
 	}
 
-	if i, err := valuehash.Decode(enc, bNewBlock); err != nil {
-		return err
-	} else {
-		enb = i
+	if newBlock != nil && newBlock.Empty() {
+		return xerrors.Errorf("empty newBlock hash found")
 	}
 
 	var voteproof base.Voteproof
@@ -39,28 +35,31 @@ func (ab *ACCEPTBallotV0) unpack(
 	ab.BaseBallotV0 = bb
 	ab.ACCEPTBallotFactV0 = ACCEPTBallotFactV0{
 		BaseBallotFactV0: bf,
-		proposal:         epr,
-		newBlock:         enb,
+		proposal:         proposal,
+		newBlock:         newBlock,
 	}
 	ab.voteproof = voteproof
 
 	return nil
 }
 
-func (abf *ACCEPTBallotFactV0) unpack(enc encoder.Encoder, bf BaseBallotFactV0, bProposal, bNewBlock []byte) error {
-	var err error
-
-	var pr, nb valuehash.Hash
-	if pr, err = valuehash.Decode(enc, bProposal); err != nil {
-		return err
+func (abf *ACCEPTBallotFactV0) unpack(
+	_ encoder.Encoder,
+	bf BaseBallotFactV0,
+	proposal,
+	newBlock valuehash.Hash,
+) error {
+	if proposal != nil && proposal.Empty() {
+		return xerrors.Errorf("empty proposal hash found")
 	}
-	if nb, err = valuehash.Decode(enc, bNewBlock); err != nil {
-		return err
+
+	if newBlock != nil && newBlock.Empty() {
+		return xerrors.Errorf("empty newBlock hash found")
 	}
 
 	abf.BaseBallotFactV0 = bf
-	abf.proposal = pr
-	abf.newBlock = nb
+	abf.proposal = proposal
+	abf.newBlock = newBlock
 
 	return nil
 }

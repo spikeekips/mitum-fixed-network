@@ -6,8 +6,8 @@ import (
 
 	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/base/key"
-	"github.com/spikeekips/mitum/base/valuehash"
 	jsonenc "github.com/spikeekips/mitum/util/encoder/json"
+	"github.com/spikeekips/mitum/util/valuehash"
 )
 
 type PolicyOperationBodyV0PackerJSON struct {
@@ -82,8 +82,8 @@ func (spo SetPolicyOperationV0) MarshalJSON() ([]byte, error) {
 }
 
 type SetPolicyOperationV0UnpackerJSON struct {
-	H  json.RawMessage `json:"hash"`
-	FH json.RawMessage `json:"fact_hash"`
+	H  valuehash.Bytes `json:"hash"`
+	FH valuehash.Bytes `json:"fact_hash"`
 	FS key.Signature   `json:"fact_signature"`
 	SN json.RawMessage `json:"signer"`
 	TK []byte          `json:"token"`

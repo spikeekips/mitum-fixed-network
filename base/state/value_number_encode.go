@@ -5,19 +5,12 @@ import (
 
 	"golang.org/x/xerrors"
 
-	"github.com/spikeekips/mitum/base/valuehash"
 	"github.com/spikeekips/mitum/util"
 	"github.com/spikeekips/mitum/util/encoder"
+	"github.com/spikeekips/mitum/util/valuehash"
 )
 
-func (nv *NumberValue) unpack(enc encoder.Encoder, bHash, bValue []byte, t reflect.Kind) error {
-	var h valuehash.Hash
-	if i, err := valuehash.Decode(enc, bHash); err != nil {
-		return err
-	} else {
-		h = i
-	}
-
+func (nv *NumberValue) unpack(_ encoder.Encoder, h valuehash.Hash, bValue []byte, t reflect.Kind) error {
 	var v interface{}
 	switch t {
 	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:

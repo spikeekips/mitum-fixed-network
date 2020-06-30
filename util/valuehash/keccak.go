@@ -1,7 +1,8 @@
 package valuehash
 
 import (
-	"github.com/btcsuite/btcutil/base58"
+	"bytes"
+
 	"golang.org/x/crypto/sha3"
 	"golang.org/x/xerrors"
 
@@ -36,7 +37,7 @@ type SHA512 struct {
 	b [sha512Size]byte
 }
 
-func NewSHA512(b []byte) Hash {
+func NewSHA512(b []byte) SHA512 {
 	return SHA512{b: sha3.Sum512(b)}
 }
 
@@ -52,49 +53,46 @@ func LoadSHA512FromBytes(b []byte) (Hash, error) {
 }
 
 func LoadSHA512FromString(s string) (Hash, error) {
-	return LoadSHA512FromBytes(base58.Decode(s))
+	return LoadSHA512FromBytes(fromString(s))
 }
 
-func (s512 SHA512) String() string {
-	return base58.Encode(s512.Bytes())
+func (hs SHA512) String() string {
+	return toString(hs.b[:])
 }
 
-func (s512 SHA512) Hint() hint.Hint {
+func (hs SHA512) Hint() hint.Hint {
 	return sha512Hint
 }
 
-func (s512 SHA512) IsValid([]byte) error {
-	if emptySHA512 == s512.b || nilSHA512 == s512.b {
+func (hs SHA512) Empty() bool {
+	return emptySHA512 == hs.b || nilSHA512 == hs.b
+}
+
+func (hs SHA512) IsValid([]byte) error {
+	if emptySHA512 == hs.b || nilSHA512 == hs.b {
 		return EmptyHashError
 	}
 
 	return nil
 }
 
-func (s512 SHA512) Size() int {
+func (hs SHA512) Size() int {
 	return sha512Size
 }
 
-func (s512 SHA512) Bytes() []byte {
-	return s512.b[:]
+func (hs SHA512) Bytes() []byte {
+	return hs.b[:]
 }
 
-func (s512 SHA512) Equal(h Hash) bool {
-	if s512.Hint().Type() != h.Hint().Type() {
-		return false
-	}
-	if s512.b != h.(SHA512).b {
-		return false
-	}
-
-	return true
+func (hs SHA512) Equal(h Hash) bool {
+	return bytes.Equal(hs.b[:], h.Bytes())
 }
 
 type SHA256 struct {
 	b [sha256Size]byte
 }
 
-func NewSHA256(b []byte) Hash {
+func NewSHA256(b []byte) SHA256 {
 	return SHA256{b: sha3.Sum256(b)}
 }
 
@@ -110,40 +108,37 @@ func LoadSHA256FromBytes(b []byte) (Hash, error) {
 }
 
 func LoadSHA256FromString(s string) (Hash, error) {
-	return LoadSHA256FromBytes(base58.Decode(s))
+	return LoadSHA256FromBytes(fromString(s))
 }
 
-func (s256 SHA256) String() string {
-	return base58.Encode(s256.Bytes())
+func (hs SHA256) String() string {
+	return toString(hs.b[:])
 }
 
-func (s256 SHA256) Hint() hint.Hint {
+func (hs SHA256) Hint() hint.Hint {
 	return sha256Hint
 }
 
-func (s256 SHA256) IsValid([]byte) error {
-	if emptySHA256 == s256.b || nilSHA256 == s256.b {
+func (hs SHA256) Empty() bool {
+	return emptySHA256 == hs.b || nilSHA256 == hs.b
+}
+
+func (hs SHA256) IsValid([]byte) error {
+	if emptySHA256 == hs.b || nilSHA256 == hs.b {
 		return EmptyHashError
 	}
 
 	return nil
 }
 
-func (s256 SHA256) Size() int {
+func (hs SHA256) Size() int {
 	return sha256Size
 }
 
-func (s256 SHA256) Bytes() []byte {
-	return s256.b[:]
+func (hs SHA256) Bytes() []byte {
+	return hs.b[:]
 }
 
-func (s256 SHA256) Equal(h Hash) bool {
-	if s256.Hint().Type() != h.Hint().Type() {
-		return false
-	}
-	if s256.b != h.(SHA256).b {
-		return false
-	}
-
-	return true
+func (hs SHA256) Equal(h Hash) bool {
+	return bytes.Equal(hs.b[:], h.Bytes())
 }

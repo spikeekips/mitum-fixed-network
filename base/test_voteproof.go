@@ -7,7 +7,6 @@ import (
 
 	"go.mongodb.org/mongo-driver/bson"
 
-	"github.com/spikeekips/mitum/base/valuehash"
 	"github.com/spikeekips/mitum/util"
 	bsonenc "github.com/spikeekips/mitum/util/encoder/bson"
 	jsonenc "github.com/spikeekips/mitum/util/encoder/json"
@@ -24,9 +23,8 @@ func NewTestVoteproofV0(
 	closed bool,
 	stage Stage,
 	majority Fact,
-	facts map[valuehash.Hash]Fact,
-	ballots map[Address]valuehash.Hash,
-	votes map[Address]VoteproofNodeFact,
+	facts []Fact,
+	votes []VoteproofNodeFact,
 	finishedAt time.Time,
 ) VoteproofV0 {
 	return VoteproofV0{
@@ -39,7 +37,6 @@ func NewTestVoteproofV0(
 		stage:          stage,
 		majority:       majority,
 		facts:          facts,
-		ballots:        ballots,
 		votes:          votes,
 		finishedAt:     finishedAt,
 	}
@@ -116,11 +113,11 @@ func (vp DummyVoteproof) Majority() Fact {
 	return nil
 }
 
-func (vp DummyVoteproof) Ballots() map[Address]valuehash.Hash {
+func (vp DummyVoteproof) Facts() []Fact {
 	return nil
 }
 
-func (vp DummyVoteproof) Votes() map[Address]VoteproofNodeFact {
+func (vp DummyVoteproof) Votes() []VoteproofNodeFact {
 	return nil
 }
 

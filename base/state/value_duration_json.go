@@ -1,11 +1,10 @@
 package state
 
 import (
-	"encoding/json"
 	"time"
 
-	"github.com/spikeekips/mitum/base/valuehash"
 	jsonenc "github.com/spikeekips/mitum/util/encoder/json"
+	"github.com/spikeekips/mitum/util/valuehash"
 )
 
 func (dv DurationValue) MarshalJSON() ([]byte, error) {
@@ -22,7 +21,7 @@ func (dv DurationValue) MarshalJSON() ([]byte, error) {
 
 func (dv *DurationValue) UnpackJSON(b []byte, enc *jsonenc.Encoder) error {
 	var uv struct {
-		H json.RawMessage `json:"hash"`
+		H valuehash.Bytes `json:"hash"`
 		V int64           `json:"value"`
 	}
 
@@ -30,13 +29,7 @@ func (dv *DurationValue) UnpackJSON(b []byte, enc *jsonenc.Encoder) error {
 		return err
 	}
 
-	var err error
-	var h valuehash.Hash
-	if h, err = valuehash.Decode(enc, uv.H); err != nil {
-		return err
-	}
-
-	dv.h = h
+	dv.h = uv.H
 	dv.v = time.Duration(uv.V)
 
 	return nil

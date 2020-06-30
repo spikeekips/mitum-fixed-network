@@ -15,12 +15,12 @@ import (
 	"github.com/spikeekips/mitum/base/block"
 	"github.com/spikeekips/mitum/base/key"
 	"github.com/spikeekips/mitum/base/seal"
-	"github.com/spikeekips/mitum/base/valuehash"
 	"github.com/spikeekips/mitum/network"
 	"github.com/spikeekips/mitum/util"
 	"github.com/spikeekips/mitum/util/encoder"
 	jsonenc "github.com/spikeekips/mitum/util/encoder/json"
 	"github.com/spikeekips/mitum/util/localtime"
+	"github.com/spikeekips/mitum/util/valuehash"
 )
 
 type testQuicSever struct {
@@ -113,8 +113,8 @@ func (t *testQuicSever) TestSendSeal() {
 		t.NoError(xerrors.Errorf("failed to receive respond"))
 	case r := <-received:
 		t.Equal(sl.Hint(), r.Hint())
-		t.Equal(sl.Hash(), r.Hash())
-		t.Equal(sl.BodyHash(), r.BodyHash())
+		t.True(sl.Hash().Equal(r.Hash()))
+		t.True(sl.BodyHash().Equal(r.BodyHash()))
 		t.Equal(sl.Signer(), r.Signer())
 		t.Equal(sl.Signature(), r.Signature())
 		t.Equal(localtime.RFC3339(sl.SignedAt()), localtime.RFC3339(r.SignedAt()))
@@ -133,19 +133,20 @@ func (t *testQuicSever) TestGetSeals() {
 	defer qn.Stop()
 
 	var hs []valuehash.Hash
-	seals := map[valuehash.Hash]seal.Seal{}
+	seals := map[string]seal.Seal{}
 	for i := 0; i < 3; i++ {
 		sl := seal.NewDummySeal(key.MustNewBTCPrivatekey())
 
-		seals[sl.Hash()] = sl
+		seals[sl.Hash().String()] = sl
 		hs = append(hs, sl.Hash())
 	}
 
 	qn.SetGetSealsHandler(func(hs []valuehash.Hash) ([]seal.Seal, error) {
 		var sls []seal.Seal
 
-		for _, h := range hs {
-			if sl, found := seals[h]; found {
+		for _, ih := range hs {
+			h := ih.(valuehash.Bytes)
+			if sl, found := seals[h.String()]; found {
 				sls = append(sls, sl)
 			}
 		}
@@ -161,9 +162,9 @@ func (t *testQuicSever) TestGetSeals() {
 		t.NoError(err)
 		t.Equal(len(hs), len(l))
 
-		sm := map[valuehash.Hash]seal.Seal{}
+		sm := map[string]seal.Seal{}
 		for _, s := range l {
-			sm[s.Hash()] = s
+			sm[s.Hash().String()] = s
 		}
 
 		for h, sl := range seals {
@@ -176,13 +177,13 @@ func (t *testQuicSever) TestGetSeals() {
 		t.NoError(err)
 		t.Equal(len(hs[:2]), len(l))
 
-		sm := map[valuehash.Hash]seal.Seal{}
+		sm := map[string]seal.Seal{}
 		for _, s := range l {
-			sm[s.Hash()] = s
+			sm[s.Hash().String()] = s
 		}
 
 		for _, h := range hs[:2] {
-			t.True(seals[h].Hash().Equal(sm[h].Hash()))
+			t.True(seals[h.String()].Hash().Equal(sm[h.String()].Hash()))
 		}
 	}
 
@@ -194,13 +195,13 @@ func (t *testQuicSever) TestGetSeals() {
 		t.NoError(err)
 		t.Equal(len(hs[:2]), len(l))
 
-		sm := map[valuehash.Hash]seal.Seal{}
+		sm := map[string]seal.Seal{}
 		for _, s := range l {
-			sm[s.Hash()] = s
+			sm[s.Hash().String()] = s
 		}
 
 		for _, h := range hs[:2] {
-			t.True(seals[h].Hash().Equal(sm[h].Hash()))
+			t.True(seals[h.String()].Hash().Equal(sm[h.String()].Hash()))
 		}
 	}
 }

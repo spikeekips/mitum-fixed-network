@@ -2,22 +2,20 @@ package ballot
 
 import (
 	"github.com/spikeekips/mitum/base"
-	"github.com/spikeekips/mitum/base/valuehash"
 	"github.com/spikeekips/mitum/util/encoder"
+	"github.com/spikeekips/mitum/util/valuehash"
+	"golang.org/x/xerrors"
 )
 
 func (ib *INITBallotV0) unpack(
 	enc encoder.Encoder,
 	bb BaseBallotV0,
 	bf BaseBallotFactV0,
-	bPreviousBlock []byte,
+	previousBlock valuehash.Hash,
 	bVoteproof []byte,
 ) error {
-	var epb valuehash.Hash
-	if i, err := valuehash.Decode(enc, bPreviousBlock); err != nil {
-		return err
-	} else {
-		epb = i
+	if previousBlock != nil && previousBlock.Empty() {
+		return xerrors.Errorf("empty previous_block hash found")
 	}
 
 	var voteproof base.Voteproof
@@ -32,7 +30,7 @@ func (ib *INITBallotV0) unpack(
 	ib.BaseBallotV0 = bb
 	ib.INITBallotFactV0 = INITBallotFactV0{
 		BaseBallotFactV0: bf,
-		previousBlock:    epb,
+		previousBlock:    previousBlock,
 	}
 	ib.voteproof = voteproof
 
@@ -40,19 +38,16 @@ func (ib *INITBallotV0) unpack(
 }
 
 func (ibf *INITBallotFactV0) unpack(
-	enc encoder.Encoder,
+	_ encoder.Encoder,
 	bf BaseBallotFactV0,
-	bPreviousBlock []byte,
+	previousBlock valuehash.Hash,
 ) error {
-	var err error
-
-	var pb valuehash.Hash
-	if pb, err = valuehash.Decode(enc, bPreviousBlock); err != nil {
-		return err
+	if previousBlock != nil && previousBlock.Empty() {
+		return xerrors.Errorf("empty previous_block hash found")
 	}
 
 	ibf.BaseBallotFactV0 = bf
-	ibf.previousBlock = pb
+	ibf.previousBlock = previousBlock
 
 	return nil
 }

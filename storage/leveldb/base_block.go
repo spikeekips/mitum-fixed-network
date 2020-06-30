@@ -8,7 +8,7 @@ import (
 	"github.com/spikeekips/mitum/base/operation"
 	"github.com/spikeekips/mitum/base/state"
 	"github.com/spikeekips/mitum/base/tree"
-	"github.com/spikeekips/mitum/base/valuehash"
+	"github.com/spikeekips/mitum/util/valuehash"
 )
 
 type BlockStorage struct {

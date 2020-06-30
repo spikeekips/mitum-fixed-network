@@ -7,6 +7,7 @@ import (
 
 	"github.com/spikeekips/mitum/base/key"
 	bsonenc "github.com/spikeekips/mitum/util/encoder/bson"
+	"github.com/spikeekips/mitum/util/valuehash"
 )
 
 func (sl Seal) MarshalBSON() ([]byte, error) {
@@ -24,12 +25,12 @@ func (sl Seal) MarshalBSON() ([]byte, error) {
 }
 
 type SealBSONUnpack struct {
-	H   bson.Raw      `bson:"hash"`
-	BH  bson.Raw      `bson:"body_hash"`
-	SN  bson.Raw      `bson:"signer"`
-	SG  key.Signature `bson:"signature"`
-	SA  time.Time     `bson:"signed_at"`
-	OPS []bson.Raw    `bson:"operations"`
+	H   valuehash.Bytes `bson:"hash"`
+	BH  valuehash.Bytes `bson:"body_hash"`
+	SN  bson.Raw        `bson:"signer"`
+	SG  key.Signature   `bson:"signature"`
+	SA  time.Time       `bson:"signed_at"`
+	OPS []bson.Raw      `bson:"operations"`
 }
 
 func (sl *Seal) UnpackBSON(b []byte, enc *bsonenc.Encoder) error {

@@ -5,6 +5,7 @@ import (
 
 	"github.com/spikeekips/mitum/base"
 	bsonenc "github.com/spikeekips/mitum/util/encoder/bson"
+	"github.com/spikeekips/mitum/util/valuehash"
 )
 
 func (st StateV0) MarshalBSON() ([]byte, error) {
@@ -23,13 +24,13 @@ func (st StateV0) MarshalBSON() ([]byte, error) {
 }
 
 type StateV0UnpackerBSON struct {
-	H   bson.Raw    `bson:"hash"`
-	K   string      `bson:"key"`
-	V   bson.Raw    `bson:"value"`
-	PB  bson.Raw    `bson:"previous_block"`
-	HT  base.Height `bson:"height"`
-	CB  bson.Raw    `bson:"current_block"`
-	OPS []bson.Raw  `bson:"operation_infos"`
+	H   valuehash.Bytes `bson:"hash"`
+	K   string          `bson:"key"`
+	V   bson.Raw        `bson:"value"`
+	PB  valuehash.Bytes `bson:"previous_block"`
+	HT  base.Height     `bson:"height"`
+	CB  valuehash.Bytes `bson:"current_block"`
+	OPS []bson.Raw      `bson:"operation_infos"`
 }
 
 func (st *StateV0) UnpackBSON(b []byte, enc *bsonenc.Encoder) error {
@@ -57,8 +58,8 @@ func (oi OperationInfoV0) MarshalBSON() ([]byte, error) {
 }
 
 type OperationInfoV0UnpackerBSON struct {
-	OH bson.Raw `bson:"operation"`
-	SH bson.Raw `bson:"seal"`
+	OH valuehash.Bytes `bson:"operation"`
+	SH valuehash.Bytes `bson:"seal"`
 }
 
 func (oi *OperationInfoV0) UnpackBSON(b []byte, enc *bsonenc.Encoder) error {

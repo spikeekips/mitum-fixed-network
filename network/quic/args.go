@@ -2,7 +2,7 @@ package quicnetwork
 
 import (
 	"github.com/spikeekips/mitum/base"
-	"github.com/spikeekips/mitum/base/valuehash"
+	"github.com/spikeekips/mitum/util/valuehash"
 )
 
 type HeightsArgs struct {

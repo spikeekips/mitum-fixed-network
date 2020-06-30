@@ -16,11 +16,11 @@ import (
 	"github.com/spikeekips/mitum/base/operation"
 	"github.com/spikeekips/mitum/base/state"
 	"github.com/spikeekips/mitum/base/tree"
-	"github.com/spikeekips/mitum/base/valuehash"
 	"github.com/spikeekips/mitum/storage"
 	"github.com/spikeekips/mitum/util"
 	"github.com/spikeekips/mitum/util/encoder"
 	"github.com/spikeekips/mitum/util/localtime"
+	"github.com/spikeekips/mitum/util/valuehash"
 )
 
 type baseTestStateHandler struct {
@@ -37,7 +37,7 @@ func (t *baseTestStateHandler) SetupSuite() {
 	_ = t.Encs.AddHinter(key.BTCPrivatekey{})
 	_ = t.Encs.AddHinter(key.BTCPublickey{})
 	_ = t.Encs.AddHinter(valuehash.SHA256{})
-	_ = t.Encs.AddHinter(valuehash.Dummy{})
+	_ = t.Encs.AddHinter(valuehash.Bytes{})
 	_ = t.Encs.AddHinter(base.NewShortAddress(""))
 	_ = t.Encs.AddHinter(ballot.INITBallotV0{})
 	_ = t.Encs.AddHinter(ballot.INITBallotFactV0{})
@@ -136,8 +136,7 @@ func (t *baseTestStateHandler) newVoteproof(
 ) (base.VoteproofV0, error) {
 	factHash := fact.Hash()
 
-	ballots := map[base.Address]valuehash.Hash{}
-	votes := map[base.Address]base.VoteproofNodeFact{}
+	var votes []base.VoteproofNodeFact
 
 	for _, state := range states {
 		factSignature, err := state.Node().Privatekey().Sign(
@@ -150,13 +149,13 @@ func (t *baseTestStateHandler) newVoteproof(
 			return base.VoteproofV0{}, err
 		}
 
-		ballots[state.Node().Address()] = valuehash.RandomSHA256()
-		votes[state.Node().Address()] = base.NewVoteproofNodeFact(
+		votes = append(votes, base.NewVoteproofNodeFact(
 			state.Node().Address(),
+			valuehash.RandomSHA256(),
 			factHash,
 			factSignature,
 			state.Node().Publickey(),
-		)
+		))
 	}
 
 	var height base.Height
@@ -179,10 +178,7 @@ func (t *baseTestStateHandler) newVoteproof(
 		false,
 		stage,
 		fact,
-		map[valuehash.Hash]base.Fact{
-			factHash: fact,
-		},
-		ballots,
+		[]base.Fact{fact},
 		votes,
 		localtime.Now(),
 	)
@@ -328,9 +324,35 @@ func (t *baseTestStateHandler) compareVoteproof(a, b base.Voteproof) {
 	t.Equal(a.Round(), b.Round())
 	t.Equal(a.Stage(), b.Stage())
 	t.Equal(a.Result(), b.Result())
-	t.Equal(a.Majority(), b.Majority())
-	t.Equal(a.Ballots(), b.Ballots())
+	t.True(a.Majority().Hash().Equal(b.Majority().Hash()))
 	t.Equal(a.ThresholdRatio(), b.ThresholdRatio())
+
+	for _, aFact := range a.Facts() {
+		var bFact base.Fact
+		for _, f := range b.Facts() {
+			if aFact.Hash().Equal(f.Hash()) {
+				bFact = f
+				break
+			}
+		}
+
+		t.NotNil(bFact)
+		t.True(aFact.Hash().Equal(bFact.Hash()))
+	}
+
+	for i := range a.Votes() {
+		aFact := a.Votes()[i]
+
+		var bFact base.VoteproofNodeFact
+		for j := range b.Votes() {
+			if aFact.Node().Equal(b.Votes()[j].Node()) {
+				bFact = b.Votes()[j]
+				break
+			}
+		}
+
+		t.True(aFact.Fact().Equal(bFact.Fact()))
+	}
 }
 
 func (t *baseTestStateHandler) compareAVLTree(a, b *tree.AVLTree) {

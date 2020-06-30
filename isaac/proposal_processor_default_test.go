@@ -8,8 +8,8 @@ import (
 	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/base/ballot"
 	"github.com/spikeekips/mitum/base/seal"
-	"github.com/spikeekips/mitum/base/valuehash"
 	channetwork "github.com/spikeekips/mitum/network/gochan"
+	"github.com/spikeekips/mitum/util/valuehash"
 )
 
 type testProposalProcessor struct {

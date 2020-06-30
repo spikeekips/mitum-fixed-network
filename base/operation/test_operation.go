@@ -10,11 +10,11 @@ import (
 
 	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/base/key"
-	"github.com/spikeekips/mitum/base/valuehash"
 	"github.com/spikeekips/mitum/util"
 	bsonenc "github.com/spikeekips/mitum/util/encoder/bson"
 	jsonenc "github.com/spikeekips/mitum/util/encoder/json"
 	"github.com/spikeekips/mitum/util/hint"
+	"github.com/spikeekips/mitum/util/valuehash"
 )
 
 var (
@@ -251,13 +251,13 @@ func (kvo KVOperation) MarshalBSON() ([]byte, error) {
 
 func (kvo *KVOperation) UnpackBSON(b []byte, enc *bsonenc.Encoder) error {
 	var ukvo struct {
-		SG bson.Raw      `bson:"signer"`
-		TK []byte        `bson:"token"`
-		K  string        `bson:"key"`
-		V  []byte        `bson:"value"`
-		H  bson.Raw      `bson:"hash"`
-		FH bson.Raw      `bson:"fact_hash"`
-		FS key.Signature `bson:"fact_signature"`
+		SG bson.Raw        `bson:"signer"`
+		TK []byte          `bson:"token"`
+		K  string          `bson:"key"`
+		V  []byte          `bson:"value"`
+		H  valuehash.Bytes `bson:"hash"`
+		FH valuehash.Bytes `bson:"fact_hash"`
+		FS key.Signature   `bson:"fact_signature"`
 	}
 
 	if err := enc.Unmarshal(b, &ukvo); err != nil {
@@ -271,14 +271,6 @@ func (kvo *KVOperation) UnpackBSON(b []byte, enc *bsonenc.Encoder) error {
 		return err
 	}
 
-	var h, factHash valuehash.Hash
-	if h, err = valuehash.Decode(enc, ukvo.H); err != nil {
-		return err
-	}
-	if factHash, err = valuehash.Decode(enc, ukvo.FH); err != nil {
-		return err
-	}
-
 	kvo.KVOperationFact = KVOperationFact{
 		signer: signer,
 		token:  ukvo.TK,
@@ -286,8 +278,8 @@ func (kvo *KVOperation) UnpackBSON(b []byte, enc *bsonenc.Encoder) error {
 		Value:  ukvo.V,
 	}
 
-	kvo.h = h
-	kvo.factHash = factHash
+	kvo.h = ukvo.H
+	kvo.factHash = ukvo.FH
 	kvo.factSignature = ukvo.FS
 
 	return nil

@@ -4,6 +4,7 @@ import (
 	"go.mongodb.org/mongo-driver/bson"
 
 	bsonenc "github.com/spikeekips/mitum/util/encoder/bson"
+	"github.com/spikeekips/mitum/util/valuehash"
 )
 
 func (sv SliceValue) MarshalBSON() ([]byte, error) {
@@ -18,8 +19,8 @@ func (sv SliceValue) MarshalBSON() ([]byte, error) {
 
 func (sv *SliceValue) UnpackBSON(b []byte, enc *bsonenc.Encoder) error {
 	var uv struct {
-		H bson.Raw   `bson:"hash"`
-		V []bson.Raw `bson:"value"`
+		H valuehash.Bytes `bson:"hash"`
+		V []bson.Raw      `bson:"value"`
 	}
 
 	if err := enc.Unmarshal(b, &uv); err != nil {

@@ -5,23 +5,23 @@ import (
 
 	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/base/key"
-	"github.com/spikeekips/mitum/base/valuehash"
 	"github.com/spikeekips/mitum/util/encoder"
 	bsonenc "github.com/spikeekips/mitum/util/encoder/bson"
 	jsonenc "github.com/spikeekips/mitum/util/encoder/json"
+	"github.com/spikeekips/mitum/util/valuehash"
 )
 
 func (bb BaseBallotV0) unpack(
 	enc encoder.Encoder,
-	bHash,
+	h valuehash.Hash,
 	bSigner []byte,
 	signature key.Signature,
 	signedAt time.Time,
 	height base.Height,
 	round base.Round,
-	bNode,
-	bBodyHash,
-	bFactHash []byte,
+	bNode []byte,
+	bodyHash,
+	factHash valuehash.Hash,
 	factSignature key.Signature,
 ) (BaseBallotV0, BaseBallotFactV0, error) {
 	var err error
@@ -32,32 +32,19 @@ func (bb BaseBallotV0) unpack(
 		return BaseBallotV0{}, BaseBallotFactV0{}, err
 	}
 
-	var eh, ebh, efh valuehash.Hash
-	if eh, err = valuehash.Decode(enc, bHash); err != nil {
-		return BaseBallotV0{}, BaseBallotFactV0{}, err
-	}
-
-	if ebh, err = valuehash.Decode(enc, bBodyHash); err != nil {
-		return BaseBallotV0{}, BaseBallotFactV0{}, err
-	}
-
-	if efh, err = valuehash.Decode(enc, bFactHash); err != nil {
-		return BaseBallotV0{}, BaseBallotFactV0{}, err
-	}
-
 	var node base.Address
 	if node, err = base.DecodeAddress(enc, bNode); err != nil {
 		return BaseBallotV0{}, BaseBallotFactV0{}, err
 	}
 
 	return BaseBallotV0{
-			h:             eh,
-			bodyHash:      ebh,
+			h:             h,
+			bodyHash:      bodyHash,
 			signer:        signer,
 			signature:     signature,
 			signedAt:      signedAt,
 			node:          node,
-			factHash:      efh,
+			factHash:      factHash,
 			factSignature: factSignature,
 		},
 		BaseBallotFactV0{

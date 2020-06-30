@@ -9,6 +9,7 @@ import (
 	"github.com/spikeekips/mitum/base/key"
 	bsonenc "github.com/spikeekips/mitum/util/encoder/bson"
 	"github.com/spikeekips/mitum/util/hint"
+	"github.com/spikeekips/mitum/util/valuehash"
 )
 
 func PackBaseBallotV0BSON(ballot Ballot) bson.M {
@@ -30,16 +31,16 @@ func PackBaseBallotV0BSON(ballot Ballot) bson.M {
 }
 
 type BaseBallotV0UnpackerBSON struct {
-	H   bson.Raw      `bson:"hash"`
-	SN  bson.Raw      `bson:"signer"`
-	SG  key.Signature `bson:"signature"`
-	SA  time.Time     `bson:"signed_at"`
-	HT  base.Height   `bson:"height"`
-	RD  base.Round    `bson:"round"`
-	N   bson.Raw      `bson:"node"`
-	BH  bson.Raw      `bson:"body_hash"`
-	FH  bson.Raw      `bson:"fact_hash"`
-	FSG key.Signature `bson:"fact_signature"`
+	H   valuehash.Bytes `bson:"hash"`
+	SN  bson.Raw        `bson:"signer"`
+	SG  key.Signature   `bson:"signature"`
+	SA  time.Time       `bson:"signed_at"`
+	HT  base.Height     `bson:"height"`
+	RD  base.Round      `bson:"round"`
+	N   bson.Raw        `bson:"node"`
+	BH  valuehash.Bytes `bson:"body_hash"`
+	FH  valuehash.Bytes `bson:"fact_hash"`
+	FSG key.Signature   `bson:"fact_signature"`
 }
 
 func NewBaseBallotFactV0PackerBSON(bbf BaseBallotFactV0, ht hint.Hint) bson.M {

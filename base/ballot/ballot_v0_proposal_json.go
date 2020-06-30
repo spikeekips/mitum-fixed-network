@@ -1,10 +1,8 @@
 package ballot
 
 import (
-	"encoding/json"
-
-	"github.com/spikeekips/mitum/base/valuehash"
 	jsonenc "github.com/spikeekips/mitum/util/encoder/json"
+	"github.com/spikeekips/mitum/util/valuehash"
 )
 
 type ProposalV0PackerJSON struct {
@@ -28,8 +26,8 @@ func (pr ProposalV0) MarshalJSON() ([]byte, error) {
 
 type ProposalV0UnpackerJSON struct {
 	BaseBallotV0UnpackerJSON
-	OP []json.RawMessage `json:"operations"`
-	SL []json.RawMessage `json:"seals"`
+	OP []valuehash.Bytes `json:"operations"`
+	SL []valuehash.Bytes `json:"seals"`
 }
 
 func (pr *ProposalV0) UnpackJSON(b []byte, enc *jsonenc.Encoder) error {
@@ -43,14 +41,14 @@ func (pr *ProposalV0) UnpackJSON(b []byte, enc *jsonenc.Encoder) error {
 		return err
 	}
 
-	ops := make([][]byte, len(npb.OP))
-	for i, r := range npb.OP {
-		ops[i] = r
+	ops := make([]valuehash.Hash, len(npb.OP))
+	for i := range npb.OP {
+		ops[i] = npb.OP[i]
 	}
 
-	seals := make([][]byte, len(npb.SL))
-	for i, r := range npb.SL {
-		seals[i] = r
+	seals := make([]valuehash.Hash, len(npb.SL))
+	for i := range npb.SL {
+		seals[i] = npb.SL[i]
 	}
 
 	return pr.unpack(enc, bb, bf, ops, seals)

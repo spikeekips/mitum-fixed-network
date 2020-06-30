@@ -1,19 +1,12 @@
 package state
 
 import (
-	"github.com/spikeekips/mitum/base/valuehash"
 	"github.com/spikeekips/mitum/util/encoder"
 	"github.com/spikeekips/mitum/util/hint"
+	"github.com/spikeekips/mitum/util/valuehash"
 )
 
-func (sv *SliceValue) unpack(enc encoder.Encoder, bHash []byte, bValue [][]byte) error {
-	var h valuehash.Hash
-	if i, err := valuehash.Decode(enc, bHash); err != nil {
-		return err
-	} else {
-		h = i
-	}
-
+func (sv *SliceValue) unpack(enc encoder.Encoder, h valuehash.Hash, bValue [][]byte) error {
 	v := make([]hint.Hinter, len(bValue))
 	for i, r := range bValue {
 		decoded, err := enc.DecodeByHint(r)

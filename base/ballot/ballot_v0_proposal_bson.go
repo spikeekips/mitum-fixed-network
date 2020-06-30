@@ -1,9 +1,8 @@
 package ballot
 
 import (
-	"go.mongodb.org/mongo-driver/bson"
-
 	bsonenc "github.com/spikeekips/mitum/util/encoder/bson"
+	"github.com/spikeekips/mitum/util/valuehash"
 )
 
 func (pr ProposalV0) MarshalBSON() ([]byte, error) {
@@ -16,8 +15,8 @@ func (pr ProposalV0) MarshalBSON() ([]byte, error) {
 }
 
 type ProposalV0UnpackerBSON struct {
-	OP []bson.Raw `bson:"operations"`
-	SL []bson.Raw `bson:"seals"`
+	OP []valuehash.Bytes `bson:"operations"`
+	SL []valuehash.Bytes `bson:"seals"`
 }
 
 func (pr *ProposalV0) UnpackBSON(b []byte, enc *bsonenc.Encoder) error {
@@ -31,14 +30,14 @@ func (pr *ProposalV0) UnpackBSON(b []byte, enc *bsonenc.Encoder) error {
 		return err
 	}
 
-	ops := make([][]byte, len(npb.OP))
-	for i, r := range npb.OP {
-		ops[i] = r
+	ops := make([]valuehash.Hash, len(npb.OP))
+	for i := range npb.OP {
+		ops[i] = npb.OP[i]
 	}
 
-	seals := make([][]byte, len(npb.SL))
-	for i, r := range npb.SL {
-		seals[i] = r
+	seals := make([]valuehash.Hash, len(npb.SL))
+	for i := range npb.SL {
+		seals[i] = npb.SL[i]
 	}
 
 	return pr.unpack(enc, bb, bf, ops, seals)

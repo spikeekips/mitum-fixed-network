@@ -6,6 +6,7 @@ import (
 	"go.mongodb.org/mongo-driver/bson"
 
 	bsonenc "github.com/spikeekips/mitum/util/encoder/bson"
+	"github.com/spikeekips/mitum/util/valuehash"
 )
 
 func (nv NumberValue) MarshalBSON() ([]byte, error) {
@@ -20,9 +21,9 @@ func (nv NumberValue) MarshalBSON() ([]byte, error) {
 }
 
 type NumberValueBSONUnpacker struct {
-	H bson.Raw     `bson:"hash"`
-	V []byte       `bson:"value"`
-	T reflect.Kind `bson:"type"`
+	H valuehash.Bytes `bson:"hash"`
+	V []byte          `bson:"value"`
+	T reflect.Kind    `bson:"type"`
 }
 
 func (nv *NumberValue) UnpackBSON(b []byte, enc *bsonenc.Encoder) error {

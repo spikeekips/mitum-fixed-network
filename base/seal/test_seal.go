@@ -6,20 +6,20 @@ import (
 	"go.mongodb.org/mongo-driver/bson"
 
 	"github.com/spikeekips/mitum/base/key"
-	"github.com/spikeekips/mitum/base/valuehash"
 	"github.com/spikeekips/mitum/util"
 	bsonenc "github.com/spikeekips/mitum/util/encoder/bson"
 	jsonenc "github.com/spikeekips/mitum/util/encoder/json"
 	"github.com/spikeekips/mitum/util/hint"
 	"github.com/spikeekips/mitum/util/localtime"
+	"github.com/spikeekips/mitum/util/valuehash"
 )
 
 var dummySealHint = hint.MustHintWithType(hint.Type{0xff, 0x35}, "0.1", "dummy-seal")
 
 type DummySeal struct {
 	PK        key.BTCPrivatekey
-	H         valuehash.SHA256
-	BH        valuehash.SHA256
+	H         valuehash.Hash
+	BH        valuehash.Hash
 	S         string
 	CreatedAt time.Time
 }
@@ -73,8 +73,17 @@ func (ds DummySeal) SignedAt() time.Time {
 type DummySealJSONPacker struct {
 	jsonenc.HintedHead
 	PK        key.BTCPrivatekey
-	H         valuehash.SHA256
-	BH        valuehash.SHA256
+	H         valuehash.Hash
+	BH        valuehash.Hash
+	S         string
+	CreatedAt localtime.JSONTime
+}
+
+type DummySealJSONUnpacker struct {
+	jsonenc.HintedHead
+	PK        key.BTCPrivatekey
+	H         valuehash.Bytes
+	BH        valuehash.Bytes
 	S         string
 	CreatedAt localtime.JSONTime
 }
@@ -91,7 +100,7 @@ func (ds DummySeal) MarshalJSON() ([]byte, error) {
 }
 
 func (ds *DummySeal) UnmarshalJSON(b []byte) error {
-	var uds DummySealJSONPacker
+	var uds DummySealJSONUnpacker
 	if err := jsonenc.Unmarshal(b, &uds); err != nil {
 		return err
 	}
@@ -118,16 +127,16 @@ func (ds DummySeal) MarshalBSON() ([]byte, error) {
 	))
 }
 
-type DummySealBSONPacker struct {
+type DummySealBSONUnpacker struct {
 	PK        key.BTCPrivatekey
-	H         valuehash.SHA256
-	BH        valuehash.SHA256
+	H         valuehash.Bytes
+	BH        valuehash.Bytes
 	S         string
 	CreatedAt time.Time
 }
 
 func (ds *DummySeal) UnmarshalBSON(b []byte) error {
-	var uds DummySealBSONPacker
+	var uds DummySealBSONUnpacker
 	if err := bsonenc.Unmarshal(b, &uds); err != nil {
 		return err
 	}

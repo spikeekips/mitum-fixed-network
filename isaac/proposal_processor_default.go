@@ -14,9 +14,9 @@ import (
 	"github.com/spikeekips/mitum/base/operation"
 	"github.com/spikeekips/mitum/base/state"
 	"github.com/spikeekips/mitum/base/tree"
-	"github.com/spikeekips/mitum/base/valuehash"
 	"github.com/spikeekips/mitum/storage"
 	"github.com/spikeekips/mitum/util/logging"
+	"github.com/spikeekips/mitum/util/valuehash"
 )
 
 type DefaultProposalProcessor struct {
@@ -42,13 +42,13 @@ func (dp *DefaultProposalProcessor) Initialize() error {
 }
 
 func (dp *DefaultProposalProcessor) IsProcessed(ph valuehash.Hash) bool {
-	_, found := dp.processors.Load(ph)
+	_, found := dp.processors.Load(ph.String())
 
 	return found
 }
 
 func (dp *DefaultProposalProcessor) ProcessINIT(ph valuehash.Hash, initVoteproof base.Voteproof) (block.Block, error) {
-	if i, found := dp.processors.Load(ph); found {
+	if i, found := dp.processors.Load(ph.String()); found {
 		processor := i.(*internalDefaultProposalProcessor)
 
 		return processor.block, nil
@@ -77,7 +77,7 @@ func (dp *DefaultProposalProcessor) ProcessINIT(ph valuehash.Hash, initVoteproof
 		return nil, err
 	}
 
-	dp.processors.Store(ph, processor)
+	dp.processors.Store(ph.String(), processor)
 
 	return blk, nil
 }
@@ -90,7 +90,7 @@ func (dp *DefaultProposalProcessor) ProcessACCEPT(
 	}
 
 	var processor *internalDefaultProposalProcessor
-	if i, found := dp.processors.Load(ph); !found {
+	if i, found := dp.processors.Load(ph.String()); !found {
 		return nil, xerrors.Errorf("not processed ProcessINIT")
 	} else {
 		processor = i.(*internalDefaultProposalProcessor)
@@ -100,7 +100,7 @@ func (dp *DefaultProposalProcessor) ProcessACCEPT(
 		return nil, err
 	}
 
-	defer dp.processors.Delete(ph)
+	defer dp.processors.Delete(ph.String())
 
 	return processor.bs, nil
 }
@@ -137,7 +137,7 @@ type internalDefaultProposalProcessor struct {
 	lastManifest       block.Manifest
 	block              block.BlockUpdater
 	proposal           ballot.Proposal
-	proposedOperations map[valuehash.Hash]struct{}
+	proposedOperations map[string]struct{}
 	operations         []state.OperationInfoV0
 	bs                 storage.BlockStorage
 	si                 block.SuffrageInfoV0
@@ -158,9 +158,9 @@ func newInternalDefaultProposalProcessor(
 		lastManifest = m
 	}
 
-	proposedOperations := map[valuehash.Hash]struct{}{}
+	proposedOperations := map[string]struct{}{}
 	for _, h := range proposal.Operations() {
-		proposedOperations[h] = struct{}{}
+		proposedOperations[h.String()] = struct{}{}
 	}
 
 	var si block.SuffrageInfoV0
@@ -284,7 +284,7 @@ func (pp *internalDefaultProposalProcessor) process(initVoteproof base.Voteproof
 func (pp *internalDefaultProposalProcessor) extractOperations() ([]state.OperationInfoV0, error) {
 	// NOTE the order of operation should be kept by the order of
 	// Proposal.Seals()
-	founds := map[valuehash.Hash]state.OperationInfoV0{}
+	founds := map[string]state.OperationInfoV0{}
 
 	var notFounds []valuehash.Hash
 	for _, h := range pp.proposal.Seals() {
@@ -306,7 +306,7 @@ func (pp *internalDefaultProposalProcessor) extractOperations() ([]state.Operati
 			}
 
 			op := ops[i]
-			founds[op.Operation()] = op
+			founds[op.Operation().String()] = op
 		}
 	}
 
@@ -318,13 +318,13 @@ func (pp *internalDefaultProposalProcessor) extractOperations() ([]state.Operati
 
 		for i := range ops {
 			op := ops[i]
-			founds[op.Operation()] = op
+			founds[op.Operation().String()] = op
 		}
 	}
 
 	var operations []state.OperationInfoV0
 	for _, h := range pp.proposal.Operations() {
-		if oi, found := founds[h]; !found {
+		if oi, found := founds[h.String()]; !found {
 			return nil, xerrors.Errorf("failed to fetch Operation from Proposal: operation=%s", h)
 		} else {
 			operations = append(operations, oi)
@@ -344,12 +344,12 @@ func (pp *internalDefaultProposalProcessor) processOperations() (*tree.AVLTree, 
 	if ops, err := pp.extractOperations(); err != nil {
 		return nil, err
 	} else {
-		founds := map[valuehash.Hash]struct{}{}
+		founds := map[string]struct{}{}
 
 		for i := range ops {
 			op := ops[i]
 			// NOTE Duplicated Operation.Hash, the latter will be ignored.
-			if _, found := founds[op.Operation()]; found {
+			if _, found := founds[op.Operation().String()]; found {
 				continue
 			} else if found, err := pp.localstate.Storage().HasOperation(op.Operation()); err != nil {
 				return nil, err
@@ -358,7 +358,7 @@ func (pp *internalDefaultProposalProcessor) processOperations() (*tree.AVLTree, 
 			}
 
 			operations = append(operations, op)
-			founds[op.Operation()] = struct{}{}
+			founds[op.Operation().String()] = struct{}{}
 		}
 	}
 
@@ -454,7 +454,7 @@ func (pp *internalDefaultProposalProcessor) getOperationsFromStorage(h valuehash
 
 	ops := make([]state.OperationInfoV0, len(osl.Operations()))
 	for i, op := range osl.Operations() {
-		if _, found := pp.proposedOperations[op.Hash()]; !found {
+		if _, found := pp.proposedOperations[op.Hash().String()]; !found {
 			continue
 		}
 
@@ -467,7 +467,7 @@ func (pp *internalDefaultProposalProcessor) getOperationsFromStorage(h valuehash
 func (pp *internalDefaultProposalProcessor) getOperationsThruChannel(
 	proposer base.Address,
 	notFounds []valuehash.Hash,
-	founds map[valuehash.Hash]state.OperationInfoV0,
+	founds map[string]state.OperationInfoV0,
 ) ([]state.OperationInfoV0, error) {
 	if pp.localstate.Node().Address().Equal(proposer) {
 		pp.Log().Warn().Msg("proposer is local node, but local node should have seals. Hmmm")
@@ -493,9 +493,9 @@ func (pp *internalDefaultProposalProcessor) getOperationsThruChannel(
 			return nil, xerrors.Errorf("not operation.Seal: %T", sl)
 		} else {
 			for _, op := range os.Operations() {
-				if _, found := pp.proposedOperations[op.Hash()]; !found {
+				if _, found := pp.proposedOperations[op.Hash().String()]; !found {
 					continue
-				} else if _, found := founds[op.Hash()]; found {
+				} else if _, found := founds[op.Hash().String()]; found {
 					continue
 				}
 

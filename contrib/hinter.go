@@ -8,12 +8,12 @@ import (
 	"github.com/spikeekips/mitum/base/operation"
 	"github.com/spikeekips/mitum/base/state"
 	"github.com/spikeekips/mitum/base/tree"
-	"github.com/spikeekips/mitum/base/valuehash"
 	contestlib "github.com/spikeekips/mitum/contest/lib"
 	"github.com/spikeekips/mitum/isaac"
 	bsonenc "github.com/spikeekips/mitum/util/encoder/bson"
 	jsonenc "github.com/spikeekips/mitum/util/encoder/json"
 	"github.com/spikeekips/mitum/util/hint"
+	"github.com/spikeekips/mitum/util/valuehash"
 )
 
 var Hinters = []hint.Hinter{
@@ -41,7 +41,7 @@ var Hinters = []hint.Hinter{
 	key.StellarPublickey{},
 	valuehash.SHA256{},
 	valuehash.SHA512{},
-	valuehash.Dummy{},
+	valuehash.Bytes{},
 	operation.Seal{},
 	tree.AVLTree{},
 	operation.OperationAVLNode{},

@@ -6,10 +6,10 @@ import (
 	"github.com/stretchr/testify/suite"
 
 	"github.com/spikeekips/mitum/base/key"
-	"github.com/spikeekips/mitum/base/valuehash"
 	bsonenc "github.com/spikeekips/mitum/util/encoder/bson"
 	"github.com/spikeekips/mitum/util/hint"
 	"github.com/spikeekips/mitum/util/localtime"
+	"github.com/spikeekips/mitum/util/valuehash"
 )
 
 type testVoteproofBSON struct {
@@ -44,23 +44,19 @@ func (t *testVoteproofBSON) TestMarshal() {
 		suffrages:      []Address{n0.Address(), n1.Address()},
 		thresholdRatio: threshold.Ratio,
 		result:         VoteResultMajority,
-		facts: map[valuehash.Hash]Fact{
-			factHash0: fact0,
-		},
-		majority: fact0,
-		ballots: map[Address]valuehash.Hash{
-			n0.Address(): valuehash.RandomSHA256(),
-			n1.Address(): valuehash.RandomSHA256(),
-		},
-		votes: map[Address]VoteproofNodeFact{
-			n0.Address(): {
+		facts:          []Fact{fact0},
+		majority:       fact0,
+		votes: []VoteproofNodeFact{
+			{
 				address:       n0.Address(),
+				ballot:        valuehash.RandomSHA256(),
 				fact:          factHash0,
 				factSignature: factSignature0,
 				signer:        n0.Publickey(),
 			},
-			n1.Address(): {
+			{
 				address:       n1.Address(),
+				ballot:        valuehash.RandomSHA256(),
 				fact:          factHash0,
 				factSignature: factSignature1,
 				signer:        n1.Publickey(),
@@ -88,12 +84,17 @@ func (t *testVoteproofBSON) TestMarshal() {
 
 	t.Equal(vp.Majority().Bytes(), uvp.Majority().Bytes())
 	t.Equal(len(vp.facts), len(uvp.facts))
-	for h, f := range vp.facts {
-		t.Equal(f.Bytes(), uvp.facts[h].Bytes())
-	}
-	t.Equal(len(vp.ballots), len(uvp.ballots))
-	for a, h := range vp.ballots {
-		t.True(h.Equal(uvp.ballots[a]))
+	for _, f := range vp.facts {
+		var fact Fact
+
+		for _, uf := range uvp.facts {
+			if f.Hash().Equal(uf.Hash()) {
+				fact = f
+				break
+			}
+		}
+
+		t.Equal(f.Bytes(), fact.Bytes())
 	}
 	t.Equal(len(vp.votes), len(uvp.votes))
 	for a, f := range vp.votes {

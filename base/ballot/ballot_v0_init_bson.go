@@ -4,6 +4,7 @@ import (
 	"go.mongodb.org/mongo-driver/bson"
 
 	bsonenc "github.com/spikeekips/mitum/util/encoder/bson"
+	"github.com/spikeekips/mitum/util/valuehash"
 )
 
 func (ib INITBallotV0) MarshalBSON() ([]byte, error) {
@@ -19,8 +20,8 @@ func (ib INITBallotV0) MarshalBSON() ([]byte, error) {
 }
 
 type INITBallotV0UnpackerBSON struct {
-	PB bson.Raw `bson:"previous_block"`
-	VR bson.Raw `bson:"voteproof,omitempty"`
+	PB valuehash.Bytes `bson:"previous_block"`
+	VR bson.Raw        `bson:"voteproof,omitempty"`
 }
 
 func (ib *INITBallotV0) UnpackBSON(b []byte, enc *bsonenc.Encoder) error {
@@ -46,7 +47,7 @@ func (ibf INITBallotFactV0) MarshalBSON() ([]byte, error) {
 }
 
 type INITBallotFactV0UnpackerBSON struct {
-	PB bson.Raw `bson:"previous_block"`
+	PB valuehash.Bytes `bson:"previous_block"`
 }
 
 func (ibf *INITBallotFactV0) UnpackBSON(b []byte, enc *bsonenc.Encoder) error {

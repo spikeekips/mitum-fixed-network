@@ -5,10 +5,10 @@ import (
 
 	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/base/key"
-	"github.com/spikeekips/mitum/base/valuehash"
 	jsonenc "github.com/spikeekips/mitum/util/encoder/json"
 	"github.com/spikeekips/mitum/util/hint"
 	"github.com/spikeekips/mitum/util/localtime"
+	"github.com/spikeekips/mitum/util/valuehash"
 )
 
 type BaseBallotV0PackerJSON struct {
@@ -43,15 +43,15 @@ func PackBaseBallotV0JSON(ballot Ballot) (BaseBallotV0PackerJSON, error) {
 
 type BaseBallotV0UnpackerJSON struct {
 	jsonenc.HintedHead
-	H   json.RawMessage    `json:"hash"`
+	H   valuehash.Bytes    `json:"hash"`
 	SN  json.RawMessage    `json:"signer"`
 	SG  key.Signature      `json:"signature"`
 	SA  localtime.JSONTime `json:"signed_at"`
 	HT  base.Height        `json:"height"`
 	RD  base.Round         `json:"round"`
 	N   json.RawMessage    `json:"node"`
-	BH  json.RawMessage    `json:"body_hash"`
-	FH  json.RawMessage    `json:"fact_hash"`
+	BH  valuehash.Bytes    `json:"body_hash"`
+	FH  valuehash.Bytes    `json:"fact_hash"`
 	FSG key.Signature      `json:"fact_signature"`
 }
 
@@ -68,32 +68,30 @@ func UnpackBaseBallotV0JSON(nib BaseBallotV0UnpackerJSON, enc *jsonenc.Encoder) 
 		return BaseBallotV0{}, BaseBallotFactV0{}, err
 	}
 
-	var eh, ebh, efh valuehash.Hash
-	if eh, err = valuehash.Decode(enc, nib.H); err != nil {
-		return BaseBallotV0{}, BaseBallotFactV0{}, err
-	}
-
-	if ebh, err = valuehash.Decode(enc, nib.BH); err != nil {
-		return BaseBallotV0{}, BaseBallotFactV0{}, err
-	}
-
-	if efh, err = valuehash.Decode(enc, nib.FH); err != nil {
-		return BaseBallotV0{}, BaseBallotFactV0{}, err
-	}
-
 	var node base.Address
 	if node, err = base.DecodeAddress(enc, nib.N); err != nil {
 		return BaseBallotV0{}, BaseBallotFactV0{}, err
 	}
 
+	var h, bh, fh valuehash.Hash
+	if !nib.H.Empty() {
+		h = nib.H
+	}
+	if !nib.BH.Empty() {
+		bh = nib.BH
+	}
+	if !nib.FH.Empty() {
+		fh = nib.FH
+	}
+
 	return BaseBallotV0{
-			h:             eh,
-			bodyHash:      ebh,
+			h:             h,
+			bodyHash:      bh,
 			signer:        signer,
 			signature:     nib.SG,
 			signedAt:      nib.SA.Time,
 			node:          node,
-			factHash:      efh,
+			factHash:      fh,
 			factSignature: nib.FSG,
 		},
 		BaseBallotFactV0{

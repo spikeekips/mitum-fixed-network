@@ -4,8 +4,8 @@ package block
 
 import (
 	"github.com/spikeekips/mitum/base"
-	"github.com/spikeekips/mitum/base/valuehash"
 	"github.com/spikeekips/mitum/util"
+	"github.com/spikeekips/mitum/util/valuehash"
 )
 
 func NewTestBlockV0(height base.Height, round base.Round, proposal, previousBlock valuehash.Hash) (BlockV0, error) {

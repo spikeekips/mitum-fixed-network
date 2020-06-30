@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/suite"
+	"go.mongodb.org/mongo-driver/bson"
 )
 
 type testKeccak512 struct {
@@ -24,20 +25,20 @@ func (t *testKeccak512) TestNil() {
 }
 
 func (t *testKeccak512) TestNew() {
-	s512 := NewSHA512(nil)
-	t.Implements((*Hash)(nil), s512)
-	t.Equal(sha512Size, s512.Size())
+	hs := NewSHA512(nil)
+	t.Implements((*Hash)(nil), hs)
+	t.Equal(sha512Size, hs.Size())
 
-	initial := s512.Bytes()
+	initial := hs.Bytes()
 
 	b := []byte("showme")
-	s512 = NewSHA512(b)
+	hs = NewSHA512(b)
 
-	t.NotEqual(initial, s512.Bytes())
+	t.NotEqual(initial, hs.Bytes())
 
 	newS512 := NewSHA512(b)
 
-	t.Equal(s512.Bytes(), newS512.Bytes())
+	t.Equal(hs.Bytes(), newS512.Bytes())
 }
 
 func (t *testKeccak512) TestLoadFromBytes() {
@@ -63,28 +64,16 @@ func (t *testKeccak512) TestLoadFromString() {
 
 func (t *testKeccak512) TestJSONMarshal() {
 	b := []byte("killme")
-	s512 := NewSHA512(b)
+	hs := NewSHA512(b)
 
 	{
-		b, err := marshalJSON(s512)
+		b, err := marshalJSON(hs)
 		t.NoError(err)
 
-		var jh JSONHash
+		var jh Bytes
 		t.NoError(err, json.Unmarshal(b, &jh))
 
-		t.Equal(s512.Hint(), jh.HintedHead.H)
-		t.Equal(s512.String(), jh.Hash)
-	}
-
-	{
-		b, err := json.Marshal(s512)
-		t.NoError(err)
-
-		var jh JSONHash
-		t.NoError(err, json.Unmarshal(b, &jh))
-
-		t.Equal(s512.Hint(), jh.HintedHead.H)
-		t.Equal(s512.String(), jh.Hash)
+		t.True(hs.Equal(jh))
 	}
 }
 
@@ -109,46 +98,46 @@ func (t *testKeccak256) TestNil() {
 }
 
 func (t *testKeccak256) TestNew() {
-	s256 := NewSHA256(nil)
-	t.Implements((*Hash)(nil), s256)
-	t.Equal(sha256Size, s256.Size())
+	hs := NewSHA256(nil)
+	t.Implements((*Hash)(nil), hs)
+	t.Equal(sha256Size, hs.Size())
 
-	initial := s256.Bytes()
+	initial := hs.Bytes()
 
 	b := []byte("showme")
-	s256 = NewSHA256(b)
+	hs = NewSHA256(b)
 
-	t.NotEqual(initial, s256.Bytes())
+	t.NotEqual(initial, hs.Bytes())
 
 	newS256 := NewSHA256(b)
 
-	t.Equal(s256.Bytes(), newS256.Bytes())
+	t.Equal(hs.Bytes(), newS256.Bytes())
+}
+
+func (t *testKeccak256) TestBSONMarshal() {
+	hs := NewSHA256([]byte("killme"))
+
+	_, b, err := bson.MarshalValue(hs)
+	t.NoError(err)
+
+	uh, err := unmarshalBSONValue(b)
+	t.NoError(err)
+
+	t.True(hs.Equal(uh))
 }
 
 func (t *testKeccak256) TestJSONMarshal() {
 	b := []byte("killme")
-	s256 := NewSHA256(b)
+	hs := NewSHA256(b)
 
 	{
-		b, err := marshalJSON(s256)
+		b, err := marshalJSON(hs)
 		t.NoError(err)
 
-		var jh JSONHash
+		var jh Bytes
 		t.NoError(err, json.Unmarshal(b, &jh))
 
-		t.Equal(s256.Hint(), jh.HintedHead.H)
-		t.Equal(s256.String(), jh.Hash)
-	}
-
-	{
-		b, err := json.Marshal(s256)
-		t.NoError(err)
-
-		var jh JSONHash
-		t.NoError(err, json.Unmarshal(b, &jh))
-
-		t.Equal(s256.Hint(), jh.HintedHead.H)
-		t.Equal(s256.String(), jh.Hash)
+		t.True(hs.Equal(jh))
 	}
 }
 

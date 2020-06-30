@@ -4,6 +4,7 @@ import (
 	"go.mongodb.org/mongo-driver/bson"
 
 	bsonenc "github.com/spikeekips/mitum/util/encoder/bson"
+	"github.com/spikeekips/mitum/util/valuehash"
 )
 
 func (ab ACCEPTBallotV0) MarshalBSON() ([]byte, error) {
@@ -20,9 +21,9 @@ func (ab ACCEPTBallotV0) MarshalBSON() ([]byte, error) {
 }
 
 type ACCEPTBallotV0UnpackerBSON struct {
-	PR bson.Raw `bson:"proposal"`
-	NB bson.Raw `bson:"new_block"`
-	VR bson.Raw `bson:"voteproof,omitempty"`
+	PR valuehash.Bytes `bson:"proposal"`
+	NB valuehash.Bytes `bson:"new_block"`
+	VR bson.Raw        `bson:"voteproof,omitempty"`
 }
 
 func (ab *ACCEPTBallotV0) UnpackBSON(b []byte, enc *bsonenc.Encoder) error {
@@ -49,8 +50,8 @@ func (abf ACCEPTBallotFactV0) MarshalBSON() ([]byte, error) {
 }
 
 type ACCEPTBallotFactV0UnpackerBSON struct {
-	PR bson.Raw `bson:"proposal"`
-	NB bson.Raw `bson:"new_block"`
+	PR valuehash.Bytes `bson:"proposal"`
+	NB valuehash.Bytes `bson:"new_block"`
 }
 
 func (abf *ACCEPTBallotFactV0) UnpackBSON(b []byte, enc *bsonenc.Encoder) error {

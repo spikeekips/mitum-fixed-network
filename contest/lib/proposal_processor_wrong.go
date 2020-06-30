@@ -3,10 +3,10 @@ package contestlib
 import (
 	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/base/block"
-	"github.com/spikeekips/mitum/base/valuehash"
 	"github.com/spikeekips/mitum/isaac"
 	"github.com/spikeekips/mitum/storage"
 	"github.com/spikeekips/mitum/util/logging"
+	"github.com/spikeekips/mitum/util/valuehash"
 )
 
 type WrongProposalProcessor struct {

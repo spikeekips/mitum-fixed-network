@@ -17,7 +17,6 @@ func (hv HintedValue) MarshalBSON() ([]byte, error) {
 }
 
 type HintedValueUnpackerBSON struct {
-	H bson.Raw `bson:"hash"`
 	V bson.Raw `bson:"value"`
 }
 

@@ -3,11 +3,11 @@ package base
 import (
 	"bytes"
 	"sort"
+	"strings"
 	"time"
 
 	"golang.org/x/xerrors"
 
-	"github.com/spikeekips/mitum/base/valuehash"
 	"github.com/spikeekips/mitum/util"
 	"github.com/spikeekips/mitum/util/hint"
 	"github.com/spikeekips/mitum/util/isvalid"
@@ -29,9 +29,8 @@ type VoteproofV0 struct {
 	closed         bool
 	stage          Stage
 	majority       Fact
-	facts          map[valuehash.Hash]Fact       // key: Fact.Hash(), value: Fact
-	ballots        map[Address]valuehash.Hash    // key: node Address, value: ballot hash
-	votes          map[Address]VoteproofNodeFact // key: node Address, value: VoteproofNodeFact
+	facts          []Fact
+	votes          []VoteproofNodeFact
 	finishedAt     time.Time
 }
 
@@ -49,9 +48,6 @@ func NewVoteproofV0(
 		thresholdRatio: thresholdRatio,
 		result:         VoteResultNotYet,
 		stage:          stage,
-		facts:          map[valuehash.Hash]Fact{},
-		ballots:        map[Address]valuehash.Hash{},
-		votes:          map[Address]VoteproofNodeFact{},
 	}
 }
 
@@ -113,16 +109,6 @@ func (vp *VoteproofV0) SetMajority(fact Fact) *VoteproofV0 {
 	return vp
 }
 
-func (vp VoteproofV0) Ballots() map[Address]valuehash.Hash {
-	return vp.ballots
-}
-
-func (vp *VoteproofV0) SetBallots(ballots map[Address]valuehash.Hash) *VoteproofV0 {
-	vp.ballots = ballots
-
-	return vp
-}
-
 func (vp VoteproofV0) Suffrages() []Address {
 	return vp.suffrages
 }
@@ -131,21 +117,21 @@ func (vp VoteproofV0) ThresholdRatio() ThresholdRatio {
 	return vp.thresholdRatio
 }
 
-func (vp VoteproofV0) Facts() map[valuehash.Hash]Fact {
+func (vp VoteproofV0) Facts() []Fact {
 	return vp.facts
 }
 
-func (vp *VoteproofV0) SetFacts(facts map[valuehash.Hash]Fact) *VoteproofV0 {
+func (vp *VoteproofV0) SetFacts(facts []Fact) *VoteproofV0 {
 	vp.facts = facts
 
 	return vp
 }
 
-func (vp VoteproofV0) Votes() map[Address]VoteproofNodeFact {
+func (vp VoteproofV0) Votes() []VoteproofNodeFact {
 	return vp.votes
 }
 
-func (vp *VoteproofV0) SetVotes(votes map[Address]VoteproofNodeFact) *VoteproofV0 {
+func (vp *VoteproofV0) SetVotes(votes []VoteproofNodeFact) *VoteproofV0 {
 	vp.votes = votes
 
 	return vp
@@ -163,73 +149,43 @@ func (vp *VoteproofV0) Close() *VoteproofV0 {
 	return vp
 }
 
-func (vp VoteproofV0) ballotsBytes() []byte {
-	keys := make([]Address, len(vp.ballots))
-	var i int
-	for a := range vp.ballots {
-		keys[i] = a
-		i++
-	}
-
-	// NOTE without ordering, the bytes values will be varies.
-	sort.Slice(keys, func(i, j int) bool {
-		return bytes.Compare(
-			keys[i].Bytes(),
-			keys[j].Bytes(),
-		) < 0
-	})
-
-	bs := make([][]byte, len(keys))
-	for i, a := range keys {
-		bs[i] = vp.ballots[a].Bytes()
-	}
-
-	return util.ConcatBytesSlice(bs...)
-}
-
 func (vp VoteproofV0) factsBytes() []byte {
-	keys := make([]valuehash.Hash, len(vp.facts))
-	var i int
-	for a := range vp.facts {
-		keys[i] = a
-		i++
+	facts := map[string]Fact{}
+	keys := make([]string, len(vp.facts))
+	for i := range vp.facts {
+		s := vp.facts[i].Hash().String()
+		keys[i] = s
+		facts[s] = vp.facts[i]
 	}
 
 	// NOTE without ordering, the bytes values will be varies.
 	sort.Slice(keys, func(i, j int) bool {
-		return bytes.Compare(
-			keys[i].Bytes(),
-			keys[j].Bytes(),
-		) < 0
+		return strings.Compare(keys[i], keys[j]) < 0
 	})
 
 	bs := make([][]byte, len(keys))
 	for i, a := range keys {
-		bs[i] = vp.facts[a].Bytes()
+		bs[i] = facts[a].Bytes()
 	}
 
 	return util.ConcatBytesSlice(bs...)
 }
 
 func (vp VoteproofV0) votesBytes() []byte {
-	keys := make([]Address, len(vp.votes))
-	var i int
-	for a := range vp.votes {
-		keys[i] = a
-		i++
-	}
+	l := make([]VoteproofNodeFact, len(vp.votes))
+	copy(l, vp.votes)
 
 	// NOTE without ordering, the bytes values will be varies.
-	sort.Slice(keys, func(i, j int) bool {
+	sort.Slice(l, func(i, j int) bool {
 		return bytes.Compare(
-			keys[i].Bytes(),
-			keys[j].Bytes(),
+			l[i].Node().Bytes(),
+			l[j].Node().Bytes(),
 		) < 0
 	})
 
-	bs := make([][]byte, len(keys))
-	for i, a := range keys {
-		bs[i] = vp.votes[a].Bytes()
+	bs := make([][]byte, len(l))
+	for i := range l {
+		bs[i] = l[i].Bytes()
 	}
 
 	return util.ConcatBytesSlice(bs...)
@@ -252,7 +208,6 @@ func (vp VoteproofV0) Bytes() []byte {
 		vp.result.Bytes(),
 		vp.stage.Bytes(),
 		vp.majority.Bytes(),
-		vp.ballotsBytes(),
 		vp.factsBytes(),
 		vp.votesBytes(),
 		vp.suffragesBytes(),
@@ -291,13 +246,13 @@ func (vp VoteproofV0) isValidCheckMajority() error {
 		threshold = t
 	}
 
-	counts := map[valuehash.Hash]uint{}
-	for a := range vp.votes {
-		counts[vp.votes[a].fact]++
+	counts := map[string]uint{}
+	for i := range vp.votes {
+		counts[vp.votes[i].fact.String()]++
 	}
 
 	set := make([]uint, len(counts))
-	byCount := map[uint]valuehash.Hash{}
+	byCount := map[uint]string{}
 
 	var index int
 	for h, c := range counts {
@@ -307,7 +262,7 @@ func (vp VoteproofV0) isValidCheckMajority() error {
 	}
 
 	var fact Fact
-	var factHash valuehash.Hash
+	var factHash string
 	var result VoteResultType
 	switch index := FindMajority(threshold.Total, threshold.Threshold, set...); index {
 	case -1:
@@ -317,7 +272,13 @@ func (vp VoteproofV0) isValidCheckMajority() error {
 	default:
 		result = VoteResultMajority
 		factHash = byCount[set[index]]
-		fact = vp.facts[factHash]
+
+		for _, f := range vp.facts {
+			if factHash == f.Hash().String() {
+				fact = f
+				break
+			}
+		}
 	}
 
 	if vp.result != result {
@@ -329,9 +290,9 @@ func (vp VoteproofV0) isValidCheckMajority() error {
 			return xerrors.Errorf("result should be nil, but not")
 		}
 	} else {
-		mhash := vp.majority.Hash()
-		if !mhash.Equal(factHash) {
-			return xerrors.Errorf("fact hash mismatch; vp.majority=%s != fact=%s", mhash, factHash)
+		mh := vp.majority.Hash().String()
+		if mh != factHash {
+			return xerrors.Errorf("fact hash mismatch; vp.majority=%s != fact=%s", mh, factHash)
 		}
 	}
 
@@ -367,63 +328,46 @@ func (vp VoteproofV0) isValidFields(b []byte) error {
 		return isvalid.InvalidError.Errorf("empty facts")
 	}
 
-	if len(vp.ballots) < 1 {
-		return isvalid.InvalidError.Errorf("empty ballots")
-	}
-
 	if len(vp.votes) < 1 {
 		return isvalid.InvalidError.Errorf("empty votes")
-	}
-
-	if len(vp.ballots) != len(vp.votes) {
-		return isvalid.InvalidError.Errorf("vote count does not match: ballots=%d votes=%d", len(vp.ballots), len(vp.votes))
-	}
-
-	for k := range vp.ballots {
-		if _, found := vp.votes[k]; !found {
-			return xerrors.Errorf("unknown node found: %v", k)
-		}
 	}
 
 	return nil
 }
 
 func (vp VoteproofV0) isValidFacts(b []byte) error {
-	factHashes := map[valuehash.Hash]bool{}
-	for node := range vp.votes {
-		if err := node.IsValid(b); err != nil {
+	factHashes := map[string]bool{}
+	for i := range vp.votes {
+		nf := vp.votes[i]
+
+		if err := nf.Node().IsValid(b); err != nil {
 			return err
 		}
 
-		f := vp.votes[node]
-		if err := isvalid.Check([]isvalid.IsValider{f}, b, false); err != nil {
+		if err := isvalid.Check([]isvalid.IsValider{nf}, b, false); err != nil {
 			return err
 		}
 
-		if _, found := vp.facts[f.fact]; !found {
-			return xerrors.Errorf("missing fact found in facts: %s", f.fact.String())
+		var found bool
+		for _, f := range vp.facts {
+			if nf.fact.Equal(f.Hash()) {
+				found = true
+				break
+			}
 		}
-		factHashes[f.fact] = true
+
+		if !found {
+			return xerrors.Errorf("missing fact found in facts: %s", nf.fact.String())
+		}
+		factHashes[nf.fact.String()] = true
 	}
 
 	if len(factHashes) != len(vp.facts) {
 		return xerrors.Errorf("unknown facts found in facts: %d", len(vp.facts)-len(factHashes))
 	}
 
-	for k, v := range vp.facts {
-		if h := v.Hash(); !h.Equal(k) {
-			return xerrors.Errorf(
-				"factHash and Fact.Hash() does not match: factHash=%v != Fact.Hash()=%v",
-				k.String(), h.String(),
-			)
-		}
-		if err := isvalid.Check([]isvalid.IsValider{k, v}, b, false); err != nil {
-			return err
-		}
-	}
-
-	for k, v := range vp.ballots {
-		if err := isvalid.Check([]isvalid.IsValider{k, v}, b, false); err != nil {
+	for _, f := range vp.facts {
+		if err := isvalid.Check([]isvalid.IsValider{f}, b, false); err != nil {
 			return err
 		}
 	}

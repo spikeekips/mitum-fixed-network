@@ -9,7 +9,6 @@ import (
 )
 
 func (at *AVLTree) unpack(enc encoder.Encoder, rootKey string, bNodes [][]byte) error {
-	var tr *avl.Tree
 	np := avl.NewSyncMapNodePool(&sync.Map{})
 
 	for _, r := range bNodes {
@@ -20,6 +19,7 @@ func (at *AVLTree) unpack(enc encoder.Encoder, rootKey string, bNodes [][]byte) 
 		}
 	}
 
+	var tr *avl.Tree
 	if t, err := avl.NewTree([]byte(rootKey), np); err != nil {
 		return err
 	} else {

@@ -174,10 +174,11 @@ func (ss *StateSyncingHandler) fromVoteproof(voteproof base.Voteproof) error {
 	}
 
 	var sourceNodes []network.Node
-	for address := range voteproof.Ballots() {
-		if ss.localstate.Node().Address().Equal(address) {
+	for i := range voteproof.Votes() {
+		nf := voteproof.Votes()[i]
+		if ss.localstate.Node().Address().Equal(nf.Node()) {
 			continue
-		} else if n, found := ss.localstate.Nodes().Node(address); !found {
+		} else if n, found := ss.localstate.Nodes().Node(nf.Node()); !found {
 			return xerrors.Errorf("node in Voteproof is not known node")
 		} else {
 			sourceNodes = append(sourceNodes, n)

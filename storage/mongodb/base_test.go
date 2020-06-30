@@ -20,9 +20,9 @@ import (
 	"github.com/spikeekips/mitum/base/key"
 	"github.com/spikeekips/mitum/base/operation"
 	"github.com/spikeekips/mitum/base/seal"
-	"github.com/spikeekips/mitum/base/valuehash"
 	"github.com/spikeekips/mitum/storage"
 	"github.com/spikeekips/mitum/util"
+	"github.com/spikeekips/mitum/util/valuehash"
 )
 
 type testStorage struct {
@@ -201,15 +201,21 @@ func (t *testStorage) TestSealsByHash() {
 	}
 	t.NoError(t.storage.NewSeals(seals))
 
-	loaded := map[valuehash.Hash]seal.Seal{}
+	loaded := map[string]seal.Seal{}
 	t.NoError(t.storage.SealsByHash(hashes, func(_ valuehash.Hash, sl seal.Seal) (bool, error) {
-		loaded[sl.Hash()] = sl
+		loaded[sl.Hash().String()] = sl
 
 		return true, nil
 	}, true))
 
 	for _, h := range hashes {
-		_, found := loaded[h]
+		var found bool
+		for lh := range loaded {
+			if h.String() == lh {
+				found = true
+				break
+			}
+		}
 		t.True(found)
 	}
 }
@@ -312,13 +318,13 @@ func (t *testStorage) TestStagedOperationSeals() {
 	}
 	t.NoError(t.storage.NewSeals(seals))
 
-	ops := map[valuehash.Hash]operation.Seal{}
+	ops := map[string]operation.Seal{}
 	// 10 operation.Seal
 	for i := 0; i < 10; i++ {
 		sl := t.newOperationSeal()
 
 		seals = append(seals, sl)
-		ops[sl.Hash()] = sl
+		ops[sl.Hash().String()] = sl
 	}
 	t.NoError(t.storage.NewSeals(seals))
 
@@ -337,7 +343,14 @@ func (t *testStorage) TestStagedOperationSeals() {
 	for _, sl := range collected {
 		t.IsType(operation.Seal{}, sl)
 
-		_, found := ops[sl.Hash()]
+		var found bool
+		for h := range ops {
+			if sl.Hash().String() == h {
+				found = true
+				break
+			}
+		}
+
 		t.True(found)
 	}
 }
@@ -361,13 +374,13 @@ func (t *testStorage) TestUnStagedOperationSeals() {
 	var unstaged []valuehash.Hash
 
 	rs := rand.New(rand.NewSource(time.Now().Unix()))
-	selected := map[valuehash.Hash]struct{}{}
+	selected := map[string]struct{}{}
 	for i := 0; i < 5; i++ {
 		var sl seal.Seal
 		for {
 			sl = ops[rs.Intn(len(ops))]
-			if _, found := selected[sl.Hash()]; !found {
-				selected[sl.Hash()] = struct{}{}
+			if _, found := selected[sl.Hash().String()]; !found {
+				selected[sl.Hash().String()] = struct{}{}
 				break
 			}
 		}

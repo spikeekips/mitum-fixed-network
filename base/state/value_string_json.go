@@ -1,10 +1,9 @@
 package state
 
 import (
-	"encoding/json"
-
-	"github.com/spikeekips/mitum/base/valuehash"
 	jsonenc "github.com/spikeekips/mitum/util/encoder/json"
+	"github.com/spikeekips/mitum/util/valuehash"
+	"golang.org/x/xerrors"
 )
 
 func (sv StringValue) MarshalJSON() ([]byte, error) {
@@ -21,7 +20,7 @@ func (sv StringValue) MarshalJSON() ([]byte, error) {
 
 func (sv *StringValue) UnpackJSON(b []byte, enc *jsonenc.Encoder) error {
 	var uv struct {
-		H json.RawMessage `json:"hash"`
+		H valuehash.Bytes `json:"hash"`
 		V string          `json:"value"`
 	}
 
@@ -29,13 +28,11 @@ func (sv *StringValue) UnpackJSON(b []byte, enc *jsonenc.Encoder) error {
 		return err
 	}
 
-	var err error
-	var h valuehash.Hash
-	if h, err = valuehash.Decode(enc, uv.H); err != nil {
-		return err
+	if uv.H.Empty() {
+		return xerrors.Errorf("empty previous_block hash found")
 	}
 
-	sv.h = h
+	sv.h = uv.H
 	sv.v = uv.V
 
 	return nil

@@ -3,9 +3,9 @@ package state
 import (
 	"encoding/json"
 
-	"github.com/spikeekips/mitum/base/valuehash"
 	jsonenc "github.com/spikeekips/mitum/util/encoder/json"
 	"github.com/spikeekips/mitum/util/hint"
+	"github.com/spikeekips/mitum/util/valuehash"
 )
 
 func (sv SliceValue) MarshalJSON() ([]byte, error) {
@@ -22,7 +22,7 @@ func (sv SliceValue) MarshalJSON() ([]byte, error) {
 
 func (sv *SliceValue) UnpackJSON(b []byte, enc *jsonenc.Encoder) error {
 	var uv struct {
-		H json.RawMessage   `json:"hash"`
+		H valuehash.Bytes   `json:"hash"`
 		V []json.RawMessage `json:"value"`
 	}
 

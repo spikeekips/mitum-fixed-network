@@ -8,6 +8,7 @@ import (
 	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/base/key"
 	bsonenc "github.com/spikeekips/mitum/util/encoder/bson"
+	"github.com/spikeekips/mitum/util/valuehash"
 )
 
 func (po PolicyOperationBodyV0) MarshalBSON() ([]byte, error) {
@@ -73,12 +74,12 @@ func (spo SetPolicyOperationV0) MarshalBSON() ([]byte, error) {
 }
 
 type SetPolicyOperationV0UnpackerBSON struct {
-	H  bson.Raw      `bson:"hash"`
-	FH bson.Raw      `bson:"fact_hash"`
-	FS key.Signature `bson:"fact_signature"`
-	SN bson.Raw      `bson:"signer"`
-	TK []byte        `bson:"token"`
-	PO bson.Raw      `bson:"policies"`
+	H  valuehash.Bytes `bson:"hash"`
+	FH valuehash.Bytes `bson:"fact_hash"`
+	FS key.Signature   `bson:"fact_signature"`
+	SN bson.Raw        `bson:"signer"`
+	TK []byte          `bson:"token"`
+	PO bson.Raw        `bson:"policies"`
 }
 
 func (spo *SetPolicyOperationV0) UnpackBSON(b []byte, enc *bsonenc.Encoder) error {

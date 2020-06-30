@@ -3,8 +3,8 @@ package tree
 import (
 	"encoding/json"
 
-	"github.com/spikeekips/mitum/base/valuehash"
 	jsonenc "github.com/spikeekips/mitum/util/encoder/json"
+	"github.com/spikeekips/mitum/util/valuehash"
 )
 
 type AVLTreeJSONPacker struct {

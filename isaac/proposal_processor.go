@@ -3,9 +3,9 @@ package isaac
 import (
 	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/base/block"
-	"github.com/spikeekips/mitum/base/valuehash"
 	"github.com/spikeekips/mitum/storage"
 	"github.com/spikeekips/mitum/util"
+	"github.com/spikeekips/mitum/util/valuehash"
 )
 
 type ProposalProcessor interface {

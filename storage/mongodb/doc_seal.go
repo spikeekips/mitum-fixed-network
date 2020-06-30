@@ -5,10 +5,10 @@ import (
 	"golang.org/x/xerrors"
 
 	"github.com/spikeekips/mitum/base/seal"
-	"github.com/spikeekips/mitum/base/valuehash"
 	"github.com/spikeekips/mitum/util/encoder"
 	bsonenc "github.com/spikeekips/mitum/util/encoder/bson"
 	"github.com/spikeekips/mitum/util/localtime"
+	"github.com/spikeekips/mitum/util/valuehash"
 )
 
 type SealDoc struct {
@@ -60,25 +60,13 @@ func loadSealFromDecoder(decoder func(interface{}) error, encs *encoder.Encoders
 	return sl, nil
 }
 
-func loadSealHashFromDecoder(decoder func(interface{}) error, encs *encoder.Encoders) (valuehash.Hash, error) {
+func loadSealHashFromDecoder(decoder func(interface{}) error, _ *encoder.Encoders) (valuehash.Hash, error) {
 	var hd HashIDDoc
 	if err := decoder(&hd); err != nil {
 		return nil, err
+	} else if hd.H.Empty() {
+		return nil, xerrors.Errorf("empty hash for HashIDDoc")
 	}
 
-	enc, err := encs.Encoder(hd.E.Type(), hd.E.Version())
-	if err != nil {
-		return nil, err
-	}
-
-	var h valuehash.Hash
-	if hinter, err := enc.DecodeByHint(hd.H); err != nil {
-		return nil, err
-	} else if i, ok := hinter.(valuehash.Hash); !ok {
-		return nil, xerrors.Errorf("not valuehash.Hash: %T", hinter)
-	} else {
-		h = i
-	}
-
-	return h, nil
+	return hd.H, nil
 }

@@ -4,9 +4,9 @@ import (
 	"encoding/json"
 
 	"github.com/spikeekips/mitum/base/key"
-	"github.com/spikeekips/mitum/base/valuehash"
 	jsonenc "github.com/spikeekips/mitum/util/encoder/json"
 	"github.com/spikeekips/mitum/util/localtime"
+	"github.com/spikeekips/mitum/util/valuehash"
 )
 
 type SealJSONPack struct {
@@ -32,8 +32,8 @@ func (sl Seal) MarshalJSON() ([]byte, error) {
 }
 
 type SealJSONUnpack struct {
-	H   json.RawMessage    `json:"hash"`
-	BH  json.RawMessage    `json:"body_hash"`
+	H   valuehash.Bytes    `json:"hash"`
+	BH  valuehash.Bytes    `json:"body_hash"`
 	SN  json.RawMessage    `json:"signer"`
 	SG  key.Signature      `json:"signature"`
 	SA  localtime.JSONTime `json:"signed_at"`

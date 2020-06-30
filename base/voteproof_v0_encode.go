@@ -3,13 +3,21 @@ package base
 import (
 	"time"
 
-	"golang.org/x/xerrors"
-
 	"github.com/spikeekips/mitum/base/key"
-	"github.com/spikeekips/mitum/base/valuehash"
 	"github.com/spikeekips/mitum/util"
 	"github.com/spikeekips/mitum/util/encoder"
+	"github.com/spikeekips/mitum/util/valuehash"
 )
+
+type VoteproofV0FactUnpacker interface {
+	Hash() valuehash.Bytes
+	Fact() []byte
+}
+
+type VoteproofV0BallotUnpacker interface {
+	Hash() valuehash.Bytes
+	Address() []byte
+}
 
 func (vp *VoteproofV0) unpack( // nolint
 	enc encoder.Encoder,
@@ -20,88 +28,47 @@ func (vp *VoteproofV0) unpack( // nolint
 	result VoteResultType,
 	stage Stage,
 	bMajority []byte,
-	bFacts,
-	bBallots,
-	bVotes [][2][]byte,
+	bFacts [][]byte,
+	bVotes [][]byte,
 	finishedAt time.Time,
 	isClosed bool,
 ) error {
-	var err error
 	var majority Fact
 	if bMajority != nil {
-		if majority, err = DecodeFact(enc, bMajority); err != nil {
+		if m, err := DecodeFact(enc, bMajority); err != nil {
 			return err
+		} else {
+			majority = m
 		}
 	}
 
 	var suffrages []Address
 	for i := range bSuffrages {
-		var address Address
-		if address, err = DecodeAddress(enc, bSuffrages[i]); err != nil {
+		if address, err := DecodeAddress(enc, bSuffrages[i]); err != nil {
 			return err
 		} else {
 			suffrages = append(suffrages, address)
 		}
 	}
 
-	facts := map[valuehash.Hash]Fact{}
+	facts := make([]Fact, len(bFacts))
 	for i := range bFacts {
-		l := bFacts[i]
-		if len(l) != 2 {
-			return xerrors.Errorf("invalid raw of facts; not [2]bson.Raw")
-		}
-
-		var factHash valuehash.Hash
-		if factHash, err = valuehash.Decode(enc, l[0]); err != nil {
+		switch fact, err := DecodeFact(enc, bFacts[i]); {
+		case err != nil:
 			return err
+		default:
+			facts[i] = fact
 		}
-
-		var fact Fact
-		if fact, err = DecodeFact(enc, l[1]); err != nil {
-			return err
-		}
-
-		facts[factHash] = fact
 	}
 
-	ballots := map[Address]valuehash.Hash{}
-	for i := range bBallots {
-		l := bBallots[i]
-		if len(l) != 2 {
-			return xerrors.Errorf("invalid raw of ballots; not [2]bson.Raw")
-		}
-
-		var address Address
-		if address, err = DecodeAddress(enc, l[0]); err != nil {
-			return err
-		}
-
-		var ballot valuehash.Hash
-		if ballot, err = valuehash.Decode(enc, l[1]); err != nil {
-			return err
-		}
-
-		ballots[address] = ballot
-	}
-
-	votes := map[Address]VoteproofNodeFact{}
+	votes := make([]VoteproofNodeFact, len(bVotes))
 	for i := range bVotes {
-		l := bVotes[i]
-		if len(l) != 2 {
-			return xerrors.Errorf("invalid raw of votes; not [2]bson.Raw")
-		}
-
-		var address Address
-		if address, err = DecodeAddress(enc, l[0]); err != nil {
-			return err
-		}
-
 		var nodeFact VoteproofNodeFact
-		if err = enc.Decode(l[1], &nodeFact); err != nil {
+		if err := enc.Decode(bVotes[i], &nodeFact); err != nil {
 			return err
+		} else {
+			votes[i] = nodeFact
 		}
-
-		votes[address] = nodeFact
 	}
 
 	vp.height = height
@@ -112,7 +79,6 @@ func (vp *VoteproofV0) unpack( // nolint
 	vp.stage = stage
 	vp.majority = majority
 	vp.facts = facts
-	vp.ballots = ballots
 	vp.votes = votes
 	vp.finishedAt = finishedAt
 	vp.closed = isClosed
@@ -124,7 +90,8 @@ func (vp *VoteproofV0) unpack( // nolint
 func (vf *VoteproofNodeFact) unpack(
 	enc encoder.Encoder,
 	bAddress []byte,
-	bFact []byte,
+	blt,
+	fact valuehash.Hash,
 	factSignature key.Signature,
 	bSigner []byte,
 ) error {
@@ -135,13 +102,6 @@ func (vf *VoteproofNodeFact) unpack(
 		address = h
 	}
 
-	var fact valuehash.Hash
-	if h, err := valuehash.Decode(enc, bFact); err != nil {
-		return err
-	} else {
-		fact = h
-	}
-
 	var signer key.Publickey
 	if h, err := key.DecodePublickey(enc, bSigner); err != nil {
 		return err
@@ -150,6 +110,7 @@ func (vf *VoteproofNodeFact) unpack(
 	}
 
 	vf.address = address
+	vf.ballot = blt
 	vf.fact = fact
 	vf.factSignature = factSignature
 	vf.signer = signer

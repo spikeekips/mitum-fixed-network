@@ -1,12 +1,13 @@
 package isaac
 
 import (
+	"golang.org/x/xerrors"
+
 	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/base/ballot"
-	"github.com/spikeekips/mitum/base/valuehash"
 	"github.com/spikeekips/mitum/util"
 	"github.com/spikeekips/mitum/util/logging"
-	"golang.org/x/xerrors"
+	"github.com/spikeekips/mitum/util/valuehash"
 )
 
 type BallotChecker struct {

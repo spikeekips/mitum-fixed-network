@@ -4,8 +4,8 @@ import (
 	"sync"
 
 	"github.com/spikeekips/mitum/base/state"
-	"github.com/spikeekips/mitum/base/valuehash"
 	"github.com/spikeekips/mitum/storage"
+	"github.com/spikeekips/mitum/util/valuehash"
 )
 
 type StatePool struct {

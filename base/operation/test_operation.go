@@ -5,7 +5,6 @@ package operation
 import (
 	"encoding/json"
 
-	"go.mongodb.org/mongo-driver/bson"
 	"golang.org/x/xerrors"
 
 	"github.com/spikeekips/mitum/base"
@@ -185,7 +184,7 @@ func (kvo KVOperation) MarshalJSON() ([]byte, error) {
 
 func (kvo *KVOperation) UnpackJSON(b []byte, enc *jsonenc.Encoder) error {
 	var ukvo struct {
-		SG json.RawMessage `json:"signer"`
+		SG key.KeyDecoder  `json:"signer"`
 		TK []byte          `json:"token"`
 		K  string          `json:"key"`
 		V  []byte          `json:"value"`
@@ -201,8 +200,12 @@ func (kvo *KVOperation) UnpackJSON(b []byte, enc *jsonenc.Encoder) error {
 	var err error
 
 	var signer key.Publickey
-	if signer, err = key.DecodePublickey(enc, ukvo.SG); err != nil {
+	if k, err := ukvo.SG.Encode(enc); err != nil {
 		return err
+	} else if pk, ok := k.(key.Publickey); !ok {
+		return xerrors.Errorf("not key.Publickey; type=%T", k)
+	} else {
+		signer = pk
 	}
 
 	var h, factHash valuehash.Hash
@@ -251,7 +254,7 @@ func (kvo KVOperation) MarshalBSON() ([]byte, error) {
 
 func (kvo *KVOperation) UnpackBSON(b []byte, enc *bsonenc.Encoder) error {
 	var ukvo struct {
-		SG bson.Raw        `bson:"signer"`
+		SG key.KeyDecoder  `bson:"signer"`
 		TK []byte          `bson:"token"`
 		K  string          `bson:"key"`
 		V  []byte          `bson:"value"`
@@ -264,11 +267,13 @@ func (kvo *KVOperation) UnpackBSON(b []byte, enc *bsonenc.Encoder) error {
 		return err
 	}
 
-	var err error
-
 	var signer key.Publickey
-	if signer, err = key.DecodePublickey(enc, ukvo.SG); err != nil {
+	if k, err := ukvo.SG.Encode(enc); err != nil {
 		return err
+	} else if pk, ok := k.(key.Publickey); !ok {
+		return xerrors.Errorf("not key.Publickey; type=%T", k)
+	} else {
+		signer = pk
 	}
 
 	kvo.KVOperationFact = KVOperationFact{

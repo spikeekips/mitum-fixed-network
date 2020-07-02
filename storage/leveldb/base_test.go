@@ -409,6 +409,6 @@ func (t *testStorage) TestHasOperation() {
 	}
 }
 
-func TestStorage(t *testing.T) {
+func TestLeveldbStorage(t *testing.T) {
 	suite.Run(t, new(testStorage))
 }

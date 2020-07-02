@@ -19,7 +19,10 @@ const (
 	HintMarshalStringFormat string = "%x+%s"
 )
 
-var reHintMarshalStringFormat *regexp.Regexp = regexp.MustCompile(`^(?P<type>[a-f0-9]{4})\+(?P<version>.*)$`)
+var (
+	ReHintMarshalStringFormat                = `(?P<type>[a-f0-9]{4})\+(?P<version>.*)`
+	reHintMarshalString       *regexp.Regexp = regexp.MustCompile("^" + ReHintMarshalStringFormat + "$")
+)
 
 type Hint struct {
 	t       Type
@@ -46,11 +49,11 @@ func NewHintFromString(s string) (Hint, error) {
 		return Hint{}, xerrors.Errorf("wrong string for Hint; len=%d", len(s))
 	}
 
-	if !reHintMarshalStringFormat.MatchString(s) {
+	if !reHintMarshalString.MatchString(s) {
 		return Hint{}, xerrors.Errorf("unknown format of hint: %q", s)
 	}
 
-	ms := reHintMarshalStringFormat.FindStringSubmatch(s)
+	ms := reHintMarshalString.FindStringSubmatch(s)
 	if len(ms) != 3 {
 		return Hint{}, xerrors.Errorf("something empty of hint: %q", s)
 	}

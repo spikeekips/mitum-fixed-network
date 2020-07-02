@@ -34,7 +34,7 @@ func (sl Seal) MarshalJSON() ([]byte, error) {
 type SealJSONUnpack struct {
 	H   valuehash.Bytes    `json:"hash"`
 	BH  valuehash.Bytes    `json:"body_hash"`
-	SN  json.RawMessage    `json:"signer"`
+	SN  key.KeyDecoder     `json:"signer"`
 	SG  key.Signature      `json:"signature"`
 	SA  localtime.JSONTime `json:"signed_at"`
 	OPS []json.RawMessage  `json:"operations"`

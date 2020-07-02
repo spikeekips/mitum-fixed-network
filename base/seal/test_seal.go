@@ -81,7 +81,7 @@ type DummySealJSONPacker struct {
 
 type DummySealJSONUnpacker struct {
 	jsonenc.HintedHead
-	PK        key.BTCPrivatekey
+	PK        key.KeyDecoder
 	H         valuehash.Bytes
 	BH        valuehash.Bytes
 	S         string
@@ -105,7 +105,12 @@ func (ds *DummySeal) UnmarshalJSON(b []byte) error {
 		return err
 	}
 
-	ds.PK = uds.PK
+	signer := new(key.BTCPrivatekey)
+	if err := signer.UnmarshalJSON([]byte(uds.PK.StringValue())); err != nil {
+		return err
+	}
+
+	ds.PK = *signer
 	ds.H = uds.H
 	ds.BH = uds.BH
 	ds.S = uds.S
@@ -128,7 +133,7 @@ func (ds DummySeal) MarshalBSON() ([]byte, error) {
 }
 
 type DummySealBSONUnpacker struct {
-	PK        key.BTCPrivatekey
+	PK        key.KeyDecoder
 	H         valuehash.Bytes
 	BH        valuehash.Bytes
 	S         string
@@ -141,7 +146,12 @@ func (ds *DummySeal) UnmarshalBSON(b []byte) error {
 		return err
 	}
 
-	ds.PK = uds.PK
+	signer := new(key.BTCPrivatekey)
+	if err := signer.UnmarshalJSON([]byte(uds.PK.StringValue())); err != nil {
+		return err
+	}
+
+	ds.PK = *signer
 	ds.H = uds.H
 	ds.BH = uds.BH
 	ds.S = uds.S

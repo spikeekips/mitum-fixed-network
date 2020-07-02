@@ -61,6 +61,11 @@ func (je *Encoder) DecodeByHint(b []byte) (hint.Hinter, error) {
 	if err != nil {
 		return nil, err
 	}
+
+	return je.DecodeWithHint(h, b)
+}
+
+func (je *Encoder) DecodeWithHint(h hint.Hint, b []byte) (hint.Hinter, error) {
 	hinter, err := je.hintset.Hinter(h.Type(), h.Version())
 	if err != nil {
 		return nil, xerrors.Errorf(`failed to find hinter: hint=%s input="%s": %w`, h.Verbose(), string(b), err)

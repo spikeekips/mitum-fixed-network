@@ -158,7 +158,7 @@ type VoteproofNodeFactUnpackJSON struct {
 	BT valuehash.Bytes `json:"ballot"`
 	FC valuehash.Bytes `json:"fact"`
 	FS key.Signature   `json:"fact_signature"`
-	SG json.RawMessage `json:"signer"`
+	SG key.KeyDecoder  `json:"signer"`
 }
 
 func (vf *VoteproofNodeFact) UnpackJSON(b []byte, enc *jsonenc.Encoder) error {

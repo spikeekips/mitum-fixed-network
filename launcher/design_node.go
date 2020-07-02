@@ -48,7 +48,7 @@ func (nd *NodeDesign) IsValid([]byte) error {
 		je = e
 	}
 
-	if pk, err := key.DecodePrivatekey(je, []byte(nd.PrivatekeyString)); err != nil {
+	if pk, err := key.DecodePrivatekey(je, nd.PrivatekeyString); err != nil {
 		return err
 	} else {
 		nd.privatekey = pk
@@ -139,7 +139,7 @@ func (rd *RemoteDesign) IsValid([]byte) error {
 		je = e
 	}
 
-	if pk, err := key.DecodePublickey(je, []byte(rd.PublickeyString)); err != nil {
+	if pk, err := key.DecodePublickey(je, rd.PublickeyString); err != nil {
 		return err
 	} else {
 		rd.publickey = pk

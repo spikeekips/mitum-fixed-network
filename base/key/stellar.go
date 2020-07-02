@@ -45,7 +45,7 @@ func (sp StellarPrivatekey) String() string {
 		return ""
 	}
 
-	return sp.kp.Seed()
+	return toString(sp.Hint(), sp.kp.Seed())
 }
 
 func (sp StellarPrivatekey) Hint() hint.Hint {
@@ -116,7 +116,7 @@ func (sp StellarPublickey) String() string {
 		return ""
 	}
 
-	return sp.kp.Address()
+	return toString(sp.Hint(), sp.kp.Address())
 }
 
 func (sp StellarPublickey) Hint() hint.Hint {

@@ -53,7 +53,7 @@ func (ep EtherPrivatekey) String() string {
 		return ""
 	}
 
-	return hex.EncodeToString(etherCrypto.FromECDSA(ep.pk))
+	return toString(ep.Hint(), hex.EncodeToString(etherCrypto.FromECDSA(ep.pk)))
 }
 
 func (ep EtherPrivatekey) Hint() hint.Hint {
@@ -112,7 +112,7 @@ type EtherPublickey struct {
 	pk *ecdsa.PublicKey
 }
 
-func NewEtherPublickey(s string) (EtherPublickey, error) {
+func NewEtherPublickeyFromString(s string) (EtherPublickey, error) {
 	h, err := hex.DecodeString(s)
 	if err != nil {
 		return EtherPublickey{}, err
@@ -131,7 +131,7 @@ func (ep EtherPublickey) String() string {
 		return ""
 	}
 
-	return hex.EncodeToString(etherCrypto.FromECDSAPub(ep.pk))
+	return toString(ep.Hint(), hex.EncodeToString(etherCrypto.FromECDSAPub(ep.pk)))
 }
 
 func (ep EtherPublickey) Hint() hint.Hint {

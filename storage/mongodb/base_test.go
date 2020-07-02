@@ -494,6 +494,6 @@ func (t *testStorage) TestCreateIndexNew() {
 	t.Equal(created, []string{"_id_", "mitum_findme"})
 }
 
-func TestStorage(t *testing.T) {
+func TestMongodbStorage(t *testing.T) {
 	suite.Run(t, new(testStorage))
 }

@@ -7,6 +7,7 @@ import (
 	"github.com/spikeekips/mitum/util"
 	"github.com/spikeekips/mitum/util/encoder"
 	"github.com/spikeekips/mitum/util/valuehash"
+	"golang.org/x/xerrors"
 )
 
 type VoteproofV0FactUnpacker interface {
@@ -93,7 +94,7 @@ func (vf *VoteproofNodeFact) unpack(
 	blt,
 	fact valuehash.Hash,
 	factSignature key.Signature,
-	bSigner []byte,
+	bSigner key.KeyDecoder,
 ) error {
 	var address Address
 	if h, err := DecodeAddress(enc, bAddress); err != nil {
@@ -103,10 +104,12 @@ func (vf *VoteproofNodeFact) unpack(
 	}
 
 	var signer key.Publickey
-	if h, err := key.DecodePublickey(enc, bSigner); err != nil {
+	if k, err := bSigner.Encode(enc); err != nil {
 		return err
+	} else if pk, ok := k.(key.Publickey); !ok {
+		return xerrors.Errorf("not key.Publickey; type=%T", k)
 	} else {
-		signer = h
+		signer = pk
 	}
 
 	vf.address = address

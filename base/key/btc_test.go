@@ -8,18 +8,18 @@ import (
 	"golang.org/x/xerrors"
 )
 
-type testBTCKeypair struct {
+type testBTCKey struct {
 	suite.Suite
 }
 
-func (t *testBTCKeypair) TestNew() {
+func (t *testBTCKey) TestNew() {
 	kp, err := NewBTCPrivatekey()
 	t.NoError(err)
 
 	t.Implements((*Privatekey)(nil), kp)
 }
 
-func (t *testBTCKeypair) TestKeypairIsValid() {
+func (t *testBTCKey) TestKeypairIsValid() {
 	kp, _ := NewBTCPrivatekey()
 	t.NoError(kp.IsValid(nil))
 
@@ -28,29 +28,31 @@ func (t *testBTCKeypair) TestKeypairIsValid() {
 	t.True(xerrors.Is(empty.IsValid(nil), InvalidKeyError))
 }
 
-func (t *testBTCKeypair) TestKeypairExportKeys() {
+func (t *testBTCKey) TestKeypairExportKeys() {
 	priv := "L1bQZCcDZKy342x8xjK9Hk935Nttm2jkApVVS2mn4Nqyxvu7nyGC"
 	kp, _ := NewBTCPrivatekeyFromString(priv)
 
-	t.Equal("27phogA4gmbMGfg321EHfx5eABkL7KAYuDPRGFoyQtAUb", kp.Publickey().String())
-	t.Equal(priv, kp.String())
+	t.Equal("27phogA4gmbMGfg321EHfx5eABkL7KAYuDPRGFoyQtAUb-0203+0.0.1", kp.Publickey().String())
 }
 
-func (t *testBTCKeypair) TestPublickey() {
+func (t *testBTCKey) TestPublickey() {
 	priv := "L1bQZCcDZKy342x8xjK9Hk935Nttm2jkApVVS2mn4Nqyxvu7nyGC"
 	kp, _ := NewBTCPrivatekeyFromString(priv)
 
-	t.Equal("27phogA4gmbMGfg321EHfx5eABkL7KAYuDPRGFoyQtAUb", kp.Publickey().String())
+	t.Equal("27phogA4gmbMGfg321EHfx5eABkL7KAYuDPRGFoyQtAUb-0203+0.0.1", kp.Publickey().String())
 
 	t.NoError(kp.IsValid(nil))
 
-	pk, err := NewBTCPublickeyFromString(kp.Publickey().String())
+	_, s, err := parseString(kp.Publickey().String())
 	t.NoError(err)
 
-	t.True(kp.Publickey().Equal(pk))
+	ukp, err := NewBTCPublickeyFromString(s)
+	t.NoError(err)
+
+	t.True(kp.Publickey().Equal(ukp))
 }
 
-func (t *testBTCKeypair) TestPublickeyEqual() {
+func (t *testBTCKey) TestPublickeyEqual() {
 	kp, _ := NewBTCPrivatekey()
 
 	t.True(kp.Publickey().Equal(kp.Publickey()))
@@ -59,21 +61,20 @@ func (t *testBTCKeypair) TestPublickeyEqual() {
 	t.False(kp.Publickey().Equal(nkp.Publickey()))
 }
 
-func (t *testBTCKeypair) TestPrivatekey() {
+func (t *testBTCKey) TestPrivatekey() {
 	priv := "L1bQZCcDZKy342x8xjK9Hk935Nttm2jkApVVS2mn4Nqyxvu7nyGC"
 	kp, _ := NewBTCPrivatekeyFromString(priv)
 
-	t.Equal(priv, kp.String())
-
 	t.NoError(kp.IsValid(nil))
 
-	pk, err := NewBTCPrivatekeyFromString(kp.String())
+	_, s, err := parseString(kp.String())
 	t.NoError(err)
 
-	t.True(kp.Equal(pk))
+	ukp, _ := NewBTCPrivatekeyFromString(s)
+	t.True(kp.Equal(ukp))
 }
 
-func (t *testBTCKeypair) TestPrivatekeyEqual() {
+func (t *testBTCKey) TestPrivatekeyEqual() {
 	kp, _ := NewBTCPrivatekey()
 
 	t.True(kp.Equal(kp))
@@ -82,7 +83,7 @@ func (t *testBTCKeypair) TestPrivatekeyEqual() {
 	t.False(kp.Equal(nkp))
 }
 
-func (t *testBTCKeypair) TestSign() {
+func (t *testBTCKey) TestSign() {
 	kp, _ := NewBTCPrivatekey()
 
 	input := []byte("makeme")
@@ -97,7 +98,7 @@ func (t *testBTCKeypair) TestSign() {
 	t.NoError(err)
 }
 
-func (t *testBTCKeypair) TestSignInvalidInput() {
+func (t *testBTCKey) TestSignInvalidInput() {
 	kp, _ := NewBTCPrivatekey()
 
 	b := []byte(util.UUID().String())
@@ -123,6 +124,6 @@ func (t *testBTCKeypair) TestSignInvalidInput() {
 	}
 }
 
-func TestBTCKeypair(t *testing.T) {
-	suite.Run(t, new(testBTCKeypair))
+func TestBTCKey(t *testing.T) {
+	suite.Run(t, new(testBTCKey))
 }

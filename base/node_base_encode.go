@@ -1,11 +1,13 @@
 package base
 
 import (
+	"golang.org/x/xerrors"
+
 	"github.com/spikeekips/mitum/base/key"
 	"github.com/spikeekips/mitum/util/encoder"
 )
 
-func (bn *BaseNodeV0) unpack(enc encoder.Encoder, bad, bpk []byte) error {
+func (bn *BaseNodeV0) unpack(enc encoder.Encoder, bad []byte, bpk key.KeyDecoder) error {
 	var address Address
 	if a, err := DecodeAddress(enc, bad); err != nil {
 		return err
@@ -14,8 +16,10 @@ func (bn *BaseNodeV0) unpack(enc encoder.Encoder, bad, bpk []byte) error {
 	}
 
 	var pk key.Publickey
-	if p, err := key.DecodePublickey(enc, bpk); err != nil {
+	if k, err := bpk.Encode(enc); err != nil {
 		return err
+	} else if p, ok := k.(key.Publickey); !ok {
+		return xerrors.Errorf("not key.Publickey; type=%T", k)
 	} else {
 		pk = p
 	}

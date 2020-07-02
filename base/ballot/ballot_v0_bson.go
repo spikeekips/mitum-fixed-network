@@ -32,7 +32,7 @@ func PackBaseBallotV0BSON(ballot Ballot) bson.M {
 
 type BaseBallotV0UnpackerBSON struct {
 	H   valuehash.Bytes `bson:"hash"`
-	SN  bson.Raw        `bson:"signer"`
+	SN  key.KeyDecoder  `bson:"signer"`
 	SG  key.Signature   `bson:"signature"`
 	SA  time.Time       `bson:"signed_at"`
 	HT  base.Height     `bson:"height"`

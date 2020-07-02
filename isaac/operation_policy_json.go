@@ -85,7 +85,7 @@ type SetPolicyOperationV0UnpackerJSON struct {
 	H  valuehash.Bytes `json:"hash"`
 	FH valuehash.Bytes `json:"fact_hash"`
 	FS key.Signature   `json:"fact_signature"`
-	SN json.RawMessage `json:"signer"`
+	SN key.KeyDecoder  `json:"signer"`
 	TK []byte          `json:"token"`
 	PO json.RawMessage `json:"policies"`
 }

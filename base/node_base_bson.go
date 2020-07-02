@@ -23,8 +23,8 @@ func (bn BaseNodeV0) MarshalBSON() ([]byte, error) {
 }
 
 type BaseNodeV0UnpackerBSON struct {
-	AD bson.Raw `bson:"address"`
-	PK bson.Raw `bson:"publickey"`
+	AD bson.Raw       `bson:"address"`
+	PK key.KeyDecoder `bson:"publickey"`
 }
 
 func (bn *BaseNodeV0) UnpackBSON(b []byte, enc *bsonenc.Encoder) error {

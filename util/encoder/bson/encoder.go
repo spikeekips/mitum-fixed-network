@@ -56,6 +56,10 @@ func (be *Encoder) DecodeByHint(b []byte) (hint.Hinter, error) {
 		return nil, err
 	}
 
+	return be.DecodeWithHint(h, b)
+}
+
+func (be *Encoder) DecodeWithHint(h hint.Hint, b []byte) (hint.Hinter, error) {
 	hinter, err := be.hintset.Hinter(h.Type(), h.Version())
 	if err != nil {
 		return nil, err

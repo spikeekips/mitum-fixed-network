@@ -1,49 +1,29 @@
 package key
 
 func (ep EtherPrivatekey) MarshalJSON() ([]byte, error) {
-	return MarshalJSONKey(ep)
+	return marshalJSONStringKey(ep)
 }
 
 func (ep *EtherPrivatekey) UnmarshalJSON(b []byte) error {
-	var key string
-	if h, s, err := UnmarshalJSONKey(b); err != nil {
-		return err
-	} else if err := ep.Hint().IsCompatible(h); err != nil {
+	if k, err := NewEtherPrivatekeyFromString(string(b)); err != nil {
 		return err
 	} else {
-		key = s
+		*ep = k
 	}
-
-	kp, err := NewEtherPrivatekeyFromString(key)
-	if err != nil {
-		return err
-	}
-
-	ep.pk = kp.pk
 
 	return nil
 }
 
 func (ep EtherPublickey) MarshalJSON() ([]byte, error) {
-	return MarshalJSONKey(ep)
+	return marshalJSONStringKey(ep)
 }
 
 func (ep *EtherPublickey) UnmarshalJSON(b []byte) error {
-	var key string
-	if h, s, err := UnmarshalJSONKey(b); err != nil {
-		return err
-	} else if err := ep.Hint().IsCompatible(h); err != nil {
+	if k, err := NewEtherPublickeyFromString(string(b)); err != nil {
 		return err
 	} else {
-		key = s
+		*ep = k
 	}
-
-	kp, err := NewEtherPublickey(key)
-	if err != nil {
-		return err
-	}
-
-	ep.pk = kp.pk
 
 	return nil
 }

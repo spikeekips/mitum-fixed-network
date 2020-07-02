@@ -12,4 +12,5 @@ type Encoder interface {
 	Analyze(interface{}) error
 	SetHintset(*hint.Hintset)
 	DecodeByHint([]byte) (hint.Hinter, error)
+	DecodeWithHint(hint.Hint, []byte) (hint.Hinter, error)
 }

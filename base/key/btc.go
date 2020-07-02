@@ -50,7 +50,7 @@ func NewBTCPrivatekeyFromString(s string) (BTCPrivatekey, error) {
 }
 
 func (bt BTCPrivatekey) String() string {
-	return bt.wif.String()
+	return toString(bt.Hint(), bt.wif.String())
 }
 
 func (bt BTCPrivatekey) Hint() hint.Hint {
@@ -114,7 +114,7 @@ func NewBTCPublickeyFromString(s string) (BTCPublickey, error) {
 }
 
 func (bt BTCPublickey) String() string {
-	return base58.Encode(bt.pk.SerializeCompressed())
+	return toString(bt.Hint(), base58.Encode(bt.pk.SerializeCompressed()))
 }
 
 func (bt BTCPublickey) Hint() hint.Hint {

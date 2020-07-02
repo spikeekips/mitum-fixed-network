@@ -25,7 +25,6 @@ import (
 	"github.com/spikeekips/mitum/storage"
 	"github.com/spikeekips/mitum/util"
 	"github.com/spikeekips/mitum/util/encoder"
-	jsonenc "github.com/spikeekips/mitum/util/encoder/json"
 	"github.com/spikeekips/mitum/util/logging"
 )
 
@@ -704,7 +703,7 @@ func (ct *Container) networkDesign() *launcher.NetworkDesign {
 func (ct *Container) RemoteDesign() *launcher.RemoteDesign {
 	return &launcher.RemoteDesign{
 		Address:         ct.name,
-		PublickeyString: jsonenc.ToString(ct.privatekey.Publickey()),
+		PublickeyString: ct.privatekey.Publickey().String(),
 		Network:         ct.networkDesign().Publish,
 	}
 }
@@ -725,7 +724,7 @@ func (ct *Container) NodeDesign(isGenesisNode bool) NodeDesign {
 
 	lnd := &launcher.NodeDesign{
 		Address:          ct.name,
-		PrivatekeyString: jsonenc.ToString(ct.privatekey),
+		PrivatekeyString: ct.privatekey.String(),
 		Storage:          ct.storageURIInternal(),
 		NetworkIDString:  ct.contestDesign.Config.NetworkIDString,
 		Network:          ct.networkDesign(),

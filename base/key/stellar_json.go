@@ -1,38 +1,28 @@
 package key
 
 func (sp StellarPrivatekey) MarshalJSON() ([]byte, error) {
-	return MarshalJSONKey(sp)
+	return marshalJSONStringKey(sp)
 }
 
 func (sp *StellarPrivatekey) UnmarshalJSON(b []byte) error {
-	_, s, err := UnmarshalJSONKey(b)
-	if err != nil {
-		return err
-	}
-
-	if kp, err := NewStellarPrivatekeyFromString(s); err != nil {
+	if k, err := NewStellarPrivatekeyFromString(string(b)); err != nil {
 		return err
 	} else {
-		sp.kp = kp.kp
+		*sp = k
 	}
 
 	return nil
 }
 
 func (sp StellarPublickey) MarshalJSON() ([]byte, error) {
-	return MarshalJSONKey(sp)
+	return marshalJSONStringKey(sp)
 }
 
 func (sp *StellarPublickey) UnmarshalJSON(b []byte) error {
-	_, s, err := UnmarshalJSONKey(b)
-	if err != nil {
-		return err
-	}
-
-	if kp, err := NewStellarPublickeyFromString(s); err != nil {
+	if k, err := NewStellarPublickeyFromString(string(b)); err != nil {
 		return err
 	} else {
-		sp.kp = kp.kp
+		*sp = k
 	}
 
 	return nil

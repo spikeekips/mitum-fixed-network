@@ -2,12 +2,17 @@ package bsonenc
 
 import (
 	"go.mongodb.org/mongo-driver/bson"
+	"go.mongodb.org/mongo-driver/bson/bsontype"
 
 	"github.com/spikeekips/mitum/util/hint"
 )
 
 func Marshal(i interface{}) ([]byte, error) {
 	return bson.Marshal(i)
+}
+
+func MarshalValue(i interface{}) (bsontype.Type, []byte, error) {
+	return bson.MarshalValue(i)
 }
 
 func Unmarshal(b []byte, i interface{}) error {

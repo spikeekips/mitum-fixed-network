@@ -27,7 +27,7 @@ func (sl Seal) MarshalBSON() ([]byte, error) {
 type SealBSONUnpack struct {
 	H   valuehash.Bytes `bson:"hash"`
 	BH  valuehash.Bytes `bson:"body_hash"`
-	SN  bson.Raw        `bson:"signer"`
+	SN  key.KeyDecoder  `bson:"signer"`
 	SG  key.Signature   `bson:"signature"`
 	SA  time.Time       `bson:"signed_at"`
 	OPS []bson.Raw      `bson:"operations"`

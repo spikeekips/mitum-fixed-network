@@ -23,7 +23,7 @@ func (bn BaseNodeV0) MarshalJSON() ([]byte, error) {
 
 type BaseNodeV0UnpackerJSON struct {
 	AD json.RawMessage `json:"address"`
-	PK json.RawMessage `json:"publickey"`
+	PK key.KeyDecoder  `json:"publickey"`
 }
 
 func (bn *BaseNodeV0) UnpackJSON(b []byte, enc *jsonenc.Encoder) error {

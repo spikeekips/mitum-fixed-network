@@ -77,7 +77,7 @@ type SetPolicyOperationV0UnpackerBSON struct {
 	H  valuehash.Bytes `bson:"hash"`
 	FH valuehash.Bytes `bson:"fact_hash"`
 	FS key.Signature   `bson:"fact_signature"`
-	SN bson.Raw        `bson:"signer"`
+	SN key.KeyDecoder  `bson:"signer"`
 	TK []byte          `bson:"token"`
 	PO bson.Raw        `bson:"policies"`
 }

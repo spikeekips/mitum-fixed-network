@@ -8,18 +8,18 @@ import (
 	"golang.org/x/xerrors"
 )
 
-type testStellarKeypair struct {
+type testStellarKey struct {
 	suite.Suite
 }
 
-func (t *testStellarKeypair) TestNew() {
+func (t *testStellarKey) TestNew() {
 	kp, err := NewStellarPrivatekey()
 	t.NoError(err)
 
 	t.Implements((*Privatekey)(nil), kp)
 }
 
-func (t *testStellarKeypair) TestKeypairIsValid() {
+func (t *testStellarKey) TestKeypairIsValid() {
 	kp, _ := NewStellarPrivatekey()
 	t.NoError(kp.IsValid(nil))
 
@@ -28,29 +28,32 @@ func (t *testStellarKeypair) TestKeypairIsValid() {
 	t.True(xerrors.Is(empty.IsValid(nil), InvalidKeyError))
 }
 
-func (t *testStellarKeypair) TestKeypairExportKeys() {
+func (t *testStellarKey) TestKeypairExportKeys() {
 	seed := "SCD6GQMWGDQT33QOCNKYKRJZL3YWFSLBVQSL6ICVWBUYQZCBFYUQY673"
 	kp, _ := NewStellarPrivatekeyFromString(seed)
 
-	t.Equal("GAVAONBETT4MVPV2IYN2T7OB7ZTYXGNN4BFGZHUYBUYR6G4ACHZMDOQ6", kp.Publickey().String())
-	t.Equal(seed, kp.String())
+	t.Equal("GAVAONBETT4MVPV2IYN2T7OB7ZTYXGNN4BFGZHUYBUYR6G4ACHZMDOQ6-0201+0.0.1", kp.Publickey().String())
+	t.Equal("SCD6GQMWGDQT33QOCNKYKRJZL3YWFSLBVQSL6ICVWBUYQZCBFYUQY673-0200+0.0.1", kp.String())
 }
 
-func (t *testStellarKeypair) TestPublickey() {
+func (t *testStellarKey) TestPublickey() {
 	seed := "SCD6GQMWGDQT33QOCNKYKRJZL3YWFSLBVQSL6ICVWBUYQZCBFYUQY673"
 	kp, _ := NewStellarPrivatekeyFromString(seed)
 
-	t.Equal("GAVAONBETT4MVPV2IYN2T7OB7ZTYXGNN4BFGZHUYBUYR6G4ACHZMDOQ6", kp.Publickey().String())
+	t.Equal("GAVAONBETT4MVPV2IYN2T7OB7ZTYXGNN4BFGZHUYBUYR6G4ACHZMDOQ6-0201+0.0.1", kp.Publickey().String())
 
 	t.NoError(kp.IsValid(nil))
 
-	pk, err := NewStellarPublickeyFromString(kp.Publickey().String())
+	_, s, err := parseString(kp.Publickey().String())
+	t.NoError(err)
+
+	pk, err := NewStellarPublickeyFromString(s)
 	t.NoError(err)
 
 	t.True(kp.Publickey().Equal(pk))
 }
 
-func (t *testStellarKeypair) TestPublickeyEqual() {
+func (t *testStellarKey) TestPublickeyEqual() {
 	kp, _ := NewStellarPrivatekey()
 
 	t.True(kp.Publickey().Equal(kp.Publickey()))
@@ -59,21 +62,24 @@ func (t *testStellarKeypair) TestPublickeyEqual() {
 	t.False(kp.Publickey().Equal(nkp.Publickey()))
 }
 
-func (t *testStellarKeypair) TestPrivatekey() {
+func (t *testStellarKey) TestPrivatekey() {
 	seed := "SCD6GQMWGDQT33QOCNKYKRJZL3YWFSLBVQSL6ICVWBUYQZCBFYUQY673"
 	kp, _ := NewStellarPrivatekeyFromString(seed)
 
-	t.Equal(seed, kp.String())
+	t.Equal("SCD6GQMWGDQT33QOCNKYKRJZL3YWFSLBVQSL6ICVWBUYQZCBFYUQY673-0200+0.0.1", kp.String())
 
 	t.NoError(kp.IsValid(nil))
 
-	pk, err := NewStellarPrivatekeyFromString(kp.String())
+	_, s, err := parseString(kp.String())
+	t.NoError(err)
+
+	pk, err := NewStellarPrivatekeyFromString(s)
 	t.NoError(err)
 
 	t.True(kp.Equal(pk))
 }
 
-func (t *testStellarKeypair) TestPrivatekeyEqual() {
+func (t *testStellarKey) TestPrivatekeyEqual() {
 	kp, _ := NewStellarPrivatekey()
 
 	t.True(kp.Equal(kp))
@@ -82,7 +88,7 @@ func (t *testStellarKeypair) TestPrivatekeyEqual() {
 	t.False(kp.Equal(nkp))
 }
 
-func (t *testStellarKeypair) TestSign() {
+func (t *testStellarKey) TestSign() {
 	kp, _ := NewStellarPrivatekey()
 
 	input := []byte("makeme")
@@ -97,7 +103,7 @@ func (t *testStellarKeypair) TestSign() {
 	t.NoError(err)
 }
 
-func (t *testStellarKeypair) TestSignInvalidInput() {
+func (t *testStellarKey) TestSignInvalidInput() {
 	kp, _ := NewStellarPrivatekey()
 
 	b := []byte(util.UUID().String())
@@ -123,6 +129,6 @@ func (t *testStellarKeypair) TestSignInvalidInput() {
 	}
 }
 
-func TestStellarKeypair(t *testing.T) {
-	suite.Run(t, new(testStellarKeypair))
+func TestStellarKey(t *testing.T) {
+	suite.Run(t, new(testStellarKey))
 }

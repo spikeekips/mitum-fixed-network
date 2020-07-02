@@ -1,31 +1,29 @@
 package key
 
 func (bt BTCPrivatekey) MarshalJSON() ([]byte, error) {
-	return MarshalJSONKey(bt)
+	return marshalJSONStringKey(bt)
 }
 
 func (bt *BTCPrivatekey) UnmarshalJSON(b []byte) error {
-	var key string
-	if _, s, err := UnmarshalJSONKey(b); err != nil {
+	if k, err := NewBTCPrivatekeyFromString(string(b)); err != nil {
 		return err
 	} else {
-		key = s
+		*bt = k
 	}
 
-	return bt.unpack(key)
+	return nil
 }
 
 func (bt BTCPublickey) MarshalJSON() ([]byte, error) {
-	return MarshalJSONKey(bt)
+	return marshalJSONStringKey(bt)
 }
 
 func (bt *BTCPublickey) UnmarshalJSON(b []byte) error {
-	var key string
-	if _, s, err := UnmarshalJSONKey(b); err != nil {
+	if k, err := NewBTCPublickeyFromString(string(b)); err != nil {
 		return err
 	} else {
-		key = s
+		*bt = k
 	}
 
-	return bt.unpack(key)
+	return nil
 }

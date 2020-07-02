@@ -9,6 +9,7 @@ import (
 	"github.com/spikeekips/mitum/util/hint"
 	"github.com/spikeekips/mitum/util/localtime"
 	"github.com/spikeekips/mitum/util/valuehash"
+	"golang.org/x/xerrors"
 )
 
 type BaseBallotV0PackerJSON struct {
@@ -44,7 +45,7 @@ func PackBaseBallotV0JSON(ballot Ballot) (BaseBallotV0PackerJSON, error) {
 type BaseBallotV0UnpackerJSON struct {
 	jsonenc.HintedHead
 	H   valuehash.Bytes    `json:"hash"`
-	SN  json.RawMessage    `json:"signer"`
+	SN  key.KeyDecoder     `json:"signer"`
 	SG  key.Signature      `json:"signature"`
 	SA  localtime.JSONTime `json:"signed_at"`
 	HT  base.Height        `json:"height"`
@@ -60,17 +61,21 @@ func UnpackBaseBallotV0JSON(nib BaseBallotV0UnpackerJSON, enc *jsonenc.Encoder) 
 	BaseBallotFactV0,
 	error,
 ) {
-	var err error
-
 	// signer
 	var signer key.Publickey
-	if signer, err = key.DecodePublickey(enc, nib.SN); err != nil {
+	if k, err := nib.SN.Encode(enc); err != nil {
 		return BaseBallotV0{}, BaseBallotFactV0{}, err
+	} else if pk, ok := k.(key.Publickey); !ok {
+		return BaseBallotV0{}, BaseBallotFactV0{}, xerrors.Errorf("not key.Publickey; type=%T", k)
+	} else {
+		signer = pk
 	}
 
 	var node base.Address
-	if node, err = base.DecodeAddress(enc, nib.N); err != nil {
+	if n, err := base.DecodeAddress(enc, nib.N); err != nil {
 		return BaseBallotV0{}, BaseBallotFactV0{}, err
+	} else {
+		node = n
 	}
 
 	var h, bh, fh valuehash.Hash

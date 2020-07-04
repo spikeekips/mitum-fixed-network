@@ -130,7 +130,7 @@ func (ss *StateSyncingHandler) Activate(ctx StateChangeContext) error {
 			return err
 		}
 	case ctx.From() == base.StateBooting:
-		ss.Log().Debug().Msg("syncing started from booting wihout initial block")
+		ss.Log().Debug().Msg("syncing started from booting without initial block")
 	default:
 		return xerrors.Errorf("empty voteproof or ballot in StateChangeContext")
 	}

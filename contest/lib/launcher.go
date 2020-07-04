@@ -1,18 +1,13 @@
 package contestlib
 
 import (
-	"crypto/tls"
 	"fmt"
 	"net/url"
-	"time"
 
 	"github.com/spikeekips/mitum/isaac"
 	"github.com/spikeekips/mitum/launcher"
 	"github.com/spikeekips/mitum/network"
-	quicnetwork "github.com/spikeekips/mitum/network/quic"
 	"github.com/spikeekips/mitum/util"
-	"github.com/spikeekips/mitum/util/encoder"
-	jsonenc "github.com/spikeekips/mitum/util/encoder/json"
 	"github.com/spikeekips/mitum/util/logging"
 	"golang.org/x/xerrors"
 )
@@ -85,7 +80,7 @@ func (nr *Launcher) attachStorage() error {
 	})
 	l.Debug().Msg("trying to attach")
 
-	if st, err := LoadStorage(nr.design.Storage, nr.Encoders()); err != nil {
+	if st, err := launcher.LoadStorage(nr.design.Storage, nr.Encoders()); err != nil {
 		return err
 	} else {
 		_ = nr.SetStorage(st)
@@ -97,39 +92,21 @@ func (nr *Launcher) attachStorage() error {
 }
 
 func (nr *Launcher) attachNetwork() error {
-	// TODO move under launcher
 	l := nr.Log().WithLogger(func(ctx logging.Context) logging.Emitter {
 		return ctx.Str("target", "network")
 	})
 	l.Debug().Msg("trying to attach")
 
-	var je encoder.Encoder
-	if e, err := nr.Encoders().Encoder(jsonenc.JSONType, ""); err != nil { // NOTE get latest json encoder
-		return xerrors.Errorf("json encoder needs for quic-network: %w", err)
-	} else {
-		je = e
-	}
-
-	nd := nr.design.Network
-
-	var certs []tls.Certificate
-	if priv, err := util.GenerateED25519Privatekey(); err != nil {
-		return err
-	} else if ct, err := util.GenerateTLSCerts(nd.PublishURL().Host, priv); err != nil {
+	if qs, err := launcher.LoadNetworkServer(
+		nr.design.Network.Bind,
+		nr.design.Network.PublishURL(),
+		nr.Encoders(),
+	); err != nil {
 		return err
 	} else {
-		certs = ct
+		_ = nr.SetNetwork(qs).
+			SetPublichURL(nr.design.Network.PublishURL().String())
 	}
-
-	if qs, err := quicnetwork.NewPrimitiveQuicServer(nd.Bind, certs); err != nil {
-		return err
-	} else if nqs, err := quicnetwork.NewQuicServer(qs, nr.Encoders(), je); err != nil {
-		return err
-	} else {
-		_ = nr.SetNetwork(nqs)
-	}
-
-	_ = nr.SetPublichURL(nd.PublishURL().String())
 
 	l.Debug().Msg("attached")
 
@@ -142,18 +119,11 @@ func (nr *Launcher) attachNodeChannel() error {
 	})
 	l.Debug().Msg("trying to attach")
 
-	var je encoder.Encoder
-	if e, err := nr.Encoders().Encoder(jsonenc.JSONType, ""); err != nil { // NOTE get latest json encoder
-		return xerrors.Errorf("json encoder needs for quic-network: %w", err)
-	} else {
-		je = e
-	}
-
 	nu := new(url.URL)
 	*nu = *nr.design.Network.PublishURL()
 	nu.Host = fmt.Sprintf("localhost:%s", nu.Port())
 
-	if ch, err := CreateNodeChannel(nu, nr.Encoders(), je); err != nil {
+	if ch, err := launcher.LoadNodeChannel(nu, nr.Encoders()); err != nil {
 		return err
 	} else {
 		_ = nr.SetNodeChannel(ch)
@@ -166,31 +136,24 @@ func (nr *Launcher) attachNodeChannel() error {
 }
 
 func (nr *Launcher) attachRemoteNodes() error {
-	var je encoder.Encoder
-	if e, err := nr.Encoders().Encoder(jsonenc.JSONType, ""); err != nil { // NOTE get latest json encoder
-		return xerrors.Errorf("json encoder needs for quic-network: %w", err)
-	} else {
-		je = e
-	}
-
 	nodes := make([]network.Node, len(nr.design.Nodes))
 
-	for i, r := range nr.design.Nodes {
-		r := r
+	for i := range nr.design.Nodes {
+		c := nr.design.Nodes[i]
 		l := nr.Log().WithLogger(func(ctx logging.Context) logging.Emitter {
-			return ctx.Str("address", r.Address)
+			return ctx.Str("target", "remote-nodes").Str("address", c.Address)
 		})
 
-		l.Debug().Msg("trying to create remote node")
+		l.Debug().Str("url", c.NetworkURL().String()).Msg("trying to create remote node")
 
 		var n *isaac.RemoteNode
-		if ca, err := NewContestAddress(r.Address); err != nil {
+		if ca, err := NewContestAddress(c.Address); err != nil {
 			return err
 		} else {
-			n = isaac.NewRemoteNode(ca, r.Publickey())
+			n = isaac.NewRemoteNode(ca, c.Publickey())
 		}
 
-		if ch, err := CreateNodeChannel(r.NetworkURL(), nr.Encoders(), je); err != nil {
+		if ch, err := launcher.LoadNodeChannel(c.NetworkURL(), nr.Encoders()); err != nil {
 			return err
 		} else {
 			_ = n.SetChannel(ch)
@@ -245,30 +208,4 @@ func (nr *Launcher) attachProposalProcessor() error {
 	l.Debug().Msg("attached")
 
 	return nil
-}
-
-func CreateNodeChannel(publish *url.URL, encs *encoder.Encoders, enc encoder.Encoder) (network.NetworkChannel, error) {
-	var channel network.NetworkChannel
-
-	switch publish.Scheme {
-	case "quic":
-		if ch, err := quicnetwork.NewQuicChannel(
-			publish.String(),
-			100,
-			true,
-			time.Second*1,
-			3,
-			nil,
-			encs,
-			enc,
-		); err != nil {
-			return nil, err
-		} else {
-			channel = ch
-		}
-	default:
-		return nil, xerrors.Errorf("unsupported publish URL, %v", publish.String())
-	}
-
-	return channel, nil
 }

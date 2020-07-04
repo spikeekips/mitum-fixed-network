@@ -811,7 +811,7 @@ func (ct *Container) storageURIExternal() string {
 }
 
 func (ct *Container) Storage() (storage.Storage, error) {
-	if st, err := LoadStorage(ct.storageURIExternal(), ct.encs); err != nil {
+	if st, err := launcher.LoadStorage(ct.storageURIExternal(), ct.encs); err != nil {
 		return nil, err
 	} else if err := st.Initialize(); err != nil {
 		return nil, err

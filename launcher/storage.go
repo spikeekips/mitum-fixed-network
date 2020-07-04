@@ -1,14 +1,13 @@
-package contestlib
+package launcher
 
 import (
 	"net/url"
 	"strings"
 
-	"golang.org/x/xerrors"
-
 	"github.com/spikeekips/mitum/storage"
 	mongodbstorage "github.com/spikeekips/mitum/storage/mongodb"
 	"github.com/spikeekips/mitum/util/encoder"
+	"golang.org/x/xerrors"
 )
 
 func LoadStorage(uri string, encs *encoder.Encoders) (storage.Storage, error) {

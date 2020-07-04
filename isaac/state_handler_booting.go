@@ -41,12 +41,11 @@ func (cs *StateBootingHandler) Activate(_ StateChangeContext) error {
 
 	cs.Log().Debug().Msg("activated")
 
-	go func() {
-		if err := cs.initialize(); err != nil {
-			// TODO node process should be stopped
-			cs.Log().Error().Err(err).Msg("failed to initialize at booting")
-		}
-	}()
+	if err := cs.initialize(); err != nil {
+		cs.Log().Error().Err(err).Msg("failed to initialize at booting")
+
+		return err
+	}
 
 	return nil
 }
@@ -86,19 +85,6 @@ func (cs *StateBootingHandler) NewVoteproof(voteproof base.Voteproof) error {
 func (cs *StateBootingHandler) initialize() error {
 	cs.Log().Debug().Msg("trying to initialize")
 
-	if err := cs.check(); err != nil {
-		return err
-	}
-
-	cs.Log().Debug().Msg("initialized; moves to joining")
-
-	return cs.ChangeState(base.StateJoining, nil, nil)
-}
-
-func (cs *StateBootingHandler) check() error {
-	cs.Log().Debug().Msg("trying to check")
-	defer cs.Log().Debug().Msg("checked")
-
 	if err := cs.checkBlock(); err != nil {
 		cs.Log().Error().Err(err).Msg("something wrong to check blocks")
 
@@ -106,12 +92,16 @@ func (cs *StateBootingHandler) check() error {
 			if err0 := cs.whenEmptyBlocks(); err0 != nil {
 				return err0
 			}
+
+			return nil
 		}
 
 		return err
 	}
 
-	return nil
+	cs.Log().Debug().Msg("initialized; moves to joining")
+
+	return cs.ChangeState(base.StateJoining, nil, nil)
 }
 
 func (cs *StateBootingHandler) checkBlock() error {
@@ -161,8 +151,6 @@ func (cs *StateBootingHandler) whenEmptyBlocks() error {
 		}
 
 		cs.Log().Debug().Interface("policy", po).Msg("got policy at first time and merged")
-
-		// update policy
 	}
 
 	return cs.ChangeState(base.StateSyncing, nil, nil)
@@ -214,9 +202,6 @@ func (cs *StateBootingHandler) newPolicyTimer(nodes []network.Node) (
 		return nil, err
 	}
 	_ = timer.SetLogger(cs.Log())
-
-	cs.Lock()
-	defer cs.Unlock()
 
 	if cs.policyTimer != nil {
 		if err := cs.policyTimer.Stop(); err != nil {

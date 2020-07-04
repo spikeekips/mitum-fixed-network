@@ -275,6 +275,10 @@ func (bn *Launcher) Start() error {
 	return nil
 }
 
+func (bn *Launcher) ErrChan() <-chan error {
+	return bn.consensusStates.ErrChan()
+}
+
 func (bn *Launcher) createConsensusStates() (*isaac.ConsensusStates, error) {
 	proposalMaker := isaac.NewProposalMaker(bn.localstate)
 

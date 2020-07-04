@@ -52,11 +52,17 @@ func (cmd *RunCommand) Run(log logging.Logger, version util.Version) error {
 		return xerrors.Errorf("failed to start: %w", err)
 	}
 
+	var wait time.Duration = -1
 	if cmd.ExitAfter != 0 {
-		<-time.After(cmd.ExitAfter)
+		wait = cmd.ExitAfter
+	}
+
+	select {
+	case err := <-nr.ErrChan():
+		return err
+	case <-time.After(wait):
+		log.Info().Msg("expired, exit.")
 
 		return nil
 	}
-
-	select {}
 }

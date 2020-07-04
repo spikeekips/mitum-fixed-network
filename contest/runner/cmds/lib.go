@@ -7,6 +7,7 @@ import (
 
 	"github.com/spikeekips/mitum/base"
 	contestlib "github.com/spikeekips/mitum/contest/lib"
+	"github.com/spikeekips/mitum/launcher"
 	"github.com/spikeekips/mitum/network"
 	"github.com/spikeekips/mitum/util"
 	"github.com/spikeekips/mitum/util/encoder"
@@ -70,16 +71,8 @@ func loadNodeChannel(u *url.URL, log logging.Logger) (network.NetworkChannel, er
 	}
 	log.Debug().Msg("hinters loaded")
 
-	var je encoder.Encoder
-	if e, err := encs.Encoder(jsonenc.JSONType, ""); err != nil { // NOTE get latest json encoder
-		return nil, xerrors.Errorf("json encoder needs for quic-network: %w", err)
-	} else {
-		je = e
-	}
-	log.Debug().Msg("json encoder loaded")
-
 	var channel network.NetworkChannel
-	if ch, err := contestlib.CreateNodeChannel(u, encs, je); err != nil {
+	if ch, err := launcher.LoadNodeChannel(u, encs); err != nil {
 		return nil, err
 	} else {
 		channel = ch

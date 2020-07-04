@@ -113,7 +113,7 @@ func (t *testStateBootingHandler) TestWithoutBlock() {
 		}
 	}()
 
-	t.NoError(cs.Activate(NewStateChangeContext(base.StateStopped, base.StateBooting, nil, nil)))
+	_ = cs.Activate(NewStateChangeContext(base.StateStopped, base.StateBooting, nil, nil))
 	defer func() {
 		_ = cs.Deactivate(StateChangeContext{})
 	}()

@@ -31,6 +31,7 @@ type ConsensusStates struct {
 	sealChan      chan seal.Seal
 	stopHooks     []func() error
 	livp          base.Voteproof
+	errChan       chan error
 }
 
 func NewConsensusStates(
@@ -63,6 +64,7 @@ func NewConsensusStates(
 		stateChan: make(chan StateChangeContext),
 		sealChan:  make(chan seal.Seal),
 		livp:      livp,
+		errChan:   make(chan error, 100),
 	}
 	css.FunctionDaemon = util.NewFunctionDaemon(css.start, false)
 
@@ -82,6 +84,10 @@ func (css *ConsensusStates) SetLogger(l logging.Logger) logging.Logger {
 	}
 
 	return css.Log()
+}
+
+func (css *ConsensusStates) ErrChan() <-chan error {
+	return css.errChan
 }
 
 func (css *ConsensusStates) Start() error {
@@ -104,16 +110,16 @@ func (css *ConsensusStates) Start() error {
 		return err
 	}
 
-	if err := css.activateHandler(NewStateChangeContext(base.StateStopped, base.StateBooting, nil, nil)); err != nil {
-		return err
-	}
-
 	ticker := css.cleanBallotbox()
 	css.stopHooks = append(css.stopHooks, func() error {
 		ticker.Stop()
 
 		return nil
 	})
+
+	go func() {
+		css.stateChan <- NewStateChangeContext(base.StateStopped, base.StateBooting, nil, nil)
+	}()
 
 	return nil
 }
@@ -179,20 +185,26 @@ func (css *ConsensusStates) cleanBallotbox() *time.Ticker {
 }
 
 func (css *ConsensusStates) start(stopChan chan struct{}) error {
+	errChan := make(chan error)
 	stateStopChan := make(chan struct{})
-	go css.startStateChan(stateStopChan)
+	go css.startStateChan(stateStopChan, errChan)
 
 	sealStopChan := make(chan struct{})
 	go css.startSealChan(sealStopChan)
 
-	<-stopChan
-	stateStopChan <- struct{}{}
+	var err error
+	select {
+	case err = <-errChan:
+	case <-stopChan:
+		stateStopChan <- struct{}{}
+	}
+
 	sealStopChan <- struct{}{}
 
-	return nil
+	return err
 }
 
-func (css *ConsensusStates) startStateChan(stopChan chan struct{}) {
+func (css *ConsensusStates) startStateChan(stopChan chan struct{}, errChan chan<- error) {
 end:
 	for {
 		select {
@@ -201,6 +213,12 @@ end:
 		case ctx := <-css.stateChan:
 			if err := css.activateHandler(ctx); err != nil {
 				css.Log().Error().Err(err).Msg("failed to activate handler")
+
+				go func(err error) {
+					errChan <- err
+				}(err)
+
+				break end
 			}
 		}
 	}
@@ -340,10 +358,6 @@ func (css *ConsensusStates) newVoteproof(voteproof base.Voteproof) error {
 	var ctx *StateToBeChangeError
 	switch {
 	case xerrors.As(err, &ctx):
-		changeCtx := NewStateChangeContext(css.ActiveHandler().State(), ctx.ToState, ctx.Voteproof, ctx.Ballot)
-		if err0 := css.activateHandler(changeCtx); err0 != nil {
-			return err0
-		}
 	case xerrors.Is(err, IgnoreVoteproofError):
 		return nil
 	case err != nil:
@@ -360,7 +374,27 @@ func (css *ConsensusStates) newVoteproof(voteproof base.Voteproof) error {
 		return nil
 	}
 
-	return css.ActiveHandler().NewVoteproof(voteproof)
+	if ctx == nil {
+		return css.ActiveHandler().NewVoteproof(voteproof)
+	}
+
+	if css.ActiveHandler().State() == ctx.ToState {
+		go func(ctx *StateToBeChangeError) {
+			if err := css.ActiveHandler().NewVoteproof(ctx.Voteproof); err != nil {
+				css.Log().Error().Err(err).Msg("failed to newVoteproof for handler")
+			}
+		}(ctx)
+
+		return nil
+	}
+
+	go func() {
+		css.stateChan <- NewStateChangeContext(
+			css.ActiveHandler().State(), ctx.ToState, ctx.Voteproof, ctx.Ballot,
+		)
+	}()
+
+	return nil
 }
 
 // NewSeal receives Seal and hand it over to handler;

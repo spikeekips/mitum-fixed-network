@@ -7,6 +7,7 @@ import (
 
 	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/base/key"
+	"github.com/spikeekips/mitum/base/operation"
 	"github.com/spikeekips/mitum/util/encoder"
 	jsonenc "github.com/spikeekips/mitum/util/encoder/json"
 	"github.com/spikeekips/mitum/util/valuehash"
@@ -32,6 +33,7 @@ func (t *testSetPolicyOperationJSON) SetupSuite() {
 	_ = t.encs.AddHinter(valuehash.SHA256{})
 	_ = t.encs.AddHinter(SetPolicyOperationFactV0{})
 	_ = t.encs.AddHinter(SetPolicyOperationV0{})
+	_ = t.encs.AddHinter(operation.BaseFactSign{})
 }
 
 func (t *testSetPolicyOperationJSON) TestEncode() {

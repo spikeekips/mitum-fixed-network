@@ -6,7 +6,7 @@ import (
 	"go.mongodb.org/mongo-driver/bson"
 
 	"github.com/spikeekips/mitum/base"
-	"github.com/spikeekips/mitum/base/key"
+	"github.com/spikeekips/mitum/base/operation"
 	bsonenc "github.com/spikeekips/mitum/util/encoder/bson"
 	"github.com/spikeekips/mitum/util/valuehash"
 )
@@ -63,21 +63,17 @@ func (spo SetPolicyOperationV0) MarshalBSON() ([]byte, error) {
 	return bsonenc.Marshal(bsonenc.MergeBSONM(
 		bsonenc.NewHintedDoc(spo.Hint()),
 		bson.M{
-			"hash":           spo.h,
-			"fact_hash":      spo.factHash,
-			"fact_signature": spo.factSignature,
-			"signer":         spo.signer,
-			"token":          spo.token,
-			"policies":       spo.SetPolicyOperationFactV0.PolicyOperationBodyV0,
+			"hash":       spo.h,
+			"fact_signs": []operation.FactSign{spo.fs},
+			"token":      spo.token,
+			"policies":   spo.SetPolicyOperationFactV0.PolicyOperationBodyV0,
 		},
 	))
 }
 
 type SetPolicyOperationV0UnpackerBSON struct {
 	H  valuehash.Bytes `bson:"hash"`
-	FH valuehash.Bytes `bson:"fact_hash"`
-	FS key.Signature   `bson:"fact_signature"`
-	SN key.KeyDecoder  `bson:"signer"`
+	FS []bson.Raw      `bson:"fact_signs"`
 	TK []byte          `bson:"token"`
 	PO bson.Raw        `bson:"policies"`
 }
@@ -88,5 +84,10 @@ func (spo *SetPolicyOperationV0) UnpackBSON(b []byte, enc *bsonenc.Encoder) erro
 		return err
 	}
 
-	return spo.unpack(enc, usp.H, usp.FH, usp.FS, usp.SN, usp.TK, usp.PO)
+	var fs []byte
+	if len(usp.FS) > 0 {
+		fs = usp.FS[0]
+	}
+
+	return spo.unpack(enc, usp.H, fs, usp.TK, usp.PO)
 }

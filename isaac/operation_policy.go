@@ -179,30 +179,20 @@ func (po PolicyOperationBodyV0) SetTimeoutProcessProposal(v time.Duration) Polic
 
 type SetPolicyOperationFactV0 struct {
 	PolicyOperationBodyV0
-	signer key.Publickey
-	token  []byte
+	token []byte
 }
 
 func NewSetPolicyOperationFactV0(
-	signer key.Publickey,
 	token []byte,
 	policies PolicyOperationBodyV0,
 ) (SetPolicyOperationFactV0, error) {
-	if signer == nil {
-		return SetPolicyOperationFactV0{}, xerrors.Errorf("fact has empty signer")
-	}
-
 	return SetPolicyOperationFactV0{
 		PolicyOperationBodyV0: policies,
-		signer:                signer,
 		token:                 token,
 	}, nil
 }
 
 func (spof SetPolicyOperationFactV0) IsValid([]byte) error {
-	if spof.signer == nil {
-		return xerrors.Errorf("fact has empty signer")
-	}
 	if err := spof.Hint().IsValid(nil); err != nil {
 		return err
 	}
@@ -220,14 +210,9 @@ func (spof SetPolicyOperationFactV0) Hash() valuehash.Hash {
 
 func (spof SetPolicyOperationFactV0) Bytes() []byte {
 	return util.ConcatBytesSlice(
-		[]byte(spof.signer.String()),
 		spof.token,
 		spof.PolicyOperationBodyV0.Bytes(),
 	)
-}
-
-func (spof SetPolicyOperationFactV0) Signer() key.Publickey {
-	return spof.signer
 }
 
 func (spof SetPolicyOperationFactV0) Token() []byte {
@@ -236,9 +221,8 @@ func (spof SetPolicyOperationFactV0) Token() []byte {
 
 type SetPolicyOperationV0 struct {
 	SetPolicyOperationFactV0
-	h             valuehash.Hash
-	factHash      valuehash.Hash
-	factSignature key.Signature
+	h  valuehash.Hash
+	fs operation.FactSign
 }
 
 func NewSetPolicyOperationV0(
@@ -251,7 +235,7 @@ func NewSetPolicyOperationV0(
 		return SetPolicyOperationV0{}, xerrors.Errorf("empty privatekey")
 	}
 
-	fact, err := NewSetPolicyOperationFactV0(signer.Publickey(), token, policies)
+	fact, err := NewSetPolicyOperationFactV0(token, policies)
 	if err != nil {
 		return SetPolicyOperationV0{}, err
 	}
@@ -270,9 +254,8 @@ func NewSetPolicyOperationV0FromFact(signer key.Privatekey, fact SetPolicyOperat
 		return SetPolicyOperationV0{}, err
 	}
 
-	factHash := fact.Hash()
 	var factSignature key.Signature
-	if fs, err := signer.Sign(util.ConcatBytesSlice(factHash.Bytes(), networkID)); err != nil {
+	if fs, err := signer.Sign(util.ConcatBytesSlice(fact.Hash().Bytes(), networkID)); err != nil {
 		return SetPolicyOperationV0{}, err
 	} else {
 		factSignature = fs
@@ -280,8 +263,7 @@ func NewSetPolicyOperationV0FromFact(signer key.Privatekey, fact SetPolicyOperat
 
 	spo := SetPolicyOperationV0{
 		SetPolicyOperationFactV0: fact,
-		factHash:                 factHash,
-		factSignature:            factSignature,
+		fs:                       operation.NewBaseFactSign(signer.Publickey(), factSignature),
 	}
 
 	if h, err := spo.GenerateHash(); err != nil {
@@ -309,16 +291,17 @@ func (spo SetPolicyOperationV0) Hash() valuehash.Hash {
 	return spo.h
 }
 
+func (spo SetPolicyOperationV0) Signs() []operation.FactSign {
+	return []operation.FactSign{spo.fs}
+}
+
 func (spo SetPolicyOperationV0) GenerateHash() (valuehash.Hash, error) {
-	return valuehash.NewSHA256(util.ConcatBytesSlice(spo.factHash.Bytes(), spo.factSignature.Bytes())), nil
-}
-
-func (spo SetPolicyOperationV0) FactHash() valuehash.Hash {
-	return spo.factHash
-}
-
-func (spo SetPolicyOperationV0) FactSignature() key.Signature {
-	return spo.factSignature
+	return valuehash.NewSHA256(
+		util.ConcatBytesSlice(
+			spo.Fact().Hash().Bytes(),
+			spo.fs.Bytes(),
+		),
+	), nil
 }
 
 func (spo SetPolicyOperationV0) ProcessOperation(

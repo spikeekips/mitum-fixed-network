@@ -4,10 +4,9 @@ import (
 	"time"
 
 	"github.com/spikeekips/mitum/base"
-	"github.com/spikeekips/mitum/base/key"
+	"github.com/spikeekips/mitum/base/operation"
 	"github.com/spikeekips/mitum/util/encoder"
 	"github.com/spikeekips/mitum/util/valuehash"
-	"golang.org/x/xerrors"
 )
 
 func (po *PolicyOperationBodyV0) unpack(
@@ -36,33 +35,27 @@ func (po *PolicyOperationBodyV0) unpack(
 
 func (spo *SetPolicyOperationV0) unpack(
 	enc encoder.Encoder,
-	h,
-	factHash valuehash.Hash,
-	factSignature key.Signature,
-	bSigner key.KeyDecoder,
+	h valuehash.Hash,
+	bfs []byte,
 	token,
 	bPolicies []byte,
 ) error {
-	var signer key.Publickey
-	if k, err := bSigner.Encode(enc); err != nil {
-		return err
-	} else if pk, ok := k.(key.Publickey); !ok {
-		return xerrors.Errorf("not key.Publickey; type=%T", k)
-	} else {
-		signer = pk
-	}
-
 	var body PolicyOperationBodyV0
 	if err := enc.Decode(bPolicies, &body); err != nil {
 		return err
 	}
 
+	var fs operation.FactSign
+	if f, err := operation.DecodeFactSign(enc, bfs); err != nil {
+		return err
+	} else {
+		fs = f
+	}
+
 	spo.h = h
-	spo.factHash = factHash
-	spo.factSignature = factSignature
+	spo.fs = fs
 	spo.SetPolicyOperationFactV0 = SetPolicyOperationFactV0{
 		PolicyOperationBodyV0: body,
-		signer:                signer,
 		token:                 token,
 	}
 

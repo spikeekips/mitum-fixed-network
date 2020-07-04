@@ -100,7 +100,7 @@ func (gg *GenesisBlockV0Generator) generateOperationSeal() ([]operation.Seal, er
 	}
 
 	var seals []operation.Seal
-	if sl, err := operation.NewSeal(
+	if sl, err := operation.NewBaseSeal(
 		gg.localstate.Node().Privatekey(),
 		gg.ops,
 		gg.localstate.Policy().NetworkID(),

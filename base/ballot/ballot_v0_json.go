@@ -22,7 +22,6 @@ type BaseBallotV0PackerJSON struct {
 	RD  base.Round         `json:"round"`
 	N   base.Address       `json:"node"`
 	BH  valuehash.Hash     `json:"body_hash"`
-	FH  valuehash.Hash     `json:"fact_hash"`
 	FSG key.Signature      `json:"fact_signature"`
 }
 
@@ -37,7 +36,6 @@ func PackBaseBallotV0JSON(ballot Ballot) (BaseBallotV0PackerJSON, error) {
 		RD:         ballot.Round(),
 		N:          ballot.Node(),
 		BH:         ballot.BodyHash(),
-		FH:         ballot.FactHash(),
 		FSG:        ballot.FactSignature(),
 	}, nil
 }
@@ -52,7 +50,6 @@ type BaseBallotV0UnpackerJSON struct {
 	RD  base.Round         `json:"round"`
 	N   json.RawMessage    `json:"node"`
 	BH  valuehash.Bytes    `json:"body_hash"`
-	FH  valuehash.Bytes    `json:"fact_hash"`
 	FSG key.Signature      `json:"fact_signature"`
 }
 
@@ -78,15 +75,12 @@ func UnpackBaseBallotV0JSON(nib BaseBallotV0UnpackerJSON, enc *jsonenc.Encoder) 
 		node = n
 	}
 
-	var h, bh, fh valuehash.Hash
+	var h, bh valuehash.Hash
 	if !nib.H.Empty() {
 		h = nib.H
 	}
 	if !nib.BH.Empty() {
 		bh = nib.BH
-	}
-	if !nib.FH.Empty() {
-		fh = nib.FH
 	}
 
 	return BaseBallotV0{
@@ -96,7 +90,6 @@ func UnpackBaseBallotV0JSON(nib BaseBallotV0UnpackerJSON, enc *jsonenc.Encoder) 
 			signature:     nib.SG,
 			signedAt:      nib.SA.Time,
 			node:          node,
-			factHash:      fh,
 			factSignature: nib.FSG,
 		},
 		BaseBallotFactV0{

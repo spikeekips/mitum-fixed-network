@@ -42,7 +42,7 @@ var Hinters = []hint.Hinter{
 	valuehash.SHA256{},
 	valuehash.SHA512{},
 	valuehash.Bytes{},
-	operation.Seal{},
+	operation.BaseSeal{},
 	tree.AVLTree{},
 	operation.OperationAVLNode{},
 	isaac.PolicyOperationBodyV0{},

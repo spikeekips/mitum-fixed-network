@@ -9,10 +9,12 @@ import (
 	"github.com/spikeekips/mitum/base/key"
 	"github.com/spikeekips/mitum/util/encoder"
 	bsonenc "github.com/spikeekips/mitum/util/encoder/bson"
+	jsonenc "github.com/spikeekips/mitum/util/encoder/json"
+	"github.com/spikeekips/mitum/util/localtime"
 	"github.com/spikeekips/mitum/util/valuehash"
 )
 
-type testSealBSON struct {
+type testSealEncode struct {
 	suite.Suite
 
 	pk   key.BTCPrivatekey
@@ -20,21 +22,21 @@ type testSealBSON struct {
 	enc  encoder.Encoder
 }
 
-func (t *testSealBSON) SetupSuite() {
+func (t *testSealEncode) SetupSuite() {
 	t.pk, _ = key.NewBTCPrivatekey()
 
 	t.encs = encoder.NewEncoders()
-	t.enc = bsonenc.NewEncoder()
 	_ = t.encs.AddEncoder(t.enc)
 
 	_ = t.encs.AddHinter(key.BTCPublickey{})
 	_ = t.encs.AddHinter(valuehash.SHA256{})
-	_ = t.encs.AddHinter(Seal{})
+	_ = t.encs.AddHinter(BaseSeal{})
 	_ = t.encs.AddHinter(KVOperation{})
 	_ = t.encs.AddHinter(KVOperationFact{})
+	_ = t.encs.AddHinter(BaseFactSign{})
 }
 
-func (t *testSealBSON) TestSign() {
+func (t *testSealEncode) TestSign() {
 	token := []byte("this-is-token")
 
 	var ops []Operation
@@ -44,17 +46,17 @@ func (t *testSealBSON) TestSign() {
 
 		ops = append(ops, op)
 	}
-	sl, err := NewSeal(t.pk, ops, nil)
+	sl, err := NewBaseSeal(t.pk, ops, nil)
 	t.NoError(err)
 
 	var raw []byte
-	raw, err = bsonenc.Marshal(sl)
+	raw, err = t.enc.Marshal(sl)
 	t.NoError(err)
 
 	hinter, err := t.enc.DecodeByHint(raw)
 	t.NoError(err)
 
-	usl, ok := hinter.(Seal)
+	usl, ok := hinter.(BaseSeal)
 	t.True(ok)
 
 	t.True(sl.Hash().Equal(usl.Hash()))
@@ -65,14 +67,32 @@ func (t *testSealBSON) TestSign() {
 		b := usl.Operations()[i].(KVOperation)
 
 		t.True(a.Hash().Equal(b.Hash()))
-		t.True(a.FactHash().Equal(b.FactHash()))
-		t.Equal(a.FactSignature(), b.FactSignature())
-		t.Equal(a.FactSignature(), b.FactSignature())
+		t.True(a.Fact().Hash().Equal(b.Fact().Hash()))
 		t.Equal(a.Key, b.Key)
 		t.Equal(a.Value, b.Value)
+
+		t.Equal(len(a.Signs()), len(b.Signs()))
+		for j := range a.Signs() {
+			sa := a.Signs()[j]
+			sb := b.Signs()[j]
+
+			t.True(sa.Signer().Equal(sb.Signer()))
+			t.Equal(sa.Signature(), sb.Signature())
+			t.Equal(localtime.Normalize(sa.SignedAt()), localtime.Normalize(sb.SignedAt()))
+		}
 	}
 }
 
-func TestSealBSON(t *testing.T) {
-	suite.Run(t, new(testSealBSON))
+func TestSealEncodeJSON(t *testing.T) {
+	b := new(testSealEncode)
+	b.enc = jsonenc.NewEncoder()
+
+	suite.Run(t, b)
+}
+
+func TestSealEncodeBSON(t *testing.T) {
+	b := new(testSealEncode)
+	b.enc = bsonenc.NewEncoder()
+
+	suite.Run(t, b)
 }

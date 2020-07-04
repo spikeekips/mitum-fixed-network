@@ -41,7 +41,7 @@ func (vrs *VoteRecords) addBallot(blt ballot.Ballot) bool {
 
 	vrs.ballots[blt.Node().String()] = blt
 
-	factHash := vrs.sanitizeHash(blt.FactHash())
+	factHash := vrs.sanitizeHash(blt.Fact().Hash())
 	vrs.votes[blt.Node().String()] = factHash
 
 	if _, found := vrs.facts[factHash.String()]; !found {
@@ -90,7 +90,7 @@ func (vrs *VoteRecords) Vote(blt ballot.Ballot) base.Voteproof {
 			votes[i] = base.NewVoteproofNodeFact(
 				blt.Node(),
 				vrs.sanitizeHash(blt.Hash()),
-				vrs.sanitizeHash(blt.FactHash()),
+				vrs.sanitizeHash(blt.Fact().Hash()),
 				blt.FactSignature(),
 				blt.Signer(),
 			)

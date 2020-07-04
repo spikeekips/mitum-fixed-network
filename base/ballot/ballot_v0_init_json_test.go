@@ -77,7 +77,7 @@ func (t *testBallotV0INITJSON) TestEncode() {
 	t.True(ib.BodyHash().Equal(nib.BodyHash()))
 	t.True(ib.PreviousBlock().Equal(nib.PreviousBlock()))
 	t.Equal(ib.FactSignature(), nib.FactSignature())
-	t.True(ib.FactHash().Equal(nib.FactHash()))
+	t.True(ib.Fact().Hash().Equal(nib.Fact().Hash()))
 	t.Equal(vp, nib.Voteproof())
 }
 

@@ -80,7 +80,7 @@ func (t *testBallotV0ACCEPTJSON) TestEncode() {
 	t.True(ab.NewBlock().Equal(nib.NewBlock()))
 	t.True(ab.Proposal().Equal(nib.Proposal()))
 	t.Equal(ab.FactSignature(), nib.FactSignature())
-	t.True(ab.FactHash().Equal(nib.FactHash()))
+	t.True(ab.Fact().Hash().Equal(nib.Fact().Hash()))
 	t.Equal(vp, nib.Voteproof())
 }
 

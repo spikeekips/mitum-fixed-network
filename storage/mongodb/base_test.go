@@ -300,7 +300,7 @@ func (t *testStorage) newOperationSeal() operation.Seal {
 	op, err := operation.NewKVOperation(t.PK, token, util.UUID().String(), []byte(util.UUID().String()), nil)
 	t.NoError(err)
 
-	sl, err := operation.NewSeal(t.PK, []operation.Operation{op}, nil)
+	sl, err := operation.NewBaseSeal(t.PK, []operation.Operation{op}, nil)
 	t.NoError(err)
 	t.NoError(sl.IsValid(nil))
 
@@ -341,7 +341,7 @@ func (t *testStorage) TestStagedOperationSeals() {
 	t.Equal(len(ops), len(collected))
 
 	for _, sl := range collected {
-		t.IsType(operation.Seal{}, sl)
+		t.Implements((*operation.Seal)(nil), sl)
 
 		var found bool
 		for h := range ops {

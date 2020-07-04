@@ -70,7 +70,7 @@ func (t *testBallotProposalV0BSON) TestEncode() {
 	t.True(ib.Hash().Equal(nib.Hash()))
 	t.True(ib.BodyHash().Equal(nib.BodyHash()))
 	t.Equal(ib.FactSignature(), nib.FactSignature())
-	t.True(ib.FactHash().Equal(nib.FactHash()))
+	t.True(ib.Fact().Hash().Equal(nib.Fact().Hash()))
 
 	for i, s := range ib.Seals() {
 		t.True(s.Equal(nib.Seals()[i]))

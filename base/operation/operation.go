@@ -1,7 +1,7 @@
 package operation
 
 import (
-	"github.com/spikeekips/mitum/base/key"
+	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/util/hint"
 	"github.com/spikeekips/mitum/util/isvalid"
 	"github.com/spikeekips/mitum/util/valuehash"
@@ -10,8 +10,7 @@ import (
 const MaxTokenSize = 100
 
 type BaseOperationFact interface {
-	EmbededFact
-	Signer() key.Publickey
+	Fact() base.Fact
 	Token() []byte
 }
 
@@ -21,6 +20,7 @@ type Operation interface {
 	valuehash.Hasher
 	valuehash.HashGenerator
 	BaseOperationFact
+	Signs() []FactSign
 }
 
 func IsValidOperation(op Operation, networkID []byte) error {
@@ -38,8 +38,13 @@ func IsValidOperation(op Operation, networkID []byte) error {
 		return err
 	}
 
-	if err := IsValidEmbededFact(op.Signer(), op, networkID); err != nil {
-		return err
+	for i := range op.Signs() {
+		fs := op.Signs()[i]
+		if err := fs.IsValid(networkID); err != nil {
+			return err
+		} else if err := IsValidFactSign(op.Fact(), fs, networkID); err != nil {
+			return err
+		}
 	}
 
 	if h, err := op.GenerateHash(); err != nil {

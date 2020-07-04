@@ -58,7 +58,6 @@ type BaseBallotV0 struct {
 	signature     key.Signature
 	signedAt      time.Time
 	node          base.Address
-	factHash      valuehash.Hash
 	factSignature key.Signature
 }
 
@@ -92,10 +91,6 @@ func (bb BaseBallotV0) Signature() key.Signature {
 
 func (bb BaseBallotV0) SignedAt() time.Time {
 	return bb.signedAt
-}
-
-func (bb BaseBallotV0) FactHash() valuehash.Hash {
-	return bb.factHash
 }
 
 func (bb BaseBallotV0) FactSignature() key.Signature {

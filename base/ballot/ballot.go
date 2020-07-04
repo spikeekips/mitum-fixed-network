@@ -3,10 +3,10 @@ package ballot
 import (
 	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/base/key"
-	"github.com/spikeekips/mitum/base/operation"
 	"github.com/spikeekips/mitum/base/seal"
 	"github.com/spikeekips/mitum/util"
 	"github.com/spikeekips/mitum/util/hint"
+	"github.com/spikeekips/mitum/util/isvalid"
 	"github.com/spikeekips/mitum/util/localtime"
 	"github.com/spikeekips/mitum/util/logging"
 	"github.com/spikeekips/mitum/util/valuehash"
@@ -24,7 +24,9 @@ var (
 )
 
 type Ballot interface {
-	operation.FactSeal
+	seal.Seal
+	Fact() base.Fact
+	FactSignature() key.Signature
 	logging.LogHintedMarshaler
 	Stage() base.Stage
 	Height() base.Height
@@ -74,12 +76,29 @@ type ACCEPTBallotFact interface {
 	NewBlock() valuehash.Hash
 }
 
-func IsValidBallot(ballot Ballot, b []byte) error {
-	if err := seal.IsValidSeal(ballot, b); err != nil {
+func IsValidBallot(blt Ballot, b []byte) error {
+	if err := seal.IsValidSeal(blt, b); err != nil {
 		return err
 	}
 
-	return operation.IsValidEmbededFact(ballot.Signer(), ballot, b)
+	if blt.Fact() == nil {
+		return isvalid.InvalidError.Errorf("Ballot has empty Fact()")
+	}
+	if blt.Fact().Hash() == nil {
+		return isvalid.InvalidError.Errorf("Ballot has empty Fact hash")
+	}
+	if blt.FactSignature() == nil {
+		return isvalid.InvalidError.Errorf("Ballot has empty FactSignature()")
+	}
+
+	if err := blt.Signer().Verify(util.ConcatBytesSlice(blt.Fact().Hash().Bytes(), b), blt.FactSignature()); err != nil {
+		return err
+	}
+
+	return blt.Signer().Verify(
+		util.ConcatBytesSlice(blt.Fact().Hash().Bytes(), b),
+		blt.FactSignature(),
+	)
 }
 
 func SignBaseBallotV0(blt Ballot, bb BaseBallotV0, pk key.Privatekey, networkID []byte) (BaseBallotV0, error) {
@@ -101,8 +120,7 @@ func SignBaseBallotV0(blt Ballot, bb BaseBallotV0, pk key.Privatekey, networkID 
 		sig = s
 	}
 
-	factHash := blt.Fact().Hash()
-	factSig, err := pk.Sign(util.ConcatBytesSlice(factHash.Bytes(), networkID))
+	factSig, err := pk.Sign(util.ConcatBytesSlice(blt.Fact().Hash().Bytes(), networkID))
 	if err != nil {
 		return BaseBallotV0{}, err
 	}
@@ -111,7 +129,6 @@ func SignBaseBallotV0(blt Ballot, bb BaseBallotV0, pk key.Privatekey, networkID 
 	bb.signature = sig
 	bb.signedAt = localtime.Now()
 	bb.bodyHash = bodyHash
-	bb.factHash = factHash
 	bb.factSignature = factSig
 
 	return bb, nil

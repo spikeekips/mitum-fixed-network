@@ -24,7 +24,6 @@ func PackBaseBallotV0BSON(ballot Ballot) bson.M {
 			"round":          ballot.Round(),
 			"node":           ballot.Node(),
 			"body_hash":      ballot.BodyHash(),
-			"fact_hash":      ballot.FactHash(),
 			"fact_signature": ballot.FactSignature(),
 		},
 	)
@@ -39,7 +38,6 @@ type BaseBallotV0UnpackerBSON struct {
 	RD  base.Round      `bson:"round"`
 	N   bson.Raw        `bson:"node"`
 	BH  valuehash.Bytes `bson:"body_hash"`
-	FH  valuehash.Bytes `bson:"fact_hash"`
 	FSG key.Signature   `bson:"fact_signature"`
 }
 

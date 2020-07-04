@@ -60,11 +60,16 @@ func (t *testProposalProcessor) TestBlockOperations() {
 		opl := t.newOperationSeal(t.local)
 		t.NoError(t.local.Storage().NewSeals([]seal.Seal{opl}))
 
+		ophs := make([]valuehash.Hash, len(opl.Operations()))
+		for i, op := range opl.Operations() {
+			ophs[i] = op.Hash()
+		}
+
 		proposal = ballot.NewProposalV0(
 			t.local.Node().Address(),
 			pr.Height(),
 			pr.Round(),
-			opl.OperationHashes(),
+			ophs,
 			[]valuehash.Hash{opl.Hash()},
 		)
 		t.NoError(SignSeal(&proposal, t.local))
@@ -124,11 +129,16 @@ func (t *testProposalProcessor) TestNotFoundInProposal() {
 			},
 		)
 
+		ophs := make([]valuehash.Hash, len(op.Operations()))
+		for i, op := range op.Operations() {
+			ophs[i] = op.Hash()
+		}
+
 		proposal = ballot.NewProposalV0(
 			t.remote.Node().Address(),
 			pr.Height(),
 			pr.Round(),
-			op.OperationHashes(),
+			ophs,
 			[]valuehash.Hash{op.Hash()},
 		)
 		t.NoError(SignSeal(&proposal, t.remote))

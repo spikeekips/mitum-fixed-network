@@ -21,8 +21,7 @@ func (bb BaseBallotV0) unpack(
 	height base.Height,
 	round base.Round,
 	bNode []byte,
-	bodyHash,
-	factHash valuehash.Hash,
+	bodyHash valuehash.Hash,
 	factSignature key.Signature,
 ) (BaseBallotV0, BaseBallotFactV0, error) {
 	// signer
@@ -49,7 +48,6 @@ func (bb BaseBallotV0) unpack(
 			signature:     signature,
 			signedAt:      signedAt,
 			node:          node,
-			factHash:      factHash,
 			factSignature: factSignature,
 		},
 		BaseBallotFactV0{
@@ -67,7 +65,7 @@ func (bb BaseBallotV0) unpackJSON(b []byte, enc *jsonenc.Encoder) (
 	}
 
 	return bb.unpack(enc,
-		nbb.H, nbb.SN, nbb.SG, nbb.SA.Time, nbb.HT, nbb.RD, nbb.N, nbb.BH, nbb.FH, nbb.FSG)
+		nbb.H, nbb.SN, nbb.SG, nbb.SA.Time, nbb.HT, nbb.RD, nbb.N, nbb.BH, nbb.FSG)
 }
 
 func (bb BaseBallotV0) unpackBSON(b []byte, enc *bsonenc.Encoder) (
@@ -79,7 +77,7 @@ func (bb BaseBallotV0) unpackBSON(b []byte, enc *bsonenc.Encoder) (
 	}
 
 	return bb.unpack(enc,
-		nbb.H, nbb.SN, nbb.SG, nbb.SA, nbb.HT, nbb.RD, nbb.N, nbb.BH, nbb.FH, nbb.FSG)
+		nbb.H, nbb.SN, nbb.SG, nbb.SA, nbb.HT, nbb.RD, nbb.N, nbb.BH, nbb.FSG)
 }
 
 func (bf BaseBallotFactV0) unpack(_ encoder.Encoder, height base.Height, round base.Round) (

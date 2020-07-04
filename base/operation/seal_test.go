@@ -29,8 +29,10 @@ func (t *testSeal) TestSign() {
 
 		ops = append(ops, op)
 	}
-	sl, err := NewSeal(t.pk, ops, nil)
+	sl, err := NewBaseSeal(t.pk, ops, nil)
 	t.NoError(err)
+
+	t.Implements((*Seal)(nil), sl)
 	t.NoError(sl.IsValid(nil))
 
 	t.Equal(3, len(sl.Operations()))

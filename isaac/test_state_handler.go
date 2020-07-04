@@ -53,7 +53,8 @@ func (t *baseTestStateHandler) SetupSuite() {
 	_ = t.Encs.AddHinter(block.ManifestV0{})
 	_ = t.Encs.AddHinter(block.BlockConsensusInfoV0{})
 	_ = t.Encs.AddHinter(block.SuffrageInfoV0{})
-	_ = t.Encs.AddHinter(operation.Seal{})
+	_ = t.Encs.AddHinter(operation.BaseFactSign{})
+	_ = t.Encs.AddHinter(operation.BaseSeal{})
 	_ = t.Encs.AddHinter(operation.KVOperationFact{})
 	_ = t.Encs.AddHinter(operation.KVOperation{})
 	_ = t.Encs.AddHinter(KVOperation{})
@@ -282,7 +283,7 @@ func (t *baseTestStateHandler) newOperationSeal(localstate *Localstate) operatio
 	op, err := NewKVOperation(pk, token, util.UUID().String(), []byte(util.UUID().String()), nil)
 	t.NoError(err)
 
-	sl, err := operation.NewSeal(pk, []operation.Operation{op}, nil)
+	sl, err := operation.NewBaseSeal(pk, []operation.Operation{op}, nil)
 	t.NoError(err)
 	t.NoError(sl.IsValid(nil))
 

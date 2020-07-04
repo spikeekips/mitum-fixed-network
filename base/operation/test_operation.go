@@ -5,11 +5,13 @@ package operation
 import (
 	"encoding/json"
 
+	"go.mongodb.org/mongo-driver/bson"
 	"golang.org/x/xerrors"
 
 	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/base/key"
 	"github.com/spikeekips/mitum/util"
+	"github.com/spikeekips/mitum/util/encoder"
 	bsonenc "github.com/spikeekips/mitum/util/encoder/bson"
 	jsonenc "github.com/spikeekips/mitum/util/encoder/json"
 	"github.com/spikeekips/mitum/util/hint"
@@ -29,16 +31,12 @@ var (
 )
 
 type KVOperationFact struct {
-	signer key.Publickey
-	token  []byte
-	Key    string
-	Value  []byte
+	token []byte
+	Key   string
+	Value []byte
 }
 
 func (kvof KVOperationFact) IsValid([]byte) error {
-	if kvof.signer == nil {
-		return xerrors.Errorf("fact has empty signer")
-	}
 	if err := kvof.Hint().IsValid(nil); err != nil {
 		return err
 	}
@@ -68,15 +66,10 @@ func (kvof KVOperationFact) Hash() valuehash.Hash {
 
 func (kvof KVOperationFact) Bytes() []byte {
 	return util.ConcatBytesSlice(
-		[]byte(kvof.signer.String()),
 		kvof.token,
 		[]byte(kvof.Key),
 		kvof.Value,
 	)
-}
-
-func (kvof KVOperationFact) Signer() key.Publickey {
-	return kvof.signer
 }
 
 func (kvof KVOperationFact) Token() []byte {
@@ -85,9 +78,8 @@ func (kvof KVOperationFact) Token() []byte {
 
 type KVOperation struct {
 	KVOperationFact
-	h             valuehash.Hash
-	factHash      valuehash.Hash
-	factSignature key.Signature
+	h  valuehash.Hash
+	fs []FactSign
 }
 
 func NewKVOperation(
@@ -102,14 +94,12 @@ func NewKVOperation(
 	}
 
 	fact := KVOperationFact{
-		signer: signer.Publickey(),
-		token:  token,
-		Key:    k,
-		Value:  v,
+		token: token,
+		Key:   k,
+		Value: v,
 	}
-	factHash := fact.Hash()
 	var factSignature key.Signature
-	if fs, err := signer.Sign(util.ConcatBytesSlice(factHash.Bytes(), b)); err != nil {
+	if fs, err := signer.Sign(util.ConcatBytesSlice(fact.Hash().Bytes(), b)); err != nil {
 		return KVOperation{}, err
 	} else {
 		factSignature = fs
@@ -117,8 +107,7 @@ func NewKVOperation(
 
 	kvo := KVOperation{
 		KVOperationFact: fact,
-		factHash:        factHash,
-		factSignature:   factSignature,
+		fs:              []FactSign{NewBaseFactSign(signer.Publickey(), factSignature)},
 	}
 
 	if h, err := kvo.GenerateHash(); err != nil {
@@ -147,145 +136,116 @@ func (kvo KVOperation) Hash() valuehash.Hash {
 }
 
 func (kvo KVOperation) GenerateHash() (valuehash.Hash, error) {
-	e := util.ConcatBytesSlice(kvo.factHash.Bytes(), kvo.factSignature.Bytes())
+	bs := make([][]byte, len(kvo.fs))
+	for i := range kvo.fs {
+		bs[i] = kvo.fs[i].Bytes()
+	}
+
+	e := util.ConcatBytesSlice(kvo.Fact().Hash().Bytes(), util.ConcatBytesSlice(bs...))
 
 	return valuehash.NewSHA256(e), nil
 }
 
-func (kvo KVOperation) FactHash() valuehash.Hash {
-	return kvo.factHash
-}
-
-func (kvo KVOperation) FactSignature() key.Signature {
-	return kvo.factSignature
+func (kvo KVOperation) Signs() []FactSign {
+	return kvo.fs
 }
 
 func (kvo KVOperation) MarshalJSON() ([]byte, error) {
 	return jsonenc.Marshal(struct {
 		jsonenc.HintedHead
-		SG key.Publickey  `json:"signer"`
 		TK []byte         `json:"token"`
 		K  string         `json:"key"`
 		V  []byte         `json:"value"`
 		H  valuehash.Hash `json:"hash"`
-		FH valuehash.Hash `json:"fact_hash"`
-		FS key.Signature  `json:"fact_signature"`
+		FS []FactSign     `json:"fact_signs"`
 	}{
 		HintedHead: jsonenc.NewHintedHead(kvo.Hint()),
-		SG:         kvo.signer,
 		TK:         kvo.token,
 		K:          kvo.Key,
 		V:          kvo.Value,
 		H:          kvo.h,
-		FH:         kvo.factHash,
-		FS:         kvo.factSignature,
+		FS:         kvo.fs,
 	})
 }
 
 func (kvo *KVOperation) UnpackJSON(b []byte, enc *jsonenc.Encoder) error {
 	var ukvo struct {
-		SG key.KeyDecoder  `json:"signer"`
-		TK []byte          `json:"token"`
-		K  string          `json:"key"`
-		V  []byte          `json:"value"`
-		H  json.RawMessage `json:"hash"`
-		FH json.RawMessage `json:"fact_hash"`
-		FS key.Signature   `json:"fact_signature"`
+		TK []byte            `json:"token"`
+		K  string            `json:"key"`
+		V  []byte            `json:"value"`
+		H  valuehash.Bytes   `json:"hash"`
+		FS []json.RawMessage `json:"fact_signs"`
 	}
 
 	if err := enc.Unmarshal(b, &ukvo); err != nil {
 		return err
 	}
 
-	var err error
-
-	var signer key.Publickey
-	if k, err := ukvo.SG.Encode(enc); err != nil {
-		return err
-	} else if pk, ok := k.(key.Publickey); !ok {
-		return xerrors.Errorf("not key.Publickey; type=%T", k)
-	} else {
-		signer = pk
+	fs := make([][]byte, len(ukvo.FS))
+	for i := range ukvo.FS {
+		fs[i] = ukvo.FS[i]
 	}
 
-	var h, factHash valuehash.Hash
-	if h, err = valuehash.Decode(enc, ukvo.H); err != nil {
-		return err
-	}
-	if factHash, err = valuehash.Decode(enc, ukvo.FH); err != nil {
-		return err
-	}
-
-	kvo.KVOperationFact = KVOperationFact{
-		signer: signer,
-		token:  ukvo.TK,
-		Key:    ukvo.K,
-		Value:  ukvo.V,
-	}
-
-	kvo.h = h
-	kvo.factHash = factHash
-	kvo.factSignature = ukvo.FS
-
-	return nil
+	return kvo.unpack(enc, ukvo.TK, ukvo.K, ukvo.V, ukvo.H, fs)
 }
 
 func (kvo KVOperation) MarshalBSON() ([]byte, error) {
 	return bsonenc.Marshal(struct {
 		HI hint.Hint      `bson:"_hint"`
-		SG key.Publickey  `bson:"signer"`
 		TK []byte         `bson:"token"`
 		K  string         `bson:"key"`
 		V  []byte         `bson:"value"`
 		H  valuehash.Hash `bson:"hash"`
-		FH valuehash.Hash `bson:"fact_hash"`
-		FS key.Signature  `bson:"fact_signature"`
+		FS []FactSign     `bson:"fact_signs"`
 	}{
 		HI: kvo.Hint(),
-		SG: kvo.signer,
 		TK: kvo.token,
 		K:  kvo.Key,
 		V:  kvo.Value,
 		H:  kvo.h,
-		FH: kvo.factHash,
-		FS: kvo.factSignature,
+		FS: kvo.fs,
 	})
 }
 
 func (kvo *KVOperation) UnpackBSON(b []byte, enc *bsonenc.Encoder) error {
 	var ukvo struct {
-		SG key.KeyDecoder  `bson:"signer"`
 		TK []byte          `bson:"token"`
 		K  string          `bson:"key"`
 		V  []byte          `bson:"value"`
 		H  valuehash.Bytes `bson:"hash"`
-		FH valuehash.Bytes `bson:"fact_hash"`
-		FS key.Signature   `bson:"fact_signature"`
+		FS []bson.Raw      `bson:"fact_signs"`
 	}
 
 	if err := enc.Unmarshal(b, &ukvo); err != nil {
 		return err
 	}
 
-	var signer key.Publickey
-	if k, err := ukvo.SG.Encode(enc); err != nil {
-		return err
-	} else if pk, ok := k.(key.Publickey); !ok {
-		return xerrors.Errorf("not key.Publickey; type=%T", k)
-	} else {
-		signer = pk
+	fs := make([][]byte, len(ukvo.FS))
+	for i := range ukvo.FS {
+		fs[i] = ukvo.FS[i]
+	}
+
+	return kvo.unpack(enc, ukvo.TK, ukvo.K, ukvo.V, ukvo.H, fs)
+}
+
+func (kvo *KVOperation) unpack(enc encoder.Encoder, tk []byte, k string, v []byte, h valuehash.Hash, bfs [][]byte) error {
+	fs := make([]FactSign, len(bfs))
+	for i := range bfs {
+		if f, err := DecodeFactSign(enc, bfs[i]); err != nil {
+			return err
+		} else {
+			fs[i] = f
+		}
 	}
 
 	kvo.KVOperationFact = KVOperationFact{
-		signer: signer,
-		token:  ukvo.TK,
-		Key:    ukvo.K,
-		Value:  ukvo.V,
+		token: tk,
+		Key:   k,
+		Value: v,
 	}
 
-	kvo.h = ukvo.H
-	kvo.factHash = ukvo.FH
-	kvo.factSignature = ukvo.FS
+	kvo.h = h
+	kvo.fs = fs
 
 	return nil
 }

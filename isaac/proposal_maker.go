@@ -27,17 +27,17 @@ func (pm *ProposalMaker) operations() ([]valuehash.Hash, []valuehash.Hash, error
 	if err := pm.localstate.Storage().StagedOperationSeals(
 		func(sl operation.Seal) (bool, error) {
 			var hasOperations bool
-			for _, op := range sl.OperationHashes() {
-				if _, found := mo[op.String()]; found {
+			for _, op := range sl.Operations() {
+				if _, found := mo[op.Hash().String()]; found {
 					continue
-				} else if found, err := pm.localstate.Storage().HasOperation(op); err != nil {
+				} else if found, err := pm.localstate.Storage().HasOperation(op.Hash()); err != nil {
 					return false, err
 				} else if found {
 					continue
 				}
 
-				operations = append(operations, op)
-				mo[op.String()] = struct{}{}
+				operations = append(operations, op.Hash())
+				mo[op.Hash().String()] = struct{}{}
 				hasOperations = true
 
 				if len(operations) == operation.MaxOperationsInSeal {

@@ -10,7 +10,7 @@ import (
 	"github.com/spikeekips/mitum/util/valuehash"
 )
 
-func (sl Seal) MarshalBSON() ([]byte, error) {
+func (sl BaseSeal) MarshalBSON() ([]byte, error) {
 	return bsonenc.Marshal(bsonenc.MergeBSONM(
 		bsonenc.NewHintedDoc(sl.Hint()),
 		bson.M{
@@ -33,7 +33,7 @@ type SealBSONUnpack struct {
 	OPS []bson.Raw      `bson:"operations"`
 }
 
-func (sl *Seal) UnpackBSON(b []byte, enc *bsonenc.Encoder) error {
+func (sl *BaseSeal) UnpackBSON(b []byte, enc *bsonenc.Encoder) error {
 	var usl SealBSONUnpack
 	if err := enc.Unmarshal(b, &usl); err != nil {
 		return err

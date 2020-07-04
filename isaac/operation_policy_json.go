@@ -5,7 +5,7 @@ import (
 	"time"
 
 	"github.com/spikeekips/mitum/base"
-	"github.com/spikeekips/mitum/base/key"
+	"github.com/spikeekips/mitum/base/operation"
 	jsonenc "github.com/spikeekips/mitum/util/encoder/json"
 	"github.com/spikeekips/mitum/util/valuehash"
 )
@@ -65,29 +65,23 @@ func (spo SetPolicyOperationV0) MarshalJSON() ([]byte, error) {
 	return jsonenc.Marshal(struct {
 		jsonenc.HintedHead
 		H  valuehash.Hash        `json:"hash"`
-		FH valuehash.Hash        `json:"fact_hash"`
-		FS key.Signature         `json:"fact_signature"`
-		SN key.Publickey         `json:"signer"`
+		FS []operation.FactSign  `json:"fact_signs"`
 		TK []byte                `json:"token"`
 		PO PolicyOperationBodyV0 `json:"policies"`
 	}{
 		HintedHead: jsonenc.NewHintedHead(spo.Hint()),
 		H:          spo.h,
-		FH:         spo.factHash,
-		FS:         spo.factSignature,
-		SN:         spo.signer,
+		FS:         []operation.FactSign{spo.fs},
 		TK:         spo.token,
 		PO:         spo.SetPolicyOperationFactV0.PolicyOperationBodyV0,
 	})
 }
 
 type SetPolicyOperationV0UnpackerJSON struct {
-	H  valuehash.Bytes `json:"hash"`
-	FH valuehash.Bytes `json:"fact_hash"`
-	FS key.Signature   `json:"fact_signature"`
-	SN key.KeyDecoder  `json:"signer"`
-	TK []byte          `json:"token"`
-	PO json.RawMessage `json:"policies"`
+	H  valuehash.Bytes   `json:"hash"`
+	FS []json.RawMessage `json:"fact_signs"`
+	TK []byte            `json:"token"`
+	PO json.RawMessage   `json:"policies"`
 }
 
 func (spo *SetPolicyOperationV0) UnpackJSON(b []byte, enc *jsonenc.Encoder) error {
@@ -96,5 +90,10 @@ func (spo *SetPolicyOperationV0) UnpackJSON(b []byte, enc *jsonenc.Encoder) erro
 		return err
 	}
 
-	return spo.unpack(enc, usp.H, usp.FH, usp.FS, usp.SN, usp.TK, usp.PO)
+	var fs []byte
+	if len(usp.FS) > 0 {
+		fs = usp.FS[0]
+	}
+
+	return spo.unpack(enc, usp.H, fs, usp.TK, usp.PO)
 }

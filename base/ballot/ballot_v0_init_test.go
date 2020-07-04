@@ -8,7 +8,6 @@ import (
 
 	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/base/key"
-	"github.com/spikeekips/mitum/base/operation"
 	"github.com/spikeekips/mitum/util/localtime"
 	"github.com/spikeekips/mitum/util/valuehash"
 )
@@ -64,7 +63,6 @@ func (t *testBallotV0INIT) TestFact() {
 		},
 		voteproof: vp,
 	}
-	t.Implements((*operation.FactSeal)(nil), ib)
 
 	fact := ib.Fact()
 
@@ -74,16 +72,14 @@ func (t *testBallotV0INIT) TestFact() {
 	t.NotNil(factHash)
 	t.NoError(fact.IsValid(nil))
 
-	// before signing, FactHash() and FactSignature() is nil
-	t.Nil(ib.FactHash())
 	t.Nil(ib.FactSignature())
 
 	t.NoError(ib.Sign(t.pk, nil))
 
-	t.NotNil(ib.FactHash())
+	t.NotNil(ib.Fact().Hash())
 	t.NotNil(ib.FactSignature())
 
-	t.NoError(ib.Signer().Verify(ib.FactHash().Bytes(), ib.FactSignature()))
+	t.NoError(ib.Signer().Verify(ib.Fact().Hash().Bytes(), ib.FactSignature()))
 }
 
 func (t *testBallotV0INIT) TestGenerateHash() {

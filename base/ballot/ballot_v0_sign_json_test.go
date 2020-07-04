@@ -69,7 +69,7 @@ func (t *testBallotV0SIGNJSON) TestEncode() {
 	t.True(ib.NewBlock().Equal(nib.NewBlock()))
 	t.True(ib.Proposal().Equal(nib.Proposal()))
 	t.Equal(ib.FactSignature(), nib.FactSignature())
-	t.True(ib.FactHash().Equal(nib.FactHash()))
+	t.True(ib.Fact().Hash().Equal(nib.Fact().Hash()))
 }
 
 func TestBallotV0SIGNJSON(t *testing.T) {

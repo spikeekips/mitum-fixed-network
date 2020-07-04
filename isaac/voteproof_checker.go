@@ -112,9 +112,13 @@ func NewVoteproofConsensusStateChecker(
 ) *VoteproofConsensusStateChecker {
 	return &VoteproofConsensusStateChecker{
 		Logging: logging.NewLogging(func(c logging.Context) logging.Emitter {
+			var li string
+			if lastINITVoteproof != nil {
+				li = lastINITVoteproof.ID()
+			}
 			return c.Str("module", "voteproof-validation-checker").
 				Str("voteproof_id", voteproof.ID()).
-				Str("last_init_voteproof_id", lastINITVoteproof.ID())
+				Str("last_init_voteproof_id", li)
 		}),
 		lastManifest:      lastManifest,
 		lastINITVoteproof: lastINITVoteproof,

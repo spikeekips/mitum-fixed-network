@@ -104,7 +104,7 @@ func (cmd *InitCommand) loadPolicyOperation(design *contestlib.NodeDesign) (
 	t := design.GenesisPolicy.PolicyOperationBodyV0
 
 	var fact isaac.SetPolicyOperationFactV0
-	if f, err := isaac.NewSetPolicyOperationFactV0(design.Privatekey().Publickey(), token, t); err != nil {
+	if f, err := isaac.NewSetPolicyOperationFactV0(token, t); err != nil {
 		return nil, err
 	} else {
 		fact = f

@@ -94,7 +94,8 @@ func (t *BaseTestStorage) SetupSuite() {
 	_ = t.Encs.AddHinter(valuehash.SHA256{})
 	_ = t.Encs.AddHinter(base.VoteproofV0{})
 	_ = t.Encs.AddHinter(seal.DummySeal{})
-	_ = t.Encs.AddHinter(operation.Seal{})
+	_ = t.Encs.AddHinter(operation.BaseSeal{})
+	_ = t.Encs.AddHinter(operation.BaseFactSign{})
 	_ = t.Encs.AddHinter(operation.KVOperation{})
 	_ = t.Encs.AddHinter(operation.KVOperationFact{})
 

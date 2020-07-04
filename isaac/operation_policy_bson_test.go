@@ -7,6 +7,7 @@ import (
 
 	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/base/key"
+	"github.com/spikeekips/mitum/base/operation"
 	"github.com/spikeekips/mitum/util/encoder"
 	bsonenc "github.com/spikeekips/mitum/util/encoder/bson"
 	jsonenc "github.com/spikeekips/mitum/util/encoder/json"
@@ -33,6 +34,7 @@ func (t *testSetPolicyOperationBSON) SetupSuite() {
 	_ = t.encs.AddHinter(valuehash.SHA256{})
 	_ = t.encs.AddHinter(SetPolicyOperationFactV0{})
 	_ = t.encs.AddHinter(SetPolicyOperationV0{})
+	_ = t.encs.AddHinter(operation.BaseFactSign{})
 }
 
 func (t *testSetPolicyOperationBSON) TestEncode() {
@@ -44,6 +46,7 @@ func (t *testSetPolicyOperationBSON) TestEncode() {
 
 	spo, err := NewSetPolicyOperationV0(t.pk, token, policies, nil)
 	t.NoError(err)
+	t.NoError(spo.IsValid(nil))
 
 	b, err := bsonenc.Marshal(spo)
 	t.NoError(err)

@@ -14,6 +14,11 @@ import (
 	"github.com/spikeekips/mitum/util/valuehash"
 )
 
+type Seal interface {
+	seal.Seal
+	Operations() []Operation
+}
+
 // TODO MaxOperationsInSeal will be managed by Policy.
 
 var MaxOperationsInSeal int = 100
@@ -23,7 +28,7 @@ var (
 	SealHint = hint.MustHint(SealType, "0.0.1")
 )
 
-type Seal struct {
+type BaseSeal struct {
 	h         valuehash.Hash
 	bodyHash  valuehash.Hash
 	signer    key.Publickey
@@ -32,20 +37,20 @@ type Seal struct {
 	ops       []Operation
 }
 
-func NewSeal(pk key.Privatekey, ops []Operation, networkID []byte) (Seal, error) {
+func NewBaseSeal(pk key.Privatekey, ops []Operation, networkID []byte) (BaseSeal, error) {
 	if len(ops) < 1 {
-		return Seal{}, xerrors.Errorf("seal can not be generated without Operations")
+		return BaseSeal{}, xerrors.Errorf("seal can not be generated without Operations")
 	}
 
-	sl := Seal{ops: ops}
+	sl := BaseSeal{ops: ops}
 	if err := sl.Sign(pk, networkID); err != nil {
-		return Seal{}, err
+		return BaseSeal{}, err
 	}
 
 	return sl, nil
 }
 
-func (sl Seal) IsValid(networkID []byte) error {
+func (sl BaseSeal) IsValid(networkID []byte) error {
 	if l := len(sl.ops); l < 1 {
 		return isvalid.InvalidError.Errorf("empty operations")
 	} else if l > MaxOperationsInSeal {
@@ -65,23 +70,23 @@ func (sl Seal) IsValid(networkID []byte) error {
 	return nil
 }
 
-func (sl Seal) Hint() hint.Hint {
+func (sl BaseSeal) Hint() hint.Hint {
 	return SealHint
 }
 
-func (sl Seal) Hash() valuehash.Hash {
+func (sl BaseSeal) Hash() valuehash.Hash {
 	return sl.h
 }
 
-func (sl Seal) GenerateHash() (valuehash.Hash, error) {
+func (sl BaseSeal) GenerateHash() (valuehash.Hash, error) {
 	return valuehash.NewSHA256(util.ConcatBytesSlice(sl.bodyHash.Bytes(), sl.signature.Bytes())), nil
 }
 
-func (sl Seal) BodyHash() valuehash.Hash {
+func (sl BaseSeal) BodyHash() valuehash.Hash {
 	return sl.bodyHash
 }
 
-func (sl Seal) GenerateBodyHash() (valuehash.Hash, error) {
+func (sl BaseSeal) GenerateBodyHash() (valuehash.Hash, error) {
 	bl := [][]byte{
 		[]byte(sl.signer.String()),
 		[]byte(localtime.RFC3339(sl.signedAt)),
@@ -94,32 +99,23 @@ func (sl Seal) GenerateBodyHash() (valuehash.Hash, error) {
 	return valuehash.NewSHA256(util.ConcatBytesSlice(bl...)), nil
 }
 
-func (sl Seal) Signer() key.Publickey {
+func (sl BaseSeal) Signer() key.Publickey {
 	return sl.signer
 }
 
-func (sl Seal) Signature() key.Signature {
+func (sl BaseSeal) Signature() key.Signature {
 	return sl.signature
 }
 
-func (sl Seal) SignedAt() time.Time {
+func (sl BaseSeal) SignedAt() time.Time {
 	return sl.signedAt
 }
 
-func (sl Seal) Operations() []Operation {
+func (sl BaseSeal) Operations() []Operation {
 	return sl.ops
 }
 
-func (sl Seal) OperationHashes() []valuehash.Hash {
-	hs := make([]valuehash.Hash, len(sl.ops))
-	for i := range sl.ops {
-		hs[i] = sl.ops[i].Hash()
-	}
-
-	return hs
-}
-
-func (sl *Seal) Sign(pk key.Privatekey, b []byte) error {
+func (sl *BaseSeal) Sign(pk key.Privatekey, b []byte) error {
 	sl.signer = pk.Publickey()
 	sl.signedAt = localtime.Now()
 

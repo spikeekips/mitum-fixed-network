@@ -19,7 +19,7 @@ type SealJSONPack struct {
 	OPS []Operation        `json:"operations"`
 }
 
-func (sl Seal) MarshalJSON() ([]byte, error) {
+func (sl BaseSeal) MarshalJSON() ([]byte, error) {
 	return jsonenc.Marshal(SealJSONPack{
 		HintedHead: jsonenc.NewHintedHead(sl.Hint()),
 		H:          sl.h,
@@ -40,7 +40,7 @@ type SealJSONUnpack struct {
 	OPS []json.RawMessage  `json:"operations"`
 }
 
-func (sl *Seal) UnpackJSON(b []byte, enc *jsonenc.Encoder) error {
+func (sl *BaseSeal) UnpackJSON(b []byte, enc *jsonenc.Encoder) error {
 	var usl SealJSONUnpack
 	if err := enc.Unmarshal(b, &usl); err != nil {
 		return err

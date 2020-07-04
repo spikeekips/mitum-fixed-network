@@ -67,7 +67,7 @@ func (t *testMongodbClient) SetupSuite() {
 	_ = t.encs.AddHinter(valuehash.SHA256{})
 	_ = t.encs.AddHinter(base.VoteproofV0{})
 	_ = t.encs.AddHinter(seal.DummySeal{})
-	_ = t.encs.AddHinter(operation.Seal{})
+	_ = t.encs.AddHinter(operation.BaseSeal{})
 	_ = t.encs.AddHinter(operation.KVOperation{})
 	_ = t.encs.AddHinter(operation.KVOperationFact{})
 }

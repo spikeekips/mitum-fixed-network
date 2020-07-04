@@ -9,30 +9,30 @@ import (
 	"github.com/spikeekips/mitum/base/key"
 	"github.com/spikeekips/mitum/util/encoder"
 	bsonenc "github.com/spikeekips/mitum/util/encoder/bson"
+	jsonenc "github.com/spikeekips/mitum/util/encoder/json"
 	"github.com/spikeekips/mitum/util/localtime"
 	"github.com/spikeekips/mitum/util/valuehash"
 )
 
-type testBallotV0SIGNBSON struct {
+type testBallotV0SIGNEncode struct {
 	suite.Suite
 
-	pk key.BTCPrivatekey
+	pk  key.BTCPrivatekey
+	enc encoder.Encoder
 }
 
-func (t *testBallotV0SIGNBSON) SetupSuite() {
+func (t *testBallotV0SIGNEncode) SetupSuite() {
 	t.pk, _ = key.NewBTCPrivatekey()
-}
-
-func (t *testBallotV0SIGNBSON) TestEncode() {
-	je := bsonenc.NewEncoder()
 
 	encs := encoder.NewEncoders()
-	t.NoError(encs.AddEncoder(je))
+	t.NoError(encs.AddEncoder(t.enc))
 	t.NoError(encs.AddHinter(valuehash.SHA256{}))
 	t.NoError(encs.AddHinter(base.NewShortAddress("")))
 	t.NoError(encs.AddHinter(key.BTCPublickey{}))
 	t.NoError(encs.AddHinter(SIGNBallotV0{}))
+}
 
+func (t *testBallotV0SIGNEncode) TestEncode() {
 	ib := SIGNBallotV0{
 		BaseBallotV0: BaseBallotV0{
 			node: base.NewShortAddress("test-for-sign-ballot"),
@@ -49,10 +49,10 @@ func (t *testBallotV0SIGNBSON) TestEncode() {
 
 	t.NoError(ib.Sign(t.pk, nil))
 
-	b, err := je.Marshal(ib)
+	b, err := t.enc.Marshal(ib)
 	t.NoError(err)
 
-	ht, err := je.DecodeByHint(b)
+	ht, err := t.enc.DecodeByHint(b)
 	t.NoError(err)
 
 	nib, ok := ht.(SIGNBallotV0)
@@ -72,6 +72,16 @@ func (t *testBallotV0SIGNBSON) TestEncode() {
 	t.True(ib.Fact().Hash().Equal(nib.Fact().Hash()))
 }
 
-func TestBallotV0SIGNBSON(t *testing.T) {
-	suite.Run(t, new(testBallotV0SIGNBSON))
+func TestBallotV0SIGNEncodeJSON(t *testing.T) {
+	b := new(testBallotV0SIGNEncode)
+	b.enc = jsonenc.NewEncoder()
+
+	suite.Run(t, b)
+}
+
+func TestBallotV0SIGNEncodeBSON(t *testing.T) {
+	b := new(testBallotV0SIGNEncode)
+	b.enc = bsonenc.NewEncoder()
+
+	suite.Run(t, b)
 }

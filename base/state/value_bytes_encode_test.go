@@ -3,34 +3,34 @@ package state
 import (
 	"testing"
 
+	"github.com/stretchr/testify/suite"
+
 	"github.com/spikeekips/mitum/util/encoder"
+	bsonenc "github.com/spikeekips/mitum/util/encoder/bson"
 	jsonenc "github.com/spikeekips/mitum/util/encoder/json"
 	"github.com/spikeekips/mitum/util/valuehash"
-	"github.com/stretchr/testify/suite"
 )
 
-type testStateBytesValueJSON struct {
+type testStateBytesValueEncode struct {
 	suite.Suite
 
-	encs *encoder.Encoders
-	enc  encoder.Encoder
+	enc encoder.Encoder
 }
 
-func (t *testStateBytesValueJSON) SetupSuite() {
-	t.encs = encoder.NewEncoders()
-	t.enc = jsonenc.NewEncoder()
-	_ = t.encs.AddEncoder(t.enc)
+func (t *testStateBytesValueEncode) SetupSuite() {
+	encs := encoder.NewEncoders()
+	_ = encs.AddEncoder(t.enc)
 
-	_ = t.encs.AddHinter(valuehash.SHA256{})
-	_ = t.encs.AddHinter(BytesValue{})
+	_ = encs.AddHinter(valuehash.SHA256{})
+	_ = encs.AddHinter(BytesValue{})
 }
 
-func (t *testStateBytesValueJSON) TestEncode() {
+func (t *testStateBytesValueEncode) TestEncode() {
 	v := []byte("showme")
 	bv, err := NewBytesValue(v)
 	t.NoError(err)
 
-	b, err := jsonenc.Marshal(bv)
+	b, err := t.enc.Marshal(bv)
 	t.NoError(err)
 
 	decoded, err := t.enc.DecodeByHint(b)
@@ -44,13 +44,13 @@ func (t *testStateBytesValueJSON) TestEncode() {
 	t.Equal(bv.v, u.(BytesValue).v)
 }
 
-func (t *testStateBytesValueJSON) TestEmpty() {
+func (t *testStateBytesValueEncode) TestEmpty() {
 	var v []byte
 
 	bv, err := NewBytesValue(v)
 	t.NoError(err)
 
-	b, err := jsonenc.Marshal(bv)
+	b, err := t.enc.Marshal(bv)
 	t.NoError(err)
 
 	decoded, err := t.enc.DecodeByHint(b)
@@ -64,6 +64,16 @@ func (t *testStateBytesValueJSON) TestEmpty() {
 	t.Equal(bv.v, u.(BytesValue).v)
 }
 
-func TestStateBytesValueJSON(t *testing.T) {
-	suite.Run(t, new(testStateBytesValueJSON))
+func TestStateBytesValueEncodeJSON(t *testing.T) {
+	b := new(testStateBytesValueEncode)
+	b.enc = jsonenc.NewEncoder()
+
+	suite.Run(t, b)
+}
+
+func TestStateBytesValueEncodeBSON(t *testing.T) {
+	b := new(testStateBytesValueEncode)
+	b.enc = bsonenc.NewEncoder()
+
+	suite.Run(t, b)
 }

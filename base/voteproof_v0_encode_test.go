@@ -6,27 +6,33 @@ import (
 	"github.com/stretchr/testify/suite"
 
 	"github.com/spikeekips/mitum/base/key"
+	"github.com/spikeekips/mitum/util/encoder"
+	bsonenc "github.com/spikeekips/mitum/util/encoder/bson"
 	jsonenc "github.com/spikeekips/mitum/util/encoder/json"
 	"github.com/spikeekips/mitum/util/hint"
 	"github.com/spikeekips/mitum/util/localtime"
 	"github.com/spikeekips/mitum/util/valuehash"
 )
 
-type testVoteproofJSON struct {
+type testVoteproofEncode struct {
 	suite.Suite
 
 	hs *hint.Hintset
+
+	enc encoder.Encoder
 }
 
-func (t *testVoteproofJSON) SetupSuite() {
-	t.hs = hint.NewHintset()
-	t.hs.Add(valuehash.SHA256{})
-	t.hs.Add(ShortAddress(""))
-	t.hs.Add(key.BTCPublickey{})
-	t.hs.Add(tinyFact{})
+func (t *testVoteproofEncode) SetupSuite() {
+	hs := hint.NewHintset()
+	hs.Add(valuehash.SHA256{})
+	hs.Add(ShortAddress(""))
+	hs.Add(key.BTCPublickey{})
+	hs.Add(tinyFact{})
+
+	t.enc.SetHintset(hs)
 }
 
-func (t *testVoteproofJSON) TestMajorityButNot() {
+func (t *testVoteproofEncode) TestMarshal() {
 	threshold, _ := NewThreshold(2, 80)
 
 	n0 := RandomNode("n0")
@@ -66,15 +72,12 @@ func (t *testVoteproofJSON) TestMajorityButNot() {
 	}
 	t.NoError(vp.IsValid(nil))
 
-	b, err := jsonenc.Marshal(vp)
+	b, err := t.enc.Marshal(vp)
 	t.NoError(err)
 	t.NotNil(b)
 
-	je := jsonenc.NewEncoder()
-	je.SetHintset(t.hs)
-
 	var uvp VoteproofV0
-	t.NoError(je.Decode(b, &uvp))
+	t.NoError(t.enc.Decode(b, &uvp))
 
 	t.Equal(vp.Height(), uvp.Height())
 	t.Equal(vp.Round(), uvp.Round())
@@ -106,6 +109,16 @@ func (t *testVoteproofJSON) TestMajorityButNot() {
 	}
 }
 
-func TestVoteproofJSON(t *testing.T) {
-	suite.Run(t, new(testVoteproofJSON))
+func TestVoteproofEncodeJSON(t *testing.T) {
+	b := new(testVoteproofEncode)
+	b.enc = jsonenc.NewEncoder()
+
+	suite.Run(t, b)
+}
+
+func TestVoteproofEncodeBSON(t *testing.T) {
+	b := new(testVoteproofEncode)
+	b.enc = bsonenc.NewEncoder()
+
+	suite.Run(t, b)
 }

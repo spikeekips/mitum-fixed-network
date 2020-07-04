@@ -7,34 +7,33 @@ import (
 
 	"github.com/spikeekips/mitum/util/encoder"
 	bsonenc "github.com/spikeekips/mitum/util/encoder/bson"
+	jsonenc "github.com/spikeekips/mitum/util/encoder/json"
 	"github.com/spikeekips/mitum/util/valuehash"
 )
 
-type testStateHintedValueBSON struct {
+type testStateHintedValueEncode struct {
 	suite.Suite
 
-	encs *encoder.Encoders
-	enc  encoder.Encoder
+	enc encoder.Encoder
 }
 
-func (t *testStateHintedValueBSON) SetupSuite() {
-	t.encs = encoder.NewEncoders()
-	t.enc = bsonenc.NewEncoder()
-	_ = t.encs.AddEncoder(t.enc)
+func (t *testStateHintedValueEncode) SetupSuite() {
+	encs := encoder.NewEncoders()
+	_ = encs.AddEncoder(t.enc)
 
-	_ = t.encs.AddHinter(valuehash.SHA256{})
-	_ = t.encs.AddHinter(dummy{})
-	_ = t.encs.AddHinter(HintedValue{})
+	_ = encs.AddHinter(valuehash.SHA256{})
+	_ = encs.AddHinter(dummy{})
+	_ = encs.AddHinter(HintedValue{})
 }
 
-func (t *testStateHintedValueBSON) TestEncode() {
+func (t *testStateHintedValueEncode) TestEncode() {
 	d := dummy{}
 	d.v = 33
 
 	bv, err := NewHintedValue(d)
 	t.NoError(err)
 
-	b, err := bsonenc.Marshal(bv)
+	b, err := t.enc.Marshal(bv)
 	t.NoError(err)
 
 	decoded, err := t.enc.DecodeByHint(b)
@@ -48,12 +47,12 @@ func (t *testStateHintedValueBSON) TestEncode() {
 	t.Equal(bv.v, u.(HintedValue).v)
 }
 
-func (t *testStateHintedValueBSON) TestEmpty() {
+func (t *testStateHintedValueEncode) TestEmpty() {
 	var d dummy
 	bv, err := NewHintedValue(d)
 	t.NoError(err)
 
-	b, err := bsonenc.Marshal(bv)
+	b, err := t.enc.Marshal(bv)
 	t.NoError(err)
 
 	decoded, err := t.enc.DecodeByHint(b)
@@ -67,6 +66,16 @@ func (t *testStateHintedValueBSON) TestEmpty() {
 	t.Equal(bv.v, u.(HintedValue).v)
 }
 
-func TestStateHintedValueBSON(t *testing.T) {
-	suite.Run(t, new(testStateHintedValueBSON))
+func TestStateHintedValueEncodeJSON(t *testing.T) {
+	b := new(testStateHintedValueEncode)
+	b.enc = jsonenc.NewEncoder()
+
+	suite.Run(t, b)
+}
+
+func TestStateHintedValueEncodeBSON(t *testing.T) {
+	b := new(testStateHintedValueEncode)
+	b.enc = bsonenc.NewEncoder()
+
+	suite.Run(t, b)
 }

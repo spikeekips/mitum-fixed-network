@@ -9,57 +9,63 @@ import (
 	"github.com/spikeekips/mitum/base/key"
 	"github.com/spikeekips/mitum/util/encoder"
 	bsonenc "github.com/spikeekips/mitum/util/encoder/bson"
+	jsonenc "github.com/spikeekips/mitum/util/encoder/json"
 	"github.com/spikeekips/mitum/util/localtime"
 	"github.com/spikeekips/mitum/util/valuehash"
 )
 
-type testBallotProposalV0BSON struct {
+type testBallotV0INITEncode struct {
 	suite.Suite
 
-	pk key.BTCPrivatekey
+	pk  key.BTCPrivatekey
+	enc encoder.Encoder
 }
 
-func (t *testBallotProposalV0BSON) SetupSuite() {
+func (t *testBallotV0INITEncode) SetupSuite() {
 	t.pk, _ = key.NewBTCPrivatekey()
-}
-
-func (t *testBallotProposalV0BSON) TestEncode() {
-	je := bsonenc.NewEncoder()
 
 	encs := encoder.NewEncoders()
-	t.NoError(encs.AddEncoder(je))
+	t.NoError(encs.AddEncoder(t.enc))
 	t.NoError(encs.AddHinter(valuehash.SHA256{}))
 	t.NoError(encs.AddHinter(base.NewShortAddress("")))
 	t.NoError(encs.AddHinter(key.BTCPublickey{}))
-	t.NoError(encs.AddHinter(ProposalV0{}))
+	t.NoError(encs.AddHinter(INITBallotV0{}))
+	t.NoError(encs.AddHinter(base.DummyVoteproof{}))
+}
 
-	ib := ProposalV0{
+func (t *testBallotV0INITEncode) TestEncode() {
+	vp := base.NewDummyVoteproof(
+		base.Height(10),
+		base.Round(0),
+		base.StageACCEPT,
+		base.VoteResultMajority,
+	)
+
+	ib := INITBallotV0{
 		BaseBallotV0: BaseBallotV0{
-			node: base.NewShortAddress("test-for-proposal"),
+			node: base.NewShortAddress("test-for-init-ballot"),
 		},
-		ProposalFactV0: ProposalFactV0{
+		INITBallotFactV0: INITBallotFactV0{
 			BaseBallotFactV0: BaseBallotFactV0{
-				height: base.Height(10),
+				height: vp.Height() + 1,
 				round:  base.Round(0),
 			},
-			seals: []valuehash.Hash{
-				valuehash.RandomSHA256(),
-				valuehash.RandomSHA256(),
-				valuehash.RandomSHA256(),
-			},
+			previousBlock: valuehash.RandomSHA256(),
 		},
+		voteproof: vp,
 	}
 
 	t.NoError(ib.Sign(t.pk, nil))
 
-	b, err := je.Marshal(ib)
+	b, err := t.enc.Marshal(ib)
 	t.NoError(err)
 
-	ht, err := je.DecodeByHint(b)
+	ht, err := t.enc.DecodeByHint(b)
 	t.NoError(err)
 
-	nib, ok := ht.(ProposalV0)
+	nib, ok := ht.(INITBallotV0)
 	t.True(ok)
+
 	t.NoError(nib.IsValid(nil))
 	t.Equal(ib.Node(), nib.Node())
 	t.Equal(ib.Signature(), nib.Signature())
@@ -69,14 +75,22 @@ func (t *testBallotProposalV0BSON) TestEncode() {
 	t.True(ib.Signer().Equal(nib.Signer()))
 	t.True(ib.Hash().Equal(nib.Hash()))
 	t.True(ib.BodyHash().Equal(nib.BodyHash()))
+	t.True(ib.PreviousBlock().Equal(nib.PreviousBlock()))
 	t.Equal(ib.FactSignature(), nib.FactSignature())
 	t.True(ib.Fact().Hash().Equal(nib.Fact().Hash()))
-
-	for i, s := range ib.Seals() {
-		t.True(s.Equal(nib.Seals()[i]))
-	}
+	t.Equal(vp, nib.Voteproof())
 }
 
-func TestBallotProposalV0BSON(t *testing.T) {
-	suite.Run(t, new(testBallotProposalV0BSON))
+func TestBallotV0INITEncodeJSON(t *testing.T) {
+	b := new(testBallotV0INITEncode)
+	b.enc = jsonenc.NewEncoder()
+
+	suite.Run(t, b)
+}
+
+func TestBallotV0INITEncodeBSON(t *testing.T) {
+	b := new(testBallotV0INITEncode)
+	b.enc = bsonenc.NewEncoder()
+
+	suite.Run(t, b)
 }

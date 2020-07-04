@@ -8,31 +8,31 @@ import (
 	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/base/key"
 	"github.com/spikeekips/mitum/util/encoder"
+	bsonenc "github.com/spikeekips/mitum/util/encoder/bson"
 	jsonenc "github.com/spikeekips/mitum/util/encoder/json"
 	"github.com/spikeekips/mitum/util/localtime"
 	"github.com/spikeekips/mitum/util/valuehash"
 )
 
-type testBallotProposalV0JSON struct {
+type testBallotProposalV0Encode struct {
 	suite.Suite
 
-	pk key.BTCPrivatekey
+	pk  key.BTCPrivatekey
+	enc encoder.Encoder
 }
 
-func (t *testBallotProposalV0JSON) SetupSuite() {
+func (t *testBallotProposalV0Encode) SetupSuite() {
 	t.pk, _ = key.NewBTCPrivatekey()
-}
-
-func (t *testBallotProposalV0JSON) TestEncode() {
-	je := jsonenc.NewEncoder()
 
 	encs := encoder.NewEncoders()
-	t.NoError(encs.AddEncoder(je))
+	t.NoError(encs.AddEncoder(t.enc))
 	t.NoError(encs.AddHinter(valuehash.SHA256{}))
 	t.NoError(encs.AddHinter(base.NewShortAddress("")))
 	t.NoError(encs.AddHinter(key.BTCPublickey{}))
 	t.NoError(encs.AddHinter(ProposalV0{}))
+}
 
+func (t *testBallotProposalV0Encode) TestEncode() {
 	ib := ProposalV0{
 		BaseBallotV0: BaseBallotV0{
 			node: base.NewShortAddress("test-for-proposal"),
@@ -52,10 +52,10 @@ func (t *testBallotProposalV0JSON) TestEncode() {
 
 	t.NoError(ib.Sign(t.pk, nil))
 
-	b, err := je.Marshal(ib)
+	b, err := t.enc.Marshal(ib)
 	t.NoError(err)
 
-	ht, err := je.DecodeByHint(b)
+	ht, err := t.enc.DecodeByHint(b)
 	t.NoError(err)
 
 	nib, ok := ht.(ProposalV0)
@@ -65,7 +65,7 @@ func (t *testBallotProposalV0JSON) TestEncode() {
 	t.Equal(ib.Signature(), nib.Signature())
 	t.Equal(ib.Height(), nib.Height())
 	t.Equal(ib.Round(), nib.Round())
-	t.Equal(localtime.RFC3339(ib.SignedAt()), localtime.RFC3339(nib.SignedAt()))
+	t.Equal(localtime.Normalize(ib.SignedAt()), localtime.Normalize(nib.SignedAt()))
 	t.True(ib.Signer().Equal(nib.Signer()))
 	t.True(ib.Hash().Equal(nib.Hash()))
 	t.True(ib.BodyHash().Equal(nib.BodyHash()))
@@ -77,6 +77,16 @@ func (t *testBallotProposalV0JSON) TestEncode() {
 	}
 }
 
-func TestBallotProposalV0JSON(t *testing.T) {
-	suite.Run(t, new(testBallotProposalV0JSON))
+func TestBallotProposalV0EncodeJSON(t *testing.T) {
+	b := new(testBallotProposalV0Encode)
+	b.enc = jsonenc.NewEncoder()
+
+	suite.Run(t, b)
+}
+
+func TestBallotProposalV0EncodeBSON(t *testing.T) {
+	b := new(testBallotProposalV0Encode)
+	b.enc = bsonenc.NewEncoder()
+
+	suite.Run(t, b)
 }

@@ -6,32 +6,31 @@ import (
 	"github.com/stretchr/testify/suite"
 
 	"github.com/spikeekips/mitum/util/encoder"
+	bsonenc "github.com/spikeekips/mitum/util/encoder/bson"
 	jsonenc "github.com/spikeekips/mitum/util/encoder/json"
 	"github.com/spikeekips/mitum/util/valuehash"
 )
 
-type testStateNumberValueJSON struct {
+type testStateNumberValueEncode struct {
 	suite.Suite
 
-	encs *encoder.Encoders
-	enc  encoder.Encoder
+	enc encoder.Encoder
 }
 
-func (t *testStateNumberValueJSON) SetupSuite() {
-	t.encs = encoder.NewEncoders()
-	t.enc = jsonenc.NewEncoder()
-	_ = t.encs.AddEncoder(t.enc)
+func (t *testStateNumberValueEncode) SetupSuite() {
+	encs := encoder.NewEncoders()
+	_ = encs.AddEncoder(t.enc)
 
-	_ = t.encs.AddHinter(valuehash.SHA256{})
-	_ = t.encs.AddHinter(dummy{})
-	_ = t.encs.AddHinter(NumberValue{})
+	_ = encs.AddHinter(valuehash.SHA256{})
+	_ = encs.AddHinter(dummy{})
+	_ = encs.AddHinter(NumberValue{})
 }
 
-func (t *testStateNumberValueJSON) TestEncode() {
+func (t *testStateNumberValueEncode) TestEncode() {
 	iv, err := NewNumberValue(int64(33))
 	t.NoError(err)
 
-	b, err := jsonenc.Marshal(iv)
+	b, err := t.enc.Marshal(iv)
 	t.NoError(err)
 
 	decoded, err := t.enc.DecodeByHint(b)
@@ -45,7 +44,7 @@ func (t *testStateNumberValueJSON) TestEncode() {
 	t.Equal(iv.v, u.(NumberValue).v)
 }
 
-func (t *testStateNumberValueJSON) TestCases() {
+func (t *testStateNumberValueEncode) TestCases() {
 	cases := []struct {
 		name string
 		v    interface{}
@@ -73,7 +72,7 @@ func (t *testStateNumberValueJSON) TestCases() {
 				iv, err := NewNumberValue(c.v)
 				t.NoError(err, "%d: name=%s value=%s", i, c.name, c.v)
 
-				b, err := jsonenc.Marshal(iv)
+				b, err := t.enc.Marshal(iv)
 				t.NoError(err, "%d: name=%s value=%s", i, c.name, c.v)
 
 				decoded, err := t.enc.DecodeByHint(b)
@@ -91,6 +90,16 @@ func (t *testStateNumberValueJSON) TestCases() {
 	}
 }
 
-func TestStateNumberValueJSON(t *testing.T) {
-	suite.Run(t, new(testStateNumberValueJSON))
+func TestStateNumberValueEncodeJSON(t *testing.T) {
+	b := new(testStateNumberValueEncode)
+	b.enc = jsonenc.NewEncoder()
+
+	suite.Run(t, b)
+}
+
+func TestStateNumberValueEncodeBSON(t *testing.T) {
+	b := new(testStateNumberValueEncode)
+	b.enc = bsonenc.NewEncoder()
+
+	suite.Run(t, b)
 }

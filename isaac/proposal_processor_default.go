@@ -287,7 +287,7 @@ func (pp *internalDefaultProposalProcessor) extractOperations() ([]state.Operati
 	founds := map[string]state.OperationInfoV0{}
 
 	var notFounds []valuehash.Hash
-	for _, h := range pp.proposal.Seals() { // TODO use Operations() instead of Seals()
+	for _, h := range pp.proposal.Seals() {
 		ops, err := pp.getOperationsFromStorage(h)
 		if err != nil {
 			if storage.IsNotFoundError(err) {

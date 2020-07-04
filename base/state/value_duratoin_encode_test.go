@@ -8,27 +8,26 @@ import (
 
 	"github.com/spikeekips/mitum/util/encoder"
 	bsonenc "github.com/spikeekips/mitum/util/encoder/bson"
+	jsonenc "github.com/spikeekips/mitum/util/encoder/json"
 	"github.com/spikeekips/mitum/util/valuehash"
 )
 
-type testStateDurationValueBSON struct {
+type testStateDurationValueEncode struct {
 	suite.Suite
 
-	encs *encoder.Encoders
-	enc  encoder.Encoder
+	enc encoder.Encoder
 }
 
-func (t *testStateDurationValueBSON) SetupSuite() {
-	t.encs = encoder.NewEncoders()
-	t.enc = bsonenc.NewEncoder()
-	_ = t.encs.AddEncoder(t.enc)
+func (t *testStateDurationValueEncode) SetupSuite() {
+	encs := encoder.NewEncoders()
+	_ = encs.AddEncoder(t.enc)
 
-	_ = t.encs.AddHinter(valuehash.SHA256{})
-	_ = t.encs.AddHinter(dummy{})
-	_ = t.encs.AddHinter(DurationValue{})
+	_ = encs.AddHinter(valuehash.SHA256{})
+	_ = encs.AddHinter(dummy{})
+	_ = encs.AddHinter(DurationValue{})
 }
 
-func (t *testStateDurationValueBSON) TestCases() {
+func (t *testStateDurationValueEncode) TestCases() {
 	cases := []struct {
 		name string
 		v    time.Duration
@@ -49,7 +48,7 @@ func (t *testStateDurationValueBSON) TestCases() {
 				iv, err := NewDurationValue(c.v)
 				t.NoError(err, "%d: name=%s value=%s", i, c.name, c.v)
 
-				b, err := bsonenc.Marshal(iv)
+				b, err := t.enc.Marshal(iv)
 				t.NoError(err, "%d: name=%s value=%s", i, c.name, c.v)
 
 				decoded, err := t.enc.DecodeByHint(b)
@@ -66,6 +65,16 @@ func (t *testStateDurationValueBSON) TestCases() {
 	}
 }
 
-func TestStateDurationValueBSON(t *testing.T) {
-	suite.Run(t, new(testStateDurationValueBSON))
+func TestStateDurationValueEncodeJSON(t *testing.T) {
+	b := new(testStateDurationValueEncode)
+	b.enc = jsonenc.NewEncoder()
+
+	suite.Run(t, b)
+}
+
+func TestStateDurationValueEncodeBSON(t *testing.T) {
+	b := new(testStateDurationValueEncode)
+	b.enc = bsonenc.NewEncoder()
+
+	suite.Run(t, b)
 }

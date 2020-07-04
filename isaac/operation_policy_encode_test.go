@@ -9,34 +9,33 @@ import (
 	"github.com/spikeekips/mitum/base/key"
 	"github.com/spikeekips/mitum/base/operation"
 	"github.com/spikeekips/mitum/util/encoder"
+	bsonenc "github.com/spikeekips/mitum/util/encoder/bson"
 	jsonenc "github.com/spikeekips/mitum/util/encoder/json"
 	"github.com/spikeekips/mitum/util/valuehash"
 )
 
-type testSetPolicyOperationJSON struct {
+type testSetPolicyOperationEncode struct {
 	suite.Suite
 
-	pk   key.BTCPrivatekey
-	encs *encoder.Encoders
-	enc  encoder.Encoder
+	pk  key.BTCPrivatekey
+	enc encoder.Encoder
 }
 
-func (t *testSetPolicyOperationJSON) SetupSuite() {
+func (t *testSetPolicyOperationEncode) SetupSuite() {
 	t.pk, _ = key.NewBTCPrivatekey()
 
-	t.encs = encoder.NewEncoders()
-	t.enc = jsonenc.NewEncoder()
-	_ = t.encs.AddEncoder(t.enc)
+	encs := encoder.NewEncoders()
+	_ = encs.AddEncoder(t.enc)
 
-	_ = t.encs.AddHinter(key.BTCPrivatekey{})
-	_ = t.encs.AddHinter(key.BTCPublickey{})
-	_ = t.encs.AddHinter(valuehash.SHA256{})
-	_ = t.encs.AddHinter(SetPolicyOperationFactV0{})
-	_ = t.encs.AddHinter(SetPolicyOperationV0{})
-	_ = t.encs.AddHinter(operation.BaseFactSign{})
+	_ = encs.AddHinter(key.BTCPrivatekey{})
+	_ = encs.AddHinter(key.BTCPublickey{})
+	_ = encs.AddHinter(valuehash.SHA256{})
+	_ = encs.AddHinter(SetPolicyOperationFactV0{})
+	_ = encs.AddHinter(SetPolicyOperationV0{})
+	_ = encs.AddHinter(operation.BaseFactSign{})
 }
 
-func (t *testSetPolicyOperationJSON) TestEncode() {
+func (t *testSetPolicyOperationEncode) TestEncode() {
 	token := []byte("findme")
 
 	policies := DefaultPolicy()
@@ -45,8 +44,9 @@ func (t *testSetPolicyOperationJSON) TestEncode() {
 
 	spo, err := NewSetPolicyOperationV0(t.pk, token, policies, nil)
 	t.NoError(err)
+	t.NoError(spo.IsValid(nil))
 
-	b, err := jsonenc.Marshal(spo)
+	b, err := t.enc.Marshal(spo)
 	t.NoError(err)
 
 	hinter, err := t.enc.DecodeByHint(b)
@@ -63,6 +63,16 @@ func (t *testSetPolicyOperationJSON) TestEncode() {
 	t.Equal(jsonenc.ToString(spo), jsonenc.ToString(uspo))
 }
 
-func TestSetPolicyOperationJSON(t *testing.T) {
-	suite.Run(t, new(testSetPolicyOperationJSON))
+func TestSetPolicyOperationEncodeJSON(t *testing.T) {
+	b := new(testSetPolicyOperationEncode)
+	b.enc = jsonenc.NewEncoder()
+
+	suite.Run(t, b)
+}
+
+func TestSetPolicyOperationEncodeBSON(t *testing.T) {
+	b := new(testSetPolicyOperationEncode)
+	b.enc = bsonenc.NewEncoder()
+
+	suite.Run(t, b)
 }

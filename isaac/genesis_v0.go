@@ -21,6 +21,7 @@ type GenesisBlockV0Generator struct {
 }
 
 func NewGenesisBlockV0Generator(localstate *Localstate, ops []operation.Operation) (*GenesisBlockV0Generator, error) {
+	// TODO add operation for storing network id by default
 	threshold, _ := base.NewThreshold(1, 100)
 
 	suffrage := base.NewFixedSuffrage(localstate.Node().Address(), nil)

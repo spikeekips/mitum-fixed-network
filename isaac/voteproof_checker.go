@@ -6,6 +6,7 @@ import (
 	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/base/ballot"
 	"github.com/spikeekips/mitum/base/block"
+	"github.com/spikeekips/mitum/storage"
 	"github.com/spikeekips/mitum/util/errors"
 	"github.com/spikeekips/mitum/util/logging"
 )
@@ -105,11 +106,18 @@ type VoteproofConsensusStateChecker struct {
 }
 
 func NewVoteproofConsensusStateChecker(
-	lastManifest block.Manifest,
+	st storage.Storage,
 	lastINITVoteproof base.Voteproof,
 	voteproof base.Voteproof,
 	css *ConsensusStates,
-) *VoteproofConsensusStateChecker {
+) (*VoteproofConsensusStateChecker, error) {
+	var manifest block.Manifest
+	if m, found, err := st.LastManifest(); err != nil {
+		return nil, err
+	} else if found {
+		manifest = m
+	}
+
 	return &VoteproofConsensusStateChecker{
 		Logging: logging.NewLogging(func(c logging.Context) logging.Emitter {
 			var li string
@@ -120,11 +128,11 @@ func NewVoteproofConsensusStateChecker(
 				Str("voteproof_id", voteproof.ID()).
 				Str("last_init_voteproof_id", li)
 		}),
-		lastManifest:      lastManifest,
+		lastManifest:      manifest,
 		lastINITVoteproof: lastINITVoteproof,
 		voteproof:         voteproof,
 		css:               css,
-	}
+	}, nil
 }
 
 func (vpc *VoteproofConsensusStateChecker) CheckHeight() (bool, error) {

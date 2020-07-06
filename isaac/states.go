@@ -332,42 +332,38 @@ func (css *ConsensusStates) broadcastSeal(sl seal.Seal, errChan chan<- error) {
 }
 
 func (css *ConsensusStates) newVoteproof(voteproof base.Voteproof) error {
-	var manifest block.Manifest
-	if m, found, err := css.localstate.Storage().LastManifest(); err != nil {
-		return err
-	} else if found {
-		manifest = m
-	}
-
 	_ = loggerWithVoteproof(voteproof, css.Log())
 
-	vpc := NewVoteproofConsensusStateChecker(
-		manifest,
+	var vpc *VoteproofConsensusStateChecker
+	if v, err := NewVoteproofConsensusStateChecker(
+		css.localstate.Storage(),
 		css.lastINITVoteproof(),
 		voteproof,
 		css,
-	)
-	_ = vpc.SetLogger(css.Log())
+	); err != nil {
+		return err
+	} else {
+		vpc = v
+		_ = vpc.SetLogger(css.Log())
+	}
 
-	err := util.NewChecker("voteproof-validation-checker", []util.CheckerFunc{
+	var ctx *StateToBeChangeError
+	if err := util.NewChecker("voteproof-validation-checker", []util.CheckerFunc{
 		vpc.CheckHeight,
 		vpc.CheckINITVoteproof,
 		vpc.CheckACCEPTVoteproof,
-	}).Check()
-
-	var ctx *StateToBeChangeError
-	switch {
-	case xerrors.As(err, &ctx):
-	case xerrors.Is(err, IgnoreVoteproofError):
-		return nil
-	case err != nil:
-		return err
+	}).Check(); err != nil {
+		switch {
+		case xerrors.As(err, &ctx):
+		case xerrors.Is(err, IgnoreVoteproofError):
+			return nil
+		case err != nil:
+			return err
+		}
 	}
 
-	if css.ActiveHandler() != nil {
-		if voteproof.Stage() == base.StageINIT {
-			css.setLastINITVoteproof(voteproof)
-		}
+	if voteproof.Stage() == base.StageINIT {
+		css.setLastINITVoteproof(voteproof)
 	}
 
 	if css.ActiveHandler() == nil {

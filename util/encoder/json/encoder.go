@@ -107,13 +107,13 @@ func (je *Encoder) analyze(i interface{}) (string, encoder.CachedPacker, error) 
 func (je *Encoder) analyzeInstance(i interface{}) (string, unpackFunc) {
 	ptr, _ := encoder.ExtractPtr(i)
 
-	if _, ok := ptr.Interface().(json.Unmarshaler); ok {
-		return "JSONUnmarshaler", func(b []byte, i interface{}) error {
-			return i.(json.Unmarshaler).UnmarshalJSON(b)
-		}
-	} else if _, ok := ptr.Interface().(Unpackable); ok {
+	if _, ok := ptr.Interface().(Unpackable); ok {
 		return "JSONUnpackable", func(b []byte, i interface{}) error {
 			return i.(Unpackable).UnpackJSON(b, je)
+		}
+	} else if _, ok := ptr.Interface().(json.Unmarshaler); ok {
+		return "JSONUnmarshaler", func(b []byte, i interface{}) error {
+			return i.(json.Unmarshaler).UnmarshalJSON(b)
 		}
 	}
 

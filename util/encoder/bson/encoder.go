@@ -104,15 +104,15 @@ func (be *Encoder) analyzeInstance(i interface{}) (string, unpackFunc) {
 
 	ptr, _ := encoder.ExtractPtr(i)
 
-	if _, ok := ptr.Interface().(bson.Unmarshaler); ok {
-		name = "BSONUnmarshaler"
-		upf = func(b []byte, i interface{}) error {
-			return i.(bson.Unmarshaler).UnmarshalBSON(b)
-		}
-	} else if _, ok := ptr.Interface().(Unpackable); ok {
+	if _, ok := ptr.Interface().(Unpackable); ok {
 		name = "Unpackable"
 		upf = func(b []byte, i interface{}) error {
 			return i.(Unpackable).UnpackBSON(b, be)
+		}
+	} else if _, ok := ptr.Interface().(bson.Unmarshaler); ok {
+		name = "BSONUnmarshaler"
+		upf = func(b []byte, i interface{}) error {
+			return i.(bson.Unmarshaler).UnmarshalBSON(b)
 		}
 	}
 

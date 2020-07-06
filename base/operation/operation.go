@@ -38,6 +38,10 @@ func IsValidOperation(op Operation, networkID []byte) error {
 		return err
 	}
 
+	if len(op.Signs()) < 1 {
+		return isvalid.InvalidError.Errorf("empty Signs()")
+	}
+
 	for i := range op.Signs() {
 		fs := op.Signs()[i]
 		if err := fs.IsValid(networkID); err != nil {

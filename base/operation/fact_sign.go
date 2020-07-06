@@ -26,6 +26,14 @@ type FactSign interface {
 	SignedAt() time.Time
 }
 
+func NewFactSignature(signer key.Privatekey, fact base.Fact, b []byte) (key.Signature, error) {
+	if fs, err := signer.Sign(util.ConcatBytesSlice(fact.Hash().Bytes(), b)); err != nil {
+		return nil, err
+	} else {
+		return fs, nil
+	}
+}
+
 func IsValidFactSign(fact base.Fact, fs FactSign, b []byte) error {
 	if fact == nil || fact.Hash() == nil {
 		return isvalid.InvalidError.Errorf("empty Fact")

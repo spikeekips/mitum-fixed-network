@@ -73,7 +73,7 @@ func (ne *NError) Errorf(s string, a ...interface{}) *NError {
 	return &NError{
 		id:    ne.id,
 		s:     ne.s,
-		err:   NewError(fmt.Sprintf("%s; %s", ne.s, s), a...).SetFrame(2),
+		err:   xerrors.Errorf(s, a...),
 		frame: xerrors.Caller(2),
 	}
 }

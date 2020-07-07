@@ -307,20 +307,19 @@ func (spo SetPolicyOperationV0) GenerateHash() (valuehash.Hash, error) {
 func (spo SetPolicyOperationV0) ProcessOperation(
 	getState func(key string) (state.StateUpdater, error),
 	setState func(state.StateUpdater) error,
-) (state.StateUpdater, error) {
-	value, err := state.NewHintedValue(spo.SetPolicyOperationFactV0.PolicyOperationBodyV0)
-	if err != nil {
-		return nil, err
-	}
-
-	var st state.StateUpdater
-	if s, err := getState(PolicyOperationKey); err != nil {
-		return nil, err
-	} else if err := s.SetValue(value); err != nil {
-		return nil, err
+) error {
+	var value state.HintedValue
+	if v, err := state.NewHintedValue(spo.SetPolicyOperationFactV0.PolicyOperationBodyV0); err != nil {
+		return err
 	} else {
-		st = s
+		value = v
 	}
 
-	return st, setState(st)
+	if s, err := getState(PolicyOperationKey); err != nil {
+		return err
+	} else if err := s.SetValue(value); err != nil {
+		return err
+	} else {
+		return setState(s)
+	}
 }

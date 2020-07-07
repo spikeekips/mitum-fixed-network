@@ -54,7 +54,8 @@ func (t *testPolicy) TestLoadFromStorage() {
 	st := t.Storage(nil, nil)
 	defer st.Close()
 
-	statepool := NewStatePool(st)
+	statepool, err := NewStatePool(st)
+	t.NoError(err)
 
 	policies := DefaultPolicy()
 	policies.timeoutWaitingProposal = policies.timeoutWaitingProposal * 3
@@ -79,7 +80,11 @@ func (t *testPolicy) TestLoadFromStorage() {
 	)
 	t.NoError(err)
 
-	newState, err := spo.ProcessOperation(statepool.Get, statepool.Set)
+	var newState state.StateUpdater
+	err = spo.ProcessOperation(statepool.Get, func(s state.StateUpdater) error {
+		newState = s
+		return statepool.Set(s)
+	})
 	t.NoError(err)
 
 	t.NoError(newState.SetPreviousBlock(previousBlock.Hash()))

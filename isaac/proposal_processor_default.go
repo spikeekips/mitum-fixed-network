@@ -386,7 +386,12 @@ func (pp *internalDefaultProposalProcessor) processOperations() (*tree.AVLTree, 
 }
 
 func (pp *internalDefaultProposalProcessor) processStates() (*tree.AVLTree, error) {
-	pool := NewStatePool(pp.localstate.Storage())
+	var pool *StatePool
+	if p, err := NewStatePool(pp.localstate.Storage()); err != nil {
+		return nil, err
+	} else {
+		pool = p
+	}
 
 	for i := range pp.operations {
 		opi := pp.operations[i]
@@ -399,18 +404,21 @@ func (pp *internalDefaultProposalProcessor) processStates() (*tree.AVLTree, erro
 			continue
 		}
 
-		if st, err := opp.ProcessOperation(pool.Get, pool.Set); err != nil {
+		if err := opp.ProcessOperation(
+			pool.Get,
+			func(s state.StateUpdater) error {
+				if err := s.AddOperationInfo(opi); err != nil {
+					return err
+				}
+
+				return pool.Set(s)
+			},
+		); err != nil {
 			pp.Log().Error().Err(err).
 				Interface("operation", op).
 				Msg("failed to process operation")
+
 			continue
-		} else if st != nil {
-			if err := st.SetPreviousBlock(pp.lastManifest.Hash()); err != nil {
-				return nil, err
-			}
-			if err := st.AddOperationInfo(opi); err != nil {
-				return nil, err
-			}
 		}
 	}
 

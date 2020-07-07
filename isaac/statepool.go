@@ -3,6 +3,7 @@ package isaac
 import (
 	"sync"
 
+	"github.com/spikeekips/mitum/base/block"
 	"github.com/spikeekips/mitum/base/state"
 	"github.com/spikeekips/mitum/storage"
 	"github.com/spikeekips/mitum/util/valuehash"
@@ -10,17 +11,27 @@ import (
 
 type StatePool struct {
 	sync.RWMutex
-	st      storage.Storage
-	cached  map[string]state.StateUpdater
-	updated map[string]state.StateUpdater
+	st           storage.Storage
+	lastManifest block.Manifest
+	cached       map[string]state.StateUpdater
+	updated      map[string]state.StateUpdater
 }
 
-func NewStatePool(st storage.Storage) *StatePool {
-	return &StatePool{
-		st:      st,
-		cached:  map[string]state.StateUpdater{},
-		updated: map[string]state.StateUpdater{},
+func NewStatePool(st storage.Storage) (*StatePool, error) {
+	var lastManifest block.Manifest
+	switch m, found, err := st.LastManifest(); {
+	case found:
+		lastManifest = m
+	case err != nil:
+		return nil, err
 	}
+
+	return &StatePool{
+		st:           st,
+		lastManifest: lastManifest,
+		cached:       map[string]state.StateUpdater{},
+		updated:      map[string]state.StateUpdater{},
+	}, nil
 }
 
 func (sp *StatePool) Get(key string) (state.StateUpdater, error) {
@@ -34,12 +45,14 @@ func (sp *StatePool) Get(key string) (state.StateUpdater, error) {
 
 	var value state.Value
 	var previousBlock valuehash.Hash
-
-	if s, _, err := sp.st.State(key); err != nil {
+	switch s, found, err := sp.st.State(key); {
+	case err != nil:
 		return nil, err
-	} else if s != nil {
+	case found:
 		value = s.Value()
 		previousBlock = s.CurrentBlock()
+	case sp.lastManifest != nil:
+		previousBlock = sp.lastManifest.Hash()
 	}
 
 	var st state.StateUpdater
@@ -51,6 +64,7 @@ func (sp *StatePool) Get(key string) (state.StateUpdater, error) {
 
 	sp.Lock()
 	defer sp.Unlock()
+
 	sp.cached[key] = st
 
 	return st, nil

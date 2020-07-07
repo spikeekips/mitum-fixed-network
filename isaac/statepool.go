@@ -36,11 +36,11 @@ func NewStatePool(st storage.Storage) (*StatePool, error) {
 
 func (sp *StatePool) Get(key string) (state.StateUpdater, bool, error) {
 	if s, found := sp.getFromUpdated(key); found {
-		return s, false, nil
+		return s, true, nil
 	}
 
 	if s, found := sp.getFromCached(key); found {
-		return s, false, nil
+		return s, true, nil
 	}
 
 	var found bool

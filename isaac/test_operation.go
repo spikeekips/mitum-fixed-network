@@ -95,22 +95,21 @@ func (kvo *KVOperation) UnpackBSON(b []byte, enc *bsonenc.Encoder) error {
 }
 
 func (kvo KVOperation) ProcessOperation(
-	getState func(key string) (state.StateUpdater, error),
+	getState func(key string) (state.StateUpdater, bool, error),
 	setState func(state.StateUpdater) error,
-) (state.StateUpdater, error) {
-	value, err := state.NewBytesValue(kvo.Value)
-	if err != nil {
-		return nil, err
-	}
-
-	var st state.StateUpdater
-	if s, err := getState(kvo.Key); err != nil {
-		return nil, err
-	} else if err := s.SetValue(value); err != nil {
-		return nil, err
+) error {
+	var value state.BytesValue
+	if v, err := state.NewBytesValue(kvo.Value); err != nil {
+		return err
 	} else {
-		st = s
+		value = v
 	}
 
-	return st, setState(st)
+	if s, _, err := getState(kvo.Key); err != nil {
+		return err
+	} else if err := s.SetValue(value); err != nil {
+		return err
+	} else {
+		return setState(s)
+	}
 }

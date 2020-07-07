@@ -386,31 +386,42 @@ func (pp *internalDefaultProposalProcessor) processOperations() (*tree.AVLTree, 
 }
 
 func (pp *internalDefaultProposalProcessor) processStates() (*tree.AVLTree, error) {
-	pool := NewStatePool(pp.localstate.Storage())
+	var pool *StatePool
+	if p, err := NewStatePool(pp.localstate.Storage()); err != nil {
+		return nil, err
+	} else {
+		pool = p
+	}
 
 	for i := range pp.operations {
 		opi := pp.operations[i]
 		op := opi.RawOperation()
-		opp, ok := op.(state.OperationProcesser)
-		if !ok {
+		if opp, ok := op.(state.OperationProcesser); !ok {
 			pp.Log().Error().
 				Str("operation_type", fmt.Sprintf("%T", op)).
 				Msg("operation does not support state.OperationProcesser")
-			continue
-		}
 
-		if st, err := opp.ProcessOperation(pool.Get, pool.Set); err != nil {
+			continue
+		} else if err := opp.ProcessOperation(
+			pool.Get,
+			func(s state.StateUpdater) error {
+				if err := s.AddOperationInfo(opi); err != nil {
+					return err
+				}
+
+				return pool.Set(s)
+			},
+		); err != nil {
+			// TODO needs test
+			if xerrors.Is(err, state.IgnoreOperationProcessingError) {
+				continue
+			}
+
 			pp.Log().Error().Err(err).
 				Interface("operation", op).
 				Msg("failed to process operation")
-			continue
-		} else if st != nil {
-			if err := st.SetPreviousBlock(pp.lastManifest.Hash()); err != nil {
-				return nil, err
-			}
-			if err := st.AddOperationInfo(opi); err != nil {
-				return nil, err
-			}
+
+			return nil, err
 		}
 	}
 
@@ -423,15 +434,13 @@ func (pp *internalDefaultProposalProcessor) processStates() (*tree.AVLTree, erro
 	for _, s := range updated {
 		if err := s.SetHash(s.GenerateHash()); err != nil {
 			return nil, err
-		}
-
-		if err := s.IsValid(nil); err != nil {
+		} else if err := s.IsValid(nil); err != nil {
 			return nil, err
-		}
-
-		n := state.NewStateV0AVLNodeMutable(s.(*state.StateV0))
-		if _, err := tg.Add(n); err != nil {
-			return nil, err
+		} else {
+			n := state.NewStateV0AVLNodeMutable(s.(*state.StateV0))
+			if _, err := tg.Add(n); err != nil {
+				return nil, err
+			}
 		}
 	}
 

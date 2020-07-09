@@ -16,11 +16,11 @@ const (
 	MaxVersionSize          int    = 15
 	MaxHintSize             int    = MaxVersionSize + 2
 	HintVerboseFormat       string = `hint{type=%q code="%x" version=%q}`
-	HintMarshalStringFormat string = "%x+%s"
+	HintMarshalStringFormat string = "%x:%s"
 )
 
 var (
-	ReHintMarshalStringFormat                = `(?P<type>[a-f0-9]{4})\+(?P<version>.*)`
+	ReHintMarshalStringFormat                = `(?P<type>[a-f0-9]{4})\:(?P<version>.*)`
 	reHintMarshalString       *regexp.Regexp = regexp.MustCompile("^" + ReHintMarshalStringFormat + "$")
 )
 

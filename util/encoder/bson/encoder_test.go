@@ -22,7 +22,6 @@ type s0 struct {
 	A string
 }
 
-// sup0 has UnpackRLP
 type sup0 struct {
 	A string
 }
@@ -46,7 +45,6 @@ func (s0 *sup0) UnpackBSON(b []byte, _ *Encoder) error {
 	return nil
 }
 
-// sp0 has PackRLP
 type sp0 struct {
 	A string
 	B []byte
@@ -244,7 +242,7 @@ func (t *testBSON) TestEncodeEmbed() {
 func (t *testBSON) TestAnalyzePack() {
 	be := NewEncoder()
 
-	{ // has PackRLP
+	{
 		s := se0{
 			A: util.UUID().String(),
 			S: sup0{A: util.UUID().String()},
@@ -256,7 +254,7 @@ func (t *testBSON) TestAnalyzePack() {
 		t.Equal("default", name)
 	}
 
-	{ // don't have PackRLP
+	{
 		s := s0{A: util.UUID().String()}
 
 		name, cp, err := be.analyze(s)
@@ -346,7 +344,7 @@ func (t *testBSON) TestEncodeHinterNotCompatible() {
 	{ // wrong major version
 		var decoded []byte
 		{
-			c := bytes.Replace(encoded, []byte(`+0.1`), []byte(`+1.1`), -1)
+			c := bytes.Replace(encoded, []byte(`:0.1`), []byte(`:1.1`), -1)
 
 			var m1 bson.M
 			t.NoError(jsonenc.Unmarshal(c, &m1))
@@ -364,7 +362,7 @@ func (t *testBSON) TestEncodeHinterNotCompatible() {
 	{ // wrong type code
 		var decoded []byte
 		{
-			c := bytes.Replace(encoded, []byte(`ff31+`), []byte(`ffaa+`), -1)
+			c := bytes.Replace(encoded, []byte(`ff31:`), []byte(`ffaa:`), -1)
 
 			var m1 bson.M
 			t.NoError(jsonenc.Unmarshal(c, &m1))

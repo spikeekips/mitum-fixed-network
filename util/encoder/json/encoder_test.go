@@ -15,7 +15,6 @@ import (
 	"github.com/spikeekips/mitum/util/hint"
 )
 
-// sp0 has PackRLP
 type sp0 struct {
 	A string
 	B []byte
@@ -107,7 +106,6 @@ func (s0 s1) MarshalJSON() ([]byte, error) {
 	})
 }
 
-// sup0 has UnpackRLP
 type sup0 struct {
 	A string
 }
@@ -233,7 +231,7 @@ func (t *testJSON) TestEncodeSimpleStruct() {
 	t.Equal(s.A, us.A)
 }
 
-func (t *testJSON) TestEncodeRLPPackable() {
+func (t *testJSON) TestEncodePackable() {
 	s := sp0{A: util.UUID().String()}
 
 	je := NewEncoder()
@@ -247,7 +245,7 @@ func (t *testJSON) TestEncodeRLPPackable() {
 	t.Equal([]byte(s.A), us.B)
 }
 
-func (t *testJSON) TestEncodeRLPUnpackable() {
+func (t *testJSON) TestEncodeUnpackable() {
 	s := sup0{A: util.UUID().String()}
 
 	je := NewEncoder()

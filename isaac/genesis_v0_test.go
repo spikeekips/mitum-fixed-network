@@ -45,11 +45,11 @@ func (t *testGenesisBlockV0) TestNewGenesisBlock() {
 	t.NoError(err)
 	t.NotNil(pr)
 
-	st, found, err := t.local.Storage().State(op.Key)
+	st, found, err := t.local.Storage().State(op.Key())
 	t.NoError(err)
 	t.True(found)
 
-	t.Equal(st.Key(), op.Key)
+	t.Equal(st.Key(), op.Key())
 }
 
 func TestGenesisBlockV0(t *testing.T) {

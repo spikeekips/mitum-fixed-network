@@ -8,6 +8,7 @@ import (
 	"github.com/spikeekips/mitum/base/key"
 	"github.com/spikeekips/mitum/base/operation"
 	"github.com/spikeekips/mitum/base/state"
+	"github.com/spikeekips/mitum/util"
 	bsonenc "github.com/spikeekips/mitum/util/encoder/bson"
 	jsonenc "github.com/spikeekips/mitum/util/encoder/json"
 	"github.com/spikeekips/mitum/util/hint"
@@ -31,6 +32,8 @@ func NewKVOperation(
 		return KVOperation{}, err
 	}
 
+	op.BaseOperation = op.SetHint(KVOperationHint)
+
 	return KVOperation{
 		KVOperation: op,
 	}, nil
@@ -41,55 +44,31 @@ func (kvo KVOperation) Hint() hint.Hint {
 }
 
 func (kvo KVOperation) MarshalJSON() ([]byte, error) {
-	b, err := jsonenc.Marshal(kvo.KVOperation)
-	if err != nil {
-		return nil, err
-	}
-
-	var m map[string]interface{}
-	if err := jsonenc.Unmarshal(b, &m); err != nil {
-		return nil, err
-	} else {
-		m["_hint"] = kvo.Hint()
-	}
-
-	return jsonenc.Marshal(m)
+	return util.JSON.Marshal(kvo.BaseOperation)
 }
 
 func (kvo *KVOperation) UnpackJSON(b []byte, enc *jsonenc.Encoder) error {
-	okvo := &operation.KVOperation{}
-	if err := okvo.UnpackJSON(b, enc); err != nil {
+	var bo operation.BaseOperation
+	if err := bo.UnpackJSON(b, enc); err != nil {
 		return err
 	}
 
-	kvo.KVOperation = *okvo
+	kvo.BaseOperation = bo
 
 	return nil
 }
 
 func (kvo KVOperation) MarshalBSON() ([]byte, error) {
-	b, err := bsonenc.Marshal(kvo.KVOperation)
-	if err != nil {
-		return nil, err
-	}
-
-	var m bson.M
-	if err := bsonenc.Unmarshal(b, &m); err != nil {
-		return nil, err
-	} else {
-		m["_hint"] = kvo.Hint()
-	}
-
-	return bsonenc.Marshal(m)
+	return bson.Marshal(kvo.BaseOperation)
 }
 
 func (kvo *KVOperation) UnpackBSON(b []byte, enc *bsonenc.Encoder) error {
-	okvo := &operation.KVOperation{}
-	if err := okvo.UnpackBSON(b, enc); err != nil {
+	var bo operation.BaseOperation
+	if err := bo.UnpackBSON(b, enc); err != nil {
 		return err
 	}
 
-	kvo.KVOperation = *okvo
+	kvo.BaseOperation = bo
 
 	return nil
 }
@@ -99,13 +78,13 @@ func (kvo KVOperation) ProcessOperation(
 	setState func(state.StateUpdater) error,
 ) error {
 	var value state.BytesValue
-	if v, err := state.NewBytesValue(kvo.Value); err != nil {
+	if v, err := state.NewBytesValue(kvo.Value()); err != nil {
 		return err
 	} else {
 		value = v
 	}
 
-	if s, _, err := getState(kvo.Key); err != nil {
+	if s, _, err := getState(kvo.Key()); err != nil {
 		return err
 	} else if err := s.SetValue(value); err != nil {
 		return err

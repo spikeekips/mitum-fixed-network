@@ -6,22 +6,20 @@ import (
 	bsonenc "github.com/spikeekips/mitum/util/encoder/bson"
 )
 
-type OperationAVLNodePackerBSON struct {
-	OP Operation `bson:"operation"`
-}
-
 func (em OperationAVLNode) MarshalBSON() ([]byte, error) {
-	return bsonenc.Marshal(bson.M{
-		"_hint":      em.Hint(),
-		"key":        em.key,
-		"height":     em.height,
-		"left_key":   em.left,
-		"left_hash":  em.leftHash,
-		"right_key":  em.right,
-		"right_hash": em.rightHash,
-		"hash":       em.h,
-		"operation":  em.op,
-	})
+	return bsonenc.Marshal(bsonenc.MergeBSONM(
+		bsonenc.NewHintedDoc(em.Hint()),
+		bson.M{
+			"key":        em.key,
+			"height":     em.height,
+			"left_key":   em.left,
+			"left_hash":  em.leftHash,
+			"right_key":  em.right,
+			"right_hash": em.rightHash,
+			"hash":       em.h,
+			"operation":  em.op,
+		},
+	))
 }
 
 type OperationAVLNodeUnpackerBSON struct {

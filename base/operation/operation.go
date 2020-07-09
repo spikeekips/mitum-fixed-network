@@ -2,6 +2,7 @@ package operation
 
 import (
 	"github.com/spikeekips/mitum/base"
+	"github.com/spikeekips/mitum/util"
 	"github.com/spikeekips/mitum/util/hint"
 	"github.com/spikeekips/mitum/util/isvalid"
 	"github.com/spikeekips/mitum/util/valuehash"
@@ -9,8 +10,8 @@ import (
 
 const MaxTokenSize = 100
 
-type BaseOperationFact interface {
-	Fact() base.Fact
+type OperationFact interface {
+	base.Fact
 	Token() []byte
 }
 
@@ -19,7 +20,7 @@ type Operation interface {
 	hint.Hinter
 	valuehash.Hasher
 	valuehash.HashGenerator
-	BaseOperationFact
+	Fact() base.Fact
 	Signs() []FactSign
 }
 
@@ -28,7 +29,14 @@ func IsValidOperation(op Operation, networkID []byte) error {
 		return err
 	}
 
-	if l := len(op.Token()); l < 1 {
+	var fact OperationFact
+	if fc, ok := op.Fact().(OperationFact); !ok {
+		return isvalid.InvalidError.Errorf("wrong fact, %T found", op.Fact())
+	} else {
+		fact = fc
+	}
+
+	if l := len(fact.Token()); l < 1 {
 		return isvalid.InvalidError.Errorf("Operation has empty token")
 	} else if l > MaxTokenSize {
 		return isvalid.InvalidError.Errorf("Operation token size too large: %d > %d", l, MaxTokenSize)
@@ -58,4 +66,77 @@ func IsValidOperation(op Operation, networkID []byte) error {
 	}
 
 	return nil
+}
+
+type BaseOperation struct {
+	ht   hint.Hint
+	fact OperationFact
+	h    valuehash.Hash
+	fs   []FactSign
+}
+
+func NewBaseOperation(ht hint.Hint, fact OperationFact, h valuehash.Hash, fs []FactSign) BaseOperation {
+	return BaseOperation{
+		ht:   ht,
+		fact: fact,
+		h:    h,
+		fs:   fs,
+	}
+}
+
+func NewBaseOperationFromFact(ht hint.Hint, fact OperationFact, fs []FactSign) (BaseOperation, error) {
+	bo := BaseOperation{
+		ht:   ht,
+		fact: fact,
+		fs:   fs,
+	}
+
+	if h, err := bo.GenerateHash(); err != nil {
+		return BaseOperation{}, err
+	} else {
+		bo.h = h
+	}
+
+	return bo, nil
+}
+
+func (bo BaseOperation) SetHint(ht hint.Hint) BaseOperation {
+	bo.ht = ht
+
+	return bo
+}
+
+func (bo BaseOperation) Fact() base.Fact {
+	return bo.fact
+}
+
+func (bo BaseOperation) Token() []byte {
+	return bo.fact.Token()
+}
+
+func (bo BaseOperation) Hint() hint.Hint {
+	return bo.ht
+}
+
+func (bo BaseOperation) Hash() valuehash.Hash {
+	return bo.h
+}
+
+func (bo BaseOperation) GenerateHash() (valuehash.Hash, error) {
+	bs := make([][]byte, len(bo.fs))
+	for i := range bo.fs {
+		bs[i] = bo.fs[i].Bytes()
+	}
+
+	e := util.ConcatBytesSlice(bo.Fact().Hash().Bytes(), util.ConcatBytesSlice(bs...))
+
+	return valuehash.NewSHA256(e), nil
+}
+
+func (bo BaseOperation) Signs() []FactSign {
+	return bo.fs
+}
+
+func (bo BaseOperation) IsValid(networkID []byte) error {
+	return IsValidOperation(bo, networkID)
 }

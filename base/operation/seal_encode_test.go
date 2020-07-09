@@ -68,8 +68,8 @@ func (t *testSealEncode) TestSign() {
 
 		t.True(a.Hash().Equal(b.Hash()))
 		t.True(a.Fact().Hash().Equal(b.Fact().Hash()))
-		t.Equal(a.Key, b.Key)
-		t.Equal(a.Value, b.Value)
+		t.Equal(a.Key(), b.Key())
+		t.Equal(a.Value(), b.Value())
 
 		t.Equal(len(a.Signs()), len(b.Signs()))
 		for j := range a.Signs() {

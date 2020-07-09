@@ -18,7 +18,7 @@ func toString(h hint.Hint, s string) string {
 	return s + "-" + h.String()
 }
 
-func parseString(s string) (hint.Hint, string, error) {
+func ParseString(s string) (hint.Hint, string, error) {
 	if !reKeyStringCheck.MatchString(s) {
 		return hint.Hint{}, "", xerrors.Errorf("unknown format of key string, %q", s)
 	}

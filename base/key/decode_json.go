@@ -10,7 +10,7 @@ func (kd *KeyDecoder) UnmarshalJSON(b []byte) error {
 		return err
 	}
 
-	if h, us, err := parseString(s); err != nil {
+	if h, us, err := ParseString(s); err != nil {
 		return err
 	} else {
 		kd.h = h

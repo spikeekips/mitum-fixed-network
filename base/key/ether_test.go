@@ -45,7 +45,7 @@ func (t *testEtherKey) TestPublickey() {
 
 	t.NoError(kp.IsValid(nil))
 
-	_, s, err := parseString(kp.Publickey().String())
+	_, s, err := ParseString(kp.Publickey().String())
 	t.NoError(err)
 
 	pk, err := NewEtherPublickeyFromString(s)
@@ -71,7 +71,7 @@ func (t *testEtherKey) TestPrivatekey() {
 
 	t.NoError(kp.IsValid(nil))
 
-	_, s, err := parseString(kp.String())
+	_, s, err := ParseString(kp.String())
 	t.NoError(err)
 
 	pk, err := NewEtherPrivatekeyFromString(s)

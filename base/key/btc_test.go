@@ -43,7 +43,7 @@ func (t *testBTCKey) TestPublickey() {
 
 	t.NoError(kp.IsValid(nil))
 
-	_, s, err := parseString(kp.Publickey().String())
+	_, s, err := ParseString(kp.Publickey().String())
 	t.NoError(err)
 
 	ukp, err := NewBTCPublickeyFromString(s)
@@ -67,7 +67,7 @@ func (t *testBTCKey) TestPrivatekey() {
 
 	t.NoError(kp.IsValid(nil))
 
-	_, s, err := parseString(kp.String())
+	_, s, err := ParseString(kp.String())
 	t.NoError(err)
 
 	ukp, _ := NewBTCPrivatekeyFromString(s)

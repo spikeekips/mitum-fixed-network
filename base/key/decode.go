@@ -40,7 +40,7 @@ func (kd KeyDecoder) Encode(enc encoder.Encoder) (Key, error) {
 }
 
 func DecodePrivatekey(enc encoder.Encoder, s string) (Privatekey, error) {
-	h, us, err := parseString(s)
+	h, us, err := ParseString(s)
 	if err != nil {
 		return nil, err
 	}
@@ -56,7 +56,7 @@ func DecodePrivatekey(enc encoder.Encoder, s string) (Privatekey, error) {
 }
 
 func DecodePublickey(enc encoder.Encoder, s string) (Publickey, error) {
-	h, us, err := parseString(s)
+	h, us, err := ParseString(s)
 	if err != nil {
 		return nil, err
 	}

@@ -16,7 +16,7 @@ func (kd *KeyDecoder) UnmarshalBSONValue(t bsontype.Type, b []byte) error {
 		return xerrors.Errorf("can not read string")
 	}
 
-	if h, us, err := parseString(s); err != nil {
+	if h, us, err := ParseString(s); err != nil {
 		return err
 	} else {
 		kd.h = h

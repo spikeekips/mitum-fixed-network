@@ -48,12 +48,12 @@ func NewEtherPrivatekeyFromString(s string) (EtherPrivatekey, error) {
 	return EtherPrivatekey{pk: pk}, nil
 }
 
-func (ep EtherPrivatekey) String() string {
-	if ep.pk == nil {
-		return ""
-	}
+func (ep EtherPrivatekey) Raw() string {
+	return hex.EncodeToString(etherCrypto.FromECDSA(ep.pk))
+}
 
-	return toString(ep.Hint(), hex.EncodeToString(etherCrypto.FromECDSA(ep.pk)))
+func (ep EtherPrivatekey) String() string {
+	return toString(ep.Hint(), ep.Raw())
 }
 
 func (ep EtherPrivatekey) Hint() hint.Hint {
@@ -126,12 +126,12 @@ func NewEtherPublickeyFromString(s string) (EtherPublickey, error) {
 	return EtherPublickey{pk: pk}, nil
 }
 
-func (ep EtherPublickey) String() string {
-	if ep.pk == nil {
-		return ""
-	}
+func (ep EtherPublickey) Raw() string {
+	return hex.EncodeToString(etherCrypto.FromECDSAPub(ep.pk))
+}
 
-	return toString(ep.Hint(), hex.EncodeToString(etherCrypto.FromECDSAPub(ep.pk)))
+func (ep EtherPublickey) String() string {
+	return toString(ep.Hint(), ep.Raw())
 }
 
 func (ep EtherPublickey) Hint() hint.Hint {

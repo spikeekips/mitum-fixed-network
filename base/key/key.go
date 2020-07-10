@@ -18,6 +18,7 @@ type Key interface {
 	hint.Hinter
 	isvalid.IsValider
 	Equal(Key) bool
+	Raw() string
 }
 
 type Privatekey interface {

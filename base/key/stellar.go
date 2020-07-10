@@ -40,12 +40,12 @@ func NewStellarPrivatekeyFromString(s string) (StellarPrivatekey, error) {
 	return StellarPrivatekey{kp: full}, nil
 }
 
-func (sp StellarPrivatekey) String() string {
-	if sp.kp == nil {
-		return ""
-	}
+func (sp StellarPrivatekey) Raw() string {
+	return sp.kp.Seed()
+}
 
-	return toString(sp.Hint(), sp.kp.Seed())
+func (sp StellarPrivatekey) String() string {
+	return toString(sp.Hint(), sp.Raw())
 }
 
 func (sp StellarPrivatekey) Hint() hint.Hint {
@@ -111,12 +111,12 @@ func NewStellarPublickeyFromString(s string) (StellarPublickey, error) {
 	return StellarPublickey{kp: addr}, nil
 }
 
-func (sp StellarPublickey) String() string {
-	if sp.kp == nil {
-		return ""
-	}
+func (sp StellarPublickey) Raw() string {
+	return sp.kp.Address()
+}
 
-	return toString(sp.Hint(), sp.kp.Address())
+func (sp StellarPublickey) String() string {
+	return toString(sp.Hint(), sp.Raw())
 }
 
 func (sp StellarPublickey) Hint() hint.Hint {

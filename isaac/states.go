@@ -201,6 +201,10 @@ func (css *ConsensusStates) start(stopChan chan struct{}) error {
 
 	sealStopChan <- struct{}{}
 
+	go func() {
+		css.errChan <- err
+	}()
+
 	return err
 }
 

@@ -10,7 +10,7 @@ import (
 )
 
 var (
-	StringValueType = hint.MustNewType(0x12, 0x01, "state-string-value")
+	StringValueType = hint.MustNewType(0x01, 0x69, "state-string-value")
 	StringValueHint = hint.MustHint(StringValueType, "0.0.1")
 )
 

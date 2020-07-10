@@ -15,7 +15,7 @@ import (
 )
 
 var (
-	ContestAddressType = hint.MustNewType(0xd0, 0x00, "contest-address")
+	ContestAddressType = hint.MustNewType(0xf0, 0x00, "contest-address")
 	ContestAddressHint = hint.MustHint(ContestAddressType, "0.0.1")
 )
 

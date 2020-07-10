@@ -13,7 +13,7 @@ import (
 )
 
 var (
-	baseFactSignType = hint.MustNewType(0x09, 0x03, "base-fact-sign")
+	baseFactSignType = hint.MustNewType(0x01, 0x50, "base-fact-sign")
 	baseFactSignHint = hint.MustHint(baseFactSignType, "0.0.1")
 )
 

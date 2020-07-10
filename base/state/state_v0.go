@@ -11,9 +11,9 @@ import (
 )
 
 var (
-	StateV0Type         = hint.MustNewType(0x11, 0x00, "stete-v0")
+	StateV0Type         = hint.MustNewType(0x01, 0x60, "stete-v0")
 	StateV0Hint         = hint.MustHint(StateV0Type, "0.0.1")
-	OperationInfoV0Type = hint.MustNewType(0x11, 0x01, "operation-info-v0")
+	OperationInfoV0Type = hint.MustNewType(0x01, 0x61, "operation-info-v0")
 	OperationInfoV0Hint = hint.MustHint(OperationInfoV0Type, "0.0.1")
 )
 

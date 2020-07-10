@@ -15,11 +15,11 @@ import (
 )
 
 var (
-	PolicyOperationBodyV0Type    = hint.MustNewType(0x08, 0x01, "policy-body-v0")
+	PolicyOperationBodyV0Type    = hint.MustNewType(0x01, 0x83, "policy-body-v0")
 	PolicyOperationBodyV0Hint    = hint.MustHint(PolicyOperationBodyV0Type, "0.0.1")
-	SetPolicyOperationFactV0Type = hint.MustNewType(0x08, 0x02, "set-policy-operation-fact-v0")
+	SetPolicyOperationFactV0Type = hint.MustNewType(0x01, 0x84, "set-policy-operation-fact-v0")
 	SetPolicyOperationFactV0Hint = hint.MustHint(SetPolicyOperationFactV0Type, "0.0.1")
-	SetPolicyOperationV0Type     = hint.MustNewType(0x08, 0x03, "set-policy-operation-v0")
+	SetPolicyOperationV0Type     = hint.MustNewType(0x01, 0x85, "set-policy-operation-v0")
 	SetPolicyOperationV0Hint     = hint.MustHint(SetPolicyOperationV0Type, "0.0.1")
 )
 

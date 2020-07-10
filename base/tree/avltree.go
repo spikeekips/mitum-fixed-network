@@ -11,7 +11,7 @@ import (
 )
 
 var (
-	AVLTreeType = hint.MustNewType(0x10, 0x00, "avltree")
+	AVLTreeType = hint.MustNewType(0x01, 0x54, "avltree")
 	AVLTreeHint = hint.MustHint(AVLTreeType, "0.0.1")
 )
 

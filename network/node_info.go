@@ -14,7 +14,7 @@ import (
 )
 
 var (
-	NodeInfoV0Type = hint.MustNewType(0x13, 0x01, "node-info-v0")
+	NodeInfoV0Type = hint.MustNewType(0x01, 0x86, "node-info-v0")
 	NodeInfoV0Hint = hint.MustHint(NodeInfoV0Type, "0.0.1")
 )
 

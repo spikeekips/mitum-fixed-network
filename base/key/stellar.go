@@ -7,9 +7,9 @@ import (
 )
 
 var (
-	stellarPrivatekeyType = hint.MustNewType(0x02, 0x00, "stellar-privatekey")
+	stellarPrivatekeyType = hint.MustNewType(0x01, 0x10, "stellar-privatekey")
 	stellarPrivatekeyHint = hint.MustHint(stellarPrivatekeyType, "0.0.1")
-	stellarPublickeyType  = hint.MustNewType(0x02, 0x01, "stellar-publickey")
+	stellarPublickeyType  = hint.MustNewType(0x01, 0x11, "stellar-publickey")
 	stellarPublickeyHint  = hint.MustHint(stellarPublickeyType, "0.0.1")
 )
 

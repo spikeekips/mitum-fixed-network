@@ -28,8 +28,11 @@ func init() {
 	nameTypes = map[string]Type{}
 }
 
-// Type represents the type of struct, or any arbitrary data.
-// NOTE '0xff' of first element of Type is reserved for testing.
+// Type represents the type of struct, or any arbitrary data. Type defines the
+// type of object. It should be unique thru the runtime.
+//
+// - 0x00 ~ 0x10 range is for mitum itself.
+// - 0xff,- range is reserved for testing.
 type Type [2]byte
 
 func MustNewType(a, b byte, name string) Type {

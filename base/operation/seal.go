@@ -24,7 +24,7 @@ type Seal interface {
 var MaxOperationsInSeal int = 100
 
 var (
-	SealType = hint.MustNewType(0x09, 0x00, "seal")
+	SealType = hint.MustNewType(0x01, 0x51, "seal")
 	SealHint = hint.MustHint(SealType, "0.0.1")
 )
 

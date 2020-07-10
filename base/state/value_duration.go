@@ -11,7 +11,7 @@ import (
 )
 
 var (
-	DurationValueType = hint.MustNewType(0x12, 0x05, "state-duration-value")
+	DurationValueType = hint.MustNewType(0x01, 0x65, "state-duration-value")
 	DurationValueHint = hint.MustHint(DurationValueType, "0.0.1")
 )
 

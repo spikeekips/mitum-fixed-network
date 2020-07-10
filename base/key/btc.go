@@ -13,9 +13,9 @@ import (
 )
 
 var (
-	btcPrivatekeyType = hint.MustNewType(0x02, 0x02, "btc-privatekey")
+	btcPrivatekeyType = hint.MustNewType(0x01, 0x12, "btc-privatekey")
 	btcPrivatekeyHint = hint.MustHint(btcPrivatekeyType, "0.0.1")
-	btcPublickeyType  = hint.MustNewType(0x02, 0x03, "btc-publickey")
+	btcPublickeyType  = hint.MustNewType(0x01, 0x13, "btc-publickey")
 	btcPublickeyHint  = hint.MustHint(btcPublickeyType, "0.0.1")
 )
 

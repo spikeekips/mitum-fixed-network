@@ -8,7 +8,7 @@ import (
 )
 
 var (
-	BaseNodeV0Type = hint.MustNewType(0x13, 0x00, "base-node-v0")
+	BaseNodeV0Type = hint.MustNewType(0x01, 0x70, "base-node-v0")
 	BaseNodeV0Hint = hint.MustHint(BaseNodeV0Type, "0.0.1")
 )
 

@@ -11,7 +11,7 @@ import (
 )
 
 var (
-	NumberValueType = hint.MustNewType(0x12, 0x00, "state-number-value")
+	NumberValueType = hint.MustNewType(0x01, 0x67, "state-number-value")
 	NumberValueHint = hint.MustHint(NumberValueType, "0.0.1")
 )
 

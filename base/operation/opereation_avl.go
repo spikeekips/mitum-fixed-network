@@ -10,9 +10,9 @@ import (
 )
 
 var (
-	OperationAVLNodeType        = hint.MustNewType(0x09, 0x01, "operation-avlnode")
+	OperationAVLNodeType        = hint.MustNewType(0x01, 0x52, "operation-avlnode")
 	OperationAVLNodeHint        = hint.MustHint(OperationAVLNodeType, "0.0.1")
-	OperationAVLNodeMutableType = hint.MustNewType(0x09, 0x02, "operation-avlnode-mutable")
+	OperationAVLNodeMutableType = hint.MustNewType(0x01, 0x53, "operation-avlnode-mutable")
 	OperationAVLNodeMutableHint = hint.MustHint(OperationAVLNodeMutableType, "0.0.1")
 )
 

@@ -9,7 +9,7 @@ import (
 const maxBytesHashSize = 100
 
 var (
-	bytesType = hint.MustNewType(0x07, 0x02, "hash-bytes")
+	bytesType = hint.MustNewType(0x01, 0x80, "hash-bytes")
 	bytesHint = hint.MustHint(bytesType, "0.0.1")
 )
 

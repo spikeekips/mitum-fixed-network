@@ -15,9 +15,9 @@ import (
 )
 
 var (
-	etherPrivatekeyType = hint.MustNewType(0x02, 0x04, "ether-privatekey")
+	etherPrivatekeyType = hint.MustNewType(0x01, 0x14, "ether-privatekey")
 	etherPrivatekeyHint = hint.MustHint(etherPrivatekeyType, "0.0.1")
-	etherPublickeyType  = hint.MustNewType(0x02, 0x05, "ether-publickey")
+	etherPublickeyType  = hint.MustNewType(0x01, 0x15, "ether-publickey")
 	etherPublickeyHint  = hint.MustHint(etherPublickeyType, "0.0.1")
 )
 

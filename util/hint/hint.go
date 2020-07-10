@@ -14,13 +14,13 @@ import (
 
 const (
 	MaxVersionSize          int    = 15
-	MaxHintSize             int    = MaxVersionSize + 2
+	MaxHintSize             int    = MaxVersionSize + len(Type{})
 	HintVerboseFormat       string = `hint{type=%q code="%x" version=%q}`
 	HintMarshalStringFormat string = "%x:%s"
 )
 
 var (
-	ReHintMarshalStringFormat                = `(?P<type>[a-f0-9]{4})\:(?P<version>.*)`
+	ReHintMarshalStringFormat                = fmt.Sprintf(`(?P<type>[a-f0-9]{%d})\:(?P<version>.*)`, len(Type{})*2)
 	reHintMarshalString       *regexp.Regexp = regexp.MustCompile("^" + ReHintMarshalStringFormat + "$")
 )
 

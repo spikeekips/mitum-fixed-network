@@ -11,7 +11,7 @@ import (
 )
 
 var (
-	SliceValueType = hint.MustNewType(0x12, 0x03, "state-slice-value")
+	SliceValueType = hint.MustNewType(0x01, 0x68, "state-slice-value")
 	SliceValueHint = hint.MustHint(SliceValueType, "0.0.1")
 )
 

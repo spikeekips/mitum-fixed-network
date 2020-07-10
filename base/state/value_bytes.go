@@ -11,7 +11,7 @@ import (
 )
 
 var (
-	BytesValueType = hint.MustNewType(0x12, 0x02, "state-bytes-value")
+	BytesValueType = hint.MustNewType(0x01, 0x64, "state-bytes-value")
 	BytesValueHint = hint.MustHint(BytesValueType, "0.0.1")
 )
 

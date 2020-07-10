@@ -10,7 +10,7 @@ import (
 )
 
 var (
-	HintedValueType = hint.MustNewType(0x12, 0x04, "state-hinted-value")
+	HintedValueType = hint.MustNewType(0x01, 0x66, "state-hinted-value")
 	HintedValueHint = hint.MustHint(HintedValueType, "0.0.1")
 )
 

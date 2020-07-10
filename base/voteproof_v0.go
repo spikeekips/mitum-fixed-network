@@ -15,7 +15,7 @@ import (
 )
 
 var (
-	VoteproofV0Type           = hint.MustNewType(0x04, 0x00, "voteproof")
+	VoteproofV0Type           = hint.MustNewType(0x01, 0x30, "voteproof")
 	VoteproofV0Hint hint.Hint = hint.MustHint(VoteproofV0Type, "0.0.1")
 )
 

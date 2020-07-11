@@ -50,8 +50,10 @@ func (st StateV0) IsValid([]byte) error {
 		return err
 	}
 
-	if err := st.previousBlock.IsValid(nil); err != nil {
-		return err
+	if st.previousBlock != nil {
+		if err := st.previousBlock.IsValid(nil); err != nil {
+			return err
+		}
 	}
 
 	if st.currentBlock != nil {
@@ -92,17 +94,18 @@ func (st StateV0) GenerateHash() valuehash.Hash {
 	be = append(
 		be,
 		[]byte(st.key),
-		st.previousBlock.Bytes(),
 		st.value.Hash().Bytes(),
 	)
+
+	if st.previousBlock != nil {
+		be = append(be, st.previousBlock.Bytes())
+	}
 
 	for _, oi := range st.operations {
 		be = append(be, oi.Bytes())
 	}
 
-	e := util.ConcatBytesSlice(be...)
-
-	return valuehash.NewSHA256(e)
+	return valuehash.NewSHA256(util.ConcatBytesSlice(be...))
 }
 
 func (st StateV0) Key() string {

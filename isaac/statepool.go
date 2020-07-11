@@ -53,8 +53,6 @@ func (sp *StatePool) Get(key string) (state.StateUpdater, bool, error) {
 		value = s.Value()
 		previousBlock = s.CurrentBlock()
 		found = fo
-	case sp.lastManifest != nil:
-		previousBlock = sp.lastManifest.Hash()
 	}
 
 	var st state.StateUpdater

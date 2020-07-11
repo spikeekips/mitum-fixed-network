@@ -27,7 +27,7 @@ type StateV0UnpackerBSON struct {
 	H   valuehash.Bytes `bson:"hash"`
 	K   string          `bson:"key"`
 	V   bson.Raw        `bson:"value"`
-	PB  valuehash.Bytes `bson:"previous_block"`
+	PB  bson.RawValue   `bson:"previous_block"`
 	HT  base.Height     `bson:"height"`
 	CB  valuehash.Bytes `bson:"current_block"`
 	OPS []bson.Raw      `bson:"operation_infos"`
@@ -39,12 +39,19 @@ func (st *StateV0) UnpackBSON(b []byte, enc *bsonenc.Encoder) error {
 		return err
 	}
 
+	var pb valuehash.Bytes
+	if s, ok := ust.PB.StringValueOK(); ok && len(s) > 0 {
+		if err := ust.PB.Unmarshal(&pb); err != nil {
+			return err
+		}
+	}
+
 	ops := make([][]byte, len(ust.OPS))
 	for i, b := range ust.OPS {
 		ops[i] = b
 	}
 
-	return st.unpack(enc, ust.H, ust.K, ust.V, ust.PB, ust.HT, ust.CB, ops)
+	return st.unpack(enc, ust.H, ust.K, ust.V, pb, ust.HT, ust.CB, ops)
 }
 
 func (oi OperationInfoV0) MarshalBSON() ([]byte, error) {

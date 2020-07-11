@@ -419,9 +419,7 @@ func (pp *internalDefaultProposalProcessor) processStates() (*tree.AVLTree, erro
 				continue
 			}
 
-			pp.Log().Error().Err(err).
-				Interface("operation", op).
-				Msg("failed to process operation")
+			pp.Log().Error().Err(err).Interface("operation", op).Msg("failed to process operation")
 
 			return nil, err
 		}

@@ -21,8 +21,8 @@ func (st *StateV0) unpack(
 		return xerrors.Errorf("empty previous_block hash found")
 	}
 
-	if previousBlock != nil && previousBlock.Empty() {
-		return xerrors.Errorf("empty previous_block hash found")
+	if previousBlock.Empty() {
+		previousBlock = nil
 	}
 
 	if currentBlock != nil && currentBlock.Empty() {

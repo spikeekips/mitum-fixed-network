@@ -4,7 +4,10 @@ import (
 	"github.com/rs/zerolog"
 )
 
-var NilLog zerolog.Logger = zerolog.Nop()
+var (
+	NilLog    zerolog.Logger = zerolog.Nop()
+	NilLogger Logger         = Logger{Logger: &NilLog}
+)
 
 type LogHintedMarshaler interface {
 	MarshalLog(string /*key */, Emitter, bool /* is verbose? */) Emitter

@@ -404,12 +404,14 @@ func (pp *internalDefaultProposalProcessor) processStates() (*tree.AVLTree, erro
 			continue
 		} else if err := opp.ProcessOperation(
 			pool.Get,
-			func(s state.StateUpdater) error {
-				if err := s.AddOperationInfo(opi); err != nil {
-					return err
+			func(s ...state.StateUpdater) error {
+				for i := range s {
+					if err := s[i].AddOperationInfo(opi); err != nil {
+						return err
+					}
 				}
 
-				return pool.Set(s)
+				return pool.Set(s...)
 			},
 		); err != nil {
 			// TODO needs test

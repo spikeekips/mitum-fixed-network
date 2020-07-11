@@ -72,11 +72,13 @@ func (sp *StatePool) Get(key string) (state.StateUpdater, bool, error) {
 	return st, found, nil
 }
 
-func (sp *StatePool) Set(s state.StateUpdater) error {
+func (sp *StatePool) Set(s ...state.StateUpdater) error {
 	sp.Lock()
 	defer sp.Unlock()
 
-	sp.updated[s.Key()] = s
+	for i := range s {
+		sp.updated[s[i].Key()] = s[i]
+	}
 
 	return nil
 }

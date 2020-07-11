@@ -7,6 +7,6 @@ var IgnoreOperationProcessingError = errors.NewError("ignore operation processin
 type OperationProcesser interface {
 	ProcessOperation(
 		getState func(key string) (StateUpdater, bool, error),
-		setState func(StateUpdater) error,
+		setState func(...StateUpdater) error,
 	) error
 }

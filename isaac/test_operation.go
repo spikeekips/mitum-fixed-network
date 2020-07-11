@@ -75,7 +75,7 @@ func (kvo *KVOperation) UnpackBSON(b []byte, enc *bsonenc.Encoder) error {
 
 func (kvo KVOperation) ProcessOperation(
 	getState func(key string) (state.StateUpdater, bool, error),
-	setState func(state.StateUpdater) error,
+	setState func(...state.StateUpdater) error,
 ) error {
 	var value state.BytesValue
 	if v, err := state.NewBytesValue(kvo.Value()); err != nil {

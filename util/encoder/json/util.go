@@ -2,6 +2,7 @@ package jsonenc
 
 import (
 	"bytes"
+	"encoding/json"
 
 	"github.com/spikeekips/mitum/util"
 	"github.com/spikeekips/mitum/util/hint"
@@ -18,7 +19,7 @@ func MustMarshal(i interface{}) []byte {
 }
 
 func MarshalIndent(i interface{}) ([]byte, error) {
-	return util.JSON.MarshalIndent(i, "", "  ")
+	return json.MarshalIndent(i, "", "  ")
 }
 
 func MustMarshalIndent(i interface{}) []byte {

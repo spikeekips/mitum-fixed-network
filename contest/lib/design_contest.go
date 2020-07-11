@@ -106,8 +106,9 @@ func (cd *ContestDesign) loadConditionActions() error {
 }
 
 type ContestConfigDesign struct {
-	NetworkIDString string                 `yaml:"network-id"`
-	GenesisPolicy   *launcher.PolicyDesign `yaml:"genesis-policy"`
+	NetworkIDString string                     `yaml:"network-id"`
+	GenesisPolicy   *launcher.PolicyDesign     `yaml:"genesis-policy"`
+	InitOperations  []launcher.OperationDesign `yaml:"init-operations"`
 }
 
 func NewContestConfigDesign() *ContestConfigDesign {

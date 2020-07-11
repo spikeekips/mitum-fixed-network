@@ -733,6 +733,7 @@ func (ct *Container) NodeDesign(isGenesisNode bool) NodeDesign {
 
 	if isGenesisNode {
 		lnd.GenesisPolicy = ct.contestDesign.Config.GenesisPolicy
+		lnd.InitOperations = ct.contestDesign.Config.InitOperations
 	}
 
 	lnd.SetEncoders(ct.encs)

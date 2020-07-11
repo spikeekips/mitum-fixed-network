@@ -24,6 +24,7 @@ type NodeDesign struct {
 	GenesisPolicy    *PolicyDesign `yaml:"genesis-policy,omitempty"`
 	privatekey       key.Privatekey
 	Nodes            []*RemoteDesign
+	InitOperations   []OperationDesign `yaml:"init-operations"`
 }
 
 func (nd *NodeDesign) SetEncoders(encs *encoder.Encoders) {

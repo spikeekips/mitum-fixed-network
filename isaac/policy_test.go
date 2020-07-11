@@ -80,13 +80,15 @@ func (t *testPolicy) TestLoadFromStorage() {
 	)
 	t.NoError(err)
 
-	var newState state.StateUpdater
-	err = spo.ProcessOperation(statepool.Get, func(s state.StateUpdater) error {
-		newState = s
-		return statepool.Set(s)
+	var newStates []state.StateUpdater
+	err = spo.ProcessOperation(statepool.Get, func(s ...state.StateUpdater) error {
+		newStates = s
+		return statepool.Set(s...)
 	})
 	t.NoError(err)
+	t.Equal(1, len(newStates))
 
+	newState := newStates[0]
 	t.NoError(newState.SetPreviousBlock(previousBlock.Hash()))
 	t.NoError(newState.SetCurrentBlock(currentBlock.Height(), currentBlock.Hash()))
 	t.NoError(newState.SetHash(newState.GenerateHash()))

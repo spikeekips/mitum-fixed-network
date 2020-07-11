@@ -40,3 +40,12 @@ func ParseString(s string) (hint.Hint, string, error) {
 
 	return h, k, nil
 }
+
+func MustNewBTCPrivatekey() BTCPrivatekey {
+	k, err := NewBTCPrivatekey()
+	if err != nil {
+		panic(err)
+	}
+
+	return k
+}

@@ -7,20 +7,17 @@ import (
 	"github.com/spikeekips/mitum/util/valuehash"
 )
 
-type baseOperationJSONPacker struct {
-	jsonenc.HintedHead
-	H  valuehash.Hash `json:"hash"`
-	FC OperationFact  `json:"fact"`
-	FS []FactSign     `json:"fact_signs"`
+func (bo BaseOperation) JSONM() map[string]interface{} {
+	return map[string]interface{}{
+		"_hint":      bo.Hint(),
+		"hash":       bo.h,
+		"fact":       bo.fact,
+		"fact_signs": bo.fs,
+	}
 }
 
 func (bo BaseOperation) MarshalJSON() ([]byte, error) {
-	return jsonenc.Marshal(baseOperationJSONPacker{
-		HintedHead: jsonenc.NewHintedHead(bo.Hint()),
-		H:          bo.h,
-		FC:         bo.fact,
-		FS:         bo.fs,
-	})
+	return jsonenc.Marshal(bo.JSONM())
 }
 
 type baseOperationJSONUnpacker struct {

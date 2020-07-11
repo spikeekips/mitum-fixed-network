@@ -9,14 +9,18 @@ import (
 )
 
 func (bo BaseOperation) MarshalBSON() ([]byte, error) {
-	return bsonenc.Marshal(bsonenc.MergeBSONM(
+	return bsonenc.Marshal(bo.BSONM())
+}
+
+func (bo BaseOperation) BSONM() bson.M {
+	return bsonenc.MergeBSONM(
 		bsonenc.NewHintedDoc(bo.Hint()),
 		bson.M{
 			"hash":       bo.h,
 			"fact":       bo.fact,
 			"fact_signs": bo.fs,
 		},
-	))
+	)
 }
 
 type BaseOperationBSONUnpacker struct {

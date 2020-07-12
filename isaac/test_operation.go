@@ -3,6 +3,8 @@
 package isaac
 
 import (
+	"sync"
+
 	"go.mongodb.org/mongo-driver/bson"
 
 	"github.com/spikeekips/mitum/base/key"
@@ -14,7 +16,10 @@ import (
 	"github.com/spikeekips/mitum/util/hint"
 )
 
-var KVOperationHint = hint.MustHintWithType(hint.Type{0xff, 0xfb}, "0.0.1", "kv-operation-isaac")
+var (
+	KVOperationHint     = hint.MustHintWithType(hint.Type{0xff, 0xfb}, "0.0.1", "kv-operation-isaac")
+	LongKVOperationHint = hint.MustHintWithType(hint.Type{0xff, 0xfc}, "0.0.1", "long-kv-operation-isaac")
+)
 
 type KVOperation struct {
 	operation.KVOperation
@@ -91,4 +96,84 @@ func (kvo KVOperation) ProcessOperation(
 	} else {
 		return setState(s)
 	}
+}
+
+type LongKVOperation struct {
+	KVOperation
+	preProcess func(
+		getState func(key string) (state.StateUpdater, bool, error),
+		setState func(...state.StateUpdater) error,
+	) error
+}
+
+func NewLongKVOperation(op KVOperation) LongKVOperation {
+	op.BaseOperation = op.SetHint(LongKVOperationHint)
+
+	return LongKVOperation{
+		KVOperation: op,
+	}
+}
+
+func (kvo LongKVOperation) Hint() hint.Hint {
+	return LongKVOperationHint
+}
+
+func (kvo LongKVOperation) ProcessOperation(
+	getState func(string) (state.StateUpdater, bool, error),
+	setState func(...state.StateUpdater) error,
+) error {
+	if kvo.preProcess != nil {
+		if err := kvo.preProcess(getState, setState); err != nil {
+			return err
+		}
+	}
+
+	return kvo.KVOperation.ProcessOperation(getState, setState)
+}
+
+var longKVOperationFuncMap = &sync.Map{}
+
+func (kvo LongKVOperation) SetPreProcess(
+	f func(
+		getState func(key string) (state.StateUpdater, bool, error),
+		setState func(...state.StateUpdater) error,
+	) error,
+) LongKVOperation {
+	kvo.preProcess = f
+
+	longKVOperationFuncMap.Store(kvo.Hash().String(), f)
+
+	return kvo
+}
+
+func (kvo *LongKVOperation) UnpackJSON(b []byte, enc *jsonenc.Encoder) error {
+	var bo operation.BaseOperation
+	if err := bo.UnpackJSON(b, enc); err != nil {
+		return err
+	}
+
+	kvo.BaseOperation = bo
+
+	f, found := longKVOperationFuncMap.Load(bo.Hash().String())
+	if found {
+		kvo.preProcess = f.(func(func(string) (state.StateUpdater, bool, error), func(...state.StateUpdater) error) error)
+	}
+
+	return nil
+}
+
+func (kvo *LongKVOperation) UnpackBSON(b []byte, enc *bsonenc.Encoder) error {
+	var bo operation.BaseOperation
+	if err := bo.UnpackBSON(b, enc); err != nil {
+		return err
+	}
+
+	kvo.BaseOperation = bo
+
+	f, found := longKVOperationFuncMap.Load(bo.Hash().String())
+	if found {
+		kvo.preProcess = f.(func(func(string) (state.StateUpdater, bool, error), func(...state.StateUpdater) error) error)
+	}
+
+	return nil
 }

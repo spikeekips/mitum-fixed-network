@@ -58,6 +58,7 @@ func (t *baseTestStateHandler) SetupSuite() {
 	_ = t.Encs.AddHinter(operation.KVOperationFact{})
 	_ = t.Encs.AddHinter(operation.KVOperation{})
 	_ = t.Encs.AddHinter(KVOperation{})
+	_ = t.Encs.AddHinter(LongKVOperation{})
 	_ = t.Encs.AddHinter(tree.AVLTree{})
 	_ = t.Encs.AddHinter(operation.OperationAVLNode{})
 	_ = t.Encs.AddHinter(operation.OperationAVLNodeMutable{})

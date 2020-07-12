@@ -1,14 +1,19 @@
 package isaac
 
 import (
+	"sync/atomic"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/suite"
 
 	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/base/ballot"
+	"github.com/spikeekips/mitum/base/operation"
 	"github.com/spikeekips/mitum/base/seal"
+	"github.com/spikeekips/mitum/base/state"
 	channetwork "github.com/spikeekips/mitum/network/gochan"
+	"github.com/spikeekips/mitum/util"
 	"github.com/spikeekips/mitum/util/valuehash"
 )
 
@@ -165,15 +170,48 @@ func (t *testProposalProcessor) TestNotFoundInProposal() {
 }
 
 func (t *testProposalProcessor) TestTimeoutProcessProposal() {
-	t.local.Policy().SetTimeoutProcessProposal(1)
+	t.local.Policy().SetTimeoutProcessProposal(time.Millisecond * 100)
 
-	pm := NewProposalMaker(t.local)
+	var processed int64
+
+	var sls []seal.Seal
+	for i := 0; i < 2; i++ {
+		kop, err := NewKVOperation(
+			t.local.Node().Privatekey(),
+			util.UUID().Bytes(),
+			util.UUID().String(),
+			util.UUID().Bytes(),
+			TestNetworkID,
+		)
+		t.NoError(err)
+
+		op := NewLongKVOperation(kop).
+			SetPreProcess(func(
+				func(key string) (state.StateUpdater, bool, error), func(...state.StateUpdater) error,
+			) error {
+				<-time.After(time.Millisecond * 300)
+				atomic.AddInt64(&processed, 1)
+
+				return nil
+			})
+
+		sl, err := operation.NewBaseSeal(t.local.Node().Privatekey(), []operation.Operation{op}, TestNetworkID)
+		t.NoError(err)
+		t.NoError(sl.IsValid(TestNetworkID))
+
+		sls = append(sls, sl)
+	}
+
+	err := t.local.Storage().NewSeals(sls)
+	t.NoError(err)
 
 	ib := t.newINITBallot(t.local, base.Round(0), nil)
 	initFact := ib.INITBallotFactV0
 
+	pm := NewDummyProposalMaker(t.local, sls)
 	ivp, err := t.newVoteproof(base.StageINIT, initFact, t.local, t.remote)
 	proposal, err := pm.Proposal(ivp.Round())
+	t.NoError(err)
 
 	_ = t.local.Storage().NewProposal(proposal)
 
@@ -181,6 +219,9 @@ func (t *testProposalProcessor) TestTimeoutProcessProposal() {
 
 	_, err = dp.ProcessINIT(proposal.Hash(), ivp)
 	t.Contains(err.Error(), "timeout to process Proposal")
+
+	<-time.After(time.Second * 2)
+	t.Equal(int64(1), atomic.LoadInt64(&processed))
 }
 
 func TestProposalProcessor(t *testing.T) {

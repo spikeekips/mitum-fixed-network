@@ -16,7 +16,7 @@ run:
   tests: false
 
   # list of build tags, all linters use it. Default is empty list.
-  build-tags: test
+  build-tags:
 
   # which dirs to skip: they won't be analyzed;
   # can use regexp here: generated.*, regexp is applied on full path;
@@ -202,6 +202,12 @@ issues:
   # Excluding configuration per-path, per-linter, per-text and per-source
   exclude-rules:
     # Exclude some linters from running on tests files.
+    - path: test_.*\.go
+      linters:
+        - gocyclo
+        - errcheck
+        - dupl
+        - gosec
     - path: _test\.go
       linters:
         - gocyclo

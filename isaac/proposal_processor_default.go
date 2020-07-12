@@ -20,10 +20,11 @@ import (
 )
 
 type DefaultProposalProcessor struct {
+	sync.RWMutex
 	*logging.Logging
 	localstate *Localstate
-	processors *sync.Map
 	suffrage   base.Suffrage
+	pp         *internalDefaultProposalProcessor
 }
 
 func NewDefaultProposalProcessor(localstate *Localstate, suffrage base.Suffrage) *DefaultProposalProcessor {
@@ -33,7 +34,6 @@ func NewDefaultProposalProcessor(localstate *Localstate, suffrage base.Suffrage)
 		}),
 		localstate: localstate,
 		suffrage:   suffrage,
-		processors: &sync.Map{},
 	}
 }
 
@@ -42,16 +42,41 @@ func (dp *DefaultProposalProcessor) Initialize() error {
 }
 
 func (dp *DefaultProposalProcessor) IsProcessed(ph valuehash.Hash) bool {
-	_, found := dp.processors.Load(ph.String())
+	dp.RLock()
+	defer dp.RUnlock()
 
-	return found
+	if dp.pp == nil {
+		return false
+	}
+
+	return dp.pp.proposal.Hash().Equal(ph)
+}
+
+func (dp *DefaultProposalProcessor) processed(ph valuehash.Hash) *internalDefaultProposalProcessor {
+	dp.RLock()
+	defer dp.RUnlock()
+
+	if dp.pp == nil {
+		return nil
+	}
+
+	if !dp.pp.proposal.Hash().Equal(ph) {
+		return nil
+	}
+
+	return dp.pp
+}
+
+func (dp *DefaultProposalProcessor) setProcessor(pp *internalDefaultProposalProcessor) {
+	dp.Lock()
+	defer dp.Unlock()
+
+	dp.pp = pp
 }
 
 func (dp *DefaultProposalProcessor) ProcessINIT(ph valuehash.Hash, initVoteproof base.Voteproof) (block.Block, error) {
-	if i, found := dp.processors.Load(ph.String()); found {
-		processor := i.(*internalDefaultProposalProcessor)
-
-		return processor.block, nil
+	if pp := dp.processed(ph); pp != nil {
+		return pp.block, nil
 	}
 
 	if initVoteproof.Stage() != base.StageINIT {
@@ -65,19 +90,21 @@ func (dp *DefaultProposalProcessor) ProcessINIT(ph valuehash.Hash, initVoteproof
 		proposal = pr
 	}
 
-	processor, err := newInternalDefaultProposalProcessor(dp.localstate, dp.suffrage, proposal)
+	pp, err := newInternalDefaultProposalProcessor(dp.localstate, dp.suffrage, proposal)
 	if err != nil {
 		return nil, err
 	}
 
-	_ = processor.SetLogger(dp.Log())
+	_ = pp.SetLogger(dp.Log())
 
-	blk, err := processor.processINIT(initVoteproof)
+	dp.setProcessor(nil)
+
+	blk, err := pp.processINIT(initVoteproof)
 	if err != nil {
 		return nil, err
 	}
 
-	dp.processors.Store(ph.String(), processor)
+	dp.setProcessor(pp)
 
 	return blk, nil
 }
@@ -89,20 +116,18 @@ func (dp *DefaultProposalProcessor) ProcessACCEPT(
 		return nil, xerrors.Errorf("Processaccept needs ACCEPT Voteproof")
 	}
 
-	var processor *internalDefaultProposalProcessor
-	if i, found := dp.processors.Load(ph.String()); !found {
+	pp := dp.processed(ph)
+	if pp == nil {
 		return nil, xerrors.Errorf("not processed ProcessINIT")
-	} else {
-		processor = i.(*internalDefaultProposalProcessor)
 	}
 
-	if err := processor.setACCEPTVoteproof(acceptVoteproof); err != nil {
+	if err := pp.setACCEPTVoteproof(acceptVoteproof); err != nil {
 		return nil, err
 	}
 
-	defer dp.processors.Delete(ph.String())
+	dp.setProcessor(nil)
 
-	return processor.bs, nil
+	return pp.bs, nil
 }
 
 func (dp *DefaultProposalProcessor) checkProposal(

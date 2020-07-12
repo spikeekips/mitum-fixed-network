@@ -17,3 +17,4 @@ tests/*/*/coverage/
 .*.go
 /*.log
 .*.yaml
+/.release-it.json

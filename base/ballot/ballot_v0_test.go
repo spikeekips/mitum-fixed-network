@@ -13,7 +13,7 @@ import (
 type testBaseBallotV0 struct {
 	suite.Suite
 
-	pk key.BTCPrivatekey
+	pk key.Privatekey
 }
 
 func (t *testBaseBallotV0) SetupSuite() {

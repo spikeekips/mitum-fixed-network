@@ -17,7 +17,7 @@ import (
 type testBallotV0SIGNEncode struct {
 	suite.Suite
 
-	pk  key.BTCPrivatekey
+	pk  key.Privatekey
 	enc encoder.Encoder
 }
 

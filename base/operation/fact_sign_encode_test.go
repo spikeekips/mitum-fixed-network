@@ -16,7 +16,7 @@ import (
 type testFactSignEncoding struct {
 	suite.Suite
 
-	pk   key.BTCPrivatekey
+	pk   key.Privatekey
 	encs *encoder.Encoders
 	enc  encoder.Encoder
 }

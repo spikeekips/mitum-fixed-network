@@ -12,7 +12,7 @@ import (
 type testSeal struct {
 	suite.Suite
 
-	pk key.BTCPrivatekey
+	pk key.Privatekey
 }
 
 func (t *testSeal) SetupSuite() {

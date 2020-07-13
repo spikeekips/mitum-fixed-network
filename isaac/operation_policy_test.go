@@ -13,7 +13,7 @@ import (
 type testSetPolicyOperation struct {
 	suite.Suite
 
-	pk key.BTCPrivatekey
+	pk key.Privatekey
 }
 
 func (t *testSetPolicyOperation) SetupSuite() {

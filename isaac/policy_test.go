@@ -16,7 +16,7 @@ type testPolicy struct {
 	suite.Suite
 	StorageSupportTest
 
-	pk key.BTCPrivatekey
+	pk key.Privatekey
 }
 
 func (t *testPolicy) SetupSuite() {

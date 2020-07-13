@@ -15,7 +15,7 @@ import (
 type testNetworkChanChannel struct {
 	suite.Suite
 
-	pk key.BTCPrivatekey
+	pk key.Privatekey
 }
 
 func (t *testNetworkChanChannel) SetupSuite() {

@@ -70,7 +70,7 @@ func (dst *DummyBlockStorage) Committed() bool {
 
 type BaseTestStorage struct {
 	suite.Suite
-	PK      key.BTCPrivatekey
+	PK      key.Privatekey
 	Encs    *encoder.Encoders
 	JSONEnc encoder.Encoder
 	BSONEnc encoder.Encoder

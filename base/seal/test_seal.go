@@ -17,14 +17,14 @@ import (
 var dummySealHint = hint.MustHintWithType(hint.Type{0xff, 0x35}, "0.1", "dummy-seal")
 
 type DummySeal struct {
-	PK        key.BTCPrivatekey
+	PK        key.Privatekey
 	H         valuehash.Hash
 	BH        valuehash.Hash
 	S         string
 	CreatedAt time.Time
 }
 
-func NewDummySeal(pk key.BTCPrivatekey) DummySeal {
+func NewDummySeal(pk key.Privatekey) DummySeal {
 	return DummySeal{
 		PK:        pk,
 		H:         valuehash.RandomSHA256().(valuehash.SHA256),
@@ -72,7 +72,7 @@ func (ds DummySeal) SignedAt() time.Time {
 
 type DummySealJSONPacker struct {
 	jsonenc.HintedHead
-	PK        key.BTCPrivatekey
+	PK        key.Privatekey
 	H         valuehash.Hash
 	BH        valuehash.Hash
 	S         string

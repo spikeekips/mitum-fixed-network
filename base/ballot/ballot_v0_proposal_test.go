@@ -14,7 +14,7 @@ import (
 type testBallotV0Proposal struct {
 	suite.Suite
 
-	pk key.BTCPrivatekey
+	pk key.Privatekey
 }
 
 func (t *testBallotV0Proposal) SetupSuite() {

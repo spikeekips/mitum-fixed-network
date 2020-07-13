@@ -65,6 +65,10 @@ func (dp *DefaultProposalProcessor) setProcessor(pp *internalDefaultProposalProc
 	dp.Lock()
 	defer dp.Unlock()
 
+	if dp.pp != nil {
+		dp.pp.stop()
+	}
+
 	dp.pp = pp
 }
 

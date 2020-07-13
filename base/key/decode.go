@@ -39,7 +39,7 @@ func (kd KeyDecoder) Encode(enc encoder.Encoder) (Key, error) {
 	}
 }
 
-func DecodePrivatekey(enc encoder.Encoder, s string) (Privatekey, error) {
+func decodeKey(enc encoder.Encoder, s string) (Key, error) {
 	h, us, err := ParseString(s)
 	if err != nil {
 		return nil, err
@@ -47,6 +47,20 @@ func DecodePrivatekey(enc encoder.Encoder, s string) (Privatekey, error) {
 
 	kd := KeyDecoder{h: h, s: us}
 	if k, err := kd.Encode(enc); err != nil {
+		return nil, err
+	} else if pk, ok := k.(Key); !ok {
+		return nil, xerrors.Errorf("not key.Key; type=%T", k)
+	} else {
+		return pk, nil
+	}
+}
+
+func DecodeKey(enc encoder.Encoder, s string) (Key, error) {
+	return decodeKey(enc, s)
+}
+
+func DecodePrivatekey(enc encoder.Encoder, s string) (Privatekey, error) {
+	if k, err := decodeKey(enc, s); err != nil {
 		return nil, err
 	} else if pk, ok := k.(Privatekey); !ok {
 		return nil, xerrors.Errorf("not key.Privatekey; type=%T", k)
@@ -56,13 +70,7 @@ func DecodePrivatekey(enc encoder.Encoder, s string) (Privatekey, error) {
 }
 
 func DecodePublickey(enc encoder.Encoder, s string) (Publickey, error) {
-	h, us, err := ParseString(s)
-	if err != nil {
-		return nil, err
-	}
-
-	kd := KeyDecoder{h: h, s: us}
-	if k, err := kd.Encode(enc); err != nil {
+	if k, err := decodeKey(enc, s); err != nil {
 		return nil, err
 	} else if pk, ok := k.(Publickey); !ok {
 		return nil, xerrors.Errorf("not key.Publickey; type=%T", k)

@@ -6,6 +6,7 @@ import (
 	"github.com/spikeekips/mitum/util/hint"
 	"github.com/spikeekips/mitum/util/isvalid"
 	"github.com/spikeekips/mitum/util/valuehash"
+	"golang.org/x/xerrors"
 )
 
 const MaxTokenSize = 100
@@ -100,6 +101,12 @@ func NewBaseOperationFromFact(ht hint.Hint, fact OperationFact, fs []FactSign) (
 	return bo, nil
 }
 
+func (bo BaseOperation) SetHash(h valuehash.Hash) BaseOperation {
+	bo.h = h
+
+	return bo
+}
+
 func (bo BaseOperation) SetHint(ht hint.Hint) BaseOperation {
 	bo.ht = ht
 
@@ -139,4 +146,32 @@ func (bo BaseOperation) Signs() []FactSign {
 
 func (bo BaseOperation) IsValid(networkID []byte) error {
 	return IsValidOperation(bo, networkID)
+}
+
+func (bo BaseOperation) AddFactSigns(fs ...FactSign) (FactSignUpdater, error) {
+	for i := range bo.fs {
+		bofs := bo.fs[i]
+
+		var found bool
+		for j := range fs {
+			if bofs.Signer().Equal(fs[j].Signer()) {
+				found = true
+				break
+			}
+		}
+
+		if found {
+			return nil, xerrors.Errorf("already signed")
+		}
+	}
+
+	bo.fs = append(bo.fs, fs...)
+
+	if h, err := bo.GenerateHash(); err != nil {
+		return nil, err
+	} else {
+		bo.h = h
+	}
+
+	return bo, nil
 }

@@ -19,6 +19,10 @@ type Seal interface {
 	Operations() []Operation
 }
 
+type SealUpdater interface {
+	SetOperations([]Operation) SealUpdater
+}
+
 // TODO MaxOperationsInSeal will be managed by Policy.
 
 var MaxOperationsInSeal int = 100
@@ -113,6 +117,12 @@ func (sl BaseSeal) SignedAt() time.Time {
 
 func (sl BaseSeal) Operations() []Operation {
 	return sl.ops
+}
+
+func (sl BaseSeal) SetOperations(ops []Operation) SealUpdater {
+	sl.ops = ops
+
+	return sl
 }
 
 func (sl *BaseSeal) Sign(pk key.Privatekey, b []byte) error {

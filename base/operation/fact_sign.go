@@ -17,6 +17,10 @@ var (
 	baseFactSignHint = hint.MustHint(baseFactSignType, "0.0.1")
 )
 
+type FactSignUpdater interface {
+	AddFactSigns(...FactSign) (FactSignUpdater, error)
+}
+
 type FactSign interface {
 	util.Byter
 	isvalid.IsValider

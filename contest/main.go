@@ -52,7 +52,7 @@ func main() {
 	}
 
 	var log logging.Logger
-	if o, err := contestlib.SetupLoggingOutput(flags.Log, flags.LogFormat, flags.LogColor); err != nil {
+	if o, err := contestlib.SetupLoggingOutput(flags.Log, flags.LogFormat, flags.LogColor, os.Stdout); err != nil {
 		ctx.FatalIfErrorf(err)
 	} else if l, err := contestlib.SetupLogging(o, flags.LogLevel.Zero(), flags.Verbose); err != nil {
 		ctx.FatalIfErrorf(err)

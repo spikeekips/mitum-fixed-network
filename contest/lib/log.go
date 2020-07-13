@@ -31,15 +31,18 @@ type LogFlags struct {
 	LogFormat LogFormat `help:"log format {json terminal} (default: ${log_format})" default:"${log_format}"`
 }
 
-func SetupLoggingOutput(f string, format LogFormat, forceColor bool) (io.Writer, error) {
+func SetupLoggingOutput(f string, format LogFormat, forceColor bool, defaultOutput io.Writer) (io.Writer, error) {
 	logFile := strings.TrimSpace(f)
 
 	var output io.Writer
 	if len(logFile) < 1 {
-		o := os.Stdout
-		ExitHooks.Add(func() {
-			_ = o.Sync()
-		})
+		o := defaultOutput
+
+		if f, ok := o.(*os.File); ok {
+			ExitHooks.Add(func() {
+				_ = f.Sync()
+			})
+		}
 
 		output = o
 	} else {

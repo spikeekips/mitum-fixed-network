@@ -92,7 +92,7 @@ func setupLogging(logs []string) (logging.Logger, error) {
 
 	var outputs []io.Writer
 	for _, l := range logs {
-		if o, err := contestlib.SetupLoggingOutput(l, "json", false); err != nil {
+		if o, err := contestlib.SetupLoggingOutput(l, "json", false, os.Stdout); err != nil {
 			return logging.Logger{}, err
 		} else {
 			outputs = append(outputs, o)

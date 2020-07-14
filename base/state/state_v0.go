@@ -1,6 +1,8 @@
 package state
 
 import (
+	"sync"
+
 	"golang.org/x/xerrors"
 
 	"github.com/spikeekips/mitum/base"
@@ -18,6 +20,7 @@ var (
 )
 
 type StateV0 struct {
+	*sync.RWMutex
 	h             valuehash.Hash
 	key           string
 	value         Value
@@ -25,6 +28,7 @@ type StateV0 struct {
 	operations    []OperationInfo
 	currentHeight base.Height
 	currentBlock  valuehash.Hash
+	opcache       map[string]struct{}
 }
 
 func NewStateV0(
@@ -33,9 +37,11 @@ func NewStateV0(
 	previousBlock valuehash.Hash,
 ) (*StateV0, error) {
 	st := &StateV0{
+		RWMutex:       &sync.RWMutex{},
 		key:           key,
 		value:         value,
 		previousBlock: previousBlock,
+		opcache:       map[string]struct{}{},
 	}
 
 	return st, nil
@@ -84,6 +90,9 @@ func (st *StateV0) SetHash(h valuehash.Hash) error {
 		return err
 	}
 
+	st.Lock()
+	defer st.Unlock()
+
 	st.h = h
 
 	return nil
@@ -117,6 +126,9 @@ func (st StateV0) Value() Value {
 }
 
 func (st *StateV0) SetValue(value Value) error {
+	st.Lock()
+	defer st.Unlock()
+
 	st.value = value
 
 	return nil
@@ -130,6 +142,9 @@ func (st *StateV0) SetPreviousBlock(h valuehash.Hash) error {
 	if err := h.IsValid(nil); err != nil {
 		return err
 	}
+
+	st.Lock()
+	defer st.Unlock()
 
 	st.previousBlock = h
 
@@ -149,8 +164,13 @@ func (st *StateV0) SetCurrentBlock(height base.Height, h valuehash.Hash) error {
 		return err
 	}
 
+	st.Lock()
+	defer st.Unlock()
+
 	st.currentHeight = height
 	st.currentBlock = h
+
+	st.opcache = map[string]struct{}{}
 
 	return nil
 }
@@ -162,6 +182,15 @@ func (st StateV0) Operations() []OperationInfo {
 func (st *StateV0) AddOperationInfo(opi OperationInfo) error {
 	if err := opi.IsValid(nil); err != nil {
 		return err
+	}
+
+	st.Lock()
+	defer st.Unlock()
+
+	if _, found := st.opcache[opi.Operation().String()]; found {
+		return nil
+	} else {
+		st.opcache[opi.Operation().String()] = struct{}{}
 	}
 
 	st.operations = append(st.operations, opi)

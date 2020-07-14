@@ -343,6 +343,10 @@ func (pp *internalDefaultProposalProcessor) processStates() (*tree.AVLTree, erro
 			return pool.Set(s...)
 		}); err != nil {
 			if xerrors.Is(err, state.IgnoreOperationProcessingError) { // TODO needs test
+				pp.Log().VerboseFunc(func(e *logging.Event) logging.Emitter {
+					return e.Err(err).Interface("operation", op)
+				}).Hinted("operation_hash", op.Hash()).Msg("operation ignored")
+
 				continue
 			}
 

@@ -350,7 +350,7 @@ func (cmd *StartCommand) defaultActionCleanStorage(nodes []string) (func(logging
 		}
 
 		for _, ct := range cs {
-			if st, err := ct.Storage(); err != nil {
+			if st, err := ct.Storage(false); err != nil {
 				return err
 			} else if err := st.Clean(); err != nil {
 				return err
@@ -506,7 +506,7 @@ func (cmd *StartCommand) prepareContainersForMangle(nodeNames []string, fromHeig
 			ct = c
 		}
 
-		if st, err := ct.Storage(); err != nil {
+		if st, err := ct.Storage(false); err != nil {
 			return nil, err
 		} else if err := st.CleanByHeight(fromHeight); err != nil {
 			return nil, err

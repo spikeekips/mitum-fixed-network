@@ -100,10 +100,6 @@ func (cc *ConditionsChecker) Check(exitChan chan error) (bool, error) {
 }
 
 func (cc *ConditionsChecker) check(c *Condition) (bool, error) {
-	if cc.current == 0 {
-		cc.Log().Debug().Str("condition", c.String()).Msg("current condition")
-	}
-
 	var record map[string]interface{}
 	switch r, err := cc.query(c); {
 	case err != nil:

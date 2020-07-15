@@ -3,6 +3,7 @@ package contestlib
 import (
 	"context"
 	"fmt"
+	"html/template"
 	"io"
 	"io/ioutil"
 	"os"
@@ -29,10 +30,21 @@ import (
 )
 
 var (
-	MongodbImage         = "mongo:latest"
-	MongodbContainerName = "contest-mongodb"
-	MongodbExternalPort  = "37017"
-	ContainerLabel       = "contest"
+	MongodbImage           = "mongo:latest"
+	MongodbContainerName   = "contest-mongodb"
+	MongodbExternalPort    = "37017"
+	ContainerLabel         = "contest"
+	defaultNodeINITCommand = "{{ .runner }} init {{ .design }}"
+	defaultNodeRunCommand  = `{{ .runner }} \
+    --log /dev/stdout \
+    --log {{ .log }} \
+    run \
+        --enable-profiling \
+        --mem-prof {{ .profiling.mem }} \
+        --cpu-prof {{ .profiling.cpu }} \
+        --trace-prof {{ .profiling.trace }} \
+        --exit-after {{ .exit_after }} \
+        {{ .design }}`
 )
 
 type Containers struct {
@@ -307,7 +319,7 @@ func (cts *Containers) initializeByGenesisNode() error {
 	}
 
 	var gstorage storage.Storage
-	if st, err := cts.genesisNode.Storage(); err != nil {
+	if st, err := cts.genesisNode.Storage(false); err != nil {
 		return err
 	} else {
 		gstorage = st
@@ -320,7 +332,7 @@ func (cts *Containers) initializeByGenesisNode() error {
 		}
 
 		cts.Log().Debug().Str("from", cts.genesisNode.name).Str("to", c.name).Msg("trying to sync storage")
-		if st, err := c.Storage(); err != nil {
+		if st, err := c.Storage(false); err != nil {
 			return err
 		} else if err := st.Copy(gstorage); err != nil {
 			return err
@@ -528,19 +540,18 @@ func (ct *Container) Name() string {
 }
 
 func (ct *Container) create() error {
+	var command string
+	if s, err := ct.makeNodeCommand(ct.contestDesign.Config.NodeRunCommand, defaultNodeRunCommand); err != nil {
+		return err
+	} else {
+		command = s
+	}
+
+	ct.Log().Debug().Str("run-command", command).Msg("command ready")
+
 	r, err := ct.client.ContainerCreate(
 		context.Background(),
-		ct.configCreate([]string{
-			"/runner",
-			"--log", "/dev/stdout",
-			"--log", fmt.Sprintf("/share/base-%s.log", ct.name),
-			"run",
-			"--mem-prof", fmt.Sprintf("/share/%s-mem.prof", ct.name),
-			"--cpu-prof", fmt.Sprintf("/share/%s-cpu.prof", ct.name),
-			"--trace-prof", fmt.Sprintf("/share/%s-trace.prof", ct.name),
-			"--exit-after", ct.exitAfter.String(),
-			fmt.Sprintf("/share/design-%s.yml", ct.name),
-		}),
+		ct.configCreate([]string{"sh", "-c", "exec " + command}),
 		ct.configHost(),
 		ct.configNetworking(),
 		ct.Name(),
@@ -554,14 +565,46 @@ func (ct *Container) create() error {
 	return nil
 }
 
+func (ct *Container) makeNodeCommand(s, defaultString string) (string, error) {
+	if len(s) < 1 {
+		s = defaultString
+	}
+
+	vars := NewVars(map[string]interface{}{
+		"runner": "/runner",
+		"design": fmt.Sprintf("/share/design-%s.yml", ct.name),
+		"log":    fmt.Sprintf("/share/base-%s.log", ct.name),
+		"profiling": map[string]interface{}{
+			"mem":   fmt.Sprintf("/share/%s-mem.prof", ct.name),
+			"cpu":   fmt.Sprintf("/share/%s-cpu.prof", ct.name),
+			"trace": fmt.Sprintf("/share/%s-trace.prof", ct.name),
+		},
+		"exit_after": ct.exitAfter.String(),
+	})
+
+	var command string
+	if t, err := template.New("node-init-command").Parse(s); err != nil {
+		return "", err
+	} else {
+		command = vars.Format(t)
+	}
+
+	return command, nil
+}
+
 func (ct *Container) createInitialize() error {
+	var command string
+	if s, err := ct.makeNodeCommand(ct.contestDesign.Config.NodeINITCommand, defaultNodeINITCommand); err != nil {
+		return err
+	} else {
+		command = s
+	}
+
+	ct.Log().Debug().Str("init-command", command).Msg("command ready")
+
 	r, err := ct.client.ContainerCreate(
 		context.Background(),
-		ct.configCreate([]string{
-			"/runner",
-			"init",
-			fmt.Sprintf("/share/design-%s.yml", ct.name),
-		}),
+		ct.configCreate([]string{"sh", "-c", "exec " + command}),
 		ct.configHost(),
 		ct.configNetworking(),
 		ct.Name(),
@@ -811,12 +854,16 @@ func (ct *Container) storageURIExternal() string {
 	return fmt.Sprintf("mongodb://%s:%s/contest_%s", ct.mongodbIP, MongodbExternalPort, ct.name)
 }
 
-func (ct *Container) Storage() (storage.Storage, error) {
+func (ct *Container) Storage(initialize bool) (storage.Storage, error) {
 	if st, err := launcher.LoadStorage(ct.storageURIExternal(), ct.encs); err != nil {
 		return nil, err
-	} else if err := st.Initialize(); err != nil {
-		return nil, err
 	} else {
+		if initialize {
+			if err := st.Initialize(); err != nil {
+				return nil, err
+			}
+		}
+
 		return st, nil
 	}
 }
@@ -826,7 +873,7 @@ func (ct *Container) Localstate() *isaac.Localstate {
 	if err != nil {
 		panic(err)
 	}
-	st, err := ct.Storage()
+	st, err := ct.Storage(true)
 	if err != nil {
 		panic(err)
 	}

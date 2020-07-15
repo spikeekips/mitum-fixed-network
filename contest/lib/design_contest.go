@@ -137,6 +137,8 @@ type ContestConfigDesign struct {
 	NetworkIDString string                     `yaml:"network-id"`
 	GenesisPolicy   *launcher.PolicyDesign     `yaml:"genesis-policy"`
 	InitOperations  []launcher.OperationDesign `yaml:"init-operations"`
+	NodeINITCommand string                     `yaml:"node-init-command"`
+	NodeRunCommand  string                     `yaml:"node-run-command"`
 }
 
 func NewContestConfigDesign() *ContestConfigDesign {
@@ -152,6 +154,9 @@ func (cc *ContestConfigDesign) IsValid([]byte) error {
 	} else if err := cc.GenesisPolicy.IsValid(nil); err != nil {
 		return err
 	}
+
+	cc.NodeINITCommand = strings.TrimSpace(cc.NodeINITCommand)
+	cc.NodeRunCommand = strings.TrimSpace(cc.NodeRunCommand)
 
 	return nil
 }

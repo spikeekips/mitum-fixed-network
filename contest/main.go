@@ -24,10 +24,11 @@ var mainVars = kong.Vars{
 }
 
 type mainFlags struct {
+	*contestlib.LogFlags
+	Log     string              `help:"log output"`
 	Start   cmds.StartCommand   `cmd:"" help:"start contest"`
 	Clean   cmds.CleanCommand   `cmd:"" help:"clean contest"`
 	Version cmds.VersionCommand `cmd:"" help:"Print version"`
-	*contestlib.LogFlags
 }
 
 func main() {

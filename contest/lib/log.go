@@ -24,7 +24,6 @@ func init() {
 }
 
 type LogFlags struct {
-	Log       string    `help:"log file (default: ${log})" default:"${log}"`
 	Verbose   bool      `help:"verbose log output (default: false)" default:"${verbose}"`
 	LogColor  bool      `help:"show color log" default:"${log_color}"`
 	LogLevel  LogLevel  `help:"log level {debug error warn info crit} (default: ${log_level})" default:"${log_level}"`

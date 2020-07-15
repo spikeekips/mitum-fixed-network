@@ -9,10 +9,10 @@ import (
 )
 
 type PprofFlags struct {
-	EnableProfiling bool   `help:"enable profiling (default:${enable_pprofiling})" default:"${enable_pprofiling}"`
-	MemProf         string `help:"memory prof file (default:${mem_prof_file})" default:"${mem_prof_file}"`
-	CPUProf         string `help:"CPU prof file (default:${cpu_prof_file})" default:"${cpu_prof_file}"`
-	TraceProf       string `help:"trace prof file (default:${trace_prof_file})" default:"${trace_prof_file}"`
+	EnableProfiling bool   `name:"enable-profiling" help:"enable profiling (default:${enable_pprofiling})" default:"${enable_pprofiling}"` // nolint
+	MemProf         string `name:"mem-prof" help:"memory prof file (default:${mem_prof_file})" default:"${mem_prof_file}"`                 // nolint
+	CPUProf         string `name:"cpu-prof" help:"CPU prof file (default:${cpu_prof_file})" default:"${cpu_prof_file}"`                    // nolint
+	TraceProf       string `name:"trace-prof" help:"trace prof file (default:${trace_prof_file})" default:"${trace_prof_file}"`            // nolint
 }
 
 func RunPprof(flags *PprofFlags) (func() error, error) {

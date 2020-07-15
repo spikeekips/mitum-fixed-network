@@ -56,15 +56,14 @@ func ConnectSignal() {
 	go func() {
 		s := <-sigc
 
-		ExitHooks.Run()
+		defer func() {
+			os.Exit(1)
+		}()
 
-		_, _ = fmt.Fprintf(os.Stderr, "contest stopped by force: %v\n", s)
+		defer func() {
+			ExitHooks.Run()
 
-		var exit int = 1
-		if s == syscall.SIGHUP {
-			exit = 0
-		}
-
-		os.Exit(exit)
+			_, _ = fmt.Fprintf(os.Stderr, "stopped by force: %v\n", s)
+		}()
 	}()
 }

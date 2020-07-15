@@ -506,7 +506,7 @@ func (cmd *StartCommand) prepareContainersForMangle(nodeNames []string, fromHeig
 			ct = c
 		}
 
-		if st, err := ct.Storage(false); err != nil {
+		if st, err := ct.Storage(true); err != nil {
 			return nil, err
 		} else if err := st.CleanByHeight(fromHeight); err != nil {
 			return nil, err

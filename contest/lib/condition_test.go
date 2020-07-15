@@ -24,7 +24,8 @@ query: >
 	t.NoError(yaml.Unmarshal([]byte(y), &cm))
 	t.NoError(cm.IsValid(nil))
 
-	_, err := cm.FormatQuery(nil)
+	vars := NewVars(nil)
+	_, err := cm.FormatQuery(vars)
 	t.NoError(err)
 
 	t.Equal("n0", cm.query["_node"])

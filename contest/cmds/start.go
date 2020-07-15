@@ -213,6 +213,12 @@ func (cmd *StartCommand) loadDesign(f string) error {
 			Msg("threshold is too low, recommend over 67.0")
 	}
 
+	for _, a := range cmd.design.Conditions {
+		if l, ok := a.Action().(logging.SetLogger); ok {
+			_ = l.SetLogger(cmd.log)
+		}
+	}
+
 	return nil
 }
 
@@ -273,7 +279,7 @@ func (cmd *StartCommand) checkConditions(client *mongodbstorage.Client) error {
 		cs[i] = cmd.design.Conditions[i]
 	}
 
-	cc := contestlib.NewConditionsChecker(client, "event", cs)
+	cc := contestlib.NewConditionsChecker(client, "event", cs, cmd.design.Vars)
 	_ = cc.SetLogger(cmd.log)
 
 	ticker := time.NewTicker(time.Millisecond * 100)
@@ -304,12 +310,12 @@ end:
 	return nil
 }
 
-func (cmd *StartCommand) defaultActionStartNode(nodes []string) (func() error, error) {
+func (cmd *StartCommand) defaultActionStartNode(nodes []string) (func(logging.Logger) error, error) {
 	if len(nodes) < 1 {
 		return nil, xerrors.Errorf("empty nodes to start")
 	}
 
-	return func() error {
+	return func(logging.Logger) error {
 		for _, n := range nodes {
 			var found bool
 			for _, d := range cmd.design.Nodes {
@@ -328,12 +334,12 @@ func (cmd *StartCommand) defaultActionStartNode(nodes []string) (func() error, e
 	}, nil
 }
 
-func (cmd *StartCommand) defaultActionCleanStorage(nodes []string) (func() error, error) {
+func (cmd *StartCommand) defaultActionCleanStorage(nodes []string) (func(logging.Logger) error, error) {
 	if len(nodes) < 1 {
 		return nil, xerrors.Errorf("empty nodes to clean storage")
 	}
 
-	return func() error {
+	return func(logging.Logger) error {
 		var cs []*contestlib.Container
 		for _, n := range nodes {
 			if ct, found := cmd.containers.Container(n); !found {
@@ -357,15 +363,15 @@ func (cmd *StartCommand) defaultActionCleanStorage(nodes []string) (func() error
 	}, nil
 }
 
-func (cmd *StartCommand) defaultActionStopContest([]string) (func() error, error) {
-	return func() error {
+func (cmd *StartCommand) defaultActionStopContest([]string) (func(logging.Logger) error, error) {
+	return func(logging.Logger) error {
 		cmd.exitChan <- xerrors.Errorf("stopped by design")
 
 		return nil
 	}, nil
 }
 
-func (cmd *StartCommand) defaultActionBuildBlocks(args []string) (func() error, error) {
+func (cmd *StartCommand) defaultActionBuildBlocks(args []string) (func(logging.Logger) error, error) {
 	var height base.Height
 	if len(args) != 1 {
 		return nil, xerrors.Errorf("one height must be given")
@@ -375,7 +381,7 @@ func (cmd *StartCommand) defaultActionBuildBlocks(args []string) (func() error, 
 		height = h
 	}
 
-	return func() error {
+	return func(logging.Logger) error {
 		cmd.log.Debug().Hinted("target_height", height).Msg("trying to build blocks")
 
 		var genesis *isaac.Localstate
@@ -428,7 +434,7 @@ func (cmd *StartCommand) defaultActionBuildBlocks(args []string) (func() error, 
 	}, nil
 }
 
-func (cmd *StartCommand) defaultActionMangleBlocks(args []string) (func() error, error) {
+func (cmd *StartCommand) defaultActionMangleBlocks(args []string) (func(logging.Logger) error, error) {
 	if len(args) < 3 {
 		return nil, xerrors.Errorf("height and nodes must be given")
 	}
@@ -447,7 +453,7 @@ func (cmd *StartCommand) defaultActionMangleBlocks(args []string) (func() error,
 
 	nodeNames := args[2:]
 
-	return func() error {
+	return func(logging.Logger) error {
 		l := cmd.log.WithLogger(func(ctx logging.Context) logging.Emitter {
 			return ctx.Strs("nodes", nodeNames).
 				Hinted("from_height", fromHeight).

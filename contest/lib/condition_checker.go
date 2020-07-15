@@ -21,13 +21,14 @@ type ConditionsChecker struct {
 	conditions []*Condition
 	remains    []*Condition
 	current    int
-	registers  map[string]interface{}
+	vars       *Vars
 }
 
 func NewConditionsChecker(
 	client *mongodbstorage.Client,
 	collection string,
 	conditions []*Condition,
+	vars *Vars,
 ) *ConditionsChecker {
 	return &ConditionsChecker{
 		Logging: logging.NewLogging(func(c logging.Context) logging.Emitter {
@@ -37,9 +38,7 @@ func NewConditionsChecker(
 		collection: collection,
 		conditions: conditions,
 		remains:    conditions,
-		registers: map[string]interface{}{
-			"last_matched": "",
-		},
+		vars:       vars,
 	}
 }
 
@@ -52,7 +51,7 @@ func (cc *ConditionsChecker) next() (*Condition, bool) {
 	}
 
 	c := cc.remains[0]
-	if _, err := c.FormatQuery(cc.registers); err != nil {
+	if _, err := c.FormatQuery(cc.vars); err != nil {
 		return nil, false
 	}
 
@@ -79,7 +78,7 @@ func (cc *ConditionsChecker) Check(exitChan chan error) (bool, error) {
 		l.Info().Msg("condition matched")
 
 		if c.Action() != nil {
-			l.Verbose().Msg("action found")
+			l.Debug().Msg("action found")
 
 			go func(action ConditionAction) {
 				if err := action.Run(); err != nil {
@@ -113,7 +112,7 @@ func (cc *ConditionsChecker) check(c *Condition) (bool, error) {
 		return false, nil
 	default:
 		record = r
-		cc.addRegister("last_matched", record["_id"])
+		cc.vars.Set("last_matched", record["_id"])
 	}
 
 	if len(c.Register) > 0 {
@@ -121,7 +120,7 @@ func (cc *ConditionsChecker) check(c *Condition) (bool, error) {
 			if v, found := Lookup(record, r.Key); !found {
 				continue
 			} else {
-				cc.addRegister(r.Assign, v)
+				cc.vars.Set(r.Assign, v)
 			}
 		}
 	}
@@ -142,7 +141,7 @@ func (cc *ConditionsChecker) check(c *Condition) (bool, error) {
 
 func (cc *ConditionsChecker) query(c *Condition) (map[string]interface{}, error) {
 	var query bson.M
-	if q, err := c.FormatQuery(cc.registers); err != nil {
+	if q, err := c.FormatQuery(cc.vars); err != nil {
 		return nil, err
 	} else {
 		query = q
@@ -162,13 +161,4 @@ func (cc *ConditionsChecker) query(c *Condition) (map[string]interface{}, error)
 	}
 
 	return record, nil
-}
-
-func (cc *ConditionsChecker) addRegister(key string, value interface{}) {
-	cc.Lock()
-	defer cc.Unlock()
-
-	cc.registers[key] = value
-
-	cc.Log().Debug().Str("key", key).Interface("value", value).Msg("register")
 }

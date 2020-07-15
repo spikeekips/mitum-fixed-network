@@ -1,11 +1,16 @@
 package contestlib
 
 import (
+	"html/template"
+	"strings"
+
+	"github.com/spikeekips/mitum/util"
 	"github.com/spikeekips/mitum/util/isvalid"
 	"github.com/spikeekips/mitum/util/logging"
+	"golang.org/x/xerrors"
 )
 
-type ConditionActionLoader = func([]string) (func() error, error)
+type ConditionActionLoader = func([]string) (func(logging.Logger) error, error)
 
 type ConditionAction interface {
 	isvalid.IsValider
@@ -18,7 +23,7 @@ type BaseConditionAction struct {
 	name    string
 	load    ConditionActionLoader
 	args    []string
-	f       func() error
+	f       func(logging.Logger) error
 	iferror ConditionActionIfError
 }
 
@@ -58,12 +63,7 @@ func (ca *BaseConditionAction) Name() string {
 }
 
 func (ca *BaseConditionAction) Run() error {
-	err := ca.f()
-	if err != nil {
-		ca.Log().Error().Err(err).Msg("something wrong")
-	} else {
-		ca.Log().Verbose().Msg("run")
-	}
+	err := ca.f(ca.Log())
 
 	switch {
 	case err == nil:
@@ -75,4 +75,38 @@ func (ca *BaseConditionAction) Run() error {
 	default:
 		return err
 	}
+}
+
+func NewShellConditionActionLoader(vars *Vars, s string) (ConditionActionLoader, error) {
+	if len(s) < 1 {
+		return nil, xerrors.Errorf("empty command for shell action")
+	}
+
+	var tmpl *template.Template
+	if t, err := template.New("shell-command").Parse(s); err != nil {
+		return nil, err
+	} else {
+		tmpl = t
+	}
+
+	return func([]string) (func(logging.Logger) error, error) {
+		return func(log logging.Logger) error {
+			c := vars.Format(tmpl)
+			if len(c) < 1 {
+				return xerrors.Errorf("failed to format command")
+			}
+
+			log.Debug().Str("command", c).Msg("run shell command")
+
+			return util.Exec(c)
+		}, nil
+	}, nil
+}
+
+func cutShellCommandString(s string) string {
+	if !strings.HasPrefix(s, "$ ") {
+		return s
+	}
+
+	return s[2:]
 }

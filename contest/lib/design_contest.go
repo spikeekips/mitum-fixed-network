@@ -3,6 +3,7 @@ package contestlib
 import (
 	"io/ioutil"
 	"path/filepath"
+	"strings"
 
 	"golang.org/x/xerrors"
 	"gopkg.in/yaml.v3"
@@ -13,6 +14,7 @@ import (
 
 type ContestDesign struct {
 	encs       *encoder.Encoders
+	Vars       *Vars
 	Conditions []*Condition
 	Config     *ContestConfigDesign
 	Component  *ComponentDesign
@@ -21,7 +23,8 @@ type ContestDesign struct {
 }
 
 func LoadContestDesignFromFile(
-	f string, encs *encoder.Encoders,
+	f string,
+	encs *encoder.Encoders,
 	actions map[string]ConditionActionLoader,
 ) (*ContestDesign, error) {
 	var design ContestDesign
@@ -80,6 +83,10 @@ func (cd *ContestDesign) IsValid([]byte) error {
 		addrs[r.Address()] = struct{}{}
 	}
 
+	if cd.Vars == nil {
+		cd.Vars = NewVars(nil)
+	}
+
 	return nil
 }
 
@@ -89,18 +96,39 @@ func (cd *ContestDesign) loadConditionActions() error {
 			return err
 		}
 
-		if len(c.ActionString) < 1 {
-			continue
-		} else if f, found := cd.actions[c.ActionString]; !found {
-			return xerrors.Errorf("action not found: %q", c.ActionString)
-		} else {
-			ca := NewConditionAction(c.ActionString, f, c.Args, c.IfError)
-			if err := ca.IsValid(nil); err != nil {
-				return xerrors.Errorf("invalid actions: %w", err)
-			}
-			c.action = ca
+		if err := cd.loadConditionAction(c); err != nil {
+			return err
 		}
 	}
+
+	return nil
+}
+
+func (cd *ContestDesign) loadConditionAction(c *Condition) error {
+	if len(c.ActionString) < 1 {
+		return nil
+	}
+
+	var cl ConditionActionLoader
+	var args []string
+	if strings.HasPrefix(c.ActionString, "$ ") {
+		if i, err := NewShellConditionActionLoader(cd.Vars, cutShellCommandString(c.ActionString)); err != nil {
+			return err
+		} else {
+			cl = i
+		}
+	} else if f, found := cd.actions[c.ActionString]; !found {
+		return xerrors.Errorf("action not found: %q", c.ActionString)
+	} else {
+		cl = f
+		args = c.Args
+	}
+
+	ca := NewConditionAction(c.ActionString, cl, args, c.IfError)
+	if err := ca.IsValid(nil); err != nil {
+		return xerrors.Errorf("invalid actions: %w", err)
+	}
+	c.action = ca
 
 	return nil
 }

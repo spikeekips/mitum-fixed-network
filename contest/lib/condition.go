@@ -1,9 +1,9 @@
 package contestlib
 
 import (
-	"bytes"
 	"html/template"
 	"regexp"
+	"strings"
 
 	jsonenc "github.com/spikeekips/mitum/util/encoder/json"
 	"go.mongodb.org/mongo-driver/bson"
@@ -88,6 +88,8 @@ func (dc *Condition) IsValid([]byte) error {
 		return err
 	}
 
+	dc.ActionString = strings.TrimSpace(dc.ActionString)
+
 	for _, r := range dc.Register {
 		if err := r.IsValid(nil); err != nil {
 			return err
@@ -112,18 +114,13 @@ func (dc *Condition) Action() ConditionAction {
 	return dc.action
 }
 
-func (dc *Condition) FormatQuery(m map[string]interface{}) (bson.M, error) {
+func (dc *Condition) FormatQuery(vars *Vars) (bson.M, error) {
 	if dc.query != nil {
 		return dc.query, nil
 	}
 
-	var bf bytes.Buffer
-	if err := dc.tmpl.Execute(&bf, m); err != nil {
-		return nil, err
-	}
-
 	var q bson.M
-	if err := bson.UnmarshalExtJSON(bf.Bytes(), false, &q); err != nil {
+	if err := bson.UnmarshalExtJSON([]byte(vars.Format(dc.tmpl)), false, &q); err != nil {
 		return nil, err
 	}
 

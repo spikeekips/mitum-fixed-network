@@ -351,9 +351,13 @@ func (st *Storage) Copy(source storage.Storage) error {
 		sst = s
 	}
 
-	for _, c := range allCollections {
-		if err := st.Client().CopyCollection(sst.Client(), c, c); err != nil {
-			return err
+	if cols, err := sst.Client().Collections(); err != nil {
+		return err
+	} else {
+		for _, c := range cols {
+			if err := st.Client().CopyCollection(sst.Client(), c, c); err != nil {
+				return err
+			}
 		}
 	}
 

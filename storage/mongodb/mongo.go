@@ -74,6 +74,10 @@ func (cl *Client) Collection(col string) *mongo.Collection {
 	return cl.db.Collection(col)
 }
 
+func (cl *Client) Collections() ([]string, error) {
+	return cl.db.ListCollectionNames(context.TODO(), bson.M{})
+}
+
 func (cl *Client) Find(
 	col string,
 	query interface{},

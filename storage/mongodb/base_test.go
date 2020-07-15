@@ -12,6 +12,7 @@ import (
 
 	"github.com/stretchr/testify/suite"
 	"go.mongodb.org/mongo-driver/bson"
+	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
 
@@ -492,6 +493,61 @@ func (t *testStorage) TestCreateIndexNew() {
 
 	t.Equal(existings, []string{"_id_", "mitum_showme"})
 	t.Equal(created, []string{"_id_", "mitum_findme"})
+}
+
+func (t *testStorage) TestCopy() {
+	client, err := NewClient(TestMongodbURI(), time.Second*2, time.Second*2)
+	t.NoError(err)
+
+	other, err := NewStorage(client, t.Encs, t.BSONEnc)
+	t.NoError(err)
+
+	var cols []string
+	for i := 0; i < 3; i++ {
+		col := util.UUID().String()
+		doc := NewDocNilID(nil, bson.M{"v": i})
+		_, err = t.storage.Client().Set(col, doc)
+		t.NoError(err)
+
+		cols = append(cols, col)
+	}
+
+	sort.Strings(cols)
+
+	t.NoError(other.Copy(t.storage))
+
+	otherCols, err := other.Client().Collections()
+	t.NoError(err)
+
+	sort.Strings(otherCols)
+
+	t.Equal(cols, otherCols)
+
+	for _, col := range cols {
+		rs := map[string]bson.M{}
+		t.NoError(t.storage.Client().Find(col, bson.M{}, func(cursor *mongo.Cursor) (bool, error) {
+			var record bson.M
+			if err := cursor.Decode(&record); err != nil {
+				return false, err
+			} else {
+				rs[record["_id"].(primitive.ObjectID).Hex()] = record
+			}
+
+			return true, nil
+		}))
+
+		for sid, record := range rs {
+			oid, err := primitive.ObjectIDFromHex(sid)
+			t.NoError(err)
+
+			var doc bson.M
+			t.NoError(other.Client().GetByID(col, oid, func(res *mongo.SingleResult) error {
+				return res.Decode(&doc)
+			}))
+
+			t.Equal(record["v"], doc["v"])
+		}
+	}
 }
 
 func TestMongodbStorage(t *testing.T) {

@@ -13,20 +13,21 @@ import (
 	"github.com/spikeekips/mitum/util/logging"
 )
 
+var EvenCollection = "event"
+
 type ConditionsChecker struct {
 	sync.RWMutex
 	*logging.Logging
-	client     *mongodbstorage.Client
-	collection string
-	conditions []*Condition
-	remains    []*Condition
-	current    int
-	vars       *Vars
+	defaultClient *mongodbstorage.Client
+	clients       map[string]*mongodbstorage.Client
+	conditions    []*Condition
+	remains       []*Condition
+	current       int
+	vars          *Vars
 }
 
 func NewConditionsChecker(
 	client *mongodbstorage.Client,
-	collection string,
 	conditions []*Condition,
 	vars *Vars,
 ) *ConditionsChecker {
@@ -34,8 +35,10 @@ func NewConditionsChecker(
 		Logging: logging.NewLogging(func(c logging.Context) logging.Emitter {
 			return c.Str("module", "condition-checker")
 		}),
-		client:     client,
-		collection: collection,
+		defaultClient: client,
+		clients: map[string]*mongodbstorage.Client{
+			"": client,
+		},
 		conditions: conditions,
 		remains:    conditions,
 		vars:       vars,
@@ -135,6 +138,33 @@ func (cc *ConditionsChecker) check(c *Condition) (bool, error) {
 	return true, nil
 }
 
+func (cc *ConditionsChecker) client(s string) *mongodbstorage.Client {
+	f := func(s string) *mongodbstorage.Client {
+		cc.RLock()
+		defer cc.RUnlock()
+
+		if c, found := cc.clients[s]; found {
+			return c
+		}
+
+		return nil
+	}
+
+	if len(s) < 1 {
+		return cc.defaultClient
+	} else if c := f(s); c != nil {
+		return c
+	}
+
+	cc.Lock()
+	defer cc.Unlock()
+
+	c := cc.defaultClient.New(s)
+	cc.clients[s] = c
+
+	return c
+}
+
 func (cc *ConditionsChecker) query(c *Condition) (map[string]interface{}, error) {
 	var query bson.M
 	if q, err := c.FormatQuery(cc.vars); err != nil {
@@ -143,8 +173,10 @@ func (cc *ConditionsChecker) query(c *Condition) (map[string]interface{}, error)
 		query = q
 	}
 
+	client := cc.client(c.DB())
+
 	var record map[string]interface{}
-	if err := cc.client.Find(cc.collection, query, func(cursor *mongo.Cursor) (bool, error) {
+	if err := client.Find(c.Collection(), query, func(cursor *mongo.Cursor) (bool, error) {
 		if err := cursor.Decode(&record); err != nil {
 			return false, err
 		}

@@ -30,6 +30,7 @@ import (
 )
 
 var (
+	DockerNetworkName      = "contest-network"
 	MongodbImage           = "mongo:latest"
 	MongodbContainerName   = "contest-mongodb"
 	MongodbExternalPort    = "37017"
@@ -54,7 +55,6 @@ type Containers struct {
 	client          *dockerClient.Client
 	image           string
 	runner          string
-	networkName     string
 	dockerNetworkID string
 	design          *ContestDesign
 	outputDir       string
@@ -72,7 +72,6 @@ func NewContainers(
 	encs *encoder.Encoders,
 	image,
 	runner,
-	networkName,
 	dockerNetworkID string,
 	design *ContestDesign,
 	outputDir string,
@@ -86,7 +85,6 @@ func NewContainers(
 		encs:            encs,
 		image:           image,
 		runner:          runner,
-		networkName:     networkName,
 		dockerNetworkID: dockerNetworkID,
 		design:          design,
 		outputDir:       outputDir,
@@ -198,7 +196,6 @@ func (cts *Containers) createContainer(d *ContestNodeDesign) (*Container, error)
 		port:            cts.port(d.Address()),
 		runner:          cts.runner,
 		privatekey:      cts.pk(d.Address()),
-		networkName:     cts.networkName,
 		dockerNetworkID: cts.dockerNetworkID,
 		exitAfter:       cts.exitAfter,
 		eventChan:       cts.eventChan,
@@ -306,6 +303,28 @@ func (cts *Containers) RunNodes(nodes []string) error {
 
 	wg.Wait()
 
+	return cts.containersIP()
+}
+
+func (cts *Containers) containersIP() error {
+	vm := map[string]interface{}{}
+	for name := range cts.containers {
+		c := cts.containers[name]
+		var ip string
+		if r, err := ContainerInspect(cts.client, c.id); err != nil {
+			return err
+		} else {
+			ip = r.NetworkSettings.Networks[DockerNetworkName].IPAddress
+		}
+
+		c.ip = ip
+		c.nodeDesign = NodeDesign{}
+
+		vm[c.name] = c.NodeDesign(false)
+	}
+
+	_ = cts.design.Vars.Set("nodes", vm)
+
 	return nil
 }
 
@@ -365,7 +384,7 @@ func (cts *Containers) RunStorage() error {
 		},
 		&dockerNetwork.NetworkingConfig{
 			EndpointsConfig: map[string]*dockerNetwork.EndpointSettings{
-				cts.networkName: {NetworkID: cts.dockerNetworkID},
+				DockerNetworkName: {NetworkID: cts.dockerNetworkID},
 			},
 		},
 		MongodbContainerName,
@@ -499,7 +518,6 @@ type Container struct {
 	runner          string
 	privatekey      key.Privatekey
 	id              string
-	networkName     string
 	dockerNetworkID string
 	rds             []*launcher.RemoteDesign
 	designFile      string
@@ -508,6 +526,7 @@ type Container struct {
 	shareDir        string
 	exitAfter       time.Duration
 	eventChan       chan *Event
+	ip              string
 }
 
 func (ct *Container) ID() string {
@@ -738,8 +757,9 @@ func (ct *Container) containerErr() (func(), error) {
 
 func (ct *Container) networkDesign() *launcher.NetworkDesign {
 	return &launcher.NetworkDesign{
-		Bind:    "0.0.0.0:54321",
-		Publish: fmt.Sprintf("quic://%s:54321", ct.Name()),
+		Bind:          "0.0.0.0:54321",
+		Publish:       fmt.Sprintf("quic://%s:54321", ct.Name()),
+		PublishWithIP: fmt.Sprintf("quic://%s:54321", ct.ip),
 	}
 }
 
@@ -839,7 +859,7 @@ func (ct *Container) configHost() *container.HostConfig {
 func (ct *Container) configNetworking() *dockerNetwork.NetworkingConfig {
 	return &dockerNetwork.NetworkingConfig{
 		EndpointsConfig: map[string]*dockerNetwork.EndpointSettings{
-			ct.networkName: {
+			DockerNetworkName: {
 				NetworkID: ct.dockerNetworkID,
 			},
 		},

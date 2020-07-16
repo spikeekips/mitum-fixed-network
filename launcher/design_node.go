@@ -89,11 +89,13 @@ func (nd NodeDesign) Privatekey() key.Privatekey {
 }
 
 type NetworkDesign struct {
-	Bind       string
-	Publish    string
-	bindHost   string
-	bindPort   int
-	publishURL *url.URL
+	Bind             string
+	Publish          string
+	PublishWithIP    string
+	bindHost         string
+	bindPort         int
+	publishURL       *url.URL
+	publishURLWithIP *url.URL
 }
 
 func (nd *NetworkDesign) IsValid([]byte) error {
@@ -116,11 +118,21 @@ func (nd *NetworkDesign) IsValid([]byte) error {
 		nd.publishURL = u
 	}
 
+	if u, err := isvalidNetworkURL(nd.PublishWithIP); err != nil {
+		return err
+	} else {
+		nd.publishURLWithIP = u
+	}
+
 	return nil
 }
 
 func (nd *NetworkDesign) PublishURL() *url.URL {
 	return nd.publishURL
+}
+
+func (nd *NetworkDesign) PublishURLWithIP() *url.URL {
+	return nd.publishURLWithIP
 }
 
 type RemoteDesign struct {

@@ -22,10 +22,7 @@ import (
 	"github.com/spikeekips/mitum/util/logging"
 )
 
-var (
-	networkName  = "contest-network"
-	DefaultAlias = "test"
-)
+var DefaultAlias = "test"
 
 var conditionActions = map[string]contestlib.ConditionActionLoader{}
 
@@ -131,7 +128,7 @@ func (cmd *StartCommand) run() error {
 
 func (cmd *StartCommand) createContainers(dc *dockerClient.Client) error {
 	var dockerNetworkID string
-	if i, err := contestlib.CreateDockerNetwork(dc, networkName, false); err != nil {
+	if i, err := contestlib.CreateDockerNetwork(dc, false); err != nil {
 		return xerrors.Errorf("failed to create new docker network: %w", err)
 	} else {
 		dockerNetworkID = i
@@ -160,7 +157,6 @@ func (cmd *StartCommand) createContainers(dc *dockerClient.Client) error {
 		cmd.encs,
 		cmd.Image,
 		cmd.RunnerPath,
-		networkName,
 		dockerNetworkID,
 		cmd.design,
 		output,
@@ -219,16 +215,20 @@ func (cmd *StartCommand) loadDesign(f string) error {
 		}
 	}
 
+	_ = cmd.design.Vars.
+		Set("runner", cmd.RunnerPath).
+		Set("network_id", string(cmd.design.Config.NetworkID()))
+
 	return nil
 }
 
 func (cmd *StartCommand) handleEventChan(client *mongodbstorage.Client) {
 	for e := range cmd.eventChan {
 		if r, err := e.Raw(); err != nil {
-			cmd.log.Error().Err(err).Str("event", e.String()).Msg("malformed event found")
+			cmd.log.Error().Err(err).Str(contestlib.EvenCollection, e.String()).Msg("malformed event found")
 
 			continue
-		} else if _, err := client.SetRaw("event", r); err != nil {
+		} else if _, err := client.SetRaw(contestlib.EvenCollection, r); err != nil {
 			cmd.log.Error().Err(err).Msg("failed to store event")
 
 			continue
@@ -279,7 +279,7 @@ func (cmd *StartCommand) checkConditions(client *mongodbstorage.Client) error {
 		cs[i] = cmd.design.Conditions[i]
 	}
 
-	cc := contestlib.NewConditionsChecker(client, "event", cs, cmd.design.Vars)
+	cc := contestlib.NewConditionsChecker(client, cs, cmd.design.Vars)
 	_ = cc.SetLogger(cmd.log)
 
 	ticker := time.NewTicker(time.Millisecond * 100)

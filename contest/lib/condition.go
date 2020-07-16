@@ -12,8 +12,8 @@ import (
 )
 
 var (
-	reTemplateAssignStringFormat = `\{\{\.[a-zA-Z0-9_][a-zA-Z0-9_]*\}\}`
-	reTemplateAssignString       = regexp.MustCompile(reTemplateAssignStringFormat)
+	reConditionQueryStringFormat = `\{\{[\s]*\.[a-zA-Z0-9_][a-zA-Z0-9_]*[\s]*\}\}`
+	reConditionQueryString       = regexp.MustCompile(reConditionQueryStringFormat)
 )
 
 type ConditionActionIfError uint8
@@ -73,10 +73,12 @@ type Condition struct {
 	ActionString string                 `yaml:"action"`
 	Args         []string               `yaml:"args"`
 	IfError      ConditionActionIfError `yaml:"if-error"`
+	ColString    string                 `yaml:"col"`
 	Register     []*ConditionRegister
 	query        bson.M
 	tmpl         *template.Template
 	action       ConditionAction
+	col          [2]string
 }
 
 func (dc *Condition) String() string {
@@ -96,15 +98,32 @@ func (dc *Condition) IsValid([]byte) error {
 		}
 	}
 
-	n := reTemplateAssignString.ReplaceAll([]byte(dc.QueryString), []byte("1"))
-	if err := jsonenc.Unmarshal(n, &bson.M{}); err != nil {
-		return err
+	if !reConditionQueryString.Match([]byte(dc.QueryString)) {
+		var q bson.M
+		if err := jsonenc.Unmarshal([]byte(dc.QueryString), &q); err != nil {
+			return err
+		}
+
+		dc.query = q
+	} else {
+		n := reConditionQueryString.ReplaceAll([]byte(dc.QueryString), []byte("1"))
+		if err := jsonenc.Unmarshal(n, &bson.M{}); err != nil {
+			return err
+		}
+
+		if t, err := template.New("query").Parse(dc.QueryString); err != nil {
+			return err
+		} else {
+			dc.tmpl = t
+		}
 	}
 
-	if t, err := template.New("query").Parse(dc.QueryString); err != nil {
-		return err
+	if s := strings.TrimSpace(dc.ColString); len(s) < 1 {
+		dc.col = [2]string{}
+	} else if l := strings.Split(s, "."); len(l) < 2 {
+		return xerrors.Errorf(`invalid col string, "<db>.<collection>"`)
 	} else {
-		dc.tmpl = t
+		dc.col = [2]string{l[0], strings.Join(l[1:], ".")}
 	}
 
 	return nil
@@ -127,4 +146,20 @@ func (dc *Condition) FormatQuery(vars *Vars) (bson.M, error) {
 	dc.query = q
 
 	return dc.query, nil
+}
+
+func (dc *Condition) DB() string {
+	if dc.col[0] == "" {
+		return ""
+	}
+
+	return dc.col[0]
+}
+
+func (dc *Condition) Collection() string {
+	if dc.col[1] == "" {
+		return EvenCollection
+	}
+
+	return dc.col[1]
 }

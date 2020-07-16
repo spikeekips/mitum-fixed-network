@@ -12,6 +12,8 @@ import (
 	"github.com/spikeekips/mitum/util/encoder"
 )
 
+var defaultNetworkID = "contest-network-id"
+
 type ContestDesign struct {
 	encs       *encoder.Encoders
 	Vars       *Vars
@@ -50,7 +52,7 @@ func (cd *ContestDesign) IsValid([]byte) error {
 	}
 
 	if cd.Config == nil {
-		cd.Config = NewContestConfigDesign()
+		cd.Config = &ContestConfigDesign{}
 	}
 	if err := cd.Config.IsValid(nil); err != nil {
 		return err
@@ -141,18 +143,16 @@ type ContestConfigDesign struct {
 	NodeRunCommand  string                     `yaml:"node-run-command"`
 }
 
-func NewContestConfigDesign() *ContestConfigDesign {
-	return &ContestConfigDesign{
-		GenesisPolicy:   launcher.NewPolicyDesign(),
-		NetworkIDString: "contest-network-id",
-	}
-}
-
 func (cc *ContestConfigDesign) IsValid([]byte) error {
 	if cc.GenesisPolicy == nil {
 		cc.GenesisPolicy = launcher.NewPolicyDesign()
-	} else if err := cc.GenesisPolicy.IsValid(nil); err != nil {
+	}
+	if err := cc.GenesisPolicy.IsValid(nil); err != nil {
 		return err
+	}
+
+	if len(strings.TrimSpace(cc.NetworkIDString)) < 1 {
+		cc.NetworkIDString = defaultNetworkID
 	}
 
 	cc.NodeINITCommand = strings.TrimSpace(cc.NodeINITCommand)

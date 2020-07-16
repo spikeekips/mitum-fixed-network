@@ -178,14 +178,14 @@ func CleanContainer(dc *dockerClient.Client, id string, log logging.Logger) erro
 	return nil
 }
 
-func CreateDockerNetwork(dc *dockerClient.Client, networkName string, createNew bool) (string, error) {
+func CreateDockerNetwork(dc *dockerClient.Client, createNew bool) (string, error) {
 	var found string
 	if l, err := dc.NetworkList(context.Background(), types.NetworkListOptions{}); err != nil {
 		return "", err
 	} else {
 		for i := range l {
 			n := l[i]
-			if n.Name == networkName {
+			if n.Name == DockerNetworkName {
 				found = n.ID
 				break
 			}
@@ -202,7 +202,7 @@ func CreateDockerNetwork(dc *dockerClient.Client, networkName string, createNew 
 		}
 	}
 
-	if r, err := dc.NetworkCreate(context.Background(), networkName, types.NetworkCreate{}); err != nil {
+	if r, err := dc.NetworkCreate(context.Background(), DockerNetworkName, types.NetworkCreate{}); err != nil {
 		return "", err
 	} else {
 		return r.ID, nil

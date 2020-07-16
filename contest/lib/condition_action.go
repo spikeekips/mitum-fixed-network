@@ -1,8 +1,10 @@
 package contestlib
 
 import (
+	"context"
 	"html/template"
 	"strings"
+	"time"
 
 	"github.com/spikeekips/mitum/util"
 	"github.com/spikeekips/mitum/util/isvalid"
@@ -96,9 +98,21 @@ func NewShellConditionActionLoader(vars *Vars, s string) (ConditionActionLoader,
 				return xerrors.Errorf("failed to format command")
 			}
 
-			log.Debug().Str("command", c).Msg("run shell command")
+			log.Debug().Str("command", c).Msg("trying to run shell command")
 
-			return util.Exec(c)
+			ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+			defer cancel()
+
+			b, err := util.ShellExec(ctx, c)
+			if err != nil {
+				log.Error().Err(err).Str("output", string(b)).Msg("failed to run shell command")
+
+				return err
+			} else {
+				log.Debug().Str("output", string(b)).Msg("shell command executed")
+
+				return nil
+			}
 		}, nil
 	}, nil
 }

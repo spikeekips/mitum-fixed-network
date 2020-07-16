@@ -1,9 +1,12 @@
 package util
 
-import "os/exec"
+import (
+	"context"
+	"os/exec"
+)
 
-func Exec(c string) error {
-	cmd := exec.Command("bash", "-c", c) // nolint: gosec
+func ShellExec(ctx context.Context, c string) ([]byte, error) {
+	cmd := exec.CommandContext(ctx, "bash", "-c", c) // nolint: gosec
 
-	return cmd.Run()
+	return cmd.CombinedOutput()
 }

@@ -1,7 +1,9 @@
 package util
 
 import (
+	"context"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/suite"
 )
@@ -11,20 +13,51 @@ type testExec struct {
 }
 
 func (t *testExec) TestBadCommand() {
-	t.Error(Exec("tr0"))
+	_, err := ShellExec(context.TODO(), "tr0")
+	t.Error(err)
 }
 
 func (t *testExec) TestExitCode() {
-	t.Error(Exec("exit 1"))
-	t.NoError(Exec("exit 0"))
+	_, err := ShellExec(context.TODO(), "exit 1")
+	t.Error(err)
+	_, err = ShellExec(context.TODO(), "exit 0")
+	t.NoError(err)
 }
 
 func (t *testExec) TestPipe() {
-	t.NoError(Exec("echo showme | cat"))
+	b, err := ShellExec(context.TODO(), "echo showme | cat")
+	t.NoError(err)
+	t.Equal([]byte("showme\n"), b)
 }
 
 func (t *testExec) TestError() {
-	t.NoError(Exec("unknown-command || true"))
+	_, err := ShellExec(context.TODO(), "unknown-command || true")
+	t.NoError(err)
+}
+
+func (t *testExec) TestOutput() {
+	// stderr
+	b, err := ShellExec(context.TODO(), "echo findme > /dev/stderr")
+	t.NoError(err)
+	t.Equal([]byte("findme\n"), b)
+
+	// stdout
+	b, err = ShellExec(context.TODO(), "echo findme > /dev/stdout")
+	t.NoError(err)
+	t.Equal([]byte("findme\n"), b)
+
+	// combined
+	b, err = ShellExec(context.TODO(), "echo findme > /dev/stdout; echo showme > /dev/stderr")
+	t.NoError(err)
+	t.Equal([]byte("findme\nshowme\n"), b)
+}
+
+func (t *testExec) TestTimeout() {
+	ctx, cancel := context.WithTimeout(context.Background(), 1*time.Nanosecond)
+	defer cancel()
+
+	_, err := ShellExec(ctx, "sleep 4")
+	t.Contains(err.Error(), "context deadline exceeded")
 }
 
 func TestExec(t *testing.T) {

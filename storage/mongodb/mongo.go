@@ -327,3 +327,11 @@ func (cl *Client) CopyCollection(source *Client, fromCol, toCol string) error {
 
 	return cl.Bulk(toCol, models)
 }
+
+func (cl *Client) New(db string) *Client {
+	n := new(Client)
+	*n = *cl
+	n.db = cl.client.Database(db)
+
+	return n
+}

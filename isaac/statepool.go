@@ -11,7 +11,7 @@ import (
 	"github.com/spikeekips/mitum/util/valuehash"
 )
 
-type StatePool struct {
+type Statepool struct {
 	sync.RWMutex
 	st           storage.Storage
 	lastManifest block.Manifest
@@ -19,7 +19,7 @@ type StatePool struct {
 	updated      map[string]state.StateUpdater
 }
 
-func NewStatePool(st storage.Storage) (*StatePool, error) {
+func NewStatepool(st storage.Storage) (*Statepool, error) {
 	var lastManifest block.Manifest
 	switch m, found, err := st.LastManifest(); {
 	case found:
@@ -28,7 +28,7 @@ func NewStatePool(st storage.Storage) (*StatePool, error) {
 		return nil, err
 	}
 
-	return &StatePool{
+	return &Statepool{
 		st:           st,
 		lastManifest: lastManifest,
 		cached:       map[string]state.StateUpdater{},
@@ -36,7 +36,7 @@ func NewStatePool(st storage.Storage) (*StatePool, error) {
 	}, nil
 }
 
-func (sp *StatePool) Get(key string) (state.StateUpdater, bool, error) {
+func (sp *Statepool) Get(key string) (state.StateUpdater, bool, error) {
 	if s, found := sp.getFromUpdated(key); found {
 		return s, true, nil
 	}
@@ -72,7 +72,7 @@ func (sp *StatePool) Get(key string) (state.StateUpdater, bool, error) {
 	return st, found, nil
 }
 
-func (sp *StatePool) Set(s ...state.StateUpdater) error {
+func (sp *Statepool) Set(s ...state.StateUpdater) error {
 	sp.Lock()
 	defer sp.Unlock()
 
@@ -83,11 +83,11 @@ func (sp *StatePool) Set(s ...state.StateUpdater) error {
 	return nil
 }
 
-func (sp *StatePool) IsUpdated() bool {
+func (sp *Statepool) IsUpdated() bool {
 	return len(sp.updated) > 0
 }
 
-func (sp *StatePool) Updates() []state.StateUpdater {
+func (sp *Statepool) Updates() []state.StateUpdater {
 	us := make([]state.StateUpdater, len(sp.updated))
 
 	var i int
@@ -103,7 +103,7 @@ func (sp *StatePool) Updates() []state.StateUpdater {
 	return us
 }
 
-func (sp *StatePool) getFromCached(key string) (state.StateUpdater, bool) {
+func (sp *Statepool) getFromCached(key string) (state.StateUpdater, bool) {
 	sp.RLock()
 	defer sp.RUnlock()
 
@@ -115,7 +115,7 @@ func (sp *StatePool) getFromCached(key string) (state.StateUpdater, bool) {
 	return s, found
 }
 
-func (sp *StatePool) getFromUpdated(key string) (state.StateUpdater, bool) {
+func (sp *Statepool) getFromUpdated(key string) (state.StateUpdater, bool) {
 	sp.RLock()
 	defer sp.RUnlock()
 

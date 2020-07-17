@@ -54,7 +54,7 @@ func (t *testPolicy) TestLoadFromStorage() {
 	st := t.Storage(nil, nil)
 	defer st.Close()
 
-	statepool, err := NewStatePool(st)
+	statepool, err := NewStatepool(st)
 	t.NoError(err)
 
 	policies := DefaultPolicy()

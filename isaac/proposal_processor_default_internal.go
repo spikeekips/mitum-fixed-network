@@ -312,8 +312,8 @@ func (pp *internalDefaultProposalProcessor) processStates() (*tree.AVLTree, valu
 		return nil, nil, nil
 	}
 
-	var pool *StatePool
-	if p, err := NewStatePool(pp.localstate.Storage()); err != nil {
+	var pool *Statepool
+	if p, err := NewStatepool(pp.localstate.Storage()); err != nil {
 		return nil, nil, err
 	} else {
 		pool = p
@@ -357,7 +357,7 @@ func (pp *internalDefaultProposalProcessor) processStates() (*tree.AVLTree, valu
 	return pp.generateStatesTree(pool)
 }
 
-func (pp *internalDefaultProposalProcessor) generateStatesTree(pool *StatePool) (*tree.AVLTree, valuehash.Hash, error) {
+func (pp *internalDefaultProposalProcessor) generateStatesTree(pool *Statepool) (*tree.AVLTree, valuehash.Hash, error) {
 	if !pool.IsUpdated() {
 		return nil, nil, nil
 	}

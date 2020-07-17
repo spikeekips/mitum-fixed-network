@@ -1,6 +1,7 @@
 package contestlib
 
 import (
+	"bufio"
 	"context"
 	"fmt"
 	"html/template"
@@ -317,8 +318,9 @@ func (cts *Containers) containersIP() error {
 			ip = r.NetworkSettings.Networks[DockerNetworkName].IPAddress
 		}
 
-		c.ip = ip
-		c.nodeDesign = NodeDesign{}
+		if _, err := c.NodeDesign(false).Network.SetPublishURLWithIP(fmt.Sprintf("quic://%s:54321", ip)); err != nil {
+			return err
+		}
 
 		vm[c.name] = c.NodeDesign(false)
 	}
@@ -510,7 +512,7 @@ type Container struct {
 	*logging.Logging
 	contestDesign   *ContestDesign
 	design          *ContestNodeDesign
-	nodeDesign      NodeDesign
+	nodeDesign      *NodeDesign
 	name            string
 	image           string
 	client          *dockerClient.Client
@@ -526,7 +528,6 @@ type Container struct {
 	shareDir        string
 	exitAfter       time.Duration
 	eventChan       chan *Event
-	ip              string
 }
 
 func (ct *Container) ID() string {
@@ -660,16 +661,21 @@ func (ct *Container) run(initialize bool) error {
 	}
 	l.Debug().Msg("container started")
 
-	if cancel, err := ct.containerErr(); err != nil {
+	var cancel func()
+	if c, err := ct.containerErr(); err != nil {
 		return err
 	} else {
-		defer cancel()
+		cancel = c
 	}
 
 	if initialize {
+		defer cancel()
+
 		return ct.wait()
 	} else {
 		go func() {
+			defer cancel()
+
 			if err := ct.wait(); err != nil {
 				ct.Log().Error().Err(err).Msg("failed to run container")
 			}
@@ -738,16 +744,21 @@ func (ct *Container) containerErr() (func(), error) {
 		}
 	}
 
-	var errWriter io.Writer = ct.errWriter
-	if ct.errWriter == nil {
-		errWriter = ioutil.Discard
+	var errWriter *bufio.Writer
+	if ct.errWriter != nil {
+		errWriter = bufio.NewWriter(ct.errWriter)
 	}
 
 	go func() {
 		for b := range errChan {
 			ct.Log().Error().Str("msg", string(b)).Msg("container error")
-			if _, err := fmt.Fprintln(errWriter, string(b)); err != nil {
-				ct.Log().Error().Err(err).Msg("failed to write error log")
+
+			if errWriter != nil {
+				if _, err := fmt.Fprintln(errWriter, string(b)); err != nil {
+					ct.Log().Error().Err(err).Msg("failed to write error log")
+				} else {
+					_ = errWriter.Flush()
+				}
 			}
 		}
 	}()
@@ -757,9 +768,8 @@ func (ct *Container) containerErr() (func(), error) {
 
 func (ct *Container) networkDesign() *launcher.NetworkDesign {
 	return &launcher.NetworkDesign{
-		Bind:          "0.0.0.0:54321",
-		Publish:       fmt.Sprintf("quic://%s:54321", ct.Name()),
-		PublishWithIP: fmt.Sprintf("quic://%s:54321", ct.ip),
+		Bind:    "0.0.0.0:54321",
+		Publish: fmt.Sprintf("quic://%s:54321", ct.Name()),
 	}
 }
 
@@ -771,8 +781,8 @@ func (ct *Container) RemoteDesign() *launcher.RemoteDesign {
 	}
 }
 
-func (ct *Container) NodeDesign(isGenesisNode bool) NodeDesign {
-	if !ct.nodeDesign.IsEmpty() {
+func (ct *Container) NodeDesign(isGenesisNode bool) *NodeDesign {
+	if ct.nodeDesign != nil {
 		return ct.nodeDesign
 	}
 
@@ -810,7 +820,7 @@ func (ct *Container) NodeDesign(isGenesisNode bool) NodeDesign {
 		panic(err)
 	}
 
-	ct.nodeDesign = *nd
+	ct.nodeDesign = nd
 
 	return ct.nodeDesign
 }

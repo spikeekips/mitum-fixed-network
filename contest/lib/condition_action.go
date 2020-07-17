@@ -95,7 +95,7 @@ func NewShellConditionActionLoader(vars *Vars, s string) (ConditionActionLoader,
 		return func(log logging.Logger) error {
 			c := vars.Format(tmpl)
 			if len(c) < 1 {
-				return xerrors.Errorf("failed to format command")
+				return xerrors.Errorf("failed to format command, %q", s)
 			}
 
 			log.Debug().Str("command", c).Msg("trying to run shell command")

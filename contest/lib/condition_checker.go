@@ -85,7 +85,7 @@ func (cc *ConditionsChecker) Check(exitChan chan error) (bool, error) {
 
 			go func(action ConditionAction) {
 				if err := action.Run(); err != nil {
-					l.Error().Err(err).Msg("failed to run action")
+					l.Error().Err(err).Str("action", action.Name()).Msg("failed to run action")
 
 					exitChan <- err
 				}

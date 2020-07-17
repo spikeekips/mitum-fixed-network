@@ -295,7 +295,7 @@ end:
 		case <-allEndedChan:
 			cmd.log.Debug().Msg("all containers ended")
 
-			return nil
+			return xerrors.Errorf("all containers ended")
 		case <-ticker.C:
 			if passed, err := cc.Check(cmd.exitChan); err != nil {
 				cmd.log.Error().Err(err).Msg("something wrong to check")

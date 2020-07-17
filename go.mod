@@ -35,8 +35,7 @@ require (
 	github.com/satori/go.uuid v1.2.0
 	github.com/sirupsen/logrus v1.6.0 // indirect
 	github.com/spikeekips/avl v0.0.0-20191218024138-87d874c0c032
-	github.com/stellar/go v0.0.0-20200710231815-787570f2f3dc
-	github.com/stellar/go-xdr v0.0.0-20200331223602-71a1e6d555f2 // indirect
+	github.com/stellar/go v0.0.0-20200716132855-ded108912a76
 	github.com/stretchr/testify v1.6.1
 	github.com/syndtr/goleveldb v1.0.1-0.20190923125748-758128399b1d
 	go.mongodb.org/mongo-driver v1.3.5

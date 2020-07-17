@@ -364,10 +364,8 @@ func (t *baseTestStateHandler) compareAVLTree(a, b *tree.AVLTree) {
 
 	t.True(a.Hint().Equal(b.Hint()))
 	{
-		ah, err := a.RootHash()
-		t.NoError(err)
-		bh, err := b.RootHash()
-		t.NoError(err)
+		ah := a.RootHash()
+		bh := b.RootHash()
 
 		t.True(ah.Equal(bh))
 	}

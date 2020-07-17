@@ -80,9 +80,7 @@ func (bm BlockV0) IsValid(networkID []byte) error {
 			return xerrors.Errorf("Operations should not be empty")
 		}
 
-		if rh, err := bm.operations.RootHash(); err != nil {
-			return err
-		} else if !bm.OperationsHash().Equal(rh) {
+		if !bm.OperationsHash().Equal(bm.operations.RootHash()) {
 			return xerrors.Errorf("Block.Opertions() hash does not match with it's RootHash()")
 		}
 	}
@@ -92,9 +90,7 @@ func (bm BlockV0) IsValid(networkID []byte) error {
 			return xerrors.Errorf("States should not be empty")
 		}
 
-		if rh, err := bm.States().RootHash(); err != nil {
-			return err
-		} else if !bm.StatesHash().Equal(rh) {
+		if !bm.StatesHash().Equal(bm.States().RootHash()) {
 			return xerrors.Errorf("Block.States() hash does not match with it's RootHash()")
 		}
 	}

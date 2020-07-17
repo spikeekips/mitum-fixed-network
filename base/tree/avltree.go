@@ -31,8 +31,8 @@ func (at *AVLTree) Root() Node {
 	return at.Tree.Root().(Node)
 }
 
-func (at *AVLTree) RootHash() (valuehash.Hash, error) {
-	return valuehash.LoadSHA256FromBytes(at.Root().Hash())
+func (at *AVLTree) RootHash() valuehash.Hash {
+	return valuehash.NewBytes(at.Root().Hash())
 }
 
 func (at *AVLTree) IsValid() error {

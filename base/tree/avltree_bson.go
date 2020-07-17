@@ -4,7 +4,6 @@ import (
 	"go.mongodb.org/mongo-driver/bson"
 
 	bsonenc "github.com/spikeekips/mitum/util/encoder/bson"
-	"github.com/spikeekips/mitum/util/valuehash"
 )
 
 func (at *AVLTree) MarshalBSON() ([]byte, error) {
@@ -17,19 +16,12 @@ func (at *AVLTree) MarshalBSON() ([]byte, error) {
 		return nil, err
 	}
 
-	var rh valuehash.Hash
-	if h, err := at.RootHash(); err != nil {
-		return nil, err
-	} else {
-		rh = h
-	}
-
 	return bsonenc.Marshal(bsonenc.MergeBSONM(
 		bsonenc.NewHintedDoc(at.Hint()),
 		bson.M{
 			"tree_type": "avl hashable tree",
 			"root_key":  string(at.Root().Key()),
-			"root_hash": rh,
+			"root_hash": at.RootHash(),
 			"nodes":     nodes,
 		},
 	))

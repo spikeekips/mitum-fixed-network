@@ -29,18 +29,11 @@ func (at *AVLTree) MarshalJSON() ([]byte, error) {
 		return nil, err
 	}
 
-	var rh valuehash.Hash
-	if h, err := at.RootHash(); err != nil {
-		return nil, err
-	} else {
-		rh = h
-	}
-
 	return jsonenc.Marshal(AVLTreeJSONPacker{
 		HintedHead: jsonenc.NewHintedHead(at.Hint()),
 		TY:         "avl hashable tree",
 		RT:         string(at.Root().Key()),
-		RH:         rh,
+		RH:         at.RootHash(),
 		NS:         nodes,
 	})
 }

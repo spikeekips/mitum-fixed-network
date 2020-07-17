@@ -1,6 +1,8 @@
 package isaac
 
 import (
+	"sort"
+	"strings"
 	"sync"
 
 	"github.com/spikeekips/mitum/base/block"
@@ -81,14 +83,22 @@ func (sp *StatePool) Set(s ...state.StateUpdater) error {
 	return nil
 }
 
-func (sp *StatePool) Updated() []state.StateUpdater {
+func (sp *StatePool) IsUpdated() bool {
+	return len(sp.updated) > 0
+}
+
+func (sp *StatePool) Updates() []state.StateUpdater {
 	us := make([]state.StateUpdater, len(sp.updated))
 
 	var i int
-	for _, s := range sp.updated {
-		us[i] = s
+	for s := range sp.updated {
+		us[i] = sp.updated[s]
 		i++
 	}
+
+	sort.Slice(us, func(i, j int) bool {
+		return strings.Compare(us[i].Key(), us[j].Key()) < 0
+	})
 
 	return us
 }

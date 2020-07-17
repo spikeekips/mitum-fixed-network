@@ -177,10 +177,7 @@ func (vp VoteproofV0) votesBytes() []byte {
 
 	// NOTE without ordering, the bytes values will be varies.
 	sort.Slice(l, func(i, j int) bool {
-		return bytes.Compare(
-			l[i].Node().Bytes(),
-			l[j].Node().Bytes(),
-		) < 0
+		return bytes.Compare(l[i].Node().Bytes(), l[j].Node().Bytes()) < 0
 	})
 
 	bs := make([][]byte, len(l))

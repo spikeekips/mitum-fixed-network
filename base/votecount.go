@@ -35,12 +35,9 @@ func FindMajority(total, threshold uint, set ...uint) int {
 	}
 
 	if len(set) > 0 {
-		sort.Slice(
-			set,
-			func(i, j int) bool {
-				return set[i] > set[j]
-			},
-		)
+		sort.Slice(set, func(i, j int) bool {
+			return set[i] > set[j]
+		})
 	}
 
 	if total-sum+set[0] < threshold {

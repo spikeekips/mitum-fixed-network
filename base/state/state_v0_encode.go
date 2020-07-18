@@ -15,7 +15,7 @@ func (st *StateV0) unpack(
 	previousBlock valuehash.Hash,
 	height base.Height,
 	currentBlock valuehash.Hash,
-	bOperationInfos [][]byte,
+	ops []valuehash.Bytes,
 ) error {
 	if h != nil && h.Empty() {
 		return xerrors.Errorf("empty previous_block hash found")
@@ -36,13 +36,9 @@ func (st *StateV0) unpack(
 		value = v
 	}
 
-	ops := make([]OperationInfo, len(bOperationInfos))
-	for i := range bOperationInfos {
-		if oi, err := DecodeOperationInfo(enc, bOperationInfos[i]); err != nil {
-			return err
-		} else {
-			ops[i] = oi
-		}
+	uops := make([]valuehash.Hash, len(ops))
+	for i := range ops {
+		uops[i] = ops[i]
 	}
 
 	st.h = h
@@ -51,14 +47,7 @@ func (st *StateV0) unpack(
 	st.previousBlock = previousBlock
 	st.currentHeight = height
 	st.currentBlock = currentBlock
-	st.operations = ops
-
-	return nil
-}
-
-func (oi *OperationInfoV0) unpack(_ encoder.Encoder, operation, seal valuehash.Hash) error {
-	oi.oh = operation
-	oi.sh = seal
+	st.operations = uops
 
 	return nil
 }

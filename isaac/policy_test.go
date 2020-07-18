@@ -8,6 +8,7 @@ import (
 	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/base/block"
 	"github.com/spikeekips/mitum/base/key"
+	"github.com/spikeekips/mitum/base/operation"
 	"github.com/spikeekips/mitum/base/state"
 	"github.com/spikeekips/mitum/util/valuehash"
 )
@@ -26,7 +27,7 @@ func (t *testPolicy) SetupSuite() {
 
 	_ = t.Encs.AddHinter(valuehash.SHA256{})
 	_ = t.Encs.AddHinter(state.StateV0{})
-	_ = t.Encs.AddHinter(state.OperationInfoV0{})
+	_ = t.Encs.AddHinter(operation.OperationInfoV0{})
 	_ = t.Encs.AddHinter(PolicyOperationBodyV0{})
 	_ = t.Encs.AddHinter(SetPolicyOperationV0{})
 	_ = t.Encs.AddHinter(SetPolicyOperationFactV0{})
@@ -81,9 +82,9 @@ func (t *testPolicy) TestLoadFromStorage() {
 	t.NoError(err)
 
 	var newStates []state.StateUpdater
-	err = spo.ProcessOperation(statepool.Get, func(s ...state.StateUpdater) error {
+	err = spo.Process(statepool.Get, func(op valuehash.Hash, s ...state.StateUpdater) error {
 		newStates = s
-		return statepool.Set(s...)
+		return statepool.Set(spo.Hash(), s...)
 	})
 	t.NoError(err)
 	t.Equal(1, len(newStates))

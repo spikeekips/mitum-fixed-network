@@ -32,20 +32,17 @@ func (t *testStateV0) TestDuplicatedOperation() {
 		value.Interface().([]byte),
 		nil,
 	)
-	opi := NewOperationInfoV0(op, valuehash.RandomSHA256())
 
-	t.NoError(st.AddOperationInfo(opi))
+	t.NoError(st.AddOperation(op.Hash()))
 
 	t.Equal(1, len(st.Operations()))
-	t.True(st.Operations()[0].Operation().Equal(op.Hash()))
-	t.True(st.Operations()[0].Seal().Equal(opi.Seal()))
+	t.True(st.Operations()[0].Equal(op.Hash()))
 
-	t.NoError(st.AddOperationInfo(opi))
+	t.NoError(st.AddOperation(op.Hash()))
 	t.Equal(1, len(st.Operations()))
 
 	t.Equal(1, len(st.Operations()))
-	t.True(st.Operations()[0].Operation().Equal(op.Hash()))
-	t.True(st.Operations()[0].Seal().Equal(opi.Seal()))
+	t.True(st.Operations()[0].Equal(op.Hash()))
 
 	t.Equal(1, len(st.opcache))
 

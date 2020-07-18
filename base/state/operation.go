@@ -1,12 +1,15 @@
 package state
 
-import "github.com/spikeekips/mitum/util/errors"
+import (
+	"github.com/spikeekips/mitum/util/errors"
+	"github.com/spikeekips/mitum/util/valuehash"
+)
 
 var IgnoreOperationProcessingError = errors.NewError("ignore operation processing")
 
-type OperationProcesser interface {
-	ProcessOperation(
+type StateProcessor interface {
+	Process(
 		getState func(key string) (StateUpdater, bool, error),
-		setState func(...StateUpdater) error,
+		setState func(valuehash.Hash, ...StateUpdater) error,
 	) error
 }

@@ -6,17 +6,14 @@ import (
 	"golang.org/x/xerrors"
 
 	"github.com/spikeekips/mitum/base"
-	"github.com/spikeekips/mitum/base/operation"
 	"github.com/spikeekips/mitum/util"
 	"github.com/spikeekips/mitum/util/hint"
 	"github.com/spikeekips/mitum/util/valuehash"
 )
 
 var (
-	StateV0Type         = hint.MustNewType(0x01, 0x60, "stete-v0")
-	StateV0Hint         = hint.MustHint(StateV0Type, "0.0.1")
-	OperationInfoV0Type = hint.MustNewType(0x01, 0x61, "operation-info-v0")
-	OperationInfoV0Hint = hint.MustHint(OperationInfoV0Type, "0.0.1")
+	StateV0Type = hint.MustNewType(0x01, 0x60, "stete-v0")
+	StateV0Hint = hint.MustHint(StateV0Type, "0.0.1")
 )
 
 type StateV0 struct {
@@ -25,7 +22,7 @@ type StateV0 struct {
 	key           string
 	value         Value
 	previousBlock valuehash.Hash
-	operations    []OperationInfo
+	operations    []valuehash.Hash
 	currentHeight base.Height
 	currentBlock  valuehash.Hash
 	opcache       map[string]struct{}
@@ -175,67 +172,25 @@ func (st *StateV0) SetCurrentBlock(height base.Height, h valuehash.Hash) error {
 	return nil
 }
 
-func (st StateV0) Operations() []OperationInfo {
+func (st StateV0) Operations() []valuehash.Hash {
 	return st.operations
 }
 
-func (st *StateV0) AddOperationInfo(opi OperationInfo) error {
-	if err := opi.IsValid(nil); err != nil {
+func (st *StateV0) AddOperation(op valuehash.Hash) error {
+	if err := op.IsValid(nil); err != nil {
 		return err
 	}
 
 	st.Lock()
 	defer st.Unlock()
 
-	if _, found := st.opcache[opi.Operation().String()]; found {
+	if _, found := st.opcache[op.String()]; found {
 		return nil
 	} else {
-		st.opcache[opi.Operation().String()] = struct{}{}
+		st.opcache[op.String()] = struct{}{}
 	}
 
-	st.operations = append(st.operations, opi)
+	st.operations = append(st.operations, op)
 
 	return nil
-}
-
-type OperationInfoV0 struct {
-	oh valuehash.Hash
-	sh valuehash.Hash
-	op operation.Operation
-}
-
-func NewOperationInfoV0(op operation.Operation, sh valuehash.Hash) OperationInfoV0 {
-	return OperationInfoV0{
-		oh: op.Hash(),
-		sh: sh,
-		op: op,
-	}
-}
-
-func (oi OperationInfoV0) Hint() hint.Hint {
-	return OperationInfoV0Hint
-}
-
-func (oi OperationInfoV0) IsValid([]byte) error {
-	if err := oi.oh.IsValid(nil); err != nil {
-		return err
-	}
-
-	return oi.sh.IsValid(nil)
-}
-
-func (oi OperationInfoV0) Operation() valuehash.Hash {
-	return oi.oh
-}
-
-func (oi OperationInfoV0) RawOperation() operation.Operation {
-	return oi.op
-}
-
-func (oi OperationInfoV0) Seal() valuehash.Hash {
-	return oi.sh
-}
-
-func (oi OperationInfoV0) Bytes() []byte {
-	return util.ConcatBytesSlice(oi.oh.Bytes(), oi.sh.Bytes())
 }

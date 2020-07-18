@@ -2,19 +2,10 @@ package state
 
 import (
 	"github.com/spikeekips/mitum/base"
-	"github.com/spikeekips/mitum/util"
 	"github.com/spikeekips/mitum/util/hint"
 	"github.com/spikeekips/mitum/util/isvalid"
 	"github.com/spikeekips/mitum/util/valuehash"
 )
-
-type OperationInfo interface {
-	isvalid.IsValider
-	hint.Hinter
-	util.Byter
-	Operation() valuehash.Hash
-	Seal() valuehash.Hash
-}
 
 type State interface {
 	isvalid.IsValider
@@ -24,7 +15,7 @@ type State interface {
 	Value() Value
 	GenerateHash() valuehash.Hash
 	PreviousBlock() valuehash.Hash
-	Operations() []OperationInfo
+	Operations() []valuehash.Hash
 	Height() base.Height
 	CurrentBlock() valuehash.Hash
 }
@@ -34,6 +25,6 @@ type StateUpdater interface {
 	SetValue(Value) error
 	SetHash(valuehash.Hash) error
 	SetPreviousBlock(valuehash.Hash) error
-	AddOperationInfo(OperationInfo) error
+	AddOperation(valuehash.Hash) error
 	SetCurrentBlock(base.Height, valuehash.Hash) error
 }

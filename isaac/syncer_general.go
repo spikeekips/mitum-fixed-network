@@ -107,6 +107,7 @@ func NewGeneralSyncer(
 			return c.
 				Hinted("from", from).
 				Hinted("to", to).
+				Str("syncer_id", util.UUID().String()).
 				Str("module", "general-syncer")
 		}),
 		localstate:              localstate,
@@ -805,14 +806,6 @@ func (cs *GeneralSyncer) checkThreshold(
 }
 
 func (cs *GeneralSyncer) fetchManifests(node network.Node, heights []base.Height) ([]block.Manifest, error) { // nolint
-	l := cs.Log().WithLogger(func(ctx logging.Context) logging.Emitter {
-		return ctx.Hinted("source_node", node.Address()).
-			Hinted("height_from", heights[0]).
-			Hinted("height_to", heights[len(heights)-1])
-	})
-
-	l.Debug().Msg("trying to fetch manifests")
-
 	var fetched []block.Manifest
 	if bs, err := node.Channel().Manifests(heights); err != nil {
 		return nil, err
@@ -822,8 +815,6 @@ func (cs *GeneralSyncer) fetchManifests(node network.Node, heights []base.Height
 		})
 		fetched = bs
 	}
-
-	l.Debug().Int("fetched", len(fetched)).Msg("fetched manifests")
 
 	return fetched, nil
 }
@@ -981,7 +972,6 @@ func (cs *GeneralSyncer) fetchBlocks(node network.Node, heights []base.Height) (
 
 func (cs *GeneralSyncer) commit() error {
 	cs.Log().Debug().Msg("trying to commit")
-	defer cs.Log().Debug().Msg("committed")
 
 	from := cs.heightFrom.Int64()
 	to := cs.heightTo.Int64()
@@ -1006,6 +996,8 @@ func (cs *GeneralSyncer) commit() error {
 				Msg("new block stored")
 		}
 	}
+
+	cs.Log().Debug().Msg("committed")
 
 	return nil
 }

@@ -482,6 +482,9 @@ func (pp *internalDefaultProposalProcessor) getOperationsThruChannel(
 }
 
 func (pp *internalDefaultProposalProcessor) setACCEPTVoteproof(acceptVoteproof base.Voteproof) error {
+	pp.Lock()
+	defer pp.Unlock()
+
 	if pp.bs == nil {
 		return xerrors.Errorf("not yet processed")
 	}

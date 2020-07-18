@@ -175,10 +175,12 @@ func (st *SyncerStorage) SetBlocks(blocks []block.Block) error {
 }
 
 func (st *SyncerStorage) Commit() error {
-	st.Log().Debug().
-		Hinted("from_height", st.heightFrom).
-		Hinted("to_height", st.heightTo).
-		Msg("trying to commit blocks")
+	l := st.Log().WithLogger(func(ctx logging.Context) logging.Emitter {
+		return ctx.Hinted("from_height", st.heightFrom).
+			Hinted("to_height", st.heightTo)
+	})
+
+	l.Debug().Msg("trying to commit blocks to main storage")
 
 	var lastBlock block.Block
 	if l, found, err := st.blockStorage.LastBlock(); err != nil || !found {
@@ -197,23 +199,14 @@ func (st *SyncerStorage) Commit() error {
 		defaultColNameState,
 	} {
 		if err := moveWithinCol(st.blockStorage, col, st.main, col, bson.D{}); err != nil {
+			l.Error().Err(err).Str("collection", col).Msg("failed to move collection")
+
 			return err
 		}
+		l.Debug().Str("collection", col).Msg("moved collection")
 	}
 
 	return st.main.setLastBlock(lastBlock, false, false)
-}
-
-func (st *SyncerStorage) commitBlock(blk block.Block) error {
-	if bs, err := st.main.OpenBlockStorage(blk); err != nil {
-		return err
-	} else if err := bs.SetBlock(blk); err != nil {
-		return err
-	} else if err := bs.Commit(); err != nil {
-		return err
-	}
-
-	return nil
 }
 
 func (st *SyncerStorage) checkHeight(height base.Height) {

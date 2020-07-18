@@ -68,17 +68,15 @@ func (dp *DefaultProposalProcessor) setProcessor(pp *internalDefaultProposalProc
 	dp.Lock()
 	defer dp.Unlock()
 
-	if dp.pp != nil {
-		dp.pp.stop()
-	}
-
 	dp.pp = pp
 }
 
 func (dp *DefaultProposalProcessor) ProcessINIT(ph valuehash.Hash, initVoteproof base.Voteproof) (block.Block, error) {
 	if pp := dp.processed(ph); pp != nil {
-		return pp.block, nil
+		return nil, xerrors.Errorf("already processed")
 	}
+
+	dp.setProcessor(nil)
 
 	if initVoteproof.Stage() != base.StageINIT {
 		return nil, xerrors.Errorf("ProcessINIT needs INIT Voteproof")
@@ -97,15 +95,19 @@ func (dp *DefaultProposalProcessor) ProcessINIT(ph valuehash.Hash, initVoteproof
 	}
 
 	_ = pp.SetLogger(dp.Log())
+	dp.setProcessor(pp)
 
-	dp.setProcessor(nil)
+	defer func() {
+		dp.Lock()
+		defer dp.Unlock()
+
+		dp.pp.stop()
+	}()
 
 	blk, err := pp.processINIT(initVoteproof)
 	if err != nil {
 		return nil, err
 	}
-
-	dp.setProcessor(pp)
 
 	return blk, nil
 }

@@ -79,6 +79,7 @@ func (sy *Syncers) Stop() error {
 	}
 
 	sy.syncers = nil
+	sy.finished = 0
 
 	return nil
 }

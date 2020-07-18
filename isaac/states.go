@@ -251,10 +251,16 @@ func (css *ConsensusStates) activateHandler(ctx StateChangeContext) error {
 		Msg("trying to change state")
 
 	handler := css.ActiveHandler()
-	if handler != nil && handler.State() == ctx.toState {
-		css.Log().Debug().Msgf("handler, %s already activated", ctx.toState)
+	if handler != nil {
+		if handler.State() != ctx.fromState {
+			css.Log().Debug().Msgf("not from active handler, %s", ctx.fromState)
 
-		return nil
+			return nil
+		} else if handler.State() == ctx.toState {
+			css.Log().Debug().Msgf("handler, %s already activated", ctx.toState)
+
+			return nil
+		}
 	}
 
 	css.Lock()
@@ -460,7 +466,7 @@ func (css *ConsensusStates) validateProposal(proposal ballot.Proposal) error {
 		pvc.CheckSigning,
 		pvc.IsProposer,
 		pvc.SaveProposal,
-		pvc.IsOld,
+		pvc.IsOldOrHigher,
 	}).Check()
 }
 

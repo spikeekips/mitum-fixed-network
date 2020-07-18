@@ -110,7 +110,7 @@ func (pvc *ProposalValidationChecker) SaveProposal() (bool, error) {
 	return true, nil
 }
 
-func (pvc *ProposalValidationChecker) IsOld() (bool, error) {
+func (pvc *ProposalValidationChecker) IsOldOrHigher() (bool, error) {
 	height := pvc.proposal.Height()
 	round := pvc.proposal.Round()
 
@@ -122,6 +122,16 @@ func (pvc *ProposalValidationChecker) IsOld() (bool, error) {
 				Hinted("round", pvc.initVoteproof.Round()),
 			).
 			Msg("old proposal received")
+
+		return false, err
+	} else if height > pvc.initVoteproof.Height() {
+		err := xerrors.Errorf("higher Proposal received")
+		pvc.Log().Error().Err(err).
+			Dict("current", logging.Dict().
+				Hinted("height", pvc.initVoteproof.Height()).
+				Hinted("round", pvc.initVoteproof.Round()),
+			).
+			Msg("higher proposal received")
 
 		return false, err
 	}

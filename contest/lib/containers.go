@@ -311,6 +311,10 @@ func (cts *Containers) containersIP() error {
 	vm := map[string]interface{}{}
 	for name := range cts.containers {
 		c := cts.containers[name]
+		if len(c.id) < 1 {
+			continue
+		}
+
 		var ip string
 		if r, err := ContainerInspect(cts.client, c.id); err != nil {
 			return err
@@ -659,7 +663,7 @@ func (ct *Container) run(initialize bool) error {
 	if err := ct.client.ContainerStart(context.Background(), ct.ID(), types.ContainerStartOptions{}); err != nil {
 		return xerrors.Errorf("failed to run container: %w", err)
 	}
-	l.Debug().Msg("container started")
+	l.Debug().Str("container_id", ct.ID()).Msg("container started")
 
 	var cancel func()
 	if c, err := ct.containerErr(); err != nil {
@@ -923,8 +927,4 @@ func (ct *Container) Localstate() *isaac.Localstate {
 	}
 
 	return l
-}
-
-func (ct *Container) Reset() {
-	ct.setID("")
 }

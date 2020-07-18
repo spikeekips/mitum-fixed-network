@@ -63,7 +63,6 @@ func (t *baseTestStateHandler) SetupSuite() {
 	_ = t.Encs.AddHinter(operation.OperationAVLNode{})
 	_ = t.Encs.AddHinter(operation.OperationAVLNodeMutable{})
 	_ = t.Encs.AddHinter(state.StateV0{})
-	_ = t.Encs.AddHinter(operation.OperationInfoV0{})
 	_ = t.Encs.AddHinter(state.StateV0AVLNode{})
 	_ = t.Encs.AddHinter(state.StateV0AVLNodeMutable{})
 	_ = t.Encs.AddHinter(state.BytesValue{})

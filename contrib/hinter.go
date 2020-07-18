@@ -45,7 +45,6 @@ var Hinters = []hint.Hinter{
 	key.StellarPublickey{},
 	operation.BaseSeal{},
 	operation.OperationAVLNode{},
-	operation.OperationInfoV0{},
 	state.BytesValue{},
 	state.DurationValue{},
 	state.HintedValue{},

@@ -8,7 +8,6 @@ import (
 	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/base/block"
 	"github.com/spikeekips/mitum/base/key"
-	"github.com/spikeekips/mitum/base/operation"
 	"github.com/spikeekips/mitum/base/state"
 	"github.com/spikeekips/mitum/util/valuehash"
 )
@@ -27,7 +26,6 @@ func (t *testPolicy) SetupSuite() {
 
 	_ = t.Encs.AddHinter(valuehash.SHA256{})
 	_ = t.Encs.AddHinter(state.StateV0{})
-	_ = t.Encs.AddHinter(operation.OperationInfoV0{})
 	_ = t.Encs.AddHinter(PolicyOperationBodyV0{})
 	_ = t.Encs.AddHinter(SetPolicyOperationV0{})
 	_ = t.Encs.AddHinter(SetPolicyOperationFactV0{})

@@ -9,6 +9,7 @@ import (
 	"github.com/spikeekips/mitum/base/ballot"
 	"github.com/spikeekips/mitum/base/block"
 	"github.com/spikeekips/mitum/storage"
+	"github.com/spikeekips/mitum/util/hint"
 	"github.com/spikeekips/mitum/util/logging"
 	"github.com/spikeekips/mitum/util/valuehash"
 )
@@ -16,9 +17,10 @@ import (
 type DefaultProposalProcessor struct {
 	sync.RWMutex
 	*logging.Logging
-	localstate *Localstate
-	suffrage   base.Suffrage
-	pp         *internalDefaultProposalProcessor
+	localstate                *Localstate
+	suffrage                  base.Suffrage
+	pp                        *internalDefaultProposalProcessor
+	operationProcessorHintSet *hint.Hintmap
 }
 
 func NewDefaultProposalProcessor(localstate *Localstate, suffrage base.Suffrage) *DefaultProposalProcessor {
@@ -26,8 +28,9 @@ func NewDefaultProposalProcessor(localstate *Localstate, suffrage base.Suffrage)
 		Logging: logging.NewLogging(func(c logging.Context) logging.Emitter {
 			return c.Str("module", "default-proposal-processor")
 		}),
-		localstate: localstate,
-		suffrage:   suffrage,
+		localstate:                localstate,
+		suffrage:                  suffrage,
+		operationProcessorHintSet: hint.NewHintmap(),
 	}
 }
 
@@ -88,7 +91,7 @@ func (dp *DefaultProposalProcessor) ProcessINIT(ph valuehash.Hash, initVoteproof
 		proposal = pr
 	}
 
-	pp, err := newInternalDefaultProposalProcessor(dp.localstate, dp.suffrage, proposal)
+	pp, err := newInternalDefaultProposalProcessor(dp.localstate, dp.suffrage, proposal, dp.operationProcessorHintSet)
 	if err != nil {
 		return nil, err
 	}
@@ -151,4 +154,15 @@ func (dp *DefaultProposalProcessor) checkProposal(
 	}
 
 	return proposal, nil
+}
+
+func (dp *DefaultProposalProcessor) AddOperationProcessor(
+	ht hint.Hinter,
+	opr OperationProcessor,
+) (ProposalProcessor, error) {
+	if err := dp.operationProcessorHintSet.Add(ht, opr); err != nil {
+		return nil, err
+	}
+
+	return dp, nil
 }

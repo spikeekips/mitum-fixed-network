@@ -187,7 +187,8 @@ func (t *testProposalProcessor) TestTimeoutProcessProposal() {
 
 		op := NewLongKVOperation(kop).
 			SetPreProcess(func(
-				func(key string) (state.StateUpdater, bool, error), func(...state.StateUpdater) error,
+				func(key string) (state.StateUpdater, bool, error),
+				func(valuehash.Hash, ...state.StateUpdater) error,
 			) error {
 				<-time.After(time.Millisecond * 300)
 				atomic.AddInt64(&processed, 1)
@@ -222,6 +223,81 @@ func (t *testProposalProcessor) TestTimeoutProcessProposal() {
 
 	<-time.After(time.Second * 2)
 	t.Equal(int64(1), atomic.LoadInt64(&processed))
+}
+
+type dummyOperationProcessor struct {
+	pool           *Statepool
+	afterProcessed func(dummyOperationProcessor) error
+}
+
+func (opp dummyOperationProcessor) New(pool *Statepool) OperationProcessor {
+	return dummyOperationProcessor{
+		pool:           pool,
+		afterProcessed: opp.afterProcessed,
+	}
+}
+
+func (opp dummyOperationProcessor) Process(op state.StateProcessor) error {
+	if err := op.Process(opp.pool.Get, opp.pool.Set); err != nil {
+		return err
+	}
+
+	if opp.afterProcessed == nil {
+		return nil
+	}
+
+	return opp.afterProcessed(opp)
+}
+
+func (t *testProposalProcessor) TestCustomOperationProcessor() {
+	var sls []seal.Seal
+	for i := 0; i < 2; i++ {
+		op, err := NewKVOperation(
+			t.local.Node().Privatekey(),
+			util.UUID().Bytes(),
+			util.UUID().String(),
+			util.UUID().Bytes(),
+			TestNetworkID,
+		)
+		t.NoError(err)
+
+		sl, err := operation.NewBaseSeal(t.local.Node().Privatekey(), []operation.Operation{op}, TestNetworkID)
+		t.NoError(err)
+		t.NoError(sl.IsValid(TestNetworkID))
+
+		sls = append(sls, sl)
+	}
+
+	err := t.local.Storage().NewSeals(sls)
+	t.NoError(err)
+
+	ib := t.newINITBallot(t.local, base.Round(0), nil)
+	initFact := ib.INITBallotFactV0
+
+	pm := NewDummyProposalMaker(t.local, sls)
+	ivp, err := t.newVoteproof(base.StageINIT, initFact, t.local, t.remote)
+	proposal, err := pm.Proposal(ivp.Round())
+	t.NoError(err)
+
+	_ = t.local.Storage().NewProposal(proposal)
+
+	dp := NewDefaultProposalProcessor(t.local, t.suffrage(t.local))
+
+	var processed int64
+	opr := dummyOperationProcessor{
+		afterProcessed: func(dummyOperationProcessor) error {
+			atomic.AddInt64(&processed, 1)
+
+			return nil
+		},
+	}
+
+	_, err = dp.AddOperationProcessor(KVOperation{}, opr)
+	t.NoError(err)
+
+	_, err = dp.ProcessINIT(proposal.Hash(), ivp)
+	t.NoError(err)
+	t.Equal(int64(len(sls)), atomic.LoadInt64(&processed))
 }
 
 func TestProposalProcessor(t *testing.T) {

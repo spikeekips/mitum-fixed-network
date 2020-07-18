@@ -304,9 +304,9 @@ func (spo SetPolicyOperationV0) GenerateHash() (valuehash.Hash, error) {
 	), nil
 }
 
-func (spo SetPolicyOperationV0) ProcessOperation(
+func (spo SetPolicyOperationV0) Process(
 	getState func(key string) (state.StateUpdater, bool, error),
-	setState func(...state.StateUpdater) error,
+	setState func(valuehash.Hash, ...state.StateUpdater) error,
 ) error {
 	var value state.HintedValue
 	if v, err := state.NewHintedValue(spo.SetPolicyOperationFactV0.PolicyOperationBodyV0); err != nil {
@@ -320,6 +320,6 @@ func (spo SetPolicyOperationV0) ProcessOperation(
 	} else if err := s.SetValue(value); err != nil {
 		return err
 	} else {
-		return setState(s)
+		return setState(spo.Hash(), s)
 	}
 }

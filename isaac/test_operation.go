@@ -14,6 +14,7 @@ import (
 	bsonenc "github.com/spikeekips/mitum/util/encoder/bson"
 	jsonenc "github.com/spikeekips/mitum/util/encoder/json"
 	"github.com/spikeekips/mitum/util/hint"
+	"github.com/spikeekips/mitum/util/valuehash"
 )
 
 var (
@@ -78,9 +79,9 @@ func (kvo *KVOperation) UnpackBSON(b []byte, enc *bsonenc.Encoder) error {
 	return nil
 }
 
-func (kvo KVOperation) ProcessOperation(
+func (kvo KVOperation) Process(
 	getState func(key string) (state.StateUpdater, bool, error),
-	setState func(...state.StateUpdater) error,
+	setState func(valuehash.Hash, ...state.StateUpdater) error,
 ) error {
 	var value state.BytesValue
 	if v, err := state.NewBytesValue(kvo.Value()); err != nil {
@@ -94,7 +95,7 @@ func (kvo KVOperation) ProcessOperation(
 	} else if err := s.SetValue(value); err != nil {
 		return err
 	} else {
-		return setState(s)
+		return setState(kvo.Hash(), s)
 	}
 }
 
@@ -102,7 +103,7 @@ type LongKVOperation struct {
 	KVOperation
 	preProcess func(
 		getState func(key string) (state.StateUpdater, bool, error),
-		setState func(...state.StateUpdater) error,
+		setState func(valuehash.Hash, ...state.StateUpdater) error,
 	) error
 }
 
@@ -118,9 +119,9 @@ func (kvo LongKVOperation) Hint() hint.Hint {
 	return LongKVOperationHint
 }
 
-func (kvo LongKVOperation) ProcessOperation(
+func (kvo LongKVOperation) Process(
 	getState func(string) (state.StateUpdater, bool, error),
-	setState func(...state.StateUpdater) error,
+	setState func(valuehash.Hash, ...state.StateUpdater) error,
 ) error {
 	if kvo.preProcess != nil {
 		if err := kvo.preProcess(getState, setState); err != nil {
@@ -128,7 +129,7 @@ func (kvo LongKVOperation) ProcessOperation(
 		}
 	}
 
-	return kvo.KVOperation.ProcessOperation(getState, setState)
+	return kvo.KVOperation.Process(getState, setState)
 }
 
 var longKVOperationFuncMap = &sync.Map{}
@@ -136,7 +137,7 @@ var longKVOperationFuncMap = &sync.Map{}
 func (kvo LongKVOperation) SetPreProcess(
 	f func(
 		getState func(key string) (state.StateUpdater, bool, error),
-		setState func(...state.StateUpdater) error,
+		setState func(valuehash.Hash, ...state.StateUpdater) error,
 	) error,
 ) LongKVOperation {
 	kvo.preProcess = f
@@ -156,7 +157,7 @@ func (kvo *LongKVOperation) UnpackJSON(b []byte, enc *jsonenc.Encoder) error {
 
 	f, found := longKVOperationFuncMap.Load(bo.Hash().String())
 	if found {
-		kvo.preProcess = f.(func(func(string) (state.StateUpdater, bool, error), func(...state.StateUpdater) error) error)
+		kvo.preProcess = f.(func(func(string) (state.StateUpdater, bool, error), func(valuehash.Hash, ...state.StateUpdater) error) error)
 	}
 
 	return nil
@@ -172,7 +173,7 @@ func (kvo *LongKVOperation) UnpackBSON(b []byte, enc *bsonenc.Encoder) error {
 
 	f, found := longKVOperationFuncMap.Load(bo.Hash().String())
 	if found {
-		kvo.preProcess = f.(func(func(string) (state.StateUpdater, bool, error), func(...state.StateUpdater) error) error)
+		kvo.preProcess = f.(func(func(string) (state.StateUpdater, bool, error), func(valuehash.Hash, ...state.StateUpdater) error) error)
 	}
 
 	return nil

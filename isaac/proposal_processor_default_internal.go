@@ -15,6 +15,7 @@ import (
 	"github.com/spikeekips/mitum/base/state"
 	"github.com/spikeekips/mitum/base/tree"
 	"github.com/spikeekips/mitum/storage"
+	"github.com/spikeekips/mitum/util/hint"
 	"github.com/spikeekips/mitum/util/logging"
 	"github.com/spikeekips/mitum/util/valuehash"
 )
@@ -22,22 +23,25 @@ import (
 type internalDefaultProposalProcessor struct {
 	sync.RWMutex
 	*logging.Logging
-	localstate         *Localstate
-	stopped            bool
-	suffrage           base.Suffrage
-	lastManifest       block.Manifest
-	block              block.BlockUpdater
-	proposal           ballot.Proposal
-	proposedOperations map[string]struct{}
-	operations         []state.OperationInfoV0
-	bs                 storage.BlockStorage
-	si                 block.SuffrageInfoV0
+	localstate                *Localstate
+	stopped                   bool
+	suffrage                  base.Suffrage
+	lastManifest              block.Manifest
+	block                     block.BlockUpdater
+	proposal                  ballot.Proposal
+	proposedOperations        map[string]struct{}
+	operations                []operation.OperationInfoV0
+	bs                        storage.BlockStorage
+	si                        block.SuffrageInfoV0
+	operationProcessorHintSet *hint.Hintmap
+	operationProcessors       map[hint.Hint]OperationProcessor
 }
 
 func newInternalDefaultProposalProcessor(
 	localstate *Localstate,
 	suffrage base.Suffrage,
 	proposal ballot.Proposal,
+	operationProcessorHintSet *hint.Hintmap,
 ) (*internalDefaultProposalProcessor, error) {
 	var lastManifest block.Manifest
 	switch m, found, err := localstate.Storage().LastManifest(); {
@@ -74,12 +78,14 @@ func newInternalDefaultProposalProcessor(
 		Logging: logging.NewLogging(func(c logging.Context) logging.Emitter {
 			return c.Str("module", "internal-proposal-processor-inside-v0")
 		}),
-		localstate:         localstate,
-		suffrage:           suffrage,
-		proposal:           proposal,
-		lastManifest:       lastManifest,
-		proposedOperations: proposedOperations,
-		si:                 si,
+		localstate:                localstate,
+		suffrage:                  suffrage,
+		proposal:                  proposal,
+		lastManifest:              lastManifest,
+		proposedOperations:        proposedOperations,
+		si:                        si,
+		operationProcessorHintSet: operationProcessorHintSet,
+		operationProcessors:       map[hint.Hint]OperationProcessor{},
 	}, nil
 }
 
@@ -192,8 +198,8 @@ func (pp *internalDefaultProposalProcessor) process(initVoteproof base.Voteproof
 	return blk, nil
 }
 
-func (pp *internalDefaultProposalProcessor) extractOperations() ([]state.OperationInfoV0, error) {
-	founds := map[string]state.OperationInfoV0{}
+func (pp *internalDefaultProposalProcessor) extractOperations() ([]operation.OperationInfoV0, error) {
+	founds := map[string]operation.OperationInfoV0{}
 
 	// TODO only defined operations should be filtered from seal, not all
 	// operations of seal.
@@ -237,7 +243,7 @@ func (pp *internalDefaultProposalProcessor) extractOperations() ([]state.Operati
 		}
 	}
 
-	var operations []state.OperationInfoV0
+	var operations []operation.OperationInfoV0
 	for _, h := range pp.proposal.Operations() {
 		if oi, found := founds[h.String()]; !found {
 			return nil, xerrors.Errorf("failed to fetch Operation from Proposal: operation=%s", h)
@@ -254,7 +260,7 @@ func (pp *internalDefaultProposalProcessor) processOperations() (*tree.AVLTree, 
 		return nil, nil, nil
 	}
 
-	var operations []state.OperationInfoV0
+	var operations []operation.OperationInfoV0
 
 	if ops, err := pp.extractOperations(); err != nil {
 		return nil, nil, err
@@ -319,42 +325,96 @@ func (pp *internalDefaultProposalProcessor) processStates() (*tree.AVLTree, valu
 		pool = p
 	}
 
+	// NOTE for performance, gathers OperationProcessors by each operation
+	// before processing them.
+	var mopr map[string]OperationProcessor
+	if m, err := func() (map[string]OperationProcessor, error) {
+		pp.Lock()
+		defer pp.Unlock()
+
+		m := map[string]OperationProcessor{}
+		for i := range pp.operations {
+			op := pp.operations[i].RawOperation()
+			if opr, err := pp.operationProcessor(op, pool); err != nil {
+				return nil, err
+			} else {
+				m[op.Hash().String()] = opr
+			}
+		}
+
+		return m, nil
+	}(); err != nil {
+		return nil, nil, err
+	} else {
+		mopr = m
+	}
+
 	for i := range pp.operations {
 		if pp.isStopped() {
 			return nil, nil, xerrors.Errorf("already stopped")
 		}
 
-		opi := pp.operations[i]
-		op := opi.RawOperation()
-		if opp, ok := op.(state.OperationProcesser); !ok {
-			pp.Log().Error().Str("operation_type", fmt.Sprintf("%T", op)).
-				Msg("operation does not support state.OperationProcesser")
-
-			continue
-		} else if err := opp.ProcessOperation(pool.Get, func(s ...state.StateUpdater) error {
-			for i := range s {
-				if err := s[i].AddOperationInfo(opi); err != nil {
-					return err
-				}
-			}
-
-			return pool.Set(s...)
-		}); err != nil {
-			if xerrors.Is(err, state.IgnoreOperationProcessingError) { // TODO needs test
-				pp.Log().VerboseFunc(func(e *logging.Event) logging.Emitter {
-					return e.Err(err).Interface("operation", op)
-				}).Hinted("operation_hash", op.Hash()).Msg("operation ignored")
-
-				continue
-			}
-
-			pp.Log().Error().Err(err).Interface("operation", op).Msg("failed to process operation")
-
+		op := pp.operations[i].RawOperation()
+		if err := pp.processOperation(op, mopr[op.Hash().String()]); err != nil {
 			return nil, nil, err
 		}
 	}
 
 	return pp.generateStatesTree(pool)
+}
+
+func (pp *internalDefaultProposalProcessor) operationProcessor(
+	op operation.Operation,
+	pool *Statepool,
+) (OperationProcessor, error) {
+	if opr, found := pp.operationProcessors[op.Hint()]; found {
+		return opr, nil
+	}
+
+	var opr OperationProcessor
+	if hinter, found := pp.operationProcessorHintSet.Get(op); !found {
+		opr = defaultOperationProcessor{}
+	} else if p, ok := hinter.(OperationProcessor); !ok {
+		return nil, xerrors.Errorf("invalid OperationProcessor found, %T", hinter)
+	} else {
+		opr = p
+	}
+
+	opr = opr.New(pool)
+	pp.operationProcessors[op.Hint()] = opr
+
+	return opr, nil
+}
+
+func (pp *internalDefaultProposalProcessor) processOperation(
+	op operation.Operation,
+	opr OperationProcessor,
+) error {
+	var opp state.StateProcessor
+	if p, ok := op.(state.StateProcessor); !ok {
+		pp.Log().Error().Str("operation_type", fmt.Sprintf("%T", op)).
+			Msg("operation does not support state.StateProcessor")
+
+		return nil
+	} else {
+		opp = p
+	}
+
+	if err := opr.Process(opp); err != nil {
+		if xerrors.Is(err, state.IgnoreOperationProcessingError) {
+			pp.Log().VerboseFunc(func(e *logging.Event) logging.Emitter {
+				return e.Err(err).Interface("operation", op)
+			}).Hinted("operation_hash", op.Hash()).Msg("operation ignored")
+
+			return nil
+		}
+
+		pp.Log().Error().Err(err).Interface("operation", op).Msg("failed to process operation")
+
+		return err
+	} else {
+		return nil
+	}
 }
 
 func (pp *internalDefaultProposalProcessor) generateStatesTree(pool *Statepool) (*tree.AVLTree, valuehash.Hash, error) {
@@ -379,7 +439,7 @@ func (pp *internalDefaultProposalProcessor) generateStatesTree(pool *Statepool) 
 }
 
 func (pp *internalDefaultProposalProcessor) getOperationsFromStorage(h valuehash.Hash) (
-	[]state.OperationInfoV0, error,
+	[]operation.OperationInfoV0, error,
 ) {
 	var osl operation.Seal
 	if sl, found, err := pp.localstate.Storage().Seal(h); !found {
@@ -392,7 +452,7 @@ func (pp *internalDefaultProposalProcessor) getOperationsFromStorage(h valuehash
 		osl = os
 	}
 
-	ops := make([]state.OperationInfoV0, len(osl.Operations()))
+	ops := make([]operation.OperationInfoV0, len(osl.Operations()))
 	for i, op := range osl.Operations() {
 		if pp.isStopped() {
 			return nil, xerrors.Errorf("already stopped")
@@ -402,7 +462,7 @@ func (pp *internalDefaultProposalProcessor) getOperationsFromStorage(h valuehash
 			continue
 		}
 
-		ops[i] = state.NewOperationInfoV0(op, h)
+		ops[i] = operation.NewOperationInfoV0(op, h)
 	}
 
 	return ops, nil
@@ -411,8 +471,8 @@ func (pp *internalDefaultProposalProcessor) getOperationsFromStorage(h valuehash
 func (pp *internalDefaultProposalProcessor) getOperationsThruChannel(
 	proposer base.Address,
 	notFounds []valuehash.Hash,
-	founds map[string]state.OperationInfoV0,
-) ([]state.OperationInfoV0, error) {
+	founds map[string]operation.OperationInfoV0,
+) ([]operation.OperationInfoV0, error) {
 	if pp.localstate.Node().Address().Equal(proposer) {
 		pp.Log().Warn().Msg("proposer is local node, but local node should have seals. Hmmm")
 	}
@@ -431,7 +491,7 @@ func (pp *internalDefaultProposalProcessor) getOperationsThruChannel(
 		return nil, err
 	}
 
-	var ops []state.OperationInfoV0
+	var ops []operation.OperationInfoV0
 	for _, sl := range received {
 		if pp.isStopped() {
 			return nil, xerrors.Errorf("already stopped")
@@ -447,7 +507,7 @@ func (pp *internalDefaultProposalProcessor) getOperationsThruChannel(
 					continue
 				}
 
-				ops = append(ops, state.NewOperationInfoV0(op, sl.Hash()))
+				ops = append(ops, operation.NewOperationInfoV0(op, sl.Hash()))
 			}
 		}
 	}

@@ -6,6 +6,7 @@ import (
 	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/base/block"
 	"github.com/spikeekips/mitum/storage"
+	"github.com/spikeekips/mitum/util/hint"
 	"github.com/spikeekips/mitum/util/valuehash"
 )
 
@@ -70,4 +71,8 @@ func (dp *DummyProposalProcessor) ProcessACCEPT(
 
 func (dp *DummyProposalProcessor) BlockStorages(h valuehash.Hash) *storage.DummyBlockStorage {
 	return dp.bs[h.String()]
+}
+
+func (dp *DummyProposalProcessor) AddOperationProcessor(hint.Hinter, OperationProcessor) (ProposalProcessor, error) {
+	return dp, nil
 }

@@ -72,9 +72,15 @@ func (sp *Statepool) Get(key string) (state.StateUpdater, bool, error) {
 	return st, found, nil
 }
 
-func (sp *Statepool) Set(s ...state.StateUpdater) error {
+func (sp *Statepool) Set(op valuehash.Hash, s ...state.StateUpdater) error {
 	sp.Lock()
 	defer sp.Unlock()
+
+	for i := range s {
+		if err := s[i].AddOperation(op); err != nil {
+			return err
+		}
+	}
 
 	for i := range s {
 		sp.updated[s[i].Key()] = s[i]

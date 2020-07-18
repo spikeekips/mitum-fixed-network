@@ -30,7 +30,7 @@ type internalDefaultProposalProcessor struct {
 	block                     block.BlockUpdater
 	proposal                  ballot.Proposal
 	proposedOperations        map[string]struct{}
-	operations                []operation.OperationInfoV0
+	operations                []operation.Operation
 	bs                        storage.BlockStorage
 	si                        block.SuffrageInfoV0
 	operationProcessorHintSet *hint.Hintmap
@@ -143,20 +143,23 @@ func (pp *internalDefaultProposalProcessor) process(initVoteproof base.Voteproof
 		return pp.block, nil
 	}
 
-	var operationsTree, statesTree *tree.AVLTree
-	var operationsHash, statesHash valuehash.Hash
-	if tr, h, err := pp.processOperations(); err != nil {
+	if ops, err := pp.extractOperations(); err != nil {
 		return nil, err
 	} else {
-		operationsTree = tr
-		operationsHash = h
+		pp.operations = ops
 	}
 
-	if tr, h, err := pp.processStates(); err != nil {
-		return nil, err
-	} else {
-		statesTree = tr
-		statesHash = h
+	var operationsTree, statesTree *tree.AVLTree
+	var operationsHash, statesHash valuehash.Hash
+	if len(pp.operations) > 0 {
+		var err error
+		if statesTree, statesHash, err = pp.processStates(); err != nil {
+			return nil, err
+		} else if statesTree != nil {
+			if operationsTree, operationsHash, err = pp.processOperations(); err != nil {
+				return nil, err
+			}
+		}
 	}
 
 	var blk block.BlockUpdater
@@ -198,36 +201,38 @@ func (pp *internalDefaultProposalProcessor) process(initVoteproof base.Voteproof
 	return blk, nil
 }
 
-func (pp *internalDefaultProposalProcessor) extractOperations() ([]operation.OperationInfoV0, error) {
-	founds := map[string]operation.OperationInfoV0{}
+func (pp *internalDefaultProposalProcessor) extractOperations() ([]operation.Operation, error) {
+	if len(pp.proposal.Seals()) < 1 {
+		return nil, nil
+	}
 
 	// TODO only defined operations should be filtered from seal, not all
 	// operations of seal.
+
+	founds := map[string]operation.Operation{}
 	var notFounds []valuehash.Hash
 	for _, h := range pp.proposal.Seals() {
 		if pp.isStopped() {
 			return nil, xerrors.Errorf("already stopped")
 		}
 
-		ops, err := pp.getOperationsFromStorage(h)
-		if err != nil {
-			if storage.IsNotFoundError(err) {
-				notFounds = append(notFounds, h)
-				continue
-			}
-
+		switch ops, found, err := pp.getOperationsFromStorage(h); {
+		case err != nil:
 			return nil, err
-		} else if len(ops) < 1 {
+		case !found:
+			notFounds = append(notFounds, h)
 			continue
-		}
+		case len(ops) < 1:
+			continue
+		default:
+			for i := range ops {
+				op := ops[i]
+				if _, found := founds[op.Hash().String()]; found {
+					continue
+				}
 
-		for i := range ops {
-			if ops[i].Operation() == nil {
-				continue
+				founds[op.Hash().String()] = op
 			}
-
-			op := ops[i]
-			founds[op.Operation().String()] = op
 		}
 	}
 
@@ -239,85 +244,42 @@ func (pp *internalDefaultProposalProcessor) extractOperations() ([]operation.Ope
 
 		for i := range ops {
 			op := ops[i]
-			founds[op.Operation().String()] = op
+			founds[op.Hash().String()] = op
 		}
 	}
 
-	var operations []operation.OperationInfoV0
+	var ops []operation.Operation
 	for _, h := range pp.proposal.Operations() {
-		if oi, found := founds[h.String()]; !found {
+		if pp.isStopped() {
+			return nil, xerrors.Errorf("already stopped")
+		}
+
+		if op, found := founds[h.String()]; !found {
 			return nil, xerrors.Errorf("failed to fetch Operation from Proposal: operation=%s", h)
 		} else {
-			operations = append(operations, oi)
+			ops = append(ops, op)
 		}
 	}
 
-	return operations, nil
+	return pp.filterOperations(ops)
 }
 
 func (pp *internalDefaultProposalProcessor) processOperations() (*tree.AVLTree, valuehash.Hash, error) {
-	if len(pp.proposal.Seals()) < 1 {
-		return nil, nil, nil
-	}
-
-	var operations []operation.OperationInfoV0
-
-	if ops, err := pp.extractOperations(); err != nil {
-		return nil, nil, err
-	} else {
-		founds := map[string]struct{}{}
-
-		for i := range ops {
-			if pp.isStopped() {
-				return nil, nil, xerrors.Errorf("already stopped")
-			}
-
-			op := ops[i]
-			// NOTE Duplicated Operation.Hash, the latter will be ignored.
-			if _, found := founds[op.Operation().String()]; found {
-				continue
-			} else if found, err := pp.localstate.Storage().HasOperation(op.Operation()); err != nil {
-				return nil, nil, err
-			} else if found { // already stored Operation
-				continue
-			}
-
-			operations = append(operations, op)
-			founds[op.Operation().String()] = struct{}{}
-		}
-	}
-
-	if len(operations) < 1 {
-		return nil, nil, nil
-	}
-
 	tg := avl.NewTreeGenerator()
-	for i := range operations {
+	for i := range pp.operations {
 		if pp.isStopped() {
 			return nil, nil, xerrors.Errorf("already stopped")
 		}
 
-		op := operations[i]
-		n := operation.NewOperationAVLNodeMutable(op.RawOperation())
-		if _, err := tg.Add(n); err != nil {
+		if _, err := tg.Add(operation.NewOperationAVLNodeMutable(pp.operations[i])); err != nil {
 			return nil, nil, err
 		}
 	}
 
-	if tr, h, err := pp.validateTree(tg); err != nil {
-		return nil, nil, err
-	} else {
-		pp.operations = operations
-
-		return tr, h, nil
-	}
+	return pp.validateTree(tg)
 }
 
 func (pp *internalDefaultProposalProcessor) processStates() (*tree.AVLTree, valuehash.Hash, error) {
-	if len(pp.operations) < 1 {
-		return nil, nil, nil
-	}
-
 	var pool *Statepool
 	if p, err := NewStatepool(pp.localstate.Storage()); err != nil {
 		return nil, nil, err
@@ -334,7 +296,7 @@ func (pp *internalDefaultProposalProcessor) processStates() (*tree.AVLTree, valu
 
 		m := map[string]OperationProcessor{}
 		for i := range pp.operations {
-			op := pp.operations[i].RawOperation()
+			op := pp.operations[i]
 			if opr, err := pp.operationProcessor(op, pool); err != nil {
 				return nil, err
 			} else {
@@ -354,7 +316,7 @@ func (pp *internalDefaultProposalProcessor) processStates() (*tree.AVLTree, valu
 			return nil, nil, xerrors.Errorf("already stopped")
 		}
 
-		op := pp.operations[i].RawOperation()
+		op := pp.operations[i]
 		if err := pp.processOperation(op, mopr[op.Hash().String()]); err != nil {
 			return nil, nil, err
 		}
@@ -386,34 +348,30 @@ func (pp *internalDefaultProposalProcessor) operationProcessor(
 	return opr, nil
 }
 
-func (pp *internalDefaultProposalProcessor) processOperation(
-	op operation.Operation,
-	opr OperationProcessor,
-) error {
-	var opp state.StateProcessor
+func (pp *internalDefaultProposalProcessor) processOperation(op operation.Operation, opr OperationProcessor) error {
+	var sp state.StateProcessor
 	if p, ok := op.(state.StateProcessor); !ok {
 		pp.Log().Error().Str("operation_type", fmt.Sprintf("%T", op)).
 			Msg("operation does not support state.StateProcessor")
 
 		return nil
 	} else {
-		opp = p
+		sp = p
 	}
 
-	if err := opr.Process(opp); err != nil {
-		if xerrors.Is(err, state.IgnoreOperationProcessingError) {
-			pp.Log().VerboseFunc(func(e *logging.Event) logging.Emitter {
-				return e.Err(err).Interface("operation", op)
-			}).Hinted("operation_hash", op.Hash()).Msg("operation ignored")
+	switch err := opr.Process(sp); {
+	case err == nil:
+		return nil
+	case xerrors.Is(err, state.IgnoreOperationProcessingError):
+		pp.Log().VerboseFunc(func(e *logging.Event) logging.Emitter {
+			return e.Err(err).Interface("operation", op)
+		}).Hinted("operation_hash", op.Hash()).Msg("operation ignored")
 
-			return nil
-		}
-
+		return nil
+	default:
 		pp.Log().Error().Err(err).Interface("operation", op).Msg("failed to process operation")
 
 		return err
-	} else {
-		return nil
 	}
 }
 
@@ -439,40 +397,46 @@ func (pp *internalDefaultProposalProcessor) generateStatesTree(pool *Statepool) 
 }
 
 func (pp *internalDefaultProposalProcessor) getOperationsFromStorage(h valuehash.Hash) (
-	[]operation.OperationInfoV0, error,
+	[]operation.Operation, bool, error,
 ) {
 	var osl operation.Seal
 	if sl, found, err := pp.localstate.Storage().Seal(h); !found {
-		return nil, storage.NotFoundError.Errorf("seal not found")
+		return nil, false, nil
 	} else if err != nil {
-		return nil, err
+		return nil, false, err
 	} else if os, ok := sl.(operation.Seal); !ok {
-		return nil, xerrors.Errorf("not operation.Seal: %T", sl)
+		return nil, false, xerrors.Errorf("not operation.Seal: %T", sl)
 	} else {
 		osl = os
 	}
 
-	ops := make([]operation.OperationInfoV0, len(osl.Operations()))
-	for i, op := range osl.Operations() {
+	founds := map[string]struct{}{}
+	var ops []operation.Operation // nolint
+	for i := range osl.Operations() {
 		if pp.isStopped() {
-			return nil, xerrors.Errorf("already stopped")
+			return nil, false, xerrors.Errorf("already stopped")
 		}
 
+		op := osl.Operations()[i]
 		if _, found := pp.proposedOperations[op.Hash().String()]; !found {
 			continue
+		} else if _, found := founds[op.Hash().String()]; found {
+			continue
+		} else {
+			founds[op.Hash().String()] = struct{}{}
 		}
 
-		ops[i] = operation.NewOperationInfoV0(op, h)
+		ops = append(ops, op)
 	}
 
-	return ops, nil
+	return ops, true, nil
 }
 
 func (pp *internalDefaultProposalProcessor) getOperationsThruChannel(
 	proposer base.Address,
 	notFounds []valuehash.Hash,
-	founds map[string]operation.OperationInfoV0,
-) ([]operation.OperationInfoV0, error) {
+	founds map[string]operation.Operation,
+) ([]operation.Operation, error) {
 	if pp.localstate.Node().Address().Equal(proposer) {
 		pp.Log().Warn().Msg("proposer is local node, but local node should have seals. Hmmm")
 	}
@@ -491,23 +455,25 @@ func (pp *internalDefaultProposalProcessor) getOperationsThruChannel(
 		return nil, err
 	}
 
-	var ops []operation.OperationInfoV0
-	for _, sl := range received {
+	var ops []operation.Operation
+	for i := range received {
 		if pp.isStopped() {
 			return nil, xerrors.Errorf("already stopped")
 		}
 
+		sl := received[i]
 		if os, ok := sl.(operation.Seal); !ok {
 			return nil, xerrors.Errorf("not operation.Seal: %T", sl)
 		} else {
-			for _, op := range os.Operations() {
+			for i := range os.Operations() {
+				op := os.Operations()[i]
 				if _, found := pp.proposedOperations[op.Hash().String()]; !found {
 					continue
 				} else if _, found := founds[op.Hash().String()]; found {
 					continue
 				}
 
-				ops = append(ops, operation.NewOperationInfoV0(op, sl.Hash()))
+				ops = append(ops, op)
 			}
 		}
 	}
@@ -563,4 +529,41 @@ func (pp *internalDefaultProposalProcessor) updateStates(tr *tree.AVLTree, blk b
 
 		return true, nil
 	})
+}
+
+func (pp *internalDefaultProposalProcessor) filterOperation(op operation.Operation) (bool, error) {
+	// NOTE Duplicated Operation.Fact().Hash, the latter will be ignored.
+	switch found, err := pp.localstate.Storage().HasOperation(op.Hash()); {
+	case err != nil:
+		// TODO check by op.Fact().Hash() instead of op.Hash()
+		return false, err
+	case found: // already stored Operation
+		return false, nil
+	default:
+		return true, nil
+	}
+}
+
+func (pp *internalDefaultProposalProcessor) filterOperations(ops []operation.Operation) ([]operation.Operation, error) {
+	var nop []operation.Operation // nolint
+	founds := map[string]struct{}{}
+	for i := range ops {
+		if pp.isStopped() {
+			return nil, xerrors.Errorf("already stopped")
+		}
+
+		op := ops[i]
+		if _, found := founds[op.Hash().String()]; found {
+			continue
+		} else if ok, err := pp.filterOperation(op); err != nil {
+			return nil, err
+		} else if !ok {
+			continue
+		}
+
+		nop = append(nop, op)
+		founds[op.Hash().String()] = struct{}{}
+	}
+
+	return nop, nil
 }

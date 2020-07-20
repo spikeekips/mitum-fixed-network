@@ -73,6 +73,10 @@ func (sp *Statepool) Get(key string) (state.StateUpdater, bool, error) {
 }
 
 func (sp *Statepool) Set(op valuehash.Hash, s ...state.StateUpdater) error {
+	if len(s) < 1 {
+		return nil
+	}
+
 	sp.Lock()
 	defer sp.Unlock()
 

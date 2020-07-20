@@ -94,6 +94,7 @@ func (pp *internalDefaultProposalProcessor) stop() {
 	defer pp.Unlock()
 
 	pp.stopped = true
+	pp.operationProcessors = nil
 }
 
 func (pp *internalDefaultProposalProcessor) isStopped() bool {

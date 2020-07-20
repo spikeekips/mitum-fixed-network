@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	"github.com/spikeekips/mitum/util"
+	"github.com/spikeekips/mitum/util/hint"
 	"github.com/stretchr/testify/suite"
 	"golang.org/x/xerrors"
 )
@@ -45,7 +46,7 @@ func (t *testEtherKey) TestPublickey() {
 
 	t.NoError(kp.IsValid(nil))
 
-	_, s, err := ParseString(kp.Publickey().String())
+	_, s, err := hint.ParseHintedString(kp.Publickey().String())
 	t.NoError(err)
 
 	pk, err := NewEtherPublickeyFromString(s)
@@ -71,7 +72,7 @@ func (t *testEtherKey) TestPrivatekey() {
 
 	t.NoError(kp.IsValid(nil))
 
-	_, s, err := ParseString(kp.String())
+	_, s, err := hint.ParseHintedString(kp.String())
 	t.NoError(err)
 
 	pk, err := NewEtherPrivatekeyFromString(s)

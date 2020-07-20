@@ -53,7 +53,7 @@ func (ep EtherPrivatekey) Raw() string {
 }
 
 func (ep EtherPrivatekey) String() string {
-	return toString(ep.Hint(), ep.Raw())
+	return hint.HintedString(ep.Hint(), ep.Raw())
 }
 
 func (ep EtherPrivatekey) Hint() hint.Hint {
@@ -131,7 +131,7 @@ func (ep EtherPublickey) Raw() string {
 }
 
 func (ep EtherPublickey) String() string {
-	return toString(ep.Hint(), ep.Raw())
+	return hint.HintedString(ep.Hint(), ep.Raw())
 }
 
 func (ep EtherPublickey) Hint() hint.Hint {

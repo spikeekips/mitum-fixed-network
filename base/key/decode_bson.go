@@ -1,6 +1,7 @@
 package key
 
 import (
+	"github.com/spikeekips/mitum/util/hint"
 	"go.mongodb.org/mongo-driver/bson/bsontype"
 	"go.mongodb.org/mongo-driver/x/bsonx/bsoncore"
 	"golang.org/x/xerrors"
@@ -16,7 +17,7 @@ func (kd *KeyDecoder) UnmarshalBSONValue(t bsontype.Type, b []byte) error {
 		return xerrors.Errorf("can not read string")
 	}
 
-	if h, us, err := ParseString(s); err != nil {
+	if h, us, err := hint.ParseHintedString(s); err != nil {
 		return err
 	} else {
 		kd.h = h

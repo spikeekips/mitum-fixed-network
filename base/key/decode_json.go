@@ -2,6 +2,7 @@ package key
 
 import (
 	"github.com/spikeekips/mitum/util"
+	"github.com/spikeekips/mitum/util/hint"
 )
 
 func (kd *KeyDecoder) UnmarshalJSON(b []byte) error {
@@ -10,7 +11,7 @@ func (kd *KeyDecoder) UnmarshalJSON(b []byte) error {
 		return err
 	}
 
-	if h, us, err := ParseString(s); err != nil {
+	if h, us, err := hint.ParseHintedString(s); err != nil {
 		return err
 	} else {
 		kd.h = h

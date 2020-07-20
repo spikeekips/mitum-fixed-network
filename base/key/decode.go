@@ -40,7 +40,7 @@ func (kd KeyDecoder) Encode(enc encoder.Encoder) (Key, error) {
 }
 
 func decodeKey(enc encoder.Encoder, s string) (Key, error) {
-	h, us, err := ParseString(s)
+	h, us, err := hint.ParseHintedString(s)
 	if err != nil {
 		return nil, err
 	}

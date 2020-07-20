@@ -54,7 +54,7 @@ func (bt BTCPrivatekey) Raw() string {
 }
 
 func (bt BTCPrivatekey) String() string {
-	return toString(bt.Hint(), bt.Raw())
+	return hint.HintedString(bt.Hint(), bt.Raw())
 }
 
 func (bt BTCPrivatekey) Hint() hint.Hint {
@@ -122,7 +122,7 @@ func (bt BTCPublickey) Raw() string {
 }
 
 func (bt BTCPublickey) String() string {
-	return toString(bt.Hint(), bt.Raw())
+	return hint.HintedString(bt.Hint(), bt.Raw())
 }
 
 func (bt BTCPublickey) Hint() hint.Hint {

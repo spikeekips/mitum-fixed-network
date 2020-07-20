@@ -45,7 +45,7 @@ func (sp StellarPrivatekey) Raw() string {
 }
 
 func (sp StellarPrivatekey) String() string {
-	return toString(sp.Hint(), sp.Raw())
+	return hint.HintedString(sp.Hint(), sp.Raw())
 }
 
 func (sp StellarPrivatekey) Hint() hint.Hint {
@@ -116,7 +116,7 @@ func (sp StellarPublickey) Raw() string {
 }
 
 func (sp StellarPublickey) String() string {
-	return toString(sp.Hint(), sp.Raw())
+	return hint.HintedString(sp.Hint(), sp.Raw())
 }
 
 func (sp StellarPublickey) Hint() hint.Hint {

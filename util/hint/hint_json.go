@@ -4,26 +4,22 @@ import (
 	"github.com/spikeekips/mitum/util"
 )
 
-type hintJSON struct {
-	Type    Type         `json:"type"`
-	Version util.Version `json:"version"`
-}
-
 func (ht Hint) MarshalJSON() ([]byte, error) {
-	return util.JSON.Marshal(hintJSON{
-		Type:    ht.t,
-		Version: ht.version,
-	})
+	return util.JSON.Marshal(ht.String())
 }
 
 func (ht *Hint) UnmarshalJSON(b []byte) error {
-	var h hintJSON
-	if err := util.JSON.Unmarshal(b, &h); err != nil {
+	var s string
+	if err := util.JSON.Unmarshal(b, &s); err != nil {
 		return err
 	}
 
-	ht.t = h.Type
-	ht.version = h.Version
+	if h, err := NewHintFromString(s); err != nil {
+		return err
+	} else {
+		ht.t = h.t
+		ht.version = h.version
+	}
 
 	return nil
 }

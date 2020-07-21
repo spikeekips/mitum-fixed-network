@@ -1,7 +1,6 @@
 package network
 
 import (
-	"fmt"
 	"net/url"
 
 	"github.com/spikeekips/mitum/base"
@@ -19,7 +18,6 @@ var (
 )
 
 type NodeInfo interface {
-	fmt.Stringer
 	isvalid.IsValider
 	hint.Hinter
 	base.Node

@@ -3,32 +3,26 @@ package hint
 import (
 	"encoding/hex"
 
-	"go.mongodb.org/mongo-driver/bson"
+	"go.mongodb.org/mongo-driver/bson/bsontype"
+	"go.mongodb.org/mongo-driver/x/bsonx/bsoncore"
 	"golang.org/x/xerrors"
 )
 
-type typeBSON struct {
-	N string `bson:"name"`
-	C string `bson:"code"`
+func (ty Type) MarshalBSONValue() (bsontype.Type, []byte, error) {
+	return bsontype.String, bsoncore.AppendString(nil,
+		hex.EncodeToString(ty.Bytes()),
+	), nil
 }
 
-func (ty Type) MarshalBSON() ([]byte, error) {
-	name := ty.String()
-	if len(name) < 1 {
-		return nil, xerrors.Errorf("Type does not have name: %s", ty.Verbose())
+func (ty *Type) UnmarshalBSONValue(t bsontype.Type, b []byte) error {
+	if t != bsontype.String {
+		return xerrors.Errorf("invalid marshaled type for hint, %v", t)
 	}
 
-	return bson.Marshal(typeBSON{
-		N: name,
-		C: hex.EncodeToString(ty.Bytes()),
-	})
-}
-
-func (ty *Type) UnmarshalBSON(b []byte) error {
-	var o typeBSON
-	if err := bson.Unmarshal(b, &o); err != nil {
-		return err
+	s, _, ok := bsoncore.ReadString(b)
+	if !ok {
+		return xerrors.Errorf("can not read string")
 	}
 
-	return ty.unpack(o.C)
+	return ty.unpack(s)
 }

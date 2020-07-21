@@ -15,7 +15,7 @@ import (
 const (
 	MaxVersionSize          int    = 15
 	MaxHintSize             int    = MaxVersionSize + len(Type{})
-	HintVerboseFormat       string = `hint{type=%q code="%x" version=%q}`
+	HintVerboseFormat       string = `hint{type=%q code=%q version=%q}`
 	HintMarshalStringFormat string = "%x:%s"
 )
 
@@ -143,8 +143,8 @@ func (ht Hint) Bytes() []byte {
 func (ht Hint) Verbose() string {
 	return fmt.Sprintf(
 		HintVerboseFormat,
+		ht.Type().Name(),
 		ht.Type().String(),
-		[2]byte(ht.Type()),
 		ht.version,
 	)
 }

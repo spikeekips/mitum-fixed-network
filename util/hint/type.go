@@ -16,6 +16,7 @@ var (
 )
 
 var NullType = Type{}
+var TypeVerboseFormat string = `type{name=%q code=%q}`
 
 // NOTE typeNames and nameTypes maintain all the registered Type and it's name.
 var (
@@ -44,13 +45,22 @@ func MustNewType(a, b byte, name string) Type {
 	return t
 }
 
-// String returns the name of Type.
-func (ty Type) String() string {
+// Name returns the name of Type.
+func (ty Type) Name() string {
 	if _, found := typeNames[ty]; !found {
 		return ""
 	}
 
 	return typeNames[ty]
+}
+
+// String returns the byte strings of Type.
+func (ty Type) String() string {
+	if _, found := typeNames[ty]; !found {
+		return ""
+	}
+
+	return fmt.Sprintf("%x", ty[:])
 }
 
 // IsValid checks Type
@@ -74,12 +84,7 @@ func (ty Type) Bytes() []byte {
 
 // Verbose shows the detailed Type info
 func (ty Type) Verbose() string {
-	name := ty.String()
-	if len(name) > 0 {
-		name = fmt.Sprintf("(%s)", name)
-	}
-
-	return fmt.Sprintf("%x%s", [2]byte(ty), name)
+	return fmt.Sprintf(TypeVerboseFormat, ty.Name(), ty.String())
 }
 
 func isRegisteredType(t Type) bool {

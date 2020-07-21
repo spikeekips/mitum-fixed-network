@@ -55,7 +55,8 @@ func (t *testType) TestString() {
 	ty := Type{0xff, 0x01}
 
 	_ = registerType(ty, tn)
-	t.Equal(tn, ty.String())
+	t.Equal("ff01", ty.String())
+	t.Equal(tn, ty.Name())
 }
 
 func (t *testType) TestRegisterSameName() {

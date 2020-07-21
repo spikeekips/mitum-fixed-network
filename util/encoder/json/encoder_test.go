@@ -365,14 +365,14 @@ func (t *testJSON) TestEncodeHinterNotCompatible() {
 	t.NotNil(b)
 
 	{ // wrong major version
-		c := bytes.Replace(b, []byte(`"version":"0.1"`), []byte(`"version":"1.1"`), -1)
+		c := bytes.Replace(b, []byte(`:0.1`), []byte(`:1.1`), -1)
 
 		_, err := je.DecodeByHint(c)
 		t.True(xerrors.Is(err, hint.HintNotFoundError))
 	}
 
 	{ // wrong type code
-		c := bytes.Replace(b, []byte(`"code":"ff31"`), []byte(`"code":"ffaa"`), -1)
+		c := bytes.Replace(b, []byte(`ff31:`), []byte(`ffaa:`), -1)
 
 		_, err := je.DecodeByHint(c)
 		t.Contains(err.Error(), "Hint not found in Hintset")

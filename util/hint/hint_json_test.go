@@ -1,8 +1,6 @@
 package hint
 
 import (
-	"fmt"
-
 	"github.com/spikeekips/mitum/util"
 )
 
@@ -17,12 +15,6 @@ func (t *testHint) TestMarshalJSON() {
 
 	b, err := util.JSON.Marshal(h)
 	t.NoError(err)
-
-	var m map[string]interface{}
-	t.NoError(util.JSON.Unmarshal(b, &m))
-
-	t.Contains(fmt.Sprintf("%v", m["type"]), h.Type().String())
-	t.Equal(h.Version().String(), m["version"])
 
 	// unmarshal
 	var uh Hint

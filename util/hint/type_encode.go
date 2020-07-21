@@ -4,9 +4,9 @@ import (
 	"encoding/hex"
 )
 
-func (ty *Type) unpack(c string) error {
+func (ty *Type) unpack(s string) error {
 	var t [2]byte
-	if d, err := hex.DecodeString(c); err != nil {
+	if d, err := hex.DecodeString(s); err != nil {
 		return err
 	} else {
 		copy(t[:], d)

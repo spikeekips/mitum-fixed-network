@@ -19,6 +19,10 @@ func (vs Version) String() string {
 	return string(vs)
 }
 
+func (vs Version) Bytes() []byte {
+	return []byte(vs)
+}
+
 // GO returns golang style semver string. It does not check IsValid().
 func (vs Version) GO() string {
 	s := string(vs)

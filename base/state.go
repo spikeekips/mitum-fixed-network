@@ -2,6 +2,8 @@ package base
 
 import (
 	"golang.org/x/xerrors"
+
+	"github.com/spikeekips/mitum/util"
 )
 
 type State uint8
@@ -43,6 +45,10 @@ func (st State) String() string {
 	default:
 		return "<unknown State>"
 	}
+}
+
+func (st State) Bytes() []byte {
+	return util.Uint8ToBytes(uint8(st))
 }
 
 func StateFromString(s string) (State, error) {

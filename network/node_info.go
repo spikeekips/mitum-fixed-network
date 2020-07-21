@@ -66,7 +66,15 @@ func (ni NodeInfoV0) String() string {
 }
 
 func (ni NodeInfoV0) Bytes() []byte {
-	return nil
+	return util.ConcatBytesSlice(
+		ni.node.Bytes(),
+		ni.networkID.Bytes(),
+		ni.state.Bytes(),
+		ni.lastBlock.Hash().Bytes(),
+		ni.version.Bytes(),
+		[]byte(ni.u),
+		ni.policy.Bytes(),
+	)
 }
 
 func (ni NodeInfoV0) Hint() hint.Hint {

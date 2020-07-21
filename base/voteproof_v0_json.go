@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 
 	"github.com/spikeekips/mitum/base/key"
-	"github.com/spikeekips/mitum/util/encoder"
 	jsonenc "github.com/spikeekips/mitum/util/encoder/json"
 	"github.com/spikeekips/mitum/util/localtime"
 	"github.com/spikeekips/mitum/util/valuehash"
@@ -159,7 +158,7 @@ type VoteproofNodeFactUnpackJSON struct {
 	BT valuehash.Bytes      `json:"ballot"`
 	FC valuehash.Bytes      `json:"fact"`
 	FS key.Signature        `json:"fact_signature"`
-	SG encoder.HintedString `json:"signer"`
+	SG key.PublickeyDecoder `json:"signer"`
 }
 
 func (vf *VoteproofNodeFact) UnpackJSON(b []byte, enc *jsonenc.Encoder) error {

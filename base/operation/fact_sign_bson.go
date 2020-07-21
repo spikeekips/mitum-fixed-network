@@ -4,7 +4,6 @@ import (
 	"go.mongodb.org/mongo-driver/bson"
 
 	"github.com/spikeekips/mitum/base/key"
-	"github.com/spikeekips/mitum/util/encoder"
 	bsonenc "github.com/spikeekips/mitum/util/encoder/bson"
 	"github.com/spikeekips/mitum/util/localtime"
 )
@@ -21,7 +20,7 @@ func (fs BaseFactSign) MarshalBSON() ([]byte, error) {
 }
 
 type BaseFactSignBSONUnpacker struct {
-	SN encoder.HintedString `bson:"signer"`
+	SN key.PublickeyDecoder `bson:"signer"`
 	SG key.Signature        `bson:"signature"`
 	SA localtime.JSONTime   `bson:"signed_at"`
 }

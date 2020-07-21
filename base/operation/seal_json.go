@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 
 	"github.com/spikeekips/mitum/base/key"
-	"github.com/spikeekips/mitum/util/encoder"
 	jsonenc "github.com/spikeekips/mitum/util/encoder/json"
 	"github.com/spikeekips/mitum/util/localtime"
 	"github.com/spikeekips/mitum/util/valuehash"
@@ -35,7 +34,7 @@ func (sl BaseSeal) MarshalJSON() ([]byte, error) {
 type SealJSONUnpack struct {
 	H   valuehash.Bytes      `json:"hash"`
 	BH  valuehash.Bytes      `json:"body_hash"`
-	SN  encoder.HintedString `json:"signer"`
+	SN  key.PublickeyDecoder `json:"signer"`
 	SG  key.Signature        `json:"signature"`
 	SA  localtime.JSONTime   `json:"signed_at"`
 	OPS []json.RawMessage    `json:"operations"`

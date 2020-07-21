@@ -6,14 +6,13 @@ import (
 	"github.com/spikeekips/mitum/base/key"
 	"github.com/spikeekips/mitum/util/encoder"
 	"github.com/spikeekips/mitum/util/valuehash"
-	"golang.org/x/xerrors"
 )
 
 func (sl *BaseSeal) unpack(
 	enc encoder.Encoder,
 	h,
 	bodyHash valuehash.Hash,
-	bSigner encoder.HintedString,
+	bSigner key.PublickeyDecoder,
 	signature key.Signature,
 	signedAt time.Time,
 	operations [][]byte,
@@ -21,10 +20,8 @@ func (sl *BaseSeal) unpack(
 	var signer key.Publickey
 	if k, err := bSigner.Encode(enc); err != nil {
 		return err
-	} else if pk, ok := k.(key.Publickey); !ok {
-		return xerrors.Errorf("not key.Publickey; type=%T", k)
 	} else {
-		signer = pk
+		signer = k
 	}
 
 	var ops []Operation

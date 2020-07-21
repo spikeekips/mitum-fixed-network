@@ -7,7 +7,6 @@ import (
 
 	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/base/key"
-	"github.com/spikeekips/mitum/util/encoder"
 	bsonenc "github.com/spikeekips/mitum/util/encoder/bson"
 	"github.com/spikeekips/mitum/util/hint"
 	"github.com/spikeekips/mitum/util/valuehash"
@@ -32,7 +31,7 @@ func PackBaseBallotV0BSON(ballot Ballot) bson.M {
 
 type BaseBallotV0UnpackerBSON struct {
 	H   valuehash.Bytes      `bson:"hash"`
-	SN  encoder.HintedString `bson:"signer"`
+	SN  key.PublickeyDecoder `bson:"signer"`
 	SG  key.Signature        `bson:"signature"`
 	SA  time.Time            `bson:"signed_at"`
 	HT  base.Height          `bson:"height"`

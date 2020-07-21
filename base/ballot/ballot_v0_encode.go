@@ -9,13 +9,12 @@ import (
 	bsonenc "github.com/spikeekips/mitum/util/encoder/bson"
 	jsonenc "github.com/spikeekips/mitum/util/encoder/json"
 	"github.com/spikeekips/mitum/util/valuehash"
-	"golang.org/x/xerrors"
 )
 
 func (bb BaseBallotV0) unpack(
 	enc encoder.Encoder,
 	h valuehash.Hash,
-	bSigner encoder.HintedString,
+	bSigner key.PublickeyDecoder,
 	signature key.Signature,
 	signedAt time.Time,
 	height base.Height,
@@ -28,10 +27,8 @@ func (bb BaseBallotV0) unpack(
 	var signer key.Publickey
 	if k, err := bSigner.Encode(enc); err != nil {
 		return BaseBallotV0{}, BaseBallotFactV0{}, err
-	} else if pk, ok := k.(key.Publickey); !ok {
-		return BaseBallotV0{}, BaseBallotFactV0{}, xerrors.Errorf("not key.Publickey; type=%T", k)
 	} else {
-		signer = pk
+		signer = k
 	}
 
 	var node base.Address

@@ -6,7 +6,6 @@ import (
 	"go.mongodb.org/mongo-driver/bson"
 
 	"github.com/spikeekips/mitum/base/key"
-	"github.com/spikeekips/mitum/util/encoder"
 	bsonenc "github.com/spikeekips/mitum/util/encoder/bson"
 	"github.com/spikeekips/mitum/util/valuehash"
 )
@@ -28,7 +27,7 @@ func (sl BaseSeal) MarshalBSON() ([]byte, error) {
 type SealBSONUnpack struct {
 	H   valuehash.Bytes      `bson:"hash"`
 	BH  valuehash.Bytes      `bson:"body_hash"`
-	SN  encoder.HintedString `bson:"signer"`
+	SN  key.PublickeyDecoder `bson:"signer"`
 	SG  key.Signature        `bson:"signature"`
 	SA  time.Time            `bson:"signed_at"`
 	OPS []bson.Raw           `bson:"operations"`

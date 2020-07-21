@@ -42,3 +42,31 @@ func DecodePublickey(enc encoder.Encoder, s string) (Publickey, error) {
 		return pk, nil
 	}
 }
+
+type PrivatekeyDecoder struct {
+	encoder.HintedString
+}
+
+func (kd *PrivatekeyDecoder) Encode(enc encoder.Encoder) (Privatekey, error) {
+	if hinter, err := kd.HintedString.Encode(enc); err != nil {
+		return nil, err
+	} else if k, ok := hinter.(Privatekey); !ok {
+		return nil, xerrors.Errorf("not Privatekey, %T", hinter)
+	} else {
+		return k, nil
+	}
+}
+
+type PublickeyDecoder struct {
+	encoder.HintedString
+}
+
+func (kd *PublickeyDecoder) Encode(enc encoder.Encoder) (Publickey, error) {
+	if hinter, err := kd.HintedString.Encode(enc); err != nil {
+		return nil, err
+	} else if k, ok := hinter.(Publickey); !ok {
+		return nil, xerrors.Errorf("not Publickey, %T", hinter)
+	} else {
+		return k, nil
+	}
+}

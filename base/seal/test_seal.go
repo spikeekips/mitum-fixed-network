@@ -7,7 +7,6 @@ import (
 
 	"github.com/spikeekips/mitum/base/key"
 	"github.com/spikeekips/mitum/util"
-	"github.com/spikeekips/mitum/util/encoder"
 	bsonenc "github.com/spikeekips/mitum/util/encoder/bson"
 	jsonenc "github.com/spikeekips/mitum/util/encoder/json"
 	"github.com/spikeekips/mitum/util/hint"
@@ -82,7 +81,7 @@ type DummySealJSONPacker struct {
 
 type DummySealJSONUnpacker struct {
 	jsonenc.HintedHead
-	PK        encoder.HintedString
+	PK        key.PublickeyDecoder
 	H         valuehash.Bytes
 	BH        valuehash.Bytes
 	S         string
@@ -134,7 +133,7 @@ func (ds DummySeal) MarshalBSON() ([]byte, error) {
 }
 
 type DummySealBSONUnpacker struct {
-	PK        encoder.HintedString
+	PK        key.PublickeyDecoder
 	H         valuehash.Bytes
 	BH        valuehash.Bytes
 	S         string

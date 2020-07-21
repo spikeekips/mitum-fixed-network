@@ -1,7 +1,6 @@
 package key
 
 import (
-	"encoding/json"
 	"testing"
 
 	"github.com/stretchr/testify/suite"
@@ -31,24 +30,6 @@ func (t *baseTestHintedString) SetupSuite() {
 	t.encs.AddHinter(k)
 }
 
-func (t *baseTestHintedString) TestDecodeJSON() {
-	kp, err := t.newKey()
-	t.NoError(err)
-
-	b, err := json.Marshal(kp)
-	t.NoError(err)
-
-	var kd encoder.HintedString
-	t.NoError(json.Unmarshal(b, &kd))
-
-	t.NoError(kd.IsValid(nil))
-
-	ukp, err := kd.Encode(t.je)
-	t.NoError(err)
-
-	t.True(kp.Equal(ukp.(Key)))
-}
-
 func (t *baseTestHintedString) TestDecodeBSON() {
 	kp, err := t.newKey()
 	t.NoError(err)
@@ -62,19 +43,71 @@ func (t *baseTestHintedString) TestDecodeBSON() {
 	b, err := bsonenc.Marshal(mkp)
 	t.NoError(err)
 
-	var ukd struct {
-		KP encoder.HintedString
+	var ukp Key
+	switch kp.(type) {
+	case Privatekey:
+		i := struct {
+			KP *PrivatekeyDecoder
+		}{}
+		t.NoError(bsonenc.Unmarshal(b, &i))
+
+		k, err := i.KP.Encode(t.be)
+		t.NoError(err)
+
+		ukp = k
+	case Publickey:
+		i := struct {
+			KP *PublickeyDecoder
+		}{}
+		t.NoError(bsonenc.Unmarshal(b, &i))
+
+		k, err := i.KP.Encode(t.be)
+		t.NoError(err)
+
+		ukp = k
 	}
 
-	t.NoError(bsonenc.Unmarshal(b, &ukd))
+	t.True(kp.Equal(ukp))
+}
 
-	kd := ukd.KP
-	t.NoError(kd.IsValid(nil))
-
-	ukp, err := kd.Encode(t.be)
+func (t *baseTestHintedString) TestDecodeJSON() {
+	kp, err := t.newKey()
 	t.NoError(err)
 
-	t.True(kp.Equal(ukp.(Key)))
+	mkp := struct {
+		KP Key
+	}{
+		KP: kp,
+	}
+
+	b, err := jsonenc.Marshal(mkp)
+	t.NoError(err)
+
+	var ukp Key
+	switch kp.(type) {
+	case Privatekey:
+		i := struct {
+			KP *PrivatekeyDecoder
+		}{}
+		t.NoError(jsonenc.Unmarshal(b, &i))
+
+		k, err := i.KP.Encode(t.je)
+		t.NoError(err)
+
+		ukp = k
+	case Publickey:
+		i := struct {
+			KP *PublickeyDecoder
+		}{}
+		t.NoError(jsonenc.Unmarshal(b, &i))
+
+		k, err := i.KP.Encode(t.je)
+		t.NoError(err)
+
+		ukp = k
+	}
+
+	t.True(kp.Equal(ukp))
 }
 
 type testHintedString struct {

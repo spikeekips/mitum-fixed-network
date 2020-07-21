@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 
 	"github.com/spikeekips/mitum/base/key"
+	"github.com/spikeekips/mitum/util/encoder"
 	jsonenc "github.com/spikeekips/mitum/util/encoder/json"
 )
 
@@ -22,8 +23,8 @@ func (bn BaseNodeV0) MarshalJSON() ([]byte, error) {
 }
 
 type BaseNodeV0UnpackerJSON struct {
-	AD json.RawMessage `json:"address"`
-	PK key.KeyDecoder  `json:"publickey"`
+	AD json.RawMessage      `json:"address"`
+	PK encoder.HintedString `json:"publickey"`
 }
 
 func (bn *BaseNodeV0) UnpackJSON(b []byte, enc *jsonenc.Encoder) error {

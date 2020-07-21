@@ -15,7 +15,7 @@ import (
 func (bb BaseBallotV0) unpack(
 	enc encoder.Encoder,
 	h valuehash.Hash,
-	bSigner key.KeyDecoder,
+	bSigner encoder.HintedString,
 	signature key.Signature,
 	signedAt time.Time,
 	height base.Height,

@@ -7,6 +7,7 @@ import (
 
 	"github.com/spikeekips/mitum/base/key"
 	"github.com/spikeekips/mitum/util"
+	"github.com/spikeekips/mitum/util/encoder"
 	bsonenc "github.com/spikeekips/mitum/util/encoder/bson"
 	jsonenc "github.com/spikeekips/mitum/util/encoder/json"
 	"github.com/spikeekips/mitum/util/hint"
@@ -81,7 +82,7 @@ type DummySealJSONPacker struct {
 
 type DummySealJSONUnpacker struct {
 	jsonenc.HintedHead
-	PK        key.KeyDecoder
+	PK        encoder.HintedString
 	H         valuehash.Bytes
 	BH        valuehash.Bytes
 	S         string
@@ -106,7 +107,7 @@ func (ds *DummySeal) UnmarshalJSON(b []byte) error {
 	}
 
 	signer := new(key.BTCPrivatekey)
-	if err := signer.UnmarshalText([]byte(uds.PK.StringValue())); err != nil {
+	if err := signer.UnmarshalText([]byte(uds.PK.String())); err != nil {
 		return err
 	}
 
@@ -133,7 +134,7 @@ func (ds DummySeal) MarshalBSON() ([]byte, error) {
 }
 
 type DummySealBSONUnpacker struct {
-	PK        key.KeyDecoder
+	PK        encoder.HintedString
 	H         valuehash.Bytes
 	BH        valuehash.Bytes
 	S         string
@@ -147,7 +148,7 @@ func (ds *DummySeal) UnmarshalBSON(b []byte) error {
 	}
 
 	signer := new(key.BTCPrivatekey)
-	if err := signer.UnmarshalText([]byte(uds.PK.StringValue())); err != nil {
+	if err := signer.UnmarshalText([]byte(uds.PK.String())); err != nil {
 		return err
 	}
 

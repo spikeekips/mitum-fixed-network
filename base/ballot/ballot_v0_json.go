@@ -5,6 +5,7 @@ import (
 
 	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/base/key"
+	"github.com/spikeekips/mitum/util/encoder"
 	jsonenc "github.com/spikeekips/mitum/util/encoder/json"
 	"github.com/spikeekips/mitum/util/hint"
 	"github.com/spikeekips/mitum/util/localtime"
@@ -42,15 +43,15 @@ func PackBaseBallotV0JSON(ballot Ballot) (BaseBallotV0PackerJSON, error) {
 
 type BaseBallotV0UnpackerJSON struct {
 	jsonenc.HintedHead
-	H   valuehash.Bytes    `json:"hash"`
-	SN  key.KeyDecoder     `json:"signer"`
-	SG  key.Signature      `json:"signature"`
-	SA  localtime.JSONTime `json:"signed_at"`
-	HT  base.Height        `json:"height"`
-	RD  base.Round         `json:"round"`
-	N   json.RawMessage    `json:"node"`
-	BH  valuehash.Bytes    `json:"body_hash"`
-	FSG key.Signature      `json:"fact_signature"`
+	H   valuehash.Bytes      `json:"hash"`
+	SN  encoder.HintedString `json:"signer"`
+	SG  key.Signature        `json:"signature"`
+	SA  localtime.JSONTime   `json:"signed_at"`
+	HT  base.Height          `json:"height"`
+	RD  base.Round           `json:"round"`
+	N   json.RawMessage      `json:"node"`
+	BH  valuehash.Bytes      `json:"body_hash"`
+	FSG key.Signature        `json:"fact_signature"`
 }
 
 func UnpackBaseBallotV0JSON(nib BaseBallotV0UnpackerJSON, enc *jsonenc.Encoder) (

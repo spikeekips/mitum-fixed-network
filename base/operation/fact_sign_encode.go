@@ -11,7 +11,7 @@ import (
 
 func (fs *BaseFactSign) unpack(
 	enc encoder.Encoder,
-	bSigner key.KeyDecoder,
+	bSigner encoder.HintedString,
 	signature key.Signature,
 	signedAt time.Time,
 ) error {

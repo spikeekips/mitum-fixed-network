@@ -94,7 +94,7 @@ func (vf *VoteproofNodeFact) unpack(
 	blt,
 	fact valuehash.Hash,
 	factSignature key.Signature,
-	bSigner key.KeyDecoder,
+	bSigner encoder.HintedString,
 ) error {
 	var address Address
 	if h, err := DecodeAddress(enc, bAddress); err != nil {

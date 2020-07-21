@@ -6,6 +6,7 @@ import (
 	"go.mongodb.org/mongo-driver/bson"
 
 	"github.com/spikeekips/mitum/base/key"
+	"github.com/spikeekips/mitum/util/encoder"
 	bsonenc "github.com/spikeekips/mitum/util/encoder/bson"
 	"github.com/spikeekips/mitum/util/valuehash"
 )
@@ -140,11 +141,11 @@ func (vf VoteproofNodeFact) MarshalBSON() ([]byte, error) {
 }
 
 type VoteproofNodeFactUnpackBSON struct {
-	AD bson.Raw        `bson:"address"`
-	BT valuehash.Bytes `bson:"ballot"`
-	FC valuehash.Bytes `bson:"fact"`
-	FS key.Signature   `bson:"fact_signature"`
-	SG key.KeyDecoder  `bson:"signer"`
+	AD bson.Raw             `bson:"address"`
+	BT valuehash.Bytes      `bson:"ballot"`
+	FC valuehash.Bytes      `bson:"fact"`
+	FS key.Signature        `bson:"fact_signature"`
+	SG encoder.HintedString `bson:"signer"`
 }
 
 func (vf *VoteproofNodeFact) UnpackBSON(b []byte, enc *bsonenc.Encoder) error {

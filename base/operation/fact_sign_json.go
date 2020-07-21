@@ -2,6 +2,7 @@ package operation
 
 import (
 	"github.com/spikeekips/mitum/base/key"
+	"github.com/spikeekips/mitum/util/encoder"
 	jsonenc "github.com/spikeekips/mitum/util/encoder/json"
 	"github.com/spikeekips/mitum/util/localtime"
 )
@@ -23,9 +24,9 @@ func (fs BaseFactSign) MarshalJSON() ([]byte, error) {
 }
 
 type BaseFactSignJSONUnpacker struct {
-	SN key.KeyDecoder     `json:"signer"`
-	SG key.Signature      `json:"signature"`
-	SA localtime.JSONTime `json:"signed_at"`
+	SN encoder.HintedString `json:"signer"`
+	SG key.Signature        `json:"signature"`
+	SA localtime.JSONTime   `json:"signed_at"`
 }
 
 func (fs *BaseFactSign) UnpackJSON(b []byte, enc *jsonenc.Encoder) error {

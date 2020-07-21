@@ -1,4 +1,4 @@
-package key
+package encoder
 
 import (
 	"go.mongodb.org/mongo-driver/bson/bsontype"
@@ -8,9 +8,9 @@ import (
 	"github.com/spikeekips/mitum/util/hint"
 )
 
-func (kd *KeyDecoder) UnmarshalBSONValue(t bsontype.Type, b []byte) error {
+func (hs *HintedString) UnmarshalBSONValue(t bsontype.Type, b []byte) error {
 	if t != bsontype.String {
-		return xerrors.Errorf("invalid marshaled type for KeyDecoder, %v", t)
+		return xerrors.Errorf("invalid marshaled type for HintedString, %v", t)
 	}
 
 	s, _, ok := bsoncore.ReadString(b)
@@ -21,8 +21,8 @@ func (kd *KeyDecoder) UnmarshalBSONValue(t bsontype.Type, b []byte) error {
 	if h, us, err := hint.ParseHintedString(s); err != nil {
 		return err
 	} else {
-		kd.h = h
-		kd.s = us
+		hs.h = h
+		hs.s = us
 	}
 
 	return nil

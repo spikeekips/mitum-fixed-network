@@ -1,43 +1,11 @@
 package key
 
 import (
+	"golang.org/x/xerrors"
+
 	"github.com/spikeekips/mitum/util/encoder"
 	"github.com/spikeekips/mitum/util/hint"
-	"golang.org/x/xerrors"
 )
-
-type KeyDecoder struct {
-	h hint.Hint
-	s string
-}
-
-func (kd KeyDecoder) Hint() hint.Hint {
-	return kd.h
-}
-
-func (kd KeyDecoder) StringValue() string {
-	return kd.s
-}
-
-func (kd KeyDecoder) IsValid([]byte) error {
-	if err := kd.h.IsValid(nil); err != nil {
-		return InvalidKeyError.Wrap(err)
-	}
-
-	if len(kd.s) < 1 {
-		return InvalidKeyError.Errorf("empty source string for KeyDecoder")
-	}
-
-	return nil
-}
-
-func (kd KeyDecoder) Encode(enc encoder.Encoder) (Key, error) {
-	if hinter, err := enc.DecodeWithHint(kd.h, []byte(kd.s)); err != nil {
-		return nil, err
-	} else {
-		return hinter.(Key), nil
-	}
-}
 
 func DecodeKey(enc encoder.Encoder, s string) (Key, error) {
 	h, us, err := hint.ParseHintedString(s)
@@ -45,7 +13,7 @@ func DecodeKey(enc encoder.Encoder, s string) (Key, error) {
 		return nil, err
 	}
 
-	kd := KeyDecoder{h: h, s: us}
+	kd := encoder.NewHintedString(h, us)
 	if k, err := kd.Encode(enc); err != nil {
 		return nil, err
 	} else if pk, ok := k.(Key); !ok {

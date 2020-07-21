@@ -13,7 +13,7 @@ func (sl *BaseSeal) unpack(
 	enc encoder.Encoder,
 	h,
 	bodyHash valuehash.Hash,
-	bSigner key.KeyDecoder,
+	bSigner encoder.HintedString,
 	signature key.Signature,
 	signedAt time.Time,
 	operations [][]byte,

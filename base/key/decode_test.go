@@ -11,7 +11,7 @@ import (
 	jsonenc "github.com/spikeekips/mitum/util/encoder/json"
 )
 
-type baseTestKeyDecoder struct {
+type baseTestHintedString struct {
 	suite.Suite
 	encs   *encoder.Encoders
 	je     *jsonenc.Encoder
@@ -19,7 +19,7 @@ type baseTestKeyDecoder struct {
 	newKey func() (Key, error)
 }
 
-func (t *baseTestKeyDecoder) SetupSuite() {
+func (t *baseTestHintedString) SetupSuite() {
 	t.je = jsonenc.NewEncoder()
 	t.be = bsonenc.NewEncoder()
 
@@ -31,14 +31,14 @@ func (t *baseTestKeyDecoder) SetupSuite() {
 	t.encs.AddHinter(k)
 }
 
-func (t *baseTestKeyDecoder) TestDecodeJSON() {
+func (t *baseTestHintedString) TestDecodeJSON() {
 	kp, err := t.newKey()
 	t.NoError(err)
 
 	b, err := json.Marshal(kp)
 	t.NoError(err)
 
-	var kd KeyDecoder
+	var kd encoder.HintedString
 	t.NoError(json.Unmarshal(b, &kd))
 
 	t.NoError(kd.IsValid(nil))
@@ -46,10 +46,10 @@ func (t *baseTestKeyDecoder) TestDecodeJSON() {
 	ukp, err := kd.Encode(t.je)
 	t.NoError(err)
 
-	t.True(kp.Equal(ukp))
+	t.True(kp.Equal(ukp.(Key)))
 }
 
-func (t *baseTestKeyDecoder) TestDecodeBSON() {
+func (t *baseTestHintedString) TestDecodeBSON() {
 	kp, err := t.newKey()
 	t.NoError(err)
 
@@ -63,7 +63,7 @@ func (t *baseTestKeyDecoder) TestDecodeBSON() {
 	t.NoError(err)
 
 	var ukd struct {
-		KP KeyDecoder
+		KP encoder.HintedString
 	}
 
 	t.NoError(bsonenc.Unmarshal(b, &ukd))
@@ -74,15 +74,15 @@ func (t *baseTestKeyDecoder) TestDecodeBSON() {
 	ukp, err := kd.Encode(t.be)
 	t.NoError(err)
 
-	t.True(kp.Equal(ukp))
+	t.True(kp.Equal(ukp.(Key)))
 }
 
-type testKeyDecoder struct {
-	baseTestKeyDecoder
+type testHintedString struct {
+	baseTestHintedString
 }
 
-func TestKeyDecoderEtherPrivatekey(t *testing.T) {
-	s := new(testKeyDecoder)
+func TestHintedStringEtherPrivatekey(t *testing.T) {
+	s := new(testHintedString)
 	s.newKey = func() (Key, error) {
 		return NewEtherPrivatekey()
 	}
@@ -90,8 +90,8 @@ func TestKeyDecoderEtherPrivatekey(t *testing.T) {
 	suite.Run(t, s)
 }
 
-func TestKeyDecoderEtherPublickey(t *testing.T) {
-	s := new(testKeyDecoder)
+func TestHintedStringEtherPublickey(t *testing.T) {
+	s := new(testHintedString)
 	s.newKey = func() (Key, error) {
 		k, _ := NewEtherPrivatekey()
 
@@ -101,8 +101,8 @@ func TestKeyDecoderEtherPublickey(t *testing.T) {
 	suite.Run(t, s)
 }
 
-func TestKeyDecoderBTCPrivatekey(t *testing.T) {
-	s := new(testKeyDecoder)
+func TestHintedStringBTCPrivatekey(t *testing.T) {
+	s := new(testHintedString)
 	s.newKey = func() (Key, error) {
 		return NewBTCPrivatekey()
 	}
@@ -110,8 +110,8 @@ func TestKeyDecoderBTCPrivatekey(t *testing.T) {
 	suite.Run(t, s)
 }
 
-func TestKeyDecoderBTCPublickey(t *testing.T) {
-	s := new(testKeyDecoder)
+func TestHintedStringBTCPublickey(t *testing.T) {
+	s := new(testHintedString)
 	s.newKey = func() (Key, error) {
 		k, _ := NewBTCPrivatekey()
 
@@ -121,8 +121,8 @@ func TestKeyDecoderBTCPublickey(t *testing.T) {
 	suite.Run(t, s)
 }
 
-func TestKeyDecoderStellarPrivatekey(t *testing.T) {
-	s := new(testKeyDecoder)
+func TestHintedStringStellarPrivatekey(t *testing.T) {
+	s := new(testHintedString)
 	s.newKey = func() (Key, error) {
 		return NewStellarPrivatekey()
 	}
@@ -130,8 +130,8 @@ func TestKeyDecoderStellarPrivatekey(t *testing.T) {
 	suite.Run(t, s)
 }
 
-func TestKeyDecoderStellarPublickey(t *testing.T) {
-	s := new(testKeyDecoder)
+func TestHintedStringStellarPublickey(t *testing.T) {
+	s := new(testHintedString)
 	s.newKey = func() (Key, error) {
 		k, _ := NewStellarPrivatekey()
 

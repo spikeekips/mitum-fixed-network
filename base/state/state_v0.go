@@ -3,8 +3,6 @@ package state
 import (
 	"sync"
 
-	"golang.org/x/xerrors"
-
 	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/util"
 	"github.com/spikeekips/mitum/util/hint"
@@ -33,6 +31,10 @@ func NewStateV0(
 	value Value,
 	previousBlock valuehash.Hash,
 ) (*StateV0, error) {
+	if err := IsValidKey(key); err != nil {
+		return nil, err
+	}
+
 	st := &StateV0{
 		RWMutex:       &sync.RWMutex{},
 		key:           key,
@@ -45,8 +47,8 @@ func NewStateV0(
 }
 
 func (st StateV0) IsValid([]byte) error {
-	if len(st.key) < 1 {
-		return xerrors.Errorf("empty key")
+	if err := IsValidKey(st.key); err != nil {
+		return err
 	}
 
 	if err := st.value.IsValid(nil); err != nil {

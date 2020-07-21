@@ -23,7 +23,7 @@ var (
 	SetPolicyOperationV0Hint     = hint.MustHint(SetPolicyOperationV0Type, "0.0.1")
 )
 
-const PolicyOperationKey = "network_policy"
+const PolicyOperationKey = "_network_policy"
 
 func DefaultPolicy() PolicyOperationBodyV0 {
 	return PolicyOperationBodyV0{

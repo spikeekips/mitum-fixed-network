@@ -79,12 +79,12 @@ func (prf ProposalFactV0) Bytes() []byte {
 	return util.ConcatBytesSlice(
 		prf.BaseBallotFactV0.Bytes(),
 		func() []byte {
-			var hl [][]byte
-			for _, h := range prf.operations {
-				hl = append(hl, h.Bytes())
+			hl := make([][]byte, len(prf.operations)+len(prf.seals))
+			for i := range prf.operations {
+				hl[i] = prf.operations[i].Bytes()
 			}
-			for _, h := range prf.seals {
-				hl = append(hl, h.Bytes())
+			for i := range prf.seals {
+				hl[len(prf.operations)+i] = prf.seals[i].Bytes()
 			}
 
 			return util.ConcatBytesSlice(hl...)

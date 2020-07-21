@@ -137,10 +137,7 @@ func (ht Hint) IsCompatible(check Hint) error {
 }
 
 func (ht Hint) Bytes() []byte {
-	b := bytes.NewBuffer(ht.t[:])
-	_, _ = b.Write([]byte(ht.version))
-
-	return b.Bytes()
+	return util.ConcatBytesSlice(ht.t.Bytes(), ht.version.Bytes())
 }
 
 func (ht Hint) Verbose() string {

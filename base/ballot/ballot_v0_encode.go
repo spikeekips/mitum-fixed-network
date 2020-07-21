@@ -19,7 +19,7 @@ func (bb BaseBallotV0) unpack(
 	signedAt time.Time,
 	height base.Height,
 	round base.Round,
-	bNode []byte,
+	bNode base.AddressDecoder,
 	bodyHash valuehash.Hash,
 	factSignature key.Signature,
 ) (BaseBallotV0, BaseBallotFactV0, error) {
@@ -32,7 +32,7 @@ func (bb BaseBallotV0) unpack(
 	}
 
 	var node base.Address
-	if n, err := base.DecodeAddress(enc, bNode); err != nil {
+	if n, err := bNode.Encode(enc); err != nil {
 		return BaseBallotV0{}, BaseBallotFactV0{}, err
 	} else {
 		node = n

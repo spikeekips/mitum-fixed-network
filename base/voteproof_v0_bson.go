@@ -71,28 +71,23 @@ func (vp VoteproofV0) MarshalBSON() ([]byte, error) {
 }
 
 type VoteproofV0UnpackBSON struct { // nolint
-	HT Height         `bson:"height"`
-	RD Round          `bson:"round"`
-	SS []bson.Raw     `bson:"suffrages"`
-	TH ThresholdRatio `bson:"threshold"`
-	RS VoteResultType `bson:"result"`
-	ST Stage          `bson:"stage"`
-	MJ bson.Raw       `bson:"majority"`
-	FS []bson.Raw     `bson:"facts"`
-	VS []bson.Raw     `bson:"votes"`
-	FA time.Time      `bson:"finished_at"`
-	CL bool           `bson:"is_closed"`
+	HT Height           `bson:"height"`
+	RD Round            `bson:"round"`
+	SS []AddressDecoder `bson:"suffrages"`
+	TH ThresholdRatio   `bson:"threshold"`
+	RS VoteResultType   `bson:"result"`
+	ST Stage            `bson:"stage"`
+	MJ bson.Raw         `bson:"majority"`
+	FS []bson.Raw       `bson:"facts"`
+	VS []bson.Raw       `bson:"votes"`
+	FA time.Time        `bson:"finished_at"`
+	CL bool             `bson:"is_closed"`
 }
 
 func (vp *VoteproofV0) UnpackBSON(b []byte, enc *bsonenc.Encoder) error {
 	var vpp VoteproofV0UnpackBSON
 	if err := enc.Unmarshal(b, &vpp); err != nil {
 		return err
-	}
-
-	ss := make([][]byte, len(vpp.SS))
-	for i := range vpp.SS {
-		ss[i] = vpp.SS[i]
 	}
 
 	fs := make([][]byte, len(vpp.FS))
@@ -109,7 +104,7 @@ func (vp *VoteproofV0) UnpackBSON(b []byte, enc *bsonenc.Encoder) error {
 		enc,
 		vpp.HT,
 		vpp.RD,
-		ss,
+		vpp.SS,
 		vpp.TH,
 		vpp.RS,
 		vpp.ST,
@@ -140,7 +135,7 @@ func (vf VoteproofNodeFact) MarshalBSON() ([]byte, error) {
 }
 
 type VoteproofNodeFactUnpackBSON struct {
-	AD bson.Raw             `bson:"address"`
+	AD AddressDecoder       `bson:"address"`
 	BT valuehash.Bytes      `bson:"ballot"`
 	FC valuehash.Bytes      `bson:"fact"`
 	FS key.Signature        `bson:"fact_signature"`

@@ -4,10 +4,12 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/suite"
+	"go.mongodb.org/mongo-driver/bson"
 	"golang.org/x/xerrors"
 
 	"github.com/spikeekips/mitum/util"
 	bsonenc "github.com/spikeekips/mitum/util/encoder/bson"
+	"github.com/spikeekips/mitum/util/hint"
 )
 
 type testStringAddress struct {
@@ -115,7 +117,7 @@ func (t *testStringAddress) TestString() {
 	sa, err := NewStringAddress(util.UUID().String())
 	t.NoError(err)
 
-	una, err := NewStringAddressFromHintedString(sa.HintedString())
+	una, err := NewStringAddressFromHintedString(hint.HintedString(sa.Hint(), sa.String()))
 	t.NoError(err)
 
 	t.True(sa.Equal(una))
@@ -128,10 +130,13 @@ func (t *testStringAddress) TestJSON() {
 	b, err := util.JSON.Marshal(sa)
 	t.NoError(err)
 
-	var una StringAddress
-	t.NoError(util.JSON.Unmarshal(b, &una))
+	var s string
+	t.NoError(util.JSON.Unmarshal(b, &s))
 
-	t.True(sa.Equal(una))
+	usa, err := NewStringAddressFromHintedString(s)
+	t.NoError(err)
+
+	t.True(sa.Equal(usa))
 }
 
 func (t *testStringAddress) TestBSON() {
@@ -144,12 +149,15 @@ func (t *testStringAddress) TestBSON() {
 	t.NoError(err)
 
 	var una struct {
-		N StringAddress
+		N bson.RawValue
 	}
 
 	t.NoError(bsonenc.Unmarshal(b, &una))
 
-	t.True(sa.Equal(una.N))
+	usa, err := NewStringAddressFromHintedString(string(una.N.StringValue()))
+	t.NoError(err)
+
+	t.True(sa.Equal(usa))
 }
 
 func TestStringAddress(t *testing.T) {

@@ -17,18 +17,6 @@ func DecodeFact(enc encoder.Encoder, b []byte) (Fact, error) {
 	}
 }
 
-func DecodeAddress(enc encoder.Encoder, b []byte) (Address, error) {
-	if i, err := enc.DecodeByHint(b); err != nil {
-		return nil, err
-	} else if i == nil {
-		return nil, nil
-	} else if v, ok := i.(Address); !ok {
-		return nil, hint.InvalidTypeError.Errorf("not Address; type=%T", i)
-	} else {
-		return v, nil
-	}
-}
-
 func DecodeNode(enc encoder.Encoder, b []byte) (Node, error) {
 	if i, err := enc.DecodeByHint(b); err != nil {
 		return nil, err

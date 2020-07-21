@@ -5,9 +5,9 @@ import (
 	"github.com/spikeekips/mitum/util/encoder"
 )
 
-func (bn *BaseNodeV0) unpack(enc encoder.Encoder, bad []byte, bpk key.PublickeyDecoder) error {
+func (bn *BaseNodeV0) unpack(enc encoder.Encoder, bad AddressDecoder, bpk key.PublickeyDecoder) error {
 	var address Address
-	if a, err := DecodeAddress(enc, bad); err != nil {
+	if a, err := bad.Encode(enc); err != nil {
 		return err
 	} else {
 		address = a

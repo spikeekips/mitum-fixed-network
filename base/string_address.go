@@ -1,15 +1,13 @@
 package base
 
 import (
-	"encoding/json"
 	"regexp"
 	"strings"
 
-	"go.mongodb.org/mongo-driver/bson"
+	"go.mongodb.org/mongo-driver/bson/bsontype"
+	"go.mongodb.org/mongo-driver/x/bsonx/bsoncore"
 	"golang.org/x/xerrors"
 
-	bsonenc "github.com/spikeekips/mitum/util/encoder/bson"
-	jsonenc "github.com/spikeekips/mitum/util/encoder/json"
 	"github.com/spikeekips/mitum/util/hint"
 	"github.com/spikeekips/mitum/util/isvalid"
 	"github.com/spikeekips/mitum/util/logging"
@@ -50,10 +48,6 @@ func (sa StringAddress) String() string {
 	return string(sa)
 }
 
-func (sa StringAddress) HintedString() string {
-	return hint.HintedString(sa.Hint(), string(sa))
-}
-
 func (sa StringAddress) Hint() hint.Hint {
 	return StringAddressHint
 }
@@ -86,55 +80,24 @@ func (sa StringAddress) Bytes() []byte {
 	return []byte(sa.String())
 }
 
-func (sa StringAddress) MarshalJSON() ([]byte, error) {
-	return jsonenc.Marshal(struct {
-		jsonenc.HintedHead
-		A string `json:"address"`
-	}{
-		HintedHead: jsonenc.NewHintedHead(sa.Hint()),
-		A:          sa.String(),
-	})
+func (sa StringAddress) MarshalText() ([]byte, error) {
+	return []byte(hint.HintedString(sa.Hint(), sa.String())), nil
 }
 
-func (sa *StringAddress) UnmarshalJSON(b []byte) error {
-	var s struct {
-		A string `json:"address"`
-	}
-	if err := json.Unmarshal(b, &s); err != nil {
-		return err
-	} else {
-		*sa = StringAddress(s.A)
-	}
-
-	return nil
-}
-
-func (sa StringAddress) MarshalBSON() ([]byte, error) {
-	return bsonenc.Marshal(bsonenc.MergeBSONM(
-		bsonenc.NewHintedDoc(sa.Hint()),
-		bson.M{"address": sa.String()},
-	))
-}
-
-func (sa *StringAddress) UnmarshalBSON(b []byte) error {
-	var s struct {
-		A string `bson:"address"`
-	}
-	if err := bsonenc.Unmarshal(b, &s); err != nil {
-		return err
-	} else if len(s.A) < 1 {
-		return xerrors.Errorf("not enough address")
-	}
-
-	if a, err := NewStringAddress(s.A); err != nil {
+func (sa *StringAddress) UnmarshalText(b []byte) error {
+	if a, err := NewStringAddress(string(b)); err != nil {
 		return err
 	} else {
 		*sa = a
-	}
 
-	return nil
+		return nil
+	}
+}
+
+func (sa StringAddress) MarshalBSONValue() (bsontype.Type, []byte, error) {
+	return bsontype.String, bsoncore.AppendString(nil, hint.HintedString(sa.Hint(), sa.String())), nil
 }
 
 func (sa StringAddress) MarshalLog(key string, e logging.Emitter, _ bool) logging.Emitter {
-	return e.Str(key, sa.HintedString())
+	return e.Str(key, hint.HintedString(sa.Hint(), sa.String()))
 }

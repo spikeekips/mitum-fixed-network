@@ -1,8 +1,6 @@
 package base
 
 import (
-	"encoding/json"
-
 	"github.com/spikeekips/mitum/base/key"
 	jsonenc "github.com/spikeekips/mitum/util/encoder/json"
 )
@@ -22,7 +20,7 @@ func (bn BaseNodeV0) MarshalJSON() ([]byte, error) {
 }
 
 type BaseNodeV0UnpackerJSON struct {
-	AD json.RawMessage      `json:"address"`
+	AD AddressDecoder       `json:"address"`
 	PK key.PublickeyDecoder `json:"publickey"`
 }
 

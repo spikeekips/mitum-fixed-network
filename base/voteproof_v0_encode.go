@@ -23,7 +23,7 @@ func (vp *VoteproofV0) unpack( // nolint
 	enc encoder.Encoder,
 	height Height,
 	round Round,
-	bSuffrages [][]byte,
+	bSuffrages []AddressDecoder,
 	thresholdRatio ThresholdRatio,
 	result VoteResultType,
 	stage Stage,
@@ -44,7 +44,7 @@ func (vp *VoteproofV0) unpack( // nolint
 
 	var suffrages []Address
 	for i := range bSuffrages {
-		if address, err := DecodeAddress(enc, bSuffrages[i]); err != nil {
+		if address, err := bSuffrages[i].Encode(enc); err != nil {
 			return err
 		} else {
 			suffrages = append(suffrages, address)
@@ -89,14 +89,14 @@ func (vp *VoteproofV0) unpack( // nolint
 
 func (vf *VoteproofNodeFact) unpack(
 	enc encoder.Encoder,
-	bAddress []byte,
+	bAddress AddressDecoder,
 	blt,
 	fact valuehash.Hash,
 	factSignature key.Signature,
 	bSigner key.PublickeyDecoder,
 ) error {
 	var address Address
-	if h, err := DecodeAddress(enc, bAddress); err != nil {
+	if h, err := bAddress.Encode(enc); err != nil {
 		return err
 	} else {
 		address = h

@@ -1,8 +1,6 @@
 package ballot
 
 import (
-	"encoding/json"
-
 	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/base/key"
 	jsonenc "github.com/spikeekips/mitum/util/encoder/json"
@@ -47,7 +45,7 @@ type BaseBallotV0UnpackerJSON struct {
 	SA  localtime.JSONTime   `json:"signed_at"`
 	HT  base.Height          `json:"height"`
 	RD  base.Round           `json:"round"`
-	N   json.RawMessage      `json:"node"`
+	N   base.AddressDecoder  `json:"node"`
 	BH  valuehash.Bytes      `json:"body_hash"`
 	FSG key.Signature        `json:"fact_signature"`
 }
@@ -66,7 +64,7 @@ func UnpackBaseBallotV0JSON(nib BaseBallotV0UnpackerJSON, enc *jsonenc.Encoder) 
 	}
 
 	var node base.Address
-	if n, err := base.DecodeAddress(enc, nib.N); err != nil {
+	if n, err := nib.N.Encode(enc); err != nil {
 		return BaseBallotV0{}, BaseBallotFactV0{}, err
 	} else {
 		node = n

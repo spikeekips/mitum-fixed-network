@@ -36,7 +36,7 @@ type BaseBallotV0UnpackerBSON struct {
 	SA  time.Time            `bson:"signed_at"`
 	HT  base.Height          `bson:"height"`
 	RD  base.Round           `bson:"round"`
-	N   bson.Raw             `bson:"node"`
+	N   base.AddressDecoder  `bson:"node"`
 	BH  valuehash.Bytes      `bson:"body_hash"`
 	FSG key.Signature        `bson:"fact_signature"`
 }

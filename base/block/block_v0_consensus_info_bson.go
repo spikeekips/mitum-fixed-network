@@ -3,6 +3,7 @@ package block
 import (
 	"go.mongodb.org/mongo-driver/bson"
 
+	"github.com/spikeekips/mitum/base"
 	bsonenc "github.com/spikeekips/mitum/util/encoder/bson"
 )
 
@@ -48,8 +49,8 @@ func (si SuffrageInfoV0) MarshalBSON() ([]byte, error) {
 }
 
 type SuffrageInfoV0UnpackBSON struct {
-	PR bson.Raw   `bson:"proposer"`
-	NS []bson.Raw `bson:"nodes"`
+	PR base.AddressDecoder `bson:"proposer"`
+	NS []bson.Raw          `bson:"nodes"`
 }
 
 func (si *SuffrageInfoV0) UnpackBSON(b []byte, enc *bsonenc.Encoder) error {

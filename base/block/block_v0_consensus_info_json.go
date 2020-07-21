@@ -53,8 +53,8 @@ func (si SuffrageInfoV0) MarshalJSON() ([]byte, error) {
 }
 
 type SuffrageInfoV0UnpackJSON struct {
-	PR json.RawMessage   `json:"proposer"`
-	NS []json.RawMessage `json:"nodes"`
+	PR base.AddressDecoder `json:"proposer"`
+	NS []json.RawMessage   `json:"nodes"`
 }
 
 func (si *SuffrageInfoV0) UnpackJSON(b []byte, enc *jsonenc.Encoder) error {

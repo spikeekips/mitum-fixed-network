@@ -34,9 +34,9 @@ func (bc *BlockConsensusInfoV0) unpack(enc encoder.Encoder, biv, bav, bsi []byte
 	return nil
 }
 
-func (si *SuffrageInfoV0) unpack(enc encoder.Encoder, bpr []byte, bns [][]byte) error {
+func (si *SuffrageInfoV0) unpack(enc encoder.Encoder, bpr base.AddressDecoder, bns [][]byte) error {
 	var proposer base.Address
-	if pr, err := base.DecodeAddress(enc, bpr); err != nil {
+	if pr, err := bpr.Encode(enc); err != nil {
 		return err
 	} else {
 		proposer = pr

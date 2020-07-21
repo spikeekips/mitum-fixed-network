@@ -87,7 +87,7 @@ func (vp VoteproofV0) MarshalJSON() ([]byte, error) {
 type VoteproofV0UnpackJSON struct {
 	HT Height             `json:"height"`
 	RD Round              `json:"round"`
-	SS []json.RawMessage  `json:"suffrages"`
+	SS []AddressDecoder   `json:"suffrages"`
 	TH ThresholdRatio     `json:"threshold"`
 	RS VoteResultType     `json:"result"`
 	ST Stage              `json:"stage"`
@@ -104,11 +104,6 @@ func (vp *VoteproofV0) UnpackJSON(b []byte, enc *jsonenc.Encoder) error {
 		return err
 	}
 
-	ss := make([][]byte, len(vpp.SS))
-	for i := range vpp.SS {
-		ss[i] = vpp.SS[i]
-	}
-
 	bFacts := make([][]byte, len(vpp.FS))
 	for i := range vpp.FS {
 		bFacts[i] = vpp.FS[i]
@@ -123,7 +118,7 @@ func (vp *VoteproofV0) UnpackJSON(b []byte, enc *jsonenc.Encoder) error {
 		enc,
 		vpp.HT,
 		vpp.RD,
-		ss,
+		vpp.SS,
 		vpp.TH,
 		vpp.RS,
 		vpp.ST,
@@ -154,7 +149,7 @@ func (vf VoteproofNodeFact) MarshalJSON() ([]byte, error) {
 }
 
 type VoteproofNodeFactUnpackJSON struct {
-	AD json.RawMessage      `json:"address"`
+	AD AddressDecoder       `json:"address"`
 	BT valuehash.Bytes      `json:"ballot"`
 	FC valuehash.Bytes      `json:"fact"`
 	FS key.Signature        `json:"fact_signature"`

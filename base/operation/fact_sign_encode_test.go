@@ -27,7 +27,7 @@ func (t *testFactSignEncoding) SetupSuite() {
 	t.encs = encoder.NewEncoders()
 	_ = t.encs.AddEncoder(t.enc)
 
-	_ = t.encs.AddHinter(key.BTCPublickey{})
+	_ = t.encs.AddHinter(key.BTCPublickeyHinter)
 	_ = t.encs.AddHinter(BaseFactSign{})
 }
 

@@ -1,10 +1,11 @@
 package key
 
 import (
-	"github.com/spikeekips/mitum/util/hint"
 	"go.mongodb.org/mongo-driver/bson/bsontype"
 	"go.mongodb.org/mongo-driver/x/bsonx/bsoncore"
 	"golang.org/x/xerrors"
+
+	"github.com/spikeekips/mitum/util/hint"
 )
 
 func (kd *KeyDecoder) UnmarshalBSONValue(t bsontype.Type, b []byte) error {

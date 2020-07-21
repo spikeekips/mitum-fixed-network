@@ -13,8 +13,21 @@ var (
 	stellarPublickeyHint  = hint.MustHint(stellarPublickeyType, "0.0.1")
 )
 
+var (
+	StellarPrivatekeyHinter = StellarPrivatekey{BaseKey: NewBaseKey(stellarPrivatekeyHint, nil)}
+	StellarPublickeyHinter  = StellarPublickey{BaseKey: NewBaseKey(stellarPublickeyHint, nil)}
+)
+
 type StellarPrivatekey struct {
+	BaseKey
 	kp *stellarKeypair.Full
+}
+
+func newStellarPrivatekey(kp *stellarKeypair.Full) StellarPrivatekey {
+	return StellarPrivatekey{
+		BaseKey: NewBaseKey(stellarPrivatekeyHint, kp.Seed),
+		kp:      kp,
+	}
 }
 
 func NewStellarPrivatekey() (StellarPrivatekey, error) {
@@ -23,7 +36,7 @@ func NewStellarPrivatekey() (StellarPrivatekey, error) {
 		return StellarPrivatekey{}, err
 	}
 
-	return StellarPrivatekey{kp: full}, nil
+	return newStellarPrivatekey(full), nil
 }
 
 func NewStellarPrivatekeyFromString(s string) (StellarPrivatekey, error) {
@@ -37,19 +50,7 @@ func NewStellarPrivatekeyFromString(s string) (StellarPrivatekey, error) {
 		return StellarPrivatekey{}, InvalidKeyError.Errorf("not stellar private key; type=%T", kp)
 	}
 
-	return StellarPrivatekey{kp: full}, nil
-}
-
-func (sp StellarPrivatekey) Raw() string {
-	return sp.kp.Seed()
-}
-
-func (sp StellarPrivatekey) String() string {
-	return hint.HintedString(sp.Hint(), sp.Raw())
-}
-
-func (sp StellarPrivatekey) Hint() hint.Hint {
-	return stellarPrivatekeyHint
+	return newStellarPrivatekey(full), nil
 }
 
 func (sp StellarPrivatekey) IsValid([]byte) error {
@@ -86,7 +87,7 @@ func (sp StellarPrivatekey) Equal(key Key) bool {
 }
 
 func (sp StellarPrivatekey) Publickey() Publickey {
-	return StellarPublickey{kp: interface{}(sp.kp).(stellarKeypair.KP)}
+	return newStellarPublickey(interface{}(sp.kp).(stellarKeypair.KP))
 }
 
 func (sp StellarPrivatekey) Sign(input []byte) (Signature, error) {
@@ -98,29 +99,35 @@ func (sp StellarPrivatekey) Sign(input []byte) (Signature, error) {
 	return Signature(sig), nil
 }
 
+func (sp *StellarPrivatekey) UnmarshalText(b []byte) error {
+	if k, err := NewStellarPrivatekeyFromString(string(b)); err != nil {
+		return err
+	} else {
+		*sp = k
+
+		return nil
+	}
+}
+
 type StellarPublickey struct {
+	BaseKey
 	kp stellarKeypair.KP
 }
 
+func newStellarPublickey(kp stellarKeypair.KP) StellarPublickey {
+	return StellarPublickey{
+		kp:      kp,
+		BaseKey: NewBaseKey(stellarPublickeyHint, kp.Address),
+	}
+}
+
 func NewStellarPublickeyFromString(s string) (StellarPublickey, error) {
-	addr, err := stellarKeypair.ParseAddress(s)
+	kp, err := stellarKeypair.ParseAddress(s)
 	if err != nil {
 		return StellarPublickey{}, nil
 	}
 
-	return StellarPublickey{kp: addr}, nil
-}
-
-func (sp StellarPublickey) Raw() string {
-	return sp.kp.Address()
-}
-
-func (sp StellarPublickey) String() string {
-	return hint.HintedString(sp.Hint(), sp.Raw())
-}
-
-func (sp StellarPublickey) Hint() hint.Hint {
-	return stellarPublickeyHint
+	return newStellarPublickey(kp), nil
 }
 
 func (sp StellarPublickey) IsValid([]byte) error {
@@ -131,27 +138,20 @@ func (sp StellarPublickey) IsValid([]byte) error {
 	return nil
 }
 
-func (sp StellarPublickey) Equal(key Key) bool {
-	if sp.kp == nil {
-		return false
-	}
-
-	if sp.Hint().Type() != key.Hint().Type() {
-		return false
-	}
-
-	k, ok := key.(StellarPublickey)
-	if !ok {
-		return false
-	}
-
-	return sp.kp.Address() == k.kp.Address()
-}
-
 func (sp StellarPublickey) Verify(input []byte, sig Signature) error {
 	if err := sp.kp.Verify(input, []byte(sig)); err != nil {
 		return SignatureVerificationFailedError.Wrap(err)
 	}
 
 	return nil
+}
+
+func (sp *StellarPublickey) UnmarshalText(b []byte) error {
+	if k, err := NewStellarPublickeyFromString(string(b)); err != nil {
+		return err
+	} else {
+		*sp = k
+
+		return nil
+	}
 }

@@ -28,7 +28,7 @@ func (t *testSealEncode) SetupSuite() {
 	t.encs = encoder.NewEncoders()
 	_ = t.encs.AddEncoder(t.enc)
 
-	_ = t.encs.AddHinter(key.BTCPublickey{})
+	_ = t.encs.AddHinter(key.BTCPublickeyHinter)
 	_ = t.encs.AddHinter(valuehash.SHA256{})
 	_ = t.encs.AddHinter(BaseSeal{})
 	_ = t.encs.AddHinter(KVOperation{})

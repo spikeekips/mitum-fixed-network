@@ -1,6 +1,7 @@
 package jsonenc
 
 import (
+	"encoding"
 	"encoding/json"
 	"reflect"
 
@@ -114,6 +115,10 @@ func (je *Encoder) analyzeInstance(i interface{}) (string, unpackFunc) {
 	} else if _, ok := ptr.Interface().(json.Unmarshaler); ok {
 		return "JSONUnmarshaler", func(b []byte, i interface{}) error {
 			return i.(json.Unmarshaler).UnmarshalJSON(b)
+		}
+	} else if _, ok := ptr.Interface().(encoding.TextUnmarshaler); ok {
+		return "TextUnmarshaler", func(b []byte, i interface{}) error {
+			return i.(encoding.TextUnmarshaler).UnmarshalText(b)
 		}
 	}
 

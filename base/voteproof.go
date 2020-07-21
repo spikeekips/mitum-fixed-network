@@ -75,7 +75,7 @@ func (vf VoteproofNodeFact) Bytes() []byte {
 		vf.ballot.Bytes(),
 		vf.fact.Bytes(),
 		vf.factSignature.Bytes(),
-		[]byte(vf.signer.String()),
+		vf.signer.Bytes(),
 	)
 }
 

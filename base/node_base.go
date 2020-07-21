@@ -37,7 +37,7 @@ func (bn BaseNodeV0) IsValid([]byte) error {
 }
 
 func (bn BaseNodeV0) Bytes() []byte {
-	return util.ConcatBytesSlice(bn.address.Bytes(), []byte(bn.publickey.String()))
+	return util.ConcatBytesSlice(bn.address.Bytes(), bn.publickey.Bytes())
 }
 
 func (bn BaseNodeV0) Address() Address {

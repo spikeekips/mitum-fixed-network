@@ -4,7 +4,6 @@ import (
 	"testing"
 
 	"github.com/spikeekips/mitum/util"
-	"github.com/spikeekips/mitum/util/hint"
 	"github.com/stretchr/testify/suite"
 	"golang.org/x/xerrors"
 )
@@ -33,22 +32,19 @@ func (t *testStellarKey) TestKeypairExportKeys() {
 	seed := "SCD6GQMWGDQT33QOCNKYKRJZL3YWFSLBVQSL6ICVWBUYQZCBFYUQY673"
 	kp, _ := NewStellarPrivatekeyFromString(seed)
 
-	t.Equal("GAVAONBETT4MVPV2IYN2T7OB7ZTYXGNN4BFGZHUYBUYR6G4ACHZMDOQ6-0111:0.0.1", kp.Publickey().String())
-	t.Equal("SCD6GQMWGDQT33QOCNKYKRJZL3YWFSLBVQSL6ICVWBUYQZCBFYUQY673-0110:0.0.1", kp.String())
+	t.Equal("GAVAONBETT4MVPV2IYN2T7OB7ZTYXGNN4BFGZHUYBUYR6G4ACHZMDOQ6", kp.Publickey().String())
+	t.Equal("SCD6GQMWGDQT33QOCNKYKRJZL3YWFSLBVQSL6ICVWBUYQZCBFYUQY673", kp.String())
 }
 
 func (t *testStellarKey) TestPublickey() {
 	seed := "SCD6GQMWGDQT33QOCNKYKRJZL3YWFSLBVQSL6ICVWBUYQZCBFYUQY673"
 	kp, _ := NewStellarPrivatekeyFromString(seed)
 
-	t.Equal("GAVAONBETT4MVPV2IYN2T7OB7ZTYXGNN4BFGZHUYBUYR6G4ACHZMDOQ6-0111:0.0.1", kp.Publickey().String())
+	t.Equal("GAVAONBETT4MVPV2IYN2T7OB7ZTYXGNN4BFGZHUYBUYR6G4ACHZMDOQ6", kp.Publickey().String())
 
 	t.NoError(kp.IsValid(nil))
 
-	_, s, err := hint.ParseHintedString(kp.Publickey().String())
-	t.NoError(err)
-
-	pk, err := NewStellarPublickeyFromString(s)
+	pk, err := NewStellarPublickeyFromString(kp.Publickey().String())
 	t.NoError(err)
 
 	t.True(kp.Publickey().Equal(pk))
@@ -67,14 +63,11 @@ func (t *testStellarKey) TestPrivatekey() {
 	seed := "SCD6GQMWGDQT33QOCNKYKRJZL3YWFSLBVQSL6ICVWBUYQZCBFYUQY673"
 	kp, _ := NewStellarPrivatekeyFromString(seed)
 
-	t.Equal("SCD6GQMWGDQT33QOCNKYKRJZL3YWFSLBVQSL6ICVWBUYQZCBFYUQY673-0110:0.0.1", kp.String())
+	t.Equal("SCD6GQMWGDQT33QOCNKYKRJZL3YWFSLBVQSL6ICVWBUYQZCBFYUQY673", kp.String())
 
 	t.NoError(kp.IsValid(nil))
 
-	_, s, err := hint.ParseHintedString(kp.String())
-	t.NoError(err)
-
-	pk, err := NewStellarPrivatekeyFromString(s)
+	pk, err := NewStellarPrivatekeyFromString(seed)
 	t.NoError(err)
 
 	t.True(kp.Equal(pk))

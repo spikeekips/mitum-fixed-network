@@ -34,8 +34,8 @@ type baseTestStateHandler struct {
 func (t *baseTestStateHandler) SetupSuite() {
 	t.StorageSupportTest.SetupSuite()
 
-	_ = t.Encs.AddHinter(key.BTCPrivatekey{})
-	_ = t.Encs.AddHinter(key.BTCPublickey{})
+	_ = t.Encs.AddHinter(key.BTCPrivatekeyHinter)
+	_ = t.Encs.AddHinter(key.BTCPublickeyHinter)
 	_ = t.Encs.AddHinter(valuehash.SHA256{})
 	_ = t.Encs.AddHinter(valuehash.Bytes{})
 	_ = t.Encs.AddHinter(base.StringAddress(""))

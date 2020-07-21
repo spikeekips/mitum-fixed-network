@@ -136,7 +136,7 @@ func (bb BaseBallotV0) IsReadyToSign([]byte) error {
 func (bb BaseBallotV0) Bytes() []byte {
 	return util.ConcatBytesSlice(
 		bb.bodyHash.Bytes(),
-		[]byte(bb.signer.String()),
+		bb.signer.Bytes(),
 		bb.signature.Bytes(),
 		[]byte(localtime.String(localtime.Normalize(bb.signedAt))),
 		bb.node.Bytes(),

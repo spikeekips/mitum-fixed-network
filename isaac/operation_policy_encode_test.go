@@ -27,8 +27,8 @@ func (t *testSetPolicyOperationEncode) SetupSuite() {
 	encs := encoder.NewEncoders()
 	_ = encs.AddEncoder(t.enc)
 
-	_ = encs.AddHinter(key.BTCPrivatekey{})
-	_ = encs.AddHinter(key.BTCPublickey{})
+	_ = encs.AddHinter(key.BTCPrivatekeyHinter)
+	_ = encs.AddHinter(key.BTCPublickeyHinter)
 	_ = encs.AddHinter(valuehash.SHA256{})
 	_ = encs.AddHinter(SetPolicyOperationFactV0{})
 	_ = encs.AddHinter(SetPolicyOperationV0{})

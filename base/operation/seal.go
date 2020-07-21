@@ -92,7 +92,7 @@ func (sl BaseSeal) BodyHash() valuehash.Hash {
 
 func (sl BaseSeal) GenerateBodyHash() (valuehash.Hash, error) {
 	bl := [][]byte{
-		[]byte(sl.signer.String()),
+		sl.signer.Bytes(),
 		[]byte(localtime.RFC3339(sl.signedAt)),
 	}
 

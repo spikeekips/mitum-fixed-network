@@ -28,7 +28,7 @@ func (t *testBallotV0INITEncode) SetupSuite() {
 	t.NoError(encs.AddEncoder(t.enc))
 	t.NoError(encs.AddHinter(valuehash.SHA256{}))
 	t.NoError(encs.AddHinter(base.StringAddress("")))
-	t.NoError(encs.AddHinter(key.BTCPublickey{}))
+	t.NoError(encs.AddHinter(key.BTCPublickeyHinter))
 	t.NoError(encs.AddHinter(INITBallotV0{}))
 	t.NoError(encs.AddHinter(base.DummyVoteproof{}))
 }

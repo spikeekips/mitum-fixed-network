@@ -28,6 +28,7 @@ import (
 	"github.com/spikeekips/mitum/storage"
 	"github.com/spikeekips/mitum/util"
 	"github.com/spikeekips/mitum/util/encoder"
+	"github.com/spikeekips/mitum/util/hint"
 	"github.com/spikeekips/mitum/util/logging"
 )
 
@@ -781,7 +782,7 @@ func (ct *Container) networkDesign() *launcher.NetworkDesign {
 func (ct *Container) RemoteDesign() *launcher.RemoteDesign {
 	return &launcher.RemoteDesign{
 		Address:         ct.name,
-		PublickeyString: ct.privatekey.Publickey().String(),
+		PublickeyString: hint.HintedString(ct.privatekey.Publickey().Hint(), ct.privatekey.Publickey().String()),
 		Network:         ct.networkDesign().Publish,
 	}
 }
@@ -802,7 +803,7 @@ func (ct *Container) NodeDesign(isGenesisNode bool) *NodeDesign {
 
 	lnd := &launcher.NodeDesign{
 		Address:          ct.name,
-		PrivatekeyString: ct.privatekey.String(),
+		PrivatekeyString: hint.HintedString(ct.privatekey.Hint(), ct.privatekey.String()),
 		Storage:          ct.storageURIInternal(),
 		NetworkIDString:  ct.contestDesign.Config.NetworkIDString,
 		Network:          ct.networkDesign(),

@@ -1,8 +1,6 @@
 package key
 
 import (
-	"bytes"
-
 	"github.com/btcsuite/btcd/btcec"
 	"github.com/btcsuite/btcd/chaincfg"
 	"github.com/btcsuite/btcd/chaincfg/chainhash"
@@ -19,8 +17,21 @@ var (
 	btcPublickeyHint  = hint.MustHint(btcPublickeyType, "0.0.1")
 )
 
+var (
+	BTCPrivatekeyHinter = BTCPrivatekey{BaseKey: NewBaseKey(btcPrivatekeyHint, nil)}
+	BTCPublickeyHinter  = BTCPublickey{BaseKey: NewBaseKey(btcPublickeyHint, nil)}
+)
+
 type BTCPrivatekey struct {
+	BaseKey
 	wif *btcutil.WIF
+}
+
+func newBTCPrivatekey(wif *btcutil.WIF) BTCPrivatekey {
+	return BTCPrivatekey{
+		wif:     wif,
+		BaseKey: NewBaseKey(btcPrivatekeyHint, wif.String),
+	}
 }
 
 func NewBTCPrivatekey() (BTCPrivatekey, error) {
@@ -34,7 +45,7 @@ func NewBTCPrivatekey() (BTCPrivatekey, error) {
 		return BTCPrivatekey{}, err
 	}
 
-	return BTCPrivatekey{wif: wif}, nil
+	return newBTCPrivatekey(wif), nil
 }
 
 func NewBTCPrivatekeyFromString(s string) (BTCPrivatekey, error) {
@@ -46,19 +57,7 @@ func NewBTCPrivatekeyFromString(s string) (BTCPrivatekey, error) {
 		return BTCPrivatekey{}, InvalidKeyError.Errorf("unsupported BTC network")
 	}
 
-	return BTCPrivatekey{wif: wif}, nil
-}
-
-func (bt BTCPrivatekey) Raw() string {
-	return bt.wif.String()
-}
-
-func (bt BTCPrivatekey) String() string {
-	return hint.HintedString(bt.Hint(), bt.Raw())
-}
-
-func (bt BTCPrivatekey) Hint() hint.Hint {
-	return btcPrivatekeyHint
+	return newBTCPrivatekey(wif), nil
 }
 
 func (bt BTCPrivatekey) IsValid([]byte) error {
@@ -71,28 +70,8 @@ func (bt BTCPrivatekey) IsValid([]byte) error {
 	return nil
 }
 
-func (bt BTCPrivatekey) Equal(key Key) bool {
-	if bt.wif == nil || bt.wif.PrivKey == nil {
-		return false
-	}
-
-	if bt.Hint().Type() != key.Hint().Type() {
-		return false
-	}
-
-	k, ok := key.(BTCPrivatekey)
-	if !ok {
-		return false
-	}
-
-	return bytes.Equal(
-		bt.wif.PrivKey.Serialize(),
-		k.wif.PrivKey.Serialize(),
-	)
-}
-
 func (bt BTCPrivatekey) Publickey() Publickey {
-	return BTCPublickey{pk: bt.wif.PrivKey.PubKey()}
+	return newBTCPublickey(bt.wif.PrivKey.PubKey())
 }
 
 func (bt BTCPrivatekey) Sign(input []byte) (Signature, error) {
@@ -104,8 +83,28 @@ func (bt BTCPrivatekey) Sign(input []byte) (Signature, error) {
 	return Signature(sig.Serialize()), nil
 }
 
+func (bt *BTCPrivatekey) UnmarshalText(b []byte) error {
+	if k, err := NewBTCPrivatekeyFromString(string(b)); err != nil {
+		return err
+	} else {
+		*bt = k
+
+		return nil
+	}
+}
+
 type BTCPublickey struct {
+	BaseKey
 	pk *btcec.PublicKey
+}
+
+func newBTCPublickey(pk *btcec.PublicKey) BTCPublickey {
+	return BTCPublickey{
+		pk: pk,
+		BaseKey: NewBaseKey(btcPublickeyHint, func() string {
+			return base58.Encode(pk.SerializeCompressed())
+		}),
+	}
 }
 
 func NewBTCPublickeyFromString(s string) (BTCPublickey, error) {
@@ -114,19 +113,12 @@ func NewBTCPublickeyFromString(s string) (BTCPublickey, error) {
 		return BTCPublickey{}, err
 	}
 
-	return BTCPublickey{pk: pk}, nil
-}
-
-func (bt BTCPublickey) Raw() string {
-	return base58.Encode(bt.pk.SerializeCompressed())
-}
-
-func (bt BTCPublickey) String() string {
-	return hint.HintedString(bt.Hint(), bt.Raw())
-}
-
-func (bt BTCPublickey) Hint() hint.Hint {
-	return btcPublickeyHint
+	return BTCPublickey{
+		BaseKey: NewBaseKey(btcPublickeyHint, func() string {
+			return base58.Encode(pk.SerializeCompressed())
+		}),
+		pk: pk,
+	}, nil
 }
 
 func (bt BTCPublickey) IsValid([]byte) error {
@@ -135,23 +127,6 @@ func (bt BTCPublickey) IsValid([]byte) error {
 	}
 
 	return nil
-}
-
-func (bt BTCPublickey) Equal(key Key) bool {
-	if bt.pk == nil {
-		return false
-	}
-
-	if bt.Hint().Type() != key.Hint().Type() {
-		return false
-	}
-
-	k, ok := key.(BTCPublickey)
-	if !ok {
-		return false
-	}
-
-	return bt.pk.IsEqual(k.pk)
 }
 
 func (bt BTCPublickey) Verify(input []byte, sig Signature) error {
@@ -165,4 +140,14 @@ func (bt BTCPublickey) Verify(input []byte, sig Signature) error {
 	}
 
 	return nil
+}
+
+func (bt *BTCPublickey) UnmarshalText(b []byte) error {
+	if k, err := NewBTCPublickeyFromString(string(b)); err != nil {
+		return err
+	} else {
+		*bt = k
+
+		return nil
+	}
 }

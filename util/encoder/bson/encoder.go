@@ -1,6 +1,7 @@
 package bsonenc
 
 import (
+	"encoding"
 	"reflect"
 
 	"go.mongodb.org/mongo-driver/bson"
@@ -113,6 +114,11 @@ func (be *Encoder) analyzeInstance(i interface{}) (string, unpackFunc) {
 		name = "BSONUnmarshaler"
 		upf = func(b []byte, i interface{}) error {
 			return i.(bson.Unmarshaler).UnmarshalBSON(b)
+		}
+	} else if _, ok := ptr.Interface().(encoding.TextUnmarshaler); ok {
+		name = "BSONUnmarshaler"
+		upf = func(b []byte, i interface{}) error {
+			return i.(encoding.TextUnmarshaler).UnmarshalText(b)
 		}
 	}
 

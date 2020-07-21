@@ -4,7 +4,6 @@ import (
 	"testing"
 
 	"github.com/spikeekips/mitum/util"
-	"github.com/spikeekips/mitum/util/hint"
 	"github.com/stretchr/testify/suite"
 	"golang.org/x/xerrors"
 )
@@ -33,21 +32,18 @@ func (t *testBTCKey) TestKeypairExportKeys() {
 	priv := "L1bQZCcDZKy342x8xjK9Hk935Nttm2jkApVVS2mn4Nqyxvu7nyGC"
 	kp, _ := NewBTCPrivatekeyFromString(priv)
 
-	t.Equal("27phogA4gmbMGfg321EHfx5eABkL7KAYuDPRGFoyQtAUb-0113:0.0.1", kp.Publickey().String())
+	t.Equal("27phogA4gmbMGfg321EHfx5eABkL7KAYuDPRGFoyQtAUb", kp.Publickey().String())
 }
 
 func (t *testBTCKey) TestPublickey() {
 	priv := "L1bQZCcDZKy342x8xjK9Hk935Nttm2jkApVVS2mn4Nqyxvu7nyGC"
 	kp, _ := NewBTCPrivatekeyFromString(priv)
 
-	t.Equal("27phogA4gmbMGfg321EHfx5eABkL7KAYuDPRGFoyQtAUb-0113:0.0.1", kp.Publickey().String())
+	t.Equal("27phogA4gmbMGfg321EHfx5eABkL7KAYuDPRGFoyQtAUb", kp.Publickey().String())
 
 	t.NoError(kp.IsValid(nil))
 
-	_, s, err := hint.ParseHintedString(kp.Publickey().String())
-	t.NoError(err)
-
-	ukp, err := NewBTCPublickeyFromString(s)
+	ukp, err := NewBTCPublickeyFromString(kp.Publickey().String())
 	t.NoError(err)
 
 	t.True(kp.Publickey().Equal(ukp))
@@ -68,10 +64,7 @@ func (t *testBTCKey) TestPrivatekey() {
 
 	t.NoError(kp.IsValid(nil))
 
-	_, s, err := hint.ParseHintedString(kp.String())
-	t.NoError(err)
-
-	ukp, _ := NewBTCPrivatekeyFromString(s)
+	ukp, _ := NewBTCPrivatekeyFromString(priv)
 	t.True(kp.Equal(ukp))
 }
 

@@ -26,7 +26,7 @@ func (t *testVoteproofEncode) SetupSuite() {
 	hs := hint.NewHintset()
 	hs.Add(valuehash.SHA256{})
 	hs.Add(StringAddress(""))
-	hs.Add(key.BTCPublickey{})
+	hs.Add(key.BTCPublickeyHinter)
 	hs.Add(tinyFact{})
 
 	t.enc.SetHintset(hs)

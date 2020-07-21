@@ -1,7 +1,6 @@
 package key
 
 import (
-	"bytes"
 	"crypto/ecdsa"
 	"crypto/rand"
 	"crypto/sha256"
@@ -21,8 +20,23 @@ var (
 	etherPublickeyHint  = hint.MustHint(etherPublickeyType, "0.0.1")
 )
 
+var (
+	EtherPrivatekeyHinter = EtherPrivatekey{BaseKey: NewBaseKey(etherPrivatekeyHint, nil)}
+	EtherPublickeyHinter  = EtherPublickey{BaseKey: NewBaseKey(etherPublickeyHint, nil)}
+)
+
 type EtherPrivatekey struct {
+	BaseKey
 	pk *ecdsa.PrivateKey
+}
+
+func newEtherPrivatekey(pk *ecdsa.PrivateKey) EtherPrivatekey {
+	return EtherPrivatekey{
+		BaseKey: NewBaseKey(etherPrivatekeyHint, func() string {
+			return hex.EncodeToString(etherCrypto.FromECDSA(pk))
+		}),
+		pk: pk,
+	}
 }
 
 func NewEtherPrivatekey() (EtherPrivatekey, error) {
@@ -31,7 +45,7 @@ func NewEtherPrivatekey() (EtherPrivatekey, error) {
 		return EtherPrivatekey{}, err
 	}
 
-	return EtherPrivatekey{pk: pk}, nil
+	return newEtherPrivatekey(pk), nil
 }
 
 func NewEtherPrivatekeyFromString(s string) (EtherPrivatekey, error) {
@@ -45,19 +59,7 @@ func NewEtherPrivatekeyFromString(s string) (EtherPrivatekey, error) {
 		return EtherPrivatekey{}, err
 	}
 
-	return EtherPrivatekey{pk: pk}, nil
-}
-
-func (ep EtherPrivatekey) Raw() string {
-	return hex.EncodeToString(etherCrypto.FromECDSA(ep.pk))
-}
-
-func (ep EtherPrivatekey) String() string {
-	return hint.HintedString(ep.Hint(), ep.Raw())
-}
-
-func (ep EtherPrivatekey) Hint() hint.Hint {
-	return etherPrivatekeyHint
+	return newEtherPrivatekey(pk), nil
 }
 
 func (ep EtherPrivatekey) IsValid([]byte) error {
@@ -68,28 +70,8 @@ func (ep EtherPrivatekey) IsValid([]byte) error {
 	return nil
 }
 
-func (ep EtherPrivatekey) Equal(key Key) bool {
-	if ep.pk == nil {
-		return false
-	}
-
-	if ep.Hint().Type() != key.Hint().Type() {
-		return false
-	}
-
-	k, ok := key.(EtherPrivatekey)
-	if !ok {
-		return false
-	}
-
-	return bytes.Equal(
-		etherCrypto.FromECDSA(ep.pk),
-		etherCrypto.FromECDSA(k.pk),
-	)
-}
-
 func (ep EtherPrivatekey) Publickey() Publickey {
-	return EtherPublickey{pk: &ep.pk.PublicKey}
+	return newEtherPublickey(&ep.pk.PublicKey)
 }
 
 func (ep EtherPrivatekey) Sign(input []byte) (Signature, error) {
@@ -108,8 +90,28 @@ func (ep EtherPrivatekey) Sign(input []byte) (Signature, error) {
 	return Signature(bs), nil
 }
 
+func (ep *EtherPrivatekey) UnmarshalText(b []byte) error {
+	if k, err := NewEtherPrivatekeyFromString(string(b)); err != nil {
+		return err
+	} else {
+		*ep = k
+
+		return nil
+	}
+}
+
 type EtherPublickey struct {
+	BaseKey
 	pk *ecdsa.PublicKey
+}
+
+func newEtherPublickey(pk *ecdsa.PublicKey) EtherPublickey {
+	return EtherPublickey{
+		BaseKey: NewBaseKey(etherPublickeyHint, func() string {
+			return hex.EncodeToString(etherCrypto.FromECDSAPub(pk))
+		}),
+		pk: pk,
+	}
 }
 
 func NewEtherPublickeyFromString(s string) (EtherPublickey, error) {
@@ -123,19 +125,7 @@ func NewEtherPublickeyFromString(s string) (EtherPublickey, error) {
 		return EtherPublickey{}, err
 	}
 
-	return EtherPublickey{pk: pk}, nil
-}
-
-func (ep EtherPublickey) Raw() string {
-	return hex.EncodeToString(etherCrypto.FromECDSAPub(ep.pk))
-}
-
-func (ep EtherPublickey) String() string {
-	return hint.HintedString(ep.Hint(), ep.Raw())
-}
-
-func (ep EtherPublickey) Hint() hint.Hint {
-	return etherPublickeyHint
+	return newEtherPublickey(pk), nil
 }
 
 func (ep EtherPublickey) IsValid([]byte) error {
@@ -144,26 +134,6 @@ func (ep EtherPublickey) IsValid([]byte) error {
 	}
 
 	return nil
-}
-
-func (ep EtherPublickey) Equal(key Key) bool {
-	if ep.pk == nil {
-		return false
-	}
-
-	if ep.Hint().Type() != key.Hint().Type() {
-		return false
-	}
-
-	k, ok := key.(EtherPublickey)
-	if !ok {
-		return false
-	}
-
-	return bytes.Equal(
-		etherCrypto.FromECDSAPub(ep.pk),
-		etherCrypto.FromECDSAPub(k.pk),
-	)
 }
 
 func (ep EtherPublickey) Verify(input []byte, sig Signature) error {
@@ -181,4 +151,14 @@ func (ep EtherPublickey) Verify(input []byte, sig Signature) error {
 	}
 
 	return nil
+}
+
+func (ep *EtherPublickey) UnmarshalText(b []byte) error {
+	if k, err := NewEtherPublickeyFromString(string(b)); err != nil {
+		return err
+	} else {
+		*ep = k
+
+		return nil
+	}
 }

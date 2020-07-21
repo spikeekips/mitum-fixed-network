@@ -60,7 +60,7 @@ func (t *testMongodbClient) SetupSuite() {
 	t.enc = bsonenc.NewEncoder()
 	_ = t.encs.AddEncoder(t.enc)
 
-	_ = t.encs.AddHinter(key.BTCPublickey{})
+	_ = t.encs.AddHinter(key.BTCPublickeyHinter)
 	_ = t.encs.AddHinter(block.BlockV0{})
 	_ = t.encs.AddHinter(block.ManifestV0{})
 	_ = t.encs.AddHinter(block.BlockConsensusInfoV0{})

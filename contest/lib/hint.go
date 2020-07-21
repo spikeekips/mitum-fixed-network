@@ -17,7 +17,6 @@ import (
 )
 
 var Hinters = []hint.Hinter{
-	ContestAddress(""),
 	ballot.ACCEPTBallotFactV0{},
 	ballot.ACCEPTBallotV0{},
 	ballot.INITBallotFactV0{},
@@ -28,6 +27,7 @@ var Hinters = []hint.Hinter{
 	ballot.SIGNBallotV0{},
 	base.BaseNodeV0{},
 	base.VoteproofV0{},
+	base.StringAddress(""),
 	block.BlockConsensusInfoV0{},
 	block.BlockV0{},
 	block.ManifestV0{},

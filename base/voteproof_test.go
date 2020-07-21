@@ -318,7 +318,7 @@ func (t *testVoteproof) TestNotYetButNot() {
 
 	vp := VoteproofV0{
 		stage:          StageINIT,
-		suffrages:      []Address{n0.Address(), RandomShortAddress(), RandomShortAddress()},
+		suffrages:      []Address{n0.Address(), RandomStringAddress(), RandomStringAddress()},
 		thresholdRatio: t.threshold.Ratio,
 		result:         VoteResultDraw,
 		majority:       fact,

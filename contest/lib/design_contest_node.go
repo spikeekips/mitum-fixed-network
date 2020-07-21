@@ -1,5 +1,7 @@
 package contestlib
 
+import "github.com/spikeekips/mitum/base"
+
 type ContestNodeDesign struct {
 	AddressString string `yaml:"address"`
 	Component     *ComponentDesign
@@ -18,7 +20,7 @@ func (cn *ContestNodeDesign) IsValid([]byte) error {
 		return err
 	}
 
-	if _, err := NewContestAddress(cn.AddressString); err != nil {
+	if _, err := base.NewStringAddress(cn.AddressString); err != nil {
 		return err
 	}
 

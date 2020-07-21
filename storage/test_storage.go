@@ -84,7 +84,7 @@ func (t *BaseTestStorage) SetupSuite() {
 	t.NoError(t.Encs.AddEncoder(t.JSONEnc))
 	t.NoError(t.Encs.AddEncoder(t.BSONEnc))
 
-	_ = t.Encs.AddHinter(base.ShortAddress(""))
+	_ = t.Encs.AddHinter(base.StringAddress(""))
 	_ = t.Encs.AddHinter(base.BaseNodeV0{})
 	_ = t.Encs.AddHinter(block.SuffrageInfoV0{})
 	_ = t.Encs.AddHinter(key.BTCPublickey{})

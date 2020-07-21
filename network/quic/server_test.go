@@ -42,7 +42,7 @@ func (t *testQuicSever) SetupTest() {
 	_ = t.encs.AddHinter(valuehash.SHA256{})
 	_ = t.encs.AddHinter(seal.DummySeal{})
 	_ = t.encs.AddHinter(base.BaseNodeV0{})
-	_ = t.encs.AddHinter(base.ShortAddress(""))
+	_ = t.encs.AddHinter(base.StringAddress(""))
 	_ = t.encs.AddHinter(block.ManifestV0{})
 	_ = t.encs.AddHinter(network.NodeInfoV0{})
 

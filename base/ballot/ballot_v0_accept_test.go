@@ -32,7 +32,7 @@ func (t *testBallotV0ACCEPT) TestNew() {
 
 	ib := ACCEPTBallotV0{
 		BaseBallotV0: BaseBallotV0{
-			node: base.NewShortAddress("test-for-accept-ballot"),
+			node: base.RandomStringAddress(),
 		},
 		ACCEPTBallotFactV0: ACCEPTBallotFactV0{
 			BaseBallotFactV0: BaseBallotFactV0{
@@ -61,7 +61,7 @@ func (t *testBallotV0ACCEPT) TestFact() {
 
 	ib := ACCEPTBallotV0{
 		BaseBallotV0: BaseBallotV0{
-			node: base.NewShortAddress("test-for-accept-ballot"),
+			node: base.RandomStringAddress(),
 		},
 		ACCEPTBallotFactV0: ACCEPTBallotFactV0{
 			BaseBallotFactV0: BaseBallotFactV0{
@@ -103,7 +103,7 @@ func (t *testBallotV0ACCEPT) TestGenerateHash() {
 
 	ib := ACCEPTBallotV0{
 		BaseBallotV0: BaseBallotV0{
-			node: base.NewShortAddress("test-for-accept-ballot"),
+			node: base.RandomStringAddress(),
 		},
 		ACCEPTBallotFactV0: ACCEPTBallotFactV0{
 			BaseBallotFactV0: BaseBallotFactV0{
@@ -137,7 +137,7 @@ func (t *testBallotV0ACCEPT) TestSign() {
 
 	ib := ACCEPTBallotV0{
 		BaseBallotV0: BaseBallotV0{
-			node: base.NewShortAddress("test-for-accept-ballot"),
+			node: base.RandomStringAddress(),
 		},
 		ACCEPTBallotFactV0: ACCEPTBallotFactV0{
 			BaseBallotFactV0: BaseBallotFactV0{
@@ -175,7 +175,7 @@ func (t *testBallotV0ACCEPT) TestSign() {
 func (t *testBallotV0ACCEPT) TestIsValid() {
 	{ // empty signedAt
 		bb := BaseBallotV0{
-			node: base.NewShortAddress("test-for-accept-ballot"),
+			node: base.RandomStringAddress(),
 		}
 		err := bb.IsValid(nil)
 		t.Contains(err.Error(), "empty SignedAt")
@@ -183,7 +183,7 @@ func (t *testBallotV0ACCEPT) TestIsValid() {
 
 	{ // empty signer
 		bb := BaseBallotV0{
-			node:     base.NewShortAddress("test-for-accept-ballot"),
+			node:     base.RandomStringAddress(),
 			signedAt: localtime.Now(),
 		}
 		err := bb.IsValid(nil)
@@ -192,7 +192,7 @@ func (t *testBallotV0ACCEPT) TestIsValid() {
 
 	{ // empty signature
 		bb := BaseBallotV0{
-			node:     base.NewShortAddress("test-for-accept-ballot"),
+			node:     base.RandomStringAddress(),
 			signedAt: localtime.Now(),
 			signer:   t.pk.Publickey(),
 		}

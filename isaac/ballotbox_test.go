@@ -45,7 +45,7 @@ func (t *testBallotbox) suffragesFunc(n ...base.Address) func() []base.Address {
 }
 
 func (t *testBallotbox) TestNew() {
-	n := base.NewShortAddress("test-for-init-ballot")
+	n := base.RandomStringAddress()
 	bb := NewBallotbox(t.suffragesFunc(n), t.thresholdFunc(2, 67))
 	ba := t.newINITBallot(base.Height(10), base.Round(0), n, nil)
 
@@ -55,10 +55,10 @@ func (t *testBallotbox) TestNew() {
 }
 
 func (t *testBallotbox) TestNotInSuffrage() {
-	n := base.NewShortAddress("test-for-init-ballot")
+	n := base.RandomStringAddress()
 	bb := NewBallotbox(t.suffragesFunc(n), t.thresholdFunc(2, 67))
 
-	other := base.NewShortAddress("other")
+	other := base.RandomStringAddress()
 	ba := t.newINITBallot(base.Height(10), base.Round(0), other, nil)
 
 	_, err := bb.Vote(ba)
@@ -95,7 +95,7 @@ func (t *testBallotbox) newINITBallot(
 }
 
 func (t *testBallotbox) TestVoteRace() {
-	node := base.RandomShortAddress()
+	node := base.RandomStringAddress()
 	bb := NewBallotbox(t.suffragesFunc(node), t.thresholdFunc(50, 100))
 
 	checkDone := make(chan bool)
@@ -135,7 +135,7 @@ func (t *testBallotbox) TestVoteRace() {
 }
 
 func (t *testBallotbox) TestINITVoteResultNotYet() {
-	node := base.NewShortAddress("test-for-init-ballot")
+	node := base.RandomStringAddress()
 	bb := NewBallotbox(t.suffragesFunc(node), t.thresholdFunc(2, 67))
 	ba := t.newINITBallot(base.Height(10), base.Round(0), node, nil)
 
@@ -160,9 +160,9 @@ func (t *testBallotbox) TestINITVoteResultNotYet() {
 
 func (t *testBallotbox) TestINITVoteResultDraw() {
 	nodes := []base.Address{
-		base.NewShortAddress("node0"),
-		base.NewShortAddress("node1"),
-		base.NewShortAddress("node2"),
+		base.RandomStringAddress(),
+		base.RandomStringAddress(),
+		base.RandomStringAddress(),
 	}
 	bb := NewBallotbox(t.suffragesFunc(nodes...), t.thresholdFunc(2, 67))
 
@@ -195,8 +195,8 @@ func (t *testBallotbox) TestINITVoteResultDraw() {
 
 func (t *testBallotbox) TestINITVoteResultMajority() {
 	nodes := []base.Address{
-		base.NewShortAddress("node0"),
-		base.NewShortAddress("node1"),
+		base.RandomStringAddress(),
+		base.RandomStringAddress(),
 	}
 	bb := NewBallotbox(t.suffragesFunc(nodes...), t.thresholdFunc(3, 66))
 
@@ -220,8 +220,8 @@ func (t *testBallotbox) TestINITVoteResultMajority() {
 
 func (t *testBallotbox) TestINITVoteproofClean() {
 	nodes := []base.Address{
-		base.NewShortAddress("node0"),
-		base.NewShortAddress("node1"),
+		base.RandomStringAddress(),
+		base.RandomStringAddress(),
 	}
 	bb := NewBallotbox(t.suffragesFunc(nodes...), t.thresholdFunc(3, 66))
 
@@ -301,7 +301,7 @@ func (t *testBallotbox) newACCEPTBallot(
 }
 
 func (t *testBallotbox) TestACCEPTVoteResultNotYet() {
-	node := base.NewShortAddress("test-for-accept-ballot")
+	node := base.RandomStringAddress()
 	bb := NewBallotbox(t.suffragesFunc(node), t.thresholdFunc(2, 67))
 	ba := t.newACCEPTBallot(base.Height(10), base.Round(0), node, nil, nil)
 
@@ -327,8 +327,8 @@ func (t *testBallotbox) TestACCEPTVoteResultNotYet() {
 
 func (t *testBallotbox) TestACCEPTVoteResultDraw() {
 	nodes := []base.Address{
-		base.NewShortAddress("node0"),
-		base.NewShortAddress("node1"),
+		base.RandomStringAddress(),
+		base.RandomStringAddress(),
 	}
 	bb := NewBallotbox(t.suffragesFunc(nodes...), t.thresholdFunc(2, 67))
 
@@ -350,8 +350,8 @@ func (t *testBallotbox) TestACCEPTVoteResultDraw() {
 
 func (t *testBallotbox) TestACCEPTVoteResultMajority() {
 	nodes := []base.Address{
-		base.NewShortAddress("node0"),
-		base.NewShortAddress("node1"),
+		base.RandomStringAddress(),
+		base.RandomStringAddress(),
 	}
 	bb := NewBallotbox(t.suffragesFunc(nodes...), t.thresholdFunc(3, 66))
 
@@ -376,9 +376,9 @@ func (t *testBallotbox) TestACCEPTVoteResultMajority() {
 
 func (t *testBallotbox) TestINITVoteResultMajorityClosed() {
 	nodes := []base.Address{
-		base.NewShortAddress("node0"),
-		base.NewShortAddress("node1"),
-		base.NewShortAddress("node2"),
+		base.RandomStringAddress(),
+		base.RandomStringAddress(),
+		base.RandomStringAddress(),
 	}
 	bb := NewBallotbox(t.suffragesFunc(nodes...), t.thresholdFunc(3, 66))
 

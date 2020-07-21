@@ -21,6 +21,7 @@ import (
 	"golang.org/x/xerrors"
 	"gopkg.in/yaml.v3"
 
+	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/base/key"
 	"github.com/spikeekips/mitum/isaac"
 	"github.com/spikeekips/mitum/launcher"
@@ -903,7 +904,7 @@ func (ct *Container) Storage(initialize bool) (storage.Storage, error) {
 }
 
 func (ct *Container) Localstate() *isaac.Localstate {
-	address, err := NewContestAddress(ct.name)
+	address, err := base.NewStringAddress(ct.name)
 	if err != nil {
 		panic(err)
 	}

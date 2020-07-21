@@ -27,7 +27,7 @@ func (t *testBallotV0ACCEPTEncode) SetupSuite() {
 	encs := encoder.NewEncoders()
 	t.NoError(encs.AddEncoder(t.enc))
 	t.NoError(encs.AddHinter(valuehash.SHA256{}))
-	t.NoError(encs.AddHinter(base.NewShortAddress("")))
+	t.NoError(encs.AddHinter(base.StringAddress("")))
 	t.NoError(encs.AddHinter(key.BTCPublickey{}))
 	t.NoError(encs.AddHinter(ACCEPTBallotV0{}))
 	t.NoError(encs.AddHinter(base.DummyVoteproof{}))
@@ -43,7 +43,7 @@ func (t *testBallotV0ACCEPTEncode) TestEncode() {
 
 	ab := ACCEPTBallotV0{
 		BaseBallotV0: BaseBallotV0{
-			node: base.NewShortAddress("test-for-accept-ballot"),
+			node: base.RandomStringAddress(),
 		},
 		ACCEPTBallotFactV0: ACCEPTBallotFactV0{
 			BaseBallotFactV0: BaseBallotFactV0{

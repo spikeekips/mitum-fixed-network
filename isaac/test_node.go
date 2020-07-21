@@ -15,7 +15,7 @@ func RandomLocalNode(name string, channel network.NetworkChannel) *LocalNode {
 	pk, _ := key.NewBTCPrivatekey()
 
 	ln := NewLocalNode(
-		base.NewShortAddress(fmt.Sprintf("n-%s", name)),
+		base.MustStringAddress(fmt.Sprintf("n-%s", name)),
 		pk,
 	)
 

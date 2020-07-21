@@ -25,7 +25,7 @@ func (t *testBallotV0INIT) SetupSuite() {
 func (t *testBallotV0INIT) TestNew() {
 	ib := INITBallotV0{
 		BaseBallotV0: BaseBallotV0{
-			node: base.NewShortAddress("test-for-init-ballot"),
+			node: base.RandomStringAddress(),
 		},
 		INITBallotFactV0: INITBallotFactV0{
 			BaseBallotFactV0: BaseBallotFactV0{
@@ -52,7 +52,7 @@ func (t *testBallotV0INIT) TestFact() {
 
 	ib := INITBallotV0{
 		BaseBallotV0: BaseBallotV0{
-			node: base.NewShortAddress("test-for-init-ballot"),
+			node: base.RandomStringAddress(),
 		},
 		INITBallotFactV0: INITBallotFactV0{
 			BaseBallotFactV0: BaseBallotFactV0{
@@ -92,7 +92,7 @@ func (t *testBallotV0INIT) TestGenerateHash() {
 
 	ib := INITBallotV0{
 		BaseBallotV0: BaseBallotV0{
-			node: base.NewShortAddress("test-for-init-ballot"),
+			node: base.RandomStringAddress(),
 		},
 		INITBallotFactV0: INITBallotFactV0{
 			BaseBallotFactV0: BaseBallotFactV0{
@@ -125,7 +125,7 @@ func (t *testBallotV0INIT) TestSign() {
 
 	ib := INITBallotV0{
 		BaseBallotV0: BaseBallotV0{
-			node: base.NewShortAddress("test-for-init-ballot"),
+			node: base.RandomStringAddress(),
 		},
 		INITBallotFactV0: INITBallotFactV0{
 			BaseBallotFactV0: BaseBallotFactV0{
@@ -162,7 +162,7 @@ func (t *testBallotV0INIT) TestSign() {
 func (t *testBallotV0INIT) TestIsValid() {
 	{ // empty signedAt
 		bb := BaseBallotV0{
-			node: base.NewShortAddress("test-for-init-ballot"),
+			node: base.RandomStringAddress(),
 		}
 		err := bb.IsValid(nil)
 		t.Contains(err.Error(), "empty SignedAt")
@@ -170,7 +170,7 @@ func (t *testBallotV0INIT) TestIsValid() {
 
 	{ // empty signer
 		bb := BaseBallotV0{
-			node:     base.NewShortAddress("test-for-init-ballot"),
+			node:     base.RandomStringAddress(),
 			signedAt: localtime.Now(),
 		}
 		err := bb.IsValid(nil)
@@ -179,7 +179,7 @@ func (t *testBallotV0INIT) TestIsValid() {
 
 	{ // empty signature
 		bb := BaseBallotV0{
-			node:     base.NewShortAddress("test-for-init-ballot"),
+			node:     base.RandomStringAddress(),
 			signedAt: localtime.Now(),
 			signer:   t.pk.Publickey(),
 		}

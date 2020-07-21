@@ -23,14 +23,14 @@ func (t *testBaseBallotV0) SetupSuite() {
 func (t *testBaseBallotV0) TestIsReadyToSign() {
 	{ // empty signedAt
 		bb := BaseBallotV0{
-			node: base.NewShortAddress("test-for-init-ballot"),
+			node: base.RandomStringAddress(),
 		}
 		t.NoError(bb.IsReadyToSign(nil))
 	}
 
 	{ // empty signer
 		bb := BaseBallotV0{
-			node:     base.NewShortAddress("test-for-init-ballot"),
+			node:     base.RandomStringAddress(),
 			signedAt: localtime.Now(),
 		}
 		t.NoError(bb.IsReadyToSign(nil))
@@ -38,7 +38,7 @@ func (t *testBaseBallotV0) TestIsReadyToSign() {
 
 	{ // empty signature
 		bb := BaseBallotV0{
-			node:     base.NewShortAddress("test-for-init-ballot"),
+			node:     base.RandomStringAddress(),
 			signedAt: localtime.Now(),
 			signer:   t.pk.Publickey(),
 		}
@@ -47,7 +47,7 @@ func (t *testBaseBallotV0) TestIsReadyToSign() {
 
 	{ // invalid Node
 		bb := BaseBallotV0{
-			node: base.NewShortAddress(""), // empty Address
+			node: base.StringAddress(""), // empty Address
 		}
 		err := bb.IsReadyToSign(nil)
 		t.Contains(err.Error(), "empty address")
@@ -57,7 +57,7 @@ func (t *testBaseBallotV0) TestIsReadyToSign() {
 func (t *testBaseBallotV0) TestIsValid() {
 	{ // empty signedAt
 		bb := BaseBallotV0{
-			node: base.NewShortAddress("test-for-init-ballot"),
+			node: base.RandomStringAddress(),
 		}
 		err := bb.IsValid(nil)
 		t.Contains(err.Error(), "empty SignedAt")
@@ -65,7 +65,7 @@ func (t *testBaseBallotV0) TestIsValid() {
 
 	{ // empty signer
 		bb := BaseBallotV0{
-			node:     base.NewShortAddress("test-for-init-ballot"),
+			node:     base.RandomStringAddress(),
 			signedAt: localtime.Now(),
 		}
 		err := bb.IsValid(nil)
@@ -74,7 +74,7 @@ func (t *testBaseBallotV0) TestIsValid() {
 
 	{ // empty signature
 		bb := BaseBallotV0{
-			node:     base.NewShortAddress("test-for-init-ballot"),
+			node:     base.RandomStringAddress(),
 			signedAt: localtime.Now(),
 			signer:   t.pk.Publickey(),
 		}
@@ -84,7 +84,7 @@ func (t *testBaseBallotV0) TestIsValid() {
 
 	{ // invalid Node
 		bb := BaseBallotV0{
-			node: base.NewShortAddress(""), // empty Address
+			node: base.StringAddress(""), // empty Address
 		}
 		err := bb.IsValid(nil)
 		t.Contains(err.Error(), "empty address")

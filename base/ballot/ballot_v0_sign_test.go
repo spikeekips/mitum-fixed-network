@@ -25,7 +25,7 @@ func (t *testBallotV0SIGN) SetupSuite() {
 func (t *testBallotV0SIGN) TestNew() {
 	ib := SIGNBallotV0{
 		BaseBallotV0: BaseBallotV0{
-			node: base.NewShortAddress("test-for-sign-ballot"),
+			node: base.RandomStringAddress(),
 		},
 		SIGNBallotFactV0: SIGNBallotFactV0{
 			BaseBallotFactV0: BaseBallotFactV0{
@@ -46,7 +46,7 @@ func (t *testBallotV0SIGN) TestNew() {
 func (t *testBallotV0SIGN) TestFact() {
 	ib := SIGNBallotV0{
 		BaseBallotV0: BaseBallotV0{
-			node: base.NewShortAddress("test-for-sign-ballot"),
+			node: base.RandomStringAddress(),
 		},
 		SIGNBallotFactV0: SIGNBallotFactV0{
 			BaseBallotFactV0: BaseBallotFactV0{
@@ -79,7 +79,7 @@ func (t *testBallotV0SIGN) TestFact() {
 func (t *testBallotV0SIGN) TestGenerateHash() {
 	ib := SIGNBallotV0{
 		BaseBallotV0: BaseBallotV0{
-			node: base.NewShortAddress("test-for-sign-ballot"),
+			node: base.RandomStringAddress(),
 		},
 		SIGNBallotFactV0: SIGNBallotFactV0{
 			BaseBallotFactV0: BaseBallotFactV0{
@@ -105,7 +105,7 @@ func (t *testBallotV0SIGN) TestGenerateHash() {
 func (t *testBallotV0SIGN) TestSign() {
 	ib := SIGNBallotV0{
 		BaseBallotV0: BaseBallotV0{
-			node: base.NewShortAddress("test-for-sign-ballot"),
+			node: base.RandomStringAddress(),
 		},
 		SIGNBallotFactV0: SIGNBallotFactV0{
 			BaseBallotFactV0: BaseBallotFactV0{
@@ -142,7 +142,7 @@ func (t *testBallotV0SIGN) TestSign() {
 func (t *testBallotV0SIGN) TestIsValid() {
 	{ // empty signedAt
 		bb := BaseBallotV0{
-			node: base.NewShortAddress("test-for-sign-ballot"),
+			node: base.RandomStringAddress(),
 		}
 		err := bb.IsValid(nil)
 		t.Contains(err.Error(), "empty SignedAt")
@@ -150,7 +150,7 @@ func (t *testBallotV0SIGN) TestIsValid() {
 
 	{ // empty signer
 		bb := BaseBallotV0{
-			node:     base.NewShortAddress("test-for-sign-ballot"),
+			node:     base.RandomStringAddress(),
 			signedAt: localtime.Now(),
 		}
 		err := bb.IsValid(nil)
@@ -159,7 +159,7 @@ func (t *testBallotV0SIGN) TestIsValid() {
 
 	{ // empty signature
 		bb := BaseBallotV0{
-			node:     base.NewShortAddress("test-for-sign-ballot"),
+			node:     base.RandomStringAddress(),
 			signedAt: localtime.Now(),
 			signer:   t.pk.Publickey(),
 		}

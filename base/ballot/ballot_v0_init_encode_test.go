@@ -27,7 +27,7 @@ func (t *testBallotV0INITEncode) SetupSuite() {
 	encs := encoder.NewEncoders()
 	t.NoError(encs.AddEncoder(t.enc))
 	t.NoError(encs.AddHinter(valuehash.SHA256{}))
-	t.NoError(encs.AddHinter(base.NewShortAddress("")))
+	t.NoError(encs.AddHinter(base.StringAddress("")))
 	t.NoError(encs.AddHinter(key.BTCPublickey{}))
 	t.NoError(encs.AddHinter(INITBallotV0{}))
 	t.NoError(encs.AddHinter(base.DummyVoteproof{}))
@@ -43,7 +43,7 @@ func (t *testBallotV0INITEncode) TestEncode() {
 
 	ib := INITBallotV0{
 		BaseBallotV0: BaseBallotV0{
-			node: base.NewShortAddress("test-for-init-ballot"),
+			node: base.RandomStringAddress(),
 		},
 		INITBallotFactV0: INITBallotFactV0{
 			BaseBallotFactV0: BaseBallotFactV0{

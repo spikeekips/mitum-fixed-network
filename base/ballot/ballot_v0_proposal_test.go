@@ -24,7 +24,7 @@ func (t *testBallotV0Proposal) SetupSuite() {
 func (t *testBallotV0Proposal) TestNew() {
 	ib := ProposalV0{
 		BaseBallotV0: BaseBallotV0{
-			node: base.NewShortAddress("test-for-proposal"),
+			node: base.RandomStringAddress(),
 		},
 		ProposalFactV0: ProposalFactV0{
 			BaseBallotFactV0: BaseBallotFactV0{
@@ -43,7 +43,7 @@ func (t *testBallotV0Proposal) TestNew() {
 func (t *testBallotV0Proposal) TestFact() {
 	ib := ProposalV0{
 		BaseBallotV0: BaseBallotV0{
-			node: base.NewShortAddress("test-for-proposal"),
+			node: base.RandomStringAddress(),
 		},
 		ProposalFactV0: ProposalFactV0{
 			BaseBallotFactV0: BaseBallotFactV0{
@@ -74,7 +74,7 @@ func (t *testBallotV0Proposal) TestFact() {
 func (t *testBallotV0Proposal) TestGenerateHash() {
 	ib := ProposalV0{
 		BaseBallotV0: BaseBallotV0{
-			node: base.NewShortAddress("test-for-proposal"),
+			node: base.RandomStringAddress(),
 		},
 		ProposalFactV0: ProposalFactV0{
 			BaseBallotFactV0: BaseBallotFactV0{
@@ -103,7 +103,7 @@ func (t *testBallotV0Proposal) TestGenerateHash() {
 func (t *testBallotV0Proposal) TestSign() {
 	ib := ProposalV0{
 		BaseBallotV0: BaseBallotV0{
-			node: base.NewShortAddress("test-for-proposal"),
+			node: base.RandomStringAddress(),
 		},
 		ProposalFactV0: ProposalFactV0{
 			BaseBallotFactV0: BaseBallotFactV0{

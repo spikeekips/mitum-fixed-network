@@ -8,7 +8,6 @@ import (
 	"github.com/spikeekips/mitum/base/operation"
 	"github.com/spikeekips/mitum/base/state"
 	"github.com/spikeekips/mitum/base/tree"
-	contestlib "github.com/spikeekips/mitum/contest/lib"
 	"github.com/spikeekips/mitum/isaac"
 	bsonenc "github.com/spikeekips/mitum/util/encoder/bson"
 	jsonenc "github.com/spikeekips/mitum/util/encoder/json"
@@ -32,7 +31,7 @@ var Hinters = []hint.Hinter{
 	block.ManifestV0{},
 	block.SuffrageInfoV0{},
 	bsonenc.Encoder{},
-	contestlib.ContestAddress(""),
+	base.StringAddress(""),
 	isaac.PolicyOperationBodyV0{},
 	isaac.SetPolicyOperationFactV0{},
 	isaac.SetPolicyOperationV0{},

@@ -28,7 +28,7 @@ func RandomNode(name string) *DummyNode {
 	pk, _ := key.NewBTCPrivatekey()
 
 	return NewDummyNode(
-		NewShortAddress(fmt.Sprintf("n-%s", name)),
+		MustStringAddress(fmt.Sprintf("n-%s", name)),
 		pk,
 	)
 }

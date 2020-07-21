@@ -85,8 +85,8 @@ func (fs FixedSuffrageDesign) IsValid([]byte) error {
 }
 
 func (fs FixedSuffrageDesign) New(localstate *isaac.Localstate) (base.Suffrage, error) {
-	var proposer ContestAddress
-	switch p, err := NewContestAddress(fs.proposer); {
+	var proposer base.StringAddress
+	switch p, err := base.NewStringAddress(fs.proposer); {
 	case err != nil:
 		return nil, err
 	case !p.Equal(localstate.Node().Address()) && !localstate.Nodes().Exists(p):

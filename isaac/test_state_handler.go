@@ -38,7 +38,7 @@ func (t *baseTestStateHandler) SetupSuite() {
 	_ = t.Encs.AddHinter(key.BTCPublickey{})
 	_ = t.Encs.AddHinter(valuehash.SHA256{})
 	_ = t.Encs.AddHinter(valuehash.Bytes{})
-	_ = t.Encs.AddHinter(base.NewShortAddress(""))
+	_ = t.Encs.AddHinter(base.StringAddress(""))
 	_ = t.Encs.AddHinter(ballot.INITBallotV0{})
 	_ = t.Encs.AddHinter(ballot.INITBallotFactV0{})
 	_ = t.Encs.AddHinter(ballot.ProposalV0{})

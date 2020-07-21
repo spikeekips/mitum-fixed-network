@@ -40,7 +40,7 @@ func (t *testNodeInfo) SetupTest() {
 	_ = t.encs.AddHinter(key.BTCPublickey{})
 	_ = t.encs.AddHinter(valuehash.SHA256{})
 	_ = t.encs.AddHinter(base.BaseNodeV0{})
-	_ = t.encs.AddHinter(base.ShortAddress(""))
+	_ = t.encs.AddHinter(base.StringAddress(""))
 	_ = t.encs.AddHinter(block.ManifestV0{})
 	_ = t.encs.AddHinter(NodeInfoV0{})
 }

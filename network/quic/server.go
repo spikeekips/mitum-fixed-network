@@ -168,6 +168,10 @@ func (qs *QuicServer) handleNewSeal(w http.ResponseWriter, r *http.Request) {
 	var sl seal.Seal
 	if s, err := seal.DecodeSeal(enc, body.Bytes()); err != nil {
 		network.HTTPError(w, http.StatusBadRequest)
+
+		qs.Log().Error().Err(err).
+			Str("body", body.String()).Msg("invalid seal found")
+
 		return
 	} else {
 		sl = s

@@ -86,7 +86,7 @@ func (t *testNodesState) TestRemove() {
 	ns := NewNodesState(t.localNode, nodes)
 
 	{ // try to remove, but nothing
-		err := ns.Remove(base.NewShortAddress("hehe"))
+		err := ns.Remove(base.RandomStringAddress())
 		t.Contains(err.Error(), "does not exist")
 		t.Equal(len(nodes), ns.Len())
 	}

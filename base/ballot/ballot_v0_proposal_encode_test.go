@@ -27,7 +27,7 @@ func (t *testBallotProposalV0Encode) SetupSuite() {
 	encs := encoder.NewEncoders()
 	t.NoError(encs.AddEncoder(t.enc))
 	t.NoError(encs.AddHinter(valuehash.SHA256{}))
-	t.NoError(encs.AddHinter(base.NewShortAddress("")))
+	t.NoError(encs.AddHinter(base.StringAddress("")))
 	t.NoError(encs.AddHinter(key.BTCPublickey{}))
 	t.NoError(encs.AddHinter(ProposalV0{}))
 }
@@ -35,7 +35,7 @@ func (t *testBallotProposalV0Encode) SetupSuite() {
 func (t *testBallotProposalV0Encode) TestEncode() {
 	ib := ProposalV0{
 		BaseBallotV0: BaseBallotV0{
-			node: base.NewShortAddress("test-for-proposal"),
+			node: base.RandomStringAddress(),
 		},
 		ProposalFactV0: ProposalFactV0{
 			BaseBallotFactV0: BaseBallotFactV0{

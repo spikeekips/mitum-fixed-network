@@ -160,7 +160,11 @@ func (cts *Containers) createContainers() ([]*Container, error) {
 
 	rds := make([]*launcher.RemoteDesign, len(cs))
 	for i, c := range cs {
-		rds[i] = c.RemoteDesign()
+		if rd, err := c.RemoteDesign(); err != nil {
+			return nil, err
+		} else {
+			rds[i] = rd
+		}
 	}
 
 	for i, c := range cs {
@@ -182,7 +186,7 @@ func (cts *Containers) createContainers() ([]*Container, error) {
 
 func (cts *Containers) createContainer(d *ContestNodeDesign) (*Container, error) {
 	var errWriter io.Writer
-	errWriterFile := filepath.Join(cts.outputDir, fmt.Sprintf("error-%s.log", d.Address()))
+	errWriterFile := filepath.Join(cts.outputDir, fmt.Sprintf("error-%s.log", d.Name))
 	if f, err := os.Create(errWriterFile); err != nil {
 		return nil, xerrors.Errorf("failed to create error log file: %w", err)
 	} else {
@@ -193,12 +197,12 @@ func (cts *Containers) createContainer(d *ContestNodeDesign) (*Container, error)
 		encs:            cts.encs,
 		contestDesign:   cts.design,
 		design:          d,
-		name:            d.Address(),
+		name:            d.Name,
 		image:           cts.image,
 		client:          cts.client,
-		port:            cts.port(d.Address()),
+		port:            cts.port(d.Name),
 		runner:          cts.runner,
-		privatekey:      cts.pk(d.Address()),
+		privatekey:      cts.pk(d.Name),
 		dockerNetworkID: cts.dockerNetworkID,
 		exitAfter:       cts.exitAfter,
 		eventChan:       cts.eventChan,
@@ -206,7 +210,7 @@ func (cts *Containers) createContainer(d *ContestNodeDesign) (*Container, error)
 		errWriter:       errWriter,
 	}
 
-	address := d.Address()
+	address := d.Name
 	container.Logging = logging.NewLogging(func(c logging.Context) logging.Emitter {
 		return c.Str("module", "contest-container").Str("address", address)
 	})
@@ -779,12 +783,16 @@ func (ct *Container) networkDesign() *launcher.NetworkDesign {
 	}
 }
 
-func (ct *Container) RemoteDesign() *launcher.RemoteDesign {
-	return &launcher.RemoteDesign{
-		Address:         ct.name,
+func (ct *Container) RemoteDesign() (*launcher.RemoteDesign, error) {
+	rd := &launcher.RemoteDesign{
+		AddressString:   hint.HintedString(ct.Address().Hint(), ct.Address().String()),
 		PublickeyString: hint.HintedString(ct.privatekey.Publickey().Hint(), ct.privatekey.Publickey().String()),
 		Network:         ct.networkDesign().Publish,
 	}
+
+	rd.SetEncoders(ct.encs)
+
+	return rd, rd.IsValid(nil)
 }
 
 func (ct *Container) NodeDesign(isGenesisNode bool) *NodeDesign {
@@ -794,7 +802,7 @@ func (ct *Container) NodeDesign(isGenesisNode bool) *NodeDesign {
 
 	var nodes []*launcher.RemoteDesign // nolint
 	for _, d := range ct.rds {
-		if d.Address == ct.name {
+		if d.Address().Equal(ct.Address()) {
 			continue
 		}
 
@@ -802,7 +810,7 @@ func (ct *Container) NodeDesign(isGenesisNode bool) *NodeDesign {
 	}
 
 	lnd := &launcher.NodeDesign{
-		Address:          ct.name,
+		AddressString:    hint.HintedString(ct.Address().Hint(), ct.Address().String()),
 		PrivatekeyString: hint.HintedString(ct.privatekey.Hint(), ct.privatekey.String()),
 		Storage:          ct.storageURIInternal(),
 		NetworkIDString:  ct.contestDesign.Config.NetworkIDString,
@@ -904,11 +912,16 @@ func (ct *Container) Storage(initialize bool) (storage.Storage, error) {
 	}
 }
 
-func (ct *Container) Localstate() *isaac.Localstate {
+func (ct *Container) Address() base.Address {
 	address, err := base.NewStringAddress(ct.name)
 	if err != nil {
 		panic(err)
 	}
+
+	return address
+}
+
+func (ct *Container) Localstate() *isaac.Localstate {
 	st, err := ct.Storage(true)
 	if err != nil {
 		panic(err)
@@ -917,7 +930,7 @@ func (ct *Container) Localstate() *isaac.Localstate {
 	l, err := isaac.NewLocalstate(
 		st,
 		isaac.NewLocalNode(
-			address,
+			ct.Address(),
 			ct.privatekey,
 		),
 		ct.NodeDesign(false).NetworkID(),

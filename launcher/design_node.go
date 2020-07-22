@@ -8,6 +8,7 @@ import (
 
 	"golang.org/x/xerrors"
 
+	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/base/key"
 	"github.com/spikeekips/mitum/util/encoder"
 	jsonenc "github.com/spikeekips/mitum/util/encoder/json"
@@ -16,7 +17,8 @@ import (
 
 type NodeDesign struct {
 	encs             *encoder.Encoders
-	Address          string
+	address          base.Address
+	AddressString    string `yaml:"address"`
 	PrivatekeyString string `yaml:"privatekey"`
 	Storage          string
 	NetworkIDString  string `yaml:"network-id,omitempty"`
@@ -49,6 +51,14 @@ func (nd *NodeDesign) IsValid([]byte) error {
 		je = e
 	}
 
+	if a, err := base.DecodeAddressFromString(je, strings.TrimSpace(nd.AddressString)); err != nil {
+		return err
+	} else if err := a.IsValid(nil); err != nil {
+		return err
+	} else {
+		nd.address = a
+	}
+
 	if pk, err := key.DecodePrivatekey(je, nd.PrivatekeyString); err != nil {
 		return err
 	} else {
@@ -56,7 +66,7 @@ func (nd *NodeDesign) IsValid([]byte) error {
 	}
 
 	addrs := map[string]struct{}{
-		nd.Address: {},
+		nd.Address().String(): {},
 	}
 	for _, r := range nd.Nodes {
 		r.encs = nd.encs
@@ -64,10 +74,10 @@ func (nd *NodeDesign) IsValid([]byte) error {
 			return err
 		}
 
-		if _, found := addrs[r.Address]; found {
-			return xerrors.Errorf("duplicated address found: '%v'", r.Address)
+		if _, found := addrs[r.Address().String()]; found {
+			return xerrors.Errorf("duplicated address found: '%v'", r.Address().String())
 		}
-		addrs[r.Address] = struct{}{}
+		addrs[r.Address().String()] = struct{}{}
 	}
 
 	if nd.GenesisPolicy == nil {
@@ -78,6 +88,10 @@ func (nd *NodeDesign) IsValid([]byte) error {
 	}
 
 	return nil
+}
+
+func (nd NodeDesign) Address() base.Address {
+	return nd.address
 }
 
 func (nd NodeDesign) NetworkID() []byte {
@@ -140,11 +154,16 @@ func (nd *NetworkDesign) PublishURLWithIP() *url.URL {
 
 type RemoteDesign struct {
 	encs            *encoder.Encoders
-	Address         string
+	address         base.Address
+	AddressString   string `yaml:"address"`
 	PublickeyString string `yaml:"publickey"`
 	Network         string
 	publickey       key.Publickey
 	networkURL      *url.URL
+}
+
+func (rd *RemoteDesign) SetEncoders(encs *encoder.Encoders) {
+	rd.encs = encs
 }
 
 func (rd *RemoteDesign) IsValid([]byte) error {
@@ -153,6 +172,14 @@ func (rd *RemoteDesign) IsValid([]byte) error {
 		return xerrors.Errorf("json encoder needs for load design: %w", err)
 	} else {
 		je = e
+	}
+
+	if a, err := base.DecodeAddressFromString(je, strings.TrimSpace(rd.AddressString)); err != nil {
+		return err
+	} else if err := a.IsValid(nil); err != nil {
+		return err
+	} else {
+		rd.address = a
 	}
 
 	if pk, err := key.DecodePublickey(je, rd.PublickeyString); err != nil {
@@ -168,6 +195,10 @@ func (rd *RemoteDesign) IsValid([]byte) error {
 	}
 
 	return nil
+}
+
+func (rd *RemoteDesign) Address() base.Address {
+	return rd.address
 }
 
 func (rd *RemoteDesign) Publickey() key.Publickey {

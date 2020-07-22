@@ -36,7 +36,7 @@ func createLauncherFromDesign(f string, version util.Version, log logging.Logger
 
 	var nr *contestlib.Launcher
 	if n, err := contestlib.NewLauncherFromDesign(design, version); err != nil {
-		return nil, xerrors.Errorf("failed to create node runner: %w", err)
+		return nil, err
 	} else if err := n.AddHinters(contestlib.Hinters...); err != nil {
 		return nil, err
 	} else {

@@ -79,10 +79,10 @@ func (cd *ContestDesign) IsValid([]byte) error {
 
 	addrs := map[string]struct{}{}
 	for _, r := range cd.Nodes {
-		if _, found := addrs[r.Address()]; found {
-			return xerrors.Errorf("duplicated address found: '%v'", r.Address())
+		if _, found := addrs[r.Name]; found {
+			return xerrors.Errorf("duplicated address found: '%v'", r.Name)
 		}
-		addrs[r.Address()] = struct{}{}
+		addrs[r.Name] = struct{}{}
 	}
 
 	if cd.Vars == nil {

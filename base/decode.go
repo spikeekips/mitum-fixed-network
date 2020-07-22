@@ -1,6 +1,8 @@
 package base
 
 import (
+	"golang.org/x/xerrors"
+
 	"github.com/spikeekips/mitum/util/encoder"
 	"github.com/spikeekips/mitum/util/hint"
 )
@@ -50,5 +52,21 @@ func DecodePolicyOperationBody(enc encoder.Encoder, b []byte) (PolicyOperationBo
 		return nil, hint.InvalidTypeError.Errorf("not PolicyOperationBody; type=%T", i)
 	} else {
 		return v, nil
+	}
+}
+
+func DecodeAddressFromString(enc encoder.Encoder, s string) (Address, error) {
+	h, us, err := hint.ParseHintedString(s)
+	if err != nil {
+		return nil, err
+	}
+
+	kd := encoder.NewHintedString(h, us)
+	if k, err := kd.Encode(enc); err != nil {
+		return nil, err
+	} else if a, ok := k.(Address); !ok {
+		return nil, xerrors.Errorf("not Address; type=%T", k)
+	} else {
+		return a, nil
 	}
 }

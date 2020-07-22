@@ -3,12 +3,13 @@ package contestlib
 import "github.com/spikeekips/mitum/base"
 
 type ContestNodeDesign struct {
-	AddressString string `yaml:"address"`
-	Component     *ComponentDesign
+	Name      string
+	Component *ComponentDesign
+	address   base.Address
 }
 
-func (cn *ContestNodeDesign) Address() string {
-	return cn.AddressString
+func (cn *ContestNodeDesign) Address() base.Address {
+	return cn.address
 }
 
 func (cn *ContestNodeDesign) IsValid([]byte) error {
@@ -20,8 +21,10 @@ func (cn *ContestNodeDesign) IsValid([]byte) error {
 		return err
 	}
 
-	if _, err := base.NewStringAddress(cn.AddressString); err != nil {
+	if a, err := base.NewStringAddress(cn.Name); err != nil {
 		return err
+	} else {
+		cn.address = a
 	}
 
 	return nil

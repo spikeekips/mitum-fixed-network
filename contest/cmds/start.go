@@ -319,7 +319,7 @@ func (cmd *StartCommand) defaultActionStartNode(nodes []string) (func(logging.Lo
 		for _, n := range nodes {
 			var found bool
 			for _, d := range cmd.design.Nodes {
-				if n == d.Address() {
+				if n == d.Name {
 					found = true
 					break
 				}
@@ -387,9 +387,9 @@ func (cmd *StartCommand) defaultActionBuildBlocks(args []string) (func(logging.L
 		var genesis *isaac.Localstate
 		var all []*isaac.Localstate
 		for _, d := range cmd.design.Nodes {
-			ct, found := cmd.containers.Container(d.Address())
+			ct, found := cmd.containers.Container(d.Name)
 			if !found {
-				return xerrors.Errorf("container name, %q not found", d.Address())
+				return xerrors.Errorf("container name, %q not found", d.Name)
 			}
 
 			l := ct.Localstate()

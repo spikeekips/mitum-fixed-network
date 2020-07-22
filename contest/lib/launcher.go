@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"net/url"
 
-	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/isaac"
 	"github.com/spikeekips/mitum/launcher"
 	"github.com/spikeekips/mitum/network"
@@ -22,9 +21,7 @@ type Launcher struct {
 func NewLauncherFromDesign(design *NodeDesign, version util.Version) (*Launcher, error) {
 	nr := &Launcher{design: design}
 
-	if ca, err := base.NewStringAddress(design.Address); err != nil {
-		return nil, err
-	} else if bn, err := launcher.NewLauncher(ca, design.Privatekey(), design.NetworkID(), version); err != nil {
+	if bn, err := launcher.NewLauncher(design.Address(), design.Privatekey(), design.NetworkID(), version); err != nil {
 		return nil, err
 	} else {
 		nr.Launcher = bn
@@ -142,18 +139,12 @@ func (nr *Launcher) attachRemoteNodes() error {
 	for i := range nr.design.Nodes {
 		c := nr.design.Nodes[i]
 		l := nr.Log().WithLogger(func(ctx logging.Context) logging.Emitter {
-			return ctx.Str("target", "remote-nodes").Str("address", c.Address)
+			return ctx.Str("target", "remote-nodes").Str("address", c.Address().String())
 		})
 
 		l.Debug().Str("url", c.NetworkURL().String()).Msg("trying to create remote node")
 
-		var n *isaac.RemoteNode
-		if ca, err := base.NewStringAddress(c.Address); err != nil {
-			return err
-		} else {
-			n = isaac.NewRemoteNode(ca, c.Publickey())
-		}
-
+		n := isaac.NewRemoteNode(c.Address(), c.Publickey())
 		if ch, err := launcher.LoadNodeChannel(c.NetworkURL(), nr.Encoders()); err != nil {
 			return err
 		} else {

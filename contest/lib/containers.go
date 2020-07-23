@@ -522,7 +522,7 @@ type Container struct {
 	*logging.Logging
 	contestDesign   *ContestDesign
 	design          *ContestNodeDesign
-	nodeDesign      *NodeDesign
+	nodeDesign      *launcher.NodeDesign
 	name            string
 	image           string
 	client          *dockerClient.Client
@@ -795,7 +795,7 @@ func (ct *Container) RemoteDesign() (*launcher.RemoteDesign, error) {
 	return rd, rd.IsValid(nil)
 }
 
-func (ct *Container) NodeDesign(isGenesisNode bool) *NodeDesign {
+func (ct *Container) NodeDesign(isGenesisNode bool) *launcher.NodeDesign {
 	if ct.nodeDesign != nil {
 		return ct.nodeDesign
 	}
@@ -809,26 +809,22 @@ func (ct *Container) NodeDesign(isGenesisNode bool) *NodeDesign {
 		nodes = append(nodes, d)
 	}
 
-	lnd := &launcher.NodeDesign{
+	nd := &launcher.NodeDesign{
 		AddressString:    hint.HintedString(ct.Address().Hint(), ct.Address().String()),
 		PrivatekeyString: hint.HintedString(ct.privatekey.Hint(), ct.privatekey.String()),
 		Storage:          ct.storageURIInternal(),
 		NetworkIDString:  ct.contestDesign.Config.NetworkIDString,
 		Network:          ct.networkDesign(),
 		Nodes:            nodes,
+		Component:        ct.design.Component.NodeDesign(),
 	}
 
 	if isGenesisNode {
-		lnd.GenesisPolicy = ct.contestDesign.Config.GenesisPolicy
-		lnd.InitOperations = ct.contestDesign.Config.InitOperations
+		nd.GenesisPolicy = ct.contestDesign.Config.GenesisPolicy
+		nd.InitOperations = ct.contestDesign.Config.InitOperations
 	}
 
-	lnd.SetEncoders(ct.encs)
-
-	nd := &NodeDesign{
-		NodeDesign: lnd,
-		Component:  ct.design.Component,
-	}
+	nd.SetEncoders(ct.encs)
 
 	if err := nd.IsValid(nil); err != nil {
 		panic(err)

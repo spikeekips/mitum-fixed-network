@@ -1,12 +1,15 @@
 package launcher
 
 import (
+	"io/ioutil"
 	"net"
 	"net/url"
+	"path/filepath"
 	"strconv"
 	"strings"
 
 	"golang.org/x/xerrors"
+	"gopkg.in/yaml.v3"
 
 	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/base/key"
@@ -27,6 +30,7 @@ type NodeDesign struct {
 	privatekey       key.Privatekey
 	Nodes            []*RemoteDesign
 	InitOperations   []OperationDesign `yaml:"init-operations"`
+	Component        *NodeComponentDesign
 }
 
 func (nd *NodeDesign) SetEncoders(encs *encoder.Encoders) {
@@ -87,7 +91,11 @@ func (nd *NodeDesign) IsValid([]byte) error {
 		return err
 	}
 
-	return nil
+	if nd.Component == nil {
+		nd.Component = NewNodeComponentDesign(nil)
+	}
+
+	return nd.Component.IsValid(nil)
 }
 
 func (nd NodeDesign) Address() base.Address {
@@ -224,4 +232,23 @@ func isvalidNetworkURL(n string) (*url.URL, error) {
 	}
 
 	return ur, nil
+}
+
+func LoadNodeDesign(b []byte, encs *encoder.Encoders) (*NodeDesign, error) {
+	var design *NodeDesign
+	if err := yaml.Unmarshal(b, &design); err != nil {
+		return nil, err
+	}
+
+	design.SetEncoders(encs)
+
+	return design, nil
+}
+
+func LoadNodeDesignFromFile(f string, encs *encoder.Encoders) (*NodeDesign, error) {
+	if b, err := ioutil.ReadFile(filepath.Clean(f)); err != nil {
+		return nil, err
+	} else {
+		return LoadNodeDesign(b, encs)
+	}
 }

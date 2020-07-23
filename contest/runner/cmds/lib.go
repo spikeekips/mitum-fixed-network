@@ -27,7 +27,7 @@ func createLauncherFromDesign(f string, version util.Version, log logging.Logger
 		encs = e
 	}
 
-	var design *contestlib.NodeDesign
+	var design *launcher.NodeDesign
 	if d, err := loadDesign(f, encs); err != nil {
 		return nil, xerrors.Errorf("failed to load design: %w", err)
 	} else {
@@ -49,8 +49,8 @@ func createLauncherFromDesign(f string, version util.Version, log logging.Logger
 	return nr, nil
 }
 
-func loadDesign(f string, encs *encoder.Encoders) (*contestlib.NodeDesign, error) {
-	if d, err := contestlib.LoadNodeDesignFromFile(f, encs); err != nil {
+func loadDesign(f string, encs *encoder.Encoders) (*launcher.NodeDesign, error) {
+	if d, err := launcher.LoadNodeDesignFromFile(f, encs); err != nil {
 		return nil, xerrors.Errorf("failed to load design file: %w", err)
 	} else if err := d.IsValid(nil); err != nil {
 		return nil, xerrors.Errorf("invalid design file: %w", err)

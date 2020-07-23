@@ -1,4 +1,4 @@
-package contestlib
+package launcher
 
 import (
 	"fmt"
@@ -33,6 +33,26 @@ func ParseBlockPoint(s string) (BlockPoint, error) {
 		Height: height,
 		Round:  base.Round(r),
 	}, nil
+}
+
+func ParseBlockPoints(hs interface{}) ([]BlockPoint, error) {
+	l, ok := hs.([]interface{})
+	if !ok {
+		return nil, xerrors.Errorf("blockpoints must be list; %T", hs)
+	}
+	bps := make([]BlockPoint, len(l))
+
+	for i, v := range l {
+		if s, ok := v.(string); !ok {
+			return nil, xerrors.Errorf("invalid BlockPoint string, %v", v)
+		} else if bp, err := ParseBlockPoint(s); err != nil {
+			return nil, err
+		} else {
+			bps[i] = bp
+		}
+	}
+
+	return bps, nil
 }
 
 type ProposalProcessorDesign struct {
@@ -80,7 +100,7 @@ func (st *ProposalProcessorDesign) IsValid([]byte) error {
 	case "wrong-processing":
 		var points []BlockPoint
 		if i, found := st.Info["points"]; !found {
-		} else if hs, err := st.parseBlockPoint(i); err != nil {
+		} else if hs, err := ParseBlockPoints(i); err != nil {
 			return xerrors.Errorf("invalid points for wrong points: %w", err)
 		} else {
 			points = hs
@@ -94,13 +114,13 @@ func (st *ProposalProcessorDesign) IsValid([]byte) error {
 	case "occurring-error":
 		var initPoints, acceptPoints []BlockPoint
 		if i, found := st.Info["init-points"]; !found {
-		} else if hs, err := st.parseBlockPoint(i); err != nil {
+		} else if hs, err := ParseBlockPoints(i); err != nil {
 			return xerrors.Errorf("invalid points for init error points: %w", err)
 		} else {
 			initPoints = hs
 		}
 		if i, found := st.Info["accept-points"]; !found {
-		} else if hs, err := st.parseBlockPoint(i); err != nil {
+		} else if hs, err := ParseBlockPoints(i); err != nil {
 			return xerrors.Errorf("invalid points for accept error points: %w", err)
 		} else {
 			acceptPoints = hs
@@ -132,24 +152,4 @@ func (st *ProposalProcessorDesign) New(
 	default:
 		return nil, xerrors.Errorf("unknown type found: %v", st.Type)
 	}
-}
-
-func (st *ProposalProcessorDesign) parseBlockPoint(hs interface{}) ([]BlockPoint, error) {
-	l, ok := hs.([]interface{})
-	if !ok {
-		return nil, xerrors.Errorf("blockpoints must be list; %T", hs)
-	}
-	bps := make([]BlockPoint, len(l))
-
-	for i, v := range l {
-		if s, ok := v.(string); !ok {
-			return nil, xerrors.Errorf("invalid BlockPoint string, %v", v)
-		} else if bp, err := ParseBlockPoint(s); err != nil {
-			return nil, err
-		} else {
-			bps[i] = bp
-		}
-	}
-
-	return bps, nil
 }

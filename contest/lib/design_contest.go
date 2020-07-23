@@ -19,7 +19,7 @@ type ContestDesign struct {
 	Vars       *Vars
 	Conditions []*Condition
 	Config     *ContestConfigDesign
-	Component  *ComponentDesign
+	Component  *launcher.ContestComponentDesign
 	actions    map[string]ConditionActionLoader
 	Nodes      []*ContestNodeDesign
 }
@@ -59,22 +59,21 @@ func (cd *ContestDesign) IsValid([]byte) error {
 	}
 
 	if cd.Component == nil {
-		cd.Component = NewComponentDesign(nil)
-	}
-	if err := cd.Component.IsValid(nil); err != nil {
-		return err
+		cd.Component = launcher.NewContestComponentDesign(nil)
 	}
 
 	for _, n := range cd.Nodes {
 		if n.Component == nil {
-			n.Component = NewComponentDesign(cd.Component)
-		} else if err := n.Component.Merge(cd.Component); err != nil {
-			return err
+			n.Component = launcher.NewContestComponentDesign(cd.Component)
 		}
 
-		if err := n.IsValid(nil); err != nil {
+		if err := n.Component.Merge(cd.Component); err != nil {
 			return err
 		}
+	}
+
+	if err := cd.Component.IsValid(nil); err != nil {
+		return err
 	}
 
 	addrs := map[string]struct{}{}

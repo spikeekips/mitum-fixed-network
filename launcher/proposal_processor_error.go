@@ -1,4 +1,4 @@
-package contestlib
+package launcher
 
 import (
 	"golang.org/x/xerrors"

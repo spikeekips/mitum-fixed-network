@@ -7,6 +7,7 @@ import (
 	"github.com/spikeekips/mitum/base/operation"
 	contestlib "github.com/spikeekips/mitum/contest/lib"
 	"github.com/spikeekips/mitum/isaac"
+	"github.com/spikeekips/mitum/launcher"
 	"github.com/spikeekips/mitum/util"
 	"github.com/spikeekips/mitum/util/logging"
 )
@@ -97,7 +98,7 @@ func (cmd *InitCommand) checkExisting(nr *contestlib.Launcher, log logging.Logge
 	return nil
 }
 
-func (cmd *InitCommand) loadPolicyOperation(design *contestlib.NodeDesign) (
+func (cmd *InitCommand) loadPolicyOperation(design *launcher.NodeDesign) (
 	operation.Operation, error,
 ) {
 	token := []byte("genesis-policies-from-contest")

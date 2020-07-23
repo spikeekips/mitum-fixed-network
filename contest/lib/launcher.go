@@ -15,10 +15,10 @@ import (
 type Launcher struct {
 	*logging.Logging
 	*launcher.Launcher
-	design *NodeDesign
+	design *launcher.NodeDesign
 }
 
-func NewLauncherFromDesign(design *NodeDesign, version util.Version) (*Launcher, error) {
+func NewLauncherFromDesign(design *launcher.NodeDesign, version util.Version) (*Launcher, error) {
 	nr := &Launcher{design: design}
 
 	if bn, err := launcher.NewLauncher(design.Address(), design.Privatekey(), design.NetworkID(), version); err != nil {
@@ -40,7 +40,7 @@ func (nr *Launcher) SetLogger(l logging.Logger) logging.Logger {
 	return nr.Log()
 }
 
-func (nr *Launcher) Design() *NodeDesign {
+func (nr *Launcher) Design() *launcher.NodeDesign {
 	return nr.design
 }
 
@@ -164,7 +164,7 @@ func (nr *Launcher) attachSuffrage() error {
 	})
 	l.Debug().Msg("trying to attach")
 
-	if sf, err := nr.design.Component.Suffrage.New(nr.Localstate()); err != nil {
+	if sf, err := nr.design.Component.Suffrage.New(nr.Localstate(), nr.Encoders()); err != nil {
 		return xerrors.Errorf("failed to create new suffrage component: %w", err)
 	} else {
 		l.Debug().

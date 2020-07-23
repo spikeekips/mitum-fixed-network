@@ -21,7 +21,14 @@ func init() {
 }
 
 func UUID() uuid.UUID {
-	return uuid.Must(uuid.NewV4(), nil)
+	var u uuid.UUID
+	if i, err := uuid.NewV4(); err != nil {
+		panic(err)
+	} else {
+		u = i
+	}
+
+	return u
 }
 
 func ULID() ulid.ULID {

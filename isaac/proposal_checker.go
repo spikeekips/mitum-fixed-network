@@ -26,12 +26,10 @@ func NewProposalValidationChecker(
 		Logging: logging.NewLogging(func(c logging.Context) logging.Emitter {
 			return c.
 				Str("module", "proposal-validation-checker").
-				Dict("proposal", logging.Dict().
-					Hinted("hash", proposal.Hash()).
-					Hinted("height", proposal.Height()).
-					Hinted("round", proposal.Round()).
-					Hinted("node", proposal.Node()),
-				)
+				Hinted("proposal", proposal.Hash()).
+				Hinted("proposal_height", proposal.Height()).
+				Hinted("proposal_round", proposal.Round()).
+				Hinted("proposal_node", proposal.Node())
 		}),
 		localstate:    localstate,
 		suffrage:      suffrage,
@@ -117,7 +115,7 @@ func (pvc *ProposalValidationChecker) IsOldOrHigher() (bool, error) {
 	if height < pvc.initVoteproof.Height() || round != pvc.initVoteproof.Round() {
 		err := xerrors.Errorf("old Proposal received")
 		pvc.Log().Error().Err(err).
-			Dict("current", logging.Dict().
+			Dict("init_voteproof", logging.Dict().
 				Hinted("height", pvc.initVoteproof.Height()).
 				Hinted("round", pvc.initVoteproof.Round()),
 			).
@@ -127,7 +125,7 @@ func (pvc *ProposalValidationChecker) IsOldOrHigher() (bool, error) {
 	} else if height > pvc.initVoteproof.Height() {
 		err := xerrors.Errorf("higher Proposal received")
 		pvc.Log().Error().Err(err).
-			Dict("current", logging.Dict().
+			Dict("init_voteproof", logging.Dict().
 				Hinted("height", pvc.initVoteproof.Height()).
 				Hinted("round", pvc.initVoteproof.Round()),
 			).

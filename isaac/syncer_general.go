@@ -988,7 +988,7 @@ func (cs *GeneralSyncer) commit() error {
 			return err
 		default:
 			cs.Log().Info().Dict("block", logging.Dict().
-				Hinted("proposal", m.Proposal()).
+				Hinted("proposal_hash", m.Proposal()).
 				Hinted("hash", m.Hash()).
 				Hinted("height", m.Height()).
 				Hinted("round", m.Round()),

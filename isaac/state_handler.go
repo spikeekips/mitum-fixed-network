@@ -152,7 +152,7 @@ func (bs *BaseStateHandler) StoreNewBlock(acceptVoteproof base.Voteproof) error 
 	l := loggerWithVoteproofID(
 		acceptVoteproof,
 		bs.Log().WithLogger(func(ctx logging.Context) logging.Emitter {
-			return ctx.Hinted("proposal", fact.Proposal()).
+			return ctx.Hinted("proposal_hash", fact.Proposal()).
 				Hinted("new_block", fact.NewBlock())
 		}),
 	)
@@ -188,7 +188,7 @@ func (bs *BaseStateHandler) StoreNewBlock(acceptVoteproof base.Voteproof) error 
 	}
 
 	l.Info().Dict("block", logging.Dict().
-		Hinted("proposal", blockStorage.Block().Proposal()).
+		Hinted("proposal_hash", blockStorage.Block().Proposal()).
 		Hinted("hash", blockStorage.Block().Hash()).
 		Hinted("height", blockStorage.Block().Height()).
 		Hinted("round", blockStorage.Block().Round()),

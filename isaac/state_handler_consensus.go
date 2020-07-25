@@ -139,7 +139,7 @@ func (cs *StateConsensusHandler) NewSeal(sl seal.Seal) error {
 		go func(proposal ballot.Proposal) {
 			if err := cs.handleProposal(proposal); err != nil {
 				cs.Log().Error().Err(err).
-					Hinted("proposal", proposal.Hash()).
+					Hinted("proposal_hash", proposal.Hash()).
 					Msg("failed to handle proposal")
 			}
 		}(t)

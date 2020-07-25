@@ -179,7 +179,7 @@ func (pp *internalDefaultProposalProcessor) process(initVoteproof base.Voteproof
 			Hinted("hash", blk.Hash()).
 			Hinted("height", blk.Height()).
 			Hinted("round", blk.Round()).
-			Hinted("proposal", blk.Proposal()).
+			Hinted("proposal_hash", blk.Proposal()).
 			Hinted("previous_block", blk.PreviousBlock()).
 			Hinted("operations_hash", blk.OperationsHash()).
 			Hinted("states_hash", blk.StatesHash()),

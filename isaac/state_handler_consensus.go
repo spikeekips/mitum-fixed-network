@@ -157,7 +157,7 @@ func (cs *StateConsensusHandler) NewVoteproof(voteproof base.Voteproof) error {
 		return cs.startNextRound(voteproof)
 	}
 
-	l.Debug().Msg("got Voteproof; for restarting next round timer")
+	l.Debug().Msg("got Voteproof")
 	if timer, err := cs.TimerTimedoutMoveNextRound(voteproof); err != nil {
 		return err
 	} else if err := cs.timers.SetTimer(TimerIDTimedoutMoveNextRound, timer); err != nil {

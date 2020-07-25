@@ -4,7 +4,6 @@ import (
 	"time"
 
 	"github.com/spikeekips/mitum/base/key"
-	"github.com/spikeekips/mitum/util"
 	"github.com/spikeekips/mitum/util/encoder"
 	"github.com/spikeekips/mitum/util/valuehash"
 )
@@ -82,7 +81,6 @@ func (vp *VoteproofV0) unpack( // nolint
 	vp.votes = votes
 	vp.finishedAt = finishedAt
 	vp.closed = isClosed
-	vp.id = util.UUID().String()
 
 	return nil
 }

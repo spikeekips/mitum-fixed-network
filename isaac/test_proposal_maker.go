@@ -30,7 +30,7 @@ func NewDummyProposalMaker(localstate *Localstate, sls []seal.Seal) *DummyPropos
 func (pm *DummyProposalMaker) operations() ([]valuehash.Hash, []valuehash.Hash, error) {
 	mo := map[ /* Operation.Hash() */ string]struct{}{}
 
-	var operations, seals []valuehash.Hash
+	var facts, seals []valuehash.Hash
 	for _, sl := range pm.sls {
 		var hasOperations bool
 		var osl operation.Seal
@@ -41,17 +41,17 @@ func (pm *DummyProposalMaker) operations() ([]valuehash.Hash, []valuehash.Hash, 
 		}
 
 		for _, op := range osl.Operations() {
-			if _, found := mo[op.Hash().String()]; found {
+			if _, found := mo[op.Fact().Hash().String()]; found {
 				continue
 			} else if found {
 				continue
 			}
 
-			operations = append(operations, op.Hash())
-			mo[op.Hash().String()] = struct{}{}
+			facts = append(facts, op.Fact().Hash())
+			mo[op.Fact().Hash().String()] = struct{}{}
 			hasOperations = true
 
-			if len(operations) == operation.MaxOperationsInSeal {
+			if len(facts) == operation.MaxOperationsInSeal {
 				break
 			}
 		}
@@ -61,7 +61,7 @@ func (pm *DummyProposalMaker) operations() ([]valuehash.Hash, []valuehash.Hash, 
 		}
 	}
 
-	return operations, seals, nil
+	return facts, seals, nil
 }
 
 func (pm *DummyProposalMaker) Proposal(round base.Round) (ballot.Proposal, error) {

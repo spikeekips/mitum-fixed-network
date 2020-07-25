@@ -797,10 +797,10 @@ func (st *Storage) NewState(sta state.State) error {
 	return nil
 }
 
-func (st *Storage) HasOperation(h valuehash.Hash) (bool, error) {
+func (st *Storage) HasOperationFact(h valuehash.Hash) (bool, error) {
 	count, err := st.client.Count(
 		defaultColNameOperation,
-		util.NewBSONFilter("hash_string", h.String()).AddOp("height", st.lastHeight(), "$lte").D(),
+		util.NewBSONFilter("fact_hash_string", h.String()).AddOp("height", st.lastHeight(), "$lte").D(),
 		options.Count().SetLimit(1),
 	)
 	if err != nil {

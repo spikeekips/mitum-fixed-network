@@ -186,10 +186,11 @@ func (st *StateV0) AddOperation(op valuehash.Hash) error {
 	st.Lock()
 	defer st.Unlock()
 
-	if _, found := st.opcache[op.String()]; found {
+	oh := op.String()
+	if _, found := st.opcache[oh]; found {
 		return nil
 	} else {
-		st.opcache[op.String()] = struct{}{}
+		st.opcache[oh] = struct{}{}
 	}
 
 	st.operations = append(st.operations, op)

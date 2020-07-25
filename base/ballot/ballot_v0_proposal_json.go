@@ -7,7 +7,7 @@ import (
 
 type ProposalV0PackerJSON struct {
 	BaseBallotV0PackerJSON
-	OP []valuehash.Hash `json:"operations"`
+	FS []valuehash.Hash `json:"facts"`
 	SL []valuehash.Hash `json:"seals"`
 }
 
@@ -20,13 +20,13 @@ func (pr ProposalV0) MarshalJSON() ([]byte, error) {
 	return jsonenc.Marshal(ProposalV0PackerJSON{
 		BaseBallotV0PackerJSON: bb,
 		SL:                     pr.seals,
-		OP:                     pr.operations,
+		FS:                     pr.facts,
 	})
 }
 
 type ProposalV0UnpackerJSON struct {
 	BaseBallotV0UnpackerJSON
-	OP []valuehash.Bytes `json:"operations"`
+	FS []valuehash.Bytes `json:"facts"`
 	SL []valuehash.Bytes `json:"seals"`
 }
 
@@ -41,9 +41,9 @@ func (pr *ProposalV0) UnpackJSON(b []byte, enc *jsonenc.Encoder) error {
 		return err
 	}
 
-	ops := make([]valuehash.Hash, len(npb.OP))
-	for i := range npb.OP {
-		ops[i] = npb.OP[i]
+	fs := make([]valuehash.Hash, len(npb.FS))
+	for i := range npb.FS {
+		fs[i] = npb.FS[i]
 	}
 
 	seals := make([]valuehash.Hash, len(npb.SL))
@@ -51,5 +51,5 @@ func (pr *ProposalV0) UnpackJSON(b []byte, enc *jsonenc.Encoder) error {
 		seals[i] = npb.SL[i]
 	}
 
-	return pr.unpack(enc, bb, bf, ops, seals)
+	return pr.unpack(enc, bb, bf, fs, seals)
 }

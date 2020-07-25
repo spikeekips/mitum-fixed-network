@@ -46,7 +46,7 @@ type Storage interface {
 	State(key string) (state.State, bool, error)
 	NewState(state.State) error
 
-	HasOperation(valuehash.Hash) (bool, error)
+	HasOperationFact(valuehash.Hash) (bool, error)
 
 	// NOTE StagedOperationSeals returns the new(staged) operation.Seal by incoming order.
 	StagedOperationSeals(func(operation.Seal) (bool, error), bool /* sort */) error

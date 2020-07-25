@@ -384,26 +384,26 @@ func (t *testStorage) TestUnStagedOperationSeals() {
 }
 
 func (t *testStorage) TestHasOperation() {
-	op := valuehash.RandomSHA256()
+	fact := valuehash.RandomSHA256()
 
 	{ // store
-		raw, err := t.storage.enc.Marshal(op)
+		raw, err := t.storage.enc.Marshal(fact)
 		t.NoError(err)
 		t.storage.db.Put(
-			leveldbOperationHashKey(op),
+			leveldbOperationFactHashKey(fact),
 			encodeWithEncoder(t.storage.enc, raw),
 			nil,
 		)
 	}
 
 	{
-		found, err := t.storage.HasOperation(op)
+		found, err := t.storage.HasOperationFact(fact)
 		t.NoError(err)
 		t.True(found)
 	}
 
 	{ // unknown
-		found, err := t.storage.HasOperation(valuehash.RandomSHA256())
+		found, err := t.storage.HasOperationFact(valuehash.RandomSHA256())
 		t.NoError(err)
 		t.False(found)
 	}

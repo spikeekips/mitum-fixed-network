@@ -29,7 +29,7 @@ type internalDefaultProposalProcessor struct {
 	lastManifest              block.Manifest
 	block                     block.BlockUpdater
 	proposal                  ballot.Proposal
-	proposedOperations        map[string]struct{}
+	proposedFacts             map[string]struct{}
 	operations                []operation.Operation
 	bs                        storage.BlockStorage
 	si                        block.SuffrageInfoV0
@@ -54,7 +54,7 @@ func newInternalDefaultProposalProcessor(
 	}
 
 	proposedOperations := map[string]struct{}{}
-	for _, h := range proposal.Operations() {
+	for _, h := range proposal.Facts() {
 		proposedOperations[h.String()] = struct{}{}
 	}
 
@@ -82,7 +82,7 @@ func newInternalDefaultProposalProcessor(
 		suffrage:                  suffrage,
 		proposal:                  proposal,
 		lastManifest:              lastManifest,
-		proposedOperations:        proposedOperations,
+		proposedFacts:             proposedOperations,
 		si:                        si,
 		operationProcessorHintSet: operationProcessorHintSet,
 		operationProcessors:       map[hint.Hint]OperationProcessor{},
@@ -179,7 +179,7 @@ func (pp *internalDefaultProposalProcessor) process(initVoteproof base.Voteproof
 			Hinted("hash", blk.Hash()).
 			Hinted("height", blk.Height()).
 			Hinted("round", blk.Round()).
-			Hinted("proposal_hash", blk.Proposal()).
+			Hinted("proposal", blk.Proposal()).
 			Hinted("previous_block", blk.PreviousBlock()).
 			Hinted("operations_hash", blk.OperationsHash()).
 			Hinted("states_hash", blk.StatesHash()),
@@ -207,9 +207,6 @@ func (pp *internalDefaultProposalProcessor) extractOperations() ([]operation.Ope
 		return nil, nil
 	}
 
-	// TODO only defined operations should be filtered from seal, not all
-	// operations of seal.
-
 	founds := map[string]operation.Operation{}
 	var notFounds []valuehash.Hash
 	for _, h := range pp.proposal.Seals() {
@@ -228,11 +225,12 @@ func (pp *internalDefaultProposalProcessor) extractOperations() ([]operation.Ope
 		default:
 			for i := range ops {
 				op := ops[i]
-				if _, found := founds[op.Hash().String()]; found {
+				fh := op.Fact().Hash().String()
+				if _, found := founds[fh]; found {
 					continue
 				}
 
-				founds[op.Hash().String()] = op
+				founds[fh] = op
 			}
 		}
 	}
@@ -245,12 +243,12 @@ func (pp *internalDefaultProposalProcessor) extractOperations() ([]operation.Ope
 
 		for i := range ops {
 			op := ops[i]
-			founds[op.Hash().String()] = op
+			founds[op.Fact().Hash().String()] = op
 		}
 	}
 
 	var ops []operation.Operation
-	for _, h := range pp.proposal.Operations() {
+	for _, h := range pp.proposal.Facts() {
 		if pp.isStopped() {
 			return nil, xerrors.Errorf("already stopped")
 		}
@@ -419,12 +417,13 @@ func (pp *internalDefaultProposalProcessor) getOperationsFromStorage(h valuehash
 		}
 
 		op := osl.Operations()[i]
-		if _, found := pp.proposedOperations[op.Hash().String()]; !found {
+		fh := op.Fact().Hash().String()
+		if _, found := pp.proposedFacts[fh]; !found {
 			continue
-		} else if _, found := founds[op.Hash().String()]; found {
+		} else if _, found := founds[fh]; found {
 			continue
 		} else {
-			founds[op.Hash().String()] = struct{}{}
+			founds[fh] = struct{}{}
 		}
 
 		ops = append(ops, op)
@@ -468,9 +467,10 @@ func (pp *internalDefaultProposalProcessor) getOperationsThruChannel(
 		} else {
 			for i := range os.Operations() {
 				op := os.Operations()[i]
-				if _, found := pp.proposedOperations[op.Hash().String()]; !found {
+				fh := op.Fact().Hash().String()
+				if _, found := pp.proposedFacts[fh]; !found {
 					continue
-				} else if _, found := founds[op.Hash().String()]; found {
+				} else if _, found := founds[fh]; found {
 					continue
 				}
 
@@ -536,10 +536,8 @@ func (pp *internalDefaultProposalProcessor) updateStates(tr *tree.AVLTree, blk b
 }
 
 func (pp *internalDefaultProposalProcessor) filterOperation(op operation.Operation) (bool, error) {
-	// NOTE Duplicated Operation.Fact().Hash, the latter will be ignored.
-	switch found, err := pp.localstate.Storage().HasOperation(op.Hash()); {
+	switch found, err := pp.localstate.Storage().HasOperationFact(op.Fact().Hash()); {
 	case err != nil:
-		// TODO check by op.Fact().Hash() instead of op.Hash()
 		return false, err
 	case found: // already stored Operation
 		return false, nil
@@ -550,23 +548,19 @@ func (pp *internalDefaultProposalProcessor) filterOperation(op operation.Operati
 
 func (pp *internalDefaultProposalProcessor) filterOperations(ops []operation.Operation) ([]operation.Operation, error) {
 	var nop []operation.Operation // nolint
-	founds := map[string]struct{}{}
 	for i := range ops {
 		if pp.isStopped() {
 			return nil, xerrors.Errorf("already stopped")
 		}
 
 		op := ops[i]
-		if _, found := founds[op.Hash().String()]; found {
-			continue
-		} else if ok, err := pp.filterOperation(op); err != nil {
+		if ok, err := pp.filterOperation(op); err != nil {
 			return nil, err
 		} else if !ok {
 			continue
 		}
 
 		nop = append(nop, op)
-		founds[op.Hash().String()] = struct{}{}
 	}
 
 	return nop, nil

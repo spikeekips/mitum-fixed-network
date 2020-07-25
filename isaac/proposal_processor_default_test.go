@@ -67,7 +67,7 @@ func (t *testProposalProcessor) TestBlockOperations() {
 
 		ophs := make([]valuehash.Hash, len(opl.Operations()))
 		for i, op := range opl.Operations() {
-			ophs[i] = op.Hash()
+			ophs[i] = op.Fact().Hash()
 		}
 
 		proposal = ballot.NewProposalV0(
@@ -125,18 +125,18 @@ func (t *testProposalProcessor) TestNotFoundInProposal() {
 		pr, err := pm.Proposal(ivp.Round())
 		t.NoError(err)
 
-		op := t.newOperationSeal(t.remote)
+		sl := t.newOperationSeal(t.remote)
 
 		// add getSealHandler
 		t.remote.Node().Channel().(*channetwork.NetworkChanChannel).SetGetSealHandler(
 			func(hs []valuehash.Hash) ([]seal.Seal, error) {
-				return []seal.Seal{op}, nil
+				return []seal.Seal{sl}, nil
 			},
 		)
 
-		ophs := make([]valuehash.Hash, len(op.Operations()))
-		for i, op := range op.Operations() {
-			ophs[i] = op.Hash()
+		ophs := make([]valuehash.Hash, len(sl.Operations()))
+		for i, op := range sl.Operations() {
+			ophs[i] = op.Fact().Hash()
 		}
 
 		proposal = ballot.NewProposalV0(
@@ -144,7 +144,7 @@ func (t *testProposalProcessor) TestNotFoundInProposal() {
 			pr.Height(),
 			pr.Round(),
 			ophs,
-			[]valuehash.Hash{op.Hash()},
+			[]valuehash.Hash{sl.Hash()},
 		)
 		t.NoError(SignSeal(&proposal, t.remote))
 	}

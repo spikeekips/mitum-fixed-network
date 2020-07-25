@@ -20,27 +20,28 @@ func NewProposalMaker(localstate *Localstate) *ProposalMaker {
 	return &ProposalMaker{localstate: localstate}
 }
 
-func (pm *ProposalMaker) operations() ([]valuehash.Hash, []valuehash.Hash, error) {
-	mo := map[ /* Operation.Hash() */ string]struct{}{}
+func (pm *ProposalMaker) facts() ([]valuehash.Hash, []valuehash.Hash, error) {
+	mo := map[ /* Operation.Fact().Hash() */ string]struct{}{}
 
-	var operations, seals, uselessSeals []valuehash.Hash
+	var facts, seals, uselessSeals []valuehash.Hash
 	if err := pm.localstate.Storage().StagedOperationSeals(
 		func(sl operation.Seal) (bool, error) {
 			var hasOperations bool
 			for _, op := range sl.Operations() {
-				if _, found := mo[op.Hash().String()]; found {
+				fh := op.Fact().Hash()
+				if _, found := mo[fh.String()]; found {
 					continue
-				} else if found, err := pm.localstate.Storage().HasOperation(op.Hash()); err != nil {
+				} else if found, err := pm.localstate.Storage().HasOperationFact(fh); err != nil {
 					return false, err
 				} else if found {
 					continue
 				}
 
-				operations = append(operations, op.Hash())
-				mo[op.Hash().String()] = struct{}{}
+				facts = append(facts, fh)
+				mo[fh.String()] = struct{}{}
 				hasOperations = true
 
-				if len(operations) == operation.MaxOperationsInSeal {
+				if len(facts) == operation.MaxOperationsInSeal {
 					return false, nil
 				}
 			}
@@ -64,7 +65,7 @@ func (pm *ProposalMaker) operations() ([]valuehash.Hash, []valuehash.Hash, error
 		}
 	}
 
-	return operations, seals, nil
+	return facts, seals, nil
 }
 
 func (pm *ProposalMaker) Proposal(round base.Round) (ballot.Proposal, error) {
@@ -87,7 +88,7 @@ func (pm *ProposalMaker) Proposal(round base.Round) (ballot.Proposal, error) {
 		}
 	}
 
-	operations, seals, err := pm.operations()
+	facts, seals, err := pm.facts()
 	if err != nil {
 		return nil, err
 	}
@@ -96,7 +97,7 @@ func (pm *ProposalMaker) Proposal(round base.Round) (ballot.Proposal, error) {
 		pm.localstate.Node().Address(),
 		height,
 		round,
-		operations,
+		facts,
 		seals,
 	)
 	if err := SignSeal(&pr, pm.localstate); err != nil {

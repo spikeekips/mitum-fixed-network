@@ -17,7 +17,7 @@ var (
 )
 
 type OperationAVLNode struct {
-	key       []byte
+	key       []byte // NOTE key should be Operation.Fact().Hash()
 	height    int16
 	left      []byte
 	leftHash  []byte
@@ -85,7 +85,7 @@ func (em OperationAVLNode) Immutable() tree.Node {
 }
 
 type OperationAVLNodeMutable struct {
-	key    []byte // Operation.Hash().Bytes()
+	key    []byte // Operation.Fact().Hash().Bytes()
 	height int16
 	left   avlHashable.HashableMutableNode
 	right  avlHashable.HashableMutableNode
@@ -94,7 +94,7 @@ type OperationAVLNodeMutable struct {
 }
 
 func NewOperationAVLNodeMutable(op Operation) *OperationAVLNodeMutable {
-	return &OperationAVLNodeMutable{key: []byte(op.Hash().String()), op: op}
+	return &OperationAVLNodeMutable{key: []byte(op.Fact().Hash().String()), op: op}
 }
 
 func (em OperationAVLNodeMutable) Hint() hint.Hint {

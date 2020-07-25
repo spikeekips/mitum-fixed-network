@@ -28,6 +28,12 @@ var manifestIndexModels = []mongo.IndexModel{
 
 var operationIndexModels = []mongo.IndexModel{
 	{
+		Keys: bson.D{bson.E{Key: "fact_hash_string", Value: 1}},
+		Options: options.Index().
+			SetName("mitum_operation_fact_hash").
+			SetUnique(true),
+	},
+	{
 		Keys: bson.D{bson.E{Key: "hash_string", Value: 1}},
 		Options: options.Index().
 			SetName("mitum_operation_hash").

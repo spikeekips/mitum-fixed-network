@@ -440,13 +440,13 @@ func (t *testStorage) TestHasOperation() {
 	}
 
 	{
-		found, err := t.storage.HasOperation(op.Hash())
+		found, err := t.storage.HasOperationFact(op.Fact().Hash())
 		t.NoError(err)
 		t.True(found)
 	}
 
 	{ // unknown
-		found, err := t.storage.HasOperation(valuehash.RandomSHA256())
+		found, err := t.storage.HasOperationFact(valuehash.RandomSHA256())
 		t.NoError(err)
 		t.False(found)
 	}

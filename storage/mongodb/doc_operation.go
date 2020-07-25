@@ -36,6 +36,7 @@ func (od OperationDoc) MarshalBSON() ([]byte, error) {
 		return nil, err
 	}
 
+	m["fact_hash_string"] = od.op.Fact().Hash().String()
 	m["hash_string"] = od.op.Hash().String()
 	m["hash"] = od.op.Hash()
 	m["height"] = od.height

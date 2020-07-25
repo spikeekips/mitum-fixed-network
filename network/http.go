@@ -42,7 +42,6 @@ func HTTPLogHandler(handler http.Handler, logger logging.Logger) http.Handler {
 			}
 
 			logEvent := hlog.FromRequest(r).Debug().
-				Str("method", r.Method).
 				Int("status", status).
 				Int("size", size).
 				Dur("duration", duration).

@@ -15,8 +15,10 @@ var (
 	TypeDoesNotMatchError        = errors.NewError("type does not match")
 )
 
-var NullType = Type{}
-var TypeVerboseFormat string = `type{name=%q code=%q}`
+var (
+	NullType                 = Type{}
+	TypeVerboseFormat string = `type{name=%q code=%q}`
+)
 
 // NOTE typeNames and nameTypes maintain all the registered Type and it's name.
 var (

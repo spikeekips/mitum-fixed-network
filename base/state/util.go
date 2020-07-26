@@ -6,9 +6,7 @@ import (
 	"github.com/spikeekips/mitum/util/isvalid"
 )
 
-var (
-	reHasBlank *regexp.Regexp = regexp.MustCompile(`\s`)
-)
+var reHasBlank *regexp.Regexp = regexp.MustCompile(`\s`)
 
 func IsValidKey(s string) error {
 	if reHasBlank.Match([]byte(s)) {

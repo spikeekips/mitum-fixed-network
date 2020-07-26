@@ -5,8 +5,8 @@ import (
 	"math/big"
 	"testing"
 
-	"go.uber.org/goleak"
 	"github.com/stretchr/testify/suite"
+	"go.uber.org/goleak"
 	"golang.org/x/xerrors"
 )
 

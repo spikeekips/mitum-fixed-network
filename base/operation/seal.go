@@ -23,9 +23,12 @@ type SealUpdater interface {
 	SetOperations([]Operation) SealUpdater
 }
 
-// TODO MaxOperationsInSeal will be managed by Policy.
+// TODO MaxOperationsInSeal and MaxOperationsInProposal will be managed by Policy.
 
-var MaxOperationsInSeal int = 100
+var (
+	MaxOperationsInSeal     int = 100
+	MaxOperationsInProposal int = 100
+)
 
 var (
 	SealType = hint.MustNewType(0x01, 0x51, "seal")

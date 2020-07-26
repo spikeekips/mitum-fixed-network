@@ -41,7 +41,7 @@ func (pm *ProposalMaker) facts() ([]valuehash.Hash, []valuehash.Hash, error) {
 				mo[fh.String()] = struct{}{}
 				hasOperations = true
 
-				if len(facts) == operation.MaxOperationsInSeal {
+				if len(facts) == operation.MaxOperationsInProposal {
 					return false, nil
 				}
 			}

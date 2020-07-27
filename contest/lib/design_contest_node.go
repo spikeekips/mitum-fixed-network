@@ -9,6 +9,7 @@ type ContestNodeDesign struct {
 	Name      string
 	Component *launcher.ContestComponentDesign
 	address   base.Address
+	Config    *launcher.NodeConfigDesign
 }
 
 func (cn *ContestNodeDesign) Address() base.Address {

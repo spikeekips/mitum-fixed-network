@@ -22,11 +22,14 @@ func NewLocalstate(st storage.Storage, node *LocalNode, networkID []byte) (*Loca
 }
 
 func (ls *Localstate) Initialize() error {
-	if p, err := NewLocalPolicy(ls.storage, ls.networkID); err != nil {
-		return err
-	} else {
-		ls.policy = p
+	lp := NewLocalPolicy(ls.networkID)
+	if ls.storage != nil {
+		if err := lp.Reload(ls.storage); err != nil {
+			return err
+		}
 	}
+
+	ls.policy = lp
 
 	return nil
 }

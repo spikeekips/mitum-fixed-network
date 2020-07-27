@@ -6,9 +6,9 @@ import (
 	"github.com/spikeekips/mitum/base/block"
 	"github.com/spikeekips/mitum/base/key"
 	"github.com/spikeekips/mitum/base/operation"
+	"github.com/spikeekips/mitum/base/policy"
 	"github.com/spikeekips/mitum/base/state"
 	"github.com/spikeekips/mitum/base/tree"
-	"github.com/spikeekips/mitum/isaac"
 	bsonenc "github.com/spikeekips/mitum/util/encoder/bson"
 	jsonenc "github.com/spikeekips/mitum/util/encoder/json"
 	"github.com/spikeekips/mitum/util/hint"
@@ -32,9 +32,6 @@ var Hinters = []hint.Hinter{
 	block.SuffrageInfoV0{},
 	bsonenc.Encoder{},
 	base.StringAddress(""),
-	isaac.PolicyOperationBodyV0{},
-	isaac.SetPolicyOperationFactV0{},
-	isaac.SetPolicyOperationV0{},
 	jsonenc.Encoder{},
 	key.BTCPrivatekeyHinter,
 	key.BTCPublickeyHinter,
@@ -56,4 +53,7 @@ var Hinters = []hint.Hinter{
 	valuehash.Bytes{},
 	valuehash.SHA256{},
 	valuehash.SHA512{},
+	policy.PolicyV0{},
+	policy.SetPolicyFactV0{},
+	policy.SetPolicyV0{},
 }

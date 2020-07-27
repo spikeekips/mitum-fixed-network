@@ -9,6 +9,7 @@ import (
 
 	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/base/block"
+	"github.com/spikeekips/mitum/base/policy"
 	"github.com/spikeekips/mitum/network"
 	channetwork "github.com/spikeekips/mitum/network/gochan"
 	"github.com/spikeekips/mitum/util"
@@ -70,10 +71,7 @@ func (t *testStateBootingHandler) TestWithoutBlock() {
 	blk, err := block.NewTestBlockV0(base.Height(33), base.Round(0), valuehash.RandomSHA256(), valuehash.RandomSHA256())
 	t.NoError(err)
 
-	policy := DefaultPolicy().
-		SetThresholdRatio(DefaultPolicy().ThresholdRatio() - 1).
-		SetNumberOfActingSuffrageNodes(DefaultPolicy().NumberOfActingSuffrageNodes() + 1)
-
+	po := policy.DefaultPolicyV0()
 	ni := network.NewNodeInfoV0(
 		base.RandomNode("n0"),
 		TestNetworkID,
@@ -81,7 +79,7 @@ func (t *testStateBootingHandler) TestWithoutBlock() {
 		blk.Manifest(),
 		util.Version("0.1.1"),
 		"quic://local",
-		policy,
+		po,
 	)
 
 	nch := t.remote.Node().Channel().(*channetwork.NetworkChanChannel)
@@ -125,8 +123,8 @@ func (t *testStateBootingHandler) TestWithoutBlock() {
 		break
 	}
 
-	t.Equal(policy.ThresholdRatio(), t.local.Policy().ThresholdRatio())
-	t.Equal(policy.NumberOfActingSuffrageNodes(), t.local.Policy().NumberOfActingSuffrageNodes())
+	t.Equal(policy.DefaultPolicyThresholdRatio, t.local.Policy().ThresholdRatio())
+	t.Equal(policy.DefaultPolicyNumberOfActingSuffrageNodes, t.local.Policy().NumberOfActingSuffrageNodes())
 }
 
 func TestStateBootingHandler(t *testing.T) {

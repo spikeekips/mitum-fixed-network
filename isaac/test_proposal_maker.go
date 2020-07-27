@@ -30,6 +30,8 @@ func NewDummyProposalMaker(localstate *Localstate, sls []seal.Seal) *DummyPropos
 func (pm *DummyProposalMaker) operations() ([]valuehash.Hash, []valuehash.Hash, error) {
 	mo := map[ /* Operation.Hash() */ string]struct{}{}
 
+	maxOperations := pm.localstate.Policy().MaxOperationsInProposal()
+
 	var facts, seals []valuehash.Hash
 	for _, sl := range pm.sls {
 		var hasOperations bool
@@ -51,7 +53,7 @@ func (pm *DummyProposalMaker) operations() ([]valuehash.Hash, []valuehash.Hash, 
 			mo[op.Fact().Hash().String()] = struct{}{}
 			hasOperations = true
 
-			if len(facts) == operation.MaxOperationsInProposal {
+			if uint(len(facts)) == maxOperations {
 				break
 			}
 		}

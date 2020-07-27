@@ -7,6 +7,7 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
+	"sync"
 
 	"golang.org/x/xerrors"
 	"gopkg.in/yaml.v3"
@@ -31,6 +32,7 @@ type NodeDesign struct {
 	Nodes            []*RemoteDesign
 	InitOperations   []OperationDesign `yaml:"init-operations"`
 	Component        *NodeComponentDesign
+	Config           *NodeConfigDesign
 }
 
 func (nd *NodeDesign) SetEncoders(encs *encoder.Encoders) {
@@ -55,6 +57,42 @@ func (nd *NodeDesign) IsValid([]byte) error {
 		je = e
 	}
 
+	if err := nd.isValidAddress(je); err != nil {
+		return err
+	}
+
+	if err := nd.isValidPrivatekey(je); err != nil {
+		return err
+	}
+
+	if err := nd.isValidRemotes(); err != nil {
+		return err
+	}
+
+	if nd.GenesisPolicy != nil {
+		if err := nd.GenesisPolicy.IsValid(nil); err != nil {
+			return err
+		}
+	}
+
+	if nd.Component == nil {
+		nd.Component = NewNodeComponentDesign(nil)
+	}
+	if err := nd.Component.IsValid(nil); err != nil {
+		return err
+	}
+
+	if nd.Config == nil {
+		nd.Config = NewNodeConfigDesign(nil)
+	}
+	if err := nd.Config.IsValid(nil); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (nd *NodeDesign) isValidAddress(je encoder.Encoder) error {
 	if a, err := base.DecodeAddressFromString(je, strings.TrimSpace(nd.AddressString)); err != nil {
 		return err
 	} else if err := a.IsValid(nil); err != nil {
@@ -63,12 +101,20 @@ func (nd *NodeDesign) IsValid([]byte) error {
 		nd.address = a
 	}
 
+	return nil
+}
+
+func (nd *NodeDesign) isValidPrivatekey(je encoder.Encoder) error {
 	if pk, err := key.DecodePrivatekey(je, nd.PrivatekeyString); err != nil {
 		return err
 	} else {
 		nd.privatekey = pk
 	}
 
+	return nil
+}
+
+func (nd *NodeDesign) isValidRemotes() error {
 	addrs := map[string]struct{}{
 		nd.Address().String(): {},
 	}
@@ -84,18 +130,7 @@ func (nd *NodeDesign) IsValid([]byte) error {
 		addrs[r.Address().String()] = struct{}{}
 	}
 
-	if nd.GenesisPolicy == nil {
-		nd.GenesisPolicy = NewPolicyDesign()
-	}
-	if err := nd.GenesisPolicy.IsValid(nil); err != nil {
-		return err
-	}
-
-	if nd.Component == nil {
-		nd.Component = NewNodeComponentDesign(nil)
-	}
-
-	return nd.Component.IsValid(nil)
+	return nil
 }
 
 func (nd NodeDesign) Address() base.Address {
@@ -111,6 +146,7 @@ func (nd NodeDesign) Privatekey() key.Privatekey {
 }
 
 type NetworkDesign struct {
+	sync.RWMutex
 	Bind             string
 	Publish          string
 	bindHost         string
@@ -150,6 +186,9 @@ func (nd *NetworkDesign) SetPublishURLWithIP(s string) (*NetworkDesign, error) {
 	if u, err := isvalidNetworkURL(s); err != nil {
 		return nil, err
 	} else {
+		nd.Lock()
+		defer nd.Unlock()
+
 		nd.publishURLWithIP = u
 	}
 
@@ -157,6 +196,9 @@ func (nd *NetworkDesign) SetPublishURLWithIP(s string) (*NetworkDesign, error) {
 }
 
 func (nd *NetworkDesign) PublishURLWithIP() *url.URL {
+	nd.RLock()
+	defer nd.RUnlock()
+
 	return nd.publishURLWithIP
 }
 

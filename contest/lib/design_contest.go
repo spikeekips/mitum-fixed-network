@@ -140,6 +140,7 @@ type ContestConfigDesign struct {
 	InitOperations  []launcher.OperationDesign `yaml:"init-operations"`
 	NodeINITCommand string                     `yaml:"node-init-command"`
 	NodeRunCommand  string                     `yaml:"node-run-command"`
+	NodeConfig      *launcher.NodeConfigDesign `yaml:"node-config"`
 }
 
 func (cc *ContestConfigDesign) IsValid([]byte) error {
@@ -147,6 +148,12 @@ func (cc *ContestConfigDesign) IsValid([]byte) error {
 		cc.GenesisPolicy = launcher.NewPolicyDesign()
 	}
 	if err := cc.GenesisPolicy.IsValid(nil); err != nil {
+		return err
+	}
+	if cc.NodeConfig == nil {
+		cc.NodeConfig = launcher.NewNodeConfigDesign(nil)
+	}
+	if err := cc.NodeConfig.IsValid(nil); err != nil {
 		return err
 	}
 

@@ -21,7 +21,7 @@ type Launcher struct {
 func NewLauncherFromDesign(design *launcher.NodeDesign, version util.Version) (*Launcher, error) {
 	nr := &Launcher{design: design}
 
-	if bn, err := launcher.NewLauncher(design.Address(), design.Privatekey(), design.NetworkID(), version); err != nil {
+	if bn, err := launcher.NewLauncher(design, version); err != nil {
 		return nil, err
 	} else {
 		nr.Launcher = bn

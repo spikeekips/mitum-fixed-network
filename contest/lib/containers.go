@@ -167,10 +167,10 @@ func (cts *Containers) createContainers() ([]*Container, error) {
 		}
 	}
 
-	for i, c := range cs {
+	for _, c := range cs {
 		c.rds = rds
 
-		if b, err := yaml.Marshal(c.NodeDesign(i == 0)); err != nil {
+		if b, err := yaml.Marshal(c.NodeDesign()); err != nil {
 			return nil, xerrors.Errorf("failed to create node design: %w", err)
 		} else {
 			designFile := filepath.Join(cts.outputDir, fmt.Sprintf("design-%s.yml", c.name))
@@ -191,6 +191,17 @@ func (cts *Containers) createContainer(d *ContestNodeDesign) (*Container, error)
 		return nil, xerrors.Errorf("failed to create error log file: %w", err)
 	} else {
 		errWriter = f
+	}
+
+	if d.Config == nil {
+		d.Config = &launcher.NodeConfigDesign{}
+	}
+
+	nc := launcher.NewNodeConfigDesign(d.Config)
+	if err := nc.Merge(cts.design.Config.NodeConfig); err != nil {
+		return nil, err
+	} else {
+		d.Config = nc
 	}
 
 	container := &Container{
@@ -317,22 +328,22 @@ func (cts *Containers) containersIP() error {
 	vm := map[string]interface{}{}
 	for name := range cts.containers {
 		c := cts.containers[name]
-		if len(c.id) < 1 {
+		if len(c.ID()) < 1 {
 			continue
 		}
 
 		var ip string
-		if r, err := ContainerInspect(cts.client, c.id); err != nil {
+		if r, err := ContainerInspect(cts.client, c.ID()); err != nil {
 			return err
 		} else {
 			ip = r.NetworkSettings.Networks[DockerNetworkName].IPAddress
 		}
 
-		if _, err := c.NodeDesign(false).Network.SetPublishURLWithIP(fmt.Sprintf("quic://%s:54321", ip)); err != nil {
+		if _, err := c.NodeDesign().Network.SetPublishURLWithIP(fmt.Sprintf("quic://%s:54321", ip)); err != nil {
 			return err
 		}
 
-		vm[c.name] = c.NodeDesign(false)
+		vm[c.name] = c.NodeDesign()
 	}
 
 	_ = cts.design.Vars.Set("nodes", vm)
@@ -345,7 +356,7 @@ func (cts *Containers) initializeByGenesisNode() error {
 
 	if err := cts.genesisNode.run(true); err != nil {
 		return err
-	} else if err := CleanContainer(cts.client, cts.genesisNode.id, cts.Log()); err != nil {
+	} else if err := CleanContainer(cts.client, cts.genesisNode.ID(), cts.Log()); err != nil {
 		return err
 	}
 
@@ -795,7 +806,7 @@ func (ct *Container) RemoteDesign() (*launcher.RemoteDesign, error) {
 	return rd, rd.IsValid(nil)
 }
 
-func (ct *Container) NodeDesign(isGenesisNode bool) *launcher.NodeDesign {
+func (ct *Container) NodeDesign() *launcher.NodeDesign {
 	if ct.nodeDesign != nil {
 		return ct.nodeDesign
 	}
@@ -817,12 +828,11 @@ func (ct *Container) NodeDesign(isGenesisNode bool) *launcher.NodeDesign {
 		Network:          ct.networkDesign(),
 		Nodes:            nodes,
 		Component:        ct.design.Component.NodeDesign(),
+		Config:           ct.design.Config,
 	}
 
-	if isGenesisNode {
-		nd.GenesisPolicy = ct.contestDesign.Config.GenesisPolicy
-		nd.InitOperations = ct.contestDesign.Config.InitOperations
-	}
+	nd.GenesisPolicy = ct.contestDesign.Config.GenesisPolicy
+	nd.InitOperations = ct.contestDesign.Config.InitOperations
 
 	nd.SetEncoders(ct.encs)
 
@@ -929,7 +939,7 @@ func (ct *Container) Localstate() *isaac.Localstate {
 			ct.Address(),
 			ct.privatekey,
 		),
-		ct.NodeDesign(false).NetworkID(),
+		ct.NodeDesign().NetworkID(),
 	)
 	if err != nil {
 		panic(err)

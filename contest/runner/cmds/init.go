@@ -5,6 +5,7 @@ import (
 
 	"github.com/spikeekips/mitum/base/block"
 	"github.com/spikeekips/mitum/base/operation"
+	"github.com/spikeekips/mitum/base/policy"
 	contestlib "github.com/spikeekips/mitum/contest/lib"
 	"github.com/spikeekips/mitum/isaac"
 	"github.com/spikeekips/mitum/launcher"
@@ -102,18 +103,11 @@ func (cmd *InitCommand) loadPolicyOperation(design *launcher.NodeDesign) (
 	operation.Operation, error,
 ) {
 	token := []byte("genesis-policies-from-contest")
-	t := design.GenesisPolicy.PolicyOperationBodyV0
 
-	var fact isaac.SetPolicyOperationFactV0
-	if f, err := isaac.NewSetPolicyOperationFactV0(token, t); err != nil {
-		return nil, err
-	} else {
-		fact = f
-	}
-
-	if op, err := isaac.NewSetPolicyOperationV0FromFact(
+	if op, err := policy.NewSetPolicyV0(
+		design.GenesisPolicy.Policy().(policy.PolicyV0),
+		token,
 		design.Privatekey(),
-		fact,
 		design.NetworkID(),
 	); err != nil {
 		return nil, xerrors.Errorf("failed to create SetPolicyOperation: %w", err)

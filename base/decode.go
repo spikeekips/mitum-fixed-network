@@ -43,18 +43,6 @@ func DecodeVoteproof(enc encoder.Encoder, b []byte) (Voteproof, error) {
 	}
 }
 
-func DecodePolicyOperationBody(enc encoder.Encoder, b []byte) (PolicyOperationBody, error) {
-	if i, err := enc.DecodeByHint(b); err != nil {
-		return nil, err
-	} else if i == nil {
-		return nil, nil
-	} else if v, ok := i.(PolicyOperationBody); !ok {
-		return nil, hint.InvalidTypeError.Errorf("not PolicyOperationBody; type=%T", i)
-	} else {
-		return v, nil
-	}
-}
-
 func DecodeAddressFromString(enc encoder.Encoder, s string) (Address, error) {
 	h, us, err := hint.ParseHintedString(s)
 	if err != nil {

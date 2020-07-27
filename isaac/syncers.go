@@ -178,7 +178,7 @@ func (sy *Syncers) stateChanged(ctx SyncerStateChangedContext) error {
 				}
 			}
 
-			if err := sy.localstate.Policy().Reload(); err != nil {
+			if err := sy.localstate.Policy().Reload(sy.localstate.Storage()); err != nil {
 				sy.Log().Error().Err(err).Msg("failed to update Policy")
 
 				return err

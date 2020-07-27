@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/spikeekips/mitum/base"
+	"github.com/spikeekips/mitum/base/policy"
 	"github.com/spikeekips/mitum/base/seal"
 	"github.com/spikeekips/mitum/network"
 	"github.com/spikeekips/mitum/storage"
@@ -159,10 +160,8 @@ func (cs *StateBootingHandler) whenEmptyBlocks() error {
 // newPolicyTimer starts new timer for gathering NodeInfo from suffrage nodes.
 // If nothing to be collected, keeps trying.
 func (cs *StateBootingHandler) newPolicyTimer(nodes []network.Node) (
-	chan base.PolicyOperationBody,
-	error,
-) {
-	gotPolicyChan := make(chan base.PolicyOperationBody)
+	chan policy.Policy, error) {
+	gotPolicyChan := make(chan policy.Policy)
 
 	var once sync.Once
 	var called int64
@@ -171,7 +170,7 @@ func (cs *StateBootingHandler) newPolicyTimer(nodes []network.Node) (
 		func() (bool, error) {
 			cs.Log().Debug().Msg("trying to gather node info")
 
-			var ni base.PolicyOperationBody
+			var ni policy.Policy
 			switch n, err := cs.gatherPolicy(nodes); {
 			case err != nil:
 				cs.Log().Error().Err(err).Msg("failed to get node info")
@@ -218,7 +217,7 @@ func (cs *StateBootingHandler) newPolicyTimer(nodes []network.Node) (
 	return gotPolicyChan, nil
 }
 
-func (cs *StateBootingHandler) gatherPolicy(nodes []network.Node) (base.PolicyOperationBody, error) {
+func (cs *StateBootingHandler) gatherPolicy(nodes []network.Node) (policy.Policy, error) {
 	var nis []network.NodeInfo
 	for i := range nodes {
 		n := nodes[i]
@@ -241,7 +240,7 @@ func (cs *StateBootingHandler) gatherPolicy(nodes []network.Node) (base.PolicyOp
 	}
 
 	set := make([]string, len(nis))
-	mnis := map[string]base.PolicyOperationBody{}
+	mnis := map[string]policy.Policy{}
 
 	for i := range nis {
 		p := nis[i].Policy()

@@ -23,13 +23,6 @@ type SealUpdater interface {
 	SetOperations([]Operation) SealUpdater
 }
 
-// TODO MaxOperationsInSeal and MaxOperationsInProposal will be managed by Policy.
-
-var (
-	MaxOperationsInSeal     int = 100
-	MaxOperationsInProposal int = 100
-)
-
 var (
 	SealType = hint.MustNewType(0x01, 0x51, "seal")
 	SealHint = hint.MustHint(SealType, "0.0.1")
@@ -60,8 +53,6 @@ func NewBaseSeal(pk key.Privatekey, ops []Operation, networkID []byte) (BaseSeal
 func (sl BaseSeal) IsValid(networkID []byte) error {
 	if l := len(sl.ops); l < 1 {
 		return isvalid.InvalidError.Errorf("empty operations")
-	} else if l > MaxOperationsInSeal {
-		return isvalid.InvalidError.Errorf("operations over limit; %d > %d", l, MaxOperationsInSeal)
 	}
 
 	if err := seal.IsValidSeal(sl, networkID); err != nil {

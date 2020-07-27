@@ -6,6 +6,7 @@ import (
 	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/base/block"
 	"github.com/spikeekips/mitum/base/key"
+	"github.com/spikeekips/mitum/base/policy"
 	"github.com/spikeekips/mitum/util"
 	jsonenc "github.com/spikeekips/mitum/util/encoder/json"
 	"github.com/spikeekips/mitum/util/hint"
@@ -26,7 +27,7 @@ type NodeInfo interface {
 	LastBlock() block.Manifest
 	Version() util.Version
 	URL() string
-	Policy() base.PolicyOperationBody
+	Policy() policy.Policy
 }
 
 type NodeInfoV0 struct {
@@ -36,7 +37,7 @@ type NodeInfoV0 struct {
 	lastBlock block.Manifest
 	version   util.Version
 	u         string
-	policy    base.PolicyOperationBody
+	policy    policy.Policy
 }
 
 func NewNodeInfoV0(
@@ -46,7 +47,7 @@ func NewNodeInfoV0(
 	lastBlock block.Manifest,
 	version util.Version,
 	u string,
-	policy base.PolicyOperationBody,
+	policy policy.Policy,
 ) NodeInfoV0 {
 	return NodeInfoV0{
 		node:      node,
@@ -123,6 +124,6 @@ func (ni NodeInfoV0) URL() string {
 	return ni.u
 }
 
-func (ni NodeInfoV0) Policy() base.PolicyOperationBody {
+func (ni NodeInfoV0) Policy() policy.Policy {
 	return ni.policy
 }

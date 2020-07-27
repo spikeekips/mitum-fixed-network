@@ -7,106 +7,108 @@ import (
 	"golang.org/x/xerrors"
 
 	"github.com/spikeekips/mitum/base"
+	"github.com/spikeekips/mitum/base/policy"
 	"github.com/spikeekips/mitum/storage"
 	"github.com/spikeekips/mitum/util"
+	"github.com/spikeekips/mitum/util/valuehash"
+)
+
+var (
+	// NOTE default threshold ratio assumes only one node exists, it means the network is just booted.
+	DefaultPolicyTimeoutWaitingProposal           = time.Second * 5
+	DefaultPolicyIntervalBroadcastingINITBallot   = time.Second * 1
+	DefaultPolicyIntervalBroadcastingProposal     = time.Second * 1
+	DefaultPolicyWaitBroadcastingACCEPTBallot     = time.Second * 2
+	DefaultPolicyIntervalBroadcastingACCEPTBallot = time.Second * 1
+	DefaultPolicyTimespanValidBallot              = time.Minute * 1
+	DefaultPolicyTimeoutProcessProposal           = time.Second * 30
 )
 
 type LocalPolicy struct {
 	sync.RWMutex
-	st                               storage.Storage
-	networkID                        *util.LockedItem // NOTE networkID should be string, internally []byte
+	lastPolicy                       valuehash.Hash
+	networkID                        *util.LockedItem
 	thresholdRatio                   *util.LockedItem
+	maxOperationsInSeal              *util.LockedItem
+	maxOperationsInProposal          *util.LockedItem
+	numberOfActingSuffrageNodes      *util.LockedItem
 	timeoutWaitingProposal           *util.LockedItem
 	intervalBroadcastingINITBallot   *util.LockedItem
 	intervalBroadcastingProposal     *util.LockedItem
 	waitBroadcastingACCEPTBallot     *util.LockedItem
 	intervalBroadcastingACCEPTBallot *util.LockedItem
-	numberOfActingSuffrageNodes      *util.LockedItem
 	// timespanValidBallot is used to check the SignedAt time of incoming
 	// Ballot should be within timespanValidBallot on now. By default, 1 minute.
 	timespanValidBallot    *util.LockedItem
 	timeoutProcessProposal *util.LockedItem
 }
 
-func NewLocalPolicy(st storage.Storage, networkID []byte) (*LocalPolicy, error) {
+func NewLocalPolicy(networkID []byte) *LocalPolicy {
 	lp := &LocalPolicy{
-		st:        st,
-		networkID: util.NewLockedItem(networkID),
+		networkID:                        util.NewLockedItem(networkID),
+		thresholdRatio:                   util.NewLockedItem(policy.DefaultPolicyThresholdRatio),
+		numberOfActingSuffrageNodes:      util.NewLockedItem(policy.DefaultPolicyNumberOfActingSuffrageNodes),
+		maxOperationsInSeal:              util.NewLockedItem(policy.DefaultPolicyMaxOperationsInSeal),
+		maxOperationsInProposal:          util.NewLockedItem(policy.DefaultPolicyMaxOperationsInProposal),
+		timeoutWaitingProposal:           util.NewLockedItem(DefaultPolicyTimeoutWaitingProposal),
+		intervalBroadcastingINITBallot:   util.NewLockedItem(DefaultPolicyIntervalBroadcastingINITBallot),
+		intervalBroadcastingProposal:     util.NewLockedItem(DefaultPolicyIntervalBroadcastingProposal),
+		waitBroadcastingACCEPTBallot:     util.NewLockedItem(DefaultPolicyWaitBroadcastingACCEPTBallot),
+		intervalBroadcastingACCEPTBallot: util.NewLockedItem(DefaultPolicyIntervalBroadcastingACCEPTBallot),
+		timespanValidBallot:              util.NewLockedItem(DefaultPolicyTimespanValidBallot),
+		timeoutProcessProposal:           util.NewLockedItem(DefaultPolicyTimeoutProcessProposal),
 	}
 
-	d := DefaultPolicy()
-	lp.thresholdRatio = util.NewLockedItem(d.ThresholdRatio())
-	lp.timeoutWaitingProposal = util.NewLockedItem(d.TimeoutWaitingProposal())
-	lp.intervalBroadcastingINITBallot = util.NewLockedItem(d.IntervalBroadcastingINITBallot())
-	lp.intervalBroadcastingProposal = util.NewLockedItem(d.IntervalBroadcastingProposal())
-	lp.waitBroadcastingACCEPTBallot = util.NewLockedItem(d.WaitBroadcastingACCEPTBallot())
-	lp.intervalBroadcastingACCEPTBallot = util.NewLockedItem(d.IntervalBroadcastingACCEPTBallot())
-	lp.numberOfActingSuffrageNodes = util.NewLockedItem(d.NumberOfActingSuffrageNodes())
-	lp.timespanValidBallot = util.NewLockedItem(d.TimespanValidBallot())
-	lp.timeoutProcessProposal = util.NewLockedItem(d.TimeoutProcessProposal())
-
-	if err := lp.load(); err != nil {
-		return nil, err
-	}
-
-	return lp, nil
+	return lp
 }
 
-func (lp *LocalPolicy) load() error {
-	var loaded base.PolicyOperationBody
-	if lp.st == nil {
-		loaded = DefaultPolicy()
+func LoadLocalPolicy(st storage.Storage) (valuehash.Hash, policy.Policy, error) {
+	if l, found, err := st.State(policy.PolicyOperationKey); err != nil {
+		return nil, nil, err
+	} else if !found || l.Value() == nil { // set default
+		return nil, nil, nil
+	} else if i := l.Value().Interface(); i == nil {
+		return nil, nil, nil
+	} else if p, ok := i.(policy.Policy); !ok {
+		return nil, nil, xerrors.Errorf("wrong type policy, %T", i)
 	} else {
-		if l, found, err := lp.st.State(PolicyOperationKey); err != nil {
-			return err
-		} else if !found || l.Value() == nil { // set default
-			loaded = DefaultPolicy()
-		} else if i := l.Value().Interface(); i == nil {
-			loaded = DefaultPolicy()
-		} else if p, ok := i.(base.PolicyOperationBody); !ok {
-			loaded = DefaultPolicy()
-		} else {
-			loaded = p
-		}
+		return l.Hash(), p, nil
 	}
-
-	return lp.Merge(loaded)
 }
 
-func (lp *LocalPolicy) Reload() error {
+func (lp *LocalPolicy) Reload(st storage.Storage) error {
 	lp.Lock()
 	defer lp.Unlock()
 
-	return lp.load()
+	switch h, p, err := LoadLocalPolicy(st); {
+	case err != nil:
+		return err
+	case p == nil:
+		return nil
+	case lp.lastPolicy != nil && lp.lastPolicy.Equal(h):
+		return nil
+	default:
+		if err := lp.Merge(p); err != nil {
+			return err
+		} else {
+			lp.lastPolicy = h
+			return nil
+		}
+	}
 }
 
-func (lp *LocalPolicy) Merge(p base.PolicyOperationBody) error {
+func (lp *LocalPolicy) Merge(p policy.Policy) error {
 	if v := lp.ThresholdRatio(); v != p.ThresholdRatio() {
 		_ = lp.thresholdRatio.SetValue(p.ThresholdRatio())
-	}
-	if v := lp.TimeoutWaitingProposal(); v != p.TimeoutWaitingProposal() {
-		_ = lp.timeoutWaitingProposal.SetValue(p.TimeoutWaitingProposal())
-	}
-	if v := lp.IntervalBroadcastingINITBallot(); v != p.IntervalBroadcastingINITBallot() {
-		_ = lp.intervalBroadcastingINITBallot.SetValue(p.IntervalBroadcastingINITBallot())
-	}
-	if v := lp.IntervalBroadcastingProposal(); v != p.IntervalBroadcastingProposal() {
-		_ = lp.intervalBroadcastingProposal.SetValue(p.IntervalBroadcastingProposal())
-	}
-	if v := lp.WaitBroadcastingACCEPTBallot(); v != p.WaitBroadcastingACCEPTBallot() {
-		_ = lp.waitBroadcastingACCEPTBallot.SetValue(p.WaitBroadcastingACCEPTBallot())
-	}
-	if v := lp.IntervalBroadcastingACCEPTBallot(); v != p.IntervalBroadcastingACCEPTBallot() {
-		_ = lp.intervalBroadcastingACCEPTBallot.SetValue(p.IntervalBroadcastingACCEPTBallot())
 	}
 	if v := lp.NumberOfActingSuffrageNodes(); v != p.NumberOfActingSuffrageNodes() {
 		_ = lp.numberOfActingSuffrageNodes.SetValue(p.NumberOfActingSuffrageNodes())
 	}
-	if v := lp.TimespanValidBallot(); v != p.TimespanValidBallot() {
-		_ = lp.timespanValidBallot.SetValue(p.TimespanValidBallot())
+	if v := lp.MaxOperationsInSeal(); v != p.MaxOperationsInSeal() {
+		_ = lp.maxOperationsInSeal.SetValue(p.MaxOperationsInSeal())
 	}
-	if v := lp.TimeoutProcessProposal(); v != p.TimeoutProcessProposal() {
-		_ = lp.timeoutProcessProposal.SetValue(p.TimeoutProcessProposal())
+	if v := lp.MaxOperationsInProposal(); v != p.MaxOperationsInProposal() {
+		_ = lp.maxOperationsInProposal.SetValue(p.MaxOperationsInProposal())
 	}
 
 	return nil
@@ -238,16 +240,19 @@ func (lp *LocalPolicy) SetTimeoutProcessProposal(d time.Duration) (*LocalPolicy,
 	return lp, nil
 }
 
-func (lp *LocalPolicy) PolicyOperationBody() base.PolicyOperationBody {
-	return PolicyOperationBodyV0{
-		thresholdRatio:                   lp.ThresholdRatio(),
-		timeoutWaitingProposal:           lp.TimeoutWaitingProposal(),
-		intervalBroadcastingINITBallot:   lp.IntervalBroadcastingINITBallot(),
-		intervalBroadcastingProposal:     lp.IntervalBroadcastingProposal(),
-		waitBroadcastingACCEPTBallot:     lp.WaitBroadcastingACCEPTBallot(),
-		intervalBroadcastingACCEPTBallot: lp.IntervalBroadcastingACCEPTBallot(),
-		numberOfActingSuffrageNodes:      lp.NumberOfActingSuffrageNodes(),
-		timespanValidBallot:              lp.TimespanValidBallot(),
-		timeoutProcessProposal:           lp.TimeoutProcessProposal(),
-	}
+func (lp *LocalPolicy) MaxOperationsInSeal() uint {
+	return lp.maxOperationsInSeal.Value().(uint)
+}
+
+func (lp *LocalPolicy) MaxOperationsInProposal() uint {
+	return lp.maxOperationsInProposal.Value().(uint)
+}
+
+func (lp *LocalPolicy) Policy() policy.Policy {
+	return policy.NewPolicyV0(
+		lp.ThresholdRatio(),
+		lp.NumberOfActingSuffrageNodes(),
+		lp.MaxOperationsInSeal(),
+		lp.MaxOperationsInProposal(),
+	)
 }

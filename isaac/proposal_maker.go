@@ -23,6 +23,8 @@ func NewProposalMaker(localstate *Localstate) *ProposalMaker {
 func (pm *ProposalMaker) facts() ([]valuehash.Hash, []valuehash.Hash, error) {
 	mo := map[ /* Operation.Fact().Hash() */ string]struct{}{}
 
+	maxOperations := pm.localstate.Policy().MaxOperationsInProposal()
+
 	var facts, seals, uselessSeals []valuehash.Hash
 	if err := pm.localstate.Storage().StagedOperationSeals(
 		func(sl operation.Seal) (bool, error) {
@@ -41,7 +43,7 @@ func (pm *ProposalMaker) facts() ([]valuehash.Hash, []valuehash.Hash, error) {
 				mo[fh.String()] = struct{}{}
 				hasOperations = true
 
-				if len(facts) == operation.MaxOperationsInProposal {
+				if uint(len(facts)) == maxOperations {
 					return false, nil
 				}
 			}

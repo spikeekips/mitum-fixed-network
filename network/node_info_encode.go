@@ -3,6 +3,7 @@ package network
 import (
 	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/base/block"
+	"github.com/spikeekips/mitum/base/policy"
 	"github.com/spikeekips/mitum/util"
 	"github.com/spikeekips/mitum/util/encoder"
 )
@@ -34,7 +35,7 @@ func (ni *NodeInfoV0) unpack(
 	ni.u = u
 
 	if len(bpo) > 0 {
-		if p, err := base.DecodePolicyOperationBody(enc, bpo); err != nil {
+		if p, err := policy.DecodePolicyV0(enc, bpo); err != nil {
 			return err
 		} else {
 			ni.policy = p

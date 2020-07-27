@@ -5,19 +5,20 @@ import (
 
 	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/base/block"
+	"github.com/spikeekips/mitum/base/policy"
 	"github.com/spikeekips/mitum/util"
 	jsonenc "github.com/spikeekips/mitum/util/encoder/json"
 )
 
 type NodeInfoV0PackerJSON struct {
 	jsonenc.HintedHead
-	ND  base.Node                `json:"node"`
-	NID base.NetworkID           `json:"network_id"`
-	ST  base.State               `json:"state"`
-	LB  block.Manifest           `json:"last_block"`
-	VS  util.Version             `json:"version"`
-	UL  string                   `json:"url"`
-	PO  base.PolicyOperationBody `json:"policy"`
+	ND  base.Node      `json:"node"`
+	NID base.NetworkID `json:"network_id"`
+	ST  base.State     `json:"state"`
+	LB  block.Manifest `json:"last_block"`
+	VS  util.Version   `json:"version"`
+	UL  string         `json:"url"`
+	PO  policy.Policy  `json:"policy"`
 }
 
 func (ni NodeInfoV0) MarshalJSON() ([]byte, error) {

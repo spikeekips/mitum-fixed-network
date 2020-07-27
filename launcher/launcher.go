@@ -28,6 +28,7 @@ type Launcher struct {
 	sync.RWMutex
 	*logging.Logging
 	encs            *encoder.Encoders
+	design          *NodeDesign
 	version         util.Version
 	localstate      *isaac.Localstate
 	consensusStates *isaac.ConsensusStates
@@ -41,12 +42,7 @@ type Launcher struct {
 	publishURL        string
 }
 
-func NewLauncher(
-	address base.Address,
-	privateKey key.Privatekey,
-	networkID base.NetworkID,
-	version util.Version,
-) (*Launcher, error) {
+func NewLauncher(design *NodeDesign, version util.Version) (*Launcher, error) {
 	var encs *encoder.Encoders
 	if e, err := encoder.LoadEncoders(
 		[]encoder.Encoder{jsonenc.NewEncoder(), bsonenc.NewEncoder()},
@@ -61,10 +57,11 @@ func NewLauncher(
 			return c.Str("module", "base-node-runner")
 		}),
 		encs:    encs,
+		design:  design,
 		version: version,
 	}
 
-	return bn.SetLocalstate(address, privateKey, networkID)
+	return bn.SetLocalstate(design.Address(), design.Privatekey(), design.NetworkID())
 }
 
 func (bn *Launcher) Encoders() *encoder.Encoders {
@@ -101,7 +98,36 @@ func (bn *Launcher) SetLocalstate(
 func (bn *Launcher) reloadLocalstate() error {
 	_ = bn.localstate.SetStorage(bn.storage)
 
-	return bn.localstate.Initialize()
+	if err := bn.localstate.Initialize(); err != nil {
+		return err
+	}
+
+	co := bn.design.Config
+	lpo := bn.localstate.Policy()
+
+	if _, err := lpo.SetTimeoutWaitingProposal(co.TimeoutWaitingProposal); err != nil {
+		return err
+	}
+	if _, err := lpo.SetIntervalBroadcastingINITBallot(co.IntervalBroadcastingINITBallot); err != nil {
+		return err
+	}
+	if _, err := lpo.SetIntervalBroadcastingProposal(co.IntervalBroadcastingProposal); err != nil {
+		return err
+	}
+	if _, err := lpo.SetWaitBroadcastingACCEPTBallot(co.WaitBroadcastingACCEPTBallot); err != nil {
+		return err
+	}
+	if _, err := lpo.SetIntervalBroadcastingACCEPTBallot(co.IntervalBroadcastingACCEPTBallot); err != nil {
+		return err
+	}
+	if _, err := lpo.SetTimespanValidBallot(co.TimespanValidBallot); err != nil {
+		return err
+	}
+	if _, err := lpo.SetTimeoutProcessProposal(co.TimeoutProcessProposal); err != nil {
+		return err
+	}
+
+	return nil
 }
 
 func (bn *Launcher) Localstate() *isaac.Localstate {
@@ -358,8 +384,8 @@ func (bn *Launcher) networkHandlerGetSeals(hs []valuehash.Hash) ([]seal.Seal, er
 func (bn *Launcher) networkhandlerNewSeal(sl seal.Seal) error {
 	sealChecker := isaac.NewSealValidationChecker(
 		sl,
-		bn.localstate.Policy().NetworkID(),
 		bn.storage,
+		bn.localstate.Policy(),
 	)
 	if err := util.NewChecker("network-new-seal-checker", []util.CheckerFunc{
 		sealChecker.CheckIsValid,
@@ -461,7 +487,7 @@ func (bn *Launcher) networkhandlerNodeInfo() (network.NodeInfo, error) {
 		manifest,
 		bn.version,
 		bn.publishURL,
-		bn.localstate.Policy().PolicyOperationBody(),
+		bn.localstate.Policy().Policy(),
 	), nil
 }
 

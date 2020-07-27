@@ -279,7 +279,7 @@ func (t *testJSON) TestEncodeEmbed() {
 func (t *testJSON) TestAnalyzePack() {
 	je := NewEncoder()
 
-	{ // has PackRLP
+	{
 		s := se0{
 			A: util.UUID().String(),
 			S: sup0{A: util.UUID().String()},
@@ -291,7 +291,7 @@ func (t *testJSON) TestAnalyzePack() {
 		t.Equal("JSONUnpackable", name)
 	}
 
-	{ // don't have PackRLP
+	{
 		s := s0{A: util.UUID().String()}
 
 		name, cp, err := je.analyze(s)

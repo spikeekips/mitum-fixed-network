@@ -490,6 +490,19 @@ func (pp *internalDefaultProposalProcessor) setACCEPTVoteproof(acceptVoteproof b
 		return xerrors.Errorf("not yet processed")
 	}
 
+	var fact ballot.ACCEPTBallotFact
+	if m := acceptVoteproof.Majority(); m == nil {
+		return xerrors.Errorf("acceptVoteproof has empty majority")
+	} else if f, ok := m.(ballot.ACCEPTBallotFact); !ok {
+		return xerrors.Errorf("acceptVoteproof does not have ballot.ACCEPTBallotFact")
+	} else {
+		fact = f
+	}
+
+	if !pp.block.Hash().Equal(fact.NewBlock()) {
+		return xerrors.Errorf("hash of the processed block does not match with acceptVoteproof")
+	}
+
 	blk := pp.block.SetACCEPTVoteproof(acceptVoteproof)
 	if err := pp.bs.SetBlock(blk); err != nil {
 		return err

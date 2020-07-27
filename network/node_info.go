@@ -28,6 +28,8 @@ type NodeInfo interface {
 	Version() util.Version
 	URL() string
 	Policy() policy.Policy
+
+	// TODO include the properties of isaac.LocalPolicy.
 }
 
 type NodeInfoV0 struct {

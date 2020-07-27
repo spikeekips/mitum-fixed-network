@@ -13,7 +13,7 @@ require (
 	github.com/docker/docker v17.12.0-ce-rc1.0.20200514230353-811a247d06e8+incompatible
 	github.com/docker/go-connections v0.4.0
 	github.com/docker/go-units v0.4.0 // indirect
-	github.com/ethereum/go-ethereum v1.9.17
+	github.com/ethereum/go-ethereum v1.9.18
 	github.com/gogo/protobuf v1.3.1 // indirect
 	github.com/golang/protobuf v1.4.2 // indirect
 	github.com/gorilla/mux v1.7.4
@@ -36,7 +36,7 @@ require (
 	github.com/satori/go.uuid v0.0.0-20181028125025-b2ce2384e17b
 	github.com/sirupsen/logrus v1.6.0 // indirect
 	github.com/spikeekips/avl v0.0.0-20191218024138-87d874c0c032
-	github.com/stellar/go v0.0.0-20200723182226-a1cac3d2ebd7
+	github.com/stellar/go v0.0.0-20200724192619-8789164de4e6
 	github.com/stretchr/testify v1.6.1
 	github.com/syndtr/goleveldb v1.0.1-0.20190923125748-758128399b1d
 	go.mongodb.org/mongo-driver v1.3.5
@@ -47,10 +47,10 @@ require (
 	golang.org/x/mod v0.3.0
 	golang.org/x/net v0.0.0-20200707034311-ab3426394381 // indirect
 	golang.org/x/sync v0.0.0-20200625203802-6e8e738ad208 // indirect
-	golang.org/x/sys v0.0.0-20200722175500-76b94024e4b6 // indirect
+	golang.org/x/sys v0.0.0-20200727154430-2d971f7391a4 // indirect
 	golang.org/x/tools v0.0.0-20200606014950-c42cb6316fb6 // indirect
 	golang.org/x/xerrors v0.0.0-20191204190536-9bdfabe68543
-	google.golang.org/genproto v0.0.0-20200722002428-88e341933a54 // indirect
+	google.golang.org/genproto v0.0.0-20200726014623-da3ae01ef02d // indirect
 	google.golang.org/grpc v1.30.0 // indirect
 	google.golang.org/protobuf v1.25.0 // indirect
 	gopkg.in/check.v1 v1.0.0-20190902080502-41f04d3bba15 // indirect

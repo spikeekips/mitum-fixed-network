@@ -150,7 +150,7 @@ func (pr ProposalV0) IsValid(networkID []byte) error {
 	return IsValidBallot(pr, networkID)
 }
 
-func (pr ProposalV0) GenerateHash() (valuehash.Hash, error) {
+func (pr ProposalV0) GenerateHash() valuehash.Hash {
 	return GenerateHash(pr, pr.BaseBallotV0)
 }
 
@@ -171,11 +171,7 @@ func (pr *ProposalV0) Sign(pk key.Privatekey, networkID []byte) error {
 		return err
 	} else {
 		pr.BaseBallotV0 = newBase
-		if h, err := pr.GenerateHash(); err != nil {
-			return err
-		} else {
-			pr.BaseBallotV0 = pr.BaseBallotV0.SetHash(h)
-		}
+		pr.BaseBallotV0 = pr.BaseBallotV0.SetHash(pr.GenerateHash())
 	}
 
 	return nil

@@ -118,7 +118,7 @@ func (ab ACCEPTBallotV0) Voteproof() base.Voteproof {
 	return ab.voteproof
 }
 
-func (ab ACCEPTBallotV0) GenerateHash() (valuehash.Hash, error) {
+func (ab ACCEPTBallotV0) GenerateHash() valuehash.Hash {
 	var vb []byte
 	if ab.voteproof != nil {
 		vb = ab.voteproof.Bytes()
@@ -149,11 +149,7 @@ func (ab *ACCEPTBallotV0) Sign(pk key.Privatekey, networkID []byte) error {
 		return err
 	} else {
 		ab.BaseBallotV0 = newBase
-		if h, err := ab.GenerateHash(); err != nil {
-			return err
-		} else {
-			ab.BaseBallotV0 = ab.BaseBallotV0.SetHash(h)
-		}
+		ab.BaseBallotV0 = ab.BaseBallotV0.SetHash(ab.GenerateHash())
 	}
 
 	return nil

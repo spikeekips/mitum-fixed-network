@@ -134,7 +134,7 @@ func SignBaseBallotV0(blt Ballot, bb BaseBallotV0, pk key.Privatekey, networkID 
 	return bb, nil
 }
 
-func GenerateHash(blt Ballot, bb BaseBallotV0, bs ...[]byte) (valuehash.Hash, error) {
+func GenerateHash(blt Ballot, bb BaseBallotV0, bs ...[]byte) valuehash.Hash {
 	bl := util.ConcatBytesSlice(bb.Bytes(), blt.Fact().Bytes())
 	if len(bs) > 0 {
 		bl = util.ConcatBytesSlice(
@@ -143,5 +143,5 @@ func GenerateHash(blt Ballot, bb BaseBallotV0, bs ...[]byte) (valuehash.Hash, er
 		)
 	}
 
-	return valuehash.NewSHA256(bl), nil
+	return valuehash.NewSHA256(bl)
 }

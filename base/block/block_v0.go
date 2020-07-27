@@ -47,11 +47,7 @@ func NewBlockV0(
 		statesHash:     statesHash,
 		createdAt:      localtime.Now(),
 	}
-	if h, err := bm.GenerateHash(); err != nil {
-		return BlockV0{}, err
-	} else {
-		bm.h = h
-	}
+	bm.h = bm.GenerateHash()
 
 	return BlockV0{
 		ManifestV0: bm,

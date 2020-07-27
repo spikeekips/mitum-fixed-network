@@ -6,10 +6,8 @@ import (
 )
 
 func IsValidSeal(seal Seal, networkID []byte) error {
-	if h, err := seal.GenerateHash(); err != nil {
-		return err
-	} else if sh := seal.Hash(); !sh.Equal(h) {
-		return isvalid.InvalidError.Errorf("hash does not match: seal=%s(%v) generated=%s(%v)", sh, sh.Hint(), h, h.Hint())
+	if !seal.Hash().Equal(seal.GenerateHash()) {
+		return isvalid.InvalidError.Errorf("hash does not match")
 	}
 
 	if err := seal.Signer().Verify(

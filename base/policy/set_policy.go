@@ -80,11 +80,7 @@ func NewSetPolicyV0(
 		fs:              []operation.FactSign{operation.NewBaseFactSign(signer.Publickey(), factSig)},
 	}
 
-	if h, err := spo.GenerateHash(); err != nil {
-		return SetPolicyV0{}, err
-	} else {
-		spo.h = h
-	}
+	spo.h = spo.GenerateHash()
 
 	return spo, nil
 }
@@ -115,8 +111,8 @@ func (spo SetPolicyV0) Fact() base.Fact {
 	return spo.SetPolicyFactV0
 }
 
-func (spo SetPolicyV0) GenerateHash() (valuehash.Hash, error) {
-	return valuehash.NewSHA256(spo.Bytes()), nil
+func (spo SetPolicyV0) GenerateHash() valuehash.Hash {
+	return valuehash.NewSHA256(spo.Bytes())
 }
 
 func (spo SetPolicyV0) Signs() []operation.FactSign {

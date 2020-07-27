@@ -23,8 +23,8 @@ type ManifestV0 struct {
 	createdAt      time.Time
 }
 
-func (bm ManifestV0) GenerateHash() (valuehash.Hash, error) {
-	return valuehash.NewSHA256(bm.Bytes()), nil
+func (bm ManifestV0) GenerateHash() valuehash.Hash {
+	return valuehash.NewSHA256(bm.Bytes())
 }
 
 func (bm ManifestV0) IsValid(networkID []byte) error {
@@ -45,10 +45,8 @@ func (bm ManifestV0) IsValid(networkID []byte) error {
 		return err
 	}
 
-	if h, err := bm.GenerateHash(); err != nil {
-		return err
-	} else if !bm.h.Equal(h) {
-		return xerrors.Errorf("incorrect hash; hash=%s != generated=%s", bm.h, h)
+	if !bm.h.Equal(bm.GenerateHash()) {
+		return xerrors.Errorf("incorrect manifest hash")
 	}
 
 	return nil

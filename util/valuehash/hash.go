@@ -32,5 +32,5 @@ type Hasher interface {
 }
 
 type HashGenerator interface {
-	GenerateHash() (Hash, error)
+	GenerateHash() Hash
 }

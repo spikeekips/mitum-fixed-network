@@ -127,7 +127,7 @@ func (ib INITBallotV0) Voteproof() base.Voteproof {
 	return ib.voteproof
 }
 
-func (ib INITBallotV0) GenerateHash() (valuehash.Hash, error) {
+func (ib INITBallotV0) GenerateHash() valuehash.Hash {
 	return GenerateHash(ib, ib.BaseBallotV0)
 }
 
@@ -153,11 +153,7 @@ func (ib *INITBallotV0) Sign(pk key.Privatekey, networkID []byte) error {
 		return err
 	} else {
 		ib.BaseBallotV0 = newBase
-		if h, err := ib.GenerateHash(); err != nil {
-			return err
-		} else {
-			ib.BaseBallotV0 = ib.BaseBallotV0.SetHash(h)
-		}
+		ib.BaseBallotV0 = ib.BaseBallotV0.SetHash(ib.GenerateHash())
 	}
 
 	return nil

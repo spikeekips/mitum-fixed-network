@@ -102,7 +102,7 @@ func (sb SIGNBallotV0) IsValid(networkID []byte) error {
 	return IsValidBallot(sb, networkID)
 }
 
-func (sb SIGNBallotV0) GenerateHash() (valuehash.Hash, error) {
+func (sb SIGNBallotV0) GenerateHash() valuehash.Hash {
 	return GenerateHash(sb, sb.BaseBallotV0)
 }
 
@@ -123,11 +123,7 @@ func (sb *SIGNBallotV0) Sign(pk key.Privatekey, networkID []byte) error {
 		return err
 	} else {
 		sb.BaseBallotV0 = newBase
-		if h, err := sb.GenerateHash(); err != nil {
-			return err
-		} else {
-			sb.BaseBallotV0 = sb.BaseBallotV0.SetHash(h)
-		}
+		sb.BaseBallotV0 = sb.BaseBallotV0.SetHash(sb.GenerateHash())
 	}
 
 	return nil

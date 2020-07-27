@@ -60,9 +60,7 @@ func IsValidOperation(op Operation, networkID []byte) error {
 		}
 	}
 
-	if h, err := op.GenerateHash(); err != nil {
-		return err
-	} else if !h.Equal(op.Hash()) {
+	if !op.Hash().Equal(op.GenerateHash()) {
 		return isvalid.InvalidError.Errorf("wrong Opeartion hash")
 	}
 
@@ -92,11 +90,7 @@ func NewBaseOperationFromFact(ht hint.Hint, fact OperationFact, fs []FactSign) (
 		fs:   fs,
 	}
 
-	if h, err := bo.GenerateHash(); err != nil {
-		return BaseOperation{}, err
-	} else {
-		bo.h = h
-	}
+	bo.h = bo.GenerateHash()
 
 	return bo, nil
 }
@@ -129,7 +123,7 @@ func (bo BaseOperation) Hash() valuehash.Hash {
 	return bo.h
 }
 
-func (bo BaseOperation) GenerateHash() (valuehash.Hash, error) {
+func (bo BaseOperation) GenerateHash() valuehash.Hash {
 	bs := make([][]byte, len(bo.fs))
 	for i := range bo.fs {
 		bs[i] = bo.fs[i].Bytes()
@@ -137,7 +131,7 @@ func (bo BaseOperation) GenerateHash() (valuehash.Hash, error) {
 
 	e := util.ConcatBytesSlice(bo.Fact().Hash().Bytes(), util.ConcatBytesSlice(bs...))
 
-	return valuehash.NewSHA256(e), nil
+	return valuehash.NewSHA256(e)
 }
 
 func (bo BaseOperation) Signs() []FactSign {
@@ -166,12 +160,7 @@ func (bo BaseOperation) AddFactSigns(fs ...FactSign) (FactSignUpdater, error) {
 	}
 
 	bo.fs = append(bo.fs, fs...)
-
-	if h, err := bo.GenerateHash(); err != nil {
-		return nil, err
-	} else {
-		bo.h = h
-	}
+	bo.h = bo.GenerateHash()
 
 	return bo, nil
 }

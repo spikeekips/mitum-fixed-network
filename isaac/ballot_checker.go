@@ -89,6 +89,7 @@ func (bc *BallotChecker) CheckProposal() (bool, error) {
 	}
 
 	var proposal ballot.Proposal
+	var proposalInLocal bool
 	if sl, found, err := bc.localstate.Storage().Seal(ph); !found {
 		if pr, err0 := bc.requestProposal(bc.ballot.Node(), ph); err0 != nil {
 			// NOTE if not found, request proposal from node of ballot
@@ -102,19 +103,23 @@ func (bc *BallotChecker) CheckProposal() (bool, error) {
 		return false, xerrors.Errorf("seal is not Proposal: %T", sl)
 	} else {
 		proposal = pr
+		proposalInLocal = true
 	}
 
 	if err := proposal.IsValid(bc.localstate.Policy().NetworkID()); err != nil {
 		return false, err
 	} else {
 		pvc := NewProposalValidationChecker(bc.localstate, bc.suffrage, proposal, nil)
-		if err := util.NewChecker("proposal-validation-checker", []util.CheckerFunc{
+		checkers := []util.CheckerFunc{
 			pvc.IsKnown,
 			pvc.CheckSigning,
 			pvc.IsProposer,
-			pvc.SaveProposal,
-			// pvc.IsOld, // NOTE duplicated function with belows.
-		}).Check(); err != nil {
+		}
+		if !proposalInLocal {
+			checkers = append(checkers, pvc.SaveProposal)
+		}
+
+		if err := util.NewChecker("proposal-validation-checker", checkers).Check(); err != nil {
 			return false, err
 		}
 	}

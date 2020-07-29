@@ -109,8 +109,11 @@ func (sy *Syncers) lastSyncer() Syncer {
 	return sy.syncers[len(sy.syncers)-1]
 }
 
-func (sy *Syncers) getFrom(to base.Height) (base.Height, error) {
-	lastSyncer := sy.lastSyncer()
+func (sy *Syncers) getFrom(to base.Height) (Syncer, base.Height, error) {
+	var lastSyncer Syncer
+	if len(sy.syncers) > 0 {
+		lastSyncer = sy.syncers[len(sy.syncers)-1]
+	}
 
 	var from base.Height
 	if lastSyncer == nil {
@@ -124,10 +127,10 @@ func (sy *Syncers) getFrom(to base.Height) (base.Height, error) {
 	}
 
 	if to < from {
-		return base.NilHeight, xerrors.Errorf("target height, %v is lower than from height, %v", to, from)
+		return nil, base.NilHeight, xerrors.Errorf("target height, %v is lower than from height, %v", to, from)
 	}
 
-	return from, nil
+	return lastSyncer, from, nil
 }
 
 func (sy *Syncers) nextUnpreparedSyncer() Syncer {
@@ -194,6 +197,9 @@ func (sy *Syncers) stateChanged(ctx SyncerStateChangedContext) error {
 }
 
 func (sy *Syncers) Add(to base.Height, sourceNodes []network.Node) error {
+	sy.Lock()
+	defer sy.Unlock()
+
 	l := sy.Log().WithLogger(func(ctx logging.Context) logging.Emitter {
 		return ctx.Hinted("to", to)
 	})
@@ -215,10 +221,12 @@ func (sy *Syncers) add(to base.Height, sourceNodes []network.Node) error {
 		return xerrors.Errorf("empty source nodes")
 	}
 
+	var lastSyncer Syncer
 	var from base.Height
-	if f, err := sy.getFrom(to); err != nil {
+	if s, f, err := sy.getFrom(to); err != nil {
 		return err
 	} else {
+		lastSyncer = s
 		from = f
 	}
 
@@ -237,11 +245,7 @@ func (sy *Syncers) add(to base.Height, sourceNodes []network.Node) error {
 		}
 	}
 
-	lastSyncer := sy.lastSyncer()
-
-	sy.Lock()
 	sy.syncers = append(sy.syncers, syncer)
-	sy.Unlock()
 
 	l.Debug().Msg("added to syncers")
 

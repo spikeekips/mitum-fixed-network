@@ -228,7 +228,7 @@ func (cmd *StartCommand) handleEventChan(client *mongodbstorage.Client) {
 			cmd.log.Error().Err(err).Str(contestlib.EvenCollection, e.String()).Msg("malformed event found")
 
 			continue
-		} else if _, err := client.SetRaw(contestlib.EvenCollection, r); err != nil {
+		} else if _, err := client.AddRaw(contestlib.EvenCollection, r); err != nil {
 			cmd.log.Error().Err(err).Msg("failed to store event")
 
 			continue

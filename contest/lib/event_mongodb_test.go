@@ -47,7 +47,7 @@ func (t *testEventMongodb) TestInsert() {
 	r, err := e.Raw()
 	t.NoError(err)
 
-	id, err := t.client.SetRaw("test", r)
+	id, err := t.client.AddRaw("test", r)
 	t.NoError(err)
 
 	var event map[string]interface{}
@@ -74,7 +74,7 @@ func (t *testEventMongodb) TestPreseveInsertedOrder() {
 		r, err := e.Raw()
 		t.NoError(err)
 
-		_, err = t.client.SetRaw("test", r)
+		_, err = t.client.AddRaw("test", r)
 		t.NoError(err)
 	}
 

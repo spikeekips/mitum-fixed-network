@@ -16,6 +16,8 @@ import (
 	"github.com/spikeekips/mitum/util"
 )
 
+var errorDuplicateKey = 11000
+
 type (
 	getRecordCallback  func(*mongo.SingleResult) error
 	getRecordsCallback func(*mongo.Cursor) (bool, error)
@@ -173,66 +175,70 @@ func (cl *Client) getByFilter(col string, filter bson.D, opts ...*options.FindOn
 	return res, nil
 }
 
-func (cl *Client) Set(col string, doc Doc) (interface{}, error) {
-	if doc.ID() == nil {
-		return cl.setWithoutID(col, doc)
+func (cl *Client) Add(col string, doc Doc) (interface{}, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), cl.execTimeout)
+	defer cancel()
+
+	res, err := cl.db.Collection(col).InsertOne(ctx, doc)
+	if err != nil {
+		if isDuplicatedError(err) {
+			return nil, storage.DuplicatedError.Wrap(err)
+		}
+
+		return nil, storage.WrapError(err)
 	}
 
-	return cl.setWithID(col, doc)
+	return res.InsertedID, nil
 }
 
-func (cl *Client) setWithID(col string, doc Doc) (interface{}, error) {
+func (cl *Client) Set(col string, doc Doc) (interface{}, error) {
+	if doc.ID() == nil {
+		return cl.Add(col, doc)
+	}
+
 	// NOTE remove existing one
 	models := []mongo.WriteModel{
 		mongo.NewDeleteOneModel().SetFilter(util.NewBSONFilter("_id", doc.ID()).D()),
 		mongo.NewInsertOneModel().SetDocument(doc),
 	}
 
-	if err := cl.bulk(col, models); err != nil {
+	if err := cl.Bulk(col, models, true); err != nil {
 		return nil, err
 	}
 
 	return doc.ID(), nil
 }
 
-func (cl *Client) SetRaw(col string, raw bson.Raw) (interface{}, error) {
+func (cl *Client) AddRaw(col string, raw bson.Raw) (interface{}, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), cl.execTimeout)
 	defer cancel()
 
 	res, err := cl.db.Collection(col).InsertOne(ctx, raw)
 	if err != nil {
+		if isDuplicatedError(err) {
+			return nil, storage.DuplicatedError.Wrap(err)
+		}
+
 		return nil, storage.WrapError(err)
 	}
 
 	return res.InsertedID, nil
 }
 
-func (cl *Client) setWithoutID(col string, doc interface{}) (interface{}, error) {
+func (cl *Client) Bulk(col string, models []mongo.WriteModel, order bool) error {
 	ctx, cancel := context.WithTimeout(context.Background(), cl.execTimeout)
 	defer cancel()
 
-	res, err := cl.db.Collection(col).InsertOne(ctx, doc)
-	if err != nil {
-		return nil, storage.WrapError(err)
-	}
-
-	return res.InsertedID, nil
-}
-
-func (cl *Client) bulk(col string, models []mongo.WriteModel) error {
-	ctx, cancel := context.WithTimeout(context.Background(), cl.execTimeout)
-	defer cancel()
-
-	opts := options.BulkWrite().SetOrdered(true)
+	opts := options.BulkWrite().SetOrdered(order)
 	if _, err := cl.db.Collection(col).BulkWrite(ctx, models, opts); err != nil {
+		if isDuplicatedError(err) {
+			return storage.DuplicatedError.Wrap(err)
+		}
+
 		return storage.WrapError(err)
 	}
 
 	return nil
-}
-
-func (cl *Client) Bulk(col string, models []mongo.WriteModel) error {
-	return cl.bulk(col, models)
 }
 
 func (cl *Client) Count(col string, filter interface{}, opts ...*options.CountOptions) (int64, error) {
@@ -305,7 +311,7 @@ func (cl *Client) CopyCollection(source *Client, fromCol, toCol string) error {
 	var models []mongo.WriteModel
 	err := source.Find(fromCol, bson.D{}, func(cursor *mongo.Cursor) (bool, error) {
 		if len(models) == limit {
-			if err := cl.Bulk(toCol, models); err != nil {
+			if err := cl.Bulk(toCol, models, false); err != nil {
 				return false, err
 			} else {
 				models = nil
@@ -325,7 +331,7 @@ func (cl *Client) CopyCollection(source *Client, fromCol, toCol string) error {
 		return nil
 	}
 
-	return cl.Bulk(toCol, models)
+	return cl.Bulk(toCol, models, false)
 }
 
 func (cl *Client) New(db string) *Client {
@@ -334,4 +340,27 @@ func (cl *Client) New(db string) *Client {
 	n.db = cl.client.Database(db)
 
 	return n
+}
+
+func isDuplicatedError(err error) bool {
+	switch t := err.(type) {
+	case mongo.WriteException:
+		for i := range t.WriteErrors {
+			if t.WriteErrors[i].Code == errorDuplicateKey {
+				return true
+			}
+		}
+
+		return false
+	case mongo.BulkWriteException:
+		for i := range t.WriteErrors {
+			if t.WriteErrors[i].WriteError.Code == errorDuplicateKey {
+				return true
+			}
+		}
+
+		return false
+	default:
+		return false
+	}
 }

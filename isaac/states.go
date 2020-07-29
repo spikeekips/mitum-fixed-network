@@ -11,6 +11,7 @@ import (
 	"github.com/spikeekips/mitum/base/block"
 	"github.com/spikeekips/mitum/base/seal"
 	"github.com/spikeekips/mitum/network"
+	"github.com/spikeekips/mitum/storage"
 	"github.com/spikeekips/mitum/util"
 	"github.com/spikeekips/mitum/util/errors"
 	"github.com/spikeekips/mitum/util/logging"
@@ -412,7 +413,9 @@ func (css *ConsensusStates) NewSeal(sl seal.Seal) error {
 	l.Debug().Msg("seal received")
 
 	if err := css.localstate.Storage().NewSeals([]seal.Seal{sl}); err != nil {
-		return err
+		if !xerrors.Is(err, storage.DuplicatedError) {
+			return err
+		}
 	}
 
 	if css.ActiveHandler() == nil {

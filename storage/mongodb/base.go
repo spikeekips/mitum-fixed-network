@@ -548,7 +548,6 @@ func (st *Storage) NewSeals(seals []seal.Seal) error {
 		}
 
 		models = append(models,
-			mongo.NewDeleteOneModel().SetFilter(util.NewBSONFilter("_id", doc.ID()).D()),
 			mongo.NewInsertOneModel().SetDocument(doc),
 		)
 
@@ -557,12 +556,11 @@ func (st *Storage) NewSeals(seals []seal.Seal) error {
 		}
 
 		operationModels = append(operationModels,
-			mongo.NewDeleteOneModel().SetFilter(util.NewBSONFilter("_id", doc.ID()).D()),
 			mongo.NewInsertOneModel().SetDocument(doc),
 		)
 	}
 
-	if err := st.client.Bulk(defaultColNameSeal, models); err != nil {
+	if err := st.client.Bulk(defaultColNameSeal, models, false); err != nil {
 		return err
 	}
 
@@ -570,7 +568,7 @@ func (st *Storage) NewSeals(seals []seal.Seal) error {
 		return nil
 	}
 
-	return st.client.Bulk(defaultColNameOperationSeal, operationModels)
+	return st.client.Bulk(defaultColNameOperationSeal, operationModels, false)
 }
 
 func (st *Storage) Seals(callback func(valuehash.Hash, seal.Seal) (bool, error), sort, load bool) error {
@@ -695,7 +693,7 @@ func (st *Storage) UnstagedOperationSeals(seals []valuehash.Hash) error {
 		)
 	}
 
-	return st.client.Bulk(defaultColNameOperationSeal, models)
+	return st.client.Bulk(defaultColNameOperationSeal, models, false)
 }
 
 func (st *Storage) Proposals(callback func(ballot.Proposal) (bool, error), sort bool) error {
@@ -729,7 +727,7 @@ func (st *Storage) Proposals(callback func(ballot.Proposal) (bool, error), sort 
 func (st *Storage) NewProposal(proposal ballot.Proposal) error {
 	if doc, err := NewProposalDoc(proposal, st.enc); err != nil {
 		return err
-	} else if _, err := st.client.Set(defaultColNameProposal, doc); err != nil {
+	} else if _, err := st.client.Add(defaultColNameProposal, doc); err != nil {
 		return err
 	}
 
@@ -790,7 +788,7 @@ func (st *Storage) State(key string) (state.State, bool, error) {
 func (st *Storage) NewState(sta state.State) error {
 	if doc, err := NewStateDoc(sta, st.enc); err != nil {
 		return err
-	} else if _, err := st.client.Set(defaultColNameState, doc); err != nil {
+	} else if _, err := st.client.Add(defaultColNameState, doc); err != nil {
 		return err
 	}
 

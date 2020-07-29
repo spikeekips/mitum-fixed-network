@@ -200,6 +200,10 @@ func (bg *DummyBlocksV0Generator) syncSeals(from *Localstate) error {
 
 		for _, proposal := range proposals {
 			if err := l.Storage().NewProposal(proposal); err != nil {
+				if xerrors.Is(err, storage.DuplicatedError) {
+					continue
+				}
+
 				return err
 			}
 		}
@@ -299,10 +303,6 @@ func (bg *DummyBlocksV0Generator) createINITBallot(localstate *Localstate) (ball
 		return nil, err
 	} else {
 		baseBallot = b
-	}
-
-	if err := localstate.Storage().NewSeals([]seal.Seal{baseBallot}); err != nil {
-		return nil, err
 	}
 
 	return baseBallot, nil

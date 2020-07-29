@@ -77,7 +77,7 @@ func TestLookupMongodb(t *testing.T) {
 				r, err := bsonenc.Marshal(c.doc)
 				assert.NoError(t, err, "%d: %v", i, c.name)
 
-				id, err := client.SetRaw("test", r)
+				id, err := client.AddRaw("test", r)
 				assert.NoError(t, err, "%d: %v", i, c.name)
 
 				args := map[string]interface{}{

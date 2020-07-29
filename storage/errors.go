@@ -7,24 +7,30 @@ import (
 )
 
 var (
-	NotFoundError = errors.NewError("not found")
-	StorageError  = errors.NewError("storage error")
+	NotFoundError   = errors.NewError("not found")
+	DuplicatedError = errors.NewError("duplicated error")
+	StorageError    = errors.NewError("storage error")
 )
 
 func WrapError(err error) error {
-	if err == nil {
+	switch {
+	case err == nil:
 		return nil
-	}
-
-	if IsNotFoundError(err) {
+	case IsNotFoundError(err):
 		return err
-	} else if xerrors.Is(err, StorageError) {
+	case IsDuplicatedError(err):
 		return err
+	case xerrors.Is(err, StorageError):
+		return err
+	default:
+		return StorageError.Wrap(err)
 	}
-
-	return StorageError.Wrap(err)
 }
 
 func IsNotFoundError(err error) bool {
 	return xerrors.Is(err, NotFoundError)
+}
+
+func IsDuplicatedError(err error) bool {
+	return xerrors.Is(err, DuplicatedError)
 }

@@ -320,14 +320,16 @@ func (t *testStorage) TestStagedOperationSeals() {
 	t.NoError(t.storage.NewSeals(seals))
 
 	ops := map[string]operation.Seal{}
+
+	var others []seal.Seal
 	// 10 operation.Seal
 	for i := 0; i < 10; i++ {
 		sl := t.newOperationSeal()
 
-		seals = append(seals, sl)
+		others = append(others, sl)
 		ops[sl.Hash().String()] = sl
 	}
-	t.NoError(t.storage.NewSeals(seals))
+	t.NoError(t.storage.NewSeals(others))
 
 	var collected []seal.Seal
 	t.NoError(t.storage.StagedOperationSeals(

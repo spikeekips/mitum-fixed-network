@@ -106,7 +106,7 @@ func (st *SyncerStorage) SetManifests(manifests []block.Manifest) error {
 		}
 	}
 
-	if err := st.manifestStorage.Client().Bulk(defaultColNameManifest, models); err != nil {
+	if err := st.manifestStorage.Client().Bulk(defaultColNameManifest, models, true); err != nil {
 		return err
 	}
 
@@ -259,7 +259,7 @@ func moveWithinCol(from *Storage, fromCol string, to *Storage, toCol string, fil
 	var models []mongo.WriteModel
 	err := from.Client().Find(fromCol, filter, func(cursor *mongo.Cursor) (bool, error) {
 		if len(models) == limit {
-			if err := to.Client().Bulk(toCol, models); err != nil {
+			if err := to.Client().Bulk(toCol, models, false); err != nil {
 				return false, err
 			} else {
 				models = nil
@@ -276,7 +276,7 @@ func moveWithinCol(from *Storage, fromCol string, to *Storage, toCol string, fil
 	}
 
 	if len(models) > 0 {
-		if err := to.Client().Bulk(toCol, models); err != nil {
+		if err := to.Client().Bulk(toCol, models, false); err != nil {
 			return err
 		}
 	}

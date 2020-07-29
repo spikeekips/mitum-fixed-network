@@ -452,7 +452,9 @@ func (pp *internalDefaultProposalProcessor) getOperationsThruChannel(
 	}
 
 	if err := pp.localstate.Storage().NewSeals(received); err != nil {
-		return nil, err
+		if !xerrors.Is(err, storage.DuplicatedError) {
+			return nil, err
+		}
 	}
 
 	var ops []operation.Operation

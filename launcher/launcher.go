@@ -393,7 +393,9 @@ func (bn *Launcher) networkhandlerNewSeal(sl seal.Seal) error {
 		func() (bool, error) {
 			// NOTE stores seal regardless further checkings.
 			if err := bn.storage.NewSeals([]seal.Seal{sl}); err != nil {
-				return false, err
+				if !xerrors.Is(err, storage.DuplicatedError) {
+					return false, err
+				}
 			}
 
 			return true, nil

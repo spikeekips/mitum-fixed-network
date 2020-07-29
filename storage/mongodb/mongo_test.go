@@ -11,12 +11,14 @@ import (
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
+	"golang.org/x/xerrors"
 
 	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/base/block"
 	"github.com/spikeekips/mitum/base/key"
 	"github.com/spikeekips/mitum/base/operation"
 	"github.com/spikeekips/mitum/base/seal"
+	"github.com/spikeekips/mitum/storage"
 	"github.com/spikeekips/mitum/util"
 	"github.com/spikeekips/mitum/util/encoder"
 	bsonenc "github.com/spikeekips/mitum/util/encoder/bson"
@@ -231,6 +233,61 @@ func (t *testMongodbClient) TestInsertWithObjectID() {
 	t.Equal(doc.Doc()["findme"], rs[0]["findme"])
 }
 
+func (t *testMongodbClient) TestSetDuplicatedError() {
+	id := util.UUID().String()
+
+	doc := NewDocNilID(id, bson.M{"findme": int64(3), "_id": id})
+	inserted, err := t.client.Add("showme", doc)
+	t.NoError(err)
+	t.IsType("", inserted)
+	t.Equal(id, inserted)
+
+	_, err = t.client.Add("showme", doc)
+	t.True(xerrors.Is(err, storage.DuplicatedError))
+}
+
+func (t *testMongodbClient) TestSetRawDuplicatedError() {
+	id := util.UUID().String()
+	raw, err := bsonenc.Marshal(bson.M{"findme": int64(3), "_id": id})
+	t.NoError(err)
+
+	inserted, err := t.client.AddRaw("showme", raw)
+	t.NoError(err)
+	t.IsType("", inserted)
+	t.Equal(id, inserted)
+
+	_, err = t.client.AddRaw("showme", raw)
+	t.True(xerrors.Is(err, storage.DuplicatedError))
+}
+
+func (t *testMongodbClient) TestBulkDuplicatedError0() {
+	var models []mongo.WriteModel
+
+	id := util.UUID().String()
+	doc := NewDocNilID(id, bson.M{"findme": int64(3), "_id": id})
+
+	models = append(models, mongo.NewInsertOneModel().SetDocument(doc))
+	models = append(models, mongo.NewInsertOneModel().SetDocument(doc))
+
+	err := t.client.Bulk("showme", models, false)
+	t.True(xerrors.Is(err, storage.DuplicatedError))
+}
+
+func (t *testMongodbClient) TestBulkDuplicatedError1() {
+	var models []mongo.WriteModel
+
+	id := util.UUID().String()
+	doc := NewDocNilID(id, bson.M{"findme": int64(3), "_id": id})
+
+	_, err := t.client.Add("showme", doc)
+	t.NoError(err)
+
+	models = append(models, mongo.NewInsertOneModel().SetDocument(doc))
+
+	err = t.client.Bulk("showme", models, false)
+	t.True(xerrors.Is(err, storage.DuplicatedError))
+}
+
 func (t *testMongodbClient) TestMoveRawBytes() {
 	doc := NewDocNilID(nil, bson.M{"findme": int64(3)})
 	insertedID, err := t.client.Set("showme", doc)
@@ -238,7 +295,7 @@ func (t *testMongodbClient) TestMoveRawBytes() {
 
 	var newInsertedID interface{}
 	t.client.Find("showme", bson.D{}, func(cursor *mongo.Cursor) (bool, error) {
-		i, err := t.client.SetRaw("new_showme", cursor.Current)
+		i, err := t.client.AddRaw("new_showme", cursor.Current)
 		t.NoError(err)
 
 		newInsertedID = i

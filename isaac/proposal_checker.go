@@ -5,6 +5,7 @@ import (
 
 	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/base/ballot"
+	"github.com/spikeekips/mitum/storage"
 	"github.com/spikeekips/mitum/util/logging"
 )
 
@@ -99,7 +100,9 @@ func (pvc *ProposalValidationChecker) SaveProposal() (bool, error) {
 	}
 
 	if err := pvc.localstate.Storage().NewProposal(pvc.proposal); err != nil {
-		return false, xerrors.Errorf("failed to save proposal: %w", err)
+		if !xerrors.Is(err, storage.DuplicatedError) {
+			return false, xerrors.Errorf("failed to save proposal: %w", err)
+		}
 	}
 
 	return true, nil

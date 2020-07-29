@@ -226,10 +226,6 @@ func (gg *GenesisBlockV0Generator) generateACCEPTVoteproof(newBlock block.Block,
 			return nil, xerrors.Errorf("something wrong, ACCEPTVoteproof should be finished, but not")
 		}
 
-		if err := gg.localstate.Storage().NewSeals([]seal.Seal{ab}); err != nil {
-			return nil, err
-		}
-
 		return voteproof, nil
 	}
 }

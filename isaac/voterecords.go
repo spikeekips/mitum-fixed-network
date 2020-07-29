@@ -8,6 +8,12 @@ import (
 	"github.com/spikeekips/mitum/util/valuehash"
 )
 
+var voteRecordsPool = sync.Pool{
+	New: func() interface{} {
+		return new(VoteRecords)
+	},
+}
+
 type VoteRecords struct {
 	sync.RWMutex
 	facts     map[string]base.Fact
@@ -18,19 +24,21 @@ type VoteRecords struct {
 }
 
 func NewVoteRecords(blt ballot.Ballot, suffrages []base.Address, threshold base.Threshold) *VoteRecords {
-	return &VoteRecords{
-		facts:   map[string]base.Fact{},
-		votes:   map[string]valuehash.Hash{},
-		ballots: map[string]ballot.Ballot{},
-		voteproof: base.NewVoteproofV0(
-			blt.Height(),
-			blt.Round(),
-			suffrages,
-			threshold.Ratio,
-			blt.Stage(),
-		),
-		threshold: threshold,
-	}
+	vr := voteRecordsPool.Get().(*VoteRecords)
+	vr.RWMutex = sync.RWMutex{}
+	vr.facts = map[string]base.Fact{}
+	vr.votes = map[string]valuehash.Hash{}
+	vr.ballots = map[string]ballot.Ballot{}
+	vr.voteproof = base.NewVoteproofV0(
+		blt.Height(),
+		blt.Round(),
+		suffrages,
+		threshold.Ratio,
+		blt.Stage(),
+	)
+	vr.threshold = threshold
+
+	return vr
 }
 
 func (vrs *VoteRecords) addBallot(blt ballot.Ballot) bool {

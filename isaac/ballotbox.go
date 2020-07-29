@@ -87,6 +87,7 @@ func (bb *Ballotbox) Clean(height base.Height) error {
 		}
 
 		removes = append(removes, k)
+		voteRecordsPool.Put(v)
 
 		bb.Log().Debug().
 			Int64("height", h).Uint64("round", r).Str("stage", base.Stage(s).String()).
@@ -102,8 +103,8 @@ func (bb *Ballotbox) Clean(height base.Height) error {
 	if len(removes) < 1 {
 		return nil
 	}
-	for _, k := range removes {
-		bb.vrs.Delete(k)
+	for i := range removes {
+		bb.vrs.Delete(removes[i])
 	}
 
 	return nil

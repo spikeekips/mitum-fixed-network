@@ -61,11 +61,15 @@ func (bb *Ballotbox) loadVoteRecords(blt ballot.Ballot, ifNotCreate bool) *VoteR
 }
 
 func (bb *Ballotbox) Clean(height base.Height) error {
+	bb.Lock()
+	defer bb.Unlock()
+
 	bb.Log().Debug().Hinted("height", height).Msg("trying to clean unused records")
 
 	gh := height.Int64()
 
 	var err error
+	var removeKeys []interface{}
 	var removes []interface{}
 	bb.vrs.Range(func(k, v interface{}) bool {
 		var h int64
@@ -86,8 +90,8 @@ func (bb *Ballotbox) Clean(height base.Height) error {
 			return true
 		}
 
-		removes = append(removes, k)
-		voteRecordsPool.Put(v)
+		removeKeys = append(removeKeys, k)
+		removes = append(removes, v)
 
 		bb.Log().Debug().
 			Int64("height", h).Uint64("round", r).Str("stage", base.Stage(s).String()).
@@ -100,11 +104,15 @@ func (bb *Ballotbox) Clean(height base.Height) error {
 		return err
 	}
 
-	if len(removes) < 1 {
+	if len(removeKeys) < 1 {
 		return nil
 	}
+	for i := range removeKeys {
+		bb.vrs.Delete(removeKeys[i])
+	}
+
 	for i := range removes {
-		bb.vrs.Delete(removes[i])
+		voteRecordsPool.Put(removes[i])
 	}
 
 	return nil

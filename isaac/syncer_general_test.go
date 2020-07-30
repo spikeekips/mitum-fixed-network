@@ -536,8 +536,8 @@ func (t *testGeneralSyncer) TestMissingHead() {
 
 	cs.reset()
 
-	err = cs.headAndTailManifests()
-	t.Error(err)
+	cs.setState(SyncerPreparing)
+	t.Error(cs.headAndTailManifests())
 }
 
 func (t *testGeneralSyncer) TestMissingTail() {
@@ -577,8 +577,8 @@ func (t *testGeneralSyncer) TestMissingTail() {
 
 	cs.reset()
 
-	err = cs.headAndTailManifests()
-	t.Error(err)
+	cs.setState(SyncerPreparing)
+	t.Error(cs.headAndTailManifests())
 }
 
 func (t *testGeneralSyncer) TestMissingManifests() {
@@ -618,8 +618,8 @@ func (t *testGeneralSyncer) TestMissingManifests() {
 
 	cs.reset()
 
-	err = cs.fillManifests()
-	t.Error(err)
+	cs.setState(SyncerPreparing)
+	t.Error(cs.fillManifests())
 }
 
 func (t *testGeneralSyncer) TestMissingBlocks() {

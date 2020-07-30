@@ -259,6 +259,9 @@ func (st *Storage) LastVoteproof(stage base.Stage) (base.Voteproof, bool, error)
 }
 
 func (st *Storage) SyncerStorage() (storage.SyncerStorage, error) {
+	st.Lock()
+	defer st.Unlock()
+
 	return NewSyncerStorage(st)
 }
 
@@ -308,7 +311,7 @@ func (st *Storage) CleanByHeight(height base.Height) error {
 	var newLastBlock block.Block
 	switch blk, found, err := st.BlockByHeight(height - 1); {
 	case !found:
-		return xerrors.Errorf("failed to find block of height, %v", height-1)
+		return storage.NotFoundError.Errorf("failed to find block of height, %v", height-1)
 	case err != nil:
 		return xerrors.Errorf("failed to find block of height, %v: %w", height-1, err)
 	default:

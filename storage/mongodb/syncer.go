@@ -51,7 +51,8 @@ func NewSyncerStorage(main *Storage) (*SyncerStorage, error) {
 		main:            main,
 		manifestStorage: manifestStorage,
 		blockStorage:    blockStorage,
-		heightFrom:      base.Height(-1),
+		heightFrom:      base.NilHeight,
+		heightTo:        base.NilHeight,
 	}, nil
 }
 
@@ -75,6 +76,9 @@ func (st *SyncerStorage) Manifests(heights []base.Height) ([]block.Manifest, err
 }
 
 func (st *SyncerStorage) SetManifests(manifests []block.Manifest) error {
+	st.Lock()
+	defer st.Unlock()
+
 	st.Log().VerboseFunc(func(e *logging.Event) logging.Emitter {
 		var heights []base.Height
 		for i := range manifests {
@@ -97,12 +101,17 @@ func (st *SyncerStorage) SetManifests(manifests []block.Manifest) error {
 
 	var models []mongo.WriteModel
 	for i := range manifests {
-		if doc, err := NewManifestDoc(manifests[i], st.blockStorage.Encoder()); err != nil {
+		m := manifests[i]
+		if doc, err := NewManifestDoc(m, st.blockStorage.Encoder()); err != nil {
 			return err
 		} else {
-			models = append(models,
-				mongo.NewInsertOneModel().SetDocument(doc),
-			)
+			models = append(models, mongo.NewInsertOneModel().SetDocument(doc))
+		}
+
+		if h := m.Height(); st.heightFrom <= base.NilHeight || h < st.heightFrom {
+			st.heightFrom = h
+		} else if h > st.heightTo {
+			st.heightTo = h
 		}
 	}
 
@@ -150,11 +159,19 @@ func (st *SyncerStorage) SetBlocks(blocks []block.Block) error {
 		Int("blocks", len(blocks)).
 		Msg("set blocks")
 
+	for i := st.heightFrom; i <= st.heightTo; i++ {
+		if err := st.main.CleanByHeight(i); err != nil {
+			if storage.IsNotFoundError(err) {
+				continue
+			}
+
+			return err
+		}
+	}
+
 	var lastBlock block.Block
 	for i := range blocks {
 		blk := blocks[i]
-
-		st.checkHeight(blk.Height())
 
 		if bs, err := st.blockStorage.OpenBlockStorage(blk); err != nil {
 			return err
@@ -207,21 +224,6 @@ func (st *SyncerStorage) Commit() error {
 	}
 
 	return st.main.setLastBlock(lastBlock, false, false)
-}
-
-func (st *SyncerStorage) checkHeight(height base.Height) {
-	st.Lock()
-	defer st.Unlock()
-
-	switch {
-	case st.heightFrom < 0:
-		st.heightFrom = height
-		st.heightTo = height
-	case st.heightFrom > height:
-		st.heightFrom = height
-	case st.heightTo < height:
-		st.heightTo = height
-	}
 }
 
 func (st *SyncerStorage) Close() error {

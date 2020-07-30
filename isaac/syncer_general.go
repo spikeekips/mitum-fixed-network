@@ -361,7 +361,9 @@ func (cs *GeneralSyncer) prepare() error {
 
 func (cs *GeneralSyncer) headAndTailManifests() error {
 	if cs.State() != SyncerPreparing {
-		return xerrors.Errorf("not preparing state: %v", cs.State())
+		cs.Log().Debug().Str("state", cs.State().String()).Msg("not preparing state")
+
+		return nil
 	}
 
 	var heights []base.Height
@@ -416,7 +418,9 @@ func (cs *GeneralSyncer) headAndTailManifests() error {
 
 func (cs *GeneralSyncer) fillManifests() error {
 	if cs.State() != SyncerPreparing {
-		return xerrors.Errorf("not preparing state: %v", cs.State())
+		cs.Log().Debug().Str("state", cs.State().String()).Msg("not preparing state")
+
+		return nil
 	}
 
 	if cs.heightFrom == cs.heightTo || cs.heightTo == cs.heightFrom+1 {

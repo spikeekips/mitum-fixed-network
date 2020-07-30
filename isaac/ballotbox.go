@@ -112,7 +112,7 @@ func (bb *Ballotbox) Clean(height base.Height) error {
 	}
 
 	for i := range removes {
-		voteRecordsPool.Put(removes[i])
+		voteRecordsPool.Put(removes[i].(*VoteRecords).reset())
 	}
 
 	return nil

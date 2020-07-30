@@ -41,6 +41,19 @@ func NewVoteRecords(blt ballot.Ballot, suffrages []base.Address, threshold base.
 	return vr
 }
 
+func (vrs *VoteRecords) reset() *VoteRecords {
+	vrs.Lock()
+	defer vrs.Unlock()
+
+	vrs.facts = nil
+	vrs.votes = nil
+	vrs.ballots = nil
+	vrs.voteproof = base.VoteproofV0{}
+	vrs.threshold = base.Threshold{}
+
+	return vrs
+}
+
 func (vrs *VoteRecords) addBallot(blt ballot.Ballot) bool {
 	if _, found := vrs.votes[blt.Node().String()]; found {
 		return true

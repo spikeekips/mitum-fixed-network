@@ -57,7 +57,7 @@ strategy,
 */
 type StateJoiningHandler struct {
 	*BaseStateHandler
-	cr base.Round
+	cr base.Round // TODO remove currentRound
 }
 
 func NewStateJoiningHandler(
@@ -83,7 +83,10 @@ func (cs *StateJoiningHandler) SetLogger(l logging.Logger) logging.Logger {
 	return cs.Log()
 }
 
-func (cs *StateJoiningHandler) Activate(_ StateChangeContext) error {
+func (cs *StateJoiningHandler) Activate(_ *StateChangeContext) error {
+	cs.Lock()
+	defer cs.Unlock()
+
 	var avp base.Voteproof // NOTE ACCEPT Voteproof of last block
 	switch vp, found, err := cs.localstate.Storage().LastVoteproof(base.StageACCEPT); {
 	case !found:
@@ -94,11 +97,15 @@ func (cs *StateJoiningHandler) Activate(_ StateChangeContext) error {
 		avp = vp
 	}
 
+	cs.activate()
+
+	cs.cr = base.Round(0)
+
 	if timer, err := cs.TimerBroadcastingINITBallot(
 		func() time.Duration {
 			return cs.localstate.Policy().IntervalBroadcastingINITBallot()
 		},
-		cs.currentRound,
+		cs.cr,
 		avp,
 	); err != nil {
 		return err
@@ -116,9 +123,11 @@ func (cs *StateJoiningHandler) Activate(_ StateChangeContext) error {
 	return nil
 }
 
-func (cs *StateJoiningHandler) Deactivate(_ StateChangeContext) error {
+func (cs *StateJoiningHandler) Deactivate(_ *StateChangeContext) error {
 	cs.Lock()
 	defer cs.Unlock()
+
+	cs.deactivate()
 
 	if err := cs.timers.Stop(); err != nil {
 		return err

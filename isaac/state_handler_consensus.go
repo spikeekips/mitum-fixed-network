@@ -68,7 +68,14 @@ func (cs *StateConsensusHandler) SetLogger(l logging.Logger) logging.Logger {
 	return cs.Log()
 }
 
-func (cs *StateConsensusHandler) Activate(ctx StateChangeContext) error {
+func (cs *StateConsensusHandler) Activate(ctx *StateChangeContext) error {
+	cs.Lock()
+	defer cs.Unlock()
+
+	if ctx == nil {
+		return xerrors.Errorf("empty StateChangeContext")
+	}
+
 	if _, found, err := cs.localstate.Storage().LastManifest(); !found {
 		return storage.NotFoundError.Errorf("last manifest is empty")
 	} else if err != nil {
@@ -83,6 +90,8 @@ func (cs *StateConsensusHandler) Activate(ctx StateChangeContext) error {
 		return xerrors.Errorf("consensus handler got invalid Voteproof: %w", err)
 	}
 
+	cs.activate()
+
 	go func() {
 		if err := cs.handleINITVoteproof(ctx.Voteproof()); err != nil {
 			cs.Log().Error().Err(err).Msg("activated, but handleINITVoteproof failed with voteproof")
@@ -94,7 +103,9 @@ func (cs *StateConsensusHandler) Activate(ctx StateChangeContext) error {
 	return nil
 }
 
-func (cs *StateConsensusHandler) Deactivate(_ StateChangeContext) error {
+func (cs *StateConsensusHandler) Deactivate(_ *StateChangeContext) error {
+	cs.deactivate()
+
 	if err := cs.timers.Stop(); err != nil {
 		return err
 	}
@@ -236,7 +247,7 @@ func (cs *StateConsensusHandler) handleINITVoteproof(voteproof base.Voteproof) e
 func (cs *StateConsensusHandler) keepBroadcastingINITBallotForNextBlock(voteproof base.Voteproof) error {
 	if timer, err := cs.TimerBroadcastingINITBallot(
 		func() time.Duration { return cs.localstate.Policy().IntervalBroadcastingINITBallot() },
-		func() base.Round { return base.Round(0) },
+		base.Round(0),
 		voteproof,
 	); err != nil {
 		return err
@@ -371,7 +382,7 @@ func (cs *StateConsensusHandler) startNextRound(voteproof base.Voteproof) error 
 
 			return cs.localstate.Policy().IntervalBroadcastingINITBallot()
 		},
-		func() base.Round { return round },
+		round,
 		voteproof,
 	); err != nil {
 		return err

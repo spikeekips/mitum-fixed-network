@@ -36,24 +36,39 @@ func NewStateBootingHandler(
 	return cs, nil
 }
 
-func (cs *StateBootingHandler) Activate(_ StateChangeContext) error {
+func (cs *StateBootingHandler) Activate(_ *StateChangeContext) error {
 	cs.Lock()
 	defer cs.Unlock()
 
 	cs.Log().Debug().Msg("activated")
 
-	if err := cs.initialize(); err != nil {
+	var ctx *StateChangeContext
+	if c, err := cs.initialize(); err != nil {
 		cs.Log().Error().Err(err).Msg("failed to initialize at booting")
 
 		return err
+	} else if c != nil {
+		ctx = c
+	}
+
+	cs.activate()
+
+	if ctx != nil {
+		go func() {
+			if err := cs.ChangeState(ctx.To(), ctx.Voteproof(), ctx.Ballot()); err != nil {
+				cs.Log().Error().Err(err).Msg("ChangeState error")
+			}
+		}()
 	}
 
 	return nil
 }
 
-func (cs *StateBootingHandler) Deactivate(_ StateChangeContext) error {
+func (cs *StateBootingHandler) Deactivate(_ *StateChangeContext) error {
 	cs.Lock()
 	defer cs.Unlock()
+
+	cs.deactivate()
 
 	if cs.policyTimer != nil {
 		if err := cs.policyTimer.Stop(); err != nil {
@@ -83,26 +98,28 @@ func (cs *StateBootingHandler) NewVoteproof(voteproof base.Voteproof) error {
 	return nil
 }
 
-func (cs *StateBootingHandler) initialize() error {
+func (cs *StateBootingHandler) initialize() (*StateChangeContext, error) {
 	cs.Log().Debug().Msg("trying to initialize")
 
 	if err := cs.checkBlock(); err != nil {
 		cs.Log().Error().Err(err).Msg("something wrong to check blocks")
 
 		if storage.IsNotFoundError(err) {
-			if err0 := cs.whenEmptyBlocks(); err0 != nil {
-				return err0
+			if ctx, err0 := cs.whenEmptyBlocks(); err0 != nil {
+				return nil, err0
+			} else if ctx != nil {
+				return ctx, nil
 			}
 
-			return nil
+			return nil, nil
 		}
 
-		return err
+		return nil, err
 	}
 
 	cs.Log().Debug().Msg("initialized; moves to joining")
 
-	return cs.ChangeState(base.StateJoining, nil, nil)
+	return NewStateChangeContext(base.StateBooting, base.StateJoining, nil, nil), nil
 }
 
 func (cs *StateBootingHandler) checkBlock() error {
@@ -123,9 +140,9 @@ func (cs *StateBootingHandler) checkBlock() error {
 	return nil
 }
 
-func (cs *StateBootingHandler) whenEmptyBlocks() error {
+func (cs *StateBootingHandler) whenEmptyBlocks() (*StateChangeContext, error) {
 	if len(cs.suffrage.Nodes()) < 2 {
-		return xerrors.Errorf("empty block, but no other nodes; can not sync")
+		return nil, xerrors.Errorf("empty block, but no other nodes; can not sync")
 	}
 
 	var nodes []network.Node
@@ -133,28 +150,28 @@ func (cs *StateBootingHandler) whenEmptyBlocks() error {
 		if a.Equal(cs.localstate.Node().Address()) {
 			continue
 		} else if n, found := cs.localstate.Nodes().Node(a); !found {
-			return xerrors.Errorf("unknown node, %s found in suffrage", a)
+			return nil, xerrors.Errorf("unknown node, %s found in suffrage", a)
 		} else {
 			nodes = append(nodes, n)
 		}
 	}
 
 	if len(nodes) < 1 {
-		return xerrors.Errorf("empty nodes for syncing")
+		return nil, xerrors.Errorf("empty nodes for syncing")
 	}
 
 	if ch, err := cs.newPolicyTimer(nodes); err != nil {
-		return err
+		return nil, err
 	} else {
 		po := <-ch
 		if err := cs.localstate.Policy().Merge(po); err != nil {
-			return err
+			return nil, err
 		}
 
 		cs.Log().Debug().Interface("policy", po).Msg("got policy at first time and merged")
 	}
 
-	return cs.ChangeState(base.StateSyncing, nil, nil)
+	return NewStateChangeContext(base.StateBooting, base.StateSyncing, nil, nil), nil
 }
 
 // newPolicyTimer starts new timer for gathering NodeInfo from suffrage nodes.

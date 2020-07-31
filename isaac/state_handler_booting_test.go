@@ -34,7 +34,7 @@ func (t *testStateBootingHandler) TestWithBlock() {
 	cs, err := NewStateBootingHandler(t.local, t.suffrage(t.local))
 	t.NoError(err)
 
-	stateChan := make(chan StateChangeContext)
+	stateChan := make(chan *StateChangeContext)
 	cs.SetStateChan(stateChan)
 
 	doneChan := make(chan struct{})
@@ -56,7 +56,7 @@ func (t *testStateBootingHandler) TestWithBlock() {
 
 	t.NoError(cs.Activate(NewStateChangeContext(base.StateStopped, base.StateBooting, nil, nil)))
 	defer func() {
-		_ = cs.Deactivate(StateChangeContext{})
+		_ = cs.Deactivate(nil)
 	}()
 
 	select {
@@ -91,7 +91,7 @@ func (t *testStateBootingHandler) TestWithoutBlock() {
 	t.NoError(err)
 	t.NoError(t.local.Storage().Clean())
 
-	stateChan := make(chan StateChangeContext)
+	stateChan := make(chan *StateChangeContext)
 	cs.SetStateChan(stateChan)
 
 	doneChan := make(chan struct{})
@@ -113,7 +113,7 @@ func (t *testStateBootingHandler) TestWithoutBlock() {
 
 	_ = cs.Activate(NewStateChangeContext(base.StateStopped, base.StateBooting, nil, nil))
 	defer func() {
-		_ = cs.Deactivate(StateChangeContext{})
+		_ = cs.Deactivate(nil)
 	}()
 
 	select {

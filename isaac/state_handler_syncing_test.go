@@ -30,7 +30,7 @@ func (t *testStateSyncingHandler) TestINITMovesToConsensus() {
 	cs := NewStateSyncingHandler(t.local)
 	t.NotNil(cs)
 
-	stateChan := make(chan StateChangeContext)
+	stateChan := make(chan *StateChangeContext)
 	cs.SetStateChan(stateChan)
 
 	doneChan := make(chan struct{})
@@ -56,7 +56,7 @@ func (t *testStateSyncingHandler) TestINITMovesToConsensus() {
 
 	t.NoError(cs.Activate(NewStateChangeContext(base.StateJoining, base.StateSyncing, voteproof, nil)))
 	defer func() {
-		_ = cs.Deactivate(StateChangeContext{})
+		_ = cs.Deactivate(nil)
 	}()
 
 	select {
@@ -74,7 +74,7 @@ func (t *testStateSyncingHandler) TestWaitMovesToJoining() {
 	cs.waitVoteproofTimeout = time.Millisecond * 10
 	t.NotNil(cs)
 
-	stateChan := make(chan StateChangeContext)
+	stateChan := make(chan *StateChangeContext)
 	cs.SetStateChan(stateChan)
 
 	doneChan := make(chan struct{})
@@ -90,7 +90,7 @@ func (t *testStateSyncingHandler) TestWaitMovesToJoining() {
 
 	t.NoError(cs.Activate(NewStateChangeContext(base.StateBooting, base.StateSyncing, nil, nil)))
 	defer func() {
-		_ = cs.Deactivate(StateChangeContext{})
+		_ = cs.Deactivate(nil)
 	}()
 
 	cs.whenFinished(base.NilHeight)

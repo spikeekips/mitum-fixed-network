@@ -33,10 +33,10 @@ func (t *testStateJoiningHandler) TestNew() {
 	t.NoError(err)
 	t.NotNil(cs)
 
-	t.NoError(cs.Activate(StateChangeContext{}))
+	t.NoError(cs.Activate(nil))
 
 	defer func() {
-		_ = cs.Deactivate(StateChangeContext{})
+		_ = cs.Deactivate(nil)
 	}()
 }
 
@@ -49,9 +49,9 @@ func (t *testStateJoiningHandler) TestKeepBroadcastingINITBallot() {
 	sealChan := make(chan seal.Seal)
 	cs.SetSealChan(sealChan)
 
-	t.NoError(cs.Activate(StateChangeContext{}))
+	t.NoError(cs.Activate(nil))
 	defer func() {
-		_ = cs.Deactivate(StateChangeContext{})
+		_ = cs.Deactivate(nil)
 	}()
 
 	time.Sleep(time.Millisecond * 50)
@@ -92,9 +92,9 @@ func (t *testStateJoiningHandler) TestINITBallotWithACCEPTVoteproofExpectedHeigh
 	t.NoError(err)
 	t.NotNil(cs)
 
-	t.NoError(cs.Activate(StateChangeContext{}))
+	t.NoError(cs.Activate(nil))
 	defer func() {
-		_ = cs.Deactivate(StateChangeContext{})
+		_ = cs.Deactivate(nil)
 	}()
 
 	manifest := t.lastManifest(t.local.Storage())
@@ -139,9 +139,9 @@ func (t *testStateJoiningHandler) TestINITBallotWithACCEPTVoteproofLowerHeight()
 	t.NoError(err)
 	t.NotNil(cs)
 
-	t.NoError(cs.Activate(StateChangeContext{}))
+	t.NoError(cs.Activate(nil))
 	defer func() {
-		_ = cs.Deactivate(StateChangeContext{})
+		_ = cs.Deactivate(nil)
 	}()
 
 	manifest := t.lastManifest(t.remote.Storage())
@@ -187,9 +187,9 @@ func (t *testStateJoiningHandler) TestINITBallotWithACCEPTVoteproofHigherHeight(
 	t.NoError(err)
 	t.NotNil(cs)
 
-	t.NoError(cs.Activate(StateChangeContext{}))
+	t.NoError(cs.Activate(nil))
 	defer func() {
-		_ = cs.Deactivate(StateChangeContext{})
+		_ = cs.Deactivate(nil)
 	}()
 
 	manifest := t.lastManifest(t.local.Storage())
@@ -216,12 +216,12 @@ func (t *testStateJoiningHandler) TestINITBallotWithACCEPTVoteproofHigherHeight(
 	)
 	t.NoError(ib.Sign(t.remote.Node().Privatekey(), t.remote.Policy().NetworkID()))
 
-	stateChan := make(chan StateChangeContext)
+	stateChan := make(chan *StateChangeContext)
 	cs.SetStateChan(stateChan)
 
 	t.NoError(cs.NewSeal(ib))
 
-	var ctx StateChangeContext
+	var ctx *StateChangeContext
 	select {
 	case ctx = <-stateChan:
 	case <-time.After(time.Millisecond * 100):
@@ -250,9 +250,9 @@ func (t *testStateJoiningHandler) TestINITBallotWithINITVoteproofExpectedHeight(
 	t.NoError(err)
 	t.NotNil(cs)
 
-	t.NoError(cs.Activate(StateChangeContext{}))
+	t.NoError(cs.Activate(nil))
 	defer func() {
-		_ = cs.Deactivate(StateChangeContext{})
+		_ = cs.Deactivate(nil)
 	}()
 
 	cs.setCurrentRound(base.Round(1))
@@ -278,7 +278,7 @@ func (t *testStateJoiningHandler) TestINITBallotWithINITVoteproofExpectedHeight(
 	)
 	t.NoError(ib.Sign(t.remote.Node().Privatekey(), t.remote.Policy().NetworkID()))
 
-	stateChan := make(chan StateChangeContext)
+	stateChan := make(chan *StateChangeContext)
 	cs.SetStateChan(stateChan)
 
 	t.NoError(cs.NewSeal(ib))
@@ -299,9 +299,9 @@ func (t *testStateJoiningHandler) TestINITBallotWithINITVoteproofLowerHeight() {
 	t.NoError(err)
 	t.NotNil(cs)
 
-	t.NoError(cs.Activate(StateChangeContext{}))
+	t.NoError(cs.Activate(nil))
 	defer func() {
-		_ = cs.Deactivate(StateChangeContext{})
+		_ = cs.Deactivate(nil)
 	}()
 
 	cs.setCurrentRound(base.Round(1))
@@ -327,7 +327,7 @@ func (t *testStateJoiningHandler) TestINITBallotWithINITVoteproofLowerHeight() {
 	)
 	t.NoError(ib.Sign(t.remote.Node().Privatekey(), t.remote.Policy().NetworkID()))
 
-	stateChan := make(chan StateChangeContext)
+	stateChan := make(chan *StateChangeContext)
 	cs.SetStateChan(stateChan)
 
 	t.NoError(cs.NewSeal(ib))
@@ -349,9 +349,9 @@ func (t *testStateJoiningHandler) TestINITBallotWithINITVoteproofHigherHeight() 
 	t.NoError(err)
 	t.NotNil(cs)
 
-	t.NoError(cs.Activate(StateChangeContext{}))
+	t.NoError(cs.Activate(nil))
 	defer func() {
-		_ = cs.Deactivate(StateChangeContext{})
+		_ = cs.Deactivate(nil)
 	}()
 
 	cs.setCurrentRound(base.Round(1))
@@ -393,9 +393,9 @@ func (t *testStateJoiningHandler) TestINITVoteproofExpected() {
 	t.NoError(err)
 	t.NotNil(cs)
 
-	t.NoError(cs.Activate(StateChangeContext{}))
+	t.NoError(cs.Activate(nil))
 	defer func() {
-		_ = cs.Deactivate(StateChangeContext{})
+		_ = cs.Deactivate(nil)
 	}()
 
 	manifest := t.lastManifest(t.local.Storage())
@@ -410,12 +410,12 @@ func (t *testStateJoiningHandler) TestINITVoteproofExpected() {
 	vp, err := t.newVoteproof(base.StageINIT, initFact, t.local, t.remote)
 	t.NoError(err)
 
-	stateChan := make(chan StateChangeContext)
+	stateChan := make(chan *StateChangeContext)
 	cs.SetStateChan(stateChan)
 
 	t.NoError(cs.NewVoteproof(vp))
 
-	var ctx StateChangeContext
+	var ctx *StateChangeContext
 	select {
 	case ctx = <-stateChan:
 	case <-time.After(time.Millisecond * 100):
@@ -440,9 +440,9 @@ func (t *testStateJoiningHandler) TestINITVoteproofLowerHeight() {
 	t.NoError(err)
 	t.NotNil(cs)
 
-	t.NoError(cs.Activate(StateChangeContext{}))
+	t.NoError(cs.Activate(nil))
 	defer func() {
-		_ = cs.Deactivate(StateChangeContext{})
+		_ = cs.Deactivate(nil)
 	}()
 
 	manifest := t.lastManifest(t.local.Storage())
@@ -457,7 +457,7 @@ func (t *testStateJoiningHandler) TestINITVoteproofLowerHeight() {
 	vp, err := t.newVoteproof(base.StageINIT, initFact, t.local, t.remote)
 	t.NoError(err)
 
-	stateChan := make(chan StateChangeContext)
+	stateChan := make(chan *StateChangeContext)
 	cs.SetStateChan(stateChan)
 
 	t.NoError(cs.NewVoteproof(vp))
@@ -485,9 +485,9 @@ func (t *testStateJoiningHandler) TestACCEPTVoteproofExpected() {
 	t.NoError(err)
 	t.NotNil(cs)
 
-	t.NoError(cs.Activate(StateChangeContext{}))
+	t.NoError(cs.Activate(nil))
 	defer func() {
-		_ = cs.Deactivate(StateChangeContext{})
+		_ = cs.Deactivate(nil)
 	}()
 
 	acceptFact := ballot.NewACCEPTBallotV0(
@@ -502,7 +502,7 @@ func (t *testStateJoiningHandler) TestACCEPTVoteproofExpected() {
 	vp, err := t.newVoteproof(base.StageACCEPT, acceptFact, t.local, t.remote)
 	t.NoError(err)
 
-	stateChan := make(chan StateChangeContext)
+	stateChan := make(chan *StateChangeContext)
 	cs.SetStateChan(stateChan)
 
 	t.NoError(cs.NewVoteproof(vp))
@@ -520,9 +520,9 @@ func (t *testStateJoiningHandler) TestACCEPTVoteproofLowerHeight() {
 	t.NoError(err)
 	t.NotNil(cs)
 
-	t.NoError(cs.Activate(StateChangeContext{}))
+	t.NoError(cs.Activate(nil))
 	defer func() {
-		_ = cs.Deactivate(StateChangeContext{})
+		_ = cs.Deactivate(nil)
 	}()
 
 	manifest := t.lastManifest(t.local.Storage())
@@ -538,7 +538,7 @@ func (t *testStateJoiningHandler) TestACCEPTVoteproofLowerHeight() {
 	vp, err := t.newVoteproof(base.StageACCEPT, acceptFact, t.local, t.remote)
 	t.NoError(err)
 
-	stateChan := make(chan StateChangeContext)
+	stateChan := make(chan *StateChangeContext)
 	cs.SetStateChan(stateChan)
 
 	t.NoError(cs.NewVoteproof(vp))

@@ -48,14 +48,15 @@ func (t *testStateConsensusHandler) TestNew() {
 
 	cs.SetLastINITVoteproof(vp)
 
-	t.NoError(cs.Activate(StateChangeContext{
-		fromState: base.StateJoining,
-		toState:   base.StateJoining,
-		voteproof: vp,
-	}))
+	t.NoError(cs.Activate(NewStateChangeContext(
+		base.StateJoining,
+		base.StateJoining,
+		vp,
+		nil,
+	)))
 
 	defer func() {
-		_ = cs.Deactivate(StateChangeContext{})
+		_ = cs.Deactivate(nil)
 	}()
 
 	lb := cs.LastINITVoteproof()
@@ -91,14 +92,15 @@ func (t *testStateConsensusHandler) TestWaitingProposalButTimedOut() {
 
 	cs.SetLastINITVoteproof(vp)
 
-	t.NoError(cs.Activate(StateChangeContext{
-		fromState: base.StateJoining,
-		toState:   base.StateConsensus,
-		voteproof: vp,
-	}))
+	t.NoError(cs.Activate(NewStateChangeContext(
+		base.StateJoining,
+		base.StateConsensus,
+		vp,
+		nil,
+	)))
 
 	defer func() {
-		_ = cs.Deactivate(StateChangeContext{})
+		_ = cs.Deactivate(nil)
 	}()
 
 	select {
@@ -140,14 +142,15 @@ func (t *testStateConsensusHandler) TestWithProposalWaitACCEPTBallot() {
 	t.NoError(err)
 	cs.SetLastINITVoteproof(vp)
 
-	t.NoError(cs.Activate(StateChangeContext{
-		fromState: base.StateJoining,
-		toState:   base.StateConsensus,
-		voteproof: vp,
-	}))
+	t.NoError(cs.Activate(NewStateChangeContext(
+		base.StateJoining,
+		base.StateConsensus,
+		vp,
+		nil,
+	)))
 
 	defer func() {
-		_ = cs.Deactivate(StateChangeContext{})
+		_ = cs.Deactivate(nil)
 	}()
 
 	pr := t.newProposal(t.remote, initFact.Round(), nil, nil)
@@ -193,14 +196,15 @@ func (t *testStateConsensusHandler) TestWithProposalWaitSIGNBallot() {
 	t.NoError(err)
 	cs.SetLastINITVoteproof(vp)
 
-	t.NoError(cs.Activate(StateChangeContext{
-		fromState: base.StateJoining,
-		toState:   base.StateConsensus,
-		voteproof: vp,
-	}))
+	t.NoError(cs.Activate(NewStateChangeContext(
+		base.StateJoining,
+		base.StateConsensus,
+		vp,
+		nil,
+	)))
 
 	defer func() {
-		_ = cs.Deactivate(StateChangeContext{})
+		_ = cs.Deactivate(nil)
 	}()
 
 	pr := t.newProposal(t.remote, initFact.Round(), nil, nil)
@@ -244,14 +248,15 @@ func (t *testStateConsensusHandler) TestDraw() {
 		cs.SetLastINITVoteproof(vp)
 	}
 
-	t.NoError(cs.Activate(StateChangeContext{
-		fromState: base.StateJoining,
-		toState:   base.StateConsensus,
-		voteproof: vp,
-	}))
+	t.NoError(cs.Activate(NewStateChangeContext(
+		base.StateJoining,
+		base.StateConsensus,
+		vp,
+		nil,
+	)))
 
 	defer func() {
-		_ = cs.Deactivate(StateChangeContext{})
+		_ = cs.Deactivate(nil)
 	}()
 
 	var drew base.VoteproofV0
@@ -288,7 +293,7 @@ func (t *testStateConsensusHandler) TestWrongProposalProcessing() {
 	t.NoError(err)
 	t.NotNil(cs)
 
-	stateChan := make(chan StateChangeContext)
+	stateChan := make(chan *StateChangeContext)
 	cs.SetStateChan(stateChan)
 
 	var ivp base.Voteproof
@@ -298,14 +303,15 @@ func (t *testStateConsensusHandler) TestWrongProposalProcessing() {
 		cs.SetLastINITVoteproof(ivp)
 	}
 
-	t.NoError(cs.Activate(StateChangeContext{
-		fromState: base.StateJoining,
-		toState:   base.StateConsensus,
-		voteproof: ivp,
-	}))
+	t.NoError(cs.Activate(NewStateChangeContext(
+		base.StateJoining,
+		base.StateConsensus,
+		ivp,
+		nil,
+	)))
 
 	defer func() {
-		_ = cs.Deactivate(StateChangeContext{})
+		_ = cs.Deactivate(nil)
 	}()
 
 	wrongBlock, _ := block.NewTestBlockV0(ivp.Height(), ivp.Round(), valuehash.RandomSHA256(), valuehash.RandomSHA256())
@@ -322,7 +328,7 @@ func (t *testStateConsensusHandler) TestWrongProposalProcessing() {
 
 	t.NoError(cs.NewVoteproof(avp))
 
-	var ctx StateChangeContext
+	var ctx *StateChangeContext
 	select {
 	case ctx = <-stateChan:
 	case <-time.After(time.Millisecond * 100):

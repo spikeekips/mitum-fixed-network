@@ -40,6 +40,7 @@ type StateSyncingHandler struct {
 	sync.RWMutex
 	*BaseStateHandler
 	lv                   base.Voteproof
+	lvLock               sync.RWMutex
 	syncs                *Syncers
 	waitVoteproofTimeout time.Duration
 }
@@ -65,9 +66,6 @@ func (ss *StateSyncingHandler) syncers() *Syncers {
 }
 
 func (ss *StateSyncingHandler) newSyncers() error {
-	ss.Lock()
-	defer ss.Unlock()
-
 	if syncs := ss.syncs; syncs != nil {
 		if !syncs.isFinished() {
 			return xerrors.Errorf("syncers still running")
@@ -109,17 +107,62 @@ func (ss *StateSyncingHandler) SetLogger(l logging.Logger) logging.Logger {
 	return ss.Log()
 }
 
-func (ss *StateSyncingHandler) Activate(ctx StateChangeContext) error {
+func (ss *StateSyncingHandler) Activate(ctx *StateChangeContext) error {
+	ss.Lock()
+	defer ss.Unlock()
+
+	if ctx == nil {
+		return xerrors.Errorf("empty StateChangeContext")
+	}
+
+	switch {
+	case ctx.Voteproof() != nil:
+	case ctx.Ballot() != nil:
+	case ctx.From() == base.StateBooting:
+	default:
+		return xerrors.Errorf("empty voteproof or ballot in StateChangeContext")
+	}
+
+	ss.BaseStateHandler.activate()
+
 	if err := ss.newSyncers(); err != nil {
 		return err
 	}
-
-	ss.Log().Debug().Msg("activated")
 
 	if vp, found, _ := ss.localstate.Storage().LastVoteproof(base.StageACCEPT); found {
 		ss.setLastVoteproof(vp)
 	}
 
+	go func() {
+		if err := ss.activate(ctx); err != nil {
+			ss.Log().Error().Err(err).Msg("failed to activate syncing handler")
+		}
+	}()
+
+	ss.Log().Debug().Msg("activated")
+
+	return nil
+}
+
+func (ss *StateSyncingHandler) Deactivate(_ *StateChangeContext) error {
+	ss.Log().Debug().Msg("deactivated")
+
+	ss.deactivate()
+
+	if syncs := ss.syncers(); syncs != nil {
+		if err := syncs.Stop(); err != nil {
+			return err
+		}
+	}
+
+	if err := ss.timers.Stop(); err != nil {
+		return xerrors.Errorf("failed to stop timers of syncing handler: %w", err)
+	}
+
+	return nil
+}
+
+func (ss *StateSyncingHandler) activate(ctx *StateChangeContext) error {
 	switch {
 	case ctx.Voteproof() != nil:
 		if err := ss.handleVoteproof(ctx.Voteproof()); err != nil {
@@ -133,22 +176,6 @@ func (ss *StateSyncingHandler) Activate(ctx StateChangeContext) error {
 		ss.Log().Debug().Msg("syncing started from booting without initial block")
 	default:
 		return xerrors.Errorf("empty voteproof or ballot in StateChangeContext")
-	}
-
-	return nil
-}
-
-func (ss *StateSyncingHandler) Deactivate(_ StateChangeContext) error {
-	ss.Log().Debug().Msg("deactivated")
-
-	if syncs := ss.syncers(); syncs != nil {
-		if err := syncs.Stop(); err != nil {
-			return err
-		}
-	}
-
-	if err := ss.timers.Stop(); err != nil {
-		return xerrors.Errorf("failed to stop timers of syncing handler: %w", err)
 	}
 
 	return nil
@@ -277,15 +304,15 @@ func (ss *StateSyncingHandler) handleBallot(blt ballot.Ballot) error {
 }
 
 func (ss *StateSyncingHandler) lastVoteproof() base.Voteproof {
-	ss.RLock()
-	defer ss.RUnlock()
+	ss.lvLock.RLock()
+	defer ss.lvLock.RUnlock()
 
 	return ss.lv
 }
 
 func (ss *StateSyncingHandler) setLastVoteproof(voteproof base.Voteproof) {
-	ss.Lock()
-	defer ss.Unlock()
+	ss.lvLock.Lock()
+	defer ss.lvLock.Unlock()
 
 	if ss.lv != nil && ss.lv.Height() <= voteproof.Height() {
 		return

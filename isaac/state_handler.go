@@ -11,6 +11,7 @@ import (
 	"github.com/spikeekips/mitum/base/ballot"
 	"github.com/spikeekips/mitum/base/block"
 	"github.com/spikeekips/mitum/base/seal"
+	"github.com/spikeekips/mitum/storage"
 	"github.com/spikeekips/mitum/util/localtime"
 	"github.com/spikeekips/mitum/util/logging"
 )
@@ -25,10 +26,10 @@ const (
 
 type StateHandler interface {
 	State() base.State
-	SetStateChan(chan<- StateChangeContext)
+	SetStateChan(chan<- *StateChangeContext)
 	SetSealChan(chan<- seal.Seal)
-	Activate(StateChangeContext) error
-	Deactivate(StateChangeContext) error
+	Activate(*StateChangeContext) error
+	Deactivate(*StateChangeContext) error
 	// NewSeal receives Seal.
 	NewSeal(seal.Seal) error
 	// NewVoteproof receives the finished Voteproof.
@@ -43,8 +44,8 @@ type StateChangeContext struct {
 	ballot    ballot.Ballot
 }
 
-func NewStateChangeContext(from, to base.State, voteproof base.Voteproof, blt ballot.Ballot) StateChangeContext {
-	return StateChangeContext{
+func NewStateChangeContext(from, to base.State, voteproof base.Voteproof, blt ballot.Ballot) *StateChangeContext {
+	return &StateChangeContext{
 		fromState: from,
 		toState:   to,
 		voteproof: voteproof,
@@ -81,10 +82,12 @@ type BaseStateHandler struct {
 	localstate        *Localstate
 	proposalProcessor ProposalProcessor
 	state             base.State
-	stateChan         chan<- StateChangeContext
-	sealChan          chan<- seal.Seal
+	activatedLock     sync.RWMutex
+	activated         bool
 	timers            *localtime.Timers
 	livp              base.Voteproof
+	stateChan         chan<- *StateChangeContext
+	sealChan          chan<- seal.Seal
 }
 
 func NewBaseStateHandler(
@@ -97,11 +100,32 @@ func NewBaseStateHandler(
 	}
 }
 
+func (bs *BaseStateHandler) activate() {
+	bs.activatedLock.Lock()
+	defer bs.activatedLock.Unlock()
+
+	bs.activated = true
+}
+
+func (bs *BaseStateHandler) deactivate() {
+	bs.activatedLock.Lock()
+	defer bs.activatedLock.Unlock()
+
+	bs.activated = false
+}
+
+func (bs *BaseStateHandler) isActivated() bool {
+	bs.activatedLock.RLock()
+	defer bs.activatedLock.RUnlock()
+
+	return bs.activated
+}
+
 func (bs *BaseStateHandler) State() base.State {
 	return bs.state
 }
 
-func (bs *BaseStateHandler) SetStateChan(stateChan chan<- StateChangeContext) {
+func (bs *BaseStateHandler) SetStateChan(stateChan chan<- *StateChangeContext) {
 	bs.stateChan = stateChan
 }
 
@@ -110,6 +134,10 @@ func (bs *BaseStateHandler) SetSealChan(sealChan chan<- seal.Seal) {
 }
 
 func (bs *BaseStateHandler) ChangeState(newState base.State, voteproof base.Voteproof, blt ballot.Ballot) error {
+	if !bs.isActivated() {
+		return nil
+	}
+
 	if bs.stateChan == nil {
 		return nil
 	}
@@ -128,6 +156,10 @@ func (bs *BaseStateHandler) ChangeState(newState base.State, voteproof base.Vote
 }
 
 func (bs *BaseStateHandler) BroadcastSeal(sl seal.Seal) {
+	if !bs.isActivated() {
+		return
+	}
+
 	if bs.sealChan == nil {
 		return
 	}
@@ -138,45 +170,46 @@ func (bs *BaseStateHandler) BroadcastSeal(sl seal.Seal) {
 }
 
 func (bs *BaseStateHandler) StoreNewBlock(acceptVoteproof base.Voteproof) error {
+	if !bs.isActivated() {
+		return nil
+	}
+
 	if bs.proposalProcessor == nil {
 		bs.Log().Debug().Msg("this state not support store new block")
 
 		return nil
 	}
 
-	fact, ok := acceptVoteproof.Majority().(ballot.ACCEPTBallotFact)
-	if !ok {
+	var fact ballot.ACCEPTBallotFact
+	if f, ok := acceptVoteproof.Majority().(ballot.ACCEPTBallotFact); !ok {
 		return xerrors.Errorf("needs ACCEPTBallotFact: fact=%T", acceptVoteproof.Majority())
+	} else {
+		fact = f
 	}
 
-	l := loggerWithVoteproofID(
-		acceptVoteproof,
-		bs.Log().WithLogger(func(ctx logging.Context) logging.Emitter {
-			return ctx.Hinted("proposal_hash", fact.Proposal()).
-				Hinted("new_block", fact.NewBlock())
-		}),
-	)
+	l := loggerWithVoteproofID(acceptVoteproof, bs.Log().WithLogger(func(ctx logging.Context) logging.Emitter {
+		return ctx.Hinted("proposal_hash", fact.Proposal()).
+			Hinted("new_block", fact.NewBlock())
+	}))
 
 	l.Debug().Msg("trying to store new block")
 
-	blockStorage, err := bs.proposalProcessor.ProcessACCEPT(fact.Proposal(), acceptVoteproof)
-	if err != nil {
+	var blockStorage storage.BlockStorage
+	switch bs, err := bs.proposalProcessor.ProcessACCEPT(fact.Proposal(), acceptVoteproof); {
+	case err != nil:
 		return xerrors.Errorf("failed to process ACCEPT Voteproof: %w", err)
-	}
-
-	if blockStorage.Block() == nil {
+	case bs.Block() == nil:
 		err := xerrors.Errorf("failed to process Proposal; empty Block returned")
 		l.Error().Err(err).Msg("failed to store new block")
 
 		return err
+	default:
+		blockStorage = bs
 	}
 
 	if !fact.NewBlock().Equal(blockStorage.Block().Hash()) {
-		err := xerrors.Errorf(
-			"processed new block does not match; fact=%s processed=%s",
-			fact.NewBlock(),
-			blockStorage.Block().Hash(),
-		)
+		err := xerrors.Errorf("processed new block does not match; fact=%s processed=%s",
+			fact.NewBlock(), blockStorage.Block().Hash())
 		l.Error().Err(err).Msg("failed to store new block; moves to sync")
 
 		return NewStateToBeChangeError(base.StateSyncing, acceptVoteproof, nil, err)
@@ -184,6 +217,7 @@ func (bs *BaseStateHandler) StoreNewBlock(acceptVoteproof base.Voteproof) error 
 
 	if err := blockStorage.Commit(); err != nil {
 		l.Error().Err(err).Msg("failed to store new block")
+
 		return err
 	}
 
@@ -192,20 +226,22 @@ func (bs *BaseStateHandler) StoreNewBlock(acceptVoteproof base.Voteproof) error 
 		Hinted("hash", blockStorage.Block().Hash()).
 		Hinted("height", blockStorage.Block().Height()).
 		Hinted("round", blockStorage.Block().Round()),
-	).
-		Msg("new block stored")
+	).Msg("new block stored")
 
 	return nil
 }
 
 func (bs *BaseStateHandler) TimerBroadcastingINITBallot(
 	intervalFunc func() time.Duration,
-	roundFunc func() base.Round,
+	round base.Round,
 	voteproof base.Voteproof,
 ) (*localtime.CallbackTimer, error) {
+	if !bs.isActivated() {
+		return nil, nil
+	}
+
 	var baseBallot ballot.INITBallotV0
 
-	round := roundFunc()
 	if round == 0 {
 		if b, err := NewINITBallotV0Round0(bs.localstate.Storage(), bs.localstate.Node().Address()); err != nil {
 			return nil, err
@@ -223,6 +259,10 @@ func (bs *BaseStateHandler) TimerBroadcastingINITBallot(
 	return localtime.NewCallbackTimer(
 		TimerIDBroadcastingINITBallot,
 		func() (bool, error) {
+			if !bs.isActivated() {
+				return false, nil
+			}
+
 			ib := baseBallot
 			if err := SignSeal(&ib, bs.localstate); err != nil {
 				bs.Log().Error().Err(err).Msg("failed to re-sign INITBallot, but will keep trying")
@@ -240,6 +280,10 @@ func (bs *BaseStateHandler) TimerBroadcastingINITBallot(
 }
 
 func (bs *BaseStateHandler) TimerBroadcastingACCEPTBallot(newBlock block.Block) (*localtime.CallbackTimer, error) {
+	if !bs.isActivated() {
+		return nil, nil
+	}
+
 	baseBallot := NewACCEPTBallotV0(bs.localstate.Node().Address(), newBlock, bs.LastINITVoteproof())
 
 	var called int64
@@ -247,6 +291,10 @@ func (bs *BaseStateHandler) TimerBroadcastingACCEPTBallot(newBlock block.Block) 
 	return localtime.NewCallbackTimer(
 		TimerIDBroadcastingACCEPTBallot,
 		func() (bool, error) {
+			if !bs.isActivated() {
+				return false, nil
+			}
+
 			ab := baseBallot
 			if err := SignSeal(&ab, bs.localstate); err != nil {
 				bs.Log().Error().Err(err).Msg("failed to re-sign ACCEPTBallot, but will keep trying")
@@ -273,6 +321,10 @@ func (bs *BaseStateHandler) TimerBroadcastingACCEPTBallot(newBlock block.Block) 
 }
 
 func (bs *BaseStateHandler) TimerTimedoutMoveNextRound(voteproof base.Voteproof) (*localtime.CallbackTimer, error) {
+	if !bs.isActivated() {
+		return nil, nil
+	}
+
 	var baseBallot ballot.INITBallotV0
 	if b, err := NewINITBallotV0WithVoteproof(bs.localstate.Node().Address(), voteproof); err != nil {
 		return nil, err
@@ -285,6 +337,10 @@ func (bs *BaseStateHandler) TimerTimedoutMoveNextRound(voteproof base.Voteproof)
 	return localtime.NewCallbackTimer(
 		TimerIDTimedoutMoveNextRound,
 		func() (bool, error) {
+			if !bs.isActivated() {
+				return false, nil
+			}
+
 			bs.Log().Debug().
 				Dur("timeout", bs.localstate.Policy().TimeoutWaitingProposal()).
 				Hinted("next_round", baseBallot.Round()).
@@ -320,11 +376,19 @@ func (bs *BaseStateHandler) TimerTimedoutMoveNextRound(voteproof base.Voteproof)
 }
 
 func (bs *BaseStateHandler) TimerBroadcastingProposal(proposal ballot.Proposal) (*localtime.CallbackTimer, error) {
+	if !bs.isActivated() {
+		return nil, nil
+	}
+
 	var called int64
 
 	return localtime.NewCallbackTimer(
 		TimerIDBroadcastingProposal,
 		func() (bool, error) {
+			if !bs.isActivated() {
+				return false, nil
+			}
+
 			bs.BroadcastSeal(proposal)
 
 			return true, nil

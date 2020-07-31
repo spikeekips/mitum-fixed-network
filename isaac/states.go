@@ -28,7 +28,7 @@ type ConsensusStates struct {
 	suffrage      base.Suffrage
 	states        map[base.State]StateHandler
 	activeHandler StateHandler
-	stateChan     chan StateChangeContext
+	stateChan     chan *StateChangeContext
 	sealChan      chan seal.Seal
 	stopHooks     []func() error
 	livp          base.Voteproof
@@ -62,7 +62,7 @@ func NewConsensusStates(
 			base.StateSyncing:   syncing,
 			base.StateBroken:    broken,
 		},
-		stateChan: make(chan StateChangeContext),
+		stateChan: make(chan *StateChangeContext),
 		sealChan:  make(chan seal.Seal),
 		livp:      livp,
 		errChan:   make(chan error, 100),
@@ -241,11 +241,11 @@ end:
 	}
 }
 
-func (css *ConsensusStates) ActivateHandler(ctx StateChangeContext) {
+func (css *ConsensusStates) ActivateHandler(ctx *StateChangeContext) {
 	css.stateChan <- ctx
 }
 
-func (css *ConsensusStates) activateHandler(ctx StateChangeContext) error {
+func (css *ConsensusStates) activateHandler(ctx *StateChangeContext) error {
 	css.Log().Debug().
 		Hinted("states", ctx).
 		HintedVerbose("voteproof", ctx.Voteproof(), true).

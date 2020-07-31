@@ -17,7 +17,7 @@ type dummySyncingStateHandler struct {
 	*StateSyncingHandler
 }
 
-func (ss *dummySyncingStateHandler) Activate(_ StateChangeContext) error {
+func (ss *dummySyncingStateHandler) Activate(_ *StateChangeContext) error {
 	return nil
 }
 

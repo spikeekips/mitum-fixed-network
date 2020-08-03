@@ -4,10 +4,10 @@ package channetwork
 
 import "github.com/spikeekips/mitum/network"
 
-func (gs *NetworkChanChannel) GetBlocksHandler() network.GetBlocksHandler {
-	return gs.getBlocks
+func (ch *Channel) GetBlocksHandler() network.GetBlocksHandler {
+	return ch.getBlocks
 }
 
-func (gs *NetworkChanChannel) GetManifestsHandler() network.GetManifestsHandler {
-	return gs.getManifests
+func (ch *Channel) GetManifestsHandler() network.GetManifestsHandler {
+	return ch.getManifests
 }

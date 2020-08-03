@@ -23,7 +23,7 @@ func (t *testNetworkChanChannel) SetupSuite() {
 }
 
 func (t *testNetworkChanChannel) TestSendReceive() {
-	gs := NewNetworkChanChannel(0)
+	gs := NewChannel(0)
 
 	sl := seal.NewDummySeal(t.pk)
 	go func() {
@@ -36,7 +36,7 @@ func (t *testNetworkChanChannel) TestSendReceive() {
 }
 
 func (t *testNetworkChanChannel) TestGetSeal() {
-	gs := NewNetworkChanChannel(0)
+	gs := NewChannel(0)
 
 	sl := seal.NewDummySeal(t.pk)
 
@@ -52,7 +52,7 @@ func (t *testNetworkChanChannel) TestGetSeal() {
 }
 
 func (t *testNetworkChanChannel) TestManifests() {
-	gs := NewNetworkChanChannel(0)
+	gs := NewChannel(0)
 
 	blk, err := block.NewTestBlockV0(base.Height(33), base.Round(9), valuehash.RandomSHA256(), valuehash.RandomSHA256())
 	t.NoError(err)
@@ -98,7 +98,7 @@ func (t *testNetworkChanChannel) TestManifests() {
 }
 
 func (t *testNetworkChanChannel) TestBlocks() {
-	gs := NewNetworkChanChannel(0)
+	gs := NewChannel(0)
 
 	blk, err := block.NewTestBlockV0(base.Height(33), base.Round(9), valuehash.RandomSHA256(), valuehash.RandomSHA256())
 	t.NoError(err)

@@ -12,14 +12,16 @@ import (
 	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/base/block"
 	"github.com/spikeekips/mitum/base/seal"
+	"github.com/spikeekips/mitum/base/state"
 	"github.com/spikeekips/mitum/network"
+	"github.com/spikeekips/mitum/storage"
 	"github.com/spikeekips/mitum/util/encoder"
 	"github.com/spikeekips/mitum/util/hint"
 	"github.com/spikeekips/mitum/util/logging"
 	"github.com/spikeekips/mitum/util/valuehash"
 )
 
-type QuicChannel struct {
+type Channel struct {
 	*logging.Logging
 	recvChan        chan seal.Seal
 	u               string
@@ -30,11 +32,12 @@ type QuicChannel struct {
 	getSealsURL     string
 	getManifestsURL string
 	getBlocksURL    string
+	getStateURL     string
 	nodeInfoURL     string
 	client          *QuicClient
 }
 
-func NewQuicChannel(
+func NewChannel(
 	addr string,
 	bufsize uint,
 	insecure bool,
@@ -43,8 +46,8 @@ func NewQuicChannel(
 	quicConfig *quic.Config,
 	encs *encoder.Encoders,
 	enc encoder.Encoder,
-) (*QuicChannel, error) {
-	qc := &QuicChannel{
+) (*Channel, error) {
+	ch := &Channel{
 		Logging: logging.NewLogging(func(c logging.Context) logging.Emitter {
 			return c.Str("module", "quic-network")
 		}),
@@ -60,42 +63,43 @@ func NewQuicChannel(
 			u.Scheme = "https"
 		}
 
-		qc.addr = u
-		qc.u = addr
+		ch.addr = u
+		ch.u = addr
 	}
 
-	qc.nodeInfoURL = mustQuicURL(qc.addr.String(), QuicHandlerPathNodeInfo)
-	qc.sendSealURL = mustQuicURL(qc.addr.String(), QuicHandlerPathSendSeal)
-	qc.getSealsURL = mustQuicURL(qc.addr.String(), QuicHandlerPathGetSeals)
-	qc.getBlocksURL = mustQuicURL(qc.addr.String(), QuicHandlerPathGetBlocks)
-	qc.getManifestsURL = mustQuicURL(qc.addr.String(), QuicHandlerPathGetManifests)
+	ch.nodeInfoURL = mustQuicURL(ch.addr.String(), QuicHandlerPathNodeInfo)
+	ch.sendSealURL = mustQuicURL(ch.addr.String(), QuicHandlerPathSendSeal)
+	ch.getSealsURL = mustQuicURL(ch.addr.String(), QuicHandlerPathGetSeals)
+	ch.getBlocksURL = mustQuicURL(ch.addr.String(), QuicHandlerPathGetBlocks)
+	ch.getStateURL = mustQuicURL(ch.addr.String(), QuicHandlerPathGetState)
+	ch.getManifestsURL = mustQuicURL(ch.addr.String(), QuicHandlerPathGetManifests)
 
 	if client, err := NewQuicClient(insecure, timeout, retries, quicConfig); err != nil {
-		return qc, nil
+		return ch, nil
 	} else {
-		qc.client = client
+		ch.client = client
 	}
 
-	return qc, nil
+	return ch, nil
 }
 
-func (qc *QuicChannel) Initialize() error {
+func (ch *Channel) Initialize() error {
 	return nil
 }
 
-func (qc *QuicChannel) SetLogger(l logging.Logger) logging.Logger {
-	_ = qc.Logging.SetLogger(l)
-	_ = qc.client.SetLogger(l)
+func (ch *Channel) SetLogger(l logging.Logger) logging.Logger {
+	_ = ch.Logging.SetLogger(l)
+	_ = ch.client.SetLogger(l)
 
-	return qc.Log()
+	return ch.Log()
 }
 
-func (qc *QuicChannel) URL() string {
-	return qc.u
+func (ch *Channel) URL() string {
+	return ch.u
 }
 
-func (qc *QuicChannel) Seals(hs []valuehash.Hash) ([]seal.Seal, error) {
-	qc.Log().VerboseFunc(func(e *logging.Event) logging.Emitter {
+func (ch *Channel) Seals(hs []valuehash.Hash) ([]seal.Seal, error) {
+	ch.Log().VerboseFunc(func(e *logging.Event) logging.Emitter {
 		var l []string
 		for _, h := range hs {
 			l = append(l, h.String())
@@ -104,7 +108,7 @@ func (qc *QuicChannel) Seals(hs []valuehash.Hash) ([]seal.Seal, error) {
 		return e.Strs("seal_hashes", l)
 	}).Msg("request seals")
 
-	ss, err := qc.requestHinters(qc.getSealsURL, NewHashesArgs(hs))
+	ss, err := ch.requestHinters(ch.getSealsURL, NewHashesArgs(hs))
 	if err != nil {
 		return nil, err
 	}
@@ -121,30 +125,30 @@ func (qc *QuicChannel) Seals(hs []valuehash.Hash) ([]seal.Seal, error) {
 	return seals, nil
 }
 
-func (qc *QuicChannel) SendSeal(sl seal.Seal) error {
-	b, err := qc.enc.Marshal(sl)
+func (ch *Channel) SendSeal(sl seal.Seal) error {
+	b, err := ch.enc.Marshal(sl)
 	if err != nil {
 		return err
 	}
 
-	qc.Log().Debug().Hinted("seal_hash", sl.Hash()).Msg("sent seal")
+	ch.Log().Debug().Hinted("seal_hash", sl.Hash()).Msg("sent seal")
 
 	headers := http.Header{}
-	headers.Set(QuicEncoderHintHeader, qc.enc.Hint().String())
+	headers.Set(QuicEncoderHintHeader, ch.enc.Hint().String())
 
-	return qc.client.Send(qc.sendSealURL, b, headers)
+	return ch.client.Send(ch.sendSealURL, b, headers)
 }
 
-func (qc *QuicChannel) requestHinters(u string, hs interface{}) ([]hint.Hinter, error) {
-	b, err := qc.enc.Marshal(hs)
+func (ch *Channel) requestHinters(u string, hs interface{}) ([]hint.Hinter, error) {
+	b, err := ch.enc.Marshal(hs)
 	if err != nil {
 		return nil, err
 	}
 
 	headers := http.Header{}
-	headers.Set(QuicEncoderHintHeader, qc.enc.Hint().String())
+	headers.Set(QuicEncoderHintHeader, ch.enc.Hint().String())
 
-	response, err := qc.client.Request(u, b, headers)
+	response, err := ch.client.Request(u, b, headers)
 	if err != nil {
 		return nil, err
 	} else if err := response.Error(); err != nil {
@@ -152,7 +156,7 @@ func (qc *QuicChannel) requestHinters(u string, hs interface{}) ([]hint.Hinter, 
 	}
 
 	var enc encoder.Encoder
-	if e, err := EncoderFromHeader(response.Header(), qc.encs, qc.enc); err != nil {
+	if e, err := EncoderFromHeader(response.Header(), ch.encs, ch.enc); err != nil {
 		return nil, err
 	} else {
 		enc = e
@@ -160,7 +164,7 @@ func (qc *QuicChannel) requestHinters(u string, hs interface{}) ([]hint.Hinter, 
 
 	var ss []json.RawMessage
 	if err := enc.Unmarshal(response.Bytes(), &ss); err != nil {
-		qc.Log().Error().Err(err).Msg("failed to unmarshal manifest slice")
+		ch.Log().Error().Err(err).Msg("failed to unmarshal manifest slice")
 		return nil, err
 	}
 
@@ -176,8 +180,38 @@ func (qc *QuicChannel) requestHinters(u string, hs interface{}) ([]hint.Hinter, 
 	return hinters, nil
 }
 
-func (qc *QuicChannel) Manifests(heights []base.Height) ([]block.Manifest, error) {
-	qc.Log().VerboseFunc(func(e *logging.Event) logging.Emitter {
+func (ch *Channel) requestHinter(u string, hs interface{}) (hint.Hinter, error) {
+	b, err := ch.enc.Marshal(hs)
+	if err != nil {
+		return nil, err
+	}
+
+	headers := http.Header{}
+	headers.Set(QuicEncoderHintHeader, ch.enc.Hint().String())
+
+	response, err := ch.client.Request(u, b, headers)
+	if err != nil {
+		return nil, err
+	} else if err := response.Error(); err != nil {
+		return nil, err
+	}
+
+	var enc encoder.Encoder
+	if e, err := EncoderFromHeader(response.Header(), ch.encs, ch.enc); err != nil {
+		return nil, err
+	} else {
+		enc = e
+	}
+
+	if hinter, err := enc.DecodeByHint(response.Bytes()); err != nil {
+		return nil, err
+	} else {
+		return hinter, nil
+	}
+}
+
+func (ch *Channel) Manifests(heights []base.Height) ([]block.Manifest, error) {
+	ch.Log().VerboseFunc(func(e *logging.Event) logging.Emitter {
 		var l []string
 		for _, h := range heights {
 			l = append(l, h.String())
@@ -186,7 +220,7 @@ func (qc *QuicChannel) Manifests(heights []base.Height) ([]block.Manifest, error
 		return e.Strs("manifest_height", l)
 	}).Msg("request manfests")
 
-	hinters, err := qc.requestHinters(qc.getManifestsURL, NewHeightsArgs(heights))
+	hinters, err := ch.requestHinters(ch.getManifestsURL, NewHeightsArgs(heights))
 	if err != nil {
 		return nil, err
 	}
@@ -203,8 +237,8 @@ func (qc *QuicChannel) Manifests(heights []base.Height) ([]block.Manifest, error
 	return manifests, nil
 }
 
-func (qc *QuicChannel) Blocks(heights []base.Height) ([]block.Block, error) {
-	qc.Log().VerboseFunc(func(e *logging.Event) logging.Emitter {
+func (ch *Channel) Blocks(heights []base.Height) ([]block.Block, error) {
+	ch.Log().VerboseFunc(func(e *logging.Event) logging.Emitter {
 		var l []string
 		for _, h := range heights {
 			l = append(l, h.String())
@@ -213,7 +247,7 @@ func (qc *QuicChannel) Blocks(heights []base.Height) ([]block.Block, error) {
 		return e.Strs("block_heights", l)
 	}).Msg("request blocks")
 
-	hs, err := qc.requestHinters(qc.getBlocksURL, NewHeightsArgs(heights))
+	hs, err := ch.requestHinters(ch.getBlocksURL, NewHeightsArgs(heights))
 	if err != nil {
 		return nil, err
 	}
@@ -230,11 +264,29 @@ func (qc *QuicChannel) Blocks(heights []base.Height) ([]block.Block, error) {
 	return blocks, nil
 }
 
-func (qc *QuicChannel) NodeInfo() (network.NodeInfo, error) {
-	headers := http.Header{}
-	headers.Set(QuicEncoderHintHeader, qc.enc.Hint().String())
+func (ch *Channel) State(key string) (state.State, bool, error) {
+	ch.Log().Debug().Str("key", key).Msg("request state")
 
-	response, err := qc.client.Request(qc.nodeInfoURL, nil, headers)
+	if h, err := ch.requestHinter(ch.getStateURL, key); err != nil {
+		if storage.IsNotFoundError(err) {
+			return nil, false, nil
+		}
+
+		return nil, false, err
+	} else if h == nil {
+		return nil, false, nil
+	} else if s, ok := h.(state.State); !ok {
+		return nil, false, xerrors.Errorf("decoded, but not state.State; %T", h)
+	} else {
+		return s, true, nil
+	}
+}
+
+func (ch *Channel) NodeInfo() (network.NodeInfo, error) {
+	headers := http.Header{}
+	headers.Set(QuicEncoderHintHeader, ch.enc.Hint().String())
+
+	response, err := ch.client.Request(ch.nodeInfoURL, nil, headers)
 	if err != nil {
 		return nil, err
 	} else if err := response.Error(); err != nil {
@@ -242,7 +294,7 @@ func (qc *QuicChannel) NodeInfo() (network.NodeInfo, error) {
 	}
 
 	var enc encoder.Encoder
-	if e, err := EncoderFromHeader(response.Header(), qc.encs, qc.enc); err != nil {
+	if e, err := EncoderFromHeader(response.Header(), ch.encs, ch.enc); err != nil {
 		return nil, err
 	} else {
 		enc = e

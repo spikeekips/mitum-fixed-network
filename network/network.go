@@ -4,6 +4,7 @@ import (
 	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/base/block"
 	"github.com/spikeekips/mitum/base/seal"
+	"github.com/spikeekips/mitum/base/state"
 	"github.com/spikeekips/mitum/util"
 	"github.com/spikeekips/mitum/util/valuehash"
 )
@@ -14,6 +15,7 @@ type (
 	NewSealHandler      func(seal.Seal) error
 	GetManifestsHandler func([]base.Height) ([]block.Manifest, error)
 	GetBlocksHandler    func([]base.Height) ([]block.Block, error)
+	GetStateHandler     func(string) (state.State, bool, error)
 	NodeInfoHandler     func() (NodeInfo, error)
 )
 
@@ -27,6 +29,7 @@ type Server interface {
 	SetNewSealHandler(NewSealHandler)
 	SetGetManifestsHandler(GetManifestsHandler)
 	SetGetBlocksHandler(GetBlocksHandler)
+	SetGetStateHandler(GetStateHandler)
 	SetNodeInfoHandler(NodeInfoHandler)
 }
 
@@ -35,7 +38,7 @@ type Response interface {
 	OK() bool
 }
 
-type NetworkChannel interface {
+type Channel interface {
 	util.Initializer
 	URL() string
 	Seals([]valuehash.Hash) ([]seal.Seal, error)
@@ -43,4 +46,5 @@ type NetworkChannel interface {
 	Manifests([]base.Height) ([]block.Manifest, error)
 	Blocks([]base.Height) ([]block.Block, error)
 	NodeInfo() (NodeInfo, error)
+	State(string) (state.State, bool, error)
 }

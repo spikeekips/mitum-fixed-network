@@ -3,6 +3,8 @@ package state
 import (
 	"sync"
 
+	"golang.org/x/xerrors"
+
 	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/util"
 	"github.com/spikeekips/mitum/util/hint"
@@ -49,6 +51,14 @@ func NewStateV0(
 func (st StateV0) IsValid([]byte) error {
 	if err := IsValidKey(st.key); err != nil {
 		return err
+	}
+
+	if st.h != nil && st.h.Empty() {
+		return xerrors.Errorf("empty hash found")
+	}
+
+	if st.currentBlock != nil && st.currentBlock.Empty() {
+		return xerrors.Errorf("empty current block hash found")
 	}
 
 	if err := st.value.IsValid(nil); err != nil {

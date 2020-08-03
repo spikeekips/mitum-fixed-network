@@ -59,7 +59,7 @@ func loadDesign(f string, encs *encoder.Encoders) (*launcher.NodeDesign, error) 
 	}
 }
 
-func loadNodeChannel(u *url.URL, log logging.Logger) (network.NetworkChannel, error) {
+func loadNodeChannel(u *url.URL, log logging.Logger) (network.Channel, error) {
 	var encs *encoder.Encoders
 	if e, err := encoder.LoadEncoders(
 		[]encoder.Encoder{jsonenc.NewEncoder(), bsonenc.NewEncoder()},
@@ -71,7 +71,7 @@ func loadNodeChannel(u *url.URL, log logging.Logger) (network.NetworkChannel, er
 	}
 	log.Debug().Msg("hinters loaded")
 
-	var channel network.NetworkChannel
+	var channel network.Channel
 	if ch, err := launcher.LoadNodeChannel(u, encs); err != nil {
 		return nil, err
 	} else {
@@ -120,7 +120,7 @@ func requestByHeights(u *url.URL, hs []int64, t string, log logging.Logger) (int
 		heights = hs
 	}
 
-	var channel network.NetworkChannel
+	var channel network.Channel
 	if ch, err := loadNodeChannel(u, log); err != nil {
 		return nil, err
 	} else {

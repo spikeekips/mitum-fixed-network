@@ -15,6 +15,7 @@ import (
 	"github.com/spikeekips/mitum/base/block"
 	"github.com/spikeekips/mitum/base/key"
 	"github.com/spikeekips/mitum/base/seal"
+	"github.com/spikeekips/mitum/base/state"
 	"github.com/spikeekips/mitum/network"
 	"github.com/spikeekips/mitum/util"
 	"github.com/spikeekips/mitum/util/encoder"
@@ -30,7 +31,7 @@ type testQuicSever struct {
 	bind  string
 	certs []tls.Certificate
 	url   *url.URL
-	qn    *QuicServer
+	qn    *Server
 }
 
 func (t *testQuicSever) SetupTest() {
@@ -45,6 +46,8 @@ func (t *testQuicSever) SetupTest() {
 	_ = t.encs.AddHinter(base.StringAddress(""))
 	_ = t.encs.AddHinter(block.ManifestV0{})
 	_ = t.encs.AddHinter(network.NodeInfoV0{})
+	_ = t.encs.AddHinter(state.StateV0{})
+	_ = t.encs.AddHinter(state.BytesValue{})
 
 	port, err := util.FreePort("udp")
 	t.NoError(err)
@@ -61,11 +64,11 @@ func (t *testQuicSever) SetupTest() {
 	t.url = &url.URL{Scheme: "quic", Host: t.bind}
 }
 
-func (t *testQuicSever) readyServer() *QuicServer {
+func (t *testQuicSever) readyServer() *Server {
 	qs, err := NewPrimitiveQuicServer(t.bind, t.certs)
 	t.NoError(err)
 
-	qn, err := NewQuicServer(qs, t.encs, t.enc)
+	qn, err := NewServer(qs, t.encs, t.enc)
 	t.NoError(err)
 
 	t.NoError(qn.Start())
@@ -91,6 +94,16 @@ func (t *testQuicSever) readyServer() *QuicServer {
 	return qn
 }
 
+func (t *testQuicSever) TestNew() {
+	qs, err := NewPrimitiveQuicServer(t.bind, t.certs)
+	t.NoError(err)
+
+	qn, err := NewServer(qs, t.encs, t.enc)
+	t.NoError(err)
+
+	t.Implements((*network.Server)(nil), qn)
+}
+
 func (t *testQuicSever) TestSendSeal() {
 	qn := t.readyServer()
 	defer qn.Stop()
@@ -101,7 +114,7 @@ func (t *testQuicSever) TestSendSeal() {
 		return nil
 	})
 
-	qc, err := NewQuicChannel(t.url.String(), 2, true, time.Millisecond*500, 3, nil, t.encs, t.enc)
+	qc, err := NewChannel(t.url.String(), 2, true, time.Millisecond*500, 3, nil, t.encs, t.enc)
 	t.NoError(err)
 
 	sl := seal.NewDummySeal(key.MustNewBTCPrivatekey())
@@ -154,7 +167,7 @@ func (t *testQuicSever) TestGetSeals() {
 		return sls, nil
 	})
 
-	qc, err := NewQuicChannel(t.url.String(), 2, true, time.Millisecond*500, 3, nil, t.encs, t.enc)
+	qc, err := NewChannel(t.url.String(), 2, true, time.Millisecond*500, 3, nil, t.encs, t.enc)
 	t.NoError(err)
 
 	{ // get all
@@ -232,13 +245,55 @@ func (t *testQuicSever) TestNodeInfo() {
 		return ni, nil
 	})
 
-	qc, err := NewQuicChannel(t.url.String(), 2, true, time.Millisecond*500, 3, nil, t.encs, t.enc)
+	qc, err := NewChannel(t.url.String(), 2, true, time.Millisecond*500, 3, nil, t.encs, t.enc)
 	t.NoError(err)
 
 	nni, err := qc.NodeInfo()
 	t.NoError(err)
 
 	network.CompareNodeInfo(t.T(), ni, nni)
+}
+
+func (t *testQuicSever) TestGetState() {
+	qn := t.readyServer()
+	defer qn.Stop()
+
+	var sts []state.State
+	for i := 0; i < 2; i++ {
+		value, _ := state.NewBytesValue(util.UUID().Bytes())
+		st, err := state.NewStateV0(util.UUID().String(), value, nil)
+		t.NoError(err)
+
+		sts = append(sts, st)
+	}
+
+	qn.SetGetStateHandler(func(key string) (state.State, bool, error) {
+		for _, st := range sts {
+			if st.Key() == key {
+				return st, true, nil
+			}
+		}
+
+		return nil, false, nil
+	})
+
+	qc, err := NewChannel(t.url.String(), 2, true, time.Millisecond*500, 3, nil, t.encs, t.enc)
+	t.NoError(err)
+
+	st, found, err := qc.State("unknown key")
+	t.NoError(err)
+	t.False(found)
+	t.Nil(st)
+
+	for _, st := range sts {
+		ust, found, err := qc.State(st.Key())
+		t.NoError(err)
+		t.True(found)
+		t.NotNil(ust)
+
+		t.Equal(st.Key(), ust.Key())
+		t.Equal(st.Value().Interface(), ust.Value().Interface())
+	}
 }
 
 func TestQuicSever(t *testing.T) {

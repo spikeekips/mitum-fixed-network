@@ -128,7 +128,7 @@ func (t *testProposalProcessor) TestNotFoundInProposal() {
 		sl := t.newOperationSeal(t.remote)
 
 		// add getSealHandler
-		t.remote.Node().Channel().(*channetwork.NetworkChanChannel).SetGetSealHandler(
+		t.remote.Node().Channel().(*channetwork.Channel).SetGetSealHandler(
 			func(hs []valuehash.Hash) ([]seal.Seal, error) {
 				return []seal.Seal{sl}, nil
 			},

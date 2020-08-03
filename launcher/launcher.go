@@ -36,7 +36,7 @@ type Launcher struct {
 
 	storage           storage.Storage
 	network           network.Server
-	nodeChannel       network.NetworkChannel
+	nodeChannel       network.Channel
 	suffrage          base.Suffrage
 	proposalProcessor isaac.ProposalProcessor
 	publishURL        string
@@ -152,6 +152,7 @@ func (bn *Launcher) SetNetwork(nt network.Server) *Launcher {
 	bn.network.SetNewSealHandler(bn.networkhandlerNewSeal)
 	bn.network.SetGetManifestsHandler(bn.networkhandlerGetManifests)
 	bn.network.SetGetBlocksHandler(bn.networkhandlerGetBlocks)
+	bn.network.SetGetStateHandler(bn.storage.State)
 	bn.network.SetNodeInfoHandler(bn.networkhandlerNodeInfo)
 
 	return bn
@@ -161,13 +162,13 @@ func (bn *Launcher) Network() network.Server {
 	return bn.network
 }
 
-func (bn *Launcher) SetNodeChannel(nc network.NetworkChannel) *Launcher {
+func (bn *Launcher) SetNodeChannel(nc network.Channel) *Launcher {
 	bn.nodeChannel = nc
 
 	return bn
 }
 
-func (bn *Launcher) NodeChannel() network.NetworkChannel {
+func (bn *Launcher) NodeChannel() network.Channel {
 	return bn.nodeChannel
 }
 

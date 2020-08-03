@@ -510,7 +510,7 @@ func (t *testGeneralSyncer) TestMissingHead() {
 	t.generateBlocks([]*Localstate{rn0}, target)
 
 	head := baseBlock.Height() + 1
-	ch := rn0.Node().Channel().(*channetwork.NetworkChanChannel)
+	ch := rn0.Node().Channel().(*channetwork.Channel)
 	orig := ch.GetManifestsHandler()
 	ch.SetGetManifestsHandler(func(heights []base.Height) ([]block.Manifest, error) {
 		var bs []block.Manifest
@@ -551,7 +551,7 @@ func (t *testGeneralSyncer) TestMissingTail() {
 	t.generateBlocks([]*Localstate{rn0}, target)
 
 	tail := target
-	ch := rn0.Node().Channel().(*channetwork.NetworkChanChannel)
+	ch := rn0.Node().Channel().(*channetwork.Channel)
 	orig := ch.GetManifestsHandler()
 	ch.SetGetManifestsHandler(func(heights []base.Height) ([]block.Manifest, error) {
 		var bs []block.Manifest
@@ -592,7 +592,7 @@ func (t *testGeneralSyncer) TestMissingManifests() {
 	t.generateBlocks([]*Localstate{rn0}, target)
 
 	missing := target - 1
-	ch := rn0.Node().Channel().(*channetwork.NetworkChanChannel)
+	ch := rn0.Node().Channel().(*channetwork.Channel)
 	orig := ch.GetManifestsHandler()
 	ch.SetGetManifestsHandler(func(heights []base.Height) ([]block.Manifest, error) {
 		var bs []block.Manifest
@@ -633,7 +633,7 @@ func (t *testGeneralSyncer) TestMissingBlocks() {
 	t.generateBlocks([]*Localstate{rn0}, target)
 
 	missing := target - 1
-	ch := rn0.Node().Channel().(*channetwork.NetworkChanChannel)
+	ch := rn0.Node().Channel().(*channetwork.Channel)
 	orig := ch.GetBlocksHandler()
 	ch.SetGetBlocksHandler(func(heights []base.Height) ([]block.Block, error) {
 		var bs []block.Block

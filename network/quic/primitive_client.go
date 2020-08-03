@@ -13,6 +13,7 @@ import (
 	"github.com/lucas-clemente/quic-go/http3"
 	"golang.org/x/xerrors"
 
+	"github.com/spikeekips/mitum/storage"
 	"github.com/spikeekips/mitum/util/logging"
 )
 
@@ -237,6 +238,8 @@ func (qr QuicResponse) Bytes() []byte {
 func (qr QuicResponse) Error() error {
 	if qr.OK() {
 		return nil
+	} else if qr.status == http.StatusNotFound {
+		return storage.NotFoundError.Errorf("failed to request: %s(%d)", qr.body, qr.status)
 	}
 
 	return xerrors.Errorf("failed to request: %s(%d)", qr.body, qr.status)

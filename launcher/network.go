@@ -33,14 +33,14 @@ func LoadNetworkServer(bind string, u *url.URL, encs *encoder.Encoders) (network
 
 	if qs, err := quicnetwork.NewPrimitiveQuicServer(bind, certs); err != nil {
 		return nil, err
-	} else if nqs, err := quicnetwork.NewQuicServer(qs, encs, je); err != nil {
+	} else if nqs, err := quicnetwork.NewServer(qs, encs, je); err != nil {
 		return nil, err
 	} else {
 		return nqs, nil
 	}
 }
 
-func LoadNodeChannel(u *url.URL, encs *encoder.Encoders) (network.NetworkChannel, error) {
+func LoadNodeChannel(u *url.URL, encs *encoder.Encoders) (network.Channel, error) {
 	var je encoder.Encoder
 	if e, err := encs.Encoder(jsonenc.JSONType, ""); err != nil {
 		return nil, xerrors.Errorf("json encoder needs for quic-network: %w", err)
@@ -50,7 +50,7 @@ func LoadNodeChannel(u *url.URL, encs *encoder.Encoders) (network.NetworkChannel
 
 	switch u.Scheme {
 	case "quic":
-		if ch, err := quicnetwork.NewQuicChannel(
+		if ch, err := quicnetwork.NewChannel(
 			u.String(),
 			100,
 			true,

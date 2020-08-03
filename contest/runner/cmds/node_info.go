@@ -17,7 +17,7 @@ type NodeInfoCommand struct {
 func (cmd *NodeInfoCommand) Run(log logging.Logger) error {
 	log.Debug().Interface("node_url", cmd.URL).Msg("trying to get node info")
 
-	var channel network.NetworkChannel
+	var channel network.Channel
 	if ch, err := loadNodeChannel(cmd.URL, log); err != nil {
 		return err
 	} else {

@@ -11,7 +11,7 @@ import (
 	channetwork "github.com/spikeekips/mitum/network/gochan"
 )
 
-func RandomLocalNode(name string, channel network.NetworkChannel) *LocalNode {
+func RandomLocalNode(name string, ch network.Channel) *LocalNode {
 	pk, _ := key.NewBTCPrivatekey()
 
 	ln := NewLocalNode(
@@ -19,9 +19,9 @@ func RandomLocalNode(name string, channel network.NetworkChannel) *LocalNode {
 		pk,
 	)
 
-	if channel == nil {
-		channel = channetwork.NewNetworkChanChannel(0)
+	if ch == nil {
+		ch = channetwork.NewChannel(0)
 	}
 
-	return ln.SetChannel(channel)
+	return ln.SetChannel(ch)
 }

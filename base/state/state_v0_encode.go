@@ -4,7 +4,6 @@ import (
 	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/util/encoder"
 	"github.com/spikeekips/mitum/util/valuehash"
-	"golang.org/x/xerrors"
 )
 
 func (st *StateV0) unpack(
@@ -17,16 +16,8 @@ func (st *StateV0) unpack(
 	currentBlock valuehash.Hash,
 	ops []valuehash.Bytes,
 ) error {
-	if h != nil && h.Empty() {
-		return xerrors.Errorf("empty previous_block hash found")
-	}
-
 	if previousBlock.Empty() {
 		previousBlock = nil
-	}
-
-	if currentBlock != nil && currentBlock.Empty() {
-		return xerrors.Errorf("empty previous_block hash found")
 	}
 
 	var value Value

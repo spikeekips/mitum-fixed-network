@@ -82,7 +82,7 @@ func (t *testStateBootingHandler) TestWithoutBlock() {
 		po,
 	)
 
-	nch := t.remote.Node().Channel().(*channetwork.NetworkChanChannel)
+	nch := t.remote.Node().Channel().(*channetwork.Channel)
 	nch.SetNodeInfoHandler(func() (network.NodeInfo, error) {
 		return ni, nil
 	})

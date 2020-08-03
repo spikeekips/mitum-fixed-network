@@ -276,14 +276,19 @@ func (t *baseTestStateHandler) proposalMaker(localstate *Localstate) *ProposalMa
 	return NewProposalMaker(localstate)
 }
 
-func (t *baseTestStateHandler) newOperationSeal(localstate *Localstate) operation.Seal {
+func (t *baseTestStateHandler) newOperationSeal(localstate *Localstate, n uint) operation.Seal {
 	pk := localstate.Node().Privatekey()
 
-	token := []byte("this-is-token")
-	op, err := NewKVOperation(pk, token, util.UUID().String(), []byte(util.UUID().String()), nil)
-	t.NoError(err)
+	var ops []operation.Operation
+	for i := uint(0); i < n; i++ {
+		token := []byte("this-is-token")
+		op, err := NewKVOperation(pk, token, util.UUID().String(), []byte(util.UUID().String()), nil)
+		t.NoError(err)
 
-	sl, err := operation.NewBaseSeal(pk, []operation.Operation{op}, nil)
+		ops = append(ops, op)
+	}
+
+	sl, err := operation.NewBaseSeal(pk, ops, nil)
 	t.NoError(err)
 	t.NoError(sl.IsValid(nil))
 

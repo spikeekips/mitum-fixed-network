@@ -244,8 +244,28 @@ func (lp *LocalPolicy) MaxOperationsInSeal() uint {
 	return lp.maxOperationsInSeal.Value().(uint)
 }
 
+func (lp *LocalPolicy) SetMaxOperationsInSeal(m uint) (*LocalPolicy, error) {
+	if m < 1 {
+		return nil, xerrors.Errorf("zero MaxOperationsInSeal")
+	}
+
+	_ = lp.maxOperationsInSeal.SetValue(m)
+
+	return lp, nil
+}
+
 func (lp *LocalPolicy) MaxOperationsInProposal() uint {
 	return lp.maxOperationsInProposal.Value().(uint)
+}
+
+func (lp *LocalPolicy) SetMaxOperationsInProposal(m uint) (*LocalPolicy, error) {
+	if m < 1 {
+		return nil, xerrors.Errorf("zero MaxOperationsInProposal")
+	}
+
+	_ = lp.maxOperationsInProposal.SetValue(m)
+
+	return lp, nil
 }
 
 func (lp *LocalPolicy) Policy() policy.Policy {

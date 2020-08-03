@@ -28,7 +28,7 @@ func (pm *ProposalMaker) facts() ([]valuehash.Hash, []valuehash.Hash, error) {
 	var facts, seals, uselessSeals []valuehash.Hash
 	if err := pm.localstate.Storage().StagedOperationSeals(
 		func(sl operation.Seal) (bool, error) {
-			var hasOperations bool
+			var ofs []valuehash.Hash
 			for _, op := range sl.Operations() {
 				fh := op.Fact().Hash()
 				if _, found := mo[fh.String()]; found {
@@ -39,18 +39,21 @@ func (pm *ProposalMaker) facts() ([]valuehash.Hash, []valuehash.Hash, error) {
 					continue
 				}
 
-				facts = append(facts, fh)
-				mo[fh.String()] = struct{}{}
-				hasOperations = true
-
-				if uint(len(facts)) == maxOperations {
-					return false, nil
+				ofs = append(ofs, fh)
+				if uint(len(facts)+len(ofs)) > maxOperations {
+					break
 				}
+
+				mo[fh.String()] = struct{}{}
 			}
 
-			if hasOperations {
+			switch {
+			case uint(len(facts)+len(ofs)) > maxOperations:
+				return false, nil
+			case len(ofs) > 0:
+				facts = append(facts, ofs...)
 				seals = append(seals, sl.Hash())
-			} else {
+			default:
 				uselessSeals = append(uselessSeals, sl.Hash())
 			}
 

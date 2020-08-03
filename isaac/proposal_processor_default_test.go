@@ -62,7 +62,7 @@ func (t *testProposalProcessor) TestBlockOperations() {
 		pr, err := pm.Proposal(ivp.Round())
 		t.NoError(err)
 
-		opl := t.newOperationSeal(t.local)
+		opl := t.newOperationSeal(t.local, 1)
 		t.NoError(t.local.Storage().NewSeals([]seal.Seal{opl}))
 
 		ophs := make([]valuehash.Hash, len(opl.Operations()))
@@ -125,7 +125,7 @@ func (t *testProposalProcessor) TestNotFoundInProposal() {
 		pr, err := pm.Proposal(ivp.Round())
 		t.NoError(err)
 
-		sl := t.newOperationSeal(t.remote)
+		sl := t.newOperationSeal(t.remote, 1)
 
 		// add getSealHandler
 		t.remote.Node().Channel().(*channetwork.Channel).SetGetSealHandler(

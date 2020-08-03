@@ -188,8 +188,7 @@ func (bs *BaseStateHandler) StoreNewBlock(acceptVoteproof base.Voteproof) error 
 	}
 
 	l := loggerWithVoteproofID(acceptVoteproof, bs.Log().WithLogger(func(ctx logging.Context) logging.Emitter {
-		return ctx.Hinted("proposal_hash", fact.Proposal()).
-			Hinted("new_block", fact.NewBlock())
+		return ctx.Hinted("proposal_hash", fact.Proposal()).Hinted("new_block", fact.NewBlock())
 	}))
 
 	l.Debug().Msg("trying to store new block")
@@ -219,13 +218,13 @@ func (bs *BaseStateHandler) StoreNewBlock(acceptVoteproof base.Voteproof) error 
 		l.Error().Err(err).Msg("failed to store new block")
 
 		return err
+	} else if err := bs.proposalProcessor.Done(fact.Proposal()); err != nil {
+		l.Error().Err(err).Msg("failed to be done ProposalProcessor")
 	}
 
 	l.Info().Dict("block", logging.Dict().
-		Hinted("proposal_hash", blockStorage.Block().Proposal()).
-		Hinted("hash", blockStorage.Block().Hash()).
-		Hinted("height", blockStorage.Block().Height()).
-		Hinted("round", blockStorage.Block().Round()),
+		Hinted("proposal_hash", blockStorage.Block().Proposal()).Hinted("hash", blockStorage.Block().Hash()).
+		Hinted("height", blockStorage.Block().Height()).Hinted("round", blockStorage.Block().Round()),
 	).Msg("new block stored")
 
 	return nil

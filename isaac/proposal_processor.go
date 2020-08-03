@@ -17,6 +17,7 @@ type ProposalProcessor interface {
 	ProcessACCEPT(
 		valuehash.Hash /* Proposal.Hash() */, base.Voteproof, /* ACCEPT Voteproof */
 	) (storage.BlockStorage, error)
+	Done(valuehash.Hash /* Proposal.Hash() */) error
 	AddOperationProcessor(hint.Hinter, OperationProcessor) (ProposalProcessor, error)
 }
 

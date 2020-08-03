@@ -69,6 +69,10 @@ func (dp *DummyProposalProcessor) ProcessACCEPT(
 	return bs, nil
 }
 
+func (dp *DummyProposalProcessor) Done(valuehash.Hash) error {
+	return nil
+}
+
 func (dp *DummyProposalProcessor) BlockStorages(h valuehash.Hash) *storage.DummyBlockStorage {
 	return dp.bs[h.String()]
 }

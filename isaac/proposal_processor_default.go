@@ -128,9 +128,18 @@ func (dp *DefaultProposalProcessor) ProcessACCEPT(
 		return nil, err
 	}
 
+	return pp.bs, nil
+}
+
+func (dp *DefaultProposalProcessor) Done(ph valuehash.Hash) error {
+	if pp := dp.processed(ph); pp != nil {
+	} else {
+		dp.Log().Debug().Hinted("proposal", ph).Msg("not processed ProcessINIT")
+	}
+
 	dp.setProcessor(nil)
 
-	return pp.bs, nil
+	return nil
 }
 
 func (dp *DefaultProposalProcessor) checkProposal(

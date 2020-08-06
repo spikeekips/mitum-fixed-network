@@ -36,6 +36,7 @@ func NewPrimitiveQuicServer(bind string, certs []tls.Certificate) (*PrimitiveQui
 		bind: bind,
 		tlsConfig: &tls.Config{
 			Certificates: certs,
+			MinVersion:   tls.VersionTLS13,
 			// NextProtos:   []string{""}, // TODO set unique strings
 		},
 		stoppedChan: make(chan struct{}, 10),

@@ -508,6 +508,10 @@ func (pp *internalDefaultProposalProcessor) setACCEPTVoteproof(acceptVoteproof b
 	blk := pp.block.SetACCEPTVoteproof(acceptVoteproof)
 	if err := pp.bs.SetBlock(blk); err != nil {
 		return err
+	} else if seals := pp.proposal.Seals(); len(seals) > 0 {
+		if err := pp.bs.UnstageOperationSeals(seals); err != nil {
+			return err
+		}
 	}
 	pp.block = blk
 

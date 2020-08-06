@@ -83,7 +83,7 @@ func (t *testEventMongodb) TestPreseveInsertedOrder() {
 	t.Equal(int64(10), count)
 
 	var seqs []int64
-	t.client.Find("test", bson.D{}, func(cursor *mongo.Cursor) (bool, error) {
+	t.client.Find(nil, "test", bson.D{}, func(cursor *mongo.Cursor) (bool, error) {
 		s := cursor.Current.Lookup("seq").Double()
 		seqs = append(seqs, int64(s))
 

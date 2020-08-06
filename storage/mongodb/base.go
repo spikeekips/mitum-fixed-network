@@ -447,8 +447,12 @@ func (st *Storage) BlocksByHeight(heights []base.Height) ([]block.Block, error) 
 	opt := options.Find().
 		SetSort(util.NewBSONFilter("height", 1).D())
 
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second*10)
+	defer cancel()
+
 	var blocks []block.Block
 	if err := st.client.Find(
+		ctx,
 		defaultColNameBlock,
 		bson.M{"height": bson.M{"$in": filtered}},
 		func(cursor *mongo.Cursor) (bool, error) {
@@ -585,7 +589,11 @@ func (st *Storage) Seals(callback func(valuehash.Hash, seal.Seal) (bool, error),
 	opt := options.Find()
 	opt.SetSort(util.NewBSONFilter("hash", dir).D())
 
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second*10)
+	defer cancel()
+
 	return st.client.Find(
+		ctx,
 		defaultColNameSeal,
 		bson.D{},
 		func(cursor *mongo.Cursor) (bool, error) {
@@ -626,7 +634,11 @@ func (st *Storage) SealsByHash(
 	opt := options.Find().
 		SetSort(util.NewBSONFilter("hash", 1).D())
 
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second*10)
+	defer cancel()
+
 	return st.client.Find(
+		ctx,
 		defaultColNameSeal,
 		bson.M{"hash_string": bson.M{"$in": hashStrings}},
 		func(cursor *mongo.Cursor) (bool, error) {
@@ -669,7 +681,11 @@ func (st *Storage) StagedOperationSeals(callback func(operation.Seal) (bool, err
 	opt := options.Find()
 	opt.SetSort(util.NewBSONFilter("inserted_at", dir).D())
 
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second*10)
+	defer cancel()
+
 	return st.client.Find(
+		ctx,
 		defaultColNameOperationSeal,
 		bson.D{},
 		func(cursor *mongo.Cursor) (bool, error) {
@@ -711,6 +727,7 @@ func (st *Storage) Proposals(callback func(ballot.Proposal) (bool, error), sort 
 	opt.SetSort(util.NewBSONFilter("height", dir).D())
 
 	return st.client.Find(
+		nil,
 		defaultColNameProposal,
 		bson.D{},
 		func(cursor *mongo.Cursor) (bool, error) {
@@ -742,6 +759,7 @@ func (st *Storage) Proposal(height base.Height, round base.Round) (ballot.Propos
 	var proposal ballot.Proposal
 
 	if err := st.client.Find(
+		nil,
 		defaultColNameProposal,
 		util.NewBSONFilter("height", height).Add("round", round).D(),
 		func(cursor *mongo.Cursor) (bool, error) {
@@ -769,6 +787,7 @@ func (st *Storage) State(key string) (state.State, bool, error) {
 	var sta state.State
 
 	if err := st.client.Find(
+		nil,
 		defaultColNameState,
 		util.NewBSONFilter("key", key).AddOp("height", st.lastHeight(), "$lte").D(),
 		func(cursor *mongo.Cursor) (bool, error) {

@@ -1,6 +1,7 @@
 package mongodbstorage
 
 import (
+	"context"
 	"fmt"
 	"sync"
 	"time"
@@ -257,9 +258,12 @@ func newTempStorage(main *Storage, prefix string) (*Storage, error) {
 }
 
 func moveWithinCol(from *Storage, fromCol string, to *Storage, toCol string, filter bson.D) error {
+	ctx, cancel := context.WithTimeout(context.Background(), time.Minute*50)
+	defer cancel()
+
 	var limit int = 100
 	var models []mongo.WriteModel
-	err := from.Client().Find(fromCol, filter, func(cursor *mongo.Cursor) (bool, error) {
+	err := from.Client().Find(ctx, fromCol, filter, func(cursor *mongo.Cursor) (bool, error) {
 		if len(models) == limit {
 			if err := to.Client().Bulk(toCol, models, false); err != nil {
 				return false, err

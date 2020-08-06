@@ -97,7 +97,7 @@ func TestLookupMongodb(t *testing.T) {
 				assert.NoError(t, err, "%d: %v", i, c.name)
 
 				var doc bson.M
-				assert.NoError(t, client.Find("test", q, func(cursor *mongo.Cursor) (bool, error) {
+				assert.NoError(t, client.Find(nil, "test", q, func(cursor *mongo.Cursor) (bool, error) {
 					assert.NoError(t, cursor.Decode(&doc))
 
 					return false, nil

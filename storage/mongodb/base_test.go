@@ -527,7 +527,7 @@ func (t *testStorage) TestCopy() {
 
 	for _, col := range cols {
 		rs := map[string]bson.M{}
-		t.NoError(t.storage.Client().Find(col, bson.M{}, func(cursor *mongo.Cursor) (bool, error) {
+		t.NoError(t.storage.Client().Find(nil, col, bson.M{}, func(cursor *mongo.Cursor) (bool, error) {
 			var record bson.M
 			if err := cursor.Decode(&record); err != nil {
 				return false, err

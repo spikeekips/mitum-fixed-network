@@ -81,13 +81,17 @@ func (cl *Client) Collections() ([]string, error) {
 }
 
 func (cl *Client) Find(
+	ctx context.Context,
 	col string,
 	query interface{},
 	callback getRecordsCallback,
 	opts ...*options.FindOptions,
 ) error {
-	ctx, cancel := context.WithTimeout(context.Background(), cl.execTimeout)
-	defer cancel()
+	if ctx == nil {
+		var cancel func()
+		ctx, cancel = context.WithTimeout(context.Background(), cl.execTimeout)
+		defer cancel()
+	}
 
 	var cursor *mongo.Cursor
 	if c, err := cl.db.Collection(col).Find(ctx, query, opts...); err != nil {
@@ -307,9 +311,12 @@ func (cl *Client) Raw() *mongo.Client {
 }
 
 func (cl *Client) CopyCollection(source *Client, fromCol, toCol string) error {
+	ctx, cancel := context.WithTimeout(context.Background(), time.Minute*50)
+	defer cancel()
+
 	var limit int = 100
 	var models []mongo.WriteModel
-	err := source.Find(fromCol, bson.D{}, func(cursor *mongo.Cursor) (bool, error) {
+	err := source.Find(ctx, fromCol, bson.D{}, func(cursor *mongo.Cursor) (bool, error) {
 		if len(models) == limit {
 			if err := cl.Bulk(toCol, models, false); err != nil {
 				return false, err

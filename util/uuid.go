@@ -17,7 +17,7 @@ var (
 )
 
 func init() {
-	ulidEntropy = ulid.Monotonic(rand.New(rand.NewSource(ulidT.UnixNano())), 0)
+	ulidEntropy = ulid.Monotonic(rand.New(rand.NewSource(ulidT.UnixNano())), 0) // nolint
 }
 
 func UUID() uuid.UUID {

@@ -51,7 +51,7 @@ func (t *baseTestStateHandler) SetupSuite() {
 	_ = t.Encs.AddHinter(base.BaseNodeV0{})
 	_ = t.Encs.AddHinter(block.BlockV0{})
 	_ = t.Encs.AddHinter(block.ManifestV0{})
-	_ = t.Encs.AddHinter(block.BlockConsensusInfoV0{})
+	_ = t.Encs.AddHinter(block.ConsensusInfoV0{})
 	_ = t.Encs.AddHinter(block.SuffrageInfoV0{})
 	_ = t.Encs.AddHinter(operation.BaseFactSign{})
 	_ = t.Encs.AddHinter(operation.BaseSeal{})
@@ -317,8 +317,8 @@ func (t *baseTestStateHandler) compareBlock(a, b block.Block) {
 	t.compareManifest(a, b)
 	t.compareAVLTree(a.States(), b.States())
 	t.compareAVLTree(a.Operations(), b.Operations())
-	t.compareVoteproof(a.INITVoteproof(), b.INITVoteproof())
-	t.compareVoteproof(a.ACCEPTVoteproof(), b.ACCEPTVoteproof())
+	t.compareVoteproof(a.ConsensusInfo().INITVoteproof(), b.ConsensusInfo().INITVoteproof())
+	t.compareVoteproof(a.ConsensusInfo().ACCEPTVoteproof(), b.ConsensusInfo().ACCEPTVoteproof())
 }
 
 func (t *baseTestStateHandler) compareVoteproof(a, b base.Voteproof) {

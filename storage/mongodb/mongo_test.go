@@ -65,7 +65,7 @@ func (t *testMongodbClient) SetupSuite() {
 	_ = t.encs.AddHinter(key.BTCPublickeyHinter)
 	_ = t.encs.AddHinter(block.BlockV0{})
 	_ = t.encs.AddHinter(block.ManifestV0{})
-	_ = t.encs.AddHinter(block.BlockConsensusInfoV0{})
+	_ = t.encs.AddHinter(block.ConsensusInfoV0{})
 	_ = t.encs.AddHinter(valuehash.SHA256{})
 	_ = t.encs.AddHinter(base.VoteproofV0{})
 	_ = t.encs.AddHinter(seal.DummySeal{})

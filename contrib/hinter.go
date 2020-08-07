@@ -26,7 +26,7 @@ var Hinters = []hint.Hinter{
 	ballot.SIGNBallotV0{},
 	base.BaseNodeV0{},
 	base.VoteproofV0{},
-	block.BlockConsensusInfoV0{},
+	block.ConsensusInfoV0{},
 	block.BlockV0{},
 	block.ManifestV0{},
 	block.SuffrageInfoV0{},

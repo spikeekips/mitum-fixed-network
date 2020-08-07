@@ -90,7 +90,7 @@ func (t *BaseTestStorage) SetupSuite() {
 	_ = t.Encs.AddHinter(key.BTCPublickeyHinter)
 	_ = t.Encs.AddHinter(block.BlockV0{})
 	_ = t.Encs.AddHinter(block.ManifestV0{})
-	_ = t.Encs.AddHinter(block.BlockConsensusInfoV0{})
+	_ = t.Encs.AddHinter(block.ConsensusInfoV0{})
 	_ = t.Encs.AddHinter(valuehash.SHA256{})
 	_ = t.Encs.AddHinter(base.VoteproofV0{})
 	_ = t.Encs.AddHinter(seal.DummySeal{})
@@ -113,6 +113,6 @@ func (t *BaseTestStorage) CompareManifest(a, b block.Manifest) {
 
 func (t *BaseTestStorage) CompareBlock(a, b block.Block) {
 	t.CompareManifest(a, b)
-	t.Equal(a.INITVoteproof(), b.INITVoteproof())
-	t.Equal(a.ACCEPTVoteproof(), b.ACCEPTVoteproof())
+	t.Equal(a.ConsensusInfo().INITVoteproof(), b.ConsensusInfo().INITVoteproof())
+	t.Equal(a.ConsensusInfo().ACCEPTVoteproof(), b.ConsensusInfo().ACCEPTVoteproof())
 }

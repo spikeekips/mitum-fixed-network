@@ -28,7 +28,7 @@ var Hinters = []hint.Hinter{
 	base.BaseNodeV0{},
 	base.VoteproofV0{},
 	base.StringAddress(""),
-	block.BlockConsensusInfoV0{},
+	block.ConsensusInfoV0{},
 	block.BlockV0{},
 	block.ManifestV0{},
 	block.SuffrageInfoV0{},

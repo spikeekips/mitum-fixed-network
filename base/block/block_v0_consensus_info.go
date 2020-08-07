@@ -4,22 +4,25 @@ import (
 	"golang.org/x/xerrors"
 
 	"github.com/spikeekips/mitum/base"
+	"github.com/spikeekips/mitum/base/ballot"
 	"github.com/spikeekips/mitum/util/hint"
 	"github.com/spikeekips/mitum/util/isvalid"
 )
 
-type BlockConsensusInfoV0 struct {
+type ConsensusInfoV0 struct {
 	initVoteproof   base.Voteproof
 	acceptVoteproof base.Voteproof
 	suffrageInfo    SuffrageInfo
+	proposal        ballot.Proposal
 }
 
-func (bc BlockConsensusInfoV0) IsValid(networkID []byte) error {
+func (bc ConsensusInfoV0) IsValid(networkID []byte) error {
 	if err := isvalid.Check(
 		[]isvalid.IsValider{
 			bc.initVoteproof,
 			bc.acceptVoteproof,
 			bc.suffrageInfo,
+			bc.proposal,
 		},
 		networkID, false); err != nil {
 		return err
@@ -45,7 +48,7 @@ func (bc BlockConsensusInfoV0) IsValid(networkID []byte) error {
 	return nil
 }
 
-func (bc BlockConsensusInfoV0) isValidVoteproof(
+func (bc ConsensusInfoV0) isValidVoteproof(
 	_ []byte,
 	sn map[base.Address]base.Node,
 	voteproof base.Voteproof,
@@ -62,20 +65,24 @@ func (bc BlockConsensusInfoV0) isValidVoteproof(
 	return nil
 }
 
-func (bc BlockConsensusInfoV0) Hint() hint.Hint {
+func (bc ConsensusInfoV0) Hint() hint.Hint {
 	return BlockConsensusInfoV0Hint
 }
 
-func (bc BlockConsensusInfoV0) INITVoteproof() base.Voteproof {
+func (bc ConsensusInfoV0) INITVoteproof() base.Voteproof {
 	return bc.initVoteproof
 }
 
-func (bc BlockConsensusInfoV0) ACCEPTVoteproof() base.Voteproof {
+func (bc ConsensusInfoV0) ACCEPTVoteproof() base.Voteproof {
 	return bc.acceptVoteproof
 }
 
-func (bc BlockConsensusInfoV0) SuffrageInfo() SuffrageInfo {
+func (bc ConsensusInfoV0) SuffrageInfo() SuffrageInfo {
 	return bc.suffrageInfo
+}
+
+func (bc ConsensusInfoV0) Proposal() ballot.Proposal {
+	return bc.proposal
 }
 
 type SuffrageInfoV0 struct {

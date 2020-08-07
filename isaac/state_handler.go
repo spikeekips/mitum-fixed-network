@@ -214,6 +214,7 @@ func (bs *BaseStateHandler) StoreNewBlock(acceptVoteproof base.Voteproof) error 
 		return NewStateToBeChangeError(base.StateSyncing, acceptVoteproof, nil, err)
 	}
 
+	s := time.Now()
 	if err := blockStorage.Commit(); err != nil {
 		l.Error().Err(err).Msg("failed to store new block")
 
@@ -223,6 +224,7 @@ func (bs *BaseStateHandler) StoreNewBlock(acceptVoteproof base.Voteproof) error 
 	}
 
 	l.Info().Dict("block", logging.Dict().
+		Dur("elapsed", time.Since(s)).
 		Hinted("proposal_hash", blockStorage.Block().Proposal()).Hinted("hash", blockStorage.Block().Hash()).
 		Hinted("height", blockStorage.Block().Height()).Hinted("round", blockStorage.Block().Round()),
 	).Msg("new block stored")

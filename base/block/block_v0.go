@@ -4,6 +4,7 @@ import (
 	"golang.org/x/xerrors"
 
 	"github.com/spikeekips/mitum/base"
+	"github.com/spikeekips/mitum/base/ballot"
 	"github.com/spikeekips/mitum/base/tree"
 	"github.com/spikeekips/mitum/util/hint"
 	"github.com/spikeekips/mitum/util/isvalid"
@@ -24,9 +25,9 @@ var (
 
 type BlockV0 struct {
 	ManifestV0
-	BlockConsensusInfoV0
 	operations *tree.AVLTree
 	states     *tree.AVLTree
+	ci         ConsensusInfoV0
 }
 
 func NewBlockV0(
@@ -51,7 +52,7 @@ func NewBlockV0(
 
 	return BlockV0{
 		ManifestV0: bm,
-		BlockConsensusInfoV0: BlockConsensusInfoV0{
+		ci: ConsensusInfoV0{
 			suffrageInfo: si,
 		},
 	}, nil
@@ -65,7 +66,7 @@ func (bm BlockV0) IsValid(networkID []byte) error {
 	} else {
 		if err := isvalid.Check([]isvalid.IsValider{
 			bm.ManifestV0,
-			bm.BlockConsensusInfoV0,
+			bm.ci,
 		}, networkID, false); err != nil {
 			return err
 		}
@@ -103,13 +104,19 @@ func (bm BlockV0) Bytes() []byte {
 }
 
 func (bm BlockV0) SetINITVoteproof(voteproof base.Voteproof) BlockUpdater {
-	bm.BlockConsensusInfoV0.initVoteproof = voteproof
+	bm.ci.initVoteproof = voteproof
 
 	return bm
 }
 
 func (bm BlockV0) SetACCEPTVoteproof(voteproof base.Voteproof) BlockUpdater {
-	bm.BlockConsensusInfoV0.acceptVoteproof = voteproof
+	bm.ci.acceptVoteproof = voteproof
+
+	return bm
+}
+
+func (bm BlockV0) SetProposal(proposal ballot.Proposal) BlockUpdater {
+	bm.ci.proposal = proposal
 
 	return bm
 }
@@ -118,8 +125,8 @@ func (bm BlockV0) Manifest() Manifest {
 	return bm.ManifestV0
 }
 
-func (bm BlockV0) ConsensusInfo() BlockConsensusInfo {
-	return bm.BlockConsensusInfoV0
+func (bm BlockV0) ConsensusInfo() ConsensusInfo {
+	return bm.ci
 }
 
 func (bm BlockV0) Operations() *tree.AVLTree {

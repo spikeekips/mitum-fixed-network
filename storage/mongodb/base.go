@@ -231,8 +231,8 @@ func (st *Storage) setLastBlock(blk block.Block, save, force bool) error {
 
 	st.lastManifest = blk.Manifest()
 	st.lastManifestHeight = blk.Height()
-	st.lastINITVoteproof = blk.INITVoteproof()
-	st.lastACCEPTVoteproof = blk.ACCEPTVoteproof()
+	st.lastINITVoteproof = blk.ConsensusInfo().INITVoteproof()
+	st.lastACCEPTVoteproof = blk.ConsensusInfo().ACCEPTVoteproof()
 
 	return nil
 }
@@ -447,12 +447,9 @@ func (st *Storage) BlocksByHeight(heights []base.Height) ([]block.Block, error) 
 	opt := options.Find().
 		SetSort(util.NewBSONFilter("height", 1).D())
 
-	ctx, cancel := context.WithTimeout(context.Background(), time.Second*10)
-	defer cancel()
-
 	var blocks []block.Block
 	if err := st.client.Find(
-		ctx,
+		context.Background(),
 		defaultColNameBlock,
 		bson.M{"height": bson.M{"$in": filtered}},
 		func(cursor *mongo.Cursor) (bool, error) {
@@ -589,11 +586,8 @@ func (st *Storage) Seals(callback func(valuehash.Hash, seal.Seal) (bool, error),
 	opt := options.Find()
 	opt.SetSort(util.NewBSONFilter("hash", dir).D())
 
-	ctx, cancel := context.WithTimeout(context.Background(), time.Second*10)
-	defer cancel()
-
 	return st.client.Find(
-		ctx,
+		context.Background(),
 		defaultColNameSeal,
 		bson.D{},
 		func(cursor *mongo.Cursor) (bool, error) {
@@ -634,11 +628,8 @@ func (st *Storage) SealsByHash(
 	opt := options.Find().
 		SetSort(util.NewBSONFilter("hash", 1).D())
 
-	ctx, cancel := context.WithTimeout(context.Background(), time.Second*10)
-	defer cancel()
-
 	return st.client.Find(
-		ctx,
+		context.Background(),
 		defaultColNameSeal,
 		bson.M{"hash_string": bson.M{"$in": hashStrings}},
 		func(cursor *mongo.Cursor) (bool, error) {
@@ -681,11 +672,8 @@ func (st *Storage) StagedOperationSeals(callback func(operation.Seal) (bool, err
 	opt := options.Find()
 	opt.SetSort(util.NewBSONFilter("inserted_at", dir).D())
 
-	ctx, cancel := context.WithTimeout(context.Background(), time.Second*10)
-	defer cancel()
-
 	return st.client.Find(
-		ctx,
+		nil,
 		defaultColNameOperationSeal,
 		bson.D{},
 		func(cursor *mongo.Cursor) (bool, error) {

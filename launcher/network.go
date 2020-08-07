@@ -54,7 +54,7 @@ func LoadNodeChannel(u *url.URL, encs *encoder.Encoders) (network.Channel, error
 			u.String(),
 			100,
 			true,
-			time.Second*1,
+			time.Second*1000,
 			3,
 			nil,
 			encs,

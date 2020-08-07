@@ -4,6 +4,7 @@ import (
 	"time"
 
 	"github.com/spikeekips/mitum/base"
+	"github.com/spikeekips/mitum/base/ballot"
 	"github.com/spikeekips/mitum/base/tree"
 	"github.com/spikeekips/mitum/util"
 	"github.com/spikeekips/mitum/util/hint"
@@ -27,19 +28,19 @@ type Manifest interface {
 	CreatedAt() time.Time
 }
 
-type BlockConsensusInfo interface {
+type ConsensusInfo interface {
 	isvalid.IsValider
 	hint.Hinter
 	INITVoteproof() base.Voteproof
 	ACCEPTVoteproof() base.Voteproof
 	SuffrageInfo() SuffrageInfo
+	Proposal() ballot.Proposal
 }
 
 type Block interface {
 	Manifest
-	BlockConsensusInfo
 	Manifest() Manifest
-	ConsensusInfo() BlockConsensusInfo
+	ConsensusInfo() ConsensusInfo
 	Operations() *tree.AVLTree
 	States() *tree.AVLTree
 }
@@ -48,6 +49,7 @@ type BlockUpdater interface {
 	Block
 	SetINITVoteproof(base.Voteproof) BlockUpdater
 	SetACCEPTVoteproof(base.Voteproof) BlockUpdater
+	SetProposal(ballot.Proposal) BlockUpdater
 	SetOperations(*tree.AVLTree) BlockUpdater
 	SetStates(*tree.AVLTree) BlockUpdater
 }

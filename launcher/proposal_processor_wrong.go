@@ -55,7 +55,7 @@ func (wp *WrongProposalProcessor) ProcessACCEPT(ph valuehash.Hash, voteproof bas
 	// NOTE make fake block
 	orig := bs.Block()
 	if blk, err := block.NewBlockV0(
-		orig.SuffrageInfo().(block.SuffrageInfoV0),
+		orig.ConsensusInfo().SuffrageInfo().(block.SuffrageInfoV0),
 		orig.Height(),
 		orig.Round(),
 		orig.Proposal(),
@@ -66,8 +66,9 @@ func (wp *WrongProposalProcessor) ProcessACCEPT(ph valuehash.Hash, voteproof bas
 		panic(err)
 	} else {
 		newBlock := blk.
-			SetINITVoteproof(orig.INITVoteproof()).
-			SetACCEPTVoteproof(orig.ACCEPTVoteproof())
+			SetINITVoteproof(orig.ConsensusInfo().INITVoteproof()).
+			SetACCEPTVoteproof(orig.ConsensusInfo().ACCEPTVoteproof()).
+			SetProposal(orig.ConsensusInfo().Proposal())
 
 		newbs, err := wp.localstate.Storage().OpenBlockStorage(newBlock)
 		if err != nil {

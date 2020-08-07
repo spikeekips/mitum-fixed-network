@@ -4,38 +4,42 @@ import (
 	"encoding/json"
 
 	"github.com/spikeekips/mitum/base"
+	"github.com/spikeekips/mitum/base/ballot"
 	jsonenc "github.com/spikeekips/mitum/util/encoder/json"
 )
 
-type BlockConsensusInfoV0PackJSON struct {
+type ConsensusInfoV0PackJSON struct {
 	jsonenc.HintedHead
-	IV base.Voteproof `json:"init_voteproof,omitempty"`
-	AV base.Voteproof `json:"accept_voteproof,omitempty"`
-	SI SuffrageInfo   `json:"suffrage_info,omitempty"`
+	IV base.Voteproof  `json:"init_voteproof,omitempty"`
+	AV base.Voteproof  `json:"accept_voteproof,omitempty"`
+	SI SuffrageInfo    `json:"suffrage_info,omitempty"`
+	PR ballot.Proposal `json:"proposal,omitempty"`
 }
 
-func (bc BlockConsensusInfoV0) MarshalJSON() ([]byte, error) {
-	return jsonenc.Marshal(BlockConsensusInfoV0PackJSON{
+func (bc ConsensusInfoV0) MarshalJSON() ([]byte, error) {
+	return jsonenc.Marshal(ConsensusInfoV0PackJSON{
 		HintedHead: jsonenc.NewHintedHead(bc.Hint()),
 		IV:         bc.initVoteproof,
 		AV:         bc.acceptVoteproof,
 		SI:         bc.suffrageInfo,
+		PR:         bc.proposal,
 	})
 }
 
-type BlockConsensusInfoV0UnpackJSON struct {
+type ConsensusInfoV0UnpackJSON struct {
 	IV json.RawMessage `json:"init_voteproof"`
 	AV json.RawMessage `json:"accept_voteproof"`
 	SI json.RawMessage `json:"suffrage_info"`
+	PR json.RawMessage `json:"proposal"`
 }
 
-func (bc *BlockConsensusInfoV0) UnpackJSON(b []byte, enc *jsonenc.Encoder) error {
-	var nbc BlockConsensusInfoV0UnpackJSON
+func (bc *ConsensusInfoV0) UnpackJSON(b []byte, enc *jsonenc.Encoder) error {
+	var nbc ConsensusInfoV0UnpackJSON
 	if err := enc.Unmarshal(b, &nbc); err != nil {
 		return err
 	}
 
-	return bc.unpack(enc, nbc.IV, nbc.AV, nbc.SI)
+	return bc.unpack(enc, nbc.IV, nbc.AV, nbc.SI, nbc.PR)
 }
 
 type SuffrageInfoV0PackJSON struct {

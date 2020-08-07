@@ -212,9 +212,9 @@ func (st *Storage) LastVoteproof(stage base.Stage) (base.Voteproof, bool, error)
 	} else {
 		switch {
 		case stage == base.StageINIT:
-			return blk.INITVoteproof(), true, nil
+			return blk.ConsensusInfo().INITVoteproof(), true, nil
 		case stage == base.StageACCEPT:
-			return blk.ACCEPTVoteproof(), true, nil
+			return blk.ConsensusInfo().ACCEPTVoteproof(), true, nil
 		default:
 			return nil, false, nil
 		}

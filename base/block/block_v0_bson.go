@@ -11,7 +11,7 @@ import (
 func (bm BlockV0) MarshalBSON() ([]byte, error) {
 	m := bson.M{
 		"manifest":  bm.ManifestV0,
-		"consensus": bm.BlockConsensusInfoV0,
+		"consensus": bm.ci,
 	}
 
 	if bm.operations != nil && !bm.operations.Empty() {
@@ -47,10 +47,10 @@ func (bm *BlockV0) UnpackBSON(b []byte, enc *bsonenc.Encoder) error {
 		mf = mv
 	}
 
-	var ci BlockConsensusInfoV0
-	if m, err := decodeBlockConsensusInfo(enc, nbm.CI); err != nil {
+	var ci ConsensusInfoV0
+	if m, err := decodeConsensusInfo(enc, nbm.CI); err != nil {
 		return err
-	} else if mv, ok := m.(BlockConsensusInfoV0); !ok {
+	} else if mv, ok := m.(ConsensusInfoV0); !ok {
 		return xerrors.Errorf("not ConsensusInfoV0: type=%T", m)
 	} else {
 		ci = mv
@@ -74,7 +74,7 @@ func (bm *BlockV0) UnpackBSON(b []byte, enc *bsonenc.Encoder) error {
 	}
 
 	bm.ManifestV0 = mf
-	bm.BlockConsensusInfoV0 = ci
+	bm.ci = ci
 	bm.operations = &operations
 	bm.states = &states
 

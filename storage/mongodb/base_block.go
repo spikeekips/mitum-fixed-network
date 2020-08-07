@@ -2,7 +2,6 @@ package mongodbstorage
 
 import (
 	"context"
-	"time"
 
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
@@ -199,11 +198,8 @@ func (bst *BlockStorage) writeModels(col string, models []mongo.WriteModel) (*mo
 		return nil, nil
 	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), time.Second*2)
-	defer cancel()
-
 	opts := options.BulkWrite().SetOrdered(true)
-	res, err := bst.st.client.Collection(col).BulkWrite(ctx, models, opts)
+	res, err := bst.st.client.Collection(col).BulkWrite(context.Background(), models, opts)
 	if err != nil {
 		return nil, storage.WrapError(err)
 	}

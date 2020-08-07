@@ -505,7 +505,8 @@ func (pp *internalDefaultProposalProcessor) setACCEPTVoteproof(acceptVoteproof b
 		return xerrors.Errorf("hash of the processed block does not match with acceptVoteproof")
 	}
 
-	blk := pp.block.SetACCEPTVoteproof(acceptVoteproof)
+	blk := pp.block.SetACCEPTVoteproof(acceptVoteproof).
+		SetProposal(pp.proposal)
 	if err := pp.bs.SetBlock(blk); err != nil {
 		return err
 	} else if seals := pp.proposal.Seals(); len(seals) > 0 {

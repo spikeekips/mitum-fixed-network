@@ -7,7 +7,7 @@ import (
 	bsonenc "github.com/spikeekips/mitum/util/encoder/bson"
 )
 
-func (bc BlockConsensusInfoV0) MarshalBSON() ([]byte, error) {
+func (bc ConsensusInfoV0) MarshalBSON() ([]byte, error) {
 	m := bson.M{}
 	if bc.initVoteproof != nil {
 		m["init_voteproof"] = bc.initVoteproof
@@ -21,22 +21,27 @@ func (bc BlockConsensusInfoV0) MarshalBSON() ([]byte, error) {
 		m["suffrage_info"] = bc.suffrageInfo
 	}
 
+	if bc.proposal != nil {
+		m["proposal"] = bc.proposal
+	}
+
 	return bsonenc.Marshal(bsonenc.MergeBSONM(bsonenc.NewHintedDoc(bc.Hint()), m))
 }
 
-type BlockConsensusInfoV0UnpackBSON struct {
+type ConsensusInfoV0UnpackBSON struct {
 	IV bson.Raw `bson:"init_voteproof,omitempty"`
 	AV bson.Raw `bson:"accept_voteproof,omitempty"`
 	SI bson.Raw `bson:"suffrage_info,omitempty"`
+	PR bson.Raw `bson:"proposal,omitempty"`
 }
 
-func (bc *BlockConsensusInfoV0) UnpackBSON(b []byte, enc *bsonenc.Encoder) error {
-	var nbc BlockConsensusInfoV0UnpackBSON
+func (bc *ConsensusInfoV0) UnpackBSON(b []byte, enc *bsonenc.Encoder) error {
+	var nbc ConsensusInfoV0UnpackBSON
 	if err := enc.Unmarshal(b, &nbc); err != nil {
 		return err
 	}
 
-	return bc.unpack(enc, nbc.IV, nbc.AV, nbc.SI)
+	return bc.unpack(enc, nbc.IV, nbc.AV, nbc.SI, nbc.PR)
 }
 
 func (si SuffrageInfoV0) MarshalBSON() ([]byte, error) {

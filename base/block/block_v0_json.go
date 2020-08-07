@@ -11,17 +11,17 @@ import (
 
 type BlockV0PackJSON struct {
 	jsonenc.HintedHead
-	MF ManifestV0           `json:"manifest"`
-	CI BlockConsensusInfoV0 `json:"consensus"`
-	OP *tree.AVLTree        `json:"operations"`
-	ST *tree.AVLTree        `json:"states"`
+	MF ManifestV0      `json:"manifest"`
+	CI ConsensusInfoV0 `json:"consensus"`
+	OP *tree.AVLTree   `json:"operations"`
+	ST *tree.AVLTree   `json:"states"`
 }
 
 func (bm BlockV0) MarshalJSON() ([]byte, error) {
 	return jsonenc.Marshal(BlockV0PackJSON{
 		HintedHead: jsonenc.NewHintedHead(bm.Hint()),
 		MF:         bm.ManifestV0,
-		CI:         bm.BlockConsensusInfoV0,
+		CI:         bm.ci,
 		OP:         bm.operations,
 		ST:         bm.states,
 	})
@@ -50,10 +50,10 @@ func (bm *BlockV0) UnpackJSON(b []byte, enc *jsonenc.Encoder) error {
 		mf = mv
 	}
 
-	var ci BlockConsensusInfoV0
-	if m, err := decodeBlockConsensusInfo(enc, nbm.CI); err != nil {
+	var ci ConsensusInfoV0
+	if m, err := decodeConsensusInfo(enc, nbm.CI); err != nil {
 		return err
-	} else if mv, ok := m.(BlockConsensusInfoV0); !ok {
+	} else if mv, ok := m.(ConsensusInfoV0); !ok {
 		return xerrors.Errorf("not ConsensusInfoV0: type=%T", m)
 	} else {
 		ci = mv
@@ -73,7 +73,7 @@ func (bm *BlockV0) UnpackJSON(b []byte, enc *jsonenc.Encoder) error {
 	}
 
 	bm.ManifestV0 = mf
-	bm.BlockConsensusInfoV0 = ci
+	bm.ci = ci
 	bm.operations = &operations
 	bm.states = &states
 

@@ -17,12 +17,12 @@ func DecodeManifest(enc encoder.Encoder, b []byte) (Manifest, error) {
 	}
 }
 
-func decodeBlockConsensusInfo(enc encoder.Encoder, b []byte) (BlockConsensusInfo, error) {
+func decodeConsensusInfo(enc encoder.Encoder, b []byte) (ConsensusInfo, error) {
 	if i, err := enc.DecodeByHint(b); err != nil {
 		return nil, err
 	} else if i == nil {
 		return nil, nil
-	} else if v, ok := i.(BlockConsensusInfo); !ok {
+	} else if v, ok := i.(ConsensusInfo); !ok {
 		return nil, hint.InvalidTypeError.Errorf("not ConsensusInfoifest; type=%T", i)
 	} else {
 		return v, nil

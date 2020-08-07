@@ -1,6 +1,7 @@
 package contestlib
 
 import (
+	"context"
 	"sync"
 
 	"go.mongodb.org/mongo-driver/bson"
@@ -176,7 +177,7 @@ func (cc *ConditionsChecker) query(c *Condition) (map[string]interface{}, error)
 	client := cc.client(c.DB())
 
 	var record map[string]interface{}
-	if err := client.Find(nil, c.Collection(), query, func(cursor *mongo.Cursor) (bool, error) {
+	if err := client.Find(context.Background(), c.Collection(), query, func(cursor *mongo.Cursor) (bool, error) {
 		if err := cursor.Decode(&record); err != nil {
 			return false, err
 		}

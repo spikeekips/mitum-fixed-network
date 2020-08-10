@@ -1,6 +1,7 @@
 package isaac
 
 import (
+	"context"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -12,6 +13,7 @@ import (
 	"github.com/spikeekips/mitum/base/block"
 	"github.com/spikeekips/mitum/base/seal"
 	"github.com/spikeekips/mitum/storage"
+	"github.com/spikeekips/mitum/util"
 	"github.com/spikeekips/mitum/util/localtime"
 	"github.com/spikeekips/mitum/util/logging"
 )
@@ -34,7 +36,8 @@ type StateHandler interface {
 	NewSeal(seal.Seal) error
 	// NewVoteproof receives the finished Voteproof.
 	NewVoteproof(base.Voteproof) error
-	SetLastINITVoteproof(base.Voteproof)
+	LastINITVoteproof() base.Voteproof
+	SetLastINITVoteproof(base.Voteproof) error
 }
 
 type StateChangeContext struct {
@@ -172,9 +175,7 @@ func (bs *BaseStateHandler) BroadcastSeal(sl seal.Seal) {
 func (bs *BaseStateHandler) StoreNewBlock(acceptVoteproof base.Voteproof) error {
 	if !bs.isActivated() {
 		return nil
-	}
-
-	if bs.proposalProcessor == nil {
+	} else if bs.proposalProcessor == nil {
 		bs.Log().Debug().Msg("this state not support store new block")
 
 		return nil
@@ -188,9 +189,51 @@ func (bs *BaseStateHandler) StoreNewBlock(acceptVoteproof base.Voteproof) error 
 	}
 
 	l := loggerWithVoteproofID(acceptVoteproof, bs.Log().WithLogger(func(ctx logging.Context) logging.Emitter {
-		return ctx.Hinted("proposal_hash", fact.Proposal()).Hinted("new_block", fact.NewBlock())
+		return ctx.Hinted("proposal_hash", fact.Proposal()).
+			Dict("block", logging.Dict().
+				Hinted("hash", fact.NewBlock()).Hinted("height", acceptVoteproof.Height()).Hinted("round", acceptVoteproof.Round()))
 	}))
 
+	if err := util.Retry(3, time.Millisecond*200, func() error {
+		err := bs.storeNewBlock(fact, acceptVoteproof)
+		if err == nil {
+			return nil
+		}
+
+		var ctx *StateToBeChangeError
+		switch {
+		case xerrors.As(err, &ctx):
+			l.Error().Err(err).Msg("state will be moved with accept voteproof")
+
+			return util.StopRetryingError.Wrap(err)
+		case xerrors.Is(err, IgnoreVoteproofError):
+			return util.StopRetryingError.Wrap(err)
+		}
+
+		l.Error().Err(err).Msg("something wrong to store accept voteproof; will retry")
+
+		return err
+	}); err != nil {
+		l.Error().Err(err).Msg("failed to store new block after retrial")
+
+		if e := bs.proposalProcessor.Done(fact.Proposal()); e != nil {
+			return xerrors.Errorf(
+				"failed to be store new block; and failed to be done ProposalProcessor: %w",
+				e)
+		}
+
+		return err
+	}
+
+	return nil
+}
+
+func (bs *BaseStateHandler) storeNewBlock(fact ballot.ACCEPTBallotFact, acceptVoteproof base.Voteproof) error {
+	l := loggerWithVoteproofID(acceptVoteproof, bs.Log().WithLogger(func(ctx logging.Context) logging.Emitter {
+		return ctx.Hinted("proposal_hash", fact.Proposal()).
+			Dict("block", logging.Dict().
+				Hinted("hash", fact.NewBlock()).Hinted("height", acceptVoteproof.Height()).Hinted("round", acceptVoteproof.Round()))
+	}))
 	l.Debug().Msg("trying to store new block")
 
 	var blockStorage storage.BlockStorage
@@ -206,28 +249,31 @@ func (bs *BaseStateHandler) StoreNewBlock(acceptVoteproof base.Voteproof) error 
 		blockStorage = bs
 	}
 
-	if !fact.NewBlock().Equal(blockStorage.Block().Hash()) {
+	if newBlock := blockStorage.Block().Hash(); !fact.NewBlock().Equal(newBlock) {
 		err := xerrors.Errorf("processed new block does not match; fact=%s processed=%s",
-			fact.NewBlock(), blockStorage.Block().Hash())
+			fact.NewBlock(), newBlock)
 		l.Error().Err(err).Msg("failed to store new block; moves to sync")
 
 		return NewStateToBeChangeError(base.StateSyncing, acceptVoteproof, nil, err)
 	}
 
 	s := time.Now()
-	if err := blockStorage.Commit(); err != nil {
+
+	timeout := bs.localstate.Policy().TimeoutWaitingProposal()
+	l.Debug().Dur("timeout", timeout).Msg("trying to commit block")
+	ctx, cancel := context.WithTimeout(context.Background(), timeout)
+	defer cancel()
+	if err := blockStorage.Commit(ctx); err != nil {
 		l.Error().Err(err).Msg("failed to store new block")
 
 		return err
-	} else if err := bs.proposalProcessor.Done(fact.Proposal()); err != nil {
-		l.Error().Err(err).Msg("failed to be done ProposalProcessor")
 	}
 
-	l.Info().Dict("block", logging.Dict().
-		Dur("elapsed", time.Since(s)).
-		Hinted("proposal_hash", blockStorage.Block().Proposal()).Hinted("hash", blockStorage.Block().Hash()).
-		Hinted("height", blockStorage.Block().Height()).Hinted("round", blockStorage.Block().Round()),
-	).Msg("new block stored")
+	if err := bs.proposalProcessor.Done(fact.Proposal()); err != nil {
+		return xerrors.Errorf("failed to be done ProposalProcessor: %w", err)
+	}
+
+	l.Info().Dur("elapsed", time.Since(s)).Msg("new block stored")
 
 	return nil
 }
@@ -280,12 +326,15 @@ func (bs *BaseStateHandler) TimerBroadcastingINITBallot(
 	)
 }
 
-func (bs *BaseStateHandler) TimerBroadcastingACCEPTBallot(newBlock block.Block) (*localtime.CallbackTimer, error) {
+func (bs *BaseStateHandler) TimerBroadcastingACCEPTBallot(
+	newBlock block.Block,
+	voteproof base.Voteproof,
+) (*localtime.CallbackTimer, error) {
 	if !bs.isActivated() {
 		return nil, nil
 	}
 
-	baseBallot := NewACCEPTBallotV0(bs.localstate.Node().Address(), newBlock, bs.LastINITVoteproof())
+	baseBallot := NewACCEPTBallotV0(bs.localstate.Node().Address(), newBlock, voteproof)
 
 	var called int64
 
@@ -415,13 +464,27 @@ func (bs *BaseStateHandler) LastINITVoteproof() base.Voteproof {
 	return bs.livp
 }
 
-func (bs *BaseStateHandler) SetLastINITVoteproof(voteproof base.Voteproof) {
+func (bs *BaseStateHandler) SetLastINITVoteproof(voteproof base.Voteproof) error {
 	bs.Lock()
 	defer bs.Unlock()
 
 	if voteproof != nil && voteproof.Stage() != base.StageINIT {
-		panic(xerrors.Errorf("invalid voteproof, %v for init", voteproof.Stage()))
+		return xerrors.Errorf("invalid voteproof, %v for init", voteproof.Stage())
+	}
+
+	switch v := bs.livp; {
+	case v == nil:
+	case v.Height() > voteproof.Height():
+		return xerrors.Errorf("lower height; %v > %v", v.Height(), voteproof.Height())
+	case v.Height() == voteproof.Height():
+		if v.Round() > voteproof.Round() {
+			return xerrors.Errorf("same height, but lower round; %v, %v > %v", v.Height(), v.Round(), voteproof.Round())
+		}
 	}
 
 	bs.livp = voteproof
+
+	// NOTE cancel the previous processor
+
+	return nil
 }

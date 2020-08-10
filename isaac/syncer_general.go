@@ -991,12 +991,13 @@ func (cs *GeneralSyncer) commit() error {
 		case err != nil:
 			return err
 		default:
-			cs.Log().Info().Dict("block", logging.Dict().
+			cs.Log().Info().
 				Hinted("proposal_hash", m.Proposal()).
-				Hinted("hash", m.Hash()).
-				Hinted("height", m.Height()).
-				Hinted("round", m.Round()),
-			).
+				Dict("block", logging.Dict().
+					Hinted("hash", m.Hash()).
+					Hinted("height", m.Height()).
+					Hinted("round", m.Round()),
+				).
 				Msg("new block stored")
 		}
 	}

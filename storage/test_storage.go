@@ -3,6 +3,8 @@
 package storage
 
 import (
+	"context"
+
 	"github.com/stretchr/testify/suite"
 
 	"github.com/spikeekips/mitum/base"
@@ -58,7 +60,7 @@ func (dst *DummyBlockStorage) UnstageOperationSeals([]valuehash.Hash) error {
 	return nil
 }
 
-func (dst *DummyBlockStorage) Commit() error {
+func (dst *DummyBlockStorage) Commit(context.Context) error {
 	dst.commited = true
 
 	return nil

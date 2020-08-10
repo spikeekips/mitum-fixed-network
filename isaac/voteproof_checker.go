@@ -147,6 +147,7 @@ func (vpc *VoteproofConsensusStateChecker) CheckHeight() (bool, error) {
 
 	if d > 0 {
 		vpc.Log().Debug().
+			Hinted("voteproof_height", vpc.voteproof.Height()).
 			Hinted("local_block_height", height).
 			Msg("Voteproof has higher height from local block")
 

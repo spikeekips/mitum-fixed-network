@@ -83,44 +83,6 @@ func NewINITBallotV0WithVoteproof(node base.Address, voteproof base.Voteproof) (
 	), nil
 }
 
-func NewINITBallotV0(node base.Address, voteproof base.Voteproof) (ballot.INITBallotV0, error) {
-	var height base.Height
-	var round base.Round
-	var previousBlock valuehash.Hash
-	switch voteproof.Stage() {
-	case base.StageACCEPT:
-		if fact, ok := voteproof.Majority().(ballot.ACCEPTBallotFact); !ok {
-			return ballot.INITBallotV0{}, xerrors.Errorf(
-				"invalid accept voteproof found; majority fact is not accept ballot fact")
-		} else {
-			previousBlock = fact.NewBlock()
-		}
-
-		height = voteproof.Height() + 1
-		round = base.Round(0)
-	case base.StageINIT:
-		if fact, ok := voteproof.Majority().(ballot.INITBallotFact); !ok {
-			return ballot.INITBallotV0{}, xerrors.Errorf(
-				"invalid init voteproof found; majority fact is not init ballot fact")
-		} else {
-			previousBlock = fact.PreviousBlock()
-		}
-
-		height = voteproof.Height()
-		round = voteproof.Round() + 1
-	default:
-		return ballot.INITBallotV0{}, xerrors.Errorf("invalid voteproof stage, %v found", voteproof.Stage())
-	}
-
-	return ballot.NewINITBallotV0(
-		node,
-		height,
-		round,
-		previousBlock,
-		voteproof,
-	), nil
-}
-
 func NewProposalV0(st storage.Storage, node base.Address, round base.Round, operations, seals []valuehash.Hash) (
 	ballot.ProposalV0, error,
 ) {

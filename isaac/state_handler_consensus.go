@@ -12,7 +12,6 @@ import (
 	"github.com/spikeekips/mitum/base/block"
 	"github.com/spikeekips/mitum/base/seal"
 	"github.com/spikeekips/mitum/storage"
-	"github.com/spikeekips/mitum/util"
 	"github.com/spikeekips/mitum/util/localtime"
 	"github.com/spikeekips/mitum/util/logging"
 )
@@ -169,7 +168,15 @@ func (cs *StateConsensusHandler) NewVoteproof(voteproof base.Voteproof) error {
 	}
 
 	l.Debug().Msg("got Voteproof")
-	if timer, err := cs.TimerTimedoutMoveNextRound(voteproof); err != nil {
+	var nVoteproof base.Voteproof
+	switch voteproof.Stage() {
+	case base.StageINIT:
+		nVoteproof = voteproof
+	case base.StageACCEPT:
+		nVoteproof = cs.LastINITVoteproof()
+	}
+
+	if timer, err := cs.TimerTimedoutMoveNextRound(nVoteproof); err != nil {
 		return err
 	} else if err := cs.timers.SetTimer(TimerIDTimedoutMoveNextRound, timer); err != nil {
 		return err
@@ -189,42 +196,7 @@ func (cs *StateConsensusHandler) newVoteproof(voteproof base.Voteproof) error {
 
 	switch voteproof.Stage() {
 	case base.StageACCEPT:
-		var ignore bool
-		var ctx *StateToBeChangeError
-		if err := util.Retry(3, time.Millisecond*200, func() error {
-			err := cs.StoreNewBlock(voteproof)
-			if err == nil {
-				return nil
-			}
-
-			switch {
-			case xerrors.As(err, &ctx):
-				l.Error().Err(err).Msg("state will be moved with accept voteproof")
-
-				return nil
-			case xerrors.Is(err, IgnoreVoteproofError):
-				l.Error().Err(err).Msg("accept voteproof will be ignored")
-
-				ignore = true
-
-				return nil
-			}
-			l.Error().Err(err).Msg("something wrong to store accept voteproof; will retry")
-
-			return err
-		}); err != nil {
-			l.Error().Err(err).Msg("failed to store accept voteproof; moves to sync")
-
-			return cs.ChangeState(base.StateSyncing, voteproof, nil)
-		}
-
-		if ignore {
-			return nil
-		} else if ctx != nil {
-			return cs.ChangeState(ctx.ToState, ctx.Voteproof, ctx.Ballot)
-		}
-
-		return cs.keepBroadcastingINITBallotForNextBlock(voteproof)
+		return cs.handleACCEPTVoteproof(voteproof)
 	case base.StageINIT:
 		return cs.handleINITVoteproof(voteproof)
 	default:
@@ -242,6 +214,34 @@ func (cs *StateConsensusHandler) handleINITVoteproof(voteproof base.Voteproof) e
 	l.Debug().Msg("expected Voteproof received; will wait Proposal")
 
 	return cs.waitProposal(voteproof)
+}
+
+func (cs *StateConsensusHandler) handleACCEPTVoteproof(voteproof base.Voteproof) error {
+	l := loggerWithLocalstate(cs.localstate, loggerWithVoteproofID(voteproof, cs.Log()))
+
+	if err := cs.StoreNewBlock(voteproof); err != nil {
+		var ctx *StateToBeChangeError
+		switch {
+		case xerrors.As(err, &ctx):
+			l.Error().Err(err).Msg("state will be moved with accept voteproof")
+
+			return cs.ChangeState(ctx.ToState, ctx.Voteproof, ctx.Ballot)
+		case xerrors.Is(err, IgnoreVoteproofError):
+			l.Error().Err(err).Msg("accept voteproof will be ignored")
+
+			return nil
+		case xerrors.Is(err, storage.TimeoutError):
+			l.Error().Err(err).Msg("failed to store accept voteproof with timeout error; moves to next round")
+
+			return err
+		default:
+			l.Error().Err(err).Msg("failed to store accept voteproof; moves to sync")
+
+			return cs.ChangeState(base.StateSyncing, voteproof, nil)
+		}
+	}
+
+	return cs.keepBroadcastingINITBallotForNextBlock(voteproof)
 }
 
 func (cs *StateConsensusHandler) keepBroadcastingINITBallotForNextBlock(voteproof base.Voteproof) error {
@@ -269,7 +269,8 @@ func (cs *StateConsensusHandler) handleProposal(proposal ballot.Proposal) error 
 
 	l.Debug().Msg("got proposal")
 
-	blk, err := cs.proposalProcessor.ProcessINIT(proposal.Hash(), cs.LastINITVoteproof())
+	voteproof := cs.LastINITVoteproof()
+	blk, err := cs.proposalProcessor.ProcessINIT(proposal.Hash(), voteproof)
 	if err != nil {
 		return err
 	}
@@ -288,7 +289,7 @@ func (cs *StateConsensusHandler) handleProposal(proposal ballot.Proposal) error 
 		}
 	}
 
-	return cs.readyToACCEPTBallot(blk)
+	return cs.readyToACCEPTBallot(blk, voteproof)
 }
 
 func (cs *StateConsensusHandler) readyToSIGNBallot(newBlock block.Block) error {
@@ -307,9 +308,9 @@ func (cs *StateConsensusHandler) readyToSIGNBallot(newBlock block.Block) error {
 	return nil
 }
 
-func (cs *StateConsensusHandler) readyToACCEPTBallot(newBlock block.Block) error {
+func (cs *StateConsensusHandler) readyToACCEPTBallot(newBlock block.Block, voteproof base.Voteproof) error {
 	// NOTE if not in acting suffrage, broadcast ACCEPT Ballot after interval.
-	if timer, err := cs.TimerBroadcastingACCEPTBallot(newBlock); err != nil {
+	if timer, err := cs.TimerBroadcastingACCEPTBallot(newBlock, voteproof); err != nil {
 		return err
 	} else if err := cs.timers.SetTimer(TimerIDBroadcastingACCEPTBallot, timer); err != nil {
 		return err
@@ -340,8 +341,6 @@ func (cs *StateConsensusHandler) proposal(voteproof base.Voteproof) (bool, error
 	if err != nil {
 		return false, xerrors.Errorf("failed to make proposal: %w", err)
 	}
-
-	l.Debug().Interface("seal", proposal).Msg("trying to broadcast Proposal")
 
 	if timer, err := cs.TimerBroadcastingProposal(proposal); err != nil {
 		return false, err
@@ -414,6 +413,16 @@ func (cs *StateConsensusHandler) checkReceivedProposal(height base.Height, round
 			cs.Log().Error().Err(err).Msg("processing already received proposal, but")
 		}
 	}()
+
+	return nil
+}
+
+func (cs *StateConsensusHandler) SetLastINITVoteproof(voteproof base.Voteproof) error {
+	if err := cs.BaseStateHandler.SetLastINITVoteproof(voteproof); err != nil {
+		return err
+	}
+
+	_ = cs.proposalProcessor.Cancel()
 
 	return nil
 }

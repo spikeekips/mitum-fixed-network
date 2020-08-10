@@ -251,6 +251,7 @@ func (css *ConsensusStates) activateHandler(ctx *StateChangeContext) error {
 		HintedVerbose("voteproof", ctx.Voteproof(), true).
 		Msg("trying to change state")
 
+	var livp base.Voteproof = css.livp
 	handler := css.ActiveHandler()
 	if handler != nil {
 		if handler.State() != ctx.fromState {
@@ -261,6 +262,10 @@ func (css *ConsensusStates) activateHandler(ctx *StateChangeContext) error {
 			css.Log().Debug().Msgf("handler, %s already activated", ctx.toState)
 
 			return nil
+		}
+
+		if v := handler.LastINITVoteproof(); v != nil {
+			livp = v
 		}
 	}
 
@@ -286,7 +291,7 @@ func (css *ConsensusStates) activateHandler(ctx *StateChangeContext) error {
 		}
 	}
 
-	toHandler.SetLastINITVoteproof(css.livp)
+	_ = toHandler.SetLastINITVoteproof(livp)
 	if err := toHandler.Activate(ctx); err != nil {
 		return FailedToActivateHandler.Wrap(err)
 	}
@@ -504,17 +509,23 @@ func (css *ConsensusStates) lastINITVoteproof() base.Voteproof {
 	css.RLock()
 	defer css.RUnlock()
 
-	return css.livp
+	if css.activeHandler == nil {
+		return nil
+	}
+
+	return css.activeHandler.LastINITVoteproof()
 }
 
 func (css *ConsensusStates) setLastINITVoteproof(voteproof base.Voteproof) {
-	css.Lock()
-	defer css.Unlock()
+	css.RLock()
+	defer css.RUnlock()
 
-	css.livp = voteproof
+	if css.activeHandler == nil {
+		return
+	}
 
-	if css.activeHandler != nil {
-		css.activeHandler.SetLastINITVoteproof(voteproof)
+	if err := css.activeHandler.SetLastINITVoteproof(voteproof); err != nil {
+		css.Log().Error().Err(err).Msg("ignore to set the last init voteproof")
 	}
 }
 

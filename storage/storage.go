@@ -1,6 +1,8 @@
 package storage
 
 import (
+	"context"
+
 	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/base/ballot"
 	"github.com/spikeekips/mitum/base/block"
@@ -58,7 +60,7 @@ type BlockStorage interface {
 	SetBlock(block.Block) error
 	// NOTE UnstageOperationSeals cleans staged operation.Seals
 	UnstageOperationSeals([]valuehash.Hash) error
-	Commit() error
+	Commit(context.Context) error
 }
 
 type LastBlockSaver interface {

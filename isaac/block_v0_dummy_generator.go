@@ -1,6 +1,8 @@
 package isaac
 
 import (
+	"context"
+
 	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/base/ballot"
 	"github.com/spikeekips/mitum/base/block"
@@ -150,7 +152,7 @@ end:
 				return err
 			} else if err := bs.SetBlock(blk); err != nil {
 				return err
-			} else if err := bs.Commit(); err != nil {
+			} else if err := bs.Commit(context.Background()); err != nil {
 				return err
 			}
 		}
@@ -253,7 +255,9 @@ func (bg *DummyBlocksV0Generator) finish(vm map[base.Address]base.Voteproof) err
 			return err
 		} else if err := bs.Block().IsValid(bg.networkID); err != nil {
 			return err
-		} else if err := bs.Commit(); err != nil {
+		} else if err := bs.Commit(context.Background()); err != nil {
+			return err
+		} else if err := pm.Done(proposal); err != nil {
 			return err
 		}
 	}

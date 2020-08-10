@@ -1,6 +1,8 @@
 package isaac
 
 import (
+	"context"
+
 	"golang.org/x/xerrors"
 
 	"github.com/spikeekips/mitum/base"
@@ -85,7 +87,7 @@ func (gg *GenesisBlockV0Generator) Generate() (block.Block, error) {
 	} else {
 		if bs, err := pm.ProcessACCEPT(proposal.Hash(), vp); err != nil {
 			return nil, err
-		} else if err := bs.Commit(); err != nil {
+		} else if err := bs.Commit(context.Background()); err != nil {
 			return nil, err
 		} else {
 			blk = bs.Block()
@@ -144,7 +146,7 @@ func (gg *GenesisBlockV0Generator) generatePreviousBlock() error {
 
 	if bs, err := gg.localstate.Storage().OpenBlockStorage(blk); err != nil {
 		return err
-	} else if err := bs.Commit(); err != nil {
+	} else if err := bs.Commit(context.Background()); err != nil {
 		return err
 	}
 

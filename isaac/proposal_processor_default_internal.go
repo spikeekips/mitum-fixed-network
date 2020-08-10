@@ -174,17 +174,6 @@ func (pp *internalDefaultProposalProcessor) process(initVoteproof base.Voteproof
 		blk = b
 	}
 
-	pp.Log().Debug().
-		Dict("block", logging.Dict().
-			Hinted("hash", blk.Hash()).
-			Hinted("height", blk.Height()).
-			Hinted("round", blk.Round()).
-			Hinted("proposal", blk.Proposal()).
-			Hinted("previous_block", blk.PreviousBlock()).
-			Hinted("operations_hash", blk.OperationsHash()).
-			Hinted("states_hash", blk.StatesHash()),
-		).Msg("processed block")
-
 	if statesTree != nil {
 		if err := pp.updateStates(statesTree, blk); err != nil {
 			return nil, err
@@ -198,6 +187,17 @@ func (pp *internalDefaultProposalProcessor) process(initVoteproof base.Voteproof
 		pp.bs = bs
 		pp.block = blk
 	}
+
+	pp.Log().Debug().
+		Dict("block", logging.Dict().
+			Hinted("hash", blk.Hash()).
+			Hinted("height", blk.Height()).
+			Hinted("round", blk.Round()).
+			Hinted("proposal", blk.Proposal()).
+			Hinted("previous_block", blk.PreviousBlock()).
+			Hinted("operations_hash", blk.OperationsHash()).
+			Hinted("states_hash", blk.StatesHash()),
+		).Msg("processed block")
 
 	return blk, nil
 }

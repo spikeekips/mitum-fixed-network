@@ -20,7 +20,7 @@ func Retry(max uint, interval time.Duration, callback func() error) error {
 		if err = callback(); err == nil {
 			return nil
 		} else if xerrors.Is(err, StopRetryingError) {
-			return nil
+			return err
 		}
 
 		if max > 0 {

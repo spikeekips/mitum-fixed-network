@@ -2,6 +2,7 @@ package leveldbstorage
 
 import (
 	"bytes"
+	"context"
 	"math/rand"
 	"sort"
 	"testing"
@@ -41,7 +42,7 @@ func (t *testStorage) TestLastBlock() {
 	bs, err := t.storage.OpenBlockStorage(blk)
 	t.NoError(err)
 	t.NoError(bs.SetBlock(blk))
-	t.NoError(bs.Commit())
+	t.NoError(bs.Commit(context.Background()))
 
 	loaded, found, err := t.storage.LastBlock()
 	t.NoError(err)
@@ -58,7 +59,7 @@ func (t *testStorage) TestLastManifest() {
 	bs, err := t.storage.OpenBlockStorage(blk)
 	t.NoError(err)
 	t.NoError(bs.SetBlock(blk))
-	t.NoError(bs.Commit())
+	t.NoError(bs.Commit(context.Background()))
 
 	loaded, found, err := t.storage.LastManifest()
 	t.NoError(err)
@@ -98,7 +99,7 @@ func (t *testStorage) TestLoadManifestByHash() {
 	bs, err := t.storage.OpenBlockStorage(blk)
 	t.NoError(err)
 	t.NoError(bs.SetBlock(blk))
-	t.NoError(bs.Commit())
+	t.NoError(bs.Commit(context.Background()))
 
 	loaded, found, err := t.storage.Manifest(blk.Hash())
 	t.NoError(err)
@@ -119,7 +120,7 @@ func (t *testStorage) TestLoadManifestByHeight() {
 	bs, err := t.storage.OpenBlockStorage(blk)
 	t.NoError(err)
 	t.NoError(bs.SetBlock(blk))
-	t.NoError(bs.Commit())
+	t.NoError(bs.Commit(context.Background()))
 
 	loaded, found, err := t.storage.ManifestByHeight(blk.Height())
 	t.NoError(err)
@@ -140,7 +141,7 @@ func (t *testStorage) TestLoadBlockByHeight() {
 	bs, err := t.storage.OpenBlockStorage(blk)
 	t.NoError(err)
 	t.NoError(bs.SetBlock(blk))
-	t.NoError(bs.Commit())
+	t.NoError(bs.Commit(context.Background()))
 
 	loaded, found, err := t.storage.BlockByHeight(blk.Height())
 	t.NoError(err)
@@ -350,7 +351,7 @@ func (t *testStorage) TestUnStagedOperationSeals() {
 
 	// unstage
 	t.NoError(bs.UnstageOperationSeals(unstaged))
-	t.NoError(bs.Commit())
+	t.NoError(bs.Commit(context.Background()))
 
 	var collected []seal.Seal
 	t.NoError(t.storage.StagedOperationSeals(

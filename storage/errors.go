@@ -9,6 +9,7 @@ import (
 var (
 	NotFoundError   = errors.NewError("not found")
 	DuplicatedError = errors.NewError("duplicated error")
+	TimeoutError    = errors.NewError("timeout")
 	StorageError    = errors.NewError("storage error")
 )
 
@@ -19,6 +20,8 @@ func WrapError(err error) error {
 	case IsNotFoundError(err):
 		return err
 	case IsDuplicatedError(err):
+		return err
+	case IsTimeoutError(err):
 		return err
 	case xerrors.Is(err, StorageError):
 		return err
@@ -33,4 +36,8 @@ func IsNotFoundError(err error) bool {
 
 func IsDuplicatedError(err error) bool {
 	return xerrors.Is(err, DuplicatedError)
+}
+
+func IsTimeoutError(err error) bool {
+	return xerrors.Is(err, TimeoutError)
 }

@@ -60,6 +60,14 @@ func (ne *NError) Is(err error) bool {
 	}
 }
 
+func (ne *NError) As(target interface{}) bool {
+	if ne.err == nil {
+		return false
+	}
+
+	return xerrors.As(ne.err, target)
+}
+
 func (ne *NError) New() *NError {
 	n := NewError(ne.s)
 	n.id = ne.id

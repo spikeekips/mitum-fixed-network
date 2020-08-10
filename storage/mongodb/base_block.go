@@ -99,38 +99,62 @@ func (bst *BlockStorage) UnstageOperationSeals(seals []valuehash.Hash) error {
 	return nil
 }
 
-func (bst *BlockStorage) Commit() error {
+func (bst *BlockStorage) Commit(ctx context.Context) error {
+	if err := bst.commit(ctx); err == nil {
+		return nil
+	} else {
+		defer func() {
+			_ = bst.st.CleanByHeight(bst.block.Height())
+		}()
+
+		var me mongo.CommandError
+		if xerrors.Is(err, context.DeadlineExceeded) {
+			return storage.TimeoutError.Wrap(err)
+		} else if xerrors.As(err, &me) {
+			if me.HasErrorLabel("NetworkError") {
+				return storage.TimeoutError.Wrap(err)
+			}
+		}
+
+		return err
+	}
+}
+
+func (bst *BlockStorage) commit(ctx context.Context) error {
 	if bst.blockModels == nil || bst.manifestModels == nil {
 		if err := bst.SetBlock(bst.block); err != nil {
 			return err
 		}
 	}
 
-	if res, err := bst.writeModels(defaultColNameBlock, bst.blockModels); err != nil {
+	ctx, cancel := context.WithCancel(ctx)
+	defer cancel()
+
+	if res, err := bst.writeModels(ctx, defaultColNameBlock, bst.blockModels); err != nil {
 		return storage.WrapError(err)
 	} else if res != nil && res.InsertedCount < 1 {
 		return xerrors.Errorf("block not inserted")
 	}
 
-	if res, err := bst.writeModels(defaultColNameManifest, bst.manifestModels); err != nil {
+	if res, err := bst.writeModels(ctx, defaultColNameManifest, bst.manifestModels); err != nil {
 		return storage.WrapError(err)
 	} else if res != nil && res.InsertedCount < 1 {
 		return xerrors.Errorf("manifest not inserted")
 	}
 
-	if res, err := bst.writeModels(defaultColNameOperation, bst.operationModels); err != nil {
+	if res, err := bst.writeModels(ctx, defaultColNameOperation, bst.operationModels); err != nil {
 		return storage.WrapError(err)
 	} else if res != nil && res.InsertedCount < 1 {
 		return xerrors.Errorf("operation not inserted")
 	}
 
-	if res, err := bst.writeModels(defaultColNameState, bst.stateModels); err != nil {
+	if res, err := bst.writeModels(ctx, defaultColNameState, bst.stateModels); err != nil {
 		return storage.WrapError(err)
 	} else if res != nil && res.InsertedCount < 1 {
 		return xerrors.Errorf("state not inserted")
 	}
 
-	if _, err := bst.writeModels(defaultColNameOperationSeal, bst.operationSealModels); err != nil {
+	if _, err := bst.writeModels(ctx, defaultColNameOperationSeal, bst.operationSealModels); err != nil {
 		return storage.WrapError(err)
 	}
 
@@ -193,13 +217,13 @@ func (bst *BlockStorage) setStates(tr *tree.AVLTree) error {
 	return nil
 }
 
-func (bst *BlockStorage) writeModels(col string, models []mongo.WriteModel) (*mongo.BulkWriteResult, error) {
+func (bst *BlockStorage) writeModels(ctx context.Context, col string, models []mongo.WriteModel) (*mongo.BulkWriteResult, error) {
 	if len(models) < 1 {
 		return nil, nil
 	}
 
 	opts := options.BulkWrite().SetOrdered(true)
-	res, err := bst.st.client.Collection(col).BulkWrite(context.Background(), models, opts)
+	res, err := bst.st.client.Collection(col).BulkWrite(ctx, models, opts)
 	if err != nil {
 		return nil, storage.WrapError(err)
 	}

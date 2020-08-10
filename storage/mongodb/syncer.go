@@ -178,7 +178,7 @@ func (st *SyncerStorage) SetBlocks(blocks []block.Block) error {
 			return err
 		} else if err := bs.SetBlock(blk); err != nil {
 			return err
-		} else if err := bs.Commit(); err != nil {
+		} else if err := bs.Commit(context.Background()); err != nil {
 			return err
 		}
 

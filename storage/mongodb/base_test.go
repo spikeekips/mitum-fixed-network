@@ -15,6 +15,7 @@ import (
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
+	"golang.org/x/xerrors"
 
 	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/base/block"
@@ -57,7 +58,7 @@ func (t *testStorage) saveNewBlock(height base.Height) block.Block {
 	t.NoError(err)
 
 	t.NoError(bs.SetBlock(blk))
-	t.NoError(bs.Commit())
+	t.NoError(bs.Commit(context.Background()))
 
 	return blk
 }
@@ -70,6 +71,21 @@ func (t *testStorage) TestLastBlock() {
 	t.True(found)
 
 	t.CompareBlock(blk, loaded)
+}
+
+func (t *testStorage) TestSaveBlockContext() {
+	blk, err := block.NewTestBlockV0(base.Height(33), base.Round(0), valuehash.RandomSHA256(), valuehash.RandomSHA256())
+	t.NoError(err)
+
+	bs, err := t.storage.OpenBlockStorage(blk)
+	t.NoError(err)
+
+	t.NoError(bs.SetBlock(blk))
+
+	ctx, cancel := context.WithTimeout(context.Background(), time.Nanosecond*1)
+	defer cancel()
+	err = bs.Commit(ctx)
+	t.True(xerrors.Is(err, context.DeadlineExceeded))
 }
 
 func (t *testStorage) TestLastManifest() {
@@ -398,7 +414,7 @@ func (t *testStorage) TestUnStagedOperationSeals() {
 
 	// unstage
 	t.NoError(bs.UnstageOperationSeals(unstaged))
-	t.NoError(bs.Commit())
+	t.NoError(bs.Commit(context.Background()))
 
 	var collected []seal.Seal
 	t.NoError(t.storage.StagedOperationSeals(

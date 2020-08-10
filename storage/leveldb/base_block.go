@@ -1,6 +1,8 @@
 package leveldbstorage
 
 import (
+	"context"
+
 	"github.com/syndtr/goleveldb/leveldb"
 	"golang.org/x/xerrors"
 
@@ -159,7 +161,7 @@ func (bst *BlockStorage) UnstageOperationSeals(hs []valuehash.Hash) error {
 	return leveldbUnstageOperationSeals(bst.st, bst.batch, hs)
 }
 
-func (bst *BlockStorage) Commit() error {
+func (bst *BlockStorage) Commit(context.Context) error {
 	if bst.batch.Len() < 1 {
 		if err := bst.SetBlock(bst.block); err != nil {
 			return err

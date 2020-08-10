@@ -833,7 +833,7 @@ func (st *Storage) initialize() error {
 }
 
 func (st *Storage) cleanByHeight(height base.Height) error {
-	filter := util.EmptyBSONFilter().AddOp("height", height, "$gt").D()
+	filter := util.EmptyBSONFilter().AddOp("height", height, "$gt").D() // TODO use $gte
 
 	// block
 	if _, err := st.client.Delete(defaultColNameBlock, filter); err != nil {

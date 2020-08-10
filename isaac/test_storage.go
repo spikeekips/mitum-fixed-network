@@ -3,6 +3,7 @@
 package isaac
 
 import (
+	"context"
 	"time"
 
 	"golang.org/x/xerrors"
@@ -77,7 +78,7 @@ func (ss *StorageSupportTest) Storage(encs *encoder.Encoders, enc encoder.Encode
 func (ss *StorageSupportTest) SetBlock(st storage.Storage, blk block.Block) error {
 	if bs, err := st.OpenBlockStorage(blk); err != nil {
 		return err
-	} else if err := bs.Commit(); err != nil {
+	} else if err := bs.Commit(context.Background()); err != nil {
 		return err
 	}
 

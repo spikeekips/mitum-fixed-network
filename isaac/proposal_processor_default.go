@@ -31,6 +31,7 @@ func NewDefaultProposalProcessor(localstate *Localstate, suffrage base.Suffrage)
 		localstate:                localstate,
 		suffrage:                  suffrage,
 		operationProcessorHintSet: hint.NewHintmap(),
+		pp:                        nil,
 	}
 }
 
@@ -49,19 +50,26 @@ func (dp *DefaultProposalProcessor) IsProcessed(ph valuehash.Hash) bool {
 	return dp.pp.proposal.Hash().Equal(ph)
 }
 
-func (dp *DefaultProposalProcessor) processed(ph valuehash.Hash) *internalDefaultProposalProcessor {
+func (dp *DefaultProposalProcessor) processor() *internalDefaultProposalProcessor {
+	dp.RLock()
+	defer dp.RUnlock()
+
+	return dp.pp
+}
+
+func (dp *DefaultProposalProcessor) processed(ph valuehash.Hash) (*internalDefaultProposalProcessor, error) {
 	dp.RLock()
 	defer dp.RUnlock()
 
 	if dp.pp == nil {
-		return nil
+		return nil, xerrors.Errorf("empty processor")
 	}
 
 	if !dp.pp.proposal.Hash().Equal(ph) {
-		return nil
+		return nil, xerrors.Errorf("hash does not match; %s != %s", dp.pp.proposal.Hash(), ph)
 	}
 
-	return dp.pp
+	return dp.pp, nil
 }
 
 func (dp *DefaultProposalProcessor) setProcessor(pp *internalDefaultProposalProcessor) {
@@ -69,10 +77,28 @@ func (dp *DefaultProposalProcessor) setProcessor(pp *internalDefaultProposalProc
 	defer dp.Unlock()
 
 	dp.pp = pp
+
+	if pp == nil {
+		dp.Log().Debug().Msg("nil processor")
+	} else {
+		dp.Log().Debug().
+			Hinted("proposal", pp.proposal.Hash()).
+			Hinted("height", pp.proposal.Height()).
+			Hinted("round", pp.proposal.Round()).
+			Msg("new processor")
+	}
 }
 
 func (dp *DefaultProposalProcessor) ProcessINIT(ph valuehash.Hash, initVoteproof base.Voteproof) (block.Block, error) {
-	if pp := dp.processed(ph); pp != nil {
+	if pp := dp.processor(); pp != nil {
+		pr := pp.proposal
+		dp.Log().Error().
+			Hinted("proposal", ph).
+			Hinted("proposal_of_processor", pr.Hash()).
+			Hinted("height", pr.Height()).
+			Hinted("round", pr.Round()).
+			Msg("already processed")
+
 		return nil, xerrors.Errorf("already processed")
 	}
 
@@ -97,15 +123,12 @@ func (dp *DefaultProposalProcessor) ProcessINIT(ph valuehash.Hash, initVoteproof
 	_ = pp.SetLogger(dp.Log())
 	dp.setProcessor(pp)
 
-	defer func() {
-		dp.Lock()
-		defer dp.Unlock()
-
-		dp.pp.stop()
-	}()
+	defer pp.stop()
 
 	blk, err := pp.processINIT(initVoteproof)
 	if err != nil {
+		dp.setProcessor(nil)
+
 		return nil, err
 	}
 
@@ -119,9 +142,11 @@ func (dp *DefaultProposalProcessor) ProcessACCEPT(
 		return nil, xerrors.Errorf("Processaccept needs ACCEPT Voteproof")
 	}
 
-	pp := dp.processed(ph)
-	if pp == nil {
-		return nil, xerrors.Errorf("not processed ProcessINIT")
+	var pp *internalDefaultProposalProcessor
+	if p, err := dp.processed(ph); err != nil {
+		return nil, err
+	} else {
+		pp = p
 	}
 
 	if err := pp.setACCEPTVoteproof(acceptVoteproof); err != nil {
@@ -132,9 +157,18 @@ func (dp *DefaultProposalProcessor) ProcessACCEPT(
 }
 
 func (dp *DefaultProposalProcessor) Done(ph valuehash.Hash) error {
-	if pp := dp.processed(ph); pp != nil {
-	} else {
-		dp.Log().Debug().Hinted("proposal", ph).Msg("not processed ProcessINIT")
+	if _, err := dp.processed(ph); err != nil {
+		return err
+	}
+
+	dp.setProcessor(nil)
+
+	return nil
+}
+
+func (dp *DefaultProposalProcessor) Cancel() error {
+	if pp := dp.processor(); pp != nil {
+		pp.stop()
 	}
 
 	dp.setProcessor(nil)

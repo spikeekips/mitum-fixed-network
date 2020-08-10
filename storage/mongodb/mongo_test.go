@@ -3,6 +3,7 @@
 package mongodbstorage
 
 import (
+	"context"
 	"fmt"
 	"testing"
 	"time"
@@ -11,6 +12,7 @@ import (
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
+	"go.mongodb.org/mongo-driver/mongo/options"
 	"golang.org/x/xerrors"
 
 	"github.com/spikeekips/mitum/base"
@@ -313,6 +315,61 @@ func (t *testMongodbClient) TestMoveRawBytes() {
 
 	t.Equal(insertedID, newDoc["_id"])
 	t.Equal(doc.Doc()["findme"], newDoc["findme"])
+}
+
+func (t *testMongodbClient) TestBulkTimeoutShort() {
+	i, err := t.client.Count("showme", bson.D{})
+	t.NoError(err)
+	t.Equal(int64(0), i)
+
+	var models []mongo.WriteModel
+
+	for i := 0; i < 10; i++ {
+		id := util.UUID().String()
+		doc := NewDocNilID(id, bson.M{"findme": int64(3), "_id": id})
+		models = append(models, mongo.NewInsertOneModel().SetDocument(doc))
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), time.Nanosecond*1)
+	defer cancel()
+
+	opts := options.BulkWrite().SetOrdered(true)
+	_, err = t.client.Collection("showme").BulkWrite(ctx, models, opts)
+	t.Error(err)
+
+	t.True(xerrors.Is(err, context.DeadlineExceeded))
+}
+
+func (t *testMongodbClient) TestBulkTimeoutNetworkError() {
+	i, err := t.client.Count("showme", bson.D{})
+	t.NoError(err)
+	t.Equal(int64(0), i)
+
+	var models []mongo.WriteModel
+
+	l := 100000
+	for i := 0; i < l; i++ {
+		id := util.UUID().String()
+		doc := NewDocNilID(id, bson.M{"findme": int64(3), "_id": id})
+		models = append(models, mongo.NewInsertOneModel().SetDocument(doc))
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), time.Millisecond*500)
+	defer cancel()
+
+	opts := options.BulkWrite().SetOrdered(true)
+	_, err = t.client.Collection("showme").BulkWrite(ctx, models, opts)
+	t.Error(err)
+
+	inserted, _ := t.client.Count("showme", bson.D{})
+	t.NotEqual(0, inserted)
+
+	if !xerrors.Is(err, context.DeadlineExceeded) {
+		var me mongo.CommandError
+		t.True(xerrors.As(err, &me))
+		t.Equal(int32(0), me.Code)
+		t.True(me.HasErrorLabel("NetworkError"))
+	}
 }
 
 type docIntRaw struct {

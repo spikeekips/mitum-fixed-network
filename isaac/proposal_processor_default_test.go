@@ -1,6 +1,7 @@
 package isaac
 
 import (
+	"context"
 	"sync/atomic"
 	"testing"
 	"time"
@@ -103,7 +104,7 @@ func (t *testProposalProcessor) TestBlockOperations() {
 
 	bs, err := dp.ProcessACCEPT(proposal.Hash(), avp)
 	t.NoError(err)
-	t.NoError(bs.Commit())
+	t.NoError(bs.Commit(context.Background()))
 
 	loaded, found, err := t.local.Storage().Block(blk.Hash())
 	t.NoError(err)

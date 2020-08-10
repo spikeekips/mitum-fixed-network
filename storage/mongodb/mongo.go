@@ -246,6 +246,7 @@ func (cl *Client) Bulk(col string, models []mongo.WriteModel, order bool) error 
 }
 
 func (cl *Client) Count(col string, filter interface{}, opts ...*options.CountOptions) (int64, error) {
+	// TODO set context
 	ctx, cancel := context.WithTimeout(context.Background(), cl.execTimeout)
 	defer cancel()
 

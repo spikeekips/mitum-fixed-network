@@ -24,10 +24,11 @@ type (
 )
 
 type Client struct {
-	uri         string
-	client      *mongo.Client
-	db          *mongo.Database
-	execTimeout time.Duration
+	uri            string
+	client         *mongo.Client
+	db             *mongo.Database
+	connectTimeout time.Duration
+	execTimeout    time.Duration
 }
 
 func NewClient(uri string, connectTimeout, execTimeout time.Duration) (*Client, error) {
@@ -65,10 +66,11 @@ func NewClient(uri string, connectTimeout, execTimeout time.Duration) (*Client, 
 	}
 
 	return &Client{
-		uri:         uri,
-		client:      client,
-		db:          client.Database(cs.Database),
-		execTimeout: execTimeout,
+		uri:            uri,
+		client:         client,
+		db:             client.Database(cs.Database),
+		connectTimeout: connectTimeout,
+		execTimeout:    execTimeout,
 	}, nil
 }
 
@@ -342,12 +344,15 @@ func (cl *Client) CopyCollection(source *Client, fromCol, toCol string) error {
 	return cl.Bulk(toCol, models, false)
 }
 
-func (cl *Client) New(db string) *Client {
-	n := new(Client)
-	*n = *cl
-	n.db = cl.client.Database(db)
-
-	return n
+func (cl *Client) New(db string) (*Client, error) {
+	if n, err := NewClient(cl.uri, cl.connectTimeout, cl.execTimeout); err != nil {
+		return nil, err
+	} else if len(db) < 1 {
+		return n, nil
+	} else {
+		n.db = n.client.Database(db)
+		return n, nil
+	}
 }
 
 func isDuplicatedError(err error) bool {

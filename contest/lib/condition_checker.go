@@ -139,7 +139,7 @@ func (cc *ConditionsChecker) check(c *Condition) (bool, error) {
 	return true, nil
 }
 
-func (cc *ConditionsChecker) client(s string) *mongodbstorage.Client {
+func (cc *ConditionsChecker) client(s string) (*mongodbstorage.Client, error) {
 	f := func(s string) *mongodbstorage.Client {
 		cc.RLock()
 		defer cc.RUnlock()
@@ -152,18 +152,20 @@ func (cc *ConditionsChecker) client(s string) *mongodbstorage.Client {
 	}
 
 	if len(s) < 1 {
-		return cc.defaultClient
+		return cc.defaultClient, nil
 	} else if c := f(s); c != nil {
-		return c
+		return c, nil
 	}
 
 	cc.Lock()
 	defer cc.Unlock()
 
-	c := cc.defaultClient.New(s)
-	cc.clients[s] = c
-
-	return c
+	if c, err := cc.defaultClient.New(s); err != nil {
+		return nil, err
+	} else {
+		cc.clients[s] = c
+		return c, nil
+	}
 }
 
 func (cc *ConditionsChecker) query(c *Condition) (map[string]interface{}, error) {
@@ -174,7 +176,12 @@ func (cc *ConditionsChecker) query(c *Condition) (map[string]interface{}, error)
 		query = q
 	}
 
-	client := cc.client(c.DB())
+	var client *mongodbstorage.Client
+	if cl, err := cc.client(c.DB()); err != nil {
+		return nil, err
+	} else {
+		client = cl
+	}
 
 	var record map[string]interface{}
 	if err := client.Find(context.Background(), c.Collection(), query, func(cursor *mongo.Cursor) (bool, error) {

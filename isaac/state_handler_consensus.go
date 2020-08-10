@@ -235,9 +235,9 @@ func (cs *StateConsensusHandler) handleACCEPTVoteproof(voteproof base.Voteproof)
 
 			return err
 		default:
-			l.Error().Err(err).Msg("failed to store accept voteproof; moves to sync")
+			l.Error().Err(err).Msg("failed to store accept voteproof")
 
-			return cs.ChangeState(base.StateSyncing, voteproof, nil)
+			return err
 		}
 	}
 

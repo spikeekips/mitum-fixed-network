@@ -399,10 +399,10 @@ func (pp *internalDefaultProposalProcessor) getOperationsFromStorage(h valuehash
 	[]operation.Operation, bool, error,
 ) {
 	var osl operation.Seal
-	if sl, found, err := pp.localstate.Storage().Seal(h); !found {
-		return nil, false, nil
-	} else if err != nil {
+	if sl, found, err := pp.localstate.Storage().Seal(h); err != nil {
 		return nil, false, err
+	} else if !found {
+		return nil, false, nil
 	} else if os, ok := sl.(operation.Seal); !ok {
 		return nil, false, xerrors.Errorf("not operation.Seal: %T", sl)
 	} else {
@@ -439,6 +439,8 @@ func (pp *internalDefaultProposalProcessor) getOperationsThruChannel(
 ) ([]operation.Operation, error) {
 	if pp.localstate.Node().Address().Equal(proposer) {
 		pp.Log().Warn().Msg("proposer is local node, but local node should have seals. Hmmm")
+
+		return nil, nil
 	}
 
 	node, found := pp.localstate.Nodes().Node(proposer)

@@ -18,6 +18,7 @@ import (
 
 type BlockStorage struct {
 	st                  *Storage
+	ost                 *Storage
 	block               block.Block
 	operations          *tree.AVLTree
 	states              *tree.AVLTree
@@ -29,8 +30,16 @@ type BlockStorage struct {
 }
 
 func NewBlockStorage(st *Storage, blk block.Block) (*BlockStorage, error) {
+	var nst *Storage
+	if n, err := st.New(); err != nil {
+		return nil, err
+	} else {
+		nst = n
+	}
+
 	bst := &BlockStorage{
-		st:    st,
+		st:    nst,
+		ost:   st,
 		block: blk,
 	}
 
@@ -100,6 +109,10 @@ func (bst *BlockStorage) UnstageOperationSeals(seals []valuehash.Hash) error {
 }
 
 func (bst *BlockStorage) Commit(ctx context.Context) error {
+	defer func() {
+		_ = bst.st.Close()
+	}()
+
 	if err := bst.commit(ctx); err == nil {
 		return nil
 	} else {
@@ -158,7 +171,7 @@ func (bst *BlockStorage) commit(ctx context.Context) error {
 		return storage.WrapError(err)
 	}
 
-	return bst.st.setLastBlock(bst.block, true, false)
+	return bst.ost.setLastBlock(bst.block, true, false)
 }
 
 func (bst *BlockStorage) setOperations(tr *tree.AVLTree) error {
@@ -222,7 +235,7 @@ func (bst *BlockStorage) writeModels(ctx context.Context, col string, models []m
 		return nil, nil
 	}
 
-	opts := options.BulkWrite().SetOrdered(true)
+	opts := options.BulkWrite().SetOrdered(true) // TODO set unordered
 	res, err := bst.st.client.Collection(col).BulkWrite(ctx, models, opts)
 	if err != nil {
 		return nil, storage.WrapError(err)

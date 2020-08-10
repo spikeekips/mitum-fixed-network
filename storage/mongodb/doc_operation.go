@@ -1,10 +1,6 @@
 package mongodbstorage
 
 import (
-	"golang.org/x/xerrors"
-
-	"go.mongodb.org/mongo-driver/bson"
-
 	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/base/operation"
 	"github.com/spikeekips/mitum/util/encoder"
@@ -42,26 +38,4 @@ func (od OperationDoc) MarshalBSON() ([]byte, error) {
 	m["height"] = od.height
 
 	return bsonenc.Marshal(m)
-}
-
-func loadOperationFromDecoder(decoder func(interface{}) error, encs *encoder.Encoders) (
-	operation.Operation, error,
-) {
-	var b bson.Raw
-	if err := decoder(&b); err != nil {
-		return nil, err
-	}
-
-	var op operation.Operation
-
-	_, hinter, err := loadWithEncoder(b, encs)
-	if err != nil {
-		return nil, err
-	} else if i, ok := hinter.(operation.Operation); !ok {
-		return nil, xerrors.Errorf("not Operation: %T", hinter)
-	} else {
-		op = i
-	}
-
-	return op, nil
 }

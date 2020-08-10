@@ -903,3 +903,25 @@ func (st *Storage) createIndex(col string, models []mongo.IndexModel) error {
 
 	return nil
 }
+
+func (st *Storage) New() (*Storage, error) {
+	var client *Client
+	if cl, err := st.client.New(""); err != nil {
+		return nil, err
+	} else {
+		client = cl
+	}
+
+	return &Storage{
+		Logging: logging.NewLogging(func(c logging.Context) logging.Emitter {
+			return c.Str("module", "mongodb-storage")
+		}),
+		client:              client,
+		encs:                st.encs,
+		enc:                 st.enc,
+		lastManifest:        st.lastManifest,
+		lastManifestHeight:  st.lastManifestHeight,
+		lastINITVoteproof:   st.lastINITVoteproof,
+		lastACCEPTVoteproof: st.lastACCEPTVoteproof,
+	}, nil
+}

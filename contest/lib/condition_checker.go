@@ -157,12 +157,12 @@ func (cc *ConditionsChecker) client(s string) (*mongodbstorage.Client, error) {
 		return c, nil
 	}
 
-	cc.Lock()
-	defer cc.Unlock()
-
 	if c, err := cc.defaultClient.New(s); err != nil {
 		return nil, err
 	} else {
+		cc.Lock()
+		defer cc.Unlock()
+
 		cc.clients[s] = c
 		return c, nil
 	}

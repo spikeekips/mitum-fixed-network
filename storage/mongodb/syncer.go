@@ -116,7 +116,7 @@ func (st *SyncerStorage) SetManifests(manifests []block.Manifest) error {
 		}
 	}
 
-	if err := st.manifestStorage.Client().Bulk(defaultColNameManifest, models, true); err != nil {
+	if err := st.manifestStorage.Client().Bulk(context.Background(), defaultColNameManifest, models, true); err != nil {
 		return err
 	}
 
@@ -258,14 +258,11 @@ func newTempStorage(main *Storage, prefix string) (*Storage, error) {
 }
 
 func moveWithinCol(from *Storage, fromCol string, to *Storage, toCol string, filter bson.D) error {
-	ctx, cancel := context.WithTimeout(context.Background(), time.Minute*50)
-	defer cancel()
-
 	var limit int = 100
 	var models []mongo.WriteModel
-	err := from.Client().Find(ctx, fromCol, filter, func(cursor *mongo.Cursor) (bool, error) {
+	err := from.Client().Find(context.Background(), fromCol, filter, func(cursor *mongo.Cursor) (bool, error) {
 		if len(models) == limit {
-			if err := to.Client().Bulk(toCol, models, false); err != nil {
+			if err := to.Client().Bulk(context.Background(), toCol, models, false); err != nil {
 				return false, err
 			} else {
 				models = nil
@@ -282,7 +279,7 @@ func moveWithinCol(from *Storage, fromCol string, to *Storage, toCol string, fil
 	}
 
 	if len(models) > 0 {
-		if err := to.Client().Bulk(toCol, models, false); err != nil {
+		if err := to.Client().Bulk(context.Background(), toCol, models, false); err != nil {
 			return err
 		}
 	}

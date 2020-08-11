@@ -208,7 +208,7 @@ func (cl *Client) Set(col string, doc Doc) (interface{}, error) {
 		mongo.NewInsertOneModel().SetDocument(doc),
 	}
 
-	if err := cl.Bulk(col, models, true); err != nil {
+	if err := cl.Bulk(context.Background(), col, models, true); err != nil {
 		return nil, err
 	}
 
@@ -231,10 +231,7 @@ func (cl *Client) AddRaw(col string, raw bson.Raw) (interface{}, error) {
 	return res.InsertedID, nil
 }
 
-func (cl *Client) Bulk(col string, models []mongo.WriteModel, order bool) error {
-	ctx, cancel := context.WithTimeout(context.Background(), cl.execTimeout)
-	defer cancel()
-
+func (cl *Client) Bulk(ctx context.Context, col string, models []mongo.WriteModel, order bool) error {
 	opts := options.BulkWrite().SetOrdered(order)
 	if _, err := cl.db.Collection(col).BulkWrite(ctx, models, opts); err != nil {
 		if isDuplicatedError(err) {
@@ -314,14 +311,11 @@ func (cl *Client) Raw() *mongo.Client {
 }
 
 func (cl *Client) CopyCollection(source *Client, fromCol, toCol string) error {
-	ctx, cancel := context.WithTimeout(context.Background(), time.Minute*50)
-	defer cancel()
-
 	var limit int = 100
 	var models []mongo.WriteModel
-	err := source.Find(ctx, fromCol, bson.D{}, func(cursor *mongo.Cursor) (bool, error) {
+	err := source.Find(context.Background(), fromCol, bson.D{}, func(cursor *mongo.Cursor) (bool, error) {
 		if len(models) == limit {
-			if err := cl.Bulk(toCol, models, false); err != nil {
+			if err := cl.Bulk(context.Background(), toCol, models, false); err != nil {
 				return false, err
 			} else {
 				models = nil
@@ -341,7 +335,7 @@ func (cl *Client) CopyCollection(source *Client, fromCol, toCol string) error {
 		return nil
 	}
 
-	return cl.Bulk(toCol, models, false)
+	return cl.Bulk(context.Background(), toCol, models, false)
 }
 
 func (cl *Client) New(db string) (*Client, error) {

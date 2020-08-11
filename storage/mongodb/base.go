@@ -561,7 +561,7 @@ func (st *Storage) NewSeals(seals []seal.Seal) error {
 		)
 	}
 
-	if err := st.client.Bulk(defaultColNameSeal, models, false); err != nil {
+	if err := st.client.Bulk(context.Background(), defaultColNameSeal, models, false); err != nil {
 		return err
 	}
 
@@ -569,7 +569,7 @@ func (st *Storage) NewSeals(seals []seal.Seal) error {
 		return nil
 	}
 
-	return st.client.Bulk(defaultColNameOperationSeal, operationModels, false)
+	return st.client.Bulk(context.Background(), defaultColNameOperationSeal, operationModels, false)
 }
 
 func (st *Storage) Seals(callback func(valuehash.Hash, seal.Seal) (bool, error), sort, load bool) error {
@@ -697,7 +697,7 @@ func (st *Storage) UnstagedOperationSeals(seals []valuehash.Hash) error {
 		)
 	}
 
-	return st.client.Bulk(defaultColNameOperationSeal, models, false)
+	return st.client.Bulk(context.Background(), defaultColNameOperationSeal, models, false)
 }
 
 func (st *Storage) Proposals(callback func(ballot.Proposal) (bool, error), sort bool) error {
@@ -908,6 +908,9 @@ func (st *Storage) New() (*Storage, error) {
 	} else {
 		client = cl
 	}
+
+	st.RLock()
+	defer st.RUnlock()
 
 	return &Storage{
 		Logging: logging.NewLogging(func(c logging.Context) logging.Emitter {

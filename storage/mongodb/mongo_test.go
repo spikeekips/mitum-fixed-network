@@ -272,7 +272,7 @@ func (t *testMongodbClient) TestBulkDuplicatedError0() {
 	models = append(models, mongo.NewInsertOneModel().SetDocument(doc))
 	models = append(models, mongo.NewInsertOneModel().SetDocument(doc))
 
-	err := t.client.Bulk("showme", models, false)
+	err := t.client.Bulk(context.Background(), "showme", models, false)
 	t.True(xerrors.Is(err, storage.DuplicatedError))
 }
 
@@ -287,7 +287,7 @@ func (t *testMongodbClient) TestBulkDuplicatedError1() {
 
 	models = append(models, mongo.NewInsertOneModel().SetDocument(doc))
 
-	err = t.client.Bulk("showme", models, false)
+	err = t.client.Bulk(context.Background(), "showme", models, false)
 	t.True(xerrors.Is(err, storage.DuplicatedError))
 }
 

@@ -92,3 +92,67 @@ func TestThreshold(t *testing.T) {
 		)
 	}
 }
+
+func TestNumberOfFaultyNodes(t *testing.T) {
+	cases := []struct {
+		name      string
+		n         uint
+		threshold float64
+		expected  int
+	}{
+		{
+			name:      "3, 67",
+			n:         3,
+			threshold: 67,
+			expected:  0,
+		},
+		{
+			name:      "3, 60",
+			n:         3,
+			threshold: 60,
+			expected:  1,
+		},
+		{
+			name:      "0, 60",
+			n:         0,
+			threshold: 60,
+			expected:  0,
+		},
+		{
+			name:      "10, 60",
+			n:         10,
+			threshold: 60,
+			expected:  4,
+		},
+		{
+			name:      "10, 61",
+			n:         10,
+			threshold: 61,
+			expected:  3,
+		},
+		{
+			name:      "10, 100",
+			n:         10,
+			threshold: 100,
+			expected:  0,
+		},
+		{
+			name:      "33, 200",
+			n:         33,
+			threshold: 200,
+			expected:  0,
+		},
+	}
+
+	for i, c := range cases {
+		i := i
+		c := c
+		t.Run(
+			c.name,
+			func(*testing.T) {
+				f := NumberOfFaultyNodes(c.n, c.threshold)
+				assert.Equal(t, c.expected, f, "%d: %v; %v != %v", i, c.name, c.expected, f)
+			},
+		)
+	}
+}

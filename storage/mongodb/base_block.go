@@ -213,11 +213,7 @@ func (bst *BlockStorage) setStates(tr *tree.AVLTree) error {
 		if err != nil {
 			return false, err
 		}
-		models = append(models,
-			// NOTE state is managed by it's Key()
-			mongo.NewDeleteOneModel().SetFilter(util.NewBSONFilter("_id", doc.ID()).D()),
-			mongo.NewInsertOneModel().SetDocument(doc),
-		)
+		models = append(models, mongo.NewInsertOneModel().SetDocument(doc))
 
 		return true, nil
 	}); err != nil {
@@ -235,7 +231,7 @@ func (bst *BlockStorage) writeModels(ctx context.Context, col string, models []m
 		return nil, nil
 	}
 
-	opts := options.BulkWrite().SetOrdered(true) // TODO set unordered
+	opts := options.BulkWrite().SetOrdered(false)
 	res, err := bst.st.client.Collection(col).BulkWrite(ctx, models, opts)
 	if err != nil {
 		return nil, storage.WrapError(err)

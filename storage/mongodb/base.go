@@ -277,10 +277,7 @@ func (st *Storage) Close() error {
 // collections by user, drop collections instead of drop database.
 func (st *Storage) Clean() error {
 	drop := func(c string) error {
-		ctx, cancel := context.WithTimeout(context.Background(), time.Second*10)
-		defer cancel()
-
-		return st.client.Collection(c).Drop(ctx)
+		return st.client.Collection(c).Drop(context.Background())
 	}
 
 	for _, c := range allCollections {

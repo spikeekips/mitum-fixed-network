@@ -235,9 +235,15 @@ func (cs *StateConsensusHandler) handleACCEPTVoteproof(voteproof base.Voteproof)
 
 			return err
 		default:
-			l.Error().Err(err).Msg("failed to store accept voteproof")
+			if len(cs.suffrage.Nodes()) < 2 {
+				l.Error().Err(err).Msg("failed to store accept voteproof; standalone node will wait")
 
-			return err
+				return err
+			}
+
+			l.Error().Err(err).Msg("failed to store accept voteproof; moves to sync")
+
+			return cs.ChangeState(base.StateSyncing, voteproof, nil)
 		}
 	}
 

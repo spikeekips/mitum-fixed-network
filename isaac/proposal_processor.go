@@ -20,6 +20,7 @@ type ProposalProcessor interface {
 	Done(valuehash.Hash /* Proposal.Hash() */) error
 	Cancel() error
 	AddOperationProcessor(hint.Hinter, OperationProcessor) (ProposalProcessor, error)
+	States() map[string]interface{}
 }
 
 type OperationProcessor interface {

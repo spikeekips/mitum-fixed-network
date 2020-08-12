@@ -84,3 +84,7 @@ func (dp *DummyProposalProcessor) BlockStorages(h valuehash.Hash) *storage.Dummy
 func (dp *DummyProposalProcessor) AddOperationProcessor(hint.Hinter, OperationProcessor) (ProposalProcessor, error) {
 	return dp, nil
 }
+
+func (dp *DummyProposalProcessor) States() map[string]interface{} {
+	return nil
+}

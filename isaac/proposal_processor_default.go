@@ -211,3 +211,11 @@ func (dp *DefaultProposalProcessor) AddOperationProcessor(
 
 	return dp, nil
 }
+
+func (dp *DefaultProposalProcessor) States() map[string]interface{} {
+	if pp := dp.processor(); pp == nil {
+		return nil
+	} else {
+		return pp.states()
+	}
+}

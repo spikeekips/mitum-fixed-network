@@ -3,13 +3,15 @@ package util
 import (
 	"fmt"
 	"sync"
+	"sync/atomic"
 
 	"github.com/spikeekips/mitum/util/logging"
+	"golang.org/x/xerrors"
 )
 
 type WorkerCallback func( /* job id */ uint, interface{} /* arguments */) error
 
-type Worker struct {
+type ParallelWorker struct {
 	sync.RWMutex
 	*logging.Logging
 	jobChan     chan interface{}
@@ -21,8 +23,8 @@ type Worker struct {
 	lastCalled  int
 }
 
-func NewWorker(name string, bufsize uint) *Worker {
-	wk := &Worker{
+func NewParallelWorker(name string, bufsize uint) *ParallelWorker {
+	wk := &ParallelWorker{
 		Logging: logging.NewLogging(func(c logging.Context) logging.Emitter {
 			return c.Str("module", fmt.Sprintf("worker-%s", name))
 		}),
@@ -37,7 +39,7 @@ func NewWorker(name string, bufsize uint) *Worker {
 	return wk
 }
 
-func (wk *Worker) roundrobin() {
+func (wk *ParallelWorker) roundrobin() {
 	var jobID uint
 	for job := range wk.jobChan {
 		callback := wk.nextCallback()
@@ -54,7 +56,7 @@ func (wk *Worker) roundrobin() {
 	}
 }
 
-func (wk *Worker) Run(callback WorkerCallback) *Worker {
+func (wk *ParallelWorker) Run(callback WorkerCallback) *ParallelWorker {
 	wk.Lock()
 	defer wk.Unlock()
 
@@ -63,7 +65,7 @@ func (wk *Worker) Run(callback WorkerCallback) *Worker {
 	return wk
 }
 
-func (wk *Worker) nextCallback() WorkerCallback {
+func (wk *ParallelWorker) nextCallback() WorkerCallback {
 	wk.Lock()
 	defer wk.Unlock()
 
@@ -78,7 +80,7 @@ func (wk *Worker) nextCallback() WorkerCallback {
 	return wk.callbacks[index]
 }
 
-func (wk *Worker) NewJob(j interface{}) {
+func (wk *ParallelWorker) NewJob(j interface{}) {
 	wk.Lock()
 	wk.jobCalled++
 	wk.Unlock()
@@ -90,25 +92,25 @@ func (wk *Worker) NewJob(j interface{}) {
 	wk.jobChan <- j
 }
 
-func (wk *Worker) Errors() <-chan error {
+func (wk *ParallelWorker) Errors() <-chan error {
 	return wk.errChan
 }
 
-func (wk *Worker) Jobs() uint {
+func (wk *ParallelWorker) Jobs() uint {
 	wk.RLock()
 	defer wk.RUnlock()
 
 	return wk.jobCalled
 }
 
-func (wk *Worker) FinishedJobs() int {
+func (wk *ParallelWorker) FinishedJobs() int {
 	wk.RLock()
 	defer wk.RUnlock()
 
 	return wk.jobFinished
 }
 
-func (wk *Worker) Done() {
+func (wk *ParallelWorker) Done() {
 	if wk.jobChan != nil {
 		close(wk.jobChan)
 	}
@@ -116,9 +118,106 @@ func (wk *Worker) Done() {
 	// NOTE don't close errChan :)
 }
 
-func (wk *Worker) IsFinished() bool {
+func (wk *ParallelWorker) IsFinished() bool {
 	wk.RLock()
 	defer wk.RUnlock()
 
 	return uint(wk.jobFinished) == wk.jobCalled
+}
+
+type DistributeWorker struct {
+	sync.RWMutex
+	n          uint
+	wg         *sync.WaitGroup
+	input      chan interface{}
+	closed     bool
+	closedchan chan uint
+	errchan    chan error
+	sonce      sync.Once
+	conce      sync.Once
+	jobs       uint64
+}
+
+func NewDistributeWorker(n uint, errchan chan error) *DistributeWorker {
+	return &DistributeWorker{
+		n:          n,
+		input:      make(chan interface{}),
+		closedchan: make(chan uint, n),
+		errchan:    errchan,
+	}
+}
+
+func (wk *DistributeWorker) Run(callback WorkerCallback) error {
+	var errcallback func(error)
+	if wk.errchan == nil {
+		errcallback = func(error) {}
+	} else {
+		errcallback = func(err error) {
+			wk.errchan <- err
+		}
+	}
+
+	if wk.wg != nil {
+		return xerrors.Errorf("already ran")
+	}
+
+	wk.wg = &sync.WaitGroup{}
+	wk.wg.Add(int(wk.n))
+
+	for i := uint(0); i < wk.n; i++ {
+		go func(i uint) {
+			defer wk.wg.Done()
+
+		end:
+			for {
+				select {
+				case <-wk.closedchan:
+					break end
+				case j := <-wk.input:
+					errcallback(callback(i, j))
+				}
+			}
+		}(i)
+	}
+
+	wk.wg.Wait()
+
+	return nil
+}
+
+func (wk *DistributeWorker) NewJob(i interface{}) bool {
+	wk.RLock()
+	defer wk.RUnlock()
+
+	if wk.closed {
+		return false
+	}
+
+	atomic.AddUint64(&wk.jobs, 1)
+	wk.input <- i
+
+	return true
+}
+
+func (wk *DistributeWorker) Jobs() uint64 {
+	return atomic.LoadUint64(&wk.jobs)
+}
+
+func (wk *DistributeWorker) Done(setClose bool) {
+	wk.sonce.Do(func() {
+		wk.Lock()
+		wk.closed = true
+		wk.Unlock()
+
+		for i := uint(0); i < wk.n; i++ {
+			wk.closedchan <- i
+		}
+	})
+
+	if setClose {
+		wk.conce.Do(func() {
+			close(wk.input)
+			close(wk.closedchan)
+		})
+	}
 }

@@ -475,7 +475,7 @@ func (cs *GeneralSyncer) startBlocks() error {
 func (cs *GeneralSyncer) fetchBlocksByNodes() error {
 	cs.Log().Debug().Msg("start to fetch blocks by nodes")
 
-	worker := util.NewWorker("sync-fetch-blocks", 5)
+	worker := util.NewParallelWorker("sync-fetch-blocks", 5)
 	defer worker.Done()
 	_ = worker.SetLogger(cs.Log())
 
@@ -554,7 +554,7 @@ func (cs *GeneralSyncer) handleSyncerFetchBlockError(err error) error {
 	return nil
 }
 
-func (cs *GeneralSyncer) distributeBlocksJob(worker *util.Worker) error {
+func (cs *GeneralSyncer) distributeBlocksJob(worker *util.ParallelWorker) error {
 	from := cs.heightFrom.Int64()
 	to := cs.heightTo.Int64()
 

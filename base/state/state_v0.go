@@ -17,7 +17,6 @@ var (
 )
 
 type StateV0 struct {
-	*sync.RWMutex
 	h             valuehash.Hash
 	key           string
 	value         Value
@@ -25,27 +24,6 @@ type StateV0 struct {
 	operations    []valuehash.Hash
 	currentHeight base.Height
 	currentBlock  valuehash.Hash
-	opcache       map[string]struct{}
-}
-
-func NewStateV0(
-	key string,
-	value Value,
-	previousBlock valuehash.Hash,
-) (*StateV0, error) {
-	if err := IsValidKey(key); err != nil {
-		return nil, err
-	}
-
-	st := &StateV0{
-		RWMutex:       &sync.RWMutex{},
-		key:           key,
-		value:         value,
-		previousBlock: previousBlock,
-		opcache:       map[string]struct{}{},
-	}
-
-	return st, nil
 }
 
 func (st StateV0) IsValid([]byte) error {
@@ -94,19 +72,6 @@ func (st StateV0) Hash() valuehash.Hash {
 	return st.h
 }
 
-func (st *StateV0) SetHash(h valuehash.Hash) error {
-	if err := h.IsValid(nil); err != nil {
-		return err
-	}
-
-	st.Lock()
-	defer st.Unlock()
-
-	st.h = h
-
-	return nil
-}
-
 func (st StateV0) GenerateHash() valuehash.Hash {
 	be := make([][]byte, len(st.operations))
 	be = append(
@@ -134,30 +99,8 @@ func (st StateV0) Value() Value {
 	return st.value
 }
 
-func (st *StateV0) SetValue(value Value) error {
-	st.Lock()
-	defer st.Unlock()
-
-	st.value = value
-
-	return nil
-}
-
 func (st StateV0) PreviousBlock() valuehash.Hash {
 	return st.previousBlock
-}
-
-func (st *StateV0) SetPreviousBlock(h valuehash.Hash) error {
-	if err := h.IsValid(nil); err != nil {
-		return err
-	}
-
-	st.Lock()
-	defer st.Unlock()
-
-	st.previousBlock = h
-
-	return nil
 }
 
 func (st StateV0) Height() base.Height {
@@ -168,42 +111,153 @@ func (st StateV0) CurrentBlock() valuehash.Hash {
 	return st.currentBlock
 }
 
-func (st *StateV0) SetCurrentBlock(height base.Height, h valuehash.Hash) error {
-	if err := h.IsValid(nil); err != nil {
-		return err
-	}
-
-	st.Lock()
-	defer st.Unlock()
-
-	st.currentHeight = height
-	st.currentBlock = h
-
-	st.opcache = map[string]struct{}{}
-
-	return nil
-}
-
 func (st StateV0) Operations() []valuehash.Hash {
 	return st.operations
 }
 
-func (st *StateV0) AddOperation(op valuehash.Hash) error {
+type StateV0Updater struct {
+	StateV0
+	sync.RWMutex
+	opcache   map[string]struct{}
+	origValue Value
+}
+
+func NewStateV0Updater(key string, value Value, previousBlock valuehash.Hash) (*StateV0Updater, error) {
+	if err := IsValidKey(key); err != nil {
+		return nil, err
+	}
+
+	return &StateV0Updater{
+		StateV0: StateV0{
+			key:           key,
+			value:         value,
+			previousBlock: previousBlock,
+		},
+		opcache:   map[string]struct{}{},
+		origValue: value,
+	}, nil
+}
+
+func (stu *StateV0Updater) State() StateV0 {
+	stu.RLock()
+	defer stu.RUnlock()
+
+	return stu.StateV0
+}
+
+func (stu *StateV0Updater) OriginalValue() Value {
+	return stu.origValue
+}
+
+func (stu *StateV0Updater) Key() string {
+	stu.RLock()
+	defer stu.RUnlock()
+
+	return stu.StateV0.key
+}
+
+func (stu *StateV0Updater) Hash() valuehash.Hash {
+	stu.RLock()
+	defer stu.RUnlock()
+
+	return stu.h
+}
+
+func (stu *StateV0Updater) SetHash(h valuehash.Hash) error {
+	stu.Lock()
+	defer stu.Unlock()
+
+	if err := h.IsValid(nil); err != nil {
+		return err
+	}
+
+	stu.h = h
+
+	return nil
+}
+
+func (stu *StateV0Updater) Value() Value {
+	stu.RLock()
+	defer stu.RUnlock()
+
+	return stu.StateV0.value
+}
+
+func (stu *StateV0Updater) SetValue(value Value) error {
+	stu.Lock()
+	defer stu.Unlock()
+
+	stu.StateV0.value = value
+
+	return nil
+}
+
+func (stu *StateV0Updater) PreviousBlock() valuehash.Hash {
+	stu.RLock()
+	defer stu.RUnlock()
+
+	return stu.previousBlock
+}
+
+func (stu *StateV0Updater) SetPreviousBlock(h valuehash.Hash) error {
+	stu.Lock()
+	defer stu.Unlock()
+
+	if err := h.IsValid(nil); err != nil {
+		return err
+	}
+
+	stu.previousBlock = h
+
+	return nil
+}
+
+func (stu *StateV0Updater) CurrentBlock() valuehash.Hash {
+	stu.RLock()
+	defer stu.RUnlock()
+
+	return stu.currentBlock
+}
+
+func (stu *StateV0Updater) SetCurrentBlock(height base.Height, h valuehash.Hash) error {
+	stu.Lock()
+	defer stu.Unlock()
+
+	if err := h.IsValid(nil); err != nil {
+		return err
+	}
+
+	stu.currentHeight = height
+	stu.currentBlock = h
+
+	stu.opcache = map[string]struct{}{}
+
+	return nil
+}
+
+func (stu *StateV0Updater) Operations() []valuehash.Hash {
+	stu.RLock()
+	defer stu.RUnlock()
+
+	return stu.operations
+}
+
+func (stu *StateV0Updater) AddOperation(op valuehash.Hash) error {
+	stu.Lock()
+	defer stu.Unlock()
+
 	if err := op.IsValid(nil); err != nil {
 		return err
 	}
 
-	st.Lock()
-	defer st.Unlock()
-
 	oh := op.String()
-	if _, found := st.opcache[oh]; found {
+	if _, found := stu.opcache[oh]; found {
 		return nil
 	} else {
-		st.opcache[oh] = struct{}{}
+		stu.opcache[oh] = struct{}{}
 	}
 
-	st.operations = append(st.operations, op)
+	stu.operations = append(stu.operations, op)
 
 	return nil
 }

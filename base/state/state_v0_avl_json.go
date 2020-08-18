@@ -8,14 +8,14 @@ import (
 
 type StateV0AVLNodePackerJSON struct {
 	jsonenc.HintedHead
-	H   []byte   `json:"hash"`
-	K   []byte   `json:"key"`
-	HT  int16    `json:"height"`
-	LF  []byte   `json:"left_key"`
-	LFH []byte   `json:"left_hash"`
-	RG  []byte   `json:"right_key"`
-	RGH []byte   `json:"right_hash"`
-	ST  *StateV0 `json:"state"`
+	H   []byte  `json:"hash"`
+	K   []byte  `json:"key"`
+	HT  int16   `json:"height"`
+	LF  []byte  `json:"left_key"`
+	LFH []byte  `json:"left_hash"`
+	RG  []byte  `json:"right_key"`
+	RGH []byte  `json:"right_hash"`
+	ST  StateV0 `json:"state"`
 }
 
 func (stav StateV0AVLNode) MarshalJSON() ([]byte, error) {

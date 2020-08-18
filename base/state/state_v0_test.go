@@ -18,7 +18,7 @@ type testStateV0 struct {
 
 func (t *testStateV0) TestDuplicatedOperation() {
 	value, _ := NewBytesValue(util.UUID().Bytes())
-	st, err := NewStateV0(
+	st, err := NewStateV0Updater(
 		util.UUID().String(),
 		value,
 		nil,

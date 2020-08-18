@@ -261,7 +261,7 @@ func (t *testQuicSever) TestGetState() {
 	var sts []state.State
 	for i := 0; i < 2; i++ {
 		value, _ := state.NewBytesValue(util.UUID().Bytes())
-		st, err := state.NewStateV0(util.UUID().String(), value, nil)
+		st, err := state.NewStateV0Updater(util.UUID().String(), value, nil)
 		t.NoError(err)
 
 		sts = append(sts, st)

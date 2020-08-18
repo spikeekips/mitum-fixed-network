@@ -23,7 +23,7 @@ type StateV0AVLNode struct {
 	leftHash  []byte
 	right     []byte
 	rightHash []byte
-	state     *StateV0
+	state     StateV0
 }
 
 func NewStateV0AVLNode(st *StateV0AVLNodeMutable) StateV0AVLNode {
@@ -34,7 +34,7 @@ func NewStateV0AVLNode(st *StateV0AVLNodeMutable) StateV0AVLNode {
 		right:     st.RightKey(),
 		rightHash: st.RightHash(),
 		h:         st.Hash(),
-		state:     st.state,
+		state:     st.state.State(),
 	}
 }
 
@@ -87,10 +87,10 @@ type StateV0AVLNodeMutable struct {
 	left   avlHashable.HashableMutableNode
 	right  avlHashable.HashableMutableNode
 	h      []byte
-	state  *StateV0 // State
+	state  *StateV0Updater // State
 }
 
-func NewStateV0AVLNodeMutable(st *StateV0) *StateV0AVLNodeMutable {
+func NewStateV0AVLNodeMutable(st *StateV0Updater) *StateV0AVLNodeMutable {
 	return &StateV0AVLNodeMutable{state: st}
 }
 

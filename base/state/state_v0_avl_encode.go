@@ -30,7 +30,7 @@ func (stav *StateV0AVLNode) unpack(
 	stav.leftHash = bLeftHash
 	stav.right = bRight
 	stav.rightHash = bRightHash
-	stav.state = &state
+	stav.state = state
 
 	return nil
 }

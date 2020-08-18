@@ -1,7 +1,7 @@
 package isaac
 
 import (
-	"fmt"
+	"context"
 	"sync"
 	"time"
 
@@ -23,27 +23,27 @@ import (
 type internalDefaultProposalProcessor struct {
 	sync.RWMutex
 	*logging.Logging
-	localstate                *Localstate
-	stopped                   bool
-	suffrage                  base.Suffrage
-	lastManifest              block.Manifest
-	block                     block.BlockUpdater
-	proposal                  ballot.Proposal
-	proposedFacts             map[string]struct{}
-	operations                []operation.Operation
-	bs                        storage.BlockStorage
-	si                        block.SuffrageInfoV0
-	operationProcessorHintSet *hint.Hintmap
-	operationProcessors       map[hint.Hint]OperationProcessor
-	statesLock                sync.RWMutex
-	stateValues               map[string]interface{}
+	localstate    *Localstate
+	stopped       bool
+	suffrage      base.Suffrage
+	lastManifest  block.Manifest
+	block         block.BlockUpdater
+	proposal      ballot.Proposal
+	proposedFacts map[string]struct{}
+	operations    []operation.Operation
+	bs            storage.BlockStorage
+	si            block.SuffrageInfoV0
+	oprHintset    *hint.Hintmap
+	oprs          map[hint.Hint]OperationProcessor
+	statesLock    sync.RWMutex
+	stateValues   map[string]interface{}
 }
 
 func newInternalDefaultProposalProcessor(
 	localstate *Localstate,
 	suffrage base.Suffrage,
 	proposal ballot.Proposal,
-	operationProcessorHintSet *hint.Hintmap,
+	oprHintset *hint.Hintmap,
 ) (*internalDefaultProposalProcessor, error) {
 	var lastManifest block.Manifest
 	switch m, found, err := localstate.Storage().LastManifest(); {
@@ -80,15 +80,15 @@ func newInternalDefaultProposalProcessor(
 		Logging: logging.NewLogging(func(c logging.Context) logging.Emitter {
 			return c.Str("module", "internal-proposal-processor-inside-v0")
 		}),
-		localstate:                localstate,
-		suffrage:                  suffrage,
-		proposal:                  proposal,
-		lastManifest:              lastManifest,
-		proposedFacts:             proposedOperations,
-		si:                        si,
-		operationProcessorHintSet: operationProcessorHintSet,
-		operationProcessors:       map[hint.Hint]OperationProcessor{},
-		stateValues:               map[string]interface{}{},
+		localstate:    localstate,
+		suffrage:      suffrage,
+		proposal:      proposal,
+		lastManifest:  lastManifest,
+		proposedFacts: proposedOperations,
+		si:            si,
+		oprHintset:    oprHintset,
+		oprs:          map[hint.Hint]OperationProcessor{},
+		stateValues:   map[string]interface{}{},
 	}, nil
 }
 
@@ -97,7 +97,7 @@ func (pp *internalDefaultProposalProcessor) stop() {
 	defer pp.Unlock()
 
 	pp.stopped = true
-	pp.operationProcessors = nil
+	pp.oprs = nil
 }
 
 func (pp *internalDefaultProposalProcessor) isStopped() bool {
@@ -116,12 +116,15 @@ func (pp *internalDefaultProposalProcessor) processINIT(initVoteproof base.Votep
 		return pp.block, nil
 	}
 
+	ctx, cancel := context.WithTimeout(context.Background(), pp.localstate.Policy().TimeoutProcessProposal())
+	defer cancel()
+
 	errChan := make(chan error)
 	blkChan := make(chan block.Block)
 	go func() {
 		s := time.Now()
 
-		blk, err := pp.process(initVoteproof)
+		blk, err := pp.process(ctx, initVoteproof)
 		pp.setState("process", time.Since(s))
 
 		if err != nil {
@@ -140,8 +143,8 @@ func (pp *internalDefaultProposalProcessor) processINIT(initVoteproof base.Votep
 
 	var blk block.Block
 	select {
-	case <-time.After(pp.localstate.Policy().TimeoutProcessProposal()):
-		return nil, xerrors.Errorf("timeout to process Proposal")
+	case <-ctx.Done():
+		return nil, xerrors.Errorf("timeout to process Proposal: %w", ctx.Err())
 	case err := <-errChan:
 		return nil, err
 	case blk = <-blkChan:
@@ -150,7 +153,9 @@ func (pp *internalDefaultProposalProcessor) processINIT(initVoteproof base.Votep
 	return blk, nil
 }
 
-func (pp *internalDefaultProposalProcessor) process(initVoteproof base.Voteproof) (block.Block, error) {
+func (pp *internalDefaultProposalProcessor) process(
+	ctx context.Context, initVoteproof base.Voteproof,
+) (block.Block, error) {
 	if len(pp.proposal.Seals()) > 0 {
 		if ops, err := pp.extractOperations(); err != nil {
 			return nil, err
@@ -163,7 +168,7 @@ func (pp *internalDefaultProposalProcessor) process(initVoteproof base.Voteproof
 	var operationsHash, statesHash valuehash.Hash
 	if len(pp.operations) > 0 {
 		var err error
-		if statesTree, statesHash, err = pp.processStates(); err != nil {
+		if statesTree, statesHash, err = pp.processStates(ctx); err != nil {
 			return nil, err
 		} else if statesTree != nil {
 			if operationsTree, operationsHash, err = pp.processOperations(); err != nil {
@@ -292,7 +297,7 @@ func (pp *internalDefaultProposalProcessor) processOperations() (*tree.AVLTree, 
 	return pp.validateTree(tg)
 }
 
-func (pp *internalDefaultProposalProcessor) processStates() (*tree.AVLTree, valuehash.Hash, error) {
+func (pp *internalDefaultProposalProcessor) processStates(ctx context.Context) (*tree.AVLTree, valuehash.Hash, error) {
 	s := time.Now()
 	defer func() {
 		pp.setState("process-states", time.Since(s))
@@ -305,92 +310,34 @@ func (pp *internalDefaultProposalProcessor) processStates() (*tree.AVLTree, valu
 		pool = p
 	}
 
-	// NOTE for performance, gathers OperationProcessors by each operation
-	// before processing them.
-	var mopr map[string]OperationProcessor
-	if m, err := func() (map[string]OperationProcessor, error) {
-		pp.Lock()
-		defer pp.Unlock()
-
-		m := map[string]OperationProcessor{}
-		for i := range pp.operations {
-			op := pp.operations[i]
-			if opr, err := pp.operationProcessor(op, pool); err != nil {
-				return nil, err
-			} else {
-				m[op.Hash().String()] = opr
-			}
-		}
-
-		return m, nil
-	}(); err != nil {
+	var co *ConcurrentOperationsProcessor
+	if c, err := NewConcurrentOperationsProcessor(len(pp.operations), pool, pp.oprHintset); err != nil {
 		return nil, nil, err
 	} else {
-		mopr = m
+		nctx, cancel := context.WithCancel(ctx)
+		defer cancel()
+
+		co = c.Start(nctx)
+
+		go func() {
+			<-nctx.Done()
+			_ = co.Cancel()
+		}()
 	}
 
 	for i := range pp.operations {
 		if pp.isStopped() {
 			return nil, nil, xerrors.Errorf("already stopped")
-		}
-
-		op := pp.operations[i]
-		if err := pp.processOperation(op, mopr[op.Hash().String()]); err != nil {
+		} else if err := co.Process(pp.operations[i]); err != nil {
 			return nil, nil, err
 		}
 	}
 
+	if err := co.Close(); err != nil {
+		return nil, nil, err
+	}
+
 	return pp.generateStatesTree(pool)
-}
-
-func (pp *internalDefaultProposalProcessor) operationProcessor(
-	op operation.Operation,
-	pool *Statepool,
-) (OperationProcessor, error) {
-	if opr, found := pp.operationProcessors[op.Hint()]; found {
-		return opr, nil
-	}
-
-	var opr OperationProcessor
-	if hinter, found := pp.operationProcessorHintSet.Get(op); !found {
-		opr = defaultOperationProcessor{}
-	} else if p, ok := hinter.(OperationProcessor); !ok {
-		return nil, xerrors.Errorf("invalid OperationProcessor found, %T", hinter)
-	} else {
-		opr = p
-	}
-
-	opr = opr.New(pool)
-	pp.operationProcessors[op.Hint()] = opr
-
-	return opr, nil
-}
-
-func (pp *internalDefaultProposalProcessor) processOperation(op operation.Operation, opr OperationProcessor) error {
-	var sp state.StateProcessor
-	if p, ok := op.(state.StateProcessor); !ok {
-		pp.Log().Error().Str("operation_type", fmt.Sprintf("%T", op)).
-			Msg("operation does not support state.StateProcessor")
-
-		return nil
-	} else {
-		sp = p
-	}
-
-	switch err := opr.Process(sp); {
-	case err == nil:
-		return nil
-	case xerrors.Is(err, state.IgnoreOperationProcessingError):
-		pp.Log().VerboseFunc(func(e *logging.Event) logging.Emitter {
-			return e.Err(err).Interface("operation", op)
-		}).Hinted("operation_hash", op.Hash()).Msg("operation ignored")
-
-		return nil
-	default:
-		pp.Log().Error().Err(err).Interface("operation", op).Msg("failed to process operation")
-
-		return err
-	}
 }
 
 func (pp *internalDefaultProposalProcessor) generateStatesTree(pool *Statepool) (*tree.AVLTree, valuehash.Hash, error) {
@@ -406,7 +353,7 @@ func (pp *internalDefaultProposalProcessor) generateStatesTree(pool *Statepool) 
 			return nil, nil, err
 		} else if err := s.IsValid(nil); err != nil {
 			return nil, nil, err
-		} else if _, err := tg.Add(state.NewStateV0AVLNodeMutable(s.(*state.StateV0))); err != nil {
+		} else if _, err := tg.Add(state.NewStateV0AVLNodeMutable(s.(*state.StateV0Updater))); err != nil {
 			return nil, nil, err
 		}
 	}

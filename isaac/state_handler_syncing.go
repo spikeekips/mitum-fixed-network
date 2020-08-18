@@ -130,7 +130,7 @@ func (ss *StateSyncingHandler) Activate(ctx *StateChangeContext) error {
 	}
 
 	if vp, found, _ := ss.localstate.Storage().LastVoteproof(base.StageACCEPT); found {
-		ss.setLastVoteproof(vp)
+		_ = ss.setLastVoteproof(vp)
 	}
 
 	go func() {
@@ -261,8 +261,6 @@ func (ss *StateSyncingHandler) handleVoteproof(voteproof base.Voteproof) error {
 	}
 
 	if d := to - baseHeight; d < 0 {
-		l.Debug().Msg("known voteproof received")
-
 		return nil
 	} else if d > 0 {
 		l.Debug().Msg("voteproof, ahead of local; sync")
@@ -275,8 +273,6 @@ func (ss *StateSyncingHandler) handleVoteproof(voteproof base.Voteproof) error {
 	}
 
 	if voteproof.Stage() != base.StageINIT {
-		l.Debug().Msg("only init voteproof is needed")
-
 		return nil
 	}
 
@@ -314,13 +310,6 @@ func (ss *StateSyncingHandler) handleBallot(blt ballot.Ballot) error {
 	}
 
 	return ss.fromVoteproof(voteproof)
-}
-
-func (ss *StateSyncingHandler) lastVoteproof() base.Voteproof {
-	ss.lvLock.RLock()
-	defer ss.lvLock.RUnlock()
-
-	return ss.lv
 }
 
 func (ss *StateSyncingHandler) setLastVoteproof(voteproof base.Voteproof) bool {

@@ -171,12 +171,11 @@ func (t *testProposalProcessor) TestNotFoundInProposal() {
 }
 
 func (t *testProposalProcessor) TestTimeoutProcessProposal() {
-	t.local.Policy().SetTimeoutProcessProposal(time.Millisecond * 100)
-
-	var processed int64
+	timeout := time.Millisecond * 100
+	t.local.Policy().SetTimeoutProcessProposal(timeout)
 
 	var sls []seal.Seal
-	for i := 0; i < 2; i++ {
+	for i := 0; i < 3; i++ {
 		kop, err := NewKVOperation(
 			t.local.Node().Privatekey(),
 			util.UUID().Bytes(),
@@ -191,8 +190,7 @@ func (t *testProposalProcessor) TestTimeoutProcessProposal() {
 				func(key string) (state.StateUpdater, bool, error),
 				func(valuehash.Hash, ...state.StateUpdater) error,
 			) error {
-				<-time.After(time.Millisecond * 300)
-				atomic.AddInt64(&processed, 1)
+				<-time.After(time.Millisecond * 500)
 
 				return nil
 			})
@@ -219,11 +217,11 @@ func (t *testProposalProcessor) TestTimeoutProcessProposal() {
 
 	dp := NewDefaultProposalProcessor(t.local, t.suffrage(t.local))
 
+	s := time.Now()
 	_, err = dp.ProcessINIT(proposal.Hash(), ivp)
 	t.Contains(err.Error(), "timeout to process Proposal")
 
-	<-time.After(time.Second * 2)
-	t.Equal(int64(1), atomic.LoadInt64(&processed))
+	t.True(time.Since(s) < timeout*2)
 }
 
 type dummyOperationProcessor struct {

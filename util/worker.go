@@ -186,10 +186,12 @@ func (wk *DistributeWorker) Run(callback WorkerCallback) error {
 }
 
 func (wk *DistributeWorker) NewJob(i interface{}) bool {
-	wk.RLock()
-	defer wk.RUnlock()
+	if func() bool {
+		wk.RLock()
+		defer wk.RUnlock()
 
-	if wk.closed {
+		return wk.closed
+	}() {
 		return false
 	}
 

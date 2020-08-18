@@ -149,6 +149,10 @@ func (ss *StateSyncingHandler) Deactivate(_ *StateChangeContext) error {
 
 	ss.deactivate()
 
+	ss.lvLock.Lock()
+	ss.lv = nil
+	ss.lvLock.Unlock()
+
 	if syncs := ss.syncers(); syncs != nil {
 		if err := syncs.Stop(); err != nil {
 			return err
@@ -245,6 +249,10 @@ func (ss *StateSyncingHandler) handleVoteproof(voteproof base.Voteproof) error {
 
 	l.Debug().Msg("got voteproof for syncing")
 
+	if !ss.setLastVoteproof(voteproof) { // NOTE old voteproof should be ignored
+		return xerrors.Errorf("known voteproof received; height=%v", voteproof.Height())
+	}
+
 	var to base.Height
 	if h, err := ss.getExpectedHeightFromoteproof(voteproof); err != nil {
 		return err
@@ -252,40 +260,41 @@ func (ss *StateSyncingHandler) handleVoteproof(voteproof base.Voteproof) error {
 		to = h
 	}
 
-	// NOTE old voteproof should be ignored
-	if lv := ss.lastVoteproof(); lv != nil && to <= lv.Height() {
-		if to != lv.Height() || voteproof.Stage() != base.StageINIT {
-			return xerrors.Errorf("known voteproof received: height=%v", voteproof.Height())
-		}
-	} else if lv != nil {
-		ss.setLastVoteproof(voteproof)
-	}
+	if d := to - baseHeight; d < 0 {
+		l.Debug().Msg("known voteproof received")
 
-	if to-baseHeight == 0 {
-		l.Debug().Msg("init voteproof, expected")
-
-		if !ss.syncers().isFinished() {
-			l.Debug().Msg("init voteproof, expected; but syncing is not finished")
-
-			return nil
-		}
+		return nil
+	} else if d > 0 {
+		l.Debug().Msg("voteproof, ahead of local; sync")
 
 		if err := ss.timers.StopTimers([]string{TimerIDWaitVoteproof}); err != nil {
-			ss.Log().Error().Err(err).Str("timer", TimerIDWaitVoteproof).Msg("failed to stop")
+			l.Error().Err(err).Str("timer", TimerIDWaitVoteproof).Msg("failed to stop")
 		}
 
-		l.Debug().Msg("init voteproof, expected; moves to consensus")
-
-		return ss.ChangeState(base.StateConsensus, voteproof, nil)
+		return ss.fromVoteproof(voteproof)
 	}
 
-	l.Debug().Msg("voteproof, ahead of local; sync")
+	if voteproof.Stage() != base.StageINIT {
+		l.Debug().Msg("only init voteproof is needed")
+
+		return nil
+	}
+
+	l.Debug().Msg("init voteproof, expected")
+
+	if !ss.syncers().isFinished() {
+		l.Debug().Msg("init voteproof, expected; but syncing is not finished")
+
+		return nil
+	}
 
 	if err := ss.timers.StopTimers([]string{TimerIDWaitVoteproof}); err != nil {
 		ss.Log().Error().Err(err).Str("timer", TimerIDWaitVoteproof).Msg("failed to stop")
 	}
 
-	return ss.fromVoteproof(voteproof)
+	l.Debug().Msg("init voteproof, expected; moves to consensus")
+
+	return ss.ChangeState(base.StateConsensus, voteproof, nil)
 }
 
 func (ss *StateSyncingHandler) handleBallot(blt ballot.Ballot) error {
@@ -300,6 +309,10 @@ func (ss *StateSyncingHandler) handleBallot(blt ballot.Ballot) error {
 		voteproof = t.Voteproof()
 	}
 
+	if !ss.setLastVoteproof(voteproof) {
+		return nil
+	}
+
 	return ss.fromVoteproof(voteproof)
 }
 
@@ -310,12 +323,18 @@ func (ss *StateSyncingHandler) lastVoteproof() base.Voteproof {
 	return ss.lv
 }
 
-func (ss *StateSyncingHandler) setLastVoteproof(voteproof base.Voteproof) {
+func (ss *StateSyncingHandler) setLastVoteproof(voteproof base.Voteproof) bool {
 	ss.lvLock.Lock()
 	defer ss.lvLock.Unlock()
 
-	if ss.lv != nil && ss.lv.Height() <= voteproof.Height() {
-		return
+	if ss.lv != nil {
+		if d := ss.lv.Height() - voteproof.Height(); d > 0 {
+			return false
+		} else if d == 0 {
+			if ss.lv.Stage() >= voteproof.Stage() {
+				return false
+			}
+		}
 	}
 
 	ss.Log().Debug().
@@ -325,6 +344,8 @@ func (ss *StateSyncingHandler) setLastVoteproof(voteproof base.Voteproof) {
 		Msg("new last voteproof")
 
 	ss.lv = voteproof
+
+	return true
 }
 
 func (ss *StateSyncingHandler) getExpectedHeightFromoteproof(voteproof base.Voteproof) (base.Height, error) {
@@ -362,7 +383,7 @@ func (ss *StateSyncingHandler) timerWaitVoteproof() (*localtime.CallbackTimer, e
 	return localtime.NewCallbackTimer(
 		TimerIDWaitVoteproof,
 		func() (bool, error) {
-			ss.Log().Debug().Msg("syncing finished, but no more Voteproof; moves to Joining state")
+			ss.Log().Debug().Msg("syncing finished, but no more Voteproof; moves to joining state")
 			if err := ss.ChangeState(base.StateJoining, nil, nil); err != nil {
 				return false, err
 			}

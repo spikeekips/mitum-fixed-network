@@ -10,13 +10,15 @@ import (
 	"github.com/spikeekips/mitum/base/state"
 	"github.com/spikeekips/mitum/util"
 	"github.com/spikeekips/mitum/util/hint"
+	"github.com/spikeekips/mitum/util/logging"
 )
 
 var maxConcurrentOperations int = 500
 
 type OperationProcessor interface {
 	New(*Statepool) OperationProcessor
-	Process(state.StateProcessor) error
+	PreProcess(state.Processor) (state.Processor, error)
+	Process(state.Processor) error
 }
 
 type defaultOperationProcessor struct {
@@ -29,11 +31,20 @@ func (opp defaultOperationProcessor) New(pool *Statepool) OperationProcessor {
 	}
 }
 
-func (opp defaultOperationProcessor) Process(op state.StateProcessor) error {
+func (opp defaultOperationProcessor) PreProcess(op state.Processor) (state.Processor, error) {
+	if pr, ok := op.(state.PreProcessor); ok {
+		return pr.PreProcess(opp.pool.Get, opp.pool.Set)
+	} else {
+		return op, nil
+	}
+}
+
+func (opp defaultOperationProcessor) Process(op state.Processor) error {
 	return op.Process(opp.pool.Get, opp.pool.Set)
 }
 
 type ConcurrentOperationsProcessor struct {
+	*logging.Logging
 	size       uint
 	pool       *Statepool
 	wk         *util.DistributeWorker
@@ -55,6 +66,9 @@ func NewConcurrentOperationsProcessor(
 	}
 
 	return &ConcurrentOperationsProcessor{
+		Logging: logging.NewLogging(func(c logging.Context) logging.Emitter {
+			return c.Str("module", "concurrent-operations-processor")
+		}),
 		size:       uint(size),
 		pool:       pool,
 		oppHintSet: oppHintSet,
@@ -77,12 +91,25 @@ func (co *ConcurrentOperationsProcessor) Start(ctx context.Context) *ConcurrentO
 			func(i uint, j interface{}) error {
 				if j == nil {
 					return nil
-				} else if op, ok := j.(state.StateProcessor); !ok {
-					return xerrors.Errorf("not state.StateProcessor, %T", j)
+				}
+
+				if op, ok := j.(state.Processor); !ok {
+					return state.IgnoreOperationProcessingError.Errorf("not state.StateProcessor, %T", j)
 				} else if opr, err := co.opr(op); err != nil {
 					return err
 				} else {
-					return opr.Process(op)
+					if err := opr.Process(op); err != nil {
+						co.Log().Verbose().
+							Hinted("operation", op.(operation.Operation).Hash()).
+							Err(err).
+							Msg("operation failed to process")
+
+						return err
+					} else {
+						co.Log().Verbose().Hinted("operation", op.(operation.Operation).Hash()).Err(err).Msg("operation processed")
+
+						return nil
+					}
 				}
 			},
 		)
@@ -95,7 +122,7 @@ func (co *ConcurrentOperationsProcessor) Start(ctx context.Context) *ConcurrentO
 
 	go func() {
 		for err := range errchan {
-			if err == nil {
+			if err == nil || xerrors.Is(err, state.IgnoreOperationProcessingError) {
 				continue
 			}
 
@@ -111,13 +138,41 @@ func (co *ConcurrentOperationsProcessor) Start(ctx context.Context) *ConcurrentO
 	return co
 }
 
-func (co *ConcurrentOperationsProcessor) Process(po operation.Operation) error {
+func (co *ConcurrentOperationsProcessor) Process(op operation.Operation) error {
 	if co.wk == nil {
 		return xerrors.Errorf("not started")
 	}
 
-	if !co.wk.NewJob(po) {
-		return xerrors.Errorf("already closed")
+	l := co.Log().WithLogger(func(ctx logging.Context) logging.Emitter {
+		return ctx.Hinted("operation", op.Hash())
+	})
+
+	if pr, ok := op.(state.Processor); !ok {
+		co.Log().Verbose().Msgf("not state.StateProcessor, %T", op)
+
+		return nil
+	} else if err := co.process(pr); err != nil {
+		if xerrors.Is(err, state.IgnoreOperationProcessingError) {
+			return nil
+		}
+
+		l.Verbose().Err(err).Msg("operation failed to PreProcess")
+
+		return err
+	}
+
+	l.Verbose().Msg("operation ready to process")
+
+	return nil
+}
+
+func (co *ConcurrentOperationsProcessor) process(op state.Processor) error {
+	if opr, err := co.opr(op); err != nil {
+		return err
+	} else if ppr, err := opr.PreProcess(op); err != nil {
+		return err
+	} else if !co.wk.NewJob(ppr) {
+		return state.IgnoreOperationProcessingError.Errorf("already closed")
 	}
 
 	return nil
@@ -143,7 +198,7 @@ func (co *ConcurrentOperationsProcessor) Close() error {
 	return <-co.donechan
 }
 
-func (co *ConcurrentOperationsProcessor) opr(op state.StateProcessor) (OperationProcessor, error) {
+func (co *ConcurrentOperationsProcessor) opr(op state.Processor) (OperationProcessor, error) {
 	co.oprLock.Lock()
 	defer co.oprLock.Unlock()
 

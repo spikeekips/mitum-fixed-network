@@ -7,9 +7,16 @@ import (
 
 var IgnoreOperationProcessingError = errors.NewError("ignore operation processing")
 
-type StateProcessor interface {
+type Processor interface {
 	Process(
 		getState func(key string) (StateUpdater, bool, error),
 		setState func(valuehash.Hash, ...StateUpdater) error,
 	) error
+}
+
+type PreProcessor interface {
+	PreProcess(
+		getState func(key string) (StateUpdater, bool, error),
+		setState func(valuehash.Hash, ...StateUpdater) error,
+	) (Processor, error)
 }

@@ -236,7 +236,11 @@ func (opp dummyOperationProcessor) New(pool *Statepool) OperationProcessor {
 	}
 }
 
-func (opp dummyOperationProcessor) Process(op state.StateProcessor) error {
+func (opp dummyOperationProcessor) PreProcess(op state.Processor) (state.Processor, error) {
+	return op, nil
+}
+
+func (opp dummyOperationProcessor) Process(op state.Processor) error {
 	if err := op.Process(opp.pool.Get, opp.pool.Set); err != nil {
 		return err
 	}

@@ -314,6 +314,8 @@ func (pp *internalDefaultProposalProcessor) processStates(ctx context.Context) (
 	if c, err := NewConcurrentOperationsProcessor(len(pp.operations), pool, pp.oprHintset); err != nil {
 		return nil, nil, err
 	} else {
+		_ = c.SetLogger(pp.Log())
+
 		nctx, cancel := context.WithCancel(ctx)
 		defer cancel()
 

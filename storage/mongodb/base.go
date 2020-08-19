@@ -299,10 +299,18 @@ func (st *Storage) Clean() error {
 	return nil
 }
 
-// cleanByHeight is only used for contest
 func (st *Storage) CleanByHeight(height base.Height) error {
-	if height <= base.PreGenesisHeight+1 {
-		return st.Clean()
+	if err := st.cleanByHeight(height); err != nil {
+		return err
+	}
+
+	switch m, found, err := st.LastManifest(); {
+	case err != nil:
+		return err
+	case !found:
+		//
+	case m.Height() == height-1:
+		return nil
 	}
 
 	var newLastBlock block.Block
@@ -313,31 +321,6 @@ func (st *Storage) CleanByHeight(height base.Height) error {
 		return xerrors.Errorf("failed to find block of height, %v: %w", height-1, err)
 	default:
 		newLastBlock = blk
-	}
-
-	opts := options.BulkWrite().SetOrdered(true)
-	removeByHeight := mongo.NewDeleteManyModel().SetFilter(bson.M{"height": bson.M{"$gte": height}})
-
-	for _, col := range []string{
-		defaultColNameInfo,
-		defaultColNameBlock,
-		defaultColNameManifest,
-		defaultColNameOperation,
-		defaultColNameOperationSeal,
-		defaultColNameProposal,
-		defaultColNameState,
-	} {
-
-		res, err := st.client.Collection(col).BulkWrite(
-			context.Background(),
-			[]mongo.WriteModel{removeByHeight},
-			opts,
-		)
-		if err != nil {
-			return storage.WrapError(err)
-		}
-
-		st.Log().Debug().Str("collection", col).Interface("result", res).Msg("clean collection by height")
 	}
 
 	return st.setLastBlock(newLastBlock, true, true)
@@ -830,33 +813,40 @@ func (st *Storage) initialize() error {
 }
 
 func (st *Storage) cleanByHeight(height base.Height) error {
-	filter := util.EmptyBSONFilter().AddOp("height", height, "$gt").D() // TODO use $gte
-
-	// block
-	if _, err := st.client.Delete(defaultColNameBlock, filter); err != nil {
-		return err
+	if height <= base.PreGenesisHeight+1 {
+		return st.Clean()
 	}
 
-	// manifest
-	if _, err := st.client.Delete(defaultColNameManifest, filter); err != nil {
-		return err
-	}
+	opts := options.BulkWrite().SetOrdered(true)
+	removeByHeight := mongo.NewDeleteManyModel().SetFilter(bson.M{"height": bson.M{"$gte": height}})
 
-	// operation
-	if _, err := st.client.Delete(defaultColNameOperation, filter); err != nil {
-		return err
-	}
+	for _, col := range []string{
+		defaultColNameInfo,
+		defaultColNameBlock,
+		defaultColNameManifest,
+		defaultColNameOperation,
+		defaultColNameOperationSeal,
+		defaultColNameProposal,
+		defaultColNameState,
+	} {
 
-	// state
-	if _, err := st.client.Delete(defaultColNameState, filter); err != nil {
-		return err
+		res, err := st.client.Collection(col).BulkWrite(
+			context.Background(),
+			[]mongo.WriteModel{removeByHeight},
+			opts,
+		)
+		if err != nil {
+			return storage.WrapError(err)
+		}
+
+		st.Log().Debug().Str("collection", col).Interface("result", res).Msg("clean collection by height")
 	}
 
 	return nil
 }
 
 func (st *Storage) cleanupIncompleteData() error {
-	return st.cleanByHeight(st.lastHeight())
+	return st.cleanByHeight(st.lastHeight() + 1)
 }
 
 func (st *Storage) createIndex(col string, models []mongo.IndexModel) error {

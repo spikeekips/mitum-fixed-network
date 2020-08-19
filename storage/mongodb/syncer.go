@@ -160,12 +160,8 @@ func (st *SyncerStorage) SetBlocks(blocks []block.Block) error {
 		Int("blocks", len(blocks)).
 		Msg("set blocks")
 
-	for i := st.heightFrom; i <= st.heightTo; i++ {
-		if err := st.main.CleanByHeight(i); err != nil {
-			if storage.IsNotFoundError(err) {
-				continue
-			}
-
+	if err := st.main.CleanByHeight(st.heightFrom); err != nil {
+		if !storage.IsNotFoundError(err) {
 			return err
 		}
 	}

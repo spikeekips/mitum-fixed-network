@@ -1,6 +1,8 @@
 package state
 
 import (
+	"bytes"
+	"sort"
 	"sync"
 
 	"golang.org/x/xerrors"
@@ -24,6 +26,18 @@ type StateV0 struct {
 	operations    []valuehash.Hash
 	currentHeight base.Height
 	currentBlock  valuehash.Hash
+}
+
+func NewStateV0(key string, value Value, previousBlock valuehash.Hash) (StateV0, error) {
+	if err := IsValidKey(key); err != nil {
+		return StateV0{}, err
+	}
+
+	return StateV0{
+		key:           key,
+		value:         value,
+		previousBlock: previousBlock,
+	}, nil
 }
 
 func (st StateV0) IsValid([]byte) error {
@@ -73,22 +87,29 @@ func (st StateV0) Hash() valuehash.Hash {
 }
 
 func (st StateV0) GenerateHash() valuehash.Hash {
-	be := make([][]byte, len(st.operations))
-	be = append(
-		be,
+	ops := st.operations
+	sort.Slice(ops, func(i, j int) bool {
+		return bytes.Compare(ops[i].Bytes(), ops[j].Bytes()) < 0
+	})
+
+	opb := make([][]byte, len(ops))
+	for i := range ops {
+		opb[i] = ops[i].Bytes()
+	}
+
+	var pbb []byte
+	if st.previousBlock != nil {
+		pbb = st.previousBlock.Bytes()
+	}
+
+	be := util.ConcatBytesSlice(
 		[]byte(st.key),
 		st.value.Hash().Bytes(),
+		pbb,
+		util.ConcatBytesSlice(opb...),
 	)
 
-	if st.previousBlock != nil {
-		be = append(be, st.previousBlock.Bytes())
-	}
-
-	for _, oi := range st.operations {
-		be = append(be, oi.Bytes())
-	}
-
-	return valuehash.NewSHA256(util.ConcatBytesSlice(be...))
+	return valuehash.NewSHA256(be)
 }
 
 func (st StateV0) Key() string {
@@ -97,6 +118,12 @@ func (st StateV0) Key() string {
 
 func (st StateV0) Value() Value {
 	return st.value
+}
+
+func (st StateV0) SetValue(value Value) (State, error) {
+	st.value = value
+
+	return st, nil
 }
 
 func (st StateV0) PreviousBlock() valuehash.Hash {
@@ -113,6 +140,22 @@ func (st StateV0) CurrentBlock() valuehash.Hash {
 
 func (st StateV0) Operations() []valuehash.Hash {
 	return st.operations
+}
+
+func (st StateV0) Merge(source State) (State, error) {
+	if st.Key() != source.Key() {
+		return nil, xerrors.Errorf("different key found during merging")
+	}
+
+	if source.Value() == nil {
+		return st, nil
+	} else if st.Value() != nil && st.Value().Equal(source.Value()) {
+		return st, nil
+	}
+
+	st.value = source.Value()
+
+	return st, nil
 }
 
 type StateV0Updater struct {
@@ -145,14 +188,7 @@ func (stu *StateV0Updater) State() StateV0 {
 	return stu.StateV0
 }
 
-func (stu *StateV0Updater) OriginalValue() Value {
-	return stu.origValue
-}
-
 func (stu *StateV0Updater) Key() string {
-	stu.RLock()
-	defer stu.RUnlock()
-
 	return stu.StateV0.key
 }
 
@@ -183,13 +219,17 @@ func (stu *StateV0Updater) Value() Value {
 	return stu.StateV0.value
 }
 
-func (stu *StateV0Updater) SetValue(value Value) error {
+func (stu *StateV0Updater) setValue(value Value) {
+	stu.StateV0.value = value
+}
+
+func (stu *StateV0Updater) SetValue(value Value) (State, error) {
 	stu.Lock()
 	defer stu.Unlock()
 
-	stu.StateV0.value = value
+	stu.setValue(value)
 
-	return nil
+	return stu, nil
 }
 
 func (stu *StateV0Updater) PreviousBlock() valuehash.Hash {
@@ -260,4 +300,26 @@ func (stu *StateV0Updater) AddOperation(op valuehash.Hash) error {
 	stu.operations = append(stu.operations, op)
 
 	return nil
+}
+
+func (stu *StateV0Updater) Merge(source State) (State, error) {
+	stu.Lock()
+	defer stu.Unlock()
+
+	if stu.Key() != source.Key() {
+		return nil, xerrors.Errorf("different key found during merging")
+	} else if ns, err := source.Merge(stu.StateV0); err != nil {
+		return nil, err
+	} else {
+		stu.setValue(ns.Value())
+	}
+
+	return stu.StateV0, nil
+}
+
+func (stu *StateV0Updater) Reset() {
+	stu.Lock()
+	defer stu.Unlock()
+
+	stu.setValue(stu.origValue)
 }

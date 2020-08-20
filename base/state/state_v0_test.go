@@ -51,6 +51,98 @@ func (t *testStateV0) TestDuplicatedOperation() {
 	t.Empty(st.opcache)
 }
 
+func (t *testStateV0) TestMerge() {
+	k := util.UUID().String()
+
+	v0, _ := NewBytesValue(util.UUID().Bytes())
+	s0, err := NewStateV0(k, v0, nil)
+	t.NoError(err)
+
+	v1, _ := NewBytesValue(util.UUID().Bytes())
+	s1, err := NewStateV0(k, v1, nil)
+	t.NoError(err)
+
+	ns, err := s0.Merge(s1)
+	t.NoError(err)
+
+	t.True(ns.Value().Equal(s1.Value()))
+}
+
+func (t *testStateV0) TestMergeNil() {
+	k := util.UUID().String()
+
+	{ // not nil -> nil
+		s0, err := NewStateV0(k, nil, nil)
+		t.NoError(err)
+
+		v1, _ := NewBytesValue(util.UUID().Bytes())
+		s1, err := NewStateV0(k, v1, nil)
+		t.NoError(err)
+
+		ns, err := s0.Merge(s1)
+		t.NoError(err)
+
+		t.True(ns.Value().Equal(s1.Value()))
+	}
+
+	{ // nil -> not nil
+		v0, _ := NewBytesValue(util.UUID().Bytes())
+		s0, err := NewStateV0(k, v0, nil)
+		t.NoError(err)
+
+		s1, err := NewStateV0(k, nil, nil)
+		t.NoError(err)
+
+		ns, err := s0.Merge(s1)
+		t.NoError(err)
+
+		t.Nil(ns.Value())
+	}
+
+	{ // nil -> nil
+		s0, err := NewStateV0(k, nil, nil)
+		t.NoError(err)
+
+		s1, err := NewStateV0(k, nil, nil)
+		t.NoError(err)
+
+		ns, err := s0.Merge(s1)
+		t.NoError(err)
+
+		t.Nil(ns.Value())
+	}
+}
+
+func (t *testStateV0) TestMergeDifferentKey() {
+	v0, _ := NewBytesValue(util.UUID().Bytes())
+	s0, err := NewStateV0(util.UUID().String(), v0, nil)
+	t.NoError(err)
+
+	v1, _ := NewBytesValue(util.UUID().Bytes())
+	s1, err := NewStateV0(util.UUID().String(), v1, nil)
+	t.NoError(err)
+
+	_, err = s0.Merge(s1)
+	t.Contains(err.Error(), "different key found during merging")
+}
+
+func (t *testStateV0) TestMergeUpdater() {
+	k := util.UUID().String()
+
+	v0, _ := NewBytesValue(util.UUID().Bytes())
+	s0, err := NewStateV0Updater(k, v0, nil)
+	t.NoError(err)
+
+	v1, _ := NewBytesValue(util.UUID().Bytes())
+	s1, err := NewStateV0(k, v1, nil)
+	t.NoError(err)
+
+	ns, err := s0.Merge(s1)
+	t.NoError(err)
+
+	t.True(ns.Value().Equal(s0.Value()))
+}
+
 func TestStateV0(t *testing.T) {
 	suite.Run(t, new(testStateV0))
 }

@@ -11,11 +11,16 @@ import (
 	"github.com/spikeekips/mitum/util/valuehash"
 )
 
+type cachedState struct {
+	state.State
+	exists bool
+}
+
 type Statepool struct {
 	sync.RWMutex
 	lastManifest block.Manifest
 	fromStorage  func(string) (state.State, bool, error)
-	cached       map[string]state.StateUpdater
+	cached       map[string]cachedState
 	updated      map[string]state.StateUpdater
 }
 
@@ -31,67 +36,75 @@ func NewStatepool(st storage.Storage) (*Statepool, error) {
 	return &Statepool{
 		fromStorage:  st.State,
 		lastManifest: lastManifest,
-		cached:       map[string]state.StateUpdater{},
+		cached:       map[string]cachedState{},
 		updated:      map[string]state.StateUpdater{},
 	}, nil
 }
 
-func (sp *Statepool) Get(key string) (state.StateUpdater, bool, error) {
+func (sp *Statepool) Get(key string) (state.State, bool, error) {
 	sp.Lock()
 	defer sp.Unlock()
 
-	if s, found := sp.getFromUpdated(key); found {
-		return s, true, nil
+	if ca, found := sp.cached[key]; found {
+		return ca.State, ca.exists, nil
 	}
 
-	if s, found := sp.getFromCached(key); found {
-		return s, true, nil
-	}
-
-	var found bool
-	var value state.Value
-	var previousBlock valuehash.Hash
-	switch s, fo, err := sp.fromStorage(key); {
+	switch st, found, err := sp.fromStorage(key); {
 	case err != nil:
 		return nil, false, err
-	case fo:
-		value = s.Value()
-		previousBlock = s.CurrentBlock()
-		found = fo
+	case found:
+		sp.cached[key] = cachedState{State: st, exists: true}
+
+		return st, true, nil
 	}
 
-	var st state.StateUpdater
-	if su, err := state.NewStateV0Updater(key, value, previousBlock); err != nil {
-		return nil, found, err
+	if st, err := state.NewStateV0(key, nil, nil); err != nil {
+		return nil, false, err
 	} else {
-		st = su
+		sp.cached[key] = cachedState{State: st, exists: false}
+
+		return st, false, nil
 	}
-
-	sp.cached[key] = st
-
-	return st, found, nil
 }
 
-func (sp *Statepool) Set(op valuehash.Hash, s ...state.StateUpdater) error {
-	sp.Lock()
-	defer sp.Unlock()
-
+func (sp *Statepool) Set(op valuehash.Hash, s ...state.State) error {
 	if len(s) < 1 {
 		return nil
 	}
 
+	sp.Lock()
+	defer sp.Unlock()
+
 	for i := range s {
-		if err := s[i].AddOperation(op); err != nil {
+		st := s[i]
+
+		var su state.StateUpdater
+		if u, found := sp.updated[s[i].Key()]; !found {
+			if nu, err := state.NewStateV0Updater(st.Key(), st.Value(), st.PreviousBlock()); err != nil {
+				return err
+			} else {
+				sp.updated[s[i].Key()] = nu
+				su = nu
+			}
+		} else {
+			su = u
+		}
+
+		if err := func() error {
+			if _, err := su.Merge(st); err != nil {
+				return err
+			} else if err := su.AddOperation(op); err != nil {
+				return err
+			}
+
+			return nil
+		}(); err != nil {
+			for j := 0; j <= i; j++ {
+				sp.updated[s[j].Key()].Reset() // NOTE reset previous updated states
+			}
+
 			return err
 		}
-	}
-
-	for i := range s {
-		if _, found := sp.updated[s[i].Key()]; found {
-			continue
-		}
-
-		sp.updated[s[i].Key()] = s[i]
 	}
 
 	return nil
@@ -121,19 +134,4 @@ func (sp *Statepool) Updates() []state.StateUpdater {
 	})
 
 	return us
-}
-
-func (sp *Statepool) getFromCached(key string) (state.StateUpdater, bool) {
-	s, found := sp.cached[key]
-	if found {
-		return s, s != nil
-	}
-
-	return s, found
-}
-
-func (sp *Statepool) getFromUpdated(key string) (state.StateUpdater, bool) {
-	s, found := sp.updated[key]
-
-	return s, found
 }

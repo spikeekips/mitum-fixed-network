@@ -120,8 +120,8 @@ func (spo SetPolicyV0) Signs() []operation.FactSign {
 }
 
 func (spo SetPolicyV0) Process(
-	getState func(key string) (state.StateUpdater, bool, error),
-	setState func(valuehash.Hash, ...state.StateUpdater) error,
+	getState func(key string) (state.State, bool, error),
+	setState func(valuehash.Hash, ...state.State) error,
 ) error {
 	var value state.HintedValue
 	if v, err := state.NewHintedValue(spo.SetPolicyFactV0.PolicyV0); err != nil {
@@ -134,9 +134,9 @@ func (spo SetPolicyV0) Process(
 		return err
 	} else if found {
 		return xerrors.Errorf("already storeed; at this time, only new policy can be allowed")
-	} else if err := s.SetValue(value); err != nil {
+	} else if ns, err := s.SetValue(value); err != nil {
 		return err
 	} else {
-		return setState(spo.Hash(), s)
+		return setState(spo.Hash(), ns)
 	}
 }

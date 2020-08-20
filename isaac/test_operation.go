@@ -80,8 +80,8 @@ func (kvo *KVOperation) UnpackBSON(b []byte, enc *bsonenc.Encoder) error {
 }
 
 func (kvo KVOperation) Process(
-	getState func(key string) (state.StateUpdater, bool, error),
-	setState func(valuehash.Hash, ...state.StateUpdater) error,
+	getState func(key string) (state.State, bool, error),
+	setState func(valuehash.Hash, ...state.State) error,
 ) error {
 	var value state.BytesValue
 	if v, err := state.NewBytesValue(kvo.Value()); err != nil {
@@ -92,18 +92,18 @@ func (kvo KVOperation) Process(
 
 	if s, _, err := getState(kvo.Key()); err != nil {
 		return err
-	} else if err := s.SetValue(value); err != nil {
+	} else if ns, err := s.SetValue(value); err != nil {
 		return err
 	} else {
-		return setState(kvo.Hash(), s)
+		return setState(kvo.Hash(), ns)
 	}
 }
 
 type LongKVOperation struct {
 	KVOperation
 	preProcess func(
-		getState func(key string) (state.StateUpdater, bool, error),
-		setState func(valuehash.Hash, ...state.StateUpdater) error,
+		getState func(key string) (state.State, bool, error),
+		setState func(valuehash.Hash, ...state.State) error,
 	) error
 }
 
@@ -120,8 +120,8 @@ func (kvo LongKVOperation) Hint() hint.Hint {
 }
 
 func (kvo LongKVOperation) Process(
-	getState func(string) (state.StateUpdater, bool, error),
-	setState func(valuehash.Hash, ...state.StateUpdater) error,
+	getState func(string) (state.State, bool, error),
+	setState func(valuehash.Hash, ...state.State) error,
 ) error {
 	if kvo.preProcess != nil {
 		if err := kvo.preProcess(getState, setState); err != nil {
@@ -136,8 +136,8 @@ var longKVOperationFuncMap = &sync.Map{}
 
 func (kvo LongKVOperation) SetPreProcess(
 	f func(
-		getState func(key string) (state.StateUpdater, bool, error),
-		setState func(valuehash.Hash, ...state.StateUpdater) error,
+		getState func(key string) (state.State, bool, error),
+		setState func(valuehash.Hash, ...state.State) error,
 	) error,
 ) LongKVOperation {
 	kvo.preProcess = f
@@ -157,7 +157,7 @@ func (kvo *LongKVOperation) UnpackJSON(b []byte, enc *jsonenc.Encoder) error {
 
 	f, found := longKVOperationFuncMap.Load(bo.Hash().String())
 	if found {
-		kvo.preProcess = f.(func(func(string) (state.StateUpdater, bool, error), func(valuehash.Hash, ...state.StateUpdater) error) error)
+		kvo.preProcess = f.(func(func(string) (state.State, bool, error), func(valuehash.Hash, ...state.State) error) error)
 	}
 
 	return nil
@@ -173,7 +173,7 @@ func (kvo *LongKVOperation) UnpackBSON(b []byte, enc *bsonenc.Encoder) error {
 
 	f, found := longKVOperationFuncMap.Load(bo.Hash().String())
 	if found {
-		kvo.preProcess = f.(func(func(string) (state.StateUpdater, bool, error), func(valuehash.Hash, ...state.StateUpdater) error) error)
+		kvo.preProcess = f.(func(func(string) (state.State, bool, error), func(valuehash.Hash, ...state.State) error) error)
 	}
 
 	return nil

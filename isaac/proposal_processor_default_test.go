@@ -13,6 +13,7 @@ import (
 	"github.com/spikeekips/mitum/base/operation"
 	"github.com/spikeekips/mitum/base/seal"
 	"github.com/spikeekips/mitum/base/state"
+	"github.com/spikeekips/mitum/base/tree"
 	channetwork "github.com/spikeekips/mitum/network/gochan"
 	"github.com/spikeekips/mitum/util"
 	"github.com/spikeekips/mitum/util/valuehash"
@@ -187,8 +188,8 @@ func (t *testProposalProcessor) TestTimeoutProcessProposal() {
 
 		op := NewLongKVOperation(kop).
 			SetPreProcess(func(
-				func(key string) (state.StateUpdater, bool, error),
-				func(valuehash.Hash, ...state.StateUpdater) error,
+				func(key string) (state.State, bool, error),
+				func(valuehash.Hash, ...state.State) error,
 			) error {
 				<-time.After(time.Millisecond * 500)
 
@@ -301,6 +302,93 @@ func (t *testProposalProcessor) TestCustomOperationProcessor() {
 	_, err = dp.ProcessINIT(proposal.Hash(), ivp)
 	t.NoError(err)
 	t.Equal(int64(len(sls)), atomic.LoadInt64(&processed))
+}
+
+func (t *testProposalProcessor) TestSameStateHash() {
+	var sls []seal.Seal
+
+	var keys []string
+	var values [][]byte
+	for i := 0; i < 2; i++ {
+		keys = append(keys, util.UUID().String())
+		values = append(values, util.UUID().Bytes())
+	}
+
+	for i := 0; i < 10; i++ {
+		key := keys[i%2]
+		value := values[i%2]
+
+		op, err := NewKVOperation(
+			t.local.Node().Privatekey(),
+			util.UUID().Bytes(),
+			key,
+			value,
+			TestNetworkID,
+		)
+		t.NoError(err)
+
+		sl, err := operation.NewBaseSeal(t.local.Node().Privatekey(), []operation.Operation{op}, TestNetworkID)
+		t.NoError(err)
+		t.NoError(sl.IsValid(TestNetworkID))
+
+		sls = append(sls, sl)
+	}
+
+	err := t.local.Storage().NewSeals(sls)
+	t.NoError(err)
+
+	ib := t.newINITBallot(t.local, base.Round(0), nil)
+	initFact := ib.INITBallotFactV0
+
+	pm := NewDummyProposalMaker(t.local, sls)
+	ivp, err := t.newVoteproof(base.StageINIT, initFact, t.local, t.remote)
+	proposal, err := pm.Proposal(ivp.Round())
+	t.NoError(err)
+
+	_ = t.local.Storage().NewProposal(proposal)
+
+	dp := NewDefaultProposalProcessor(t.local, t.suffrage(t.local))
+	blk, err := dp.ProcessINIT(proposal.Hash(), ivp)
+	t.NoError(err)
+
+	t.NotNil(blk.States())
+
+	var states []state.State
+	blk.States().Traverse(func(n tree.Node) (bool, error) {
+		s := n.(*state.StateV0AVLNodeMutable).State()
+
+		states = append(states, s)
+		return true, nil
+	})
+
+	t.Equal(2, len(states))
+
+	stateHashes := map[string]valuehash.Hash{}
+	for _, s := range states {
+		stateHashes[s.Key()] = s.Hash()
+	}
+
+	for i := 0; i < 10; i++ {
+		dp := NewDefaultProposalProcessor(t.local, t.suffrage(t.local))
+		blk, err := dp.ProcessINIT(proposal.Hash(), ivp)
+		t.NoError(err)
+
+		t.NotNil(blk.States())
+
+		var states []state.State
+		blk.States().Traverse(func(n tree.Node) (bool, error) {
+			s := n.(*state.StateV0AVLNodeMutable).State()
+
+			states = append(states, s)
+			return true, nil
+		})
+
+		t.Equal(2, len(states))
+
+		for _, s := range states {
+			t.True(stateHashes[s.Key()].Equal(s.Hash()))
+		}
+	}
 }
 
 func TestProposalProcessor(t *testing.T) {

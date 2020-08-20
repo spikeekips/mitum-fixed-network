@@ -13,18 +13,20 @@ type State interface {
 	valuehash.Hasher
 	Key() string
 	Value() Value
+	SetValue(Value) (State, error)
 	GenerateHash() valuehash.Hash
 	PreviousBlock() valuehash.Hash
 	Operations() []valuehash.Hash
 	Height() base.Height
 	CurrentBlock() valuehash.Hash
+	Merge(State) (State, error)
 }
 
 type StateUpdater interface {
 	State
-	SetValue(Value) error
 	SetHash(valuehash.Hash) error
 	SetPreviousBlock(valuehash.Hash) error
 	AddOperation(valuehash.Hash) error
 	SetCurrentBlock(base.Height, valuehash.Hash) error
+	Reset()
 }

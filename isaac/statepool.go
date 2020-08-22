@@ -41,6 +41,23 @@ func NewStatepool(st storage.Storage) (*Statepool, error) {
 	}, nil
 }
 
+// NewStatepoolWithBase only used for testing
+func NewStatepoolWithBase(st storage.Storage, base map[string]state.State) (*Statepool, error) {
+	if sp, err := NewStatepool(st); err != nil {
+		return nil, err
+	} else {
+		sp.fromStorage = func(key string) (state.State, bool, error) {
+			if s, found := base[key]; found {
+				return s, true, nil
+			} else {
+				return st.State(key)
+			}
+		}
+
+		return sp, nil
+	}
+}
+
 func (sp *Statepool) Get(key string) (state.State, bool, error) {
 	sp.Lock()
 	defer sp.Unlock()

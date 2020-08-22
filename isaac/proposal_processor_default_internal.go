@@ -35,8 +35,7 @@ type internalDefaultProposalProcessor struct {
 	si            block.SuffrageInfoV0
 	oprHintset    *hint.Hintmap
 	oprs          map[hint.Hint]OperationProcessor
-	statesLock    sync.RWMutex
-	stateValues   map[string]interface{}
+	statesValue   *sync.Map
 }
 
 func newInternalDefaultProposalProcessor(
@@ -88,7 +87,7 @@ func newInternalDefaultProposalProcessor(
 		si:            si,
 		oprHintset:    oprHintset,
 		oprs:          map[hint.Hint]OperationProcessor{},
-		stateValues:   map[string]interface{}{},
+		statesValue:   &sync.Map{},
 	}, nil
 }
 
@@ -125,7 +124,7 @@ func (pp *internalDefaultProposalProcessor) processINIT(initVoteproof base.Votep
 		s := time.Now()
 
 		blk, err := pp.process(ctx, initVoteproof)
-		pp.setState("process", time.Since(s))
+		pp.statesValue.Store("process", time.Since(s))
 
 		if err != nil {
 			errChan <- err
@@ -219,7 +218,7 @@ func (pp *internalDefaultProposalProcessor) process(
 func (pp *internalDefaultProposalProcessor) extractOperations() ([]operation.Operation, error) {
 	s := time.Now()
 	defer func() {
-		pp.setState("extract-operations", time.Since(s))
+		pp.statesValue.Store("extract-operations", time.Since(s))
 	}()
 
 	founds := map[string]operation.Operation{}
@@ -280,7 +279,7 @@ func (pp *internalDefaultProposalProcessor) extractOperations() ([]operation.Ope
 func (pp *internalDefaultProposalProcessor) processOperations() (*tree.AVLTree, valuehash.Hash, error) {
 	s := time.Now()
 	defer func() {
-		pp.setState("process-operations", time.Since(s))
+		pp.statesValue.Store("process-operations", time.Since(s))
 	}()
 
 	tg := avl.NewTreeGenerator()
@@ -300,7 +299,7 @@ func (pp *internalDefaultProposalProcessor) processOperations() (*tree.AVLTree, 
 func (pp *internalDefaultProposalProcessor) processStates(ctx context.Context) (*tree.AVLTree, valuehash.Hash, error) {
 	s := time.Now()
 	defer func() {
-		pp.setState("process-states", time.Since(s))
+		pp.statesValue.Store("process-states", time.Since(s))
 	}()
 
 	var pool *Statepool
@@ -464,7 +463,7 @@ func (pp *internalDefaultProposalProcessor) setACCEPTVoteproof(acceptVoteproof b
 
 	s := time.Now()
 	defer func() {
-		pp.setState("set-accept-voteproof", time.Since(s))
+		pp.statesValue.Store("set-accept-voteproof", time.Since(s))
 	}()
 
 	var fact ballot.ACCEPTBallotFact
@@ -486,7 +485,7 @@ func (pp *internalDefaultProposalProcessor) setACCEPTVoteproof(acceptVoteproof b
 	if err := func() error {
 		s := time.Now()
 		defer func() {
-			pp.setState("set-block", time.Since(s))
+			pp.statesValue.Store("set-block", time.Since(s))
 		}()
 
 		return pp.bs.SetBlock(blk)
@@ -499,7 +498,7 @@ func (pp *internalDefaultProposalProcessor) setACCEPTVoteproof(acceptVoteproof b
 		if err := func() error {
 			s := time.Now()
 			defer func() {
-				pp.setState("unstage-operation-seals", time.Since(s))
+				pp.statesValue.Store("unstage-operation-seals", time.Since(s))
 			}()
 
 			return pp.bs.UnstageOperationSeals(seals)
@@ -530,7 +529,7 @@ func (pp *internalDefaultProposalProcessor) validateTree(tg *avl.TreeGenerator) 
 func (pp *internalDefaultProposalProcessor) updateStates(tr *tree.AVLTree, blk block.Block) error {
 	s := time.Now()
 	defer func() {
-		pp.setState("update-states", time.Since(s))
+		pp.statesValue.Store("update-states", time.Since(s))
 	}()
 
 	return tr.Traverse(func(node tree.Node) (bool, error) {
@@ -584,16 +583,13 @@ func (pp *internalDefaultProposalProcessor) filterOperations(ops []operation.Ope
 	return nop, nil
 }
 
-func (pp *internalDefaultProposalProcessor) setState(k string, v interface{}) {
-	pp.statesLock.Lock()
-	defer pp.statesLock.Unlock()
-
-	pp.stateValues[k] = v
-}
-
 func (pp *internalDefaultProposalProcessor) states() map[string]interface{} {
-	pp.statesLock.RLock()
-	defer pp.statesLock.RUnlock()
+	m := map[string]interface{}{}
+	pp.statesValue.Range(func(key, value interface{}) bool {
+		m[key.(string)] = value
 
-	return pp.stateValues
+		return true
+	})
+
+	return m
 }

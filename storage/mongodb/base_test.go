@@ -36,7 +36,7 @@ func (t *testStorage) SetupTest() {
 	client, err := NewClient(TestMongodbURI(), time.Second*2, time.Second*2)
 	t.NoError(err)
 
-	st, err := NewStorage(client, t.Encs, t.BSONEnc)
+	st, err := NewStorage(client, t.Encs, nil)
 	t.NoError(err)
 	t.storage = st
 }

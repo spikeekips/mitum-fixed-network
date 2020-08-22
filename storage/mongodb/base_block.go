@@ -2,6 +2,9 @@ package mongodbstorage
 
 import (
 	"context"
+	"fmt"
+	"sync"
+	"time"
 
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
@@ -27,6 +30,7 @@ type BlockStorage struct {
 	operationSealModels []mongo.WriteModel
 	operationModels     []mongo.WriteModel
 	stateModels         []mongo.WriteModel
+	statesValue         *sync.Map
 }
 
 func NewBlockStorage(st *Storage, blk block.Block) (*BlockStorage, error) {
@@ -38,9 +42,10 @@ func NewBlockStorage(st *Storage, blk block.Block) (*BlockStorage, error) {
 	}
 
 	bst := &BlockStorage{
-		st:    nst,
-		ost:   st,
-		block: blk,
+		st:          nst,
+		ost:         st,
+		block:       blk,
+		statesValue: &sync.Map{},
 	}
 
 	return bst, nil
@@ -51,6 +56,11 @@ func (bst *BlockStorage) Block() block.Block {
 }
 
 func (bst *BlockStorage) SetBlock(blk block.Block) error {
+	startedf := time.Now()
+	defer func() {
+		bst.statesValue.Store("set-block", time.Since(startedf))
+	}()
+
 	if bst.block.Height() != blk.Height() {
 		return xerrors.Errorf(
 			"block has different height from initial block; initial=%d != block=%d",
@@ -73,15 +83,19 @@ func (bst *BlockStorage) SetBlock(blk block.Block) error {
 
 	enc := bst.st.enc
 
+	started := time.Now()
 	if doc, err := NewBlockDoc(blk, enc); err != nil {
 		return err
 	} else {
+		bst.statesValue.Store("set-block-model", time.Since(started))
 		bst.blockModels = append(bst.blockModels, mongo.NewInsertOneModel().SetDocument(doc))
 	}
 
+	started = time.Now()
 	if doc, err := NewManifestDoc(blk.Manifest(), enc); err != nil {
 		return err
 	} else {
+		bst.statesValue.Store("set-manifest-model", time.Since(started))
 		bst.manifestModels = append(bst.manifestModels, mongo.NewInsertOneModel().SetDocument(doc))
 	}
 
@@ -99,6 +113,11 @@ func (bst *BlockStorage) SetBlock(blk block.Block) error {
 }
 
 func (bst *BlockStorage) UnstageOperationSeals(seals []valuehash.Hash) error {
+	started := time.Now()
+	defer func() {
+		bst.statesValue.Store("unstage-operation-seals", time.Since(started))
+	}()
+
 	for _, h := range seals {
 		bst.operationSealModels = append(bst.operationSealModels,
 			mongo.NewDeleteOneModel().SetFilter(util.NewBSONFilter("_id", h.String()).D()),
@@ -109,15 +128,13 @@ func (bst *BlockStorage) UnstageOperationSeals(seals []valuehash.Hash) error {
 }
 
 func (bst *BlockStorage) Commit(ctx context.Context) error {
-	defer func() {
-		_ = bst.st.Close()
-	}()
-
 	if err := bst.commit(ctx); err == nil {
 		return nil
 	} else {
 		defer func() {
+			started := time.Now()
 			_ = bst.st.CleanByHeight(bst.block.Height())
+			bst.statesValue.Store("clean-by-height", time.Since(started))
 		}()
 
 		var me mongo.CommandError
@@ -134,6 +151,13 @@ func (bst *BlockStorage) Commit(ctx context.Context) error {
 }
 
 func (bst *BlockStorage) commit(ctx context.Context) error {
+	started := time.Now()
+	defer func() {
+		bst.statesValue.Store("commit", time.Since(started))
+
+		_ = bst.st.Close()
+	}()
+
 	if bst.blockModels == nil || bst.manifestModels == nil {
 		if err := bst.SetBlock(bst.block); err != nil {
 			return err
@@ -197,6 +221,11 @@ func (bst *BlockStorage) commit(ctx context.Context) error {
 }
 
 func (bst *BlockStorage) setOperations(tr *tree.AVLTree) error {
+	started := time.Now()
+	defer func() {
+		bst.statesValue.Store("set-operations", time.Since(started))
+	}()
+
 	if tr == nil || tr.Empty() {
 		return nil
 	}
@@ -223,6 +252,11 @@ func (bst *BlockStorage) setOperations(tr *tree.AVLTree) error {
 }
 
 func (bst *BlockStorage) setStates(tr *tree.AVLTree) error {
+	started := time.Now()
+	defer func() {
+		bst.statesValue.Store("set-states", time.Since(started))
+	}()
+
 	if tr == nil || tr.Empty() {
 		return nil
 	}
@@ -249,6 +283,11 @@ func (bst *BlockStorage) setStates(tr *tree.AVLTree) error {
 }
 
 func (bst *BlockStorage) writeModels(ctx context.Context, col string, models []mongo.WriteModel) (*mongo.BulkWriteResult, error) {
+	started := time.Now()
+	defer func() {
+		bst.statesValue.Store(fmt.Sprintf("write-models-%s", col), time.Since(started))
+	}()
+
 	if len(models) < 1 {
 		return nil, nil
 	}
@@ -260,4 +299,15 @@ func (bst *BlockStorage) writeModels(ctx context.Context, col string, models []m
 	}
 
 	return res, nil
+}
+
+func (bst *BlockStorage) States() map[string]interface{} {
+	m := map[string]interface{}{}
+	bst.statesValue.Range(func(key, value interface{}) bool {
+		m[key.(string)] = value
+
+		return true
+	})
+
+	return m
 }

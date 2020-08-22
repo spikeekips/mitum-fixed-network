@@ -61,6 +61,7 @@ type BlockStorage interface {
 	// NOTE UnstageOperationSeals cleans staged operation.Seals
 	UnstageOperationSeals([]valuehash.Hash) error
 	Commit(context.Context) error
+	States() map[string]interface{}
 }
 
 type LastBlockSaver interface {

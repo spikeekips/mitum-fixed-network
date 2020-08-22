@@ -70,6 +70,10 @@ func (dst *DummyBlockStorage) Committed() bool {
 	return dst.commited
 }
 
+func (dst *DummyBlockStorage) States() map[string]interface{} {
+	return nil
+}
+
 type BaseTestStorage struct {
 	suite.Suite
 	PK      key.Privatekey

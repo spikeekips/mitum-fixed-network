@@ -170,3 +170,7 @@ func (bst *BlockStorage) Commit(context.Context) error {
 
 	return wrapError(bst.st.db.Write(bst.batch, nil))
 }
+
+func (bst *BlockStorage) States() map[string]interface{} {
+	return nil
+}

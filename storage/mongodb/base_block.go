@@ -167,6 +167,28 @@ func (bst *BlockStorage) commit(ctx context.Context) error {
 		return xerrors.Errorf("state not inserted")
 	}
 
+	if bst.operations != nil {
+		if err := bst.operations.Traverse(func(node tree.Node) (bool, error) {
+			op := node.Immutable().(operation.OperationAVLNode).Operation()
+
+			_ = bst.ost.operationFactCache.Set(op.Hash().String(), struct{}{})
+			return true, nil
+		}); err != nil {
+			return err
+		}
+	}
+
+	if bst.states != nil {
+		if err := bst.states.Traverse(func(node tree.Node) (bool, error) {
+			st := node.Immutable().(state.StateV0AVLNode).State()
+
+			_ = bst.ost.stateCache.Set(st.Key(), st)
+			return true, nil
+		}); err != nil {
+			return err
+		}
+	}
+
 	if _, err := bst.writeModels(ctx, defaultColNameOperationSeal, bst.operationSealModels); err != nil {
 		return storage.WrapError(err)
 	}

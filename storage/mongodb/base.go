@@ -7,6 +7,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/bluele/gcache"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
@@ -58,10 +59,25 @@ type Storage struct {
 	lastManifestHeight  base.Height
 	lastINITVoteproof   base.Voteproof
 	lastACCEPTVoteproof base.Voteproof
+	stateCache          gcache.Cache
+	sealCache           gcache.Cache
+	operationFactCache  gcache.Cache
 }
 
 func NewStorage(client *Client, encs *encoder.Encoders, enc encoder.Encoder) (*Storage, error) {
 	// NOTE call Initialize() later.
+
+	stateCache := gcache.New(100 * 100 * 100).LRU().
+		Expiration(time.Hour * 10).
+		Build()
+
+	sealCache := gcache.New(100 * 100).LRU().
+		Expiration(time.Hour * 1).
+		Build()
+
+	operationFactCache := gcache.New(100 * 100 * 100).LRU().
+		Expiration(time.Hour * 10).
+		Build()
 
 	return &Storage{
 		Logging: logging.NewLogging(func(c logging.Context) logging.Emitter {
@@ -71,6 +87,9 @@ func NewStorage(client *Client, encs *encoder.Encoders, enc encoder.Encoder) (*S
 		encs:               encs,
 		enc:                enc,
 		lastManifestHeight: base.NilHeight,
+		stateCache:         stateCache,
+		sealCache:          sealCache,
+		operationFactCache: operationFactCache,
 	}, nil
 }
 
@@ -485,6 +504,10 @@ func (st *Storage) ManifestByHeight(height base.Height) (block.Manifest, bool, e
 }
 
 func (st *Storage) Seal(h valuehash.Hash) (seal.Seal, bool, error) {
+	if i, _ := st.sealCache.Get(h.String()); i != nil {
+		return i.(seal.Seal), true, nil
+	}
+
 	var sl seal.Seal
 
 	if err := st.client.GetByID(
@@ -538,6 +561,8 @@ func (st *Storage) NewSeals(seals []seal.Seal) error {
 		if _, ok := sl.(operation.Seal); !ok {
 			continue
 		}
+
+		_ = st.sealCache.Set(sl.Hash().String(), sl)
 
 		operationModels = append(operationModels,
 			mongo.NewInsertOneModel().SetDocument(doc),
@@ -752,6 +777,10 @@ func (st *Storage) Proposal(height base.Height, round base.Round) (ballot.Propos
 }
 
 func (st *Storage) State(key string) (state.State, bool, error) {
+	if i, _ := st.stateCache.Get(key); i != nil {
+		return i.(state.State), true, nil
+	}
+
 	var sta state.State
 
 	if err := st.client.Find(
@@ -782,10 +811,16 @@ func (st *Storage) NewState(sta state.State) error {
 		return err
 	}
 
+	_ = st.stateCache.Set(sta.Key(), sta)
+
 	return nil
 }
 
 func (st *Storage) HasOperationFact(h valuehash.Hash) (bool, error) {
+	if st.operationFactCache.Has(h.String()) {
+		return true, nil
+	}
+
 	count, err := st.client.Count(
 		defaultColNameOperation,
 		util.NewBSONFilter("fact_hash_string", h.String()).AddOp("height", st.lastHeight(), "$lte").D(),

@@ -96,7 +96,7 @@ func (t *testStateV0) TestMergeNil() {
 		ns, err := s0.Merge(s1)
 		t.NoError(err)
 
-		t.Nil(ns.Value())
+		t.True(ns.Value().Equal(s0.Value()))
 	}
 
 	{ // nil -> nil

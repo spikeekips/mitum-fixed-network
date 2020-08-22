@@ -79,6 +79,14 @@ func NewStorage(client *Client, encs *encoder.Encoders, enc encoder.Encoder) (*S
 		Expiration(time.Hour * 10).
 		Build()
 
+	if enc == nil {
+		if e, err := encs.Encoder(bsonenc.BSONType, ""); err != nil {
+			return nil, err
+		} else {
+			enc = e
+		}
+	}
+
 	return &Storage{
 		Logging: logging.NewLogging(func(c logging.Context) logging.Emitter {
 			return c.Str("module", "mongodb-storage")

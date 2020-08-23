@@ -59,15 +59,15 @@ func (t *testProposalProcessor) TestBlockOperations() {
 
 	ivp, err := t.newVoteproof(base.StageINIT, initFact, t.local, t.remote)
 
+	opl := t.newOperationSeal(t.local, 1)
+	ophs := make([]valuehash.Hash, len(opl.Operations()))
 	var proposal ballot.ProposalV0
 	{
 		pr, err := pm.Proposal(ivp.Round())
 		t.NoError(err)
 
-		opl := t.newOperationSeal(t.local, 1)
 		t.NoError(t.local.Storage().NewSeals([]seal.Seal{opl}))
 
-		ophs := make([]valuehash.Hash, len(opl.Operations()))
 		for i, op := range opl.Operations() {
 			ophs[i] = op.Fact().Hash()
 		}
@@ -112,6 +112,16 @@ func (t *testProposalProcessor) TestBlockOperations() {
 	t.True(found)
 
 	t.compareBlock(bs.Block(), loaded)
+
+	<-time.After(time.Second * 2)
+	if st, ok := t.local.Storage().(DummyMongodbStorage); ok {
+		for _, h := range ophs {
+			t.True(t.local.Storage().HasOperationFact(h))
+
+			a, _ := st.OperationFactCache().Get(h.String())
+			t.NotNil(a)
+		}
+	}
 }
 
 func (t *testProposalProcessor) TestNotFoundInProposal() {

@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"os"
 
+	"github.com/bluele/gcache"
 	"github.com/rs/zerolog"
 
 	"github.com/spikeekips/mitum/base/block"
@@ -40,4 +41,8 @@ func TestMongodbURI() string {
 	}
 
 	return fmt.Sprintf("mongodb://%s/t_%s", uri, util.UUID().String())
+}
+
+func (st *Storage) OperationFactCache() gcache.Cache {
+	return st.operationFactCache
 }

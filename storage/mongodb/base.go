@@ -549,6 +549,7 @@ func (st *Storage) NewSeals(seals []seal.Seal) error {
 	var models []mongo.WriteModel
 	var operationModels []mongo.WriteModel
 
+	var ops []seal.Seal
 	inserted := map[string]struct{}{}
 	for _, sl := range seals {
 		if _, found := inserted[sl.Hash().String()]; found {
@@ -570,8 +571,7 @@ func (st *Storage) NewSeals(seals []seal.Seal) error {
 			continue
 		}
 
-		_ = st.sealCache.Set(sl.Hash().String(), sl)
-
+		ops = append(ops, sl)
 		operationModels = append(operationModels,
 			mongo.NewInsertOneModel().SetDocument(doc),
 		)
@@ -585,7 +585,17 @@ func (st *Storage) NewSeals(seals []seal.Seal) error {
 		return nil
 	}
 
-	return st.client.Bulk(context.Background(), defaultColNameOperationSeal, operationModels, false)
+	if err := st.client.Bulk(context.Background(), defaultColNameOperationSeal, operationModels, false); err != nil {
+		return err
+	}
+
+	go func() {
+		for _, sl := range ops {
+			_ = st.sealCache.Set(sl.Hash().String(), sl)
+		}
+	}()
+
+	return nil
 }
 
 func (st *Storage) Seals(callback func(valuehash.Hash, seal.Seal) (bool, error), sort, load bool) error {

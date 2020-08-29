@@ -66,11 +66,11 @@ func (t *testStorage) saveNewBlock(height base.Height) block.Block {
 func (t *testStorage) TestLastBlock() {
 	blk := t.saveNewBlock(base.Height(33))
 
-	loaded, found, err := t.storage.LastBlock()
+	loaded, found, err := t.storage.LastManifest()
 	t.NoError(err)
 	t.True(found)
 
-	t.CompareBlock(blk, loaded)
+	t.CompareManifest(blk.Manifest(), loaded)
 }
 
 func (t *testStorage) TestSaveBlockContext() {
@@ -96,45 +96,6 @@ func (t *testStorage) TestLastManifest() {
 	t.True(found)
 
 	t.CompareManifest(blk.Manifest(), loaded)
-}
-
-func (t *testStorage) TestLoadBlockByHash() {
-	blk := t.saveNewBlock(base.Height(33))
-
-	loaded, found, err := t.storage.Block(blk.Hash())
-	t.NoError(err)
-	t.True(found)
-
-	t.CompareBlock(blk, loaded)
-}
-
-func (t *testStorage) TestLoadBlockByHeight() {
-	blk := t.saveNewBlock(base.Height(33))
-
-	loaded, found, err := t.storage.BlockByHeight(blk.Height())
-	t.NoError(err)
-	t.True(found)
-
-	t.CompareBlock(blk, loaded)
-}
-
-func (t *testStorage) TestLoadBlocksByHeight() {
-	var blocks []block.Block
-	heights := []base.Height{base.Height(33), base.Height(34)}
-	for _, h := range heights {
-		blk := t.saveNewBlock(h)
-
-		blocks = append(blocks, blk)
-	}
-
-	loaded, err := t.storage.BlocksByHeight(heights)
-	t.NoError(err)
-
-	t.Equal(len(heights), len(blocks))
-
-	for i := range heights {
-		t.CompareBlock(blocks[i], loaded[i])
-	}
 }
 
 func (t *testStorage) TestLoadManifestByHash() {

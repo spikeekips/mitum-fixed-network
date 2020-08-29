@@ -19,6 +19,10 @@ func NewBytes(b []byte) Bytes {
 	return Bytes(b)
 }
 
+func NewBytesFromString(s string) Bytes {
+	return NewBytes(fromString(s))
+}
+
 func (hs Bytes) String() string {
 	return toString(hs)
 }

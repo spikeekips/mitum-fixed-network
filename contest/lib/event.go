@@ -91,7 +91,7 @@ func Lookup(o map[string]interface{}, key string) (interface{}, bool) {
 		return nil, false
 	}
 
-	ts := strings.SplitN(key, ".", -1)
+	ts := strings.Split(key, ".")
 
 	return lookupByKeys(o, ts)
 }

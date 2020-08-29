@@ -24,6 +24,7 @@ type NodeDesign struct {
 	address          base.Address
 	AddressString    string `yaml:"address"`
 	PrivatekeyString string `yaml:"privatekey"`
+	BlockFS          string `yaml:"blockfs"`
 	Storage          string
 	NetworkIDString  string `yaml:"network-id,omitempty"`
 	Network          *NetworkDesign
@@ -48,6 +49,10 @@ func (nd *NodeDesign) IsValid([]byte) error {
 
 	if len(strings.TrimSpace(nd.NetworkIDString)) < 1 {
 		nd.NetworkIDString = "contest-network-id"
+	}
+
+	if len(strings.TrimSpace(nd.BlockFS)) < 1 {
+		return xerrors.Errorf("blockfs must be given")
 	}
 
 	var je encoder.Encoder

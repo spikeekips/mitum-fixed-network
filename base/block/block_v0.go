@@ -115,8 +115,20 @@ func (bm BlockV0) SetACCEPTVoteproof(voteproof base.Voteproof) BlockUpdater {
 	return bm
 }
 
+func (bm BlockV0) SetSuffrageInfo(sf SuffrageInfo) BlockUpdater {
+	bm.ci.suffrageInfo = sf
+
+	return bm
+}
+
 func (bm BlockV0) SetProposal(proposal ballot.Proposal) BlockUpdater {
 	bm.ci.proposal = proposal
+
+	return bm
+}
+
+func (bm BlockV0) SetManifest(m Manifest) BlockUpdater {
+	bm.ManifestV0 = m.(ManifestV0)
 
 	return bm
 }

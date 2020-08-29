@@ -3,13 +3,15 @@ package isaac
 import (
 	"context"
 
+	"golang.org/x/xerrors"
+
 	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/base/ballot"
 	"github.com/spikeekips/mitum/base/block"
 	"github.com/spikeekips/mitum/base/seal"
 	"github.com/spikeekips/mitum/storage"
+	"github.com/spikeekips/mitum/util/errors"
 	"github.com/spikeekips/mitum/util/valuehash"
-	"golang.org/x/xerrors"
 )
 
 type DummyBlocksV0Generator struct {
@@ -63,36 +65,37 @@ func (bg *DummyBlocksV0Generator) Generate(ignoreExists bool) error {
 		for _, n := range bg.allNodes {
 			if err := n.Storage().Clean(); err != nil {
 				return err
+			} else if err := n.BlockFS().Clean(false); err != nil {
+				return err
 			}
 		}
 	}
 
 	lastHeight := base.NilHeight
 	if !ignoreExists {
-		if l, found, err := bg.genesisNode.Storage().LastManifest(); !found {
+		switch l, found, err := bg.genesisNode.Storage().LastManifest(); {
+		case err != nil:
+			return err
+		case !found:
 			lastHeight = base.NilHeight
-		} else if err != nil {
-			return err
-		} else if err := l.IsValid(bg.networkID); err != nil {
-			return err
-		} else {
-			lastHeight = l.Height()
-		}
-
-		if lastHeight >= bg.lastHeight {
-			return nil
+		default:
+			switch err := l.IsValid(bg.networkID); {
+			case err != nil:
+				return err
+			case l.Height() >= bg.lastHeight:
+				return nil
+			default:
+				lastHeight = l.Height()
+			}
 		}
 	}
 
 	if lastHeight == base.NilHeight {
-		genesis, err := NewGenesisBlockV0Generator(bg.genesisNode, nil)
-		if err != nil {
+		if genesis, err := NewGenesisBlockV0Generator(bg.genesisNode, nil); err != nil {
 			return err
 		} else if _, err := genesis.Generate(); err != nil {
 			return err
-		}
-
-		if err := bg.syncBlocks(bg.genesisNode); err != nil {
+		} else if err := bg.syncBlocks(bg.genesisNode); err != nil {
 			return err
 		}
 	}
@@ -126,11 +129,12 @@ func (bg *DummyBlocksV0Generator) syncBlocks(from *Localstate) error {
 
 end:
 	for {
-		switch blk, found, err := from.Storage().BlockByHeight(height); {
+		switch blk, err := from.BlockFS().Load(height); {
 		case err != nil:
+			if xerrors.Is(err, storage.NotFoundError) {
+				break end
+			}
 			return err
-		case !found:
-			break end
 		default:
 			blocks = append(blocks, blk)
 		}
@@ -153,6 +157,13 @@ end:
 			} else if err := bs.SetBlock(blk); err != nil {
 				return err
 			} else if err := bs.Commit(context.Background()); err != nil {
+				return err
+			} else if err := l.BlockFS().AddAndCommit(blk); err != nil {
+				err := errors.NewError("failed to commit to blockfs").Wrap(err)
+				if err0 := bs.Cancel(); err0 != nil {
+					return err.Wrap(err0)
+				}
+
 				return err
 			}
 		}
@@ -301,7 +312,7 @@ func (bg *DummyBlocksV0Generator) createINITVoteproof() (map[base.Address]base.V
 
 func (bg *DummyBlocksV0Generator) createINITBallot(localstate *Localstate) (ballot.INITBallot, error) {
 	var baseBallot ballot.INITBallotV0
-	if b, err := NewINITBallotV0Round0(localstate.Storage(), localstate.Node().Address()); err != nil {
+	if b, err := NewINITBallotV0Round0(localstate); err != nil {
 		return nil, err
 	} else if err := SignSeal(&b, localstate); err != nil {
 		return nil, err

@@ -29,7 +29,6 @@ import (
 
 const (
 	defaultColNameInfo          = "info"
-	defaultColNameBlock         = "block"
 	defaultColNameManifest      = "manifest"
 	defaultColNameSeal          = "seal"
 	defaultColNameOperation     = "operation"
@@ -40,7 +39,6 @@ const (
 
 var allCollections = []string{
 	defaultColNameInfo,
-	defaultColNameBlock,
 	defaultColNameManifest,
 	defaultColNameSeal,
 	defaultColNameOperation,
@@ -52,16 +50,14 @@ var allCollections = []string{
 type Storage struct {
 	sync.RWMutex
 	*logging.Logging
-	client              *Client
-	encs                *encoder.Encoders
-	enc                 encoder.Encoder
-	lastManifest        block.Manifest
-	lastManifestHeight  base.Height
-	lastINITVoteproof   base.Voteproof
-	lastACCEPTVoteproof base.Voteproof
-	stateCache          gcache.Cache
-	sealCache           gcache.Cache
-	operationFactCache  gcache.Cache
+	client             *Client
+	encs               *encoder.Encoders
+	enc                encoder.Encoder
+	lastManifest       block.Manifest
+	lastManifestHeight base.Height
+	stateCache         gcache.Cache
+	sealCache          gcache.Cache
+	operationFactCache gcache.Cache
 }
 
 func NewStorage(client *Client, encs *encoder.Encoders, enc encoder.Encoder) (*Storage, error) {
@@ -167,13 +163,14 @@ func (st *Storage) loadLastBlock() error {
 		return err
 	}
 
-	if blk, err := st.rawBlockByFilter(util.NewBSONFilter("height", height).D()); err != nil {
-		return err
-	} else if err := st.setLastBlock(blk, false, false); err != nil {
-		return err
+	switch m, found, err := st.manifestByFilter(util.NewBSONFilter("height", height).D()); {
+	case err != nil:
+		return xerrors.Errorf("failed to find last block of height, %v: %w", height, err)
+	case !found:
+		return storage.NotFoundError.Errorf("failed to find last block of height, %v", height)
+	default:
+		return st.setLastBlock(m, false, false)
 	}
-
-	return nil
 }
 
 func (st *Storage) SaveLastBlock(height base.Height) error {
@@ -204,32 +201,11 @@ func (st *Storage) LastManifest() (block.Manifest, bool, error) {
 	return st.lastManifest, true, nil
 }
 
-func (st *Storage) setLastManifest(m block.Manifest) {
+func (st *Storage) setLastBlock(manifest block.Manifest, save, force bool) error {
 	st.Lock()
 	defer st.Unlock()
 
-	if m == nil {
-		st.lastManifest = nil
-		st.lastManifestHeight = base.PreGenesisHeight
-
-		return
-	}
-
-	if m.Height() <= st.lastManifestHeight {
-		return
-	}
-
-	st.Log().Debug().Hinted("manifest_height", m.Height()).Msg("new last manifest")
-
-	st.lastManifest = m
-	st.lastManifestHeight = m.Height()
-}
-
-func (st *Storage) setLastBlock(blk block.Block, save, force bool) error {
-	st.Lock()
-	defer st.Unlock()
-
-	if blk == nil {
+	if manifest == nil {
 		if save {
 			if err := st.SaveLastBlock(base.NilHeight); err != nil {
 				return err
@@ -238,51 +214,26 @@ func (st *Storage) setLastBlock(blk block.Block, save, force bool) error {
 
 		st.lastManifest = nil
 		st.lastManifestHeight = base.PreGenesisHeight
-		st.lastINITVoteproof = nil
-		st.lastACCEPTVoteproof = nil
 
 		return nil
 	}
 
-	if !force && blk.Height() <= st.lastManifestHeight {
+	if !force && manifest.Height() <= st.lastManifestHeight {
 		return nil
 	}
 
 	if save {
-		if err := st.SaveLastBlock(blk.Height()); err != nil {
+		if err := st.SaveLastBlock(manifest.Height()); err != nil {
 			return err
 		}
 	}
 
-	st.Log().Debug().Hinted("block_height", blk.Height()).Msg("new last block")
+	st.Log().Debug().Hinted("block_height", manifest.Height()).Msg("new last block")
 
-	st.lastManifest = blk.Manifest()
-	st.lastManifestHeight = blk.Height()
-	st.lastINITVoteproof = blk.ConsensusInfo().INITVoteproof()
-	st.lastACCEPTVoteproof = blk.ConsensusInfo().ACCEPTVoteproof()
+	st.lastManifest = manifest
+	st.lastManifestHeight = manifest.Height()
 
 	return nil
-}
-
-func (st *Storage) LastVoteproof(stage base.Stage) (base.Voteproof, bool, error) {
-	st.RLock()
-	defer st.RUnlock()
-
-	var vp base.Voteproof
-	switch stage {
-	case base.StageINIT:
-		vp = st.lastINITVoteproof
-	case base.StageACCEPT:
-		vp = st.lastACCEPTVoteproof
-	default:
-		return nil, false, xerrors.Errorf("invalid stage: %v", stage)
-	}
-
-	if vp == nil {
-		return nil, false, nil
-	}
-
-	return vp, true, nil
 }
 
 func (st *Storage) SyncerStorage() (storage.SyncerStorage, error) {
@@ -340,17 +291,14 @@ func (st *Storage) CleanByHeight(height base.Height) error {
 		return nil
 	}
 
-	var newLastBlock block.Block
-	switch blk, found, err := st.BlockByHeight(height - 1); {
-	case !found:
-		return storage.NotFoundError.Errorf("failed to find block of height, %v", height-1)
+	switch m, found, err := st.ManifestByHeight(height - 1); {
 	case err != nil:
 		return xerrors.Errorf("failed to find block of height, %v: %w", height-1, err)
+	case !found:
+		return storage.NotFoundError.Errorf("failed to find block of height, %v", height-1)
 	default:
-		newLastBlock = blk
+		return st.setLastBlock(m, true, true)
 	}
-
-	return st.setLastBlock(newLastBlock, true, true)
 }
 
 func (st *Storage) Copy(source storage.Storage) error {
@@ -382,106 +330,12 @@ func (st *Storage) Encoders() *encoder.Encoders {
 	return st.encs
 }
 
-func (st *Storage) LastBlock() (block.Block, bool, error) {
-	return st.blockByFilter(util.NewBSONFilter("height", st.lastHeight()).D())
-}
-
-func (st *Storage) blockByFilter(filter bson.D) (block.Block, bool, error) {
-	if blk, err := st.rawBlockByFilter(
-		util.NewBSONFilterFromD(filter).AddOp("height", st.lastHeight(), "$lte").D(),
-	); err != nil {
-		if storage.IsNotFoundError(err) {
-			return nil, false, nil
-		}
-
-		return nil, false, err
-	} else {
-		return blk, true, nil
-	}
-}
-
-func (st *Storage) rawBlockByFilter(filter bson.D) (block.Block, error) {
-	var blk block.Block
-
-	if err := st.client.GetByFilter(
-		defaultColNameBlock,
-		filter,
-		func(res *mongo.SingleResult) error {
-			if i, err := loadBlockFromDecoder(res.Decode, st.encs); err != nil {
-				return err
-			} else {
-				blk = i
-			}
-
-			return nil
-		},
-		options.FindOne().SetSort(util.NewBSONFilter("height", -1).D()),
-	); err != nil {
-		return nil, err
-	}
-
-	if blk == nil {
-		return nil, storage.NotFoundError.Errorf("block not found; filter=%q", filter)
-	}
-
-	return blk, nil
-}
-
-func (st *Storage) Block(h valuehash.Hash) (block.Block, bool, error) {
-	return st.blockByFilter(util.NewBSONFilter("_id", h.String()).D())
-}
-
-func (st *Storage) BlockByHeight(height base.Height) (block.Block, bool, error) {
-	if height > st.lastHeight() {
-		return nil, false, nil
-	}
-
-	return st.blockByFilter(util.NewBSONFilter("height", height).D())
-}
-
-func (st *Storage) BlocksByHeight(heights []base.Height) ([]block.Block, error) {
-	var filtered []base.Height
-	given := map[base.Height]struct{}{}
-	for _, h := range heights {
-		if _, found := given[h]; found {
-			continue
-		}
-
-		given[h] = struct{}{}
-		filtered = append(filtered, h)
-	}
-
-	opt := options.Find().
-		SetSort(util.NewBSONFilter("height", 1).D())
-
-	var blocks []block.Block
-	if err := st.client.Find(
-		context.Background(),
-		defaultColNameBlock,
-		bson.M{"height": bson.M{"$in": filtered}},
-		func(cursor *mongo.Cursor) (bool, error) {
-			if blk, err := loadBlockFromDecoder(cursor.Decode, st.encs); err != nil {
-				return false, err
-			} else {
-				blocks = append(blocks, blk)
-			}
-
-			return true, nil
-		},
-		opt,
-	); err != nil {
-		return nil, err
-	}
-
-	return blocks, nil
-}
-
 func (st *Storage) manifestByFilter(filter bson.D) (block.Manifest, bool, error) {
 	var manifest block.Manifest
 
 	if err := st.client.GetByFilter(
 		defaultColNameManifest,
-		util.NewBSONFilterFromD(filter).AddOp("height", st.lastHeight(), "$lte").D(),
+		filter,
 		func(res *mongo.SingleResult) error {
 			if i, err := loadManifestFromDecoder(res.Decode, st.encs); err != nil {
 				return err
@@ -504,11 +358,11 @@ func (st *Storage) manifestByFilter(filter bson.D) (block.Manifest, bool, error)
 }
 
 func (st *Storage) Manifest(h valuehash.Hash) (block.Manifest, bool, error) {
-	return st.manifestByFilter(util.NewBSONFilter("_id", h.String()).D())
+	return st.manifestByFilter(util.NewBSONFilter("_id", h.String()).AddOp("height", st.lastHeight(), "$lte").D())
 }
 
 func (st *Storage) ManifestByHeight(height base.Height) (block.Manifest, bool, error) {
-	return st.manifestByFilter(util.NewBSONFilter("height", height).D())
+	return st.manifestByFilter(util.NewBSONFilter("height", height).AddOp("height", st.lastHeight(), "$lte").D())
 }
 
 func (st *Storage) Seal(h valuehash.Hash) (seal.Seal, bool, error) {
@@ -848,6 +702,10 @@ func (st *Storage) HasOperationFact(h valuehash.Hash) (bool, error) {
 		return false, err
 	}
 
+	if count > 0 {
+		_ = st.operationFactCache.Set(h.String(), struct{}{})
+	}
+
 	return count > 0, nil
 }
 
@@ -875,7 +733,6 @@ func (st *Storage) cleanByHeight(height base.Height) error {
 
 	for _, col := range []string{
 		defaultColNameInfo,
-		defaultColNameBlock,
 		defaultColNameManifest,
 		defaultColNameOperation,
 		defaultColNameOperationSeal,
@@ -889,7 +746,7 @@ func (st *Storage) cleanByHeight(height base.Height) error {
 			opts,
 		)
 		if err != nil {
-			return storage.WrapError(err)
+			return storage.WrapStorageError(err)
 		}
 
 		st.Log().Debug().Str("collection", col).Interface("result", res).Msg("clean collection by height")
@@ -928,7 +785,7 @@ func (st *Storage) createIndex(col string, models []mongo.IndexModel) error {
 	if len(existings) > 0 {
 		for _, name := range existings {
 			if _, err := iv.DropOne(context.TODO(), name); err != nil {
-				return storage.WrapError(err)
+				return storage.WrapStorageError(err)
 			}
 		}
 	}
@@ -938,7 +795,7 @@ func (st *Storage) createIndex(col string, models []mongo.IndexModel) error {
 	}
 
 	if _, err := iv.CreateMany(context.TODO(), models); err != nil {
-		return storage.WrapError(err)
+		return storage.WrapStorageError(err)
 	}
 
 	return nil
@@ -959,12 +816,10 @@ func (st *Storage) New() (*Storage, error) {
 		Logging: logging.NewLogging(func(c logging.Context) logging.Emitter {
 			return c.Str("module", "mongodb-storage")
 		}),
-		client:              client,
-		encs:                st.encs,
-		enc:                 st.enc,
-		lastManifest:        st.lastManifest,
-		lastManifestHeight:  st.lastManifestHeight,
-		lastINITVoteproof:   st.lastINITVoteproof,
-		lastACCEPTVoteproof: st.lastACCEPTVoteproof,
+		client:             client,
+		encs:               st.encs,
+		enc:                st.enc,
+		lastManifest:       st.lastManifest,
+		lastManifestHeight: st.lastManifestHeight,
 	}, nil
 }

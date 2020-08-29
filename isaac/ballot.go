@@ -11,9 +11,9 @@ import (
 	"github.com/spikeekips/mitum/util/valuehash"
 )
 
-func NewINITBallotV0Round0(st storage.Storage, node base.Address) (ballot.INITBallotV0, error) {
+func NewINITBallotV0Round0(local *Localstate) (ballot.INITBallotV0, error) {
 	var m block.Manifest
-	switch l, found, err := st.LastManifest(); {
+	switch l, found, err := local.Storage().LastManifest(); {
 	case !found:
 		return ballot.INITBallotV0{}, xerrors.Errorf("last block not found")
 	case err != nil:
@@ -23,7 +23,7 @@ func NewINITBallotV0Round0(st storage.Storage, node base.Address) (ballot.INITBa
 	}
 
 	var avp base.Voteproof
-	switch vp, found, err := st.LastVoteproof(base.StageACCEPT); {
+	switch vp, found, err := local.BlockFS().LastVoteproof(base.StageACCEPT); {
 	case !found:
 		if m.Height() != base.PreGenesisHeight {
 			return ballot.INITBallotV0{}, xerrors.Errorf("failed to get last voteproof: %w", err)
@@ -35,11 +35,11 @@ func NewINITBallotV0Round0(st storage.Storage, node base.Address) (ballot.INITBa
 	}
 
 	if avp != nil {
-		return NewINITBallotV0WithVoteproof(node, avp)
+		return NewINITBallotV0WithVoteproof(local.Node().Address(), avp)
 	}
 
 	return ballot.NewINITBallotV0(
-		node,
+		local.Node().Address(),
 		m.Height()+1,
 		base.Round(0),
 		m.Hash(),

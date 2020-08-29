@@ -88,7 +88,7 @@ func (cs *StateJoiningHandler) Activate(_ *StateChangeContext) error {
 	defer cs.Unlock()
 
 	var avp base.Voteproof // NOTE ACCEPT Voteproof of last block
-	switch vp, found, err := cs.localstate.Storage().LastVoteproof(base.StageACCEPT); {
+	switch vp, found, err := cs.localstate.BlockFS().LastVoteproof(base.StageACCEPT); {
 	case !found:
 		return storage.NotFoundError.Errorf("last voteproof not found")
 	case err != nil:

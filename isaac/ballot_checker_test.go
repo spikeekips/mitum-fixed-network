@@ -95,7 +95,7 @@ func (t *testBallotChecker) TestIsInSuffrage() {
 func (t *testBallotChecker) TestCheckWithLastBlock() {
 	var avp base.Voteproof
 
-	avp, found, err := t.local.Storage().LastVoteproof(base.StageACCEPT)
+	avp, found, err := t.local.BlockFS().LastVoteproof(base.StageACCEPT)
 	t.NoError(err)
 	t.True(found)
 

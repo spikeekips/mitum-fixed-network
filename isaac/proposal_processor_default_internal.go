@@ -145,8 +145,11 @@ func (pp *internalDefaultProposalProcessor) processINIT(initVoteproof base.Votep
 	case <-ctx.Done():
 		return nil, xerrors.Errorf("timeout to process Proposal: %w", ctx.Err())
 	case err := <-errChan:
-		return nil, err
+		return nil, xerrors.Errorf("timeout to process Proposal: %w", err)
 	case blk = <-blkChan:
+		if err := pp.setBlockfs(blk); err != nil {
+			return nil, xerrors.Errorf("failed to set blockfs: %w", err)
+		}
 	}
 
 	return blk, nil
@@ -193,7 +196,9 @@ func (pp *internalDefaultProposalProcessor) process(
 		}
 	}
 
-	blk = blk.SetOperations(operationsTree).SetStates(statesTree).SetINITVoteproof(initVoteproof)
+	blk = blk.SetOperations(operationsTree).SetStates(statesTree).
+		SetINITVoteproof(initVoteproof).SetProposal(pp.proposal)
+
 	if bs, err := pp.localstate.Storage().OpenBlockStorage(blk); err != nil {
 		return nil, err
 	} else {
@@ -203,13 +208,9 @@ func (pp *internalDefaultProposalProcessor) process(
 
 	pp.Log().Debug().
 		Dict("block", logging.Dict().
-			Hinted("hash", blk.Hash()).
-			Hinted("height", blk.Height()).
-			Hinted("round", blk.Round()).
-			Hinted("proposal", blk.Proposal()).
-			Hinted("previous_block", blk.PreviousBlock()).
-			Hinted("operations_hash", blk.OperationsHash()).
-			Hinted("states_hash", blk.StatesHash()),
+			Hinted("hash", blk.Hash()).Hinted("height", blk.Height()).Hinted("round", blk.Round()).
+			Hinted("proposal", blk.Proposal()).Hinted("previous_block", blk.PreviousBlock()).
+			Hinted("operations_hash", blk.OperationsHash()).Hinted("states_hash", blk.StatesHash()),
 		).Msg("processed block")
 
 	return blk, nil
@@ -273,7 +274,7 @@ func (pp *internalDefaultProposalProcessor) extractOperations() ([]operation.Ope
 		}
 	}
 
-	return pp.filterOperations(ops)
+	return ops, nil
 }
 
 func (pp *internalDefaultProposalProcessor) processOperations() (*tree.AVLTree, valuehash.Hash, error) {
@@ -310,7 +311,7 @@ func (pp *internalDefaultProposalProcessor) processStates(ctx context.Context) (
 	}
 
 	var co *ConcurrentOperationsProcessor
-	if c, err := NewConcurrentOperationsProcessor(len(pp.operations), pool, pp.oprHintset); err != nil {
+	if c, err := NewConcurrentOperationsProcessor(pp.localstate, len(pp.operations), pool, pp.oprHintset); err != nil {
 		return nil, nil, err
 	} else {
 		_ = c.SetLogger(pp.Log())
@@ -479,8 +480,7 @@ func (pp *internalDefaultProposalProcessor) setACCEPTVoteproof(acceptVoteproof b
 		return xerrors.Errorf("hash of the processed block does not match with acceptVoteproof")
 	}
 
-	blk := pp.block.SetACCEPTVoteproof(acceptVoteproof).
-		SetProposal(pp.proposal)
+	blk := pp.block.SetACCEPTVoteproof(acceptVoteproof)
 
 	if err := func() error {
 		s := time.Now()
@@ -493,6 +493,10 @@ func (pp *internalDefaultProposalProcessor) setACCEPTVoteproof(acceptVoteproof b
 		return err
 	}
 
+	if err := pp.localstate.BlockFS().AddACCEPTVoteproof(blk.Height(), blk.Hash(), acceptVoteproof); err != nil {
+		return err
+	}
+
 	if seals := pp.proposal.Seals(); len(seals) > 0 {
 		// TODO when failed, seals of UnstageOperationSeals should be recovered
 		if err := func() error {
@@ -501,7 +505,7 @@ func (pp *internalDefaultProposalProcessor) setACCEPTVoteproof(acceptVoteproof b
 				pp.statesValue.Store("unstage-operation-seals", time.Since(s))
 			}()
 
-			return pp.bs.UnstageOperationSeals(seals)
+			return pp.bs.UnstageOperationSeals(seals) // TODO if failed to commit, seals should be recovered
 		}(); err != nil {
 			return err
 		}
@@ -552,37 +556,6 @@ func (pp *internalDefaultProposalProcessor) updateStates(tr *tree.AVLTree, blk b
 	})
 }
 
-func (pp *internalDefaultProposalProcessor) filterOperation(op operation.Operation) (bool, error) {
-	switch found, err := pp.localstate.Storage().HasOperationFact(op.Fact().Hash()); {
-	case err != nil:
-		return false, err
-	case found: // already stored Operation
-		return false, nil
-	default:
-		return true, nil
-	}
-}
-
-func (pp *internalDefaultProposalProcessor) filterOperations(ops []operation.Operation) ([]operation.Operation, error) {
-	var nop []operation.Operation // nolint
-	for i := range ops {
-		if pp.isStopped() {
-			return nil, xerrors.Errorf("already stopped")
-		}
-
-		op := ops[i]
-		if ok, err := pp.filterOperation(op); err != nil {
-			return nil, err
-		} else if !ok {
-			continue
-		}
-
-		nop = append(nop, op)
-	}
-
-	return nop, nil
-}
-
 func (pp *internalDefaultProposalProcessor) states() map[string]interface{} {
 	m := map[string]interface{}{}
 	pp.statesValue.Range(func(key, value interface{}) bool {
@@ -592,4 +565,13 @@ func (pp *internalDefaultProposalProcessor) states() map[string]interface{} {
 	})
 
 	return m
+}
+
+func (pp *internalDefaultProposalProcessor) setBlockfs(blk block.Block) error {
+	s := time.Now()
+	defer func() {
+		pp.statesValue.Store("blockfs", time.Since(s))
+	}()
+
+	return pp.localstate.BlockFS().Add(blk)
 }

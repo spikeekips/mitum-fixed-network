@@ -8,15 +8,6 @@ import (
 
 var indexPrefix = "mitum_"
 
-var blockIndexModels = []mongo.IndexModel{
-	{
-		Keys: bson.D{bson.E{Key: "height", Value: 1}},
-		Options: options.Index().
-			SetName("mitum_block_height").
-			SetUnique(true),
-	},
-}
-
 var manifestIndexModels = []mongo.IndexModel{
 	{
 		Keys: bson.D{bson.E{Key: "height", Value: 1}},
@@ -94,7 +85,6 @@ var sealIndexModels = []mongo.IndexModel{
 }
 
 var defaultIndexes = map[string] /* collection */ []mongo.IndexModel{
-	defaultColNameBlock:     blockIndexModels,
 	defaultColNameManifest:  manifestIndexModels,
 	defaultColNameOperation: operationIndexModels,
 	defaultColNameProposal:  proposalIndexModels,

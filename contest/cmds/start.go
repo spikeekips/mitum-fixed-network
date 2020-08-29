@@ -510,6 +510,8 @@ func (cmd *StartCommand) prepareContainersForMangle(nodeNames []string, fromHeig
 			return nil, err
 		} else if err := st.CleanByHeight(fromHeight + 1); err != nil {
 			return nil, err
+		} else if err := ct.BlockFS().CleanByHeight(fromHeight + 1); err != nil {
+			return nil, err
 		}
 
 		all[i] = ct.Localstate()

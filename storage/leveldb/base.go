@@ -200,28 +200,7 @@ func (st *Storage) LastManifest() (block.Manifest, bool, error) {
 	return st.Manifest(h)
 }
 
-func (st *Storage) LastVoteproof(stage base.Stage) (base.Voteproof, bool, error) {
-	switch {
-	case stage == base.StageINIT, stage == base.StageACCEPT:
-	default:
-		return nil, false, xerrors.Errorf("invalid stage: %v", stage)
-	}
-
-	if blk, found, err := st.LastBlock(); err != nil || !found {
-		return nil, false, err
-	} else {
-		switch {
-		case stage == base.StageINIT:
-			return blk.ConsensusInfo().INITVoteproof(), true, nil
-		case stage == base.StageACCEPT:
-			return blk.ConsensusInfo().ACCEPTVoteproof(), true, nil
-		default:
-			return nil, false, nil
-		}
-	}
-}
-
-func (st *Storage) LastBlock() (block.Block, bool, error) {
+func (st *Storage) lastBlock() (block.Block, bool, error) {
 	var raw []byte
 
 	if err := st.iter(
@@ -244,7 +223,7 @@ func (st *Storage) LastBlock() (block.Block, bool, error) {
 		return nil, false, err
 	}
 
-	return st.Block(h)
+	return st.block(h)
 }
 
 func (st *Storage) get(key []byte) ([]byte, error) {
@@ -253,7 +232,7 @@ func (st *Storage) get(key []byte) ([]byte, error) {
 	return b, wrapError(err)
 }
 
-func (st *Storage) Block(h valuehash.Hash) (block.Block, bool, error) {
+func (st *Storage) block(h valuehash.Hash) (block.Block, bool, error) {
 	if raw, err := st.get(leveldbBlockHashKey(h)); err != nil {
 		if storage.IsNotFoundError(err) {
 			return nil, false, nil
@@ -267,7 +246,7 @@ func (st *Storage) Block(h valuehash.Hash) (block.Block, bool, error) {
 	}
 }
 
-func (st *Storage) BlockByHeight(height base.Height) (block.Block, bool, error) {
+func (st *Storage) blockByHeight(height base.Height) (block.Block, bool, error) {
 	if raw, err := st.get(leveldbBlockHeightKey(height)); err != nil {
 		if storage.IsNotFoundError(err) {
 			return nil, false, nil
@@ -277,32 +256,8 @@ func (st *Storage) BlockByHeight(height base.Height) (block.Block, bool, error) 
 	} else if h, err := st.loadHash(raw); err != nil {
 		return nil, false, err
 	} else {
-		return st.Block(h)
+		return st.block(h)
 	}
-}
-
-func (st *Storage) BlocksByHeight(heights []base.Height) ([]block.Block, error) {
-	var blocks []block.Block
-
-	fetched := map[base.Height]struct{}{}
-	for _, h := range heights {
-		if _, found := fetched[h]; found {
-			continue
-		}
-
-		fetched[h] = struct{}{}
-
-		switch m, found, err := st.BlockByHeight(h); {
-		case !found:
-			continue
-		case err != nil:
-			return nil, err
-		default:
-			blocks = append(blocks, m)
-		}
-	}
-
-	return blocks, nil
 }
 
 func (st *Storage) Manifest(h valuehash.Hash) (block.Manifest, bool, error) {

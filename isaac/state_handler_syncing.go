@@ -129,10 +129,6 @@ func (ss *StateSyncingHandler) Activate(ctx *StateChangeContext) error {
 		return err
 	}
 
-	if vp, found, _ := ss.localstate.Storage().LastVoteproof(base.StageACCEPT); found {
-		_ = ss.setLastVoteproof(vp)
-	}
-
 	go func() {
 		if err := ss.activate(ctx); err != nil {
 			ss.Log().Error().Err(err).Msg("failed to activate syncing handler")
@@ -249,10 +245,6 @@ func (ss *StateSyncingHandler) handleVoteproof(voteproof base.Voteproof) error {
 
 	l.Debug().Msg("got voteproof for syncing")
 
-	if !ss.setLastVoteproof(voteproof) { // NOTE old voteproof should be ignored
-		return xerrors.Errorf("known voteproof received; height=%v", voteproof.Height())
-	}
-
 	var to base.Height
 	if h, err := ss.getExpectedHeightFromoteproof(voteproof); err != nil {
 		return err
@@ -305,36 +297,7 @@ func (ss *StateSyncingHandler) handleBallot(blt ballot.Ballot) error {
 		voteproof = t.Voteproof()
 	}
 
-	if !ss.setLastVoteproof(voteproof) {
-		return nil
-	}
-
 	return ss.fromVoteproof(voteproof)
-}
-
-func (ss *StateSyncingHandler) setLastVoteproof(voteproof base.Voteproof) bool {
-	ss.lvLock.Lock()
-	defer ss.lvLock.Unlock()
-
-	if ss.lv != nil {
-		if d := ss.lv.Height() - voteproof.Height(); d > 0 {
-			return false
-		} else if d == 0 {
-			if ss.lv.Stage() >= voteproof.Stage() {
-				return false
-			}
-		}
-	}
-
-	ss.Log().Debug().
-		Hinted("voteproof_stage", voteproof.Stage()).
-		Hinted("voteproof_height", voteproof.Height()).
-		Hinted("voteproof_round", voteproof.Round()).
-		Msg("new last voteproof")
-
-	ss.lv = voteproof
-
-	return true
 }
 
 func (ss *StateSyncingHandler) getExpectedHeightFromoteproof(voteproof base.Voteproof) (base.Height, error) {

@@ -2,6 +2,7 @@ package base
 
 import (
 	"fmt"
+	"strconv"
 
 	"github.com/spikeekips/mitum/util"
 	"github.com/spikeekips/mitum/util/isvalid"
@@ -14,6 +15,14 @@ var (
 
 // Height stands for height of Block
 type Height int64
+
+func NewHeightFromString(s string) (Height, error) {
+	if i, err := strconv.ParseInt(s, 10, 64); err != nil {
+		return NilHeight, err
+	} else {
+		return Height(i), nil
+	}
+}
 
 // IsValid checks Height.
 func (ht Height) IsValid([]byte) error {

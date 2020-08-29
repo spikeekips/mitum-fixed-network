@@ -34,14 +34,14 @@ type Client struct {
 func NewClient(uri string, connectTimeout, execTimeout time.Duration) (*Client, error) {
 	var cs connstring.ConnString
 	if c, err := checkURI(uri); err != nil {
-		return nil, storage.WrapError(err)
+		return nil, storage.WrapStorageError(err)
 	} else {
 		cs = c
 	}
 
 	clientOpts := options.Client().ApplyURI(uri)
 	if err := clientOpts.Validate(); err != nil {
-		return nil, storage.WrapError(err)
+		return nil, storage.WrapStorageError(err)
 	}
 
 	var client *mongo.Client
@@ -50,7 +50,7 @@ func NewClient(uri string, connectTimeout, execTimeout time.Duration) (*Client, 
 		defer cancel()
 
 		if c, err := mongo.Connect(ctx, clientOpts); err != nil {
-			return nil, storage.WrapError(xerrors.Errorf("connect timeout: %w", err))
+			return nil, storage.WrapStorageError(xerrors.Errorf("connect timeout: %w", err))
 		} else {
 			client = c
 		}
@@ -61,7 +61,7 @@ func NewClient(uri string, connectTimeout, execTimeout time.Duration) (*Client, 
 		defer cancel()
 
 		if err := client.Ping(ctx, readpref.Primary()); err != nil {
-			return nil, storage.WrapError(xerrors.Errorf("ping timeout: %w", err))
+			return nil, storage.WrapStorageError(xerrors.Errorf("ping timeout: %w", err))
 		}
 	}
 
@@ -175,7 +175,7 @@ func (cl *Client) getByFilter(col string, filter bson.D, opts ...*options.FindOn
 			return nil, storage.NotFoundError.Wrap(err)
 		}
 
-		return nil, storage.WrapError(err)
+		return nil, storage.WrapStorageError(err)
 	}
 
 	return res, nil
@@ -191,7 +191,7 @@ func (cl *Client) Add(col string, doc Doc) (interface{}, error) {
 			return nil, storage.DuplicatedError.Wrap(err)
 		}
 
-		return nil, storage.WrapError(err)
+		return nil, storage.WrapStorageError(err)
 	}
 
 	return res.InsertedID, nil
@@ -225,7 +225,7 @@ func (cl *Client) AddRaw(col string, raw bson.Raw) (interface{}, error) {
 			return nil, storage.DuplicatedError.Wrap(err)
 		}
 
-		return nil, storage.WrapError(err)
+		return nil, storage.WrapStorageError(err)
 	}
 
 	return res.InsertedID, nil
@@ -238,7 +238,7 @@ func (cl *Client) Bulk(ctx context.Context, col string, models []mongo.WriteMode
 			return storage.DuplicatedError.Wrap(err)
 		}
 
-		return storage.WrapError(err)
+		return storage.WrapStorageError(err)
 	}
 
 	return nil
@@ -251,7 +251,7 @@ func (cl *Client) Count(col string, filter interface{}, opts ...*options.CountOp
 
 	count, err := cl.db.Collection(col).CountDocuments(ctx, filter, opts...)
 
-	return count, storage.WrapError(err)
+	return count, storage.WrapStorageError(err)
 }
 
 func (cl *Client) Delete(col string, filter bson.D, opts ...*options.DeleteOptions) (*mongo.DeleteResult, error) {
@@ -273,7 +273,7 @@ func (cl *Client) WithSession(
 	opts := options.Session().SetDefaultReadConcern(readconcern.Majority())
 	sess, err := cl.client.StartSession(opts)
 	if err != nil {
-		return nil, storage.WrapError(err)
+		return nil, storage.WrapStorageError(err)
 	}
 	defer sess.EndSession(context.TODO())
 
@@ -286,7 +286,7 @@ func (cl *Client) WithSession(
 		txnOpts,
 	)
 	if err != nil {
-		return nil, storage.WrapError(err)
+		return nil, storage.WrapStorageError(err)
 	}
 
 	return result, nil

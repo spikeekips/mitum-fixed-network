@@ -67,6 +67,7 @@ type GeneralSyncer struct { // nolint; maligned
 	bm                      block.Manifest
 	stateChan               chan<- SyncerStateChangedContext
 	tailManifest            block.Manifest
+	blocks                  []block.Block
 }
 
 func NewGeneralSyncer(
@@ -203,6 +204,15 @@ func (cs *GeneralSyncer) save() error {
 	}
 
 	if err := cs.commit(); err != nil {
+		return err
+	}
+
+	if err := cs.saveBlockFS(); err != nil {
+		err := errors.NewError("failed to save blockfs").Wrap(err)
+		if err0 := cs.localstate.Storage().CleanByHeight(cs.heightFrom); err0 != nil {
+			return err.Wrap(err0)
+		}
+
 		return err
 	}
 
@@ -943,11 +953,21 @@ func (cs *GeneralSyncer) checkFetchedBlocks(fetched []block.Block) ([]base.Heigh
 		filtered = append(filtered, blk)
 	}
 
-	if err := cs.storage().SetBlocks(filtered); err != nil {
-		return nil, err
+	if len(missing) > 0 {
+		return missing, nil
 	}
 
-	return missing, nil
+	for i := range filtered {
+		if err := cs.localstate.BlockFS().Add(filtered[i]); err != nil {
+			return nil, err
+		}
+	}
+
+	cs.Lock()
+	cs.blocks = append(cs.blocks, filtered...)
+	cs.Unlock()
+
+	return nil, cs.storage().SetBlocks(filtered)
 }
 
 func (cs *GeneralSyncer) fetchBlocks(node network.Node, heights []base.Height) ([]block.Block, error) { // nolint
@@ -1047,6 +1067,8 @@ func (cs *GeneralSyncer) rollback(rollbackCtx *BlockIntegrityError) error {
 	// NOTE clean block until unmatched height and start again prepare()
 	var baseManifest block.Manifest
 	if err := cs.localstate.Storage().CleanByHeight(unmatched); err != nil {
+		return err
+	} else if err := cs.localstate.BlockFS().CleanByHeight(unmatched); err != nil {
 		return err
 	} else if unmatched > base.PreGenesisHeight+1 {
 		switch m, found, err := cs.localstate.Storage().ManifestByHeight(unmatched - 1); {
@@ -1166,4 +1188,24 @@ func (cs *GeneralSyncer) searchUnmatched(from, to base.Height) (base.Height, err
 	}
 
 	return from + base.Height(int64(found)), nil
+}
+
+func (cs *GeneralSyncer) saveBlockFS() error {
+	cs.RLock()
+	defer cs.RUnlock()
+
+	added := map[base.Height]struct{}{}
+	for i := range cs.blocks {
+		blk := cs.blocks[i]
+		if _, found := added[blk.Height()]; found {
+			continue
+		}
+
+		if err := cs.localstate.BlockFS().Commit(blk.Height(), blk.Hash()); err != nil {
+			return err
+		}
+		added[blk.Height()] = struct{}{}
+	}
+
+	return nil
 }

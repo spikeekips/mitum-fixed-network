@@ -86,7 +86,7 @@ func (t *testSyncers) TestMultipleSyncers() {
 	}
 
 	select {
-	case <-time.After(time.Second * 3):
+	case <-time.After(time.Second * 5):
 		t.NoError(xerrors.Errorf("timeout to wait to be finished"))
 	case height := <-finishedChan:
 		t.Equal(target, height)
@@ -122,7 +122,7 @@ func (t *testSyncers) TestMangledFinishedOrder() {
 	t.NoError(ss.Add(target, []network.Node{remote.Node()}))
 
 	select {
-	case <-time.After(time.Second * 3):
+	case <-time.After(time.Second * 5):
 		t.NoError(xerrors.Errorf("timeout to wait to be finished"))
 	case height := <-finishedChan:
 		t.Equal(target, height)

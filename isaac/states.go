@@ -42,7 +42,7 @@ func NewConsensusStates(
 	booting, joining, consensus, syncing, broken StateHandler,
 ) (*ConsensusStates, error) {
 	var livp base.Voteproof
-	if vp, found, err := localstate.Storage().LastVoteproof(base.StageINIT); err != nil {
+	if vp, found, err := localstate.BlockFS().LastVoteproof(base.StageINIT); err != nil {
 		return nil, err
 	} else if found {
 		livp = vp

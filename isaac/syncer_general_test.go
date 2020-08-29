@@ -185,11 +185,16 @@ func (t *testGeneralSyncer) TestFetchBlocks() {
 		t.Equal(i, b.Height().Int64())
 	}
 
-	for i := baseHeight.Int64() + 1; i < target.Int64()+1; i++ {
-		b, found, err := cs.storage().Block(base.Height(i))
-		t.True(found)
-		t.NoError(err)
-		t.Equal(b.Height(), base.Height(i))
+	for i := baseHeight + 1; i < target+1; i++ {
+		var b block.Block
+		for _, j := range cs.blocks {
+			if j.Height() == i {
+				b = j
+				break
+			}
+		}
+
+		t.NotNil(b)
 	}
 }
 
@@ -227,23 +232,24 @@ func (t *testGeneralSyncer) TestSaveBlocks() {
 
 	t.NoError(cs.startBlocks())
 
-	for i := baseHeight.Int64() + 1; i < target.Int64()+1; i++ {
-		b, found, err := cs.storage().Block(base.Height(i))
-		t.True(found)
-		t.NoError(err)
-		t.Equal(b.Height(), base.Height(i))
+	for i := baseHeight + 1; i < target+1; i++ {
+		var b block.Block
+		for _, j := range cs.blocks {
+			if j.Height() == i {
+				b = j
+				break
+			}
+		}
 
-		_, found, err = local.Storage().BlockByHeight(base.Height(i))
-		t.False(found)
-		t.Nil(err)
+		t.NotNil(b)
 	}
 
 	t.NoError(cs.commit())
+	t.NoError(cs.saveBlockFS())
 
 	for i := baseHeight.Int64() + 1; i < target.Int64()+1; i++ {
-		b, found, err := local.Storage().BlockByHeight(base.Height(i))
+		b, err := local.BlockFS().Load(base.Height(i))
 		t.NoError(err)
-		t.True(found)
 		t.Equal(b.Height(), base.Height(i))
 	}
 }
@@ -671,7 +677,9 @@ func (t *testGeneralSyncer) TestMissingBlocks() {
 
 func (t *testGeneralSyncer) buildDifferentBlocks(local, remote *Localstate, from, to base.Height) {
 	_ = local.Storage().Clean()
+	_ = local.BlockFS().Clean(false)
 	_ = remote.Storage().Clean()
+	_ = remote.BlockFS().Clean(false)
 	if from > base.PreGenesisHeight+1 {
 		t.generateBlocks([]*Localstate{local, remote}, from-1)
 	}

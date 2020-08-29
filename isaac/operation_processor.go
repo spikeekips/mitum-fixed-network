@@ -52,9 +52,11 @@ type ConcurrentOperationsProcessor struct {
 	oprLock    sync.RWMutex
 	oppHintSet *hint.Hintmap
 	oprs       map[hint.Hint]OperationProcessor
+	localstate *Localstate
 }
 
 func NewConcurrentOperationsProcessor(
+	localstate *Localstate,
 	size int,
 	pool *Statepool,
 	oppHintSet *hint.Hintmap,
@@ -69,6 +71,7 @@ func NewConcurrentOperationsProcessor(
 		Logging: logging.NewLogging(func(c logging.Context) logging.Emitter {
 			return c.Str("module", "concurrent-operations-processor")
 		}),
+		localstate: localstate,
 		size:       uint(size),
 		pool:       pool,
 		oppHintSet: oppHintSet,
@@ -87,33 +90,7 @@ func (co *ConcurrentOperationsProcessor) Start(ctx context.Context) *ConcurrentO
 	}()
 
 	go func() {
-		err := co.wk.Run(
-			func(i uint, j interface{}) error {
-				if j == nil {
-					return nil
-				}
-
-				if op, ok := j.(state.Processor); !ok {
-					return state.IgnoreOperationProcessingError.Errorf("not state.StateProcessor, %T", j)
-				} else if opr, err := co.opr(op); err != nil {
-					return err
-				} else {
-					if err := opr.Process(op); err != nil {
-						co.Log().Verbose().
-							Hinted("operation", op.(operation.Operation).Hash()).
-							Err(err).
-							Msg("operation failed to process")
-
-						return err
-					} else {
-						co.Log().Verbose().Hinted("operation", op.(operation.Operation).Hash()).Err(err).Msg("operation processed")
-
-						return nil
-					}
-				}
-			},
-		)
-		if err != nil {
+		if err := co.wk.Run(co.work); err != nil {
 			errchan <- err
 		}
 
@@ -224,4 +201,40 @@ func (co *ConcurrentOperationsProcessor) opr(op state.Processor) (OperationProce
 	co.oprs[hinter.Hint()] = opr
 
 	return opr, nil
+}
+
+func (co *ConcurrentOperationsProcessor) work(_ uint, j interface{}) error {
+	if j == nil {
+		return nil
+	}
+
+	var op state.Processor
+	if sp, ok := j.(state.Processor); !ok {
+		return state.IgnoreOperationProcessingError.Errorf("not state.StateProcessor, %T", j)
+	} else {
+		op = sp
+	}
+
+	if found, err := co.localstate.Storage().HasOperationFact(op.(operation.Operation).Fact().Hash()); err != nil {
+		return err
+	} else if found {
+		return state.IgnoreOperationProcessingError.Errorf("already known")
+	}
+
+	if opr, err := co.opr(op); err != nil {
+		return err
+	} else {
+		if err := opr.Process(op); err != nil {
+			co.Log().Verbose().
+				Hinted("operation", op.(operation.Operation).Hash()).
+				Err(err).
+				Msg("operation failed to process")
+
+			return err
+		} else {
+			co.Log().Verbose().Hinted("operation", op.(operation.Operation).Hash()).Err(err).Msg("operation processed")
+
+			return nil
+		}
+	}
 }

@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"sort"
 	"sync"
+	"syscall"
 
 	"golang.org/x/xerrors"
 
@@ -15,6 +16,7 @@ import (
 	"github.com/spikeekips/mitum/isaac"
 	"github.com/spikeekips/mitum/network"
 	"github.com/spikeekips/mitum/storage"
+	"github.com/spikeekips/mitum/storage/localfs"
 	"github.com/spikeekips/mitum/util"
 	"github.com/spikeekips/mitum/util/encoder"
 	bsonenc "github.com/spikeekips/mitum/util/encoder/bson"
@@ -85,7 +87,27 @@ func (bn *Launcher) SetLocalstate(
 ) (*Launcher, error) {
 	node := isaac.NewLocalNode(address, privateKey)
 
-	if ls, err := isaac.NewLocalstate(bn.storage, node, networkID); err != nil {
+	var enc *jsonenc.Encoder
+	if e, err := bn.encs.Encoder(jsonenc.JSONType, ""); err != nil {
+		return nil, err
+	} else {
+		enc = e.(*jsonenc.Encoder)
+	}
+
+	if bn.design.Config.IsDev {
+		syscall.Umask(0)
+		localfs.DefaultFilePermission = 0o666
+		localfs.DefaultDirectoryPermission = 0o777
+	}
+
+	var blockfs *storage.BlockFS
+	if fs, err := localfs.NewFS(bn.design.BlockFS, true); err != nil {
+		return nil, err
+	} else {
+		blockfs = storage.NewBlockFS(fs, enc)
+	}
+
+	if ls, err := isaac.NewLocalstate(bn.storage, blockfs, node, networkID); err != nil {
 		return nil, err
 	} else {
 		bn.localstate = ls
@@ -466,7 +488,20 @@ func (bn *Launcher) networkhandlerGetBlocks(heights []base.Height) ([]block.Bloc
 		return heights[i] < heights[j]
 	})
 
-	return bn.storage.BlocksByHeight(heights)
+	var blocks []block.Block
+	for _, h := range heights {
+		if blk, err := bn.localstate.BlockFS().Load(h); err != nil {
+			if xerrors.Is(err, storage.NotFoundError) {
+				break
+			}
+
+			return nil, err
+		} else {
+			blocks = append(blocks, blk)
+		}
+	}
+
+	return blocks, nil
 }
 
 func (bn *Launcher) networkhandlerNodeInfo() (network.NodeInfo, error) {

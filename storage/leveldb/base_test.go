@@ -44,7 +44,7 @@ func (t *testStorage) TestLastBlock() {
 	t.NoError(bs.SetBlock(blk))
 	t.NoError(bs.Commit(context.Background()))
 
-	loaded, found, err := t.storage.LastBlock()
+	loaded, found, err := t.storage.lastBlock()
 	t.NoError(err)
 	t.True(found)
 
@@ -84,7 +84,7 @@ func (t *testStorage) TestLoadBlockByHash() {
 		t.NoError(t.storage.db.Put(leveldbBlockHeightKey(blk.Height()), key, nil))
 	}
 
-	loaded, found, err := t.storage.Block(blk.Hash())
+	loaded, found, err := t.storage.block(blk.Hash())
 	t.NoError(err)
 	t.True(found)
 
@@ -143,7 +143,7 @@ func (t *testStorage) TestLoadBlockByHeight() {
 	t.NoError(bs.SetBlock(blk))
 	t.NoError(bs.Commit(context.Background()))
 
-	loaded, found, err := t.storage.BlockByHeight(blk.Height())
+	loaded, found, err := t.storage.blockByHeight(blk.Height())
 	t.NoError(err)
 	t.True(found)
 

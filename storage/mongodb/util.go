@@ -16,11 +16,11 @@ import (
 func checkURI(uri string) (connstring.ConnString, error) {
 	cs, err := connstring.Parse(uri)
 	if err != nil {
-		return connstring.ConnString{}, storage.WrapError(err)
+		return connstring.ConnString{}, storage.WrapStorageError(err)
 	}
 
 	if len(cs.Database) < 1 {
-		return connstring.ConnString{}, storage.WrapError(xerrors.Errorf("empty database name in mongodb uri: '%v'", uri))
+		return connstring.ConnString{}, storage.WrapStorageError(xerrors.Errorf("empty database name in mongodb uri: '%v'", uri))
 	}
 
 	return cs, nil

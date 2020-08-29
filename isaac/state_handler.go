@@ -290,7 +290,7 @@ func (bs *BaseStateHandler) TimerBroadcastingINITBallot(
 	var baseBallot ballot.INITBallotV0
 
 	if round == 0 {
-		if b, err := NewINITBallotV0Round0(bs.localstate.Storage(), bs.localstate.Node().Address()); err != nil {
+		if b, err := NewINITBallotV0Round0(bs.localstate); err != nil {
 			return nil, err
 		} else {
 			baseBallot = b

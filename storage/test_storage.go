@@ -66,6 +66,12 @@ func (dst *DummyBlockStorage) Commit(context.Context) error {
 	return nil
 }
 
+func (dst *DummyBlockStorage) Cancel() error {
+	dst.commited = false
+
+	return nil
+}
+
 func (dst *DummyBlockStorage) Committed() bool {
 	return dst.commited
 }

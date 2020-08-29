@@ -6,7 +6,9 @@ import (
 	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/base/block"
 	channetwork "github.com/spikeekips/mitum/network/gochan"
+	"github.com/spikeekips/mitum/storage"
 	"github.com/spikeekips/mitum/util"
+	"golang.org/x/xerrors"
 )
 
 type baseTestSyncer struct {
@@ -27,7 +29,9 @@ func (t *baseTestSyncer) generateBlocks(localstates []*Localstate, targetHeight 
 func (t *baseTestSyncer) emptyLocalstate() *Localstate {
 	lst := t.Storage(nil, nil)
 	localNode := RandomLocalNode(util.UUID().String(), nil)
-	localstate, err := NewLocalstate(lst, localNode, TestNetworkID)
+	blockfs := t.BlockFS(t.JSONEnc)
+
+	localstate, err := NewLocalstate(lst, blockfs, localNode, TestNetworkID)
 	t.NoError(err)
 
 	t.NoError(localstate.Initialize())
@@ -75,14 +79,15 @@ func (t *baseTestStateHandler) setup(local *Localstate, others []*Localstate) {
 		nch.SetGetBlocksHandler(func(heights []base.Height) ([]block.Block, error) {
 			var bs []block.Block
 			for _, h := range heights {
-				m, found, err := st.Storage().BlockByHeight(h)
-				if !found {
-					break
-				} else if err != nil {
-					return nil, err
-				}
+				if blk, err := st.BlockFS().Load(h); err != nil {
+					if xerrors.Is(err, storage.NotFoundError) {
+						break
+					}
 
-				bs = append(bs, m)
+					return nil, err
+				} else {
+					bs = append(bs, blk)
+				}
 			}
 
 			return bs, nil

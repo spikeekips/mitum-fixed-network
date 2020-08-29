@@ -26,8 +26,10 @@ import (
 	"github.com/spikeekips/mitum/isaac"
 	"github.com/spikeekips/mitum/launcher"
 	"github.com/spikeekips/mitum/storage"
+	"github.com/spikeekips/mitum/storage/localfs"
 	"github.com/spikeekips/mitum/util"
 	"github.com/spikeekips/mitum/util/encoder"
+	jsonenc "github.com/spikeekips/mitum/util/encoder/json"
 	"github.com/spikeekips/mitum/util/hint"
 	"github.com/spikeekips/mitum/util/logging"
 )
@@ -194,7 +196,7 @@ func (cts *Containers) createContainer(d *ContestNodeDesign) (*Container, error)
 	}
 
 	if d.Config == nil {
-		d.Config = &launcher.NodeConfigDesign{}
+		d.Config = &launcher.NodeConfigDesign{IsDev: true}
 	}
 
 	nc := launcher.NewNodeConfigDesign(d.Config)
@@ -249,6 +251,8 @@ func (cts *Containers) Create() error {
 		cts.genesisNode = c
 		cts.genesisNode.rds = cs[0].rds
 		cts.genesisNode.designFile = cs[0].designFile
+
+		_ = c.BlockFS()
 	}
 
 	cts.containers = mcs
@@ -368,6 +372,7 @@ func (cts *Containers) initializeByGenesisNode() error {
 	}
 
 	cts.Log().Debug().Msg("sync storage")
+	fromRoot := cts.genesisNode.BlockFS().FS().Root()
 	for _, c := range cts.containers {
 		if c.name == cts.genesisNode.name {
 			continue
@@ -377,6 +382,13 @@ func (cts *Containers) initializeByGenesisNode() error {
 		if st, err := c.Storage(false); err != nil {
 			return err
 		} else if err := st.Copy(gstorage); err != nil {
+			return err
+		}
+
+		toRoot := c.BlockFS().FS().Root()
+		if err := os.RemoveAll(toRoot); err != nil {
+			return err
+		} else if err := CopyDir(fromRoot, toRoot); err != nil {
 			return err
 		}
 
@@ -820,6 +832,8 @@ func (ct *Container) NodeDesign() *launcher.NodeDesign {
 		nodes = append(nodes, d)
 	}
 
+	ct.design.Config.IsDev = true
+
 	nd := &launcher.NodeDesign{
 		AddressString:    hint.HintedString(ct.Address().Hint(), ct.Address().String()),
 		PrivatekeyString: hint.HintedString(ct.privatekey.Hint(), ct.privatekey.String()),
@@ -829,6 +843,7 @@ func (ct *Container) NodeDesign() *launcher.NodeDesign {
 		Nodes:            nodes,
 		Component:        ct.design.Component.NodeDesign(),
 		Config:           ct.design.Config,
+		BlockFS:          filepath.Join("/share", "fs", ct.name),
 	}
 
 	nd.GenesisPolicy = ct.contestDesign.Config.GenesisPolicy
@@ -918,6 +933,21 @@ func (ct *Container) Storage(initialize bool) (storage.Storage, error) {
 	}
 }
 
+func (ct *Container) BlockFS() *storage.BlockFS {
+	var enc *jsonenc.Encoder
+	if e, err := ct.encs.Encoder(jsonenc.JSONType, ""); err != nil {
+		panic(err)
+	} else {
+		enc = e.(*jsonenc.Encoder)
+	}
+
+	if fs, err := localfs.NewFS(filepath.Join(ct.shareDir, "fs", ct.name), true); err != nil {
+		panic(err)
+	} else {
+		return storage.NewBlockFS(fs, enc)
+	}
+}
+
 func (ct *Container) Address() base.Address {
 	address, err := base.NewStringAddress(ct.name)
 	if err != nil {
@@ -935,6 +965,7 @@ func (ct *Container) Localstate() *isaac.Localstate {
 
 	l, err := isaac.NewLocalstate(
 		st,
+		ct.BlockFS(),
 		isaac.NewLocalNode(
 			ct.Address(),
 			ct.privatekey,

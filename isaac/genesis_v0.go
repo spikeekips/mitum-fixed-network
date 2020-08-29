@@ -10,6 +10,7 @@ import (
 	"github.com/spikeekips/mitum/base/block"
 	"github.com/spikeekips/mitum/base/operation"
 	"github.com/spikeekips/mitum/base/seal"
+	"github.com/spikeekips/mitum/util/errors"
 	"github.com/spikeekips/mitum/util/logging"
 	"github.com/spikeekips/mitum/util/valuehash"
 )
@@ -89,6 +90,8 @@ func (gg *GenesisBlockV0Generator) Generate() (block.Block, error) {
 			return nil, err
 		} else if err := bs.Commit(context.Background()); err != nil {
 			return nil, err
+		} else if err := pm.Done(proposal.Hash()); err != nil {
+			return nil, err
 		} else {
 			blk = bs.Block()
 		}
@@ -148,6 +151,13 @@ func (gg *GenesisBlockV0Generator) generatePreviousBlock() error {
 		return err
 	} else if err := bs.Commit(context.Background()); err != nil {
 		return err
+	} else if err := gg.localstate.BlockFS().AddAndCommit(blk); err != nil {
+		err := errors.NewError("failed to commit to blockfs").Wrap(err)
+		if err0 := bs.Cancel(); err0 != nil {
+			return err.Wrap(err0)
+		}
+
+		return err
 	}
 
 	return nil
@@ -185,7 +195,7 @@ func (gg *GenesisBlockV0Generator) generateProposal(seals []operation.Seal) (bal
 
 func (gg *GenesisBlockV0Generator) generateINITVoteproof() (base.Voteproof, error) {
 	var ib ballot.INITBallotV0
-	if b, err := NewINITBallotV0Round0(gg.localstate.Storage(), gg.localstate.Node().Address()); err != nil {
+	if b, err := NewINITBallotV0Round0(gg.localstate); err != nil {
 		return nil, err
 	} else if err := SignSeal(&b, gg.localstate); err != nil {
 		return nil, err

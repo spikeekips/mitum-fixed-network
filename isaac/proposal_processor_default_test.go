@@ -106,10 +106,10 @@ func (t *testProposalProcessor) TestBlockOperations() {
 	bs, err := dp.ProcessACCEPT(proposal.Hash(), avp)
 	t.NoError(err)
 	t.NoError(bs.Commit(context.Background()))
+	t.NoError(dp.Done(proposal.Hash()))
 
-	loaded, found, err := t.local.Storage().Block(blk.Hash())
+	loaded, err := t.local.BlockFS().Load(blk.Height())
 	t.NoError(err)
-	t.True(found)
 
 	t.compareBlock(bs.Block(), loaded)
 

@@ -157,7 +157,9 @@ func (dp *DefaultProposalProcessor) ProcessACCEPT(
 }
 
 func (dp *DefaultProposalProcessor) Done(ph valuehash.Hash) error {
-	if _, err := dp.processed(ph); err != nil {
+	if pp, err := dp.processed(ph); err != nil {
+		return err
+	} else if err := dp.localstate.BlockFS().Commit(pp.block.Height(), pp.block.Hash()); err != nil {
 		return err
 	}
 

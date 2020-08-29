@@ -7,6 +7,7 @@ import (
 )
 
 type NodeConfigDesign struct {
+	IsDev                            bool          `yaml:"is-dev"`
 	TimeoutWaitingProposal           time.Duration `yaml:"timeout-waiting-proposal"`
 	IntervalBroadcastingINITBallot   time.Duration `yaml:"interval-broadcasting-init-ballot"`
 	IntervalBroadcastingProposal     time.Duration `yaml:"interval-broadcasting-proposal"`

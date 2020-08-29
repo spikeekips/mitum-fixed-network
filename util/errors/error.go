@@ -89,7 +89,7 @@ func (ne *NError) Errorf(s string, a ...interface{}) *NError {
 		id:    ne.id,
 		s:     ne.s,
 		err:   xerrors.Errorf(s, a...),
-		frame: xerrors.Caller(2),
+		frame: xerrors.Caller(1),
 	}
 }
 

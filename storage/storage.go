@@ -26,14 +26,9 @@ type Storage interface {
 	OpenBlockStorage(block.Block) (BlockStorage, error)
 	SyncerStorage() (SyncerStorage, error)
 
-	LastBlock() (block.Block, bool, error)
 	LastManifest() (block.Manifest, bool, error)
-	Block(valuehash.Hash) (block.Block, bool, error)
-	BlockByHeight(base.Height) (block.Block, bool, error)
-	BlocksByHeight([]base.Height) ([]block.Block, error)
 	Manifest(valuehash.Hash) (block.Manifest, bool, error)
 	ManifestByHeight(base.Height) (block.Manifest, bool, error)
-	LastVoteproof(base.Stage) (base.Voteproof, bool, error)
 
 	NewSeals([]seal.Seal) error
 	Seal(valuehash.Hash) (seal.Seal, bool, error)
@@ -61,6 +56,7 @@ type BlockStorage interface {
 	// NOTE UnstageOperationSeals cleans staged operation.Seals
 	UnstageOperationSeals([]valuehash.Hash) error
 	Commit(context.Context) error
+	Cancel() error
 	States() map[string]interface{}
 }
 

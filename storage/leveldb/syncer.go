@@ -107,23 +107,8 @@ func (st *SyncerStorage) HasBlock(height base.Height) (bool, error) {
 	return st.storage.db.Has(leveldbBlockHeightKey(height), nil)
 }
 
-func (st *SyncerStorage) Block(height base.Height) (block.Block, bool, error) {
-	return st.storage.BlockByHeight(height)
-}
-
-func (st *SyncerStorage) Blocks(heights []base.Height) ([]block.Block, error) {
-	var bs []block.Block
-	for i := range heights {
-		if b, found, err := st.storage.BlockByHeight(heights[i]); !found {
-			return nil, storage.NotFoundError.Errorf("block not found by height")
-		} else if err != nil {
-			return nil, err
-		} else {
-			bs = append(bs, b)
-		}
-	}
-
-	return bs, nil
+func (st *SyncerStorage) block(height base.Height) (block.Block, bool, error) {
+	return st.storage.blockByHeight(height)
 }
 
 func (st *SyncerStorage) SetBlocks(blocks []block.Block) error {
@@ -162,7 +147,7 @@ func (st *SyncerStorage) Commit() error {
 		Msg("trying to commit blocks")
 
 	for i := st.heightFrom.Int64(); i <= st.heightTo.Int64(); i++ {
-		if blk, found, err := st.Block(base.Height(i)); !found {
+		if blk, found, err := st.block(base.Height(i)); !found {
 			return storage.NotFoundError.Errorf("block not found")
 		} else if err != nil {
 			return err

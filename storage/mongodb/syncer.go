@@ -39,8 +39,6 @@ func NewSyncerStorage(main *Storage) (*SyncerStorage, error) {
 	}
 	if s, err := newTempStorage(main, "block"); err != nil {
 		return nil, err
-	} else if err := s.createIndex(defaultColNameBlock, blockIndexModels); err != nil {
-		return nil, err
 	} else {
 		blockStorage = s
 	}
@@ -120,32 +118,11 @@ func (st *SyncerStorage) SetManifests(manifests []block.Manifest) error {
 		return err
 	}
 
-	st.manifestStorage.setLastManifest(lastManifest)
-
-	return nil
+	return st.manifestStorage.setLastBlock(lastManifest, false, false)
 }
 
 func (st *SyncerStorage) HasBlock(height base.Height) (bool, error) {
-	return st.blockStorage.client.Exists(defaultColNameBlock, util.NewBSONFilter("height", height).D())
-}
-
-func (st *SyncerStorage) Block(height base.Height) (block.Block, bool, error) {
-	return st.blockStorage.BlockByHeight(height)
-}
-
-func (st *SyncerStorage) Blocks(heights []base.Height) ([]block.Block, error) {
-	var bs []block.Block
-	for i := range heights {
-		if b, found, err := st.blockStorage.BlockByHeight(heights[i]); !found {
-			return nil, storage.NotFoundError.Errorf("block not found")
-		} else if err != nil {
-			return nil, err
-		} else {
-			bs = append(bs, b)
-		}
-	}
-
-	return bs, nil
+	return st.blockStorage.client.Exists(defaultColNameManifest, util.NewBSONFilter("height", height).D())
 }
 
 func (st *SyncerStorage) SetBlocks(blocks []block.Block) error {
@@ -196,15 +173,14 @@ func (st *SyncerStorage) Commit() error {
 
 	l.Debug().Msg("trying to commit blocks to main storage")
 
-	var lastBlock block.Block
-	if l, found, err := st.blockStorage.LastBlock(); err != nil || !found {
+	var last block.Manifest
+	if m, found, err := st.blockStorage.LastManifest(); err != nil || !found {
 		return xerrors.Errorf("failed to get last manifest fromm storage: %w", err)
 	} else {
-		lastBlock = l
+		last = m
 	}
 
 	for _, col := range []string{
-		defaultColNameBlock,
 		defaultColNameManifest,
 		defaultColNameSeal,
 		defaultColNameOperation,
@@ -220,7 +196,7 @@ func (st *SyncerStorage) Commit() error {
 		l.Debug().Str("collection", col).Msg("moved collection")
 	}
 
-	return st.main.setLastBlock(lastBlock, false, false)
+	return st.main.setLastBlock(last, false, false)
 }
 
 func (st *SyncerStorage) Close() error {

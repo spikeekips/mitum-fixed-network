@@ -47,11 +47,13 @@ type Block interface {
 
 type BlockUpdater interface {
 	Block
+	SetManifest(Manifest) BlockUpdater
 	SetINITVoteproof(base.Voteproof) BlockUpdater
 	SetACCEPTVoteproof(base.Voteproof) BlockUpdater
-	SetProposal(ballot.Proposal) BlockUpdater
 	SetOperations(*tree.AVLTree) BlockUpdater
 	SetStates(*tree.AVLTree) BlockUpdater
+	SetProposal(ballot.Proposal) BlockUpdater
+	SetSuffrageInfo(SuffrageInfo) BlockUpdater
 }
 
 type SuffrageInfo interface {

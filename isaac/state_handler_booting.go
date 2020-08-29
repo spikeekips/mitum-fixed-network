@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/spikeekips/mitum/base"
+	"github.com/spikeekips/mitum/base/block"
 	"github.com/spikeekips/mitum/base/policy"
 	"github.com/spikeekips/mitum/base/seal"
 	"github.com/spikeekips/mitum/network"
@@ -126,11 +127,28 @@ func (cs *StateBootingHandler) checkBlock() error {
 	cs.Log().Debug().Msg("trying to check block")
 	defer cs.Log().Debug().Msg("checked block")
 
-	if blk, found, err := cs.localstate.Storage().LastBlock(); !found {
-		return storage.NotFoundError.Errorf("empty block")
-	} else if err != nil {
+	var manifest block.Manifest
+	switch m, found, err := cs.localstate.Storage().LastManifest(); {
+	case err != nil:
 		return err
-	} else if err := blk.IsValid(cs.localstate.Policy().NetworkID()); err != nil {
+	case !found:
+		return storage.NotFoundError.Errorf("empty block")
+	default:
+		manifest = m
+	}
+
+	var blk block.Block
+	if b, err := cs.localstate.BlockFS().Load(manifest.Height()); err != nil {
+		if !storage.IsNotFoundError(err) {
+			return err
+		}
+
+		return storage.NotFoundError.Errorf("empty block")
+	} else {
+		blk = b
+	}
+
+	if err := blk.IsValid(cs.localstate.Policy().NetworkID()); err != nil {
 		// TODO if invalid block, it should be re-synced.
 		return err
 	} else {
@@ -141,6 +159,13 @@ func (cs *StateBootingHandler) checkBlock() error {
 }
 
 func (cs *StateBootingHandler) whenEmptyBlocks() (*StateChangeContext, error) {
+	// NOTE clean storages
+	if err := cs.localstate.Storage().Clean(); err != nil {
+		return nil, err
+	} else if err := cs.localstate.BlockFS().Clean(false); err != nil {
+		return nil, err
+	}
+
 	if len(cs.suffrage.Nodes()) < 2 {
 		return nil, xerrors.Errorf("empty block, but no other nodes; can not sync")
 	}

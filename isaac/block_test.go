@@ -15,9 +15,9 @@ type testBlock struct {
 
 func (t *testBlock) TestBlockIsValid() {
 	local := t.localstates(1)[0]
-	blk, found, err := local.Storage().BlockByHeight(2)
+	blk, err := local.BlockFS().Load(2)
 	t.NoError(err)
-	t.True(found)
+	t.NotNil(blk)
 
 	orig := local.Policy().NetworkID()
 	t.NoError(blk.IsValid(orig))

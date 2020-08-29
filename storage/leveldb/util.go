@@ -45,5 +45,5 @@ func wrapError(err error) error {
 		return storage.NotFoundError.Wrap(err)
 	}
 
-	return storage.WrapError(err)
+	return storage.WrapStorageError(err)
 }

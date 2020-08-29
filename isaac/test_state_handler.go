@@ -17,6 +17,7 @@ import (
 	"github.com/spikeekips/mitum/base/state"
 	"github.com/spikeekips/mitum/base/tree"
 	"github.com/spikeekips/mitum/storage"
+	"github.com/spikeekips/mitum/storage/localfs"
 	"github.com/spikeekips/mitum/util"
 	"github.com/spikeekips/mitum/util/encoder"
 	"github.com/spikeekips/mitum/util/localtime"
@@ -26,6 +27,7 @@ import (
 type baseTestStateHandler struct {
 	suite.Suite
 	StorageSupportTest
+	localfs.BaseTestBlocks
 	encs *encoder.Encoders
 	enc  encoder.Encoder
 	ls   []*Localstate
@@ -33,6 +35,7 @@ type baseTestStateHandler struct {
 
 func (t *baseTestStateHandler) SetupSuite() {
 	t.StorageSupportTest.SetupSuite()
+	t.BaseTestBlocks.SetupSuite()
 
 	_ = t.Encs.AddHinter(key.BTCPrivatekeyHinter)
 	_ = t.Encs.AddHinter(key.BTCPublickeyHinter)
@@ -78,7 +81,9 @@ func (t *baseTestStateHandler) localstates(n int) []*Localstate {
 	for i := 0; i < n; i++ {
 		lst := t.Storage(t.Encs, t.JSONEnc)
 		localNode := RandomLocalNode(util.UUID().String(), nil)
-		localstate, err := NewLocalstate(lst, localNode, TestNetworkID)
+
+		blockfs := t.BlockFS(t.JSONEnc)
+		localstate, err := NewLocalstate(lst, blockfs, localNode, TestNetworkID)
 		if err != nil {
 			panic(err)
 		} else if err := localstate.Initialize(); err != nil {
@@ -121,7 +126,7 @@ func (t *baseTestStateHandler) TearDownTest() {
 }
 
 func (t *baseTestStateHandler) lastINITVoteproof(localstate *Localstate) base.Voteproof {
-	vp, _, _ := localstate.Storage().LastVoteproof(base.StageINIT)
+	vp, _, _ := localstate.BlockFS().LastVoteproof(base.StageINIT)
 
 	return vp
 }
@@ -205,7 +210,7 @@ func (t *baseTestStateHandler) suffrage(proposerState *Localstate, states ...*Lo
 func (t *baseTestStateHandler) newINITBallot(localstate *Localstate, round base.Round, voteproof base.Voteproof) ballot.INITBallotV0 {
 	var ib ballot.INITBallotV0
 	if round == 0 {
-		if b, err := NewINITBallotV0Round0(localstate.Storage(), localstate.Node().Address()); err != nil {
+		if b, err := NewINITBallotV0Round0(localstate); err != nil {
 			panic(err)
 		} else {
 			ib = b
@@ -419,8 +424,8 @@ func (t *baseTestStateHandler) lastManifest(st storage.Storage) block.Manifest {
 	}
 }
 
-func (t *baseTestStateHandler) lastBlock(st storage.Storage) block.Block {
-	if m, found, err := st.LastBlock(); !found {
+func (t *baseTestStateHandler) lastBlock(st storage.Storage) block.Manifest {
+	if m, found, err := st.LastManifest(); !found {
 		panic(storage.NotFoundError.Errorf("last block not found"))
 	} else if err != nil {
 		panic(err)

@@ -311,7 +311,7 @@ func (pp *internalDefaultProposalProcessor) processStates(ctx context.Context) (
 	}
 
 	var co *ConcurrentOperationsProcessor
-	if c, err := NewConcurrentOperationsProcessor(pp.localstate, len(pp.operations), pool, pp.oprHintset); err != nil {
+	if c, err := NewConcurrentOperationsProcessor(len(pp.operations), pool, pp.oprHintset); err != nil {
 		return nil, nil, err
 	} else {
 		_ = c.SetLogger(pp.Log())
@@ -319,7 +319,19 @@ func (pp *internalDefaultProposalProcessor) processStates(ctx context.Context) (
 		nctx, cancel := context.WithCancel(ctx)
 		defer cancel()
 
-		co = c.Start(nctx)
+		co = c.Start(
+			nctx,
+			func(sp state.Processor) error {
+				switch found, err := pp.localstate.Storage().HasOperationFact(sp.(operation.Operation).Fact().Hash()); {
+				case err != nil:
+					return err
+				case found:
+					return state.IgnoreOperationProcessingError.Errorf("already known")
+				default:
+					return nil
+				}
+			},
+		)
 
 		go func() {
 			<-nctx.Done()

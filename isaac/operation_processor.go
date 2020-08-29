@@ -52,11 +52,10 @@ type ConcurrentOperationsProcessor struct {
 	oprLock    sync.RWMutex
 	oppHintSet *hint.Hintmap
 	oprs       map[hint.Hint]OperationProcessor
-	localstate *Localstate
+	workFilter func(state.Processor) error
 }
 
 func NewConcurrentOperationsProcessor(
-	localstate *Localstate,
 	size int,
 	pool *Statepool,
 	oppHintSet *hint.Hintmap,
@@ -71,15 +70,22 @@ func NewConcurrentOperationsProcessor(
 		Logging: logging.NewLogging(func(c logging.Context) logging.Emitter {
 			return c.Str("module", "concurrent-operations-processor")
 		}),
-		localstate: localstate,
 		size:       uint(size),
 		pool:       pool,
 		oppHintSet: oppHintSet,
 		oprs:       map[hint.Hint]OperationProcessor{},
+		workFilter: func(state.Processor) error { return nil },
 	}, nil
 }
 
-func (co *ConcurrentOperationsProcessor) Start(ctx context.Context) *ConcurrentOperationsProcessor {
+func (co *ConcurrentOperationsProcessor) Start(
+	ctx context.Context,
+	workFilter func(state.Processor) error,
+) *ConcurrentOperationsProcessor {
+	if workFilter != nil {
+		co.workFilter = workFilter
+	}
+
 	errchan := make(chan error)
 	co.wk = util.NewDistributeWorker(co.size, errchan)
 
@@ -215,10 +221,8 @@ func (co *ConcurrentOperationsProcessor) work(_ uint, j interface{}) error {
 		op = sp
 	}
 
-	if found, err := co.localstate.Storage().HasOperationFact(op.(operation.Operation).Fact().Hash()); err != nil {
+	if err := co.workFilter(op); err != nil {
 		return err
-	} else if found {
-		return state.IgnoreOperationProcessingError.Errorf("already known")
 	}
 
 	if opr, err := co.opr(op); err != nil {

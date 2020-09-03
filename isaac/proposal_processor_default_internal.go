@@ -367,9 +367,13 @@ func (pp *internalDefaultProposalProcessor) processStates(
 	}
 
 	for i := range pp.operations {
+		op := pp.operations[i]
+
+		pp.Log().Verbose().Hinted("fact", op.Fact().Hash()).Msg("process fact")
+
 		if pp.isStopped() {
 			return tree.FixedTree{}, nil, xerrors.Errorf("already stopped")
-		} else if err := co.Process(pp.operations[i]); err != nil {
+		} else if err := co.Process(op); err != nil {
 			return tree.FixedTree{}, nil, err
 		}
 	}

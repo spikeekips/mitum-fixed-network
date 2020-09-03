@@ -127,15 +127,19 @@ func (co *ConcurrentOperationsProcessor) Process(op operation.Operation) error {
 	}
 
 	l := co.Log().WithLogger(func(ctx logging.Context) logging.Emitter {
-		return ctx.Hinted("operation", op.Hash())
+		return ctx.Hinted("operation", op.Hash()).Hinted("fact", op.Fact().Hash())
 	})
 
+	l.Verbose().Msg("opertion will be processed")
+
 	if pr, ok := op.(state.Processor); !ok {
-		co.Log().Verbose().Msgf("not state.StateProcessor, %T", op)
+		l.Verbose().Msgf("not state.StateProcessor, %T", op)
 
 		return nil
 	} else if err := co.process(pr); err != nil {
 		if xerrors.Is(err, state.IgnoreOperationProcessingError) {
+			l.Verbose().Err(err).Msg("operation ignored")
+
 			return nil
 		}
 
@@ -205,6 +209,10 @@ func (co *ConcurrentOperationsProcessor) opr(op state.Processor) (OperationProce
 
 	opr = opr.New(co.pool)
 	co.oprs[hinter.Hint()] = opr
+
+	if l, ok := opr.(logging.SetLogger); ok {
+		_ = l.SetLogger(co.Log())
+	}
 
 	return opr, nil
 }

@@ -45,3 +45,7 @@ func (ht Height) Bytes() []byte {
 func (ht Height) String() string {
 	return fmt.Sprintf("%d", ht)
 }
+
+func (ht Height) IsEmpty() bool {
+	return ht == NilHeight
+}

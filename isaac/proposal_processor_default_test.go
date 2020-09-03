@@ -10,6 +10,7 @@ import (
 
 	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/base/ballot"
+	"github.com/spikeekips/mitum/base/block"
 	"github.com/spikeekips/mitum/base/operation"
 	"github.com/spikeekips/mitum/base/seal"
 	"github.com/spikeekips/mitum/base/state"
@@ -478,6 +479,97 @@ func (t *testProposalProcessor) TestSameStateHash() {
 		for _, s := range blk.States() {
 			t.True(stateHashes[s.Key()].Equal(s.Hash()))
 		}
+	}
+}
+
+func (t *testProposalProcessor) TestCheckStates() {
+	process := func(ops []operation.Operation) block.Block {
+		var sls []seal.Seal
+
+		for _, op := range ops {
+			sl, err := operation.NewBaseSeal(t.local.Node().Privatekey(), []operation.Operation{op}, TestNetworkID)
+			t.NoError(err)
+			t.NoError(sl.IsValid(TestNetworkID))
+
+			sls = append(sls, sl)
+		}
+
+		err := t.local.Storage().NewSeals(sls)
+		t.NoError(err)
+
+		ib := t.newINITBallot(t.local, base.Round(0), nil)
+		initFact := ib.INITBallotFactV0
+
+		pm := NewDummyProposalMaker(t.local, sls)
+		ivp, err := t.newVoteproof(base.StageINIT, initFact, t.local, t.remote)
+		proposal, err := pm.Proposal(ivp.Round())
+		t.NoError(err)
+
+		_ = t.local.Storage().NewProposal(proposal)
+
+		dp := NewDefaultProposalProcessor(t.local, t.suffrage(t.local))
+
+		blk, err := dp.ProcessINIT(proposal.Hash(), ivp)
+		t.NoError(err)
+
+		acceptFact := ballot.NewACCEPTBallotV0(
+			nil,
+			ivp.Height(),
+			ivp.Round(),
+			proposal.Hash(),
+			blk.Hash(),
+			nil,
+		).Fact()
+
+		avp, err := t.newVoteproof(base.StageACCEPT, acceptFact, t.local, t.remote)
+
+		bs, err := dp.ProcessACCEPT(proposal.Hash(), avp)
+		t.NoError(err)
+		t.NoError(bs.Commit(context.Background()))
+		t.NoError(dp.Done(proposal.Hash()))
+
+		return blk
+	}
+
+	var ops []operation.Operation
+	for i := 0; i < 3; i++ {
+		op, err := NewKVOperation(
+			t.local.Node().Privatekey(),
+			util.UUID().Bytes(),
+			util.UUID().String(),
+			util.UUID().Bytes(),
+			TestNetworkID,
+		)
+		t.NoError(err)
+
+		ops = append(ops, op)
+	}
+
+	blk := process(ops)
+	for _, s := range blk.States() {
+		t.Equal(base.NilHeight, s.PreviousHeight())
+		t.Equal(blk.Height(), s.Height())
+	}
+
+	// process same operations for next block
+	var newOps []operation.Operation
+	for _, op := range ops {
+		op, err := NewKVOperation(
+			t.local.Node().Privatekey(),
+			util.UUID().Bytes(),
+			op.(KVOperation).Key(),
+			util.UUID().Bytes(),
+			TestNetworkID,
+		)
+		t.NoError(err)
+
+		newOps = append(newOps, op)
+	}
+
+	nextBlk := process(newOps)
+	for _, s := range nextBlk.States() {
+		t.Equal(blk.Height(), s.PreviousHeight())
+		t.Equal(nextBlk.Height(), s.Height())
 	}
 }
 

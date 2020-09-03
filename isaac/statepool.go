@@ -5,7 +5,7 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/spikeekips/mitum/base/block"
+	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/base/state"
 	"github.com/spikeekips/mitum/storage"
 	"github.com/spikeekips/mitum/util/valuehash"
@@ -18,28 +18,28 @@ type cachedState struct {
 
 type Statepool struct {
 	sync.RWMutex
-	lastManifest block.Manifest
-	fromStorage  func(string) (state.State, bool, error)
-	cached       map[string]cachedState
-	updated      map[string]state.StateUpdater
-	ops          map[string]valuehash.Hash
+	nextHeight  base.Height
+	fromStorage func(string) (state.State, bool, error)
+	cached      map[string]cachedState
+	updated     map[string]state.StateUpdater
+	ops         map[string]valuehash.Hash
 }
 
 func NewStatepool(st storage.Storage) (*Statepool, error) {
-	var lastManifest block.Manifest
+	var nextHeight base.Height = base.Height(0)
 	switch m, found, err := st.LastManifest(); {
-	case found:
-		lastManifest = m
 	case err != nil:
 		return nil, err
+	case found:
+		nextHeight = m.Height() + 1
 	}
 
 	return &Statepool{
-		fromStorage:  st.State,
-		lastManifest: lastManifest,
-		cached:       map[string]cachedState{},
-		updated:      map[string]state.StateUpdater{},
-		ops:          map[string]valuehash.Hash{},
+		fromStorage: st.State,
+		nextHeight:  nextHeight,
+		cached:      map[string]cachedState{},
+		updated:     map[string]state.StateUpdater{},
+		ops:         map[string]valuehash.Hash{},
 	}, nil
 }
 
@@ -77,7 +77,7 @@ func (sp *Statepool) Get(key string) (state.State, bool, error) {
 		return st, true, nil
 	}
 
-	if st, err := state.NewStateV0(key, nil, nil); err != nil {
+	if st, err := state.NewStateV0(key, nil, base.NilHeight); err != nil {
 		return nil, false, err
 	} else {
 		sp.cached[key] = cachedState{State: st, exists: false}
@@ -103,7 +103,9 @@ func (sp *Statepool) Set(fact valuehash.Hash, s ...state.State) error {
 
 		var su state.StateUpdater
 		if u, found := sp.updated[s[i].Key()]; !found {
-			if nu, err := state.NewStateV0Updater(st.Key(), st.Value(), st.PreviousBlock()); err != nil {
+			if nu, err := state.NewStateV0Updater(st.Key(), st.Value(), st.Height()); err != nil {
+				return err
+			} else if err := nu.SetHeight(sp.nextHeight); err != nil {
 				return err
 			} else {
 				sp.updated[s[i].Key()] = nu

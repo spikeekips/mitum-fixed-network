@@ -11,15 +11,10 @@ func (st *StateV0) unpack(
 	h valuehash.Hash,
 	key string,
 	bValue []byte,
-	previousBlock valuehash.Hash,
+	previousBlock base.Height,
 	height base.Height,
-	currentBlock valuehash.Hash,
 	ops []valuehash.Bytes,
 ) error {
-	if previousBlock.Empty() {
-		previousBlock = nil
-	}
-
 	var value Value
 	if v, err := DecodeValue(enc, bValue); err != nil {
 		return err
@@ -35,9 +30,8 @@ func (st *StateV0) unpack(
 	st.h = h
 	st.key = key
 	st.value = value
-	st.previousBlock = previousBlock
-	st.currentHeight = height
-	st.currentBlock = currentBlock
+	st.previousHeight = previousBlock
+	st.height = height
 	st.operations = uops
 
 	return nil

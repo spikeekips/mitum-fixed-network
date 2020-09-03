@@ -403,6 +403,10 @@ func (st *Storage) Seal(h valuehash.Hash) (seal.Seal, bool, error) {
 }
 
 func (st *Storage) NewSeals(seals []seal.Seal) error {
+	if len(seals) < 1 {
+		return xerrors.Errorf("empty seals")
+	}
+
 	var models []mongo.WriteModel
 	var operationModels []mongo.WriteModel
 

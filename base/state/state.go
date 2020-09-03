@@ -14,19 +14,18 @@ type State interface {
 	Key() string
 	Value() Value
 	SetValue(Value) (State, error)
-	GenerateHash() valuehash.Hash
-	PreviousBlock() valuehash.Hash
-	Operations() []valuehash.Hash
 	Height() base.Height
-	CurrentBlock() valuehash.Hash
+	PreviousHeight() base.Height
+	Operations() []valuehash.Hash
+	GenerateHash() valuehash.Hash
 	Merge(State) (State, error)
 }
 
 type StateUpdater interface {
 	State
 	SetHash(valuehash.Hash) error
-	SetPreviousBlock(valuehash.Hash) error
+	SetPreviousHeight(base.Height) error
+	SetHeight(base.Height) error
 	AddOperation(valuehash.Hash) error
-	SetCurrentBlock(base.Height, valuehash.Hash) error
 	Reset()
 }

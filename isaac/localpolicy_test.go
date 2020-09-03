@@ -90,8 +90,8 @@ func (t *testPolicy) TestLoadFromStorage() {
 		break
 	}
 
-	t.NoError(newState.SetPreviousBlock(previousBlock.Hash()))
-	t.NoError(newState.SetCurrentBlock(currentBlock.Height(), currentBlock.Hash()))
+	t.NoError(newState.SetPreviousHeight(previousBlock.Height()))
+	t.NoError(newState.SetHeight(currentBlock.Height()))
 	t.NoError(newState.SetHash(newState.GenerateHash()))
 
 	t.NoError(st.NewState(newState))

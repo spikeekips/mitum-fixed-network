@@ -9,7 +9,6 @@ import (
 	"github.com/spikeekips/mitum/base/key"
 	"github.com/spikeekips/mitum/base/operation"
 	"github.com/spikeekips/mitum/util"
-	"github.com/spikeekips/mitum/util/valuehash"
 )
 
 type testStateV0 struct {
@@ -21,9 +20,10 @@ func (t *testStateV0) TestDuplicatedOperation() {
 	st, err := NewStateV0Updater(
 		util.UUID().String(),
 		value,
-		nil,
+		base.NilHeight,
 	)
 	t.NoError(err)
+	t.Implements((*State)(nil), st)
 
 	op, err := operation.NewKVOperation(
 		key.MustNewBTCPrivatekey(),
@@ -47,7 +47,7 @@ func (t *testStateV0) TestDuplicatedOperation() {
 	t.Equal(1, len(st.opcache))
 
 	// NOTE SetCurrentBlock() will initialize opcache
-	t.NoError(st.SetCurrentBlock(base.Height(3), valuehash.RandomSHA256()))
+	t.NoError(st.SetHeight(base.Height(3)))
 	t.Empty(st.opcache)
 }
 
@@ -55,11 +55,11 @@ func (t *testStateV0) TestMerge() {
 	k := util.UUID().String()
 
 	v0, _ := NewBytesValue(util.UUID().Bytes())
-	s0, err := NewStateV0(k, v0, nil)
+	s0, err := NewStateV0(k, v0, base.NilHeight)
 	t.NoError(err)
 
 	v1, _ := NewBytesValue(util.UUID().Bytes())
-	s1, err := NewStateV0(k, v1, nil)
+	s1, err := NewStateV0(k, v1, base.NilHeight)
 	t.NoError(err)
 
 	ns, err := s0.Merge(s1)
@@ -72,11 +72,11 @@ func (t *testStateV0) TestMergeNil() {
 	k := util.UUID().String()
 
 	{ // not nil -> nil
-		s0, err := NewStateV0(k, nil, nil)
+		s0, err := NewStateV0(k, nil, base.NilHeight)
 		t.NoError(err)
 
 		v1, _ := NewBytesValue(util.UUID().Bytes())
-		s1, err := NewStateV0(k, v1, nil)
+		s1, err := NewStateV0(k, v1, base.NilHeight)
 		t.NoError(err)
 
 		ns, err := s0.Merge(s1)
@@ -87,10 +87,10 @@ func (t *testStateV0) TestMergeNil() {
 
 	{ // nil -> not nil
 		v0, _ := NewBytesValue(util.UUID().Bytes())
-		s0, err := NewStateV0(k, v0, nil)
+		s0, err := NewStateV0(k, v0, base.NilHeight)
 		t.NoError(err)
 
-		s1, err := NewStateV0(k, nil, nil)
+		s1, err := NewStateV0(k, nil, base.NilHeight)
 		t.NoError(err)
 
 		ns, err := s0.Merge(s1)
@@ -100,10 +100,10 @@ func (t *testStateV0) TestMergeNil() {
 	}
 
 	{ // nil -> nil
-		s0, err := NewStateV0(k, nil, nil)
+		s0, err := NewStateV0(k, nil, base.NilHeight)
 		t.NoError(err)
 
-		s1, err := NewStateV0(k, nil, nil)
+		s1, err := NewStateV0(k, nil, base.NilHeight)
 		t.NoError(err)
 
 		ns, err := s0.Merge(s1)
@@ -115,11 +115,11 @@ func (t *testStateV0) TestMergeNil() {
 
 func (t *testStateV0) TestMergeDifferentKey() {
 	v0, _ := NewBytesValue(util.UUID().Bytes())
-	s0, err := NewStateV0(util.UUID().String(), v0, nil)
+	s0, err := NewStateV0(util.UUID().String(), v0, base.NilHeight)
 	t.NoError(err)
 
 	v1, _ := NewBytesValue(util.UUID().Bytes())
-	s1, err := NewStateV0(util.UUID().String(), v1, nil)
+	s1, err := NewStateV0(util.UUID().String(), v1, base.NilHeight)
 	t.NoError(err)
 
 	_, err = s0.Merge(s1)
@@ -130,11 +130,11 @@ func (t *testStateV0) TestMergeUpdater() {
 	k := util.UUID().String()
 
 	v0, _ := NewBytesValue(util.UUID().Bytes())
-	s0, err := NewStateV0Updater(k, v0, nil)
+	s0, err := NewStateV0Updater(k, v0, base.NilHeight)
 	t.NoError(err)
 
 	v1, _ := NewBytesValue(util.UUID().Bytes())
-	s1, err := NewStateV0(k, v1, nil)
+	s1, err := NewStateV0(k, v1, base.NilHeight)
 	t.NoError(err)
 
 	ns, err := s0.Merge(s1)

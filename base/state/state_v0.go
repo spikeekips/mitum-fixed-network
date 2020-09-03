@@ -19,24 +19,24 @@ var (
 )
 
 type StateV0 struct {
-	h             valuehash.Hash
-	key           string
-	value         Value
-	previousBlock valuehash.Hash
-	operations    []valuehash.Hash
-	currentHeight base.Height
-	currentBlock  valuehash.Hash
+	h              valuehash.Hash
+	key            string
+	value          Value
+	height         base.Height
+	previousHeight base.Height
+	operations     []valuehash.Hash
 }
 
-func NewStateV0(key string, value Value, previousBlock valuehash.Hash) (StateV0, error) {
+func NewStateV0(key string, value Value, previousHeight base.Height) (StateV0, error) {
 	if err := IsValidKey(key); err != nil {
 		return StateV0{}, err
 	}
 
 	return StateV0{
-		key:           key,
-		value:         value,
-		previousBlock: previousBlock,
+		key:            key,
+		value:          value,
+		previousHeight: previousHeight,
+		height:         base.NilHeight,
 	}, nil
 }
 
@@ -49,22 +49,18 @@ func (st StateV0) IsValid([]byte) error {
 		return xerrors.Errorf("empty hash found")
 	}
 
-	if st.currentBlock != nil && st.currentBlock.Empty() {
-		return xerrors.Errorf("empty current block hash found")
-	}
-
 	if err := st.value.IsValid(nil); err != nil {
 		return err
 	}
 
-	if st.previousBlock != nil {
-		if err := st.previousBlock.IsValid(nil); err != nil {
+	if !st.previousHeight.IsEmpty() {
+		if err := st.previousHeight.IsValid(nil); err != nil {
 			return err
 		}
 	}
 
-	if st.currentBlock != nil {
-		if err := st.currentBlock.IsValid(nil); err != nil {
+	if !st.height.IsEmpty() {
+		if err := st.height.IsValid(nil); err != nil {
 			return err
 		}
 	}
@@ -98,8 +94,8 @@ func (st StateV0) GenerateHash() valuehash.Hash {
 	}
 
 	var pbb []byte
-	if st.previousBlock != nil {
-		pbb = st.previousBlock.Bytes()
+	if st.previousHeight != base.NilHeight {
+		pbb = st.previousHeight.Bytes()
 	}
 
 	be := util.ConcatBytesSlice(
@@ -126,16 +122,12 @@ func (st StateV0) SetValue(value Value) (State, error) {
 	return st, nil
 }
 
-func (st StateV0) PreviousBlock() valuehash.Hash {
-	return st.previousBlock
+func (st StateV0) PreviousHeight() base.Height {
+	return st.previousHeight
 }
 
 func (st StateV0) Height() base.Height {
-	return st.currentHeight
-}
-
-func (st StateV0) CurrentBlock() valuehash.Hash {
-	return st.currentBlock
+	return st.height
 }
 
 func (st StateV0) Operations() []valuehash.Hash {
@@ -165,17 +157,20 @@ type StateV0Updater struct {
 	origValue Value
 }
 
-func NewStateV0Updater(key string, value Value, previousBlock valuehash.Hash) (*StateV0Updater, error) {
+func NewStateV0Updater(key string, value Value, previousHeight base.Height) (*StateV0Updater, error) {
 	if err := IsValidKey(key); err != nil {
 		return nil, err
 	}
 
+	var st StateV0
+	if s, err := NewStateV0(key, value, previousHeight); err != nil {
+		return nil, err
+	} else {
+		st = s
+	}
+
 	return &StateV0Updater{
-		StateV0: StateV0{
-			key:           key,
-			value:         value,
-			previousBlock: previousBlock,
-		},
+		StateV0:   st,
 		opcache:   map[string]struct{}{},
 		origValue: value,
 	}, nil
@@ -232,44 +227,39 @@ func (stu *StateV0Updater) SetValue(value Value) (State, error) {
 	return stu, nil
 }
 
-func (stu *StateV0Updater) PreviousBlock() valuehash.Hash {
+func (stu *StateV0Updater) PreviousHeight() base.Height {
 	stu.RLock()
 	defer stu.RUnlock()
 
-	return stu.previousBlock
+	return stu.previousHeight
 }
 
-func (stu *StateV0Updater) SetPreviousBlock(h valuehash.Hash) error {
+func (stu *StateV0Updater) SetPreviousHeight(h base.Height) error {
 	stu.Lock()
 	defer stu.Unlock()
 
-	if err := h.IsValid(nil); err != nil {
-		return err
+	if !h.IsEmpty() {
+		if err := h.IsValid(nil); err != nil {
+			return err
+		}
 	}
 
-	stu.previousBlock = h
+	stu.previousHeight = h
 
 	return nil
 }
 
-func (stu *StateV0Updater) CurrentBlock() valuehash.Hash {
-	stu.RLock()
-	defer stu.RUnlock()
-
-	return stu.currentBlock
-}
-
-func (stu *StateV0Updater) SetCurrentBlock(height base.Height, h valuehash.Hash) error {
+func (stu *StateV0Updater) SetHeight(h base.Height) error {
 	stu.Lock()
 	defer stu.Unlock()
 
-	if err := h.IsValid(nil); err != nil {
-		return err
+	if !h.IsEmpty() {
+		if err := h.IsValid(nil); err != nil {
+			return err
+		}
 	}
 
-	stu.currentHeight = height
-	stu.currentBlock = h
-
+	stu.height = h
 	stu.opcache = map[string]struct{}{}
 
 	return nil

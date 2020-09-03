@@ -213,12 +213,6 @@ func (pp *internalDefaultProposalProcessor) createBlock(
 		blk = b
 	}
 
-	if !statesTree.IsEmpty() {
-		if err := pp.updateStates(sts, blk); err != nil {
-			return nil, err
-		}
-	}
-
 	blk = blk.SetOperationsTree(operationsTree).SetOperations(pp.operations).
 		SetStatesTree(statesTree).SetStates(sts).
 		SetINITVoteproof(initVoteproof).SetProposal(pp.proposal)
@@ -571,26 +565,6 @@ func (pp *internalDefaultProposalProcessor) setACCEPTVoteproof(acceptVoteproof b
 		}
 	}
 	pp.block = blk
-
-	return nil
-}
-
-func (pp *internalDefaultProposalProcessor) updateStates(sts []state.State, blk block.Block) error {
-	s := time.Now()
-	defer func() {
-		pp.statesValue.Store("update-states", time.Since(s))
-	}()
-
-	for i := range sts {
-		if pp.isStopped() {
-			return xerrors.Errorf("already stopped")
-		}
-
-		st := sts[i].(state.StateUpdater)
-		if err := st.SetCurrentBlock(blk.Height(), blk.Hash()); err != nil {
-			return err
-		}
-	}
 
 	return nil
 }

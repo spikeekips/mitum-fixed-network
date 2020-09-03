@@ -17,6 +17,7 @@ import (
 	"github.com/spikeekips/mitum/util/encoder"
 	bsonenc "github.com/spikeekips/mitum/util/encoder/bson"
 	jsonenc "github.com/spikeekips/mitum/util/encoder/json"
+	"github.com/spikeekips/mitum/util/tree"
 	"github.com/spikeekips/mitum/util/valuehash"
 	"github.com/stretchr/testify/suite"
 	"golang.org/x/xerrors"
@@ -52,6 +53,7 @@ func (t *testBlock) SetupTest() {
 	_ = t.Encs.AddHinter(operation.BaseFactSign{})
 	_ = t.Encs.AddHinter(operation.KVOperation{})
 	_ = t.Encs.AddHinter(operation.KVOperationFact{})
+	_ = t.Encs.AddHinter(tree.FixedTree{})
 }
 
 func (t *testBlock) TestFileHash() {
@@ -73,7 +75,9 @@ func (t *testBlock) TestNew() {
 	t.NoError(err)
 
 	t.NoError(bs.AddManifest(blk.Height(), blk.Hash(), blk.Manifest()))
+	t.NoError(bs.AddOperationsTree(blk.Height(), blk.Hash(), blk.OperationsTree()))
 	t.NoError(bs.AddOperations(blk.Height(), blk.Hash(), blk.Operations()))
+	t.NoError(bs.AddStatesTree(blk.Height(), blk.Hash(), blk.StatesTree()))
 	t.NoError(bs.AddStates(blk.Height(), blk.Hash(), blk.States()))
 	t.NoError(bs.AddINITVoteproof(blk.Height(), blk.Hash(), blk.ConsensusInfo().INITVoteproof()))
 	t.NoError(bs.AddACCEPTVoteproof(blk.Height(), blk.Hash(), blk.ConsensusInfo().ACCEPTVoteproof()))

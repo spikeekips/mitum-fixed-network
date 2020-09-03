@@ -13,7 +13,6 @@ import (
 	"github.com/spikeekips/mitum/base/operation"
 	"github.com/spikeekips/mitum/base/seal"
 	"github.com/spikeekips/mitum/base/state"
-	"github.com/spikeekips/mitum/base/tree"
 	channetwork "github.com/spikeekips/mitum/network/gochan"
 	"github.com/spikeekips/mitum/util"
 	"github.com/spikeekips/mitum/util/valuehash"
@@ -236,14 +235,16 @@ func (t *testProposalProcessor) TestTimeoutProcessProposal() {
 }
 
 type dummyOperationProcessor struct {
-	pool           *Statepool
-	afterProcessed func(dummyOperationProcessor) error
+	pool            *Statepool
+	beforeProcessed func(state.Processor) error
+	afterProcessed  func(state.Processor) error
 }
 
 func (opp dummyOperationProcessor) New(pool *Statepool) OperationProcessor {
 	return dummyOperationProcessor{
-		pool:           pool,
-		afterProcessed: opp.afterProcessed,
+		pool:            pool,
+		beforeProcessed: opp.beforeProcessed,
+		afterProcessed:  opp.afterProcessed,
 	}
 }
 
@@ -252,6 +253,12 @@ func (opp dummyOperationProcessor) PreProcess(op state.Processor) (state.Process
 }
 
 func (opp dummyOperationProcessor) Process(op state.Processor) error {
+	if opp.beforeProcessed != nil {
+		if err := opp.beforeProcessed(op); err != nil {
+			return err
+		}
+	}
+
 	if err := op.Process(opp.pool.Get, opp.pool.Set); err != nil {
 		return err
 	}
@@ -260,7 +267,7 @@ func (opp dummyOperationProcessor) Process(op state.Processor) error {
 		return nil
 	}
 
-	return opp.afterProcessed(opp)
+	return opp.afterProcessed(op)
 }
 
 func (t *testProposalProcessor) TestCustomOperationProcessor() {
@@ -299,7 +306,7 @@ func (t *testProposalProcessor) TestCustomOperationProcessor() {
 
 	var processed int64
 	opr := dummyOperationProcessor{
-		afterProcessed: func(dummyOperationProcessor) error {
+		afterProcessed: func(_ state.Processor) error {
 			atomic.AddInt64(&processed, 1)
 
 			return nil
@@ -314,6 +321,80 @@ func (t *testProposalProcessor) TestCustomOperationProcessor() {
 	t.Equal(int64(len(sls)), atomic.LoadInt64(&processed))
 }
 
+func (t *testProposalProcessor) TestNotProcessedOperations() {
+	var sls []seal.Seal
+	var exclude valuehash.Hash
+	for i := 0; i < 2; i++ {
+		op, err := NewKVOperation(
+			t.local.Node().Privatekey(),
+			util.UUID().Bytes(),
+			util.UUID().String(),
+			util.UUID().Bytes(),
+			TestNetworkID,
+		)
+		t.NoError(err)
+
+		sl, err := operation.NewBaseSeal(t.local.Node().Privatekey(), []operation.Operation{op}, TestNetworkID)
+		t.NoError(err)
+		t.NoError(sl.IsValid(TestNetworkID))
+
+		if i == 1 {
+			exclude = op.Fact().Hash()
+		}
+
+		sls = append(sls, sl)
+	}
+
+	err := t.local.Storage().NewSeals(sls)
+	t.NoError(err)
+
+	ib := t.newINITBallot(t.local, base.Round(0), nil)
+	initFact := ib.INITBallotFactV0
+
+	pm := NewDummyProposalMaker(t.local, sls)
+	ivp, err := t.newVoteproof(base.StageINIT, initFact, t.local, t.remote)
+	proposal, err := pm.Proposal(ivp.Round())
+	t.NoError(err)
+
+	_ = t.local.Storage().NewProposal(proposal)
+
+	dp := NewDefaultProposalProcessor(t.local, t.suffrage(t.local))
+
+	var processed int64
+	opr := dummyOperationProcessor{
+		beforeProcessed: func(op state.Processor) error {
+			if fh := op.(operation.Operation).Fact().Hash(); fh.Equal(exclude) {
+				return state.IgnoreOperationProcessingError.Errorf("exclude this operation, %v", fh)
+			}
+
+			atomic.AddInt64(&processed, 1)
+			return nil
+		},
+	}
+
+	_, err = dp.AddOperationProcessor(KVOperation{}, opr)
+	t.NoError(err)
+
+	blk, err := dp.ProcessINIT(proposal.Hash(), ivp)
+	t.NoError(err)
+	t.Equal(int64(len(sls)-1), atomic.LoadInt64(&processed))
+
+	_ = blk.OperationsTree().Traverse(func(_ int, key, h, v []byte) (bool, error) {
+		fh := valuehash.NewBytes(key)
+
+		m, err := base.BytesToFactMode(v)
+		t.NoError(err)
+
+		if exclude.Equal(fh) {
+			t.False(m&base.FInStates != 0)
+		} else {
+			t.True(m&base.FInStates != 0)
+		}
+
+		return true, nil
+	})
+}
+
 func (t *testProposalProcessor) TestSameStateHash() {
 	var sls []seal.Seal
 
@@ -324,6 +405,7 @@ func (t *testProposalProcessor) TestSameStateHash() {
 		values = append(values, util.UUID().Bytes())
 	}
 
+	facts := map[string]valuehash.Hash{}
 	for i := 0; i < 10; i++ {
 		key := keys[i%2]
 		value := values[i%2]
@@ -336,6 +418,8 @@ func (t *testProposalProcessor) TestSameStateHash() {
 			TestNetworkID,
 		)
 		t.NoError(err)
+
+		facts[op.Fact().Hash().String()] = op.Fact().Hash()
 
 		sl, err := operation.NewBaseSeal(t.local.Node().Privatekey(), []operation.Operation{op}, TestNetworkID)
 		t.NoError(err)
@@ -361,20 +445,24 @@ func (t *testProposalProcessor) TestSameStateHash() {
 	blk, err := dp.ProcessINIT(proposal.Hash(), ivp)
 	t.NoError(err)
 
-	t.NotNil(blk.States())
+	// check operation(fact) is in states
+	_ = blk.OperationsTree().Traverse(func(i int, key, h, v []byte) (bool, error) {
+		_, found := facts[valuehash.NewBytes(key).String()]
+		t.True(found)
 
-	var states []state.State
-	blk.States().Traverse(func(n tree.Node) (bool, error) {
-		s := n.(*state.StateV0AVLNodeMutable).State()
+		m, err := base.BytesToFactMode(v)
+		t.NoError(err)
+		t.True(m&base.FInStates != 0)
 
-		states = append(states, s)
 		return true, nil
 	})
 
-	t.Equal(2, len(states))
+	t.NotNil(blk.States())
+
+	t.Equal(2, len(blk.States()))
 
 	stateHashes := map[string]valuehash.Hash{}
-	for _, s := range states {
+	for _, s := range blk.States() {
 		stateHashes[s.Key()] = s.Hash()
 	}
 
@@ -385,17 +473,9 @@ func (t *testProposalProcessor) TestSameStateHash() {
 
 		t.NotNil(blk.States())
 
-		var states []state.State
-		blk.States().Traverse(func(n tree.Node) (bool, error) {
-			s := n.(*state.StateV0AVLNodeMutable).State()
+		t.Equal(2, len(blk.States()))
 
-			states = append(states, s)
-			return true, nil
-		})
-
-		t.Equal(2, len(states))
-
-		for _, s := range states {
+		for _, s := range blk.States() {
 			t.True(stateHashes[s.Key()].Equal(s.Hash()))
 		}
 	}

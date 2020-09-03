@@ -5,10 +5,12 @@ import (
 
 	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/base/ballot"
-	"github.com/spikeekips/mitum/base/tree"
+	"github.com/spikeekips/mitum/base/operation"
+	"github.com/spikeekips/mitum/base/state"
 	"github.com/spikeekips/mitum/util/hint"
 	"github.com/spikeekips/mitum/util/isvalid"
 	"github.com/spikeekips/mitum/util/localtime"
+	"github.com/spikeekips/mitum/util/tree"
 	"github.com/spikeekips/mitum/util/valuehash"
 )
 
@@ -25,9 +27,11 @@ var (
 
 type BlockV0 struct {
 	ManifestV0
-	operations *tree.AVLTree
-	states     *tree.AVLTree
-	ci         ConsensusInfoV0
+	operationsTree tree.FixedTree
+	operations     []operation.Operation
+	statesTree     tree.FixedTree
+	states         []state.State
+	ci             ConsensusInfoV0
 }
 
 func NewBlockV0(
@@ -72,23 +76,30 @@ func (bm BlockV0) IsValid(networkID []byte) error {
 		}
 	}
 
-	if bm.OperationsHash() != nil {
-		if bm.operations == nil {
+	if bm.operationsHash == nil || bm.operationsHash.Empty() {
+		bm.operationsHash = nil
+	}
+	if bm.statesHash == nil || bm.statesHash.Empty() {
+		bm.statesHash = nil
+	}
+
+	if bm.operationsHash != nil {
+		if bm.operations == nil || bm.operationsTree.IsEmpty() {
 			return xerrors.Errorf("Operations should not be empty")
 		}
 
-		if !bm.OperationsHash().Equal(bm.operations.RootHash()) {
-			return xerrors.Errorf("Block.Opertions() hash does not match with it's RootHash()")
+		if !bm.operationsHash.Equal(valuehash.NewBytes(bm.operationsTree.Root())) {
+			return xerrors.Errorf("Block.Opertions() hash does not match with it's Root()")
 		}
 	}
 
-	if bm.StatesHash() != nil {
-		if bm.states == nil {
+	if bm.statesHash != nil {
+		if bm.states == nil || bm.statesTree.IsEmpty() {
 			return xerrors.Errorf("States should not be empty")
 		}
 
-		if !bm.StatesHash().Equal(bm.States().RootHash()) {
-			return xerrors.Errorf("Block.States() hash does not match with it's RootHash()")
+		if !bm.statesHash.Equal(valuehash.NewBytes(bm.statesTree.Root())) {
+			return xerrors.Errorf("Block.States() hash does not match with it's Root()")
 		}
 	}
 
@@ -141,22 +152,42 @@ func (bm BlockV0) ConsensusInfo() ConsensusInfo {
 	return bm.ci
 }
 
-func (bm BlockV0) Operations() *tree.AVLTree {
+func (bm BlockV0) OperationsTree() tree.FixedTree {
+	return bm.operationsTree
+}
+
+func (bm BlockV0) Operations() []operation.Operation {
 	return bm.operations
 }
 
-func (bm BlockV0) SetOperations(tr *tree.AVLTree) BlockUpdater {
-	bm.operations = tr
+func (bm BlockV0) SetOperationsTree(tr tree.FixedTree) BlockUpdater {
+	bm.operationsTree = tr
 
 	return bm
 }
 
-func (bm BlockV0) States() *tree.AVLTree {
+func (bm BlockV0) SetOperations(ops []operation.Operation) BlockUpdater {
+	bm.operations = ops
+
+	return bm
+}
+
+func (bm BlockV0) StatesTree() tree.FixedTree {
+	return bm.statesTree
+}
+
+func (bm BlockV0) SetStatesTree(tr tree.FixedTree) BlockUpdater {
+	bm.statesTree = tr
+
+	return bm
+}
+
+func (bm BlockV0) States() []state.State {
 	return bm.states
 }
 
-func (bm BlockV0) SetStates(tr *tree.AVLTree) BlockUpdater {
-	bm.states = tr
+func (bm BlockV0) SetStates(sts []state.State) BlockUpdater {
+	bm.states = sts
 
 	return bm
 }

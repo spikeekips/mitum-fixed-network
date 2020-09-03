@@ -5,11 +5,13 @@ import (
 
 	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/base/ballot"
-	"github.com/spikeekips/mitum/base/tree"
+	"github.com/spikeekips/mitum/base/operation"
+	"github.com/spikeekips/mitum/base/state"
 	"github.com/spikeekips/mitum/util"
 	"github.com/spikeekips/mitum/util/hint"
 	"github.com/spikeekips/mitum/util/isvalid"
 	"github.com/spikeekips/mitum/util/logging"
+	"github.com/spikeekips/mitum/util/tree"
 	"github.com/spikeekips/mitum/util/valuehash"
 )
 
@@ -41,8 +43,10 @@ type Block interface {
 	Manifest
 	Manifest() Manifest
 	ConsensusInfo() ConsensusInfo
-	Operations() *tree.AVLTree
-	States() *tree.AVLTree
+	OperationsTree() tree.FixedTree
+	StatesTree() tree.FixedTree
+	States() []state.State
+	Operations() []operation.Operation
 }
 
 type BlockUpdater interface {
@@ -50,8 +54,10 @@ type BlockUpdater interface {
 	SetManifest(Manifest) BlockUpdater
 	SetINITVoteproof(base.Voteproof) BlockUpdater
 	SetACCEPTVoteproof(base.Voteproof) BlockUpdater
-	SetOperations(*tree.AVLTree) BlockUpdater
-	SetStates(*tree.AVLTree) BlockUpdater
+	SetOperationsTree(tree.FixedTree) BlockUpdater
+	SetOperations([]operation.Operation) BlockUpdater
+	SetStatesTree(tree.FixedTree) BlockUpdater
+	SetStates([]state.State) BlockUpdater
 	SetProposal(ballot.Proposal) BlockUpdater
 	SetSuffrageInfo(SuffrageInfo) BlockUpdater
 }

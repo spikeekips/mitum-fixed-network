@@ -31,7 +31,7 @@ const (
 	defaultColNameInfo          = "info"
 	defaultColNameManifest      = "manifest"
 	defaultColNameSeal          = "seal"
-	defaultColNameOperation     = "operation"
+	defaultColNameOperation     = "operation" // TODO rename to operation_fact
 	defaultColNameOperationSeal = "operation_seal"
 	defaultColNameProposal      = "proposal"
 	defaultColNameState         = "state"
@@ -297,6 +297,9 @@ func (st *Storage) CleanByHeight(height base.Height) error {
 	case !found:
 		return storage.NotFoundError.Errorf("failed to find block of height, %v", height-1)
 	default:
+		st.stateCache.Purge()
+		st.operationFactCache.Purge()
+
 		return st.setLastBlock(m, true, true)
 	}
 }

@@ -47,13 +47,15 @@ func UintToBytes(i uint) []byte {
 	return b.Bytes()
 }
 
-func BytesToUint(b []byte) (uint, error) {
-	i, err := BytesToUint64(b)
+func BytesToUint8(b []byte) (uint8, error) {
+	var i uint8
+	buf := bytes.NewReader(b)
+	err := binary.Read(buf, binary.LittleEndian, &i)
 	if err != nil {
 		return 0, err
 	}
 
-	return uint(i), nil
+	return i, nil
 }
 
 func Uint8ToBytes(i uint8) []byte {

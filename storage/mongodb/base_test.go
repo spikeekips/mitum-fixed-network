@@ -412,7 +412,7 @@ func (t *testStorage) TestHasOperation() {
 	t.NoError(err)
 
 	{ // store
-		doc, err := NewOperationDoc(op, t.storage.enc, base.Height(33))
+		doc, err := NewOperationDoc(op.Fact().Hash(), t.storage.enc, base.Height(33))
 		t.NoError(err)
 		_, err = t.storage.client.Set("operation", doc)
 		t.NoError(err)

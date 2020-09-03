@@ -2,27 +2,27 @@ package mongodbstorage
 
 import (
 	"github.com/spikeekips/mitum/base"
-	"github.com/spikeekips/mitum/base/operation"
 	"github.com/spikeekips/mitum/util/encoder"
 	bsonenc "github.com/spikeekips/mitum/util/encoder/bson"
+	"github.com/spikeekips/mitum/util/valuehash"
 )
 
 type OperationDoc struct {
 	BaseDoc
-	op     operation.Operation
+	fact   valuehash.Hash
 	height base.Height
 }
 
-func NewOperationDoc(op operation.Operation, enc encoder.Encoder, height base.Height) (OperationDoc, error) {
-	b, err := NewBaseDoc(nil, op, enc)
+func NewOperationDoc(fact valuehash.Hash, enc encoder.Encoder, height base.Height) (OperationDoc, error) {
+	b, err := NewBaseDoc(nil, nil, enc)
 	if err != nil {
 		return OperationDoc{}, err
 	}
 
 	return OperationDoc{
 		BaseDoc: b,
-		op:      op,
 		height:  height,
+		fact:    fact,
 	}, nil
 }
 
@@ -32,9 +32,8 @@ func (od OperationDoc) MarshalBSON() ([]byte, error) {
 		return nil, err
 	}
 
-	m["fact_hash_string"] = od.op.Fact().Hash().String()
-	m["hash_string"] = od.op.Hash().String()
-	m["hash"] = od.op.Hash()
+	m["fact_hash_string"] = od.fact.String()
+	m["fact_hash"] = od.fact
 	m["height"] = od.height
 
 	return bsonenc.Marshal(m)

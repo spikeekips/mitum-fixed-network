@@ -22,6 +22,7 @@ type Statepool struct {
 	fromStorage  func(string) (state.State, bool, error)
 	cached       map[string]cachedState
 	updated      map[string]state.StateUpdater
+	ops          map[string]valuehash.Hash
 }
 
 func NewStatepool(st storage.Storage) (*Statepool, error) {
@@ -38,6 +39,7 @@ func NewStatepool(st storage.Storage) (*Statepool, error) {
 		lastManifest: lastManifest,
 		cached:       map[string]cachedState{},
 		updated:      map[string]state.StateUpdater{},
+		ops:          map[string]valuehash.Hash{},
 	}, nil
 }
 
@@ -84,13 +86,17 @@ func (sp *Statepool) Get(key string) (state.State, bool, error) {
 	}
 }
 
-func (sp *Statepool) Set(op valuehash.Hash, s ...state.State) error {
+func (sp *Statepool) Set(fact valuehash.Hash, s ...state.State) error {
 	if len(s) < 1 {
 		return nil
 	}
 
 	sp.Lock()
 	defer sp.Unlock()
+
+	if _, found := sp.ops[fact.String()]; !found {
+		sp.ops[fact.String()] = fact
+	}
 
 	for i := range s {
 		st := s[i]
@@ -110,7 +116,7 @@ func (sp *Statepool) Set(op valuehash.Hash, s ...state.State) error {
 		if err := func() error {
 			if _, err := su.Merge(st); err != nil {
 				return err
-			} else if err := su.AddOperation(op); err != nil {
+			} else if err := su.AddOperation(fact); err != nil {
 				return err
 			}
 
@@ -151,4 +157,11 @@ func (sp *Statepool) Updates() []state.StateUpdater {
 	})
 
 	return us
+}
+
+func (sp *Statepool) InsertedOperations() map[string]valuehash.Hash {
+	sp.RLock()
+	defer sp.RUnlock()
+
+	return sp.ops
 }

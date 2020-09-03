@@ -7,6 +7,7 @@ import (
 	"github.com/spikeekips/mitum/base/block"
 	"github.com/spikeekips/mitum/storage"
 	"github.com/spikeekips/mitum/util/hint"
+	"github.com/spikeekips/mitum/util/tree"
 	"github.com/spikeekips/mitum/util/valuehash"
 )
 
@@ -62,7 +63,7 @@ func (dp *DummyProposalProcessor) ProcessACCEPT(
 		return nil, dp.err
 	}
 
-	bs := storage.NewDummyBlockStorage(dp.returnBlock, nil, nil)
+	bs := storage.NewDummyBlockStorage(dp.returnBlock, tree.FixedTree{}, tree.FixedTree{})
 
 	dp.bs[h.String()] = bs
 

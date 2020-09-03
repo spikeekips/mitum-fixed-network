@@ -7,18 +7,15 @@ import (
 	"golang.org/x/xerrors"
 
 	"github.com/spikeekips/mitum/base/block"
-	"github.com/spikeekips/mitum/base/operation"
 	"github.com/spikeekips/mitum/base/state"
-	"github.com/spikeekips/mitum/base/tree"
+	"github.com/spikeekips/mitum/util/tree"
 	"github.com/spikeekips/mitum/util/valuehash"
 )
 
 type BlockStorage struct {
-	st         *Storage
-	block      block.Block
-	operations *tree.AVLTree
-	states     *tree.AVLTree
-	batch      *leveldb.Batch
+	st    *Storage
+	block block.Block
+	batch *leveldb.Batch
 }
 
 func NewBlockStorage(st *Storage, blk block.Block) (*BlockStorage, error) {
@@ -72,7 +69,7 @@ func (bst *BlockStorage) SetBlock(blk block.Block) error {
 		bst.batch.Put(leveldbManifestHeightKey(blk.Height()), b)
 	}
 
-	if err := bst.setOperations(blk.Operations()); err != nil {
+	if err := bst.setOperationsTree(blk.OperationsTree()); err != nil {
 		return err
 	}
 
@@ -85,8 +82,8 @@ func (bst *BlockStorage) SetBlock(blk block.Block) error {
 	return nil
 }
 
-func (bst *BlockStorage) setOperations(tr *tree.AVLTree) error {
-	if tr == nil || tr.Empty() {
+func (bst *BlockStorage) setOperationsTree(tr tree.FixedTree) error {
+	if tr.IsEmpty() {
 		return nil
 	}
 
@@ -97,62 +94,25 @@ func (bst *BlockStorage) setOperations(tr *tree.AVLTree) error {
 	}
 
 	// store operation hashes
-	if err := tr.Traverse(func(node tree.Node) (bool, error) {
-		op := node.Immutable().(operation.OperationAVLNode).Operation()
-
-		if raw, err := bst.st.enc.Marshal(op.Hash()); err != nil {
-			return false, err
-		} else {
-			bst.batch.Put(leveldbOperationHashKey(op.Hash()), encodeWithEncoder(bst.st.enc, raw))
-		}
-
-		if raw, err := bst.st.enc.Marshal(op.Hash()); err != nil {
-			return false, err
-		} else {
-			bst.batch.Put(leveldbOperationFactHashKey(op.Fact().Hash()), encodeWithEncoder(bst.st.enc, raw))
-		}
+	if err := tr.Traverse(func(_ int, key, _, _ []byte) (bool, error) {
+		bst.batch.Put(leveldbOperationFactHashKey(valuehash.NewBytes(key)), nil)
 
 		return true, nil
 	}); err != nil {
 		return err
 	}
-
-	bst.operations = tr
 
 	return nil
 }
 
-func (bst *BlockStorage) setStates(tr *tree.AVLTree) error {
-	if tr == nil || tr.Empty() {
-		return nil
-	}
-
-	if b, err := marshal(bst.st.enc, tr); err != nil { // block 1st
-		return err
-	} else {
-		bst.batch.Put(leveldbBlockStatesKey(bst.block), b)
-	}
-
-	if err := tr.Traverse(func(node tree.Node) (bool, error) {
-		var st state.State
-		if s, ok := node.Immutable().(state.StateV0AVLNode); !ok {
-			return false, xerrors.Errorf("not state.StateV0AVLNode: %T", node)
+func (bst *BlockStorage) setStates(sts []state.State) error {
+	for i := range sts {
+		if b, err := marshal(bst.st.enc, sts[i]); err != nil {
+			return err
 		} else {
-			st = s.State()
+			bst.batch.Put(leveldbStateKey(sts[i].Key()), b)
 		}
-
-		if b, err := marshal(bst.st.enc, st); err != nil {
-			return false, err
-		} else {
-			bst.batch.Put(leveldbStateKey(st.Key()), b)
-		}
-
-		return true, nil
-	}); err != nil {
-		return err
 	}
-
-	bst.states = tr
 
 	return nil
 }

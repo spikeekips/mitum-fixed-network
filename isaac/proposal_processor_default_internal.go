@@ -1,11 +1,12 @@
 package isaac
 
 import (
+	"bytes"
 	"context"
+	"sort"
 	"sync"
 	"time"
 
-	"github.com/spikeekips/avl"
 	"golang.org/x/xerrors"
 
 	"github.com/spikeekips/mitum/base"
@@ -13,10 +14,10 @@ import (
 	"github.com/spikeekips/mitum/base/block"
 	"github.com/spikeekips/mitum/base/operation"
 	"github.com/spikeekips/mitum/base/state"
-	"github.com/spikeekips/mitum/base/tree"
 	"github.com/spikeekips/mitum/storage"
 	"github.com/spikeekips/mitum/util/hint"
 	"github.com/spikeekips/mitum/util/logging"
+	"github.com/spikeekips/mitum/util/tree"
 	"github.com/spikeekips/mitum/util/valuehash"
 )
 
@@ -166,37 +167,60 @@ func (pp *internalDefaultProposalProcessor) process(
 		}
 	}
 
-	var operationsTree, statesTree *tree.AVLTree
-	var operationsHash, statesHash valuehash.Hash
+	var pool *Statepool
+	if p, err := NewStatepool(pp.localstate.Storage()); err != nil {
+		return nil, err
+	} else {
+		pool = p
+	}
+
+	var operationsTree, statesTree tree.FixedTree
+	var sts []state.State
 	if len(pp.operations) > 0 {
 		var err error
-		if statesTree, statesHash, err = pp.processStates(ctx); err != nil {
+		if statesTree, sts, err = pp.processStates(ctx, pool); err != nil {
 			return nil, err
-		} else if statesTree != nil {
-			if operationsTree, operationsHash, err = pp.processOperations(); err != nil {
+		} else if !statesTree.IsEmpty() {
+			if operationsTree, err = pp.processOperations(pool); err != nil {
 				return nil, err
 			}
 		}
 	}
 
+	return pp.createBlock(initVoteproof, operationsTree, statesTree, sts)
+}
+
+func (pp *internalDefaultProposalProcessor) createBlock(
+	initVoteproof base.Voteproof,
+	operationsTree, statesTree tree.FixedTree,
+	sts []state.State,
+) (block.Block, error) {
+	var opsHash, stsHash valuehash.Hash
+	if !operationsTree.IsEmpty() {
+		opsHash = valuehash.NewBytes(operationsTree.Root())
+	}
+	if !statesTree.IsEmpty() {
+		stsHash = valuehash.NewBytes(statesTree.Root())
+	}
+
 	var blk block.BlockUpdater
 	if b, err := block.NewBlockV0(
-		pp.si,
-		pp.proposal.Height(), pp.proposal.Round(), pp.proposal.Hash(), pp.lastManifest.Hash(),
-		operationsHash, statesHash,
+		pp.si, pp.proposal.Height(), pp.proposal.Round(), pp.proposal.Hash(), pp.lastManifest.Hash(),
+		opsHash, stsHash,
 	); err != nil {
 		return nil, err
 	} else {
 		blk = b
 	}
 
-	if statesTree != nil {
-		if err := pp.updateStates(statesTree, blk); err != nil {
+	if !statesTree.IsEmpty() {
+		if err := pp.updateStates(sts, blk); err != nil {
 			return nil, err
 		}
 	}
 
-	blk = blk.SetOperations(operationsTree).SetStates(statesTree).
+	blk = blk.SetOperationsTree(operationsTree).SetOperations(pp.operations).
+		SetStatesTree(statesTree).SetStates(sts).
 		SetINITVoteproof(initVoteproof).SetProposal(pp.proposal)
 
 	if bs, err := pp.localstate.Storage().OpenBlockStorage(blk); err != nil {
@@ -211,7 +235,7 @@ func (pp *internalDefaultProposalProcessor) process(
 			Hinted("hash", blk.Hash()).Hinted("height", blk.Height()).Hinted("round", blk.Round()).
 			Hinted("proposal", blk.Proposal()).Hinted("previous_block", blk.PreviousBlock()).
 			Hinted("operations_hash", blk.OperationsHash()).Hinted("states_hash", blk.StatesHash()),
-		).Msg("processed block")
+		).Msg("block processed")
 
 	return blk, nil
 }
@@ -277,42 +301,51 @@ func (pp *internalDefaultProposalProcessor) extractOperations() ([]operation.Ope
 	return ops, nil
 }
 
-func (pp *internalDefaultProposalProcessor) processOperations() (*tree.AVLTree, valuehash.Hash, error) {
+func (pp *internalDefaultProposalProcessor) processOperations(pool *Statepool) (tree.FixedTree, error) {
 	s := time.Now()
 	defer func() {
 		pp.statesValue.Store("process-operations", time.Since(s))
 	}()
 
-	tg := avl.NewTreeGenerator()
+	statesOps := pool.InsertedOperations()
+
+	tg := tree.NewFixedTreeGenerator(uint(len(pp.operations)), nil)
 	for i := range pp.operations {
 		if pp.isStopped() {
-			return nil, nil, xerrors.Errorf("already stopped")
+			return tree.FixedTree{}, xerrors.Errorf("already stopped")
 		}
 
-		if _, err := tg.Add(operation.NewOperationAVLNodeMutable(pp.operations[i])); err != nil {
-			return nil, nil, err
+		fh := pp.operations[i].Fact().Hash()
+
+		var mod []byte
+		if _, found := statesOps[fh.String()]; found {
+			mod = base.FactMode2bytes(base.FInStates)
+		}
+
+		if err := tg.Add(i, fh.Bytes(), mod); err != nil {
+			return tree.FixedTree{}, err
 		}
 	}
 
-	return pp.validateTree(tg)
+	if tr, err := tg.Tree(); err != nil {
+		return tree.FixedTree{}, err
+	} else {
+		return tr, nil
+	}
 }
 
-func (pp *internalDefaultProposalProcessor) processStates(ctx context.Context) (*tree.AVLTree, valuehash.Hash, error) {
+func (pp *internalDefaultProposalProcessor) processStates(
+	ctx context.Context,
+	pool *Statepool,
+) (tree.FixedTree, []state.State, error) {
 	s := time.Now()
 	defer func() {
 		pp.statesValue.Store("process-states", time.Since(s))
 	}()
 
-	var pool *Statepool
-	if p, err := NewStatepool(pp.localstate.Storage()); err != nil {
-		return nil, nil, err
-	} else {
-		pool = p
-	}
-
 	var co *ConcurrentOperationsProcessor
 	if c, err := NewConcurrentOperationsProcessor(len(pp.operations), pool, pp.oprHintset); err != nil {
-		return nil, nil, err
+		return tree.FixedTree{}, nil, err
 	} else {
 		_ = c.SetLogger(pp.Log())
 
@@ -341,38 +374,53 @@ func (pp *internalDefaultProposalProcessor) processStates(ctx context.Context) (
 
 	for i := range pp.operations {
 		if pp.isStopped() {
-			return nil, nil, xerrors.Errorf("already stopped")
+			return tree.FixedTree{}, nil, xerrors.Errorf("already stopped")
 		} else if err := co.Process(pp.operations[i]); err != nil {
-			return nil, nil, err
+			return tree.FixedTree{}, nil, err
 		}
 	}
 
 	if err := co.Close(); err != nil {
-		return nil, nil, err
+		return tree.FixedTree{}, nil, err
+	}
+
+	if !pool.IsUpdated() {
+		return tree.FixedTree{}, nil, nil
 	}
 
 	return pp.generateStatesTree(pool)
 }
 
-func (pp *internalDefaultProposalProcessor) generateStatesTree(pool *Statepool) (*tree.AVLTree, valuehash.Hash, error) {
-	if !pool.IsUpdated() {
-		return nil, nil, nil
-	}
-
-	tg := avl.NewTreeGenerator()
-	for _, s := range pool.Updates() {
+func (pp *internalDefaultProposalProcessor) generateStatesTree(pool *Statepool) (tree.FixedTree, []state.State, error) {
+	sts := make([]state.State, len(pool.Updates()))
+	for i, s := range pool.Updates() {
 		if pp.isStopped() {
-			return nil, nil, xerrors.Errorf("already stopped")
+			return tree.FixedTree{}, nil, xerrors.Errorf("already stopped")
 		} else if err := s.SetHash(s.GenerateHash()); err != nil {
-			return nil, nil, err
+			return tree.FixedTree{}, nil, err
 		} else if err := s.IsValid(nil); err != nil {
-			return nil, nil, err
-		} else if _, err := tg.Add(state.NewStateV0AVLNodeMutable(s.(*state.StateV0Updater))); err != nil {
-			return nil, nil, err
+			return tree.FixedTree{}, nil, err
+		} else {
+			sts[i] = s
 		}
 	}
 
-	return pp.validateTree(tg)
+	sort.Slice(sts, func(i, j int) bool {
+		return bytes.Compare(sts[i].Hash().Bytes(), sts[j].Hash().Bytes()) < 0
+	})
+
+	tg := tree.NewFixedTreeGenerator(uint(len(pool.Updates())), nil)
+	for i := range sts {
+		if err := tg.Add(i, sts[i].Hash().Bytes(), nil); err != nil {
+			return tree.FixedTree{}, nil, err
+		}
+	}
+
+	if tr, err := tg.Tree(); err != nil {
+		return tree.FixedTree{}, nil, err
+	} else {
+		return tr, sts, nil
+	}
 }
 
 func (pp *internalDefaultProposalProcessor) getOperationsFromStorage(h valuehash.Hash) (
@@ -527,45 +575,24 @@ func (pp *internalDefaultProposalProcessor) setACCEPTVoteproof(acceptVoteproof b
 	return nil
 }
 
-func (pp *internalDefaultProposalProcessor) validateTree(tg *avl.TreeGenerator) (*tree.AVLTree, valuehash.Hash, error) {
-	var tr *tree.AVLTree
-	if t, err := tg.Tree(); err != nil {
-		return nil, nil, err
-	} else if at, err := tree.NewAVLTree(t); err != nil {
-		return nil, nil, err
-	} else if err := at.IsValid(); err != nil {
-		return nil, nil, err
-	} else {
-		tr = at
-	}
-
-	return tr, tr.RootHash(), nil
-}
-
-func (pp *internalDefaultProposalProcessor) updateStates(tr *tree.AVLTree, blk block.Block) error {
+func (pp *internalDefaultProposalProcessor) updateStates(sts []state.State, blk block.Block) error {
 	s := time.Now()
 	defer func() {
 		pp.statesValue.Store("update-states", time.Since(s))
 	}()
 
-	return tr.Traverse(func(node tree.Node) (bool, error) {
+	for i := range sts {
 		if pp.isStopped() {
-			return false, xerrors.Errorf("already stopped")
+			return xerrors.Errorf("already stopped")
 		}
 
-		var st state.StateUpdater
-		if s, ok := node.(*state.StateV0AVLNodeMutable); !ok {
-			return false, xerrors.Errorf("not state.StateV0AVLNode: %T", node)
-		} else {
-			st = s.State().(state.StateUpdater)
-		}
-
+		st := sts[i].(state.StateUpdater)
 		if err := st.SetCurrentBlock(blk.Height(), blk.Hash()); err != nil {
-			return false, err
+			return err
 		}
+	}
 
-		return true, nil
-	})
+	return nil
 }
 
 func (pp *internalDefaultProposalProcessor) states() map[string]interface{} {

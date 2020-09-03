@@ -25,17 +25,6 @@ var operationIndexModels = []mongo.IndexModel{
 			SetUnique(true),
 	},
 	{
-		Keys: bson.D{bson.E{Key: "hash_string", Value: 1}},
-		Options: options.Index().
-			SetName("mitum_operation_hash").
-			SetUnique(true),
-	},
-	{
-		Keys: bson.D{bson.E{Key: "hash_string", Value: 1}, bson.E{Key: "height", Value: 1}},
-		Options: options.Index().
-			SetName("mitum_operation_hash_and_height"),
-	},
-	{
 		Keys: bson.D{bson.E{Key: "height", Value: 1}},
 		Options: options.Index().
 			SetName("mitum_operation_height"),

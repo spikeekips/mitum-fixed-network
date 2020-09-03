@@ -95,7 +95,7 @@ func (kvo KVOperation) Process(
 	} else if ns, err := s.SetValue(value); err != nil {
 		return err
 	} else {
-		return setState(kvo.Hash(), ns)
+		return setState(kvo.Fact().Hash(), ns)
 	}
 }
 

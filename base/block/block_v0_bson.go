@@ -4,8 +4,10 @@ import (
 	"go.mongodb.org/mongo-driver/bson"
 	"golang.org/x/xerrors"
 
-	"github.com/spikeekips/mitum/base/tree"
+	"github.com/spikeekips/mitum/base/operation"
+	"github.com/spikeekips/mitum/base/state"
 	bsonenc "github.com/spikeekips/mitum/util/encoder/bson"
+	"github.com/spikeekips/mitum/util/tree"
 )
 
 func (bm BlockV0) MarshalBSON() ([]byte, error) {
@@ -14,11 +16,19 @@ func (bm BlockV0) MarshalBSON() ([]byte, error) {
 		"consensus": bm.ci,
 	}
 
-	if bm.operations != nil && !bm.operations.Empty() {
+	if !bm.operationsTree.IsEmpty() {
+		m["operations_tree"] = bm.operationsTree
+	}
+
+	if len(bm.operations) > 0 {
 		m["operations"] = bm.operations
 	}
 
-	if bm.states != nil && !bm.states.Empty() {
+	if !bm.statesTree.IsEmpty() {
+		m["states_tree"] = bm.statesTree
+	}
+
+	if len(bm.states) > 0 {
 		m["states"] = bm.states
 	}
 
@@ -26,10 +36,12 @@ func (bm BlockV0) MarshalBSON() ([]byte, error) {
 }
 
 type BlockV0UnpackBSON struct {
-	MF bson.Raw `bson:"manifest"`
-	CI bson.Raw `bson:"consensus"`
-	OP bson.Raw `bson:"operations,omitempty"`
-	ST bson.Raw `bson:"states,omitempty"`
+	MF  bson.Raw   `bson:"manifest"`
+	CI  bson.Raw   `bson:"consensus"`
+	OPT bson.Raw   `bson:"operations_tree,omitempty"`
+	OP  []bson.Raw `bson:"operations,omitempty"`
+	STT bson.Raw   `bson:"states_tree,omitempty"`
+	ST  []bson.Raw `bson:"states,omitempty"`
 }
 
 func (bm *BlockV0) UnpackBSON(b []byte, enc *bsonenc.Encoder) error {
@@ -38,45 +50,57 @@ func (bm *BlockV0) UnpackBSON(b []byte, enc *bsonenc.Encoder) error {
 		return err
 	}
 
-	var mf ManifestV0
 	if m, err := DecodeManifest(enc, nbm.MF); err != nil {
 		return err
 	} else if mv, ok := m.(ManifestV0); !ok {
 		return xerrors.Errorf("not ManifestV0: type=%T", m)
 	} else {
-		mf = mv
+		bm.ManifestV0 = mv
 	}
 
-	var ci ConsensusInfoV0
 	if m, err := decodeConsensusInfo(enc, nbm.CI); err != nil {
 		return err
 	} else if mv, ok := m.(ConsensusInfoV0); !ok {
 		return xerrors.Errorf("not ConsensusInfoV0: type=%T", m)
 	} else {
-		ci = mv
+		bm.ci = mv
 	}
 
-	var operations, states tree.AVLTree
-	if nbm.OP != nil {
-		if tr, err := tree.DecodeAVLTree(enc, nbm.OP); err != nil {
+	if nbm.OPT != nil {
+		if tr, err := tree.DecodeFixedTree(enc, nbm.OPT); err != nil {
 			return err
 		} else {
-			operations = tr
+			bm.operationsTree = tr
 		}
 	}
 
-	if nbm.ST != nil {
-		if tr, err := tree.DecodeAVLTree(enc, nbm.ST); err != nil {
+	ops := make([]operation.Operation, len(nbm.OP))
+	for i := range nbm.OP {
+		if op, err := operation.DecodeOperation(enc, nbm.OP[i]); err != nil {
 			return err
 		} else {
-			states = tr
+			ops[i] = op
+		}
+	}
+	bm.operations = ops
+
+	if nbm.STT != nil {
+		if tr, err := tree.DecodeFixedTree(enc, nbm.STT); err != nil {
+			return err
+		} else {
+			bm.statesTree = tr
 		}
 	}
 
-	bm.ManifestV0 = mf
-	bm.ci = ci
-	bm.operations = &operations
-	bm.states = &states
+	sts := make([]state.State, len(nbm.ST))
+	for i := range nbm.ST {
+		if st, err := state.DecodeState(enc, nbm.ST[i]); err != nil {
+			return err
+		} else {
+			sts[i] = st
+		}
+	}
+	bm.states = sts
 
 	return nil
 }

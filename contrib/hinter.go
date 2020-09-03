@@ -8,7 +8,6 @@ import (
 	"github.com/spikeekips/mitum/base/operation"
 	"github.com/spikeekips/mitum/base/policy"
 	"github.com/spikeekips/mitum/base/state"
-	"github.com/spikeekips/mitum/base/tree"
 	bsonenc "github.com/spikeekips/mitum/util/encoder/bson"
 	jsonenc "github.com/spikeekips/mitum/util/encoder/json"
 	"github.com/spikeekips/mitum/util/hint"
@@ -40,16 +39,13 @@ var Hinters = []hint.Hinter{
 	key.StellarPrivatekeyHinter,
 	key.StellarPublickeyHinter,
 	operation.BaseSeal{},
-	operation.OperationAVLNode{},
 	state.BytesValue{},
 	state.DurationValue{},
 	state.HintedValue{},
 	state.NumberValue{},
 	state.SliceValue{},
-	state.StateV0AVLNode{},
 	state.StateV0{},
 	state.StringValue{},
-	tree.AVLTree{},
 	valuehash.Bytes{},
 	valuehash.SHA256{},
 	valuehash.SHA512{},

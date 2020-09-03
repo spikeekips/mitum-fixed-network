@@ -3,9 +3,6 @@
 package isaac
 
 import (
-	"bytes"
-	"sort"
-
 	"github.com/stretchr/testify/suite"
 	"golang.org/x/xerrors"
 
@@ -15,12 +12,12 @@ import (
 	"github.com/spikeekips/mitum/base/key"
 	"github.com/spikeekips/mitum/base/operation"
 	"github.com/spikeekips/mitum/base/state"
-	"github.com/spikeekips/mitum/base/tree"
 	"github.com/spikeekips/mitum/storage"
 	"github.com/spikeekips/mitum/storage/localfs"
 	"github.com/spikeekips/mitum/util"
 	"github.com/spikeekips/mitum/util/encoder"
 	"github.com/spikeekips/mitum/util/localtime"
+	"github.com/spikeekips/mitum/util/tree"
 	"github.com/spikeekips/mitum/util/valuehash"
 )
 
@@ -62,12 +59,8 @@ func (t *baseTestStateHandler) SetupSuite() {
 	_ = t.Encs.AddHinter(operation.KVOperation{})
 	_ = t.Encs.AddHinter(KVOperation{})
 	_ = t.Encs.AddHinter(LongKVOperation{})
-	_ = t.Encs.AddHinter(tree.AVLTree{})
-	_ = t.Encs.AddHinter(operation.OperationAVLNode{})
-	_ = t.Encs.AddHinter(operation.OperationAVLNodeMutable{})
+	_ = t.Encs.AddHinter(tree.FixedTree{})
 	_ = t.Encs.AddHinter(state.StateV0{})
-	_ = t.Encs.AddHinter(state.StateV0AVLNode{})
-	_ = t.Encs.AddHinter(state.StateV0AVLNodeMutable{})
 	_ = t.Encs.AddHinter(state.BytesValue{})
 	_ = t.Encs.AddHinter(state.DurationValue{})
 	_ = t.Encs.AddHinter(state.HintedValue{})
@@ -320,10 +313,23 @@ func (t *baseTestStateHandler) compareManifest(a, b block.Manifest) {
 
 func (t *baseTestStateHandler) compareBlock(a, b block.Block) {
 	t.compareManifest(a, b)
-	t.compareAVLTree(a.States(), b.States())
-	t.compareAVLTree(a.Operations(), b.Operations())
+	t.compareFixedTree(a.OperationsTree(), b.OperationsTree())
+	t.compareFixedTree(a.StatesTree(), b.StatesTree())
 	t.compareVoteproof(a.ConsensusInfo().INITVoteproof(), b.ConsensusInfo().INITVoteproof())
 	t.compareVoteproof(a.ConsensusInfo().ACCEPTVoteproof(), b.ConsensusInfo().ACCEPTVoteproof())
+
+	for i := range a.Operations() {
+		ao := a.Operations()[i]
+		bo := b.Operations()[i]
+		t.True(ao.Hash().Equal(bo.Hash()))
+		t.True(ao.Fact().Hash().Equal(bo.Fact().Hash()))
+	}
+
+	for i := range a.States() {
+		ao := a.States()[i]
+		bo := b.States()[i]
+		t.True(ao.Hash().Equal(bo.Hash()))
+	}
 }
 
 func (t *baseTestStateHandler) compareVoteproof(a, b base.Voteproof) {
@@ -366,52 +372,22 @@ func (t *baseTestStateHandler) compareVoteproof(a, b base.Voteproof) {
 	}
 }
 
-func (t *baseTestStateHandler) compareAVLTree(a, b *tree.AVLTree) {
-	if a == nil && b == nil {
+func (t *baseTestStateHandler) compareFixedTree(a, b tree.FixedTree) {
+	if a.IsEmpty() && b.IsEmpty() {
 		return
 	}
 
 	t.True(a.Hint().Equal(b.Hint()))
-	{
-		ah := a.RootHash()
-		bh := b.RootHash()
 
-		t.True(ah.Equal(bh))
-	}
+	t.Equal(a.Len(), b.Len())
+	t.Equal(a.Root(), b.Root())
 
-	var nodesA, nodesB []tree.Node
-	t.NoError(a.Traverse(func(node tree.Node) (bool, error) {
-		nodesA = append(nodesA, node)
+	t.NoError(a.Traverse(func(i int, key, h, _ []byte) (bool, error) {
+		t.Equal(key, b.Key(i))
+		t.Equal(h, b.Hash(i))
+
 		return true, nil
 	}))
-	t.NoError(b.Traverse(func(node tree.Node) (bool, error) {
-		nodesB = append(nodesB, node)
-		return true, nil
-	}))
-
-	sort.Slice(nodesA, func(i, j int) bool {
-		return bytes.Compare(nodesA[i].Key(), nodesA[j].Key()) < 0
-	})
-	sort.Slice(nodesB, func(i, j int) bool {
-		return bytes.Compare(nodesB[i].Key(), nodesB[j].Key()) < 0
-	})
-
-	t.Equal(len(nodesA), len(nodesB))
-
-	for i := range nodesA {
-		t.compareAVLTreeNode(nodesA[i].Immutable(), nodesB[i].Immutable())
-	}
-}
-
-func (t *baseTestStateHandler) compareAVLTreeNode(a, b tree.Node) {
-	t.Equal(a.Hint(), b.Hint())
-	t.Equal(a.Key(), b.Key())
-	t.Equal(a.Hash(), b.Hash())
-	t.Equal(a.LeftKey(), b.LeftHash())
-	t.Equal(a.LeftHash(), b.LeftHash())
-	t.Equal(a.RightKey(), b.RightHash())
-	t.Equal(a.RightHash(), b.RightHash())
-	t.Equal(a.ValueHash(), b.ValueHash())
 }
 
 func (t *baseTestStateHandler) lastManifest(st storage.Storage) block.Manifest {

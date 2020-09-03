@@ -12,24 +12,24 @@ import (
 	"github.com/spikeekips/mitum/base/key"
 	"github.com/spikeekips/mitum/base/operation"
 	"github.com/spikeekips/mitum/base/seal"
-	"github.com/spikeekips/mitum/base/tree"
 	"github.com/spikeekips/mitum/util/encoder"
 	bsonenc "github.com/spikeekips/mitum/util/encoder/bson"
 	jsonenc "github.com/spikeekips/mitum/util/encoder/json"
+	"github.com/spikeekips/mitum/util/tree"
 	"github.com/spikeekips/mitum/util/valuehash"
 )
 
 type DummyBlockStorage struct {
 	block      block.Block
-	operations *tree.AVLTree
-	states     *tree.AVLTree
+	operations tree.FixedTree
+	states     tree.FixedTree
 	commited   bool
 }
 
 func NewDummyBlockStorage(
 	blk block.Block,
-	operations *tree.AVLTree,
-	states *tree.AVLTree,
+	operations tree.FixedTree,
+	states tree.FixedTree,
 ) *DummyBlockStorage {
 	return &DummyBlockStorage{block: blk, operations: operations, states: states}
 }
@@ -44,13 +44,13 @@ func (dst *DummyBlockStorage) SetBlock(blk block.Block) error {
 	return nil
 }
 
-func (dst *DummyBlockStorage) SetOperations(tree *tree.AVLTree) error {
+func (dst *DummyBlockStorage) SetOperations(tree tree.FixedTree) error {
 	dst.operations = tree
 
 	return nil
 }
 
-func (dst *DummyBlockStorage) SetStates(tree *tree.AVLTree) error {
+func (dst *DummyBlockStorage) SetStates(tree tree.FixedTree) error {
 	dst.states = tree
 
 	return nil
@@ -110,6 +110,7 @@ func (t *BaseTestStorage) SetupSuite() {
 	_ = t.Encs.AddHinter(operation.BaseFactSign{})
 	_ = t.Encs.AddHinter(operation.KVOperation{})
 	_ = t.Encs.AddHinter(operation.KVOperationFact{})
+	_ = t.Encs.AddHinter(tree.FixedTree{})
 
 	t.PK, _ = key.NewBTCPrivatekey()
 }

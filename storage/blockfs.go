@@ -1,6 +1,8 @@
 package storage
 
 import (
+	"bufio"
+	"bytes"
 	"compress/gzip"
 	"fmt"
 	"io"
@@ -16,12 +18,14 @@ import (
 	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/base/ballot"
 	"github.com/spikeekips/mitum/base/block"
-	"github.com/spikeekips/mitum/base/tree"
+	"github.com/spikeekips/mitum/base/operation"
+	"github.com/spikeekips/mitum/base/state"
 	"github.com/spikeekips/mitum/util"
 	"github.com/spikeekips/mitum/util/encoder"
 	jsonenc "github.com/spikeekips/mitum/util/encoder/json"
 	"github.com/spikeekips/mitum/util/errors"
 	"github.com/spikeekips/mitum/util/logging"
+	"github.com/spikeekips/mitum/util/tree"
 	"github.com/spikeekips/mitum/util/valuehash"
 )
 
@@ -29,7 +33,9 @@ var (
 	heightFormat = "%021s"
 	blockFiles   = []string{
 		"manifest",
+		"operations_tree",
 		"operations",
+		"states_tree",
 		"states",
 		"init_voteproof",
 		"accept_voteproof",
@@ -74,8 +80,16 @@ func (bs *BlockFS) OpenManifest(height base.Height) (io.ReadCloser, bool, error)
 	return bs.open(height, "manifest")
 }
 
+func (bs *BlockFS) OpenOperationsTree(height base.Height) (io.ReadCloser, bool, error) {
+	return bs.open(height, "operations_tree")
+}
+
 func (bs *BlockFS) OpenOperations(height base.Height) (io.ReadCloser, bool, error) {
 	return bs.open(height, "operations")
+}
+
+func (bs *BlockFS) OpenStatesTree(height base.Height) (io.ReadCloser, bool, error) {
+	return bs.open(height, "states_tree")
 }
 
 func (bs *BlockFS) OpenStates(height base.Height) (io.ReadCloser, bool, error) {
@@ -99,64 +113,63 @@ func (bs *BlockFS) OpenProposal(height base.Height) (io.ReadCloser, bool, error)
 }
 
 func (bs *BlockFS) Load(height base.Height) (block.Block, error) {
-	var manifest block.Manifest
+	blk := (interface{})(block.BlockV0{}).(block.BlockUpdater)
+
 	if i, err := bs.LoadManifest(height); err != nil {
 		return nil, err
 	} else {
-		manifest = i
+		blk = blk.SetManifest(i)
 	}
 
-	var ops *tree.AVLTree
+	if i, err := bs.LoadOperationsTree(height); err != nil {
+		return nil, err
+	} else {
+		blk = blk.SetOperationsTree(i)
+	}
+
 	if i, err := bs.LoadOperations(height); err != nil {
 		return nil, err
 	} else {
-		ops = i
+		blk = blk.SetOperations(i)
 	}
 
-	var states *tree.AVLTree
+	if i, err := bs.LoadStatesTree(height); err != nil {
+		return nil, err
+	} else {
+		blk = blk.SetStatesTree(i)
+	}
+
 	if i, err := bs.LoadStates(height); err != nil {
 		return nil, err
 	} else {
-		states = i
+		blk = blk.SetStates(i)
 	}
 
-	var ivp base.Voteproof
 	if i, err := bs.LoadINITVoteproof(height); err != nil {
 		return nil, err
 	} else {
-		ivp = i
+		blk = blk.SetINITVoteproof(i)
 	}
 
-	var avp base.Voteproof
 	if i, err := bs.LoadACCEPTVoteproof(height); err != nil {
 		return nil, err
 	} else {
-		avp = i
+		blk = blk.SetACCEPTVoteproof(i)
 	}
 
-	var suffrage block.SuffrageInfo
 	if i, err := bs.LoadSuffrage(height); err != nil {
 		return nil, err
 	} else {
-		suffrage = i
+		blk = blk.SetSuffrageInfo(i)
 	}
 
-	var proposal ballot.Proposal
 	if i, err := bs.LoadProposal(height); err != nil {
 		return nil, err
 	} else {
-		proposal = i
+		blk = blk.SetProposal(i)
 	}
 
-	blk := block.BlockV0{}
-
-	return blk.SetManifest(manifest).
-		SetOperations(ops).
-		SetStates(states).
-		SetINITVoteproof(ivp).
-		SetACCEPTVoteproof(avp).
-		SetSuffrageInfo(suffrage).
-		SetProposal(proposal), nil
+	return blk, nil
 }
 
 func (bs *BlockFS) LoadManifest(height base.Height) (block.Manifest, error) {
@@ -169,28 +182,102 @@ func (bs *BlockFS) LoadManifest(height base.Height) (block.Manifest, error) {
 	}
 }
 
-func (bs *BlockFS) LoadOperations(height base.Height) (*tree.AVLTree, error) {
-	if hinter, err := bs.load(height, "operations"); err != nil {
-		return nil, err
+func (bs *BlockFS) LoadOperationsTree(height base.Height) (tree.FixedTree, error) {
+	if hinter, err := bs.load(height, "operations_tree"); err != nil {
+		return tree.FixedTree{}, err
 	} else if hinter == nil {
-		return nil, nil
-	} else if i, ok := hinter.(tree.AVLTree); !ok {
-		return nil, xerrors.Errorf("not operations, *tree.AVLTree, %T", hinter)
+		return tree.FixedTree{}, nil
+	} else if i, ok := hinter.(tree.FixedTree); !ok {
+		return tree.FixedTree{}, xerrors.Errorf("not operations, *tree.FixedTree, %T", hinter)
 	} else {
-		return &i, nil
+		return i, nil
 	}
 }
 
-func (bs *BlockFS) LoadStates(height base.Height) (*tree.AVLTree, error) {
-	if hinter, err := bs.load(height, "states"); err != nil {
+func (bs *BlockFS) LoadOperations(height base.Height) ([]operation.Operation, error) {
+	var ops []operation.Operation
+	if err := bs.loadByLine(height, "operations", func(b []byte) error {
+		if op, err := operation.DecodeOperation(bs.enc, b); err != nil {
+			return err
+		} else {
+			ops = append(ops, op)
+		}
+
+		return nil
+	}); err != nil {
 		return nil, err
-	} else if hinter == nil {
-		return nil, nil
-	} else if i, ok := hinter.(tree.AVLTree); !ok {
-		return nil, xerrors.Errorf("not states, *tree.AVLTree, %T", hinter)
 	} else {
-		return &i, nil
+		return ops, nil
 	}
+}
+
+func (bs *BlockFS) LoadStatesTree(height base.Height) (tree.FixedTree, error) {
+	if hinter, err := bs.load(height, "states_tree"); err != nil {
+		return tree.FixedTree{}, err
+	} else if hinter == nil {
+		return tree.FixedTree{}, nil
+	} else if i, ok := hinter.(tree.FixedTree); !ok {
+		return tree.FixedTree{}, xerrors.Errorf("not states, tree.FixedTree, %T", hinter)
+	} else {
+		return i, nil
+	}
+}
+
+func (bs *BlockFS) LoadStates(height base.Height) ([]state.State, error) {
+	var sts []state.State
+	if err := bs.loadByLine(height, "states", func(b []byte) error {
+		if st, err := state.DecodeState(bs.enc, b); err != nil {
+			return err
+		} else {
+			sts = append(sts, st)
+		}
+
+		return nil
+	}); err != nil {
+		return nil, err
+	} else {
+		return sts, nil
+	}
+}
+
+func (bs *BlockFS) loadByLine(height base.Height, name string, decode func([]byte) error) error {
+	r, isCompressed, err := bs.open(height, name)
+	if err != nil {
+		return err
+	}
+
+	defer func() {
+		_ = r.Close()
+	}()
+
+	var rd io.Reader
+	switch {
+	case !isCompressed:
+		rd = r
+	default:
+		if gr, err := gzip.NewReader(r); err != nil {
+			return WrapFSError(err)
+		} else {
+			rd = gr
+		}
+	}
+
+	bd := bufio.NewReader(rd)
+	for {
+		l, err := bd.ReadBytes('\n')
+		if err != nil {
+			if err == io.EOF {
+				break
+			}
+
+			return err
+		}
+		if err := decode(l); err != nil {
+			return err
+		}
+	}
+
+	return nil
 }
 
 func (bs *BlockFS) LoadINITVoteproof(height base.Height) (base.Voteproof, error) {
@@ -248,18 +335,16 @@ func (bs *BlockFS) Add(blk block.Block) error {
 		if !xerrors.Is(err, NotFoundError) {
 			return err
 		}
-	}
-
-	if err := bs.fs.CreateDirectory(unstaged); err != nil {
+	} else if err := bs.fs.CreateDirectory(unstaged); err != nil {
 		if !xerrors.Is(err, FoundError) {
 			return err
 		}
 	}
 
 	var wg sync.WaitGroup
-	wg.Add(7)
+	wg.Add(9)
 
-	errchan := make(chan error, 7)
+	errchan := make(chan error, 9)
 
 	f := func(name string, i interface{}) {
 		defer wg.Done()
@@ -268,8 +353,18 @@ func (bs *BlockFS) Add(blk block.Block) error {
 	}
 
 	go f("manifest", blk.Manifest())
-	go f("operations", blk.Operations())
-	go f("states", blk.States())
+	go f("operations_tree", blk.OperationsTree())
+	go func() {
+		defer wg.Done()
+
+		errchan <- bs.AddOperations(height, bh, blk.Operations())
+	}()
+	go f("states_tree", blk.StatesTree())
+	go func() {
+		defer wg.Done()
+
+		errchan <- bs.AddStates(height, bh, blk.States())
+	}()
 	go f("init_voteproof", blk.ConsensusInfo().INITVoteproof())
 	go f("accept_voteproof", blk.ConsensusInfo().ACCEPTVoteproof())
 	go f("suffrage", blk.ConsensusInfo().SuffrageInfo())
@@ -278,39 +373,62 @@ func (bs *BlockFS) Add(blk block.Block) error {
 	wg.Wait()
 	close(errchan)
 
-	var err error
-	for e := range errchan {
-		if e != nil {
+	for err := range errchan {
+		if err == nil {
 			continue
 		}
 
-		err = e
+		err0 := errors.NewError("failed to save block data").Wrap(err)
+		if err1 := bs.Cancel(height, bh); err1 != nil {
+			return err0.Wrap(err1)
+		}
 
-		break
+		return err0
 	}
 
-	if err == nil {
-		return err
-	}
-
-	err0 := errors.NewError("failed to save block data").Wrap(err)
-	if err1 := bs.Cancel(height, bh); err1 != nil {
-		return err0.Wrap(err1)
-	}
-
-	return err0
+	return nil
 }
 
 func (bs *BlockFS) AddManifest(height base.Height, bh valuehash.Hash, i block.Manifest) error {
 	return bs.add(height, bh, "manifest", i)
 }
 
-func (bs *BlockFS) AddOperations(height base.Height, bh valuehash.Hash, i *tree.AVLTree) error {
-	return bs.add(height, bh, "operations", i)
+func (bs *BlockFS) AddOperationsTree(height base.Height, bh valuehash.Hash, i tree.FixedTree) error {
+	return bs.add(height, bh, "operations_tree", i)
 }
 
-func (bs *BlockFS) AddStates(height base.Height, bh valuehash.Hash, i *tree.AVLTree) error {
-	return bs.add(height, bh, "states", i)
+func (bs *BlockFS) AddOperations(height base.Height, bh valuehash.Hash, ops []operation.Operation) error {
+	buf := bytes.NewBuffer(nil)
+
+	// TODO use io.Writer
+	for i := range ops {
+		if b, err := bs.enc.Marshal(ops[i]); err != nil {
+			return err
+		} else {
+			_, _ = buf.Write(append(b, '\n'))
+		}
+	}
+
+	return bs.addRaw(height, bh, "operations", buf.Bytes())
+}
+
+func (bs *BlockFS) AddStatesTree(height base.Height, bh valuehash.Hash, i tree.FixedTree) error {
+	return bs.add(height, bh, "states_tree", i)
+}
+
+func (bs *BlockFS) AddStates(height base.Height, bh valuehash.Hash, sts []state.State) error {
+	buf := bytes.NewBuffer(nil)
+
+	// TODO use io.Writer
+	for i := range sts {
+		if b, err := bs.enc.Marshal(sts[i]); err != nil {
+			return err
+		} else {
+			_, _ = buf.Write(append(b, '\n'))
+		}
+	}
+
+	return bs.addRaw(height, bh, "states", buf.Bytes())
 }
 
 func (bs *BlockFS) AddINITVoteproof(height base.Height, bh valuehash.Hash, i base.Voteproof) error {
@@ -537,7 +655,15 @@ func (bs *BlockFS) add(height base.Height, bh valuehash.Hash, name string, i int
 
 	if b, err := bs.enc.Marshal(i); err != nil {
 		return err
-	} else if err := bs.save(height, bh, name, b); err != nil {
+	} else if err := bs.addRaw(height, bh, name, b); err != nil {
+		return err
+	} else {
+		return nil
+	}
+}
+
+func (bs *BlockFS) addRaw(height base.Height, bh valuehash.Hash, name string, b []byte) error {
+	if err := bs.save(height, bh, name, b); err != nil {
 		err := errors.NewError("failed to save block data, %q", name).Wrap(err)
 		if err0 := bs.Cancel(height, bh); err0 != nil {
 			return err.Wrap(err0)
@@ -692,7 +818,7 @@ func (bs *BlockFS) existsWithHash(p string, height base.Height, bh valuehash.Has
 
 	for _, f := range founds {
 		if !f {
-			return NotFoundError.Errorf("no block files found")
+			return NotFoundError.Errorf("no block files found, %s", p)
 		}
 	}
 

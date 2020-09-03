@@ -11,11 +11,10 @@ import (
 	"golang.org/x/xerrors"
 
 	"github.com/spikeekips/mitum/base/block"
-	"github.com/spikeekips/mitum/base/operation"
 	"github.com/spikeekips/mitum/base/state"
-	"github.com/spikeekips/mitum/base/tree"
 	"github.com/spikeekips/mitum/storage"
 	"github.com/spikeekips/mitum/util"
+	"github.com/spikeekips/mitum/util/tree"
 	"github.com/spikeekips/mitum/util/valuehash"
 )
 
@@ -23,8 +22,8 @@ type BlockStorage struct {
 	st                  *Storage
 	ost                 *Storage
 	block               block.Block
-	operations          *tree.AVLTree
-	states              *tree.AVLTree
+	operations          tree.FixedTree
+	states              []state.State
 	manifestModels      []mongo.WriteModel
 	operationSealModels []mongo.WriteModel
 	operationModels     []mongo.WriteModel
@@ -90,7 +89,7 @@ func (bst *BlockStorage) SetBlock(blk block.Block) error {
 		bst.manifestModels = append(bst.manifestModels, mongo.NewInsertOneModel().SetDocument(doc))
 	}
 
-	if err := bst.setOperations(blk.Operations()); err != nil {
+	if err := bst.setOperationsTree(blk.OperationsTree()); err != nil {
 		return err
 	}
 
@@ -184,26 +183,24 @@ func (bst *BlockStorage) commit(ctx context.Context) error {
 		return err
 	}
 
-	go bst.insertCaches()
+	bst.insertCaches()
 
 	return nil
 }
 
-func (bst *BlockStorage) setOperations(tr *tree.AVLTree) error {
+func (bst *BlockStorage) setOperationsTree(tr tree.FixedTree) error {
 	started := time.Now()
 	defer func() {
-		bst.statesValue.Store("set-operations", time.Since(started))
+		bst.statesValue.Store("set-operations-tree", time.Since(started))
 	}()
 
-	if tr == nil || tr.Empty() {
+	if tr.IsEmpty() {
 		return nil
 	}
 
 	var models []mongo.WriteModel
-	if err := tr.Traverse(func(node tree.Node) (bool, error) {
-		op := node.Immutable().(operation.OperationAVLNode).Operation()
-
-		doc, err := NewOperationDoc(op, bst.st.enc, bst.block.Height())
+	if err := tr.Traverse(func(_ int, key, _, _ []byte) (bool, error) {
+		doc, err := NewOperationDoc(valuehash.NewBytes(key), bst.st.enc, bst.block.Height())
 		if err != nil {
 			return false, err
 		}
@@ -220,33 +217,23 @@ func (bst *BlockStorage) setOperations(tr *tree.AVLTree) error {
 	return nil
 }
 
-func (bst *BlockStorage) setStates(tr *tree.AVLTree) error {
+func (bst *BlockStorage) setStates(sts []state.State) error {
 	started := time.Now()
 	defer func() {
 		bst.statesValue.Store("set-states", time.Since(started))
 	}()
 
-	if tr == nil || tr.Empty() {
-		return nil
-	}
-
 	var models []mongo.WriteModel
-	if err := tr.Traverse(func(node tree.Node) (bool, error) {
-		st := node.Immutable().(state.StateV0AVLNode).State()
-
-		doc, err := NewStateDoc(st, bst.st.enc)
+	for i := range sts {
+		doc, err := NewStateDoc(sts[i], bst.st.enc)
 		if err != nil {
-			return false, err
+			return err
 		}
 		models = append(models, mongo.NewInsertOneModel().SetDocument(doc))
-
-		return true, nil
-	}); err != nil {
-		return err
 	}
 
 	bst.stateModels = models
-	bst.states = tr
+	bst.states = sts
 
 	return nil
 }
@@ -271,23 +258,30 @@ func (bst *BlockStorage) writeModels(ctx context.Context, col string, models []m
 }
 
 func (bst *BlockStorage) insertCaches() {
-	if bst.operations != nil {
-		_ = bst.operations.Traverse(func(node tree.Node) (bool, error) {
-			op := node.Immutable().(operation.OperationAVLNode).Operation()
+	var wg sync.WaitGroup
+	wg.Add(2)
 
-			_ = bst.ost.operationFactCache.Set(op.Fact().Hash().String(), struct{}{})
-			return true, nil
-		})
-	}
+	go func() {
+		defer wg.Done()
 
-	if bst.states != nil {
-		_ = bst.states.Traverse(func(node tree.Node) (bool, error) {
-			st := node.Immutable().(state.StateV0AVLNode).State()
+		if !bst.operations.IsEmpty() {
+			_ = bst.operations.Traverse(func(_ int, key, _, _ []byte) (bool, error) {
+				_ = bst.ost.operationFactCache.Set(valuehash.NewBytes(key).String(), struct{}{})
 
-			_ = bst.ost.stateCache.Set(st.Key(), st)
-			return true, nil
-		})
-	}
+				return true, nil
+			})
+		}
+	}()
+
+	go func() {
+		defer wg.Done()
+
+		for i := range bst.states {
+			_ = bst.ost.stateCache.Set(bst.states[i].Key(), bst.states[i])
+		}
+	}()
+
+	wg.Wait()
 }
 
 func (bst *BlockStorage) States() map[string]interface{} {

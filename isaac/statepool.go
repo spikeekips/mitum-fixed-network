@@ -167,3 +167,7 @@ func (sp *Statepool) InsertedOperations() map[string]valuehash.Hash {
 
 	return sp.ops
 }
+
+func (sp *Statepool) Height() base.Height {
+	return sp.nextHeight
+}

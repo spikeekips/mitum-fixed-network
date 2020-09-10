@@ -410,6 +410,30 @@ func (t *testStorage) TestHasOperation() {
 	}
 }
 
+func (t *testStorage) TestInfo() {
+	key := util.UUID().String()
+	b := util.UUID().Bytes()
+
+	_, found, err := t.storage.GetInfo(key)
+	t.NoError(err)
+	t.False(found)
+
+	t.NoError(t.storage.SetInfo(key, b))
+
+	ub, found, err := t.storage.GetInfo(key)
+	t.NoError(err)
+	t.True(found)
+	t.Equal(b, ub)
+
+	nb := util.UUID().Bytes()
+	t.NoError(t.storage.SetInfo(key, nb))
+
+	unb, found, err := t.storage.GetInfo(key)
+	t.NoError(err)
+	t.True(found)
+	t.Equal(nb, unb)
+}
+
 func TestLeveldbStorage(t *testing.T) {
 	suite.Run(t, new(testStorage))
 }

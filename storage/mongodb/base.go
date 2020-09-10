@@ -833,3 +833,32 @@ func (st *Storage) New() (*Storage, error) {
 		lastManifestHeight: st.lastManifestHeight,
 	}, nil
 }
+
+func (st *Storage) SetInfo(key string, b []byte) error {
+	if doc, err := NewInfoDoc(key, b, st.enc); err != nil {
+		return err
+	} else if _, err := st.client.Set(defaultColNameInfo, doc); err != nil {
+		return err
+	} else {
+		return nil
+	}
+}
+
+func (st *Storage) GetInfo(key string) ([]byte, bool, error) {
+	var b []byte
+	if err := st.client.GetByID(defaultColNameInfo, infoDocKey(key),
+		func(res *mongo.SingleResult) error {
+			if i, err := loadInfo(res.Decode, st.encs); err != nil {
+				return err
+			} else {
+				b = i
+			}
+
+			return nil
+		},
+	); err != nil {
+		return nil, false, err
+	}
+
+	return b, b != nil, nil
+}

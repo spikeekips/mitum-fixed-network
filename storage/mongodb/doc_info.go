@@ -1,7 +1,10 @@
 package mongodbstorage
 
 import (
+	"encoding/hex"
+
 	"go.mongodb.org/mongo-driver/bson"
+	"golang.org/x/crypto/sha3"
 	"golang.org/x/xerrors"
 
 	"github.com/spikeekips/mitum/base"
@@ -52,4 +55,53 @@ func loadLastManifest(decoder func(interface{}) error, encs *encoder.Encoders) (
 	}
 
 	return height, nil
+}
+
+type InfoDoc struct {
+	BaseDoc
+	key string
+	b   []byte
+}
+
+func infoDocKey(key string) string {
+	h := sha3.Sum256([]byte(key))
+	return hex.EncodeToString(h[:])
+}
+
+func NewInfoDoc(key string, v []byte, enc encoder.Encoder) (InfoDoc, error) {
+	b, err := NewBaseDoc(infoDocKey(key), v, enc)
+	if err != nil {
+		return InfoDoc{}, err
+	}
+
+	return InfoDoc{BaseDoc: b, key: key}, nil
+}
+
+func (do InfoDoc) MarshalBSON() ([]byte, error) {
+	m, err := do.BaseDoc.M()
+	if err != nil {
+		return nil, err
+	}
+
+	m["key"] = do.key
+
+	return bsonenc.Marshal(m)
+}
+
+func loadInfo(decoder func(interface{}) error, encs *encoder.Encoders) ([]byte /* value */, error) {
+	var b bson.Raw
+	if err := decoder(&b); err != nil {
+		return nil, err
+	}
+
+	var v []byte
+	if _, d, err := loadWithEncoder(b, encs); err != nil {
+		return nil, err
+	} else if r, ok := d.(bson.RawValue); !ok {
+		return nil, xerrors.Errorf("invalid data type for info, %T", d)
+	} else if err := r.Unmarshal(&v); err != nil {
+		return nil, err
+	} else {
+		return v, nil
+	}
 }

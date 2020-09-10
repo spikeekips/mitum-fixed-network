@@ -21,6 +21,7 @@ import (
 
 type NodeDesign struct {
 	encs             *encoder.Encoders
+	jenc             *jsonenc.Encoder
 	address          base.Address
 	AddressString    string `yaml:"address"`
 	PrivatekeyString string `yaml:"privatekey"`
@@ -36,8 +37,24 @@ type NodeDesign struct {
 	Config           *NodeConfigDesign
 }
 
-func (nd *NodeDesign) SetEncoders(encs *encoder.Encoders) {
+func (nd *NodeDesign) Encoder() *encoder.Encoders {
+	return nd.encs
+}
+
+func (nd *NodeDesign) JSONEncoder() *jsonenc.Encoder {
+	return nd.jenc
+}
+
+func (nd *NodeDesign) SetEncoders(encs *encoder.Encoders) error {
+	if e, err := encs.Encoder(jsonenc.JSONType, ""); err != nil {
+		return xerrors.Errorf("json encoder needs for load design: %w", err)
+	} else {
+		nd.jenc = e.(*jsonenc.Encoder)
+	}
+
 	nd.encs = encs
+
+	return nil
 }
 
 func (nd *NodeDesign) IsValid([]byte) error {
@@ -287,7 +304,9 @@ func LoadNodeDesign(b []byte, encs *encoder.Encoders) (*NodeDesign, error) {
 		return nil, err
 	}
 
-	design.SetEncoders(encs)
+	if err := design.SetEncoders(encs); err != nil {
+		return nil, err
+	}
 
 	return design, nil
 }

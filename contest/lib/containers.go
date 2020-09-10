@@ -849,7 +849,9 @@ func (ct *Container) NodeDesign() *launcher.NodeDesign {
 	nd.GenesisPolicy = ct.contestDesign.Config.GenesisPolicy
 	nd.InitOperations = ct.contestDesign.Config.InitOperations
 
-	nd.SetEncoders(ct.encs)
+	if err := nd.SetEncoders(ct.encs); err != nil {
+		panic(err)
+	}
 
 	if err := nd.IsValid(nil); err != nil {
 		panic(err)

@@ -48,6 +48,9 @@ type Storage interface {
 	// NOTE StagedOperationSeals returns the new(staged) operation.Seal by incoming order.
 	StagedOperationSeals(func(operation.Seal) (bool, error), bool /* sort */) error
 	UnstagedOperationSeals([]valuehash.Hash /* seal.Hash()s */) error
+
+	SetInfo(string /* key */, []byte /* value */) error
+	GetInfo(string /* key */) ([]byte, bool, error)
 }
 
 type BlockStorage interface {

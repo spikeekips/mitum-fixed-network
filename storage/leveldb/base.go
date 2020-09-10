@@ -38,6 +38,7 @@ var (
 	keyPrefixOperationHash              []byte = []byte{0x00, 0x13}
 	keyPrefixOperationFactHash          []byte = []byte{0x00, 0x14}
 	keyPrefixManifestHeight             []byte = []byte{0x00, 0x15}
+	keyPrefixInfo                       []byte = []byte{0x00, 0x16}
 )
 
 type Storage struct {
@@ -684,6 +685,26 @@ func (st *Storage) OpenBlockStorage(blk block.Block) (storage.BlockStorage, erro
 	return NewBlockStorage(st, blk)
 }
 
+func (st *Storage) SetInfo(key string, b []byte) error {
+	if err := st.db.Put(leveldbInfoKey(key), b, nil); err != nil {
+		return wrapError(err)
+	}
+
+	return nil
+}
+
+func (st *Storage) GetInfo(key string) ([]byte, bool, error) {
+	if b, err := st.get(leveldbInfoKey(key)); err != nil {
+		if storage.IsNotFoundError(err) {
+			return nil, false, nil
+		}
+
+		return nil, false, err
+	} else {
+		return b, true, nil
+	}
+}
+
 func leveldbBlockHeightKey(height base.Height) []byte {
 	return util.ConcatBytesSlice(
 		keyPrefixBlockHeight,
@@ -768,4 +789,11 @@ func leveldbUnstageOperationSeals(st *Storage, batch *leveldb.Batch, seals []val
 	}
 
 	return nil
+}
+
+func leveldbInfoKey(key string) []byte {
+	return util.ConcatBytesSlice(
+		keyPrefixInfo,
+		[]byte(key),
+	)
 }

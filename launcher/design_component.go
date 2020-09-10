@@ -97,20 +97,51 @@ func (cc *ContestComponentDesign) NodeDesign() *NodeComponentDesign {
 	return nc
 }
 
-type NodeComponentDesign struct {
+type coreNodeComponentDesign struct {
 	Suffrage          *SuffrageDesign          `yaml:",omitempty"`
 	ProposalProcessor *ProposalProcessorDesign `yaml:"proposal-processor,omitempty"`
+}
+
+type NodeComponentDesign struct {
+	coreNodeComponentDesign
+	Others map[string]interface{} `yaml:"-"`
 }
 
 func NewNodeComponentDesign(o *NodeComponentDesign) *NodeComponentDesign {
 	if o != nil {
 		return &NodeComponentDesign{
-			Suffrage:          o.Suffrage,
-			ProposalProcessor: o.ProposalProcessor,
+			coreNodeComponentDesign: coreNodeComponentDesign{
+				Suffrage:          o.Suffrage,
+				ProposalProcessor: o.ProposalProcessor,
+			},
 		}
 	}
 
 	return &NodeComponentDesign{}
+}
+
+func (cc *NodeComponentDesign) UnmarshalYAML(v *yaml.Node) error {
+	var c coreNodeComponentDesign
+	if err := v.Decode(&c); err != nil {
+		return err
+	}
+
+	var m map[string]interface{}
+	if err := v.Decode(&m); err != nil {
+		return err
+	} else {
+		for k := range m {
+			if k == "suffrage" || k == "proposal-processor" {
+				delete(m, k)
+			}
+		}
+	}
+
+	cc.Suffrage = c.Suffrage
+	cc.ProposalProcessor = c.ProposalProcessor
+	cc.Others = m
+
+	return nil
 }
 
 func (cc *NodeComponentDesign) IsValid([]byte) error {
@@ -147,6 +178,19 @@ func (cc *NodeComponentDesign) Merge(b *NodeComponentDesign) error {
 			cc.ProposalProcessor = NewProposalProcessorDesign()
 		} else {
 			cc.ProposalProcessor = b.ProposalProcessor
+		}
+	}
+
+	if b.Others != nil {
+		if cc.Others == nil {
+			cc.Others = b.Others
+		} else {
+			for k, v := range b.Others {
+				if _, found := cc.Others[k]; found {
+					continue
+				}
+				cc.Others[k] = v
+			}
 		}
 	}
 

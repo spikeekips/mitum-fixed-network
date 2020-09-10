@@ -8,17 +8,21 @@ import (
 	"github.com/spikeekips/mitum/util/valuehash"
 )
 
+func (st StateV0) BSONM() bson.M {
+	return bson.M{
+		"key":            st.key,
+		"value":          st.value,
+		"previous_block": st.previousHeight,
+		"height":         st.height,
+		"operations":     st.operations,
+	}
+}
+
 func (st StateV0) MarshalBSON() ([]byte, error) {
 	return bsonenc.Marshal(bsonenc.MergeBSONM(
 		bsonenc.NewHintedDoc(st.Hint()),
-		bson.M{
-			"hash":           st.h,
-			"key":            st.key,
-			"value":          st.value,
-			"previous_block": st.previousHeight,
-			"height":         st.height,
-			"operations":     st.operations,
-		},
+		st.BSONM(),
+		bson.M{"hash": st.h},
 	))
 }
 

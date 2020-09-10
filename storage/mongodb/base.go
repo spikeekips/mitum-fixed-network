@@ -767,6 +767,9 @@ func (st *Storage) cleanupIncompleteData() error {
 }
 
 func (st *Storage) createIndex(col string, models []mongo.IndexModel) error {
+	st.Lock()
+	defer st.Unlock()
+
 	iv := st.client.Collection(col).Indexes()
 
 	cursor, err := iv.List(context.TODO())

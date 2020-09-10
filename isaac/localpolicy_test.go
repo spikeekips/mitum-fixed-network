@@ -84,17 +84,16 @@ func (t *testPolicy) TestLoadFromStorage() {
 	t.NoError(err)
 	t.Equal(1, len(statepool.Updates()))
 
-	var newState state.StateUpdater
+	var newState *state.StateUpdater
 	for _, v := range statepool.Updates() {
 		newState = v
 		break
 	}
 
-	t.NoError(newState.SetPreviousHeight(previousBlock.Height()))
-	t.NoError(newState.SetHeight(currentBlock.Height()))
+	newState.SetHeight(currentBlock.Height())
 	t.NoError(newState.SetHash(newState.GenerateHash()))
 
-	t.NoError(st.NewState(newState))
+	t.NoError(st.NewState(newState.GetState()))
 
 	if mst, ok := st.(DummyMongodbStorage); ok {
 		mst.SetLastBlock(currentBlock)

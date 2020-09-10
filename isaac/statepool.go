@@ -6,8 +6,10 @@ import (
 	"sync"
 
 	"github.com/spikeekips/mitum/base"
+	"github.com/spikeekips/mitum/base/operation"
 	"github.com/spikeekips/mitum/base/state"
 	"github.com/spikeekips/mitum/storage"
+	"github.com/spikeekips/mitum/util/errors"
 	"github.com/spikeekips/mitum/util/valuehash"
 )
 
@@ -16,13 +18,18 @@ type cachedState struct {
 	exists bool
 }
 
+func newCachedState(st state.State, exists bool) cachedState {
+	return cachedState{State: st, exists: exists}
+}
+
 type Statepool struct {
 	sync.RWMutex
 	nextHeight  base.Height
 	fromStorage func(string) (state.State, bool, error)
 	cached      map[string]cachedState
-	updated     map[string]state.StateUpdater
-	ops         map[string]valuehash.Hash
+	updated     map[string]*state.StateUpdater
+	insertedOps map[string]valuehash.Hash
+	addedOps    map[string]operation.Operation
 }
 
 func NewStatepool(st storage.Storage) (*Statepool, error) {
@@ -38,8 +45,9 @@ func NewStatepool(st storage.Storage) (*Statepool, error) {
 		fromStorage: st.State,
 		nextHeight:  nextHeight,
 		cached:      map[string]cachedState{},
-		updated:     map[string]state.StateUpdater{},
-		ops:         map[string]valuehash.Hash{},
+		updated:     map[string]*state.StateUpdater{},
+		insertedOps: map[string]valuehash.Hash{},
+		addedOps:    map[string]operation.Operation{},
 	}, nil
 }
 
@@ -64,6 +72,14 @@ func (sp *Statepool) Get(key string) (state.State, bool, error) {
 	sp.Lock()
 	defer sp.Unlock()
 
+	if st, exists, err := sp.get(key); err != nil {
+		return nil, false, err
+	} else {
+		return st.Clear(), exists, nil
+	}
+}
+
+func (sp *Statepool) get(key string) (state.State, bool, error) {
 	if ca, found := sp.cached[key]; found {
 		return ca.State, ca.exists, nil
 	}
@@ -72,7 +88,8 @@ func (sp *Statepool) Get(key string) (state.State, bool, error) {
 	case err != nil:
 		return nil, false, err
 	case found:
-		sp.cached[key] = cachedState{State: st, exists: true}
+		st = st.Clear()
+		sp.cached[key] = newCachedState(st, true)
 
 		return st, true, nil
 	}
@@ -80,7 +97,7 @@ func (sp *Statepool) Get(key string) (state.State, bool, error) {
 	if st, err := state.NewStateV0(key, nil, base.NilHeight); err != nil {
 		return nil, false, err
 	} else {
-		sp.cached[key] = cachedState{State: st, exists: false}
+		sp.cached[key] = newCachedState(st, false)
 
 		return st, false, nil
 	}
@@ -94,43 +111,43 @@ func (sp *Statepool) Set(fact valuehash.Hash, s ...state.State) error {
 	sp.Lock()
 	defer sp.Unlock()
 
-	if _, found := sp.ops[fact.String()]; !found {
-		sp.ops[fact.String()] = fact
-	}
-
 	for i := range s {
 		st := s[i]
 
-		var su state.StateUpdater
-		if u, found := sp.updated[s[i].Key()]; !found {
-			if nu, err := state.NewStateV0Updater(st.Key(), st.Value(), st.Height()); err != nil {
-				return err
-			} else if err := nu.SetHeight(sp.nextHeight); err != nil {
-				return err
-			} else {
-				sp.updated[s[i].Key()] = nu
-				su = nu
-			}
-		} else {
+		var su *state.StateUpdater
+		if u, found := sp.updated[s[i].Key()]; found {
 			su = u
+		} else {
+			nu := state.NewStateUpdater(st.Clear()).SetHeight(sp.nextHeight)
+
+			sp.updated[s[i].Key()] = nu
+			su = nu
 		}
 
 		if err := func() error {
-			if _, err := su.Merge(st); err != nil {
+			if err := su.Merge(st); err != nil {
 				return err
-			} else if err := su.AddOperation(fact); err != nil {
+			}
+
+			if err := su.AddOperation(fact); err != nil {
 				return err
 			}
 
 			return nil
 		}(); err != nil {
+			err0 := errors.NewError("failed to set States").Wrap(err)
 			for j := 0; j <= i; j++ {
-				sp.updated[s[j].Key()].Reset() // NOTE reset previous updated states
+				// NOTE reset previous updated states
+				if err := sp.updated[s[j].Key()].Reset(); err != nil {
+					return err0.Wrap(err)
+				}
 			}
 
-			return err
+			return err0
 		}
 	}
+
+	sp.insertOperations(fact)
 
 	return nil
 }
@@ -142,11 +159,11 @@ func (sp *Statepool) IsUpdated() bool {
 	return len(sp.updated) > 0
 }
 
-func (sp *Statepool) Updates() []state.StateUpdater {
+func (sp *Statepool) Updates() []*state.StateUpdater {
 	sp.RLock()
 	defer sp.RUnlock()
 
-	us := make([]state.StateUpdater, len(sp.updated))
+	us := make([]*state.StateUpdater, len(sp.updated))
 
 	var i int
 	for s := range sp.updated {
@@ -161,13 +178,44 @@ func (sp *Statepool) Updates() []state.StateUpdater {
 	return us
 }
 
+func (sp *Statepool) insertOperations(facts ...valuehash.Hash) {
+	for i := range facts {
+		f := facts[i]
+		if _, found := sp.insertedOps[f.String()]; !found {
+			sp.insertedOps[f.String()] = f
+		}
+	}
+}
+
 func (sp *Statepool) InsertedOperations() map[string]valuehash.Hash {
 	sp.RLock()
 	defer sp.RUnlock()
 
-	return sp.ops
+	return sp.insertedOps
 }
 
 func (sp *Statepool) Height() base.Height {
 	return sp.nextHeight
+}
+
+func (sp *Statepool) AddOperations(ops ...operation.Operation) {
+	sp.RLock()
+	defer sp.RUnlock()
+
+	for i := range ops {
+		op := ops[i]
+		f := op.Fact().Hash()
+		if _, found := sp.addedOps[f.String()]; !found {
+			sp.addedOps[f.String()] = op
+		}
+
+		sp.insertOperations(f)
+	}
+}
+
+func (sp *Statepool) AddedOperations() map[string]operation.Operation {
+	sp.RLock()
+	defer sp.RUnlock()
+
+	return sp.addedOps
 }

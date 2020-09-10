@@ -906,6 +906,14 @@ func (cs *GeneralSyncer) workerCallbackFetchBlocks(node network.Node) util.Worke
 			err = e
 		}
 
+		if err != nil {
+			return &syncerFetchBlockError{
+				node:    node.Address(),
+				heights: heights,
+				err:     err,
+			}
+		}
+
 		blocks := make([]block.Block, len(manifests))
 		for i := range manifests {
 			blocks[i] = manifests[i].(block.Block)

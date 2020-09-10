@@ -271,6 +271,14 @@ func (opp dummyOperationProcessor) Process(op state.Processor) error {
 	return opp.afterProcessed(op)
 }
 
+func (opp dummyOperationProcessor) Close() error {
+	return nil
+}
+
+func (opp dummyOperationProcessor) Cancel() error {
+	return nil
+}
+
 func (t *testProposalProcessor) TestCustomOperationProcessor() {
 	var sls []seal.Seal
 	for i := 0; i < 2; i++ {
@@ -568,7 +576,6 @@ func (t *testProposalProcessor) TestCheckStates() {
 
 	nextBlk := process(newOps)
 	for _, s := range nextBlk.States() {
-		t.Equal(blk.Height(), s.PreviousHeight())
 		t.Equal(nextBlk.Height(), s.Height())
 	}
 }

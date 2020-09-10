@@ -18,8 +18,8 @@ type StateV0PackerJSON struct {
 	OPS []valuehash.Hash `json:"operations"`
 }
 
-func (st StateV0) MarshalJSON() ([]byte, error) {
-	return jsonenc.Marshal(StateV0PackerJSON{
+func (st StateV0) PackerJSON() StateV0PackerJSON {
+	return StateV0PackerJSON{
 		HintedHead: jsonenc.NewHintedHead(st.Hint()),
 		H:          st.h,
 		K:          st.key,
@@ -27,7 +27,11 @@ func (st StateV0) MarshalJSON() ([]byte, error) {
 		PB:         st.previousHeight,
 		HT:         st.height,
 		OPS:        st.operations,
-	})
+	}
+}
+
+func (st StateV0) MarshalJSON() ([]byte, error) {
+	return jsonenc.Marshal(st.PackerJSON())
 }
 
 type StateV0UnpackerJSON struct {

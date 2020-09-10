@@ -19,6 +19,8 @@ type OperationProcessor interface {
 	New(*Statepool) OperationProcessor
 	PreProcess(state.Processor) (state.Processor, error)
 	Process(state.Processor) error
+	Close() error
+	Cancel() error
 }
 
 type defaultOperationProcessor struct {
@@ -43,7 +45,16 @@ func (opp defaultOperationProcessor) Process(op state.Processor) error {
 	return op.Process(opp.pool.Get, opp.pool.Set)
 }
 
+func (opp defaultOperationProcessor) Close() error {
+	return nil
+}
+
+func (opp defaultOperationProcessor) Cancel() error {
+	return nil
+}
+
 type ConcurrentOperationsProcessor struct {
+	sync.RWMutex
 	*logging.Logging
 	size       uint
 	pool       *Statepool
@@ -53,6 +64,7 @@ type ConcurrentOperationsProcessor struct {
 	oppHintSet *hint.Hintmap
 	oprs       map[hint.Hint]OperationProcessor
 	workFilter func(state.Processor) error
+	closed     bool
 }
 
 func NewConcurrentOperationsProcessor(
@@ -166,23 +178,79 @@ func (co *ConcurrentOperationsProcessor) process(op state.Processor) error {
 }
 
 func (co *ConcurrentOperationsProcessor) Cancel() error {
-	if co.wk == nil {
+	co.Lock()
+	defer co.Unlock()
+
+	if co.wk == nil || co.closed {
 		return nil
 	}
 
 	co.wk.Done(false)
+	co.closed = true
+
+	errchan := make(chan error, len(co.oprs))
+
+	var wg sync.WaitGroup
+	wg.Add(len(co.oprs))
+	for _, opr := range co.oprs {
+		opr := opr
+		go func() {
+			defer wg.Done()
+
+			errchan <- opr.Cancel()
+		}()
+	}
+
+	wg.Wait()
+	close(errchan)
+
+	for err := range errchan {
+		if err != nil {
+			return err
+		}
+	}
 
 	return nil
 }
 
 func (co *ConcurrentOperationsProcessor) Close() error {
-	if co.wk == nil {
+	co.Lock()
+	defer co.Unlock()
+
+	if co.wk == nil || co.closed {
 		return nil
 	}
 
 	co.wk.Done(true)
+	co.closed = true
 
-	return <-co.donechan
+	if err := <-co.donechan; err != nil {
+		return err
+	}
+
+	errchan := make(chan error, len(co.oprs))
+
+	var wg sync.WaitGroup
+	wg.Add(len(co.oprs))
+	for _, opr := range co.oprs {
+		opr := opr
+		go func() {
+			defer wg.Done()
+
+			errchan <- opr.Close()
+		}()
+	}
+
+	wg.Wait()
+	close(errchan)
+
+	for err := range errchan {
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
 }
 
 func (co *ConcurrentOperationsProcessor) opr(op state.Processor) (OperationProcessor, error) {

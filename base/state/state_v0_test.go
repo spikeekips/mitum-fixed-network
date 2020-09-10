@@ -17,7 +17,7 @@ type testStateV0 struct {
 
 func (t *testStateV0) TestDuplicatedOperation() {
 	value, _ := NewBytesValue(util.UUID().Bytes())
-	st, err := NewStateV0Updater(
+	st, err := NewStateV0(
 		util.UUID().String(),
 		value,
 		base.NilHeight,
@@ -25,30 +25,32 @@ func (t *testStateV0) TestDuplicatedOperation() {
 	t.NoError(err)
 	t.Implements((*State)(nil), st)
 
+	stu := NewStateUpdater(st)
+
 	op, err := operation.NewKVOperation(
 		key.MustNewBTCPrivatekey(),
 		util.UUID().Bytes(),
-		st.Key(),
+		stu.Key(),
 		value.Interface().([]byte),
 		nil,
 	)
 
-	t.NoError(st.AddOperation(op.Hash()))
+	t.NoError(stu.AddOperation(op.Hash()))
 
-	t.Equal(1, len(st.Operations()))
-	t.True(st.Operations()[0].Equal(op.Hash()))
+	t.Equal(1, len(stu.Operations()))
+	t.True(stu.Operations()[0].Equal(op.Hash()))
 
-	t.NoError(st.AddOperation(op.Hash()))
-	t.Equal(1, len(st.Operations()))
+	t.NoError(stu.AddOperation(op.Hash()))
+	t.Equal(1, len(stu.Operations()))
 
-	t.Equal(1, len(st.Operations()))
-	t.True(st.Operations()[0].Equal(op.Hash()))
+	t.Equal(1, len(stu.Operations()))
+	t.True(stu.Operations()[0].Equal(op.Hash()))
 
-	t.Equal(1, len(st.opcache))
+	t.Equal(1, len(stu.opcache))
 
 	// NOTE SetCurrentBlock() will initialize opcache
-	t.NoError(st.SetHeight(base.Height(3)))
-	t.Empty(st.opcache)
+	stu.SetHeight(base.Height(3))
+	t.Empty(stu.opcache)
 }
 
 func (t *testStateV0) TestMerge() {
@@ -130,17 +132,17 @@ func (t *testStateV0) TestMergeUpdater() {
 	k := util.UUID().String()
 
 	v0, _ := NewBytesValue(util.UUID().Bytes())
-	s0, err := NewStateV0Updater(k, v0, base.NilHeight)
+	st0, err := NewStateV0(k, v0, base.NilHeight)
 	t.NoError(err)
+	s0 := NewStateUpdater(st0)
 
 	v1, _ := NewBytesValue(util.UUID().Bytes())
 	s1, err := NewStateV0(k, v1, base.NilHeight)
 	t.NoError(err)
 
-	ns, err := s0.Merge(s1)
-	t.NoError(err)
+	t.NoError(s0.Merge(s1))
 
-	t.True(ns.Value().Equal(s0.Value()))
+	t.True(v0.Equal(s0.Value()))
 }
 
 func TestStateV0(t *testing.T) {

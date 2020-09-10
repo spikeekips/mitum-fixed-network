@@ -11,6 +11,12 @@ func (hs Bytes) MarshalBSONValue() (bsontype.Type, []byte, error) {
 
 func (hs *Bytes) UnmarshalBSONValue(t bsontype.Type, b []byte) error {
 	if t != bsontype.String {
+		if t == bsontype.Null {
+			*hs = NewBytes(nil)
+
+			return nil
+		}
+
 		return xerrors.Errorf("invalid marshaled type for Hash, %v", t)
 	}
 

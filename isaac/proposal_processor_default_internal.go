@@ -35,7 +35,6 @@ type internalDefaultProposalProcessor struct {
 	bs            storage.BlockStorage
 	si            block.SuffrageInfoV0
 	oprHintset    *hint.Hintmap
-	oprs          map[hint.Hint]OperationProcessor
 	statesValue   *sync.Map
 }
 
@@ -87,7 +86,6 @@ func newInternalDefaultProposalProcessor(
 		proposedFacts: proposedOperations,
 		si:            si,
 		oprHintset:    oprHintset,
-		oprs:          map[hint.Hint]OperationProcessor{},
 		statesValue:   &sync.Map{},
 	}, nil
 }
@@ -97,7 +95,6 @@ func (pp *internalDefaultProposalProcessor) stop() {
 	defer pp.Unlock()
 
 	pp.stopped = true
-	pp.oprs = nil
 }
 
 func (pp *internalDefaultProposalProcessor) isStopped() bool {
@@ -295,39 +292,6 @@ func (pp *internalDefaultProposalProcessor) extractOperations() ([]operation.Ope
 	return ops, nil
 }
 
-func (pp *internalDefaultProposalProcessor) processOperations(pool *Statepool) (tree.FixedTree, error) {
-	s := time.Now()
-	defer func() {
-		pp.statesValue.Store("process-operations", time.Since(s))
-	}()
-
-	statesOps := pool.InsertedOperations()
-
-	tg := tree.NewFixedTreeGenerator(uint(len(pp.operations)), nil)
-	for i := range pp.operations {
-		if pp.isStopped() {
-			return tree.FixedTree{}, xerrors.Errorf("already stopped")
-		}
-
-		fh := pp.operations[i].Fact().Hash()
-
-		var mod []byte
-		if _, found := statesOps[fh.String()]; found {
-			mod = base.FactMode2bytes(base.FInStates)
-		}
-
-		if err := tg.Add(i, fh.Bytes(), mod); err != nil {
-			return tree.FixedTree{}, err
-		}
-	}
-
-	if tr, err := tg.Tree(); err != nil {
-		return tree.FixedTree{}, err
-	} else {
-		return tr, nil
-	}
-}
-
 func (pp *internalDefaultProposalProcessor) processStates(
 	ctx context.Context,
 	pool *Statepool,
@@ -343,11 +307,8 @@ func (pp *internalDefaultProposalProcessor) processStates(
 	} else {
 		_ = c.SetLogger(pp.Log())
 
-		nctx, cancel := context.WithCancel(ctx)
-		defer cancel()
-
 		co = c.Start(
-			nctx,
+			ctx,
 			func(sp state.Processor) error {
 				switch found, err := pp.localstate.Storage().HasOperationFact(sp.(operation.Operation).Fact().Hash()); {
 				case err != nil:
@@ -361,7 +322,7 @@ func (pp *internalDefaultProposalProcessor) processStates(
 		)
 
 		go func() {
-			<-nctx.Done()
+			<-ctx.Done()
 			_ = co.Cancel()
 		}()
 	}
@@ -389,17 +350,56 @@ func (pp *internalDefaultProposalProcessor) processStates(
 	return pp.generateStatesTree(pool)
 }
 
+func (pp *internalDefaultProposalProcessor) processOperations(pool *Statepool) (tree.FixedTree, error) {
+	s := time.Now()
+	defer func() {
+		pp.statesValue.Store("process-operations", time.Since(s))
+	}()
+
+	statesOps := pool.InsertedOperations()
+	for _, op := range pool.AddedOperations() {
+		pp.operations = append(pp.operations, op)
+	}
+
+	tg := tree.NewFixedTreeGenerator(uint(len(pp.operations)), nil)
+	for i := range pp.operations {
+		if pp.isStopped() {
+			return tree.FixedTree{}, xerrors.Errorf("already stopped")
+		}
+
+		fh := pp.operations[i].Fact().Hash()
+
+		var mod []byte
+		if _, found := statesOps[fh.String()]; found {
+			mod = base.FactMode2bytes(base.FInStates)
+		}
+
+		if err := tg.Add(i, fh.Bytes(), mod); err != nil {
+			return tree.FixedTree{}, err
+		}
+	}
+
+	if tr, err := tg.Tree(); err != nil {
+		return tree.FixedTree{}, err
+	} else {
+		return tr, nil
+	}
+}
+
 func (pp *internalDefaultProposalProcessor) generateStatesTree(pool *Statepool) (tree.FixedTree, []state.State, error) {
 	sts := make([]state.State, len(pool.Updates()))
 	for i, s := range pool.Updates() {
 		if pp.isStopped() {
 			return tree.FixedTree{}, nil, xerrors.Errorf("already stopped")
-		} else if err := s.SetHash(s.GenerateHash()); err != nil {
+		}
+
+		st := s.GetState()
+		if ust, err := st.SetHash(st.GenerateHash()); err != nil {
 			return tree.FixedTree{}, nil, err
-		} else if err := s.IsValid(nil); err != nil {
+		} else if err := ust.IsValid(nil); err != nil {
 			return tree.FixedTree{}, nil, err
 		} else {
-			sts[i] = s
+			sts[i] = ust
 		}
 	}
 

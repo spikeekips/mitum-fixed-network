@@ -3,7 +3,6 @@ package state
 import (
 	"bytes"
 	"sort"
-	"sync"
 
 	"golang.org/x/xerrors"
 
@@ -82,7 +81,17 @@ func (st StateV0) Hash() valuehash.Hash {
 	return st.h
 }
 
-func (st StateV0) GenerateHash() valuehash.Hash {
+func (st StateV0) SetHash(h valuehash.Hash) (State, error) {
+	if err := h.IsValid(nil); err != nil {
+		return nil, err
+	}
+
+	st.h = h
+
+	return st, nil
+}
+
+func (st StateV0) Bytes() []byte {
 	ops := st.operations
 	sort.Slice(ops, func(i, j int) bool {
 		return bytes.Compare(ops[i].Bytes(), ops[j].Bytes()) < 0
@@ -98,14 +107,16 @@ func (st StateV0) GenerateHash() valuehash.Hash {
 		pbb = st.previousHeight.Bytes()
 	}
 
-	be := util.ConcatBytesSlice(
+	return util.ConcatBytesSlice(
 		[]byte(st.key),
 		st.value.Hash().Bytes(),
 		pbb,
 		util.ConcatBytesSlice(opb...),
 	)
+}
 
-	return valuehash.NewSHA256(be)
+func (st StateV0) GenerateHash() valuehash.Hash {
+	return valuehash.NewSHA256(st.Bytes())
 }
 
 func (st StateV0) Key() string {
@@ -126,12 +137,33 @@ func (st StateV0) PreviousHeight() base.Height {
 	return st.previousHeight
 }
 
+func (st StateV0) SetPreviousHeight(h base.Height) (State, error) {
+	st.previousHeight = h
+
+	return st, nil
+}
+
 func (st StateV0) Height() base.Height {
 	return st.height
 }
 
+func (st StateV0) SetHeight(h base.Height) State {
+	if st.height != h {
+		st.previousHeight = st.height
+		st.height = h
+	}
+
+	return st
+}
+
 func (st StateV0) Operations() []valuehash.Hash {
 	return st.operations
+}
+
+func (st StateV0) SetOperation(ops []valuehash.Hash) State {
+	st.operations = ops
+
+	return st
 }
 
 func (st StateV0) Merge(source State) (State, error) {
@@ -150,166 +182,8 @@ func (st StateV0) Merge(source State) (State, error) {
 	return st, nil
 }
 
-type StateV0Updater struct {
-	StateV0
-	sync.RWMutex
-	opcache   map[string]struct{}
-	origValue Value
-}
+func (st StateV0) Clear() State {
+	st.operations = nil
 
-func NewStateV0Updater(key string, value Value, previousHeight base.Height) (*StateV0Updater, error) {
-	if err := IsValidKey(key); err != nil {
-		return nil, err
-	}
-
-	var st StateV0
-	if s, err := NewStateV0(key, value, previousHeight); err != nil {
-		return nil, err
-	} else {
-		st = s
-	}
-
-	return &StateV0Updater{
-		StateV0:   st,
-		opcache:   map[string]struct{}{},
-		origValue: value,
-	}, nil
-}
-
-func (stu *StateV0Updater) State() StateV0 {
-	stu.RLock()
-	defer stu.RUnlock()
-
-	return stu.StateV0
-}
-
-func (stu *StateV0Updater) Key() string {
-	return stu.StateV0.key
-}
-
-func (stu *StateV0Updater) Hash() valuehash.Hash {
-	stu.RLock()
-	defer stu.RUnlock()
-
-	return stu.h
-}
-
-func (stu *StateV0Updater) SetHash(h valuehash.Hash) error {
-	stu.Lock()
-	defer stu.Unlock()
-
-	if err := h.IsValid(nil); err != nil {
-		return err
-	}
-
-	stu.h = h
-
-	return nil
-}
-
-func (stu *StateV0Updater) Value() Value {
-	stu.RLock()
-	defer stu.RUnlock()
-
-	return stu.StateV0.value
-}
-
-func (stu *StateV0Updater) setValue(value Value) {
-	stu.StateV0.value = value
-}
-
-func (stu *StateV0Updater) SetValue(value Value) (State, error) {
-	stu.Lock()
-	defer stu.Unlock()
-
-	stu.setValue(value)
-
-	return stu, nil
-}
-
-func (stu *StateV0Updater) PreviousHeight() base.Height {
-	stu.RLock()
-	defer stu.RUnlock()
-
-	return stu.previousHeight
-}
-
-func (stu *StateV0Updater) SetPreviousHeight(h base.Height) error {
-	stu.Lock()
-	defer stu.Unlock()
-
-	if !h.IsEmpty() {
-		if err := h.IsValid(nil); err != nil {
-			return err
-		}
-	}
-
-	stu.previousHeight = h
-
-	return nil
-}
-
-func (stu *StateV0Updater) SetHeight(h base.Height) error {
-	stu.Lock()
-	defer stu.Unlock()
-
-	if !h.IsEmpty() {
-		if err := h.IsValid(nil); err != nil {
-			return err
-		}
-	}
-
-	stu.height = h
-	stu.opcache = map[string]struct{}{}
-
-	return nil
-}
-
-func (stu *StateV0Updater) Operations() []valuehash.Hash {
-	stu.RLock()
-	defer stu.RUnlock()
-
-	return stu.operations
-}
-
-func (stu *StateV0Updater) AddOperation(op valuehash.Hash) error {
-	stu.Lock()
-	defer stu.Unlock()
-
-	if err := op.IsValid(nil); err != nil {
-		return err
-	}
-
-	oh := op.String()
-	if _, found := stu.opcache[oh]; found {
-		return nil
-	} else {
-		stu.opcache[oh] = struct{}{}
-	}
-
-	stu.operations = append(stu.operations, op)
-
-	return nil
-}
-
-func (stu *StateV0Updater) Merge(source State) (State, error) {
-	stu.Lock()
-	defer stu.Unlock()
-
-	if stu.Key() != source.Key() {
-		return nil, xerrors.Errorf("different key found during merging")
-	} else if ns, err := source.Merge(stu.StateV0); err != nil {
-		return nil, err
-	} else {
-		stu.setValue(ns.Value())
-	}
-
-	return stu.StateV0, nil
-}
-
-func (stu *StateV0Updater) Reset() {
-	stu.Lock()
-	defer stu.Unlock()
-
-	stu.setValue(stu.origValue)
+	return st
 }

@@ -44,6 +44,7 @@ var (
 	}
 	regBlockFilename = regexp.MustCompile(`^(?i)(?P<height>[0-9_][0-9_]*)\-(?P<block_hash>[a-z0-9][a-z0-9]*)` +
 		`\-(?P<name>[\w][\w]*)\-(?P<checksum>[a-z0-9][a-z0-9]*)\.([a-z0-9][a-z0-9]*)\.gz$`)
+	blockfsTemp = "/tmp"
 )
 
 type BlockFS struct {
@@ -70,6 +71,18 @@ func NewBlockFS(fs FS, enc *jsonenc.Encoder) *BlockFS {
 		fs:       fs,
 		enc:      enc,
 	}
+}
+
+func (bs *BlockFS) Initialize() error {
+	if err := bs.fs.RemoveDirectory(blockfsTemp); err != nil {
+		if xerrors.Is(err, NotFoundError) {
+			return nil
+		}
+
+		return err
+	}
+
+	return nil
 }
 
 func (bs *BlockFS) FS() FS {
@@ -789,11 +802,11 @@ func (bs *BlockFS) parseFilename(s string) (base.Height, valuehash.Hash, string,
 }
 
 func (bs *BlockFS) temp() string {
-	return filepath.Join("/tmp", util.UUID().String())
+	return filepath.Join(blockfsTemp, util.UUID().String())
 }
 
 func (bs *BlockFS) unstaged(height base.Height, bh valuehash.Hash) string {
-	return filepath.Join("/tmp", fmt.Sprintf("%d-%s", height, bh.String()))
+	return filepath.Join(blockfsTemp, fmt.Sprintf("%d-%s", height, bh.String()))
 }
 
 func (bs *BlockFS) existsWithHash(p string, height base.Height, bh valuehash.Hash) error {

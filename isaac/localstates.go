@@ -30,6 +30,12 @@ func NewLocalstate(
 
 func (ls *Localstate) Initialize() error {
 	lp := NewLocalPolicy(ls.networkID)
+	if ls.blockfs != nil {
+		if err := ls.blockfs.Initialize(); err != nil {
+			return err
+		}
+	}
+
 	if ls.storage != nil {
 		if err := lp.Reload(ls.storage); err != nil {
 			return err

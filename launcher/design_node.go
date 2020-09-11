@@ -33,7 +33,7 @@ type NodeDesign struct {
 	privatekey       key.Privatekey
 	Nodes            []*RemoteDesign
 	InitOperations   []OperationDesign `yaml:"init-operations"`
-	Component        *NodeComponentDesign
+	Component        *ComponentDesign
 	Config           *NodeConfigDesign
 }
 
@@ -98,7 +98,7 @@ func (nd *NodeDesign) IsValid([]byte) error {
 	}
 
 	if nd.Component == nil {
-		nd.Component = NewNodeComponentDesign(nil)
+		nd.Component = NewComponentDesign(nil)
 	}
 	if err := nd.Component.IsValid(nil); err != nil {
 		return err
@@ -168,7 +168,7 @@ func (nd NodeDesign) Privatekey() key.Privatekey {
 }
 
 type NetworkDesign struct {
-	sync.RWMutex
+	sync.RWMutex     `yaml:"-"`
 	Bind             string
 	Publish          string
 	bindHost         string

@@ -62,6 +62,10 @@ func (cd *ContestDesign) IsValid([]byte) error {
 		cd.Component = launcher.NewContestComponentDesign(nil)
 	}
 
+	if err := cd.Component.IsValid(nil); err != nil {
+		return err
+	}
+
 	for _, n := range cd.Nodes {
 		if n.Component == nil {
 			n.Component = launcher.NewContestComponentDesign(cd.Component)
@@ -70,10 +74,6 @@ func (cd *ContestDesign) IsValid([]byte) error {
 		if err := n.Component.Merge(cd.Component); err != nil {
 			return err
 		}
-	}
-
-	if err := cd.Component.IsValid(nil); err != nil {
-		return err
 	}
 
 	addrs := map[string]struct{}{}

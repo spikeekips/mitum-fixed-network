@@ -5,13 +5,16 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-type ContestComponentDesign struct {
-	m map[string]interface{}
+type ComponentDesign struct {
+	m                 map[string]interface{}
+	suffrage          *SuffrageDesign
+	proposalProcessor *ProposalProcessorDesign
+	others            map[string]interface{}
 }
 
-func NewContestComponentDesign(o *ContestComponentDesign) *ContestComponentDesign {
+func NewComponentDesign(o *ComponentDesign) *ComponentDesign {
 	if o == nil {
-		return &ContestComponentDesign{m: map[string]interface{}{}}
+		return &ComponentDesign{m: map[string]interface{}{}}
 	}
 
 	var m map[string]interface{}
@@ -26,10 +29,14 @@ func NewContestComponentDesign(o *ContestComponentDesign) *ContestComponentDesig
 		nm[k] = m[k]
 	}
 
-	return &ContestComponentDesign{m: nm}
+	return &ComponentDesign{m: nm}
 }
 
-func (cc *ContestComponentDesign) UnmarshalYAML(v *yaml.Node) error {
+func (cc *ComponentDesign) MarshalYAML() (interface{}, error) {
+	return cc.m, nil
+}
+
+func (cc *ComponentDesign) UnmarshalYAML(v *yaml.Node) error {
 	var m map[string]interface{}
 	if err := v.Decode(&m); err != nil {
 		return err
@@ -40,32 +47,67 @@ func (cc *ContestComponentDesign) UnmarshalYAML(v *yaml.Node) error {
 	return nil
 }
 
-func (cc *ContestComponentDesign) IsValid([]byte) error {
+func (cc *ComponentDesign) IsValid([]byte) error {
 	if cc.m == nil {
 		return nil
 	}
 
-	if i, found := cc.m["suffrage"]; found {
-		if m, ok := i.(map[string]interface{}); !ok {
-			return xerrors.Errorf("'suffrage' should be map[string]interface{}, not %T", i)
-		} else if err := isValidContestSuffrageDesign(m); err != nil {
-			return err
-		}
+	var suffrage *SuffrageDesign
+	if i, found := cc.m["suffrage"]; !found {
+		cc.suffrage = NewSuffrageDesign()
+	} else if b, err := yaml.Marshal(i); err != nil {
+		return err
+	} else if err := yaml.Unmarshal(b, &suffrage); err != nil {
+		return err
+	} else if err := suffrage.IsValid(nil); err != nil {
+		return err
+	} else {
+		cc.suffrage = suffrage
 	}
 
-	var nc *NodeComponentDesign
-	if b, err := yaml.Marshal(cc.m); err != nil {
+	var pp *ProposalProcessorDesign
+	if i, found := cc.m["proposal-processor"]; !found {
+		cc.proposalProcessor = NewProposalProcessorDesign()
+	} else if b, err := yaml.Marshal(i); err != nil {
 		return err
-	} else if err := yaml.Unmarshal(b, &nc); err != nil {
+	} else if err := yaml.Unmarshal(b, &pp); err != nil {
 		return err
-	} else if err := nc.IsValid(nil); err != nil {
+	} else if err := pp.IsValid(nil); err != nil {
 		return err
+	} else {
+		cc.proposalProcessor = pp
 	}
+
+	others := map[string]interface{}{}
+	for k, v := range cc.m {
+		if k == "suffrage" || k == "proposal-processor" {
+			continue
+		}
+
+		others[k] = v
+	}
+	cc.others = others
 
 	return nil
 }
 
-func (cc *ContestComponentDesign) Merge(o *ContestComponentDesign) error {
+func (cc *ComponentDesign) Suffrage() *SuffrageDesign {
+	return cc.suffrage
+}
+
+func (cc *ComponentDesign) ProposalProcessor() *ProposalProcessorDesign {
+	return cc.proposalProcessor
+}
+
+func (cc *ComponentDesign) Others() map[string]interface{} {
+	return cc.others
+}
+
+func (cc *ComponentDesign) M() map[string]interface{} {
+	return cc.m
+}
+
+func (cc *ComponentDesign) Merge(o *ComponentDesign) error {
 	var m map[string]interface{}
 	if i, err := DeepCopyMap(o.m); err != nil {
 		return err
@@ -84,115 +126,62 @@ func (cc *ContestComponentDesign) Merge(o *ContestComponentDesign) error {
 	return cc.IsValid(nil)
 }
 
-func (cc *ContestComponentDesign) NodeDesign() *NodeComponentDesign {
-	var nc *NodeComponentDesign
-	if b, err := yaml.Marshal(cc.m); err != nil {
-		panic(err)
-	} else if err := yaml.Unmarshal(b, &nc); err != nil {
-		panic(err)
-	} else if err := nc.IsValid(nil); err != nil {
-		panic(err)
-	}
-
-	return nc
+type ContestComponentDesign struct {
+	*ComponentDesign `yaml:",inline"`
 }
 
-type coreNodeComponentDesign struct {
-	Suffrage          *SuffrageDesign          `yaml:",omitempty"`
-	ProposalProcessor *ProposalProcessorDesign `yaml:"proposal-processor,omitempty"`
-}
-
-type NodeComponentDesign struct {
-	coreNodeComponentDesign
-	Others map[string]interface{} `yaml:"-"`
-}
-
-func NewNodeComponentDesign(o *NodeComponentDesign) *NodeComponentDesign {
-	if o != nil {
-		return &NodeComponentDesign{
-			coreNodeComponentDesign: coreNodeComponentDesign{
-				Suffrage:          o.Suffrage,
-				ProposalProcessor: o.ProposalProcessor,
-			},
-		}
-	}
-
-	return &NodeComponentDesign{}
-}
-
-func (cc *NodeComponentDesign) UnmarshalYAML(v *yaml.Node) error {
-	var c coreNodeComponentDesign
-	if err := v.Decode(&c); err != nil {
-		return err
-	}
-
-	var m map[string]interface{}
-	if err := v.Decode(&m); err != nil {
-		return err
+func NewContestComponentDesign(o *ContestComponentDesign) *ContestComponentDesign {
+	var cc *ComponentDesign
+	if o == nil {
+		cc = NewComponentDesign(nil)
 	} else {
-		for k := range m {
-			if k == "suffrage" || k == "proposal-processor" {
-				delete(m, k)
-			}
-		}
+		cc = NewComponentDesign(o.ComponentDesign)
 	}
 
-	cc.Suffrage = c.Suffrage
-	cc.ProposalProcessor = c.ProposalProcessor
-	cc.Others = m
+	return &ContestComponentDesign{ComponentDesign: cc}
+}
+
+func (cc *ContestComponentDesign) UnmarshalYAML(v *yaml.Node) error {
+	cd := new(ComponentDesign)
+	if err := cd.UnmarshalYAML(v); err != nil {
+		return err
+	}
+
+	cc.ComponentDesign = cd
 
 	return nil
 }
 
-func (cc *NodeComponentDesign) IsValid([]byte) error {
-	if cc.Suffrage == nil {
-		cc.Suffrage = NewSuffrageDesign()
-	}
-
-	if err := cc.Suffrage.IsValid(nil); err != nil {
+func (cc *ContestComponentDesign) IsValid(b []byte) error {
+	if err := cc.ComponentDesign.IsValid(b); err != nil {
 		return err
 	}
 
-	if cc.ProposalProcessor == nil {
-		cc.ProposalProcessor = NewProposalProcessorDesign()
-	}
-
-	if err := cc.ProposalProcessor.IsValid(nil); err != nil {
-		return err
+	if i, found := cc.m["suffrage"]; found {
+		if m, ok := i.(map[string]interface{}); !ok {
+			return xerrors.Errorf("'suffrage' should be map[string]interface{}, not %T", i)
+		} else if err := isValidContestSuffrageDesign(m); err != nil {
+			return err
+		}
 	}
 
 	return nil
 }
 
-func (cc *NodeComponentDesign) Merge(b *NodeComponentDesign) error {
-	if cc.Suffrage == nil {
-		if b == nil {
-			cc.Suffrage = NewSuffrageDesign()
-		} else {
-			cc.Suffrage = b.Suffrage
-		}
+func (cc *ContestComponentDesign) Merge(o *ContestComponentDesign) error {
+	return cc.ComponentDesign.Merge(o.ComponentDesign)
+}
+
+func (cc *ContestComponentDesign) NodeDesign() *ComponentDesign {
+	m, err := DeepCopyMap(cc.m)
+	if err != nil {
+		panic(err)
 	}
 
-	if cc.ProposalProcessor == nil {
-		if b == nil {
-			cc.ProposalProcessor = NewProposalProcessorDesign()
-		} else {
-			cc.ProposalProcessor = b.ProposalProcessor
-		}
+	ncc := &ComponentDesign{m: m}
+	if err := ncc.IsValid(nil); err != nil {
+		panic(err)
 	}
 
-	if b.Others != nil {
-		if cc.Others == nil {
-			cc.Others = b.Others
-		} else {
-			for k, v := range b.Others {
-				if _, found := cc.Others[k]; found {
-					continue
-				}
-				cc.Others[k] = v
-			}
-		}
-	}
-
-	return nil
+	return ncc
 }

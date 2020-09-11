@@ -160,7 +160,7 @@ func (t *testBallotChecker) TestCheckInvalidProposal() {
 			t.local.Node().Address(),
 			t.lastManifest(t.local.Storage()).Height()+1,
 			base.Round(0),
-			nil, nil,
+			nil,
 		)
 
 		// signed by unknown node
@@ -189,7 +189,7 @@ func (t *testBallotChecker) TestCheckWrongHeightProposal() {
 			t.remote.Node().Address(),
 			t.lastManifest(t.remote.Storage()).Height()+100, // wrong height
 			base.Round(0),
-			nil, nil,
+			nil,
 		)
 		_ = pr.Sign(t.remote.Node().Privatekey(), t.remote.Policy().NetworkID())
 		t.NoError(t.local.Storage().NewSeals([]seal.Seal{pr}))
@@ -215,7 +215,7 @@ func (t *testBallotChecker) TestCheckWrongRoundProposal() {
 			t.remote.Node().Address(),
 			t.lastManifest(t.local.Storage()).Height()+1,
 			base.Round(33), // wrong round
-			nil, nil,
+			nil,
 		)
 		_ = pr.Sign(t.remote.Node().Privatekey(), t.local.Policy().NetworkID())
 		t.NoError(t.local.Storage().NewSeals([]seal.Seal{pr}))

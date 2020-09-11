@@ -239,8 +239,8 @@ func (t *baseTestStateHandler) newINITBallotFact(localstate *Localstate, round b
 	)
 }
 
-func (t *baseTestStateHandler) newProposal(localstate *Localstate, round base.Round, operations, seals []valuehash.Hash) ballot.Proposal {
-	pr, err := NewProposalV0(localstate.Storage(), localstate.Node().Address(), round, operations, seals)
+func (t *baseTestStateHandler) newProposal(localstate *Localstate, round base.Round, seals []valuehash.Hash) ballot.Proposal {
+	pr, err := NewProposalV0(localstate.Storage(), localstate.Node().Address(), round, seals)
 	if err != nil {
 		panic(err)
 	}

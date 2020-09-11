@@ -27,12 +27,13 @@ func NewDummyProposalMaker(localstate *Localstate, sls []seal.Seal) *DummyPropos
 	}
 }
 
-func (pm *DummyProposalMaker) operations() ([]valuehash.Hash, []valuehash.Hash, error) {
+func (pm *DummyProposalMaker) seals() ([]valuehash.Hash, error) {
 	mo := map[ /* Operation.Hash() */ string]struct{}{}
 
 	maxOperations := pm.localstate.Policy().MaxOperationsInProposal()
 
-	var facts, seals []valuehash.Hash
+	var facts int
+	var seals []valuehash.Hash
 	for _, sl := range pm.sls {
 		var hasOperations bool
 		var osl operation.Seal
@@ -49,11 +50,11 @@ func (pm *DummyProposalMaker) operations() ([]valuehash.Hash, []valuehash.Hash, 
 				continue
 			}
 
-			facts = append(facts, op.Fact().Hash())
+			facts++
 			mo[op.Fact().Hash().String()] = struct{}{}
 			hasOperations = true
 
-			if uint(len(facts)) == maxOperations {
+			if uint(facts) == maxOperations {
 				break
 			}
 		}
@@ -63,7 +64,7 @@ func (pm *DummyProposalMaker) operations() ([]valuehash.Hash, []valuehash.Hash, 
 		}
 	}
 
-	return facts, seals, nil
+	return seals, nil
 }
 
 func (pm *DummyProposalMaker) Proposal(round base.Round) (ballot.Proposal, error) {
@@ -86,7 +87,7 @@ func (pm *DummyProposalMaker) Proposal(round base.Round) (ballot.Proposal, error
 		}
 	}
 
-	operations, seals, err := pm.operations()
+	seals, err := pm.seals()
 	if err != nil {
 		return nil, err
 	}
@@ -95,7 +96,6 @@ func (pm *DummyProposalMaker) Proposal(round base.Round) (ballot.Proposal, error
 		pm.localstate.Node().Address(),
 		height,
 		round,
-		operations,
 		seals,
 	)
 	if err := SignSeal(&pr, pm.localstate); err != nil {

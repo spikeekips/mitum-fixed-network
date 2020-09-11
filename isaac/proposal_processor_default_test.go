@@ -76,7 +76,6 @@ func (t *testProposalProcessor) TestBlockOperations() {
 			t.local.Node().Address(),
 			pr.Height(),
 			pr.Round(),
-			ophs,
 			[]valuehash.Hash{opl.Hash()},
 		)
 		t.NoError(SignSeal(&proposal, t.local))
@@ -146,16 +145,10 @@ func (t *testProposalProcessor) TestNotFoundInProposal() {
 			},
 		)
 
-		ophs := make([]valuehash.Hash, len(sl.Operations()))
-		for i, op := range sl.Operations() {
-			ophs[i] = op.Fact().Hash()
-		}
-
 		proposal = ballot.NewProposalV0(
 			t.remote.Node().Address(),
 			pr.Height(),
 			pr.Round(),
-			ophs,
 			[]valuehash.Hash{sl.Hash()},
 		)
 		t.NoError(SignSeal(&proposal, t.remote))

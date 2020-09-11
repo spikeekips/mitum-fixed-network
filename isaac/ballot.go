@@ -83,7 +83,7 @@ func NewINITBallotV0WithVoteproof(node base.Address, voteproof base.Voteproof) (
 	), nil
 }
 
-func NewProposalV0(st storage.Storage, node base.Address, round base.Round, operations, seals []valuehash.Hash) (
+func NewProposalV0(st storage.Storage, node base.Address, round base.Round, seals []valuehash.Hash) (
 	ballot.ProposalV0, error,
 ) {
 	var manifest block.Manifest
@@ -100,7 +100,6 @@ func NewProposalV0(st storage.Storage, node base.Address, round base.Round, oper
 		node,
 		manifest.Height()+1,
 		round,
-		operations,
 		seals,
 	), nil
 }

@@ -153,7 +153,7 @@ func (t *testStateConsensusHandler) TestWithProposalWaitACCEPTBallot() {
 		_ = cs.Deactivate(nil)
 	}()
 
-	pr := t.newProposal(t.remote, initFact.Round(), nil, nil)
+	pr := t.newProposal(t.remote, initFact.Round(), nil)
 
 	returnedBlock, err := block.NewTestBlockV0(initFact.Height(), initFact.Round(), pr.Hash(), valuehash.RandomSHA256())
 	t.NoError(err)
@@ -207,7 +207,7 @@ func (t *testStateConsensusHandler) TestWithProposalWaitSIGNBallot() {
 		_ = cs.Deactivate(nil)
 	}()
 
-	pr := t.newProposal(t.remote, initFact.Round(), nil, nil)
+	pr := t.newProposal(t.remote, initFact.Round(), nil)
 
 	returnedBlock, err := block.NewTestBlockV0(initFact.Height(), initFact.Round(), pr.Hash(), valuehash.RandomSHA256())
 	t.NoError(err)

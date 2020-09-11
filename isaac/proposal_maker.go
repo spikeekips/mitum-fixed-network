@@ -20,18 +20,19 @@ func NewProposalMaker(localstate *Localstate) *ProposalMaker {
 	return &ProposalMaker{localstate: localstate}
 }
 
-func (pm *ProposalMaker) facts() ([]valuehash.Hash, []valuehash.Hash, error) {
-	mo := map[ /* Operation.Fact().Hash() */ string]struct{}{}
+func (pm *ProposalMaker) seals() ([]valuehash.Hash, error) {
+	founds := map[ /* Operation.Fact().Hash() */ string]struct{}{}
 
 	maxOperations := pm.localstate.Policy().MaxOperationsInProposal()
 
-	var facts, seals, uselessSeals []valuehash.Hash
+	var facts int
+	var seals, uselessSeals []valuehash.Hash
 	if err := pm.localstate.Storage().StagedOperationSeals(
 		func(sl operation.Seal) (bool, error) {
 			var ofs []valuehash.Hash
 			for _, op := range sl.Operations() {
 				fh := op.Fact().Hash()
-				if _, found := mo[fh.String()]; found {
+				if _, found := founds[fh.String()]; found {
 					continue
 				} else if found, err := pm.localstate.Storage().HasOperationFact(fh); err != nil {
 					return false, err
@@ -40,18 +41,18 @@ func (pm *ProposalMaker) facts() ([]valuehash.Hash, []valuehash.Hash, error) {
 				}
 
 				ofs = append(ofs, fh)
-				if uint(len(facts)+len(ofs)) > maxOperations {
+				if uint(facts+len(ofs)) > maxOperations {
 					break
 				}
 
-				mo[fh.String()] = struct{}{}
+				founds[fh.String()] = struct{}{}
 			}
 
 			switch {
-			case uint(len(facts)+len(ofs)) > maxOperations:
+			case uint(facts+len(ofs)) > maxOperations:
 				return false, nil
 			case len(ofs) > 0:
-				facts = append(facts, ofs...)
+				facts += len(ofs)
 				seals = append(seals, sl.Hash())
 			default:
 				uselessSeals = append(uselessSeals, sl.Hash())
@@ -61,16 +62,16 @@ func (pm *ProposalMaker) facts() ([]valuehash.Hash, []valuehash.Hash, error) {
 		},
 		true,
 	); err != nil {
-		return nil, nil, err
+		return nil, err
 	}
 
 	if len(uselessSeals) > 0 {
 		if err := pm.localstate.Storage().UnstagedOperationSeals(uselessSeals); err != nil {
-			return nil, nil, err
+			return nil, err
 		}
 	}
 
-	return facts, seals, nil
+	return seals, nil
 }
 
 func (pm *ProposalMaker) Proposal(round base.Round) (ballot.Proposal, error) {
@@ -93,7 +94,7 @@ func (pm *ProposalMaker) Proposal(round base.Round) (ballot.Proposal, error) {
 		}
 	}
 
-	facts, seals, err := pm.facts()
+	seals, err := pm.seals()
 	if err != nil {
 		return nil, err
 	}
@@ -102,7 +103,6 @@ func (pm *ProposalMaker) Proposal(round base.Round) (ballot.Proposal, error) {
 		pm.localstate.Node().Address(),
 		height,
 		round,
-		facts,
 		seals,
 	)
 	if err := SignSeal(&pr, pm.localstate); err != nil {

@@ -18,7 +18,6 @@ var (
 
 type ProposalFactV0 struct {
 	BaseBallotFactV0
-	facts []valuehash.Hash
 	seals []valuehash.Hash
 }
 
@@ -33,9 +32,6 @@ func (prf ProposalFactV0) IsValid(networkID []byte) error {
 
 	if err := isvalid.Check(func() []isvalid.IsValider {
 		var vs []isvalid.IsValider
-		for _, s := range prf.facts {
-			vs = append(vs, s)
-		}
 		for _, s := range prf.seals {
 			vs = append(vs, s)
 		}
@@ -45,26 +41,15 @@ func (prf ProposalFactV0) IsValid(networkID []byte) error {
 		return err
 	}
 
-	// NOTE duplicated facts or seals will not be allowed
+	// NOTE duplicated seals will not be allowed
 	{
-		mo := map[string]struct{}{}
-		for _, h := range prf.facts {
-			if _, found := mo[h.String()]; found {
-				return xerrors.Errorf("duplicated Operation found in Proposal")
-			}
-
-			mo[h.String()] = struct{}{}
-		}
-	}
-
-	{
-		mo := map[string]struct{}{}
+		founds := map[string]struct{}{}
 		for _, h := range prf.seals {
-			if _, found := mo[h.String()]; found {
+			if _, found := founds[h.String()]; found {
 				return xerrors.Errorf("duplicated Seal found in Proposal")
 			}
 
-			mo[h.String()] = struct{}{}
+			founds[h.String()] = struct{}{}
 		}
 	}
 
@@ -79,21 +64,14 @@ func (prf ProposalFactV0) Bytes() []byte {
 	return util.ConcatBytesSlice(
 		prf.BaseBallotFactV0.Bytes(),
 		func() []byte {
-			hl := make([][]byte, len(prf.facts)+len(prf.seals))
-			for i := range prf.facts {
-				hl[i] = prf.facts[i].Bytes()
-			}
+			hl := make([][]byte, len(prf.seals))
 			for i := range prf.seals {
-				hl[len(prf.facts)+i] = prf.seals[i].Bytes()
+				hl[i] = prf.seals[i].Bytes()
 			}
 
 			return util.ConcatBytesSlice(hl...)
 		}(),
 	)
-}
-
-func (prf ProposalFactV0) Facts() []valuehash.Hash {
-	return prf.facts
 }
 
 func (prf ProposalFactV0) Seals() []valuehash.Hash {
@@ -109,7 +87,6 @@ func NewProposalV0(
 	node base.Address,
 	height base.Height,
 	round base.Round,
-	facts []valuehash.Hash,
 	seals []valuehash.Hash,
 ) ProposalV0 {
 	return ProposalV0{
@@ -121,7 +98,6 @@ func NewProposalV0(
 				height: height,
 				round:  round,
 			},
-			facts: facts,
 			seals: seals,
 		},
 	}

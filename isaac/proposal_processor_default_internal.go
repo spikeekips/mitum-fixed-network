@@ -24,18 +24,17 @@ import (
 type internalDefaultProposalProcessor struct {
 	sync.RWMutex
 	*logging.Logging
-	localstate    *Localstate
-	stopped       bool
-	suffrage      base.Suffrage
-	lastManifest  block.Manifest
-	block         block.BlockUpdater
-	proposal      ballot.Proposal
-	proposedFacts map[string]struct{}
-	operations    []operation.Operation
-	bs            storage.BlockStorage
-	si            block.SuffrageInfoV0
-	oprHintset    *hint.Hintmap
-	statesValue   *sync.Map
+	localstate   *Localstate
+	stopped      bool
+	suffrage     base.Suffrage
+	lastManifest block.Manifest
+	block        block.BlockUpdater
+	proposal     ballot.Proposal
+	operations   []operation.Operation
+	bs           storage.BlockStorage
+	si           block.SuffrageInfoV0
+	oprHintset   *hint.Hintmap
+	statesValue  *sync.Map
 }
 
 func newInternalDefaultProposalProcessor(
@@ -52,11 +51,6 @@ func newInternalDefaultProposalProcessor(
 		return nil, err
 	default:
 		lastManifest = m
-	}
-
-	proposedOperations := map[string]struct{}{}
-	for _, h := range proposal.Facts() {
-		proposedOperations[h.String()] = struct{}{}
 	}
 
 	var si block.SuffrageInfoV0
@@ -79,14 +73,13 @@ func newInternalDefaultProposalProcessor(
 		Logging: logging.NewLogging(func(c logging.Context) logging.Emitter {
 			return c.Str("module", "internal-proposal-processor-inside-v0")
 		}),
-		localstate:    localstate,
-		suffrage:      suffrage,
-		proposal:      proposal,
-		lastManifest:  lastManifest,
-		proposedFacts: proposedOperations,
-		si:            si,
-		oprHintset:    oprHintset,
-		statesValue:   &sync.Map{},
+		localstate:   localstate,
+		suffrage:     suffrage,
+		proposal:     proposal,
+		lastManifest: lastManifest,
+		si:           si,
+		oprHintset:   oprHintset,
+		statesValue:  &sync.Map{},
 	}, nil
 }
 
@@ -237,59 +230,74 @@ func (pp *internalDefaultProposalProcessor) extractOperations() ([]operation.Ope
 		pp.statesValue.Store("extract-operations", time.Since(s))
 	}()
 
-	founds := map[string]operation.Operation{}
+	if pp.isStopped() {
+		return nil, xerrors.Errorf("already stopped")
+	}
+
+	founds := map[string]struct{}{}
+	bySeals := map[string][]operation.Operation{}
 	var notFounds []valuehash.Hash
 	for _, h := range pp.proposal.Seals() {
-		if pp.isStopped() {
-			return nil, xerrors.Errorf("already stopped")
-		}
-
-		switch ops, found, err := pp.getOperationsFromStorage(h); {
+		switch l, found, err := pp.getOperationsFromStorage(h); {
 		case err != nil:
 			return nil, err
 		case !found:
 			notFounds = append(notFounds, h)
-			continue
-		case len(ops) < 1:
+
 			continue
 		default:
-			for i := range ops {
-				op := ops[i]
-				fh := op.Fact().Hash().String()
-				if _, found := founds[fh]; found {
-					continue
-				}
-
-				founds[fh] = op
+			ops := pp.filterOps(l, founds)
+			if len(ops) < 1 {
+				continue
 			}
+
+			bySeals[h.String()] = ops
 		}
 	}
 
 	if len(notFounds) > 0 {
-		if ops, err := pp.getOperationsThruChannel(pp.proposal.Node(), notFounds, founds); err != nil {
+		if m, err := pp.getOperationsThruChannel(pp.proposal.Node(), notFounds, founds); err != nil {
 			return nil, err
 		} else {
-			for i := range ops {
-				op := ops[i]
-				founds[op.Fact().Hash().String()] = op
+			for k := range m {
+				bySeals[k] = m[k]
 			}
 		}
 	}
 
 	var ops []operation.Operation
-	for _, h := range pp.proposal.Facts() {
-		if pp.isStopped() {
-			return nil, xerrors.Errorf("already stopped")
-		}
-
-		if op, found := founds[h.String()]; !found {
-			return nil, xerrors.Errorf("failed to fetch Operation from Proposal: operation=%s", h)
+	for _, h := range pp.proposal.Seals() {
+		if l, found := bySeals[h.String()]; !found {
+			continue
 		} else {
-			ops = append(ops, op)
+			ops = append(ops, l...)
 		}
 	}
 
 	return ops, nil
+}
+
+func (pp *internalDefaultProposalProcessor) filterOps(
+	ops []operation.Operation,
+	founds map[string]struct{},
+) []operation.Operation {
+	if len(ops) < 1 {
+		return nil
+	}
+
+	var nops []operation.Operation
+	for i := range ops {
+		op := ops[i]
+		fk := op.Hash().String()
+		if _, found := founds[fk]; found {
+			continue
+		} else {
+			nops = append(nops, op)
+			founds[fk] = struct{}{}
+		}
+	}
+
+	return nops
 }
 
 func (pp *internalDefaultProposalProcessor) processStates(
@@ -435,24 +443,13 @@ func (pp *internalDefaultProposalProcessor) getOperationsFromStorage(h valuehash
 		osl = os
 	}
 
-	founds := map[string]struct{}{}
 	var ops []operation.Operation // nolint
 	for i := range osl.Operations() {
 		if pp.isStopped() {
 			return nil, false, xerrors.Errorf("already stopped")
 		}
 
-		op := osl.Operations()[i]
-		fh := op.Fact().Hash().String()
-		if _, found := pp.proposedFacts[fh]; !found {
-			continue
-		} else if _, found := founds[fh]; found {
-			continue
-		} else {
-			founds[fh] = struct{}{}
-		}
-
-		ops = append(ops, op)
+		ops = append(ops, osl.Operations()[i])
 	}
 
 	return ops, true, nil
@@ -461,8 +458,12 @@ func (pp *internalDefaultProposalProcessor) getOperationsFromStorage(h valuehash
 func (pp *internalDefaultProposalProcessor) getOperationsThruChannel(
 	proposer base.Address,
 	notFounds []valuehash.Hash,
-	founds map[string]operation.Operation,
-) ([]operation.Operation, error) {
+	founds map[string]struct{},
+) (map[string][]operation.Operation, error) {
+	if pp.isStopped() {
+		return nil, xerrors.Errorf("already stopped")
+	}
+
 	if pp.localstate.Node().Address().Equal(proposer) {
 		pp.Log().Warn().Msg("proposer is local node, but local node should have seals. Hmmm")
 
@@ -485,31 +486,18 @@ func (pp *internalDefaultProposalProcessor) getOperationsThruChannel(
 		}
 	}
 
-	var ops []operation.Operation
+	bySeals := map[string][]operation.Operation{}
 	for i := range received {
-		if pp.isStopped() {
-			return nil, xerrors.Errorf("already stopped")
-		}
-
 		sl := received[i]
 		if os, ok := sl.(operation.Seal); !ok {
 			return nil, xerrors.Errorf("not operation.Seal: %T", sl)
 		} else {
-			for i := range os.Operations() {
-				op := os.Operations()[i]
-				fh := op.Fact().Hash().String()
-				if _, found := pp.proposedFacts[fh]; !found {
-					continue
-				} else if _, found := founds[fh]; found {
-					continue
-				}
-
-				ops = append(ops, op)
-			}
+			l := pp.filterOps(os.Operations(), founds)
+			bySeals[sl.Hash().String()] = l
 		}
 	}
 
-	return ops, nil
+	return bySeals, nil
 }
 
 func (pp *internalDefaultProposalProcessor) setACCEPTVoteproof(acceptVoteproof base.Voteproof) error {

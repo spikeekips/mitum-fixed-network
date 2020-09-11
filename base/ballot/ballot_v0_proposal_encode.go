@@ -9,13 +9,11 @@ func (pr *ProposalV0) unpack(
 	_ encoder.Encoder,
 	bb BaseBallotV0,
 	bf BaseBallotFactV0,
-	fs,
 	sls []valuehash.Hash,
 ) error {
 	pr.BaseBallotV0 = bb
 	pr.ProposalFactV0 = ProposalFactV0{
 		BaseBallotFactV0: bf,
-		facts:            fs,
 		seals:            sls,
 	}
 

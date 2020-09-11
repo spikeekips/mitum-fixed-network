@@ -78,17 +78,6 @@ func (st *SyncerStorage) SetManifests(manifests []block.Manifest) error {
 	st.Lock()
 	defer st.Unlock()
 
-	st.Log().VerboseFunc(func(e *logging.Event) logging.Emitter {
-		var heights []base.Height
-		for i := range manifests {
-			heights = append(heights, manifests[i].Height())
-		}
-
-		return e.Interface("heights", heights)
-	}).
-		Int("manifests", len(manifests)).
-		Msg("set manifests")
-
 	var lastManifest block.Manifest
 	for _, m := range manifests {
 		if lastManifest == nil {
@@ -109,7 +98,9 @@ func (st *SyncerStorage) SetManifests(manifests []block.Manifest) error {
 
 		if h := m.Height(); st.heightFrom <= base.NilHeight || h < st.heightFrom {
 			st.heightFrom = h
-		} else if h > st.heightTo {
+		}
+
+		if h := m.Height(); h > st.heightTo {
 			st.heightTo = h
 		}
 	}
@@ -117,6 +108,19 @@ func (st *SyncerStorage) SetManifests(manifests []block.Manifest) error {
 	if err := st.manifestStorage.Client().Bulk(context.Background(), defaultColNameManifest, models, true); err != nil {
 		return err
 	}
+
+	st.Log().VerboseFunc(func(e *logging.Event) logging.Emitter {
+		var heights []base.Height
+		for i := range manifests {
+			heights = append(heights, manifests[i].Height())
+		}
+
+		return e.Interface("heights", heights)
+	}).
+		Hinted("from_height", st.heightFrom).
+		Hinted("to_height", st.heightTo).
+		Int("manifests", len(manifests)).
+		Msg("set manifests")
 
 	return st.manifestStorage.setLastBlock(lastManifest, false, false)
 }
@@ -136,12 +140,6 @@ func (st *SyncerStorage) SetBlocks(blocks []block.Block) error {
 	}).
 		Int("blocks", len(blocks)).
 		Msg("set blocks")
-
-	if err := st.main.CleanByHeight(st.heightFrom); err != nil {
-		if !storage.IsNotFoundError(err) {
-			return err
-		}
-	}
 
 	var lastBlock block.Block
 	for i := range blocks {

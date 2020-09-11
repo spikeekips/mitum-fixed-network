@@ -124,7 +124,7 @@ func (bst *BlockStorage) Commit(ctx context.Context) error {
 		defer func() {
 			started := time.Now()
 			_ = bst.Cancel()
-			bst.statesValue.Store("clean-by-height", time.Since(started))
+			bst.statesValue.Store("commit", time.Since(started))
 		}()
 
 		var me mongo.CommandError

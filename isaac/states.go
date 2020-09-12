@@ -246,31 +246,23 @@ func (css *ConsensusStates) ActivateHandler(ctx *StateChangeContext) {
 }
 
 func (css *ConsensusStates) activateHandler(ctx *StateChangeContext) error {
+	css.Lock()
+	defer css.Unlock()
+
+	var current base.State
+	if css.activeHandler != nil {
+		current = css.activeHandler.State()
+	}
+
 	css.Log().Debug().
+		Str("current", current.String()).
 		Hinted("states", ctx).
 		HintedVerbose("voteproof", ctx.Voteproof(), true).
 		Msg("trying to change state")
 
-	var livp base.Voteproof = css.livp
-	handler := css.ActiveHandler()
-	if handler != nil {
-		if handler.State() != ctx.fromState {
-			css.Log().Debug().Msgf("not from active handler, %s", ctx.fromState)
-
-			return nil
-		} else if handler.State() == ctx.toState {
-			css.Log().Debug().Msgf("handler, %s already activated", ctx.toState)
-
-			return nil
-		}
-
-		if v := handler.LastINITVoteproof(); v != nil {
-			livp = v
-		}
+	if !css.canChangeState(ctx) {
+		return nil
 	}
-
-	css.Lock()
-	defer css.Unlock()
 
 	var toHandler StateHandler
 	if h, found := css.states[ctx.toState]; !found {
@@ -283,8 +275,15 @@ func (css *ConsensusStates) activateHandler(ctx *StateChangeContext) error {
 		return FailedToActivateHandler.Errorf("state handler not registered: %s", ctx.toState)
 	}
 
-	if handler != nil {
-		if err := handler.Deactivate(ctx); err != nil {
+	var livp base.Voteproof = css.livp
+	if css.activeHandler != nil {
+		if v := css.activeHandler.LastINITVoteproof(); v != nil {
+			livp = v
+		}
+	}
+
+	if css.activeHandler != nil {
+		if err := css.activeHandler.Deactivate(ctx); err != nil {
 			return FailedToActivateHandler.Wrap(
 				xerrors.Errorf("failed to deactivate previous handler: %w", err),
 			)
@@ -304,6 +303,26 @@ func (css *ConsensusStates) activateHandler(ctx *StateChangeContext) error {
 		Msg("state changed")
 
 	return nil
+}
+
+func (css *ConsensusStates) canChangeState(ctx *StateChangeContext) bool {
+	if css.activeHandler == nil {
+		return true
+	}
+
+	if css.activeHandler.State() != ctx.fromState {
+		css.Log().Debug().Msgf("not from active handler, %s", ctx.fromState)
+
+		return false
+	}
+
+	if css.activeHandler.State() == ctx.toState {
+		css.Log().Debug().Msgf("handler, %s already activated", ctx.toState)
+
+		return false
+	}
+
+	return true
 }
 
 // ActiveHandler returns the current activated handler.

@@ -42,6 +42,8 @@ func (st State) String() string {
 		return "SYNCING"
 	case StateBroken:
 		return "BROKEN"
+	case StateUnknown:
+		return "<empty State>"
 	default:
 		return "<unknown State>"
 	}

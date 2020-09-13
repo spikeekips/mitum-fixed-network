@@ -16,13 +16,14 @@ type Syncers struct {
 	sync.RWMutex
 	*util.FunctionDaemon
 	*logging.Logging
-	localstate   *Localstate
-	syncers      []Syncer
-	baseManifest block.Manifest
-	stateChan    chan SyncerStateChangedContext
-	lp           int
-	finished     int
-	whenFinished func(base.Height)
+	localstate     *Localstate
+	syncers        []Syncer
+	baseManifest   block.Manifest
+	stateChan      chan SyncerStateChangedContext
+	lp             int
+	finished       int
+	whenFinished   func(base.Height)
+	whenBlockSaved func([]block.Block)
 }
 
 func NewSyncers(localstate *Localstate, baseManifest block.Manifest) *Syncers {
@@ -30,11 +31,12 @@ func NewSyncers(localstate *Localstate, baseManifest block.Manifest) *Syncers {
 		Logging: logging.NewLogging(func(c logging.Context) logging.Emitter {
 			return c.Str("module", "syncers")
 		}),
-		localstate:   localstate,
-		baseManifest: baseManifest,
-		lp:           -1,
-		stateChan:    make(chan SyncerStateChangedContext),
-		whenFinished: func(base.Height) {},
+		localstate:     localstate,
+		baseManifest:   baseManifest,
+		lp:             -1,
+		stateChan:      make(chan SyncerStateChangedContext),
+		whenFinished:   func(base.Height) {},
+		whenBlockSaved: func([]block.Block) {},
 	}
 
 	sy.FunctionDaemon = util.NewFunctionDaemon(sy.start, true)
@@ -172,6 +174,8 @@ func (sy *Syncers) stateChanged(ctx SyncerStateChangedContext) error {
 		sy.finished++
 		sy.Unlock()
 
+		sy.whenBlockSaved(ctx.Blocks())
+
 		if sy.isFinished() {
 			l.Debug().Msg("every syncers was finished")
 
@@ -273,4 +277,11 @@ func (sy *Syncers) WhenFinished(callback func(base.Height)) {
 	defer sy.Unlock()
 
 	sy.whenFinished = callback
+}
+
+func (sy *Syncers) WhenBlockSaved(callback func([]block.Block)) {
+	sy.Lock()
+	defer sy.Unlock()
+
+	sy.whenBlockSaved = callback
 }

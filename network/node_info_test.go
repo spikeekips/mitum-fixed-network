@@ -49,18 +49,42 @@ func (t *testNodeInfo) TestNew() {
 	blk, err := block.NewTestBlockV0(base.Height(33), base.Round(0), valuehash.RandomSHA256(), valuehash.RandomSHA256())
 	t.NoError(err)
 
+	local := base.RandomNode("n0")
+
+	na1, err := base.NewStringAddress("n1")
+	t.NoError(err)
+	n1 := base.NewBaseNodeV0(na1, key.MustNewBTCPrivatekey().Publickey())
+
+	na2, err := base.NewStringAddress("n2")
+	t.NoError(err)
+	n2 := base.NewBaseNodeV0(na2, key.MustNewBTCPrivatekey().Publickey())
+
+	nodes := []base.Node{n1, n2}
+	config := map[string]interface{}{"showme": 1}
+
 	ni := NewNodeInfoV0(
-		base.RandomNode("n0"),
+		local,
 		t.nid,
 		base.StateBooting,
 		blk.Manifest(),
 		util.Version("0.1.1"),
 		"quic://local",
 		nil,
+		config,
+		nodes,
 	)
 	t.NoError(ni.IsValid(nil))
 
 	t.Implements((*NodeInfo)(nil), ni)
+	t.Equal(config, ni.Config())
+
+	expectedNodes := []string{n1.Address().String(), n2.Address().String(), local.Address().String()}
+	var suffrage []string
+	for _, n := range ni.Suffrage() {
+		suffrage = append(suffrage, n.Address().String())
+	}
+
+	t.Equal(expectedNodes, suffrage)
 }
 
 func (t *testNodeInfo) TestEmptyNetworkID() {
@@ -74,6 +98,8 @@ func (t *testNodeInfo) TestEmptyNetworkID() {
 		blk.Manifest(),
 		util.Version("0.1.1"),
 		"quic://local",
+		nil,
+		map[string]interface{}{"showme": 1},
 		nil,
 	)
 	t.Contains(ni.IsValid(nil).Error(), "empty NetworkID")
@@ -91,6 +117,8 @@ func (t *testNodeInfo) TestWrongNetworkID() {
 		util.Version("0.1.1"),
 		"quic://local",
 		nil,
+		map[string]interface{}{"showme": 1},
+		nil,
 	)
 	t.Contains(ni.IsValid(nil).Error(), "invalid state")
 }
@@ -103,6 +131,8 @@ func (t *testNodeInfo) TestEmptyBlock() {
 		nil,
 		util.Version("0.1.1"),
 		"quic://local",
+		nil,
+		map[string]interface{}{"showme": 1},
 		nil,
 	)
 	t.NoError(ni.IsValid(nil))
@@ -120,6 +150,8 @@ func (t *testNodeInfo) TestEmptyVersion() {
 		"",
 		"quic://local",
 		nil,
+		map[string]interface{}{"showme": 1},
+		nil,
 	)
 	t.Contains(ni.IsValid(nil).Error(), "invalid version")
 }
@@ -136,6 +168,8 @@ func (t *testNodeInfo) TestWrongVersion() {
 		util.Version("wrong-version"),
 		"quic://local",
 		nil,
+		map[string]interface{}{"showme": 1},
+		nil,
 	)
 	t.Contains(ni.IsValid(nil).Error(), "invalid version")
 }
@@ -143,6 +177,17 @@ func (t *testNodeInfo) TestWrongVersion() {
 func (t *testNodeInfo) TestJSON() {
 	blk, err := block.NewTestBlockV0(base.Height(33), base.Round(0), valuehash.RandomSHA256(), valuehash.RandomSHA256())
 	t.NoError(err)
+
+	na0, err := base.NewStringAddress("n0")
+	t.NoError(err)
+	n0 := base.NewBaseNodeV0(na0, key.MustNewBTCPrivatekey().Publickey())
+
+	na1, err := base.NewStringAddress("n1")
+	t.NoError(err)
+	n1 := base.NewBaseNodeV0(na1, key.MustNewBTCPrivatekey().Publickey())
+
+	nodes := []base.Node{n0, n1}
+	config := map[string]interface{}{"showme": 1.1}
 
 	ni := NewNodeInfoV0(
 		base.RandomNode("n0"),
@@ -152,6 +197,8 @@ func (t *testNodeInfo) TestJSON() {
 		util.Version("1.2.3"),
 		"quic://local",
 		nil,
+		config,
+		nodes,
 	)
 	t.NoError(ni.IsValid(nil))
 
@@ -177,6 +224,8 @@ func (t *testNodeInfo) TestBSON() {
 		blk.Manifest(),
 		util.Version("1.2.3"),
 		"quic://local",
+		nil,
+		map[string]interface{}{"showme": 1.1},
 		nil,
 	)
 	t.NoError(ni.IsValid(nil))

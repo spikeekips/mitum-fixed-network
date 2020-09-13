@@ -340,6 +340,59 @@ func (t *testStateConsensusHandler) TestWrongProposalProcessing() {
 	t.Equal(base.StageACCEPT, ctx.voteproof.Stage())
 }
 
+func (t *testStateConsensusHandler) TestSaveNewBlock() {
+	pp := NewDummyProposalProcessor(nil, nil)
+	cs, err := NewStateConsensusHandler(
+		t.local,
+		pp,
+		t.suffrage(t.remote, t.local, t.remote),
+		NewProposalMaker(t.local),
+	)
+	t.NoError(err)
+	t.NotNil(cs)
+
+	stateChan := make(chan *StateChangeContext)
+	cs.SetStateChan(stateChan)
+
+	var ivp base.Voteproof
+	{
+		ibf := t.newINITBallotFact(t.local, base.Round(0))
+		ivp, _ = t.newVoteproof(base.StageINIT, ibf, t.local, t.remote)
+		cs.SetLastINITVoteproof(ivp)
+	}
+
+	t.NoError(cs.Activate(NewStateChangeContext(
+		base.StateJoining,
+		base.StateConsensus,
+		ivp,
+		nil,
+	)))
+
+	defer func() {
+		_ = cs.Deactivate(nil)
+	}()
+
+	newblock, _ := block.NewTestBlockV0(ivp.Height(), ivp.Round(), valuehash.RandomSHA256(), valuehash.RandomSHA256())
+	pp.SetReturnBlock(newblock)
+
+	var avp base.Voteproof
+	{
+		ab := t.newACCEPTBallot(t.local, ivp.Round(), newblock.Proposal(), newblock.Hash())
+		fact := ab.ACCEPTBallotFactV0
+
+		avp, _ = t.newVoteproof(base.StageACCEPT, fact, t.local, t.remote)
+	}
+
+	var savedBlock block.Block
+	cs.WhenBlockSaved(func(blocks []block.Block) {
+		savedBlock = blocks[0]
+	})
+	t.NoError(cs.NewVoteproof(avp))
+
+	t.Equal(newblock.Height(), savedBlock.Height())
+	t.True(newblock.Hash().Equal(savedBlock.Hash()))
+}
+
 func TestStateConsensusHandler(t *testing.T) {
 	suite.Run(t, new(testStateConsensusHandler))
 }

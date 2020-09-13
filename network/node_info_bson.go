@@ -17,17 +17,21 @@ func (ni NodeInfoV0) MarshalBSON() ([]byte, error) {
 		"version":    ni.version,
 		"url":        ni.u,
 		"policy":     ni.policy,
+		"config":     ni.config,
+		"suffrage":   ni.suffrage,
 	}))
 }
 
 type NodeInfoV0UnpackerBSON struct {
-	ND  bson.Raw       `bson:"node"`
-	NID base.NetworkID `bson:"network_id"`
-	ST  base.State     `bson:"state"`
-	LB  bson.Raw       `bson:"last_block"`
-	VS  util.Version   `bson:"version"`
-	UL  string         `bson:"url"`
-	PO  bson.Raw       `bson:"policy"`
+	ND  bson.Raw               `bson:"node"`
+	NID base.NetworkID         `bson:"network_id"`
+	ST  base.State             `bson:"state"`
+	LB  bson.Raw               `bson:"last_block"`
+	VS  util.Version           `bson:"version"`
+	UL  string                 `bson:"url"`
+	PO  bson.Raw               `bson:"policy"`
+	CO  map[string]interface{} `bson:"config"`
+	SF  []bson.Raw             `bson:"suffrage"`
 }
 
 func (ni *NodeInfoV0) UnpackBSON(b []byte, enc *bsonenc.Encoder) error {
@@ -36,5 +40,10 @@ func (ni *NodeInfoV0) UnpackBSON(b []byte, enc *bsonenc.Encoder) error {
 		return err
 	}
 
-	return ni.unpack(enc, nni.ND, nni.NID, nni.ST, nni.LB, nni.VS, nni.UL, nni.PO)
+	sf := make([][]byte, len(nni.SF))
+	for i := range nni.SF {
+		sf[i] = nni.SF[i]
+	}
+
+	return ni.unpack(enc, nni.ND, nni.NID, nni.ST, nni.LB, nni.VS, nni.UL, nni.PO, nni.CO, sf)
 }

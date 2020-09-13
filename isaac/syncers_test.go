@@ -1,6 +1,7 @@
 package isaac
 
 import (
+	"sort"
 	"testing"
 	"time"
 
@@ -8,6 +9,7 @@ import (
 	"golang.org/x/xerrors"
 
 	"github.com/spikeekips/mitum/base"
+	"github.com/spikeekips/mitum/base/block"
 	"github.com/spikeekips/mitum/network"
 )
 
@@ -21,7 +23,8 @@ func (t *testSyncers) TestNew() {
 
 	t.setup(local, []*Localstate{remote})
 
-	target := t.lastManifest(local.Storage()).Height() + 2
+	fromHeight := t.lastManifest(local.Storage()).Height() + 1
+	target := fromHeight + 2
 	t.generateBlocks([]*Localstate{remote}, target)
 
 	baseManifest, found, err := local.Storage().LastManifest()
@@ -29,10 +32,14 @@ func (t *testSyncers) TestNew() {
 	t.True(found)
 
 	finishedChan := make(chan base.Height)
+	blocksChan := make(chan []block.Block)
 
 	ss := NewSyncers(local, baseManifest)
 	ss.WhenFinished(func(height base.Height) {
 		finishedChan <- height
+	})
+	ss.WhenBlockSaved(func(blocks []block.Block) {
+		blocksChan <- blocks
 	})
 	t.NoError(ss.Start())
 
@@ -40,13 +47,29 @@ func (t *testSyncers) TestNew() {
 
 	t.NoError(ss.Add(target, []network.Node{remote.Node()}))
 
+	var blocks []base.Height
 	select {
 	case <-time.After(time.Second * 3):
 		t.NoError(xerrors.Errorf("timeout to wait to be finished"))
+	case bs := <-blocksChan:
+		for _, blk := range bs {
+			blocks = append(blocks, blk.Height())
+		}
 	case height := <-finishedChan:
 		t.Equal(target, height)
 		break
 	}
+
+	sort.Slice(blocks, func(i, j int) bool {
+		return blocks[i] < blocks[j]
+	})
+
+	var expectedBlocks []base.Height
+	for i := fromHeight; i <= target; i++ {
+		expectedBlocks = append(expectedBlocks, i)
+	}
+
+	t.Equal(expectedBlocks, blocks)
 
 	rm, found, err := remote.Storage().LastManifest()
 	t.NoError(err)

@@ -80,6 +80,8 @@ func (t *testStateBootingHandler) TestWithoutBlock() {
 		util.Version("0.1.1"),
 		"quic://local",
 		po,
+		map[string]interface{}{"showme": 1},
+		nil,
 	)
 
 	nch := t.remote.Node().Channel().(*channetwork.Channel)

@@ -548,6 +548,10 @@ func (css *ConsensusStates) setLastINITVoteproof(voteproof base.Voteproof) {
 	}
 }
 
+func (css *ConsensusStates) StateHandler(state base.State) StateHandler {
+	return css.states[state]
+}
+
 func checkBlockWithINITVoteproof(manifest block.Manifest, voteproof base.Voteproof) error {
 	if manifest == nil {
 		return nil

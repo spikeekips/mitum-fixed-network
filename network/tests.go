@@ -3,7 +3,9 @@
 package network
 
 import (
+	"bytes"
 	"os"
+	"sort"
 	"testing"
 	"time"
 
@@ -43,4 +45,21 @@ func CompareNodeInfo(t *testing.T, a, b NodeInfo) {
 	assert.True(t, a.LastBlock().PreviousBlock().Equal(b.LastBlock().PreviousBlock()))
 	assert.True(t, a.LastBlock().OperationsHash().Equal(b.LastBlock().OperationsHash()))
 	assert.True(t, a.LastBlock().StatesHash().Equal(b.LastBlock().StatesHash()))
+
+	assert.Equal(t, a.Config(), b.Config())
+
+	as := a.Suffrage()
+	bs := b.Suffrage()
+	assert.Equal(t, len(as), len(bs))
+
+	sort.Slice(as, func(i, j int) bool {
+		return bytes.Compare(as[i].Address().Bytes(), as[j].Address().Bytes()) < 0
+	})
+	sort.Slice(bs, func(i, j int) bool {
+		return bytes.Compare(bs[i].Address().Bytes(), bs[j].Address().Bytes()) < 0
+	})
+	for i := range as {
+		assert.True(t, as[i].Address().Equal(bs[i].Address()))
+		assert.True(t, as[i].Publickey().Equal(bs[i].Publickey()))
+	}
 }

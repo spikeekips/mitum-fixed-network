@@ -300,12 +300,9 @@ func (ch *Channel) NodeInfo() (network.NodeInfo, error) {
 		enc = e
 	}
 
-	var ni network.NodeInfo
 	if hinter, err := network.DecodeNodeInfo(enc, response.Bytes()); err != nil {
 		return nil, err
 	} else {
-		ni = hinter.(network.NodeInfo)
+		return hinter.(network.NodeInfo), nil
 	}
-
-	return ni, nil
 }

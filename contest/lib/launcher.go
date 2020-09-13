@@ -124,6 +124,10 @@ func (nr *Launcher) attachNodeChannel() error {
 	if ch, err := launcher.LoadNodeChannel(nu, nr.Encoders()); err != nil {
 		return err
 	} else {
+		if l, ok := ch.(logging.SetLogger); ok {
+			_ = l.SetLogger(nr.Log())
+		}
+
 		_ = nr.SetNodeChannel(ch)
 		_ = nr.Localstate().Node().SetChannel(ch)
 	}
@@ -148,6 +152,10 @@ func (nr *Launcher) attachRemoteNodes() error {
 		if ch, err := launcher.LoadNodeChannel(c.NetworkURL(), nr.Encoders()); err != nil {
 			return err
 		} else {
+			if l, ok := ch.(logging.SetLogger); ok {
+				_ = l.SetLogger(nr.Log())
+			}
+
 			_ = n.SetChannel(ch)
 		}
 		l.Debug().Msg("created")

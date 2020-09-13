@@ -62,10 +62,11 @@ func (fm *syncerFetchBlockError) Error() string {
 type SyncerStateChangedContext struct {
 	syncer Syncer
 	state  SyncerState
+	blocks []block.Block
 }
 
-func NewSyncerStateChangedContext(syncer Syncer, state SyncerState) SyncerStateChangedContext {
-	return SyncerStateChangedContext{syncer: syncer, state: state}
+func NewSyncerStateChangedContext(syncer Syncer, state SyncerState, blocks []block.Block) SyncerStateChangedContext {
+	return SyncerStateChangedContext{syncer: syncer, state: state, blocks: blocks}
 }
 
 func (ss SyncerStateChangedContext) Syncer() Syncer {
@@ -74,4 +75,8 @@ func (ss SyncerStateChangedContext) Syncer() Syncer {
 
 func (ss SyncerStateChangedContext) State() SyncerState {
 	return ss.state
+}
+
+func (ss SyncerStateChangedContext) Blocks() []block.Block {
+	return ss.blocks
 }

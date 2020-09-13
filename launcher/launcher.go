@@ -175,7 +175,7 @@ func (bn *Launcher) SetNetwork(nt network.Server) *Launcher {
 	bn.network.SetGetManifestsHandler(bn.networkhandlerGetManifests)
 	bn.network.SetGetBlocksHandler(bn.networkhandlerGetBlocks)
 	bn.network.SetGetStateHandler(bn.storage.State)
-	bn.network.SetNodeInfoHandler(bn.networkhandlerNodeInfo)
+	bn.network.SetNodeInfoHandler(bn.NodeInfo)
 
 	return bn
 }
@@ -245,6 +245,10 @@ func (bn *Launcher) Initialize() error {
 		return true
 	})
 
+	if err := bn.createConsensusStates(); err != nil {
+		return err
+	}
+
 	bn.Log().Info().Msg("all initialized")
 
 	return nil
@@ -307,16 +311,8 @@ func (bn *Launcher) Start() error {
 
 	bn.Log().Info().Interface("policy", bn.localstate.Policy()).Msg("policies")
 
-	if cs, err := bn.createConsensusStates(); err != nil {
+	if err := bn.consensusStates.Start(); err != nil {
 		return err
-	} else {
-		_ = cs.SetLogger(bn.Log())
-
-		bn.consensusStates = cs
-
-		if err := cs.Start(); err != nil {
-			return err
-		}
 	}
 
 	bn.Log().Info().Msg("started")
@@ -328,28 +324,29 @@ func (bn *Launcher) ErrChan() <-chan error {
 	return bn.consensusStates.ErrChan()
 }
 
-func (bn *Launcher) createConsensusStates() (*isaac.ConsensusStates, error) {
+func (bn *Launcher) ConsensusStates() *isaac.ConsensusStates {
+	return bn.consensusStates
+}
+
+func (bn *Launcher) createConsensusStates() error {
 	proposalMaker := isaac.NewProposalMaker(bn.localstate)
 
 	var booting, joining, consensus, syncing, broken isaac.StateHandler
-	{
-		var err error
-		if booting, err = isaac.NewStateBootingHandler(bn.localstate, bn.suffrage); err != nil {
-			return nil, err
-		}
-		syncing = isaac.NewStateSyncingHandler(bn.localstate)
-
-		if joining, err = isaac.NewStateJoiningHandler(bn.localstate, bn.proposalProcessor); err != nil {
-			return nil, err
-		}
-		if consensus, err = isaac.NewStateConsensusHandler(
-			bn.localstate, bn.proposalProcessor, bn.suffrage, proposalMaker,
-		); err != nil {
-			return nil, err
-		}
-		if broken, err = isaac.NewStateBrokenHandler(bn.localstate); err != nil {
-			return nil, err
-		}
+	var err error
+	if booting, err = isaac.NewStateBootingHandler(bn.localstate, bn.suffrage); err != nil {
+		return err
+	}
+	syncing = isaac.NewStateSyncingHandler(bn.localstate)
+	if joining, err = isaac.NewStateJoiningHandler(bn.localstate, bn.proposalProcessor); err != nil {
+		return err
+	}
+	if consensus, err = isaac.NewStateConsensusHandler(
+		bn.localstate, bn.proposalProcessor, bn.suffrage, proposalMaker,
+	); err != nil {
+		return err
+	}
+	if broken, err = isaac.NewStateBrokenHandler(bn.localstate); err != nil {
+		return err
 	}
 	for _, h := range []interface{}{booting, joining, consensus, syncing, broken} {
 		if l, ok := h.(logging.SetLogger); ok {
@@ -374,16 +371,21 @@ func (bn *Launcher) createConsensusStates() (*isaac.ConsensusStates, error) {
 	)
 	_ = ballotbox.SetLogger(bn.Log())
 
-	return isaac.NewConsensusStates(
-		bn.localstate,
-		ballotbox,
-		bn.suffrage,
+	if cs, err := isaac.NewConsensusStates(
+		bn.localstate, ballotbox, bn.suffrage,
 		booting.(*isaac.StateBootingHandler),
 		joining.(*isaac.StateJoiningHandler),
 		consensus.(*isaac.StateConsensusHandler),
 		syncing.(*isaac.StateSyncingHandler),
 		broken.(*isaac.StateBrokenHandler),
-	)
+	); err != nil {
+		return err
+	} else {
+		_ = cs.SetLogger(bn.Log())
+		bn.consensusStates = cs
+
+		return nil
+	}
 }
 
 func (bn *Launcher) networkHandlerHasSeal(h valuehash.Hash) (bool, error) {
@@ -504,7 +506,7 @@ func (bn *Launcher) networkhandlerGetBlocks(heights []base.Height) ([]block.Bloc
 	return blocks, nil
 }
 
-func (bn *Launcher) networkhandlerNodeInfo() (network.NodeInfo, error) {
+func (bn *Launcher) NodeInfo() (network.NodeInfo, error) {
 	// TODO set cache
 	var state base.State = base.StateUnknown
 	if handler := bn.consensusStates.ActiveHandler(); handler != nil {
@@ -518,6 +520,15 @@ func (bn *Launcher) networkhandlerNodeInfo() (network.NodeInfo, error) {
 		manifest = m
 	}
 
+	suffrage := make([]base.Node, bn.localstate.Nodes().Len())
+	var i int
+	bn.localstate.Nodes().Traverse(func(n network.Node) bool {
+		suffrage[i] = n
+		i++
+
+		return true
+	})
+
 	return network.NewNodeInfoV0(
 		bn.localstate.Node(),
 		bn.localstate.Policy().NetworkID(),
@@ -526,6 +537,8 @@ func (bn *Launcher) networkhandlerNodeInfo() (network.NodeInfo, error) {
 		bn.version,
 		bn.publishURL,
 		bn.localstate.Policy().Policy(),
+		bn.localstate.Policy().Config(),
+		suffrage,
 	), nil
 }
 

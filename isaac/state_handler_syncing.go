@@ -87,6 +87,7 @@ func (ss *StateSyncingHandler) newSyncers() error {
 
 	syncs := NewSyncers(ss.localstate, baseManifest)
 	syncs.WhenFinished(ss.whenFinished)
+	syncs.WhenBlockSaved(ss.whenBlockSaved)
 	_ = syncs.SetLogger(ss.Log())
 
 	if err := syncs.Start(); err != nil {

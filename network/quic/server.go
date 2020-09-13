@@ -347,6 +347,7 @@ func (sv *Server) handleGetState(w http.ResponseWriter, r *http.Request) {
 func (sv *Server) handleNodeInfo(w http.ResponseWriter, _ *http.Request) {
 	if sv.nodeInfoHandler == nil {
 		network.HTTPError(w, http.StatusInternalServerError)
+
 		return
 	}
 
@@ -358,7 +359,7 @@ func (sv *Server) handleNodeInfo(w http.ResponseWriter, _ *http.Request) {
 
 		return
 	} else if b, err := sv.enc.Marshal(n); err != nil {
-		sv.Log().Error().Err(err).Msg("failed to encode NodeInfo")
+		sv.Log().Error().Err(err).Msg("failed to encode node info")
 
 		network.HTTPError(w, http.StatusInternalServerError)
 

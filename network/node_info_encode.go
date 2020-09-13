@@ -16,6 +16,8 @@ func (ni *NodeInfoV0) unpack(
 	vs util.Version,
 	u string,
 	bpo []byte,
+	co map[string]interface{},
+	bsf [][]byte,
 ) error {
 	if n, err := base.DecodeNode(enc, bnode); err != nil {
 		return err
@@ -41,6 +43,19 @@ func (ni *NodeInfoV0) unpack(
 			ni.policy = p
 		}
 	}
+
+	ni.config = co
+
+	sf := make([]base.Node, len(bsf))
+	for i := range bsf {
+		if n, err := base.DecodeNode(enc, bsf[i]); err != nil {
+			return err
+		} else {
+			sf[i] = n
+		}
+	}
+
+	ni.suffrage = sf
 
 	return nil
 }

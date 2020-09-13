@@ -91,6 +91,7 @@ type BaseStateHandler struct {
 	livp              base.Voteproof
 	stateChan         chan<- *StateChangeContext
 	sealChan          chan<- seal.Seal
+	whenBlockSaved    func([]block.Block)
 }
 
 func NewBaseStateHandler(
@@ -100,6 +101,7 @@ func NewBaseStateHandler(
 		localstate:        localstate,
 		proposalProcessor: proposalProcessor,
 		state:             state,
+		whenBlockSaved:    func([]block.Block) {},
 	}
 }
 
@@ -195,28 +197,27 @@ func (bs *BaseStateHandler) StoreNewBlock(acceptVoteproof base.Voteproof) error 
 	}))
 
 	if err := util.Retry(3, time.Millisecond*200, func() error {
-		err := bs.storeNewBlock(fact, acceptVoteproof)
-		if err == nil {
+		if err := bs.storeNewBlock(fact, acceptVoteproof); err == nil {
 			return nil
+		} else {
+			var ctx *StateToBeChangeError
+			switch {
+			case xerrors.As(err, &ctx):
+				l.Error().Err(err).Msg("state will be moved with accept voteproof")
+
+				return util.StopRetryingError.Wrap(err)
+			case xerrors.Is(err, IgnoreVoteproofError):
+				return util.StopRetryingError.Wrap(err)
+			default:
+				l.Error().Err(err).Msg("something wrong to store accept voteproof; will retry")
+
+				return err
+			}
 		}
-
-		var ctx *StateToBeChangeError
-		switch {
-		case xerrors.As(err, &ctx):
-			l.Error().Err(err).Msg("state will be moved with accept voteproof")
-
-			return util.StopRetryingError.Wrap(err)
-		case xerrors.Is(err, IgnoreVoteproofError):
-			return util.StopRetryingError.Wrap(err)
-		}
-
-		l.Error().Err(err).Msg("something wrong to store accept voteproof; will retry")
-
-		return err
 	}); err != nil {
 		l.Error().Err(err).Msg("failed to store new block after retrial")
 
-		if e := bs.proposalProcessor.Done(fact.Proposal()); e != nil {
+		if e := bs.proposalProcessor.Cancel(); e != nil {
 			return xerrors.Errorf(
 				"failed to be store new block; and failed to be done ProposalProcessor: %w",
 				e)
@@ -249,12 +250,15 @@ func (bs *BaseStateHandler) storeNewBlock(fact ballot.ACCEPTBallotFact, acceptVo
 		blockStorage = bs
 	}
 
-	if newBlock := blockStorage.Block().Hash(); !fact.NewBlock().Equal(newBlock) {
+	var newBlock block.Block
+	if blk := blockStorage.Block(); !fact.NewBlock().Equal(blk.Hash()) {
 		err := xerrors.Errorf("processed new block does not match; fact=%s processed=%s",
-			fact.NewBlock(), newBlock)
+			fact.NewBlock(), blk.Hash())
 		l.Error().Err(err).Msg("failed to store new block; moves to sync")
 
 		return NewStateToBeChangeError(base.StateSyncing, acceptVoteproof, nil, err)
+	} else {
+		newBlock = blk
 	}
 
 	s := time.Now()
@@ -274,6 +278,8 @@ func (bs *BaseStateHandler) storeNewBlock(fact ballot.ACCEPTBallotFact, acceptVo
 	}
 
 	l.Info().Dur("elapsed", time.Since(s)).Msg("new block stored")
+
+	bs.whenBlockSaved([]block.Block{newBlock})
 
 	return nil
 }
@@ -487,4 +493,11 @@ func (bs *BaseStateHandler) SetLastINITVoteproof(voteproof base.Voteproof) error
 	// NOTE cancel the previous processor
 
 	return nil
+}
+
+func (bs *BaseStateHandler) WhenBlockSaved(callback func([]block.Block)) {
+	bs.Lock()
+	defer bs.Unlock()
+
+	bs.whenBlockSaved = callback
 }

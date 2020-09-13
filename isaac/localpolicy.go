@@ -276,3 +276,15 @@ func (lp *LocalPolicy) Policy() policy.Policy {
 		lp.MaxOperationsInProposal(),
 	)
 }
+
+func (lp *LocalPolicy) Config() map[string]interface{} {
+	return map[string]interface{}{
+		"timeout_waiting_proposal":            lp.TimeoutWaitingProposal(),
+		"interval_broadcasting_init_ballot":   lp.IntervalBroadcastingINITBallot(),
+		"interval_broadcasting_proposal":      lp.IntervalBroadcastingProposal(),
+		"wait_broadcasting_accept_ballot":     lp.WaitBroadcastingACCEPTBallot(),
+		"interval_broadcasting_accept_ballot": lp.IntervalBroadcastingACCEPTBallot(),
+		"timespan_valid_ballot":               lp.TimespanValidBallot(),
+		"timeout_process_proposal":            lp.TimeoutProcessProposal(),
+	}
+}

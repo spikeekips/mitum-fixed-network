@@ -31,7 +31,7 @@ func NewPrimitiveQuicServer(bind string, certs []tls.Certificate) (*PrimitiveQui
 	// TODO ratelimit
 	qs := &PrimitiveQuicServer{
 		Logging: logging.NewLogging(func(c logging.Context) logging.Emitter {
-			return c.Str("module", "network-quic-server")
+			return c.Str("module", "network-quic-primitive-server")
 		}),
 		bind: bind,
 		tlsConfig: &tls.Config{

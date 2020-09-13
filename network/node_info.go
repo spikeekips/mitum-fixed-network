@@ -28,8 +28,8 @@ type NodeInfo interface {
 	Version() util.Version
 	URL() string
 	Policy() policy.Policy
-
-	// TODO include the properties of isaac.LocalPolicy.
+	Config() map[string]interface{}
+	Suffrage() []base.Node
 }
 
 type NodeInfoV0 struct {
@@ -40,6 +40,8 @@ type NodeInfoV0 struct {
 	version   util.Version
 	u         string
 	policy    policy.Policy
+	config    map[string]interface{}
+	suffrage  []base.Node
 }
 
 func NewNodeInfoV0(
@@ -50,7 +52,22 @@ func NewNodeInfoV0(
 	version util.Version,
 	u string,
 	policy policy.Policy,
+	config map[string]interface{},
+	suffrage []base.Node,
 ) NodeInfoV0 {
+	// NOTE insert node itself to suffrage
+	var found bool
+	for i := range suffrage {
+		if suffrage[i].Address().Equal(node.Address()) {
+			found = true
+
+			break
+		}
+	}
+	if !found {
+		suffrage = append(suffrage, node)
+	}
+
 	return NodeInfoV0{
 		node:      node,
 		networkID: networkID,
@@ -59,6 +76,8 @@ func NewNodeInfoV0(
 		version:   version,
 		u:         u,
 		policy:    policy,
+		config:    config,
+		suffrage:  suffrage,
 	}
 }
 
@@ -67,15 +86,7 @@ func (ni NodeInfoV0) String() string {
 }
 
 func (ni NodeInfoV0) Bytes() []byte {
-	return util.ConcatBytesSlice(
-		ni.node.Bytes(),
-		ni.networkID.Bytes(),
-		ni.state.Bytes(),
-		ni.lastBlock.Hash().Bytes(),
-		ni.version.Bytes(),
-		[]byte(ni.u),
-		ni.policy.Bytes(),
-	)
+	return nil
 }
 
 func (ni NodeInfoV0) Hint() hint.Hint {
@@ -128,4 +139,12 @@ func (ni NodeInfoV0) URL() string {
 
 func (ni NodeInfoV0) Policy() policy.Policy {
 	return ni.policy
+}
+
+func (ni NodeInfoV0) Config() map[string]interface{} {
+	return ni.config
+}
+
+func (ni NodeInfoV0) Suffrage() []base.Node {
+	return ni.suffrage
 }

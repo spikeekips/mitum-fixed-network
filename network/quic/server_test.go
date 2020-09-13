@@ -238,6 +238,8 @@ func (t *testQuicSever) TestNodeInfo() {
 			util.Version("0.1.1"),
 			"quic://local",
 			nil,
+			map[string]interface{}{"showme": 1.1},
+			nil,
 		)
 	}
 

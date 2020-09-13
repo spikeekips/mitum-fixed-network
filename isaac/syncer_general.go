@@ -179,7 +179,12 @@ func (cs *GeneralSyncer) setState(state SyncerState) {
 
 	if cs.stateChan != nil {
 		go func() {
-			cs.stateChan <- NewSyncerStateChangedContext(cs, state)
+			var blocks []block.Block
+			if state == SyncerSaved {
+				blocks = cs.blocks
+			}
+
+			cs.stateChan <- NewSyncerStateChangedContext(cs, state, blocks)
 		}()
 	}
 }

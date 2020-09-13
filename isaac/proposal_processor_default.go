@@ -170,6 +170,12 @@ func (dp *DefaultProposalProcessor) Done(ph valuehash.Hash) error {
 
 func (dp *DefaultProposalProcessor) Cancel() error {
 	if pp := dp.processor(); pp != nil {
+		if pp.block != nil {
+			if err := dp.localstate.BlockFS().Cancel(pp.block.Height(), pp.block.Hash()); err != nil {
+				return err
+			}
+		}
+
 		pp.stop()
 	}
 

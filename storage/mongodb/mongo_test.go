@@ -318,7 +318,7 @@ func (t *testMongodbClient) TestMoveRawBytes() {
 }
 
 func (t *testMongodbClient) TestBulkTimeoutShort() {
-	i, err := t.client.Count("showme", bson.D{})
+	i, err := t.client.Count(context.Background(), "showme", bson.D{})
 	t.NoError(err)
 	t.Equal(int64(0), i)
 
@@ -341,7 +341,7 @@ func (t *testMongodbClient) TestBulkTimeoutShort() {
 }
 
 func (t *testMongodbClient) TestBulkTimeoutNetworkError() {
-	i, err := t.client.Count("showme", bson.D{})
+	i, err := t.client.Count(context.Background(), "showme", bson.D{})
 	t.NoError(err)
 	t.Equal(int64(0), i)
 
@@ -354,14 +354,14 @@ func (t *testMongodbClient) TestBulkTimeoutNetworkError() {
 		models = append(models, mongo.NewInsertOneModel().SetDocument(doc))
 	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), time.Millisecond*500)
+	ctx, cancel := context.WithTimeout(context.Background(), time.Millisecond)
 	defer cancel()
 
 	opts := options.BulkWrite().SetOrdered(true)
 	_, err = t.client.Collection("showme").BulkWrite(ctx, models, opts)
 	t.Error(err)
 
-	inserted, _ := t.client.Count("showme", bson.D{})
+	inserted, _ := t.client.Count(context.Background(), "showme", bson.D{})
 	t.NotEqual(0, inserted)
 
 	if !xerrors.Is(err, context.DeadlineExceeded) {

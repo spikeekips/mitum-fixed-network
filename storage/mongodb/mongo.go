@@ -244,11 +244,7 @@ func (cl *Client) Bulk(ctx context.Context, col string, models []mongo.WriteMode
 	return nil
 }
 
-func (cl *Client) Count(col string, filter interface{}, opts ...*options.CountOptions) (int64, error) {
-	// TODO set context
-	ctx, cancel := context.WithTimeout(context.Background(), cl.execTimeout)
-	defer cancel()
-
+func (cl *Client) Count(ctx context.Context, col string, filter interface{}, opts ...*options.CountOptions) (int64, error) {
 	count, err := cl.db.Collection(col).CountDocuments(ctx, filter, opts...)
 
 	return count, storage.WrapStorageError(err)
@@ -262,7 +258,7 @@ func (cl *Client) Delete(col string, filter bson.D, opts ...*options.DeleteOptio
 }
 
 func (cl *Client) Exists(col string, filter bson.D) (bool, error) {
-	count, err := cl.Count(col, filter, options.Count().SetLimit(1))
+	count, err := cl.Count(context.Background(), col, filter, options.Count().SetLimit(1))
 
 	return count > 0, err
 }

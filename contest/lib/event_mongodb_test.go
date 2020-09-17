@@ -78,7 +78,7 @@ func (t *testEventMongodb) TestPreseveInsertedOrder() {
 		t.NoError(err)
 	}
 
-	count, err := t.client.Count("test", bson.D{})
+	count, err := t.client.Count(context.Background(), "test", bson.D{})
 	t.NoError(err)
 	t.Equal(int64(10), count)
 

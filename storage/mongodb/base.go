@@ -31,7 +31,7 @@ const (
 	defaultColNameInfo          = "info"
 	defaultColNameManifest      = "manifest"
 	defaultColNameSeal          = "seal"
-	defaultColNameOperation     = "operation" // TODO rename to operation_fact
+	defaultColNameOperation     = "operation"
 	defaultColNameOperationSeal = "operation_seal"
 	defaultColNameProposal      = "proposal"
 	defaultColNameState         = "state"
@@ -701,6 +701,7 @@ func (st *Storage) HasOperationFact(h valuehash.Hash) (bool, error) {
 	}
 
 	count, err := st.client.Count(
+		context.Background(),
 		defaultColNameOperation,
 		util.NewBSONFilter("fact_hash_string", h.String()).AddOp("height", st.lastHeight(), "$lte").D(),
 		options.Count().SetLimit(1),

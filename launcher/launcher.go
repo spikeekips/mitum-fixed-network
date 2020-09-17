@@ -506,7 +506,6 @@ func (bn *Launcher) networkhandlerGetBlocks(heights []base.Height) ([]block.Bloc
 }
 
 func (bn *Launcher) NodeInfo() (network.NodeInfo, error) {
-	// TODO set cache
 	var state base.State = base.StateUnknown
 	if handler := bn.consensusStates.ActiveHandler(); handler != nil {
 		state = handler.State()

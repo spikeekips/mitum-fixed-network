@@ -12,9 +12,7 @@ import (
 	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/base/block"
 	"github.com/spikeekips/mitum/base/seal"
-	"github.com/spikeekips/mitum/base/state"
 	"github.com/spikeekips/mitum/network"
-	"github.com/spikeekips/mitum/storage"
 	"github.com/spikeekips/mitum/util/encoder"
 	"github.com/spikeekips/mitum/util/hint"
 	"github.com/spikeekips/mitum/util/logging"
@@ -32,7 +30,6 @@ type Channel struct {
 	getSealsURL     string
 	getManifestsURL string
 	getBlocksURL    string
-	getStateURL     string
 	nodeInfoURL     string
 	client          *QuicClient
 }
@@ -71,7 +68,6 @@ func NewChannel(
 	ch.sendSealURL = mustQuicURL(ch.addr.String(), QuicHandlerPathSendSeal)
 	ch.getSealsURL = mustQuicURL(ch.addr.String(), QuicHandlerPathGetSeals)
 	ch.getBlocksURL = mustQuicURL(ch.addr.String(), QuicHandlerPathGetBlocks)
-	ch.getStateURL = mustQuicURL(ch.addr.String(), QuicHandlerPathGetState)
 	ch.getManifestsURL = mustQuicURL(ch.addr.String(), QuicHandlerPathGetManifests)
 
 	if client, err := NewQuicClient(insecure, timeout, retries, quicConfig); err != nil {
@@ -180,36 +176,6 @@ func (ch *Channel) requestHinters(u string, hs interface{}) ([]hint.Hinter, erro
 	return hinters, nil
 }
 
-func (ch *Channel) requestHinter(u string, hs interface{}) (hint.Hinter, error) {
-	b, err := ch.enc.Marshal(hs)
-	if err != nil {
-		return nil, err
-	}
-
-	headers := http.Header{}
-	headers.Set(QuicEncoderHintHeader, ch.enc.Hint().String())
-
-	response, err := ch.client.Request(u, b, headers)
-	if err != nil {
-		return nil, err
-	} else if err := response.Error(); err != nil {
-		return nil, err
-	}
-
-	var enc encoder.Encoder
-	if e, err := EncoderFromHeader(response.Header(), ch.encs, ch.enc); err != nil {
-		return nil, err
-	} else {
-		enc = e
-	}
-
-	if hinter, err := enc.DecodeByHint(response.Bytes()); err != nil {
-		return nil, err
-	} else {
-		return hinter, nil
-	}
-}
-
 func (ch *Channel) Manifests(heights []base.Height) ([]block.Manifest, error) {
 	ch.Log().VerboseFunc(func(e *logging.Event) logging.Emitter {
 		var l []string
@@ -262,24 +228,6 @@ func (ch *Channel) Blocks(heights []base.Height) ([]block.Block, error) {
 	}
 
 	return blocks, nil
-}
-
-func (ch *Channel) State(key string) (state.State, bool, error) {
-	ch.Log().Debug().Str("key", key).Msg("request state")
-
-	if h, err := ch.requestHinter(ch.getStateURL, key); err != nil {
-		if storage.IsNotFoundError(err) {
-			return nil, false, nil
-		}
-
-		return nil, false, err
-	} else if h == nil {
-		return nil, false, nil
-	} else if s, ok := h.(state.State); !ok {
-		return nil, false, xerrors.Errorf("decoded, but not state.State; %T", h)
-	} else {
-		return s, true, nil
-	}
 }
 
 func (ch *Channel) NodeInfo() (network.NodeInfo, error) {

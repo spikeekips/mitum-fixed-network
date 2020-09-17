@@ -10,6 +10,7 @@ import (
 	"github.com/spikeekips/mitum/base/key"
 	"github.com/spikeekips/mitum/base/policy"
 	"github.com/spikeekips/mitum/base/state"
+	"github.com/spikeekips/mitum/storage"
 	"github.com/spikeekips/mitum/util"
 	"github.com/spikeekips/mitum/util/valuehash"
 )
@@ -93,7 +94,7 @@ func (t *testPolicy) TestLoadFromStorage() {
 	newState.SetHeight(currentBlock.Height())
 	t.NoError(newState.SetHash(newState.GenerateHash()))
 
-	t.NoError(st.NewState(newState.GetState()))
+	t.NoError(st.(storage.StateUpdater).NewState(newState.GetState()))
 
 	if mst, ok := st.(DummyMongodbStorage); ok {
 		mst.SetLastBlock(currentBlock)

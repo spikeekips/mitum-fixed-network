@@ -29,7 +29,6 @@ type Server interface {
 	SetNewSealHandler(NewSealHandler)
 	SetGetManifestsHandler(GetManifestsHandler)
 	SetGetBlocksHandler(GetBlocksHandler)
-	SetGetStateHandler(GetStateHandler)
 	SetNodeInfoHandler(NodeInfoHandler)
 }
 
@@ -46,5 +45,4 @@ type Channel interface {
 	Manifests([]base.Height) ([]block.Manifest, error)
 	Blocks([]base.Height) ([]block.Block, error)
 	NodeInfo() (NodeInfo, error)
-	State(string) (state.State, bool, error)
 }

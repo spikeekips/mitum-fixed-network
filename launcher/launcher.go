@@ -174,7 +174,6 @@ func (bn *Launcher) SetNetwork(nt network.Server) *Launcher {
 	bn.network.SetNewSealHandler(bn.networkhandlerNewSeal)
 	bn.network.SetGetManifestsHandler(bn.networkhandlerGetManifests)
 	bn.network.SetGetBlocksHandler(bn.networkhandlerGetBlocks)
-	bn.network.SetGetStateHandler(bn.storage.State)
 	bn.network.SetNodeInfoHandler(bn.NodeInfo)
 
 	return bn

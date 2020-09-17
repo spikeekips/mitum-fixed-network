@@ -21,7 +21,6 @@ var (
 	QuicHandlerPathSendSeal     = "/seal"
 	QuicHandlerPathGetBlocks    = "/blocks"
 	QuicHandlerPathGetManifests = "/manifests"
-	QuicHandlerPathGetState     = "/state"
 	QuicHandlerPathNodeInfo     = "/"
 )
 
@@ -35,7 +34,6 @@ type Server struct {
 	newSealHandler      network.NewSealHandler
 	getManifestsHandler network.GetManifestsHandler
 	getBlocksHandler    network.GetBlocksHandler
-	getStateHandler     network.GetStateHandler
 	nodeInfoHandler     network.NodeInfoHandler
 }
 
@@ -86,10 +84,6 @@ func (sv *Server) SetGetBlocksHandler(fn network.GetBlocksHandler) {
 	sv.getBlocksHandler = fn
 }
 
-func (sv *Server) SetGetStateHandler(fn network.GetStateHandler) {
-	sv.getStateHandler = fn
-}
-
 func (sv *Server) SetNodeInfoHandler(fn network.NodeInfoHandler) {
 	sv.nodeInfoHandler = fn
 }
@@ -99,7 +93,6 @@ func (sv *Server) setHandlers() {
 	_ = sv.SetHandler(QuicHandlerPathSendSeal, sv.handleNewSeal).Methods("POST")
 	_ = sv.SetHandler(QuicHandlerPathGetManifests, sv.handleGetManifests).Methods("POST")
 	_ = sv.SetHandler(QuicHandlerPathGetBlocks, sv.handleGetBlocks).Methods("POST")
-	_ = sv.SetHandler(QuicHandlerPathGetState, sv.handleGetState).Methods("POST")
 	_ = sv.SetHandler(QuicHandlerPathNodeInfo, sv.handleNodeInfo)
 }
 
@@ -291,57 +284,6 @@ func (sv *Server) handleGetBlocks(w http.ResponseWriter, r *http.Request) {
 		sv.Log().Error().Err(err).Msg("failed to get blocks")
 		return
 	}
-}
-
-func (sv *Server) handleGetState(w http.ResponseWriter, r *http.Request) {
-	if sv.getStateHandler == nil {
-		network.HTTPError(w, http.StatusInternalServerError)
-		return
-	}
-
-	body := &bytes.Buffer{}
-	if _, err := io.Copy(body, r.Body); err != nil {
-		sv.Log().Error().Err(err).Msg("failed to read post body")
-		network.HTTPError(w, http.StatusInternalServerError)
-
-		return
-	}
-
-	var enc encoder.Encoder
-	if e, err := EncoderFromHeader(r.Header, sv.encs, sv.enc); err != nil {
-		network.HTTPError(w, http.StatusBadRequest)
-
-		return
-	} else {
-		enc = e
-	}
-
-	var key string
-	if err := enc.Unmarshal(body.Bytes(), &key); err != nil {
-		network.HTTPError(w, http.StatusBadRequest)
-
-		return
-	}
-
-	var output []byte
-	if st, found, err := sv.getStateHandler(key); err != nil {
-		network.HTTPError(w, http.StatusBadRequest)
-
-		return
-	} else if !found {
-		network.HTTPError(w, http.StatusNotFound)
-
-		return
-	} else if b, err := sv.enc.Marshal(st); err != nil {
-		network.HTTPError(w, http.StatusInternalServerError)
-
-		return
-	} else {
-		output = b
-	}
-
-	w.Header().Set(QuicEncoderHintHeader, sv.enc.Hint().String())
-	_, _ = w.Write(output)
 }
 
 func (sv *Server) handleNodeInfo(w http.ResponseWriter, _ *http.Request) {

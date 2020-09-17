@@ -256,48 +256,6 @@ func (t *testQuicSever) TestNodeInfo() {
 	network.CompareNodeInfo(t.T(), ni, nni)
 }
 
-func (t *testQuicSever) TestGetState() {
-	qn := t.readyServer()
-	defer qn.Stop()
-
-	var sts []state.State
-	for i := 0; i < 2; i++ {
-		value, _ := state.NewBytesValue(util.UUID().Bytes())
-		st, err := state.NewStateV0(util.UUID().String(), value, base.NilHeight)
-		t.NoError(err)
-
-		sts = append(sts, st)
-	}
-
-	qn.SetGetStateHandler(func(key string) (state.State, bool, error) {
-		for _, st := range sts {
-			if st.Key() == key {
-				return st, true, nil
-			}
-		}
-
-		return nil, false, nil
-	})
-
-	qc, err := NewChannel(t.url.String(), 2, true, time.Millisecond*500, 3, nil, t.encs, t.enc)
-	t.NoError(err)
-
-	st, found, err := qc.State("unknown key")
-	t.NoError(err)
-	t.False(found)
-	t.Nil(st)
-
-	for _, st := range sts {
-		ust, found, err := qc.State(st.Key())
-		t.NoError(err)
-		t.True(found)
-		t.NotNil(ust)
-
-		t.Equal(st.Key(), ust.Key())
-		t.Equal(st.Value().Interface(), ust.Value().Interface())
-	}
-}
-
 func TestQuicSever(t *testing.T) {
 	suite.Run(t, new(testQuicSever))
 }

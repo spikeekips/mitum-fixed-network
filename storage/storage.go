@@ -41,7 +41,6 @@ type Storage interface {
 	Proposals(func(ballot.Proposal) (bool, error), bool /* sort */) error
 
 	State(key string) (state.State, bool, error)
-	NewState(state.State) error
 
 	HasOperationFact(valuehash.Hash) (bool, error)
 
@@ -65,4 +64,8 @@ type BlockStorage interface {
 
 type LastBlockSaver interface {
 	SaveLastBlock(base.Height) error
+}
+
+type StateUpdater interface {
+	NewState(state.State) error
 }

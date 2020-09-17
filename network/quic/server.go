@@ -6,7 +6,9 @@ import (
 	"net/http"
 	"net/url"
 	"path"
+	"time"
 
+	"github.com/bluele/gcache"
 	"golang.org/x/xerrors"
 
 	"github.com/spikeekips/mitum/base"
@@ -24,6 +26,8 @@ var (
 	QuicHandlerPathNodeInfo     = "/"
 )
 
+var cacheKeyNodeInfo = [2]byte{0x00, 0x00}
+
 type Server struct {
 	*logging.Logging
 	*PrimitiveQuicServer
@@ -35,11 +39,17 @@ type Server struct {
 	getManifestsHandler network.GetManifestsHandler
 	getBlocksHandler    network.GetBlocksHandler
 	nodeInfoHandler     network.NodeInfoHandler
+
+	cache gcache.Cache
 }
 
 func NewServer(
 	prim *PrimitiveQuicServer, encs *encoder.Encoders, enc encoder.Encoder,
 ) (*Server, error) {
+	cache := gcache.New(100 * 100 * 100).LRU().
+		Expiration(time.Hour * 10).
+		Build()
+
 	// TODO ratelimit
 	nqs := &Server{
 		Logging: logging.NewLogging(func(c logging.Context) logging.Emitter {
@@ -48,6 +58,7 @@ func NewServer(
 		PrimitiveQuicServer: prim,
 		encs:                encs,
 		enc:                 enc,
+		cache:               cache,
 	}
 	nqs.setHandlers()
 
@@ -293,6 +304,15 @@ func (sv *Server) handleNodeInfo(w http.ResponseWriter, _ *http.Request) {
 		return
 	}
 
+	if i, err := sv.cache.Get(cacheKeyNodeInfo); err == nil {
+		if output, ok := i.([]byte); ok {
+			w.Header().Set(QuicEncoderHintHeader, sv.enc.Hint().String())
+			_, _ = w.Write(output)
+
+			return
+		}
+	}
+
 	var output []byte
 	if n, err := sv.nodeInfoHandler(); err != nil {
 		sv.Log().Error().Err(err).Msg("failed to get node info")
@@ -308,6 +328,7 @@ func (sv *Server) handleNodeInfo(w http.ResponseWriter, _ *http.Request) {
 		return
 	} else {
 		output = b
+		_ = sv.cache.SetWithExpire(cacheKeyNodeInfo, output, time.Second*3)
 	}
 
 	w.Header().Set(QuicEncoderHintHeader, sv.enc.Hint().String())

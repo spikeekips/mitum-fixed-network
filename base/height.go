@@ -24,6 +24,14 @@ func NewHeightFromString(s string) (Height, error) {
 	}
 }
 
+func NewHeightFromBytes(b []byte) (Height, error) {
+	if i, err := util.BytesToInt64(b); err != nil {
+		return NilHeight, err
+	} else {
+		return Height(i), nil
+	}
+}
+
 // IsValid checks Height.
 func (ht Height) IsValid([]byte) error {
 	if ht < PreGenesisHeight {

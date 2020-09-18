@@ -75,7 +75,7 @@ func loadBlockFromDecoder(decoder func(interface{}) error, encs *encoder.Encoder
 
 	var blk block.Block
 
-	_, hinter, err := loadWithEncoder(b, encs)
+	_, hinter, err := LoadDataFromDoc(b, encs)
 	if err != nil {
 		return nil, err
 	} else if i, ok := hinter.(block.Block); !ok {
@@ -95,7 +95,7 @@ func loadManifestFromDecoder(decoder func(interface{}) error, encs *encoder.Enco
 
 	var manifest block.Manifest
 
-	_, hinter, err := loadWithEncoder(b, encs)
+	_, hinter, err := LoadDataFromDoc(b, encs)
 	if err != nil {
 		return nil, err
 	} else if i, ok := hinter.(block.Manifest); !ok {

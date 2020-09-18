@@ -48,7 +48,7 @@ func loadSealFromDecoder(decoder func(interface{}) error, encs *encoder.Encoders
 	}
 
 	var sl seal.Seal
-	_, hinter, err := loadWithEncoder(b, encs)
+	_, hinter, err := LoadDataFromDoc(b, encs)
 	if err != nil {
 		return nil, err
 	} else if i, ok := hinter.(seal.Seal); !ok {

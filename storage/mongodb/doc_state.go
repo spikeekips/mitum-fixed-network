@@ -49,7 +49,7 @@ func loadStateFromDecoder(decoder func(interface{}) error, encs *encoder.Encoder
 
 	var st state.State
 
-	_, hinter, err := loadWithEncoder(b, encs)
+	_, hinter, err := LoadDataFromDoc(b, encs)
 	if err != nil {
 		return nil, err
 	} else if i, ok := hinter.(state.State); !ok {

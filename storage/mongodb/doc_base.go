@@ -57,7 +57,7 @@ type BaseDocUnpacker struct {
 	H bool          `bson:"_hinted"`
 }
 
-func loadWithEncoder(b []byte, encs *encoder.Encoders) (bson.Raw /* id */, interface{} /* data */, error) {
+func LoadDataFromDoc(b []byte, encs *encoder.Encoders) (bson.Raw /* id */, interface{} /* data */, error) {
 	var bd BaseDocUnpacker
 	if err := bsonenc.Unmarshal(b, &bd); err != nil {
 		return nil, nil, err

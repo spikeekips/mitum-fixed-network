@@ -45,7 +45,7 @@ func loadLastManifest(decoder func(interface{}) error, encs *encoder.Encoders) (
 	}
 
 	var height base.Height
-	_, d, err := loadWithEncoder(b, encs)
+	_, d, err := LoadDataFromDoc(b, encs)
 	if err != nil {
 		return base.Height(0), err
 	} else if r, ok := d.(bson.RawValue); !ok {
@@ -95,7 +95,7 @@ func loadInfo(decoder func(interface{}) error, encs *encoder.Encoders) ([]byte /
 	}
 
 	var v []byte
-	if _, d, err := loadWithEncoder(b, encs); err != nil {
+	if _, d, err := LoadDataFromDoc(b, encs); err != nil {
 		return nil, err
 	} else if r, ok := d.(bson.RawValue); !ok {
 		return nil, xerrors.Errorf("invalid data type for info, %T", d)

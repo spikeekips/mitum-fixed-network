@@ -533,13 +533,13 @@ func (t *testStorage) TestInfo() {
 	key := util.UUID().String()
 	b := util.UUID().Bytes()
 
-	_, found, err := t.storage.GetInfo(key)
-	t.True(xerrors.Is(err, storage.NotFoundError))
+	_, found, err := t.storage.Info(key)
+	t.Nil(err)
 	t.False(found)
 
 	t.NoError(t.storage.SetInfo(key, b))
 
-	ub, found, err := t.storage.GetInfo(key)
+	ub, found, err := t.storage.Info(key)
 	t.NoError(err)
 	t.True(found)
 	t.Equal(b, ub)
@@ -547,7 +547,7 @@ func (t *testStorage) TestInfo() {
 	nb := util.UUID().Bytes()
 	t.NoError(t.storage.SetInfo(key, nb))
 
-	unb, found, err := t.storage.GetInfo(key)
+	unb, found, err := t.storage.Info(key)
 	t.NoError(err)
 	t.True(found)
 	t.Equal(nb, unb)

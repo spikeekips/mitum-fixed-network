@@ -58,6 +58,7 @@ type Storage struct {
 	stateCache         gcache.Cache
 	sealCache          gcache.Cache
 	operationFactCache gcache.Cache
+	readonly           bool
 }
 
 func NewStorage(client *Client, encs *encoder.Encoders, enc encoder.Encoder) (*Storage, error) {
@@ -136,6 +137,12 @@ func NewStorageFromURI(uri string, encs *encoder.Encoders) (*Storage, error) {
 }
 
 func (st *Storage) Initialize() error {
+	if st.readonly {
+		st.lastManifestHeight = base.Height(int(^uint(0) >> 1))
+
+		return nil
+	}
+
 	if err := st.loadLastBlock(); err != nil && !storage.IsNotFoundError(err) {
 		return err
 	}
@@ -174,6 +181,10 @@ func (st *Storage) loadLastBlock() error {
 }
 
 func (st *Storage) SaveLastBlock(height base.Height) error {
+	if st.readonly {
+		return xerrors.Errorf("readonly mode")
+	}
+
 	if cb, err := NewLastManifestDoc(height, st.enc); err != nil {
 		return err
 	} else if _, err := st.client.Set(defaultColNameInfo, cb); err != nil {
@@ -191,6 +202,10 @@ func (st *Storage) lastHeight() base.Height {
 }
 
 func (st *Storage) LastManifest() (block.Manifest, bool, error) {
+	if st.readonly {
+		return st.manifestByFilter(bson.D{})
+	}
+
 	st.RLock()
 	defer st.RUnlock()
 
@@ -202,6 +217,10 @@ func (st *Storage) LastManifest() (block.Manifest, bool, error) {
 }
 
 func (st *Storage) setLastBlock(manifest block.Manifest, save, force bool) error {
+	if st.readonly {
+		return xerrors.Errorf("readonly mode")
+	}
+
 	st.Lock()
 	defer st.Unlock()
 
@@ -237,6 +256,10 @@ func (st *Storage) setLastBlock(manifest block.Manifest, save, force bool) error
 }
 
 func (st *Storage) SyncerStorage() (storage.SyncerStorage, error) {
+	if st.readonly {
+		return nil, xerrors.Errorf("readonly mode")
+	}
+
 	st.Lock()
 	defer st.Unlock()
 
@@ -254,6 +277,10 @@ func (st *Storage) Close() error {
 // Clean will drop the existing collections. To keep safe the another
 // collections by user, drop collections instead of drop database.
 func (st *Storage) Clean() error {
+	if st.readonly {
+		return xerrors.Errorf("readonly mode")
+	}
+
 	drop := func(c string) error {
 		return st.client.Collection(c).Drop(context.Background())
 	}
@@ -278,6 +305,10 @@ func (st *Storage) Clean() error {
 }
 
 func (st *Storage) CleanByHeight(height base.Height) error {
+	if st.readonly {
+		return xerrors.Errorf("readonly mode")
+	}
+
 	if err := st.cleanByHeight(height); err != nil {
 		return err
 	}
@@ -305,6 +336,10 @@ func (st *Storage) CleanByHeight(height base.Height) error {
 }
 
 func (st *Storage) Copy(source storage.Storage) error {
+	if st.readonly {
+		return xerrors.Errorf("readonly mode")
+	}
+
 	var sst *Storage
 	if s, ok := source.(*Storage); !ok {
 		return xerrors.Errorf("only mongodbstorage.Storage can be allowed: %T", source)
@@ -403,6 +438,10 @@ func (st *Storage) Seal(h valuehash.Hash) (seal.Seal, bool, error) {
 }
 
 func (st *Storage) NewSeals(seals []seal.Seal) error {
+	if st.readonly {
+		return xerrors.Errorf("readonly mode")
+	}
+
 	if len(seals) < 1 {
 		return xerrors.Errorf("empty seals")
 	}
@@ -577,6 +616,10 @@ func (st *Storage) StagedOperationSeals(callback func(operation.Seal) (bool, err
 }
 
 func (st *Storage) UnstagedOperationSeals(seals []valuehash.Hash) error {
+	if st.readonly {
+		return xerrors.Errorf("readonly mode")
+	}
+
 	var models []mongo.WriteModel
 	for _, h := range seals {
 		models = append(models,
@@ -617,6 +660,10 @@ func (st *Storage) Proposals(callback func(ballot.Proposal) (bool, error), sort 
 }
 
 func (st *Storage) NewProposal(proposal ballot.Proposal) error {
+	if st.readonly {
+		return xerrors.Errorf("readonly mode")
+	}
+
 	if doc, err := NewProposalDoc(proposal, st.enc); err != nil {
 		return err
 	} else if _, err := st.client.Add(defaultColNameProposal, doc); err != nil {
@@ -684,6 +731,10 @@ func (st *Storage) State(key string) (state.State, bool, error) {
 }
 
 func (st *Storage) NewState(sta state.State) error {
+	if st.readonly {
+		return xerrors.Errorf("readonly mode")
+	}
+
 	if doc, err := NewStateDoc(sta, st.enc); err != nil {
 		return err
 	} else if _, err := st.client.Add(defaultColNameState, doc); err != nil {
@@ -718,10 +769,18 @@ func (st *Storage) HasOperationFact(h valuehash.Hash) (bool, error) {
 }
 
 func (st *Storage) OpenBlockStorage(blk block.Block) (storage.BlockStorage, error) {
+	if st.readonly {
+		return nil, xerrors.Errorf("readonly mode")
+	}
+
 	return NewBlockStorage(st, blk)
 }
 
 func (st *Storage) initialize() error {
+	if st.readonly {
+		return xerrors.Errorf("readonly mode")
+	}
+
 	for col, models := range defaultIndexes {
 		if err := st.createIndex(col, models); err != nil {
 			return err
@@ -732,6 +791,10 @@ func (st *Storage) initialize() error {
 }
 
 func (st *Storage) cleanByHeight(height base.Height) error {
+	if st.readonly {
+		return xerrors.Errorf("readonly mode")
+	}
+
 	if height <= base.PreGenesisHeight+1 {
 		return st.Clean()
 	}
@@ -764,10 +827,18 @@ func (st *Storage) cleanByHeight(height base.Height) error {
 }
 
 func (st *Storage) cleanupIncompleteData() error {
+	if st.readonly {
+		return xerrors.Errorf("readonly mode")
+	}
+
 	return st.cleanByHeight(st.lastHeight() + 1)
 }
 
 func (st *Storage) createIndex(col string, models []mongo.IndexModel) error {
+	if st.readonly {
+		return xerrors.Errorf("readonly mode")
+	}
+
 	st.Lock()
 	defer st.Unlock()
 
@@ -836,6 +907,10 @@ func (st *Storage) New() (*Storage, error) {
 }
 
 func (st *Storage) SetInfo(key string, b []byte) error {
+	if st.readonly {
+		return xerrors.Errorf("readonly mode")
+	}
+
 	if doc, err := NewInfoDoc(key, b, st.enc); err != nil {
 		return err
 	} else if _, err := st.client.Set(defaultColNameInfo, doc); err != nil {
@@ -845,7 +920,7 @@ func (st *Storage) SetInfo(key string, b []byte) error {
 	}
 }
 
-func (st *Storage) GetInfo(key string) ([]byte, bool, error) {
+func (st *Storage) Info(key string) ([]byte, bool, error) {
 	var b []byte
 	if err := st.client.GetByID(defaultColNameInfo, infoDocKey(key),
 		func(res *mongo.SingleResult) error {
@@ -858,8 +933,22 @@ func (st *Storage) GetInfo(key string) ([]byte, bool, error) {
 			return nil
 		},
 	); err != nil {
+		if xerrors.Is(err, storage.NotFoundError) {
+			return nil, false, nil
+		}
+
 		return nil, false, err
 	}
 
 	return b, b != nil, nil
+}
+
+func (st *Storage) Readonly() (*Storage, error) {
+	if nst, err := st.New(); err != nil {
+		return nil, err
+	} else {
+		nst.readonly = true
+
+		return nst, nil
+	}
 }

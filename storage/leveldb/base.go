@@ -693,7 +693,7 @@ func (st *Storage) SetInfo(key string, b []byte) error {
 	return nil
 }
 
-func (st *Storage) GetInfo(key string) ([]byte, bool, error) {
+func (st *Storage) Info(key string) ([]byte, bool, error) {
 	if b, err := st.get(leveldbInfoKey(key)); err != nil {
 		if storage.IsNotFoundError(err) {
 			return nil, false, nil

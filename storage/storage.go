@@ -49,7 +49,7 @@ type Storage interface {
 	UnstagedOperationSeals([]valuehash.Hash /* seal.Hash()s */) error
 
 	SetInfo(string /* key */, []byte /* value */) error
-	GetInfo(string /* key */) ([]byte, bool, error)
+	Info(string /* key */) ([]byte, bool, error)
 }
 
 type BlockStorage interface {

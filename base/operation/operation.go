@@ -1,6 +1,9 @@
 package operation
 
 import (
+	"sort"
+	"time"
+
 	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/util"
 	"github.com/spikeekips/mitum/util/hint"
@@ -23,6 +26,7 @@ type Operation interface {
 	valuehash.HashGenerator
 	Fact() base.Fact
 	Signs() []FactSign
+	LastSignedAt() time.Time
 }
 
 func IsValidOperation(op Operation, networkID []byte) error {
@@ -163,4 +167,22 @@ func (bo BaseOperation) AddFactSigns(fs ...FactSign) (FactSignUpdater, error) {
 	bo.h = bo.GenerateHash()
 
 	return bo, nil
+}
+
+func (bo BaseOperation) LastSignedAt() time.Time {
+	return LastSignedAt(bo.fs)
+}
+
+func LastSignedAt(fs []FactSign) time.Time {
+	if n := len(fs); n < 1 {
+		return time.Time{}
+	} else if n == 1 {
+		return fs[0].SignedAt()
+	}
+
+	sort.Slice(fs, func(i, j int) bool {
+		return fs[i].SignedAt().After(fs[j].SignedAt())
+	})
+
+	return fs[0].SignedAt()
 }

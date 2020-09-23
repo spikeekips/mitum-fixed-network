@@ -1,6 +1,8 @@
 package policy
 
 import (
+	"time"
+
 	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/base/key"
 	"github.com/spikeekips/mitum/base/operation"
@@ -139,4 +141,8 @@ func (spo SetPolicyV0) Process(
 	} else {
 		return setState(spo.Hash(), ns)
 	}
+}
+
+func (spo SetPolicyV0) LastSignedAt() time.Time {
+	return operation.LastSignedAt(spo.fs)
 }

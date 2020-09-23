@@ -10,11 +10,11 @@ import (
 
 func (st StateV0) BSONM() bson.M {
 	return bson.M{
-		"key":            st.key,
-		"value":          st.value,
-		"previous_block": st.previousHeight,
-		"height":         st.height,
-		"operations":     st.operations,
+		"key":             st.key,
+		"value":           st.value,
+		"previous_height": st.previousHeight,
+		"height":          st.height,
+		"operations":      st.operations,
 	}
 }
 
@@ -30,7 +30,7 @@ type StateV0UnpackerBSON struct {
 	H   valuehash.Bytes   `bson:"hash"`
 	K   string            `bson:"key"`
 	V   bson.Raw          `bson:"value"`
-	PB  base.Height       `bson:"previous_block"`
+	PH  base.Height       `bson:"previous_height"`
 	HT  base.Height       `bson:"height"`
 	OPS []valuehash.Bytes `bson:"operations"`
 }
@@ -41,5 +41,5 @@ func (st *StateV0) UnpackBSON(b []byte, enc *bsonenc.Encoder) error {
 		return err
 	}
 
-	return st.unpack(enc, ust.H, ust.K, ust.V, ust.PB, ust.HT, ust.OPS)
+	return st.unpack(enc, ust.H, ust.K, ust.V, ust.PH, ust.HT, ust.OPS)
 }

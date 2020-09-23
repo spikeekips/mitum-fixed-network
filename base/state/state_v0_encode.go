@@ -11,7 +11,7 @@ func (st *StateV0) unpack(
 	h valuehash.Hash,
 	key string,
 	bValue []byte,
-	previousBlock base.Height,
+	previousHeight base.Height,
 	height base.Height,
 	ops []valuehash.Bytes,
 ) error {
@@ -30,7 +30,7 @@ func (st *StateV0) unpack(
 	st.h = h
 	st.key = key
 	st.value = value
-	st.previousHeight = previousBlock
+	st.previousHeight = previousHeight
 	st.height = height
 	st.operations = uops
 

@@ -13,7 +13,7 @@ type StateV0PackerJSON struct {
 	H   valuehash.Hash   `json:"hash"`
 	K   string           `json:"key"`
 	V   Value            `json:"value"`
-	PB  base.Height      `json:"previous_block"`
+	PH  base.Height      `json:"previous_height"`
 	HT  base.Height      `json:"height"`
 	OPS []valuehash.Hash `json:"operations"`
 }
@@ -24,7 +24,7 @@ func (st StateV0) PackerJSON() StateV0PackerJSON {
 		H:          st.h,
 		K:          st.key,
 		V:          st.value,
-		PB:         st.previousHeight,
+		PH:         st.previousHeight,
 		HT:         st.height,
 		OPS:        st.operations,
 	}
@@ -38,7 +38,7 @@ type StateV0UnpackerJSON struct {
 	H   valuehash.Bytes   `json:"hash"`
 	K   string            `json:"key"`
 	V   json.RawMessage   `json:"value"`
-	PB  base.Height       `json:"previous_block"`
+	PH  base.Height       `json:"previous_height"`
 	HT  base.Height       `json:"height"`
 	OPS []valuehash.Bytes `json:"operations"`
 }
@@ -49,5 +49,5 @@ func (st *StateV0) UnpackJSON(b []byte, enc *jsonenc.Encoder) error {
 		return err
 	}
 
-	return st.unpack(enc, ust.H, ust.K, ust.V, ust.PB, ust.HT, ust.OPS)
+	return st.unpack(enc, ust.H, ust.K, ust.V, ust.PH, ust.HT, ust.OPS)
 }

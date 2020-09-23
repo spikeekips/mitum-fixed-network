@@ -26,7 +26,7 @@ type StateV0 struct {
 	operations     []valuehash.Hash
 }
 
-func NewStateV0(key string, value Value, previousHeight base.Height) (StateV0, error) {
+func NewStateV0(key string, value Value, height base.Height) (StateV0, error) {
 	if err := IsValidKey(key); err != nil {
 		return StateV0{}, err
 	}
@@ -34,8 +34,8 @@ func NewStateV0(key string, value Value, previousHeight base.Height) (StateV0, e
 	return StateV0{
 		key:            key,
 		value:          value,
-		previousHeight: previousHeight,
-		height:         base.NilHeight,
+		previousHeight: base.NilHeight,
+		height:         height,
 	}, nil
 }
 

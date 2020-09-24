@@ -5,6 +5,7 @@ import (
 	"github.com/spikeekips/mitum/base/block"
 	"github.com/spikeekips/mitum/isaac"
 	"github.com/spikeekips/mitum/storage"
+	"github.com/spikeekips/mitum/util/localtime"
 	"github.com/spikeekips/mitum/util/logging"
 	"github.com/spikeekips/mitum/util/valuehash"
 )
@@ -62,6 +63,7 @@ func (wp *WrongProposalProcessor) ProcessACCEPT(ph valuehash.Hash, voteproof bas
 		orig.PreviousBlock(),
 		valuehash.RandomSHA256(),
 		valuehash.RandomSHA256(), // NOTE set random hash for OperationsHash() and StatesHash()
+		localtime.Now(),
 	); err != nil {
 		panic(err)
 	} else {

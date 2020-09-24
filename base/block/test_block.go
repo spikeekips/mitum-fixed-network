@@ -5,6 +5,7 @@ package block
 import (
 	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/util"
+	"github.com/spikeekips/mitum/util/localtime"
 	"github.com/spikeekips/mitum/util/valuehash"
 )
 
@@ -19,5 +20,6 @@ func NewTestBlockV0(height base.Height, round base.Round, proposal, previousBloc
 		previousBlock,
 		valuehash.RandomSHA256(),
 		valuehash.RandomSHA256(),
+		localtime.Now(),
 	)
 }

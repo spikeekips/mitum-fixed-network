@@ -17,6 +17,7 @@ func (bm ManifestV0) MarshalBSON() ([]byte, error) {
 		"round":          bm.round,
 		"proposal":       bm.proposal,
 		"previous_block": bm.previousBlock,
+		"confirmed_at":   bm.confirmedAt,
 		"created_at":     bm.createdAt,
 	}
 	if bm.operationsHash != nil {
@@ -38,6 +39,7 @@ type ManifestV0UnpackBSON struct {
 	PB valuehash.Bytes `bson:"previous_block"`
 	BO valuehash.Bytes `bson:"block_operations,omitempty"`
 	BS valuehash.Bytes `bson:"block_states,omitempty"`
+	CF time.Time       `bson:"confirmed_at"`
 	CA time.Time       `bson:"created_at"`
 }
 
@@ -47,5 +49,5 @@ func (bm *ManifestV0) UnpackBSON(b []byte, enc *bsonenc.Encoder) error {
 		return err
 	}
 
-	return bm.unpack(enc, nbm.H, nbm.HT, nbm.RD, nbm.PR, nbm.PB, nbm.BO, nbm.BS, nbm.CA)
+	return bm.unpack(enc, nbm.H, nbm.HT, nbm.RD, nbm.PR, nbm.PB, nbm.BO, nbm.BS, nbm.CF, nbm.CA)
 }

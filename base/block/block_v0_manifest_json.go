@@ -16,6 +16,7 @@ type ManifestV0PackJSON struct {
 	PB valuehash.Hash     `json:"previous_block"`
 	BO valuehash.Hash     `json:"block_operations"`
 	BS valuehash.Hash     `json:"block_states"`
+	CF localtime.JSONTime `json:"confirmed_at"`
 	CA localtime.JSONTime `json:"created_at"`
 }
 
@@ -29,6 +30,7 @@ func (bm ManifestV0) MarshalJSON() ([]byte, error) {
 		PB:         bm.previousBlock,
 		BO:         bm.operationsHash,
 		BS:         bm.statesHash,
+		CF:         localtime.NewJSONTime(bm.confirmedAt),
 		CA:         localtime.NewJSONTime(bm.createdAt),
 	})
 }
@@ -42,6 +44,7 @@ type ManifestV0UnpackJSON struct {
 	PB valuehash.Bytes    `json:"previous_block"`
 	BO valuehash.Bytes    `json:"block_operations"`
 	BS valuehash.Bytes    `json:"block_states"`
+	CF localtime.JSONTime `json:"confirmed_at"`
 	CA localtime.JSONTime `json:"created_at"`
 }
 
@@ -51,5 +54,5 @@ func (bm *ManifestV0) UnpackJSON(b []byte, enc *jsonenc.Encoder) error {
 		return err
 	}
 
-	return bm.unpack(enc, nbm.H, nbm.HT, nbm.RD, nbm.PR, nbm.PB, nbm.BO, nbm.BS, nbm.CA.Time)
+	return bm.unpack(enc, nbm.H, nbm.HT, nbm.RD, nbm.PR, nbm.PB, nbm.BO, nbm.BS, nbm.CF.Time, nbm.CA.Time)
 }

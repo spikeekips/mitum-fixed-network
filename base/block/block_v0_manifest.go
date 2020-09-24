@@ -9,6 +9,7 @@ import (
 	"github.com/spikeekips/mitum/util"
 	"github.com/spikeekips/mitum/util/hint"
 	"github.com/spikeekips/mitum/util/isvalid"
+	"github.com/spikeekips/mitum/util/localtime"
 	"github.com/spikeekips/mitum/util/valuehash"
 )
 
@@ -20,6 +21,7 @@ type ManifestV0 struct {
 	previousBlock  valuehash.Hash
 	operationsHash valuehash.Hash
 	statesHash     valuehash.Hash
+	confirmedAt    time.Time
 	createdAt      time.Time
 }
 
@@ -28,6 +30,10 @@ func (bm ManifestV0) GenerateHash() valuehash.Hash {
 }
 
 func (bm ManifestV0) IsValid(networkID []byte) error {
+	if bm.confirmedAt.IsZero() {
+		return xerrors.Errorf("empty confirmedAt")
+	}
+
 	if err := isvalid.Check([]isvalid.IsValider{
 		bm.h,
 		bm.height,
@@ -78,6 +84,7 @@ func (bm ManifestV0) Bytes() []byte {
 		bm.previousBlock.Bytes(),
 		operationsHashBytes,
 		statesHashBytes,
+		[]byte(localtime.String(localtime.Normalize(bm.confirmedAt))),
 		// NOTE createdAt does not included for Bytes(), because Bytes() is used
 		// for Hash().
 	)
@@ -105,6 +112,10 @@ func (bm ManifestV0) OperationsHash() valuehash.Hash {
 
 func (bm ManifestV0) StatesHash() valuehash.Hash {
 	return bm.statesHash
+}
+
+func (bm ManifestV0) ConfirmedAt() time.Time {
+	return bm.confirmedAt
 }
 
 func (bm ManifestV0) CreatedAt() time.Time {

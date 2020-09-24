@@ -1,6 +1,8 @@
 package block
 
 import (
+	"time"
+
 	"golang.org/x/xerrors"
 
 	"github.com/spikeekips/mitum/base"
@@ -42,6 +44,7 @@ func NewBlockV0(
 	previousBlock valuehash.Hash,
 	operationsHash valuehash.Hash,
 	statesHash valuehash.Hash,
+	confirmedAt time.Time,
 ) (BlockV0, error) {
 	bm := ManifestV0{
 		previousBlock:  previousBlock,
@@ -50,6 +53,7 @@ func NewBlockV0(
 		proposal:       proposal,
 		operationsHash: operationsHash,
 		statesHash:     statesHash,
+		confirmedAt:    confirmedAt,
 		createdAt:      localtime.Now(),
 	}
 	bm.h = bm.GenerateHash()

@@ -11,6 +11,7 @@ import (
 	"github.com/spikeekips/mitum/base/operation"
 	"github.com/spikeekips/mitum/base/seal"
 	"github.com/spikeekips/mitum/util/errors"
+	"github.com/spikeekips/mitum/util/localtime"
 	"github.com/spikeekips/mitum/util/logging"
 	"github.com/spikeekips/mitum/util/valuehash"
 )
@@ -141,6 +142,7 @@ func (gg *GenesisBlockV0Generator) generatePreviousBlock() error {
 		genesisHash,
 		nil,
 		nil,
+		localtime.Now(),
 	)
 	if err != nil {
 		return err

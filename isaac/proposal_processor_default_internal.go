@@ -196,7 +196,7 @@ func (pp *internalDefaultProposalProcessor) createBlock(
 	var blk block.BlockUpdater
 	if b, err := block.NewBlockV0(
 		pp.si, pp.proposal.Height(), pp.proposal.Round(), pp.proposal.Hash(), pp.lastManifest.Hash(),
-		opsHash, stsHash,
+		opsHash, stsHash, pp.proposal.SignedAt(),
 	); err != nil {
 		return nil, err
 	} else {

@@ -27,6 +27,7 @@ type Manifest interface {
 	Proposal() valuehash.Hash
 	OperationsHash() valuehash.Hash
 	StatesHash() valuehash.Hash
+	ConfirmedAt() time.Time
 	CreatedAt() time.Time
 }
 

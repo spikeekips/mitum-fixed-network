@@ -17,6 +17,7 @@ func (bm *ManifestV0) unpack(
 	previousBlock,
 	operationsHash,
 	statesHash valuehash.Hash,
+	confirmedAt time.Time,
 	createdAt time.Time,
 ) error {
 	if operationsHash != nil && operationsHash.Empty() {
@@ -34,6 +35,7 @@ func (bm *ManifestV0) unpack(
 	bm.previousBlock = previousBlock
 	bm.operationsHash = operationsHash
 	bm.statesHash = statesHash
+	bm.confirmedAt = confirmedAt
 	bm.createdAt = createdAt
 
 	return nil

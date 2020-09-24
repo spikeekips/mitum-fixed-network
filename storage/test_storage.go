@@ -15,6 +15,7 @@ import (
 	"github.com/spikeekips/mitum/util/encoder"
 	bsonenc "github.com/spikeekips/mitum/util/encoder/bson"
 	jsonenc "github.com/spikeekips/mitum/util/encoder/json"
+	"github.com/spikeekips/mitum/util/localtime"
 	"github.com/spikeekips/mitum/util/tree"
 	"github.com/spikeekips/mitum/util/valuehash"
 )
@@ -122,6 +123,7 @@ func (t *BaseTestStorage) CompareManifest(a, b block.Manifest) {
 	t.True(a.PreviousBlock().Equal(b.PreviousBlock()))
 	t.True(a.OperationsHash().Equal(b.OperationsHash()))
 	t.True(a.StatesHash().Equal(b.StatesHash()))
+	t.Equal(localtime.Normalize(a.ConfirmedAt()), localtime.Normalize(b.ConfirmedAt()))
 }
 
 func (t *BaseTestStorage) CompareBlock(a, b block.Block) {

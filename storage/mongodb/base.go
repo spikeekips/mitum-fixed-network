@@ -385,6 +385,10 @@ func (st *Storage) manifestByFilter(filter bson.D) (block.Manifest, bool, error)
 		},
 		options.FindOne().SetSort(util.NewBSONFilter("height", -1).D()),
 	); err != nil {
+		if xerrors.Is(err, storage.NotFoundError) {
+			return nil, false, nil
+		}
+
 		return nil, false, err
 	}
 

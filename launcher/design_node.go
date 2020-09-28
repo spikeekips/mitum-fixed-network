@@ -1,6 +1,7 @@
 package launcher
 
 import (
+	"crypto/tls"
 	"io/ioutil"
 	"net"
 	"net/url"
@@ -18,6 +19,8 @@ import (
 	jsonenc "github.com/spikeekips/mitum/util/encoder/json"
 	"github.com/spikeekips/mitum/util/isvalid"
 )
+
+var DefaultNetworkBind = "0.0.0.0:54321"
 
 type NodeDesign struct {
 	encs             *encoder.Encoders
@@ -167,19 +170,40 @@ func (nd NodeDesign) Privatekey() key.Privatekey {
 	return nd.privatekey
 }
 
-type NetworkDesign struct {
-	sync.RWMutex     `yaml:"-"`
-	Bind             string
-	Publish          string
-	bindHost         string
-	bindPort         int
-	publishURL       *url.URL
-	publishURLWithIP *url.URL
+type BaseNetworkDesign struct {
+	Bind        string
+	Publish     string
+	CertKeyFile string `yaml:"cert-key"`
+	CertFile    string `yaml:"cert"`
+	bindHost    string
+	bindPort    int
+	publishURL  *url.URL
+	certs       []tls.Certificate
 }
 
-func (nd *NetworkDesign) IsValid([]byte) error {
+func (nd *BaseNetworkDesign) BindHost() string {
+	return nd.bindHost
+}
+
+func (nd *BaseNetworkDesign) BindPort() int {
+	return nd.bindPort
+}
+
+func (nd *BaseNetworkDesign) PublishURL() *url.URL {
+	return nd.publishURL
+}
+
+func (nd *BaseNetworkDesign) Certs() []tls.Certificate {
+	return nd.certs
+}
+
+func (nd *BaseNetworkDesign) IsValid([]byte) error {
 	if nd == nil {
 		return xerrors.Errorf("empty network design")
+	}
+
+	if len(nd.Bind) < 1 {
+		nd.Bind = DefaultNetworkBind
 	}
 
 	if h, p, err := net.SplitHostPort(nd.Bind); err != nil {
@@ -191,7 +215,50 @@ func (nd *NetworkDesign) IsValid([]byte) error {
 		nd.bindPort = int(i)
 	}
 
-	if u, err := isvalidNetworkURL(nd.Publish); err != nil {
+	if u, err := IsvalidNetworkURL(nd.Publish); err != nil {
+		return err
+	} else {
+		nd.publishURL = u
+	}
+
+	if len(nd.CertKeyFile) > 0 && len(nd.CertFile) > 0 {
+		if c, err := tls.LoadX509KeyPair(nd.CertFile, nd.CertKeyFile); err != nil {
+			return err
+		} else {
+			nd.certs = []tls.Certificate{c}
+		}
+	}
+
+	return nil
+}
+
+type NetworkDesign struct {
+	sync.RWMutex `yaml:"-"`
+	*BaseNetworkDesign
+	publishURLWithIP *url.URL
+}
+
+func (nd *NetworkDesign) MarshalYAML() (interface{}, error) {
+	return nd.BaseNetworkDesign, nil
+}
+
+func (nd *NetworkDesign) UnmarshalYAML(value *yaml.Node) error {
+	var bn *BaseNetworkDesign
+	if err := value.Decode(&bn); err != nil {
+		return err
+	} else {
+		nd.BaseNetworkDesign = bn
+
+		return nil
+	}
+}
+
+func (nd *NetworkDesign) IsValid([]byte) error {
+	if err := nd.BaseNetworkDesign.IsValid(nil); err != nil {
+		return err
+	}
+
+	if u, err := IsvalidNodeNetworkURL(nd.Publish); err != nil {
 		return err
 	} else {
 		nd.publishURL = u
@@ -200,12 +267,8 @@ func (nd *NetworkDesign) IsValid([]byte) error {
 	return nil
 }
 
-func (nd *NetworkDesign) PublishURL() *url.URL {
-	return nd.publishURL
-}
-
 func (nd *NetworkDesign) SetPublishURLWithIP(s string) (*NetworkDesign, error) {
-	if u, err := isvalidNetworkURL(s); err != nil {
+	if u, err := IsvalidNodeNetworkURL(s); err != nil {
 		return nil, err
 	} else {
 		nd.Lock()
@@ -260,7 +323,7 @@ func (rd *RemoteDesign) IsValid([]byte) error {
 		rd.publickey = pk
 	}
 
-	if u, err := isvalidNetworkURL(rd.Network); err != nil {
+	if u, err := IsvalidNodeNetworkURL(rd.Network); err != nil {
 		return err
 	} else {
 		rd.networkURL = u
@@ -281,21 +344,26 @@ func (rd *RemoteDesign) NetworkURL() *url.URL {
 	return rd.networkURL
 }
 
-func isvalidNetworkURL(n string) (*url.URL, error) {
-	var ur *url.URL
+func IsvalidNetworkURL(n string) (*url.URL, error) {
 	if u, err := url.Parse(n); err != nil {
 		return nil, xerrors.Errorf("invalid network url, '%v': %w", n, err)
 	} else {
-		ur = u
+		return u, nil
 	}
+}
 
-	switch ur.Scheme {
-	case "quic":
-	default:
-		return nil, xerrors.Errorf("unsupported network type found: %v", n)
+func IsvalidNodeNetworkURL(n string) (*url.URL, error) {
+	if ur, err := IsvalidNetworkURL(n); err != nil {
+		return nil, err
+	} else {
+		switch ur.Scheme {
+		case "quic":
+		default:
+			return nil, xerrors.Errorf("unsupported network type found: %v", n)
+		}
+
+		return ur, nil
 	}
-
-	return ur, nil
 }
 
 func LoadNodeDesign(b []byte, encs *encoder.Encoders) (*NodeDesign, error) {

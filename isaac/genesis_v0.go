@@ -10,6 +10,7 @@ import (
 	"github.com/spikeekips/mitum/base/block"
 	"github.com/spikeekips/mitum/base/operation"
 	"github.com/spikeekips/mitum/base/seal"
+	"github.com/spikeekips/mitum/storage"
 	"github.com/spikeekips/mitum/util/errors"
 	"github.com/spikeekips/mitum/util/localtime"
 	"github.com/spikeekips/mitum/util/logging"
@@ -76,8 +77,6 @@ func (gg *GenesisBlockV0Generator) Generate() (block.Block, error) {
 		proposal = pr
 	}
 
-	var blk block.Block
-
 	pm := NewDefaultProposalProcessor(gg.localstate, gg.suffrage)
 	_ = pm.SetLogger(gg.Log())
 
@@ -86,18 +85,37 @@ func (gg *GenesisBlockV0Generator) Generate() (block.Block, error) {
 	} else if vp, err := gg.generateACCEPTVoteproof(bk, ivp); err != nil {
 		return nil, err
 	} else {
-		if bs, err := pm.ProcessACCEPT(proposal.Hash(), vp); err != nil {
-			return nil, err
-		} else if err := bs.Commit(context.Background()); err != nil {
-			return nil, err
-		} else if err := pm.Done(proposal.Hash()); err != nil {
-			return nil, err
-		} else {
-			blk = bs.Block()
-		}
+		return gg.store(pm, proposal, vp)
+	}
+}
+
+func (gg *GenesisBlockV0Generator) store(
+	pm *DefaultProposalProcessor,
+	proposal ballot.Proposal,
+	vp base.Voteproof,
+) (block.Block, error) {
+	var blk block.Block
+	var bs storage.BlockStorage
+
+	if st, err := pm.ProcessACCEPT(proposal.Hash(), vp); err != nil {
+		return nil, err
+	} else {
+		bs = st
 	}
 
-	return blk, nil
+	defer func() {
+		_ = bs.Close()
+	}()
+
+	blk = bs.Block()
+
+	if err := bs.Commit(context.Background()); err != nil {
+		return nil, err
+	} else if err := pm.Done(proposal.Hash()); err != nil {
+		return nil, err
+	} else {
+		return blk, nil
+	}
 }
 
 func (gg *GenesisBlockV0Generator) generateOperationSeal() ([]operation.Seal, error) {
@@ -148,9 +166,18 @@ func (gg *GenesisBlockV0Generator) generatePreviousBlock() error {
 		return err
 	}
 
-	if bs, err := gg.localstate.Storage().OpenBlockStorage(blk); err != nil {
+	var bs storage.BlockStorage
+	if st, err := gg.localstate.Storage().OpenBlockStorage(blk); err != nil {
 		return err
-	} else if err := bs.Commit(context.Background()); err != nil {
+	} else {
+		bs = st
+	}
+
+	defer func() {
+		_ = bs.Close()
+	}()
+
+	if err := bs.Commit(context.Background()); err != nil {
 		return err
 	} else if err := gg.localstate.BlockFS().AddAndCommit(blk); err != nil {
 		err := errors.NewError("failed to commit to blockfs").Wrap(err)

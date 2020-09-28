@@ -73,6 +73,10 @@ func (dst *DummyBlockStorage) Cancel() error {
 	return nil
 }
 
+func (dst *DummyBlockStorage) Close() error {
+	return dst.Cancel()
+}
+
 func (dst *DummyBlockStorage) Committed() bool {
 	return dst.commited
 }

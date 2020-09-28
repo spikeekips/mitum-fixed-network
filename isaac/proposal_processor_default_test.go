@@ -104,13 +104,16 @@ func (t *testProposalProcessor) TestBlockOperations() {
 
 	bs, err := dp.ProcessACCEPT(proposal.Hash(), avp)
 	t.NoError(err)
+
+	blk = bs.Block()
+
 	t.NoError(bs.Commit(context.Background()))
 	t.NoError(dp.Done(proposal.Hash()))
 
 	loaded, err := t.local.BlockFS().Load(blk.Height())
 	t.NoError(err)
 
-	t.compareBlock(bs.Block(), loaded)
+	t.compareBlock(blk, loaded)
 
 	<-time.After(time.Second * 2)
 	if st, ok := t.local.Storage().(DummyMongodbStorage); ok {

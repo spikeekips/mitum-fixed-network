@@ -152,24 +152,45 @@ end:
 				continue
 			}
 
-			if bs, err := l.Storage().OpenBlockStorage(blk); err != nil {
-				return err
-			} else if err := bs.SetBlock(blk); err != nil {
-				return err
-			} else if err := bs.Commit(context.Background()); err != nil {
-				return err
-			} else if err := l.BlockFS().AddAndCommit(blk); err != nil {
-				err := errors.NewError("failed to commit to blockfs").Wrap(err)
-				if err0 := bs.Cancel(); err0 != nil {
-					return err.Wrap(err0)
-				}
-
+			if err := bg.storeBlock(l, blk); err != nil {
 				return err
 			}
 		}
 	}
 
 	return bg.syncSeals(from)
+}
+
+func (bg *DummyBlocksV0Generator) storeBlock(l *Localstate, blk block.Block) error {
+	var bs storage.BlockStorage
+	if st, err := l.Storage().OpenBlockStorage(blk); err != nil {
+		return err
+	} else {
+		bs = st
+	}
+
+	defer func() {
+		_ = bs.Close()
+	}()
+
+	if err := bs.SetBlock(blk); err != nil {
+		return err
+	}
+
+	if err := bs.Commit(context.Background()); err != nil {
+		return err
+	}
+
+	if err := l.BlockFS().AddAndCommit(blk); err != nil {
+		err := errors.NewError("failed to commit to blockfs").Wrap(err)
+		if err0 := bs.Cancel(); err0 != nil {
+			return err.Wrap(err0)
+		}
+
+		return err
+	}
+
+	return nil
 }
 
 func (bg *DummyBlocksV0Generator) syncSeals(from *Localstate) error {
@@ -247,30 +268,44 @@ func (bg *DummyBlocksV0Generator) createNextBlock() error {
 		avm = v
 	}
 
-	return bg.finish(avm)
-}
-
-func (bg *DummyBlocksV0Generator) finish(vm map[base.Address]base.Voteproof) error {
 	for _, l := range bg.allNodes {
 		var vp base.Voteproof
-		if v, found := vm[l.Node().Address()]; !found {
+		if v, found := avm[l.Node().Address()]; !found {
 			return xerrors.Errorf("failed to find voteproofs for all nodes")
 		} else {
 			vp = v
 		}
 
-		proposal := vp.Majority().(ballot.ACCEPTBallotFact).Proposal()
-
-		pm := bg.pms[l.Node().Address()]
-		if bs, err := pm.ProcessACCEPT(proposal, vp); err != nil {
-			return err
-		} else if err := bs.Block().IsValid(bg.networkID); err != nil {
-			return err
-		} else if err := bs.Commit(context.Background()); err != nil {
-			return err
-		} else if err := pm.Done(proposal); err != nil {
+		if err := bg.finish(l, vp); err != nil {
 			return err
 		}
+	}
+
+	return nil
+}
+
+func (bg *DummyBlocksV0Generator) finish(l *Localstate, vp base.Voteproof) error {
+	proposal := vp.Majority().(ballot.ACCEPTBallotFact).Proposal()
+
+	pm := bg.pms[l.Node().Address()]
+
+	var bs storage.BlockStorage
+	if st, err := pm.ProcessACCEPT(proposal, vp); err != nil {
+		return err
+	} else {
+		bs = st
+	}
+
+	defer func() {
+		_ = bs.Close()
+	}()
+
+	if err := bs.Block().IsValid(bg.networkID); err != nil {
+		return err
+	} else if err := bs.Commit(context.Background()); err != nil {
+		return err
+	} else if err := pm.Done(proposal); err != nil {
+		return err
 	}
 
 	return nil

@@ -47,6 +47,8 @@ var (
 	blockfsTemp = "/tmp"
 )
 
+var BlockFSError = errors.NewError("blockfs error")
+
 type BlockFS struct {
 	sync.RWMutex
 	*logging.Logging

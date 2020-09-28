@@ -122,8 +122,9 @@ func (bst *BlockStorage) Commit(ctx context.Context) error {
 		return nil
 	} else {
 		defer func() {
+			_ = bst.Close()
+
 			started := time.Now()
-			_ = bst.Cancel()
 			bst.statesValue.Store("commit", time.Since(started))
 		}()
 
@@ -145,7 +146,7 @@ func (bst *BlockStorage) commit(ctx context.Context) error {
 	defer func() {
 		bst.statesValue.Store("commit", time.Since(started))
 
-		_ = bst.st.Close()
+		_ = bst.Close()
 	}()
 
 	if bst.manifestModels == nil {
@@ -296,9 +297,24 @@ func (bst *BlockStorage) States() map[string]interface{} {
 }
 
 func (bst *BlockStorage) Cancel() error {
+	defer func() {
+		_ = bst.Close()
+	}()
+
 	if bst.block == nil {
 		return xerrors.Errorf("empty block")
 	}
 
 	return bst.st.CleanByHeight(bst.block.Height())
+}
+
+func (bst *BlockStorage) Close() error {
+	bst.block = nil
+	bst.states = nil
+	bst.manifestModels = nil
+	bst.operationSealModels = nil
+	bst.operationModels = nil
+	bst.stateModels = nil
+
+	return bst.st.Close()
 }

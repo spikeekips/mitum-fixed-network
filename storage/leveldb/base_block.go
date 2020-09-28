@@ -135,6 +135,10 @@ func (bst *BlockStorage) Cancel() error {
 	return nil
 }
 
+func (bst *BlockStorage) Close() error {
+	return nil
+}
+
 func (bst *BlockStorage) States() map[string]interface{} {
 	return nil
 }

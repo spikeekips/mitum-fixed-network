@@ -250,6 +250,10 @@ func (bs *BaseStateHandler) storeNewBlock(fact ballot.ACCEPTBallotFact, acceptVo
 		blockStorage = bs
 	}
 
+	defer func() {
+		_ = blockStorage.Close()
+	}()
+
 	var newBlock block.Block
 	if blk := blockStorage.Block(); !fact.NewBlock().Equal(blk.Hash()) {
 		err := xerrors.Errorf("processed new block does not match; fact=%s processed=%s",

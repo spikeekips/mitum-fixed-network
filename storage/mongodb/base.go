@@ -806,7 +806,7 @@ func (st *Storage) initialize() error {
 	}
 
 	for col, models := range defaultIndexes {
-		if err := st.CreateIndex(col, models); err != nil {
+		if err := st.CreateIndex(col, models, indexPrefix); err != nil {
 			return err
 		}
 	}
@@ -858,7 +858,7 @@ func (st *Storage) cleanupIncompleteData() error {
 	return st.cleanByHeight(st.lastHeight() + 1)
 }
 
-func (st *Storage) CreateIndex(col string, models []mongo.IndexModel) error {
+func (st *Storage) CreateIndex(col string, models []mongo.IndexModel, prefix string) error {
 	if st.readonly {
 		return xerrors.Errorf("readonly mode")
 	}
@@ -880,7 +880,7 @@ func (st *Storage) CreateIndex(col string, models []mongo.IndexModel) error {
 	} else {
 		for _, r := range results {
 			name := r["name"].(string)
-			if !strings.HasPrefix(name, indexPrefix) {
+			if !strings.HasPrefix(name, prefix) {
 				continue
 			}
 

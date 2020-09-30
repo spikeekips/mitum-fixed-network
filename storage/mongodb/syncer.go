@@ -32,7 +32,7 @@ func NewSyncerStorage(main *Storage) (*SyncerStorage, error) {
 
 	if s, err := newTempStorage(main, "manifest"); err != nil {
 		return nil, err
-	} else if err := s.CreateIndex(defaultColNameManifest, manifestIndexModels); err != nil {
+	} else if err := s.CreateIndex(defaultColNameManifest, manifestIndexModels, indexPrefix); err != nil {
 		return nil, err
 	} else {
 		manifestStorage = s

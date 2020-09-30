@@ -457,7 +457,7 @@ func (t *testStorage) TestCreateIndexNew() {
 		},
 	}
 
-	t.NoError(t.storage.CreateIndex(defaultColNameManifest, oldIndexes))
+	t.NoError(t.storage.CreateIndex(defaultColNameManifest, oldIndexes, indexPrefix))
 
 	existings := allIndexes(defaultColNameManifest)
 
@@ -468,7 +468,7 @@ func (t *testStorage) TestCreateIndexNew() {
 		},
 	}
 
-	t.NoError(t.storage.CreateIndex(defaultColNameManifest, newIndexes))
+	t.NoError(t.storage.CreateIndex(defaultColNameManifest, newIndexes, indexPrefix))
 	created := allIndexes(defaultColNameManifest)
 
 	t.Equal(existings, []string{"_id_", "mitum_showme"})

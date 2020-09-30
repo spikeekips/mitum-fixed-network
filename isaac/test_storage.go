@@ -12,6 +12,7 @@ import (
 	"github.com/spikeekips/mitum/storage"
 	leveldbstorage "github.com/spikeekips/mitum/storage/leveldb"
 	mongodbstorage "github.com/spikeekips/mitum/storage/mongodb"
+	"github.com/spikeekips/mitum/util/cache"
 	"github.com/spikeekips/mitum/util/encoder"
 	bsonenc "github.com/spikeekips/mitum/util/encoder/bson"
 	jsonenc "github.com/spikeekips/mitum/util/encoder/json"
@@ -60,7 +61,31 @@ func (ss *StorageSupportTest) Storage(encs *encoder.Encoders, enc encoder.Encode
 			enc = ss.BSONEnc
 		}
 
-		st, err := mongodbstorage.NewStorage(client, encs, enc)
+		st, err := mongodbstorage.NewStorage(client, encs, enc, cache.Dummy{})
+		if err != nil {
+			panic(err)
+		}
+
+		d := NewDummyMongodbStorage(st)
+
+		_ = d.Initialize()
+
+		return d
+	case "mongodb+gcache":
+		client, err := mongodbstorage.NewClient(mongodbstorage.TestMongodbURI(), time.Second*2, time.Second*2)
+		if err != nil {
+			panic(err)
+		}
+
+		if enc == nil || enc.Hint().Type() != bsonenc.BSONType {
+			enc = ss.BSONEnc
+		}
+
+		ca, err := cache.NewGCache("lru", 100*100, time.Hour)
+		if err != nil {
+			panic(err)
+		}
+		st, err := mongodbstorage.NewStorage(client, encs, enc, ca)
 		if err != nil {
 			panic(err)
 		}

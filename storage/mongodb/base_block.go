@@ -267,7 +267,7 @@ func (bst *BlockStorage) insertCaches() {
 
 		if !bst.operations.IsEmpty() {
 			_ = bst.operations.Traverse(func(_ int, key, _, _ []byte) (bool, error) {
-				_ = bst.ost.operationFactCache.Set(valuehash.NewBytes(key).String(), struct{}{})
+				_ = bst.ost.operationFactCache.Set(valuehash.NewBytes(key).String(), struct{}{}, 0)
 
 				return true, nil
 			})
@@ -278,7 +278,7 @@ func (bst *BlockStorage) insertCaches() {
 		defer wg.Done()
 
 		for i := range bst.states {
-			_ = bst.ost.stateCache.Set(bst.states[i].Key(), bst.states[i])
+			_ = bst.ost.stateCache.Set(bst.states[i].Key(), bst.states[i], 0)
 		}
 	}()
 

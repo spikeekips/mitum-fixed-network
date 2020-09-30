@@ -7,7 +7,6 @@ import (
 	"sync"
 	"time"
 
-	"github.com/bluele/gcache"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
@@ -21,6 +20,7 @@ import (
 	"github.com/spikeekips/mitum/base/state"
 	"github.com/spikeekips/mitum/storage"
 	"github.com/spikeekips/mitum/util"
+	"github.com/spikeekips/mitum/util/cache"
 	"github.com/spikeekips/mitum/util/encoder"
 	bsonenc "github.com/spikeekips/mitum/util/encoder/bson"
 	"github.com/spikeekips/mitum/util/logging"
@@ -55,26 +55,41 @@ type Storage struct {
 	enc                encoder.Encoder
 	lastManifest       block.Manifest
 	lastManifestHeight base.Height
-	stateCache         gcache.Cache
-	sealCache          gcache.Cache
-	operationFactCache gcache.Cache
+	stateCache         cache.Cache
+	sealCache          cache.Cache
+	operationFactCache cache.Cache
 	readonly           bool
+	cache              cache.Cache
 }
 
-func NewStorage(client *Client, encs *encoder.Encoders, enc encoder.Encoder) (*Storage, error) {
+func NewStorage(client *Client, encs *encoder.Encoders, enc encoder.Encoder, ca cache.Cache) (*Storage, error) {
 	// NOTE call Initialize() later.
+	if ca == nil {
+		if c, err := cache.NewGCache("lru", 100*100*100, time.Minute*3); err != nil {
+			return nil, err
+		} else {
+			ca = c
+		}
+	}
 
-	stateCache := gcache.New(100 * 100 * 100).LRU().
-		Expiration(time.Hour * 10).
-		Build()
+	var stateCache, sealCache, operationFactCache cache.Cache
+	if ca, err := ca.New(); err != nil {
+		return nil, err
+	} else {
+		stateCache = ca
+	}
 
-	sealCache := gcache.New(100 * 100).LRU().
-		Expiration(time.Hour * 1).
-		Build()
+	if ca, err := ca.New(); err != nil {
+		return nil, err
+	} else {
+		sealCache = ca
+	}
 
-	operationFactCache := gcache.New(100 * 100 * 100).LRU().
-		Expiration(time.Hour * 10).
-		Build()
+	if ca, err := ca.New(); err != nil {
+		return nil, err
+	} else {
+		operationFactCache = ca
+	}
 
 	if enc == nil {
 		if e, err := encs.Encoder(bsonenc.BSONType, ""); err != nil {
@@ -95,10 +110,11 @@ func NewStorage(client *Client, encs *encoder.Encoders, enc encoder.Encoder) (*S
 		stateCache:         stateCache,
 		sealCache:          sealCache,
 		operationFactCache: operationFactCache,
+		cache:              ca,
 	}, nil
 }
 
-func NewStorageFromURI(uri string, encs *encoder.Encoders) (*Storage, error) {
+func NewStorageFromURI(uri string, encs *encoder.Encoders, ca cache.Cache) (*Storage, error) {
 	parsed, err := url.Parse(uri)
 	if err != nil {
 		return nil, xerrors.Errorf("invalid storge uri: %w", err)
@@ -129,7 +145,7 @@ func NewStorageFromURI(uri string, encs *encoder.Encoders) (*Storage, error) {
 
 	if client, err := NewClient(uri, connectTimeout, execTimeout); err != nil {
 		return nil, err
-	} else if st, err := NewStorage(client, encs, be); err != nil {
+	} else if st, err := NewStorage(client, encs, be, ca); err != nil {
 		return nil, err
 	} else {
 		return st, nil
@@ -328,8 +344,8 @@ func (st *Storage) CleanByHeight(height base.Height) error {
 	case !found:
 		return storage.NotFoundError.Errorf("failed to find block of height, %v", height-1)
 	default:
-		st.stateCache.Purge()
-		st.operationFactCache.Purge()
+		_ = st.stateCache.Purge()
+		_ = st.operationFactCache.Purge()
 
 		return st.setLastBlock(m, true, true)
 	}
@@ -366,6 +382,10 @@ func (st *Storage) Encoder() encoder.Encoder {
 
 func (st *Storage) Encoders() *encoder.Encoders {
 	return st.encs
+}
+
+func (st *Storage) Cache() cache.Cache {
+	return st.cache
 }
 
 func (st *Storage) manifestByFilter(filter bson.D) (block.Manifest, bool, error) {
@@ -495,7 +515,7 @@ func (st *Storage) NewSeals(seals []seal.Seal) error {
 
 	go func() {
 		for _, sl := range ops {
-			_ = st.sealCache.Set(sl.Hash().String(), sl)
+			_ = st.sealCache.Set(sl.Hash().String(), sl, 0)
 		}
 	}()
 
@@ -745,7 +765,7 @@ func (st *Storage) NewState(sta state.State) error {
 		return err
 	}
 
-	_ = st.stateCache.Set(sta.Key(), sta)
+	_ = st.stateCache.Set(sta.Key(), sta, 0)
 
 	return nil
 }
@@ -766,7 +786,7 @@ func (st *Storage) HasOperationFact(h valuehash.Hash) (bool, error) {
 	}
 
 	if count > 0 {
-		_ = st.operationFactCache.Set(h.String(), struct{}{})
+		_ = st.operationFactCache.Set(h.String(), struct{}{}, 0)
 	}
 
 	return count > 0, nil
@@ -786,7 +806,7 @@ func (st *Storage) initialize() error {
 	}
 
 	for col, models := range defaultIndexes {
-		if err := st.createIndex(col, models); err != nil {
+		if err := st.CreateIndex(col, models); err != nil {
 			return err
 		}
 	}
@@ -838,7 +858,7 @@ func (st *Storage) cleanupIncompleteData() error {
 	return st.cleanByHeight(st.lastHeight() + 1)
 }
 
-func (st *Storage) createIndex(col string, models []mongo.IndexModel) error {
+func (st *Storage) CreateIndex(col string, models []mongo.IndexModel) error {
 	if st.readonly {
 		return xerrors.Errorf("readonly mode")
 	}
@@ -898,16 +918,14 @@ func (st *Storage) New() (*Storage, error) {
 	st.RLock()
 	defer st.RUnlock()
 
-	return &Storage{
-		Logging: logging.NewLogging(func(c logging.Context) logging.Emitter {
-			return c.Str("module", "mongodb-storage")
-		}),
-		client:             client,
-		encs:               st.encs,
-		enc:                st.enc,
-		lastManifest:       st.lastManifest,
-		lastManifestHeight: st.lastManifestHeight,
-	}, nil
+	if nst, err := NewStorage(client, st.encs, st.enc, st.cache); err != nil {
+		return nil, err
+	} else {
+		nst.lastManifest = st.lastManifest
+		nst.lastManifestHeight = st.lastManifestHeight
+
+		return nst, nil
+	}
 }
 
 func (st *Storage) SetInfo(key string, b []byte) error {

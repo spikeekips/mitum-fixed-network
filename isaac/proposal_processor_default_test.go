@@ -114,16 +114,6 @@ func (t *testProposalProcessor) TestBlockOperations() {
 	t.NoError(err)
 
 	t.compareBlock(blk, loaded)
-
-	<-time.After(time.Second * 2)
-	if st, ok := t.local.Storage().(DummyMongodbStorage); ok {
-		for _, h := range ophs {
-			t.True(t.local.Storage().HasOperationFact(h))
-
-			a, _ := st.OperationFactCache().Get(h.String())
-			t.NotNil(a)
-		}
-	}
 }
 
 func (t *testProposalProcessor) TestNotFoundInProposal() {

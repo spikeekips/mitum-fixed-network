@@ -1,6 +1,8 @@
 package launcher
 
 import (
+	"net/url"
+
 	"golang.org/x/xerrors"
 	"gopkg.in/yaml.v3"
 )
@@ -9,6 +11,7 @@ type ComponentDesign struct {
 	m                 map[string]interface{}
 	suffrage          *SuffrageDesign
 	proposalProcessor *ProposalProcessorDesign
+	storageCache      string
 	others            map[string]interface{}
 }
 
@@ -78,9 +81,19 @@ func (cc *ComponentDesign) IsValid([]byte) error {
 		cc.proposalProcessor = pp
 	}
 
+	if i, found := cc.m["storage-cache"]; found {
+		if s, ok := i.(string); !ok {
+			return xerrors.Errorf("invalid storage-cache value, %T", i)
+		} else if _, err := url.Parse(s); err != nil {
+			return xerrors.Errorf("invalid storage-cache string, %q: %w", s, err)
+		} else {
+			cc.storageCache = s
+		}
+	}
+
 	others := map[string]interface{}{}
 	for k, v := range cc.m {
-		if k == "suffrage" || k == "proposal-processor" {
+		if k == "suffrage" || k == "proposal-processor" || k == "storage-cache" {
 			continue
 		}
 
@@ -97,6 +110,10 @@ func (cc *ComponentDesign) Suffrage() *SuffrageDesign {
 
 func (cc *ComponentDesign) ProposalProcessor() *ProposalProcessorDesign {
 	return cc.proposalProcessor
+}
+
+func (cc *ComponentDesign) StorageCache() string {
+	return cc.storageCache
 }
 
 func (cc *ComponentDesign) Others() map[string]interface{} {

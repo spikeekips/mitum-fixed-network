@@ -24,6 +24,7 @@ import (
 	"github.com/spikeekips/mitum/base/seal"
 	"github.com/spikeekips/mitum/storage"
 	"github.com/spikeekips/mitum/util"
+	"github.com/spikeekips/mitum/util/cache"
 	"github.com/spikeekips/mitum/util/valuehash"
 )
 
@@ -36,7 +37,7 @@ func (t *testStorage) SetupTest() {
 	client, err := NewClient(TestMongodbURI(), time.Second*2, time.Second*2)
 	t.NoError(err)
 
-	st, err := NewStorage(client, t.Encs, nil)
+	st, err := NewStorage(client, t.Encs, nil, cache.Dummy{})
 	t.NoError(err)
 	t.storage = st
 }
@@ -456,7 +457,7 @@ func (t *testStorage) TestCreateIndexNew() {
 		},
 	}
 
-	t.NoError(t.storage.createIndex(defaultColNameManifest, oldIndexes))
+	t.NoError(t.storage.CreateIndex(defaultColNameManifest, oldIndexes))
 
 	existings := allIndexes(defaultColNameManifest)
 
@@ -467,7 +468,7 @@ func (t *testStorage) TestCreateIndexNew() {
 		},
 	}
 
-	t.NoError(t.storage.createIndex(defaultColNameManifest, newIndexes))
+	t.NoError(t.storage.CreateIndex(defaultColNameManifest, newIndexes))
 	created := allIndexes(defaultColNameManifest)
 
 	t.Equal(existings, []string{"_id_", "mitum_showme"})
@@ -478,7 +479,7 @@ func (t *testStorage) TestCopy() {
 	client, err := NewClient(TestMongodbURI(), time.Second*2, time.Second*2)
 	t.NoError(err)
 
-	other, err := NewStorage(client, t.Encs, t.BSONEnc)
+	other, err := NewStorage(client, t.Encs, t.BSONEnc, cache.Dummy{})
 	t.NoError(err)
 
 	var cols []string

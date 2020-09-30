@@ -8,6 +8,7 @@ import (
 	"github.com/spikeekips/mitum/launcher"
 	"github.com/spikeekips/mitum/network"
 	"github.com/spikeekips/mitum/util"
+	"github.com/spikeekips/mitum/util/cache"
 	"github.com/spikeekips/mitum/util/logging"
 	"golang.org/x/xerrors"
 )
@@ -78,7 +79,16 @@ func (nr *Launcher) attachStorage() error {
 	})
 	l.Debug().Msg("trying to attach")
 
-	if st, err := launcher.LoadStorage(nr.design.Storage, nr.Encoders()); err != nil {
+	var ca cache.Cache
+	if len(nr.design.Component.StorageCache()) > 0 {
+		if c, err := cache.NewCacheFromURI(nr.design.Component.StorageCache()); err != nil {
+			return err
+		} else {
+			ca = c
+		}
+	}
+
+	if st, err := launcher.LoadStorage(nr.design.Storage, nr.Encoders(), ca); err != nil {
 		return err
 	} else {
 		_ = nr.SetStorage(st)

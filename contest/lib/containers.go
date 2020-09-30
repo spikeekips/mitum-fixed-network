@@ -28,6 +28,7 @@ import (
 	"github.com/spikeekips/mitum/storage"
 	"github.com/spikeekips/mitum/storage/localfs"
 	"github.com/spikeekips/mitum/util"
+	"github.com/spikeekips/mitum/util/cache"
 	"github.com/spikeekips/mitum/util/encoder"
 	jsonenc "github.com/spikeekips/mitum/util/encoder/json"
 	"github.com/spikeekips/mitum/util/hint"
@@ -923,7 +924,7 @@ func (ct *Container) storageURIExternal() string {
 }
 
 func (ct *Container) Storage(initialize bool) (storage.Storage, error) {
-	if st, err := launcher.LoadStorage(ct.storageURIExternal(), ct.encs); err != nil {
+	if st, err := launcher.LoadStorage(ct.storageURIExternal(), ct.encs, cache.Dummy{}); err != nil {
 		return nil, err
 	} else {
 		if initialize {

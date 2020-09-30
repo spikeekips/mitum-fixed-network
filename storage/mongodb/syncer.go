@@ -32,7 +32,7 @@ func NewSyncerStorage(main *Storage) (*SyncerStorage, error) {
 
 	if s, err := newTempStorage(main, "manifest"); err != nil {
 		return nil, err
-	} else if err := s.createIndex(defaultColNameManifest, manifestIndexModels); err != nil {
+	} else if err := s.CreateIndex(defaultColNameManifest, manifestIndexModels); err != nil {
 		return nil, err
 	} else {
 		manifestStorage = s
@@ -241,7 +241,7 @@ func newTempStorage(main *Storage, prefix string) (*Storage, error) {
 		tmpClient = c
 	}
 
-	return NewStorage(tmpClient, main.Encoders(), main.Encoder())
+	return NewStorage(tmpClient, main.Encoders(), main.Encoder(), main.Cache())
 }
 
 func moveWithinCol(from *Storage, fromCol string, to *Storage, toCol string, filter bson.D) error {

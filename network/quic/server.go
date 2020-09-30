@@ -8,12 +8,12 @@ import (
 	"path"
 	"time"
 
-	"github.com/bluele/gcache"
 	"golang.org/x/xerrors"
 
 	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/base/seal"
 	"github.com/spikeekips/mitum/network"
+	"github.com/spikeekips/mitum/util/cache"
 	"github.com/spikeekips/mitum/util/encoder"
 	"github.com/spikeekips/mitum/util/logging"
 )
@@ -40,15 +40,18 @@ type Server struct {
 	getBlocksHandler    network.GetBlocksHandler
 	nodeInfoHandler     network.NodeInfoHandler
 
-	cache gcache.Cache
+	cache *cache.GCache
 }
 
 func NewServer(
 	prim *PrimitiveQuicServer, encs *encoder.Encoders, enc encoder.Encoder,
 ) (*Server, error) {
-	cache := gcache.New(100 * 100 * 100).LRU().
-		Expiration(time.Hour * 10).
-		Build()
+	var ca *cache.GCache
+	if c, err := cache.NewGCache("lru", 100, time.Second*3); err != nil {
+		return nil, err
+	} else {
+		ca = c
+	}
 
 	// TODO ratelimit
 	nqs := &Server{
@@ -58,7 +61,7 @@ func NewServer(
 		PrimitiveQuicServer: prim,
 		encs:                encs,
 		enc:                 enc,
-		cache:               cache,
+		cache:               ca,
 	}
 	nqs.setHandlers()
 
@@ -328,7 +331,7 @@ func (sv *Server) handleNodeInfo(w http.ResponseWriter, _ *http.Request) {
 		return
 	} else {
 		output = b
-		_ = sv.cache.SetWithExpire(cacheKeyNodeInfo, output, time.Second*3)
+		_ = sv.cache.Set(cacheKeyNodeInfo, output, time.Second*3)
 	}
 
 	w.Header().Set(QuicEncoderHintHeader, sv.enc.Hint().String())

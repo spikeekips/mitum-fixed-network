@@ -12,6 +12,7 @@ import (
 	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/network"
 	mongodbstorage "github.com/spikeekips/mitum/storage/mongodb"
+	"github.com/spikeekips/mitum/util/cache"
 )
 
 func (t *testSyncers) TestSaveLastBlock() {
@@ -63,7 +64,7 @@ func (t *testSyncers) TestSaveLastBlock() {
 
 	orig := local.Storage().(DummyMongodbStorage)
 
-	st, err := mongodbstorage.NewStorage(orig.Client(), t.Encs, t.BSONEnc)
+	st, err := mongodbstorage.NewStorage(orig.Client(), t.Encs, t.BSONEnc, cache.Dummy{})
 	t.NoError(err)
 	d := NewDummyMongodbStorage(st)
 

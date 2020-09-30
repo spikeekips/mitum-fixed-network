@@ -6,11 +6,11 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/bluele/gcache"
 	"github.com/rs/zerolog"
 
 	"github.com/spikeekips/mitum/base/block"
 	"github.com/spikeekips/mitum/util"
+	"github.com/spikeekips/mitum/util/cache"
 	"github.com/spikeekips/mitum/util/logging"
 )
 
@@ -43,6 +43,6 @@ func TestMongodbURI() string {
 	return fmt.Sprintf("mongodb://%s/t_%s", uri, util.UUID().String())
 }
 
-func (st *Storage) OperationFactCache() gcache.Cache {
+func (st *Storage) OperationFactCache() cache.Cache {
 	return st.operationFactCache
 }

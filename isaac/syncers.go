@@ -63,6 +63,9 @@ func (sy *Syncers) start(stopChan chan struct{}) error {
 }
 
 func (sy *Syncers) Stop() error {
+	sy.Lock()
+	defer sy.Unlock()
+
 	if err := sy.FunctionDaemon.Stop(); err != nil {
 		if xerrors.Is(err, util.DaemonAlreadyStoppedError) {
 			return nil
@@ -70,9 +73,6 @@ func (sy *Syncers) Stop() error {
 
 		return err
 	}
-
-	sy.Lock()
-	defer sy.Unlock()
 
 	for _, syncer := range sy.syncers {
 		if err := syncer.Close(); err != nil {

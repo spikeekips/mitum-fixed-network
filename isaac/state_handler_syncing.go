@@ -39,8 +39,6 @@ Voteproof received within a given time, states will be changed to joining state.
 type StateSyncingHandler struct {
 	sync.RWMutex
 	*BaseStateHandler
-	lv                   base.Voteproof
-	lvLock               sync.RWMutex
 	syncs                *Syncers
 	waitVoteproofTimeout time.Duration
 }
@@ -142,16 +140,15 @@ func (ss *StateSyncingHandler) Activate(ctx *StateChangeContext) error {
 }
 
 func (ss *StateSyncingHandler) Deactivate(_ *StateChangeContext) error {
+	ss.Lock()
+	defer ss.Unlock()
+
 	ss.Log().Debug().Msg("deactivated")
 
 	ss.deactivate()
 
-	ss.lvLock.Lock()
-	ss.lv = nil
-	ss.lvLock.Unlock()
-
-	if syncs := ss.syncers(); syncs != nil {
-		if err := syncs.Stop(); err != nil {
+	if ss.syncs != nil {
+		if err := ss.syncs.Stop(); err != nil {
 			return err
 		}
 	}
@@ -230,6 +227,70 @@ func (ss *StateSyncingHandler) fromVoteproof(voteproof base.Voteproof) error {
 }
 
 func (ss *StateSyncingHandler) handleVoteproof(voteproof base.Voteproof) error {
+	switch voteproof.Stage() {
+	case base.StageINIT:
+		return ss.handleINITTVoteproof(voteproof)
+	case base.StageACCEPT:
+		return ss.handleACCEPTVoteproof(voteproof)
+	default:
+		return nil
+	}
+}
+
+func (ss *StateSyncingHandler) handleINITTVoteproof(voteproof base.Voteproof) error {
+	baseHeight := base.PreGenesisHeight
+	if m, found, err := ss.localstate.Storage().LastManifest(); err != nil {
+		return err
+	} else if found {
+		baseHeight = m.Height()
+	}
+
+	var lastHeight base.Height = base.NilHeight
+	if last := ss.syncers().lastSyncer(); last != nil {
+		lastHeight = last.HeightTo()
+	}
+
+	l := ss.Log().WithLogger(func(ctx logging.Context) logging.Emitter {
+		return ctx.Hinted("voteproof_stage", voteproof.Stage()).
+			Hinted("voteproof_height", voteproof.Height()).
+			Hinted("voteproof_round", voteproof.Round()).
+			Hinted("local_height", baseHeight).
+			Hinted("last_height", lastHeight)
+	})
+
+	to := voteproof.Height() - 1
+
+	switch {
+	case baseHeight > to:
+		l.Debug().Msg("voteproof has lower height")
+
+		return nil
+	case baseHeight < to:
+		if lastHeight >= to {
+			l.Debug().Hinted("last_syncers", lastHeight).Msg("init voteproof, but under syncing")
+
+			return nil
+		}
+
+		return ss.fromVoteproof(voteproof)
+	default:
+		if !ss.syncers().isFinished() {
+			return nil
+		}
+
+		l.Debug().Msg("init voteproof, expected")
+
+		if err := ss.timers.StopTimers([]string{TimerIDWaitVoteproof}); err != nil {
+			ss.Log().Error().Err(err).Str("timer", TimerIDWaitVoteproof).Msg("failed to stop")
+		}
+
+		l.Debug().Msg("init voteproof, expected; moves to consensus")
+
+		return ss.ChangeState(base.StateConsensus, voteproof, nil)
+	}
+}
+
+func (ss *StateSyncingHandler) handleACCEPTVoteproof(voteproof base.Voteproof) error {
 	baseHeight := base.PreGenesisHeight
 	if m, found, err := ss.localstate.Storage().LastManifest(); err != nil {
 		return err
@@ -244,46 +305,19 @@ func (ss *StateSyncingHandler) handleVoteproof(voteproof base.Voteproof) error {
 			Hinted("local_height", baseHeight)
 	})
 
-	l.Debug().Msg("got voteproof for syncing")
+	if baseHeight >= voteproof.Height() {
+		l.Debug().Msg("voteproof has lower height")
 
-	var to base.Height
-	if h, err := ss.getExpectedHeightFromoteproof(voteproof); err != nil {
-		return err
-	} else {
-		to = h
-	}
-
-	if d := to - baseHeight; d < 0 {
 		return nil
-	} else if d > 0 {
-		l.Debug().Msg("voteproof, ahead of local; sync")
+	} else if last := ss.syncers().lastSyncer(); last != nil {
+		if last.HeightTo() >= voteproof.Height() {
+			l.Debug().Hinted("last_syncers", last.HeightTo()).Msg("init voteproof, but under syncing")
 
-		if err := ss.timers.StopTimers([]string{TimerIDWaitVoteproof}); err != nil {
-			l.Error().Err(err).Str("timer", TimerIDWaitVoteproof).Msg("failed to stop")
+			return nil
 		}
-
-		return ss.fromVoteproof(voteproof)
 	}
 
-	if voteproof.Stage() != base.StageINIT {
-		return nil
-	}
-
-	l.Debug().Msg("init voteproof, expected")
-
-	if !ss.syncers().isFinished() {
-		l.Debug().Msg("init voteproof, expected; but syncing is not finished")
-
-		return nil
-	}
-
-	if err := ss.timers.StopTimers([]string{TimerIDWaitVoteproof}); err != nil {
-		ss.Log().Error().Err(err).Str("timer", TimerIDWaitVoteproof).Msg("failed to stop")
-	}
-
-	l.Debug().Msg("init voteproof, expected; moves to consensus")
-
-	return ss.ChangeState(base.StateConsensus, voteproof, nil)
+	return ss.fromVoteproof(voteproof)
 }
 
 func (ss *StateSyncingHandler) handleBallot(blt ballot.Ballot) error {
@@ -299,17 +333,6 @@ func (ss *StateSyncingHandler) handleBallot(blt ballot.Ballot) error {
 	}
 
 	return ss.fromVoteproof(voteproof)
-}
-
-func (ss *StateSyncingHandler) getExpectedHeightFromoteproof(voteproof base.Voteproof) (base.Height, error) {
-	switch voteproof.Stage() {
-	case base.StageINIT:
-		return voteproof.Height() - 1, nil
-	case base.StageACCEPT:
-		return voteproof.Height(), nil
-	default:
-		return base.NilHeight, xerrors.Errorf("invalid Voteproof received")
-	}
 }
 
 func (ss *StateSyncingHandler) whenFinished(height base.Height) {

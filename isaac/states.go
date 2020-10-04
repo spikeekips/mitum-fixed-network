@@ -369,36 +369,11 @@ func (css *ConsensusStates) broadcastSeal(sl seal.Seal, errChan chan<- error) {
 func (css *ConsensusStates) newVoteproof(voteproof base.Voteproof) error {
 	_ = loggerWithVoteproof(voteproof, css.Log())
 
-	var vpc *VoteproofConsensusStateChecker
-	if v, err := NewVoteproofConsensusStateChecker(
-		css.localstate.Storage(),
-		css.lastINITVoteproof(),
-		voteproof,
-		css,
-	); err != nil {
+	var ctx *StateToBeChangeError
+	if c, err := css.checkNewVoteproof(voteproof); err != nil {
 		return err
 	} else {
-		vpc = v
-		_ = vpc.SetLogger(css.Log())
-	}
-
-	var ctx *StateToBeChangeError
-	if err := util.NewChecker("voteproof-validation-checker", []util.CheckerFunc{
-		vpc.CheckHeight,
-		vpc.CheckINITVoteproof,
-		vpc.CheckACCEPTVoteproof,
-	}).Check(); err != nil {
-		switch {
-		case xerrors.As(err, &ctx):
-		case xerrors.Is(err, IgnoreVoteproofError):
-			return nil
-		case err != nil:
-			return err
-		}
-	}
-
-	if voteproof.Stage() == base.StageINIT {
-		css.setLastINITVoteproof(voteproof)
+		ctx = c
 	}
 
 	if css.ActiveHandler() == nil {
@@ -426,6 +401,49 @@ func (css *ConsensusStates) newVoteproof(voteproof base.Voteproof) error {
 	}()
 
 	return nil
+}
+
+func (css *ConsensusStates) checkNewVoteproof(voteproof base.Voteproof) (*StateToBeChangeError, error) {
+	css.Lock()
+	defer css.Unlock()
+
+	var lvp base.Voteproof
+	if css.activeHandler != nil {
+		lvp = css.activeHandler.LastINITVoteproof()
+	}
+
+	var vpc *VoteproofConsensusStateChecker
+	if v, err := NewVoteproofConsensusStateChecker(css.localstate.Storage(), lvp, voteproof, css); err != nil {
+		return nil, err
+	} else {
+		vpc = v
+		_ = vpc.SetLogger(css.Log())
+	}
+
+	var ctx *StateToBeChangeError
+	if err := util.NewChecker("voteproof-validation-checker", []util.CheckerFunc{
+		vpc.CheckHeight,
+		vpc.CheckINITVoteproof,
+		vpc.CheckACCEPTVoteproof,
+	}).Check(); err != nil {
+		switch {
+		case xerrors.As(err, &ctx):
+		case xerrors.Is(err, IgnoreVoteproofError):
+			return nil, nil
+		case err != nil:
+			return nil, err
+		}
+	}
+
+	if voteproof.Stage() == base.StageINIT {
+		if css.activeHandler != nil {
+			if err := css.activeHandler.SetLastINITVoteproof(voteproof); err != nil {
+				css.Log().Error().Err(err).Msg("ignore to set the last init voteproof")
+			}
+		}
+	}
+
+	return ctx, nil
 }
 
 // NewSeal receives Seal and hand it over to handler;
@@ -533,19 +551,6 @@ func (css *ConsensusStates) lastINITVoteproof() base.Voteproof {
 	}
 
 	return css.activeHandler.LastINITVoteproof()
-}
-
-func (css *ConsensusStates) setLastINITVoteproof(voteproof base.Voteproof) {
-	css.RLock()
-	defer css.RUnlock()
-
-	if css.activeHandler == nil {
-		return
-	}
-
-	if err := css.activeHandler.SetLastINITVoteproof(voteproof); err != nil {
-		css.Log().Error().Err(err).Msg("ignore to set the last init voteproof")
-	}
 }
 
 func (css *ConsensusStates) StateHandler(state base.State) StateHandler {

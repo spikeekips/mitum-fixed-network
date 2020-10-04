@@ -802,8 +802,8 @@ func (ct *Container) containerErr() (func(), error) {
 
 func (ct *Container) networkDesign() *launcher.NetworkDesign {
 	nd := &launcher.NetworkDesign{BaseNetworkDesign: &launcher.BaseNetworkDesign{}}
-	nd.Bind = "0.0.0.0:54321"
-	nd.Publish = fmt.Sprintf("quic://%s:54321", ct.Name())
+	nd.BindString = launcher.DefaultNetworkBindString
+	nd.Publish = fmt.Sprintf("%s://%s:%d", launcher.DefaultNetworkBindScheme, ct.Name(), launcher.DefaultNetworkBindPort)
 
 	return nd
 }

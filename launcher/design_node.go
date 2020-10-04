@@ -3,7 +3,6 @@ package launcher
 import (
 	"crypto/tls"
 	"io/ioutil"
-	"net"
 	"net/url"
 	"path/filepath"
 	"strconv"
@@ -20,7 +19,11 @@ import (
 	"github.com/spikeekips/mitum/util/isvalid"
 )
 
-var DefaultNetworkBind = "0.0.0.0:54321"
+var (
+	DefaultNetworkBindScheme     = "quic"
+	DefaultNetworkBindPort   int = 54321
+	DefaultNetworkBindString     = "quic://0.0.0.0:54321"
+)
 
 type NodeDesign struct {
 	encs             *encoder.Encoders
@@ -171,22 +174,32 @@ func (nd NodeDesign) Privatekey() key.Privatekey {
 }
 
 type BaseNetworkDesign struct {
-	Bind        string
+	BindString  string `yaml:"bind"`
 	Publish     string
-	CertKeyFile string `yaml:"cert-key"`
-	CertFile    string `yaml:"cert"`
-	bindHost    string
+	CertKeyFile string `yaml:"cert-key,omitempty"`
+	CertFile    string `yaml:"cert,omitempty"`
+	bind        *url.URL
 	bindPort    int
+	bindScheme  string
 	publishURL  *url.URL
 	certs       []tls.Certificate
 }
 
-func (nd *BaseNetworkDesign) BindHost() string {
-	return nd.bindHost
+func (nd *BaseNetworkDesign) Bind() *url.URL {
+	return nd.bind
+}
+
+func (nd *BaseNetworkDesign) SetBind(u *url.URL) {
+	nd.bind = u
+	nd.BindString = u.String()
 }
 
 func (nd *BaseNetworkDesign) BindPort() int {
 	return nd.bindPort
+}
+
+func (nd *BaseNetworkDesign) BindScheme() string {
+	return nd.bindScheme
 }
 
 func (nd *BaseNetworkDesign) PublishURL() *url.URL {
@@ -197,22 +210,37 @@ func (nd *BaseNetworkDesign) Certs() []tls.Certificate {
 	return nd.certs
 }
 
+func (nd *BaseNetworkDesign) SetCerts(certs []tls.Certificate) {
+	nd.certs = certs
+}
+
 func (nd *BaseNetworkDesign) IsValid([]byte) error {
 	if nd == nil {
 		return xerrors.Errorf("empty network design")
 	}
 
-	if len(nd.Bind) < 1 {
-		nd.Bind = DefaultNetworkBind
+	if len(nd.BindString) < 1 {
+		nd.BindString = DefaultNetworkBindString
 	}
 
-	if h, p, err := net.SplitHostPort(nd.Bind); err != nil {
-		return xerrors.Errorf("invalid bind value, '%v': %w", nd.Bind, err)
-	} else if i, err := strconv.ParseUint(p, 10, 64); err != nil {
-		return xerrors.Errorf("invalid port in bind value, '%v': %w", nd.Bind, err)
+	if u, err := url.Parse(nd.BindString); err != nil {
+		return xerrors.Errorf("invalid bind value, '%v': %w", nd.BindString, err)
 	} else {
-		nd.bindHost = h
-		nd.bindPort = int(i)
+		nd.bind = u
+
+		if p := u.Scheme; len(p) < 1 {
+			nd.bindScheme = DefaultNetworkBindScheme
+		} else {
+			nd.bindScheme = p
+		}
+
+		if p := u.Port(); len(p) < 1 {
+			nd.bindPort = DefaultNetworkBindPort
+		} else if up, err := strconv.ParseUint(p, 10, 64); err != nil {
+			return xerrors.Errorf("invalid port in bind value, '%v': %w", nd.BindString, err)
+		} else {
+			nd.bindPort = int(up)
+		}
 	}
 
 	if u, err := IsvalidNetworkURL(nd.Publish); err != nil {

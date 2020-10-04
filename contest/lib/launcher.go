@@ -106,7 +106,7 @@ func (nr *Launcher) attachNetwork() error {
 	l.Debug().Msg("trying to attach")
 
 	if qs, err := launcher.LoadNetworkServer(
-		nr.design.Network.Bind,
+		nr.design.Network.Bind().Host,
 		nr.design.Network.PublishURL(),
 		nr.Encoders(),
 	); err != nil {

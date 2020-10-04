@@ -336,7 +336,7 @@ func (ss *StateSyncingHandler) handleBallot(blt ballot.Ballot) error {
 }
 
 func (ss *StateSyncingHandler) whenFinished(height base.Height) {
-	ss.Log().Debug().Hinted("height", height).Msg("syncing finished; start timer")
+	ss.Log().Debug().Hinted("height", height).Msg("syncing finished; will wait new voteproof")
 
 	if timer, err := ss.timerWaitVoteproof(); err != nil {
 		ss.Log().Error().Err(err).Str("timer", TimerIDWaitVoteproof).Msg("failed to make timer")

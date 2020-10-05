@@ -110,7 +110,7 @@ func (pp *internalDefaultProposalProcessor) processINIT(initVoteproof base.Votep
 	defer cancel()
 
 	errChan := make(chan error)
-	blkChan := make(chan block.Block)
+	blkChan := make(chan block.BlockUpdater)
 	go func() {
 		s := time.Now()
 
@@ -131,7 +131,7 @@ func (pp *internalDefaultProposalProcessor) processINIT(initVoteproof base.Votep
 
 	defer pp.stop()
 
-	var blk block.Block
+	var blk block.BlockUpdater
 	select {
 	case <-ctx.Done():
 		return nil, xerrors.Errorf("timeout to process Proposal: %w", ctx.Err())
@@ -141,6 +141,7 @@ func (pp *internalDefaultProposalProcessor) processINIT(initVoteproof base.Votep
 		if err := pp.setBlockfs(blk); err != nil {
 			return nil, xerrors.Errorf("failed to set blockfs: %w", err)
 		}
+		pp.block = blk
 	}
 
 	return blk, nil
@@ -148,7 +149,7 @@ func (pp *internalDefaultProposalProcessor) processINIT(initVoteproof base.Votep
 
 func (pp *internalDefaultProposalProcessor) process(
 	ctx context.Context, initVoteproof base.Voteproof,
-) (block.Block, error) {
+) (block.BlockUpdater, error) {
 	if len(pp.proposal.Seals()) > 0 {
 		if ops, err := pp.extractOperations(); err != nil {
 			return nil, err
@@ -184,7 +185,7 @@ func (pp *internalDefaultProposalProcessor) createBlock(
 	initVoteproof base.Voteproof,
 	operationsTree, statesTree tree.FixedTree,
 	sts []state.State,
-) (block.Block, error) {
+) (block.BlockUpdater, error) {
 	var opsHash, stsHash valuehash.Hash
 	if !operationsTree.IsEmpty() {
 		opsHash = valuehash.NewBytes(operationsTree.Root())
@@ -211,7 +212,6 @@ func (pp *internalDefaultProposalProcessor) createBlock(
 		return nil, err
 	} else {
 		pp.bs = bs
-		pp.block = blk
 	}
 
 	pp.Log().Debug().

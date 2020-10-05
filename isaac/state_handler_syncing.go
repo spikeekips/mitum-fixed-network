@@ -359,6 +359,14 @@ func (ss *StateSyncingHandler) timerWaitVoteproof() (*localtime.CallbackTimer, e
 	return localtime.NewCallbackTimer(
 		TimerIDWaitVoteproof,
 		func() (bool, error) {
+			if sy := ss.syncers(); sy != nil {
+				if !sy.isFinished() {
+					ss.Log().Debug().Msg("syncer is still running; wait to be finished")
+
+					return true, nil
+				}
+			}
+
 			ss.Log().Debug().Msg("syncing finished, but no more Voteproof; moves to joining state")
 			if err := ss.ChangeState(base.StateJoining, nil, nil); err != nil {
 				return false, err

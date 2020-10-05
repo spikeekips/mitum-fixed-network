@@ -287,7 +287,8 @@ func (st *Storage) Client() *Client {
 }
 
 func (st *Storage) Close() error {
-	return st.client.Close()
+	// FUTURE return st.client.Close()
+	return nil
 }
 
 // Clean will drop the existing collections. To keep safe the another

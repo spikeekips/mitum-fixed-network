@@ -4,6 +4,8 @@ package isaac
 
 import (
 	"context"
+	"fmt"
+	"sync"
 	"time"
 
 	"golang.org/x/xerrors"
@@ -12,6 +14,7 @@ import (
 	"github.com/spikeekips/mitum/storage"
 	leveldbstorage "github.com/spikeekips/mitum/storage/leveldb"
 	mongodbstorage "github.com/spikeekips/mitum/storage/mongodb"
+	"github.com/spikeekips/mitum/util"
 	"github.com/spikeekips/mitum/util/cache"
 	"github.com/spikeekips/mitum/util/encoder"
 	bsonenc "github.com/spikeekips/mitum/util/encoder/bson"
@@ -52,7 +55,8 @@ func (ss *StorageSupportTest) Storage(encs *encoder.Encoders, enc encoder.Encode
 
 		return leveldbstorage.NewMemStorage(encs, enc)
 	case "mongodb":
-		client, err := mongodbstorage.NewClient(mongodbstorage.TestMongodbURI(), time.Second*2, time.Second*2)
+		c := mongoConnPool.Get().(*mongodbstorage.Client)
+		client, err := c.New(fmt.Sprintf("t-%s", util.UUID().String()))
 		if err != nil {
 			panic(err)
 		}
@@ -72,7 +76,8 @@ func (ss *StorageSupportTest) Storage(encs *encoder.Encoders, enc encoder.Encode
 
 		return d
 	case "mongodb+gcache":
-		client, err := mongodbstorage.NewClient(mongodbstorage.TestMongodbURI(), time.Second*2, time.Second*2)
+		c := mongoConnPool.Get().(*mongodbstorage.Client)
+		client, err := c.New(fmt.Sprintf("t-%s", util.UUID().String()))
 		if err != nil {
 			panic(err)
 		}
@@ -128,5 +133,18 @@ func (dm DummyMongodbStorage) Close() error {
 		return err
 	}
 
+	mongoConnPool.Put(dm.Client())
+
 	return dm.Storage.Close()
+}
+
+var mongoConnPool = sync.Pool{
+	New: func() interface{} {
+		client, err := mongodbstorage.NewClient(mongodbstorage.TestMongodbURI(), time.Second*2, time.Second*2)
+		if err != nil {
+			panic(err)
+		}
+
+		return client
+	},
 }

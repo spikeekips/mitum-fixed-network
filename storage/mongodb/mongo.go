@@ -335,14 +335,20 @@ func (cl *Client) CopyCollection(source *Client, fromCol, toCol string) error {
 }
 
 func (cl *Client) New(db string) (*Client, error) {
-	if n, err := NewClient(cl.uri, cl.connectTimeout, cl.execTimeout); err != nil {
-		return nil, err
-	} else if len(db) < 1 {
-		return n, nil
+	var d *mongo.Database
+	if len(db) < 1 {
+		d = cl.db
 	} else {
-		n.db = n.client.Database(db)
-		return n, nil
+		d = cl.client.Database(db)
 	}
+
+	return &Client{
+		uri:            cl.uri,
+		client:         cl.client,
+		db:             d,
+		connectTimeout: cl.connectTimeout,
+		execTimeout:    cl.execTimeout,
+	}, nil
 }
 
 func isDuplicatedError(err error) bool {

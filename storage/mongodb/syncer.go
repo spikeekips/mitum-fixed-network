@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"sync"
-	"time"
 
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
@@ -218,12 +217,9 @@ func (st *SyncerStorage) Close() error {
 	// NOTE drop tmp database
 	if err := st.manifestStorage.client.DropDatabase(); err != nil {
 		return err
-	} else if err := st.manifestStorage.client.Close(); err != nil {
-		return err
 	}
+
 	if err := st.blockStorage.client.DropDatabase(); err != nil {
-		return err
-	} else if err := st.blockStorage.client.Close(); err != nil {
 		return err
 	}
 
@@ -231,11 +227,9 @@ func (st *SyncerStorage) Close() error {
 }
 
 func newTempStorage(main *Storage, prefix string) (*Storage, error) {
-	// NOTE create new mongodb client
+	// NOTE create new mongodb database with prefix
 	var tmpClient *Client
-	if uri, err := NewTempURI(main.client.uri, fmt.Sprintf("sync-%s", prefix)); err != nil {
-		return nil, err
-	} else if c, err := NewClient(uri, time.Second*2, main.client.execTimeout); err != nil {
+	if c, err := main.client.New(fmt.Sprintf("sync-%s_%s", prefix, util.UUID().String())); err != nil {
 		return nil, err
 	} else {
 		tmpClient = c

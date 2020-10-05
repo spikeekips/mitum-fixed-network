@@ -26,9 +26,10 @@ type internalDefaultProposalProcessor struct {
 	*logging.Logging
 	localstate   *Localstate
 	stopped      bool
+	stoppedLock  sync.RWMutex
 	suffrage     base.Suffrage
 	lastManifest block.Manifest
-	block        block.BlockUpdater
+	blk          block.BlockUpdater
 	proposal     ballot.Proposal
 	operations   []operation.Operation
 	bs           storage.BlockStorage
@@ -84,37 +85,54 @@ func newInternalDefaultProposalProcessor(
 }
 
 func (pp *internalDefaultProposalProcessor) stop() {
-	pp.Lock()
-	defer pp.Unlock()
+	pp.stoppedLock.Lock()
+	defer pp.stoppedLock.Unlock()
 
 	pp.stopped = true
 }
 
 func (pp *internalDefaultProposalProcessor) isStopped() bool {
-	pp.RLock()
-	defer pp.RUnlock()
+	pp.stoppedLock.RLock()
+	defer pp.stoppedLock.RUnlock()
 
 	return pp.stopped
 }
 
+func (pp *internalDefaultProposalProcessor) blockStorage() storage.BlockStorage {
+	pp.RLock()
+	defer pp.RUnlock()
+
+	return pp.bs
+}
+
+func (pp *internalDefaultProposalProcessor) block() block.BlockUpdater {
+	pp.RLock()
+	defer pp.RUnlock()
+
+	return pp.blk
+}
+
 func (pp *internalDefaultProposalProcessor) processINIT(initVoteproof base.Voteproof) (block.Block, error) {
+	pp.Lock()
+	defer pp.Unlock()
+
 	if pp.isStopped() {
 		return nil, xerrors.Errorf("already stopped")
 	}
 
-	if pp.block != nil {
-		return pp.block, nil
+	if pp.blk != nil {
+		return pp.blk, nil
 	}
 
 	ctx, cancel := context.WithTimeout(context.Background(), pp.localstate.Policy().TimeoutProcessProposal())
 	defer cancel()
 
 	errChan := make(chan error)
-	blkChan := make(chan block.BlockUpdater)
+	blkChan := make(chan [2]interface{})
 	go func() {
 		s := time.Now()
 
-		blk, err := pp.process(ctx, initVoteproof)
+		bs, blk, err := pp.process(ctx, initVoteproof)
 		pp.statesValue.Store("process", time.Since(s))
 
 		if err != nil {
@@ -123,36 +141,38 @@ func (pp *internalDefaultProposalProcessor) processINIT(initVoteproof base.Votep
 			return
 		}
 
-		blkChan <- blk
+		blkChan <- [2]interface{}{bs, blk}
 	}()
 
 	// FUTURE if timed out, the next proposal may be able to be passed within
 	// timeout. The long-taken operations should be checked and eliminated.
 
-	defer pp.stop()
-
-	var blk block.BlockUpdater
 	select {
 	case <-ctx.Done():
 		return nil, xerrors.Errorf("timeout to process Proposal: %w", ctx.Err())
 	case err := <-errChan:
 		return nil, xerrors.Errorf("timeout to process Proposal: %w", err)
-	case blk = <-blkChan:
+	case i := <-blkChan:
+		bs := i[0].(storage.BlockStorage)
+		blk := i[1].(block.BlockUpdater)
+
 		if err := pp.setBlockfs(blk); err != nil {
 			return nil, xerrors.Errorf("failed to set blockfs: %w", err)
 		}
-		pp.block = blk
+
+		pp.bs = bs
+		pp.blk = blk
 	}
 
-	return blk, nil
+	return pp.blk, nil
 }
 
 func (pp *internalDefaultProposalProcessor) process(
 	ctx context.Context, initVoteproof base.Voteproof,
-) (block.BlockUpdater, error) {
+) (storage.BlockStorage, block.BlockUpdater, error) {
 	if len(pp.proposal.Seals()) > 0 {
 		if ops, err := pp.extractOperations(); err != nil {
-			return nil, err
+			return nil, nil, err
 		} else {
 			pp.operations = ops
 		}
@@ -160,7 +180,7 @@ func (pp *internalDefaultProposalProcessor) process(
 
 	var pool *Statepool
 	if p, err := NewStatepool(pp.localstate.Storage()); err != nil {
-		return nil, err
+		return nil, nil, err
 	} else {
 		pool = p
 	}
@@ -170,10 +190,10 @@ func (pp *internalDefaultProposalProcessor) process(
 	if len(pp.operations) > 0 {
 		var err error
 		if statesTree, sts, err = pp.processStates(ctx, pool); err != nil {
-			return nil, err
+			return nil, nil, err
 		} else if !statesTree.IsEmpty() {
 			if operationsTree, err = pp.processOperations(pool); err != nil {
-				return nil, err
+				return nil, nil, err
 			}
 		}
 	}
@@ -185,7 +205,7 @@ func (pp *internalDefaultProposalProcessor) createBlock(
 	initVoteproof base.Voteproof,
 	operationsTree, statesTree tree.FixedTree,
 	sts []state.State,
-) (block.BlockUpdater, error) {
+) (storage.BlockStorage, block.BlockUpdater, error) {
 	var opsHash, stsHash valuehash.Hash
 	if !operationsTree.IsEmpty() {
 		opsHash = valuehash.NewBytes(operationsTree.Root())
@@ -199,7 +219,7 @@ func (pp *internalDefaultProposalProcessor) createBlock(
 		pp.si, pp.proposal.Height(), pp.proposal.Round(), pp.proposal.Hash(), pp.lastManifest.Hash(),
 		opsHash, stsHash, pp.proposal.SignedAt(),
 	); err != nil {
-		return nil, err
+		return nil, nil, err
 	} else {
 		blk = b
 	}
@@ -208,10 +228,11 @@ func (pp *internalDefaultProposalProcessor) createBlock(
 		SetStatesTree(statesTree).SetStates(sts).
 		SetINITVoteproof(initVoteproof).SetProposal(pp.proposal)
 
-	if bs, err := pp.localstate.Storage().OpenBlockStorage(blk); err != nil {
-		return nil, err
+	var bs storage.BlockStorage
+	if b, err := pp.localstate.Storage().OpenBlockStorage(blk); err != nil {
+		return nil, nil, err
 	} else {
-		pp.bs = bs
+		bs = b
 	}
 
 	pp.Log().Debug().
@@ -221,7 +242,7 @@ func (pp *internalDefaultProposalProcessor) createBlock(
 			Hinted("operations_hash", blk.OperationsHash()).Hinted("states_hash", blk.StatesHash()),
 		).Msg("block processed")
 
-	return blk, nil
+	return bs, blk, nil
 }
 
 func (pp *internalDefaultProposalProcessor) extractOperations() ([]operation.Operation, error) {
@@ -504,8 +525,10 @@ func (pp *internalDefaultProposalProcessor) setACCEPTVoteproof(acceptVoteproof b
 	pp.Lock()
 	defer pp.Unlock()
 
-	if pp.bs == nil {
-		return xerrors.Errorf("not yet processed")
+	if pp.blk == nil {
+		return xerrors.Errorf("not yet processed; empty block")
+	} else if pp.bs == nil {
+		return xerrors.Errorf("not yet processed; empty BlockStorage")
 	}
 
 	s := time.Now()
@@ -522,11 +545,11 @@ func (pp *internalDefaultProposalProcessor) setACCEPTVoteproof(acceptVoteproof b
 		fact = f
 	}
 
-	if !pp.block.Hash().Equal(fact.NewBlock()) {
+	if !pp.blk.Hash().Equal(fact.NewBlock()) {
 		return xerrors.Errorf("hash of the processed block does not match with acceptVoteproof")
 	}
 
-	blk := pp.block.SetACCEPTVoteproof(acceptVoteproof)
+	pp.blk = pp.blk.SetACCEPTVoteproof(acceptVoteproof)
 
 	if err := func() error {
 		s := time.Now()
@@ -534,12 +557,12 @@ func (pp *internalDefaultProposalProcessor) setACCEPTVoteproof(acceptVoteproof b
 			pp.statesValue.Store("set-block", time.Since(s))
 		}()
 
-		return pp.bs.SetBlock(blk)
+		return pp.bs.SetBlock(pp.blk)
 	}(); err != nil {
 		return err
 	}
 
-	if err := pp.localstate.BlockFS().AddACCEPTVoteproof(blk.Height(), blk.Hash(), acceptVoteproof); err != nil {
+	if err := pp.localstate.BlockFS().AddACCEPTVoteproof(pp.blk.Height(), pp.blk.Hash(), acceptVoteproof); err != nil {
 		return err
 	}
 
@@ -556,12 +579,14 @@ func (pp *internalDefaultProposalProcessor) setACCEPTVoteproof(acceptVoteproof b
 			return err
 		}
 	}
-	pp.block = blk
 
 	return nil
 }
 
 func (pp *internalDefaultProposalProcessor) states() map[string]interface{} {
+	pp.RLock()
+	defer pp.RUnlock()
+
 	m := map[string]interface{}{}
 	pp.statesValue.Range(func(key, value interface{}) bool {
 		m[key.(string)] = value

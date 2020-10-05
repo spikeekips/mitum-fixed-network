@@ -91,12 +91,11 @@ func (dp *DefaultProposalProcessor) setProcessor(pp *internalDefaultProposalProc
 
 func (dp *DefaultProposalProcessor) ProcessINIT(ph valuehash.Hash, initVoteproof base.Voteproof) (block.Block, error) {
 	if pp := dp.processor(); pp != nil {
-		pr := pp.proposal
 		dp.Log().Error().
 			Hinted("proposal", ph).
-			Hinted("proposal_of_processor", pr.Hash()).
-			Hinted("height", pr.Height()).
-			Hinted("round", pr.Round()).
+			Hinted("proposal_of_processor", pp.proposal.Hash()).
+			Hinted("height", pp.proposal.Height()).
+			Hinted("round", pp.proposal.Round()).
 			Msg("already processed")
 
 		return nil, xerrors.Errorf("already processed")
@@ -119,11 +118,10 @@ func (dp *DefaultProposalProcessor) ProcessINIT(ph valuehash.Hash, initVoteproof
 	if err != nil {
 		return nil, err
 	}
+	defer pp.stop()
 
 	_ = pp.SetLogger(dp.Log())
 	dp.setProcessor(pp)
-
-	defer pp.stop()
 
 	blk, err := pp.processINIT(initVoteproof)
 	if err != nil {
@@ -153,13 +151,15 @@ func (dp *DefaultProposalProcessor) ProcessACCEPT(
 		return nil, err
 	}
 
-	return pp.bs, nil
+	return pp.blockStorage(), nil
 }
 
 func (dp *DefaultProposalProcessor) Done(ph valuehash.Hash) error {
 	if pp, err := dp.processed(ph); err != nil {
 		return err
-	} else if err := dp.localstate.BlockFS().Commit(pp.block.Height(), pp.block.Hash()); err != nil {
+	} else if blk := pp.block(); blk == nil {
+		return xerrors.Errorf("not processed; empty block")
+	} else if err := dp.localstate.BlockFS().Commit(blk.Height(), blk.Hash()); err != nil {
 		return err
 	}
 
@@ -170,8 +170,8 @@ func (dp *DefaultProposalProcessor) Done(ph valuehash.Hash) error {
 
 func (dp *DefaultProposalProcessor) Cancel() error {
 	if pp := dp.processor(); pp != nil {
-		if pp.block != nil {
-			if err := dp.localstate.BlockFS().Cancel(pp.block.Height(), pp.block.Hash()); err != nil {
+		if blk := pp.block(); blk != nil {
+			if err := dp.localstate.BlockFS().Cancel(blk.Height(), blk.Hash()); err != nil {
 				return err
 			}
 		}

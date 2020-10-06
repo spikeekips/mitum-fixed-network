@@ -265,6 +265,11 @@ func (st *Storage) setLastBlock(manifest block.Manifest, save, force bool) error
 
 	st.Log().Debug().Hinted("block_height", manifest.Height()).Msg("new last block")
 
+	switch t := manifest.(type) {
+	case block.Block:
+		manifest = t.Manifest()
+	}
+
 	st.lastManifest = manifest
 	st.lastManifestHeight = manifest.Height()
 

@@ -30,8 +30,12 @@ type FactSign interface {
 	SignedAt() time.Time
 }
 
+func NewBytesForFactSignature(fact base.Fact, b []byte) []byte {
+	return util.ConcatBytesSlice(fact.Hash().Bytes(), b)
+}
+
 func NewFactSignature(signer key.Privatekey, fact base.Fact, b []byte) (key.Signature, error) {
-	if fs, err := signer.Sign(util.ConcatBytesSlice(fact.Hash().Bytes(), b)); err != nil {
+	if fs, err := signer.Sign(NewBytesForFactSignature(fact, b)); err != nil {
 		return nil, err
 	} else {
 		return fs, nil
@@ -70,6 +74,10 @@ type BaseFactSign struct {
 
 func NewBaseFactSign(signer key.Publickey, signature key.Signature) BaseFactSign {
 	return BaseFactSign{signer: signer, signature: signature, signedAt: localtime.Now()}
+}
+
+func RawBaseFactSign(signer key.Publickey, signature key.Signature, signedAt time.Time) BaseFactSign {
+	return BaseFactSign{signer: signer, signature: signature, signedAt: signedAt}
 }
 
 func (fs BaseFactSign) Hint() hint.Hint {

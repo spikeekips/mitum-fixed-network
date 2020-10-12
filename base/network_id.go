@@ -2,6 +2,7 @@ package base
 
 import (
 	"bytes"
+	"encoding/base64"
 
 	"golang.org/x/xerrors"
 )
@@ -32,13 +33,17 @@ func (ni NetworkID) Equal(a NetworkID) bool {
 }
 
 func (ni NetworkID) MarshalText() ([]byte, error) {
-	return []byte(ni), nil
+	return []byte(base64.StdEncoding.EncodeToString(ni.Bytes())), nil
 }
 
 func (ni *NetworkID) UnmarshalText(b []byte) error {
-	*ni = NetworkID(b)
+	if s, err := base64.StdEncoding.DecodeString(string(b)); err != nil {
+		return err
+	} else {
+		*ni = NetworkID(s)
 
-	return nil
+		return nil
+	}
 }
 
 func (ni NetworkID) Bytes() []byte {

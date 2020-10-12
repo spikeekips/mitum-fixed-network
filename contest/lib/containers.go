@@ -973,6 +973,7 @@ func (ct *Container) Localstate() *isaac.Localstate {
 		isaac.NewLocalNode(
 			ct.Address(),
 			ct.privatekey,
+			ct.NodeDesign().Network.PublishURL().String(),
 		),
 		ct.NodeDesign().NetworkID(),
 	)

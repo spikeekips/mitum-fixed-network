@@ -9,6 +9,7 @@ type BaseNodeV0PackerJSON struct {
 	jsonenc.HintedHead
 	AD Address       `json:"address"`
 	PK key.Publickey `json:"publickey"`
+	UR string        `json:"url"`
 }
 
 func (bn BaseNodeV0) MarshalJSON() ([]byte, error) {
@@ -16,12 +17,14 @@ func (bn BaseNodeV0) MarshalJSON() ([]byte, error) {
 		HintedHead: jsonenc.NewHintedHead(bn.Hint()),
 		AD:         bn.address,
 		PK:         bn.publickey,
+		UR:         bn.url,
 	})
 }
 
 type BaseNodeV0UnpackerJSON struct {
 	AD AddressDecoder       `json:"address"`
 	PK key.PublickeyDecoder `json:"publickey"`
+	UR string               `json:"url"`
 }
 
 func (bn *BaseNodeV0) UnpackJSON(b []byte, enc *jsonenc.Encoder) error {
@@ -30,5 +33,5 @@ func (bn *BaseNodeV0) UnpackJSON(b []byte, enc *jsonenc.Encoder) error {
 		return err
 	}
 
-	return bn.unpack(enc, nbn.AD, nbn.PK)
+	return bn.unpack(enc, nbn.AD, nbn.PK, nbn.UR)
 }

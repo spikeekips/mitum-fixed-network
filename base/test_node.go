@@ -15,13 +15,19 @@ type DummyNode struct {
 
 func NewDummyNode(address Address, privatekey key.Privatekey) *DummyNode {
 	return &DummyNode{
-		BaseNodeV0: NewBaseNodeV0(address, privatekey.Publickey()),
+		BaseNodeV0: NewBaseNodeV0(address, privatekey.Publickey(), ""),
 		privatekey: privatekey,
 	}
 }
 
 func (ln *DummyNode) Privatekey() key.Privatekey {
 	return ln.privatekey
+}
+
+func (ln *DummyNode) SetURL(url string) *DummyNode {
+	ln.BaseNodeV0.url = url
+
+	return ln
 }
 
 func RandomNode(name string) *DummyNode {

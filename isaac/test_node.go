@@ -17,6 +17,7 @@ func RandomLocalNode(name string, ch network.Channel) *LocalNode {
 	ln := NewLocalNode(
 		base.MustStringAddress(fmt.Sprintf("n-%s", name)),
 		pk,
+		"",
 	)
 
 	if ch == nil {

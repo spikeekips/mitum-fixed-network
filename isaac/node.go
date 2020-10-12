@@ -15,9 +15,9 @@ type LocalNode struct {
 	channel    network.Channel
 }
 
-func NewLocalNode(address base.Address, privatekey key.Privatekey) *LocalNode {
+func NewLocalNode(address base.Address, privatekey key.Privatekey, url string) *LocalNode {
 	return &LocalNode{
-		BaseNodeV0: base.NewBaseNodeV0(address, privatekey.Publickey()),
+		BaseNodeV0: base.NewBaseNodeV0(address, privatekey.Publickey(), url),
 		privatekey: privatekey,
 	}
 }
@@ -58,9 +58,9 @@ type RemoteNode struct {
 	channel network.Channel
 }
 
-func NewRemoteNode(address base.Address, publickey key.Publickey) *RemoteNode {
+func NewRemoteNode(address base.Address, publickey key.Publickey, url string) *RemoteNode {
 	return &RemoteNode{
-		BaseNodeV0: base.NewBaseNodeV0(address, publickey),
+		BaseNodeV0: base.NewBaseNodeV0(address, publickey, url),
 	}
 }
 

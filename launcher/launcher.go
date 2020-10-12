@@ -85,7 +85,7 @@ func (bn *Launcher) SetLocalstate(
 	privateKey key.Privatekey,
 	networkID base.NetworkID,
 ) (*Launcher, error) {
-	node := isaac.NewLocalNode(address, privateKey)
+	node := isaac.NewLocalNode(address, privateKey, bn.design.Network.PublishURL().String())
 
 	var enc *jsonenc.Encoder
 	if e, err := bn.encs.Encoder(jsonenc.JSONType, ""); err != nil {

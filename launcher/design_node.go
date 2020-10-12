@@ -14,6 +14,8 @@ import (
 
 	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/base/key"
+	"github.com/spikeekips/mitum/isaac"
+	"github.com/spikeekips/mitum/network"
 	"github.com/spikeekips/mitum/util/encoder"
 	jsonenc "github.com/spikeekips/mitum/util/encoder/json"
 	"github.com/spikeekips/mitum/util/isvalid"
@@ -165,12 +167,23 @@ func (nd NodeDesign) Address() base.Address {
 	return nd.address
 }
 
-func (nd NodeDesign) NetworkID() []byte {
-	return []byte(nd.NetworkIDString)
+func (nd NodeDesign) NetworkID() base.NetworkID {
+	return base.NetworkID(nd.NetworkIDString)
 }
 
 func (nd NodeDesign) Privatekey() key.Privatekey {
 	return nd.privatekey
+}
+
+func (nd NodeDesign) NetworkNode(encs *encoder.Encoders) (network.Node, error) {
+	n := isaac.NewRemoteNode(nd.address, nd.privatekey.Publickey(), nd.Network.PublishURL().String())
+	if ch, err := LoadNodeChannel(nd.Network.PublishURL(), encs); err != nil {
+		return nil, err
+	} else {
+		n = n.SetChannel(ch)
+	}
+
+	return n, nil
 }
 
 type BaseNetworkDesign struct {
@@ -370,6 +383,17 @@ func (rd *RemoteDesign) Publickey() key.Publickey {
 
 func (rd *RemoteDesign) NetworkURL() *url.URL {
 	return rd.networkURL
+}
+
+func (rd *RemoteDesign) NetworkNode(encs *encoder.Encoders) (network.Node, error) {
+	n := isaac.NewRemoteNode(rd.address, rd.publickey, rd.networkURL.String())
+	if ch, err := LoadNodeChannel(rd.networkURL, encs); err != nil {
+		return nil, err
+	} else {
+		n = n.SetChannel(ch)
+	}
+
+	return n, nil
 }
 
 func IsvalidNetworkURL(n string) (*url.URL, error) {

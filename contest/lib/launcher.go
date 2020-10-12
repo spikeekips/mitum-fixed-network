@@ -158,7 +158,7 @@ func (nr *Launcher) attachRemoteNodes() error {
 
 		l.Debug().Str("url", c.NetworkURL().String()).Msg("trying to create remote node")
 
-		n := isaac.NewRemoteNode(c.Address(), c.Publickey())
+		n := isaac.NewRemoteNode(c.Address(), c.Publickey(), c.NetworkURL().String())
 		if ch, err := launcher.LoadNodeChannel(c.NetworkURL(), nr.Encoders()); err != nil {
 			return err
 		} else {

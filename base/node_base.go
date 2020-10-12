@@ -15,10 +15,11 @@ var (
 type BaseNodeV0 struct {
 	address   Address
 	publickey key.Publickey
+	url       string
 }
 
-func NewBaseNodeV0(address Address, publickey key.Publickey) BaseNodeV0 {
-	return BaseNodeV0{address: address, publickey: publickey}
+func NewBaseNodeV0(address Address, publickey key.Publickey, url string) BaseNodeV0 {
+	return BaseNodeV0{address: address, publickey: publickey, url: url}
 }
 
 func (bn BaseNodeV0) String() string {
@@ -46,4 +47,8 @@ func (bn BaseNodeV0) Address() Address {
 
 func (bn BaseNodeV0) Publickey() key.Publickey {
 	return bn.publickey
+}
+
+func (bn BaseNodeV0) URL() string {
+	return bn.url
 }

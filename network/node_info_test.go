@@ -53,11 +53,11 @@ func (t *testNodeInfo) TestNew() {
 
 	na1, err := base.NewStringAddress("n1")
 	t.NoError(err)
-	n1 := base.NewBaseNodeV0(na1, key.MustNewBTCPrivatekey().Publickey())
+	n1 := base.NewBaseNodeV0(na1, key.MustNewBTCPrivatekey().Publickey(), "quic://na1")
 
 	na2, err := base.NewStringAddress("n2")
 	t.NoError(err)
-	n2 := base.NewBaseNodeV0(na2, key.MustNewBTCPrivatekey().Publickey())
+	n2 := base.NewBaseNodeV0(na2, key.MustNewBTCPrivatekey().Publickey(), "quic://na2")
 
 	nodes := []base.Node{n1, n2}
 	config := map[string]interface{}{"showme": 1}
@@ -180,11 +180,11 @@ func (t *testNodeInfo) TestJSON() {
 
 	na0, err := base.NewStringAddress("n0")
 	t.NoError(err)
-	n0 := base.NewBaseNodeV0(na0, key.MustNewBTCPrivatekey().Publickey())
+	n0 := base.NewBaseNodeV0(na0, key.MustNewBTCPrivatekey().Publickey(), "quic://na0")
 
 	na1, err := base.NewStringAddress("n1")
 	t.NoError(err)
-	n1 := base.NewBaseNodeV0(na1, key.MustNewBTCPrivatekey().Publickey())
+	n1 := base.NewBaseNodeV0(na1, key.MustNewBTCPrivatekey().Publickey(), "quic://na1")
 
 	nodes := []base.Node{n0, n1}
 	config := map[string]interface{}{"showme": 1.1}

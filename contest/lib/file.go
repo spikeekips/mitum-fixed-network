@@ -52,7 +52,7 @@ func CopyFile(src, dst string, bufsize int64) error {
 
 	buf := make([]byte, bufsize)
 	for {
-		if n, err := source.Read(buf); err != nil && err != io.EOF {
+		if n, err := source.Read(buf); err != nil && !xerrors.Is(err, io.EOF) {
 			return err
 		} else if n == 0 {
 			break

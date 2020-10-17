@@ -281,7 +281,7 @@ func (bs *BlockFS) loadByLine(height base.Height, name string, decode func([]byt
 	for {
 		l, err := bd.ReadBytes('\n')
 		if err != nil {
-			if err == io.EOF {
+			if xerrors.Is(err, io.EOF) {
 				break
 			}
 

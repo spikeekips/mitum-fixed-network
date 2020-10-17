@@ -53,7 +53,8 @@ func (ne *NError) Is(err error) bool {
 		return false
 	}
 
-	if e, ok := err.(*NError); !ok {
+	var e *NError
+	if !xerrors.As(err, &e) {
 		return false
 	} else {
 		return e.id == ne.id

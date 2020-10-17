@@ -8,6 +8,7 @@ import (
 
 	"github.com/gorilla/mux"
 	"github.com/lucas-clemente/quic-go/http3"
+	"golang.org/x/xerrors"
 
 	"github.com/spikeekips/mitum/network"
 	"github.com/spikeekips/mitum/util"
@@ -90,7 +91,7 @@ func (qs *PrimitiveQuicServer) run(stopChan chan struct{}) error {
 
 	errChan := make(chan error)
 	go func() {
-		if err := server.ListenAndServe(); err != http.ErrServerClosed {
+		if err := server.ListenAndServe(); !xerrors.Is(err, http.ErrServerClosed) {
 			// TODO monkey patch; see https://github.com/lucas-clemente/quic-go/issues/1778
 			if err.Error() == "server closed" {
 				return

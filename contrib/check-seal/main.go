@@ -115,7 +115,7 @@ func parse(flags *mainFlags) error {
 		content = append(content, b[:n]...)
 
 		if err != nil {
-			if err == io.EOF {
+			if xerrors.Is(err, io.EOF) {
 				break
 			}
 

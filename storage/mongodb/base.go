@@ -433,6 +433,52 @@ func (st *Storage) ManifestByHeight(height base.Height) (block.Manifest, bool, e
 	return st.manifestByFilter(util.NewBSONFilter("height", height).AddOp("height", st.lastHeight(), "$lte").D())
 }
 
+func (st *Storage) Manifests(filter bson.M, load, reverse bool, limit int64, callback func(base.Height, valuehash.Hash, block.Manifest) (bool, error)) error {
+	var dir int = 1
+	if reverse {
+		dir = -1
+	}
+
+	opt := options.Find().
+		SetSort(util.NewBSONFilter("height", dir).D()).
+		SetLimit(limit)
+
+	if !load {
+		opt = opt.SetProjection(bson.M{"height": 1, "hash": 1})
+	}
+
+	return st.client.Find(
+		context.Background(),
+		defaultColNameManifest,
+		filter,
+		func(cursor *mongo.Cursor) (bool, error) {
+			var height base.Height
+			var h valuehash.Hash
+			var m block.Manifest
+
+			if !load {
+				if ht, i, err := loadManifestHeightAndHash(cursor.Decode, st.encs); err != nil {
+					return false, err
+				} else {
+					height = ht
+					h = i
+				}
+			} else {
+				if i, err := loadManifestFromDecoder(cursor.Decode, st.encs); err != nil {
+					return false, err
+				} else {
+					height = i.Height()
+					h = i.Hash()
+					m = i
+				}
+			}
+
+			return callback(height, h, m)
+		},
+		opt,
+	)
+}
+
 func (st *Storage) Seal(h valuehash.Hash) (seal.Seal, bool, error) {
 	if i, _ := st.sealCache.Get(h.String()); i != nil {
 		return i.(seal.Seal), true, nil

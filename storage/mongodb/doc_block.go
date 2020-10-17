@@ -4,9 +4,11 @@ import (
 	"go.mongodb.org/mongo-driver/bson"
 	"golang.org/x/xerrors"
 
+	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/base/block"
 	"github.com/spikeekips/mitum/util/encoder"
 	bsonenc "github.com/spikeekips/mitum/util/encoder/bson"
+	"github.com/spikeekips/mitum/util/valuehash"
 )
 
 type BlockDoc struct {
@@ -105,4 +107,19 @@ func loadManifestFromDecoder(decoder func(interface{}) error, encs *encoder.Enco
 	}
 
 	return manifest, nil
+}
+
+func loadManifestHeightAndHash(decoder func(interface{}) error, _ *encoder.Encoders) (base.Height, valuehash.Hash, error) {
+	var hd struct {
+		HT base.Height     `bson:"height"`
+		H  valuehash.Bytes `bson:"hash"`
+	}
+
+	if err := decoder(&hd); err != nil {
+		return base.NilHeight, nil, err
+	} else if hd.H.Empty() {
+		return base.NilHeight, nil, xerrors.Errorf("empty hash for ManifestDoc")
+	}
+
+	return hd.HT, hd.H, nil
 }

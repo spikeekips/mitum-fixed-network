@@ -148,21 +148,15 @@ linters-settings:
 
 linters:
   enable:
-    - megacheck
-    - govet
-    - deadcode
-    - errcheck
-    - gosimple
-    - ineffassign
-    - staticcheck
-    - structcheck
-    - typecheck
-    - unused
-    - varcheck
+    - asciicheck
     - bodyclose
+    - deadcode
     - depguard
     - dogsled
     - dupl
+    - errcheck
+    - exhaustive
+    - exportloopref
     - funlen
     - gochecknoinits
     - gocognit
@@ -173,15 +167,25 @@ linters:
     - goimports
     - golint
     - gosec
+    - gosimple
+    - govet
+    - ineffassign
     - lll
     - maligned
+    - megacheck
     - misspell
     - nakedret
     - prealloc
     - scopelint
+    - staticcheck
+    - structcheck
     - stylecheck
+    - typecheck
     - unconvert
     - unparam
+    - unused
+    - varcheck
+    - vet
     - whitespace
   enable-all: false
   disable:
@@ -202,12 +206,6 @@ issues:
   # Excluding configuration per-path, per-linter, per-text and per-source
   exclude-rules:
     # Exclude some linters from running on tests files.
-    - path: test_.*\.go
-      linters:
-        - gocyclo
-        - errcheck
-        - dupl
-        - gosec
     - path: _test\.go
       linters:
         - gocyclo

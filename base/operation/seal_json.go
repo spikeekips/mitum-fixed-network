@@ -11,12 +11,12 @@ import (
 
 type SealJSONPack struct {
 	jsonenc.HintedHead
-	H   valuehash.Hash     `json:"hash"`
-	BH  valuehash.Hash     `json:"body_hash"`
-	SN  key.Publickey      `json:"signer"`
-	SG  key.Signature      `json:"signature"`
-	SA  localtime.JSONTime `json:"signed_at"`
-	OPS []Operation        `json:"operations"`
+	H   valuehash.Hash `json:"hash"`
+	BH  valuehash.Hash `json:"body_hash"`
+	SN  key.Publickey  `json:"signer"`
+	SG  key.Signature  `json:"signature"`
+	SA  localtime.Time `json:"signed_at"`
+	OPS []Operation    `json:"operations"`
 }
 
 func (sl BaseSeal) MarshalJSON() ([]byte, error) {
@@ -26,7 +26,7 @@ func (sl BaseSeal) MarshalJSON() ([]byte, error) {
 		BH:         sl.bodyHash,
 		SN:         sl.signer,
 		SG:         sl.signature,
-		SA:         localtime.NewJSONTime(sl.signedAt),
+		SA:         localtime.NewTime(sl.signedAt),
 		OPS:        sl.ops,
 	})
 }
@@ -36,7 +36,7 @@ type SealJSONUnpack struct {
 	BH  valuehash.Bytes      `json:"body_hash"`
 	SN  key.PublickeyDecoder `json:"signer"`
 	SG  key.Signature        `json:"signature"`
-	SA  localtime.JSONTime   `json:"signed_at"`
+	SA  localtime.Time       `json:"signed_at"`
 	OPS []json.RawMessage    `json:"operations"`
 }
 

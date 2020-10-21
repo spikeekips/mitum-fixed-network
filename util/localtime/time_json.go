@@ -1,34 +1,15 @@
 package localtime
 
-import (
-	"time"
-
-	jsonenc "github.com/spikeekips/mitum/util/encoder/json"
-)
-
-type JSONTime struct {
-	time.Time
+func (t Time) MarshalText() ([]byte, error) {
+	return []byte(t.Normalize().RFC3339()), nil
 }
 
-func NewJSONTime(t time.Time) JSONTime {
-	return JSONTime{Time: t}
-}
-
-func (jt JSONTime) MarshalJSON() ([]byte, error) {
-	return jsonenc.Marshal(RFC3339(jt.Time))
-}
-
-func (jt *JSONTime) UnmarshalJSON(b []byte) error {
-	var s string
-	if err := jsonenc.Unmarshal(b, &s); err != nil {
+func (t *Time) UnmarshalText(b []byte) error {
+	if s, err := ParseRFC3339(string(b)); err != nil {
 		return err
-	}
+	} else {
+		t.Time = Normalize(s)
 
-	t, err := ParseTimeFromRFC3339(s)
-	if err != nil {
-		return err
+		return nil
 	}
-	jt.Time = t
-
-	return nil
 }

@@ -127,7 +127,7 @@ func (t *BaseTestStorage) CompareManifest(a, b block.Manifest) {
 	t.True(a.PreviousBlock().Equal(b.PreviousBlock()))
 	t.True(a.OperationsHash().Equal(b.OperationsHash()))
 	t.True(a.StatesHash().Equal(b.StatesHash()))
-	t.Equal(localtime.Normalize(a.ConfirmedAt()), localtime.Normalize(b.ConfirmedAt()))
+	t.True(localtime.Equal(a.ConfirmedAt(), b.ConfirmedAt()))
 }
 
 func (t *BaseTestStorage) CompareBlock(a, b block.Block) {

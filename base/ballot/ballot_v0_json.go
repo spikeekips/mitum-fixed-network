@@ -11,15 +11,15 @@ import (
 
 type BaseBallotV0PackerJSON struct {
 	jsonenc.HintedHead
-	H   valuehash.Hash     `json:"hash"`
-	SN  key.Publickey      `json:"signer"`
-	SG  key.Signature      `json:"signature"`
-	SA  localtime.JSONTime `json:"signed_at"`
-	HT  base.Height        `json:"height"`
-	RD  base.Round         `json:"round"`
-	N   base.Address       `json:"node"`
-	BH  valuehash.Hash     `json:"body_hash"`
-	FSG key.Signature      `json:"fact_signature"`
+	H   valuehash.Hash `json:"hash"`
+	SN  key.Publickey  `json:"signer"`
+	SG  key.Signature  `json:"signature"`
+	SA  localtime.Time `json:"signed_at"`
+	HT  base.Height    `json:"height"`
+	RD  base.Round     `json:"round"`
+	N   base.Address   `json:"node"`
+	BH  valuehash.Hash `json:"body_hash"`
+	FSG key.Signature  `json:"fact_signature"`
 }
 
 func PackBaseBallotV0JSON(ballot Ballot) (BaseBallotV0PackerJSON, error) {
@@ -28,7 +28,7 @@ func PackBaseBallotV0JSON(ballot Ballot) (BaseBallotV0PackerJSON, error) {
 		H:          ballot.Hash(),
 		SN:         ballot.Signer(),
 		SG:         ballot.Signature(),
-		SA:         localtime.NewJSONTime(ballot.SignedAt()),
+		SA:         localtime.NewTime(ballot.SignedAt()),
 		HT:         ballot.Height(),
 		RD:         ballot.Round(),
 		N:          ballot.Node(),
@@ -42,7 +42,7 @@ type BaseBallotV0UnpackerJSON struct {
 	H   valuehash.Bytes      `json:"hash"`
 	SN  key.PublickeyDecoder `json:"signer"`
 	SG  key.Signature        `json:"signature"`
-	SA  localtime.JSONTime   `json:"signed_at"`
+	SA  localtime.Time       `json:"signed_at"`
 	HT  base.Height          `json:"height"`
 	RD  base.Round           `json:"round"`
 	N   base.AddressDecoder  `json:"node"`

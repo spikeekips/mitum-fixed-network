@@ -84,7 +84,7 @@ func (bm ManifestV0) Bytes() []byte {
 		bm.previousBlock.Bytes(),
 		operationsHashBytes,
 		statesHashBytes,
-		[]byte(localtime.String(localtime.Normalize(bm.confirmedAt))),
+		localtime.NewTime(bm.confirmedAt).Bytes(),
 		// NOTE createdAt does not included for Bytes(), because Bytes() is used
 		// for Hash().
 	)

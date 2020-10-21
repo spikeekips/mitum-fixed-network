@@ -1,11 +1,12 @@
 package operation
 
 import (
+	"time"
+
 	"go.mongodb.org/mongo-driver/bson"
 
 	"github.com/spikeekips/mitum/base/key"
 	bsonenc "github.com/spikeekips/mitum/util/encoder/bson"
-	"github.com/spikeekips/mitum/util/localtime"
 )
 
 func (fs BaseFactSign) MarshalBSON() ([]byte, error) {
@@ -14,7 +15,7 @@ func (fs BaseFactSign) MarshalBSON() ([]byte, error) {
 		bson.M{
 			"signer":    fs.signer,
 			"signature": fs.signature,
-			"signed_at": localtime.NewJSONTime(fs.signedAt),
+			"signed_at": fs.signedAt,
 		},
 	))
 }
@@ -22,7 +23,7 @@ func (fs BaseFactSign) MarshalBSON() ([]byte, error) {
 type BaseFactSignBSONUnpacker struct {
 	SN key.PublickeyDecoder `bson:"signer"`
 	SG key.Signature        `bson:"signature"`
-	SA localtime.JSONTime   `bson:"signed_at"`
+	SA time.Time            `bson:"signed_at"`
 }
 
 func (fs *BaseFactSign) UnpackBSON(b []byte, enc *bsonenc.Encoder) error {
@@ -31,5 +32,5 @@ func (fs *BaseFactSign) UnpackBSON(b []byte, enc *bsonenc.Encoder) error {
 		return err
 	}
 
-	return fs.unpack(enc, ufs.SN, ufs.SG, ufs.SA.Time)
+	return fs.unpack(enc, ufs.SN, ufs.SG, ufs.SA)
 }

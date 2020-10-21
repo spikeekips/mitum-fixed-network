@@ -335,7 +335,7 @@ func (t *baseTestStateHandler) compareBlock(a, b block.Block) {
 func (t *baseTestStateHandler) compareVoteproof(a, b base.Voteproof) {
 	t.True(a.Hint().Equal(b.Hint()))
 	t.Equal(a.IsFinished(), b.IsFinished())
-	t.Equal(localtime.Normalize(a.FinishedAt()), localtime.Normalize(b.FinishedAt()))
+	t.True(localtime.Equal(a.FinishedAt(), b.FinishedAt()))
 	t.Equal(a.IsClosed(), b.IsClosed())
 	t.Equal(a.Height(), b.Height())
 	t.Equal(a.Round(), b.Round())

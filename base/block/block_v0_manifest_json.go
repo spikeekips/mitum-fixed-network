@@ -9,15 +9,15 @@ import (
 
 type ManifestV0PackJSON struct {
 	jsonenc.HintedHead
-	H  valuehash.Hash     `json:"hash"`
-	HT base.Height        `json:"height"`
-	RD base.Round         `json:"round"`
-	PR valuehash.Hash     `json:"proposal"`
-	PB valuehash.Hash     `json:"previous_block"`
-	BO valuehash.Hash     `json:"block_operations"`
-	BS valuehash.Hash     `json:"block_states"`
-	CF localtime.JSONTime `json:"confirmed_at"`
-	CA localtime.JSONTime `json:"created_at"`
+	H  valuehash.Hash `json:"hash"`
+	HT base.Height    `json:"height"`
+	RD base.Round     `json:"round"`
+	PR valuehash.Hash `json:"proposal"`
+	PB valuehash.Hash `json:"previous_block"`
+	BO valuehash.Hash `json:"block_operations"`
+	BS valuehash.Hash `json:"block_states"`
+	CF localtime.Time `json:"confirmed_at"`
+	CA localtime.Time `json:"created_at"`
 }
 
 func (bm ManifestV0) MarshalJSON() ([]byte, error) {
@@ -30,22 +30,22 @@ func (bm ManifestV0) MarshalJSON() ([]byte, error) {
 		PB:         bm.previousBlock,
 		BO:         bm.operationsHash,
 		BS:         bm.statesHash,
-		CF:         localtime.NewJSONTime(bm.confirmedAt),
-		CA:         localtime.NewJSONTime(bm.createdAt),
+		CF:         localtime.NewTime(bm.confirmedAt),
+		CA:         localtime.NewTime(bm.createdAt),
 	})
 }
 
 type ManifestV0UnpackJSON struct {
 	jsonenc.HintedHead
-	H  valuehash.Bytes    `json:"hash"`
-	HT base.Height        `json:"height"`
-	RD base.Round         `json:"round"`
-	PR valuehash.Bytes    `json:"proposal"`
-	PB valuehash.Bytes    `json:"previous_block"`
-	BO valuehash.Bytes    `json:"block_operations"`
-	BS valuehash.Bytes    `json:"block_states"`
-	CF localtime.JSONTime `json:"confirmed_at"`
-	CA localtime.JSONTime `json:"created_at"`
+	H  valuehash.Bytes `json:"hash"`
+	HT base.Height     `json:"height"`
+	RD base.Round      `json:"round"`
+	PR valuehash.Bytes `json:"proposal"`
+	PB valuehash.Bytes `json:"previous_block"`
+	BO valuehash.Bytes `json:"block_operations"`
+	BS valuehash.Bytes `json:"block_states"`
+	CF localtime.Time  `json:"confirmed_at"`
+	CA localtime.Time  `json:"created_at"`
 }
 
 func (bm *ManifestV0) UnpackJSON(b []byte, enc *jsonenc.Encoder) error {

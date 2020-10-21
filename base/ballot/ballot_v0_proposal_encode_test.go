@@ -65,7 +65,7 @@ func (t *testBallotProposalV0Encode) TestEncode() {
 	t.Equal(ib.Signature(), nib.Signature())
 	t.Equal(ib.Height(), nib.Height())
 	t.Equal(ib.Round(), nib.Round())
-	t.Equal(localtime.Normalize(ib.SignedAt()), localtime.Normalize(nib.SignedAt()))
+	t.True(localtime.Equal(ib.SignedAt(), nib.SignedAt()))
 	t.True(ib.Signer().Equal(nib.Signer()))
 	t.True(ib.Hash().Equal(nib.Hash()))
 	t.True(ib.BodyHash().Equal(nib.BodyHash()))

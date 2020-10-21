@@ -8,9 +8,9 @@ import (
 
 type BaseFactSignJSONPacker struct {
 	jsonenc.HintedHead
-	SN key.Publickey      `json:"signer"`
-	SG key.Signature      `json:"signature"`
-	SA localtime.JSONTime `json:"signed_at"`
+	SN key.Publickey  `json:"signer"`
+	SG key.Signature  `json:"signature"`
+	SA localtime.Time `json:"signed_at"`
 }
 
 func (fs BaseFactSign) MarshalJSON() ([]byte, error) {
@@ -18,14 +18,14 @@ func (fs BaseFactSign) MarshalJSON() ([]byte, error) {
 		HintedHead: jsonenc.NewHintedHead(fs.Hint()),
 		SN:         fs.signer,
 		SG:         fs.signature,
-		SA:         localtime.NewJSONTime(fs.signedAt),
+		SA:         localtime.NewTime(fs.signedAt),
 	})
 }
 
 type BaseFactSignJSONUnpacker struct {
 	SN key.PublickeyDecoder `json:"signer"`
 	SG key.Signature        `json:"signature"`
-	SA localtime.JSONTime   `json:"signed_at"`
+	SA localtime.Time       `json:"signed_at"`
 }
 
 func (fs *BaseFactSign) UnpackJSON(b []byte, enc *jsonenc.Encoder) error {

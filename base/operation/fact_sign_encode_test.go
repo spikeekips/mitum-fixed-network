@@ -46,7 +46,7 @@ func (t *testFactSignEncoding) TestMarshal() {
 
 	t.True(fs.Signer().Equal(ufs.Signer()))
 	t.Equal(fs.Signature(), ufs.Signature())
-	t.Equal(localtime.Normalize(fs.SignedAt()), localtime.Normalize(ufs.SignedAt()))
+	t.True(localtime.Equal(fs.SignedAt(), ufs.SignedAt()))
 }
 
 func TestFactSignEncodingJSON(t *testing.T) {

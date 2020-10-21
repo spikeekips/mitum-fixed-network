@@ -100,7 +100,7 @@ func (fs BaseFactSign) Bytes() []byte {
 	return util.ConcatBytesSlice(
 		fs.signer.Bytes(),
 		fs.signature.Bytes(),
-		[]byte(localtime.RFC3339(fs.signedAt)),
+		localtime.NewTime(fs.signedAt).Bytes(),
 	)
 }
 

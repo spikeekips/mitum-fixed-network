@@ -78,7 +78,7 @@ func (t *testSealEncode) TestSign() {
 
 			t.True(sa.Signer().Equal(sb.Signer()))
 			t.Equal(sa.Signature(), sb.Signature())
-			t.Equal(localtime.Normalize(sa.SignedAt()), localtime.Normalize(sb.SignedAt()))
+			t.True(localtime.Equal(sa.SignedAt(), sb.SignedAt()))
 		}
 	}
 }

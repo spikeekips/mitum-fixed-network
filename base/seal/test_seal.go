@@ -76,7 +76,7 @@ type DummySealJSONPacker struct {
 	H         valuehash.Hash
 	BH        valuehash.Hash
 	S         string
-	CreatedAt localtime.JSONTime
+	CreatedAt localtime.Time
 }
 
 type DummySealJSONUnpacker struct {
@@ -85,7 +85,7 @@ type DummySealJSONUnpacker struct {
 	H         valuehash.Bytes
 	BH        valuehash.Bytes
 	S         string
-	CreatedAt localtime.JSONTime
+	CreatedAt localtime.Time
 }
 
 func (ds DummySeal) MarshalJSON() ([]byte, error) {
@@ -95,7 +95,7 @@ func (ds DummySeal) MarshalJSON() ([]byte, error) {
 		H:          ds.H,
 		BH:         ds.BH,
 		S:          ds.S,
-		CreatedAt:  localtime.NewJSONTime(ds.CreatedAt),
+		CreatedAt:  localtime.NewTime(ds.CreatedAt),
 	})
 }
 

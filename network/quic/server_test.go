@@ -130,7 +130,7 @@ func (t *testQuicSever) TestSendSeal() {
 		t.True(sl.BodyHash().Equal(r.BodyHash()))
 		t.True(sl.Signer().Equal(r.Signer()))
 		t.Equal(sl.Signature(), r.Signature())
-		t.Equal(localtime.RFC3339(sl.SignedAt()), localtime.RFC3339(r.SignedAt()))
+		t.True(localtime.Equal(sl.SignedAt(), r.SignedAt()))
 	}
 
 	// NOTE if already known seal received, server returns 200

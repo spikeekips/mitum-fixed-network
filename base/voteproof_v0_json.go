@@ -56,7 +56,7 @@ type VoteproofV0PackJSON struct {
 	MJ Fact                `json:"majority"`
 	FS []Fact              `json:"facts"`
 	VS []VoteproofNodeFact `json:"votes"`
-	FA localtime.JSONTime  `json:"finished_at"`
+	FA localtime.Time      `json:"finished_at"`
 	CL string              `json:"is_closed"`
 }
 
@@ -79,23 +79,23 @@ func (vp VoteproofV0) MarshalJSON() ([]byte, error) {
 		MJ:         vp.majority,
 		FS:         vp.facts,
 		VS:         vp.votes,
-		FA:         localtime.NewJSONTime(vp.finishedAt),
+		FA:         localtime.NewTime(vp.finishedAt),
 		CL:         isClosed,
 	})
 }
 
 type VoteproofV0UnpackJSON struct {
-	HT Height             `json:"height"`
-	RD Round              `json:"round"`
-	SS []AddressDecoder   `json:"suffrages"`
-	TH ThresholdRatio     `json:"threshold"`
-	RS VoteResultType     `json:"result"`
-	ST Stage              `json:"stage"`
-	MJ json.RawMessage    `json:"majority"`
-	FS []json.RawMessage  `json:"facts"`
-	VS []json.RawMessage  `json:"votes"`
-	FA localtime.JSONTime `json:"finished_at"`
-	CL string             `json:"is_closed"`
+	HT Height            `json:"height"`
+	RD Round             `json:"round"`
+	SS []AddressDecoder  `json:"suffrages"`
+	TH ThresholdRatio    `json:"threshold"`
+	RS VoteResultType    `json:"result"`
+	ST Stage             `json:"stage"`
+	MJ json.RawMessage   `json:"majority"`
+	FS []json.RawMessage `json:"facts"`
+	VS []json.RawMessage `json:"votes"`
+	FA localtime.Time    `json:"finished_at"`
+	CL string            `json:"is_closed"`
 }
 
 func (vp *VoteproofV0) UnpackJSON(b []byte, enc *jsonenc.Encoder) error {

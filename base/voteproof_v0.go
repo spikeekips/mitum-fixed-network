@@ -202,7 +202,7 @@ func (vp VoteproofV0) Bytes() []byte {
 		vp.factsBytes(),
 		vp.votesBytes(),
 		vp.suffragesBytes(),
-		[]byte(localtime.RFC3339(vp.finishedAt)),
+		localtime.NewTime(vp.finishedAt).Bytes(),
 	)
 }
 

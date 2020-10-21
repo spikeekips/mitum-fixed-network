@@ -57,7 +57,7 @@ strategy,
 */
 type StateJoiningHandler struct {
 	*BaseStateHandler
-	cr base.Round // TODO remove currentRound
+	cr base.Round
 }
 
 func NewStateJoiningHandler(
@@ -101,20 +101,7 @@ func (cs *StateJoiningHandler) Activate(_ *StateChangeContext) error {
 
 	cs.cr = base.Round(0)
 
-	if timer, err := cs.TimerBroadcastingINITBallot(
-		func() time.Duration {
-			return cs.localstate.Policy().IntervalBroadcastingINITBallot()
-		},
-		cs.cr,
-		avp,
-	); err != nil {
-		return err
-	} else if err := cs.timers.SetTimer(TimerIDBroadcastingINITBallot, timer); err != nil {
-		return err
-	}
-
-	// NOTE starts to keep broadcasting INIT Ballot
-	if err := cs.timers.StartTimers([]string{TimerIDBroadcastingINITBallot}, true); err != nil {
+	if err := cs.broadcastINITBallot(cs.cr, avp); err != nil {
 		return err
 	}
 
@@ -145,11 +132,17 @@ func (cs *StateJoiningHandler) currentRound() base.Round {
 	return cs.cr
 }
 
-func (cs *StateJoiningHandler) setCurrentRound(round base.Round) {
+func (cs *StateJoiningHandler) setCurrentRound(round base.Round, voteproof base.Voteproof) error {
 	cs.Lock()
 	defer cs.Unlock()
 
+	if cs.cr == round {
+		return nil
+	}
+
 	cs.cr = round
+
+	return cs.broadcastINITBallot(cs.cr, voteproof)
 }
 
 // NewSeal only cares on INIT ballot and it's Voteproof.
@@ -272,10 +265,12 @@ func (cs *StateJoiningHandler) handleINITBallotAndINITVoteproof(blt ballot.INITB
 				Hinted("current_round", cs.currentRound()).
 				Msg("Voteproof.Round() is same or greater than currentRound; use this round")
 
-			cs.setCurrentRound(blt.Round())
+			if err := cs.setCurrentRound(blt.Round(), voteproof); err != nil {
+				return err
+			}
+		} else {
+			l.Debug().Msg("same height; keep waiting another voteproof")
 		}
-
-		l.Debug().Msg("same height; keep waiting another voteproof")
 
 		return nil
 	case d > 0:
@@ -372,4 +367,25 @@ func (cs *StateJoiningHandler) handleINITVoteproof(voteproof base.Voteproof) err
 	l.Debug().Msg("expected height; moves to consensus state")
 
 	return cs.ChangeState(base.StateConsensus, voteproof, nil)
+}
+
+func (cs *StateJoiningHandler) broadcastINITBallot(round base.Round, voteproof base.Voteproof) error {
+	if timer, err := cs.TimerBroadcastingINITBallot(
+		func() time.Duration {
+			return cs.localstate.Policy().IntervalBroadcastingINITBallot()
+		},
+		round,
+		voteproof,
+	); err != nil {
+		return err
+	} else if err := cs.timers.SetTimer(TimerIDBroadcastingINITBallot, timer); err != nil {
+		return err
+	}
+
+	// NOTE starts to keep broadcasting INIT Ballot
+	if err := cs.timers.StartTimers([]string{TimerIDBroadcastingINITBallot}, true); err != nil {
+		return err
+	} else {
+		return nil
+	}
 }

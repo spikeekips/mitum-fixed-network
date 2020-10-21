@@ -255,7 +255,7 @@ func (t *testStateJoiningHandler) TestINITBallotWithINITVoteproofExpectedHeight(
 		_ = cs.Deactivate(nil)
 	}()
 
-	cs.setCurrentRound(base.Round(1))
+	cs.cr = base.Round(1)
 	manifest := t.lastManifest(t.remote.Storage())
 
 	initFact := ballot.NewINITBallotV0(
@@ -304,7 +304,7 @@ func (t *testStateJoiningHandler) TestINITBallotWithINITVoteproofLowerHeight() {
 		_ = cs.Deactivate(nil)
 	}()
 
-	cs.setCurrentRound(base.Round(1))
+	cs.cr = base.Round(1)
 	manifest := t.lastManifest(t.remote.Storage())
 
 	initFact := ballot.NewINITBallotV0(
@@ -354,7 +354,7 @@ func (t *testStateJoiningHandler) TestINITBallotWithINITVoteproofHigherHeight() 
 		_ = cs.Deactivate(nil)
 	}()
 
-	cs.setCurrentRound(base.Round(1))
+	cs.cr = base.Round(1)
 
 	manifest := t.lastManifest(t.local.Storage())
 

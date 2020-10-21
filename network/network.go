@@ -19,8 +19,6 @@ type (
 	NodeInfoHandler     func() (NodeInfo, error)
 )
 
-// TODO GetXXX should have limit
-
 type Server interface {
 	util.Daemon
 	util.Initializer

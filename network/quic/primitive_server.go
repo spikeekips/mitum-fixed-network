@@ -29,7 +29,6 @@ type PrimitiveQuicServer struct {
 }
 
 func NewPrimitiveQuicServer(bind string, certs []tls.Certificate) (*PrimitiveQuicServer, error) {
-	// TODO ratelimit
 	qs := &PrimitiveQuicServer{
 		Logging: logging.NewLogging(func(c logging.Context) logging.Emitter {
 			return c.Str("module", "network-quic-primitive-server")
@@ -38,7 +37,6 @@ func NewPrimitiveQuicServer(bind string, certs []tls.Certificate) (*PrimitiveQui
 		tlsConfig: &tls.Config{
 			Certificates: certs,
 			MinVersion:   tls.VersionTLS13,
-			// NextProtos:   []string{""}, // TODO set unique strings
 		},
 		stoppedChan: make(chan struct{}, 10),
 		router:      mux.NewRouter(),

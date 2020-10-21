@@ -17,7 +17,7 @@ var (
 	DefaultFilePermission      os.FileMode = 0o640
 	DefaultDirectoryPermission os.FileMode = 0o750
 	osOpenFile                             = os.OpenFile
-	// TODO At this time, Sun 30 Aug 2020 05:44:44 AM KST, golangci-lint
+	// NOTE At this time, Sun 30 Aug 2020 05:44:44 AM KST, golangci-lint
 	// produced 'G304: Potential file inclusion via variable (gosec)', but
 	// filepath.Clean already applied.
 )

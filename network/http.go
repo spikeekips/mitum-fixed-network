@@ -65,7 +65,6 @@ func HTTPLogHandler(handler http.Handler, logger logging.Logger) http.Handler {
 }
 
 func HTTPError(w http.ResponseWriter, statusCode int) {
-	// TODO set http problem
 	text := http.StatusText(statusCode)
 	if len(text) < 1 {
 		statusCode = http.StatusInternalServerError

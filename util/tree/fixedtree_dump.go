@@ -28,7 +28,7 @@ func (ft FixedTree) Dump(w io.Writer) error {
 }
 
 func LoadFixedTreeFromReader(r io.Reader) (FixedTree, error) {
-	// TODO support Hint
+	// FUTURE support Hint
 	var nodes [][]byte
 
 	scanner := bufio.NewScanner(r)

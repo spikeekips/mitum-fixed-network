@@ -149,8 +149,7 @@ func (cs *StateBootingHandler) checkBlock() error {
 	}
 
 	if err := blk.IsValid(cs.localstate.Policy().NetworkID()); err != nil {
-		// TODO if invalid block, it should be re-synced.
-		return err
+		return xerrors.Errorf("invalid block found, clean up block: %w", err)
 	} else {
 		cs.Log().Debug().Hinted("block", blk.Manifest()).Msg("valid initial block found")
 	}

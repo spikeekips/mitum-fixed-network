@@ -2,12 +2,12 @@ package tree
 
 import (
 	"bytes"
-	"encoding/hex"
 	"fmt"
 	"math/rand"
 	"testing"
 	"time"
 
+	"github.com/btcsuite/btcutil/base58"
 	"github.com/stretchr/testify/suite"
 	"golang.org/x/crypto/sha3"
 
@@ -99,31 +99,31 @@ func (t *testFixedTree) TestNodeHash() {
 	}
 
 	expected_hashes := []string{
-		"87d7dd884b8252db03c5d5a8b0d95a0ff503ed828b33122d9109cef1c102169d",
-		"bed71740335e68b67278fb37b61a03d30493d16535534f068cc039613e9eca91",
-		"b7db7bc7d20c5fdabf4fe7e0ddd8923f2fd023613898a20f0b48b3fbb27c8770",
-		"61eacd1f797014c82025a8a10d0a8ac15bcce6cc4662f361fab2787b98962ed2",
-		"3e8c7ccad22bab1ba595e67a8b52aa67021f7fd508c87cc91e8b44acb2031bcd",
-		"9435ec791ae00ada11514164db866a7bf93a20d52104bddb69e3716d7a7a232a",
-		"a6382727b782336163a0c20aaa3cefe78413744fe30fff1cfa405e2bf65d79a9",
-		"59166b96e2712afec64e6652243e2c44d8e33291b270d5e6c3b302527bd4ec2f",
-		"fae08a87fc3e4a056fad35df71f74e7419bd97a46f902b6bace4e9f814b4173a",
-		"831c108325897b2f690f0d5a2d7681741c72c4004f7fe936dbd8814cb509bdc1",
-		"dd121e36961a04627eacff629765dd3528471ed745c1e32222db4a8a5f3421c4",
-		"4410fc15c5a3cde7a2b5366a41dbc95e6547a6021efdff98cfcd5e875e8c3c70",
-		"1a9a118cb653759c3fcb3bd5060e6f9910c8c27008dd11fe4315f4635c9caa98",
-		"1ad7a51ebb6db8cfd0f40d83e398f0a8ad6e7fd4b98e6623b92cfc7c18c4325a",
-		"1f5272c162bddcec544967f3c32b238b0f632d365fe95c6fb0929db8cbf2282c",
-		"71f0c2511c6d5dae680e288d7d627eb127f3b3cc1079f0fc497170c4b35759f7",
-		"958b08cb3a6f8252890b89292372d10357890e39ca35cbc684d3ecd9e4f052a6",
-		"c8b6a189ddbf2b1dd605d19a9889d4cd1bdb5a451e614a02f83fb8be46dde633",
-		"a5c7cd33a255de5992d6d74b34a3ebdde7d1e922de25dac1d30ea3f0ad88df19",
-		"7548240b8da85518ebb5dfa9e45899b43c64cb867a6f21f90384d283ef142cae",
+		"A9GxCExHbNdEc2XvikDwhVwZhJahhfJjTNNgjXJ4giZr",
+		"Dqxh28B6Y3BLSd8Xei97E9SoVbEBQ5US8hYyXxeYDAxg",
+		"DNhipXqczvhByRxvyw8kpSZ7qvGwksrh9R69Db3iq5vF",
+		"7bECxMJcc5tWokenak9k9cmG35chV6rarCeyqGKKiqGd",
+		"5DAXTQgqmvHTNaXeiD86nq42Rz5Zp27TVJP4DhXkjLAQ",
+		"AyZ2irRhKGGaoHh9ZogzdYoMt4vGhPve3PbEGBkpFA9P",
+		"CBrLi2WYDMuFwgAv1boJrj2vSAjvevvpxpn5uiFvnAqn",
+		"6zm7bVenvTEytfcQXLEFJk1dwgdUXC3UAfgo2RK9zHN6",
+		"HtKWZqQXB3VxgVYGBzTBhLcnrkipeMhZHBWXhKCt3ecy",
+		"9poEGfR8GWv5M39y8n3shz51ZBpJ4Gt7sFkRCz3Ab6vk",
+		"Fsy8F5V1bjUqkp96v9GfRnhhq5kZZo8X4ogTrkC1jhwy",
+		"5ahkCYAFVxCuTBySrjLeVDv3VKc4Y3BPsajrjjNVDrB9",
+		"2nqrqBkSfyHiagjjAEepssnYdhPcb9UZ61yCUBoM6dk3",
+		"2onKReqrFhBsBcYQd3x3R4AYSd5FFUQWGQMfsjaD8SXK",
+		"37GZGNNZP9ts5pMxe2YDc9UZHsRKhFWSYdyvRvNP2yLP",
+		"8fmzuXFqosnTxrmtin2kPcfiAat1eGDLRSaZLYuY7c2r",
+		"B4kiAGUusvSY6iWLmFWWBDY1vSt9mtZZXETyDbPY8AAH",
+		"EWW4Sdaek8pQHMyWxVFo2D82raodNLNmpxxHhsJry8rn",
+		"CA8yb6G1XVWMmTZDkc4DqC7HEkRQSNJHnf5dxDGhiyZr",
+		"8tpW8qJjqDx9c6nMLCHsjYWZgDcSNCp1TQW5jKdPSeF7",
 	}
 
 	_ = ft.Hash(0)
 	for i := 0; i < ft.size; i++ {
-		t.Equal(expected_hashes[i], hex.EncodeToString(ft.Hash(i)))
+		t.Equal(expected_hashes[i], base58.Encode(ft.Hash(i)))
 	}
 
 	t.Equal(ft.size*3, len(ft.Nodes()))
@@ -150,14 +150,14 @@ func (t *testFixedTree) TestNilKey() {
 		expected[i] = ""
 	}
 
-	expected[0] = "c4c58dec3e69a44be39c92bacee66a2bd9cda0c58e757001418f3c6321b8b1d7"
-	expected[1] = "7444ba93c9ad43ef0960759d209dddb963956de72fb47cdf515c851801d01878"
-	expected[4] = "2eff19b70aa472dca7c689d3638be2b2baf9c7e2f13f2ccd4a3f731b64715bf8"
-	expected[10] = hex.EncodeToString(hashFunc(ft.Key(10)))
+	expected[0] = "EF7dMmEvhbmZettQA5vp615xo7CTNWvkahyhH6yqXCs8"
+	expected[1] = "8ps5UDMFzLGVMhF6WQ4VuLJpvSNnBHHRL8sHu2XcdTEF"
+	expected[4] = "4ATNEzPN98D3ujSvsmbYViK4raec3rijSufgLFNCiTTu"
+	expected[10] = base58.Encode(hashFunc(ft.Key(10)))
 
 	_ = ft.Hash(0)
 	for i := 0; i < ft.size; i++ {
-		t.Equal(expected[i], hex.EncodeToString(ft.nodes[(i*3)+1]), "index=%d", i)
+		t.Equal(expected[i], base58.Encode(ft.nodes[(i*3)+1]), "index=%d", i)
 	}
 
 	t.Equal(ft.size*3, len(ft.Nodes()))
@@ -249,7 +249,7 @@ func (t *testFixedTree) TestParallel() {
 		var count uint
 
 	end:
-		for _ = range done {
+		for range done {
 			count++
 			if count >= size {
 				break end

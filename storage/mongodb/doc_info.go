@@ -1,8 +1,7 @@
 package mongodbstorage
 
 import (
-	"encoding/hex"
-
+	"github.com/btcsuite/btcutil/base58"
 	"go.mongodb.org/mongo-driver/bson"
 	"golang.org/x/crypto/sha3"
 	"golang.org/x/xerrors"
@@ -65,7 +64,8 @@ type InfoDoc struct {
 
 func infoDocKey(key string) string {
 	h := sha3.Sum256([]byte(key))
-	return hex.EncodeToString(h[:])
+
+	return base58.Encode(h[:])
 }
 
 func NewInfoDoc(key string, v []byte, enc encoder.Encoder) (InfoDoc, error) {

@@ -2,10 +2,11 @@ package tree
 
 import (
 	"bufio"
-	"encoding/hex"
 	"fmt"
 	"io"
 	"strings"
+
+	"github.com/btcsuite/btcutil/base58"
 )
 
 func (ft FixedTree) Dump(w io.Writer) error {
@@ -15,9 +16,9 @@ func (ft FixedTree) Dump(w io.Writer) error {
 
 	_, _ = fmt.Fprintf(w, "# %s\n", ft.Hint().String())
 	if err := ft.Traverse(func(_ int, key, h, v []byte) (bool, error) {
-		_, _ = fmt.Fprintln(w, hex.EncodeToString(key))
-		_, _ = fmt.Fprintln(w, hex.EncodeToString(h))
-		_, _ = fmt.Fprintln(w, hex.EncodeToString(v))
+		_, _ = fmt.Fprintln(w, base58.Encode(key))
+		_, _ = fmt.Fprintln(w, base58.Encode(h))
+		_, _ = fmt.Fprintln(w, base58.Encode(v))
 
 		return true, nil
 	}); err != nil {
@@ -38,11 +39,7 @@ func LoadFixedTreeFromReader(r io.Reader) (FixedTree, error) {
 			continue
 		}
 
-		if b, err := hex.DecodeString(l); err != nil {
-			return FixedTree{}, err
-		} else {
-			nodes = append(nodes, b)
-		}
+		nodes = append(nodes, base58.Decode(l))
 	}
 	if err := scanner.Err(); err != nil {
 		return FixedTree{}, err

@@ -76,11 +76,12 @@ func (ct *CallbackTimer) callback(cb func() (bool, error)) func(chan struct{}) e
 	return func(stopChan chan struct{}) error {
 		returnChan := make(chan error)
 
-		i := ct.intervalFunc()
-		if i < time.Nanosecond {
-			return xerrors.Errorf("too narrow interval: %v", i)
+		lastInterval := ct.intervalFunc()
+		if lastInterval < time.Nanosecond {
+			return xerrors.Errorf("too narrow interval: %v", lastInterval)
 		}
-		ticker := time.NewTicker(i)
+
+		ticker := time.NewTicker(lastInterval)
 		defer ticker.Stop()
 
 		go func() {
@@ -102,13 +103,15 @@ func (ct *CallbackTimer) callback(cb func() (bool, error)) func(chan struct{}) e
 						}
 					}()
 
-					i := ct.intervalFunc()
-					if i < time.Nanosecond {
+					if i := ct.intervalFunc(); i < time.Nanosecond {
 						returnChan <- xerrors.Errorf("too narrow interval: %v", i)
-						return
-					}
 
-					ticker = time.NewTicker(i)
+						return
+					} else if i != lastInterval {
+						ticker.Reset(i)
+
+						lastInterval = i
+					}
 				}
 			}
 		}()

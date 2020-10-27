@@ -454,10 +454,8 @@ func (css *ConsensusStates) NewSeal(sl seal.Seal) error {
 
 	l.Debug().Msg("seal received")
 
-	if err := css.localstate.Storage().NewSeals([]seal.Seal{sl}); err != nil {
-		if !xerrors.Is(err, storage.DuplicatedError) {
-			return err
-		}
+	if err := css.storeSeal(sl); err != nil {
+		return err
 	}
 
 	if css.ActiveHandler() == nil {
@@ -483,6 +481,24 @@ func (css *ConsensusStates) NewSeal(sl seal.Seal) error {
 			l.Error().Err(err).Msg("activated handler can not receive Seal")
 		}
 	}()
+
+	return nil
+}
+
+// storeSeal does not store ballots except Proposal.
+func (css *ConsensusStates) storeSeal(sl seal.Seal) error {
+	switch sl.(type) {
+	case ballot.Proposal:
+	case ballot.Ballot:
+		return nil
+	}
+
+	switch err := css.localstate.Storage().NewSeals([]seal.Seal{sl}); {
+	case err == nil:
+	case xerrors.Is(err, storage.DuplicatedError):
+	default:
+		return err
+	}
 
 	return nil
 }

@@ -313,22 +313,16 @@ func (bg *DummyBlocksV0Generator) finish(l *Localstate, vp base.Voteproof) error
 
 func (bg *DummyBlocksV0Generator) createINITVoteproof() (map[base.Address]base.Voteproof, error) {
 	var ballots []ballot.INITBallot
-	var seals []seal.Seal
 	for _, l := range bg.allNodes {
 		if ib, err := bg.createINITBallot(l); err != nil {
 			return nil, err
 		} else {
 			ballots = append(ballots, ib)
-			seals = append(seals, ib)
 		}
 	}
 
 	vm := map[base.Address]base.Voteproof{}
 	for _, l := range bg.allNodes {
-		if err := l.Storage().NewSeals(seals); err != nil {
-			return nil, err
-		}
-
 		for _, blt := range ballots {
 			if voteproof, err := bg.ballotboxes[l.Node().Address()].Vote(blt); err != nil {
 				return nil, err
@@ -385,7 +379,6 @@ func (bg *DummyBlocksV0Generator) createACCEPTVoteproof(proposal ballot.Proposal
 	map[base.Address]base.Voteproof, error,
 ) {
 	var ballots []ballot.ACCEPTBallot
-	var seals []seal.Seal
 	for _, l := range bg.allNodes {
 		var newBlock block.Block
 
@@ -401,16 +394,11 @@ func (bg *DummyBlocksV0Generator) createACCEPTVoteproof(proposal ballot.Proposal
 			return nil, err
 		} else {
 			ballots = append(ballots, ab)
-			seals = append(seals, ab)
 		}
 	}
 
 	vm := map[base.Address]base.Voteproof{}
 	for _, l := range bg.allNodes {
-		if err := l.Storage().NewSeals(seals); err != nil {
-			return nil, err
-		}
-
 		for _, blt := range ballots {
 			if voteproof, err := bg.ballotboxes[l.Node().Address()].Vote(blt); err != nil {
 				return nil, err

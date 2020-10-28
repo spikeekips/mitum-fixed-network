@@ -2,7 +2,7 @@ version: 2
 
 defaults: &defaults
   docker:
-    - image: circleci/golang:1.14
+    - image: circleci/golang:1.15
     #- image: circleci/mongo:4.2
   working_directory: /go/src/github.com/spikeekips/mitum
 

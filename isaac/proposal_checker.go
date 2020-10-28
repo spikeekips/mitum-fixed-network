@@ -102,6 +102,10 @@ func (pvc *ProposalValidationChecker) SaveProposal() (bool, error) {
 }
 
 func (pvc *ProposalValidationChecker) IsOldOrHigher() (bool, error) {
+	if pvc.initVoteproof == nil {
+		return false, xerrors.Errorf("no INIT Voteproof")
+	}
+
 	height := pvc.proposal.Height()
 	round := pvc.proposal.Round()
 

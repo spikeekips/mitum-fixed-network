@@ -460,11 +460,7 @@ func (bn *Launcher) networkhandlerNewSeal(sl seal.Seal) error {
 		}
 	}
 
-	if err := bn.consensusStates.NewSeal(sl); err != nil {
-		bn.Log().Error().Err(err).Msg("failed to receive seal by consensus states")
-
-		return err
-	}
+	bn.consensusStates.NewSeal(sl)
 
 	return nil
 }

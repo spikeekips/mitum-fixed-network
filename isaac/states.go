@@ -30,6 +30,7 @@ type ConsensusStates struct {
 	activeHandler StateHandler
 	stateChan     chan *StateChangeContext
 	sealChan      chan seal.Seal
+	voteproofChan chan base.Voteproof
 	stopHooks     []func() error
 	livp          base.Voteproof
 	errChan       chan error
@@ -62,10 +63,11 @@ func NewConsensusStates(
 			base.StateSyncing:   syncing,
 			base.StateBroken:    broken,
 		},
-		stateChan: make(chan *StateChangeContext),
-		sealChan:  make(chan seal.Seal),
-		livp:      livp,
-		errChan:   make(chan error, 100),
+		stateChan:     make(chan *StateChangeContext),
+		voteproofChan: make(chan base.Voteproof, 100),
+		sealChan:      make(chan seal.Seal),
+		livp:          livp,
+		errChan:       make(chan error, 100),
 	}
 	css.FunctionDaemon = util.NewFunctionDaemon(css.start, false)
 
@@ -121,6 +123,8 @@ func (css *ConsensusStates) Start() error {
 	go func() {
 		css.stateChan <- NewStateChangeContext(base.StateStopped, base.StateBooting, nil, nil)
 	}()
+
+	go css.handleNewVoteproof()
 
 	return nil
 }
@@ -277,9 +281,7 @@ func (css *ConsensusStates) activateHandler(ctx *StateChangeContext) error {
 
 	var livp base.Voteproof = css.livp
 	if css.activeHandler != nil {
-		if v := css.activeHandler.LastINITVoteproof(); v != nil {
-			livp = v
-		}
+		livp = css.activeHandler.LastINITVoteproof()
 	}
 
 	if css.activeHandler != nil {
@@ -338,7 +340,7 @@ func (css *ConsensusStates) broadcastSeal(sl seal.Seal, errChan chan<- error) {
 	l.Debug().Msg("trying to broadcast seal")
 
 	go func() {
-		if err := css.NewSeal(sl); err != nil {
+		if err := css.newSeal(sl); err != nil {
 			l.Error().Err(err).Msg("failed to send ballot to local")
 		}
 	}()
@@ -366,7 +368,11 @@ func (css *ConsensusStates) broadcastSeal(sl seal.Seal, errChan chan<- error) {
 	})
 }
 
-func (css *ConsensusStates) newVoteproof(voteproof base.Voteproof) error {
+func (css *ConsensusStates) newVoteproof(voteproof base.Voteproof) {
+	css.voteproofChan <- voteproof
+}
+
+func (css *ConsensusStates) processNewVoteproof(voteproof base.Voteproof) error {
 	_ = loggerWithVoteproof(voteproof, css.Log())
 
 	var ctx *StateToBeChangeError
@@ -447,7 +453,15 @@ func (css *ConsensusStates) checkNewVoteproof(voteproof base.Voteproof) (*StateT
 }
 
 // NewSeal receives Seal and hand it over to handler;
-func (css *ConsensusStates) NewSeal(sl seal.Seal) error {
+func (css *ConsensusStates) NewSeal(sl seal.Seal) {
+	go func() {
+		if err := css.newSeal(sl); err != nil {
+			css.Log().Error().Err(err).Msg("failed to handle new seal")
+		}
+	}()
+}
+
+func (css *ConsensusStates) newSeal(sl seal.Seal) error {
 	l := loggerWithSeal(sl, css.Log()).WithLogger(func(ctx logging.Context) logging.Emitter {
 		return ctx.Hinted("handler", css.ActiveHandler().State())
 	})
@@ -545,15 +559,7 @@ func (css *ConsensusStates) vote(blt ballot.Ballot) error {
 		return nil
 	}
 
-	go func() {
-		if err := css.newVoteproof(voteproof); err != nil {
-			css.Log().Error().Err(err).
-				Hinted("height", voteproof.Height()).
-				Hinted("round", voteproof.Round()).
-				Hinted("stage", voteproof.Stage()).
-				Msg("failed to handle new voteproof")
-		}
-	}()
+	go css.newVoteproof(voteproof)
 
 	return nil
 }
@@ -594,4 +600,16 @@ func checkBlockWithINITVoteproof(manifest block.Manifest, voteproof base.Votepro
 	}
 
 	return nil
+}
+
+func (css *ConsensusStates) handleNewVoteproof() {
+	for voteproof := range css.voteproofChan {
+		if err := css.processNewVoteproof(voteproof); err != nil {
+			css.Log().Error().Err(err).
+				Hinted("height", voteproof.Height()).
+				Hinted("round", voteproof.Round()).
+				Hinted("stage", voteproof.Stage()).
+				Msg("failed to handle new voteproof")
+		}
+	}
 }

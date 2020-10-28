@@ -52,7 +52,7 @@ func (t *testConsensusStates) TestINITVoteproofHigherHeight() {
 	vp, err := t.newVoteproof(base.StageINIT, initFact, local, remote)
 	t.NoError(err)
 
-	t.NoError(css.newVoteproof(vp))
+	t.NoError(css.processNewVoteproof(vp))
 
 	t.NotNil(css.ActiveHandler())
 	t.Equal(base.StateSyncing, css.ActiveHandler().State())

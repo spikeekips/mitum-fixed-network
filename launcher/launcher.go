@@ -5,6 +5,7 @@ import (
 	"sort"
 	"sync"
 	"syscall"
+	"time"
 
 	"golang.org/x/xerrors"
 
@@ -18,6 +19,7 @@ import (
 	"github.com/spikeekips/mitum/storage"
 	"github.com/spikeekips/mitum/storage/localfs"
 	"github.com/spikeekips/mitum/util"
+	"github.com/spikeekips/mitum/util/cache"
 	"github.com/spikeekips/mitum/util/encoder"
 	bsonenc "github.com/spikeekips/mitum/util/encoder/bson"
 	jsonenc "github.com/spikeekips/mitum/util/encoder/json"
@@ -42,6 +44,7 @@ type Launcher struct {
 	suffrage          base.Suffrage
 	proposalProcessor isaac.ProposalProcessor
 	publishURL        string
+	sealCache         cache.Cache
 }
 
 func NewLauncher(design *NodeDesign, version util.Version) (*Launcher, error) {
@@ -54,13 +57,21 @@ func NewLauncher(design *NodeDesign, version util.Version) (*Launcher, error) {
 		encs = e
 	}
 
+	var sealCache cache.Cache
+	if ca, err := cache.NewGCache("lru", 100*100, time.Minute*3); err != nil {
+		return nil, err
+	} else {
+		sealCache = ca
+	}
+
 	bn := &Launcher{
 		Logging: logging.NewLogging(func(c logging.Context) logging.Emitter {
 			return c.Str("module", "base-node-runner")
 		}),
-		encs:    encs,
-		design:  design,
-		version: version,
+		encs:      encs,
+		design:    design,
+		version:   version,
+		sealCache: sealCache,
 	}
 
 	return bn.SetLocalstate(design.Address(), design.Privatekey(), design.NetworkID())
@@ -410,10 +421,11 @@ func (bn *Launcher) networkhandlerNewSeal(sl seal.Seal) error {
 		sl,
 		bn.storage,
 		bn.localstate.Policy(),
+		bn.sealCache,
 	)
 	if err := util.NewChecker("network-new-seal-checker", []util.CheckerFunc{
-		sealChecker.CheckIsValid,
 		sealChecker.CheckIsKnown,
+		sealChecker.CheckIsValid,
 		func() (bool, error) {
 			// NOTE stores seal regardless further checkings.
 			if err := bn.storage.NewSeals([]seal.Seal{sl}); err != nil {

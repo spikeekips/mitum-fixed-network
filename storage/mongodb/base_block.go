@@ -249,13 +249,14 @@ func (bst *BlockStorage) writeModels(ctx context.Context, col string, models []m
 		return nil, nil
 	}
 
-	opts := options.BulkWrite().SetOrdered(false)
-	res, err := bst.st.client.Collection(col).BulkWrite(ctx, models, opts)
-	if err != nil {
-		return nil, storage.WrapStorageError(err)
-	}
-
-	return res, nil
+	return writeBulkModels(
+		ctx,
+		bst.st.client,
+		col,
+		models,
+		defaultLimitWriteModels,
+		options.BulkWrite().SetOrdered(false),
+	)
 }
 
 func (bst *BlockStorage) insertCaches() {

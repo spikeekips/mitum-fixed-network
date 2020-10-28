@@ -233,15 +233,11 @@ func (cl *Client) AddRaw(col string, raw bson.Raw) (interface{}, error) {
 
 func (cl *Client) Bulk(ctx context.Context, col string, models []mongo.WriteModel, order bool) error {
 	opts := options.BulkWrite().SetOrdered(order)
-	if _, err := cl.db.Collection(col).BulkWrite(ctx, models, opts); err != nil {
-		if isDuplicatedError(err) {
-			return storage.DuplicatedError.Wrap(err)
-		}
-
-		return storage.WrapStorageError(err)
+	if _, err := writeBulkModels(ctx, cl, col, models, defaultLimitWriteModels, opts); err != nil {
+		return err
+	} else {
+		return nil
 	}
-
-	return nil
 }
 
 func (cl *Client) Count(ctx context.Context, col string, filter interface{}, opts ...*options.CountOptions) (int64, error) {

@@ -64,12 +64,12 @@ func (ts *TimeSyncer) Start() error {
 
 func (ts *TimeSyncer) schedule(stopChan chan struct{}) error {
 	ticker := time.NewTicker(ts.interval)
+	defer ticker.Stop()
 
 end:
 	for {
 		select {
 		case <-stopChan:
-			ticker.Stop()
 			ts.Log().Debug().Msg("stopped")
 
 			break end

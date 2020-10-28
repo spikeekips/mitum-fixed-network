@@ -113,12 +113,7 @@ func (css *ConsensusStates) Start() error {
 		return err
 	}
 
-	ticker := css.cleanBallotbox()
-	css.stopHooks = append(css.stopHooks, func() error {
-		ticker.Stop()
-
-		return nil
-	})
+	go css.cleanBallotbox()
 
 	go func() {
 		css.stateChan <- NewStateChangeContext(base.StateStopped, base.StateBooting, nil, nil)
@@ -157,36 +152,33 @@ func (css *ConsensusStates) Stop() error {
 	return nil
 }
 
-func (css *ConsensusStates) cleanBallotbox() *time.Ticker {
+func (css *ConsensusStates) cleanBallotbox() {
 	ticker := time.NewTicker(time.Second * 10)
+	defer ticker.Stop()
 
-	go func() {
-		for range ticker.C {
-			var height base.Height
-			switch m, found, err := css.localstate.Storage().LastManifest(); {
-			case !found:
-				css.Log().Error().Msg("something wrong to clean Ballotbox; last manifest not found")
+	for range ticker.C {
+		var height base.Height
+		switch m, found, err := css.localstate.Storage().LastManifest(); {
+		case !found:
+			css.Log().Error().Msg("something wrong to clean Ballotbox; last manifest not found")
 
-				continue
-			case err != nil:
-				css.Log().Error().Err(err).Msg("something wrong to clean Ballotbox; failed to get last manifest")
+			continue
+		case err != nil:
+			css.Log().Error().Err(err).Msg("something wrong to clean Ballotbox; failed to get last manifest")
 
-				continue
-			default:
-				height = m.Height() - 3
-			}
-
-			if height < 1 {
-				continue
-			}
-
-			if err := css.ballotbox.Clean(height); err != nil {
-				css.Log().Error().Err(err).Msg("something wrong to clean Ballotbox")
-			}
+			continue
+		default:
+			height = m.Height() - 3
 		}
-	}()
 
-	return ticker
+		if height < 1 {
+			continue
+		}
+
+		if err := css.ballotbox.Clean(height); err != nil {
+			css.Log().Error().Err(err).Msg("something wrong to clean Ballotbox")
+		}
+	}
 }
 
 func (css *ConsensusStates) start(stopChan chan struct{}) error {

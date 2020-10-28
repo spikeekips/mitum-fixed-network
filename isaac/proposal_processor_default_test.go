@@ -40,7 +40,9 @@ func (t *testProposalProcessor) TestProcess() {
 	initFact := ib.INITBallotFactV0
 
 	ivp, err := t.newVoteproof(base.StageINIT, initFact, t.local, t.remote)
+	t.NoError(err)
 	proposal, err := pm.Proposal(ivp.Round())
+	t.NoError(err)
 
 	_ = t.local.Storage().NewProposal(proposal)
 
@@ -58,6 +60,7 @@ func (t *testProposalProcessor) TestBlockOperations() {
 	initFact := ib.INITBallotFactV0
 
 	ivp, err := t.newVoteproof(base.StageINIT, initFact, t.local, t.remote)
+	t.NoError(err)
 
 	opl := t.newOperationSeal(t.local, 1)
 	ophs := make([]valuehash.Hash, len(opl.Operations()))
@@ -101,6 +104,7 @@ func (t *testProposalProcessor) TestBlockOperations() {
 	).Fact()
 
 	avp, err := t.newVoteproof(base.StageACCEPT, acceptFact, t.local, t.remote)
+	t.NoError(err)
 
 	bs, err := dp.ProcessACCEPT(proposal.Hash(), avp)
 	t.NoError(err)
@@ -123,6 +127,7 @@ func (t *testProposalProcessor) TestNotFoundInProposal() {
 	initFact := ib.INITBallotFactV0
 
 	ivp, err := t.newVoteproof(base.StageINIT, initFact, t.local, t.remote)
+	t.NoError(err)
 
 	var proposal ballot.ProposalV0
 	{
@@ -207,6 +212,7 @@ func (t *testProposalProcessor) TestTimeoutProcessProposal() {
 
 	pm := NewDummyProposalMaker(t.local, sls)
 	ivp, err := t.newVoteproof(base.StageINIT, initFact, t.local, t.remote)
+	t.NoError(err)
 	proposal, err := pm.Proposal(ivp.Round())
 	t.NoError(err)
 
@@ -292,6 +298,7 @@ func (t *testProposalProcessor) TestCustomOperationProcessor() {
 
 	pm := NewDummyProposalMaker(t.local, sls)
 	ivp, err := t.newVoteproof(base.StageINIT, initFact, t.local, t.remote)
+	t.NoError(err)
 	proposal, err := pm.Proposal(ivp.Round())
 	t.NoError(err)
 
@@ -348,6 +355,7 @@ func (t *testProposalProcessor) TestNotProcessedOperations() {
 
 	pm := NewDummyProposalMaker(t.local, sls)
 	ivp, err := t.newVoteproof(base.StageINIT, initFact, t.local, t.remote)
+	t.NoError(err)
 	proposal, err := pm.Proposal(ivp.Round())
 	t.NoError(err)
 
@@ -431,6 +439,7 @@ func (t *testProposalProcessor) TestSameStateHash() {
 
 	pm := NewDummyProposalMaker(t.local, sls)
 	ivp, err := t.newVoteproof(base.StageINIT, initFact, t.local, t.remote)
+	t.NoError(err)
 	proposal, err := pm.Proposal(ivp.Round())
 	t.NoError(err)
 
@@ -496,6 +505,7 @@ func (t *testProposalProcessor) TestCheckStates() {
 
 		pm := NewDummyProposalMaker(t.local, sls)
 		ivp, err := t.newVoteproof(base.StageINIT, initFact, t.local, t.remote)
+		t.NoError(err)
 		proposal, err := pm.Proposal(ivp.Round())
 		t.NoError(err)
 
@@ -516,6 +526,7 @@ func (t *testProposalProcessor) TestCheckStates() {
 		).Fact()
 
 		avp, err := t.newVoteproof(base.StageACCEPT, acceptFact, t.local, t.remote)
+		t.NoError(err)
 
 		bs, err := dp.ProcessACCEPT(proposal.Hash(), avp)
 		t.NoError(err)

@@ -231,10 +231,8 @@ func (t *testCallbackTimer) TestLongInterval() {
 		t.NoError(ct.Stop())
 	}()
 
-	select {
-	case <-time.After(time.Millisecond * 100):
-		t.Error(xerrors.Errorf("stopping too long waited"))
-	}
+	time.Sleep(time.Millisecond * 100)
+	t.Error(xerrors.Errorf("stopping too long waited"))
 }
 
 func TestCallbackTimer(t *testing.T) {

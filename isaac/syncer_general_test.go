@@ -273,17 +273,13 @@ func (t *testGeneralSyncer) TestFinishedChan() {
 	finishedChan := make(chan SyncerStateChangedContext)
 
 	go func() {
-	end:
-		for {
-			select {
-			case ctx := <-stateChan:
-				if ctx.State() != SyncerSaved {
-					continue
-				}
-
-				finishedChan <- ctx
-				break end
+		for ctx := range stateChan {
+			if ctx.State() != SyncerSaved {
+				continue
 			}
+
+			finishedChan <- ctx
+			break
 		}
 	}()
 
@@ -322,17 +318,13 @@ func (t *testGeneralSyncer) TestFromGenesis() {
 	finishedChan := make(chan SyncerStateChangedContext)
 
 	go func() {
-	end:
-		for {
-			select {
-			case ctx := <-stateChan:
-				if ctx.State() != SyncerSaved {
-					continue
-				}
-
-				finishedChan <- ctx
-				break end
+		for ctx := range stateChan {
+			if ctx.State() != SyncerSaved {
+				continue
 			}
+
+			finishedChan <- ctx
+			break
 		}
 	}()
 

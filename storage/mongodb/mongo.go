@@ -89,7 +89,7 @@ func (cl *Client) Find(
 	callback getRecordsCallback,
 	opts ...*options.FindOptions,
 ) error {
-	if ctx == nil {
+	if ctx == context.TODO() {
 		var cancel func()
 		ctx, cancel = context.WithTimeout(context.Background(), cl.execTimeout)
 		defer cancel()

@@ -38,7 +38,6 @@ func (t *testStateSliceValue) TestNotAcceptableValue() {
 				}
 
 				t.Contains(err.Error(), c.err, "%d: %v; %v != %v", i, c.name, c.err, err)
-				return
 			},
 		)
 	}

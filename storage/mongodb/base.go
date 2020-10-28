@@ -672,7 +672,7 @@ func (st *Storage) StagedOperationSeals(callback func(operation.Seal) (bool, err
 	opt.SetSort(util.NewBSONFilter("inserted_at", dir).D())
 
 	return st.client.Find(
-		nil,
+		context.TODO(),
 		defaultColNameOperationSeal,
 		bson.D{},
 		func(cursor *mongo.Cursor) (bool, error) {
@@ -718,7 +718,7 @@ func (st *Storage) Proposals(callback func(ballot.Proposal) (bool, error), sort 
 	opt.SetSort(util.NewBSONFilter("height", dir).D())
 
 	return st.client.Find(
-		nil,
+		context.TODO(),
 		defaultColNameProposal,
 		bson.D{},
 		func(cursor *mongo.Cursor) (bool, error) {
@@ -754,7 +754,7 @@ func (st *Storage) Proposal(height base.Height, round base.Round) (ballot.Propos
 	var proposal ballot.Proposal
 
 	if err := st.client.Find(
-		nil,
+		context.TODO(),
 		defaultColNameProposal,
 		util.NewBSONFilter("height", height).Add("round", round).D(),
 		func(cursor *mongo.Cursor) (bool, error) {
@@ -786,7 +786,7 @@ func (st *Storage) State(key string) (state.State, bool, error) {
 	var sta state.State
 
 	if err := st.client.Find(
-		nil,
+		context.TODO(),
 		defaultColNameState,
 		util.NewBSONFilter("key", key).AddOp("height", st.lastHeight(), "$lte").D(),
 		func(cursor *mongo.Cursor) (bool, error) {

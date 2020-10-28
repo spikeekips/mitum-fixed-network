@@ -17,8 +17,6 @@ import (
 type testVoteproofEncode struct {
 	suite.Suite
 
-	hs *hint.Hintset
-
 	enc encoder.Encoder
 }
 

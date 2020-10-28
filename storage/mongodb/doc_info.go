@@ -7,7 +7,6 @@ import (
 	"golang.org/x/xerrors"
 
 	"github.com/spikeekips/mitum/base"
-	"github.com/spikeekips/mitum/base/block"
 	"github.com/spikeekips/mitum/util/encoder"
 	bsonenc "github.com/spikeekips/mitum/util/encoder/bson"
 )
@@ -16,7 +15,6 @@ const lastManifestDocID = "confirmed_block"
 
 type lastManifestDoc struct {
 	BaseDoc
-	block block.Block
 }
 
 func NewLastManifestDoc(height base.Height, enc encoder.Encoder) (lastManifestDoc, error) {
@@ -59,7 +57,6 @@ func loadLastManifest(decoder func(interface{}) error, encs *encoder.Encoders) (
 type InfoDoc struct {
 	BaseDoc
 	key string
-	b   []byte
 }
 
 func infoDocKey(key string) string {

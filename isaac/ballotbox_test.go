@@ -180,7 +180,7 @@ func (t *testBallotbox) TestINITVoteResultDraw() {
 		t.Equal(base.VoteResultDraw, vp.Result())
 		t.True(vp.IsFinished())
 		t.NotNil(vp.FinishedAt())
-		t.True(time.Now().Sub(vp.FinishedAt()) < time.Second)
+		t.True(time.Since(vp.FinishedAt()) < time.Second)
 	}
 
 	{ // already finished

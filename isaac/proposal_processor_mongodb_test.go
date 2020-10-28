@@ -42,6 +42,7 @@ func (t *testProposalProcessorWithGCache) TestBlockOperations() {
 	initFact := ib.INITBallotFactV0
 
 	ivp, err := t.newVoteproof(base.StageINIT, initFact, t.local, t.remote)
+	t.NoError(err)
 
 	opl := t.newOperationSeal(t.local, 1)
 	ophs := make([]valuehash.Hash, len(opl.Operations()))
@@ -85,6 +86,7 @@ func (t *testProposalProcessorWithGCache) TestBlockOperations() {
 	).Fact()
 
 	avp, err := t.newVoteproof(base.StageACCEPT, acceptFact, t.local, t.remote)
+	t.NoError(err)
 
 	bs, err := dp.ProcessACCEPT(proposal.Hash(), avp)
 	t.NoError(err)

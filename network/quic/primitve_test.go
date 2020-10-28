@@ -23,7 +23,6 @@ type testPrimitiveQuicSever struct {
 	bind  string
 	certs []tls.Certificate
 	url   *url.URL
-	qn    *PrimitiveQuicServer
 }
 
 func (t *testPrimitiveQuicSever) SetupTest() {

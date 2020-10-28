@@ -35,10 +35,9 @@ var (
 	keyPrefixStagedOperationSeal        []byte = []byte{0x00, 0x10}
 	keyPrefixStagedOperationSealReverse []byte = []byte{0x00, 0x11}
 	keyPrefixState                      []byte = []byte{0x00, 0x12}
-	keyPrefixOperationHash              []byte = []byte{0x00, 0x13}
-	keyPrefixOperationFactHash          []byte = []byte{0x00, 0x14}
-	keyPrefixManifestHeight             []byte = []byte{0x00, 0x15}
-	keyPrefixInfo                       []byte = []byte{0x00, 0x16}
+	keyPrefixOperationFactHash          []byte = []byte{0x00, 0x13}
+	keyPrefixManifestHeight             []byte = []byte{0x00, 0x14}
+	keyPrefixInfo                       []byte = []byte{0x00, 0x15}
 )
 
 type Storage struct {
@@ -751,13 +750,6 @@ func leveldbStateKey(key string) []byte {
 	return util.ConcatBytesSlice(
 		keyPrefixState,
 		[]byte(key),
-	)
-}
-
-func leveldbOperationHashKey(h valuehash.Hash) []byte {
-	return util.ConcatBytesSlice(
-		keyPrefixOperationHash,
-		h.Bytes(),
 	)
 }
 

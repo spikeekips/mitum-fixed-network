@@ -91,12 +91,8 @@ func (t *testDaemon) TestFunctionError() {
 
 func (t *testDaemon) TestStopByStopChan() {
 	ed := &emptyDaemon{FunctionDaemon: NewFunctionDaemon(func(stopChan chan struct{}) error {
-	end:
-		for {
-			select {
-			case <-stopChan:
-				break end
-			}
+		for range stopChan {
+			break
 		}
 
 		return nil

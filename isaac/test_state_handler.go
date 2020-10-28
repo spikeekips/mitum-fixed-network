@@ -15,7 +15,6 @@ import (
 	"github.com/spikeekips/mitum/storage"
 	"github.com/spikeekips/mitum/storage/localfs"
 	"github.com/spikeekips/mitum/util"
-	"github.com/spikeekips/mitum/util/encoder"
 	"github.com/spikeekips/mitum/util/localtime"
 	"github.com/spikeekips/mitum/util/tree"
 	"github.com/spikeekips/mitum/util/valuehash"
@@ -25,9 +24,7 @@ type baseTestStateHandler struct {
 	suite.Suite
 	StorageSupportTest
 	localfs.BaseTestBlocks
-	encs *encoder.Encoders
-	enc  encoder.Encoder
-	ls   []*Localstate
+	ls []*Localstate
 }
 
 func (t *baseTestStateHandler) SetupSuite() {
@@ -270,10 +267,6 @@ func (t *baseTestStateHandler) newACCEPTBallot(localstate *Localstate, round bas
 	return ab
 }
 
-func (t *baseTestStateHandler) proposalMaker(localstate *Localstate) *ProposalMaker {
-	return NewProposalMaker(localstate)
-}
-
 func (t *baseTestStateHandler) newOperationSeal(localstate *Localstate, n uint) operation.Seal {
 	pk := localstate.Node().Privatekey()
 
@@ -393,16 +386,6 @@ func (t *baseTestStateHandler) compareFixedTree(a, b tree.FixedTree) {
 func (t *baseTestStateHandler) lastManifest(st storage.Storage) block.Manifest {
 	if m, found, err := st.LastManifest(); !found {
 		panic(storage.NotFoundError.Errorf("last manifest not found"))
-	} else if err != nil {
-		panic(err)
-	} else {
-		return m
-	}
-}
-
-func (t *baseTestStateHandler) lastBlock(st storage.Storage) block.Manifest {
-	if m, found, err := st.LastManifest(); !found {
-		panic(storage.NotFoundError.Errorf("last block not found"))
 	} else if err != nil {
 		panic(err)
 	} else {

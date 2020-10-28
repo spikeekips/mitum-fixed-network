@@ -161,7 +161,7 @@ func (t *testLogging) TestVerboseFunc() {
 		}).Msg("showme")
 
 		t.False(called)
-		t.NotContains(string(t.buf.Bytes()), "eatme")
+		t.NotContains(t.buf.String(), "eatme")
 	}
 
 	t.buf.Reset()

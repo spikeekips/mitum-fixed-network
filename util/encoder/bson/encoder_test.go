@@ -45,11 +45,6 @@ func (s0 *sup0) UnpackBSON(b []byte, _ *Encoder) error {
 	return nil
 }
 
-type sp0 struct {
-	A string
-	B []byte
-}
-
 // se0 embeds sup0
 type se0 struct {
 	A string

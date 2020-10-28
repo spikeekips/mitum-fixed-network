@@ -279,10 +279,10 @@ func (t *testFixedTree) TestProof() {
 
 	_ = ft.Hash(0)
 
-	pr, err := ft.Proof(20)
+	_, err := ft.Proof(20)
 	t.Contains(err.Error(), "over size")
 
-	pr, err = ft.Proof(19)
+	pr, err := ft.Proof(19)
 	t.NoError(err)
 	t.Equal(22, len(pr))
 
@@ -323,11 +323,11 @@ func (t *testFixedTree) TestProve() {
 
 	_ = ft.Hash(0)
 
-	pr, err := ft.Proof(20)
+	_, err := ft.Proof(20)
 	t.Contains(err.Error(), "over size")
 
 	{ // even
-		pr, err = ft.Proof(18)
+		pr, err := ft.Proof(18)
 		t.NoError(err)
 		t.Equal(24, len(pr))
 
@@ -336,7 +336,7 @@ func (t *testFixedTree) TestProve() {
 	}
 
 	{ // odd
-		pr, err = ft.Proof(19)
+		pr, err := ft.Proof(19)
 		t.NoError(err)
 		t.Equal(22, len(pr))
 

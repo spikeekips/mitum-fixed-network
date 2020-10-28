@@ -11,7 +11,8 @@ import (
 	"github.com/spikeekips/mitum/util/logging"
 )
 
-var log logging.Logger // nolint
+//lint:ignore U1000 debugging inside test
+var log logging.Logger
 
 func init() {
 	zerolog.TimeFieldFormat = time.RFC3339Nano

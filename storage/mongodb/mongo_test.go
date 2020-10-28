@@ -106,7 +106,7 @@ func (t *testMongodbClient) TestFindUnknown() {
 	var records []bson.M
 
 	err := t.client.Find(
-		nil,
+		context.TODO(),
 		"showme",
 		util.NewBSONFilter("findme", 1).D(),
 		func(cursor *mongo.Cursor) (bool, error) {
@@ -134,7 +134,7 @@ func (t *testMongodbClient) TestInsertOne() {
 	t.False(inserted.(primitive.ObjectID).IsZero())
 
 	var rs []bson.M
-	err = t.client.Find(nil, "showme", util.NewBSONFilter("findme", int64(3)).D(),
+	err = t.client.Find(context.TODO(), "showme", util.NewBSONFilter("findme", int64(3)).D(),
 		func(cursor *mongo.Cursor) (bool, error) {
 			var record bson.M
 			if err := cursor.Decode(&record); err != nil {
@@ -170,7 +170,7 @@ func (t *testMongodbClient) TestOverwrite() {
 
 	{ // existing one should be removed
 		var rs []bson.M
-		err := t.client.Find(nil, "showme", util.NewBSONFilter("findme", int64(3)).D(),
+		err := t.client.Find(context.TODO(), "showme", util.NewBSONFilter("findme", int64(3)).D(),
 			func(cursor *mongo.Cursor) (bool, error) {
 				var record bson.M
 				if err := cursor.Decode(&record); err != nil {
@@ -188,7 +188,7 @@ func (t *testMongodbClient) TestOverwrite() {
 	}
 
 	var rs []bson.M
-	err = t.client.Find(nil, "showme", util.NewBSONFilter("findme", int64(33)).D(),
+	err = t.client.Find(context.TODO(), "showme", util.NewBSONFilter("findme", int64(33)).D(),
 		func(cursor *mongo.Cursor) (bool, error) {
 			var record bson.M
 			if err := cursor.Decode(&record); err != nil {
@@ -218,7 +218,7 @@ func (t *testMongodbClient) TestInsertWithObjectID() {
 	t.Equal(id, inserted)
 
 	var rs []bson.M
-	err = t.client.Find(nil, "showme", util.NewBSONFilter("_id", id).D(),
+	err = t.client.Find(context.TODO(), "showme", util.NewBSONFilter("_id", id).D(),
 		func(cursor *mongo.Cursor) (bool, error) {
 			var record bson.M
 			if err := cursor.Decode(&record); err != nil {
@@ -297,7 +297,7 @@ func (t *testMongodbClient) TestMoveRawBytes() {
 	t.NoError(err)
 
 	var newInsertedID interface{}
-	t.client.Find(nil, "showme", bson.D{}, func(cursor *mongo.Cursor) (bool, error) {
+	t.client.Find(context.TODO(), "showme", bson.D{}, func(cursor *mongo.Cursor) (bool, error) {
 		i, err := t.client.AddRaw("new_showme", cursor.Current)
 		t.NoError(err)
 

@@ -69,26 +69,6 @@ func (md ManifestDoc) MarshalBSON() ([]byte, error) {
 	return bsonenc.Marshal(m)
 }
 
-func loadBlockFromDecoder(decoder func(interface{}) error, encs *encoder.Encoders) (block.Block, error) {
-	var b bson.Raw
-	if err := decoder(&b); err != nil {
-		return nil, err
-	}
-
-	var blk block.Block
-
-	_, hinter, err := LoadDataFromDoc(b, encs)
-	if err != nil {
-		return nil, err
-	} else if i, ok := hinter.(block.Block); !ok {
-		return nil, xerrors.Errorf("not Block: %T", hinter)
-	} else {
-		blk = i
-	}
-
-	return blk, nil
-}
-
 func loadManifestFromDecoder(decoder func(interface{}) error, encs *encoder.Encoders) (block.Manifest, error) {
 	var b bson.Raw
 	if err := decoder(&b); err != nil {

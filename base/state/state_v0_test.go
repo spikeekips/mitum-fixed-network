@@ -34,6 +34,7 @@ func (t *testStateV0) TestDuplicatedOperation() {
 		value.Interface().([]byte),
 		nil,
 	)
+	t.NoError(err)
 
 	t.NoError(stu.AddOperation(op.Hash()))
 

@@ -31,7 +31,6 @@ type testQuicSever struct {
 	bind  string
 	certs []tls.Certificate
 	url   *url.URL
-	qn    *Server
 }
 
 func (t *testQuicSever) SetupTest() {

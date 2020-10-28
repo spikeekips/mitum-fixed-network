@@ -7,15 +7,12 @@ import (
 
 	"github.com/spikeekips/mitum/base/key"
 	"github.com/spikeekips/mitum/util"
-	"github.com/spikeekips/mitum/util/encoder"
 )
 
 type testOperation struct {
 	suite.Suite
 
-	pk   key.Privatekey
-	encs *encoder.Encoders
-	enc  encoder.Encoder
+	pk key.Privatekey
 }
 
 func (t *testOperation) SetupSuite() {

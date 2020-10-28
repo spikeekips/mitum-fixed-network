@@ -119,15 +119,12 @@ func (t *testParallelWorker) TestStopBeforeFinish() {
 	var wg sync.WaitGroup
 	wg.Add(numJob)
 
-	var jobs []int
 	for i := 0; i < numJob; i++ {
 		go func(i int) {
 			defer wg.Done()
 
 			wk.NewJob(i)
 		}(i)
-
-		jobs = append(jobs, i)
 	}
 	wg.Wait()
 
@@ -139,7 +136,7 @@ func (t *testParallelWorker) TestStopBeforeFinish() {
 	}
 
 	var count int
-	for _ = range wk.Errors() {
+	for range wk.Errors() {
 		count++
 		if count == numJob {
 			break
@@ -304,16 +301,12 @@ func (t *testDistributeWorker) TestWithErrchanStopFirst() {
 
 	var found bool
 
-end:
-	for {
-		select {
-		case err := <-errchan:
-			if err == nil {
-				continue
-			}
-			found = true
-			break end
+	for err := range errchan {
+		if err == nil {
+			continue
 		}
+		found = true
+		break
 	}
 	wk.Done(false)
 
@@ -338,7 +331,7 @@ func (t *testDistributeWorker) TestWithRunFirst() {
 
 	done := make(chan struct{})
 	go func() {
-		for _ = range errchan {
+		for range errchan {
 		}
 		done <- struct{}{}
 	}()
@@ -403,17 +396,13 @@ func (t *testDistributeWorker) TestOneCallback() {
 
 	var found bool
 
-end:
-	for {
-		select {
-		case err := <-errchan:
-			if err == nil {
-				continue
-			}
-
-			found = true
-			break end
+	for err := range errchan {
+		if err == nil {
+			continue
 		}
+
+		found = true
+		break
 	}
 	wk.Done(false)
 

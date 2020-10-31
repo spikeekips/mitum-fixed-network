@@ -19,7 +19,7 @@ type testGeneralSyncer struct {
 }
 
 func (t *testGeneralSyncer) TestInvalidFrom() {
-	ls := t.localstates(2)
+	ls := t.locals(2)
 	local, remote := ls[0], ls[1]
 
 	base := t.lastManifest(local.Storage()).Height()
@@ -40,7 +40,7 @@ func (t *testGeneralSyncer) TestInvalidFrom() {
 }
 
 func (t *testGeneralSyncer) TestInvalidSourceNodes() {
-	ls := t.localstates(2)
+	ls := t.locals(2)
 	local, _ := ls[0], ls[1]
 
 	t.setup(local, nil)
@@ -59,13 +59,13 @@ func (t *testGeneralSyncer) TestInvalidSourceNodes() {
 }
 
 func (t *testGeneralSyncer) TestNew() {
-	ls := t.localstates(2)
+	ls := t.locals(2)
 	local, remote := ls[0], ls[1]
 
-	t.setup(local, []*Localstate{remote})
+	t.setup(local, []*Local{remote})
 
 	target := t.lastManifest(local.Storage()).Height() + 1
-	t.generateBlocks([]*Localstate{remote}, target)
+	t.generateBlocks([]*Local{remote}, target)
 
 	cs, err := NewGeneralSyncer(local, []network.Node{remote.Node()}, target, target)
 	t.NoError(err)
@@ -81,14 +81,14 @@ func (t *testGeneralSyncer) TestNew() {
 // TestHeadAndTailManifests setups 4 nodes and 3 nodes has higher blocks rather
 // than 1 node.
 func (t *testGeneralSyncer) TestHeadAndTailManifests() {
-	ls := t.localstates(4)
+	ls := t.locals(4)
 	local, rn0, rn1, rn2 := ls[0], ls[1], ls[2], ls[3]
 
-	t.setup(local, []*Localstate{rn0, rn1, rn2})
+	t.setup(local, []*Local{rn0, rn1, rn2})
 
 	base := t.lastManifest(local.Storage()).Height()
 	target := base + 5
-	t.generateBlocks([]*Localstate{rn0, rn1, rn2}, target)
+	t.generateBlocks([]*Local{rn0, rn1, rn2}, target)
 
 	cs, err := NewGeneralSyncer(local, []network.Node{rn0.Node(), rn1.Node(), rn2.Node()}, base+1, target)
 	t.NoError(err)
@@ -124,14 +124,14 @@ func (t *testGeneralSyncer) TestHeadAndTailManifests() {
 // TestFillManifests setups 4 nodes and 3 nodes has higher blocks rather
 // than 1 node.
 func (t *testGeneralSyncer) TestFillManifests() {
-	ls := t.localstates(4)
+	ls := t.locals(4)
 	local, rn0, rn1, rn2 := ls[0], ls[1], ls[2], ls[3]
 
-	t.setup(local, []*Localstate{rn0, rn1, rn2})
+	t.setup(local, []*Local{rn0, rn1, rn2})
 
 	baseBlock := t.lastManifest(local.Storage())
 	target := baseBlock.Height() + 5
-	t.generateBlocks([]*Localstate{rn0, rn1, rn2}, target)
+	t.generateBlocks([]*Local{rn0, rn1, rn2}, target)
 
 	cs, err := NewGeneralSyncer(local, []network.Node{rn0.Node(), rn1.Node(), rn2.Node()}, baseBlock.Height()+1, target)
 	t.NoError(err)
@@ -154,14 +154,14 @@ func (t *testGeneralSyncer) TestFillManifests() {
 // TestFetchBlocks setups 4 nodes and 3 nodes has higher blocks rather
 // than 1 node.
 func (t *testGeneralSyncer) TestFetchBlocks() {
-	ls := t.localstates(4)
+	ls := t.locals(4)
 	local, rn0, rn1, rn2 := ls[0], ls[1], ls[2], ls[3]
 
-	t.setup(local, []*Localstate{local, rn0, rn1, rn2})
+	t.setup(local, []*Local{local, rn0, rn1, rn2})
 
 	baseHeight := t.lastManifest(local.Storage()).Height()
 	target := baseHeight + 5
-	t.generateBlocks([]*Localstate{rn0, rn1, rn2}, target)
+	t.generateBlocks([]*Local{rn0, rn1, rn2}, target)
 
 	cs, err := NewGeneralSyncer(local, []network.Node{rn0.Node(), rn1.Node(), rn2.Node()}, baseHeight+1, target)
 	t.NoError(err)
@@ -199,14 +199,14 @@ func (t *testGeneralSyncer) TestFetchBlocks() {
 }
 
 func (t *testGeneralSyncer) TestSaveBlocks() {
-	ls := t.localstates(4)
+	ls := t.locals(4)
 	local, rn0, rn1, rn2 := ls[0], ls[1], ls[2], ls[3]
 
-	t.setup(local, []*Localstate{rn0, rn1, rn2})
+	t.setup(local, []*Local{rn0, rn1, rn2})
 
 	baseHeight := t.lastManifest(local.Storage()).Height()
 	target := baseHeight + 5
-	t.generateBlocks([]*Localstate{rn0, rn1, rn2}, target)
+	t.generateBlocks([]*Local{rn0, rn1, rn2}, target)
 
 	cs, err := NewGeneralSyncer(local, []network.Node{rn0.Node(), rn1.Node(), rn2.Node()}, baseHeight+1, target)
 	t.NoError(err)
@@ -255,14 +255,14 @@ func (t *testGeneralSyncer) TestSaveBlocks() {
 }
 
 func (t *testGeneralSyncer) TestFinishedChan() {
-	ls := t.localstates(4)
+	ls := t.locals(4)
 	local, rn0, rn1, rn2 := ls[0], ls[1], ls[2], ls[3]
 
-	t.setup(local, []*Localstate{rn0, rn1, rn2})
+	t.setup(local, []*Local{rn0, rn1, rn2})
 
 	baseBlock := t.lastManifest(local.Storage())
 	target := baseBlock.Height() + 5
-	t.generateBlocks([]*Localstate{rn0, rn1, rn2}, target)
+	t.generateBlocks([]*Local{rn0, rn1, rn2}, target)
 
 	cs, err := NewGeneralSyncer(local, []network.Node{rn0.Node(), rn1.Node(), rn2.Node()}, baseBlock.Height()+1, target)
 	t.NoError(err)
@@ -298,12 +298,12 @@ func (t *testGeneralSyncer) TestFinishedChan() {
 }
 
 func (t *testGeneralSyncer) TestFromGenesis() {
-	ls := t.localstates(2)
+	ls := t.locals(2)
 	local, _ := ls[0], ls[1]
 
 	t.setup(local, nil)
 
-	syncNode := t.emptyLocalstate()
+	syncNode := t.emptyLocal()
 	t.NoError(local.Nodes().Add(syncNode.Node()))
 	defer t.closeStates(syncNode)
 
@@ -343,14 +343,14 @@ func (t *testGeneralSyncer) TestFromGenesis() {
 }
 
 func (t *testGeneralSyncer) TestSyncingHandlerFromBallot() {
-	ls := t.localstates(4)
+	ls := t.locals(4)
 	local, rn0, rn1, rn2 := ls[0], ls[1], ls[2], ls[3]
 
-	t.setup(local, []*Localstate{rn0, rn1, rn2})
+	t.setup(local, []*Local{rn0, rn1, rn2})
 
 	baseBlock := t.lastManifest(local.Storage())
 	target := baseBlock.Height() + 5
-	t.generateBlocks([]*Localstate{rn0, rn1, rn2}, target)
+	t.generateBlocks([]*Local{rn0, rn1, rn2}, target)
 
 	cs := NewStateSyncingHandler(local)
 
@@ -384,14 +384,14 @@ func (t *testGeneralSyncer) TestSyncingHandlerFromBallot() {
 }
 
 func (t *testGeneralSyncer) TestSyncingHandlerFromINITVoteproof() {
-	ls := t.localstates(4)
+	ls := t.locals(4)
 	local, rn0, rn1, rn2 := ls[0], ls[1], ls[2], ls[3]
 
-	t.setup(local, []*Localstate{rn0, rn1, rn2})
+	t.setup(local, []*Local{rn0, rn1, rn2})
 
 	baseBlock := t.lastManifest(local.Storage())
 	target := baseBlock.Height() + 5
-	t.generateBlocks([]*Localstate{rn0, rn1, rn2}, target)
+	t.generateBlocks([]*Local{rn0, rn1, rn2}, target)
 
 	cs := NewStateSyncingHandler(local)
 
@@ -437,14 +437,14 @@ func (t *testGeneralSyncer) TestSyncingHandlerFromINITVoteproof() {
 }
 
 func (t *testGeneralSyncer) TestSyncingHandlerFromACCEPTVoteproof() {
-	ls := t.localstates(4)
+	ls := t.locals(4)
 	local, rn0, rn1, rn2 := ls[0], ls[1], ls[2], ls[3]
 
-	t.setup(local, []*Localstate{rn0, rn1, rn2})
+	t.setup(local, []*Local{rn0, rn1, rn2})
 
 	baseBlock := t.lastManifest(local.Storage())
 	target := baseBlock.Height() + 5
-	t.generateBlocks([]*Localstate{rn0, rn1, rn2}, target)
+	t.generateBlocks([]*Local{rn0, rn1, rn2}, target)
 
 	cs := NewStateSyncingHandler(local)
 
@@ -498,14 +498,14 @@ func (t *testGeneralSyncer) TestSyncingHandlerFromACCEPTVoteproof() {
 }
 
 func (t *testGeneralSyncer) TestMissingHead() {
-	ls := t.localstates(2)
+	ls := t.locals(2)
 	local, rn0 := ls[0], ls[1]
 
-	t.setup(local, []*Localstate{rn0})
+	t.setup(local, []*Local{rn0})
 
 	baseBlock := t.lastManifest(local.Storage())
 	target := baseBlock.Height() + 5
-	t.generateBlocks([]*Localstate{rn0}, target)
+	t.generateBlocks([]*Local{rn0}, target)
 
 	head := baseBlock.Height() + 1
 	ch := rn0.Node().Channel().(*channetwork.Channel)
@@ -539,14 +539,14 @@ func (t *testGeneralSyncer) TestMissingHead() {
 }
 
 func (t *testGeneralSyncer) TestMissingTail() {
-	ls := t.localstates(2)
+	ls := t.locals(2)
 	local, rn0 := ls[0], ls[1]
 
-	t.setup(local, []*Localstate{rn0})
+	t.setup(local, []*Local{rn0})
 
 	baseBlock := t.lastManifest(local.Storage())
 	target := baseBlock.Height() + 5
-	t.generateBlocks([]*Localstate{rn0}, target)
+	t.generateBlocks([]*Local{rn0}, target)
 
 	tail := target
 	ch := rn0.Node().Channel().(*channetwork.Channel)
@@ -580,14 +580,14 @@ func (t *testGeneralSyncer) TestMissingTail() {
 }
 
 func (t *testGeneralSyncer) TestMissingManifests() {
-	ls := t.localstates(2)
+	ls := t.locals(2)
 	local, rn0 := ls[0], ls[1]
 
-	t.setup(local, []*Localstate{rn0})
+	t.setup(local, []*Local{rn0})
 
 	baseBlock := t.lastManifest(local.Storage())
 	target := baseBlock.Height() + 5
-	t.generateBlocks([]*Localstate{rn0}, target)
+	t.generateBlocks([]*Local{rn0}, target)
 
 	missing := target - 1
 	ch := rn0.Node().Channel().(*channetwork.Channel)
@@ -621,14 +621,14 @@ func (t *testGeneralSyncer) TestMissingManifests() {
 }
 
 func (t *testGeneralSyncer) TestMissingBlocks() {
-	ls := t.localstates(2)
+	ls := t.locals(2)
 	local, rn0 := ls[0], ls[1]
 
-	t.setup(local, []*Localstate{rn0})
+	t.setup(local, []*Local{rn0})
 
 	baseBlock := t.lastManifest(local.Storage())
 	target := baseBlock.Height() + 5
-	t.generateBlocks([]*Localstate{rn0}, target)
+	t.generateBlocks([]*Local{rn0}, target)
 
 	missing := target - 1
 	ch := rn0.Node().Channel().(*channetwork.Channel)
@@ -667,17 +667,17 @@ func (t *testGeneralSyncer) TestMissingBlocks() {
 	t.Error(err)
 }
 
-func (t *testGeneralSyncer) buildDifferentBlocks(local, remote *Localstate, from, to base.Height) {
+func (t *testGeneralSyncer) buildDifferentBlocks(local, remote *Local, from, to base.Height) {
 	_ = local.Storage().Clean()
 	_ = local.BlockFS().Clean(false)
 	_ = remote.Storage().Clean()
 	_ = remote.BlockFS().Clean(false)
 	if from > base.PreGenesisHeight+1 {
-		t.generateBlocks([]*Localstate{local, remote}, from-1)
+		t.generateBlocks([]*Local{local, remote}, from-1)
 	}
 
-	t.generateBlocks([]*Localstate{local}, to)
-	t.generateBlocks([]*Localstate{remote}, to)
+	t.generateBlocks([]*Local{local}, to)
+	t.generateBlocks([]*Local{remote}, to)
 }
 
 func (t *testGeneralSyncer) TestRollbackFindUnmatched() {
@@ -714,10 +714,10 @@ func (t *testGeneralSyncer) TestRollbackFindUnmatched() {
 		t.Run(
 			c.name,
 			func() {
-				ls := t.localstates(2)
+				ls := t.locals(2)
 				local, remote := ls[0], ls[1]
 
-				t.setup(local, []*Localstate{remote})
+				t.setup(local, []*Local{remote})
 
 				from, to := base.Height(c.from), base.Height(c.to)
 				t.buildDifferentBlocks(local, remote, from, to)
@@ -743,19 +743,19 @@ func (t *testGeneralSyncer) TestRollbackFindUnmatched() {
 }
 
 func (t *testGeneralSyncer) TestRollbackWrongGenesisBlocks() {
-	ls := t.localstates(2)
+	ls := t.locals(2)
 	local, rn0 := ls[0], ls[1]
 
-	t.setup(local, []*Localstate{rn0})
+	t.setup(local, []*Local{rn0})
 
 	baseBlock := t.lastManifest(local.Storage())
 
-	t.generateBlocks([]*Localstate{local}, baseBlock.Height()+3)
+	t.generateBlocks([]*Local{local}, baseBlock.Height()+3)
 
 	target := baseBlock.Height() + 5
 
 	// NOTE build new blocks from genesis
-	bg, err := NewDummyBlocksV0Generator(rn0, target, t.suffrage(rn0, rn0), []*Localstate{rn0})
+	bg, err := NewDummyBlocksV0Generator(rn0, target, t.suffrage(rn0, rn0), []*Local{rn0})
 	t.NoError(err)
 	t.NoError(bg.Generate(true))
 
@@ -779,17 +779,17 @@ func (t *testGeneralSyncer) TestRollbackWrongGenesisBlocks() {
 }
 
 func (t *testGeneralSyncer) TestRollbackDetect() {
-	ls := t.localstates(2)
+	ls := t.locals(2)
 	local, rn0 := ls[0], ls[1]
 
-	t.setup(local, []*Localstate{rn0})
+	t.setup(local, []*Local{rn0})
 
 	baseBlock := t.lastManifest(local.Storage())
 
-	t.generateBlocks([]*Localstate{local}, baseBlock.Height()+3)
+	t.generateBlocks([]*Local{local}, baseBlock.Height()+3)
 
 	target := baseBlock.Height() + 5
-	t.generateBlocks([]*Localstate{rn0}, target)
+	t.generateBlocks([]*Local{rn0}, target)
 
 	fromManifest := t.lastManifest(local.Storage())
 	cs, err := NewGeneralSyncer(local, []network.Node{rn0.Node()}, fromManifest.Height()+1, target)
@@ -805,17 +805,17 @@ func (t *testGeneralSyncer) TestRollbackDetect() {
 }
 
 func (t *testGeneralSyncer) TestRollback() {
-	ls := t.localstates(2)
+	ls := t.locals(2)
 	local, remote := ls[0], ls[1]
 
-	t.setup(local, []*Localstate{remote})
+	t.setup(local, []*Local{remote})
 
 	baseBlock := t.lastManifest(local.Storage())
 
-	t.generateBlocks([]*Localstate{local}, baseBlock.Height()+3)
+	t.generateBlocks([]*Local{local}, baseBlock.Height()+3)
 
 	target := baseBlock.Height() + 5
-	t.generateBlocks([]*Localstate{remote}, target)
+	t.generateBlocks([]*Local{remote}, target)
 
 	fromManifest := t.lastManifest(local.Storage())
 	cs, err := NewGeneralSyncer(local, []network.Node{remote.Node()}, fromManifest.Height()+1, target)

@@ -14,7 +14,7 @@ type testBlock struct {
 }
 
 func (t *testBlock) TestBlockIsValid() {
-	local := t.localstates(1)[0]
+	local := t.locals(1)[0]
 	blk, err := local.BlockFS().Load(2)
 	t.NoError(err)
 	t.NotNil(blk)

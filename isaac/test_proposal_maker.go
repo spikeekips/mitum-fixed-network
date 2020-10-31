@@ -15,22 +15,22 @@ import (
 
 type DummyProposalMaker struct {
 	sync.Mutex
-	localstate *Localstate
-	proposed   ballot.Proposal
-	sls        []seal.Seal
+	local    *Local
+	proposed ballot.Proposal
+	sls      []seal.Seal
 }
 
-func NewDummyProposalMaker(localstate *Localstate, sls []seal.Seal) *DummyProposalMaker {
+func NewDummyProposalMaker(local *Local, sls []seal.Seal) *DummyProposalMaker {
 	return &DummyProposalMaker{
-		localstate: localstate,
-		sls:        sls,
+		local: local,
+		sls:   sls,
 	}
 }
 
 func (pm *DummyProposalMaker) seals() ([]valuehash.Hash, error) {
 	mo := map[ /* Operation.Hash() */ string]struct{}{}
 
-	maxOperations := pm.localstate.Policy().MaxOperationsInProposal()
+	maxOperations := pm.local.Policy().MaxOperationsInProposal()
 
 	var facts int
 	var seals []valuehash.Hash
@@ -72,7 +72,7 @@ func (pm *DummyProposalMaker) Proposal(round base.Round) (ballot.Proposal, error
 	defer pm.Unlock()
 
 	var height base.Height
-	switch m, found, err := pm.localstate.Storage().LastManifest(); {
+	switch m, found, err := pm.local.Storage().LastManifest(); {
 	case !found:
 		return nil, storage.NotFoundError.Errorf("last manifest not found")
 	case err != nil:
@@ -93,12 +93,12 @@ func (pm *DummyProposalMaker) Proposal(round base.Round) (ballot.Proposal, error
 	}
 
 	pr := ballot.NewProposalV0(
-		pm.localstate.Node().Address(),
+		pm.local.Node().Address(),
 		height,
 		round,
 		seals,
 	)
-	if err := SignSeal(&pr, pm.localstate); err != nil {
+	if err := SignSeal(&pr, pm.local); err != nil {
 		return nil, err
 	}
 

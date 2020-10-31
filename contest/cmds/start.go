@@ -384,15 +384,15 @@ func (cmd *StartCommand) defaultActionBuildBlocks(args []string) (func(logging.L
 	return func(logging.Logger) error {
 		cmd.log.Debug().Hinted("target_height", height).Msg("trying to build blocks")
 
-		var genesis *isaac.Localstate
-		var all []*isaac.Localstate
+		var genesis *isaac.Local
+		var all []*isaac.Local
 		for _, d := range cmd.design.Nodes {
 			ct, found := cmd.containers.Container(d.Name)
 			if !found {
 				return xerrors.Errorf("container name, %q not found", d.Name)
 			}
 
-			l := ct.Localstate()
+			l := ct.Local()
 			all = append(all, l)
 
 			if ct.Name() == cmd.containers.GenesisNode().Name() {
@@ -462,7 +462,7 @@ func (cmd *StartCommand) defaultActionMangleBlocks(args []string) (func(logging.
 
 		l.Debug().Msg("trying to mangle blocks")
 
-		var all []*isaac.Localstate
+		var all []*isaac.Local
 		if a, err := cmd.prepareContainersForMangle(nodeNames, fromHeight); err != nil {
 			return err
 		} else {
@@ -494,10 +494,10 @@ func (cmd *StartCommand) defaultActionMangleBlocks(args []string) (func(logging.
 }
 
 func (cmd *StartCommand) prepareContainersForMangle(nodeNames []string, fromHeight base.Height) (
-	[]*isaac.Localstate,
+	[]*isaac.Local,
 	error,
 ) {
-	all := make([]*isaac.Localstate, len(nodeNames))
+	all := make([]*isaac.Local, len(nodeNames))
 	for i, n := range nodeNames {
 		var ct *contestlib.Container
 		if c, found := cmd.containers.Container(n); !found {
@@ -514,7 +514,7 @@ func (cmd *StartCommand) prepareContainersForMangle(nodeNames []string, fromHeig
 			return nil, err
 		}
 
-		all[i] = ct.Localstate()
+		all[i] = ct.Local()
 	}
 
 	for _, l := range all {

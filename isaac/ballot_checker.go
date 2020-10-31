@@ -13,14 +13,14 @@ import (
 type BallotChecker struct {
 	*logging.Logging
 	suffrage   base.Suffrage
-	localstate *Localstate
+	local      *Local
 	ballot     ballot.Ballot
 	lastHeight base.Height
 }
 
-func NewBallotChecker(blt ballot.Ballot, localstate *Localstate, suffrage base.Suffrage) (*BallotChecker, error) {
+func NewBallotChecker(blt ballot.Ballot, local *Local, suffrage base.Suffrage) (*BallotChecker, error) {
 	var height base.Height
-	switch m, found, err := localstate.Storage().LastManifest(); {
+	switch m, found, err := local.Storage().LastManifest(); {
 	case err != nil:
 		return nil, err
 	case !found:
@@ -34,7 +34,7 @@ func NewBallotChecker(blt ballot.Ballot, localstate *Localstate, suffrage base.S
 			return c.Str("module", "ballot-checker")
 		}),
 		suffrage:   suffrage,
-		localstate: localstate,
+		local:      local,
 		ballot:     blt,
 		lastHeight: height,
 	}, nil
@@ -52,9 +52,9 @@ func (bc *BallotChecker) CheckIsInSuffrage() (bool, error) {
 // CheckSigning checks node signed by it's valid key.
 func (bc *BallotChecker) CheckSigning() (bool, error) {
 	var node base.Node
-	if bc.ballot.Node().Equal(bc.localstate.Node().Address()) {
-		node = bc.localstate.Node()
-	} else if n, found := bc.localstate.Nodes().Node(bc.ballot.Node()); !found {
+	if bc.ballot.Node().Equal(bc.local.Node().Address()) {
+		node = bc.local.Node()
+	} else if n, found := bc.local.Nodes().Node(bc.ballot.Node()); !found {
 		return false, xerrors.Errorf("node not found")
 	} else {
 		node = n
@@ -90,7 +90,7 @@ func (bc *BallotChecker) CheckProposal() (bool, error) {
 
 	var proposal ballot.Proposal
 	var proposalInLocal bool
-	if sl, found, err := bc.localstate.Storage().Seal(ph); !found {
+	if sl, found, err := bc.local.Storage().Seal(ph); !found {
 		if pr, err0 := bc.requestProposal(bc.ballot.Node(), ph); err0 != nil {
 			// NOTE if not found, request proposal from node of ballot
 			return false, err0
@@ -106,10 +106,10 @@ func (bc *BallotChecker) CheckProposal() (bool, error) {
 		proposalInLocal = true
 	}
 
-	if err := proposal.IsValid(bc.localstate.Policy().NetworkID()); err != nil {
+	if err := proposal.IsValid(bc.local.Policy().NetworkID()); err != nil {
 		return false, err
 	} else {
-		pvc := NewProposalValidationChecker(bc.localstate, bc.suffrage, proposal, nil)
+		pvc := NewProposalValidationChecker(bc.local, bc.suffrage, proposal, nil)
 		checkers := []util.CheckerFunc{
 			pvc.IsKnown,
 			pvc.CheckSigning,
@@ -152,7 +152,7 @@ func (bc *BallotChecker) CheckVoteproof() (bool, error) {
 		return true, nil
 	}
 
-	vc := NewVoteProofChecker(voteproof, bc.localstate, bc.suffrage)
+	vc := NewVoteProofChecker(voteproof, bc.local, bc.suffrage)
 	_ = vc.SetLogger(bc.Log())
 
 	if err := util.NewChecker("ballot-voteproof-checker", []util.CheckerFunc{
@@ -167,7 +167,7 @@ func (bc *BallotChecker) CheckVoteproof() (bool, error) {
 }
 
 func (bc *BallotChecker) requestProposal(address base.Address, h valuehash.Hash) (ballot.Proposal, error) {
-	if n, found := bc.localstate.Nodes().Node(address); !found {
+	if n, found := bc.local.Nodes().Node(address); !found {
 		return nil, xerrors.Errorf("unknown node of ballot; %v", address)
 	} else if r, err := n.Channel().Seals([]valuehash.Hash{h}); err != nil {
 		return nil, err

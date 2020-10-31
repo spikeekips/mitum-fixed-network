@@ -4,7 +4,7 @@ import (
 	"github.com/spikeekips/mitum/storage"
 )
 
-type Localstate struct {
+type Local struct {
 	storage   storage.Storage
 	blockfs   *storage.BlockFS
 	node      *LocalNode
@@ -13,13 +13,13 @@ type Localstate struct {
 	networkID []byte
 }
 
-func NewLocalstate(
+func NewLocal(
 	st storage.Storage,
 	blockfs *storage.BlockFS,
 	node *LocalNode,
 	networkID []byte,
-) (*Localstate, error) {
-	return &Localstate{
+) (*Local, error) {
+	return &Local{
 		storage:   st,
 		blockfs:   blockfs,
 		node:      node,
@@ -28,7 +28,7 @@ func NewLocalstate(
 	}, nil
 }
 
-func (ls *Localstate) Initialize() error {
+func (ls *Local) Initialize() error {
 	lp := NewLocalPolicy(ls.networkID)
 	if ls.blockfs != nil {
 		if err := ls.blockfs.Initialize(); err != nil {
@@ -55,28 +55,28 @@ func (ls *Localstate) Initialize() error {
 	return nil
 }
 
-func (ls *Localstate) Storage() storage.Storage {
+func (ls *Local) Storage() storage.Storage {
 	return ls.storage
 }
 
-func (ls *Localstate) BlockFS() *storage.BlockFS {
+func (ls *Local) BlockFS() *storage.BlockFS {
 	return ls.blockfs
 }
 
-func (ls *Localstate) SetStorage(st storage.Storage) *Localstate {
+func (ls *Local) SetStorage(st storage.Storage) *Local {
 	ls.storage = st
 
 	return ls
 }
 
-func (ls *Localstate) Node() *LocalNode {
+func (ls *Local) Node() *LocalNode {
 	return ls.node
 }
 
-func (ls *Localstate) Policy() *LocalPolicy {
+func (ls *Local) Policy() *LocalPolicy {
 	return ls.policy
 }
 
-func (ls *Localstate) Nodes() *NodesState {
+func (ls *Local) Nodes() *NodesState {
 	return ls.nodes
 }

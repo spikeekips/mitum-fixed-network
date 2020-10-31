@@ -961,13 +961,13 @@ func (ct *Container) Address() base.Address {
 	return address
 }
 
-func (ct *Container) Localstate() *isaac.Localstate {
+func (ct *Container) Local() *isaac.Local {
 	st, err := ct.Storage(true)
 	if err != nil {
 		panic(err)
 	}
 
-	l, err := isaac.NewLocalstate(
+	l, err := isaac.NewLocal(
 		st,
 		ct.BlockFS(),
 		isaac.NewLocalNode(

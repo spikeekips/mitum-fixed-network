@@ -10,9 +10,9 @@ type StateBrokenHandler struct {
 	*BaseStateHandler
 }
 
-func NewStateBrokenHandler(localstate *Localstate) (*StateBrokenHandler, error) {
+func NewStateBrokenHandler(local *Local) (*StateBrokenHandler, error) {
 	ss := &StateBrokenHandler{
-		BaseStateHandler: NewBaseStateHandler(localstate, nil, base.StateBroken),
+		BaseStateHandler: NewBaseStateHandler(local, nil, base.StateBroken),
 	}
 	ss.BaseStateHandler.Logging = logging.NewLogging(func(c logging.Context) logging.Emitter {
 		return c.Str("module", "consensus-state-broken-handler")

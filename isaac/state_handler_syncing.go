@@ -43,9 +43,9 @@ type StateSyncingHandler struct {
 	waitVoteproofTimeout time.Duration
 }
 
-func NewStateSyncingHandler(localstate *Localstate) *StateSyncingHandler {
+func NewStateSyncingHandler(local *Local) *StateSyncingHandler {
 	ss := &StateSyncingHandler{
-		BaseStateHandler:     NewBaseStateHandler(localstate, nil, base.StateSyncing),
+		BaseStateHandler:     NewBaseStateHandler(local, nil, base.StateSyncing),
 		waitVoteproofTimeout: time.Second * 5, // NOTE long enough time
 	}
 	ss.BaseStateHandler.Logging = logging.NewLogging(func(c logging.Context) logging.Emitter {
@@ -76,14 +76,14 @@ func (ss *StateSyncingHandler) newSyncers() error {
 
 	baseHeight := base.NilHeight
 	var baseManifest block.Manifest
-	if m, found, err := ss.localstate.Storage().LastManifest(); err != nil {
+	if m, found, err := ss.local.Storage().LastManifest(); err != nil {
 		return err
 	} else if found {
 		baseHeight = m.Height()
 		baseManifest = m
 	}
 
-	syncs := NewSyncers(ss.localstate, baseManifest)
+	syncs := NewSyncers(ss.local, baseManifest)
 	syncs.WhenFinished(ss.whenFinished)
 	syncs.WhenBlockSaved(ss.whenBlockSaved)
 	_ = syncs.SetLogger(ss.Log())
@@ -201,9 +201,9 @@ func (ss *StateSyncingHandler) fromVoteproof(voteproof base.Voteproof) error {
 	var sourceNodes []network.Node
 	for i := range voteproof.Votes() {
 		nf := voteproof.Votes()[i]
-		if ss.localstate.Node().Address().Equal(nf.Node()) {
+		if ss.local.Node().Address().Equal(nf.Node()) {
 			continue
-		} else if n, found := ss.localstate.Nodes().Node(nf.Node()); !found {
+		} else if n, found := ss.local.Nodes().Node(nf.Node()); !found {
 			return xerrors.Errorf("node in Voteproof is not known node")
 		} else {
 			sourceNodes = append(sourceNodes, n)
@@ -239,7 +239,7 @@ func (ss *StateSyncingHandler) handleVoteproof(voteproof base.Voteproof) error {
 
 func (ss *StateSyncingHandler) handleINITTVoteproof(voteproof base.Voteproof) error {
 	baseHeight := base.PreGenesisHeight
-	if m, found, err := ss.localstate.Storage().LastManifest(); err != nil {
+	if m, found, err := ss.local.Storage().LastManifest(); err != nil {
 		return err
 	} else if found {
 		baseHeight = m.Height()
@@ -292,7 +292,7 @@ func (ss *StateSyncingHandler) handleINITTVoteproof(voteproof base.Voteproof) er
 
 func (ss *StateSyncingHandler) handleACCEPTVoteproof(voteproof base.Voteproof) error {
 	baseHeight := base.PreGenesisHeight
-	if m, found, err := ss.localstate.Storage().LastManifest(); err != nil {
+	if m, found, err := ss.local.Storage().LastManifest(); err != nil {
 		return err
 	} else if found {
 		baseHeight = m.Height()

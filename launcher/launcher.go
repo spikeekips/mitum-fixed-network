@@ -34,7 +34,7 @@ type Launcher struct {
 	encs            *encoder.Encoders
 	design          *NodeDesign
 	version         util.Version
-	localstate      *isaac.Localstate
+	local           *isaac.Local
 	consensusStates *isaac.ConsensusStates
 	networkID       base.NetworkID
 
@@ -74,7 +74,7 @@ func NewLauncher(design *NodeDesign, version util.Version) (*Launcher, error) {
 		sealCache: sealCache,
 	}
 
-	return bn.SetLocalstate(design.Address(), design.Privatekey(), design.NetworkID())
+	return bn.SetLocal(design.Address(), design.Privatekey(), design.NetworkID())
 }
 
 func (bn *Launcher) Encoders() *encoder.Encoders {
@@ -91,7 +91,7 @@ func (bn *Launcher) AddHinters(hinters ...hint.Hinter) error {
 	return nil
 }
 
-func (bn *Launcher) SetLocalstate(
+func (bn *Launcher) SetLocal(
 	address base.Address,
 	privateKey key.Privatekey,
 	networkID base.NetworkID,
@@ -118,25 +118,25 @@ func (bn *Launcher) SetLocalstate(
 		blockfs = storage.NewBlockFS(fs, enc)
 	}
 
-	if ls, err := isaac.NewLocalstate(bn.storage, blockfs, node, networkID); err != nil {
+	if ls, err := isaac.NewLocal(bn.storage, blockfs, node, networkID); err != nil {
 		return nil, err
 	} else {
-		bn.localstate = ls
+		bn.local = ls
 		bn.networkID = networkID
 
 		return bn, nil
 	}
 }
 
-func (bn *Launcher) reloadLocalstate() error {
-	_ = bn.localstate.SetStorage(bn.storage)
+func (bn *Launcher) reloadLocal() error {
+	_ = bn.local.SetStorage(bn.storage)
 
-	if err := bn.localstate.Initialize(); err != nil {
+	if err := bn.local.Initialize(); err != nil {
 		return err
 	}
 
 	co := bn.design.Config
-	lpo := bn.localstate.Policy()
+	lpo := bn.local.Policy()
 
 	if _, err := lpo.SetTimeoutWaitingProposal(co.TimeoutWaitingProposal); err != nil {
 		return err
@@ -163,8 +163,8 @@ func (bn *Launcher) reloadLocalstate() error {
 	return nil
 }
 
-func (bn *Launcher) Localstate() *isaac.Localstate {
-	return bn.localstate
+func (bn *Launcher) Local() *isaac.Local {
+	return bn.local
 }
 
 func (bn *Launcher) SetStorage(st storage.Storage) *Launcher {
@@ -237,7 +237,7 @@ func (bn *Launcher) Initialize() error {
 		{"storage", bn.storage},
 		{"network", bn.network},
 		{"nodeChannel", bn.nodeChannel},
-		{"reload-localstate", bn.reloadLocalstate},
+		{"reload-local", bn.reloadLocal},
 		{"suffrage", bn.suffrage},
 		{"proposalProcessor", bn.proposalProcessor},
 	}
@@ -247,7 +247,7 @@ func (bn *Launcher) Initialize() error {
 		}
 	}
 
-	bn.localstate.Nodes().Traverse(func(n network.Node) bool {
+	bn.local.Nodes().Traverse(func(n network.Node) bool {
 		if l, ok := n.(logging.SetLogger); ok {
 			_ = l.SetLogger(bn.Log())
 		}
@@ -319,7 +319,7 @@ func (bn *Launcher) Start() error {
 		return err
 	}
 
-	bn.Log().Info().Interface("policy", bn.localstate.Policy()).Msg("policies")
+	bn.Log().Info().Interface("policy", bn.local.Policy()).Msg("policies")
 
 	if err := bn.consensusStates.Start(); err != nil {
 		return err
@@ -339,23 +339,23 @@ func (bn *Launcher) ConsensusStates() *isaac.ConsensusStates {
 }
 
 func (bn *Launcher) createConsensusStates() error {
-	proposalMaker := isaac.NewProposalMaker(bn.localstate)
+	proposalMaker := isaac.NewProposalMaker(bn.local)
 
 	var booting, joining, consensus, syncing, broken isaac.StateHandler
 	var err error
-	if booting, err = isaac.NewStateBootingHandler(bn.localstate, bn.suffrage); err != nil {
+	if booting, err = isaac.NewStateBootingHandler(bn.local, bn.suffrage); err != nil {
 		return err
 	}
-	syncing = isaac.NewStateSyncingHandler(bn.localstate)
-	if joining, err = isaac.NewStateJoiningHandler(bn.localstate, bn.proposalProcessor); err != nil {
+	syncing = isaac.NewStateSyncingHandler(bn.local)
+	if joining, err = isaac.NewStateJoiningHandler(bn.local, bn.proposalProcessor); err != nil {
 		return err
 	}
 	if consensus, err = isaac.NewStateConsensusHandler(
-		bn.localstate, bn.proposalProcessor, bn.suffrage, proposalMaker,
+		bn.local, bn.proposalProcessor, bn.suffrage, proposalMaker,
 	); err != nil {
 		return err
 	}
-	if broken, err = isaac.NewStateBrokenHandler(bn.localstate); err != nil {
+	if broken, err = isaac.NewStateBrokenHandler(bn.local); err != nil {
 		return err
 	}
 	for _, h := range []interface{}{booting, joining, consensus, syncing, broken} {
@@ -371,7 +371,7 @@ func (bn *Launcher) createConsensusStates() error {
 		func() base.Threshold {
 			if t, err := base.NewThreshold(
 				uint(len(bn.suffrage.Nodes())),
-				bn.localstate.Policy().ThresholdRatio(),
+				bn.local.Policy().ThresholdRatio(),
 			); err != nil {
 				panic(err)
 			} else {
@@ -382,7 +382,7 @@ func (bn *Launcher) createConsensusStates() error {
 	_ = ballotbox.SetLogger(bn.Log())
 
 	if cs, err := isaac.NewConsensusStates(
-		bn.localstate, ballotbox, bn.suffrage,
+		bn.local, ballotbox, bn.suffrage,
 		booting.(*isaac.StateBootingHandler),
 		joining.(*isaac.StateJoiningHandler),
 		consensus.(*isaac.StateConsensusHandler),
@@ -420,7 +420,7 @@ func (bn *Launcher) networkhandlerNewSeal(sl seal.Seal) error {
 	sealChecker := isaac.NewSealValidationChecker(
 		sl,
 		bn.storage,
-		bn.localstate.Policy(),
+		bn.local.Policy(),
 		bn.sealCache,
 	)
 	if err := util.NewChecker("network-new-seal-checker", []util.CheckerFunc{
@@ -447,7 +447,7 @@ func (bn *Launcher) networkhandlerNewSeal(sl seal.Seal) error {
 	}
 
 	if t, ok := sl.(ballot.Ballot); ok {
-		if checker, err := isaac.NewBallotChecker(t, bn.localstate, bn.suffrage); err != nil {
+		if checker, err := isaac.NewBallotChecker(t, bn.local, bn.suffrage); err != nil {
 			return err
 		} else if err := util.NewChecker("network-new-ballot-checker", []util.CheckerFunc{
 			checker.CheckIsInSuffrage,
@@ -499,7 +499,7 @@ func (bn *Launcher) networkhandlerGetBlocks(heights []base.Height) ([]block.Bloc
 
 	var blocks []block.Block
 	for _, h := range heights {
-		if blk, err := bn.localstate.BlockFS().Load(h); err != nil {
+		if blk, err := bn.local.BlockFS().Load(h); err != nil {
 			if xerrors.Is(err, storage.NotFoundError) {
 				break
 			}
@@ -526,9 +526,9 @@ func (bn *Launcher) NodeInfo() (network.NodeInfo, error) {
 		manifest = m
 	}
 
-	suffrage := make([]base.Node, bn.localstate.Nodes().Len())
+	suffrage := make([]base.Node, bn.local.Nodes().Len())
 	var i int
-	bn.localstate.Nodes().Traverse(func(n network.Node) bool {
+	bn.local.Nodes().Traverse(func(n network.Node) bool {
 		suffrage[i] = n
 		i++
 
@@ -536,14 +536,14 @@ func (bn *Launcher) NodeInfo() (network.NodeInfo, error) {
 	})
 
 	return network.NewNodeInfoV0(
-		bn.localstate.Node(),
-		bn.localstate.Policy().NetworkID(),
+		bn.local.Node(),
+		bn.local.Policy().NetworkID(),
 		state,
 		manifest,
 		bn.version,
 		bn.publishURL,
-		bn.localstate.Policy().Policy(),
-		bn.localstate.Policy().Config(),
+		bn.local.Policy().Policy(),
+		bn.local.Policy().Config(),
 		suffrage,
 	), nil
 }
@@ -572,7 +572,7 @@ func (bn *Launcher) DefaultSuffrage() error {
 	})
 	l.Debug().Msg("trying to attach")
 
-	bn.suffrage = NewRoundrobinSuffrage(bn.localstate, 100)
+	bn.suffrage = NewRoundrobinSuffrage(bn.local, 100)
 
 	l.Debug().Msg("attached")
 
@@ -585,7 +585,7 @@ func (bn *Launcher) DefaultProposalProcessor() error {
 	})
 	l.Debug().Msg("trying to attach")
 
-	bn.proposalProcessor = isaac.NewDefaultProposalProcessor(bn.localstate, bn.suffrage)
+	bn.proposalProcessor = isaac.NewDefaultProposalProcessor(bn.local, bn.suffrage)
 
 	l.Debug().Msg("attached")
 

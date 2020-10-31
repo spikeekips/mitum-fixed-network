@@ -140,15 +140,15 @@ func (st *ProposalProcessorDesign) IsValid([]byte) error {
 }
 
 func (st *ProposalProcessorDesign) New(
-	localstate *isaac.Localstate, suffrage base.Suffrage,
+	local *isaac.Local, suffrage base.Suffrage,
 ) (isaac.ProposalProcessor, error) {
 	switch st.Type {
 	case "default":
-		return isaac.NewDefaultProposalProcessor(localstate, suffrage), nil
+		return isaac.NewDefaultProposalProcessor(local, suffrage), nil
 	case "wrong-processing":
-		return NewWrongProposalProcessor(localstate, suffrage, st.wrongPoints), nil
+		return NewWrongProposalProcessor(local, suffrage, st.wrongPoints), nil
 	case "occurring-error":
-		return NewErrorProposalProcessor(localstate, suffrage, st.errorINITPoints, st.errorACCEPTPoints), nil
+		return NewErrorProposalProcessor(local, suffrage, st.errorINITPoints, st.errorACCEPTPoints), nil
 	default:
 		return nil, xerrors.Errorf("unknown type found: %v", st.Type)
 	}

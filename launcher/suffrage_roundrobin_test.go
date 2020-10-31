@@ -14,18 +14,18 @@ type testRoundrobinSuffrage struct {
 	suite.Suite
 }
 
-func (t *testRoundrobinSuffrage) localstate() *isaac.Localstate {
+func (t *testRoundrobinSuffrage) local() *isaac.Local {
 	localNode := isaac.RandomLocalNode("local", nil)
-	localstate, err := isaac.NewLocalstate(nil, nil, localNode, isaac.TestNetworkID)
+	local, err := isaac.NewLocal(nil, nil, localNode, isaac.TestNetworkID)
 	t.NoError(err)
 
-	t.NoError(localstate.Initialize())
+	t.NoError(local.Initialize())
 
-	return localstate
+	return local
 }
 
 func (t *testRoundrobinSuffrage) TestNew() {
-	local := t.localstate()
+	local := t.local()
 	sf := NewRoundrobinSuffrage(local, 10)
 	t.NotNil(sf)
 
@@ -33,7 +33,7 @@ func (t *testRoundrobinSuffrage) TestNew() {
 }
 
 func (t *testRoundrobinSuffrage) TestActingSuffrage() {
-	local := t.localstate()
+	local := t.local()
 	_, _ = local.Policy().SetNumberOfActingSuffrageNodes(3)
 
 	nodes := []network.Node{
@@ -73,7 +73,7 @@ func (t *testRoundrobinSuffrage) TestActingSuffrage() {
 }
 
 func (t *testRoundrobinSuffrage) TestActingSuffrageNotSufficient() {
-	local := t.localstate()
+	local := t.local()
 	_, _ = local.Policy().SetNumberOfActingSuffrageNodes(4)
 
 	nodes := []network.Node{

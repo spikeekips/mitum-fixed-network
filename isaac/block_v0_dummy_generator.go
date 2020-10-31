@@ -15,29 +15,29 @@ import (
 )
 
 type DummyBlocksV0Generator struct {
-	genesisNode *Localstate
-	localstates []*Localstate
+	genesisNode *Local
+	locals      []*Local
 	lastHeight  base.Height
 	suffrage    base.Suffrage
 	networkID   []byte
-	allNodes    map[base.Address]*Localstate
+	allNodes    map[base.Address]*Local
 	ballotboxes map[base.Address]*Ballotbox
 	pms         map[base.Address]ProposalProcessor
 }
 
 func NewDummyBlocksV0Generator(
-	genesisNode *Localstate, lastHeight base.Height, suffrage base.Suffrage, localstates []*Localstate,
+	genesisNode *Local, lastHeight base.Height, suffrage base.Suffrage, locals []*Local,
 ) (*DummyBlocksV0Generator, error) {
 	if lastHeight <= base.NilHeight {
 		return nil, xerrors.Errorf("last height must not be nil height, %v", base.NilHeight)
 	}
 
-	allNodes := map[base.Address]*Localstate{}
+	allNodes := map[base.Address]*Local{}
 	ballotboxes := map[base.Address]*Ballotbox{}
 	pms := map[base.Address]ProposalProcessor{}
 
-	threshold, _ := base.NewThreshold(uint(len(localstates)), 67)
-	for _, l := range localstates {
+	threshold, _ := base.NewThreshold(uint(len(locals)), 67)
+	for _, l := range locals {
 		allNodes[l.Node().Address()] = l
 		ballotboxes[l.Node().Address()] = NewBallotbox(
 			suffrage.Nodes,
@@ -50,7 +50,7 @@ func NewDummyBlocksV0Generator(
 
 	return &DummyBlocksV0Generator{
 		genesisNode: genesisNode,
-		localstates: localstates,
+		locals:      locals,
 		lastHeight:  lastHeight,
 		suffrage:    suffrage,
 		networkID:   genesisNode.Policy().NetworkID(),
@@ -123,7 +123,7 @@ end:
 	return nil
 }
 
-func (bg *DummyBlocksV0Generator) syncBlocks(from *Localstate) error {
+func (bg *DummyBlocksV0Generator) syncBlocks(from *Local) error {
 	var blocks []block.Block
 	height := base.PreGenesisHeight
 
@@ -161,7 +161,7 @@ end:
 	return bg.syncSeals(from)
 }
 
-func (bg *DummyBlocksV0Generator) storeBlock(l *Localstate, blk block.Block) error {
+func (bg *DummyBlocksV0Generator) storeBlock(l *Local, blk block.Block) error {
 	var bs storage.BlockStorage
 	if st, err := l.Storage().OpenBlockStorage(blk); err != nil {
 		return err
@@ -193,7 +193,7 @@ func (bg *DummyBlocksV0Generator) storeBlock(l *Localstate, blk block.Block) err
 	return nil
 }
 
-func (bg *DummyBlocksV0Generator) syncSeals(from *Localstate) error {
+func (bg *DummyBlocksV0Generator) syncSeals(from *Local) error {
 	var seals []seal.Seal
 	if err := from.Storage().Seals(
 		func(_ valuehash.Hash, sl seal.Seal) (bool, error) {
@@ -284,7 +284,7 @@ func (bg *DummyBlocksV0Generator) createNextBlock() error {
 	return nil
 }
 
-func (bg *DummyBlocksV0Generator) finish(l *Localstate, vp base.Voteproof) error {
+func (bg *DummyBlocksV0Generator) finish(l *Local, vp base.Voteproof) error {
 	proposal := vp.Majority().(ballot.ACCEPTBallotFact).Proposal()
 
 	pm := bg.pms[l.Node().Address()]
@@ -339,11 +339,11 @@ func (bg *DummyBlocksV0Generator) createINITVoteproof() (map[base.Address]base.V
 	return vm, nil
 }
 
-func (bg *DummyBlocksV0Generator) createINITBallot(localstate *Localstate) (ballot.INITBallot, error) {
+func (bg *DummyBlocksV0Generator) createINITBallot(local *Local) (ballot.INITBallot, error) {
 	var baseBallot ballot.INITBallotV0
-	if b, err := NewINITBallotV0Round0(localstate); err != nil {
+	if b, err := NewINITBallotV0Round0(local); err != nil {
 		return nil, err
-	} else if err := SignSeal(&b, localstate); err != nil {
+	} else if err := SignSeal(&b, local); err != nil {
 		return nil, err
 	} else {
 		baseBallot = b

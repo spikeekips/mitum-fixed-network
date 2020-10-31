@@ -5,7 +5,7 @@ import (
 	"github.com/spikeekips/mitum/util/logging"
 )
 
-func (ls *Localstate) MarshalLog(key string, e logging.Emitter, verbose bool) logging.Emitter {
+func (ls *Local) MarshalLog(key string, e logging.Emitter, verbose bool) logging.Emitter {
 	var manifest block.Manifest
 	if m, found, err := ls.Storage().LastManifest(); !found || err != nil {
 		return e

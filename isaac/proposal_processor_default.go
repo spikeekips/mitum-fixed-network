@@ -17,18 +17,18 @@ import (
 type DefaultProposalProcessor struct {
 	sync.RWMutex
 	*logging.Logging
-	localstate                *Localstate
+	local                     *Local
 	suffrage                  base.Suffrage
 	pp                        *internalDefaultProposalProcessor
 	operationProcessorHintSet *hint.Hintmap
 }
 
-func NewDefaultProposalProcessor(localstate *Localstate, suffrage base.Suffrage) *DefaultProposalProcessor {
+func NewDefaultProposalProcessor(local *Local, suffrage base.Suffrage) *DefaultProposalProcessor {
 	return &DefaultProposalProcessor{
 		Logging: logging.NewLogging(func(c logging.Context) logging.Emitter {
 			return c.Str("module", "default-proposal-processor")
 		}),
-		localstate:                localstate,
+		local:                     local,
 		suffrage:                  suffrage,
 		operationProcessorHintSet: hint.NewHintmap(),
 		pp:                        nil,
@@ -114,7 +114,7 @@ func (dp *DefaultProposalProcessor) ProcessINIT(ph valuehash.Hash, initVoteproof
 		proposal = pr
 	}
 
-	pp, err := newInternalDefaultProposalProcessor(dp.localstate, dp.suffrage, proposal, dp.operationProcessorHintSet)
+	pp, err := newInternalDefaultProposalProcessor(dp.local, dp.suffrage, proposal, dp.operationProcessorHintSet)
 	if err != nil {
 		return nil, err
 	}
@@ -159,7 +159,7 @@ func (dp *DefaultProposalProcessor) Done(ph valuehash.Hash) error {
 		return err
 	} else if blk := pp.block(); blk == nil {
 		return xerrors.Errorf("not processed; empty block")
-	} else if err := dp.localstate.BlockFS().Commit(blk.Height(), blk.Hash()); err != nil {
+	} else if err := dp.local.BlockFS().Commit(blk.Height(), blk.Hash()); err != nil {
 		return err
 	}
 
@@ -171,7 +171,7 @@ func (dp *DefaultProposalProcessor) Done(ph valuehash.Hash) error {
 func (dp *DefaultProposalProcessor) Cancel() error {
 	if pp := dp.processor(); pp != nil {
 		if blk := pp.block(); blk != nil {
-			if err := dp.localstate.BlockFS().Cancel(blk.Height(), blk.Hash()); err != nil {
+			if err := dp.local.BlockFS().Cancel(blk.Height(), blk.Hash()); err != nil {
 				return err
 			}
 		}
@@ -188,7 +188,7 @@ func (dp *DefaultProposalProcessor) checkProposal(
 	ph valuehash.Hash, initVoteproof base.Voteproof,
 ) (ballot.Proposal, error) {
 	var proposal ballot.Proposal
-	if sl, found, err := dp.localstate.Storage().Seal(ph); !found {
+	if sl, found, err := dp.local.Storage().Seal(ph); !found {
 		return nil, storage.NotFoundError.Errorf("seal not found")
 	} else if err != nil {
 		return nil, err
@@ -198,7 +198,7 @@ func (dp *DefaultProposalProcessor) checkProposal(
 		proposal = pr
 	}
 
-	timespan := dp.localstate.Policy().TimespanValidBallot()
+	timespan := dp.local.Policy().TimespanValidBallot()
 	if proposal.SignedAt().Before(initVoteproof.FinishedAt().Add(timespan * -1)) {
 		return nil, xerrors.Errorf(
 			"Proposal was sent before Voteproof; SignedAt=%s now=%s timespan=%s",

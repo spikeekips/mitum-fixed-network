@@ -18,14 +18,14 @@ type testSyncers struct {
 }
 
 func (t *testSyncers) TestNew() {
-	ls := t.localstates(2)
+	ls := t.locals(2)
 	local, remote := ls[0], ls[1]
 
-	t.setup(local, []*Localstate{remote})
+	t.setup(local, []*Local{remote})
 
 	fromHeight := t.lastManifest(local.Storage()).Height() + 1
 	target := fromHeight + 2
-	t.generateBlocks([]*Localstate{remote}, target)
+	t.generateBlocks([]*Local{remote}, target)
 
 	baseManifest, found, err := local.Storage().LastManifest()
 	t.NoError(err)
@@ -82,13 +82,13 @@ func (t *testSyncers) TestNew() {
 }
 
 func (t *testSyncers) TestMultipleSyncers() {
-	ls := t.localstates(2)
+	ls := t.locals(2)
 	local, remote := ls[0], ls[1]
 
-	t.setup(local, []*Localstate{remote})
+	t.setup(local, []*Local{remote})
 
 	target := t.lastManifest(local.Storage()).Height() + 2
-	t.generateBlocks([]*Localstate{remote}, target)
+	t.generateBlocks([]*Local{remote}, target)
 
 	baseManifest, found, err := local.Storage().LastManifest()
 	t.NoError(err)
@@ -118,13 +118,13 @@ func (t *testSyncers) TestMultipleSyncers() {
 }
 
 func (t *testSyncers) TestMangledFinishedOrder() {
-	ls := t.localstates(2)
+	ls := t.locals(2)
 	local, remote := ls[0], ls[1]
 
-	t.setup(local, []*Localstate{remote})
+	t.setup(local, []*Local{remote})
 
 	target := t.lastManifest(local.Storage()).Height() + 10
-	t.generateBlocks([]*Localstate{remote}, target)
+	t.generateBlocks([]*Local{remote}, target)
 
 	baseManifest, found, err := local.Storage().LastManifest()
 	t.NoError(err)
@@ -154,13 +154,13 @@ func (t *testSyncers) TestMangledFinishedOrder() {
 }
 
 func (t *testSyncers) TestAddAfterFinished() {
-	ls := t.localstates(2)
+	ls := t.locals(2)
 	local, remote := ls[0], ls[1]
 
-	t.setup(local, []*Localstate{remote})
+	t.setup(local, []*Local{remote})
 
 	target := t.lastManifest(local.Storage()).Height() + 10
-	t.generateBlocks([]*Localstate{remote}, target)
+	t.generateBlocks([]*Local{remote}, target)
 
 	baseManifest, found, err := local.Storage().LastManifest()
 	t.NoError(err)

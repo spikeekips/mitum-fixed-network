@@ -13,14 +13,14 @@ import (
 type testStateSyncingHandler struct {
 	baseTestStateHandler
 
-	local  *Localstate
-	remote *Localstate
+	local  *Local
+	remote *Local
 }
 
 func (t *testStateSyncingHandler) SetupTest() {
 	t.baseTestStateHandler.SetupTest()
 
-	ls := t.localstates(2)
+	ls := t.locals(2)
 	t.local, t.remote = ls[0], ls[1]
 }
 

@@ -11,7 +11,7 @@ import (
 	"github.com/spikeekips/mitum/util/valuehash"
 )
 
-func NewINITBallotV0Round0(local *Localstate) (ballot.INITBallotV0, error) {
+func NewINITBallotV0Round0(local *Local) (ballot.INITBallotV0, error) {
 	var m block.Manifest
 	switch l, found, err := local.Storage().LastManifest(); {
 	case !found:
@@ -125,6 +125,6 @@ func NewACCEPTBallotV0(node base.Address, newBlock block.Block, voteproof base.V
 	)
 }
 
-func SignSeal(b seal.Signer, localstate *Localstate) error {
-	return b.Sign(localstate.Node().Privatekey(), localstate.Policy().NetworkID())
+func SignSeal(b seal.Signer, local *Local) error {
+	return b.Sign(local.Node().Privatekey(), local.Policy().NetworkID())
 }

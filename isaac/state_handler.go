@@ -81,7 +81,7 @@ func (csc StateChangeContext) MarshalLog(key string, e logging.Emitter, _ bool) 
 type BaseStateHandler struct {
 	sync.RWMutex
 	*logging.Logging
-	localstate        *Localstate
+	local             *Local
 	proposalProcessor ProposalProcessor
 	state             base.State
 	activatedLock     sync.RWMutex
@@ -94,10 +94,10 @@ type BaseStateHandler struct {
 }
 
 func NewBaseStateHandler(
-	localstate *Localstate, proposalProcessor ProposalProcessor, state base.State,
+	local *Local, proposalProcessor ProposalProcessor, state base.State,
 ) *BaseStateHandler {
 	return &BaseStateHandler{
-		localstate:        localstate,
+		local:             local,
 		proposalProcessor: proposalProcessor,
 		state:             state,
 		whenBlockSaved:    func([]block.Block) {},
@@ -266,7 +266,7 @@ func (bs *BaseStateHandler) storeNewBlock(fact ballot.ACCEPTBallotFact, acceptVo
 
 	s := time.Now()
 
-	timeout := bs.localstate.Policy().TimeoutWaitingProposal()
+	timeout := bs.local.Policy().TimeoutWaitingProposal()
 	l.Debug().Dur("timeout", timeout).Msg("trying to commit block")
 	ctx, cancel := context.WithTimeout(context.Background(), timeout)
 	defer cancel()
@@ -299,13 +299,13 @@ func (bs *BaseStateHandler) TimerBroadcastingINITBallot(
 	var baseBallot ballot.INITBallotV0
 
 	if round == 0 {
-		if b, err := NewINITBallotV0Round0(bs.localstate); err != nil {
+		if b, err := NewINITBallotV0Round0(bs.local); err != nil {
 			return nil, err
 		} else {
 			baseBallot = b
 		}
 	} else {
-		if b, err := NewINITBallotV0WithVoteproof(bs.localstate.Node().Address(), voteproof); err != nil {
+		if b, err := NewINITBallotV0WithVoteproof(bs.local.Node().Address(), voteproof); err != nil {
 			return nil, err
 		} else {
 			baseBallot = b
@@ -320,7 +320,7 @@ func (bs *BaseStateHandler) TimerBroadcastingINITBallot(
 			}
 
 			ib := baseBallot
-			if err := SignSeal(&ib, bs.localstate); err != nil {
+			if err := SignSeal(&ib, bs.local); err != nil {
 				bs.Log().Error().Err(err).Msg("failed to re-sign INITBallot, but will keep trying")
 
 				return true, nil
@@ -348,7 +348,7 @@ func (bs *BaseStateHandler) TimerBroadcastingACCEPTBallot(
 		return nil, nil
 	}
 
-	baseBallot := NewACCEPTBallotV0(bs.localstate.Node().Address(), newBlock, voteproof)
+	baseBallot := NewACCEPTBallotV0(bs.local.Node().Address(), newBlock, voteproof)
 
 	ct, err := localtime.NewCallbackTimer(
 		TimerIDBroadcastingACCEPTBallot,
@@ -358,7 +358,7 @@ func (bs *BaseStateHandler) TimerBroadcastingACCEPTBallot(
 			}
 
 			ab := baseBallot
-			if err := SignSeal(&ab, bs.localstate); err != nil {
+			if err := SignSeal(&ab, bs.local); err != nil {
 				bs.Log().Error().Err(err).Msg("failed to re-sign ACCEPTBallot, but will keep trying")
 
 				return true, nil
@@ -378,10 +378,10 @@ func (bs *BaseStateHandler) TimerBroadcastingACCEPTBallot(
 			// NOTE at 1st time, wait timeout duration, after then, periodically
 			// broadcast ACCEPT Ballot.
 			if i < 1 {
-				return bs.localstate.Policy().WaitBroadcastingACCEPTBallot()
+				return bs.local.Policy().WaitBroadcastingACCEPTBallot()
 			}
 
-			return bs.localstate.Policy().IntervalBroadcastingACCEPTBallot()
+			return bs.local.Policy().IntervalBroadcastingACCEPTBallot()
 		}), nil
 	}
 }
@@ -392,7 +392,7 @@ func (bs *BaseStateHandler) TimerTimedoutMoveNextRound(voteproof base.Voteproof)
 	}
 
 	var baseBallot ballot.INITBallotV0
-	if b, err := NewINITBallotV0WithVoteproof(bs.localstate.Node().Address(), voteproof); err != nil {
+	if b, err := NewINITBallotV0WithVoteproof(bs.local.Node().Address(), voteproof); err != nil {
 		return nil, err
 	} else {
 		baseBallot = b
@@ -406,7 +406,7 @@ func (bs *BaseStateHandler) TimerTimedoutMoveNextRound(voteproof base.Voteproof)
 			}
 
 			bs.Log().Debug().
-				Dur("timeout", bs.localstate.Policy().TimeoutWaitingProposal()).
+				Dur("timeout", bs.local.Policy().TimeoutWaitingProposal()).
 				Hinted("next_round", baseBallot.Round()).
 				Msg("timeout; waiting Proposal; trying to move next round")
 
@@ -415,7 +415,7 @@ func (bs *BaseStateHandler) TimerTimedoutMoveNextRound(voteproof base.Voteproof)
 			}
 
 			ib := baseBallot
-			if err := SignSeal(&ib, bs.localstate); err != nil {
+			if err := SignSeal(&ib, bs.local); err != nil {
 				bs.Log().Error().Err(err).Msg("failed to re-sign ACCEPTBallot, but will keep trying")
 
 				return true, nil
@@ -435,10 +435,10 @@ func (bs *BaseStateHandler) TimerTimedoutMoveNextRound(voteproof base.Voteproof)
 			// NOTE at 1st time, wait timeout duration, after then, periodically
 			// broadcast INIT Ballot.
 			if i < 1 {
-				return bs.localstate.Policy().TimeoutWaitingProposal()
+				return bs.local.Policy().TimeoutWaitingProposal()
 			}
 
-			return bs.localstate.Policy().IntervalBroadcastingINITBallot()
+			return bs.local.Policy().IntervalBroadcastingINITBallot()
 		}), nil
 	}
 }
@@ -472,7 +472,7 @@ func (bs *BaseStateHandler) TimerBroadcastingProposal(proposal ballot.Proposal) 
 				return time.Nanosecond
 			}
 
-			return bs.localstate.Policy().IntervalBroadcastingProposal()
+			return bs.local.Policy().IntervalBroadcastingProposal()
 		}), nil
 	}
 }

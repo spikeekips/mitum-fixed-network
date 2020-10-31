@@ -26,7 +26,7 @@ func (ss *dummySyncingStateHandler) NewVoteproof(_ base.Voteproof) error {
 }
 
 func (t *testConsensusStates) TestINITVoteproofHigherHeight() {
-	ls := t.localstates(2)
+	ls := t.locals(2)
 	local, remote := ls[0], ls[1]
 
 	r := base.ThresholdRatio(67)

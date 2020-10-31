@@ -11,13 +11,13 @@ import (
 
 type testGenesisBlockV0 struct {
 	baseTestStateHandler
-	local *Localstate
+	local *Local
 }
 
 func (t *testGenesisBlockV0) SetupTest() {
 	t.baseTestStateHandler.SetupTest()
 
-	t.local = t.localstates(1)[0]
+	t.local = t.locals(1)[0]
 	t.local.Storage().Clean()
 }
 

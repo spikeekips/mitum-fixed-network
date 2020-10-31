@@ -12,19 +12,19 @@ import (
 
 type WrongProposalProcessor struct {
 	*isaac.DefaultProposalProcessor
-	localstate *isaac.Localstate
-	points     []BlockPoint
+	local  *isaac.Local
+	points []BlockPoint
 }
 
 func NewWrongProposalProcessor(
-	localstate *isaac.Localstate,
+	local *isaac.Local,
 	suffrage base.Suffrage,
 	points []BlockPoint,
 ) *WrongProposalProcessor {
 	wp := &WrongProposalProcessor{
-		DefaultProposalProcessor: isaac.NewDefaultProposalProcessor(localstate, suffrage),
+		DefaultProposalProcessor: isaac.NewDefaultProposalProcessor(local, suffrage),
 		points:                   points,
-		localstate:               localstate,
+		local:                    local,
 	}
 	wp.Logging = logging.NewLogging(func(c logging.Context) logging.Emitter {
 		return c.Str("module", "wrong-proposal-processor")
@@ -72,7 +72,7 @@ func (wp *WrongProposalProcessor) ProcessACCEPT(ph valuehash.Hash, voteproof bas
 			SetACCEPTVoteproof(orig.ConsensusInfo().ACCEPTVoteproof()).
 			SetProposal(orig.ConsensusInfo().Proposal())
 
-		newbs, err := wp.localstate.Storage().OpenBlockStorage(newBlock)
+		newbs, err := wp.local.Storage().OpenBlockStorage(newBlock)
 		if err != nil {
 			panic(err)
 		} else if err := newbs.SetBlock(newBlock); err != nil {

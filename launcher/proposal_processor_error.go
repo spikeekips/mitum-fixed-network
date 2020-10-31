@@ -17,13 +17,13 @@ type ErrorProposalProcessor struct {
 }
 
 func NewErrorProposalProcessor(
-	localstate *isaac.Localstate,
+	local *isaac.Local,
 	suffrage base.Suffrage,
 	initPoints []BlockPoint,
 	acceptPoints []BlockPoint,
 ) *ErrorProposalProcessor {
 	return &ErrorProposalProcessor{
-		DefaultProposalProcessor: isaac.NewDefaultProposalProcessor(localstate, suffrage),
+		DefaultProposalProcessor: isaac.NewDefaultProposalProcessor(local, suffrage),
 		initPoints:               initPoints,
 		acceptPoints:             acceptPoints,
 	}

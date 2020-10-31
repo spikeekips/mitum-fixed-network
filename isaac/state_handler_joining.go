@@ -61,11 +61,11 @@ type StateJoiningHandler struct {
 }
 
 func NewStateJoiningHandler(
-	localstate *Localstate,
+	local *Local,
 	proposalProcessor ProposalProcessor,
 ) (*StateJoiningHandler, error) {
 	cs := &StateJoiningHandler{
-		BaseStateHandler: NewBaseStateHandler(localstate, proposalProcessor, base.StateJoining),
+		BaseStateHandler: NewBaseStateHandler(local, proposalProcessor, base.StateJoining),
 	}
 	cs.BaseStateHandler.Logging = logging.NewLogging(func(c logging.Context) logging.Emitter {
 		return c.Str("module", "consensus-state-joining-handler")
@@ -88,7 +88,7 @@ func (cs *StateJoiningHandler) Activate(_ *StateChangeContext) error {
 	defer cs.Unlock()
 
 	var avp base.Voteproof // NOTE ACCEPT Voteproof of last block
-	switch vp, found, err := cs.localstate.BlockFS().LastVoteproof(base.StageACCEPT); {
+	switch vp, found, err := cs.local.BlockFS().LastVoteproof(base.StageACCEPT); {
 	case !found:
 		return storage.NotFoundError.Errorf("last voteproof not found")
 	case err != nil:
@@ -211,7 +211,7 @@ func (cs *StateJoiningHandler) handleINITBallotAndACCEPTVoteproof(
 	l.Debug().Msg("INIT Ballot + ACCEPT Voteproof")
 
 	var height base.Height
-	switch m, found, err := cs.localstate.Storage().LastManifest(); {
+	switch m, found, err := cs.local.Storage().LastManifest(); {
 	case !found:
 		return storage.NotFoundError.Errorf("last manifest not found")
 	case err != nil:
@@ -243,7 +243,7 @@ func (cs *StateJoiningHandler) handleINITBallotAndINITVoteproof(blt ballot.INITB
 	l.Debug().Msg("INIT Ballot + INIT Voteproof")
 
 	var manifest block.Manifest
-	switch m, found, err := cs.localstate.Storage().LastManifest(); {
+	switch m, found, err := cs.local.Storage().LastManifest(); {
 	case !found:
 		return storage.NotFoundError.Errorf("last manifest not found")
 	case err != nil:
@@ -293,7 +293,7 @@ func (cs *StateJoiningHandler) handleACCEPTBallotAndINITVoteproof(
 	l.Debug().Msg("ACCEPT Ballot + INIT Voteproof")
 
 	var manifest block.Manifest
-	switch m, found, err := cs.localstate.Storage().LastManifest(); {
+	switch m, found, err := cs.local.Storage().LastManifest(); {
 	case !found:
 		return storage.NotFoundError.Errorf("last manifest not found")
 	case err != nil:
@@ -318,8 +318,8 @@ func (cs *StateJoiningHandler) handleACCEPTBallotAndINITVoteproof(
 			return err
 		}
 
-		ab := NewACCEPTBallotV0(cs.localstate.Node().Address(), blk, cs.LastINITVoteproof())
-		if err := SignSeal(&ab, cs.localstate); err != nil {
+		ab := NewACCEPTBallotV0(cs.local.Node().Address(), blk, cs.LastINITVoteproof())
+		if err := SignSeal(&ab, cs.local); err != nil {
 			cs.Log().Error().Err(err).Msg("failed to sign ACCEPTBallot; will keep trying")
 			return err
 		} else {
@@ -362,7 +362,7 @@ func (cs *StateJoiningHandler) NewVoteproof(voteproof base.Voteproof) error {
 }
 
 func (cs *StateJoiningHandler) handleINITVoteproof(voteproof base.Voteproof) error {
-	l := loggerWithLocalstate(cs.localstate, loggerWithVoteproofID(voteproof, cs.Log()))
+	l := loggerWithLocal(cs.local, loggerWithVoteproofID(voteproof, cs.Log()))
 
 	l.Debug().Msg("expected height; moves to consensus state")
 
@@ -372,7 +372,7 @@ func (cs *StateJoiningHandler) handleINITVoteproof(voteproof base.Voteproof) err
 func (cs *StateJoiningHandler) broadcastINITBallot(round base.Round, voteproof base.Voteproof) error {
 	if timer, err := cs.TimerBroadcastingINITBallot(
 		func(int) time.Duration {
-			return cs.localstate.Policy().IntervalBroadcastingINITBallot()
+			return cs.local.Policy().IntervalBroadcastingINITBallot()
 		},
 		round,
 		voteproof,

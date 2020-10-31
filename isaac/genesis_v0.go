@@ -19,16 +19,16 @@ import (
 
 type GenesisBlockV0Generator struct {
 	*logging.Logging
-	localstate *Localstate
-	ballotbox  *Ballotbox
-	ops        []operation.Operation
-	suffrage   base.Suffrage
+	local     *Local
+	ballotbox *Ballotbox
+	ops       []operation.Operation
+	suffrage  base.Suffrage
 }
 
-func NewGenesisBlockV0Generator(localstate *Localstate, ops []operation.Operation) (*GenesisBlockV0Generator, error) {
+func NewGenesisBlockV0Generator(local *Local, ops []operation.Operation) (*GenesisBlockV0Generator, error) {
 	threshold, _ := base.NewThreshold(1, 100)
 
-	suffrage := base.NewFixedSuffrage(localstate.Node().Address(), nil)
+	suffrage := base.NewFixedSuffrage(local.Node().Address(), nil)
 	if err := suffrage.Initialize(); err != nil {
 		return nil, err
 	}
@@ -37,10 +37,10 @@ func NewGenesisBlockV0Generator(localstate *Localstate, ops []operation.Operatio
 		Logging: logging.NewLogging(func(c logging.Context) logging.Emitter {
 			return c.Str("module", "genesis-block-generator")
 		}),
-		localstate: localstate,
+		local: local,
 		ballotbox: NewBallotbox(
 			func() []base.Address {
-				return []base.Address{localstate.Node().Address()}
+				return []base.Address{local.Node().Address()}
 			},
 			func() base.Threshold {
 				return threshold
@@ -77,7 +77,7 @@ func (gg *GenesisBlockV0Generator) Generate() (block.Block, error) {
 		proposal = pr
 	}
 
-	pm := NewDefaultProposalProcessor(gg.localstate, gg.suffrage)
+	pm := NewDefaultProposalProcessor(gg.local, gg.suffrage)
 	_ = pm.SetLogger(gg.Log())
 
 	if bk, err := pm.ProcessINIT(proposal.Hash(), ivp); err != nil {
@@ -125,12 +125,12 @@ func (gg *GenesisBlockV0Generator) generateOperationSeal() ([]operation.Seal, er
 
 	var seals []operation.Seal
 	if sl, err := operation.NewBaseSeal(
-		gg.localstate.Node().Privatekey(),
+		gg.local.Node().Privatekey(),
 		gg.ops,
-		gg.localstate.Policy().NetworkID(),
+		gg.local.Policy().NetworkID(),
 	); err != nil {
 		return nil, err
-	} else if err := gg.localstate.Storage().NewSeals([]seal.Seal{sl}); err != nil {
+	} else if err := gg.local.Storage().NewSeals([]seal.Seal{sl}); err != nil {
 		return nil, err
 	} else {
 		seals = append(seals, sl)
@@ -143,7 +143,7 @@ func (gg *GenesisBlockV0Generator) generatePreviousBlock() error {
 	// NOTE the privatekey of local node is melted into genesis previous block;
 	// it means, genesis block contains who creates it.
 	var genesisHash valuehash.Hash
-	if sig, err := gg.localstate.Node().Privatekey().Sign(gg.localstate.Policy().NetworkID()); err != nil {
+	if sig, err := gg.local.Node().Privatekey().Sign(gg.local.Policy().NetworkID()); err != nil {
 		return err
 	} else {
 		genesisHash = valuehash.NewBytes(sig.Bytes())
@@ -151,8 +151,8 @@ func (gg *GenesisBlockV0Generator) generatePreviousBlock() error {
 
 	blk, err := block.NewBlockV0(
 		block.NewSuffrageInfoV0(
-			gg.localstate.Node().Address(),
-			[]base.Node{gg.localstate.Node()},
+			gg.local.Node().Address(),
+			[]base.Node{gg.local.Node()},
 		),
 		base.PreGenesisHeight,
 		base.Round(0),
@@ -167,7 +167,7 @@ func (gg *GenesisBlockV0Generator) generatePreviousBlock() error {
 	}
 
 	var bs storage.BlockStorage
-	if st, err := gg.localstate.Storage().OpenBlockStorage(blk); err != nil {
+	if st, err := gg.local.Storage().OpenBlockStorage(blk); err != nil {
 		return err
 	} else {
 		bs = st
@@ -179,7 +179,7 @@ func (gg *GenesisBlockV0Generator) generatePreviousBlock() error {
 
 	if err := bs.Commit(context.Background()); err != nil {
 		return err
-	} else if err := gg.localstate.BlockFS().AddAndCommit(blk); err != nil {
+	} else if err := gg.local.BlockFS().AddAndCommit(blk); err != nil {
 		err := errors.NewError("failed to commit to blockfs").Wrap(err)
 		if err0 := bs.Cancel(); err0 != nil {
 			return err.Wrap(err0)
@@ -200,14 +200,14 @@ func (gg *GenesisBlockV0Generator) generateProposal(seals []operation.Seal) (bal
 
 	var proposal ballot.Proposal
 	pr := ballot.NewProposalV0(
-		gg.localstate.Node().Address(),
+		gg.local.Node().Address(),
 		base.Height(0),
 		base.Round(0),
 		sealHashes,
 	)
-	if err := SignSeal(&pr, gg.localstate); err != nil {
+	if err := SignSeal(&pr, gg.local); err != nil {
 		return nil, err
-	} else if err := gg.localstate.Storage().NewProposal(pr); err != nil {
+	} else if err := gg.local.Storage().NewProposal(pr); err != nil {
 		return nil, err
 	} else {
 		proposal = pr
@@ -218,9 +218,9 @@ func (gg *GenesisBlockV0Generator) generateProposal(seals []operation.Seal) (bal
 
 func (gg *GenesisBlockV0Generator) generateINITVoteproof() (base.Voteproof, error) {
 	var ib ballot.INITBallotV0
-	if b, err := NewINITBallotV0Round0(gg.localstate); err != nil {
+	if b, err := NewINITBallotV0Round0(gg.local); err != nil {
 		return nil, err
-	} else if err := SignSeal(&b, gg.localstate); err != nil {
+	} else if err := SignSeal(&b, gg.local); err != nil {
 		return nil, err
 	} else {
 		ib = b
@@ -243,8 +243,8 @@ func (gg *GenesisBlockV0Generator) generateINITVoteproof() (base.Voteproof, erro
 func (gg *GenesisBlockV0Generator) generateACCEPTVoteproof(newBlock block.Block, ivp base.Voteproof) (
 	base.Voteproof, error,
 ) {
-	ab := NewACCEPTBallotV0(gg.localstate.Node().Address(), newBlock, ivp)
-	if err := SignSeal(&ab, gg.localstate); err != nil {
+	ab := NewACCEPTBallotV0(gg.local.Node().Address(), newBlock, ivp)
+	if err := SignSeal(&ab, gg.local); err != nil {
 		return nil, err
 	}
 

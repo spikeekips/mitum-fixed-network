@@ -15,32 +15,32 @@ type baseTestSyncer struct {
 	baseTestStateHandler
 }
 
-func (t *baseTestSyncer) generateBlocks(localstates []*Localstate, targetHeight base.Height) {
+func (t *baseTestSyncer) generateBlocks(locals []*Local, targetHeight base.Height) {
 	bg, err := NewDummyBlocksV0Generator(
-		localstates[0],
+		locals[0],
 		targetHeight,
-		t.suffrage(localstates[0], localstates...),
-		localstates,
+		t.suffrage(locals[0], locals...),
+		locals,
 	)
 	t.NoError(err)
 	t.NoError(bg.Generate(false))
 }
 
-func (t *baseTestSyncer) emptyLocalstate() *Localstate {
+func (t *baseTestSyncer) emptyLocal() *Local {
 	lst := t.Storage(nil, nil)
 	localNode := RandomLocalNode(util.UUID().String(), nil)
 	blockfs := t.BlockFS(t.JSONEnc)
 
-	localstate, err := NewLocalstate(lst, blockfs, localNode, TestNetworkID)
+	local, err := NewLocal(lst, blockfs, localNode, TestNetworkID)
 	t.NoError(err)
 
-	t.NoError(localstate.Initialize())
+	t.NoError(local.Initialize())
 
-	return localstate
+	return local
 }
 
-func (t *baseTestStateHandler) setup(local *Localstate, others []*Localstate) {
-	var nodes []*Localstate = []*Localstate{local}
+func (t *baseTestStateHandler) setup(local *Local, others []*Local) {
+	var nodes []*Local = []*Local{local}
 	nodes = append(nodes, others...)
 
 	lastHeight := t.lastManifest(local.Storage()).Height()

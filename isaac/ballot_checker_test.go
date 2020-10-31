@@ -18,14 +18,14 @@ type testBallotChecker struct {
 
 	suf base.Suffrage
 
-	local  *Localstate
-	remote *Localstate
+	local  *Local
+	remote *Local
 }
 
 func (t *testBallotChecker) SetupTest() {
 	t.baseTestStateHandler.SetupTest()
 
-	ls := t.localstates(2)
+	ls := t.locals(2)
 
 	t.local, t.remote = ls[0], ls[1]
 
@@ -69,7 +69,7 @@ func (t *testBallotChecker) TestIsInSuffrage() {
 	}
 
 	{ // from unknown
-		unknown := t.localstates(1)[0]
+		unknown := t.locals(1)[0]
 		t.False(t.suf.IsInside(unknown.Node().Address()))
 
 		ib := t.newINITBallot(unknown, base.Round(0), nil)

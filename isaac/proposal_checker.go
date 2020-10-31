@@ -11,14 +11,14 @@ import (
 
 type ProposalValidationChecker struct {
 	*logging.Logging
-	localstate    *Localstate
+	local         *Local
 	suffrage      base.Suffrage
 	proposal      ballot.Proposal
 	initVoteproof base.Voteproof
 }
 
 func NewProposalValidationChecker(
-	localstate *Localstate,
+	local *Local,
 	suffrage base.Suffrage,
 	proposal ballot.Proposal,
 	initVoteproof base.Voteproof,
@@ -32,7 +32,7 @@ func NewProposalValidationChecker(
 				Hinted("proposal_round", proposal.Round()).
 				Hinted("proposal_node", proposal.Node())
 		}),
-		localstate:    localstate,
+		local:         local,
 		suffrage:      suffrage,
 		proposal:      proposal,
 		initVoteproof: initVoteproof,
@@ -44,7 +44,7 @@ func (pvc *ProposalValidationChecker) IsKnown() (bool, error) {
 	height := pvc.proposal.Height()
 	round := pvc.proposal.Round()
 
-	if _, found, err := pvc.localstate.Storage().Proposal(height, round); err != nil {
+	if _, found, err := pvc.local.Storage().Proposal(height, round); err != nil {
 		return false, err
 	} else if found {
 		return false, nil // NOTE the already saved will be passed
@@ -56,9 +56,9 @@ func (pvc *ProposalValidationChecker) IsKnown() (bool, error) {
 // CheckSigning checks node signed by it's valid key.
 func (pvc *ProposalValidationChecker) CheckSigning() (bool, error) {
 	var node base.Node
-	if pvc.proposal.Node().Equal(pvc.localstate.Node().Address()) {
-		node = pvc.localstate.Node()
-	} else if n, found := pvc.localstate.Nodes().Node(pvc.proposal.Node()); !found {
+	if pvc.proposal.Node().Equal(pvc.local.Node().Address()) {
+		node = pvc.local.Node()
+	} else if n, found := pvc.local.Nodes().Node(pvc.proposal.Node()); !found {
 		return false, xerrors.Errorf("node not found")
 	} else {
 		node = n
@@ -92,7 +92,7 @@ func (pvc *ProposalValidationChecker) IsProposer() (bool, error) {
 }
 
 func (pvc *ProposalValidationChecker) SaveProposal() (bool, error) {
-	if err := pvc.localstate.Storage().NewProposal(pvc.proposal); err != nil {
+	if err := pvc.local.Storage().NewProposal(pvc.proposal); err != nil {
 		if !xerrors.Is(err, storage.DuplicatedError) {
 			return false, xerrors.Errorf("failed to save proposal: %w", err)
 		}

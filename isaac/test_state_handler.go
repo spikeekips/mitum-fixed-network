@@ -24,7 +24,7 @@ type baseTestStateHandler struct {
 	suite.Suite
 	StorageSupportTest
 	localfs.BaseTestBlocks
-	ls []*Localstate
+	ls []*Local
 }
 
 func (t *baseTestStateHandler) SetupSuite() {
@@ -66,21 +66,21 @@ func (t *baseTestStateHandler) SetupSuite() {
 	_ = t.Encs.AddHinter(state.StringValue{})
 }
 
-func (t *baseTestStateHandler) localstates(n int) []*Localstate {
-	var ls []*Localstate
+func (t *baseTestStateHandler) locals(n int) []*Local {
+	var ls []*Local
 	for i := 0; i < n; i++ {
 		lst := t.Storage(t.Encs, t.JSONEnc)
 		localNode := RandomLocalNode(util.UUID().String(), nil)
 
 		blockfs := t.BlockFS(t.JSONEnc)
-		localstate, err := NewLocalstate(lst, blockfs, localNode, TestNetworkID)
+		local, err := NewLocal(lst, blockfs, localNode, TestNetworkID)
 		if err != nil {
 			panic(err)
-		} else if err := localstate.Initialize(); err != nil {
+		} else if err := local.Initialize(); err != nil {
 			panic(err)
 		}
 
-		ls = append(ls, localstate)
+		ls = append(ls, local)
 	}
 
 	for _, l := range ls {
@@ -115,20 +115,20 @@ func (t *baseTestStateHandler) TearDownTest() {
 	t.closeStates(t.ls...)
 }
 
-func (t *baseTestStateHandler) lastINITVoteproof(localstate *Localstate) base.Voteproof {
-	vp, _, _ := localstate.BlockFS().LastVoteproof(base.StageINIT)
+func (t *baseTestStateHandler) lastINITVoteproof(local *Local) base.Voteproof {
+	vp, _, _ := local.BlockFS().LastVoteproof(base.StageINIT)
 
 	return vp
 }
 
-func (t *baseTestStateHandler) closeStates(states ...*Localstate) {
+func (t *baseTestStateHandler) closeStates(states ...*Local) {
 	for _, s := range states {
 		_ = s.Storage().Close()
 	}
 }
 
 func (t *baseTestStateHandler) newVoteproof(
-	stage base.Stage, fact base.Fact, states ...*Localstate,
+	stage base.Stage, fact base.Fact, states ...*Local,
 ) (base.VoteproofV0, error) {
 	factHash := fact.Hash()
 
@@ -182,7 +182,7 @@ func (t *baseTestStateHandler) newVoteproof(
 	return vp, nil
 }
 
-func (t *baseTestStateHandler) suffrage(proposerState *Localstate, states ...*Localstate) base.Suffrage {
+func (t *baseTestStateHandler) suffrage(proposerState *Local, states ...*Local) base.Suffrage {
 	nodes := make([]base.Address, len(states))
 	for i, s := range states {
 		nodes[i] = s.Node().Address()
@@ -197,30 +197,30 @@ func (t *baseTestStateHandler) suffrage(proposerState *Localstate, states ...*Lo
 	return sf
 }
 
-func (t *baseTestStateHandler) newINITBallot(localstate *Localstate, round base.Round, voteproof base.Voteproof) ballot.INITBallotV0 {
+func (t *baseTestStateHandler) newINITBallot(local *Local, round base.Round, voteproof base.Voteproof) ballot.INITBallotV0 {
 	var ib ballot.INITBallotV0
 	if round == 0 {
-		if b, err := NewINITBallotV0Round0(localstate); err != nil {
+		if b, err := NewINITBallotV0Round0(local); err != nil {
 			panic(err)
 		} else {
 			ib = b
 		}
 	} else {
-		if b, err := NewINITBallotV0WithVoteproof(localstate.Node().Address(), voteproof); err != nil {
+		if b, err := NewINITBallotV0WithVoteproof(local.Node().Address(), voteproof); err != nil {
 			panic(err)
 		} else {
 			ib = b
 		}
 	}
 
-	_ = ib.Sign(localstate.Node().Privatekey(), localstate.Policy().NetworkID())
+	_ = ib.Sign(local.Node().Privatekey(), local.Policy().NetworkID())
 
 	return ib
 }
 
-func (t *baseTestStateHandler) newINITBallotFact(localstate *Localstate, round base.Round) ballot.INITBallotFactV0 {
+func (t *baseTestStateHandler) newINITBallotFact(local *Local, round base.Round) ballot.INITBallotFactV0 {
 	var manifest block.Manifest
-	switch l, found, err := localstate.Storage().LastManifest(); {
+	switch l, found, err := local.Storage().LastManifest(); {
 	case !found:
 		panic(xerrors.Errorf("last block not found: %w", err))
 	case err != nil:
@@ -236,23 +236,23 @@ func (t *baseTestStateHandler) newINITBallotFact(localstate *Localstate, round b
 	)
 }
 
-func (t *baseTestStateHandler) newProposal(localstate *Localstate, round base.Round, seals []valuehash.Hash) ballot.Proposal {
-	pr, err := NewProposalV0(localstate.Storage(), localstate.Node().Address(), round, seals)
+func (t *baseTestStateHandler) newProposal(local *Local, round base.Round, seals []valuehash.Hash) ballot.Proposal {
+	pr, err := NewProposalV0(local.Storage(), local.Node().Address(), round, seals)
 	if err != nil {
 		panic(err)
 	}
-	if err := SignSeal(&pr, localstate); err != nil {
+	if err := SignSeal(&pr, local); err != nil {
 		panic(err)
 	}
 
 	return pr
 }
 
-func (t *baseTestStateHandler) newACCEPTBallot(localstate *Localstate, round base.Round, proposal, newBlock valuehash.Hash) ballot.ACCEPTBallotV0 {
-	manifest := t.lastManifest(localstate.Storage())
+func (t *baseTestStateHandler) newACCEPTBallot(local *Local, round base.Round, proposal, newBlock valuehash.Hash) ballot.ACCEPTBallotV0 {
+	manifest := t.lastManifest(local.Storage())
 
 	ab := ballot.NewACCEPTBallotV0(
-		localstate.Node().Address(),
+		local.Node().Address(),
 		manifest.Height()+1,
 		round,
 		proposal,
@@ -260,15 +260,15 @@ func (t *baseTestStateHandler) newACCEPTBallot(localstate *Localstate, round bas
 		nil,
 	)
 
-	if err := ab.Sign(localstate.Node().Privatekey(), localstate.Policy().NetworkID()); err != nil {
+	if err := ab.Sign(local.Node().Privatekey(), local.Policy().NetworkID()); err != nil {
 		panic(err)
 	}
 
 	return ab
 }
 
-func (t *baseTestStateHandler) newOperationSeal(localstate *Localstate, n uint) operation.Seal {
-	pk := localstate.Node().Privatekey()
+func (t *baseTestStateHandler) newOperationSeal(local *Local, n uint) operation.Seal {
+	pk := local.Node().Privatekey()
 
 	var ops []operation.Operation
 	for i := uint(0); i < n; i++ {

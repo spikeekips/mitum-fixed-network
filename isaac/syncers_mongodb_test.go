@@ -20,13 +20,13 @@ func (t *testSyncers) TestSaveLastBlock() {
 		return
 	}
 
-	ls := t.localstates(2)
+	ls := t.locals(2)
 	local, remote := ls[0], ls[1]
 
-	t.setup(local, []*Localstate{remote})
+	t.setup(local, []*Local{remote})
 
 	target := t.lastManifest(local.Storage()).Height() + 2
-	t.generateBlocks([]*Localstate{remote}, target)
+	t.generateBlocks([]*Local{remote}, target)
 
 	baseManifest, found, err := local.Storage().LastManifest()
 	t.NoError(err)

@@ -61,10 +61,10 @@ func (st *SuffrageDesign) IsValid([]byte) error {
 	return nil
 }
 
-func (st *SuffrageDesign) New(localstate *isaac.Localstate, encs *encoder.Encoders) (base.Suffrage, error) {
+func (st *SuffrageDesign) New(local *isaac.Local, encs *encoder.Encoders) (base.Suffrage, error) {
 	switch st.Type {
 	case suffrageTypeRoundrobin:
-		return (RoundrobinSuffrageDesign{}).New(localstate, encs)
+		return (RoundrobinSuffrageDesign{}).New(local, encs)
 	case suffrageTypeFixedProposer:
 		var proposer string
 		if i, found := st.Info["proposer"]; !found {
@@ -73,7 +73,7 @@ func (st *SuffrageDesign) New(localstate *isaac.Localstate, encs *encoder.Encode
 			proposer = i.(string)
 		}
 
-		return (FixedSuffrageDesign{proposer: proposer}).New(localstate, encs)
+		return (FixedSuffrageDesign{proposer: proposer}).New(local, encs)
 	default:
 		return nil, xerrors.Errorf("unknown type found: %v", st.Type)
 	}
@@ -91,7 +91,7 @@ func (fs FixedSuffrageDesign) IsValid([]byte) error {
 	return nil
 }
 
-func (fs FixedSuffrageDesign) New(localstate *isaac.Localstate, encs *encoder.Encoders) (base.Suffrage, error) {
+func (fs FixedSuffrageDesign) New(local *isaac.Local, encs *encoder.Encoders) (base.Suffrage, error) {
 	var je encoder.Encoder
 	if e, err := encs.Encoder(jsonenc.JSONType, ""); err != nil {
 		return nil, xerrors.Errorf("json encoder needs for load design: %w", err)
@@ -103,23 +103,23 @@ func (fs FixedSuffrageDesign) New(localstate *isaac.Localstate, encs *encoder.En
 	switch p, err := base.DecodeAddressFromString(je, fs.proposer); {
 	case err != nil:
 		return nil, err
-	case !p.Equal(localstate.Node().Address()) && !localstate.Nodes().Exists(p):
+	case !p.Equal(local.Node().Address()) && !local.Nodes().Exists(p):
 		return nil, xerrors.Errorf("proposer, %q not found", p)
 	default:
 		proposer = p
 	}
 
-	nodes := make([]base.Address, localstate.Nodes().Len()+1)
+	nodes := make([]base.Address, local.Nodes().Len()+1)
 
 	var i int
-	localstate.Nodes().Traverse(func(n network.Node) bool {
+	local.Nodes().Traverse(func(n network.Node) bool {
 		nodes[i] = n.Address()
 
 		i++
 
 		return true
 	})
-	nodes[i] = localstate.Node().Address()
+	nodes[i] = local.Node().Address()
 
 	sf := base.NewFixedSuffrage(proposer, nodes)
 
@@ -133,8 +133,8 @@ func (fs RoundrobinSuffrageDesign) IsValid([]byte) error {
 	return nil
 }
 
-func (fs RoundrobinSuffrageDesign) New(localstate *isaac.Localstate, _ *encoder.Encoders) (base.Suffrage, error) {
-	return NewRoundrobinSuffrage(localstate, 100), nil
+func (fs RoundrobinSuffrageDesign) New(local *isaac.Local, _ *encoder.Encoders) (base.Suffrage, error) {
+	return NewRoundrobinSuffrage(local, 100), nil
 }
 
 func isValidContestSuffrageDesign(m map[string]interface{}) error {

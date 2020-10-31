@@ -23,7 +23,7 @@ type ConsensusStates struct {
 	sync.RWMutex
 	*logging.Logging
 	*util.FunctionDaemon
-	localstate    *Localstate
+	local         *Local
 	ballotbox     *Ballotbox
 	suffrage      base.Suffrage
 	states        map[base.State]StateHandler
@@ -37,13 +37,13 @@ type ConsensusStates struct {
 }
 
 func NewConsensusStates(
-	localstate *Localstate,
+	local *Local,
 	ballotbox *Ballotbox,
 	suffrage base.Suffrage,
 	booting, joining, consensus, syncing, broken StateHandler,
 ) (*ConsensusStates, error) {
 	var livp base.Voteproof
-	if vp, found, err := localstate.BlockFS().LastVoteproof(base.StageINIT); err != nil {
+	if vp, found, err := local.BlockFS().LastVoteproof(base.StageINIT); err != nil {
 		return nil, err
 	} else if found {
 		livp = vp
@@ -53,9 +53,9 @@ func NewConsensusStates(
 		Logging: logging.NewLogging(func(c logging.Context) logging.Emitter {
 			return c.Str("module", "consensus-states")
 		}),
-		localstate: localstate,
-		ballotbox:  ballotbox,
-		suffrage:   suffrage,
+		local:     local,
+		ballotbox: ballotbox,
+		suffrage:  suffrage,
 		states: map[base.State]StateHandler{
 			base.StateBooting:   booting,
 			base.StateJoining:   joining,
@@ -158,7 +158,7 @@ func (css *ConsensusStates) cleanBallotbox() {
 
 	for range ticker.C {
 		var height base.Height
-		switch m, found, err := css.localstate.Storage().LastManifest(); {
+		switch m, found, err := css.local.Storage().LastManifest(); {
 		case !found:
 			css.Log().Error().Msg("something wrong to clean Ballotbox; last manifest not found")
 
@@ -337,7 +337,7 @@ func (css *ConsensusStates) broadcastSeal(sl seal.Seal, errChan chan<- error) {
 		}
 	}()
 
-	css.localstate.Nodes().Traverse(func(m network.Node) bool {
+	css.local.Nodes().Traverse(func(m network.Node) bool {
 		go func(n network.Node) {
 			lt := l.WithLogger(func(ctx logging.Context) logging.Emitter {
 				return ctx.Hinted("target_node", n.Address())
@@ -411,7 +411,7 @@ func (css *ConsensusStates) checkNewVoteproof(voteproof base.Voteproof) (*StateT
 	}
 
 	var vpc *VoteproofConsensusStateChecker
-	if v, err := NewVoteproofConsensusStateChecker(css.localstate.Storage(), lvp, voteproof, css); err != nil {
+	if v, err := NewVoteproofConsensusStateChecker(css.local.Storage(), lvp, voteproof, css); err != nil {
 		return nil, err
 	} else {
 		vpc = v
@@ -468,7 +468,7 @@ func (css *ConsensusStates) newSeal(sl seal.Seal) error {
 		return xerrors.Errorf("no activated handler")
 	}
 
-	if !sl.Signer().Equal(css.localstate.Node().Publickey()) {
+	if !sl.Signer().Equal(css.local.Node().Publickey()) {
 		if err := css.validateSeal(sl); err != nil {
 			l.Error().Err(err).Msg("seal validation failed")
 
@@ -499,7 +499,7 @@ func (css *ConsensusStates) storeSeal(sl seal.Seal) error {
 		return nil
 	}
 
-	switch err := css.localstate.Storage().NewSeals([]seal.Seal{sl}); {
+	switch err := css.local.Storage().NewSeals([]seal.Seal{sl}); {
 	case err == nil:
 	case xerrors.Is(err, storage.DuplicatedError):
 	default:
@@ -525,7 +525,7 @@ func (css *ConsensusStates) validateBallot(ballot.Ballot) error {
 }
 
 func (css *ConsensusStates) validateProposal(proposal ballot.Proposal) error {
-	pvc := NewProposalValidationChecker(css.localstate, css.suffrage, proposal, css.lastINITVoteproof())
+	pvc := NewProposalValidationChecker(css.local, css.suffrage, proposal, css.lastINITVoteproof())
 	_ = pvc.SetLogger(css.Log())
 
 	return util.NewChecker("proposal-validation-checker", []util.CheckerFunc{

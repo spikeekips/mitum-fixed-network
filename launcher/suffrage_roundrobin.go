@@ -15,11 +15,11 @@ import (
 
 type RoundrobinSuffrage struct {
 	*logging.Logging
-	localstate *isaac.Localstate
-	cache      *lru.TwoQueueCache
+	local *isaac.Local
+	cache *lru.TwoQueueCache
 }
 
-func NewRoundrobinSuffrage(localstate *isaac.Localstate, cacheSize int) *RoundrobinSuffrage {
+func NewRoundrobinSuffrage(local *isaac.Local, cacheSize int) *RoundrobinSuffrage {
 	var cache *lru.TwoQueueCache
 	if cacheSize > 0 {
 		cache, _ = lru.New2Q(cacheSize)
@@ -29,8 +29,8 @@ func NewRoundrobinSuffrage(localstate *isaac.Localstate, cacheSize int) *Roundro
 		Logging: logging.NewLogging(func(c logging.Context) logging.Emitter {
 			return c.Str("module", "roundrobin-suffrage")
 		}),
-		localstate: localstate,
-		cache:      cache,
+		local: local,
+		cache: cache,
 	}
 }
 
@@ -44,7 +44,7 @@ func (sf *RoundrobinSuffrage) Name() string {
 
 func (sf *RoundrobinSuffrage) IsInside(a base.Address) bool {
 	var found bool
-	sf.localstate.Nodes().Traverse(func(n network.Node) bool {
+	sf.local.Nodes().Traverse(func(n network.Node) bool {
 		if n.Address().Equal(a) {
 			found = true
 			return false
@@ -76,8 +76,8 @@ func (sf *RoundrobinSuffrage) Acting(height base.Height, round base.Round) base.
 }
 
 func (sf *RoundrobinSuffrage) acting(height base.Height, round base.Round) base.ActingSuffrage {
-	all := []base.Node{sf.localstate.Node()}
-	sf.localstate.Nodes().Traverse(func(n network.Node) bool {
+	all := []base.Node{sf.local.Node()}
+	sf.local.Nodes().Traverse(func(n network.Node) bool {
 		all = append(all, n)
 
 		return true
@@ -95,7 +95,7 @@ func (sf *RoundrobinSuffrage) acting(height base.Height, round base.Round) base.
 		)
 	}
 
-	numberOfActingSuffrageNodes := int(sf.localstate.Policy().NumberOfActingSuffrageNodes())
+	numberOfActingSuffrageNodes := int(sf.local.Policy().NumberOfActingSuffrageNodes())
 	if len(all) < numberOfActingSuffrageNodes {
 		numberOfActingSuffrageNodes = len(all)
 	}
@@ -145,8 +145,8 @@ func (sf *RoundrobinSuffrage) IsProposer(height base.Height, round base.Round, n
 }
 
 func (sf *RoundrobinSuffrage) Nodes() []base.Address {
-	ns := []base.Address{sf.localstate.Node().Address()}
-	sf.localstate.Nodes().Traverse(func(n network.Node) bool {
+	ns := []base.Address{sf.local.Node().Address()}
+	sf.local.Nodes().Traverse(func(n network.Node) bool {
 		ns = append(ns, n.Address())
 
 		return true

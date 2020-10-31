@@ -46,9 +46,9 @@ func loggerWithVoteproof(voteproof base.Voteproof, l logging.Logger) logging.Log
 	return ll
 }
 
-func loggerWithLocalstate(localstate *Localstate, l logging.Logger) logging.Logger {
+func loggerWithLocal(local *Local, l logging.Logger) logging.Logger {
 	var manifest block.Manifest
-	if m, found, err := localstate.Storage().LastManifest(); err != nil || !found {
+	if m, found, err := local.Storage().LastManifest(); err != nil || !found {
 		return l
 	} else {
 		manifest = m

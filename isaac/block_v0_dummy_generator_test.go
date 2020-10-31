@@ -15,7 +15,7 @@ type testBlockV0DummyGenerator struct {
 }
 
 func (t *testBlockV0DummyGenerator) TestCreate() {
-	all := t.localstates(3)
+	all := t.locals(3)
 
 	for _, l := range all {
 		t.NoError(l.Storage().Clean())
@@ -57,7 +57,7 @@ func (t *testBlockV0DummyGenerator) TestCreate() {
 }
 
 func (t *testBlockV0DummyGenerator) TestCleanByHeight() {
-	local := t.localstates(1)[0]
+	local := t.locals(1)[0]
 
 	lastManifest, _, _ := local.Storage().LastManifest()
 

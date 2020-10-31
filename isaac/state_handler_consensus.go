@@ -33,13 +33,13 @@ type StateConsensusHandler struct {
 }
 
 func NewStateConsensusHandler(
-	localstate *Localstate,
+	local *Local,
 	proposalProcessor ProposalProcessor,
 	suffrage base.Suffrage,
 	proposalMaker *ProposalMaker,
 ) (*StateConsensusHandler, error) {
 	cs := &StateConsensusHandler{
-		BaseStateHandler: NewBaseStateHandler(localstate, proposalProcessor, base.StateConsensus),
+		BaseStateHandler: NewBaseStateHandler(local, proposalProcessor, base.StateConsensus),
 		suffrage:         suffrage,
 		proposalMaker:    proposalMaker,
 	}
@@ -74,7 +74,7 @@ func (cs *StateConsensusHandler) Activate(ctx *StateChangeContext) error {
 		return xerrors.Errorf("empty StateChangeContext")
 	}
 
-	if _, found, err := cs.localstate.Storage().LastManifest(); !found {
+	if _, found, err := cs.local.Storage().LastManifest(); !found {
 		return storage.NotFoundError.Errorf("last manifest is empty")
 	} else if err != nil {
 		return xerrors.Errorf("failed to get last manifest: %w", err)
@@ -84,7 +84,7 @@ func (cs *StateConsensusHandler) Activate(ctx *StateChangeContext) error {
 		return xerrors.Errorf("consensus handler got empty Voteproof")
 	} else if ctx.Voteproof().Stage() != base.StageINIT {
 		return xerrors.Errorf("consensus handler starts with INIT Voteproof: %s", ctx.Voteproof().Stage())
-	} else if err := ctx.Voteproof().IsValid(cs.localstate.Policy().NetworkID()); err != nil {
+	} else if err := ctx.Voteproof().IsValid(cs.local.Policy().NetworkID()); err != nil {
 		return xerrors.Errorf("consensus handler got invalid Voteproof: %w", err)
 	}
 
@@ -208,7 +208,7 @@ func (cs *StateConsensusHandler) newVoteproof(voteproof base.Voteproof) error {
 }
 
 func (cs *StateConsensusHandler) handleINITVoteproof(voteproof base.Voteproof) error {
-	l := loggerWithLocalstate(cs.localstate, loggerWithVoteproofID(voteproof, cs.Log()))
+	l := loggerWithLocal(cs.local, loggerWithVoteproofID(voteproof, cs.Log()))
 
 	l.Debug().Msg("expected Voteproof received; will wait Proposal")
 
@@ -216,7 +216,7 @@ func (cs *StateConsensusHandler) handleINITVoteproof(voteproof base.Voteproof) e
 }
 
 func (cs *StateConsensusHandler) handleACCEPTVoteproof(voteproof base.Voteproof) error {
-	l := loggerWithLocalstate(cs.localstate, loggerWithVoteproofID(voteproof, cs.Log()))
+	l := loggerWithLocal(cs.local, loggerWithVoteproofID(voteproof, cs.Log()))
 
 	if err := cs.StoreNewBlock(voteproof); err != nil {
 		var ctx *StateToBeChangeError
@@ -251,7 +251,7 @@ func (cs *StateConsensusHandler) handleACCEPTVoteproof(voteproof base.Voteproof)
 
 func (cs *StateConsensusHandler) keepBroadcastingINITBallotForNextBlock(voteproof base.Voteproof) error {
 	if timer, err := cs.TimerBroadcastingINITBallot(
-		func(int) time.Duration { return cs.localstate.Policy().IntervalBroadcastingINITBallot() },
+		func(int) time.Duration { return cs.local.Policy().IntervalBroadcastingINITBallot() },
 		base.Round(0),
 		voteproof,
 	); err != nil {
@@ -285,7 +285,7 @@ func (cs *StateConsensusHandler) handleProposal(proposal ballot.Proposal) error 
 	}
 
 	acting := cs.suffrage.Acting(proposal.Height(), proposal.Round())
-	isActing := acting.Exists(cs.localstate.Node().Address())
+	isActing := acting.Exists(cs.local.Node().Address())
 
 	l.Debug().
 		Hinted("acting_suffrage", acting).
@@ -305,8 +305,8 @@ func (cs *StateConsensusHandler) readyToSIGNBallot(newBlock block.Block) error {
 	// NOTE not like broadcasting ACCEPT Ballot, SIGN Ballot will be broadcasted
 	// withtout waiting.
 
-	sb := NewSIGNBallotV0(cs.localstate.Node().Address(), newBlock)
-	if err := SignSeal(&sb, cs.localstate); err != nil {
+	sb := NewSIGNBallotV0(cs.local.Node().Address(), newBlock)
+	if err := SignSeal(&sb, cs.local); err != nil {
 		return err
 	} else {
 		cs.BroadcastSeal(sb)
@@ -335,10 +335,10 @@ func (cs *StateConsensusHandler) proposal(voteproof base.Voteproof) (bool, error
 	l := loggerWithVoteproofID(voteproof, cs.Log())
 
 	l.Debug().Msg("prepare to broadcast Proposal")
-	isProposer := cs.suffrage.IsProposer(voteproof.Height(), voteproof.Round(), cs.localstate.Node().Address())
+	isProposer := cs.suffrage.IsProposer(voteproof.Height(), voteproof.Round(), cs.local.Node().Address())
 	l.Debug().
 		Hinted("acting_suffrage", cs.suffrage.Acting(voteproof.Height(), voteproof.Round())).
-		Bool("is_acting", cs.suffrage.IsActing(voteproof.Height(), voteproof.Round(), cs.localstate.Node().Address())).
+		Bool("is_acting", cs.suffrage.IsActing(voteproof.Height(), voteproof.Round(), cs.local.Node().Address())).
 		Bool("is_proposer", isProposer).
 		Msgf("node is proposer? %v", isProposer)
 
@@ -386,7 +386,7 @@ func (cs *StateConsensusHandler) startNextRound(voteproof base.Voteproof) error 
 				return time.Nanosecond
 			}
 
-			return cs.localstate.Policy().IntervalBroadcastingINITBallot()
+			return cs.local.Policy().IntervalBroadcastingINITBallot()
 		},
 		round,
 		voteproof,
@@ -406,7 +406,7 @@ func (cs *StateConsensusHandler) checkReceivedProposal(height base.Height, round
 	cs.Log().Debug().Msg("trying to check already received Proposal")
 
 	// if Proposal already received, find and processing it.
-	proposal, found, err := cs.localstate.Storage().Proposal(height, round)
+	proposal, found, err := cs.local.Storage().Proposal(height, round)
 	if !found {
 		return nil
 	} else if err != nil {

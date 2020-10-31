@@ -16,7 +16,7 @@ type Syncers struct {
 	sync.RWMutex
 	*util.FunctionDaemon
 	*logging.Logging
-	localstate     *Localstate
+	local          *Local
 	syncers        []Syncer
 	baseManifest   block.Manifest
 	stateChan      chan SyncerStateChangedContext
@@ -26,12 +26,12 @@ type Syncers struct {
 	whenBlockSaved func([]block.Block)
 }
 
-func NewSyncers(localstate *Localstate, baseManifest block.Manifest) *Syncers {
+func NewSyncers(local *Local, baseManifest block.Manifest) *Syncers {
 	sy := &Syncers{
 		Logging: logging.NewLogging(func(c logging.Context) logging.Emitter {
 			return c.Str("module", "syncers")
 		}),
-		localstate:     localstate,
+		local:          local,
 		baseManifest:   baseManifest,
 		lp:             -1,
 		stateChan:      make(chan SyncerStateChangedContext),
@@ -179,18 +179,18 @@ func (sy *Syncers) stateChanged(ctx SyncerStateChangedContext) error {
 		if sy.isFinished() {
 			l.Debug().Msg("every syncers was finished")
 
-			if st, ok := sy.localstate.Storage().(storage.LastBlockSaver); ok {
+			if st, ok := sy.local.Storage().(storage.LastBlockSaver); ok {
 				if err := st.SaveLastBlock(sy.lastSyncer().HeightTo()); err != nil {
 					return err
 				}
 			}
 
-			if err := sy.localstate.Policy().Reload(sy.localstate.Storage()); err != nil {
+			if err := sy.local.Policy().Reload(sy.local.Storage()); err != nil {
 				sy.Log().Error().Err(err).Msg("failed to update Policy")
 
 				return err
 			} else {
-				sy.Log().Debug().Interface("policy", sy.localstate.Policy()).Msg("Policy updated")
+				sy.Log().Debug().Interface("policy", sy.local.Policy()).Msg("Policy updated")
 			}
 
 			sy.whenFinished(sy.lastSyncer().HeightTo())
@@ -239,7 +239,7 @@ func (sy *Syncers) add(to base.Height, sourceNodes []network.Node) error {
 	})
 
 	var syncer Syncer
-	if s, err := NewGeneralSyncer(sy.localstate, sourceNodes, from, to); err != nil {
+	if s, err := NewGeneralSyncer(sy.local, sourceNodes, from, to); err != nil {
 		return err
 	} else {
 		syncer = s.SetStateChan(sy.stateChan)

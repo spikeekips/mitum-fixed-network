@@ -12,29 +12,29 @@ import (
 
 type ProposalMaker struct {
 	sync.Mutex
-	localstate *Localstate
-	proposed   ballot.Proposal
+	local    *Local
+	proposed ballot.Proposal
 }
 
-func NewProposalMaker(localstate *Localstate) *ProposalMaker {
-	return &ProposalMaker{localstate: localstate}
+func NewProposalMaker(local *Local) *ProposalMaker {
+	return &ProposalMaker{local: local}
 }
 
 func (pm *ProposalMaker) seals() ([]valuehash.Hash, error) {
 	founds := map[ /* Operation.Fact().Hash() */ string]struct{}{}
 
-	maxOperations := pm.localstate.Policy().MaxOperationsInProposal()
+	maxOperations := pm.local.Policy().MaxOperationsInProposal()
 
 	var facts int
 	var seals, uselessSeals []valuehash.Hash
-	if err := pm.localstate.Storage().StagedOperationSeals(
+	if err := pm.local.Storage().StagedOperationSeals(
 		func(sl operation.Seal) (bool, error) {
 			var ofs []valuehash.Hash
 			for _, op := range sl.Operations() {
 				fh := op.Fact().Hash()
 				if _, found := founds[fh.String()]; found {
 					continue
-				} else if found, err := pm.localstate.Storage().HasOperationFact(fh); err != nil {
+				} else if found, err := pm.local.Storage().HasOperationFact(fh); err != nil {
 					return false, err
 				} else if found {
 					continue
@@ -66,7 +66,7 @@ func (pm *ProposalMaker) seals() ([]valuehash.Hash, error) {
 	}
 
 	if len(uselessSeals) > 0 {
-		if err := pm.localstate.Storage().UnstagedOperationSeals(uselessSeals); err != nil {
+		if err := pm.local.Storage().UnstagedOperationSeals(uselessSeals); err != nil {
 			return nil, err
 		}
 	}
@@ -79,7 +79,7 @@ func (pm *ProposalMaker) Proposal(round base.Round) (ballot.Proposal, error) {
 	defer pm.Unlock()
 
 	var height base.Height
-	switch m, found, err := pm.localstate.Storage().LastManifest(); {
+	switch m, found, err := pm.local.Storage().LastManifest(); {
 	case !found:
 		return nil, storage.NotFoundError.Errorf("last manifest not found")
 	case err != nil:
@@ -100,12 +100,12 @@ func (pm *ProposalMaker) Proposal(round base.Round) (ballot.Proposal, error) {
 	}
 
 	pr := ballot.NewProposalV0(
-		pm.localstate.Node().Address(),
+		pm.local.Node().Address(),
 		height,
 		round,
 		seals,
 	)
-	if err := SignSeal(&pr, pm.localstate); err != nil {
+	if err := SignSeal(&pr, pm.local); err != nil {
 		return nil, err
 	}
 

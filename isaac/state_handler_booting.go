@@ -22,11 +22,11 @@ type StateBootingHandler struct {
 }
 
 func NewStateBootingHandler(
-	localstate *Localstate,
+	local *Local,
 	suffrage base.Suffrage,
 ) (*StateBootingHandler, error) {
 	cs := &StateBootingHandler{
-		BaseStateHandler: NewBaseStateHandler(localstate, nil, base.StateBooting),
+		BaseStateHandler: NewBaseStateHandler(local, nil, base.StateBooting),
 		suffrage:         suffrage,
 	}
 	cs.BaseStateHandler.Logging = logging.NewLogging(func(c logging.Context) logging.Emitter {
@@ -127,7 +127,7 @@ func (cs *StateBootingHandler) checkBlock() error {
 	defer cs.Log().Debug().Msg("checked block")
 
 	var manifest block.Manifest
-	switch m, found, err := cs.localstate.Storage().LastManifest(); {
+	switch m, found, err := cs.local.Storage().LastManifest(); {
 	case err != nil:
 		return err
 	case !found:
@@ -137,7 +137,7 @@ func (cs *StateBootingHandler) checkBlock() error {
 	}
 
 	var blk block.Block
-	if b, err := cs.localstate.BlockFS().Load(manifest.Height()); err != nil {
+	if b, err := cs.local.BlockFS().Load(manifest.Height()); err != nil {
 		if !storage.IsNotFoundError(err) {
 			return err
 		}
@@ -147,7 +147,7 @@ func (cs *StateBootingHandler) checkBlock() error {
 		blk = b
 	}
 
-	if err := blk.IsValid(cs.localstate.Policy().NetworkID()); err != nil {
+	if err := blk.IsValid(cs.local.Policy().NetworkID()); err != nil {
 		return xerrors.Errorf("invalid block found, clean up block: %w", err)
 	} else {
 		cs.Log().Debug().Hinted("block", blk.Manifest()).Msg("valid initial block found")
@@ -158,9 +158,9 @@ func (cs *StateBootingHandler) checkBlock() error {
 
 func (cs *StateBootingHandler) whenEmptyBlocks() (*StateChangeContext, error) {
 	// NOTE clean storages
-	if err := cs.localstate.Storage().Clean(); err != nil {
+	if err := cs.local.Storage().Clean(); err != nil {
 		return nil, err
-	} else if err := cs.localstate.BlockFS().Clean(false); err != nil {
+	} else if err := cs.local.BlockFS().Clean(false); err != nil {
 		return nil, err
 	}
 
@@ -170,9 +170,9 @@ func (cs *StateBootingHandler) whenEmptyBlocks() (*StateChangeContext, error) {
 
 	var nodes []network.Node
 	for _, a := range cs.suffrage.Nodes() {
-		if a.Equal(cs.localstate.Node().Address()) {
+		if a.Equal(cs.local.Node().Address()) {
 			continue
-		} else if n, found := cs.localstate.Nodes().Node(a); !found {
+		} else if n, found := cs.local.Nodes().Node(a); !found {
 			return nil, xerrors.Errorf("unknown node, %s found in suffrage", a)
 		} else {
 			nodes = append(nodes, n)
@@ -187,7 +187,7 @@ func (cs *StateBootingHandler) whenEmptyBlocks() (*StateChangeContext, error) {
 		return nil, err
 	} else {
 		po := <-ch
-		if err := cs.localstate.Policy().Merge(po); err != nil {
+		if err := cs.local.Policy().Merge(po); err != nil {
 			return nil, err
 		}
 

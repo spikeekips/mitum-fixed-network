@@ -16,7 +16,7 @@ type testProposalMaker struct {
 }
 
 func (t *testProposalMaker) TestCached() {
-	proposalMaker := NewProposalMaker(t.localstates(1)[0])
+	proposalMaker := NewProposalMaker(t.locals(1)[0])
 
 	round := base.Round(1)
 	proposal, err := proposalMaker.Proposal(round)
@@ -29,7 +29,7 @@ func (t *testProposalMaker) TestCached() {
 }
 
 func (t *testProposalMaker) TestClean() {
-	local := t.localstates(1)[0]
+	local := t.locals(1)[0]
 
 	proposalMaker := NewProposalMaker(local)
 
@@ -41,7 +41,7 @@ func (t *testProposalMaker) TestClean() {
 }
 
 func (t *testProposalMaker) TestSeals() {
-	local := t.localstates(1)[0]
+	local := t.locals(1)[0]
 
 	var seals []seal.Seal
 	// 10 operation.Seal
@@ -76,7 +76,7 @@ func (t *testProposalMaker) TestSeals() {
 }
 
 func (t *testProposalMaker) TestOneSealOver0() {
-	local := t.localstates(1)[0]
+	local := t.locals(1)[0]
 
 	var maxOperations uint = 3
 	_, _ = local.Policy().SetMaxOperationsInProposal(maxOperations)
@@ -106,7 +106,7 @@ func (t *testProposalMaker) TestOneSealOver0() {
 }
 
 func (t *testProposalMaker) TestOneSealOver1() {
-	local := t.localstates(1)[0]
+	local := t.locals(1)[0]
 
 	var maxOperations uint = 3
 	_, _ = local.Policy().SetMaxOperationsInProposal(maxOperations)
@@ -138,7 +138,7 @@ func (t *testProposalMaker) TestOneSealOver1() {
 }
 
 func (t *testProposalMaker) TestNumberOperationMatch() {
-	local := t.localstates(1)[0]
+	local := t.locals(1)[0]
 
 	var maxOperations uint = 3
 	_, _ = local.Policy().SetMaxOperationsInProposal(maxOperations)

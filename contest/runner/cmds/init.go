@@ -55,7 +55,7 @@ func (cmd *InitCommand) run(log logging.Logger) error {
 	}
 
 	log.Debug().Msg("trying to create genesis block")
-	if gg, err := isaac.NewGenesisBlockV0Generator(nr.Localstate(), ops); err != nil {
+	if gg, err := isaac.NewGenesisBlockV0Generator(nr.Local(), ops); err != nil {
 		return xerrors.Errorf("failed to create genesis block generator: %w", err)
 	} else if blk, err := gg.Generate(); err != nil {
 		return xerrors.Errorf("failed to generate genesis block: %w", err)

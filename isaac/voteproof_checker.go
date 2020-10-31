@@ -41,28 +41,28 @@ func NewStateToBeChangeError(
 
 type VoteProofChecker struct {
 	*logging.Logging
-	voteproof  base.Voteproof
-	suffrage   base.Suffrage
-	localstate *Localstate
+	voteproof base.Voteproof
+	suffrage  base.Suffrage
+	local     *Local
 }
 
 // NOTE VoteProofChecker should check the signer of VoteproofNodeFact is valid
 // Ballot.Signer(), but it takes a little bit time to gather the Ballots from
 // the other node, so this will be ignored at this time for performance reason.
 
-func NewVoteProofChecker(voteproof base.Voteproof, localstate *Localstate, suffrage base.Suffrage) *VoteProofChecker {
+func NewVoteProofChecker(voteproof base.Voteproof, local *Local, suffrage base.Suffrage) *VoteProofChecker {
 	return &VoteProofChecker{
 		Logging: logging.NewLogging(func(c logging.Context) logging.Emitter {
 			return c.Str("module", "voteproof-checker")
 		}),
-		voteproof:  voteproof,
-		suffrage:   suffrage,
-		localstate: localstate,
+		voteproof: voteproof,
+		suffrage:  suffrage,
+		local:     local,
 	}
 }
 
 func (vc *VoteProofChecker) CheckIsValid() (bool, error) {
-	networkID := vc.localstate.Policy().NetworkID()
+	networkID := vc.local.Policy().NetworkID()
 	if err := vc.voteproof.IsValid(networkID); err != nil {
 		return false, err
 	}
@@ -85,7 +85,7 @@ func (vc *VoteProofChecker) CheckNodeIsInSuffrage() (bool, error) {
 
 // CheckThreshold checks Threshold only for new incoming Voteproof.
 func (vc *VoteProofChecker) CheckThreshold() (bool, error) {
-	tr := vc.localstate.Policy().ThresholdRatio()
+	tr := vc.local.Policy().ThresholdRatio()
 	if tr != vc.voteproof.ThresholdRatio() {
 		vc.Log().Debug().
 			Interface("threshold_ratio", vc.voteproof.ThresholdRatio()).

@@ -24,7 +24,7 @@ import (
 type internalDefaultProposalProcessor struct {
 	sync.RWMutex
 	*logging.Logging
-	localstate   *Localstate
+	local        *Local
 	stopped      bool
 	stoppedLock  sync.RWMutex
 	suffrage     base.Suffrage
@@ -39,13 +39,13 @@ type internalDefaultProposalProcessor struct {
 }
 
 func newInternalDefaultProposalProcessor(
-	localstate *Localstate,
+	local *Local,
 	suffrage base.Suffrage,
 	proposal ballot.Proposal,
 	oprHintset *hint.Hintmap,
 ) (*internalDefaultProposalProcessor, error) {
 	var lastManifest block.Manifest
-	switch m, found, err := localstate.Storage().LastManifest(); {
+	switch m, found, err := local.Storage().LastManifest(); {
 	case !found:
 		return nil, storage.NotFoundError.Errorf("last manifest is empty")
 	case err != nil:
@@ -58,10 +58,10 @@ func newInternalDefaultProposalProcessor(
 	{
 		var ns []base.Node
 		for _, address := range suffrage.Nodes() {
-			if address.Equal(localstate.Node().Address()) {
-				ns = append(ns, localstate.Node())
-			} else if n, found := localstate.Nodes().Node(address); !found {
-				return nil, xerrors.Errorf("suffrage node, %s not found in NodePool(Localstate)", address)
+			if address.Equal(local.Node().Address()) {
+				ns = append(ns, local.Node())
+			} else if n, found := local.Nodes().Node(address); !found {
+				return nil, xerrors.Errorf("suffrage node, %s not found in node pool", address)
 			} else {
 				ns = append(ns, n)
 			}
@@ -74,7 +74,7 @@ func newInternalDefaultProposalProcessor(
 		Logging: logging.NewLogging(func(c logging.Context) logging.Emitter {
 			return c.Str("module", "internal-proposal-processor-inside-v0")
 		}),
-		localstate:   localstate,
+		local:        local,
 		suffrage:     suffrage,
 		proposal:     proposal,
 		lastManifest: lastManifest,
@@ -124,7 +124,7 @@ func (pp *internalDefaultProposalProcessor) processINIT(initVoteproof base.Votep
 		return pp.blk, nil
 	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), pp.localstate.Policy().TimeoutProcessProposal())
+	ctx, cancel := context.WithTimeout(context.Background(), pp.local.Policy().TimeoutProcessProposal())
 	defer cancel()
 
 	errChan := make(chan error)
@@ -179,7 +179,7 @@ func (pp *internalDefaultProposalProcessor) process(
 	}
 
 	var pool *Statepool
-	if p, err := NewStatepool(pp.localstate.Storage()); err != nil {
+	if p, err := NewStatepool(pp.local.Storage()); err != nil {
 		return nil, nil, err
 	} else {
 		pool = p
@@ -229,7 +229,7 @@ func (pp *internalDefaultProposalProcessor) createBlock(
 		SetINITVoteproof(initVoteproof).SetProposal(pp.proposal)
 
 	var bs storage.BlockStorage
-	if b, err := pp.localstate.Storage().OpenBlockStorage(blk); err != nil {
+	if b, err := pp.local.Storage().OpenBlockStorage(blk); err != nil {
 		return nil, nil, err
 	} else {
 		bs = b
@@ -339,7 +339,7 @@ func (pp *internalDefaultProposalProcessor) processStates(
 		co = c.Start(
 			ctx,
 			func(sp state.Processor) error {
-				switch found, err := pp.localstate.Storage().HasOperationFact(sp.(operation.Operation).Fact().Hash()); {
+				switch found, err := pp.local.Storage().HasOperationFact(sp.(operation.Operation).Fact().Hash()); {
 				case err != nil:
 					return err
 				case found:
@@ -454,7 +454,7 @@ func (pp *internalDefaultProposalProcessor) getOperationsFromStorage(h valuehash
 	[]operation.Operation, bool, error,
 ) {
 	var osl operation.Seal
-	if sl, found, err := pp.localstate.Storage().Seal(h); err != nil {
+	if sl, found, err := pp.local.Storage().Seal(h); err != nil {
 		return nil, false, err
 	} else if !found {
 		return nil, false, nil
@@ -485,13 +485,13 @@ func (pp *internalDefaultProposalProcessor) getOperationsThruChannel(
 		return nil, xerrors.Errorf("already stopped")
 	}
 
-	if pp.localstate.Node().Address().Equal(proposer) {
+	if pp.local.Node().Address().Equal(proposer) {
 		pp.Log().Warn().Msg("proposer is local node, but local node should have seals. Hmmm")
 
 		return nil, nil
 	}
 
-	node, found := pp.localstate.Nodes().Node(proposer)
+	node, found := pp.local.Nodes().Node(proposer)
 	if !found {
 		return nil, xerrors.Errorf("unknown proposer: %v", proposer)
 	}
@@ -501,7 +501,7 @@ func (pp *internalDefaultProposalProcessor) getOperationsThruChannel(
 		return nil, err
 	}
 
-	if err := pp.localstate.Storage().NewSeals(received); err != nil {
+	if err := pp.local.Storage().NewSeals(received); err != nil {
 		if !xerrors.Is(err, storage.DuplicatedError) {
 			return nil, err
 		}
@@ -562,7 +562,7 @@ func (pp *internalDefaultProposalProcessor) setACCEPTVoteproof(acceptVoteproof b
 		return err
 	}
 
-	if err := pp.localstate.BlockFS().AddACCEPTVoteproof(pp.blk.Height(), pp.blk.Hash(), acceptVoteproof); err != nil {
+	if err := pp.local.BlockFS().AddACCEPTVoteproof(pp.blk.Height(), pp.blk.Hash(), acceptVoteproof); err != nil {
 		return err
 	}
 
@@ -603,5 +603,5 @@ func (pp *internalDefaultProposalProcessor) setBlockfs(blk block.Block) error {
 		pp.statesValue.Store("blockfs", time.Since(s))
 	}()
 
-	return pp.localstate.BlockFS().Add(blk)
+	return pp.local.BlockFS().Add(blk)
 }

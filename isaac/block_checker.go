@@ -10,8 +10,8 @@ import (
 
 type baseBlocksValidationChecker struct {
 	*logging.Logging
-	localstate *Localstate
-	networkID  base.NetworkID
+	local     *Local
+	networkID base.NetworkID
 }
 
 func (bc *baseBlocksValidationChecker) checkIsValid(blk block.Manifest) error {
@@ -41,10 +41,10 @@ type ManifestsValidationChecker struct {
 }
 
 func NewManifestsValidationChecker(
-	localstate *Localstate,
+	local *Local,
 	manifests []block.Manifest,
 ) *ManifestsValidationChecker {
-	networkID := localstate.Policy().NetworkID()
+	networkID := local.Policy().NetworkID()
 
 	return &ManifestsValidationChecker{
 		baseBlocksValidationChecker: baseBlocksValidationChecker{
@@ -54,8 +54,8 @@ func NewManifestsValidationChecker(
 					Hinted("to_manifest", manifests[len(manifests)-1].Height()).
 					Str("module", "manifests-validation-checker")
 			}),
-			localstate: localstate,
-			networkID:  networkID,
+			local:     local,
+			networkID: networkID,
 		},
 		manifests: manifests,
 	}
@@ -93,8 +93,8 @@ type BlocksValidationChecker struct {
 	blocks []block.Block
 }
 
-func NewBlocksValidationChecker(localstate *Localstate, blocks []block.Block) *BlocksValidationChecker {
-	networkID := localstate.Policy().NetworkID()
+func NewBlocksValidationChecker(local *Local, blocks []block.Block) *BlocksValidationChecker {
+	networkID := local.Policy().NetworkID()
 
 	return &BlocksValidationChecker{
 		baseBlocksValidationChecker: baseBlocksValidationChecker{
@@ -104,8 +104,8 @@ func NewBlocksValidationChecker(localstate *Localstate, blocks []block.Block) *B
 					Hinted("to_block", blocks[len(blocks)-1].Height()).
 					Str("module", "blocks-validation-checker")
 			}),
-			localstate: localstate,
-			networkID:  networkID,
+			local:     local,
+			networkID: networkID,
 		},
 		blocks: blocks,
 	}

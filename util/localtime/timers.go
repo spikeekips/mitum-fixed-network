@@ -88,6 +88,20 @@ func (ts *Timers) Stop() error {
 	return nil
 }
 
+func (ts *Timers) ResetTimer(id string) error {
+	ts.RLock()
+	defer ts.RUnlock()
+
+	switch t, found := ts.timers[id]; {
+	case !found:
+		return xerrors.Errorf("timer, %q not found", id)
+	case t == nil:
+		return xerrors.Errorf("timer, %q not running", id)
+	default:
+		return t.Reset()
+	}
+}
+
 // SetTimer sets the timer with id
 func (ts *Timers) SetTimer(id string, timer *CallbackTimer) error {
 	ts.Lock()
@@ -159,7 +173,7 @@ func (ts *Timers) StopTimers(ids []string) error {
 
 func (ts *Timers) stopTimers(ids []string) error {
 	callback := func(t *CallbackTimer) {
-		if t.IsStopped() {
+		if !t.IsStarted() {
 			return
 		}
 

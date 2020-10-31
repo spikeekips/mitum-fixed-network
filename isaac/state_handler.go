@@ -3,7 +3,6 @@ package isaac
 import (
 	"context"
 	"sync"
-	"sync/atomic"
 	"time"
 
 	"golang.org/x/xerrors"
@@ -289,7 +288,7 @@ func (bs *BaseStateHandler) storeNewBlock(fact ballot.ACCEPTBallotFact, acceptVo
 }
 
 func (bs *BaseStateHandler) TimerBroadcastingINITBallot(
-	intervalFunc func() time.Duration,
+	intervalFunc func(int) time.Duration,
 	round base.Round,
 	voteproof base.Voteproof,
 ) (*localtime.CallbackTimer, error) {
@@ -313,9 +312,9 @@ func (bs *BaseStateHandler) TimerBroadcastingINITBallot(
 		}
 	}
 
-	return localtime.NewCallbackTimer(
+	ct, err := localtime.NewCallbackTimer(
 		TimerIDBroadcastingINITBallot,
-		func() (bool, error) {
+		func(int) (bool, error) {
 			if !bs.isActivated() {
 				return false, nil
 			}
@@ -332,8 +331,13 @@ func (bs *BaseStateHandler) TimerBroadcastingINITBallot(
 			return true, nil
 		},
 		0,
-		intervalFunc,
 	)
+
+	if err != nil {
+		return nil, err
+	} else {
+		return ct.SetInterval(intervalFunc), nil
+	}
 }
 
 func (bs *BaseStateHandler) TimerBroadcastingACCEPTBallot(
@@ -346,11 +350,9 @@ func (bs *BaseStateHandler) TimerBroadcastingACCEPTBallot(
 
 	baseBallot := NewACCEPTBallotV0(bs.localstate.Node().Address(), newBlock, voteproof)
 
-	var called int64
-
-	return localtime.NewCallbackTimer(
+	ct, err := localtime.NewCallbackTimer(
 		TimerIDBroadcastingACCEPTBallot,
-		func() (bool, error) {
+		func(int) (bool, error) {
 			if !bs.isActivated() {
 				return false, nil
 			}
@@ -367,17 +369,21 @@ func (bs *BaseStateHandler) TimerBroadcastingACCEPTBallot(
 			return true, nil
 		},
 		0,
-		func() time.Duration {
+	)
+
+	if err != nil {
+		return nil, err
+	} else {
+		return ct.SetInterval(func(i int) time.Duration {
 			// NOTE at 1st time, wait timeout duration, after then, periodically
 			// broadcast ACCEPT Ballot.
-			if atomic.LoadInt64(&called) < 1 {
-				atomic.AddInt64(&called, 1)
+			if i < 1 {
 				return bs.localstate.Policy().WaitBroadcastingACCEPTBallot()
 			}
 
 			return bs.localstate.Policy().IntervalBroadcastingACCEPTBallot()
-		},
-	)
+		}), nil
+	}
 }
 
 func (bs *BaseStateHandler) TimerTimedoutMoveNextRound(voteproof base.Voteproof) (*localtime.CallbackTimer, error) {
@@ -392,11 +398,9 @@ func (bs *BaseStateHandler) TimerTimedoutMoveNextRound(voteproof base.Voteproof)
 		baseBallot = b
 	}
 
-	var called int64
-
-	return localtime.NewCallbackTimer(
+	ct, err := localtime.NewCallbackTimer(
 		TimerIDTimedoutMoveNextRound,
-		func() (bool, error) {
+		func(int) (bool, error) {
 			if !bs.isActivated() {
 				return false, nil
 			}
@@ -422,17 +426,21 @@ func (bs *BaseStateHandler) TimerTimedoutMoveNextRound(voteproof base.Voteproof)
 			return true, nil
 		},
 		0,
-		func() time.Duration {
+	)
+
+	if err != nil {
+		return nil, err
+	} else {
+		return ct.SetInterval(func(i int) time.Duration {
 			// NOTE at 1st time, wait timeout duration, after then, periodically
 			// broadcast INIT Ballot.
-			if atomic.LoadInt64(&called) < 1 {
-				atomic.AddInt64(&called, 1)
+			if i < 1 {
 				return bs.localstate.Policy().TimeoutWaitingProposal()
 			}
 
 			return bs.localstate.Policy().IntervalBroadcastingINITBallot()
-		},
-	)
+		}), nil
+	}
 }
 
 func (bs *BaseStateHandler) TimerBroadcastingProposal(proposal ballot.Proposal) (*localtime.CallbackTimer, error) {
@@ -440,11 +448,9 @@ func (bs *BaseStateHandler) TimerBroadcastingProposal(proposal ballot.Proposal) 
 		return nil, nil
 	}
 
-	var called int64
-
-	return localtime.NewCallbackTimer(
+	ct, err := localtime.NewCallbackTimer(
 		TimerIDBroadcastingProposal,
-		func() (bool, error) {
+		func(int) (bool, error) {
 			if !bs.isActivated() {
 				return false, nil
 			}
@@ -454,17 +460,21 @@ func (bs *BaseStateHandler) TimerBroadcastingProposal(proposal ballot.Proposal) 
 			return true, nil
 		},
 		0,
-		func() time.Duration {
+	)
+
+	if err != nil {
+		return nil, err
+	} else {
+		return ct.SetInterval(func(i int) time.Duration {
 			// NOTE at 1st time, wait timeout duration, after then, periodically
 			// broadcast.
-			if atomic.LoadInt64(&called) < 1 {
-				atomic.AddInt64(&called, 1)
+			if i < 1 {
 				return time.Nanosecond
 			}
 
 			return bs.localstate.Policy().IntervalBroadcastingProposal()
-		},
-	)
+		}), nil
+	}
 }
 
 func (bs *BaseStateHandler) LastINITVoteproof() base.Voteproof {

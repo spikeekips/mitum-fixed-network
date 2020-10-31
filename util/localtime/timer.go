@@ -7,245 +7,216 @@ import (
 	"golang.org/x/xerrors"
 
 	"github.com/spikeekips/mitum/util"
+	"github.com/spikeekips/mitum/util/errors"
 	"github.com/spikeekips/mitum/util/logging"
 )
 
+var (
+	StopTimer            = errors.NewError("stop timer")
+	defaultTimerDuration = time.Hour * 24 * 360
+)
+
 type CallbackTimer struct {
+	sync.RWMutex
 	*logging.Logging
-	*util.FunctionDaemon
 	name         string
-	intervalFunc func() time.Duration
+	callback     func(int) (bool, error)
+	intervalFunc func(int) time.Duration
+	errchan      chan error
+	ticker       *time.Ticker
+	stopped      bool
+	stopChan     chan struct{}
+	resetChan    chan struct{}
 }
 
 func NewCallbackTimer(
 	name string,
-	callback func() (bool, error),
-	defaultInterval time.Duration,
-	intervalFunc func() time.Duration,
+	callback func(int) (bool, error),
+	interval time.Duration,
 ) (*CallbackTimer, error) {
-	if defaultInterval < 1 && intervalFunc == nil {
-		return nil, xerrors.Errorf("interval is missing")
-	}
-
-	if intervalFunc == nil {
-		intervalFunc = func() time.Duration {
-			return defaultInterval
-		}
-	}
-
-	ct := &CallbackTimer{
+	return &CallbackTimer{
 		Logging: logging.NewLogging(func(c logging.Context) logging.Emitter {
-			return c.Str("module", "callback-timer").
+			return c.Str("module", "next-callback-timer").
 				Str("name", name)
 		}),
-		name:         name,
-		intervalFunc: intervalFunc,
-	}
-	ct.FunctionDaemon = util.NewFunctionDaemon(ct.callback(callback), false)
-
-	return ct, nil
-}
-
-func (ct *CallbackTimer) SetLogger(l logging.Logger) logging.Logger {
-	_ = ct.Logging.SetLogger(l)
-	_ = ct.FunctionDaemon.SetLogger(l)
-
-	return ct.Log()
-}
-
-func (ct *CallbackTimer) Start() error {
-	ct.Log().Debug().Msg("trying to start")
-	defer ct.Log().Debug().Msg("timer started")
-
-	return ct.FunctionDaemon.Start()
-}
-
-func (ct *CallbackTimer) Stop() error {
-	ct.Log().Debug().Msg("trying to stop")
-	defer ct.Log().Debug().Msg("timer stopped")
-
-	err := ct.FunctionDaemon.Stop()
-	if xerrors.Is(err, util.DaemonAlreadyStoppedError) {
-		return nil
-	}
-
-	return err
-}
-
-func (ct *CallbackTimer) callback(cb func() (bool, error)) func(chan struct{}) error {
-	return func(stopChan chan struct{}) error {
-		returnChan := make(chan error)
-
-		lastInterval := ct.intervalFunc()
-		if lastInterval < time.Nanosecond {
-			return xerrors.Errorf("too narrow interval: %v", lastInterval)
-		}
-
-		ticker := time.NewTicker(lastInterval)
-		defer ticker.Stop()
-
-		go func() {
-			errChan := make(chan error)
-			for {
-				select {
-				case err := <-errChan:
-					returnChan <- err
-					return
-				case <-stopChan:
-					returnChan <- nil
-					return
-				case <-ticker.C:
-					go func() {
-						if keep, err := cb(); err != nil {
-							errChan <- err
-						} else if !keep {
-							errChan <- xerrors.Errorf("don't go")
-						}
-					}()
-
-					if i := ct.intervalFunc(); i < time.Nanosecond {
-						returnChan <- xerrors.Errorf("too narrow interval: %v", i)
-
-						return
-					} else if i != lastInterval {
-						ticker.Reset(i)
-
-						lastInterval = i
-					}
-				}
-			}
-		}()
-
-		return <-returnChan
-	}
+		name: name,
+		intervalFunc: func(int) time.Duration {
+			return interval
+		},
+		callback:  callback,
+		errchan:   make(chan error, 100),
+		stopped:   true,
+		stopChan:  make(chan struct{}, 1),
+		ticker:    time.NewTicker(defaultTimerDuration),
+		resetChan: make(chan struct{}),
+	}, nil
 }
 
 func (ct *CallbackTimer) Name() string {
 	return ct.name
 }
 
-type CallbackTimerset struct {
-	sync.RWMutex
-	timers    []*CallbackTimer
-	isStarted bool
-}
-
-func NewCallbackTimerset(timers []*CallbackTimer) *CallbackTimerset {
-	return &CallbackTimerset{
-		timers: timers,
-	}
-}
-
-func (ct *CallbackTimerset) SetLogger(l logging.Logger) logging.Logger {
-	for _, t := range ct.timers {
-		_ = t.SetLogger(l)
-	}
-
-	return logging.Logger{}
-}
-
-func (ct *CallbackTimerset) Start() error {
+// SetInterval sets the interval function. If the returned duration is 0, the
+// timer will be stopped.
+func (ct *CallbackTimer) SetInterval(f func(int) time.Duration) *CallbackTimer {
 	ct.Lock()
 	defer ct.Unlock()
 
-	var wg sync.WaitGroup
-	wg.Add(len(ct.timers))
+	ct.intervalFunc = f
 
-	errChan := make(chan error, len(ct.timers))
-	for _, tr := range ct.timers {
-		if !tr.IsStopped() {
-			wg.Done()
-			continue
-		}
+	return ct
+}
 
-		go func(t *CallbackTimer) {
-			if err := t.Start(); err != nil {
-				errChan <- err
-			}
-			wg.Done()
-		}(tr)
+func (ct *CallbackTimer) Start() error {
+	ct.Lock()
+	defer ct.Unlock()
+
+	if i := ct.intervalFunc(0); i < time.Nanosecond {
+		return xerrors.Errorf("too narrow interval: %v", i)
 	}
 
-	close(errChan)
+	return ct.start()
+}
 
-	wg.Wait()
-
-	var err error
-	for err = range errChan {
-		if err != nil {
-			break
-		}
+func (ct *CallbackTimer) start() error {
+	if !ct.stopped {
+		return util.DaemonAlreadyStartedError
 	}
 
-	if err != nil {
-		wg.Add(len(ct.timers))
+	ct.stopped = false
 
-		// stop started timer
-		for _, tr := range ct.timers {
-			if !tr.IsStarted() {
-				wg.Done()
-				continue
-			}
+	ct.ticker.Reset(defaultTimerDuration)
+	ct.stopChan = make(chan struct{}, 1)
 
-			go func(t *CallbackTimer) {
-				_ = t.Stop()
-				wg.Done()
-			}(tr)
-		}
-		wg.Wait()
+	go ct.clock()
 
-		return err
-	}
-
-	ct.isStarted = true
+	ct.Log().Debug().Msg("timer started")
 
 	return nil
 }
 
-func (ct *CallbackTimerset) Stop() error {
-	if !ct.IsStarted() {
-		return nil
-	}
-
+func (ct *CallbackTimer) Stop() error {
 	ct.Lock()
 	defer ct.Unlock()
 
-	var wg sync.WaitGroup
-	wg.Add(len(ct.timers))
-
-	errChan := make(chan error, len(ct.timers))
-	for _, tr := range ct.timers {
-		if !tr.IsStarted() {
-			wg.Done()
-			continue
-		}
-
-		go func(t *CallbackTimer) {
-			if err := t.Stop(); err != nil {
-				errChan <- err
-			}
-			wg.Done()
-		}(tr)
-	}
-
-	wg.Wait()
-	close(errChan)
-
-	var err error
-	for err = range errChan {
-		if err != nil {
-			break
-		}
-	}
-
-	ct.isStarted = false
-
-	return err
+	return ct.stop()
 }
 
-func (ct *CallbackTimerset) IsStarted() bool {
+func (ct *CallbackTimer) stop() error {
+	if ct.stopped {
+		return nil
+	}
+
+	ct.stopped = true
+
+	ct.stopChan <- struct{}{}
+
+	ct.Log().Debug().Msg("timer stopped")
+
+	return nil
+}
+
+func (ct *CallbackTimer) Restart() error {
+	ct.Lock()
+	defer ct.Unlock()
+
+	if !ct.stopped {
+		if err := ct.stop(); err != nil {
+			return err
+		}
+	}
+
+	return ct.start()
+}
+
+func (ct *CallbackTimer) Reset() error {
+	ct.Lock()
+	defer ct.Unlock()
+
+	if ct.stopped {
+		return nil
+	}
+
+	ct.resetChan <- struct{}{}
+
+	return nil
+}
+
+func (ct *CallbackTimer) IsStarted() bool {
 	ct.RLock()
 	defer ct.RUnlock()
 
-	return ct.isStarted
+	return !ct.stopped
+}
+
+func (ct *CallbackTimer) clock() {
+	var lastInterval time.Duration
+	if d, err := ct.resetTicker(0, lastInterval); err != nil {
+		_ = ct.Stop()
+
+		return
+	} else {
+		lastInterval = d
+	}
+
+	defer ct.ticker.Stop()
+
+	var i int
+
+end:
+	for {
+		select {
+		case <-ct.stopChan:
+			return
+		case <-ct.resetChan:
+			i = 0
+			if d, err := ct.resetTicker(0, lastInterval); err != nil {
+				break end
+			} else {
+				lastInterval = d
+			}
+		case err := <-ct.errchan:
+			if err == nil {
+				continue
+			}
+
+			if xerrors.Is(err, StopTimer) {
+				ct.Log().Debug().Msg("timer will be stopped by callback")
+			} else {
+				ct.Log().Error().Err(err).Msg("timer got error; timer will be stopped")
+			}
+
+			break end
+		case <-ct.ticker.C:
+			go func(i int) {
+				if keep, err := ct.callback(i); err != nil {
+					ct.errchan <- err
+				} else if !keep {
+					ct.errchan <- StopTimer
+				}
+			}(i)
+
+			i++
+
+			if d, err := ct.resetTicker(i, lastInterval); err != nil {
+				break end
+			} else {
+				lastInterval = d
+			}
+		}
+	}
+
+	_ = ct.Stop()
+}
+
+func (ct *CallbackTimer) resetTicker(i int, last time.Duration) (time.Duration, error) {
+	if i := ct.intervalFunc(i); i < time.Nanosecond {
+		return 0, xerrors.Errorf("too narrow interval: %v", i)
+	} else {
+		if i != last {
+			ct.ticker.Reset(i)
+		}
+
+		return i, nil
+	}
 }

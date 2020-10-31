@@ -371,7 +371,7 @@ func (cs *StateJoiningHandler) handleINITVoteproof(voteproof base.Voteproof) err
 
 func (cs *StateJoiningHandler) broadcastINITBallot(round base.Round, voteproof base.Voteproof) error {
 	if timer, err := cs.TimerBroadcastingINITBallot(
-		func() time.Duration {
+		func(int) time.Duration {
 			return cs.localstate.Policy().IntervalBroadcastingINITBallot()
 		},
 		round,

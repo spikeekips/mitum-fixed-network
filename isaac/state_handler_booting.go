@@ -2,7 +2,6 @@ package isaac
 
 import (
 	"sync"
-	"sync/atomic"
 	"time"
 
 	"github.com/spikeekips/mitum/base"
@@ -75,9 +74,9 @@ func (cs *StateBootingHandler) Deactivate(_ *StateChangeContext) error {
 		if err := cs.policyTimer.Stop(); err != nil {
 			return xerrors.Errorf("failed to stop policy timer: %w", err)
 		}
-	}
 
-	cs.policyTimer = nil
+		cs.policyTimer = nil
+	}
 
 	cs.Log().Debug().Msg("deactivated")
 
@@ -205,10 +204,9 @@ func (cs *StateBootingHandler) newPolicyTimer(nodes []network.Node) (
 	gotPolicyChan := make(chan policy.Policy)
 
 	var once sync.Once
-	var called int64
 	timer, err := localtime.NewCallbackTimer(
 		TimerIDNodeInfo,
-		func() (bool, error) {
+		func(int) (bool, error) {
 			cs.Log().Debug().Msg("trying to gather node info")
 
 			var ni policy.Policy
@@ -229,19 +227,18 @@ func (cs *StateBootingHandler) newPolicyTimer(nodes []network.Node) (
 			return false, nil
 		},
 		0,
-		func() time.Duration {
-			if atomic.LoadInt64(&called) < 1 {
-				atomic.AddInt64(&called, 1)
-				return time.Nanosecond
-			}
-
-			return time.Second * 1
-		},
 	)
 	if err != nil {
 		return nil, err
 	}
-	_ = timer.SetLogger(cs.Log())
+
+	_ = timer.SetInterval(func(i int) time.Duration {
+		if i < 1 {
+			return time.Nanosecond
+		}
+
+		return time.Second * 1
+	}).SetLogger(cs.Log())
 
 	if cs.policyTimer != nil {
 		if err := cs.policyTimer.Stop(); err != nil {

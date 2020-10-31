@@ -2,7 +2,6 @@ package isaac
 
 import (
 	"sync"
-	"sync/atomic"
 	"time"
 
 	"golang.org/x/xerrors"
@@ -252,7 +251,7 @@ func (cs *StateConsensusHandler) handleACCEPTVoteproof(voteproof base.Voteproof)
 
 func (cs *StateConsensusHandler) keepBroadcastingINITBallotForNextBlock(voteproof base.Voteproof) error {
 	if timer, err := cs.TimerBroadcastingINITBallot(
-		func() time.Duration { return cs.localstate.Policy().IntervalBroadcastingINITBallot() },
+		func(int) time.Duration { return cs.localstate.Policy().IntervalBroadcastingINITBallot() },
 		base.Round(0),
 		voteproof,
 	); err != nil {
@@ -274,6 +273,10 @@ func (cs *StateConsensusHandler) handleProposal(proposal ballot.Proposal) error 
 	l := loggerWithBallot(proposal, cs.Log())
 
 	l.Debug().Msg("got proposal")
+
+	if err := cs.timers.ResetTimer(TimerIDTimedoutMoveNextRound); err != nil {
+		l.Debug().Err(err).Str("timer", TimerIDTimedoutMoveNextRound).Msg("tried to reset timer, but failed; ignored")
+	}
 
 	voteproof := cs.LastINITVoteproof()
 	blk, err := cs.proposalProcessor.ProcessINIT(proposal.Hash(), voteproof)
@@ -375,13 +378,11 @@ func (cs *StateConsensusHandler) startNextRound(voteproof base.Voteproof) error 
 		round = voteproof.Round() + 1
 	}
 
-	var called int64
 	if timer, err := cs.TimerBroadcastingINITBallot(
-		func() time.Duration {
+		func(i int) time.Duration {
 			// NOTE at 1st time, wait timeout duration, after then, periodically
 			// broadcast INIT Ballot.
-			if atomic.LoadInt64(&called) < 1 {
-				atomic.AddInt64(&called, 1)
+			if i < 1 {
 				return time.Nanosecond
 			}
 

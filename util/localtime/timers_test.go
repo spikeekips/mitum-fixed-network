@@ -16,11 +16,10 @@ type testTimers struct {
 func (t *testTimers) timer(id string) *CallbackTimer {
 	timer, err := NewCallbackTimer(
 		id,
-		func() (bool, error) {
+		func(int) (bool, error) {
 			return true, nil
 		},
 		time.Second*10,
-		nil,
 	)
 	t.NoError(err)
 

@@ -358,7 +358,7 @@ func (ss *StateSyncingHandler) whenFinished(height base.Height) {
 func (ss *StateSyncingHandler) timerWaitVoteproof() (*localtime.CallbackTimer, error) {
 	return localtime.NewCallbackTimer(
 		TimerIDWaitVoteproof,
-		func() (bool, error) {
+		func(int) (bool, error) {
 			if sy := ss.syncers(); sy != nil {
 				if !sy.isFinished() {
 					ss.Log().Debug().Msg("syncer is still running; wait to be finished")
@@ -375,6 +375,5 @@ func (ss *StateSyncingHandler) timerWaitVoteproof() (*localtime.CallbackTimer, e
 			return false, nil
 		},
 		ss.waitVoteproofTimeout,
-		nil,
 	)
 }

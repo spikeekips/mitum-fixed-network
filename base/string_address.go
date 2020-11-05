@@ -44,8 +44,12 @@ func NewStringAddressFromHintedString(s string) (StringAddress, error) {
 	}
 }
 
-func (sa StringAddress) String() string {
+func (sa StringAddress) Raw() string {
 	return string(sa)
+}
+
+func (sa StringAddress) String() string {
+	return hint.HintedString(StringAddressHint, string(sa))
 }
 
 func (sa StringAddress) Hint() hint.Hint {
@@ -53,7 +57,7 @@ func (sa StringAddress) Hint() hint.Hint {
 }
 
 func (sa StringAddress) IsValid([]byte) error {
-	if reBlankAddressString.Match(sa.Bytes()) {
+	if reBlankAddressString.Match([]byte(sa)) {
 		return isvalid.InvalidError.Errorf("address string, %q has blank", sa)
 	}
 
@@ -61,7 +65,7 @@ func (sa StringAddress) IsValid([]byte) error {
 		return isvalid.InvalidError.Errorf("empty address")
 	}
 
-	if !reAddressString.Match(sa.Bytes()) {
+	if !reAddressString.Match([]byte(sa)) {
 		return isvalid.InvalidError.Errorf("invalid address string, %q", sa)
 	}
 
@@ -81,7 +85,7 @@ func (sa StringAddress) Bytes() []byte {
 }
 
 func (sa StringAddress) MarshalText() ([]byte, error) {
-	return []byte(hint.HintedString(sa.Hint(), sa.String())), nil
+	return []byte(sa.String()), nil
 }
 
 func (sa *StringAddress) UnmarshalText(b []byte) error {
@@ -95,9 +99,9 @@ func (sa *StringAddress) UnmarshalText(b []byte) error {
 }
 
 func (sa StringAddress) MarshalBSONValue() (bsontype.Type, []byte, error) {
-	return bsontype.String, bsoncore.AppendString(nil, hint.HintedString(sa.Hint(), sa.String())), nil
+	return bsontype.String, bsoncore.AppendString(nil, sa.String()), nil
 }
 
 func (sa StringAddress) MarshalLog(key string, e logging.Emitter, _ bool) logging.Emitter {
-	return e.Str(key, hint.HintedString(sa.Hint(), sa.String()))
+	return e.Str(key, sa.String())
 }

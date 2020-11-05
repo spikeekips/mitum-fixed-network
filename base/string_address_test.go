@@ -33,7 +33,7 @@ func (t *testStringAddress) TestFormat() {
 		{
 			name:     "uuid",
 			s:        uuidString,
-			expected: uuidString,
+			expected: hint.HintedString(StringAddressHint, uuidString),
 		},
 		{
 			name: "blank first",
@@ -58,7 +58,7 @@ func (t *testStringAddress) TestFormat() {
 		{
 			name:     "has underscore",
 			s:        "showm_e",
-			expected: "showm_e",
+			expected: hint.HintedString(StringAddressHint, "showm_e"),
 		},
 		{
 			name: "has plus sign",
@@ -99,6 +99,7 @@ func (t *testStringAddress) TestFormat() {
 					t.NoError(xerrors.Errorf(c.err))
 				} else {
 					t.Equal(c.expected, r.String(), "%d: %v; %v != %v", i, c.name, c.expected, r)
+					t.Equal(c.s, r.Raw(), "%d: %v; %v != %v", i, c.name, c.s, r.Raw())
 				}
 			},
 		)
@@ -117,7 +118,7 @@ func (t *testStringAddress) TestString() {
 	sa, err := NewStringAddress(util.UUID().String())
 	t.NoError(err)
 
-	una, err := NewStringAddressFromHintedString(hint.HintedString(sa.Hint(), sa.String()))
+	una, err := NewStringAddressFromHintedString(sa.String())
 	t.NoError(err)
 
 	t.True(sa.Equal(una))

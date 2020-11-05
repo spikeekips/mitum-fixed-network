@@ -6,6 +6,7 @@ import (
 	"github.com/spikeekips/mitum/util/errors"
 	"github.com/spikeekips/mitum/util/hint"
 	"github.com/spikeekips/mitum/util/isvalid"
+	"github.com/spikeekips/mitum/util/logging"
 )
 
 var (
@@ -21,6 +22,7 @@ type Key interface {
 	Bytes() []byte // NOTE Bytes() will be used for hashing. It only contains Type
 	// without version. With same type, but different version hashing will be
 	// different.
+	Raw() string
 }
 
 type Privatekey interface {
@@ -47,8 +49,12 @@ func (ky BaseKey) Hint() hint.Hint {
 	return ky.ht
 }
 
-func (ky BaseKey) String() string {
+func (ky BaseKey) Raw() string {
 	return ky.rawFunc()
+}
+
+func (ky BaseKey) String() string {
+	return hint.HintedString(ky.ht, ky.rawFunc())
 }
 
 func (ky BaseKey) Bytes() []byte {
@@ -56,7 +62,12 @@ func (ky BaseKey) Bytes() []byte {
 }
 
 func (ky BaseKey) MarshalText() ([]byte, error) {
-	return []byte(hint.HintedString(ky.Hint(), ky.String())), nil
+	return []byte(ky.String()), nil
+}
+
+func (ky BaseKey) MarshalLog(key string, e logging.Emitter, _ bool) logging.Emitter {
+	// TODO replace key.String()
+	return e.Str(key, ky.String())
 }
 
 func (ky BaseKey) Equal(k Key) bool {
@@ -64,5 +75,5 @@ func (ky BaseKey) Equal(k Key) bool {
 		return false
 	}
 
-	return ky.String() == k.String()
+	return ky.Raw() == k.Raw()
 }

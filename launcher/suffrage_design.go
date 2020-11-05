@@ -9,7 +9,6 @@ import (
 	"github.com/spikeekips/mitum/network"
 	"github.com/spikeekips/mitum/util/encoder"
 	jsonenc "github.com/spikeekips/mitum/util/encoder/json"
-	"github.com/spikeekips/mitum/util/hint"
 )
 
 const (
@@ -157,7 +156,7 @@ func isValidContestSuffrageDesign(m map[string]interface{}) error {
 		} else if p, err := base.NewStringAddress(s); err != nil {
 			return err
 		} else {
-			m["proposer"] = hint.HintedString(p.Hint(), p.String())
+			m["proposer"] = p.String()
 		}
 	default:
 		return xerrors.Errorf("unknown suffrage type, %q", t)

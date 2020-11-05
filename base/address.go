@@ -11,10 +11,11 @@ import (
 
 // Address represents the address of account.
 type Address interface {
-	fmt.Stringer
+	fmt.Stringer // NOTE String() should be hinted string
 	isvalid.IsValider
 	hint.Hinter
 	util.Byter
 	logging.LogHintedMarshaler
 	Equal(Address) bool
+	Raw() string
 }

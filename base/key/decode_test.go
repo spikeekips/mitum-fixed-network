@@ -67,6 +67,7 @@ func (t *baseTestHintedString) TestDecodeBSON() {
 		ukp = k
 	}
 
+	t.Equal(kp.String(), ukp.String())
 	t.True(kp.Equal(ukp))
 }
 
@@ -108,6 +109,7 @@ func (t *baseTestHintedString) TestDecodeJSON() {
 	}
 
 	t.True(kp.Equal(ukp))
+	t.Equal(kp.String(), ukp.String())
 }
 
 type testHintedString struct {

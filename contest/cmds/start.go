@@ -59,7 +59,7 @@ func (cmd *StartCommand) Run(log logging.Logger) error {
 
 	// create docker env
 	var dc *dockerClient.Client
-	if c, err := dockerClient.NewClientWithOpts(dockerClient.FromEnv); err != nil {
+	if c, err := dockerClient.NewEnvClient(); err != nil {
 		return err
 	} else {
 		dc = c

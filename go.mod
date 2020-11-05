@@ -4,14 +4,14 @@ go 1.15
 
 require (
 	github.com/Azure/go-ansiterm v0.0.0-20170929234023-d6e3b3328b78 // indirect
+	github.com/Nvveen/Gotty v0.0.0-20120604004816-cd527374f1e5 // indirect
 	github.com/alecthomas/kong v0.2.11
 	github.com/aws/aws-sdk-go v1.35.11 // indirect
 	github.com/beevik/ntp v0.3.0
 	github.com/bluele/gcache v0.0.0-20190518031135-bc40bd653833
 	github.com/btcsuite/btcd v0.21.0-beta
 	github.com/btcsuite/btcutil v1.0.2
-	github.com/containerd/containerd v1.4.1 // indirect
-	github.com/docker/docker v17.12.0-ce-rc1.0.20200514230353-811a247d06e8+incompatible
+	github.com/docker/docker v17.12.1-ce+incompatible
 	github.com/docker/go-connections v0.4.0
 	github.com/ethereum/go-ethereum v1.9.23
 	github.com/gogo/protobuf v1.3.1 // indirect
@@ -27,7 +27,6 @@ require (
 	github.com/lucas-clemente/quic-go v0.18.1
 	github.com/marten-seemann/qtls-go1-15 v0.1.1 // indirect
 	github.com/mattn/go-isatty v0.0.12
-	github.com/morikuni/aec v1.0.0 // indirect
 	github.com/oklog/ulid v1.3.1
 	github.com/opencontainers/image-spec v1.0.1 // indirect
 	github.com/rs/zerolog v1.20.0
@@ -47,8 +46,6 @@ require (
 	golang.org/x/sys v0.0.0-20201020230747-6e5568b54d1a // indirect
 	golang.org/x/tools v0.0.0-20200606014950-c42cb6316fb6 // indirect
 	golang.org/x/xerrors v0.0.0-20200804184101-5ec99f83aff1
-	google.golang.org/genproto v0.0.0-20201021134325-0d71844de594 // indirect
-	google.golang.org/grpc v1.33.1 // indirect
 	google.golang.org/protobuf v1.25.0 // indirect
 	gopkg.in/check.v1 v1.0.0-20190902080502-41f04d3bba15 // indirect
 	gopkg.in/yaml.v3 v3.0.0-20200615113413-eeeca48fe776

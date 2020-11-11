@@ -138,6 +138,7 @@ func (bn *Launcher) reloadLocal() error {
 	co := bn.design.Config
 	lpo := bn.local.Policy()
 
+	_ = lpo.SetThresholdRatio(co.ThresholdRatio)
 	if _, err := lpo.SetTimeoutWaitingProposal(co.TimeoutWaitingProposal); err != nil {
 		return err
 	}

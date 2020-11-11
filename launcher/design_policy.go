@@ -20,9 +20,6 @@ func (cd PolicyDesign) Policy() policy.Policy {
 
 func (cd *PolicyDesign) IsValid([]byte) error {
 	po := cd.PolicyV0
-	if po.ThresholdRatio() < 1 {
-		po = po.SetThresholdRatio(policy.DefaultPolicyThresholdRatio)
-	}
 	if po.NumberOfActingSuffrageNodes() < 1 {
 		po = po.SetNumberOfActingSuffrageNodes(policy.DefaultPolicyNumberOfActingSuffrageNodes)
 	}

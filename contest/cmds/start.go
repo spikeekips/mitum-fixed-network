@@ -203,7 +203,7 @@ func (cmd *StartCommand) loadDesign(f string) error {
 		cmd.design = d
 	}
 
-	if r := cmd.design.Config.GenesisPolicy.Policy().ThresholdRatio(); r < 67.0 {
+	if r := cmd.design.Config.NodeConfig.ThresholdRatio; r < 67.0 {
 		cmd.log.Warn().
 			Float64("threshold", r.Float64()).
 			Msg("threshold is too low, recommend over 67.0")

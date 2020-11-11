@@ -5,7 +5,6 @@ import (
 
 	"github.com/stretchr/testify/suite"
 
-	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/base/key"
 	"github.com/spikeekips/mitum/util/encoder"
 	bsonenc "github.com/spikeekips/mitum/util/encoder/bson"
@@ -33,7 +32,7 @@ func (t *testPolicyV0Encode) SetupSuite() {
 }
 
 func (t *testPolicyV0Encode) TestEncode() {
-	po := NewPolicyV0(base.ThresholdRatio(99), 3, 6, 9)
+	po := NewPolicyV0(3, 6, 9)
 	t.NoError(po.IsValid(nil))
 
 	b, err := t.enc.Marshal(po)
@@ -48,7 +47,6 @@ func (t *testPolicyV0Encode) TestEncode() {
 	t.NoError(upo.IsValid(nil))
 
 	t.True(po.Hash().Equal(upo.Hash()))
-	t.Equal(po.ThresholdRatio(), upo.ThresholdRatio())
 	t.Equal(po.MaxOperationsInSeal(), upo.MaxOperationsInSeal())
 	t.Equal(po.MaxOperationsInProposal(), upo.MaxOperationsInProposal())
 

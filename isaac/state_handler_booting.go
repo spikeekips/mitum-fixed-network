@@ -42,26 +42,32 @@ func (cs *StateBootingHandler) Activate(_ *StateChangeContext) error {
 
 	cs.Log().Debug().Msg("activated")
 
-	var ctx *StateChangeContext
-	if c, err := cs.initialize(); err != nil {
-		cs.Log().Error().Err(err).Msg("failed to initialize at booting")
-
-		return err
-	} else if c != nil {
-		ctx = c
-	}
-
 	cs.activate()
 
-	if ctx != nil {
-		go func() {
-			if err := cs.ChangeState(ctx.To(), ctx.Voteproof(), ctx.Ballot()); err != nil {
-				cs.Log().Error().Err(err).Msg("ChangeState error")
-			}
-		}()
-	}
-
 	return nil
+}
+
+func (cs *StateBootingHandler) activate() {
+	cs.BaseStateHandler.activate()
+
+	go func() {
+		var ctx *StateChangeContext
+		if c, err := cs.initialize(); err != nil {
+			cs.Log().Error().Err(err).Msg("failed to initialize at booting")
+
+			return
+		} else if c != nil {
+			ctx = c
+		}
+
+		if ctx != nil {
+			go func() {
+				if err := cs.ChangeState(ctx.To(), ctx.Voteproof(), ctx.Ballot()); err != nil {
+					cs.Log().Error().Err(err).Msg("ChangeState error")
+				}
+			}()
+		}
+	}()
 }
 
 func (cs *StateBootingHandler) Deactivate(_ *StateChangeContext) error {
@@ -215,6 +221,10 @@ func (cs *StateBootingHandler) newPolicyTimer(nodes []network.Node) (
 				cs.Log().Error().Err(err).Msg("failed to get node info")
 
 				return true, nil
+			case n == nil:
+				cs.Log().Error().Err(err).Msg("failed to get node info; empty policy")
+
+				return true, nil
 			default:
 				cs.Log().Debug().Interface("node_info", n).Msg("got node info")
 				ni = n
@@ -282,9 +292,6 @@ func (cs *StateBootingHandler) gatherPolicy(nodes []network.Node) (policy.Policy
 
 	for i := range nis {
 		p := nis[i].Policy()
-		if p == nil {
-			continue
-		}
 
 		h := p.Hash().String()
 		set[i] = h

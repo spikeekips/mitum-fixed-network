@@ -3,7 +3,6 @@ package policy
 import (
 	"golang.org/x/xerrors"
 
-	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/util"
 	"github.com/spikeekips/mitum/util/hint"
 	"github.com/spikeekips/mitum/util/valuehash"
@@ -15,7 +14,6 @@ var (
 )
 
 type PolicyV0 struct {
-	thresholdRatio              base.ThresholdRatio
 	numberOfActingSuffrageNodes uint
 	maxOperationsInSeal         uint
 	maxOperationsInProposal     uint
@@ -23,7 +21,6 @@ type PolicyV0 struct {
 
 func DefaultPolicyV0() PolicyV0 {
 	return NewPolicyV0(
-		DefaultPolicyThresholdRatio,
 		DefaultPolicyNumberOfActingSuffrageNodes,
 		DefaultPolicyMaxOperationsInSeal,
 		DefaultPolicyMaxOperationsInProposal,
@@ -31,13 +28,11 @@ func DefaultPolicyV0() PolicyV0 {
 }
 
 func NewPolicyV0(
-	thresholdRatio base.ThresholdRatio,
 	numberOfActingSuffrageNodes uint,
 	maxOperationsInSeal uint,
 	maxOperationsInProposal uint,
 ) PolicyV0 {
 	return PolicyV0{
-		thresholdRatio:              thresholdRatio,
 		numberOfActingSuffrageNodes: numberOfActingSuffrageNodes,
 		maxOperationsInSeal:         maxOperationsInSeal,
 		maxOperationsInProposal:     maxOperationsInProposal,
@@ -59,12 +54,11 @@ func (po PolicyV0) IsValid([]byte) error {
 		return xerrors.Errorf("MaxOperationsInProposal must be over 0; %d", po.MaxOperationsInProposal)
 	}
 
-	return po.thresholdRatio.IsValid(nil)
+	return nil
 }
 
 func (po PolicyV0) Bytes() []byte {
 	return util.ConcatBytesSlice(
-		util.Float64ToBytes(po.thresholdRatio.Float64()),
 		util.UintToBytes(po.numberOfActingSuffrageNodes),
 		util.UintToBytes(po.maxOperationsInSeal),
 		util.UintToBytes(po.maxOperationsInProposal),
@@ -73,16 +67,6 @@ func (po PolicyV0) Bytes() []byte {
 
 func (po PolicyV0) Hash() valuehash.Hash {
 	return valuehash.NewSHA256(po.Bytes())
-}
-
-func (po PolicyV0) ThresholdRatio() base.ThresholdRatio {
-	return po.thresholdRatio
-}
-
-func (po PolicyV0) SetThresholdRatio(t base.ThresholdRatio) PolicyV0 {
-	po.thresholdRatio = t
-
-	return po
 }
 
 func (po PolicyV0) NumberOfActingSuffrageNodes() uint {

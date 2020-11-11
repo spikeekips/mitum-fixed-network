@@ -179,8 +179,15 @@ func (ss *StateSyncingHandler) activate(ctx *StateChangeContext) error {
 	return nil
 }
 
-func (ss *StateSyncingHandler) NewSeal(seal.Seal) error {
-	return nil
+func (ss *StateSyncingHandler) NewSeal(sl seal.Seal) error {
+	// NOTE only ballot will be handled
+	if ballot, ok := sl.(ballot.Ballot); !ok {
+		return nil
+	} else if err := ss.handleBallot(ballot); err != nil {
+		return err
+	} else {
+		return nil
+	}
 }
 
 func (ss *StateSyncingHandler) NewVoteproof(voteproof base.Voteproof) error {
@@ -330,6 +337,8 @@ func (ss *StateSyncingHandler) handleBallot(blt ballot.Ballot) error {
 		voteproof = t.Voteproof()
 	case ballot.ACCEPTBallot:
 		voteproof = t.Voteproof()
+	default:
+		return nil
 	}
 
 	return ss.fromVoteproof(voteproof)

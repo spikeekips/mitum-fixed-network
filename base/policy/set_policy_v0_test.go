@@ -21,7 +21,7 @@ func (t *testSetPolicyV0) SetupSuite() {
 }
 
 func (t *testSetPolicyV0) TestNewFact() {
-	po := NewPolicyV0(base.ThresholdRatio(33), 3, 6, 9)
+	po := NewPolicyV0(3, 6, 9)
 	t.NoError(po.IsValid(nil))
 
 	fact := NewSetPolicyFactV0(po, util.UUID().Bytes())
@@ -31,7 +31,7 @@ func (t *testSetPolicyV0) TestNewFact() {
 }
 
 func (t *testSetPolicyV0) TestNew() {
-	po := NewPolicyV0(base.ThresholdRatio(33), 3, 6, 9)
+	po := NewPolicyV0(3, 6, 9)
 	t.NoError(po.IsValid(nil))
 
 	networkID := util.UUID().Bytes()

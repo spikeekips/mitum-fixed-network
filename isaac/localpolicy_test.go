@@ -38,7 +38,7 @@ func (t *testPolicy) SetupSuite() {
 func (t *testPolicy) TestLoadWithoutStorage() {
 	p := NewLocalPolicy(nil)
 
-	t.Equal(policy.DefaultPolicyThresholdRatio, p.ThresholdRatio())
+	t.Equal(DefaultPolicyThresholdRatio, p.ThresholdRatio())
 	t.Equal(DefaultPolicyTimeoutWaitingProposal, p.TimeoutWaitingProposal())
 	t.Equal(DefaultPolicyIntervalBroadcastingINITBallot, p.IntervalBroadcastingINITBallot())
 	t.Equal(DefaultPolicyIntervalBroadcastingProposal, p.IntervalBroadcastingProposal())
@@ -58,7 +58,7 @@ func (t *testPolicy) TestLoadFromStorage() {
 	statepool, err := NewStatepool(st)
 	t.NoError(err)
 
-	po := policy.NewPolicyV0(base.ThresholdRatio(99), 3, 6, policy.DefaultPolicyMaxOperationsInProposal+1)
+	po := policy.NewPolicyV0(3, 6, policy.DefaultPolicyMaxOperationsInProposal+1)
 	spo, err := policy.NewSetPolicyV0(po, util.UUID().Bytes(), t.pk, TestNetworkID)
 	t.NoError(err)
 	t.NoError(spo.IsValid(TestNetworkID))

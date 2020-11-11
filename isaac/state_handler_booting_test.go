@@ -125,7 +125,7 @@ func (t *testStateBootingHandler) TestWithoutBlock() {
 		break
 	}
 
-	t.Equal(policy.DefaultPolicyThresholdRatio, t.local.Policy().ThresholdRatio())
+	t.Equal(DefaultPolicyThresholdRatio, t.local.Policy().ThresholdRatio())
 	t.Equal(policy.DefaultPolicyNumberOfActingSuffrageNodes, t.local.Policy().NumberOfActingSuffrageNodes())
 }
 

@@ -15,6 +15,7 @@ import (
 
 var (
 	// NOTE default threshold ratio assumes only one node exists, it means the network is just booted.
+	DefaultPolicyThresholdRatio                   = base.ThresholdRatio(100)
 	DefaultPolicyTimeoutWaitingProposal           = time.Second * 5
 	DefaultPolicyIntervalBroadcastingINITBallot   = time.Second * 1
 	DefaultPolicyIntervalBroadcastingProposal     = time.Second * 1
@@ -46,7 +47,7 @@ type LocalPolicy struct {
 func NewLocalPolicy(networkID []byte) *LocalPolicy {
 	lp := &LocalPolicy{
 		networkID:                        util.NewLockedItem(networkID),
-		thresholdRatio:                   util.NewLockedItem(policy.DefaultPolicyThresholdRatio),
+		thresholdRatio:                   util.NewLockedItem(DefaultPolicyThresholdRatio),
 		numberOfActingSuffrageNodes:      util.NewLockedItem(policy.DefaultPolicyNumberOfActingSuffrageNodes),
 		maxOperationsInSeal:              util.NewLockedItem(policy.DefaultPolicyMaxOperationsInSeal),
 		maxOperationsInProposal:          util.NewLockedItem(policy.DefaultPolicyMaxOperationsInProposal),
@@ -98,9 +99,6 @@ func (lp *LocalPolicy) Reload(st storage.Storage) error {
 }
 
 func (lp *LocalPolicy) Merge(p policy.Policy) error {
-	if v := lp.ThresholdRatio(); v != p.ThresholdRatio() {
-		_ = lp.thresholdRatio.SetValue(p.ThresholdRatio())
-	}
 	if v := lp.NumberOfActingSuffrageNodes(); v != p.NumberOfActingSuffrageNodes() {
 		_ = lp.numberOfActingSuffrageNodes.SetValue(p.NumberOfActingSuffrageNodes())
 	}
@@ -270,7 +268,6 @@ func (lp *LocalPolicy) SetMaxOperationsInProposal(m uint) (*LocalPolicy, error) 
 
 func (lp *LocalPolicy) Policy() policy.Policy {
 	return policy.NewPolicyV0(
-		lp.ThresholdRatio(),
 		lp.NumberOfActingSuffrageNodes(),
 		lp.MaxOperationsInSeal(),
 		lp.MaxOperationsInProposal(),

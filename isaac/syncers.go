@@ -207,12 +207,11 @@ func (sy *Syncers) Add(to base.Height, sourceNodes []network.Node) error {
 	l := sy.Log().WithLogger(func(ctx logging.Context) logging.Emitter {
 		return ctx.Hinted("to", to)
 	})
-	l.Debug().Msg("trying to add new syncer")
 
 	if err := sy.add(to, sourceNodes); err != nil {
-		l.Error().Err(err).Msg("failed to add new syncer")
+		l.Debug().Err(err).Msg("failed to add new syncer")
 
-		return xerrors.Errorf("failed to add new syncer: %w", err)
+		return nil
 	}
 
 	l.Debug().Msg("new syncer added")

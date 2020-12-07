@@ -426,7 +426,7 @@ func (css *ConsensusStates) checkNewVoteproof(voteproof base.Voteproof) (*StateT
 	}).Check(); err != nil {
 		switch {
 		case xerrors.As(err, &ctx):
-		case xerrors.Is(err, IgnoreVoteproofError):
+		case xerrors.Is(err, util.IgnoreError):
 			return nil, nil
 		case err != nil:
 			return nil, err

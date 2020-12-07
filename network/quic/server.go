@@ -19,6 +19,7 @@ import (
 )
 
 var (
+	DefaultPort                 = "54321"
 	QuicHandlerPathGetSeals     = "/seals"
 	QuicHandlerPathSendSeal     = "/seal"
 	QuicHandlerPathGetBlocks    = "/blocks"
@@ -96,6 +97,10 @@ func (sv *Server) SetGetManifestsHandler(fn network.GetManifestsHandler) {
 
 func (sv *Server) SetGetBlocksHandler(fn network.GetBlocksHandler) {
 	sv.getBlocksHandler = fn
+}
+
+func (sv *Server) NodeInfoHandler() network.NodeInfoHandler {
+	return sv.nodeInfoHandler
 }
 
 func (sv *Server) SetNodeInfoHandler(fn network.NodeInfoHandler) {

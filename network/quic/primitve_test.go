@@ -29,7 +29,7 @@ func (t *testPrimitiveQuicSever) SetupTest() {
 	port, err := util.FreePort("udp")
 	t.NoError(err)
 
-	t.bind = fmt.Sprintf("localhost:%d", port)
+	t.bind = fmt.Sprintf("127.0.0.1:%d", port)
 
 	priv, err := util.GenerateED25519Privatekey()
 	t.NoError(err)

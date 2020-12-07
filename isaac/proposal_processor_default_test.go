@@ -367,7 +367,7 @@ func (t *testProposalProcessor) TestNotProcessedOperations() {
 	opr := dummyOperationProcessor{
 		beforeProcessed: func(op state.Processor) error {
 			if fh := op.(operation.Operation).Fact().Hash(); fh.Equal(exclude) {
-				return state.IgnoreOperationProcessingError.Errorf("exclude this operation, %v", fh)
+				return util.IgnoreError.Errorf("exclude this operation, %v", fh)
 			}
 
 			atomic.AddInt64(&processed, 1)

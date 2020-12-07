@@ -27,6 +27,7 @@ type Server interface {
 	SetNewSealHandler(NewSealHandler)
 	SetGetManifestsHandler(GetManifestsHandler)
 	SetGetBlocksHandler(GetBlocksHandler)
+	NodeInfoHandler() NodeInfoHandler
 	SetNodeInfoHandler(NodeInfoHandler)
 }
 

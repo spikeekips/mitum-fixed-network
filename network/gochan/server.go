@@ -48,6 +48,7 @@ func (sv *Server) SetNewSealHandler(f network.NewSealHandler) {
 func (sv *Server) SetGetManifestsHandler(network.GetManifestsHandler) {}
 func (sv *Server) SetGetBlocksHandler(network.GetBlocksHandler)       {}
 func (sv *Server) SetNodeInfoHandler(network.NodeInfoHandler)         {}
+func (sv *Server) NodeInfoHandler() network.NodeInfoHandler           { return nil }
 
 func (sv *Server) run(stopChan chan struct{}) error {
 end:

@@ -9,6 +9,7 @@ import (
 	"github.com/spikeekips/mitum/base/ballot"
 	"github.com/spikeekips/mitum/base/block"
 	"github.com/spikeekips/mitum/storage"
+	"github.com/spikeekips/mitum/util"
 	"github.com/spikeekips/mitum/util/hint"
 	"github.com/spikeekips/mitum/util/logging"
 	"github.com/spikeekips/mitum/util/valuehash"
@@ -91,14 +92,14 @@ func (dp *DefaultProposalProcessor) setProcessor(pp *internalDefaultProposalProc
 
 func (dp *DefaultProposalProcessor) ProcessINIT(ph valuehash.Hash, initVoteproof base.Voteproof) (block.Block, error) {
 	if pp := dp.processor(); pp != nil {
-		dp.Log().Error().
+		dp.Log().Debug().
 			Hinted("proposal", ph).
 			Hinted("proposal_of_processor", pp.proposal.Hash()).
 			Hinted("height", pp.proposal.Height()).
 			Hinted("round", pp.proposal.Round()).
 			Msg("already processed")
 
-		return nil, xerrors.Errorf("already processed")
+		return nil, util.IgnoreError.Errorf("proposal already processed")
 	}
 
 	dp.setProcessor(nil)

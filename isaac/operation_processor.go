@@ -117,7 +117,7 @@ func (co *ConcurrentOperationsProcessor) Start(
 
 	go func() {
 		for err := range errchan {
-			if err == nil || xerrors.Is(err, state.IgnoreOperationProcessingError) {
+			if err == nil || xerrors.Is(err, util.IgnoreError) {
 				continue
 			}
 
@@ -149,7 +149,7 @@ func (co *ConcurrentOperationsProcessor) Process(op operation.Operation) error {
 
 		return nil
 	} else if err := co.process(pr); err != nil {
-		if xerrors.Is(err, state.IgnoreOperationProcessingError) {
+		if xerrors.Is(err, util.IgnoreError) {
 			l.Verbose().Err(err).Msg("operation ignored")
 
 			return nil
@@ -171,7 +171,7 @@ func (co *ConcurrentOperationsProcessor) process(op state.Processor) error {
 	} else if ppr, err := opr.PreProcess(op); err != nil {
 		return err
 	} else if !co.wk.NewJob(ppr) {
-		return state.IgnoreOperationProcessingError.Errorf("already closed")
+		return util.IgnoreError.Errorf("operation processor already closed")
 	}
 
 	return nil
@@ -292,7 +292,7 @@ func (co *ConcurrentOperationsProcessor) work(_ uint, j interface{}) error {
 
 	var op state.Processor
 	if sp, ok := j.(state.Processor); !ok {
-		return state.IgnoreOperationProcessingError.Errorf("not state.StateProcessor, %T", j)
+		return util.IgnoreError.Errorf("not state.StateProcessor, %T", j)
 	} else {
 		op = sp
 	}

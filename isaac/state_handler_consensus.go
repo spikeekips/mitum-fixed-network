@@ -11,6 +11,7 @@ import (
 	"github.com/spikeekips/mitum/base/block"
 	"github.com/spikeekips/mitum/base/seal"
 	"github.com/spikeekips/mitum/storage"
+	"github.com/spikeekips/mitum/util"
 	"github.com/spikeekips/mitum/util/localtime"
 	"github.com/spikeekips/mitum/util/logging"
 )
@@ -147,6 +148,10 @@ func (cs *StateConsensusHandler) NewSeal(sl seal.Seal) error {
 	case ballot.Proposal:
 		go func(proposal ballot.Proposal) {
 			if err := cs.handleProposal(proposal); err != nil {
+				if xerrors.Is(err, util.IgnoreError) {
+					return
+				}
+
 				cs.Log().Error().Err(err).
 					Hinted("proposal_hash", proposal.Hash()).
 					Msg("failed to handle proposal")
@@ -221,11 +226,7 @@ func (cs *StateConsensusHandler) handleACCEPTVoteproof(voteproof base.Voteproof)
 	if err := cs.StoreNewBlock(voteproof); err != nil {
 		var ctx *StateToBeChangeError
 		switch {
-		case xerrors.As(err, &ctx):
-			l.Error().Err(err).Msg("state will be moved with accept voteproof")
-
-			return cs.ChangeState(ctx.ToState, ctx.Voteproof, ctx.Ballot)
-		case xerrors.Is(err, IgnoreVoteproofError):
+		case xerrors.Is(err, util.IgnoreError):
 			l.Error().Err(err).Msg("accept voteproof will be ignored")
 
 			return nil
@@ -233,6 +234,10 @@ func (cs *StateConsensusHandler) handleACCEPTVoteproof(voteproof base.Voteproof)
 			l.Error().Err(err).Msg("failed to store accept voteproof with timeout error; moves to next round")
 
 			return err
+		case xerrors.As(err, &ctx):
+			l.Error().Err(err).Msg("state will be moved with accept voteproof")
+
+			return cs.ChangeState(ctx.ToState, ctx.Voteproof, ctx.Ballot)
 		default:
 			if len(cs.suffrage.Nodes()) < 2 {
 				l.Error().Err(err).Msg("failed to store accept voteproof; standalone node will wait")

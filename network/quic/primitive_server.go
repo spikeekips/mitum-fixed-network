@@ -29,6 +29,10 @@ type PrimitiveQuicServer struct {
 }
 
 func NewPrimitiveQuicServer(bind string, certs []tls.Certificate) (*PrimitiveQuicServer, error) {
+	if err := network.CheckBindIsOpen("udp", bind, time.Second*1); err != nil {
+		return nil, xerrors.Errorf("failed to open quic server, %q: %w", bind, err)
+	}
+
 	qs := &PrimitiveQuicServer{
 		Logging: logging.NewLogging(func(c logging.Context) logging.Emitter {
 			return c.Str("module", "network-quic-primitive-server")

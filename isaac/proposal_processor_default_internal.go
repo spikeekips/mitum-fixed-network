@@ -15,6 +15,7 @@ import (
 	"github.com/spikeekips/mitum/base/operation"
 	"github.com/spikeekips/mitum/base/state"
 	"github.com/spikeekips/mitum/storage"
+	"github.com/spikeekips/mitum/util"
 	"github.com/spikeekips/mitum/util/hint"
 	"github.com/spikeekips/mitum/util/logging"
 	"github.com/spikeekips/mitum/util/tree"
@@ -343,7 +344,7 @@ func (pp *internalDefaultProposalProcessor) processStates(
 				case err != nil:
 					return err
 				case found:
-					return state.IgnoreOperationProcessingError.Errorf("already known")
+					return util.IgnoreError.Errorf("already known")
 				default:
 					return nil
 				}

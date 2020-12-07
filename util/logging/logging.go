@@ -13,6 +13,10 @@ type LogHintedMarshaler interface {
 	MarshalLog(string /*key */, Emitter, bool /* is verbose? */) Emitter
 }
 
+type HasLogger interface {
+	Log() Logger
+}
+
 type SetLogger interface {
 	SetLogger(Logger) Logger
 }

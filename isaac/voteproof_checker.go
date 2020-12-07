@@ -7,14 +7,12 @@ import (
 	"github.com/spikeekips/mitum/base/ballot"
 	"github.com/spikeekips/mitum/base/block"
 	"github.com/spikeekips/mitum/storage"
+	"github.com/spikeekips/mitum/util"
 	"github.com/spikeekips/mitum/util/errors"
 	"github.com/spikeekips/mitum/util/logging"
 )
 
-var (
-	IgnoreVoteproofError = errors.NewError("Voteproof should be ignored")
-	stateToBeChangeError = errors.NewError("State needs to be changed")
-)
+var stateToBeChangeError = errors.NewError("State needs to be changed")
 
 type StateToBeChangeError struct {
 	*errors.NError
@@ -162,7 +160,7 @@ func (vpc *VoteproofConsensusStateChecker) CheckHeight() (bool, error) {
 			Hinted("local_block_height", height).
 			Msg("Voteproof has lower height from local block; ignore it")
 
-		return false, IgnoreVoteproofError
+		return false, util.IgnoreError.Errorf("Voteproof has lower height from local block; ignore it")
 	}
 
 	return true, nil

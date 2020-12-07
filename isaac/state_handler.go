@@ -205,7 +205,7 @@ func (bs *BaseStateHandler) StoreNewBlock(acceptVoteproof base.Voteproof) error 
 				l.Error().Err(err).Msg("state will be moved with accept voteproof")
 
 				return util.StopRetryingError.Wrap(err)
-			case xerrors.Is(err, IgnoreVoteproofError):
+			case xerrors.Is(err, util.IgnoreError):
 				return util.StopRetryingError.Wrap(err)
 			default:
 				l.Error().Err(err).Msg("something wrong to store accept voteproof; will retry")

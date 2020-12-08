@@ -81,11 +81,11 @@ func (ep EtherPrivatekey) Sign(input []byte) (Signature, error) {
 		return nil, err
 	}
 
-	bs := make([]byte, 4)
+	bs := make([]byte, 4+len(r.Bytes())+len(s.Bytes()))
 	binary.LittleEndian.PutUint32(bs, uint32(len(r.Bytes())))
 
-	bs = append(bs, r.Bytes()...)
-	bs = append(bs, s.Bytes()...)
+	copy(bs[4:], r.Bytes())
+	copy(bs[4+len(r.Bytes()):], s.Bytes())
 
 	return Signature(bs), nil
 }

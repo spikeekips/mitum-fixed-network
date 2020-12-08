@@ -185,14 +185,6 @@ func (sy *Syncers) stateChanged(ctx SyncerStateChangedContext) error {
 				}
 			}
 
-			if err := sy.local.Policy().Reload(sy.local.Storage()); err != nil {
-				sy.Log().Error().Err(err).Msg("failed to update Policy")
-
-				return err
-			} else {
-				sy.Log().Debug().Interface("policy", sy.local.Policy()).Msg("Policy updated")
-			}
-
 			sy.whenFinished(sy.lastSyncer().HeightTo())
 		}
 	}

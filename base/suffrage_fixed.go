@@ -52,6 +52,7 @@ func (ff *FixedSuffrage) IsInside(a Address) bool {
 }
 
 func (ff *FixedSuffrage) Acting(height Height, round Round) ActingSuffrage {
+	// TODO apply policy.NumberOfActingSuffrageNodes
 	return NewActingSuffrage(height, round, ff.proposer, ff.nodeList)
 }
 

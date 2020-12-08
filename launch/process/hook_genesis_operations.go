@@ -4,10 +4,8 @@ import (
 	"context"
 
 	"golang.org/x/xerrors"
-	"gopkg.in/yaml.v3"
 
 	"github.com/spikeekips/mitum/base/operation"
-	"github.com/spikeekips/mitum/base/policy"
 	"github.com/spikeekips/mitum/launch/config"
 	"github.com/spikeekips/mitum/launch/pm"
 )
@@ -16,9 +14,7 @@ type HookHandlerGenesisOperations func(context.Context, map[string]interface{}) 
 
 var (
 	DefaultGenesisOperationToken         = []byte("genesis-operation-token")
-	DefaultHookHandlersGenesisOperations = map[string]HookHandlerGenesisOperations{
-		"set-policy": GenesisOperationsHandlerSetPolicy,
-	}
+	DefaultHookHandlersGenesisOperations = map[string]HookHandlerGenesisOperations{}
 )
 
 func HookGenesisOperationFunc(handlers map[string]HookHandlerGenesisOperations) pm.ProcessFunc {
@@ -57,36 +53,6 @@ func HookGenesisOperationFunc(handlers map[string]HookHandlerGenesisOperations) 
 			return ctx, nil
 		}
 	}
-}
-
-func GenesisOperationsHandlerSetPolicy(ctx context.Context, m map[string]interface{}) (operation.Operation, error) {
-	var conf config.LocalNode
-	if err := config.LoadConfigContextValue(ctx, &conf); err != nil {
-		return nil, err
-	}
-
-	var p policy.PolicyV0
-	if b, err := yaml.Marshal(m); err != nil {
-		return nil, err
-	} else if err := yaml.Unmarshal(b, &p); err != nil {
-		return nil, err
-	}
-
-	if p.NumberOfActingSuffrageNodes() < 1 {
-		p = p.SetNumberOfActingSuffrageNodes(policy.DefaultPolicyNumberOfActingSuffrageNodes)
-	}
-	if p.MaxOperationsInSeal() < 1 {
-		p = p.SetMaxOperationsInSeal(policy.DefaultPolicyMaxOperationsInSeal)
-	}
-	if p.MaxOperationsInProposal() < 1 {
-		p = p.SetMaxOperationsInProposal(policy.DefaultPolicyMaxOperationsInProposal)
-	}
-
-	if err := p.IsValid(nil); err != nil {
-		return nil, err
-	}
-
-	return policy.NewSetPolicyV0(p, DefaultGenesisOperationToken, conf.Privatekey(), conf.NetworkID())
 }
 
 func parseGenesisOperations(o interface{}) ([]map[string]interface{}, error) {

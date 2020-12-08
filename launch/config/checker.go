@@ -2,7 +2,9 @@ package config
 
 import (
 	"context"
+	"time"
 
+	"github.com/spikeekips/mitum/base/policy"
 	"github.com/spikeekips/mitum/isaac"
 	"github.com/spikeekips/mitum/util/logging"
 )
@@ -88,46 +90,44 @@ func (cc *checker) CheckPolicy() (bool, error) {
 		}
 	}
 
-	if conf.TimeoutWaitingProposal() == 0 {
-		if err := conf.SetTimeoutWaitingProposal(isaac.DefaultPolicyTimeoutWaitingProposal.String()); err != nil {
+	uints := [][3]interface{}{
+		{conf.NumberOfActingSuffrageNodes(), conf.SetNumberOfActingSuffrageNodes, policy.DefaultPolicyNumberOfActingSuffrageNodes}, // nolint:lll
+		{conf.MaxOperationsInSeal(), conf.SetMaxOperationsInSeal, policy.DefaultPolicyMaxOperationsInSeal},                         // nolint:lll
+		{conf.MaxOperationsInProposal(), conf.SetMaxOperationsInProposal, policy.DefaultPolicyMaxOperationsInProposal},             // nolint:lll
+	}
+
+	for i := range uints {
+		v := uints[i][0].(uint)
+		d := uints[i][2].(uint)
+		f := uints[i][1].(func(uint) error)
+
+		if v > 0 {
+			continue
+		}
+		if err := f(d); err != nil {
 			return false, err
 		}
 	}
 
-	if conf.IntervalBroadcastingINITBallot() == 0 {
-		if err := conf.SetIntervalBroadcastingINITBallot(
-			isaac.DefaultPolicyIntervalBroadcastingINITBallot.String()); err != nil {
-			return false, err
-		}
+	durs := [][3]interface{}{
+		{conf.TimeoutWaitingProposal(), conf.SetTimeoutWaitingProposal, isaac.DefaultPolicyTimeoutWaitingProposal},                               // nolint:lll
+		{conf.IntervalBroadcastingINITBallot(), conf.SetIntervalBroadcastingINITBallot, isaac.DefaultPolicyIntervalBroadcastingINITBallot},       // nolint:lll
+		{conf.IntervalBroadcastingProposal(), conf.SetIntervalBroadcastingProposal, isaac.DefaultPolicyIntervalBroadcastingProposal},             // nolint:lll
+		{conf.WaitBroadcastingACCEPTBallot(), conf.SetWaitBroadcastingACCEPTBallot, isaac.DefaultPolicyWaitBroadcastingACCEPTBallot},             // nolint:lll
+		{conf.IntervalBroadcastingACCEPTBallot(), conf.SetIntervalBroadcastingACCEPTBallot, isaac.DefaultPolicyIntervalBroadcastingACCEPTBallot}, // nolint:lll
+		{conf.TimespanValidBallot(), conf.SetTimespanValidBallot, isaac.DefaultPolicyTimespanValidBallot},                                        // nolint:lll
+		{conf.TimeoutProcessProposal(), conf.SetTimeoutProcessProposal, isaac.DefaultPolicyTimeoutProcessProposal},                               // nolint:lll
 	}
 
-	if conf.IntervalBroadcastingProposal() == 0 {
-		if err := conf.SetIntervalBroadcastingProposal(isaac.DefaultPolicyIntervalBroadcastingProposal.String()); err != nil {
-			return false, err
-		}
-	}
+	for i := range durs {
+		v := durs[i][0].(time.Duration)
+		d := durs[i][2].(time.Duration)
+		f := durs[i][1].(func(string) error)
 
-	if conf.WaitBroadcastingACCEPTBallot() == 0 {
-		if err := conf.SetWaitBroadcastingACCEPTBallot(isaac.DefaultPolicyWaitBroadcastingACCEPTBallot.String()); err != nil {
-			return false, err
+		if v > 0 {
+			continue
 		}
-	}
-
-	if conf.IntervalBroadcastingACCEPTBallot() == 0 {
-		if err := conf.SetIntervalBroadcastingACCEPTBallot(
-			isaac.DefaultPolicyIntervalBroadcastingACCEPTBallot.String()); err != nil {
-			return false, err
-		}
-	}
-
-	if conf.TimespanValidBallot() == 0 {
-		if err := conf.SetTimespanValidBallot(isaac.DefaultPolicyTimespanValidBallot.String()); err != nil {
-			return false, err
-		}
-	}
-
-	if conf.TimeoutProcessProposal() == 0 {
-		if err := conf.SetTimeoutProcessProposal(isaac.DefaultPolicyTimeoutProcessProposal.String()); err != nil {
+		if err := f(d.String()); err != nil {
 			return false, err
 		}
 	}

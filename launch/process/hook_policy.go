@@ -26,6 +26,15 @@ func HookSetPolicy(ctx context.Context) (context.Context, error) {
 	policy := local.Policy()
 
 	_ = policy.SetThresholdRatio(conf.ThresholdRatio())
+	if _, err := policy.SetNumberOfActingSuffrageNodes(conf.NumberOfActingSuffrageNodes()); err != nil {
+		return ctx, err
+	}
+	if _, err := policy.SetMaxOperationsInSeal(conf.MaxOperationsInSeal()); err != nil {
+		return ctx, err
+	}
+	if _, err := policy.SetMaxOperationsInProposal(conf.MaxOperationsInProposal()); err != nil {
+		return ctx, err
+	}
 	if _, err := policy.SetTimeoutWaitingProposal(conf.TimeoutWaitingProposal()); err != nil {
 		return ctx, err
 	}

@@ -55,6 +55,4 @@ var DefaultHinters = []hint.Hinter{
 	valuehash.SHA256{},
 	valuehash.SHA512{},
 	policy.PolicyV0{},
-	policy.SetPolicyFactV0{},
-	policy.SetPolicyV0{},
 }

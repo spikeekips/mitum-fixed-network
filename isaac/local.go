@@ -37,10 +37,6 @@ func (ls *Local) Initialize() error {
 	}
 
 	if ls.storage != nil {
-		if err := lp.Reload(ls.storage); err != nil {
-			return err
-		}
-
 		if m, found, err := ls.storage.LastManifest(); err != nil {
 			return err
 		} else if found {

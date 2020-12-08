@@ -2,12 +2,16 @@ package yamlconfig
 
 import (
 	"context"
+	"reflect"
 
 	"github.com/spikeekips/mitum/launch/config"
 )
 
 type Policy struct {
 	ThresholdRatio                   *float64               `yaml:"threshold,omitempty"`
+	NumberOfActingSuffrageNodes      *uint                  `yaml:"number-of-acting-suffrage-nodes"`
+	MaxOperationsInSeal              *uint                  `yaml:"max-operations-in-seal"`
+	MaxOperationsInProposal          *uint                  `yaml:"max-operations-in-proposal"`
 	TimeoutWaitingProposal           *string                `yaml:"timeout-waiting-proposal,omitempty"`
 	IntervalBroadcastingINITBallot   *string                `yaml:"interval-broadcasting-init-ballot,omitempty"`
 	IntervalBroadcastingProposal     *string                `yaml:"interval-broadcasting-proposal,omitempty"`
@@ -32,38 +36,45 @@ func (no Policy) Set(ctx context.Context) (context.Context, error) {
 			return ctx, err
 		}
 	}
-	if no.TimeoutWaitingProposal != nil {
-		if err := conf.SetTimeoutWaitingProposal(*no.TimeoutWaitingProposal); err != nil {
+
+	uintCol := [][2]interface{}{
+		{no.NumberOfActingSuffrageNodes, conf.SetNumberOfActingSuffrageNodes},
+		{no.MaxOperationsInSeal, conf.SetMaxOperationsInSeal},
+		{no.MaxOperationsInProposal, conf.SetMaxOperationsInProposal},
+	}
+
+	for i := range uintCol {
+		v, f := uintCol[i][0], uintCol[i][1]
+
+		rv := reflect.ValueOf(v)
+		if rv.IsNil() {
+			continue
+		}
+
+		if err := f.(func(uint) error)(rv.Elem().Interface().(uint)); err != nil {
 			return ctx, err
 		}
 	}
-	if no.IntervalBroadcastingINITBallot != nil {
-		if err := conf.SetIntervalBroadcastingINITBallot(*no.IntervalBroadcastingINITBallot); err != nil {
-			return ctx, err
-		}
+
+	durationCol := [][2]interface{}{
+		{no.TimeoutWaitingProposal, conf.SetTimeoutWaitingProposal},
+		{no.IntervalBroadcastingINITBallot, conf.SetIntervalBroadcastingINITBallot},
+		{no.IntervalBroadcastingProposal, conf.SetIntervalBroadcastingProposal},
+		{no.WaitBroadcastingACCEPTBallot, conf.SetWaitBroadcastingACCEPTBallot},
+		{no.IntervalBroadcastingACCEPTBallot, conf.SetIntervalBroadcastingACCEPTBallot},
+		{no.TimespanValidBallot, conf.SetTimespanValidBallot},
+		{no.TimeoutProcessProposal, conf.SetTimeoutProcessProposal},
 	}
-	if no.IntervalBroadcastingProposal != nil {
-		if err := conf.SetIntervalBroadcastingProposal(*no.IntervalBroadcastingProposal); err != nil {
-			return ctx, err
+
+	for i := range durationCol {
+		v, f := durationCol[i][0], durationCol[i][1]
+
+		rv := reflect.ValueOf(v)
+		if rv.IsNil() {
+			continue
 		}
-	}
-	if no.WaitBroadcastingACCEPTBallot != nil {
-		if err := conf.SetWaitBroadcastingACCEPTBallot(*no.WaitBroadcastingACCEPTBallot); err != nil {
-			return ctx, err
-		}
-	}
-	if no.IntervalBroadcastingACCEPTBallot != nil {
-		if err := conf.SetIntervalBroadcastingACCEPTBallot(*no.IntervalBroadcastingACCEPTBallot); err != nil {
-			return ctx, err
-		}
-	}
-	if no.TimespanValidBallot != nil {
-		if err := conf.SetTimespanValidBallot(*no.TimespanValidBallot); err != nil {
-			return ctx, err
-		}
-	}
-	if no.TimeoutProcessProposal != nil {
-		if err := conf.SetTimeoutProcessProposal(*no.TimeoutProcessProposal); err != nil {
+
+		if err := f.(func(string) error)(rv.Elem().Interface().(string)); err != nil {
 			return ctx, err
 		}
 	}

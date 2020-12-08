@@ -48,27 +48,24 @@ func ProcessSuffrage(ctx context.Context) (context.Context, error) {
 	switch t := conf.(type) {
 	case config.FixedProposerSuffrage:
 		var found bool
-		var i int
-		nodes := make([]base.Address, local.Nodes().Len()+1)
-		local.Nodes().Traverse(func(node network.Node) bool {
-			address := node.Address()
-			if !found && t.Proposer.Equal(address) {
-				found = true
-			}
+		if t.Proposer.Equal(local.Node().Address()) {
+			found = true
+		} else {
+			local.Nodes().Traverse(func(node network.Node) bool {
+				address := node.Address()
+				if !found && t.Proposer.Equal(address) {
+					found = true
+				}
 
-			nodes[i] = address
-			i++
-
-			return true
-		})
-
-		if !found {
-			return ctx, xerrors.Errorf("proposer not found in suffrage nodes")
+				return true
+			})
 		}
 
-		nodes[local.Nodes().Len()] = local.Node().Address()
+		if !found {
+			return ctx, xerrors.Errorf("proposer not found in suffrage nodes or local")
+		}
 
-		sf = base.NewFixedSuffrage(t.Proposer, nodes)
+		sf = base.NewFixedSuffrage(t.Proposer, nil)
 	case config.RoundrobinSuffrage:
 		sf = NewRoundrobinSuffrage(local, t.CacheSize)
 	}

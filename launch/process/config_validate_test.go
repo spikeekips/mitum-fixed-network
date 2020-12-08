@@ -7,7 +7,6 @@ import (
 	"github.com/stretchr/testify/suite"
 
 	"github.com/spikeekips/mitum/base/operation"
-	"github.com/spikeekips/mitum/base/policy"
 	"github.com/spikeekips/mitum/launch/config"
 	"github.com/spikeekips/mitum/launch/pm"
 )
@@ -417,19 +416,42 @@ proposal-processor:
 	t.Contains(err.Error(), "unknown proposal-processor found, find-me")
 }
 
+func testGenesisOperationsHandlerSetPolicy(ctx context.Context, m map[string]interface{}) (operation.Operation, error) {
+	var conf config.LocalNode
+	if err := config.LoadConfigContextValue(ctx, &conf); err != nil {
+		return nil, err
+	}
+
+	var key string
+	var value []byte
+	for k := range m {
+		if k == "type" {
+			continue
+		}
+
+		key = k
+		value = []byte(m[k].(string))
+	}
+
+	return operation.NewKVOperation(conf.Privatekey(), DefaultGenesisOperationToken, key, value, conf.NetworkID())
+}
+
 func (t *testConfigValidator) TestLoadGenesisOperations() {
 	y := `
 privatekey: KzmnCUoBrqYbkoP8AUki1AJsyKqxNsiqdrtTB2onyzQfB6MQ5Sef-0112:0.0.1
 network-id: show me
 genesis-operations:
-  - type: set-policy
-    number-of-acting-suffrage-nodes: 33
-    max-operations-in-seal: 44
-    max-operations-in-proposal: 55
+  - type: set-data
+    suffrage-nodes: "empty"
 `
 	ctx := t.loadConfig(y)
 
-	ctx, err := HookGenesisOperationFunc(DefaultHookHandlersGenesisOperations)(ctx)
+	handlers := map[string]HookHandlerGenesisOperations{}
+	for k, v := range DefaultHookHandlersGenesisOperations {
+		handlers[k] = v
+	}
+	handlers["set-data"] = testGenesisOperationsHandlerSetPolicy
+	ctx, err := HookGenesisOperationFunc(handlers)(ctx)
 	t.NoError(err)
 
 	va, err := config.NewValidator(ctx)
@@ -445,15 +467,14 @@ genesis-operations:
 	op := conf.GenesisOperations()[0]
 	t.NoError(op.IsValid(conf.NetworkID()))
 
-	t.IsType(policy.SetPolicyV0{}, op)
-	t.IsType(policy.SetPolicyFactV0{}, op.Fact())
+	t.IsType(operation.KVOperation{}, op)
 	t.Implements((*operation.OperationFact)(nil), op.Fact())
 
-	fact := op.Fact().(policy.SetPolicyFactV0)
-	t.Equal(DefaultGenesisOperationToken, fact.Token())
-	t.Equal(uint(33), fact.NumberOfActingSuffrageNodes())
-	t.Equal(uint(44), fact.MaxOperationsInSeal())
-	t.Equal(uint(55), fact.MaxOperationsInProposal())
+	kop := op.(operation.KVOperation)
+
+	t.Equal(DefaultGenesisOperationToken, kop.Fact().(operation.KVOperationFact).Token())
+	t.Equal("suffrage-nodes", kop.Key())
+	t.Equal([]byte("empty"), kop.Value())
 }
 
 func (t *testConfigValidator) TestUnknownGenesisOperations() {

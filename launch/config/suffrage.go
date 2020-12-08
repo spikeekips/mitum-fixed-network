@@ -9,6 +9,8 @@ type Suffrage interface {
 }
 
 type FixedProposerSuffrage struct {
+	// TODO rename to FixedSuffrage
+	// TODO add node list
 	Proposer base.Address
 }
 
@@ -17,11 +19,12 @@ func NewFixedProposerSuffrage(proposer base.Address) (FixedProposerSuffrage, err
 }
 
 func (fd FixedProposerSuffrage) SuffrageType() string {
-	return "fixed-proposer"
+	return "fixed-proposer" // TODO rename to fixed-suffrage
 }
 
 type RoundrobinSuffrage struct {
 	CacheSize int
+	// TODO add NumberOfActingSuffrageNodes
 }
 
 func NewRoundrobinSuffrage() RoundrobinSuffrage {

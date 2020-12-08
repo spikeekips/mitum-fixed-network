@@ -1,24 +1,17 @@
 package isaac
 
 import (
-	"sync"
-	"time"
-
 	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/base/block"
-	"github.com/spikeekips/mitum/base/policy"
 	"github.com/spikeekips/mitum/base/seal"
-	"github.com/spikeekips/mitum/network"
 	"github.com/spikeekips/mitum/storage"
-	"github.com/spikeekips/mitum/util/localtime"
 	"github.com/spikeekips/mitum/util/logging"
 	"golang.org/x/xerrors"
 )
 
 type StateBootingHandler struct {
 	*BaseStateHandler
-	suffrage    base.Suffrage
-	policyTimer *localtime.CallbackTimer
+	suffrage base.Suffrage
 }
 
 func NewStateBootingHandler(
@@ -75,14 +68,6 @@ func (cs *StateBootingHandler) Deactivate(_ *StateChangeContext) error {
 	defer cs.Unlock()
 
 	cs.deactivate()
-
-	if cs.policyTimer != nil {
-		if err := cs.policyTimer.Stop(); err != nil {
-			return xerrors.Errorf("failed to stop policy timer: %w", err)
-		}
-
-		cs.policyTimer = nil
-	}
 
 	cs.Log().Debug().Msg("deactivated")
 
@@ -170,144 +155,9 @@ func (cs *StateBootingHandler) whenEmptyBlocks() (*StateChangeContext, error) {
 		return nil, err
 	}
 
-	if len(cs.suffrage.Nodes()) < 2 {
+	if len(cs.suffrage.Nodes()) < 2 { // NOTE suffrage nodes has local node itself
 		return nil, xerrors.Errorf("empty block, but no other nodes; can not sync")
 	}
 
-	var nodes []network.Node
-	for _, a := range cs.suffrage.Nodes() {
-		if a.Equal(cs.local.Node().Address()) {
-			continue
-		} else if n, found := cs.local.Nodes().Node(a); !found {
-			return nil, xerrors.Errorf("unknown node, %s found in suffrage", a)
-		} else {
-			nodes = append(nodes, n)
-		}
-	}
-
-	if len(nodes) < 1 {
-		return nil, xerrors.Errorf("empty nodes for syncing")
-	}
-
-	if ch, err := cs.newPolicyTimer(nodes); err != nil {
-		return nil, err
-	} else {
-		po := <-ch
-		if err := cs.local.Policy().Merge(po); err != nil {
-			return nil, err
-		}
-
-		cs.Log().Debug().Interface("policy", po).Msg("got policy at first time and merged")
-	}
-
 	return NewStateChangeContext(base.StateBooting, base.StateSyncing, nil, nil), nil
-}
-
-// newPolicyTimer starts new timer for gathering NodeInfo from suffrage nodes.
-// If nothing to be collected, keeps trying.
-func (cs *StateBootingHandler) newPolicyTimer(nodes []network.Node) (
-	chan policy.Policy, error) {
-	gotPolicyChan := make(chan policy.Policy)
-
-	var once sync.Once
-	timer, err := localtime.NewCallbackTimer(
-		TimerIDNodeInfo,
-		func(int) (bool, error) {
-			cs.Log().Debug().Msg("trying to gather node info")
-
-			var ni policy.Policy
-			switch n, err := cs.gatherPolicy(nodes); {
-			case err != nil:
-				cs.Log().Error().Err(err).Msg("failed to get node info")
-
-				return true, nil
-			case n == nil:
-				cs.Log().Error().Err(err).Msg("failed to get node info; empty policy")
-
-				return true, nil
-			default:
-				cs.Log().Debug().Interface("node_info", n).Msg("got node info")
-				ni = n
-			}
-
-			once.Do(func() {
-				gotPolicyChan <- ni
-			})
-
-			return false, nil
-		},
-		0,
-	)
-	if err != nil {
-		return nil, err
-	}
-
-	_ = timer.SetInterval(func(i int) time.Duration {
-		if i < 1 {
-			return time.Nanosecond
-		}
-
-		return time.Second * 1
-	}).SetLogger(cs.Log())
-
-	if cs.policyTimer != nil {
-		if err := cs.policyTimer.Stop(); err != nil {
-			return nil, xerrors.Errorf("failed to stop policy timer: %w", err)
-		}
-	}
-
-	if err := timer.Start(); err != nil {
-		return nil, err
-	}
-
-	cs.policyTimer = timer
-
-	return gotPolicyChan, nil
-}
-
-func (cs *StateBootingHandler) gatherPolicy(nodes []network.Node) (policy.Policy, error) {
-	var nis []network.NodeInfo
-	for i := range nodes {
-		n := nodes[i]
-		switch i, err := n.Channel().NodeInfo(); {
-		case err != nil:
-			cs.Log().Error().Err(err).Hinted("target_node", n.Address()).Msg("failed to get node info from node")
-
-			return nil, err
-		case i == nil:
-			cs.Log().Error().Err(err).Hinted("target_node", n.Address()).Msg("got empty node info from node")
-
-			continue
-		default:
-			nis = append(nis, i)
-		}
-	}
-
-	if len(nis) < 1 {
-		return nil, xerrors.Errorf("empty node info")
-	}
-
-	set := make([]string, len(nis))
-	mnis := map[string]policy.Policy{}
-
-	for i := range nis {
-		p := nis[i].Policy()
-
-		h := p.Hash().String()
-		set[i] = h
-		mnis[h] = p
-	}
-
-	var threshold base.Threshold
-	if t, err := base.NewThreshold(uint(len(nis)), base.ThresholdRatio(67)); err != nil {
-		return nil, err
-	} else {
-		threshold = t
-	}
-
-	if r, key := base.FindMajorityFromSlice(threshold.Total, threshold.Threshold, set); r != base.VoteResultMajority {
-		return nil, nil
-	} else {
-		return mnis[key], nil
-	}
 }

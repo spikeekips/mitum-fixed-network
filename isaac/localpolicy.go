@@ -8,9 +8,7 @@ import (
 
 	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/base/policy"
-	"github.com/spikeekips/mitum/storage"
 	"github.com/spikeekips/mitum/util"
-	"github.com/spikeekips/mitum/util/valuehash"
 )
 
 var (
@@ -27,12 +25,11 @@ var (
 
 type LocalPolicy struct {
 	sync.RWMutex
-	lastPolicy                       valuehash.Hash
 	networkID                        *util.LockedItem
 	thresholdRatio                   *util.LockedItem
+	numberOfActingSuffrageNodes      *util.LockedItem
 	maxOperationsInSeal              *util.LockedItem
 	maxOperationsInProposal          *util.LockedItem
-	numberOfActingSuffrageNodes      *util.LockedItem
 	timeoutWaitingProposal           *util.LockedItem
 	intervalBroadcastingINITBallot   *util.LockedItem
 	intervalBroadcastingProposal     *util.LockedItem
@@ -61,55 +58,6 @@ func NewLocalPolicy(networkID []byte) *LocalPolicy {
 	}
 
 	return lp
-}
-
-func LoadLocalPolicy(st storage.Storage) (valuehash.Hash, policy.Policy, error) {
-	if l, found, err := st.State(policy.PolicyOperationKey); err != nil {
-		return nil, nil, err
-	} else if !found || l.Value() == nil { // set default
-		return nil, nil, nil
-	} else if i := l.Value().Interface(); i == nil {
-		return nil, nil, nil
-	} else if p, ok := i.(policy.Policy); !ok {
-		return nil, nil, xerrors.Errorf("wrong type policy, %T", i)
-	} else {
-		return l.Hash(), p, nil
-	}
-}
-
-func (lp *LocalPolicy) Reload(st storage.Storage) error {
-	lp.Lock()
-	defer lp.Unlock()
-
-	switch h, p, err := LoadLocalPolicy(st); {
-	case err != nil:
-		return err
-	case p == nil:
-		return nil
-	case lp.lastPolicy != nil && lp.lastPolicy.Equal(h):
-		return nil
-	default:
-		if err := lp.Merge(p); err != nil {
-			return err
-		} else {
-			lp.lastPolicy = h
-			return nil
-		}
-	}
-}
-
-func (lp *LocalPolicy) Merge(p policy.Policy) error {
-	if v := lp.NumberOfActingSuffrageNodes(); v != p.NumberOfActingSuffrageNodes() {
-		_ = lp.numberOfActingSuffrageNodes.SetValue(p.NumberOfActingSuffrageNodes())
-	}
-	if v := lp.MaxOperationsInSeal(); v != p.MaxOperationsInSeal() {
-		_ = lp.maxOperationsInSeal.SetValue(p.MaxOperationsInSeal())
-	}
-	if v := lp.MaxOperationsInProposal(); v != p.MaxOperationsInProposal() {
-		_ = lp.maxOperationsInProposal.SetValue(p.MaxOperationsInProposal())
-	}
-
-	return nil
 }
 
 func (lp *LocalPolicy) NetworkID() []byte {
@@ -276,6 +224,7 @@ func (lp *LocalPolicy) Policy() policy.Policy {
 
 func (lp *LocalPolicy) Config() map[string]interface{} {
 	return map[string]interface{}{
+		"threshold":                           lp.ThresholdRatio(),
 		"timeout_waiting_proposal":            lp.TimeoutWaitingProposal(),
 		"interval_broadcasting_init_ballot":   lp.IntervalBroadcastingINITBallot(),
 		"interval_broadcasting_proposal":      lp.IntervalBroadcastingProposal(),

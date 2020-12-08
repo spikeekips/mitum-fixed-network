@@ -111,6 +111,23 @@ func (va *validator) CheckPolicy() (bool, error) {
 		return false, xerrors.Errorf("threshold is zero")
 	}
 
+	if n := conf.NumberOfActingSuffrageNodes(); n < 1 {
+		return false, xerrors.Errorf("number-of-acting-suffrage-nodes is zero")
+	} else if int(n)-1 > len(va.config.Nodes()) {
+		return false, xerrors.Errorf(
+			"number-of-acting-suffrage-nodes, %d is over number of ndoes, %d",
+			n, len(va.config.Nodes())+1,
+		)
+	}
+
+	if conf.MaxOperationsInSeal() < 1 {
+		return false, xerrors.Errorf("max-operations-in-seal is zero")
+	}
+
+	if conf.MaxOperationsInProposal() < 1 {
+		return false, xerrors.Errorf("max-operations-in-proposal is zero")
+	}
+
 	if conf.TimeoutWaitingProposal() < 1 {
 		return false, xerrors.Errorf("timeout-waiting-proposal is zero")
 	}

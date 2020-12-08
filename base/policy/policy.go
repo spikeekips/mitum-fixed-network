@@ -20,7 +20,7 @@ type Policy interface {
 	valuehash.Hasher
 	util.Byter
 	isvalid.IsValider
-	NumberOfActingSuffrageNodes() uint
+	NumberOfActingSuffrageNodes() uint // TODO NumberOfActingSuffrageNodes should be moved under roundrobin config
 	MaxOperationsInSeal() uint
 	MaxOperationsInProposal() uint
 }

@@ -9,6 +9,12 @@ import (
 type Policy interface {
 	ThresholdRatio() base.ThresholdRatio
 	SetThresholdRatio(float64) error
+	NumberOfActingSuffrageNodes() uint
+	SetNumberOfActingSuffrageNodes(uint) error
+	MaxOperationsInSeal() uint
+	SetMaxOperationsInSeal(uint) error
+	MaxOperationsInProposal() uint
+	SetMaxOperationsInProposal(uint) error
 	TimeoutWaitingProposal() time.Duration
 	SetTimeoutWaitingProposal(string) error
 	IntervalBroadcastingINITBallot() time.Duration
@@ -27,6 +33,9 @@ type Policy interface {
 
 type BasePolicy struct {
 	thresholdRatio                   base.ThresholdRatio
+	numberOfActingSuffrageNodes      uint
+	maxOperationsInSeal              uint
+	maxOperationsInProposal          uint
 	timeoutWaitingProposal           time.Duration
 	intervalBroadcastingINITBallot   time.Duration
 	intervalBroadcastingProposal     time.Duration
@@ -49,6 +58,36 @@ func (no *BasePolicy) SetThresholdRatio(s float64) error {
 
 		return nil
 	}
+}
+
+func (no *BasePolicy) NumberOfActingSuffrageNodes() uint {
+	return no.numberOfActingSuffrageNodes
+}
+
+func (no *BasePolicy) SetNumberOfActingSuffrageNodes(n uint) error {
+	no.numberOfActingSuffrageNodes = n
+
+	return nil
+}
+
+func (no *BasePolicy) MaxOperationsInSeal() uint {
+	return no.maxOperationsInSeal
+}
+
+func (no *BasePolicy) SetMaxOperationsInSeal(m uint) error {
+	no.maxOperationsInSeal = m
+
+	return nil
+}
+
+func (no *BasePolicy) MaxOperationsInProposal() uint {
+	return no.maxOperationsInProposal
+}
+
+func (no *BasePolicy) SetMaxOperationsInProposal(m uint) error {
+	no.maxOperationsInProposal = m
+
+	return nil
 }
 
 func (no BasePolicy) TimeoutWaitingProposal() time.Duration {

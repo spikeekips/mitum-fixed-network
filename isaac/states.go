@@ -576,7 +576,7 @@ func checkBlockWithINITVoteproof(manifest block.Manifest, voteproof base.Votepro
 		return nil
 	}
 
-	// check voteproof.PreviousBlock with local block
+	// check init ballot fact.PreviousBlock with local block
 	fact, ok := voteproof.Majority().(ballot.INITBallotFact)
 	if !ok {
 		return xerrors.Errorf("needs INITTBallotFact: fact=%T", voteproof.Majority())

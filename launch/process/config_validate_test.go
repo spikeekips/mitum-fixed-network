@@ -303,7 +303,7 @@ suffrage:
 `
 	ctx := t.loadConfig(y)
 
-	ctx, err := HookSuffrageFunc(nil)(ctx)
+	ctx, err := HookSuffrageConfigFunc(nil)(ctx)
 	t.NoError(err)
 
 	va, err := config.NewValidator(ctx)
@@ -324,7 +324,7 @@ suffrage:
 `
 	ctx := t.loadConfig(y)
 
-	_, err := HookSuffrageFunc(DefaultHookHandlersSuffrage)(ctx)
+	_, err := HookSuffrageConfigFunc(DefaultHookHandlersSuffrageConfig)(ctx)
 	t.Contains(err.Error(), "proposer not set for fixed-suffrage")
 }
 
@@ -336,7 +336,7 @@ suffrage:
 `
 	ctx := t.loadConfig(y)
 
-	_, err := HookSuffrageFunc(DefaultHookHandlersSuffrage)(ctx)
+	_, err := HookSuffrageConfigFunc(DefaultHookHandlersSuffrageConfig)(ctx)
 	t.Contains(err.Error(), "invalid proposer address for fixed-suffrage")
 }
 
@@ -348,7 +348,7 @@ suffrage:
 `
 	ctx := t.loadConfig(y)
 
-	ctx, err := HookSuffrageFunc(DefaultHookHandlersSuffrage)(ctx)
+	ctx, err := HookSuffrageConfigFunc(DefaultHookHandlersSuffrageConfig)(ctx)
 	t.NoError(err)
 
 	va, err := config.NewValidator(ctx)
@@ -376,7 +376,7 @@ suffrage:
 `
 	ctx := t.loadConfig(y)
 
-	ctx, err := HookSuffrageFunc(DefaultHookHandlersSuffrage)(ctx)
+	ctx, err := HookSuffrageConfigFunc(DefaultHookHandlersSuffrageConfig)(ctx)
 	t.NoError(err)
 
 	va, err := config.NewValidator(ctx)
@@ -405,7 +405,7 @@ suffrage:
 `
 	ctx := t.loadConfig(y)
 
-	_, err := HookSuffrageFunc(DefaultHookHandlersSuffrage)(ctx)
+	_, err := HookSuffrageConfigFunc(DefaultHookHandlersSuffrageConfig)(ctx)
 	t.Contains(err.Error(), "invalid node address")
 }
 
@@ -416,7 +416,7 @@ suffrage:
 `
 	ctx := t.loadConfig(y)
 
-	ctx, err := HookSuffrageFunc(DefaultHookHandlersSuffrage)(ctx)
+	ctx, err := HookSuffrageConfigFunc(DefaultHookHandlersSuffrageConfig)(ctx)
 	t.NoError(err)
 
 	va, err := config.NewValidator(ctx)

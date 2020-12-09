@@ -12,14 +12,14 @@ import (
 	jsonenc "github.com/spikeekips/mitum/util/encoder/json"
 )
 
-type HookHandlerSuffrage func(context.Context, map[string]interface{}) (config.Suffrage, error)
+type HookHandlerSuffrageConfig func(context.Context, map[string]interface{}) (config.Suffrage, error)
 
-var DefaultHookHandlersSuffrage = map[string]HookHandlerSuffrage{
-	"fixed-suffrage": SuffrageHandlerFixedProposer,
-	"roundrobin":     SuffrageHandlerRoundrobin,
+var DefaultHookHandlersSuffrageConfig = map[string]HookHandlerSuffrageConfig{
+	"fixed-suffrage": SuffrageConfigHandlerFixedProposer,
+	"roundrobin":     SuffrageConfigHandlerRoundrobin,
 }
 
-func HookSuffrageFunc(handlers map[string]HookHandlerSuffrage) pm.ProcessFunc {
+func HookSuffrageConfigFunc(handlers map[string]HookHandlerSuffrageConfig) pm.ProcessFunc {
 	return func(ctx context.Context) (context.Context, error) {
 		var conf config.LocalNode
 		var sc map[string]interface{}
@@ -44,7 +44,7 @@ func HookSuffrageFunc(handlers map[string]HookHandlerSuffrage) pm.ProcessFunc {
 
 		var sf config.Suffrage
 		if len(st) < 1 {
-			if i, err := SuffrageHandlerRoundrobin(ctx, nil); err != nil {
+			if i, err := SuffrageConfigHandlerRoundrobin(ctx, nil); err != nil {
 				return ctx, err
 			} else {
 				sf = i
@@ -65,7 +65,7 @@ func HookSuffrageFunc(handlers map[string]HookHandlerSuffrage) pm.ProcessFunc {
 	}
 }
 
-func SuffrageHandlerFixedProposer(ctx context.Context, m map[string]interface{}) (config.Suffrage, error) {
+func SuffrageConfigHandlerFixedProposer(ctx context.Context, m map[string]interface{}) (config.Suffrage, error) {
 	var enc *jsonenc.Encoder
 	if err := config.LoadJSONEncoderContextValue(ctx, &enc); err != nil {
 		return nil, err
@@ -99,7 +99,7 @@ func SuffrageHandlerFixedProposer(ctx context.Context, m map[string]interface{})
 	return config.NewFixedSuffrage(proposer, nodes)
 }
 
-func SuffrageHandlerRoundrobin(_ context.Context, m map[string]interface{}) (config.Suffrage, error) {
+func SuffrageConfigHandlerRoundrobin(_ context.Context, m map[string]interface{}) (config.Suffrage, error) {
 	var numberOfActing uint
 	if i, found := m["number-of-acting"]; !found {
 		numberOfActing = isaac.DefaultPolicyNumberOfActingSuffrageNodes

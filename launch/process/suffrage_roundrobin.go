@@ -2,24 +2,29 @@ package process
 
 import (
 	"fmt"
+	"os"
 	"sort"
 	"strings"
 
 	lru "github.com/hashicorp/golang-lru"
+	"golang.org/x/xerrors"
 
 	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/isaac"
 	"github.com/spikeekips/mitum/network"
+	jsonenc "github.com/spikeekips/mitum/util/encoder/json"
 	"github.com/spikeekips/mitum/util/logging"
 )
 
 type RoundrobinSuffrage struct {
 	*logging.Logging
-	local *isaac.Local
-	cache *lru.TwoQueueCache
+	cacheSize      int
+	numberOfActing uint
+	local          *isaac.Local
+	cache          *lru.TwoQueueCache
 }
 
-func NewRoundrobinSuffrage(local *isaac.Local, cacheSize int) *RoundrobinSuffrage {
+func NewRoundrobinSuffrage(local *isaac.Local, cacheSize int, numberOfActing uint) *RoundrobinSuffrage {
 	var cache *lru.TwoQueueCache
 	if cacheSize > 0 {
 		cache, _ = lru.New2Q(cacheSize)
@@ -29,8 +34,10 @@ func NewRoundrobinSuffrage(local *isaac.Local, cacheSize int) *RoundrobinSuffrag
 		Logging: logging.NewLogging(func(c logging.Context) logging.Emitter {
 			return c.Str("module", "roundrobin-suffrage")
 		}),
-		local: local,
-		cache: cache,
+		numberOfActing: numberOfActing,
+		cacheSize:      cacheSize,
+		local:          local,
+		cache:          cache,
 	}
 }
 
@@ -95,15 +102,15 @@ func (sf *RoundrobinSuffrage) acting(height base.Height, round base.Round) base.
 		)
 	}
 
-	numberOfActingSuffrageNodes := int(sf.local.Policy().NumberOfActingSuffrageNodes())
-	if len(all) < numberOfActingSuffrageNodes {
-		numberOfActingSuffrageNodes = len(all)
+	na := int(sf.numberOfActing)
+	if len(all) < na {
+		na = len(all)
 	}
 
 	pos := sf.pos(height, round, len(all))
 
 	var selected []base.Address
-	if len(all) == numberOfActingSuffrageNodes {
+	if len(all) == na {
 		for _, n := range all {
 			selected = append(selected, n.Address())
 		}
@@ -114,10 +121,10 @@ func (sf *RoundrobinSuffrage) acting(height base.Height, round base.Round) base.
 			selected = append(selected, n.Address())
 		}
 
-		if len(selected) > numberOfActingSuffrageNodes {
-			selected = selected[:numberOfActingSuffrageNodes]
-		} else if len(selected) < numberOfActingSuffrageNodes {
-			for _, n := range all[:numberOfActingSuffrageNodes-len(selected)] {
+		if len(selected) > na {
+			selected = selected[:na]
+		} else if len(selected) < na {
+			for _, n := range all[:na-len(selected)] {
 				selected = append(selected, n.Address())
 			}
 		}
@@ -153,4 +160,24 @@ func (sf *RoundrobinSuffrage) Nodes() []base.Address {
 	})
 
 	return ns
+}
+
+func (sf *RoundrobinSuffrage) Verbose() string {
+	m := map[string]interface{}{
+		"type":             sf.Name(),
+		"cache_size":       sf.cacheSize,
+		"number_of_acting": sf.numberOfActing,
+	}
+
+	if b, err := jsonenc.Marshal(m); err != nil {
+		_, _ = fmt.Fprintf(
+			os.Stderr,
+			"%+v\n",
+			xerrors.Errorf("failed to marshal RoundrobinSuffrage.Verbose(): %w", err).Error(),
+		)
+
+		return sf.Name()
+	} else {
+		return string(b)
+	}
 }

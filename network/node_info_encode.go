@@ -3,7 +3,6 @@ package network
 import (
 	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/base/block"
-	"github.com/spikeekips/mitum/base/policy"
 	"github.com/spikeekips/mitum/util"
 	"github.com/spikeekips/mitum/util/encoder"
 )
@@ -15,7 +14,6 @@ func (ni *NodeInfoV0) unpack(
 	blb []byte,
 	vs util.Version,
 	u string,
-	bpo []byte,
 	co map[string]interface{},
 	bsf [][]byte,
 ) error {
@@ -36,14 +34,6 @@ func (ni *NodeInfoV0) unpack(
 	ni.version = vs
 	ni.u = u
 
-	if len(bpo) > 0 {
-		if p, err := policy.DecodePolicyV0(enc, bpo); err != nil {
-			return err
-		} else {
-			ni.policy = p
-		}
-	}
-
 	ni.config = co
 
 	sf := make([]base.Node, len(bsf))
@@ -55,7 +45,7 @@ func (ni *NodeInfoV0) unpack(
 		}
 	}
 
-	ni.suffrage = sf
+	ni.nodes = sf
 
 	return nil
 }

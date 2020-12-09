@@ -9,7 +9,6 @@ func (lp *LocalPolicy) MarshalJSON() ([]byte, error) {
 	return jsonenc.Marshal(struct {
 		NID string              `json:"network_id"`
 		TH  base.ThresholdRatio `json:"threshold"`
-		NA  uint                `json:"number_of_acting_suffrage_nodes"`
 		MS  uint                `json:"max_operations_in_seal"`
 		MP  uint                `json:"max_operations_in_proposal"`
 		TP  string              `json:"timeout_waiting_proposal"`
@@ -22,7 +21,6 @@ func (lp *LocalPolicy) MarshalJSON() ([]byte, error) {
 	}{
 		NID: string(lp.NetworkID()),
 		TH:  lp.ThresholdRatio(),
-		NA:  lp.NumberOfActingSuffrageNodes(),
 		MS:  lp.MaxOperationsInSeal(),
 		MP:  lp.MaxOperationsInProposal(),
 		TP:  lp.TimeoutWaitingProposal().String(),

@@ -9,7 +9,6 @@ import (
 
 type Policy struct {
 	ThresholdRatio                   *float64               `yaml:"threshold,omitempty"`
-	NumberOfActingSuffrageNodes      *uint                  `yaml:"number-of-acting-suffrage-nodes"`
 	MaxOperationsInSeal              *uint                  `yaml:"max-operations-in-seal"`
 	MaxOperationsInProposal          *uint                  `yaml:"max-operations-in-proposal"`
 	TimeoutWaitingProposal           *string                `yaml:"timeout-waiting-proposal,omitempty"`
@@ -38,7 +37,6 @@ func (no Policy) Set(ctx context.Context) (context.Context, error) {
 	}
 
 	uintCol := [][2]interface{}{
-		{no.NumberOfActingSuffrageNodes, conf.SetNumberOfActingSuffrageNodes},
 		{no.MaxOperationsInSeal, conf.SetMaxOperationsInSeal},
 		{no.MaxOperationsInProposal, conf.SetMaxOperationsInProposal},
 	}

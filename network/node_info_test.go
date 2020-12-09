@@ -62,6 +62,8 @@ func (t *testNodeInfo) TestNew() {
 	nodes := []base.Node{n1, n2}
 	config := map[string]interface{}{"showme": 1}
 
+	suffrage := base.NewFixedSuffrage(local.Address(), nil)
+
 	ni := NewNodeInfoV0(
 		local,
 		t.nid,
@@ -69,9 +71,9 @@ func (t *testNodeInfo) TestNew() {
 		blk.Manifest(),
 		util.Version("0.1.1"),
 		"quic://local",
-		nil,
 		config,
 		nodes,
+		suffrage,
 	)
 	t.NoError(ni.IsValid(nil))
 
@@ -79,17 +81,19 @@ func (t *testNodeInfo) TestNew() {
 	t.Equal(config, ni.Config())
 
 	expectedNodes := []string{n1.Address().String(), n2.Address().String(), local.Address().String()}
-	var suffrage []string
-	for _, n := range ni.Suffrage() {
-		suffrage = append(suffrage, n.Address().String())
+	var regs []string
+	for _, n := range ni.Nodes() {
+		regs = append(regs, n.Address().String())
 	}
 
-	t.Equal(expectedNodes, suffrage)
+	t.Equal(expectedNodes, regs)
 }
 
 func (t *testNodeInfo) TestEmptyNetworkID() {
 	blk, err := block.NewTestBlockV0(base.Height(33), base.Round(0), valuehash.RandomSHA256(), valuehash.RandomSHA256())
 	t.NoError(err)
+
+	suffrage := base.NewFixedSuffrage(base.RandomStringAddress(), nil)
 
 	ni := NewNodeInfoV0(
 		base.RandomNode("n0"),
@@ -98,9 +102,9 @@ func (t *testNodeInfo) TestEmptyNetworkID() {
 		blk.Manifest(),
 		util.Version("0.1.1"),
 		"quic://local",
-		nil,
 		map[string]interface{}{"showme": 1},
 		nil,
+		suffrage,
 	)
 	t.Contains(ni.IsValid(nil).Error(), "empty NetworkID")
 }
@@ -109,6 +113,8 @@ func (t *testNodeInfo) TestWrongNetworkID() {
 	blk, err := block.NewTestBlockV0(base.Height(33), base.Round(0), valuehash.RandomSHA256(), valuehash.RandomSHA256())
 	t.NoError(err)
 
+	suffrage := base.NewFixedSuffrage(base.RandomStringAddress(), nil)
+
 	ni := NewNodeInfoV0(
 		base.RandomNode("n0"),
 		t.nid,
@@ -116,14 +122,15 @@ func (t *testNodeInfo) TestWrongNetworkID() {
 		blk.Manifest(),
 		util.Version("0.1.1"),
 		"quic://local",
-		nil,
 		map[string]interface{}{"showme": 1},
 		nil,
+		suffrage,
 	)
 	t.Contains(ni.IsValid(nil).Error(), "invalid state")
 }
 
 func (t *testNodeInfo) TestEmptyBlock() {
+	suffrage := base.NewFixedSuffrage(base.RandomStringAddress(), nil)
 	ni := NewNodeInfoV0(
 		base.RandomNode("n0"),
 		t.nid,
@@ -131,9 +138,9 @@ func (t *testNodeInfo) TestEmptyBlock() {
 		nil,
 		util.Version("0.1.1"),
 		"quic://local",
-		nil,
 		map[string]interface{}{"showme": 1},
 		nil,
+		suffrage,
 	)
 	t.NoError(ni.IsValid(nil))
 }
@@ -142,6 +149,7 @@ func (t *testNodeInfo) TestEmptyVersion() {
 	blk, err := block.NewTestBlockV0(base.Height(33), base.Round(0), valuehash.RandomSHA256(), valuehash.RandomSHA256())
 	t.NoError(err)
 
+	suffrage := base.NewFixedSuffrage(base.RandomStringAddress(), nil)
 	ni := NewNodeInfoV0(
 		base.RandomNode("n0"),
 		t.nid,
@@ -149,9 +157,9 @@ func (t *testNodeInfo) TestEmptyVersion() {
 		blk.Manifest(),
 		"",
 		"quic://local",
-		nil,
 		map[string]interface{}{"showme": 1},
 		nil,
+		suffrage,
 	)
 	t.Contains(ni.IsValid(nil).Error(), "invalid version")
 }
@@ -160,6 +168,7 @@ func (t *testNodeInfo) TestWrongVersion() {
 	blk, err := block.NewTestBlockV0(base.Height(33), base.Round(0), valuehash.RandomSHA256(), valuehash.RandomSHA256())
 	t.NoError(err)
 
+	suffrage := base.NewFixedSuffrage(base.RandomStringAddress(), nil)
 	ni := NewNodeInfoV0(
 		base.RandomNode("n0"),
 		t.nid,
@@ -167,9 +176,9 @@ func (t *testNodeInfo) TestWrongVersion() {
 		blk.Manifest(),
 		util.Version("wrong-version"),
 		"quic://local",
-		nil,
 		map[string]interface{}{"showme": 1},
 		nil,
+		suffrage,
 	)
 	t.Contains(ni.IsValid(nil).Error(), "invalid version")
 }
@@ -189,6 +198,7 @@ func (t *testNodeInfo) TestJSON() {
 	nodes := []base.Node{n0, n1}
 	config := map[string]interface{}{"showme": 1.1}
 
+	suffrage := base.NewFixedSuffrage(base.RandomStringAddress(), nil)
 	ni := NewNodeInfoV0(
 		base.RandomNode("n0"),
 		t.nid,
@@ -196,9 +206,9 @@ func (t *testNodeInfo) TestJSON() {
 		blk.Manifest(),
 		util.Version("1.2.3"),
 		"quic://local",
-		nil,
 		config,
 		nodes,
+		suffrage,
 	)
 	t.NoError(ni.IsValid(nil))
 
@@ -217,6 +227,7 @@ func (t *testNodeInfo) TestBSON() {
 	blk, err := block.NewTestBlockV0(base.Height(33), base.Round(0), valuehash.RandomSHA256(), valuehash.RandomSHA256())
 	t.NoError(err)
 
+	suffrage := base.NewFixedSuffrage(base.RandomStringAddress(), nil)
 	ni := NewNodeInfoV0(
 		base.RandomNode("n0"),
 		t.nid,
@@ -224,9 +235,9 @@ func (t *testNodeInfo) TestBSON() {
 		blk.Manifest(),
 		util.Version("1.2.3"),
 		"quic://local",
-		nil,
 		map[string]interface{}{"showme": 1.1},
 		nil,
+		suffrage,
 	)
 	t.NoError(ni.IsValid(nil))
 
@@ -239,6 +250,34 @@ func (t *testNodeInfo) TestBSON() {
 	t.True(ok)
 
 	CompareNodeInfo(t.T(), ni, nni)
+}
+
+func (t *testNodeInfo) TestSuffrage() {
+	blk, err := block.NewTestBlockV0(base.Height(33), base.Round(0), valuehash.RandomSHA256(), valuehash.RandomSHA256())
+	t.NoError(err)
+
+	suffrage := base.NewFixedSuffrage(base.RandomStringAddress(), nil)
+	ni := NewNodeInfoV0(
+		base.RandomNode("n0"),
+		t.nid,
+		base.StateBooting,
+		blk.Manifest(),
+		util.Version("1.2.3"),
+		"quic://local",
+		map[string]interface{}{"showme": 1.1},
+		nil,
+		suffrage,
+	)
+	t.NoError(ni.IsValid(nil))
+
+	_, found := ni.Config()["suffrage"]
+	t.True(found)
+
+	var a, b map[string]interface{}
+	t.NoError(jsonenc.Unmarshal([]byte(ni.Config()["suffrage"].(string)), &a))
+	t.NoError(jsonenc.Unmarshal([]byte(suffrage.Verbose()), &b))
+
+	t.Equal(b, a)
 }
 
 func TestNodeInfo(t *testing.T) {

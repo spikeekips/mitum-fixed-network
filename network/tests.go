@@ -49,8 +49,8 @@ func CompareNodeInfo(t *testing.T, a, b NodeInfo) {
 
 	assert.Equal(t, a.Config(), b.Config())
 
-	as := a.Suffrage()
-	bs := b.Suffrage()
+	as := a.Nodes()
+	bs := b.Nodes()
 	assert.Equal(t, len(as), len(bs))
 
 	sort.Slice(as, func(i, j int) bool {

@@ -6,7 +6,6 @@ import (
 	"github.com/stretchr/testify/suite"
 
 	"github.com/spikeekips/mitum/base"
-	"github.com/spikeekips/mitum/base/policy"
 )
 
 type testPolicy struct {
@@ -22,11 +21,10 @@ func (t *testPolicy) TestNew() {
 	t.Equal(DefaultPolicyIntervalBroadcastingProposal, p.IntervalBroadcastingProposal())
 	t.Equal(DefaultPolicyWaitBroadcastingACCEPTBallot, p.WaitBroadcastingACCEPTBallot())
 	t.Equal(DefaultPolicyIntervalBroadcastingACCEPTBallot, p.IntervalBroadcastingACCEPTBallot())
-	t.Equal(policy.DefaultPolicyNumberOfActingSuffrageNodes, p.NumberOfActingSuffrageNodes())
 	t.Equal(DefaultPolicyTimespanValidBallot, p.TimespanValidBallot())
 	t.Equal(DefaultPolicyTimeoutProcessProposal, p.TimeoutProcessProposal())
-	t.Equal(policy.DefaultPolicyMaxOperationsInSeal, p.MaxOperationsInSeal())
-	t.Equal(policy.DefaultPolicyMaxOperationsInProposal, p.MaxOperationsInProposal())
+	t.Equal(DefaultPolicyMaxOperationsInSeal, p.MaxOperationsInSeal())
+	t.Equal(DefaultPolicyMaxOperationsInProposal, p.MaxOperationsInProposal())
 }
 
 func (t *testPolicy) TestSet() {

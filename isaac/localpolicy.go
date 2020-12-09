@@ -7,27 +7,28 @@ import (
 	"golang.org/x/xerrors"
 
 	"github.com/spikeekips/mitum/base"
-	"github.com/spikeekips/mitum/base/policy"
 	"github.com/spikeekips/mitum/util"
 )
 
 var (
 	// NOTE default threshold ratio assumes only one node exists, it means the network is just booted.
-	DefaultPolicyThresholdRatio                   = base.ThresholdRatio(100)
-	DefaultPolicyTimeoutWaitingProposal           = time.Second * 5
-	DefaultPolicyIntervalBroadcastingINITBallot   = time.Second * 1
-	DefaultPolicyIntervalBroadcastingProposal     = time.Second * 1
-	DefaultPolicyWaitBroadcastingACCEPTBallot     = time.Second * 2
-	DefaultPolicyIntervalBroadcastingACCEPTBallot = time.Second * 1
-	DefaultPolicyTimespanValidBallot              = time.Minute * 1
-	DefaultPolicyTimeoutProcessProposal           = time.Second * 30
+	DefaultPolicyThresholdRatio                        = base.ThresholdRatio(100)
+	DefaultPolicyNumberOfActingSuffrageNodes           = uint(1)
+	DefaultPolicyMaxOperationsInSeal              uint = 100
+	DefaultPolicyMaxOperationsInProposal          uint = 100
+	DefaultPolicyTimeoutWaitingProposal                = time.Second * 5
+	DefaultPolicyIntervalBroadcastingINITBallot        = time.Second * 1
+	DefaultPolicyIntervalBroadcastingProposal          = time.Second * 1
+	DefaultPolicyWaitBroadcastingACCEPTBallot          = time.Second * 2
+	DefaultPolicyIntervalBroadcastingACCEPTBallot      = time.Second * 1
+	DefaultPolicyTimespanValidBallot                   = time.Minute * 1
+	DefaultPolicyTimeoutProcessProposal                = time.Second * 30
 )
 
 type LocalPolicy struct {
 	sync.RWMutex
 	networkID                        *util.LockedItem
 	thresholdRatio                   *util.LockedItem
-	numberOfActingSuffrageNodes      *util.LockedItem
 	maxOperationsInSeal              *util.LockedItem
 	maxOperationsInProposal          *util.LockedItem
 	timeoutWaitingProposal           *util.LockedItem
@@ -45,9 +46,8 @@ func NewLocalPolicy(networkID []byte) *LocalPolicy {
 	lp := &LocalPolicy{
 		networkID:                        util.NewLockedItem(networkID),
 		thresholdRatio:                   util.NewLockedItem(DefaultPolicyThresholdRatio),
-		numberOfActingSuffrageNodes:      util.NewLockedItem(policy.DefaultPolicyNumberOfActingSuffrageNodes),
-		maxOperationsInSeal:              util.NewLockedItem(policy.DefaultPolicyMaxOperationsInSeal),
-		maxOperationsInProposal:          util.NewLockedItem(policy.DefaultPolicyMaxOperationsInProposal),
+		maxOperationsInSeal:              util.NewLockedItem(DefaultPolicyMaxOperationsInSeal),
+		maxOperationsInProposal:          util.NewLockedItem(DefaultPolicyMaxOperationsInProposal),
 		timeoutWaitingProposal:           util.NewLockedItem(DefaultPolicyTimeoutWaitingProposal),
 		intervalBroadcastingINITBallot:   util.NewLockedItem(DefaultPolicyIntervalBroadcastingINITBallot),
 		intervalBroadcastingProposal:     util.NewLockedItem(DefaultPolicyIntervalBroadcastingProposal),
@@ -144,20 +144,6 @@ func (lp *LocalPolicy) SetIntervalBroadcastingACCEPTBallot(d time.Duration) (*Lo
 	return lp, nil
 }
 
-func (lp *LocalPolicy) NumberOfActingSuffrageNodes() uint {
-	return lp.numberOfActingSuffrageNodes.Value().(uint)
-}
-
-func (lp *LocalPolicy) SetNumberOfActingSuffrageNodes(i uint) (*LocalPolicy, error) {
-	if i < 1 {
-		return nil, xerrors.Errorf("NumberOfActingSuffrageNodes should be greater than 0; %v", i)
-	}
-
-	_ = lp.numberOfActingSuffrageNodes.SetValue(i)
-
-	return lp, nil
-}
-
 func (lp *LocalPolicy) TimespanValidBallot() time.Duration {
 	return lp.timespanValidBallot.Value().(time.Duration)
 }
@@ -214,17 +200,11 @@ func (lp *LocalPolicy) SetMaxOperationsInProposal(m uint) (*LocalPolicy, error) 
 	return lp, nil
 }
 
-func (lp *LocalPolicy) Policy() policy.Policy {
-	return policy.NewPolicyV0(
-		lp.NumberOfActingSuffrageNodes(),
-		lp.MaxOperationsInSeal(),
-		lp.MaxOperationsInProposal(),
-	)
-}
-
 func (lp *LocalPolicy) Config() map[string]interface{} {
 	return map[string]interface{}{
 		"threshold":                           lp.ThresholdRatio(),
+		"max_operations_in_seal":              lp.MaxOperationsInSeal(),
+		"max_operations_in_proposal":          lp.MaxOperationsInProposal(),
 		"timeout_waiting_proposal":            lp.TimeoutWaitingProposal(),
 		"interval_broadcasting_init_ballot":   lp.IntervalBroadcastingINITBallot(),
 		"interval_broadcasting_proposal":      lp.IntervalBroadcastingProposal(),

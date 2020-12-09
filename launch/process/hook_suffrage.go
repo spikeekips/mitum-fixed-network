@@ -6,6 +6,7 @@ import (
 	"golang.org/x/xerrors"
 
 	"github.com/spikeekips/mitum/base"
+	"github.com/spikeekips/mitum/isaac"
 	"github.com/spikeekips/mitum/launch/config"
 	"github.com/spikeekips/mitum/launch/pm"
 	jsonenc "github.com/spikeekips/mitum/util/encoder/json"
@@ -14,7 +15,7 @@ import (
 type HookHandlerSuffrage func(context.Context, map[string]interface{}) (config.Suffrage, error)
 
 var DefaultHookHandlersSuffrage = map[string]HookHandlerSuffrage{
-	"fixed-proposer": SuffrageHandlerFixedProposer,
+	"fixed-suffrage": SuffrageHandlerFixedProposer,
 	"roundrobin":     SuffrageHandlerRoundrobin,
 }
 
@@ -70,17 +71,58 @@ func SuffrageHandlerFixedProposer(ctx context.Context, m map[string]interface{})
 		return nil, err
 	}
 
+	var proposer base.Address
 	if i, found := m["proposer"]; !found {
-		return nil, xerrors.Errorf("proposer not set for fixed-proposer")
-	} else if s, ok := i.(string); !ok {
-		return nil, xerrors.Errorf("proposer for fixed-proposer should be string, not %T", i)
-	} else if address, err := base.DecodeAddressFromString(enc, s); err != nil {
-		return nil, xerrors.Errorf("invalid proposer address for fixed-proposer: %w", err)
+		return nil, xerrors.Errorf("proposer not set for fixed-suffrage")
+	} else if a, err := parseAddress(i, enc); err != nil {
+		return nil, xerrors.Errorf("invalid proposer address for fixed-suffrage: %w", err)
 	} else {
-		return config.NewFixedProposerSuffrage(address)
+		proposer = a
 	}
+
+	var nodes []base.Address
+	if i, found := m["nodes"]; found {
+		if l, ok := i.([]interface{}); !ok {
+			return nil, xerrors.Errorf("invalid nodes list, %T", i)
+		} else {
+			nodes = make([]base.Address, len(l))
+			for j := range l {
+				if a, err := parseAddress(l[j], enc); err != nil {
+					return nil, xerrors.Errorf("invalid node address for fixed-suffrage: %w", err)
+				} else {
+					nodes[j] = a
+				}
+			}
+		}
+	}
+
+	return config.NewFixedSuffrage(proposer, nodes)
 }
 
-func SuffrageHandlerRoundrobin(context.Context, map[string]interface{}) (config.Suffrage, error) {
-	return config.NewRoundrobinSuffrage(), nil
+func SuffrageHandlerRoundrobin(_ context.Context, m map[string]interface{}) (config.Suffrage, error) {
+	var numberOfActing uint
+	if i, found := m["number-of-acting"]; !found {
+		numberOfActing = isaac.DefaultPolicyNumberOfActingSuffrageNodes
+	} else {
+		switch n := i.(type) {
+		case int:
+			numberOfActing = uint(n)
+		case uint:
+			numberOfActing = n
+		default:
+			return nil, xerrors.Errorf("invalid type for number-of-acting, %T", i)
+		}
+	}
+
+	return config.NewRoundrobinSuffrage(numberOfActing), nil
+}
+
+func parseAddress(i interface{}, enc *jsonenc.Encoder) (base.Address, error) {
+	if s, ok := i.(string); !ok {
+		return nil, xerrors.Errorf("not address string, not %T", i)
+	} else if address, err := base.DecodeAddressFromString(enc, s); err != nil {
+		return nil, xerrors.Errorf("invalid address: %w", err)
+	} else {
+		return address, err
+	}
 }

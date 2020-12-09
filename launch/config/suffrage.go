@@ -1,6 +1,8 @@
 package config
 
-import "github.com/spikeekips/mitum/base"
+import (
+	"github.com/spikeekips/mitum/base"
+)
 
 var defaultCacheSize int = 10
 
@@ -8,27 +10,36 @@ type Suffrage interface {
 	SuffrageType() string
 }
 
-type FixedProposerSuffrage struct {
-	// TODO rename to FixedSuffrage
-	// TODO add node list
+type FixedSuffrage struct {
 	Proposer base.Address
+	Nodes    []base.Address
 }
 
-func NewFixedProposerSuffrage(proposer base.Address) (FixedProposerSuffrage, error) {
-	return FixedProposerSuffrage{Proposer: proposer}, proposer.IsValid(nil)
+func NewFixedSuffrage(proposer base.Address, nodes []base.Address) (FixedSuffrage, error) {
+	if err := proposer.IsValid(nil); err != nil {
+		return FixedSuffrage{}, err
+	}
+
+	for i := range nodes {
+		if err := nodes[i].IsValid(nil); err != nil {
+			return FixedSuffrage{}, err
+		}
+	}
+
+	return FixedSuffrage{Proposer: proposer, Nodes: nodes}, nil
 }
 
-func (fd FixedProposerSuffrage) SuffrageType() string {
-	return "fixed-proposer" // TODO rename to fixed-suffrage
+func (fd FixedSuffrage) SuffrageType() string {
+	return "fixed-suffrage"
 }
 
 type RoundrobinSuffrage struct {
-	CacheSize int
-	// TODO add NumberOfActingSuffrageNodes
+	NumberOfActing uint
+	CacheSize      int
 }
 
-func NewRoundrobinSuffrage() RoundrobinSuffrage {
-	return RoundrobinSuffrage{CacheSize: defaultCacheSize}
+func NewRoundrobinSuffrage(numberOfActing uint) RoundrobinSuffrage {
+	return RoundrobinSuffrage{CacheSize: defaultCacheSize, NumberOfActing: numberOfActing}
 }
 
 func (fd RoundrobinSuffrage) SuffrageType() string {

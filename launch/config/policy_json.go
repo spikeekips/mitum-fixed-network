@@ -7,7 +7,6 @@ import (
 
 type BasePolicyPackerJSON struct {
 	ThresholdRatio                   base.ThresholdRatio `json:"threshold,omitempty"`
-	NumberOfActingSuffrageNodes      uint                `json:"number_of_acting_suffrage_nodes"`
 	MaxOperationsInSeal              uint                `json:"max_operations_in_seal"`
 	MaxOperationsInProposal          uint                `json:"max_operations_in_proposal"`
 	TimeoutWaitingProposal           string              `json:"timeout_waiting_proposal,omitempty"`
@@ -22,7 +21,6 @@ type BasePolicyPackerJSON struct {
 func (no BasePolicy) MarshalJSON() ([]byte, error) {
 	return jsonenc.Marshal(BasePolicyPackerJSON{
 		ThresholdRatio:                   no.thresholdRatio,
-		NumberOfActingSuffrageNodes:      no.numberOfActingSuffrageNodes,
 		MaxOperationsInSeal:              no.maxOperationsInSeal,
 		MaxOperationsInProposal:          no.maxOperationsInProposal,
 		TimeoutWaitingProposal:           no.timeoutWaitingProposal.String(),

@@ -6,7 +6,6 @@ import (
 	"github.com/spikeekips/mitum/base/block"
 	"github.com/spikeekips/mitum/base/key"
 	"github.com/spikeekips/mitum/base/operation"
-	"github.com/spikeekips/mitum/base/policy"
 	"github.com/spikeekips/mitum/base/state"
 	"github.com/spikeekips/mitum/network"
 	bsonenc "github.com/spikeekips/mitum/util/encoder/bson"
@@ -54,5 +53,4 @@ var DefaultHinters = []hint.Hinter{
 	valuehash.Bytes{},
 	valuehash.SHA256{},
 	valuehash.SHA512{},
-	policy.PolicyV0{},
 }

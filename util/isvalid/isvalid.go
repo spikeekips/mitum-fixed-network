@@ -1,6 +1,8 @@
 package isvalid
 
-import "github.com/spikeekips/mitum/util/errors"
+import (
+	"github.com/spikeekips/mitum/util/errors"
+)
 
 var InvalidError = errors.NewError("invalid")
 

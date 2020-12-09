@@ -57,7 +57,7 @@ func (ns *NodesState) Add(nl ...network.Node) error {
 
 	for _, n := range nl {
 		if n.Address().Equal(ns.localNode.Address()) {
-			return xerrors.Errorf("local node can be added")
+			return xerrors.Errorf("local node can not be added")
 		}
 
 		if ns.exists(n.Address()) {

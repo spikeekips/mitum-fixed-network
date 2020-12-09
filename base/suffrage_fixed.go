@@ -1,7 +1,12 @@
 package base
 
 import (
+	"fmt"
+	"os"
+
+	jsonenc "github.com/spikeekips/mitum/util/encoder/json"
 	"github.com/spikeekips/mitum/util/logging"
+	"golang.org/x/xerrors"
 )
 
 // FixedSuffrage will be used for creating genesis block or testing.
@@ -52,7 +57,6 @@ func (ff *FixedSuffrage) IsInside(a Address) bool {
 }
 
 func (ff *FixedSuffrage) Acting(height Height, round Round) ActingSuffrage {
-	// TODO apply policy.NumberOfActingSuffrageNodes
 	return NewActingSuffrage(height, round, ff.proposer, ff.nodeList)
 }
 
@@ -67,4 +71,22 @@ func (ff *FixedSuffrage) IsProposer(_ Height, _ Round, node Address) bool {
 
 func (ff *FixedSuffrage) Nodes() []Address {
 	return ff.nodeList
+}
+
+func (ff *FixedSuffrage) Verbose() string {
+	m := map[string]interface{}{
+		"type":     ff.Name(),
+		"proposer": ff.proposer,
+	}
+	if len(ff.Nodes()) > 0 {
+		m["nodes"] = ff.Nodes()
+	}
+
+	if b, err := jsonenc.Marshal(m); err != nil {
+		_, _ = fmt.Fprintf(os.Stderr, "%+v\n", xerrors.Errorf("failed to marshal FixedSuffrage.Verbose(): %w", err).Error())
+
+		return ff.Name()
+	} else {
+		return string(b)
+	}
 }

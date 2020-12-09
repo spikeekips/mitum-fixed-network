@@ -320,30 +320,30 @@ suffrage:
 func (t *testConfigValidator) TestFixedSuffrageWithEmptyAddress() {
 	y := `
 suffrage:
-  type: fixed-proposer
+  type: fixed-suffrage
 `
 	ctx := t.loadConfig(y)
 
 	_, err := HookSuffrageFunc(DefaultHookHandlersSuffrage)(ctx)
-	t.Contains(err.Error(), "proposer not set for fixed-proposer")
+	t.Contains(err.Error(), "proposer not set for fixed-suffrage")
 }
 
 func (t *testConfigValidator) TestFixedSuffrageWithInvalidAddress() {
 	y := `
 suffrage:
-  type: fixed-proposer
+  type: fixed-suffrage
   proposer: showme hahah
 `
 	ctx := t.loadConfig(y)
 
 	_, err := HookSuffrageFunc(DefaultHookHandlersSuffrage)(ctx)
-	t.Contains(err.Error(), "invalid proposer address for fixed-proposer")
+	t.Contains(err.Error(), "invalid proposer address for fixed-suffrage")
 }
 
 func (t *testConfigValidator) TestFixedSuffrage() {
 	y := `
 suffrage:
-  type: fixed-proposer
+  type: fixed-suffrage
   proposer: n0-010a:0.0.1
 `
 	ctx := t.loadConfig(y)
@@ -359,9 +359,54 @@ suffrage:
 	var conf config.LocalNode
 	t.NoError(config.LoadConfigContextValue(ctx, &conf))
 
-	t.IsType(config.FixedProposerSuffrage{}, conf.Suffrage())
+	t.IsType(config.FixedSuffrage{}, conf.Suffrage())
 
-	t.Equal("n0-010a:0.0.1", conf.Suffrage().(config.FixedProposerSuffrage).Proposer.String())
+	fs := conf.Suffrage().(config.FixedSuffrage)
+	t.Equal("n0-010a:0.0.1", fs.Proposer.String())
+	t.Empty(fs.Nodes)
+}
+
+func (t *testConfigValidator) TestFixedSuffrageWithNodes() {
+	y := `
+suffrage:
+  type: fixed-suffrage
+  proposer: n0-010a:0.0.1
+  nodes:
+    - n1-010a:0.0.1
+`
+	ctx := t.loadConfig(y)
+
+	ctx, err := HookSuffrageFunc(DefaultHookHandlersSuffrage)(ctx)
+	t.NoError(err)
+
+	va, err := config.NewValidator(ctx)
+	t.NoError(err)
+	_, err = va.CheckSuffrage()
+	t.NoError(err)
+
+	var conf config.LocalNode
+	t.NoError(config.LoadConfigContextValue(ctx, &conf))
+
+	t.IsType(config.FixedSuffrage{}, conf.Suffrage())
+
+	fs := conf.Suffrage().(config.FixedSuffrage)
+	t.Equal("n0-010a:0.0.1", fs.Proposer.String())
+	t.Equal(1, len(fs.Nodes))
+	t.Equal("n1-010a:0.0.1", fs.Nodes[0].String())
+}
+
+func (t *testConfigValidator) TestFixedSuffrageWithBadNodes() {
+	y := `
+suffrage:
+  type: fixed-suffrage
+  proposer: n0-010a:0.0.1
+  nodes:
+    - n1-010a:0. # invalid address
+`
+	ctx := t.loadConfig(y)
+
+	_, err := HookSuffrageFunc(DefaultHookHandlersSuffrage)(ctx)
+	t.Contains(err.Error(), "invalid node address")
 }
 
 func (t *testConfigValidator) TestRoundrobin() {

@@ -4,7 +4,6 @@ import (
 	"context"
 	"time"
 
-	"github.com/spikeekips/mitum/base/policy"
 	"github.com/spikeekips/mitum/isaac"
 	"github.com/spikeekips/mitum/util/logging"
 )
@@ -91,9 +90,8 @@ func (cc *checker) CheckPolicy() (bool, error) {
 	}
 
 	uints := [][3]interface{}{
-		{conf.NumberOfActingSuffrageNodes(), conf.SetNumberOfActingSuffrageNodes, policy.DefaultPolicyNumberOfActingSuffrageNodes}, // nolint:lll
-		{conf.MaxOperationsInSeal(), conf.SetMaxOperationsInSeal, policy.DefaultPolicyMaxOperationsInSeal},                         // nolint:lll
-		{conf.MaxOperationsInProposal(), conf.SetMaxOperationsInProposal, policy.DefaultPolicyMaxOperationsInProposal},             // nolint:lll
+		{conf.MaxOperationsInSeal(), conf.SetMaxOperationsInSeal, isaac.DefaultPolicyMaxOperationsInSeal},             // nolint:lll
+		{conf.MaxOperationsInProposal(), conf.SetMaxOperationsInProposal, isaac.DefaultPolicyMaxOperationsInProposal}, // nolint:lll
 	}
 
 	for i := range uints {

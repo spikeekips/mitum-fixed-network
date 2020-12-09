@@ -264,10 +264,10 @@ func (sn *SettingNetworkHandlers) networkHandlerNodeInfo() network.NodeInfoHandl
 			manifest = m
 		}
 
-		suffrage := make([]base.Node, sn.local.Nodes().Len())
+		nodes := make([]base.Node, sn.local.Nodes().Len())
 		var i int
 		sn.local.Nodes().Traverse(func(n network.Node) bool {
-			suffrage[i] = n
+			nodes[i] = n
 			i++
 
 			return true
@@ -280,9 +280,9 @@ func (sn *SettingNetworkHandlers) networkHandlerNodeInfo() network.NodeInfoHandl
 			manifest,
 			sn.version,
 			sn.conf.Network().URL().String(),
-			sn.local.Policy().Policy(),
 			sn.local.Policy().Config(),
-			suffrage,
+			nodes,
+			sn.suffrage,
 		), nil
 	}
 }

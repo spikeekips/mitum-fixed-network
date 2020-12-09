@@ -46,28 +46,18 @@ func ProcessSuffrage(ctx context.Context) (context.Context, error) {
 
 	var sf base.Suffrage
 	switch t := conf.(type) {
-	case config.FixedProposerSuffrage:
-		var found bool
-		if t.Proposer.Equal(local.Node().Address()) {
-			found = true
+	case config.FixedSuffrage:
+		if s, err := processFixedSuffrage(ctx, t); err != nil {
+			return ctx, err
 		} else {
-			local.Nodes().Traverse(func(node network.Node) bool {
-				address := node.Address()
-				if !found && t.Proposer.Equal(address) {
-					found = true
-				}
-
-				return true
-			})
+			sf = s
 		}
-
-		if !found {
-			return ctx, xerrors.Errorf("proposer not found in suffrage nodes or local")
-		}
-
-		sf = base.NewFixedSuffrage(t.Proposer, nil)
 	case config.RoundrobinSuffrage:
-		sf = NewRoundrobinSuffrage(local, t.CacheSize)
+		if s, err := processRoundrobinSuffrage(ctx, t); err != nil {
+			return ctx, err
+		} else {
+			sf = s
+		}
 	}
 
 	if err := sf.Initialize(); err != nil {
@@ -75,4 +65,65 @@ func ProcessSuffrage(ctx context.Context) (context.Context, error) {
 	}
 
 	return context.WithValue(ctx, ContextValueSuffrage, sf), nil
+}
+
+func processFixedSuffrage(ctx context.Context, conf config.FixedSuffrage) (base.Suffrage, error) {
+	var local *isaac.Local
+	if err := LoadLocalContextValue(ctx, &local); err != nil {
+		return nil, err
+	}
+
+	// NOTE check proposer
+	var found bool
+	if conf.Proposer.Equal(local.Node().Address()) {
+		found = true
+	} else {
+		local.Nodes().Traverse(func(node network.Node) bool {
+			address := node.Address()
+			if !found && conf.Proposer.Equal(address) {
+				found = true
+			}
+
+			return true
+		})
+	}
+
+	if !found {
+		return nil, xerrors.Errorf("proposer not found in suffrage nodes or local")
+	}
+
+	// NOTE check nodes
+	for i := range conf.Nodes {
+		c := conf.Nodes[i]
+
+		var found bool
+		local.Nodes().Traverse(func(n network.Node) bool {
+			if n.Address().Equal(c) {
+				found = true
+
+				return false
+			}
+
+			return true
+		})
+
+		if !found {
+			return nil, xerrors.Errorf("unknown node of fixed-suffrage found, %q", c)
+		}
+	}
+
+	return base.NewFixedSuffrage(conf.Proposer, conf.Nodes), nil
+}
+
+func processRoundrobinSuffrage(ctx context.Context, conf config.RoundrobinSuffrage) (base.Suffrage, error) {
+	var local *isaac.Local
+	if err := LoadLocalContextValue(ctx, &local); err != nil {
+		return nil, err
+	}
+
+	if conf.NumberOfActing < 1 {
+		return nil, xerrors.Errorf("number-of-acting should be over zero")
+	}
+
+	return NewRoundrobinSuffrage(local, conf.CacheSize, conf.NumberOfActing), nil
 }

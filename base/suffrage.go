@@ -12,6 +12,7 @@ type Suffrage interface {
 	IsActing(Height, Round, Address /* node address */) bool
 	IsProposer(Height, Round, Address /* node address */) bool
 	Nodes() []Address
+	Verbose() string
 }
 
 type ActingSuffrage struct {

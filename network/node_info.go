@@ -6,7 +6,6 @@ import (
 	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/base/block"
 	"github.com/spikeekips/mitum/base/key"
-	"github.com/spikeekips/mitum/base/policy"
 	"github.com/spikeekips/mitum/util"
 	jsonenc "github.com/spikeekips/mitum/util/encoder/json"
 	"github.com/spikeekips/mitum/util/hint"
@@ -27,9 +26,8 @@ type NodeInfo interface {
 	LastBlock() block.Manifest
 	Version() util.Version
 	URL() string
-	Policy() policy.Policy
 	Config() map[string]interface{}
-	Suffrage() []base.Node
+	Nodes() []base.Node
 }
 
 type NodeInfoV0 struct {
@@ -39,9 +37,8 @@ type NodeInfoV0 struct {
 	lastBlock block.Manifest
 	version   util.Version
 	u         string
-	policy    policy.Policy
 	config    map[string]interface{}
-	suffrage  []base.Node
+	nodes     []base.Node
 }
 
 func NewNodeInfoV0(
@@ -51,22 +48,24 @@ func NewNodeInfoV0(
 	lastBlock block.Manifest,
 	version util.Version,
 	u string,
-	policy policy.Policy,
 	config map[string]interface{},
-	suffrage []base.Node,
+	nodes []base.Node,
+	suffrage base.Suffrage,
 ) NodeInfoV0 {
-	// NOTE insert node itself to suffrage
+	// NOTE insert node itself to nodes
 	var found bool
-	for i := range suffrage {
-		if suffrage[i].Address().Equal(node.Address()) {
+	for i := range nodes {
+		if nodes[i].Address().Equal(node.Address()) {
 			found = true
 
 			break
 		}
 	}
 	if !found {
-		suffrage = append(suffrage, node)
+		nodes = append(nodes, node)
 	}
+
+	config["suffrage"] = suffrage.Verbose()
 
 	return NodeInfoV0{
 		node:      node,
@@ -75,9 +74,8 @@ func NewNodeInfoV0(
 		lastBlock: lastBlock,
 		version:   version,
 		u:         u,
-		policy:    policy,
 		config:    config,
-		suffrage:  suffrage,
+		nodes:     nodes,
 	}
 }
 
@@ -137,14 +135,10 @@ func (ni NodeInfoV0) URL() string {
 	return ni.u
 }
 
-func (ni NodeInfoV0) Policy() policy.Policy {
-	return ni.policy
-}
-
 func (ni NodeInfoV0) Config() map[string]interface{} {
 	return ni.config
 }
 
-func (ni NodeInfoV0) Suffrage() []base.Node {
-	return ni.suffrage
+func (ni NodeInfoV0) Nodes() []base.Node {
+	return ni.nodes
 }

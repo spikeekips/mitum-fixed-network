@@ -9,8 +9,6 @@ import (
 type Policy interface {
 	ThresholdRatio() base.ThresholdRatio
 	SetThresholdRatio(float64) error
-	NumberOfActingSuffrageNodes() uint
-	SetNumberOfActingSuffrageNodes(uint) error
 	MaxOperationsInSeal() uint
 	SetMaxOperationsInSeal(uint) error
 	MaxOperationsInProposal() uint
@@ -33,7 +31,6 @@ type Policy interface {
 
 type BasePolicy struct {
 	thresholdRatio                   base.ThresholdRatio
-	numberOfActingSuffrageNodes      uint
 	maxOperationsInSeal              uint
 	maxOperationsInProposal          uint
 	timeoutWaitingProposal           time.Duration
@@ -58,16 +55,6 @@ func (no *BasePolicy) SetThresholdRatio(s float64) error {
 
 		return nil
 	}
-}
-
-func (no *BasePolicy) NumberOfActingSuffrageNodes() uint {
-	return no.numberOfActingSuffrageNodes
-}
-
-func (no *BasePolicy) SetNumberOfActingSuffrageNodes(n uint) error {
-	no.numberOfActingSuffrageNodes = n
-
-	return nil
 }
 
 func (no *BasePolicy) MaxOperationsInSeal() uint {

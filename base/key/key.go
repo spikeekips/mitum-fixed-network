@@ -66,7 +66,6 @@ func (ky BaseKey) MarshalText() ([]byte, error) {
 }
 
 func (ky BaseKey) MarshalLog(key string, e logging.Emitter, _ bool) logging.Emitter {
-	// TODO replace key.String()
 	return e.Str(key, ky.String())
 }
 

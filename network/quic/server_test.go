@@ -229,6 +229,8 @@ func (t *testQuicSever) TestNodeInfo() {
 		blk, err := block.NewTestBlockV0(base.Height(33), base.Round(0), valuehash.RandomSHA256(), valuehash.RandomSHA256())
 		t.NoError(err)
 
+		suffrage := base.NewFixedSuffrage(base.RandomStringAddress(), nil)
+
 		ni = network.NewNodeInfoV0(
 			base.RandomNode("n0"),
 			nid,
@@ -236,9 +238,9 @@ func (t *testQuicSever) TestNodeInfo() {
 			blk.Manifest(),
 			util.Version("0.1.1"),
 			"quic://local",
-			nil,
 			map[string]interface{}{"showme": 1.1},
 			nil,
+			suffrage,
 		)
 	}
 

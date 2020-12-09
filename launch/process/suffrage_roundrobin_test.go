@@ -26,7 +26,7 @@ func (t *testRoundrobinSuffrage) local() *isaac.Local {
 
 func (t *testRoundrobinSuffrage) TestNew() {
 	local := t.local()
-	sf := NewRoundrobinSuffrage(local, 10)
+	sf := NewRoundrobinSuffrage(local, 10, 1)
 	t.NotNil(sf)
 
 	t.Implements((*base.Suffrage)(nil), sf)
@@ -34,7 +34,8 @@ func (t *testRoundrobinSuffrage) TestNew() {
 
 func (t *testRoundrobinSuffrage) TestActingSuffrage() {
 	local := t.local()
-	_, _ = local.Policy().SetNumberOfActingSuffrageNodes(3)
+
+	var na uint = 3
 
 	nodes := []network.Node{
 		isaac.RandomLocalNode("n0", nil),
@@ -45,11 +46,11 @@ func (t *testRoundrobinSuffrage) TestActingSuffrage() {
 	}
 	t.NoError(local.Nodes().Add(nodes...))
 
-	sf := NewRoundrobinSuffrage(local, 10)
+	sf := NewRoundrobinSuffrage(local, 10, na)
 
 	af := sf.Acting(base.Height(33), base.Round(0))
 	t.NotNil(af)
-	t.Equal(int(local.Policy().NumberOfActingSuffrageNodes()), len(af.Nodes()))
+	t.Equal(int(na), len(af.Nodes()))
 
 	expectedProposer := nodes[2]
 	t.True(expectedProposer.Address().Equal(af.Proposer()))
@@ -74,7 +75,8 @@ func (t *testRoundrobinSuffrage) TestActingSuffrage() {
 
 func (t *testRoundrobinSuffrage) TestActingSuffrageNotSufficient() {
 	local := t.local()
-	_, _ = local.Policy().SetNumberOfActingSuffrageNodes(4)
+
+	var na uint = 4
 
 	nodes := []network.Node{
 		isaac.RandomLocalNode("n0", nil),
@@ -82,7 +84,7 @@ func (t *testRoundrobinSuffrage) TestActingSuffrageNotSufficient() {
 	}
 	t.NoError(local.Nodes().Add(nodes...))
 
-	sf := NewRoundrobinSuffrage(local, 10)
+	sf := NewRoundrobinSuffrage(local, 10, na)
 
 	af := sf.Acting(base.Height(33), base.Round(0))
 	t.NotNil(af)

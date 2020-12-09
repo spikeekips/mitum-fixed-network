@@ -252,6 +252,15 @@ func (cs *GeneralSyncer) reset() error {
 		_ = sl.SetLogger(cs.Log())
 	}
 
+	// NOTE clean up blocks in blockfs
+	cs.Log().Debug().Int("blocks", len(cs.blocks)).Msg("reset: will cleanup blockfs")
+	for i := range cs.blocks {
+		blk := cs.blocks[i]
+		if err := cs.local.BlockFS().Cancel(blk.Height(), blk.Hash()); err != nil {
+			return err
+		}
+	}
+
 	cs.initializeProvedNodes()
 
 	return nil
@@ -695,10 +704,10 @@ func (cs *GeneralSyncer) callbackFetchManifests(node network.Node, heights []bas
 }
 
 func (cs *GeneralSyncer) callbackFetchManifestsSlice(node network.Node, heights []base.Height) []block.Manifest {
-	var retries uint = 3
+	var maxRetries uint = 3
 
 	l := cs.Log().WithLogger(func(ctx logging.Context) logging.Emitter {
-		return ctx.Uint("retries", retries).
+		return ctx.Uint("max-retries", maxRetries).
 			Hinted("source_node", node.Address()).
 			Interface("heights", heights)
 	})
@@ -708,7 +717,12 @@ func (cs *GeneralSyncer) callbackFetchManifestsSlice(node network.Node, heights 
 	var manifests []block.Manifest
 
 	missing := heights
-	_ = util.Retry(retries, time.Millisecond*300, func() error {
+
+	var retries uint
+	_ = util.Retry(maxRetries, time.Millisecond*300, func() error {
+		l.Debug().Uint("retries", retries).Msg("try to fetch manifest")
+		retries++
+
 		bs, err := cs.fetchManifests(node, missing)
 		if err != nil {
 			return err

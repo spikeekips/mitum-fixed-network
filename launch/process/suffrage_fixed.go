@@ -78,7 +78,7 @@ func (sf *FixedSuffrage) electWithProposer(height base.Height, round base.Round)
 }
 
 func (sf *FixedSuffrage) elect(height base.Height, round base.Round) base.ActingSuffrage {
-	pos := uint64(len(sf.acting)-1) % (uint64(height) + round.Uint64())
+	pos := (uint64(height) + round.Uint64()) % uint64(len(sf.acting))
 
 	return base.NewActingSuffrage(height, round, sf.acting[pos], sf.acting)
 }

@@ -50,10 +50,7 @@ func (sf *RoundrobinSuffrage) elect(height base.Height, round base.Round) base.A
 	if len(all) == na {
 		selected = append(selected, all...)
 	} else {
-		selected = append(selected, all[pos])
-
-		selected = append(selected, all[pos+1:]...)
-
+		selected = append(selected, all[pos:]...)
 		if len(selected) > na {
 			selected = selected[:na]
 		} else if len(selected) < na {

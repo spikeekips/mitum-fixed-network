@@ -325,7 +325,7 @@ suffrage:
 	ctx := t.loadConfig(y)
 
 	_, err := HookSuffrageConfigFunc(DefaultHookHandlersSuffrageConfig)(ctx)
-	t.Contains(err.Error(), "proposer not set for fixed-suffrage")
+	t.Contains(err.Error(), "empty proposer and acting")
 }
 
 func (t *testConfigValidator) TestFixedSuffrageWithInvalidAddress() {
@@ -371,7 +371,7 @@ func (t *testConfigValidator) TestFixedSuffrageWithNodes() {
 suffrage:
   type: fixed-suffrage
   proposer: n0-010a:0.0.1
-  nodes:
+  acting:
     - n1-010a:0.0.1
 `
 	ctx := t.loadConfig(y)
@@ -400,7 +400,7 @@ func (t *testConfigValidator) TestFixedSuffrageWithBadNodes() {
 suffrage:
   type: fixed-suffrage
   proposer: n0-010a:0.0.1
-  nodes:
+  acting:
     - n1-010a:0. # invalid address
 `
 	ctx := t.loadConfig(y)

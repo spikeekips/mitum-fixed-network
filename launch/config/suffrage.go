@@ -11,22 +11,13 @@ type Suffrage interface {
 }
 
 type FixedSuffrage struct {
-	Proposer base.Address
-	Nodes    []base.Address
+	Proposer  base.Address
+	Nodes     []base.Address
+	CacheSize int
 }
 
-func NewFixedSuffrage(proposer base.Address, nodes []base.Address) (FixedSuffrage, error) {
-	if err := proposer.IsValid(nil); err != nil {
-		return FixedSuffrage{}, err
-	}
-
-	for i := range nodes {
-		if err := nodes[i].IsValid(nil); err != nil {
-			return FixedSuffrage{}, err
-		}
-	}
-
-	return FixedSuffrage{Proposer: proposer, Nodes: nodes}, nil
+func NewFixedSuffrage(proposer base.Address, nodes []base.Address) FixedSuffrage {
+	return FixedSuffrage{Proposer: proposer, Nodes: nodes, CacheSize: defaultCacheSize}
 }
 
 func (fd FixedSuffrage) SuffrageType() string {

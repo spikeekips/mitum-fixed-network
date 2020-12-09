@@ -74,45 +74,49 @@ func processFixedSuffrage(ctx context.Context, conf config.FixedSuffrage) (base.
 	}
 
 	// NOTE check proposer
-	var found bool
-	if conf.Proposer.Equal(local.Node().Address()) {
-		found = true
-	} else {
-		local.Nodes().Traverse(func(node network.Node) bool {
-			address := node.Address()
-			if !found && conf.Proposer.Equal(address) {
-				found = true
-			}
+	if conf.Proposer != nil {
+		var found bool
+		if conf.Proposer.Equal(local.Node().Address()) {
+			found = true
+		} else {
+			local.Nodes().Traverse(func(node network.Node) bool {
+				address := node.Address()
+				if !found && conf.Proposer.Equal(address) {
+					found = true
+				}
 
-			return true
-		})
-	}
+				return true
+			})
+		}
 
-	if !found {
-		return nil, xerrors.Errorf("proposer not found in suffrage nodes or local")
+		if !found {
+			return nil, xerrors.Errorf("proposer not found in suffrage nodes or local")
+		}
 	}
 
 	// NOTE check nodes
 	for i := range conf.Nodes {
 		c := conf.Nodes[i]
 
-		var found bool
-		local.Nodes().Traverse(func(n network.Node) bool {
-			if n.Address().Equal(c) {
-				found = true
+		if !local.Node().Address().Equal(c) {
+			var found bool
+			local.Nodes().Traverse(func(n network.Node) bool {
+				if n.Address().Equal(c) {
+					found = true
 
-				return false
+					return false
+				}
+
+				return true
+			})
+
+			if !found {
+				return nil, xerrors.Errorf("unknown node of fixed-suffrage found, %q", c)
 			}
-
-			return true
-		})
-
-		if !found {
-			return nil, xerrors.Errorf("unknown node of fixed-suffrage found, %q", c)
 		}
 	}
 
-	return base.NewFixedSuffrage(conf.Proposer, conf.Nodes), nil
+	return NewFixedSuffrage(local, conf.CacheSize, conf.Proposer, conf.Nodes)
 }
 
 func processRoundrobinSuffrage(ctx context.Context, conf config.RoundrobinSuffrage) (base.Suffrage, error) {

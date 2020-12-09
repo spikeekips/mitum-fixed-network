@@ -72,31 +72,35 @@ func SuffrageConfigHandlerFixedProposer(ctx context.Context, m map[string]interf
 	}
 
 	var proposer base.Address
-	if i, found := m["proposer"]; !found {
-		return nil, xerrors.Errorf("proposer not set for fixed-suffrage")
-	} else if a, err := parseAddress(i, enc); err != nil {
-		return nil, xerrors.Errorf("invalid proposer address for fixed-suffrage: %w", err)
-	} else {
-		proposer = a
+	if i, found := m["proposer"]; found {
+		if a, err := parseAddress(i, enc); err != nil {
+			return nil, xerrors.Errorf("invalid proposer address for fixed-suffrage: %w", err)
+		} else {
+			proposer = a
+		}
 	}
 
-	var nodes []base.Address
-	if i, found := m["nodes"]; found {
+	var acting []base.Address
+	if i, found := m["acting"]; found {
 		if l, ok := i.([]interface{}); !ok {
-			return nil, xerrors.Errorf("invalid nodes list, %T", i)
+			return nil, xerrors.Errorf("invalid acting list, %T", i)
 		} else {
-			nodes = make([]base.Address, len(l))
+			acting = make([]base.Address, len(l))
 			for j := range l {
 				if a, err := parseAddress(l[j], enc); err != nil {
 					return nil, xerrors.Errorf("invalid node address for fixed-suffrage: %w", err)
 				} else {
-					nodes[j] = a
+					acting[j] = a
 				}
 			}
 		}
 	}
 
-	return config.NewFixedSuffrage(proposer, nodes)
+	if proposer == nil && len(acting) < 1 {
+		return nil, xerrors.Errorf("empty proposer and acting")
+	}
+
+	return config.NewFixedSuffrage(proposer, acting), nil
 }
 
 func SuffrageConfigHandlerRoundrobin(_ context.Context, m map[string]interface{}) (config.Suffrage, error) {
@@ -121,6 +125,8 @@ func parseAddress(i interface{}, enc *jsonenc.Encoder) (base.Address, error) {
 	if s, ok := i.(string); !ok {
 		return nil, xerrors.Errorf("not address string, not %T", i)
 	} else if address, err := base.DecodeAddressFromString(enc, s); err != nil {
+		return nil, xerrors.Errorf("invalid address: %w", err)
+	} else if err := address.IsValid(nil); err != nil {
 		return nil, xerrors.Errorf("invalid address: %w", err)
 	} else {
 		return address, err

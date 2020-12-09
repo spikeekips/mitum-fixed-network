@@ -48,7 +48,7 @@ func (ff *FixedSuffrage) Initialize() error {
 }
 
 func (ff *FixedSuffrage) Name() string {
-	return "fixed-suffrage"
+	return "base-fixed-suffrage"
 }
 
 func (ff *FixedSuffrage) IsInside(a Address) bool {

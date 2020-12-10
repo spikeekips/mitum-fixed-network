@@ -116,6 +116,12 @@ func (bs *BaseStateHandler) deactivate() {
 	defer bs.activatedLock.Unlock()
 
 	bs.activated = false
+
+	if bs.proposalProcessor != nil {
+		if err := bs.proposalProcessor.Cancel(); err != nil {
+			bs.Log().Error().Err(err).Msg("failed to cancel proposal processor")
+		}
+	}
 }
 
 func (bs *BaseStateHandler) isActivated() bool {

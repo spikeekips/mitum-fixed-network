@@ -318,13 +318,18 @@ func (cs *StateJoiningHandler) handleACCEPTBallotAndINITVoteproof(
 			return err
 		}
 
-		ab := NewACCEPTBallotV0(cs.local.Node().Address(), blk, cs.LastINITVoteproof())
+		if err := cs.SetLastINITVoteproof(voteproof); err != nil {
+			return err
+		}
+
+		ab := NewACCEPTBallotV0(cs.local.Node().Address(), blk, voteproof)
 		if err := SignSeal(&ab, cs.local); err != nil {
 			cs.Log().Error().Err(err).Msg("failed to sign ACCEPTBallot; will keep trying")
 			return err
 		} else {
 			al := loggerWithBallot(ab, l)
 			cs.BroadcastSeal(ab)
+
 			al.Debug().Msg("ACCEPTBallot was broadcasted")
 		}
 

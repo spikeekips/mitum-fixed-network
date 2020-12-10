@@ -105,9 +105,7 @@ func (cmd *InitCommand) cleanStorage(ctx context.Context) (context.Context, erro
 		return ctx, err
 	}
 
-	if err := st.Clean(); err != nil {
-		return ctx, err
-	} else if err := blockFS.Clean(true); err != nil {
+	if err := storage.Clean(st, blockFS, false); err != nil {
 		return ctx, err
 	}
 

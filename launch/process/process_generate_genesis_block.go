@@ -115,9 +115,7 @@ func HookCheckGenesisBlock(ctx context.Context) (context.Context, error) {
 		return ctx, xerrors.Errorf("environment already exists: block=%d", manifest.Height())
 	}
 
-	if err := st.Clean(); err != nil {
-		return ctx, err
-	} else if err := blockFS.Clean(true); err != nil {
+	if err := storage.Clean(st, blockFS, false); err != nil {
 		return ctx, err
 	}
 

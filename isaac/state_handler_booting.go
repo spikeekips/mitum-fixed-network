@@ -117,24 +117,13 @@ func (cs *StateBootingHandler) checkBlock() error {
 	cs.Log().Debug().Msg("trying to check block")
 	defer cs.Log().Debug().Msg("checked block")
 
-	var manifest block.Manifest
-	switch m, found, err := cs.local.Storage().LastManifest(); {
+	var blk block.Block
+	switch b, err := storage.CheckBlockEmpty(cs.local.Storage(), cs.local.BlockFS()); {
 	case err != nil:
 		return err
-	case !found:
+	case b == nil:
 		return storage.NotFoundError.Errorf("empty block")
 	default:
-		manifest = m
-	}
-
-	var blk block.Block
-	if b, err := cs.local.BlockFS().Load(manifest.Height()); err != nil {
-		if !storage.IsNotFoundError(err) {
-			return err
-		}
-
-		return storage.NotFoundError.Errorf("empty block")
-	} else {
 		blk = b
 	}
 
@@ -149,9 +138,7 @@ func (cs *StateBootingHandler) checkBlock() error {
 
 func (cs *StateBootingHandler) whenEmptyBlocks() (*StateChangeContext, error) {
 	// NOTE clean storages
-	if err := cs.local.Storage().Clean(); err != nil {
-		return nil, err
-	} else if err := cs.local.BlockFS().Clean(false); err != nil {
+	if err := storage.Clean(cs.local.Storage(), cs.local.BlockFS(), false); err != nil {
 		return nil, err
 	}
 

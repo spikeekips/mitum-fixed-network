@@ -7,9 +7,14 @@ import (
 	"golang.org/x/xerrors"
 
 	"github.com/spikeekips/mitum/isaac"
+	"github.com/spikeekips/mitum/launch/pm"
 	"github.com/spikeekips/mitum/launch/process"
 	"github.com/spikeekips/mitum/util"
 )
+
+var defaultRunHooks = []pm.Hook{
+	pm.NewHook(pm.HookPrefixPost, process.ProcessNameLocal, process.HookNameCheckEmptyBlock, process.HookCheckEmptyBlock),
+}
 
 type RunCommand struct {
 	*BaseRunCommand
@@ -17,9 +22,21 @@ type RunCommand struct {
 }
 
 func NewRunCommand(dryrun bool) RunCommand {
-	return RunCommand{
+	co := RunCommand{
 		BaseRunCommand: NewBaseRunCommand(dryrun, "run"),
 	}
+
+	ps := co.Processes()
+	for i := range defaultRunHooks {
+		hook := defaultRunHooks[i]
+		if err := ps.AddHook(hook.Prefix, hook.Process, hook.Name, hook.F, true); err != nil {
+			panic(err)
+		}
+	}
+
+	_ = co.SetProcesses(ps)
+
+	return co
 }
 
 func (cmd *RunCommand) Run(version util.Version) error {

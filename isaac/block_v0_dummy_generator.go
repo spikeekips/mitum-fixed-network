@@ -63,9 +63,7 @@ func NewDummyBlocksV0Generator(
 func (bg *DummyBlocksV0Generator) Generate(ignoreExists bool) error {
 	if ignoreExists {
 		for _, n := range bg.allNodes {
-			if err := n.Storage().Clean(); err != nil {
-				return err
-			} else if err := n.BlockFS().Clean(false); err != nil {
+			if err := storage.Clean(n.Storage(), n.BlockFS(), false); err != nil {
 				return err
 			}
 		}

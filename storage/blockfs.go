@@ -415,7 +415,6 @@ func (bs *BlockFS) AddOperationsTree(height base.Height, bh valuehash.Hash, i tr
 func (bs *BlockFS) AddOperations(height base.Height, bh valuehash.Hash, ops []operation.Operation) error {
 	buf := bytes.NewBuffer(nil)
 
-	// TODO use io.Writer
 	for i := range ops {
 		if b, err := bs.enc.Marshal(ops[i]); err != nil {
 			return err
@@ -434,7 +433,6 @@ func (bs *BlockFS) AddStatesTree(height base.Height, bh valuehash.Hash, i tree.F
 func (bs *BlockFS) AddStates(height base.Height, bh valuehash.Hash, sts []state.State) error {
 	buf := bytes.NewBuffer(nil)
 
-	// TODO use io.Writer
 	for i := range sts {
 		if b, err := bs.enc.Marshal(sts[i]); err != nil {
 			return err

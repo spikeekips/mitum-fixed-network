@@ -143,7 +143,6 @@ func (vrs *VoteRecords) vote(blt ballot.Ballot, voteproof *base.VoteproofV0) boo
 		return false
 	}
 
-	// TODO remember the last set and facts for performance
 	set := make([]string, len(vrs.votes))
 	facts := map[string]base.Fact{}
 

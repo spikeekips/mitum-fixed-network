@@ -568,14 +568,13 @@ func (pp *internalDefaultProposalProcessor) setACCEPTVoteproof(acceptVoteproof b
 	}
 
 	if seals := pp.proposal.Seals(); len(seals) > 0 {
-		// TODO when failed, seals of UnstageOperationSeals should be recovered
 		if err := func() error {
 			s := time.Now()
 			defer func() {
 				pp.statesValue.Store("unstage-operation-seals", time.Since(s))
 			}()
 
-			return pp.bs.UnstageOperationSeals(seals) // TODO if failed to commit, seals should be recovered
+			return pp.bs.UnstageOperationSeals(seals)
 		}(); err != nil {
 			return err
 		}

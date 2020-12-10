@@ -19,8 +19,6 @@ var BlocksVars = kong.Vars{
 	"blocks_request_type": "manifest",
 }
 
-// TODO download and store blocks
-
 type BlocksCommand struct {
 	*BaseCommand
 	URL     *url.URL `arg:"" name:"node url" help:"remote mitum url" required:""`
@@ -49,7 +47,7 @@ func (cmd *BlocksCommand) Run(version util.Version) error {
 	cmd.Log().Debug().Msg("trying to get blocks thru channel")
 	if i, err := cmd.requestByHeights(); err != nil {
 		return err
-	} else { // TODO save to local fs
+	} else {
 		_, _ = fmt.Fprintln(os.Stdout, jsonenc.ToString(i))
 	}
 

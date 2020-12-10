@@ -84,7 +84,6 @@ func SettingNetworkHandlersFromContext(ctx context.Context) (*SettingNetworkHand
 	}
 
 	var sealCache cache.Cache
-	// TODO sealCache also can be configurable
 	if ca, err := cache.NewGCache("lru", 100*100, time.Minute*3); err != nil {
 		return nil, err
 	} else {

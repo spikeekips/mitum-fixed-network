@@ -53,7 +53,6 @@ func (no *BaseBlockFS) SetWideOpen(s bool) error {
 }
 
 type MainStorage interface {
-	// TODO needs another proper name
 	URI() *url.URL
 	SetURI(string) error
 	Cache() *url.URL

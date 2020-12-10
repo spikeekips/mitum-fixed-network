@@ -11,10 +11,6 @@ import (
 	"github.com/spikeekips/mitum/util"
 )
 
-// TODO graceful stop; it supports,
-// - to store incompleted data
-// - (TODO) to broadcast stopped seal to nodes
-
 type RunCommand struct {
 	*BaseRunCommand
 	ExitAfter time.Duration `name:"exit-after" help:"exit after the given duration"`

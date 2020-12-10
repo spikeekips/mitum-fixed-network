@@ -54,7 +54,6 @@ func NewServer(
 		ca = c
 	}
 
-	// TODO ratelimit
 	nqs := &Server{
 		Logging: logging.NewLogging(func(c logging.Context) logging.Emitter {
 			return c.Str("module", "network-quic-server")

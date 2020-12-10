@@ -94,7 +94,7 @@ func (qs *PrimitiveQuicServer) run(stopChan chan struct{}) error {
 	errChan := make(chan error)
 	go func() {
 		if err := server.ListenAndServe(); !xerrors.Is(err, http.ErrServerClosed) {
-			// TODO monkey patch; see https://github.com/lucas-clemente/quic-go/issues/1778
+			// NOTE monkey patch; see https://github.com/lucas-clemente/quic-go/issues/1778
 			if err.Error() == "server closed" {
 				return
 			}

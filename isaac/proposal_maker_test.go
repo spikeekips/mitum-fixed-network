@@ -18,11 +18,12 @@ type testProposalMaker struct {
 func (t *testProposalMaker) TestCached() {
 	proposalMaker := NewProposalMaker(t.locals(1)[0])
 
+	height := base.Height(33)
 	round := base.Round(1)
-	proposal, err := proposalMaker.Proposal(round)
+	proposal, err := proposalMaker.Proposal(height, round)
 	t.NoError(err)
 
-	newProposal, err := proposalMaker.Proposal(round)
+	newProposal, err := proposalMaker.Proposal(height, round)
 	t.NoError(err)
 
 	t.True(proposal.Hash().Equal(newProposal.Hash()))
@@ -33,8 +34,9 @@ func (t *testProposalMaker) TestClean() {
 
 	proposalMaker := NewProposalMaker(local)
 
+	height := base.Height(33)
 	round := base.Round(1)
-	_, err := proposalMaker.Proposal(round)
+	_, err := proposalMaker.Proposal(height, round)
 	t.NoError(err)
 
 	t.NotNil(proposalMaker.proposed)
@@ -54,8 +56,9 @@ func (t *testProposalMaker) TestSeals() {
 
 	proposalMaker := NewProposalMaker(local)
 
+	height := base.Height(33)
 	round := base.Round(1)
-	proposal, err := proposalMaker.Proposal(round)
+	proposal, err := proposalMaker.Proposal(height, round)
 	t.NoError(err)
 
 	t.Equal(len(seals), len(proposal.Seals()))
@@ -94,8 +97,9 @@ func (t *testProposalMaker) TestOneSealOver0() {
 
 	proposalMaker := NewProposalMaker(local)
 
+	height := base.Height(33)
 	round := base.Round(1)
-	proposal, err := proposalMaker.Proposal(round)
+	proposal, err := proposalMaker.Proposal(height, round)
 	t.NoError(err)
 
 	t.Equal(len(seals)-1, len(proposal.Seals()))
@@ -126,8 +130,9 @@ func (t *testProposalMaker) TestOneSealOver1() {
 
 	proposalMaker := NewProposalMaker(local)
 
+	height := base.Height(33)
 	round := base.Round(1)
-	proposal, err := proposalMaker.Proposal(round)
+	proposal, err := proposalMaker.Proposal(height, round)
 	t.NoError(err)
 
 	t.Equal(len(seals)-1, len(proposal.Seals()))
@@ -152,8 +157,9 @@ func (t *testProposalMaker) TestNumberOperationMatch() {
 
 	proposalMaker := NewProposalMaker(local)
 
+	height := base.Height(33)
 	round := base.Round(1)
-	proposal, err := proposalMaker.Proposal(round)
+	proposal, err := proposalMaker.Proposal(height, round)
 	t.NoError(err)
 
 	t.Equal(len(seals), len(proposal.Seals()))

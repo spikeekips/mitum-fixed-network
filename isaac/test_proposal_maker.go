@@ -9,7 +9,6 @@ import (
 	"github.com/spikeekips/mitum/base/ballot"
 	"github.com/spikeekips/mitum/base/operation"
 	"github.com/spikeekips/mitum/base/seal"
-	"github.com/spikeekips/mitum/storage"
 	"github.com/spikeekips/mitum/util/valuehash"
 )
 
@@ -67,19 +66,9 @@ func (pm *DummyProposalMaker) seals() ([]valuehash.Hash, error) {
 	return seals, nil
 }
 
-func (pm *DummyProposalMaker) Proposal(round base.Round) (ballot.Proposal, error) {
+func (pm *DummyProposalMaker) Proposal(height base.Height, round base.Round) (ballot.Proposal, error) {
 	pm.Lock()
 	defer pm.Unlock()
-
-	var height base.Height
-	switch m, found, err := pm.local.Storage().LastManifest(); {
-	case !found:
-		return nil, storage.NotFoundError.Errorf("last manifest not found")
-	case err != nil:
-		return nil, err
-	default:
-		height = m.Height() + 1
-	}
 
 	if pm.proposed != nil {
 		if pm.proposed.Height() == height && pm.proposed.Round() == round {

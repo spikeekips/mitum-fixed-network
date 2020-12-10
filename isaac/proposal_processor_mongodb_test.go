@@ -48,7 +48,7 @@ func (t *testProposalProcessorWithGCache) TestBlockOperations() {
 	ophs := make([]valuehash.Hash, len(opl.Operations()))
 	var proposal ballot.ProposalV0
 	{
-		pr, err := pm.Proposal(ivp.Round())
+		pr, err := pm.Proposal(ivp.Height(), ivp.Round())
 		t.NoError(err)
 
 		t.NoError(t.local.Storage().NewSeals([]seal.Seal{opl}))

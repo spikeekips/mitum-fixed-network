@@ -351,7 +351,7 @@ func (cs *StateConsensusHandler) proposal(voteproof base.Voteproof) (bool, error
 		return false, nil
 	}
 
-	proposal, err := cs.proposalMaker.Proposal(voteproof.Round())
+	proposal, err := cs.proposalMaker.Proposal(voteproof.Height(), voteproof.Round())
 	if err != nil {
 		return false, xerrors.Errorf("failed to make proposal: %w", err)
 	}

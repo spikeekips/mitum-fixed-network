@@ -10,39 +10,40 @@ import (
 	"github.com/stretchr/testify/suite"
 )
 
-type testNodesState struct {
+type testNodesPool struct {
 	suite.Suite
 	localNode *LocalNode
 }
 
-func (t *testNodesState) SetupSuite() {
+func (t *testNodesPool) SetupSuite() {
 	t.localNode = RandomLocalNode("local", nil)
 }
 
-func (t *testNodesState) TestEmpty() {
-	var nodes []network.Node
-	ns := NewNodesState(t.localNode, nodes)
+func (t *testNodesPool) TestEmpty() {
+	ns := NewNodesPool(t.localNode)
 	t.Equal(0, ns.Len())
 }
 
-func (t *testNodesState) TestDuplicatedAddress() {
+func (t *testNodesPool) TestDuplicatedAddress() {
 	nodes := []network.Node{
 		RandomLocalNode("n0", nil),
 		RandomLocalNode("n0", nil), // will be ignored
 		RandomLocalNode("n1", nil),
 	}
 
-	ns := NewNodesState(t.localNode, nodes)
-	t.Equal(len(nodes)-1, ns.Len())
+	ns := NewNodesPool(t.localNode)
+	err := ns.Add(nodes...)
+	t.Contains(err.Error(), "duplicated Address found")
 }
 
-func (t *testNodesState) TestAdd() {
+func (t *testNodesPool) TestAdd() {
 	nodes := []network.Node{
 		RandomLocalNode("n0", nil),
 		RandomLocalNode("n1", nil),
 	}
 
-	ns := NewNodesState(t.localNode, nodes)
+	ns := NewNodesPool(t.localNode)
+	t.NoError(ns.Add(nodes...))
 
 	{ // add, but same Address
 		err := ns.Add(RandomLocalNode("n1", nil))
@@ -76,14 +77,30 @@ func (t *testNodesState) TestAdd() {
 	t.True(newNode.Address().Equal(added[2].Address()))
 }
 
-func (t *testNodesState) TestRemove() {
+func (t *testNodesPool) TestAddSameWithLocal() {
+	ns := NewNodesPool(t.localNode)
+
+	err := ns.Add(t.localNode)
+	t.Contains(err.Error(), "local node can not be added")
+}
+
+func (t *testNodesPool) TestAddDuplicated() {
+	ns := NewNodesPool(t.localNode)
+
+	newNode := RandomLocalNode("n2", nil)
+	err := ns.Add(newNode, newNode)
+	t.Contains(err.Error(), "duplicated Address found")
+}
+
+func (t *testNodesPool) TestRemove() {
 	nodes := []network.Node{
 		RandomLocalNode("n0", nil),
 		RandomLocalNode("n1", nil),
 		RandomLocalNode("n2", nil),
 	}
 
-	ns := NewNodesState(t.localNode, nodes)
+	ns := NewNodesPool(t.localNode)
+	t.NoError(ns.Add(nodes...))
 
 	{ // try to remove, but nothing
 		err := ns.Remove(base.RandomStringAddress())
@@ -115,14 +132,15 @@ func (t *testNodesState) TestRemove() {
 	}
 }
 
-func (t *testNodesState) TestTraverse() {
+func (t *testNodesPool) TestTraverse() {
 	nodes := []network.Node{
 		RandomLocalNode("n0", nil),
 		RandomLocalNode("n1", nil),
 		RandomLocalNode("n2", nil),
 	}
 
-	ns := NewNodesState(t.localNode, nodes)
+	ns := NewNodesPool(t.localNode)
+	t.NoError(ns.Add(nodes...))
 
 	{ // all
 		var traversed []network.Node
@@ -160,6 +178,6 @@ func (t *testNodesState) TestTraverse() {
 	}
 }
 
-func TestNodesState(t *testing.T) {
-	suite.Run(t, new(testNodesState))
+func TestNodesPool(t *testing.T) {
+	suite.Run(t, new(testNodesPool))
 }

@@ -3,8 +3,6 @@ package process
 import (
 	"fmt"
 	"os"
-	"sort"
-	"strings"
 
 	"golang.org/x/xerrors"
 
@@ -32,12 +30,6 @@ func NewRoundrobinSuffrage(local *isaac.Local, cacheSize int, numberOfActing uin
 
 func (sf *RoundrobinSuffrage) elect(height base.Height, round base.Round) base.ActingSuffrage {
 	all := sf.Nodes()
-
-	if len(all) > 1 {
-		sort.Slice(all, func(i, j int) bool {
-			return strings.Compare(all[i].String(), all[j].String()) < 0
-		})
-	}
 
 	na := int(sf.numberOfActing)
 	if len(all) < na {

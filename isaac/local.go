@@ -9,7 +9,7 @@ type Local struct {
 	blockfs   *storage.BlockFS
 	node      *LocalNode
 	policy    *LocalPolicy
-	nodes     *NodesState
+	nodes     *NodesPool
 	networkID []byte
 }
 
@@ -23,7 +23,7 @@ func NewLocal(
 		storage:   st,
 		blockfs:   blockfs,
 		node:      node,
-		nodes:     NewNodesState(node, nil),
+		nodes:     NewNodesPool(node),
 		networkID: networkID,
 	}, nil
 }
@@ -73,6 +73,6 @@ func (ls *Local) Policy() *LocalPolicy {
 	return ls.policy
 }
 
-func (ls *Local) Nodes() *NodesState {
+func (ls *Local) Nodes() *NodesPool {
 	return ls.nodes
 }

@@ -3,8 +3,6 @@ package process
 import (
 	"fmt"
 	"os"
-	"sort"
-	"strings"
 
 	"golang.org/x/xerrors"
 
@@ -53,9 +51,7 @@ func NewFixedSuffrage(
 			acting = append(acting, proposer)
 		}
 
-		sort.Slice(acting, func(i, j int) bool {
-			return strings.Compare(acting[i].String(), acting[j].String()) < 0
-		})
+		base.SortAddresses(acting)
 
 		elect = sf.electWithProposer
 	}
@@ -103,4 +99,17 @@ func (sf *FixedSuffrage) Verbose() string {
 	} else {
 		return string(b)
 	}
+}
+
+func (sf *FixedSuffrage) IsInside(a base.Address) bool {
+	var found bool
+	for i := range sf.acting {
+		if a.Equal(sf.acting[i]) {
+			found = true
+
+			break
+		}
+	}
+
+	return found
 }

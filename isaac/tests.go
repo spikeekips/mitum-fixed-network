@@ -11,7 +11,7 @@ import (
 	"github.com/spikeekips/mitum/util/logging"
 )
 
-//lint:ignore U1000 debugging inside test
+//lint:file-ignore U1000 debugging inside test
 var log logging.Logger
 
 func init() {

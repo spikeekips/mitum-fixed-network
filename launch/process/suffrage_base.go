@@ -73,17 +73,7 @@ func (sf *BaseSuffrage) Name() string {
 }
 
 func (sf *BaseSuffrage) IsInside(a base.Address) bool {
-	var found bool
-	sf.local.Nodes().Traverse(func(n network.Node) bool {
-		if n.Address().Equal(a) {
-			found = true
-
-			return false
-		}
-		return true
-	})
-
-	return found
+	return sf.local.Nodes().Exists(a)
 }
 
 func (sf *BaseSuffrage) Acting(height base.Height, round base.Round) base.ActingSuffrage {

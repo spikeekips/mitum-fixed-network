@@ -20,7 +20,7 @@ func (st *Storage) SetLastBlock(m block.Block) {
 
 var BaseTestMongodbURI = "mongodb://localhost:27017"
 
-//lint:ignore U1000 debugging inside test
+//lint:file-ignore U1000 debugging inside test
 var log logging.Logger
 
 func init() {

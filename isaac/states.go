@@ -160,8 +160,6 @@ func (css *ConsensusStates) cleanBallotbox() {
 		var height base.Height
 		switch m, found, err := css.local.Storage().LastManifest(); {
 		case !found:
-			css.Log().Error().Msg("something wrong to clean Ballotbox; last manifest not found")
-
 			continue
 		case err != nil:
 			css.Log().Error().Err(err).Msg("something wrong to clean Ballotbox; failed to get last manifest")

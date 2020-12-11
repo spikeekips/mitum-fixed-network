@@ -64,7 +64,10 @@ func (bb *Ballotbox) Clean(height base.Height) error {
 	bb.Lock()
 	defer bb.Unlock()
 
-	bb.Log().Debug().Hinted("height", height).Msg("trying to clean unused records")
+	l := bb.Log().WithLogger(func(ctx logging.Context) logging.Emitter {
+		return ctx.Hinted("height", height)
+	})
+	l.Debug().Msg("trying to clean unused records")
 
 	gh := height.Int64()
 
@@ -93,7 +96,7 @@ func (bb *Ballotbox) Clean(height base.Height) error {
 		removeKeys = append(removeKeys, k)
 		removes = append(removes, v)
 
-		bb.Log().Debug().
+		l.Debug().
 			Int64("height", h).Uint64("round", r).Str("stage", base.Stage(s).String()).
 			Msg("records will be removed")
 
@@ -114,6 +117,8 @@ func (bb *Ballotbox) Clean(height base.Height) error {
 	for i := range removes {
 		voteRecordsPool.Put(removes[i].(*VoteRecords).reset())
 	}
+
+	l.Debug().Int("records", len(removeKeys)).Msg("records removed")
 
 	return nil
 }

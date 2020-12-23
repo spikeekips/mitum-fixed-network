@@ -8,6 +8,7 @@ import (
 	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/base/ballot"
 	"github.com/spikeekips/mitum/base/block"
+	"github.com/spikeekips/mitum/base/prprocessor"
 	"github.com/spikeekips/mitum/base/seal"
 	"github.com/spikeekips/mitum/storage"
 	"github.com/spikeekips/mitum/util/errors"
@@ -22,7 +23,7 @@ type DummyBlocksV0Generator struct {
 	networkID   []byte
 	allNodes    map[base.Address]*Local
 	ballotboxes map[base.Address]*Ballotbox
-	pms         map[base.Address]ProposalProcessor
+	ppss        map[base.Address]*prprocessor.Processors
 }
 
 func NewDummyBlocksV0Generator(
@@ -34,7 +35,7 @@ func NewDummyBlocksV0Generator(
 
 	allNodes := map[base.Address]*Local{}
 	ballotboxes := map[base.Address]*Ballotbox{}
-	pms := map[base.Address]ProposalProcessor{}
+	pms := map[base.Address]*prprocessor.Processors{}
 
 	threshold, _ := base.NewThreshold(uint(len(locals)), 67)
 	for _, l := range locals {
@@ -45,7 +46,17 @@ func NewDummyBlocksV0Generator(
 				return threshold
 			},
 		)
-		pms[l.Node().Address()] = NewDefaultProposalProcessor(l, suffrage)
+		pps := prprocessor.NewProcessors(
+			NewDefaultProcessorNewFunc(l.Node(), l.Storage(), l.BlockFS(), l.Nodes(), suffrage, nil),
+			nil,
+		)
+		if err := pps.Initialize(); err != nil {
+			return nil, err
+		} else if err := pps.Start(); err != nil {
+			return nil, err
+		}
+
+		pms[l.Node().Address()] = pps
 	}
 
 	return &DummyBlocksV0Generator{
@@ -56,11 +67,41 @@ func NewDummyBlocksV0Generator(
 		networkID:   genesisNode.Policy().NetworkID(),
 		allNodes:    allNodes,
 		ballotboxes: ballotboxes,
-		pms:         pms,
+		ppss:        pms,
 	}, nil
 }
 
+func (bg *DummyBlocksV0Generator) Close() error {
+	for _, pps := range bg.ppss {
+		if err := pps.Stop(); err != nil {
+			panic(err) // DummyBlocksV0Generator used only for testing
+		}
+	}
+
+	return nil
+}
+
+func (bg *DummyBlocksV0Generator) findLastHeight() (base.Height, error) {
+	switch l, found, err := bg.genesisNode.Storage().LastManifest(); {
+	case err != nil:
+		return base.NilHeight, err
+	case !found:
+		return base.NilHeight, nil
+	default:
+		switch err := l.IsValid(bg.networkID); {
+		case err != nil:
+			return base.NilHeight, err
+		default:
+			return l.Height(), nil
+		}
+	}
+}
+
 func (bg *DummyBlocksV0Generator) Generate(ignoreExists bool) error {
+	defer func() {
+		_ = bg.Close()
+	}()
+
 	if ignoreExists {
 		for _, n := range bg.allNodes {
 			if err := storage.Clean(n.Storage(), n.BlockFS(), false); err != nil {
@@ -71,20 +112,13 @@ func (bg *DummyBlocksV0Generator) Generate(ignoreExists bool) error {
 
 	lastHeight := base.NilHeight
 	if !ignoreExists {
-		switch l, found, err := bg.genesisNode.Storage().LastManifest(); {
+		switch h, err := bg.findLastHeight(); {
 		case err != nil:
 			return err
-		case !found:
-			lastHeight = base.NilHeight
+		case h >= bg.lastHeight:
+			return nil
 		default:
-			switch err := l.IsValid(bg.networkID); {
-			case err != nil:
-				return err
-			case l.Height() >= bg.lastHeight:
-				return nil
-			default:
-				lastHeight = l.Height()
-			}
+			lastHeight = h
 		}
 	}
 
@@ -285,25 +319,9 @@ func (bg *DummyBlocksV0Generator) createNextBlock() error {
 func (bg *DummyBlocksV0Generator) finish(l *Local, vp base.Voteproof) error {
 	proposal := vp.Majority().(ballot.ACCEPTBallotFact).Proposal()
 
-	pm := bg.pms[l.Node().Address()]
-
-	var bs storage.BlockStorage
-	if st, err := pm.ProcessACCEPT(proposal, vp); err != nil {
-		return err
-	} else {
-		bs = st
-	}
-
-	defer func() {
-		_ = bs.Close()
-	}()
-
-	if err := bs.Block().IsValid(bg.networkID); err != nil {
-		return err
-	} else if err := bs.Commit(context.Background()); err != nil {
-		return err
-	} else if err := pm.Done(proposal); err != nil {
-		return err
+	pps := bg.ppss[l.Node().Address()]
+	if result := <-pps.Save(context.Background(), proposal, vp); result.Err != nil {
+		return result.Err
 	}
 
 	return nil
@@ -381,10 +399,11 @@ func (bg *DummyBlocksV0Generator) createACCEPTVoteproof(proposal ballot.Proposal
 		var newBlock block.Block
 
 		ivp := ivm[l.Node().Address()]
-		if b, err := bg.pms[l.Node().Address()].ProcessINIT(proposal.Hash(), ivp); err != nil {
-			return nil, err
-		} else if newBlock == nil {
-			newBlock = b
+		pps := bg.ppss[l.Node().Address()]
+		if result := <-pps.NewProposal(context.Background(), proposal, ivp); result.Err != nil {
+			return nil, result.Err
+		} else {
+			newBlock = result.Block
 		}
 
 		ab := NewACCEPTBallotV0(l.Node().Address(), newBlock, ivp)

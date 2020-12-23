@@ -1,6 +1,6 @@
 // +build test
 
-package isaac
+package network
 
 import (
 	"github.com/spikeekips/mitum/base"

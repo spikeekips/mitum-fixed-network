@@ -5,11 +5,13 @@ import (
 
 	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/base/block"
+	"github.com/spikeekips/mitum/base/prprocessor"
 	"github.com/spikeekips/mitum/isaac"
 	"github.com/spikeekips/mitum/launch/config"
 	"github.com/spikeekips/mitum/network"
 	"github.com/spikeekips/mitum/storage"
 	"github.com/spikeekips/mitum/util"
+	"github.com/spikeekips/mitum/util/hint"
 )
 
 var (
@@ -26,6 +28,7 @@ var (
 	ContextValueConsensusStates         config.ContextKey = "consensus_states"
 	ContextValueGenesisBlockForceCreate config.ContextKey = "force_create_genesis_block"
 	ContextValueGenesisBlock            config.ContextKey = "genesis_block"
+	ContextValueOperationProcessors     config.ContextKey = "operation_processors"
 )
 
 func LoadConfigSourceContextValue(ctx context.Context, l *[]byte) error {
@@ -60,7 +63,7 @@ func LoadSuffrageContextValue(ctx context.Context, l *base.Suffrage) error {
 	return config.LoadFromContextValue(ctx, ContextValueSuffrage, l)
 }
 
-func LoadProposalProcessorContextValue(ctx context.Context, l *isaac.ProposalProcessor) error {
+func LoadProposalProcessorContextValue(ctx context.Context, l **prprocessor.Processors) error {
 	return config.LoadFromContextValue(ctx, ContextValueProposalProcessor, l)
 }
 
@@ -74,4 +77,8 @@ func LoadGenesisBlockForceCreateContextValue(ctx context.Context, l *bool) error
 
 func LoadGenesisBlockContextValue(ctx context.Context, l *block.Block) error {
 	return config.LoadFromContextValue(ctx, ContextValueGenesisBlock, l)
+}
+
+func LoadOperationProcessorsContextValue(ctx context.Context, l **hint.Hintmap) error {
+	return config.LoadFromContextValue(ctx, ContextValueOperationProcessors, l)
 }

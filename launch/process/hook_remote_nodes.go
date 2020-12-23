@@ -5,6 +5,7 @@ import (
 
 	"github.com/spikeekips/mitum/isaac"
 	"github.com/spikeekips/mitum/launch/config"
+	"github.com/spikeekips/mitum/network"
 	"github.com/spikeekips/mitum/util/encoder"
 )
 
@@ -34,7 +35,7 @@ func HookRemoteNodes(ctx context.Context) (context.Context, error) {
 	for i := range nodeConfigs {
 		conf := nodeConfigs[i]
 
-		node := isaac.NewRemoteNode(conf.Address(), conf.Publickey(), conf.URL().String())
+		node := network.NewRemoteNode(conf.Address(), conf.Publickey(), conf.URL().String())
 		if ch, err := LoadNodeChannel(conf.URL(), encs); err != nil {
 			return ctx, err
 		} else {

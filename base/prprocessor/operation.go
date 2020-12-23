@@ -1,4 +1,4 @@
-package isaac
+package prprocessor
 
 import (
 	"context"
@@ -8,6 +8,7 @@ import (
 
 	"github.com/spikeekips/mitum/base/operation"
 	"github.com/spikeekips/mitum/base/state"
+	"github.com/spikeekips/mitum/storage"
 	"github.com/spikeekips/mitum/util"
 	"github.com/spikeekips/mitum/util/hint"
 	"github.com/spikeekips/mitum/util/logging"
@@ -16,7 +17,7 @@ import (
 var maxConcurrentOperations int = 500
 
 type OperationProcessor interface {
-	New(*Statepool) OperationProcessor
+	New(*storage.Statepool) OperationProcessor
 	PreProcess(state.Processor) (state.Processor, error)
 	Process(state.Processor) error
 	Close() error
@@ -24,10 +25,10 @@ type OperationProcessor interface {
 }
 
 type defaultOperationProcessor struct {
-	pool *Statepool
+	pool *storage.Statepool
 }
 
-func (opp defaultOperationProcessor) New(pool *Statepool) OperationProcessor {
+func (opp defaultOperationProcessor) New(pool *storage.Statepool) OperationProcessor {
 	return &defaultOperationProcessor{
 		pool: pool,
 	}
@@ -57,7 +58,7 @@ type ConcurrentOperationsProcessor struct {
 	sync.RWMutex
 	*logging.Logging
 	size       uint
-	pool       *Statepool
+	pool       *storage.Statepool
 	wk         *util.DistributeWorker
 	donechan   chan error
 	oprLock    sync.RWMutex
@@ -69,7 +70,7 @@ type ConcurrentOperationsProcessor struct {
 
 func NewConcurrentOperationsProcessor(
 	size int,
-	pool *Statepool,
+	pool *storage.Statepool,
 	oppHintSet *hint.Hintmap,
 ) (*ConcurrentOperationsProcessor, error) {
 	if size < 1 {
@@ -268,11 +269,13 @@ func (co *ConcurrentOperationsProcessor) opr(op state.Processor) (OperationProce
 		return opr, nil
 	}
 
-	var opr OperationProcessor
-	if hinter, found := co.oppHintSet.Get(hinter); !found {
-		opr = defaultOperationProcessor{}
-	} else {
-		opr = hinter.(OperationProcessor)
+	var opr OperationProcessor = defaultOperationProcessor{}
+	if co.oppHintSet != nil {
+		if hinter, found := co.oppHintSet.Get(hinter); !found {
+			opr = defaultOperationProcessor{}
+		} else {
+			opr = hinter.(OperationProcessor)
+		}
 	}
 
 	opr = opr.New(co.pool)

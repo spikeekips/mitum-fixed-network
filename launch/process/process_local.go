@@ -6,6 +6,7 @@ import (
 	"github.com/spikeekips/mitum/isaac"
 	"github.com/spikeekips/mitum/launch/config"
 	"github.com/spikeekips/mitum/launch/pm"
+	"github.com/spikeekips/mitum/network"
 	"github.com/spikeekips/mitum/storage"
 )
 
@@ -31,7 +32,7 @@ func ProcessLocal(ctx context.Context) (context.Context, error) {
 		return ctx, err
 	}
 
-	node := isaac.NewLocalNode(conf.Address(), conf.Privatekey(), conf.Network().URL().String())
+	node := network.NewLocalNode(conf.Address(), conf.Privatekey(), conf.Network().URL().String())
 
 	var blockfs *storage.BlockFS
 	if err := LoadBlockFSContextValue(ctx, &blockfs); err != nil {

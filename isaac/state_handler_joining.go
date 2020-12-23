@@ -1,6 +1,7 @@
 package isaac
 
 import (
+	"context"
 	"time"
 
 	"golang.org/x/xerrors"
@@ -8,6 +9,7 @@ import (
 	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/base/ballot"
 	"github.com/spikeekips/mitum/base/block"
+	"github.com/spikeekips/mitum/base/prprocessor"
 	"github.com/spikeekips/mitum/base/seal"
 	"github.com/spikeekips/mitum/storage"
 	"github.com/spikeekips/mitum/util/localtime"
@@ -62,10 +64,10 @@ type StateJoiningHandler struct {
 
 func NewStateJoiningHandler(
 	local *Local,
-	proposalProcessor ProposalProcessor,
+	pps *prprocessor.Processors,
 ) (*StateJoiningHandler, error) {
 	cs := &StateJoiningHandler{
-		BaseStateHandler: NewBaseStateHandler(local, proposalProcessor, base.StateJoining),
+		BaseStateHandler: NewBaseStateHandler(local, pps, base.StateJoining),
 	}
 	cs.BaseStateHandler.Logging = logging.NewLogging(func(c logging.Context) logging.Emitter {
 		return c.Str("module", "consensus-state-joining-handler")
@@ -287,7 +289,8 @@ func (cs *StateJoiningHandler) handleINITBallotAndINITVoteproof(blt ballot.INITB
 }
 
 func (cs *StateJoiningHandler) handleACCEPTBallotAndINITVoteproof(
-	blt ballot.ACCEPTBallot, voteproof base.Voteproof,
+	blt ballot.ACCEPTBallot,
+	voteproof base.Voteproof,
 ) error {
 	l := loggerWithVoteproofID(voteproof, loggerWithBallot(blt, cs.Log()))
 	l.Debug().Msg("ACCEPT Ballot + INIT Voteproof")
@@ -312,19 +315,17 @@ func (cs *StateJoiningHandler) handleACCEPTBallotAndINITVoteproof(
 
 		// NOTE expected ACCEPT Ballot received, so will process Proposal of
 		// INIT Voteproof and broadcast new ACCEPT Ballot.
-		blk, err := cs.proposalProcessor.ProcessINIT(blt.Proposal(), voteproof)
-		if err != nil {
-			l.Debug().Err(err).Msg("tried to process Proposal, but it is not yet received")
+		var newBlock block.Block
+		if blk, err := cs.processACCEPTBallotAndINITVoteproof(blt, voteproof); err != nil {
 			return err
+		} else {
+			newBlock = blk
 		}
 
-		if err := cs.SetLastINITVoteproof(voteproof); err != nil {
-			return err
-		}
-
-		ab := NewACCEPTBallotV0(cs.local.Node().Address(), blk, voteproof)
+		ab := NewACCEPTBallotV0(cs.local.Node().Address(), newBlock, voteproof)
 		if err := SignSeal(&ab, cs.local); err != nil {
 			cs.Log().Error().Err(err).Msg("failed to sign ACCEPTBallot; will keep trying")
+
 			return err
 		} else {
 			al := loggerWithBallot(ab, l)
@@ -392,5 +393,45 @@ func (cs *StateJoiningHandler) broadcastINITBallot(round base.Round, voteproof b
 		return err
 	} else {
 		return nil
+	}
+}
+
+func (cs *StateJoiningHandler) processACCEPTBallotAndINITVoteproof(
+	blt ballot.ACCEPTBallot,
+	voteproof base.Voteproof,
+) (block.Block, error) {
+	l := loggerWithVoteproofID(voteproof, loggerWithBallot(blt, cs.Log()))
+
+	// NOTE expected ACCEPT Ballot received, so will process Proposal of
+	// INIT Voteproof and broadcast new ACCEPT Ballot.
+	var proposal ballot.Proposal
+	if pr, err := cs.findProposal(blt.Proposal()); err != nil {
+		return nil, err
+	} else {
+		timespan := cs.local.Policy().TimespanValidBallot()
+		if pr.SignedAt().Before(voteproof.FinishedAt().Add(timespan * -1)) {
+			return nil, xerrors.Errorf(
+				"Proposal was sent before Voteproof; SignedAt=%s now=%s timespan=%s",
+				pr.SignedAt(), voteproof.FinishedAt(), timespan,
+			)
+		}
+
+		proposal = pr
+	}
+
+	timeout := cs.local.Policy().TimeoutProcessProposal()
+	ctx, cancel := context.WithTimeout(context.Background(), timeout)
+	defer cancel()
+
+	cs.Log().Debug().Dur("timeout", timeout).Msg("trying to prepare block")
+
+	if result := <-cs.pps.NewProposal(ctx, proposal, voteproof); result.Err != nil {
+		l.Debug().Err(result.Err).Msg("tried to process Proposal, but it is not yet received")
+
+		return nil, result.Err
+	} else if err := cs.SetLastINITVoteproof(voteproof); err != nil {
+		return nil, err
+	} else {
+		return result.Block, nil
 	}
 }

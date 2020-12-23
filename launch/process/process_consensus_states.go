@@ -4,6 +4,7 @@ import (
 	"context"
 
 	"github.com/spikeekips/mitum/base"
+	"github.com/spikeekips/mitum/base/prprocessor"
 	"github.com/spikeekips/mitum/isaac"
 	"github.com/spikeekips/mitum/launch/config"
 	"github.com/spikeekips/mitum/launch/pm"
@@ -36,8 +37,8 @@ func ProcessConsensusStates(ctx context.Context) (context.Context, error) {
 		return ctx, err
 	}
 
-	var proposalProcessor isaac.ProposalProcessor
-	if err := LoadProposalProcessorContextValue(ctx, &proposalProcessor); err != nil {
+	var pps *prprocessor.Processors
+	if err := LoadProposalProcessorContextValue(ctx, &pps); err != nil {
 		return ctx, err
 	}
 
@@ -51,7 +52,7 @@ func ProcessConsensusStates(ctx context.Context) (context.Context, error) {
 		return ctx, err
 	}
 
-	if cs, err := processConsensusStates(local, proposalProcessor, suffrage, log); err != nil {
+	if cs, err := processConsensusStates(local, pps, suffrage, log); err != nil {
 		return ctx, err
 	} else {
 		_ = cs.SetLogger(log)
@@ -62,7 +63,7 @@ func ProcessConsensusStates(ctx context.Context) (context.Context, error) {
 
 func processConsensusStates(
 	local *isaac.Local,
-	proposalProcessor isaac.ProposalProcessor,
+	pps *prprocessor.Processors,
 	suffrage base.Suffrage,
 	log logging.Logger,
 ) (*isaac.ConsensusStates, error) {
@@ -74,11 +75,11 @@ func processConsensusStates(
 		return nil, err
 	}
 	syncing = isaac.NewStateSyncingHandler(local)
-	if joining, err = isaac.NewStateJoiningHandler(local, proposalProcessor); err != nil {
+	if joining, err = isaac.NewStateJoiningHandler(local, pps); err != nil {
 		return nil, err
 	}
 	if consensus, err = isaac.NewStateConsensusHandler(
-		local, proposalProcessor, suffrage, proposalMaker,
+		local, pps, suffrage, proposalMaker,
 	); err != nil {
 		return nil, err
 	}

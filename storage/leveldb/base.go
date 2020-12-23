@@ -98,7 +98,7 @@ func (st *Storage) Clean() error {
 }
 
 func (st *Storage) CleanByHeight(height base.Height) error {
-	if height <= base.PreGenesisHeight+1 {
+	if height <= base.PreGenesisHeight {
 		return st.Clean()
 	}
 

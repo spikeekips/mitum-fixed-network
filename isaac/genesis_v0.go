@@ -9,6 +9,7 @@ import (
 	"github.com/spikeekips/mitum/base/ballot"
 	"github.com/spikeekips/mitum/base/block"
 	"github.com/spikeekips/mitum/base/operation"
+	"github.com/spikeekips/mitum/base/prprocessor"
 	"github.com/spikeekips/mitum/base/seal"
 	"github.com/spikeekips/mitum/storage"
 	"github.com/spikeekips/mitum/util/errors"
@@ -77,44 +78,37 @@ func (gg *GenesisBlockV0Generator) Generate() (block.Block, error) {
 		proposal = pr
 	}
 
-	pm := NewDefaultProposalProcessor(gg.local, gg.suffrage)
-	_ = pm.SetLogger(gg.Log())
-
-	if bk, err := pm.ProcessINIT(proposal.Hash(), ivp); err != nil {
+	pps := prprocessor.NewProcessors(
+		NewDefaultProcessorNewFunc(
+			gg.local.Node(),
+			gg.local.Storage(),
+			gg.local.BlockFS(),
+			gg.local.Nodes(),
+			gg.suffrage,
+			nil,
+		),
+		nil,
+	)
+	if err := pps.Initialize(); err != nil {
 		return nil, err
-	} else if vp, err := gg.generateACCEPTVoteproof(bk, ivp); err != nil {
-		return nil, err
-	} else {
-		return gg.store(pm, proposal, vp)
-	}
-}
-
-func (gg *GenesisBlockV0Generator) store(
-	pm *DefaultProposalProcessor,
-	proposal ballot.Proposal,
-	vp base.Voteproof,
-) (block.Block, error) {
-	var blk block.Block
-	var bs storage.BlockStorage
-
-	if st, err := pm.ProcessACCEPT(proposal.Hash(), vp); err != nil {
+	} else if err := pps.Start(); err != nil {
 		return nil, err
 	} else {
-		bs = st
+		defer func() {
+			_ = pps.Stop()
+		}()
 	}
 
-	defer func() {
-		_ = bs.Close()
-	}()
+	_ = pps.SetLogger(gg.Log())
 
-	blk = bs.Block()
-
-	if err := bs.Commit(context.Background()); err != nil {
+	if result := <-pps.NewProposal(context.Background(), proposal, ivp); result.Err != nil {
+		return nil, result.Err
+	} else if avp, err := gg.generateACCEPTVoteproof(result.Block, ivp); err != nil {
 		return nil, err
-	} else if err := pm.Done(proposal.Hash()); err != nil {
-		return nil, err
+	} else if result := <-pps.Save(context.Background(), proposal.Hash(), avp); result.Err != nil {
+		return nil, result.Err
 	} else {
-		return blk, nil
+		return pps.Current().Block(), nil
 	}
 }
 

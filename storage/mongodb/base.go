@@ -871,7 +871,7 @@ func (st *Storage) cleanByHeight(height base.Height) error {
 		return xerrors.Errorf("readonly mode")
 	}
 
-	if height <= base.PreGenesisHeight+1 {
+	if height <= base.PreGenesisHeight {
 		return st.Clean()
 	}
 

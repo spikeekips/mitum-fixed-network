@@ -15,7 +15,7 @@ type testRoundrobinSuffrage struct {
 }
 
 func (t *testRoundrobinSuffrage) local() *isaac.Local {
-	localNode := isaac.RandomLocalNode("local", nil)
+	localNode := network.RandomLocalNode("local", nil)
 	local, err := isaac.NewLocal(nil, nil, localNode, isaac.TestNetworkID)
 	t.NoError(err)
 
@@ -38,11 +38,11 @@ func (t *testRoundrobinSuffrage) TestActingSuffrage() {
 	var na uint = 3
 
 	nodes := []network.Node{
-		isaac.RandomLocalNode("n0", nil),
-		isaac.RandomLocalNode("n1", nil),
-		isaac.RandomLocalNode("n2", nil),
-		isaac.RandomLocalNode("n3", nil),
-		isaac.RandomLocalNode("n4", nil),
+		network.RandomLocalNode("n0", nil),
+		network.RandomLocalNode("n1", nil),
+		network.RandomLocalNode("n2", nil),
+		network.RandomLocalNode("n3", nil),
+		network.RandomLocalNode("n4", nil),
 	}
 	t.NoError(local.Nodes().Add(nodes...))
 
@@ -79,8 +79,8 @@ func (t *testRoundrobinSuffrage) TestActingSuffrageNotSufficient() {
 	var na uint = 4
 
 	nodes := []network.Node{
-		isaac.RandomLocalNode("n0", nil),
-		isaac.RandomLocalNode("n1", nil),
+		network.RandomLocalNode("n0", nil),
+		network.RandomLocalNode("n1", nil),
 	}
 	t.NoError(local.Nodes().Add(nodes...))
 

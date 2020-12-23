@@ -65,7 +65,9 @@ func NewNodeInfoV0(
 		nodes = append(nodes, node)
 	}
 
-	config["suffrage"] = suffrage.Verbose()
+	if suffrage != nil {
+		config["suffrage"] = suffrage.Verbose()
+	}
 
 	return NodeInfoV0{
 		node:      node,

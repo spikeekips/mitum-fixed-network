@@ -1,6 +1,7 @@
 package isaac
 
 import (
+	"context"
 	"testing"
 	"time"
 
@@ -10,6 +11,7 @@ import (
 	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/base/ballot"
 	"github.com/spikeekips/mitum/base/block"
+	"github.com/spikeekips/mitum/base/prprocessor"
 	"github.com/spikeekips/mitum/base/seal"
 	"github.com/spikeekips/mitum/util/valuehash"
 )
@@ -479,9 +481,12 @@ func (t *testStateJoiningHandler) TestACCEPTVoteproofExpected() {
 		valuehash.RandomSHA256(),
 	)
 	t.NoError(err)
-	proposalProcessor := NewDummyProposalProcessor(returnedBlock, nil)
 
-	cs, err := NewStateJoiningHandler(t.local, proposalProcessor)
+	dp := &prprocessor.DummyProcessor{PF: func(context.Context) (block.Block, error) {
+		return returnedBlock, nil
+	}}
+
+	cs, err := NewStateJoiningHandler(t.local, t.Processors(dp.New))
 	t.NoError(err)
 	t.NotNil(cs)
 

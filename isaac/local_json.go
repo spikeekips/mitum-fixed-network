@@ -13,9 +13,9 @@ func (ls Local) MarshalJSON() ([]byte, error) {
 	})
 
 	return jsonenc.Marshal(struct {
-		ND *LocalNode     `json:"node"`
-		PL *LocalPolicy   `json:"policy"`
-		NS []network.Node `json:"nodes"`
+		ND *network.LocalNode `json:"node"`
+		PL *LocalPolicy       `json:"policy"`
+		NS []network.Node     `json:"nodes"`
 	}{
 		ND: ls.Node(),
 		PL: ls.Policy(),

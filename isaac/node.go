@@ -1,5 +1,6 @@
 package isaac
 
+/*
 import (
 	"sync"
 
@@ -79,3 +80,4 @@ func (ln *RemoteNode) SetChannel(channel network.Channel) *RemoteNode {
 
 	return ln
 }
+*/

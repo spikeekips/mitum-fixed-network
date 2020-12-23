@@ -1,4 +1,4 @@
-package isaac
+package network
 
 import (
 	"sort"
@@ -6,43 +6,42 @@ import (
 	"testing"
 
 	"github.com/spikeekips/mitum/base"
-	"github.com/spikeekips/mitum/network"
 	"github.com/stretchr/testify/suite"
 )
 
-type testNodesPool struct {
+type testNodepool struct {
 	suite.Suite
 	localNode *LocalNode
 }
 
-func (t *testNodesPool) SetupSuite() {
+func (t *testNodepool) SetupSuite() {
 	t.localNode = RandomLocalNode("local", nil)
 }
 
-func (t *testNodesPool) TestEmpty() {
-	ns := NewNodesPool(t.localNode)
+func (t *testNodepool) TestEmpty() {
+	ns := NewNodepool(t.localNode)
 	t.Equal(0, ns.Len())
 }
 
-func (t *testNodesPool) TestDuplicatedAddress() {
-	nodes := []network.Node{
+func (t *testNodepool) TestDuplicatedAddress() {
+	nodes := []Node{
 		RandomLocalNode("n0", nil),
 		RandomLocalNode("n0", nil), // will be ignored
 		RandomLocalNode("n1", nil),
 	}
 
-	ns := NewNodesPool(t.localNode)
+	ns := NewNodepool(t.localNode)
 	err := ns.Add(nodes...)
 	t.Contains(err.Error(), "duplicated Address found")
 }
 
-func (t *testNodesPool) TestAdd() {
-	nodes := []network.Node{
+func (t *testNodepool) TestAdd() {
+	nodes := []Node{
 		RandomLocalNode("n0", nil),
 		RandomLocalNode("n1", nil),
 	}
 
-	ns := NewNodesPool(t.localNode)
+	ns := NewNodepool(t.localNode)
 	t.NoError(ns.Add(nodes...))
 
 	{ // add, but same Address
@@ -56,8 +55,8 @@ func (t *testNodesPool) TestAdd() {
 	t.NoError(err)
 	t.Equal(len(nodes)+1, ns.Len())
 
-	var added []network.Node
-	ns.Traverse(func(n network.Node) bool {
+	var added []Node
+	ns.Traverse(func(n Node) bool {
 		added = append(added, n)
 		return true
 	})
@@ -77,29 +76,29 @@ func (t *testNodesPool) TestAdd() {
 	t.True(newNode.Address().Equal(added[2].Address()))
 }
 
-func (t *testNodesPool) TestAddSameWithLocal() {
-	ns := NewNodesPool(t.localNode)
+func (t *testNodepool) TestAddSameWithLocal() {
+	ns := NewNodepool(t.localNode)
 
 	err := ns.Add(t.localNode)
 	t.Contains(err.Error(), "local node can not be added")
 }
 
-func (t *testNodesPool) TestAddDuplicated() {
-	ns := NewNodesPool(t.localNode)
+func (t *testNodepool) TestAddDuplicated() {
+	ns := NewNodepool(t.localNode)
 
 	newNode := RandomLocalNode("n2", nil)
 	err := ns.Add(newNode, newNode)
 	t.Contains(err.Error(), "duplicated Address found")
 }
 
-func (t *testNodesPool) TestRemove() {
-	nodes := []network.Node{
+func (t *testNodepool) TestRemove() {
+	nodes := []Node{
 		RandomLocalNode("n0", nil),
 		RandomLocalNode("n1", nil),
 		RandomLocalNode("n2", nil),
 	}
 
-	ns := NewNodesPool(t.localNode)
+	ns := NewNodepool(t.localNode)
 	t.NoError(ns.Add(nodes...))
 
 	{ // try to remove, but nothing
@@ -112,8 +111,8 @@ func (t *testNodesPool) TestRemove() {
 	t.NoError(err)
 	t.Equal(len(nodes)-1, ns.Len())
 
-	var removed []network.Node
-	ns.Traverse(func(n network.Node) bool {
+	var removed []Node
+	ns.Traverse(func(n Node) bool {
 		removed = append(removed, n)
 		return true
 	})
@@ -132,19 +131,19 @@ func (t *testNodesPool) TestRemove() {
 	}
 }
 
-func (t *testNodesPool) TestTraverse() {
-	nodes := []network.Node{
+func (t *testNodepool) TestTraverse() {
+	nodes := []Node{
 		RandomLocalNode("n0", nil),
 		RandomLocalNode("n1", nil),
 		RandomLocalNode("n2", nil),
 	}
 
-	ns := NewNodesPool(t.localNode)
+	ns := NewNodepool(t.localNode)
 	t.NoError(ns.Add(nodes...))
 
 	{ // all
-		var traversed []network.Node
-		ns.Traverse(func(n network.Node) bool {
+		var traversed []Node
+		ns.Traverse(func(n Node) bool {
 			traversed = append(traversed, n)
 			return true
 		})
@@ -164,8 +163,8 @@ func (t *testNodesPool) TestTraverse() {
 	}
 
 	{ // only first one
-		var traversed []network.Node
-		ns.Traverse(func(n network.Node) bool {
+		var traversed []Node
+		ns.Traverse(func(n Node) bool {
 			if n.Address().Equal(nodes[1].Address()) {
 				traversed = append(traversed, n)
 				return false
@@ -178,6 +177,6 @@ func (t *testNodesPool) TestTraverse() {
 	}
 }
 
-func TestNodesPool(t *testing.T) {
-	suite.Run(t, new(testNodesPool))
+func TestNodepool(t *testing.T) {
+	suite.Run(t, new(testNodepool))
 }

@@ -69,7 +69,7 @@ func (lp *LocalPolicy) ThresholdRatio() base.ThresholdRatio {
 }
 
 func (lp *LocalPolicy) SetThresholdRatio(ratio base.ThresholdRatio) *LocalPolicy {
-	_ = lp.thresholdRatio.SetValue(ratio)
+	_ = lp.thresholdRatio.Set(ratio)
 
 	return lp
 }
@@ -83,7 +83,7 @@ func (lp *LocalPolicy) SetTimeoutWaitingProposal(d time.Duration) (*LocalPolicy,
 		return nil, xerrors.Errorf("TimeoutWaitingProposal too short; %v", d)
 	}
 
-	_ = lp.timeoutWaitingProposal.SetValue(d)
+	_ = lp.timeoutWaitingProposal.Set(d)
 
 	return lp, nil
 }
@@ -97,7 +97,7 @@ func (lp *LocalPolicy) SetIntervalBroadcastingINITBallot(d time.Duration) (*Loca
 		return nil, xerrors.Errorf("IntervalBroadcastingINITBallot too short; %v", d)
 	}
 
-	_ = lp.intervalBroadcastingINITBallot.SetValue(d)
+	_ = lp.intervalBroadcastingINITBallot.Set(d)
 
 	return lp, nil
 }
@@ -111,7 +111,7 @@ func (lp *LocalPolicy) SetIntervalBroadcastingProposal(d time.Duration) (*LocalP
 		return nil, xerrors.Errorf("IntervalBroadcastingProposal too short; %v", d)
 	}
 
-	_ = lp.intervalBroadcastingProposal.SetValue(d)
+	_ = lp.intervalBroadcastingProposal.Set(d)
 
 	return lp, nil
 }
@@ -125,7 +125,7 @@ func (lp *LocalPolicy) SetWaitBroadcastingACCEPTBallot(d time.Duration) (*LocalP
 		return nil, xerrors.Errorf("WaitBroadcastingACCEPTBallot too short; %v", d)
 	}
 
-	_ = lp.waitBroadcastingACCEPTBallot.SetValue(d)
+	_ = lp.waitBroadcastingACCEPTBallot.Set(d)
 
 	return lp, nil
 }
@@ -139,7 +139,7 @@ func (lp *LocalPolicy) SetIntervalBroadcastingACCEPTBallot(d time.Duration) (*Lo
 		return nil, xerrors.Errorf("IntervalBroadcastingACCEPTBallot too short; %v", d)
 	}
 
-	_ = lp.intervalBroadcastingACCEPTBallot.SetValue(d)
+	_ = lp.intervalBroadcastingACCEPTBallot.Set(d)
 
 	return lp, nil
 }
@@ -153,7 +153,7 @@ func (lp *LocalPolicy) SetTimespanValidBallot(d time.Duration) (*LocalPolicy, er
 		return nil, xerrors.Errorf("TimespanValidBallot too short; %v", d)
 	}
 
-	_ = lp.timespanValidBallot.SetValue(d)
+	_ = lp.timespanValidBallot.Set(d)
 
 	return lp, nil
 }
@@ -167,7 +167,7 @@ func (lp *LocalPolicy) SetTimeoutProcessProposal(d time.Duration) (*LocalPolicy,
 		return nil, xerrors.Errorf("TimeoutProcessProposal too short; %v", d)
 	}
 
-	_ = lp.timeoutProcessProposal.SetValue(d)
+	_ = lp.timeoutProcessProposal.Set(d)
 
 	return lp, nil
 }
@@ -181,7 +181,7 @@ func (lp *LocalPolicy) SetMaxOperationsInSeal(m uint) (*LocalPolicy, error) {
 		return nil, xerrors.Errorf("zero MaxOperationsInSeal")
 	}
 
-	_ = lp.maxOperationsInSeal.SetValue(m)
+	_ = lp.maxOperationsInSeal.Set(m)
 
 	return lp, nil
 }
@@ -195,7 +195,7 @@ func (lp *LocalPolicy) SetMaxOperationsInProposal(m uint) (*LocalPolicy, error) 
 		return nil, xerrors.Errorf("zero MaxOperationsInProposal")
 	}
 
-	_ = lp.maxOperationsInProposal.SetValue(m)
+	_ = lp.maxOperationsInProposal.Set(m)
 
 	return lp, nil
 }

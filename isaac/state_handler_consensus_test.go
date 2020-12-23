@@ -1,6 +1,7 @@
 package isaac
 
 import (
+	"context"
 	"testing"
 	"time"
 
@@ -10,7 +11,10 @@ import (
 	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/base/ballot"
 	"github.com/spikeekips/mitum/base/block"
+	"github.com/spikeekips/mitum/base/prprocessor"
 	"github.com/spikeekips/mitum/base/seal"
+	"github.com/spikeekips/mitum/storage"
+	"github.com/spikeekips/mitum/util/tree"
 	"github.com/spikeekips/mitum/util/valuehash"
 )
 
@@ -35,7 +39,7 @@ func (t *testStateConsensusHandler) TestNew() {
 
 	proposalMaker := NewProposalMaker(t.local)
 	cs, err := NewStateConsensusHandler(
-		t.local, NewDummyProposalProcessor(nil, nil), suffrage, proposalMaker,
+		t.local, t.DummyProcessors(), suffrage, proposalMaker,
 	)
 	t.NoError(err)
 	t.NotNil(cs)
@@ -77,7 +81,7 @@ func (t *testStateConsensusHandler) TestWaitingProposalButTimedOut() {
 	suffrage := t.suffrage(t.remote, t.local)
 
 	proposalMaker := NewProposalMaker(t.local)
-	cs, err := NewStateConsensusHandler(t.local, NewDummyProposalProcessor(nil, nil), suffrage, proposalMaker)
+	cs, err := NewStateConsensusHandler(t.local, t.DummyProcessors(), suffrage, proposalMaker)
 	t.NoError(err)
 	t.NotNil(cs)
 
@@ -125,10 +129,12 @@ func (t *testStateConsensusHandler) TestWithProposalWaitACCEPTBallot() {
 	ib := t.newINITBallot(t.local, base.Round(0), nil)
 	initFact := ib.INITBallotFactV0
 
+	dp := &prprocessor.DummyProcessor{}
+
 	proposalMaker := NewProposalMaker(t.local)
 	cs, err := NewStateConsensusHandler(
 		t.local,
-		NewDummyProposalProcessor(nil, nil),
+		t.Processors(dp.New),
 		t.suffrage(t.remote, t.remote), // localnode is not in ActingSuffrage.
 		proposalMaker,
 	)
@@ -157,7 +163,10 @@ func (t *testStateConsensusHandler) TestWithProposalWaitACCEPTBallot() {
 
 	returnedBlock, err := block.NewTestBlockV0(initFact.Height(), initFact.Round(), pr.Hash(), valuehash.RandomSHA256())
 	t.NoError(err)
-	cs.proposalProcessor = NewDummyProposalProcessor(returnedBlock, nil)
+
+	dp.PF = func(context.Context) (block.Block, error) {
+		return returnedBlock, nil
+	}
 
 	t.NoError(cs.NewSeal(pr))
 
@@ -179,10 +188,12 @@ func (t *testStateConsensusHandler) TestWithProposalWaitSIGNBallot() {
 	ib := t.newINITBallot(t.local, base.Round(0), nil)
 	initFact := ib.INITBallotFactV0
 
+	dp := &prprocessor.DummyProcessor{}
+
 	proposalMaker := NewProposalMaker(t.local)
 	cs, err := NewStateConsensusHandler(
 		t.local,
-		NewDummyProposalProcessor(nil, nil),
+		t.Processors(dp.New),
 		t.suffrage(t.remote, t.local, t.remote), // localnode is not in ActingSuffrage.
 		proposalMaker,
 	)
@@ -211,7 +222,9 @@ func (t *testStateConsensusHandler) TestWithProposalWaitSIGNBallot() {
 
 	returnedBlock, err := block.NewTestBlockV0(initFact.Height(), initFact.Round(), pr.Hash(), valuehash.RandomSHA256())
 	t.NoError(err)
-	cs.proposalProcessor = NewDummyProposalProcessor(returnedBlock, nil)
+	dp.PF = func(context.Context) (block.Block, error) {
+		return returnedBlock, nil
+	}
 
 	t.NoError(cs.NewSeal(pr))
 
@@ -231,7 +244,7 @@ func (t *testStateConsensusHandler) TestDraw() {
 	proposalMaker := NewProposalMaker(t.local)
 	cs, err := NewStateConsensusHandler(
 		t.local,
-		NewDummyProposalProcessor(nil, nil),
+		t.DummyProcessors(),
 		t.suffrage(t.remote, t.local, t.remote), // localnode is not in ActingSuffrage.
 		proposalMaker,
 	)
@@ -283,10 +296,10 @@ func (t *testStateConsensusHandler) TestDraw() {
 }
 
 func (t *testStateConsensusHandler) TestWrongProposalProcessing() {
-	pp := NewDummyProposalProcessor(nil, nil)
+	dp := &prprocessor.DummyProcessor{}
 	cs, err := NewStateConsensusHandler(
 		t.local,
-		pp,
+		t.Processors(dp.New),
 		t.suffrage(t.remote, t.local, t.remote),
 		NewProposalMaker(t.local),
 	)
@@ -315,7 +328,10 @@ func (t *testStateConsensusHandler) TestWrongProposalProcessing() {
 	}()
 
 	wrongBlock, _ := block.NewTestBlockV0(ivp.Height(), ivp.Round(), valuehash.RandomSHA256(), valuehash.RandomSHA256())
-	pp.SetReturnBlock(wrongBlock)
+
+	dp.PF = func(context.Context) (block.Block, error) {
+		return wrongBlock, nil
+	}
 
 	var avp base.Voteproof
 	{
@@ -341,10 +357,31 @@ func (t *testStateConsensusHandler) TestWrongProposalProcessing() {
 }
 
 func (t *testStateConsensusHandler) TestSaveNewBlock() {
-	pp := NewDummyProposalProcessor(nil, nil)
+	var ivp base.Voteproof
+	var pr ballot.Proposal
+	{
+		ibf := t.newINITBallotFact(t.local, base.Round(0))
+		ivp, _ = t.newVoteproof(base.StageINIT, ibf, t.local, t.remote)
+		pr = t.newProposal(t.local, ibf.Round(), nil)
+
+	}
+	newblock, _ := block.NewTestBlockV0(ivp.Height(), ivp.Round(), pr.Hash(), valuehash.RandomSHA256())
+
+	dp := &prprocessor.DummyProcessor{P: pr, IV: ivp}
+	dp.SF = func(ctx context.Context) error {
+		dp.B = newblock
+
+		bs := storage.NewDummyBlockStorage(newblock, tree.FixedTree{}, tree.FixedTree{})
+
+		return bs.Commit(ctx)
+	}
+	dp.SetState(prprocessor.Prepared)
+	pps := t.Processors(dp.New)
+	pps.SetCurrent(dp)
+
 	cs, err := NewStateConsensusHandler(
 		t.local,
-		pp,
+		pps,
 		t.suffrage(t.remote, t.local, t.remote),
 		NewProposalMaker(t.local),
 	)
@@ -353,13 +390,7 @@ func (t *testStateConsensusHandler) TestSaveNewBlock() {
 
 	stateChan := make(chan *StateChangeContext)
 	cs.SetStateChan(stateChan)
-
-	var ivp base.Voteproof
-	{
-		ibf := t.newINITBallotFact(t.local, base.Round(0))
-		ivp, _ = t.newVoteproof(base.StageINIT, ibf, t.local, t.remote)
-		cs.SetLastINITVoteproof(ivp)
-	}
+	cs.SetLastINITVoteproof(ivp)
 
 	t.NoError(cs.Activate(NewStateChangeContext(
 		base.StateJoining,
@@ -371,9 +402,6 @@ func (t *testStateConsensusHandler) TestSaveNewBlock() {
 	defer func() {
 		_ = cs.Deactivate(nil)
 	}()
-
-	newblock, _ := block.NewTestBlockV0(ivp.Height(), ivp.Round(), valuehash.RandomSHA256(), valuehash.RandomSHA256())
-	pp.SetReturnBlock(newblock)
 
 	var avp base.Voteproof
 	{

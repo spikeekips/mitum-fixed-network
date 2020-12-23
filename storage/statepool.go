@@ -1,4 +1,4 @@
-package isaac
+package storage
 
 import (
 	"sort"
@@ -8,7 +8,6 @@ import (
 	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/base/operation"
 	"github.com/spikeekips/mitum/base/state"
-	"github.com/spikeekips/mitum/storage"
 	"github.com/spikeekips/mitum/util/errors"
 	"github.com/spikeekips/mitum/util/valuehash"
 )
@@ -32,7 +31,7 @@ type Statepool struct {
 	addedOps    map[string]operation.Operation
 }
 
-func NewStatepool(st storage.Storage) (*Statepool, error) {
+func NewStatepool(st Storage) (*Statepool, error) {
 	var nextHeight base.Height = base.Height(0)
 	switch m, found, err := st.LastManifest(); {
 	case err != nil:
@@ -52,7 +51,7 @@ func NewStatepool(st storage.Storage) (*Statepool, error) {
 }
 
 // NewStatepoolWithBase only used for testing
-func NewStatepoolWithBase(st storage.Storage, base map[string]state.State) (*Statepool, error) {
+func NewStatepoolWithBase(st Storage, base map[string]state.State) (*Statepool, error) {
 	if sp, err := NewStatepool(st); err != nil {
 		return nil, err
 	} else {

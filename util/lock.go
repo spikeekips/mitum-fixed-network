@@ -18,7 +18,7 @@ func (li *LockedItem) Value() interface{} {
 	return li.value
 }
 
-func (li *LockedItem) SetValue(value interface{}) *LockedItem {
+func (li *LockedItem) Set(value interface{}) *LockedItem {
 	li.Lock()
 	defer li.Unlock()
 

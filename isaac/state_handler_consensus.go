@@ -1,6 +1,7 @@
 package isaac
 
 import (
+	"context"
 	"sync"
 	"time"
 
@@ -9,6 +10,7 @@ import (
 	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/base/ballot"
 	"github.com/spikeekips/mitum/base/block"
+	"github.com/spikeekips/mitum/base/prprocessor"
 	"github.com/spikeekips/mitum/base/seal"
 	"github.com/spikeekips/mitum/storage"
 	"github.com/spikeekips/mitum/util"
@@ -35,12 +37,12 @@ type StateConsensusHandler struct {
 
 func NewStateConsensusHandler(
 	local *Local,
-	proposalProcessor ProposalProcessor,
+	pps *prprocessor.Processors,
 	suffrage base.Suffrage,
 	proposalMaker *ProposalMaker,
 ) (*StateConsensusHandler, error) {
 	cs := &StateConsensusHandler{
-		BaseStateHandler: NewBaseStateHandler(local, proposalProcessor, base.StateConsensus),
+		BaseStateHandler: NewBaseStateHandler(local, pps, base.StateConsensus),
 		suffrage:         suffrage,
 		proposalMaker:    proposalMaker,
 	}
@@ -284,9 +286,18 @@ func (cs *StateConsensusHandler) handleProposal(proposal ballot.Proposal) error 
 	}
 
 	voteproof := cs.LastINITVoteproof()
-	blk, err := cs.proposalProcessor.ProcessINIT(proposal.Hash(), voteproof)
-	if err != nil {
-		return err
+
+	timeout := cs.local.Policy().TimeoutProcessProposal()
+	ctx, cancel := context.WithTimeout(context.Background(), timeout)
+	defer cancel()
+
+	cs.Log().Debug().Dur("timeout", timeout).Msg("trying to prepare block")
+
+	var newBlock block.Block
+	if result := <-cs.pps.NewProposal(ctx, proposal, voteproof); result.Err != nil {
+		return result.Err
+	} else {
+		newBlock = result.Block
 	}
 
 	acting := cs.suffrage.Acting(proposal.Height(), proposal.Round())
@@ -298,12 +309,12 @@ func (cs *StateConsensusHandler) handleProposal(proposal ballot.Proposal) error 
 		Msgf("node is in acting suffrage? %v", isActing)
 
 	if isActing {
-		if err := cs.readyToSIGNBallot(blk); err != nil {
+		if err := cs.readyToSIGNBallot(newBlock); err != nil {
 			return err
 		}
 	}
 
-	return cs.readyToACCEPTBallot(blk, voteproof)
+	return cs.readyToACCEPTBallot(newBlock, voteproof)
 }
 
 func (cs *StateConsensusHandler) readyToSIGNBallot(newBlock block.Block) error {
@@ -433,8 +444,6 @@ func (cs *StateConsensusHandler) SetLastINITVoteproof(voteproof base.Voteproof) 
 	if err := cs.BaseStateHandler.SetLastINITVoteproof(voteproof); err != nil {
 		return err
 	}
-
-	_ = cs.proposalProcessor.Cancel()
 
 	return nil
 }

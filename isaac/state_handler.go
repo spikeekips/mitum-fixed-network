@@ -10,11 +10,12 @@ import (
 	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/base/ballot"
 	"github.com/spikeekips/mitum/base/block"
+	"github.com/spikeekips/mitum/base/prprocessor"
 	"github.com/spikeekips/mitum/base/seal"
 	"github.com/spikeekips/mitum/storage"
-	"github.com/spikeekips/mitum/util"
 	"github.com/spikeekips/mitum/util/localtime"
 	"github.com/spikeekips/mitum/util/logging"
+	"github.com/spikeekips/mitum/util/valuehash"
 )
 
 const (
@@ -81,26 +82,24 @@ func (csc StateChangeContext) MarshalLog(key string, e logging.Emitter, _ bool) 
 type BaseStateHandler struct {
 	sync.RWMutex
 	*logging.Logging
-	local             *Local
-	proposalProcessor ProposalProcessor
-	state             base.State
-	activatedLock     sync.RWMutex
-	activated         bool
-	timers            *localtime.Timers
-	livp              base.Voteproof
-	stateChan         chan<- *StateChangeContext
-	sealChan          chan<- seal.Seal
-	whenBlockSaved    func([]block.Block)
+	local          *Local
+	pps            *prprocessor.Processors
+	state          base.State
+	activatedLock  sync.RWMutex
+	activated      bool
+	timers         *localtime.Timers
+	livp           base.Voteproof
+	stateChan      chan<- *StateChangeContext
+	sealChan       chan<- seal.Seal
+	whenBlockSaved func([]block.Block)
 }
 
-func NewBaseStateHandler(
-	local *Local, proposalProcessor ProposalProcessor, state base.State,
-) *BaseStateHandler {
+func NewBaseStateHandler(local *Local, pps *prprocessor.Processors, state base.State) *BaseStateHandler {
 	return &BaseStateHandler{
-		local:             local,
-		proposalProcessor: proposalProcessor,
-		state:             state,
-		whenBlockSaved:    func([]block.Block) {},
+		local:          local,
+		pps:            pps,
+		state:          state,
+		whenBlockSaved: func([]block.Block) {},
 	}
 }
 
@@ -116,12 +115,6 @@ func (bs *BaseStateHandler) deactivate() {
 	defer bs.activatedLock.Unlock()
 
 	bs.activated = false
-
-	if bs.proposalProcessor != nil {
-		if err := bs.proposalProcessor.Cancel(); err != nil {
-			bs.Log().Error().Err(err).Msg("failed to cancel proposal processor")
-		}
-	}
 }
 
 func (bs *BaseStateHandler) isActivated() bool {
@@ -182,7 +175,7 @@ func (bs *BaseStateHandler) BroadcastSeal(sl seal.Seal) {
 func (bs *BaseStateHandler) StoreNewBlock(acceptVoteproof base.Voteproof) error {
 	if !bs.isActivated() {
 		return nil
-	} else if bs.proposalProcessor == nil {
+	} else if bs.pps == nil {
 		bs.Log().Debug().Msg("this state not support store new block")
 
 		return nil
@@ -201,32 +194,8 @@ func (bs *BaseStateHandler) StoreNewBlock(acceptVoteproof base.Voteproof) error 
 				Hinted("hash", fact.NewBlock()).Hinted("height", acceptVoteproof.Height()).Hinted("round", acceptVoteproof.Round()))
 	}))
 
-	if err := util.Retry(3, time.Millisecond*200, func() error {
-		if err := bs.storeNewBlock(fact, acceptVoteproof); err == nil {
-			return nil
-		} else {
-			var ctx *StateToBeChangeError
-			switch {
-			case xerrors.As(err, &ctx):
-				l.Error().Err(err).Msg("state will be moved with accept voteproof")
-
-				return util.StopRetryingError.Wrap(err)
-			case xerrors.Is(err, util.IgnoreError):
-				return util.StopRetryingError.Wrap(err)
-			default:
-				l.Error().Err(err).Msg("something wrong to store accept voteproof; will retry")
-
-				return err
-			}
-		}
-	}); err != nil {
-		l.Error().Err(err).Msg("failed to store new block after retrial")
-
-		if e := bs.proposalProcessor.Cancel(); e != nil {
-			return xerrors.Errorf(
-				"failed to be store new block; and failed to be done ProposalProcessor: %w",
-				e)
-		}
+	if err := bs.storeNewBlock(fact, acceptVoteproof); err != nil {
+		l.Error().Err(err).Msg("failed to store new block")
 
 		return err
 	}
@@ -242,48 +211,25 @@ func (bs *BaseStateHandler) storeNewBlock(fact ballot.ACCEPTBallotFact, acceptVo
 	}))
 	l.Debug().Msg("trying to store new block")
 
-	var blockStorage storage.BlockStorage
-	switch bs, err := bs.proposalProcessor.ProcessACCEPT(fact.Proposal(), acceptVoteproof); {
-	case err != nil:
-		return xerrors.Errorf("failed to process ACCEPT Voteproof: %w", err)
-	case bs.Block() == nil:
-		err := xerrors.Errorf("failed to process Proposal; empty Block returned")
-		l.Error().Err(err).Msg("failed to store new block")
-
-		return err
-	default:
-		blockStorage = bs
-	}
-
-	defer func() {
-		_ = blockStorage.Close()
-	}()
-
-	var newBlock block.Block
-	if blk := blockStorage.Block(); !fact.NewBlock().Equal(blk.Hash()) {
-		err := xerrors.Errorf("processed new block does not match; fact=%s processed=%s",
-			fact.NewBlock(), blk.Hash())
-		l.Error().Err(err).Msg("failed to store new block; moves to sync")
-
-		return NewStateToBeChangeError(base.StateSyncing, acceptVoteproof, nil, err)
-	} else {
-		newBlock = blk
-	}
-
 	s := time.Now()
 
 	timeout := bs.local.Policy().TimeoutWaitingProposal()
-	l.Debug().Dur("timeout", timeout).Msg("trying to commit block")
 	ctx, cancel := context.WithTimeout(context.Background(), timeout)
 	defer cancel()
-	if err := blockStorage.Commit(ctx); err != nil {
-		l.Error().Err(err).Msg("failed to store new block")
 
-		return err
-	}
+	l.Debug().Dur("timeout", timeout).Msg("trying to commit block")
 
-	if err := bs.proposalProcessor.Done(fact.Proposal()); err != nil {
-		return xerrors.Errorf("failed to be done ProposalProcessor: %w", err)
+	var newBlock block.Block
+	if result := <-bs.pps.Save(ctx, fact.Proposal(), acceptVoteproof); result.Err != nil {
+		return xerrors.Errorf("failed to process ACCEPT Voteproof: %w", result.Err)
+	} else {
+		newBlock = bs.pps.Current().Block()
+		if newBlock == nil {
+			err := xerrors.Errorf("failed to process Proposal; empty Block returned")
+			l.Error().Err(err).Msg("failed to store new block")
+
+			return err
+		}
 	}
 
 	l.Info().Dur("elapsed", time.Since(s)).Msg("new block stored")
@@ -520,4 +466,16 @@ func (bs *BaseStateHandler) WhenBlockSaved(callback func([]block.Block)) {
 	defer bs.Unlock()
 
 	bs.whenBlockSaved = callback
+}
+
+func (bs *BaseStateHandler) findProposal(h valuehash.Hash) (ballot.Proposal, error) {
+	if sl, found, err := bs.local.Storage().Seal(h); !found {
+		return nil, storage.NotFoundError.Errorf("seal not found")
+	} else if err != nil {
+		return nil, err
+	} else if pr, ok := sl.(ballot.Proposal); !ok {
+		return nil, xerrors.Errorf("seal is not Proposal: %T", sl)
+	} else {
+		return pr, nil
+	}
 }

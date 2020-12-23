@@ -31,7 +31,11 @@ func (t *BaseTestLocalFS) SetupSuite() {
 
 func (t *BaseTestLocalFS) TearDownSuite() {
 	if err := os.RemoveAll(t.root); err != nil {
-		t.T().Log(fmt.Sprintf("%+v", err))
+		if l := t.T().Log; l == nil {
+			fmt.Fprintf(os.Stderr, "%+v", err)
+		} else {
+			l(fmt.Sprintf("%+v", err))
+		}
 	}
 }
 

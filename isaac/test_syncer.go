@@ -3,12 +3,13 @@
 package isaac
 
 import (
+	"golang.org/x/xerrors"
+
 	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/base/block"
 	channetwork "github.com/spikeekips/mitum/network/gochan"
 	"github.com/spikeekips/mitum/storage"
 	"github.com/spikeekips/mitum/util"
-	"golang.org/x/xerrors"
 )
 
 type baseTestSyncer struct {
@@ -28,7 +29,7 @@ func (t *baseTestSyncer) generateBlocks(locals []*Local, targetHeight base.Heigh
 
 func (t *baseTestSyncer) emptyLocal() *Local {
 	lst := t.Storage(nil, nil)
-	localNode := RandomLocalNode(util.UUID().String(), nil)
+	localNode := channetwork.RandomLocalNode(util.UUID().String())
 	blockfs := t.BlockFS(t.JSONEnc)
 
 	local, err := NewLocal(lst, blockfs, localNode, TestNetworkID)

@@ -11,7 +11,9 @@ import (
 	"github.com/spikeekips/mitum/base/block"
 	"github.com/spikeekips/mitum/base/key"
 	"github.com/spikeekips/mitum/base/operation"
+	"github.com/spikeekips/mitum/base/prprocessor"
 	"github.com/spikeekips/mitum/base/state"
+	channetwork "github.com/spikeekips/mitum/network/gochan"
 	"github.com/spikeekips/mitum/storage"
 	"github.com/spikeekips/mitum/storage/localfs"
 	"github.com/spikeekips/mitum/util"
@@ -25,6 +27,7 @@ type baseTestStateHandler struct {
 	StorageSupportTest
 	localfs.BaseTestBlocks
 	ls []*Local
+	pp *prprocessor.Processors
 }
 
 func (t *baseTestStateHandler) SetupSuite() {
@@ -70,7 +73,7 @@ func (t *baseTestStateHandler) locals(n int) []*Local {
 	var ls []*Local
 	for i := 0; i < n; i++ {
 		lst := t.Storage(t.Encs, t.JSONEnc)
-		localNode := RandomLocalNode(util.UUID().String(), nil)
+		localNode := channetwork.RandomLocalNode(util.UUID().String())
 
 		blockfs := t.BlockFS(t.JSONEnc)
 		local, err := NewLocal(lst, blockfs, localNode, TestNetworkID)
@@ -113,6 +116,9 @@ func (t *baseTestStateHandler) SetupTest() {
 
 func (t *baseTestStateHandler) TearDownTest() {
 	t.closeStates(t.ls...)
+	if t.pp != nil {
+		t.NoError(t.pp.Stop())
+	}
 }
 
 func (t *baseTestStateHandler) lastINITVoteproof(local *Local) base.Voteproof {
@@ -304,85 +310,6 @@ func (t *baseTestStateHandler) compareManifest(a, b block.Manifest) {
 	}
 }
 
-func (t *baseTestStateHandler) compareBlock(a, b block.Block) {
-	t.compareManifest(a, b)
-	t.compareFixedTree(a.OperationsTree(), b.OperationsTree())
-	t.compareFixedTree(a.StatesTree(), b.StatesTree())
-	t.compareVoteproof(a.ConsensusInfo().INITVoteproof(), b.ConsensusInfo().INITVoteproof())
-	t.compareVoteproof(a.ConsensusInfo().ACCEPTVoteproof(), b.ConsensusInfo().ACCEPTVoteproof())
-
-	for i := range a.Operations() {
-		ao := a.Operations()[i]
-		bo := b.Operations()[i]
-		t.True(ao.Hash().Equal(bo.Hash()))
-		t.True(ao.Fact().Hash().Equal(bo.Fact().Hash()))
-	}
-
-	for i := range a.States() {
-		ao := a.States()[i]
-		bo := b.States()[i]
-		t.True(ao.Hash().Equal(bo.Hash()))
-	}
-}
-
-func (t *baseTestStateHandler) compareVoteproof(a, b base.Voteproof) {
-	t.True(a.Hint().Equal(b.Hint()))
-	t.Equal(a.IsFinished(), b.IsFinished())
-	t.True(localtime.Equal(a.FinishedAt(), b.FinishedAt()))
-	t.Equal(a.IsClosed(), b.IsClosed())
-	t.Equal(a.Height(), b.Height())
-	t.Equal(a.Round(), b.Round())
-	t.Equal(a.Stage(), b.Stage())
-	t.Equal(a.Result(), b.Result())
-	t.True(a.Majority().Hash().Equal(b.Majority().Hash()))
-	t.Equal(a.ThresholdRatio(), b.ThresholdRatio())
-
-	for _, aFact := range a.Facts() {
-		var bFact base.Fact
-		for _, f := range b.Facts() {
-			if aFact.Hash().Equal(f.Hash()) {
-				bFact = f
-				break
-			}
-		}
-
-		t.NotNil(bFact)
-		t.True(aFact.Hash().Equal(bFact.Hash()))
-	}
-
-	for i := range a.Votes() {
-		aFact := a.Votes()[i]
-
-		var bFact base.VoteproofNodeFact
-		for j := range b.Votes() {
-			if aFact.Node().Equal(b.Votes()[j].Node()) {
-				bFact = b.Votes()[j]
-				break
-			}
-		}
-
-		t.True(aFact.Fact().Equal(bFact.Fact()))
-	}
-}
-
-func (t *baseTestStateHandler) compareFixedTree(a, b tree.FixedTree) {
-	if a.IsEmpty() && b.IsEmpty() {
-		return
-	}
-
-	t.True(a.Hint().Equal(b.Hint()))
-
-	t.Equal(a.Len(), b.Len())
-	t.Equal(a.Root(), b.Root())
-
-	t.NoError(a.Traverse(func(i int, key, h, _ []byte) (bool, error) {
-		t.Equal(key, b.Key(i))
-		t.Equal(h, b.Hash(i))
-
-		return true, nil
-	}))
-}
-
 func (t *baseTestStateHandler) lastManifest(st storage.Storage) block.Manifest {
 	if m, found, err := st.LastManifest(); !found {
 		panic(storage.NotFoundError.Errorf("last manifest not found"))
@@ -391,4 +318,24 @@ func (t *baseTestStateHandler) lastManifest(st storage.Storage) block.Manifest {
 	} else {
 		return m
 	}
+}
+
+func (t *baseTestStateHandler) DummyProcessors() *prprocessor.Processors {
+	pp := prprocessor.NewProcessors(
+		(&prprocessor.DummyProcessor{}).New,
+		nil,
+	)
+	t.NoError(pp.Initialize())
+	t.NoError(pp.Start())
+
+	return pp
+}
+
+func (t *baseTestStateHandler) Processors(newFunc prprocessor.ProcessorNewFunc) *prprocessor.Processors {
+	pp := prprocessor.NewProcessors(newFunc, nil)
+
+	t.NoError(pp.Initialize())
+	t.NoError(pp.Start())
+
+	return pp
 }

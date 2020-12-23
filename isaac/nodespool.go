@@ -1,5 +1,6 @@
 package isaac
 
+/*
 import (
 	"sync"
 
@@ -143,3 +144,4 @@ func (ns *NodesPool) Traverse(callback func(network.Node) bool) {
 		}
 	}
 }
+*/

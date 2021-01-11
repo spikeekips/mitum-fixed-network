@@ -9,14 +9,21 @@ import (
 	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/isaac"
 	jsonenc "github.com/spikeekips/mitum/util/encoder/json"
+	"github.com/spikeekips/mitum/util/valuehash"
 )
 
 type RoundrobinSuffrage struct {
 	*BaseSuffrage
+	getManifestFunc func(base.Height) (valuehash.Hash, error)
 }
 
-func NewRoundrobinSuffrage(local *isaac.Local, cacheSize int, numberOfActing uint) *RoundrobinSuffrage {
-	sf := &RoundrobinSuffrage{}
+func NewRoundrobinSuffrage(
+	local *isaac.Local,
+	cacheSize int,
+	numberOfActing uint,
+	getManifestFunc func(base.Height) (valuehash.Hash, error),
+) *RoundrobinSuffrage {
+	sf := &RoundrobinSuffrage{getManifestFunc: getManifestFunc}
 	sf.BaseSuffrage = NewBaseSuffrage(
 		"roundrobin-suffrage",
 		local,
@@ -28,15 +35,25 @@ func NewRoundrobinSuffrage(local *isaac.Local, cacheSize int, numberOfActing uin
 	return sf
 }
 
-func (sf *RoundrobinSuffrage) elect(height base.Height, round base.Round) base.ActingSuffrage {
+func (sf *RoundrobinSuffrage) elect(height base.Height, round base.Round) (base.ActingSuffrage, error) {
 	all := sf.Nodes()
+	base.SortAddresses(all)
 
 	na := int(sf.numberOfActing)
 	if len(all) < na {
 		na = len(all)
 	}
 
-	pos := sf.pos(height, round, len(all))
+	var proposer base.Address
+	var pos int
+	if h := height - 1; h <= base.PreGenesisHeight {
+		proposer = sf.local.Node().Address()
+	} else if i, err := sf.pos(height, round, len(all)); err != nil {
+		return base.ActingSuffrage{}, err
+	} else {
+		pos = i
+		proposer = all[i]
+	}
 
 	var selected []base.Address
 	if len(all) == na {
@@ -50,13 +67,27 @@ func (sf *RoundrobinSuffrage) elect(height base.Height, round base.Round) base.A
 		}
 	}
 
-	return base.NewActingSuffrage(height, round, all[pos], selected)
+	return base.NewActingSuffrage(height, round, proposer, selected), nil
 }
 
-func (sf *RoundrobinSuffrage) pos(height base.Height, round base.Round, all int) int {
-	sum := uint64(height.Int64()) + round.Uint64()
+func (sf *RoundrobinSuffrage) pos(height base.Height, round base.Round, all int) (int, error) {
+	var sum uint64
 
-	return int(sum % uint64(all))
+	// NOTE get manifest of previous height
+	if sf.getManifestFunc != nil {
+		switch h, err := sf.getManifestFunc(height - 1); {
+		case err != nil:
+			return 0, err
+		default:
+			for _, b := range h.Bytes() {
+				sum += uint64(b)
+			}
+		}
+	}
+
+	sum += uint64(height.Int64()) + round.Uint64()
+
+	return int(sum % uint64(all)), nil
 }
 
 func (sf *RoundrobinSuffrage) Verbose() string {

@@ -10,6 +10,8 @@ import (
 	"github.com/spikeekips/mitum/launch/config"
 	"github.com/spikeekips/mitum/launch/pm"
 	"github.com/spikeekips/mitum/network"
+	"github.com/spikeekips/mitum/storage"
+	"github.com/spikeekips/mitum/util/valuehash"
 )
 
 const ProcessNameSuffrage = "suffrage"
@@ -125,9 +127,28 @@ func processRoundrobinSuffrage(ctx context.Context, conf config.RoundrobinSuffra
 		return nil, err
 	}
 
+	var st storage.Storage
+	if err := LoadStorageContextValue(ctx, &st); err != nil {
+		return nil, err
+	}
+
 	if conf.NumberOfActing < 1 {
 		return nil, xerrors.Errorf("number-of-acting should be over zero")
 	}
 
-	return NewRoundrobinSuffrage(local, conf.CacheSize, conf.NumberOfActing), nil
+	return NewRoundrobinSuffrage(
+		local,
+		conf.CacheSize,
+		conf.NumberOfActing,
+		func(height base.Height) (valuehash.Hash, error) {
+			switch m, found, err := st.ManifestByHeight(height); {
+			case err != nil:
+				return nil, err
+			case !found:
+				return nil, storage.NotFoundError.Errorf("manifest not found for suffrage")
+			default:
+				return m.Hash(), nil
+			}
+		},
+	), nil
 }

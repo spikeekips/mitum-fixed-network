@@ -69,14 +69,14 @@ func NewFixedSuffrage(
 	return sf, nil
 }
 
-func (sf *FixedSuffrage) electWithProposer(height base.Height, round base.Round) base.ActingSuffrage {
-	return base.NewActingSuffrage(height, round, sf.proposer, sf.acting)
+func (sf *FixedSuffrage) electWithProposer(height base.Height, round base.Round) (base.ActingSuffrage, error) {
+	return base.NewActingSuffrage(height, round, sf.proposer, sf.acting), nil
 }
 
-func (sf *FixedSuffrage) elect(height base.Height, round base.Round) base.ActingSuffrage {
+func (sf *FixedSuffrage) elect(height base.Height, round base.Round) (base.ActingSuffrage, error) {
 	pos := (uint64(height) + round.Uint64()) % uint64(len(sf.acting))
 
-	return base.NewActingSuffrage(height, round, sf.acting[pos], sf.acting)
+	return base.NewActingSuffrage(height, round, sf.acting[pos], sf.acting), nil
 }
 
 func (sf *FixedSuffrage) Verbose() string {

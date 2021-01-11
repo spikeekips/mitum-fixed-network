@@ -11,7 +11,7 @@ import (
 	"github.com/spikeekips/mitum/util/logging"
 )
 
-type ActinfSuffrageElectFunc func(base.Height, base.Round) base.ActingSuffrage
+type ActinfSuffrageElectFunc func(base.Height, base.Round) (base.ActingSuffrage, error)
 
 type BaseSuffrage struct {
 	sync.RWMutex
@@ -76,32 +76,39 @@ func (sf *BaseSuffrage) IsInside(a base.Address) bool {
 	return sf.local.Nodes().Exists(a)
 }
 
-func (sf *BaseSuffrage) Acting(height base.Height, round base.Round) base.ActingSuffrage {
+func (sf *BaseSuffrage) Acting(height base.Height, round base.Round) (base.ActingSuffrage, error) {
 	if sf.cache == nil {
 		return sf.electFunc(height, round)
 	}
 
 	cacheKey := sf.cacheKey(height, round)
 	if af, found := sf.cache.Get(cacheKey); found {
-		return af.(base.ActingSuffrage)
+		return af.(base.ActingSuffrage), nil
 	}
 
-	af := sf.electFunc(height, round)
-	sf.cache.Add(cacheKey, af)
+	if af, err := sf.electFunc(height, round); err != nil {
+		return af, err
+	} else {
+		sf.cache.Add(cacheKey, af)
 
-	return af
+		return af, nil
+	}
 }
 
-func (sf *BaseSuffrage) IsActing(height base.Height, round base.Round, node base.Address) bool {
-	af := sf.Acting(height, round)
-
-	return af.Exists(node)
+func (sf *BaseSuffrage) IsActing(height base.Height, round base.Round, node base.Address) (bool, error) {
+	if af, err := sf.Acting(height, round); err != nil {
+		return false, err
+	} else {
+		return af.Exists(node), nil
+	}
 }
 
-func (sf *BaseSuffrage) IsProposer(height base.Height, round base.Round, node base.Address) bool {
-	af := sf.Acting(height, round)
-
-	return af.Proposer().Equal(node)
+func (sf *BaseSuffrage) IsProposer(height base.Height, round base.Round, node base.Address) (bool, error) {
+	if af, err := sf.Acting(height, round); err != nil {
+		return false, err
+	} else {
+		return af.Proposer().Equal(node), nil
+	}
 }
 
 func (sf *BaseSuffrage) Nodes() []base.Address {

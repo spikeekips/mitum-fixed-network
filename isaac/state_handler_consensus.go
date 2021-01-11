@@ -300,7 +300,13 @@ func (cs *StateConsensusHandler) handleProposal(proposal ballot.Proposal) error 
 		newBlock = result.Block
 	}
 
-	acting := cs.suffrage.Acting(proposal.Height(), proposal.Round())
+	var acting base.ActingSuffrage
+	if i, err := cs.suffrage.Acting(proposal.Height(), proposal.Round()); err != nil {
+		return err
+	} else {
+		acting = i
+	}
+
 	isActing := acting.Exists(cs.local.Node().Address())
 
 	l.Debug().
@@ -351,10 +357,18 @@ func (cs *StateConsensusHandler) proposal(voteproof base.Voteproof) (bool, error
 	l := loggerWithVoteproofID(voteproof, cs.Log())
 
 	l.Debug().Msg("prepare to broadcast Proposal")
-	isProposer := cs.suffrage.IsProposer(voteproof.Height(), voteproof.Round(), cs.local.Node().Address())
+
+	var acting base.ActingSuffrage
+	if i, err := cs.suffrage.Acting(voteproof.Height(), voteproof.Round()); err != nil {
+		return false, err
+	} else {
+		acting = i
+	}
+
+	isProposer := cs.local.Node().Address().Equal(acting.Proposer())
 	l.Debug().
-		Hinted("acting_suffrage", cs.suffrage.Acting(voteproof.Height(), voteproof.Round())).
-		Bool("is_acting", cs.suffrage.IsActing(voteproof.Height(), voteproof.Round(), cs.local.Node().Address())).
+		Hinted("acting_suffrage", acting).
+		Bool("is_acting", acting.Exists(cs.local.Node().Address())).
 		Bool("is_proposer", isProposer).
 		Msgf("node is proposer? %v", isProposer)
 

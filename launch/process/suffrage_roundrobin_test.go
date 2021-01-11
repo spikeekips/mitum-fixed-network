@@ -8,6 +8,7 @@ import (
 	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/isaac"
 	"github.com/spikeekips/mitum/network"
+	"github.com/spikeekips/mitum/util/valuehash"
 )
 
 type testRoundrobinSuffrage struct {
@@ -26,7 +27,7 @@ func (t *testRoundrobinSuffrage) local() *isaac.Local {
 
 func (t *testRoundrobinSuffrage) TestNew() {
 	local := t.local()
-	sf := NewRoundrobinSuffrage(local, 10, 1)
+	sf := NewRoundrobinSuffrage(local, 10, 1, nil)
 	t.NotNil(sf)
 
 	t.Implements((*base.Suffrage)(nil), sf)
@@ -46,9 +47,12 @@ func (t *testRoundrobinSuffrage) TestActingSuffrage() {
 	}
 	t.NoError(local.Nodes().Add(nodes...))
 
-	sf := NewRoundrobinSuffrage(local, 10, na)
+	sf := NewRoundrobinSuffrage(local, 10, na, func(base.Height) (valuehash.Hash, error) {
+		return valuehash.NewBytes([]byte("showme 5")), nil
+	})
 
-	af := sf.Acting(base.Height(33), base.Round(0))
+	af, err := sf.Acting(base.Height(33), base.Round(0))
+	t.NoError(err)
 	t.NotNil(af)
 	t.Equal(int(na), len(af.Nodes()))
 
@@ -84,9 +88,10 @@ func (t *testRoundrobinSuffrage) TestActingSuffrageNotSufficient() {
 	}
 	t.NoError(local.Nodes().Add(nodes...))
 
-	sf := NewRoundrobinSuffrage(local, 10, na)
+	sf := NewRoundrobinSuffrage(local, 10, na, nil)
 
-	af := sf.Acting(base.Height(33), base.Round(0))
+	af, err := sf.Acting(base.Height(33), base.Round(0))
+	t.NoError(err)
 	t.NotNil(af)
 	t.Equal(len(nodes)+1, len(af.Nodes()))
 

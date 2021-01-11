@@ -369,8 +369,12 @@ func (bg *DummyBlocksV0Generator) createINITBallot(local *Local) (ballot.INITBal
 }
 
 func (bg *DummyBlocksV0Generator) createProposal(voteproof base.Voteproof) (ballot.Proposal, error) {
-	acting := bg.suffrage.Acting(voteproof.Height(), voteproof.Round())
-	proposer := bg.allNodes[acting.Proposer()]
+	var proposer *Local
+	if acting, err := bg.suffrage.Acting(voteproof.Height(), voteproof.Round()); err != nil {
+		return nil, err
+	} else {
+		proposer = bg.allNodes[acting.Proposer()]
+	}
 
 	pr := ballot.NewProposalV0(
 		proposer.Node().Address(),

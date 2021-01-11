@@ -56,17 +56,17 @@ func (ff *FixedSuffrage) IsInside(a Address) bool {
 	return found
 }
 
-func (ff *FixedSuffrage) Acting(height Height, round Round) ActingSuffrage {
-	return NewActingSuffrage(height, round, ff.proposer, ff.nodeList)
+func (ff *FixedSuffrage) Acting(height Height, round Round) (ActingSuffrage, error) {
+	return NewActingSuffrage(height, round, ff.proposer, ff.nodeList), nil
 }
 
-func (ff *FixedSuffrage) IsActing(_ Height, _ Round, node Address) bool {
+func (ff *FixedSuffrage) IsActing(_ Height, _ Round, node Address) (bool, error) {
 	_, found := ff.nodes[node]
-	return found
+	return found, nil
 }
 
-func (ff *FixedSuffrage) IsProposer(_ Height, _ Round, node Address) bool {
-	return ff.proposer.Equal(node)
+func (ff *FixedSuffrage) IsProposer(_ Height, _ Round, node Address) (bool, error) {
+	return ff.proposer.Equal(node), nil
 }
 
 func (ff *FixedSuffrage) Nodes() []Address {

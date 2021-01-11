@@ -7,10 +7,10 @@ import (
 type Suffrage interface {
 	util.Initializer
 	Name() string
-	Acting(Height, Round) ActingSuffrage
+	Acting(Height, Round) (ActingSuffrage, error)
 	IsInside(Address) bool
-	IsActing(Height, Round, Address /* node address */) bool
-	IsProposer(Height, Round, Address /* node address */) bool
+	IsActing(Height, Round, Address /* node address */) (bool, error)
+	IsProposer(Height, Round, Address /* node address */) (bool, error)
 	Nodes() []Address
 	Verbose() string
 }

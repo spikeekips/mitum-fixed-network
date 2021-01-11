@@ -76,15 +76,20 @@ func (pvc *ProposalValidationChecker) IsProposer() (bool, error) {
 	round := pvc.proposal.Round()
 	node := pvc.proposal.Node()
 
-	if pvc.suffrage.IsProposer(height, round, node) {
+	var acting base.ActingSuffrage
+	if i, err := pvc.suffrage.Acting(height, round); err != nil {
+		return false, err
+	} else {
+		acting = i
+	}
+
+	if node.Equal(acting.Proposer()) {
 		return true, nil
 	}
 
 	err := xerrors.Errorf("proposal has wrong proposer")
 
-	pvc.Log().Error().Err(err).
-		Hinted("expected_proposer", pvc.suffrage.Acting(height, round).Proposer()).
-		Send()
+	pvc.Log().Error().Err(err).Hinted("expected_proposer", acting.Proposer()).Send()
 
 	pvc.Log().Error().Err(err).Msg("wrong proposer found")
 

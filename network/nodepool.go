@@ -12,7 +12,6 @@ type Nodepool struct {
 	sync.RWMutex
 	local    Node
 	nodesMap map[string]Node
-	nodes    []base.Address
 }
 
 func NewNodepool(local Node) *Nodepool {
@@ -60,10 +59,7 @@ func (np *Nodepool) Add(nl ...Node) error {
 
 	for _, n := range nl {
 		np.nodesMap[n.Address().String()] = n
-		np.nodes = append(np.nodes, n.Address())
 	}
-
-	base.SortAddresses(np.nodes)
 
 	return nil
 }
@@ -83,32 +79,9 @@ func (np *Nodepool) Remove(addresses ...base.Address) error {
 		}
 	}
 
-	nodes := make([]base.Address, len(np.nodes)-len(addresses))
-
-	var i int
-	for j := range np.nodes {
-		var deleted bool
-		for k := range addresses {
-			if addresses[k].Equal(np.nodes[j]) {
-				deleted = true
-
-				break
-			}
-		}
-
-		if deleted {
-			delete(np.nodesMap, np.nodes[j].String())
-
-			continue
-		}
-
-		nodes[i] = np.nodes[j]
-		i++
+	for i := range addresses {
+		delete(np.nodesMap, addresses[i].String())
 	}
-
-	base.SortAddresses(nodes)
-
-	np.nodes = nodes
 
 	return nil
 }
@@ -120,19 +93,17 @@ func (np *Nodepool) Len() int {
 	return len(np.nodesMap)
 }
 
-// Traverse returns the sorted nodes.
 func (np *Nodepool) Traverse(callback func(Node) bool) {
-	var nodes []Node
+	nodes := make([]Node, len(np.nodesMap))
 	np.RLock()
+	if len(np.nodesMap) < 1 {
+		return
+	}
 
-	{
-		if len(np.nodesMap) < 1 {
-			return
-		}
-
-		for i := range np.nodes {
-			nodes = append(nodes, np.nodesMap[np.nodes[i].String()])
-		}
+	var i int
+	for k := range np.nodesMap {
+		nodes[i] = np.nodesMap[k]
+		i++
 	}
 	np.RUnlock()
 

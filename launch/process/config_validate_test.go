@@ -436,7 +436,7 @@ proposal-processor:
 `
 	ctx := t.loadConfig(y)
 
-	ctx, err := HookProposalProcessorFunc(DefaultHookHandlersProposalProcessor)(ctx)
+	ctx, err := HookProposalProcessorConfigFunc(DefaultHookHandlersProposalProcessorConfig)(ctx)
 	t.NoError(err)
 
 	va, err := config.NewValidator(ctx)
@@ -457,7 +457,7 @@ proposal-processor:
 `
 	ctx := t.loadConfig(y)
 
-	_, err := HookProposalProcessorFunc(DefaultHookHandlersProposalProcessor)(ctx)
+	_, err := HookProposalProcessorConfigFunc(DefaultHookHandlersProposalProcessorConfig)(ctx)
 	t.Contains(err.Error(), "unknown proposal-processor found, find-me")
 }
 
@@ -479,6 +479,38 @@ func testGenesisOperationsHandlerSetPolicy(ctx context.Context, m map[string]int
 	}
 
 	return operation.NewKVOperation(conf.Privatekey(), DefaultGenesisOperationToken, key, value, conf.NetworkID())
+}
+
+func (t *testConfigValidator) TestErrorProposalProcessor() {
+	y := `
+proposal-processor:
+   type: error
+   when-prepare:
+       - point: 3,1
+       - point: 4,2
+         type: wrong-block
+   when-save:
+       - point: 5,3
+       - point: 6,4
+`
+	ctx := t.loadConfig(y)
+
+	ctx, err := HookProposalProcessorConfigFunc(DefaultHookHandlersProposalProcessorConfig)(ctx)
+	t.NoError(err)
+
+	va, err := config.NewValidator(ctx)
+	t.NoError(err)
+	_, err = va.CheckProposalProcessor()
+	t.NoError(err)
+
+	var conf config.LocalNode
+	t.NoError(config.LoadConfigContextValue(ctx, &conf))
+
+	t.IsType(config.ErrorProposalProcessor{}, conf.ProposalProcessor())
+
+	c := conf.ProposalProcessor().(config.ErrorProposalProcessor)
+	t.Equal([]config.ErrorPoint{{Height: 3, Round: 1, Type: config.ErrorTypeError}, {Height: 4, Round: 2, Type: config.ErrorTypeWrongBlockHash}}, c.WhenPreparePoints)
+	t.Equal([]config.ErrorPoint{{Height: 5, Round: 3, Type: config.ErrorTypeError}, {Height: 6, Round: 4, Type: config.ErrorTypeError}}, c.WhenSavePoints)
 }
 
 func (t *testConfigValidator) TestLoadGenesisOperations() {

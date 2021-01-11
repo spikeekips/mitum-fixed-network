@@ -193,6 +193,10 @@ func (vpc *VoteproofConsensusStateChecker) CheckACCEPTVoteproof() (bool, error) 
 			Hinted("voteproof_height", vpc.voteproof.Height()).
 			Hinted("voteproof_round", vpc.voteproof.Round()).
 			Msg("Voteproof has different round from last init voteproof")
+
+		if ivp.Height() == vpc.voteproof.Height() && ivp.Round() > vpc.voteproof.Round() {
+			return false, xerrors.Errorf("accept voteproof for old round; ignored")
+		}
 	}
 
 	return true, nil

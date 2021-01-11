@@ -54,45 +54,67 @@ func NewDefaultProcessorNewFunc(
 	oprHintset *hint.Hintmap,
 ) prprocessor.ProcessorNewFunc {
 	return func(proposal ballot.Proposal, initVoteproof base.Voteproof) (prprocessor.Processor, error) {
-		var baseManifest block.Manifest
-		switch m, found, err := st.ManifestByHeight(proposal.Height() - 1); {
-		case !found:
-			return nil, storage.NotFoundError.Errorf("base manifest, %d is empty", proposal.Height()-1)
-		case err != nil:
-			return nil, err
-		default:
-			baseManifest = m
-		}
-
-		pp := &DefaultProcessor{
-			Logging: logging.NewLogging(func(c logging.Context) logging.Emitter {
-				return c.Str("module", "default-proposal-processor").
-					Hinted("height", proposal.Height()).
-					Hinted("round", proposal.Round()).
-					Hinted("proposal", proposal.Hash())
-			}),
-			local:         local,
-			st:            st,
-			blockFS:       blockFS,
-			nodepool:      nodepool,
-			baseManifest:  baseManifest,
-			suffrage:      suffrage,
-			oprHintset:    oprHintset,
-			proposal:      proposal,
-			state:         prprocessor.BeforePrepared,
-			initVoteproof: initVoteproof,
-			preSaveHook:   nil,
-			postSaveHook:  nil,
-		}
-
-		if i, err := pp.getSuffrageInfo(); err != nil {
-			return nil, err
-		} else {
-			pp.suffrageInfo = i
-		}
-
-		return pp, nil
+		return NewDefaultProcessor(
+			local,
+			st,
+			blockFS,
+			nodepool,
+			suffrage,
+			oprHintset,
+			proposal,
+			initVoteproof,
+		)
 	}
+}
+
+func NewDefaultProcessor(
+	local base.Node,
+	st storage.Storage,
+	blockFS *storage.BlockFS,
+	nodepool *network.Nodepool,
+	suffrage base.Suffrage,
+	oprHintset *hint.Hintmap,
+	proposal ballot.Proposal,
+	initVoteproof base.Voteproof,
+) (*DefaultProcessor, error) {
+	var baseManifest block.Manifest
+	switch m, found, err := st.ManifestByHeight(proposal.Height() - 1); {
+	case !found:
+		return nil, storage.NotFoundError.Errorf("base manifest, %d is empty", proposal.Height()-1)
+	case err != nil:
+		return nil, err
+	default:
+		baseManifest = m
+	}
+
+	pp := &DefaultProcessor{
+		Logging: logging.NewLogging(func(c logging.Context) logging.Emitter {
+			return c.Str("module", "default-proposal-processor").
+				Hinted("height", proposal.Height()).
+				Hinted("round", proposal.Round()).
+				Hinted("proposal", proposal.Hash())
+		}),
+		local:         local,
+		st:            st,
+		blockFS:       blockFS,
+		nodepool:      nodepool,
+		baseManifest:  baseManifest,
+		suffrage:      suffrage,
+		oprHintset:    oprHintset,
+		proposal:      proposal,
+		state:         prprocessor.BeforePrepared,
+		initVoteproof: initVoteproof,
+		preSaveHook:   nil,
+		postSaveHook:  nil,
+	}
+
+	if i, err := pp.getSuffrageInfo(); err != nil {
+		return nil, err
+	} else {
+		pp.suffrageInfo = i
+	}
+
+	return pp, nil
 }
 
 func (pp *DefaultProcessor) State() prprocessor.State {

@@ -207,23 +207,41 @@ func (pps *Processors) handleProposal(
 func (pps *Processors) doPrepare(ctx context.Context, processor Processor, outchan chan<- Result) {
 	var blk block.Block
 	err := util.Retry(0, time.Millisecond*200, func() error {
-		switch b, err := processor.Prepare(ctx); {
-		case err == nil:
-			blk = b
+		select {
+		case <-ctx.Done():
+			pps.Log().Error().Err(ctx.Err()).Msg("something wrong to prepare; will be stopped")
 
-			return nil
-		case processor.State() == Canceled:
-			return util.StopRetryingError.Errorf("canceled")
-		case xerrors.Is(err, context.DeadlineExceeded) || xerrors.Is(err, context.Canceled):
-			return util.StopRetryingError.Wrap(err)
+			return util.StopRetryingError.Wrap(ctx.Err())
 		default:
-			pps.Log().Error().Err(err).Msg("something wrong to prepare; will retry")
+			switch b, err := processor.Prepare(ctx); {
+			case err == nil:
+				blk = b
 
-			return err
+				return nil
+			case processor.State() == Canceled:
+				return util.StopRetryingError.Errorf("canceled")
+			case xerrors.Is(err, context.DeadlineExceeded) || xerrors.Is(err, context.Canceled):
+				return util.StopRetryingError.Wrap(err)
+			default:
+				pps.Log().Error().Err(err).Msg("something wrong to prepare; will retry")
+
+				return err
+			}
 		}
 	})
 	if err != nil {
 		err = PrepareFailedError.Wrap(err)
+
+		pps.Log().Error().Err(err).Msg("failed to prepare; cancel processor")
+
+		if cerr := pps.cancelProcessor(processor); cerr != nil {
+			pps.Log().Error().Err(err).Msg("failed to cancel processor")
+
+			var ne *errors.NError
+			if xerrors.As(err, &ne) {
+				err = ne.Wrap(cerr)
+			}
+		}
 	}
 
 	outchan <- Result{Block: blk, Err: err}
@@ -242,6 +260,15 @@ func (pps *Processors) saveProposal(
 		err = xerrors.Errorf("not yet prepared")
 	} else if h := current.Proposal().Hash(); !h.Equal(proposal) { // NOTE if different processor exists already
 		err = xerrors.Errorf("not yet prepared; another processor already exists")
+
+		pps.Log().Error().Err(err).
+			Dict("previous", logging.Dict().
+				Str("state", current.State().String()).
+				Hinted("height", current.Proposal().Height()).
+				Hinted("round", current.Proposal().Round()).
+				Hinted("proposal", current.Proposal().Hash())).
+			Hinted("propsoal", proposal).
+			Msg("failed to save proposal")
 	}
 
 	if err != nil {

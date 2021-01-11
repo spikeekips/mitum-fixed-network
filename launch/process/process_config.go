@@ -120,7 +120,7 @@ func Config(ps *pm.Processes) error {
 
 	if err := ps.AddHook(
 		pm.HookPrefixPost, ProcessNameConfig,
-		HookNameConfigProposalProcessor, HookProposalProcessorFunc(DefaultHookHandlersProposalProcessor),
+		HookNameConfigProposalProcessor, HookProposalProcessorConfigFunc(DefaultHookHandlersProposalProcessorConfig),
 		false,
 	); err != nil {
 		return err

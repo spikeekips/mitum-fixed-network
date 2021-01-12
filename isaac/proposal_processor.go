@@ -188,6 +188,14 @@ func (pp *DefaultProcessor) Cancel() error {
 	return nil
 }
 
+func (pp *DefaultProcessor) BaseManifest() block.Manifest {
+	return pp.baseManifest
+}
+
+func (pp *DefaultProcessor) SuffrageInfo() block.SuffrageInfoV0 {
+	return pp.suffrageInfo
+}
+
 func (pp *DefaultProcessor) getSuffrageInfo() (block.SuffrageInfoV0, error) {
 	var ns []base.Node
 	for _, address := range pp.suffrage.Nodes() {

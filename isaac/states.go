@@ -358,10 +358,6 @@ func (css *ConsensusStates) broadcastSeal(sl seal.Seal, errChan chan<- error) {
 	})
 }
 
-func (css *ConsensusStates) newVoteproof(voteproof base.Voteproof) {
-	css.voteproofChan <- voteproof
-}
-
 func (css *ConsensusStates) processNewVoteproof(voteproof base.Voteproof) error {
 	_ = loggerWithVoteproof(voteproof, css.Log())
 
@@ -536,20 +532,32 @@ func (css *ConsensusStates) validateProposal(proposal ballot.Proposal) error {
 }
 
 func (css *ConsensusStates) vote(blt ballot.Ballot) error {
+	l := loggerWithSeal(blt, css.Log())
+
 	voteproof, err := css.ballotbox.Vote(blt)
 	if err != nil {
+		l.Verbose().Err(err).Msg("failed to vote")
+
 		return err
 	}
 
 	if !voteproof.IsFinished() {
+		l.Verbose().Msg("voted, but not yet finished")
+
 		return nil
 	}
 
 	if voteproof.IsClosed() {
+		l.Verbose().Msg("voted, but closed")
+
 		return nil
 	}
 
-	go css.newVoteproof(voteproof)
+	l.Verbose().Interface("voteproof", voteproof).Msg("voted and will process")
+
+	go func() {
+		css.voteproofChan <- voteproof
+	}()
 
 	return nil
 }

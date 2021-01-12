@@ -75,7 +75,8 @@ func NewErrorProposalProcessor(
 
 func (pp *ErrorProposalProcessor) Prepare(ctx context.Context) (block.Block, error) {
 	var found bool
-	for _, p := range pp.whenPreparePoints {
+	for i := range pp.whenPreparePoints {
+		p := pp.whenPreparePoints[i]
 		if p.Height == pp.Proposal().Height() && p.Round == pp.Proposal().Round() {
 			found = true
 
@@ -96,7 +97,8 @@ func (pp *ErrorProposalProcessor) Prepare(ctx context.Context) (block.Block, err
 
 func (pp *ErrorProposalProcessor) Save(ctx context.Context) error {
 	var found bool
-	for _, p := range pp.whenSavePoints {
+	for i := range pp.whenSavePoints {
+		p := pp.whenSavePoints[i]
 		if p.Height == pp.Proposal().Height() && p.Round == pp.Proposal().Round() {
 			found = true
 

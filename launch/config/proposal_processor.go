@@ -41,7 +41,7 @@ func (no ErrorProposalProcessor) ProposalProcessorType() string {
 }
 
 type ErrorPoint struct {
-	Type   ErrorType
-	Height base.Height
-	Round  base.Round
+	Type   ErrorType   `json:"type"`
+	Height base.Height `json:"height"`
+	Round  base.Round  `json:"round"`
 }

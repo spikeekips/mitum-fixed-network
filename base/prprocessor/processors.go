@@ -205,11 +205,18 @@ func (pps *Processors) handleProposal(
 }
 
 func (pps *Processors) doPrepare(ctx context.Context, processor Processor, outchan chan<- Result) {
+	l := pps.Log().WithLogger(func(ctx logging.Context) logging.Emitter {
+		return ctx.
+			Hinted("height", processor.Proposal().Height()).
+			Hinted("round", processor.Proposal().Round()).
+			Hinted("proposal", processor.Proposal().Hash())
+	})
+
 	var blk block.Block
 	err := util.Retry(0, time.Millisecond*200, func() error {
 		select {
 		case <-ctx.Done():
-			pps.Log().Error().Err(ctx.Err()).Msg("something wrong to prepare; will be stopped")
+			l.Error().Err(ctx.Err()).Msg("something wrong to prepare; will be stopped")
 
 			return util.StopRetryingError.Wrap(ctx.Err())
 		default:
@@ -223,7 +230,7 @@ func (pps *Processors) doPrepare(ctx context.Context, processor Processor, outch
 			case xerrors.Is(err, context.DeadlineExceeded) || xerrors.Is(err, context.Canceled):
 				return util.StopRetryingError.Wrap(err)
 			default:
-				pps.Log().Error().Err(err).Msg("something wrong to prepare; will retry")
+				l.Error().Err(err).Msg("something wrong to prepare; will retry")
 
 				return err
 			}
@@ -232,16 +239,18 @@ func (pps *Processors) doPrepare(ctx context.Context, processor Processor, outch
 	if err != nil {
 		err = PrepareFailedError.Wrap(err)
 
-		pps.Log().Error().Err(err).Msg("failed to prepare; cancel processor")
+		l.Error().Err(err).Msg("failed to prepare; processor will be canceled")
 
 		if cerr := pps.cancelProcessor(processor); cerr != nil {
-			pps.Log().Error().Err(err).Msg("failed to cancel processor")
+			l.Error().Err(err).Msg("failed to cancel processor")
 
 			var ne *errors.NError
 			if xerrors.As(err, &ne) {
 				err = ne.Wrap(cerr)
 			}
 		}
+	} else if blk != nil {
+		l.Debug().Hinted("new_block", blk.Hash()).Msg("new block prepared")
 	}
 
 	outchan <- Result{Block: blk, Err: err}

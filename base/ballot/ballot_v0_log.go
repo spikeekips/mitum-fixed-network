@@ -7,7 +7,13 @@ import (
 
 func marshalBallotLog(ballot Ballot, key string, e logging.Emitter, verbose bool) logging.Emitter {
 	if !verbose {
-		return e.Hinted(key, ballot.Hash())
+		return e.Dict(key, logging.Dict().
+			Hinted("hash", ballot.Hash()).
+			Hinted("stage", ballot.Stage()).
+			Hinted("node", ballot.Node()).
+			Hinted("height", ballot.Height()).
+			Hinted("round", ballot.Round()),
+		)
 	}
 
 	r, _ := jsonenc.Marshal(ballot)

@@ -174,7 +174,7 @@ func (cs *StateConsensusHandler) NewVoteproof(voteproof base.Voteproof) error {
 		return cs.startNextRound(voteproof)
 	}
 
-	l.Debug().Msg("got Voteproof")
+	l.Debug().Msg("got voteproof")
 	var nVoteproof base.Voteproof
 	switch voteproof.Stage() {
 	case base.StageINIT:
@@ -435,7 +435,14 @@ func (cs *StateConsensusHandler) startNextRound(voteproof base.Voteproof) error 
 
 	var round base.Round
 	if voteproof.Stage() == base.StageACCEPT {
-		round = 0
+		if voteproof.Result() == base.VoteResultMajority {
+			round = 0
+		} else if ivp := cs.LastINITVoteproof(); ivp.Height() != voteproof.Height() {
+			return xerrors.Errorf("tried to start next round, but no INIT voteproof of ACCEPT voterpof")
+		} else {
+			voteproof = ivp
+			round = voteproof.Round() + 1
+		}
 	} else {
 		round = voteproof.Round() + 1
 	}

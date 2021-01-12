@@ -241,12 +241,11 @@ func (pps *Processors) doPrepare(ctx context.Context, processor Processor, outch
 
 		l.Error().Err(err).Msg("failed to prepare; processor will be canceled")
 
-		if cerr := pps.cancelProcessor(processor); cerr != nil {
-			l.Error().Err(err).Msg("failed to cancel processor")
-
-			var ne *errors.NError
-			if xerrors.As(err, &ne) {
-				err = ne.Wrap(cerr)
+		switch processor.State() {
+		case Prepared, BeforePrepared, PrepareFailed, SaveFailed, Saved, Canceled:
+		default:
+			if cerr := pps.cancelProcessor(processor); cerr != nil {
+				l.Error().Err(err).Msg("failed to cancel processor")
 			}
 		}
 	} else if blk != nil {
@@ -299,25 +298,49 @@ func (pps *Processors) doSave(
 	acceptVoteproof base.Voteproof,
 	outchan chan<- Result,
 ) {
-	err := util.Retry(0, time.Millisecond*200, func() error {
-		err := pps.save(ctx, processor, acceptVoteproof)
-		switch {
-		case err == nil:
-			return nil
-		case processor.State() == Canceled:
-			return util.StopRetryingError.Errorf("canceled")
-		case xerrors.Is(err, context.DeadlineExceeded) || xerrors.Is(err, context.Canceled):
-			return util.StopRetryingError.Wrap(err)
-		case processor.State() < Prepared:
-			return util.StopRetryingError.Wrap(err)
-		default:
-			pps.Log().Error().Err(err).Msg("something wrong to save; will retry")
+	l := pps.Log().WithLogger(func(ctx logging.Context) logging.Emitter {
+		return ctx.
+			Hinted("height", processor.Proposal().Height()).
+			Hinted("round", processor.Proposal().Round()).
+			Hinted("proposal", processor.Proposal().Hash())
+	})
 
-			return err
+	err := util.Retry(0, time.Millisecond*200, func() error {
+		select {
+		case <-ctx.Done():
+			l.Error().Err(ctx.Err()).Msg("something wrong to save; will be stopped")
+
+			return util.StopRetryingError.Wrap(ctx.Err())
+		default:
+			err := pps.save(ctx, processor, acceptVoteproof)
+			switch {
+			case err == nil:
+				return nil
+			case processor.State() == Canceled:
+				return util.StopRetryingError.Errorf("canceled")
+			case xerrors.Is(err, context.DeadlineExceeded) || xerrors.Is(err, context.Canceled):
+				return util.StopRetryingError.Wrap(err)
+			case processor.State() < Prepared:
+				return util.StopRetryingError.Wrap(err)
+			default:
+				l.Error().Err(err).Msg("something wrong to save; will retry")
+
+				return err
+			}
 		}
 	})
 	if err != nil {
 		err = SaveFailedError.Wrap(err)
+
+		l.Error().Err(err).Msg("failed to save; processor will be canceled")
+
+		switch processor.State() {
+		case Prepared, BeforePrepared, PrepareFailed, SaveFailed, Saved, Canceled:
+		default:
+			if cerr := pps.cancelProcessor(processor); cerr != nil {
+				l.Error().Err(err).Msg("failed to cancel processor")
+			}
+		}
 	}
 
 	outchan <- Result{Err: err}

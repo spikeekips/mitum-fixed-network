@@ -55,6 +55,7 @@ func NewStateConsensusHandler(
 			TimerIDBroadcastingACCEPTBallot,
 			TimerIDBroadcastingProposal,
 			TimerIDTimedoutMoveNextRound,
+			TimerIDTimedoutProcessingProposal,
 		},
 		false,
 	)
@@ -281,23 +282,23 @@ func (cs *StateConsensusHandler) handleProposal(proposal ballot.Proposal) error 
 
 	l.Debug().Msg("got proposal")
 
-	if err := cs.timers.ResetTimer(TimerIDTimedoutMoveNextRound); err != nil {
-		l.Debug().Err(err).Str("timer", TimerIDTimedoutMoveNextRound).Msg("tried to reset timer, but failed; ignored")
+	var newBlock block.Block
+	if i, err := cs.processingProposal(proposal); err != nil {
+		return err
+	} else {
+		newBlock = i
 	}
 
 	voteproof := cs.LastINITVoteproof()
-
-	timeout := cs.local.Policy().TimeoutProcessProposal()
-	ctx, cancel := context.WithTimeout(context.Background(), timeout)
-	defer cancel()
-
-	cs.Log().Debug().Dur("timeout", timeout).Msg("trying to prepare block")
-
-	var newBlock block.Block
-	if result := <-cs.pps.NewProposal(ctx, proposal, voteproof); result.Err != nil {
-		return result.Err
-	} else {
-		newBlock = result.Block
+	if timer, err := cs.TimerTimedoutMoveNextRound(voteproof); err != nil {
+		return err
+	} else if err := cs.timers.SetTimer(TimerIDTimedoutMoveNextRound, timer); err != nil {
+		return err
+	} else if err := cs.timers.StartTimers([]string{
+		TimerIDTimedoutMoveNextRound,
+		TimerIDBroadcastingACCEPTBallot,
+	}, true); err != nil {
+		return err
 	}
 
 	var acting base.ActingSuffrage
@@ -321,6 +322,37 @@ func (cs *StateConsensusHandler) handleProposal(proposal ballot.Proposal) error 
 	}
 
 	return cs.readyToACCEPTBallot(newBlock, voteproof)
+}
+
+func (cs *StateConsensusHandler) processingProposal(proposal ballot.Proposal) (block.Block, error) {
+	timeout := cs.local.Policy().TimeoutProcessProposal()
+
+	if voteproof := cs.LastINITVoteproof(); voteproof != nil {
+		if timer, err := cs.TimerTimedoutProcessingProposal(voteproof, timeout); err != nil {
+			return nil, err
+		} else if err := cs.timers.SetTimer(TimerIDTimedoutProcessingProposal, timer); err != nil {
+			return nil, err
+		} else if err := cs.timers.StartTimers([]string{
+			TimerIDTimedoutProcessingProposal,
+			TimerIDBroadcastingINITBallot,
+			TimerIDBroadcastingACCEPTBallot,
+		}, true); err != nil {
+			return nil, err
+		}
+	}
+
+	voteproof := cs.LastINITVoteproof()
+
+	ctx, cancel := context.WithTimeout(context.Background(), timeout)
+	defer cancel()
+
+	cs.Log().Debug().Dur("timeout", timeout).Msg("trying to prepare block")
+
+	if result := <-cs.pps.NewProposal(ctx, proposal, voteproof); result.Err != nil {
+		return nil, result.Err
+	} else {
+		return result.Block, nil
+	}
 }
 
 func (cs *StateConsensusHandler) readyToSIGNBallot(newBlock block.Block) error {

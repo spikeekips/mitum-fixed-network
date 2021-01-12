@@ -19,11 +19,12 @@ import (
 )
 
 const (
-	TimerIDBroadcastingINITBallot   = "broadcasting-init-ballot"
-	TimerIDBroadcastingACCEPTBallot = "broadcasting-accept-ballot"
-	TimerIDBroadcastingProposal     = "broadcasting-proposal"
-	TimerIDTimedoutMoveNextRound    = "timedout-move-to-next-round"
-	TimerIDNodeInfo                 = "node-info"
+	TimerIDBroadcastingINITBallot     = "broadcasting-init-ballot"
+	TimerIDBroadcastingACCEPTBallot   = "broadcasting-accept-ballot"
+	TimerIDBroadcastingProposal       = "broadcasting-proposal"
+	TimerIDTimedoutMoveNextRound      = "timedout-move-to-next-round"
+	TimerIDTimedoutProcessingProposal = "timedout-processing-proposal"
+	TimerIDNodeInfo                   = "node-info"
 )
 
 type StateHandler interface {
@@ -339,48 +340,11 @@ func (bs *BaseStateHandler) TimerBroadcastingACCEPTBallot(
 }
 
 func (bs *BaseStateHandler) TimerTimedoutMoveNextRound(voteproof base.Voteproof) (*localtime.CallbackTimer, error) {
-	if !bs.isActivated() {
-		return nil, nil
-	}
-
-	var baseBallot ballot.INITBallotV0
-	if b, err := NewINITBallotV0WithVoteproof(bs.local.Node().Address(), voteproof); err != nil {
-		return nil, err
-	} else {
-		baseBallot = b
-	}
-
-	ct, err := localtime.NewCallbackTimer(
+	if ct, err := bs.timerTimedoutMoveNextRound(
+		voteproof,
 		TimerIDTimedoutMoveNextRound,
-		func(int) (bool, error) {
-			if !bs.isActivated() {
-				return false, nil
-			}
-
-			bs.Log().Debug().
-				Dur("timeout", bs.local.Policy().TimeoutWaitingProposal()).
-				Hinted("next_round", baseBallot.Round()).
-				Msg("timeout; waiting Proposal; trying to move next round")
-
-			if err := bs.timers.StopTimers([]string{TimerIDBroadcastingINITBallot}); err != nil {
-				bs.Log().Error().Err(err).Str("timer", TimerIDBroadcastingINITBallot).Msg("failed to stop")
-			}
-
-			ib := baseBallot
-			if err := SignSeal(&ib, bs.local); err != nil {
-				bs.Log().Error().Err(err).Msg("failed to re-sign ACCEPTBallot, but will keep trying")
-
-				return true, nil
-			}
-
-			bs.BroadcastSeal(ib)
-
-			return true, nil
-		},
-		0,
-	)
-
-	if err != nil {
+		[]string{TimerIDBroadcastingINITBallot},
+	); err != nil {
 		return nil, err
 	} else {
 		return ct.SetInterval(func(i int) time.Duration {
@@ -393,6 +357,75 @@ func (bs *BaseStateHandler) TimerTimedoutMoveNextRound(voteproof base.Voteproof)
 			return bs.local.Policy().IntervalBroadcastingINITBallot()
 		}), nil
 	}
+}
+
+func (bs *BaseStateHandler) TimerTimedoutProcessingProposal(
+	voteproof base.Voteproof,
+	timeout time.Duration,
+) (*localtime.CallbackTimer, error) {
+	if ct, err := bs.timerTimedoutMoveNextRound(
+		voteproof,
+		TimerIDTimedoutProcessingProposal,
+		[]string{TimerIDBroadcastingINITBallot, TimerIDTimedoutMoveNextRound},
+	); err != nil {
+		return nil, err
+	} else {
+		return ct.SetInterval(func(i int) time.Duration {
+			if i < 1 {
+				return timeout
+			}
+
+			return bs.local.Policy().IntervalBroadcastingINITBallot()
+		}), nil
+	}
+}
+
+func (bs *BaseStateHandler) timerTimedoutMoveNextRound(
+	voteproof base.Voteproof,
+	timerid string,
+	stopTimers []string,
+) (*localtime.CallbackTimer, error) {
+	if !bs.isActivated() {
+		return nil, nil
+	}
+
+	var baseBallot ballot.INITBallotV0
+	if b, err := NewINITBallotV0WithVoteproof(bs.local.Node().Address(), voteproof); err != nil {
+		return nil, err
+	} else {
+		baseBallot = b
+	}
+
+	return localtime.NewCallbackTimer(
+		timerid,
+		func(int) (bool, error) {
+			if !bs.isActivated() {
+				return false, nil
+			}
+
+			bs.Log().Debug().
+				Str("timer_id", timerid).
+				Hinted("height", baseBallot.Height()).
+				Hinted("next_round", baseBallot.Round()).
+				Msg("timeout; trying to move next round")
+
+			if err := bs.timers.StopTimers(stopTimers); err != nil {
+				bs.Log().Error().Err(err).Strs("timers", stopTimers).Msg("failed to stop")
+			}
+
+			ib := baseBallot
+			if err := SignSeal(&ib, bs.local); err != nil {
+				bs.Log().Error().Err(err).Msg("failed to re-sign INITTBallot, but will keep trying")
+
+				return true, nil
+			}
+
+			bs.BroadcastSeal(ib)
+
+			return true, nil
+		},
+		0,
+	)
 }
 
 func (bs *BaseStateHandler) TimerBroadcastingProposal(proposal ballot.Proposal) (*localtime.CallbackTimer, error) {

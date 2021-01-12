@@ -22,7 +22,7 @@ var (
 	DefaultPolicyWaitBroadcastingACCEPTBallot          = time.Second * 2
 	DefaultPolicyIntervalBroadcastingACCEPTBallot      = time.Second * 1
 	DefaultPolicyTimespanValidBallot                   = time.Minute * 1
-	DefaultPolicyTimeoutProcessProposal                = time.Second * 30
+	DefaultPolicyTimeoutProcessProposal                = time.Second * 10
 )
 
 type LocalPolicy struct {

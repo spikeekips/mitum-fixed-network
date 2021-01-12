@@ -192,13 +192,18 @@ func (vp VoteproofV0) suffragesBytes() []byte {
 }
 
 func (vp VoteproofV0) Bytes() []byte {
+	var m []byte
+	if vp.majority != nil {
+		m = vp.majority.Bytes()
+	}
+
 	return util.ConcatBytesSlice(
 		vp.height.Bytes(),
 		vp.round.Bytes(),
 		util.Float64ToBytes(vp.thresholdRatio.Float64()),
 		vp.result.Bytes(),
 		vp.stage.Bytes(),
-		vp.majority.Bytes(),
+		m,
 		vp.factsBytes(),
 		vp.votesBytes(),
 		vp.suffragesBytes(),

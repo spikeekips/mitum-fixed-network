@@ -14,7 +14,9 @@ import (
 	"github.com/spikeekips/mitum/network"
 	"github.com/spikeekips/mitum/storage"
 	"github.com/spikeekips/mitum/util/hint"
+	"github.com/spikeekips/mitum/util/localtime"
 	"github.com/spikeekips/mitum/util/logging"
+	"github.com/spikeekips/mitum/util/valuehash"
 )
 
 func NewErrorProcessorNewFunc(
@@ -74,39 +76,37 @@ func NewErrorProposalProcessor(
 }
 
 func (pp *ErrorProposalProcessor) Prepare(ctx context.Context) (block.Block, error) {
-	var found bool
-	for i := range pp.whenPreparePoints {
-		p := pp.whenPreparePoints[i]
-		if p.Height == pp.Proposal().Height() && p.Round == pp.Proposal().Round() {
-			found = true
+	if p, found := pp.findPoint(pp.whenPreparePoints); found {
+		pp.Log().Debug().Interface("point", p).Msg("prepare-occurring-error")
 
-			break
+		if p.Type == config.ErrorTypeWrongBlockHash {
+			// NOTE return fake block.Block
+			return block.NewBlockV0(
+				pp.SuffrageInfo(),
+				pp.Proposal().Height(),
+				pp.Proposal().Round(),
+				pp.Proposal().Hash(),
+				pp.BaseManifest().Hash(),
+				valuehash.RandomSHA256(),
+				valuehash.RandomSHA256(),
+				localtime.Now(),
+			)
+		} else {
+			return nil, xerrors.Errorf(
+				"contest-designed-error: prepare-occurring-error: height=%d round=%d",
+				pp.Proposal().Height(),
+				pp.Proposal().Round(),
+			)
 		}
-	}
-
-	if found {
-		return nil, xerrors.Errorf(
-			"contest-designed-error: prepare-occurring-error: height=%d round=%d",
-			pp.Proposal().Height(),
-			pp.Proposal().Round(),
-		)
 	}
 
 	return pp.DefaultProcessor.Prepare(ctx)
 }
 
 func (pp *ErrorProposalProcessor) Save(ctx context.Context) error {
-	var found bool
-	for i := range pp.whenSavePoints {
-		p := pp.whenSavePoints[i]
-		if p.Height == pp.Proposal().Height() && p.Round == pp.Proposal().Round() {
-			found = true
+	if p, found := pp.findPoint(pp.whenSavePoints); found {
+		pp.Log().Debug().Interface("point", p).Msg("save-occurring-error")
 
-			break
-		}
-	}
-
-	if found {
 		return xerrors.Errorf(
 			"contest-designed-error: save-occurring-error: height=%d round=%d",
 			pp.Proposal().Height(),
@@ -115,4 +115,20 @@ func (pp *ErrorProposalProcessor) Save(ctx context.Context) error {
 	}
 
 	return pp.DefaultProcessor.Save(ctx)
+}
+
+func (pp *ErrorProposalProcessor) findPoint(points []config.ErrorPoint) (config.ErrorPoint, bool) {
+	var found bool
+	var point config.ErrorPoint
+	for i := range points {
+		p := points[i]
+		if p.Height == pp.Proposal().Height() && p.Round == pp.Proposal().Round() {
+			found = true
+			point = p
+
+			break
+		}
+	}
+
+	return point, found
 }

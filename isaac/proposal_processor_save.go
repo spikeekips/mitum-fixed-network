@@ -100,8 +100,6 @@ func (pp *DefaultProcessor) resetSave() error {
 		prprocessor.Preparing,
 		prprocessor.PrepareFailed,
 		prprocessor.Prepared,
-		prprocessor.SaveFailed,
-		prprocessor.Saved,
 		prprocessor.Canceled:
 		return nil
 	}

@@ -351,16 +351,9 @@ func (pp *DefaultProcessor) prepareBlockFS(context.Context) error {
 }
 
 func (pp *DefaultProcessor) resetPrepare() error {
-	pp.Log().Debug().Msg("prepare will be resetted")
+	pp.Log().Debug().Str("state", pp.state.String()).Msg("prepare will be resetted")
 
-	if pp.bs != nil {
-		if err := pp.bs.Cancel(); err != nil {
-			return err
-		}
-
-		pp.bs = nil
-	}
-
+	pp.bs = nil
 	pp.blk = nil
 	pp.operations = nil
 	pp.operationsTree = tree.FixedTree{}

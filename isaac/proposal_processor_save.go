@@ -95,7 +95,18 @@ func (pp *DefaultProcessor) storeBlockFS(context.Context) error {
 }
 
 func (pp *DefaultProcessor) resetSave() error {
-	pp.Log().Debug().Msg("save will be resetted")
+	switch pp.state {
+	case prprocessor.BeforePrepared,
+		prprocessor.Preparing,
+		prprocessor.PrepareFailed,
+		prprocessor.Prepared,
+		prprocessor.SaveFailed,
+		prprocessor.Saved,
+		prprocessor.Canceled:
+		return nil
+	}
+
+	pp.Log().Debug().Str("state", pp.state.String()).Msg("save will be resetted")
 
 	if err := pp.st.CleanByHeight(pp.proposal.Height()); err != nil {
 		return err

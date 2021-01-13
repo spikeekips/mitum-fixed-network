@@ -368,6 +368,8 @@ func (css *ConsensusStates) processNewVoteproof(voteproof base.Voteproof) error 
 		ctx = c
 	}
 
+	css.Log().Debug().Interface("voteproof", voteproof).Msg("new voteproof")
+
 	if css.ActiveHandler() == nil {
 		return nil
 	}

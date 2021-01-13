@@ -685,24 +685,12 @@ func (t *testProposalProcessor) TestTimeoutSaveAfterSaving() {
 		t.True(xerrors.Is(result.Err, context.DeadlineExceeded))
 	}
 
-	// Before Cancel()ing, the temporary data still exists.
+	// temporary data will be removed.
 	_, found, err := t.local.Storage().ManifestByHeight(pr.Height())
-	t.NoError(err)
-	t.True(found)
-
-	bblk, err := t.local.BlockFS().Load(pr.Height())
-	t.NoError(err)
-	t.NotNil(bblk)
-
-	// Cancel
-	t.NoError(pps.Current().Cancel())
-
-	m, found, err := t.local.Storage().ManifestByHeight(pr.Height())
-	t.Nil(m)
 	t.NoError(err)
 	t.False(found)
 
-	bblk, err = t.local.BlockFS().Load(pr.Height())
+	bblk, err := t.local.BlockFS().Load(pr.Height())
 	t.True(xerrors.Is(err, storage.NotFoundError))
 	t.Nil(bblk)
 }

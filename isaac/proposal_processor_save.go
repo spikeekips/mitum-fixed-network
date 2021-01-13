@@ -19,6 +19,10 @@ func (pp *DefaultProcessor) Save(ctx context.Context) error {
 	if err := pp.save(ctx); err != nil {
 		pp.setState(prprocessor.SaveFailed)
 
+		if err0 := pp.resetSave(); err0 != nil {
+			return err0
+		}
+
 		return err
 	} else {
 		pp.setState(prprocessor.Saved)
@@ -101,6 +105,9 @@ func (pp *DefaultProcessor) resetSave() error {
 		prprocessor.PrepareFailed,
 		prprocessor.Prepared,
 		prprocessor.Canceled:
+
+		pp.setState(prprocessor.BeforePrepared)
+
 		return nil
 	}
 
@@ -111,6 +118,8 @@ func (pp *DefaultProcessor) resetSave() error {
 	} else if err := pp.blockFS.CleanByHeight(pp.proposal.Height()); err != nil {
 		return err
 	}
+
+	pp.setState(prprocessor.Prepared)
 
 	return nil
 }

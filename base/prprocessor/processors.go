@@ -225,10 +225,10 @@ func (pps *Processors) doPrepare(ctx context.Context, processor Processor, outch
 				blk = b
 
 				return nil
-			case processor.State() == Canceled:
-				return util.StopRetryingError.Errorf("canceled")
 			case xerrors.Is(err, context.DeadlineExceeded) || xerrors.Is(err, context.Canceled):
 				return util.StopRetryingError.Wrap(err)
+			case processor.State() == Canceled:
+				return util.StopRetryingError.Errorf("canceled")
 			default:
 				l.Error().Err(err).Msg("something wrong to prepare; will retry")
 
@@ -316,10 +316,10 @@ func (pps *Processors) doSave(
 			switch {
 			case err == nil:
 				return nil
-			case processor.State() == Canceled:
-				return util.StopRetryingError.Errorf("canceled")
 			case xerrors.Is(err, context.DeadlineExceeded) || xerrors.Is(err, context.Canceled):
 				return util.StopRetryingError.Wrap(err)
+			case processor.State() == Canceled:
+				return util.StopRetryingError.Errorf("canceled")
 			case processor.State() < Prepared:
 				return util.StopRetryingError.Wrap(err)
 			default:

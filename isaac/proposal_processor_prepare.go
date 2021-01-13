@@ -31,6 +31,10 @@ func (pp *DefaultProcessor) Prepare(ctx context.Context) (block.Block, error) {
 	if err := pp.prepare(ctx); err != nil {
 		pp.setState(prprocessor.PrepareFailed)
 
+		if err0 := pp.resetPrepare(); err0 != nil {
+			return nil, err0
+		}
+
 		return nil, err
 	} else {
 		pp.setState(prprocessor.Prepared)

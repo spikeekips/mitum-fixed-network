@@ -209,7 +209,7 @@ func (sv *Server) handleNewSeal(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if err := sv.newSealHandler(sl); err != nil {
-		seal.LoggerWithSeal(
+		seal.LogEventWithSeal(
 			sl,
 			sv.Log().Error().Err(err),
 			sv.Log().IsVerbose(),

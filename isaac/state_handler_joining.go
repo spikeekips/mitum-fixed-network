@@ -171,7 +171,7 @@ func (cs *StateJoiningHandler) NewSeal(sl seal.Seal) error {
 	}
 
 	l := loggerWithVoteproof(voteproof, loggerWithBallot(blt, cs.Log()))
-	l.Debug().Msg("got ballot")
+	l.Debug().Msg("got voteproof with ballot")
 
 	if blt.Stage() == base.StageINIT {
 		switch voteproof.Stage() {
@@ -209,7 +209,7 @@ func (cs *StateJoiningHandler) handleProposal(proposal ballot.Proposal) error {
 func (cs *StateJoiningHandler) handleINITBallotAndACCEPTVoteproof(
 	blt ballot.INITBallot, voteproof base.Voteproof,
 ) error {
-	l := loggerWithVoteproofID(voteproof, loggerWithBallot(blt, cs.Log()))
+	l := loggerWithVoteproof(voteproof, loggerWithBallot(blt, cs.Log()))
 	l.Debug().Msg("INIT Ballot + ACCEPT Voteproof")
 
 	var height base.Height
@@ -241,7 +241,7 @@ func (cs *StateJoiningHandler) handleINITBallotAndACCEPTVoteproof(
 }
 
 func (cs *StateJoiningHandler) handleINITBallotAndINITVoteproof(blt ballot.INITBallot, voteproof base.Voteproof) error {
-	l := loggerWithVoteproofID(voteproof, loggerWithBallot(blt, cs.Log()))
+	l := loggerWithVoteproof(voteproof, loggerWithBallot(blt, cs.Log()))
 	l.Debug().Msg("INIT Ballot + INIT Voteproof")
 
 	var manifest block.Manifest
@@ -292,7 +292,7 @@ func (cs *StateJoiningHandler) handleACCEPTBallotAndINITVoteproof(
 	blt ballot.ACCEPTBallot,
 	voteproof base.Voteproof,
 ) error {
-	l := loggerWithVoteproofID(voteproof, loggerWithBallot(blt, cs.Log()))
+	l := loggerWithVoteproof(voteproof, loggerWithBallot(blt, cs.Log()))
 	l.Debug().Msg("ACCEPT Ballot + INIT Voteproof")
 
 	var manifest block.Manifest
@@ -350,9 +350,7 @@ func (cs *StateJoiningHandler) handleACCEPTBallotAndINITVoteproof(
 
 // NewVoteproof receives Voteproof.
 func (cs *StateJoiningHandler) NewVoteproof(voteproof base.Voteproof) error {
-	l := loggerWithVoteproofID(voteproof, cs.Log())
-
-	l.Debug().Msg("got Voteproof")
+	l := loggerWithVoteproof(voteproof, cs.Log())
 
 	switch voteproof.Stage() {
 	case base.StageACCEPT:
@@ -368,7 +366,7 @@ func (cs *StateJoiningHandler) NewVoteproof(voteproof base.Voteproof) error {
 }
 
 func (cs *StateJoiningHandler) handleINITVoteproof(voteproof base.Voteproof) error {
-	l := loggerWithLocal(cs.local, loggerWithVoteproofID(voteproof, cs.Log()))
+	l := loggerWithLocal(cs.local, loggerWithVoteproof(voteproof, cs.Log()))
 
 	l.Debug().Msg("expected height; moves to consensus state")
 
@@ -400,7 +398,7 @@ func (cs *StateJoiningHandler) processACCEPTBallotAndINITVoteproof(
 	blt ballot.ACCEPTBallot,
 	voteproof base.Voteproof,
 ) (block.Block, error) {
-	l := loggerWithVoteproofID(voteproof, loggerWithBallot(blt, cs.Log()))
+	l := loggerWithVoteproof(voteproof, loggerWithBallot(blt, cs.Log()))
 
 	// NOTE expected ACCEPT Ballot received, so will process Proposal of
 	// INIT Voteproof and broadcast new ACCEPT Ballot.
@@ -423,7 +421,7 @@ func (cs *StateJoiningHandler) processACCEPTBallotAndINITVoteproof(
 	ctx, cancel := context.WithTimeout(context.Background(), timeout)
 	defer cancel()
 
-	cs.Log().Debug().Dur("timeout", timeout).Msg("trying to prepare block")
+	l.Debug().Dur("timeout", timeout).Msg("trying to prepare block")
 
 	if result := <-cs.pps.NewProposal(ctx, proposal, voteproof); result.Err != nil {
 		l.Debug().Err(result.Err).Msg("tried to process Proposal, but it is not yet received")

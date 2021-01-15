@@ -189,7 +189,7 @@ func (bs *BaseStateHandler) StoreNewBlock(acceptVoteproof base.Voteproof) error 
 		fact = f
 	}
 
-	l := loggerWithVoteproofID(acceptVoteproof, bs.Log().WithLogger(func(ctx logging.Context) logging.Emitter {
+	l := loggerWithVoteproof(acceptVoteproof, bs.Log().WithLogger(func(ctx logging.Context) logging.Emitter {
 		return ctx.Hinted("proposal_hash", fact.Proposal()).
 			Dict("block", logging.Dict().
 				Hinted("hash", fact.NewBlock()).Hinted("height", acceptVoteproof.Height()).Hinted("round", acceptVoteproof.Round()))
@@ -205,7 +205,7 @@ func (bs *BaseStateHandler) StoreNewBlock(acceptVoteproof base.Voteproof) error 
 }
 
 func (bs *BaseStateHandler) storeNewBlock(fact ballot.ACCEPTBallotFact, acceptVoteproof base.Voteproof) error {
-	l := loggerWithVoteproofID(acceptVoteproof, bs.Log().WithLogger(func(ctx logging.Context) logging.Emitter {
+	l := loggerWithVoteproof(acceptVoteproof, bs.Log().WithLogger(func(ctx logging.Context) logging.Emitter {
 		return ctx.Hinted("proposal_hash", fact.Proposal()).
 			Dict("block", logging.Dict().
 				Hinted("hash", fact.NewBlock()).Hinted("height", acceptVoteproof.Height()).Hinted("round", acceptVoteproof.Round()))

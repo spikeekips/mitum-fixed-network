@@ -74,18 +74,11 @@ func (cs *StateBootingHandler) Deactivate(_ *StateChangeContext) error {
 	return nil
 }
 
-func (cs *StateBootingHandler) NewSeal(sl seal.Seal) error {
-	l := loggerWithSeal(sl, cs.Log())
-	l.Debug().Msg("got Seal")
-
+func (cs *StateBootingHandler) NewSeal(seal.Seal) error {
 	return nil
 }
 
-func (cs *StateBootingHandler) NewVoteproof(voteproof base.Voteproof) error {
-	l := loggerWithVoteproofID(voteproof, cs.Log())
-
-	l.Debug().Msg("got Voteproof")
-
+func (cs *StateBootingHandler) NewVoteproof(base.Voteproof) error {
 	return nil
 }
 

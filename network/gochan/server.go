@@ -64,7 +64,7 @@ end:
 				}
 
 				if err := sv.newSealHandler(sl); err != nil {
-					seal.LoggerWithSeal(
+					seal.LogEventWithSeal(
 						sl,
 						sv.Log().Error().Err(err),
 						sv.Log().IsVerbose(),

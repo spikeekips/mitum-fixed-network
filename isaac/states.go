@@ -359,7 +359,7 @@ func (css *ConsensusStates) broadcastSeal(sl seal.Seal, errChan chan<- error) {
 }
 
 func (css *ConsensusStates) processNewVoteproof(voteproof base.Voteproof) error {
-	_ = loggerWithVoteproof(voteproof, css.Log())
+	l := loggerWithVoteproof(voteproof, css.Log())
 
 	var ctx *StateToBeChangeError
 	if c, err := css.checkNewVoteproof(voteproof); err != nil {
@@ -368,7 +368,7 @@ func (css *ConsensusStates) processNewVoteproof(voteproof base.Voteproof) error 
 		ctx = c
 	}
 
-	css.Log().Debug().Interface("voteproof", voteproof).Msg("new voteproof")
+	l.Debug().Msg("new voteproof")
 
 	if css.ActiveHandler() == nil {
 		return nil
@@ -454,7 +454,7 @@ func (css *ConsensusStates) newSeal(sl seal.Seal) error {
 		return ctx.Hinted("handler", css.ActiveHandler().State())
 	})
 
-	l.Debug().Msg("seal received")
+	seal.LogEventWithSeal(sl, l.Debug(), l.IsVerbose()).Msg("seal received")
 
 	if err := css.storeSeal(sl); err != nil {
 		return err
@@ -472,9 +472,13 @@ func (css *ConsensusStates) newSeal(sl seal.Seal) error {
 		}
 	}
 
-	if blt, ok := sl.(ballot.Ballot); ok && blt.Stage().CanVote() {
-		if err := css.vote(blt); err != nil {
-			return xerrors.Errorf("failed to vote: %w", err)
+	if blt, ok := sl.(ballot.Ballot); ok {
+		l.Debug().HintedVerbose("ballot", blt, l.IsVerbose()).Msg("ballot received")
+
+		if blt.Stage().CanVote() {
+			if err := css.vote(blt); err != nil {
+				return xerrors.Errorf("failed to vote: %w", err)
+			}
 		}
 	}
 
@@ -604,8 +608,11 @@ func checkBlockWithINITVoteproof(manifest block.Manifest, voteproof base.Votepro
 
 func (css *ConsensusStates) handleNewVoteproof() {
 	for voteproof := range css.voteproofChan {
+		l := loggerWithVoteproof(voteproof, css.Log())
+		l.Debug().HintedVerbose("voteproof", voteproof, true).Msg("new voteproof")
+
 		if err := css.processNewVoteproof(voteproof); err != nil {
-			css.Log().Error().Err(err).
+			l.Error().Err(err).
 				Hinted("height", voteproof.Height()).
 				Hinted("round", voteproof.Round()).
 				Hinted("stage", voteproof.Stage()).

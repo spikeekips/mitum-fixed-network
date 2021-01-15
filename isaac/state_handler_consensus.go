@@ -168,13 +168,10 @@ func (cs *StateConsensusHandler) NewSeal(sl seal.Seal) error {
 }
 
 func (cs *StateConsensusHandler) NewVoteproof(voteproof base.Voteproof) error {
-	l := loggerWithVoteproofID(voteproof, cs.Log())
-
 	if voteproof.Result() == base.VoteResultDraw { // NOTE if drew, goes to next round.
 		return cs.startNextRound(voteproof)
 	}
 
-	l.Debug().Msg("got voteproof")
 	var nVoteproof base.Voteproof
 	switch voteproof.Stage() {
 	case base.StageINIT:
@@ -199,7 +196,7 @@ func (cs *StateConsensusHandler) NewVoteproof(voteproof base.Voteproof) error {
 }
 
 func (cs *StateConsensusHandler) newVoteproof(voteproof base.Voteproof) error {
-	l := loggerWithVoteproofID(voteproof, cs.Log())
+	l := loggerWithVoteproof(voteproof, cs.Log())
 
 	switch voteproof.Stage() {
 	case base.StageACCEPT:
@@ -216,7 +213,7 @@ func (cs *StateConsensusHandler) newVoteproof(voteproof base.Voteproof) error {
 }
 
 func (cs *StateConsensusHandler) handleINITVoteproof(voteproof base.Voteproof) error {
-	l := loggerWithLocal(cs.local, loggerWithVoteproofID(voteproof, cs.Log()))
+	l := loggerWithLocal(cs.local, loggerWithVoteproof(voteproof, cs.Log()))
 
 	l.Debug().Msg("expected Voteproof received; will wait Proposal")
 
@@ -224,7 +221,7 @@ func (cs *StateConsensusHandler) handleINITVoteproof(voteproof base.Voteproof) e
 }
 
 func (cs *StateConsensusHandler) handleACCEPTVoteproof(voteproof base.Voteproof) error {
-	l := loggerWithLocal(cs.local, loggerWithVoteproofID(voteproof, cs.Log()))
+	l := loggerWithLocal(cs.local, loggerWithVoteproof(voteproof, cs.Log()))
 
 	if err := cs.StoreNewBlock(voteproof); err != nil {
 		var ctx *StateToBeChangeError
@@ -386,7 +383,7 @@ func (cs *StateConsensusHandler) readyToACCEPTBallot(newBlock block.Block, votep
 }
 
 func (cs *StateConsensusHandler) proposal(voteproof base.Voteproof) (bool, error) {
-	l := loggerWithVoteproofID(voteproof, cs.Log())
+	l := loggerWithVoteproof(voteproof, cs.Log())
 
 	l.Debug().Msg("prepare to broadcast Proposal")
 

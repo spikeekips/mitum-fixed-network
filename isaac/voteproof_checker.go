@@ -183,6 +183,8 @@ func (vpc *VoteproofConsensusStateChecker) CheckINITVoteproof() (bool, error) {
 func (vpc *VoteproofConsensusStateChecker) CheckACCEPTVoteproof() (bool, error) {
 	if vpc.voteproof.Stage() != base.StageACCEPT {
 		return true, nil
+	} else if vpc.lastINITVoteproof == nil {
+		return true, nil
 	}
 
 	ivp := vpc.lastINITVoteproof

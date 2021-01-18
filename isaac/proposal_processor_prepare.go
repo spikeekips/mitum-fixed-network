@@ -181,13 +181,7 @@ func (pp *DefaultProcessor) prepareBlockStorage(context.Context) error {
 		bs = b
 	}
 
-	if err := bs.SetBlock(pp.blk); err == nil {
-		if seals := pp.proposal.Seals(); len(seals) > 0 {
-			if err = bs.UnstageOperationSeals(seals); err != nil {
-				return err
-			}
-		}
-	} else {
+	if err := bs.SetBlock(pp.blk); err != nil {
 		pp.Log().Error().Err(err).Msg("failed to store to BlockStorage")
 
 		return err

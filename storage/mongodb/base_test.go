@@ -352,8 +352,6 @@ func (t *testStorage) TestUnStagedOperationSeals() {
 		ops = append(ops, sl)
 	}
 
-	var unstaged []valuehash.Hash
-
 	rs := rand.New(rand.NewSource(time.Now().Unix()))
 	selected := map[string]struct{}{}
 	for i := 0; i < 5; i++ {
@@ -365,7 +363,6 @@ func (t *testStorage) TestUnStagedOperationSeals() {
 				break
 			}
 		}
-		unstaged = append(unstaged, sl.Hash())
 	}
 
 	blk, err := block.NewTestBlockV0(base.Height(33), base.Round(0), valuehash.RandomSHA256(), valuehash.RandomSHA256())
@@ -374,8 +371,6 @@ func (t *testStorage) TestUnStagedOperationSeals() {
 	bs, err := t.storage.OpenBlockStorage(blk)
 	t.NoError(err)
 
-	// unstage
-	t.NoError(bs.UnstageOperationSeals(unstaged))
 	t.NoError(bs.Commit(context.Background()))
 
 	var collected []seal.Seal
@@ -388,19 +383,7 @@ func (t *testStorage) TestUnStagedOperationSeals() {
 		true,
 	))
 
-	t.Equal(len(ops)-len(unstaged), len(collected))
-
-	for _, sl := range collected {
-		var found bool
-		for _, usl := range unstaged {
-			if sl.Hash().Equal(usl) {
-				found = true
-				break
-			}
-		}
-
-		t.False(found)
-	}
+	t.Equal(len(ops), len(collected))
 }
 
 func (t *testStorage) TestHasOperation() {

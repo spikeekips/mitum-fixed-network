@@ -117,10 +117,6 @@ func (bst *BlockStorage) setStates(sts []state.State) error {
 	return nil
 }
 
-func (bst *BlockStorage) UnstageOperationSeals(hs []valuehash.Hash) error {
-	return leveldbUnstageOperationSeals(bst.st, bst.batch, hs)
-}
-
 func (bst *BlockStorage) Commit(context.Context) error {
 	if bst.batch.Len() < 1 {
 		if err := bst.SetBlock(bst.block); err != nil {

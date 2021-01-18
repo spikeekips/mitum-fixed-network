@@ -56,7 +56,6 @@ type BlockStorage interface {
 	Block() block.Block
 	SetBlock(block.Block) error
 	// NOTE UnstageOperationSeals cleans staged operation.Seals
-	UnstageOperationSeals([]valuehash.Hash) error
 	Commit(context.Context) error
 	Close() error
 	Cancel() error

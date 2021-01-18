@@ -13,22 +13,20 @@ import (
 	"github.com/spikeekips/mitum/base/block"
 	"github.com/spikeekips/mitum/base/state"
 	"github.com/spikeekips/mitum/storage"
-	"github.com/spikeekips/mitum/util"
 	"github.com/spikeekips/mitum/util/tree"
 	"github.com/spikeekips/mitum/util/valuehash"
 )
 
 type BlockStorage struct {
-	st                  *Storage
-	ost                 *Storage
-	block               block.Block
-	operations          tree.FixedTree
-	states              []state.State
-	manifestModels      []mongo.WriteModel
-	operationSealModels []mongo.WriteModel
-	operationModels     []mongo.WriteModel
-	stateModels         []mongo.WriteModel
-	statesValue         *sync.Map
+	st              *Storage
+	ost             *Storage
+	block           block.Block
+	operations      tree.FixedTree
+	states          []state.State
+	manifestModels  []mongo.WriteModel
+	operationModels []mongo.WriteModel
+	stateModels     []mongo.WriteModel
+	statesValue     *sync.Map
 }
 
 func NewBlockStorage(st *Storage, blk block.Block) (*BlockStorage, error) {
@@ -102,21 +100,6 @@ func (bst *BlockStorage) SetBlock(blk block.Block) error {
 	return nil
 }
 
-func (bst *BlockStorage) UnstageOperationSeals(seals []valuehash.Hash) error {
-	started := time.Now()
-	defer func() {
-		bst.statesValue.Store("unstage-operation-seals", time.Since(started))
-	}()
-
-	for _, h := range seals {
-		bst.operationSealModels = append(bst.operationSealModels,
-			mongo.NewDeleteOneModel().SetFilter(util.NewBSONFilter("_id", h.String()).D()),
-		)
-	}
-
-	return nil
-}
-
 func (bst *BlockStorage) Commit(ctx context.Context) error {
 	if err := bst.commit(ctx); err == nil {
 		return nil
@@ -174,10 +157,6 @@ func (bst *BlockStorage) commit(ctx context.Context) error {
 		return storage.WrapStorageError(err)
 	} else if res != nil && res.InsertedCount < 1 {
 		return xerrors.Errorf("state not inserted")
-	}
-
-	if _, err := bst.writeModels(ctx, defaultColNameOperationSeal, bst.operationSealModels); err != nil {
-		return storage.WrapStorageError(err)
 	}
 
 	if err := bst.ost.setLastBlock(bst.block, true, false); err != nil {
@@ -313,7 +292,6 @@ func (bst *BlockStorage) Close() error {
 	bst.block = nil
 	bst.states = nil
 	bst.manifestModels = nil
-	bst.operationSealModels = nil
 	bst.operationModels = nil
 	bst.stateModels = nil
 

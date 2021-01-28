@@ -141,19 +141,19 @@ func (bst *BlockStorage) commit(ctx context.Context) error {
 	ctx, cancel := context.WithCancel(ctx)
 	defer cancel()
 
-	if res, err := bst.writeModels(ctx, defaultColNameManifest, bst.manifestModels); err != nil {
+	if res, err := bst.writeModels(ctx, ColNameManifest, bst.manifestModels); err != nil {
 		return storage.WrapStorageError(err)
 	} else if res != nil && res.InsertedCount < 1 {
 		return xerrors.Errorf("manifest not inserted")
 	}
 
-	if res, err := bst.writeModels(ctx, defaultColNameOperation, bst.operationModels); err != nil {
+	if res, err := bst.writeModels(ctx, ColNameOperation, bst.operationModels); err != nil {
 		return storage.WrapStorageError(err)
 	} else if res != nil && res.InsertedCount < 1 {
 		return xerrors.Errorf("operation not inserted")
 	}
 
-	if res, err := bst.writeModels(ctx, defaultColNameState, bst.stateModels); err != nil {
+	if res, err := bst.writeModels(ctx, ColNameState, bst.stateModels); err != nil {
 		return storage.WrapStorageError(err)
 	} else if res != nil && res.InsertedCount < 1 {
 		return xerrors.Errorf("state not inserted")

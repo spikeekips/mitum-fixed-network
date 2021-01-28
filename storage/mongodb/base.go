@@ -28,23 +28,23 @@ import (
 )
 
 const (
-	defaultColNameInfo          = "info"
-	defaultColNameManifest      = "manifest"
-	defaultColNameSeal          = "seal"
-	defaultColNameOperation     = "operation"
-	defaultColNameOperationSeal = "operation_seal"
-	defaultColNameProposal      = "proposal"
-	defaultColNameState         = "state"
+	ColNameInfo          = "info"
+	ColNameManifest      = "manifest"
+	ColNameSeal          = "seal"
+	ColNameOperation     = "operation"
+	ColNameOperationSeal = "operation_seal"
+	ColNameProposal      = "proposal"
+	ColNameState         = "state"
 )
 
 var allCollections = []string{
-	defaultColNameInfo,
-	defaultColNameManifest,
-	defaultColNameSeal,
-	defaultColNameOperation,
-	defaultColNameOperationSeal,
-	defaultColNameProposal,
-	defaultColNameState,
+	ColNameInfo,
+	ColNameManifest,
+	ColNameSeal,
+	ColNameOperation,
+	ColNameOperationSeal,
+	ColNameProposal,
+	ColNameState,
 }
 
 type Storage struct {
@@ -172,7 +172,7 @@ func (st *Storage) Initialize() error {
 
 func (st *Storage) loadLastBlock() error {
 	var height base.Height
-	if err := st.client.GetByID(defaultColNameInfo, lastManifestDocID,
+	if err := st.client.GetByID(ColNameInfo, lastManifestDocID,
 		func(res *mongo.SingleResult) error {
 			if i, err := loadLastManifest(res.Decode, st.encs); err != nil {
 				return err
@@ -203,7 +203,7 @@ func (st *Storage) SaveLastBlock(height base.Height) error {
 
 	if cb, err := NewLastManifestDoc(height, st.enc); err != nil {
 		return err
-	} else if _, err := st.client.Set(defaultColNameInfo, cb); err != nil {
+	} else if _, err := st.client.Set(ColNameInfo, cb); err != nil {
 		return err
 	}
 
@@ -398,7 +398,7 @@ func (st *Storage) manifestByFilter(filter bson.D) (block.Manifest, bool, error)
 	var manifest block.Manifest
 
 	if err := st.client.GetByFilter(
-		defaultColNameManifest,
+		ColNameManifest,
 		filter,
 		func(res *mongo.SingleResult) error {
 			if i, err := loadManifestFromDecoder(res.Decode, st.encs); err != nil {
@@ -449,7 +449,7 @@ func (st *Storage) Manifests(filter bson.M, load, reverse bool, limit int64, cal
 
 	return st.client.Find(
 		context.Background(),
-		defaultColNameManifest,
+		ColNameManifest,
 		filter,
 		func(cursor *mongo.Cursor) (bool, error) {
 			var height base.Height
@@ -487,7 +487,7 @@ func (st *Storage) Seal(h valuehash.Hash) (seal.Seal, bool, error) {
 	var sl seal.Seal
 
 	if err := st.client.GetByID(
-		defaultColNameSeal,
+		ColNameSeal,
 		h.String(),
 		func(res *mongo.SingleResult) error {
 			if i, err := loadSealFromDecoder(res.Decode, st.encs); err != nil {
@@ -553,7 +553,7 @@ func (st *Storage) NewSeals(seals []seal.Seal) error {
 		)
 	}
 
-	if err := st.client.Bulk(context.Background(), defaultColNameSeal, models, false); err != nil {
+	if err := st.client.Bulk(context.Background(), ColNameSeal, models, false); err != nil {
 		return err
 	}
 
@@ -561,7 +561,7 @@ func (st *Storage) NewSeals(seals []seal.Seal) error {
 		return nil
 	}
 
-	if err := st.client.Bulk(context.Background(), defaultColNameOperationSeal, operationModels, false); err != nil {
+	if err := st.client.Bulk(context.Background(), ColNameOperationSeal, operationModels, false); err != nil {
 		return err
 	}
 
@@ -587,7 +587,7 @@ func (st *Storage) Seals(callback func(valuehash.Hash, seal.Seal) (bool, error),
 
 	return st.client.Find(
 		context.Background(),
-		defaultColNameSeal,
+		ColNameSeal,
 		bson.D{},
 		func(cursor *mongo.Cursor) (bool, error) {
 			var h valuehash.Hash
@@ -629,7 +629,7 @@ func (st *Storage) SealsByHash(
 
 	return st.client.Find(
 		context.Background(),
-		defaultColNameSeal,
+		ColNameSeal,
 		bson.M{"hash_string": bson.M{"$in": hashStrings}},
 		func(cursor *mongo.Cursor) (bool, error) {
 			var h valuehash.Hash
@@ -657,7 +657,7 @@ func (st *Storage) SealsByHash(
 }
 
 func (st *Storage) HasSeal(h valuehash.Hash) (bool, error) {
-	return st.client.Exists(defaultColNameSeal, util.NewBSONFilter("_id", h.String()).D())
+	return st.client.Exists(ColNameSeal, util.NewBSONFilter("_id", h.String()).D())
 }
 
 func (st *Storage) StagedOperationSeals(callback func(operation.Seal) (bool, error), sort bool) error {
@@ -673,7 +673,7 @@ func (st *Storage) StagedOperationSeals(callback func(operation.Seal) (bool, err
 
 	return st.client.Find(
 		context.TODO(),
-		defaultColNameOperationSeal,
+		ColNameOperationSeal,
 		bson.D{},
 		func(cursor *mongo.Cursor) (bool, error) {
 			var sl operation.Seal
@@ -703,7 +703,7 @@ func (st *Storage) UnstagedOperationSeals(seals []valuehash.Hash) error {
 		)
 	}
 
-	return st.client.Bulk(context.Background(), defaultColNameOperationSeal, models, false)
+	return st.client.Bulk(context.Background(), ColNameOperationSeal, models, false)
 }
 
 func (st *Storage) Proposals(callback func(ballot.Proposal) (bool, error), sort bool) error {
@@ -719,7 +719,7 @@ func (st *Storage) Proposals(callback func(ballot.Proposal) (bool, error), sort 
 
 	return st.client.Find(
 		context.TODO(),
-		defaultColNameProposal,
+		ColNameProposal,
 		bson.D{},
 		func(cursor *mongo.Cursor) (bool, error) {
 			var proposal ballot.Proposal
@@ -742,7 +742,7 @@ func (st *Storage) NewProposal(proposal ballot.Proposal) error {
 
 	if doc, err := NewProposalDoc(proposal, st.enc); err != nil {
 		return err
-	} else if _, err := st.client.Add(defaultColNameProposal, doc); err != nil {
+	} else if _, err := st.client.Add(ColNameProposal, doc); err != nil {
 		return err
 	}
 
@@ -755,7 +755,7 @@ func (st *Storage) Proposal(height base.Height, round base.Round) (ballot.Propos
 
 	if err := st.client.Find(
 		context.TODO(),
-		defaultColNameProposal,
+		ColNameProposal,
 		util.NewBSONFilter("height", height).Add("round", round).D(),
 		func(cursor *mongo.Cursor) (bool, error) {
 			if i, err := loadProposalFromDecoder(cursor.Decode, st.encs); err != nil {
@@ -787,7 +787,7 @@ func (st *Storage) State(key string) (state.State, bool, error) {
 
 	if err := st.client.Find(
 		context.TODO(),
-		defaultColNameState,
+		ColNameState,
 		util.NewBSONFilter("key", key).AddOp("height", st.lastHeight(), "$lte").D(),
 		func(cursor *mongo.Cursor) (bool, error) {
 			if i, err := loadStateFromDecoder(cursor.Decode, st.encs); err != nil {
@@ -813,7 +813,7 @@ func (st *Storage) NewState(sta state.State) error {
 
 	if doc, err := NewStateDoc(sta, st.enc); err != nil {
 		return err
-	} else if _, err := st.client.Add(defaultColNameState, doc); err != nil {
+	} else if _, err := st.client.Add(ColNameState, doc); err != nil {
 		return err
 	}
 
@@ -829,7 +829,7 @@ func (st *Storage) HasOperationFact(h valuehash.Hash) (bool, error) {
 
 	count, err := st.client.Count(
 		context.Background(),
-		defaultColNameOperation,
+		ColNameOperation,
 		util.NewBSONFilter("fact_hash_string", h.String()).AddOp("height", st.lastHeight(), "$lte").D(),
 		options.Count().SetLimit(1),
 	)
@@ -879,12 +879,12 @@ func (st *Storage) cleanByHeight(height base.Height) error {
 	removeByHeight := mongo.NewDeleteManyModel().SetFilter(bson.M{"height": bson.M{"$gte": height}})
 
 	for _, col := range []string{
-		defaultColNameInfo,
-		defaultColNameManifest,
-		defaultColNameOperation,
-		defaultColNameOperationSeal,
-		defaultColNameProposal,
-		defaultColNameState,
+		ColNameInfo,
+		ColNameManifest,
+		ColNameOperation,
+		ColNameOperationSeal,
+		ColNameProposal,
+		ColNameState,
 	} {
 
 		res, err := st.client.Collection(col).BulkWrite(
@@ -987,7 +987,7 @@ func (st *Storage) SetInfo(key string, b []byte) error {
 
 	if doc, err := NewInfoDoc(key, b, st.enc); err != nil {
 		return err
-	} else if _, err := st.client.Set(defaultColNameInfo, doc); err != nil {
+	} else if _, err := st.client.Set(ColNameInfo, doc); err != nil {
 		return err
 	} else {
 		return nil
@@ -996,7 +996,7 @@ func (st *Storage) SetInfo(key string, b []byte) error {
 
 func (st *Storage) Info(key string) ([]byte, bool, error) {
 	var b []byte
-	if err := st.client.GetByID(defaultColNameInfo, infoDocKey(key),
+	if err := st.client.GetByID(ColNameInfo, infoDocKey(key),
 		func(res *mongo.SingleResult) error {
 			if i, err := loadInfo(res.Decode, st.encs); err != nil {
 				return err

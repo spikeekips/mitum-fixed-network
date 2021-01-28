@@ -74,9 +74,9 @@ var sealIndexModels = []mongo.IndexModel{
 }
 
 var defaultIndexes = map[string] /* collection */ []mongo.IndexModel{
-	defaultColNameManifest:  manifestIndexModels,
-	defaultColNameOperation: operationIndexModels,
-	defaultColNameProposal:  proposalIndexModels,
-	defaultColNameSeal:      sealIndexModels,
-	defaultColNameState:     stateIndexModels,
+	ColNameManifest:  manifestIndexModels,
+	ColNameOperation: operationIndexModels,
+	ColNameProposal:  proposalIndexModels,
+	ColNameSeal:      sealIndexModels,
+	ColNameState:     stateIndexModels,
 }

@@ -440,9 +440,9 @@ func (t *testStorage) TestCreateIndexNew() {
 		},
 	}
 
-	t.NoError(t.storage.CreateIndex(defaultColNameManifest, oldIndexes, indexPrefix))
+	t.NoError(t.storage.CreateIndex(ColNameManifest, oldIndexes, indexPrefix))
 
-	existings := allIndexes(defaultColNameManifest)
+	existings := allIndexes(ColNameManifest)
 
 	newIndexes := []mongo.IndexModel{
 		{
@@ -451,8 +451,8 @@ func (t *testStorage) TestCreateIndexNew() {
 		},
 	}
 
-	t.NoError(t.storage.CreateIndex(defaultColNameManifest, newIndexes, indexPrefix))
-	created := allIndexes(defaultColNameManifest)
+	t.NoError(t.storage.CreateIndex(ColNameManifest, newIndexes, indexPrefix))
+	created := allIndexes(ColNameManifest)
 
 	t.Equal(existings, []string{"_id_", "mitum_showme"})
 	t.Equal(created, []string{"_id_", "mitum_findme"})

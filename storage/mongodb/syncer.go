@@ -31,7 +31,7 @@ func NewSyncerStorage(main *Storage) (*SyncerStorage, error) {
 
 	if s, err := newTempStorage(main, "manifest"); err != nil {
 		return nil, err
-	} else if err := s.CreateIndex(defaultColNameManifest, manifestIndexModels, indexPrefix); err != nil {
+	} else if err := s.CreateIndex(ColNameManifest, manifestIndexModels, indexPrefix); err != nil {
 		return nil, err
 	} else {
 		manifestStorage = s
@@ -104,7 +104,7 @@ func (st *SyncerStorage) SetManifests(manifests []block.Manifest) error {
 		}
 	}
 
-	if err := st.manifestStorage.Client().Bulk(context.Background(), defaultColNameManifest, models, true); err != nil {
+	if err := st.manifestStorage.Client().Bulk(context.Background(), ColNameManifest, models, true); err != nil {
 		return err
 	}
 
@@ -125,7 +125,7 @@ func (st *SyncerStorage) SetManifests(manifests []block.Manifest) error {
 }
 
 func (st *SyncerStorage) HasBlock(height base.Height) (bool, error) {
-	return st.blockStorage.client.Exists(defaultColNameManifest, util.NewBSONFilter("height", height).D())
+	return st.blockStorage.client.Exists(ColNameManifest, util.NewBSONFilter("height", height).D())
 }
 
 func (st *SyncerStorage) SetBlocks(blocks []block.Block) error {
@@ -195,12 +195,12 @@ func (st *SyncerStorage) Commit() error {
 	}
 
 	for _, col := range []string{
-		defaultColNameManifest,
-		defaultColNameSeal,
-		defaultColNameOperation,
-		defaultColNameOperationSeal,
-		defaultColNameProposal,
-		defaultColNameState,
+		ColNameManifest,
+		ColNameSeal,
+		ColNameOperation,
+		ColNameOperationSeal,
+		ColNameProposal,
+		ColNameState,
 	} {
 		if err := moveWithinCol(st.blockStorage, col, st.main, col, bson.D{}); err != nil {
 			l.Error().Err(err).Str("collection", col).Msg("failed to move collection")

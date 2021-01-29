@@ -18,6 +18,10 @@ func (hs HintedString) Hint() hint.Hint {
 	return hs.h
 }
 
+func (hs HintedString) IsEmpty() bool {
+	return len(hs.s) < 1
+}
+
 func (hs HintedString) String() string {
 	return hs.s
 }

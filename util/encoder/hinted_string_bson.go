@@ -9,7 +9,11 @@ import (
 )
 
 func (hs *HintedString) UnmarshalBSONValue(t bsontype.Type, b []byte) error {
-	if t != bsontype.String {
+	switch t {
+	case bsontype.Null:
+		return nil
+	case bsontype.String:
+	default:
 		return xerrors.Errorf("invalid marshaled type for HintedString, %v", t)
 	}
 

@@ -14,6 +14,8 @@ import (
 
 var defaultRunHooks = []pm.Hook{
 	pm.NewHook(pm.HookPrefixPost, process.ProcessNameLocal, process.HookNameCheckEmptyBlock, process.HookCheckEmptyBlock),
+	pm.NewHook(pm.HookPrefixPost, process.ProcessNameConfig, process.HookNameConfigGenesisOperations, pm.EmptyHookFunc).
+		SetOverride(true),
 }
 
 type RunCommand struct {
@@ -29,7 +31,7 @@ func NewRunCommand(dryrun bool) RunCommand {
 	ps := co.Processes()
 	for i := range defaultRunHooks {
 		hook := defaultRunHooks[i]
-		if err := ps.AddHook(hook.Prefix, hook.Process, hook.Name, hook.F, true); err != nil {
+		if err := ps.AddHook(hook.Prefix, hook.Process, hook.Name, hook.F, hook.Override); err != nil {
 			panic(err)
 		}
 	}

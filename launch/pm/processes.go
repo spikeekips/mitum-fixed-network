@@ -72,7 +72,7 @@ func (pm *Processes) AddProcess(pr Process, override bool) error {
 
 	if _, found := pm.processes[pr.Name()]; found {
 		if !override {
-			return xerrors.Errorf("already added, %q", pr.Name())
+			return xerrors.Errorf("process already added, %q", pr.Name())
 		}
 	} else {
 		pm.processesOrder = append(pm.processesOrder, pr.Name())
@@ -93,7 +93,7 @@ func (pm *Processes) AddHook(
 	prName := pm.processHookName(prefix, pr)
 	if _, found := pm.hooks[hook]; found {
 		if !override {
-			return xerrors.Errorf("already added")
+			return xerrors.Errorf("hook already added, %q", hook)
 		}
 	} else {
 		pm.hooksByProcess[prName] = append(pm.hooksByProcess[prName], hook)

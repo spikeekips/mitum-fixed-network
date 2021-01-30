@@ -124,11 +124,11 @@ func (pp *DefaultProcessor) processOperations(ctx context.Context) error {
 		var err error
 		if err = pp.processStatesTree(ctx, pool); err != nil {
 			return err
-		} else if !pp.statesTree.IsEmpty() {
-			if err = pp.processOperationsTree(ctx, pool); err != nil {
-				return err
-			}
 		}
+	}
+
+	if err := pp.processOperationsTree(ctx, pool); err != nil {
+		return err
 	}
 
 	return nil
@@ -267,14 +267,17 @@ func (pp *DefaultProcessor) concurrentProcessStatesTree(
 func (pp *DefaultProcessor) processOperationsTree(_ context.Context, pool *storage.Statepool) error {
 	pp.Log().Debug().Msg("trying to process operationsTree")
 
-	pp.operationsTree = tree.FixedTree{}
-
-	statesOps := pool.InsertedOperations()
-
 	added := pool.AddedOperations()
 	for k := range added {
 		pp.operations = append(pp.operations, added[k])
 	}
+
+	if len(pp.operations) < 1 {
+		return nil
+	}
+
+	statesOps := pool.InsertedOperations()
+	pp.operationsTree = tree.FixedTree{}
 
 	tg := tree.NewFixedTreeGenerator(uint(len(pp.operations)), nil)
 	for i := range pp.operations {

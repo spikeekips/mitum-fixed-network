@@ -68,8 +68,8 @@ func ProcessBlockFS(ctx context.Context) (context.Context, error) {
 
 	if conf.WideOpen() {
 		syscall.Umask(0)
-		localfs.DefaultFilePermission = 0o666
-		localfs.DefaultDirectoryPermission = 0o777
+		localfs.DefaultFilePermission = 0o644
+		localfs.DefaultDirectoryPermission = 0o755
 	}
 
 	var blockFS *storage.BlockFS

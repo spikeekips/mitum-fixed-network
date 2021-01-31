@@ -88,7 +88,7 @@ func (cs *StateBootingHandler) initialize() (*StateChangeContext, error) {
 	if err := cs.checkBlock(); err != nil {
 		cs.Log().Error().Err(err).Msg("something wrong to check blocks")
 
-		if storage.IsNotFoundError(err) {
+		if xerrors.Is(err, storage.NotFoundError) {
 			if ctx, err0 := cs.whenEmptyBlocks(); err0 != nil {
 				return nil, err0
 			} else if ctx != nil {

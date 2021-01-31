@@ -21,33 +21,16 @@ func WrapStorageError(err error) error {
 	switch {
 	case err == nil:
 		return nil
-	case IsNotFoundError(err):
-		return err
-	case IsDuplicatedError(err):
-		return err
-	case IsTimeoutError(err):
-		return err
+	case xerrors.Is(err, FoundError):
+	case xerrors.Is(err, NotFoundError):
+	case xerrors.Is(err, DuplicatedError):
+	case xerrors.Is(err, TimeoutError):
 	case xerrors.Is(err, StorageError):
-		return err
 	default:
 		return StorageError.Wrap(err)
 	}
-}
 
-func IsFoundError(err error) bool {
-	return xerrors.Is(err, FoundError)
-}
-
-func IsNotFoundError(err error) bool {
-	return xerrors.Is(err, NotFoundError)
-}
-
-func IsDuplicatedError(err error) bool {
-	return xerrors.Is(err, DuplicatedError)
-}
-
-func IsTimeoutError(err error) bool {
-	return xerrors.Is(err, TimeoutError)
+	return err
 }
 
 func WrapFSError(err error) error {
@@ -58,13 +41,12 @@ func WrapFSError(err error) error {
 		return FoundError.Wrap(err)
 	case os.IsNotExist(err):
 		return NotFoundError.Wrap(err)
-	case IsFoundError(err):
-		return err
-	case IsNotFoundError(err):
-		return err
+	case xerrors.Is(err, FoundError):
+	case xerrors.Is(err, NotFoundError):
 	case xerrors.Is(err, FSError):
-		return err
 	default:
 		return FSError.Wrap(err)
 	}
+
+	return err
 }

@@ -234,7 +234,7 @@ func (st *Storage) get(key []byte) ([]byte, error) {
 
 func (st *Storage) block(h valuehash.Hash) (block.Block, bool, error) {
 	if raw, err := st.get(leveldbBlockHashKey(h)); err != nil {
-		if storage.IsNotFoundError(err) {
+		if xerrors.Is(err, storage.NotFoundError) {
 			return nil, false, nil
 		}
 
@@ -248,7 +248,7 @@ func (st *Storage) block(h valuehash.Hash) (block.Block, bool, error) {
 
 func (st *Storage) blockByHeight(height base.Height) (block.Block, bool, error) {
 	if raw, err := st.get(leveldbBlockHeightKey(height)); err != nil {
-		if storage.IsNotFoundError(err) {
+		if xerrors.Is(err, storage.NotFoundError) {
 			return nil, false, nil
 		}
 
@@ -262,7 +262,7 @@ func (st *Storage) blockByHeight(height base.Height) (block.Block, bool, error) 
 
 func (st *Storage) Manifest(h valuehash.Hash) (block.Manifest, bool, error) {
 	if raw, err := st.get(leveldbManifestKey(h)); err != nil {
-		if storage.IsNotFoundError(err) {
+		if xerrors.Is(err, storage.NotFoundError) {
 			return nil, false, nil
 		}
 
@@ -276,7 +276,7 @@ func (st *Storage) Manifest(h valuehash.Hash) (block.Manifest, bool, error) {
 
 func (st *Storage) ManifestByHeight(height base.Height) (block.Manifest, bool, error) {
 	if raw, err := st.get(leveldbBlockHeightKey(height)); err != nil {
-		if storage.IsNotFoundError(err) {
+		if xerrors.Is(err, storage.NotFoundError) {
 			return nil, false, nil
 		}
 
@@ -316,7 +316,7 @@ func (st *Storage) Seal(h valuehash.Hash) (seal.Seal, bool, error) {
 func (st *Storage) sealByKey(key []byte) (seal.Seal, bool, error) {
 	b, err := st.get(key)
 	if err != nil {
-		if storage.IsNotFoundError(err) {
+		if xerrors.Is(err, storage.NotFoundError) {
 			return nil, false, nil
 		}
 
@@ -635,7 +635,7 @@ func (st *Storage) NewProposal(proposal ballot.Proposal) error {
 func (st *Storage) Proposal(height base.Height, round base.Round) (ballot.Proposal, bool, error) {
 	sealKey, err := st.get(st.proposalKey(height, round))
 	if err != nil {
-		if storage.IsNotFoundError(err) {
+		if xerrors.Is(err, storage.NotFoundError) {
 			return nil, false, nil
 		}
 
@@ -652,7 +652,7 @@ func (st *Storage) Proposal(height base.Height, round base.Round) (ballot.Propos
 func (st *Storage) State(key string) (state.State, bool, error) {
 	b, err := st.get(leveldbStateKey(key))
 	if err != nil {
-		if storage.IsNotFoundError(err) {
+		if xerrors.Is(err, storage.NotFoundError) {
 			return nil, false, nil
 		}
 
@@ -694,7 +694,7 @@ func (st *Storage) SetInfo(key string, b []byte) error {
 
 func (st *Storage) Info(key string) ([]byte, bool, error) {
 	if b, err := st.get(leveldbInfoKey(key)); err != nil {
-		if storage.IsNotFoundError(err) {
+		if xerrors.Is(err, storage.NotFoundError) {
 			return nil, false, nil
 		}
 

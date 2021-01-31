@@ -1,6 +1,9 @@
 package storage
 
-import "github.com/spikeekips/mitum/base/block"
+import (
+	"github.com/spikeekips/mitum/base/block"
+	"golang.org/x/xerrors"
+)
 
 // CheckBlockEmpty checks whether local has block data in Storage and BlockFS.
 // If empty, return nil block.Block. Block should exist both in Storage and
@@ -17,7 +20,7 @@ func CheckBlockEmpty(st Storage, blockFS *BlockFS) (block.Block, error) {
 	}
 
 	if blk, err := blockFS.Load(manifest.Height()); err != nil {
-		if IsNotFoundError(err) {
+		if xerrors.Is(err, NotFoundError) {
 			return nil, nil
 		}
 

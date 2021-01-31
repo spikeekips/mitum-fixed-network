@@ -159,7 +159,7 @@ func (st *Storage) Initialize() error {
 		return nil
 	}
 
-	if err := st.loadLastBlock(); err != nil && !storage.IsNotFoundError(err) {
+	if err := st.loadLastBlock(); err != nil && !xerrors.Is(err, storage.NotFoundError) {
 		return err
 	}
 
@@ -499,7 +499,7 @@ func (st *Storage) Seal(h valuehash.Hash) (seal.Seal, bool, error) {
 			return nil
 		},
 	); err != nil {
-		if storage.IsNotFoundError(err) {
+		if xerrors.Is(err, storage.NotFoundError) {
 			return nil, false, nil
 		}
 

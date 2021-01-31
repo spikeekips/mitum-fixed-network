@@ -5,6 +5,7 @@ import (
 	"sync"
 
 	"github.com/syndtr/goleveldb/leveldb"
+	"golang.org/x/xerrors"
 
 	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/base/block"
@@ -43,7 +44,7 @@ func (st *SyncerStorage) manifestKey(height base.Height) []byte {
 func (st *SyncerStorage) Manifest(height base.Height) (block.Manifest, bool, error) {
 	raw, err := st.storage.DB().Get(st.manifestKey(height), nil)
 	if err != nil {
-		if storage.IsNotFoundError(err) {
+		if xerrors.Is(err, storage.NotFoundError) {
 			return nil, false, nil
 		}
 
@@ -52,7 +53,7 @@ func (st *SyncerStorage) Manifest(height base.Height) (block.Manifest, bool, err
 
 	m, err := st.storage.loadManifest(raw)
 	if err != nil {
-		if storage.IsNotFoundError(err) {
+		if xerrors.Is(err, storage.NotFoundError) {
 			return nil, false, nil
 		}
 		return nil, false, err

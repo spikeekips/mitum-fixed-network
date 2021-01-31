@@ -543,14 +543,12 @@ func (st *Storage) NewSeals(seals []seal.Seal) error {
 			mongo.NewInsertOneModel().SetDocument(doc),
 		)
 
-		if _, ok := sl.(operation.Seal); !ok {
-			continue
+		if _, ok := sl.(operation.Seal); ok {
+			ops = append(ops, sl)
+			operationModels = append(operationModels,
+				mongo.NewInsertOneModel().SetDocument(doc),
+			)
 		}
-
-		ops = append(ops, sl)
-		operationModels = append(operationModels,
-			mongo.NewInsertOneModel().SetDocument(doc),
-		)
 	}
 
 	if err := st.client.Bulk(context.Background(), ColNameSeal, models, false); err != nil {

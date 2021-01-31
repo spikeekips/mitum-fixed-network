@@ -55,6 +55,10 @@ func (pvc *ProposalValidationChecker) IsKnown() (bool, error) {
 
 // CheckSigning checks node signed by it's valid key.
 func (pvc *ProposalValidationChecker) CheckSigning() (bool, error) {
+	if pvc.proposal.Signer().Equal(pvc.local.Node().Publickey()) {
+		return true, nil
+	}
+
 	var node base.Node
 	if pvc.proposal.Node().Equal(pvc.local.Node().Address()) {
 		node = pvc.local.Node()
@@ -72,6 +76,10 @@ func (pvc *ProposalValidationChecker) CheckSigning() (bool, error) {
 }
 
 func (pvc *ProposalValidationChecker) IsProposer() (bool, error) {
+	if pvc.proposal.Signer().Equal(pvc.local.Node().Publickey()) {
+		return true, nil
+	}
+
 	height := pvc.proposal.Height()
 	round := pvc.proposal.Round()
 	node := pvc.proposal.Node()

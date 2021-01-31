@@ -157,16 +157,6 @@ func (sn *SettingNetworkHandlers) networkhandlerNewSeal() network.NewSealHandler
 		if err := util.NewChecker("network-new-seal-checker", []util.CheckerFunc{
 			sealChecker.CheckIsKnown,
 			sealChecker.CheckIsValid,
-			func() (bool, error) {
-				// NOTE stores seal regardless further checkings.
-				if err := sn.storage.NewSeals([]seal.Seal{sl}); err != nil {
-					if !xerrors.Is(err, storage.DuplicatedError) {
-						return false, err
-					}
-				}
-
-				return true, nil
-			},
 		}).Check(); err != nil {
 			if xerrors.Is(err, util.CheckerNilError) {
 				sn.logger.Debug().Msg(err.Error())

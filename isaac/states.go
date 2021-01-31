@@ -456,71 +456,55 @@ func (css *ConsensusStates) newSeal(sl seal.Seal) error {
 
 	seal.LogEventWithSeal(sl, l.Debug(), l.IsVerbose()).Msg("seal received")
 
-	if err := css.storeSeal(sl); err != nil {
-		return err
-	}
-
-	if css.ActiveHandler() == nil {
-		return xerrors.Errorf("no activated handler")
-	}
-
-	if !sl.Signer().Equal(css.local.Node().Publickey()) {
-		if err := css.validateSeal(sl); err != nil {
-			l.Error().Err(err).Msg("seal validation failed")
-
-			return err
-		}
-	}
-
-	if blt, ok := sl.(ballot.Ballot); ok {
-		l.Debug().HintedVerbose("ballot", blt, l.IsVerbose()).Msg("ballot received")
-
-		if blt.Stage().CanVote() {
-			if err := css.vote(blt); err != nil {
-				return xerrors.Errorf("failed to vote: %w", err)
+	if _, ok := sl.(ballot.Ballot); !ok {
+		if err := css.local.Storage().NewSeals([]seal.Seal{sl}); err != nil {
+			if !xerrors.Is(err, storage.DuplicatedError) {
+				return err
 			}
 		}
 	}
 
-	go func() {
-		if err := css.ActiveHandler().NewSeal(sl); err != nil {
-			l.Error().Err(err).Msg("activated handler can not receive Seal")
-		}
-	}()
+	if err := css.processSeal(sl); err != nil {
+		l.Error().Err(err).Msg("activated handler failed to process seal")
 
-	return nil
-}
-
-// storeSeal does not store ballots except Proposal.
-func (css *ConsensusStates) storeSeal(sl seal.Seal) error {
-	switch sl.(type) {
-	case ballot.Proposal:
-	case ballot.Ballot:
-		return nil
-	}
-
-	switch err := css.local.Storage().NewSeals([]seal.Seal{sl}); {
-	case err == nil:
-	case xerrors.Is(err, storage.DuplicatedError):
-	default:
 		return err
 	}
 
 	return nil
 }
 
-func (css *ConsensusStates) validateSeal(sl seal.Seal) error {
-	switch t := sl.(type) {
-	case ballot.Proposal:
-		return css.validateProposal(t)
-	case ballot.Ballot:
-		return css.validateBallot(t)
+func (css *ConsensusStates) processSeal(sl seal.Seal) error {
+	if css.ActiveHandler() == nil {
+		return xerrors.Errorf("no activated handler")
 	}
 
-	return nil
+	switch t := sl.(type) {
+	case ballot.Proposal:
+		if err := css.validateProposal(t); err != nil {
+			return err
+		}
+	case ballot.Ballot:
+		if err := css.validateBallot(t); err != nil {
+			return err
+		}
+	default:
+		return nil
+	}
+
+	return css.ActiveHandler().NewSeal(sl)
 }
 
-func (css *ConsensusStates) validateBallot(ballot.Ballot) error {
+func (css *ConsensusStates) validateBallot(blt ballot.Ballot) error {
+	if !blt.Stage().CanVote() {
+		return nil
+	}
+
+	css.Log().Debug().HintedVerbose("ballot", blt, css.Log().IsVerbose()).Msg("ballot received; will vote")
+
+	if err := css.vote(blt); err != nil {
+		return xerrors.Errorf("failed to vote: %w", err)
+	}
+
 	return nil
 }
 

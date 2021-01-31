@@ -192,7 +192,7 @@ func (t *testBallotChecker) TestCheckWrongHeightProposal() {
 			nil,
 		)
 		_ = pr.Sign(t.remote.Node().Privatekey(), t.remote.Policy().NetworkID())
-		t.NoError(t.local.Storage().NewSeals([]seal.Seal{pr}))
+		t.NoError(t.local.Storage().NewProposal(pr))
 
 		proposal = pr
 	}
@@ -218,7 +218,7 @@ func (t *testBallotChecker) TestCheckWrongRoundProposal() {
 			nil,
 		)
 		_ = pr.Sign(t.remote.Node().Privatekey(), t.local.Policy().NetworkID())
-		t.NoError(t.local.Storage().NewSeals([]seal.Seal{pr}))
+		t.NoError(t.local.Storage().NewProposal(pr))
 
 		proposal = pr
 	}

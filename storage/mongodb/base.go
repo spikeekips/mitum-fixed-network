@@ -526,12 +526,14 @@ func (st *Storage) NewSeals(seals []seal.Seal) error {
 	var operationModels []mongo.WriteModel
 
 	var ops []seal.Seal
-	inserted := map[string]struct{}{}
-	for _, sl := range seals {
-		if _, found := inserted[sl.Hash().String()]; found {
+	checked := map[string]struct{}{}
+	for i := range seals {
+		sl := seals[i]
+
+		if _, found := checked[sl.Hash().String()]; found {
 			continue
 		} else {
-			inserted[sl.Hash().String()] = struct{}{}
+			checked[sl.Hash().String()] = struct{}{}
 		}
 
 		doc, err := NewSealDoc(sl, st.enc)
@@ -539,15 +541,15 @@ func (st *Storage) NewSeals(seals []seal.Seal) error {
 			return err
 		}
 
-		models = append(models,
-			mongo.NewInsertOneModel().SetDocument(doc),
-		)
+		models = append(models, mongo.NewInsertOneModel().SetDocument(doc))
 
-		if _, ok := sl.(operation.Seal); ok {
+		if ok, err := st.checkNewOperationSeal(sl); err != nil {
+			return err
+		} else if !ok {
+			continue
+		} else {
 			ops = append(ops, sl)
-			operationModels = append(operationModels,
-				mongo.NewInsertOneModel().SetDocument(doc),
-			)
+			operationModels = append(operationModels, mongo.NewInsertOneModel().SetDocument(doc))
 		}
 	}
 
@@ -555,12 +557,10 @@ func (st *Storage) NewSeals(seals []seal.Seal) error {
 		return err
 	}
 
-	if len(operationModels) < 1 {
-		return nil
-	}
-
-	if err := st.client.Bulk(context.Background(), ColNameOperationSeal, operationModels, false); err != nil {
-		return err
+	if len(operationModels) > 0 {
+		if err := st.client.Bulk(context.Background(), ColNameOperationSeal, operationModels, false); err != nil {
+			return err
+		}
 	}
 
 	go func() {
@@ -570,6 +570,28 @@ func (st *Storage) NewSeals(seals []seal.Seal) error {
 	}()
 
 	return nil
+}
+
+// checkNewOperationSeal prevents the seal, which has already processed
+// operations to be stored.
+func (st *Storage) checkNewOperationSeal(sl seal.Seal) (bool, error) {
+	var osl operation.Seal
+	if i, ok := sl.(operation.Seal); !ok {
+		return false, nil
+	} else {
+		osl = i
+	}
+
+	for i := range osl.Operations() {
+		op := osl.Operations()[i]
+		if found, err := st.HasOperationFact(op.Fact().Hash()); err != nil {
+			return false, err
+		} else if !found {
+			return true, nil
+		}
+	}
+
+	return false, nil
 }
 
 func (st *Storage) Seals(callback func(valuehash.Hash, seal.Seal) (bool, error), sort, load bool) error {

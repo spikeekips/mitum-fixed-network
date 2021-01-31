@@ -7,6 +7,7 @@ import (
 	"github.com/spikeekips/mitum/util"
 	"github.com/spikeekips/mitum/util/cache"
 	"github.com/spikeekips/mitum/util/isvalid"
+	"golang.org/x/xerrors"
 )
 
 type SealValidationChecker struct {
@@ -56,6 +57,21 @@ func (svc SealValidationChecker) IsValidOperationSeal() (bool, error) {
 		return false, isvalid.InvalidError.Errorf("empty operations")
 	} else if uint(l) > svc.policy.MaxOperationsInSeal() {
 		return false, isvalid.InvalidError.Errorf("operations over limit; %d > %d", l, svc.policy.MaxOperationsInSeal())
+	}
+
+	var notFound bool
+	for i := range os.Operations() {
+		if found, err := svc.storage.HasOperationFact(os.Operations()[i].Fact().Hash()); err != nil {
+			return false, xerrors.Errorf("failed to check HasOperationFact: %w", err)
+		} else if !found {
+			notFound = true
+
+			break
+		}
+	}
+
+	if !notFound {
+		return false, util.CheckerNilError.Errorf("operation seal does not have new operations")
 	}
 
 	return true, nil

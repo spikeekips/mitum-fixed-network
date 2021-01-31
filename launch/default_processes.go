@@ -7,8 +7,8 @@ import (
 
 var defaultProcesses = []pm.Process{
 	process.ProcessorEncoders,
-	process.ProcessorBlockFS,
 	process.ProcessorStorage,
+	process.ProcessorBlockFS,
 	process.ProcessorLocal,
 	process.ProcessorProposalProcessor,
 	process.ProcessorSuffrage,

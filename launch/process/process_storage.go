@@ -27,28 +27,27 @@ var (
 
 func init() {
 	if i, err := pm.NewProcess(
-		ProcessNameBlockFS,
-		[]string{
-			ProcessNameConfig,
-		},
-		ProcessBlockFS,
-	); err != nil {
-		panic(err)
-	} else {
-		ProcessorBlockFS = i
-	}
-
-	if i, err := pm.NewProcess(
 		ProcessNameStorage,
 		[]string{
 			ProcessNameConfig,
-			ProcessNameBlockFS,
 		},
 		ProcessMongodbStorage,
 	); err != nil {
 		panic(err)
 	} else {
 		ProcessorStorage = i
+	}
+
+	if i, err := pm.NewProcess(
+		ProcessNameBlockFS,
+		[]string{
+			ProcessNameStorage,
+		},
+		ProcessBlockFS,
+	); err != nil {
+		panic(err)
+	} else {
+		ProcessorBlockFS = i
 	}
 }
 
@@ -59,6 +58,11 @@ func ProcessBlockFS(ctx context.Context) (context.Context, error) {
 		return ctx, err
 	} else {
 		conf = l.Storage().BlockFS()
+	}
+
+	var st storage.Storage
+	if err := LoadStorageContextValue(ctx, &st); err != nil {
+		return ctx, err
 	}
 
 	var enc *jsonenc.Encoder
@@ -79,6 +83,14 @@ func ProcessBlockFS(ctx context.Context) (context.Context, error) {
 		blockFS = storage.NewBlockFS(fs, enc)
 		if err := blockFS.Initialize(); err != nil {
 			return nil, err
+		}
+	}
+
+	if m, found, err := st.LastManifest(); err != nil {
+		return ctx, err
+	} else if found {
+		if err := blockFS.SetLast(m.Height()); err != nil {
+			return ctx, err
 		}
 	}
 

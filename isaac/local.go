@@ -31,21 +31,6 @@ func NewLocal(
 
 func (ls *Local) Initialize() error {
 	lp := NewLocalPolicy(ls.networkID)
-	if ls.blockfs != nil {
-		if err := ls.blockfs.Initialize(); err != nil {
-			return err
-		}
-	}
-
-	if ls.storage != nil {
-		if m, found, err := ls.storage.LastManifest(); err != nil {
-			return err
-		} else if found {
-			if err := ls.blockfs.SetLast(m.Height()); err != nil {
-				return err
-			}
-		}
-	}
 
 	ls.policy = lp
 

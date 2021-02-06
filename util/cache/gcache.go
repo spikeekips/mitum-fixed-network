@@ -1,6 +1,7 @@
 package cache
 
 import (
+	"math"
 	"net/url"
 	"strconv"
 	"time"
@@ -28,9 +29,9 @@ func NewGCacheWithQuery(config url.Values) (*GCache, error) {
 
 	if config != nil && len(config) > 0 {
 		if s := config.Get("size"); len(s) > 0 {
-			if n, err := strconv.ParseInt(s, 10, 64); err != nil {
+			if n, err := strconv.ParseInt(s, 10, 32); err != nil {
 				return nil, xerrors.Errorf("invalid size, %q of GCache: %w", s, err)
-			} else {
+			} else if n > 0 && n <= math.MaxInt32 {
 				size = int(n)
 			}
 		}

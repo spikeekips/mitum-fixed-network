@@ -10,6 +10,7 @@ mitum project is trying to create the general purpose blockchian factory.
 [![Go Report Card](https://goreportcard.com/badge/github.com/spikeekips/mitum)](https://goreportcard.com/report/github.com/spikeekips/mitum)
 [![codecov](https://codecov.io/gh/spikeekips/mitum/branch/master/graph/badge.svg)](https://codecov.io/gh/spikeekips/mitum)
 [![](https://tokei.rs/b1/github/spikeekips/mitum?category=lines)](https://github.com/spikeekips/mitum)
+[![Total alerts](https://img.shields.io/lgtm/alerts/g/spikeekips/mitum.svg?logo=lgtm&logoWidth=18)](https://lgtm.com/projects/g/spikeekips/mitum/alerts/)
 
 The detailed operations of mitum is writing at [MITUM Documentation](https://mitum-doc.readthedocs.io/en/master/).
 

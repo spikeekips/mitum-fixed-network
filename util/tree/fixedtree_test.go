@@ -94,31 +94,32 @@ func (t *testFixedTree) TestNodeHash() {
 
 	for i := 0; i < ft.size; i++ {
 		b := []byte(fmt.Sprintf("%d", i))
-		t.NoError(ft.Add(i, b, nil))
+		extra := []byte(fmt.Sprintf("extra%d", i))
+		t.NoError(ft.Add(i, b, extra))
 		t.Equal(b, ft.Key(i))
 	}
 
 	expected_hashes := []string{
-		"A9GxCExHbNdEc2XvikDwhVwZhJahhfJjTNNgjXJ4giZr",
-		"Dqxh28B6Y3BLSd8Xei97E9SoVbEBQ5US8hYyXxeYDAxg",
-		"DNhipXqczvhByRxvyw8kpSZ7qvGwksrh9R69Db3iq5vF",
-		"7bECxMJcc5tWokenak9k9cmG35chV6rarCeyqGKKiqGd",
-		"5DAXTQgqmvHTNaXeiD86nq42Rz5Zp27TVJP4DhXkjLAQ",
-		"AyZ2irRhKGGaoHh9ZogzdYoMt4vGhPve3PbEGBkpFA9P",
-		"CBrLi2WYDMuFwgAv1boJrj2vSAjvevvpxpn5uiFvnAqn",
-		"6zm7bVenvTEytfcQXLEFJk1dwgdUXC3UAfgo2RK9zHN6",
-		"HtKWZqQXB3VxgVYGBzTBhLcnrkipeMhZHBWXhKCt3ecy",
-		"9poEGfR8GWv5M39y8n3shz51ZBpJ4Gt7sFkRCz3Ab6vk",
-		"Fsy8F5V1bjUqkp96v9GfRnhhq5kZZo8X4ogTrkC1jhwy",
-		"5ahkCYAFVxCuTBySrjLeVDv3VKc4Y3BPsajrjjNVDrB9",
-		"2nqrqBkSfyHiagjjAEepssnYdhPcb9UZ61yCUBoM6dk3",
-		"2onKReqrFhBsBcYQd3x3R4AYSd5FFUQWGQMfsjaD8SXK",
-		"37GZGNNZP9ts5pMxe2YDc9UZHsRKhFWSYdyvRvNP2yLP",
-		"8fmzuXFqosnTxrmtin2kPcfiAat1eGDLRSaZLYuY7c2r",
-		"B4kiAGUusvSY6iWLmFWWBDY1vSt9mtZZXETyDbPY8AAH",
-		"EWW4Sdaek8pQHMyWxVFo2D82raodNLNmpxxHhsJry8rn",
-		"CA8yb6G1XVWMmTZDkc4DqC7HEkRQSNJHnf5dxDGhiyZr",
-		"8tpW8qJjqDx9c6nMLCHsjYWZgDcSNCp1TQW5jKdPSeF7",
+		"BjGge9T1Tiy63SSGK2359PLtHf2DBAKnaJEcirE2QTpz",
+		"2SwHDm8yXxJU2vGyBvQy87kXKbo3juhwiGnx4rcphwvT",
+		"DHVJt8sMBUmNuxJ95eLpA2JrP5ZHuim13BvBW2hoGn7R",
+		"v6M9D2ykyTeLNnT3z1nzVMfUNp6EDWSGBi5wVTxV8QK",
+		"VAuYeQbsCQqJX5KLHE3obfVuUW3RMYB3EwNug4ACwvg",
+		"wL1GwB2tYM6RU2S67HVXTZZU61GZsU8yqbe2g2W1WnY",
+		"4yHMzwBJKE4bYC8QMMTf7NMPV1oj7hFF7mLzrsi5eWVP",
+		"Gha4doiXH7BD14LCqzN4xmif7YJmpAjx6aBHSFavB8GS",
+		"B3pFhmZTdFudYoQjtyWTDZFVNVt2rC2UC5jHbUTY757e",
+		"CkdZFHD4Li1RGErRW6WfqwA97uXfTdj6n8Y8fTCEyKFW",
+		"HRqBic6YP1CMiG8equ7c6WkkbaZX6i9Px7VE4AAxDr2V",
+		"FgoZ93Udje5XaqBaCVre4SG77tepkJArM6q4ov8t8Q2q",
+		"DbnjurUx16zKwFxNh2VrY5QCcrdnKEfT4NjP3og6hB1W",
+		"6EQhyeqQjVSGRQGH58TLuuiTTNs6ooRzF8Sfn3WZFEGK",
+		"2jbjfN4PhSKMVPuBJbGcsyY2EimX7aFWnYu76RuhHRZ3",
+		"5bMKDXSDNUYeizGPk1k4jXhMJViTyHKfd3eG8kH79CTM",
+		"C4patNCpFu3wTV22Kqct2MXstu9qjQGmg4xRFQ1ciHjq",
+		"EVWoDGw3DSEyojiKLQjNup7bYVpixP4nrn8nPnfc8rxK",
+		"99LPbbFP7pnPwzHKDSLkErgu26g4k9RpeMFdTDbrNSGa",
+		"3pPNc4S4Up7bpeeX1mmcXLviDmUQewXotFZpGhESMiib",
 	}
 
 	_ = ft.Hash(0)

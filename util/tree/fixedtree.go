@@ -163,9 +163,11 @@ func (ft baseFixedTree) generateNodeHash(i int) []byte {
 	var b [3][]byte
 
 	key := ft.nodes[i*3]
+	extra := ft.nodes[i*3+2]
 	if len(key) > 0 {
-		b[0] = make([]byte, len(key))
+		b[0] = make([]byte, len(key)+len(extra))
 		copy(b[0], key)
+		copy(b[0][len(key):], extra)
 	}
 
 	ch := ft.children(i)

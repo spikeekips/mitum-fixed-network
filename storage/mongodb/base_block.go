@@ -51,7 +51,27 @@ func (bst *BlockStorage) Block() block.Block {
 	return bst.block
 }
 
-func (bst *BlockStorage) SetBlock(blk block.Block) error {
+func (bst *BlockStorage) SetBlock(ctx context.Context, blk block.Block) error {
+	finished := make(chan error)
+	go func() {
+		finished <- bst.setBlock(blk)
+	}()
+
+	select {
+	case <-ctx.Done():
+		if err := bst.st.CleanByHeight(blk.Height()); err != nil {
+			if !xerrors.Is(err, storage.NotFoundError) {
+				return err
+			}
+		}
+
+		return ctx.Err()
+	case err := <-finished:
+		return err
+	}
+}
+
+func (bst *BlockStorage) setBlock(blk block.Block) error {
 	startedf := time.Now()
 	defer func() {
 		bst.statesValue.Store("set-block", time.Since(startedf))
@@ -133,7 +153,7 @@ func (bst *BlockStorage) commit(ctx context.Context) error {
 	}()
 
 	if bst.manifestModels == nil {
-		if err := bst.SetBlock(bst.block); err != nil {
+		if err := bst.SetBlock(ctx, bst.block); err != nil {
 			return err
 		}
 	}

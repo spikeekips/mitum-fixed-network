@@ -58,7 +58,7 @@ func (t *testStorage) saveNewBlock(height base.Height) block.Block {
 	bs, err := t.storage.OpenBlockStorage(blk)
 	t.NoError(err)
 
-	t.NoError(bs.SetBlock(blk))
+	t.NoError(bs.SetBlock(context.Background(), blk))
 	t.NoError(bs.Commit(context.Background()))
 
 	return blk
@@ -74,6 +74,20 @@ func (t *testStorage) TestLastBlock() {
 	t.CompareManifest(blk.Manifest(), loaded)
 }
 
+func (t *testStorage) TestSetBlockContext() {
+	blk, err := block.NewTestBlockV0(base.Height(33), base.Round(0), valuehash.RandomSHA256(), valuehash.RandomSHA256())
+	t.NoError(err)
+
+	bs, err := t.storage.OpenBlockStorage(blk)
+	t.NoError(err)
+
+	ctx, cancel := context.WithTimeout(context.Background(), time.Nanosecond*1)
+	defer cancel()
+
+	err = bs.SetBlock(ctx, blk)
+	t.True(xerrors.Is(err, context.DeadlineExceeded))
+}
+
 func (t *testStorage) TestSaveBlockContext() {
 	blk, err := block.NewTestBlockV0(base.Height(33), base.Round(0), valuehash.RandomSHA256(), valuehash.RandomSHA256())
 	t.NoError(err)
@@ -81,7 +95,7 @@ func (t *testStorage) TestSaveBlockContext() {
 	bs, err := t.storage.OpenBlockStorage(blk)
 	t.NoError(err)
 
-	t.NoError(bs.SetBlock(blk))
+	t.NoError(bs.SetBlock(context.Background(), blk))
 
 	ctx, cancel := context.WithTimeout(context.Background(), time.Nanosecond*1)
 	defer cancel()

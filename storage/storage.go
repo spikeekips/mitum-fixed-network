@@ -54,7 +54,7 @@ type Storage interface {
 
 type BlockStorage interface {
 	Block() block.Block
-	SetBlock(block.Block) error
+	SetBlock(context.Context, block.Block) error
 	// NOTE UnstageOperationSeals cleans staged operation.Seals
 	Commit(context.Context) error
 	Close() error

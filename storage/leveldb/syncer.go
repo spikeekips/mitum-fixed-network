@@ -131,7 +131,7 @@ func (st *SyncerStorage) SetBlocks(blocks []block.Block) error {
 
 		if bs, err := st.storage.OpenBlockStorage(blk); err != nil {
 			return err
-		} else if err := bs.SetBlock(blk); err != nil {
+		} else if err := bs.SetBlock(context.Background(), blk); err != nil {
 			return err
 		} else if err := bs.Commit(context.Background()); err != nil {
 			return err
@@ -166,7 +166,7 @@ func (st *SyncerStorage) Commit() error {
 func (st *SyncerStorage) commitBlock(blk block.Block) error {
 	if bs, err := st.main.OpenBlockStorage(blk); err != nil {
 		return err
-	} else if err := bs.SetBlock(blk); err != nil {
+	} else if err := bs.SetBlock(context.Background(), blk); err != nil {
 		return err
 	} else if err := bs.Commit(context.Background()); err != nil {
 		return err

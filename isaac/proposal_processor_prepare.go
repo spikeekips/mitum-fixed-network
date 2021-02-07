@@ -171,7 +171,7 @@ func (pp *DefaultProcessor) prepareBlock(context.Context) error {
 	return nil
 }
 
-func (pp *DefaultProcessor) prepareBlockStorage(context.Context) error {
+func (pp *DefaultProcessor) prepareBlockStorage(ctx context.Context) error {
 	pp.Log().Debug().Msg("trying to store to BlockStorage")
 
 	var bs storage.BlockStorage
@@ -181,7 +181,7 @@ func (pp *DefaultProcessor) prepareBlockStorage(context.Context) error {
 		bs = b
 	}
 
-	if err := bs.SetBlock(pp.blk); err != nil {
+	if err := bs.SetBlock(ctx, pp.blk); err != nil {
 		pp.Log().Error().Err(err).Msg("failed to store to BlockStorage")
 
 		return err

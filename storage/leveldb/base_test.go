@@ -40,7 +40,7 @@ func (t *testStorage) TestLastBlock() {
 
 	bs, err := t.storage.OpenBlockStorage(blk)
 	t.NoError(err)
-	t.NoError(bs.SetBlock(blk))
+	t.NoError(bs.SetBlock(context.Background(), blk))
 	t.NoError(bs.Commit(context.Background()))
 
 	loaded, found, err := t.storage.lastBlock()
@@ -57,7 +57,7 @@ func (t *testStorage) TestLastManifest() {
 
 	bs, err := t.storage.OpenBlockStorage(blk)
 	t.NoError(err)
-	t.NoError(bs.SetBlock(blk))
+	t.NoError(bs.SetBlock(context.Background(), blk))
 	t.NoError(bs.Commit(context.Background()))
 
 	loaded, found, err := t.storage.LastManifest()
@@ -97,7 +97,7 @@ func (t *testStorage) TestLoadManifestByHash() {
 
 	bs, err := t.storage.OpenBlockStorage(blk)
 	t.NoError(err)
-	t.NoError(bs.SetBlock(blk))
+	t.NoError(bs.SetBlock(context.Background(), blk))
 	t.NoError(bs.Commit(context.Background()))
 
 	loaded, found, err := t.storage.Manifest(blk.Hash())
@@ -118,7 +118,7 @@ func (t *testStorage) TestLoadManifestByHeight() {
 
 	bs, err := t.storage.OpenBlockStorage(blk)
 	t.NoError(err)
-	t.NoError(bs.SetBlock(blk))
+	t.NoError(bs.SetBlock(context.Background(), blk))
 	t.NoError(bs.Commit(context.Background()))
 
 	loaded, found, err := t.storage.ManifestByHeight(blk.Height())
@@ -139,7 +139,7 @@ func (t *testStorage) TestLoadBlockByHeight() {
 
 	bs, err := t.storage.OpenBlockStorage(blk)
 	t.NoError(err)
-	t.NoError(bs.SetBlock(blk))
+	t.NoError(bs.SetBlock(context.Background(), blk))
 	t.NoError(bs.Commit(context.Background()))
 
 	loaded, found, err := t.storage.blockByHeight(blk.Height())

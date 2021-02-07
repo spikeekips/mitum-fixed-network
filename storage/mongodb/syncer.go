@@ -170,7 +170,7 @@ func (st *SyncerStorage) setBlock(blk block.Block) error {
 		_ = bs.Close()
 	}()
 
-	if err := bs.SetBlock(blk); err != nil {
+	if err := bs.SetBlock(context.Background(), blk); err != nil {
 		return err
 	} else if err := bs.Commit(context.Background()); err != nil {
 		return err

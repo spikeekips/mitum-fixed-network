@@ -205,7 +205,7 @@ func (bg *DummyBlocksV0Generator) storeBlock(l *Local, blk block.Block) error {
 		_ = bs.Close()
 	}()
 
-	if err := bs.SetBlock(blk); err != nil {
+	if err := bs.SetBlock(context.Background(), blk); err != nil {
 		return err
 	}
 

@@ -32,7 +32,7 @@ func (bst *BlockStorage) Block() block.Block {
 	return bst.block
 }
 
-func (bst *BlockStorage) SetBlock(blk block.Block) error {
+func (bst *BlockStorage) SetBlock(_ context.Context, blk block.Block) error {
 	if bst.block.Height() != blk.Height() {
 		return xerrors.Errorf(
 			"block has different height from initial block; initial=%d != block=%d",
@@ -117,9 +117,9 @@ func (bst *BlockStorage) setStates(sts []state.State) error {
 	return nil
 }
 
-func (bst *BlockStorage) Commit(context.Context) error {
+func (bst *BlockStorage) Commit(ctx context.Context) error {
 	if bst.batch.Len() < 1 {
-		if err := bst.SetBlock(bst.block); err != nil {
+		if err := bst.SetBlock(ctx, bst.block); err != nil {
 			return err
 		}
 	}

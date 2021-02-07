@@ -376,16 +376,8 @@ func (css *ConsensusStates) processNewVoteproof(voteproof base.Voteproof) error 
 
 	if ctx == nil {
 		return css.ActiveHandler().NewVoteproof(voteproof)
-	}
-
-	if css.ActiveHandler().State() == ctx.ToState {
-		go func(ctx *StateToBeChangeError) {
-			if err := css.ActiveHandler().NewVoteproof(ctx.Voteproof); err != nil {
-				css.Log().Error().Err(err).Msg("failed to newVoteproof for handler")
-			}
-		}(ctx)
-
-		return nil
+	} else if css.ActiveHandler().State() == ctx.ToState {
+		return css.ActiveHandler().NewVoteproof(ctx.Voteproof)
 	}
 
 	go func() {

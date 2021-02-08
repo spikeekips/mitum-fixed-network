@@ -31,6 +31,7 @@ type StateHandler interface {
 	State() base.State
 	SetStateChan(chan<- *StateChangeContext)
 	SetSealChan(chan<- seal.Seal)
+	SetVoteproofChan(chan<- base.Voteproof)
 	Activate(*StateChangeContext) error
 	Deactivate(*StateChangeContext) error
 	// NewSeal receives Seal.
@@ -92,6 +93,7 @@ type BaseStateHandler struct {
 	livp           base.Voteproof
 	stateChan      chan<- *StateChangeContext
 	sealChan       chan<- seal.Seal
+	voteproofChan  chan<- base.Voteproof
 	whenBlockSaved func([]block.Block)
 }
 
@@ -137,6 +139,10 @@ func (bs *BaseStateHandler) SetSealChan(sealChan chan<- seal.Seal) {
 	bs.sealChan = sealChan
 }
 
+func (bs *BaseStateHandler) SetVoteproofChan(ch chan<- base.Voteproof) {
+	bs.voteproofChan = ch
+}
+
 func (bs *BaseStateHandler) ChangeState(newState base.State, voteproof base.Voteproof, blt ballot.Ballot) error {
 	if !bs.isActivated() {
 		return nil
@@ -160,9 +166,8 @@ func (bs *BaseStateHandler) ChangeState(newState base.State, voteproof base.Vote
 }
 
 func (bs *BaseStateHandler) BroadcastSeal(sl seal.Seal) {
-	if !bs.isActivated() {
-		return
-	}
+	bs.RLock()
+	defer bs.RUnlock()
 
 	if bs.sealChan == nil {
 		return
@@ -171,6 +176,10 @@ func (bs *BaseStateHandler) BroadcastSeal(sl seal.Seal) {
 	go func() {
 		bs.sealChan <- sl
 	}()
+}
+
+func (bs *BaseStateHandler) VoteproofToStates(voteproof base.Voteproof) {
+	bs.voteproofChan <- voteproof
 }
 
 func (bs *BaseStateHandler) StoreNewBlock(acceptVoteproof base.Voteproof) error {

@@ -94,3 +94,16 @@ func (vf VoteproofNodeFact) Node() Address {
 func (vf VoteproofNodeFact) Signer() key.Publickey {
 	return vf.signer
 }
+
+type VoteproofCallbacker struct {
+	Voteproof
+	callback func() error
+}
+
+func VoteproofWithCallback(voteproof Voteproof, callback func() error) VoteproofCallbacker {
+	return VoteproofCallbacker{Voteproof: voteproof, callback: callback}
+}
+
+func (vc VoteproofCallbacker) Callback() error {
+	return vc.callback()
+}

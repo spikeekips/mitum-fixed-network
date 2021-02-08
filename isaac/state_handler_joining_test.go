@@ -30,6 +30,24 @@ func (t *testStateJoiningHandler) SetupTest() {
 	t.local, t.remote = ls[0], ls[1]
 }
 
+func (t *testStateJoiningHandler) newConsensusStates(cs *StateJoiningHandler) *ConsensusStates {
+	tr, err := base.NewThreshold(100, 100) // prevent agreement
+	t.NoError(err)
+
+	bb := NewBallotbox(func() []base.Address {
+		return []base.Address{t.local.Node().Address()}
+	}, func() base.Threshold {
+		return tr
+	})
+
+	css, err := NewConsensusStates(t.local, bb, nil, nil, cs, nil, nil, nil)
+	t.NoError(err)
+
+	css.activeHandler = cs
+
+	return css
+}
+
 func (t *testStateJoiningHandler) TestNew() {
 	cs, err := NewStateJoiningHandler(t.local, nil)
 	t.NoError(err)
@@ -42,7 +60,7 @@ func (t *testStateJoiningHandler) TestNew() {
 	}()
 }
 
-func (t *testStateJoiningHandler) TestKeepBroadcastingINITBallot() {
+func (t *testStateJoiningHandler) TestBroadcastingINITBallot() {
 	_, _ = t.local.Policy().SetIntervalBroadcastingINITBallot(time.Millisecond * 30)
 	cs, err := NewStateJoiningHandler(t.local, nil)
 	t.NoError(err)
@@ -56,13 +74,21 @@ func (t *testStateJoiningHandler) TestKeepBroadcastingINITBallot() {
 		_ = cs.Deactivate(nil)
 	}()
 
-	time.Sleep(time.Millisecond * 50)
+	started := time.Now()
+	wait := t.local.Policy().IntervalBroadcastingINITBallot() * 5
 
-	received := <-sealChan
+	var received seal.Seal
+	select {
+	case <-time.After(wait):
+	case received = <-sealChan:
+	}
+
 	t.NotNil(received)
 
 	t.Implements((*seal.Seal)(nil), received)
 	t.IsType(ballot.INITBallotV0{}, received)
+
+	t.True(received.SignedAt().Sub(started) > t.local.Policy().IntervalBroadcastingINITBallot()*3)
 
 	ballot := received.(ballot.INITBallotV0)
 
@@ -98,6 +124,10 @@ func (t *testStateJoiningHandler) TestINITBallotWithACCEPTVoteproofExpectedHeigh
 	defer func() {
 		_ = cs.Deactivate(nil)
 	}()
+
+	css := t.newConsensusStates(cs)
+	t.NoError(css.Start())
+	defer css.Stop()
 
 	manifest := t.lastManifest(t.local.Storage())
 
@@ -145,6 +175,10 @@ func (t *testStateJoiningHandler) TestINITBallotWithACCEPTVoteproofLowerHeight()
 	defer func() {
 		_ = cs.Deactivate(nil)
 	}()
+
+	css := t.newConsensusStates(cs)
+	t.NoError(css.Start())
+	defer css.Stop()
 
 	manifest := t.lastManifest(t.remote.Storage())
 
@@ -194,6 +228,13 @@ func (t *testStateJoiningHandler) TestINITBallotWithACCEPTVoteproofHigherHeight(
 		_ = cs.Deactivate(nil)
 	}()
 
+	css := t.newConsensusStates(cs)
+	t.NoError(css.Start())
+	defer css.Stop()
+
+	stateChan := make(chan *StateChangeContext)
+	cs.SetStateChan(stateChan)
+
 	manifest := t.lastManifest(t.local.Storage())
 
 	// ACCEPT Voteproof; 2 node(local and remote) vote with same AcceptFact.
@@ -217,9 +258,6 @@ func (t *testStateJoiningHandler) TestINITBallotWithACCEPTVoteproofHigherHeight(
 		vp,
 	)
 	t.NoError(ib.Sign(t.remote.Node().Privatekey(), t.remote.Policy().NetworkID()))
-
-	stateChan := make(chan *StateChangeContext)
-	cs.SetStateChan(stateChan)
 
 	t.NoError(cs.NewSeal(ib))
 
@@ -256,6 +294,10 @@ func (t *testStateJoiningHandler) TestINITBallotWithINITVoteproofExpectedHeight(
 	defer func() {
 		_ = cs.Deactivate(nil)
 	}()
+
+	css := t.newConsensusStates(cs)
+	t.NoError(css.Start())
+	defer css.Stop()
 
 	cs.cr = base.Round(1)
 	manifest := t.lastManifest(t.remote.Storage())
@@ -306,6 +348,10 @@ func (t *testStateJoiningHandler) TestINITBallotWithINITVoteproofLowerHeight() {
 		_ = cs.Deactivate(nil)
 	}()
 
+	css := t.newConsensusStates(cs)
+	t.NoError(css.Start())
+	defer css.Stop()
+
 	cs.cr = base.Round(1)
 	manifest := t.lastManifest(t.remote.Storage())
 
@@ -354,6 +400,12 @@ func (t *testStateJoiningHandler) TestINITBallotWithINITVoteproofHigherHeight() 
 	t.NoError(cs.Activate(nil))
 	defer func() {
 		_ = cs.Deactivate(nil)
+	}()
+
+	css := t.newConsensusStates(cs)
+	t.NoError(css.Start())
+	defer func() {
+		css.Stop()
 	}()
 
 	cs.cr = base.Round(1)

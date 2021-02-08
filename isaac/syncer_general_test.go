@@ -198,6 +198,96 @@ func (t *testGeneralSyncer) TestFetchBlocks() {
 	}
 }
 
+func (t *testGeneralSyncer) TestFetchBlocksButSomeNodesFailed() {
+	ls := t.locals(4)
+	local, rn0, rn1, rn2 := ls[0], ls[1], ls[2], ls[3]
+
+	t.setup(local, []*Local{local, rn0, rn1, rn2})
+
+	_ = local.Policy().SetThresholdRatio(base.ThresholdRatio(100))
+
+	baseHeight := t.lastManifest(local.Storage()).Height()
+	target := baseHeight + 3
+	t.generateBlocks([]*Local{rn0, rn1, rn2}, target)
+
+	// only one node, rn0 will return correct manifest
+	for i := range ls[2:] {
+		ch := ls[i+2].Node().Channel().(*channetwork.Channel)
+		orig := ch.GetManifestsHandler()
+		ch.SetGetManifestsHandler(func(heights []base.Height) ([]block.Manifest, error) {
+			var bs []block.Manifest
+			if l, err := orig(heights); err != nil {
+				return nil, err
+			} else {
+				for _, i := range l {
+					if i.Height() == target {
+						continue
+					}
+
+					bs = append(bs, i)
+				}
+			}
+
+			return bs, nil
+		})
+	}
+
+	cs, err := NewGeneralSyncer(local, []network.Node{rn0.Node(), rn1.Node(), rn2.Node()}, baseHeight+1, target)
+	t.NoError(err)
+
+	defer cs.Close()
+
+	cs.reset()
+
+	cs.setState(SyncerPreparing)
+	t.NoError(cs.headAndTailManifests())
+}
+
+func (t *testGeneralSyncer) TestFetchBlocksButAllNodesFailed() {
+	ls := t.locals(4)
+	local, rn0, rn1, rn2 := ls[0], ls[1], ls[2], ls[3]
+
+	t.setup(local, []*Local{local, rn0, rn1, rn2})
+
+	_ = local.Policy().SetThresholdRatio(base.ThresholdRatio(100))
+
+	baseHeight := t.lastManifest(local.Storage()).Height()
+	target := baseHeight + 3
+	t.generateBlocks([]*Local{rn0, rn1, rn2}, target)
+
+	for i := range ls[1:] {
+		ch := ls[i+1].Node().Channel().(*channetwork.Channel)
+		orig := ch.GetManifestsHandler()
+		ch.SetGetManifestsHandler(func(heights []base.Height) ([]block.Manifest, error) {
+			var bs []block.Manifest
+			if l, err := orig(heights); err != nil {
+				return nil, err
+			} else {
+				for _, i := range l {
+					if i.Height() == target {
+						continue
+					}
+
+					bs = append(bs, i)
+				}
+			}
+
+			return bs, nil
+		})
+	}
+
+	cs, err := NewGeneralSyncer(local, []network.Node{rn0.Node(), rn1.Node(), rn2.Node()}, baseHeight+1, target)
+	t.NoError(err)
+
+	defer cs.Close()
+
+	cs.reset()
+
+	cs.setState(SyncerPreparing)
+	err = cs.headAndTailManifests()
+	t.Contains(err.Error(), "nothing fetched")
+}
+
 func (t *testGeneralSyncer) TestSaveBlocks() {
 	ls := t.locals(4)
 	local, rn0, rn1, rn2 := ls[0], ls[1], ls[2], ls[3]

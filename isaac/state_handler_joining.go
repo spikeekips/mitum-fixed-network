@@ -16,47 +16,6 @@ import (
 	"github.com/spikeekips/mitum/util/logging"
 )
 
-/*
-StateJoiningHandler tries to join network safely. This is the basic
-strategy,
-
-* Keeping broadcasting INIT ballot with Voteproof
-
-- waits the incoming INIT ballots, which should have Voteproof.
-- if timed out, still broadcasts and waits.
-
-* With (valid) incoming Ballot Voteproof
-
-- validate it.
-
-	- if height should be within *predictable* range
-
-- if not valid, still broadcasts and waits.
-
-- if Voteproof is INIT
-	- if height is the next of local block, keeps broadcasts INIT ballot with Voteproof's round
-
-	- if not,
-		-> moves to syncing.
-
-- if Voteproof is ACCEPT
-	- if height is not the next of local block,
-		-> moves to syncing.
-
-	- if next of local block,
-		1. processes Proposal.
-		1. check the result of new block of Proposal.
-		1. if not,
-			-> moves to syncing.
-		1. waits next INIT voteproof
-
-* With consensused INIT Voteproof received,
-	- if height is not the next of local block,
-		-> moves to syncing.
-
-	- if next of local block,
-		-> moves to consesus.
-*/
 type StateJoiningHandler struct {
 	*BaseStateHandler
 	cr base.Round
@@ -176,22 +135,41 @@ func (cs *StateJoiningHandler) NewSeal(sl seal.Seal) error {
 	if blt.Stage() == base.StageINIT {
 		switch voteproof.Stage() {
 		case base.StageACCEPT:
-			return cs.handleINITBallotAndACCEPTVoteproof(blt.(ballot.INITBallot), voteproof)
+			return cs.voteproofToStates(voteproof, func() error {
+				return cs.handleINITBallotAndACCEPTVoteproof(blt.(ballot.INITBallot), voteproof)
+			})
 		case base.StageINIT:
-			return cs.handleINITBallotAndINITVoteproof(blt.(ballot.INITBallot), voteproof)
+			return cs.voteproofToStates(voteproof, func() error {
+				return cs.handleINITBallotAndINITVoteproof(blt.(ballot.INITBallot), voteproof)
+			})
 		default:
 			return xerrors.Errorf("invalid Voteproof stage found in init ballot")
 		}
 	} else if blt.Stage() == base.StageACCEPT {
 		switch voteproof.Stage() {
 		case base.StageINIT:
-			return cs.handleACCEPTBallotAndINITVoteproof(blt.(ballot.ACCEPTBallot), voteproof)
+			return cs.voteproofToStates(voteproof, func() error {
+				return cs.handleACCEPTBallotAndINITVoteproof(blt.(ballot.ACCEPTBallot), voteproof)
+			})
 		default:
 			return xerrors.Errorf("invalid Voteproof stage found in accept ballot")
 		}
 	}
 
 	return xerrors.Errorf("invalid ballot stage found")
+}
+
+func (cs *StateJoiningHandler) voteproofToStates(voteproof base.Voteproof, callback func() error) error {
+	finished := make(chan error)
+	go cs.VoteproofToStates(base.VoteproofWithCallback(voteproof, func() error {
+		err := callback()
+
+		finished <- err
+
+		return err
+	}))
+
+	return <-finished
 }
 
 func (cs *StateJoiningHandler) handleProposal(proposal ballot.Proposal) error {
@@ -375,8 +353,13 @@ func (cs *StateJoiningHandler) handleINITVoteproof(voteproof base.Voteproof) err
 
 func (cs *StateJoiningHandler) broadcastINITBallot(round base.Round, voteproof base.Voteproof) error {
 	if timer, err := cs.TimerBroadcastingINITBallot(
-		func(int) time.Duration {
-			return cs.local.Policy().IntervalBroadcastingINITBallot()
+		func(i int) time.Duration {
+			// NOTE at first time, wait enough time for incoming ballot
+			if i < 1 {
+				return cs.local.Policy().IntervalBroadcastingINITBallot() * 3
+			} else {
+				return cs.local.Policy().IntervalBroadcastingINITBallot()
+			}
 		},
 		round,
 		voteproof,

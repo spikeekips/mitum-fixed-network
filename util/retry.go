@@ -7,6 +7,10 @@ import (
 	"golang.org/x/xerrors"
 )
 
+type Callbacker interface {
+	Callback() error
+}
+
 var StopRetryingError = errors.NewError("stop retrying")
 
 func Retry(max uint, interval time.Duration, callback func() error) error {

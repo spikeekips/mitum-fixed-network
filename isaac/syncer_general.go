@@ -781,13 +781,6 @@ func (cs *GeneralSyncer) checkThreshold(
 	fetched map[base.Address][]block.Manifest,
 	provedNodes map[base.Address]network.Node,
 ) (block.Manifest, []base.Address, error) {
-	var threshold base.Threshold
-	if t, err := base.NewThreshold(uint(len(provedNodes)), cs.local.Policy().ThresholdRatio()); err != nil {
-		return nil, nil, err
-	} else {
-		threshold = t
-	}
-
 	height := heights[index]
 	hashByNode := map[string][]base.Address{}
 	ms := map[string]block.Manifest{}
@@ -818,19 +811,18 @@ func (cs *GeneralSyncer) checkThreshold(
 		hashByNode[key] = append(hashByNode[key], node)
 	}
 
-	result, key := base.FindMajorityFromSlice(threshold.Total, threshold.Threshold, set)
-
-	if cs.Log().IsVerbose() {
-		var ns []string
-		for n := range provedNodes {
-			ns = append(ns, provedNodes[n].Address().String())
-		}
-
-		cs.Log().Debug().
-			Str("result", result.String()).Str("majority_block_hash", key).Hinted("height", height).
-			Strs("target_nodes", ns).Msg("check majority of manifests")
+	if len(set) < 1 {
+		return nil, nil, xerrors.Errorf("nothing fetched for height=%d", height)
 	}
 
+	var threshold base.Threshold
+	if t, err := base.NewThreshold(uint(len(set)), cs.local.Policy().ThresholdRatio()); err != nil {
+		return nil, nil, err
+	} else {
+		threshold = t
+	}
+
+	result, key := base.FindMajorityFromSlice(threshold.Total, threshold.Threshold, set)
 	if result != base.VoteResultMajority {
 		return nil, nil, xerrors.Errorf("given target nodes doet not have common blocks: height=%s", height)
 	}

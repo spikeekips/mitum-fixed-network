@@ -37,7 +37,7 @@ type Storage interface {
 	SealsByHash([]valuehash.Hash, func(valuehash.Hash, seal.Seal) (bool, error), bool /* load Seal? */) error
 
 	NewProposal(ballot.Proposal) error
-	Proposal(base.Height, base.Round) (ballot.Proposal, bool, error)
+	Proposal(base.Height, base.Round, base.Address /* proposer address */) (ballot.Proposal, bool, error)
 	Proposals(func(ballot.Proposal) (bool, error), bool /* sort */) error
 
 	State(key string) (state.State, bool, error)

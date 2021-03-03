@@ -32,6 +32,7 @@ func (t *testProcessors) newProposal(height base.Height, round base.Round) ballo
 		height,
 		round,
 		nil,
+		nil,
 	)
 	t.NoError(pr.Sign(t.pk, nil))
 
@@ -535,7 +536,7 @@ end:
 
 		return
 	case result := <-sch:
-		t.Nil(result.Block)
+		t.NotNil(result.Block)
 		t.NoError(result.Err)
 	}
 }

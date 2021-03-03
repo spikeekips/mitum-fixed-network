@@ -55,7 +55,9 @@ will sync [1,2,3,4,5].
 type GeneralSyncer struct { // nolint; maligned
 	sync.RWMutex
 	*logging.Logging
-	local                   *Local
+	ost                     storage.Storage
+	blockFS                 *storage.BlockFS
+	policy                  *LocalPolicy
 	st                      storage.SyncerStorage
 	sourceNodes             map[base.Address]network.Node
 	heightFrom              base.Height
@@ -71,7 +73,10 @@ type GeneralSyncer struct { // nolint; maligned
 }
 
 func NewGeneralSyncer(
-	local *Local,
+	local *network.LocalNode,
+	ost storage.Storage,
+	blockFS *storage.BlockFS,
+	policy *LocalPolicy,
 	sourceNodes []network.Node,
 	from, to base.Height,
 ) (*GeneralSyncer, error) {
@@ -82,7 +87,7 @@ func NewGeneralSyncer(
 		return nil, xerrors.Errorf("empty source nodes")
 	}
 
-	if m, found, err := local.Storage().LastManifest(); err != nil {
+	if m, found, err := ost.LastManifest(); err != nil {
 		return nil, err
 	} else if found && from <= m.Height() {
 		return nil, xerrors.Errorf("from height is same or lower than last block; from=%d last=%d", from, m.Height())
@@ -91,7 +96,7 @@ func NewGeneralSyncer(
 	sn := map[base.Address]network.Node{}
 	{
 		for _, node := range sourceNodes {
-			if local.Node().Address().Equal(node.Address()) {
+			if local.Address().Equal(node.Address()) {
 				return nil, xerrors.Errorf("one of sourceNodes is same with local node")
 			}
 
@@ -111,7 +116,9 @@ func NewGeneralSyncer(
 				Str("syncer_id", util.UUID().String()).
 				Str("module", "general-syncer")
 		}),
-		local:                   local,
+		ost:                     ost,
+		blockFS:                 blockFS,
+		policy:                  policy,
 		sourceNodes:             sn,
 		heightFrom:              from,
 		heightTo:                to,
@@ -214,7 +221,7 @@ func (cs *GeneralSyncer) save() error {
 
 	if err := cs.saveBlockFS(); err != nil {
 		err := errors.NewError("failed to save blockfs").Wrap(err)
-		if err0 := cs.local.Storage().CleanByHeight(cs.heightFrom); err0 != nil {
+		if err0 := cs.ost.CleanByHeight(cs.heightFrom); err0 != nil {
 			return err.Wrap(err0)
 		}
 
@@ -242,7 +249,7 @@ func (cs *GeneralSyncer) reset() error {
 		}
 	}
 
-	if st, err := cs.local.Storage().SyncerStorage(); err != nil {
+	if st, err := cs.ost.SyncerStorage(); err != nil {
 		return err
 	} else {
 		cs.st = st
@@ -256,7 +263,7 @@ func (cs *GeneralSyncer) reset() error {
 	cs.Log().Debug().Int("blocks", len(cs.blocks)).Msg("reset: will cleanup blockfs")
 	for i := range cs.blocks {
 		blk := cs.blocks[i]
-		if err := cs.local.BlockFS().Cancel(blk.Height(), blk.Hash()); err != nil {
+		if err := cs.blockFS.Cancel(blk.Height(), blk.Hash()); err != nil {
 			return err
 		}
 	}
@@ -332,7 +339,7 @@ func (cs *GeneralSyncer) Prepare(manifest block.Manifest) error {
 
 	go func() {
 		// NOTE do forever unless successfully done
-		_ = util.Retry(0, time.Millisecond*500, func() error {
+		_ = util.Retry(0, time.Millisecond*500, func(int) error {
 			if err := cs.reset(); err != nil {
 				cs.Log().Error().Err(err).Msg("failed to reset for syncing")
 
@@ -418,7 +425,7 @@ func (cs *GeneralSyncer) headAndTailManifests() error {
 			Hinted("head", head.Hash()).
 			Msg("checking base and head manifest")
 
-		checker := NewManifestsValidationChecker(cs.local, []block.Manifest{cs.baseManifest(), head})
+		checker := NewManifestsValidationChecker(cs.policy.NetworkID(), []block.Manifest{cs.baseManifest(), head})
 		_ = checker.SetLogger(cs.Log())
 
 		if err := util.NewChecker("sync-manifests-validation-checker", []util.CheckerFunc{
@@ -484,7 +491,7 @@ func (cs *GeneralSyncer) startBlocks() error {
 	cs.Log().Debug().Msg("start to fetch blocks")
 	defer cs.Log().Debug().Msg("fetched blocks")
 
-	_ = util.Retry(0, time.Second, func() error {
+	_ = util.Retry(0, time.Second, func(int) error {
 		err := cs.fetchBlocksByNodes()
 		if err != nil {
 			cs.Log().Error().Err(err).Msg("failed to fetch blocks by nodes")
@@ -718,10 +725,8 @@ func (cs *GeneralSyncer) callbackFetchManifestsSlice(node network.Node, heights 
 
 	missing := heights
 
-	var retries uint
-	_ = util.Retry(maxRetries, time.Millisecond*300, func() error {
-		l.Debug().Uint("retries", retries).Msg("try to fetch manifest")
-		retries++
+	_ = util.Retry(maxRetries, time.Millisecond*300, func(retries int) error {
+		l.Debug().Int("retries", retries).Msg("try to fetch manifest")
 
 		bs, err := cs.fetchManifests(node, missing)
 		if err != nil {
@@ -816,7 +821,7 @@ func (cs *GeneralSyncer) checkThreshold(
 	}
 
 	var threshold base.Threshold
-	if t, err := base.NewThreshold(uint(len(set)), cs.local.Policy().ThresholdRatio()); err != nil {
+	if t, err := base.NewThreshold(uint(len(set)), cs.policy.ThresholdRatio()); err != nil {
 		return nil, nil, err
 	} else {
 		threshold = t
@@ -941,7 +946,7 @@ func (cs *GeneralSyncer) workerCallbackFetchBlocks(node network.Node) util.Worke
 }
 
 func (cs *GeneralSyncer) checkFetchedBlocks(fetched []block.Block) ([]base.Height, error) {
-	networkID := cs.local.Policy().NetworkID()
+	networkID := cs.policy.NetworkID()
 
 	var filtered []block.Block // nolint
 	var missing []base.Height
@@ -977,7 +982,7 @@ func (cs *GeneralSyncer) checkFetchedBlocks(fetched []block.Block) ([]base.Heigh
 	}
 
 	for i := range filtered {
-		if err := cs.local.BlockFS().Add(filtered[i]); err != nil {
+		if err := cs.blockFS.Add(filtered[i]); err != nil {
 			return nil, err
 		}
 	}
@@ -1085,12 +1090,12 @@ func (cs *GeneralSyncer) rollback(rollbackCtx *BlockIntegrityError) error {
 
 	// NOTE clean block until unmatched height and start again prepare()
 	var baseManifest block.Manifest
-	if err := cs.local.Storage().CleanByHeight(unmatched); err != nil {
+	if err := cs.ost.CleanByHeight(unmatched); err != nil {
 		return err
-	} else if err := cs.local.BlockFS().CleanByHeight(unmatched); err != nil {
+	} else if err := cs.blockFS.CleanByHeight(unmatched); err != nil {
 		return err
 	} else if unmatched > base.PreGenesisHeight+1 {
-		switch m, found, err := cs.local.Storage().ManifestByHeight(unmatched - 1); {
+		switch m, found, err := cs.ost.ManifestByHeight(unmatched - 1); {
 		case err != nil:
 			return err
 		case !found:
@@ -1162,7 +1167,7 @@ func (cs *GeneralSyncer) compareInsideBlocks(top base.Height) (base.Height, bool
 
 func (cs *GeneralSyncer) compareBlock(height base.Height) (bool, error) {
 	var local block.Manifest
-	switch m, found, err := cs.local.Storage().ManifestByHeight(height); {
+	switch m, found, err := cs.ost.ManifestByHeight(height); {
 	case !found:
 		return false, xerrors.Errorf("local block, %d not found", height)
 	case err != nil:
@@ -1220,7 +1225,7 @@ func (cs *GeneralSyncer) saveBlockFS() error {
 			continue
 		}
 
-		if err := cs.local.BlockFS().Commit(blk.Height(), blk.Hash()); err != nil {
+		if err := cs.blockFS.Commit(blk.Height(), blk.Hash()); err != nil {
 			return err
 		}
 		added[blk.Height()] = struct{}{}

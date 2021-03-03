@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/beevik/ntp"
+	"golang.org/x/xerrors"
 
 	"github.com/spikeekips/mitum/util"
 	"github.com/spikeekips/mitum/util/logging"
@@ -28,9 +29,14 @@ type TimeSyncer struct {
 
 // NewTimeSyncer creates new TimeSyncer
 func NewTimeSyncer(server string, checkInterval time.Duration) (*TimeSyncer, error) {
-	_, err := ntp.Query(server)
-	if err != nil {
-		return nil, err
+	if err := util.Retry(3, time.Second*2, func(int) error {
+		if _, err := ntp.Query(server); err != nil {
+			return xerrors.Errorf("failed to query ntp server, %q: %w", server, err)
+		}
+
+		return nil
+	}); err != nil {
+		return nil, xerrors.Errorf("failed to query ntp server, %q: %w", server, err)
 	}
 
 	ts := &TimeSyncer{
@@ -43,14 +49,9 @@ func NewTimeSyncer(server string, checkInterval time.Duration) (*TimeSyncer, err
 		interval: checkInterval,
 	}
 
-	if checkInterval < minTimeSyncCheckInterval {
-		ts.Log().Warn().
-			Dur("checkInterval", checkInterval).
-			Dur("minCeckInterval", minTimeSyncCheckInterval).
-			Msg("checkInterval too short")
-	}
-
 	ts.FunctionDaemon = util.NewFunctionDaemon(ts.schedule, true)
+
+	ts.check()
 
 	return ts, nil
 }
@@ -58,6 +59,13 @@ func NewTimeSyncer(server string, checkInterval time.Duration) (*TimeSyncer, err
 // Start starts TimeSyncer
 func (ts *TimeSyncer) Start() error {
 	ts.Log().Debug().Msg("started")
+
+	if ts.interval < minTimeSyncCheckInterval {
+		ts.Log().Warn().
+			Dur("check_interval", ts.interval).
+			Dur("min_ceck_interval", minTimeSyncCheckInterval).
+			Msg("interval too short")
+	}
 
 	return ts.FunctionDaemon.Start()
 }
@@ -96,6 +104,7 @@ func (ts *TimeSyncer) check() {
 	response, err := ntp.Query(ts.server)
 	if err != nil {
 		ts.Log().Error().Err(err).Msg("failed to query")
+
 		return
 	}
 
@@ -117,6 +126,7 @@ func (ts *TimeSyncer) check() {
 
 	if ts.offset < 1 {
 		ts.offset = response.ClockOffset
+
 		return
 	}
 

@@ -10,7 +10,6 @@ import (
 
 type baseBlocksValidationChecker struct {
 	*logging.Logging
-	local     *Local
 	networkID base.NetworkID
 }
 
@@ -41,11 +40,9 @@ type ManifestsValidationChecker struct {
 }
 
 func NewManifestsValidationChecker(
-	local *Local,
+	networkID base.NetworkID,
 	manifests []block.Manifest,
 ) *ManifestsValidationChecker {
-	networkID := local.Policy().NetworkID()
-
 	return &ManifestsValidationChecker{
 		baseBlocksValidationChecker: baseBlocksValidationChecker{
 			Logging: logging.NewLogging(func(c logging.Context) logging.Emitter {
@@ -54,7 +51,6 @@ func NewManifestsValidationChecker(
 					Hinted("to_manifest", manifests[len(manifests)-1].Height()).
 					Str("module", "manifests-validation-checker")
 			}),
-			local:     local,
 			networkID: networkID,
 		},
 		manifests: manifests,
@@ -84,56 +80,6 @@ func (bc *ManifestsValidationChecker) CheckSerialized() (bool, error) {
 	}
 
 	bc.Log().Debug().Msg("validated serialized manifests")
-
-	return true, nil
-}
-
-type BlocksValidationChecker struct {
-	baseBlocksValidationChecker
-	blocks []block.Block
-}
-
-func NewBlocksValidationChecker(local *Local, blocks []block.Block) *BlocksValidationChecker {
-	networkID := local.Policy().NetworkID()
-
-	return &BlocksValidationChecker{
-		baseBlocksValidationChecker: baseBlocksValidationChecker{
-			Logging: logging.NewLogging(func(c logging.Context) logging.Emitter {
-				return c.
-					Hinted("from_block", blocks[0].Height()).
-					Hinted("to_block", blocks[len(blocks)-1].Height()).
-					Str("module", "blocks-validation-checker")
-			}),
-			local:     local,
-			networkID: networkID,
-		},
-		blocks: blocks,
-	}
-}
-
-func (bc *BlocksValidationChecker) CheckSerialized() (bool, error) {
-	bc.Log().Debug().Msg("trying to validate serialized blocks")
-
-	i := 0
-	l := len(bc.blocks)
-	for {
-		current := bc.blocks[i]
-		if err := bc.checkIsValid(current); err != nil {
-			return false, err
-		}
-
-		if l == i+1 {
-			break
-		}
-
-		if err := bc.checkPreviousBlock(current, bc.blocks[i+1]); err != nil {
-			return false, err
-		}
-
-		i++
-	}
-
-	bc.Log().Debug().Msg("validated serialized blocks")
 
 	return true, nil
 }

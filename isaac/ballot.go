@@ -35,7 +35,7 @@ func NewINITBallotV0Round0(local *Local) (ballot.INITBallotV0, error) {
 	}
 
 	if avp != nil {
-		return NewINITBallotV0WithVoteproof(local.Node().Address(), avp)
+		return NewINITBallotV0WithVoteproof(local, local.Node().Address(), avp)
 	}
 
 	return ballot.NewINITBallotV0(
@@ -44,15 +44,17 @@ func NewINITBallotV0Round0(local *Local) (ballot.INITBallotV0, error) {
 		base.Round(0),
 		m.Hash(),
 		avp,
+		avp,
 	), nil
 }
 
-func NewINITBallotV0WithVoteproof(node base.Address, voteproof base.Voteproof) (
+func NewINITBallotV0WithVoteproof(local *Local, node base.Address, voteproof base.Voteproof) (
 	ballot.INITBallotV0, error,
 ) {
 	var height base.Height
 	var round base.Round
 	var previousBlock valuehash.Hash
+	var avp base.Voteproof
 	switch voteproof.Stage() {
 	case base.StageINIT:
 		height = voteproof.Height()
@@ -63,7 +65,15 @@ func NewINITBallotV0WithVoteproof(node base.Address, voteproof base.Voteproof) (
 		case ballot.ACCEPTBallotFact:
 			previousBlock = t.NewBlock()
 		}
+
+		switch vp, found, err := local.BlockFS().LastVoteproof(base.StageACCEPT); {
+		case err != nil:
+			return ballot.INITBallotV0{}, xerrors.Errorf("failed to get last voteproof: %w", err)
+		case found:
+			avp = vp
+		}
 	case base.StageACCEPT:
+		avp = voteproof
 		height = voteproof.Height() + 1
 		round = base.Round(0)
 		if f, ok := voteproof.Majority().(ballot.ACCEPTBallotFact); !ok {
@@ -80,10 +90,17 @@ func NewINITBallotV0WithVoteproof(node base.Address, voteproof base.Voteproof) (
 		round,
 		previousBlock,
 		voteproof,
+		avp,
 	), nil
 }
 
-func NewProposalV0(st storage.Storage, node base.Address, round base.Round, seals []valuehash.Hash) (
+func NewProposalV0(
+	st storage.Storage,
+	node base.Address,
+	round base.Round,
+	seals []valuehash.Hash,
+	voteproof base.Voteproof,
+) (
 	ballot.ProposalV0, error,
 ) {
 	var manifest block.Manifest
@@ -101,6 +118,7 @@ func NewProposalV0(st storage.Storage, node base.Address, round base.Round, seal
 		manifest.Height()+1,
 		round,
 		seals,
+		voteproof,
 	), nil
 }
 

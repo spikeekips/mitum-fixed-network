@@ -1,6 +1,6 @@
 // +build mongodb
 
-package isaac
+package basicstates
 
 import (
 	"testing"
@@ -8,8 +8,8 @@ import (
 	"github.com/stretchr/testify/suite"
 )
 
-func TestStateConsensusHandlerMongodb(t *testing.T) {
-	handler := new(testStateConsensusHandler)
+func TestStateBootingMongodb(t *testing.T) {
+	handler := new(testStateBooting)
 	handler.DBType = "mongodb"
 
 	suite.Run(t, handler)

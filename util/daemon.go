@@ -25,6 +25,7 @@ type FunctionDaemon struct {
 	stopChan     chan struct{}
 	stoppingWait *sync.WaitGroup
 	isDebug      bool
+	isBlocked    bool
 }
 
 func NewFunctionDaemon(fn func(chan struct{}) error, isDebug bool) *FunctionDaemon {
@@ -36,6 +37,12 @@ func NewFunctionDaemon(fn func(chan struct{}) error, isDebug bool) *FunctionDaem
 		stopChan: make(chan struct{}, 2),
 		isDebug:  isDebug,
 	}
+
+	return dm
+}
+
+func (dm *FunctionDaemon) SetBlocking(blocked bool) *FunctionDaemon {
+	dm.isBlocked = blocked
 
 	return dm
 }
@@ -63,6 +70,10 @@ func (dm *FunctionDaemon) Start() error {
 		return DaemonAlreadyStartedError
 	}
 
+	if dm.isBlocked {
+		return dm.fn(dm.stopChan)
+	}
+
 	{
 		dm.Lock()
 		dm.stoppingChan = make(chan struct{}, 2)
@@ -84,6 +95,7 @@ func (dm *FunctionDaemon) Start() error {
 	if dm.isDebug {
 		dm.Log().Debug().Msg("started")
 	}
+
 	return nil
 }
 

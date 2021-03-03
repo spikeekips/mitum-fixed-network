@@ -2,13 +2,16 @@ package cmds
 
 import (
 	"context"
+	"fmt"
+	"os"
 	"time"
 
 	"golang.org/x/xerrors"
 
-	"github.com/spikeekips/mitum/isaac"
+	"github.com/spikeekips/mitum/base/prprocessor"
 	"github.com/spikeekips/mitum/launch/pm"
 	"github.com/spikeekips/mitum/launch/process"
+	"github.com/spikeekips/mitum/states"
 	"github.com/spikeekips/mitum/util"
 )
 
@@ -20,12 +23,14 @@ var defaultRunHooks = []pm.Hook{
 
 type RunCommand struct {
 	*BaseRunCommand
-	ExitAfter time.Duration `name:"exit-after" help:"exit after the given duration"`
+	ExitAfter         time.Duration `name:"exit-after" help:"exit after the given duration"`
+	afterStartedHooks *pm.Hooks
 }
 
 func NewRunCommand(dryrun bool) RunCommand {
 	co := RunCommand{
-		BaseRunCommand: NewBaseRunCommand(dryrun, "run"),
+		BaseRunCommand:    NewBaseRunCommand(dryrun, "run"),
+		afterStartedHooks: pm.NewHooks("run-after-started"),
 	}
 
 	ps := co.Processes()
@@ -64,20 +69,21 @@ func (cmd *RunCommand) Run(version util.Version) error {
 func (cmd *RunCommand) run() error {
 	ps := cmd.Processes()
 
-	var ctx context.Context
 	if err := ps.Run(); err != nil {
 		return xerrors.Errorf("failed to run: %w", err)
-	} else {
-		ctx = ps.Context()
 	}
 
-	var cs *isaac.ConsensusStates
-	if err := process.LoadConsensusStatesContextValue(ctx, &cs); err != nil {
+	errch := make(chan error)
+	go func() {
+		errch <- cmd.runStates(ps.Context())
+	}()
+
+	if err := cmd.afterStartedHooks.Run(ps.Context()); err != nil {
 		return err
 	}
 
 	select {
-	case err := <-cs.ErrChan():
+	case err := <-errch:
 		return err
 	case <-func(w time.Duration) <-chan time.Time {
 		if w < 1 {
@@ -86,9 +92,49 @@ func (cmd *RunCommand) run() error {
 
 		return time.After(w)
 	}(cmd.ExitAfter):
-
 		cmd.Log().Info().Str("exit-after", cmd.ExitAfter.String()).Msg("expired, exit.")
 
 		return nil
 	}
+}
+
+func (cmd *RunCommand) runStates(ctx context.Context) error {
+	var pps *prprocessor.Processors
+	if err := process.LoadProposalProcessorContextValue(ctx, &pps); err != nil {
+		return err
+	}
+
+	var cs states.States
+	if err := process.LoadConsensusStatesContextValue(ctx, &cs); err != nil {
+		return err
+	}
+
+	if err := pps.Start(); err != nil {
+		return xerrors.Errorf("failed to start Processors: %w", err)
+	}
+
+	errch := make(chan error)
+	go func() {
+		errch <- cs.Start()
+	}()
+
+	cmd.ConnectSig(func() {
+		if err := cs.Stop(); err != nil {
+			_, _ = fmt.Fprintf(os.Stderr, "failed to stop consensus states, %v\n", err)
+
+			return
+		}
+
+		_, _ = fmt.Fprintln(os.Stderr, "consensus states stopped")
+	})
+
+	if err := <-errch; err != nil {
+		return xerrors.Errorf("problem of consensus states: %w", err)
+	} else {
+		return nil
+	}
+}
+
+func (cmd *RunCommand) AfterStartedHooks() *pm.Hooks {
+	return cmd.afterStartedHooks
 }

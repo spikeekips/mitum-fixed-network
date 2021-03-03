@@ -296,6 +296,20 @@ func (bs *BlockFS) loadByLine(height base.Height, name string, decode func([]byt
 }
 
 func (bs *BlockFS) LoadINITVoteproof(height base.Height) (base.Voteproof, error) {
+	bs.RLock()
+	defer bs.RUnlock()
+
+	return bs.loadINITVoteproof(height)
+}
+
+func (bs *BlockFS) loadINITVoteproof(height base.Height) (base.Voteproof, error) {
+	switch i, found, err := bs.lastVoteproof(base.StageINIT); {
+	case err != nil:
+		return nil, err
+	case found && i.Height() == height:
+		return i, nil
+	}
+
 	if hinter, err := bs.load(height, "init_voteproof"); err != nil {
 		return nil, err
 	} else if hinter == nil {
@@ -308,6 +322,20 @@ func (bs *BlockFS) LoadINITVoteproof(height base.Height) (base.Voteproof, error)
 }
 
 func (bs *BlockFS) LoadACCEPTVoteproof(height base.Height) (base.Voteproof, error) {
+	bs.RLock()
+	defer bs.RUnlock()
+
+	return bs.loadACCEPTVoteproof(height)
+}
+
+func (bs *BlockFS) loadACCEPTVoteproof(height base.Height) (base.Voteproof, error) {
+	switch i, found, err := bs.lastVoteproof(base.StageACCEPT); {
+	case err != nil:
+		return nil, err
+	case found && i.Height() == height:
+		return i, nil
+	}
+
 	if hinter, err := bs.load(height, "accept_voteproof"); err != nil {
 		return nil, err
 	} else if hinter == nil {
@@ -578,13 +606,13 @@ func (bs *BlockFS) setLast(height base.Height) error {
 	}
 
 	var ivp, avp base.Voteproof
-	if vp, err := bs.LoadINITVoteproof(height); err != nil {
+	if vp, err := bs.loadINITVoteproof(height); err != nil {
 		return err
 	} else {
 		ivp = vp
 	}
 
-	if vp, err := bs.LoadACCEPTVoteproof(height); err != nil {
+	if vp, err := bs.loadACCEPTVoteproof(height); err != nil {
 		return err
 	} else {
 		avp = vp
@@ -600,6 +628,10 @@ func (bs *BlockFS) LastVoteproof(stage base.Stage) (base.Voteproof, bool, error)
 	bs.RLock()
 	defer bs.RUnlock()
 
+	return bs.lastVoteproof(stage)
+}
+
+func (bs *BlockFS) lastVoteproof(stage base.Stage) (base.Voteproof, bool, error) {
 	var vp base.Voteproof
 	switch stage {
 	case base.StageINIT:

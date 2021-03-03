@@ -98,12 +98,12 @@ func (cmd *BaseCommand) Initialize(flags interface{}, version util.Version) erro
 		cmd.version = version
 	}
 
-	cmd.connectSig()
-
 	return nil
 }
 
-func (cmd *BaseCommand) connectSig() {
+func (cmd *BaseCommand) ConnectSig(stopfunc func()) {
+	cmd.Log().Debug().Msg("signal connected")
+
 	sigc := make(chan os.Signal, 1)
 	signal.Notify(sigc,
 		syscall.SIGINT,
@@ -115,15 +115,12 @@ func (cmd *BaseCommand) connectSig() {
 	go func() {
 		s := <-sigc
 
-		defer func() {
-			os.Exit(1)
-		}()
+		cmd.done.Do(cmd.Done)
+		stopfunc()
 
-		defer func() {
-			cmd.done.Do(cmd.Done)
+		_, _ = fmt.Fprintf(os.Stderr, "stopped by force: %v\n", s)
 
-			_, _ = fmt.Fprintf(os.Stderr, "stopped by force: %v\n", s)
-		}()
+		os.Exit(1)
 	}()
 }
 

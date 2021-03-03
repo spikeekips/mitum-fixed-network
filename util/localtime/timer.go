@@ -16,10 +16,16 @@ var (
 	defaultTimerDuration = time.Hour * 24 * 360
 )
 
+type TimerID string
+
+func (ti TimerID) String() string {
+	return string(ti)
+}
+
 type CallbackTimer struct {
 	sync.RWMutex
 	*logging.Logging
-	name         string
+	id           TimerID
 	callback     func(int) (bool, error)
 	intervalFunc func(int) time.Duration
 	errchan      chan error
@@ -30,16 +36,16 @@ type CallbackTimer struct {
 }
 
 func NewCallbackTimer(
-	name string,
+	id TimerID,
 	callback func(int) (bool, error),
 	interval time.Duration,
 ) (*CallbackTimer, error) {
 	return &CallbackTimer{
 		Logging: logging.NewLogging(func(c logging.Context) logging.Emitter {
 			return c.Str("module", "next-callback-timer").
-				Str("name", name)
+				Str("id", id.String())
 		}),
-		name: name,
+		id: id,
 		intervalFunc: func(int) time.Duration {
 			return interval
 		},
@@ -52,8 +58,8 @@ func NewCallbackTimer(
 	}, nil
 }
 
-func (ct *CallbackTimer) Name() string {
-	return ct.name
+func (ct *CallbackTimer) ID() TimerID {
+	return ct.id
 }
 
 // SetInterval sets the interval function. If the returned duration is 0, the

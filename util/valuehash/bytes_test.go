@@ -1,9 +1,11 @@
 package valuehash
 
 import (
+	"bytes"
 	"encoding/json"
 	"testing"
 
+	"github.com/spikeekips/mitum/util"
 	"github.com/stretchr/testify/suite"
 )
 
@@ -47,6 +49,66 @@ func (t *testBytes) TestNew() {
 	t.Equal(hs.Bytes(), newdm.Bytes())
 	t.Equal(len(b), newdm.Size())
 	t.Equal(b, newdm.Bytes())
+}
+
+func (t *testBytes) TestSHA256WithPrefix() {
+	h := RandomSHA256WithPrefix([]byte("showme"))
+	t.NoError(h.IsValid(nil))
+
+	h = RandomSHA256WithPrefix(bytes.Repeat([]byte("s"), 53)) // NOTE 52 is max prefix length
+	err := h.IsValid(nil)
+	t.Contains(err.Error(), "invalid hash")
+	t.Contains(err.Error(), "over max")
+
+	{
+		prefix := []byte("findme")
+		h = RandomSHA256WithPrefix(prefix)
+		t.NoError(h.IsValid(nil))
+
+		// NOTE decode prefix random hash
+		bh := h.Bytes()
+		lh, err := util.BytesToInt64(bh[:8])
+		t.NoError(err)
+		lp, err := util.BytesToInt64(bh[8:16])
+		t.NoError(err)
+
+		t.Equal(int64(sha256Size), lh)
+		t.Equal(int64(len(prefix)), lp)
+
+		pb := bh[16+lh:]
+
+		t.Equal(prefix, pb)
+	}
+}
+
+func (t *testBytes) TestSHA512WithPrefix() {
+	h := RandomSHA512WithPrefix([]byte("showme"))
+	t.NoError(h.IsValid(nil))
+
+	h = RandomSHA512WithPrefix(bytes.Repeat([]byte("s"), 21)) // NOTE 20 is max prefix length
+	err := h.IsValid(nil)
+	t.Contains(err.Error(), "invalid hash")
+	t.Contains(err.Error(), "over max")
+
+	{
+		prefix := []byte("findme")
+		h = RandomSHA512WithPrefix(prefix)
+		t.NoError(h.IsValid(nil))
+
+		// NOTE decode prefix random hash
+		bh := h.Bytes()
+		lh, err := util.BytesToInt64(bh[:8])
+		t.NoError(err)
+		lp, err := util.BytesToInt64(bh[8:16])
+		t.NoError(err)
+
+		t.Equal(int64(sha512Size), lh)
+		t.Equal(int64(len(prefix)), lp)
+
+		pb := bh[16+lh:]
+
+		t.Equal(prefix, pb)
+	}
 }
 
 func (t *testBytes) TestJSONMarshal() {

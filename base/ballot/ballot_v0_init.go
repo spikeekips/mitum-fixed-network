@@ -61,7 +61,8 @@ func (ibf INITBallotFactV0) PreviousBlock() valuehash.Hash {
 type INITBallotV0 struct {
 	BaseBallotV0
 	INITBallotFactV0
-	voteproof base.Voteproof
+	voteproof       base.Voteproof
+	acceptVoteproof base.Voteproof
 }
 
 func NewINITBallotV0(
@@ -70,6 +71,7 @@ func NewINITBallotV0(
 	round base.Round,
 	previousBlock valuehash.Hash,
 	voteproof base.Voteproof,
+	acceptVoteproof base.Voteproof,
 ) INITBallotV0 {
 	return INITBallotV0{
 		BaseBallotV0: NewBaseBallotV0(node),
@@ -78,7 +80,8 @@ func NewINITBallotV0(
 			round,
 			previousBlock,
 		),
-		voteproof: voteproof,
+		voteproof:       voteproof,
+		acceptVoteproof: acceptVoteproof,
 	}
 }
 
@@ -97,7 +100,7 @@ func (ib INITBallotV0) Stage() base.Stage {
 func (ib INITBallotV0) IsValid(networkID []byte) error {
 	if ib.Height() == base.Height(0) {
 		if ib.voteproof != nil {
-			return xerrors.Errorf("not empty Voteproof for genesis INITBallot")
+			return xerrors.Errorf("not empty voteproof for genesis INITBallot")
 		}
 
 		if err := isvalid.Check([]isvalid.IsValider{
@@ -106,18 +109,19 @@ func (ib INITBallotV0) IsValid(networkID []byte) error {
 		}, networkID, false); err != nil {
 			return err
 		}
-	} else {
-		if ib.voteproof == nil {
-			return xerrors.Errorf("empty Voteproof")
-		}
+	}
 
-		if err := isvalid.Check([]isvalid.IsValider{
-			ib.BaseBallotV0,
-			ib.INITBallotFactV0,
-			ib.voteproof,
-		}, networkID, false); err != nil {
-			return err
-		}
+	if ib.voteproof == nil || ib.acceptVoteproof == nil {
+		return xerrors.Errorf("empty voteproof")
+	}
+
+	if err := isvalid.Check([]isvalid.IsValider{
+		ib.BaseBallotV0,
+		ib.INITBallotFactV0,
+		ib.voteproof,
+		ib.acceptVoteproof,
+	}, networkID, false); err != nil {
+		return err
 	}
 
 	return IsValidBallot(ib, networkID)
@@ -125,6 +129,10 @@ func (ib INITBallotV0) IsValid(networkID []byte) error {
 
 func (ib INITBallotV0) Voteproof() base.Voteproof {
 	return ib.voteproof
+}
+
+func (ib INITBallotV0) ACCEPTVoteproof() base.Voteproof {
+	return ib.acceptVoteproof
 }
 
 func (ib INITBallotV0) GenerateHash() valuehash.Hash {
@@ -136,12 +144,19 @@ func (ib INITBallotV0) GenerateBodyHash() (valuehash.Hash, error) {
 		return nil, err
 	}
 
-	var vb []byte
-	if ib.Height() != base.Height(0) && ib.voteproof != nil {
-		vb = ib.voteproof.Bytes()
+	bs := make([][]byte, 3)
+	bs[0] = ib.INITBallotFactV0.Bytes()
+
+	if ib.Height() != base.Height(0) {
+		if ib.voteproof != nil {
+			bs[1] = ib.voteproof.Bytes()
+		}
+		if ib.acceptVoteproof != nil {
+			bs[2] = ib.acceptVoteproof.Bytes()
+		}
 	}
 
-	return valuehash.NewSHA256(util.ConcatBytesSlice(ib.INITBallotFactV0.Bytes(), vb)), nil
+	return valuehash.NewSHA256(util.ConcatBytesSlice(bs...)), nil
 }
 
 func (ib INITBallotV0) Fact() base.Fact {

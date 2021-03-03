@@ -73,7 +73,11 @@ func (pm *ProposalMaker) seals() ([]valuehash.Hash, error) {
 	return seals, nil
 }
 
-func (pm *ProposalMaker) Proposal(height base.Height, round base.Round) (ballot.Proposal, error) {
+func (pm *ProposalMaker) Proposal(
+	height base.Height,
+	round base.Round,
+	voteproof base.Voteproof,
+) (ballot.Proposal, error) {
 	pm.Lock()
 	defer pm.Unlock()
 
@@ -93,6 +97,7 @@ func (pm *ProposalMaker) Proposal(height base.Height, round base.Round) (ballot.
 		height,
 		round,
 		seals,
+		voteproof,
 	)
 	if err := SignSeal(&pr, pm.local); err != nil {
 		return nil, err

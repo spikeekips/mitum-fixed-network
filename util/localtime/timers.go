@@ -13,12 +13,12 @@ import (
 type Timers struct {
 	*logging.Logging
 	sync.RWMutex
-	timers   map[ /* timer id */ string]*CallbackTimer
+	timers   map[ /* timer id */ TimerID]*CallbackTimer
 	allowNew bool // if allowNew is true, new timer can be added.
 }
 
-func NewTimers(ids []string, allowNew bool) *Timers {
-	timers := map[string]*CallbackTimer{}
+func NewTimers(ids []TimerID, allowNew bool) *Timers {
+	timers := map[TimerID]*CallbackTimer{}
 	for _, id := range ids {
 		timers[id] = nil
 	}
@@ -74,7 +74,7 @@ func (ts *Timers) Stop() error {
 			defer wg.Done()
 
 			if err := t.Stop(); err != nil {
-				ts.Log().Error().Err(err).Str("timer", t.Name()).Msg("failed to stop timer")
+				ts.Log().Error().Err(err).Str("timer", t.ID().String()).Msg("failed to stop timer")
 			}
 		}(timer)
 	}
@@ -88,7 +88,7 @@ func (ts *Timers) Stop() error {
 	return nil
 }
 
-func (ts *Timers) ResetTimer(id string) error {
+func (ts *Timers) ResetTimer(id TimerID) error {
 	ts.RLock()
 	defer ts.RUnlock()
 
@@ -103,27 +103,27 @@ func (ts *Timers) ResetTimer(id string) error {
 }
 
 // SetTimer sets the timer with id
-func (ts *Timers) SetTimer(id string, timer *CallbackTimer) error {
+func (ts *Timers) SetTimer(timer *CallbackTimer) error {
 	ts.Lock()
 	defer ts.Unlock()
 
-	if _, found := ts.timers[id]; !found {
+	if _, found := ts.timers[timer.ID()]; !found {
 		if !ts.allowNew {
-			return xerrors.Errorf("not allowed to add new timer: %s", id)
+			return xerrors.Errorf("not allowed to add new timer: %s", timer.ID())
 		}
 	}
 
-	existing := ts.timers[id]
+	existing := ts.timers[timer.ID()]
 	if existing != nil && existing.IsStarted() {
 		if err := existing.Stop(); err != nil {
 			return err
 		}
 	}
 
-	ts.timers[id] = timer
+	ts.timers[timer.ID()] = timer
 
 	if timer != nil {
-		_ = ts.timers[id].SetLogger(ts.Log())
+		_ = ts.timers[timer.ID()].SetLogger(ts.Log())
 	}
 
 	return nil
@@ -131,14 +131,19 @@ func (ts *Timers) SetTimer(id string, timer *CallbackTimer) error {
 
 // StartTimers starts timers with the given ids, before starting timers, stops
 // the other timers if stopOthers is true.
-func (ts *Timers) StartTimers(ids []string, stopOthers bool) error {
+func (ts *Timers) StartTimers(ids []TimerID, stopOthers bool) error {
 	ts.Lock()
 	defer ts.Unlock()
 
+	sids := make([]string, len(ids))
+	for i := range ids {
+		sids[i] = ids[i].String()
+	}
+
 	if stopOthers {
-		var stopIDs []string
+		var stopIDs []TimerID
 		for id := range ts.timers {
-			if util.InStringSlice(id, ids) {
+			if util.InStringSlice(id.String(), sids) {
 				continue
 			}
 			stopIDs = append(stopIDs, id)
@@ -157,28 +162,28 @@ func (ts *Timers) StartTimers(ids []string, stopOthers bool) error {
 		}
 
 		if err := t.Start(); err != nil {
-			ts.Log().Error().Err(err).Str("timer", t.Name()).Msg("failed to start timer")
+			ts.Log().Error().Err(err).Str("timer", t.ID().String()).Msg("failed to start timer")
 		}
 	}
 
 	return ts.traverse(callback, ids)
 }
 
-func (ts *Timers) StopTimers(ids []string) error {
+func (ts *Timers) StopTimers(ids []TimerID) error {
 	ts.Lock()
 	defer ts.Unlock()
 
 	return ts.stopTimers(ids)
 }
 
-func (ts *Timers) stopTimers(ids []string) error {
+func (ts *Timers) stopTimers(ids []TimerID) error {
 	callback := func(t *CallbackTimer) {
 		if !t.IsStarted() {
 			return
 		}
 
 		if err := t.Stop(); err != nil {
-			ts.Log().Error().Err(err).Str("timer", t.Name()).Msg("failed to start timer")
+			ts.Log().Error().Err(err).Str("timer", t.ID().String()).Msg("failed to start timer")
 		}
 	}
 
@@ -193,11 +198,11 @@ func (ts *Timers) stopTimers(ids []string) error {
 	return nil
 }
 
-func (ts *Timers) Started() []string {
+func (ts *Timers) Started() []TimerID {
 	ts.RLock()
 	defer ts.RUnlock()
 
-	var started []string
+	var started []TimerID
 	for id := range ts.timers {
 		timer := ts.timers[id]
 		if timer != nil && ts.timers[id].IsStarted() {
@@ -208,7 +213,7 @@ func (ts *Timers) Started() []string {
 	return started
 }
 
-func (ts *Timers) checkExists(ids []string) error {
+func (ts *Timers) checkExists(ids []TimerID) error {
 	for _, id := range ids {
 		if _, found := ts.timers[id]; !found {
 			return xerrors.Errorf("timer not found: %s", id)
@@ -218,7 +223,7 @@ func (ts *Timers) checkExists(ids []string) error {
 	return nil
 }
 
-func (ts *Timers) traverse(callback func(*CallbackTimer), ids []string) error {
+func (ts *Timers) traverse(callback func(*CallbackTimer), ids []TimerID) error {
 	if err := ts.checkExists(ids); err != nil {
 		return err
 	}
@@ -227,7 +232,7 @@ func (ts *Timers) traverse(callback func(*CallbackTimer), ids []string) error {
 	wg.Add(len(ids))
 
 	for _, id := range ids {
-		go func(id string) {
+		go func(id TimerID) {
 			defer wg.Done()
 
 			timer := ts.timers[id]

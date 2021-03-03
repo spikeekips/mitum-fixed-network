@@ -34,6 +34,7 @@ func (pd ProposalDoc) MarshalBSON() ([]byte, error) {
 	m["hash_string"] = pd.proposal.Hash().String()
 	m["height"] = pd.proposal.Height()
 	m["round"] = pd.proposal.Round()
+	m["proposer"] = pd.proposal.Node().String()
 
 	return bsonenc.Marshal(m)
 }

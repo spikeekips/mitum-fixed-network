@@ -3,6 +3,7 @@ package ballot
 import (
 	bsonenc "github.com/spikeekips/mitum/util/encoder/bson"
 	"github.com/spikeekips/mitum/util/valuehash"
+	"go.mongodb.org/mongo-driver/bson"
 )
 
 func (pr ProposalV0) MarshalBSON() ([]byte, error) {
@@ -10,11 +11,16 @@ func (pr ProposalV0) MarshalBSON() ([]byte, error) {
 
 	m["seals"] = pr.seals
 
+	if pr.voteproof != nil {
+		m["voteproof"] = pr.voteproof
+	}
+
 	return bsonenc.Marshal(m)
 }
 
 type ProposalV0UnpackerBSON struct {
 	SL []valuehash.Bytes `bson:"seals"`
+	VR bson.Raw          `bson:"voteproof,omitempty"`
 }
 
 func (pr *ProposalV0) UnpackBSON(b []byte, enc *bsonenc.Encoder) error {
@@ -33,5 +39,5 @@ func (pr *ProposalV0) UnpackBSON(b []byte, enc *bsonenc.Encoder) error {
 		seals[i] = npb.SL[i]
 	}
 
-	return pr.unpack(enc, bb, bf, seals)
+	return pr.unpack(enc, bb, bf, seals, npb.VR)
 }

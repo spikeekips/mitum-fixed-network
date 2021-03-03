@@ -107,3 +107,29 @@ func VoteproofWithCallback(voteproof Voteproof, callback func() error) Voteproof
 func (vc VoteproofCallbacker) Callback() error {
 	return vc.callback()
 }
+
+type Voteproofer interface {
+	Voteproof() Voteproof
+}
+
+func CompareVoteproof(a, b Voteproof) int {
+	if a.Height() > b.Height() {
+		return 1
+	} else if a.Height() < b.Height() {
+		return -1
+	}
+
+	if a.Round() > b.Round() {
+		return 1
+	} else if a.Round() < b.Round() {
+		return -1
+	}
+
+	if a.Stage() > b.Stage() {
+		return 1
+	} else if a.Stage() < b.Stage() {
+		return -1
+	}
+
+	return 0
+}

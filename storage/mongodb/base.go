@@ -426,10 +426,24 @@ func (st *Storage) manifestByFilter(filter bson.D) (block.Manifest, bool, error)
 }
 
 func (st *Storage) Manifest(h valuehash.Hash) (block.Manifest, bool, error) {
+	switch m, found, err := st.LastManifest(); {
+	case err != nil:
+		return nil, false, err
+	case found && m.Hash().Equal(h):
+		return m, true, nil
+	}
+
 	return st.manifestByFilter(util.NewBSONFilter("_id", h.String()).AddOp("height", st.lastHeight(), "$lte").D())
 }
 
 func (st *Storage) ManifestByHeight(height base.Height) (block.Manifest, bool, error) {
+	switch m, found, err := st.LastManifest(); {
+	case err != nil:
+		return nil, false, err
+	case found && m.Height() == height:
+		return m, true, nil
+	}
+
 	return st.manifestByFilter(util.NewBSONFilter("height", height).AddOp("height", st.lastHeight(), "$lte").D())
 }
 
@@ -770,13 +784,13 @@ func (st *Storage) NewProposal(proposal ballot.Proposal) error {
 	return st.NewSeals([]seal.Seal{proposal})
 }
 
-func (st *Storage) Proposal(height base.Height, round base.Round) (ballot.Proposal, bool, error) {
+func (st *Storage) Proposal(height base.Height, round base.Round, proposer base.Address) (ballot.Proposal, bool, error) {
 	var proposal ballot.Proposal
 
 	if err := st.client.Find(
 		context.TODO(),
 		ColNameProposal,
-		util.NewBSONFilter("height", height).Add("round", round).D(),
+		util.NewBSONFilter("height", height).Add("round", round).Add("proposer", proposer.String()).D(),
 		func(cursor *mongo.Cursor) (bool, error) {
 			if i, err := loadProposalFromDecoder(cursor.Decode, st.encs); err != nil {
 				return false, err
@@ -903,7 +917,6 @@ func (st *Storage) cleanByHeight(height base.Height) error {
 		ColNameManifest,
 		ColNameOperation,
 		ColNameOperationSeal,
-		ColNameProposal,
 		ColNameState,
 	} {
 

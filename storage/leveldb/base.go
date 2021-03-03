@@ -611,8 +611,8 @@ func (st *Storage) Proposals(callback func(ballot.Proposal) (bool, error), sort 
 	)
 }
 
-func (st *Storage) proposalKey(height base.Height, round base.Round) []byte {
-	return util.ConcatBytesSlice(keyPrefixProposal, height.Bytes(), round.Bytes())
+func (st *Storage) proposalKey(height base.Height, round base.Round, proposer base.Address) []byte {
+	return util.ConcatBytesSlice(keyPrefixProposal, height.Bytes(), round.Bytes(), proposer.Bytes())
 }
 
 func (st *Storage) NewProposal(proposal ballot.Proposal) error {
@@ -625,15 +625,15 @@ func (st *Storage) NewProposal(proposal ballot.Proposal) error {
 		}
 	}
 
-	if err := st.db.Put(st.proposalKey(proposal.Height(), proposal.Round()), sealKey, nil); err != nil {
+	if err := st.db.Put(st.proposalKey(proposal.Height(), proposal.Round(), proposal.Node()), sealKey, nil); err != nil {
 		return wrapError(err)
 	}
 
 	return nil
 }
 
-func (st *Storage) Proposal(height base.Height, round base.Round) (ballot.Proposal, bool, error) {
-	sealKey, err := st.get(st.proposalKey(height, round))
+func (st *Storage) Proposal(height base.Height, round base.Round, proposer base.Address) (ballot.Proposal, bool, error) {
+	sealKey, err := st.get(st.proposalKey(height, round, proposer))
 	if err != nil {
 		if xerrors.Is(err, storage.NotFoundError) {
 			return nil, false, nil

@@ -425,3 +425,129 @@ func (t *testVoteproof) TestMajorityButNot() {
 func TestVoteproof(t *testing.T) {
 	suite.Run(t, new(testVoteproof))
 }
+
+func (t *testVoteproof) TestCompareVoteproof() {
+	cases := []struct {
+		name     string
+		aHeight  Height
+		aRound   Round
+		aStage   Stage
+		bHeight  Height
+		bRound   Round
+		bStage   Stage
+		expected int
+	}{
+		{
+			name:     "height higher",
+			aHeight:  Height(3),
+			aRound:   Round(0),
+			aStage:   StageINIT,
+			bHeight:  Height(2),
+			bRound:   Round(10),
+			bStage:   StageACCEPT,
+			expected: 1,
+		},
+		{
+			name:     "height lower",
+			aHeight:  Height(3),
+			aRound:   Round(0),
+			aStage:   StageINIT,
+			bHeight:  Height(9),
+			bRound:   Round(10),
+			bStage:   StageACCEPT,
+			expected: -1,
+		},
+		{
+			name:     "height same, round higher",
+			aHeight:  Height(3),
+			aRound:   Round(11),
+			aStage:   StageINIT,
+			bHeight:  Height(3),
+			bRound:   Round(10),
+			bStage:   StageACCEPT,
+			expected: 1,
+		},
+		{
+			name:     "height same, round lower",
+			aHeight:  Height(3),
+			aRound:   Round(9),
+			aStage:   StageINIT,
+			bHeight:  Height(3),
+			bRound:   Round(10),
+			bStage:   StageACCEPT,
+			expected: -1,
+		},
+		{
+			name:     "same height round, but stage higher",
+			aHeight:  Height(3),
+			aRound:   Round(9),
+			aStage:   StageACCEPT,
+			bHeight:  Height(3),
+			bRound:   Round(9),
+			bStage:   StageINIT,
+			expected: 1,
+		},
+		{
+			name:     "same height round, but stage lower",
+			aHeight:  Height(3),
+			aRound:   Round(9),
+			aStage:   StageINIT,
+			bHeight:  Height(3),
+			bRound:   Round(9),
+			bStage:   StageACCEPT,
+			expected: -1,
+		},
+		{
+			name:     "same height round and stage",
+			aHeight:  Height(3),
+			aRound:   Round(9),
+			aStage:   StageINIT,
+			bHeight:  Height(3),
+			bRound:   Round(9),
+			bStage:   StageINIT,
+			expected: 0,
+		},
+	}
+
+	newVoteproof := func(height Height, round Round, stage Stage) Voteproof {
+		n0 := RandomNode("n0")
+		fact := tinyFact{A: "showme"}
+		factHash := fact.Hash()
+		factSignature, _ := n0.Privatekey().Sign(factHash.Bytes())
+
+		return VoteproofV0{
+			height:         height,
+			round:          round,
+			stage:          stage,
+			thresholdRatio: t.threshold.Ratio,
+			result:         VoteResultMajority,
+			majority:       fact,
+			facts:          []Fact{fact},
+			votes: []VoteproofNodeFact{
+				{
+					address:       n0.Address(),
+					ballot:        valuehash.RandomSHA256(),
+					fact:          factHash,
+					factSignature: factSignature,
+					signer:        n0.Publickey(),
+				},
+			},
+			finishedAt: localtime.Now(),
+		}
+	}
+
+	for i, c := range cases {
+		i := i
+		c := c
+		t.Run(
+			c.name,
+			func() {
+				avp := newVoteproof(c.aHeight, c.aRound, c.aStage)
+				bvp := newVoteproof(c.bHeight, c.bRound, c.bStage)
+				result := CompareVoteproof(avp, bvp)
+
+				t.Equal(c.expected, result, "%d: %v; %v != %v", i, c.name, c.expected, result)
+			},
+		)
+	}
+}

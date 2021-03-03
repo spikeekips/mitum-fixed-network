@@ -7,7 +7,6 @@ import (
 	"time"
 
 	"github.com/rs/zerolog"
-
 	"github.com/spikeekips/mitum/util/logging"
 )
 

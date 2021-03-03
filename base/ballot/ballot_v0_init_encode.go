@@ -12,18 +12,27 @@ func (ib *INITBallotV0) unpack(
 	bb BaseBallotV0,
 	bf BaseBallotFactV0,
 	previousBlock valuehash.Hash,
-	bVoteproof []byte,
+	bVoteproof,
+	bAVoteproof []byte,
 ) error {
 	if previousBlock != nil && previousBlock.Empty() {
 		return xerrors.Errorf("empty previous_block hash found")
 	}
 
-	var voteproof base.Voteproof
+	var voteproof, acceptVoteproof base.Voteproof
 	if bVoteproof != nil {
 		if i, err := base.DecodeVoteproof(enc, bVoteproof); err != nil {
 			return err
 		} else {
 			voteproof = i
+		}
+	}
+
+	if bAVoteproof != nil {
+		if i, err := base.DecodeVoteproof(enc, bAVoteproof); err != nil {
+			return err
+		} else {
+			acceptVoteproof = i
 		}
 	}
 
@@ -33,6 +42,7 @@ func (ib *INITBallotV0) unpack(
 		previousBlock:    previousBlock,
 	}
 	ib.voteproof = voteproof
+	ib.acceptVoteproof = acceptVoteproof
 
 	return nil
 }

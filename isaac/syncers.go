@@ -16,7 +16,10 @@ type Syncers struct {
 	sync.RWMutex
 	*util.FunctionDaemon
 	*logging.Logging
-	local          *Local
+	local          *network.LocalNode
+	storage        storage.Storage
+	blockFS        *storage.BlockFS
+	policy         *LocalPolicy
 	syncers        []Syncer
 	baseManifest   block.Manifest
 	stateChan      chan SyncerStateChangedContext
@@ -26,12 +29,21 @@ type Syncers struct {
 	whenBlockSaved func([]block.Block)
 }
 
-func NewSyncers(local *Local, baseManifest block.Manifest) *Syncers {
+func NewSyncers(
+	local *network.LocalNode,
+	st storage.Storage,
+	blockFS *storage.BlockFS,
+	policy *LocalPolicy,
+	baseManifest block.Manifest,
+) *Syncers {
 	sy := &Syncers{
 		Logging: logging.NewLogging(func(c logging.Context) logging.Emitter {
 			return c.Str("module", "syncers")
 		}),
 		local:          local,
+		storage:        st,
+		blockFS:        blockFS,
+		policy:         policy,
 		baseManifest:   baseManifest,
 		lp:             -1,
 		stateChan:      make(chan SyncerStateChangedContext),
@@ -93,14 +105,14 @@ func (sy *Syncers) SetLogger(l logging.Logger) logging.Logger {
 	return sy.Log()
 }
 
-func (sy *Syncers) isFinished() bool {
+func (sy *Syncers) IsFinished() bool {
 	sy.RLock()
 	defer sy.RUnlock()
 
 	return len(sy.syncers)-sy.finished < 1
 }
 
-func (sy *Syncers) lastSyncer() Syncer {
+func (sy *Syncers) LastSyncer() Syncer {
 	sy.RLock()
 	defer sy.RUnlock()
 
@@ -176,16 +188,16 @@ func (sy *Syncers) stateChanged(ctx SyncerStateChangedContext) error {
 
 		sy.whenBlockSaved(ctx.Blocks())
 
-		if sy.isFinished() {
+		if sy.IsFinished() {
 			l.Debug().Msg("every syncers was finished")
 
-			if st, ok := sy.local.Storage().(storage.LastBlockSaver); ok {
-				if err := st.SaveLastBlock(sy.lastSyncer().HeightTo()); err != nil {
+			if st, ok := sy.storage.(storage.LastBlockSaver); ok {
+				if err := st.SaveLastBlock(sy.LastSyncer().HeightTo()); err != nil {
 					return err
 				}
 			}
 
-			sy.whenFinished(sy.lastSyncer().HeightTo())
+			sy.whenFinished(sy.LastSyncer().HeightTo())
 		}
 	}
 
@@ -230,7 +242,7 @@ func (sy *Syncers) add(to base.Height, sourceNodes []network.Node) error {
 	})
 
 	var syncer Syncer
-	if s, err := NewGeneralSyncer(sy.local, sourceNodes, from, to); err != nil {
+	if s, err := NewGeneralSyncer(sy.local, sy.storage, sy.blockFS, sy.policy, sourceNodes, from, to); err != nil {
 		return err
 	} else {
 		syncer = s.SetStateChan(sy.stateChan)

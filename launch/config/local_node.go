@@ -28,6 +28,8 @@ type LocalNode interface {
 	SetPolicy(Policy) error
 	GenesisOperations() []operation.Operation
 	SetGenesisOperations([]operation.Operation) error
+	TimeServer() string
+	SetTimeServer(string) error
 }
 
 type BaseLocalNode struct {
@@ -43,15 +45,17 @@ type BaseLocalNode struct {
 	proposalProcessor ProposalProcessor
 	policy            Policy
 	genesisOperations []operation.Operation
+	timeServer        string
 }
 
 func NewBaseLocalNode(enc encoder.Encoder, source map[string]interface{}) *BaseLocalNode {
 	return &BaseLocalNode{
-		enc:     enc,
-		source:  source,
-		network: EmptyBaseLocalNetwork(),
-		storage: EmptyBaseStorage(),
-		policy:  &BasePolicy{},
+		enc:        enc,
+		source:     source,
+		network:    EmptyBaseLocalNetwork(),
+		storage:    EmptyBaseStorage(),
+		policy:     &BasePolicy{},
+		timeServer: "time.google.com",
 	}
 }
 
@@ -159,6 +163,16 @@ func (no BaseLocalNode) GenesisOperations() []operation.Operation {
 
 func (no *BaseLocalNode) SetGenesisOperations(ops []operation.Operation) error {
 	no.genesisOperations = ops
+
+	return nil
+}
+
+func (no BaseLocalNode) TimeServer() string {
+	return no.timeServer
+}
+
+func (no *BaseLocalNode) SetTimeServer(s string) error {
+	no.timeServer = s
 
 	return nil
 }

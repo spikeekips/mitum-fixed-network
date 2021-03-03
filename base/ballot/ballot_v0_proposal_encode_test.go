@@ -30,9 +30,17 @@ func (t *testBallotProposalV0Encode) SetupSuite() {
 	t.NoError(encs.AddHinter(base.StringAddress("")))
 	t.NoError(encs.AddHinter(key.BTCPublickeyHinter))
 	t.NoError(encs.AddHinter(ProposalV0{}))
+	t.NoError(encs.AddHinter(base.DummyVoteproof{}))
 }
 
 func (t *testBallotProposalV0Encode) TestEncode() {
+	vp := base.NewDummyVoteproof(
+		base.Height(10),
+		base.Round(0),
+		base.StageINIT,
+		base.VoteResultMajority,
+	)
+
 	ib := ProposalV0{
 		BaseBallotV0: BaseBallotV0{
 			node: base.RandomStringAddress(),
@@ -48,6 +56,7 @@ func (t *testBallotProposalV0Encode) TestEncode() {
 				valuehash.RandomSHA256(),
 			},
 		},
+		voteproof: vp,
 	}
 
 	t.NoError(ib.Sign(t.pk, nil))
@@ -71,6 +80,7 @@ func (t *testBallotProposalV0Encode) TestEncode() {
 	t.True(ib.BodyHash().Equal(nib.BodyHash()))
 	t.Equal(ib.FactSignature(), nib.FactSignature())
 	t.True(ib.Fact().Hash().Equal(nib.Fact().Hash()))
+	t.Equal(vp, nib.Voteproof())
 
 	for i, s := range ib.Seals() {
 		t.True(s.Equal(nib.Seals()[i]))

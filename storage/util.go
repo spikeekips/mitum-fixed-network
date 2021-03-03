@@ -1,9 +1,28 @@
 package storage
 
 import (
+	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/base/block"
 	"golang.org/x/xerrors"
 )
+
+func CheckBlock(st Storage, blockFS *BlockFS, networkID base.NetworkID) error {
+	var blk block.Block
+	switch b, err := CheckBlockEmpty(st, blockFS); {
+	case err != nil:
+		return err
+	case b == nil:
+		return NotFoundError.Errorf("empty block")
+	default:
+		blk = b
+	}
+
+	if err := blk.IsValid(networkID); err != nil {
+		return xerrors.Errorf("invalid block found, clean up block: %w", err)
+	}
+
+	return nil
+}
 
 // CheckBlockEmpty checks whether local has block data in Storage and BlockFS.
 // If empty, return nil block.Block. Block should exist both in Storage and

@@ -72,7 +72,7 @@ func (gg *GenesisBlockV0Generator) Generate() (block.Block, error) {
 	}
 
 	var proposal ballot.Proposal
-	if pr, err := gg.generateProposal(seals); err != nil {
+	if pr, err := gg.generateProposal(seals, ivp); err != nil {
 		return nil, err
 	} else {
 		proposal = pr
@@ -185,7 +185,10 @@ func (gg *GenesisBlockV0Generator) generatePreviousBlock() error {
 	return nil
 }
 
-func (gg *GenesisBlockV0Generator) generateProposal(seals []operation.Seal) (ballot.Proposal, error) {
+func (gg *GenesisBlockV0Generator) generateProposal(
+	seals []operation.Seal,
+	voteproof base.Voteproof,
+) (ballot.Proposal, error) {
 	sealHashes := make([]valuehash.Hash, len(seals))
 	for i := range seals {
 		sl := seals[i]
@@ -198,6 +201,7 @@ func (gg *GenesisBlockV0Generator) generateProposal(seals []operation.Seal) (bal
 		base.Height(0),
 		base.Round(0),
 		sealHashes,
+		voteproof,
 	)
 	if err := SignSeal(&pr, gg.local); err != nil {
 		return nil, err

@@ -88,6 +88,7 @@ func (t *testBallotbox) newINITBallot(
 		round,
 		previousBlock,
 		vp,
+		vp,
 	)
 	t.NoError(ib.Sign(t.pk, nil))
 
@@ -409,6 +410,33 @@ func (t *testBallotbox) TestINITVoteResultMajorityClosed() {
 		t.Equal(base.VoteResultMajority, vp.Result())
 		t.True(vp.IsClosed())
 	}
+}
+
+func (t *testBallotbox) TestLatestBallot() {
+	node := base.RandomStringAddress()
+
+	ba0 := t.newINITBallot(base.Height(10), base.Round(0), node, nil)
+	ba1 := t.newINITBallot(base.Height(10), base.Round(1), node, nil)
+	ba2 := t.newINITBallot(base.Height(11), base.Round(0), node, nil)
+	ba3 := t.newINITBallot(base.Height(10), base.Round(1), node, nil)
+
+	bb := NewBallotbox(t.suffragesFunc(node), t.thresholdFunc(3, 66))
+
+	_, err := bb.Vote(ba0)
+	t.NoError(err)
+	t.True(bb.LatestBallot().Hash().Equal(ba0.Hash()))
+
+	_, err = bb.Vote(ba1)
+	t.NoError(err)
+	t.True(bb.LatestBallot().Hash().Equal(ba1.Hash()))
+
+	_, err = bb.Vote(ba2)
+	t.NoError(err)
+	t.True(bb.LatestBallot().Hash().Equal(ba2.Hash()))
+
+	_, err = bb.Vote(ba3)
+	t.NoError(err)
+	t.True(bb.LatestBallot().Hash().Equal(ba2.Hash()))
 }
 
 func TestBallotbox(t *testing.T) {

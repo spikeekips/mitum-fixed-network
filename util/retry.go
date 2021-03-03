@@ -13,23 +13,21 @@ type Callbacker interface {
 
 var StopRetryingError = errors.NewError("stop retrying")
 
-func Retry(max uint, interval time.Duration, callback func() error) error {
+func Retry(max uint, interval time.Duration, callback func(int) error) error {
 	var err error
-	var tried uint = 0
+	var tried int
 	for {
-		if max > 0 && tried == max { // if max == 0,  do forever
+		if max > 0 && uint(tried) == max { // if max == 0,  do forever
 			break
 		}
 
-		if err = callback(); err == nil {
+		if err = callback(tried); err == nil {
 			return nil
 		} else if xerrors.Is(err, StopRetryingError) {
 			return err
 		}
 
-		if max > 0 {
-			tried++
-		}
+		tried++
 
 		if interval > 0 {
 			<-time.After(interval)

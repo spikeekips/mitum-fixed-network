@@ -1,6 +1,6 @@
 // +build mongodb
 
-package isaac
+package basicstates
 
 import (
 	"testing"
@@ -8,8 +8,8 @@ import (
 	"github.com/stretchr/testify/suite"
 )
 
-func TestStateSyncingHandlerMongodb(t *testing.T) {
-	handler := new(testStateSyncingHandler)
+func TestStateJoiningMongodb(t *testing.T) {
+	handler := new(testStateJoining)
 	handler.DBType = "mongodb"
 
 	suite.Run(t, handler)

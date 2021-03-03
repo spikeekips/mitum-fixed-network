@@ -83,6 +83,32 @@ func (pm *Processes) AddProcess(pr Process, override bool) error {
 	return nil
 }
 
+func (pm *Processes) RemoveProcess(name string) error {
+	if name == INITProcess {
+		return xerrors.Errorf("can not remove init process")
+	}
+
+	if _, found := pm.processes[name]; !found {
+		return xerrors.Errorf("process not found, %q", name)
+	}
+
+	processesOrder := make([]string, len(pm.processesOrder)-1)
+	var c int
+	for i := range pm.processesOrder {
+		if pm.processesOrder[i] == name {
+			continue
+		}
+		processesOrder[c] = pm.processesOrder[i]
+		c++
+	}
+
+	pm.processesOrder = processesOrder
+
+	delete(pm.processes, name)
+
+	return nil
+}
+
 func (pm *Processes) AddHook(
 	prefix HookPrefix,
 	pr string,

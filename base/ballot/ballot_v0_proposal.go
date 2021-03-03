@@ -81,6 +81,7 @@ func (prf ProposalFactV0) Seals() []valuehash.Hash {
 type ProposalV0 struct {
 	BaseBallotV0
 	ProposalFactV0
+	voteproof base.Voteproof
 }
 
 func NewProposalV0(
@@ -88,6 +89,7 @@ func NewProposalV0(
 	height base.Height,
 	round base.Round,
 	seals []valuehash.Hash,
+	voteproof base.Voteproof,
 ) ProposalV0 {
 	return ProposalV0{
 		BaseBallotV0: BaseBallotV0{
@@ -100,6 +102,7 @@ func NewProposalV0(
 			},
 			seals: seals,
 		},
+		voteproof: voteproof,
 	}
 }
 
@@ -126,6 +129,10 @@ func (pr ProposalV0) IsValid(networkID []byte) error {
 	return IsValidBallot(pr, networkID)
 }
 
+func (pr ProposalV0) Voteproof() base.Voteproof {
+	return pr.voteproof
+}
+
 func (pr ProposalV0) GenerateHash() valuehash.Hash {
 	return GenerateHash(pr, pr.BaseBallotV0)
 }
@@ -135,7 +142,16 @@ func (pr ProposalV0) GenerateBodyHash() (valuehash.Hash, error) {
 		return nil, err
 	}
 
-	return valuehash.NewSHA256(pr.ProposalFactV0.Bytes()), nil
+	bs := make([][]byte, 2)
+	bs[0] = pr.ProposalFactV0.Bytes()
+
+	if pr.Height() != base.Height(0) {
+		if pr.voteproof != nil {
+			bs[1] = pr.voteproof.Bytes()
+		}
+	}
+
+	return valuehash.NewSHA256(util.ConcatBytesSlice(bs...)), nil
 }
 
 func (pr ProposalV0) Fact() base.Fact {

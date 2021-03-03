@@ -95,7 +95,7 @@ func checkConfig(ctx context.Context) (context.Context, error) {
 		cc.CheckStorage,
 		cc.CheckPolicy,
 	}).Check(); err != nil {
-		if xerrors.Is(err, util.CheckerNilError) {
+		if xerrors.Is(err, util.IgnoreError) {
 			return ctx, nil
 		}
 

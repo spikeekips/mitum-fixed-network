@@ -18,6 +18,7 @@ type Ballotbox struct {
 	vrs           *sync.Map
 	suffragesFunc func() []base.Address
 	thresholdFunc func() base.Threshold
+	latestBallot  ballot.Ballot
 }
 
 func NewBallotbox(suffragesFunc func() []base.Address, thresholdFunc func() base.Threshold) *Ballotbox {
@@ -41,23 +42,6 @@ func (bb *Ballotbox) Vote(blt ballot.Ballot) (base.Voteproof, error) {
 	vrs := bb.loadVoteRecords(blt, true)
 
 	return vrs.Vote(blt), nil
-}
-
-func (bb *Ballotbox) loadVoteRecords(blt ballot.Ballot, ifNotCreate bool) *VoteRecords {
-	bb.Lock()
-	defer bb.Unlock()
-
-	key := bb.vrsKey(blt)
-
-	var vrs *VoteRecords
-	if i, found := bb.vrs.Load(key); found {
-		vrs = i.(*VoteRecords)
-	} else if ifNotCreate {
-		vrs = NewVoteRecords(blt, bb.suffragesFunc(), bb.thresholdFunc())
-		bb.vrs.Store(key, vrs)
-	}
-
-	return vrs
 }
 
 func (bb *Ballotbox) Clean(height base.Height) error {
@@ -121,6 +105,45 @@ func (bb *Ballotbox) Clean(height base.Height) error {
 	l.Debug().Int("records", len(removeKeys)).Msg("records removed")
 
 	return nil
+}
+
+func (bb *Ballotbox) LatestBallot() ballot.Ballot {
+	bb.RLock()
+	defer bb.RUnlock()
+
+	return bb.latestBallot
+}
+
+func (bb *Ballotbox) loadVoteRecords(blt ballot.Ballot, ifNotCreate bool) *VoteRecords {
+	bb.Lock()
+	defer bb.Unlock()
+
+	switch l := bb.latestBallot; {
+	case l == nil:
+		bb.latestBallot = blt
+	case blt.Height() > l.Height():
+		bb.latestBallot = blt
+	case blt.Height() == l.Height() && blt.Round() > l.Round():
+		bb.latestBallot = blt
+	case blt.Height() == l.Height() && blt.Round() == l.Round() && blt.Stage().CanVote():
+		if blt.Stage() > bb.latestBallot.Stage() {
+			if _, ok := blt.(base.Voteproofer); ok {
+				bb.latestBallot = blt
+			}
+		}
+	}
+
+	key := bb.vrsKey(blt)
+
+	var vrs *VoteRecords
+	if i, found := bb.vrs.Load(key); found {
+		vrs = i.(*VoteRecords)
+	} else if ifNotCreate {
+		vrs = NewVoteRecords(blt, bb.suffragesFunc(), bb.thresholdFunc())
+		bb.vrs.Store(key, vrs)
+	}
+
+	return vrs
 }
 
 func (bb *Ballotbox) vrsKey(blt ballot.Ballot) string {

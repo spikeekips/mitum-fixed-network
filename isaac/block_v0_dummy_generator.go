@@ -381,6 +381,7 @@ func (bg *DummyBlocksV0Generator) createProposal(voteproof base.Voteproof) (ball
 		voteproof.Height(),
 		voteproof.Round(),
 		nil,
+		voteproof,
 	)
 	if err := SignSeal(&pr, proposer); err != nil {
 		return nil, err

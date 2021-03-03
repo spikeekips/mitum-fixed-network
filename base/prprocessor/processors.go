@@ -85,8 +85,9 @@ func (pps *Processors) NewProposal(
 ) <-chan Result {
 	// NOTE 1-size bufferred channel; channel can be closed without if receiver
 	// does not receive from channel
-	ch := make(chan Result, 1)
 	if initVoteproof.Stage() != base.StageINIT {
+		ch := make(chan Result)
+
 		go func() {
 			ch <- Result{Err: xerrors.Errorf("not valid voteproof, %v", initVoteproof.Stage())}
 
@@ -94,13 +95,15 @@ func (pps *Processors) NewProposal(
 		}()
 
 		return ch
+	} else {
+		ch := make(chan Result, 1)
+
+		go func() {
+			pps.newProposalChan <- pv{ctx: ctx, proposal: proposal, voteproof: initVoteproof, outchan: ch}
+		}()
+
+		return ch
 	}
-
-	go func() {
-		pps.newProposalChan <- pv{ctx: ctx, proposal: proposal, voteproof: initVoteproof, outchan: ch}
-	}()
-
-	return ch
 }
 
 func (pps *Processors) Save(
@@ -108,13 +111,25 @@ func (pps *Processors) Save(
 	proposal valuehash.Hash,
 	acceptVoteproof base.Voteproof,
 ) <-chan Result {
-	ch := make(chan Result, 1)
+	if acceptVoteproof.Stage() != base.StageACCEPT {
+		ch := make(chan Result)
 
-	go func() {
-		pps.saveChan <- sv{ctx: ctx, proposal: proposal, voteproof: acceptVoteproof, outchan: ch}
-	}()
+		go func() {
+			ch <- Result{Err: xerrors.Errorf("not valid voteproof, %v", acceptVoteproof.Stage())}
 
-	return ch
+			close(ch)
+		}()
+
+		return ch
+	} else {
+		ch := make(chan Result, 1)
+
+		go func() {
+			pps.saveChan <- sv{ctx: ctx, proposal: proposal, voteproof: acceptVoteproof, outchan: ch}
+		}()
+
+		return ch
+	}
 }
 
 func (pps *Processors) Current() Processor {
@@ -138,16 +153,19 @@ end:
 		case <-stopChan:
 			break end
 		case i := <-pps.newProposalChan:
-			if r := pps.handleProposal(i.ctx, i.proposal, i.voteproof, i.outchan); !r.IsEmpty() {
-				go func(ch chan<- Result) {
-					ch <- r
-				}(i.outchan)
-			} else if err := r.Err; err != nil {
+			r := pps.handleProposal(i.ctx, i.proposal, i.voteproof, i.outchan)
+			if err := r.Err; err != nil {
 				if xerrors.Is(err, util.IgnoreError) {
 					pps.Log().Debug().Err(err).Msg("proposal ignored")
 				} else {
 					pps.Log().Error().Err(err).Msg("failed to handle proposal")
 				}
+			}
+
+			if !r.IsEmpty() {
+				go func(ch chan<- Result) {
+					ch <- r
+				}(i.outchan)
 			}
 		case i := <-pps.saveChan:
 			if r := pps.saveProposal(i.ctx, i.proposal, i.voteproof, i.outchan); !r.IsEmpty() {
@@ -213,7 +231,7 @@ func (pps *Processors) doPrepare(ctx context.Context, processor Processor, outch
 	})
 
 	var blk block.Block
-	err := util.Retry(0, time.Millisecond*200, func() error {
+	err := util.Retry(3, time.Millisecond*200, func(int) error {
 		select {
 		case <-ctx.Done():
 			l.Error().Err(ctx.Err()).Msg("something wrong to prepare; will be stopped")
@@ -305,15 +323,15 @@ func (pps *Processors) doSave(
 			Hinted("proposal", processor.Proposal().Hash())
 	})
 
-	err := util.Retry(0, time.Millisecond*200, func() error {
+	// NOTE tries 3 times
+	err := util.Retry(3, time.Millisecond*200, func(int) error {
 		select {
 		case <-ctx.Done():
 			l.Error().Err(ctx.Err()).Msg("something wrong to save; will be stopped")
 
 			return util.StopRetryingError.Wrap(ctx.Err())
 		default:
-			err := pps.save(ctx, processor, acceptVoteproof)
-			switch {
+			switch err := pps.save(ctx, processor, acceptVoteproof); {
 			case err == nil:
 				return nil
 			case xerrors.Is(err, context.DeadlineExceeded) || xerrors.Is(err, context.Canceled):
@@ -329,7 +347,11 @@ func (pps *Processors) doSave(
 			}
 		}
 	})
-	if err != nil {
+
+	var blk block.Block
+	if err == nil {
+		blk = processor.Block()
+	} else {
 		err = SaveFailedError.Wrap(err)
 
 		l.Error().Err(err).Msg("failed to save; processor will be canceled")
@@ -343,7 +365,7 @@ func (pps *Processors) doSave(
 		}
 	}
 
-	outchan <- Result{Err: err}
+	outchan <- Result{Block: blk, Err: err}
 }
 
 func (pps *Processors) save(ctx context.Context, processor Processor, acceptVoteproof base.Voteproof) error {
@@ -386,6 +408,17 @@ func (pps *Processors) save(ctx context.Context, processor Processor, acceptVote
 	}
 
 	return processor.Save(ctx)
+}
+
+func (pps *Processors) CurrentState(proposal valuehash.Hash) State {
+	switch current := pps.Current(); {
+	case current == nil:
+		return BeforePrepared
+	case !current.Proposal().Hash().Equal(proposal):
+		return BeforePrepared
+	default:
+		return current.State()
+	}
 }
 
 func (pps *Processors) checkPrepareCurrent(proposal valuehash.Hash) (Processor, error) {

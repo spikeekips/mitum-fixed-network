@@ -38,9 +38,6 @@ func NewInitCommand(dryrun bool) InitCommand {
 	if err := ps.AddProcess(pm.NewDisabledProcess(process.ProcessorStartNetwork), true); err != nil {
 		panic(err)
 	}
-	if err := ps.AddProcess(pm.NewDisabledProcess(process.ProcessorStartConsensusStates), true); err != nil {
-		panic(err)
-	}
 
 	if err := ps.AddProcess(process.ProcessorGenerateGenesisBlock, true); err != nil {
 		panic(err)
@@ -88,10 +85,10 @@ func (cmd *InitCommand) Run(version util.Version) error {
 }
 
 func (cmd *InitCommand) cleanStorage(ctx context.Context) (context.Context, error) {
-	var force bool
-	if err := process.LoadGenesisBlockForceCreateContextValue(ctx, &force); err != nil {
+	var forceCreate bool
+	if err := process.LoadGenesisBlockForceCreateContextValue(ctx, &forceCreate); err != nil {
 		return ctx, err
-	} else if !force {
+	} else if !forceCreate {
 		return ctx, nil
 	}
 

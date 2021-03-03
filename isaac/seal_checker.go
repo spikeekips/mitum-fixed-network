@@ -10,7 +10,7 @@ import (
 	"golang.org/x/xerrors"
 )
 
-type SealValidationChecker struct {
+type SealChecker struct {
 	// NOTE SealValidationChecker should be done before ConsensusStates
 	seal      seal.Seal
 	storage   storage.Storage
@@ -18,16 +18,16 @@ type SealValidationChecker struct {
 	sealCache cache.Cache
 }
 
-func NewSealValidationChecker(
+func NewSealChecker(
 	sl seal.Seal,
 	storage storage.Storage,
 	policy *LocalPolicy,
 	sealCache cache.Cache,
-) SealValidationChecker {
-	return SealValidationChecker{seal: sl, storage: storage, policy: policy, sealCache: sealCache}
+) SealChecker {
+	return SealChecker{seal: sl, storage: storage, policy: policy, sealCache: sealCache}
 }
 
-func (svc SealValidationChecker) CheckIsValid() (bool, error) {
+func (svc SealChecker) IsValid() (bool, error) {
 	if err := svc.seal.IsValid(svc.policy.NetworkID()); err != nil {
 		return false, err
 	}
@@ -35,17 +35,22 @@ func (svc SealValidationChecker) CheckIsValid() (bool, error) {
 	return true, nil
 }
 
-func (svc SealValidationChecker) CheckIsKnown() (bool, error) {
-	if svc.sealCache.Has(svc.seal.Hash().String()) {
-		return false, util.CheckerNilError.Errorf("seal is known")
-	} else if err := svc.sealCache.Set(svc.seal.Hash().String(), struct{}{}, 0); err != nil {
-		return false, util.CheckerNilError.Errorf("failed to set cache for seal: %w", err)
+func (svc SealChecker) IsKnown() (bool, error) {
+	if svc.sealCache == nil {
+		return true, nil
 	}
 
-	return true, nil
+	cachekey := svc.seal.Hash().String()
+	if svc.sealCache.Has(cachekey) {
+		return false, util.IgnoreError.Errorf("seal is known")
+	} else if err := svc.sealCache.Set(cachekey, struct{}{}, 0); err != nil {
+		return false, util.IgnoreError.Errorf("failed to set cache for seal: %w", err)
+	} else {
+		return true, nil
+	}
 }
 
-func (svc SealValidationChecker) IsValidOperationSeal() (bool, error) {
+func (svc SealChecker) IsValidOperationSeal() (bool, error) {
 	var os operation.Seal
 	if s, ok := svc.seal.(operation.Seal); !ok {
 		return true, nil
@@ -71,7 +76,7 @@ func (svc SealValidationChecker) IsValidOperationSeal() (bool, error) {
 	}
 
 	if !notFound {
-		return false, util.CheckerNilError.Errorf("operation seal does not have new operations")
+		return false, util.IgnoreError.Errorf("operation seal does not have new operations")
 	}
 
 	return true, nil

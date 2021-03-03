@@ -8,19 +8,19 @@ import (
 	"github.com/spikeekips/mitum/util/logging"
 )
 
-func loggerWithSeal(sl seal.Seal, l logging.Logger) logging.Logger {
+func LoggerWithSeal(sl seal.Seal, l logging.Logger) logging.Logger {
 	return l.WithLogger(func(ctx logging.Context) logging.Emitter {
-		return ctx.Hinted("seal_hash", sl.Hash()).(logging.Context)
+		return ctx.Interface("seal_hint", sl.Hint()).Hinted("seal_hash", sl.Hash()).(logging.Context)
 	})
 }
 
-func loggerWithBallot(blt ballot.Ballot, l logging.Logger) logging.Logger {
+func LoggerWithBallot(blt ballot.Ballot, l logging.Logger) logging.Logger {
 	return l.WithLogger(func(ctx logging.Context) logging.Emitter {
 		return ctx.Hinted("ballot_hash", blt.Hash()).(logging.Context)
 	})
 }
 
-func loggerWithVoteproof(voteproof base.Voteproof, l logging.Logger) logging.Logger {
+func LoggerWithVoteproof(voteproof base.Voteproof, l logging.Logger) logging.Logger {
 	if voteproof == nil {
 		return l
 	}
@@ -30,7 +30,7 @@ func loggerWithVoteproof(voteproof base.Voteproof, l logging.Logger) logging.Log
 	})
 }
 
-func loggerWithLocal(local *Local, l logging.Logger) logging.Logger {
+func LoggerWithLocal(local *Local, l logging.Logger) logging.Logger {
 	var manifest block.Manifest
 	if m, found, err := local.Storage().LastManifest(); err != nil || !found {
 		return l

@@ -15,13 +15,17 @@ func (ib INITBallotV0) MarshalBSON() ([]byte, error) {
 	if ib.voteproof != nil {
 		m["voteproof"] = ib.voteproof
 	}
+	if ib.acceptVoteproof != nil {
+		m["accept_voteproof"] = ib.acceptVoteproof
+	}
 
 	return bsonenc.Marshal(m)
 }
 
 type INITBallotV0UnpackerBSON struct {
-	PB valuehash.Bytes `bson:"previous_block"`
-	VR bson.Raw        `bson:"voteproof,omitempty"`
+	PB  valuehash.Bytes `bson:"previous_block"`
+	VR  bson.Raw        `bson:"voteproof,omitempty"`
+	AVR bson.Raw        `bson:"accept_voteproof,omitempty"`
 }
 
 func (ib *INITBallotV0) UnpackBSON(b []byte, enc *bsonenc.Encoder) error {
@@ -35,7 +39,7 @@ func (ib *INITBallotV0) UnpackBSON(b []byte, enc *bsonenc.Encoder) error {
 		return err
 	}
 
-	return ib.unpack(enc, bb, bf, nib.PB, nib.VR)
+	return ib.unpack(enc, bb, bf, nib.PB, nib.VR, nib.AVR)
 }
 
 func (ibf INITBallotFactV0) MarshalBSON() ([]byte, error) {

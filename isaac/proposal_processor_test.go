@@ -68,16 +68,16 @@ func (opp dummyOperationProcessor) Cancel() error {
 }
 
 type testProposalProcessor struct {
-	baseTestStateHandler
+	BaseTest
 
 	local  *Local
 	remote *Local
 }
 
 func (t *testProposalProcessor) SetupTest() {
-	t.baseTestStateHandler.SetupTest()
+	t.BaseTest.SetupTest()
 
-	ls := t.locals(2)
+	ls := t.Locals(2)
 	t.local, t.remote = ls[0], ls[1]
 }
 
@@ -87,7 +87,7 @@ func (t *testProposalProcessor) processors() *prprocessor.Processors {
 		t.local.Storage(),
 		t.local.BlockFS(),
 		t.local.Nodes(),
-		t.suffrage(t.local),
+		t.Suffrage(t.local),
 		nil,
 	), nil)
 
@@ -117,12 +117,12 @@ func (t *testProposalProcessor) newOperationSeal() (seal.Seal, KVOperation) {
 func (t *testProposalProcessor) TestPrepare() {
 	pm := NewProposalMaker(t.local)
 
-	ib := t.newINITBallot(t.local, base.Round(0), nil)
+	ib := t.NewINITBallot(t.local, base.Round(0), nil)
 	initFact := ib.INITBallotFactV0
 
-	ivp, err := t.newVoteproof(base.StageINIT, initFact, t.local, t.remote)
+	ivp, err := t.NewVoteproof(base.StageINIT, initFact, t.local, t.remote)
 	t.NoError(err)
-	pr, err := pm.Proposal(ivp.Height(), ivp.Round())
+	pr, err := pm.Proposal(ivp.Height(), ivp.Round(), ivp)
 	t.NoError(err)
 
 	pps := t.processors()
@@ -152,12 +152,12 @@ func (t *testProposalProcessor) TestPrepare() {
 func (t *testProposalProcessor) TestPrepareRetry() {
 	pm := NewProposalMaker(t.local)
 
-	ib := t.newINITBallot(t.local, base.Round(0), nil)
+	ib := t.NewINITBallot(t.local, base.Round(0), nil)
 	initFact := ib.INITBallotFactV0
 
-	ivp, err := t.newVoteproof(base.StageINIT, initFact, t.local, t.remote)
+	ivp, err := t.NewVoteproof(base.StageINIT, initFact, t.local, t.remote)
 	t.NoError(err)
-	pr, err := pm.Proposal(ivp.Height(), ivp.Round())
+	pr, err := pm.Proposal(ivp.Height(), ivp.Round(), ivp)
 	t.NoError(err)
 
 	var called int64
@@ -176,7 +176,7 @@ func (t *testProposalProcessor) TestPrepareRetry() {
 		t.local.Storage(),
 		t.local.BlockFS(),
 		t.local.Nodes(),
-		t.suffrage(t.local),
+		t.Suffrage(t.local),
 		nil,
 	)
 	pps := prprocessor.NewProcessors(
@@ -223,12 +223,12 @@ func (t *testProposalProcessor) TestPrepareRetry() {
 func (t *testProposalProcessor) TestSave() {
 	pm := NewProposalMaker(t.local)
 
-	ib := t.newINITBallot(t.local, base.Round(0), nil)
+	ib := t.NewINITBallot(t.local, base.Round(0), nil)
 	initFact := ib.INITBallotFactV0
 
-	ivp, err := t.newVoteproof(base.StageINIT, initFact, t.local, t.remote)
+	ivp, err := t.NewVoteproof(base.StageINIT, initFact, t.local, t.remote)
 	t.NoError(err)
-	pr, err := pm.Proposal(ivp.Height(), ivp.Round())
+	pr, err := pm.Proposal(ivp.Height(), ivp.Round(), ivp)
 	t.NoError(err)
 
 	pps := t.processors()
@@ -258,7 +258,7 @@ func (t *testProposalProcessor) TestSave() {
 		nil,
 	).Fact()
 
-	avp, err := t.newVoteproof(base.StageACCEPT, acceptFact, t.local, t.remote)
+	avp, err := t.NewVoteproof(base.StageACCEPT, acceptFact, t.local, t.remote)
 	t.NoError(err)
 
 	sch := pps.Save(context.Background(), pr.Hash(), avp)
@@ -318,15 +318,15 @@ func (t *testProposalProcessor) TestCancelPreviousProposal() {
 
 	t.NoError(t.local.Storage().NewSeals([]seal.Seal{sl}))
 
-	ib := t.newINITBallot(t.local, base.Round(0), nil)
+	ib := t.NewINITBallot(t.local, base.Round(0), nil)
 	initFact := ib.INITBallotFactV0
 
-	ivp, err := t.newVoteproof(base.StageINIT, initFact, t.local, t.remote)
+	ivp, err := t.NewVoteproof(base.StageINIT, initFact, t.local, t.remote)
 	t.NoError(err)
 
 	var pr ballot.ProposalV0
 	{
-		i, err := pm.Proposal(ivp.Height(), ivp.Round())
+		i, err := pm.Proposal(ivp.Height(), ivp.Round(), ivp)
 		t.NoError(err)
 
 		pr = i.(ballot.ProposalV0)
@@ -366,13 +366,13 @@ func (t *testProposalProcessor) TestOperation() {
 	err := t.local.Storage().NewSeals([]seal.Seal{sl})
 	t.NoError(err)
 
-	ib := t.newINITBallot(t.local, base.Round(0), nil)
+	ib := t.NewINITBallot(t.local, base.Round(0), nil)
 	initFact := ib.INITBallotFactV0
 
-	ivp, err := t.newVoteproof(base.StageINIT, initFact, t.local, t.remote)
+	ivp, err := t.NewVoteproof(base.StageINIT, initFact, t.local, t.remote)
 	t.NoError(err)
 
-	pr, err := pm.Proposal(ivp.Height(), ivp.Round())
+	pr, err := pm.Proposal(ivp.Height(), ivp.Round(), ivp)
 	t.NoError(err)
 
 	pch := pps.NewProposal(context.Background(), pr, ivp)
@@ -403,7 +403,7 @@ func (t *testProposalProcessor) TestOperation() {
 		nil,
 	).Fact()
 
-	avp, err := t.newVoteproof(base.StageACCEPT, acceptFact, t.local, t.remote)
+	avp, err := t.NewVoteproof(base.StageACCEPT, acceptFact, t.local, t.remote)
 	t.NoError(err)
 
 	sch := pps.Save(context.Background(), pr.Hash(), avp)
@@ -431,10 +431,10 @@ func (t *testProposalProcessor) TestOperation() {
 }
 
 func (t *testProposalProcessor) TestSealsNotFound() {
-	ib := t.newINITBallot(t.local, base.Round(0), nil)
+	ib := t.NewINITBallot(t.local, base.Round(0), nil)
 	initFact := ib.INITBallotFactV0
 
-	ivp, err := t.newVoteproof(base.StageINIT, initFact, t.local, t.remote)
+	ivp, err := t.NewVoteproof(base.StageINIT, initFact, t.local, t.remote)
 	t.NoError(err)
 
 	var pr ballot.Proposal
@@ -450,7 +450,7 @@ func (t *testProposalProcessor) TestSealsNotFound() {
 		)
 
 		pm := NewProposalMaker(t.remote)
-		pr, _ = pm.Proposal(ivp.Height(), ivp.Round())
+		pr, _ = pm.Proposal(ivp.Height(), ivp.Round(), ivp)
 	}
 
 	for _, h := range pr.Seals() {
@@ -509,13 +509,13 @@ func (t *testProposalProcessor) TestTimeoutPrepare() {
 
 	t.NoError(t.local.Storage().NewSeals([]seal.Seal{sl}))
 
-	ib := t.newINITBallot(t.local, base.Round(0), nil)
+	ib := t.NewINITBallot(t.local, base.Round(0), nil)
 	initFact := ib.INITBallotFactV0
 
 	pm := NewProposalMaker(t.local)
-	ivp, err := t.newVoteproof(base.StageINIT, initFact, t.local, t.remote)
+	ivp, err := t.NewVoteproof(base.StageINIT, initFact, t.local, t.remote)
 	t.NoError(err)
-	pr, err := pm.Proposal(ivp.Height(), ivp.Round())
+	pr, err := pm.Proposal(ivp.Height(), ivp.Round(), ivp)
 	t.NoError(err)
 
 	_ = t.local.Storage().NewProposal(pr)
@@ -543,13 +543,13 @@ func (t *testProposalProcessor) TestTimeoutSaveBeforeSavingStorage() {
 	sl, _ := t.newOperationSeal()
 	t.NoError(t.local.Storage().NewSeals([]seal.Seal{sl}))
 
-	ib := t.newINITBallot(t.local, base.Round(0), nil)
+	ib := t.NewINITBallot(t.local, base.Round(0), nil)
 	initFact := ib.INITBallotFactV0
 
 	pm := NewProposalMaker(t.local)
-	ivp, err := t.newVoteproof(base.StageINIT, initFact, t.local, t.remote)
+	ivp, err := t.NewVoteproof(base.StageINIT, initFact, t.local, t.remote)
 	t.NoError(err)
-	pr, err := pm.Proposal(ivp.Height(), ivp.Round())
+	pr, err := pm.Proposal(ivp.Height(), ivp.Round(), ivp)
 	t.NoError(err)
 
 	_ = t.local.Storage().NewProposal(pr)
@@ -590,7 +590,7 @@ func (t *testProposalProcessor) TestTimeoutSaveBeforeSavingStorage() {
 		nil,
 	).Fact()
 
-	avp, err := t.newVoteproof(base.StageACCEPT, acceptFact, t.local, t.remote)
+	avp, err := t.NewVoteproof(base.StageACCEPT, acceptFact, t.local, t.remote)
 	t.NoError(err)
 
 	sch := pps.Save(ctx, pr.Hash(), avp)
@@ -609,13 +609,13 @@ func (t *testProposalProcessor) TestTimeoutSaveAfterSaving() {
 	sl, _ := t.newOperationSeal()
 	t.NoError(t.local.Storage().NewSeals([]seal.Seal{sl}))
 
-	ib := t.newINITBallot(t.local, base.Round(0), nil)
+	ib := t.NewINITBallot(t.local, base.Round(0), nil)
 	initFact := ib.INITBallotFactV0
 
 	pm := NewProposalMaker(t.local)
-	ivp, err := t.newVoteproof(base.StageINIT, initFact, t.local, t.remote)
+	ivp, err := t.NewVoteproof(base.StageINIT, initFact, t.local, t.remote)
 	t.NoError(err)
-	pr, err := pm.Proposal(ivp.Height(), ivp.Round())
+	pr, err := pm.Proposal(ivp.Height(), ivp.Round(), ivp)
 	t.NoError(err)
 
 	_ = t.local.Storage().NewProposal(pr)
@@ -668,7 +668,7 @@ func (t *testProposalProcessor) TestTimeoutSaveAfterSaving() {
 		nil,
 	).Fact()
 
-	avp, err := t.newVoteproof(base.StageACCEPT, acceptFact, t.local, t.remote)
+	avp, err := t.NewVoteproof(base.StageACCEPT, acceptFact, t.local, t.remote)
 	t.NoError(err)
 
 	ctx, cancel := context.WithTimeout(context.Background(), time.Millisecond*100)
@@ -701,12 +701,12 @@ func (t *testProposalProcessor) TestCustomOperationProcessor() {
 
 	pm := NewProposalMaker(t.local)
 
-	ib := t.newINITBallot(t.local, base.Round(0), nil)
+	ib := t.NewINITBallot(t.local, base.Round(0), nil)
 	initFact := ib.INITBallotFactV0
 
-	ivp, err := t.newVoteproof(base.StageINIT, initFact, t.local, t.remote)
+	ivp, err := t.NewVoteproof(base.StageINIT, initFact, t.local, t.remote)
 	t.NoError(err)
-	pr, err := pm.Proposal(ivp.Height(), ivp.Round())
+	pr, err := pm.Proposal(ivp.Height(), ivp.Round(), ivp)
 	t.NoError(err)
 
 	var processed int64
@@ -726,7 +726,7 @@ func (t *testProposalProcessor) TestCustomOperationProcessor() {
 		t.local.Storage(),
 		t.local.BlockFS(),
 		t.local.Nodes(),
-		t.suffrage(t.local),
+		t.Suffrage(t.local),
 		hm,
 	), nil)
 
@@ -763,12 +763,12 @@ func (t *testProposalProcessor) TestNotProcessedOperations() {
 
 	pm := NewProposalMaker(t.local)
 
-	ib := t.newINITBallot(t.local, base.Round(0), nil)
+	ib := t.NewINITBallot(t.local, base.Round(0), nil)
 	initFact := ib.INITBallotFactV0
 
-	ivp, err := t.newVoteproof(base.StageINIT, initFact, t.local, t.remote)
+	ivp, err := t.NewVoteproof(base.StageINIT, initFact, t.local, t.remote)
 	t.NoError(err)
-	pr, err := pm.Proposal(ivp.Height(), ivp.Round())
+	pr, err := pm.Proposal(ivp.Height(), ivp.Round(), ivp)
 	t.NoError(err)
 
 	var processed int64
@@ -791,7 +791,7 @@ func (t *testProposalProcessor) TestNotProcessedOperations() {
 		t.local.Storage(),
 		t.local.BlockFS(),
 		t.local.Nodes(),
-		t.suffrage(t.local),
+		t.Suffrage(t.local),
 		hm,
 	), nil)
 
@@ -869,12 +869,12 @@ func (t *testProposalProcessor) TestSameStateHash() {
 
 	pm := NewProposalMaker(t.local)
 
-	ib := t.newINITBallot(t.local, base.Round(0), nil)
+	ib := t.NewINITBallot(t.local, base.Round(0), nil)
 	initFact := ib.INITBallotFactV0
 
-	ivp, err := t.newVoteproof(base.StageINIT, initFact, t.local, t.remote)
+	ivp, err := t.NewVoteproof(base.StageINIT, initFact, t.local, t.remote)
 	t.NoError(err)
-	pr, err := pm.Proposal(ivp.Height(), ivp.Round())
+	pr, err := pm.Proposal(ivp.Height(), ivp.Round(), ivp)
 	t.NoError(err)
 
 	pps := t.processors()
@@ -956,13 +956,13 @@ func (t *testProposalProcessor) TestHeavyOperations() {
 	err := t.local.Storage().NewSeals(sls)
 	t.NoError(err)
 
-	ib := t.newINITBallot(t.local, base.Round(0), nil)
+	ib := t.NewINITBallot(t.local, base.Round(0), nil)
 	initFact := ib.INITBallotFactV0
 
-	ivp, err := t.newVoteproof(base.StageINIT, initFact, t.local, t.remote)
+	ivp, err := t.NewVoteproof(base.StageINIT, initFact, t.local, t.remote)
 	t.NoError(err)
 
-	pr, err := pm.Proposal(ivp.Height(), ivp.Round())
+	pr, err := pm.Proposal(ivp.Height(), ivp.Round(), ivp)
 	t.NoError(err)
 
 	pps := t.processors()

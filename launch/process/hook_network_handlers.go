@@ -14,6 +14,7 @@ import (
 	"github.com/spikeekips/mitum/isaac"
 	"github.com/spikeekips/mitum/launch/config"
 	"github.com/spikeekips/mitum/network"
+	"github.com/spikeekips/mitum/states"
 	"github.com/spikeekips/mitum/storage"
 	"github.com/spikeekips/mitum/util"
 	"github.com/spikeekips/mitum/util/cache"
@@ -34,17 +35,17 @@ func HookSetNetworkHandlers(ctx context.Context) (context.Context, error) {
 }
 
 type SettingNetworkHandlers struct {
-	version         util.Version
-	ctx             context.Context
-	conf            config.LocalNode
-	local           *isaac.Local
-	storage         storage.Storage
-	blockfs         *storage.BlockFS
-	suffrage        base.Suffrage
-	consensusStates *isaac.ConsensusStates
-	network         network.Server
-	sealCache       cache.Cache
-	logger          logging.Logger
+	version   util.Version
+	ctx       context.Context
+	conf      config.LocalNode
+	local     *isaac.Local
+	storage   storage.Storage
+	blockfs   *storage.BlockFS
+	suffrage  base.Suffrage
+	states    states.States
+	network   network.Server
+	sealCache cache.Cache
+	logger    logging.Logger
 }
 
 func SettingNetworkHandlersFromContext(ctx context.Context) (*SettingNetworkHandlers, error) { // nolint:funlen
@@ -78,7 +79,7 @@ func SettingNetworkHandlersFromContext(ctx context.Context) (*SettingNetworkHand
 		return nil, err
 	}
 
-	var consensusStates *isaac.ConsensusStates
+	var consensusStates states.States
 	if err := LoadConsensusStatesContextValue(ctx, &consensusStates); err != nil {
 		return nil, err
 	}
@@ -99,17 +100,17 @@ func SettingNetworkHandlersFromContext(ctx context.Context) (*SettingNetworkHand
 	}
 
 	return &SettingNetworkHandlers{
-		ctx:             ctx,
-		version:         version,
-		conf:            conf,
-		local:           local,
-		storage:         st,
-		blockfs:         blockfs,
-		suffrage:        suffrage,
-		consensusStates: consensusStates,
-		network:         nt,
-		sealCache:       sealCache,
-		logger:          logger,
+		ctx:       ctx,
+		version:   version,
+		conf:      conf,
+		local:     local,
+		storage:   st,
+		blockfs:   blockfs,
+		suffrage:  suffrage,
+		states:    consensusStates,
+		network:   nt,
+		sealCache: sealCache,
+		logger:    logger,
 	}, nil
 }
 
@@ -148,40 +149,50 @@ func (sn *SettingNetworkHandlers) networkHandlerGetSeals() network.GetSealsHandl
 
 func (sn *SettingNetworkHandlers) networkhandlerNewSeal() network.NewSealHandler {
 	return func(sl seal.Seal) error {
-		sealChecker := isaac.NewSealValidationChecker(
+		sealChecker := isaac.NewSealChecker(
 			sl,
 			sn.storage,
 			sn.local.Policy(),
 			sn.sealCache,
 		)
 		if err := util.NewChecker("network-new-seal-checker", []util.CheckerFunc{
-			sealChecker.CheckIsKnown,
-			sealChecker.CheckIsValid,
+			sealChecker.IsKnown,
+			sealChecker.IsValid,
+			sealChecker.IsValidOperationSeal,
 		}).Check(); err != nil {
-			if xerrors.Is(err, util.CheckerNilError) {
-				sn.logger.Debug().Msg(err.Error())
-
+			if xerrors.Is(err, util.IgnoreError) {
 				return nil
 			}
+
+			sn.logger.Error().Err(err).Msg("seal checking failed")
 
 			return err
 		}
 
 		if t, ok := sl.(ballot.Ballot); ok {
-			if checker, err := isaac.NewBallotChecker(t, sn.local, sn.suffrage); err != nil {
-				return err
-			} else if err := util.NewChecker("network-new-ballot-checker", []util.CheckerFunc{
-				checker.CheckIsInSuffrage,
+			checker := isaac.NewBallotChecker(
+				t,
+				sn.local.Node(),
+				sn.storage,
+				sn.local.Policy(),
+				sn.suffrage,
+				sn.local.Nodes(),
+				sn.states.LastVoteproof(),
+			)
+			if err := util.NewChecker("network-new-ballot-checker", []util.CheckerFunc{
+				checker.InSuffrage,
 				checker.CheckSigning,
-				checker.CheckWithLastBlock,
-				checker.CheckProposal,
+				checker.CheckWithLastVoteproof,
+				checker.CheckProposalInACCEPTBallot,
 				checker.CheckVoteproof,
 			}).Check(); err != nil {
 				return err
 			}
 		}
 
-		sn.consensusStates.NewSeal(sl)
+		go func() {
+			_ = sn.states.NewSeal(sl)
+		}()
 
 		return nil
 	}
@@ -241,11 +252,6 @@ func (sn *SettingNetworkHandlers) networkhandlerGetBlocks() network.GetBlocksHan
 
 func (sn *SettingNetworkHandlers) networkHandlerNodeInfo() network.NodeInfoHandler {
 	return func() (network.NodeInfo, error) {
-		var state base.State = base.StateUnknown
-		if handler := sn.consensusStates.ActiveHandler(); handler != nil {
-			state = handler.State()
-		}
-
 		var manifest block.Manifest
 		if m, found, err := sn.storage.LastManifest(); err != nil {
 			return nil, err
@@ -265,7 +271,7 @@ func (sn *SettingNetworkHandlers) networkHandlerNodeInfo() network.NodeInfoHandl
 		return network.NewNodeInfoV0(
 			sn.local.Node(),
 			sn.local.Policy().NetworkID(),
-			state,
+			sn.states.State(),
 			manifest,
 			sn.version,
 			sn.conf.Network().URL().String(),

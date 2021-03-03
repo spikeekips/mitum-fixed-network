@@ -22,15 +22,14 @@ import (
 	"github.com/spikeekips/mitum/util/valuehash"
 )
 
-type baseTestStateHandler struct {
+type BaseTest struct {
 	suite.Suite
 	StorageSupportTest
 	localfs.BaseTestBlocks
 	ls []*Local
-	pp *prprocessor.Processors
 }
 
-func (t *baseTestStateHandler) SetupSuite() {
+func (t *BaseTest) SetupSuite() {
 	t.StorageSupportTest.SetupSuite()
 	t.BaseTestBlocks.SetupSuite()
 
@@ -69,7 +68,70 @@ func (t *baseTestStateHandler) SetupSuite() {
 	_ = t.Encs.AddHinter(state.StringValue{})
 }
 
-func (t *baseTestStateHandler) locals(n int) []*Local {
+func (t *BaseTest) SetupTest() {
+}
+
+func (t *BaseTest) TearDownTest() {
+	t.CloseStates(t.ls...)
+}
+
+func (t *BaseTest) SetupNodes(local *Local, others []*Local) {
+	var nodes []*Local = []*Local{local}
+	nodes = append(nodes, others...)
+
+	lastHeight := t.LastManifest(local.Storage()).Height()
+
+	t.GenerateBlocks(nodes, lastHeight)
+
+	for _, st := range nodes {
+		nch := st.Node().Channel().(*channetwork.Channel)
+		nch.SetGetManifestsHandler(func(heights []base.Height) ([]block.Manifest, error) {
+			var bs []block.Manifest
+			for _, h := range heights {
+				m, found, err := st.Storage().ManifestByHeight(h)
+				if !found {
+					break
+				} else if err != nil {
+					return nil, err
+				}
+
+				bs = append(bs, m)
+			}
+
+			return bs, nil
+		})
+
+		nch.SetGetBlocksHandler(func(heights []base.Height) ([]block.Block, error) {
+			var bs []block.Block
+			for _, h := range heights {
+				if blk, err := st.BlockFS().Load(h); err != nil {
+					if xerrors.Is(err, storage.NotFoundError) {
+						break
+					}
+
+					return nil, err
+				} else {
+					bs = append(bs, blk)
+				}
+			}
+
+			return bs, nil
+		})
+	}
+}
+
+func (t *BaseTest) GenerateBlocks(locals []*Local, targetHeight base.Height) {
+	bg, err := NewDummyBlocksV0Generator(
+		locals[0],
+		targetHeight,
+		t.Suffrage(locals[0], locals...),
+		locals,
+	)
+	t.NoError(err)
+	t.NoError(bg.Generate(false))
+}
+
+func (t *BaseTest) Locals(n int) []*Local {
 	var ls []*Local
 	for i := 0; i < n; i++ {
 		lst := t.Storage(t.Encs, t.JSONEnc)
@@ -98,7 +160,7 @@ func (t *baseTestStateHandler) locals(n int) []*Local {
 		}
 	}
 
-	suffrage := t.suffrage(ls[0], ls...)
+	suffrage := t.Suffrage(ls[0], ls...)
 
 	if bg, err := NewDummyBlocksV0Generator(ls[0], base.Height(2), suffrage, ls); err != nil {
 		panic(err)
@@ -111,29 +173,26 @@ func (t *baseTestStateHandler) locals(n int) []*Local {
 	return ls
 }
 
-func (t *baseTestStateHandler) SetupTest() {
+func (t *BaseTest) EmptyLocal() *Local {
+	lst := t.Storage(nil, nil)
+	localNode := channetwork.RandomLocalNode(util.UUID().String())
+	blockfs := t.BlockFS(t.JSONEnc)
+
+	local, err := NewLocal(lst, blockfs, localNode, TestNetworkID)
+	t.NoError(err)
+
+	t.NoError(local.Initialize())
+
+	return local
 }
 
-func (t *baseTestStateHandler) TearDownTest() {
-	t.closeStates(t.ls...)
-	if t.pp != nil {
-		t.NoError(t.pp.Stop())
-	}
-}
-
-func (t *baseTestStateHandler) lastINITVoteproof(local *Local) base.Voteproof {
-	vp, _, _ := local.BlockFS().LastVoteproof(base.StageINIT)
-
-	return vp
-}
-
-func (t *baseTestStateHandler) closeStates(states ...*Local) {
+func (t *BaseTest) CloseStates(states ...*Local) {
 	for _, s := range states {
 		_ = s.Storage().Close()
 	}
 }
 
-func (t *baseTestStateHandler) newVoteproof(
+func (t *BaseTest) NewVoteproof(
 	stage base.Stage, fact base.Fact, states ...*Local,
 ) (base.VoteproofV0, error) {
 	factHash := fact.Hash()
@@ -174,7 +233,7 @@ func (t *baseTestStateHandler) newVoteproof(
 	vp := base.NewTestVoteproofV0(
 		height,
 		round,
-		t.suffrage(states[0], states...).Nodes(),
+		t.Suffrage(states[0], states...).Nodes(),
 		states[0].Policy().ThresholdRatio(),
 		base.VoteResultMajority,
 		false,
@@ -188,7 +247,7 @@ func (t *baseTestStateHandler) newVoteproof(
 	return vp, nil
 }
 
-func (t *baseTestStateHandler) suffrage(proposerState *Local, states ...*Local) base.Suffrage {
+func (t *BaseTest) Suffrage(proposerState *Local, states ...*Local) base.Suffrage {
 	nodes := make([]base.Address, len(states))
 	for i, s := range states {
 		nodes[i] = s.Node().Address()
@@ -203,7 +262,7 @@ func (t *baseTestStateHandler) suffrage(proposerState *Local, states ...*Local) 
 	return sf
 }
 
-func (t *baseTestStateHandler) newINITBallot(local *Local, round base.Round, voteproof base.Voteproof) ballot.INITBallotV0 {
+func (t *BaseTest) NewINITBallot(local *Local, round base.Round, voteproof base.Voteproof) ballot.INITBallotV0 {
 	var ib ballot.INITBallotV0
 	if round == 0 {
 		if b, err := NewINITBallotV0Round0(local); err != nil {
@@ -212,7 +271,7 @@ func (t *baseTestStateHandler) newINITBallot(local *Local, round base.Round, vot
 			ib = b
 		}
 	} else {
-		if b, err := NewINITBallotV0WithVoteproof(local.Node().Address(), voteproof); err != nil {
+		if b, err := NewINITBallotV0WithVoteproof(local, local.Node().Address(), voteproof); err != nil {
 			panic(err)
 		} else {
 			ib = b
@@ -224,7 +283,7 @@ func (t *baseTestStateHandler) newINITBallot(local *Local, round base.Round, vot
 	return ib
 }
 
-func (t *baseTestStateHandler) newINITBallotFact(local *Local, round base.Round) ballot.INITBallotFactV0 {
+func (t *BaseTest) NewINITBallotFact(local *Local, round base.Round) ballot.INITBallotFactV0 {
 	var manifest block.Manifest
 	switch l, found, err := local.Storage().LastManifest(); {
 	case !found:
@@ -242,20 +301,8 @@ func (t *baseTestStateHandler) newINITBallotFact(local *Local, round base.Round)
 	)
 }
 
-func (t *baseTestStateHandler) newProposal(local *Local, round base.Round, seals []valuehash.Hash) ballot.Proposal {
-	pr, err := NewProposalV0(local.Storage(), local.Node().Address(), round, seals)
-	if err != nil {
-		panic(err)
-	}
-	if err := SignSeal(&pr, local); err != nil {
-		panic(err)
-	}
-
-	return pr
-}
-
-func (t *baseTestStateHandler) newACCEPTBallot(local *Local, round base.Round, proposal, newBlock valuehash.Hash) ballot.ACCEPTBallotV0 {
-	manifest := t.lastManifest(local.Storage())
+func (t *BaseTest) NewACCEPTBallot(local *Local, round base.Round, proposal, newBlock valuehash.Hash, voteproof base.Voteproof) ballot.ACCEPTBallotV0 {
+	manifest := t.LastManifest(local.Storage())
 
 	ab := ballot.NewACCEPTBallotV0(
 		local.Node().Address(),
@@ -263,7 +310,7 @@ func (t *baseTestStateHandler) newACCEPTBallot(local *Local, round base.Round, p
 		round,
 		proposal,
 		newBlock,
-		nil,
+		voteproof,
 	)
 
 	if err := ab.Sign(local.Node().Privatekey(), local.Policy().NetworkID()); err != nil {
@@ -273,7 +320,7 @@ func (t *baseTestStateHandler) newACCEPTBallot(local *Local, round base.Round, p
 	return ab
 }
 
-func (t *baseTestStateHandler) newOperationSeal(local *Local, n uint) operation.Seal {
+func (t *BaseTest) NewOperationSeal(local *Local, n uint) operation.Seal {
 	pk := local.Node().Privatekey()
 
 	var ops []operation.Operation
@@ -292,7 +339,19 @@ func (t *baseTestStateHandler) newOperationSeal(local *Local, n uint) operation.
 	return sl
 }
 
-func (t *baseTestStateHandler) compareManifest(a, b block.Manifest) {
+func (t *BaseTest) NewProposal(local *Local, round base.Round, seals []valuehash.Hash, voteproof base.Voteproof) ballot.Proposal {
+	pr, err := NewProposalV0(local.Storage(), local.Node().Address(), round, seals, voteproof)
+	if err != nil {
+		panic(err)
+	}
+	if err := SignSeal(&pr, local); err != nil {
+		panic(err)
+	}
+
+	return pr
+}
+
+func (t *BaseTest) CompareManifest(a, b block.Manifest) {
 	t.Equal(a.Height(), b.Height())
 	t.Equal(a.Round(), b.Round())
 	t.True(a.Proposal().Equal(b.Proposal()))
@@ -310,7 +369,7 @@ func (t *baseTestStateHandler) compareManifest(a, b block.Manifest) {
 	}
 }
 
-func (t *baseTestStateHandler) lastManifest(st storage.Storage) block.Manifest {
+func (t *BaseTest) LastManifest(st storage.Storage) block.Manifest {
 	if m, found, err := st.LastManifest(); !found {
 		panic(storage.NotFoundError.Errorf("last manifest not found"))
 	} else if err != nil {
@@ -320,7 +379,7 @@ func (t *baseTestStateHandler) lastManifest(st storage.Storage) block.Manifest {
 	}
 }
 
-func (t *baseTestStateHandler) DummyProcessors() *prprocessor.Processors {
+func (t *BaseTest) DummyProcessors() *prprocessor.Processors {
 	pp := prprocessor.NewProcessors(
 		(&prprocessor.DummyProcessor{}).New,
 		nil,
@@ -331,11 +390,35 @@ func (t *baseTestStateHandler) DummyProcessors() *prprocessor.Processors {
 	return pp
 }
 
-func (t *baseTestStateHandler) Processors(newFunc prprocessor.ProcessorNewFunc) *prprocessor.Processors {
+func (t *BaseTest) Processors(newFunc prprocessor.ProcessorNewFunc) *prprocessor.Processors {
 	pp := prprocessor.NewProcessors(newFunc, nil)
 
 	t.NoError(pp.Initialize())
 	t.NoError(pp.Start())
 
 	return pp
+}
+
+func (t *BaseTest) LastINITVoteproofFromBlockFS(blockFS *storage.BlockFS) base.Voteproof {
+	vp, found, err := blockFS.LastVoteproof(base.StageINIT)
+	t.NoError(err)
+	t.True(found)
+
+	return vp
+}
+
+func (t *BaseTest) Ballotbox(suffrage base.Suffrage, policy *LocalPolicy) *Ballotbox {
+	return NewBallotbox(
+		suffrage.Nodes,
+		func() base.Threshold {
+			if t, err := base.NewThreshold(
+				uint(len(suffrage.Nodes())),
+				policy.ThresholdRatio(),
+			); err != nil {
+				panic(err)
+			} else {
+				return t
+			}
+		},
+	)
 }

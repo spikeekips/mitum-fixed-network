@@ -5,23 +5,28 @@ import (
 
 	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/base/ballot"
+	"github.com/spikeekips/mitum/network"
 	"github.com/spikeekips/mitum/storage"
 	"github.com/spikeekips/mitum/util/logging"
 )
 
 type ProposalValidationChecker struct {
 	*logging.Logging
-	local         *Local
-	suffrage      base.Suffrage
-	proposal      ballot.Proposal
-	initVoteproof base.Voteproof
+	local    *network.LocalNode
+	storage  storage.Storage
+	suffrage base.Suffrage
+	nodepool *network.Nodepool
+	proposal ballot.Proposal
+	livp     base.Voteproof
 }
 
 func NewProposalValidationChecker(
-	local *Local,
+	local *network.LocalNode,
+	st storage.Storage,
 	suffrage base.Suffrage,
+	nodepool *network.Nodepool,
 	proposal ballot.Proposal,
-	initVoteproof base.Voteproof,
+	lastINITVoteproof base.Voteproof,
 ) *ProposalValidationChecker {
 	return &ProposalValidationChecker{
 		Logging: logging.NewLogging(func(c logging.Context) logging.Emitter {
@@ -32,10 +37,12 @@ func NewProposalValidationChecker(
 				Hinted("proposal_round", proposal.Round()).
 				Hinted("proposal_node", proposal.Node())
 		}),
-		local:         local,
-		suffrage:      suffrage,
-		proposal:      proposal,
-		initVoteproof: initVoteproof,
+		local:    local,
+		storage:  st,
+		suffrage: suffrage,
+		nodepool: nodepool,
+		proposal: proposal,
+		livp:     lastINITVoteproof,
 	}
 }
 
@@ -44,10 +51,10 @@ func (pvc *ProposalValidationChecker) IsKnown() (bool, error) {
 	height := pvc.proposal.Height()
 	round := pvc.proposal.Round()
 
-	if _, found, err := pvc.local.Storage().Proposal(height, round); err != nil {
+	if _, found, err := pvc.storage.Proposal(height, round, pvc.proposal.Node()); err != nil {
 		return false, err
 	} else if found {
-		return false, nil // NOTE the already saved will be passed
+		return false, KnownSealError.Wrap(storage.FoundError.Errorf("proposal already in storage"))
 	}
 
 	return true, nil
@@ -55,94 +62,90 @@ func (pvc *ProposalValidationChecker) IsKnown() (bool, error) {
 
 // CheckSigning checks node signed by it's valid key.
 func (pvc *ProposalValidationChecker) CheckSigning() (bool, error) {
-	if pvc.proposal.Signer().Equal(pvc.local.Node().Publickey()) {
+	if err := CheckBallotSigning(pvc.proposal, pvc.local, pvc.nodepool); err != nil {
+		return false, err
+	} else {
 		return true, nil
 	}
-
-	var node base.Node
-	if pvc.proposal.Node().Equal(pvc.local.Node().Address()) {
-		node = pvc.local.Node()
-	} else if n, found := pvc.local.Nodes().Node(pvc.proposal.Node()); !found {
-		return false, xerrors.Errorf("node not found")
-	} else {
-		node = n
-	}
-
-	if !pvc.proposal.Signer().Equal(node.Publickey()) {
-		return false, xerrors.Errorf("publickey not matched")
-	}
-
-	return true, nil
 }
 
 func (pvc *ProposalValidationChecker) IsProposer() (bool, error) {
-	if pvc.proposal.Signer().Equal(pvc.local.Node().Publickey()) {
+	if err := CheckNodeIsProposer(
+		pvc.proposal.Node(),
+		pvc.suffrage,
+		pvc.proposal.Height(),
+		pvc.proposal.Round(),
+	); err != nil {
+		return false, err
+	} else {
 		return true, nil
 	}
+}
 
-	height := pvc.proposal.Height()
-	round := pvc.proposal.Round()
-	node := pvc.proposal.Node()
-
-	var acting base.ActingSuffrage
-	if i, err := pvc.suffrage.Acting(height, round); err != nil {
+func (pvc *ProposalValidationChecker) SaveProposal() (bool, error) {
+	switch err := pvc.storage.NewProposal(pvc.proposal); {
+	case err == nil:
+		return true, nil
+	case xerrors.Is(err, storage.DuplicatedError):
+		return true, nil
+	default:
 		return false, err
+	}
+}
+
+func (pvc *ProposalValidationChecker) IsOlder() (bool, error) {
+	if pvc.livp == nil {
+		return false, xerrors.Errorf("no last voteproof")
+	}
+
+	ph := pvc.proposal.Height()
+	lh := pvc.livp.Height()
+	pr := pvc.proposal.Round()
+	lr := pvc.livp.Round()
+
+	switch {
+	case ph < lh:
+		return false, xerrors.Errorf("lower proposal height than last voteproof: %v < %v", ph, lh)
+	case ph == lh && pr < lr:
+		return false, xerrors.Errorf(
+			"same height, but lower proposal round than last voteproof: %v < %v", pr, lr)
+	default:
+		return true, nil
+	}
+}
+
+func (pvc *ProposalValidationChecker) IsWaiting() (bool, error) {
+	if pvc.livp == nil {
+		return false, xerrors.Errorf("no last voteproof")
+	}
+
+	ph := pvc.proposal.Height()
+	lh := pvc.livp.Height()
+	pr := pvc.proposal.Round()
+	lr := pvc.livp.Round()
+
+	switch {
+	case ph != lh:
+		return false, xerrors.Errorf("proposal height does not match with last voteproof: %v != %v", ph, lh)
+	case pr != lr:
+		return false, xerrors.Errorf(
+			"proposal round does not match with last voteproof: %v != %v", pr, lr)
+	default:
+		return true, nil
+	}
+}
+
+func CheckNodeIsProposer(node base.Address, suffrage base.Suffrage, height base.Height, round base.Round) error {
+	var acting base.ActingSuffrage
+	if i, err := suffrage.Acting(height, round); err != nil {
+		return err
 	} else {
 		acting = i
 	}
 
 	if node.Equal(acting.Proposer()) {
-		return true, nil
+		return nil
+	} else {
+		return xerrors.Errorf("proposal has wrong proposer")
 	}
-
-	err := xerrors.Errorf("proposal has wrong proposer")
-
-	pvc.Log().Error().Err(err).Hinted("expected_proposer", acting.Proposer()).Send()
-
-	pvc.Log().Error().Err(err).Msg("wrong proposer found")
-
-	return false, err
-}
-
-func (pvc *ProposalValidationChecker) SaveProposal() (bool, error) {
-	if err := pvc.local.Storage().NewProposal(pvc.proposal); err != nil {
-		if !xerrors.Is(err, storage.DuplicatedError) {
-			return false, xerrors.Errorf("failed to save proposal: %w", err)
-		}
-	}
-
-	return true, nil
-}
-
-func (pvc *ProposalValidationChecker) IsOldOrHigher() (bool, error) {
-	if pvc.initVoteproof == nil {
-		return false, xerrors.Errorf("no INIT Voteproof")
-	}
-
-	height := pvc.proposal.Height()
-	round := pvc.proposal.Round()
-
-	if height < pvc.initVoteproof.Height() || round != pvc.initVoteproof.Round() {
-		err := xerrors.Errorf("old Proposal received")
-		pvc.Log().Error().Err(err).
-			Dict("init_voteproof", logging.Dict().
-				Hinted("height", pvc.initVoteproof.Height()).
-				Hinted("round", pvc.initVoteproof.Round()),
-			).
-			Msg("old proposal received")
-
-		return false, err
-	} else if height > pvc.initVoteproof.Height() {
-		err := xerrors.Errorf("higher Proposal received")
-		pvc.Log().Error().Err(err).
-			Dict("init_voteproof", logging.Dict().
-				Hinted("height", pvc.initVoteproof.Height()).
-				Hinted("round", pvc.initVoteproof.Round()),
-			).
-			Msg("higher proposal received")
-
-		return false, err
-	}
-
-	return true, nil
 }

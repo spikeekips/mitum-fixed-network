@@ -17,8 +17,8 @@ var voteRecordsPool = sync.Pool{
 type VoteRecords struct {
 	sync.RWMutex
 	facts     map[string]base.Fact
-	votes     map[string]valuehash.Hash // key: node Address, value: fact hash
-	ballots   map[string]ballot.Ballot
+	votes     map[string]valuehash.Hash // {node Address: fact hash}
+	ballots   map[string]ballot.Ballot  // {node Address: ballot}
 	voteproof base.VoteproofV0
 	threshold base.Threshold
 }

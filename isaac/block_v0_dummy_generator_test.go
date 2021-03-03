@@ -11,17 +11,15 @@ import (
 )
 
 type testBlockV0DummyGenerator struct {
-	baseTestStateHandler
+	BaseTest
 }
 
 func (t *testBlockV0DummyGenerator) TestCreate() {
-	all := t.locals(3)
+	all := t.Locals(3)
 
 	for _, l := range all {
 		t.NoError(l.Storage().Clean())
 	}
-
-	defer t.closeStates(all...)
 
 	var suffrage base.Suffrage
 	{
@@ -30,7 +28,7 @@ func (t *testBlockV0DummyGenerator) TestCreate() {
 			nodes[i] = all[i].Node().Address()
 		}
 
-		suffrage = t.suffrage(all[0], all...)
+		suffrage = t.Suffrage(all[0], all...)
 	}
 
 	lastHeight := base.Height(3)
@@ -57,7 +55,7 @@ func (t *testBlockV0DummyGenerator) TestCreate() {
 }
 
 func (t *testBlockV0DummyGenerator) TestCleanByHeight() {
-	local := t.locals(1)[0]
+	local := t.Locals(1)[0]
 
 	lastManifest, _, _ := local.Storage().LastManifest()
 

@@ -17,6 +17,7 @@ type BaseLocalNodePackerYAML struct {
 	ProposalProcessor map[string]interface{} `yaml:",omitempty"`
 	Policy            Policy                 `yaml:",omitempty"`
 	GenesisOperations []operation.Operation  `yaml:"genesis-operations,omitempty"`
+	TimeServer        string                 `yaml:"timeserver,omitempty"`
 }
 
 func NewBaseLocalNodePackerYAMLFromConfig(conf LocalNode) BaseLocalNodePackerYAML {
@@ -29,5 +30,6 @@ func NewBaseLocalNodePackerYAMLFromConfig(conf LocalNode) BaseLocalNodePackerYAM
 		Nodes:             conf.Nodes(),
 		Policy:            conf.Policy(),
 		GenesisOperations: conf.GenesisOperations(),
+		TimeServer:        conf.TimeServer(),
 	}
 }

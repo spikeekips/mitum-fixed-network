@@ -6,6 +6,7 @@ import (
 )
 
 var defaultProcesses = []pm.Process{
+	process.ProcessorTimeSyncer,
 	process.ProcessorEncoders,
 	process.ProcessorStorage,
 	process.ProcessorBlockFS,
@@ -15,7 +16,6 @@ var defaultProcesses = []pm.Process{
 	process.ProcessorConsensusStates,
 	process.ProcessorNetwork,
 	process.ProcessorStartNetwork,
-	process.ProcessorStartConsensusStates,
 }
 
 var defaultHooks = []pm.Hook{

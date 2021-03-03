@@ -52,7 +52,8 @@ func (t *testBallotV0INITEncode) TestEncode() {
 			},
 			previousBlock: valuehash.RandomSHA256(),
 		},
-		voteproof: vp,
+		voteproof:       vp,
+		acceptVoteproof: vp,
 	}
 
 	t.NoError(ib.Sign(t.pk, nil))

@@ -8,6 +8,8 @@ import (
 	"github.com/spikeekips/mitum/isaac"
 	"github.com/spikeekips/mitum/launch/config"
 	"github.com/spikeekips/mitum/launch/pm"
+	"github.com/spikeekips/mitum/states"
+	basicstate "github.com/spikeekips/mitum/states/basic"
 	"github.com/spikeekips/mitum/util/logging"
 )
 
@@ -55,7 +57,9 @@ func ProcessConsensusStates(ctx context.Context) (context.Context, error) {
 	if cs, err := processConsensusStates(local, pps, suffrage, log); err != nil {
 		return ctx, err
 	} else {
-		_ = cs.SetLogger(log)
+		if i, ok := cs.(logging.SetLogger); ok {
+			_ = i.SetLogger(log)
+		}
 
 		return context.WithValue(ctx, ContextValueConsensusStates, cs), nil
 	}
@@ -66,32 +70,7 @@ func processConsensusStates(
 	pps *prprocessor.Processors,
 	suffrage base.Suffrage,
 	log logging.Logger,
-) (*isaac.ConsensusStates, error) {
-	proposalMaker := isaac.NewProposalMaker(local)
-
-	var booting, joining, consensus, syncing, broken isaac.StateHandler
-	var err error
-	if booting, err = isaac.NewStateBootingHandler(local, suffrage); err != nil {
-		return nil, err
-	}
-	syncing = isaac.NewStateSyncingHandler(local)
-	if joining, err = isaac.NewStateJoiningHandler(local, pps); err != nil {
-		return nil, err
-	}
-	if consensus, err = isaac.NewStateConsensusHandler(
-		local, pps, suffrage, proposalMaker,
-	); err != nil {
-		return nil, err
-	}
-	if broken, err = isaac.NewStateBrokenHandler(local); err != nil {
-		return nil, err
-	}
-	for _, h := range []interface{}{booting, joining, consensus, syncing, broken} {
-		if l, ok := h.(logging.SetLogger); ok {
-			_ = l.SetLogger(log)
-		}
-	}
-
+) (states.States, error) {
 	ballotbox := isaac.NewBallotbox(
 		suffrage.Nodes,
 		func() base.Threshold {
@@ -107,12 +86,28 @@ func processConsensusStates(
 	)
 	_ = ballotbox.SetLogger(log)
 
-	return isaac.NewConsensusStates(
-		local, ballotbox, suffrage,
-		booting.(*isaac.StateBootingHandler),
-		joining.(*isaac.StateJoiningHandler),
-		consensus.(*isaac.StateConsensusHandler),
-		syncing.(*isaac.StateSyncingHandler),
-		broken.(*isaac.StateBrokenHandler),
+	proposalMaker := isaac.NewProposalMaker(local)
+
+	stopped := basicstate.NewStoppedState()
+	booting := basicstate.NewBootingState(local.Storage(), local.BlockFS(), local.Policy(), suffrage)
+	joining := basicstate.NewJoiningState(local.Node(), local.Storage(), local.BlockFS(), local.Policy(),
+		suffrage, ballotbox)
+	consensus := basicstate.NewConsensusState(
+		local.Node(), local.Storage(), local.BlockFS(), local.Policy(), local.Nodes(), suffrage, proposalMaker, pps)
+	syncing := basicstate.NewSyncingState(local.Node(), local.Storage(), local.BlockFS(), local.Policy(), local.Nodes())
+
+	return basicstate.NewStates(
+		local.Node(),
+		local.Storage(),
+		local.BlockFS(),
+		local.Policy(),
+		local.Nodes(),
+		suffrage,
+		ballotbox,
+		stopped,
+		booting,
+		joining,
+		consensus,
+		syncing,
 	)
 }

@@ -10,9 +10,11 @@ import (
 	"github.com/spikeekips/mitum/storage"
 	"github.com/spikeekips/mitum/storage/localfs"
 	mongodbstorage "github.com/spikeekips/mitum/storage/mongodb"
+	"github.com/spikeekips/mitum/util"
 	"github.com/spikeekips/mitum/util/cache"
 	"github.com/spikeekips/mitum/util/encoder"
 	jsonenc "github.com/spikeekips/mitum/util/encoder/json"
+	"golang.org/x/xerrors"
 )
 
 const (
@@ -86,11 +88,20 @@ func ProcessBlockFS(ctx context.Context) (context.Context, error) {
 		}
 	}
 
-	if m, found, err := st.LastManifest(); err != nil {
-		return ctx, err
-	} else if found {
-		if err := blockFS.SetLast(m.Height()); err != nil {
+	var forceCreate bool
+	if err := LoadGenesisBlockForceCreateContextValue(ctx, &forceCreate); err != nil {
+		if !xerrors.Is(err, util.ContextValueNotFoundError) {
 			return ctx, err
+		}
+	}
+
+	if !forceCreate {
+		if m, found, err := st.LastManifest(); err != nil {
+			return ctx, err
+		} else if found {
+			if err := blockFS.SetLast(m.Height()); err != nil {
+				return ctx, err
+			}
 		}
 	}
 

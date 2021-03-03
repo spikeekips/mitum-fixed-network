@@ -53,9 +53,9 @@ var proposalIndexModels = []mongo.IndexModel{
 			SetUnique(true),
 	},
 	{
-		Keys: bson.D{bson.E{Key: "height", Value: 1}, bson.E{Key: "round", Value: 1}},
+		Keys: bson.D{bson.E{Key: "height", Value: 1}, bson.E{Key: "round", Value: 1}, bson.E{Key: "proposer", Value: 1}},
 		Options: options.Index().
-			SetName("mitum_proposal_height_and_round"),
+			SetName("mitum_proposal_height_round_proposer"),
 	},
 }
 

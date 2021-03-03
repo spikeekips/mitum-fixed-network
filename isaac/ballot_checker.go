@@ -5,6 +5,8 @@ import (
 
 	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/base/ballot"
+	"github.com/spikeekips/mitum/network"
+	"github.com/spikeekips/mitum/storage"
 	"github.com/spikeekips/mitum/util"
 	"github.com/spikeekips/mitum/util/logging"
 	"github.com/spikeekips/mitum/util/valuehash"
@@ -12,36 +14,40 @@ import (
 
 type BallotChecker struct {
 	*logging.Logging
-	suffrage   base.Suffrage
-	local      *Local
-	ballot     ballot.Ballot
-	lastHeight base.Height
+	local    *network.LocalNode
+	storage  storage.Storage
+	policy   *LocalPolicy
+	suffrage base.Suffrage
+	nodepool *network.Nodepool
+	ballot   ballot.Ballot
+	lvp      base.Voteproof
 }
 
-func NewBallotChecker(blt ballot.Ballot, local *Local, suffrage base.Suffrage) (*BallotChecker, error) {
-	var height base.Height
-	switch m, found, err := local.Storage().LastManifest(); {
-	case err != nil:
-		return nil, err
-	case !found:
-		height = base.NilHeight
-	default:
-		height = m.Height()
-	}
-
+func NewBallotChecker(
+	blt ballot.Ballot,
+	local *network.LocalNode,
+	st storage.Storage,
+	policy *LocalPolicy,
+	suffrage base.Suffrage,
+	nodepool *network.Nodepool,
+	lastVoteproof base.Voteproof,
+) *BallotChecker {
 	return &BallotChecker{
 		Logging: logging.NewLogging(func(c logging.Context) logging.Emitter {
 			return c.Str("module", "ballot-checker")
 		}),
-		suffrage:   suffrage,
-		local:      local,
-		ballot:     blt,
-		lastHeight: height,
-	}, nil
+		storage:  st,
+		policy:   policy,
+		suffrage: suffrage,
+		nodepool: nodepool,
+		local:    local,
+		ballot:   blt,
+		lvp:      lastVoteproof,
+	}
 }
 
-// CheckIsInSuffrage checks Ballot.Node() is inside suffrage
-func (bc *BallotChecker) CheckIsInSuffrage() (bool, error) {
+// InSuffrage checks Ballot.Node() is inside suffrage
+func (bc *BallotChecker) InSuffrage() (bool, error) {
 	if !bc.suffrage.IsInside(bc.ballot.Node()) {
 		return false, nil
 	}
@@ -51,91 +57,72 @@ func (bc *BallotChecker) CheckIsInSuffrage() (bool, error) {
 
 // CheckSigning checks node signed by it's valid key.
 func (bc *BallotChecker) CheckSigning() (bool, error) {
-	var node base.Node
-	if bc.ballot.Node().Equal(bc.local.Node().Address()) {
-		node = bc.local.Node()
-	} else if n, found := bc.local.Nodes().Node(bc.ballot.Node()); !found {
-		return false, xerrors.Errorf("node not found")
+	if err := CheckBallotSigning(bc.ballot, bc.local, bc.nodepool); err != nil {
+		return false, err
 	} else {
-		node = n
+		return true, nil
 	}
-
-	if !bc.ballot.Signer().Equal(node.Publickey()) {
-		return false, xerrors.Errorf("publickey not matched")
-	}
-
-	return true, nil
 }
 
-// CheckWithLastBlock checks Ballot.Height() and Ballot.Round() with
+// CheckWithLastVoteproof checks Ballot.Height() and Ballot.Round() with
 // last Block.
 // - If Height is same or lower than last, Ballot will be ignored.
-func (bc *BallotChecker) CheckWithLastBlock() (bool, error) {
-	if bc.ballot.Height() <= bc.lastHeight {
-		return false, nil
-	}
-
-	return true, nil
-}
-
-// CheckProposal checks ACCEPT ballot should have valid proposal.
-func (bc *BallotChecker) CheckProposal() (bool, error) {
-	var ph valuehash.Hash
-	switch t := bc.ballot.(type) {
-	case ballot.ACCEPTBallot:
-		ph = t.Proposal()
-	default:
+func (bc *BallotChecker) CheckWithLastVoteproof() (bool, error) {
+	if bc.lvp == nil {
 		return true, nil
 	}
 
-	var proposal ballot.Proposal
-	var proposalInLocal bool
-	if sl, found, err := bc.local.Storage().Seal(ph); !found {
-		if pr, err0 := bc.requestProposal(bc.ballot.Node(), ph); err0 != nil {
-			// NOTE if not found, request proposal from node of ballot
-			return false, err0
-		} else {
-			proposal = pr
-		}
-	} else if err != nil {
-		return false, err
-	} else if pr, ok := sl.(ballot.Proposal); !ok {
-		return false, xerrors.Errorf("seal is not Proposal: %T", sl)
+	bh := bc.ballot.Height()
+	lh := bc.lvp.Height()
+	br := bc.ballot.Round()
+	lr := bc.lvp.Round()
+
+	switch {
+	case bh < lh:
+		return false, nil
+	case bh > lh:
+		return true, nil
+	case br <= lr:
+		return false, nil
+	default:
+		return true, nil
+	}
+}
+
+// CheckProposalInACCEPTBallot checks ACCEPT ballot should have valid proposal.
+func (bc *BallotChecker) CheckProposalInACCEPTBallot() (bool, error) {
+	var ph valuehash.Hash
+	if i, ok := bc.ballot.(ballot.ACCEPTBallot); !ok {
+		return true, nil
 	} else {
-		proposal = pr
-		proposalInLocal = true
+		ph = i.Proposal()
 	}
 
-	if err := proposal.IsValid(bc.local.Policy().NetworkID()); err != nil {
+	var proposal ballot.Proposal
+	if i, found, err := bc.storage.Seal(ph); err != nil {
 		return false, err
-	} else {
-		pvc := NewProposalValidationChecker(bc.local, bc.suffrage, proposal, nil)
-		checkers := []util.CheckerFunc{
-			pvc.IsKnown,
-			pvc.CheckSigning,
-			pvc.IsProposer,
+	} else if found {
+		if j, ok := i.(ballot.Proposal); !ok {
+			return false, xerrors.Errorf("not proposal in accept ballot, %T", i)
+		} else {
+			proposal = j
 		}
-		if !proposalInLocal {
-			checkers = append(checkers, pvc.SaveProposal)
-		}
+	}
 
-		if err := util.NewChecker("proposal-validation-checker", checkers).Check(); err != nil {
+	if proposal == nil { // NOTE if not found, request proposal from node of ballot
+		if i, err := bc.requestProposal(bc.ballot.Node(), ph); err != nil {
 			return false, err
+		} else {
+			proposal = i
 		}
 	}
 
 	if bc.ballot.Height() != proposal.Height() {
-		return false, xerrors.Errorf(
-			"proposal in ACCEPTBallot is invalid; different height, ballot=%v proposal=%v",
-			bc.ballot.Height(), proposal.Height(),
-		)
-	}
-
-	if bc.ballot.Round() != proposal.Round() {
-		return false, xerrors.Errorf(
-			"proposal in ACCEPTBallot is invalid; different round, ballot=%v proposal=%v",
-			bc.ballot.Round(), proposal.Round(),
-		)
+		return false, xerrors.Errorf("proposal in ACCEPTBallot is invalid; different height, ballot=%v proposal=%v",
+			bc.ballot.Height(), proposal.Height())
+	} else if bc.ballot.Round() != proposal.Round() {
+		return false, xerrors.Errorf("proposal in ACCEPTBallot is invalid; different round, ballot=%v proposal=%v",
+			bc.ballot.Round(), proposal.Round())
 	}
 
 	return true, nil
@@ -143,21 +130,18 @@ func (bc *BallotChecker) CheckProposal() (bool, error) {
 
 func (bc *BallotChecker) CheckVoteproof() (bool, error) {
 	var voteproof base.Voteproof
-	switch t := bc.ballot.(type) {
-	case ballot.INITBallot:
-		voteproof = t.Voteproof()
-	case ballot.ACCEPTBallot:
-		voteproof = t.Voteproof()
-	default:
+	if i, ok := bc.ballot.(base.Voteproofer); !ok {
 		return true, nil
+	} else {
+		voteproof = i.Voteproof()
 	}
 
-	vc := NewVoteProofChecker(voteproof, bc.local, bc.suffrage)
+	vc := NewVoteProofChecker(voteproof, bc.policy, bc.suffrage)
 	_ = vc.SetLogger(bc.Log())
 
 	if err := util.NewChecker("ballot-voteproof-checker", []util.CheckerFunc{
-		vc.CheckIsValid,
-		vc.CheckNodeIsInSuffrage,
+		vc.IsValid,
+		vc.NodeIsInSuffrage,
 		vc.CheckThreshold,
 	}).Check(); err != nil {
 		return false, err
@@ -167,21 +151,78 @@ func (bc *BallotChecker) CheckVoteproof() (bool, error) {
 }
 
 func (bc *BallotChecker) requestProposal(address base.Address, h valuehash.Hash) (ballot.Proposal, error) {
-	if n, found := bc.local.Nodes().Node(address); !found {
+	var proposal ballot.Proposal
+	if n, found := bc.nodepool.Node(address); !found {
 		return nil, xerrors.Errorf("unknown node of ballot; %v", address)
-	} else if r, err := n.Channel().Seals([]valuehash.Hash{h}); err != nil {
+	} else if i, err := RequestProposal(n, h); err != nil {
+		return nil, err
+	} else {
+		proposal = i
+	}
+
+	sealChecker := NewSealChecker(proposal, bc.storage, bc.policy, nil)
+	if err := util.NewChecker("proposal-seal-checker", []util.CheckerFunc{sealChecker.IsValid}).Check(); err != nil {
+		return nil, err
+	}
+
+	ballotChecker := NewBallotChecker(proposal, bc.local, bc.storage, bc.policy, bc.suffrage, bc.nodepool, bc.lvp)
+	if err := util.NewChecker("proposal-ballot-checker", []util.CheckerFunc{
+		ballotChecker.InSuffrage,
+		ballotChecker.CheckVoteproof,
+	}).Check(); err != nil {
+		if !xerrors.Is(err, util.IgnoreError) {
+			return nil, err
+		}
+	}
+
+	pvc := NewProposalValidationChecker(bc.local, bc.storage, bc.suffrage, bc.nodepool, proposal, nil)
+	if err := util.NewChecker("proposal-checker", []util.CheckerFunc{
+		pvc.IsKnown,
+		pvc.CheckSigning,
+		pvc.SaveProposal,
+	}).Check(); err != nil {
+		switch {
+		case xerrors.Is(err, util.IgnoreError):
+		case xerrors.Is(err, KnownSealError):
+		default:
+			return nil, err
+		}
+	}
+
+	return proposal, nil
+}
+
+func CheckBallotSigning(blt ballot.Ballot, local network.Node, nodepool *network.Nodepool) error {
+	var node base.Node
+	if blt.Node().Equal(local.Address()) {
+		node = local
+	} else if n, found := nodepool.Node(blt.Node()); !found {
+		return xerrors.Errorf("node not found")
+	} else {
+		node = n
+	}
+
+	if !blt.Signer().Equal(node.Publickey()) {
+		return xerrors.Errorf("publickey not matched")
+	}
+
+	return nil
+}
+
+func RequestProposal(node network.Node, h valuehash.Hash) (ballot.Proposal, error) {
+	if r, err := node.Channel().Seals([]valuehash.Hash{h}); err != nil {
 		return nil, err
 	} else if len(r) < 1 {
 		return nil, xerrors.Errorf(
 			"failed to receive Proposal, %v from %s",
 			h.String(),
-			address,
+			node.Address(),
 		)
 	} else if pr, ok := r[0].(ballot.Proposal); !ok {
 		return nil, xerrors.Errorf(
 			"failed to receive Proposal, %v from %s; not ballot.Proposal, %T",
 			h.String(),
-			address,
+			node.Address(),
 			r[0],
 		)
 	} else {

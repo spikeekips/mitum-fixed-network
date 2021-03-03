@@ -71,7 +71,7 @@ func NewChannel(
 	ch.getManifestsURL = mustQuicURL(ch.addr.String(), QuicHandlerPathGetManifests)
 
 	if client, err := NewQuicClient(insecure, timeout, retries, quicConfig); err != nil {
-		return ch, nil
+		return nil, err
 	} else {
 		ch.client = client
 	}

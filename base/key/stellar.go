@@ -124,7 +124,7 @@ func newStellarPublickey(kp stellarKeypair.KP) StellarPublickey {
 func NewStellarPublickeyFromString(s string) (StellarPublickey, error) {
 	kp, err := stellarKeypair.ParseAddress(s)
 	if err != nil {
-		return StellarPublickey{}, nil
+		return StellarPublickey{}, err
 	}
 
 	return newStellarPublickey(kp), nil

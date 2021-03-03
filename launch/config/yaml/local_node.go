@@ -108,7 +108,7 @@ func (no LocalNode) setComponents(ctx context.Context, _ config.LocalNode) (cont
 func (no LocalNode) setNodes(ctx context.Context, conf config.LocalNode) (context.Context, error) {
 	if len(no.Nodes) < 1 {
 		if err := conf.SetNodes(nil); err != nil {
-			return ctx, nil
+			return ctx, err
 		}
 
 		return ctx, nil

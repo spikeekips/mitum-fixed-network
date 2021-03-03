@@ -16,7 +16,7 @@ import (
 )
 
 var defaultRunHooks = []pm.Hook{
-	pm.NewHook(pm.HookPrefixPost, process.ProcessNameLocalNode,
+	pm.NewHook(pm.HookPrefixPre, process.ProcessNameConsensusStates,
 		process.HookNameCheckEmptyBlock, process.HookCheckEmptyBlock),
 	pm.NewHook(pm.HookPrefixPost, process.ProcessNameConfig,
 		process.HookNameConfigGenesisOperations, pm.EmptyHookFunc).

@@ -568,7 +568,7 @@ func (bs *BlockFS) Exists(height base.Height) (valuehash.Hash, error) {
 
 	if err := bs.walk(bs.base(height), height, nil, func(fp string, fi os.FileInfo) error {
 		if _, ph, name, _, _, err := bs.parseFilename(fi.Name()); err != nil {
-			return nil
+			return nil // nolint:nilerr
 		} else if _, found := founds[name]; !found {
 			return nil
 		} else {
@@ -671,7 +671,7 @@ func (bs *BlockFS) open(height base.Height, name string) (io.ReadCloser, bool, e
 	if err := bs.walk(bs.base(height), height, nil, func(fp string, fi os.FileInfo) error {
 		switch _, _, n, _, _, err := bs.parseFilename(fi.Name()); {
 		case err != nil:
-			return nil
+			return nil // nolint:nilerr
 		case name == n:
 			f = fp
 			return FoundError.Errorf("found")
@@ -849,7 +849,7 @@ func (bs *BlockFS) existsWithHash(p string, height base.Height, bh valuehash.Has
 
 	if err := bs.walk(p, height, bh, func(fp string, fi os.FileInfo) error {
 		if _, _, name, _, _, err := bs.parseFilename(fi.Name()); err != nil {
-			return nil
+			return nil // nolint:nilerr
 		} else if _, found := founds[name]; !found {
 			return nil
 		} else {
@@ -918,7 +918,7 @@ func (bs *BlockFS) save(height base.Height, bh valuehash.Hash, name string, b []
 	if err := bs.walk(bs.unstaged(height, bh), height, bh, func(fp string, fi os.FileInfo) error {
 		switch _, _, n, _, _, err := bs.parseFilename(fi.Name()); {
 		case err != nil:
-			return nil
+			return nil // nolint:nilerr
 		case n == name:
 			founds = append(founds, fp)
 

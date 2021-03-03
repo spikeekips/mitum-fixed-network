@@ -22,13 +22,15 @@ var (
 	ContextValueNetwork                 util.ContextKey = "network"
 	ContextValueBlockFS                 util.ContextKey = "blockfs"
 	ContextValueStorage                 util.ContextKey = "storage"
-	ContextValueLocal                   util.ContextKey = "local"
+	ContextValueLocalNode               util.ContextKey = "local_node"
+	ContextValueNodepool                util.ContextKey = "nodepool"
 	ContextValueSuffrage                util.ContextKey = "suffrage"
 	ContextValueProposalProcessor       util.ContextKey = "proposal_processor"
 	ContextValueConsensusStates         util.ContextKey = "consensus_states"
 	ContextValueGenesisBlockForceCreate util.ContextKey = "force_create_genesis_block"
 	ContextValueGenesisBlock            util.ContextKey = "genesis_block"
 	ContextValueOperationProcessors     util.ContextKey = "operation_processors"
+	ContextValuePolicy                  util.ContextKey = "policy"
 )
 
 func LoadConfigSourceContextValue(ctx context.Context, l *[]byte) error {
@@ -55,8 +57,12 @@ func LoadStorageContextValue(ctx context.Context, l *storage.Storage) error {
 	return util.LoadFromContextValue(ctx, ContextValueStorage, l)
 }
 
-func LoadLocalContextValue(ctx context.Context, l **isaac.Local) error {
-	return util.LoadFromContextValue(ctx, ContextValueLocal, l)
+func LoadLocalNodeContextValue(ctx context.Context, l **network.LocalNode) error {
+	return util.LoadFromContextValue(ctx, ContextValueLocalNode, l)
+}
+
+func LoadNodepoolContextValue(ctx context.Context, l **network.Nodepool) error {
+	return util.LoadFromContextValue(ctx, ContextValueNodepool, l)
 }
 
 func LoadSuffrageContextValue(ctx context.Context, l *base.Suffrage) error {
@@ -81,4 +87,8 @@ func LoadGenesisBlockContextValue(ctx context.Context, l *block.Block) error {
 
 func LoadOperationProcessorsContextValue(ctx context.Context, l **hint.Hintmap) error {
 	return util.LoadFromContextValue(ctx, ContextValueOperationProcessors, l)
+}
+
+func LoadPolicyContextValue(ctx context.Context, l **isaac.LocalPolicy) error {
+	return util.LoadFromContextValue(ctx, ContextValuePolicy, l)
 }

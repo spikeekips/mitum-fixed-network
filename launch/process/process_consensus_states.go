@@ -8,8 +8,10 @@ import (
 	"github.com/spikeekips/mitum/isaac"
 	"github.com/spikeekips/mitum/launch/config"
 	"github.com/spikeekips/mitum/launch/pm"
+	"github.com/spikeekips/mitum/network"
 	"github.com/spikeekips/mitum/states"
 	basicstate "github.com/spikeekips/mitum/states/basic"
+	"github.com/spikeekips/mitum/storage"
 	"github.com/spikeekips/mitum/util/logging"
 )
 
@@ -21,7 +23,9 @@ func init() {
 	if i, err := pm.NewProcess(
 		ProcessNameConsensusStates,
 		[]string{
-			ProcessNameLocal,
+			ProcessNameLocalNode,
+			ProcessNameStorage,
+			ProcessNameBlockFS,
 			ProcessNameSuffrage,
 			ProcessNameProposalProcessor,
 		},
@@ -34,8 +38,28 @@ func init() {
 }
 
 func ProcessConsensusStates(ctx context.Context) (context.Context, error) {
-	var local *isaac.Local
-	if err := LoadLocalContextValue(ctx, &local); err != nil {
+	var local *network.LocalNode
+	if err := LoadLocalNodeContextValue(ctx, &local); err != nil {
+		return ctx, err
+	}
+
+	var policy *isaac.LocalPolicy
+	if err := LoadPolicyContextValue(ctx, &policy); err != nil {
+		return ctx, err
+	}
+
+	var nodepool *network.Nodepool
+	if err := LoadNodepoolContextValue(ctx, &nodepool); err != nil {
+		return ctx, err
+	}
+
+	var st storage.Storage
+	if err := LoadStorageContextValue(ctx, &st); err != nil {
+		return ctx, err
+	}
+
+	var blockFS *storage.BlockFS
+	if err := LoadBlockFSContextValue(ctx, &blockFS); err != nil {
 		return ctx, err
 	}
 
@@ -54,7 +78,7 @@ func ProcessConsensusStates(ctx context.Context) (context.Context, error) {
 		return ctx, err
 	}
 
-	if cs, err := processConsensusStates(local, pps, suffrage, log); err != nil {
+	if cs, err := processConsensusStates(local, st, blockFS, policy, nodepool, pps, suffrage, log); err != nil {
 		return ctx, err
 	} else {
 		if i, ok := cs.(logging.SetLogger); ok {
@@ -66,7 +90,11 @@ func ProcessConsensusStates(ctx context.Context) (context.Context, error) {
 }
 
 func processConsensusStates(
-	local *isaac.Local,
+	local *network.LocalNode,
+	st storage.Storage,
+	blockFS *storage.BlockFS,
+	policy *isaac.LocalPolicy,
+	nodepool *network.Nodepool,
 	pps *prprocessor.Processors,
 	suffrage base.Suffrage,
 	log logging.Logger,
@@ -76,7 +104,7 @@ func processConsensusStates(
 		func() base.Threshold {
 			if t, err := base.NewThreshold(
 				uint(len(suffrage.Nodes())),
-				local.Policy().ThresholdRatio(),
+				policy.ThresholdRatio(),
 			); err != nil {
 				panic(err)
 			} else {
@@ -86,22 +114,22 @@ func processConsensusStates(
 	)
 	_ = ballotbox.SetLogger(log)
 
-	proposalMaker := isaac.NewProposalMaker(local)
+	proposalMaker := isaac.NewProposalMaker(local, st, policy)
 
 	stopped := basicstate.NewStoppedState()
-	booting := basicstate.NewBootingState(local.Storage(), local.BlockFS(), local.Policy(), suffrage)
-	joining := basicstate.NewJoiningState(local.Node(), local.Storage(), local.BlockFS(), local.Policy(),
+	booting := basicstate.NewBootingState(st, blockFS, policy, suffrage)
+	joining := basicstate.NewJoiningState(local, st, blockFS, policy,
 		suffrage, ballotbox)
 	consensus := basicstate.NewConsensusState(
-		local.Node(), local.Storage(), local.BlockFS(), local.Policy(), local.Nodes(), suffrage, proposalMaker, pps)
-	syncing := basicstate.NewSyncingState(local.Node(), local.Storage(), local.BlockFS(), local.Policy(), local.Nodes())
+		local, st, blockFS, policy, nodepool, suffrage, proposalMaker, pps)
+	syncing := basicstate.NewSyncingState(local, st, blockFS, policy, nodepool)
 
 	return basicstate.NewStates(
-		local.Node(),
-		local.Storage(),
-		local.BlockFS(),
-		local.Policy(),
-		local.Nodes(),
+		local,
+		st,
+		blockFS,
+		policy,
+		nodepool,
 		suffrage,
 		ballotbox,
 		stopped,

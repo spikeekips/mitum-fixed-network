@@ -7,7 +7,7 @@ import (
 	"golang.org/x/xerrors"
 
 	"github.com/spikeekips/mitum/base"
-	"github.com/spikeekips/mitum/isaac"
+	"github.com/spikeekips/mitum/network"
 	jsonenc "github.com/spikeekips/mitum/util/encoder/json"
 	"github.com/spikeekips/mitum/util/valuehash"
 )
@@ -18,7 +18,8 @@ type RoundrobinSuffrage struct {
 }
 
 func NewRoundrobinSuffrage(
-	local *isaac.Local,
+	local *network.LocalNode,
+	nodepool *network.Nodepool,
 	cacheSize int,
 	numberOfActing uint,
 	getManifestFunc func(base.Height) (valuehash.Hash, error),
@@ -27,6 +28,7 @@ func NewRoundrobinSuffrage(
 	sf.BaseSuffrage = NewBaseSuffrage(
 		"roundrobin-suffrage",
 		local,
+		nodepool,
 		cacheSize,
 		numberOfActing,
 		sf.elect,
@@ -47,7 +49,7 @@ func (sf *RoundrobinSuffrage) elect(height base.Height, round base.Round) (base.
 	var proposer base.Address
 	var pos int
 	if h := height - 1; h <= base.PreGenesisHeight {
-		proposer = sf.local.Node().Address()
+		proposer = sf.local.Address()
 	} else if i, err := sf.pos(height, round, len(all)); err != nil {
 		return base.ActingSuffrage{}, err
 	} else {

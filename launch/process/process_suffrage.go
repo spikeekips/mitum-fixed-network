@@ -6,11 +6,11 @@ import (
 	"golang.org/x/xerrors"
 
 	"github.com/spikeekips/mitum/base"
-	"github.com/spikeekips/mitum/isaac"
 	"github.com/spikeekips/mitum/launch/config"
 	"github.com/spikeekips/mitum/launch/pm"
 	"github.com/spikeekips/mitum/network"
 	"github.com/spikeekips/mitum/storage"
+	"github.com/spikeekips/mitum/util/logging"
 	"github.com/spikeekips/mitum/util/valuehash"
 )
 
@@ -23,6 +23,7 @@ func init() {
 		ProcessNameSuffrage,
 		[]string{
 			ProcessNameConfig,
+			ProcessNameLocalNode,
 		},
 		ProcessSuffrage,
 	); err != nil {
@@ -33,17 +34,17 @@ func init() {
 }
 
 func ProcessSuffrage(ctx context.Context) (context.Context, error) {
+	var log logging.Logger
+	if err := config.LoadLogContextValue(ctx, &log); err != nil {
+		return ctx, err
+	}
+
 	var l config.LocalNode
 	var conf config.Suffrage
 	if err := config.LoadConfigContextValue(ctx, &l); err != nil {
 		return ctx, err
 	} else {
 		conf = l.Suffrage()
-	}
-
-	var local *isaac.Local
-	if err := LoadLocalContextValue(ctx, &local); err != nil {
-		return ctx, err
 	}
 
 	var sf base.Suffrage
@@ -66,22 +67,29 @@ func ProcessSuffrage(ctx context.Context) (context.Context, error) {
 		return ctx, err
 	}
 
+	log.Debug().Interface("suffrage_nodes", sf.Nodes()).Msg("suffrage done")
+
 	return context.WithValue(ctx, ContextValueSuffrage, sf), nil
 }
 
 func processFixedSuffrage(ctx context.Context, conf config.FixedSuffrage) (base.Suffrage, error) {
-	var local *isaac.Local
-	if err := LoadLocalContextValue(ctx, &local); err != nil {
+	var local *network.LocalNode
+	if err := LoadLocalNodeContextValue(ctx, &local); err != nil {
+		return nil, err
+	}
+
+	var nodepool *network.Nodepool
+	if err := LoadNodepoolContextValue(ctx, &nodepool); err != nil {
 		return nil, err
 	}
 
 	// NOTE check proposer
 	if conf.Proposer != nil {
 		var found bool
-		if conf.Proposer.Equal(local.Node().Address()) {
+		if conf.Proposer.Equal(local.Address()) {
 			found = true
 		} else {
-			local.Nodes().Traverse(func(node network.Node) bool {
+			nodepool.Traverse(func(node network.Node) bool {
 				address := node.Address()
 				if !found && conf.Proposer.Equal(address) {
 					found = true
@@ -100,9 +108,9 @@ func processFixedSuffrage(ctx context.Context, conf config.FixedSuffrage) (base.
 	for i := range conf.Nodes {
 		c := conf.Nodes[i]
 
-		if !local.Node().Address().Equal(c) {
+		if !local.Address().Equal(c) {
 			var found bool
-			local.Nodes().Traverse(func(n network.Node) bool {
+			nodepool.Traverse(func(n network.Node) bool {
 				if n.Address().Equal(c) {
 					found = true
 
@@ -118,12 +126,17 @@ func processFixedSuffrage(ctx context.Context, conf config.FixedSuffrage) (base.
 		}
 	}
 
-	return NewFixedSuffrage(local, conf.CacheSize, conf.Proposer, conf.Nodes)
+	return NewFixedSuffrage(local, nodepool, conf.CacheSize, conf.Proposer, conf.Nodes)
 }
 
 func processRoundrobinSuffrage(ctx context.Context, conf config.RoundrobinSuffrage) (base.Suffrage, error) {
-	var local *isaac.Local
-	if err := LoadLocalContextValue(ctx, &local); err != nil {
+	var local *network.LocalNode
+	if err := LoadLocalNodeContextValue(ctx, &local); err != nil {
+		return nil, err
+	}
+
+	var nodepool *network.Nodepool
+	if err := LoadNodepoolContextValue(ctx, &nodepool); err != nil {
 		return nil, err
 	}
 
@@ -138,6 +151,7 @@ func processRoundrobinSuffrage(ctx context.Context, conf config.RoundrobinSuffra
 
 	return NewRoundrobinSuffrage(
 		local,
+		nodepool,
 		conf.CacheSize,
 		conf.NumberOfActing,
 		func(height base.Height) (valuehash.Hash, error) {

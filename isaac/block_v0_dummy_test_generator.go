@@ -1,3 +1,5 @@
+// +build test
+
 package isaac
 
 import (
@@ -123,7 +125,13 @@ func (bg *DummyBlocksV0Generator) Generate(ignoreExists bool) error {
 	}
 
 	if lastHeight == base.NilHeight {
-		if genesis, err := NewGenesisBlockV0Generator(bg.genesisNode, nil); err != nil {
+		if genesis, err := NewGenesisBlockV0Generator(
+			bg.genesisNode.Node(),
+			bg.genesisNode.Storage(),
+			bg.genesisNode.BlockFS(),
+			bg.genesisNode.Policy(),
+			nil,
+		); err != nil {
 			return err
 		} else if _, err := genesis.Generate(); err != nil {
 			return err
@@ -357,7 +365,7 @@ func (bg *DummyBlocksV0Generator) createINITVoteproof() (map[base.Address]base.V
 
 func (bg *DummyBlocksV0Generator) createINITBallot(local *Local) (ballot.INITBallot, error) {
 	var baseBallot ballot.INITBallotV0
-	if b, err := NewINITBallotV0Round0(local); err != nil {
+	if b, err := NewINITBallotV0Round0(local.Node(), local.Storage(), local.BlockFS()); err != nil {
 		return nil, err
 	} else if err := SignSeal(&b, local); err != nil {
 		return nil, err

@@ -3,6 +3,7 @@ package process
 import (
 	"context"
 
+	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/isaac"
 	"github.com/spikeekips/mitum/launch/config"
 	"github.com/spikeekips/mitum/storage"
@@ -15,8 +16,18 @@ const HookNameCheckEmptyBlock = "check_empty_block"
 // HookCheckEmptyBlock checks whether local has empty block. If empty block and
 // there are no other nodes, stop process with error.
 func HookCheckEmptyBlock(ctx context.Context) (context.Context, error) {
-	var local *isaac.Local
-	if err := LoadLocalContextValue(ctx, &local); err != nil {
+	var log logging.Logger
+	if err := config.LoadLogContextValue(ctx, &log); err != nil {
+		return ctx, err
+	}
+
+	var policy *isaac.LocalPolicy
+	if err := LoadPolicyContextValue(ctx, &policy); err != nil {
+		return ctx, err
+	}
+
+	var suffrage base.Suffrage
+	if err := LoadSuffrageContextValue(ctx, &suffrage); err != nil {
 		return ctx, err
 	}
 
@@ -30,11 +41,6 @@ func HookCheckEmptyBlock(ctx context.Context) (context.Context, error) {
 		return ctx, err
 	}
 
-	var log logging.Logger
-	if err := config.LoadLogContextValue(ctx, &log); err != nil {
-		return ctx, err
-	}
-
 	if blk, err := storage.CheckBlockEmpty(st, blockFS); err != nil {
 		return ctx, err
 	} else if blk == nil {
@@ -44,10 +50,10 @@ func HookCheckEmptyBlock(ctx context.Context) (context.Context, error) {
 			return nil, err
 		}
 
-		if local.Nodes().Len() < 1 {
+		if len(suffrage.Nodes()) < 2 {
 			return ctx, xerrors.Errorf("empty block, but no other nodes; can not sync")
 		}
-	} else if err := blk.IsValid(local.Policy().NetworkID()); err != nil {
+	} else if err := blk.IsValid(policy.NetworkID()); err != nil {
 		return ctx, xerrors.Errorf("invalid block found, clean up block: %w", err)
 	} else {
 		log.Debug().Hinted("block", blk.Manifest()).Msg("valid initial block found")

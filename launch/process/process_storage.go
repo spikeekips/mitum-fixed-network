@@ -105,9 +105,7 @@ func ProcessBlockFS(ctx context.Context) (context.Context, error) {
 		}
 	}
 
-	ctx = context.WithValue(ctx, ContextValueBlockFS, blockFS)
-
-	return ctx, nil
+	return context.WithValue(ctx, ContextValueBlockFS, blockFS), nil
 }
 
 func ProcessMongodbStorage(ctx context.Context) (context.Context, error) {
@@ -140,8 +138,6 @@ func ProcessMongodbStorage(ctx context.Context) (context.Context, error) {
 	} else if err := st.Initialize(); err != nil {
 		return ctx, err
 	} else {
-		ctx = context.WithValue(ctx, ContextValueStorage, st)
+		return context.WithValue(ctx, ContextValueStorage, st), nil
 	}
-
-	return ctx, nil
 }

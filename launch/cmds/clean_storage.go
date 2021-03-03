@@ -27,7 +27,7 @@ func NewCleanStorageCommand(dryrun bool) CleanStorageCommand {
 	}
 
 	if err := ps.AddHook( // NOTE clean storage and blockfs with `--force`
-		pm.HookPrefixPre, process.ProcessNameLocal,
+		pm.HookPrefixPre, process.ProcessNameLocalNode,
 		"clean-storage", cmd.cleanStorage,
 		true,
 	); err != nil {

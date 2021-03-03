@@ -16,8 +16,10 @@ import (
 )
 
 var defaultRunHooks = []pm.Hook{
-	pm.NewHook(pm.HookPrefixPost, process.ProcessNameLocal, process.HookNameCheckEmptyBlock, process.HookCheckEmptyBlock),
-	pm.NewHook(pm.HookPrefixPost, process.ProcessNameConfig, process.HookNameConfigGenesisOperations, pm.EmptyHookFunc).
+	pm.NewHook(pm.HookPrefixPost, process.ProcessNameLocalNode,
+		process.HookNameCheckEmptyBlock, process.HookCheckEmptyBlock),
+	pm.NewHook(pm.HookPrefixPost, process.ProcessNameConfig,
+		process.HookNameConfigGenesisOperations, pm.EmptyHookFunc).
 		SetOverride(true),
 }
 

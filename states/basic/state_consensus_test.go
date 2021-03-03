@@ -41,7 +41,7 @@ func (t *testStateConsensus) newState(suffrage base.Suffrage, pps *prprocessor.P
 		pps = t.DummyProcessors()
 	}
 
-	proposalMaker := isaac.NewProposalMaker(t.local)
+	proposalMaker := isaac.NewProposalMaker(t.local.Node(), t.local.Storage(), t.local.Policy())
 	st := NewConsensusState(
 		t.local.Node(),
 		t.local.Storage(),

@@ -10,6 +10,7 @@ import (
 	"github.com/spikeekips/mitum/isaac"
 	"github.com/spikeekips/mitum/launch/config"
 	"github.com/spikeekips/mitum/launch/pm"
+	"github.com/spikeekips/mitum/network"
 	"github.com/spikeekips/mitum/storage"
 	"github.com/spikeekips/mitum/util/logging"
 )
@@ -24,7 +25,7 @@ var ProcessorGenerateGenesisBlock pm.Process
 func init() {
 	if i, err := pm.NewProcess(
 		ProcessNameGenerateGenesisBlock,
-		[]string{ProcessNameLocal, ProcessNameStorage, ProcessNameBlockFS},
+		[]string{ProcessNameLocalNode, ProcessNameStorage, ProcessNameBlockFS},
 		ProcessGenerateGenesisBlock,
 	); err != nil {
 		panic(err)
@@ -39,9 +40,24 @@ func ProcessGenerateGenesisBlock(ctx context.Context) (context.Context, error) {
 		return ctx, err
 	}
 
-	var local *isaac.Local
-	if err := LoadLocalContextValue(ctx, &local); err != nil {
+	var local *network.LocalNode
+	if err := LoadLocalNodeContextValue(ctx, &local); err != nil {
 		return ctx, err
+	}
+
+	var st storage.Storage
+	if err := LoadStorageContextValue(ctx, &st); err != nil {
+		return nil, err
+	}
+
+	var blockFS *storage.BlockFS
+	if err := LoadBlockFSContextValue(ctx, &blockFS); err != nil {
+		return nil, err
+	}
+
+	var policy *isaac.LocalPolicy
+	if err := LoadPolicyContextValue(ctx, &policy); err != nil {
+		return nil, err
 	}
 
 	var l config.LocalNode
@@ -55,7 +71,7 @@ func ProcessGenerateGenesisBlock(ctx context.Context) (context.Context, error) {
 	}
 
 	log.Debug().Msg("trying to create genesis block")
-	if gg, err := isaac.NewGenesisBlockV0Generator(local, ops); err != nil {
+	if gg, err := isaac.NewGenesisBlockV0Generator(local, st, blockFS, policy, ops); err != nil {
 		return ctx, xerrors.Errorf("failed to create genesis block generator: %w", err)
 	} else if blk, err := gg.Generate(); err != nil {
 		return ctx, xerrors.Errorf("failed to generate genesis block: %w", err)

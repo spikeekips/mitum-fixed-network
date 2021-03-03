@@ -18,7 +18,7 @@ type testProposalMaker struct {
 func (t *testProposalMaker) TestCached() {
 	local := t.Locals(1)[0]
 
-	proposalMaker := NewProposalMaker(t.Locals(1)[0])
+	proposalMaker := NewProposalMaker(local.Node(), local.Storage(), local.Policy())
 
 	ib := t.NewINITBallot(local, base.Round(0), nil)
 	initFact := ib.INITBallotFactV0
@@ -38,7 +38,7 @@ func (t *testProposalMaker) TestCached() {
 func (t *testProposalMaker) TestClean() {
 	local := t.Locals(1)[0]
 
-	proposalMaker := NewProposalMaker(local)
+	proposalMaker := NewProposalMaker(local.Node(), local.Storage(), local.Policy())
 
 	height := base.Height(33)
 	round := base.Round(1)
@@ -60,7 +60,7 @@ func (t *testProposalMaker) TestSeals() {
 	}
 	t.NoError(local.Storage().NewSeals(seals))
 
-	proposalMaker := NewProposalMaker(local)
+	proposalMaker := NewProposalMaker(local.Node(), local.Storage(), local.Policy())
 
 	height := base.Height(33)
 	round := base.Round(1)
@@ -101,7 +101,7 @@ func (t *testProposalMaker) TestOneSealOver0() {
 
 	t.NoError(local.Storage().NewSeals(seals))
 
-	proposalMaker := NewProposalMaker(local)
+	proposalMaker := NewProposalMaker(local.Node(), local.Storage(), local.Policy())
 
 	height := base.Height(33)
 	round := base.Round(1)
@@ -134,7 +134,7 @@ func (t *testProposalMaker) TestOneSealOver1() {
 
 	t.NoError(local.Storage().NewSeals(seals))
 
-	proposalMaker := NewProposalMaker(local)
+	proposalMaker := NewProposalMaker(local.Node(), local.Storage(), local.Policy())
 
 	height := base.Height(33)
 	round := base.Round(1)
@@ -161,7 +161,7 @@ func (t *testProposalMaker) TestNumberOperationMatch() {
 	}
 	t.NoError(local.Storage().NewSeals(seals))
 
-	proposalMaker := NewProposalMaker(local)
+	proposalMaker := NewProposalMaker(local.Node(), local.Storage(), local.Policy())
 
 	height := base.Height(33)
 	round := base.Round(1)

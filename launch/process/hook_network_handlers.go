@@ -38,9 +38,11 @@ type SettingNetworkHandlers struct {
 	version   util.Version
 	ctx       context.Context
 	conf      config.LocalNode
-	local     *isaac.Local
+	local     *network.LocalNode
 	storage   storage.Storage
 	blockfs   *storage.BlockFS
+	policy    *isaac.LocalPolicy
+	nodepool  *network.Nodepool
 	suffrage  base.Suffrage
 	states    states.States
 	network   network.Server
@@ -59,8 +61,18 @@ func SettingNetworkHandlersFromContext(ctx context.Context) (*SettingNetworkHand
 		return nil, err
 	}
 
-	var local *isaac.Local
-	if err := LoadLocalContextValue(ctx, &local); err != nil {
+	var local *network.LocalNode
+	if err := LoadLocalNodeContextValue(ctx, &local); err != nil {
+		return nil, err
+	}
+
+	var policy *isaac.LocalPolicy
+	if err := LoadPolicyContextValue(ctx, &policy); err != nil {
+		return nil, err
+	}
+
+	var nodepool *network.Nodepool
+	if err := LoadNodepoolContextValue(ctx, &nodepool); err != nil {
 		return nil, err
 	}
 
@@ -106,6 +118,8 @@ func SettingNetworkHandlersFromContext(ctx context.Context) (*SettingNetworkHand
 		local:     local,
 		storage:   st,
 		blockfs:   blockfs,
+		policy:    policy,
+		nodepool:  nodepool,
 		suffrage:  suffrage,
 		states:    consensusStates,
 		network:   nt,
@@ -152,7 +166,7 @@ func (sn *SettingNetworkHandlers) networkhandlerNewSeal() network.NewSealHandler
 		sealChecker := isaac.NewSealChecker(
 			sl,
 			sn.storage,
-			sn.local.Policy(),
+			sn.policy,
 			sn.sealCache,
 		)
 		if err := util.NewChecker("network-new-seal-checker", []util.CheckerFunc{
@@ -172,11 +186,11 @@ func (sn *SettingNetworkHandlers) networkhandlerNewSeal() network.NewSealHandler
 		if t, ok := sl.(ballot.Ballot); ok {
 			checker := isaac.NewBallotChecker(
 				t,
-				sn.local.Node(),
+				sn.local,
 				sn.storage,
-				sn.local.Policy(),
+				sn.policy,
 				sn.suffrage,
-				sn.local.Nodes(),
+				sn.nodepool,
 				sn.states.LastVoteproof(),
 			)
 			if err := util.NewChecker("network-new-ballot-checker", []util.CheckerFunc{
@@ -259,9 +273,9 @@ func (sn *SettingNetworkHandlers) networkHandlerNodeInfo() network.NodeInfoHandl
 			manifest = m
 		}
 
-		nodes := make([]base.Node, sn.local.Nodes().Len())
+		nodes := make([]base.Node, sn.nodepool.Len())
 		var i int
-		sn.local.Nodes().Traverse(func(n network.Node) bool {
+		sn.nodepool.Traverse(func(n network.Node) bool {
 			nodes[i] = n
 			i++
 
@@ -269,13 +283,13 @@ func (sn *SettingNetworkHandlers) networkHandlerNodeInfo() network.NodeInfoHandl
 		})
 
 		return network.NewNodeInfoV0(
-			sn.local.Node(),
-			sn.local.Policy().NetworkID(),
+			sn.local,
+			sn.policy.NetworkID(),
 			sn.states.State(),
 			manifest,
 			sn.version,
 			sn.conf.Network().URL().String(),
-			sn.local.Policy().Config(),
+			sn.policy.Config(),
 			nodes,
 			sn.suffrage,
 		), nil

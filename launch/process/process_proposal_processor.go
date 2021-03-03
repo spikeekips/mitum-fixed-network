@@ -8,6 +8,7 @@ import (
 	"github.com/spikeekips/mitum/isaac"
 	"github.com/spikeekips/mitum/launch/config"
 	"github.com/spikeekips/mitum/launch/pm"
+	"github.com/spikeekips/mitum/network"
 	"github.com/spikeekips/mitum/storage"
 	"github.com/spikeekips/mitum/util/hint"
 	"github.com/spikeekips/mitum/util/logging"
@@ -21,7 +22,9 @@ func init() {
 	if i, err := pm.NewProcess(
 		ProcessNameProposalProcessor,
 		[]string{
-			ProcessNameLocal,
+			ProcessNameLocalNode,
+			ProcessNameStorage,
+			ProcessNameBlockFS,
 			ProcessNameSuffrage,
 		},
 		ProcessProposalProcessor,
@@ -77,8 +80,13 @@ func ProcessProposalProcessor(ctx context.Context) (context.Context, error) {
 }
 
 func processDefaultProposalProcessor(ctx context.Context) (prprocessor.ProcessorNewFunc, error) {
-	var local *isaac.Local
-	if err := LoadLocalContextValue(ctx, &local); err != nil {
+	var local *network.LocalNode
+	if err := LoadLocalNodeContextValue(ctx, &local); err != nil {
+		return nil, err
+	}
+
+	var nodepool *network.Nodepool
+	if err := LoadNodepoolContextValue(ctx, &nodepool); err != nil {
 		return nil, err
 	}
 
@@ -103,10 +111,10 @@ func processDefaultProposalProcessor(ctx context.Context) (prprocessor.Processor
 	}
 
 	return isaac.NewDefaultProcessorNewFunc(
-		local.Node(),
+		local,
 		sf,
 		blockFS,
-		local.Nodes(),
+		nodepool,
 		suffrage,
 		oprs,
 	), nil
@@ -127,8 +135,13 @@ func processErrorProposalProcessor(
 		return processDefaultProposalProcessor(ctx)
 	}
 
-	var local *isaac.Local
-	if err := LoadLocalContextValue(ctx, &local); err != nil {
+	var local *network.LocalNode
+	if err := LoadLocalNodeContextValue(ctx, &local); err != nil {
+		return nil, err
+	}
+
+	var nodepool *network.Nodepool
+	if err := LoadNodepoolContextValue(ctx, &nodepool); err != nil {
 		return nil, err
 	}
 
@@ -153,10 +166,10 @@ func processErrorProposalProcessor(
 	}
 
 	return NewErrorProcessorNewFunc(
-		local.Node(),
+		local,
 		sf,
 		blockFS,
-		local.Nodes(),
+		nodepool,
 		suffrage,
 		oprs,
 		conf.WhenPreparePoints,

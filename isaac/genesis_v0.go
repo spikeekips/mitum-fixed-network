@@ -11,6 +11,7 @@ import (
 	"github.com/spikeekips/mitum/base/operation"
 	"github.com/spikeekips/mitum/base/prprocessor"
 	"github.com/spikeekips/mitum/base/seal"
+	"github.com/spikeekips/mitum/network"
 	"github.com/spikeekips/mitum/storage"
 	"github.com/spikeekips/mitum/util/errors"
 	"github.com/spikeekips/mitum/util/localtime"
@@ -20,28 +21,44 @@ import (
 
 type GenesisBlockV0Generator struct {
 	*logging.Logging
-	local     *Local
+	local     *network.LocalNode
+	storage   storage.Storage
+	blockFS   *storage.BlockFS
+	policy    *LocalPolicy
+	nodepool  *network.Nodepool
 	ballotbox *Ballotbox
 	ops       []operation.Operation
 	suffrage  base.Suffrage
 }
 
-func NewGenesisBlockV0Generator(local *Local, ops []operation.Operation) (*GenesisBlockV0Generator, error) {
+func NewGenesisBlockV0Generator(
+	local *network.LocalNode,
+	st storage.Storage,
+	blockFS *storage.BlockFS,
+	policy *LocalPolicy,
+	ops []operation.Operation,
+) (*GenesisBlockV0Generator, error) {
 	threshold, _ := base.NewThreshold(1, 100)
 
-	suffrage := base.NewFixedSuffrage(local.Node().Address(), nil)
+	suffrage := base.NewFixedSuffrage(local.Address(), nil)
 	if err := suffrage.Initialize(); err != nil {
 		return nil, err
 	}
+
+	nodepool := network.NewNodepool(local)
 
 	return &GenesisBlockV0Generator{
 		Logging: logging.NewLogging(func(c logging.Context) logging.Emitter {
 			return c.Str("module", "genesis-block-generator")
 		}),
-		local: local,
+		local:    local,
+		storage:  st,
+		blockFS:  blockFS,
+		policy:   policy,
+		nodepool: nodepool,
 		ballotbox: NewBallotbox(
 			func() []base.Address {
-				return []base.Address{local.Node().Address()}
+				return []base.Address{local.Address()}
 			},
 			func() base.Threshold {
 				return threshold
@@ -80,10 +97,10 @@ func (gg *GenesisBlockV0Generator) Generate() (block.Block, error) {
 
 	pps := prprocessor.NewProcessors(
 		NewDefaultProcessorNewFunc(
-			gg.local.Node(),
-			gg.local.Storage(),
-			gg.local.BlockFS(),
-			gg.local.Nodes(),
+			gg.local,
+			gg.storage,
+			gg.blockFS,
+			gg.nodepool,
 			gg.suffrage,
 			nil,
 		),
@@ -119,12 +136,12 @@ func (gg *GenesisBlockV0Generator) generateOperationSeal() ([]operation.Seal, er
 
 	var seals []operation.Seal
 	if sl, err := operation.NewBaseSeal(
-		gg.local.Node().Privatekey(),
+		gg.local.Privatekey(),
 		gg.ops,
-		gg.local.Policy().NetworkID(),
+		gg.policy.NetworkID(),
 	); err != nil {
 		return nil, err
-	} else if err := gg.local.Storage().NewSeals([]seal.Seal{sl}); err != nil {
+	} else if err := gg.storage.NewSeals([]seal.Seal{sl}); err != nil {
 		return nil, err
 	} else {
 		seals = append(seals, sl)
@@ -137,7 +154,7 @@ func (gg *GenesisBlockV0Generator) generatePreviousBlock() error {
 	// NOTE the privatekey of local node is melted into genesis previous block;
 	// it means, genesis block contains who creates it.
 	var genesisHash valuehash.Hash
-	if sig, err := gg.local.Node().Privatekey().Sign(gg.local.Policy().NetworkID()); err != nil {
+	if sig, err := gg.local.Privatekey().Sign(gg.policy.NetworkID()); err != nil {
 		return err
 	} else {
 		genesisHash = valuehash.NewBytes(sig.Bytes())
@@ -145,8 +162,8 @@ func (gg *GenesisBlockV0Generator) generatePreviousBlock() error {
 
 	blk, err := block.NewBlockV0(
 		block.NewSuffrageInfoV0(
-			gg.local.Node().Address(),
-			[]base.Node{gg.local.Node()},
+			gg.local.Address(),
+			[]base.Node{gg.local},
 		),
 		base.PreGenesisHeight,
 		base.Round(0),
@@ -161,7 +178,7 @@ func (gg *GenesisBlockV0Generator) generatePreviousBlock() error {
 	}
 
 	var bs storage.BlockStorage
-	if st, err := gg.local.Storage().OpenBlockStorage(blk); err != nil {
+	if st, err := gg.storage.OpenBlockStorage(blk); err != nil {
 		return err
 	} else {
 		bs = st
@@ -173,7 +190,7 @@ func (gg *GenesisBlockV0Generator) generatePreviousBlock() error {
 
 	if err := bs.Commit(context.Background()); err != nil {
 		return err
-	} else if err := gg.local.BlockFS().AddAndCommit(blk); err != nil {
+	} else if err := gg.blockFS.AddAndCommit(blk); err != nil {
 		err := errors.NewError("failed to commit to blockfs").Wrap(err)
 		if err0 := bs.Cancel(); err0 != nil {
 			return err.Wrap(err0)
@@ -197,15 +214,15 @@ func (gg *GenesisBlockV0Generator) generateProposal(
 
 	var proposal ballot.Proposal
 	pr := ballot.NewProposalV0(
-		gg.local.Node().Address(),
+		gg.local.Address(),
 		base.Height(0),
 		base.Round(0),
 		sealHashes,
 		voteproof,
 	)
-	if err := SignSeal(&pr, gg.local); err != nil {
+	if err := pr.Sign(gg.local.Privatekey(), gg.policy.NetworkID()); err != nil {
 		return nil, err
-	} else if err := gg.local.Storage().NewProposal(pr); err != nil {
+	} else if err := gg.storage.NewProposal(pr); err != nil {
 		return nil, err
 	} else {
 		proposal = pr
@@ -216,9 +233,9 @@ func (gg *GenesisBlockV0Generator) generateProposal(
 
 func (gg *GenesisBlockV0Generator) generateINITVoteproof() (base.Voteproof, error) {
 	var ib ballot.INITBallotV0
-	if b, err := NewINITBallotV0Round0(gg.local); err != nil {
+	if b, err := NewINITBallotV0Round0(gg.local, gg.storage, gg.blockFS); err != nil {
 		return nil, err
-	} else if err := SignSeal(&b, gg.local); err != nil {
+	} else if err := b.Sign(gg.local.Privatekey(), gg.policy.NetworkID()); err != nil {
 		return nil, err
 	} else {
 		ib = b
@@ -241,8 +258,8 @@ func (gg *GenesisBlockV0Generator) generateINITVoteproof() (base.Voteproof, erro
 func (gg *GenesisBlockV0Generator) generateACCEPTVoteproof(newBlock block.Block, ivp base.Voteproof) (
 	base.Voteproof, error,
 ) {
-	ab := NewACCEPTBallotV0(gg.local.Node().Address(), newBlock, ivp)
-	if err := SignSeal(&ab, gg.local); err != nil {
+	ab := NewACCEPTBallotV0(gg.local.Address(), newBlock, ivp)
+	if err := ab.Sign(gg.local.Privatekey(), gg.policy.NetworkID()); err != nil {
 		return nil, err
 	}
 

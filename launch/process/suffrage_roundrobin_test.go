@@ -27,7 +27,7 @@ func (t *testRoundrobinSuffrage) local() *isaac.Local {
 
 func (t *testRoundrobinSuffrage) TestNew() {
 	local := t.local()
-	sf := NewRoundrobinSuffrage(local, 10, 1, nil)
+	sf := NewRoundrobinSuffrage(local.Node(), local.Nodes(), 10, 1, nil)
 	t.NotNil(sf)
 
 	t.Implements((*base.Suffrage)(nil), sf)
@@ -47,7 +47,7 @@ func (t *testRoundrobinSuffrage) TestActingSuffrage() {
 	}
 	t.NoError(local.Nodes().Add(nodes...))
 
-	sf := NewRoundrobinSuffrage(local, 10, na, func(base.Height) (valuehash.Hash, error) {
+	sf := NewRoundrobinSuffrage(local.Node(), local.Nodes(), 10, na, func(base.Height) (valuehash.Hash, error) {
 		return valuehash.NewBytes([]byte("showme 5")), nil
 	})
 
@@ -88,7 +88,7 @@ func (t *testRoundrobinSuffrage) TestActingSuffrageNotSufficient() {
 	}
 	t.NoError(local.Nodes().Add(nodes...))
 
-	sf := NewRoundrobinSuffrage(local, 10, na, nil)
+	sf := NewRoundrobinSuffrage(local.Node(), local.Nodes(), 10, na, nil)
 
 	af, err := sf.Acting(base.Height(33), base.Round(0))
 	t.NoError(err)

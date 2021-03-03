@@ -6,14 +6,18 @@ import (
 	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/base/ballot"
 	"github.com/spikeekips/mitum/base/block"
-	"github.com/spikeekips/mitum/base/seal"
+	"github.com/spikeekips/mitum/network"
 	"github.com/spikeekips/mitum/storage"
 	"github.com/spikeekips/mitum/util/valuehash"
 )
 
-func NewINITBallotV0Round0(local *Local) (ballot.INITBallotV0, error) {
+func NewINITBallotV0Round0(
+	node network.Node,
+	st storage.Storage,
+	blockFS *storage.BlockFS,
+) (ballot.INITBallotV0, error) {
 	var m block.Manifest
-	switch l, found, err := local.Storage().LastManifest(); {
+	switch l, found, err := st.LastManifest(); {
 	case !found:
 		return ballot.INITBallotV0{}, xerrors.Errorf("last block not found")
 	case err != nil:
@@ -23,7 +27,7 @@ func NewINITBallotV0Round0(local *Local) (ballot.INITBallotV0, error) {
 	}
 
 	var avp base.Voteproof
-	switch vp, found, err := local.BlockFS().LastVoteproof(base.StageACCEPT); {
+	switch vp, found, err := blockFS.LastVoteproof(base.StageACCEPT); {
 	case !found:
 		if m.Height() != base.PreGenesisHeight {
 			return ballot.INITBallotV0{}, xerrors.Errorf("failed to get last voteproof: %w", err)
@@ -35,11 +39,11 @@ func NewINITBallotV0Round0(local *Local) (ballot.INITBallotV0, error) {
 	}
 
 	if avp != nil {
-		return NewINITBallotV0WithVoteproof(local, local.Node().Address(), avp)
+		return NewINITBallotV0WithVoteproof(node, blockFS, avp)
 	}
 
 	return ballot.NewINITBallotV0(
-		local.Node().Address(),
+		node.Address(),
 		m.Height()+1,
 		base.Round(0),
 		m.Hash(),
@@ -48,7 +52,11 @@ func NewINITBallotV0Round0(local *Local) (ballot.INITBallotV0, error) {
 	), nil
 }
 
-func NewINITBallotV0WithVoteproof(local *Local, node base.Address, voteproof base.Voteproof) (
+func NewINITBallotV0WithVoteproof(
+	node network.Node,
+	blockFS *storage.BlockFS,
+	voteproof base.Voteproof,
+) (
 	ballot.INITBallotV0, error,
 ) {
 	var height base.Height
@@ -66,7 +74,7 @@ func NewINITBallotV0WithVoteproof(local *Local, node base.Address, voteproof bas
 			previousBlock = t.NewBlock()
 		}
 
-		switch vp, found, err := local.BlockFS().LastVoteproof(base.StageACCEPT); {
+		switch vp, found, err := blockFS.LastVoteproof(base.StageACCEPT); {
 		case err != nil:
 			return ballot.INITBallotV0{}, xerrors.Errorf("failed to get last voteproof: %w", err)
 		case found:
@@ -85,7 +93,7 @@ func NewINITBallotV0WithVoteproof(local *Local, node base.Address, voteproof bas
 	}
 
 	return ballot.NewINITBallotV0(
-		node,
+		node.Address(),
 		height,
 		round,
 		previousBlock,
@@ -141,8 +149,4 @@ func NewACCEPTBallotV0(node base.Address, newBlock block.Block, voteproof base.V
 		newBlock.Hash(),
 		voteproof,
 	)
-}
-
-func SignSeal(b seal.Signer, local *Local) error {
-	return b.Sign(local.Node().Privatekey(), local.Policy().NetworkID())
 }

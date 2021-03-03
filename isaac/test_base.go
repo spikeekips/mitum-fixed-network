@@ -12,6 +12,7 @@ import (
 	"github.com/spikeekips/mitum/base/key"
 	"github.com/spikeekips/mitum/base/operation"
 	"github.com/spikeekips/mitum/base/prprocessor"
+	"github.com/spikeekips/mitum/base/seal"
 	"github.com/spikeekips/mitum/base/state"
 	channetwork "github.com/spikeekips/mitum/network/gochan"
 	"github.com/spikeekips/mitum/storage"
@@ -21,6 +22,10 @@ import (
 	"github.com/spikeekips/mitum/util/tree"
 	"github.com/spikeekips/mitum/util/valuehash"
 )
+
+func SignSeal(b seal.Signer, local *Local) error {
+	return b.Sign(local.Node().Privatekey(), local.Policy().NetworkID())
+}
 
 type BaseTest struct {
 	suite.Suite
@@ -265,13 +270,13 @@ func (t *BaseTest) Suffrage(proposerState *Local, states ...*Local) base.Suffrag
 func (t *BaseTest) NewINITBallot(local *Local, round base.Round, voteproof base.Voteproof) ballot.INITBallotV0 {
 	var ib ballot.INITBallotV0
 	if round == 0 {
-		if b, err := NewINITBallotV0Round0(local); err != nil {
+		if b, err := NewINITBallotV0Round0(local.Node(), local.Storage(), local.BlockFS()); err != nil {
 			panic(err)
 		} else {
 			ib = b
 		}
 	} else {
-		if b, err := NewINITBallotV0WithVoteproof(local, local.Node().Address(), voteproof); err != nil {
+		if b, err := NewINITBallotV0WithVoteproof(local.Node(), local.BlockFS(), voteproof); err != nil {
 			panic(err)
 		} else {
 			ib = b

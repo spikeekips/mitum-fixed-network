@@ -3,6 +3,7 @@ package process
 import (
 	"context"
 
+	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/isaac"
 	"github.com/spikeekips/mitum/launch/config"
 )
@@ -10,20 +11,17 @@ import (
 const HookNameSetPolicy = "set_policy"
 
 func HookSetPolicy(ctx context.Context) (context.Context, error) {
+	var networkID base.NetworkID
 	var l config.LocalNode
 	var conf config.Policy
 	if err := config.LoadConfigContextValue(ctx, &l); err != nil {
 		return ctx, err
 	} else {
+		networkID = l.NetworkID()
 		conf = l.Policy()
 	}
 
-	var local *isaac.Local
-	if err := LoadLocalContextValue(ctx, &local); err != nil {
-		return ctx, err
-	}
-
-	policy := local.Policy()
+	policy := isaac.NewLocalPolicy(networkID)
 
 	_ = policy.SetThresholdRatio(conf.ThresholdRatio())
 	if _, err := policy.SetMaxOperationsInSeal(conf.MaxOperationsInSeal()); err != nil {
@@ -54,5 +52,5 @@ func HookSetPolicy(ctx context.Context) (context.Context, error) {
 		return ctx, err
 	}
 
-	return ctx, nil
+	return context.WithValue(ctx, ContextValuePolicy, policy), nil
 }

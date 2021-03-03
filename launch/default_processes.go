@@ -10,7 +10,7 @@ var defaultProcesses = []pm.Process{
 	process.ProcessorEncoders,
 	process.ProcessorStorage,
 	process.ProcessorBlockFS,
-	process.ProcessorLocal,
+	process.ProcessorLocalNode,
 	process.ProcessorProposalProcessor,
 	process.ProcessorSuffrage,
 	process.ProcessorConsensusStates,
@@ -23,8 +23,8 @@ var defaultHooks = []pm.Hook{
 		process.HookNameAddHinters, process.HookAddHinters(process.DefaultHinters)),
 	pm.NewHook(pm.HookPrefixPost, process.ProcessNameNetwork,
 		process.HookNameSetNetworkHandlers, process.HookSetNetworkHandlers),
-	pm.NewHook(pm.HookPrefixPost, process.ProcessNameLocal, process.HookNameSetPolicy, process.HookSetPolicy),
-	pm.NewHook(pm.HookPrefixPost, process.ProcessNameLocal, process.HookNameRemoteNodes, process.HookRemoteNodes),
+	pm.NewHook(pm.HookPrefixPost, process.ProcessNameLocalNode, process.HookNameSetPolicy, process.HookSetPolicy),
+	pm.NewHook(pm.HookPrefixPost, process.ProcessNameLocalNode, process.HookNameRemoteNodes, process.HookRemoteNodes),
 }
 
 func DefaultProcesses() *pm.Processes {

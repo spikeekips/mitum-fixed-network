@@ -115,7 +115,7 @@ func (t *testProposalProcessor) newOperationSeal() (seal.Seal, KVOperation) {
 }
 
 func (t *testProposalProcessor) TestPrepare() {
-	pm := NewProposalMaker(t.local)
+	pm := NewProposalMaker(t.local.Node(), t.local.Storage(), t.local.Policy())
 
 	ib := t.NewINITBallot(t.local, base.Round(0), nil)
 	initFact := ib.INITBallotFactV0
@@ -150,7 +150,7 @@ func (t *testProposalProcessor) TestPrepare() {
 }
 
 func (t *testProposalProcessor) TestPrepareRetry() {
-	pm := NewProposalMaker(t.local)
+	pm := NewProposalMaker(t.local.Node(), t.local.Storage(), t.local.Policy())
 
 	ib := t.NewINITBallot(t.local, base.Round(0), nil)
 	initFact := ib.INITBallotFactV0
@@ -221,7 +221,7 @@ func (t *testProposalProcessor) TestPrepareRetry() {
 }
 
 func (t *testProposalProcessor) TestSave() {
-	pm := NewProposalMaker(t.local)
+	pm := NewProposalMaker(t.local.Node(), t.local.Storage(), t.local.Policy())
 
 	ib := t.NewINITBallot(t.local, base.Round(0), nil)
 	initFact := ib.INITBallotFactV0
@@ -284,7 +284,7 @@ func (t *testProposalProcessor) TestSave() {
 }
 
 func (t *testProposalProcessor) TestCancelPreviousProposal() {
-	pm := NewProposalMaker(t.local)
+	pm := NewProposalMaker(t.local.Node(), t.local.Storage(), t.local.Policy())
 
 	timeout := time.Millisecond * 100
 
@@ -356,7 +356,7 @@ func (t *testProposalProcessor) TestCancelPreviousProposal() {
 }
 
 func (t *testProposalProcessor) TestOperation() {
-	pm := NewProposalMaker(t.local)
+	pm := NewProposalMaker(t.local.Node(), t.local.Storage(), t.local.Policy())
 
 	pps := t.processors()
 	defer pps.Stop()
@@ -449,7 +449,7 @@ func (t *testProposalProcessor) TestSealsNotFound() {
 			},
 		)
 
-		pm := NewProposalMaker(t.remote)
+		pm := NewProposalMaker(t.remote.Node(), t.remote.Storage(), t.remote.Policy())
 		pr, _ = pm.Proposal(ivp.Height(), ivp.Round(), ivp)
 	}
 
@@ -512,7 +512,7 @@ func (t *testProposalProcessor) TestTimeoutPrepare() {
 	ib := t.NewINITBallot(t.local, base.Round(0), nil)
 	initFact := ib.INITBallotFactV0
 
-	pm := NewProposalMaker(t.local)
+	pm := NewProposalMaker(t.local.Node(), t.local.Storage(), t.local.Policy())
 	ivp, err := t.NewVoteproof(base.StageINIT, initFact, t.local, t.remote)
 	t.NoError(err)
 	pr, err := pm.Proposal(ivp.Height(), ivp.Round(), ivp)
@@ -546,7 +546,7 @@ func (t *testProposalProcessor) TestTimeoutSaveBeforeSavingStorage() {
 	ib := t.NewINITBallot(t.local, base.Round(0), nil)
 	initFact := ib.INITBallotFactV0
 
-	pm := NewProposalMaker(t.local)
+	pm := NewProposalMaker(t.local.Node(), t.local.Storage(), t.local.Policy())
 	ivp, err := t.NewVoteproof(base.StageINIT, initFact, t.local, t.remote)
 	t.NoError(err)
 	pr, err := pm.Proposal(ivp.Height(), ivp.Round(), ivp)
@@ -612,7 +612,7 @@ func (t *testProposalProcessor) TestTimeoutSaveAfterSaving() {
 	ib := t.NewINITBallot(t.local, base.Round(0), nil)
 	initFact := ib.INITBallotFactV0
 
-	pm := NewProposalMaker(t.local)
+	pm := NewProposalMaker(t.local.Node(), t.local.Storage(), t.local.Policy())
 	ivp, err := t.NewVoteproof(base.StageINIT, initFact, t.local, t.remote)
 	t.NoError(err)
 	pr, err := pm.Proposal(ivp.Height(), ivp.Round(), ivp)
@@ -699,7 +699,7 @@ func (t *testProposalProcessor) TestCustomOperationProcessor() {
 	sl, _ := t.newOperationSeal()
 	t.NoError(t.local.Storage().NewSeals([]seal.Seal{sl}))
 
-	pm := NewProposalMaker(t.local)
+	pm := NewProposalMaker(t.local.Node(), t.local.Storage(), t.local.Policy())
 
 	ib := t.NewINITBallot(t.local, base.Round(0), nil)
 	initFact := ib.INITBallotFactV0
@@ -761,7 +761,7 @@ func (t *testProposalProcessor) TestNotProcessedOperations() {
 
 	t.NoError(t.local.Storage().NewSeals(sls))
 
-	pm := NewProposalMaker(t.local)
+	pm := NewProposalMaker(t.local.Node(), t.local.Storage(), t.local.Policy())
 
 	ib := t.NewINITBallot(t.local, base.Round(0), nil)
 	initFact := ib.INITBallotFactV0
@@ -867,7 +867,7 @@ func (t *testProposalProcessor) TestSameStateHash() {
 
 	t.NoError(t.local.Storage().NewSeals(sls))
 
-	pm := NewProposalMaker(t.local)
+	pm := NewProposalMaker(t.local.Node(), t.local.Storage(), t.local.Policy())
 
 	ib := t.NewINITBallot(t.local, base.Round(0), nil)
 	initFact := ib.INITBallotFactV0
@@ -920,7 +920,7 @@ func (t *testProposalProcessor) TestSameStateHash() {
 func (t *testProposalProcessor) TestHeavyOperations() {
 	var n uint = 30
 	t.local.Policy().SetMaxOperationsInProposal(n)
-	pm := NewProposalMaker(t.local)
+	pm := NewProposalMaker(t.local.Node(), t.local.Storage(), t.local.Policy())
 
 	var operated int64
 	sls := make([]seal.Seal, n)

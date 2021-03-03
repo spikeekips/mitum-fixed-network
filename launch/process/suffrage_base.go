@@ -6,7 +6,6 @@ import (
 
 	lru "github.com/hashicorp/golang-lru"
 	"github.com/spikeekips/mitum/base"
-	"github.com/spikeekips/mitum/isaac"
 	"github.com/spikeekips/mitum/network"
 	"github.com/spikeekips/mitum/util/logging"
 )
@@ -17,7 +16,8 @@ type BaseSuffrage struct {
 	sync.RWMutex
 	*logging.Logging
 	name           string
-	local          *isaac.Local
+	local          *network.LocalNode
+	nodepool       *network.Nodepool
 	numberOfActing uint
 	cacheSize      int
 	cache          *lru.TwoQueueCache
@@ -26,7 +26,8 @@ type BaseSuffrage struct {
 
 func NewBaseSuffrage(
 	name string,
-	local *isaac.Local,
+	local *network.LocalNode,
+	nodepool *network.Nodepool,
 	cacheSize int,
 	numberOfActing uint,
 	electFunc ActinfSuffrageElectFunc,
@@ -41,6 +42,7 @@ func NewBaseSuffrage(
 			return c.Str("module", name)
 		}),
 		local:          local,
+		nodepool:       nodepool,
 		numberOfActing: numberOfActing,
 		cacheSize:      cacheSize,
 		cache:          cache,
@@ -48,12 +50,16 @@ func NewBaseSuffrage(
 	}
 }
 
-func (sf *BaseSuffrage) Initialize() error {
-	return nil
+func (sf *BaseSuffrage) Local() *network.LocalNode {
+	return sf.local
 }
 
-func (sf *BaseSuffrage) Local() *isaac.Local {
-	return sf.local
+func (sf *BaseSuffrage) Nodepool() *network.Nodepool {
+	return sf.nodepool
+}
+
+func (sf *BaseSuffrage) Initialize() error {
+	return nil
 }
 
 func (sf *BaseSuffrage) Cache() *lru.TwoQueueCache {
@@ -73,7 +79,11 @@ func (sf *BaseSuffrage) Name() string {
 }
 
 func (sf *BaseSuffrage) IsInside(a base.Address) bool {
-	return sf.local.Nodes().Exists(a)
+	if sf.local.Address().Equal(a) {
+		return true
+	}
+
+	return sf.nodepool.Exists(a)
 }
 
 func (sf *BaseSuffrage) Acting(height base.Height, round base.Round) (base.ActingSuffrage, error) {
@@ -112,8 +122,8 @@ func (sf *BaseSuffrage) IsProposer(height base.Height, round base.Round, node ba
 }
 
 func (sf *BaseSuffrage) Nodes() []base.Address {
-	ns := []base.Address{sf.local.Node().Address()}
-	sf.local.Nodes().Traverse(func(n network.Node) bool {
+	ns := []base.Address{sf.local.Address()}
+	sf.nodepool.Traverse(func(n network.Node) bool {
 		ns = append(ns, n.Address())
 
 		return true

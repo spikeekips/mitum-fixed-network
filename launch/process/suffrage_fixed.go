@@ -7,7 +7,7 @@ import (
 	"golang.org/x/xerrors"
 
 	"github.com/spikeekips/mitum/base"
-	"github.com/spikeekips/mitum/isaac"
+	"github.com/spikeekips/mitum/network"
 	jsonenc "github.com/spikeekips/mitum/util/encoder/json"
 )
 
@@ -18,7 +18,8 @@ type FixedSuffrage struct {
 }
 
 func NewFixedSuffrage(
-	local *isaac.Local,
+	local *network.LocalNode,
+	nodepool *network.Nodepool,
 	cacheSize int,
 	proposer base.Address,
 	acting []base.Address,
@@ -61,6 +62,7 @@ func NewFixedSuffrage(
 	sf.BaseSuffrage = NewBaseSuffrage(
 		"fixed-suffrage",
 		local,
+		nodepool,
 		cacheSize,
 		uint(len(acting)),
 		elect,
@@ -99,17 +101,4 @@ func (sf *FixedSuffrage) Verbose() string {
 	} else {
 		return string(b)
 	}
-}
-
-func (sf *FixedSuffrage) IsInside(a base.Address) bool {
-	var found bool
-	for i := range sf.acting {
-		if a.Equal(sf.acting[i]) {
-			found = true
-
-			break
-		}
-	}
-
-	return found
 }

@@ -6,34 +6,42 @@ import (
 	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/base/ballot"
 	"github.com/spikeekips/mitum/base/operation"
+	"github.com/spikeekips/mitum/network"
+	"github.com/spikeekips/mitum/storage"
 	"github.com/spikeekips/mitum/util/valuehash"
 )
 
 type ProposalMaker struct {
 	sync.Mutex
-	local    *Local
+	local    *network.LocalNode
+	storage  storage.Storage
+	policy   *LocalPolicy
 	proposed ballot.Proposal
 }
 
-func NewProposalMaker(local *Local) *ProposalMaker {
-	return &ProposalMaker{local: local}
+func NewProposalMaker(
+	local *network.LocalNode,
+	st storage.Storage,
+	policy *LocalPolicy,
+) *ProposalMaker {
+	return &ProposalMaker{local: local, storage: st, policy: policy}
 }
 
 func (pm *ProposalMaker) seals() ([]valuehash.Hash, error) {
 	founds := map[ /* Operation.Fact().Hash() */ string]struct{}{}
 
-	maxOperations := pm.local.Policy().MaxOperationsInProposal()
+	maxOperations := pm.policy.MaxOperationsInProposal()
 
 	var facts int
 	var seals, uselessSeals []valuehash.Hash
-	if err := pm.local.Storage().StagedOperationSeals(
+	if err := pm.storage.StagedOperationSeals(
 		func(sl operation.Seal) (bool, error) {
 			var ofs []valuehash.Hash
 			for _, op := range sl.Operations() {
 				fh := op.Fact().Hash()
 				if _, found := founds[fh.String()]; found {
 					continue
-				} else if found, err := pm.local.Storage().HasOperationFact(fh); err != nil {
+				} else if found, err := pm.storage.HasOperationFact(fh); err != nil {
 					return false, err
 				} else if found {
 					continue
@@ -65,7 +73,7 @@ func (pm *ProposalMaker) seals() ([]valuehash.Hash, error) {
 	}
 
 	if len(uselessSeals) > 0 {
-		if err := pm.local.Storage().UnstagedOperationSeals(uselessSeals); err != nil {
+		if err := pm.storage.UnstagedOperationSeals(uselessSeals); err != nil {
 			return nil, err
 		}
 	}
@@ -93,13 +101,13 @@ func (pm *ProposalMaker) Proposal(
 	}
 
 	pr := ballot.NewProposalV0(
-		pm.local.Node().Address(),
+		pm.local.Address(),
 		height,
 		round,
 		seals,
 		voteproof,
 	)
-	if err := SignSeal(&pr, pm.local); err != nil {
+	if err := pr.Sign(pm.local.Privatekey(), pm.policy.NetworkID()); err != nil {
 		return nil, err
 	}
 

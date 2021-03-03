@@ -31,7 +31,7 @@ func (t *testGenesisBlockV0) TestNewGenesisBlock() {
 	)
 	t.NoError(err)
 
-	gg, err := NewGenesisBlockV0Generator(t.local, []operation.Operation{op})
+	gg, err := NewGenesisBlockV0Generator(t.local.Node(), t.local.Storage(), t.local.BlockFS(), t.local.Policy(), []operation.Operation{op})
 	t.NoError(err)
 
 	blk, err := gg.Generate()

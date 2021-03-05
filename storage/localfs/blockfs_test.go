@@ -4,7 +4,7 @@ import (
 	"compress/gzip"
 	"crypto/sha256"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"os"
 	"testing"
 
@@ -209,7 +209,7 @@ func (t *testBlock) TestOpen() {
 	gr, err := gzip.NewReader(r)
 	t.NoError(err)
 
-	b, err := ioutil.ReadAll(gr)
+	b, err := io.ReadAll(gr)
 	t.NoError(err)
 	t.NotNil(b)
 }

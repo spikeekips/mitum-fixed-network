@@ -6,7 +6,6 @@ import (
 	"compress/gzip"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -745,7 +744,7 @@ func (bs *BlockFS) load(height base.Height, name string) (interface{}, error) {
 		}
 	}
 
-	if b, err := ioutil.ReadAll(rd); err != nil {
+	if b, err := io.ReadAll(rd); err != nil {
 		return nil, WrapFSError(err)
 	} else if hinter, err := bs.enc.DecodeByHint(b); err != nil {
 		return nil, err

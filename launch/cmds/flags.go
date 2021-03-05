@@ -2,7 +2,7 @@ package cmds
 
 import (
 	"bytes"
-	"io/ioutil"
+	"os"
 	"path/filepath"
 
 	"golang.org/x/xerrors"
@@ -22,7 +22,7 @@ func (v *FileLoad) UnmarshalText(b []byte) error {
 		} else {
 			body = c
 		}
-	} else if c, err := ioutil.ReadFile(filepath.Clean(string(b))); err != nil {
+	} else if c, err := os.ReadFile(filepath.Clean(string(b))); err != nil {
 		return err
 	} else {
 		body = c

@@ -4,7 +4,6 @@ package localfs
 
 import (
 	"fmt"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 
@@ -21,7 +20,7 @@ type BaseTestLocalFS struct {
 }
 
 func (t *BaseTestLocalFS) SetupSuite() {
-	p, err := ioutil.TempDir("", "fs-")
+	p, err := os.MkdirTemp("", "fs-")
 	if err != nil {
 		panic(err)
 	}

@@ -4,6 +4,8 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"os/signal"
+	"syscall"
 	"time"
 
 	"golang.org/x/xerrors"
@@ -75,29 +77,7 @@ func (cmd *RunCommand) run() error {
 		return xerrors.Errorf("failed to run: %w", err)
 	}
 
-	errch := make(chan error)
-	go func() {
-		errch <- cmd.runStates(ps.Context())
-	}()
-
-	if err := cmd.afterStartedHooks.Run(ps.Context()); err != nil {
-		return err
-	}
-
-	select {
-	case err := <-errch:
-		return err
-	case <-func(w time.Duration) <-chan time.Time {
-		if w < 1 {
-			return make(chan time.Time)
-		}
-
-		return time.After(w)
-	}(cmd.ExitAfter):
-		cmd.Log().Info().Str("exit-after", cmd.ExitAfter.String()).Msg("expired, exit.")
-
-		return nil
-	}
+	return cmd.runStates(ps.Context())
 }
 
 func (cmd *RunCommand) runStates(ctx context.Context) error {
@@ -120,20 +100,45 @@ func (cmd *RunCommand) runStates(ctx context.Context) error {
 		errch <- cs.Start()
 	}()
 
-	cmd.ConnectSig(func() {
-		if err := cs.Stop(); err != nil {
-			_, _ = fmt.Fprintf(os.Stderr, "failed to stop consensus states, %v\n", err)
+	if err := cmd.afterStartedHooks.Run(ctx); err != nil {
+		return err
+	}
 
-			return
+	sctx, stopfunc := signal.NotifyContext(context.Background(),
+		syscall.SIGINT, syscall.SIGTERM, syscall.SIGQUIT, syscall.SIGHUP,
+	)
+	defer stopfunc()
+
+	select {
+	case err := <-errch:
+		return err
+	case <-sctx.Done():
+		if err := cs.Stop(); err != nil {
+			_, _ = fmt.Fprintf(os.Stderr, "stop signal received, but failed to stop consensus states, %v\n", err)
+
+			return err
+		} else {
+			_, _ = fmt.Fprintln(os.Stderr, "stop signal received, consensus states stopped")
+
+			return nil
+		}
+	case <-func(w time.Duration) <-chan time.Time {
+		if w < 1 {
+			return make(chan time.Time)
 		}
 
-		_, _ = fmt.Fprintln(os.Stderr, "consensus states stopped")
-	})
+		return time.After(w)
+	}(cmd.ExitAfter):
+		if err := cs.Stop(); err != nil {
+			_, _ = fmt.Fprintf(os.Stderr,
+				"expired by exit-after, %v, but failed to stop consensus states: %+v\n", cmd.ExitAfter, err)
 
-	if err := <-errch; err != nil {
-		return xerrors.Errorf("problem of consensus states: %w", err)
-	} else {
-		return nil
+			return err
+		} else {
+			_, _ = fmt.Fprintf(os.Stderr, "expired by exit-after, %v, consensus states stopped\n", cmd.ExitAfter)
+
+			return nil
+		}
 	}
 }
 

@@ -3,7 +3,6 @@ package localfs
 import (
 	"compress/gzip"
 	"io"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"strings"
@@ -63,7 +62,7 @@ func NewFS(root string, ifNotCreate bool) (*FS, error) {
 	}
 
 	// NOTE check writable
-	if p, err := ioutil.TempDir(root, ".temp"); err != nil {
+	if p, err := os.MkdirTemp(root, ".temp"); err != nil {
 		return nil, storage.WrapFSError(err)
 	} else {
 		_ = os.RemoveAll(p)
@@ -92,7 +91,7 @@ func (fs *FS) Clean(remove bool) error {
 		return nil
 	}
 
-	if files, err := ioutil.ReadDir(fs.root); err != nil {
+	if files, err := os.ReadDir(fs.root); err != nil {
 		return storage.WrapFSError(err)
 	} else {
 		for _, f := range files {

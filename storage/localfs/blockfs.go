@@ -1,14 +1,14 @@
 package localfs
 
 import (
-	"io/ioutil"
+	"os"
 
 	"github.com/spikeekips/mitum/storage"
 	jsonenc "github.com/spikeekips/mitum/util/encoder/json"
 )
 
 func TempBlockFS(enc *jsonenc.Encoder) *storage.BlockFS {
-	p, err := ioutil.TempDir("", "fs-")
+	p, err := os.MkdirTemp("", "fs-")
 	if err != nil {
 		panic(err)
 	}

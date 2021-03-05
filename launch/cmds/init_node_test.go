@@ -1,7 +1,6 @@
 package cmds
 
 import (
-	"io/ioutil"
 	"os"
 	"strings"
 	"testing"
@@ -16,7 +15,7 @@ type testInitNode struct {
 }
 
 func (t *testInitNode) designFile(y string) string {
-	tmpfile, err := ioutil.TempFile("", "")
+	tmpfile, err := os.CreateTemp("", "")
 	t.NoError(err)
 
 	_, err = tmpfile.Write([]byte(y))

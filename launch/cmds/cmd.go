@@ -4,9 +4,6 @@ import (
 	"context"
 	"fmt"
 	"os"
-	"os/signal"
-	"sync"
-	"syscall"
 
 	"github.com/alecthomas/kong"
 	"go.uber.org/automaxprocs/maxprocs"
@@ -60,7 +57,6 @@ type BaseCommand struct {
 	jsonenc   *jsonenc.Encoder
 	bsonenc   *bsonenc.Encoder
 	exithooks []func() error
-	done      sync.Once
 }
 
 func NewBaseCommand(name string) *BaseCommand {
@@ -99,29 +95,6 @@ func (cmd *BaseCommand) Initialize(flags interface{}, version util.Version) erro
 	}
 
 	return nil
-}
-
-func (cmd *BaseCommand) ConnectSig(stopfunc func()) {
-	cmd.Log().Debug().Msg("signal connected")
-
-	sigc := make(chan os.Signal, 1)
-	signal.Notify(sigc,
-		syscall.SIGINT,
-		syscall.SIGTERM,
-		syscall.SIGQUIT,
-		syscall.SIGHUP,
-	)
-
-	go func() {
-		s := <-sigc
-
-		cmd.done.Do(cmd.Done)
-		stopfunc()
-
-		_, _ = fmt.Fprintf(os.Stderr, "stopped by force: %v\n", s)
-
-		os.Exit(1)
-	}()
 }
 
 func (cmd *BaseCommand) Done() {

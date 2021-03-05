@@ -34,7 +34,7 @@ func (t *testProposalChecker) TestIsKnown() {
 
 	pr := t.NewProposal(t.remote, initFact.Round(), nil, vp)
 
-	pvc := NewProposalValidationChecker(t.local.Node(), t.local.Storage(), t.suf, t.local.Nodes(), pr, nil)
+	pvc := NewProposalValidationChecker(t.local.Storage(), t.suf, t.local.Nodes(), pr, nil)
 
 	{
 		keep, err := pvc.IsKnown()
@@ -62,7 +62,7 @@ func (t *testProposalChecker) TestCheckSigning() {
 	pr := t.NewProposal(t.remote, initFact.Round(), nil, vp)
 
 	{
-		pvc := NewProposalValidationChecker(t.local.Node(), t.local.Storage(), t.suf, t.local.Nodes(), pr, nil)
+		pvc := NewProposalValidationChecker(t.local.Storage(), t.suf, t.local.Nodes(), pr, nil)
 		keep, err := pvc.CheckSigning()
 		t.True(keep)
 		t.NoError(err)
@@ -73,7 +73,7 @@ func (t *testProposalChecker) TestCheckSigning() {
 
 		t.NoError(SignSeal(&npr, t.local))
 
-		pvc := NewProposalValidationChecker(t.local.Node(), t.local.Storage(), t.suf, t.local.Nodes(), npr, nil)
+		pvc := NewProposalValidationChecker(t.local.Storage(), t.suf, t.local.Nodes(), npr, nil)
 
 		// NOTE sign again with another privatekey
 		keep, err := pvc.CheckSigning()
@@ -92,7 +92,7 @@ func (t *testProposalChecker) TestPropserPointProposal() {
 
 	pr := t.NewProposal(t.remote, initFact.Round(), nil, vp)
 
-	pvc := NewProposalValidationChecker(t.local.Node(), t.local.Storage(), t.suf, t.local.Nodes(), pr, vp)
+	pvc := NewProposalValidationChecker(t.local.Storage(), t.suf, t.local.Nodes(), pr, vp)
 	keep, err := pvc.IsOlder()
 	t.True(keep)
 	t.NoError(err)
@@ -113,7 +113,7 @@ func (t *testProposalChecker) TestPropserPointOldProposalHeight() {
 		nil,
 	)
 
-	pvc := NewProposalValidationChecker(t.local.Node(), t.local.Storage(), t.suf, t.local.Nodes(), pr, ivp)
+	pvc := NewProposalValidationChecker(t.local.Storage(), t.suf, t.local.Nodes(), pr, ivp)
 	keep, err := pvc.IsOlder()
 	t.False(keep)
 	t.Error(err)
@@ -135,7 +135,7 @@ func (t *testProposalChecker) TestPropserPointOldProposalRound() {
 
 	pr := t.NewProposal(t.remote, base.Round(0), nil, ivp0)
 
-	pvc := NewProposalValidationChecker(t.local.Node(), t.local.Storage(), t.suf, t.local.Nodes(), pr, ivp1)
+	pvc := NewProposalValidationChecker(t.local.Storage(), t.suf, t.local.Nodes(), pr, ivp1)
 	keep, err := pvc.IsOlder()
 	t.False(keep)
 	t.Error(err)
@@ -157,7 +157,7 @@ func (t *testProposalChecker) TestPropserPointHigherProposalHeight() {
 		nil,
 	)
 
-	pvc := NewProposalValidationChecker(t.local.Node(), t.local.Storage(), t.suf, t.local.Nodes(), pr, ivp)
+	pvc := NewProposalValidationChecker(t.local.Storage(), t.suf, t.local.Nodes(), pr, ivp)
 
 	keep, err := pvc.IsOlder()
 	t.True(keep)
@@ -184,7 +184,7 @@ func (t *testProposalChecker) TestPropserPointHigherProposalRound() {
 
 	pr := t.NewProposal(t.remote, base.Round(1), nil, ivp1)
 
-	pvc := NewProposalValidationChecker(t.local.Node(), t.local.Storage(), t.suf, t.local.Nodes(), pr, ivp0)
+	pvc := NewProposalValidationChecker(t.local.Storage(), t.suf, t.local.Nodes(), pr, ivp0)
 	keep, err := pvc.IsWaiting()
 	t.False(keep)
 	t.Error(err)

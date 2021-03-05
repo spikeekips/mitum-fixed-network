@@ -31,7 +31,6 @@ type States struct {
 	sync.RWMutex
 	*logging.Logging
 	*util.FunctionDaemon
-	local          *network.LocalNode
 	storage        storage.Storage
 	blockFS        *storage.BlockFS
 	policy         *isaac.LocalPolicy
@@ -52,7 +51,6 @@ type States struct {
 }
 
 func NewStates(
-	local *network.LocalNode,
 	st storage.Storage,
 	blockFS *storage.BlockFS,
 	policy *isaac.LocalPolicy,
@@ -65,7 +63,7 @@ func NewStates(
 		Logging: logging.NewLogging(func(c logging.Context) logging.Emitter {
 			return c.Str("module", "basic-states")
 		}),
-		local: local, storage: st, blockFS: blockFS, policy: policy, nodepool: nodepool, suffrage: suffrage,
+		storage: st, blockFS: blockFS, policy: policy, nodepool: nodepool, suffrage: suffrage,
 		state:       base.StateStopped,
 		statech:     make(chan StateSwitchContext, 33),
 		voteproofch: make(chan base.Voteproof, 33),
@@ -260,11 +258,7 @@ func (ss *States) BroadcastSeals(sl seal.Seal, toLocal bool) error {
 	}
 
 	// NOTE broadcast nodes of Nodepool, including suffrage nodes
-	ss.nodepool.Traverse(func(node network.Node) bool {
-		if node.Address().Equal(ss.local.Address()) {
-			return true
-		}
-
+	ss.nodepool.TraverseRemotes(func(node network.Node) bool {
 		go func(node network.Node) {
 			if err := node.Channel().SendSeal(sl); err != nil {
 				l.Error().Err(err).Hinted("target_node", node.Address()).Msg("failed to broadcast")
@@ -513,7 +507,7 @@ func (ss *States) processVoteproofInternal(voteproof base.Voteproof) error {
 	l := isaac.LoggerWithVoteproof(voteproof, ss.Log())
 	l.Debug().HintedVerbose("voteproof", voteproof, true).Msg("new voteproof")
 
-	vc := NewVoteproofChecker(ss.local, ss.storage, ss.suffrage, ss.nodepool, ss.LastVoteproof(), voteproof)
+	vc := NewVoteproofChecker(ss.storage, ss.suffrage, ss.nodepool, ss.LastVoteproof(), voteproof)
 	_ = vc.SetLogger(ss.Log())
 
 	err := util.NewChecker("voteproof-checker", []util.CheckerFunc{
@@ -554,7 +548,7 @@ func (ss *States) processProposal(proposal ballot.Proposal) error {
 	l := isaac.LoggerWithBallot(proposal, ss.Log())
 	l.Debug().Msg("validating proposal")
 	pvc := isaac.NewProposalValidationChecker(
-		ss.local, ss.storage, ss.suffrage, ss.nodepool,
+		ss.storage, ss.suffrage, ss.nodepool,
 		proposal,
 		ss.LastINITVoteproof(),
 	)
@@ -576,7 +570,7 @@ func (ss *States) processProposal(proposal ballot.Proposal) error {
 func (ss *States) processSeal(sl seal.Seal) error {
 	switch t := sl.(type) {
 	case ballot.Proposal:
-		if t.Node().Equal(ss.local.Address()) {
+		if t.Node().Equal(ss.nodepool.Local().Address()) {
 			return nil
 		}
 
@@ -625,14 +619,14 @@ func (ss *States) saveSeal(sl seal.Seal) error {
 
 func (ss *States) validateProposal(proposal ballot.Proposal) error {
 	pvc := isaac.NewProposalValidationChecker(
-		ss.local, ss.storage, ss.suffrage, ss.nodepool,
+		ss.storage, ss.suffrage, ss.nodepool,
 		proposal,
 		ss.LastINITVoteproof(),
 	)
 	_ = pvc.SetLogger(ss.Log())
 
 	var fns []util.CheckerFunc
-	if proposal.Node().Equal(ss.local.Address()) {
+	if proposal.Node().Equal(ss.nodepool.Local().Address()) {
 		fns = []util.CheckerFunc{
 			pvc.SaveProposal,
 			pvc.IsOlder,
@@ -700,7 +694,7 @@ func (ss *States) checkBallotVoteproof(blt ballot.Ballot) error {
 		return nil
 	}
 
-	if blt.Node().Equal(ss.local.Address()) {
+	if blt.Node().Equal(ss.nodepool.Local().Address()) {
 		return nil
 	}
 

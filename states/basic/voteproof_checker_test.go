@@ -42,7 +42,7 @@ func (t *testVoteproofChecker) TestACCEPTVoteproofProposalNotFound() {
 	avp, err := t.NewVoteproof(base.StageACCEPT, ab.Fact(), t.local, t.remote)
 	t.NoError(err)
 
-	vc := NewVoteproofChecker(t.local.Node(), t.local.Storage(), t.suf, t.local.Nodes(), nil, avp)
+	vc := NewVoteproofChecker(t.local.Storage(), t.suf, t.local.Nodes(), nil, avp)
 
 	keep, err := vc.CheckACCEPTVoteproofProposal()
 	t.False(keep)
@@ -64,7 +64,7 @@ func (t *testVoteproofChecker) TestACCEPTVoteproofProposalFoundInLocal() {
 	avp, err := t.NewVoteproof(base.StageACCEPT, ab.Fact(), t.local, t.remote)
 	t.NoError(err)
 
-	vc := NewVoteproofChecker(t.local.Node(), t.local.Storage(), t.suf, t.local.Nodes(), nil, avp)
+	vc := NewVoteproofChecker(t.local.Storage(), t.suf, t.local.Nodes(), nil, avp)
 
 	keep, err := vc.CheckACCEPTVoteproofProposal()
 	t.True(keep)
@@ -102,7 +102,7 @@ func (t *testVoteproofChecker) TestACCEPTVoteproofProposalFoundInRemote() {
 	avp, err := t.NewVoteproof(base.StageACCEPT, ab.Fact(), t.local, t.remote)
 	t.NoError(err)
 
-	vc := NewVoteproofChecker(t.local.Node(), t.local.Storage(), t.suf, t.local.Nodes(), nil, avp)
+	vc := NewVoteproofChecker(t.local.Storage(), t.suf, t.local.Nodes(), nil, avp)
 
 	keep, err := vc.CheckACCEPTVoteproofProposal()
 	t.True(keep)

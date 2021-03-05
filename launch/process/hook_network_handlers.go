@@ -38,7 +38,6 @@ type SettingNetworkHandlers struct {
 	version   util.Version
 	ctx       context.Context
 	conf      config.LocalNode
-	local     *network.LocalNode
 	storage   storage.Storage
 	blockfs   *storage.BlockFS
 	policy    *isaac.LocalPolicy
@@ -58,11 +57,6 @@ func SettingNetworkHandlersFromContext(ctx context.Context) (*SettingNetworkHand
 
 	var conf config.LocalNode
 	if err := config.LoadConfigContextValue(ctx, &conf); err != nil {
-		return nil, err
-	}
-
-	var local *network.LocalNode
-	if err := LoadLocalNodeContextValue(ctx, &local); err != nil {
 		return nil, err
 	}
 
@@ -115,7 +109,6 @@ func SettingNetworkHandlersFromContext(ctx context.Context) (*SettingNetworkHand
 		ctx:       ctx,
 		version:   version,
 		conf:      conf,
-		local:     local,
 		storage:   st,
 		blockfs:   blockfs,
 		policy:    policy,
@@ -133,8 +126,17 @@ func (sn *SettingNetworkHandlers) Set() error {
 	sn.network.SetGetSealsHandler(sn.networkHandlerGetSeals())
 	sn.network.SetNewSealHandler(sn.networkhandlerNewSeal())
 	sn.network.SetGetManifestsHandler(sn.networkhandlerGetManifests())
-	sn.network.SetGetBlocksHandler(sn.networkhandlerGetBlocks())
+	sn.network.SetGetBlocksHandler(sn.networkHandlerGetBlocks())
 	sn.network.SetNodeInfoHandler(sn.networkHandlerNodeInfo())
+
+	lc := sn.nodepool.Local().Channel().(*network.DummyChannel)
+	lc.SetNewSealHandler(sn.networkhandlerNewSeal())
+	lc.SetGetSealsHandler(sn.networkHandlerGetSeals())
+	lc.SetGetManifestsHandler(sn.networkhandlerGetManifests())
+	lc.SetGetBlocksHandler(sn.networkHandlerGetBlocks())
+	lc.SetNodeInfoHandler(sn.networkHandlerNodeInfo())
+
+	sn.logger.Debug().Msg("local channel handlers binded")
 
 	return nil
 }
@@ -186,7 +188,6 @@ func (sn *SettingNetworkHandlers) networkhandlerNewSeal() network.NewSealHandler
 		if t, ok := sl.(ballot.Ballot); ok {
 			checker := isaac.NewBallotChecker(
 				t,
-				sn.local,
 				sn.storage,
 				sn.policy,
 				sn.suffrage,
@@ -241,7 +242,7 @@ func (sn *SettingNetworkHandlers) networkhandlerGetManifests() network.GetManife
 	}
 }
 
-func (sn *SettingNetworkHandlers) networkhandlerGetBlocks() network.GetBlocksHandler {
+func (sn *SettingNetworkHandlers) networkHandlerGetBlocks() network.GetBlocksHandler {
 	return func(heights []base.Height) ([]block.Block, error) {
 		sort.Slice(heights, func(i, j int) bool {
 			return heights[i] < heights[j]
@@ -273,17 +274,18 @@ func (sn *SettingNetworkHandlers) networkHandlerNodeInfo() network.NodeInfoHandl
 			manifest = m
 		}
 
-		nodes := make([]base.Node, sn.nodepool.Len())
-		var i int
-		sn.nodepool.Traverse(func(n network.Node) bool {
-			nodes[i] = n
-			i++
-
-			return true
-		})
+		suffrageNodes := sn.suffrage.Nodes()
+		nodes := make([]base.Node, len(suffrageNodes))
+		for i := range suffrageNodes {
+			if n, found := sn.nodepool.Node(suffrageNodes[i]); !found {
+				return nil, xerrors.Errorf("suffrage node, %q not found", n.Address())
+			} else {
+				nodes[i] = n
+			}
+		}
 
 		return network.NewNodeInfoV0(
-			sn.local,
+			sn.nodepool.Local(),
 			sn.policy.NetworkID(),
 			sn.states.State(),
 			manifest,

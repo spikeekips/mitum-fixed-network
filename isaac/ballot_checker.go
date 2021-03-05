@@ -14,7 +14,6 @@ import (
 
 type BallotChecker struct {
 	*logging.Logging
-	local    *network.LocalNode
 	storage  storage.Storage
 	policy   *LocalPolicy
 	suffrage base.Suffrage
@@ -25,7 +24,6 @@ type BallotChecker struct {
 
 func NewBallotChecker(
 	blt ballot.Ballot,
-	local *network.LocalNode,
 	st storage.Storage,
 	policy *LocalPolicy,
 	suffrage base.Suffrage,
@@ -40,7 +38,6 @@ func NewBallotChecker(
 		policy:   policy,
 		suffrage: suffrage,
 		nodepool: nodepool,
-		local:    local,
 		ballot:   blt,
 		lvp:      lastVoteproof,
 	}
@@ -57,7 +54,7 @@ func (bc *BallotChecker) InSuffrage() (bool, error) {
 
 // CheckSigning checks node signed by it's valid key.
 func (bc *BallotChecker) CheckSigning() (bool, error) {
-	if err := CheckBallotSigning(bc.ballot, bc.local, bc.nodepool); err != nil {
+	if err := CheckBallotSigning(bc.ballot, bc.nodepool); err != nil {
 		return false, err
 	} else {
 		return true, nil
@@ -165,7 +162,7 @@ func (bc *BallotChecker) requestProposal(address base.Address, h valuehash.Hash)
 		return nil, err
 	}
 
-	ballotChecker := NewBallotChecker(proposal, bc.local, bc.storage, bc.policy, bc.suffrage, bc.nodepool, bc.lvp)
+	ballotChecker := NewBallotChecker(proposal, bc.storage, bc.policy, bc.suffrage, bc.nodepool, bc.lvp)
 	if err := util.NewChecker("proposal-ballot-checker", []util.CheckerFunc{
 		ballotChecker.InSuffrage,
 		ballotChecker.CheckVoteproof,
@@ -175,7 +172,7 @@ func (bc *BallotChecker) requestProposal(address base.Address, h valuehash.Hash)
 		}
 	}
 
-	pvc := NewProposalValidationChecker(bc.local, bc.storage, bc.suffrage, bc.nodepool, proposal, nil)
+	pvc := NewProposalValidationChecker(bc.storage, bc.suffrage, bc.nodepool, proposal, nil)
 	if err := util.NewChecker("proposal-checker", []util.CheckerFunc{
 		pvc.IsKnown,
 		pvc.CheckSigning,
@@ -192,11 +189,9 @@ func (bc *BallotChecker) requestProposal(address base.Address, h valuehash.Hash)
 	return proposal, nil
 }
 
-func CheckBallotSigning(blt ballot.Ballot, local network.Node, nodepool *network.Nodepool) error {
+func CheckBallotSigning(blt ballot.Ballot, nodepool *network.Nodepool) error {
 	var node base.Node
-	if blt.Node().Equal(local.Address()) {
-		node = local
-	} else if n, found := nodepool.Node(blt.Node()); !found {
+	if n, found := nodepool.Node(blt.Node()); !found {
 		return xerrors.Errorf("node not found")
 	} else {
 		node = n

@@ -11,13 +11,14 @@ type Suffrage interface {
 }
 
 type FixedSuffrage struct {
-	Proposer  base.Address
-	Nodes     []base.Address
-	CacheSize int
+	Proposer       base.Address
+	Nodes          []base.Address
+	NumberOfActing uint
+	CacheSize      int
 }
 
-func NewFixedSuffrage(proposer base.Address, nodes []base.Address) FixedSuffrage {
-	return FixedSuffrage{Proposer: proposer, Nodes: nodes, CacheSize: defaultCacheSize}
+func NewFixedSuffrage(proposer base.Address, nodes []base.Address, numberOfActing uint) FixedSuffrage {
+	return FixedSuffrage{Proposer: proposer, Nodes: nodes, NumberOfActing: numberOfActing, CacheSize: defaultCacheSize}
 }
 
 func (fd FixedSuffrage) SuffrageType() string {
@@ -25,12 +26,13 @@ func (fd FixedSuffrage) SuffrageType() string {
 }
 
 type RoundrobinSuffrage struct {
+	Nodes          []base.Address
 	NumberOfActing uint
 	CacheSize      int
 }
 
-func NewRoundrobinSuffrage(numberOfActing uint) RoundrobinSuffrage {
-	return RoundrobinSuffrage{CacheSize: defaultCacheSize, NumberOfActing: numberOfActing}
+func NewRoundrobinSuffrage(nodes []base.Address, numberOfActing uint) RoundrobinSuffrage {
+	return RoundrobinSuffrage{Nodes: nodes, NumberOfActing: numberOfActing, CacheSize: defaultCacheSize}
 }
 
 func (fd RoundrobinSuffrage) SuffrageType() string {

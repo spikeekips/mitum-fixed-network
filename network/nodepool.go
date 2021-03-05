@@ -8,14 +8,20 @@ import (
 	"github.com/spikeekips/mitum/base"
 )
 
+// Nodepool contains all the known nodes including local node.
 type Nodepool struct {
 	sync.RWMutex
-	local    Node
+	local    *LocalNode
 	nodesMap map[string]Node
 }
 
-func NewNodepool(local Node) *Nodepool {
-	return &Nodepool{local: local, nodesMap: map[string]Node{}}
+func NewNodepool(local *LocalNode) *Nodepool {
+	return &Nodepool{
+		local: local,
+		nodesMap: map[string]Node{
+			local.Address().String(): local,
+		},
+	}
 }
 
 func (np *Nodepool) Node(address base.Address) (Node, bool) {
@@ -25,6 +31,10 @@ func (np *Nodepool) Node(address base.Address) (Node, bool) {
 	n, found := np.nodesMap[address.String()]
 
 	return n, found
+}
+
+func (np *Nodepool) Local() *LocalNode {
+	return np.local
 }
 
 func (np *Nodepool) Exists(address base.Address) bool {
@@ -46,9 +56,7 @@ func (np *Nodepool) Add(nl ...Node) error {
 
 	founds := map[string]struct{}{}
 	for _, n := range nl {
-		if n.Address().Equal(np.local.Address()) {
-			return xerrors.Errorf("local node can not be added")
-		} else if np.exists(n.Address()) {
+		if np.exists(n.Address()) {
 			return xerrors.Errorf("same Address already exists; %v", n.Address())
 		} else if _, found := founds[n.Address().String()]; found {
 			return xerrors.Errorf("duplicated Address found; %v", n.Address())
@@ -70,6 +78,10 @@ func (np *Nodepool) Remove(addresses ...base.Address) error {
 
 	founds := map[string]struct{}{}
 	for _, address := range addresses {
+		if address.Equal(np.local.Address()) {
+			return xerrors.Errorf("local can not be removed; %v", address)
+		}
+
 		if !np.exists(address) {
 			return xerrors.Errorf("Address does not exist; %v", address)
 		} else if _, found := founds[address.String()]; found {
@@ -112,4 +124,34 @@ func (np *Nodepool) Traverse(callback func(Node) bool) {
 			break
 		}
 	}
+}
+
+func (np *Nodepool) TraverseRemotes(callback func(Node) bool) {
+	np.RLock()
+	if len(np.nodesMap) < 2 {
+		return
+	}
+	np.RUnlock()
+
+	np.Traverse(func(n Node) bool {
+		if n.Address().Equal(np.local.Address()) {
+			return true
+		}
+
+		return callback(n)
+	})
+}
+
+func (np *Nodepool) Addresses() []base.Address {
+	nodes := make([]base.Address, np.Len())
+
+	var i int
+	np.Traverse(func(n Node) bool {
+		nodes[i] = n.Address()
+		i++
+
+		return true
+	})
+
+	return nodes
 }

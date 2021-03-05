@@ -27,7 +27,7 @@ type NodeInfo interface {
 	Version() util.Version
 	URL() string
 	Config() map[string]interface{}
-	Nodes() []base.Node
+	Nodes() []base.Node // Only contains suffrage nodes
 }
 
 type NodeInfoV0 struct {

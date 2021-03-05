@@ -97,7 +97,6 @@ func (gg *GenesisBlockV0Generator) Generate() (block.Block, error) {
 
 	pps := prprocessor.NewProcessors(
 		NewDefaultProcessorNewFunc(
-			gg.local,
 			gg.storage,
 			gg.blockFS,
 			gg.nodepool,

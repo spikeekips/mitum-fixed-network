@@ -1,8 +1,6 @@
 package network
 
 import (
-	"sort"
-	"strings"
 	"testing"
 
 	"github.com/spikeekips/mitum/base"
@@ -11,16 +9,16 @@ import (
 
 type testNodepool struct {
 	suite.Suite
-	localNode *LocalNode
+	local *LocalNode
 }
 
 func (t *testNodepool) SetupSuite() {
-	t.localNode = RandomLocalNode("local", nil)
+	t.local = RandomLocalNode("local", nil)
 }
 
 func (t *testNodepool) TestEmpty() {
-	ns := NewNodepool(t.localNode)
-	t.Equal(0, ns.Len())
+	ns := NewNodepool(t.local)
+	t.Equal(1, ns.Len())
 }
 
 func (t *testNodepool) TestDuplicatedAddress() {
@@ -30,7 +28,7 @@ func (t *testNodepool) TestDuplicatedAddress() {
 		RandomLocalNode("n1", nil),
 	}
 
-	ns := NewNodepool(t.localNode)
+	ns := NewNodepool(t.local)
 	err := ns.Add(nodes...)
 	t.Contains(err.Error(), "duplicated Address found")
 }
@@ -41,50 +39,35 @@ func (t *testNodepool) TestAdd() {
 		RandomLocalNode("n1", nil),
 	}
 
-	ns := NewNodepool(t.localNode)
+	ns := NewNodepool(t.local)
 	t.NoError(ns.Add(nodes...))
 
 	{ // add, but same Address
 		err := ns.Add(RandomLocalNode("n1", nil))
 		t.Contains(err.Error(), "already exists")
-		t.Equal(len(nodes), ns.Len())
+		t.Equal(len(nodes)+1, ns.Len())
 	}
 
 	newNode := RandomLocalNode("n2", nil)
 	err := ns.Add(newNode)
 	t.NoError(err)
-	t.Equal(len(nodes)+1, ns.Len())
+	t.Equal(len(nodes)+2, ns.Len())
 
-	var added []Node
-	ns.Traverse(func(n Node) bool {
-		added = append(added, n)
-		return true
-	})
-	sort.Slice(
-		added,
-		func(i, j int) bool {
-			return strings.Compare(
-				added[i].Address().String(),
-				added[j].Address().String(),
-			) < 0
-		},
-	)
-
-	for i, n := range nodes {
-		t.True(n.Address().Equal(added[i].Address()))
+	for _, n := range nodes {
+		t.True(ns.Exists(n.Address()))
 	}
-	t.True(newNode.Address().Equal(added[2].Address()))
+	t.True(ns.Exists(newNode.Address()))
 }
 
 func (t *testNodepool) TestAddSameWithLocal() {
-	ns := NewNodepool(t.localNode)
+	ns := NewNodepool(t.local)
 
-	err := ns.Add(t.localNode)
-	t.Contains(err.Error(), "local node can not be added")
+	err := ns.Add(t.local)
+	t.Contains(err.Error(), "same Address already exists")
 }
 
 func (t *testNodepool) TestAddDuplicated() {
-	ns := NewNodepool(t.localNode)
+	ns := NewNodepool(t.local)
 
 	newNode := RandomLocalNode("n2", nil)
 	err := ns.Add(newNode, newNode)
@@ -98,37 +81,20 @@ func (t *testNodepool) TestRemove() {
 		RandomLocalNode("n2", nil),
 	}
 
-	ns := NewNodepool(t.localNode)
+	ns := NewNodepool(t.local)
 	t.NoError(ns.Add(nodes...))
 
 	{ // try to remove, but nothing
 		err := ns.Remove(base.RandomStringAddress())
 		t.Contains(err.Error(), "does not exist")
-		t.Equal(len(nodes), ns.Len())
+		t.Equal(len(nodes)+1, ns.Len())
 	}
 
 	err := ns.Remove(nodes[2].Address())
 	t.NoError(err)
-	t.Equal(len(nodes)-1, ns.Len())
+	t.Equal(len(nodes), ns.Len())
 
-	var removed []Node
-	ns.Traverse(func(n Node) bool {
-		removed = append(removed, n)
-		return true
-	})
-	sort.Slice(
-		removed,
-		func(i, j int) bool {
-			return strings.Compare(
-				removed[i].Address().String(),
-				removed[j].Address().String(),
-			) < 0
-		},
-	)
-
-	for i, n := range removed {
-		t.True(nodes[i].Address().Equal(n.Address()))
-	}
+	t.False(ns.Exists(nodes[2].Address()))
 }
 
 func (t *testNodepool) TestTraverse() {
@@ -138,42 +104,18 @@ func (t *testNodepool) TestTraverse() {
 		RandomLocalNode("n2", nil),
 	}
 
-	ns := NewNodepool(t.localNode)
+	ns := NewNodepool(t.local)
 	t.NoError(ns.Add(nodes...))
 
-	{ // all
-		var traversed []Node
-		ns.Traverse(func(n Node) bool {
-			traversed = append(traversed, n)
-			return true
-		})
-		sort.Slice(
-			traversed,
-			func(i, j int) bool {
-				return strings.Compare(
-					traversed[i].Address().String(),
-					traversed[j].Address().String(),
-				) < 0
-			},
-		)
+	var traversed []Node
+	ns.Traverse(func(n Node) bool {
+		traversed = append(traversed, n)
+		return true
+	})
 
-		for i, n := range traversed {
-			t.True(nodes[i].Address().Equal(n.Address()))
-		}
-	}
-
-	{ // only first one
-		var traversed []Node
-		ns.Traverse(func(n Node) bool {
-			if n.Address().Equal(nodes[1].Address()) {
-				traversed = append(traversed, n)
-				return false
-			}
-			return true
-		})
-
-		t.Equal(1, len(traversed))
-		t.True(traversed[0].Address().Equal(nodes[1].Address()))
+	t.Equal(len(nodes)+1, len(traversed))
+	for _, n := range traversed {
+		t.True(ns.Exists(n.Address()))
 	}
 }
 

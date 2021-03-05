@@ -7,7 +7,6 @@ import (
 	"golang.org/x/xerrors"
 
 	"github.com/spikeekips/mitum/base"
-	"github.com/spikeekips/mitum/network"
 	jsonenc "github.com/spikeekips/mitum/util/encoder/json"
 	"github.com/spikeekips/mitum/util/valuehash"
 )
@@ -18,54 +17,56 @@ type RoundrobinSuffrage struct {
 }
 
 func NewRoundrobinSuffrage(
-	local *network.LocalNode,
-	nodepool *network.Nodepool,
-	cacheSize int,
+	nodes []base.Address,
 	numberOfActing uint,
+	cacheSize int,
 	getManifestFunc func(base.Height) (valuehash.Hash, error),
-) *RoundrobinSuffrage {
+) (*RoundrobinSuffrage, error) {
 	sf := &RoundrobinSuffrage{getManifestFunc: getManifestFunc}
-	sf.BaseSuffrage = NewBaseSuffrage(
+
+	if b, err := NewBaseSuffrage(
 		"roundrobin-suffrage",
-		local,
-		nodepool,
-		cacheSize,
+		nodes,
 		numberOfActing,
 		sf.elect,
-	)
+		cacheSize,
+	); err != nil {
+		return nil, err
+	} else {
+		sf.BaseSuffrage = b
+	}
 
-	return sf
+	return sf, nil
 }
 
 func (sf *RoundrobinSuffrage) elect(height base.Height, round base.Round) (base.ActingSuffrage, error) {
-	all := sf.Nodes()
-	base.SortAddresses(all)
+	nodes := sf.Nodes()
 
 	na := int(sf.numberOfActing)
-	if len(all) < na {
-		na = len(all)
+	if len(nodes) < na {
+		na = len(nodes)
 	}
 
 	var proposer base.Address
 	var pos int
 	if h := height - 1; h <= base.PreGenesisHeight {
-		proposer = sf.local.Address()
-	} else if i, err := sf.pos(height, round, len(all)); err != nil {
+		proposer = nodes[0]
+	} else if i, err := sf.pos(height, round, len(nodes)); err != nil {
 		return base.ActingSuffrage{}, err
 	} else {
 		pos = i
-		proposer = all[i]
+		proposer = nodes[i]
 	}
 
 	var selected []base.Address
-	if len(all) == na {
-		selected = append(selected, all...)
+	if len(nodes) == na {
+		selected = nodes
 	} else {
-		selected = append(selected, all[pos:]...)
+		selected = append(selected, nodes[pos:]...)
 		if len(selected) > na {
 			selected = selected[:na]
 		} else if len(selected) < na {
-			selected = append(selected, all[:na-len(selected)]...)
+			selected = append(selected, nodes[:na-len(selected)]...)
 		}
 	}
 

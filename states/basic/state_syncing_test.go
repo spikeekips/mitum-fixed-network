@@ -25,7 +25,7 @@ func (t *testStateSyncing) SetupTest() {
 }
 
 func (t *testStateSyncing) newState(local *isaac.Local) (*SyncingState, func()) {
-	st := NewSyncingState(local.Node(), local.Storage(), local.BlockFS(), local.Policy(), local.Nodes())
+	st := NewSyncingState(local.Storage(), local.BlockFS(), local.Policy(), local.Nodes())
 
 	return st, func() {
 		f, err := st.Exit(NewStateSwitchContext(base.StateSyncing, base.StateStopped))

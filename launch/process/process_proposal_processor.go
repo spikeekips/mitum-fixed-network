@@ -80,11 +80,6 @@ func ProcessProposalProcessor(ctx context.Context) (context.Context, error) {
 }
 
 func processDefaultProposalProcessor(ctx context.Context) (prprocessor.ProcessorNewFunc, error) {
-	var local *network.LocalNode
-	if err := LoadLocalNodeContextValue(ctx, &local); err != nil {
-		return nil, err
-	}
-
 	var nodepool *network.Nodepool
 	if err := LoadNodepoolContextValue(ctx, &nodepool); err != nil {
 		return nil, err
@@ -111,7 +106,6 @@ func processDefaultProposalProcessor(ctx context.Context) (prprocessor.Processor
 	}
 
 	return isaac.NewDefaultProcessorNewFunc(
-		local,
 		sf,
 		blockFS,
 		nodepool,
@@ -133,11 +127,6 @@ func processErrorProposalProcessor(
 		l.Debug().Msg("ErrorProposalProcessor was given, but block points are empty. DefaultProposalProcessor will be used")
 
 		return processDefaultProposalProcessor(ctx)
-	}
-
-	var local *network.LocalNode
-	if err := LoadLocalNodeContextValue(ctx, &local); err != nil {
-		return nil, err
 	}
 
 	var nodepool *network.Nodepool
@@ -166,7 +155,6 @@ func processErrorProposalProcessor(
 	}
 
 	return NewErrorProcessorNewFunc(
-		local,
 		sf,
 		blockFS,
 		nodepool,

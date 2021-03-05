@@ -15,7 +15,6 @@ import (
 
 type VoteproofChecker struct {
 	*logging.Logging
-	local     *network.LocalNode
 	storage   storage.Storage
 	suffrage  base.Suffrage
 	nodepool  *network.Nodepool
@@ -24,7 +23,6 @@ type VoteproofChecker struct {
 }
 
 func NewVoteproofChecker(
-	local *network.LocalNode,
 	st storage.Storage,
 	suffrage base.Suffrage,
 	nodepool *network.Nodepool,
@@ -41,7 +39,6 @@ func NewVoteproofChecker(
 
 			return e
 		}),
-		local:     local,
 		storage:   st,
 		suffrage:  suffrage,
 		nodepool:  nodepool,
@@ -150,7 +147,8 @@ func (vc *VoteproofChecker) CheckACCEPTVoteproofProposal() (bool, error) {
 		if !f.Fact().Equal(fact.Hash()) {
 			continue
 		}
-		if f.Node().Equal(vc.local.Address()) {
+
+		if f.Node().Equal(vc.nodepool.Local().Address()) {
 			continue
 		}
 
@@ -171,7 +169,7 @@ func (vc *VoteproofChecker) CheckACCEPTVoteproofProposal() (bool, error) {
 		return false, xerrors.Errorf("failed to find proposal from accept voteproof")
 	}
 
-	pvc := isaac.NewProposalValidationChecker(vc.local, vc.storage, vc.suffrage, vc.nodepool, proposal, nil)
+	pvc := isaac.NewProposalValidationChecker(vc.storage, vc.suffrage, vc.nodepool, proposal, nil)
 	checkers := []util.CheckerFunc{
 		pvc.IsKnown,
 		pvc.CheckSigning,

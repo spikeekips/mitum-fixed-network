@@ -38,11 +38,6 @@ func init() {
 }
 
 func ProcessConsensusStates(ctx context.Context) (context.Context, error) {
-	var local *network.LocalNode
-	if err := LoadLocalNodeContextValue(ctx, &local); err != nil {
-		return ctx, err
-	}
-
 	var policy *isaac.LocalPolicy
 	if err := LoadPolicyContextValue(ctx, &policy); err != nil {
 		return ctx, err
@@ -78,7 +73,7 @@ func ProcessConsensusStates(ctx context.Context) (context.Context, error) {
 		return ctx, err
 	}
 
-	if cs, err := processConsensusStates(local, st, blockFS, policy, nodepool, pps, suffrage, log); err != nil {
+	if cs, err := processConsensusStates(st, blockFS, policy, nodepool, pps, suffrage, log); err != nil {
 		return ctx, err
 	} else {
 		if i, ok := cs.(logging.SetLogger); ok {
@@ -90,7 +85,6 @@ func ProcessConsensusStates(ctx context.Context) (context.Context, error) {
 }
 
 func processConsensusStates(
-	local *network.LocalNode,
 	st storage.Storage,
 	blockFS *storage.BlockFS,
 	policy *isaac.LocalPolicy,
@@ -114,18 +108,17 @@ func processConsensusStates(
 	)
 	_ = ballotbox.SetLogger(log)
 
-	proposalMaker := isaac.NewProposalMaker(local, st, policy)
+	proposalMaker := isaac.NewProposalMaker(nodepool.Local(), st, policy)
 
 	stopped := basicstate.NewStoppedState()
 	booting := basicstate.NewBootingState(st, blockFS, policy, suffrage)
-	joining := basicstate.NewJoiningState(local, st, blockFS, policy,
+	joining := basicstate.NewJoiningState(nodepool.Local(), st, blockFS, policy,
 		suffrage, ballotbox)
 	consensus := basicstate.NewConsensusState(
-		local, st, blockFS, policy, nodepool, suffrage, proposalMaker, pps)
-	syncing := basicstate.NewSyncingState(local, st, blockFS, policy, nodepool)
+		st, blockFS, policy, nodepool, suffrage, proposalMaker, pps)
+	syncing := basicstate.NewSyncingState(st, blockFS, policy, nodepool)
 
 	return basicstate.NewStates(
-		local,
 		st,
 		blockFS,
 		policy,

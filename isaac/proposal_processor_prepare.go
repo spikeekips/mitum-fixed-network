@@ -90,7 +90,7 @@ func (pp *DefaultProcessor) prepareOperations(ctx context.Context) error {
 		return nil
 	}
 
-	se := NewSealsExtracter(pp.local.Address(), pp.proposal.Node(), pp.st, pp.nodepool, seals)
+	se := NewSealsExtracter(pp.nodepool.Local().Address(), pp.proposal.Node(), pp.st, pp.nodepool, seals)
 	_ = se.SetLogger(pp.Log())
 
 	if ops, err := se.Extract(ctx); err != nil {

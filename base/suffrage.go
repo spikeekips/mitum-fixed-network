@@ -7,6 +7,7 @@ import (
 type Suffrage interface {
 	util.Initializer
 	Name() string
+	NumberOfActing() uint
 	Acting(Height, Round) (ActingSuffrage, error)
 	IsInside(Address) bool
 	IsActing(Height, Round, Address /* node address */) (bool, error)

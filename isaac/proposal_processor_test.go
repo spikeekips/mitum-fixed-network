@@ -83,7 +83,6 @@ func (t *testProposalProcessor) SetupTest() {
 
 func (t *testProposalProcessor) processors() *prprocessor.Processors {
 	pps := prprocessor.NewProcessors(NewDefaultProcessorNewFunc(
-		t.local.Node(),
 		t.local.Storage(),
 		t.local.BlockFS(),
 		t.local.Nodes(),
@@ -172,7 +171,6 @@ func (t *testProposalProcessor) TestPrepareRetry() {
 	}
 
 	newFunc := NewDefaultProcessorNewFunc(
-		t.local.Node(),
 		t.local.Storage(),
 		t.local.BlockFS(),
 		t.local.Nodes(),
@@ -722,7 +720,6 @@ func (t *testProposalProcessor) TestCustomOperationProcessor() {
 	t.NoError(hm.Add(KVOperation{}, opr))
 
 	pps := prprocessor.NewProcessors(NewDefaultProcessorNewFunc(
-		t.local.Node(),
 		t.local.Storage(),
 		t.local.BlockFS(),
 		t.local.Nodes(),
@@ -787,7 +784,6 @@ func (t *testProposalProcessor) TestNotProcessedOperations() {
 	t.NoError(hm.Add(KVOperation{}, opr))
 
 	pps := prprocessor.NewProcessors(NewDefaultProcessorNewFunc(
-		t.local.Node(),
 		t.local.Storage(),
 		t.local.BlockFS(),
 		t.local.Nodes(),

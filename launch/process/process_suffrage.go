@@ -73,71 +73,50 @@ func ProcessSuffrage(ctx context.Context) (context.Context, error) {
 }
 
 func processFixedSuffrage(ctx context.Context, conf config.FixedSuffrage) (base.Suffrage, error) {
-	var local *network.LocalNode
-	if err := LoadLocalNodeContextValue(ctx, &local); err != nil {
-		return nil, err
-	}
-
 	var nodepool *network.Nodepool
 	if err := LoadNodepoolContextValue(ctx, &nodepool); err != nil {
 		return nil, err
 	}
 
-	// NOTE check proposer
-	if conf.Proposer != nil {
-		var found bool
-		if conf.Proposer.Equal(local.Address()) {
-			found = true
-		} else {
-			nodepool.Traverse(func(node network.Node) bool {
-				address := node.Address()
-				if !found && conf.Proposer.Equal(address) {
-					found = true
-				}
-
-				return true
-			})
-		}
-
-		if !found {
-			return nil, xerrors.Errorf("proposer not found in suffrage nodes or local")
-		}
-	}
-
-	// NOTE check nodes
-	for i := range conf.Nodes {
-		c := conf.Nodes[i]
-
-		if !local.Address().Equal(c) {
-			var found bool
-			nodepool.Traverse(func(n network.Node) bool {
-				if n.Address().Equal(c) {
-					found = true
-
-					return false
-				}
-
-				return true
-			})
-
-			if !found {
+	var nodes []base.Address
+	if len(conf.Nodes) < 1 {
+		nodes = nodepool.Addresses()
+	} else {
+		for i := range conf.Nodes {
+			c := conf.Nodes[i]
+			if !nodepool.Exists(c) {
 				return nil, xerrors.Errorf("unknown node of fixed-suffrage found, %q", c)
 			}
 		}
+
+		nodes = conf.Nodes
 	}
 
-	return NewFixedSuffrage(local, nodepool, conf.CacheSize, conf.Proposer, conf.Nodes)
+	if conf.NumberOfActing < 1 {
+		return nil, xerrors.Errorf("number-of-acting should be over zero")
+	}
+
+	return NewFixedSuffrage(conf.Proposer, nodes, conf.NumberOfActing, conf.CacheSize)
 }
 
 func processRoundrobinSuffrage(ctx context.Context, conf config.RoundrobinSuffrage) (base.Suffrage, error) {
-	var local *network.LocalNode
-	if err := LoadLocalNodeContextValue(ctx, &local); err != nil {
-		return nil, err
-	}
-
 	var nodepool *network.Nodepool
 	if err := LoadNodepoolContextValue(ctx, &nodepool); err != nil {
 		return nil, err
+	}
+
+	var nodes []base.Address
+	if len(conf.Nodes) < 1 {
+		nodes = nodepool.Addresses()
+	} else {
+		for i := range conf.Nodes {
+			c := conf.Nodes[i]
+			if !nodepool.Exists(c) {
+				return nil, xerrors.Errorf("unknown node of fixed-suffrage found, %q", c)
+			}
+		}
+
+		nodes = conf.Nodes
 	}
 
 	var st storage.Storage
@@ -150,10 +129,9 @@ func processRoundrobinSuffrage(ctx context.Context, conf config.RoundrobinSuffra
 	}
 
 	return NewRoundrobinSuffrage(
-		local,
-		nodepool,
-		conf.CacheSize,
+		nodes,
 		conf.NumberOfActing,
+		conf.CacheSize,
 		func(height base.Height) (valuehash.Hash, error) {
 			switch m, found, err := st.ManifestByHeight(height); {
 			case err != nil:
@@ -164,5 +142,5 @@ func processRoundrobinSuffrage(ctx context.Context, conf config.RoundrobinSuffra
 				return m.Hash(), nil
 			}
 		},
-	), nil
+	)
 }

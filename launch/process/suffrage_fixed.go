@@ -7,41 +7,38 @@ import (
 	"golang.org/x/xerrors"
 
 	"github.com/spikeekips/mitum/base"
-	"github.com/spikeekips/mitum/network"
 	jsonenc "github.com/spikeekips/mitum/util/encoder/json"
 )
 
 type FixedSuffrage struct {
 	*BaseSuffrage
 	proposer base.Address
-	acting   []base.Address
 }
 
 func NewFixedSuffrage(
-	local *network.LocalNode,
-	nodepool *network.Nodepool,
-	cacheSize int,
 	proposer base.Address,
-	acting []base.Address,
+	nodes []base.Address,
+	numberOfActing uint,
+	cacheSize int,
 ) (*FixedSuffrage, error) {
-	if proposer == nil && len(acting) < 1 {
-		return nil, xerrors.Errorf("empty proposer and nodes")
+	if len(nodes) < 1 {
+		return nil, xerrors.Errorf("empty nodes")
 	}
 
 	sf := &FixedSuffrage{proposer: proposer}
 
 	var elect ActinfSuffrageElectFunc
 	if proposer == nil {
-		if len(acting) == 1 {
-			sf.proposer = acting[0]
+		if len(nodes) == 1 {
+			sf.proposer = nodes[0]
 			elect = sf.electWithProposer
 		} else {
 			elect = sf.elect
 		}
 	} else {
 		var found bool
-		for i := range acting {
-			if acting[i].Equal(proposer) {
+		for i := range nodes {
+			if nodes[i].Equal(proposer) {
 				found = true
 
 				break
@@ -49,36 +46,36 @@ func NewFixedSuffrage(
 		}
 
 		if !found {
-			acting = append(acting, proposer)
+			return nil, xerrors.Errorf("proposer not found in nodes")
 		}
-
-		base.SortAddresses(acting)
 
 		elect = sf.electWithProposer
 	}
 
-	sf.acting = acting
-
-	sf.BaseSuffrage = NewBaseSuffrage(
+	if b, err := NewBaseSuffrage(
 		"fixed-suffrage",
-		local,
-		nodepool,
-		cacheSize,
-		uint(len(acting)),
+		nodes,
+		numberOfActing,
 		elect,
-	)
+		cacheSize,
+	); err != nil {
+		return nil, err
+	} else {
+		sf.BaseSuffrage = b
+	}
 
 	return sf, nil
 }
 
 func (sf *FixedSuffrage) electWithProposer(height base.Height, round base.Round) (base.ActingSuffrage, error) {
-	return base.NewActingSuffrage(height, round, sf.proposer, sf.acting), nil
+	return base.NewActingSuffrage(height, round, sf.proposer, sf.Nodes()), nil
 }
 
 func (sf *FixedSuffrage) elect(height base.Height, round base.Round) (base.ActingSuffrage, error) {
-	pos := (uint64(height) + round.Uint64()) % uint64(len(sf.acting))
+	pos := (uint64(height) + round.Uint64()) % uint64(sf.NumberOfActing())
 
-	return base.NewActingSuffrage(height, round, sf.acting[pos], sf.acting), nil
+	nodes := sf.Nodes()
+	return base.NewActingSuffrage(height, round, nodes[pos], nodes), nil
 }
 
 func (sf *FixedSuffrage) Verbose() string {
@@ -87,7 +84,7 @@ func (sf *FixedSuffrage) Verbose() string {
 		"cache_size":       sf.CacheSize(),
 		"number_of_acting": sf.NumberOfActing(),
 		"proposer":         sf.proposer,
-		"acting":           sf.acting,
+		"nodes":            sf.nodes,
 	}
 
 	if b, err := jsonenc.Marshal(m); err != nil {

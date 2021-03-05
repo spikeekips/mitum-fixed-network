@@ -20,7 +20,6 @@ import (
 )
 
 func NewErrorProcessorNewFunc(
-	local base.Node,
 	st storage.Storage,
 	blockFS *storage.BlockFS,
 	nodepool *network.Nodepool,
@@ -31,7 +30,6 @@ func NewErrorProcessorNewFunc(
 ) prprocessor.ProcessorNewFunc {
 	return func(proposal ballot.Proposal, initVoteproof base.Voteproof) (prprocessor.Processor, error) {
 		if pp, err := isaac.NewDefaultProcessor(
-			local,
 			st,
 			blockFS,
 			nodepool,

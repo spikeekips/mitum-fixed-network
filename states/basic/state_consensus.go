@@ -25,7 +25,6 @@ var BlockPrefixFailedProcessProposal = []byte("processproposalfailed")
 type ConsensusState struct {
 	*logging.Logging
 	*BaseState
-	local         *network.LocalNode
 	storage       storage.Storage
 	blockFS       *storage.BlockFS
 	policy        *isaac.LocalPolicy
@@ -36,7 +35,6 @@ type ConsensusState struct {
 }
 
 func NewConsensusState(
-	local *network.LocalNode,
 	st storage.Storage,
 	blockFS *storage.BlockFS,
 	policy *isaac.LocalPolicy,
@@ -50,7 +48,6 @@ func NewConsensusState(
 			return c.Str("module", "basic-consensus-state")
 		}),
 		BaseState:     NewBaseState(base.StateConsensus),
-		local:         local,
 		storage:       st,
 		blockFS:       blockFS,
 		policy:        policy,
@@ -148,8 +145,8 @@ func (st *ConsensusState) ProcessProposal(proposal ballot.Proposal) error {
 
 	started := time.Now()
 	if voteproof, newBlock, ok := st.processProposal(proposal); newBlock != nil {
-		if ok {
-			go func() { // sign ballot
+		if st.suffrage.NumberOfActing() > 1 && ok {
+			go func() {
 				if err := st.broadcastSIGNBallot(proposal, newBlock); err != nil {
 					st.Log().Error().Err(err).Msg("failed to broadcast sign ballot")
 				}
@@ -196,7 +193,7 @@ func (st *ConsensusState) newINITVoteproof(voteproof base.Voteproof) error {
 		proposal = i
 	}
 
-	if proposal == nil && actingSuffrage.Proposer().Equal(st.local.Address()) {
+	if proposal == nil && actingSuffrage.Proposer().Equal(st.nodepool.Local().Address()) {
 		if i, err := st.prepareProposal(voteproof.Height(), voteproof.Round(), voteproof); err != nil {
 			return err
 		} else if i != nil {
@@ -443,22 +440,24 @@ func (st *ConsensusState) prepareProposal(
 }
 
 func (st *ConsensusState) broadcastSIGNBallot(proposal ballot.Proposal, newBlock valuehash.Hash) error {
+	st.Log().Debug().Msg("broadcasting sign ballot")
+
 	if i, err := st.suffrage.Acting(proposal.Height(), proposal.Round()); err != nil {
 		return err
-	} else if !i.Exists(st.local.Address()) {
+	} else if !i.Exists(st.nodepool.Local().Address()) {
 		return nil
 	}
 
 	// NOTE not like broadcasting ACCEPT Ballot, SIGN Ballot will be broadcasted
 	// withtout waiting.
 	sb := ballot.NewSIGNBallotV0(
-		st.local.Address(),
+		st.nodepool.Local().Address(),
 		proposal.Height(),
 		proposal.Round(),
 		proposal.Hash(),
 		newBlock,
 	)
-	if err := sb.Sign(st.local.Privatekey(), st.policy.NetworkID()); err != nil {
+	if err := sb.Sign(st.nodepool.Local().Privatekey(), st.policy.NetworkID()); err != nil {
 		return err
 	} else if err := st.BroadcastSeals(sb, true); err != nil {
 		return err
@@ -474,7 +473,7 @@ func (st *ConsensusState) broadcastACCEPTBallot(
 	initialDelay time.Duration,
 ) error {
 	baseBallot := ballot.NewACCEPTBallotV0(
-		st.local.Address(),
+		st.nodepool.Local().Address(),
 		voteproof.Height(),
 		voteproof.Round(),
 		proposal,
@@ -482,7 +481,7 @@ func (st *ConsensusState) broadcastACCEPTBallot(
 		voteproof,
 	)
 
-	if err := baseBallot.Sign(st.local.Privatekey(), st.policy.NetworkID()); err != nil {
+	if err := baseBallot.Sign(st.nodepool.Local().Privatekey(), st.policy.NetworkID()); err != nil {
 		return xerrors.Errorf("failed to re-sign accept ballot: %w", err)
 	}
 
@@ -529,9 +528,9 @@ func (st *ConsensusState) broadcastNewINITBallot(voteproof base.Voteproof) error
 	}
 
 	var baseBallot ballot.INITBallotV0
-	if b, err := NextINITBallotFromACCEPTVoteproof(st.storage, st.blockFS, st.local, voteproof); err != nil {
+	if b, err := NextINITBallotFromACCEPTVoteproof(st.storage, st.blockFS, st.nodepool.Local(), voteproof); err != nil {
 		return err
-	} else if err := b.Sign(st.local.Privatekey(), st.policy.NetworkID()); err != nil {
+	} else if err := b.Sign(st.nodepool.Local().Privatekey(), st.policy.NetworkID()); err != nil {
 		return xerrors.Errorf("failed to re-sign new init ballot: %w", err)
 	} else {
 		baseBallot = b
@@ -575,9 +574,9 @@ func (st *ConsensusState) whenProposalTimeout(voteproof base.Voteproof, proposer
 	l.Debug().Msg("waiting new proposal; if timed out, will move to next round")
 
 	var baseBallot ballot.INITBallotV0
-	if b, err := NextINITBallotFromINITVoteproof(st.storage, st.blockFS, st.local, voteproof); err != nil {
+	if b, err := NextINITBallotFromINITVoteproof(st.storage, st.blockFS, st.nodepool.Local(), voteproof); err != nil {
 		return err
-	} else if err := b.Sign(st.local.Privatekey(), st.policy.NetworkID()); err != nil {
+	} else if err := b.Sign(st.nodepool.Local().Privatekey(), st.policy.NetworkID()); err != nil {
 		return xerrors.Errorf("failed to re-sign next init ballot: %w", err)
 	} else {
 		baseBallot = b
@@ -640,16 +639,16 @@ func (st *ConsensusState) nextRound(voteproof base.Voteproof) error {
 		var err error
 		switch s := voteproof.Stage(); s {
 		case base.StageINIT:
-			baseBallot, err = NextINITBallotFromINITVoteproof(st.storage, st.blockFS, st.local, voteproof)
+			baseBallot, err = NextINITBallotFromINITVoteproof(st.storage, st.blockFS, st.nodepool.Local(), voteproof)
 		case base.StageACCEPT:
-			baseBallot, err = NextINITBallotFromACCEPTVoteproof(st.storage, st.blockFS, st.local, voteproof)
+			baseBallot, err = NextINITBallotFromACCEPTVoteproof(st.storage, st.blockFS, st.nodepool.Local(), voteproof)
 		}
 		if err != nil {
 			return err
 		}
 	}
 
-	if err := baseBallot.Sign(st.local.Privatekey(), st.policy.NetworkID()); err != nil {
+	if err := baseBallot.Sign(st.nodepool.Local().Privatekey(), st.policy.NetworkID()); err != nil {
 		return xerrors.Errorf("failed to re-sign next round init ballot: %w", err)
 	}
 

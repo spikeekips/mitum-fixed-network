@@ -71,39 +71,6 @@ func SuffrageConfigHandlerFixedProposer(ctx context.Context, m map[string]interf
 		return nil, err
 	}
 
-	var proposer base.Address
-	if i, found := m["proposer"]; found {
-		if a, err := parseAddress(i, enc); err != nil {
-			return nil, xerrors.Errorf("invalid proposer address for fixed-suffrage: %w", err)
-		} else {
-			proposer = a
-		}
-	}
-
-	var acting []base.Address
-	if i, found := m["acting"]; found {
-		if l, ok := i.([]interface{}); !ok {
-			return nil, xerrors.Errorf("invalid acting list, %T", i)
-		} else {
-			acting = make([]base.Address, len(l))
-			for j := range l {
-				if a, err := parseAddress(l[j], enc); err != nil {
-					return nil, xerrors.Errorf("invalid node address for fixed-suffrage: %w", err)
-				} else {
-					acting[j] = a
-				}
-			}
-		}
-	}
-
-	if proposer == nil && len(acting) < 1 {
-		return nil, xerrors.Errorf("empty proposer and acting")
-	}
-
-	return config.NewFixedSuffrage(proposer, acting), nil
-}
-
-func SuffrageConfigHandlerRoundrobin(_ context.Context, m map[string]interface{}) (config.Suffrage, error) {
 	var numberOfActing uint
 	if i, found := m["number-of-acting"]; !found {
 		numberOfActing = isaac.DefaultPolicyNumberOfActingSuffrageNodes
@@ -118,7 +85,75 @@ func SuffrageConfigHandlerRoundrobin(_ context.Context, m map[string]interface{}
 		}
 	}
 
-	return config.NewRoundrobinSuffrage(numberOfActing), nil
+	var proposer base.Address
+	if i, found := m["proposer"]; found {
+		if a, err := parseAddress(i, enc); err != nil {
+			return nil, xerrors.Errorf("invalid proposer address for fixed-suffrage: %w", err)
+		} else {
+			proposer = a
+		}
+	}
+
+	var nodes []base.Address
+	if i, found := m["nodes"]; found {
+		if l, ok := i.([]interface{}); !ok {
+			return nil, xerrors.Errorf("invalid nodes list, %T", i)
+		} else {
+			nodes = make([]base.Address, len(l))
+			for j := range l {
+				if a, err := parseAddress(l[j], enc); err != nil {
+					return nil, xerrors.Errorf("invalid node address for fixed-suffrage: %w", err)
+				} else {
+					nodes[j] = a
+				}
+			}
+		}
+	}
+
+	if proposer == nil && len(nodes) < 1 {
+		return nil, xerrors.Errorf("empty proposer and acting")
+	}
+
+	return config.NewFixedSuffrage(proposer, nodes, numberOfActing), nil
+}
+
+func SuffrageConfigHandlerRoundrobin(ctx context.Context, m map[string]interface{}) (config.Suffrage, error) {
+	var enc *jsonenc.Encoder
+	if err := config.LoadJSONEncoderContextValue(ctx, &enc); err != nil {
+		return nil, err
+	}
+
+	var numberOfActing uint
+	if i, found := m["number-of-acting"]; !found {
+		numberOfActing = isaac.DefaultPolicyNumberOfActingSuffrageNodes
+	} else {
+		switch n := i.(type) {
+		case int:
+			numberOfActing = uint(n)
+		case uint:
+			numberOfActing = n
+		default:
+			return nil, xerrors.Errorf("invalid type for number-of-acting, %T", i)
+		}
+	}
+
+	var nodes []base.Address
+	if i, found := m["nodes"]; found {
+		if l, ok := i.([]interface{}); !ok {
+			return nil, xerrors.Errorf("invalid nodes list, %T", i)
+		} else {
+			nodes = make([]base.Address, len(l))
+			for j := range l {
+				if a, err := parseAddress(l[j], enc); err != nil {
+					return nil, xerrors.Errorf("invalid node address for fixed-suffrage: %w", err)
+				} else {
+					nodes[j] = a
+				}
+			}
+		}
+	}
+
+	return config.NewRoundrobinSuffrage(nodes, numberOfActing), nil
 }
 
 func parseAddress(i interface{}, enc *jsonenc.Encoder) (base.Address, error) {

@@ -27,7 +27,6 @@ func (t *testStates) SetupTest() {
 func (t *testStates) TestLastINITVoteproof() {
 	suffrage := t.Suffrage(t.remote, t.local)
 	ss, err := NewStates(
-		t.local.Node(),
 		t.local.Storage(),
 		t.local.BlockFS(),
 		t.local.Policy(),
@@ -56,7 +55,6 @@ func (t *testStates) TestLastINITVoteproof() {
 func (t *testStates) newStates() *States {
 	suffrage := t.Suffrage(t.remote, t.local)
 	ss, err := NewStates(
-		t.local.Node(),
 		t.local.Storage(),
 		t.local.BlockFS(),
 		t.local.Policy(),

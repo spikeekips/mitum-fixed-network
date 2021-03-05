@@ -371,7 +371,7 @@ func (t *testConfigValidator) TestFixedSuffrageWithNodes() {
 suffrage:
   type: fixed-suffrage
   proposer: n0-010a:0.0.1
-  acting:
+  nodes:
     - n1-010a:0.0.1
 `
 	ctx := t.loadConfig(y)
@@ -400,7 +400,7 @@ func (t *testConfigValidator) TestFixedSuffrageWithBadNodes() {
 suffrage:
   type: fixed-suffrage
   proposer: n0-010a:0.0.1
-  acting:
+  nodes:
     - n1-010a:0. # invalid address
 `
 	ctx := t.loadConfig(y)

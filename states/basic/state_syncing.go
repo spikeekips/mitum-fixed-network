@@ -20,7 +20,6 @@ type SyncingState struct {
 	sync.RWMutex
 	*logging.Logging
 	*BaseState
-	local                *network.LocalNode
 	storage              storage.Storage
 	blockFS              *storage.BlockFS
 	policy               *isaac.LocalPolicy
@@ -30,7 +29,6 @@ type SyncingState struct {
 }
 
 func NewSyncingState(
-	local *network.LocalNode,
 	st storage.Storage,
 	blockFS *storage.BlockFS,
 	policy *isaac.LocalPolicy,
@@ -41,7 +39,6 @@ func NewSyncingState(
 			return c.Str("module", "basic-syncing-state")
 		}),
 		BaseState:            NewBaseState(base.StateSyncing),
-		local:                local,
 		storage:              st,
 		blockFS:              blockFS,
 		policy:               policy,
@@ -79,7 +76,7 @@ func (st *SyncingState) enter(voteproof base.Voteproof) error {
 		baseManifest = m
 	}
 
-	syncs := isaac.NewSyncers(st.local, st.storage, st.blockFS, st.policy, baseManifest)
+	syncs := isaac.NewSyncers(st.nodepool.Local(), st.storage, st.blockFS, st.policy, baseManifest)
 	syncs.WhenBlockSaved(st.whenBlockSaved)
 	syncs.WhenFinished(st.whenFinished)
 
@@ -264,11 +261,9 @@ func (st *SyncingState) syncFromVoteproof(voteproof base.Voteproof, to base.Heig
 	var sourceNodes []network.Node
 	for i := range voteproof.Votes() {
 		nf := voteproof.Votes()[i]
-		if st.local.Address().Equal(nf.Node()) {
-			continue
-		} else if n, found := st.nodepool.Node(nf.Node()); !found {
-			return xerrors.Errorf("node, %q in Voteproof is not known node", nf.Node())
-		} else {
+		if n, found := st.nodepool.Node(nf.Node()); !found {
+			return xerrors.Errorf("node, %q in voteproof is not known node", nf.Node())
+		} else if !n.Address().Equal(st.nodepool.Local().Address()) {
 			sourceNodes = append(sourceNodes, n)
 		}
 	}

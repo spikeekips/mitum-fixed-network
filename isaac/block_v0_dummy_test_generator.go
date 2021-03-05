@@ -49,7 +49,7 @@ func NewDummyBlocksV0Generator(
 			},
 		)
 		pps := prprocessor.NewProcessors(
-			NewDefaultProcessorNewFunc(l.Node(), l.Storage(), l.BlockFS(), l.Nodes(), suffrage, nil),
+			NewDefaultProcessorNewFunc(l.Storage(), l.BlockFS(), l.Nodes(), suffrage, nil),
 			nil,
 		)
 		if err := pps.Initialize(); err != nil {

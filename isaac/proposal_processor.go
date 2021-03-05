@@ -22,7 +22,6 @@ type DefaultProcessor struct {
 	sync.RWMutex
 	*logging.Logging
 	stateLock       sync.RWMutex
-	local           base.Node
 	st              storage.Storage
 	blockFS         *storage.BlockFS
 	nodepool        *network.Nodepool
@@ -46,7 +45,6 @@ type DefaultProcessor struct {
 }
 
 func NewDefaultProcessorNewFunc(
-	local base.Node,
 	st storage.Storage,
 	blockFS *storage.BlockFS,
 	nodepool *network.Nodepool,
@@ -55,7 +53,6 @@ func NewDefaultProcessorNewFunc(
 ) prprocessor.ProcessorNewFunc {
 	return func(proposal ballot.Proposal, initVoteproof base.Voteproof) (prprocessor.Processor, error) {
 		return NewDefaultProcessor(
-			local,
 			st,
 			blockFS,
 			nodepool,
@@ -68,7 +65,6 @@ func NewDefaultProcessorNewFunc(
 }
 
 func NewDefaultProcessor(
-	local base.Node,
 	st storage.Storage,
 	blockFS *storage.BlockFS,
 	nodepool *network.Nodepool,
@@ -94,7 +90,6 @@ func NewDefaultProcessor(
 				Hinted("round", proposal.Round()).
 				Hinted("proposal", proposal.Hash())
 		}),
-		local:         local,
 		st:            st,
 		blockFS:       blockFS,
 		nodepool:      nodepool,
@@ -199,9 +194,7 @@ func (pp *DefaultProcessor) SuffrageInfo() block.SuffrageInfoV0 {
 func (pp *DefaultProcessor) getSuffrageInfo() (block.SuffrageInfoV0, error) {
 	var ns []base.Node
 	for _, address := range pp.suffrage.Nodes() {
-		if address.Equal(pp.local.Address()) {
-			ns = append(ns, pp.local)
-		} else if n, found := pp.nodepool.Node(address); !found {
+		if n, found := pp.nodepool.Node(address); !found {
 			return block.SuffrageInfoV0{}, xerrors.Errorf("suffrage node, %s not found in node pool", address)
 		} else {
 			ns = append(ns, n)

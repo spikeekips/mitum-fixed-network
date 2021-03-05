@@ -43,7 +43,6 @@ func (t *testStateConsensus) newState(suffrage base.Suffrage, pps *prprocessor.P
 
 	proposalMaker := isaac.NewProposalMaker(t.local.Node(), t.local.Storage(), t.local.Policy())
 	st := NewConsensusState(
-		t.local.Node(),
 		t.local.Storage(),
 		t.local.BlockFS(),
 		t.local.Policy(),

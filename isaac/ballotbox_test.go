@@ -10,6 +10,8 @@ import (
 	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/base/ballot"
 	"github.com/spikeekips/mitum/base/key"
+	channetwork "github.com/spikeekips/mitum/network/gochan"
+	"github.com/spikeekips/mitum/util"
 	"github.com/spikeekips/mitum/util/valuehash"
 )
 
@@ -24,7 +26,8 @@ func (t *testBallotbox) SetupSuite() {
 }
 
 func (t *testBallotbox) thresholdFunc(total uint, ratio float64) func() base.Threshold {
-	ls, err := NewLocal(nil, nil, nil, TestNetworkID)
+	localNode := channetwork.RandomLocalNode(util.UUID().String())
+	ls, err := NewLocal(nil, nil, localNode, TestNetworkID)
 	t.NoError(err)
 	t.NoError(ls.Initialize())
 

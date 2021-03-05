@@ -6,8 +6,8 @@ import (
 
 	lru "github.com/hashicorp/golang-lru"
 	"github.com/spikeekips/mitum/base"
-	"github.com/spikeekips/mitum/network"
 	"github.com/spikeekips/mitum/util/logging"
+	"golang.org/x/xerrors"
 )
 
 type ActinfSuffrageElectFunc func(base.Height, base.Round) (base.ActingSuffrage, error)
@@ -16,54 +16,52 @@ type BaseSuffrage struct {
 	sync.RWMutex
 	*logging.Logging
 	name           string
-	local          *network.LocalNode
-	nodepool       *network.Nodepool
+	nodes          []base.Address
 	numberOfActing uint
 	cacheSize      int
 	cache          *lru.TwoQueueCache
 	electFunc      ActinfSuffrageElectFunc
+	nodesMap       map[string]struct{}
 }
 
 func NewBaseSuffrage(
 	name string,
-	local *network.LocalNode,
-	nodepool *network.Nodepool,
-	cacheSize int,
+	nodes []base.Address,
 	numberOfActing uint,
 	electFunc ActinfSuffrageElectFunc,
-) *BaseSuffrage {
+	cacheSize int,
+) (*BaseSuffrage, error) {
+	if len(nodes) < int(numberOfActing) {
+		return nil, xerrors.Errorf("nodes is under number of acting, %d < %d", len(nodes), numberOfActing)
+	}
+
+	nm := map[string]struct{}{}
+	for i := range nodes {
+		nm[nodes[i].String()] = struct{}{}
+	}
+
 	var cache *lru.TwoQueueCache
 	if cacheSize > 0 {
 		cache, _ = lru.New2Q(cacheSize)
 	}
 
+	base.SortAddresses(nodes)
+
 	return &BaseSuffrage{
 		Logging: logging.NewLogging(func(c logging.Context) logging.Emitter {
 			return c.Str("module", name)
 		}),
-		local:          local,
-		nodepool:       nodepool,
+		nodes:          nodes,
 		numberOfActing: numberOfActing,
 		cacheSize:      cacheSize,
 		cache:          cache,
 		electFunc:      electFunc,
-	}
-}
-
-func (sf *BaseSuffrage) Local() *network.LocalNode {
-	return sf.local
-}
-
-func (sf *BaseSuffrage) Nodepool() *network.Nodepool {
-	return sf.nodepool
+		nodesMap:       nm,
+	}, nil
 }
 
 func (sf *BaseSuffrage) Initialize() error {
 	return nil
-}
-
-func (sf *BaseSuffrage) Cache() *lru.TwoQueueCache {
-	return sf.cache
 }
 
 func (sf *BaseSuffrage) CacheSize() int {
@@ -79,11 +77,9 @@ func (sf *BaseSuffrage) Name() string {
 }
 
 func (sf *BaseSuffrage) IsInside(a base.Address) bool {
-	if sf.local.Address().Equal(a) {
-		return true
-	}
+	_, found := sf.nodesMap[a.String()]
 
-	return sf.nodepool.Exists(a)
+	return found
 }
 
 func (sf *BaseSuffrage) Acting(height base.Height, round base.Round) (base.ActingSuffrage, error) {
@@ -122,14 +118,7 @@ func (sf *BaseSuffrage) IsProposer(height base.Height, round base.Round, node ba
 }
 
 func (sf *BaseSuffrage) Nodes() []base.Address {
-	ns := []base.Address{sf.local.Address()}
-	sf.nodepool.Traverse(func(n network.Node) bool {
-		ns = append(ns, n.Address())
-
-		return true
-	})
-
-	return ns
+	return sf.nodes
 }
 
 func (sf *BaseSuffrage) cacheKey(height base.Height, round base.Round) string {

@@ -10,9 +10,8 @@ import (
 	"github.com/spikeekips/mitum/util/logging"
 )
 
-type ProposalValidationChecker struct {
+type ProposalChecker struct {
 	*logging.Logging
-	local    *network.LocalNode
 	storage  storage.Storage
 	suffrage base.Suffrage
 	nodepool *network.Nodepool
@@ -21,14 +20,13 @@ type ProposalValidationChecker struct {
 }
 
 func NewProposalValidationChecker(
-	local *network.LocalNode,
 	st storage.Storage,
 	suffrage base.Suffrage,
 	nodepool *network.Nodepool,
 	proposal ballot.Proposal,
 	lastINITVoteproof base.Voteproof,
-) *ProposalValidationChecker {
-	return &ProposalValidationChecker{
+) *ProposalChecker {
+	return &ProposalChecker{
 		Logging: logging.NewLogging(func(c logging.Context) logging.Emitter {
 			return c.
 				Str("module", "proposal-validation-checker").
@@ -37,7 +35,6 @@ func NewProposalValidationChecker(
 				Hinted("proposal_round", proposal.Round()).
 				Hinted("proposal_node", proposal.Node())
 		}),
-		local:    local,
 		storage:  st,
 		suffrage: suffrage,
 		nodepool: nodepool,
@@ -47,7 +44,7 @@ func NewProposalValidationChecker(
 }
 
 // IsKnown checks proposal is already received; if found, no nore checks.
-func (pvc *ProposalValidationChecker) IsKnown() (bool, error) {
+func (pvc *ProposalChecker) IsKnown() (bool, error) {
 	height := pvc.proposal.Height()
 	round := pvc.proposal.Round()
 
@@ -61,15 +58,15 @@ func (pvc *ProposalValidationChecker) IsKnown() (bool, error) {
 }
 
 // CheckSigning checks node signed by it's valid key.
-func (pvc *ProposalValidationChecker) CheckSigning() (bool, error) {
-	if err := CheckBallotSigning(pvc.proposal, pvc.local, pvc.nodepool); err != nil {
+func (pvc *ProposalChecker) CheckSigning() (bool, error) {
+	if err := CheckBallotSigning(pvc.proposal, pvc.nodepool); err != nil {
 		return false, err
 	} else {
 		return true, nil
 	}
 }
 
-func (pvc *ProposalValidationChecker) IsProposer() (bool, error) {
+func (pvc *ProposalChecker) IsProposer() (bool, error) {
 	if err := CheckNodeIsProposer(
 		pvc.proposal.Node(),
 		pvc.suffrage,
@@ -82,7 +79,7 @@ func (pvc *ProposalValidationChecker) IsProposer() (bool, error) {
 	}
 }
 
-func (pvc *ProposalValidationChecker) SaveProposal() (bool, error) {
+func (pvc *ProposalChecker) SaveProposal() (bool, error) {
 	switch err := pvc.storage.NewProposal(pvc.proposal); {
 	case err == nil:
 		return true, nil
@@ -93,7 +90,7 @@ func (pvc *ProposalValidationChecker) SaveProposal() (bool, error) {
 	}
 }
 
-func (pvc *ProposalValidationChecker) IsOlder() (bool, error) {
+func (pvc *ProposalChecker) IsOlder() (bool, error) {
 	if pvc.livp == nil {
 		return false, xerrors.Errorf("no last voteproof")
 	}
@@ -114,7 +111,7 @@ func (pvc *ProposalValidationChecker) IsOlder() (bool, error) {
 	}
 }
 
-func (pvc *ProposalValidationChecker) IsWaiting() (bool, error) {
+func (pvc *ProposalChecker) IsWaiting() (bool, error) {
 	if pvc.livp == nil {
 		return false, xerrors.Errorf("no last voteproof")
 	}

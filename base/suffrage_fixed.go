@@ -51,6 +51,10 @@ func (ff *FixedSuffrage) Name() string {
 	return "base-fixed-suffrage"
 }
 
+func (ff *FixedSuffrage) NumberOfActing() uint {
+	return 1
+}
+
 func (ff *FixedSuffrage) IsInside(a Address) bool {
 	_, found := ff.nodes[a]
 	return found

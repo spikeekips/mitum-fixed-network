@@ -44,8 +44,6 @@ func (pp *DefaultProcessor) Prepare(ctx context.Context) (block.Block, error) {
 }
 
 func (pp *DefaultProcessor) prepare(ctx context.Context) error {
-	pp.Log().Debug().Msg("trying to prepare")
-
 	if pp.prePrepareHook != nil {
 		if err := pp.prePrepareHook(ctx); err != nil {
 			return err
@@ -73,6 +71,8 @@ func (pp *DefaultProcessor) prepare(ctx context.Context) error {
 
 	if pp.postPrepareHook != nil {
 		if err := pp.postPrepareHook(ctx); err != nil {
+			pp.Log().Error().Err(err).Msg("failed postPrepareHook")
+
 			return err
 		}
 	}
@@ -83,7 +83,7 @@ func (pp *DefaultProcessor) prepare(ctx context.Context) error {
 }
 
 func (pp *DefaultProcessor) prepareOperations(ctx context.Context) error {
-	pp.Log().Debug().Int("seals", len(pp.proposal.Seals())).Msg("trying to extract seals of proposal")
+	ev := pp.Log().Debug().Int("seals", len(pp.proposal.Seals()))
 
 	seals := pp.proposal.Seals()
 	if len(seals) < 1 {
@@ -96,7 +96,7 @@ func (pp *DefaultProcessor) prepareOperations(ctx context.Context) error {
 	if ops, err := se.Extract(ctx); err != nil {
 		return xerrors.Errorf("failed to extract seals: %w", err)
 	} else {
-		pp.Log().Debug().Int("operations", len(ops)).Msg("operations extracted from seals of proposal")
+		ev.Int("operations", len(ops)).Msg("operations extracted from seals of proposal")
 
 		pp.operations = ops
 
@@ -110,8 +110,6 @@ func (pp *DefaultProcessor) processOperations(ctx context.Context) error {
 
 		return nil
 	}
-
-	pp.Log().Debug().Int("operations", len(pp.operations)).Msg("trying to process operations")
 
 	var pool *storage.Statepool
 	if p, err := storage.NewStatepool(pp.st); err != nil {
@@ -131,12 +129,12 @@ func (pp *DefaultProcessor) processOperations(ctx context.Context) error {
 		return err
 	}
 
+	pp.Log().Debug().Int("operations", len(pp.operations)).Msg("operations processed")
+
 	return nil
 }
 
 func (pp *DefaultProcessor) prepareBlock(context.Context) error {
-	pp.Log().Debug().Msg("trying to create new block")
-
 	var opsHash, stsHash valuehash.Hash
 	if !pp.operationsTree.IsEmpty() {
 		opsHash = valuehash.NewBytes(pp.operationsTree.Root())
@@ -172,8 +170,6 @@ func (pp *DefaultProcessor) prepareBlock(context.Context) error {
 }
 
 func (pp *DefaultProcessor) prepareBlockStorage(ctx context.Context) error {
-	pp.Log().Debug().Msg("trying to store to BlockStorage")
-
 	var bs storage.BlockStorage
 	if b, err := pp.st.OpenBlockStorage(pp.blk); err != nil {
 		return err
@@ -195,8 +191,6 @@ func (pp *DefaultProcessor) prepareBlockStorage(ctx context.Context) error {
 }
 
 func (pp *DefaultProcessor) processStatesTree(ctx context.Context, pool *storage.Statepool) error {
-	pp.Log().Debug().Msg("trying to process statesTree")
-
 	pp.statesTree = tree.FixedTree{}
 	pp.states = nil
 
@@ -265,8 +259,6 @@ func (pp *DefaultProcessor) concurrentProcessStatesTree(
 }
 
 func (pp *DefaultProcessor) processOperationsTree(_ context.Context, pool *storage.Statepool) error {
-	pp.Log().Debug().Msg("trying to process operationsTree")
-
 	added := pool.AddedOperations()
 	for k := range added {
 		pp.operations = append(pp.operations, added[k])
@@ -338,8 +330,6 @@ func (pp *DefaultProcessor) generateStatesTree(pool *storage.Statepool) (tree.Fi
 }
 
 func (pp *DefaultProcessor) prepareBlockFS(context.Context) error {
-	pp.Log().Debug().Msg("trying to store temp BlockFS")
-
 	if err := pp.blockFS.Add(pp.blk); err != nil {
 		pp.Log().Error().Err(err).Msg("failed to store temp BlockFS")
 

@@ -70,7 +70,6 @@ func ProcessGenerateGenesisBlock(ctx context.Context) (context.Context, error) {
 		log.Debug().Int("operations", len(ops)).Msg("operations loaded")
 	}
 
-	log.Debug().Msg("trying to create genesis block")
 	if gg, err := isaac.NewGenesisBlockV0Generator(local, st, blockFS, policy, ops); err != nil {
 		return ctx, xerrors.Errorf("failed to create genesis block generator: %w", err)
 	} else if blk, err := gg.Generate(); err != nil {
@@ -80,13 +79,8 @@ func ProcessGenerateGenesisBlock(ctx context.Context) (context.Context, error) {
 			Dict("block", logging.Dict().Hinted("height", blk.Height()).Hinted("hash", blk.Hash())).
 			Msg("genesis block created")
 
-		ctx = context.WithValue(ctx, ContextValueGenesisBlock, blk)
+		return context.WithValue(ctx, ContextValueGenesisBlock, blk), nil
 	}
-
-	log.Info().Msg("genesis block created")
-	log.Info().Msg("iniialized")
-
-	return ctx, nil
 }
 
 func HookCheckGenesisBlock(ctx context.Context) (context.Context, error) {
@@ -99,8 +93,6 @@ func HookCheckGenesisBlock(ctx context.Context) (context.Context, error) {
 	if err := config.LoadLogContextValue(ctx, &log); err != nil {
 		return ctx, err
 	}
-
-	log.Debug().Msg("checking existing blocks")
 
 	var st storage.Storage
 	if err := LoadStorageContextValue(ctx, &st); err != nil {
@@ -120,7 +112,7 @@ func HookCheckGenesisBlock(ctx context.Context) (context.Context, error) {
 	}
 
 	if manifest == nil {
-		log.Debug().Msg("not found existing blocks")
+		log.Debug().Msg("existing blocks not found")
 
 		return ctx, nil
 	}
@@ -133,9 +125,9 @@ func HookCheckGenesisBlock(ctx context.Context) (context.Context, error) {
 
 	if err := storage.Clean(st, blockFS, false); err != nil {
 		return ctx, err
+	} else {
+		log.Debug().Msg("existing environment cleaned")
 	}
-
-	log.Debug().Msg("existing environment cleaned")
 
 	return ctx, nil
 }

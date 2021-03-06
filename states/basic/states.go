@@ -211,7 +211,7 @@ func (ss *States) SetLastVoteproof(voteproof base.Voteproof) bool {
 func (ss *States) NewSeal(sl seal.Seal) error {
 	l := isaac.LoggerWithSeal(sl, ss.Log())
 
-	seal.LogEventWithSeal(sl, l.Debug(), true).Msg("new seal")
+	seal.LogEventWithSeal(sl, l.Debug(), true).Msg("seal received")
 
 	if err := ss.processSeal(sl); err != nil {
 		l.Error().Err(err).Msg("failed to process seal")
@@ -283,7 +283,7 @@ func (ss *States) setState(state base.State) {
 }
 
 func (ss *States) start(stopch chan struct{}) error {
-	ss.Log().Debug().Msg("starting states")
+	ss.Log().Debug().Msg("states started")
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
@@ -388,7 +388,7 @@ func (ss *States) switchState(sctx StateSwitchContext) error {
 	if err := sctx.IsValid(nil); err != nil {
 		return xerrors.Errorf("invalid state switch context: %w", err)
 	} else if ss.State() != sctx.FromState() {
-		l.Error().Msg("current state does not match in state switch context; ignore")
+		l.Debug().Msg("current state does not match in state switch context; ignore")
 
 		return nil
 	}
@@ -400,7 +400,7 @@ func (ss *States) switchState(sctx StateSwitchContext) error {
 
 		l.Debug().Msg("processing voteproof into current state")
 		if err := ss.processVoteproofInternal(sctx.Voteproof()); err != nil {
-			l.Error().Err(err).Msg("failed to process voteproof into current state; ignore")
+			l.Debug().Err(err).Msg("failed to process voteproof into current state; ignore")
 		}
 
 		return nil
@@ -412,7 +412,7 @@ func (ss *States) switchState(sctx StateSwitchContext) error {
 	case err == nil:
 	case xerrors.As(err, &nsctx):
 		if sctx.FromState() == nsctx.ToState() {
-			l.Error().Msg("exit to state returns same from state context; ignore")
+			l.Debug().Msg("exit to state returns same from state context; ignore")
 		} else {
 			l.Debug().Msg("exit to state returns state switch context; will switch state")
 
@@ -546,7 +546,6 @@ func (ss *States) processProposal(proposal ballot.Proposal) error {
 	defer ss.Unlock()
 
 	l := isaac.LoggerWithBallot(proposal, ss.Log())
-	l.Debug().Msg("validating proposal")
 	pvc := isaac.NewProposalValidationChecker(
 		ss.storage, ss.suffrage, ss.nodepool,
 		proposal,
@@ -668,9 +667,6 @@ func (ss *States) voteBallot(blt ballot.Ballot) (base.Voteproof, error) {
 		return nil, nil
 	}
 
-	l := isaac.LoggerWithBallot(blt, ss.Log())
-	l.Debug().Msg("ballot received; will vote")
-
 	var voteproof base.Voteproof
 	if i, err := ss.ballotbox.Vote(blt); err != nil {
 		return nil, xerrors.Errorf("failed to vote: %w", err)
@@ -682,7 +678,7 @@ func (ss *States) voteBallot(blt ballot.Ballot) (base.Voteproof, error) {
 		return nil, nil
 	}
 
-	l.Verbose().Interface("voteproof", voteproof).Msg("voted and new voteproof")
+	isaac.LoggerWithVoteproof(voteproof, isaac.LoggerWithBallot(blt, ss.Log())).Debug().Msg("voted and new voteproof")
 
 	return voteproof, nil
 }
@@ -712,7 +708,6 @@ func (ss *States) checkBallotVoteproof(blt ballot.Ballot) error {
 	}
 
 	l := isaac.LoggerWithVoteproof(voteproof, isaac.LoggerWithBallot(blt, ss.Log()))
-	l.Debug().HintedVerbose("voteproof", voteproof, l.IsVerbose()).Msg("checking voteproof from ballot")
 
 	lvp := ss.LastVoteproof()
 	// NOTE last init voteproof is nil, it means current block storage is
@@ -762,7 +757,7 @@ func (ss *States) cleanBallotbox(ctx context.Context) {
 }
 
 func (ss *States) detectStuck(ctx context.Context) {
-	ss.Log().Debug().Msg("will detect whether consensus is stuck")
+	ss.Log().Debug().Msg("detecting whether consensus is stuck")
 
 	endure := time.Minute
 

@@ -202,12 +202,8 @@ func (pm *Processes) Run() error {
 	pm.processed = map[string]struct{}{}
 	pm.ctx = pm.ctxSource
 
-	pm.Log().Debug().Msg("trying to run")
-
 	// run init first
 	if err := pm.runProcess(INITProcess, ""); err != nil {
-		pm.Log().Error().Err(err).Msg("failed to run init")
-
 		return xerrors.Errorf("failed to run init: %w", err)
 	}
 
@@ -216,8 +212,6 @@ func (pm *Processes) Run() error {
 			return xerrors.Errorf("failed to run process, %q: %w", name, err)
 		}
 	}
-
-	pm.Log().Debug().Msg("done")
 
 	return nil
 }
@@ -278,8 +272,6 @@ func (pm *Processes) runProcess(s, from string) error {
 		return ctx.Str("process", pr.Name()).Str("from_process", from)
 	})
 
-	l.Debug().Msg("trying to run process")
-
 	// run requires
 	for _, r := range pr.Requires() {
 		if err := pm.runProcess(r, pr.Name()); err != nil {
@@ -308,7 +300,7 @@ func (pm *Processes) runProcess(s, from string) error {
 		return err
 	}
 
-	l.Debug().Msg("process done")
+	l.Debug().Msg("processed")
 
 	return nil
 }
@@ -326,19 +318,11 @@ func (pm *Processes) runProcessHooks(prefix HookPrefix, pr string) error {
 		hooks = i
 	}
 
-	l := pm.Log().WithLogger(func(ctx logging.Context) logging.Emitter {
-		return ctx.Str("process_hook", prHook).Strs("hooks", hooks)
-	})
-
-	l.Debug().Msg("trying to run hooks")
-
 	for i := range hooks {
 		if err := pm.runProcessHook(hooks[i], pr); err != nil {
 			return err
 		}
 	}
-
-	l.Debug().Msg("hooks done")
 
 	return nil
 }
@@ -347,8 +331,6 @@ func (pm *Processes) runProcessHook(hook, from string) error {
 	l := pm.Log().WithLogger(func(ctx logging.Context) logging.Emitter {
 		return ctx.Str("hook", hook).Str("from", from)
 	})
-
-	l.Debug().Msg("trying to run hook")
 
 	if f, found := pm.hooks[hook]; !found {
 		return xerrors.Errorf("hook, %q not found", hook)
@@ -364,7 +346,7 @@ func (pm *Processes) runProcessHook(hook, from string) error {
 		}
 	}
 
-	l.Debug().Msg("hook done")
+	l.Debug().Msg("hook processed")
 
 	return nil
 }

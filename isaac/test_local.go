@@ -5,11 +5,12 @@ package isaac
 import (
 	"github.com/spikeekips/mitum/network"
 	"github.com/spikeekips/mitum/storage"
+	"github.com/spikeekips/mitum/storage/blockdata"
 )
 
 type Local struct {
 	storage   storage.Storage
-	blockfs   *storage.BlockFS
+	blockData blockdata.BlockData
 	node      *network.LocalNode
 	policy    *LocalPolicy
 	nodes     *network.Nodepool
@@ -18,13 +19,13 @@ type Local struct {
 
 func NewLocal(
 	st storage.Storage,
-	blockfs *storage.BlockFS,
+	blockData blockdata.BlockData,
 	node *network.LocalNode,
 	networkID []byte,
 ) (*Local, error) {
 	return &Local{
 		storage:   st,
-		blockfs:   blockfs,
+		blockData: blockData,
 		node:      node,
 		nodes:     network.NewNodepool(node),
 		networkID: networkID,
@@ -43,8 +44,8 @@ func (ls *Local) Storage() storage.Storage {
 	return ls.storage
 }
 
-func (ls *Local) BlockFS() *storage.BlockFS {
-	return ls.blockfs
+func (ls *Local) BlockData() blockdata.BlockData {
+	return ls.blockData
 }
 
 func (ls *Local) SetStorage(st storage.Storage) *Local {

@@ -11,11 +11,7 @@ import (
 	"github.com/spikeekips/mitum/util/valuehash"
 )
 
-func NewINITBallotV0Round0(
-	node network.Node,
-	st storage.Storage,
-	blockFS *storage.BlockFS,
-) (ballot.INITBallotV0, error) {
+func NewINITBallotV0Round0(node network.Node, st storage.Storage) (ballot.INITBallotV0, error) {
 	var m block.Manifest
 	switch l, found, err := st.LastManifest(); {
 	case !found:
@@ -26,21 +22,7 @@ func NewINITBallotV0Round0(
 		m = l
 	}
 
-	var avp base.Voteproof
-	switch vp, found, err := blockFS.LastVoteproof(base.StageACCEPT); {
-	case !found:
-		if m.Height() != base.PreGenesisHeight {
-			return ballot.INITBallotV0{}, xerrors.Errorf("failed to get last voteproof: %w", err)
-		}
-	case err != nil:
-		return ballot.INITBallotV0{}, xerrors.Errorf("failed to get last voteproof: %w", err)
-	default:
-		avp = vp
-	}
-
-	if avp != nil {
-		return NewINITBallotV0WithVoteproof(node, blockFS, avp)
-	}
+	avp := st.LastVoteproof(base.StageACCEPT)
 
 	return ballot.NewINITBallotV0(
 		node.Address(),
@@ -54,11 +36,9 @@ func NewINITBallotV0Round0(
 
 func NewINITBallotV0WithVoteproof(
 	node network.Node,
-	blockFS *storage.BlockFS,
+	st storage.Storage,
 	voteproof base.Voteproof,
-) (
-	ballot.INITBallotV0, error,
-) {
+) (ballot.INITBallotV0, error) {
 	var height base.Height
 	var round base.Round
 	var previousBlock valuehash.Hash
@@ -74,12 +54,7 @@ func NewINITBallotV0WithVoteproof(
 			previousBlock = t.NewBlock()
 		}
 
-		switch vp, found, err := blockFS.LastVoteproof(base.StageACCEPT); {
-		case err != nil:
-			return ballot.INITBallotV0{}, xerrors.Errorf("failed to get last voteproof: %w", err)
-		case found:
-			avp = vp
-		}
+		avp = st.LastVoteproof(base.StageACCEPT)
 	case base.StageACCEPT:
 		avp = voteproof
 		height = voteproof.Height() + 1

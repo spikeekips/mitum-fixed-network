@@ -16,22 +16,22 @@ import (
 	"github.com/spikeekips/mitum/util/logging"
 )
 
-type SyncerStorage struct {
+type SyncerSession struct {
 	sync.RWMutex
 	*logging.Logging
 	main            *Storage
 	manifestStorage *Storage
-	blockStorage    *Storage
+	storageSession  *Storage
 	heightFrom      base.Height
 	heightTo        base.Height
 }
 
-func NewSyncerStorage(main *Storage) (*SyncerStorage, error) {
-	var manifestStorage, blockStorage *Storage
+func NewSyncerSession(main *Storage) (*SyncerSession, error) {
+	var manifestStorage, storageSession *Storage
 
 	if s, err := newTempStorage(main, "manifest"); err != nil {
 		return nil, err
-	} else if err := s.CreateIndex(ColNameManifest, manifestIndexModels, indexPrefix); err != nil {
+	} else if err := s.CreateIndex(ColNameManifest, manifestIndexModels, IndexPrefix); err != nil {
 		return nil, err
 	} else {
 		manifestStorage = s
@@ -39,26 +39,26 @@ func NewSyncerStorage(main *Storage) (*SyncerStorage, error) {
 	if s, err := newTempStorage(main, "block"); err != nil {
 		return nil, err
 	} else {
-		blockStorage = s
+		storageSession = s
 	}
 
-	return &SyncerStorage{
+	return &SyncerSession{
 		Logging: logging.NewLogging(func(c logging.Context) logging.Emitter {
 			return c.Str("module", "mongodb-syncer-storage")
 		}),
 		main:            main,
 		manifestStorage: manifestStorage,
-		blockStorage:    blockStorage,
+		storageSession:  storageSession,
 		heightFrom:      base.NilHeight,
 		heightTo:        base.NilHeight,
 	}, nil
 }
 
-func (st *SyncerStorage) Manifest(height base.Height) (block.Manifest, bool, error) {
+func (st *SyncerSession) Manifest(height base.Height) (block.Manifest, bool, error) {
 	return st.manifestStorage.ManifestByHeight(height)
 }
 
-func (st *SyncerStorage) Manifests(heights []base.Height) ([]block.Manifest, error) {
+func (st *SyncerSession) Manifests(heights []base.Height) ([]block.Manifest, error) {
 	var bs []block.Manifest
 	for i := range heights {
 		if b, found, err := st.manifestStorage.ManifestByHeight(heights[i]); !found {
@@ -73,7 +73,7 @@ func (st *SyncerStorage) Manifests(heights []base.Height) ([]block.Manifest, err
 	return bs, nil
 }
 
-func (st *SyncerStorage) SetManifests(manifests []block.Manifest) error {
+func (st *SyncerSession) SetManifests(manifests []block.Manifest) error {
 	st.Lock()
 	defer st.Unlock()
 
@@ -89,7 +89,7 @@ func (st *SyncerStorage) SetManifests(manifests []block.Manifest) error {
 	var models []mongo.WriteModel
 	for i := range manifests {
 		m := manifests[i]
-		if doc, err := NewManifestDoc(m, st.blockStorage.Encoder()); err != nil {
+		if doc, err := NewManifestDoc(m, st.storageSession.Encoder()); err != nil {
 			return err
 		} else {
 			models = append(models, mongo.NewInsertOneModel().SetDocument(doc))
@@ -121,14 +121,24 @@ func (st *SyncerStorage) SetManifests(manifests []block.Manifest) error {
 		Int("manifests", len(manifests)).
 		Msg("set manifests")
 
-	return st.manifestStorage.setLastBlock(lastManifest, false, false)
+	return st.manifestStorage.setLastManifest(lastManifest, false, false)
 }
 
-func (st *SyncerStorage) HasBlock(height base.Height) (bool, error) {
-	return st.blockStorage.client.Exists(ColNameManifest, util.NewBSONFilter("height", height).D())
+func (st *SyncerSession) HasBlock(height base.Height) (bool, error) {
+	return st.storageSession.client.Exists(ColNameManifest, util.NewBSONFilter("height", height).D())
 }
 
-func (st *SyncerStorage) SetBlocks(blocks []block.Block) error {
+func (st *SyncerSession) SetBlocks(blocks []block.Block, maps []block.BlockDataMap) error {
+	if len(blocks) != len(maps) {
+		return xerrors.Errorf("blocks and maps has different size, %d != %d", len(blocks), len(maps))
+	} else {
+		for i := range blocks {
+			if err := block.CompareManifestWithMap(blocks[i], maps[i]); err != nil {
+				return err
+			}
+		}
+	}
+
 	st.Log().VerboseFunc(func(e *logging.Event) logging.Emitter {
 		var heights []base.Height
 		for i := range blocks {
@@ -143,8 +153,9 @@ func (st *SyncerStorage) SetBlocks(blocks []block.Block) error {
 	var lastBlock block.Block
 	for i := range blocks {
 		blk := blocks[i]
+		m := maps[i]
 
-		if err := st.setBlock(blk); err != nil {
+		if err := st.setBlock(blk, m); err != nil {
 			return err
 		}
 
@@ -155,12 +166,12 @@ func (st *SyncerStorage) SetBlocks(blocks []block.Block) error {
 		}
 	}
 
-	return st.blockStorage.setLastBlock(lastBlock, true, false)
+	return st.storageSession.setLastBlock(lastBlock, true, false)
 }
 
-func (st *SyncerStorage) setBlock(blk block.Block) error {
-	var bs storage.BlockStorage
-	if st, err := st.blockStorage.OpenBlockStorage(blk); err != nil {
+func (st *SyncerSession) setBlock(blk block.Block, m block.BlockDataMap) error {
+	var bs storage.StorageSession
+	if st, err := st.storageSession.NewStorageSession(blk); err != nil {
 		return err
 	} else {
 		bs = st
@@ -172,14 +183,14 @@ func (st *SyncerStorage) setBlock(blk block.Block) error {
 
 	if err := bs.SetBlock(context.Background(), blk); err != nil {
 		return err
-	} else if err := bs.Commit(context.Background()); err != nil {
+	} else if err := bs.Commit(context.Background(), m); err != nil {
 		return err
 	}
 
 	return nil
 }
 
-func (st *SyncerStorage) Commit() error {
+func (st *SyncerSession) Commit() error {
 	l := st.Log().WithLogger(func(ctx logging.Context) logging.Emitter {
 		return ctx.Hinted("from_height", st.heightFrom).
 			Hinted("to_height", st.heightTo)
@@ -188,7 +199,7 @@ func (st *SyncerStorage) Commit() error {
 	l.Debug().Msg("trying to commit blocks to main storage")
 
 	var last block.Manifest
-	if m, found, err := st.blockStorage.LastManifest(); err != nil || !found {
+	if m, found, err := st.storageSession.LastManifest(); err != nil || !found {
 		return xerrors.Errorf("failed to get last manifest fromm storage: %w", err)
 	} else {
 		last = m
@@ -201,8 +212,10 @@ func (st *SyncerStorage) Commit() error {
 		ColNameOperationSeal,
 		ColNameProposal,
 		ColNameState,
+		ColNameVoteproof,
+		ColNameBlockDataMap,
 	} {
-		if err := moveWithinCol(st.blockStorage, col, st.main, col, bson.D{}); err != nil {
+		if err := moveWithinCol(st.storageSession, col, st.main, col, bson.D{}); err != nil {
 			l.Error().Err(err).Str("collection", col).Msg("failed to move collection")
 
 			return err
@@ -213,13 +226,13 @@ func (st *SyncerStorage) Commit() error {
 	return st.main.setLastBlock(last, false, false)
 }
 
-func (st *SyncerStorage) Close() error {
+func (st *SyncerSession) Close() error {
 	// NOTE drop tmp database
 	if err := st.manifestStorage.client.DropDatabase(); err != nil {
 		return err
 	}
 
-	if err := st.blockStorage.client.DropDatabase(); err != nil {
+	if err := st.storageSession.client.DropDatabase(); err != nil {
 		return err
 	}
 

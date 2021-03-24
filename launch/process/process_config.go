@@ -49,7 +49,7 @@ func ProcessConfig(ctx context.Context) (context.Context, error) {
 	}
 
 	if sourceType != "yaml" {
-		return ctx, xerrors.Errorf("unsupported config source type, %q", sourceType)
+		return ctx, xerrors.Errorf("not supported config source type, %q", sourceType)
 	}
 
 	if c, err := loadConfigYAML(ctx, source); err != nil {

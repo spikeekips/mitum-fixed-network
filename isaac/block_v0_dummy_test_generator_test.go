@@ -4,11 +4,58 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/suite"
-	"golang.org/x/xerrors"
 
 	"github.com/spikeekips/mitum/base"
+	"github.com/spikeekips/mitum/base/prprocessor"
+	"github.com/spikeekips/mitum/base/state"
 	"github.com/spikeekips/mitum/storage"
+	"github.com/spikeekips/mitum/storage/blockdata"
+	"github.com/spikeekips/mitum/storage/blockdata/localfs"
 )
+
+type dummyOperationProcessor struct {
+	pool            *storage.Statepool
+	beforeProcessed func(state.Processor) error
+	afterProcessed  func(state.Processor) error
+}
+
+func (opp dummyOperationProcessor) New(pool *storage.Statepool) prprocessor.OperationProcessor {
+	return dummyOperationProcessor{
+		pool:            pool,
+		beforeProcessed: opp.beforeProcessed,
+		afterProcessed:  opp.afterProcessed,
+	}
+}
+
+func (opp dummyOperationProcessor) PreProcess(op state.Processor) (state.Processor, error) {
+	return op, nil
+}
+
+func (opp dummyOperationProcessor) Process(op state.Processor) error {
+	if opp.beforeProcessed != nil {
+		if err := opp.beforeProcessed(op); err != nil {
+			return err
+		}
+	}
+
+	if err := op.Process(opp.pool.Get, opp.pool.Set); err != nil {
+		return err
+	}
+
+	if opp.afterProcessed == nil {
+		return nil
+	}
+
+	return opp.afterProcessed(op)
+}
+
+func (opp dummyOperationProcessor) Close() error {
+	return nil
+}
+
+func (opp dummyOperationProcessor) Cancel() error {
+	return nil
+}
 
 type testBlockV0DummyGenerator struct {
 	BaseTest
@@ -40,7 +87,8 @@ func (t *testBlockV0DummyGenerator) TestCreate() {
 	for i := int64(0); i < lastHeight.Int64(); i++ {
 		hashes := map[string]struct{}{}
 		for nodeid, l := range all {
-			blk, err := l.BlockFS().Load(base.Height(i))
+			bs := l.BlockData().(*localfs.BlockData)
+			blk, err := localfs.LoadBlock(bs, base.Height(i))
 			t.NoError(err)
 
 			t.NoError(err, "node=%d height=%d", nodeid, i)
@@ -54,24 +102,23 @@ func (t *testBlockV0DummyGenerator) TestCreate() {
 	}
 }
 
-func (t *testBlockV0DummyGenerator) TestCleanByHeight() {
+func (t *testBlockV0DummyGenerator) TestblockdataCleanByHeight() {
 	local := t.Locals(1)[0]
 
 	lastManifest, _, _ := local.Storage().LastManifest()
 
-	h, err := local.BlockFS().Exists(lastManifest.Height())
+	found, err := local.BlockData().Exists(lastManifest.Height())
 	t.NoError(err)
-	t.NotNil(h)
+	t.True(found)
 
-	t.NoError(local.Storage().CleanByHeight(lastManifest.Height()))
-	t.NoError(local.BlockFS().CleanByHeight(lastManifest.Height()))
+	t.NoError(blockdata.CleanByHeight(local.Storage(), local.BlockData(), lastManifest.Height()))
 
 	l, _, _ := local.Storage().LastManifest()
 	t.Equal(lastManifest.Height()-1, l.Height())
 
-	h, err = local.BlockFS().Exists(lastManifest.Height())
-	t.True(xerrors.Is(err, storage.NotFoundError))
-	t.Nil(h)
+	found, err = local.BlockData().Exists(lastManifest.Height())
+	t.NoError(err)
+	t.False(found)
 }
 
 func TestBlockV0DummyGenerator(t *testing.T) {

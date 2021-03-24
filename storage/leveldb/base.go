@@ -37,7 +37,10 @@ var (
 	keyPrefixState                      []byte = []byte{0x00, 0x12}
 	keyPrefixOperationFactHash          []byte = []byte{0x00, 0x13}
 	keyPrefixManifestHeight             []byte = []byte{0x00, 0x14}
-	keyPrefixInfo                       []byte = []byte{0x00, 0x15}
+	keyPrefixINITVoteproof              []byte = []byte{0x00, 0x15}
+	keyPrefixACCEPTVoteproof            []byte = []byte{0x00, 0x16}
+	keyPrefixBlockDataMap               []byte = []byte{0x00, 0x17}
+	keyPrefixInfo                       []byte = []byte{0x00, 0x18}
 )
 
 type Storage struct {
@@ -67,8 +70,8 @@ func (st *Storage) Initialize() error {
 	return nil
 }
 
-func (st *Storage) SyncerStorage() (storage.SyncerStorage, error) {
-	return NewSyncerStorage(st), nil
+func (st *Storage) NewSyncerSession() (storage.SyncerSession, error) {
+	return NewSyncerSession(st), nil
 }
 
 func (st *Storage) DB() *leveldb.DB {
@@ -482,6 +485,18 @@ func (st *Storage) loadState(b []byte) (state.State, error) {
 	}
 }
 
+func (st *Storage) loadBlockDataMap(b []byte) (block.BlockDataMap, error) {
+	if hinter, err := st.loadHinter(b); err != nil {
+		return nil, err
+	} else if hinter == nil {
+		return nil, nil
+	} else if i, ok := hinter.(block.BlockDataMap); !ok {
+		return nil, xerrors.Errorf("not block.BlockDataMap: %T", hinter)
+	} else {
+		return i, nil
+	}
+}
+
 func (st *Storage) iter(
 	prefix []byte,
 	callback func([]byte /* key */, []byte /* value */) (bool, error),
@@ -680,8 +695,8 @@ func (st *Storage) HasOperationFact(h valuehash.Hash) (bool, error) {
 	return found, wrapError(err)
 }
 
-func (st *Storage) OpenBlockStorage(blk block.Block) (storage.BlockStorage, error) {
-	return NewBlockStorage(st, blk)
+func (st *Storage) NewStorageSession(blk block.Block) (storage.StorageSession, error) {
+	return NewStorageSession(st, blk)
 }
 
 func (st *Storage) SetInfo(key string, b []byte) error {
@@ -702,6 +717,96 @@ func (st *Storage) Info(key string) ([]byte, bool, error) {
 	} else {
 		return b, true, nil
 	}
+}
+
+func (st *Storage) LastVoteproof(stage base.Stage) base.Voteproof {
+	var prefix []byte
+	switch stage {
+	case base.StageINIT:
+		prefix = keyPrefixINITVoteproof
+	case base.StageACCEPT:
+		prefix = keyPrefixACCEPTVoteproof
+	default:
+		return nil
+	}
+
+	var raw []byte
+	if err := st.iter(
+		prefix,
+		func(_, value []byte) (bool, error) {
+			raw = value
+			return false, nil
+		},
+		false,
+	); err != nil {
+		return nil
+	}
+
+	if raw == nil {
+		return nil
+	}
+
+	if i, err := st.loadHinter(raw); err != nil {
+		return nil
+	} else if j, ok := i.(base.Voteproof); !ok {
+		return nil
+	} else {
+		return j
+	}
+}
+
+func (st *Storage) Voteproof(height base.Height, stage base.Stage) (base.Voteproof, error) {
+	var raw []byte
+	if b, err := st.get(leveldbVoteproofKey(height, stage)); err != nil {
+		return nil, err
+	} else {
+		raw = b
+	}
+
+	if raw == nil {
+		return nil, nil
+	}
+
+	if i, err := st.loadHinter(raw); err != nil {
+		return nil, err
+	} else if j, ok := i.(base.Voteproof); !ok {
+		return nil, xerrors.Errorf("wrong voteproof, not %t", i)
+	} else {
+		return j, nil
+	}
+}
+
+func (st *Storage) BlockDataMap(height base.Height) (block.BlockDataMap, bool, error) {
+	if raw, err := st.get(leveldbBlockDataMapKey(height)); err != nil {
+		if xerrors.Is(err, storage.NotFoundError) {
+			return nil, false, nil
+		}
+
+		return nil, false, err
+	} else if i, err := st.loadBlockDataMap(raw); err != nil {
+		return nil, false, err
+	} else {
+		return i, true, nil
+	}
+}
+
+func (st *Storage) LocalBlockDataMapsByHeight(height base.Height, callback func(block.BlockDataMap) (bool, error)) error {
+	return st.iter(
+		keyPrefixBlockDataMap,
+		func(_, value []byte) (bool, error) {
+			switch bd, err := st.loadBlockDataMap(value); {
+			case err != nil:
+				return false, err
+			case bd.Height() < height:
+				return true, nil
+			case !bd.IsLocal():
+				return true, nil
+			default:
+				return callback(bd)
+			}
+		},
+		true,
+	)
 }
 
 func leveldbBlockHeightKey(height base.Height) []byte {
@@ -758,6 +863,27 @@ func leveldbOperationFactHashKey(h valuehash.Hash) []byte {
 		keyPrefixOperationFactHash,
 		h.Bytes(),
 	)
+}
+
+func leveldbVoteproofKey(height base.Height, stage base.Stage) []byte {
+	var prefix []byte
+	switch stage {
+	case base.StageINIT:
+		prefix = keyPrefixINITVoteproof
+	case base.StageACCEPT:
+		prefix = keyPrefixACCEPTVoteproof
+	default:
+		return nil
+	}
+
+	return util.ConcatBytesSlice(
+		prefix,
+		[]byte(fmt.Sprintf("%020d", height.Int64())),
+	)
+}
+
+func leveldbBlockDataMapKey(height base.Height) []byte {
+	return util.ConcatBytesSlice(keyPrefixBlockDataMap, height.Bytes())
 }
 
 func leveldbUnstageOperationSeals(st *Storage, batch *leveldb.Batch, seals []valuehash.Hash) error {

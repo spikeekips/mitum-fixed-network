@@ -103,7 +103,7 @@ func (t *testVoteproof) TestEmptyMajority() {
 		thresholdRatio: t.threshold.Ratio,
 		result:         VoteResultMajority,
 		majority:       nil,
-		finishedAt:     localtime.Now(),
+		finishedAt:     localtime.UTCNow(),
 	}
 	err := vp.IsValid(nil)
 	t.True(xerrors.Is(err, isvalid.InvalidError))
@@ -206,7 +206,7 @@ func (t *testVoteproof) TestInvalidFactHash() {
 				signer:        n0.Publickey(),
 			},
 		},
-		finishedAt: localtime.Now(),
+		finishedAt: localtime.UTCNow(),
 	}
 	err := vp.IsValid(nil)
 	t.True(xerrors.Is(err, valuehash.EmptyHashError))
@@ -244,7 +244,7 @@ func (t *testVoteproof) TestUnknownFactHash() {
 				signer:        n1.Publickey(),
 			},
 		},
-		finishedAt: localtime.Now(),
+		finishedAt: localtime.UTCNow(),
 	}
 	err := vp.IsValid(nil)
 	t.Contains(err.Error(), "missing fact found")
@@ -275,7 +275,7 @@ func (t *testVoteproof) TestFactNotFound() {
 				signer:        n0.Publickey(),
 			},
 		},
-		finishedAt: localtime.Now(),
+		finishedAt: localtime.UTCNow(),
 	}
 	err := vp.IsValid(nil)
 	t.Contains(err.Error(), "missing fact found")
@@ -303,7 +303,7 @@ func (t *testVoteproof) TestSuplusFacts() {
 				signer:        n0.Publickey(),
 			},
 		},
-		finishedAt: localtime.Now(),
+		finishedAt: localtime.UTCNow(),
 	}
 	err := vp.IsValid(nil)
 	t.Contains(err.Error(), "unknown facts found")
@@ -332,7 +332,7 @@ func (t *testVoteproof) TestNotYetButNot() {
 				signer:        n0.Publickey(),
 			},
 		},
-		finishedAt: localtime.Now(),
+		finishedAt: localtime.UTCNow(),
 	}
 	err := vp.IsValid(nil)
 	t.Contains(err.Error(), "result should be not-yet")
@@ -375,7 +375,7 @@ func (t *testVoteproof) TestDrawButNot() {
 				signer:        n1.Publickey(),
 			},
 		},
-		finishedAt: localtime.Now(),
+		finishedAt: localtime.UTCNow(),
 	}
 	err := vp.IsValid(nil)
 	t.Contains(err.Error(), "result mismatch")
@@ -415,7 +415,7 @@ func (t *testVoteproof) TestMajorityButNot() {
 				signer:        n1.Publickey(),
 			},
 		},
-		finishedAt: localtime.Now(),
+		finishedAt: localtime.UTCNow(),
 	}
 	err := vp.IsValid(nil)
 	t.Contains(err.Error(), "result mismatch")
@@ -532,7 +532,7 @@ func (t *testVoteproof) TestCompareVoteproof() {
 					signer:        n0.Publickey(),
 				},
 			},
-			finishedAt: localtime.Now(),
+			finishedAt: localtime.UTCNow(),
 		}
 	}
 

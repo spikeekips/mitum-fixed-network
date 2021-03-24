@@ -6,20 +6,21 @@ import (
 	"github.com/syndtr/goleveldb/leveldb"
 	"golang.org/x/xerrors"
 
+	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/base/block"
 	"github.com/spikeekips/mitum/base/state"
 	"github.com/spikeekips/mitum/util/tree"
 	"github.com/spikeekips/mitum/util/valuehash"
 )
 
-type BlockStorage struct {
+type StorageSession struct {
 	st    *Storage
 	block block.Block
 	batch *leveldb.Batch
 }
 
-func NewBlockStorage(st *Storage, blk block.Block) (*BlockStorage, error) {
-	bst := &BlockStorage{
+func NewStorageSession(st *Storage, blk block.Block) (*StorageSession, error) {
+	bst := &StorageSession{
 		st:    st,
 		block: blk,
 		batch: &leveldb.Batch{},
@@ -28,11 +29,11 @@ func NewBlockStorage(st *Storage, blk block.Block) (*BlockStorage, error) {
 	return bst, nil
 }
 
-func (bst *BlockStorage) Block() block.Block {
+func (bst *StorageSession) Block() block.Block {
 	return bst.block
 }
 
-func (bst *BlockStorage) SetBlock(_ context.Context, blk block.Block) error {
+func (bst *StorageSession) SetBlock(_ context.Context, blk block.Block) error {
 	if bst.block.Height() != blk.Height() {
 		return xerrors.Errorf(
 			"block has different height from initial block; initial=%d != block=%d",
@@ -77,12 +78,16 @@ func (bst *BlockStorage) SetBlock(_ context.Context, blk block.Block) error {
 		return err
 	}
 
+	if err := bst.setVoteproofs(blk.ConsensusInfo().INITVoteproof(), blk.ConsensusInfo().ACCEPTVoteproof()); err != nil {
+		return err
+	}
+
 	bst.block = blk
 
 	return nil
 }
 
-func (bst *BlockStorage) setOperationsTree(tr tree.FixedTree) error {
+func (bst *StorageSession) setOperationsTree(tr tree.FixedTree) error {
 	if tr.IsEmpty() {
 		return nil
 	}
@@ -105,7 +110,7 @@ func (bst *BlockStorage) setOperationsTree(tr tree.FixedTree) error {
 	return nil
 }
 
-func (bst *BlockStorage) setStates(sts []state.State) error {
+func (bst *StorageSession) setStates(sts []state.State) error {
 	for i := range sts {
 		if b, err := marshal(bst.st.enc, sts[i]); err != nil {
 			return err
@@ -117,24 +122,58 @@ func (bst *BlockStorage) setStates(sts []state.State) error {
 	return nil
 }
 
-func (bst *BlockStorage) Commit(ctx context.Context) error {
+func (bst *StorageSession) setVoteproofs(init, accept base.Voteproof) error {
+	if init != nil {
+		if b, err := marshal(bst.st.enc, init); err != nil {
+			return err
+		} else {
+			bst.batch.Put(leveldbVoteproofKey(init.Height(), base.StageINIT), b)
+		}
+	}
+
+	if accept != nil {
+		if err := bst.SetACCEPTVoteproof(accept); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func (bst *StorageSession) Commit(ctx context.Context, bd block.BlockDataMap) error {
 	if bst.batch.Len() < 1 {
 		if err := bst.SetBlock(ctx, bst.block); err != nil {
 			return err
 		}
 	}
 
+	if b, err := marshal(bst.st.enc, bd); err != nil {
+		return err
+	} else {
+		bst.batch.Put(leveldbBlockDataMapKey(bd.Height()), b)
+	}
+
 	return wrapError(bst.st.db.Write(bst.batch, nil))
 }
 
-func (bst *BlockStorage) Cancel() error {
+func (bst *StorageSession) Cancel() error {
 	return nil
 }
 
-func (bst *BlockStorage) Close() error {
+func (bst *StorageSession) Close() error {
 	return nil
 }
 
-func (bst *BlockStorage) States() map[string]interface{} {
-	return nil
+func (bst *StorageSession) SetACCEPTVoteproof(voteproof base.Voteproof) error {
+	if s := voteproof.Stage(); s != base.StageACCEPT {
+		return xerrors.Errorf("not accept voteproof, %v", s)
+	}
+
+	if b, err := marshal(bst.st.enc, voteproof); err != nil {
+		return err
+	} else {
+		bst.batch.Put(leveldbVoteproofKey(voteproof.Height(), base.StageACCEPT), b)
+
+		return nil
+	}
 }

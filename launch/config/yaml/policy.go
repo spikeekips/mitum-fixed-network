@@ -18,6 +18,8 @@ type Policy struct {
 	IntervalBroadcastingACCEPTBallot *string                `yaml:"interval-broadcasting-accept-ballot,omitempty"`
 	TimespanValidBallot              *string                `yaml:"timespan-valid-ballot,omitempty"`
 	TimeoutProcessProposal           *string                `yaml:"timeout-process-proposal,omitempty"`
+	NetworkConnectionTimeout         *string                `yaml:"network-connection-timeout,omitempty"`
+	NetworkConnectionTLSInsecure     *bool                  `yaml:"network-connection-tls-insecure,omitempty"`
 	Extras                           map[string]interface{} `yaml:",inline"`
 }
 
@@ -36,6 +38,24 @@ func (no Policy) Set(ctx context.Context) (context.Context, error) {
 		}
 	}
 
+	if err := no.setUints(conf); err != nil {
+		return ctx, err
+	}
+
+	if err := no.setDurations(conf); err != nil {
+		return ctx, err
+	}
+
+	if no.NetworkConnectionTLSInsecure != nil {
+		if err := conf.SetNetworkConnectionTLSInsecure(*no.NetworkConnectionTLSInsecure); err != nil {
+			return ctx, err
+		}
+	}
+
+	return ctx, nil
+}
+
+func (no Policy) setUints(conf config.Policy) error {
 	uintCol := [][2]interface{}{
 		{no.MaxOperationsInSeal, conf.SetMaxOperationsInSeal},
 		{no.MaxOperationsInProposal, conf.SetMaxOperationsInProposal},
@@ -50,10 +70,14 @@ func (no Policy) Set(ctx context.Context) (context.Context, error) {
 		}
 
 		if err := f.(func(uint) error)(rv.Elem().Interface().(uint)); err != nil {
-			return ctx, err
+			return err
 		}
 	}
 
+	return nil
+}
+
+func (no Policy) setDurations(conf config.Policy) error {
 	durationCol := [][2]interface{}{
 		{no.TimeoutWaitingProposal, conf.SetTimeoutWaitingProposal},
 		{no.IntervalBroadcastingINITBallot, conf.SetIntervalBroadcastingINITBallot},
@@ -62,6 +86,7 @@ func (no Policy) Set(ctx context.Context) (context.Context, error) {
 		{no.IntervalBroadcastingACCEPTBallot, conf.SetIntervalBroadcastingACCEPTBallot},
 		{no.TimespanValidBallot, conf.SetTimespanValidBallot},
 		{no.TimeoutProcessProposal, conf.SetTimeoutProcessProposal},
+		{no.NetworkConnectionTimeout, conf.SetNetworkConnectionTimeout},
 	}
 
 	for i := range durationCol {
@@ -73,9 +98,9 @@ func (no Policy) Set(ctx context.Context) (context.Context, error) {
 		}
 
 		if err := f.(func(string) error)(rv.Elem().Interface().(string)); err != nil {
-			return ctx, err
+			return err
 		}
 	}
 
-	return ctx, nil
+	return nil
 }

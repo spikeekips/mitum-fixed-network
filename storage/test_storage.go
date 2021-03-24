@@ -12,6 +12,7 @@ import (
 	"github.com/spikeekips/mitum/base/key"
 	"github.com/spikeekips/mitum/base/operation"
 	"github.com/spikeekips/mitum/base/seal"
+	"github.com/spikeekips/mitum/util"
 	"github.com/spikeekips/mitum/util/encoder"
 	bsonenc "github.com/spikeekips/mitum/util/encoder/bson"
 	jsonenc "github.com/spikeekips/mitum/util/encoder/json"
@@ -20,68 +21,68 @@ import (
 	"github.com/spikeekips/mitum/util/valuehash"
 )
 
-type DummyBlockStorage struct {
+type DummyStorageSession struct {
 	block      block.Block
 	operations tree.FixedTree
 	states     tree.FixedTree
 	commited   bool
 }
 
-func NewDummyBlockStorage(
+func NewDummyStorageSession(
 	blk block.Block,
 	operations tree.FixedTree,
 	states tree.FixedTree,
-) *DummyBlockStorage {
-	return &DummyBlockStorage{block: blk, operations: operations, states: states}
+) *DummyStorageSession {
+	return &DummyStorageSession{block: blk, operations: operations, states: states}
 }
 
-func (dst *DummyBlockStorage) Block() block.Block {
+func (dst *DummyStorageSession) Block() block.Block {
 	return dst.block
 }
 
-func (dst *DummyBlockStorage) SetBlock(blk block.Block) error {
+func (dst *DummyStorageSession) SetBlock(blk block.Block) error {
 	dst.block = blk
 
 	return nil
 }
 
-func (dst *DummyBlockStorage) SetOperations(tree tree.FixedTree) error {
+func (dst *DummyStorageSession) SetOperations(tree tree.FixedTree) error {
 	dst.operations = tree
 
 	return nil
 }
 
-func (dst *DummyBlockStorage) SetStates(tree tree.FixedTree) error {
+func (dst *DummyStorageSession) SetStates(tree tree.FixedTree) error {
 	dst.states = tree
 
 	return nil
 }
 
-func (dst *DummyBlockStorage) UnstageOperationSeals([]valuehash.Hash) error {
+func (dst *DummyStorageSession) UnstageOperationSeals([]valuehash.Hash) error {
 	return nil
 }
 
-func (dst *DummyBlockStorage) Commit(context.Context) error {
+func (dst *DummyStorageSession) Commit(context.Context) error {
 	dst.commited = true
 
 	return nil
 }
 
-func (dst *DummyBlockStorage) Cancel() error {
+func (dst *DummyStorageSession) Cancel() error {
 	dst.commited = false
 
 	return nil
 }
 
-func (dst *DummyBlockStorage) Close() error {
+func (dst *DummyStorageSession) Close() error {
 	return dst.Cancel()
 }
 
-func (dst *DummyBlockStorage) Committed() bool {
+func (dst *DummyStorageSession) Committed() bool {
 	return dst.commited
 }
 
-func (dst *DummyBlockStorage) States() map[string]interface{} {
+func (dst *DummyStorageSession) States() map[string]interface{} {
 	return nil
 }
 
@@ -116,6 +117,7 @@ func (t *BaseTestStorage) SetupSuite() {
 	_ = t.Encs.AddHinter(operation.KVOperation{})
 	_ = t.Encs.AddHinter(operation.KVOperationFact{})
 	_ = t.Encs.AddHinter(tree.FixedTree{})
+	_ = t.Encs.AddHinter(block.BaseBlockDataMap{})
 
 	t.PK, _ = key.NewBTCPrivatekey()
 }
@@ -134,4 +136,46 @@ func (t *BaseTestStorage) CompareBlock(a, b block.Block) {
 	t.CompareManifest(a, b)
 	t.Equal(a.ConsensusInfo().INITVoteproof(), b.ConsensusInfo().INITVoteproof())
 	t.Equal(a.ConsensusInfo().ACCEPTVoteproof(), b.ConsensusInfo().ACCEPTVoteproof())
+}
+
+func (t *BaseTestStorage) NewBlockDataMap(height base.Height, blk valuehash.Hash, isLocal bool) block.BaseBlockDataMap {
+	var scheme string = "file://"
+	if !isLocal {
+		scheme = "http://none-local.org"
+	}
+
+	u := func() string {
+		return scheme + "/" + util.UUID().String()
+	}
+
+	bd := block.NewBaseBlockDataMap(block.TestBlockDataWriterHint, height)
+	bd = bd.SetBlock(blk)
+
+	var item block.BaseBlockDataMapItem
+	item = block.NewBaseBlockDataMapItem(block.BlockDataManifest, valuehash.RandomSHA256().String(), u())
+	bd, _ = bd.SetItem(item)
+	item = block.NewBaseBlockDataMapItem(block.BlockDataOperations, valuehash.RandomSHA256().String(), u())
+	bd, _ = bd.SetItem(item)
+	item = block.NewBaseBlockDataMapItem(block.BlockDataOperationsTree, valuehash.RandomSHA256().String(), u())
+	bd, _ = bd.SetItem(item)
+	item = block.NewBaseBlockDataMapItem(block.BlockDataStates, valuehash.RandomSHA256().String(), u())
+	bd, _ = bd.SetItem(item)
+	item = block.NewBaseBlockDataMapItem(block.BlockDataStatesTree, valuehash.RandomSHA256().String(), u())
+	bd, _ = bd.SetItem(item)
+	item = block.NewBaseBlockDataMapItem(block.BlockDataINITVoteproof, valuehash.RandomSHA256().String(), u())
+	bd, _ = bd.SetItem(item)
+	item = block.NewBaseBlockDataMapItem(block.BlockDataACCEPTVoteproof, valuehash.RandomSHA256().String(), u())
+	bd, _ = bd.SetItem(item)
+	item = block.NewBaseBlockDataMapItem(block.BlockDataSuffrageInfo, valuehash.RandomSHA256().String(), u())
+	bd, _ = bd.SetItem(item)
+	item = block.NewBaseBlockDataMapItem(block.BlockDataProposal, valuehash.RandomSHA256().String(), u())
+	bd, _ = bd.SetItem(item)
+
+	i, err := bd.UpdateHash()
+	t.NoError(err)
+	bd = i
+
+	t.NoError(bd.IsValid(nil))
+
+	return bd
 }

@@ -3,6 +3,9 @@
 package isaac
 
 import (
+	"io"
+	"os"
+
 	"github.com/stretchr/testify/suite"
 	"golang.org/x/xerrors"
 
@@ -16,7 +19,7 @@ import (
 	"github.com/spikeekips/mitum/base/state"
 	channetwork "github.com/spikeekips/mitum/network/gochan"
 	"github.com/spikeekips/mitum/storage"
-	"github.com/spikeekips/mitum/storage/localfs"
+	"github.com/spikeekips/mitum/storage/blockdata/localfs"
 	"github.com/spikeekips/mitum/util"
 	"github.com/spikeekips/mitum/util/localtime"
 	"github.com/spikeekips/mitum/util/tree"
@@ -30,13 +33,12 @@ func SignSeal(b seal.Signer, local *Local) error {
 type BaseTest struct {
 	suite.Suite
 	StorageSupportTest
-	localfs.BaseTestBlocks
-	ls []*Local
+	ls   []*Local
+	Root string
 }
 
 func (t *BaseTest) SetupSuite() {
 	t.StorageSupportTest.SetupSuite()
-	t.BaseTestBlocks.SetupSuite()
 
 	_ = t.Encs.AddHinter(key.BTCPrivatekeyHinter)
 	_ = t.Encs.AddHinter(key.BTCPublickeyHinter)
@@ -71,12 +73,21 @@ func (t *BaseTest) SetupSuite() {
 	_ = t.Encs.AddHinter(state.NumberValue{})
 	_ = t.Encs.AddHinter(state.SliceValue{})
 	_ = t.Encs.AddHinter(state.StringValue{})
+	_ = t.Encs.AddHinter(block.BaseBlockDataMap{})
 }
 
 func (t *BaseTest) SetupTest() {
+	p, err := os.MkdirTemp("", "localfs-")
+	if err != nil {
+		panic(err)
+	}
+
+	t.Root = p
 }
 
 func (t *BaseTest) TearDownTest() {
+	_ = os.RemoveAll(t.Root)
+
 	t.CloseStates(t.ls...)
 }
 
@@ -90,37 +101,28 @@ func (t *BaseTest) SetupNodes(local *Local, others []*Local) {
 
 	for _, st := range nodes {
 		nch := st.Node().Channel().(*channetwork.Channel)
-		nch.SetGetManifestsHandler(func(heights []base.Height) ([]block.Manifest, error) {
-			var bs []block.Manifest
+
+		nch.SetBlockDataMapsHandler(func(heights []base.Height) ([]block.BlockDataMap, error) {
+			var bds []block.BlockDataMap
 			for _, h := range heights {
-				m, found, err := st.Storage().ManifestByHeight(h)
+				bd, found, err := st.Storage().BlockDataMap(h)
 				if !found {
 					break
 				} else if err != nil {
 					return nil, err
 				}
 
-				bs = append(bs, m)
+				bds = append(bds, bd)
 			}
 
-			return bs, nil
+			return bds, nil
 		})
-
-		nch.SetGetBlocksHandler(func(heights []base.Height) ([]block.Block, error) {
-			var bs []block.Block
-			for _, h := range heights {
-				if blk, err := st.BlockFS().Load(h); err != nil {
-					if xerrors.Is(err, storage.NotFoundError) {
-						break
-					}
-
-					return nil, err
-				} else {
-					bs = append(bs, blk)
-				}
+		nch.SetBlockDataHandler(func(p string) (io.ReadCloser, func() error, error) {
+			if i, err := st.BlockData().FS().Open(p); err != nil {
+				return nil, nil, err
+			} else {
+				return i, func() error { return nil }, nil
 			}
-
-			return bs, nil
 		})
 	}
 }
@@ -142,8 +144,13 @@ func (t *BaseTest) Locals(n int) []*Local {
 		lst := t.Storage(t.Encs, t.JSONEnc)
 		localNode := channetwork.RandomLocalNode(util.UUID().String())
 
-		blockfs := t.BlockFS(t.JSONEnc)
-		local, err := NewLocal(lst, blockfs, localNode, TestNetworkID)
+		root, err := os.MkdirTemp(t.Root, "localfs-")
+		t.NoError(err)
+
+		blockData := localfs.NewBlockData(root, t.JSONEnc)
+		t.NoError(blockData.Initialize())
+
+		local, err := NewLocal(lst, blockData, localNode, TestNetworkID)
 		if err != nil {
 			panic(err)
 		} else if err := local.Initialize(); err != nil {
@@ -167,7 +174,8 @@ func (t *BaseTest) Locals(n int) []*Local {
 
 	suffrage := t.Suffrage(ls[0], ls...)
 
-	if bg, err := NewDummyBlocksV0Generator(ls[0], base.Height(2), suffrage, ls); err != nil {
+	bg, err := NewDummyBlocksV0Generator(ls[0], base.Height(2), suffrage, ls)
+	if err != nil {
 		panic(err)
 	} else if err := bg.Generate(true); err != nil {
 		panic(err)
@@ -181,9 +189,10 @@ func (t *BaseTest) Locals(n int) []*Local {
 func (t *BaseTest) EmptyLocal() *Local {
 	lst := t.Storage(nil, nil)
 	localNode := channetwork.RandomLocalNode(util.UUID().String())
-	blockfs := t.BlockFS(t.JSONEnc)
+	blockData := localfs.NewBlockData(t.Root, t.JSONEnc)
+	t.NoError(blockData.Initialize())
 
-	local, err := NewLocal(lst, blockfs, localNode, TestNetworkID)
+	local, err := NewLocal(lst, blockData, localNode, TestNetworkID)
 	t.NoError(err)
 
 	t.NoError(local.Initialize())
@@ -246,7 +255,7 @@ func (t *BaseTest) NewVoteproof(
 		fact,
 		[]base.Fact{fact},
 		votes,
-		localtime.Now(),
+		localtime.UTCNow(),
 	)
 
 	return vp, nil
@@ -270,13 +279,13 @@ func (t *BaseTest) Suffrage(proposerState *Local, states ...*Local) base.Suffrag
 func (t *BaseTest) NewINITBallot(local *Local, round base.Round, voteproof base.Voteproof) ballot.INITBallotV0 {
 	var ib ballot.INITBallotV0
 	if round == 0 {
-		if b, err := NewINITBallotV0Round0(local.Node(), local.Storage(), local.BlockFS()); err != nil {
+		if b, err := NewINITBallotV0Round0(local.Node(), local.Storage()); err != nil {
 			panic(err)
 		} else {
 			ib = b
 		}
 	} else {
-		if b, err := NewINITBallotV0WithVoteproof(local.Node(), local.BlockFS(), voteproof); err != nil {
+		if b, err := NewINITBallotV0WithVoteproof(local.Node(), local.Storage(), voteproof); err != nil {
 			panic(err)
 		} else {
 			ib = b
@@ -325,23 +334,31 @@ func (t *BaseTest) NewACCEPTBallot(local *Local, round base.Round, proposal, new
 	return ab
 }
 
-func (t *BaseTest) NewOperationSeal(local *Local, n uint) operation.Seal {
+func (t *BaseTest) NewOperations(local *Local, n uint) []operation.Operation {
 	pk := local.Node().Privatekey()
 
 	var ops []operation.Operation
 	for i := uint(0); i < n; i++ {
 		token := []byte("this-is-token")
-		op, err := NewKVOperation(pk, token, util.UUID().String(), []byte(util.UUID().String()), nil)
+		op, err := NewKVOperation(pk, token, util.UUID().String(), []byte(util.UUID().String()), TestNetworkID)
 		t.NoError(err)
 
 		ops = append(ops, op)
 	}
 
-	sl, err := operation.NewBaseSeal(pk, ops, nil)
-	t.NoError(err)
-	t.NoError(sl.IsValid(nil))
+	return ops
+}
 
-	return sl
+func (t *BaseTest) NewOperationSeal(local *Local, n uint) (operation.Seal, []operation.Operation) {
+	pk := local.Node().Privatekey()
+
+	ops := t.NewOperations(local, n)
+
+	sl, err := operation.NewBaseSeal(pk, ops, TestNetworkID)
+	t.NoError(err)
+	t.NoError(sl.IsValid(TestNetworkID))
+
+	return sl, ops
 }
 
 func (t *BaseTest) NewProposal(local *Local, round base.Round, seals []valuehash.Hash, voteproof base.Voteproof) ballot.Proposal {
@@ -354,6 +371,22 @@ func (t *BaseTest) NewProposal(local *Local, round base.Round, seals []valuehash
 	}
 
 	return pr
+}
+
+func (t *BaseTest) NewStateValue() state.Value {
+	v, err := state.NewBytesValue(util.UUID().Bytes())
+	t.NoError(err)
+
+	return v
+}
+
+func (t *BaseTest) NewState(height base.Height) state.State {
+	s, err := state.NewStateV0(util.UUID().String(), t.NewStateValue(), height)
+	t.NoError(err)
+	i, err := s.SetHash(s.GenerateHash())
+	t.NoError(err)
+
+	return i
 }
 
 func (t *BaseTest) CompareManifest(a, b block.Manifest) {
@@ -371,6 +404,61 @@ func (t *BaseTest) CompareManifest(a, b block.Manifest) {
 		t.Nil(b.StatesHash())
 	} else {
 		t.True(a.StatesHash().Equal(b.StatesHash()))
+	}
+}
+
+func (t *BaseTest) CompareProposal(a, b ballot.Proposal) {
+	t.Equal(a.Node(), b.Node())
+	t.Equal(a.Signature(), b.Signature())
+	t.Equal(a.Height(), b.Height())
+	t.Equal(a.Round(), b.Round())
+	t.True(localtime.Equal(a.SignedAt(), b.SignedAt()))
+	t.True(a.Signer().Equal(b.Signer()))
+	t.True(a.Hash().Equal(b.Hash()))
+	t.True(a.BodyHash().Equal(b.BodyHash()))
+	t.Equal(a.FactSignature(), b.FactSignature())
+	t.True(a.Fact().Hash().Equal(b.Fact().Hash()))
+
+	av := a.Voteproof()
+	bv := b.Voteproof()
+	if av == nil {
+		t.Nil(bv)
+	} else {
+		t.NotNil(bv)
+
+		t.CompareVoteproof(a.Voteproof(), b.Voteproof())
+	}
+
+	as := a.Seals()
+	bs := b.Seals()
+	for i := range as {
+		t.True(as[i].Equal(bs[i]))
+	}
+}
+
+func (t *BaseTest) CompareVoteproof(a, b base.Voteproof) {
+	t.Equal(a.Height(), b.Height())
+	t.Equal(a.Round(), b.Round())
+	t.Equal(a.ThresholdRatio(), b.ThresholdRatio())
+	t.Equal(a.Result(), b.Result())
+	t.Equal(a.Stage(), b.Stage())
+
+	t.Equal(a.Majority().Bytes(), b.Majority().Bytes())
+	t.Equal(len(a.Facts()), len(b.Facts()))
+
+	af := a.Facts()
+	bf := b.Facts()
+	for i := range af {
+		t.Equal(af[i].Bytes(), bf[i].Bytes())
+	}
+
+	t.Equal(len(a.Votes()), len(b.Votes()))
+	av := a.Votes()
+	bv := b.Votes()
+	for i := range av {
+		t.True(av[i].Fact().Equal(bv[i].Fact()))
+		t.True(av[i].Signature().Equal(bv[i].Signature()))
+		t.True(av[i].Signer().Equal(bv[i].Signer()))
 	}
 }
 
@@ -402,14 +490,6 @@ func (t *BaseTest) Processors(newFunc prprocessor.ProcessorNewFunc) *prprocessor
 	t.NoError(pp.Start())
 
 	return pp
-}
-
-func (t *BaseTest) LastINITVoteproofFromBlockFS(blockFS *storage.BlockFS) base.Voteproof {
-	vp, found, err := blockFS.LastVoteproof(base.StageINIT)
-	t.NoError(err)
-	t.True(found)
-
-	return vp
 }
 
 func (t *BaseTest) Ballotbox(suffrage base.Suffrage, policy *LocalPolicy) *Ballotbox {

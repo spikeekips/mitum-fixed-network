@@ -10,36 +10,41 @@ import (
 
 	"golang.org/x/xerrors"
 
+	"github.com/gorilla/mux"
 	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/base/seal"
 	"github.com/spikeekips/mitum/network"
+	"github.com/spikeekips/mitum/storage"
 	"github.com/spikeekips/mitum/util/cache"
 	"github.com/spikeekips/mitum/util/encoder"
 	"github.com/spikeekips/mitum/util/logging"
 )
 
 var (
-	DefaultPort                 = "54321"
-	QuicHandlerPathGetSeals     = "/seals"
-	QuicHandlerPathSendSeal     = "/seal"
-	QuicHandlerPathGetBlocks    = "/blocks"
-	QuicHandlerPathGetManifests = "/manifests"
-	QuicHandlerPathNodeInfo     = "/"
+	DefaultPort                        = "54321"
+	QuicHandlerPathGetSeals            = "/seals"
+	QuicHandlerPathSendSeal            = "/seal"
+	QuicHandlerPathGetBlockDataMaps    = "/blockdatamaps"
+	QuicHandlerPathGetBlockData        = "/blockdata"
+	QuicHandlerPathGetBlockDataPattern = QuicHandlerPathGetBlockData + "/{path:.*}"
+	QuicHandlerPathNodeInfo            = "/"
 )
+
+var LimitRequestByHeights int = 20 // max number of reqeust heights
 
 var cacheKeyNodeInfo = [2]byte{0x00, 0x00}
 
 type Server struct {
 	*logging.Logging
 	*PrimitiveQuicServer
-	encs                *encoder.Encoders
-	enc                 encoder.Encoder // NOTE default encoder.Encoder
-	getSealsHandler     network.GetSealsHandler
-	hasSealHandler      network.HasSealHandler
-	newSealHandler      network.NewSealHandler
-	getManifestsHandler network.GetManifestsHandler
-	getBlocksHandler    network.GetBlocksHandler
-	nodeInfoHandler     network.NodeInfoHandler
+	encs                 *encoder.Encoders
+	enc                  encoder.Encoder // NOTE default encoder.Encoder
+	getSealsHandler      network.GetSealsHandler
+	hasSealHandler       network.HasSealHandler
+	newSealHandler       network.NewSealHandler
+	nodeInfoHandler      network.NodeInfoHandler
+	blockDataMapsHandler network.BlockDataMapsHandler
+	blockDataHandler     network.BlockDataHandler
 
 	cache *cache.GCache
 }
@@ -90,14 +95,6 @@ func (sv *Server) SetNewSealHandler(fn network.NewSealHandler) {
 	sv.newSealHandler = fn
 }
 
-func (sv *Server) SetGetManifestsHandler(fn network.GetManifestsHandler) {
-	sv.getManifestsHandler = fn
-}
-
-func (sv *Server) SetGetBlocksHandler(fn network.GetBlocksHandler) {
-	sv.getBlocksHandler = fn
-}
-
 func (sv *Server) NodeInfoHandler() network.NodeInfoHandler {
 	return sv.nodeInfoHandler
 }
@@ -106,11 +103,19 @@ func (sv *Server) SetNodeInfoHandler(fn network.NodeInfoHandler) {
 	sv.nodeInfoHandler = fn
 }
 
+func (sv *Server) SetBlockDataMapsHandler(fn network.BlockDataMapsHandler) {
+	sv.blockDataMapsHandler = fn
+}
+
+func (sv *Server) SetBlockDataHandler(fn network.BlockDataHandler) {
+	sv.blockDataHandler = fn
+}
+
 func (sv *Server) setHandlers() {
 	_ = sv.SetHandler(QuicHandlerPathGetSeals, sv.handleGetSeals).Methods("POST")
 	_ = sv.SetHandler(QuicHandlerPathSendSeal, sv.handleNewSeal).Methods("POST")
-	_ = sv.SetHandler(QuicHandlerPathGetManifests, sv.handleGetManifests).Methods("POST")
-	_ = sv.SetHandler(QuicHandlerPathGetBlocks, sv.handleGetBlocks).Methods("POST")
+	_ = sv.SetHandler(QuicHandlerPathGetBlockDataMaps, sv.handleGetBlockDataMaps).Methods("POST")
+	_ = sv.SetHandler(QuicHandlerPathGetBlockDataPattern, sv.handleGetBlockData).Methods("GET")
 	_ = sv.SetHandler(QuicHandlerPathNodeInfo, sv.handleNodeInfo)
 }
 
@@ -250,13 +255,27 @@ func (sv *Server) handleGetByHeights(
 		network.HTTPError(w, http.StatusBadRequest)
 
 		return err
+	} else if len(args.Heights) > LimitRequestByHeights {
+		network.HTTPError(w, http.StatusBadRequest)
+
+		return err
 	}
 
 	var output []byte
 	if sls, err := getHandler(args.Heights); err != nil {
+		if xerrors.Is(err, storage.NotFoundError) {
+			network.HTTPError(w, http.StatusNotFound)
+
+			return err
+		}
+
 		network.HTTPError(w, http.StatusBadRequest)
 
 		return err
+	} else if sls == nil {
+		network.HTTPError(w, http.StatusNotFound)
+
+		return nil
 	} else if b, err := sv.enc.Marshal(sls); err != nil {
 		network.HTTPError(w, http.StatusInternalServerError)
 
@@ -269,39 +288,6 @@ func (sv *Server) handleGetByHeights(
 	_, _ = w.Write(output)
 
 	return nil
-}
-
-func (sv *Server) handleGetManifests(w http.ResponseWriter, r *http.Request) {
-	if sv.getManifestsHandler == nil {
-		network.HTTPError(w, http.StatusInternalServerError)
-		return
-	}
-
-	if err := sv.handleGetByHeights(
-		w, r,
-		func(heights []base.Height) (interface{}, error) {
-			return sv.getManifestsHandler(heights)
-		},
-	); err != nil {
-		sv.Log().Error().Err(err).Msg("failed to get manifests")
-		return
-	}
-}
-
-func (sv *Server) handleGetBlocks(w http.ResponseWriter, r *http.Request) {
-	if sv.getBlocksHandler == nil {
-		network.HTTPError(w, http.StatusInternalServerError)
-		return
-	}
-
-	if err := sv.handleGetByHeights(
-		w, r,
-		func(heights []base.Height) (interface{}, error) {
-			return sv.getBlocksHandler(heights)
-		}); err != nil {
-		sv.Log().Error().Err(err).Msg("failed to get blocks")
-		return
-	}
 }
 
 func (sv *Server) handleNodeInfo(w http.ResponseWriter, _ *http.Request) {
@@ -340,6 +326,63 @@ func (sv *Server) handleNodeInfo(w http.ResponseWriter, _ *http.Request) {
 
 	w.Header().Set(QuicEncoderHintHeader, sv.enc.Hint().String())
 	_, _ = w.Write(output)
+}
+
+func (sv *Server) handleGetBlockDataMaps(w http.ResponseWriter, r *http.Request) {
+	if sv.blockDataMapsHandler == nil {
+		network.HTTPError(w, http.StatusInternalServerError)
+
+		return
+	}
+
+	if err := sv.handleGetByHeights(
+		w, r,
+		func(heights []base.Height) (interface{}, error) {
+			return sv.blockDataMapsHandler(heights)
+		},
+	); err != nil {
+		sv.Log().Error().Err(err).Msg("failed to get block data maps")
+
+		return
+	}
+}
+
+func (sv *Server) handleGetBlockData(w http.ResponseWriter, r *http.Request) {
+	if sv.blockDataHandler == nil {
+		network.HTTPError(w, http.StatusInternalServerError)
+
+		return
+	}
+
+	vars := mux.Vars(r)
+
+	var rc io.ReadCloser
+	if i, found := vars["path"]; !found {
+		network.HTTPError(w, http.StatusBadRequest)
+
+		return
+	} else if j, closefunc, err := sv.blockDataHandler("/" + i); err != nil {
+		if xerrors.Is(err, storage.NotFoundError) {
+			network.HTTPError(w, http.StatusNotFound)
+
+			return
+		}
+
+		network.HTTPError(w, http.StatusInternalServerError)
+
+		return
+	} else {
+		defer func() {
+			_ = j.Close()
+			_ = closefunc()
+		}()
+
+		rc = j
+	}
+
+	if _, err := io.Copy(w, rc); err != nil {
+		network.HTTPError(w, http.StatusInternalServerError)
+	}
 }
 
 func mustQuicURL(u, p string) string {

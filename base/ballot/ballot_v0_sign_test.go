@@ -151,7 +151,7 @@ func (t *testBallotV0SIGN) TestIsValid() {
 	{ // empty signer
 		bb := BaseBallotV0{
 			node:     base.RandomStringAddress(),
-			signedAt: localtime.Now(),
+			signedAt: localtime.UTCNow(),
 		}
 		err := bb.IsValid(nil)
 		t.Contains(err.Error(), "empty Signer")
@@ -160,7 +160,7 @@ func (t *testBallotV0SIGN) TestIsValid() {
 	{ // empty signature
 		bb := BaseBallotV0{
 			node:     base.RandomStringAddress(),
-			signedAt: localtime.Now(),
+			signedAt: localtime.UTCNow(),
 			signer:   t.pk.Publickey(),
 		}
 		err := bb.IsValid(nil)

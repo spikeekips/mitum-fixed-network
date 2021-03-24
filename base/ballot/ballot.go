@@ -127,7 +127,7 @@ func IsValidVoteproofInBallot(blt Ballot, voteproof base.Voteproof) error {
 	case Proposal:
 		return isValidVoteproofInProposal(t, voteproof)
 	default:
-		return xerrors.Errorf("unsupported voteproof in ballot, %T", blt)
+		return xerrors.Errorf("not supported voteproof in ballot, %T", blt)
 	}
 }
 
@@ -249,7 +249,7 @@ func SignBaseBallotV0(blt Ballot, bb BaseBallotV0, pk key.Privatekey, networkID 
 
 	bb.signer = pk.Publickey()
 	bb.signature = sig
-	bb.signedAt = localtime.Now()
+	bb.signedAt = localtime.UTCNow()
 	bb.bodyHash = bodyHash
 	bb.factSignature = factSig
 

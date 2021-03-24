@@ -87,6 +87,10 @@ func (vf VoteproofNodeFact) Fact() valuehash.Hash {
 	return vf.fact
 }
 
+func (vf VoteproofNodeFact) Signature() key.Signature {
+	return vf.factSignature
+}
+
 func (vf VoteproofNodeFact) Node() Address {
 	return vf.address
 }

@@ -73,7 +73,7 @@ type BaseFactSign struct {
 }
 
 func NewBaseFactSign(signer key.Publickey, signature key.Signature) BaseFactSign {
-	return BaseFactSign{signer: signer, signature: signature, signedAt: localtime.Now()}
+	return BaseFactSign{signer: signer, signature: signature, signedAt: localtime.UTCNow()}
 }
 
 func RawBaseFactSign(signer key.Publickey, signature key.Signature, signedAt time.Time) BaseFactSign {

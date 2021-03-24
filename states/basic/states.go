@@ -32,7 +32,6 @@ type States struct {
 	*logging.Logging
 	*util.FunctionDaemon
 	storage        storage.Storage
-	blockFS        *storage.BlockFS
 	policy         *isaac.LocalPolicy
 	nodepool       *network.Nodepool
 	suffrage       base.Suffrage
@@ -52,7 +51,6 @@ type States struct {
 
 func NewStates(
 	st storage.Storage,
-	blockFS *storage.BlockFS,
 	policy *isaac.LocalPolicy,
 	nodepool *network.Nodepool,
 	suffrage base.Suffrage,
@@ -63,7 +61,7 @@ func NewStates(
 		Logging: logging.NewLogging(func(c logging.Context) logging.Emitter {
 			return c.Str("module", "basic-states")
 		}),
-		storage: st, blockFS: blockFS, policy: policy, nodepool: nodepool, suffrage: suffrage,
+		storage: st, policy: policy, nodepool: nodepool, suffrage: suffrage,
 		state:       base.StateStopped,
 		statech:     make(chan StateSwitchContext, 33),
 		voteproofch: make(chan base.Voteproof, 33),
@@ -93,17 +91,11 @@ func NewStates(
 	ss.FunctionDaemon = util.NewFunctionDaemon(ss.start, false).SetBlocking(true)
 
 	// NOTE set last voteproof from local
-	switch i, found, err := blockFS.LastVoteproof(base.StageACCEPT); {
-	case err != nil:
-		return nil, xerrors.Errorf("failed to get last init voteproof: %w", err)
-	case found:
+	if i := st.LastVoteproof(base.StageACCEPT); i != nil {
 		ss.lvp = i
 	}
 
-	switch i, found, err := blockFS.LastVoteproof(base.StageINIT); {
-	case err != nil:
-		return nil, xerrors.Errorf("failed to get last init voteproof: %w", err)
-	case found:
+	if i := st.LastVoteproof(base.StageINIT); i != nil {
 		ss.livp = i
 	}
 
@@ -260,7 +252,7 @@ func (ss *States) BroadcastSeals(sl seal.Seal, toLocal bool) error {
 	// NOTE broadcast nodes of Nodepool, including suffrage nodes
 	ss.nodepool.TraverseRemotes(func(node network.Node) bool {
 		go func(node network.Node) {
-			if err := node.Channel().SendSeal(sl); err != nil {
+			if err := node.Channel().SendSeal(context.TODO(), sl); err != nil {
 				l.Error().Err(err).Hinted("target_node", node.Address()).Msg("failed to broadcast")
 			}
 		}(node)

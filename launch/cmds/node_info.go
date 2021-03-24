@@ -1,9 +1,11 @@
 package cmds
 
 import (
+	"context"
 	"fmt"
 	"net/url"
 	"os"
+	"time"
 
 	"golang.org/x/xerrors"
 
@@ -15,7 +17,9 @@ import (
 
 type NodeInfoCommand struct {
 	*BaseCommand
-	URL *url.URL `arg:"" name:"node url" help:"remote mitum url" required:""`
+	URL        *url.URL      `arg:"" name:"node url" help:"remote mitum url" required:""`
+	Timeout    time.Duration ` name:"timeout" help:"timeout; default is 5 seconds"`
+	TLSInscure bool          `name:"tls-insecure" help:"allow inseucre TLS connection; default is false"`
 }
 
 func NewNodeInfoCommand() NodeInfoCommand {
@@ -27,6 +31,10 @@ func NewNodeInfoCommand() NodeInfoCommand {
 func (cmd *NodeInfoCommand) Run(version util.Version) error {
 	if err := cmd.Initialize(cmd, version); err != nil {
 		return xerrors.Errorf("failed to initialize command: %w", err)
+	}
+
+	if cmd.Timeout < 1 {
+		cmd.Timeout = time.Second * 5
 	}
 
 	cmd.Log().Debug().Interface("node_url", cmd.URL).Msg("trying to get node info")
@@ -41,7 +49,7 @@ func (cmd *NodeInfoCommand) Run(version util.Version) error {
 	}
 
 	var channel network.Channel
-	if ch, err := process.LoadNodeChannel(cmd.URL, encs); err != nil {
+	if ch, err := process.LoadNodeChannel(cmd.URL, encs, cmd.Timeout, cmd.TLSInscure); err != nil {
 		return err
 	} else {
 		channel = ch
@@ -50,7 +58,10 @@ func (cmd *NodeInfoCommand) Run(version util.Version) error {
 
 	cmd.Log().Debug().Msg("trying to get node info")
 
-	if n, err := channel.NodeInfo(); err != nil {
+	ctx, cancel := context.WithTimeout(context.Background(), cmd.Timeout)
+	defer cancel()
+
+	if n, err := channel.NodeInfo(ctx); err != nil {
 		return err
 	} else {
 		_, _ = fmt.Fprintln(os.Stdout, jsonenc.ToString(n))

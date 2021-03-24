@@ -22,7 +22,7 @@ func (bc *ConsensusInfoV0) unpack(enc encoder.Encoder, biv, bav, bsi, bpr []byte
 	}
 
 	var si SuffrageInfo
-	if v, err := decodeSuffrageInfo(enc, bsi); err != nil {
+	if v, err := DecodeSuffrageInfo(enc, bsi); err != nil {
 		return err
 	} else {
 		si = v

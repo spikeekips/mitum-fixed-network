@@ -45,6 +45,10 @@ func (ft *FixedTree) UnmarshalJSON(b []byte) error {
 
 	ub := make([][]byte, len(us.NS))
 	for i := range us.NS {
+		if len(us.NS[i]) < 1 {
+			continue
+		}
+
 		ub[i] = base58.Decode(us.NS[i])
 	}
 

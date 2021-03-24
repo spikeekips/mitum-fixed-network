@@ -50,7 +50,7 @@ func (nv *NumberValue) unpack(_ encoder.Encoder, h valuehash.Hash, bValue []byte
 	case reflect.Float64:
 		v = util.BytesToFloat64(bValue)
 	default:
-		return xerrors.Errorf("unsupported type for NumberValue: %v", t)
+		return xerrors.Errorf("not supported type for NumberValue: %v", t)
 	}
 
 	nv.h = h

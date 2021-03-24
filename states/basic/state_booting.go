@@ -6,21 +6,22 @@ import (
 	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/isaac"
 	"github.com/spikeekips/mitum/storage"
+	"github.com/spikeekips/mitum/storage/blockdata"
 	"github.com/spikeekips/mitum/util/logging"
 )
 
 type BootingState struct {
 	*logging.Logging
 	*BaseState
-	storage  storage.Storage
-	blockFS  *storage.BlockFS
-	policy   *isaac.LocalPolicy
-	suffrage base.Suffrage
+	storage   storage.Storage
+	blockData blockdata.BlockData
+	policy    *isaac.LocalPolicy
+	suffrage  base.Suffrage
 }
 
 func NewBootingState(
 	st storage.Storage,
-	blockFS *storage.BlockFS,
+	blockData blockdata.BlockData,
 	policy *isaac.LocalPolicy,
 	suffrage base.Suffrage,
 ) *BootingState {
@@ -30,7 +31,7 @@ func NewBootingState(
 		}),
 		BaseState: NewBaseState(base.StateBooting),
 		storage:   st,
-		blockFS:   blockFS,
+		blockData: blockData,
 		policy:    policy,
 		suffrage:  suffrage,
 	}
@@ -44,7 +45,7 @@ func (st *BootingState) Enter(sctx StateSwitchContext) (func() error, error) {
 		callback = i
 	}
 
-	if err := storage.CheckBlock(st.storage, st.blockFS, st.policy.NetworkID()); err != nil {
+	if err := storage.CheckBlock(st.storage, st.policy.NetworkID()); err != nil {
 		st.Log().Error().Err(err).Msg("something wrong to check blocks")
 
 		if !xerrors.Is(err, storage.NotFoundError) {
@@ -53,7 +54,7 @@ func (st *BootingState) Enter(sctx StateSwitchContext) (func() error, error) {
 
 		st.Log().Debug().Msg("empty blocks found; cleaning up")
 		// NOTE empty block
-		if err := storage.Clean(st.storage, st.blockFS, false); err != nil {
+		if err := blockdata.Clean(st.storage, st.blockData, false); err != nil {
 			return nil, err
 		}
 

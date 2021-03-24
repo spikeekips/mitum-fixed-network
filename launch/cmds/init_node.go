@@ -9,6 +9,7 @@ import (
 	"github.com/spikeekips/mitum/launch/pm"
 	"github.com/spikeekips/mitum/launch/process"
 	"github.com/spikeekips/mitum/storage"
+	"github.com/spikeekips/mitum/storage/blockdata"
 	"github.com/spikeekips/mitum/util"
 )
 
@@ -27,7 +28,7 @@ func NewInitCommand(dryrun bool) InitCommand {
 		panic(xerrors.Errorf("processes not prepared"))
 	}
 
-	if err := ps.AddHook( // NOTE clean storage and blockfs with `--force`
+	if err := ps.AddHook( // NOTE clean storage and block data with `--force`
 		pm.HookPrefixPre, process.ProcessNameLocalNode,
 		"clean-storage", cmd.cleanStorage,
 		true,
@@ -35,20 +36,21 @@ func NewInitCommand(dryrun bool) InitCommand {
 		panic(err)
 	}
 
-	if err := ps.AddProcess(pm.NewDisabledProcess(process.ProcessorStartNetwork), true); err != nil {
-		panic(err)
+	for _, i := range []pm.Process{
+		process.ProcessorConsensusStates,
+		process.ProcessorNetwork,
+		process.ProcessorStartNetwork,
+	} {
+		if err := ps.AddProcess(pm.NewDisabledProcess(i), true); err != nil {
+			panic(err)
+		}
 	}
 
 	if err := ps.AddProcess(process.ProcessorGenerateGenesisBlock, true); err != nil {
 		panic(err)
 	}
-	if err := ps.AddHook(
-		pm.HookPrefixPre,
-		process.ProcessNameGenerateGenesisBlock,
-		process.HookNameCheckGenesisBlock,
-		process.HookCheckGenesisBlock,
-		true,
-	); err != nil {
+	if err := ps.AddHook(pm.HookPrefixPre, process.ProcessNameGenerateGenesisBlock,
+		process.HookNameCheckGenesisBlock, process.HookCheckGenesisBlock, true); err != nil {
 		panic(err)
 	}
 
@@ -97,16 +99,16 @@ func (cmd *InitCommand) cleanStorage(ctx context.Context) (context.Context, erro
 		return ctx, err
 	}
 
-	var blockFS *storage.BlockFS
-	if err := process.LoadBlockFSContextValue(ctx, &blockFS); err != nil {
+	var blockData blockdata.BlockData
+	if err := process.LoadBlockDataContextValue(ctx, &blockData); err != nil {
 		return ctx, err
 	}
 
-	if err := storage.Clean(st, blockFS, false); err != nil {
+	if err := blockdata.Clean(st, blockData, false); err != nil {
 		return ctx, err
 	}
 
-	cmd.Log().Info().Msg("storage and blockfs was cleaned by force")
+	cmd.Log().Info().Msg("storage and block data was cleaned by force")
 
 	return ctx, nil
 }

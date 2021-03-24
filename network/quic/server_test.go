@@ -1,10 +1,14 @@
 package quicnetwork
 
 import (
+	"context"
 	"crypto/tls"
 	"fmt"
+	"io"
+	"io/ioutil"
 	"net"
 	"net/url"
+	"os"
 	"testing"
 	"time"
 
@@ -17,6 +21,7 @@ import (
 	"github.com/spikeekips/mitum/base/seal"
 	"github.com/spikeekips/mitum/base/state"
 	"github.com/spikeekips/mitum/network"
+	"github.com/spikeekips/mitum/storage"
 	"github.com/spikeekips/mitum/util"
 	"github.com/spikeekips/mitum/util/encoder"
 	jsonenc "github.com/spikeekips/mitum/util/encoder/json"
@@ -47,6 +52,7 @@ func (t *testQuicSever) SetupTest() {
 	_ = t.encs.AddHinter(network.NodeInfoV0{})
 	_ = t.encs.AddHinter(state.StateV0{})
 	_ = t.encs.AddHinter(state.BytesValue{})
+	_ = t.encs.AddHinter(block.BaseBlockDataMap{})
 
 	port, err := util.FreePort("udp")
 	t.NoError(err)
@@ -113,12 +119,13 @@ func (t *testQuicSever) TestSendSeal() {
 		return nil
 	})
 
-	qc, err := NewChannel(t.url.String(), 2, true, time.Millisecond*500, 3, nil, t.encs, t.enc)
+	qc, err := NewChannel(t.url.String(), 2, true, nil, t.encs, t.enc)
 	t.NoError(err)
+	t.Implements((*network.Channel)(nil), qc)
 
 	sl := seal.NewDummySeal(key.MustNewBTCPrivatekey())
 
-	t.NoError(qc.SendSeal(sl))
+	t.NoError(qc.SendSeal(context.TODO(), sl))
 
 	select {
 	case <-time.After(time.Second):
@@ -137,7 +144,7 @@ func (t *testQuicSever) TestSendSeal() {
 		return true, nil
 	})
 
-	t.NoError(qc.SendSeal(sl))
+	t.NoError(qc.SendSeal(context.TODO(), sl))
 }
 
 func (t *testQuicSever) TestGetSeals() {
@@ -166,11 +173,11 @@ func (t *testQuicSever) TestGetSeals() {
 		return sls, nil
 	})
 
-	qc, err := NewChannel(t.url.String(), 2, true, time.Millisecond*500, 3, nil, t.encs, t.enc)
+	qc, err := NewChannel(t.url.String(), 2, true, nil, t.encs, t.enc)
 	t.NoError(err)
 
 	{ // get all
-		l, err := qc.Seals(hs)
+		l, err := qc.Seals(context.TODO(), hs)
 		t.NoError(err)
 		t.Equal(len(hs), len(l))
 
@@ -185,7 +192,7 @@ func (t *testQuicSever) TestGetSeals() {
 	}
 
 	{ // some of them
-		l, err := qc.Seals(hs[:2])
+		l, err := qc.Seals(context.TODO(), hs[:2])
 		t.NoError(err)
 		t.Equal(len(hs[:2]), len(l))
 
@@ -203,7 +210,7 @@ func (t *testQuicSever) TestGetSeals() {
 		bad := hs[:2]
 		bad = append(bad, valuehash.RandomSHA256())
 
-		l, err := qc.Seals(bad)
+		l, err := qc.Seals(context.TODO(), bad)
 		t.NoError(err)
 		t.Equal(len(hs[:2]), len(l))
 
@@ -248,13 +255,135 @@ func (t *testQuicSever) TestNodeInfo() {
 		return ni, nil
 	})
 
-	qc, err := NewChannel(t.url.String(), 2, true, time.Millisecond*500, 3, nil, t.encs, t.enc)
+	qc, err := NewChannel(t.url.String(), 2, true, nil, t.encs, t.enc)
 	t.NoError(err)
 
-	nni, err := qc.NodeInfo()
+	nni, err := qc.NodeInfo(context.TODO())
 	t.NoError(err)
 
 	network.CompareNodeInfo(t.T(), ni, nni)
+}
+
+func (t *testQuicSever) TestEmptyBlockDataMaps() {
+	qn := t.readyServer()
+	defer qn.Stop()
+
+	qn.SetBlockDataMapsHandler(func(hs []base.Height) ([]block.BlockDataMap, error) {
+		return nil, nil
+	})
+
+	qc, err := NewChannel(t.url.String(), 2, true, nil, t.encs, t.enc)
+	t.NoError(err)
+
+	bds, err := qc.BlockDataMaps(context.TODO(), []base.Height{33, 34})
+	t.NoError(err)
+
+	t.Empty(bds)
+}
+
+func (t *testQuicSever) TestBlockDataMaps() {
+	qn := t.readyServer()
+	defer qn.Stop()
+
+	bd := block.NewBaseBlockDataMap(block.TestBlockDataWriterHint, 33)
+	bd = bd.SetBlock(valuehash.RandomSHA256())
+
+	for _, k := range block.BlockData {
+		bd, _ = bd.SetItem(block.NewBaseBlockDataMapItem(k, util.UUID().String(), "file://"+util.UUID().String()))
+	}
+	{
+		i, err := bd.UpdateHash()
+		t.NoError(err)
+		bd = i
+	}
+
+	qn.SetBlockDataMapsHandler(func(hs []base.Height) ([]block.BlockDataMap, error) {
+		return []block.BlockDataMap{
+			bd,
+		}, nil
+	})
+
+	qc, err := NewChannel(t.url.String(), 2, true, nil, t.encs, t.enc)
+	t.NoError(err)
+
+	bds, err := qc.BlockDataMaps(context.TODO(), []base.Height{33, 34})
+	t.NoError(err)
+
+	t.Equal(1, len(bds))
+
+	block.CompareBlockDataMap(t.Assert(), bd, bds[0])
+}
+
+func (t *testQuicSever) TestEmptyBlockData() {
+	qn := t.readyServer()
+	defer qn.Stop()
+
+	qn.SetBlockDataHandler(func(p string) (io.ReadCloser, func() error, error) {
+		return nil, func() error { return nil }, nil
+	})
+
+	qc, err := NewChannel(t.url.String(), 2, true, nil, t.encs, t.enc)
+	t.NoError(err)
+
+	item := block.NewBaseBlockDataMapItem("findme", util.UUID().String(), "file:///showme/findme")
+	_, err = qc.BlockData(context.Background(), item)
+	t.Contains(err.Error(), "failed to request")
+}
+
+func (t *testQuicSever) TestGetBlockDataWithError() {
+	qn := t.readyServer()
+	defer qn.Stop()
+
+	qn.SetBlockDataHandler(func(p string) (io.ReadCloser, func() error, error) {
+		return nil, func() error { return nil }, storage.NotFoundError
+	})
+
+	qc, err := NewChannel(t.url.String(), 2, true, nil, t.encs, t.enc)
+	t.NoError(err)
+
+	item := block.NewBaseBlockDataMapItem("findme", util.UUID().String(), "file:///showme/findme")
+	_, err = qc.BlockData(context.Background(), item)
+	t.Contains(err.Error(), "not found")
+}
+
+func (t *testQuicSever) TestGetBlockData() {
+	qn := t.readyServer()
+	defer qn.Stop()
+
+	f, err := ioutil.TempFile("", "")
+	t.NoError(err)
+
+	data := []byte("findme")
+	f.Write(data)
+	_ = f.Close()
+
+	checksum, err := util.GenerateFileChecksum(f.Name())
+	t.NoError(err)
+
+	f, err = os.Open(f.Name())
+	t.NoError(err)
+
+	defer func() {
+		os.Remove(f.Name())
+	}()
+
+	qn.SetBlockDataHandler(func(p string) (io.ReadCloser, func() error, error) {
+		return f, func() error { return nil }, nil
+	})
+
+	qc, err := NewChannel(t.url.String(), 2, true, nil, t.encs, t.enc)
+	t.NoError(err)
+
+	item := block.NewBaseBlockDataMapItem("findme", checksum, "file:///showme/findme")
+	r, err := qc.BlockData(context.Background(), item)
+	t.NoError(err)
+	t.NotNil(r)
+
+	defer r.Close()
+
+	b, err := io.ReadAll(r)
+	t.NoError(err)
+	t.Equal(data, b)
 }
 
 func TestQuicSever(t *testing.T) {

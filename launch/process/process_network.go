@@ -8,6 +8,7 @@ import (
 
 	"golang.org/x/xerrors"
 
+	"github.com/lucas-clemente/quic-go"
 	"github.com/spikeekips/mitum/launch/config"
 	"github.com/spikeekips/mitum/launch/pm"
 	"github.com/spikeekips/mitum/network"
@@ -97,7 +98,12 @@ func NewNetworkServer(bind string, u *url.URL, encs *encoder.Encoders) (network.
 	}
 }
 
-func LoadNodeChannel(u *url.URL, encs *encoder.Encoders) (network.Channel, error) {
+func LoadNodeChannel(
+	u *url.URL,
+	encs *encoder.Encoders,
+	connectionTimeout time.Duration,
+	inseucre bool,
+) (network.Channel, error) {
 	var je encoder.Encoder
 	if e, err := encs.Encoder(jsonenc.JSONType, ""); err != nil {
 		return nil, xerrors.Errorf("json encoder needs for quic-network: %w", err)
@@ -107,13 +113,12 @@ func LoadNodeChannel(u *url.URL, encs *encoder.Encoders) (network.Channel, error
 
 	switch u.Scheme {
 	case "quic":
+		quicConfig := &quic.Config{HandshakeTimeout: connectionTimeout}
 		if ch, err := quicnetwork.NewChannel(
 			u.String(),
 			100,
-			true,
-			time.Second*1000,
-			3,
-			nil,
+			inseucre,
+			quicConfig,
 			encs,
 			je,
 		); err != nil {
@@ -122,6 +127,6 @@ func LoadNodeChannel(u *url.URL, encs *encoder.Encoders) (network.Channel, error
 			return ch, nil
 		}
 	default:
-		return nil, xerrors.Errorf("unsupported publish URL, %v", u.String())
+		return nil, xerrors.Errorf("not supported publish URL, %v", u.String())
 	}
 }

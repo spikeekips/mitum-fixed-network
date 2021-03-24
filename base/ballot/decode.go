@@ -20,6 +20,8 @@ func Decode(enc encoder.Encoder, b []byte) (Ballot, error) {
 func DecodeProposal(enc encoder.Encoder, b []byte) (Proposal, error) {
 	if i, err := Decode(enc, b); err != nil {
 		return nil, err
+	} else if i == nil {
+		return nil, nil
 	} else if v, ok := i.(Proposal); !ok {
 		return nil, hint.InvalidTypeError.Errorf("not Proposal; type=%T", i)
 	} else {

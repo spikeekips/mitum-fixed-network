@@ -35,7 +35,7 @@ func (ss SyncerState) String() string {
 
 type Syncer interface {
 	ID() string
-	Prepare(block.Manifest /* base manifest */) error
+	Prepare() error
 	HeightFrom() base.Height
 	HeightTo() base.Height
 	State() SyncerState

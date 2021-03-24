@@ -23,6 +23,8 @@ var (
 	DefaultPolicyIntervalBroadcastingACCEPTBallot      = time.Second * 1
 	DefaultPolicyTimespanValidBallot                   = time.Minute * 1
 	DefaultPolicyTimeoutProcessProposal                = time.Second * 10
+	DefaultPolicyNetworkConnectionTimeout              = time.Second * 3
+	DefaultPolicyNetworkConnectionTLSInsecure          = false
 )
 
 type LocalPolicy struct {
@@ -38,8 +40,10 @@ type LocalPolicy struct {
 	intervalBroadcastingACCEPTBallot *util.LockedItem
 	// timespanValidBallot is used to check the SignedAt time of incoming
 	// Ballot should be within timespanValidBallot on now. By default, 1 minute.
-	timespanValidBallot    *util.LockedItem
-	timeoutProcessProposal *util.LockedItem
+	timespanValidBallot          *util.LockedItem
+	timeoutProcessProposal       *util.LockedItem
+	networkConnectionTimeout     *util.LockedItem
+	networkConnectionTLSInsecure *util.LockedItem
 }
 
 func NewLocalPolicy(networkID []byte) *LocalPolicy {
@@ -55,6 +59,8 @@ func NewLocalPolicy(networkID []byte) *LocalPolicy {
 		intervalBroadcastingACCEPTBallot: util.NewLockedItem(DefaultPolicyIntervalBroadcastingACCEPTBallot),
 		timespanValidBallot:              util.NewLockedItem(DefaultPolicyTimespanValidBallot),
 		timeoutProcessProposal:           util.NewLockedItem(DefaultPolicyTimeoutProcessProposal),
+		networkConnectionTimeout:         util.NewLockedItem(DefaultPolicyNetworkConnectionTimeout),
+		networkConnectionTLSInsecure:     util.NewLockedItem(DefaultPolicyNetworkConnectionTLSInsecure),
 	}
 
 	return lp
@@ -172,6 +178,30 @@ func (lp *LocalPolicy) SetTimeoutProcessProposal(d time.Duration) (*LocalPolicy,
 	return lp, nil
 }
 
+func (lp *LocalPolicy) NetworkConnectionTimeout() time.Duration {
+	return lp.networkConnectionTimeout.Value().(time.Duration)
+}
+
+func (lp *LocalPolicy) SetNetworkConnectionTimeout(d time.Duration) (*LocalPolicy, error) {
+	if d < time.Second {
+		return nil, xerrors.Errorf("networkConnectionTimeout too short; %v", d)
+	}
+
+	_ = lp.networkConnectionTimeout.Set(d)
+
+	return lp, nil
+}
+
+func (lp *LocalPolicy) NetworkConnectionTLSInsecure() bool {
+	return lp.networkConnectionTLSInsecure.Value().(bool)
+}
+
+func (lp *LocalPolicy) SetNetworkConnectionTLSInsecure(d bool) (*LocalPolicy, error) {
+	_ = lp.networkConnectionTLSInsecure.Set(d)
+
+	return lp, nil
+}
+
 func (lp *LocalPolicy) MaxOperationsInSeal() uint {
 	return lp.maxOperationsInSeal.Value().(uint)
 }
@@ -212,5 +242,6 @@ func (lp *LocalPolicy) Config() map[string]interface{} {
 		"interval_broadcasting_accept_ballot": lp.IntervalBroadcastingACCEPTBallot(),
 		"timespan_valid_ballot":               lp.TimespanValidBallot(),
 		"timeout_process_proposal":            lp.TimeoutProcessProposal(),
+		"network_connection_timeout":          lp.NetworkConnectionTimeout(),
 	}
 }

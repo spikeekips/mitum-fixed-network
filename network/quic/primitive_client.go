@@ -4,9 +4,9 @@ import (
 	"bytes"
 	"context"
 	"crypto/tls"
-	"fmt"
 	"io"
 	"net/http"
+	"sync"
 	"time"
 
 	"github.com/lucas-clemente/quic-go"
@@ -14,30 +14,29 @@ import (
 	"golang.org/x/xerrors"
 
 	"github.com/spikeekips/mitum/storage"
+	"github.com/spikeekips/mitum/util"
 	"github.com/spikeekips/mitum/util/logging"
 )
+
+type clientDoRequestFunc func(context.Context, time.Duration, string, []byte, http.Header) (*QuicResponse, error)
 
 type QuicClient struct {
 	*logging.Logging
 	insecure   bool
-	timeout    time.Duration
-	retries    int
 	quicConfig *quic.Config
 }
 
-func NewQuicClient(insecure bool, timeout time.Duration, retries int, quicConfig *quic.Config) (*QuicClient, error) {
-	if timeout == 0 {
-		timeout = time.Second * 3
-	}
-	if retries < 1 {
-		retries = 1
+func NewQuicClient(insecure bool, quicConfig *quic.Config) (*QuicClient, error) {
+	if quicConfig == nil {
+		quicConfig = &quic.Config{}
 	}
 
-	if quicConfig == nil {
-		quicConfig = &quic.Config{
-			HandshakeTimeout: time.Second * 3, // long enough
-			MaxIdleTimeout:   time.Second * 5,
-		}
+	if quicConfig.HandshakeTimeout < 1 {
+		quicConfig.HandshakeTimeout = time.Second * 3
+	}
+
+	if quicConfig.MaxIdleTimeout < 1 {
+		quicConfig.MaxIdleTimeout = time.Second * 30 // long enough
 	}
 
 	return &QuicClient{
@@ -45,203 +44,160 @@ func NewQuicClient(insecure bool, timeout time.Duration, retries int, quicConfig
 			return c.Str("module", "network-quic-client")
 		}),
 		insecure:   insecure,
-		timeout:    timeout,
-		retries:    retries,
 		quicConfig: quicConfig,
 	}, nil
 }
 
-func (qc *QuicClient) newClient() (*http.Client, func() error /* close func */) {
-	roundTripper := &http3.RoundTripper{
-		TLSClientConfig: &tls.Config{
-			InsecureSkipVerify: qc.insecure, // nolint
-		},
-		QuicConfig: CloneConfig(qc.quicConfig),
-	}
+func (cl *QuicClient) Request(
+	ctx context.Context, timeout time.Duration,
+	url string, b []byte, headers http.Header,
+) (*QuicResponse, error) {
+	client, closefunc := cl.newClient(timeout)
+	if res, err := cl.request(ctx, client, url, "GET", b, headers); err != nil {
+		defer func() {
+			_ = closefunc()
+		}()
 
-	return &http.Client{Transport: roundTripper}, roundTripper.Close
-}
-
-func (qc *QuicClient) Send(url string, b []byte, headers http.Header) error {
-	l := qc.Log().WithLogger(func(ctx logging.Context) logging.Emitter {
-		return ctx.Str("to", url).
-			Int("content_length", len(b)).
-			Str("request", "send")
-	})
-
-	var err error
-	for i := 0; i < qc.retries; i++ {
-		if err = qc.send(url, b, headers); err != nil {
-			l.Warn().Err(err).Int("retries", i+1).Msg("failed to send; retries")
-			continue
-		}
-		break
-	}
-
-	return err
-}
-
-func (qc *QuicClient) send(url string, b []byte, headers http.Header) error {
-	l := qc.Log().WithLogger(func(ctx logging.Context) logging.Emitter {
-		return ctx.Str("to", url).
-			Int("content_length", len(b)).
-			Str("request", "send")
-	})
-
-	var request *http.Request
-	if req, err := http.NewRequest("POST", url, bytes.NewBuffer(b)); err != nil {
-		l.Error().Err(err).Msg("failed to create request")
-		return err
+		return nil, err
 	} else {
-		request = req
+		return NewQuicResponse(res, closefunc), nil
 	}
+}
 
-	request.Header = headers
+func (cl *QuicClient) Send(
+	ctx context.Context, timeout time.Duration,
+	url string, b []byte, headers http.Header,
+) (*QuicResponse, error) {
+	client, closefunc := cl.newClient(timeout)
+	if res, err := cl.request(ctx, client, url, "POST", b, headers); err != nil {
+		defer func() {
+			_ = closefunc()
+		}()
 
-	ctx, cancel := context.WithTimeout(context.Background(), qc.timeout)
-	defer cancel()
-
-	client, closeFunc := qc.newClient()
-
-	var response *http.Response
-	if res, err := client.Do(request.WithContext(ctx)); err != nil {
-		return err
+		return nil, err
 	} else {
-		response = res
+		return NewQuicResponse(res, closefunc), nil
 	}
-
-	defer func() {
-		if err := closeFunc(); err != nil {
-			l.Error().Err(err).Msg("failed to close")
-		}
-	}()
-
-	defer func() {
-		if err := response.Body.Close(); err != nil {
-			l.Error().Err(err).Msg("failed to close response.Body")
-		}
-	}()
-
-	return nil
 }
 
-func (qc *QuicClient) Request(url string, b []byte, headers http.Header) (QuicResponse, error) {
-	l := qc.Log().WithLogger(func(ctx logging.Context) logging.Emitter {
-		return ctx.Str("to", url).
-			Int("content_length", len(b)).
-			Str("request", "request")
-	})
-
-	var response QuicResponse
-	var err error
-	for i := 0; i < qc.retries; i++ {
-		if response, err = qc.request(url, b, headers); err != nil {
-			l.Error().Err(err).Int("retries", i+1).Msg("failed to request; retries")
-			continue
-		}
-		break
+func (cl *QuicClient) request(
+	ctx context.Context,
+	client *http.Client,
+	url string,
+	method string,
+	b []byte,
+	headers http.Header,
+) (*http.Response, error) {
+	if i, err := cl.makeRequest(url, method, b, headers); err != nil {
+		return nil, err
+	} else {
+		return client.Do(i.WithContext(ctx))
 	}
-
-	return response, err
 }
 
-func (qc *QuicClient) request(url string, b []byte, headers http.Header) (QuicResponse, error) {
-	l := qc.Log().WithLogger(func(ctx logging.Context) logging.Emitter {
-		return ctx.Str("to", url).
+func (cl *QuicClient) makeRequest(url string, method string, b []byte, headers http.Header) (*http.Request, error) {
+	l := cl.Log().WithLogger(func(ctx logging.Context) logging.Emitter {
+		return ctx.Str("url", url).
 			Int("content_length", len(b)).
+			Str("method", method).
+			Interface("headers", headers).
 			Str("request", "request")
 	})
 
 	var request *http.Request
 	{
 		var err error
-		if b == nil {
+		switch method {
+		case "GET":
 			request, err = http.NewRequest("GET", url, nil)
-		} else {
+		case "POST":
 			request, err = http.NewRequest("POST", url, bytes.NewBuffer(b))
 		}
 
 		if err != nil {
 			l.Error().Err(err).Msg("failed to create request")
-			return QuicResponse{}, err
+
+			return nil, err
 		}
 	}
 
 	request.Header = headers
 
-	ctx, cancel := context.WithTimeout(context.Background(), qc.timeout)
-	defer cancel()
+	return request, nil
+}
 
-	client, closeFunc := qc.newClient()
-
-	var response *http.Response
-	if res, err := client.Do(request.WithContext(ctx)); err != nil {
-		l.Error().Err(err).Msgf("failed to send")
-		return QuicResponse{}, err
-	} else {
-		l.Debug().
-			Str("response", fmt.Sprintf("%v", res)).
-			Msgf("got response")
-
-		response = res
+func (cl *QuicClient) newClient(maxIdleTimeout time.Duration) (*http.Client, func() error /* close func */) {
+	qcconfig := CloneConfig(cl.quicConfig)
+	if maxIdleTimeout > 0 {
+		qcconfig.MaxIdleTimeout = maxIdleTimeout
 	}
 
-	defer func() {
-		if err := closeFunc(); err != nil {
-			l.Error().Err(err).Msg("failed to close")
-		} else {
-			l.Debug().Msg("connection closed")
-		}
-	}()
+	roundTripper := &http3.RoundTripper{
+		TLSClientConfig: &tls.Config{
+			InsecureSkipVerify: cl.insecure, // nolint
+		},
+		QuicConfig: qcconfig,
+	}
 
-	defer func() {
-		if err := response.Body.Close(); err != nil {
-			l.Error().Err(err).Msg("failed to close response.Body")
-		}
-	}()
-
-	return NewQuicResponse(response)
+	return &http.Client{Transport: roundTripper}, roundTripper.Close
 }
 
 type QuicResponse struct {
-	status  int
-	headers http.Header
-	body    []byte
+	sync.Mutex
+	*http.Response
+	closeFunc func() error
+	body      io.Reader
 }
 
-func NewQuicResponse(response *http.Response) (QuicResponse, error) {
-	body := &bytes.Buffer{}
-	if _, err := io.Copy(body, response.Body); err != nil {
-		return QuicResponse{}, err
+func NewQuicResponse(response *http.Response, closeFunc func() error) *QuicResponse {
+	return &QuicResponse{Response: response, closeFunc: closeFunc}
+}
+
+func (qr *QuicResponse) OK() bool {
+	return qr.StatusCode == 200 || qr.StatusCode == 201
+}
+
+func (qr *QuicResponse) Bytes() ([]byte, error) {
+	qr.Lock()
+	defer qr.Unlock()
+
+	if qr.body == nil {
+		body := &bytes.Buffer{}
+		if _, err := io.Copy(body, qr.Response.Body); err != nil {
+			return nil, err
+		}
+
+		qr.body = body
 	}
 
-	return QuicResponse{
-		status:  response.StatusCode,
-		headers: response.Header,
-		body:    body.Bytes(),
-	}, nil
+	return qr.body.(*bytes.Buffer).Bytes(), nil
 }
 
-func (qr QuicResponse) OK() bool {
-	return qr.status == 200 || qr.status == 201
-}
-
-func (qr QuicResponse) Header() http.Header {
-	return qr.headers
-}
-
-func (qr QuicResponse) Bytes() []byte {
-	return qr.body
-}
-
-func (qr QuicResponse) Error() error {
+func (qr *QuicResponse) Error() error {
 	if qr.OK() {
 		return nil
-	} else if qr.status == http.StatusNotFound {
-		return storage.NotFoundError.Errorf("failed to request: %s(%d)", qr.body, qr.status)
+	} else if qr.StatusCode == http.StatusNotFound {
+		return storage.NotFoundError.Errorf("request not found: %d", qr.StatusCode)
 	}
 
-	return xerrors.Errorf("failed to request: %s(%d)", qr.body, qr.status)
+	return xerrors.Errorf("failed to request: %d", qr.StatusCode)
+}
+
+func (qr *QuicResponse) Close() error {
+	_ = qr.Response.Body.Close()
+
+	return qr.closeFunc()
+}
+
+func (qr *QuicResponse) Body() io.ReadCloser {
+	qr.Lock()
+	defer qr.Unlock()
+
+	if qr.body != nil {
+		return util.NewNilReadCloser(qr.body)
+	}
+
+	return qr.Response.Body
 }
 
 func CloneConfig(c *quic.Config) *quic.Config {

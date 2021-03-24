@@ -10,6 +10,7 @@ import (
 	"github.com/spikeekips/mitum/network"
 	"github.com/spikeekips/mitum/states"
 	"github.com/spikeekips/mitum/storage"
+	"github.com/spikeekips/mitum/storage/blockdata"
 	"github.com/spikeekips/mitum/util"
 	"github.com/spikeekips/mitum/util/hint"
 )
@@ -20,7 +21,7 @@ var (
 	ContextValueConfigSourceType        util.ContextKey = "config_source_type"
 	ContextValueLog                     util.ContextKey = "log"
 	ContextValueNetwork                 util.ContextKey = "network"
-	ContextValueBlockFS                 util.ContextKey = "blockfs"
+	ContextValueBlockData               util.ContextKey = "blockdata"
 	ContextValueStorage                 util.ContextKey = "storage"
 	ContextValueLocalNode               util.ContextKey = "local_node"
 	ContextValueNodepool                util.ContextKey = "nodepool"
@@ -49,8 +50,8 @@ func LoadNetworkContextValue(ctx context.Context, l *network.Server) error {
 	return util.LoadFromContextValue(ctx, ContextValueNetwork, l)
 }
 
-func LoadBlockFSContextValue(ctx context.Context, l **storage.BlockFS) error {
-	return util.LoadFromContextValue(ctx, ContextValueBlockFS, l)
+func LoadBlockDataContextValue(ctx context.Context, l *blockdata.BlockData) error {
+	return util.LoadFromContextValue(ctx, ContextValueBlockData, l)
 }
 
 func LoadStorageContextValue(ctx context.Context, l *storage.Storage) error {

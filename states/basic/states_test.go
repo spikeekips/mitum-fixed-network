@@ -28,7 +28,6 @@ func (t *testStates) TestLastINITVoteproof() {
 	suffrage := t.Suffrage(t.remote, t.local)
 	ss, err := NewStates(
 		t.local.Storage(),
-		t.local.BlockFS(),
 		t.local.Policy(),
 		t.local.Nodes(),
 		suffrage,
@@ -42,9 +41,8 @@ func (t *testStates) TestLastINITVoteproof() {
 	t.NoError(err)
 	t.NotNil(ss)
 
-	livp, found, err := t.local.BlockFS().LastVoteproof(base.StageINIT)
-	t.True(found)
-	t.NoError(err)
+	livp := t.local.Storage().LastVoteproof(base.StageINIT)
+	t.NotNil(livp)
 
 	sslivp := ss.LastINITVoteproof()
 	t.Equal(livp.Bytes(), sslivp.Bytes())
@@ -56,7 +54,6 @@ func (t *testStates) newStates() *States {
 	suffrage := t.Suffrage(t.remote, t.local)
 	ss, err := NewStates(
 		t.local.Storage(),
-		t.local.BlockFS(),
 		t.local.Policy(),
 		t.local.Nodes(),
 		suffrage,

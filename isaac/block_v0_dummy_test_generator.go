@@ -13,11 +13,14 @@ import (
 	"github.com/spikeekips/mitum/base/prprocessor"
 	"github.com/spikeekips/mitum/base/seal"
 	"github.com/spikeekips/mitum/storage"
-	"github.com/spikeekips/mitum/util/errors"
+	"github.com/spikeekips/mitum/storage/blockdata"
+	"github.com/spikeekips/mitum/storage/blockdata/localfs"
+	"github.com/spikeekips/mitum/util/logging"
 	"github.com/spikeekips/mitum/util/valuehash"
 )
 
 type DummyBlocksV0Generator struct {
+	*logging.Logging
 	genesisNode *Local
 	locals      []*Local
 	lastHeight  base.Height
@@ -49,7 +52,7 @@ func NewDummyBlocksV0Generator(
 			},
 		)
 		pps := prprocessor.NewProcessors(
-			NewDefaultProcessorNewFunc(l.Storage(), l.BlockFS(), l.Nodes(), suffrage, nil),
+			NewDefaultProcessorNewFunc(l.Storage(), l.BlockData(), l.Nodes(), suffrage, nil),
 			nil,
 		)
 		if err := pps.Initialize(); err != nil {
@@ -62,6 +65,9 @@ func NewDummyBlocksV0Generator(
 	}
 
 	return &DummyBlocksV0Generator{
+		Logging: logging.NewLogging(func(c logging.Context) logging.Emitter {
+			return c.Str("module", "dummy-block-generator")
+		}),
 		genesisNode: genesisNode,
 		locals:      locals,
 		lastHeight:  lastHeight,
@@ -106,7 +112,7 @@ func (bg *DummyBlocksV0Generator) Generate(ignoreExists bool) error {
 
 	if ignoreExists {
 		for _, n := range bg.allNodes {
-			if err := storage.Clean(n.Storage(), n.BlockFS(), false); err != nil {
+			if err := blockdata.Clean(n.Storage(), n.BlockData(), false); err != nil {
 				return err
 			}
 		}
@@ -128,15 +134,19 @@ func (bg *DummyBlocksV0Generator) Generate(ignoreExists bool) error {
 		if genesis, err := NewGenesisBlockV0Generator(
 			bg.genesisNode.Node(),
 			bg.genesisNode.Storage(),
-			bg.genesisNode.BlockFS(),
+			bg.genesisNode.BlockData(),
 			bg.genesisNode.Policy(),
 			nil,
 		); err != nil {
 			return err
-		} else if _, err := genesis.Generate(); err != nil {
-			return err
-		} else if err := bg.syncBlocks(bg.genesisNode); err != nil {
-			return err
+		} else {
+			_ = genesis.SetLogger(bg.Log())
+
+			if _, err := genesis.Generate(); err != nil {
+				return err
+			} else if err := bg.syncBlocks(bg.genesisNode); err != nil {
+				return err
+			}
 		}
 	}
 
@@ -167,13 +177,16 @@ func (bg *DummyBlocksV0Generator) syncBlocks(from *Local) error {
 	var blocks []block.Block
 	height := base.PreGenesisHeight
 
+	fbs := from.BlockData().(*localfs.BlockData)
+
 end:
 	for {
-		switch blk, err := from.BlockFS().Load(height); {
+		switch blk, err := localfs.LoadBlock(fbs, height); {
 		case err != nil:
 			if xerrors.Is(err, storage.NotFoundError) {
 				break end
 			}
+
 			return err
 		default:
 			blocks = append(blocks, blk)
@@ -202,8 +215,8 @@ end:
 }
 
 func (bg *DummyBlocksV0Generator) storeBlock(l *Local, blk block.Block) error {
-	var bs storage.BlockStorage
-	if st, err := l.Storage().OpenBlockStorage(blk); err != nil {
+	var bs storage.StorageSession
+	if st, err := l.Storage().NewStorageSession(blk); err != nil {
 		return err
 	} else {
 		bs = st
@@ -213,20 +226,25 @@ func (bg *DummyBlocksV0Generator) storeBlock(l *Local, blk block.Block) error {
 		_ = bs.Close()
 	}()
 
+	var session blockdata.Session
+	if i, err := l.BlockData().NewSession(blk.Height()); err != nil {
+		return err
+	} else {
+		session = i
+	}
+
+	var bd block.BlockDataMap
+	if err := session.SetBlock(blk); err != nil {
+		return err
+	} else if i, err := l.BlockData().SaveSession(session); err != nil {
+		return err
+	} else {
+		bd = i
+	}
+
 	if err := bs.SetBlock(context.Background(), blk); err != nil {
 		return err
-	}
-
-	if err := bs.Commit(context.Background()); err != nil {
-		return err
-	}
-
-	if err := l.BlockFS().AddAndCommit(blk); err != nil {
-		err := errors.NewError("failed to commit to blockfs").Wrap(err)
-		if err0 := bs.Cancel(); err0 != nil {
-			return err.Wrap(err0)
-		}
-
+	} else if err := bs.Commit(context.Background(), bd); err != nil {
 		return err
 	}
 
@@ -365,7 +383,7 @@ func (bg *DummyBlocksV0Generator) createINITVoteproof() (map[base.Address]base.V
 
 func (bg *DummyBlocksV0Generator) createINITBallot(local *Local) (ballot.INITBallot, error) {
 	var baseBallot ballot.INITBallotV0
-	if b, err := NewINITBallotV0Round0(local.Node(), local.Storage(), local.BlockFS()); err != nil {
+	if b, err := NewINITBallotV0Round0(local.Node(), local.Storage()); err != nil {
 		return nil, err
 	} else if err := SignSeal(&b, local); err != nil {
 		return nil, err

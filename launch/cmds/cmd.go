@@ -31,7 +31,6 @@ var defaultKongOptions = []kong.Option{
 	kong.UsageOnError(),
 	kong.ConfigureHelp(MainOptions),
 	LogVars,
-	BlocksVars,
 	DefaultConfigVars,
 	PprofVars,
 }

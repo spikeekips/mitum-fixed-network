@@ -135,8 +135,7 @@ storage:
 	t.NoError(config.LoadConfigContextValue(ps.Context(), &conf))
 
 	t.NotNil(conf.Storage())
-	t.Equal(config.DefaultBlockFSPath, conf.Storage().BlockFS().Path())
-	t.Equal(config.DefaultBlockFSWideOpen, conf.Storage().BlockFS().WideOpen())
+	t.Equal(config.DefaultBlockDataPath, conf.Storage().BlockData().Path())
 	t.Equal(config.DefaultMainStorageURI, conf.Storage().Main().URI().String())
 	t.Equal(config.DefaultMainStorageCache, conf.Storage().Main().Cache().String())
 }
@@ -145,9 +144,8 @@ func (t *testConfigChecker) TestStorage() {
 	{
 		y := `
 storage:
-  blockfs:
+  blockdata:
     path: "/a/b/c/d"
-    wide-open: true
 `
 		ctx := context.Background()
 		ctx = context.WithValue(ctx, ContextValueConfigSource, []byte(y))
@@ -165,17 +163,15 @@ storage:
 		t.NoError(config.LoadConfigContextValue(ps.Context(), &conf))
 
 		t.NotNil(conf.Storage())
-		t.Equal("/a/b/c/d", conf.Storage().BlockFS().Path())
-		t.Equal(true, conf.Storage().BlockFS().WideOpen())
+		t.Equal("/a/b/c/d", conf.Storage().BlockData().Path())
 		t.Equal(config.DefaultMainStorageURI, conf.Storage().Main().URI().String())
 		t.Equal(config.DefaultMainStorageCache, conf.Storage().Main().Cache().String())
 	}
 	{
 		y := `
 storage:
-  blockfs:
+  blockdata:
     path: "/a/b/c/d"
-    wide-open: true
   uri: mongodb://1.2.3.4:123456?a=b
 `
 		ctx := context.Background()
@@ -194,17 +190,15 @@ storage:
 		t.NoError(config.LoadConfigContextValue(ps.Context(), &conf))
 
 		t.NotNil(conf.Storage())
-		t.Equal("/a/b/c/d", conf.Storage().BlockFS().Path())
-		t.Equal(true, conf.Storage().BlockFS().WideOpen())
+		t.Equal("/a/b/c/d", conf.Storage().BlockData().Path())
 		t.Equal("mongodb://1.2.3.4:123456?a=b", conf.Storage().Main().URI().String())
 		t.Equal(config.DefaultMainStorageCache, conf.Storage().Main().Cache().String())
 	}
 	{
 		y := `
 storage:
-  blockfs:
+  blockdata:
     path: "/a/b/c/d"
-    wide-open: true
   uri: mongodb://1.2.3.4:123456
   cache: dummy://
 `
@@ -224,8 +218,7 @@ storage:
 		t.NoError(config.LoadConfigContextValue(ps.Context(), &conf))
 
 		t.NotNil(conf.Storage())
-		t.Equal("/a/b/c/d", conf.Storage().BlockFS().Path())
-		t.Equal(true, conf.Storage().BlockFS().WideOpen())
+		t.Equal("/a/b/c/d", conf.Storage().BlockData().Path())
 		t.Equal("mongodb://1.2.3.4:123456", conf.Storage().Main().URI().String())
 		t.Equal("dummy:", conf.Storage().Main().Cache().String())
 	}

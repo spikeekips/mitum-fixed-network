@@ -30,7 +30,7 @@ func NewDummySeal(pk key.Privatekey) DummySeal {
 		H:         valuehash.RandomSHA256().(valuehash.SHA256),
 		BH:        valuehash.RandomSHA256().(valuehash.SHA256),
 		S:         util.UUID().String(),
-		CreatedAt: localtime.Now(),
+		CreatedAt: localtime.UTCNow(),
 	}
 }
 

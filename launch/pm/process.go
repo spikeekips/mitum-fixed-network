@@ -12,6 +12,7 @@ type ProcessFunc func(context.Context) (context.Context, error)
 type Process interface {
 	Name() string
 	Requires() []string
+	Disabled() bool
 	Run(context.Context) (context.Context, error)
 }
 
@@ -19,6 +20,7 @@ type BaseProcess struct {
 	name     string
 	requires []string
 	f        ProcessFunc
+	disabled bool
 }
 
 func NewDisabledProcess(process Process) BaseProcess {
@@ -26,6 +28,7 @@ func NewDisabledProcess(process Process) BaseProcess {
 		name:     process.Name(),
 		requires: process.Requires(),
 		f:        DisabledProcessFunc,
+		disabled: true,
 	}
 }
 
@@ -68,6 +71,10 @@ func (pr BaseProcess) Run(ctx context.Context) (context.Context, error) {
 	}
 
 	return pr.f(ctx)
+}
+
+func (pr BaseProcess) Disabled() bool {
+	return pr.disabled
 }
 
 func DisabledProcessFunc(ctx context.Context) (context.Context, error) {

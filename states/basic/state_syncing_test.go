@@ -25,7 +25,7 @@ func (t *testStateSyncing) SetupTest() {
 }
 
 func (t *testStateSyncing) newState(local *isaac.Local) (*SyncingState, func()) {
-	st := NewSyncingState(local.Storage(), local.BlockFS(), local.Policy(), local.Nodes())
+	st := NewSyncingState(local.Storage(), local.BlockData(), local.Policy(), local.Nodes())
 
 	return st, func() {
 		f, err := st.Exit(NewStateSwitchContext(base.StateSyncing, base.StateStopped))
@@ -43,9 +43,8 @@ func (t *testStateSyncing) TestINITMovesToConsensus() {
 	}, false)
 	st.SetTimers(timers)
 
-	lastINITVoteproof, found, err := t.remote.BlockFS().LastVoteproof(base.StageINIT)
-	t.NoError(err)
-	t.True(found)
+	lastINITVoteproof := t.remote.Storage().LastVoteproof(base.StageINIT)
+	t.NotNil(lastINITVoteproof)
 
 	var voteproof base.Voteproof
 	{
@@ -81,9 +80,8 @@ func (t *testStateSyncing) TestWaitMovesToJoining() {
 	}, false)
 	st.SetTimers(timers)
 
-	lastINITVoteproof, found, err := t.remote.BlockFS().LastVoteproof(base.StageINIT)
-	t.NoError(err)
-	t.True(found)
+	lastINITVoteproof := t.remote.Storage().LastVoteproof(base.StageINIT)
+	t.NotNil(lastINITVoteproof)
 
 	statech := make(chan StateSwitchContext)
 	st.SetStateSwitchFunc(func(sctx StateSwitchContext) error {

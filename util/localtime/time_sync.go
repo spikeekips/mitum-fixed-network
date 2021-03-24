@@ -159,3 +159,7 @@ func Now() time.Time {
 
 	return time.Now().Add(timeSyncer.Offset())
 }
+
+func UTCNow() time.Time {
+	return Now().UTC()
+}

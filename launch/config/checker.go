@@ -60,8 +60,8 @@ func (cc *checker) CheckLocalNetwork() (bool, error) {
 func (cc *checker) CheckStorage() (bool, error) {
 	conf := cc.config.Storage()
 
-	if len(conf.BlockFS().Path()) < 1 {
-		if err := conf.BlockFS().SetPath(DefaultBlockFSPath); err != nil {
+	if len(conf.BlockData().Path()) < 1 {
+		if err := conf.BlockData().SetPath(DefaultBlockDataPath); err != nil {
 			return false, err
 		}
 	}
@@ -115,6 +115,7 @@ func (cc *checker) CheckPolicy() (bool, error) {
 		{conf.IntervalBroadcastingACCEPTBallot(), conf.SetIntervalBroadcastingACCEPTBallot, isaac.DefaultPolicyIntervalBroadcastingACCEPTBallot}, // nolint:lll
 		{conf.TimespanValidBallot(), conf.SetTimespanValidBallot, isaac.DefaultPolicyTimespanValidBallot},                                        // nolint:lll
 		{conf.TimeoutProcessProposal(), conf.SetTimeoutProcessProposal, isaac.DefaultPolicyTimeoutProcessProposal},                               // nolint:lll
+		{conf.NetworkConnectionTimeout(), conf.SetNetworkConnectionTimeout, isaac.DefaultPolicyNetworkConnectionTimeout},                         // nolint:lll
 	}
 
 	for i := range durs {
@@ -128,6 +129,10 @@ func (cc *checker) CheckPolicy() (bool, error) {
 		if err := f(d.String()); err != nil {
 			return false, err
 		}
+	}
+
+	if err := conf.SetNetworkConnectionTLSInsecure(conf.NetworkConnectionTLSInsecure()); err != nil {
+		return false, err
 	}
 
 	return true, nil

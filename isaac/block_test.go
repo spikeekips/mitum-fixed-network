@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	"github.com/spikeekips/mitum/base/key"
+	"github.com/spikeekips/mitum/storage/blockdata/localfs"
 	"github.com/spikeekips/mitum/util"
 	"github.com/stretchr/testify/suite"
 	"golang.org/x/xerrors"
@@ -15,7 +16,9 @@ type testBlock struct {
 
 func (t *testBlock) TestBlockIsValid() {
 	local := t.Locals(1)[0]
-	blk, err := local.BlockFS().Load(2)
+
+	bs := local.BlockData().(*localfs.BlockData)
+	blk, err := localfs.LoadBlock(bs, 2)
 	t.NoError(err)
 	t.NotNil(blk)
 

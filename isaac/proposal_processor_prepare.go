@@ -18,6 +18,8 @@ import (
 	"golang.org/x/xerrors"
 )
 
+var blockDataMapContextKey util.ContextKey = "blockdata_map"
+
 func (pp *DefaultProcessor) Prepare(ctx context.Context) (block.Block, error) {
 	pp.Lock()
 	defer pp.Unlock()
@@ -51,11 +53,11 @@ func (pp *DefaultProcessor) prepare(ctx context.Context) error {
 	}
 
 	for _, f := range []func(context.Context) error{
+		pp.prepareBlockDataSession,
 		pp.prepareOperations,
-		pp.processOperations,
+		pp.process,
 		pp.prepareBlock,
-		pp.prepareBlockStorage,
-		pp.prepareBlockFS,
+		pp.prepareStorageSession,
 	} {
 		select {
 		case <-ctx.Done():
@@ -104,6 +106,32 @@ func (pp *DefaultProcessor) prepareOperations(ctx context.Context) error {
 	}
 }
 
+func (pp *DefaultProcessor) process(ctx context.Context) error {
+	if err := pp.blockDataSession.AddOperations(pp.operations...); err != nil {
+		return err
+	} else if err := pp.blockDataSession.CloseOperations(); err != nil {
+		return err
+	}
+
+	if err := pp.processOperations(ctx); err != nil {
+		return err
+	}
+
+	if err := pp.blockDataSession.SetOperationsTree(pp.operationsTree); err != nil {
+		return err
+	} else if err := pp.blockDataSession.SetStatesTree(pp.statesTree); err != nil {
+		return err
+	}
+
+	if err := pp.blockDataSession.AddStates(pp.states...); err != nil {
+		return err
+	} else if err := pp.blockDataSession.CloseStates(); err != nil {
+		return err
+	}
+
+	return nil
+}
+
 func (pp *DefaultProcessor) processOperations(ctx context.Context) error {
 	if len(pp.operations) < 1 {
 		pp.Log().Debug().Msg("trying to process operations, but empty")
@@ -149,6 +177,8 @@ func (pp *DefaultProcessor) prepareBlock(context.Context) error {
 		opsHash, stsHash, pp.proposal.SignedAt(),
 	); err != nil {
 		return err
+	} else if err := pp.blockDataSession.SetManifest(b.Manifest()); err != nil {
+		return err
 	} else {
 		blk = b
 	}
@@ -169,23 +199,23 @@ func (pp *DefaultProcessor) prepareBlock(context.Context) error {
 	return nil
 }
 
-func (pp *DefaultProcessor) prepareBlockStorage(ctx context.Context) error {
-	var bs storage.BlockStorage
-	if b, err := pp.st.OpenBlockStorage(pp.blk); err != nil {
+func (pp *DefaultProcessor) prepareStorageSession(ctx context.Context) error {
+	var bs storage.StorageSession
+	if b, err := pp.st.NewStorageSession(pp.blk); err != nil {
 		return err
 	} else {
 		bs = b
 	}
 
 	if err := bs.SetBlock(ctx, pp.blk); err != nil {
-		pp.Log().Error().Err(err).Msg("failed to store to BlockStorage")
+		pp.Log().Error().Err(err).Msg("failed to store to StorageSession")
 
 		return err
 	}
 
-	pp.bs = bs
+	pp.ss = bs
 
-	pp.Log().Debug().Msg("stored to BlockStorage")
+	pp.Log().Debug().Msg("stored to StorageSession")
 
 	return nil
 }
@@ -248,10 +278,10 @@ func (pp *DefaultProcessor) concurrentProcessStatesTree(
 		return nil
 	}
 
-	if statesTree, states, err := pp.generateStatesTree(pool); err != nil {
+	if tr, states, err := pp.generateStatesTree(pool); err != nil {
 		return err
 	} else {
-		pp.statesTree = statesTree
+		pp.statesTree = tr
 		pp.states = states
 
 		return nil
@@ -298,7 +328,9 @@ func (pp *DefaultProcessor) processOperationsTree(_ context.Context, pool *stora
 	}
 }
 
-func (pp *DefaultProcessor) generateStatesTree(pool *storage.Statepool) (tree.FixedTree, []state.State, error) {
+func (pp *DefaultProcessor) generateStatesTree(
+	pool *storage.Statepool,
+) (tree.FixedTree, []state.State, error) {
 	states := make([]state.State, len(pool.Updates()))
 	for i, s := range pool.Updates() {
 		st := s.GetState()
@@ -329,14 +361,30 @@ func (pp *DefaultProcessor) generateStatesTree(pool *storage.Statepool) (tree.Fi
 	}
 }
 
-func (pp *DefaultProcessor) prepareBlockFS(context.Context) error {
-	if err := pp.blockFS.Add(pp.blk); err != nil {
-		pp.Log().Error().Err(err).Msg("failed to store temp BlockFS")
+func (pp *DefaultProcessor) prepareBlockDataSession(context.Context) error {
+	if i, err := pp.blockData.NewSession(pp.proposal.Height()); err != nil {
+		pp.Log().Error().Err(err).Msg("failed to make new block storage session")
 
+		return err
+	} else {
+		pp.blockDataSession = i
+	}
+
+	if vp := pp.initVoteproof; vp != nil {
+		if err := pp.blockDataSession.SetINITVoteproof(vp); err != nil {
+			return err
+		}
+	}
+
+	if err := pp.blockDataSession.SetSuffrageInfo(pp.suffrageInfo); err != nil {
 		return err
 	}
 
-	pp.Log().Debug().Msg("stored temp BlockFS")
+	if err := pp.blockDataSession.SetProposal(pp.proposal); err != nil {
+		return err
+	}
+
+	pp.Log().Debug().Msg("block storage session prepared")
 
 	return nil
 }
@@ -344,16 +392,19 @@ func (pp *DefaultProcessor) prepareBlockFS(context.Context) error {
 func (pp *DefaultProcessor) resetPrepare() error {
 	pp.Log().Debug().Str("state", pp.state.String()).Msg("prepare will be resetted")
 
-	pp.bs = nil
+	if pp.blockDataSession != nil {
+		if err := pp.blockDataSession.Cancel(); err != nil {
+			return err
+		}
+	}
+
+	pp.ss = nil
+	pp.blockDataSession = nil
 	pp.blk = nil
 	pp.operations = nil
 	pp.operationsTree = tree.FixedTree{}
 	pp.states = nil
 	pp.statesTree = tree.FixedTree{}
-
-	if err := pp.blockFS.Cancel(pp.proposal.Height(), pp.proposal.Hash()); err != nil {
-		return err
-	}
 
 	return pp.resetSave()
 }

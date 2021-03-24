@@ -27,7 +27,7 @@ func NewCacheFromURI(uri string) (Cache, error) {
 		case u.Scheme == "dummy":
 			return Dummy{}, nil
 		default:
-			return nil, xerrors.Errorf("unsupported uri of cache, %q", uri)
+			return nil, xerrors.Errorf("not supported uri of cache, %q", uri)
 		}
 	}
 }

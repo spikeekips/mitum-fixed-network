@@ -10,6 +10,7 @@ import (
 	"github.com/spikeekips/mitum/launch/pm"
 	"github.com/spikeekips/mitum/network"
 	"github.com/spikeekips/mitum/storage"
+	"github.com/spikeekips/mitum/storage/blockdata"
 	"github.com/spikeekips/mitum/util/hint"
 	"github.com/spikeekips/mitum/util/logging"
 )
@@ -24,7 +25,7 @@ func init() {
 		[]string{
 			ProcessNameLocalNode,
 			ProcessNameStorage,
-			ProcessNameBlockFS,
+			ProcessNameBlockData,
 			ProcessNameSuffrage,
 		},
 		ProcessProposalProcessor,
@@ -90,8 +91,8 @@ func processDefaultProposalProcessor(ctx context.Context) (prprocessor.Processor
 		return nil, err
 	}
 
-	var blockFS *storage.BlockFS
-	if err := LoadBlockFSContextValue(ctx, &blockFS); err != nil {
+	var blockData blockdata.BlockData
+	if err := LoadBlockDataContextValue(ctx, &blockData); err != nil {
 		return nil, err
 	}
 
@@ -107,7 +108,7 @@ func processDefaultProposalProcessor(ctx context.Context) (prprocessor.Processor
 
 	return isaac.NewDefaultProcessorNewFunc(
 		sf,
-		blockFS,
+		blockData,
 		nodepool,
 		suffrage,
 		oprs,
@@ -139,8 +140,8 @@ func processErrorProposalProcessor(
 		return nil, err
 	}
 
-	var blockFS *storage.BlockFS
-	if err := LoadBlockFSContextValue(ctx, &blockFS); err != nil {
+	var blockData blockdata.BlockData
+	if err := LoadBlockDataContextValue(ctx, &blockData); err != nil {
 		return nil, err
 	}
 
@@ -156,7 +157,7 @@ func processErrorProposalProcessor(
 
 	return NewErrorProcessorNewFunc(
 		sf,
-		blockFS,
+		blockData,
 		nodepool,
 		suffrage,
 		oprs,

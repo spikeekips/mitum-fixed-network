@@ -54,7 +54,7 @@ func NewBTCPrivatekeyFromString(s string) (BTCPrivatekey, error) {
 		return BTCPrivatekey{}, err
 	}
 	if !wif.IsForNet(&chaincfg.MainNetParams) {
-		return BTCPrivatekey{}, InvalidKeyError.Errorf("unsupported BTC network")
+		return BTCPrivatekey{}, InvalidKeyError.Errorf("not supported BTC network")
 	}
 
 	return newBTCPrivatekey(wif), nil

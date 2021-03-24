@@ -18,6 +18,8 @@ func (lp *LocalPolicy) MarshalJSON() ([]byte, error) {
 		IA  string              `json:"interval_broadcasting_accept_ballot"`
 		TS  string              `json:"timespan_valid_ballot"`
 		TC  string              `json:"timeout_process_proposal"`
+		NC  string              `json:"network_connection_timeout"`
+		NS  bool                `json:"network_connection_tls_insecure"`
 	}{
 		NID: string(lp.NetworkID()),
 		TH:  lp.ThresholdRatio(),
@@ -29,6 +31,7 @@ func (lp *LocalPolicy) MarshalJSON() ([]byte, error) {
 		WB:  lp.WaitBroadcastingACCEPTBallot().String(),
 		IA:  lp.IntervalBroadcastingACCEPTBallot().String(),
 		TS:  lp.TimespanValidBallot().String(),
-		TC:  lp.TimeoutProcessProposal().String(),
+		NC:  lp.NetworkConnectionTimeout().String(),
+		NS:  lp.NetworkConnectionTLSInsecure(),
 	})
 }

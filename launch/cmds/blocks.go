@@ -1,11 +1,12 @@
 package cmds
 
 import (
+	"context"
 	"fmt"
 	"net/url"
 	"os"
+	"time"
 
-	"github.com/alecthomas/kong"
 	"golang.org/x/xerrors"
 
 	"github.com/spikeekips/mitum/base"
@@ -15,16 +16,14 @@ import (
 	jsonenc "github.com/spikeekips/mitum/util/encoder/json"
 )
 
-var BlocksVars = kong.Vars{
-	"blocks_request_type": "manifest",
-}
-
 type BlocksCommand struct {
 	*BaseCommand
-	URL     *url.URL `arg:"" name:"node url" help:"remote mitum url" required:""`
-	Heights []int64  `arg:"" name:"height" help:"block height of blocks" required:""`
-	Type    string   `name:"type" help:"{block manifest}" default:"${blocks_request_type}"`
-	heights []base.Height
+	URL        *url.URL      `arg:"" name:"node url" help:"remote mitum url" required:""`
+	Heights    []int64       `arg:"" name:"height" help:"block height of blocks" required:""`
+	Timeout    time.Duration `name:"timeout" help:"timeout; default is 5 seconds"`
+	TLSInscure bool          `name:"tls-insecure" help:"allow inseucre TLS connection; default is false"`
+	channel    network.Channel
+	heights    []base.Height
 }
 
 func NewBlocksCommand() BlocksCommand {
@@ -44,22 +43,50 @@ func (cmd *BlocksCommand) Run(version util.Version) error {
 		return err
 	}
 
-	cmd.Log().Debug().Msg("trying to get blocks thru channel")
-	if i, err := cmd.requestByHeights(); err != nil {
-		return err
-	} else {
-		_, _ = fmt.Fprintln(os.Stdout, jsonenc.ToString(i))
+	cmd.Log().Debug().Msg("trying to get block data maps thru channel")
+
+	limit := 20
+	var heights []base.Height
+	for i := range cmd.heights {
+		if len(heights) != limit {
+			heights = append(heights, cmd.heights[i])
+
+			continue
+		}
+
+		if err := cmd.request(heights); err != nil {
+			return err
+		}
+
+		heights = nil
+	}
+
+	if len(heights) > 0 {
+		if err := cmd.request(heights); err != nil {
+			return err
+		}
 	}
 
 	return nil
 }
 
 func (cmd *BlocksCommand) prepare() error {
-	switch t := cmd.Type; t {
-	case "block", "manifest":
-	default:
-		return xerrors.Errorf("unknown --type, %q found", t)
+	encs := cmd.Encoders()
+	if encs == nil {
+		if i, err := cmd.LoadEncoders(nil); err != nil {
+			return err
+		} else {
+			encs = i
+		}
 	}
+
+	if ch, err := process.LoadNodeChannel(cmd.URL, encs, cmd.Timeout, cmd.TLSInscure); err != nil {
+		return err
+	} else {
+		cmd.channel = ch
+	}
+
+	cmd.Log().Debug().Msg("network channel loaded")
 
 	var heights []base.Height // nolint
 	for _, i := range cmd.Heights {
@@ -89,33 +116,24 @@ func (cmd *BlocksCommand) prepare() error {
 
 	cmd.heights = heights
 
+	if cmd.Timeout < 1 {
+		cmd.Timeout = time.Second * 5
+	}
+
 	return nil
 }
 
-func (cmd *BlocksCommand) requestByHeights() (interface{}, error) {
-	encs := cmd.Encoders()
-	if encs == nil {
-		if i, err := cmd.LoadEncoders(nil); err != nil {
-			return nil, err
-		} else {
-			encs = i
+func (cmd *BlocksCommand) request(heights []base.Height) error {
+	ctx, cancel := context.WithTimeout(context.Background(), cmd.Timeout)
+	defer cancel()
+
+	if maps, err := cmd.channel.BlockDataMaps(ctx, heights); err != nil {
+		return err
+	} else {
+		for i := range maps {
+			_, _ = fmt.Fprintln(os.Stdout, jsonenc.ToString(maps[i]))
 		}
 	}
 
-	var channel network.Channel
-	if ch, err := process.LoadNodeChannel(cmd.URL, encs); err != nil {
-		return nil, err
-	} else {
-		channel = ch
-	}
-	cmd.Log().Debug().Msg("network channel loaded")
-
-	switch cmd.Type {
-	case "block":
-		return channel.Blocks(cmd.heights)
-	case "manifest":
-		return channel.Manifests(cmd.heights)
-	default:
-		return nil, xerrors.Errorf("unknown request: %s", cmd.Type)
-	}
+	return nil
 }

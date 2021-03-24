@@ -1,6 +1,7 @@
 package jsonenc
 
 import (
+	"bytes"
 	"encoding"
 	"encoding/json"
 	"reflect"
@@ -50,7 +51,7 @@ func (je *Encoder) Decode(b []byte, i interface{}) error {
 }
 
 func (je *Encoder) DecodeByHint(b []byte) (hint.Hinter, error) {
-	if isNullRawMesage(b) {
+	if isNullRawMesage(b) || len(bytes.TrimSpace(b)) < 1 {
 		return nil, nil
 	}
 

@@ -28,7 +28,7 @@ func (t *testStateJoining) SetupTest() {
 }
 
 func (t *testStateJoining) newState(local *isaac.Local, suffrage base.Suffrage, ballotbox *isaac.Ballotbox) (*JoiningState, func()) {
-	st := NewJoiningState(local.Node(), local.Storage(), local.BlockFS(), local.Policy(), suffrage, ballotbox)
+	st := NewJoiningState(local.Node(), local.Storage(), local.Policy(), suffrage, ballotbox)
 
 	return st, func() {
 		f, err := st.Exit(NewStateSwitchContext(base.StateJoining, base.StateStopped))
@@ -179,9 +179,8 @@ func (t *testStateJoining) TestBroadcastingINITBallotWithACCEPTVoteproof() {
 		return nil
 	})
 
-	lastAcceptVoteproof, found, err := t.local.BlockFS().LastVoteproof(base.StageACCEPT)
-	t.NoError(err)
-	t.True(found)
+	lastAcceptVoteproof := t.local.Storage().LastVoteproof(base.StageACCEPT)
+	t.NotNil(lastAcceptVoteproof)
 
 	f, err := st.Enter(NewStateSwitchContext(base.StateBooting, base.StateJoining).SetVoteproof(lastAcceptVoteproof))
 	t.NoError(err)
@@ -233,9 +232,8 @@ func (t *testStateJoining) TestTimerStopAfterExit() {
 	st.SetTimers(timers)
 	st.SetBroadcastSealsFunc(func(seal.Seal, bool) error { return nil })
 
-	lastAcceptVoteproof, found, err := t.local.BlockFS().LastVoteproof(base.StageACCEPT)
-	t.NoError(err)
-	t.True(found)
+	lastAcceptVoteproof := t.local.Storage().LastVoteproof(base.StageACCEPT)
+	t.NotNil(lastAcceptVoteproof)
 
 	f, err := st.Enter(NewStateSwitchContext(base.StateBooting, base.StateJoining).SetVoteproof(lastAcceptVoteproof))
 	t.NoError(err)
@@ -276,9 +274,8 @@ func (t *testStateJoining) TestCheckBallotboxWithINITBallot() {
 		vpch <- voteproof
 	})
 
-	lastINITVoteproof, found, err := t.local.BlockFS().LastVoteproof(base.StageINIT)
-	t.NoError(err)
-	t.True(found)
+	lastINITVoteproof := t.local.Storage().LastVoteproof(base.StageINIT)
+	t.NotNil(lastINITVoteproof)
 
 	st.SetLastVoteproofFuncs(func() base.Voteproof {
 		return lastINITVoteproof
@@ -286,9 +283,8 @@ func (t *testStateJoining) TestCheckBallotboxWithINITBallot() {
 		return lastINITVoteproof
 	}, nil)
 
-	lastACCEPTVoteproof, found, err := t.local.BlockFS().LastVoteproof(base.StageACCEPT)
-	t.NoError(err)
-	t.True(found)
+	lastACCEPTVoteproof := t.local.Storage().LastVoteproof(base.StageACCEPT)
+	t.NotNil(lastACCEPTVoteproof)
 
 	initFact := ballot.NewINITBallotV0(
 		t.local.Node().Address(),
@@ -359,9 +355,8 @@ func (t *testStateJoining) TestNewINITVoteproof() {
 		return nil
 	})
 
-	lastINITVoteproof, found, err := t.local.BlockFS().LastVoteproof(base.StageINIT)
-	t.NoError(err)
-	t.True(found)
+	lastINITVoteproof := t.local.Storage().LastVoteproof(base.StageINIT)
+	t.NotNil(lastINITVoteproof)
 
 	st.SetLastVoteproofFuncs(func() base.Voteproof {
 		return lastINITVoteproof
@@ -369,9 +364,8 @@ func (t *testStateJoining) TestNewINITVoteproof() {
 		return lastINITVoteproof
 	}, nil)
 
-	lastACCEPTVoteproof, found, err := t.local.BlockFS().LastVoteproof(base.StageACCEPT)
-	t.NoError(err)
-	t.True(found)
+	lastACCEPTVoteproof := t.local.Storage().LastVoteproof(base.StageACCEPT)
+	t.NotNil(lastACCEPTVoteproof)
 
 	f, err := st.Enter(NewStateSwitchContext(base.StateBooting, base.StateJoining).SetVoteproof(lastACCEPTVoteproof))
 	t.NoError(err)

@@ -1,6 +1,9 @@
 package channetwork
 
 import (
+	"context"
+	"io"
+
 	"golang.org/x/xerrors"
 
 	"github.com/spikeekips/mitum/base"
@@ -14,12 +17,12 @@ import (
 
 type Channel struct {
 	*logging.Logging
-	recvChan       chan seal.Seal
-	getSealHandler network.GetSealsHandler
-	getManifests   network.GetManifestsHandler
-	getBlocks      network.GetBlocksHandler
-	getState       network.GetStateHandler
-	nodeInfo       network.NodeInfoHandler
+	recvChan         chan seal.Seal
+	getSealHandler   network.GetSealsHandler
+	getState         network.GetStateHandler
+	nodeInfo         network.NodeInfoHandler
+	getBlockDataMaps network.BlockDataMapsHandler
+	getBlockData     network.BlockDataHandler
 }
 
 func NewChannel(bufsize uint) *Channel {
@@ -39,7 +42,7 @@ func (ch *Channel) URL() string {
 	return "gochan://"
 }
 
-func (ch *Channel) Seals(h []valuehash.Hash) ([]seal.Seal, error) {
+func (ch *Channel) Seals(_ context.Context, h []valuehash.Hash) ([]seal.Seal, error) {
 	if ch.getSealHandler == nil {
 		return nil, xerrors.Errorf("getSealHandler is missing")
 	}
@@ -47,7 +50,7 @@ func (ch *Channel) Seals(h []valuehash.Hash) ([]seal.Seal, error) {
 	return ch.getSealHandler(h)
 }
 
-func (ch *Channel) SendSeal(sl seal.Seal) error {
+func (ch *Channel) SendSeal(_ context.Context, sl seal.Seal) error {
 	ch.recvChan <- sl
 
 	return nil
@@ -61,23 +64,11 @@ func (ch *Channel) SetGetSealHandler(f network.GetSealsHandler) {
 	ch.getSealHandler = f
 }
 
-func (ch *Channel) Manifests(hs []base.Height) ([]block.Manifest, error) {
-	return ch.getManifests(hs)
-}
-
-func (ch *Channel) SetGetManifestsHandler(f network.GetManifestsHandler) {
-	ch.getManifests = f
-}
-
-func (ch *Channel) Blocks(hs []base.Height) ([]block.Block, error) {
-	return ch.getBlocks(hs)
-}
-
-func (ch *Channel) State(key string) (state.State, bool, error) {
+func (ch *Channel) State(_ context.Context, key string) (state.State, bool, error) {
 	return ch.getState(key)
 }
 
-func (ch *Channel) NodeInfo() (network.NodeInfo, error) {
+func (ch *Channel) NodeInfo(_ context.Context) (network.NodeInfo, error) {
 	if ch.nodeInfo == nil {
 		return nil, nil
 	}
@@ -89,6 +80,36 @@ func (ch *Channel) SetNodeInfoHandler(f network.NodeInfoHandler) {
 	ch.nodeInfo = f
 }
 
-func (ch *Channel) SetGetBlocksHandler(f network.GetBlocksHandler) {
-	ch.getBlocks = f
+func (ch *Channel) BlockDataMaps(_ context.Context, hs []base.Height) ([]block.BlockDataMap, error) {
+	if ch.getBlockDataMaps == nil {
+		return nil, xerrors.Errorf("not supported")
+	}
+
+	if bds, err := ch.getBlockDataMaps(hs); err != nil {
+		return nil, err
+	} else {
+		for i := range bds {
+			if err := bds[i].IsValid(nil); err != nil {
+				return nil, err
+			}
+		}
+
+		return bds, nil
+	}
+}
+
+func (ch *Channel) SetBlockDataMapsHandler(f network.BlockDataMapsHandler) {
+	ch.getBlockDataMaps = f
+}
+
+func (ch *Channel) BlockData(_ context.Context, item block.BlockDataMapItem) (io.ReadCloser, error) {
+	if ch.getBlockData == nil {
+		return nil, xerrors.Errorf("not supported")
+	}
+
+	return network.FetchBlockDataThruChannel(ch.getBlockData, item)
+}
+
+func (ch *Channel) SetBlockDataHandler(f network.BlockDataHandler) {
+	ch.getBlockData = f
 }

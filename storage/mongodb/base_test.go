@@ -51,34 +51,56 @@ func (t *testStorage) TestNew() {
 	t.Implements((*storage.Storage)(nil), t.storage)
 }
 
-func (t *testStorage) saveNewBlock(height base.Height) block.Block {
+func (t *testStorage) saveNewBlock(height base.Height) (block.Block, block.BlockDataMap) {
 	blk, err := block.NewTestBlockV0(height, base.Round(0), valuehash.RandomSHA256(), valuehash.RandomSHA256())
 	t.NoError(err)
 
-	bs, err := t.storage.OpenBlockStorage(blk)
+	i := (interface{})(blk).(block.BlockUpdater)
+	i = i.SetINITVoteproof(base.NewVoteproofV0(blk.Height(), blk.Round(), nil, base.ThresholdRatio(100), base.StageINIT))
+	i = i.SetACCEPTVoteproof(base.NewVoteproofV0(blk.Height(), blk.Round(), nil, base.ThresholdRatio(100), base.StageACCEPT))
+	blk = i.(block.BlockV0)
+
+	bs, err := t.storage.NewStorageSession(blk)
 	t.NoError(err)
 
 	t.NoError(bs.SetBlock(context.Background(), blk))
-	t.NoError(bs.Commit(context.Background()))
+	bd := t.NewBlockDataMap(blk.Height(), blk.Hash(), true)
+	t.NoError(bs.Commit(context.Background(), bd))
 
-	return blk
+	return blk, bd
+}
+
+func (t *testStorage) saveBlockDataMap(st *Storage, bd block.BlockDataMap) error {
+	if doc, err := NewBlockDataMapDoc(bd, st.enc); err != nil {
+		return err
+	} else if _, err := st.client.Add(ColNameBlockDataMap, doc); err != nil {
+		return err
+	} else {
+		return nil
+	}
 }
 
 func (t *testStorage) TestLastBlock() {
-	blk := t.saveNewBlock(base.Height(33))
+	blk, bd := t.saveNewBlock(base.Height(33))
 
 	loaded, found, err := t.storage.LastManifest()
 	t.NoError(err)
 	t.True(found)
 
 	t.CompareManifest(blk.Manifest(), loaded)
+
+	ubd, found, err := t.storage.BlockDataMap(blk.Height())
+	t.NoError(err)
+	t.True(found)
+
+	block.CompareBlockDataMap(t.Assert(), bd, ubd)
 }
 
 func (t *testStorage) TestSetBlockContext() {
 	blk, err := block.NewTestBlockV0(base.Height(33), base.Round(0), valuehash.RandomSHA256(), valuehash.RandomSHA256())
 	t.NoError(err)
 
-	bs, err := t.storage.OpenBlockStorage(blk)
+	bs, err := t.storage.NewStorageSession(blk)
 	t.NoError(err)
 
 	ctx, cancel := context.WithTimeout(context.Background(), time.Nanosecond*1)
@@ -92,19 +114,26 @@ func (t *testStorage) TestSaveBlockContext() {
 	blk, err := block.NewTestBlockV0(base.Height(33), base.Round(0), valuehash.RandomSHA256(), valuehash.RandomSHA256())
 	t.NoError(err)
 
-	bs, err := t.storage.OpenBlockStorage(blk)
+	i := (interface{})(blk).(block.BlockUpdater)
+	i = i.SetINITVoteproof(base.NewVoteproofV0(blk.Height(), blk.Round(), nil, base.ThresholdRatio(100), base.StageINIT))
+	i = i.SetACCEPTVoteproof(base.NewVoteproofV0(blk.Height(), blk.Round(), nil, base.ThresholdRatio(100), base.StageACCEPT))
+	blk = i.(block.BlockV0)
+
+	bs, err := t.storage.NewStorageSession(blk)
 	t.NoError(err)
 
 	t.NoError(bs.SetBlock(context.Background(), blk))
 
 	ctx, cancel := context.WithTimeout(context.Background(), time.Nanosecond*1)
 	defer cancel()
-	err = bs.Commit(ctx)
+
+	bd := t.NewBlockDataMap(blk.Height(), blk.Hash(), true)
+	err = bs.Commit(ctx, bd)
 	t.True(xerrors.Is(err, context.DeadlineExceeded))
 }
 
 func (t *testStorage) TestLastManifest() {
-	blk := t.saveNewBlock(base.Height(33))
+	blk, _ := t.saveNewBlock(base.Height(33))
 
 	loaded, found, err := t.storage.LastManifest()
 	t.NoError(err)
@@ -114,7 +143,7 @@ func (t *testStorage) TestLastManifest() {
 }
 
 func (t *testStorage) TestLoadManifestByHash() {
-	blk := t.saveNewBlock(base.Height(33))
+	blk, _ := t.saveNewBlock(base.Height(33))
 
 	loaded, found, err := t.storage.Manifest(blk.Hash())
 	t.NoError(err)
@@ -128,7 +157,7 @@ func (t *testStorage) TestLoadManifestByHash() {
 }
 
 func (t *testStorage) TestLoadManifestByHeight() {
-	blk := t.saveNewBlock(base.Height(33))
+	blk, _ := t.saveNewBlock(base.Height(33))
 
 	loaded, found, err := t.storage.ManifestByHeight(blk.Height())
 	t.NoError(err)
@@ -382,10 +411,16 @@ func (t *testStorage) TestUnStagedOperationSeals() {
 	blk, err := block.NewTestBlockV0(base.Height(33), base.Round(0), valuehash.RandomSHA256(), valuehash.RandomSHA256())
 	t.NoError(err)
 
-	bs, err := t.storage.OpenBlockStorage(blk)
+	i := (interface{})(blk).(block.BlockUpdater)
+	i = i.SetINITVoteproof(base.NewVoteproofV0(blk.Height(), blk.Round(), nil, base.ThresholdRatio(100), base.StageINIT))
+	i = i.SetACCEPTVoteproof(base.NewVoteproofV0(blk.Height(), blk.Round(), nil, base.ThresholdRatio(100), base.StageACCEPT))
+	blk = i.(block.BlockV0)
+
+	bs, err := t.storage.NewStorageSession(blk)
 	t.NoError(err)
 
-	t.NoError(bs.Commit(context.Background()))
+	bd := t.NewBlockDataMap(blk.Height(), blk.Hash(), true)
+	t.NoError(bs.Commit(context.Background(), bd))
 
 	var collected []seal.Seal
 	t.NoError(t.storage.StagedOperationSeals(
@@ -454,7 +489,7 @@ func (t *testStorage) TestCreateIndexNew() {
 		},
 	}
 
-	t.NoError(t.storage.CreateIndex(ColNameManifest, oldIndexes, indexPrefix))
+	t.NoError(t.storage.CreateIndex(ColNameManifest, oldIndexes, IndexPrefix))
 
 	existings := allIndexes(ColNameManifest)
 
@@ -465,7 +500,7 @@ func (t *testStorage) TestCreateIndexNew() {
 		},
 	}
 
-	t.NoError(t.storage.CreateIndex(ColNameManifest, newIndexes, indexPrefix))
+	t.NoError(t.storage.CreateIndex(ColNameManifest, newIndexes, IndexPrefix))
 	created := allIndexes(ColNameManifest)
 
 	t.Equal(existings, []string{"_id_", "mitum_showme"})
@@ -549,6 +584,38 @@ func (t *testStorage) TestInfo() {
 	t.NoError(err)
 	t.True(found)
 	t.Equal(nb, unb)
+}
+
+func (t *testStorage) TestLocalBlockDataMapsByHeight() {
+	isLocal := func(height base.Height) bool {
+		switch height {
+		case 33, 36, 39:
+			return true
+		default:
+			return false
+		}
+	}
+
+	for i := base.Height(33); i < 40; i++ {
+		bd := t.NewBlockDataMap(i, valuehash.RandomSHA256(), isLocal(i))
+		t.NoError(t.saveBlockDataMap(t.storage, bd))
+	}
+
+	for i := base.Height(33); i < 40; i++ {
+		bd, found, err := t.storage.BlockDataMap(i)
+		t.NoError(err)
+		t.True(found)
+		t.NotNil(bd)
+	}
+
+	err := t.storage.LocalBlockDataMapsByHeight(36, func(bd block.BlockDataMap) (bool, error) {
+		t.True(bd.Height() > 35)
+		t.True(isLocal(bd.Height()))
+		t.True(bd.IsLocal())
+
+		return true, nil
+	})
+	t.NoError(err)
 }
 
 func TestMongodbStorage(t *testing.T) {

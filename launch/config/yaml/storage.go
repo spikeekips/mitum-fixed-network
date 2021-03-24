@@ -6,9 +6,8 @@ import (
 	"github.com/spikeekips/mitum/launch/config"
 )
 
-type BlockFS struct {
-	Path     *string
-	WideOpen *bool `yaml:"wide-open,omitempty"`
+type BlockData struct {
+	Path *string
 }
 
 type MainStorage struct {
@@ -40,8 +39,8 @@ func (no MainStorage) Set(ctx context.Context) (context.Context, error) {
 }
 
 type Storage struct {
-	Main    *MainStorage `yaml:",inline"`
-	BlockFS *BlockFS     `yaml:",omitempty"`
+	Main      *MainStorage `yaml:",inline"`
+	BlockData *BlockData   `yaml:"blockdata,omitempty"`
 }
 
 func (no Storage) Set(ctx context.Context) (context.Context, error) {
@@ -61,14 +60,9 @@ func (no Storage) Set(ctx context.Context) (context.Context, error) {
 		}
 	}
 
-	if no.BlockFS != nil {
-		if no.BlockFS.Path != nil {
-			if err := conf.BlockFS().SetPath(*no.BlockFS.Path); err != nil {
-				return ctx, err
-			}
-		}
-		if no.BlockFS.WideOpen != nil {
-			if err := conf.BlockFS().SetWideOpen(*no.BlockFS.WideOpen); err != nil {
+	if no.BlockData != nil {
+		if no.BlockData.Path != nil {
+			if err := conf.BlockData().SetPath(*no.BlockData.Path); err != nil {
 				return ctx, err
 			}
 		}

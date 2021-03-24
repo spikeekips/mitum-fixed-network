@@ -183,7 +183,7 @@ func (ts *Timers) stopTimers(ids []TimerID) error {
 		}
 
 		if err := t.Stop(); err != nil {
-			ts.Log().Error().Err(err).Str("timer", t.ID().String()).Msg("failed to start timer")
+			ts.Log().Error().Err(err).Str("timer", t.ID().String()).Msg("failed to stop timer")
 		}
 	}
 

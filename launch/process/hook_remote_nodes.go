@@ -3,6 +3,7 @@ package process
 import (
 	"context"
 
+	"github.com/spikeekips/mitum/isaac"
 	"github.com/spikeekips/mitum/launch/config"
 	"github.com/spikeekips/mitum/network"
 	"github.com/spikeekips/mitum/util/encoder"
@@ -37,11 +38,21 @@ func HookRemoteNodes(ctx context.Context) (context.Context, error) {
 		return ctx, err
 	}
 
+	var policy *isaac.LocalPolicy
+	if err := LoadPolicyContextValue(ctx, &policy); err != nil {
+		return ctx, err
+	}
+
 	for i := range nodeConfigs {
 		conf := nodeConfigs[i]
 
 		node := network.NewRemoteNode(conf.Address(), conf.Publickey(), conf.URL().String())
-		if ch, err := LoadNodeChannel(conf.URL(), encs); err != nil {
+		if ch, err := LoadNodeChannel(
+			conf.URL(),
+			encs,
+			policy.NetworkConnectionTimeout(),
+			policy.NetworkConnectionTLSInsecure(),
+		); err != nil {
 			return ctx, err
 		} else {
 			_ = node.SetChannel(ch)

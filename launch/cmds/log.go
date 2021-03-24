@@ -13,6 +13,7 @@ import (
 	"github.com/rs/zerolog/diode"
 	"golang.org/x/xerrors"
 
+	"github.com/spikeekips/mitum/util/localtime"
 	"github.com/spikeekips/mitum/util/logging"
 )
 
@@ -21,6 +22,7 @@ func init() {
 	zerolog.LevelFieldName = "l"
 	zerolog.TimestampFieldName = "t"
 	zerolog.MessageFieldName = "m"
+	zerolog.TimestampFunc = localtime.UTCNow
 
 	zerolog.DisableSampling(true)
 }

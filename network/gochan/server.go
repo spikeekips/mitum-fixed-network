@@ -45,10 +45,10 @@ func (sv *Server) SetNewSealHandler(f network.NewSealHandler) {
 	sv.newSealHandler = f
 }
 
-func (sv *Server) SetGetManifestsHandler(network.GetManifestsHandler) {}
-func (sv *Server) SetGetBlocksHandler(network.GetBlocksHandler)       {}
-func (sv *Server) SetNodeInfoHandler(network.NodeInfoHandler)         {}
-func (sv *Server) NodeInfoHandler() network.NodeInfoHandler           { return nil }
+func (sv *Server) SetNodeInfoHandler(network.NodeInfoHandler)           {}
+func (sv *Server) NodeInfoHandler() network.NodeInfoHandler             { return nil }
+func (sv *Server) SetBlockDataMapsHandler(network.BlockDataMapsHandler) {}
+func (sv *Server) SetBlockDataHandler(network.BlockDataHandler)         {}
 
 func (sv *Server) run(stopChan chan struct{}) error {
 end:

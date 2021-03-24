@@ -3,14 +3,12 @@
 package isaac
 
 import (
-	"context"
 	"fmt"
 	"sync"
 	"time"
 
 	"golang.org/x/xerrors"
 
-	"github.com/spikeekips/mitum/base/block"
 	"github.com/spikeekips/mitum/storage"
 	leveldbstorage "github.com/spikeekips/mitum/storage/leveldb"
 	mongodbstorage "github.com/spikeekips/mitum/storage/mongodb"
@@ -103,16 +101,6 @@ func (ss *StorageSupportTest) Storage(encs *encoder.Encoders, enc encoder.Encode
 	default:
 		panic(xerrors.Errorf("unknown db type: %v", ss.DBType))
 	}
-}
-
-func (ss *StorageSupportTest) SetBlock(st storage.Storage, blk block.Block) error {
-	if bs, err := st.OpenBlockStorage(blk); err != nil {
-		return err
-	} else if err := bs.Commit(context.Background()); err != nil {
-		return err
-	}
-
-	return nil
 }
 
 type DummyMongodbStorage struct {

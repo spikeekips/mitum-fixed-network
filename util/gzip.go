@@ -1,0 +1,58 @@
+package util
+
+import (
+	"compress/gzip"
+	"io"
+)
+
+// GzipWriter closes the underlying reader too.
+type GzipWriter struct {
+	*gzip.Writer
+	f io.Writer
+}
+
+func NewGzipWriter(f io.Writer) GzipWriter {
+	return GzipWriter{f: f, Writer: gzip.NewWriter(f)}
+}
+
+func (w GzipWriter) Close() error {
+	if err := w.Writer.Close(); err != nil {
+		return err
+	}
+
+	if j, ok := w.f.(io.Closer); !ok {
+		return nil
+	} else if err := j.Close(); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+// GzipReader closes the underlying reader too.
+type GzipReader struct {
+	*gzip.Reader
+	f io.Reader
+}
+
+func NewGzipReader(f io.Reader) (GzipReader, error) {
+	if r, err := gzip.NewReader(f); err != nil {
+		return GzipReader{}, err
+	} else {
+		return GzipReader{f: f, Reader: r}, nil
+	}
+}
+
+func (r GzipReader) Close() error {
+	if err := r.Reader.Close(); err != nil {
+		return err
+	}
+
+	if j, ok := r.f.(io.Closer); !ok {
+		return nil
+	} else if err := j.Close(); err != nil {
+		return err
+	}
+
+	return nil
+}

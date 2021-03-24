@@ -26,6 +26,8 @@ func (t *testPolicy) TestEmpty() {
 	t.Nil(n.IntervalBroadcastingACCEPTBallot)
 	t.Nil(n.TimespanValidBallot)
 	t.Nil(n.TimeoutProcessProposal)
+	t.Nil(n.NetworkConnectionTimeout)
+	t.Nil(n.NetworkConnectionTLSInsecure)
 }
 
 func (t *testPolicy) TestThresholdRatio() {
@@ -45,6 +47,8 @@ threshold: 33
 		t.Nil(n.IntervalBroadcastingACCEPTBallot)
 		t.Nil(n.TimespanValidBallot)
 		t.Nil(n.TimeoutProcessProposal)
+		t.Nil(n.NetworkConnectionTimeout)
+		t.Nil(n.NetworkConnectionTLSInsecure)
 
 		t.Equal(float64(33), *n.ThresholdRatio)
 	}
@@ -65,6 +69,8 @@ threshold: 33.9
 func (t *testPolicy) TestDuration() {
 	y := `
 timeout-waiting-proposal: 33m3s
+network-connection-timeout: 1ms
+network-connection-tls-insecure: true
 `
 
 	var n Policy
@@ -80,6 +86,8 @@ timeout-waiting-proposal: 33m3s
 	t.Nil(n.TimeoutProcessProposal)
 
 	t.Equal("33m3s", *n.TimeoutWaitingProposal)
+	t.Equal("1ms", *n.NetworkConnectionTimeout)
+	t.True(*n.NetworkConnectionTLSInsecure)
 }
 
 func TestPolicy(t *testing.T) {

@@ -58,7 +58,7 @@ func (bm *BlockV0) UnpackBSON(b []byte, enc *bsonenc.Encoder) error {
 		bm.ManifestV0 = mv
 	}
 
-	if m, err := decodeConsensusInfo(enc, nbm.CI); err != nil {
+	if m, err := DecodeConsensusInfo(enc, nbm.CI); err != nil {
 		return err
 	} else if mv, ok := m.(ConsensusInfoV0); !ok {
 		return xerrors.Errorf("not ConsensusInfoV0: type=%T", m)

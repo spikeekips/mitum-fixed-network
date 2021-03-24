@@ -9,6 +9,7 @@ import (
 	"github.com/spikeekips/mitum/launch/pm"
 	"github.com/spikeekips/mitum/launch/process"
 	"github.com/spikeekips/mitum/storage"
+	"github.com/spikeekips/mitum/storage/blockdata"
 	"github.com/spikeekips/mitum/util"
 )
 
@@ -26,7 +27,7 @@ func NewCleanStorageCommand(dryrun bool) CleanStorageCommand {
 		panic(xerrors.Errorf("processes not prepared"))
 	}
 
-	if err := ps.AddHook( // NOTE clean storage and blockfs with `--force`
+	if err := ps.AddHook( // NOTE clean storage and block data with `--force`
 		pm.HookPrefixPre, process.ProcessNameLocalNode,
 		"clean-storage", cmd.cleanStorage,
 		true,
@@ -95,16 +96,16 @@ func (cmd *CleanStorageCommand) cleanStorage(ctx context.Context) (context.Conte
 		return ctx, err
 	}
 
-	var blockFS *storage.BlockFS
-	if err := process.LoadBlockFSContextValue(ctx, &blockFS); err != nil {
+	var blockData blockdata.BlockData
+	if err := process.LoadBlockDataContextValue(ctx, &blockData); err != nil {
 		return ctx, err
 	}
 
-	if err := storage.Clean(st, blockFS, true); err != nil {
+	if err := blockdata.Clean(st, blockData, true); err != nil {
 		return ctx, err
 	}
 
-	cmd.Log().Info().Msg("storage and blockfs was cleaned")
+	cmd.Log().Info().Msg("storage and block data was cleaned")
 
 	return ctx, nil
 }

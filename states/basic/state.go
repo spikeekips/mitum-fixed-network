@@ -199,7 +199,7 @@ func (cc *ConsensusStuckChecker) IsOldLastVoteproofTime() (bool, error) {
 	if cc.nowFunc != nil {
 		now = cc.nowFunc()
 	} else {
-		now = localtime.Now()
+		now = localtime.UTCNow()
 	}
 
 	if since := now.Sub(cc.lastVoteproof.FinishedAt()); since > cc.endure {

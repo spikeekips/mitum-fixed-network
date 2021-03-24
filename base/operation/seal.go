@@ -121,7 +121,7 @@ func (sl BaseSeal) SetOperations(ops []Operation) SealUpdater {
 
 func (sl *BaseSeal) Sign(pk key.Privatekey, b []byte) error {
 	sl.signer = pk.Publickey()
-	sl.signedAt = localtime.Now()
+	sl.signedAt = localtime.UTCNow()
 
 	var bodyHash valuehash.Hash
 	if h, err := sl.GenerateBodyHash(); err != nil {

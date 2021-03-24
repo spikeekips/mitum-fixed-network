@@ -223,7 +223,7 @@ func (pm *Processes) check() error {
 
 	for _, name := range pm.processesOrder {
 		if pr, found := pm.processes[name]; !found {
-			return xerrors.Errorf("process, %s not found", name)
+			return xerrors.Errorf("process, %q not found", name)
 		} else if err := pm.checkProcess(pr, processed, requireCount); err != nil {
 			return xerrors.Errorf("failed to check process, %q: %w", name, err)
 		}
@@ -235,17 +235,21 @@ func (pm *Processes) check() error {
 func (pm *Processes) checkProcess(pr Process, processed map[string]struct{}, requireCount map[string]int) error {
 	if _, found := processed[pr.Name()]; found {
 		return nil
+	} else if pr.Disabled() {
+		return nil
 	}
 
 	if c := requireCount[pr.Name()]; c > 0 {
-		return xerrors.Errorf("circulation found: %s", pr.Name())
+		return xerrors.Errorf("circulation found: %q", pr.Name())
 	} else {
 		requireCount[pr.Name()] = 1
 	}
 
 	for _, r := range pr.Requires() {
 		if npr, found := pm.processes[r]; !found {
-			return xerrors.Errorf("process, %s requires %s, but not found", pr.Name(), r)
+			return xerrors.Errorf("process, %q requires %q, but not found", pr.Name(), r)
+		} else if npr.Disabled() {
+			return xerrors.Errorf("process, %q requires %q, but disabled", pr.Name(), r)
 		} else if err := pm.checkProcess(npr, processed, requireCount); err != nil {
 			return err
 		}
@@ -262,9 +266,12 @@ func (pm *Processes) runProcess(s, from string) error {
 	}
 
 	var pr Process
-	if i, found := pm.processes[s]; !found {
-		return xerrors.Errorf("process, %s not found", s)
-	} else {
+	switch i, found := pm.processes[s]; {
+	case !found:
+		return xerrors.Errorf("process, %q not found", s)
+	case i.Disabled():
+		return nil
+	default:
 		pr = i
 	}
 

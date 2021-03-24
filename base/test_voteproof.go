@@ -11,6 +11,7 @@ import (
 	bsonenc "github.com/spikeekips/mitum/util/encoder/bson"
 	jsonenc "github.com/spikeekips/mitum/util/encoder/json"
 	"github.com/spikeekips/mitum/util/hint"
+	"github.com/spikeekips/mitum/util/localtime"
 	"github.com/spikeekips/mitum/util/logging"
 )
 
@@ -78,7 +79,7 @@ func (vp DummyVoteproof) IsValid([]byte) error {
 }
 
 func (vp DummyVoteproof) FinishedAt() time.Time {
-	return time.Now()
+	return localtime.UTCNow()
 }
 
 func (vp DummyVoteproof) IsFinished() bool {

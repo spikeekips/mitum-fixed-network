@@ -3,7 +3,11 @@ package isaac
 import (
 	"context"
 
+	"github.com/spikeekips/mitum/base/block"
 	"github.com/spikeekips/mitum/base/prprocessor"
+	"github.com/spikeekips/mitum/storage/blockdata"
+	"github.com/spikeekips/mitum/util"
+	"golang.org/x/xerrors"
 )
 
 func (pp *DefaultProcessor) Save(ctx context.Context) error {
@@ -40,17 +44,21 @@ func (pp *DefaultProcessor) save(ctx context.Context) error {
 		}
 	}
 
-	for _, f := range []func(context.Context) error{
+	sctx := ctx
+	for _, f := range []func(context.Context) (context.Context, error){
+		pp.storeBlockDataSession,
 		pp.storeStorage,
-		pp.storeBlockFS,
 	} {
 		select {
 		case <-ctx.Done():
 			return ctx.Err()
 		default:
-			if err := f(ctx); err != nil {
+			if i, err := f(sctx); err != nil {
 				pp.Log().Error().Err(err).Msg("failed to save")
+
 				return err
+			} else {
+				sctx = i
 			}
 		}
 	}
@@ -66,36 +74,47 @@ func (pp *DefaultProcessor) save(ctx context.Context) error {
 	return nil
 }
 
-func (pp *DefaultProcessor) storeStorage(ctx context.Context) error {
+func (pp *DefaultProcessor) storeBlockDataSession(ctx context.Context) (context.Context, error) {
+	pp.Log().Debug().Msg("trying to store block storage session")
+
+	if pp.blockDataSession == nil {
+		return ctx, xerrors.Errorf("not prepared")
+	}
+
+	if bd, err := pp.blockData.SaveSession(pp.blockDataSession); err != nil {
+		pp.Log().Error().Err(err).Msg("trying to store block storage session")
+
+		return ctx, err
+	} else {
+		ctx = context.WithValue(ctx, blockDataMapContextKey, bd)
+	}
+
+	pp.Log().Debug().Msg("stored block storage session")
+
+	return ctx, nil
+}
+
+func (pp *DefaultProcessor) storeStorage(ctx context.Context) (context.Context, error) {
 	pp.Log().Debug().Msg("trying to store storage")
 
-	if err := pp.bs.Commit(ctx); err != nil {
+	var bd block.BlockDataMap
+	if err := util.LoadFromContextValue(ctx, blockDataMapContextKey, &bd); err != nil {
+		return ctx, xerrors.Errorf("block data map not found: %w", err)
+	}
+
+	if err := pp.ss.Commit(ctx, bd); err != nil {
 		pp.Log().Error().Err(err).Msg("failed to store storage")
 
-		return err
-	} else if err := pp.bs.Close(); err != nil {
-		return err
+		return ctx, err
+	} else if err := pp.ss.Close(); err != nil {
+		return ctx, err
 	} else {
-		pp.bs = nil
+		pp.ss = nil
 
 		pp.Log().Debug().Msg("stored storage")
 
-		return nil
+		return ctx, nil
 	}
-}
-
-func (pp *DefaultProcessor) storeBlockFS(context.Context) error {
-	pp.Log().Debug().Msg("trying to store BlockFS")
-
-	if err := pp.blockFS.Commit(pp.blk.Height(), pp.blk.Hash()); err != nil {
-		pp.Log().Error().Err(err).Msg("trying to store BlockFS")
-
-		return err
-	}
-
-	pp.Log().Debug().Msg("stored BlockFS")
-
-	return nil
 }
 
 func (pp *DefaultProcessor) resetSave() error {
@@ -113,9 +132,7 @@ func (pp *DefaultProcessor) resetSave() error {
 
 	pp.Log().Debug().Str("state", pp.state.String()).Msg("save will be resetted")
 
-	if err := pp.st.CleanByHeight(pp.proposal.Height()); err != nil {
-		return err
-	} else if err := pp.blockFS.CleanByHeight(pp.proposal.Height()); err != nil {
+	if err := blockdata.CleanByHeight(pp.st, pp.blockData, pp.proposal.Height()); err != nil {
 		return err
 	}
 

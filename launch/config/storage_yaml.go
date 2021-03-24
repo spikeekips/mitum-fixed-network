@@ -1,23 +1,21 @@
 package config
 
-type BaseBlockFSPackerYAML struct {
-	Path     string
-	WideOpen bool `yaml:"wide-open,omitempty"`
+type BaseBlockDataPackerYAML struct {
+	Path string
 }
 
 type BaseStoragePackerYAML struct {
-	URI     string                `yaml:",omitempty"`
-	Cache   string                `yaml:",omitempty"`
-	BlockFS BaseBlockFSPackerYAML `yaml:"blockfs"`
+	URI       string                  `yaml:",omitempty"`
+	Cache     string                  `yaml:",omitempty"`
+	BlockData BaseBlockDataPackerYAML `yaml:"blockdata"`
 }
 
 func (no BaseStorage) MarshalYAML() (interface{}, error) {
 	return BaseStoragePackerYAML{
 		URI:   no.main.URI().String(),
 		Cache: no.main.Cache().String(),
-		BlockFS: BaseBlockFSPackerYAML{
-			Path:     no.blockFS.Path(),
-			WideOpen: no.blockFS.WideOpen(),
+		BlockData: BaseBlockDataPackerYAML{
+			Path: no.blockData.Path(),
 		},
 	}, nil
 }

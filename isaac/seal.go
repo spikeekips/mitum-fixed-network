@@ -248,7 +248,7 @@ func (se *SealsExtracter) fromChannel(notFounds []valuehash.Hash) (map[string][]
 		proposer = node
 	}
 
-	received, err := proposer.Channel().Seals(notFounds)
+	received, err := proposer.Channel().Seals(context.TODO(), notFounds)
 	if err != nil {
 		return nil, err
 	}

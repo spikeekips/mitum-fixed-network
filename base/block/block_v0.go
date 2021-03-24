@@ -54,7 +54,7 @@ func NewBlockV0(
 		operationsHash: operationsHash,
 		statesHash:     statesHash,
 		confirmedAt:    confirmedAt,
-		createdAt:      localtime.Now(),
+		createdAt:      localtime.UTCNow(),
 	}
 	bm.h = bm.GenerateHash()
 

@@ -16,6 +16,8 @@ type BasePolicyPackerJSON struct {
 	IntervalBroadcastingACCEPTBallot string              `json:"interval_broadcasting_accept_ballot,omitempty"`
 	TimespanValidBallot              string              `json:"timespan_valid_ballot,omitempty"`
 	TimeoutProcessProposal           string              `json:"timeout_process_proposal,omitempty"`
+	NetworkConnectionTimeout         string              `json:"network_connection_timeout,omitempty"`
+	NetworkConnectionTLSInsecure     bool                `json:"network_connection_tls_insecure,omitempty"`
 }
 
 func (no BasePolicy) MarshalJSON() ([]byte, error) {
@@ -30,5 +32,7 @@ func (no BasePolicy) MarshalJSON() ([]byte, error) {
 		IntervalBroadcastingACCEPTBallot: no.intervalBroadcastingACCEPTBallot.String(),
 		TimespanValidBallot:              no.timespanValidBallot.String(),
 		TimeoutProcessProposal:           no.timeoutProcessProposal.String(),
+		NetworkConnectionTimeout:         no.networkConnectionTimeout.String(),
+		NetworkConnectionTLSInsecure:     no.networkConnectionTLSInsecure,
 	})
 }

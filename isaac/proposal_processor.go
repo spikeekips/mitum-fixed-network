@@ -12,6 +12,7 @@ import (
 	"github.com/spikeekips/mitum/base/state"
 	"github.com/spikeekips/mitum/network"
 	"github.com/spikeekips/mitum/storage"
+	"github.com/spikeekips/mitum/storage/blockdata"
 	"github.com/spikeekips/mitum/util/hint"
 	"github.com/spikeekips/mitum/util/logging"
 	"github.com/spikeekips/mitum/util/tree"
@@ -21,32 +22,33 @@ import (
 type DefaultProcessor struct {
 	sync.RWMutex
 	*logging.Logging
-	stateLock       sync.RWMutex
-	st              storage.Storage
-	blockFS         *storage.BlockFS
-	nodepool        *network.Nodepool
-	baseManifest    block.Manifest
-	suffrage        base.Suffrage
-	oprHintset      *hint.Hintmap
-	proposal        ballot.Proposal
-	initVoteproof   base.Voteproof
-	state           prprocessor.State
-	blk             block.BlockUpdater
-	suffrageInfo    block.SuffrageInfoV0
-	operations      []operation.Operation
-	states          []state.State
-	operationsTree  tree.FixedTree
-	statesTree      tree.FixedTree
-	bs              storage.BlockStorage
-	prePrepareHook  func(context.Context) error
-	postPrepareHook func(context.Context) error
-	preSaveHook     func(context.Context) error
-	postSaveHook    func(context.Context) error
+	stateLock        sync.RWMutex
+	st               storage.Storage
+	blockData        blockdata.BlockData
+	nodepool         *network.Nodepool
+	baseManifest     block.Manifest
+	suffrage         base.Suffrage
+	oprHintset       *hint.Hintmap
+	proposal         ballot.Proposal
+	initVoteproof    base.Voteproof
+	state            prprocessor.State
+	blk              block.BlockUpdater
+	suffrageInfo     block.SuffrageInfoV0
+	operations       []operation.Operation
+	states           []state.State
+	operationsTree   tree.FixedTree
+	statesTree       tree.FixedTree
+	ss               storage.StorageSession
+	blockDataSession blockdata.Session
+	prePrepareHook   func(context.Context) error
+	postPrepareHook  func(context.Context) error
+	preSaveHook      func(context.Context) error
+	postSaveHook     func(context.Context) error
 }
 
 func NewDefaultProcessorNewFunc(
 	st storage.Storage,
-	blockFS *storage.BlockFS,
+	blockData blockdata.BlockData,
 	nodepool *network.Nodepool,
 	suffrage base.Suffrage,
 	oprHintset *hint.Hintmap,
@@ -54,7 +56,7 @@ func NewDefaultProcessorNewFunc(
 	return func(proposal ballot.Proposal, initVoteproof base.Voteproof) (prprocessor.Processor, error) {
 		return NewDefaultProcessor(
 			st,
-			blockFS,
+			blockData,
 			nodepool,
 			suffrage,
 			oprHintset,
@@ -66,7 +68,7 @@ func NewDefaultProcessorNewFunc(
 
 func NewDefaultProcessor(
 	st storage.Storage,
-	blockFS *storage.BlockFS,
+	blockData blockdata.BlockData,
 	nodepool *network.Nodepool,
 	suffrage base.Suffrage,
 	oprHintset *hint.Hintmap,
@@ -91,7 +93,7 @@ func NewDefaultProcessor(
 				Hinted("proposal", proposal.Hash())
 		}),
 		st:            st,
-		blockFS:       blockFS,
+		blockData:     blockData,
 		nodepool:      nodepool,
 		baseManifest:  baseManifest,
 		suffrage:      suffrage,
@@ -149,8 +151,13 @@ func (pp *DefaultProcessor) SetACCEPTVoteproof(acceptVoteproof base.Voteproof) e
 	pp.Lock()
 	defer pp.Unlock()
 
-	if pp.blk == nil {
+	switch {
+	case pp.blk == nil:
 		return xerrors.Errorf("empty block, not prepared")
+	case pp.ss == nil:
+		return xerrors.Errorf("empty block session, not prepared")
+	case pp.blockDataSession == nil:
+		return xerrors.Errorf("empty block storage session, not prepared")
 	}
 
 	if m := acceptVoteproof.Majority(); m == nil {
@@ -162,8 +169,11 @@ func (pp *DefaultProcessor) SetACCEPTVoteproof(acceptVoteproof base.Voteproof) e
 	}
 
 	pp.blk = pp.blk.SetACCEPTVoteproof(acceptVoteproof)
+	if err := pp.ss.SetACCEPTVoteproof(acceptVoteproof); err != nil {
+		return err
+	}
 
-	return pp.blockFS.AddACCEPTVoteproof(pp.blk.Height(), pp.blk.Hash(), acceptVoteproof)
+	return pp.blockDataSession.SetACCEPTVoteproof(acceptVoteproof)
 }
 
 func (pp *DefaultProcessor) Cancel() error {

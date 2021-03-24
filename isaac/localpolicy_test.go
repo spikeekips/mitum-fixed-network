@@ -2,6 +2,7 @@ package isaac
 
 import (
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/suite"
 
@@ -25,6 +26,8 @@ func (t *testPolicy) TestNew() {
 	t.Equal(DefaultPolicyTimeoutProcessProposal, p.TimeoutProcessProposal())
 	t.Equal(DefaultPolicyMaxOperationsInSeal, p.MaxOperationsInSeal())
 	t.Equal(DefaultPolicyMaxOperationsInProposal, p.MaxOperationsInProposal())
+	t.Equal(DefaultPolicyNetworkConnectionTimeout, p.NetworkConnectionTimeout())
+	t.Equal(DefaultPolicyNetworkConnectionTLSInsecure, p.NetworkConnectionTLSInsecure())
 }
 
 func (t *testPolicy) TestSet() {
@@ -45,6 +48,17 @@ func (t *testPolicy) TestSet() {
 	t.NoError(err)
 
 	t.Equal(maxOperationsInProposal, p.MaxOperationsInProposal())
+
+	_, err = p.SetNetworkConnectionTimeout(time.Millisecond * 300)
+	t.Contains(err.Error(), "too short")
+
+	_, err = p.SetNetworkConnectionTimeout(time.Second)
+	t.NoError(err)
+	t.Equal(time.Second, p.NetworkConnectionTimeout())
+
+	_, err = p.SetNetworkConnectionTLSInsecure(true)
+	t.NoError(err)
+	t.True(p.NetworkConnectionTLSInsecure())
 }
 
 func TestPolicy(t *testing.T) {

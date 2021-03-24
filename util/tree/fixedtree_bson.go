@@ -31,14 +31,18 @@ type FixedTreeBSONUnpacker struct {
 }
 
 func (ft *FixedTree) UnpackBSON(b []byte, enc *bsonenc.Encoder) error {
-	var uft FixedTreeBSONUnpacker
-	if err := enc.Unmarshal(b, &uft); err != nil {
+	var us FixedTreeBSONUnpacker
+	if err := enc.Unmarshal(b, &us); err != nil {
 		return err
 	}
 
-	bs := make([][]byte, len(uft.NS))
-	for i := range uft.NS {
-		bs[i] = uft.NS[i]
+	bs := make([][]byte, len(us.NS))
+	for i := range us.NS {
+		if len(us.NS[i]) < 1 {
+			continue
+		}
+
+		bs[i] = us.NS[i]
 	}
 
 	return ft.unpack(nil, bs)

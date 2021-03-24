@@ -1,18 +1,21 @@
 package mongodbstorage
 
 import (
+	"fmt"
+	"strings"
+
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
 )
 
-var indexPrefix = "mitum_"
+var IndexPrefix = "mitum_"
 
 var manifestIndexModels = []mongo.IndexModel{
 	{
 		Keys: bson.D{bson.E{Key: "height", Value: 1}},
 		Options: options.Index().
-			SetName("mitum_manifest_height").
+			SetName(indexName("manifest_height")).
 			SetUnique(true),
 	},
 }
@@ -21,13 +24,13 @@ var operationIndexModels = []mongo.IndexModel{
 	{
 		Keys: bson.D{bson.E{Key: "fact_hash_string", Value: 1}},
 		Options: options.Index().
-			SetName("mitum_operation_fact_hash").
+			SetName(indexName("operation_fact_hash")).
 			SetUnique(true),
 	},
 	{
 		Keys: bson.D{bson.E{Key: "height", Value: 1}},
 		Options: options.Index().
-			SetName("mitum_operation_height"),
+			SetName(indexName("operation_height")),
 	},
 }
 
@@ -35,13 +38,13 @@ var stateIndexModels = []mongo.IndexModel{
 	{
 		Keys: bson.D{bson.E{Key: "key", Value: 1}, bson.E{Key: "height", Value: 1}},
 		Options: options.Index().
-			SetName("mitum_state_key_and_height").
+			SetName(indexName("state_key_and_height")).
 			SetUnique(true),
 	},
 	{
 		Keys: bson.D{bson.E{Key: "height", Value: 1}},
 		Options: options.Index().
-			SetName("mitum_state_height"),
+			SetName(indexName("state_height")),
 	},
 }
 
@@ -49,13 +52,13 @@ var proposalIndexModels = []mongo.IndexModel{
 	{
 		Keys: bson.D{bson.E{Key: "hash_string", Value: 1}},
 		Options: options.Index().
-			SetName("mitum_proposal_hash").
+			SetName(indexName("proposal_hash")).
 			SetUnique(true),
 	},
 	{
 		Keys: bson.D{bson.E{Key: "height", Value: 1}, bson.E{Key: "round", Value: 1}, bson.E{Key: "proposer", Value: 1}},
 		Options: options.Index().
-			SetName("mitum_proposal_height_round_proposer"),
+			SetName(indexName("proposal_height_round_proposer")),
 	},
 }
 
@@ -63,20 +66,53 @@ var sealIndexModels = []mongo.IndexModel{
 	{
 		Keys: bson.D{bson.E{Key: "hash_string", Value: 1}},
 		Options: options.Index().
-			SetName("mitum_seal_hash").
+			SetName(indexName("seal_hash")).
 			SetUnique(true),
 	},
 	{
 		Keys: bson.D{bson.E{Key: "inserted_at", Value: -1}},
 		Options: options.Index().
-			SetName("mitum_seal_inserted_at"),
+			SetName(indexName("seal_inserted_at")),
+	},
+}
+
+var voteproofIndexModels = []mongo.IndexModel{
+	{
+		Keys: bson.D{bson.E{Key: "height", Value: 1}},
+		Options: options.Index().
+			SetName(indexName("voteproof_height")),
+	},
+	{
+		Keys: bson.D{bson.E{Key: "height", Value: 1}, bson.E{Key: "stage", Value: 1}},
+		Options: options.Index().
+			SetName(indexName("voteproof_height_and_stage")).
+			SetUnique(true),
+	},
+}
+
+var blockDataMapIndexModels = []mongo.IndexModel{
+	{
+		Keys: bson.D{bson.E{Key: "height", Value: 1}},
+		Options: options.Index().
+			SetName(indexName("blockdata_map_height")).
+			SetUnique(true),
 	},
 }
 
 var defaultIndexes = map[string] /* collection */ []mongo.IndexModel{
-	ColNameManifest:  manifestIndexModels,
-	ColNameOperation: operationIndexModels,
-	ColNameProposal:  proposalIndexModels,
-	ColNameSeal:      sealIndexModels,
-	ColNameState:     stateIndexModels,
+	ColNameManifest:     manifestIndexModels,
+	ColNameOperation:    operationIndexModels,
+	ColNameProposal:     proposalIndexModels,
+	ColNameSeal:         sealIndexModels,
+	ColNameState:        stateIndexModels,
+	ColNameVoteproof:    voteproofIndexModels,
+	ColNameBlockDataMap: blockDataMapIndexModels,
+}
+
+func indexName(s string) string {
+	return fmt.Sprintf("%s%s", IndexPrefix, s)
+}
+
+func isIndexName(s, prefix string) bool {
+	return strings.HasPrefix(s, prefix)
 }

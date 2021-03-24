@@ -3,6 +3,7 @@ package encoder
 import (
 	"github.com/spikeekips/mitum/util"
 	"github.com/spikeekips/mitum/util/hint"
+	"golang.org/x/xerrors"
 )
 
 // Encoders is the collection of Encoder.
@@ -32,9 +33,13 @@ func (es *Encoders) AddEncoder(ec Encoder) error {
 
 // Encoder returns Encoder by Hint.
 func (es *Encoders) Encoder(t hint.Type, version util.Version) (Encoder, error) {
-	h, err := es.Hintset.Hinter(t, version)
-
-	return h.(Encoder), err
+	if h, err := es.Hintset.Hinter(t, version); err != nil {
+		return nil, err
+	} else if i, ok := h.(Encoder); !ok {
+		return nil, xerrors.Errorf("not Encoder, %T", h)
+	} else {
+		return i, nil
+	}
 }
 
 func (es *Encoders) AddHinter(hinter hint.Hinter) error {

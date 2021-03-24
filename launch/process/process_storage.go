@@ -3,12 +3,10 @@ package process
 import (
 	"context"
 	"strings"
-	"syscall"
 
 	"github.com/spikeekips/mitum/launch/config"
 	"github.com/spikeekips/mitum/launch/pm"
-	"github.com/spikeekips/mitum/storage"
-	"github.com/spikeekips/mitum/storage/localfs"
+	"github.com/spikeekips/mitum/storage/blockdata/localfs"
 	mongodbstorage "github.com/spikeekips/mitum/storage/mongodb"
 	"github.com/spikeekips/mitum/util"
 	"github.com/spikeekips/mitum/util/cache"
@@ -18,13 +16,13 @@ import (
 )
 
 const (
-	ProcessNameStorage = "storage"
-	ProcessNameBlockFS = "blockfs"
+	ProcessNameStorage   = "storage"
+	ProcessNameBlockData = "blockdata"
 )
 
 var (
-	ProcessorBlockFS pm.Process
-	ProcessorStorage pm.Process
+	ProcessorBlockData pm.Process
+	ProcessorStorage   pm.Process
 )
 
 func init() {
@@ -41,30 +39,25 @@ func init() {
 	}
 
 	if i, err := pm.NewProcess(
-		ProcessNameBlockFS,
+		ProcessNameBlockData,
 		[]string{
 			ProcessNameStorage,
 		},
-		ProcessBlockFS,
+		ProcessBlockData,
 	); err != nil {
 		panic(err)
 	} else {
-		ProcessorBlockFS = i
+		ProcessorBlockData = i
 	}
 }
 
-func ProcessBlockFS(ctx context.Context) (context.Context, error) {
+func ProcessBlockData(ctx context.Context) (context.Context, error) {
 	var l config.LocalNode
-	var conf config.BlockFS
+	var conf config.BlockData
 	if err := config.LoadConfigContextValue(ctx, &l); err != nil {
 		return ctx, err
 	} else {
-		conf = l.Storage().BlockFS()
-	}
-
-	var st storage.Storage
-	if err := LoadStorageContextValue(ctx, &st); err != nil {
-		return ctx, err
+		conf = l.Storage().BlockData()
 	}
 
 	var enc *jsonenc.Encoder
@@ -72,20 +65,9 @@ func ProcessBlockFS(ctx context.Context) (context.Context, error) {
 		return ctx, err
 	}
 
-	if conf.WideOpen() {
-		syscall.Umask(0)
-		localfs.DefaultFilePermission = 0o644
-		localfs.DefaultDirectoryPermission = 0o755
-	}
-
-	var blockFS *storage.BlockFS
-	if fs, err := localfs.NewFS(conf.Path(), true); err != nil {
+	blockData := localfs.NewBlockData(conf.Path(), enc)
+	if err := blockData.Initialize(); err != nil {
 		return nil, err
-	} else {
-		blockFS = storage.NewBlockFS(fs, enc)
-		if err := blockFS.Initialize(); err != nil {
-			return nil, err
-		}
 	}
 
 	var forceCreate bool
@@ -95,17 +77,7 @@ func ProcessBlockFS(ctx context.Context) (context.Context, error) {
 		}
 	}
 
-	if !forceCreate {
-		if m, found, err := st.LastManifest(); err != nil {
-			return ctx, err
-		} else if found {
-			if err := blockFS.SetLast(m.Height()); err != nil {
-				return ctx, err
-			}
-		}
-	}
-
-	return context.WithValue(ctx, ContextValueBlockFS, blockFS), nil
+	return context.WithValue(ctx, ContextValueBlockData, blockData), nil
 }
 
 func ProcessMongodbStorage(ctx context.Context) (context.Context, error) {

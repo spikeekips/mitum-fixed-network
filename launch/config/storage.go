@@ -9,8 +9,7 @@ import (
 )
 
 var (
-	DefaultBlockFSPath      = "./blockfs"
-	DefaultBlockFSWideOpen  = false
+	DefaultBlockDataPath    = "./blockdata"
 	DefaultMainStorageURI   = "mongodb://127.0.0.1:27017/mitum"
 	DefaultMainStorageCache = fmt.Sprintf(
 		"gcache:?type=%s&size=%d&expire=%s",
@@ -20,34 +19,21 @@ var (
 	)
 )
 
-type BlockFS interface {
+type BlockData interface {
 	Path() string
 	SetPath(string) error
-	WideOpen() bool
-	SetWideOpen(bool) error
 }
 
-type BaseBlockFS struct {
-	path     string
-	wideOpen bool
+type BaseBlockData struct {
+	path string
 }
 
-func (no BaseBlockFS) Path() string {
+func (no BaseBlockData) Path() string {
 	return no.path
 }
 
-func (no *BaseBlockFS) SetPath(s string) error {
+func (no *BaseBlockData) SetPath(s string) error {
 	no.path = strings.TrimSpace(s)
-
-	return nil
-}
-
-func (no BaseBlockFS) WideOpen() bool {
-	return no.wideOpen
-}
-
-func (no *BaseBlockFS) SetWideOpen(s bool) error {
-	no.wideOpen = s
 
 	return nil
 }
@@ -95,19 +81,19 @@ func (no *BaseMainStorage) SetCache(s string) error {
 type Storage interface {
 	Main() MainStorage
 	SetMain(MainStorage) error
-	BlockFS() BlockFS
-	SetBlockFS(BlockFS) error
+	BlockData() BlockData
+	SetBlockData(BlockData) error
 }
 
 type BaseStorage struct {
-	main    MainStorage
-	blockFS BlockFS
+	main      MainStorage
+	blockData BlockData
 }
 
 func EmptyBaseStorage() *BaseStorage {
 	return &BaseStorage{
-		main:    &BaseMainStorage{},
-		blockFS: &BaseBlockFS{},
+		main:      &BaseMainStorage{},
+		blockData: &BaseBlockData{},
 	}
 }
 
@@ -121,12 +107,12 @@ func (no *BaseStorage) SetMain(main MainStorage) error {
 	return nil
 }
 
-func (no BaseStorage) BlockFS() BlockFS {
-	return no.blockFS
+func (no BaseStorage) BlockData() BlockData {
+	return no.blockData
 }
 
-func (no *BaseStorage) SetBlockFS(bs BlockFS) error {
-	no.blockFS = bs
+func (no *BaseStorage) SetBlockData(bs BlockData) error {
+	no.blockData = bs
 
 	return nil
 }

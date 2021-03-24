@@ -26,7 +26,6 @@ type ConsensusState struct {
 	*logging.Logging
 	*BaseState
 	storage       storage.Storage
-	blockFS       *storage.BlockFS
 	policy        *isaac.LocalPolicy
 	nodepool      *network.Nodepool
 	suffrage      base.Suffrage
@@ -36,7 +35,6 @@ type ConsensusState struct {
 
 func NewConsensusState(
 	st storage.Storage,
-	blockFS *storage.BlockFS,
 	policy *isaac.LocalPolicy,
 	nodepool *network.Nodepool,
 	suffrage base.Suffrage,
@@ -49,7 +47,6 @@ func NewConsensusState(
 		}),
 		BaseState:     NewBaseState(base.StateConsensus),
 		storage:       st,
-		blockFS:       blockFS,
 		policy:        policy,
 		nodepool:      nodepool,
 		suffrage:      suffrage,
@@ -133,7 +130,7 @@ func (st *ConsensusState) ProcessVoteproof(voteproof base.Voteproof) error {
 	case base.StageACCEPT:
 		return st.newACCEPTVoteproof(voteproof)
 	default:
-		return util.IgnoreError.Errorf("unsupported voteproof stage, %v found", s)
+		return util.IgnoreError.Errorf("not supported voteproof stage, %v found", s)
 	}
 }
 
@@ -528,7 +525,7 @@ func (st *ConsensusState) broadcastNewINITBallot(voteproof base.Voteproof) error
 	}
 
 	var baseBallot ballot.INITBallotV0
-	if b, err := NextINITBallotFromACCEPTVoteproof(st.storage, st.blockFS, st.nodepool.Local(), voteproof); err != nil {
+	if b, err := NextINITBallotFromACCEPTVoteproof(st.storage, st.nodepool.Local(), voteproof); err != nil {
 		return err
 	} else if err := b.Sign(st.nodepool.Local().Privatekey(), st.policy.NetworkID()); err != nil {
 		return xerrors.Errorf("failed to re-sign new init ballot: %w", err)
@@ -574,7 +571,7 @@ func (st *ConsensusState) whenProposalTimeout(voteproof base.Voteproof, proposer
 	l.Debug().Msg("waiting new proposal; if timed out, will move to next round")
 
 	var baseBallot ballot.INITBallotV0
-	if b, err := NextINITBallotFromINITVoteproof(st.storage, st.blockFS, st.nodepool.Local(), voteproof); err != nil {
+	if b, err := NextINITBallotFromINITVoteproof(st.storage, st.nodepool.Local(), voteproof); err != nil {
 		return err
 	} else if err := b.Sign(st.nodepool.Local().Privatekey(), st.policy.NetworkID()); err != nil {
 		return xerrors.Errorf("failed to re-sign next init ballot: %w", err)
@@ -639,9 +636,9 @@ func (st *ConsensusState) nextRound(voteproof base.Voteproof) error {
 		var err error
 		switch s := voteproof.Stage(); s {
 		case base.StageINIT:
-			baseBallot, err = NextINITBallotFromINITVoteproof(st.storage, st.blockFS, st.nodepool.Local(), voteproof)
+			baseBallot, err = NextINITBallotFromINITVoteproof(st.storage, st.nodepool.Local(), voteproof)
 		case base.StageACCEPT:
-			baseBallot, err = NextINITBallotFromACCEPTVoteproof(st.storage, st.blockFS, st.nodepool.Local(), voteproof)
+			baseBallot, err = NextINITBallotFromACCEPTVoteproof(st.storage, st.nodepool.Local(), voteproof)
 		}
 		if err != nil {
 			return err

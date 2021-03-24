@@ -12,6 +12,7 @@ import (
 	"github.com/spikeekips/mitum/states"
 	basicstate "github.com/spikeekips/mitum/states/basic"
 	"github.com/spikeekips/mitum/storage"
+	"github.com/spikeekips/mitum/storage/blockdata"
 	"github.com/spikeekips/mitum/util/logging"
 )
 
@@ -25,7 +26,7 @@ func init() {
 		[]string{
 			ProcessNameLocalNode,
 			ProcessNameStorage,
-			ProcessNameBlockFS,
+			ProcessNameBlockData,
 			ProcessNameSuffrage,
 			ProcessNameProposalProcessor,
 		},
@@ -53,8 +54,8 @@ func ProcessConsensusStates(ctx context.Context) (context.Context, error) {
 		return ctx, err
 	}
 
-	var blockFS *storage.BlockFS
-	if err := LoadBlockFSContextValue(ctx, &blockFS); err != nil {
+	var blockData blockdata.BlockData
+	if err := LoadBlockDataContextValue(ctx, &blockData); err != nil {
 		return ctx, err
 	}
 
@@ -73,7 +74,7 @@ func ProcessConsensusStates(ctx context.Context) (context.Context, error) {
 		return ctx, err
 	}
 
-	if cs, err := processConsensusStates(st, blockFS, policy, nodepool, pps, suffrage, log); err != nil {
+	if cs, err := processConsensusStates(st, blockData, policy, nodepool, pps, suffrage, log); err != nil {
 		return ctx, err
 	} else {
 		if i, ok := cs.(logging.SetLogger); ok {
@@ -86,7 +87,7 @@ func ProcessConsensusStates(ctx context.Context) (context.Context, error) {
 
 func processConsensusStates(
 	st storage.Storage,
-	blockFS *storage.BlockFS,
+	blockData blockdata.BlockData,
 	policy *isaac.LocalPolicy,
 	nodepool *network.Nodepool,
 	pps *prprocessor.Processors,
@@ -111,16 +112,13 @@ func processConsensusStates(
 	proposalMaker := isaac.NewProposalMaker(nodepool.Local(), st, policy)
 
 	stopped := basicstate.NewStoppedState()
-	booting := basicstate.NewBootingState(st, blockFS, policy, suffrage)
-	joining := basicstate.NewJoiningState(nodepool.Local(), st, blockFS, policy,
-		suffrage, ballotbox)
-	consensus := basicstate.NewConsensusState(
-		st, blockFS, policy, nodepool, suffrage, proposalMaker, pps)
-	syncing := basicstate.NewSyncingState(st, blockFS, policy, nodepool)
+	booting := basicstate.NewBootingState(st, blockData, policy, suffrage)
+	joining := basicstate.NewJoiningState(nodepool.Local(), st, policy, suffrage, ballotbox)
+	consensus := basicstate.NewConsensusState(st, policy, nodepool, suffrage, proposalMaker, pps)
+	syncing := basicstate.NewSyncingState(st, blockData, policy, nodepool)
 
 	return basicstate.NewStates(
 		st,
-		blockFS,
 		policy,
 		nodepool,
 		suffrage,

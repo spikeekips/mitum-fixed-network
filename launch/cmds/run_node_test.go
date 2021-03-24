@@ -32,7 +32,7 @@ address: node-010a:0.0.1
 privatekey: KzmnCUoBrqYbkoP8AUki1AJsyKqxNsiqdrtTB2onyzQfB6MQ5Sef-0112:0.0.1
 storage:
   uri: mongodb://localhost:27017/@@db@@
-  blockfs:
+  blockdata:
     path: /tmp/@@db@@
 `
 

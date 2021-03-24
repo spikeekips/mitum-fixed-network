@@ -14,7 +14,7 @@ import (
 	"github.com/spikeekips/mitum/util/logging"
 )
 
-type SyncerStorage struct {
+type SyncerSession struct {
 	sync.RWMutex
 	*logging.Logging
 	main       *Storage
@@ -23,8 +23,8 @@ type SyncerStorage struct {
 	heightTo   base.Height
 }
 
-func NewSyncerStorage(main *Storage) *SyncerStorage {
-	return &SyncerStorage{
+func NewSyncerSession(main *Storage) *SyncerSession {
+	return &SyncerSession{
 		Logging: logging.NewLogging(func(c logging.Context) logging.Emitter {
 			return c.Str("module", "leveldb-syncer-storage")
 		}),
@@ -34,14 +34,14 @@ func NewSyncerStorage(main *Storage) *SyncerStorage {
 	}
 }
 
-func (st *SyncerStorage) manifestKey(height base.Height) []byte {
+func (st *SyncerSession) manifestKey(height base.Height) []byte {
 	return util.ConcatBytesSlice(
 		keyPrefixTmp,
 		leveldbManifestHeightKey(height),
 	)
 }
 
-func (st *SyncerStorage) Manifest(height base.Height) (block.Manifest, bool, error) {
+func (st *SyncerSession) Manifest(height base.Height) (block.Manifest, bool, error) {
 	raw, err := st.storage.DB().Get(st.manifestKey(height), nil)
 	if err != nil {
 		if xerrors.Is(err, storage.NotFoundError) {
@@ -62,7 +62,7 @@ func (st *SyncerStorage) Manifest(height base.Height) (block.Manifest, bool, err
 	return m, true, nil
 }
 
-func (st *SyncerStorage) Manifests(heights []base.Height) ([]block.Manifest, error) {
+func (st *SyncerSession) Manifests(heights []base.Height) ([]block.Manifest, error) {
 	var bs []block.Manifest
 	for i := range heights {
 		if b, found, err := st.Manifest(heights[i]); !found {
@@ -77,7 +77,7 @@ func (st *SyncerStorage) Manifests(heights []base.Height) ([]block.Manifest, err
 	return bs, nil
 }
 
-func (st *SyncerStorage) SetManifests(manifests []block.Manifest) error {
+func (st *SyncerSession) SetManifests(manifests []block.Manifest) error {
 	st.Log().VerboseFunc(func(e *logging.Event) logging.Emitter {
 		var heights []base.Height
 		for i := range manifests {
@@ -104,15 +104,25 @@ func (st *SyncerStorage) SetManifests(manifests []block.Manifest) error {
 	return wrapError(st.storage.DB().Write(batch, nil))
 }
 
-func (st *SyncerStorage) HasBlock(height base.Height) (bool, error) {
+func (st *SyncerSession) HasBlock(height base.Height) (bool, error) {
 	return st.storage.db.Has(leveldbBlockHeightKey(height), nil)
 }
 
-func (st *SyncerStorage) block(height base.Height) (block.Block, bool, error) {
+func (st *SyncerSession) block(height base.Height) (block.Block, bool, error) {
 	return st.storage.blockByHeight(height)
 }
 
-func (st *SyncerStorage) SetBlocks(blocks []block.Block) error {
+func (st *SyncerSession) SetBlocks(blocks []block.Block, maps []block.BlockDataMap) error {
+	if len(blocks) != len(maps) {
+		return xerrors.Errorf("blocks and maps has different size, %d != %d", len(blocks), len(maps))
+	} else {
+		for i := range blocks {
+			if err := block.CompareManifestWithMap(blocks[i], maps[i]); err != nil {
+				return err
+			}
+		}
+	}
+
 	st.Log().VerboseFunc(func(e *logging.Event) logging.Emitter {
 		var heights []base.Height
 		for i := range blocks {
@@ -129,11 +139,11 @@ func (st *SyncerStorage) SetBlocks(blocks []block.Block) error {
 
 		st.checkHeight(blk.Height())
 
-		if bs, err := st.storage.OpenBlockStorage(blk); err != nil {
+		if bs, err := st.storage.NewStorageSession(blk); err != nil {
 			return err
 		} else if err := bs.SetBlock(context.Background(), blk); err != nil {
 			return err
-		} else if err := bs.Commit(context.Background()); err != nil {
+		} else if err := bs.Commit(context.Background(), maps[i]); err != nil {
 			return err
 		}
 	}
@@ -141,41 +151,58 @@ func (st *SyncerStorage) SetBlocks(blocks []block.Block) error {
 	return nil
 }
 
-func (st *SyncerStorage) Commit() error {
+func (st *SyncerSession) Commit() error {
 	st.Log().Debug().
 		Hinted("from_height", st.heightFrom).
 		Hinted("to_height", st.heightTo).
 		Msg("trying to commit blocks")
 
-	for i := st.heightFrom.Int64(); i <= st.heightTo.Int64(); i++ {
-		if blk, found, err := st.block(base.Height(i)); !found {
-			return storage.NotFoundError.Errorf("block not found")
-		} else if err != nil {
+	for i := st.heightFrom; i <= st.heightTo; i++ {
+		var blk block.Block
+		switch j, found, err := st.block(i); {
+		case err != nil:
 			return err
-		} else if err := st.commitBlock(blk); err != nil {
-			st.Log().Error().Err(err).Int64("height", i).Msg("failed to commit block")
+		case !found:
+			return storage.NotFoundError.Errorf("block not found")
+		default:
+			blk = j
+		}
+
+		var m block.BlockDataMap
+		switch j, found, err := st.storage.BlockDataMap(i); {
+		case err != nil:
+			return err
+		case !found:
+			return storage.NotFoundError.Errorf("block data map not found")
+		default:
+			m = j
+		}
+
+		if err := st.commitBlock(blk, m); err != nil {
+			st.Log().Error().Err(err).Int64("height", i.Int64()).Msg("failed to commit block")
+
 			return err
 		}
 
-		st.Log().Debug().Int64("height", i).Msg("committed block")
+		st.Log().Debug().Int64("height", i.Int64()).Msg("committed block")
 	}
 
 	return nil
 }
 
-func (st *SyncerStorage) commitBlock(blk block.Block) error {
-	if bs, err := st.main.OpenBlockStorage(blk); err != nil {
+func (st *SyncerSession) commitBlock(blk block.Block, m block.BlockDataMap) error {
+	if bs, err := st.main.NewStorageSession(blk); err != nil {
 		return err
 	} else if err := bs.SetBlock(context.Background(), blk); err != nil {
 		return err
-	} else if err := bs.Commit(context.Background()); err != nil {
+	} else if err := bs.Commit(context.Background(), m); err != nil {
 		return err
 	}
 
 	return nil
 }
 
-func (st *SyncerStorage) checkHeight(height base.Height) {
+func (st *SyncerSession) checkHeight(height base.Height) {
 	st.Lock()
 	defer st.Unlock()
 
@@ -190,6 +217,6 @@ func (st *SyncerStorage) checkHeight(height base.Height) {
 	}
 }
 
-func (st *SyncerStorage) Close() error {
+func (st *SyncerSession) Close() error {
 	return wrapError(st.storage.DB().Close())
 }

@@ -3,7 +3,6 @@ package mongodbstorage
 import (
 	"context"
 	"net/url"
-	"strings"
 	"sync"
 	"time"
 
@@ -35,6 +34,8 @@ const (
 	ColNameOperationSeal = "operation_seal"
 	ColNameProposal      = "proposal"
 	ColNameState         = "state"
+	ColNameVoteproof     = "voteproof"
+	ColNameBlockDataMap  = "blockdata_map"
 )
 
 var allCollections = []string{
@@ -45,21 +46,25 @@ var allCollections = []string{
 	ColNameOperationSeal,
 	ColNameProposal,
 	ColNameState,
+	ColNameVoteproof,
+	ColNameBlockDataMap,
 }
 
 type Storage struct {
 	sync.RWMutex
 	*logging.Logging
-	client             *Client
-	encs               *encoder.Encoders
-	enc                encoder.Encoder
-	lastManifest       block.Manifest
-	lastManifestHeight base.Height
-	stateCache         cache.Cache
-	sealCache          cache.Cache
-	operationFactCache cache.Cache
-	readonly           bool
-	cache              cache.Cache
+	client              *Client
+	encs                *encoder.Encoders
+	enc                 encoder.Encoder
+	lastManifest        block.Manifest
+	lastManifestHeight  base.Height
+	stateCache          cache.Cache
+	sealCache           cache.Cache
+	operationFactCache  cache.Cache
+	readonly            bool
+	cache               cache.Cache
+	lastINITVoteproof   base.Voteproof
+	lastACCEPTVoteproof base.Voteproof
 }
 
 func NewStorage(client *Client, encs *encoder.Encoders, enc encoder.Encoder, ca cache.Cache) (*Storage, error) {
@@ -232,13 +237,17 @@ func (st *Storage) LastManifest() (block.Manifest, bool, error) {
 	return st.lastManifest, true, nil
 }
 
-func (st *Storage) setLastBlock(manifest block.Manifest, save, force bool) error {
+func (st *Storage) setLastManifest(manifest block.Manifest, save, force bool) error {
+	st.Lock()
+	defer st.Unlock()
+
+	return st.setLastManifestInternal(manifest, save, force)
+}
+
+func (st *Storage) setLastManifestInternal(manifest block.Manifest, save, force bool) error {
 	if st.readonly {
 		return xerrors.Errorf("readonly mode")
 	}
-
-	st.Lock()
-	defer st.Unlock()
 
 	if manifest == nil {
 		if save {
@@ -276,7 +285,47 @@ func (st *Storage) setLastBlock(manifest block.Manifest, save, force bool) error
 	return nil
 }
 
-func (st *Storage) SyncerStorage() (storage.SyncerStorage, error) {
+func (st *Storage) setLastBlock(manifest block.Manifest, save, force bool) error {
+	st.Lock()
+	defer st.Unlock()
+
+	if st.readonly {
+		return xerrors.Errorf("readonly mode")
+	}
+
+	lastManifestHeight := st.lastManifestHeight
+	if err := st.setLastManifestInternal(manifest, save, force); err != nil {
+		return err
+	}
+
+	if manifest == nil {
+		st.lastINITVoteproof = nil
+		st.lastACCEPTVoteproof = nil
+
+		return nil
+	}
+
+	if !force && manifest.Height() <= lastManifestHeight {
+		return nil
+	}
+
+	var initVoteproof, acceptVoteproof base.Voteproof
+	if manifest.Height() > base.PreGenesisHeight {
+		if i, j, err := st.lastVoteproofs(manifest.Height()); err != nil {
+			return err
+		} else {
+			initVoteproof = i
+			acceptVoteproof = j
+		}
+	}
+
+	st.lastINITVoteproof = initVoteproof
+	st.lastACCEPTVoteproof = acceptVoteproof
+
+	return nil
+}
+
+func (st *Storage) NewSyncerSession() (storage.SyncerSession, error) {
 	if st.readonly {
 		return nil, xerrors.Errorf("readonly mode")
 	}
@@ -284,7 +333,7 @@ func (st *Storage) SyncerStorage() (storage.SyncerStorage, error) {
 	st.Lock()
 	defer st.Unlock()
 
-	return NewSyncerStorage(st)
+	return NewSyncerSession(st)
 }
 
 func (st *Storage) Client() *Client {
@@ -322,6 +371,8 @@ func (st *Storage) Clean() error {
 
 	st.lastManifest = nil
 	st.lastManifestHeight = base.NilHeight
+	st.lastINITVoteproof = nil
+	st.lastACCEPTVoteproof = nil
 
 	return nil
 }
@@ -878,12 +929,12 @@ func (st *Storage) HasOperationFact(h valuehash.Hash) (bool, error) {
 	return count > 0, nil
 }
 
-func (st *Storage) OpenBlockStorage(blk block.Block) (storage.BlockStorage, error) {
+func (st *Storage) NewStorageSession(blk block.Block) (storage.StorageSession, error) {
 	if st.readonly {
 		return nil, xerrors.Errorf("readonly mode")
 	}
 
-	return NewBlockStorage(st, blk)
+	return NewStorageSession(st, blk)
 }
 
 func (st *Storage) initialize() error {
@@ -892,7 +943,7 @@ func (st *Storage) initialize() error {
 	}
 
 	for col, models := range defaultIndexes {
-		if err := st.CreateIndex(col, models, indexPrefix); err != nil {
+		if err := st.CreateIndex(col, models, IndexPrefix); err != nil {
 			return err
 		}
 	}
@@ -918,6 +969,8 @@ func (st *Storage) cleanByHeight(height base.Height) error {
 		ColNameOperation,
 		ColNameOperationSeal,
 		ColNameState,
+		ColNameVoteproof,
+		ColNameBlockDataMap,
 	} {
 
 		res, err := st.client.Collection(col).BulkWrite(
@@ -965,7 +1018,7 @@ func (st *Storage) CreateIndex(col string, models []mongo.IndexModel, prefix str
 	} else {
 		for _, r := range results {
 			name := r["name"].(string)
-			if !strings.HasPrefix(name, prefix) {
+			if !isIndexName(name, prefix) {
 				continue
 			}
 
@@ -1058,4 +1111,137 @@ func (st *Storage) Readonly() (*Storage, error) {
 
 		return nst, nil
 	}
+}
+
+func (st *Storage) voteproofByFilter(filter bson.D) (base.Voteproof, bool, error) {
+	var voteproof base.Voteproof
+
+	if err := st.client.GetByFilter(
+		ColNameVoteproof,
+		filter,
+		func(res *mongo.SingleResult) error {
+			if i, err := loadVoteproofFromDecoder(res.Decode, st.encs); err != nil {
+				return err
+			} else {
+				voteproof = i
+			}
+
+			return nil
+		},
+		options.FindOne().SetSort(util.NewBSONFilter("height", -1).D()),
+	); err != nil {
+		if xerrors.Is(err, storage.NotFoundError) {
+			return nil, false, nil
+		}
+
+		return nil, false, err
+	}
+
+	if voteproof == nil {
+		return nil, false, nil
+	}
+
+	return voteproof, true, nil
+}
+
+func (st *Storage) lastVoteproofs(height base.Height) (base.Voteproof, base.Voteproof, error) {
+	var initVoteproof, acceptVoteproof base.Voteproof
+	switch i, found, err := st.voteproofByFilter(util.NewBSONFilter("height", height).Add("stage", base.StageINIT.String()).D()); {
+	case err != nil:
+		return nil, nil, xerrors.Errorf("failed to find last init voteproof of height, %v: %w", height, err)
+	case !found:
+		return nil, nil, storage.NotFoundError.Errorf("failed to find last init voteproof of height, %v", height)
+	default:
+		initVoteproof = i
+	}
+
+	switch i, found, err := st.voteproofByFilter(util.NewBSONFilter("height", height).Add("stage", base.StageACCEPT.String()).D()); {
+	case err != nil:
+		return nil, nil, xerrors.Errorf("failed to find last accept voteproof of height, %v: %w", height, err)
+	case !found:
+		return nil, nil, storage.NotFoundError.Errorf("failed to find last accept voteproof of height, %v", height)
+	default:
+		acceptVoteproof = i
+	}
+
+	return initVoteproof, acceptVoteproof, nil
+}
+
+func (st *Storage) LastVoteproof(stage base.Stage) base.Voteproof {
+	st.RLock()
+	defer st.RUnlock()
+
+	switch stage {
+	case base.StageINIT:
+		return st.lastINITVoteproof
+	case base.StageACCEPT:
+		return st.lastACCEPTVoteproof
+	default:
+		return nil
+	}
+}
+
+func (st *Storage) Voteproof(height base.Height, stage base.Stage) (base.Voteproof, error) {
+	if l := st.LastVoteproof(stage); height == l.Height() {
+		return l, nil
+	}
+
+	switch i, found, err := st.voteproofByFilter(util.NewBSONFilter("height", height).Add("stage", stage.String()).D()); {
+	case err != nil:
+		return nil, xerrors.Errorf("something wrong to find voteproof of height, %v and stage, %v: %w", height, stage, err)
+	case !found:
+		return nil, nil
+	default:
+		return i, nil
+	}
+}
+
+func (st *Storage) BlockDataMap(height base.Height) (block.BlockDataMap, bool, error) {
+	var bd block.BlockDataMap
+
+	if err := st.client.GetByFilter(
+		ColNameBlockDataMap,
+		util.NewBSONFilter("height", height).D(),
+		func(res *mongo.SingleResult) error {
+			if i, err := loadBlockDataMapFromDecoder(res.Decode, st.encs); err != nil {
+				return err
+			} else {
+				bd = i
+			}
+
+			return nil
+		},
+		options.FindOne().SetSort(util.NewBSONFilter("height", -1).D()),
+	); err != nil {
+		if xerrors.Is(err, storage.NotFoundError) {
+			return nil, false, nil
+		}
+
+		return nil, false, err
+	}
+
+	if bd == nil {
+		return nil, false, nil
+	}
+
+	return bd, true, nil
+}
+
+func (st *Storage) LocalBlockDataMapsByHeight(height base.Height, callback func(block.BlockDataMap) (bool, error)) error {
+	opt := options.Find().
+		SetSort(util.NewBSONFilter("height", 1).D())
+
+	return st.client.Find(
+		context.Background(),
+		ColNameBlockDataMap,
+		bson.M{"height": bson.M{"$gte": height}, "is_local": true},
+		func(cursor *mongo.Cursor) (bool, error) {
+			if i, err := loadBlockDataMapFromDecoder(cursor.Decode, st.encs); err != nil {
+				return false, err
+			} else {
+				return callback(i)
+			}
+		},
+		opt,
+	)
 }

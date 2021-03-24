@@ -54,7 +54,7 @@ func (t *testProposalMaker) TestSeals() {
 	var seals []seal.Seal
 	// 10 operation.Seal
 	for i := 0; i < 10; i++ {
-		sl := t.NewOperationSeal(local, 1)
+		sl, _ := t.NewOperationSeal(local, 1)
 
 		seals = append(seals, sl)
 	}
@@ -92,11 +92,11 @@ func (t *testProposalMaker) TestOneSealOver0() {
 
 	var seals []seal.Seal
 	for i := 0; i < int(maxOperations-1); i++ {
-		sl := t.NewOperationSeal(local, 1)
+		sl, _ := t.NewOperationSeal(local, 1)
 		seals = append(seals, sl)
 	}
 
-	over := t.NewOperationSeal(local, 2)
+	over, _ := t.NewOperationSeal(local, 2)
 	seals = append(seals, over)
 
 	t.NoError(local.Storage().NewSeals(seals))
@@ -125,9 +125,9 @@ func (t *testProposalMaker) TestOneSealOver1() {
 	for i := 0; i < int(maxOperations); i++ {
 		var sl seal.Seal
 		if i == 1 {
-			sl = t.NewOperationSeal(local, 2)
+			sl, _ = t.NewOperationSeal(local, 2)
 		} else {
-			sl = t.NewOperationSeal(local, 1)
+			sl, _ = t.NewOperationSeal(local, 1)
 		}
 		seals = append(seals, sl)
 	}
@@ -156,7 +156,7 @@ func (t *testProposalMaker) TestNumberOperationMatch() {
 
 	var seals []seal.Seal
 	for i := 0; i < int(maxOperations); i++ {
-		sl := t.NewOperationSeal(local, 1)
+		sl, _ := t.NewOperationSeal(local, 1)
 		seals = append(seals, sl)
 	}
 	t.NoError(local.Storage().NewSeals(seals))

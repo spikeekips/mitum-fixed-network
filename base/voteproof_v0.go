@@ -132,7 +132,7 @@ func (vp *VoteproofV0) SetVotes(votes []VoteproofNodeFact) *VoteproofV0 {
 }
 
 func (vp *VoteproofV0) Finish() *VoteproofV0 {
-	vp.finishedAt = localtime.Now()
+	vp.finishedAt = localtime.UTCNow()
 
 	return vp
 }

@@ -13,7 +13,6 @@ import (
 
 func NextINITBallotFromACCEPTVoteproof(
 	st storage.Storage,
-	blockFS *storage.BlockFS,
 	local *network.LocalNode,
 	voteproof base.Voteproof,
 ) (ballot.INITBallotV0, error) {
@@ -54,7 +53,7 @@ func NextINITBallotFromACCEPTVoteproof(
 	if voteproof.Result() == base.VoteResultMajority {
 		avp = voteproof
 	} else {
-		switch vp, err := blockFS.LoadACCEPTVoteproof(voteproof.Height() - 1); {
+		switch vp, err := st.Voteproof(voteproof.Height()-1, base.StageACCEPT); {
 		case err != nil:
 			return ballot.INITBallotV0{}, xerrors.Errorf("failed to get last voteproof: %w", err)
 		case vp != nil:
@@ -74,7 +73,6 @@ func NextINITBallotFromACCEPTVoteproof(
 
 func NextINITBallotFromINITVoteproof(
 	st storage.Storage,
-	blockFS *storage.BlockFS,
 	local *network.LocalNode,
 	voteproof base.Voteproof,
 ) (ballot.INITBallotV0, error) {
@@ -85,7 +83,7 @@ func NextINITBallotFromINITVoteproof(
 	}
 
 	var avp base.Voteproof
-	switch vp, err := blockFS.LoadACCEPTVoteproof(voteproof.Height() - 1); {
+	switch vp, err := st.Voteproof(voteproof.Height()-1, base.StageACCEPT); {
 	case err != nil:
 		return ballot.INITBallotV0{}, xerrors.Errorf("failed to get last voteproof: %w", err)
 	case vp != nil:

@@ -51,7 +51,7 @@ func (t *testProcessors) newVoteproof(height base.Height, round base.Round, stag
 		nil,
 		nil,
 		nil,
-		localtime.Now(),
+		localtime.UTCNow(),
 	)
 
 	return vp

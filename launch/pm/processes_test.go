@@ -61,7 +61,7 @@ func (t *testProcesses) TestCirculation() {
 				MustBaseProcess("b", nil, nil),
 				MustBaseProcess("c", []string{"a"}, nil),
 			},
-			err: "circulation found: a",
+			err: `circulation found: "a"`,
 		},
 		{
 			processes: []BaseProcess{
@@ -69,7 +69,7 @@ func (t *testProcesses) TestCirculation() {
 				MustBaseProcess("b", []string{"a"}, nil),
 				MustBaseProcess("c", nil, nil),
 			},
-			err: "circulation found: a",
+			err: `circulation found: "a"`,
 		},
 		{
 			processes: []BaseProcess{
@@ -77,7 +77,7 @@ func (t *testProcesses) TestCirculation() {
 				MustBaseProcess("b", []string{"c"}, nil),
 				MustBaseProcess("c", []string{"b"}, nil),
 			},
-			err: "circulation found: b",
+			err: `circulation found: "b"`,
 		},
 		{
 			processes: []BaseProcess{
@@ -122,9 +122,10 @@ func (t *testProcesses) TestCirculation() {
 }
 
 type testProcess struct {
-	i   string
-	rs  []string
-	err string
+	i        string
+	rs       []string
+	err      string
+	disabled bool
 }
 
 func newTestProcess(i string, err string, rs ...string) testProcess {
@@ -137,6 +138,16 @@ func (t testProcess) Name() string {
 
 func (t testProcess) Requires() []string {
 	return t.rs
+}
+
+func (t testProcess) Disabled() bool {
+	return t.disabled
+}
+
+func (t testProcess) SetDisabled(b bool) testProcess {
+	t.disabled = b
+
+	return t
 }
 
 func (t testProcess) IsValid([]byte) error {
@@ -234,10 +245,17 @@ func (t *testProcesses) TestRunSequence() {
 			processes: []testProcess{
 				newTestProcess("a", ""),
 				newTestProcess("b", "", "a"),
-				newTestProcess("c", "show me", "a"),
+				newTestProcess("c", "show me", "a").SetDisabled(true), // will not be run
 			},
-			err:     "show me",
 			context: []string{"a", "b"},
+		},
+		{
+			processes: []testProcess{
+				newTestProcess("a", "").SetDisabled(true),
+				newTestProcess("b", "", "a"),
+				newTestProcess("c", "", "a"),
+			},
+			err: `process, "b" requires "a", but disabled`,
 		},
 	}
 
@@ -265,9 +283,13 @@ func (t *testProcesses) TestRunSequence() {
 				}
 
 				if c.context != nil {
-					result := pm.Context().Value("r").([]string)
+					if pm.Context() == nil {
+						t.NoError(xerrors.Errorf("empty result context"))
+					} else {
+						result := pm.Context().Value("r").([]string)
 
-					t.Equal(c.context, result, "%d; expected=%v result=%v", i, c.context, result)
+						t.Equal(c.context, result, "%d; expected=%v result=%v", i, c.context, result)
+					}
 				}
 			},
 		) {

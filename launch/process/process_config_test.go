@@ -117,8 +117,7 @@ nodes:
 	t.Equal(config.DefaultLocalNetworkURL.String(), conf.Network().URL().String())
 	t.Equal(config.DefaultLocalNetworkBind.String(), conf.Network().Bind().String())
 
-	t.Equal(config.DefaultBlockFSPath, conf.Storage().BlockFS().Path())
-	t.Equal(config.DefaultBlockFSWideOpen, conf.Storage().BlockFS().WideOpen())
+	t.Equal(config.DefaultBlockDataPath, conf.Storage().BlockData().Path())
 	t.Equal(config.DefaultMainStorageURI, conf.Storage().Main().URI().String())
 	t.Equal(config.DefaultMainStorageCache, conf.Storage().Main().Cache().String())
 

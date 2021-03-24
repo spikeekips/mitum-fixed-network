@@ -90,8 +90,8 @@ func (va *validator) CheckStorage() (bool, error) {
 		return false, xerrors.Errorf("storage is missing")
 	}
 
-	if len(conf.BlockFS().Path()) < 1 {
-		return false, xerrors.Errorf("storage path blockfs is missing")
+	if len(conf.BlockData().Path()) < 1 {
+		return false, xerrors.Errorf("storage path blockdata is missing")
 	}
 
 	if conf.Main().URI() == nil {
@@ -145,6 +145,9 @@ func (va *validator) CheckPolicy() (bool, error) {
 
 	if conf.TimeoutProcessProposal() == 0 {
 		return false, xerrors.Errorf("timeout-process-proposal is zero")
+	}
+	if conf.NetworkConnectionTimeout() == 0 {
+		return false, xerrors.Errorf("network-connection-timeout is zero")
 	}
 
 	return true, nil

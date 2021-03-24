@@ -12,6 +12,7 @@ import (
 	"github.com/spikeekips/mitum/launch/pm"
 	"github.com/spikeekips/mitum/network"
 	"github.com/spikeekips/mitum/storage"
+	"github.com/spikeekips/mitum/storage/blockdata"
 	"github.com/spikeekips/mitum/util/logging"
 )
 
@@ -25,7 +26,7 @@ var ProcessorGenerateGenesisBlock pm.Process
 func init() {
 	if i, err := pm.NewProcess(
 		ProcessNameGenerateGenesisBlock,
-		[]string{ProcessNameLocalNode, ProcessNameStorage, ProcessNameBlockFS},
+		[]string{ProcessNameLocalNode, ProcessNameStorage, ProcessNameBlockData},
 		ProcessGenerateGenesisBlock,
 	); err != nil {
 		panic(err)
@@ -50,8 +51,8 @@ func ProcessGenerateGenesisBlock(ctx context.Context) (context.Context, error) {
 		return nil, err
 	}
 
-	var blockFS *storage.BlockFS
-	if err := LoadBlockFSContextValue(ctx, &blockFS); err != nil {
+	var blockData blockdata.BlockData
+	if err := LoadBlockDataContextValue(ctx, &blockData); err != nil {
 		return nil, err
 	}
 
@@ -70,7 +71,7 @@ func ProcessGenerateGenesisBlock(ctx context.Context) (context.Context, error) {
 		log.Debug().Int("operations", len(ops)).Msg("operations loaded")
 	}
 
-	if gg, err := isaac.NewGenesisBlockV0Generator(local, st, blockFS, policy, ops); err != nil {
+	if gg, err := isaac.NewGenesisBlockV0Generator(local, st, blockData, policy, ops); err != nil {
 		return ctx, xerrors.Errorf("failed to create genesis block generator: %w", err)
 	} else if blk, err := gg.Generate(); err != nil {
 		return ctx, xerrors.Errorf("failed to generate genesis block: %w", err)
@@ -99,8 +100,8 @@ func HookCheckGenesisBlock(ctx context.Context) (context.Context, error) {
 		return ctx, err
 	}
 
-	var blockFS *storage.BlockFS
-	if err := LoadBlockFSContextValue(ctx, &blockFS); err != nil {
+	var blockData blockdata.BlockData
+	if err := LoadBlockDataContextValue(ctx, &blockData); err != nil {
 		return ctx, err
 	}
 
@@ -123,7 +124,7 @@ func HookCheckGenesisBlock(ctx context.Context) (context.Context, error) {
 		return ctx, xerrors.Errorf("environment already exists: block=%d", manifest.Height())
 	}
 
-	if err := storage.Clean(st, blockFS, false); err != nil {
+	if err := blockdata.Clean(st, blockData, false); err != nil {
 		return ctx, err
 	} else {
 		log.Debug().Msg("existing environment cleaned")

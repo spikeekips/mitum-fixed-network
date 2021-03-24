@@ -34,7 +34,7 @@ func (t *testSyncers) TestSaveLastBlock() {
 
 	finishedChan := make(chan base.Height)
 
-	ss := NewSyncers(local.Node(), local.Storage(), local.BlockFS(), local.Policy(), baseManifest)
+	ss := NewSyncers(local.Node(), local.Storage(), local.BlockData(), local.Policy(), baseManifest)
 	ss.WhenFinished(func(height base.Height) {
 		finishedChan <- height
 	})
@@ -42,7 +42,9 @@ func (t *testSyncers) TestSaveLastBlock() {
 
 	defer ss.Stop()
 
-	t.NoError(ss.Add(target, []network.Node{remote.Node()}))
+	isFinished, err := ss.Add(target, []network.Node{remote.Node()})
+	t.NoError(err)
+	t.False(isFinished)
 
 	select {
 	case <-time.After(time.Second * 3):

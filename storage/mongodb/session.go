@@ -10,6 +10,7 @@ import (
 	"go.mongodb.org/mongo-driver/mongo/options"
 	"golang.org/x/xerrors"
 
+	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/base/block"
 	"github.com/spikeekips/mitum/base/state"
 	"github.com/spikeekips/mitum/storage"
@@ -17,19 +18,21 @@ import (
 	"github.com/spikeekips/mitum/util/valuehash"
 )
 
-type BlockStorage struct {
-	st              *Storage
-	ost             *Storage
-	block           block.Block
-	operations      tree.FixedTree
-	states          []state.State
-	manifestModels  []mongo.WriteModel
-	operationModels []mongo.WriteModel
-	stateModels     []mongo.WriteModel
-	statesValue     *sync.Map
+type StorageSession struct {
+	st                     *Storage
+	ost                    *Storage
+	block                  block.Block
+	operations             tree.FixedTree
+	states                 []state.State
+	manifestModels         []mongo.WriteModel
+	operationModels        []mongo.WriteModel
+	stateModels            []mongo.WriteModel
+	statesValue            *sync.Map
+	initVoteproofsModels   mongo.WriteModel
+	acceptVoteproofsModels mongo.WriteModel
 }
 
-func NewBlockStorage(st *Storage, blk block.Block) (*BlockStorage, error) {
+func NewStorageSession(st *Storage, blk block.Block) (*StorageSession, error) {
 	var nst *Storage
 	if n, err := st.New(); err != nil {
 		return nil, err
@@ -37,7 +40,7 @@ func NewBlockStorage(st *Storage, blk block.Block) (*BlockStorage, error) {
 		nst = n
 	}
 
-	bst := &BlockStorage{
+	bst := &StorageSession{
 		st:          nst,
 		ost:         st,
 		block:       blk,
@@ -47,11 +50,15 @@ func NewBlockStorage(st *Storage, blk block.Block) (*BlockStorage, error) {
 	return bst, nil
 }
 
-func (bst *BlockStorage) Block() block.Block {
+func (bst *StorageSession) Block() block.Block {
 	return bst.block
 }
 
-func (bst *BlockStorage) SetBlock(ctx context.Context, blk block.Block) error {
+func (bst *StorageSession) SetBlock(ctx context.Context, blk block.Block) error {
+	if blk == nil {
+		return xerrors.Errorf("empty block")
+	}
+
 	finished := make(chan error)
 	go func() {
 		finished <- bst.setBlock(blk)
@@ -71,7 +78,21 @@ func (bst *BlockStorage) SetBlock(ctx context.Context, blk block.Block) error {
 	}
 }
 
-func (bst *BlockStorage) setBlock(blk block.Block) error {
+func (bst *StorageSession) SetACCEPTVoteproof(voteproof base.Voteproof) error {
+	if s := voteproof.Stage(); s != base.StageACCEPT {
+		return xerrors.Errorf("not accept voteproof, %v", s)
+	}
+
+	if doc, err := NewVoteproofDoc(voteproof, bst.st.enc); err != nil {
+		return err
+	} else {
+		bst.acceptVoteproofsModels = mongo.NewInsertOneModel().SetDocument(doc)
+
+		return nil
+	}
+}
+
+func (bst *StorageSession) setBlock(blk block.Block) error {
 	startedf := time.Now()
 	defer func() {
 		bst.statesValue.Store("set-block", time.Since(startedf))
@@ -115,22 +136,19 @@ func (bst *BlockStorage) setBlock(blk block.Block) error {
 		return err
 	}
 
+	if err := bst.setVoteproofs(blk.ConsensusInfo().INITVoteproof(), blk.ConsensusInfo().ACCEPTVoteproof()); err != nil {
+		return err
+	}
+
 	bst.block = blk
 
 	return nil
 }
 
-func (bst *BlockStorage) Commit(ctx context.Context) error {
-	if err := bst.commit(ctx); err == nil {
+func (bst *StorageSession) Commit(ctx context.Context, bd block.BlockDataMap) error {
+	if err := bst.commit(ctx, bd); err == nil {
 		return nil
 	} else {
-		defer func() {
-			_ = bst.Close()
-
-			started := time.Now()
-			bst.statesValue.Store("commit", time.Since(started))
-		}()
-
 		var me mongo.CommandError
 		if xerrors.Is(err, context.DeadlineExceeded) {
 			return storage.TimeoutError.Wrap(err)
@@ -144,12 +162,10 @@ func (bst *BlockStorage) Commit(ctx context.Context) error {
 	}
 }
 
-func (bst *BlockStorage) commit(ctx context.Context) error {
+func (bst *StorageSession) commit(ctx context.Context, bd block.BlockDataMap) error {
 	started := time.Now()
 	defer func() {
 		bst.statesValue.Store("commit", time.Since(started))
-
-		_ = bst.Close()
 	}()
 
 	if bst.manifestModels == nil {
@@ -158,8 +174,15 @@ func (bst *BlockStorage) commit(ctx context.Context) error {
 		}
 	}
 
-	ctx, cancel := context.WithCancel(ctx)
-	defer cancel()
+	if bst.block.Height() > base.PreGenesisHeight {
+		if bst.initVoteproofsModels == nil {
+			return xerrors.Errorf("empty init voteproof")
+		}
+
+		if bst.acceptVoteproofsModels == nil {
+			return xerrors.Errorf("empty accept voteproof")
+		}
+	}
 
 	if res, err := bst.writeModels(ctx, ColNameManifest, bst.manifestModels); err != nil {
 		return storage.WrapStorageError(err)
@@ -179,6 +202,30 @@ func (bst *BlockStorage) commit(ctx context.Context) error {
 		return xerrors.Errorf("state not inserted")
 	}
 
+	if bst.initVoteproofsModels != nil {
+		if res, err := bst.writeModels(ctx, ColNameVoteproof, []mongo.WriteModel{bst.initVoteproofsModels}); err != nil {
+			return storage.WrapStorageError(err)
+		} else if res != nil && res.InsertedCount < 1 {
+			return xerrors.Errorf("init voteproofs not inserted")
+		}
+	}
+
+	if bst.acceptVoteproofsModels != nil {
+		if res, err := bst.writeModels(ctx, ColNameVoteproof, []mongo.WriteModel{bst.acceptVoteproofsModels}); err != nil {
+			return storage.WrapStorageError(err)
+		} else if res != nil && res.InsertedCount < 1 {
+			return xerrors.Errorf("accept voteproofs not inserted")
+		}
+	}
+
+	if doc, err := NewBlockDataMapDoc(bd, bst.st.enc); err != nil {
+		return err
+	} else if res, err := bst.writeModels(ctx, ColNameBlockDataMap, []mongo.WriteModel{mongo.NewInsertOneModel().SetDocument(doc)}); err != nil {
+		return storage.WrapStorageError(err)
+	} else if res != nil && res.InsertedCount < 1 {
+		return xerrors.Errorf("block datamap not inserted")
+	}
+
 	if err := bst.ost.setLastBlock(bst.block, true, false); err != nil {
 		return err
 	}
@@ -188,7 +235,7 @@ func (bst *BlockStorage) commit(ctx context.Context) error {
 	return nil
 }
 
-func (bst *BlockStorage) setOperationsTree(tr tree.FixedTree) error {
+func (bst *StorageSession) setOperationsTree(tr tree.FixedTree) error {
 	started := time.Now()
 	defer func() {
 		bst.statesValue.Store("set-operations-tree", time.Since(started))
@@ -217,7 +264,7 @@ func (bst *BlockStorage) setOperationsTree(tr tree.FixedTree) error {
 	return nil
 }
 
-func (bst *BlockStorage) setStates(sts []state.State) error {
+func (bst *StorageSession) setStates(sts []state.State) error {
 	started := time.Now()
 	defer func() {
 		bst.statesValue.Store("set-states", time.Since(started))
@@ -238,7 +285,30 @@ func (bst *BlockStorage) setStates(sts []state.State) error {
 	return nil
 }
 
-func (bst *BlockStorage) writeModels(ctx context.Context, col string, models []mongo.WriteModel) (*mongo.BulkWriteResult, error) {
+func (bst *StorageSession) setVoteproofs(init, accept base.Voteproof) error {
+	started := time.Now()
+	defer func() {
+		bst.statesValue.Store("set-voteproofs", time.Since(started))
+	}()
+
+	if init != nil {
+		if doc, err := NewVoteproofDoc(init, bst.st.enc); err != nil {
+			return err
+		} else {
+			bst.initVoteproofsModels = mongo.NewInsertOneModel().SetDocument(doc)
+		}
+	}
+
+	if accept != nil {
+		if err := bst.SetACCEPTVoteproof(accept); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func (bst *StorageSession) writeModels(ctx context.Context, col string, models []mongo.WriteModel) (*mongo.BulkWriteResult, error) {
 	started := time.Now()
 	defer func() {
 		bst.statesValue.Store(fmt.Sprintf("write-models-%s", col), time.Since(started))
@@ -258,7 +328,7 @@ func (bst *BlockStorage) writeModels(ctx context.Context, col string, models []m
 	)
 }
 
-func (bst *BlockStorage) insertCaches() {
+func (bst *StorageSession) insertCaches() {
 	var wg sync.WaitGroup
 	wg.Add(2)
 
@@ -285,18 +355,7 @@ func (bst *BlockStorage) insertCaches() {
 	wg.Wait()
 }
 
-func (bst *BlockStorage) States() map[string]interface{} {
-	m := map[string]interface{}{}
-	bst.statesValue.Range(func(key, value interface{}) bool {
-		m[key.(string)] = value
-
-		return true
-	})
-
-	return m
-}
-
-func (bst *BlockStorage) Cancel() error {
+func (bst *StorageSession) Cancel() error {
 	defer func() {
 		_ = bst.Close()
 	}()
@@ -308,12 +367,17 @@ func (bst *BlockStorage) Cancel() error {
 	return bst.st.CleanByHeight(bst.block.Height())
 }
 
-func (bst *BlockStorage) Close() error {
-	bst.block = nil
+func (bst *StorageSession) Close() error {
+	if bst.block == nil {
+		return xerrors.Errorf("block storage already closed")
+	}
+
 	bst.states = nil
 	bst.manifestModels = nil
 	bst.operationModels = nil
 	bst.stateModels = nil
+	bst.initVoteproofsModels = nil
+	bst.acceptVoteproofsModels = nil
 
 	return bst.st.Close()
 }

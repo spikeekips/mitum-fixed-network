@@ -44,7 +44,6 @@ func (t *testStateConsensus) newState(suffrage base.Suffrage, pps *prprocessor.P
 	proposalMaker := isaac.NewProposalMaker(t.local.Node(), t.local.Storage(), t.local.Policy())
 	st := NewConsensusState(
 		t.local.Storage(),
-		t.local.BlockFS(),
 		t.local.Policy(),
 		t.local.Nodes(),
 		suffrage,
@@ -60,9 +59,8 @@ func (t *testStateConsensus) newState(suffrage base.Suffrage, pps *prprocessor.P
 	}, false)
 	st.SetTimers(timers)
 
-	lastINITVoteproof, found, err := t.local.BlockFS().LastVoteproof(base.StageINIT)
-	t.NoError(err)
-	t.True(found)
+	lastINITVoteproof := t.local.Storage().LastVoteproof(base.StageINIT)
+	t.NotNil(lastINITVoteproof)
 
 	st.SetLastVoteproofFuncs(func() base.Voteproof {
 		return lastINITVoteproof
@@ -114,9 +112,8 @@ func (t *testStateConsensus) TestEnterWithWrongVoteproof() {
 	t.NoError(err)
 	st.SetLastVoteproofFuncs(func() base.Voteproof { return vp }, func() base.Voteproof { return vp }, nil)
 
-	lastAcceptVoteproof, found, err := t.local.BlockFS().LastVoteproof(base.StageACCEPT)
-	t.NoError(err)
-	t.True(found)
+	lastAcceptVoteproof := t.local.Storage().LastVoteproof(base.StageACCEPT)
+	t.NotNil(lastAcceptVoteproof)
 
 	_, err = st.Enter(NewStateSwitchContext(base.StateJoining, base.StateConsensus).SetVoteproof(lastAcceptVoteproof))
 	t.Contains(err.Error(), "not allowed")
@@ -413,7 +410,7 @@ func (t *testStateConsensus) TestACCEPTVoteproof() {
 	dp.SF = func(ctx context.Context) error {
 		dp.B = newblock
 
-		bs := storage.NewDummyBlockStorage(newblock, tree.FixedTree{}, tree.FixedTree{})
+		bs := storage.NewDummyStorageSession(newblock, tree.FixedTree{}, tree.FixedTree{})
 
 		return bs.Commit(ctx)
 	}
@@ -494,7 +491,7 @@ func (t *testStateConsensus) TestDrawACCEPTVoteproofToNextRound() {
 	dp.SF = func(ctx context.Context) error {
 		dp.B = newblock
 
-		bs := storage.NewDummyBlockStorage(newblock, tree.FixedTree{}, tree.FixedTree{})
+		bs := storage.NewDummyStorageSession(newblock, tree.FixedTree{}, tree.FixedTree{})
 
 		return bs.Commit(ctx)
 	}
@@ -740,7 +737,7 @@ func (t *testStateConsensus) TestProcessingProposalFromACCEPTVoterpof() {
 	dp.SF = func(ctx context.Context) error {
 		dp.B = newblock
 
-		bs := storage.NewDummyBlockStorage(newblock, tree.FixedTree{}, tree.FixedTree{})
+		bs := storage.NewDummyStorageSession(newblock, tree.FixedTree{}, tree.FixedTree{})
 
 		return bs.Commit(ctx)
 	}
@@ -767,8 +764,9 @@ func (t *testStateConsensus) TestProcessingProposalFromACCEPTVoterpof() {
 		return nil
 	})
 
-	oldINITVoteproof, err := t.local.BlockFS().LoadINITVoteproof(st.LastINITVoteproof().Height() - 1)
+	oldINITVoteproof, err := t.local.Storage().Voteproof(st.LastINITVoteproof().Height()-1, base.StageINIT)
 	t.NoError(err)
+	t.NotNil(oldINITVoteproof)
 
 	_, err = st.Enter(NewStateSwitchContext(base.StateJoining, base.StateConsensus).SetVoteproof(oldINITVoteproof))
 	t.NoError(err)

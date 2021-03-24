@@ -13,6 +13,7 @@ import (
 	"github.com/spikeekips/mitum/launch/config"
 	"github.com/spikeekips/mitum/network"
 	"github.com/spikeekips/mitum/storage"
+	"github.com/spikeekips/mitum/storage/blockdata"
 	"github.com/spikeekips/mitum/util/hint"
 	"github.com/spikeekips/mitum/util/localtime"
 	"github.com/spikeekips/mitum/util/logging"
@@ -21,7 +22,7 @@ import (
 
 func NewErrorProcessorNewFunc(
 	st storage.Storage,
-	blockFS *storage.BlockFS,
+	blockData blockdata.BlockData,
 	nodepool *network.Nodepool,
 	suffrage base.Suffrage,
 	oprHintset *hint.Hintmap,
@@ -31,7 +32,7 @@ func NewErrorProcessorNewFunc(
 	return func(proposal ballot.Proposal, initVoteproof base.Voteproof) (prprocessor.Processor, error) {
 		if pp, err := isaac.NewDefaultProcessor(
 			st,
-			blockFS,
+			blockData,
 			nodepool,
 			suffrage,
 			oprHintset,
@@ -87,7 +88,7 @@ func (pp *ErrorProposalProcessor) Prepare(ctx context.Context) (block.Block, err
 				pp.BaseManifest().Hash(),
 				valuehash.RandomSHA256(),
 				valuehash.RandomSHA256(),
-				localtime.Now(),
+				localtime.UTCNow(),
 			)
 		} else {
 			return nil, xerrors.Errorf(

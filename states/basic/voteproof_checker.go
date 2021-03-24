@@ -54,7 +54,7 @@ func (vc *VoteproofChecker) CheckPoint() (bool, error) {
 	case base.StageACCEPT:
 		return vc.checkPointACCEPTVoteproof()
 	default:
-		return false, xerrors.Errorf("unsupported voteproof stage, %v", s)
+		return false, xerrors.Errorf("not supported voteproof stage, %v", s)
 	}
 }
 

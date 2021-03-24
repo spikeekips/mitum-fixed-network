@@ -2,6 +2,7 @@ package quicnetwork
 
 import (
 	"bytes"
+	"context"
 	"crypto/tls"
 	"fmt"
 	"io"
@@ -83,14 +84,16 @@ func (t *testPrimitiveQuicSever) TestGet() {
 	qn := t.readyServer(handlers)
 	defer qn.Stop()
 
-	client, err := NewQuicClient(true, time.Second, 1, nil)
+	client, err := NewQuicClient(true, nil)
 	t.NoError(err)
 
-	response, err := client.Request(t.url.String()+"/get", nil, nil)
+	response, err := client.Request(context.Background(), time.Second*3, t.url.String()+"/get", nil, nil)
 	t.NoError(err)
 	t.True(response.OK())
 
-	received, err := util.BytesToInt(response.Bytes())
+	b, err := response.Bytes()
+	t.NoError(err)
+	received, err := util.BytesToInt(b)
 	t.NoError(err)
 	t.Equal(data, received)
 }
@@ -118,11 +121,13 @@ func (t *testPrimitiveQuicSever) TestSend() {
 	qn := t.readyServer(handlers)
 	defer qn.Stop()
 
-	client, err := NewQuicClient(true, time.Second, 1, nil)
+	client, err := NewQuicClient(true, nil)
 	t.NoError(err)
 
 	var data int = 33
-	t.NoError(client.Send(t.url.String()+"/send", util.IntToBytes(data), nil))
+	res, err := client.Send(context.Background(), time.Second*3, t.url.String()+"/send", util.IntToBytes(data), nil)
+	t.NoError(err)
+	defer res.Close()
 
 	select {
 	case <-time.After(time.Second):

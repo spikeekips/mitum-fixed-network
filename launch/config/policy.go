@@ -27,6 +27,10 @@ type Policy interface {
 	SetTimespanValidBallot(string) error
 	TimeoutProcessProposal() time.Duration
 	SetTimeoutProcessProposal(string) error
+	NetworkConnectionTimeout() time.Duration
+	SetNetworkConnectionTimeout(string) error
+	NetworkConnectionTLSInsecure() bool
+	SetNetworkConnectionTLSInsecure(bool) error
 }
 
 type BasePolicy struct {
@@ -40,6 +44,8 @@ type BasePolicy struct {
 	intervalBroadcastingACCEPTBallot time.Duration
 	timespanValidBallot              time.Duration
 	timeoutProcessProposal           time.Duration
+	networkConnectionTimeout         time.Duration
+	networkConnectionTLSInsecure     bool
 }
 
 func (no BasePolicy) ThresholdRatio() base.ThresholdRatio {
@@ -173,4 +179,28 @@ func (no *BasePolicy) SetTimeoutProcessProposal(s string) error {
 
 		return nil
 	}
+}
+
+func (no BasePolicy) NetworkConnectionTimeout() time.Duration {
+	return no.networkConnectionTimeout
+}
+
+func (no *BasePolicy) SetNetworkConnectionTimeout(s string) error {
+	if t, err := parseTimeDuration(s, true); err != nil {
+		return err
+	} else {
+		no.networkConnectionTimeout = t
+
+		return nil
+	}
+}
+
+func (no BasePolicy) NetworkConnectionTLSInsecure() bool {
+	return no.networkConnectionTLSInsecure
+}
+
+func (no *BasePolicy) SetNetworkConnectionTLSInsecure(s bool) error {
+	no.networkConnectionTLSInsecure = s
+
+	return nil
 }

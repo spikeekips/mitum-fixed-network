@@ -12,6 +12,7 @@ import (
 	"github.com/spikeekips/mitum/isaac"
 	"github.com/spikeekips/mitum/network"
 	"github.com/spikeekips/mitum/storage"
+	"github.com/spikeekips/mitum/storage/blockdata"
 	"github.com/spikeekips/mitum/util/localtime"
 	"github.com/spikeekips/mitum/util/logging"
 )
@@ -21,7 +22,7 @@ type SyncingState struct {
 	*logging.Logging
 	*BaseState
 	storage              storage.Storage
-	blockFS              *storage.BlockFS
+	blockData            blockdata.BlockData
 	policy               *isaac.LocalPolicy
 	nodepool             *network.Nodepool
 	syncs                *isaac.Syncers
@@ -30,7 +31,7 @@ type SyncingState struct {
 
 func NewSyncingState(
 	st storage.Storage,
-	blockFS *storage.BlockFS,
+	blockData blockdata.BlockData,
 	policy *isaac.LocalPolicy,
 	nodepool *network.Nodepool,
 ) *SyncingState {
@@ -40,7 +41,7 @@ func NewSyncingState(
 		}),
 		BaseState:            NewBaseState(base.StateSyncing),
 		storage:              st,
-		blockFS:              blockFS,
+		blockData:            blockData,
 		policy:               policy,
 		nodepool:             nodepool,
 		waitVoteproofTimeout: time.Second * 5, // NOTE long enough time
@@ -76,7 +77,7 @@ func (st *SyncingState) enter(voteproof base.Voteproof) error {
 		baseManifest = m
 	}
 
-	syncs := isaac.NewSyncers(st.nodepool.Local(), st.storage, st.blockFS, st.policy, baseManifest)
+	syncs := isaac.NewSyncers(st.nodepool.Local(), st.storage, st.blockData, st.policy, baseManifest)
 	syncs.WhenBlockSaved(st.whenBlockSaved)
 	syncs.WhenFinished(st.whenFinished)
 
@@ -125,9 +126,7 @@ func (st *SyncingState) Exit(sctx StateSwitchContext) (func() error, error) {
 			return err
 		}
 
-		if err := st.Timers().StopTimers([]localtime.TimerID{
-			TimerIDSyncingWaitVoteproof,
-		}); err != nil {
+		if err := st.stopWaitVoteproof(); err != nil {
 			return err
 		}
 
@@ -172,17 +171,11 @@ func (st *SyncingState) handleINITTVoteproof(voteproof base.Voteproof) error {
 		baseHeight = m.Height()
 	}
 
-	var lastHeight base.Height = base.NilHeight
-	if last := st.syncers().LastSyncer(); last != nil {
-		lastHeight = last.HeightTo()
-	}
-
 	l := st.Log().WithLogger(func(ctx logging.Context) logging.Emitter {
 		return ctx.Hinted("voteproof_stage", voteproof.Stage()).
 			Hinted("voteproof_height", voteproof.Height()).
 			Hinted("voteproof_round", voteproof.Round()).
-			Hinted("local_height", baseHeight).
-			Hinted("last_height", lastHeight)
+			Hinted("local_height", baseHeight)
 	})
 
 	var to base.Height
@@ -201,12 +194,6 @@ func (st *SyncingState) handleINITTVoteproof(voteproof base.Voteproof) error {
 
 		return nil
 	case baseHeight < to:
-		if lastHeight >= to {
-			l.Debug().Hinted("last_syncers", lastHeight).Msg("init voteproof, but under syncing")
-
-			return nil
-		}
-
 		return st.syncFromVoteproof(voteproof, to)
 	default:
 		if !st.syncers().IsFinished() {
@@ -215,9 +202,7 @@ func (st *SyncingState) handleINITTVoteproof(voteproof base.Voteproof) error {
 
 		l.Debug().Msg("init voteproof, expected")
 
-		if err := st.Timers().StopTimers([]localtime.TimerID{TimerIDSyncingWaitVoteproof}); err != nil {
-			st.Log().Error().Err(err).Str("timer", TimerIDSyncingWaitVoteproof.String()).Msg("failed to stop")
-
+		if err := st.stopWaitVoteproof(); err != nil {
 			return err
 		}
 
@@ -246,12 +231,6 @@ func (st *SyncingState) handleACCEPTVoteproof(voteproof base.Voteproof) error {
 		l.Debug().Msg("voteproof has lower height")
 
 		return nil
-	} else if last := st.syncers().LastSyncer(); last != nil {
-		if last.HeightTo() >= voteproof.Height() {
-			l.Debug().Hinted("last_syncers", last.HeightTo()).Msg("init voteproof, but under syncing")
-
-			return nil
-		}
 	}
 
 	return st.syncFromVoteproof(voteproof, voteproof.Height())
@@ -281,7 +260,17 @@ func (st *SyncingState) syncFromVoteproof(voteproof base.Voteproof, to base.Heig
 		Hinted("height_to", to).
 		Msg("will sync to the height")
 
-	return st.syncers().Add(to, sourceNodes)
+	if isFinished, err := st.syncers().Add(to, sourceNodes); !isFinished {
+		if err0 := st.stopWaitVoteproof(); err0 != nil {
+			if err == nil {
+				return err0
+			}
+		}
+
+		return err
+	} else {
+		return err
+	}
 }
 
 func (st *SyncingState) whenFinished(height base.Height) {
@@ -350,4 +339,8 @@ func (st *SyncingState) waitVoteproof() error {
 	}
 
 	return st.Timers().StartTimers([]localtime.TimerID{TimerIDSyncingWaitVoteproof}, true)
+}
+
+func (st *SyncingState) stopWaitVoteproof() error {
+	return st.Timers().StopTimers([]localtime.TimerID{TimerIDSyncingWaitVoteproof})
 }

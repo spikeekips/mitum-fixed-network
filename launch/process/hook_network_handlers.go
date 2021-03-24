@@ -2,6 +2,7 @@ package process
 
 import (
 	"context"
+	"io"
 	"sort"
 	"time"
 
@@ -16,6 +17,7 @@ import (
 	"github.com/spikeekips/mitum/network"
 	"github.com/spikeekips/mitum/states"
 	"github.com/spikeekips/mitum/storage"
+	"github.com/spikeekips/mitum/storage/blockdata"
 	"github.com/spikeekips/mitum/util"
 	"github.com/spikeekips/mitum/util/cache"
 	"github.com/spikeekips/mitum/util/logging"
@@ -39,7 +41,7 @@ type SettingNetworkHandlers struct {
 	ctx       context.Context
 	conf      config.LocalNode
 	storage   storage.Storage
-	blockfs   *storage.BlockFS
+	blockData blockdata.BlockData
 	policy    *isaac.LocalPolicy
 	nodepool  *network.Nodepool
 	suffrage  base.Suffrage
@@ -75,8 +77,8 @@ func SettingNetworkHandlersFromContext(ctx context.Context) (*SettingNetworkHand
 		return nil, err
 	}
 
-	var blockfs *storage.BlockFS
-	if err := LoadBlockFSContextValue(ctx, &blockfs); err != nil {
+	var blockData blockdata.BlockData
+	if err := LoadBlockDataContextValue(ctx, &blockData); err != nil {
 		return nil, err
 	}
 
@@ -110,7 +112,7 @@ func SettingNetworkHandlersFromContext(ctx context.Context) (*SettingNetworkHand
 		version:   version,
 		conf:      conf,
 		storage:   st,
-		blockfs:   blockfs,
+		blockData: blockData,
 		policy:    policy,
 		nodepool:  nodepool,
 		suffrage:  suffrage,
@@ -125,16 +127,16 @@ func (sn *SettingNetworkHandlers) Set() error {
 	sn.network.SetHasSealHandler(sn.networkHandlerHasSeal())
 	sn.network.SetGetSealsHandler(sn.networkHandlerGetSeals())
 	sn.network.SetNewSealHandler(sn.networkhandlerNewSeal())
-	sn.network.SetGetManifestsHandler(sn.networkhandlerGetManifests())
-	sn.network.SetGetBlocksHandler(sn.networkHandlerGetBlocks())
 	sn.network.SetNodeInfoHandler(sn.networkHandlerNodeInfo())
+	sn.network.SetBlockDataMapsHandler(sn.networkHandlerBlockDataMaps())
+	sn.network.SetBlockDataHandler(sn.networkHandlerBlockData())
 
 	lc := sn.nodepool.Local().Channel().(*network.DummyChannel)
 	lc.SetNewSealHandler(sn.networkhandlerNewSeal())
 	lc.SetGetSealsHandler(sn.networkHandlerGetSeals())
-	lc.SetGetManifestsHandler(sn.networkhandlerGetManifests())
-	lc.SetGetBlocksHandler(sn.networkHandlerGetBlocks())
 	lc.SetNodeInfoHandler(sn.networkHandlerNodeInfo())
+	lc.SetBlockDataMapsHandler(sn.networkHandlerBlockDataMaps())
+	lc.SetBlockDataHandler(sn.networkHandlerBlockData())
 
 	sn.logger.Debug().Msg("local channel handlers binded")
 
@@ -213,58 +215,6 @@ func (sn *SettingNetworkHandlers) networkhandlerNewSeal() network.NewSealHandler
 	}
 }
 
-func (sn *SettingNetworkHandlers) networkhandlerGetManifests() network.GetManifestsHandler {
-	return func(heights []base.Height) ([]block.Manifest, error) {
-		sort.Slice(heights, func(i, j int) bool {
-			return heights[i] < heights[j]
-		})
-
-		var manifests []block.Manifest
-		fetched := map[base.Height]struct{}{}
-		for _, h := range heights {
-			if _, found := fetched[h]; found {
-				continue
-			}
-
-			fetched[h] = struct{}{}
-
-			switch m, found, err := sn.storage.ManifestByHeight(h); {
-			case !found:
-				continue
-			case err != nil:
-				return nil, err
-			default:
-				manifests = append(manifests, m)
-			}
-		}
-
-		return manifests, nil
-	}
-}
-
-func (sn *SettingNetworkHandlers) networkHandlerGetBlocks() network.GetBlocksHandler {
-	return func(heights []base.Height) ([]block.Block, error) {
-		sort.Slice(heights, func(i, j int) bool {
-			return heights[i] < heights[j]
-		})
-
-		var blocks []block.Block
-		for _, h := range heights {
-			if blk, err := sn.blockfs.Load(h); err != nil {
-				if xerrors.Is(err, storage.NotFoundError) {
-					break
-				}
-
-				return nil, err
-			} else {
-				blocks = append(blocks, blk)
-			}
-		}
-
-		return blocks, nil
-	}
-}
-
 func (sn *SettingNetworkHandlers) networkHandlerNodeInfo() network.NodeInfoHandler {
 	return func() (network.NodeInfo, error) {
 		var manifest block.Manifest
@@ -295,5 +245,49 @@ func (sn *SettingNetworkHandlers) networkHandlerNodeInfo() network.NodeInfoHandl
 			nodes,
 			sn.suffrage,
 		), nil
+	}
+}
+
+func (sn *SettingNetworkHandlers) networkHandlerBlockDataMaps() network.BlockDataMapsHandler {
+	return func(heights []base.Height) ([]block.BlockDataMap, error) {
+		sort.Slice(heights, func(i, j int) bool {
+			return heights[i] < heights[j]
+		})
+
+		var filtered []base.Height
+		founds := map[base.Height]struct{}{}
+		for i := range heights {
+			h := heights[i]
+			if _, f := founds[h]; f {
+				continue
+			}
+
+			founds[h] = struct{}{}
+			filtered = append(filtered, h)
+		}
+
+		maps := make([]block.BlockDataMap, len(filtered))
+		for i := range filtered {
+			switch m, found, err := sn.storage.BlockDataMap(filtered[i]); {
+			case !found:
+				continue
+			case err != nil:
+				return nil, err
+			default:
+				maps[i] = m
+			}
+		}
+
+		return maps, nil
+	}
+}
+
+func (sn *SettingNetworkHandlers) networkHandlerBlockData() network.BlockDataHandler {
+	return func(p string) (io.ReadCloser, func() error, error) {
+		if i, err := sn.blockData.FS().Open(p); err != nil {
+			return nil, func() error { return nil }, err
+		} else {
+			return i, func() error { return nil }, err
+		}
 	}
 }

@@ -66,7 +66,7 @@ func (t *testVoteproofEncode) TestMarshal() {
 				signer:        n1.Publickey(),
 			},
 		},
-		finishedAt: localtime.Now(),
+		finishedAt: localtime.UTCNow(),
 	}
 	t.NoError(vp.IsValid(nil))
 

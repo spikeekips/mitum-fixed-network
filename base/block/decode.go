@@ -17,7 +17,7 @@ func DecodeManifest(enc encoder.Encoder, b []byte) (Manifest, error) {
 	}
 }
 
-func decodeConsensusInfo(enc encoder.Encoder, b []byte) (ConsensusInfo, error) {
+func DecodeConsensusInfo(enc encoder.Encoder, b []byte) (ConsensusInfo, error) {
 	if i, err := enc.DecodeByHint(b); err != nil {
 		return nil, err
 	} else if i == nil {
@@ -29,7 +29,7 @@ func decodeConsensusInfo(enc encoder.Encoder, b []byte) (ConsensusInfo, error) {
 	}
 }
 
-func decodeSuffrageInfo(enc encoder.Encoder, b []byte) (SuffrageInfo, error) {
+func DecodeSuffrageInfo(enc encoder.Encoder, b []byte) (SuffrageInfo, error) {
 	if i, err := enc.DecodeByHint(b); err != nil {
 		return nil, err
 	} else if i == nil {

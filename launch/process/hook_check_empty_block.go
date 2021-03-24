@@ -7,6 +7,7 @@ import (
 	"github.com/spikeekips/mitum/isaac"
 	"github.com/spikeekips/mitum/launch/config"
 	"github.com/spikeekips/mitum/storage"
+	"github.com/spikeekips/mitum/storage/blockdata"
 	"github.com/spikeekips/mitum/util/logging"
 	"golang.org/x/xerrors"
 )
@@ -36,27 +37,27 @@ func HookCheckEmptyBlock(ctx context.Context) (context.Context, error) {
 		return ctx, err
 	}
 
-	var blockFS *storage.BlockFS
-	if err := LoadBlockFSContextValue(ctx, &blockFS); err != nil {
+	var blockData blockdata.BlockData
+	if err := LoadBlockDataContextValue(ctx, &blockData); err != nil {
 		return ctx, err
 	}
 
-	if blk, err := storage.CheckBlockEmpty(st, blockFS); err != nil {
+	if m, err := storage.CheckBlockEmpty(st); err != nil {
 		return ctx, err
-	} else if blk == nil {
+	} else if m == nil {
 		log.Debug().Msg("empty block found; storage will be empty")
 
-		if err := storage.Clean(st, blockFS, false); err != nil {
+		if err := blockdata.Clean(st, blockData, false); err != nil {
 			return nil, err
 		}
 
 		if len(suffrage.Nodes()) < 2 {
 			return ctx, xerrors.Errorf("empty block, but no other nodes; can not sync")
 		}
-	} else if err := blk.IsValid(policy.NetworkID()); err != nil {
+	} else if err := m.IsValid(policy.NetworkID()); err != nil {
 		return ctx, xerrors.Errorf("invalid block found, clean up block: %w", err)
 	} else {
-		log.Debug().Hinted("block", blk.Manifest()).Msg("valid initial block found")
+		log.Debug().Hinted("block", m).Msg("valid initial block found")
 	}
 
 	return ctx, nil

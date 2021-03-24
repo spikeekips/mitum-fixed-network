@@ -1,6 +1,8 @@
 package isaac
 
 import (
+	"context"
+
 	"golang.org/x/xerrors"
 
 	"github.com/spikeekips/mitum/base"
@@ -205,7 +207,7 @@ func CheckBallotSigning(blt ballot.Ballot, nodepool *network.Nodepool) error {
 }
 
 func RequestProposal(node network.Node, h valuehash.Hash) (ballot.Proposal, error) {
-	if r, err := node.Channel().Seals([]valuehash.Hash{h}); err != nil {
+	if r, err := node.Channel().Seals(context.TODO(), []valuehash.Hash{h}); err != nil {
 		return nil, err
 	} else if len(r) < 1 {
 		return nil, xerrors.Errorf(

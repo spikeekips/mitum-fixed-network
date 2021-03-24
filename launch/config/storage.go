@@ -9,9 +9,9 @@ import (
 )
 
 var (
-	DefaultBlockDataPath    = "./blockdata"
-	DefaultMainStorageURI   = "mongodb://127.0.0.1:27017/mitum"
-	DefaultMainStorageCache = fmt.Sprintf(
+	DefaultBlockDataPath = "./blockdata"
+	DefaultDatabaseURI   = "mongodb://127.0.0.1:27017/mitum"
+	DefaultDatabaseCache = fmt.Sprintf(
 		"gcache:?type=%s&size=%d&expire=%s",
 		cache.DefaultGCacheType,
 		cache.DefaultGCacheSize,
@@ -38,23 +38,23 @@ func (no *BaseBlockData) SetPath(s string) error {
 	return nil
 }
 
-type MainStorage interface {
+type Database interface {
 	URI() *url.URL
 	SetURI(string) error
 	Cache() *url.URL
 	SetCache(string) error
 }
 
-type BaseMainStorage struct {
+type BaseDatabase struct {
 	uri   *url.URL
 	cache *url.URL
 }
 
-func (no BaseMainStorage) URI() *url.URL {
+func (no BaseDatabase) URI() *url.URL {
 	return no.uri
 }
 
-func (no *BaseMainStorage) SetURI(s string) error {
+func (no *BaseDatabase) SetURI(s string) error {
 	if u, err := ParseURLString(s, true); err != nil {
 		return err
 	} else {
@@ -64,11 +64,11 @@ func (no *BaseMainStorage) SetURI(s string) error {
 	}
 }
 
-func (no BaseMainStorage) Cache() *url.URL {
+func (no BaseDatabase) Cache() *url.URL {
 	return no.cache
 }
 
-func (no *BaseMainStorage) SetCache(s string) error {
+func (no *BaseDatabase) SetCache(s string) error {
 	if u, err := ParseURLString(s, true); err != nil {
 		return err
 	} else {
@@ -79,30 +79,30 @@ func (no *BaseMainStorage) SetCache(s string) error {
 }
 
 type Storage interface {
-	Main() MainStorage
-	SetMain(MainStorage) error
+	Database() Database
+	SetDatabase(Database) error
 	BlockData() BlockData
 	SetBlockData(BlockData) error
 }
 
 type BaseStorage struct {
-	main      MainStorage
+	database  Database
 	blockData BlockData
 }
 
 func EmptyBaseStorage() *BaseStorage {
 	return &BaseStorage{
-		main:      &BaseMainStorage{},
+		database:  &BaseDatabase{},
 		blockData: &BaseBlockData{},
 	}
 }
 
-func (no BaseStorage) Main() MainStorage {
-	return no.main
+func (no BaseStorage) Database() Database {
+	return no.database
 }
 
-func (no *BaseStorage) SetMain(main MainStorage) error {
-	no.main = main
+func (no *BaseStorage) SetDatabase(database Database) error {
+	no.database = database
 
 	return nil
 }

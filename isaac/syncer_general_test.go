@@ -26,20 +26,20 @@ func (t *testGeneralSyncer) TestInvalidFrom() {
 	ls := t.Locals(2)
 	local, remote := ls[0], ls[1]
 
-	bm := t.LastManifest(local.Storage())
-	lower, found, err := local.Storage().ManifestByHeight(bm.Height() - 1)
+	bm := t.LastManifest(local.Database())
+	lower, found, err := local.Database().ManifestByHeight(bm.Height() - 1)
 	t.NoError(err)
 	t.True(found)
 
 	base := bm.Height()
 	{ // lower than base
-		_, err := NewGeneralSyncer(local.Node(), local.Storage(), local.BlockData(), local.Policy(),
+		_, err := NewGeneralSyncer(local.Node(), local.Database(), local.BlockData(), local.Policy(),
 			[]network.Node{remote.Node()}, lower, base+2)
 		t.Contains(err.Error(), "lower than last block")
 	}
 
 	{ // higher than to
-		_, err := NewGeneralSyncer(local.Node(), local.Storage(), local.BlockData(), local.Policy(),
+		_, err := NewGeneralSyncer(local.Node(), local.Database(), local.BlockData(), local.Policy(),
 			[]network.Node{remote.Node()}, bm, bm.Height()-2)
 		t.Contains(err.Error(), "greater than to height")
 	}
@@ -51,17 +51,17 @@ func (t *testGeneralSyncer) TestInvalidSourceNodes() {
 
 	t.SetupNodes(local, nil)
 
-	bm := t.LastManifest(local.Storage())
+	bm := t.LastManifest(local.Database())
 	base := bm.Height()
 
 	{ // nil node
-		_, err := NewGeneralSyncer(local.Node(), local.Storage(), local.BlockData(), local.Policy(),
+		_, err := NewGeneralSyncer(local.Node(), local.Database(), local.BlockData(), local.Policy(),
 			nil, bm, base+2)
 		t.Contains(err.Error(), "empty source nodes")
 	}
 
 	{ // same with local node
-		_, err := NewGeneralSyncer(local.Node(), local.Storage(), local.BlockData(), local.Policy(),
+		_, err := NewGeneralSyncer(local.Node(), local.Database(), local.BlockData(), local.Policy(),
 			[]network.Node{local.Node()}, bm, base+2)
 		t.Contains(err.Error(), "same with local node")
 	}
@@ -73,11 +73,11 @@ func (t *testGeneralSyncer) TestNew() {
 
 	t.SetupNodes(local, []*Local{remote})
 
-	bm := t.LastManifest(local.Storage())
+	bm := t.LastManifest(local.Database())
 	target := bm.Height() + 1
 	t.GenerateBlocks([]*Local{remote}, target)
 
-	cs, err := NewGeneralSyncer(local.Node(), local.Storage(), local.BlockData(), local.Policy(),
+	cs, err := NewGeneralSyncer(local.Node(), local.Database(), local.BlockData(), local.Policy(),
 		[]network.Node{remote.Node()}, bm, target)
 	t.NoError(err)
 	defer cs.Close()
@@ -96,12 +96,12 @@ func (t *testGeneralSyncer) TestHeadAndTailManifests() {
 
 	t.SetupNodes(local, []*Local{rn0, rn1, rn2})
 
-	bm := t.LastManifest(local.Storage())
+	bm := t.LastManifest(local.Database())
 	base := bm.Height()
 	target := base + 5
 	t.GenerateBlocks([]*Local{rn0, rn1, rn2}, target)
 
-	cs, err := NewGeneralSyncer(local.Node(), local.Storage(), local.BlockData(), local.Policy(),
+	cs, err := NewGeneralSyncer(local.Node(), local.Database(), local.BlockData(), local.Policy(),
 		[]network.Node{rn0.Node(), rn1.Node(), rn2.Node()}, bm, target)
 	t.NoError(err)
 	defer cs.Close()
@@ -112,14 +112,14 @@ func (t *testGeneralSyncer) TestHeadAndTailManifests() {
 	t.NoError(cs.headAndTailManifests())
 
 	{
-		b, found, err := cs.storage().Manifest(base + 1)
+		b, found, err := cs.database().Manifest(base + 1)
 		t.True(found)
 		t.NoError(err)
 		t.Equal(base+1, b.Height())
 	}
 
 	{
-		b, found, err := cs.storage().Manifest(target)
+		b, found, err := cs.database().Manifest(target)
 		t.True(found)
 		t.NoError(err)
 		t.Equal(base+5, b.Height())
@@ -140,11 +140,11 @@ func (t *testGeneralSyncer) TestFillManifests() {
 
 	t.SetupNodes(local, []*Local{rn0, rn1, rn2})
 
-	baseBlock := t.LastManifest(local.Storage())
+	baseBlock := t.LastManifest(local.Database())
 	target := baseBlock.Height() + 5
 	t.GenerateBlocks([]*Local{rn0, rn1, rn2}, target)
 
-	cs, err := NewGeneralSyncer(local.Node(), local.Storage(), local.BlockData(), local.Policy(),
+	cs, err := NewGeneralSyncer(local.Node(), local.Database(), local.BlockData(), local.Policy(),
 		[]network.Node{rn0.Node(), rn1.Node(), rn2.Node()}, baseBlock, target)
 	t.NoError(err)
 	defer cs.Close()
@@ -155,7 +155,7 @@ func (t *testGeneralSyncer) TestFillManifests() {
 	t.NoError(cs.fillManifests())
 
 	for i := baseBlock.Height().Int64() + 1; i < target.Int64()+1; i++ {
-		b, found, err := cs.storage().Manifest(base.Height(i))
+		b, found, err := cs.database().Manifest(base.Height(i))
 		t.True(found)
 		t.NoError(err)
 
@@ -171,12 +171,12 @@ func (t *testGeneralSyncer) TestFetchBlocks() {
 
 	t.SetupNodes(local, []*Local{local, rn0, rn1, rn2})
 
-	bm := t.LastManifest(local.Storage())
+	bm := t.LastManifest(local.Database())
 	baseHeight := bm.Height()
 	target := baseHeight + 5
 	t.GenerateBlocks([]*Local{rn0, rn1, rn2}, target)
 
-	cs, err := NewGeneralSyncer(local.Node(), local.Storage(), local.BlockData(), local.Policy(),
+	cs, err := NewGeneralSyncer(local.Node(), local.Database(), local.BlockData(), local.Policy(),
 		[]network.Node{rn0.Node(), rn1.Node(), rn2.Node()}, bm, target)
 	t.NoError(err)
 	defer cs.Close()
@@ -191,7 +191,7 @@ func (t *testGeneralSyncer) TestFetchBlocks() {
 	t.NoError(cs.startBlocks())
 
 	for i := baseHeight.Int64() + 1; i < target.Int64()+1; i++ {
-		b, found, err := cs.storage().Manifest(base.Height(i))
+		b, found, err := cs.database().Manifest(base.Height(i))
 		t.True(found)
 		t.NoError(err)
 
@@ -219,7 +219,7 @@ func (t *testGeneralSyncer) TestFetchBlocksButSomeNodesFailed() {
 
 	_ = local.Policy().SetThresholdRatio(base.ThresholdRatio(100))
 
-	bm := t.LastManifest(local.Storage())
+	bm := t.LastManifest(local.Database())
 	baseHeight := bm.Height()
 	target := baseHeight + 3
 	t.GenerateBlocks([]*Local{rn0, rn1, rn2}, target)
@@ -245,7 +245,7 @@ func (t *testGeneralSyncer) TestFetchBlocksButSomeNodesFailed() {
 
 	}
 
-	cs, err := NewGeneralSyncer(local.Node(), local.Storage(), local.BlockData(), local.Policy(),
+	cs, err := NewGeneralSyncer(local.Node(), local.Database(), local.BlockData(), local.Policy(),
 		[]network.Node{rn0.Node(), rn1.Node(), rn2.Node()}, bm, target)
 	t.NoError(err)
 	defer cs.Close()
@@ -264,7 +264,7 @@ func (t *testGeneralSyncer) TestFetchBlocksButAllNodesFailed() {
 
 	_ = local.Policy().SetThresholdRatio(base.ThresholdRatio(100))
 
-	bm := t.LastManifest(local.Storage())
+	bm := t.LastManifest(local.Database())
 	baseHeight := bm.Height()
 	target := baseHeight + 3
 	t.GenerateBlocks([]*Local{rn0, rn1, rn2}, target)
@@ -290,7 +290,7 @@ func (t *testGeneralSyncer) TestFetchBlocksButAllNodesFailed() {
 		})
 	}
 
-	cs, err := NewGeneralSyncer(local.Node(), local.Storage(), local.BlockData(), local.Policy(),
+	cs, err := NewGeneralSyncer(local.Node(), local.Database(), local.BlockData(), local.Policy(),
 		[]network.Node{rn0.Node(), rn1.Node(), rn2.Node()}, bm, target)
 	t.NoError(err)
 	defer cs.Close()
@@ -308,12 +308,12 @@ func (t *testGeneralSyncer) TestSaveBlocks() {
 
 	t.SetupNodes(local, []*Local{rn0, rn1, rn2})
 
-	bm := t.LastManifest(local.Storage())
+	bm := t.LastManifest(local.Database())
 	baseHeight := bm.Height()
 	target := baseHeight + 5
 	t.GenerateBlocks([]*Local{rn0, rn1, rn2}, target)
 
-	cs, err := NewGeneralSyncer(local.Node(), local.Storage(), local.BlockData(), local.Policy(),
+	cs, err := NewGeneralSyncer(local.Node(), local.Database(), local.BlockData(), local.Policy(),
 		[]network.Node{rn0.Node(), rn1.Node(), rn2.Node()}, bm, target)
 	t.NoError(err)
 	defer cs.Close()
@@ -326,7 +326,7 @@ func (t *testGeneralSyncer) TestSaveBlocks() {
 	cs.setState(SyncerPrepared, false)
 
 	for i := baseHeight.Int64() + 1; i < target.Int64()+1; i++ {
-		b, found, err := cs.storage().Manifest(base.Height(i))
+		b, found, err := cs.database().Manifest(base.Height(i))
 		t.True(found)
 		t.NoError(err)
 
@@ -366,11 +366,11 @@ func (t *testGeneralSyncer) TestFinishedChan() {
 
 	t.SetupNodes(local, []*Local{rn0, rn1, rn2})
 
-	baseBlock := t.LastManifest(local.Storage())
+	baseBlock := t.LastManifest(local.Database())
 	target := baseBlock.Height() + 5
 	t.GenerateBlocks([]*Local{rn0, rn1, rn2}, target)
 
-	cs, err := NewGeneralSyncer(local.Node(), local.Storage(), local.BlockData(), local.Policy(),
+	cs, err := NewGeneralSyncer(local.Node(), local.Database(), local.BlockData(), local.Policy(),
 		[]network.Node{rn0.Node(), rn1.Node(), rn2.Node()}, baseBlock, target)
 	t.NoError(err)
 	defer cs.Close()
@@ -413,9 +413,9 @@ func (t *testGeneralSyncer) TestFromGenesis() {
 	t.NoError(local.Nodes().Add(syncNode.Node()))
 	defer t.CloseStates(syncNode)
 
-	target := t.LastManifest(local.Storage())
+	target := t.LastManifest(local.Database())
 
-	cs, err := NewGeneralSyncer(syncNode.Node(), syncNode.Storage(), syncNode.BlockData(), syncNode.Policy(), []network.Node{local.Node()}, nil, target.Height())
+	cs, err := NewGeneralSyncer(syncNode.Node(), syncNode.Database(), syncNode.BlockData(), syncNode.Policy(), []network.Node{local.Node()}, nil, target.Height())
 	t.NoError(err)
 	defer cs.Close()
 
@@ -453,7 +453,7 @@ func (t *testGeneralSyncer) TestMissingHead() {
 
 	t.SetupNodes(local, []*Local{rn0})
 
-	baseBlock := t.LastManifest(local.Storage())
+	baseBlock := t.LastManifest(local.Database())
 	target := baseBlock.Height() + 5
 	t.GenerateBlocks([]*Local{rn0}, target)
 
@@ -477,7 +477,7 @@ func (t *testGeneralSyncer) TestMissingHead() {
 		return bds, nil
 	})
 
-	cs, err := NewGeneralSyncer(local.Node(), local.Storage(), local.BlockData(), local.Policy(),
+	cs, err := NewGeneralSyncer(local.Node(), local.Database(), local.BlockData(), local.Policy(),
 		[]network.Node{rn0.Node()}, baseBlock, target)
 	t.NoError(err)
 	defer cs.Close()
@@ -494,7 +494,7 @@ func (t *testGeneralSyncer) TestMissingTail() {
 
 	t.SetupNodes(local, []*Local{rn0})
 
-	baseBlock := t.LastManifest(local.Storage())
+	baseBlock := t.LastManifest(local.Database())
 	target := baseBlock.Height() + 5
 	t.GenerateBlocks([]*Local{rn0}, target)
 
@@ -519,7 +519,7 @@ func (t *testGeneralSyncer) TestMissingTail() {
 		return bds, nil
 	})
 
-	cs, err := NewGeneralSyncer(local.Node(), local.Storage(), local.BlockData(), local.Policy(),
+	cs, err := NewGeneralSyncer(local.Node(), local.Database(), local.BlockData(), local.Policy(),
 		[]network.Node{rn0.Node()}, baseBlock, target)
 	t.NoError(err)
 	defer cs.Close()
@@ -536,7 +536,7 @@ func (t *testGeneralSyncer) TestMissingManifests() {
 
 	t.SetupNodes(local, []*Local{rn0})
 
-	baseBlock := t.LastManifest(local.Storage())
+	baseBlock := t.LastManifest(local.Database())
 	target := baseBlock.Height() + 5
 	t.GenerateBlocks([]*Local{rn0}, target)
 
@@ -560,7 +560,7 @@ func (t *testGeneralSyncer) TestMissingManifests() {
 		return bs, nil
 	})
 
-	cs, err := NewGeneralSyncer(local.Node(), local.Storage(), local.BlockData(), local.Policy(),
+	cs, err := NewGeneralSyncer(local.Node(), local.Database(), local.BlockData(), local.Policy(),
 		[]network.Node{rn0.Node()}, baseBlock, target)
 	t.NoError(err)
 	defer cs.Close()
@@ -577,7 +577,7 @@ func (t *testGeneralSyncer) TestMissingBlocks() {
 
 	t.SetupNodes(local, []*Local{rn0})
 
-	baseBlock := t.LastManifest(local.Storage())
+	baseBlock := t.LastManifest(local.Database())
 	target := baseBlock.Height() + 5
 	t.GenerateBlocks([]*Local{rn0}, target)
 
@@ -600,7 +600,7 @@ func (t *testGeneralSyncer) TestMissingBlocks() {
 		return orig(p)
 	})
 
-	cs, err := NewGeneralSyncer(local.Node(), local.Storage(), local.BlockData(), local.Policy(),
+	cs, err := NewGeneralSyncer(local.Node(), local.Database(), local.BlockData(), local.Policy(),
 		[]network.Node{rn0.Node()}, baseBlock, target)
 	t.NoError(err)
 
@@ -619,9 +619,9 @@ func (t *testGeneralSyncer) TestMissingBlocks() {
 }
 
 func (t *testGeneralSyncer) buildDifferentBlocks(local, remote *Local, from, to base.Height) {
-	_ = local.Storage().Clean()
+	_ = local.Database().Clean()
 	_ = local.BlockData().Clean(false)
-	_ = remote.Storage().Clean()
+	_ = remote.Database().Clean()
 	_ = remote.BlockData().Clean(false)
 	if from > base.PreGenesisHeight+1 {
 		t.GenerateBlocks([]*Local{local, remote}, from-1)
@@ -673,11 +673,11 @@ func (t *testGeneralSyncer) TestRollbackFindUnmatched() {
 				from, to := base.Height(c.from), base.Height(c.to)
 				t.buildDifferentBlocks(local, remote, from, to)
 
-				base, found, err := local.Storage().ManifestByHeight(to)
+				base, found, err := local.Database().ManifestByHeight(to)
 				t.NoError(err)
 				t.True(found)
 
-				cs, err := NewGeneralSyncer(local.Node(), local.Storage(), local.BlockData(), local.Policy(),
+				cs, err := NewGeneralSyncer(local.Node(), local.Database(), local.BlockData(), local.Policy(),
 					[]network.Node{remote.Node()}, base, base.Height()+2)
 				t.NoError(err, "%d: %v", i, c.name)
 				defer cs.Close()
@@ -703,7 +703,7 @@ func (t *testGeneralSyncer) TestRollbackWrongGenesisBlocks() {
 
 	t.SetupNodes(local, []*Local{rn0})
 
-	baseBlock := t.LastManifest(local.Storage())
+	baseBlock := t.LastManifest(local.Database())
 
 	t.GenerateBlocks([]*Local{local}, baseBlock.Height()+3)
 
@@ -714,8 +714,8 @@ func (t *testGeneralSyncer) TestRollbackWrongGenesisBlocks() {
 	t.NoError(err)
 	t.NoError(bg.Generate(true))
 
-	fromManifest := t.LastManifest(local.Storage())
-	cs, err := NewGeneralSyncer(local.Node(), local.Storage(), local.BlockData(), local.Policy(),
+	fromManifest := t.LastManifest(local.Database())
+	cs, err := NewGeneralSyncer(local.Node(), local.Database(), local.BlockData(), local.Policy(),
 		[]network.Node{rn0.Node()}, fromManifest, target)
 	t.NoError(err)
 	defer cs.Close()
@@ -738,15 +738,15 @@ func (t *testGeneralSyncer) TestRollbackDetect() {
 
 	t.SetupNodes(local, []*Local{rn0})
 
-	baseBlock := t.LastManifest(local.Storage())
+	baseBlock := t.LastManifest(local.Database())
 
 	t.GenerateBlocks([]*Local{local}, baseBlock.Height()+3)
 
 	target := baseBlock.Height() + 5
 	t.GenerateBlocks([]*Local{rn0}, target)
 
-	fromManifest := t.LastManifest(local.Storage())
-	cs, err := NewGeneralSyncer(local.Node(), local.Storage(), local.BlockData(), local.Policy(),
+	fromManifest := t.LastManifest(local.Database())
+	cs, err := NewGeneralSyncer(local.Node(), local.Database(), local.BlockData(), local.Policy(),
 		[]network.Node{rn0.Node()}, fromManifest, target)
 	t.NoError(err)
 	defer cs.Close()
@@ -763,15 +763,15 @@ func (t *testGeneralSyncer) TestRollback() {
 
 	t.SetupNodes(local, []*Local{remote})
 
-	baseBlock := t.LastManifest(local.Storage())
+	baseBlock := t.LastManifest(local.Database())
 
 	t.GenerateBlocks([]*Local{local}, baseBlock.Height()+3)
 
 	target := baseBlock.Height() + 5
 	t.GenerateBlocks([]*Local{remote}, target)
 
-	fromManifest := t.LastManifest(local.Storage())
-	cs, err := NewGeneralSyncer(local.Node(), local.Storage(), local.BlockData(), local.Policy(),
+	fromManifest := t.LastManifest(local.Database())
+	cs, err := NewGeneralSyncer(local.Node(), local.Database(), local.BlockData(), local.Policy(),
 		[]network.Node{remote.Node()}, fromManifest, target)
 	t.NoError(err)
 	defer cs.Close()
@@ -796,17 +796,17 @@ end:
 		}
 	}
 
-	lm, _, err := local.Storage().LastManifest()
+	lm, _, err := local.Database().LastManifest()
 	t.NoError(err)
 	t.Equal(target, lm.Height())
 
-	rm, _, err := remote.Storage().LastManifest()
+	rm, _, err := remote.Database().LastManifest()
 	t.NoError(err)
 
 	for i := base.PreGenesisHeight; i <= rm.Height(); i++ {
-		l, _, err := local.Storage().ManifestByHeight(base.Height(i))
+		l, _, err := local.Database().ManifestByHeight(base.Height(i))
 		t.NoError(err)
-		r, _, err := remote.Storage().ManifestByHeight(base.Height(i))
+		r, _, err := remote.Database().ManifestByHeight(base.Height(i))
 		t.NoError(err)
 
 		t.CompareManifest(r, l)

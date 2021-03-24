@@ -13,14 +13,14 @@ import (
 	"github.com/spikeekips/mitum/util/valuehash"
 )
 
-type StorageSession struct {
-	st    *Storage
+type DatabaseSession struct {
+	st    *Database
 	block block.Block
 	batch *leveldb.Batch
 }
 
-func NewStorageSession(st *Storage, blk block.Block) (*StorageSession, error) {
-	bst := &StorageSession{
+func NewSession(st *Database, blk block.Block) (*DatabaseSession, error) {
+	bst := &DatabaseSession{
 		st:    st,
 		block: blk,
 		batch: &leveldb.Batch{},
@@ -29,11 +29,11 @@ func NewStorageSession(st *Storage, blk block.Block) (*StorageSession, error) {
 	return bst, nil
 }
 
-func (bst *StorageSession) Block() block.Block {
+func (bst *DatabaseSession) Block() block.Block {
 	return bst.block
 }
 
-func (bst *StorageSession) SetBlock(_ context.Context, blk block.Block) error {
+func (bst *DatabaseSession) SetBlock(_ context.Context, blk block.Block) error {
 	if bst.block.Height() != blk.Height() {
 		return xerrors.Errorf(
 			"block has different height from initial block; initial=%d != block=%d",
@@ -87,7 +87,7 @@ func (bst *StorageSession) SetBlock(_ context.Context, blk block.Block) error {
 	return nil
 }
 
-func (bst *StorageSession) setOperationsTree(tr tree.FixedTree) error {
+func (bst *DatabaseSession) setOperationsTree(tr tree.FixedTree) error {
 	if tr.IsEmpty() {
 		return nil
 	}
@@ -110,7 +110,7 @@ func (bst *StorageSession) setOperationsTree(tr tree.FixedTree) error {
 	return nil
 }
 
-func (bst *StorageSession) setStates(sts []state.State) error {
+func (bst *DatabaseSession) setStates(sts []state.State) error {
 	for i := range sts {
 		if b, err := marshal(bst.st.enc, sts[i]); err != nil {
 			return err
@@ -122,7 +122,7 @@ func (bst *StorageSession) setStates(sts []state.State) error {
 	return nil
 }
 
-func (bst *StorageSession) setVoteproofs(init, accept base.Voteproof) error {
+func (bst *DatabaseSession) setVoteproofs(init, accept base.Voteproof) error {
 	if init != nil {
 		if b, err := marshal(bst.st.enc, init); err != nil {
 			return err
@@ -140,7 +140,7 @@ func (bst *StorageSession) setVoteproofs(init, accept base.Voteproof) error {
 	return nil
 }
 
-func (bst *StorageSession) Commit(ctx context.Context, bd block.BlockDataMap) error {
+func (bst *DatabaseSession) Commit(ctx context.Context, bd block.BlockDataMap) error {
 	if bst.batch.Len() < 1 {
 		if err := bst.SetBlock(ctx, bst.block); err != nil {
 			return err
@@ -156,15 +156,15 @@ func (bst *StorageSession) Commit(ctx context.Context, bd block.BlockDataMap) er
 	return wrapError(bst.st.db.Write(bst.batch, nil))
 }
 
-func (bst *StorageSession) Cancel() error {
+func (bst *DatabaseSession) Cancel() error {
 	return nil
 }
 
-func (bst *StorageSession) Close() error {
+func (bst *DatabaseSession) Close() error {
 	return nil
 }
 
-func (bst *StorageSession) SetACCEPTVoteproof(voteproof base.Voteproof) error {
+func (bst *DatabaseSession) SetACCEPTVoteproof(voteproof base.Voteproof) error {
 	if s := voteproof.Stage(); s != base.StageACCEPT {
 		return xerrors.Errorf("not accept voteproof, %v", s)
 	}

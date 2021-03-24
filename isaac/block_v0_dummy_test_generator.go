@@ -52,7 +52,7 @@ func NewDummyBlocksV0Generator(
 			},
 		)
 		pps := prprocessor.NewProcessors(
-			NewDefaultProcessorNewFunc(l.Storage(), l.BlockData(), l.Nodes(), suffrage, nil),
+			NewDefaultProcessorNewFunc(l.Database(), l.BlockData(), l.Nodes(), suffrage, nil),
 			nil,
 		)
 		if err := pps.Initialize(); err != nil {
@@ -90,7 +90,7 @@ func (bg *DummyBlocksV0Generator) Close() error {
 }
 
 func (bg *DummyBlocksV0Generator) findLastHeight() (base.Height, error) {
-	switch l, found, err := bg.genesisNode.Storage().LastManifest(); {
+	switch l, found, err := bg.genesisNode.Database().LastManifest(); {
 	case err != nil:
 		return base.NilHeight, err
 	case !found:
@@ -112,7 +112,7 @@ func (bg *DummyBlocksV0Generator) Generate(ignoreExists bool) error {
 
 	if ignoreExists {
 		for _, n := range bg.allNodes {
-			if err := blockdata.Clean(n.Storage(), n.BlockData(), false); err != nil {
+			if err := blockdata.Clean(n.Database(), n.BlockData(), false); err != nil {
 				return err
 			}
 		}
@@ -133,7 +133,7 @@ func (bg *DummyBlocksV0Generator) Generate(ignoreExists bool) error {
 	if lastHeight == base.NilHeight {
 		if genesis, err := NewGenesisBlockV0Generator(
 			bg.genesisNode.Node(),
-			bg.genesisNode.Storage(),
+			bg.genesisNode.Database(),
 			bg.genesisNode.BlockData(),
 			bg.genesisNode.Policy(),
 			nil,
@@ -160,7 +160,7 @@ end:
 			return err
 		}
 
-		switch l, found, err := bg.genesisNode.Storage().LastManifest(); {
+		switch l, found, err := bg.genesisNode.Database().LastManifest(); {
 		case !found:
 			return storage.NotFoundError.Errorf("last manifest not found")
 		case err != nil:
@@ -215,8 +215,8 @@ end:
 }
 
 func (bg *DummyBlocksV0Generator) storeBlock(l *Local, blk block.Block) error {
-	var bs storage.StorageSession
-	if st, err := l.Storage().NewStorageSession(blk); err != nil {
+	var bs storage.DatabaseSession
+	if st, err := l.Database().NewSession(blk); err != nil {
 		return err
 	} else {
 		bs = st
@@ -253,7 +253,7 @@ func (bg *DummyBlocksV0Generator) storeBlock(l *Local, blk block.Block) error {
 
 func (bg *DummyBlocksV0Generator) syncSeals(from *Local) error {
 	var seals []seal.Seal
-	if err := from.Storage().Seals(
+	if err := from.Database().Seals(
 		func(_ valuehash.Hash, sl seal.Seal) (bool, error) {
 			seals = append(seals, sl)
 			return true, nil
@@ -269,13 +269,13 @@ func (bg *DummyBlocksV0Generator) syncSeals(from *Local) error {
 			continue
 		}
 
-		if err := l.Storage().NewSeals(seals); err != nil {
+		if err := l.Database().NewSeals(seals); err != nil {
 			return err
 		}
 	}
 
 	var proposals []ballot.Proposal
-	if err := from.Storage().Proposals(
+	if err := from.Database().Proposals(
 		func(proposal ballot.Proposal) (bool, error) {
 			proposals = append(proposals, proposal)
 			return true, nil
@@ -291,7 +291,7 @@ func (bg *DummyBlocksV0Generator) syncSeals(from *Local) error {
 		}
 
 		for _, proposal := range proposals {
-			if err := l.Storage().NewProposal(proposal); err != nil {
+			if err := l.Database().NewProposal(proposal); err != nil {
 				if xerrors.Is(err, storage.DuplicatedError) {
 					continue
 				}
@@ -383,7 +383,7 @@ func (bg *DummyBlocksV0Generator) createINITVoteproof() (map[base.Address]base.V
 
 func (bg *DummyBlocksV0Generator) createINITBallot(local *Local) (ballot.INITBallot, error) {
 	var baseBallot ballot.INITBallotV0
-	if b, err := NewINITBallotV0Round0(local.Node(), local.Storage()); err != nil {
+	if b, err := NewINITBallotV0Round0(local.Node(), local.Database()); err != nil {
 		return nil, err
 	} else if err := SignSeal(&b, local); err != nil {
 		return nil, err
@@ -414,7 +414,7 @@ func (bg *DummyBlocksV0Generator) createProposal(voteproof base.Voteproof) (ball
 	}
 
 	for _, l := range bg.allNodes {
-		if err := l.Storage().NewProposal(pr); err != nil {
+		if err := l.Database().NewProposal(pr); err != nil {
 			return nil, err
 		}
 	}

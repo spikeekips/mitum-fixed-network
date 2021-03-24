@@ -32,7 +32,7 @@ func (t *testBallotChecker) TestNew() {
 
 	ib := t.NewINITBallot(t.local, base.Round(0), nil)
 
-	bc := NewBallotChecker(ib, t.local.Storage(), t.local.Policy(), t.suf, t.local.Nodes(), t.local.Storage().LastVoteproof(base.StageINIT))
+	bc := NewBallotChecker(ib, t.local.Database(), t.local.Policy(), t.suf, t.local.Nodes(), t.local.Database().LastVoteproof(base.StageINIT))
 	err := util.NewChecker("test-ballot-checker", []util.CheckerFunc{
 		bc.InSuffrage,
 	}).Check()
@@ -45,7 +45,7 @@ func (t *testBallotChecker) TestIsInSuffrage() {
 
 		ib := t.NewINITBallot(t.local, base.Round(0), nil)
 
-		bc := NewBallotChecker(ib, t.local.Storage(), t.local.Policy(), t.suf, t.local.Nodes(), t.local.Storage().LastVoteproof(base.StageINIT))
+		bc := NewBallotChecker(ib, t.local.Database(), t.local.Policy(), t.suf, t.local.Nodes(), t.local.Database().LastVoteproof(base.StageINIT))
 
 		var finished bool
 		err := util.NewChecker("test-ballot-checker", []util.CheckerFunc{
@@ -67,7 +67,7 @@ func (t *testBallotChecker) TestIsInSuffrage() {
 
 		ib := t.NewINITBallot(unknown, base.Round(0), nil)
 
-		bc := NewBallotChecker(ib, t.local.Storage(), t.local.Policy(), t.suf, t.local.Nodes(), t.local.Storage().LastVoteproof(base.StageINIT))
+		bc := NewBallotChecker(ib, t.local.Database(), t.local.Policy(), t.suf, t.local.Nodes(), t.local.Database().LastVoteproof(base.StageINIT))
 
 		var finished bool
 		err := util.NewChecker("test-ballot-checker", []util.CheckerFunc{
@@ -85,7 +85,7 @@ func (t *testBallotChecker) TestIsInSuffrage() {
 }
 
 func (t *testBallotChecker) TestCheckWithLastVoteproof() {
-	avp := t.local.Storage().LastVoteproof(base.StageACCEPT)
+	avp := t.local.Database().LastVoteproof(base.StageACCEPT)
 	t.NotNil(avp)
 
 	{ // same height and next round
@@ -94,7 +94,7 @@ func (t *testBallotChecker) TestCheckWithLastVoteproof() {
 
 		ib := t.NewINITBallot(t.local, vp.Round()+1, vp)
 
-		bc := NewBallotChecker(ib, t.local.Storage(), t.local.Policy(), t.suf, t.local.Nodes(), t.local.Storage().LastVoteproof(base.StageINIT))
+		bc := NewBallotChecker(ib, t.local.Database(), t.local.Policy(), t.suf, t.local.Nodes(), t.local.Database().LastVoteproof(base.StageINIT))
 
 		var finished bool
 		err := util.NewChecker("test-ballot-checker", []util.CheckerFunc{
@@ -111,7 +111,7 @@ func (t *testBallotChecker) TestCheckWithLastVoteproof() {
 	}
 
 	{ // lower Height
-		lastManifest := t.LastManifest(t.local.Storage())
+		lastManifest := t.LastManifest(t.local.Database())
 
 		ib := ballot.NewINITBallotV0(
 			t.local.Node().Address(),
@@ -124,7 +124,7 @@ func (t *testBallotChecker) TestCheckWithLastVoteproof() {
 
 		t.NoError(ib.Sign(t.local.Node().Privatekey(), t.local.Policy().NetworkID()))
 
-		bc := NewBallotChecker(ib, t.local.Storage(), t.local.Policy(), t.suf, t.local.Nodes(), t.local.Storage().LastVoteproof(base.StageINIT))
+		bc := NewBallotChecker(ib, t.local.Database(), t.local.Policy(), t.suf, t.local.Nodes(), t.local.Database().LastVoteproof(base.StageINIT))
 
 		var finished bool
 		err := util.NewChecker("test-ballot-checker", []util.CheckerFunc{

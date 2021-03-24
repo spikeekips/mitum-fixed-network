@@ -21,7 +21,7 @@ type SyncingState struct {
 	sync.RWMutex
 	*logging.Logging
 	*BaseState
-	storage              storage.Storage
+	database             storage.Database
 	blockData            blockdata.BlockData
 	policy               *isaac.LocalPolicy
 	nodepool             *network.Nodepool
@@ -30,7 +30,7 @@ type SyncingState struct {
 }
 
 func NewSyncingState(
-	st storage.Storage,
+	st storage.Database,
 	blockData blockdata.BlockData,
 	policy *isaac.LocalPolicy,
 	nodepool *network.Nodepool,
@@ -40,7 +40,7 @@ func NewSyncingState(
 			return c.Str("module", "basic-syncing-state")
 		}),
 		BaseState:            NewBaseState(base.StateSyncing),
-		storage:              st,
+		database:             st,
 		blockData:            blockData,
 		policy:               policy,
 		nodepool:             nodepool,
@@ -71,13 +71,13 @@ func (st *SyncingState) Enter(sctx StateSwitchContext) (func() error, error) {
 
 func (st *SyncingState) enter(voteproof base.Voteproof) error {
 	var baseManifest block.Manifest
-	if m, found, err := st.storage.LastManifest(); err != nil {
+	if m, found, err := st.database.LastManifest(); err != nil {
 		return err
 	} else if found {
 		baseManifest = m
 	}
 
-	syncs := isaac.NewSyncers(st.nodepool.Local(), st.storage, st.blockData, st.policy, baseManifest)
+	syncs := isaac.NewSyncers(st.nodepool.Local(), st.database, st.blockData, st.policy, baseManifest)
 	syncs.WhenBlockSaved(st.whenBlockSaved)
 	syncs.WhenFinished(st.whenFinished)
 
@@ -165,7 +165,7 @@ func (st *SyncingState) setSyncers(syncs *isaac.Syncers) {
 
 func (st *SyncingState) handleINITTVoteproof(voteproof base.Voteproof) error {
 	baseHeight := base.PreGenesisHeight
-	if m, found, err := st.storage.LastManifest(); err != nil {
+	if m, found, err := st.database.LastManifest(); err != nil {
 		return err
 	} else if found {
 		baseHeight = m.Height()
@@ -214,7 +214,7 @@ func (st *SyncingState) handleINITTVoteproof(voteproof base.Voteproof) error {
 
 func (st *SyncingState) handleACCEPTVoteproof(voteproof base.Voteproof) error {
 	baseHeight := base.PreGenesisHeight
-	if m, found, err := st.storage.LastManifest(); err != nil {
+	if m, found, err := st.database.LastManifest(); err != nil {
 		return err
 	} else if found {
 		baseHeight = m.Height()

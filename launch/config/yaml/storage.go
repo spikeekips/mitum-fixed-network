@@ -10,18 +10,18 @@ type BlockData struct {
 	Path *string
 }
 
-type MainStorage struct {
+type Database struct {
 	URI   *string `yaml:",omitempty"`
 	Cache *string `yaml:",omitempty"`
 }
 
-func (no MainStorage) Set(ctx context.Context) (context.Context, error) {
+func (no Database) Set(ctx context.Context) (context.Context, error) {
 	var l config.LocalNode
-	var conf config.MainStorage
+	var conf config.Database
 	if err := config.LoadConfigContextValue(ctx, &l); err != nil {
 		return ctx, err
 	} else {
-		conf = l.Storage().Main()
+		conf = l.Storage().Database()
 	}
 
 	if no.URI != nil {
@@ -39,8 +39,8 @@ func (no MainStorage) Set(ctx context.Context) (context.Context, error) {
 }
 
 type Storage struct {
-	Main      *MainStorage `yaml:",inline"`
-	BlockData *BlockData   `yaml:"blockdata,omitempty"`
+	Database  *Database  `yaml:"database,omitempty"`
+	BlockData *BlockData `yaml:"blockdata,omitempty"`
 }
 
 func (no Storage) Set(ctx context.Context) (context.Context, error) {
@@ -52,8 +52,8 @@ func (no Storage) Set(ctx context.Context) (context.Context, error) {
 		conf = l.Storage()
 	}
 
-	if no.Main != nil {
-		if i, err := no.Main.Set(ctx); err != nil {
+	if no.Database != nil {
+		if i, err := no.Database.Set(ctx); err != nil {
 			return ctx, err
 		} else {
 			ctx = i

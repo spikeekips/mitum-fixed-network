@@ -25,16 +25,16 @@ func (t *testSyncers) TestSaveLastBlock() {
 
 	t.SetupNodes(local, []*Local{remote})
 
-	target := t.LastManifest(local.Storage()).Height() + 2
+	target := t.LastManifest(local.Database()).Height() + 2
 	t.GenerateBlocks([]*Local{remote}, target)
 
-	baseManifest, found, err := local.Storage().LastManifest()
+	baseManifest, found, err := local.Database().LastManifest()
 	t.NoError(err)
 	t.True(found)
 
 	finishedChan := make(chan base.Height)
 
-	ss := NewSyncers(local.Node(), local.Storage(), local.BlockData(), local.Policy(), baseManifest)
+	ss := NewSyncers(local.Node(), local.Database(), local.BlockData(), local.Policy(), baseManifest)
 	ss.WhenFinished(func(height base.Height) {
 		finishedChan <- height
 	})
@@ -54,21 +54,21 @@ func (t *testSyncers) TestSaveLastBlock() {
 		break
 	}
 
-	rm, found, err := remote.Storage().LastManifest()
+	rm, found, err := remote.Database().LastManifest()
 	t.NoError(err)
 	t.True(found)
 
-	lm, found, err := local.Storage().LastManifest()
+	lm, found, err := local.Database().LastManifest()
 	t.NoError(err)
 	t.True(found)
 
 	t.CompareManifest(rm, lm)
 
-	orig := local.Storage().(DummyMongodbStorage)
+	orig := local.Database().(DummyMongodbDatabase)
 
-	st, err := mongodbstorage.NewStorage(orig.Client(), t.Encs, t.BSONEnc, cache.Dummy{})
+	st, err := mongodbstorage.NewDatabase(orig.Client(), t.Encs, t.BSONEnc, cache.Dummy{})
 	t.NoError(err)
-	d := NewDummyMongodbStorage(st)
+	d := NewDummyMongodbDatabase(st)
 
 	dlm, found, err := d.LastManifest()
 	t.NoError(err)

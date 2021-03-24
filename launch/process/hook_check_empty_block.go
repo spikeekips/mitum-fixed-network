@@ -32,8 +32,8 @@ func HookCheckEmptyBlock(ctx context.Context) (context.Context, error) {
 		return ctx, err
 	}
 
-	var st storage.Storage
-	if err := LoadStorageContextValue(ctx, &st); err != nil {
+	var st storage.Database
+	if err := LoadDatabaseContextValue(ctx, &st); err != nil {
 		return ctx, err
 	}
 

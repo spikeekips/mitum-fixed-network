@@ -23,7 +23,7 @@ func (t *testStateBooting) SetupTest() {
 }
 
 func (t *testStateBooting) TestWithBlock() {
-	st := NewBootingState(t.local.Storage(), t.local.BlockData(), t.local.Policy(), t.Suffrage(t.local))
+	st := NewBootingState(t.local.Database(), t.local.BlockData(), t.local.Policy(), t.Suffrage(t.local))
 	defer st.Exit(NewStateSwitchContext(base.StateBooting, base.StateStopped))
 
 	st.SetLastVoteproofFuncs(
@@ -43,9 +43,9 @@ func (t *testStateBooting) TestWithBlock() {
 }
 
 func (t *testStateBooting) TestWithEmptyBlockWithSuffrageNodes() {
-	t.NoError(blockdata.Clean(t.local.Storage(), t.local.BlockData(), false))
+	t.NoError(blockdata.Clean(t.local.Database(), t.local.BlockData(), false))
 
-	st := NewBootingState(t.local.Storage(), t.local.BlockData(), t.local.Policy(), t.Suffrage(t.local, t.remote))
+	st := NewBootingState(t.local.Database(), t.local.BlockData(), t.local.Policy(), t.Suffrage(t.local, t.remote))
 	defer t.exitState(st, NewStateSwitchContext(base.StateBooting, base.StateStopped))
 
 	f, err := st.Enter(NewStateSwitchContext(base.StateStopped, base.StateBooting))
@@ -60,9 +60,9 @@ func (t *testStateBooting) TestWithEmptyBlockWithSuffrageNodes() {
 }
 
 func (t *testStateBooting) TestWithEmptyBlockWithoutSuffrageNodes() {
-	t.NoError(blockdata.Clean(t.local.Storage(), t.local.BlockData(), false))
+	t.NoError(blockdata.Clean(t.local.Database(), t.local.BlockData(), false))
 
-	st := NewBootingState(t.local.Storage(), t.local.BlockData(), t.local.Policy(), t.Suffrage(t.local))
+	st := NewBootingState(t.local.Database(), t.local.BlockData(), t.local.Policy(), t.Suffrage(t.local))
 	defer t.exitState(st, NewStateSwitchContext(base.StateBooting, base.StateStopped))
 
 	_, err := st.Enter(NewStateSwitchContext(base.StateStopped, base.StateBooting))

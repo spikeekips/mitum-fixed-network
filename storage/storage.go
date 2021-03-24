@@ -14,16 +14,16 @@ import (
 	"github.com/spikeekips/mitum/util/valuehash"
 )
 
-type Storage interface {
+type Database interface {
 	util.Initializer
 	Encoder() encoder.Encoder
 	Encoders() *encoder.Encoders
 	Close() error
 	Clean() error
 	CleanByHeight(base.Height) error
-	Copy(Storage /* source */) error
+	Copy(Database /* source */) error
 
-	NewStorageSession(block.Block) (StorageSession, error)
+	NewSession(block.Block) (DatabaseSession, error)
 	NewSyncerSession() (SyncerSession, error)
 
 	LastManifest() (block.Manifest, bool, error)
@@ -57,7 +57,7 @@ type Storage interface {
 	LocalBlockDataMapsByHeight(base.Height, func(block.BlockDataMap) (bool, error)) error
 }
 
-type StorageSession interface {
+type DatabaseSession interface {
 	Block() block.Block
 	SetBlock(context.Context, block.Block) error
 	SetACCEPTVoteproof(base.Voteproof) error

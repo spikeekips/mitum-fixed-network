@@ -30,14 +30,14 @@ func (t *testSyncers) TestNew() {
 
 	t.SetupNodes(local, []*Local{remote})
 
-	baseManifest, found, err := local.Storage().LastManifest()
+	baseManifest, found, err := local.Database().LastManifest()
 	t.NoError(err)
 	t.True(found)
 
 	finishedChan := make(chan base.Height, 10)
 	blocksChan := make(chan []block.Block, 10)
 
-	ss := NewSyncers(local.Node(), local.Storage(), local.BlockData(), local.Policy(), baseManifest)
+	ss := NewSyncers(local.Node(), local.Database(), local.BlockData(), local.Policy(), baseManifest)
 
 	ss.WhenFinished(func(height base.Height) {
 		finishedChan <- height
@@ -49,7 +49,7 @@ func (t *testSyncers) TestNew() {
 
 	defer ss.Stop()
 
-	fromHeight := t.LastManifest(local.Storage()).Height() + 1
+	fromHeight := t.LastManifest(local.Database()).Height() + 1
 	target := fromHeight + 2
 	t.True(target < fromHeight+base.Height(int64(ss.limitBlocksPerSyncer)))
 	t.GenerateBlocks([]*Local{remote}, target)
@@ -92,10 +92,10 @@ end:
 
 	t.Equal(expectedBlocks, blocks)
 
-	rm, found, err := remote.Storage().LastManifest()
+	rm, found, err := remote.Database().LastManifest()
 	t.NoError(err)
 	t.True(found)
-	lm, found, err := local.Storage().LastManifest()
+	lm, found, err := local.Database().LastManifest()
 	t.NoError(err)
 	t.True(found)
 
@@ -108,16 +108,16 @@ func (t *testSyncers) TestMultipleSyncers() {
 
 	t.SetupNodes(local, []*Local{remote})
 
-	target := t.LastManifest(local.Storage()).Height() + 10
+	target := t.LastManifest(local.Database()).Height() + 10
 	t.GenerateBlocks([]*Local{remote}, target)
 
-	baseManifest, found, err := local.Storage().LastManifest()
+	baseManifest, found, err := local.Database().LastManifest()
 	t.NoError(err)
 	t.True(found)
 
 	finishedChan := make(chan base.Height, 10)
 
-	ss := NewSyncers(local.Node(), local.Storage(), local.BlockData(), local.Policy(), baseManifest)
+	ss := NewSyncers(local.Node(), local.Database(), local.BlockData(), local.Policy(), baseManifest)
 
 	ss.WhenFinished(func(height base.Height) {
 		finishedChan <- height
@@ -156,16 +156,16 @@ func (t *testSyncers) TestMangledFinishedOrder() {
 
 	t.SetupNodes(local, []*Local{remote})
 
-	target := t.LastManifest(local.Storage()).Height() + 10
+	target := t.LastManifest(local.Database()).Height() + 10
 	t.GenerateBlocks([]*Local{remote}, target)
 
-	baseManifest, found, err := local.Storage().LastManifest()
+	baseManifest, found, err := local.Database().LastManifest()
 	t.NoError(err)
 	t.True(found)
 
 	finishedChan := make(chan base.Height, 10)
 
-	ss := NewSyncers(local.Node(), local.Storage(), local.BlockData(), local.Policy(), baseManifest)
+	ss := NewSyncers(local.Node(), local.Database(), local.BlockData(), local.Policy(), baseManifest)
 
 	ss.WhenFinished(func(height base.Height) {
 		finishedChan <- height
@@ -205,14 +205,14 @@ func (t *testSyncers) TestAddAfterFinished() {
 
 	t.SetupNodes(local, []*Local{remote})
 
-	target := t.LastManifest(local.Storage()).Height() + 10
+	target := t.LastManifest(local.Database()).Height() + 10
 	t.GenerateBlocks([]*Local{remote}, target)
 
-	baseManifest, found, err := local.Storage().LastManifest()
+	baseManifest, found, err := local.Database().LastManifest()
 	t.NoError(err)
 	t.True(found)
 
-	ss := NewSyncers(local.Node(), local.Storage(), local.BlockData(), local.Policy(), baseManifest)
+	ss := NewSyncers(local.Node(), local.Database(), local.BlockData(), local.Policy(), baseManifest)
 
 	finishedChan := make(chan base.Height, 10)
 	ss.WhenFinished(func(height base.Height) {
@@ -272,14 +272,14 @@ func (t *testSyncers) TestStopNotFinished() {
 
 	t.SetupNodes(local, []*Local{remote})
 
-	target := t.LastManifest(local.Storage()).Height() + 10
+	target := t.LastManifest(local.Database()).Height() + 10
 	t.GenerateBlocks([]*Local{remote}, target)
 
-	baseManifest, found, err := local.Storage().LastManifest()
+	baseManifest, found, err := local.Database().LastManifest()
 	t.NoError(err)
 	t.True(found)
 
-	ss := NewSyncers(local.Node(), local.Storage(), local.BlockData(), local.Policy(), baseManifest)
+	ss := NewSyncers(local.Node(), local.Database(), local.BlockData(), local.Policy(), baseManifest)
 	ss.limitBlocksPerSyncer = 1
 
 	finishedChan := make(chan base.Height, 10)

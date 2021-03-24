@@ -119,8 +119,8 @@ func processRoundrobinSuffrage(ctx context.Context, conf config.RoundrobinSuffra
 		nodes = conf.Nodes
 	}
 
-	var st storage.Storage
-	if err := LoadStorageContextValue(ctx, &st); err != nil {
+	var st storage.Database
+	if err := LoadDatabaseContextValue(ctx, &st); err != nil {
 		return nil, err
 	}
 

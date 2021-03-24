@@ -95,7 +95,7 @@ func (t *BaseTest) SetupNodes(local *Local, others []*Local) {
 	var nodes []*Local = []*Local{local}
 	nodes = append(nodes, others...)
 
-	lastHeight := t.LastManifest(local.Storage()).Height()
+	lastHeight := t.LastManifest(local.Database()).Height()
 
 	t.GenerateBlocks(nodes, lastHeight)
 
@@ -105,7 +105,7 @@ func (t *BaseTest) SetupNodes(local *Local, others []*Local) {
 		nch.SetBlockDataMapsHandler(func(heights []base.Height) ([]block.BlockDataMap, error) {
 			var bds []block.BlockDataMap
 			for _, h := range heights {
-				bd, found, err := st.Storage().BlockDataMap(h)
+				bd, found, err := st.Database().BlockDataMap(h)
 				if !found {
 					break
 				} else if err != nil {
@@ -141,7 +141,7 @@ func (t *BaseTest) GenerateBlocks(locals []*Local, targetHeight base.Height) {
 func (t *BaseTest) Locals(n int) []*Local {
 	var ls []*Local
 	for i := 0; i < n; i++ {
-		lst := t.Storage(t.Encs, t.JSONEnc)
+		lst := t.Database(t.Encs, t.JSONEnc)
 		localNode := channetwork.RandomLocalNode(util.UUID().String())
 
 		root, err := os.MkdirTemp(t.Root, "localfs-")
@@ -187,7 +187,7 @@ func (t *BaseTest) Locals(n int) []*Local {
 }
 
 func (t *BaseTest) EmptyLocal() *Local {
-	lst := t.Storage(nil, nil)
+	lst := t.Database(nil, nil)
 	localNode := channetwork.RandomLocalNode(util.UUID().String())
 	blockData := localfs.NewBlockData(t.Root, t.JSONEnc)
 	t.NoError(blockData.Initialize())
@@ -202,7 +202,7 @@ func (t *BaseTest) EmptyLocal() *Local {
 
 func (t *BaseTest) CloseStates(states ...*Local) {
 	for _, s := range states {
-		_ = s.Storage().Close()
+		_ = s.Database().Close()
 	}
 }
 
@@ -279,13 +279,13 @@ func (t *BaseTest) Suffrage(proposerState *Local, states ...*Local) base.Suffrag
 func (t *BaseTest) NewINITBallot(local *Local, round base.Round, voteproof base.Voteproof) ballot.INITBallotV0 {
 	var ib ballot.INITBallotV0
 	if round == 0 {
-		if b, err := NewINITBallotV0Round0(local.Node(), local.Storage()); err != nil {
+		if b, err := NewINITBallotV0Round0(local.Node(), local.Database()); err != nil {
 			panic(err)
 		} else {
 			ib = b
 		}
 	} else {
-		if b, err := NewINITBallotV0WithVoteproof(local.Node(), local.Storage(), voteproof); err != nil {
+		if b, err := NewINITBallotV0WithVoteproof(local.Node(), local.Database(), voteproof); err != nil {
 			panic(err)
 		} else {
 			ib = b
@@ -299,7 +299,7 @@ func (t *BaseTest) NewINITBallot(local *Local, round base.Round, voteproof base.
 
 func (t *BaseTest) NewINITBallotFact(local *Local, round base.Round) ballot.INITBallotFactV0 {
 	var manifest block.Manifest
-	switch l, found, err := local.Storage().LastManifest(); {
+	switch l, found, err := local.Database().LastManifest(); {
 	case !found:
 		panic(xerrors.Errorf("last block not found: %w", err))
 	case err != nil:
@@ -316,7 +316,7 @@ func (t *BaseTest) NewINITBallotFact(local *Local, round base.Round) ballot.INIT
 }
 
 func (t *BaseTest) NewACCEPTBallot(local *Local, round base.Round, proposal, newBlock valuehash.Hash, voteproof base.Voteproof) ballot.ACCEPTBallotV0 {
-	manifest := t.LastManifest(local.Storage())
+	manifest := t.LastManifest(local.Database())
 
 	ab := ballot.NewACCEPTBallotV0(
 		local.Node().Address(),
@@ -362,7 +362,7 @@ func (t *BaseTest) NewOperationSeal(local *Local, n uint) (operation.Seal, []ope
 }
 
 func (t *BaseTest) NewProposal(local *Local, round base.Round, seals []valuehash.Hash, voteproof base.Voteproof) ballot.Proposal {
-	pr, err := NewProposalV0(local.Storage(), local.Node().Address(), round, seals, voteproof)
+	pr, err := NewProposalV0(local.Database(), local.Node().Address(), round, seals, voteproof)
 	if err != nil {
 		panic(err)
 	}
@@ -462,7 +462,7 @@ func (t *BaseTest) CompareVoteproof(a, b base.Voteproof) {
 	}
 }
 
-func (t *BaseTest) LastManifest(st storage.Storage) block.Manifest {
+func (t *BaseTest) LastManifest(st storage.Database) block.Manifest {
 	if m, found, err := st.LastManifest(); !found {
 		panic(storage.NotFoundError.Errorf("last manifest not found"))
 	} else if err != nil {

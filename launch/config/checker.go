@@ -66,13 +66,13 @@ func (cc *checker) CheckStorage() (bool, error) {
 		}
 	}
 
-	if conf.Main().URI() == nil {
-		if err := conf.Main().SetURI(DefaultMainStorageURI); err != nil {
+	if conf.Database().URI() == nil {
+		if err := conf.Database().SetURI(DefaultDatabaseURI); err != nil {
 			return false, err
 		}
 	}
-	if conf.Main().Cache() == nil {
-		if err := conf.Main().SetCache(DefaultMainStorageCache); err != nil {
+	if conf.Database().Cache() == nil {
+		if err := conf.Database().SetCache(DefaultDatabaseCache); err != nil {
 			return false, err
 		}
 	}

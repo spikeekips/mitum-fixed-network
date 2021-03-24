@@ -28,7 +28,7 @@ func (t *testStateJoining) SetupTest() {
 }
 
 func (t *testStateJoining) newState(local *isaac.Local, suffrage base.Suffrage, ballotbox *isaac.Ballotbox) (*JoiningState, func()) {
-	st := NewJoiningState(local.Node(), local.Storage(), local.Policy(), suffrage, ballotbox)
+	st := NewJoiningState(local.Node(), local.Database(), local.Policy(), suffrage, ballotbox)
 
 	return st, func() {
 		f, err := st.Exit(NewStateSwitchContext(base.StateJoining, base.StateStopped))
@@ -84,7 +84,7 @@ func (t *testStateJoining) TestBroadcastingINITBallotInStandalone() {
 
 	t.NoError(ballot.IsValid(t.local.Policy().NetworkID()))
 
-	manifest := t.LastManifest(t.local.Storage())
+	manifest := t.LastManifest(t.local.Database())
 
 	t.True(t.local.Node().Publickey().Equal(ballot.Signer()))
 	t.Equal(base.StageINIT, ballot.Stage())
@@ -142,7 +142,7 @@ func (t *testStateJoining) TestBroadcastingINITBallotWithoutACCEPTVoteproof() {
 
 	t.NoError(ballot.IsValid(t.local.Policy().NetworkID()))
 
-	manifest := t.LastManifest(t.local.Storage())
+	manifest := t.LastManifest(t.local.Database())
 
 	t.True(t.local.Node().Publickey().Equal(ballot.Signer()))
 	t.Equal(base.StageINIT, ballot.Stage())
@@ -179,7 +179,7 @@ func (t *testStateJoining) TestBroadcastingINITBallotWithACCEPTVoteproof() {
 		return nil
 	})
 
-	lastAcceptVoteproof := t.local.Storage().LastVoteproof(base.StageACCEPT)
+	lastAcceptVoteproof := t.local.Database().LastVoteproof(base.StageACCEPT)
 	t.NotNil(lastAcceptVoteproof)
 
 	f, err := st.Enter(NewStateSwitchContext(base.StateBooting, base.StateJoining).SetVoteproof(lastAcceptVoteproof))
@@ -207,7 +207,7 @@ func (t *testStateJoining) TestBroadcastingINITBallotWithACCEPTVoteproof() {
 
 	t.NoError(ballot.IsValid(t.local.Policy().NetworkID()))
 
-	manifest := t.LastManifest(t.local.Storage())
+	manifest := t.LastManifest(t.local.Database())
 
 	t.True(t.local.Node().Publickey().Equal(ballot.Signer()))
 	t.Equal(base.StageINIT, ballot.Stage())
@@ -232,7 +232,7 @@ func (t *testStateJoining) TestTimerStopAfterExit() {
 	st.SetTimers(timers)
 	st.SetBroadcastSealsFunc(func(seal.Seal, bool) error { return nil })
 
-	lastAcceptVoteproof := t.local.Storage().LastVoteproof(base.StageACCEPT)
+	lastAcceptVoteproof := t.local.Database().LastVoteproof(base.StageACCEPT)
 	t.NotNil(lastAcceptVoteproof)
 
 	f, err := st.Enter(NewStateSwitchContext(base.StateBooting, base.StateJoining).SetVoteproof(lastAcceptVoteproof))
@@ -274,7 +274,7 @@ func (t *testStateJoining) TestCheckBallotboxWithINITBallot() {
 		vpch <- voteproof
 	})
 
-	lastINITVoteproof := t.local.Storage().LastVoteproof(base.StageINIT)
+	lastINITVoteproof := t.local.Database().LastVoteproof(base.StageINIT)
 	t.NotNil(lastINITVoteproof)
 
 	st.SetLastVoteproofFuncs(func() base.Voteproof {
@@ -283,7 +283,7 @@ func (t *testStateJoining) TestCheckBallotboxWithINITBallot() {
 		return lastINITVoteproof
 	}, nil)
 
-	lastACCEPTVoteproof := t.local.Storage().LastVoteproof(base.StageACCEPT)
+	lastACCEPTVoteproof := t.local.Database().LastVoteproof(base.StageACCEPT)
 	t.NotNil(lastACCEPTVoteproof)
 
 	initFact := ballot.NewINITBallotV0(
@@ -355,7 +355,7 @@ func (t *testStateJoining) TestNewINITVoteproof() {
 		return nil
 	})
 
-	lastINITVoteproof := t.local.Storage().LastVoteproof(base.StageINIT)
+	lastINITVoteproof := t.local.Database().LastVoteproof(base.StageINIT)
 	t.NotNil(lastINITVoteproof)
 
 	st.SetLastVoteproofFuncs(func() base.Voteproof {
@@ -364,7 +364,7 @@ func (t *testStateJoining) TestNewINITVoteproof() {
 		return lastINITVoteproof
 	}, nil)
 
-	lastACCEPTVoteproof := t.local.Storage().LastVoteproof(base.StageACCEPT)
+	lastACCEPTVoteproof := t.local.Database().LastVoteproof(base.StageACCEPT)
 	t.NotNil(lastACCEPTVoteproof)
 
 	f, err := st.Enter(NewStateSwitchContext(base.StateBooting, base.StateJoining).SetVoteproof(lastACCEPTVoteproof))

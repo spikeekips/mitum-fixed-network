@@ -136,8 +136,8 @@ storage:
 
 	t.NotNil(conf.Storage())
 	t.Equal(config.DefaultBlockDataPath, conf.Storage().BlockData().Path())
-	t.Equal(config.DefaultMainStorageURI, conf.Storage().Main().URI().String())
-	t.Equal(config.DefaultMainStorageCache, conf.Storage().Main().Cache().String())
+	t.Equal(config.DefaultDatabaseURI, conf.Storage().Database().URI().String())
+	t.Equal(config.DefaultDatabaseCache, conf.Storage().Database().Cache().String())
 }
 
 func (t *testConfigChecker) TestStorage() {
@@ -164,15 +164,16 @@ storage:
 
 		t.NotNil(conf.Storage())
 		t.Equal("/a/b/c/d", conf.Storage().BlockData().Path())
-		t.Equal(config.DefaultMainStorageURI, conf.Storage().Main().URI().String())
-		t.Equal(config.DefaultMainStorageCache, conf.Storage().Main().Cache().String())
+		t.Equal(config.DefaultDatabaseURI, conf.Storage().Database().URI().String())
+		t.Equal(config.DefaultDatabaseCache, conf.Storage().Database().Cache().String())
 	}
 	{
 		y := `
 storage:
   blockdata:
     path: "/a/b/c/d"
-  uri: mongodb://1.2.3.4:123456?a=b
+  database:
+    uri: mongodb://1.2.3.4:123456?a=b
 `
 		ctx := context.Background()
 		ctx = context.WithValue(ctx, ContextValueConfigSource, []byte(y))
@@ -191,16 +192,17 @@ storage:
 
 		t.NotNil(conf.Storage())
 		t.Equal("/a/b/c/d", conf.Storage().BlockData().Path())
-		t.Equal("mongodb://1.2.3.4:123456?a=b", conf.Storage().Main().URI().String())
-		t.Equal(config.DefaultMainStorageCache, conf.Storage().Main().Cache().String())
+		t.Equal("mongodb://1.2.3.4:123456?a=b", conf.Storage().Database().URI().String())
+		t.Equal(config.DefaultDatabaseCache, conf.Storage().Database().Cache().String())
 	}
 	{
 		y := `
 storage:
   blockdata:
     path: "/a/b/c/d"
-  uri: mongodb://1.2.3.4:123456
-  cache: dummy://
+  database:
+    uri: mongodb://1.2.3.4:123456
+    cache: dummy://
 `
 		ctx := context.Background()
 		ctx = context.WithValue(ctx, ContextValueConfigSource, []byte(y))
@@ -219,8 +221,8 @@ storage:
 
 		t.NotNil(conf.Storage())
 		t.Equal("/a/b/c/d", conf.Storage().BlockData().Path())
-		t.Equal("mongodb://1.2.3.4:123456", conf.Storage().Main().URI().String())
-		t.Equal("dummy:", conf.Storage().Main().Cache().String())
+		t.Equal("mongodb://1.2.3.4:123456", conf.Storage().Database().URI().String())
+		t.Equal("dummy:", conf.Storage().Database().Cache().String())
 	}
 }
 

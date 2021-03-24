@@ -25,7 +25,7 @@ func init() {
 		ProcessNameConsensusStates,
 		[]string{
 			ProcessNameLocalNode,
-			ProcessNameStorage,
+			ProcessNameDatabase,
 			ProcessNameBlockData,
 			ProcessNameSuffrage,
 			ProcessNameProposalProcessor,
@@ -49,8 +49,8 @@ func ProcessConsensusStates(ctx context.Context) (context.Context, error) {
 		return ctx, err
 	}
 
-	var st storage.Storage
-	if err := LoadStorageContextValue(ctx, &st); err != nil {
+	var st storage.Database
+	if err := LoadDatabaseContextValue(ctx, &st); err != nil {
 		return ctx, err
 	}
 
@@ -86,7 +86,7 @@ func ProcessConsensusStates(ctx context.Context) (context.Context, error) {
 }
 
 func processConsensusStates(
-	st storage.Storage,
+	st storage.Database,
 	blockData blockdata.BlockData,
 	policy *isaac.LocalPolicy,
 	nodepool *network.Nodepool,

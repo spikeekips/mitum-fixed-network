@@ -168,7 +168,7 @@ func (st *BlockData) SaveSession(session blockdata.Session) (block.BlockDataMap,
 
 	var ss *Session
 	if i, ok := session.(*Session); !ok {
-		return nil, xerrors.Errorf("only localfs.Session only allowed for localfs block storage, not %T", session)
+		return nil, xerrors.Errorf("only localfs.Session only allowed for localfs blockdata, not %T", session)
 	} else {
 		ss = i
 	}

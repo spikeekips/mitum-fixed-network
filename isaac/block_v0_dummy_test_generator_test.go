@@ -65,7 +65,7 @@ func (t *testBlockV0DummyGenerator) TestCreate() {
 	all := t.Locals(3)
 
 	for _, l := range all {
-		t.NoError(l.Storage().Clean())
+		t.NoError(l.Database().Clean())
 	}
 
 	var suffrage base.Suffrage
@@ -105,15 +105,15 @@ func (t *testBlockV0DummyGenerator) TestCreate() {
 func (t *testBlockV0DummyGenerator) TestblockdataCleanByHeight() {
 	local := t.Locals(1)[0]
 
-	lastManifest, _, _ := local.Storage().LastManifest()
+	lastManifest, _, _ := local.Database().LastManifest()
 
 	found, err := local.BlockData().Exists(lastManifest.Height())
 	t.NoError(err)
 	t.True(found)
 
-	t.NoError(blockdata.CleanByHeight(local.Storage(), local.BlockData(), lastManifest.Height()))
+	t.NoError(blockdata.CleanByHeight(local.Database(), local.BlockData(), lastManifest.Height()))
 
-	l, _, _ := local.Storage().LastManifest()
+	l, _, _ := local.Database().LastManifest()
 	t.Equal(lastManifest.Height()-1, l.Height())
 
 	found, err = local.BlockData().Exists(lastManifest.Height())

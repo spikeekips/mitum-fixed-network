@@ -14,7 +14,7 @@ import (
 	"github.com/spikeekips/mitum/util/logging"
 )
 
-func (st *Storage) SetLastBlock(m block.Block) {
+func (st *Database) SetLastBlock(m block.Block) {
 	_ = st.setLastBlock(m, true, false)
 }
 
@@ -44,6 +44,6 @@ func TestMongodbURI() string {
 	return fmt.Sprintf("mongodb://%s/t_%s", uri, util.UUID().String())
 }
 
-func (st *Storage) OperationFactCache() cache.Cache {
+func (st *Database) OperationFactCache() cache.Cache {
 	return st.operationFactCache
 }

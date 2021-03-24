@@ -13,18 +13,18 @@ import (
 type SealChecker struct {
 	// NOTE SealValidationChecker should be done before ConsensusStates
 	seal      seal.Seal
-	storage   storage.Storage
+	database  storage.Database
 	policy    *LocalPolicy
 	sealCache cache.Cache
 }
 
 func NewSealChecker(
 	sl seal.Seal,
-	storage storage.Storage,
+	database storage.Database,
 	policy *LocalPolicy,
 	sealCache cache.Cache,
 ) SealChecker {
-	return SealChecker{seal: sl, storage: storage, policy: policy, sealCache: sealCache}
+	return SealChecker{seal: sl, database: database, policy: policy, sealCache: sealCache}
 }
 
 func (svc SealChecker) IsValid() (bool, error) {
@@ -66,7 +66,7 @@ func (svc SealChecker) IsValidOperationSeal() (bool, error) {
 
 	var notFound bool
 	for i := range os.Operations() {
-		if found, err := svc.storage.HasOperationFact(os.Operations()[i].Fact().Hash()); err != nil {
+		if found, err := svc.database.HasOperationFact(os.Operations()[i].Fact().Hash()); err != nil {
 			return false, xerrors.Errorf("failed to check HasOperationFact: %w", err)
 		} else if !found {
 			notFound = true

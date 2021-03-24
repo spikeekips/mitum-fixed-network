@@ -17,19 +17,19 @@ import (
 type SyncerSession struct {
 	sync.RWMutex
 	*logging.Logging
-	main       *Storage
-	storage    *Storage
+	main       *Database
+	database   *Database
 	heightFrom base.Height
 	heightTo   base.Height
 }
 
-func NewSyncerSession(main *Storage) *SyncerSession {
+func NewSyncerSession(main *Database) *SyncerSession {
 	return &SyncerSession{
 		Logging: logging.NewLogging(func(c logging.Context) logging.Emitter {
-			return c.Str("module", "leveldb-syncer-storage")
+			return c.Str("module", "leveldb-syncer-database")
 		}),
 		main:       main,
-		storage:    NewMemStorage(main.Encoders(), main.Encoder()),
+		database:   NewMemDatabase(main.Encoders(), main.Encoder()),
 		heightFrom: base.Height(-1),
 	}
 }
@@ -42,7 +42,7 @@ func (st *SyncerSession) manifestKey(height base.Height) []byte {
 }
 
 func (st *SyncerSession) Manifest(height base.Height) (block.Manifest, bool, error) {
-	raw, err := st.storage.DB().Get(st.manifestKey(height), nil)
+	raw, err := st.database.DB().Get(st.manifestKey(height), nil)
 	if err != nil {
 		if xerrors.Is(err, storage.NotFoundError) {
 			return nil, false, nil
@@ -51,7 +51,7 @@ func (st *SyncerSession) Manifest(height base.Height) (block.Manifest, bool, err
 		return nil, false, wrapError(err)
 	}
 
-	m, err := st.storage.loadManifest(raw)
+	m, err := st.database.loadManifest(raw)
 	if err != nil {
 		if xerrors.Is(err, storage.NotFoundError) {
 			return nil, false, nil
@@ -93,7 +93,7 @@ func (st *SyncerSession) SetManifests(manifests []block.Manifest) error {
 
 	for i := range manifests {
 		m := manifests[i]
-		if b, err := marshal(st.storage.Encoder(), m); err != nil {
+		if b, err := marshal(st.database.Encoder(), m); err != nil {
 			return err
 		} else {
 			key := st.manifestKey(m.Height())
@@ -101,15 +101,15 @@ func (st *SyncerSession) SetManifests(manifests []block.Manifest) error {
 		}
 	}
 
-	return wrapError(st.storage.DB().Write(batch, nil))
+	return wrapError(st.database.DB().Write(batch, nil))
 }
 
 func (st *SyncerSession) HasBlock(height base.Height) (bool, error) {
-	return st.storage.db.Has(leveldbBlockHeightKey(height), nil)
+	return st.database.db.Has(leveldbBlockHeightKey(height), nil)
 }
 
 func (st *SyncerSession) block(height base.Height) (block.Block, bool, error) {
-	return st.storage.blockByHeight(height)
+	return st.database.blockByHeight(height)
 }
 
 func (st *SyncerSession) SetBlocks(blocks []block.Block, maps []block.BlockDataMap) error {
@@ -139,7 +139,7 @@ func (st *SyncerSession) SetBlocks(blocks []block.Block, maps []block.BlockDataM
 
 		st.checkHeight(blk.Height())
 
-		if bs, err := st.storage.NewStorageSession(blk); err != nil {
+		if bs, err := st.database.NewSession(blk); err != nil {
 			return err
 		} else if err := bs.SetBlock(context.Background(), blk); err != nil {
 			return err
@@ -169,7 +169,7 @@ func (st *SyncerSession) Commit() error {
 		}
 
 		var m block.BlockDataMap
-		switch j, found, err := st.storage.BlockDataMap(i); {
+		switch j, found, err := st.database.BlockDataMap(i); {
 		case err != nil:
 			return err
 		case !found:
@@ -191,7 +191,7 @@ func (st *SyncerSession) Commit() error {
 }
 
 func (st *SyncerSession) commitBlock(blk block.Block, m block.BlockDataMap) error {
-	if bs, err := st.main.NewStorageSession(blk); err != nil {
+	if bs, err := st.main.NewSession(blk); err != nil {
 		return err
 	} else if err := bs.SetBlock(context.Background(), blk); err != nil {
 		return err
@@ -218,5 +218,5 @@ func (st *SyncerSession) checkHeight(height base.Height) {
 }
 
 func (st *SyncerSession) Close() error {
-	return wrapError(st.storage.DB().Close())
+	return wrapError(st.database.DB().Close())
 }

@@ -28,7 +28,7 @@ func NewInitCommand(dryrun bool) InitCommand {
 		panic(xerrors.Errorf("processes not prepared"))
 	}
 
-	if err := ps.AddHook( // NOTE clean storage and block data with `--force`
+	if err := ps.AddHook( // NOTE clean database and block data with `--force`
 		pm.HookPrefixPre, process.ProcessNameLocalNode,
 		"clean-storage", cmd.cleanStorage,
 		true,
@@ -94,8 +94,8 @@ func (cmd *InitCommand) cleanStorage(ctx context.Context) (context.Context, erro
 		return ctx, nil
 	}
 
-	var st storage.Storage
-	if err := process.LoadStorageContextValue(ctx, &st); err != nil {
+	var st storage.Database
+	if err := process.LoadDatabaseContextValue(ctx, &st); err != nil {
 		return ctx, err
 	}
 
@@ -108,7 +108,7 @@ func (cmd *InitCommand) cleanStorage(ctx context.Context) (context.Context, erro
 		return ctx, err
 	}
 
-	cmd.Log().Info().Msg("storage and block data was cleaned by force")
+	cmd.Log().Info().Msg("database and block data was cleaned by force")
 
 	return ctx, nil
 }

@@ -59,7 +59,7 @@ will sync [1,2,3,4,5].
 type GeneralSyncer struct { // nolint; maligned
 	sync.RWMutex
 	*logging.Logging
-	ost                     storage.Storage
+	ost                     storage.Database
 	blockData               blockdata.BlockData
 	policy                  *LocalPolicy
 	st                      storage.SyncerSession
@@ -81,7 +81,7 @@ type GeneralSyncer struct { // nolint; maligned
 
 func NewGeneralSyncer(
 	local *network.LocalNode,
-	ost storage.Storage,
+	ost storage.Database,
 	blockData blockdata.BlockData,
 	policy *LocalPolicy,
 	sourceNodes []network.Node,
@@ -142,7 +142,7 @@ func NewGeneralSyncer(
 }
 
 func (cs *GeneralSyncer) SetLogger(l logging.Logger) logging.Logger {
-	if sl, ok := cs.storage().(logging.SetLogger); ok {
+	if sl, ok := cs.database().(logging.SetLogger); ok {
 		_ = sl.SetLogger(l)
 	}
 
@@ -322,7 +322,7 @@ func (cs *GeneralSyncer) reset() error {
 	defer cs.Unlock()
 
 	if cs.st != nil {
-		cs.Log().Debug().Int("blocks", len(cs.blocks)).Msg("reset: will cleanup storage; main storage and block data")
+		cs.Log().Debug().Int("blocks", len(cs.blocks)).Msg("reset: will cleanup storage; database and block data")
 		if err := blockdata.CleanByHeight(cs.ost, cs.blockData, cs.heightFrom); err != nil {
 			return err
 		}
@@ -411,7 +411,7 @@ func (cs *GeneralSyncer) headAndTailManifests() error {
 
 	cs.setProvedNodes(provedNodes)
 
-	if err := cs.storage().SetManifests(manifests); err != nil {
+	if err := cs.database().SetManifests(manifests); err != nil {
 		return err
 	}
 
@@ -442,7 +442,7 @@ func (cs *GeneralSyncer) fillManifests() error {
 		default:
 			cs.setProvedNodes(pn)
 
-			return cs.storage().SetManifests(ms)
+			return cs.database().SetManifests(ms)
 		}
 	}
 
@@ -535,7 +535,7 @@ func (cs *GeneralSyncer) fetchBlocksByNodes() error {
 
 	// check fetched blocks
 	for i := cs.heightFrom; i <= cs.heightTo; i++ {
-		if found, err := cs.storage().HasBlock(i); err != nil {
+		if found, err := cs.database().HasBlock(i); err != nil {
 			return xerrors.Errorf("some block not found after fetching blocks: height=%d; %w", i, err)
 		} else if !found {
 			return xerrors.Errorf("some block not found after fetching blocks: height=%d", i)
@@ -595,7 +595,7 @@ func (cs *GeneralSyncer) distributeBlocksJob(worker *util.ParallelWorker) error 
 
 	var heights []base.Height
 	for i := from; i <= to; i++ {
-		if found, err := cs.storage().HasBlock(base.Height(i)); err != nil {
+		if found, err := cs.database().HasBlock(base.Height(i)); err != nil {
 			return err
 		} else if found {
 			continue
@@ -1023,7 +1023,7 @@ func (cs *GeneralSyncer) checkFetchedBlocks(fetched []block.Block) ([]base.Heigh
 			continue
 		}
 
-		switch manifest, found, err := cs.storage().Manifest(blk.Height()); {
+		switch manifest, found, err := cs.database().Manifest(blk.Height()); {
 		case !found:
 			return nil, storage.NotFoundError.Errorf("manifest not found")
 		case err != nil:
@@ -1058,7 +1058,7 @@ func (cs *GeneralSyncer) checkFetchedBlocks(fetched []block.Block) ([]base.Heigh
 
 	if maps, err := cs.saveBlockData(sessions); err != nil {
 		return nil, err
-	} else if err := cs.storage().SetBlocks(filtered, maps); err != nil {
+	} else if err := cs.database().SetBlocks(filtered, maps); err != nil {
 		return nil, err
 	} else {
 		return nil, nil
@@ -1135,7 +1135,7 @@ func (cs *GeneralSyncer) fetchBlock(node network.Node, bd block.BlockDataMap) (b
 
 	blk := (interface{})(block.BlockV0{}).(block.BlockUpdater)
 
-	switch i, found, err := cs.storage().Manifest(bd.Height()); {
+	switch i, found, err := cs.database().Manifest(bd.Height()); {
 	case err != nil:
 		return nil, err
 	case !found:
@@ -1223,12 +1223,12 @@ func (cs *GeneralSyncer) commit() error {
 	from := cs.heightFrom.Int64()
 	to := cs.heightTo.Int64()
 
-	if err := cs.storage().Commit(); err != nil {
+	if err := cs.database().Commit(); err != nil {
 		return err
 	}
 
 	for i := from; i <= to; i++ {
-		switch m, found, err := cs.storage().Manifest(base.Height(i)); {
+		switch m, found, err := cs.database().Manifest(base.Height(i)); {
 		case !found:
 			return storage.NotFoundError.Errorf("block, %v guessed to be stored, but not found", base.Height(i))
 		case err != nil:
@@ -1462,7 +1462,7 @@ func (cs *GeneralSyncer) fetchBlockData(
 	return s, nil
 }
 
-func (cs *GeneralSyncer) storage() storage.SyncerSession {
+func (cs *GeneralSyncer) database() storage.SyncerSession {
 	cs.RLock()
 	defer cs.RUnlock()
 

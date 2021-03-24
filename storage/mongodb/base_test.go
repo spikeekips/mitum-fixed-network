@@ -28,30 +28,30 @@ import (
 	"github.com/spikeekips/mitum/util/valuehash"
 )
 
-type testStorage struct {
-	storage.BaseTestStorage
-	storage *Storage
+type testDatabase struct {
+	storage.BaseTestDatabase
+	database *Database
 }
 
-func (t *testStorage) SetupTest() {
+func (t *testDatabase) SetupTest() {
 	client, err := NewClient(TestMongodbURI(), time.Second*2, time.Second*2)
 	t.NoError(err)
 
-	st, err := NewStorage(client, t.Encs, nil, cache.Dummy{})
+	st, err := NewDatabase(client, t.Encs, nil, cache.Dummy{})
 	t.NoError(err)
-	t.storage = st
+	t.database = st
 }
 
-func (t *testStorage) TearDownTest() {
-	t.storage.Client().DropDatabase()
-	t.storage.Close()
+func (t *testDatabase) TearDownTest() {
+	t.database.Client().DropDatabase()
+	t.database.Close()
 }
 
-func (t *testStorage) TestNew() {
-	t.Implements((*storage.Storage)(nil), t.storage)
+func (t *testDatabase) TestNew() {
+	t.Implements((*storage.Database)(nil), t.database)
 }
 
-func (t *testStorage) saveNewBlock(height base.Height) (block.Block, block.BlockDataMap) {
+func (t *testDatabase) saveNewBlock(height base.Height) (block.Block, block.BlockDataMap) {
 	blk, err := block.NewTestBlockV0(height, base.Round(0), valuehash.RandomSHA256(), valuehash.RandomSHA256())
 	t.NoError(err)
 
@@ -60,7 +60,7 @@ func (t *testStorage) saveNewBlock(height base.Height) (block.Block, block.Block
 	i = i.SetACCEPTVoteproof(base.NewVoteproofV0(blk.Height(), blk.Round(), nil, base.ThresholdRatio(100), base.StageACCEPT))
 	blk = i.(block.BlockV0)
 
-	bs, err := t.storage.NewStorageSession(blk)
+	bs, err := t.database.NewSession(blk)
 	t.NoError(err)
 
 	t.NoError(bs.SetBlock(context.Background(), blk))
@@ -70,7 +70,7 @@ func (t *testStorage) saveNewBlock(height base.Height) (block.Block, block.Block
 	return blk, bd
 }
 
-func (t *testStorage) saveBlockDataMap(st *Storage, bd block.BlockDataMap) error {
+func (t *testDatabase) saveBlockDataMap(st *Database, bd block.BlockDataMap) error {
 	if doc, err := NewBlockDataMapDoc(bd, st.enc); err != nil {
 		return err
 	} else if _, err := st.client.Add(ColNameBlockDataMap, doc); err != nil {
@@ -80,27 +80,27 @@ func (t *testStorage) saveBlockDataMap(st *Storage, bd block.BlockDataMap) error
 	}
 }
 
-func (t *testStorage) TestLastBlock() {
+func (t *testDatabase) TestLastBlock() {
 	blk, bd := t.saveNewBlock(base.Height(33))
 
-	loaded, found, err := t.storage.LastManifest()
+	loaded, found, err := t.database.LastManifest()
 	t.NoError(err)
 	t.True(found)
 
 	t.CompareManifest(blk.Manifest(), loaded)
 
-	ubd, found, err := t.storage.BlockDataMap(blk.Height())
+	ubd, found, err := t.database.BlockDataMap(blk.Height())
 	t.NoError(err)
 	t.True(found)
 
 	block.CompareBlockDataMap(t.Assert(), bd, ubd)
 }
 
-func (t *testStorage) TestSetBlockContext() {
+func (t *testDatabase) TestSetBlockContext() {
 	blk, err := block.NewTestBlockV0(base.Height(33), base.Round(0), valuehash.RandomSHA256(), valuehash.RandomSHA256())
 	t.NoError(err)
 
-	bs, err := t.storage.NewStorageSession(blk)
+	bs, err := t.database.NewSession(blk)
 	t.NoError(err)
 
 	ctx, cancel := context.WithTimeout(context.Background(), time.Nanosecond*1)
@@ -110,7 +110,7 @@ func (t *testStorage) TestSetBlockContext() {
 	t.True(xerrors.Is(err, context.DeadlineExceeded))
 }
 
-func (t *testStorage) TestSaveBlockContext() {
+func (t *testDatabase) TestSaveBlockContext() {
 	blk, err := block.NewTestBlockV0(base.Height(33), base.Round(0), valuehash.RandomSHA256(), valuehash.RandomSHA256())
 	t.NoError(err)
 
@@ -119,7 +119,7 @@ func (t *testStorage) TestSaveBlockContext() {
 	i = i.SetACCEPTVoteproof(base.NewVoteproofV0(blk.Height(), blk.Round(), nil, base.ThresholdRatio(100), base.StageACCEPT))
 	blk = i.(block.BlockV0)
 
-	bs, err := t.storage.NewStorageSession(blk)
+	bs, err := t.database.NewSession(blk)
 	t.NoError(err)
 
 	t.NoError(bs.SetBlock(context.Background(), blk))
@@ -132,20 +132,20 @@ func (t *testStorage) TestSaveBlockContext() {
 	t.True(xerrors.Is(err, context.DeadlineExceeded))
 }
 
-func (t *testStorage) TestLastManifest() {
+func (t *testDatabase) TestLastManifest() {
 	blk, _ := t.saveNewBlock(base.Height(33))
 
-	loaded, found, err := t.storage.LastManifest()
+	loaded, found, err := t.database.LastManifest()
 	t.NoError(err)
 	t.True(found)
 
 	t.CompareManifest(blk.Manifest(), loaded)
 }
 
-func (t *testStorage) TestLoadManifestByHash() {
+func (t *testDatabase) TestLoadManifestByHash() {
 	blk, _ := t.saveNewBlock(base.Height(33))
 
-	loaded, found, err := t.storage.Manifest(blk.Hash())
+	loaded, found, err := t.database.Manifest(blk.Hash())
 	t.NoError(err)
 	t.True(found)
 
@@ -156,10 +156,10 @@ func (t *testStorage) TestLoadManifestByHash() {
 	t.CompareManifest(blk, loaded)
 }
 
-func (t *testStorage) TestLoadManifestByHeight() {
+func (t *testDatabase) TestLoadManifestByHeight() {
 	blk, _ := t.saveNewBlock(base.Height(33))
 
-	loaded, found, err := t.storage.ManifestByHeight(blk.Height())
+	loaded, found, err := t.database.ManifestByHeight(blk.Height())
 	t.NoError(err)
 	t.True(found)
 
@@ -170,7 +170,7 @@ func (t *testStorage) TestLoadManifestByHeight() {
 	t.CompareManifest(blk, loaded)
 }
 
-func (t *testStorage) TestSeals() {
+func (t *testDatabase) TestSeals() {
 	var seals []seal.Seal
 	for i := 0; i < 10; i++ {
 		pk, _ := key.NewBTCPrivatekey()
@@ -178,10 +178,10 @@ func (t *testStorage) TestSeals() {
 
 		seals = append(seals, sl)
 	}
-	t.NoError(t.storage.NewSeals(seals))
+	t.NoError(t.database.NewSeals(seals))
 
 	for _, sl := range seals {
-		found, err := t.storage.HasSeal(sl.Hash())
+		found, err := t.database.HasSeal(sl.Hash())
 		t.NoError(err)
 		t.True(found)
 	}
@@ -194,7 +194,7 @@ func (t *testStorage) TestSeals() {
 	})
 
 	var collected []seal.Seal
-	t.NoError(t.storage.Seals(
+	t.NoError(t.database.Seals(
 		func(_ valuehash.Hash, sl seal.Seal) (bool, error) {
 			collected = append(collected, sl)
 
@@ -211,7 +211,7 @@ func (t *testStorage) TestSeals() {
 	}
 }
 
-func (t *testStorage) TestSealsByHash() {
+func (t *testDatabase) TestSealsByHash() {
 	var seals []seal.Seal
 	var hashes []valuehash.Hash
 	for i := 0; i < 10; i++ {
@@ -221,10 +221,10 @@ func (t *testStorage) TestSealsByHash() {
 
 		seals = append(seals, sl)
 	}
-	t.NoError(t.storage.NewSeals(seals))
+	t.NoError(t.database.NewSeals(seals))
 
 	loaded := map[string]seal.Seal{}
-	t.NoError(t.storage.SealsByHash(hashes, func(_ valuehash.Hash, sl seal.Seal) (bool, error) {
+	t.NoError(t.database.SealsByHash(hashes, func(_ valuehash.Hash, sl seal.Seal) (bool, error) {
 		loaded[sl.Hash().String()] = sl
 
 		return true, nil
@@ -242,7 +242,7 @@ func (t *testStorage) TestSealsByHash() {
 	}
 }
 
-func (t *testStorage) TestSealsOnlyHash() {
+func (t *testDatabase) TestSealsOnlyHash() {
 	var seals []seal.Seal
 	for i := 0; i < 10; i++ {
 		pk, _ := key.NewBTCPrivatekey()
@@ -250,7 +250,7 @@ func (t *testStorage) TestSealsOnlyHash() {
 
 		seals = append(seals, sl)
 	}
-	t.NoError(t.storage.NewSeals(seals))
+	t.NoError(t.database.NewSeals(seals))
 
 	sort.Slice(seals, func(i, j int) bool {
 		return bytes.Compare(
@@ -260,7 +260,7 @@ func (t *testStorage) TestSealsOnlyHash() {
 	})
 
 	var collected []valuehash.Hash
-	t.NoError(t.storage.Seals(
+	t.NoError(t.database.Seals(
 		func(h valuehash.Hash, sl seal.Seal) (bool, error) {
 			t.Nil(sl)
 			collected = append(collected, h)
@@ -278,7 +278,7 @@ func (t *testStorage) TestSealsOnlyHash() {
 	}
 }
 
-func (t *testStorage) TestSealsLimit() {
+func (t *testDatabase) TestSealsLimit() {
 	var seals []seal.Seal
 	for i := 0; i < 10; i++ {
 		pk, _ := key.NewBTCPrivatekey()
@@ -286,7 +286,7 @@ func (t *testStorage) TestSealsLimit() {
 
 		seals = append(seals, sl)
 	}
-	t.NoError(t.storage.NewSeals(seals))
+	t.NoError(t.database.NewSeals(seals))
 
 	sort.Slice(seals, func(i, j int) bool {
 		return bytes.Compare(
@@ -296,7 +296,7 @@ func (t *testStorage) TestSealsLimit() {
 	})
 
 	var collected []seal.Seal
-	t.NoError(t.storage.Seals(
+	t.NoError(t.database.Seals(
 		func(_ valuehash.Hash, sl seal.Seal) (bool, error) {
 			if len(collected) == 3 {
 				return false, nil
@@ -317,7 +317,7 @@ func (t *testStorage) TestSealsLimit() {
 	}
 }
 
-func (t *testStorage) newOperationSeal() operation.Seal {
+func (t *testDatabase) newOperationSeal() operation.Seal {
 	token := []byte("this-is-token")
 	op, err := operation.NewKVOperation(t.PK, token, util.UUID().String(), []byte(util.UUID().String()), nil)
 	t.NoError(err)
@@ -329,7 +329,7 @@ func (t *testStorage) newOperationSeal() operation.Seal {
 	return sl
 }
 
-func (t *testStorage) TestStagedOperationSeals() {
+func (t *testDatabase) TestStagedOperationSeals() {
 	var seals []seal.Seal
 
 	// 10 seal.Seal
@@ -338,7 +338,7 @@ func (t *testStorage) TestStagedOperationSeals() {
 
 		seals = append(seals, sl)
 	}
-	t.NoError(t.storage.NewSeals(seals))
+	t.NoError(t.database.NewSeals(seals))
 
 	ops := map[string]operation.Seal{}
 
@@ -350,10 +350,10 @@ func (t *testStorage) TestStagedOperationSeals() {
 		others = append(others, sl)
 		ops[sl.Hash().String()] = sl
 	}
-	t.NoError(t.storage.NewSeals(others))
+	t.NoError(t.database.NewSeals(others))
 
 	var collected []seal.Seal
-	t.NoError(t.storage.StagedOperationSeals(
+	t.NoError(t.database.StagedOperationSeals(
 		func(sl operation.Seal) (bool, error) {
 			collected = append(collected, sl)
 
@@ -379,18 +379,18 @@ func (t *testStorage) TestStagedOperationSeals() {
 	}
 }
 
-func (t *testStorage) TestUnStagedOperationSeals() {
+func (t *testDatabase) TestUnStagedOperationSeals() {
 	// 10 seal.Seal
 	for i := 0; i < 10; i++ {
 		sl := seal.NewDummySeal(t.PK)
-		t.NoError(t.storage.NewSeals([]seal.Seal{sl}))
+		t.NoError(t.database.NewSeals([]seal.Seal{sl}))
 	}
 
 	var ops []operation.Seal
 	// 10 operation.Seal
 	for i := 0; i < 10; i++ {
 		sl := t.newOperationSeal()
-		t.NoError(t.storage.NewSeals([]seal.Seal{sl}))
+		t.NoError(t.database.NewSeals([]seal.Seal{sl}))
 
 		ops = append(ops, sl)
 	}
@@ -416,14 +416,14 @@ func (t *testStorage) TestUnStagedOperationSeals() {
 	i = i.SetACCEPTVoteproof(base.NewVoteproofV0(blk.Height(), blk.Round(), nil, base.ThresholdRatio(100), base.StageACCEPT))
 	blk = i.(block.BlockV0)
 
-	bs, err := t.storage.NewStorageSession(blk)
+	bs, err := t.database.NewSession(blk)
 	t.NoError(err)
 
 	bd := t.NewBlockDataMap(blk.Height(), blk.Hash(), true)
 	t.NoError(bs.Commit(context.Background(), bd))
 
 	var collected []seal.Seal
-	t.NoError(t.storage.StagedOperationSeals(
+	t.NoError(t.database.StagedOperationSeals(
 		func(sl operation.Seal) (bool, error) {
 			collected = append(collected, sl)
 
@@ -435,38 +435,38 @@ func (t *testStorage) TestUnStagedOperationSeals() {
 	t.Equal(len(ops), len(collected))
 }
 
-func (t *testStorage) TestHasOperation() {
+func (t *testDatabase) TestHasOperation() {
 	blk, err := block.NewTestBlockV0(base.Height(33), base.Round(0), valuehash.RandomSHA256(), valuehash.RandomSHA256())
 	t.NoError(err)
 
-	t.storage.setLastBlock(blk, true, false)
+	t.database.setLastBlock(blk, true, false)
 
 	op, err := operation.NewKVOperation(t.PK, []byte("showme"), "key", []byte("value"), nil)
 	t.NoError(err)
 
 	{ // store
-		doc, err := NewOperationDoc(op.Fact().Hash(), t.storage.enc, base.Height(33))
+		doc, err := NewOperationDoc(op.Fact().Hash(), t.database.enc, base.Height(33))
 		t.NoError(err)
-		_, err = t.storage.client.Set("operation", doc)
+		_, err = t.database.client.Set("operation", doc)
 		t.NoError(err)
 	}
 
 	{
-		found, err := t.storage.HasOperationFact(op.Fact().Hash())
+		found, err := t.database.HasOperationFact(op.Fact().Hash())
 		t.NoError(err)
 		t.True(found)
 	}
 
 	{ // unknown
-		found, err := t.storage.HasOperationFact(valuehash.RandomSHA256())
+		found, err := t.database.HasOperationFact(valuehash.RandomSHA256())
 		t.NoError(err)
 		t.False(found)
 	}
 }
 
-func (t *testStorage) TestCreateIndexNew() {
+func (t *testDatabase) TestCreateIndexNew() {
 	allIndexes := func(col string) []string {
-		iv := t.storage.client.Collection(col).Indexes()
+		iv := t.database.client.Collection(col).Indexes()
 
 		cursor, err := iv.List(context.TODO())
 		t.NoError(err)
@@ -489,7 +489,7 @@ func (t *testStorage) TestCreateIndexNew() {
 		},
 	}
 
-	t.NoError(t.storage.CreateIndex(ColNameManifest, oldIndexes, IndexPrefix))
+	t.NoError(t.database.CreateIndex(ColNameManifest, oldIndexes, IndexPrefix))
 
 	existings := allIndexes(ColNameManifest)
 
@@ -500,25 +500,25 @@ func (t *testStorage) TestCreateIndexNew() {
 		},
 	}
 
-	t.NoError(t.storage.CreateIndex(ColNameManifest, newIndexes, IndexPrefix))
+	t.NoError(t.database.CreateIndex(ColNameManifest, newIndexes, IndexPrefix))
 	created := allIndexes(ColNameManifest)
 
 	t.Equal(existings, []string{"_id_", "mitum_showme"})
 	t.Equal(created, []string{"_id_", "mitum_findme"})
 }
 
-func (t *testStorage) TestCopy() {
+func (t *testDatabase) TestCopy() {
 	client, err := NewClient(TestMongodbURI(), time.Second*2, time.Second*2)
 	t.NoError(err)
 
-	other, err := NewStorage(client, t.Encs, t.BSONEnc, cache.Dummy{})
+	other, err := NewDatabase(client, t.Encs, t.BSONEnc, cache.Dummy{})
 	t.NoError(err)
 
 	var cols []string
 	for i := 0; i < 3; i++ {
 		col := util.UUID().String()
 		doc := NewDocNilID(nil, bson.M{"v": i})
-		_, err = t.storage.Client().Set(col, doc)
+		_, err = t.database.Client().Set(col, doc)
 		t.NoError(err)
 
 		cols = append(cols, col)
@@ -526,7 +526,7 @@ func (t *testStorage) TestCopy() {
 
 	sort.Strings(cols)
 
-	t.NoError(other.Copy(t.storage))
+	t.NoError(other.Copy(t.database))
 
 	otherCols, err := other.Client().Collections()
 	t.NoError(err)
@@ -537,7 +537,7 @@ func (t *testStorage) TestCopy() {
 
 	for _, col := range cols {
 		rs := map[string]bson.M{}
-		t.NoError(t.storage.Client().Find(context.TODO(), col, bson.M{}, func(cursor *mongo.Cursor) (bool, error) {
+		t.NoError(t.database.Client().Find(context.TODO(), col, bson.M{}, func(cursor *mongo.Cursor) (bool, error) {
 			var record bson.M
 			if err := cursor.Decode(&record); err != nil {
 				return false, err
@@ -562,31 +562,31 @@ func (t *testStorage) TestCopy() {
 	}
 }
 
-func (t *testStorage) TestInfo() {
+func (t *testDatabase) TestInfo() {
 	key := util.UUID().String()
 	b := util.UUID().Bytes()
 
-	_, found, err := t.storage.Info(key)
+	_, found, err := t.database.Info(key)
 	t.Nil(err)
 	t.False(found)
 
-	t.NoError(t.storage.SetInfo(key, b))
+	t.NoError(t.database.SetInfo(key, b))
 
-	ub, found, err := t.storage.Info(key)
+	ub, found, err := t.database.Info(key)
 	t.NoError(err)
 	t.True(found)
 	t.Equal(b, ub)
 
 	nb := util.UUID().Bytes()
-	t.NoError(t.storage.SetInfo(key, nb))
+	t.NoError(t.database.SetInfo(key, nb))
 
-	unb, found, err := t.storage.Info(key)
+	unb, found, err := t.database.Info(key)
 	t.NoError(err)
 	t.True(found)
 	t.Equal(nb, unb)
 }
 
-func (t *testStorage) TestLocalBlockDataMapsByHeight() {
+func (t *testDatabase) TestLocalBlockDataMapsByHeight() {
 	isLocal := func(height base.Height) bool {
 		switch height {
 		case 33, 36, 39:
@@ -598,17 +598,17 @@ func (t *testStorage) TestLocalBlockDataMapsByHeight() {
 
 	for i := base.Height(33); i < 40; i++ {
 		bd := t.NewBlockDataMap(i, valuehash.RandomSHA256(), isLocal(i))
-		t.NoError(t.saveBlockDataMap(t.storage, bd))
+		t.NoError(t.saveBlockDataMap(t.database, bd))
 	}
 
 	for i := base.Height(33); i < 40; i++ {
-		bd, found, err := t.storage.BlockDataMap(i)
+		bd, found, err := t.database.BlockDataMap(i)
 		t.NoError(err)
 		t.True(found)
 		t.NotNil(bd)
 	}
 
-	err := t.storage.LocalBlockDataMapsByHeight(36, func(bd block.BlockDataMap) (bool, error) {
+	err := t.database.LocalBlockDataMapsByHeight(36, func(bd block.BlockDataMap) (bool, error) {
 		t.True(bd.Height() > 35)
 		t.True(isLocal(bd.Height()))
 		t.True(bd.IsLocal())
@@ -618,6 +618,6 @@ func (t *testStorage) TestLocalBlockDataMapsByHeight() {
 	t.NoError(err)
 }
 
-func TestMongodbStorage(t *testing.T) {
-	suite.Run(t, new(testStorage))
+func TestMongodbDatabase(t *testing.T) {
+	suite.Run(t, new(testDatabase))
 }

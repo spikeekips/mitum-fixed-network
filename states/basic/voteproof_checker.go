@@ -15,7 +15,7 @@ import (
 
 type VoteproofChecker struct {
 	*logging.Logging
-	storage   storage.Storage
+	database  storage.Database
 	suffrage  base.Suffrage
 	nodepool  *network.Nodepool
 	lvp       base.Voteproof
@@ -23,7 +23,7 @@ type VoteproofChecker struct {
 }
 
 func NewVoteproofChecker(
-	st storage.Storage,
+	st storage.Database,
 	suffrage base.Suffrage,
 	nodepool *network.Nodepool,
 	lastVoteproof, voteproof base.Voteproof,
@@ -39,7 +39,7 @@ func NewVoteproofChecker(
 
 			return e
 		}),
-		storage:   st,
+		database:  st,
 		suffrage:  suffrage,
 		nodepool:  nodepool,
 		lvp:       lastVoteproof,
@@ -114,7 +114,7 @@ func (vc *VoteproofChecker) CheckINITVoteproofWithLocalBlock() (bool, error) {
 		return true, nil
 	}
 
-	if err := CheckBlockWithINITVoteproof(vc.storage, vc.voteproof); err != nil {
+	if err := CheckBlockWithINITVoteproof(vc.database, vc.voteproof); err != nil {
 		if xerrors.Is(err, util.IgnoreError) || xerrors.Is(err, storage.NotFoundError) {
 			return true, nil
 		}
@@ -135,7 +135,7 @@ func (vc *VoteproofChecker) CheckACCEPTVoteproofProposal() (bool, error) {
 	}
 
 	fact := vc.voteproof.Majority().(ballot.ACCEPTBallotFact)
-	if found, err := vc.storage.HasSeal(fact.Proposal()); err != nil {
+	if found, err := vc.database.HasSeal(fact.Proposal()); err != nil {
 		return false, xerrors.Errorf("failed to check proposal of accept voteproof: %w", err)
 	} else if found {
 		return true, nil
@@ -169,7 +169,7 @@ func (vc *VoteproofChecker) CheckACCEPTVoteproofProposal() (bool, error) {
 		return false, xerrors.Errorf("failed to find proposal from accept voteproof")
 	}
 
-	pvc := isaac.NewProposalValidationChecker(vc.storage, vc.suffrage, vc.nodepool, proposal, nil)
+	pvc := isaac.NewProposalValidationChecker(vc.database, vc.suffrage, vc.nodepool, proposal, nil)
 	checkers := []util.CheckerFunc{
 		pvc.IsKnown,
 		pvc.CheckSigning,
@@ -188,7 +188,7 @@ func (vc *VoteproofChecker) CheckACCEPTVoteproofProposal() (bool, error) {
 	return true, nil
 }
 
-func CheckBlockWithINITVoteproof(st storage.Storage, voteproof base.Voteproof) error {
+func CheckBlockWithINITVoteproof(st storage.Database, voteproof base.Voteproof) error {
 	// check init ballot fact.PreviousBlock with local block
 	fact, ok := voteproof.Majority().(ballot.INITBallotFact)
 	if !ok {

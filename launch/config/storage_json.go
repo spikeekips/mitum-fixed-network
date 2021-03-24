@@ -4,21 +4,27 @@ import (
 	jsonenc "github.com/spikeekips/mitum/util/encoder/json"
 )
 
-type BaseBlockDataPackerJSON struct {
+type DatabasePackerJSON struct {
+	URI   string
+	Cache string
+}
+
+type BlockDataPackerJSON struct {
 	Path string `json:"path"`
 }
 
 type BaseStoragePackerJSON struct {
-	URI       string                  `json:"uri,omitempty"`
-	Cache     string                  `json:"cache,omitempty"`
-	BlockData BaseBlockDataPackerJSON `json:"blockdata"`
+	Database  DatabasePackerJSON  `json:"database"`
+	BlockData BlockDataPackerJSON `json:"blockdata"`
 }
 
 func (no BaseStorage) MarshalJSON() ([]byte, error) {
 	return jsonenc.Marshal(BaseStoragePackerJSON{
-		URI:   no.main.URI().String(),
-		Cache: no.main.Cache().String(),
-		BlockData: BaseBlockDataPackerJSON{
+		Database: DatabasePackerJSON{
+			URI:   no.database.URI().String(),
+			Cache: no.database.Cache().String(),
+		},
+		BlockData: BlockDataPackerJSON{
 			Path: no.blockData.Path(),
 		},
 	})

@@ -42,7 +42,7 @@ func (t *testVoteproofChecker) TestACCEPTVoteproofProposalNotFound() {
 	avp, err := t.NewVoteproof(base.StageACCEPT, ab.Fact(), t.local, t.remote)
 	t.NoError(err)
 
-	vc := NewVoteproofChecker(t.local.Storage(), t.suf, t.local.Nodes(), nil, avp)
+	vc := NewVoteproofChecker(t.local.Database(), t.suf, t.local.Nodes(), nil, avp)
 
 	keep, err := vc.CheckACCEPTVoteproofProposal()
 	t.False(keep)
@@ -58,13 +58,13 @@ func (t *testVoteproofChecker) TestACCEPTVoteproofProposalFoundInLocal() {
 	t.NoError(err)
 
 	pr := t.NewProposal(t.remote, initFact.Round(), nil, ivp)
-	t.NoError(t.local.Storage().NewProposal(pr))
+	t.NoError(t.local.Database().NewProposal(pr))
 
 	ab := t.NewACCEPTBallot(t.local, ivp.Round(), pr.Hash(), valuehash.RandomSHA256(), ivp)
 	avp, err := t.NewVoteproof(base.StageACCEPT, ab.Fact(), t.local, t.remote)
 	t.NoError(err)
 
-	vc := NewVoteproofChecker(t.local.Storage(), t.suf, t.local.Nodes(), nil, avp)
+	vc := NewVoteproofChecker(t.local.Database(), t.suf, t.local.Nodes(), nil, avp)
 
 	keep, err := vc.CheckACCEPTVoteproofProposal()
 	t.True(keep)
@@ -76,7 +76,7 @@ func (t *testVoteproofChecker) TestACCEPTVoteproofProposalFoundInRemote() {
 	nch.SetGetSealHandler(func(hs []valuehash.Hash) ([]seal.Seal, error) {
 		var seals []seal.Seal
 		for _, h := range hs {
-			sl, found, err := t.remote.Storage().Seal(h)
+			sl, found, err := t.remote.Database().Seal(h)
 			if !found {
 				break
 			} else if err != nil {
@@ -96,19 +96,19 @@ func (t *testVoteproofChecker) TestACCEPTVoteproofProposalFoundInRemote() {
 	t.NoError(err)
 
 	pr := t.NewProposal(t.remote, initFact.Round(), nil, ivp)
-	t.NoError(t.remote.Storage().NewProposal(pr))
+	t.NoError(t.remote.Database().NewProposal(pr))
 
 	ab := t.NewACCEPTBallot(t.local, ivp.Round(), pr.Hash(), valuehash.RandomSHA256(), ivp)
 	avp, err := t.NewVoteproof(base.StageACCEPT, ab.Fact(), t.local, t.remote)
 	t.NoError(err)
 
-	vc := NewVoteproofChecker(t.local.Storage(), t.suf, t.local.Nodes(), nil, avp)
+	vc := NewVoteproofChecker(t.local.Database(), t.suf, t.local.Nodes(), nil, avp)
 
 	keep, err := vc.CheckACCEPTVoteproofProposal()
 	t.True(keep)
 	t.NoError(err)
 
-	npr, found, err := t.local.Storage().Proposal(pr.Height(), pr.Round(), pr.Node())
+	npr, found, err := t.local.Database().Proposal(pr.Height(), pr.Round(), pr.Node())
 	t.True(found)
 	t.NoError(err)
 	t.NoError(npr.IsValid(t.local.Policy().NetworkID()))

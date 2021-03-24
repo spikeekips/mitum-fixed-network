@@ -23,7 +23,7 @@ type DefaultProcessor struct {
 	sync.RWMutex
 	*logging.Logging
 	stateLock        sync.RWMutex
-	st               storage.Storage
+	st               storage.Database
 	blockData        blockdata.BlockData
 	nodepool         *network.Nodepool
 	baseManifest     block.Manifest
@@ -38,7 +38,7 @@ type DefaultProcessor struct {
 	states           []state.State
 	operationsTree   tree.FixedTree
 	statesTree       tree.FixedTree
-	ss               storage.StorageSession
+	ss               storage.DatabaseSession
 	blockDataSession blockdata.Session
 	prePrepareHook   func(context.Context) error
 	postPrepareHook  func(context.Context) error
@@ -47,7 +47,7 @@ type DefaultProcessor struct {
 }
 
 func NewDefaultProcessorNewFunc(
-	st storage.Storage,
+	st storage.Database,
 	blockData blockdata.BlockData,
 	nodepool *network.Nodepool,
 	suffrage base.Suffrage,
@@ -67,7 +67,7 @@ func NewDefaultProcessorNewFunc(
 }
 
 func NewDefaultProcessor(
-	st storage.Storage,
+	st storage.Database,
 	blockData blockdata.BlockData,
 	nodepool *network.Nodepool,
 	suffrage base.Suffrage,
@@ -157,7 +157,7 @@ func (pp *DefaultProcessor) SetACCEPTVoteproof(acceptVoteproof base.Voteproof) e
 	case pp.ss == nil:
 		return xerrors.Errorf("empty block session, not prepared")
 	case pp.blockDataSession == nil:
-		return xerrors.Errorf("empty block storage session, not prepared")
+		return xerrors.Errorf("empty block database session, not prepared")
 	}
 
 	if m := acceptVoteproof.Majority(); m == nil {

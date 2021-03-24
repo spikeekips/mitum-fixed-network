@@ -22,7 +22,7 @@ var (
 	ContextValueLog                     util.ContextKey = "log"
 	ContextValueNetwork                 util.ContextKey = "network"
 	ContextValueBlockData               util.ContextKey = "blockdata"
-	ContextValueStorage                 util.ContextKey = "storage"
+	ContextValueDatabase                util.ContextKey = "database"
 	ContextValueLocalNode               util.ContextKey = "local_node"
 	ContextValueNodepool                util.ContextKey = "nodepool"
 	ContextValueSuffrage                util.ContextKey = "suffrage"
@@ -54,8 +54,8 @@ func LoadBlockDataContextValue(ctx context.Context, l *blockdata.BlockData) erro
 	return util.LoadFromContextValue(ctx, ContextValueBlockData, l)
 }
 
-func LoadStorageContextValue(ctx context.Context, l *storage.Storage) error {
-	return util.LoadFromContextValue(ctx, ContextValueStorage, l)
+func LoadDatabaseContextValue(ctx context.Context, l *storage.Database) error {
+	return util.LoadFromContextValue(ctx, ContextValueDatabase, l)
 }
 
 func LoadLocalNodeContextValue(ctx context.Context, l **network.LocalNode) error {

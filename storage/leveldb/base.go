@@ -43,17 +43,17 @@ var (
 	keyPrefixInfo                       []byte = []byte{0x00, 0x18}
 )
 
-type Storage struct {
+type Database struct {
 	*logging.Logging
 	db   *leveldb.DB
 	encs *encoder.Encoders
 	enc  encoder.Encoder
 }
 
-func NewStorage(db *leveldb.DB, encs *encoder.Encoders, enc encoder.Encoder) *Storage {
-	return &Storage{
+func NewDatabase(db *leveldb.DB, encs *encoder.Encoders, enc encoder.Encoder) *Database {
+	return &Database{
 		Logging: logging.NewLogging(func(c logging.Context) logging.Emitter {
-			return c.Str("module", "leveldb-storage")
+			return c.Str("module", "leveldb-database")
 		}),
 		db:   db,
 		encs: encs,
@@ -61,28 +61,28 @@ func NewStorage(db *leveldb.DB, encs *encoder.Encoders, enc encoder.Encoder) *St
 	}
 }
 
-func NewMemStorage(encs *encoder.Encoders, enc encoder.Encoder) *Storage {
+func NewMemDatabase(encs *encoder.Encoders, enc encoder.Encoder) *Database {
 	db, _ := leveldb.Open(leveldbStorage.NewMemStorage(), nil)
-	return NewStorage(db, encs, enc)
+	return NewDatabase(db, encs, enc)
 }
 
-func (st *Storage) Initialize() error {
+func (st *Database) Initialize() error {
 	return nil
 }
 
-func (st *Storage) NewSyncerSession() (storage.SyncerSession, error) {
+func (st *Database) NewSyncerSession() (storage.SyncerSession, error) {
 	return NewSyncerSession(st), nil
 }
 
-func (st *Storage) DB() *leveldb.DB {
+func (st *Database) DB() *leveldb.DB {
 	return st.db
 }
 
-func (st *Storage) Close() error {
+func (st *Database) Close() error {
 	return st.db.Close()
 }
 
-func (st *Storage) Clean() error {
+func (st *Database) Clean() error {
 	batch := &leveldb.Batch{}
 
 	if err := st.iter(
@@ -100,7 +100,7 @@ func (st *Storage) Clean() error {
 	return wrapError(st.db.Write(batch, nil))
 }
 
-func (st *Storage) CleanByHeight(height base.Height) error {
+func (st *Database) CleanByHeight(height base.Height) error {
 	if height <= base.PreGenesisHeight {
 		return st.Clean()
 	}
@@ -131,10 +131,10 @@ end:
 	return wrapError(st.db.Write(batch, nil))
 }
 
-func (st *Storage) Copy(source storage.Storage) error {
-	var sst *Storage
-	if s, ok := source.(*Storage); !ok {
-		return xerrors.Errorf("only leveldbstorage.Storage can be allowed: %T", source)
+func (st *Database) Copy(source storage.Database) error {
+	var sst *Database
+	if s, ok := source.(*Database); !ok {
+		return xerrors.Errorf("only leveldbstorage.Database can be allowed: %T", source)
 	} else {
 		sst = s
 	}
@@ -169,15 +169,15 @@ func (st *Storage) Copy(source storage.Storage) error {
 	return wrapError(st.db.Write(batch, nil))
 }
 
-func (st *Storage) Encoder() encoder.Encoder {
+func (st *Database) Encoder() encoder.Encoder {
 	return st.enc
 }
 
-func (st *Storage) Encoders() *encoder.Encoders {
+func (st *Database) Encoders() *encoder.Encoders {
 	return st.encs
 }
 
-func (st *Storage) LastManifest() (block.Manifest, bool, error) {
+func (st *Database) LastManifest() (block.Manifest, bool, error) {
 	var raw []byte
 
 	if err := st.iter(
@@ -203,7 +203,7 @@ func (st *Storage) LastManifest() (block.Manifest, bool, error) {
 	return st.Manifest(h)
 }
 
-func (st *Storage) lastBlock() (block.Block, bool, error) {
+func (st *Database) lastBlock() (block.Block, bool, error) {
 	var raw []byte
 
 	if err := st.iter(
@@ -229,13 +229,13 @@ func (st *Storage) lastBlock() (block.Block, bool, error) {
 	return st.block(h)
 }
 
-func (st *Storage) get(key []byte) ([]byte, error) {
+func (st *Database) get(key []byte) ([]byte, error) {
 	b, err := st.db.Get(key, nil)
 
 	return b, wrapError(err)
 }
 
-func (st *Storage) block(h valuehash.Hash) (block.Block, bool, error) {
+func (st *Database) block(h valuehash.Hash) (block.Block, bool, error) {
 	if raw, err := st.get(leveldbBlockHashKey(h)); err != nil {
 		if xerrors.Is(err, storage.NotFoundError) {
 			return nil, false, nil
@@ -249,7 +249,7 @@ func (st *Storage) block(h valuehash.Hash) (block.Block, bool, error) {
 	}
 }
 
-func (st *Storage) blockByHeight(height base.Height) (block.Block, bool, error) {
+func (st *Database) blockByHeight(height base.Height) (block.Block, bool, error) {
 	if raw, err := st.get(leveldbBlockHeightKey(height)); err != nil {
 		if xerrors.Is(err, storage.NotFoundError) {
 			return nil, false, nil
@@ -263,7 +263,7 @@ func (st *Storage) blockByHeight(height base.Height) (block.Block, bool, error) 
 	}
 }
 
-func (st *Storage) Manifest(h valuehash.Hash) (block.Manifest, bool, error) {
+func (st *Database) Manifest(h valuehash.Hash) (block.Manifest, bool, error) {
 	if raw, err := st.get(leveldbManifestKey(h)); err != nil {
 		if xerrors.Is(err, storage.NotFoundError) {
 			return nil, false, nil
@@ -277,7 +277,7 @@ func (st *Storage) Manifest(h valuehash.Hash) (block.Manifest, bool, error) {
 	}
 }
 
-func (st *Storage) ManifestByHeight(height base.Height) (block.Manifest, bool, error) {
+func (st *Database) ManifestByHeight(height base.Height) (block.Manifest, bool, error) {
 	if raw, err := st.get(leveldbBlockHeightKey(height)); err != nil {
 		if xerrors.Is(err, storage.NotFoundError) {
 			return nil, false, nil
@@ -291,15 +291,15 @@ func (st *Storage) ManifestByHeight(height base.Height) (block.Manifest, bool, e
 	}
 }
 
-func (st *Storage) sealKey(h valuehash.Hash) []byte {
+func (st *Database) sealKey(h valuehash.Hash) []byte {
 	return util.ConcatBytesSlice(keyPrefixSeal, h.Bytes())
 }
 
-func (st *Storage) sealHashKey(h valuehash.Hash) []byte {
+func (st *Database) sealHashKey(h valuehash.Hash) []byte {
 	return util.ConcatBytesSlice(keyPrefixSealHash, h.Bytes())
 }
 
-func (st *Storage) newStagedOperationSealKey(h valuehash.Hash) []byte {
+func (st *Database) newStagedOperationSealKey(h valuehash.Hash) []byte {
 	return util.ConcatBytesSlice(
 		keyPrefixStagedOperationSeal,
 		util.ULIDBytes(),
@@ -308,15 +308,15 @@ func (st *Storage) newStagedOperationSealKey(h valuehash.Hash) []byte {
 	)
 }
 
-func (st *Storage) newStagedOperationSealReverseKey(h valuehash.Hash) []byte {
+func (st *Database) newStagedOperationSealReverseKey(h valuehash.Hash) []byte {
 	return util.ConcatBytesSlice(keyPrefixStagedOperationSealReverse, h.Bytes())
 }
 
-func (st *Storage) Seal(h valuehash.Hash) (seal.Seal, bool, error) {
+func (st *Database) Seal(h valuehash.Hash) (seal.Seal, bool, error) {
 	return st.sealByKey(st.sealKey(h))
 }
 
-func (st *Storage) sealByKey(key []byte) (seal.Seal, bool, error) {
+func (st *Database) sealByKey(key []byte) (seal.Seal, bool, error) {
 	b, err := st.get(key)
 	if err != nil {
 		if xerrors.Is(err, storage.NotFoundError) {
@@ -333,7 +333,7 @@ func (st *Storage) sealByKey(key []byte) (seal.Seal, bool, error) {
 	}
 }
 
-func (st *Storage) NewSeals(seals []seal.Seal) error {
+func (st *Database) NewSeals(seals []seal.Seal) error {
 	batch := &leveldb.Batch{}
 
 	inserted := map[string]struct{}{}
@@ -351,7 +351,7 @@ func (st *Storage) NewSeals(seals []seal.Seal) error {
 	return wrapError(st.db.Write(batch, nil))
 }
 
-func (st *Storage) newSeal(batch *leveldb.Batch, sl seal.Seal) error {
+func (st *Database) newSeal(batch *leveldb.Batch, sl seal.Seal) error {
 	raw, err := st.enc.Marshal(sl)
 	if err != nil {
 		return err
@@ -382,13 +382,13 @@ func (st *Storage) newSeal(batch *leveldb.Batch, sl seal.Seal) error {
 	return nil
 }
 
-func (st *Storage) HasSeal(h valuehash.Hash) (bool, error) {
+func (st *Database) HasSeal(h valuehash.Hash) (bool, error) {
 	found, err := st.db.Has(st.sealKey(h), nil)
 
 	return found, wrapError(err)
 }
 
-func (st *Storage) loadHinter(b []byte) (hint.Hinter, error) {
+func (st *Database) loadHinter(b []byte) (hint.Hinter, error) {
 	if b == nil {
 		return nil, nil
 	}
@@ -407,7 +407,7 @@ func (st *Storage) loadHinter(b []byte) (hint.Hinter, error) {
 	return enc.DecodeByHint(raw)
 }
 
-func (st *Storage) loadValue(b []byte, i interface{}) error {
+func (st *Database) loadValue(b []byte, i interface{}) error {
 	if b == nil {
 		return nil
 	}
@@ -426,7 +426,7 @@ func (st *Storage) loadValue(b []byte, i interface{}) error {
 	return enc.Unmarshal(raw, i)
 }
 
-func (st *Storage) loadBlock(b []byte) (block.Block, error) {
+func (st *Database) loadBlock(b []byte) (block.Block, error) {
 	if hinter, err := st.loadHinter(b); err != nil {
 		return nil, err
 	} else if hinter == nil {
@@ -438,7 +438,7 @@ func (st *Storage) loadBlock(b []byte) (block.Block, error) {
 	}
 }
 
-func (st *Storage) loadManifest(b []byte) (block.Manifest, error) {
+func (st *Database) loadManifest(b []byte) (block.Manifest, error) {
 	if hinter, err := st.loadHinter(b); err != nil {
 		return nil, err
 	} else if hinter == nil {
@@ -450,7 +450,7 @@ func (st *Storage) loadManifest(b []byte) (block.Manifest, error) {
 	}
 }
 
-func (st *Storage) loadSeal(b []byte) (seal.Seal, error) {
+func (st *Database) loadSeal(b []byte) (seal.Seal, error) {
 	if hinter, err := st.loadHinter(b); err != nil {
 		return nil, err
 	} else if hinter == nil {
@@ -462,7 +462,7 @@ func (st *Storage) loadSeal(b []byte) (seal.Seal, error) {
 	}
 }
 
-func (st *Storage) loadHash(b []byte) (valuehash.Hash, error) {
+func (st *Database) loadHash(b []byte) (valuehash.Hash, error) {
 	var h valuehash.Bytes
 	if err := st.loadValue(b, &h); err != nil {
 		return nil, err
@@ -473,7 +473,7 @@ func (st *Storage) loadHash(b []byte) (valuehash.Hash, error) {
 	return h, nil
 }
 
-func (st *Storage) loadState(b []byte) (state.State, error) {
+func (st *Database) loadState(b []byte) (state.State, error) {
 	if hinter, err := st.loadHinter(b); err != nil {
 		return nil, err
 	} else if hinter == nil {
@@ -485,7 +485,7 @@ func (st *Storage) loadState(b []byte) (state.State, error) {
 	}
 }
 
-func (st *Storage) loadBlockDataMap(b []byte) (block.BlockDataMap, error) {
+func (st *Database) loadBlockDataMap(b []byte) (block.BlockDataMap, error) {
 	if hinter, err := st.loadHinter(b); err != nil {
 		return nil, err
 	} else if hinter == nil {
@@ -497,7 +497,7 @@ func (st *Storage) loadBlockDataMap(b []byte) (block.BlockDataMap, error) {
 	}
 }
 
-func (st *Storage) iter(
+func (st *Database) iter(
 	prefix []byte,
 	callback func([]byte /* key */, []byte /* value */) (bool, error),
 	sort bool,
@@ -533,7 +533,7 @@ func (st *Storage) iter(
 	return wrapError(iter.Error())
 }
 
-func (st *Storage) Seals(callback func(valuehash.Hash, seal.Seal) (bool, error), sort, load bool) error {
+func (st *Database) Seals(callback func(valuehash.Hash, seal.Seal) (bool, error), sort, load bool) error {
 	var prefix []byte
 	var iterFunc func([]byte, []byte) (bool, error)
 
@@ -562,7 +562,7 @@ func (st *Storage) Seals(callback func(valuehash.Hash, seal.Seal) (bool, error),
 	return st.iter(prefix, iterFunc, sort)
 }
 
-func (st *Storage) SealsByHash(
+func (st *Database) SealsByHash(
 	hashes []valuehash.Hash,
 	callback func(valuehash.Hash, seal.Seal) (bool, error),
 	_ bool,
@@ -582,7 +582,7 @@ func (st *Storage) SealsByHash(
 	return nil
 }
 
-func (st *Storage) StagedOperationSeals(callback func(operation.Seal) (bool, error), sort bool) error {
+func (st *Database) StagedOperationSeals(callback func(operation.Seal) (bool, error), sort bool) error {
 	return st.iter(
 		keyPrefixStagedOperationSeal,
 		func(_, value []byte) (bool, error) {
@@ -600,7 +600,7 @@ func (st *Storage) StagedOperationSeals(callback func(operation.Seal) (bool, err
 	)
 }
 
-func (st *Storage) UnstagedOperationSeals(seals []valuehash.Hash) error {
+func (st *Database) UnstagedOperationSeals(seals []valuehash.Hash) error {
 	batch := &leveldb.Batch{}
 
 	if err := leveldbUnstageOperationSeals(st, batch, seals); err != nil {
@@ -610,7 +610,7 @@ func (st *Storage) UnstagedOperationSeals(seals []valuehash.Hash) error {
 	return wrapError(st.db.Write(batch, nil))
 }
 
-func (st *Storage) Proposals(callback func(ballot.Proposal) (bool, error), sort bool) error {
+func (st *Database) Proposals(callback func(ballot.Proposal) (bool, error), sort bool) error {
 	return st.iter(
 		keyPrefixProposal,
 		func(_, value []byte) (bool, error) {
@@ -626,11 +626,11 @@ func (st *Storage) Proposals(callback func(ballot.Proposal) (bool, error), sort 
 	)
 }
 
-func (st *Storage) proposalKey(height base.Height, round base.Round, proposer base.Address) []byte {
+func (st *Database) proposalKey(height base.Height, round base.Round, proposer base.Address) []byte {
 	return util.ConcatBytesSlice(keyPrefixProposal, height.Bytes(), round.Bytes(), proposer.Bytes())
 }
 
-func (st *Storage) NewProposal(proposal ballot.Proposal) error {
+func (st *Database) NewProposal(proposal ballot.Proposal) error {
 	sealKey := st.sealKey(proposal.Hash())
 	if found, err := st.db.Has(sealKey, nil); err != nil {
 		return wrapError(err)
@@ -647,7 +647,7 @@ func (st *Storage) NewProposal(proposal ballot.Proposal) error {
 	return nil
 }
 
-func (st *Storage) Proposal(height base.Height, round base.Round, proposer base.Address) (ballot.Proposal, bool, error) {
+func (st *Database) Proposal(height base.Height, round base.Round, proposer base.Address) (ballot.Proposal, bool, error) {
 	sealKey, err := st.get(st.proposalKey(height, round, proposer))
 	if err != nil {
 		if xerrors.Is(err, storage.NotFoundError) {
@@ -664,7 +664,7 @@ func (st *Storage) Proposal(height base.Height, round base.Round, proposer base.
 	}
 }
 
-func (st *Storage) State(key string) (state.State, bool, error) {
+func (st *Database) State(key string) (state.State, bool, error) {
 	b, err := st.get(leveldbStateKey(key))
 	if err != nil {
 		if xerrors.Is(err, storage.NotFoundError) {
@@ -679,7 +679,7 @@ func (st *Storage) State(key string) (state.State, bool, error) {
 	return stt, st != nil, err
 }
 
-func (st *Storage) NewState(sta state.State) error {
+func (st *Database) NewState(sta state.State) error {
 	if b, err := marshal(st.enc, sta); err != nil {
 		return err
 	} else if err := st.db.Put(leveldbStateKey(sta.Key()), b, nil); err != nil {
@@ -689,17 +689,17 @@ func (st *Storage) NewState(sta state.State) error {
 	return nil
 }
 
-func (st *Storage) HasOperationFact(h valuehash.Hash) (bool, error) {
+func (st *Database) HasOperationFact(h valuehash.Hash) (bool, error) {
 	found, err := st.db.Has(leveldbOperationFactHashKey(h), nil)
 
 	return found, wrapError(err)
 }
 
-func (st *Storage) NewStorageSession(blk block.Block) (storage.StorageSession, error) {
-	return NewStorageSession(st, blk)
+func (st *Database) NewSession(blk block.Block) (storage.DatabaseSession, error) {
+	return NewSession(st, blk)
 }
 
-func (st *Storage) SetInfo(key string, b []byte) error {
+func (st *Database) SetInfo(key string, b []byte) error {
 	if err := st.db.Put(leveldbInfoKey(key), b, nil); err != nil {
 		return wrapError(err)
 	}
@@ -707,7 +707,7 @@ func (st *Storage) SetInfo(key string, b []byte) error {
 	return nil
 }
 
-func (st *Storage) Info(key string) ([]byte, bool, error) {
+func (st *Database) Info(key string) ([]byte, bool, error) {
 	if b, err := st.get(leveldbInfoKey(key)); err != nil {
 		if xerrors.Is(err, storage.NotFoundError) {
 			return nil, false, nil
@@ -719,7 +719,7 @@ func (st *Storage) Info(key string) ([]byte, bool, error) {
 	}
 }
 
-func (st *Storage) LastVoteproof(stage base.Stage) base.Voteproof {
+func (st *Database) LastVoteproof(stage base.Stage) base.Voteproof {
 	var prefix []byte
 	switch stage {
 	case base.StageINIT:
@@ -755,7 +755,7 @@ func (st *Storage) LastVoteproof(stage base.Stage) base.Voteproof {
 	}
 }
 
-func (st *Storage) Voteproof(height base.Height, stage base.Stage) (base.Voteproof, error) {
+func (st *Database) Voteproof(height base.Height, stage base.Stage) (base.Voteproof, error) {
 	var raw []byte
 	if b, err := st.get(leveldbVoteproofKey(height, stage)); err != nil {
 		return nil, err
@@ -776,7 +776,7 @@ func (st *Storage) Voteproof(height base.Height, stage base.Stage) (base.Votepro
 	}
 }
 
-func (st *Storage) BlockDataMap(height base.Height) (block.BlockDataMap, bool, error) {
+func (st *Database) BlockDataMap(height base.Height) (block.BlockDataMap, bool, error) {
 	if raw, err := st.get(leveldbBlockDataMapKey(height)); err != nil {
 		if xerrors.Is(err, storage.NotFoundError) {
 			return nil, false, nil
@@ -790,7 +790,7 @@ func (st *Storage) BlockDataMap(height base.Height) (block.BlockDataMap, bool, e
 	}
 }
 
-func (st *Storage) LocalBlockDataMapsByHeight(height base.Height, callback func(block.BlockDataMap) (bool, error)) error {
+func (st *Database) LocalBlockDataMapsByHeight(height base.Height, callback func(block.BlockDataMap) (bool, error)) error {
 	return st.iter(
 		keyPrefixBlockDataMap,
 		func(_, value []byte) (bool, error) {
@@ -886,7 +886,7 @@ func leveldbBlockDataMapKey(height base.Height) []byte {
 	return util.ConcatBytesSlice(keyPrefixBlockDataMap, height.Bytes())
 }
 
-func leveldbUnstageOperationSeals(st *Storage, batch *leveldb.Batch, seals []valuehash.Hash) error {
+func leveldbUnstageOperationSeals(st *Database, batch *leveldb.Batch, seals []valuehash.Hash) error {
 	if len(seals) < 1 {
 		return nil
 	}

@@ -14,17 +14,17 @@ import (
 type ProposalMaker struct {
 	sync.Mutex
 	local    *network.LocalNode
-	storage  storage.Storage
+	database storage.Database
 	policy   *LocalPolicy
 	proposed ballot.Proposal
 }
 
 func NewProposalMaker(
 	local *network.LocalNode,
-	st storage.Storage,
+	st storage.Database,
 	policy *LocalPolicy,
 ) *ProposalMaker {
-	return &ProposalMaker{local: local, storage: st, policy: policy}
+	return &ProposalMaker{local: local, database: st, policy: policy}
 }
 
 func (pm *ProposalMaker) seals() ([]valuehash.Hash, error) {
@@ -34,14 +34,14 @@ func (pm *ProposalMaker) seals() ([]valuehash.Hash, error) {
 
 	var facts int
 	var seals, uselessSeals []valuehash.Hash
-	if err := pm.storage.StagedOperationSeals(
+	if err := pm.database.StagedOperationSeals(
 		func(sl operation.Seal) (bool, error) {
 			var ofs []valuehash.Hash
 			for _, op := range sl.Operations() {
 				fh := op.Fact().Hash()
 				if _, found := founds[fh.String()]; found {
 					continue
-				} else if found, err := pm.storage.HasOperationFact(fh); err != nil {
+				} else if found, err := pm.database.HasOperationFact(fh); err != nil {
 					return false, err
 				} else if found {
 					continue
@@ -73,7 +73,7 @@ func (pm *ProposalMaker) seals() ([]valuehash.Hash, error) {
 	}
 
 	if len(uselessSeals) > 0 {
-		if err := pm.storage.UnstagedOperationSeals(uselessSeals); err != nil {
+		if err := pm.database.UnstagedOperationSeals(uselessSeals); err != nil {
 			return nil, err
 		}
 	}

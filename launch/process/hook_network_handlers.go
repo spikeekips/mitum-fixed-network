@@ -40,7 +40,7 @@ type SettingNetworkHandlers struct {
 	version   util.Version
 	ctx       context.Context
 	conf      config.LocalNode
-	storage   storage.Storage
+	database  storage.Database
 	blockData blockdata.BlockData
 	policy    *isaac.LocalPolicy
 	nodepool  *network.Nodepool
@@ -72,8 +72,8 @@ func SettingNetworkHandlersFromContext(ctx context.Context) (*SettingNetworkHand
 		return nil, err
 	}
 
-	var st storage.Storage
-	if err := LoadStorageContextValue(ctx, &st); err != nil {
+	var st storage.Database
+	if err := LoadDatabaseContextValue(ctx, &st); err != nil {
 		return nil, err
 	}
 
@@ -111,7 +111,7 @@ func SettingNetworkHandlersFromContext(ctx context.Context) (*SettingNetworkHand
 		ctx:       ctx,
 		version:   version,
 		conf:      conf,
-		storage:   st,
+		database:  st,
 		blockData: blockData,
 		policy:    policy,
 		nodepool:  nodepool,
@@ -145,7 +145,7 @@ func (sn *SettingNetworkHandlers) Set() error {
 
 func (sn *SettingNetworkHandlers) networkHandlerHasSeal() network.HasSealHandler {
 	return func(h valuehash.Hash) (bool, error) {
-		return sn.storage.HasSeal(h)
+		return sn.database.HasSeal(h)
 	}
 }
 
@@ -153,7 +153,7 @@ func (sn *SettingNetworkHandlers) networkHandlerGetSeals() network.GetSealsHandl
 	return func(hs []valuehash.Hash) ([]seal.Seal, error) {
 		var sls []seal.Seal
 
-		if err := sn.storage.SealsByHash(hs, func(_ valuehash.Hash, sl seal.Seal) (bool, error) {
+		if err := sn.database.SealsByHash(hs, func(_ valuehash.Hash, sl seal.Seal) (bool, error) {
 			sls = append(sls, sl)
 
 			return true, nil
@@ -169,7 +169,7 @@ func (sn *SettingNetworkHandlers) networkhandlerNewSeal() network.NewSealHandler
 	return func(sl seal.Seal) error {
 		sealChecker := isaac.NewSealChecker(
 			sl,
-			sn.storage,
+			sn.database,
 			sn.policy,
 			sn.sealCache,
 		)
@@ -190,7 +190,7 @@ func (sn *SettingNetworkHandlers) networkhandlerNewSeal() network.NewSealHandler
 		if t, ok := sl.(ballot.Ballot); ok {
 			checker := isaac.NewBallotChecker(
 				t,
-				sn.storage,
+				sn.database,
 				sn.policy,
 				sn.suffrage,
 				sn.nodepool,
@@ -218,7 +218,7 @@ func (sn *SettingNetworkHandlers) networkhandlerNewSeal() network.NewSealHandler
 func (sn *SettingNetworkHandlers) networkHandlerNodeInfo() network.NodeInfoHandler {
 	return func() (network.NodeInfo, error) {
 		var manifest block.Manifest
-		if m, found, err := sn.storage.LastManifest(); err != nil {
+		if m, found, err := sn.database.LastManifest(); err != nil {
 			return nil, err
 		} else if found {
 			manifest = m
@@ -268,7 +268,7 @@ func (sn *SettingNetworkHandlers) networkHandlerBlockDataMaps() network.BlockDat
 
 		maps := make([]block.BlockDataMap, len(filtered))
 		for i := range filtered {
-			switch m, found, err := sn.storage.BlockDataMap(filtered[i]); {
+			switch m, found, err := sn.database.BlockDataMap(filtered[i]); {
 			case !found:
 				continue
 			case err != nil:

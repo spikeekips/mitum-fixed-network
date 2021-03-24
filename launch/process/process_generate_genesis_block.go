@@ -26,7 +26,7 @@ var ProcessorGenerateGenesisBlock pm.Process
 func init() {
 	if i, err := pm.NewProcess(
 		ProcessNameGenerateGenesisBlock,
-		[]string{ProcessNameLocalNode, ProcessNameStorage, ProcessNameBlockData},
+		[]string{ProcessNameLocalNode, ProcessNameDatabase, ProcessNameBlockData},
 		ProcessGenerateGenesisBlock,
 	); err != nil {
 		panic(err)
@@ -46,8 +46,8 @@ func ProcessGenerateGenesisBlock(ctx context.Context) (context.Context, error) {
 		return ctx, err
 	}
 
-	var st storage.Storage
-	if err := LoadStorageContextValue(ctx, &st); err != nil {
+	var st storage.Database
+	if err := LoadDatabaseContextValue(ctx, &st); err != nil {
 		return nil, err
 	}
 
@@ -95,8 +95,8 @@ func HookCheckGenesisBlock(ctx context.Context) (context.Context, error) {
 		return ctx, err
 	}
 
-	var st storage.Storage
-	if err := LoadStorageContextValue(ctx, &st); err != nil {
+	var st storage.Database
+	if err := LoadDatabaseContextValue(ctx, &st); err != nil {
 		return ctx, err
 	}
 

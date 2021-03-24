@@ -16,32 +16,32 @@ import (
 )
 
 const (
-	ProcessNameStorage   = "storage"
+	ProcessNameDatabase  = "database"
 	ProcessNameBlockData = "blockdata"
 )
 
 var (
 	ProcessorBlockData pm.Process
-	ProcessorStorage   pm.Process
+	ProcessorDatabase  pm.Process
 )
 
 func init() {
 	if i, err := pm.NewProcess(
-		ProcessNameStorage,
+		ProcessNameDatabase,
 		[]string{
 			ProcessNameConfig,
 		},
-		ProcessMongodbStorage,
+		ProcessMongodbDatabase,
 	); err != nil {
 		panic(err)
 	} else {
-		ProcessorStorage = i
+		ProcessorDatabase = i
 	}
 
 	if i, err := pm.NewProcess(
 		ProcessNameBlockData,
 		[]string{
-			ProcessNameStorage,
+			ProcessNameDatabase,
 		},
 		ProcessBlockData,
 	); err != nil {
@@ -80,13 +80,13 @@ func ProcessBlockData(ctx context.Context) (context.Context, error) {
 	return context.WithValue(ctx, ContextValueBlockData, blockData), nil
 }
 
-func ProcessMongodbStorage(ctx context.Context) (context.Context, error) {
+func ProcessMongodbDatabase(ctx context.Context) (context.Context, error) {
 	var l config.LocalNode
-	var conf config.MainStorage
+	var conf config.Database
 	if err := config.LoadConfigContextValue(ctx, &l); err != nil {
 		return ctx, err
 	} else {
-		conf = l.Storage().Main()
+		conf = l.Storage().Database()
 	}
 
 	if !strings.EqualFold(conf.URI().Scheme, "mongodb") {
@@ -105,11 +105,11 @@ func ProcessMongodbStorage(ctx context.Context) (context.Context, error) {
 		return ctx, err
 	}
 
-	if st, err := mongodbstorage.NewStorageFromURI(conf.URI().String(), encs, ca); err != nil {
+	if st, err := mongodbstorage.NewDatabaseFromURI(conf.URI().String(), encs, ca); err != nil {
 		return ctx, err
 	} else if err := st.Initialize(); err != nil {
 		return ctx, err
 	} else {
-		return context.WithValue(ctx, ContextValueStorage, st), nil
+		return context.WithValue(ctx, ContextValueDatabase, st), nil
 	}
 }

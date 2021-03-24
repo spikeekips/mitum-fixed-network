@@ -22,7 +22,7 @@ import (
 type GenesisBlockV0Generator struct {
 	*logging.Logging
 	local     *network.LocalNode
-	storage   storage.Storage
+	database  storage.Database
 	blockData blockdata.BlockData
 	policy    *LocalPolicy
 	nodepool  *network.Nodepool
@@ -33,7 +33,7 @@ type GenesisBlockV0Generator struct {
 
 func NewGenesisBlockV0Generator(
 	local *network.LocalNode,
-	st storage.Storage,
+	st storage.Database,
 	blockData blockdata.BlockData,
 	policy *LocalPolicy,
 	ops []operation.Operation,
@@ -52,7 +52,7 @@ func NewGenesisBlockV0Generator(
 			return c.Str("module", "genesis-block-generator")
 		}),
 		local:     local,
-		storage:   st,
+		database:  st,
 		blockData: blockData,
 		policy:    policy,
 		nodepool:  nodepool,
@@ -97,7 +97,7 @@ func (gg *GenesisBlockV0Generator) Generate() (block.Block, error) {
 
 	pps := prprocessor.NewProcessors(
 		NewDefaultProcessorNewFunc(
-			gg.storage,
+			gg.database,
 			gg.blockData,
 			gg.nodepool,
 			gg.suffrage,
@@ -140,7 +140,7 @@ func (gg *GenesisBlockV0Generator) generateOperationSeal() ([]operation.Seal, er
 		gg.policy.NetworkID(),
 	); err != nil {
 		return nil, err
-	} else if err := gg.storage.NewSeals([]seal.Seal{sl}); err != nil {
+	} else if err := gg.database.NewSeals([]seal.Seal{sl}); err != nil {
 		return nil, err
 	} else {
 		seals = append(seals, sl)
@@ -176,8 +176,8 @@ func (gg *GenesisBlockV0Generator) generatePreviousBlock() error {
 		return err
 	}
 
-	var bs storage.StorageSession
-	if st, err := gg.storage.NewStorageSession(blk); err != nil {
+	var bs storage.DatabaseSession
+	if st, err := gg.database.NewSession(blk); err != nil {
 		return err
 	} else {
 		bs = st
@@ -221,7 +221,7 @@ func (gg *GenesisBlockV0Generator) generateProposal(
 	)
 	if err := pr.Sign(gg.local.Privatekey(), gg.policy.NetworkID()); err != nil {
 		return nil, err
-	} else if err := gg.storage.NewProposal(pr); err != nil {
+	} else if err := gg.database.NewProposal(pr); err != nil {
 		return nil, err
 	} else {
 		proposal = pr
@@ -232,7 +232,7 @@ func (gg *GenesisBlockV0Generator) generateProposal(
 
 func (gg *GenesisBlockV0Generator) generateINITVoteproof() (base.Voteproof, error) {
 	var ib ballot.INITBallotV0
-	if b, err := NewINITBallotV0Round0(gg.local, gg.storage); err != nil {
+	if b, err := NewINITBallotV0Round0(gg.local, gg.database); err != nil {
 		return nil, err
 	} else if err := b.Sign(gg.local.Privatekey(), gg.policy.NetworkID()); err != nil {
 		return nil, err

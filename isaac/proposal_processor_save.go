@@ -75,21 +75,21 @@ func (pp *DefaultProcessor) save(ctx context.Context) error {
 }
 
 func (pp *DefaultProcessor) storeBlockDataSession(ctx context.Context) (context.Context, error) {
-	pp.Log().Debug().Msg("trying to store block storage session")
+	pp.Log().Debug().Msg("trying to store block database session")
 
 	if pp.blockDataSession == nil {
 		return ctx, xerrors.Errorf("not prepared")
 	}
 
 	if bd, err := pp.blockData.SaveSession(pp.blockDataSession); err != nil {
-		pp.Log().Error().Err(err).Msg("trying to store block storage session")
+		pp.Log().Error().Err(err).Msg("trying to store block database session")
 
 		return ctx, err
 	} else {
 		ctx = context.WithValue(ctx, blockDataMapContextKey, bd)
 	}
 
-	pp.Log().Debug().Msg("stored block storage session")
+	pp.Log().Debug().Msg("stored block database session")
 
 	return ctx, nil
 }
@@ -103,7 +103,7 @@ func (pp *DefaultProcessor) storeStorage(ctx context.Context) (context.Context, 
 	}
 
 	if err := pp.ss.Commit(ctx, bd); err != nil {
-		pp.Log().Error().Err(err).Msg("failed to store storage")
+		pp.Log().Error().Err(err).Msg("failed to store database")
 
 		return ctx, err
 	} else if err := pp.ss.Close(); err != nil {

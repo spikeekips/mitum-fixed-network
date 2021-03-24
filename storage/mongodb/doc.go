@@ -1,4 +1,4 @@
 /*
-Package mongodb provides storage.Storage of mongodb.
+Package mongodb provides storages of mongodb.
 */
 package mongodbstorage

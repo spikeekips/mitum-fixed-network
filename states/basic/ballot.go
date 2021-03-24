@@ -12,7 +12,7 @@ import (
 )
 
 func NextINITBallotFromACCEPTVoteproof(
-	st storage.Storage,
+	st storage.Database,
 	local *network.LocalNode,
 	voteproof base.Voteproof,
 ) (ballot.INITBallotV0, error) {
@@ -26,7 +26,7 @@ func NextINITBallotFromACCEPTVoteproof(
 	var round base.Round
 	var previousBlock valuehash.Hash
 
-	// NOTE if voteproof drew, previous block should be get from local storage,
+	// NOTE if voteproof drew, previous block should be get from local database,
 	// not from voteproof.
 	if voteproof.Majority() == nil {
 		height = voteproof.Height()
@@ -72,7 +72,7 @@ func NextINITBallotFromACCEPTVoteproof(
 }
 
 func NextINITBallotFromINITVoteproof(
-	st storage.Storage,
+	st storage.Database,
 	local *network.LocalNode,
 	voteproof base.Voteproof,
 ) (ballot.INITBallotV0, error) {

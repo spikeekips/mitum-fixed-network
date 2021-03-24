@@ -57,7 +57,7 @@ func (pp *DefaultProcessor) prepare(ctx context.Context) error {
 		pp.prepareOperations,
 		pp.process,
 		pp.prepareBlock,
-		pp.prepareStorageSession,
+		pp.prepareDatabaseSession,
 	} {
 		select {
 		case <-ctx.Done():
@@ -199,23 +199,23 @@ func (pp *DefaultProcessor) prepareBlock(context.Context) error {
 	return nil
 }
 
-func (pp *DefaultProcessor) prepareStorageSession(ctx context.Context) error {
-	var bs storage.StorageSession
-	if b, err := pp.st.NewStorageSession(pp.blk); err != nil {
+func (pp *DefaultProcessor) prepareDatabaseSession(ctx context.Context) error {
+	var bs storage.DatabaseSession
+	if b, err := pp.st.NewSession(pp.blk); err != nil {
 		return err
 	} else {
 		bs = b
 	}
 
 	if err := bs.SetBlock(ctx, pp.blk); err != nil {
-		pp.Log().Error().Err(err).Msg("failed to store to StorageSession")
+		pp.Log().Error().Err(err).Msg("failed to store to DatabaseSession")
 
 		return err
 	}
 
 	pp.ss = bs
 
-	pp.Log().Debug().Msg("stored to StorageSession")
+	pp.Log().Debug().Msg("stored to DatabaseSession")
 
 	return nil
 }
@@ -363,7 +363,7 @@ func (pp *DefaultProcessor) generateStatesTree(
 
 func (pp *DefaultProcessor) prepareBlockDataSession(context.Context) error {
 	if i, err := pp.blockData.NewSession(pp.proposal.Height()); err != nil {
-		pp.Log().Error().Err(err).Msg("failed to make new block storage session")
+		pp.Log().Error().Err(err).Msg("failed to make new block database session")
 
 		return err
 	} else {
@@ -384,7 +384,7 @@ func (pp *DefaultProcessor) prepareBlockDataSession(context.Context) error {
 		return err
 	}
 
-	pp.Log().Debug().Msg("block storage session prepared")
+	pp.Log().Debug().Msg("block database session prepared")
 
 	return nil
 }

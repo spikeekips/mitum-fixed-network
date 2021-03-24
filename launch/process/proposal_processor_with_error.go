@@ -21,7 +21,7 @@ import (
 )
 
 func NewErrorProcessorNewFunc(
-	st storage.Storage,
+	st storage.Database,
 	blockData blockdata.BlockData,
 	nodepool *network.Nodepool,
 	suffrage base.Suffrage,

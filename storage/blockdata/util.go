@@ -7,9 +7,9 @@ import (
 	"golang.org/x/xerrors"
 )
 
-// Clean makes Storage and BlockData to be empty. If 'remove' is true, remove
+// Clean makes Database and BlockData to be empty. If 'remove' is true, remove
 // the BlockData directory itself.
-func Clean(st storage.Storage, blockData BlockData, remove bool) error {
+func Clean(st storage.Database, blockData BlockData, remove bool) error {
 	if err := st.Clean(); err != nil {
 		return err
 	} else if err := blockData.Clean(remove); err != nil {
@@ -19,7 +19,7 @@ func Clean(st storage.Storage, blockData BlockData, remove bool) error {
 	}
 }
 
-func CleanByHeight(st storage.Storage, blockData BlockData, height base.Height) error {
+func CleanByHeight(st storage.Database, blockData BlockData, height base.Height) error {
 	if err := st.LocalBlockDataMapsByHeight(height, func(bd block.BlockDataMap) (bool, error) {
 		if err := blockData.RemoveAll(bd.Height()); err != nil {
 			if xerrors.Is(err, storage.NotFoundError) {

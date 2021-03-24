@@ -1,20 +1,26 @@
 package config
 
-type BaseBlockDataPackerYAML struct {
+type DatabasePackerYAML struct {
+	URI   string `yaml:",omitempty"`
+	Cache string `yaml:",omitempty"`
+}
+
+type BlockDataPackerYAML struct {
 	Path string
 }
 
 type BaseStoragePackerYAML struct {
-	URI       string                  `yaml:",omitempty"`
-	Cache     string                  `yaml:",omitempty"`
-	BlockData BaseBlockDataPackerYAML `yaml:"blockdata"`
+	Database  DatabasePackerYAML  `yaml:"database"`
+	BlockData BlockDataPackerYAML `yaml:"blockdata"`
 }
 
 func (no BaseStorage) MarshalYAML() (interface{}, error) {
 	return BaseStoragePackerYAML{
-		URI:   no.main.URI().String(),
-		Cache: no.main.Cache().String(),
-		BlockData: BaseBlockDataPackerYAML{
+		Database: DatabasePackerYAML{
+			URI:   no.database.URI().String(),
+			Cache: no.database.Cache().String(),
+		},
+		BlockData: BlockDataPackerYAML{
 			Path: no.blockData.Path(),
 		},
 	}, nil

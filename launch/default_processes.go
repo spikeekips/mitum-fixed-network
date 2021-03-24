@@ -8,7 +8,7 @@ import (
 var defaultProcesses = []pm.Process{
 	process.ProcessorTimeSyncer,
 	process.ProcessorEncoders,
-	process.ProcessorStorage,
+	process.ProcessorDatabase,
 	process.ProcessorBlockData,
 	process.ProcessorLocalNode,
 	process.ProcessorProposalProcessor,

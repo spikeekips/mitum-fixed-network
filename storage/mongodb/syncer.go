@@ -19,49 +19,49 @@ import (
 type SyncerSession struct {
 	sync.RWMutex
 	*logging.Logging
-	main            *Storage
-	manifestStorage *Storage
-	storageSession  *Storage
-	heightFrom      base.Height
-	heightTo        base.Height
+	main             *Database
+	manifestDatabase *Database
+	session          *Database
+	heightFrom       base.Height
+	heightTo         base.Height
 }
 
-func NewSyncerSession(main *Storage) (*SyncerSession, error) {
-	var manifestStorage, storageSession *Storage
+func NewSyncerSession(main *Database) (*SyncerSession, error) {
+	var manifestDatabase, session *Database
 
-	if s, err := newTempStorage(main, "manifest"); err != nil {
+	if s, err := newTempDatabase(main, "manifest"); err != nil {
 		return nil, err
 	} else if err := s.CreateIndex(ColNameManifest, manifestIndexModels, IndexPrefix); err != nil {
 		return nil, err
 	} else {
-		manifestStorage = s
+		manifestDatabase = s
 	}
-	if s, err := newTempStorage(main, "block"); err != nil {
+	if s, err := newTempDatabase(main, "block"); err != nil {
 		return nil, err
 	} else {
-		storageSession = s
+		session = s
 	}
 
 	return &SyncerSession{
 		Logging: logging.NewLogging(func(c logging.Context) logging.Emitter {
-			return c.Str("module", "mongodb-syncer-storage")
+			return c.Str("module", "mongodb-syncer-database")
 		}),
-		main:            main,
-		manifestStorage: manifestStorage,
-		storageSession:  storageSession,
-		heightFrom:      base.NilHeight,
-		heightTo:        base.NilHeight,
+		main:             main,
+		manifestDatabase: manifestDatabase,
+		session:          session,
+		heightFrom:       base.NilHeight,
+		heightTo:         base.NilHeight,
 	}, nil
 }
 
 func (st *SyncerSession) Manifest(height base.Height) (block.Manifest, bool, error) {
-	return st.manifestStorage.ManifestByHeight(height)
+	return st.manifestDatabase.ManifestByHeight(height)
 }
 
 func (st *SyncerSession) Manifests(heights []base.Height) ([]block.Manifest, error) {
 	var bs []block.Manifest
 	for i := range heights {
-		if b, found, err := st.manifestStorage.ManifestByHeight(heights[i]); !found {
+		if b, found, err := st.manifestDatabase.ManifestByHeight(heights[i]); !found {
 			return nil, storage.NotFoundError.Errorf("manifest not found")
 		} else if err != nil {
 			return nil, err
@@ -89,7 +89,7 @@ func (st *SyncerSession) SetManifests(manifests []block.Manifest) error {
 	var models []mongo.WriteModel
 	for i := range manifests {
 		m := manifests[i]
-		if doc, err := NewManifestDoc(m, st.storageSession.Encoder()); err != nil {
+		if doc, err := NewManifestDoc(m, st.session.Encoder()); err != nil {
 			return err
 		} else {
 			models = append(models, mongo.NewInsertOneModel().SetDocument(doc))
@@ -104,7 +104,7 @@ func (st *SyncerSession) SetManifests(manifests []block.Manifest) error {
 		}
 	}
 
-	if err := st.manifestStorage.Client().Bulk(context.Background(), ColNameManifest, models, true); err != nil {
+	if err := st.manifestDatabase.Client().Bulk(context.Background(), ColNameManifest, models, true); err != nil {
 		return err
 	}
 
@@ -121,11 +121,11 @@ func (st *SyncerSession) SetManifests(manifests []block.Manifest) error {
 		Int("manifests", len(manifests)).
 		Msg("set manifests")
 
-	return st.manifestStorage.setLastManifest(lastManifest, false, false)
+	return st.manifestDatabase.setLastManifest(lastManifest, false, false)
 }
 
 func (st *SyncerSession) HasBlock(height base.Height) (bool, error) {
-	return st.storageSession.client.Exists(ColNameManifest, util.NewBSONFilter("height", height).D())
+	return st.session.client.Exists(ColNameManifest, util.NewBSONFilter("height", height).D())
 }
 
 func (st *SyncerSession) SetBlocks(blocks []block.Block, maps []block.BlockDataMap) error {
@@ -166,12 +166,12 @@ func (st *SyncerSession) SetBlocks(blocks []block.Block, maps []block.BlockDataM
 		}
 	}
 
-	return st.storageSession.setLastBlock(lastBlock, true, false)
+	return st.session.setLastBlock(lastBlock, true, false)
 }
 
 func (st *SyncerSession) setBlock(blk block.Block, m block.BlockDataMap) error {
-	var bs storage.StorageSession
-	if st, err := st.storageSession.NewStorageSession(blk); err != nil {
+	var bs storage.DatabaseSession
+	if st, err := st.session.NewSession(blk); err != nil {
 		return err
 	} else {
 		bs = st
@@ -196,10 +196,10 @@ func (st *SyncerSession) Commit() error {
 			Hinted("to_height", st.heightTo)
 	})
 
-	l.Debug().Msg("trying to commit blocks to main storage")
+	l.Debug().Msg("trying to commit blocks to main database")
 
 	var last block.Manifest
-	if m, found, err := st.storageSession.LastManifest(); err != nil || !found {
+	if m, found, err := st.session.LastManifest(); err != nil || !found {
 		return xerrors.Errorf("failed to get last manifest fromm storage: %w", err)
 	} else {
 		last = m
@@ -215,7 +215,7 @@ func (st *SyncerSession) Commit() error {
 		ColNameVoteproof,
 		ColNameBlockDataMap,
 	} {
-		if err := moveWithinCol(st.storageSession, col, st.main, col, bson.D{}); err != nil {
+		if err := moveWithinCol(st.session, col, st.main, col, bson.D{}); err != nil {
 			l.Error().Err(err).Str("collection", col).Msg("failed to move collection")
 
 			return err
@@ -228,18 +228,18 @@ func (st *SyncerSession) Commit() error {
 
 func (st *SyncerSession) Close() error {
 	// NOTE drop tmp database
-	if err := st.manifestStorage.client.DropDatabase(); err != nil {
+	if err := st.manifestDatabase.client.DropDatabase(); err != nil {
 		return err
 	}
 
-	if err := st.storageSession.client.DropDatabase(); err != nil {
+	if err := st.session.client.DropDatabase(); err != nil {
 		return err
 	}
 
 	return nil
 }
 
-func newTempStorage(main *Storage, prefix string) (*Storage, error) {
+func newTempDatabase(main *Database, prefix string) (*Database, error) {
 	// NOTE create new mongodb database with prefix
 	var tmpClient *Client
 	if c, err := main.client.New(fmt.Sprintf("sync-%s_%s", prefix, util.UUID().String())); err != nil {
@@ -248,10 +248,10 @@ func newTempStorage(main *Storage, prefix string) (*Storage, error) {
 		tmpClient = c
 	}
 
-	return NewStorage(tmpClient, main.Encoders(), main.Encoder(), main.Cache())
+	return NewDatabase(tmpClient, main.Encoders(), main.Encoder(), main.Cache())
 }
 
-func moveWithinCol(from *Storage, fromCol string, to *Storage, toCol string, filter bson.D) error {
+func moveWithinCol(from *Database, fromCol string, to *Database, toCol string, filter bson.D) error {
 	var limit int = 100
 	var models []mongo.WriteModel
 	err := from.Client().Find(context.Background(), fromCol, filter, func(cursor *mongo.Cursor) (bool, error) {

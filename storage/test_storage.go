@@ -21,72 +21,72 @@ import (
 	"github.com/spikeekips/mitum/util/valuehash"
 )
 
-type DummyStorageSession struct {
+type DummyDatabaseSession struct {
 	block      block.Block
 	operations tree.FixedTree
 	states     tree.FixedTree
 	commited   bool
 }
 
-func NewDummyStorageSession(
+func NewDummyDatabaseSession(
 	blk block.Block,
 	operations tree.FixedTree,
 	states tree.FixedTree,
-) *DummyStorageSession {
-	return &DummyStorageSession{block: blk, operations: operations, states: states}
+) *DummyDatabaseSession {
+	return &DummyDatabaseSession{block: blk, operations: operations, states: states}
 }
 
-func (dst *DummyStorageSession) Block() block.Block {
+func (dst *DummyDatabaseSession) Block() block.Block {
 	return dst.block
 }
 
-func (dst *DummyStorageSession) SetBlock(blk block.Block) error {
+func (dst *DummyDatabaseSession) SetBlock(blk block.Block) error {
 	dst.block = blk
 
 	return nil
 }
 
-func (dst *DummyStorageSession) SetOperations(tree tree.FixedTree) error {
+func (dst *DummyDatabaseSession) SetOperations(tree tree.FixedTree) error {
 	dst.operations = tree
 
 	return nil
 }
 
-func (dst *DummyStorageSession) SetStates(tree tree.FixedTree) error {
+func (dst *DummyDatabaseSession) SetStates(tree tree.FixedTree) error {
 	dst.states = tree
 
 	return nil
 }
 
-func (dst *DummyStorageSession) UnstageOperationSeals([]valuehash.Hash) error {
+func (dst *DummyDatabaseSession) UnstageOperationSeals([]valuehash.Hash) error {
 	return nil
 }
 
-func (dst *DummyStorageSession) Commit(context.Context) error {
+func (dst *DummyDatabaseSession) Commit(context.Context) error {
 	dst.commited = true
 
 	return nil
 }
 
-func (dst *DummyStorageSession) Cancel() error {
+func (dst *DummyDatabaseSession) Cancel() error {
 	dst.commited = false
 
 	return nil
 }
 
-func (dst *DummyStorageSession) Close() error {
+func (dst *DummyDatabaseSession) Close() error {
 	return dst.Cancel()
 }
 
-func (dst *DummyStorageSession) Committed() bool {
+func (dst *DummyDatabaseSession) Committed() bool {
 	return dst.commited
 }
 
-func (dst *DummyStorageSession) States() map[string]interface{} {
+func (dst *DummyDatabaseSession) States() map[string]interface{} {
 	return nil
 }
 
-type BaseTestStorage struct {
+type BaseTestDatabase struct {
 	suite.Suite
 	PK      key.Privatekey
 	Encs    *encoder.Encoders
@@ -94,7 +94,7 @@ type BaseTestStorage struct {
 	BSONEnc encoder.Encoder
 }
 
-func (t *BaseTestStorage) SetupSuite() {
+func (t *BaseTestDatabase) SetupSuite() {
 	t.Encs = encoder.NewEncoders()
 	t.JSONEnc = jsonenc.NewEncoder()
 	t.BSONEnc = bsonenc.NewEncoder()
@@ -122,7 +122,7 @@ func (t *BaseTestStorage) SetupSuite() {
 	t.PK, _ = key.NewBTCPrivatekey()
 }
 
-func (t *BaseTestStorage) CompareManifest(a, b block.Manifest) {
+func (t *BaseTestDatabase) CompareManifest(a, b block.Manifest) {
 	t.Equal(a.Height(), b.Height())
 	t.Equal(a.Round(), b.Round())
 	t.True(a.Proposal().Equal(b.Proposal()))
@@ -132,13 +132,13 @@ func (t *BaseTestStorage) CompareManifest(a, b block.Manifest) {
 	t.True(localtime.Equal(a.ConfirmedAt(), b.ConfirmedAt()))
 }
 
-func (t *BaseTestStorage) CompareBlock(a, b block.Block) {
+func (t *BaseTestDatabase) CompareBlock(a, b block.Block) {
 	t.CompareManifest(a, b)
 	t.Equal(a.ConsensusInfo().INITVoteproof(), b.ConsensusInfo().INITVoteproof())
 	t.Equal(a.ConsensusInfo().ACCEPTVoteproof(), b.ConsensusInfo().ACCEPTVoteproof())
 }
 
-func (t *BaseTestStorage) NewBlockDataMap(height base.Height, blk valuehash.Hash, isLocal bool) block.BaseBlockDataMap {
+func (t *BaseTestDatabase) NewBlockDataMap(height base.Height, blk valuehash.Hash, isLocal bool) block.BaseBlockDataMap {
 	var scheme string = "file://"
 	if !isLocal {
 		scheme = "http://none-local.org"

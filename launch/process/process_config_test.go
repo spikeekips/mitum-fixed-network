@@ -118,8 +118,8 @@ nodes:
 	t.Equal(config.DefaultLocalNetworkBind.String(), conf.Network().Bind().String())
 
 	t.Equal(config.DefaultBlockDataPath, conf.Storage().BlockData().Path())
-	t.Equal(config.DefaultMainStorageURI, conf.Storage().Main().URI().String())
-	t.Equal(config.DefaultMainStorageCache, conf.Storage().Main().Cache().String())
+	t.Equal(config.DefaultDatabaseURI, conf.Storage().Database().URI().String())
+	t.Equal(config.DefaultDatabaseCache, conf.Storage().Database().Cache().String())
 
 	t.IsType(config.RoundrobinSuffrage{}, conf.Suffrage())
 	t.IsType(config.DefaultProposalProcessor{}, conf.ProposalProcessor())

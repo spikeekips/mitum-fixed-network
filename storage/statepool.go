@@ -31,7 +31,7 @@ type Statepool struct {
 	addedOps    map[string]operation.Operation
 }
 
-func NewStatepool(st Storage) (*Statepool, error) {
+func NewStatepool(st Database) (*Statepool, error) {
 	var nextHeight base.Height = base.Height(0)
 	switch m, found, err := st.LastManifest(); {
 	case err != nil:
@@ -51,7 +51,7 @@ func NewStatepool(st Storage) (*Statepool, error) {
 }
 
 // NewStatepoolWithBase only used for testing
-func NewStatepoolWithBase(st Storage, base map[string]state.State) (*Statepool, error) {
+func NewStatepoolWithBase(st Database, base map[string]state.State) (*Statepool, error) {
 	if sp, err := NewStatepool(st); err != nil {
 		return nil, err
 	} else {

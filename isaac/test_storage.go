@@ -36,7 +36,7 @@ func (ss *StorageSupportTest) SetupSuite() {
 	_ = ss.Encs.AddEncoder(ss.BSONEnc)
 }
 
-func (ss *StorageSupportTest) Storage(encs *encoder.Encoders, enc encoder.Encoder) storage.Storage {
+func (ss *StorageSupportTest) Database(encs *encoder.Encoders, enc encoder.Encoder) storage.Database {
 	if encs == nil {
 		encs = ss.Encs
 	}
@@ -51,7 +51,7 @@ func (ss *StorageSupportTest) Storage(encs *encoder.Encoders, enc encoder.Encode
 			enc = ss.JSONEnc
 		}
 
-		return leveldbstorage.NewMemStorage(encs, enc)
+		return leveldbstorage.NewMemDatabase(encs, enc)
 	case "mongodb":
 		c := mongoConnPool.Get().(*mongodbstorage.Client)
 		client, err := c.New(fmt.Sprintf("t-%s", util.UUID().String()))
@@ -63,12 +63,12 @@ func (ss *StorageSupportTest) Storage(encs *encoder.Encoders, enc encoder.Encode
 			enc = ss.BSONEnc
 		}
 
-		st, err := mongodbstorage.NewStorage(client, encs, enc, cache.Dummy{})
+		st, err := mongodbstorage.NewDatabase(client, encs, enc, cache.Dummy{})
 		if err != nil {
 			panic(err)
 		}
 
-		d := NewDummyMongodbStorage(st)
+		d := NewDummyMongodbDatabase(st)
 
 		_ = d.Initialize()
 
@@ -88,12 +88,12 @@ func (ss *StorageSupportTest) Storage(encs *encoder.Encoders, enc encoder.Encode
 		if err != nil {
 			panic(err)
 		}
-		st, err := mongodbstorage.NewStorage(client, encs, enc, ca)
+		st, err := mongodbstorage.NewDatabase(client, encs, enc, ca)
 		if err != nil {
 			panic(err)
 		}
 
-		d := NewDummyMongodbStorage(st)
+		d := NewDummyMongodbDatabase(st)
 
 		_ = d.Initialize()
 
@@ -103,12 +103,12 @@ func (ss *StorageSupportTest) Storage(encs *encoder.Encoders, enc encoder.Encode
 	}
 }
 
-type DummyMongodbStorage struct {
-	*mongodbstorage.Storage
+type DummyMongodbDatabase struct {
+	*mongodbstorage.Database
 }
 
-func NewDummyMongodbStorage(st *mongodbstorage.Storage) DummyMongodbStorage {
-	d := DummyMongodbStorage{Storage: st}
+func NewDummyMongodbDatabase(st *mongodbstorage.Database) DummyMongodbDatabase {
+	d := DummyMongodbDatabase{Database: st}
 	if err := d.Initialize(); err != nil {
 		panic(err)
 	}
@@ -116,14 +116,14 @@ func NewDummyMongodbStorage(st *mongodbstorage.Storage) DummyMongodbStorage {
 	return d
 }
 
-func (dm DummyMongodbStorage) Close() error {
+func (dm DummyMongodbDatabase) Close() error {
 	if err := dm.Client().DropDatabase(); err != nil {
 		return err
 	}
 
 	mongoConnPool.Put(dm.Client())
 
-	return dm.Storage.Close()
+	return dm.Database.Close()
 }
 
 var mongoConnPool = sync.Pool{

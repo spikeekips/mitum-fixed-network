@@ -18,7 +18,7 @@ func (t *testGenesisBlockV0) SetupTest() {
 	t.BaseTest.SetupTest()
 
 	t.local = t.Locals(1)[0]
-	t.local.Storage().Clean()
+	t.local.Database().Clean()
 }
 
 func (t *testGenesisBlockV0) TestNewGenesisBlock() {
@@ -31,7 +31,7 @@ func (t *testGenesisBlockV0) TestNewGenesisBlock() {
 	)
 	t.NoError(err)
 
-	gg, err := NewGenesisBlockV0Generator(t.local.Node(), t.local.Storage(), t.local.BlockData(), t.local.Policy(), []operation.Operation{op})
+	gg, err := NewGenesisBlockV0Generator(t.local.Node(), t.local.Database(), t.local.BlockData(), t.local.Policy(), []operation.Operation{op})
 	t.NoError(err)
 
 	blk, err := gg.Generate()
@@ -40,12 +40,12 @@ func (t *testGenesisBlockV0) TestNewGenesisBlock() {
 	t.Equal(base.Height(0), blk.Height())
 	t.Equal(base.Round(0), blk.Round())
 
-	pr, found, err := t.local.Storage().Seal(blk.Proposal())
+	pr, found, err := t.local.Database().Seal(blk.Proposal())
 	t.True(found)
 	t.NoError(err)
 	t.NotNil(pr)
 
-	st, found, err := t.local.Storage().State(op.Key())
+	st, found, err := t.local.Database().State(op.Key())
 	t.NoError(err)
 	t.True(found)
 

@@ -1,4 +1,4 @@
 /*
-Package leveldb provides storage.Storage of leveldb.
+Package leveldb provides storages of leveldb.
 */
 package leveldbstorage

@@ -16,7 +16,7 @@ import (
 
 type BallotChecker struct {
 	*logging.Logging
-	storage  storage.Storage
+	database storage.Database
 	policy   *LocalPolicy
 	suffrage base.Suffrage
 	nodepool *network.Nodepool
@@ -26,7 +26,7 @@ type BallotChecker struct {
 
 func NewBallotChecker(
 	blt ballot.Ballot,
-	st storage.Storage,
+	st storage.Database,
 	policy *LocalPolicy,
 	suffrage base.Suffrage,
 	nodepool *network.Nodepool,
@@ -36,7 +36,7 @@ func NewBallotChecker(
 		Logging: logging.NewLogging(func(c logging.Context) logging.Emitter {
 			return c.Str("module", "ballot-checker")
 		}),
-		storage:  st,
+		database: st,
 		policy:   policy,
 		suffrage: suffrage,
 		nodepool: nodepool,
@@ -98,7 +98,7 @@ func (bc *BallotChecker) CheckProposalInACCEPTBallot() (bool, error) {
 	}
 
 	var proposal ballot.Proposal
-	if i, found, err := bc.storage.Seal(ph); err != nil {
+	if i, found, err := bc.database.Seal(ph); err != nil {
 		return false, err
 	} else if found {
 		if j, ok := i.(ballot.Proposal); !ok {
@@ -159,12 +159,12 @@ func (bc *BallotChecker) requestProposal(address base.Address, h valuehash.Hash)
 		proposal = i
 	}
 
-	sealChecker := NewSealChecker(proposal, bc.storage, bc.policy, nil)
+	sealChecker := NewSealChecker(proposal, bc.database, bc.policy, nil)
 	if err := util.NewChecker("proposal-seal-checker", []util.CheckerFunc{sealChecker.IsValid}).Check(); err != nil {
 		return nil, err
 	}
 
-	ballotChecker := NewBallotChecker(proposal, bc.storage, bc.policy, bc.suffrage, bc.nodepool, bc.lvp)
+	ballotChecker := NewBallotChecker(proposal, bc.database, bc.policy, bc.suffrage, bc.nodepool, bc.lvp)
 	if err := util.NewChecker("proposal-ballot-checker", []util.CheckerFunc{
 		ballotChecker.InSuffrage,
 		ballotChecker.CheckVoteproof,
@@ -174,7 +174,7 @@ func (bc *BallotChecker) requestProposal(address base.Address, h valuehash.Hash)
 		}
 	}
 
-	pvc := NewProposalValidationChecker(bc.storage, bc.suffrage, bc.nodepool, proposal, nil)
+	pvc := NewProposalValidationChecker(bc.database, bc.suffrage, bc.nodepool, proposal, nil)
 	if err := util.NewChecker("proposal-checker", []util.CheckerFunc{
 		pvc.IsKnown,
 		pvc.CheckSigning,

@@ -18,7 +18,7 @@ type Syncers struct {
 	*util.FunctionDaemon
 	*logging.Logging
 	local                *network.LocalNode
-	storage              storage.Storage
+	database             storage.Database
 	blockData            blockdata.BlockData
 	policy               *LocalPolicy
 	baseManifest         block.Manifest
@@ -34,7 +34,7 @@ type Syncers struct {
 
 func NewSyncers(
 	local *network.LocalNode,
-	st storage.Storage,
+	st storage.Database,
 	blockData blockdata.BlockData,
 	policy *LocalPolicy,
 	baseManifest block.Manifest,
@@ -44,7 +44,7 @@ func NewSyncers(
 			return c.Str("module", "syncers")
 		}),
 		local:                local,
-		storage:              st,
+		database:             st,
 		blockData:            blockData,
 		policy:               policy,
 		baseManifest:         baseManifest,
@@ -211,7 +211,7 @@ func (sy *Syncers) newSyncer(baseManifest block.Manifest) (Syncer, error) {
 	var syncer Syncer
 	if i, err := NewGeneralSyncer(
 		sy.local,
-		sy.storage,
+		sy.database,
 		sy.blockData,
 		sy.policy,
 		sy.sourceNodes,
@@ -363,7 +363,7 @@ func (sy *Syncers) stateChangedSaved(ctx SyncerStateChangedContext) error {
 			Hinted("last_syncer_height", sy.lastSyncer.HeightTo())
 	})
 
-	if st, ok := sy.storage.(storage.LastBlockSaver); ok {
+	if st, ok := sy.database.(storage.LastBlockSaver); ok {
 		if err := st.SaveLastBlock(syncer.HeightTo()); err != nil {
 			return err
 		}

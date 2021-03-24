@@ -18,9 +18,9 @@ import (
 	"github.com/spikeekips/mitum/util/valuehash"
 )
 
-type StorageSession struct {
-	st                     *Storage
-	ost                    *Storage
+type DatabaseSession struct {
+	st                     *Database
+	ost                    *Database
 	block                  block.Block
 	operations             tree.FixedTree
 	states                 []state.State
@@ -32,15 +32,15 @@ type StorageSession struct {
 	acceptVoteproofsModels mongo.WriteModel
 }
 
-func NewStorageSession(st *Storage, blk block.Block) (*StorageSession, error) {
-	var nst *Storage
+func NewDatabaseSession(st *Database, blk block.Block) (*DatabaseSession, error) {
+	var nst *Database
 	if n, err := st.New(); err != nil {
 		return nil, err
 	} else {
 		nst = n
 	}
 
-	bst := &StorageSession{
+	bst := &DatabaseSession{
 		st:          nst,
 		ost:         st,
 		block:       blk,
@@ -50,11 +50,11 @@ func NewStorageSession(st *Storage, blk block.Block) (*StorageSession, error) {
 	return bst, nil
 }
 
-func (bst *StorageSession) Block() block.Block {
+func (bst *DatabaseSession) Block() block.Block {
 	return bst.block
 }
 
-func (bst *StorageSession) SetBlock(ctx context.Context, blk block.Block) error {
+func (bst *DatabaseSession) SetBlock(ctx context.Context, blk block.Block) error {
 	if blk == nil {
 		return xerrors.Errorf("empty block")
 	}
@@ -78,7 +78,7 @@ func (bst *StorageSession) SetBlock(ctx context.Context, blk block.Block) error 
 	}
 }
 
-func (bst *StorageSession) SetACCEPTVoteproof(voteproof base.Voteproof) error {
+func (bst *DatabaseSession) SetACCEPTVoteproof(voteproof base.Voteproof) error {
 	if s := voteproof.Stage(); s != base.StageACCEPT {
 		return xerrors.Errorf("not accept voteproof, %v", s)
 	}
@@ -92,7 +92,7 @@ func (bst *StorageSession) SetACCEPTVoteproof(voteproof base.Voteproof) error {
 	}
 }
 
-func (bst *StorageSession) setBlock(blk block.Block) error {
+func (bst *DatabaseSession) setBlock(blk block.Block) error {
 	startedf := time.Now()
 	defer func() {
 		bst.statesValue.Store("set-block", time.Since(startedf))
@@ -145,7 +145,7 @@ func (bst *StorageSession) setBlock(blk block.Block) error {
 	return nil
 }
 
-func (bst *StorageSession) Commit(ctx context.Context, bd block.BlockDataMap) error {
+func (bst *DatabaseSession) Commit(ctx context.Context, bd block.BlockDataMap) error {
 	if err := bst.commit(ctx, bd); err == nil {
 		return nil
 	} else {
@@ -162,7 +162,7 @@ func (bst *StorageSession) Commit(ctx context.Context, bd block.BlockDataMap) er
 	}
 }
 
-func (bst *StorageSession) commit(ctx context.Context, bd block.BlockDataMap) error {
+func (bst *DatabaseSession) commit(ctx context.Context, bd block.BlockDataMap) error {
 	started := time.Now()
 	defer func() {
 		bst.statesValue.Store("commit", time.Since(started))
@@ -235,7 +235,7 @@ func (bst *StorageSession) commit(ctx context.Context, bd block.BlockDataMap) er
 	return nil
 }
 
-func (bst *StorageSession) setOperationsTree(tr tree.FixedTree) error {
+func (bst *DatabaseSession) setOperationsTree(tr tree.FixedTree) error {
 	started := time.Now()
 	defer func() {
 		bst.statesValue.Store("set-operations-tree", time.Since(started))
@@ -264,7 +264,7 @@ func (bst *StorageSession) setOperationsTree(tr tree.FixedTree) error {
 	return nil
 }
 
-func (bst *StorageSession) setStates(sts []state.State) error {
+func (bst *DatabaseSession) setStates(sts []state.State) error {
 	started := time.Now()
 	defer func() {
 		bst.statesValue.Store("set-states", time.Since(started))
@@ -285,7 +285,7 @@ func (bst *StorageSession) setStates(sts []state.State) error {
 	return nil
 }
 
-func (bst *StorageSession) setVoteproofs(init, accept base.Voteproof) error {
+func (bst *DatabaseSession) setVoteproofs(init, accept base.Voteproof) error {
 	started := time.Now()
 	defer func() {
 		bst.statesValue.Store("set-voteproofs", time.Since(started))
@@ -308,7 +308,7 @@ func (bst *StorageSession) setVoteproofs(init, accept base.Voteproof) error {
 	return nil
 }
 
-func (bst *StorageSession) writeModels(ctx context.Context, col string, models []mongo.WriteModel) (*mongo.BulkWriteResult, error) {
+func (bst *DatabaseSession) writeModels(ctx context.Context, col string, models []mongo.WriteModel) (*mongo.BulkWriteResult, error) {
 	started := time.Now()
 	defer func() {
 		bst.statesValue.Store(fmt.Sprintf("write-models-%s", col), time.Since(started))
@@ -328,7 +328,7 @@ func (bst *StorageSession) writeModels(ctx context.Context, col string, models [
 	)
 }
 
-func (bst *StorageSession) insertCaches() {
+func (bst *DatabaseSession) insertCaches() {
 	var wg sync.WaitGroup
 	wg.Add(2)
 
@@ -355,7 +355,7 @@ func (bst *StorageSession) insertCaches() {
 	wg.Wait()
 }
 
-func (bst *StorageSession) Cancel() error {
+func (bst *DatabaseSession) Cancel() error {
 	defer func() {
 		_ = bst.Close()
 	}()
@@ -367,9 +367,9 @@ func (bst *StorageSession) Cancel() error {
 	return bst.st.CleanByHeight(bst.block.Height())
 }
 
-func (bst *StorageSession) Close() error {
+func (bst *DatabaseSession) Close() error {
 	if bst.block == nil {
-		return xerrors.Errorf("block storage already closed")
+		return xerrors.Errorf("database session already closed")
 	}
 
 	bst.states = nil

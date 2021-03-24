@@ -17,11 +17,11 @@ import (
 	"golang.org/x/xerrors"
 )
 
-type testStorage struct {
+type testBlockData struct {
 	BaseTest
 }
 
-func (t *testStorage) processSession(local *Local, ss *localfs.Session) {
+func (t *testBlockData) processSession(local *Local, ss *localfs.Session) {
 	var blk block.Block
 	{
 		i, err := block.NewTestBlockV0(ss.Height(), base.Round(0), valuehash.RandomSHA256(), valuehash.RandomSHA256())
@@ -111,24 +111,24 @@ func (t *testStorage) processSession(local *Local, ss *localfs.Session) {
 	}
 }
 
-func (t *testStorage) createFile(root, p string) *os.File {
+func (t *testBlockData) createFile(root, p string) *os.File {
 	f, err := os.OpenFile(filepath.Join(root, p), os.O_CREATE|os.O_WRONLY, localfs.DefaultFilePermission)
 	t.NoError(err)
 
 	return f
 }
 
-func (t *testStorage) newStorage(root string) *localfs.BlockData {
+func (t *testBlockData) newBlockData(root string) *localfs.BlockData {
 	st := localfs.NewBlockData(root, t.JSONEnc)
 	t.NoError(st.Initialize())
 
 	return st
 }
 
-func (t *testStorage) TestSaveSession() {
+func (t *testBlockData) TestSaveSession() {
 	local := t.Locals(1)[0]
 
-	st := t.newStorage(t.Root)
+	st := t.newBlockData(t.Root)
 
 	ss, err := st.NewSession(33)
 	t.NoError(err)
@@ -139,10 +139,10 @@ func (t *testStorage) TestSaveSession() {
 	t.NoError(err)
 }
 
-func (t *testStorage) TestHeightDirectoryAlreadyExists() {
+func (t *testBlockData) TestHeightDirectoryAlreadyExists() {
 	local := t.Locals(1)[0]
 
-	st := t.newStorage(t.Root)
+	st := t.newBlockData(t.Root)
 
 	ss, err := st.NewSession(33)
 	t.NoError(err)
@@ -170,8 +170,8 @@ func (t *testStorage) TestHeightDirectoryAlreadyExists() {
 	t.True(os.IsNotExist(err))
 }
 
-func (t *testStorage) TestClean() {
-	st := t.newStorage(t.Root)
+func (t *testBlockData) TestClean() {
+	st := t.newBlockData(t.Root)
 
 	touch := func(a string) {
 		f := t.createFile(t.Root, a)
@@ -206,10 +206,10 @@ func (t *testStorage) TestClean() {
 	t.False(exists(t.Root))
 }
 
-func (t *testStorage) TestRemove() {
+func (t *testBlockData) TestRemove() {
 	local := t.Locals(1)[0]
 
-	st := t.newStorage(t.Root)
+	st := t.newBlockData(t.Root)
 
 	for i := int64(33); i < 36; i++ {
 		ss, err := st.NewSession(base.Height(i))
@@ -243,10 +243,10 @@ func (t *testStorage) TestRemove() {
 	t.NotEmpty(files)
 }
 
-func (t *testStorage) TestRemoveAll() {
+func (t *testBlockData) TestRemoveAll() {
 	local := t.Locals(1)[0]
 
-	st := t.newStorage(t.Root)
+	st := t.newBlockData(t.Root)
 
 	for i := int64(33); i < 36; i++ {
 		ss, err := st.NewSession(base.Height(i))
@@ -279,6 +279,6 @@ func (t *testStorage) TestRemoveAll() {
 	t.True(os.IsNotExist(err))
 }
 
-func TestStorage(t *testing.T) {
-	suite.Run(t, new(testStorage))
+func TestBlockData(t *testing.T) {
+	suite.Run(t, new(testBlockData))
 }

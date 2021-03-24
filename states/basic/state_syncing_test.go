@@ -25,7 +25,7 @@ func (t *testStateSyncing) SetupTest() {
 }
 
 func (t *testStateSyncing) newState(local *isaac.Local) (*SyncingState, func()) {
-	st := NewSyncingState(local.Storage(), local.BlockData(), local.Policy(), local.Nodes())
+	st := NewSyncingState(local.Database(), local.BlockData(), local.Policy(), local.Nodes())
 
 	return st, func() {
 		f, err := st.Exit(NewStateSwitchContext(base.StateSyncing, base.StateStopped))
@@ -43,7 +43,7 @@ func (t *testStateSyncing) TestINITMovesToConsensus() {
 	}, false)
 	st.SetTimers(timers)
 
-	lastINITVoteproof := t.remote.Storage().LastVoteproof(base.StageINIT)
+	lastINITVoteproof := t.remote.Database().LastVoteproof(base.StageINIT)
 	t.NotNil(lastINITVoteproof)
 
 	var voteproof base.Voteproof
@@ -80,7 +80,7 @@ func (t *testStateSyncing) TestWaitMovesToJoining() {
 	}, false)
 	st.SetTimers(timers)
 
-	lastINITVoteproof := t.remote.Storage().LastVoteproof(base.StageINIT)
+	lastINITVoteproof := t.remote.Database().LastVoteproof(base.StageINIT)
 	t.NotNil(lastINITVoteproof)
 
 	statech := make(chan StateSwitchContext)
@@ -112,7 +112,7 @@ func (t *testStateSyncing) TestSyncingHandlerFromVoteproof() {
 
 	t.SetupNodes(local, []*isaac.Local{rn0, rn1, rn2})
 
-	baseBlock := t.LastManifest(local.Storage())
+	baseBlock := t.LastManifest(local.Database())
 	target := baseBlock.Height() + 5
 	t.GenerateBlocks([]*isaac.Local{rn0, rn1, rn2}, target)
 
@@ -158,7 +158,7 @@ func (t *testStateSyncing) TestSyncingHandlerFromVoteproof() {
 	finishedChan := make(chan struct{})
 	go func() {
 		for {
-			b, found, err := local.Storage().LastManifest()
+			b, found, err := local.Database().LastManifest()
 			t.NoError(err)
 			t.True(found)
 

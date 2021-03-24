@@ -19,7 +19,7 @@ type JoiningState struct {
 	*logging.Logging
 	*BaseState
 	local     *network.LocalNode
-	storage   storage.Storage
+	database  storage.Database
 	policy    *isaac.LocalPolicy
 	suffrage  base.Suffrage
 	ballotbox *isaac.Ballotbox
@@ -27,7 +27,7 @@ type JoiningState struct {
 
 func NewJoiningState(
 	local *network.LocalNode,
-	st storage.Storage,
+	st storage.Database,
 	policy *isaac.LocalPolicy,
 	suffrage base.Suffrage,
 	ballotbox *isaac.Ballotbox,
@@ -38,7 +38,7 @@ func NewJoiningState(
 		}),
 		BaseState: NewBaseState(base.StateJoining),
 		local:     local,
-		storage:   st,
+		database:  st,
 		policy:    policy,
 		suffrage:  suffrage,
 		ballotbox: ballotbox,
@@ -54,8 +54,8 @@ func (st *JoiningState) Enter(sctx StateSwitchContext) (func() error, error) {
 	}
 
 	var voteproof base.Voteproof = sctx.Voteproof()
-	if voteproof == nil { // NOTE if empty voteproof, load last accept voteproof from storage
-		voteproof = st.storage.LastVoteproof(base.StageACCEPT)
+	if voteproof == nil { // NOTE if empty voteproof, load last accept voteproof from database
+		voteproof = st.database.LastVoteproof(base.StageACCEPT)
 		if voteproof == nil {
 			return nil, storage.NotFoundError.Errorf("last accept voteproof not found")
 		}
@@ -109,7 +109,7 @@ func (st *JoiningState) ProcessVoteproof(voteproof base.Voteproof) error {
 
 func (st *JoiningState) broadcastINITBallotEnteredWithoutDelay(voteproof base.Voteproof) error {
 	var baseBallot ballot.INITBallotV0
-	if i, err := NextINITBallotFromACCEPTVoteproof(st.storage, st.local, voteproof); err != nil {
+	if i, err := NextINITBallotFromACCEPTVoteproof(st.database, st.local, voteproof); err != nil {
 		return err
 	} else if err := i.Sign(st.local.Privatekey(), st.policy.NetworkID()); err != nil {
 		return xerrors.Errorf("failed to re-sign joining INITBallot: %w", err)
@@ -150,7 +150,7 @@ func (st *JoiningState) broadcastINITBallotEnteredWithoutDelay(voteproof base.Vo
 // executed when voteproof is stucked.
 func (st *JoiningState) broadcastINITBallotEntered(voteproof base.Voteproof) error {
 	var baseBallot ballot.INITBallotV0
-	if i, err := NextINITBallotFromACCEPTVoteproof(st.storage, st.local, voteproof); err != nil {
+	if i, err := NextINITBallotFromACCEPTVoteproof(st.database, st.local, voteproof); err != nil {
 		return err
 	} else if err := i.Sign(st.local.Privatekey(), st.policy.NetworkID()); err != nil {
 		return xerrors.Errorf("failed to re-sign joining INITBallot: %w", err)

@@ -40,7 +40,7 @@ func (t *testDefaultProposalProcessor) SetupTest() {
 
 func (t *testDefaultProposalProcessor) processors() *prprocessor.Processors {
 	pps := prprocessor.NewProcessors(NewDefaultProcessorNewFunc(
-		t.local.Storage(),
+		t.local.Database(),
 		t.local.BlockData(),
 		t.local.Nodes(),
 		t.Suffrage(t.local),
@@ -54,7 +54,7 @@ func (t *testDefaultProposalProcessor) processors() *prprocessor.Processors {
 }
 
 func (t *testDefaultProposalProcessor) TestPrepare() {
-	pm := NewProposalMaker(t.local.Node(), t.local.Storage(), t.local.Policy())
+	pm := NewProposalMaker(t.local.Node(), t.local.Database(), t.local.Policy())
 
 	ib := t.NewINITBallot(t.local, base.Round(0), nil)
 	initFact := ib.INITBallotFactV0
@@ -89,7 +89,7 @@ func (t *testDefaultProposalProcessor) TestPrepare() {
 }
 
 func (t *testDefaultProposalProcessor) TestPrepareRetry() {
-	pm := NewProposalMaker(t.local.Node(), t.local.Storage(), t.local.Policy())
+	pm := NewProposalMaker(t.local.Node(), t.local.Database(), t.local.Policy())
 
 	ib := t.NewINITBallot(t.local, base.Round(0), nil)
 	initFact := ib.INITBallotFactV0
@@ -111,7 +111,7 @@ func (t *testDefaultProposalProcessor) TestPrepareRetry() {
 	}
 
 	newFunc := NewDefaultProcessorNewFunc(
-		t.local.Storage(),
+		t.local.Database(),
 		t.local.BlockData(),
 		t.local.Nodes(),
 		t.Suffrage(t.local),
@@ -159,7 +159,7 @@ func (t *testDefaultProposalProcessor) TestPrepareRetry() {
 }
 
 func (t *testDefaultProposalProcessor) TestSave() {
-	pm := NewProposalMaker(t.local.Node(), t.local.Storage(), t.local.Policy())
+	pm := NewProposalMaker(t.local.Node(), t.local.Database(), t.local.Policy())
 
 	ib := t.NewINITBallot(t.local, base.Round(0), nil)
 	initFact := ib.INITBallotFactV0
@@ -211,7 +211,7 @@ func (t *testDefaultProposalProcessor) TestSave() {
 	}
 
 	// check storage
-	m, found, err := t.local.Storage().ManifestByHeight(pr.Height())
+	m, found, err := t.local.Database().ManifestByHeight(pr.Height())
 	t.NoError(err)
 	t.True(found)
 	t.True(m.Proposal().Equal(pr.Hash()))
@@ -235,7 +235,7 @@ func (t *testDefaultProposalProcessor) TestSave() {
 }
 
 func (t *testDefaultProposalProcessor) TestCancelPreviousProposal() {
-	pm := NewProposalMaker(t.local.Node(), t.local.Storage(), t.local.Policy())
+	pm := NewProposalMaker(t.local.Node(), t.local.Database(), t.local.Policy())
 
 	timeout := time.Millisecond * 100
 
@@ -267,7 +267,7 @@ func (t *testDefaultProposalProcessor) TestCancelPreviousProposal() {
 	t.NoError(err)
 	t.NoError(sl.IsValid(TestNetworkID))
 
-	t.NoError(t.local.Storage().NewSeals([]seal.Seal{sl}))
+	t.NoError(t.local.Database().NewSeals([]seal.Seal{sl}))
 
 	ib := t.NewINITBallot(t.local, base.Round(0), nil)
 	initFact := ib.INITBallotFactV0
@@ -307,14 +307,14 @@ func (t *testDefaultProposalProcessor) TestCancelPreviousProposal() {
 }
 
 func (t *testDefaultProposalProcessor) TestOperation() {
-	pm := NewProposalMaker(t.local.Node(), t.local.Storage(), t.local.Policy())
+	pm := NewProposalMaker(t.local.Node(), t.local.Database(), t.local.Policy())
 
 	pps := t.processors()
 	defer pps.Stop()
 
 	// create new operation
 	sl, ops := t.NewOperationSeal(t.local, 1)
-	err := t.local.Storage().NewSeals([]seal.Seal{sl})
+	err := t.local.Database().NewSeals([]seal.Seal{sl})
 	t.NoError(err)
 
 	ib := t.NewINITBallot(t.local, base.Round(0), nil)
@@ -372,7 +372,7 @@ func (t *testDefaultProposalProcessor) TestOperation() {
 		t.NotNil(newBlock)
 	}
 
-	m, found, err := t.local.Storage().Manifest(blk.Hash())
+	m, found, err := t.local.Database().Manifest(blk.Hash())
 	t.NoError(err)
 	t.True(found)
 
@@ -394,7 +394,7 @@ func (t *testDefaultProposalProcessor) TestSealsNotFound() {
 	var pr ballot.Proposal
 	{
 		sl, _ := t.NewOperationSeal(t.local, 1)
-		t.NoError(t.remote.Storage().NewSeals([]seal.Seal{sl}))
+		t.NoError(t.remote.Database().NewSeals([]seal.Seal{sl}))
 
 		// add getSealHandler
 		t.remote.Node().Channel().(*channetwork.Channel).SetGetSealHandler(
@@ -403,12 +403,12 @@ func (t *testDefaultProposalProcessor) TestSealsNotFound() {
 			},
 		)
 
-		pm := NewProposalMaker(t.remote.Node(), t.remote.Storage(), t.remote.Policy())
+		pm := NewProposalMaker(t.remote.Node(), t.remote.Database(), t.remote.Policy())
 		pr, _ = pm.Proposal(ivp.Height(), ivp.Round(), ivp)
 	}
 
 	for _, h := range pr.Seals() {
-		_, found, err := t.local.Storage().Seal(h)
+		_, found, err := t.local.Database().Seal(h)
 		t.False(found)
 		t.Nil(err)
 	}
@@ -429,7 +429,7 @@ func (t *testDefaultProposalProcessor) TestSealsNotFound() {
 	}
 
 	for _, h := range pr.Seals() {
-		_, found, err := t.local.Storage().Seal(h)
+		_, found, err := t.local.Database().Seal(h)
 		t.True(found)
 		t.Nil(err)
 	}
@@ -461,18 +461,18 @@ func (t *testDefaultProposalProcessor) TestTimeoutPrepare() {
 	t.NoError(err)
 	t.NoError(sl.IsValid(TestNetworkID))
 
-	t.NoError(t.local.Storage().NewSeals([]seal.Seal{sl}))
+	t.NoError(t.local.Database().NewSeals([]seal.Seal{sl}))
 
 	ib := t.NewINITBallot(t.local, base.Round(0), nil)
 	initFact := ib.INITBallotFactV0
 
-	pm := NewProposalMaker(t.local.Node(), t.local.Storage(), t.local.Policy())
+	pm := NewProposalMaker(t.local.Node(), t.local.Database(), t.local.Policy())
 	ivp, err := t.NewVoteproof(base.StageINIT, initFact, t.local, t.remote)
 	t.NoError(err)
 	pr, err := pm.Proposal(ivp.Height(), ivp.Round(), ivp)
 	t.NoError(err)
 
-	_ = t.local.Storage().NewProposal(pr)
+	_ = t.local.Database().NewProposal(pr)
 
 	pps := t.processors()
 	defer pps.Stop()
@@ -495,18 +495,18 @@ func (t *testDefaultProposalProcessor) TestTimeoutPrepare() {
 
 func (t *testDefaultProposalProcessor) TestTimeoutSaveBeforeSavingStorage() {
 	sl, _ := t.NewOperationSeal(t.local, 1)
-	t.NoError(t.local.Storage().NewSeals([]seal.Seal{sl}))
+	t.NoError(t.local.Database().NewSeals([]seal.Seal{sl}))
 
 	ib := t.NewINITBallot(t.local, base.Round(0), nil)
 	initFact := ib.INITBallotFactV0
 
-	pm := NewProposalMaker(t.local.Node(), t.local.Storage(), t.local.Policy())
+	pm := NewProposalMaker(t.local.Node(), t.local.Database(), t.local.Policy())
 	ivp, err := t.NewVoteproof(base.StageINIT, initFact, t.local, t.remote)
 	t.NoError(err)
 	pr, err := pm.Proposal(ivp.Height(), ivp.Round(), ivp)
 	t.NoError(err)
 
-	_ = t.local.Storage().NewProposal(pr)
+	_ = t.local.Database().NewProposal(pr)
 
 	pps := t.processors()
 	defer pps.Stop()
@@ -561,18 +561,18 @@ func (t *testDefaultProposalProcessor) TestTimeoutSaveBeforeSavingStorage() {
 
 func (t *testDefaultProposalProcessor) TestTimeoutSaveAfterSaving() {
 	sl, _ := t.NewOperationSeal(t.local, 1)
-	t.NoError(t.local.Storage().NewSeals([]seal.Seal{sl}))
+	t.NoError(t.local.Database().NewSeals([]seal.Seal{sl}))
 
 	ib := t.NewINITBallot(t.local, base.Round(0), nil)
 	initFact := ib.INITBallotFactV0
 
-	pm := NewProposalMaker(t.local.Node(), t.local.Storage(), t.local.Policy())
+	pm := NewProposalMaker(t.local.Node(), t.local.Database(), t.local.Policy())
 	ivp, err := t.NewVoteproof(base.StageINIT, initFact, t.local, t.remote)
 	t.NoError(err)
 	pr, err := pm.Proposal(ivp.Height(), ivp.Round(), ivp)
 	t.NoError(err)
 
-	_ = t.local.Storage().NewProposal(pr)
+	_ = t.local.Database().NewProposal(pr)
 
 	pps := t.processors()
 	defer pps.Stop()
@@ -594,7 +594,7 @@ func (t *testDefaultProposalProcessor) TestTimeoutSaveAfterSaving() {
 	current := pps.Current().(*DefaultProcessor)
 	current.postSaveHook = func(ctx context.Context) error {
 		// check saved
-		m, found, err := t.local.Storage().ManifestByHeight(pr.Height())
+		m, found, err := t.local.Database().ManifestByHeight(pr.Height())
 		t.NoError(err)
 		t.True(found)
 		t.True(pr.Hash().Equal(m.Proposal()))
@@ -640,7 +640,7 @@ func (t *testDefaultProposalProcessor) TestTimeoutSaveAfterSaving() {
 	}
 
 	// temporary data will be removed.
-	_, found, err := t.local.Storage().ManifestByHeight(pr.Height())
+	_, found, err := t.local.Database().ManifestByHeight(pr.Height())
 	t.NoError(err)
 	t.False(found)
 
@@ -651,9 +651,9 @@ func (t *testDefaultProposalProcessor) TestTimeoutSaveAfterSaving() {
 
 func (t *testDefaultProposalProcessor) TestCustomOperationProcessor() {
 	sl, _ := t.NewOperationSeal(t.local, 1)
-	t.NoError(t.local.Storage().NewSeals([]seal.Seal{sl}))
+	t.NoError(t.local.Database().NewSeals([]seal.Seal{sl}))
 
-	pm := NewProposalMaker(t.local.Node(), t.local.Storage(), t.local.Policy())
+	pm := NewProposalMaker(t.local.Node(), t.local.Database(), t.local.Policy())
 
 	ib := t.NewINITBallot(t.local, base.Round(0), nil)
 	initFact := ib.INITBallotFactV0
@@ -676,7 +676,7 @@ func (t *testDefaultProposalProcessor) TestCustomOperationProcessor() {
 	t.NoError(hm.Add(KVOperation{}, opr))
 
 	pps := prprocessor.NewProcessors(NewDefaultProcessorNewFunc(
-		t.local.Storage(),
+		t.local.Database(),
 		t.local.BlockData(),
 		t.local.Nodes(),
 		t.Suffrage(t.local),
@@ -712,9 +712,9 @@ func (t *testDefaultProposalProcessor) TestNotProcessedOperations() {
 		sls = append(sls, sl)
 	}
 
-	t.NoError(t.local.Storage().NewSeals(sls))
+	t.NoError(t.local.Database().NewSeals(sls))
 
-	pm := NewProposalMaker(t.local.Node(), t.local.Storage(), t.local.Policy())
+	pm := NewProposalMaker(t.local.Node(), t.local.Database(), t.local.Policy())
 
 	ib := t.NewINITBallot(t.local, base.Round(0), nil)
 	initFact := ib.INITBallotFactV0
@@ -740,7 +740,7 @@ func (t *testDefaultProposalProcessor) TestNotProcessedOperations() {
 	t.NoError(hm.Add(KVOperation{}, opr))
 
 	pps := prprocessor.NewProcessors(NewDefaultProcessorNewFunc(
-		t.local.Storage(),
+		t.local.Database(),
 		t.local.BlockData(),
 		t.local.Nodes(),
 		t.Suffrage(t.local),
@@ -817,9 +817,9 @@ func (t *testDefaultProposalProcessor) TestSameStateHash() {
 		sls = append(sls, sl)
 	}
 
-	t.NoError(t.local.Storage().NewSeals(sls))
+	t.NoError(t.local.Database().NewSeals(sls))
 
-	pm := NewProposalMaker(t.local.Node(), t.local.Storage(), t.local.Policy())
+	pm := NewProposalMaker(t.local.Node(), t.local.Database(), t.local.Policy())
 
 	ib := t.NewINITBallot(t.local, base.Round(0), nil)
 	initFact := ib.INITBallotFactV0
@@ -872,7 +872,7 @@ func (t *testDefaultProposalProcessor) TestSameStateHash() {
 func (t *testDefaultProposalProcessor) TestHeavyOperations() {
 	var n uint = 30
 	t.local.Policy().SetMaxOperationsInProposal(n)
-	pm := NewProposalMaker(t.local.Node(), t.local.Storage(), t.local.Policy())
+	pm := NewProposalMaker(t.local.Node(), t.local.Database(), t.local.Policy())
 
 	var operated int64
 	sls := make([]seal.Seal, n)
@@ -905,7 +905,7 @@ func (t *testDefaultProposalProcessor) TestHeavyOperations() {
 		sls[i] = sl
 	}
 
-	err := t.local.Storage().NewSeals(sls)
+	err := t.local.Database().NewSeals(sls)
 	t.NoError(err)
 
 	ib := t.NewINITBallot(t.local, base.Round(0), nil)

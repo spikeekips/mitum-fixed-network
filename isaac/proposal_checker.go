@@ -12,7 +12,7 @@ import (
 
 type ProposalChecker struct {
 	*logging.Logging
-	storage  storage.Storage
+	database storage.Database
 	suffrage base.Suffrage
 	nodepool *network.Nodepool
 	proposal ballot.Proposal
@@ -20,7 +20,7 @@ type ProposalChecker struct {
 }
 
 func NewProposalValidationChecker(
-	st storage.Storage,
+	st storage.Database,
 	suffrage base.Suffrage,
 	nodepool *network.Nodepool,
 	proposal ballot.Proposal,
@@ -35,7 +35,7 @@ func NewProposalValidationChecker(
 				Hinted("proposal_round", proposal.Round()).
 				Hinted("proposal_node", proposal.Node())
 		}),
-		storage:  st,
+		database: st,
 		suffrage: suffrage,
 		nodepool: nodepool,
 		proposal: proposal,
@@ -48,10 +48,10 @@ func (pvc *ProposalChecker) IsKnown() (bool, error) {
 	height := pvc.proposal.Height()
 	round := pvc.proposal.Round()
 
-	if _, found, err := pvc.storage.Proposal(height, round, pvc.proposal.Node()); err != nil {
+	if _, found, err := pvc.database.Proposal(height, round, pvc.proposal.Node()); err != nil {
 		return false, err
 	} else if found {
-		return false, KnownSealError.Wrap(storage.FoundError.Errorf("proposal already in storage"))
+		return false, KnownSealError.Wrap(storage.FoundError.Errorf("proposal already in database"))
 	}
 
 	return true, nil
@@ -80,7 +80,7 @@ func (pvc *ProposalChecker) IsProposer() (bool, error) {
 }
 
 func (pvc *ProposalChecker) SaveProposal() (bool, error) {
-	switch err := pvc.storage.NewProposal(pvc.proposal); {
+	switch err := pvc.database.NewProposal(pvc.proposal); {
 	case err == nil:
 		return true, nil
 	case xerrors.Is(err, storage.DuplicatedError):

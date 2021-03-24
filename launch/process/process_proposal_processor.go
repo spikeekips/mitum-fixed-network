@@ -24,7 +24,7 @@ func init() {
 		ProcessNameProposalProcessor,
 		[]string{
 			ProcessNameLocalNode,
-			ProcessNameStorage,
+			ProcessNameDatabase,
 			ProcessNameBlockData,
 			ProcessNameSuffrage,
 		},
@@ -86,8 +86,8 @@ func processDefaultProposalProcessor(ctx context.Context) (prprocessor.Processor
 		return nil, err
 	}
 
-	var sf storage.Storage
-	if err := LoadStorageContextValue(ctx, &sf); err != nil {
+	var sf storage.Database
+	if err := LoadDatabaseContextValue(ctx, &sf); err != nil {
 		return nil, err
 	}
 
@@ -135,8 +135,8 @@ func processErrorProposalProcessor(
 		return nil, err
 	}
 
-	var sf storage.Storage
-	if err := LoadStorageContextValue(ctx, &sf); err != nil {
+	var sf storage.Database
+	if err := LoadDatabaseContextValue(ctx, &sf); err != nil {
 		return nil, err
 	}
 

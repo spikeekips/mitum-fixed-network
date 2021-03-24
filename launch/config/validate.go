@@ -91,14 +91,14 @@ func (va *validator) CheckStorage() (bool, error) {
 	}
 
 	if len(conf.BlockData().Path()) < 1 {
-		return false, xerrors.Errorf("storage path blockdata is missing")
+		return false, xerrors.Errorf("blockdata path is missing")
 	}
 
-	if conf.Main().URI() == nil {
-		return false, xerrors.Errorf("storage uri is missing")
+	if conf.Database().URI() == nil {
+		return false, xerrors.Errorf("database uri is missing")
 	}
-	if conf.Main().Cache() == nil {
-		return false, xerrors.Errorf("storage cache is missing")
+	if conf.Database().Cache() == nil {
+		return false, xerrors.Errorf("database cache is missing")
 	}
 
 	return true, nil

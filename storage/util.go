@@ -6,7 +6,7 @@ import (
 	"golang.org/x/xerrors"
 )
 
-func CheckBlock(st Storage, networkID base.NetworkID) error {
+func CheckBlock(st Database, networkID base.NetworkID) error {
 	var m block.Manifest
 	switch b, err := CheckBlockEmpty(st); {
 	case err != nil:
@@ -24,9 +24,9 @@ func CheckBlock(st Storage, networkID base.NetworkID) error {
 	return nil
 }
 
-// CheckBlockEmpty checks whether local has block data in Storage.  If empty,
-// return nil block.Block.
-func CheckBlockEmpty(st Storage) (block.Manifest, error) {
+// CheckBlockEmpty checks whether local has block data. If empty, return nil
+// block.Block.
+func CheckBlockEmpty(st Database) (block.Manifest, error) {
 	switch m, found, err := st.LastManifest(); {
 	case err != nil:
 		return nil, err

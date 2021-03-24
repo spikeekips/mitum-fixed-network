@@ -31,7 +31,7 @@ type States struct {
 	sync.RWMutex
 	*logging.Logging
 	*util.FunctionDaemon
-	storage        storage.Storage
+	database       storage.Database
 	policy         *isaac.LocalPolicy
 	nodepool       *network.Nodepool
 	suffrage       base.Suffrage
@@ -50,7 +50,7 @@ type States struct {
 }
 
 func NewStates(
-	st storage.Storage,
+	st storage.Database,
 	policy *isaac.LocalPolicy,
 	nodepool *network.Nodepool,
 	suffrage base.Suffrage,
@@ -61,7 +61,7 @@ func NewStates(
 		Logging: logging.NewLogging(func(c logging.Context) logging.Emitter {
 			return c.Str("module", "basic-states")
 		}),
-		storage: st, policy: policy, nodepool: nodepool, suffrage: suffrage,
+		database: st, policy: policy, nodepool: nodepool, suffrage: suffrage,
 		state:       base.StateStopped,
 		statech:     make(chan StateSwitchContext, 33),
 		voteproofch: make(chan base.Voteproof, 33),
@@ -499,7 +499,7 @@ func (ss *States) processVoteproofInternal(voteproof base.Voteproof) error {
 	l := isaac.LoggerWithVoteproof(voteproof, ss.Log())
 	l.Debug().HintedVerbose("voteproof", voteproof, true).Msg("new voteproof")
 
-	vc := NewVoteproofChecker(ss.storage, ss.suffrage, ss.nodepool, ss.LastVoteproof(), voteproof)
+	vc := NewVoteproofChecker(ss.database, ss.suffrage, ss.nodepool, ss.LastVoteproof(), voteproof)
 	_ = vc.SetLogger(ss.Log())
 
 	err := util.NewChecker("voteproof-checker", []util.CheckerFunc{
@@ -539,7 +539,7 @@ func (ss *States) processProposal(proposal ballot.Proposal) error {
 
 	l := isaac.LoggerWithBallot(proposal, ss.Log())
 	pvc := isaac.NewProposalValidationChecker(
-		ss.storage, ss.suffrage, ss.nodepool,
+		ss.database, ss.suffrage, ss.nodepool,
 		proposal,
 		ss.LastINITVoteproof(),
 	)
@@ -597,7 +597,7 @@ func (ss *States) processSeal(sl seal.Seal) error {
 }
 
 func (ss *States) saveSeal(sl seal.Seal) error {
-	if err := ss.storage.NewSeals([]seal.Seal{sl}); err != nil {
+	if err := ss.database.NewSeals([]seal.Seal{sl}); err != nil {
 		if !xerrors.Is(err, storage.DuplicatedError) {
 			return err
 		}
@@ -610,7 +610,7 @@ func (ss *States) saveSeal(sl seal.Seal) error {
 
 func (ss *States) validateProposal(proposal ballot.Proposal) error {
 	pvc := isaac.NewProposalValidationChecker(
-		ss.storage, ss.suffrage, ss.nodepool,
+		ss.database, ss.suffrage, ss.nodepool,
 		proposal,
 		ss.LastINITVoteproof(),
 	)
@@ -702,8 +702,8 @@ func (ss *States) checkBallotVoteproof(blt ballot.Ballot) error {
 	l := isaac.LoggerWithVoteproof(voteproof, isaac.LoggerWithBallot(blt, ss.Log()))
 
 	lvp := ss.LastVoteproof()
-	// NOTE last init voteproof is nil, it means current block storage is
-	// empty, so will follow current state
+	// NOTE last init voteproof is nil, it means current database is empty, so
+	// will follow current state
 	if lvp == nil {
 		go ss.NewVoteproof(voteproof)
 

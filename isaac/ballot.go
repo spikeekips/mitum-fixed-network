@@ -11,7 +11,7 @@ import (
 	"github.com/spikeekips/mitum/util/valuehash"
 )
 
-func NewINITBallotV0Round0(node network.Node, st storage.Storage) (ballot.INITBallotV0, error) {
+func NewINITBallotV0Round0(node network.Node, st storage.Database) (ballot.INITBallotV0, error) {
 	var m block.Manifest
 	switch l, found, err := st.LastManifest(); {
 	case !found:
@@ -36,7 +36,7 @@ func NewINITBallotV0Round0(node network.Node, st storage.Storage) (ballot.INITBa
 
 func NewINITBallotV0WithVoteproof(
 	node network.Node,
-	st storage.Storage,
+	st storage.Database,
 	voteproof base.Voteproof,
 ) (ballot.INITBallotV0, error) {
 	var height base.Height
@@ -78,7 +78,7 @@ func NewINITBallotV0WithVoteproof(
 }
 
 func NewProposalV0(
-	st storage.Storage,
+	st storage.Database,
 	node base.Address,
 	round base.Round,
 	seals []valuehash.Hash,

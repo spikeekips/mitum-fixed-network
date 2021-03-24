@@ -13,14 +13,14 @@ import (
 type BootingState struct {
 	*logging.Logging
 	*BaseState
-	storage   storage.Storage
+	database  storage.Database
 	blockData blockdata.BlockData
 	policy    *isaac.LocalPolicy
 	suffrage  base.Suffrage
 }
 
 func NewBootingState(
-	st storage.Storage,
+	st storage.Database,
 	blockData blockdata.BlockData,
 	policy *isaac.LocalPolicy,
 	suffrage base.Suffrage,
@@ -30,7 +30,7 @@ func NewBootingState(
 			return c.Str("module", "basic-booting-state")
 		}),
 		BaseState: NewBaseState(base.StateBooting),
-		storage:   st,
+		database:  st,
 		blockData: blockData,
 		policy:    policy,
 		suffrage:  suffrage,
@@ -45,7 +45,7 @@ func (st *BootingState) Enter(sctx StateSwitchContext) (func() error, error) {
 		callback = i
 	}
 
-	if err := storage.CheckBlock(st.storage, st.policy.NetworkID()); err != nil {
+	if err := storage.CheckBlock(st.database, st.policy.NetworkID()); err != nil {
 		st.Log().Error().Err(err).Msg("something wrong to check blocks")
 
 		if !xerrors.Is(err, storage.NotFoundError) {
@@ -54,7 +54,7 @@ func (st *BootingState) Enter(sctx StateSwitchContext) (func() error, error) {
 
 		st.Log().Debug().Msg("empty blocks found; cleaning up")
 		// NOTE empty block
-		if err := blockdata.Clean(st.storage, st.blockData, false); err != nil {
+		if err := blockdata.Clean(st.database, st.blockData, false); err != nil {
 			return nil, err
 		}
 

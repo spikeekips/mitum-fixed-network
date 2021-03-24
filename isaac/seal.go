@@ -20,7 +20,7 @@ type SealsExtracter struct {
 	*logging.Logging
 	local    base.Address
 	proposer base.Address
-	st       storage.Storage
+	st       storage.Database
 	nodepool *network.Nodepool
 	seals    []valuehash.Hash
 	founds   map[string]struct{}
@@ -29,7 +29,7 @@ type SealsExtracter struct {
 func NewSealsExtracter(
 	local base.Address,
 	proposer base.Address,
-	st storage.Storage,
+	st storage.Database,
 	nodepool *network.Nodepool,
 	seals []valuehash.Hash,
 ) *SealsExtracter {

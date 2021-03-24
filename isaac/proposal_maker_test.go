@@ -18,7 +18,7 @@ type testProposalMaker struct {
 func (t *testProposalMaker) TestCached() {
 	local := t.Locals(1)[0]
 
-	proposalMaker := NewProposalMaker(local.Node(), local.Storage(), local.Policy())
+	proposalMaker := NewProposalMaker(local.Node(), local.Database(), local.Policy())
 
 	ib := t.NewINITBallot(local, base.Round(0), nil)
 	initFact := ib.INITBallotFactV0
@@ -38,7 +38,7 @@ func (t *testProposalMaker) TestCached() {
 func (t *testProposalMaker) TestClean() {
 	local := t.Locals(1)[0]
 
-	proposalMaker := NewProposalMaker(local.Node(), local.Storage(), local.Policy())
+	proposalMaker := NewProposalMaker(local.Node(), local.Database(), local.Policy())
 
 	height := base.Height(33)
 	round := base.Round(1)
@@ -58,9 +58,9 @@ func (t *testProposalMaker) TestSeals() {
 
 		seals = append(seals, sl)
 	}
-	t.NoError(local.Storage().NewSeals(seals))
+	t.NoError(local.Database().NewSeals(seals))
 
-	proposalMaker := NewProposalMaker(local.Node(), local.Storage(), local.Policy())
+	proposalMaker := NewProposalMaker(local.Node(), local.Database(), local.Policy())
 
 	height := base.Height(33)
 	round := base.Round(1)
@@ -70,7 +70,7 @@ func (t *testProposalMaker) TestSeals() {
 	t.Equal(len(seals), len(proposal.Seals()))
 
 	var expectedSeals []valuehash.Hash
-	err = local.Storage().StagedOperationSeals(func(sl operation.Seal) (bool, error) {
+	err = local.Database().StagedOperationSeals(func(sl operation.Seal) (bool, error) {
 		expectedSeals = append(expectedSeals, sl.Hash())
 
 		return true, nil
@@ -99,9 +99,9 @@ func (t *testProposalMaker) TestOneSealOver0() {
 	over, _ := t.NewOperationSeal(local, 2)
 	seals = append(seals, over)
 
-	t.NoError(local.Storage().NewSeals(seals))
+	t.NoError(local.Database().NewSeals(seals))
 
-	proposalMaker := NewProposalMaker(local.Node(), local.Storage(), local.Policy())
+	proposalMaker := NewProposalMaker(local.Node(), local.Database(), local.Policy())
 
 	height := base.Height(33)
 	round := base.Round(1)
@@ -132,9 +132,9 @@ func (t *testProposalMaker) TestOneSealOver1() {
 		seals = append(seals, sl)
 	}
 
-	t.NoError(local.Storage().NewSeals(seals))
+	t.NoError(local.Database().NewSeals(seals))
 
-	proposalMaker := NewProposalMaker(local.Node(), local.Storage(), local.Policy())
+	proposalMaker := NewProposalMaker(local.Node(), local.Database(), local.Policy())
 
 	height := base.Height(33)
 	round := base.Round(1)
@@ -159,9 +159,9 @@ func (t *testProposalMaker) TestNumberOperationMatch() {
 		sl, _ := t.NewOperationSeal(local, 1)
 		seals = append(seals, sl)
 	}
-	t.NoError(local.Storage().NewSeals(seals))
+	t.NoError(local.Database().NewSeals(seals))
 
-	proposalMaker := NewProposalMaker(local.Node(), local.Storage(), local.Policy())
+	proposalMaker := NewProposalMaker(local.Node(), local.Database(), local.Policy())
 
 	height := base.Height(33)
 	round := base.Round(1)

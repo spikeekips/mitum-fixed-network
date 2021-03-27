@@ -42,7 +42,7 @@ func wrapError(err error) error {
 	}
 
 	if err == leveldbErrors.ErrNotFound {
-		return storage.NotFoundError.Wrap(err)
+		return util.NotFoundError.Wrap(err)
 	}
 
 	return storage.WrapStorageError(err)

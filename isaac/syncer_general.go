@@ -1025,7 +1025,7 @@ func (cs *GeneralSyncer) checkFetchedBlocks(fetched []block.Block) ([]base.Heigh
 
 		switch manifest, found, err := cs.database().Manifest(blk.Height()); {
 		case !found:
-			return nil, storage.NotFoundError.Errorf("manifest not found")
+			return nil, util.NotFoundError.Errorf("manifest not found")
 		case err != nil:
 			return nil, err
 		case !manifest.Hash().Equal(blk.Hash()):
@@ -1139,7 +1139,7 @@ func (cs *GeneralSyncer) fetchBlock(node network.Node, bd block.BlockDataMap) (b
 	case err != nil:
 		return nil, err
 	case !found:
-		return nil, storage.NotFoundError.Errorf("manifest, %d not found", bd.Height())
+		return nil, util.NotFoundError.Errorf("manifest, %d not found", bd.Height())
 	default:
 		if err := ss.SetManifest(i); err != nil {
 			return nil, err
@@ -1230,7 +1230,7 @@ func (cs *GeneralSyncer) commit() error {
 	for i := from; i <= to; i++ {
 		switch m, found, err := cs.database().Manifest(base.Height(i)); {
 		case !found:
-			return storage.NotFoundError.Errorf("block, %v guessed to be stored, but not found", base.Height(i))
+			return util.NotFoundError.Errorf("block, %v guessed to be stored, but not found", base.Height(i))
 		case err != nil:
 			return err
 		default:

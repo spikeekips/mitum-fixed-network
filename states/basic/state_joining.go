@@ -11,6 +11,7 @@ import (
 	"github.com/spikeekips/mitum/isaac"
 	"github.com/spikeekips/mitum/network"
 	"github.com/spikeekips/mitum/storage"
+	"github.com/spikeekips/mitum/util"
 	"github.com/spikeekips/mitum/util/localtime"
 	"github.com/spikeekips/mitum/util/logging"
 )
@@ -57,7 +58,7 @@ func (st *JoiningState) Enter(sctx StateSwitchContext) (func() error, error) {
 	if voteproof == nil { // NOTE if empty voteproof, load last accept voteproof from database
 		voteproof = st.database.LastVoteproof(base.StageACCEPT)
 		if voteproof == nil {
-			return nil, storage.NotFoundError.Errorf("last accept voteproof not found")
+			return nil, util.NotFoundError.Errorf("last accept voteproof not found")
 		}
 	}
 

@@ -12,6 +12,7 @@ import (
 	"github.com/spikeekips/mitum/base/block"
 	"github.com/spikeekips/mitum/storage"
 	"github.com/spikeekips/mitum/storage/blockdata"
+	"github.com/spikeekips/mitum/util"
 	jsonenc "github.com/spikeekips/mitum/util/encoder/json"
 	"github.com/spikeekips/mitum/util/hint"
 	"github.com/spikeekips/mitum/util/localtime"
@@ -106,7 +107,7 @@ func (st *BlockData) remove(height base.Height) error {
 	case removed:
 		return nil
 	case !found:
-		return storage.NotFoundError.Errorf("block directory not found, %v", height)
+		return util.NotFoundError.Errorf("block directory not found, %v", height)
 	}
 
 	removedFile := []byte(localtime.RFC3339(localtime.UTCNow()))
@@ -134,7 +135,7 @@ func (st *BlockData) RemoveAll(height base.Height) error {
 	case err != nil:
 		return err
 	case !found:
-		return storage.NotFoundError.Errorf("block directory not found, %v", height)
+		return util.NotFoundError.Errorf("block directory not found, %v", height)
 	}
 
 	if err := os.RemoveAll(st.heightDirectory(height, true)); err != nil {

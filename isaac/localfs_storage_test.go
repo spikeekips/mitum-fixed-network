@@ -8,7 +8,6 @@ import (
 	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/base/block"
 	"github.com/spikeekips/mitum/base/state"
-	"github.com/spikeekips/mitum/storage"
 	"github.com/spikeekips/mitum/storage/blockdata/localfs"
 	"github.com/spikeekips/mitum/util"
 	"github.com/spikeekips/mitum/util/tree"
@@ -229,7 +228,7 @@ func (t *testBlockData) TestRemove() {
 
 	err := st.Remove(22)
 	t.Error(err)
-	t.True(xerrors.Is(err, storage.NotFoundError))
+	t.True(xerrors.Is(err, util.NotFoundError))
 
 	t.NoError(st.Remove(34))
 	found, err := st.Exists(34)
@@ -266,7 +265,7 @@ func (t *testBlockData) TestRemoveAll() {
 
 	err := st.RemoveAll(22)
 	t.Error(err)
-	t.True(xerrors.Is(err, storage.NotFoundError))
+	t.True(xerrors.Is(err, util.NotFoundError))
 
 	t.NoError(st.RemoveAll(34))
 

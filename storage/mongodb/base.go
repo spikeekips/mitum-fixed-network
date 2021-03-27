@@ -164,7 +164,7 @@ func (st *Database) Initialize() error {
 		return nil
 	}
 
-	if err := st.loadLastBlock(); err != nil && !xerrors.Is(err, storage.NotFoundError) {
+	if err := st.loadLastBlock(); err != nil && !xerrors.Is(err, util.NotFoundError) {
 		return err
 	}
 
@@ -195,7 +195,7 @@ func (st *Database) loadLastBlock() error {
 	case err != nil:
 		return xerrors.Errorf("failed to find last block of height, %v: %w", height, err)
 	case !found:
-		return storage.NotFoundError.Errorf("failed to find last block of height, %v", height)
+		return util.NotFoundError.Errorf("failed to find last block of height, %v", height)
 	default:
 		return st.setLastBlock(m, false, false)
 	}
@@ -399,7 +399,7 @@ func (st *Database) CleanByHeight(height base.Height) error {
 	case err != nil:
 		return xerrors.Errorf("failed to find block of height, %v: %w", height-1, err)
 	case !found:
-		return storage.NotFoundError.Errorf("failed to find block of height, %v", height-1)
+		return util.NotFoundError.Errorf("failed to find block of height, %v", height-1)
 	default:
 		_ = st.stateCache.Purge()
 		_ = st.operationFactCache.Purge()
@@ -462,7 +462,7 @@ func (st *Database) manifestByFilter(filter bson.D) (block.Manifest, bool, error
 		},
 		options.FindOne().SetSort(util.NewBSONFilter("height", -1).D()),
 	); err != nil {
-		if xerrors.Is(err, storage.NotFoundError) {
+		if xerrors.Is(err, util.NotFoundError) {
 			return nil, false, nil
 		}
 
@@ -564,7 +564,7 @@ func (st *Database) Seal(h valuehash.Hash) (seal.Seal, bool, error) {
 			return nil
 		},
 	); err != nil {
-		if xerrors.Is(err, storage.NotFoundError) {
+		if xerrors.Is(err, util.NotFoundError) {
 			return nil, false, nil
 		}
 
@@ -1093,7 +1093,7 @@ func (st *Database) Info(key string) ([]byte, bool, error) {
 			return nil
 		},
 	); err != nil {
-		if xerrors.Is(err, storage.NotFoundError) {
+		if xerrors.Is(err, util.NotFoundError) {
 			return nil, false, nil
 		}
 
@@ -1130,7 +1130,7 @@ func (st *Database) voteproofByFilter(filter bson.D) (base.Voteproof, bool, erro
 		},
 		options.FindOne().SetSort(util.NewBSONFilter("height", -1).D()),
 	); err != nil {
-		if xerrors.Is(err, storage.NotFoundError) {
+		if xerrors.Is(err, util.NotFoundError) {
 			return nil, false, nil
 		}
 
@@ -1150,7 +1150,7 @@ func (st *Database) lastVoteproofs(height base.Height) (base.Voteproof, base.Vot
 	case err != nil:
 		return nil, nil, xerrors.Errorf("failed to find last init voteproof of height, %v: %w", height, err)
 	case !found:
-		return nil, nil, storage.NotFoundError.Errorf("failed to find last init voteproof of height, %v", height)
+		return nil, nil, util.NotFoundError.Errorf("failed to find last init voteproof of height, %v", height)
 	default:
 		initVoteproof = i
 	}
@@ -1159,7 +1159,7 @@ func (st *Database) lastVoteproofs(height base.Height) (base.Voteproof, base.Vot
 	case err != nil:
 		return nil, nil, xerrors.Errorf("failed to find last accept voteproof of height, %v: %w", height, err)
 	case !found:
-		return nil, nil, storage.NotFoundError.Errorf("failed to find last accept voteproof of height, %v", height)
+		return nil, nil, util.NotFoundError.Errorf("failed to find last accept voteproof of height, %v", height)
 	default:
 		acceptVoteproof = i
 	}
@@ -1213,7 +1213,7 @@ func (st *Database) BlockDataMap(height base.Height) (block.BlockDataMap, bool, 
 		},
 		options.FindOne().SetSort(util.NewBSONFilter("height", -1).D()),
 	); err != nil {
-		if xerrors.Is(err, storage.NotFoundError) {
+		if xerrors.Is(err, util.NotFoundError) {
 			return nil, false, nil
 		}
 

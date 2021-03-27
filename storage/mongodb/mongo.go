@@ -172,7 +172,7 @@ func (cl *Client) getByFilter(col string, filter bson.D, opts ...*options.FindOn
 	res := cl.db.Collection(col).FindOne(ctx, filter, opts...)
 	if err := res.Err(); err != nil {
 		if err == mongo.ErrNoDocuments {
-			return nil, storage.NotFoundError.Wrap(err)
+			return nil, util.NotFoundError.Wrap(err)
 		}
 
 		return nil, storage.WrapStorageError(err)
@@ -188,7 +188,7 @@ func (cl *Client) Add(col string, doc Doc) (interface{}, error) {
 	res, err := cl.db.Collection(col).InsertOne(ctx, doc)
 	if err != nil {
 		if isDuplicatedError(err) {
-			return nil, storage.DuplicatedError.Wrap(err)
+			return nil, util.DuplicatedError.Wrap(err)
 		}
 
 		return nil, storage.WrapStorageError(err)
@@ -222,7 +222,7 @@ func (cl *Client) AddRaw(col string, raw bson.Raw) (interface{}, error) {
 	res, err := cl.db.Collection(col).InsertOne(ctx, raw)
 	if err != nil {
 		if isDuplicatedError(err) {
-			return nil, storage.DuplicatedError.Wrap(err)
+			return nil, util.DuplicatedError.Wrap(err)
 		}
 
 		return nil, storage.WrapStorageError(err)

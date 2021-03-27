@@ -7,6 +7,7 @@ import (
 	"github.com/spikeekips/mitum/isaac"
 	"github.com/spikeekips/mitum/storage"
 	"github.com/spikeekips/mitum/storage/blockdata"
+	"github.com/spikeekips/mitum/util"
 	"github.com/spikeekips/mitum/util/logging"
 )
 
@@ -48,7 +49,7 @@ func (st *BootingState) Enter(sctx StateSwitchContext) (func() error, error) {
 	if err := storage.CheckBlock(st.database, st.policy.NetworkID()); err != nil {
 		st.Log().Error().Err(err).Msg("something wrong to check blocks")
 
-		if !xerrors.Is(err, storage.NotFoundError) {
+		if !xerrors.Is(err, util.NotFoundError) {
 			return nil, err
 		}
 

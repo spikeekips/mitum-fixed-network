@@ -7,6 +7,7 @@ import (
 	"github.com/spikeekips/mitum/base/ballot"
 	"github.com/spikeekips/mitum/network"
 	"github.com/spikeekips/mitum/storage"
+	"github.com/spikeekips/mitum/util"
 	"github.com/spikeekips/mitum/util/logging"
 )
 
@@ -51,7 +52,7 @@ func (pvc *ProposalChecker) IsKnown() (bool, error) {
 	if _, found, err := pvc.database.Proposal(height, round, pvc.proposal.Node()); err != nil {
 		return false, err
 	} else if found {
-		return false, KnownSealError.Wrap(storage.FoundError.Errorf("proposal already in database"))
+		return false, KnownSealError.Wrap(util.FoundError.Errorf("proposal already in database"))
 	}
 
 	return true, nil
@@ -83,7 +84,7 @@ func (pvc *ProposalChecker) SaveProposal() (bool, error) {
 	switch err := pvc.database.NewProposal(pvc.proposal); {
 	case err == nil:
 		return true, nil
-	case xerrors.Is(err, storage.DuplicatedError):
+	case xerrors.Is(err, util.DuplicatedError):
 		return true, nil
 	default:
 		return false, err

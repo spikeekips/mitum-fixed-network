@@ -10,6 +10,7 @@ import (
 	"github.com/spikeekips/mitum/launch/pm"
 	"github.com/spikeekips/mitum/network"
 	"github.com/spikeekips/mitum/storage"
+	"github.com/spikeekips/mitum/util"
 	"github.com/spikeekips/mitum/util/logging"
 	"github.com/spikeekips/mitum/util/valuehash"
 )
@@ -137,7 +138,7 @@ func processRoundrobinSuffrage(ctx context.Context, conf config.RoundrobinSuffra
 			case err != nil:
 				return nil, err
 			case !found:
-				return nil, storage.NotFoundError.Errorf("manifest not found for suffrage")
+				return nil, util.NotFoundError.Errorf("manifest not found for suffrage")
 			default:
 				return m.Hash(), nil
 			}

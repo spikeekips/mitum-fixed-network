@@ -9,7 +9,6 @@ import (
 
 	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/base/block"
-	"github.com/spikeekips/mitum/storage"
 	"github.com/spikeekips/mitum/util"
 	"github.com/spikeekips/mitum/util/logging"
 )
@@ -44,7 +43,7 @@ func (st *SyncerSession) manifestKey(height base.Height) []byte {
 func (st *SyncerSession) Manifest(height base.Height) (block.Manifest, bool, error) {
 	raw, err := st.database.DB().Get(st.manifestKey(height), nil)
 	if err != nil {
-		if xerrors.Is(err, storage.NotFoundError) {
+		if xerrors.Is(err, util.NotFoundError) {
 			return nil, false, nil
 		}
 
@@ -53,7 +52,7 @@ func (st *SyncerSession) Manifest(height base.Height) (block.Manifest, bool, err
 
 	m, err := st.database.loadManifest(raw)
 	if err != nil {
-		if xerrors.Is(err, storage.NotFoundError) {
+		if xerrors.Is(err, util.NotFoundError) {
 			return nil, false, nil
 		}
 		return nil, false, err
@@ -66,7 +65,7 @@ func (st *SyncerSession) Manifests(heights []base.Height) ([]block.Manifest, err
 	var bs []block.Manifest
 	for i := range heights {
 		if b, found, err := st.Manifest(heights[i]); !found {
-			return nil, storage.NotFoundError.Errorf("manifest not found by height")
+			return nil, util.NotFoundError.Errorf("manifest not found by height")
 		} else if err != nil {
 			return nil, err
 		} else {
@@ -163,7 +162,7 @@ func (st *SyncerSession) Commit() error {
 		case err != nil:
 			return err
 		case !found:
-			return storage.NotFoundError.Errorf("block not found")
+			return util.NotFoundError.Errorf("block not found")
 		default:
 			blk = j
 		}
@@ -173,7 +172,7 @@ func (st *SyncerSession) Commit() error {
 		case err != nil:
 			return err
 		case !found:
-			return storage.NotFoundError.Errorf("block data map not found")
+			return util.NotFoundError.Errorf("block data map not found")
 		default:
 			m = j
 		}

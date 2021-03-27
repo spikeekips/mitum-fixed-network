@@ -20,7 +20,6 @@ import (
 	"github.com/spikeekips/mitum/base/key"
 	"github.com/spikeekips/mitum/base/operation"
 	"github.com/spikeekips/mitum/base/seal"
-	"github.com/spikeekips/mitum/storage"
 	"github.com/spikeekips/mitum/util"
 	"github.com/spikeekips/mitum/util/encoder"
 	bsonenc "github.com/spikeekips/mitum/util/encoder/bson"
@@ -246,7 +245,7 @@ func (t *testMongodbClient) TestSetDuplicatedError() {
 	t.Equal(id, inserted)
 
 	_, err = t.client.Add("showme", doc)
-	t.True(xerrors.Is(err, storage.DuplicatedError))
+	t.True(xerrors.Is(err, util.DuplicatedError))
 }
 
 func (t *testMongodbClient) TestSetRawDuplicatedError() {
@@ -260,7 +259,7 @@ func (t *testMongodbClient) TestSetRawDuplicatedError() {
 	t.Equal(id, inserted)
 
 	_, err = t.client.AddRaw("showme", raw)
-	t.True(xerrors.Is(err, storage.DuplicatedError))
+	t.True(xerrors.Is(err, util.DuplicatedError))
 }
 
 func (t *testMongodbClient) TestBulkDuplicatedError0() {
@@ -273,7 +272,7 @@ func (t *testMongodbClient) TestBulkDuplicatedError0() {
 	models = append(models, mongo.NewInsertOneModel().SetDocument(doc))
 
 	err := t.client.Bulk(context.Background(), "showme", models, false)
-	t.True(xerrors.Is(err, storage.DuplicatedError))
+	t.True(xerrors.Is(err, util.DuplicatedError))
 }
 
 func (t *testMongodbClient) TestBulkDuplicatedError1() {
@@ -288,7 +287,7 @@ func (t *testMongodbClient) TestBulkDuplicatedError1() {
 	models = append(models, mongo.NewInsertOneModel().SetDocument(doc))
 
 	err = t.client.Bulk(context.Background(), "showme", models, false)
-	t.True(xerrors.Is(err, storage.DuplicatedError))
+	t.True(xerrors.Is(err, util.DuplicatedError))
 }
 
 func (t *testMongodbClient) TestMoveRawBytes() {

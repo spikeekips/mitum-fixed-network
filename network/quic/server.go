@@ -14,7 +14,7 @@ import (
 	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/base/seal"
 	"github.com/spikeekips/mitum/network"
-	"github.com/spikeekips/mitum/storage"
+	"github.com/spikeekips/mitum/util"
 	"github.com/spikeekips/mitum/util/cache"
 	"github.com/spikeekips/mitum/util/encoder"
 	"github.com/spikeekips/mitum/util/logging"
@@ -263,7 +263,7 @@ func (sv *Server) handleGetByHeights(
 
 	var output []byte
 	if sls, err := getHandler(args.Heights); err != nil {
-		if xerrors.Is(err, storage.NotFoundError) {
+		if xerrors.Is(err, util.NotFoundError) {
 			network.HTTPError(w, http.StatusNotFound)
 
 			return err
@@ -362,7 +362,7 @@ func (sv *Server) handleGetBlockData(w http.ResponseWriter, r *http.Request) {
 
 		return
 	} else if j, closefunc, err := sv.blockDataHandler("/" + i); err != nil {
-		if xerrors.Is(err, storage.NotFoundError) {
+		if xerrors.Is(err, util.NotFoundError) {
 			network.HTTPError(w, http.StatusNotFound)
 
 			return

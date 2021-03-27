@@ -14,6 +14,7 @@ import (
 	"github.com/spikeekips/mitum/base/block"
 	"github.com/spikeekips/mitum/base/state"
 	"github.com/spikeekips/mitum/storage"
+	"github.com/spikeekips/mitum/util"
 	"github.com/spikeekips/mitum/util/tree"
 	"github.com/spikeekips/mitum/util/valuehash"
 )
@@ -67,7 +68,7 @@ func (bst *DatabaseSession) SetBlock(ctx context.Context, blk block.Block) error
 	select {
 	case <-ctx.Done():
 		if err := bst.st.CleanByHeight(blk.Height()); err != nil {
-			if !xerrors.Is(err, storage.NotFoundError) {
+			if !xerrors.Is(err, util.NotFoundError) {
 				return err
 			}
 		}

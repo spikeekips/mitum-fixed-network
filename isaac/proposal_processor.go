@@ -13,6 +13,7 @@ import (
 	"github.com/spikeekips/mitum/network"
 	"github.com/spikeekips/mitum/storage"
 	"github.com/spikeekips/mitum/storage/blockdata"
+	"github.com/spikeekips/mitum/util"
 	"github.com/spikeekips/mitum/util/hint"
 	"github.com/spikeekips/mitum/util/logging"
 	"github.com/spikeekips/mitum/util/tree"
@@ -78,7 +79,7 @@ func NewDefaultProcessor(
 	var baseManifest block.Manifest
 	switch m, found, err := st.ManifestByHeight(proposal.Height() - 1); {
 	case !found:
-		return nil, storage.NotFoundError.Errorf("base manifest, %d is empty", proposal.Height()-1)
+		return nil, util.NotFoundError.Errorf("base manifest, %d is empty", proposal.Height()-1)
 	case err != nil:
 		return nil, err
 	default:

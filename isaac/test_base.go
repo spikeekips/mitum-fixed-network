@@ -464,7 +464,7 @@ func (t *BaseTest) CompareVoteproof(a, b base.Voteproof) {
 
 func (t *BaseTest) LastManifest(st storage.Database) block.Manifest {
 	if m, found, err := st.LastManifest(); !found {
-		panic(storage.NotFoundError.Errorf("last manifest not found"))
+		panic(util.NotFoundError.Errorf("last manifest not found"))
 	} else if err != nil {
 		panic(err)
 	} else {

@@ -15,6 +15,7 @@ import (
 	"github.com/spikeekips/mitum/storage"
 	"github.com/spikeekips/mitum/storage/blockdata"
 	"github.com/spikeekips/mitum/storage/blockdata/localfs"
+	"github.com/spikeekips/mitum/util"
 	"github.com/spikeekips/mitum/util/logging"
 	"github.com/spikeekips/mitum/util/valuehash"
 )
@@ -162,7 +163,7 @@ end:
 
 		switch l, found, err := bg.genesisNode.Database().LastManifest(); {
 		case !found:
-			return storage.NotFoundError.Errorf("last manifest not found")
+			return util.NotFoundError.Errorf("last manifest not found")
 		case err != nil:
 			return err
 		case l.Height() == bg.lastHeight:
@@ -183,7 +184,7 @@ end:
 	for {
 		switch blk, err := localfs.LoadBlock(fbs, height); {
 		case err != nil:
-			if xerrors.Is(err, storage.NotFoundError) {
+			if xerrors.Is(err, util.NotFoundError) {
 				break end
 			}
 
@@ -292,7 +293,7 @@ func (bg *DummyBlocksV0Generator) syncSeals(from *Local) error {
 
 		for _, proposal := range proposals {
 			if err := l.Database().NewProposal(proposal); err != nil {
-				if xerrors.Is(err, storage.DuplicatedError) {
+				if xerrors.Is(err, util.DuplicatedError) {
 					continue
 				}
 

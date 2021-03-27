@@ -419,7 +419,7 @@ func (st *ConsensusState) prepareProposal(
 	if i, err := st.proposalMaker.Proposal(height, round, voteproof); err != nil {
 		return nil, err
 	} else if err := st.database.NewProposal(i); err != nil { // NOTE save proposal
-		if xerrors.Is(err, storage.DuplicatedError) {
+		if xerrors.Is(err, util.DuplicatedError) {
 			return i, nil
 		}
 

@@ -12,6 +12,7 @@ import (
 	"golang.org/x/xerrors"
 
 	"github.com/spikeekips/mitum/storage"
+	"github.com/spikeekips/mitum/util"
 )
 
 var defaultLimitWriteModels int = 200
@@ -73,7 +74,7 @@ func writeBulkModels(
 
 		if res, err := client.Collection(col).BulkWrite(ctx, ms, opts); err != nil {
 			if isDuplicatedError(err) {
-				err = storage.DuplicatedError.Wrap(err)
+				err = util.DuplicatedError.Wrap(err)
 			}
 
 			return nil, storage.WrapStorageError(err)

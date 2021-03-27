@@ -94,7 +94,7 @@ func LoadData(st *BlockData, height base.Height, dataType string) (io.ReadCloser
 	if found, err := st.Exists(height); err != nil {
 		return nil, err
 	} else if !found {
-		return nil, storage.NotFoundError.Errorf("block data %d not found", height)
+		return nil, util.NotFoundError.Errorf("block data %d not found", height)
 	}
 
 	g := filepath.Join(st.heightDirectory(height, true), fmt.Sprintf(BlockFileGlobFormats, height, dataType))
@@ -104,7 +104,7 @@ func LoadData(st *BlockData, height base.Height, dataType string) (io.ReadCloser
 	case err != nil:
 		return nil, storage.WrapStorageError(err)
 	case len(matches) < 1:
-		return nil, storage.NotFoundError.Errorf("block data, %q(%d) not found", dataType, height)
+		return nil, util.NotFoundError.Errorf("block data, %q(%d) not found", dataType, height)
 	default:
 		f = matches[0]
 	}

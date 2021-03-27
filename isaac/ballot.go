@@ -8,6 +8,7 @@ import (
 	"github.com/spikeekips/mitum/base/block"
 	"github.com/spikeekips/mitum/network"
 	"github.com/spikeekips/mitum/storage"
+	"github.com/spikeekips/mitum/util"
 	"github.com/spikeekips/mitum/util/valuehash"
 )
 
@@ -89,7 +90,7 @@ func NewProposalV0(
 	var manifest block.Manifest
 	switch l, found, err := st.LastManifest(); {
 	case !found:
-		return ballot.ProposalV0{}, storage.NotFoundError.Errorf("last manifest not found for NewProposalV0")
+		return ballot.ProposalV0{}, util.NotFoundError.Errorf("last manifest not found for NewProposalV0")
 	case err != nil:
 		return ballot.ProposalV0{}, err
 	default:

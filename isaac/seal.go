@@ -9,6 +9,7 @@ import (
 	"github.com/spikeekips/mitum/base/operation"
 	"github.com/spikeekips/mitum/network"
 	"github.com/spikeekips/mitum/storage"
+	"github.com/spikeekips/mitum/util"
 	"github.com/spikeekips/mitum/util/errors"
 	"github.com/spikeekips/mitum/util/logging"
 	"github.com/spikeekips/mitum/util/valuehash"
@@ -100,7 +101,7 @@ func (se *SealsExtracter) extractFromStorage(
 		case err != nil:
 			if xerrors.Is(err, context.DeadlineExceeded) || xerrors.Is(err, context.Canceled) {
 				return count, nil, err
-			} else if xerrors.Is(err, storage.NotFoundError) {
+			} else if xerrors.Is(err, util.NotFoundError) {
 				notFounds = append(notFounds, h)
 
 				continue
@@ -254,7 +255,7 @@ func (se *SealsExtracter) fromChannel(notFounds []valuehash.Hash) (map[string][]
 	}
 
 	if err := se.st.NewSeals(received); err != nil {
-		if !xerrors.Is(err, storage.DuplicatedError) {
+		if !xerrors.Is(err, util.DuplicatedError) {
 			return nil, err
 		}
 	}

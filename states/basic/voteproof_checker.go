@@ -115,7 +115,7 @@ func (vc *VoteproofChecker) CheckINITVoteproofWithLocalBlock() (bool, error) {
 	}
 
 	if err := CheckBlockWithINITVoteproof(vc.database, vc.voteproof); err != nil {
-		if xerrors.Is(err, util.IgnoreError) || xerrors.Is(err, storage.NotFoundError) {
+		if xerrors.Is(err, util.IgnoreError) || xerrors.Is(err, util.NotFoundError) {
 			return true, nil
 		}
 
@@ -200,7 +200,7 @@ func CheckBlockWithINITVoteproof(st storage.Database, voteproof base.Voteproof) 
 	case err != nil:
 		return err
 	case !found:
-		return storage.NotFoundError.Errorf("manifest, %v not found for checking init voteproof", voteproof.Height())
+		return util.NotFoundError.Errorf("manifest, %v not found for checking init voteproof", voteproof.Height())
 	default:
 		m = i
 	}

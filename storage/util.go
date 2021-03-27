@@ -3,6 +3,7 @@ package storage
 import (
 	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/base/block"
+	"github.com/spikeekips/mitum/util"
 	"golang.org/x/xerrors"
 )
 
@@ -12,7 +13,7 @@ func CheckBlock(st Database, networkID base.NetworkID) error {
 	case err != nil:
 		return err
 	case b == nil:
-		return NotFoundError.Errorf("empty block manifest")
+		return util.NotFoundError.Errorf("empty block manifest")
 	default:
 		m = b
 	}

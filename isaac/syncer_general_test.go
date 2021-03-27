@@ -12,8 +12,8 @@ import (
 	"github.com/spikeekips/mitum/base/block"
 	"github.com/spikeekips/mitum/network"
 	channetwork "github.com/spikeekips/mitum/network/gochan"
-	"github.com/spikeekips/mitum/storage"
 	"github.com/spikeekips/mitum/storage/blockdata/localfs"
+	"github.com/spikeekips/mitum/util"
 	"github.com/stretchr/testify/suite"
 	"golang.org/x/xerrors"
 )
@@ -593,7 +593,7 @@ func (t *testGeneralSyncer) TestMissingBlocks() {
 
 		if strings.HasPrefix(bp, fmt.Sprintf("%d-", missing)) {
 			if strings.Contains(p, "-operations-") {
-				return nil, nil, storage.NotFoundError
+				return nil, nil, util.NotFoundError
 			}
 		}
 

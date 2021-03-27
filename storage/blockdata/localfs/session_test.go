@@ -14,7 +14,6 @@ import (
 	"github.com/spikeekips/mitum/base/key"
 	"github.com/spikeekips/mitum/base/operation"
 	"github.com/spikeekips/mitum/base/state"
-	"github.com/spikeekips/mitum/storage"
 	"github.com/spikeekips/mitum/storage/blockdata"
 	"github.com/spikeekips/mitum/util"
 	"github.com/spikeekips/mitum/util/encoder"
@@ -136,7 +135,7 @@ func (t *testSession) checkSessionFile(ss *Session, dataType string) string {
 func (t *testSession) TestRootNotExist() {
 	_, err := NewSession(valuehash.RandomSHA256().String(), blockdata.NewDefaultWriter(t.JSONEnc), 10)
 	t.Error(err)
-	t.True(xerrors.Is(err, storage.NotFoundError))
+	t.True(xerrors.Is(err, util.NotFoundError))
 }
 
 func (t *testSession) TestNew() {

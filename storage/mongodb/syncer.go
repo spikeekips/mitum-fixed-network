@@ -62,7 +62,7 @@ func (st *SyncerSession) Manifests(heights []base.Height) ([]block.Manifest, err
 	var bs []block.Manifest
 	for i := range heights {
 		if b, found, err := st.manifestDatabase.ManifestByHeight(heights[i]); !found {
-			return nil, storage.NotFoundError.Errorf("manifest not found")
+			return nil, util.NotFoundError.Errorf("manifest not found")
 		} else if err != nil {
 			return nil, err
 		} else {

@@ -4,7 +4,6 @@ import (
 	"os"
 	"testing"
 
-	"github.com/spikeekips/mitum/storage"
 	"github.com/spikeekips/mitum/storage/blockdata"
 	"github.com/spikeekips/mitum/util"
 	jsonenc "github.com/spikeekips/mitum/util/encoder/json"
@@ -52,7 +51,7 @@ func (t *testBlockData) TestNew() {
 func (t *testBlockData) TestRootDoesNotExist() {
 	st := NewBlockData(util.UUID().String(), t.JSONEnc)
 	err := st.Initialize()
-	t.True(xerrors.Is(err, storage.NotFoundError))
+	t.True(xerrors.Is(err, util.NotFoundError))
 }
 
 func (t *testBlockData) TestRemove() {

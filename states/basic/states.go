@@ -599,7 +599,7 @@ func (ss *States) processSeal(sl seal.Seal) error {
 
 func (ss *States) saveSeal(sl seal.Seal) error {
 	if err := ss.database.NewSeals([]seal.Seal{sl}); err != nil {
-		if !xerrors.Is(err, storage.DuplicatedError) {
+		if !xerrors.Is(err, util.DuplicatedError) {
 			return err
 		}
 

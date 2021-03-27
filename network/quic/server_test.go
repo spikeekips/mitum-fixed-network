@@ -21,7 +21,6 @@ import (
 	"github.com/spikeekips/mitum/base/seal"
 	"github.com/spikeekips/mitum/base/state"
 	"github.com/spikeekips/mitum/network"
-	"github.com/spikeekips/mitum/storage"
 	"github.com/spikeekips/mitum/util"
 	"github.com/spikeekips/mitum/util/encoder"
 	jsonenc "github.com/spikeekips/mitum/util/encoder/json"
@@ -335,7 +334,7 @@ func (t *testQuicSever) TestGetBlockDataWithError() {
 	defer qn.Stop()
 
 	qn.SetBlockDataHandler(func(p string) (io.ReadCloser, func() error, error) {
-		return nil, func() error { return nil }, storage.NotFoundError
+		return nil, func() error { return nil }, util.NotFoundError
 	})
 
 	qc, err := NewChannel(t.url.String(), 2, true, nil, t.encs, t.enc)

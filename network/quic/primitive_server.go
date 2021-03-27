@@ -21,7 +21,7 @@ const QuicEncoderHintHeader string = "x-mitum-encoder-hint"
 
 type PrimitiveQuicServer struct {
 	*logging.Logging
-	*util.FunctionDaemon
+	*util.ContextDaemon
 	bind        string
 	tlsConfig   *tls.Config
 	stoppedChan chan struct{}
@@ -53,7 +53,7 @@ func NewPrimitiveQuicServer(bind string, certs []tls.Certificate) (*PrimitiveQui
 		},
 	)
 
-	qs.FunctionDaemon = util.NewFunctionDaemon(qs.run, false)
+	qs.ContextDaemon = util.NewContextDaemon("network-quic-primitive-server", qs.run)
 
 	return qs, nil
 }
@@ -71,7 +71,7 @@ func (qs *PrimitiveQuicServer) SetHandler(prefix string, handler network.HTTPHan
 
 func (qs *PrimitiveQuicServer) SetLogger(l logging.Logger) logging.Logger {
 	_ = qs.Logging.SetLogger(l)
-	_ = qs.FunctionDaemon.SetLogger(l)
+	_ = qs.ContextDaemon.SetLogger(l)
 
 	return qs.Log()
 }
@@ -80,7 +80,7 @@ func (qs *PrimitiveQuicServer) StoppedChan() <-chan struct{} {
 	return qs.stoppedChan
 }
 
-func (qs *PrimitiveQuicServer) run(stopChan chan struct{}) error {
+func (qs *PrimitiveQuicServer) run(ctx context.Context) error {
 	qs.Log().Debug().Str("bind", qs.bind).Msg("trying to start server")
 
 	server := &http3.Server{
@@ -112,7 +112,7 @@ func (qs *PrimitiveQuicServer) run(stopChan chan struct{}) error {
 	select {
 	case err := <-errChan:
 		return err
-	case <-stopChan:
+	case <-ctx.Done():
 		if err := qs.stop(server); err != nil {
 			qs.Log().Error().Err(err).Msg("failed to stop server")
 			return err

@@ -13,12 +13,12 @@ import (
 type Timers struct {
 	*logging.Logging
 	sync.RWMutex
-	timers   map[ /* timer id */ TimerID]*CallbackTimer
+	timers   map[ /* timer id */ TimerID]Timer
 	allowNew bool // if allowNew is true, new timer can be added.
 }
 
 func NewTimers(ids []TimerID, allowNew bool) *Timers {
-	timers := map[TimerID]*CallbackTimer{}
+	timers := map[TimerID]Timer{}
 	for _, id := range ids {
 		timers[id] = nil
 	}
@@ -44,7 +44,9 @@ func (ts *Timers) SetLogger(l logging.Logger) logging.Logger {
 			continue
 		}
 
-		_ = timer.SetLogger(l)
+		if i, ok := timer.(logging.SetLogger); ok {
+			_ = i.SetLogger(l)
+		}
 	}
 
 	return ts.Log()
@@ -70,7 +72,7 @@ func (ts *Timers) Stop() error {
 			continue
 		}
 
-		go func(t *CallbackTimer) {
+		go func(t Timer) {
 			defer wg.Done()
 
 			if err := t.Stop(); err != nil {
@@ -103,7 +105,7 @@ func (ts *Timers) ResetTimer(id TimerID) error {
 }
 
 // SetTimer sets the timer with id
-func (ts *Timers) SetTimer(timer *CallbackTimer) error {
+func (ts *Timers) SetTimer(timer Timer) error {
 	ts.Lock()
 	defer ts.Unlock()
 
@@ -123,7 +125,9 @@ func (ts *Timers) SetTimer(timer *CallbackTimer) error {
 	ts.timers[timer.ID()] = timer
 
 	if timer != nil {
-		_ = ts.timers[timer.ID()].SetLogger(ts.Log())
+		if l, ok := ts.timers[timer.ID()].(logging.SetLogger); ok {
+			_ = l.SetLogger(ts.Log())
+		}
 	}
 
 	return nil
@@ -156,7 +160,7 @@ func (ts *Timers) StartTimers(ids []TimerID, stopOthers bool) error {
 		}
 	}
 
-	callback := func(t *CallbackTimer) {
+	callback := func(t Timer) {
 		if t.IsStarted() {
 			return
 		}
@@ -177,7 +181,7 @@ func (ts *Timers) StopTimers(ids []TimerID) error {
 }
 
 func (ts *Timers) stopTimers(ids []TimerID) error {
-	callback := func(t *CallbackTimer) {
+	callback := func(t Timer) {
 		if !t.IsStarted() {
 			return
 		}
@@ -223,7 +227,7 @@ func (ts *Timers) checkExists(ids []TimerID) error {
 	return nil
 }
 
-func (ts *Timers) traverse(callback func(*CallbackTimer), ids []TimerID) error {
+func (ts *Timers) traverse(callback func(Timer), ids []TimerID) error {
 	if err := ts.checkExists(ids); err != nil {
 		return err
 	}

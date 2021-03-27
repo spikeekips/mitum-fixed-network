@@ -30,7 +30,7 @@ const (
 type States struct {
 	sync.RWMutex
 	*logging.Logging
-	*util.FunctionDaemon
+	*util.ContextDaemon
 	database       storage.Database
 	policy         *isaac.LocalPolicy
 	nodepool       *network.Nodepool
@@ -88,7 +88,7 @@ func NewStates(
 	}
 
 	ss.states = states
-	ss.FunctionDaemon = util.NewFunctionDaemon(ss.start, false).SetBlocking(true)
+	ss.ContextDaemon = util.NewContextDaemon("basic-states", ss.start)
 
 	// NOTE set last voteproof from local
 	if i := st.LastVoteproof(base.StageACCEPT); i != nil {
@@ -116,11 +116,17 @@ func (ss *States) SetLogger(l logging.Logger) logging.Logger {
 	return ss.Logging.Log()
 }
 
+func (ss *States) Start() error {
+	ch := ss.ContextDaemon.Wait(context.Background())
+
+	return <-ch
+}
+
 func (ss *States) Stop() error {
 	ss.Lock()
 	defer ss.Unlock()
 
-	if err := ss.FunctionDaemon.Stop(); err != nil {
+	if err := ss.ContextDaemon.Stop(); err != nil {
 		if !xerrors.Is(err, util.DaemonAlreadyStoppedError) {
 			return err
 		}
@@ -274,11 +280,8 @@ func (ss *States) setState(state base.State) {
 	ss.state = state
 }
 
-func (ss *States) start(stopch chan struct{}) error {
+func (ss *States) start(ctx context.Context) error {
 	ss.Log().Debug().Msg("states started")
-
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
 
 	go ss.cleanBallotbox(ctx)
 	go ss.detectStuck(ctx)
@@ -289,9 +292,7 @@ func (ss *States) start(stopch chan struct{}) error {
 	select {
 	case err := <-errch:
 		return err
-	case <-stopch:
-		cancel()
-
+	case <-ctx.Done():
 		return <-errch
 	}
 }

@@ -43,7 +43,7 @@ func (t *testCallbackTimer) TestStart() {
 	t.NoError(ct.Start())
 	t.True(xerrors.Is(ct.Start(), util.DaemonAlreadyStartedError))
 
-	time.Sleep(time.Millisecond * 50)
+	<-time.After(time.Millisecond * 50)
 
 	ct.Stop()
 
@@ -66,11 +66,11 @@ func (t *testCallbackTimer) TestStop() {
 	t.NoError(ct.Start())
 	t.True(xerrors.Is(ct.Start(), util.DaemonAlreadyStartedError))
 
-	time.Sleep(time.Millisecond * 40)
+	<-time.After(time.Millisecond * 40)
 	ct.Stop()
 	tickedStopped := atomic.LoadInt64(&ticked)
 
-	time.Sleep(time.Millisecond * 30)
+	<-time.After(time.Millisecond * 30)
 	t.True(tickedStopped >= 3)
 	t.True(tickedStopped <= atomic.LoadInt64(&ticked))
 	t.False(ct.IsStarted())
@@ -101,7 +101,7 @@ func (t *testCallbackTimer) TestStoppedByCallback() {
 	t.NoError(ct.Start())
 	t.True(xerrors.Is(ct.Start(), util.DaemonAlreadyStartedError))
 
-	time.Sleep(time.Millisecond * 100)
+	<-time.After(time.Millisecond * 100)
 	t.True(atomic.LoadInt64(&ticked) < 4)
 }
 
@@ -125,7 +125,7 @@ func (t *testCallbackTimer) TestStoppedByError() {
 	t.NoError(ct.Start())
 	t.True(xerrors.Is(ct.Start(), util.DaemonAlreadyStartedError))
 
-	time.Sleep(time.Millisecond * 100)
+	<-time.After(time.Millisecond * 100)
 	t.True(atomic.LoadInt64(&ticked) < 4)
 }
 
@@ -151,7 +151,7 @@ func (t *testCallbackTimer) TestIntervalFunc() {
 	t.NoError(ct.Start())
 	t.True(xerrors.Is(ct.Start(), util.DaemonAlreadyStartedError))
 
-	time.Sleep(time.Millisecond * 60)
+	<-time.After(time.Millisecond * 60)
 
 	ct.Stop()
 
@@ -183,7 +183,7 @@ func (t *testCallbackTimer) TestIntervalFuncNarrowInterval() {
 	t.NoError(ct.Start())
 	t.True(xerrors.Is(ct.Start(), util.DaemonAlreadyStartedError))
 
-	time.Sleep(time.Millisecond * 50)
+	<-time.After(time.Millisecond * 50)
 
 	_ = ct.Stop()
 
@@ -201,7 +201,7 @@ func (t *testCallbackTimer) TestLongInterval() {
 	t.NoError(err)
 	t.NoError(ct.Start())
 
-	time.Sleep(time.Millisecond * 100)
+	<-time.After(time.Millisecond * 100)
 	t.Error(xerrors.Errorf("stopping too long waited"))
 	t.NoError(ct.Stop())
 }
@@ -230,13 +230,13 @@ func (t *testCallbackTimer) TestRestartAfterStop() {
 
 	t.NoError(ct.Start())
 
-	time.Sleep(time.Millisecond * 100)
+	<-time.After(time.Millisecond * 100)
 	t.True(atomic.LoadInt64(&ticked) < 4)
 	t.False(ct.IsStarted())
 
 	t.NoError(ct.Restart())
 
-	time.Sleep(time.Millisecond * 100)
+	<-time.After(time.Millisecond * 100)
 	t.True(atomic.LoadInt64(&ticked) > 4)
 	t.True(atomic.LoadInt64(&ticked) < 8)
 	t.False(ct.IsStarted())
@@ -262,12 +262,12 @@ func (t *testCallbackTimer) TestReset() {
 
 	t.NoError(ct.Start())
 
-	time.Sleep(time.Millisecond * 100)
+	<-time.After(time.Millisecond * 100)
 	t.True(atomic.LoadInt64(&ticked) < 4)
 
 	t.NoError(ct.Reset())
 
-	time.Sleep(time.Millisecond * 100)
+	<-time.After(time.Millisecond * 100)
 	t.True(atomic.LoadInt64(&ticked) > 4)
 	t.True(atomic.LoadInt64(&ticked) < 8)
 

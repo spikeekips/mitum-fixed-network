@@ -1,6 +1,7 @@
 package localtime
 
 import (
+	"context"
 	"sync"
 	"time"
 
@@ -21,7 +22,7 @@ var (
 type TimeSyncer struct {
 	sync.RWMutex
 	*logging.Logging
-	*util.FunctionDaemon
+	*util.ContextDaemon
 	server   string
 	offset   time.Duration
 	interval time.Duration
@@ -49,7 +50,7 @@ func NewTimeSyncer(server string, checkInterval time.Duration) (*TimeSyncer, err
 		interval: checkInterval,
 	}
 
-	ts.FunctionDaemon = util.NewFunctionDaemon(ts.schedule, true)
+	ts.ContextDaemon = util.NewContextDaemon("time-syncer", ts.schedule)
 
 	ts.check()
 
@@ -67,17 +68,17 @@ func (ts *TimeSyncer) Start() error {
 			Msg("interval too short")
 	}
 
-	return ts.FunctionDaemon.Start()
+	return ts.ContextDaemon.Start()
 }
 
-func (ts *TimeSyncer) schedule(stopChan chan struct{}) error {
+func (ts *TimeSyncer) schedule(ctx context.Context) error {
 	ticker := time.NewTicker(ts.interval)
 	defer ticker.Stop()
 
 end:
 	for {
 		select {
-		case <-stopChan:
+		case <-ctx.Done():
 			ts.Log().Debug().Msg("stopped")
 
 			break end

@@ -13,15 +13,14 @@ type testTimers struct {
 	suite.Suite
 }
 
-func (t *testTimers) timer(id TimerID) *CallbackTimer {
-	timer, err := NewCallbackTimer(
+func (t *testTimers) timer(id TimerID) *ContextTimer {
+	timer := NewContextTimer(
 		id,
+		time.Second*10,
 		func(int) (bool, error) {
 			return true, nil
 		},
-		time.Second*10,
 	)
-	t.NoError(err)
 
 	return timer
 }

@@ -48,7 +48,7 @@ type sv struct {
 type Processors struct {
 	sync.RWMutex
 	*logging.Logging
-	*util.FunctionDaemon
+	*util.ContextDaemon
 	newFunc           ProcessorNewFunc
 	proposalChecker   func(ballot.Proposal) error
 	newProposalChan   chan pv
@@ -69,7 +69,7 @@ func NewProcessors(newFunc ProcessorNewFunc, proposalChecker func(ballot.Proposa
 		saveChan:        make(chan sv),
 	}
 
-	pps.FunctionDaemon = util.NewFunctionDaemon(pps.start, false)
+	pps.ContextDaemon = util.NewContextDaemon("default-proposal-processors", pps.start)
 
 	return pps
 }
@@ -146,11 +146,11 @@ func (pps *Processors) setCurrent(pp Processor) {
 	pps.current = pp
 }
 
-func (pps *Processors) start(stopChan chan struct{}) error {
+func (pps *Processors) start(ctx context.Context) error {
 end:
 	for {
 		select {
-		case <-stopChan:
+		case <-ctx.Done():
 			break end
 		case i := <-pps.newProposalChan:
 			r := pps.handleProposal(i.ctx, i.proposal, i.voteproof, i.outchan)

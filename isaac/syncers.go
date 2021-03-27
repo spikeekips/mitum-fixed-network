@@ -1,6 +1,7 @@
 package isaac
 
 import (
+	"context"
 	"sync"
 
 	"github.com/spikeekips/mitum/base"
@@ -15,7 +16,7 @@ import (
 
 type Syncers struct {
 	sync.RWMutex
-	*util.FunctionDaemon
+	*util.ContextDaemon
 	*logging.Logging
 	local                *network.LocalNode
 	database             storage.Database
@@ -55,7 +56,7 @@ func NewSyncers(
 		targetHeight:         base.NilHeight,
 	}
 
-	sy.FunctionDaemon = util.NewFunctionDaemon(sy.start, true)
+	sy.ContextDaemon = util.NewContextDaemon("syncers", sy.start)
 
 	return sy
 }
@@ -64,7 +65,7 @@ func (sy *Syncers) Stop() error {
 	sy.Lock()
 	defer sy.Unlock()
 
-	if err := sy.FunctionDaemon.Stop(); err != nil {
+	if err := sy.ContextDaemon.Stop(); err != nil {
 		if !xerrors.Is(err, util.DaemonAlreadyStoppedError) {
 			return err
 		}
@@ -91,7 +92,7 @@ func (sy *Syncers) Stop() error {
 
 func (sy *Syncers) SetLogger(l logging.Logger) logging.Logger {
 	_ = sy.Logging.SetLogger(l)
-	_ = sy.FunctionDaemon.SetLogger(l)
+	_ = sy.ContextDaemon.SetLogger(l)
 
 	return sy.Log()
 }
@@ -164,11 +165,11 @@ func (sy *Syncers) IsFinished() bool {
 	return sy.isFinished()
 }
 
-func (sy *Syncers) start(stopChan chan struct{}) error {
+func (sy *Syncers) start(ctx context.Context) error {
 end:
 	for {
 		select {
-		case <-stopChan:
+		case <-ctx.Done():
 			break end
 		case cxt := <-sy.stateChan:
 			if err := sy.stateChanged(cxt); err != nil {

@@ -23,11 +23,11 @@ func (ed *emptyDaemon) Start() error {
 	return nil
 }
 
-type testDaemon struct {
+type testFunctionDaemon struct {
 	suite.Suite
 }
 
-func (t *testDaemon) TestStart() {
+func (t *testFunctionDaemon) TestStart() {
 	ed := &emptyDaemon{FunctionDaemon: NewFunctionDaemon(func(stopChan chan struct{}) error {
 	end:
 		for {
@@ -52,7 +52,7 @@ func (t *testDaemon) TestStart() {
 	}()
 }
 
-func (t *testDaemon) TestStop() {
+func (t *testFunctionDaemon) TestStop() {
 	ed := &emptyDaemon{FunctionDaemon: NewFunctionDaemon(func(stopChan chan struct{}) error {
 	end:
 		for {
@@ -77,7 +77,7 @@ func (t *testDaemon) TestStop() {
 	t.True(xerrors.Is(ed.Stop(), DaemonAlreadyStoppedError))
 }
 
-func (t *testDaemon) TestFunctionError() {
+func (t *testFunctionDaemon) TestFunctionError() {
 	ed := &emptyDaemon{FunctionDaemon: NewFunctionDaemon(func(stopChan chan struct{}) error {
 		return xerrors.Errorf("find me :)")
 	}, true)}
@@ -89,7 +89,7 @@ func (t *testDaemon) TestFunctionError() {
 	t.True(xerrors.Is(ed.Stop(), DaemonAlreadyStoppedError))
 }
 
-func (t *testDaemon) TestStopByStopChan() {
+func (t *testFunctionDaemon) TestStopByStopChan() {
 	ed := &emptyDaemon{FunctionDaemon: NewFunctionDaemon(func(stopChan chan struct{}) error {
 		for range stopChan {
 			break
@@ -109,7 +109,7 @@ func (t *testDaemon) TestStopByStopChan() {
 	t.True(xerrors.Is(ed.Stop(), DaemonAlreadyStoppedError))
 }
 
-func (t *testDaemon) TestTimer() {
+func (t *testFunctionDaemon) TestTimer() {
 	var ticked int
 	var wg sync.WaitGroup
 	wg.Add(1)
@@ -146,7 +146,7 @@ func (t *testDaemon) TestTimer() {
 	t.True(ticked > 2)
 }
 
-func (t *testDaemon) TestMultipleTimer() {
+func (t *testFunctionDaemon) TestMultipleTimer() {
 	n := 3
 
 	var ticked int64
@@ -202,8 +202,8 @@ func (t *testDaemon) TestMultipleTimer() {
 	t.True(atomic.LoadInt64(&ticked) > int64(n*2))
 }
 
-func TestDaemon(t *testing.T) {
+func TestFunctionDaemon(t *testing.T) {
 	defer goleak.VerifyNone(t)
 
-	suite.Run(t, new(testDaemon))
+	suite.Run(t, new(testFunctionDaemon))
 }

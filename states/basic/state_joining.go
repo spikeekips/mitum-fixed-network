@@ -120,18 +120,13 @@ func (st *JoiningState) broadcastINITBallotEnteredWithoutDelay(voteproof base.Vo
 		l.Debug().HintedVerbose("voteproof", voteproof, true).Msg("joining with latest accept voteproof from local")
 	}
 
-	timer, err := localtime.NewCallbackTimer(TimerIDBroadcastJoingingINITBallot, func(i int) (bool, error) {
+	timer := localtime.NewContextTimer(TimerIDBroadcastJoingingINITBallot, 0, func(i int) (bool, error) {
 		if err := st.BroadcastSeals(baseBallot, i == 0); err != nil {
 			st.Log().Error().Err(err).Msg("failed to broadcast init ballot")
 		}
 
 		return true, nil
-	}, 0)
-	if err != nil {
-		return err
-	}
-
-	timer = timer.SetInterval(func(i int) time.Duration {
+	}).SetInterval(func(i int) time.Duration {
 		if i < 1 {
 			return time.Nanosecond
 		} else {
@@ -163,7 +158,7 @@ func (st *JoiningState) broadcastINITBallotEntered(voteproof base.Voteproof) err
 
 	checkBallotbox := st.checkBallotboxFunc()
 
-	timer, err := localtime.NewCallbackTimer(TimerIDBroadcastJoingingINITBallot, func(i int) (bool, error) {
+	timer := localtime.NewContextTimer(TimerIDBroadcastJoingingINITBallot, 0, func(i int) (bool, error) {
 		if err := checkBallotbox(); err != nil {
 			return false, err
 		}
@@ -173,12 +168,7 @@ func (st *JoiningState) broadcastINITBallotEntered(voteproof base.Voteproof) err
 		}
 
 		return true, nil
-	}, 0)
-	if err != nil {
-		return err
-	}
-
-	timer = timer.SetInterval(func(i int) time.Duration {
+	}).SetInterval(func(i int) time.Duration {
 		if i < 1 { // NOTE at first time, wait enough time for incoming ballot
 			return st.policy.IntervalBroadcastingINITBallot() * 5
 		} else {

@@ -1,6 +1,8 @@
 package channetwork
 
 import (
+	"context"
+
 	"github.com/spikeekips/mitum/base/seal"
 	"github.com/spikeekips/mitum/network"
 	"github.com/spikeekips/mitum/util"
@@ -9,7 +11,7 @@ import (
 
 type Server struct {
 	*logging.Logging
-	*util.FunctionDaemon
+	*util.ContextDaemon
 	newSealHandler network.NewSealHandler
 	ch             *Channel
 }
@@ -22,7 +24,7 @@ func NewServer(ch *Channel) *Server {
 		ch: ch,
 	}
 
-	sv.FunctionDaemon = util.NewFunctionDaemon(sv.run, false)
+	sv.ContextDaemon = util.NewContextDaemon("network-chan-server", sv.run)
 
 	return sv
 }
@@ -33,7 +35,7 @@ func (sv *Server) Initialize() error {
 
 func (sv *Server) SetLogger(l logging.Logger) logging.Logger {
 	_ = sv.Logging.SetLogger(l)
-	_ = sv.FunctionDaemon.SetLogger(l)
+	_ = sv.ContextDaemon.SetLogger(l)
 
 	return sv.Log()
 }
@@ -50,11 +52,11 @@ func (sv *Server) NodeInfoHandler() network.NodeInfoHandler             { return
 func (sv *Server) SetBlockDataMapsHandler(network.BlockDataMapsHandler) {}
 func (sv *Server) SetBlockDataHandler(network.BlockDataHandler)         {}
 
-func (sv *Server) run(stopChan chan struct{}) error {
+func (sv *Server) run(ctx context.Context) error {
 end:
 	for {
 		select {
-		case <-stopChan:
+		case <-ctx.Done():
 			break end
 		case sl := <-sv.ch.ReceiveSeal():
 			go func(sl seal.Seal) {

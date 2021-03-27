@@ -380,24 +380,19 @@ func (st *ConsensusState) processProposal(proposal ballot.Proposal) (base.Votepr
 func (st *ConsensusState) broadcastProposal(proposal ballot.Proposal) error {
 	st.Log().Debug().Msg("broadcasting proposal")
 
-	timer, err := localtime.NewCallbackTimer(TimerIDBroadcastProposal, func(int) (bool, error) {
+	timer := localtime.NewContextTimer(TimerIDBroadcastProposal, 0, func(int) (bool, error) {
 		if err := st.BroadcastSeals(proposal, false); err != nil {
 			st.Log().Error().Err(err).Msg("failed to broadcast proposal")
 		}
 
 		return true, nil
-	}, 0)
-	if err != nil {
-		return err
-	} else {
-		timer.SetInterval(func(i int) time.Duration {
-			if i < 1 {
-				return time.Nanosecond
-			}
+	}).SetInterval(func(i int) time.Duration {
+		if i < 1 {
+			return time.Nanosecond
+		}
 
-			return st.policy.IntervalBroadcastingProposal()
-		})
-	}
+		return st.policy.IntervalBroadcastingProposal()
+	})
 
 	if err := st.Timers().SetTimer(timer); err != nil {
 		return err
@@ -488,26 +483,21 @@ func (st *ConsensusState) broadcastACCEPTBallot(
 
 	l.Debug().Dur("initial_delay", initialDelay).Msg("start timer to broadcast accept ballot")
 
-	timer, err := localtime.NewCallbackTimer(TimerIDBroadcastACCEPTBallot, func(i int) (bool, error) {
+	timer := localtime.NewContextTimer(TimerIDBroadcastACCEPTBallot, 0, func(i int) (bool, error) {
 		if err := st.BroadcastSeals(baseBallot, i == 0); err != nil {
 			l.Error().Err(err).Msg("failed to broadcast accept ballot")
 		}
 
 		return true, nil
-	}, 0)
-	if err != nil {
-		return err
-	} else {
-		timer = timer.SetInterval(func(i int) time.Duration {
-			// NOTE at 1st time, wait duration, after then, periodically
-			// broadcast ACCEPT Ballot.
-			if i < 1 {
-				return initialDelay
-			}
+	}).SetInterval(func(i int) time.Duration {
+		// NOTE at 1st time, wait duration, after then, periodically
+		// broadcast ACCEPT Ballot.
+		if i < 1 {
+			return initialDelay
+		}
 
-			return st.policy.IntervalBroadcastingACCEPTBallot()
-		})
-	}
+		return st.policy.IntervalBroadcastingACCEPTBallot()
+	})
 
 	if err := st.Timers().SetTimer(timer); err != nil {
 		return err
@@ -539,16 +529,14 @@ func (st *ConsensusState) broadcastNewINITBallot(voteproof base.Voteproof) error
 	})
 	l.Debug().Msg("broadcasting new init ballot")
 
-	timer, err := localtime.NewCallbackTimer(TimerIDBroadcastINITBallot, func(i int) (bool, error) {
-		if err := st.BroadcastSeals(baseBallot, i == 0); err != nil {
-			l.Error().Err(err).Msg("failed to broadcast new init ballot")
-		}
+	timer := localtime.NewContextTimer(TimerIDBroadcastINITBallot, st.policy.IntervalBroadcastingINITBallot(),
+		func(i int) (bool, error) {
+			if err := st.BroadcastSeals(baseBallot, i == 0); err != nil {
+				l.Error().Err(err).Msg("failed to broadcast new init ballot")
+			}
 
-		return true, nil
-	}, st.policy.IntervalBroadcastingINITBallot())
-	if err != nil {
-		return err
-	}
+			return true, nil
+		})
 
 	if err := st.Timers().SetTimer(timer); err != nil {
 		return err
@@ -579,30 +567,28 @@ func (st *ConsensusState) whenProposalTimeout(voteproof base.Voteproof, proposer
 		baseBallot = b
 	}
 
-	if timer, err := localtime.NewCallbackTimer(TimerIDBroadcastINITBallot, func(i int) (bool, error) {
+	var timer localtime.Timer
+
+	timer = localtime.NewContextTimer(TimerIDBroadcastINITBallot, 0, func(i int) (bool, error) {
 		if err := st.BroadcastSeals(baseBallot, i == 0); err != nil {
 			l.Error().Err(err).Msg("failed to broadcast next init ballot")
 		}
 
 		return true, nil
-	}, 0); err != nil {
-		return err
-	} else {
-		timer = timer.SetInterval(func(i int) time.Duration {
-			// NOTE at 1st time, wait timeout duration, after then, periodically
-			// broadcast INIT Ballot.
-			if i < 1 {
-				return st.policy.TimeoutWaitingProposal()
-			}
-
-			return st.policy.IntervalBroadcastingINITBallot()
-		})
-		if err := st.Timers().SetTimer(timer); err != nil {
-			return err
+	}).SetInterval(func(i int) time.Duration {
+		// NOTE at 1st time, wait timeout duration, after then, periodically
+		// broadcast INIT Ballot.
+		if i < 1 {
+			return st.policy.TimeoutWaitingProposal()
 		}
+
+		return st.policy.IntervalBroadcastingINITBallot()
+	})
+	if err := st.Timers().SetTimer(timer); err != nil {
+		return err
 	}
 
-	if timer, err := localtime.NewCallbackTimer(TimerIDFindProposal, func(int) (bool, error) {
+	timer = localtime.NewContextTimer(TimerIDFindProposal, time.Second, func(int) (bool, error) {
 		if i, err := st.findProposal(voteproof.Height(), voteproof.Round(), proposer); err == nil && i != nil {
 			l.Debug().Msg("proposal found in local")
 
@@ -610,9 +596,8 @@ func (st *ConsensusState) whenProposalTimeout(voteproof base.Voteproof, proposer
 		}
 
 		return true, nil
-	}, time.Second); err != nil { // NOTE periodically find proposal
-		return err
-	} else if err := st.Timers().SetTimer(timer); err != nil {
+	})
+	if err := st.Timers().SetTimer(timer); err != nil {
 		return err
 	}
 
@@ -649,24 +634,19 @@ func (st *ConsensusState) nextRound(voteproof base.Voteproof) error {
 		return xerrors.Errorf("failed to re-sign next round init ballot: %w", err)
 	}
 
-	timer, err := localtime.NewCallbackTimer(TimerIDBroadcastINITBallot, func(i int) (bool, error) {
+	timer := localtime.NewContextTimer(TimerIDBroadcastINITBallot, 0, func(i int) (bool, error) {
 		if err := st.BroadcastSeals(baseBallot, i == 0); err != nil {
 			l.Error().Err(err).Msg("failed to broadcast next round init ballot")
 		}
 
 		return true, nil
-	}, 0)
-	if err != nil {
-		return err
-	} else {
-		timer = timer.SetInterval(func(i int) time.Duration {
-			if i < 1 {
-				return time.Nanosecond
-			}
+	}).SetInterval(func(i int) time.Duration {
+		if i < 1 {
+			return time.Nanosecond
+		}
 
-			return st.policy.IntervalBroadcastingINITBallot()
-		})
-	}
+		return st.policy.IntervalBroadcastingINITBallot()
+	})
 
 	if err := st.Timers().SetTimer(timer); err != nil {
 		return err

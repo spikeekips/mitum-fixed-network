@@ -301,8 +301,9 @@ func (st *SyncingState) whenBlockSaved(blks []block.Block) {
 }
 
 func (st *SyncingState) waitVoteproof() error {
-	timer, err := localtime.NewCallbackTimer(
+	timer := localtime.NewContextTimer(
 		TimerIDSyncingWaitVoteproof,
+		0,
 		func(int) (bool, error) {
 			if syncs := st.syncers(); syncs != nil {
 				if !syncs.IsFinished() {
@@ -320,19 +321,13 @@ func (st *SyncingState) waitVoteproof() error {
 
 			return false, nil
 		},
-		0,
-	)
-	if err != nil {
-		return err
-	} else {
-		timer.SetInterval(func(i int) time.Duration {
-			if i < 1 {
-				return st.waitVoteproofTimeout
-			}
+	).SetInterval(func(i int) time.Duration {
+		if i < 1 {
+			return st.waitVoteproofTimeout
+		}
 
-			return time.Second * 1
-		})
-	}
+		return time.Second * 1
+	})
 
 	if err := st.Timers().SetTimer(timer); err != nil {
 		return err

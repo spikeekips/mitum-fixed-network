@@ -58,7 +58,7 @@ func NewContextTimer(id TimerID, interval time.Duration, callback func(int) (boo
 	}
 	ct.callback = callback
 	ct.runchan = make(chan error, 1)
-	ct.ContextDaemon = util.NewContextDaemon(string(id), ct.start)
+	ct.ContextDaemon = util.NewContextDaemon("timer-"+string(id), ct.start)
 
 	return ct
 }
@@ -93,6 +93,12 @@ func (ct *ContextTimer) Stop() error {
 	close(ct.runchan)
 
 	return nil
+}
+
+func (ct *ContextTimer) SetLogger(l logging.Logger) logging.Logger {
+	_ = ct.ContextDaemon.SetLogger(l)
+
+	return ct.Logging.SetLogger(l)
 }
 
 func (ct *ContextTimer) count() int {

@@ -14,6 +14,24 @@ var voteRecordsPool = sync.Pool{
 	},
 }
 
+var (
+	voteRecordsPoolGet = func() *VoteRecords {
+		return voteRecordsPool.Get().(*VoteRecords)
+	}
+	voteRecordsPoolPut = func(vrs *VoteRecords) {
+		vrs.Lock()
+		defer vrs.Unlock()
+
+		vrs.facts = nil
+		vrs.votes = nil
+		vrs.ballots = nil
+		vrs.voteproof = base.VoteproofV0{}
+		vrs.threshold = base.Threshold{}
+
+		voteRecordsPool.Put(vrs)
+	}
+)
+
 type VoteRecords struct {
 	sync.RWMutex
 	facts     map[string]base.Fact
@@ -24,7 +42,7 @@ type VoteRecords struct {
 }
 
 func NewVoteRecords(blt ballot.Ballot, suffrages []base.Address, threshold base.Threshold) *VoteRecords {
-	vr := voteRecordsPool.Get().(*VoteRecords)
+	vr := voteRecordsPoolGet()
 	vr.RWMutex = sync.RWMutex{}
 	vr.facts = map[string]base.Fact{}
 	vr.votes = map[string]valuehash.Hash{}
@@ -39,19 +57,6 @@ func NewVoteRecords(blt ballot.Ballot, suffrages []base.Address, threshold base.
 	vr.threshold = threshold
 
 	return vr
-}
-
-func (vrs *VoteRecords) reset() *VoteRecords {
-	vrs.Lock()
-	defer vrs.Unlock()
-
-	vrs.facts = nil
-	vrs.votes = nil
-	vrs.ballots = nil
-	vrs.voteproof = base.VoteproofV0{}
-	vrs.threshold = base.Threshold{}
-
-	return vrs
 }
 
 func (vrs *VoteRecords) addBallot(blt ballot.Ballot) bool {

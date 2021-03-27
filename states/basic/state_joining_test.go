@@ -50,7 +50,7 @@ func (t *testStateJoining) TestBroadcastingINITBallotInStandalone() {
 	}, false)
 	st.SetTimers(timers)
 
-	sealch := make(chan seal.Seal)
+	sealch := make(chan seal.Seal, 1)
 	receivedTime := util.NewLockedItem(nil)
 	st.SetBroadcastSealsFunc(func(sl seal.Seal, toLocal bool) error {
 		receivedTime.Set(time.Now())
@@ -108,7 +108,7 @@ func (t *testStateJoining) TestBroadcastingINITBallotWithoutACCEPTVoteproof() {
 	}, false)
 	st.SetTimers(timers)
 
-	sealch := make(chan seal.Seal)
+	sealch := make(chan seal.Seal, 1)
 	receivedTime := util.NewLockedItem(nil)
 	st.SetBroadcastSealsFunc(func(sl seal.Seal, toLocal bool) error {
 		receivedTime.Set(time.Now())
@@ -170,7 +170,7 @@ func (t *testStateJoining) TestBroadcastingINITBallotWithACCEPTVoteproof() {
 	}, false)
 	st.SetTimers(timers)
 
-	sealch := make(chan seal.Seal)
+	sealch := make(chan seal.Seal, 1)
 	receivedTime := util.NewLockedItem(nil)
 	st.SetBroadcastSealsFunc(func(sl seal.Seal, toLocal bool) error {
 		receivedTime.Set(time.Now())

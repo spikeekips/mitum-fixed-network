@@ -143,6 +143,8 @@ func (pp *DefaultProcessor) processOperations(ctx context.Context) error {
 	if p, err := storage.NewStatepool(pp.st); err != nil {
 		return err
 	} else {
+		defer p.Done()
+
 		pool = p
 	}
 
@@ -331,8 +333,9 @@ func (pp *DefaultProcessor) processOperationsTree(_ context.Context, pool *stora
 func (pp *DefaultProcessor) generateStatesTree(
 	pool *storage.Statepool,
 ) (tree.FixedTree, []state.State, error) {
-	states := make([]state.State, len(pool.Updates()))
-	for i, s := range pool.Updates() {
+	updates := pool.Updates()
+	states := make([]state.State, len(updates))
+	for i, s := range updates {
 		st := s.GetState()
 		if ust, err := st.SetHash(st.GenerateHash()); err != nil {
 			return tree.FixedTree{}, nil, err
@@ -347,7 +350,7 @@ func (pp *DefaultProcessor) generateStatesTree(
 		return bytes.Compare(states[i].Hash().Bytes(), states[j].Hash().Bytes()) < 0
 	})
 
-	tg := tree.NewFixedTreeGenerator(uint(len(pool.Updates())), nil)
+	tg := tree.NewFixedTreeGenerator(uint(len(updates)), nil)
 	for i := range states {
 		if err := tg.Add(i, states[i].Hash().Bytes(), nil); err != nil {
 			return tree.FixedTree{}, nil, err

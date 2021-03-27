@@ -99,7 +99,7 @@ func (bb *Ballotbox) Clean(height base.Height) error {
 	}
 
 	for i := range removes {
-		voteRecordsPool.Put(removes[i].(*VoteRecords).reset())
+		voteRecordsPoolPut(removes[i].(*VoteRecords))
 	}
 
 	l.Debug().Int("records", len(removeKeys)).Msg("records removed")

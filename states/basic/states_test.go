@@ -72,7 +72,9 @@ func (t *testStates) newStates() *States {
 
 func (t *testStates) TestNewSealVoteproof() {
 	ss := t.newStates()
-	defer ss.Stop()
+	defer func() {
+		_ = ss.Stop()
+	}()
 
 	gotvoteproofch := make(chan base.Voteproof)
 	stateStopped := NewBaseState(base.StateStopped)
@@ -111,7 +113,9 @@ func (t *testStates) TestNewSealVoteproof() {
 
 func (t *testStates) TestSwitchingState() {
 	ss := t.newStates()
-	defer ss.Stop()
+	defer func() {
+		_ = ss.Stop()
+	}()
 
 	statech := make(chan StateSwitchContext)
 	stateConsensus := NewBaseState(base.StateConsensus)
@@ -141,7 +145,9 @@ func (t *testStates) TestSwitchingState() {
 
 func (t *testStates) TestSwitchingStateWithVoteproof() {
 	ss := t.newStates()
-	defer ss.Stop()
+	defer func() {
+		_ = ss.Stop()
+	}()
 
 	statech := make(chan StateSwitchContext)
 	stateConsensus := NewBaseState(base.StateConsensus)
@@ -199,7 +205,9 @@ func (t *testStates) TestSwitchingStateWithVoteproof() {
 
 func (t *testStates) TestNewVoteproofThruStateSwithContext() {
 	ss := t.newStates()
-	defer ss.Stop()
+	defer func() {
+		_ = ss.Stop()
+	}()
 
 	statech := make(chan StateSwitchContext)
 	stateConsensus := NewBaseState(base.StateConsensus)
@@ -257,7 +265,9 @@ func (t *testStates) TestNewVoteproofThruStateSwithContext() {
 
 func (t *testStates) TestNewVoteproofFromBallot() {
 	ss := t.newStates()
-	defer ss.Stop()
+	defer func() {
+		_ = ss.Stop()
+	}()
 
 	statech := make(chan StateSwitchContext)
 	stateConsensus := NewBaseState(base.StateConsensus)
@@ -320,7 +330,9 @@ func (t *testStates) TestNewVoteproofFromBallot() {
 // - states will moves state to booting
 func (t *testStates) TestFailedSwitchingState() {
 	ss := t.newStates()
-	defer ss.Stop()
+	defer func() {
+		_ = ss.Stop()
+	}()
 
 	statech := make(chan StateSwitchContext)
 
@@ -363,7 +375,9 @@ func (t *testStates) TestFailedSwitchingState() {
 // - if switching to booting also failed, states will be stopped with error
 func (t *testStates) TestFailedSwitchingStateButKeepFailing() {
 	ss := t.newStates()
-	defer ss.Stop()
+	defer func() {
+		_ = ss.Stop()
+	}()
 
 	var trying int64
 	stateBooting := NewBaseState(base.StateBooting)
@@ -423,7 +437,9 @@ func (t *testStates) TestFailedSwitchingStateButIgnore() {
 	go func() {
 		_ = ss.Start()
 	}()
-	defer ss.Stop()
+	defer func() {
+		_ = ss.Stop()
+	}()
 
 	sctx := NewStateSwitchContext(ss.State(), base.StateJoining)
 	t.NoError(ss.SwitchState(sctx))
@@ -456,7 +472,9 @@ func (t *testStates) TestFailedSwitchingStateButSameState() {
 	go func() {
 		_ = ss.Start()
 	}()
-	defer ss.Stop()
+	defer func() {
+		_ = ss.Stop()
+	}()
 
 	sctx := NewStateSwitchContext(ss.State(), base.StateJoining)
 	t.NoError(ss.SwitchState(sctx))

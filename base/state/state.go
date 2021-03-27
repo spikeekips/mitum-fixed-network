@@ -42,11 +42,14 @@ type StateUpdater struct {
 }
 
 func NewStateUpdater(st State) *StateUpdater {
-	return &StateUpdater{
-		State:   st,
-		opcache: map[string]struct{}{},
-		orig:    st,
-	}
+	stu := StateUpdaterPoolGet()
+	stu.State = st
+	stu.opcache = map[string]struct{}{}
+	stu.orig = st
+	stu.height = base.NilHeight
+	stu.operations = nil
+
+	return stu
 }
 
 func (stu *StateUpdater) SetHash(h valuehash.Hash) error {

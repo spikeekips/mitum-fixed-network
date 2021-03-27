@@ -84,8 +84,14 @@ func (ts *Timers) Stop() error {
 	wg.Wait()
 
 	for id := range ts.timers {
-		ts.timers[id] = nil
+		if timer := ts.timers[id]; timer == nil {
+			continue
+		} else {
+			ts.putTimer(timer)
+		}
 	}
+
+	ts.timers = map[TimerID]Timer{}
 
 	return nil
 }
@@ -120,6 +126,8 @@ func (ts *Timers) SetTimer(timer Timer) error {
 		if err := existing.Stop(); err != nil {
 			return err
 		}
+
+		ts.putTimer(existing)
 	}
 
 	ts.timers[timer.ID()] = timer
@@ -196,6 +204,8 @@ func (ts *Timers) stopTimers(ids []TimerID) error {
 	}
 
 	for _, id := range ids {
+		ts.putTimer(ts.timers[id])
+
 		ts.timers[id] = nil
 	}
 
@@ -251,4 +261,10 @@ func (ts *Timers) traverse(callback func(Timer), ids []TimerID) error {
 	wg.Wait()
 
 	return nil
+}
+
+func (ts *Timers) putTimer(timer Timer) {
+	if t, ok := timer.(*ContextTimer); ok {
+		ContextTimerPoolPut(t)
+	}
 }

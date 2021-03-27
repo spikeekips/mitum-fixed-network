@@ -165,7 +165,7 @@ func (t *testStateConsensus) TestBroadcastProposalWithINITVoteproof() {
 	st, done := t.newState(t.Suffrage(t.local, t.remote), pps) // NOTE set local is proposer
 	defer done()
 
-	sealch := make(chan seal.Seal)
+	sealch := make(chan seal.Seal, 1)
 	st.SetBroadcastSealsFunc(func(sl seal.Seal, toLocal bool) error {
 		if _, ok := sl.(ballot.Proposal); !ok {
 			return nil
@@ -222,7 +222,7 @@ func (t *testStateConsensus) TestFindProposal() {
 	st, done := t.newState(nil, pps) // NOTE set local is not proposer
 	defer done()
 
-	sealch := make(chan seal.Seal)
+	sealch := make(chan seal.Seal, 1)
 	st.SetBroadcastSealsFunc(func(sl seal.Seal, toLocal bool) error {
 		if _, ok := sl.(ballot.ACCEPTBallot); !ok {
 			return nil
@@ -266,7 +266,7 @@ func (t *testStateConsensus) TestTimeoutWaitingProposal() {
 	st, done := t.newState(t.Suffrage(t.remote, t.local), nil) // NOTE set local is not proposer
 	defer done()
 
-	sealch := make(chan seal.Seal)
+	sealch := make(chan seal.Seal, 1)
 	st.SetBroadcastSealsFunc(func(sl seal.Seal, toLocal bool) error {
 		if _, ok := sl.(ballot.INITBallot); !ok {
 			return nil
@@ -334,7 +334,7 @@ func (t *testStateConsensus) TestStuckACCEPTVotingKeepBroadcastingACCEPTAndPropo
 	st, done := t.newState(t.Suffrage(t.local, t.remote), pps) // NOTE set local is proposer
 	defer done()
 
-	sealch := make(chan seal.Seal)
+	sealch := make(chan seal.Seal, 1)
 	st.SetBroadcastSealsFunc(func(sl seal.Seal, toLocal bool) error {
 		sealch <- sl
 
@@ -419,7 +419,7 @@ func (t *testStateConsensus) TestACCEPTVoteproof() {
 	st, done := t.newState(nil, pps) // NOTE set local is proposer
 	defer done()
 
-	sealch := make(chan seal.Seal)
+	sealch := make(chan seal.Seal, 1)
 	st.SetBroadcastSealsFunc(func(sl seal.Seal, toLocal bool) error {
 		sealch <- sl
 
@@ -500,7 +500,7 @@ func (t *testStateConsensus) TestDrawACCEPTVoteproofToNextRound() {
 	st, done := t.newState(nil, pps)
 	defer done()
 
-	sealch := make(chan seal.Seal)
+	sealch := make(chan seal.Seal, 1)
 	st.SetBroadcastSealsFunc(func(sl seal.Seal, toLocal bool) error {
 		sealch <- sl
 
@@ -610,7 +610,7 @@ func (t *testStateConsensus) TestFailedSavingBlockMovesToSyncing() {
 	st, done := t.newState(nil, pps)
 	defer done()
 
-	sealch := make(chan seal.Seal)
+	sealch := make(chan seal.Seal, 1)
 	st.SetBroadcastSealsFunc(func(sl seal.Seal, toLocal bool) error {
 		sealch <- sl
 
@@ -667,7 +667,7 @@ func (t *testStateConsensus) TestFailedProcessingProposal() {
 	st, done := t.newState(nil, pps)
 	defer done()
 
-	sealch := make(chan seal.Seal)
+	sealch := make(chan seal.Seal, 1)
 	st.SetBroadcastSealsFunc(func(sl seal.Seal, toLocal bool) error {
 		sealch <- sl
 
@@ -746,7 +746,7 @@ func (t *testStateConsensus) TestProcessingProposalFromACCEPTVoterpof() {
 	st, done := t.newState(nil, pps) // NOTE set local is proposer
 	defer done()
 
-	sealch := make(chan seal.Seal)
+	sealch := make(chan seal.Seal, 1)
 	st.SetBroadcastSealsFunc(func(sl seal.Seal, toLocal bool) error {
 		sealch <- sl
 

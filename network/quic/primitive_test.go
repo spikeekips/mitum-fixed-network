@@ -89,6 +89,8 @@ func (t *testPrimitiveQuicSever) TestGet() {
 
 	response, err := client.Request(context.Background(), time.Second*3, t.url.String()+"/get", nil, nil)
 	t.NoError(err)
+	defer response.Close()
+
 	t.True(response.OK())
 
 	b, err := response.Bytes()

@@ -117,9 +117,7 @@ func (ss *States) SetLogger(l logging.Logger) logging.Logger {
 }
 
 func (ss *States) Start() error {
-	ch := ss.ContextDaemon.Wait(context.Background())
-
-	return <-ch
+	return <-ss.ContextDaemon.Wait(context.Background())
 }
 
 func (ss *States) Stop() error {
@@ -289,12 +287,7 @@ func (ss *States) start(ctx context.Context) error {
 	errch := make(chan error)
 	go ss.watch(ctx, errch)
 
-	select {
-	case err := <-errch:
-		return err
-	case <-ctx.Done():
-		return <-errch
-	}
+	return <-errch
 }
 
 func (ss *States) watch(ctx context.Context, errch chan<- error) {
@@ -341,9 +334,6 @@ end:
 }
 
 func (ss *States) processSwitchStates(sctx StateSwitchContext) error {
-	ss.Lock()
-	defer ss.Unlock()
-
 	for {
 		var nsctx StateSwitchContext
 		switch err := ss.switchState(sctx); {

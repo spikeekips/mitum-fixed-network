@@ -10,7 +10,6 @@ import (
 	"time"
 
 	"github.com/lucas-clemente/quic-go"
-	"github.com/lucas-clemente/quic-go/http3"
 	"golang.org/x/xerrors"
 
 	"github.com/spikeekips/mitum/util"
@@ -131,14 +130,21 @@ func (cl *QuicClient) newClient(maxIdleTimeout time.Duration) (*http.Client, fun
 		qcconfig.MaxIdleTimeout = maxIdleTimeout
 	}
 
-	roundTripper := &http3.RoundTripper{
-		TLSClientConfig: &tls.Config{
-			InsecureSkipVerify: cl.insecure, // nolint
-		},
-		QuicConfig: qcconfig,
+	r := RoundTripperPoolGet()
+	r.TLSClientConfig = &tls.Config{
+		InsecureSkipVerify: cl.insecure, // nolint
 	}
+	r.QuicConfig = qcconfig
 
-	return &http.Client{Transport: roundTripper}, roundTripper.Close
+	c := HTTPClientPoolGet()
+	c.Transport = r
+
+	return c, func() error {
+		defer HTTPClientPoolPut(c)
+		defer RoundTripperPoolPut(r)
+
+		return r.Close()
+	}
 }
 
 type QuicResponse struct {

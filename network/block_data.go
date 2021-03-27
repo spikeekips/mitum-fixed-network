@@ -21,17 +21,22 @@ func FetchBlockDataThruChannel(handler BlockDataHandler, item block.BlockDataMap
 	}
 
 	var ro io.ReadCloser
-	closefunc := func() error { return nil }
 	switch u.Scheme {
 	case "file":
-		switch i, j, err := handler(u.Path); {
+		i, closefunc, err := handler(u.Path)
+		if closefunc != nil {
+			defer func() {
+				_ = closefunc()
+			}()
+		}
+
+		switch {
 		case err != nil:
 			return nil, err
 		case i == nil:
 			return nil, xerrors.Errorf("empty raw block data reader returned")
 		default:
 			ro = i
-			closefunc = j
 		}
 	default:
 		return nil, xerrors.Errorf("%q yet supported", u.Scheme)
@@ -39,7 +44,6 @@ func FetchBlockDataThruChannel(handler BlockDataHandler, item block.BlockDataMap
 
 	defer func() {
 		_ = ro.Close()
-		_ = closefunc()
 	}()
 
 	var bo io.ReadSeeker

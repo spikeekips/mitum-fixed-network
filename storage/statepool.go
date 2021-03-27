@@ -218,3 +218,18 @@ func (sp *Statepool) AddedOperations() map[string]operation.Operation {
 
 	return sp.addedOps
 }
+
+// Done cleans up the resources.
+func (sp *Statepool) Done() {
+	sp.Lock()
+	defer sp.Unlock()
+
+	for s := range sp.updated {
+		state.StateUpdaterPoolPut(sp.updated[s])
+	}
+
+	sp.cached = nil
+	sp.updated = nil
+	sp.insertedOps = nil
+	sp.addedOps = nil
+}

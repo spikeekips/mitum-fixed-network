@@ -41,6 +41,9 @@ func (t *testTimers) TestAllowNew() {
 	}
 
 	timers := NewTimers(ids, false)
+	defer func() {
+		_ = timers.Stop()
+	}()
 
 	id := TimerID("showme")
 	t.NoError(timers.SetTimer(t.timer(id)))
@@ -56,6 +59,9 @@ func (t *testTimers) TestStartTimer() {
 	}
 
 	timers := NewTimers(ids, false)
+	defer func() {
+		_ = timers.Stop()
+	}()
 
 	for _, id := range ids {
 		t.NoError(timers.SetTimer(t.timer(id)))
@@ -78,6 +84,9 @@ func (t *testTimers) TestStartTimerStopOthers() {
 	}
 
 	timers := NewTimers(ids, false)
+	defer func() {
+		_ = timers.Stop()
+	}()
 
 	for _, id := range ids {
 		t.NoError(timers.SetTimer(t.timer(id)))
@@ -106,6 +115,9 @@ func (t *testTimers) TestStartTimerNotStop() {
 	}
 
 	timers := NewTimers(ids, false)
+	defer func() {
+		_ = timers.Stop()
+	}()
 
 	for _, id := range ids {
 		t.NoError(timers.SetTimer(t.timer(id)))
@@ -134,6 +146,9 @@ func (t *testTimers) TestStopTimer() {
 	}
 
 	timers := NewTimers(ids, false)
+	defer func() {
+		_ = timers.Stop()
+	}()
 
 	for _, id := range ids {
 		t.NoError(timers.SetTimer(t.timer(id)))
@@ -178,6 +193,9 @@ func (t *testTimers) TestStopAll() {
 	}
 
 	timers := NewTimers(ids, false)
+	defer func() {
+		_ = timers.Stop()
+	}()
 
 	for _, id := range ids {
 		t.NoError(timers.SetTimer(t.timer(id)))

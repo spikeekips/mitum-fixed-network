@@ -17,7 +17,7 @@ type NodeInfoV0PackerJSON struct {
 	LB  block.Manifest         `json:"last_block"`
 	VS  util.Version           `json:"version"`
 	UL  string                 `json:"url"`
-	CO  map[string]interface{} `json:"config"`
+	PO  map[string]interface{} `json:"policy"`
 	SF  []base.Node            `json:"suffrage"`
 }
 
@@ -30,7 +30,7 @@ func (ni NodeInfoV0) JSONPacker() NodeInfoV0PackerJSON {
 		LB:         ni.lastBlock,
 		VS:         ni.version,
 		UL:         ni.u,
-		CO:         ni.config,
+		PO:         ni.policy,
 		SF:         ni.nodes,
 	}
 }
@@ -46,7 +46,7 @@ type NodeInfoV0UnpackerJSON struct {
 	LB  json.RawMessage        `json:"last_block"`
 	VS  util.Version           `json:"version"`
 	UL  string                 `json:"url"`
-	CO  map[string]interface{} `json:"config"`
+	PO  map[string]interface{} `json:"policy"`
 	SF  []json.RawMessage      `json:"suffrage"`
 }
 
@@ -61,5 +61,5 @@ func (ni *NodeInfoV0) UnpackJSON(b []byte, enc *jsonenc.Encoder) error {
 		sf[i] = nni.SF[i]
 	}
 
-	return ni.unpack(enc, nni.ND, nni.NID, nni.ST, nni.LB, nni.VS, nni.UL, nni.CO, sf)
+	return ni.unpack(enc, nni.ND, nni.NID, nni.ST, nni.LB, nni.VS, nni.UL, nni.PO, sf)
 }

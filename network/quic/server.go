@@ -45,18 +45,16 @@ type Server struct {
 	nodeInfoHandler      network.NodeInfoHandler
 	blockDataMapsHandler network.BlockDataMapsHandler
 	blockDataHandler     network.BlockDataHandler
-
-	cache *cache.GCache
+	cache                cache.Cache
 }
 
 func NewServer(
-	prim *PrimitiveQuicServer, encs *encoder.Encoders, enc encoder.Encoder,
+	prim *PrimitiveQuicServer,
+	encs *encoder.Encoders, enc encoder.Encoder,
+	ca cache.Cache,
 ) (*Server, error) {
-	var ca *cache.GCache
-	if c, err := cache.NewGCache("lru", 100, time.Second*3); err != nil {
-		return nil, err
-	} else {
-		ca = c
+	if ca == nil {
+		ca = cache.Dummy{}
 	}
 
 	nqs := &Server{

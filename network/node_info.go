@@ -26,7 +26,7 @@ type NodeInfo interface {
 	LastBlock() block.Manifest
 	Version() util.Version
 	URL() string
-	Config() map[string]interface{}
+	Policy() map[string]interface{}
 	Nodes() []base.Node // Only contains suffrage nodes
 }
 
@@ -37,7 +37,7 @@ type NodeInfoV0 struct {
 	lastBlock block.Manifest
 	version   util.Version
 	u         string
-	config    map[string]interface{}
+	policy    map[string]interface{}
 	nodes     []base.Node
 }
 
@@ -48,7 +48,7 @@ func NewNodeInfoV0(
 	lastBlock block.Manifest,
 	version util.Version,
 	u string,
-	config map[string]interface{},
+	policy map[string]interface{},
 	nodes []base.Node,
 	suffrage base.Suffrage,
 ) NodeInfoV0 {
@@ -66,7 +66,7 @@ func NewNodeInfoV0(
 	}
 
 	if suffrage != nil {
-		config["suffrage"] = suffrage.Verbose()
+		policy["suffrage"] = suffrage.Verbose()
 	}
 
 	return NodeInfoV0{
@@ -76,7 +76,7 @@ func NewNodeInfoV0(
 		lastBlock: lastBlock,
 		version:   version,
 		u:         u,
-		config:    config,
+		policy:    policy,
 		nodes:     nodes,
 	}
 }
@@ -137,8 +137,8 @@ func (ni NodeInfoV0) URL() string {
 	return ni.u
 }
 
-func (ni NodeInfoV0) Config() map[string]interface{} {
-	return ni.config
+func (ni NodeInfoV0) Policy() map[string]interface{} {
+	return ni.policy
 }
 
 func (ni NodeInfoV0) Nodes() []base.Node {

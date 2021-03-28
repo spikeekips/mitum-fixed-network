@@ -22,6 +22,7 @@ import (
 	"github.com/spikeekips/mitum/base/state"
 	"github.com/spikeekips/mitum/network"
 	"github.com/spikeekips/mitum/util"
+	"github.com/spikeekips/mitum/util/cache"
 	"github.com/spikeekips/mitum/util/encoder"
 	jsonenc "github.com/spikeekips/mitum/util/encoder/json"
 	"github.com/spikeekips/mitum/util/localtime"
@@ -72,7 +73,10 @@ func (t *testQuicSever) readyServer() *Server {
 	qs, err := NewPrimitiveQuicServer(t.bind, t.certs)
 	t.NoError(err)
 
-	qn, err := NewServer(qs, t.encs, t.enc)
+	ca, err := cache.NewGCache("lru", 100, time.Second*3)
+	t.NoError(err)
+
+	qn, err := NewServer(qs, t.encs, t.enc, ca)
 	t.NoError(err)
 
 	t.NoError(qn.Start())
@@ -102,10 +106,11 @@ func (t *testQuicSever) TestNew() {
 	qs, err := NewPrimitiveQuicServer(t.bind, t.certs)
 	t.NoError(err)
 
-	qn, err := NewServer(qs, t.encs, t.enc)
+	qn, err := NewServer(qs, t.encs, t.enc, nil)
 	t.NoError(err)
 
 	t.Implements((*network.Server)(nil), qn)
+	t.IsType(cache.Dummy{}, qn.cache)
 }
 
 func (t *testQuicSever) TestSendSeal() {

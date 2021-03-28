@@ -60,7 +60,7 @@ func (t *testNodeInfo) TestNew() {
 	n2 := base.NewBaseNodeV0(na2, key.MustNewBTCPrivatekey().Publickey(), "quic://na2")
 
 	nodes := []base.Node{n1, n2}
-	config := map[string]interface{}{"showme": 1}
+	policy := map[string]interface{}{"showme": 1}
 
 	suffrage := base.NewFixedSuffrage(local.Address(), nil)
 
@@ -71,14 +71,14 @@ func (t *testNodeInfo) TestNew() {
 		blk.Manifest(),
 		util.Version("0.1.1"),
 		"quic://local",
-		config,
+		policy,
 		nodes,
 		suffrage,
 	)
 	t.NoError(ni.IsValid(nil))
 
 	t.Implements((*NodeInfo)(nil), ni)
-	t.Equal(config, ni.Config())
+	t.Equal(policy, ni.Policy())
 
 	expectedNodes := []string{n1.Address().String(), n2.Address().String(), local.Address().String()}
 	var regs []string
@@ -196,7 +196,7 @@ func (t *testNodeInfo) TestJSON() {
 	n1 := base.NewBaseNodeV0(na1, key.MustNewBTCPrivatekey().Publickey(), "quic://na1")
 
 	nodes := []base.Node{n0, n1}
-	config := map[string]interface{}{"showme": 1.1}
+	policy := map[string]interface{}{"showme": 1.1}
 
 	suffrage := base.NewFixedSuffrage(base.RandomStringAddress(), nil)
 	ni := NewNodeInfoV0(
@@ -206,7 +206,7 @@ func (t *testNodeInfo) TestJSON() {
 		blk.Manifest(),
 		util.Version("1.2.3"),
 		"quic://local",
-		config,
+		policy,
 		nodes,
 		suffrage,
 	)
@@ -270,11 +270,11 @@ func (t *testNodeInfo) TestSuffrage() {
 	)
 	t.NoError(ni.IsValid(nil))
 
-	_, found := ni.Config()["suffrage"]
+	_, found := ni.Policy()["suffrage"]
 	t.True(found)
 
 	var a, b map[string]interface{}
-	t.NoError(jsonenc.Unmarshal([]byte(ni.Config()["suffrage"].(string)), &a))
+	t.NoError(jsonenc.Unmarshal([]byte(ni.Policy()["suffrage"].(string)), &a))
 	t.NoError(jsonenc.Unmarshal([]byte(suffrage.Verbose()), &b))
 
 	t.Equal(b, a)

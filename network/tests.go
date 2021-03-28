@@ -47,7 +47,7 @@ func CompareNodeInfo(t *testing.T, a, b NodeInfo) {
 	assert.True(t, a.LastBlock().OperationsHash().Equal(b.LastBlock().OperationsHash()))
 	assert.True(t, a.LastBlock().StatesHash().Equal(b.LastBlock().StatesHash()))
 
-	assert.Equal(t, a.Config(), b.Config())
+	assert.Equal(t, a.Policy(), b.Policy())
 
 	as := a.Nodes()
 	bs := b.Nodes()

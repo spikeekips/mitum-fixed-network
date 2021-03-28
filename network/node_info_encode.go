@@ -34,7 +34,7 @@ func (ni *NodeInfoV0) unpack(
 	ni.version = vs
 	ni.u = u
 
-	ni.config = co
+	ni.policy = co
 
 	sf := make([]base.Node, len(bsf))
 	for i := range bsf {

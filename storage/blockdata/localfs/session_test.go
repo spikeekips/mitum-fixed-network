@@ -26,8 +26,9 @@ import (
 
 type testSession struct {
 	suite.Suite
-	JSONEnc *jsonenc.Encoder
-	root    string
+	JSONEnc  *jsonenc.Encoder
+	baseRoot string
+	root     string
 }
 
 func (t *testSession) SetupSuite() {
@@ -66,10 +67,17 @@ func (t *testSession) SetupSuite() {
 	_ = encs.AddHinter(state.NumberValue{})
 	_ = encs.AddHinter(state.SliceValue{})
 	_ = encs.AddHinter(state.StringValue{})
+
+	p, err := os.MkdirTemp("", "localfs-")
+	if err != nil {
+		panic(err)
+	}
+
+	t.baseRoot = p
 }
 
 func (t *testSession) SetupTest() {
-	p, err := os.MkdirTemp("", "localfs-")
+	p, err := os.MkdirTemp(t.baseRoot, "localfs-")
 	if err != nil {
 		panic(err)
 	}
@@ -78,7 +86,7 @@ func (t *testSession) SetupTest() {
 }
 
 func (t *testSession) TearDownSuite() {
-	_ = os.RemoveAll(t.root)
+	_ = os.RemoveAll(t.baseRoot)
 }
 
 func (t *testSession) loadFile(p string) ([]interface{}, error) {

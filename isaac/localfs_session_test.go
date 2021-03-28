@@ -20,22 +20,6 @@ import (
 
 type testBlockDataLocalFSSession struct {
 	BaseTest
-	root string
-}
-
-func (t *testBlockDataLocalFSSession) SetupTest() {
-	t.BaseTest.SetupTest()
-
-	p, err := os.MkdirTemp("", "localfs-")
-	if err != nil {
-		panic(err)
-	}
-
-	t.root = p
-}
-
-func (t *testBlockDataLocalFSSession) TearDownSuite() {
-	_ = os.RemoveAll(t.root)
 }
 
 func (t *testBlockDataLocalFSSession) openFile(p string) (io.ReadCloser, error) {
@@ -63,7 +47,7 @@ func (t *testBlockDataLocalFSSession) checkSessionFile(ss *localfs.Session, data
 }
 
 func (t *testBlockDataLocalFSSession) TestAddOperationsButNotFinished() {
-	ss, err := localfs.NewSession(t.root, blockdata.NewDefaultWriter(t.JSONEnc), 33)
+	ss, err := localfs.NewSession(t.Root, blockdata.NewDefaultWriter(t.JSONEnc), 33)
 	t.NoError(err)
 	defer ss.Cancel()
 
@@ -78,7 +62,7 @@ func (t *testBlockDataLocalFSSession) TestAddOperationsButNotFinished() {
 }
 
 func (t *testBlockDataLocalFSSession) TestAddOperationsFinishedWithClose() {
-	ss, err := localfs.NewSession(t.root, blockdata.NewDefaultWriter(t.JSONEnc), 33)
+	ss, err := localfs.NewSession(t.Root, blockdata.NewDefaultWriter(t.JSONEnc), 33)
 	t.NoError(err)
 	defer ss.Cancel()
 
@@ -114,7 +98,7 @@ func (t *testBlockDataLocalFSSession) TestAddOperationsFinishedWithClose() {
 }
 
 func (t *testBlockDataLocalFSSession) TestAddStatesButNotFinished() {
-	ss, err := localfs.NewSession(t.root, blockdata.NewDefaultWriter(t.JSONEnc), 33)
+	ss, err := localfs.NewSession(t.Root, blockdata.NewDefaultWriter(t.JSONEnc), 33)
 	t.NoError(err)
 	defer ss.Cancel()
 
@@ -132,7 +116,7 @@ func (t *testBlockDataLocalFSSession) TestAddStatesButNotFinished() {
 }
 
 func (t *testBlockDataLocalFSSession) TestAddStatesFinishedWithClose() {
-	ss, err := localfs.NewSession(t.root, blockdata.NewDefaultWriter(t.JSONEnc), 33)
+	ss, err := localfs.NewSession(t.Root, blockdata.NewDefaultWriter(t.JSONEnc), 33)
 	t.NoError(err)
 	defer ss.Cancel()
 
@@ -167,7 +151,7 @@ func (t *testBlockDataLocalFSSession) TestAddStatesFinishedWithClose() {
 }
 
 func (t *testBlockDataLocalFSSession) TestSetStatesTree() {
-	ss, err := localfs.NewSession(t.root, blockdata.NewDefaultWriter(t.JSONEnc), 33)
+	ss, err := localfs.NewSession(t.Root, blockdata.NewDefaultWriter(t.JSONEnc), 33)
 	t.NoError(err)
 	defer ss.Cancel()
 
@@ -207,7 +191,7 @@ func (t *testBlockDataLocalFSSession) TestSetStatesTree() {
 }
 
 func (t *testBlockDataLocalFSSession) TestSetINITVoteproof() {
-	ss, err := localfs.NewSession(t.root, blockdata.NewDefaultWriter(t.JSONEnc), 33)
+	ss, err := localfs.NewSession(t.Root, blockdata.NewDefaultWriter(t.JSONEnc), 33)
 	t.NoError(err)
 	defer ss.Cancel()
 
@@ -231,7 +215,7 @@ func (t *testBlockDataLocalFSSession) TestSetINITVoteproof() {
 }
 
 func (t *testBlockDataLocalFSSession) TestSetACCEPTVoteproof() {
-	ss, err := localfs.NewSession(t.root, blockdata.NewDefaultWriter(t.JSONEnc), 33)
+	ss, err := localfs.NewSession(t.Root, blockdata.NewDefaultWriter(t.JSONEnc), 33)
 	t.NoError(err)
 	defer ss.Cancel()
 
@@ -255,7 +239,7 @@ func (t *testBlockDataLocalFSSession) TestSetACCEPTVoteproof() {
 }
 
 func (t *testBlockDataLocalFSSession) TestSetProposal() {
-	ss, err := localfs.NewSession(t.root, blockdata.NewDefaultWriter(t.JSONEnc), 33)
+	ss, err := localfs.NewSession(t.Root, blockdata.NewDefaultWriter(t.JSONEnc), 33)
 	t.NoError(err)
 	defer ss.Cancel()
 
@@ -282,7 +266,7 @@ func (t *testBlockDataLocalFSSession) TestSetProposal() {
 }
 
 func (t *testBlockDataLocalFSSession) saveBlock(local *Local) (*localfs.Session, block.Block) {
-	ss, err := localfs.NewSession(t.root, blockdata.NewDefaultWriter(t.JSONEnc), base.Height(33))
+	ss, err := localfs.NewSession(t.Root, blockdata.NewDefaultWriter(t.JSONEnc), base.Height(33))
 	t.NoError(err)
 
 	var blk block.Block
@@ -384,7 +368,7 @@ func (t *testBlockDataLocalFSSession) TestDone() {
 
 	mapData, err := ss.Done()
 	t.NoError(err)
-	_, err = os.Stat(t.root)
+	_, err = os.Stat(t.Root)
 	t.NoError(err)
 
 	t.NoError(mapData.IsValid(nil))
@@ -408,6 +392,8 @@ func (t *testBlockDataLocalFSSession) TestImport() {
 
 	newroot, err := os.MkdirTemp("", "localfs-")
 	t.NoError(err)
+	defer os.RemoveAll(newroot)
+
 	nss, err := localfs.NewSession(newroot, blockdata.NewDefaultWriter(t.JSONEnc), mapData.Height())
 	t.NoError(err)
 

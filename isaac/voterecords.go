@@ -27,6 +27,7 @@ var (
 		vrs.ballots = nil
 		vrs.voteproof = base.VoteproofV0{}
 		vrs.threshold = base.Threshold{}
+		vrs.set = nil
 
 		voteRecordsPool.Put(vrs)
 	}
@@ -39,24 +40,26 @@ type VoteRecords struct {
 	ballots   map[string]ballot.Ballot  // {node Address: ballot}
 	voteproof base.VoteproofV0
 	threshold base.Threshold
+	set       []string
 }
 
 func NewVoteRecords(blt ballot.Ballot, suffrages []base.Address, threshold base.Threshold) *VoteRecords {
-	vr := voteRecordsPoolGet()
-	vr.RWMutex = sync.RWMutex{}
-	vr.facts = map[string]base.Fact{}
-	vr.votes = map[string]valuehash.Hash{}
-	vr.ballots = map[string]ballot.Ballot{}
-	vr.voteproof = base.NewVoteproofV0(
+	vrs := voteRecordsPoolGet()
+	vrs.RWMutex = sync.RWMutex{}
+	vrs.facts = map[string]base.Fact{}
+	vrs.votes = map[string]valuehash.Hash{}
+	vrs.ballots = map[string]ballot.Ballot{}
+	vrs.voteproof = base.NewVoteproofV0(
 		blt.Height(),
 		blt.Round(),
 		suffrages,
 		threshold.Ratio,
 		blt.Stage(),
 	)
-	vr.threshold = threshold
+	vrs.threshold = threshold
+	vrs.set = nil
 
-	return vr
+	return vrs
 }
 
 func (vrs *VoteRecords) addBallot(blt ballot.Ballot) bool {
@@ -90,85 +93,76 @@ func (vrs *VoteRecords) Vote(blt ballot.Ballot) base.Voteproof {
 	vrs.Lock()
 	defer vrs.Unlock()
 
-	vp := &vrs.voteproof
-	if !vrs.vote(blt, vp) {
-		vrs.voteproof = *vp
-
-		return vrs.voteproof
-	}
-
-	{
-		facts := make([]base.Fact, len(vrs.facts))
-		var i int
-		for _, v := range vrs.facts {
-			facts[i] = v
-			i++
-		}
-		vp.SetFacts(facts)
-	}
-
-	{
-		votes := make([]base.VoteproofNodeFact, len(vrs.ballots))
-
-		var i int
-		for _, blt := range vrs.ballots {
-			votes[i] = base.NewVoteproofNodeFact(
-				blt.Node(),
-				vrs.sanitizeHash(blt.Hash()),
-				vrs.sanitizeHash(blt.Fact().Hash()),
-				blt.FactSignature(),
-				blt.Signer(),
-			)
-			i++
-		}
-		vp.SetVotes(votes)
-	}
-
-	_ = vp.Finish()
-
-	vrs.voteproof = *vp
+	vrs.voteproof = vrs.vote(blt)
 
 	return vrs.voteproof
 }
 
-func (vrs *VoteRecords) vote(blt ballot.Ballot, voteproof *base.VoteproofV0) bool {
+func (vrs *VoteRecords) vote(blt ballot.Ballot) base.VoteproofV0 {
+	voteproof := &vrs.voteproof
+
 	if vrs.addBallot(blt) {
 		if voteproof.IsFinished() && !voteproof.IsClosed() {
 			_ = voteproof.Close()
 		}
 
-		return false
+		return *voteproof
 	}
 
 	if voteproof.IsFinished() && !voteproof.IsClosed() {
 		_ = voteproof.Close()
 
-		return false
-	} else if len(vrs.votes) < int(vrs.threshold.Threshold) {
-		return false
+		return *voteproof
 	}
 
-	set := make([]string, len(vrs.votes))
-	facts := map[string]base.Fact{}
+	vrs.set = append(vrs.set, vrs.sanitizeHash(blt.Fact().Hash()).String())
 
+	if len(vrs.set) < int(vrs.threshold.Threshold) {
+		return *voteproof
+	}
+
+	result, key := base.FindMajorityFromSlice(
+		vrs.threshold.Total,
+		vrs.threshold.Threshold,
+		vrs.set,
+	)
+
+	if result == base.VoteResultMajority {
+		_ = voteproof.SetMajority(vrs.facts[key])
+	}
+
+	if result != base.VoteResultNotYet {
+		_ = voteproof.SetResult(result)
+		_ = vrs.finishVoteproof(voteproof)
+	}
+
+	return *voteproof
+}
+
+func (vrs *VoteRecords) finishVoteproof(voteproof *base.VoteproofV0) *base.VoteproofV0 {
+	facts := make([]base.Fact, len(vrs.facts))
 	var i int
-	for n := range vrs.votes {
-		key := vrs.votes[n].String()
-		set[i] = key
-		facts[key] = vrs.facts[key]
+	for k := range vrs.facts {
+		facts[i] = vrs.facts[k]
 		i++
 	}
+	voteproof.SetFacts(facts)
 
-	var fact base.Fact
-	var result base.VoteResultType
+	votes := make([]base.VoteproofNodeFact, len(vrs.ballots))
 
-	result, key := base.FindMajorityFromSlice(vrs.threshold.Total, vrs.threshold.Threshold, set)
-	if result == base.VoteResultMajority {
-		fact = facts[key]
+	i = 0
+	for k := range vrs.ballots {
+		blt := vrs.ballots[k]
+		votes[i] = base.NewVoteproofNodeFact(
+			blt.Node(),
+			vrs.sanitizeHash(blt.Hash()),
+			vrs.sanitizeHash(blt.Fact().Hash()),
+			blt.FactSignature(),
+			blt.Signer(),
+		)
+		i++
 	}
+	voteproof.SetVotes(votes)
 
-	_ = voteproof.SetResult(result).
-		SetMajority(fact)
-
-	return true
+	return voteproof.Finish()
 }

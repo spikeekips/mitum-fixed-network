@@ -90,6 +90,9 @@ func (ct *ContextTimer) Stop() error {
 		return err
 	}
 
+	ct.Lock()
+	defer ct.Unlock()
+
 	close(ct.runchan)
 
 	return nil
@@ -113,7 +116,7 @@ func (ct *ContextTimer) start(ctx context.Context) error {
 		return err
 	}
 
-	errchan := make(chan error)
+	errchan := make(chan error, 1)
 
 	ct.runchan <- nil
 
@@ -129,44 +132,80 @@ end:
 
 			break end
 		case <-ct.runchan:
-			go func(count int) {
-				if err := ct.runCallback(ctx, count); err != nil {
+			if err := ct.prepareCallback(ctx, errchan); err != nil {
+				if !xerrors.Is(err, util.IgnoreError) {
 					errchan <- err
 				}
-			}(ct.count())
+
+				break end
+			}
 		}
 	}
 
 	return nil
 }
 
-func (ct *ContextTimer) runCallback(ctx context.Context, count int) error {
+func (ct *ContextTimer) finishCallback(count int) {
 	ct.Lock()
 	defer ct.Unlock()
 
+	if ct.c == count {
+		ct.c++
+	}
+
+	ct.runchan <- nil
+}
+
+func (ct *ContextTimer) prepareCallback(ctx context.Context, errchan chan error) error {
+	ct.RLock()
+	intervalfunc := ct.interval
+	callback := ct.callback
+	ct.RUnlock()
+
+	if intervalfunc == nil || callback == nil {
+		return util.IgnoreError.Errorf("empty interval or callback")
+	}
+
+	count := ct.count()
 	var interval time.Duration
-	if i := ct.interval(count); i < time.Nanosecond {
+	if i := intervalfunc(count); i < time.Nanosecond {
 		return xerrors.Errorf("invalid interval; too narrow, %v", i)
 	} else {
 		interval = i
 	}
 
+	go func(
+		interval time.Duration,
+		callback func(int) (bool, error),
+		count int,
+	) {
+		if err := ct.waitAndRun(ctx, interval, callback, count); err != nil {
+			errchan <- err
+		}
+	}(interval, callback, count)
+
+	return nil
+}
+
+func (ct *ContextTimer) waitAndRun(
+	ctx context.Context,
+	interval time.Duration,
+	callback func(int) (bool, error),
+	count int,
+) error {
 	select {
 	case <-ctx.Done():
 		return nil
 	case <-time.After(interval):
 	}
 
-	if keep, err := ct.callback(count); err != nil {
+	if keep, err := callback(count); err != nil {
 		return err
 	} else if !keep {
 		return StopTimerError
 	}
 
-	if ct.c == count {
-		ct.c++
-	}
-	ct.runchan <- nil
+	ct.finishCallback(count)
 
 	return nil
 }

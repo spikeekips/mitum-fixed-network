@@ -48,6 +48,7 @@ type ContextTimer struct {
 
 func NewContextTimer(id TimerID, interval time.Duration, callback func(int) (bool, error)) *ContextTimer {
 	ct := ContextTimerPoolGet()
+	ct.RWMutex = sync.RWMutex{}
 	ct.Logging = logging.NewLogging(func(c logging.Context) logging.Emitter {
 		return c.Str("module", "context-timer").
 			Str("id", id.String())

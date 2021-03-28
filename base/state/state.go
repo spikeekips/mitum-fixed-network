@@ -43,6 +43,7 @@ type StateUpdater struct {
 
 func NewStateUpdater(st State) *StateUpdater {
 	stu := StateUpdaterPoolGet()
+	stu.RWMutex = sync.RWMutex{}
 	stu.State = st
 	stu.opcache = map[string]struct{}{}
 	stu.orig = st

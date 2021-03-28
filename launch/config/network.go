@@ -3,11 +3,15 @@ package config
 import (
 	"crypto/tls"
 	"net/url"
+
+	"github.com/spikeekips/mitum/util/cache"
 )
 
 var (
-	DefaultLocalNetworkURL  *url.URL = &url.URL{Scheme: "quic", Host: "127.0.0.1:54321"}
-	DefaultLocalNetworkBind *url.URL = &url.URL{Scheme: "quic", Host: "0.0.0.0:54321"}
+	DefaultLocalNetworkURL       *url.URL = &url.URL{Scheme: "quic", Host: "127.0.0.1:54321"}
+	DefaultLocalNetworkBind      *url.URL = &url.URL{Scheme: "quic", Host: "0.0.0.0:54321"}
+	DefaultLocalNetworkCache              = "gcache:?type=lru&size=100&expire=3s"
+	DefaultLocalNetworkSealCache          = "gcache:?type=lru&size=10000&expire=3m"
 )
 
 type NodeNetwork interface {
@@ -44,12 +48,18 @@ type LocalNetwork interface {
 	Certs() []tls.Certificate
 	SetCerts([]tls.Certificate) error
 	SetCertFiles(string /* key */, string /* cert */) error
+	Cache() *url.URL
+	SetCache(string) error
+	SealCache() *url.URL
+	SetSealCache(string) error
 }
 
 type BaseLocalNetwork struct {
 	*BaseNodeNetwork
-	bind  *url.URL
-	certs []tls.Certificate
+	bind      *url.URL
+	certs     []tls.Certificate
+	cache     *url.URL
+	sealCache *url.URL
 }
 
 func EmptyBaseLocalNetwork() *BaseLocalNetwork {
@@ -85,6 +95,38 @@ func (no *BaseLocalNetwork) SetCertFiles(key, cert string) error {
 		return err
 	} else {
 		no.certs = []tls.Certificate{c}
+
+		return nil
+	}
+}
+
+func (no BaseLocalNetwork) Cache() *url.URL {
+	return no.cache
+}
+
+func (no *BaseLocalNetwork) SetCache(s string) error {
+	if u, err := ParseURLString(s, true); err != nil {
+		return err
+	} else if _, err := cache.NewCacheFromURI(u.String()); err != nil {
+		return err
+	} else {
+		no.cache = u
+
+		return nil
+	}
+}
+
+func (no BaseLocalNetwork) SealCache() *url.URL {
+	return no.sealCache
+}
+
+func (no *BaseLocalNetwork) SetSealCache(s string) error {
+	if u, err := ParseURLString(s, true); err != nil {
+		return err
+	} else if _, err := cache.NewCacheFromURI(u.String()); err != nil {
+		return err
+	} else {
+		no.sealCache = u
 
 		return nil
 	}

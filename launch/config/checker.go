@@ -54,6 +54,18 @@ func (cc *checker) CheckLocalNetwork() (bool, error) {
 		}
 	}
 
+	if conf.Cache() == nil {
+		if err := conf.SetCache(DefaultLocalNetworkCache); err != nil {
+			return false, err
+		}
+	}
+
+	if conf.SealCache() == nil {
+		if err := conf.SetSealCache(DefaultLocalNetworkSealCache); err != nil {
+			return false, err
+		}
+	}
+
 	return true, nil
 }
 

@@ -7,6 +7,8 @@ import (
 	"github.com/spikeekips/mitum/util/encoder"
 )
 
+var DefaultTimeServer = "time.google.com"
+
 type LocalNode interface {
 	Source() map[string]interface{}
 	Node
@@ -55,7 +57,7 @@ func NewBaseLocalNode(enc encoder.Encoder, source map[string]interface{}) *BaseL
 		network:    EmptyBaseLocalNetwork(),
 		storage:    EmptyBaseStorage(),
 		policy:     &BasePolicy{},
-		timeServer: "time.google.com",
+		timeServer: DefaultTimeServer,
 	}
 }
 

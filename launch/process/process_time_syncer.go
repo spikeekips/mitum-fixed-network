@@ -40,7 +40,7 @@ func ProcessTimeSyncer(ctx context.Context) (context.Context, error) {
 	}
 
 	if len(conf.TimeServer()) < 1 {
-		log.Debug().Msg("no timeserver; local time will be used")
+		log.Debug().Msg("no time server; local time will be used")
 
 		return ctx, nil
 	}

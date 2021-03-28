@@ -87,12 +87,16 @@ network:
 		t.NotNil(conf.Network())
 		t.Equal("quic://local:54323", conf.Network().URL().String())
 		t.Equal("quic://local:54324", conf.Network().Bind().String())
+		t.Equal(config.DefaultLocalNetworkCache, conf.Network().Cache().String())
+		t.Equal(config.DefaultLocalNetworkSealCache, conf.Network().SealCache().String())
 	}
 
 	{
 		y := `
 network:
   url: quic://local:54323
+  cache: gcache:?type=lru&size=33&expire=44s
+  seal-cache: gcache:?type=lru&size=55&expire=66s
 `
 		ctx := context.Background()
 		ctx = context.WithValue(ctx, ContextValueConfigSource, []byte(y))
@@ -112,6 +116,8 @@ network:
 		t.NotNil(conf.Network())
 		t.Equal("quic://local:54323", conf.Network().URL().String())
 		t.Equal(config.DefaultLocalNetworkBind, conf.Network().Bind())
+		t.Equal("gcache:?type=lru&size=33&expire=44s", conf.Network().Cache().String())
+		t.Equal("gcache:?type=lru&size=55&expire=66s", conf.Network().SealCache().String())
 	}
 }
 

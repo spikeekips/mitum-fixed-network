@@ -17,6 +17,8 @@ type LocalNetwork struct {
 	Bind        *string
 	CertKeyFile *string                `yaml:"cert-key,omitempty"`
 	CertFile    *string                `yaml:"cert,omitempty"`
+	Cache       *string                `yaml:",omitempty"`
+	SealCache   *string                `yaml:"seal-cache,omitempty"`
 	Extras      map[string]interface{} `yaml:",inline"`
 }
 
@@ -45,6 +47,18 @@ func (no LocalNetwork) Set(ctx context.Context) (context.Context, error) {
 		return ctx, xerrors.Errorf("cert-key and cert should be given both")
 	} else if no.CertKeyFile != nil {
 		if err := conf.SetCertFiles(*no.CertFile, *no.CertKeyFile); err != nil {
+			return ctx, err
+		}
+	}
+
+	if no.Cache != nil {
+		if err := conf.SetCache(*no.Cache); err != nil {
+			return ctx, err
+		}
+	}
+
+	if no.SealCache != nil {
+		if err := conf.SetSealCache(*no.SealCache); err != nil {
 			return ctx, err
 		}
 	}

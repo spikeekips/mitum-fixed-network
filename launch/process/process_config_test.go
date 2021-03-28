@@ -95,6 +95,7 @@ nodes:
   - address: n1-010a:0.0.1
     url: quic://local:54322
     publickey: 27phogA4gmbMGfg321EHfx5eABkL7KAYuDPRGFoyQtAUb-0113:0.0.1
+time-server: ""
 `
 
 	ps := t.ready(y)
@@ -129,6 +130,7 @@ nodes:
 	t.Equal(isaac.DefaultPolicyThresholdRatio, conf.Policy().ThresholdRatio())
 	t.Equal(isaac.DefaultPolicyWaitBroadcastingACCEPTBallot, conf.Policy().WaitBroadcastingACCEPTBallot())
 	t.Equal(isaac.DefaultPolicyTimeoutProcessProposal, conf.Policy().TimeoutProcessProposal())
+	t.Empty(conf.TimeServer())
 }
 
 func (t *testConfig) TestInValidSuffrage() {

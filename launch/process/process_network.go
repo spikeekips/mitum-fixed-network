@@ -14,6 +14,7 @@ import (
 	"github.com/spikeekips/mitum/network"
 	quicnetwork "github.com/spikeekips/mitum/network/quic"
 	"github.com/spikeekips/mitum/util"
+	"github.com/spikeekips/mitum/util/cache"
 	"github.com/spikeekips/mitum/util/encoder"
 	jsonenc "github.com/spikeekips/mitum/util/encoder/json"
 	"github.com/spikeekips/mitum/util/logging"
@@ -57,7 +58,14 @@ func ProcessQuicNetwork(ctx context.Context) (context.Context, error) {
 		return ctx, err
 	}
 
-	if nt, err := NewNetworkServer(conf.Bind().Host, conf.URL(), encs); err != nil {
+	var ca cache.Cache
+	if c, err := cache.NewCacheFromURI(conf.Cache().String()); err != nil {
+		return ctx, err
+	} else {
+		ca = c
+	}
+
+	if nt, err := NewNetworkServer(conf.Bind().Host, conf.URL(), encs, ca); err != nil {
 		return ctx, err
 	} else {
 		if i, ok := nt.(logging.SetLogger); ok {
@@ -70,7 +78,7 @@ func ProcessQuicNetwork(ctx context.Context) (context.Context, error) {
 	}
 }
 
-func NewNetworkServer(bind string, u *url.URL, encs *encoder.Encoders) (network.Server, error) {
+func NewNetworkServer(bind string, u *url.URL, encs *encoder.Encoders, ca cache.Cache) (network.Server, error) {
 	var je encoder.Encoder
 	if e, err := encs.Encoder(jsonenc.JSONType, ""); err != nil {
 		return nil, xerrors.Errorf("json encoder needs for quic-network: %w", err)
@@ -89,7 +97,7 @@ func NewNetworkServer(bind string, u *url.URL, encs *encoder.Encoders) (network.
 
 	if qs, err := quicnetwork.NewPrimitiveQuicServer(bind, certs); err != nil {
 		return nil, err
-	} else if nqs, err := quicnetwork.NewServer(qs, encs, je); err != nil {
+	} else if nqs, err := quicnetwork.NewServer(qs, encs, je, ca); err != nil {
 		return nil, err
 	} else if err := nqs.Initialize(); err != nil {
 		return nil, err

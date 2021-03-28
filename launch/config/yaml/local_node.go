@@ -19,7 +19,7 @@ type LocalNode struct {
 	ProposalProcessor map[string]interface{}   `yaml:"proposal-processor,omitempty"`
 	Policy            *Policy                  `yaml:",omitempty"`
 	GenesisOperations []map[string]interface{} `yaml:"genesis-operations,omitempty"`
-	TimeServer        *string                  `yaml:"timeserver,omitempty"`
+	TimeServer        *string                  `yaml:"time-server,omitempty"`
 	Extras            map[string]interface{}   `yaml:",inline"`
 }
 

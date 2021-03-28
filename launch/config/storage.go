@@ -71,6 +71,8 @@ func (no BaseDatabase) Cache() *url.URL {
 func (no *BaseDatabase) SetCache(s string) error {
 	if u, err := ParseURLString(s, true); err != nil {
 		return err
+	} else if _, err := cache.NewCacheFromURI(u.String()); err != nil {
+		return err
 	} else {
 		no.cache = u
 

@@ -37,6 +37,7 @@ func (t *testNetwork) TestLocalNetwork() {
 	y := `
 url: https://local:54321
 bind: quic://0.0.0.0:54321
+cache: dummy://
 `
 
 	var n LocalNetwork
@@ -45,6 +46,7 @@ bind: quic://0.0.0.0:54321
 
 	t.Equal("https://local:54321", *n.URL)
 	t.Equal("quic://0.0.0.0:54321", *n.Bind)
+	t.Equal("dummy://", *n.Cache)
 }
 
 func (t *testNetwork) TestLocalNetworkEmpty() {

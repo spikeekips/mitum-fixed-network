@@ -4,7 +4,6 @@ import (
 	"context"
 	"io"
 	"sort"
-	"time"
 
 	"golang.org/x/xerrors"
 
@@ -93,10 +92,10 @@ func SettingNetworkHandlersFromContext(ctx context.Context) (*SettingNetworkHand
 	}
 
 	var sealCache cache.Cache
-	if ca, err := cache.NewGCache("lru", 100*100, time.Minute*3); err != nil {
+	if c, err := cache.NewCacheFromURI(conf.Network().SealCache().String()); err != nil {
 		return nil, err
 	} else {
-		sealCache = ca
+		sealCache = c
 	}
 
 	var nt network.Server

@@ -6,17 +6,19 @@ import (
 	"net/http"
 	"net/url"
 	"path"
+	"strings"
 	"time"
 
+	"golang.org/x/sync/singleflight"
 	"golang.org/x/xerrors"
 
 	"github.com/gorilla/mux"
-	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/base/seal"
 	"github.com/spikeekips/mitum/network"
 	"github.com/spikeekips/mitum/util"
 	"github.com/spikeekips/mitum/util/cache"
 	"github.com/spikeekips/mitum/util/encoder"
+	"github.com/spikeekips/mitum/util/errors"
 	"github.com/spikeekips/mitum/util/logging"
 )
 
@@ -28,6 +30,11 @@ var (
 	QuicHandlerPathGetBlockData        = "/blockdata"
 	QuicHandlerPathGetBlockDataPattern = QuicHandlerPathGetBlockData + "/{path:.*}"
 	QuicHandlerPathNodeInfo            = "/"
+)
+
+var (
+	BadRequestError   = errors.NewError("bad request")
+	NotSupportedErorr = errors.NewError("not supported")
 )
 
 var LimitRequestByHeights int = 20 // max number of reqeust heights
@@ -46,6 +53,7 @@ type Server struct {
 	blockDataMapsHandler network.BlockDataMapsHandler
 	blockDataHandler     network.BlockDataHandler
 	cache                cache.Cache
+	rg                   *singleflight.Group
 }
 
 func NewServer(
@@ -65,6 +73,7 @@ func NewServer(
 		encs:                encs,
 		enc:                 enc,
 		cache:               ca,
+		rg:                  &singleflight.Group{},
 	}
 	nqs.setHandlers()
 
@@ -141,27 +150,32 @@ func (sv *Server) handleGetSeals(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var args HashesArgs
-	if err := enc.Decode(body.Bytes(), &args); err != nil {
+	switch err := enc.Decode(body.Bytes(), &args); {
+	case err != nil:
 		sv.Log().Error().Err(err).Msg("failed to decode")
 		network.HTTPError(w, http.StatusBadRequest)
 		return
-	}
-
-	var output []byte
-	if sls, err := sv.getSealsHandler(args.Hashes); err != nil {
-		sv.Log().Error().Err(err).Msg("failed to get seals")
+	case len(args.Hashes) < 1:
 		network.HTTPError(w, http.StatusBadRequest)
 		return
-	} else if b, err := sv.enc.Marshal(sls); err != nil {
-		sv.Log().Error().Err(err).Msg("failed to encode seals")
-		network.HTTPError(w, http.StatusInternalServerError)
-		return
-	} else {
-		output = b
+	default:
+		args.Sort()
 	}
 
-	w.Header().Set(QuicEncoderHintHeader, sv.enc.Hint().String())
-	_, _ = w.Write(output)
+	if v, err, _ := sv.rg.Do("GetSeals-"+args.String(), func() (interface{}, error) {
+		if i, err := sv.getSealsHandler(args.Hashes); err != nil {
+			return nil, err
+		} else {
+			return sv.enc.Marshal(i)
+		}
+	}); err != nil {
+		sv.Log().Error().Err(err).Msg("failed to get seals")
+
+		handleError(w, err)
+	} else {
+		w.Header().Set(QuicEncoderHintHeader, sv.enc.Hint().String())
+		_, _ = w.Write(v.([]byte))
+	}
 }
 
 func (sv *Server) handleNewSeal(w http.ResponseWriter, r *http.Request) {
@@ -226,68 +240,6 @@ func (sv *Server) handleNewSeal(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusCreated)
 }
 
-func (sv *Server) handleGetByHeights(
-	w http.ResponseWriter,
-	r *http.Request,
-	getHandler func([]base.Height) (interface{}, error),
-) error {
-	body := &bytes.Buffer{}
-	if _, err := io.Copy(body, r.Body); err != nil {
-		sv.Log().Error().Err(err).Msg("failed to read post body")
-		network.HTTPError(w, http.StatusInternalServerError)
-
-		return err
-	}
-
-	var enc encoder.Encoder
-	if e, err := EncoderFromHeader(r.Header, sv.encs, sv.enc); err != nil {
-		network.HTTPError(w, http.StatusBadRequest)
-
-		return xerrors.Errorf("failed to read encoder hint: %w", err)
-	} else {
-		enc = e
-	}
-
-	var args HeightsArgs
-	if err := enc.Decode(body.Bytes(), &args); err != nil {
-		network.HTTPError(w, http.StatusBadRequest)
-
-		return err
-	} else if len(args.Heights) > LimitRequestByHeights {
-		network.HTTPError(w, http.StatusBadRequest)
-
-		return err
-	}
-
-	var output []byte
-	if sls, err := getHandler(args.Heights); err != nil {
-		if xerrors.Is(err, util.NotFoundError) {
-			network.HTTPError(w, http.StatusNotFound)
-
-			return err
-		}
-
-		network.HTTPError(w, http.StatusBadRequest)
-
-		return err
-	} else if sls == nil {
-		network.HTTPError(w, http.StatusNotFound)
-
-		return nil
-	} else if b, err := sv.enc.Marshal(sls); err != nil {
-		network.HTTPError(w, http.StatusInternalServerError)
-
-		return xerrors.Errorf("failed to encode: %w", err)
-	} else {
-		output = b
-	}
-
-	w.Header().Set(QuicEncoderHintHeader, sv.enc.Hint().String())
-	_, _ = w.Write(output)
-
-	return nil
-}
-
 func (sv *Server) handleNodeInfo(w http.ResponseWriter, _ *http.Request) {
 	if sv.nodeInfoHandler == nil {
 		network.HTTPError(w, http.StatusInternalServerError)
@@ -304,26 +256,24 @@ func (sv *Server) handleNodeInfo(w http.ResponseWriter, _ *http.Request) {
 		}
 	}
 
-	var output []byte
-	if n, err := sv.nodeInfoHandler(); err != nil {
+	if v, err, shared := sv.rg.Do("NodeInfo", func() (interface{}, error) {
+		if i, err := sv.nodeInfoHandler(); err != nil {
+			return nil, err
+		} else {
+			return sv.enc.Marshal(i)
+		}
+	}); err != nil {
 		sv.Log().Error().Err(err).Msg("failed to get node info")
 
-		network.HTTPError(w, http.StatusInternalServerError)
-
-		return
-	} else if b, err := sv.enc.Marshal(n); err != nil {
-		sv.Log().Error().Err(err).Msg("failed to encode node info")
-
-		network.HTTPError(w, http.StatusInternalServerError)
-
-		return
+		handleError(w, err)
 	} else {
-		output = b
-		_ = sv.cache.Set(cacheKeyNodeInfo, output, time.Second*3)
-	}
+		if !shared {
+			_ = sv.cache.Set(cacheKeyNodeInfo, v.([]byte), time.Second*3)
+		}
 
-	w.Header().Set(QuicEncoderHintHeader, sv.enc.Hint().String())
-	_, _ = w.Write(output)
+		w.Header().Set(QuicEncoderHintHeader, sv.enc.Hint().String())
+		_, _ = w.Write(v.([]byte))
+	}
 }
 
 func (sv *Server) handleGetBlockDataMaps(w http.ResponseWriter, r *http.Request) {
@@ -333,15 +283,51 @@ func (sv *Server) handleGetBlockDataMaps(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
-	if err := sv.handleGetByHeights(
-		w, r,
-		func(heights []base.Height) (interface{}, error) {
-			return sv.blockDataMapsHandler(heights)
-		},
-	); err != nil {
-		sv.Log().Error().Err(err).Msg("failed to get block data maps")
+	body := &bytes.Buffer{}
+	if _, err := io.Copy(body, r.Body); err != nil {
+		sv.Log().Error().Err(err).Msg("failed to read post body")
+		network.HTTPError(w, http.StatusInternalServerError)
 
 		return
+	}
+
+	var enc encoder.Encoder
+	if e, err := EncoderFromHeader(r.Header, sv.encs, sv.enc); err != nil {
+		network.HTTPError(w, http.StatusBadRequest)
+
+		return
+	} else {
+		enc = e
+	}
+
+	var args HeightsArgs
+	switch err := enc.Decode(body.Bytes(), &args); {
+	case err != nil:
+		network.HTTPError(w, http.StatusBadRequest)
+
+		return
+	case len(args.Heights) > LimitRequestByHeights:
+		network.HTTPError(w, http.StatusBadRequest)
+
+		return
+	case len(args.Heights) < 1:
+		network.HTTPError(w, http.StatusBadRequest)
+		return
+	default:
+		args.Sort()
+	}
+
+	if v, err, _ := sv.rg.Do("GetBlockDataMaps-"+args.String(), func() (interface{}, error) {
+		if sls, err := sv.blockDataMapsHandler(args.Heights); err != nil {
+			return nil, err
+		} else {
+			return sv.enc.Marshal(sls)
+		}
+	}); err != nil {
+		handleError(w, err)
+	} else {
+		w.Header().Set(QuicEncoderHintHeader, sv.enc.Hint().String())
+		_, _ = w.Write(v.([]byte))
 	}
 }
 
@@ -354,32 +340,44 @@ func (sv *Server) handleGetBlockData(w http.ResponseWriter, r *http.Request) {
 
 	vars := mux.Vars(r)
 
-	var rc io.ReadCloser
+	var path string
 	if i, found := vars["path"]; !found {
 		network.HTTPError(w, http.StatusBadRequest)
 
 		return
-	} else if j, closefunc, err := sv.blockDataHandler("/" + i); err != nil {
-		if xerrors.Is(err, util.NotFoundError) {
-			network.HTTPError(w, http.StatusNotFound)
-
+	} else {
+		path = strings.TrimSpace(i)
+		if len(path) < 1 {
+			network.HTTPError(w, http.StatusBadRequest)
 			return
 		}
+	}
 
-		network.HTTPError(w, http.StatusInternalServerError)
-
-		return
+	if v, err, _ := sv.rg.Do("GetBlockData-"+path, func() (interface{}, error) {
+		if j, closefunc, err := sv.blockDataHandler("/" + vars["path"]); err != nil {
+			return nil, err
+		} else {
+			return []interface{}{j, closefunc}, nil
+		}
+	}); err != nil {
+		handleError(w, err)
 	} else {
+		var j io.ReadCloser
+		var closefunc func() error
+		{
+			l := v.([]interface{})
+			j = l[0].(io.ReadCloser)
+			closefunc = l[1].(func() error)
+		}
+
 		defer func() {
 			_ = j.Close()
 			_ = closefunc()
 		}()
 
-		rc = j
-	}
-
-	if _, err := io.Copy(w, rc); err != nil {
-		network.HTTPError(w, http.StatusInternalServerError)
+		if _, err := io.Copy(w, j); err != nil {
+			network.HTTPError(w, http.StatusInternalServerError)
+		}
 	}
 }
 
@@ -392,4 +390,16 @@ func mustQuicURL(u, p string) string {
 	uu.Path = path.Join(uu.Path, p)
 
 	return uu.String()
+}
+
+func handleError(w http.ResponseWriter, err error) {
+	var status int = http.StatusInternalServerError
+	switch {
+	case xerrors.Is(err, util.NotFoundError):
+		status = http.StatusNotFound
+	case xerrors.Is(err, BadRequestError):
+		status = http.StatusBadRequest
+	}
+
+	network.HTTPError(w, status)
 }

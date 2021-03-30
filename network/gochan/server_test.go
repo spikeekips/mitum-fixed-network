@@ -8,16 +8,16 @@ import (
 	"github.com/spikeekips/mitum/network"
 )
 
-type testChanSever struct {
+type testChanServer struct {
 	suite.Suite
 }
 
-func (t *testChanSever) TestNew() {
+func (t *testChanServer) TestNew() {
 	s := NewServer(nil)
 
 	t.Implements((*network.Server)(nil), s)
 }
 
-func TestChanSever(t *testing.T) {
-	suite.Run(t, new(testChanSever))
+func TestChanServer(t *testing.T) {
+	suite.Run(t, new(testChanServer))
 }

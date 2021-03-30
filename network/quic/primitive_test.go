@@ -19,14 +19,14 @@ import (
 	"github.com/spikeekips/mitum/util"
 )
 
-type testPrimitiveQuicSever struct {
+type testPrimitiveQuicServer struct {
 	suite.Suite
 	bind  string
 	certs []tls.Certificate
 	url   *url.URL
 }
 
-func (t *testPrimitiveQuicSever) SetupTest() {
+func (t *testPrimitiveQuicServer) SetupTest() {
 	port, err := util.FreePort("udp")
 	t.NoError(err)
 
@@ -42,7 +42,7 @@ func (t *testPrimitiveQuicSever) SetupTest() {
 	t.url = &url.URL{Scheme: "https", Host: t.bind}
 }
 
-func (t *testPrimitiveQuicSever) readyServer(handlers map[string]network.HTTPHandlerFunc) *PrimitiveQuicServer {
+func (t *testPrimitiveQuicServer) readyServer(handlers map[string]network.HTTPHandlerFunc) *PrimitiveQuicServer {
 	qn, err := NewPrimitiveQuicServer(t.bind, t.certs)
 	t.NoError(err)
 
@@ -73,7 +73,7 @@ func (t *testPrimitiveQuicSever) readyServer(handlers map[string]network.HTTPHan
 	return qn
 }
 
-func (t *testPrimitiveQuicSever) TestGet() {
+func (t *testPrimitiveQuicServer) TestGet() {
 	handlers := map[string]network.HTTPHandlerFunc{}
 
 	var data int = 33
@@ -100,7 +100,7 @@ func (t *testPrimitiveQuicSever) TestGet() {
 	t.Equal(data, received)
 }
 
-func (t *testPrimitiveQuicSever) TestSend() {
+func (t *testPrimitiveQuicServer) TestSend() {
 	handlers := map[string]network.HTTPHandlerFunc{}
 
 	received := make(chan int, 10)
@@ -139,6 +139,6 @@ func (t *testPrimitiveQuicSever) TestSend() {
 	}
 }
 
-func TestPrimitiveQuicSever(t *testing.T) {
-	suite.Run(t, new(testPrimitiveQuicSever))
+func TestPrimitiveQuicServer(t *testing.T) {
+	suite.Run(t, new(testPrimitiveQuicServer))
 }

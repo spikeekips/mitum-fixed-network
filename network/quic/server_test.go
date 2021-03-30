@@ -29,7 +29,7 @@ import (
 	"github.com/spikeekips/mitum/util/valuehash"
 )
 
-type testQuicSever struct {
+type testQuicServer struct {
 	suite.Suite
 	encs  *encoder.Encoders
 	enc   encoder.Encoder
@@ -38,7 +38,7 @@ type testQuicSever struct {
 	url   *url.URL
 }
 
-func (t *testQuicSever) SetupTest() {
+func (t *testQuicServer) SetupTest() {
 	t.encs = encoder.NewEncoders()
 	t.enc = jsonenc.NewEncoder()
 	_ = t.encs.AddEncoder(t.enc)
@@ -69,7 +69,7 @@ func (t *testQuicSever) SetupTest() {
 	t.url = &url.URL{Scheme: "quic", Host: t.bind}
 }
 
-func (t *testQuicSever) readyServer() *Server {
+func (t *testQuicServer) readyServer() *Server {
 	qs, err := NewPrimitiveQuicServer(t.bind, t.certs)
 	t.NoError(err)
 
@@ -102,7 +102,7 @@ func (t *testQuicSever) readyServer() *Server {
 	return qn
 }
 
-func (t *testQuicSever) TestNew() {
+func (t *testQuicServer) TestNew() {
 	qs, err := NewPrimitiveQuicServer(t.bind, t.certs)
 	t.NoError(err)
 
@@ -113,7 +113,7 @@ func (t *testQuicSever) TestNew() {
 	t.IsType(cache.Dummy{}, qn.cache)
 }
 
-func (t *testQuicSever) TestSendSeal() {
+func (t *testQuicServer) TestSendSeal() {
 	qn := t.readyServer()
 	defer qn.Stop()
 
@@ -151,7 +151,7 @@ func (t *testQuicSever) TestSendSeal() {
 	t.NoError(qc.SendSeal(context.TODO(), sl))
 }
 
-func (t *testQuicSever) TestGetSeals() {
+func (t *testQuicServer) TestGetSeals() {
 	qn := t.readyServer()
 	defer qn.Stop()
 
@@ -229,7 +229,7 @@ func (t *testQuicSever) TestGetSeals() {
 	}
 }
 
-func (t *testQuicSever) TestNodeInfo() {
+func (t *testQuicServer) TestNodeInfo() {
 	qn := t.readyServer()
 	defer qn.Stop()
 
@@ -268,7 +268,7 @@ func (t *testQuicSever) TestNodeInfo() {
 	network.CompareNodeInfo(t.T(), ni, nni)
 }
 
-func (t *testQuicSever) TestEmptyBlockDataMaps() {
+func (t *testQuicServer) TestEmptyBlockDataMaps() {
 	qn := t.readyServer()
 	defer qn.Stop()
 
@@ -285,7 +285,7 @@ func (t *testQuicSever) TestEmptyBlockDataMaps() {
 	t.Empty(bds)
 }
 
-func (t *testQuicSever) TestBlockDataMaps() {
+func (t *testQuicServer) TestBlockDataMaps() {
 	qn := t.readyServer()
 	defer qn.Stop()
 
@@ -318,7 +318,7 @@ func (t *testQuicSever) TestBlockDataMaps() {
 	block.CompareBlockDataMap(t.Assert(), bd, bds[0])
 }
 
-func (t *testQuicSever) TestEmptyBlockData() {
+func (t *testQuicServer) TestEmptyBlockData() {
 	qn := t.readyServer()
 	defer qn.Stop()
 
@@ -334,7 +334,7 @@ func (t *testQuicSever) TestEmptyBlockData() {
 	t.Contains(err.Error(), "failed to request")
 }
 
-func (t *testQuicSever) TestGetBlockDataWithError() {
+func (t *testQuicServer) TestGetBlockDataWithError() {
 	qn := t.readyServer()
 	defer qn.Stop()
 
@@ -350,7 +350,7 @@ func (t *testQuicSever) TestGetBlockDataWithError() {
 	t.Contains(err.Error(), "not found")
 }
 
-func (t *testQuicSever) TestGetBlockData() {
+func (t *testQuicServer) TestGetBlockData() {
 	qn := t.readyServer()
 	defer qn.Stop()
 
@@ -390,6 +390,6 @@ func (t *testQuicSever) TestGetBlockData() {
 	t.Equal(data, b)
 }
 
-func TestQuicSever(t *testing.T) {
-	suite.Run(t, new(testQuicSever))
+func TestQuicServer(t *testing.T) {
+	suite.Run(t, new(testQuicServer))
 }

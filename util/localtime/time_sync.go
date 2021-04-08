@@ -13,9 +13,10 @@ import (
 )
 
 var (
-	allowedTimeSyncOffset    = time.Millisecond * 500
-	minTimeSyncCheckInterval = time.Second * 5
-	timeSyncer               *TimeSyncer
+	allowedTimeSyncOffset     = time.Millisecond * 500
+	minTimeSyncCheckInterval  = time.Minute
+	timeServerQueryingTimeout = time.Second * 5
+	timeSyncer                *TimeSyncer
 )
 
 // TimeSyncer tries to sync time to time server.
@@ -30,6 +31,10 @@ type TimeSyncer struct {
 
 // NewTimeSyncer creates new TimeSyncer
 func NewTimeSyncer(server string, checkInterval time.Duration) (*TimeSyncer, error) {
+	if checkInterval < timeServerQueryingTimeout {
+		return nil, xerrors.Errorf("too narrow checking interval; should be over %v", timeServerQueryingTimeout)
+	}
+
 	if err := util.Retry(3, time.Second*2, func(int) error {
 		if _, err := ntp.Query(server); err != nil {
 			return xerrors.Errorf("failed to query ntp server, %q: %w", server, err)
@@ -83,7 +88,9 @@ end:
 
 			break end
 		case <-ticker.C:
+			started := time.Now()
 			ts.check()
+			ts.Log().Debug().Dur("elapsed", time.Since(started)).Msg("time queried")
 		}
 	}
 
@@ -98,16 +105,22 @@ func (ts *TimeSyncer) Offset() time.Duration {
 	return ts.offset
 }
 
-func (ts *TimeSyncer) check() {
+func (ts *TimeSyncer) setOffset(d time.Duration) {
 	ts.Lock()
 	defer ts.Unlock()
 
-	response, err := ntp.Query(ts.server)
+	ts.offset = d
+}
+
+func (ts *TimeSyncer) check() {
+	response, err := ntp.QueryWithOptions(ts.server, ntp.QueryOptions{Timeout: timeServerQueryingTimeout})
 	if err != nil {
 		ts.Log().Error().Err(err).Msg("failed to query")
 
 		return
 	}
+
+	offset := ts.Offset()
 
 	if err := response.Validate(); err != nil {
 		ts.Log().Error().
@@ -121,17 +134,17 @@ func (ts *TimeSyncer) check() {
 	defer func() {
 		ts.Log().Debug().
 			Interface("response", response).
-			Dur("offset", ts.offset).
+			Dur("offset", offset).
 			Msg("time checked")
 	}()
 
-	if ts.offset < 1 {
-		ts.offset = response.ClockOffset
+	if offset < 1 {
+		ts.setOffset(response.ClockOffset)
 
 		return
 	}
 
-	switch diff := ts.offset - response.ClockOffset; {
+	switch diff := offset - response.ClockOffset; {
 	case diff == 0:
 		return
 	case diff > 0:
@@ -144,7 +157,7 @@ func (ts *TimeSyncer) check() {
 		}
 	}
 
-	ts.offset = response.ClockOffset
+	ts.setOffset(response.ClockOffset)
 }
 
 // SetTimeSyncer sets the global TimeSyncer.

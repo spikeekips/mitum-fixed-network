@@ -69,7 +69,7 @@ func NewBaseCommand(name string) *BaseCommand {
 }
 
 func (cmd *BaseCommand) Initialize(flags interface{}, version util.Version) error {
-	if i, err := SetupLoggingFromFlags(cmd.LogFlags); err != nil {
+	if i, err := SetupLoggingFromFlags(cmd.LogFlags, os.Stdout); err != nil {
 		return err
 	} else {
 		_ = cmd.SetLogger(i)

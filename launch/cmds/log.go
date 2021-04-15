@@ -80,10 +80,10 @@ func (lf *LogFormat) UnmarshalText(b []byte) error {
 	return nil
 }
 
-func SetupLoggingFromFlags(flags *LogFlags) (logging.Logger, error) {
+func SetupLoggingFromFlags(flags *LogFlags, defaultout io.Writer) (logging.Logger, error) {
 	var output io.Writer
 	if len(flags.LogFile) < 1 {
-		output = os.Stdout
+		output = defaultout
 	} else {
 		outs := make([]io.Writer, len(flags.LogFile))
 		for i, f := range flags.LogFile {

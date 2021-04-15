@@ -138,3 +138,7 @@ func (pp *DummyProcessor) setBlock(blk block.Block) {
 
 	pp.B = blk
 }
+
+func (pp *DummyProcessor) Statics() map[string]interface{} {
+	return nil
+}

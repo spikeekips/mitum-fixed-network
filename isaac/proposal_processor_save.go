@@ -2,6 +2,7 @@ package isaac
 
 import (
 	"context"
+	"time"
 
 	"github.com/spikeekips/mitum/base/block"
 	"github.com/spikeekips/mitum/base/prprocessor"
@@ -13,6 +14,11 @@ import (
 func (pp *DefaultProcessor) Save(ctx context.Context) error {
 	pp.Lock()
 	defer pp.Unlock()
+
+	started := time.Now()
+	defer func() {
+		_ = pp.setStatic("processor_save_elapsed", time.Since(started))
+	}()
 
 	if err := pp.resetSave(); err != nil {
 		return err
@@ -75,6 +81,11 @@ func (pp *DefaultProcessor) save(ctx context.Context) error {
 }
 
 func (pp *DefaultProcessor) storeBlockDataSession(ctx context.Context) (context.Context, error) {
+	started := time.Now()
+	defer func() {
+		_ = pp.setStatic("processor_store_blockdata_session_elapsed", time.Since(started))
+	}()
+
 	pp.Log().Debug().Msg("trying to store block database session")
 
 	if pp.blockDataSession == nil {
@@ -95,6 +106,11 @@ func (pp *DefaultProcessor) storeBlockDataSession(ctx context.Context) (context.
 }
 
 func (pp *DefaultProcessor) storeStorage(ctx context.Context) (context.Context, error) {
+	started := time.Now()
+	defer func() {
+		_ = pp.setStatic("processor_store_database_commit_elapsed", time.Since(started))
+	}()
+
 	pp.Log().Debug().Msg("trying to store storage")
 
 	var bd block.BlockDataMap

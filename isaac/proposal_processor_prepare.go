@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"sort"
+	"time"
 
 	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/base/block"
@@ -23,6 +24,11 @@ var blockDataMapContextKey util.ContextKey = "blockdata_map"
 func (pp *DefaultProcessor) Prepare(ctx context.Context) (block.Block, error) {
 	pp.Lock()
 	defer pp.Unlock()
+
+	started := time.Now()
+	defer func() {
+		_ = pp.setStatic("processor_prepare_elapsed", time.Since(started))
+	}()
 
 	if err := pp.resetPrepare(); err != nil {
 		return nil, err
@@ -88,6 +94,14 @@ func (pp *DefaultProcessor) prepareOperations(ctx context.Context) error {
 	ev := pp.Log().Debug().Int("seals", len(pp.proposal.Seals()))
 
 	seals := pp.proposal.Seals()
+
+	started := time.Now()
+	defer func() {
+		_ = pp.setStatic("processor_prepare_operations_elapsed", time.Since(started)).
+			setStatic("processor_prepare_operations_seals", len(seals)).
+			setStatic("processor_prepare_operations_operations", len(pp.operations))
+	}()
+
 	if len(seals) < 1 {
 		return nil
 	}
@@ -107,9 +121,12 @@ func (pp *DefaultProcessor) prepareOperations(ctx context.Context) error {
 }
 
 func (pp *DefaultProcessor) process(ctx context.Context) error {
-	if err := pp.blockDataSession.AddOperations(pp.operations...); err != nil {
-		return err
-	} else if err := pp.blockDataSession.CloseOperations(); err != nil {
+	started := time.Now()
+	defer func() {
+		_ = pp.setStatic("processor_process_elapsed", time.Since(started))
+	}()
+
+	if err := pp.processBlockDataSessionAddOperations(); err != nil {
 		return err
 	}
 
@@ -117,22 +134,74 @@ func (pp *DefaultProcessor) process(ctx context.Context) error {
 		return err
 	}
 
-	if err := pp.blockDataSession.SetOperationsTree(pp.operationsTree); err != nil {
+	if err := pp.processBlockDataSessionSetOperationsTree(); err != nil {
 		return err
-	} else if err := pp.blockDataSession.SetStatesTree(pp.statesTree); err != nil {
+	} else if err := pp.processBlockDataSessionSetStatesTree(); err != nil {
 		return err
 	}
 
-	if err := pp.blockDataSession.AddStates(pp.states...); err != nil {
-		return err
-	} else if err := pp.blockDataSession.CloseStates(); err != nil {
+	if err := pp.processBlockDataSessionSetStates(); err != nil {
 		return err
 	}
 
 	return nil
 }
 
+func (pp *DefaultProcessor) processBlockDataSessionAddOperations() error {
+	started := time.Now()
+	defer func() {
+		_ = pp.setStatic("processor_process_blockdata_session_add_operations_elapsed", time.Since(started))
+	}()
+
+	if err := pp.blockDataSession.AddOperations(pp.operations...); err != nil {
+		return err
+	} else if err := pp.blockDataSession.CloseOperations(); err != nil {
+		return err
+	} else {
+		return nil
+	}
+}
+
+func (pp *DefaultProcessor) processBlockDataSessionSetOperationsTree() error {
+	started := time.Now()
+	defer func() {
+		_ = pp.setStatic("processor_process_set_operations_tree_elapsed", time.Since(started))
+	}()
+
+	return pp.blockDataSession.SetOperationsTree(pp.operationsTree)
+}
+
+func (pp *DefaultProcessor) processBlockDataSessionSetStatesTree() error {
+	started := time.Now()
+	defer func() {
+		_ = pp.setStatic("processor_process_set_states_tree_elapsed", time.Since(started))
+	}()
+
+	return pp.blockDataSession.SetStatesTree(pp.statesTree)
+}
+
+func (pp *DefaultProcessor) processBlockDataSessionSetStates() error {
+	started := time.Now()
+	defer func() {
+		_ = pp.setStatic("processor_process_set_states_elapsed", time.Since(started)).
+			setStatic("processor_process_set_states_number", len(pp.states))
+	}()
+
+	if err := pp.blockDataSession.AddStates(pp.states...); err != nil {
+		return err
+	} else if err := pp.blockDataSession.CloseStates(); err != nil {
+		return err
+	} else {
+		return nil
+	}
+}
+
 func (pp *DefaultProcessor) processOperations(ctx context.Context) error {
+	started := time.Now()
+	defer func() {
+		_ = pp.setStatic("processor_process_operations_elapsed", time.Since(started))
+	}()
+
 	if len(pp.operations) < 1 {
 		pp.Log().Debug().Msg("trying to process operations, but empty")
 
@@ -165,6 +234,11 @@ func (pp *DefaultProcessor) processOperations(ctx context.Context) error {
 }
 
 func (pp *DefaultProcessor) prepareBlock(context.Context) error {
+	started := time.Now()
+	defer func() {
+		_ = pp.setStatic("processor_prepare_block_elapsed", time.Since(started))
+	}()
+
 	var opsHash, stsHash valuehash.Hash
 	if !pp.operationsTree.IsEmpty() {
 		opsHash = valuehash.NewBytes(pp.operationsTree.Root())
@@ -202,6 +276,11 @@ func (pp *DefaultProcessor) prepareBlock(context.Context) error {
 }
 
 func (pp *DefaultProcessor) prepareDatabaseSession(ctx context.Context) error {
+	started := time.Now()
+	defer func() {
+		_ = pp.setStatic("processor_prepare_database_session_elapsed", time.Since(started))
+	}()
+
 	var bs storage.DatabaseSession
 	if b, err := pp.st.NewSession(pp.blk); err != nil {
 		return err
@@ -223,6 +302,11 @@ func (pp *DefaultProcessor) prepareDatabaseSession(ctx context.Context) error {
 }
 
 func (pp *DefaultProcessor) processStatesTree(ctx context.Context, pool *storage.Statepool) error {
+	started := time.Now()
+	defer func() {
+		_ = pp.setStatic("processor_process_operations_states_tree_elapsed", time.Since(started))
+	}()
+
 	pp.statesTree = tree.FixedTree{}
 	pp.states = nil
 
@@ -291,6 +375,11 @@ func (pp *DefaultProcessor) concurrentProcessStatesTree(
 }
 
 func (pp *DefaultProcessor) processOperationsTree(_ context.Context, pool *storage.Statepool) error {
+	started := time.Now()
+	defer func() {
+		_ = pp.setStatic("processor_process_operations_operations_tree_elapsed", time.Since(started))
+	}()
+
 	added := pool.AddedOperations()
 	for k := range added {
 		pp.operations = append(pp.operations, added[k])
@@ -365,6 +454,11 @@ func (pp *DefaultProcessor) generateStatesTree(
 }
 
 func (pp *DefaultProcessor) prepareBlockDataSession(context.Context) error {
+	started := time.Now()
+	defer func() {
+		_ = pp.setStatic("processor_prepare_blockdata_session_elapsed", time.Since(started))
+	}()
+
 	if i, err := pp.blockData.NewSession(pp.proposal.Height()); err != nil {
 		pp.Log().Error().Err(err).Msg("failed to make new block database session")
 

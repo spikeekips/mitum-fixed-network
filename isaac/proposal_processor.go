@@ -3,6 +3,7 @@ package isaac
 import (
 	"context"
 	"sync"
+	"time"
 
 	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/base/ballot"
@@ -45,6 +46,8 @@ type DefaultProcessor struct {
 	postPrepareHook  func(context.Context) error
 	preSaveHook      func(context.Context) error
 	postSaveHook     func(context.Context) error
+	staticsLock      sync.RWMutex
+	statics          map[string]interface{}
 }
 
 func NewDefaultProcessorNewFunc(
@@ -104,6 +107,9 @@ func NewDefaultProcessor(
 		initVoteproof: initVoteproof,
 		preSaveHook:   nil,
 		postSaveHook:  nil,
+		statics: map[string]interface{}{
+			"processor": "default-processor",
+		},
 	}
 
 	if i, err := pp.getSuffrageInfo(); err != nil {
@@ -144,13 +150,30 @@ func (pp *DefaultProcessor) Block() block.Block {
 	return pp.blk
 }
 
+func (pp *DefaultProcessor) setStatic(key string, value interface{}) *DefaultProcessor {
+	pp.staticsLock.Lock()
+	defer pp.staticsLock.Unlock()
+
+	pp.statics[key] = value
+
+	return pp
+}
+
 func (pp *DefaultProcessor) Statics() map[string]interface{} {
-	return nil
+	pp.staticsLock.RLock()
+	defer pp.staticsLock.RUnlock()
+
+	return pp.statics
 }
 
 func (pp *DefaultProcessor) SetACCEPTVoteproof(acceptVoteproof base.Voteproof) error {
 	pp.Lock()
 	defer pp.Unlock()
+
+	started := time.Now()
+	defer func() {
+		_ = pp.setStatic("processor_set_accept_voteproof_elapsed", time.Since(started))
+	}()
 
 	switch {
 	case pp.blk == nil:
@@ -184,6 +207,11 @@ func (pp *DefaultProcessor) Cancel() error {
 
 	pp.Lock()
 	defer pp.Unlock()
+
+	started := time.Now()
+	defer func() {
+		_ = pp.setStatic("processor_cancel_elapsed", time.Since(started))
+	}()
 
 	if err := pp.resetPrepare(); err != nil {
 		return err

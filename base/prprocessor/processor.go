@@ -52,4 +52,5 @@ type Processor interface {
 	Save(context.Context) error
 	Cancel() error
 	Block() block.Block
+	Statics() map[string]interface{}
 }

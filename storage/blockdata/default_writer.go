@@ -192,23 +192,7 @@ func (bd DefaultWriter) read(r io.Reader) ([]byte, error) {
 }
 
 func (bd DefaultWriter) readlines(r io.Reader, callback func([]byte) error) error {
-	br := bufio.NewReader(r)
-	for {
-		l, err := br.ReadBytes('\n')
-		if err != nil {
-			if xerrors.Is(err, io.EOF) {
-				break
-			}
-
-			return err
-		}
-
-		if err := callback(l); err != nil {
-			return err
-		}
-	}
-
-	return nil
+	return Readlines(r, callback)
 }
 
 func (bd DefaultWriter) writeItem(w io.Writer, v interface{}) error {
@@ -222,21 +206,44 @@ func (bd DefaultWriter) writeItem(w io.Writer, v interface{}) error {
 }
 
 func (bd DefaultWriter) writeItems(w io.Writer, get func() (interface{}, error)) error {
+	return Writeline(w, func() ([]byte, error) {
+		if i, err := get(); err != nil {
+			return nil, err
+		} else {
+			return bd.encoder.Marshal(i)
+		}
+	})
+}
+
+func Writeline(w io.Writer, get func() ([]byte, error)) error {
 	for {
-		var v interface{}
 		if i, err := get(); err != nil {
 			if xerrors.Is(err, io.EOF) {
 				break
 			}
 
 			return err
-		} else {
-			v = i
+		} else if _, err := w.Write(append(i, []byte("\n")...)); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func Readlines(r io.Reader, callback func([]byte) error) error {
+	br := bufio.NewReader(r)
+	for {
+		l, err := br.ReadBytes('\n')
+		if err != nil {
+			if xerrors.Is(err, io.EOF) {
+				break
+			}
+
+			return err
 		}
 
-		if err := bd.writeItem(w, v); err != nil {
-			return err
-		} else if _, err := w.Write([]byte("\n")); err != nil {
+		if err := callback(l); err != nil {
 			return err
 		}
 	}

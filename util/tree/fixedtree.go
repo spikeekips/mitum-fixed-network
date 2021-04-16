@@ -185,7 +185,7 @@ func (ft baseFixedTree) Traverse(f func(
 	int, // index
 	[]byte, // key
 	[]byte, // hash
-	[]byte, // value
+	[]byte, // extra
 ) (bool, error)) error {
 	for i := 0; i < ft.size; i++ {
 		if keep, err := f(i, ft.Key(i), ft.Hash(i), ft.Extra(i)); err != nil {

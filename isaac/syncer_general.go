@@ -1453,7 +1453,7 @@ func (cs *GeneralSyncer) fetchBlockData(
 	}
 
 	s := bytes.NewReader(buf.Bytes())
-	if err := ss.Import(item.Type(), s); err != nil {
+	if _, err := ss.Import(item.Type(), s); err != nil {
 		return nil, err
 	}
 

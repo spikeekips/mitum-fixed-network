@@ -5,6 +5,7 @@ import (
 	"os"
 	"path/filepath"
 
+	"github.com/spikeekips/mitum/base"
 	"golang.org/x/xerrors"
 )
 
@@ -43,4 +44,16 @@ func (v FileLoad) Bytes() []byte {
 
 func (v FileLoad) String() string {
 	return string(v)
+}
+
+type NetworkIDFlag []byte
+
+func (v *NetworkIDFlag) UnmarshalText(b []byte) error {
+	*v = b
+
+	return nil
+}
+
+func (v NetworkIDFlag) NetworkID() base.NetworkID {
+	return base.NetworkID(v)
 }

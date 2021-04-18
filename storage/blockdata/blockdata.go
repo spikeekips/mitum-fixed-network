@@ -41,6 +41,6 @@ type Session interface {
 	SetACCEPTVoteproof(base.Voteproof) error
 	SetSuffrageInfo(block.SuffrageInfo) error
 	SetProposal(ballot.Proposal) error
-	Import(string, io.Reader) error
+	Import(string, io.Reader) (string /* file path */, error)
 	Cancel() error
 }

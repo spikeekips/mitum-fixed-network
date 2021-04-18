@@ -14,6 +14,10 @@ type baseBlocksValidationChecker struct {
 }
 
 func (bc *baseBlocksValidationChecker) checkIsValid(blk block.Manifest) error {
+	if blk == nil {
+		return xerrors.Errorf("nil manifest found")
+	}
+
 	return blk.IsValid(bc.networkID)
 }
 

@@ -7,26 +7,26 @@ import (
 	"golang.org/x/xerrors"
 )
 
-func CheckBlock(st Database, networkID base.NetworkID) error {
+func CheckBlock(st Database, networkID base.NetworkID) (block.Manifest, error) {
 	var m block.Manifest
 	switch b, err := CheckBlockEmpty(st); {
 	case err != nil:
-		return err
+		return nil, err
 	case b == nil:
-		return util.NotFoundError.Errorf("empty block manifest")
+		return nil, util.NotFoundError.Errorf("empty block manifest")
 	default:
 		m = b
 	}
 
 	if err := m.IsValid(networkID); err != nil {
-		return xerrors.Errorf("invalid block manifest found, clean up block: %w", err)
+		return m, xerrors.Errorf("invalid block manifest found, clean up block: %w", err)
 	}
 
-	return nil
+	return m, nil
 }
 
 // CheckBlockEmpty checks whether local has block data. If empty, return nil
-// block.Block.
+// block.Manifest.
 func CheckBlockEmpty(st Database) (block.Manifest, error) {
 	switch m, found, err := st.LastManifest(); {
 	case err != nil:

@@ -1,11 +1,9 @@
 package localfs
 
 import (
-	"fmt"
 	"io/fs"
 	"os"
 	"path/filepath"
-	"strings"
 	"sync"
 
 	"github.com/spikeekips/mitum/base"
@@ -285,36 +283,7 @@ func (st *BlockData) createDirectory(p string) error {
 }
 
 func (st *BlockData) heightDirectory(height base.Height, abs bool) string {
-	h := height.String()
-	if height < 0 {
-		h = strings.ReplaceAll(h, "-", "_")
-	}
-
-	p := fmt.Sprintf(BlockDirectoryHeightFormat, h)
-
-	sl := make([]string, 7)
-	var i int
-	for {
-		e := (i * 3) + 3
-		if e > len(p) {
-			e = len(p)
-		}
-
-		s := p[i*3 : e]
-		if len(s) < 1 {
-			break
-		}
-
-		sl[i] = s
-
-		if len(s) < 3 {
-			break
-		}
-
-		i++
-	}
-
-	base := "/" + filepath.Join(strings.Join(sl, "/"))
+	base := HeightDirectory(height)
 	if !abs {
 		return base
 	} else {

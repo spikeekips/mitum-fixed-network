@@ -37,3 +37,20 @@ func CleanByHeight(st storage.Database, blockData BlockData, height base.Height)
 
 	return st.CleanByHeight(height)
 }
+
+func CheckBlock(st storage.Database, blockData BlockData, networkID base.NetworkID) (block.Manifest, error) {
+	var m block.Manifest
+	if i, err := storage.CheckBlock(st, networkID); err != nil {
+		return i, err
+	} else {
+		m = i
+	}
+
+	if found, err := blockData.Exists(m.Height()); err != nil {
+		return m, err
+	} else if !found {
+		return m, util.NotFoundError.Errorf("block, %d not found in block data", m.Height())
+	}
+
+	return m, nil
+}

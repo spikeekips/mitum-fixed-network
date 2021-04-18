@@ -17,7 +17,16 @@ var (
 		cache.DefaultGCacheSize,
 		cache.DefaultCacheExpire.String(),
 	)
+	DefaultDatabaseCacheURL *url.URL
 )
+
+func init() {
+	if i, err := url.Parse(DefaultDatabaseCache); err != nil {
+		panic(err)
+	} else {
+		DefaultDatabaseCacheURL = i
+	}
+}
 
 type BlockData interface {
 	Path() string
@@ -94,7 +103,9 @@ type BaseStorage struct {
 
 func EmptyBaseStorage() *BaseStorage {
 	return &BaseStorage{
-		database:  &BaseDatabase{},
+		database: &BaseDatabase{
+			cache: DefaultDatabaseCacheURL,
+		},
 		blockData: &BaseBlockData{},
 	}
 }

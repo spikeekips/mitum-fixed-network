@@ -5,6 +5,7 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/base/block"
@@ -116,4 +117,37 @@ func LoadData(st *BlockData, height base.Height, dataType string) (io.ReadCloser
 	} else {
 		return j, nil
 	}
+}
+
+func HeightDirectory(height base.Height) string {
+	h := height.String()
+	if height < 0 {
+		h = strings.ReplaceAll(h, "-", "_")
+	}
+
+	p := fmt.Sprintf(BlockDirectoryHeightFormat, h)
+
+	sl := make([]string, 7)
+	var i int
+	for {
+		e := (i * 3) + 3
+		if e > len(p) {
+			e = len(p)
+		}
+
+		s := p[i*3 : e]
+		if len(s) < 1 {
+			break
+		}
+
+		sl[i] = s
+
+		if len(s) < 3 {
+			break
+		}
+
+		i++
+	}
+
+	return "/" + filepath.Join(strings.Join(sl, "/"))
 }

@@ -404,7 +404,8 @@ func (t *testBlockDataLocalFSSession) TestImport() {
 		r, err := t.openFile(p)
 		t.NoError(err)
 
-		t.NoError(nss.Import(dataType, r))
+		_, err = nss.Import(dataType, r)
+		t.NoError(err)
 
 		_ = t.checkSessionFile(nss, dataType)
 	}

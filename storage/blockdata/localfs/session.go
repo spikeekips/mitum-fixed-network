@@ -291,15 +291,30 @@ func (ss *Session) Cancel() error {
 	return nil
 }
 
-func (ss *Session) Import(dataType string, r io.Reader) error {
+func (ss *Session) Import(dataType string, r io.Reader) (string, error) {
 	ss.locks[dataType].Lock()
 	defer ss.locks[dataType].Unlock()
 
-	return ss.writeAndClose(dataType, func(w io.Writer) error {
+	var w io.WriteCloser
+	if i, err := ss.newWriter(dataType); err != nil {
+		return "", err
+	} else {
+		w = i
+	}
+
+	if err := func() error {
+		defer func() {
+			_ = w.Close()
+		}()
+
 		_, err := io.Copy(w, r)
 
-		return storage.WrapFSError(err)
-	})
+		return err
+	}(); err != nil {
+		return "", err
+	}
+
+	return ss.setToMapDataWithFilename(dataType)
 }
 
 func (ss *Session) tempPath(dataType string) string {
@@ -344,19 +359,25 @@ func (ss *Session) clean() error {
 }
 
 func (ss *Session) setToMapData(dataType string) error {
+	_, err := ss.setToMapDataWithFilename(dataType)
+
+	return err
+}
+
+func (ss *Session) setToMapDataWithFilename(dataType string) (string, error) {
 	ss.Lock()
 	defer ss.Unlock()
 
 	p := ss.tempPath(dataType)
 	if fi, err := os.Stat(p); err != nil {
-		return storage.WrapFSError(err)
+		return "", storage.WrapFSError(err)
 	} else if fi.IsDir() {
-		return storage.FSError.Errorf("temp path, %q is directory", p)
+		return "", storage.FSError.Errorf("temp path, %q is directory", p)
 	}
 
 	var checksum string
 	if i, err := util.GenerateFileChecksum(p); err != nil {
-		return storage.WrapFSError(err)
+		return "", storage.WrapFSError(err)
 	} else {
 		checksum = i
 	}
@@ -364,17 +385,17 @@ func (ss *Session) setToMapData(dataType string) error {
 	t := filepath.Join(filepath.Dir(p), fmt.Sprintf(BlockFileFormats, ss.height, dataType, checksum))
 
 	if err := os.Rename(p, t); err != nil {
-		return storage.WrapFSError(err)
+		return "", storage.WrapFSError(err)
 	}
 
 	item := block.NewBaseBlockDataMapItem(dataType, checksum, "file://"+t)
 	if err := item.IsValid(nil); err != nil {
-		return err
+		return "", err
 	} else if i, err := ss.mapData.SetItem(item); err != nil {
-		return err
+		return "", err
 	} else {
 		ss.mapData = i
 	}
 
-	return nil
+	return t, nil
 }

@@ -1,7 +1,9 @@
 package prprocessor
 
 import (
+	"bytes"
 	"context"
+	"sort"
 	"sync"
 
 	"golang.org/x/xerrors"
@@ -12,6 +14,8 @@ import (
 	"github.com/spikeekips/mitum/util"
 	"github.com/spikeekips/mitum/util/hint"
 	"github.com/spikeekips/mitum/util/logging"
+	"github.com/spikeekips/mitum/util/tree"
+	"github.com/spikeekips/mitum/util/valuehash"
 )
 
 var maxConcurrentOperations int = 500
@@ -54,41 +58,55 @@ func (opp defaultOperationProcessor) Cancel() error {
 	return nil
 }
 
+type workerJob struct {
+	Index     uint64
+	Operation state.Processor
+}
+
 type ConcurrentOperationsProcessor struct {
 	sync.RWMutex
 	*logging.Logging
-	size       uint
-	pool       *storage.Statepool
-	wk         *util.DistributeWorker
-	donechan   chan error
-	oprLock    sync.RWMutex
-	oppHintSet *hint.Hintmap
-	oprs       map[hint.Hint]OperationProcessor
-	workFilter func(state.Processor) error
-	closed     bool
+	max              uint
+	pool             *storage.Statepool
+	wk               *util.DistributeWorker
+	donechan         chan error
+	oprLock          sync.RWMutex
+	oppHintSet       *hint.Hintmap
+	oprs             map[hint.Hint]OperationProcessor
+	workFilter       func(state.Processor) error
+	closed           bool
+	opsTreeGenerator *tree.FixedTreeGenerator
 }
 
 func NewConcurrentOperationsProcessor(
-	size int,
+	size uint64,
+	max int,
 	pool *storage.Statepool,
 	oppHintSet *hint.Hintmap,
 ) (*ConcurrentOperationsProcessor, error) {
-	if size < 1 {
-		return nil, xerrors.Errorf("size must be over 0")
-	} else if size > maxConcurrentOperations {
-		size = maxConcurrentOperations
+	if max < 1 {
+		return nil, xerrors.Errorf("max must be over 0")
+	} else if max > maxConcurrentOperations {
+		max = maxConcurrentOperations
 	}
 
 	return &ConcurrentOperationsProcessor{
 		Logging: logging.NewLogging(func(c logging.Context) logging.Emitter {
 			return c.Str("module", "concurrent-operations-processor")
 		}),
-		size:       uint(size),
-		pool:       pool,
-		oppHintSet: oppHintSet,
-		oprs:       map[hint.Hint]OperationProcessor{},
-		workFilter: func(state.Processor) error { return nil },
+		max:              uint(max),
+		pool:             pool,
+		oppHintSet:       oppHintSet,
+		oprs:             map[hint.Hint]OperationProcessor{},
+		workFilter:       func(state.Processor) error { return nil },
+		opsTreeGenerator: tree.NewFixedTreeGenerator(size),
 	}, nil
+}
+
+func (co *ConcurrentOperationsProcessor) addOperationsTree(index uint64, fact valuehash.Hash, reason error) error {
+	no := operation.NewFixedTreeNode(index, fact.Bytes(), reason == nil, reason)
+
+	return co.opsTreeGenerator.Add(no)
 }
 
 func (co *ConcurrentOperationsProcessor) Start(
@@ -100,7 +118,7 @@ func (co *ConcurrentOperationsProcessor) Start(
 	}
 
 	errchan := make(chan error)
-	co.wk = util.NewDistributeWorker(co.size, errchan)
+	co.wk = util.NewDistributeWorker(co.max, errchan)
 
 	co.donechan = make(chan error, 2)
 	go func() {
@@ -118,7 +136,7 @@ func (co *ConcurrentOperationsProcessor) Start(
 
 	go func() {
 		for err := range errchan {
-			if err == nil || xerrors.Is(err, util.IgnoreError) {
+			if err == nil || operationIgnored(err) {
 				continue
 			}
 
@@ -134,7 +152,78 @@ func (co *ConcurrentOperationsProcessor) Start(
 	return co
 }
 
-func (co *ConcurrentOperationsProcessor) Process(op operation.Operation) error {
+func (co *ConcurrentOperationsProcessor) StatesTree() (tree.FixedTree, []state.State, error) {
+	co.RLock()
+	defer co.RUnlock()
+
+	updates := co.pool.Updates()
+	states := make([]state.State, len(updates))
+	for i := range updates {
+		s := updates[i]
+		st := s.GetState()
+		if ust, err := st.SetHash(st.GenerateHash()); err != nil {
+			return tree.FixedTree{}, nil, err
+		} else if err := ust.IsValid(nil); err != nil {
+			return tree.FixedTree{}, nil, err
+		} else {
+			states[i] = ust
+		}
+	}
+
+	sort.Slice(states, func(i, j int) bool {
+		return bytes.Compare(states[i].Hash().Bytes(), states[j].Hash().Bytes()) < 0
+	})
+
+	trg := tree.NewFixedTreeGenerator(uint64(len(updates)))
+	for i := range states {
+		if err := trg.Add(tree.NewBaseFixedTreeNode(uint64(i), states[i].Hash().Bytes())); err != nil {
+			return tree.FixedTree{}, nil, err
+		}
+	}
+
+	if tr, err := trg.Tree(); err != nil {
+		return tree.FixedTree{}, nil, err
+	} else {
+		return tr, states, nil
+	}
+}
+
+func (co *ConcurrentOperationsProcessor) OperationsTree() (tree.FixedTree, error) {
+	co.RLock()
+	defer co.RUnlock()
+
+	added := co.pool.AddedOperations()
+	size := uint64(co.opsTreeGenerator.Len())
+	if n := len(added); n < 1 {
+		return co.opsTreeGenerator.Tree()
+	} else {
+		trg := tree.NewFixedTreeGenerator(size + uint64(n))
+		if err := co.opsTreeGenerator.Traverse(func(no tree.FixedTreeNode) (bool, error) {
+			if err := trg.Add(no); err != nil {
+				return false, err
+			}
+
+			return true, nil
+		}); err != nil {
+			return tree.FixedTree{}, err
+		} else {
+			co.opsTreeGenerator = trg
+		}
+	}
+
+	var i uint64
+	for k := range added {
+		op := added[k]
+		if err := co.addOperationsTree(size+i, op.Fact().Hash(), nil); err != nil {
+			return tree.FixedTree{}, err
+		}
+		i++
+	}
+
+	return co.opsTreeGenerator.Tree()
+}
+
+func (co *ConcurrentOperationsProcessor) Process(index uint64, op operation.Operation) error {
 	if co.wk == nil {
 		return xerrors.Errorf("not started")
 	}
@@ -143,14 +232,22 @@ func (co *ConcurrentOperationsProcessor) Process(op operation.Operation) error {
 		return ctx.Hinted("operation", op.Hash()).Hinted("fact", op.Fact().Hash())
 	})
 
-	l.Verbose().Msg("opertion will be processed")
+	l.Verbose().Msg("operation will be processed")
 
 	if pr, ok := op.(state.Processor); !ok {
 		l.Verbose().Msgf("not state.StateProcessor, %T", op)
 
-		return nil
-	} else if err := co.process(pr); err != nil {
-		if xerrors.Is(err, util.IgnoreError) {
+		return co.addOperationsTree(
+			index,
+			op.Fact().Hash(),
+			operation.NewBaseReasonError("not operation, %T", op),
+		)
+	} else if err := co.process(index, pr); err != nil {
+		if err0 := co.addOperationsTree(index, op.Fact().Hash(), err); err0 != nil {
+			return err0
+		}
+
+		if operationIgnored(err) {
 			l.Verbose().Err(err).Msg("operation ignored")
 
 			return nil
@@ -166,12 +263,12 @@ func (co *ConcurrentOperationsProcessor) Process(op operation.Operation) error {
 	return nil
 }
 
-func (co *ConcurrentOperationsProcessor) process(op state.Processor) error {
+func (co *ConcurrentOperationsProcessor) process(index uint64, op state.Processor) error {
 	if opr, err := co.opr(op); err != nil {
 		return err
 	} else if ppr, err := opr.PreProcess(op); err != nil {
 		return err
-	} else if !co.wk.NewJob(ppr) {
+	} else if !co.wk.NewJob(workerJob{Index: index, Operation: ppr}) {
 		return util.IgnoreError.Errorf("operation processor already closed")
 	}
 
@@ -289,17 +386,27 @@ func (co *ConcurrentOperationsProcessor) opr(op state.Processor) (OperationProce
 }
 
 func (co *ConcurrentOperationsProcessor) work(_ uint, j interface{}) error {
+	var job workerJob
 	if j == nil {
 		return nil
-	}
-
-	var op state.Processor
-	if sp, ok := j.(state.Processor); !ok {
-		return util.IgnoreError.Errorf("not state.StateProcessor, %T", j)
+	} else if i, ok := j.(workerJob); !ok {
+		return xerrors.Errorf("invalid input, %T", j)
 	} else {
-		op = sp
+		job = i
 	}
 
+	op := job.Operation.(operation.Operation)
+
+	err := co.workProcess(job.Operation)
+
+	if err0 := co.addOperationsTree(job.Index, op.Fact().Hash(), err); err0 != nil {
+		return err0
+	} else {
+		return err
+	}
+}
+
+func (co *ConcurrentOperationsProcessor) workProcess(op state.Processor) error {
 	if err := co.workFilter(op); err != nil {
 		return err
 	}
@@ -319,5 +426,21 @@ func (co *ConcurrentOperationsProcessor) work(_ uint, j interface{}) error {
 
 			return nil
 		}
+	}
+}
+
+func operationIgnored(err error) bool {
+	if err == nil {
+		return false
+	}
+
+	var operr operation.ReasonError
+	switch {
+	case xerrors.Is(err, util.IgnoreError):
+		return true
+	case xerrors.As(err, &operr):
+		return true
+	default:
+		return false
 	}
 }

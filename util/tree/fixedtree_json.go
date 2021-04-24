@@ -1,56 +1,77 @@
 package tree
 
 import (
-	"github.com/btcsuite/btcutil/base58"
+	"encoding/json"
 
+	"github.com/btcsuite/btcutil/base58"
 	jsonenc "github.com/spikeekips/mitum/util/encoder/json"
 )
 
-type FixedTreeJSONPacker struct {
+type BaseFixedTreeNodeJSONPacker struct {
 	jsonenc.HintedHead
-	NS []string `json:"nodes"`
+	IN uint64 `json:"index"`
+	KY string `json:"key"`
+	HS string `json:"hash"`
 }
 
-func (ft FixedTree) MarshalJSON() ([]byte, error) {
-	if ft.IsEmpty() {
+func (no BaseFixedTreeNode) MarshalJSON() ([]byte, error) {
+	if len(no.key) < 1 {
 		return jsonenc.Marshal(nil)
 	}
 
-	s := make([]string, len(ft.nodes))
-	if err := ft.Traverse(func(i int, key, h, v []byte) (bool, error) {
-		s[i*3] = base58.Encode(key)
-		s[i*3+1] = base58.Encode(h)
-		s[i*3+2] = base58.Encode(v)
+	return jsonenc.Marshal(BaseFixedTreeNodeJSONPacker{
+		HintedHead: jsonenc.NewHintedHead(no.Hint()),
+		IN:         no.index,
+		KY:         base58.Encode(no.key),
+		HS:         base58.Encode(no.hash),
+	})
+}
 
-		return true, nil
-	}); err != nil {
-		return nil, err
+type BaseFixedTreeNodeJSONUnpacker struct {
+	IN uint64 `json:"index"`
+	KY string `json:"key"`
+	HS string `json:"hash"`
+}
+
+func (no *BaseFixedTreeNode) UnmarshalJSON(b []byte) error {
+	var uno BaseFixedTreeNodeJSONUnpacker
+	if err := jsonenc.Unmarshal(b, &uno); err != nil {
+		return err
 	}
 
+	no.index = uno.IN
+	no.key = base58.Decode(uno.KY)
+	no.hash = base58.Decode(uno.HS)
+
+	return nil
+}
+
+type FixedTreeJSONPacker struct {
+	jsonenc.HintedHead
+	NS []FixedTreeNode `json:"nodes"`
+}
+
+func (tr FixedTree) MarshalJSON() ([]byte, error) {
 	return jsonenc.Marshal(FixedTreeJSONPacker{
-		HintedHead: jsonenc.NewHintedHead(ft.Hint()),
-		NS:         s,
+		HintedHead: jsonenc.NewHintedHead(tr.Hint()),
+		NS:         tr.nodes,
 	})
 }
 
 type FixedTreeJSONUnpacker struct {
-	NS []string `json:"nodes"`
+	NS []json.RawMessage `json:"nodes"`
 }
 
-func (ft *FixedTree) UnmarshalJSON(b []byte) error {
-	var us FixedTreeJSONUnpacker
-	if err := jsonenc.Unmarshal(b, &us); err != nil {
+func (tr *FixedTree) UnpackJSON(b []byte, enc *jsonenc.Encoder) error {
+	var utr FixedTreeJSONUnpacker
+	if err := enc.Unmarshal(b, &utr); err != nil {
 		return err
 	}
 
-	ub := make([][]byte, len(us.NS))
-	for i := range us.NS {
-		if len(us.NS[i]) < 1 {
-			continue
-		}
-
-		ub[i] = base58.Decode(us.NS[i])
+	bs := make([][]byte, len(utr.NS))
+	for i := range utr.NS {
+		bs[i] = utr.NS[i]
 	}
 
-	return ft.unpack(nil, ub)
+	return tr.unpack(enc, bs)
 }

@@ -16,7 +16,7 @@ func (bm BlockV0) MarshalBSON() ([]byte, error) {
 		"consensus": bm.ci,
 	}
 
-	if !bm.operationsTree.IsEmpty() {
+	if bm.operationsTree.Len() > 0 {
 		m["operations_tree"] = bm.operationsTree
 	}
 
@@ -24,7 +24,7 @@ func (bm BlockV0) MarshalBSON() ([]byte, error) {
 		m["operations"] = bm.operations
 	}
 
-	if !bm.statesTree.IsEmpty() {
+	if bm.statesTree.Len() > 0 {
 		m["states_tree"] = bm.statesTree
 	}
 

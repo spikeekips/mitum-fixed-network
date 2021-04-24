@@ -88,7 +88,7 @@ func (bst *DatabaseSession) SetBlock(_ context.Context, blk block.Block) error {
 }
 
 func (bst *DatabaseSession) setOperationsTree(tr tree.FixedTree) error {
-	if tr.IsEmpty() {
+	if tr.Len() < 1 {
 		return nil
 	}
 
@@ -99,8 +99,8 @@ func (bst *DatabaseSession) setOperationsTree(tr tree.FixedTree) error {
 	}
 
 	// store operation hashes
-	if err := tr.Traverse(func(_ int, key, _, _ []byte) (bool, error) {
-		bst.batch.Put(leveldbOperationFactHashKey(valuehash.NewBytes(key)), nil)
+	if err := tr.Traverse(func(no tree.FixedTreeNode) (bool, error) {
+		bst.batch.Put(leveldbOperationFactHashKey(valuehash.NewBytes(no.Key())), nil)
 
 		return true, nil
 	}); err != nil {

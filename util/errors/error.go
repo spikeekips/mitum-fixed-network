@@ -40,12 +40,25 @@ func (ne *NError) FormatError(p xerrors.Printer) error {
 	return ne.err
 }
 
+func (ne *NError) Msg() string {
+	return ne.s
+}
+
+func (ne *NError) Err() error {
+	return ne.err
+}
+
 func (ne *NError) Error() string {
 	if ne.err == nil {
 		return ne.s
 	}
 
-	return fmt.Sprintf("%s; %+v", ne.s, ne.err)
+	var s string
+	if len(ne.s) > 0 {
+		s = ne.s + "; "
+	}
+
+	return fmt.Sprintf("%s%+v", s, ne.err)
 }
 
 func (ne *NError) Is(err error) bool {
@@ -77,6 +90,13 @@ func (ne *NError) New() *NError {
 }
 
 func (ne *NError) Wrap(err error) *NError {
+	var nne *NError
+	if xerrors.As(err, &nne) {
+		if xerrors.Is(err, ne) {
+			return nne
+		}
+	}
+
 	return &NError{
 		id:    ne.id,
 		s:     ne.s,
@@ -89,7 +109,7 @@ func (ne *NError) Errorf(s string, a ...interface{}) *NError {
 	return &NError{
 		id:    ne.id,
 		s:     ne.s,
-		err:   xerrors.Errorf(s, a...),
+		err:   fmt.Errorf(s, a...),
 		frame: xerrors.Caller(1),
 	}
 }

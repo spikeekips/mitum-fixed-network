@@ -242,13 +242,13 @@ func (bst *DatabaseSession) setOperationsTree(tr tree.FixedTree) error {
 		bst.statesValue.Store("set-operations-tree", time.Since(started))
 	}()
 
-	if tr.IsEmpty() {
+	if tr.Len() < 1 {
 		return nil
 	}
 
 	var models []mongo.WriteModel
-	if err := tr.Traverse(func(_ int, key, _, _ []byte) (bool, error) {
-		doc, err := NewOperationDoc(valuehash.NewBytes(key), bst.st.enc, bst.block.Height())
+	if err := tr.Traverse(func(no tree.FixedTreeNode) (bool, error) {
+		doc, err := NewOperationDoc(valuehash.NewBytes(no.Key()), bst.st.enc, bst.block.Height())
 		if err != nil {
 			return false, err
 		}
@@ -336,9 +336,9 @@ func (bst *DatabaseSession) insertCaches() {
 	go func() {
 		defer wg.Done()
 
-		if !bst.operations.IsEmpty() {
-			_ = bst.operations.Traverse(func(_ int, key, _, _ []byte) (bool, error) {
-				_ = bst.ost.operationFactCache.Set(valuehash.NewBytes(key).String(), struct{}{}, 0)
+		if bst.operations.Len() < 1 {
+			_ = bst.operations.Traverse(func(no tree.FixedTreeNode) (bool, error) {
+				_ = bst.ost.operationFactCache.Set(valuehash.NewBytes(no.Key()).String(), struct{}{}, 0)
 
 				return true, nil
 			})

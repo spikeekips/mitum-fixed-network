@@ -88,7 +88,7 @@ func (bm BlockV0) IsValid(networkID []byte) error {
 	}
 
 	if bm.operationsHash != nil {
-		if bm.operations == nil || bm.operationsTree.IsEmpty() {
+		if bm.operations == nil || bm.operationsTree.Len() < 1 {
 			return xerrors.Errorf("Operations should not be empty")
 		}
 
@@ -98,7 +98,7 @@ func (bm BlockV0) IsValid(networkID []byte) error {
 	}
 
 	if bm.statesHash != nil {
-		if bm.states == nil || bm.statesTree.IsEmpty() {
+		if bm.states == nil || bm.statesTree.Len() < 1 {
 			return xerrors.Errorf("States should not be empty")
 		}
 

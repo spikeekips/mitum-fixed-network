@@ -1,240 +1,484 @@
 package tree
 
 import (
-	"bytes"
 	"fmt"
 	"math/rand"
 	"testing"
 	"time"
 
 	"github.com/btcsuite/btcutil/base58"
-	"github.com/stretchr/testify/suite"
-	"golang.org/x/crypto/sha3"
-
+	"github.com/spikeekips/mitum/util"
+	"github.com/spikeekips/mitum/util/encoder"
+	bsonenc "github.com/spikeekips/mitum/util/encoder/bson"
 	jsonenc "github.com/spikeekips/mitum/util/encoder/json"
-	"github.com/spikeekips/mitum/util/hint"
+	"github.com/stretchr/testify/suite"
+	"golang.org/x/xerrors"
 )
+
+type testFixedTreeNode struct {
+	suite.Suite
+}
+
+func (t *testFixedTreeNode) TestEmptyKey() {
+	err := NewBaseFixedTreeNode(1, nil).IsValid(nil)
+	t.True(xerrors.Is(err, EmptyKeyError))
+}
+
+func (t *testFixedTreeNode) TestEmptyHash() {
+	err := NewBaseFixedTreeNode(1, util.UUID().Bytes()).IsValid(nil)
+	t.True(xerrors.Is(err, EmptyHashError))
+}
+
+func (t *testFixedTreeNode) TestEncodeJSON() {
+	no := NewBaseFixedTreeNodeWithHash(20, util.UUID().Bytes(), util.UUID().Bytes())
+
+	b, err := jsonenc.Marshal(no)
+	t.NoError(err)
+	t.NotNil(b)
+
+	var uno BaseFixedTreeNode
+	t.NoError(jsonenc.Unmarshal(b, &uno))
+
+	t.True(no.Equal(uno))
+}
+
+func (t *testFixedTreeNode) TestEncodeBSON() {
+	no := NewBaseFixedTreeNodeWithHash(20, util.UUID().Bytes(), util.UUID().Bytes())
+
+	b, err := bsonenc.Marshal(no)
+	t.NoError(err)
+	t.NotNil(b)
+
+	var uno BaseFixedTreeNode
+	t.NoError(bsonenc.Unmarshal(b, &uno))
+
+	t.True(no.Equal(uno))
+}
+
+func TestFixedTreeNode(t *testing.T) {
+	suite.Run(t, new(testFixedTreeNode))
+}
 
 type testFixedTree struct {
 	suite.Suite
 }
 
-func (t *testFixedTree) TestNew() {
-	ft := NewFixedTreeGenerator(10, nil)
-	t.NotNil(ft)
-	t.Equal(30, len(ft.nodes))
+func (t *testFixedTree) TestWrongHash() {
+	trg := NewFixedTreeGenerator(3)
 
-	ft = NewFixedTreeGenerator(9, nil)
-	t.NotNil(ft)
-	t.Equal(27, len(ft.nodes))
+	t.NoError(trg.Add(NewBaseFixedTreeNode(0, util.UUID().Bytes())))
+	t.NoError(trg.Add(NewBaseFixedTreeNode(1, util.UUID().Bytes())))
+	t.NoError(trg.Add(NewBaseFixedTreeNode(2, util.UUID().Bytes())))
 
-	tr, err := ft.Tree()
+	tr, err := trg.Tree()
+	t.NoError(err)
+	t.NoError(tr.IsValid(nil))
+
+	tr.nodes[2] = tr.nodes[2].SetHash([]byte("showme"))
+	err = tr.IsValid(nil)
+	t.True(xerrors.Is(err, InvalidNodeError))
+	t.Contains(err.Error(), "invalid node hash")
+}
+
+func (t *testFixedTree) TestTraverse() {
+	trg := NewFixedTreeGenerator(10)
+
+	for i := 0; i < 10; i++ {
+		n := NewBaseFixedTreeNode(uint64(i), util.UUID().Bytes())
+		t.NoError(trg.Add(n))
+	}
+
+	tr, err := trg.Tree()
+	t.NoError(err)
+	t.NoError(tr.IsValid(nil))
+
+	var i uint64
+	t.NoError(tr.Traverse(func(n FixedTreeNode) (bool, error) {
+		t.True(n.Equal(tr.nodes[i]))
+		i++
+
+		return true, nil
+	}))
+}
+
+func (t *testFixedTree) TestProof1Index() {
+	trg := NewFixedTreeGenerator(10)
+
+	for i := 0; i < 10; i++ {
+		n := NewBaseFixedTreeNode(uint64(i), util.UUID().Bytes())
+		t.NoError(trg.Add(n))
+	}
+
+	tr, err := trg.Tree()
+	t.NoError(err)
+	t.NoError(tr.IsValid(nil))
+
+	pr, err := tr.Proof(1)
 	t.NoError(err)
 
-	t.Implements((*hint.Hinter)(nil), tr)
+	t.NoError(ProveFixedTreeProof(pr))
 }
 
-func (t *testFixedTree) TestIndex() {
-	{
-		ft := NewFixedTreeGenerator(3, nil)
-		t.NotNil(ft)
+func (t *testFixedTree) TestProof0Index() {
+	trg := NewFixedTreeGenerator(10)
 
-		t.NoError(ft.Append(nil, nil))
-		t.NoError(ft.Append(nil, nil))
-		t.NoError(ft.Append(nil, nil))
-		err := ft.Append(nil, nil)
-		t.Contains(err.Error(), "already filled")
+	for i := 0; i < 10; i++ {
+		n := NewBaseFixedTreeNode(uint64(i), util.UUID().Bytes())
+		t.NoError(trg.Add(n))
 	}
 
-	{
-		ft := NewFixedTreeGenerator(3, nil)
-		t.NotNil(ft)
+	tr, err := trg.Tree()
+	t.NoError(err)
+	t.NoError(tr.IsValid(nil))
 
-		t.NoError(ft.Add(0, nil, nil))
-		t.NoError(ft.Add(1, nil, nil))
-		t.NoError(ft.Add(2, nil, nil))
-		err := ft.Add(3, nil, nil)
-		t.Contains(err.Error(), "over size")
-	}
+	pr, err := tr.Proof(0)
+	t.NoError(err)
+
+	t.NoError(ProveFixedTreeProof(pr))
 }
 
-func (t *testFixedTree) TestHeight() {
-	ft := NewFixedTreeGenerator(20, nil)
-	t.NotNil(ft)
+func (t *testFixedTree) TestProofWrongSelfHash() {
+	l := uint64(15)
+	trg := NewFixedTreeGenerator(l)
 
-	t.Equal(0, ft.height(0))
-	t.Equal(-1, ft.height(20))
-}
-
-func (t *testFixedTree) TestChildren() {
-	ft := NewFixedTreeGenerator(20, nil)
-
-	for i := 0; i < ft.size; i++ {
-		t.NoError(ft.Add(i, []byte(fmt.Sprintf("%d", i)), nil))
+	for i := uint64(0); i < l; i++ {
+		n := NewBaseFixedTreeNode(i, util.UUID().Bytes())
+		t.NoError(trg.Add(n))
 	}
 
-	for i := 0; i < ft.size; i++ {
-		children := ft.children(i)
+	tr, err := trg.Tree()
+	t.NoError(err)
+	t.NoError(tr.IsValid(nil))
 
-		t.T().Log(fmt.Sprintf("index=%d childrena=%v", i, children))
-		if children[0] >= 0 {
-			t.NotNil(ft.nodes[children[0]*3])
+	pr, err := tr.Proof(4)
+	t.NoError(err)
+
+	pr[0] = pr[0].SetHash(util.UUID().Bytes()) // NOTE make wrong hash
+
+	err = ProveFixedTreeProof(pr)
+	t.True(xerrors.Is(err, InvalidProofError))
+	t.True(xerrors.Is(err, HashNotMatchError))
+	t.Contains(err.Error(), "hash not match")
+}
+
+func (t *testFixedTree) TestProofWrongHash() {
+	l := uint64(15)
+	trg := NewFixedTreeGenerator(l)
+
+	for i := uint64(0); i < l; i++ {
+		n := NewBaseFixedTreeNode(i, util.UUID().Bytes())
+		t.NoError(trg.Add(n))
+	}
+
+	tr, err := trg.Tree()
+	t.NoError(err)
+	t.NoError(tr.IsValid(nil))
+
+	pr, err := tr.Proof(4)
+	t.NoError(err)
+
+	n := pr[3].(BaseFixedTreeNode)
+	n.key = util.UUID().Bytes() // NOTE make wrong key
+	pr[3] = n
+
+	err = ProveFixedTreeProof(pr)
+	t.True(xerrors.Is(err, InvalidProofError))
+	t.True(xerrors.Is(err, HashNotMatchError))
+	t.Contains(err.Error(), "hash not match")
+}
+
+func (t *testFixedTree) TestProof() {
+	l := uint64(15)
+	trg := NewFixedTreeGenerator(l)
+
+	for i := uint64(0); i < l; i++ {
+		n := NewBaseFixedTreeNode(i, util.UUID().Bytes())
+		t.NoError(trg.Add(n))
+	}
+
+	tr, err := trg.Tree()
+	t.NoError(err)
+	t.NoError(tr.IsValid(nil))
+
+	pr, err := tr.Proof(4)
+	t.NoError(err)
+
+	t.NoError(ProveFixedTreeProof(pr))
+}
+
+func (t *testFixedTree) TestEncodeJSON() {
+	l := uint64(15)
+	trg := NewFixedTreeGenerator(l)
+
+	for i := uint64(0); i < l; i++ {
+		n := NewBaseFixedTreeNode(i, util.UUID().Bytes())
+		t.NoError(trg.Add(n))
+	}
+
+	tr, err := trg.Tree()
+	t.NoError(err)
+	t.NoError(tr.IsValid(nil))
+
+	b, err := jsonenc.Marshal(tr)
+	t.NoError(err)
+
+	enc := jsonenc.NewEncoder()
+	encs := encoder.NewEncoders()
+	t.NoError(encs.AddEncoder(enc))
+	encs.AddHinter(BaseFixedTreeNode{})
+
+	var utr FixedTree
+	t.NoError(enc.Decode(b, &utr))
+
+	t.Equal(tr.Len(), utr.Len())
+
+	t.NoError(tr.Traverse(func(n FixedTreeNode) (bool, error) {
+		if i, err := utr.Node(n.Index()); err != nil {
+			return false, err
+		} else if !n.Equal(i) {
+			return false, xerrors.Errorf("not equal")
 		}
-		if children[1] >= 0 {
-			t.NotNil(ft.nodes[children[1]*3])
+
+		return true, nil
+	}))
+}
+
+func (t *testFixedTree) TestEncodeBSON() {
+	l := uint64(15)
+	trg := NewFixedTreeGenerator(l)
+
+	for i := uint64(0); i < l; i++ {
+		n := NewBaseFixedTreeNode(i, util.UUID().Bytes())
+		t.NoError(trg.Add(n))
+	}
+
+	tr, err := trg.Tree()
+	t.NoError(err)
+	t.NoError(tr.IsValid(nil))
+
+	b, err := bsonenc.Marshal(tr)
+	t.NoError(err)
+
+	enc := bsonenc.NewEncoder()
+	encs := encoder.NewEncoders()
+	t.NoError(encs.AddEncoder(enc))
+	encs.AddHinter(BaseFixedTreeNode{})
+
+	var utr FixedTree
+	t.NoError(enc.Decode(b, &utr))
+
+	t.Equal(tr.Len(), utr.Len())
+
+	t.NoError(tr.Traverse(func(n FixedTreeNode) (bool, error) {
+		if i, err := utr.Node(n.Index()); err != nil {
+			return false, err
+		} else if !n.Equal(i) {
+			return false, xerrors.Errorf("not equal")
 		}
+
+		return true, nil
+	}))
+}
+
+func TestFixedTree(t *testing.T) {
+	suite.Run(t, new(testFixedTree))
+}
+
+type testFixedTreeGenerator struct {
+	suite.Suite
+}
+
+func (t *testFixedTreeGenerator) TestNew() {
+	trg := NewFixedTreeGenerator(10)
+	t.NotNil(trg)
+	t.Equal(10, len(trg.nodes))
+
+	trg = NewFixedTreeGenerator(9)
+	t.NotNil(trg)
+	t.Equal(9, len(trg.nodes))
+}
+
+func (t *testFixedTreeGenerator) TestZeroSize() {
+	trg := NewFixedTreeGenerator(0)
+	t.NotNil(trg)
+	t.Equal(0, len(trg.nodes))
+}
+
+func (t *testFixedTreeGenerator) TestAddOutOfRange() {
+	trg := NewFixedTreeGenerator(3)
+
+	t.NoError(trg.Add(NewBaseFixedTreeNode(1, util.UUID().Bytes())))
+
+	err := trg.Add(NewBaseFixedTreeNode(3, util.UUID().Bytes()))
+	t.Contains(err.Error(), "out of range")
+}
+
+func (t *testFixedTreeGenerator) TestAddSetNilHash() {
+	trg := NewFixedTreeGenerator(3)
+
+	n := NewBaseFixedTreeNode(1, util.UUID().Bytes())
+	n.hash = util.UUID().Bytes()
+
+	t.NoError(trg.Add(n))
+	t.Nil(trg.nodes[1].Hash())
+}
+
+func (t *testFixedTreeGenerator) TestTreeNotFilled() {
+	trg := NewFixedTreeGenerator(3)
+
+	t.NoError(trg.Add(NewBaseFixedTreeNode(0, util.UUID().Bytes())))
+	t.NoError(trg.Add(NewBaseFixedTreeNode(2, util.UUID().Bytes())))
+
+	_, err := trg.Tree()
+	t.True(xerrors.Is(err, EmptyNodeInTreeError))
+}
+
+func (t *testFixedTreeGenerator) TestTreeFilled() {
+	trg := NewFixedTreeGenerator(3)
+
+	t.NoError(trg.Add(NewBaseFixedTreeNode(0, util.UUID().Bytes())))
+	t.NoError(trg.Add(NewBaseFixedTreeNode(1, util.UUID().Bytes())))
+	t.NoError(trg.Add(NewBaseFixedTreeNode(2, util.UUID().Bytes())))
+
+	tr, err := trg.Tree()
+	t.NoError(err)
+	t.NoError(tr.IsValid(nil))
+}
+
+func (t *testFixedTreeGenerator) TestTreeAgain() {
+	trg := NewFixedTreeGenerator(3)
+
+	t.NoError(trg.Add(NewBaseFixedTreeNode(0, util.UUID().Bytes())))
+	t.NoError(trg.Add(NewBaseFixedTreeNode(1, util.UUID().Bytes())))
+	t.NoError(trg.Add(NewBaseFixedTreeNode(2, util.UUID().Bytes())))
+
+	tr0, err := trg.Tree()
+	t.NoError(err)
+	t.NoError(tr0.IsValid(nil))
+
+	tr1, err := trg.Tree()
+	t.NoError(err)
+	t.NoError(tr1.IsValid(nil))
+
+	for i := range tr0.nodes {
+		a := tr0.nodes[i]
+		b := tr1.nodes[i]
+
+		t.True(a.Equal(b), "index=%d", i)
 	}
 }
 
-func (t *testFixedTree) TestNodeHash() {
-	ft := NewFixedTreeGenerator(20, func(b []byte) []byte {
-		h := sha3.Sum256(b)
-		return h[:]
-	})
+func (t *testFixedTreeGenerator) TestNodeHash() {
+	trg := NewFixedTreeGenerator(20)
 
-	for i := 0; i < ft.size; i++ {
+	for i := 0; i < 20; i++ {
 		b := []byte(fmt.Sprintf("%d", i))
-		extra := []byte(fmt.Sprintf("extra%d", i))
-		t.NoError(ft.Add(i, b, extra))
-		t.Equal(b, ft.Key(i))
+		t.NoError(trg.Add(NewBaseFixedTreeNode(uint64(i), b)))
 	}
 
-	expected_hashes := []string{
-		"BjGge9T1Tiy63SSGK2359PLtHf2DBAKnaJEcirE2QTpz",
-		"2SwHDm8yXxJU2vGyBvQy87kXKbo3juhwiGnx4rcphwvT",
-		"DHVJt8sMBUmNuxJ95eLpA2JrP5ZHuim13BvBW2hoGn7R",
-		"v6M9D2ykyTeLNnT3z1nzVMfUNp6EDWSGBi5wVTxV8QK",
-		"VAuYeQbsCQqJX5KLHE3obfVuUW3RMYB3EwNug4ACwvg",
-		"wL1GwB2tYM6RU2S67HVXTZZU61GZsU8yqbe2g2W1WnY",
-		"4yHMzwBJKE4bYC8QMMTf7NMPV1oj7hFF7mLzrsi5eWVP",
-		"Gha4doiXH7BD14LCqzN4xmif7YJmpAjx6aBHSFavB8GS",
-		"B3pFhmZTdFudYoQjtyWTDZFVNVt2rC2UC5jHbUTY757e",
-		"CkdZFHD4Li1RGErRW6WfqwA97uXfTdj6n8Y8fTCEyKFW",
-		"HRqBic6YP1CMiG8equ7c6WkkbaZX6i9Px7VE4AAxDr2V",
-		"FgoZ93Udje5XaqBaCVre4SG77tepkJArM6q4ov8t8Q2q",
-		"DbnjurUx16zKwFxNh2VrY5QCcrdnKEfT4NjP3og6hB1W",
-		"6EQhyeqQjVSGRQGH58TLuuiTTNs6ooRzF8Sfn3WZFEGK",
-		"2jbjfN4PhSKMVPuBJbGcsyY2EimX7aFWnYu76RuhHRZ3",
-		"5bMKDXSDNUYeizGPk1k4jXhMJViTyHKfd3eG8kH79CTM",
-		"C4patNCpFu3wTV22Kqct2MXstu9qjQGmg4xRFQ1ciHjq",
-		"EVWoDGw3DSEyojiKLQjNup7bYVpixP4nrn8nPnfc8rxK",
-		"99LPbbFP7pnPwzHKDSLkErgu26g4k9RpeMFdTDbrNSGa",
-		"3pPNc4S4Up7bpeeX1mmcXLviDmUQewXotFZpGhESMiib",
+	expectedHashes := []string{
+		"EQCKyWqfF3EG7d9aNEwf9ZEGNnimYsvTjSRmUuEKfqbY",
+		"8Dtg6sPXM8GpwF1SeR6YU3rZRryT6ri1Hh6CgHxHrSvx",
+		"HxM1urjQdYUyjpXzwG6hrvkoFNp2e1gG89r6Yhjcrdsb",
+		"Bi9s2jPt24GT2WQrNV78XdeUHpDUuytQQ26zpZsbyYvC",
+		"rtpHg163dSBi2g48xCdXeEqvudBhswufZZ3gBpJNZha",
+		"iAhp5H7h5gzmVBTNrvhxUaPtQ57whY8sadSPodhc2y9",
+		"3hUZg43jgZKVL8LmbCi8AsiytJeeDUFR5iRWor9FDJXA",
+		"6Lp4VVAhXJrYGmNd4KroDiXKYbbL65dqB83xWdhfWxXR",
+		"DdcUJdxWJGH6jv1chSpPChesFNSFEPH3prsHyfdKEUJa",
+		"FQD7GAFiVC3Nb5nkdXh9bhQCkJHasXBmLPtave7aduhU",
+		"9E11xW24jYk4aioUsBesSRWqt7iryHnjyn8VdV3bjseu",
+		"ACz9RrSa2ktpNaMWuvrT9pCQKWGa6txnSREDZKD7V3Li",
+		"4R91rUkdKxa5XAY5r6TdJW79V7XhYC27i8skuT5yyn9W",
+		"FnZJd4FdURCuFfrvTGawTBmi99yBJb4UMHDFuGNhmpGp",
+		"uSCJRdChaDrEGFYdiTD9zCtEkFmj1iPrapKyu2rJbCP",
+		"7XmBvBXgLFp99Py6nLECYF9JqToR71KLaNSowqRZEEB6",
+		"7eNhEDpVW4BmBvgXxYrnSFF6JVejTVVs8Yc6qkm4uBF4",
+		"FEt7r23RgYTmT7o4bBGvTxTKTbpRCYcqpgyasxneKpb1",
+		"5opVDS3QcC5HUGJcqstwuALNoaRS2MPSN5ewbN8LqYWN",
+		"BAPXwD6pSwxfZvmWE7jHMFKYSQkFPcBXDfLAJjRoQJGV",
 	}
 
-	_ = ft.Hash(0)
-	for i := 0; i < ft.size; i++ {
-		t.Equal(expected_hashes[i], base58.Encode(ft.Hash(i)))
+	tr, err := trg.Tree()
+	t.NoError(err)
+	for i := range tr.nodes {
+		t.Equal(expectedHashes[i], base58.Encode(tr.nodes[i].Hash()))
 	}
-
-	t.Equal(ft.size*3, len(ft.Nodes()))
 }
 
-func (t *testFixedTree) TestNilKey() {
-	hashFunc := func(b []byte) []byte {
-		h := sha3.Sum256(b)
-
-		return h[:]
-	}
-	ft := NewFixedTreeGenerator(200, hashFunc)
-
-	for i := 0; i < ft.size; i++ {
-		var k []byte
-		if i == 10 {
-			k = []byte("9d8431a2-e16d-4723-b495-1739e26f5f7e")
-		}
-		t.NoError(ft.Add(i, k, nil))
-	}
-
-	expected := make([]string, ft.size)
-	for i := 0; i < ft.size; i++ {
-		expected[i] = ""
-	}
-
-	expected[0] = "EF7dMmEvhbmZettQA5vp615xo7CTNWvkahyhH6yqXCs8"
-	expected[1] = "8ps5UDMFzLGVMhF6WQ4VuLJpvSNnBHHRL8sHu2XcdTEF"
-	expected[4] = "4ATNEzPN98D3ujSvsmbYViK4raec3rijSufgLFNCiTTu"
-	expected[10] = base58.Encode(hashFunc(ft.Key(10)))
-
-	_ = ft.Hash(0)
-	for i := 0; i < ft.size; i++ {
-		t.Equal(expected[i], base58.Encode(ft.nodes[(i*3)+1]), "index=%d", i)
-	}
-
-	t.Equal(ft.size*3, len(ft.Nodes()))
-}
-
-func (t *testFixedTree) TestAppend() {
-	var size uint = 200000
+func (t *testFixedTreeGenerator) TestAddMany() {
+	var size uint64 = 200000
 	var root []byte
 	{
-		ft := NewFixedTreeGenerator(size, nil)
+		tr := NewFixedTreeGenerator(size)
 
 		s := time.Now()
-		for i := 0; i < ft.size; i++ {
-			t.NoError(ft.Add(i, []byte(fmt.Sprintf("%d", i)), nil))
+		for i := uint64(0); i < tr.size; i++ {
+			t.NoError(tr.Add(NewBaseFixedTreeNode(i, []byte(fmt.Sprintf("%d", i)))))
 		}
-		t.T().Log("from root:  insert: elapsed", ft.size, time.Since(s))
+		t.T().Log("from root:  insert: elapsed", tr.size, time.Since(s))
 
 		s = time.Now()
-		root = ft.Hash(0)
-		t.T().Log("from root: hashing: elapsed", ft.size, time.Since(s))
+		root = tr.Root()
+		t.T().Log("from root: hashing: elapsed", tr.size, time.Since(s))
 	}
 
 	{
-		ft := NewFixedTreeGenerator(size, nil)
+		tr := NewFixedTreeGenerator(size)
 
 		s := time.Now()
-		for i := ft.size - 1; i >= 0; i-- {
-			t.NoError(ft.Append([]byte(fmt.Sprintf("%d", i)), nil))
+		for i := uint64(0); i < tr.size; i++ {
+			j := tr.size - 1 - i
+			t.NoError(tr.Add(NewBaseFixedTreeNode(j, []byte(fmt.Sprintf("%d", j)))))
 		}
-		t.T().Log(" from end:  insert: elapsed", ft.size, time.Since(s))
+		t.T().Log(" from end:  insert: elapsed", tr.size, time.Since(s))
 
 		s = time.Now()
-		root0 := ft.Hash(0)
-		t.T().Log(" from end: hashing: elapsed", ft.size, time.Since(s))
+		root0 := tr.Root()
+		t.T().Log(" from end: hashing: elapsed", tr.size, time.Since(s))
 
 		t.Equal(root, root0)
 	}
 }
 
-func (t *testFixedTree) TestParallel() {
-	var size uint = 200000
+func (t *testFixedTreeGenerator) TestParallel() {
+	var size uint64 = 200000
 
 	var root []byte
 	{
-		ft := NewFixedTreeGenerator(size, nil)
+		tr := NewFixedTreeGenerator(size)
 
 		s := time.Now()
-		for i := 0; i < ft.size; i++ {
-			t.NoError(ft.Add(i, []byte(fmt.Sprintf("%d", i)), nil))
+		for i := uint64(0); i < tr.size; i++ {
+			t.NoError(tr.Add(NewBaseFixedTreeNode(i, []byte(fmt.Sprintf("%d", i)))))
 		}
-		t.T().Log("     add:  insert: elapsed", ft.size, time.Since(s))
+		t.T().Log("     add:  insert: elapsed", tr.size, time.Since(s))
 
 		s = time.Now()
-		root = ft.Hash(0)
-		t.T().Log("     add: hashing: elapsed", ft.size, time.Since(s))
+		root = tr.Root()
+		t.T().Log("     add: hashing: elapsed", tr.size, time.Since(s))
 	}
 
 	{
-		l := make([]int, size)
-		for i := 0; i < int(size); i++ {
+		l := make([]uint64, size)
+		for i := uint64(0); i < size; i++ {
 			l[i] = i
 		}
 
 		rand.Seed(time.Now().UnixNano())
 		rand.Shuffle(len(l), func(i, j int) { l[i], l[j] = l[j], l[i] })
 
-		ft := NewFixedTreeGenerator(size, nil)
+		tr := NewFixedTreeGenerator(size)
 
-		indexChan := make(chan int, size)
+		indexChan := make(chan uint64, size)
 		done := make(chan struct{}, size)
 		s := time.Now()
 
 		for i := 0; i < 10; i++ {
+			i := i
 			go func() {
-				for i := range indexChan {
-					t.NoError(ft.Add(i, []byte(fmt.Sprintf("%d", i)), nil))
+				for j := range indexChan {
+					t.NoError(tr.Add(NewBaseFixedTreeNode(j, []byte(fmt.Sprintf("%d", i)))))
 					done <- struct{}{}
 				}
 			}()
@@ -247,7 +491,7 @@ func (t *testFixedTree) TestParallel() {
 			close(indexChan)
 		}()
 
-		var count uint
+		var count uint64
 
 	end:
 		for range done {
@@ -257,230 +501,16 @@ func (t *testFixedTree) TestParallel() {
 			}
 		}
 
-		t.T().Log("parallel:  insert: elapsed", ft.size, time.Since(s))
+		t.T().Log("parallel:  insert: elapsed", tr.size, time.Since(s))
 
 		s = time.Now()
-		root0 := ft.Hash(0)
-		t.T().Log("parallel: hashing: elapsed", ft.size, time.Since(s))
+		root0 := tr.Root()
+		t.T().Log("parallel: hashing: elapsed", tr.size, time.Since(s))
 
 		t.Equal(root, root0)
 	}
 }
 
-func (t *testFixedTree) TestProof() {
-	ft := NewFixedTreeGenerator(20, func(b []byte) []byte {
-		h := sha3.Sum256(b)
-		return h[:]
-	})
-
-	for i := 0; i < ft.size; i++ {
-		k := fmt.Sprintf("%d", i)
-		t.NoError(ft.Add(i, []byte(k), nil))
-	}
-
-	_ = ft.Hash(0)
-
-	_, err := ft.Proof(20)
-	t.Contains(err.Error(), "over size")
-
-	pr, err := ft.Proof(19)
-	t.NoError(err)
-	t.Equal(22, len(pr))
-
-	var keys []string
-	var hashes [][]byte
-	for i := 0; i < len(pr)/2; i++ {
-		key := pr[i*2]
-		keys = append(keys, string(key))
-
-		h := pr[i*2+1]
-		hashes = append(hashes, h)
-	}
-
-	t.Equal([]string{"19", "9", "9", "10", "4", "3", "4", "1", "1", "2", "0"}, keys)
-
-	ids := []int{19, 9, 9, 10, 4, 3, 4, 1, 1, 2, 0}
-	for i, h := range hashes {
-		t.Equal(ft.Hash(ids[i]), h)
-	}
-}
-
-func (t *testFixedTree) TestProve() {
-	{ // empty proof
-		err := ProveFixedTreeProof(nil, nil)
-		t.Contains(err.Error(), "nothing to prove")
-	}
-
-	{ // wrong sized proof
-		err := ProveFixedTreeProof([][]byte{nil}, nil)
-		t.Contains(err.Error(), "invalid proof")
-	}
-
-	ft := NewFixedTreeGenerator(20, nil)
-
-	for i := 0; i < ft.size; i++ {
-		t.NoError(ft.Add(i, []byte(fmt.Sprintf("%d", i)), nil))
-	}
-
-	_ = ft.Hash(0)
-
-	_, err := ft.Proof(20)
-	t.Contains(err.Error(), "over size")
-
-	{ // even
-		pr, err := ft.Proof(18)
-		t.NoError(err)
-		t.Equal(24, len(pr))
-
-		err = ProveFixedTreeProof(pr, nil)
-		t.NoError(err)
-	}
-
-	{ // odd
-		pr, err := ft.Proof(19)
-		t.NoError(err)
-		t.Equal(22, len(pr))
-
-		err = ProveFixedTreeProof(pr, nil)
-		t.NoError(err)
-	}
-}
-
-func (t *testFixedTree) TestProveWrongHashInTheMiddle() {
-	ft := NewFixedTreeGenerator(20, nil)
-
-	for i := 0; i < ft.size; i++ {
-		t.NoError(ft.Add(i, []byte(fmt.Sprintf("%d", i)), nil))
-	}
-
-	_ = ft.Hash(0)
-
-	pr, err := ft.Proof(18)
-	t.NoError(err)
-	t.Equal(24, len(pr))
-
-	err = ProveFixedTreeProof(pr, nil)
-	t.NoError(err)
-
-	pr[13] = []byte("showme")
-	err = ProveFixedTreeProof(pr, nil)
-	t.Contains(err.Error(), "wrong hash in the middle found; index=16")
-}
-
-func (t *testFixedTree) TestValidate() {
-	ft := NewFixedTreeGenerator(20, nil)
-
-	for i := 0; i < ft.size; i++ {
-		t.NoError(ft.Add(i, []byte(fmt.Sprintf("%d", i)), nil))
-	}
-
-	_ = ft.Hash(0)
-
-	fv, err := NewFixedTree(ft.Nodes(), nil)
-	t.NoError(err)
-	t.NoError(fv.IsValid(nil))
-
-	{
-		nodes := ft.Nodes()
-
-		_, err := NewFixedTree(nodes[:4], nil)
-		t.Contains(err.Error(), "invalid nodes")
-	}
-
-	{ // wrong hash
-		nodes := ft.Nodes()
-		nodes[13] = []byte("showme")
-
-		fv, err := NewFixedTree(nodes, nil)
-		t.NoError(err)
-		err = fv.IsValid(nil)
-		t.Contains(err.Error(), "wrong hash; index=4")
-	}
-}
-
-func (t *testFixedTree) TestTraverse() {
-	ft := NewFixedTreeGenerator(19, nil)
-
-	keys := make([][]byte, 19)
-	for i := 0; i < ft.size; i++ {
-		key := []byte(fmt.Sprintf("%d", i))
-		keys[i] = key
-		t.NoError(ft.Add(i, key, key))
-	}
-
-	tr, err := ft.Tree()
-	t.NoError(err)
-
-	t.NoError(tr.Traverse(func(i int, key, h, v []byte) (bool, error) {
-		t.Equal(keys[i], key)
-		t.Equal(keys[i], v)
-		t.Equal(ft.Key(i), key)
-		t.Equal(ft.Hash(i), h)
-		t.Equal(ft.Extra(i), v)
-
-		return true, nil
-	}))
-}
-
-func (t *testFixedTree) TestEncode() {
-	ft := NewFixedTreeGenerator(20, nil)
-
-	for i := 0; i < ft.size; i++ {
-		t.NoError(ft.Add(i, []byte(fmt.Sprintf("%d", i)), nil))
-	}
-
-	tr, err := ft.Tree()
-	t.NoError(err)
-
-	b, err := jsonenc.Marshal(tr)
-	t.NoError(err)
-	t.NotNil(b)
-
-	var uft FixedTree
-	t.NoError(uft.UnmarshalJSON(b))
-
-	t.Equal(ft.Len(), uft.Len())
-	t.True(t.compareBytes(ft.Nodes(), uft.Nodes()))
-}
-
-func (t *testFixedTree) compareBytes(a, b [][]byte) bool {
-	if len(a) != len(b) {
-		return false
-	}
-
-	for i := range a {
-		if len(a[i]) != len(b[i]) {
-			return false
-		} else if !bytes.Equal(a[i], b[i]) {
-			return false
-		}
-	}
-
-	return true
-}
-
-func (t *testFixedTree) TestDump() {
-	ft := NewFixedTreeGenerator(20, nil)
-
-	for i := 0; i < ft.size; i++ {
-		t.NoError(ft.Add(i, []byte(fmt.Sprintf("%d", i)), nil))
-	}
-
-	tr, err := ft.Tree()
-	t.NoError(err)
-	t.NoError(tr.IsValid(nil))
-
-	var buf bytes.Buffer
-	t.NoError(tr.Dump(&buf))
-
-	utr, err := LoadFixedTreeFromReader(bytes.NewReader(buf.Bytes()))
-	t.NoError(err)
-	t.NoError(utr.IsValid(nil))
-
-	t.Equal(tr.Len(), utr.Len())
-	t.Equal(tr.Root(), utr.Root())
-}
-
-func TestFixedTree(t *testing.T) {
-	suite.Run(t, new(testFixedTree))
+func TestFixedTreeGenerator(t *testing.T) {
+	suite.Run(t, new(testFixedTreeGenerator))
 }

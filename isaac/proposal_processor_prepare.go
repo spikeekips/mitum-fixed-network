@@ -1,12 +1,9 @@
 package isaac
 
 import (
-	"bytes"
 	"context"
-	"sort"
 	"time"
 
-	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/base/block"
 	"github.com/spikeekips/mitum/base/operation"
 	"github.com/spikeekips/mitum/base/prprocessor"
@@ -224,10 +221,6 @@ func (pp *DefaultProcessor) processOperations(ctx context.Context) error {
 		}
 	}
 
-	if err := pp.processOperationsTree(ctx, pool); err != nil {
-		return err
-	}
-
 	pp.Log().Debug().Int("operations", len(pp.operations)).Msg("operations processed")
 
 	return nil
@@ -240,10 +233,10 @@ func (pp *DefaultProcessor) prepareBlock(context.Context) error {
 	}()
 
 	var opsHash, stsHash valuehash.Hash
-	if !pp.operationsTree.IsEmpty() {
+	if pp.operationsTree.Len() > 0 {
 		opsHash = valuehash.NewBytes(pp.operationsTree.Root())
 	}
-	if !pp.statesTree.IsEmpty() {
+	if pp.statesTree.Len() > 0 {
 		stsHash = valuehash.NewBytes(pp.statesTree.Root())
 	}
 
@@ -307,11 +300,13 @@ func (pp *DefaultProcessor) processStatesTree(ctx context.Context, pool *storage
 		_ = pp.setStatic("processor_process_operations_states_tree_elapsed", time.Since(started))
 	}()
 
+	pp.operationsTree = tree.FixedTree{}
 	pp.statesTree = tree.FixedTree{}
 	pp.states = nil
 
 	var co *prprocessor.ConcurrentOperationsProcessor
-	if c, err := prprocessor.NewConcurrentOperationsProcessor(len(pp.operations), pool, pp.oprHintset); err != nil {
+	size := len(pp.operations)
+	if c, err := prprocessor.NewConcurrentOperationsProcessor(uint64(size), size, pool, pp.oprHintset); err != nil {
 		return err
 	} else {
 		_ = c.SetLogger(pp.Log())
@@ -323,7 +318,7 @@ func (pp *DefaultProcessor) processStatesTree(ctx context.Context, pool *storage
 				case err != nil:
 					return err
 				case found:
-					return util.IgnoreError.Errorf("already known")
+					return operation.NewBaseReasonError("known operation")
 				default:
 					return nil
 				}
@@ -351,7 +346,7 @@ func (pp *DefaultProcessor) concurrentProcessStatesTree(
 
 		pp.Log().Verbose().Hinted("fact", op.Fact().Hash()).Msg("process fact")
 
-		if err := co.Process(op); err != nil {
+		if err := co.Process(uint64(i), op); err != nil {
 			return err
 		}
 	}
@@ -360,96 +355,26 @@ func (pp *DefaultProcessor) concurrentProcessStatesTree(
 		return err
 	}
 
-	if !pool.IsUpdated() {
-		return nil
-	}
-
-	if tr, states, err := pp.generateStatesTree(pool); err != nil {
-		return err
-	} else {
-		pp.statesTree = tr
-		pp.states = states
-
-		return nil
-	}
-}
-
-func (pp *DefaultProcessor) processOperationsTree(_ context.Context, pool *storage.Statepool) error {
-	started := time.Now()
-	defer func() {
-		_ = pp.setStatic("processor_process_operations_operations_tree_elapsed", time.Since(started))
-	}()
-
-	added := pool.AddedOperations()
-	for k := range added {
-		pp.operations = append(pp.operations, added[k])
-	}
-
-	if len(pp.operations) < 1 {
-		return nil
-	}
-
-	statesOps := pool.InsertedOperations()
-	pp.operationsTree = tree.FixedTree{}
-
-	tg := tree.NewFixedTreeGenerator(uint(len(pp.operations)), nil)
-	for i := range pp.operations {
-		fh := pp.operations[i].Fact().Hash()
-
-		var mod []byte
-		if _, found := statesOps[fh.String()]; found {
-			mod = base.FactMode2bytes(base.FInStates)
-		}
-
-		if err := tg.Add(i, fh.Bytes(), mod); err != nil {
+	if pool.IsUpdated() {
+		if tr, states, err := co.StatesTree(); err != nil {
 			return err
+		} else {
+			pp.statesTree = tr
+			pp.states = states
 		}
 	}
 
-	if tr, err := tg.Tree(); err != nil {
-		pp.Log().Error().Err(err).Msg("failed to process operationsTree")
-
+	if tr, err := co.OperationsTree(); err != nil {
 		return err
 	} else {
+		added := pool.AddedOperations()
+		for i := range added {
+			pp.operations = append(pp.operations, added[i])
+		}
+
 		pp.operationsTree = tr
 
-		pp.Log().Debug().Msg("processed operationsTree")
-
 		return nil
-	}
-}
-
-func (pp *DefaultProcessor) generateStatesTree(
-	pool *storage.Statepool,
-) (tree.FixedTree, []state.State, error) {
-	updates := pool.Updates()
-	states := make([]state.State, len(updates))
-	for i, s := range updates {
-		st := s.GetState()
-		if ust, err := st.SetHash(st.GenerateHash()); err != nil {
-			return tree.FixedTree{}, nil, err
-		} else if err := ust.IsValid(nil); err != nil {
-			return tree.FixedTree{}, nil, err
-		} else {
-			states[i] = ust
-		}
-	}
-
-	sort.Slice(states, func(i, j int) bool {
-		return bytes.Compare(states[i].Hash().Bytes(), states[j].Hash().Bytes()) < 0
-	})
-
-	tg := tree.NewFixedTreeGenerator(uint(len(updates)), nil)
-	for i := range states {
-		if err := tg.Add(i, states[i].Hash().Bytes(), nil); err != nil {
-			return tree.FixedTree{}, nil, err
-		}
-	}
-
-	if tr, err := tg.Tree(); err != nil {
-		return tree.FixedTree{}, nil, err
-	} else {
-		return tr, states, nil
 	}
 }
 

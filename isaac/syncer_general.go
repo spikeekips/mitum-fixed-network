@@ -1160,7 +1160,7 @@ func (cs *GeneralSyncer) fetchBlock(node network.Node, bd block.BlockDataMap) (b
 		return nil, err
 	} else if j, err := cs.blockData.Writer().ReadOperationsTree(i); err != nil {
 		return nil, err
-	} else if !j.IsEmpty() {
+	} else if j.Len() > 0 {
 		blk = blk.SetOperationsTree(j)
 	}
 
@@ -1176,7 +1176,7 @@ func (cs *GeneralSyncer) fetchBlock(node network.Node, bd block.BlockDataMap) (b
 		return nil, err
 	} else if j, err := cs.blockData.Writer().ReadStatesTree(i); err != nil {
 		return nil, err
-	} else if !j.IsEmpty() {
+	} else if j.Len() > 0 {
 		blk = blk.SetStatesTree(j)
 	}
 

@@ -384,6 +384,8 @@ func (st *Database) CleanByHeight(height base.Height) error {
 
 	if err := st.cleanByHeight(height); err != nil {
 		return err
+	} else if height <= base.PreGenesisHeight {
+		return nil
 	}
 
 	switch m, found, err := st.LastManifest(); {

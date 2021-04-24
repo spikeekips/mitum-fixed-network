@@ -9,6 +9,7 @@ import (
 
 	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/base/block"
+	"github.com/spikeekips/mitum/base/operation"
 	"github.com/spikeekips/mitum/base/state"
 	"github.com/spikeekips/mitum/storage/blockdata"
 	"github.com/spikeekips/mitum/storage/blockdata/localfs"
@@ -16,6 +17,7 @@ import (
 	"github.com/spikeekips/mitum/util/tree"
 	"github.com/spikeekips/mitum/util/valuehash"
 	"github.com/stretchr/testify/suite"
+	"golang.org/x/xerrors"
 )
 
 type testBlockDataLocalFSSession struct {
@@ -160,9 +162,9 @@ func (t *testBlockDataLocalFSSession) TestSetStatesTree() {
 		sts[i] = t.NewState(33)
 	}
 
-	tg := tree.NewFixedTreeGenerator(uint(len(sts)), nil)
+	tg := tree.NewFixedTreeGenerator(uint64(len(sts)))
 	for i := range sts {
-		err := tg.Add(i, sts[i].Hash().Bytes(), nil)
+		err := tg.Add(tree.NewBaseFixedTreeNode(uint64(i), sts[i].Hash().Bytes()))
 		t.NoError(err)
 	}
 
@@ -181,13 +183,18 @@ func (t *testBlockDataLocalFSSession) TestSetStatesTree() {
 	t.NoError(err)
 
 	t.NoError(utr.IsValid(nil))
-	t.Equal(len(tr.Nodes()), len(utr.Nodes()))
+	t.Equal(tr.Len(), utr.Len())
 	t.True(tr.Hint().Equal(utr.Hint()))
-	for i := range tr.Nodes() {
-		a := tr.Nodes()[i]
-		b := utr.Nodes()[i]
-		t.Equal(a, b)
-	}
+
+	t.NoError(tr.Traverse(func(no tree.FixedTreeNode) (bool, error) {
+		if i, err := utr.Node(no.Index()); err != nil {
+			return false, err
+		} else if !no.Equal(i) {
+			return false, xerrors.Errorf("different node found")
+		}
+
+		return true, nil
+	}))
 }
 
 func (t *testBlockDataLocalFSSession) TestSetINITVoteproof() {
@@ -284,9 +291,9 @@ func (t *testBlockDataLocalFSSession) saveBlock(local *Local) (*localfs.Session,
 		t.NoError(ss.AddOperations(ops...))
 		t.NoError(ss.CloseOperations())
 
-		tg := tree.NewFixedTreeGenerator(uint(len(ops)), nil)
+		tg := tree.NewFixedTreeGenerator(uint64(len(ops)))
 		for i := range ops {
-			err := tg.Add(i, ops[i].Hash().Bytes(), nil)
+			err := tg.Add(operation.NewFixedTreeNode(uint64(i), ops[i].Hash().Bytes(), true, nil))
 			t.NoError(err)
 		}
 
@@ -306,9 +313,9 @@ func (t *testBlockDataLocalFSSession) saveBlock(local *Local) (*localfs.Session,
 		t.NoError(ss.AddStates(sts...))
 		t.NoError(ss.CloseStates())
 
-		tg := tree.NewFixedTreeGenerator(uint(len(sts)), nil)
+		tg := tree.NewFixedTreeGenerator(uint64(len(sts)))
 		for i := range sts {
-			err := tg.Add(i, sts[i].Hash().Bytes(), nil)
+			err := tg.Add(tree.NewBaseFixedTreeNode(uint64(i), sts[i].Hash().Bytes()))
 			t.NoError(err)
 		}
 

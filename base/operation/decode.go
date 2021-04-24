@@ -28,3 +28,18 @@ func DecodeFactSign(enc encoder.Encoder, b []byte) (FactSign, error) {
 		return f, nil
 	}
 }
+
+func DecodeReasonError(enc encoder.Encoder, b []byte) (ReasonError, error) {
+	if len(b) < 1 {
+		return nil, nil
+	}
+	if hinter, err := enc.DecodeByHint(b); err != nil {
+		return nil, err
+	} else if hinter == nil {
+		return nil, nil
+	} else if f, ok := hinter.(ReasonError); !ok {
+		return nil, xerrors.Errorf("not ReasonError, %T", hinter)
+	} else {
+		return f, nil
+	}
+}

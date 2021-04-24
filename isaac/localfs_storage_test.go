@@ -7,6 +7,7 @@ import (
 
 	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/base/block"
+	"github.com/spikeekips/mitum/base/operation"
 	"github.com/spikeekips/mitum/base/state"
 	"github.com/spikeekips/mitum/storage/blockdata/localfs"
 	"github.com/spikeekips/mitum/util"
@@ -36,9 +37,9 @@ func (t *testBlockData) processSession(local *Local, ss *localfs.Session) {
 		t.NoError(ss.AddOperations(ops...))
 		t.NoError(ss.CloseOperations())
 
-		tg := tree.NewFixedTreeGenerator(uint(len(ops)), nil)
+		tg := tree.NewFixedTreeGenerator(uint64(len(ops)))
 		for i := range ops {
-			err := tg.Add(i, ops[i].Hash().Bytes(), nil)
+			err := tg.Add(operation.NewFixedTreeNode(uint64(i), ops[i].Hash().Bytes(), true, nil))
 			t.NoError(err)
 		}
 
@@ -58,9 +59,9 @@ func (t *testBlockData) processSession(local *Local, ss *localfs.Session) {
 		t.NoError(ss.AddStates(sts...))
 		t.NoError(ss.CloseStates())
 
-		tg := tree.NewFixedTreeGenerator(uint(len(sts)), nil)
+		tg := tree.NewFixedTreeGenerator(uint64(len(sts)))
 		for i := range sts {
-			err := tg.Add(i, sts[i].Hash().Bytes(), nil)
+			err := tg.Add(tree.NewBaseFixedTreeNode(uint64(i), sts[i].Hash().Bytes()))
 			t.NoError(err)
 		}
 

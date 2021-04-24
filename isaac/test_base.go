@@ -74,6 +74,8 @@ func (t *BaseTest) SetupSuite() {
 	_ = t.Encs.AddHinter(state.SliceValue{})
 	_ = t.Encs.AddHinter(state.StringValue{})
 	_ = t.Encs.AddHinter(block.BaseBlockDataMap{})
+	_ = t.Encs.AddHinter(operation.FixedTreeNode{})
+	_ = t.Encs.AddHinter(tree.BaseFixedTreeNode{})
 }
 
 func (t *BaseTest) SetupTest() {

@@ -21,6 +21,7 @@ import (
 	"github.com/spikeekips/mitum/storage/blockdata/localfs"
 	"github.com/spikeekips/mitum/util"
 	"github.com/spikeekips/mitum/util/hint"
+	"github.com/spikeekips/mitum/util/tree"
 	"github.com/spikeekips/mitum/util/valuehash"
 )
 
@@ -724,11 +725,12 @@ func (t *testDefaultProposalProcessor) TestNotProcessedOperations() {
 	pr, err := pm.Proposal(ivp.Height(), ivp.Round(), ivp)
 	t.NoError(err)
 
+	excludeError := operation.NewBaseReasonError("exclude this operation").SetData(map[string]interface{}{"fact": exclude.Bytes()})
 	var processed int64
 	opr := dummyOperationProcessor{
 		beforeProcessed: func(op state.Processor) error {
 			if fh := op.(operation.Operation).Fact().Hash(); fh.Equal(exclude) {
-				return util.IgnoreError.Errorf("exclude this operation, %v", fh)
+				return excludeError
 			}
 
 			atomic.AddInt64(&processed, 1)
@@ -768,16 +770,17 @@ func (t *testDefaultProposalProcessor) TestNotProcessedOperations() {
 
 	t.Equal(int64(len(sls)-1), atomic.LoadInt64(&processed))
 
-	_ = blk.OperationsTree().Traverse(func(_ int, key, h, v []byte) (bool, error) {
-		fh := valuehash.NewBytes(key)
+	_ = blk.OperationsTree().Traverse(func(no tree.FixedTreeNode) (bool, error) {
+		ono := no.(operation.FixedTreeNode)
 
-		m, err := base.BytesToFactMode(v)
-		t.NoError(err)
+		fh := valuehash.NewBytes(ono.Key())
 
 		if exclude.Equal(fh) {
-			t.False(m&base.FInStates != 0)
+			t.False(ono.InState())
+			t.Equal(ono.Reason().Msg(), excludeError.Msg())
+			t.Equal(ono.Reason().Data(), excludeError.Data())
 		} else {
-			t.True(m&base.FInStates != 0)
+			t.True(ono.InState())
 		}
 
 		return true, nil
@@ -848,13 +851,12 @@ func (t *testDefaultProposalProcessor) TestSameStateHash() {
 	}
 
 	// check operation(fact) is in states
-	_ = blk.OperationsTree().Traverse(func(i int, key, h, v []byte) (bool, error) {
-		_, found := facts[valuehash.NewBytes(key).String()]
+	_ = blk.OperationsTree().Traverse(func(no tree.FixedTreeNode) (bool, error) {
+		ono := no.(operation.FixedTreeNode)
+		_, found := facts[valuehash.NewBytes(ono.Key()).String()]
 		t.True(found)
 
-		m, err := base.BytesToFactMode(v)
-		t.NoError(err)
-		t.True(m&base.FInStates != 0)
+		t.True(ono.InState())
 
 		return true, nil
 	})

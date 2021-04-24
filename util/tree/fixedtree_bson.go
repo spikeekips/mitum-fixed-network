@@ -1,27 +1,49 @@
 package tree
 
 import (
-	"go.mongodb.org/mongo-driver/bson"
-
 	bsonenc "github.com/spikeekips/mitum/util/encoder/bson"
+	"go.mongodb.org/mongo-driver/bson"
 )
 
-func (ft FixedTree) MarshalBSON() ([]byte, error) {
-	nodes := make([][]byte, ft.Len()*3)
-	if err := ft.Traverse(func(i int, key, h, v []byte) (bool, error) {
-		nodes[i*3] = key
-		nodes[i*3+1] = h
-		nodes[i*3+2] = v
+func (no BaseFixedTreeNode) M() map[string]interface{} {
+	return map[string]interface{}{
+		"index": no.index,
+		"key":   no.key,
+		"hash":  no.hash,
+	}
+}
 
-		return true, nil
-	}); err != nil {
-		return nil, err
+func (no BaseFixedTreeNode) MarshalBSON() ([]byte, error) {
+	return bsonenc.Marshal(bsonenc.MergeBSONM(
+		bsonenc.NewHintedDoc(no.Hint()),
+		no.M(),
+	))
+}
+
+type BaseFixedTreeNodeBSONUnpacker struct {
+	IN uint64 `bson:"index"`
+	KY []byte `bson:"key"`
+	HS []byte `bson:"hash"`
+}
+
+func (no *BaseFixedTreeNode) UnmarshalBSON(b []byte) error {
+	var uno BaseFixedTreeNodeBSONUnpacker
+	if err := bsonenc.Unmarshal(b, &uno); err != nil {
+		return err
 	}
 
+	no.index = uno.IN
+	no.key = uno.KY
+	no.hash = uno.HS
+
+	return nil
+}
+
+func (tr FixedTree) MarshalBSON() ([]byte, error) {
 	return bsonenc.Marshal(bsonenc.MergeBSONM(
-		bsonenc.NewHintedDoc(ft.Hint()),
+		bsonenc.NewHintedDoc(tr.Hint()),
 		bson.M{
-			"nodes": nodes,
+			"nodes": tr.nodes,
 		},
 	))
 }
@@ -30,20 +52,16 @@ type FixedTreeBSONUnpacker struct {
 	NS []bson.Raw `bson:"nodes"`
 }
 
-func (ft *FixedTree) UnpackBSON(b []byte, enc *bsonenc.Encoder) error {
-	var us FixedTreeBSONUnpacker
-	if err := enc.Unmarshal(b, &us); err != nil {
+func (tr *FixedTree) UnpackBSON(b []byte, enc *bsonenc.Encoder) error {
+	var utr FixedTreeBSONUnpacker
+	if err := enc.Unmarshal(b, &utr); err != nil {
 		return err
 	}
 
-	bs := make([][]byte, len(us.NS))
-	for i := range us.NS {
-		if len(us.NS[i]) < 1 {
-			continue
-		}
-
-		bs[i] = us.NS[i]
+	bs := make([][]byte, len(utr.NS))
+	for i := range utr.NS {
+		bs[i] = utr.NS[i]
 	}
 
-	return ft.unpack(nil, bs)
+	return tr.unpack(enc, bs)
 }

@@ -154,6 +154,10 @@ func (va *validator) CheckPolicy() (bool, error) {
 }
 
 func (va *validator) CheckNodes() (bool, error) {
+	if va.config.Address() == nil {
+		return false, xerrors.Errorf("missing local address")
+	}
+
 	nodes := va.config.Nodes()
 
 	if len(nodes) < 1 {
@@ -198,9 +202,42 @@ func (va *validator) CheckNodes() (bool, error) {
 }
 
 func (va *validator) CheckSuffrage() (bool, error) {
+	if va.config.Address() == nil {
+		return false, xerrors.Errorf("missing local address")
+	}
+
 	conf := va.config.Suffrage()
 	if conf == nil {
 		return false, xerrors.Errorf("suffrage is missing")
+	}
+
+	if len(conf.Nodes()) < 1 {
+		return false, xerrors.Errorf("empty nodes in suffrage")
+	} else if conf.NumberOfActing() < 1 {
+		return false, xerrors.Errorf("number-of-acting should be over zero")
+	}
+
+	nodes := va.config.Nodes()
+
+	for i := range conf.Nodes() {
+		n := conf.Nodes()[i]
+
+		var found bool
+		if n.Equal(va.config.Address()) {
+			found = true
+		} else {
+			for j := range nodes {
+				if n.Equal(nodes[j].Address()) {
+					found = true
+
+					break
+				}
+			}
+		}
+
+		if !found {
+			return false, xerrors.Errorf("node, %q in suffrage not found in nodes", n)
+		}
 	}
 
 	return true, nil

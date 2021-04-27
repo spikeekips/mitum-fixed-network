@@ -297,9 +297,78 @@ nodes:
 	t.Contains(err.Error(), "duplicated network found")
 }
 
-func (t *testConfigValidator) TestEmptySuffrage() {
+func (t *testConfigValidator) TestEmptySuffrageWithoutNodes() {
 	y := `
 suffrage:
+`
+	ctx := t.loadConfig(y)
+
+	_, err := HookSuffrageConfigFunc(nil)(ctx)
+	t.Contains(err.Error(), "nodes not found in suffrage config")
+}
+
+func (t *testConfigValidator) TestEmptySuffrageWithWrongNode() {
+	y := `
+suffrage:
+  nodes:
+    - n0
+`
+	ctx := t.loadConfig(y)
+
+	_, err := HookSuffrageConfigFunc(nil)(ctx)
+	t.Contains(err.Error(), "invalid node address")
+}
+
+func (t *testConfigValidator) TestEmptySuffrageWithNodes() {
+	y := `
+suffrage:
+  nodes:
+`
+	ctx := t.loadConfig(y)
+
+	_, err := HookSuffrageConfigFunc(nil)(ctx)
+	t.Contains(err.Error(), "invalid nodes list")
+}
+
+func (t *testConfigValidator) TestSuffrageUnknowNode() {
+	y := `
+address: n0-010a:0.0.1
+
+nodes:
+  - address: n1-010a:0.0.1
+    url: quic://local:54322
+    publickey: 27phogA4gmbMGfg321EHfx5eABkL7KAYuDPRGFoyQtAUb-0113:0.0.1
+
+suffrage:
+  nodes:
+    - unknown-010a:0.0.1
+`
+	ctx := t.loadConfig(y)
+
+	ctx, err := HookSuffrageConfigFunc(nil)(ctx)
+	t.NoError(err)
+
+	va, err := config.NewValidator(ctx)
+	t.NoError(err)
+	_, err = va.CheckNodes()
+	t.NoError(err)
+
+	_, err = va.CheckSuffrage()
+	t.Contains(err.Error(), " in suffrage not found in nodes")
+}
+
+func (t *testConfigValidator) TestEmptySuffrage() {
+	y := `
+address: n0-010a:0.0.1
+
+nodes:
+  - address: n1-010a:0.0.1
+    url: quic://local:54322
+    publickey: 27phogA4gmbMGfg321EHfx5eABkL7KAYuDPRGFoyQtAUb-0113:0.0.1
+
+suffrage:
+  nodes:
+    - n0-010a:0.0.1
 `
 	ctx := t.loadConfig(y)
 
@@ -315,17 +384,21 @@ suffrage:
 	t.NoError(config.LoadConfigContextValue(ctx, &conf))
 
 	t.IsType(config.RoundrobinSuffrage{}, conf.Suffrage()) // NOTE empty will return default suffrage.
+
+	t.Equal(1, len(conf.Suffrage().Nodes()))
 }
 
 func (t *testConfigValidator) TestFixedSuffrageWithEmptyAddress() {
 	y := `
 suffrage:
   type: fixed-suffrage
+  nodes:
+    - n0-010a:0.0.1
 `
 	ctx := t.loadConfig(y)
 
 	_, err := HookSuffrageConfigFunc(DefaultHookHandlersSuffrageConfig)(ctx)
-	t.Contains(err.Error(), "empty proposer and acting")
+	t.Contains(err.Error(), "empty proposer")
 }
 
 func (t *testConfigValidator) TestFixedSuffrageWithInvalidAddress() {
@@ -333,6 +406,8 @@ func (t *testConfigValidator) TestFixedSuffrageWithInvalidAddress() {
 suffrage:
   type: fixed-suffrage
   proposer: showme hahah
+  nodes:
+    - n0-010a:0.0.1
 `
 	ctx := t.loadConfig(y)
 
@@ -342,9 +417,18 @@ suffrage:
 
 func (t *testConfigValidator) TestFixedSuffrage() {
 	y := `
+address: n0-010a:0.0.1
+
+nodes:
+  - address: n1-010a:0.0.1
+    url: quic://local:54322
+    publickey: 27phogA4gmbMGfg321EHfx5eABkL7KAYuDPRGFoyQtAUb-0113:0.0.1
+
 suffrage:
   type: fixed-suffrage
   proposer: n0-010a:0.0.1
+  nodes:
+    - n0-010a:0.0.1
 `
 	ctx := t.loadConfig(y)
 
@@ -363,11 +447,18 @@ suffrage:
 
 	fs := conf.Suffrage().(config.FixedSuffrage)
 	t.Equal("n0-010a:0.0.1", fs.Proposer.String())
-	t.Empty(fs.Nodes)
+	t.NotEmpty(fs.Nodes())
 }
 
 func (t *testConfigValidator) TestFixedSuffrageWithNodes() {
 	y := `
+address: n0-010a:0.0.1
+
+nodes:
+  - address: n1-010a:0.0.1
+    url: quic://local:54322
+    publickey: 27phogA4gmbMGfg321EHfx5eABkL7KAYuDPRGFoyQtAUb-0113:0.0.1
+
 suffrage:
   type: fixed-suffrage
   proposer: n0-010a:0.0.1
@@ -391,8 +482,8 @@ suffrage:
 
 	fs := conf.Suffrage().(config.FixedSuffrage)
 	t.Equal("n0-010a:0.0.1", fs.Proposer.String())
-	t.Equal(1, len(fs.Nodes))
-	t.Equal("n1-010a:0.0.1", fs.Nodes[0].String())
+	t.Equal(1, len(fs.Nodes()))
+	t.Equal("n1-010a:0.0.1", fs.Nodes()[0].String())
 }
 
 func (t *testConfigValidator) TestFixedSuffrageWithBadNodes() {
@@ -411,8 +502,17 @@ suffrage:
 
 func (t *testConfigValidator) TestRoundrobin() {
 	y := `
+address: n0-010a:0.0.1
+
+nodes:
+  - address: n1-010a:0.0.1
+    url: quic://local:54322
+    publickey: 27phogA4gmbMGfg321EHfx5eABkL7KAYuDPRGFoyQtAUb-0113:0.0.1
+
 suffrage:
   type: roundrobin
+  nodes:
+    - n1-010a:0.0.1
 `
 	ctx := t.loadConfig(y)
 

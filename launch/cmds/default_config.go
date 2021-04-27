@@ -10,17 +10,25 @@ import (
 	"gopkg.in/yaml.v3"
 
 	"github.com/alecthomas/kong"
+	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/launch/config"
 	"github.com/spikeekips/mitum/launch/pm"
 	"github.com/spikeekips/mitum/launch/process"
 	"github.com/spikeekips/mitum/util"
 )
 
-var defaultConfigYAML = `
+var (
+	defaultConfigLocalNode, _ = base.NewStringAddress("node")
+	defaultConfigYAML         = fmt.Sprintf(`
 network-id: mitum network; Thu 26 Nov 2020 12:25:18 AM KST
-address: node-010a:0.0.1
+address: %s
 privatekey: KzmnCUoBrqYbkoP8AUki1AJsyKqxNsiqdrtTB2onyzQfB6MQ5Sef-0112:0.0.1
-`
+suffrage:
+    nodes:
+        - %s
+`, defaultConfigLocalNode, defaultConfigLocalNode,
+	)
+)
 
 var DefaultConfigVars = kong.Vars{
 	"default_config_default_format": "yaml",
@@ -56,7 +64,8 @@ func (cmd *DefaultConfigCommand) Run(version util.Version) error {
 
 	bconf := config.NewBaseLocalNodePackerYAMLFromConfig(conf)
 	bconf.Suffrage = map[string]interface{}{
-		"type": "roundrobin",
+		"type":  "roundrobin",
+		"nodes": []base.Address{defaultConfigLocalNode},
 	}
 	bconf.ProposalProcessor = map[string]interface{}{
 		"type": "default",

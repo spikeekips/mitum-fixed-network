@@ -96,6 +96,10 @@ nodes:
     url: quic://local:54322
     publickey: 27phogA4gmbMGfg321EHfx5eABkL7KAYuDPRGFoyQtAUb-0113:0.0.1
 time-server: ""
+suffrage:
+  nodes:
+    - n0-010a:0.0.1
+    - n1-010a:0.0.1
 `
 
 	ps := t.ready(y)
@@ -144,6 +148,9 @@ nodes:
     publickey: 27phogA4gmbMGfg321EHfx5eABkL7KAYuDPRGFoyQtAUb-0113:0.0.1
 suffrage:
   type: show-me
+  nodes:
+    - n0-010a:0.0.1
+    - n1-010a:0.0.1
 `
 
 	ps := t.ready(y)

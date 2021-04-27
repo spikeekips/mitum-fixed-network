@@ -151,12 +151,16 @@ func (no LocalNode) checkSuffrage() error {
 		return nil
 	}
 
-	if s, found := no.Suffrage["type"]; !found {
-		return xerrors.Errorf("'type' is missing in suffrage")
-	} else if t, ok := s.(string); !ok {
-		return xerrors.Errorf("invalie 'type' type, %T", s)
-	} else if len(strings.TrimSpace(t)) < 1 {
-		return xerrors.Errorf("empty 'type'")
+	if _, found := no.Suffrage["nodes"]; !found {
+		return xerrors.Errorf("'nodes' is missing in suffrage")
+	}
+
+	if s, found := no.Suffrage["type"]; found {
+		if t, ok := s.(string); !ok {
+			return xerrors.Errorf("invalie 'type' type, %T", s)
+		} else if len(strings.TrimSpace(t)) < 1 {
+			return xerrors.Errorf("empty 'type'")
+		}
 	}
 
 	return nil

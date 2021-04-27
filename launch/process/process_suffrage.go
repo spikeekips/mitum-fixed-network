@@ -80,24 +80,20 @@ func processFixedSuffrage(ctx context.Context, conf config.FixedSuffrage) (base.
 	}
 
 	var nodes []base.Address
-	if len(conf.Nodes) < 1 {
-		nodes = nodepool.Addresses()
+	if len(conf.Nodes()) < 1 {
+		return nil, xerrors.Errorf("empty nodes for suffrage")
 	} else {
-		for i := range conf.Nodes {
-			c := conf.Nodes[i]
+		for i := range conf.Nodes() {
+			c := conf.Nodes()[i]
 			if !nodepool.Exists(c) {
 				return nil, xerrors.Errorf("unknown node of fixed-suffrage found, %q", c)
 			}
 		}
 
-		nodes = conf.Nodes
+		nodes = conf.Nodes()
 	}
 
-	if conf.NumberOfActing < 1 {
-		return nil, xerrors.Errorf("number-of-acting should be over zero")
-	}
-
-	return NewFixedSuffrage(conf.Proposer, nodes, conf.NumberOfActing, conf.CacheSize)
+	return NewFixedSuffrage(conf.Proposer, nodes, conf.NumberOfActing(), conf.CacheSize)
 }
 
 func processRoundrobinSuffrage(ctx context.Context, conf config.RoundrobinSuffrage) (base.Suffrage, error) {
@@ -107,17 +103,17 @@ func processRoundrobinSuffrage(ctx context.Context, conf config.RoundrobinSuffra
 	}
 
 	var nodes []base.Address
-	if len(conf.Nodes) < 1 {
-		nodes = nodepool.Addresses()
+	if len(conf.Nodes()) < 1 {
+		return nil, xerrors.Errorf("empty nodes for suffrage")
 	} else {
-		for i := range conf.Nodes {
-			c := conf.Nodes[i]
+		for i := range conf.Nodes() {
+			c := conf.Nodes()[i]
 			if !nodepool.Exists(c) {
 				return nil, xerrors.Errorf("unknown node of fixed-suffrage found, %q", c)
 			}
 		}
 
-		nodes = conf.Nodes
+		nodes = conf.Nodes()
 	}
 
 	var st storage.Database
@@ -125,13 +121,9 @@ func processRoundrobinSuffrage(ctx context.Context, conf config.RoundrobinSuffra
 		return nil, err
 	}
 
-	if conf.NumberOfActing < 1 {
-		return nil, xerrors.Errorf("number-of-acting should be over zero")
-	}
-
 	return NewRoundrobinSuffrage(
 		nodes,
-		conf.NumberOfActing,
+		conf.NumberOfActing(),
 		conf.CacheSize,
 		func(height base.Height) (valuehash.Hash, error) {
 			switch m, found, err := st.ManifestByHeight(height); {

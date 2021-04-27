@@ -10,11 +10,11 @@ import (
 	"github.com/spikeekips/mitum/util/logging"
 )
 
-const HookNameRemoteNodes = "remote_nodes"
+const HookNameNodepool = "nodepool"
 
-// HookRemoteNodes generates the node list of local node. It does not include
-// the local node itself.
-func HookRemoteNodes(ctx context.Context) (context.Context, error) {
+// HookNodepool generates the node list of local node. It does not include the
+// local node itself.
+func HookNodepool(ctx context.Context) (context.Context, error) {
 	var log logging.Logger
 	if err := config.LoadLogContextValue(ctx, &log); err != nil {
 		return ctx, err

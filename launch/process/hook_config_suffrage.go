@@ -12,7 +12,7 @@ import (
 	jsonenc "github.com/spikeekips/mitum/util/encoder/json"
 )
 
-type HookHandlerSuffrageConfig func(context.Context, map[string]interface{}) (config.Suffrage, error)
+type HookHandlerSuffrageConfig func(context.Context, map[string]interface{}, []base.Address) (config.Suffrage, error)
 
 var DefaultHookHandlersSuffrageConfig = map[string]HookHandlerSuffrageConfig{
 	"fixed-suffrage": SuffrageConfigHandlerFixedProposer,
@@ -42,16 +42,23 @@ func HookSuffrageConfigFunc(handlers map[string]HookHandlerSuffrageConfig) pm.Pr
 			m = n
 		}
 
+		var nodes []base.Address
+		if i, err := parseSuffrageNodes(ctx, m); err != nil {
+			return ctx, err
+		} else {
+			nodes = i
+		}
+
 		var sf config.Suffrage
 		if len(st) < 1 {
-			if i, err := SuffrageConfigHandlerRoundrobin(ctx, nil); err != nil {
+			if i, err := SuffrageConfigHandlerRoundrobin(ctx, nil, nodes); err != nil {
 				return ctx, err
 			} else {
 				sf = i
 			}
 		} else if h, found := handlers[st]; !found {
 			return nil, xerrors.Errorf("unknown suffrage found, %s", st)
-		} else if i, err := h(ctx, m); err != nil {
+		} else if i, err := h(ctx, m, nodes); err != nil {
 			return nil, err
 		} else {
 			sf = i
@@ -65,7 +72,11 @@ func HookSuffrageConfigFunc(handlers map[string]HookHandlerSuffrageConfig) pm.Pr
 	}
 }
 
-func SuffrageConfigHandlerFixedProposer(ctx context.Context, m map[string]interface{}) (config.Suffrage, error) {
+func SuffrageConfigHandlerFixedProposer(
+	ctx context.Context,
+	m map[string]interface{},
+	nodes []base.Address,
+) (config.Suffrage, error) {
 	var enc *jsonenc.Encoder
 	if err := config.LoadJSONEncoderContextValue(ctx, &enc); err != nil {
 		return nil, err
@@ -94,35 +105,18 @@ func SuffrageConfigHandlerFixedProposer(ctx context.Context, m map[string]interf
 		}
 	}
 
-	var nodes []base.Address
-	if i, found := m["nodes"]; found {
-		if l, ok := i.([]interface{}); !ok {
-			return nil, xerrors.Errorf("invalid nodes list, %T", i)
-		} else {
-			nodes = make([]base.Address, len(l))
-			for j := range l {
-				if a, err := parseAddress(l[j], enc); err != nil {
-					return nil, xerrors.Errorf("invalid node address for fixed-suffrage: %w", err)
-				} else {
-					nodes[j] = a
-				}
-			}
-		}
-	}
-
-	if proposer == nil && len(nodes) < 1 {
-		return nil, xerrors.Errorf("empty proposer and acting")
+	if proposer == nil {
+		return nil, xerrors.Errorf("empty proposer")
 	}
 
 	return config.NewFixedSuffrage(proposer, nodes, numberOfActing), nil
 }
 
-func SuffrageConfigHandlerRoundrobin(ctx context.Context, m map[string]interface{}) (config.Suffrage, error) {
-	var enc *jsonenc.Encoder
-	if err := config.LoadJSONEncoderContextValue(ctx, &enc); err != nil {
-		return nil, err
-	}
-
+func SuffrageConfigHandlerRoundrobin(
+	_ context.Context,
+	m map[string]interface{},
+	nodes []base.Address,
+) (config.Suffrage, error) {
 	var numberOfActing uint
 	if i, found := m["number-of-acting"]; !found {
 		numberOfActing = isaac.DefaultPolicyNumberOfActingSuffrageNodes
@@ -137,23 +131,34 @@ func SuffrageConfigHandlerRoundrobin(ctx context.Context, m map[string]interface
 		}
 	}
 
-	var nodes []base.Address
-	if i, found := m["nodes"]; found {
-		if l, ok := i.([]interface{}); !ok {
-			return nil, xerrors.Errorf("invalid nodes list, %T", i)
+	return config.NewRoundrobinSuffrage(nodes, numberOfActing), nil
+}
+
+func parseSuffrageNodes(ctx context.Context, m map[string]interface{}) ([]base.Address, error) {
+	var enc *jsonenc.Encoder
+	if err := config.LoadJSONEncoderContextValue(ctx, &enc); err != nil {
+		return nil, err
+	}
+
+	var l []interface{}
+	if i, found := m["nodes"]; !found {
+		return nil, xerrors.Errorf("nodes not found in suffrage config")
+	} else if j, ok := i.([]interface{}); !ok {
+		return nil, xerrors.Errorf("invalid nodes list, %T", i)
+	} else {
+		l = j
+	}
+
+	nodes := make([]base.Address, len(l))
+	for j := range l {
+		if a, err := parseAddress(l[j], enc); err != nil {
+			return nil, xerrors.Errorf("invalid node address for suffrage config: %w", err)
 		} else {
-			nodes = make([]base.Address, len(l))
-			for j := range l {
-				if a, err := parseAddress(l[j], enc); err != nil {
-					return nil, xerrors.Errorf("invalid node address for fixed-suffrage: %w", err)
-				} else {
-					nodes[j] = a
-				}
-			}
+			nodes[j] = a
 		}
 	}
 
-	return config.NewRoundrobinSuffrage(nodes, numberOfActing), nil
+	return nodes, nil
 }
 
 func parseAddress(i interface{}, enc *jsonenc.Encoder) (base.Address, error) {

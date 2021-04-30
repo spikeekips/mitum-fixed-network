@@ -19,7 +19,7 @@ type LocalNode struct {
 	ProposalProcessor map[string]interface{}   `yaml:"proposal-processor,omitempty"`
 	Policy            *Policy                  `yaml:",omitempty"`
 	GenesisOperations []map[string]interface{} `yaml:"genesis-operations,omitempty"`
-	TimeServer        *string                  `yaml:"time-server,omitempty"`
+	LocalConfig       *LocalConfig             `yaml:",inline"`
 	Extras            map[string]interface{}   `yaml:",inline"`
 }
 
@@ -43,7 +43,6 @@ func (no LocalNode) Set(ctx context.Context) (context.Context, error) {
 		no.setBase,
 		no.setComponents,
 		no.setNodes,
-		no.setEtc,
 	} {
 		if c, err := f(ctx, conf); err != nil {
 			return ctx, err
@@ -96,6 +95,14 @@ func (no LocalNode) setComponents(ctx context.Context, _ config.LocalNode) (cont
 
 	if no.Policy != nil {
 		if c, err := no.Policy.Set(ctx); err != nil {
+			return ctx, err
+		} else {
+			ctx = c
+		}
+	}
+
+	if no.LocalConfig != nil {
+		if c, err := no.LocalConfig.Set(ctx); err != nil {
 			return ctx, err
 		} else {
 			ctx = c
@@ -178,14 +185,4 @@ func (no LocalNode) checkGenesisOperations() error {
 	}
 
 	return nil
-}
-
-func (no LocalNode) setEtc(ctx context.Context, conf config.LocalNode) (context.Context, error) {
-	if no.TimeServer != nil {
-		if err := conf.SetTimeServer(strings.TrimSpace(*no.TimeServer)); err != nil {
-			return ctx, err
-		}
-	}
-
-	return ctx, nil
 }

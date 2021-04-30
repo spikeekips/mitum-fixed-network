@@ -7,8 +7,6 @@ import (
 	"github.com/spikeekips/mitum/util/encoder"
 )
 
-var DefaultTimeServer = "time.google.com"
-
 type LocalNode interface {
 	Source() map[string]interface{}
 	Node
@@ -30,8 +28,8 @@ type LocalNode interface {
 	SetPolicy(Policy) error
 	GenesisOperations() []operation.Operation
 	SetGenesisOperations([]operation.Operation) error
-	TimeServer() string
-	SetTimeServer(string) error
+	LocalConfig() LocalConfig
+	SetLocalConfig(LocalConfig) error
 }
 
 type BaseLocalNode struct {
@@ -47,17 +45,17 @@ type BaseLocalNode struct {
 	proposalProcessor ProposalProcessor
 	policy            Policy
 	genesisOperations []operation.Operation
-	timeServer        string
+	localConfig       LocalConfig
 }
 
 func NewBaseLocalNode(enc encoder.Encoder, source map[string]interface{}) *BaseLocalNode {
 	return &BaseLocalNode{
-		enc:        enc,
-		source:     source,
-		network:    EmptyBaseLocalNetwork(),
-		storage:    EmptyBaseStorage(),
-		policy:     &BasePolicy{},
-		timeServer: DefaultTimeServer,
+		enc:         enc,
+		source:      source,
+		network:     EmptyBaseLocalNetwork(),
+		storage:     EmptyBaseStorage(),
+		policy:      &BasePolicy{},
+		localConfig: EmptyDefaultLocalConfig(),
 	}
 }
 
@@ -169,12 +167,12 @@ func (no *BaseLocalNode) SetGenesisOperations(ops []operation.Operation) error {
 	return nil
 }
 
-func (no BaseLocalNode) TimeServer() string {
-	return no.timeServer
+func (no BaseLocalNode) LocalConfig() LocalConfig {
+	return no.localConfig
 }
 
-func (no *BaseLocalNode) SetTimeServer(s string) error {
-	no.timeServer = s
+func (no *BaseLocalNode) SetLocalConfig(s LocalConfig) error {
+	no.localConfig = s
 
 	return nil
 }

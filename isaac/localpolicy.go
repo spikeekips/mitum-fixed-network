@@ -46,7 +46,7 @@ type LocalPolicy struct {
 	networkConnectionTLSInsecure *util.LockedItem
 }
 
-func NewLocalPolicy(networkID []byte) *LocalPolicy {
+func NewLocalPolicy(networkID base.NetworkID) *LocalPolicy {
 	lp := &LocalPolicy{
 		networkID:                        util.NewLockedItem(networkID),
 		thresholdRatio:                   util.NewLockedItem(DefaultPolicyThresholdRatio),
@@ -66,8 +66,8 @@ func NewLocalPolicy(networkID []byte) *LocalPolicy {
 	return lp
 }
 
-func (lp *LocalPolicy) NetworkID() []byte {
-	return lp.networkID.Value().([]byte)
+func (lp *LocalPolicy) NetworkID() base.NetworkID {
+	return lp.networkID.Value().(base.NetworkID)
 }
 
 func (lp *LocalPolicy) ThresholdRatio() base.ThresholdRatio {

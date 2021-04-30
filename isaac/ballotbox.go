@@ -80,10 +80,6 @@ func (bb *Ballotbox) Clean(height base.Height) error {
 		removeKeys = append(removeKeys, k)
 		removes = append(removes, v)
 
-		l.Debug().
-			Int64("height", h).Uint64("round", r).Str("stage", base.Stage(s).String()).
-			Msg("records will be removed")
-
 		return true
 	})
 

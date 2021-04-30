@@ -1,11 +1,7 @@
 package basicstates
 
 import (
-	"sort"
-	"sync"
 	"time"
-
-	"golang.org/x/xerrors"
 
 	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/base/block"
@@ -15,49 +11,32 @@ import (
 	"github.com/spikeekips/mitum/storage/blockdata"
 	"github.com/spikeekips/mitum/util/localtime"
 	"github.com/spikeekips/mitum/util/logging"
+	"golang.org/x/xerrors"
 )
 
 type SyncingState struct {
-	sync.RWMutex
-	*logging.Logging
-	*BaseState
-	database             storage.Database
-	blockData            blockdata.BlockData
-	policy               *isaac.LocalPolicy
-	nodepool             *network.Nodepool
-	syncs                *isaac.Syncers
+	*BaseSyncingState
 	waitVoteproofTimeout time.Duration
 }
 
 func NewSyncingState(
-	st storage.Database,
+	db storage.Database,
 	blockData blockdata.BlockData,
 	policy *isaac.LocalPolicy,
 	nodepool *network.Nodepool,
 ) *SyncingState {
 	return &SyncingState{
-		Logging: logging.NewLogging(func(c logging.Context) logging.Emitter {
-			return c.Str("module", "basic-syncing-state")
-		}),
-		BaseState:            NewBaseState(base.StateSyncing),
-		database:             st,
-		blockData:            blockData,
-		policy:               policy,
-		nodepool:             nodepool,
+		BaseSyncingState:     NewBaseSyncingState("basic-syncing-state", db, blockData, policy, nodepool),
 		waitVoteproofTimeout: time.Second * 5, // NOTE long enough time
 	}
 }
 
 func (st *SyncingState) Enter(sctx StateSwitchContext) (func() error, error) {
-	callback := EmptySwitchFunc
-	if i, err := st.BaseState.Enter(sctx); err != nil {
+	var callback func() error
+	if i, err := st.BaseSyncingState.Enter(sctx); err != nil {
 		return nil, err
-	} else if i != nil {
+	} else {
 		callback = i
-	}
-
-	if st.syncers() != nil {
-		return nil, xerrors.Errorf("previous SyncingState not stopped correctly; syncers still running")
 	}
 
 	return func() error {
@@ -65,11 +44,39 @@ func (st *SyncingState) Enter(sctx StateSwitchContext) (func() error, error) {
 			return err
 		}
 
-		return st.enter(sctx.Voteproof())
+		return st.enterCallback(sctx.Voteproof())
 	}, nil
 }
 
-func (st *SyncingState) enter(voteproof base.Voteproof) error {
+func (st *SyncingState) Exit(sctx StateSwitchContext) (func() error, error) {
+	var callback func() error
+	if i, err := st.BaseSyncingState.Exit(sctx); err != nil {
+		return nil, err
+	} else {
+		callback = i
+	}
+
+	return func() error {
+		if err := callback(); err != nil {
+			return err
+		}
+
+		return st.stopWaitVoteproof()
+	}, nil
+}
+
+func (st *SyncingState) ProcessVoteproof(voteproof base.Voteproof) error {
+	switch voteproof.Stage() {
+	case base.StageINIT:
+		return st.handleINITTVoteproof(voteproof)
+	case base.StageACCEPT:
+		return st.handleACCEPTVoteproof(voteproof)
+	default:
+		return nil
+	}
+}
+
+func (st *SyncingState) enterCallback(voteproof base.Voteproof) error {
 	var baseManifest block.Manifest
 	if m, found, err := st.database.LastManifest(); err != nil {
 		return err
@@ -77,17 +84,8 @@ func (st *SyncingState) enter(voteproof base.Voteproof) error {
 		baseManifest = m
 	}
 
-	syncs := isaac.NewSyncers(st.nodepool.Local(), st.database, st.blockData, st.policy, baseManifest)
-	syncs.WhenBlockSaved(st.whenBlockSaved)
+	syncs := st.syncers()
 	syncs.WhenFinished(st.whenFinished)
-
-	_ = syncs.SetLogger(st.Log())
-
-	if err := syncs.Start(); err != nil {
-		return err
-	} else {
-		st.setSyncers(syncs)
-	}
 
 	if voteproof != nil {
 		e := isaac.LoggerWithVoteproof(voteproof, st.Log()).Debug()
@@ -108,59 +106,6 @@ func (st *SyncingState) enter(voteproof base.Voteproof) error {
 
 		return nil
 	}
-}
-
-func (st *SyncingState) Exit(sctx StateSwitchContext) (func() error, error) {
-	callback := EmptySwitchFunc
-	if i, err := st.BaseState.Exit(sctx); err != nil {
-		return nil, err
-	} else if i != nil {
-		callback = i
-	}
-
-	syncs := st.syncers()
-	st.setSyncers(nil)
-
-	return func() error {
-		if err := callback(); err != nil {
-			return err
-		}
-
-		if err := st.stopWaitVoteproof(); err != nil {
-			return err
-		}
-
-		if syncs == nil {
-			return nil
-		}
-
-		return syncs.Stop()
-	}, nil
-}
-
-func (st *SyncingState) ProcessVoteproof(voteproof base.Voteproof) error {
-	switch voteproof.Stage() {
-	case base.StageINIT:
-		return st.handleINITTVoteproof(voteproof)
-	case base.StageACCEPT:
-		return st.handleACCEPTVoteproof(voteproof)
-	default:
-		return nil
-	}
-}
-
-func (st *SyncingState) syncers() *isaac.Syncers {
-	st.RLock()
-	defer st.RUnlock()
-
-	return st.syncs
-}
-
-func (st *SyncingState) setSyncers(syncs *isaac.Syncers) {
-	st.Lock()
-	defer st.Unlock()
-
-	st.syncs = syncs
 }
 
 func (st *SyncingState) handleINITTVoteproof(voteproof base.Voteproof) error {
@@ -280,23 +225,6 @@ func (st *SyncingState) whenFinished(height base.Height) {
 		st.Log().Error().Err(err).Str("timer", TimerIDSyncingWaitVoteproof.String()).Msg("failed to start timer")
 
 		return
-	}
-}
-
-func (st *SyncingState) whenBlockSaved(blks []block.Block) {
-	if len(blks) < 1 {
-		panic("empty saved blocks in SyncingState")
-	}
-
-	sort.Slice(blks, func(i, j int) bool {
-		return blks[i].Height()-blks[j].Height() < 0
-	})
-
-	ivp := blks[len(blks)-1].ConsensusInfo().INITVoteproof()
-	st.SetLastVoteproof(ivp)
-
-	if err := st.NewBlocks(blks); err != nil {
-		st.Log().Error().Err(err).Msg("new blocks hooks failed")
 	}
 }
 

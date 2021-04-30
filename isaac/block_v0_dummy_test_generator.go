@@ -399,6 +399,8 @@ func (bg *DummyBlocksV0Generator) createProposal(voteproof base.Voteproof) (ball
 	var proposer *Local
 	if acting, err := bg.suffrage.Acting(voteproof.Height(), voteproof.Round()); err != nil {
 		return nil, err
+	} else if acting.Proposer() == nil {
+		return nil, xerrors.Errorf("empty proposer")
 	} else {
 		proposer = bg.allNodes[acting.Proposer()]
 	}

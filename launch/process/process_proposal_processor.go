@@ -42,6 +42,22 @@ func ProcessProposalProcessor(ctx context.Context) (context.Context, error) {
 		return ctx, err
 	}
 
+	var nodepool *network.Nodepool
+	if err := LoadNodepoolContextValue(ctx, &nodepool); err != nil {
+		return nil, err
+	}
+
+	var suffrage base.Suffrage
+	if err := LoadSuffrageContextValue(ctx, &suffrage); err != nil {
+		return nil, err
+	}
+
+	if !suffrage.IsInside(nodepool.Local().Address()) {
+		log.Debug().Msg("none-suffrage node; proposal processor will not be used")
+
+		return ctx, nil
+	}
+
 	var l config.LocalNode
 	var conf config.ProposalProcessor
 	if err := config.LoadConfigContextValue(ctx, &l); err != nil {

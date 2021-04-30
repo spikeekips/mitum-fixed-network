@@ -134,7 +134,7 @@ suffrage:
 	t.Equal(isaac.DefaultPolicyThresholdRatio, conf.Policy().ThresholdRatio())
 	t.Equal(isaac.DefaultPolicyWaitBroadcastingACCEPTBallot, conf.Policy().WaitBroadcastingACCEPTBallot())
 	t.Equal(isaac.DefaultPolicyTimeoutProcessProposal, conf.Policy().TimeoutProcessProposal())
-	t.Empty(conf.TimeServer())
+	t.Empty(conf.LocalConfig().TimeServer())
 }
 
 func (t *testConfig) TestInValidSuffrage() {

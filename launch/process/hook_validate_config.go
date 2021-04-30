@@ -25,6 +25,7 @@ func HookValidateConfig(ctx context.Context) (context.Context, error) {
 		va.CheckSuffrage,
 		va.CheckProposalProcessor,
 		va.CheckGenesisOperations,
+		va.CheckLocalConfig,
 	}).Check(); err != nil {
 		if xerrors.Is(err, util.IgnoreError) {
 			return ctx, nil

@@ -62,6 +62,8 @@ func ProcessSuffrage(ctx context.Context) (context.Context, error) {
 		} else {
 			sf = s
 		}
+	case config.EmptySuffrage:
+		sf = EmptySuffrage{}
 	}
 
 	if err := sf.Initialize(); err != nil {

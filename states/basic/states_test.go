@@ -5,12 +5,14 @@ import (
 	"testing"
 	"time"
 
+	"github.com/spikeekips/mitum/base"
+	"github.com/spikeekips/mitum/base/operation"
+	"github.com/spikeekips/mitum/isaac"
+	channetwork "github.com/spikeekips/mitum/network/gochan"
+	"github.com/spikeekips/mitum/util"
+	"github.com/spikeekips/mitum/util/valuehash"
 	"github.com/stretchr/testify/suite"
 	"golang.org/x/xerrors"
-
-	"github.com/spikeekips/mitum/base"
-	"github.com/spikeekips/mitum/isaac"
-	"github.com/spikeekips/mitum/util/valuehash"
 )
 
 type testStates struct {
@@ -101,6 +103,9 @@ func (t *testStates) TestNewSealVoteproof() {
 	case err := <-stopch:
 		t.NoError(err)
 	case voteproof := <-gotvoteproofch:
+		lib := ss.ballotbox.LatestBallot()
+		t.NotNil(lib)
+
 		t.NotNil(voteproof)
 
 		t.Equal(base.StageINIT, voteproof.Stage())
@@ -407,7 +412,7 @@ func (t *testStates) TestFailedSwitchingStateButKeepFailing() {
 	case <-time.After(time.Second * 4):
 		t.NoError(xerrors.Errorf("timeout to wait states to be stopped"))
 	case err := <-stopch:
-		t.Contains(err.Error(), "failed to move from booting to booting")
+		t.Contains(err.Error(), "failed to move to booting")
 		t.Contains(err.Error(), "impossible entering")
 	}
 
@@ -480,6 +485,76 @@ func (t *testStates) TestFailedSwitchingStateButSameState() {
 	t.NoError(ss.SwitchState(sctx))
 
 	t.Equal(base.StateJoining, sctx.ToState())
+}
+
+func (t *testStates) TestNewBallotNoneSuffrage() {
+	suffrage := t.Suffrage(t.remote)
+	ss, err := NewStates(
+		t.local.Database(),
+		t.local.Policy(),
+		t.local.Nodes(),
+		suffrage,
+		t.Ballotbox(suffrage, t.local.Policy()),
+		NewBaseState(base.StateStopped),
+		NewBaseState(base.StateBooting),
+		NewBaseState(base.StateJoining),
+		NewBaseState(base.StateConsensus),
+		NewBaseState(base.StateSyncing),
+	)
+	t.NoError(err)
+	t.NotNil(ss)
+
+	defer func() {
+		_ = ss.Stop()
+	}()
+
+	ib := t.NewINITBallot(t.local, base.Round(0), nil)
+	t.NoError(ss.NewSeal(ib))
+
+	<-time.After(time.Second * 1)
+
+	// NOTE in none-suffrage node, new incoming ballot will not be voted
+	lib := ss.ballotbox.LatestBallot()
+	t.Nil(lib)
+}
+
+func (t *testStates) TestNewOperationSealNoneSuffrage() {
+	ch := channetwork.NewChannel(1)
+	_ = t.remote.Node().SetChannel(ch)
+
+	ss, err := NewStates(
+		t.local.Database(),
+		t.local.Policy(),
+		t.local.Nodes(),
+		t.Suffrage(t.remote),
+		nil,
+		NewBaseState(base.StateStopped),
+		NewBaseState(base.StateBooting),
+		NewBaseState(base.StateJoining),
+		NewBaseState(base.StateConsensus),
+		NewBaseState(base.StateSyncing),
+	)
+	t.NoError(err)
+	t.NotNil(ss)
+
+	defer func() {
+		_ = ss.Stop()
+	}()
+
+	op, err := operation.NewKVOperation(t.local.Node().Privatekey(), util.UUID().Bytes(), util.UUID().String(), []byte(util.UUID().String()), nil)
+	t.NoError(err)
+
+	sl, err := operation.NewBaseSeal(t.local.Node().Privatekey(), []operation.Operation{op}, t.local.Policy().NetworkID())
+	t.NoError(err)
+
+	t.NoError(ss.NewSeal(sl))
+
+	select {
+	case <-time.After(time.Second * 10):
+		t.NoError(xerrors.Errorf("waited broadcasted seal, but nothing"))
+	case rsl := <-ch.ReceiveSeal():
+		t.True(sl.Hash().Equal(rsl.Hash()))
+	}
 }
 
 func TestStates(t *testing.T) {

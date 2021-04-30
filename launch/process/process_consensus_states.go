@@ -59,11 +59,6 @@ func ProcessConsensusStates(ctx context.Context) (context.Context, error) {
 		return ctx, err
 	}
 
-	var pps *prprocessor.Processors
-	if err := LoadProposalProcessorContextValue(ctx, &pps); err != nil {
-		return ctx, err
-	}
-
 	var suffrage base.Suffrage
 	if err := LoadSuffrageContextValue(ctx, &suffrage); err != nil {
 		return ctx, err
@@ -74,26 +69,50 @@ func ProcessConsensusStates(ctx context.Context) (context.Context, error) {
 		return ctx, err
 	}
 
-	if cs, err := processConsensusStates(st, blockData, policy, nodepool, pps, suffrage, log); err != nil {
-		return ctx, err
-	} else {
-		if i, ok := cs.(logging.SetLogger); ok {
-			_ = i.SetLogger(log)
+	var cs states.States
+	if suffrage.IsInside(nodepool.Local().Address()) {
+		if i, err := processConsensusStatesSuffrageNode(ctx, st, blockData, policy, nodepool, suffrage); err != nil {
+			return ctx, err
+		} else {
+			cs = i
 		}
-
-		return context.WithValue(ctx, ContextValueConsensusStates, cs), nil
+	} else {
+		if i, err := processConsensusStatesNoneSuffrageNode(ctx, st, blockData, policy, nodepool, suffrage); err != nil {
+			return ctx, err
+		} else {
+			cs = i
+		}
 	}
+
+	if i, ok := cs.(logging.SetLogger); ok {
+		_ = i.SetLogger(log)
+	}
+
+	return context.WithValue(ctx, ContextValueConsensusStates, cs), nil
 }
 
-func processConsensusStates(
+func processConsensusStatesSuffrageNode(
+	ctx context.Context,
 	st storage.Database,
 	blockData blockdata.BlockData,
 	policy *isaac.LocalPolicy,
 	nodepool *network.Nodepool,
-	pps *prprocessor.Processors,
 	suffrage base.Suffrage,
-	log logging.Logger,
 ) (states.States, error) {
+	var log logging.Logger
+	if err := config.LoadLogContextValue(ctx, &log); err != nil {
+		return nil, err
+	}
+
+	var pps *prprocessor.Processors
+	if err := LoadProposalProcessorContextValue(ctx, &pps); err != nil {
+		return nil, err
+	}
+
+	log.Debug().Msg("local is in suffrage")
+
+	proposalMaker := isaac.NewProposalMaker(nodepool.Local(), st, policy)
+
 	ballotbox := isaac.NewBallotbox(
 		suffrage.Nodes,
 		func() base.Threshold {
@@ -109,10 +128,8 @@ func processConsensusStates(
 	)
 	_ = ballotbox.SetLogger(log)
 
-	proposalMaker := isaac.NewProposalMaker(nodepool.Local(), st, policy)
-
 	stopped := basicstate.NewStoppedState()
-	booting := basicstate.NewBootingState(st, blockData, policy, suffrage)
+	booting := basicstate.NewBootingState(nodepool.Local(), st, blockData, policy, suffrage)
 	joining := basicstate.NewJoiningState(nodepool.Local(), st, policy, suffrage, ballotbox)
 	consensus := basicstate.NewConsensusState(st, policy, nodepool, suffrage, proposalMaker, pps)
 	syncing := basicstate.NewSyncingState(st, blockData, policy, nodepool)
@@ -123,6 +140,46 @@ func processConsensusStates(
 		nodepool,
 		suffrage,
 		ballotbox,
+		stopped,
+		booting,
+		joining,
+		consensus,
+		syncing,
+	)
+}
+
+func processConsensusStatesNoneSuffrageNode(
+	ctx context.Context,
+	st storage.Database,
+	blockData blockdata.BlockData,
+	policy *isaac.LocalPolicy,
+	nodepool *network.Nodepool,
+	suffrage base.Suffrage,
+) (states.States, error) {
+	var log logging.Logger
+	if err := config.LoadLogContextValue(ctx, &log); err != nil {
+		return nil, err
+	}
+
+	var conf config.LocalNode
+	if err := config.LoadConfigContextValue(ctx, &conf); err != nil {
+		return nil, err
+	}
+
+	log.Debug().Msg("local is not in suffrage")
+
+	stopped := basicstate.NewStoppedState()
+	booting := basicstate.NewBootingState(nodepool.Local(), st, blockData, policy, suffrage)
+	joining := basicstate.NewEmptyState()
+	consensus := basicstate.NewEmptyState()
+	syncing := basicstate.NewSyncingStateNoneSuffrage(st, blockData, policy, nodepool, conf.LocalConfig().SyncInterval())
+
+	return basicstate.NewStates(
+		st,
+		policy,
+		nodepool,
+		suffrage,
+		nil,
 		stopped,
 		booting,
 		joining,

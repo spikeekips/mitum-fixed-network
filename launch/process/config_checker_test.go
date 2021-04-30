@@ -373,6 +373,75 @@ policy:
 	}
 }
 
+func (t *testConfigChecker) TestEmptyLocalConfig() {
+	y := ""
+	ctx := context.Background()
+	ctx = context.WithValue(ctx, ContextValueConfigSource, []byte(y))
+	ctx = context.WithValue(ctx, ContextValueConfigSourceType, "yaml")
+
+	ps := t.ps(ctx)
+	t.NoError(ps.Run())
+
+	cc, err := config.NewChecker(ps.Context())
+	t.NoError(err)
+	_, err = cc.CheckStorage()
+	t.NoError(err)
+
+	var conf config.LocalNode
+	t.NoError(config.LoadConfigContextValue(ps.Context(), &conf))
+
+	t.NotNil(conf.LocalConfig())
+	t.Equal(config.DefaultSyncInterval, conf.LocalConfig().SyncInterval())
+}
+
+func (t *testConfigChecker) TestLocalConfig() {
+	{
+		y := `
+sync-interval: 3s
+`
+		ctx := context.Background()
+		ctx = context.WithValue(ctx, ContextValueConfigSource, []byte(y))
+		ctx = context.WithValue(ctx, ContextValueConfigSourceType, "yaml")
+
+		ps := t.ps(ctx)
+		t.NoError(ps.Run())
+
+		cc, err := config.NewChecker(ps.Context())
+		t.NoError(err)
+		_, err = cc.CheckStorage()
+		t.NoError(err)
+
+		var conf config.LocalNode
+		t.NoError(config.LoadConfigContextValue(ps.Context(), &conf))
+
+		t.NotNil(conf.LocalConfig())
+		t.Equal(time.Second*3, conf.LocalConfig().SyncInterval())
+	}
+
+	{
+		y := `
+sync-interval: 3ms
+`
+		ctx := context.Background()
+		ctx = context.WithValue(ctx, ContextValueConfigSource, []byte(y))
+		ctx = context.WithValue(ctx, ContextValueConfigSourceType, "yaml")
+
+		ps := t.ps(ctx)
+		t.NoError(ps.Run())
+
+		cc, err := config.NewChecker(ps.Context())
+		t.NoError(err)
+		_, err = cc.CheckStorage()
+		t.NoError(err)
+
+		var conf config.LocalNode
+		t.NoError(config.LoadConfigContextValue(ps.Context(), &conf))
+
+		t.NotNil(conf.LocalConfig())
+		t.Equal(time.Millisecond*3, conf.LocalConfig().SyncInterval())
+	}
+}
+
 func TestConfigChecker(t *testing.T) {
 	suite.Run(t, new(testConfigChecker))
 }

@@ -18,7 +18,6 @@ type BaseLocalNodePackerJSON struct {
 	ProposalProcessor map[string]interface{} `json:"proposal_processor,omitempty"`
 	Policy            Policy                 `json:"policy,omitempty"`
 	GenesisOperations []operation.Operation  `json:"genesis_operations,omitempty"`
-	TimeServer        string                 `json:"time_server,omitempty"`
 }
 
 func (no BaseLocalNode) MarshalJSON() ([]byte, error) {
@@ -43,6 +42,5 @@ func (no BaseLocalNode) MarshalJSON() ([]byte, error) {
 		ProposalProcessor: proposalProcessor,
 		Policy:            no.Policy(),
 		GenesisOperations: no.GenesisOperations(),
-		TimeServer:        no.TimeServer(),
 	})
 }

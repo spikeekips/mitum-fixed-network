@@ -196,7 +196,7 @@ func (pps *Processors) handleProposal(
 	}
 
 	var current Processor
-	switch pp, err := pps.checkPrepareCurrent(proposal.Hash()); {
+	switch pp, err := pps.checkCurrent(proposal.Hash()); {
 	case err != nil:
 		return Result{Err: PrepareFailedError.Wrap(err)}
 	default:
@@ -421,36 +421,20 @@ func (pps *Processors) CurrentState(proposal valuehash.Hash) State {
 	}
 }
 
-func (pps *Processors) checkPrepareCurrent(proposal valuehash.Hash) (Processor, error) {
+func (pps *Processors) checkCurrent(proposal valuehash.Hash) (Processor, error) {
 	current := pps.Current()
 
-	l := pps.Log().WithLogger(func(ctx logging.Context) logging.Emitter {
-		return ctx.Hinted("proposal", proposal).Bool("current_exists", current == nil)
-	})
-
 	if current == nil {
-		l.Debug().Msg("empty current Processor")
-
 		return nil, nil
 	}
 
-	l = pps.Log().WithLogger(func(ctx logging.Context) logging.Emitter {
-		return ctx.Dict("previous", logging.Dict().
-			Str("state", current.State().String()).
-			Hinted("proposal", current.Proposal().Hash()),
-		)
-	})
-
-	if h := current.Proposal().Hash(); h.Equal(proposal) {
-		l.Debug().Msg("existing is same Proposal")
-	} else {
-		l.Debug().Dict("previous", logging.Dict().
-			Str("state", current.State().String()).
-			Hinted("proposal", current.Proposal().Hash())).
-			Msg("found previous Processor with different Proposal")
-
+	if h := current.Proposal().Hash(); !h.Equal(proposal) {
 		if current.State() != Saved {
-			l.Debug().Msg("existing Processor will be canceled")
+			pps.Log().Debug().Dict("previous", logging.Dict().
+				Str("state", current.State().String()).
+				Str("proposal", current.Proposal().Hash().String())).
+				Str("proposal", proposal.String()).Bool("current_exists", current == nil).
+				Msg("found previous Processor with different Proposal; existing Processor will be canceled")
 
 			if err := pps.cancelProcessor(current); err != nil {
 				return nil, PrepareFailedError.Wrap(err)

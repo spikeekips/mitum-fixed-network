@@ -51,9 +51,7 @@ func HookCheckEmptyBlock(ctx context.Context) (context.Context, error) {
 			return nil, err
 		}
 
-		if len(suffrage.Nodes()) < 2 {
-			return ctx, xerrors.Errorf("empty block, but no other nodes; can not sync")
-		}
+		return ctx, nil
 	} else if err := m.IsValid(policy.NetworkID()); err != nil {
 		return ctx, xerrors.Errorf("invalid block found, clean up block: %w", err)
 	} else {

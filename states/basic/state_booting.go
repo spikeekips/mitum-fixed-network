@@ -5,6 +5,7 @@ import (
 
 	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/isaac"
+	"github.com/spikeekips/mitum/network"
 	"github.com/spikeekips/mitum/storage"
 	"github.com/spikeekips/mitum/storage/blockdata"
 	"github.com/spikeekips/mitum/util"
@@ -14,6 +15,7 @@ import (
 type BootingState struct {
 	*logging.Logging
 	*BaseState
+	local     *network.LocalNode
 	database  storage.Database
 	blockData blockdata.BlockData
 	policy    *isaac.LocalPolicy
@@ -21,6 +23,7 @@ type BootingState struct {
 }
 
 func NewBootingState(
+	local *network.LocalNode,
 	st storage.Database,
 	blockData blockdata.BlockData,
 	policy *isaac.LocalPolicy,
@@ -31,6 +34,7 @@ func NewBootingState(
 			return c.Str("module", "basic-booting-state")
 		}),
 		BaseState: NewBaseState(base.StateBooting),
+		local:     local,
 		database:  st,
 		blockData: blockData,
 		policy:    policy,
@@ -59,30 +63,48 @@ func (st *BootingState) Enter(sctx StateSwitchContext) (func() error, error) {
 			return nil, err
 		}
 
+		return st.enterSyncing(callback)
+	}
+
+	if st.suffrage.IsInside(st.local.Address()) {
+		return func() error {
+			if err := callback(); err != nil {
+				return err
+			}
+
+			st.Log().Debug().Msg("block checked; moves to joining")
+
+			return NewStateSwitchContext(base.StateBooting, base.StateJoining)
+		}, nil
+	} else {
+		return func() error {
+			if err := callback(); err != nil {
+				return err
+			}
+
+			st.Log().Debug().Msg("block checked; none-suffrage node moves to syncing")
+
+			return NewStateSwitchContext(base.StateBooting, base.StateSyncing)
+		}, nil
+	}
+}
+
+func (st *BootingState) enterSyncing(callback func() error) (func() error, error) {
+	if st.suffrage.IsInside(st.local.Address()) {
 		if len(st.suffrage.Nodes()) < 2 { // NOTE suffrage nodes has local node itself
 			st.Log().Debug().Msg("empty blocks; no other nodes in suffrage; can not sync")
 
 			return nil, xerrors.Errorf("empty blocks, but no other nodes; can not sync")
-		} else {
-			st.Log().Debug().Msg("empty blocks; will sync")
-
-			return func() error {
-				if err := callback(); err != nil {
-					return err
-				}
-
-				return NewStateSwitchContext(base.StateBooting, base.StateSyncing)
-			}, nil
 		}
 	}
+
+	st.Log().Debug().Msg("empty blocks; will sync")
 
 	return func() error {
 		if err := callback(); err != nil {
 			return err
 		}
 
-		st.Log().Debug().Msg("block checked; moves to joining")
-
-		return NewStateSwitchContext(base.StateBooting, base.StateJoining)
+		return NewStateSwitchContext(base.StateBooting, base.StateSyncing)
 	}, nil
 }

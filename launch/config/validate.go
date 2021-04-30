@@ -2,6 +2,7 @@ package config
 
 import (
 	"context"
+	"time"
 
 	"github.com/spikeekips/mitum/util/logging"
 	"golang.org/x/xerrors"
@@ -211,13 +212,18 @@ func (va *validator) CheckSuffrage() (bool, error) {
 		return false, xerrors.Errorf("suffrage is missing")
 	}
 
-	if len(conf.Nodes()) < 1 {
-		return false, xerrors.Errorf("empty nodes in suffrage")
-	} else if conf.NumberOfActing() < 1 {
-		return false, xerrors.Errorf("number-of-acting should be over zero")
+	if err := conf.IsValid(nil); err != nil {
+		return false, err
 	}
 
 	nodes := va.config.Nodes()
+	if len(conf.Nodes()) < 1 {
+		if len(nodes) < 1 {
+			return false, xerrors.Errorf("suffrage nodes and nodes both empty")
+		}
+
+		return true, nil
+	}
 
 	for i := range conf.Nodes() {
 		n := conf.Nodes()[i]
@@ -267,4 +273,17 @@ func (va *validator) CheckGenesisOperations() (bool, error) {
 	}
 
 	return true, nil
+}
+
+func (va *validator) CheckLocalConfig() (bool, error) {
+	conf := va.config.LocalConfig()
+
+	switch t := conf.SyncInterval(); {
+	case t < 1:
+		return false, xerrors.Errorf("empty sync-interval")
+	case t < time.Second:
+		return false, xerrors.Errorf("sync-interval too narrow, %q", t)
+	default:
+		return true, nil
+	}
 }

@@ -10,9 +10,11 @@ import (
 
 	"golang.org/x/xerrors"
 
+	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/base/prprocessor"
 	"github.com/spikeekips/mitum/launch/pm"
 	"github.com/spikeekips/mitum/launch/process"
+	"github.com/spikeekips/mitum/network"
 	"github.com/spikeekips/mitum/states"
 	"github.com/spikeekips/mitum/util"
 )
@@ -80,19 +82,42 @@ func (cmd *RunCommand) run() error {
 	return cmd.runStates(ps.Context())
 }
 
-func (cmd *RunCommand) runStates(ctx context.Context) error {
-	var pps *prprocessor.Processors
-	if err := process.LoadProposalProcessorContextValue(ctx, &pps); err != nil {
-		return err
-	}
-
+func (cmd *RunCommand) prepareStates(ctx context.Context) (states.States, error) {
 	var cs states.States
 	if err := process.LoadConsensusStatesContextValue(ctx, &cs); err != nil {
-		return err
+		return nil, err
 	}
 
-	if err := pps.Start(); err != nil {
-		return xerrors.Errorf("failed to start Processors: %w", err)
+	var nodepool *network.Nodepool
+	if err := process.LoadNodepoolContextValue(ctx, &nodepool); err != nil {
+		return nil, err
+	}
+
+	var suffrage base.Suffrage
+	if err := process.LoadSuffrageContextValue(ctx, &suffrage); err != nil {
+		return nil, err
+	}
+
+	if suffrage.IsInside(nodepool.Local().Address()) {
+		var pps *prprocessor.Processors
+		if err := process.LoadProposalProcessorContextValue(ctx, &pps); err != nil {
+			return nil, err
+		}
+
+		if err := pps.Start(); err != nil {
+			return nil, xerrors.Errorf("failed to start Processors: %w", err)
+		}
+	}
+
+	return cs, nil
+}
+
+func (cmd *RunCommand) runStates(ctx context.Context) error {
+	var cs states.States
+	if i, err := cmd.prepareStates(ctx); err != nil {
+		return err
+	} else {
+		cs = i
 	}
 
 	errch := make(chan error)

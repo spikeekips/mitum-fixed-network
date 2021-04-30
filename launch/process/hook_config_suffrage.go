@@ -43,9 +43,12 @@ func HookSuffrageConfigFunc(handlers map[string]HookHandlerSuffrageConfig) pm.Pr
 		}
 
 		var nodes []base.Address
-		if i, err := parseSuffrageNodes(ctx, m); err != nil {
+		switch i, err := parseSuffrageNodes(ctx, m); {
+		case err != nil:
 			return ctx, err
-		} else {
+		case len(i) < 1:
+			return ctx, conf.SetSuffrage(config.EmptySuffrage{})
+		default:
 			nodes = i
 		}
 
@@ -57,18 +60,14 @@ func HookSuffrageConfigFunc(handlers map[string]HookHandlerSuffrageConfig) pm.Pr
 				sf = i
 			}
 		} else if h, found := handlers[st]; !found {
-			return nil, xerrors.Errorf("unknown suffrage found, %s", st)
+			return ctx, xerrors.Errorf("unknown suffrage found, %s", st)
 		} else if i, err := h(ctx, m, nodes); err != nil {
-			return nil, err
+			return ctx, err
 		} else {
 			sf = i
 		}
 
-		if err := conf.SetSuffrage(sf); err != nil {
-			return ctx, err
-		} else {
-			return ctx, nil
-		}
+		return ctx, conf.SetSuffrage(sf)
 	}
 }
 
@@ -142,7 +141,7 @@ func parseSuffrageNodes(ctx context.Context, m map[string]interface{}) ([]base.A
 
 	var l []interface{}
 	if i, found := m["nodes"]; !found {
-		return nil, xerrors.Errorf("nodes not found in suffrage config")
+		return nil, nil
 	} else if j, ok := i.([]interface{}); !ok {
 		return nil, xerrors.Errorf("invalid nodes list, %T", i)
 	} else {

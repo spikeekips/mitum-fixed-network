@@ -105,6 +105,17 @@ func (np *Nodepool) Len() int {
 	return len(np.nodesMap)
 }
 
+func (np *Nodepool) LenRemotes() int {
+	var i int
+	np.TraverseRemotes(func(no Node) bool {
+		i++
+
+		return true
+	})
+
+	return i
+}
+
 func (np *Nodepool) Traverse(callback func(Node) bool) {
 	nodes := make([]Node, len(np.nodesMap))
 	np.RLock()

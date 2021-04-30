@@ -196,11 +196,13 @@ func (st *SyncerSession) Commit() error {
 			Hinted("to_height", st.heightTo)
 	})
 
-	l.Debug().Msg("trying to commit blocks to main database")
-
 	var last block.Manifest
 	if m, found, err := st.session.LastManifest(); err != nil || !found {
-		return xerrors.Errorf("failed to get last manifest fromm storage: %w", err)
+		err = xerrors.Errorf("failed to get last manifest fromm storage: %w", err)
+
+		l.Error().Err(err).Msg("failed to commit blocks to main database")
+
+		return err
 	} else {
 		last = m
 	}
@@ -220,10 +222,18 @@ func (st *SyncerSession) Commit() error {
 
 			return err
 		}
-		l.Debug().Str("collection", col).Msg("moved collection")
+		l.Verbose().Str("collection", col).Msg("moved collection")
 	}
 
-	return st.main.setLastBlock(last, false, false)
+	if err := st.main.setLastBlock(last, false, false); err != nil {
+		l.Error().Err(err).Msg("failed to commit blocks to main database")
+
+		return err
+	} else {
+		l.Debug().Msg("blocks committed to main database")
+
+		return nil
+	}
 }
 
 func (st *SyncerSession) Close() error {

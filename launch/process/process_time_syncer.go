@@ -39,13 +39,13 @@ func ProcessTimeSyncer(ctx context.Context) (context.Context, error) {
 		return ctx, err
 	}
 
-	if len(conf.TimeServer()) < 1 {
+	if len(conf.LocalConfig().TimeServer()) < 1 {
 		log.Debug().Msg("no time server; local time will be used")
 
 		return ctx, nil
 	}
 
-	if ts, err := localtime.NewTimeSyncer(conf.TimeServer(), time.Minute*2); err != nil {
+	if ts, err := localtime.NewTimeSyncer(conf.LocalConfig().TimeServer(), time.Minute*2); err != nil {
 		return ctx, err
 	} else {
 		_ = ts.SetLogger(log)

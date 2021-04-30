@@ -10,6 +10,7 @@ import (
 	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/base/ballot"
 	"github.com/spikeekips/mitum/base/block"
+	"github.com/spikeekips/mitum/base/operation"
 	"github.com/spikeekips/mitum/base/seal"
 	"github.com/spikeekips/mitum/isaac"
 	"github.com/spikeekips/mitum/launch/pm"
@@ -31,22 +32,23 @@ type States struct {
 	sync.RWMutex
 	*logging.Logging
 	*util.ContextDaemon
-	database       storage.Database
-	policy         *isaac.LocalPolicy
-	nodepool       *network.Nodepool
-	suffrage       base.Suffrage
-	statelock      sync.RWMutex
-	state          base.State
-	states         map[base.State]State
-	statech        chan StateSwitchContext
-	voteproofch    chan base.Voteproof
-	proposalch     chan ballot.Proposal
-	ballotbox      *isaac.Ballotbox
-	timers         *localtime.Timers
-	lvplock        sync.RWMutex
-	lvp            base.Voteproof
-	livp           base.Voteproof
-	blockSavedHook *pm.Hooks
+	database           storage.Database
+	policy             *isaac.LocalPolicy
+	nodepool           *network.Nodepool
+	suffrage           base.Suffrage
+	statelock          sync.RWMutex
+	state              base.State
+	states             map[base.State]State
+	statech            chan StateSwitchContext
+	voteproofch        chan base.Voteproof
+	proposalch         chan ballot.Proposal
+	ballotbox          *isaac.Ballotbox
+	timers             *localtime.Timers
+	lvplock            sync.RWMutex
+	lvp                base.Voteproof
+	livp               base.Voteproof
+	blockSavedHook     *pm.Hooks
+	isNoneSuffrageNode bool
 }
 
 func NewStates(
@@ -98,6 +100,8 @@ func NewStates(
 	if i := st.LastVoteproof(base.StageINIT); i != nil {
 		ss.livp = i
 	}
+
+	ss.isNoneSuffrageNode = !suffrage.IsInside(nodepool.Local().Address())
 
 	return ss, nil
 }
@@ -209,10 +213,22 @@ func (ss *States) NewSeal(sl seal.Seal) error {
 
 	seal.LogEventWithSeal(sl, l.Debug(), true).Msg("seal received")
 
-	if err := ss.processSeal(sl); err != nil {
-		l.Error().Err(err).Msg("failed to process seal")
+	{
+		var err error
+		switch t := sl.(type) {
+		case ballot.Proposal:
+			err = ss.newSealProposal(t)
+		case ballot.Ballot:
+			err = ss.newSealBallot(t)
+		default:
+			err = ss.newSealOthers(sl)
+		}
 
-		return err
+		if err != nil {
+			l.Error().Err(err).Msg("failed to process seal")
+
+			return err
+		}
 	}
 
 	return nil
@@ -279,10 +295,15 @@ func (ss *States) setState(state base.State) {
 }
 
 func (ss *States) start(ctx context.Context) error {
-	ss.Log().Debug().Msg("states started")
+	ss.Log().Debug().Bool("is_none_suffrage", ss.isNoneSuffrageNode).Msg("states started")
 
-	go ss.cleanBallotbox(ctx)
-	go ss.detectStuck(ctx)
+	if ss.ballotbox != nil {
+		go ss.cleanBallotbox(ctx)
+	}
+
+	if !ss.isNoneSuffrageNode {
+		go ss.detectStuck(ctx)
+	}
 
 	errch := make(chan error)
 	go ss.watch(ctx, errch)
@@ -349,7 +370,7 @@ func (ss *States) processSwitchStates(sctx StateSwitchContext) error {
 			ss.Log().Error().Err(err).Msg("problem during states switch; moves to booting")
 
 			if sctx.ToState() == base.StateBooting {
-				return xerrors.Errorf("failed to move from booting to booting: %w", err)
+				return xerrors.Errorf("failed to move to booting: %w", err)
 			} else {
 				<-time.After(time.Second * 1)
 				sctx = NewStateSwitchContext(ss.state, base.StateBooting).SetError(err)
@@ -549,54 +570,67 @@ func (ss *States) processProposal(proposal ballot.Proposal) error {
 	return ss.states[ss.State()].ProcessProposal(proposal)
 }
 
-func (ss *States) processSeal(sl seal.Seal) error {
-	switch t := sl.(type) {
-	case ballot.Proposal:
-		if t.Node().Equal(ss.nodepool.Local().Address()) {
-			return nil
-		}
+func (ss *States) newSealProposal(proposal ballot.Proposal) error {
+	if ss.isNoneSuffrageNode {
+		return nil
+	}
 
-		if err := ss.validateProposal(t); err != nil {
-			return err
-		}
+	if proposal.Node().Equal(ss.nodepool.Local().Address()) {
+		return nil
+	}
 
-		if err := ss.checkBallotVoteproof(t); err != nil {
-			return err
-		}
+	if err := ss.validateProposal(proposal); err != nil {
+		return err
+	}
 
-		go ss.NewProposal(t)
+	if err := ss.checkBallotVoteproof(proposal); err != nil {
+		return err
+	}
+
+	go ss.NewProposal(proposal)
+
+	return nil
+}
+
+func (ss *States) newSealBallot(blt ballot.Ballot) error {
+	if ss.isNoneSuffrageNode {
+		return nil
+	}
+
+	if err := ss.validateBallot(blt); err != nil {
+		return err
+	}
+
+	switch i, err := ss.voteBallot(blt); {
+	case err != nil:
+		return err
+	case i == nil:
+		return ss.checkBallotVoteproof(blt)
+	default:
+		ss.NewVoteproof(i)
 
 		return nil
-	case ballot.Ballot:
-		if err := ss.validateBallot(t); err != nil {
-			return err
-		}
-
-		switch i, err := ss.voteBallot(t); {
-		case err != nil:
-			return err
-		case i == nil:
-			return ss.checkBallotVoteproof(t)
-		default:
-			ss.NewVoteproof(i)
-
-			return nil
-		}
-	default:
-		return ss.saveSeal(sl)
 	}
 }
 
-func (ss *States) saveSeal(sl seal.Seal) error {
+func (ss *States) newSealOthers(sl seal.Seal) error {
+	// NOTE save seal
 	if err := ss.database.NewSeals([]seal.Seal{sl}); err != nil {
 		if !xerrors.Is(err, util.DuplicatedError) {
 			return err
 		}
 
 		return err
-	} else {
-		return nil
 	}
+
+	// NOTE none-suffrage node will broadcast operation seal to suffrage nodes
+	if ss.isNoneSuffrageNode {
+		if i, ok := sl.(operation.Seal); ok {
+			go ss.broadcastOperationSealToSuffrageNodes(i)
+		}
+	}
+
+	return nil
 }
 
 func (ss *States) validateProposal(proposal ballot.Proposal) error {
@@ -797,4 +831,40 @@ func (ss *States) detectStuck(ctx context.Context) {
 			}
 		}
 	}
+}
+
+func (ss *States) broadcastOperationSealToSuffrageNodes(sl operation.Seal) {
+	nodes := ss.suffrage.Nodes()
+	if len(nodes) < 1 {
+		return
+	}
+
+	var wg sync.WaitGroup
+	wg.Add(len(nodes))
+
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second*3)
+	defer cancel()
+
+	for i := range nodes {
+		var no network.Node
+		if j, found := ss.nodepool.Node(nodes[i]); !found {
+			ss.Log().Error().Str("node", nodes[i].String()).Msg("unknown node found in suffrage nodes")
+
+			wg.Done()
+
+			continue
+		} else {
+			no = j
+		}
+
+		go func(node network.Node) {
+			defer wg.Done()
+
+			if err := node.Channel().SendSeal(ctx, sl); err != nil {
+				ss.Log().Error().Err(err).Str("target_node", node.Address().String()).Msg("failed to broadcast")
+			}
+		}(no)
+	}
+
+	wg.Wait()
 }

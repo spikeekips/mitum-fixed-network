@@ -3,6 +3,7 @@ package process
 import (
 	"context"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/suite"
 
@@ -297,14 +298,41 @@ nodes:
 	t.Contains(err.Error(), "duplicated network found")
 }
 
+func (t *testConfigValidator) TestEmptySuffrage() {
+	y := `
+address: n0-010a:0.0.1
+`
+	ctx := t.loadConfig(y)
+
+	_, err := HookSuffrageConfigFunc(nil)(ctx)
+	t.NoError(err)
+
+	va, err := config.NewValidator(ctx)
+	t.NoError(err)
+	_, err = va.CheckNodes()
+	t.NoError(err)
+
+	_, err = va.CheckSuffrage()
+	t.Contains(err.Error(), "suffrage nodes and nodes both empty")
+}
+
 func (t *testConfigValidator) TestEmptySuffrageWithoutNodes() {
 	y := `
+address: n0-010a:0.0.1
 suffrage:
 `
 	ctx := t.loadConfig(y)
 
 	_, err := HookSuffrageConfigFunc(nil)(ctx)
-	t.Contains(err.Error(), "nodes not found in suffrage config")
+	t.NoError(err)
+
+	va, err := config.NewValidator(ctx)
+	t.NoError(err)
+	_, err = va.CheckNodes()
+	t.NoError(err)
+
+	_, err = va.CheckSuffrage()
+	t.Contains(err.Error(), "suffrage nodes and nodes both empty")
 }
 
 func (t *testConfigValidator) TestEmptySuffrageWithWrongNode() {
@@ -357,7 +385,7 @@ suffrage:
 	t.Contains(err.Error(), " in suffrage not found in nodes")
 }
 
-func (t *testConfigValidator) TestEmptySuffrage() {
+func (t *testConfigValidator) TestSuffrage() {
 	y := `
 address: n0-010a:0.0.1
 
@@ -663,6 +691,145 @@ genesis-operations:
 
 	_, err := HookGenesisOperationFunc(DefaultHookHandlersGenesisOperations)(ctx)
 	t.Contains(err.Error(), "invalid genesis operation found")
+}
+
+func (t *testConfigValidator) TestLocalConfigEmptySyncInterval() {
+	{
+		y := ""
+
+		ctx := t.loadConfig(y)
+
+		va, err := config.NewValidator(ctx)
+		t.NoError(err)
+		_, err = va.CheckLocalConfig()
+		t.NoError(err)
+
+		var conf config.LocalNode
+		t.NoError(config.LoadConfigContextValue(ctx, &conf))
+
+		t.Equal(config.DefaultSyncInterval, conf.LocalConfig().SyncInterval())
+	}
+
+	{
+		y := `
+sync-interval:
+`
+
+		ctx := t.loadConfig(y)
+
+		va, err := config.NewValidator(ctx)
+		t.NoError(err)
+		_, err = va.CheckLocalConfig()
+		t.NoError(err)
+
+		var conf config.LocalNode
+		t.NoError(config.LoadConfigContextValue(ctx, &conf))
+
+		t.Equal(config.DefaultSyncInterval, conf.LocalConfig().SyncInterval())
+	}
+}
+
+func (t *testConfigValidator) TestLocalConfigTooNarrowSyncInterval() {
+	y := `
+sync-interval: 900ms
+`
+
+	ctx := t.loadConfig(y)
+
+	va, err := config.NewValidator(ctx)
+	t.NoError(err)
+	_, err = va.CheckLocalConfig()
+	t.Contains(err.Error(), "sync-interval too narrow")
+}
+
+func (t *testConfigValidator) TestLocalConfigSyncInterval() {
+	y := `
+sync-interval: 9s
+`
+
+	ctx := t.loadConfig(y)
+
+	va, err := config.NewValidator(ctx)
+	t.NoError(err)
+	_, err = va.CheckLocalConfig()
+	t.NoError(err)
+
+	var conf config.LocalNode
+	t.NoError(config.LoadConfigContextValue(ctx, &conf))
+
+	t.Equal(time.Second*9, conf.LocalConfig().SyncInterval())
+}
+
+func (t *testConfigValidator) TestLocalConfigEmptTimeServer() {
+	{
+		y := ""
+
+		ctx := t.loadConfig(y)
+
+		va, err := config.NewValidator(ctx)
+		t.NoError(err)
+		_, err = va.CheckLocalConfig()
+		t.NoError(err)
+
+		var conf config.LocalNode
+		t.NoError(config.LoadConfigContextValue(ctx, &conf))
+
+		t.Equal(config.DefaultTimeServer, conf.LocalConfig().TimeServer())
+	}
+
+	{
+		y := `
+time-server:
+`
+
+		ctx := t.loadConfig(y)
+
+		va, err := config.NewValidator(ctx)
+		t.NoError(err)
+		_, err = va.CheckLocalConfig()
+		t.NoError(err)
+
+		var conf config.LocalNode
+		t.NoError(config.LoadConfigContextValue(ctx, &conf))
+
+		t.Equal(config.DefaultTimeServer, conf.LocalConfig().TimeServer())
+	}
+
+	{
+		y := `
+time-server: ""
+`
+
+		ctx := t.loadConfig(y)
+
+		va, err := config.NewValidator(ctx)
+		t.NoError(err)
+		_, err = va.CheckLocalConfig()
+		t.NoError(err)
+
+		var conf config.LocalNode
+		t.NoError(config.LoadConfigContextValue(ctx, &conf))
+
+		t.Empty(conf.LocalConfig().TimeServer())
+	}
+}
+
+func (t *testConfigValidator) TestLocalConfigTimeServer() {
+	y := `
+time-server: time.kriss.re.kr
+`
+
+	ctx := t.loadConfig(y)
+
+	va, err := config.NewValidator(ctx)
+	t.NoError(err)
+	_, err = va.CheckLocalConfig()
+	t.NoError(err)
+
+	var conf config.LocalNode
+	t.NoError(config.LoadConfigContextValue(ctx, &conf))
+
+	t.Equal("time.kriss.re.kr", conf.LocalConfig().TimeServer())
 }
 
 func TestConfigValidator(t *testing.T) {

@@ -19,7 +19,6 @@ var (
 	ContextValueVersion                 util.ContextKey = "version"
 	ContextValueConfigSource            util.ContextKey = "config_source"
 	ContextValueConfigSourceType        util.ContextKey = "config_source_type"
-	ContextValueLog                     util.ContextKey = "log"
 	ContextValueNetwork                 util.ContextKey = "network"
 	ContextValueBlockData               util.ContextKey = "blockdata"
 	ContextValueDatabase                util.ContextKey = "database"

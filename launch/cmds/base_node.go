@@ -4,6 +4,7 @@ import (
 	"context"
 
 	"github.com/spikeekips/mitum/launch"
+	"github.com/spikeekips/mitum/launch/config"
 	"github.com/spikeekips/mitum/launch/pm"
 	"github.com/spikeekips/mitum/launch/process"
 )
@@ -39,7 +40,7 @@ func (cmd *BaseRunCommand) prepare() error {
 	ctx := context.Background()
 	ctx = context.WithValue(ctx, process.ContextValueConfigSource, []byte(cmd.Design))
 	ctx = context.WithValue(ctx, process.ContextValueConfigSourceType, "yaml")
-	ctx = context.WithValue(ctx, process.ContextValueLog, cmd.Log())
+	ctx = context.WithValue(ctx, config.ContextValueLog, cmd.Log())
 	ctx = context.WithValue(ctx, process.ContextValueVersion, cmd.version)
 
 	ps := cmd.Processes()

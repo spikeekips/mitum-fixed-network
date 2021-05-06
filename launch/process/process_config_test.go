@@ -70,7 +70,7 @@ func (t *testConfig) ready(y string) *pm.Processes {
 	ctx := context.Background()
 	ctx = context.WithValue(ctx, ContextValueConfigSource, []byte(y))
 	ctx = context.WithValue(ctx, ContextValueConfigSourceType, "yaml")
-	ctx = context.WithValue(ctx, ContextValueLog, logging.NilLogger)
+	ctx = context.WithValue(ctx, config.ContextValueLog, logging.NilLogger)
 
 	ps := pm.NewProcesses().SetContext(ctx)
 

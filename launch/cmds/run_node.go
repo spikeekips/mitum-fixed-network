@@ -3,6 +3,7 @@ package cmds
 import (
 	"context"
 	"fmt"
+	"io"
 	"os"
 	"os/signal"
 	"syscall"
@@ -10,13 +11,16 @@ import (
 
 	"golang.org/x/xerrors"
 
+	"github.com/rs/zerolog"
 	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/base/prprocessor"
+	"github.com/spikeekips/mitum/launch/config"
 	"github.com/spikeekips/mitum/launch/pm"
 	"github.com/spikeekips/mitum/launch/process"
 	"github.com/spikeekips/mitum/network"
 	"github.com/spikeekips/mitum/states"
 	"github.com/spikeekips/mitum/util"
+	"github.com/spikeekips/mitum/util/logging"
 )
 
 var defaultRunHooks = []pm.Hook{
@@ -30,6 +34,7 @@ var defaultRunHooks = []pm.Hook{
 type RunCommand struct {
 	*BaseRunCommand
 	ExitAfter         time.Duration `name:"exit-after" help:"exit after the given duration"`
+	NetworkLogFile    []string      `name:"network-log" help:"network log file"`
 	afterStartedHooks *pm.Hooks
 }
 
@@ -70,6 +75,37 @@ func (cmd *RunCommand) Run(version util.Version) error {
 	}
 
 	return cmd.run()
+}
+
+func (cmd *RunCommand) prepare() error {
+	if err := cmd.BaseRunCommand.prepare(); err != nil {
+		return err
+	}
+
+	// NOTE setup network log
+	var networkLogger logging.Logger
+	if len(cmd.NetworkLogFile) < 1 {
+		networkLogger = cmd.Log()
+	} else {
+		outs := make([]io.Writer, len(cmd.NetworkLogFile))
+		for i, f := range cmd.NetworkLogFile {
+			if out, err := LogOutput(f); err != nil {
+				return err
+			} else {
+				outs[i] = out
+			}
+		}
+
+		networkLogger = SetupLogging(
+			zerolog.MultiLevelWriter(outs...),
+			zerolog.DebugLevel, "json", true, false,
+		)
+	}
+
+	ctx := context.WithValue(cmd.processes.ContextSource(), config.ContextValueNetworkLog, networkLogger)
+	_ = cmd.processes.SetContext(ctx)
+
+	return nil
 }
 
 func (cmd *RunCommand) run() error {

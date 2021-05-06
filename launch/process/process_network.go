@@ -54,7 +54,7 @@ func ProcessQuicNetwork(ctx context.Context) (context.Context, error) {
 	}
 
 	var l logging.Logger
-	if err := config.LoadLogContextValue(ctx, &l); err != nil {
+	if err := config.LoadNetworkLogContextValue(ctx, &l); err != nil {
 		return ctx, err
 	}
 

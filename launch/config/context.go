@@ -16,6 +16,7 @@ var (
 	ContextValueJSONEncoder util.ContextKey = "json_encoder"
 	ContextValueBSONEncoder util.ContextKey = "bson_encoder"
 	ContextValueLog         util.ContextKey = "log"
+	ContextValueNetworkLog  util.ContextKey = "network_log"
 )
 
 func LoadConfigContextValue(ctx context.Context, l *LocalNode) error {
@@ -36,4 +37,8 @@ func LoadBSONEncoderContextValue(ctx context.Context, l **bsonenc.Encoder) error
 
 func LoadLogContextValue(ctx context.Context, l *logging.Logger) error {
 	return util.LoadFromContextValue(ctx, ContextValueLog, l)
+}
+
+func LoadNetworkLogContextValue(ctx context.Context, l *logging.Logger) error {
+	return util.LoadFromContextValue(ctx, ContextValueNetworkLog, l)
 }

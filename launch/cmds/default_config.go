@@ -110,7 +110,7 @@ func (cmd *DefaultConfigCommand) prepare() error {
 	ctx := context.Background()
 	ctx = context.WithValue(ctx, process.ContextValueConfigSource, []byte(defaultConfigYAML))
 	ctx = context.WithValue(ctx, process.ContextValueConfigSourceType, "yaml")
-	ctx = context.WithValue(ctx, process.ContextValueLog, cmd.Log())
+	ctx = context.WithValue(ctx, config.ContextValueLog, cmd.Log())
 	ctx = context.WithValue(ctx, process.ContextValueVersion, cmd.version)
 
 	_ = ps.SetContext(ctx)

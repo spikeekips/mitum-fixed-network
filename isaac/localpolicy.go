@@ -19,7 +19,7 @@ var (
 	DefaultPolicyTimeoutWaitingProposal                = time.Second * 5
 	DefaultPolicyIntervalBroadcastingINITBallot        = time.Second * 1
 	DefaultPolicyIntervalBroadcastingProposal          = time.Second * 1
-	DefaultPolicyWaitBroadcastingACCEPTBallot          = time.Second * 2
+	DefaultPolicyWaitBroadcastingACCEPTBallot          = time.Second * 1
 	DefaultPolicyIntervalBroadcastingACCEPTBallot      = time.Second * 1
 	DefaultPolicyTimespanValidBallot                   = time.Minute * 1
 	DefaultPolicyNetworkConnectionTimeout              = time.Second * 3

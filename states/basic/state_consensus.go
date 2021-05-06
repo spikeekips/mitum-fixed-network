@@ -381,7 +381,7 @@ func (st *ConsensusState) broadcastProposal(proposal ballot.Proposal) error {
 	st.Log().Debug().Msg("broadcasting proposal")
 
 	timer := localtime.NewContextTimer(TimerIDBroadcastProposal, 0, func(int) (bool, error) {
-		if err := st.BroadcastSeals(proposal, false); err != nil {
+		if err := st.BroadcastBallot(proposal, false); err != nil {
 			st.Log().Error().Err(err).Msg("failed to broadcast proposal")
 		}
 
@@ -451,7 +451,7 @@ func (st *ConsensusState) broadcastSIGNBallot(proposal ballot.Proposal, newBlock
 	)
 	if err := sb.Sign(st.nodepool.Local().Privatekey(), st.policy.NetworkID()); err != nil {
 		return err
-	} else if err := st.BroadcastSeals(sb, true); err != nil {
+	} else if err := st.BroadcastBallot(sb, true); err != nil {
 		return err
 	} else {
 		return nil
@@ -484,7 +484,7 @@ func (st *ConsensusState) broadcastACCEPTBallot(
 	l.Debug().Dur("initial_delay", initialDelay).Msg("start timer to broadcast accept ballot")
 
 	timer := localtime.NewContextTimer(TimerIDBroadcastACCEPTBallot, 0, func(i int) (bool, error) {
-		if err := st.BroadcastSeals(baseBallot, i == 0); err != nil {
+		if err := st.BroadcastBallot(baseBallot, i == 0); err != nil {
 			l.Error().Err(err).Msg("failed to broadcast accept ballot")
 		}
 
@@ -531,7 +531,7 @@ func (st *ConsensusState) broadcastNewINITBallot(voteproof base.Voteproof) error
 
 	timer := localtime.NewContextTimer(TimerIDBroadcastINITBallot, st.policy.IntervalBroadcastingINITBallot(),
 		func(i int) (bool, error) {
-			if err := st.BroadcastSeals(baseBallot, i == 0); err != nil {
+			if err := st.BroadcastBallot(baseBallot, i == 0); err != nil {
 				l.Error().Err(err).Msg("failed to broadcast new init ballot")
 			}
 
@@ -570,7 +570,7 @@ func (st *ConsensusState) whenProposalTimeout(voteproof base.Voteproof, proposer
 	var timer localtime.Timer
 
 	timer = localtime.NewContextTimer(TimerIDBroadcastINITBallot, 0, func(i int) (bool, error) {
-		if err := st.BroadcastSeals(baseBallot, i == 0); err != nil {
+		if err := st.BroadcastBallot(baseBallot, i == 0); err != nil {
 			l.Error().Err(err).Msg("failed to broadcast next init ballot")
 		}
 
@@ -635,7 +635,7 @@ func (st *ConsensusState) nextRound(voteproof base.Voteproof) error {
 	}
 
 	timer := localtime.NewContextTimer(TimerIDBroadcastINITBallot, 0, func(i int) (bool, error) {
-		if err := st.BroadcastSeals(baseBallot, i == 0); err != nil {
+		if err := st.BroadcastBallot(baseBallot, i == 0); err != nil {
 			l.Error().Err(err).Msg("failed to broadcast next round init ballot")
 		}
 

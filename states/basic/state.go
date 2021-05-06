@@ -129,12 +129,12 @@ func (st *BaseState) NewVoteproof(voteproof base.Voteproof) {
 	st.States.NewVoteproof(voteproof)
 }
 
-func (st *BaseState) BroadcastSeals(sl seal.Seal, toLocal bool) error {
+func (st *BaseState) BroadcastBallot(blt ballot.Ballot, toLocal bool) error {
 	if st.broadcastSealsFunc != nil {
-		return st.broadcastSealsFunc(sl, toLocal)
+		return st.broadcastSealsFunc(blt, toLocal)
 	}
 
-	return st.States.BroadcastSeals(sl, toLocal)
+	return st.States.BroadcastBallot(blt, toLocal)
 }
 
 func (st *BaseState) Timers() *localtime.Timers {

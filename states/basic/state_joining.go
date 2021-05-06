@@ -122,7 +122,7 @@ func (st *JoiningState) broadcastINITBallotEnteredWithoutDelay(voteproof base.Vo
 	}
 
 	timer := localtime.NewContextTimer(TimerIDBroadcastJoingingINITBallot, 0, func(i int) (bool, error) {
-		if err := st.BroadcastSeals(baseBallot, i == 0); err != nil {
+		if err := st.BroadcastBallot(baseBallot, i == 0); err != nil {
 			st.Log().Error().Err(err).Msg("failed to broadcast init ballot")
 		}
 
@@ -164,7 +164,7 @@ func (st *JoiningState) broadcastINITBallotEntered(voteproof base.Voteproof) err
 			return false, err
 		}
 
-		if err := st.BroadcastSeals(baseBallot, i == 0); err != nil {
+		if err := st.BroadcastBallot(baseBallot, i == 0); err != nil {
 			st.Log().Error().Err(err).Msg("failed to broadcast init ballot")
 		}
 

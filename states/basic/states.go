@@ -252,6 +252,19 @@ func (ss *States) NewProposal(proposal ballot.Proposal) {
 	}()
 }
 
+// BroadcastBallot broadcast seal to the known nodes,
+// - suffrage nodes
+// - if toLocal is true, sends to local
+func (ss *States) BroadcastBallot(blt ballot.Ballot, toLocal bool) error {
+	l := isaac.LoggerWithBallot(blt, ss.Log())
+
+	l.Debug().Bool("to_local", toLocal).Msg("broadcasting ballot")
+
+	return ss.broadcast(blt, toLocal, func(node network.Node) bool {
+		return ss.suffrage.IsInside(node.Address())
+	})
+}
+
 // BroadcastSeals broadcast seal to the known nodes,
 // - suffrage nodes
 // - and other nodes
@@ -261,26 +274,9 @@ func (ss *States) BroadcastSeals(sl seal.Seal, toLocal bool) error {
 
 	seal.LogEventWithSeal(sl, l.Debug(), l.IsVerbose()).Bool("to_local", toLocal).Msg("broadcasting seal")
 
-	if toLocal {
-		go func() {
-			if err := ss.NewSeal(sl); err != nil {
-				l.Error().Err(err).Msg("failed to send ballot to local")
-			}
-		}()
-	}
-
-	// NOTE broadcast nodes of Nodepool, including suffrage nodes
-	ss.nodepool.TraverseRemotes(func(node network.Node) bool {
-		go func(node network.Node) {
-			if err := node.Channel().SendSeal(context.TODO(), sl); err != nil {
-				l.Error().Err(err).Hinted("target_node", node.Address()).Msg("failed to broadcast")
-			}
-		}(node)
-
+	return ss.broadcast(sl, toLocal, func(network.Node) bool {
 		return true
 	})
-
-	return nil
 }
 
 func (ss *States) BlockSavedHook() *pm.Hooks {
@@ -839,32 +835,47 @@ func (ss *States) broadcastOperationSealToSuffrageNodes(sl operation.Seal) {
 		return
 	}
 
-	var wg sync.WaitGroup
-	wg.Add(len(nodes))
+	if err := ss.broadcast(sl, false, func(node network.Node) bool {
+		return ss.suffrage.IsInside(node.Address())
+	}); err != nil {
+		ss.Log().Error().Err(err).Msg("problem to broadcast operation.Seal to suffrage nodes")
+	}
+}
 
-	ctx, cancel := context.WithTimeout(context.Background(), time.Second*3)
-	defer cancel()
+func (ss *States) broadcast(
+	sl seal.Seal,
+	toLocal bool,
+	filter func(node network.Node) bool,
+) error {
+	l := isaac.LoggerWithSeal(sl, ss.Log())
 
-	for i := range nodes {
-		var no network.Node
-		if j, found := ss.nodepool.Node(nodes[i]); !found {
-			ss.Log().Error().Str("node", nodes[i].String()).Msg("unknown node found in suffrage nodes")
+	seal.LogEventWithSeal(sl, l.Debug(), l.IsVerbose()).Bool("to_local", toLocal).Msg("broadcasting seal")
 
-			wg.Done()
+	if toLocal {
+		go func() {
+			if err := ss.NewSeal(sl); err != nil {
+				l.Error().Err(err).Msg("failed to send ballot to local")
+			}
+		}()
+	}
 
-			continue
-		} else {
-			no = j
+	// NOTE broadcast nodes of Nodepool, including suffrage nodes
+	ss.nodepool.TraverseRemotes(func(node network.Node) bool {
+		if !filter(node) {
+			return true
 		}
 
 		go func(node network.Node) {
-			defer wg.Done()
+			ctx, cancel := context.WithTimeout(context.Background(), time.Second*5)
+			defer cancel()
 
 			if err := node.Channel().SendSeal(ctx, sl); err != nil {
-				ss.Log().Error().Err(err).Str("target_node", node.Address().String()).Msg("failed to broadcast")
+				l.Error().Err(err).Hinted("target_node", node.Address()).Msg("failed to broadcast")
 			}
-		}(no)
-	}
+		}(node)
 
-	wg.Wait()
+		return true
+	})
+
+	return nil
 }

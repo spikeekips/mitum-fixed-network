@@ -100,7 +100,7 @@ func (nc *nodeInfoChecker) check(ctx context.Context) error {
 	close(resultch)
 
 	for i := range resultch {
-		if i == nil {
+		if i == nil || i.LastBlock() == nil {
 			continue
 		}
 

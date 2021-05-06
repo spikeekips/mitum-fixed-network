@@ -2,12 +2,14 @@ package isaac
 
 import (
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/suite"
 
 	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/base/ballot"
 	"github.com/spikeekips/mitum/util"
+	"github.com/spikeekips/mitum/util/localtime"
 )
 
 type testBallotChecker struct {
@@ -25,6 +27,36 @@ func (t *testBallotChecker) SetupTest() {
 	t.local, t.remote = ls[0], ls[1]
 
 	t.suf = t.Suffrage(t.remote, t.local)
+}
+
+func (t *testBallotChecker) TestInTimespan() {
+	t.True(t.suf.IsInside(t.local.Node().Address()))
+
+	span := t.local.Policy().TimespanValidBallot()
+
+	{ // too new
+		ib := t.NewINITBallot(t.local, base.Round(0), nil)
+		err := ib.SignWithTime(t.local.Node().Privatekey(), t.local.Policy().NetworkID(), localtime.UTCNow().Add(span+time.Second*10))
+		t.NoError(err)
+
+		bc := NewBallotChecker(ib, t.local.Database(), t.local.Policy(), t.suf, t.local.Nodes(), t.local.Database().LastVoteproof(base.StageINIT))
+		err = util.NewChecker("test-ballot-checker", []util.CheckerFunc{
+			bc.InTimespan,
+		}).Check()
+		t.Contains(err.Error(), "too new ballot")
+	}
+
+	{ // too old
+		ib := t.NewINITBallot(t.local, base.Round(0), nil)
+		err := ib.SignWithTime(t.local.Node().Privatekey(), t.local.Policy().NetworkID(), localtime.UTCNow().Add((span+time.Second*10)*-1))
+		t.NoError(err)
+
+		bc := NewBallotChecker(ib, t.local.Database(), t.local.Policy(), t.suf, t.local.Nodes(), t.local.Database().LastVoteproof(base.StageINIT))
+		err = util.NewChecker("test-ballot-checker", []util.CheckerFunc{
+			bc.InTimespan,
+		}).Check()
+		t.Contains(err.Error(), "too old ballot")
+	}
 }
 
 func (t *testBallotChecker) TestNew() {

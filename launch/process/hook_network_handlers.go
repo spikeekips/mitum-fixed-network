@@ -196,6 +196,7 @@ func (sn *SettingNetworkHandlers) networkhandlerNewSeal() network.NewSealHandler
 				sn.states.LastVoteproof(),
 			)
 			if err := util.NewChecker("network-new-ballot-checker", []util.CheckerFunc{
+				checker.InTimespan,
 				checker.InSuffrage,
 				checker.CheckSigning,
 				checker.CheckWithLastVoteproof,

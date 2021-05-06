@@ -10,6 +10,7 @@ import (
 	"github.com/spikeekips/mitum/network"
 	"github.com/spikeekips/mitum/storage"
 	"github.com/spikeekips/mitum/util"
+	"github.com/spikeekips/mitum/util/localtime"
 	"github.com/spikeekips/mitum/util/logging"
 	"github.com/spikeekips/mitum/util/valuehash"
 )
@@ -43,6 +44,22 @@ func NewBallotChecker(
 		ballot:   blt,
 		lvp:      lastVoteproof,
 	}
+}
+
+// InTimespan checks whether ballot is signed at a given interval,
+// policy.TimespanValidBallot().
+func (bc *BallotChecker) InTimespan() (bool, error) {
+	if _, ok := bc.ballot.(ballot.Proposal); ok { // NOTE old signed proposal also can be correct
+		return true, nil
+	}
+
+	if s := bc.ballot.SignedAt(); s.After(localtime.Now().Add(bc.policy.TimespanValidBallot())) {
+		return false, xerrors.Errorf("too new ballot")
+	} else if s.Before(localtime.Now().Add(bc.policy.TimespanValidBallot() * -1)) {
+		return false, xerrors.Errorf("too old ballot")
+	}
+
+	return true, nil
 }
 
 // InSuffrage checks Ballot.Node() is inside suffrage

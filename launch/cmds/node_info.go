@@ -48,8 +48,14 @@ func (cmd *NodeInfoCommand) Run(version util.Version) error {
 		}
 	}
 
+	if cmd.TLSInscure {
+		query := cmd.URL.Query()
+		query.Set("insecure", "true")
+		cmd.URL.RawQuery = query.Encode()
+	}
+
 	var channel network.Channel
-	if ch, err := process.LoadNodeChannel(cmd.URL, encs, cmd.Timeout, cmd.TLSInscure); err != nil {
+	if ch, err := process.LoadNodeChannel(cmd.URL, encs, cmd.Timeout); err != nil {
 		return err
 	} else {
 		channel = ch

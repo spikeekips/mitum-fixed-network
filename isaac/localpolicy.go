@@ -23,7 +23,6 @@ var (
 	DefaultPolicyIntervalBroadcastingACCEPTBallot      = time.Second * 1
 	DefaultPolicyTimespanValidBallot                   = time.Minute * 1
 	DefaultPolicyNetworkConnectionTimeout              = time.Second * 3
-	DefaultPolicyNetworkConnectionTLSInsecure          = false
 )
 
 type LocalPolicy struct {
@@ -39,9 +38,8 @@ type LocalPolicy struct {
 	intervalBroadcastingACCEPTBallot *util.LockedItem
 	// timespanValidBallot is used to check the SignedAt time of incoming
 	// Ballot should be within timespanValidBallot on now. By default, 1 minute.
-	timespanValidBallot          *util.LockedItem
-	networkConnectionTimeout     *util.LockedItem
-	networkConnectionTLSInsecure *util.LockedItem
+	timespanValidBallot      *util.LockedItem
+	networkConnectionTimeout *util.LockedItem
 }
 
 func NewLocalPolicy(networkID base.NetworkID) *LocalPolicy {
@@ -57,7 +55,6 @@ func NewLocalPolicy(networkID base.NetworkID) *LocalPolicy {
 		intervalBroadcastingACCEPTBallot: util.NewLockedItem(DefaultPolicyIntervalBroadcastingACCEPTBallot),
 		timespanValidBallot:              util.NewLockedItem(DefaultPolicyTimespanValidBallot),
 		networkConnectionTimeout:         util.NewLockedItem(DefaultPolicyNetworkConnectionTimeout),
-		networkConnectionTLSInsecure:     util.NewLockedItem(DefaultPolicyNetworkConnectionTLSInsecure),
 	}
 
 	return lp
@@ -171,16 +168,6 @@ func (lp *LocalPolicy) SetNetworkConnectionTimeout(d time.Duration) (*LocalPolic
 	}
 
 	_ = lp.networkConnectionTimeout.Set(d)
-
-	return lp, nil
-}
-
-func (lp *LocalPolicy) NetworkConnectionTLSInsecure() bool {
-	return lp.networkConnectionTLSInsecure.Value().(bool)
-}
-
-func (lp *LocalPolicy) SetNetworkConnectionTLSInsecure(d bool) (*LocalPolicy, error) {
-	_ = lp.networkConnectionTLSInsecure.Set(d)
 
 	return lp, nil
 }

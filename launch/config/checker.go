@@ -142,9 +142,5 @@ func (cc *checker) CheckPolicy() (bool, error) {
 		}
 	}
 
-	if err := conf.SetNetworkConnectionTLSInsecure(conf.NetworkConnectionTLSInsecure()); err != nil {
-		return false, err
-	}
-
 	return true, nil
 }

@@ -17,7 +17,6 @@ type BasePolicyPackerYAML struct {
 	IntervalBroadcastingACCEPTBallot time.Duration       `yaml:"interval-broadcasting-accept-ballot,omitempty"`
 	TimespanValidBallot              time.Duration       `yaml:"timespan-valid-ballot,omitempty"`
 	NetworkConnectionTimeout         time.Duration       `yaml:"network-connection-timeout,omitempty"`
-	NetworkConnectionTLSInsecure     bool                `yaml:"network-connection-tls-insecure,omitempty"`
 }
 
 func (no BasePolicy) MarshalYAML() (interface{}, error) {
@@ -32,6 +31,5 @@ func (no BasePolicy) MarshalYAML() (interface{}, error) {
 		IntervalBroadcastingACCEPTBallot: no.intervalBroadcastingACCEPTBallot,
 		TimespanValidBallot:              no.timespanValidBallot,
 		NetworkConnectionTimeout:         no.networkConnectionTimeout,
-		NetworkConnectionTLSInsecure:     no.networkConnectionTLSInsecure,
 	}, nil
 }

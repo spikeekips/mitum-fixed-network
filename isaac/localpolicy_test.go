@@ -26,7 +26,6 @@ func (t *testPolicy) TestNew() {
 	t.Equal(DefaultPolicyMaxOperationsInSeal, p.MaxOperationsInSeal())
 	t.Equal(DefaultPolicyMaxOperationsInProposal, p.MaxOperationsInProposal())
 	t.Equal(DefaultPolicyNetworkConnectionTimeout, p.NetworkConnectionTimeout())
-	t.Equal(DefaultPolicyNetworkConnectionTLSInsecure, p.NetworkConnectionTLSInsecure())
 }
 
 func (t *testPolicy) TestSet() {
@@ -54,10 +53,6 @@ func (t *testPolicy) TestSet() {
 	_, err = p.SetNetworkConnectionTimeout(time.Second)
 	t.NoError(err)
 	t.Equal(time.Second, p.NetworkConnectionTimeout())
-
-	_, err = p.SetNetworkConnectionTLSInsecure(true)
-	t.NoError(err)
-	t.True(p.NetworkConnectionTLSInsecure())
 }
 
 func TestPolicy(t *testing.T) {

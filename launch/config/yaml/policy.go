@@ -18,7 +18,6 @@ type Policy struct {
 	IntervalBroadcastingACCEPTBallot *string                `yaml:"interval-broadcasting-accept-ballot,omitempty"`
 	TimespanValidBallot              *string                `yaml:"timespan-valid-ballot,omitempty"`
 	NetworkConnectionTimeout         *string                `yaml:"network-connection-timeout,omitempty"`
-	NetworkConnectionTLSInsecure     *bool                  `yaml:"network-connection-tls-insecure,omitempty"`
 	Extras                           map[string]interface{} `yaml:",inline"`
 }
 
@@ -43,12 +42,6 @@ func (no Policy) Set(ctx context.Context) (context.Context, error) {
 
 	if err := no.setDurations(conf); err != nil {
 		return ctx, err
-	}
-
-	if no.NetworkConnectionTLSInsecure != nil {
-		if err := conf.SetNetworkConnectionTLSInsecure(*no.NetworkConnectionTLSInsecure); err != nil {
-			return ctx, err
-		}
 	}
 
 	return ctx, nil

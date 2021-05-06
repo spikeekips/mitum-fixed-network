@@ -42,7 +42,6 @@ type Channel struct {
 func NewChannel(
 	addr string,
 	bufsize uint,
-	insecure bool,
 	quicConfig *quic.Config,
 	encs *encoder.Encoders,
 	enc encoder.Encoder,
@@ -56,12 +55,18 @@ func NewChannel(
 		enc:      enc,
 	}
 
+	var insecure bool
 	if u, err := url.Parse(addr); err != nil {
 		return nil, err
 	} else {
 		if u.Scheme == "quic" {
 			u.Scheme = "https"
 		}
+
+		query := u.Query()
+		insecure = parseBoolInQuery(u.Query().Get("insecure"))
+		query.Del("insecure")
+		u.RawQuery = query.Encode()
 
 		ch.addr = u
 		ch.u = addr
@@ -351,4 +356,13 @@ func stripSlashFilePath(p string) string {
 	b := reStripSlash.ReplaceAll([]byte(p), nil)
 
 	return string(b)
+}
+
+func parseBoolInQuery(s string) bool {
+	switch strings.ToLower(strings.TrimSpace(s)) {
+	case "t", "true", "1", "y", "yes":
+		return true
+	default:
+		return false
+	}
 }

@@ -110,7 +110,6 @@ func LoadNodeChannel(
 	u *url.URL,
 	encs *encoder.Encoders,
 	connectionTimeout time.Duration,
-	inseucre bool,
 ) (network.Channel, error) {
 	var je encoder.Encoder
 	if e, err := encs.Encoder(jsonenc.JSONType, ""); err != nil {
@@ -125,7 +124,6 @@ func LoadNodeChannel(
 		if ch, err := quicnetwork.NewChannel(
 			u.String(),
 			100,
-			inseucre,
 			quicConfig,
 			encs,
 			je,

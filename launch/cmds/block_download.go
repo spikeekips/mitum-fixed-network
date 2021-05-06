@@ -132,7 +132,13 @@ func (cmd *BlockDownloadCommand) prepareChannel() error {
 		}
 	}
 
-	if ch, err := process.LoadNodeChannel(cmd.URL, encs, cmd.Timeout, cmd.TLSInscure); err != nil {
+	if cmd.TLSInscure {
+		query := cmd.URL.Query()
+		query.Set("insecure", "true")
+		cmd.URL.RawQuery = query.Encode()
+	}
+
+	if ch, err := process.LoadNodeChannel(cmd.URL, encs, cmd.Timeout); err != nil {
 		return err
 	} else {
 		cmd.channel = ch

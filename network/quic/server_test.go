@@ -66,7 +66,7 @@ func (t *testQuicServer) SetupTest() {
 	t.NoError(err)
 	t.certs = certs
 
-	t.url = &url.URL{Scheme: "quic", Host: t.bind}
+	t.url = &url.URL{Scheme: "quic", Host: t.bind, RawQuery: "insecure=true"}
 }
 
 func (t *testQuicServer) readyServer() *Server {
@@ -123,7 +123,7 @@ func (t *testQuicServer) TestSendSeal() {
 		return nil
 	})
 
-	qc, err := NewChannel(t.url.String(), 2, true, nil, t.encs, t.enc)
+	qc, err := NewChannel(t.url.String(), 2, nil, t.encs, t.enc)
 	t.NoError(err)
 	t.Implements((*network.Channel)(nil), qc)
 
@@ -177,7 +177,7 @@ func (t *testQuicServer) TestGetSeals() {
 		return sls, nil
 	})
 
-	qc, err := NewChannel(t.url.String(), 2, true, nil, t.encs, t.enc)
+	qc, err := NewChannel(t.url.String(), 2, nil, t.encs, t.enc)
 	t.NoError(err)
 
 	{ // get all
@@ -259,7 +259,7 @@ func (t *testQuicServer) TestNodeInfo() {
 		return ni, nil
 	})
 
-	qc, err := NewChannel(t.url.String(), 2, true, nil, t.encs, t.enc)
+	qc, err := NewChannel(t.url.String(), 2, nil, t.encs, t.enc)
 	t.NoError(err)
 
 	nni, err := qc.NodeInfo(context.TODO())
@@ -276,7 +276,7 @@ func (t *testQuicServer) TestEmptyBlockDataMaps() {
 		return nil, nil
 	})
 
-	qc, err := NewChannel(t.url.String(), 2, true, nil, t.encs, t.enc)
+	qc, err := NewChannel(t.url.String(), 2, nil, t.encs, t.enc)
 	t.NoError(err)
 
 	bds, err := qc.BlockDataMaps(context.TODO(), []base.Height{33, 34})
@@ -307,7 +307,7 @@ func (t *testQuicServer) TestBlockDataMaps() {
 		}, nil
 	})
 
-	qc, err := NewChannel(t.url.String(), 2, true, nil, t.encs, t.enc)
+	qc, err := NewChannel(t.url.String(), 2, nil, t.encs, t.enc)
 	t.NoError(err)
 
 	bds, err := qc.BlockDataMaps(context.TODO(), []base.Height{33, 34})
@@ -326,7 +326,7 @@ func (t *testQuicServer) TestEmptyBlockData() {
 		return nil, func() error { return nil }, nil
 	})
 
-	qc, err := NewChannel(t.url.String(), 2, true, nil, t.encs, t.enc)
+	qc, err := NewChannel(t.url.String(), 2, nil, t.encs, t.enc)
 	t.NoError(err)
 
 	item := block.NewBaseBlockDataMapItem("findme", util.UUID().String(), "file:///showme/findme")
@@ -342,7 +342,7 @@ func (t *testQuicServer) TestGetBlockDataWithError() {
 		return nil, func() error { return nil }, util.NotFoundError
 	})
 
-	qc, err := NewChannel(t.url.String(), 2, true, nil, t.encs, t.enc)
+	qc, err := NewChannel(t.url.String(), 2, nil, t.encs, t.enc)
 	t.NoError(err)
 
 	item := block.NewBaseBlockDataMapItem("findme", util.UUID().String(), "file:///showme/findme")
@@ -375,7 +375,7 @@ func (t *testQuicServer) TestGetBlockData() {
 		return f, func() error { return nil }, nil
 	})
 
-	qc, err := NewChannel(t.url.String(), 2, true, nil, t.encs, t.enc)
+	qc, err := NewChannel(t.url.String(), 2, nil, t.encs, t.enc)
 	t.NoError(err)
 
 	item := block.NewBaseBlockDataMapItem("findme", checksum, "file:///showme/findme")

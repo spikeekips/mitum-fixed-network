@@ -51,7 +51,6 @@ func HookNodepool(ctx context.Context) (context.Context, error) {
 			conf.URL(),
 			encs,
 			policy.NetworkConnectionTimeout(),
-			policy.NetworkConnectionTLSInsecure(),
 		); err != nil {
 			return ctx, err
 		} else {

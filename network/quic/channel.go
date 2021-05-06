@@ -35,7 +35,7 @@ type Channel struct {
 	getSealsURL      string
 	nodeInfoURL      string
 	getBlockDataMaps string
-	getBlockData     string
+	getBlockData     url.URL
 	client           *QuicClient
 }
 
@@ -72,11 +72,14 @@ func NewChannel(
 		ch.u = addr
 	}
 
-	ch.nodeInfoURL = mustQuicURL(ch.addr.String(), QuicHandlerPathNodeInfo)
-	ch.sendSealURL = mustQuicURL(ch.addr.String(), QuicHandlerPathSendSeal)
-	ch.getSealsURL = mustQuicURL(ch.addr.String(), QuicHandlerPathGetSeals)
-	ch.getBlockDataMaps = mustQuicURL(ch.addr.String(), QuicHandlerPathGetBlockDataMaps)
-	ch.getBlockData = mustQuicURL(ch.addr.String(), QuicHandlerPathGetBlockData)
+	ch.nodeInfoURL, _ = mustQuicURL(ch.addr.String(), QuicHandlerPathNodeInfo)
+	ch.sendSealURL, _ = mustQuicURL(ch.addr.String(), QuicHandlerPathSendSeal)
+	ch.getSealsURL, _ = mustQuicURL(ch.addr.String(), QuicHandlerPathGetSeals)
+	ch.getBlockDataMaps, _ = mustQuicURL(ch.addr.String(), QuicHandlerPathGetBlockDataMaps)
+	{
+		_, u := mustQuicURL(ch.addr.String(), QuicHandlerPathGetBlockData)
+		ch.getBlockData = *u
+	}
 
 	if client, err := NewQuicClient(insecure, quicConfig); err != nil {
 		return nil, err
@@ -257,7 +260,10 @@ func (ch *Channel) blockData(ctx context.Context, p string) (io.ReadCloser, func
 	headers := http.Header{}
 	headers.Set(QuicEncoderHintHeader, ch.enc.Hint().String())
 
-	response, err := ch.client.Request(ctx, time.Minute, ch.getBlockData+"/"+stripSlashFilePath(p), nil, headers)
+	u := ch.getBlockData
+	u.Path = u.Path + "/" + stripSlashFilePath(p)
+
+	response, err := ch.client.Request(ctx, time.Minute, u.String(), nil, headers)
 	closeFunc := func() error {
 		if response == nil {
 			return nil

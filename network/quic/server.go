@@ -381,7 +381,7 @@ func (sv *Server) handleGetBlockData(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func mustQuicURL(u, p string) string {
+func mustQuicURL(u, p string) (string, *url.URL) {
 	uu, err := url.Parse(u)
 	if err != nil {
 		panic(xerrors.Errorf("failed to join quic url: %w", err))
@@ -389,7 +389,7 @@ func mustQuicURL(u, p string) string {
 
 	uu.Path = path.Join(uu.Path, p)
 
-	return uu.String()
+	return uu.String(), uu
 }
 
 func handleError(w http.ResponseWriter, err error) {

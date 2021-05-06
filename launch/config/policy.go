@@ -25,8 +25,6 @@ type Policy interface {
 	SetIntervalBroadcastingACCEPTBallot(string) error
 	TimespanValidBallot() time.Duration
 	SetTimespanValidBallot(string) error
-	TimeoutProcessProposal() time.Duration
-	SetTimeoutProcessProposal(string) error
 	NetworkConnectionTimeout() time.Duration
 	SetNetworkConnectionTimeout(string) error
 	NetworkConnectionTLSInsecure() bool
@@ -43,7 +41,6 @@ type BasePolicy struct {
 	waitBroadcastingACCEPTBallot     time.Duration
 	intervalBroadcastingACCEPTBallot time.Duration
 	timespanValidBallot              time.Duration
-	timeoutProcessProposal           time.Duration
 	networkConnectionTimeout         time.Duration
 	networkConnectionTLSInsecure     bool
 }
@@ -162,20 +159,6 @@ func (no *BasePolicy) SetTimespanValidBallot(s string) error {
 		return err
 	} else {
 		no.timespanValidBallot = t
-
-		return nil
-	}
-}
-
-func (no BasePolicy) TimeoutProcessProposal() time.Duration {
-	return no.timeoutProcessProposal
-}
-
-func (no *BasePolicy) SetTimeoutProcessProposal(s string) error {
-	if t, err := parseTimeDuration(s, true); err != nil {
-		return err
-	} else {
-		no.timeoutProcessProposal = t
 
 		return nil
 	}

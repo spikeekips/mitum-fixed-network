@@ -126,7 +126,6 @@ func (cc *checker) CheckPolicy() (bool, error) {
 		{conf.WaitBroadcastingACCEPTBallot(), conf.SetWaitBroadcastingACCEPTBallot, isaac.DefaultPolicyWaitBroadcastingACCEPTBallot},             // nolint:lll
 		{conf.IntervalBroadcastingACCEPTBallot(), conf.SetIntervalBroadcastingACCEPTBallot, isaac.DefaultPolicyIntervalBroadcastingACCEPTBallot}, // nolint:lll
 		{conf.TimespanValidBallot(), conf.SetTimespanValidBallot, isaac.DefaultPolicyTimespanValidBallot},                                        // nolint:lll
-		{conf.TimeoutProcessProposal(), conf.SetTimeoutProcessProposal, isaac.DefaultPolicyTimeoutProcessProposal},                               // nolint:lll
 		{conf.NetworkConnectionTimeout(), conf.SetNetworkConnectionTimeout, isaac.DefaultPolicyNetworkConnectionTimeout},                         // nolint:lll
 	}
 

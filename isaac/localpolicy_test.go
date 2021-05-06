@@ -23,7 +23,6 @@ func (t *testPolicy) TestNew() {
 	t.Equal(DefaultPolicyWaitBroadcastingACCEPTBallot, p.WaitBroadcastingACCEPTBallot())
 	t.Equal(DefaultPolicyIntervalBroadcastingACCEPTBallot, p.IntervalBroadcastingACCEPTBallot())
 	t.Equal(DefaultPolicyTimespanValidBallot, p.TimespanValidBallot())
-	t.Equal(DefaultPolicyTimeoutProcessProposal, p.TimeoutProcessProposal())
 	t.Equal(DefaultPolicyMaxOperationsInSeal, p.MaxOperationsInSeal())
 	t.Equal(DefaultPolicyMaxOperationsInProposal, p.MaxOperationsInProposal())
 	t.Equal(DefaultPolicyNetworkConnectionTimeout, p.NetworkConnectionTimeout())

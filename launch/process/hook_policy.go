@@ -48,9 +48,6 @@ func HookSetPolicy(ctx context.Context) (context.Context, error) {
 	if _, err := policy.SetTimespanValidBallot(conf.TimespanValidBallot()); err != nil {
 		return ctx, err
 	}
-	if _, err := policy.SetTimeoutProcessProposal(conf.TimeoutProcessProposal()); err != nil {
-		return ctx, err
-	}
 	if _, err := policy.SetNetworkConnectionTimeout(conf.NetworkConnectionTimeout()); err != nil {
 		return ctx, err
 	}

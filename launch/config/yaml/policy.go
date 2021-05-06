@@ -17,7 +17,6 @@ type Policy struct {
 	WaitBroadcastingACCEPTBallot     *string                `yaml:"wait-broadcasting-accept-ballot,omitempty"`
 	IntervalBroadcastingACCEPTBallot *string                `yaml:"interval-broadcasting-accept-ballot,omitempty"`
 	TimespanValidBallot              *string                `yaml:"timespan-valid-ballot,omitempty"`
-	TimeoutProcessProposal           *string                `yaml:"timeout-process-proposal,omitempty"`
 	NetworkConnectionTimeout         *string                `yaml:"network-connection-timeout,omitempty"`
 	NetworkConnectionTLSInsecure     *bool                  `yaml:"network-connection-tls-insecure,omitempty"`
 	Extras                           map[string]interface{} `yaml:",inline"`
@@ -85,7 +84,6 @@ func (no Policy) setDurations(conf config.Policy) error {
 		{no.WaitBroadcastingACCEPTBallot, conf.SetWaitBroadcastingACCEPTBallot},
 		{no.IntervalBroadcastingACCEPTBallot, conf.SetIntervalBroadcastingACCEPTBallot},
 		{no.TimespanValidBallot, conf.SetTimespanValidBallot},
-		{no.TimeoutProcessProposal, conf.SetTimeoutProcessProposal},
 		{no.NetworkConnectionTimeout, conf.SetNetworkConnectionTimeout},
 	}
 

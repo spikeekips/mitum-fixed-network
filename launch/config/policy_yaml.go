@@ -16,7 +16,6 @@ type BasePolicyPackerYAML struct {
 	WaitBroadcastingACCEPTBallot     time.Duration       `yaml:"wait-broadcasting-accept-ballot,omitempty"`
 	IntervalBroadcastingACCEPTBallot time.Duration       `yaml:"interval-broadcasting-accept-ballot,omitempty"`
 	TimespanValidBallot              time.Duration       `yaml:"timespan-valid-ballot,omitempty"`
-	TimeoutProcessProposal           time.Duration       `yaml:"timeout-process-proposal,omitempty"`
 	NetworkConnectionTimeout         time.Duration       `yaml:"network-connection-timeout,omitempty"`
 	NetworkConnectionTLSInsecure     bool                `yaml:"network-connection-tls-insecure,omitempty"`
 }
@@ -32,7 +31,6 @@ func (no BasePolicy) MarshalYAML() (interface{}, error) {
 		WaitBroadcastingACCEPTBallot:     no.waitBroadcastingACCEPTBallot,
 		IntervalBroadcastingACCEPTBallot: no.intervalBroadcastingACCEPTBallot,
 		TimespanValidBallot:              no.timespanValidBallot,
-		TimeoutProcessProposal:           no.timeoutProcessProposal,
 		NetworkConnectionTimeout:         no.networkConnectionTimeout,
 		NetworkConnectionTLSInsecure:     no.networkConnectionTLSInsecure,
 	}, nil

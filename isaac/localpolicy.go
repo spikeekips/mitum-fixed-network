@@ -22,7 +22,6 @@ var (
 	DefaultPolicyWaitBroadcastingACCEPTBallot          = time.Second * 2
 	DefaultPolicyIntervalBroadcastingACCEPTBallot      = time.Second * 1
 	DefaultPolicyTimespanValidBallot                   = time.Minute * 1
-	DefaultPolicyTimeoutProcessProposal                = time.Second * 10
 	DefaultPolicyNetworkConnectionTimeout              = time.Second * 3
 	DefaultPolicyNetworkConnectionTLSInsecure          = false
 )
@@ -41,7 +40,6 @@ type LocalPolicy struct {
 	// timespanValidBallot is used to check the SignedAt time of incoming
 	// Ballot should be within timespanValidBallot on now. By default, 1 minute.
 	timespanValidBallot          *util.LockedItem
-	timeoutProcessProposal       *util.LockedItem
 	networkConnectionTimeout     *util.LockedItem
 	networkConnectionTLSInsecure *util.LockedItem
 }
@@ -58,7 +56,6 @@ func NewLocalPolicy(networkID base.NetworkID) *LocalPolicy {
 		waitBroadcastingACCEPTBallot:     util.NewLockedItem(DefaultPolicyWaitBroadcastingACCEPTBallot),
 		intervalBroadcastingACCEPTBallot: util.NewLockedItem(DefaultPolicyIntervalBroadcastingACCEPTBallot),
 		timespanValidBallot:              util.NewLockedItem(DefaultPolicyTimespanValidBallot),
-		timeoutProcessProposal:           util.NewLockedItem(DefaultPolicyTimeoutProcessProposal),
 		networkConnectionTimeout:         util.NewLockedItem(DefaultPolicyNetworkConnectionTimeout),
 		networkConnectionTLSInsecure:     util.NewLockedItem(DefaultPolicyNetworkConnectionTLSInsecure),
 	}
@@ -164,20 +161,6 @@ func (lp *LocalPolicy) SetTimespanValidBallot(d time.Duration) (*LocalPolicy, er
 	return lp, nil
 }
 
-func (lp *LocalPolicy) TimeoutProcessProposal() time.Duration {
-	return lp.timeoutProcessProposal.Value().(time.Duration)
-}
-
-func (lp *LocalPolicy) SetTimeoutProcessProposal(d time.Duration) (*LocalPolicy, error) {
-	if d < 1 {
-		return nil, xerrors.Errorf("TimeoutProcessProposal too short; %v", d)
-	}
-
-	_ = lp.timeoutProcessProposal.Set(d)
-
-	return lp, nil
-}
-
 func (lp *LocalPolicy) NetworkConnectionTimeout() time.Duration {
 	return lp.networkConnectionTimeout.Value().(time.Duration)
 }
@@ -241,7 +224,6 @@ func (lp *LocalPolicy) Config() map[string]interface{} {
 		"wait_broadcasting_accept_ballot":     lp.WaitBroadcastingACCEPTBallot(),
 		"interval_broadcasting_accept_ballot": lp.IntervalBroadcastingACCEPTBallot(),
 		"timespan_valid_ballot":               lp.TimespanValidBallot(),
-		"timeout_process_proposal":            lp.TimeoutProcessProposal(),
 		"network_connection_timeout":          lp.NetworkConnectionTimeout(),
 	}
 }

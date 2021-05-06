@@ -144,9 +144,6 @@ func (va *validator) CheckPolicy() (bool, error) {
 		return false, xerrors.Errorf("timespan-valid-ballot is zero")
 	}
 
-	if conf.TimeoutProcessProposal() == 0 {
-		return false, xerrors.Errorf("timeout-process-proposal is zero")
-	}
 	if conf.NetworkConnectionTimeout() == 0 {
 		return false, xerrors.Errorf("network-connection-timeout is zero")
 	}

@@ -326,53 +326,6 @@ policy:
 	}
 }
 
-func (t *testConfigChecker) TestTimeoutProcessProposal() {
-	{
-		y := `
-policy:
-`
-		ctx := context.Background()
-		ctx = context.WithValue(ctx, ContextValueConfigSource, []byte(y))
-		ctx = context.WithValue(ctx, ContextValueConfigSourceType, "yaml")
-
-		ps := t.ps(ctx)
-		t.NoError(ps.Run())
-
-		cc, err := config.NewChecker(ps.Context())
-		t.NoError(err)
-		_, err = cc.CheckPolicy()
-		t.NoError(err)
-
-		var conf config.LocalNode
-		t.NoError(config.LoadConfigContextValue(ps.Context(), &conf))
-
-		t.Equal(isaac.DefaultPolicyTimeoutProcessProposal, conf.Policy().TimeoutProcessProposal())
-	}
-
-	{
-		y := `
-policy:
-  timeout-process-proposal: 33s
-`
-		ctx := context.Background()
-		ctx = context.WithValue(ctx, ContextValueConfigSource, []byte(y))
-		ctx = context.WithValue(ctx, ContextValueConfigSourceType, "yaml")
-
-		ps := t.ps(ctx)
-		t.NoError(ps.Run())
-
-		cc, err := config.NewChecker(ps.Context())
-		t.NoError(err)
-		_, err = cc.CheckPolicy()
-		t.NoError(err)
-
-		var conf config.LocalNode
-		t.NoError(config.LoadConfigContextValue(ps.Context(), &conf))
-
-		t.Equal(time.Second*33, conf.Policy().TimeoutProcessProposal())
-	}
-}
-
 func (t *testConfigChecker) TestEmptyLocalConfig() {
 	y := ""
 	ctx := context.Background()

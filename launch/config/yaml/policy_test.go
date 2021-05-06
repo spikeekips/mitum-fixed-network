@@ -25,7 +25,6 @@ func (t *testPolicy) TestEmpty() {
 	t.Nil(n.WaitBroadcastingACCEPTBallot)
 	t.Nil(n.IntervalBroadcastingACCEPTBallot)
 	t.Nil(n.TimespanValidBallot)
-	t.Nil(n.TimeoutProcessProposal)
 	t.Nil(n.NetworkConnectionTimeout)
 	t.Nil(n.NetworkConnectionTLSInsecure)
 }
@@ -46,7 +45,6 @@ threshold: 33
 		t.Nil(n.WaitBroadcastingACCEPTBallot)
 		t.Nil(n.IntervalBroadcastingACCEPTBallot)
 		t.Nil(n.TimespanValidBallot)
-		t.Nil(n.TimeoutProcessProposal)
 		t.Nil(n.NetworkConnectionTimeout)
 		t.Nil(n.NetworkConnectionTLSInsecure)
 
@@ -83,7 +81,6 @@ network-connection-tls-insecure: true
 	t.Nil(n.WaitBroadcastingACCEPTBallot)
 	t.Nil(n.IntervalBroadcastingACCEPTBallot)
 	t.Nil(n.TimespanValidBallot)
-	t.Nil(n.TimeoutProcessProposal)
 
 	t.Equal("33m3s", *n.TimeoutWaitingProposal)
 	t.Equal("1ms", *n.NetworkConnectionTimeout)

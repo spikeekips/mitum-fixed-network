@@ -29,8 +29,8 @@ func NewQuicClient(insecure bool, quicConfig *quic.Config) (*QuicClient, error) 
 		quicConfig = &quic.Config{}
 	}
 
-	if quicConfig.HandshakeTimeout < 1 {
-		quicConfig.HandshakeTimeout = time.Second * 3
+	if quicConfig.HandshakeIdleTimeout < 1 {
+		quicConfig.HandshakeIdleTimeout = time.Second * 3
 	}
 
 	if quicConfig.MaxIdleTimeout < 1 {

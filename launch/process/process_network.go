@@ -120,7 +120,7 @@ func LoadNodeChannel(
 
 	switch u.Scheme {
 	case "quic":
-		quicConfig := &quic.Config{HandshakeTimeout: connectionTimeout}
+		quicConfig := &quic.Config{HandshakeIdleTimeout: connectionTimeout}
 		if ch, err := quicnetwork.NewChannel(
 			u.String(),
 			100,

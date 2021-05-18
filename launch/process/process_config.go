@@ -90,18 +90,20 @@ func loadConfigYAML(ctx context.Context, source []byte) (context.Context, error)
 func checkConfig(ctx context.Context) (context.Context, error) {
 	if cc, err := config.NewChecker(ctx); err != nil {
 		return ctx, err
-	} else if err := util.NewChecker("config-checker", []util.CheckerFunc{
-		cc.CheckLocalNetwork,
-		cc.CheckStorage,
-		cc.CheckPolicy,
-	}).Check(); err != nil {
-		if xerrors.Is(err, util.IgnoreError) {
-			return ctx, nil
-		}
-
-		return ctx, err
 	} else {
-		return cc.Context(), nil
+		if err := util.NewChecker("config-checker", []util.CheckerFunc{
+			cc.CheckLocalNetwork,
+			cc.CheckStorage,
+			cc.CheckPolicy,
+		}).Check(); err != nil {
+			if xerrors.Is(err, util.IgnoreError) {
+				return ctx, nil
+			}
+
+			return ctx, err
+		} else {
+			return cc.Context(), nil
+		}
 	}
 }
 

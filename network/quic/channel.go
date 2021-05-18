@@ -170,7 +170,7 @@ func (ch *Channel) NodeInfo(ctx context.Context) (network.NodeInfo, error) {
 	headers := http.Header{}
 	headers.Set(QuicEncoderHintHeader, ch.enc.Hint().String())
 
-	response, err := ch.client.Request(ctx, timeout*2, ch.nodeInfoURL, nil, headers)
+	response, err := ch.client.Get(ctx, timeout*2, ch.nodeInfoURL, nil, headers)
 	defer func() {
 		if response == nil {
 			return
@@ -263,7 +263,7 @@ func (ch *Channel) blockData(ctx context.Context, p string) (io.ReadCloser, func
 	u := ch.getBlockData
 	u.Path = u.Path + "/" + stripSlashFilePath(p)
 
-	response, err := ch.client.Request(ctx, time.Minute, u.String(), nil, headers)
+	response, err := ch.client.Get(ctx, time.Minute, u.String(), nil, headers)
 	closeFunc := func() error {
 		if response == nil {
 			return nil

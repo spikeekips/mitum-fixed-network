@@ -58,15 +58,25 @@ func NewPrimitiveQuicServer(bind string, certs []tls.Certificate) (*PrimitiveQui
 	return qs, nil
 }
 
-func (qs *PrimitiveQuicServer) SetHandler(prefix string, handler network.HTTPHandlerFunc) *mux.Route {
+func (qs *PrimitiveQuicServer) Handler(prefix string) *mux.Route {
 	var route *mux.Route
 	if prefix == "" || prefix == "/" {
 		route = qs.router.Get("root")
+	} else if i := qs.router.Get(prefix); i == nil {
+		route = qs.router.Name(prefix).Path(prefix)
 	} else {
-		route = qs.router.NewRoute()
+		route = i
 	}
 
-	return route.Path(prefix).HandlerFunc(handler)
+	return route
+}
+
+func (qs *PrimitiveQuicServer) SetHandlerFunc(prefix string, f network.HTTPHandlerFunc) *mux.Route {
+	return qs.SetHandler(prefix, http.HandlerFunc(f))
+}
+
+func (qs *PrimitiveQuicServer) SetHandler(prefix string, handler http.Handler) *mux.Route {
+	return qs.Handler(prefix).Handler(handler)
 }
 
 func (qs *PrimitiveQuicServer) SetLogger(l logging.Logger) logging.Logger {

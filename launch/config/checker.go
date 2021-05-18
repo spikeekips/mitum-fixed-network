@@ -5,7 +5,9 @@ import (
 	"time"
 
 	"github.com/spikeekips/mitum/isaac"
+	"github.com/spikeekips/mitum/util"
 	"github.com/spikeekips/mitum/util/logging"
+	"golang.org/x/xerrors"
 )
 
 type checker struct {
@@ -62,6 +64,12 @@ func (cc *checker) CheckLocalNetwork() (bool, error) {
 
 	if conf.SealCache() == nil {
 		if err := conf.SetSealCache(DefaultLocalNetworkSealCache); err != nil {
+			return false, err
+		}
+	}
+
+	if conf.RateLimit() != nil {
+		if err := cc.checkRateLimit(); err != nil {
 			return false, err
 		}
 	}
@@ -143,4 +151,26 @@ func (cc *checker) CheckPolicy() (bool, error) {
 	}
 
 	return true, nil
+}
+
+func (cc *checker) checkRateLimit() error {
+	rcc := NewRateLimitChecker(
+		cc.ctx,
+		cc.config.Network().RateLimit(),
+		map[string]RateLimitRules{
+			"suffrage": NewBaseRateLimitRules(DefaultSuffrageRateLimit),
+			"world":    NewBaseRateLimitRules(DefaultWorldRateLimit),
+		},
+	)
+
+	if err := util.NewChecker("config-ratelimit-checker", []util.CheckerFunc{
+		rcc.Initialize,
+		rcc.Check,
+	}).Check(); err != nil {
+		if !xerrors.Is(err, util.IgnoreError) {
+			return err
+		}
+	}
+
+	return cc.config.Network().SetRateLimit(rcc.Config())
 }

@@ -1,7 +1,6 @@
 package blockdata
 
 import (
-	"bufio"
 	"io"
 
 	"github.com/spikeekips/mitum/base"
@@ -10,10 +9,10 @@ import (
 	"github.com/spikeekips/mitum/base/operation"
 	"github.com/spikeekips/mitum/base/state"
 	"github.com/spikeekips/mitum/storage"
+	"github.com/spikeekips/mitum/util"
 	"github.com/spikeekips/mitum/util/encoder"
 	"github.com/spikeekips/mitum/util/hint"
 	"github.com/spikeekips/mitum/util/tree"
-	"golang.org/x/xerrors"
 )
 
 var (
@@ -192,7 +191,7 @@ func (bd DefaultWriter) read(r io.Reader) ([]byte, error) {
 }
 
 func (bd DefaultWriter) readlines(r io.Reader, callback func([]byte) error) error {
-	return Readlines(r, callback)
+	return util.Readlines(r, callback)
 }
 
 func (bd DefaultWriter) writeItem(w io.Writer, v interface{}) error {
@@ -206,47 +205,11 @@ func (bd DefaultWriter) writeItem(w io.Writer, v interface{}) error {
 }
 
 func (bd DefaultWriter) writeItems(w io.Writer, get func() (interface{}, error)) error {
-	return Writeline(w, func() ([]byte, error) {
+	return util.Writeline(w, func() ([]byte, error) {
 		if i, err := get(); err != nil {
 			return nil, err
 		} else {
 			return bd.encoder.Marshal(i)
 		}
 	})
-}
-
-func Writeline(w io.Writer, get func() ([]byte, error)) error {
-	for {
-		if i, err := get(); err != nil {
-			if xerrors.Is(err, io.EOF) {
-				break
-			}
-
-			return err
-		} else if _, err := w.Write(append(i, []byte("\n")...)); err != nil {
-			return err
-		}
-	}
-
-	return nil
-}
-
-func Readlines(r io.Reader, callback func([]byte) error) error {
-	br := bufio.NewReader(r)
-	for {
-		l, err := br.ReadBytes('\n')
-		if err != nil {
-			if xerrors.Is(err, io.EOF) {
-				break
-			}
-
-			return err
-		}
-
-		if err := callback(l); err != nil {
-			return err
-		}
-	}
-
-	return nil
 }

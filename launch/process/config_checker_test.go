@@ -121,6 +121,267 @@ network:
 	}
 }
 
+func (t *testConfigChecker) TestRateLimitWrongCache() {
+	y := `
+network:
+  url: quic://local:54323
+  bind: quic://local:54324
+  rate-limit:
+    cache: gcache:?type=lru&size=33&expire=44s
+`
+	ctx := context.Background()
+	ctx = context.WithValue(ctx, ContextValueConfigSource, []byte(y))
+	ctx = context.WithValue(ctx, ContextValueConfigSourceType, "yaml")
+
+	ps := t.ps(ctx)
+	err := ps.Run()
+
+	t.Contains(err.Error(), "unknown ratelimit cache uri")
+}
+
+func (t *testConfigChecker) TestRateLimitCache() {
+	y := `
+network:
+  url: quic://local:54323
+  bind: quic://local:54324
+  rate-limit:
+    cache: memory:?prefix=showme
+`
+	ctx := context.Background()
+	ctx = context.WithValue(ctx, ContextValueConfigSource, []byte(y))
+	ctx = context.WithValue(ctx, ContextValueConfigSourceType, "yaml")
+
+	ps := t.ps(ctx)
+	t.NoError(ps.Run())
+
+	cc, err := config.NewChecker(ps.Context())
+	t.NoError(err)
+	_, err = cc.CheckLocalNetwork()
+	t.NoError(err)
+
+	var conf config.LocalNode
+	t.NoError(config.LoadConfigContextValue(ps.Context(), &conf))
+
+	t.NotNil(conf.Network())
+	t.NotNil(conf.Network().RateLimit())
+
+	t.Equal("memory:?prefix=showme", conf.Network().RateLimit().Cache().String())
+}
+
+func (t *testConfigChecker) TestEmptyRateLimit() {
+	y := `
+network:
+  url: quic://local:54323
+  bind: quic://local:54324
+`
+	ctx := context.Background()
+	ctx = context.WithValue(ctx, ContextValueConfigSource, []byte(y))
+	ctx = context.WithValue(ctx, ContextValueConfigSourceType, "yaml")
+
+	ps := t.ps(ctx)
+	t.NoError(ps.Run())
+
+	cc, err := config.NewChecker(ps.Context())
+	t.NoError(err)
+	_, err = cc.CheckLocalNetwork()
+	t.NoError(err)
+
+	var conf config.LocalNode
+	t.NoError(config.LoadConfigContextValue(ps.Context(), &conf))
+
+	t.NotNil(conf.Network())
+	t.Nil(conf.Network().RateLimit())
+}
+
+func (t *testConfigChecker) TestRateLimit() {
+	y := `
+network:
+  url: quic://local:54323
+  bind: quic://local:54324
+
+  rate-limit:
+    preset:
+      suffrage:
+         blockdata-maps: 700/3m
+         blockdata: 80/4m
+
+      world:
+         send-seal: 300/2m
+         blockdata: 60/1m
+
+      others:
+         blockdata: 60/1m
+
+    192.168.3.3:
+      preset: world
+
+    192.168.1.0/24:
+      preset: suffrage
+      send-seal: 222/1s
+      blockdata-maps: 333/2s
+`
+	ctx := context.Background()
+	ctx = context.WithValue(ctx, ContextValueConfigSource, []byte(y))
+	ctx = context.WithValue(ctx, ContextValueConfigSourceType, "yaml")
+
+	ps := t.ps(ctx)
+	t.NoError(ps.Run())
+
+	cc, err := config.NewChecker(ps.Context())
+	t.NoError(err)
+	_, err = cc.CheckLocalNetwork()
+	t.NoError(err)
+
+	var conf config.LocalNode
+	t.NoError(config.LoadConfigContextValue(ps.Context(), &conf))
+
+	t.NotNil(conf.Network())
+	t.NotNil(conf.Network().RateLimit())
+
+	rc := conf.Network().RateLimit()
+	t.Equal(int64(80), rc.Preset()["suffrage"].Rules()["blockdata"].Limit)
+	t.Equal(time.Minute*4, rc.Preset()["suffrage"].Rules()["blockdata"].Period)
+
+	// the not defined set from default
+	t.Equal(config.DefaultSuffrageRateLimit["send-seal"].Limit, rc.Preset()["suffrage"].Rules()["send-seal"].Limit)
+	t.Equal(config.DefaultSuffrageRateLimit["send-seal"].Period, rc.Preset()["suffrage"].Rules()["send-seal"].Period)
+
+	// the not defined set from default world or suffrage
+	var found bool
+	_, found = rc.Preset()["others"].Rules()["send-seal"]
+	t.False(found)
+	t.Equal(int64(60), rc.Preset()["others"].Rules()["blockdata"].Limit)
+	t.Equal(time.Minute*1, rc.Preset()["others"].Rules()["blockdata"].Period)
+
+	t.Equal("192.168.1.0/24", rc.Rules()[1].Target())
+	t.Equal(int64(222), rc.Rules()[1].Rules()["send-seal"].Limit)
+	t.Equal(time.Second, rc.Rules()[1].Rules()["send-seal"].Period)
+	t.Equal("192.168.1.0/24", rc.Rules()[1].IPNet().String())
+}
+
+func (t *testConfigChecker) TestRateLimitEmptyRules() {
+	y := `
+network:
+  url: quic://local:54323
+  bind: quic://local:54324
+
+  rate-limit:
+    preset:
+      suffrage:
+         blockdata-maps: 700/3m
+         blockdata: 80/4m
+
+      world:
+         send-seal: 300/2m
+         blockdata: 60/1m
+
+      others:
+         blockdata: 60/1m
+`
+	ctx := context.Background()
+	ctx = context.WithValue(ctx, ContextValueConfigSource, []byte(y))
+	ctx = context.WithValue(ctx, ContextValueConfigSourceType, "yaml")
+
+	ps := t.ps(ctx)
+	t.NoError(ps.Run())
+
+	cc, err := config.NewChecker(ps.Context())
+	t.NoError(err)
+	_, err = cc.CheckLocalNetwork()
+	t.NoError(err)
+
+	var conf config.LocalNode
+	t.NoError(config.LoadConfigContextValue(ps.Context(), &conf))
+
+	t.NotNil(conf.Network())
+	t.NotNil(conf.Network().RateLimit())
+
+	rc := conf.Network().RateLimit()
+
+	t.Empty(rc.Rules())
+}
+
+func (t *testConfigChecker) TestRateLimitEmptyRule() {
+	y := `
+network:
+  url: quic://local:54323
+  bind: quic://local:54324
+
+  rate-limit:
+      192.168.0.1:
+`
+	ctx := context.Background()
+	ctx = context.WithValue(ctx, ContextValueConfigSource, []byte(y))
+	ctx = context.WithValue(ctx, ContextValueConfigSourceType, "yaml")
+
+	ps := t.ps(ctx)
+	t.NoError(ps.Run())
+
+	cc, err := config.NewChecker(ps.Context())
+	t.NoError(err)
+	_, err = cc.CheckLocalNetwork()
+	t.NoError(err)
+
+	var conf config.LocalNode
+	t.NoError(config.LoadConfigContextValue(ps.Context(), &conf))
+
+	t.NotNil(conf.Network())
+	t.NotNil(conf.Network().RateLimit())
+
+	rc := conf.Network().RateLimit()
+
+	t.Equal(1, len(rc.Rules()))
+
+	r := rc.Rules()[0]
+	t.Equal("192.168.0.1", r.Target())
+	t.Equal("", r.Preset())
+	t.Empty(r.Rules())
+}
+
+func (t *testConfigChecker) TestRateLimitRuleWithoutPreset() {
+	y := `
+network:
+  url: quic://local:54323
+  bind: quic://local:54324
+
+  rate-limit:
+    192.168.0.1:
+      send-seal: 222/2s
+      seals: 333/3s
+`
+	ctx := context.Background()
+	ctx = context.WithValue(ctx, ContextValueConfigSource, []byte(y))
+	ctx = context.WithValue(ctx, ContextValueConfigSourceType, "yaml")
+
+	ps := t.ps(ctx)
+	t.NoError(ps.Run())
+
+	cc, err := config.NewChecker(ps.Context())
+	t.NoError(err)
+	_, err = cc.CheckLocalNetwork()
+	t.NoError(err)
+
+	var conf config.LocalNode
+	t.NoError(config.LoadConfigContextValue(ps.Context(), &conf))
+
+	t.NotNil(conf.Network())
+	t.NotNil(conf.Network().RateLimit())
+
+	rc := conf.Network().RateLimit()
+
+	t.Equal(1, len(rc.Rules()))
+
+	r := rc.Rules()[0]
+	t.Equal("192.168.0.1", r.Target())
+	t.Equal("", r.Preset())
+	t.Equal(2, len(r.Rules()))
+
+	t.Equal(int64(222), r.Rules()["send-seal"].Limit)
+	t.Equal(time.Second*2, r.Rules()["send-seal"].Period)
+	t.Equal(int64(333), r.Rules()["seals"].Limit)
+	t.Equal(time.Second*3, r.Rules()["seals"].Period)
+}
+
 func (t *testConfigChecker) TestEmptyStorage() {
 	y := `
 storage:

@@ -10,7 +10,7 @@ require (
 	github.com/btcsuite/btcd v0.21.0-beta
 	github.com/btcsuite/btcutil v1.0.2
 	github.com/ethereum/go-ethereum v1.10.3
-	github.com/google/go-cmp v0.5.5 // indirect
+	github.com/go-redis/redis/v8 v8.8.3
 	github.com/gorilla/mux v1.8.0
 	github.com/hashicorp/golang-lru v0.5.5-0.20210104140557-80c98217689d
 	github.com/json-iterator/go v1.1.11
@@ -27,6 +27,7 @@ require (
 	github.com/stellar/go v0.0.0-20210507171507-23cb3ea686d3
 	github.com/stretchr/testify v1.7.0
 	github.com/syndtr/goleveldb v1.0.1-0.20210305035536-64b5b1c73954
+	github.com/ulule/limiter/v3 v3.8.0
 	github.com/youmark/pkcs8 v0.0.0-20201027041543-1326539a0a0a // indirect
 	go.mongodb.org/mongo-driver v1.5.2
 	go.uber.org/automaxprocs v1.4.0

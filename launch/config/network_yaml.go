@@ -3,14 +3,16 @@ package config
 type BaseLocalNetworkPackerYAML struct {
 	URL       string
 	Bind      string
-	Cache     string `yaml:"cache,omitempty"`
-	SealCache string `yaml:"seal-cache,omitempty"`
+	Cache     string    `yaml:"cache,omitempty"`
+	SealCache string    `yaml:"seal-cache,omitempty"`
+	RateLimit RateLimit `yaml:"rate-limit,omitempty"`
 }
 
 func (no BaseLocalNetwork) MarshalYAML() (interface{}, error) {
 	nno := BaseLocalNetworkPackerYAML{
-		URL:  no.URL().String(),
-		Bind: no.Bind().String(),
+		URL:       no.URL().String(),
+		Bind:      no.Bind().String(),
+		RateLimit: no.RateLimit(),
 	}
 
 	if no.Cache() != nil {

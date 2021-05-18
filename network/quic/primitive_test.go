@@ -47,7 +47,7 @@ func (t *testPrimitiveQuicServer) readyServer(handlers map[string]network.HTTPHa
 	t.NoError(err)
 
 	for prefix, handler := range handlers {
-		qn.SetHandler(prefix, handler)
+		qn.SetHandlerFunc(prefix, handler)
 	}
 
 	t.NoError(qn.Start())
@@ -87,7 +87,7 @@ func (t *testPrimitiveQuicServer) TestGet() {
 	client, err := NewQuicClient(true, nil)
 	t.NoError(err)
 
-	response, err := client.Request(context.Background(), time.Second*3, t.url.String()+"/get", nil, nil)
+	response, err := client.Get(context.Background(), time.Second*3, t.url.String()+"/get", nil, nil)
 	t.NoError(err)
 	defer response.Close()
 

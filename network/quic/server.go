@@ -119,11 +119,11 @@ func (sv *Server) SetBlockDataHandler(fn network.BlockDataHandler) {
 }
 
 func (sv *Server) setHandlers() {
-	_ = sv.SetHandler(QuicHandlerPathGetSeals, sv.handleGetSeals).Methods("POST")
-	_ = sv.SetHandler(QuicHandlerPathSendSeal, sv.handleNewSeal).Methods("POST")
-	_ = sv.SetHandler(QuicHandlerPathGetBlockDataMaps, sv.handleGetBlockDataMaps).Methods("POST")
-	_ = sv.SetHandler(QuicHandlerPathGetBlockDataPattern, sv.handleGetBlockData).Methods("GET")
-	_ = sv.SetHandler(QuicHandlerPathNodeInfo, sv.handleNodeInfo)
+	_ = sv.SetHandlerFunc(QuicHandlerPathGetSeals, sv.handleGetSeals).Methods("POST")
+	_ = sv.SetHandlerFunc(QuicHandlerPathSendSeal, sv.handleNewSeal).Methods("POST")
+	_ = sv.SetHandlerFunc(QuicHandlerPathGetBlockDataMaps, sv.handleGetBlockDataMaps).Methods("POST")
+	_ = sv.SetHandlerFunc(QuicHandlerPathGetBlockDataPattern, sv.handleGetBlockData).Methods("GET")
+	_ = sv.SetHandlerFunc(QuicHandlerPathNodeInfo, sv.handleNodeInfo)
 }
 
 func (sv *Server) handleGetSeals(w http.ResponseWriter, r *http.Request) {

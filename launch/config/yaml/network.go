@@ -19,6 +19,7 @@ type LocalNetwork struct {
 	CertFile    *string                `yaml:"cert,omitempty"`
 	Cache       *string                `yaml:",omitempty"`
 	SealCache   *string                `yaml:"seal-cache,omitempty"`
+	RateLimit   *RateLimit             `yaml:"rate-limit,omitempty"`
 	Extras      map[string]interface{} `yaml:",inline"`
 }
 
@@ -60,6 +61,14 @@ func (no LocalNetwork) Set(ctx context.Context) (context.Context, error) {
 	if no.SealCache != nil {
 		if err := conf.SetSealCache(*no.SealCache); err != nil {
 			return ctx, err
+		}
+	}
+
+	if no.RateLimit != nil {
+		if i, err := no.RateLimit.Set(ctx); err != nil {
+			return ctx, err
+		} else {
+			ctx = i
 		}
 	}
 

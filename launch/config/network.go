@@ -52,6 +52,8 @@ type LocalNetwork interface {
 	SetCache(string) error
 	SealCache() *url.URL
 	SetSealCache(string) error
+	RateLimit() RateLimit
+	SetRateLimit(RateLimit) error
 }
 
 type BaseLocalNetwork struct {
@@ -60,6 +62,7 @@ type BaseLocalNetwork struct {
 	certs     []tls.Certificate
 	cache     *url.URL
 	sealCache *url.URL
+	rateLimit RateLimit
 }
 
 func EmptyBaseLocalNetwork() *BaseLocalNetwork {
@@ -130,4 +133,14 @@ func (no *BaseLocalNetwork) SetSealCache(s string) error {
 
 		return nil
 	}
+}
+
+func (no BaseLocalNetwork) RateLimit() RateLimit {
+	return no.rateLimit
+}
+
+func (no *BaseLocalNetwork) SetRateLimit(s RateLimit) error {
+	no.rateLimit = s
+
+	return nil
 }

@@ -23,6 +23,8 @@ var defaultHooks = []pm.Hook{
 		process.HookNameAddHinters, process.HookAddHinters(process.DefaultHinters)),
 	pm.NewHook(pm.HookPrefixPost, process.ProcessNameNetwork,
 		process.HookNameSetNetworkHandlers, process.HookSetNetworkHandlers),
+	pm.NewHook(pm.HookPrefixPost, process.ProcessNameNetwork,
+		process.HookNameNetworkRateLimit, process.HookNetworkRateLimit),
 	pm.NewHook(pm.HookPrefixPost, process.ProcessNameLocalNode, process.HookNameSetPolicy, process.HookSetPolicy),
 	pm.NewHook(pm.HookPrefixPost, process.ProcessNameLocalNode, process.HookNameNodepool, process.HookNodepool),
 	pm.NewHook(pm.HookPrefixPre, process.ProcessNameBlockData,

@@ -5,13 +5,20 @@ import (
 )
 
 func (ht Hint) MarshalJSON() ([]byte, error) {
-	return util.JSON.Marshal(ht.String())
+	var i interface{}
+	if err := ht.Type().IsValid(nil); err == nil {
+		i = ht.String()
+	}
+
+	return util.JSON.Marshal(i)
 }
 
 func (ht *Hint) UnmarshalJSON(b []byte) error {
 	var s string
 	if err := util.JSON.Unmarshal(b, &s); err != nil {
 		return err
+	} else if len(s) < 1 {
+		return nil
 	}
 
 	if h, err := NewHintFromString(s); err != nil {

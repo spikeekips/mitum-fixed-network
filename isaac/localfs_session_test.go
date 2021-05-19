@@ -69,7 +69,7 @@ func (t *testBlockDataLocalFSSession) TestAddOperationsFinishedWithClose() {
 	defer ss.Cancel()
 
 	local := t.Locals(1)[0]
-	ops := t.NewOperations(local, 3)
+	ops := t.NewOperations(local, 10)
 
 	t.NoError(ss.AddOperations(ops...))
 	t.NoError(ss.CloseOperations())
@@ -81,7 +81,7 @@ func (t *testBlockDataLocalFSSession) TestAddOperationsFinishedWithClose() {
 
 	uops, err := writer.ReadOperations(r)
 	t.NoError(err)
-	t.Equal(3, len(uops))
+	t.Equal(len(ops), len(uops))
 
 	for i := range ops {
 		a := ops[i]

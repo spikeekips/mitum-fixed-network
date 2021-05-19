@@ -3,19 +3,28 @@ package util
 import (
 	"compress/gzip"
 	"io"
+	"sync"
 )
 
 // GzipWriter closes the underlying reader too.
 type GzipWriter struct {
+	sync.Mutex
 	*gzip.Writer
 	f io.Writer
 }
 
-func NewGzipWriter(f io.Writer) GzipWriter {
-	return GzipWriter{f: f, Writer: gzip.NewWriter(f)}
+func NewGzipWriter(f io.Writer) *GzipWriter {
+	return &GzipWriter{f: f, Writer: gzip.NewWriter(f)}
 }
 
-func (w GzipWriter) Close() error {
+func (w *GzipWriter) Write(p []byte) (int, error) {
+	w.Lock()
+	defer w.Unlock()
+
+	return w.Writer.Write(p)
+}
+
+func (w *GzipWriter) Close() error {
 	if err := w.Writer.Close(); err != nil {
 		return err
 	}

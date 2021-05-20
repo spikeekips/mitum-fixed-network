@@ -88,7 +88,7 @@ func (t *testBlockV0DummyGenerator) TestCreate() {
 		hashes := map[string]struct{}{}
 		for nodeid, l := range all {
 			bs := l.BlockData().(*localfs.BlockData)
-			blk, err := localfs.LoadBlock(bs, base.Height(i))
+			_, blk, err := localfs.LoadBlock(bs, base.Height(i))
 			t.NoError(err)
 
 			t.NoError(err, "node=%d height=%d", nodeid, i)

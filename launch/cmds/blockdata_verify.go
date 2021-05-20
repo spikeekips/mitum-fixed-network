@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"strings"
 
 	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/base/block"
@@ -115,7 +114,7 @@ func (cmd *BlockDataVerifyCommand) checkLastHeight() error {
 
 func (cmd *BlockDataVerifyCommand) loadManifest(height base.Height) (block.Manifest, error) {
 	var manifest block.Manifest
-	if i, err := localfs.LoadData(cmd.bd.(*localfs.BlockData), height, block.BlockDataManifest); err != nil {
+	if _, i, err := localfs.LoadData(cmd.bd.(*localfs.BlockData), height, block.BlockDataManifest); err != nil {
 		return nil, err
 	} else {
 		defer func() {
@@ -174,7 +173,7 @@ func (cmd *BlockDataVerifyCommand) loadBlock(height base.Height) (block.Block, e
 		return ctx.Int64("height", height.Int64())
 	})
 
-	if i, err := localfs.LoadBlock(cmd.bd.(*localfs.BlockData), height); err != nil {
+	if _, i, err := localfs.LoadBlock(cmd.bd.(*localfs.BlockData), height); err != nil {
 		l.Error().Err(err).Msg("failed to load block")
 
 		return nil, err
@@ -272,22 +271,17 @@ func (cmd *BlockDataVerifyCommand) checkBlockFile(height base.Height, dataType s
 		f = matches[0]
 	}
 
-	y := strings.ReplaceAll(filepath.Base(f), "-", " ")
-	y = strings.ReplaceAll(y, ".", " ")
-
-	var a int
-	var b string
-	var c string
-	if n, err := fmt.Sscanf(y+"\n", "%d %s %s", &a, &b, &c); err != nil {
+	var checksum string
+	if _, _, c, err := localfs.ParseDataFileName(f); err != nil {
 		return err
-	} else if n != 3 {
-		return xerrors.Errorf("invalid file format: %s", f)
+	} else {
+		checksum = c
 	}
 
 	if i, err := util.GenerateFileChecksum(f); err != nil {
 		return err
-	} else if c != i {
-		return xerrors.Errorf("file checksum does not match; %s != %s", c, i)
+	} else if checksum != i {
+		return xerrors.Errorf("file checksum does not match; %s != %s", checksum, i)
 	}
 
 	return nil

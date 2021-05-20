@@ -1,8 +1,6 @@
 package pm
 
 import (
-	"context"
-
 	"golang.org/x/xerrors"
 )
 
@@ -61,8 +59,4 @@ func (ho Hook) Add(ps *Processes) error {
 	default:
 		return ps.AddHook(ho.Prefix, ho.Process, ho.Name, ho.F, ho.Override)
 	}
-}
-
-func EmptyHookFunc(ctx context.Context) (context.Context, error) {
-	return ctx, nil
 }

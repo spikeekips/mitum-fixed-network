@@ -18,7 +18,7 @@ func (t *testBlock) TestBlockIsValid() {
 	local := t.Locals(1)[0]
 
 	bs := local.BlockData().(*localfs.BlockData)
-	blk, err := localfs.LoadBlock(bs, 2)
+	_, blk, err := localfs.LoadBlock(bs, 2)
 	t.NoError(err)
 	t.NotNil(blk)
 

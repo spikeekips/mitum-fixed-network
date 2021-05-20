@@ -339,9 +339,12 @@ func (pm *Processes) runProcessHook(hook, from string) error {
 		return ctx.Str("hook", hook).Str("from", from)
 	})
 
-	if f, found := pm.hooks[hook]; !found {
+	switch f, found := pm.hooks[hook]; {
+	case !found:
 		return xerrors.Errorf("hook, %q not found", hook)
-	} else {
+	case f == nil:
+		return nil
+	default:
 		if ctx, err := f(pm.ctx); err != nil {
 			return xerrors.Errorf("failed to emit hook of %q(%s): %w", hook, from, err)
 		} else {

@@ -53,7 +53,7 @@ func NewCleanStorageCommand(dryrun bool) CleanStorageCommand {
 		pm.HookPrefixPre,
 		process.ProcessNameGenerateGenesisBlock,
 		process.HookNameCheckGenesisBlock,
-		pm.DisabledProcessFunc,
+		nil,
 		true,
 	); err != nil {
 		panic(err)

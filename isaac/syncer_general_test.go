@@ -354,7 +354,7 @@ func (t *testGeneralSyncer) TestSaveBlocks() {
 	for i := baseHeight + 1; i < target+1; i++ {
 		t.True(local.BlockData().Exists(i))
 
-		blk, err := localfs.LoadBlock(local.BlockData().(*localfs.BlockData), i)
+		_, blk, err := localfs.LoadBlock(local.BlockData().(*localfs.BlockData), i)
 		t.NoError(err)
 		t.Equal(blk.Height(), i)
 	}

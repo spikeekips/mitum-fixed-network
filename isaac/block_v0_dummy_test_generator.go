@@ -182,7 +182,7 @@ func (bg *DummyBlocksV0Generator) syncBlocks(from *Local) error {
 
 end:
 	for {
-		switch blk, err := localfs.LoadBlock(fbs, height); {
+		switch _, blk, err := localfs.LoadBlock(fbs, height); {
 		case err != nil:
 			if xerrors.Is(err, util.NotFoundError) {
 				break end

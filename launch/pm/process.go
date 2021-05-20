@@ -20,15 +20,13 @@ type BaseProcess struct {
 	name     string
 	requires []string
 	f        ProcessFunc
-	disabled bool
 }
 
 func NewDisabledProcess(process Process) BaseProcess {
 	return BaseProcess{
 		name:     process.Name(),
 		requires: process.Requires(),
-		f:        DisabledProcessFunc,
-		disabled: true,
+		f:        nil,
 	}
 }
 
@@ -74,9 +72,5 @@ func (pr BaseProcess) Run(ctx context.Context) (context.Context, error) {
 }
 
 func (pr BaseProcess) Disabled() bool {
-	return pr.disabled
-}
-
-func DisabledProcessFunc(ctx context.Context) (context.Context, error) {
-	return ctx, nil
+	return pr.f == nil
 }

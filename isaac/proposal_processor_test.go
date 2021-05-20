@@ -221,7 +221,7 @@ func (t *testDefaultProposalProcessor) TestSave() {
 	t.NoError(err)
 	t.True(found)
 
-	f, err := localfs.LoadData(t.local.BlockData().(*localfs.BlockData), pr.Height(), block.BlockDataManifest)
+	_, f, err := localfs.LoadData(t.local.BlockData().(*localfs.BlockData), pr.Height(), block.BlockDataManifest)
 	t.NoError(err)
 	t.NotNil(f)
 	defer f.Close()

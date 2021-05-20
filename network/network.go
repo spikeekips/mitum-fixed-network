@@ -20,7 +20,7 @@ type (
 	GetStateHandler      func(string) (state.State, bool, error)
 	NodeInfoHandler      func() (NodeInfo, error)
 	BlockDataMapsHandler func([]base.Height) ([]block.BlockDataMap, error)
-	BlockDataHandler     func(string) (io.ReadCloser, func() error, error)
+	BlockDataHandler     func(string) (io.Reader, func() error, error)
 )
 
 type Server interface {

@@ -24,7 +24,7 @@ import (
 	"github.com/spikeekips/mitum/storage/blockdata"
 	"github.com/spikeekips/mitum/storage/blockdata/localfs"
 	"github.com/spikeekips/mitum/util"
-	jsonenc "github.com/spikeekips/mitum/util/encoder/json"
+	"github.com/spikeekips/mitum/util/hint"
 )
 
 var allBlockData = "all"
@@ -47,10 +47,16 @@ type BlockDownloadCommand struct {
 	bd         blockdata.BlockData
 }
 
-func NewBlockDownloadCommand() BlockDownloadCommand {
-	return BlockDownloadCommand{
+func NewBlockDownloadCommand(hinters []hint.Hinter) BlockDownloadCommand {
+	cmd := BlockDownloadCommand{
 		BaseCommand: NewBaseCommand("block-download"),
 	}
+
+	if _, err := cmd.LoadEncoders(hinters); err != nil {
+		panic(err)
+	}
+
+	return cmd
 }
 
 func (cmd *BlockDownloadCommand) Run(version util.Version) error {
@@ -277,7 +283,11 @@ func (cmd *BlockDownloadCommand) printBlockDataMaps(heights []base.Height) error
 
 	cmd.Log().Debug().Msg("block data maps thru channel")
 	for i := range maps {
-		_, _ = fmt.Fprintln(os.Stdout, jsonenc.ToString(maps[i]))
+		if b, err := cmd.jsonenc.Marshal(maps[i]); err != nil {
+			return err
+		} else {
+			_, _ = fmt.Fprintln(os.Stdout, string(b))
+		}
 	}
 
 	return nil
@@ -329,7 +339,7 @@ func (cmd *BlockDownloadCommand) printBlockData(m block.BlockDataMap, items []bl
 		s := fmt.Sprintf("{\"height\": %d, \"data_type\": %q}\n", m.Height(), item.Type())
 		if j, err := cmd.printBlockDataItem(item); err != nil {
 			return err
-		} else if b, err := jsonenc.MarshalIndent(j); err != nil {
+		} else if b, err := cmd.jsonenc.Marshal(j); err != nil {
 			return err
 		} else {
 			s += string(b)

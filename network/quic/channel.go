@@ -245,7 +245,7 @@ func (ch *Channel) BlockData(ctx context.Context, item block.BlockDataMapItem) (
 	defer cancel()
 
 	return network.FetchBlockDataThruChannel(
-		func(p string) (io.ReadCloser, func() error, error) {
+		func(p string) (io.Reader, func() error, error) {
 			return ch.blockData(ctx, p)
 		},
 		item,

@@ -184,7 +184,8 @@ func HeightDirectory(height base.Height) string {
 }
 
 func ParseDataFileName(s string) (base.Height, string /* data type */, string /* checksum */, error) {
-	y := strings.ReplaceAll(filepath.Base(s), "-", " ")
+	o := filepath.Base(s)
+	y := strings.ReplaceAll(o, "-", " ")
 	y = strings.ReplaceAll(y, ".", " ")
 
 	var a int64
@@ -194,6 +195,10 @@ func ParseDataFileName(s string) (base.Height, string /* data type */, string /*
 		return base.NilHeight, "", "", err
 	} else if n != 3 {
 		return base.NilHeight, "", "", xerrors.Errorf("invalid file format: %s", s)
+	}
+
+	if strings.HasPrefix(o, "-") {
+		a *= -1
 	}
 
 	return base.Height(a), b, c, nil

@@ -229,7 +229,7 @@ func (t *testGeneralSyncer) TestFetchBlocksButSomeNodesFailed() {
 		ch := ls[i+2].Node().Channel().(*channetwork.Channel)
 
 		orig := ch.GetBlockDataHandler()
-		ch.SetBlockDataHandler(func(p string) (io.ReadCloser, func() error, error) {
+		ch.SetBlockDataHandler(func(p string) (io.Reader, func() error, error) {
 			bp := filepath.Base(p)
 
 			if !strings.Contains(p, "manifest") {
@@ -584,7 +584,7 @@ func (t *testGeneralSyncer) TestMissingBlocks() {
 	missing := target - 1
 	ch := rn0.Node().Channel().(*channetwork.Channel)
 	orig := ch.GetBlockDataHandler()
-	ch.SetBlockDataHandler(func(p string) (io.ReadCloser, func() error, error) {
+	ch.SetBlockDataHandler(func(p string) (io.Reader, func() error, error) {
 		bp := filepath.Base(p)
 
 		if strings.Contains(p, "manifest") {

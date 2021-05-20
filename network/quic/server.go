@@ -362,20 +362,28 @@ func (sv *Server) handleGetBlockData(w http.ResponseWriter, r *http.Request) {
 	}); err != nil {
 		handleError(w, err)
 	} else {
-		var j io.ReadCloser
+		var j io.Reader
 		var closefunc func() error
 		{
 			l := v.([]interface{})
-			j = l[0].(io.ReadCloser)
-			closefunc = l[1].(func() error)
+			if l[0] != nil {
+				j = l[0].(io.Reader)
+			}
+
+			if l[1] != nil {
+				closefunc = l[1].(func() error)
+			}
 		}
 
-		defer func() {
-			_ = j.Close()
-			_ = closefunc()
-		}()
+		if closefunc != nil {
+			defer func() {
+				_ = closefunc()
+			}()
+		}
 
-		if _, err := io.Copy(w, j); err != nil {
+		if j == nil {
+			network.HTTPError(w, http.StatusInternalServerError)
+		} else if _, err := io.Copy(w, j); err != nil {
 			network.HTTPError(w, http.StatusInternalServerError)
 		}
 	}

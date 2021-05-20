@@ -322,7 +322,7 @@ func (t *testQuicServer) TestEmptyBlockData() {
 	qn := t.readyServer()
 	defer qn.Stop()
 
-	qn.SetBlockDataHandler(func(p string) (io.ReadCloser, func() error, error) {
+	qn.SetBlockDataHandler(func(p string) (io.Reader, func() error, error) {
 		return nil, func() error { return nil }, nil
 	})
 
@@ -338,7 +338,7 @@ func (t *testQuicServer) TestGetBlockDataWithError() {
 	qn := t.readyServer()
 	defer qn.Stop()
 
-	qn.SetBlockDataHandler(func(p string) (io.ReadCloser, func() error, error) {
+	qn.SetBlockDataHandler(func(p string) (io.Reader, func() error, error) {
 		return nil, func() error { return nil }, util.NotFoundError
 	})
 
@@ -371,8 +371,8 @@ func (t *testQuicServer) TestGetBlockData() {
 		os.Remove(f.Name())
 	}()
 
-	qn.SetBlockDataHandler(func(p string) (io.ReadCloser, func() error, error) {
-		return f, func() error { return nil }, nil
+	qn.SetBlockDataHandler(func(p string) (io.Reader, func() error, error) {
+		return f, f.Close, nil
 	})
 
 	qc, err := NewChannel(t.url.String(), 2, nil, t.encs, t.enc)

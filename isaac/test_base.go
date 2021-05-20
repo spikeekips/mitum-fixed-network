@@ -119,11 +119,11 @@ func (t *BaseTest) SetupNodes(local *Local, others []*Local) {
 
 			return bds, nil
 		})
-		nch.SetBlockDataHandler(func(p string) (io.ReadCloser, func() error, error) {
+		nch.SetBlockDataHandler(func(p string) (io.Reader, func() error, error) {
 			if i, err := st.BlockData().FS().Open(p); err != nil {
 				return nil, nil, err
 			} else {
-				return i, func() error { return nil }, nil
+				return i, i.Close, nil
 			}
 		})
 	}

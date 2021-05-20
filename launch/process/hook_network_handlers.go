@@ -283,11 +283,11 @@ func (sn *SettingNetworkHandlers) networkHandlerBlockDataMaps() network.BlockDat
 }
 
 func (sn *SettingNetworkHandlers) networkHandlerBlockData() network.BlockDataHandler {
-	return func(p string) (io.ReadCloser, func() error, error) {
+	return func(p string) (io.Reader, func() error, error) {
 		if i, err := sn.blockData.FS().Open(p); err != nil {
 			return nil, func() error { return nil }, err
 		} else {
-			return i, func() error { return nil }, err
+			return i, i.Close, nil
 		}
 	}
 }

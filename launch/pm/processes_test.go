@@ -17,6 +17,10 @@ func (pm *Processes) Processed(pr string) bool {
 	return found
 }
 
+func emptyProcessFunc(ctx context.Context) (context.Context, error) {
+	return ctx, nil
+}
+
 func MustBaseProcess(name string, requires []string, f ProcessFunc) BaseProcess {
 	pr, err := NewProcess(name, requires, f)
 	if err != nil {
@@ -24,6 +28,10 @@ func MustBaseProcess(name string, requires []string, f ProcessFunc) BaseProcess 
 	}
 
 	return pr
+}
+
+func MustEmptyProcess(name string, requires []string) BaseProcess {
+	return MustBaseProcess(name, requires, emptyProcessFunc)
 }
 
 type testProcesses struct {
@@ -37,53 +45,53 @@ func (t *testProcesses) TestCirculation() {
 	}{
 		{
 			processes: []BaseProcess{
-				MustBaseProcess("a", []string{"b", "c"}, nil),
+				MustEmptyProcess("a", []string{"b", "c"}),
 			},
 			err: "not found",
 		},
 		{
 			processes: []BaseProcess{
-				MustBaseProcess("a", []string{"b", "c"}, nil),
-				MustBaseProcess("b", nil, nil),
-				MustBaseProcess("c", nil, nil),
+				MustEmptyProcess("a", []string{"b", "c"}),
+				MustEmptyProcess("b", nil),
+				MustEmptyProcess("c", nil),
 			},
 		},
 		{
 			processes: []BaseProcess{
-				MustBaseProcess("a", []string{"b", "c"}, nil),
-				MustBaseProcess("c", []string{"b"}, nil),
-				MustBaseProcess("b", nil, nil),
+				MustEmptyProcess("a", []string{"b", "c"}),
+				MustEmptyProcess("c", []string{"b"}),
+				MustEmptyProcess("b", nil),
 			},
 		},
 		{
 			processes: []BaseProcess{
-				MustBaseProcess("a", []string{"b", "c"}, nil),
-				MustBaseProcess("b", nil, nil),
-				MustBaseProcess("c", []string{"a"}, nil),
-			},
-			err: `circulation found: "a"`,
-		},
-		{
-			processes: []BaseProcess{
-				MustBaseProcess("a", []string{"b", "c"}, nil),
-				MustBaseProcess("b", []string{"a"}, nil),
-				MustBaseProcess("c", nil, nil),
+				MustEmptyProcess("a", []string{"b", "c"}),
+				MustEmptyProcess("b", nil),
+				MustEmptyProcess("c", []string{"a"}),
 			},
 			err: `circulation found: "a"`,
 		},
 		{
 			processes: []BaseProcess{
-				MustBaseProcess("a", []string{"b", "c"}, nil),
-				MustBaseProcess("b", []string{"c"}, nil),
-				MustBaseProcess("c", []string{"b"}, nil),
+				MustEmptyProcess("a", []string{"b", "c"}),
+				MustEmptyProcess("b", []string{"a"}),
+				MustEmptyProcess("c", nil),
+			},
+			err: `circulation found: "a"`,
+		},
+		{
+			processes: []BaseProcess{
+				MustEmptyProcess("a", []string{"b", "c"}),
+				MustEmptyProcess("b", []string{"c"}),
+				MustEmptyProcess("c", []string{"b"}),
 			},
 			err: `circulation found: "b"`,
 		},
 		{
 			processes: []BaseProcess{
-				MustBaseProcess("a", []string{"b", "c"}, nil),
-				MustBaseProcess("b", nil, nil),
-				MustBaseProcess("c", []string{"b"}, nil),
+				MustEmptyProcess("a", []string{"b", "c"}),
+				MustEmptyProcess("b", nil),
+				MustEmptyProcess("c", []string{"b"}),
 			},
 		},
 	}

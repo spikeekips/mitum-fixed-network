@@ -74,3 +74,7 @@ func (pr BaseProcess) Run(ctx context.Context) (context.Context, error) {
 func (pr BaseProcess) Disabled() bool {
 	return pr.f == nil
 }
+
+func EmptyProcessFunc(ctx context.Context) (context.Context, error) {
+	return ctx, nil
+}

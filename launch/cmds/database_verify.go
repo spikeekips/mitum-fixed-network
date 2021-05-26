@@ -42,7 +42,7 @@ func init() {
 	if i, err := pm.NewProcess(
 		process.ProcessNameConfig,
 		nil,
-		nil,
+		pm.EmptyProcessFunc,
 	); err != nil {
 		panic(err)
 	} else {

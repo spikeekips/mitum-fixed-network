@@ -59,6 +59,7 @@ func newMemoryRateLimitStore(u *url.URL, prefix string) (limiter.Store, error) {
 }
 
 func newRedisRateLimitStore(u *url.URL, prefix string) (limiter.Store, error) {
+	u.RawQuery = ""
 	var client *libredis.Client
 	if i, err := libredis.ParseURL(u.String()); err != nil {
 		return nil, err

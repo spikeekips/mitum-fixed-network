@@ -27,14 +27,6 @@ func NewCleanStorageCommand(dryrun bool) CleanStorageCommand {
 		panic(xerrors.Errorf("processes not prepared"))
 	}
 
-	if err := ps.AddHook( // NOTE clean storage and block data with `--force`
-		pm.HookPrefixPre, process.ProcessNameLocalNode,
-		"clean-storage", cmd.cleanStorage,
-		true,
-	); err != nil {
-		panic(err)
-	}
-
 	disabledProcessors := []string{
 		process.ProcessNameStartNetwork,
 		process.ProcessNameProposalProcessor,
@@ -49,14 +41,20 @@ func NewCleanStorageCommand(dryrun bool) CleanStorageCommand {
 		}
 	}
 
-	if err := ps.AddHook(
-		pm.HookPrefixPre,
-		process.ProcessNameGenerateGenesisBlock,
-		process.HookNameCheckGenesisBlock,
-		nil,
-		true,
-	); err != nil {
-		panic(err)
+	hooks := []pm.Hook{
+		pm.NewHook(pm.HookPrefixPre, process.ProcessNameLocalNode,
+			"clean-storage", cmd.cleanStorage),
+		pm.NewHook(pm.HookPrefixPre, process.ProcessNameGenerateGenesisBlock,
+			process.HookNameCheckGenesisBlock, nil),
+		pm.NewHook(pm.HookPrefixPost, process.ProcessNameConfig,
+			process.HookNameConfigGenesisOperations, nil).SetOverride(true),
+	}
+
+	for i := range hooks {
+		hook := hooks[i]
+		if err := hook.Add(ps); err != nil {
+			panic(err)
+		}
 	}
 
 	_ = cmd.SetProcesses(ps)

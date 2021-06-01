@@ -36,6 +36,7 @@ func HookNetworkRateLimit(ctx context.Context) (context.Context, error) {
 		if i, err := quicnetwork.RateLimitStoreFromURI(conf.Cache().String()); err != nil {
 			return ctx, err
 		} else {
+			ctx = context.WithValue(ctx, ContextValueRateLimitStore, i)
 			log.Debug().Str("store", conf.Cache().String()).Msg("ratelimit store created")
 
 			store = i
@@ -71,7 +72,7 @@ func HookNetworkRateLimit(ctx context.Context) (context.Context, error) {
 		}
 	}
 
-	return ctx, nil
+	return context.WithValue(ctx, ContextValueRateLimitHandlerMap, handlerMap), nil
 }
 
 func attachRateLimitToHandler(

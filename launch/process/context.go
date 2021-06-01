@@ -13,6 +13,7 @@ import (
 	"github.com/spikeekips/mitum/storage/blockdata"
 	"github.com/spikeekips/mitum/util"
 	"github.com/spikeekips/mitum/util/hint"
+	"github.com/ulule/limiter/v3"
 )
 
 var (
@@ -31,6 +32,8 @@ var (
 	ContextValueGenesisBlock            util.ContextKey = "genesis_block"
 	ContextValueOperationProcessors     util.ContextKey = "operation_processors"
 	ContextValuePolicy                  util.ContextKey = "policy"
+	ContextValueRateLimitStore          util.ContextKey = "ratelimit-store"
+	ContextValueRateLimitHandlerMap     util.ContextKey = "ratelimit-handler-map"
 )
 
 func LoadConfigSourceContextValue(ctx context.Context, l *[]byte) error {
@@ -91,4 +94,12 @@ func LoadOperationProcessorsContextValue(ctx context.Context, l **hint.Hintmap) 
 
 func LoadPolicyContextValue(ctx context.Context, l **isaac.LocalPolicy) error {
 	return util.LoadFromContextValue(ctx, ContextValuePolicy, l)
+}
+
+func LoadRateLimitStoreContextValue(ctx context.Context, l *limiter.Store) error {
+	return util.LoadFromContextValue(ctx, ContextValueRateLimitStore, l)
+}
+
+func LoadRateLimitHandlerMapContextValue(ctx context.Context, l *map[string][]RateLimitRule) error {
+	return util.LoadFromContextValue(ctx, ContextValueRateLimitHandlerMap, l)
 }

@@ -9,6 +9,10 @@ import (
 
 type Signature []byte
 
+func NewSignatureFromString(s string) Signature {
+	return Signature(base58.Decode(s))
+}
+
 func (sg Signature) Bytes() []byte {
 	return sg
 }

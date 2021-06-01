@@ -304,8 +304,5 @@ func (t *testDeployKeyHandlers) TestKeyRevoke() {
 }
 
 func TestDeployKeyHandlers(t *testing.T) {
-	handler := new(testDeployKeyHandlers)
-	handler.DBType = "mongodb"
-
-	suite.Run(t, handler)
+	suite.Run(t, new(testDeployKeyHandlers))
 }

@@ -175,11 +175,8 @@ func (t *testDeployKeyStorageWithDatabase) TestRevoke() {
 	}
 }
 
-func TestDeployKeyStorageWithMongodb(t *testing.T) {
-	handler := new(testDeployKeyStorageWithDatabase)
-	handler.DBType = "mongodb"
-
-	suite.Run(t, handler)
+func TestDeployKeyStorageWithDatabase(t *testing.T) {
+	suite.Run(t, new(testDeployKeyStorageWithDatabase))
 }
 
 type testDeployKeyEncode struct {

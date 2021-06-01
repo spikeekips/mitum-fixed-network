@@ -104,13 +104,10 @@ func attachRateLimitToHandler(
 		prefix = j
 	}
 
-	handler := nt.Handler(prefix)
-
 	mw := NewRateLimitMiddleware(
 		NewRateLimit(rules, limiter.Rate{Limit: -1}), // NOTE by default, unlimited
-		handler.GetHandler(),
 		store,
-	)
+	).Middleware(nt.Handler(prefix).GetHandler())
 
 	_ = nt.SetHandler(prefix, mw)
 

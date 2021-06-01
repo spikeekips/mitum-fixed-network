@@ -220,8 +220,7 @@ func (dk *deployKeyHandlers) rateLimit(name string, handler http.Handler) http.H
 	} else {
 		return process.NewRateLimitMiddleware(
 			process.NewRateLimit(i, limiter.Rate{Limit: -1}),
-			handler,
 			dk.store,
-		)
+		).Middleware(handler)
 	}
 }

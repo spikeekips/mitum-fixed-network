@@ -81,53 +81,57 @@ func (rl *RateLimit) rate(ip net.IP) limiter.Rate {
 }
 
 type RateLimitMiddleware struct {
-	lt      *RateLimit
-	handler http.Handler
-	store   limiter.Store
+	lt    *RateLimit
+	store limiter.Store
 }
 
-func NewRateLimitMiddleware(lt *RateLimit, handler http.Handler, store limiter.Store) *RateLimitMiddleware {
+func NewRateLimitMiddleware(lt *RateLimit, store limiter.Store) *RateLimitMiddleware {
 	if store == nil {
 		store = limitermemory.NewStoreWithOptions(limiter.StoreOptions{CleanUpInterval: time.Hour})
 	}
 
-	return &RateLimitMiddleware{
-		lt:      lt,
-		handler: handler,
-		store:   store,
-	}
+	return &RateLimitMiddleware{lt: lt, store: store}
 }
 
-func (mw *RateLimitMiddleware) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+func (mw *RateLimitMiddleware) limit(w http.ResponseWriter, r *http.Request) bool {
 	ip := limiter.GetIP(r, limiter.Options{TrustForwardHeader: true})
 	rate := mw.lt.Rate(ip)
 	if rate.Limit < 0 { // NOTE nolimit
 		w.Header().Add("X-RateLimit-Limit", "unlimited")
 
-		mw.handler.ServeHTTP(w, r)
-
-		return
-	} else if rate.Limit < 1 || rate.Period < 1 {
+		return false
+	} else if rate.Limit < 1 || rate.Period < 1 { // NOTE block all requests
 		network.HTTPError(w, http.StatusTooManyRequests)
 
-		return
+		return true
 	}
 
-	if ctx, err := mw.store.Get(r.Context(), ip.String(), rate); err != nil {
-		mw.handler.ServeHTTP(w, r)
-
-		return
+	var rctx limiter.Context
+	if i, err := mw.store.Get(r.Context(), ip.String(), rate); err != nil {
+		return false
 	} else {
-		w.Header().Add("X-RateLimit-Limit", strconv.FormatInt(ctx.Limit, 10))
-		w.Header().Add("X-RateLimit-Remaining", strconv.FormatInt(ctx.Remaining, 10))
-		w.Header().Add("X-RateLimit-Reset", strconv.FormatInt(ctx.Reset, 10))
+		rctx = i
+	}
 
-		if ctx.Reached {
-			stdlib.DefaultLimitReachedHandler(w, r)
+	w.Header().Add("X-RateLimit-Limit", strconv.FormatInt(rctx.Limit, 10))
+	w.Header().Add("X-RateLimit-Remaining", strconv.FormatInt(rctx.Remaining, 10))
+	w.Header().Add("X-RateLimit-Reset", strconv.FormatInt(rctx.Reset, 10))
 
+	if rctx.Reached {
+		stdlib.DefaultLimitReachedHandler(w, r)
+
+		return true
+	}
+
+	return false
+}
+
+func (mw *RateLimitMiddleware) Middleware(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if mw.limit(w, r) {
 			return
 		}
-	}
 
-	mw.handler.ServeHTTP(w, r)
+		next.ServeHTTP(w, r)
+	})
 }

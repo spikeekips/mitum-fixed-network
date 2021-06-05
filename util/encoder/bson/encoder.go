@@ -43,6 +43,22 @@ func (be Encoder) Unmarshal(b []byte, i interface{}) error {
 	return Unmarshal(b, i)
 }
 
+func (be Encoder) UnmarshalArray(b []byte) ([][]byte, error) {
+	var bs []bson.Raw
+	if err := Unmarshal(b, &bs); err != nil {
+		return nil, err
+	} else if len(bs) < 1 {
+		return nil, nil
+	}
+
+	ubs := make([][]byte, len(bs))
+	for i := range bs {
+		ubs[i] = bs[i]
+	}
+
+	return ubs, nil
+}
+
 func (be *Encoder) Decode(b []byte, i interface{}) error {
 	return be.Unpack(b, i)
 }

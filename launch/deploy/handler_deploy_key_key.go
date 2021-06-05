@@ -16,7 +16,7 @@ func NewDeployKeyKeyHandler(ks *DeployKeyStorage, enc encoder.Encoder) network.H
 	return func(w http.ResponseWriter, r *http.Request) {
 		var deployKey string
 		if i, err := loadDeployKeyFromRequestPath(r); err != nil {
-			network.HTTPError(w, http.StatusBadRequest)
+			network.WriteProblemWithError(w, http.StatusBadRequest, err)
 
 			return
 		} else {
@@ -24,11 +24,11 @@ func NewDeployKeyKeyHandler(ks *DeployKeyStorage, enc encoder.Encoder) network.H
 		}
 
 		if i, found := ks.Key(deployKey); !found {
-			network.HTTPError(w, http.StatusNotFound)
+			network.WriteProblemWithError(w, http.StatusNotFound, xerrors.Errorf("deploy key not found"))
 
 			return
 		} else if j, err := enc.Marshal(i); err != nil {
-			network.HTTPError(w, http.StatusInternalServerError)
+			network.WriteProblemWithError(w, http.StatusInternalServerError, err)
 
 			return
 		} else {

@@ -13,4 +13,5 @@ type Encoder interface {
 	SetHintset(*hint.Hintset)
 	DecodeByHint([]byte) (hint.Hinter, error)
 	DecodeWithHint(hint.Hint, []byte) (hint.Hinter, error)
+	UnmarshalArray([]byte) ([][]byte, error)
 }

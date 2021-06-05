@@ -3,6 +3,7 @@ package cmds
 import (
 	"context"
 	"fmt"
+	"io"
 	"os"
 
 	"github.com/alecthomas/kong"
@@ -33,6 +34,7 @@ var defaultKongOptions = []kong.Option{
 	LogVars,
 	DefaultConfigVars,
 	PprofVars,
+	NodeConnectVars,
 }
 
 func Context(args []string, flags interface{}, options ...kong.Option) (*kong.Context, error) {
@@ -51,6 +53,7 @@ type BaseCommand struct {
 	*logging.Logging
 	*LogFlags
 	*PprofFlags
+	LogOutput io.Writer `kong:"-"`
 	version   util.Version
 	encs      *encoder.Encoders
 	jsonenc   *jsonenc.Encoder
@@ -69,7 +72,11 @@ func NewBaseCommand(name string) *BaseCommand {
 }
 
 func (cmd *BaseCommand) Initialize(flags interface{}, version util.Version) error {
-	if i, err := SetupLoggingFromFlags(cmd.LogFlags, os.Stdout); err != nil {
+	if cmd.LogOutput == nil {
+		cmd.LogOutput = os.Stdout
+	}
+
+	if i, err := SetupLoggingFromFlags(cmd.LogFlags, cmd.LogOutput); err != nil {
 		return err
 	} else {
 		_ = cmd.SetLogger(i)

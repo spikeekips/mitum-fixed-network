@@ -15,6 +15,7 @@ import (
 	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/base/prprocessor"
 	"github.com/spikeekips/mitum/launch/config"
+	"github.com/spikeekips/mitum/launch/deploy"
 	"github.com/spikeekips/mitum/launch/pm"
 	"github.com/spikeekips/mitum/launch/process"
 	"github.com/spikeekips/mitum/network"
@@ -29,6 +30,12 @@ var defaultRunHooks = []pm.Hook{
 	pm.NewHook(pm.HookPrefixPost, process.ProcessNameConfig,
 		process.HookNameConfigGenesisOperations, nil).
 		SetOverride(true),
+	pm.NewHook(pm.HookPrefixPost, process.ProcessNameNetwork,
+		deploy.HookNameBlockDataCleaner, deploy.HookBlockDataCleaner),
+	pm.NewHook(pm.HookPrefixPost, process.ProcessNameNetwork,
+		deploy.HookNameInitializeDeployKeyStorage, deploy.HookInitializeDeployKeyStorage),
+	pm.NewHook(pm.HookPrefixPost, process.ProcessNameNetwork,
+		deploy.HookNameDeployHandlers, deploy.HookDeployHandlers),
 }
 
 type RunCommand struct {

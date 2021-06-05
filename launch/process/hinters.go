@@ -57,4 +57,5 @@ var DefaultHinters = []hint.Hinter{
 	valuehash.Bytes{},
 	valuehash.SHA256{},
 	valuehash.SHA512{},
+	network.Problem{},
 }

@@ -155,7 +155,9 @@ func (cmd *BlockDataVerifyCommand) checkBlocks() error {
 		}
 
 		if err := sem.Acquire(ctx, 100); err != nil {
-			errch <- err
+			if !xerrors.Is(err, context.Canceled) {
+				errch <- err
+			}
 		}
 
 		close(errch)
@@ -210,7 +212,9 @@ func (cmd *BlockDataVerifyCommand) checkAllBlockFiles() error {
 		}
 
 		if err := sem.Acquire(ctx, 100); err != nil {
-			errch <- err
+			if !xerrors.Is(err, context.Canceled) {
+				errch <- err
+			}
 		}
 
 		close(errch)

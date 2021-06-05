@@ -1,6 +1,5 @@
 package deploy
 
-/*
 import (
 	"encoding/json"
 	"io/ioutil"
@@ -8,7 +7,6 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"github.com/spikeekips/mitum/base/key"
 	"github.com/stretchr/testify/suite"
 )
 
@@ -17,14 +15,14 @@ type testDeployKeyKeysHandler struct {
 }
 
 func (t *testDeployKeyKeysHandler) TestNew() {
-	ks, err := NewKeys(nil)
+	ks, err := NewDeployKeyStorage(nil)
 	t.NoError(err)
 
-	dks := map[string]key.Publickey{}
+	dks := map[string]DeployKey{}
 	for i := 0; i < 3; i++ {
-		dk := key.MustNewBTCPrivatekey().Publickey()
-		t.NoError(ks.Add(dk))
-		dks[dk.String()] = dk
+		dk, err := ks.New()
+		t.NoError(err)
+		dks[dk.Key()] = dk
 	}
 
 	handler := NewDeployKeyKeysHandler(ks, t.enc)
@@ -46,21 +44,20 @@ func (t *testDeployKeyKeysHandler) TestNew() {
 
 	var udk []DeployKey
 	for i := range l {
-		j, err := t.enc.DecodeByHint(l[i])
-		t.NoError(err)
-		c := j.(DeployKey)
-		udk = append(udk, c)
+		var dk DeployKey
+		t.NoError(t.enc.Unmarshal(l[i], &dk))
+		udk = append(udk, dk)
 	}
 
 	for i := range udk {
 		k := udk[i]
-		_, found := dks[k.Key().String()]
+		_, found := dks[k.Key()]
 		t.True(found)
 	}
 }
 
 func (t *testDeployKeyKeysHandler) TestEmpty() {
-	ks, err := NewKeys(nil)
+	ks, err := NewDeployKeyStorage(nil)
 	t.NoError(err)
 
 	handler := NewDeployKeyKeysHandler(ks, t.enc)
@@ -84,4 +81,3 @@ func (t *testDeployKeyKeysHandler) TestEmpty() {
 func TestDeployKeyKeysHandler(t *testing.T) {
 	suite.Run(t, new(testDeployKeyKeysHandler))
 }
-*/

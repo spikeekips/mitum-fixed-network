@@ -932,8 +932,8 @@ func (cs *GeneralSyncer) sanitizeManifests(heights []base.Height, l interface{})
 		tail := heights[len(heights)-1]
 
 		a := map[base.Height]block.Manifest{}
-		for _, i := range bs {
-			b := i.(block.Manifest)
+		for i := range bs {
+			b := bs[i]
 			if b.Height() < head || b.Height() > tail {
 				continue
 			} else if _, found := a[b.Height()]; found {
@@ -1011,7 +1011,7 @@ func (cs *GeneralSyncer) checkFetchedBlocks(fetched []block.Block) ([]base.Heigh
 	var sessions []blockdata.Session
 	var missing []base.Height
 	for i := range fetched {
-		blk := fetched[i].(block.Block)
+		blk := fetched[i]
 		if err := blk.IsValid(networkID); err != nil {
 			cs.Log().Error().Err(err).
 				Hinted("height", blk.Height()).
@@ -1437,7 +1437,13 @@ func (cs *GeneralSyncer) fetchBlockData(
 	ss blockdata.Session,
 ) (io.ReadSeeker, error) {
 	var r io.ReadCloser
-	if i, err := node.Channel().BlockData(context.Background(), item); err != nil {
+	if block.IsLocalBlockDateItem(item.URL()) {
+		if i, err := node.Channel().BlockData(context.Background(), item); err != nil {
+			return nil, err
+		} else {
+			r = i
+		}
+	} else if i, err := network.FetchBlockDataFromRemote(context.Background(), item); err != nil {
 		return nil, err
 	} else {
 		r = i

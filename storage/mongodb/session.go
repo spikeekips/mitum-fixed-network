@@ -224,7 +224,7 @@ func (bst *DatabaseSession) commit(ctx context.Context, bd block.BlockDataMap) e
 	} else if res, err := bst.writeModels(ctx, ColNameBlockDataMap, []mongo.WriteModel{mongo.NewInsertOneModel().SetDocument(doc)}); err != nil {
 		return storage.WrapStorageError(err)
 	} else if res != nil && res.InsertedCount < 1 {
-		return xerrors.Errorf("block datamap not inserted")
+		return xerrors.Errorf("blockdatamap not inserted")
 	}
 
 	if err := bst.ost.setLastBlock(bst.block, true, false); err != nil {

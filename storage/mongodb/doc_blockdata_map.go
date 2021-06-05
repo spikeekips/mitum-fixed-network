@@ -15,7 +15,7 @@ type BlockDataMapDoc struct {
 }
 
 func NewBlockDataMapDoc(bd block.BlockDataMap, enc encoder.Encoder) (BlockDataMapDoc, error) {
-	b, err := NewBaseDoc(bd.Hash().String(), bd, enc)
+	b, err := NewBaseDoc(nil, bd, enc)
 	if err != nil {
 		return BlockDataMapDoc{}, err
 	}

@@ -12,7 +12,7 @@ func NewDeployKeyRevokeHandler(ks *DeployKeyStorage) network.HTTPHandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		var deployKey string
 		if i, err := loadDeployKeyFromRequestPath(r); err != nil {
-			network.HTTPError(w, http.StatusBadRequest)
+			network.WriteProblemWithError(w, http.StatusBadRequest, err)
 
 			return
 		} else {
@@ -21,12 +21,12 @@ func NewDeployKeyRevokeHandler(ks *DeployKeyStorage) network.HTTPHandlerFunc {
 
 		if err := ks.Revoke(deployKey); err != nil {
 			if xerrors.Is(err, util.NotFoundError) {
-				network.HTTPError(w, http.StatusNotFound)
+				network.WriteProblemWithError(w, http.StatusNotFound, err)
 
 				return
 			}
 
-			network.HTTPError(w, http.StatusInternalServerError)
+			network.WriteProblemWithError(w, http.StatusInternalServerError, err)
 
 			return
 		}

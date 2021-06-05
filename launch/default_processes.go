@@ -1,7 +1,6 @@
 package launch
 
 import (
-	"github.com/spikeekips/mitum/launch/deploy"
 	"github.com/spikeekips/mitum/launch/pm"
 	"github.com/spikeekips/mitum/launch/process"
 )
@@ -30,10 +29,6 @@ var defaultHooks = []pm.Hook{
 	pm.NewHook(pm.HookPrefixPost, process.ProcessNameLocalNode, process.HookNameNodepool, process.HookNodepool),
 	pm.NewHook(pm.HookPrefixPre, process.ProcessNameBlockData,
 		process.HookNameCheckBlockDataPath, process.HookCheckBlockDataPath),
-	pm.NewHook(pm.HookPrefixPost, process.ProcessNameNetwork,
-		deploy.HookNameInitializeDeployKeyStorage, deploy.HookInitializeDeployKeyStorage),
-	pm.NewHook(pm.HookPrefixPost, process.ProcessNameNetwork,
-		deploy.HookNameDeployKeyHandlers, deploy.HookDeployKeyHandlers),
 }
 
 func DefaultProcesses() *pm.Processes {

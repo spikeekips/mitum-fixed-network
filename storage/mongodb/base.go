@@ -1229,6 +1229,40 @@ func (st *Database) BlockDataMap(height base.Height) (block.BlockDataMap, bool, 
 	return bd, true, nil
 }
 
+func (st *Database) SetBlockDataMaps(bds []block.BlockDataMap) error {
+	if len(bds) < 1 {
+		return xerrors.Errorf("empty BlockDataMaps")
+	}
+
+	models := make([]mongo.WriteModel, len(bds))
+
+	for i := range bds {
+		bd := bds[i]
+		if doc, err := NewBlockDataMapDoc(bd, st.enc); err != nil {
+			return err
+		} else {
+			models[i] = mongo.NewReplaceOneModel().
+				SetFilter(bson.M{"height": bd.Height()}).
+				SetReplacement(doc)
+		}
+	}
+
+	if res, err := writeBulkModels(
+		context.Background(),
+		st.client,
+		ColNameBlockDataMap,
+		models,
+		defaultLimitWriteModels,
+		options.BulkWrite().SetOrdered(false),
+	); err != nil {
+		return err
+	} else if res != nil && res.InsertedCount < 1 {
+		return err
+	}
+
+	return nil
+}
+
 func (st *Database) LocalBlockDataMapsByHeight(height base.Height, callback func(block.BlockDataMap) (bool, error)) error {
 	opt := options.Find().
 		SetSort(util.NewBSONFilter("height", 1).D())

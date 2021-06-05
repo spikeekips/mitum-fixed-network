@@ -196,10 +196,10 @@ func (ch *Channel) NodeInfo(ctx context.Context) (network.NodeInfo, error) {
 		ch.Log().Error().Err(err).Msg("failed to get bytes from response body")
 
 		return nil, err
-	} else if hinter, err := network.DecodeNodeInfo(enc, b); err != nil {
+	} else if i, err := network.DecodeNodeInfo(enc, b); err != nil {
 		return nil, err
 	} else {
-		return hinter.(network.NodeInfo), nil
+		return i, nil
 	}
 }
 

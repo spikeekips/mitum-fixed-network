@@ -4,7 +4,6 @@ import (
 	"reflect"
 
 	"github.com/spikeekips/mitum/util/hint"
-	"golang.org/x/xerrors"
 )
 
 func ExtractPtr(i interface{}) (reflect.Value, reflect.Value) {
@@ -34,12 +33,7 @@ func LoadEncoders(encoders []Encoder, hinters ...hint.Hinter) (*Encoders, error)
 	}
 
 	for i := range hinters {
-		hinter, ok := hinters[i].(hint.Hinter)
-		if !ok {
-			return nil, xerrors.Errorf("not hint.Hinter: %T", hinters[i])
-		}
-
-		if err := encs.AddHinter(hinter); err != nil {
+		if err := encs.AddHinter(hinters[i]); err != nil {
 			return nil, err
 		}
 	}

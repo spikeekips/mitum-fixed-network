@@ -1,6 +1,7 @@
 package deploy
 
 import (
+	"fmt"
 	"net/http"
 	"strings"
 	"time"
@@ -10,7 +11,14 @@ import (
 	"github.com/spikeekips/mitum/network"
 	"github.com/spikeekips/mitum/util/cache"
 	"github.com/spikeekips/mitum/util/logging"
+	"golang.org/x/xerrors"
 )
+
+func UnauthorizedError(w http.ResponseWriter, realm string, err error) {
+	// NOTE realm is reserved for deploy key scopes
+	w.Header().Set("WWW-Authenticate", fmt.Sprintf(`MitumDeployKey realm="%s", charset="utf-8"`, realm))
+	network.WriteProblemWithError(w, http.StatusUnauthorized, err)
+}
 
 type DeployKeyByTokenMiddleware struct {
 	*logging.Logging
@@ -39,13 +47,13 @@ func (md *DeployKeyByTokenMiddleware) Middleware(next http.Handler) http.Handler
 		// NOTE check token and signature
 		token := strings.TrimSpace(r.URL.Query().Get("token"))
 		if len(token) < 1 {
-			network.HTTPError(w, http.StatusUnauthorized)
+			network.WriteProblemWithError(w, http.StatusUnauthorized, xerrors.Errorf("empty token"))
 			return
 		}
 
 		var sig key.Signature
 		if i := strings.TrimSpace(r.URL.Query().Get("signature")); len(i) < 1 {
-			network.HTTPError(w, http.StatusUnauthorized)
+			network.WriteProblemWithError(w, http.StatusUnauthorized, xerrors.Errorf("empty signature"))
 			return
 		} else {
 			sig = key.NewSignatureFromString(i)
@@ -53,13 +61,45 @@ func (md *DeployKeyByTokenMiddleware) Middleware(next http.Handler) http.Handler
 
 		if err := VerifyDeployKeyToken(md.cache, md.localKey, token, md.networkID, []byte(sig)); err != nil {
 			md.Log().Error().Err(err).Msg("failed to verify token and signature")
-			network.HTTPError(w, http.StatusUnauthorized)
+			network.WriteProblemWithError(w, http.StatusUnauthorized,
+				xerrors.Errorf("failed to verify token and signature: %w", err))
 
 			return
 		}
 
 		// NOTE expire token
 		_ = md.cache.Set(token, nil, time.Nanosecond)
+
+		next.ServeHTTP(w, r)
+	})
+}
+
+type DeployByKeyMiddleware struct {
+	*logging.Logging
+	ks *DeployKeyStorage
+}
+
+func NewDeployByKeyMiddleware(ks *DeployKeyStorage) *DeployByKeyMiddleware {
+	return &DeployByKeyMiddleware{
+		Logging: logging.NewLogging(func(c logging.Context) logging.Emitter {
+			return c.Str("module", "deploy-by-key-middleware")
+		}),
+		ks: ks,
+	}
+}
+
+func (md *DeployByKeyMiddleware) Middleware(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		auth := strings.TrimSpace(r.Header.Get("Authorization"))
+		if len(auth) < 1 {
+			UnauthorizedError(w, "", xerrors.Errorf("empty Authorization"))
+			return
+		}
+
+		if !md.ks.Exists(auth) {
+			network.WriteProblemWithError(w, http.StatusForbidden, xerrors.Errorf("unknown deploy key"))
+			return
+		}
 
 		next.ServeHTTP(w, r)
 	})

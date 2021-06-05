@@ -88,6 +88,13 @@ func (st *BlockData) Exists(height base.Height) (bool, error) {
 	}
 }
 
+func (st *BlockData) ExistsReal(height base.Height) (bool, bool, error) {
+	st.RLock()
+	defer st.RUnlock()
+
+	return st.exists(height)
+}
+
 // Remove removes block directory by height. Remove does not remove the
 // directory and inside files, it just creates .removd file with time. .removed
 // file helps CleanByHeight to clean directories.

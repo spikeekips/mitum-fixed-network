@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	"github.com/gorilla/mux"
+	"github.com/spikeekips/mitum/network"
 	"github.com/spikeekips/mitum/util"
 	"github.com/stretchr/testify/suite"
 )
@@ -66,6 +67,11 @@ func (t *testDeployKeyKeyHandler) TestUnknownKey() {
 
 	res := w.Result()
 	t.Equal(http.StatusNotFound, res.StatusCode)
+
+	pr, err := network.LoadProblemFromResponse(res)
+	t.NoError(err)
+
+	t.Contains(pr.Title(), "deploy key not found")
 }
 
 func TestDeployKeyKeyHandler(t *testing.T) {

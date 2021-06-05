@@ -54,6 +54,7 @@ type Database interface {
 	Info(string /* key */) ([]byte, bool, error)
 
 	BlockDataMap(base.Height) (block.BlockDataMap, bool, error)
+	SetBlockDataMaps([]block.BlockDataMap) error
 	LocalBlockDataMapsByHeight(base.Height, func(block.BlockDataMap) (bool, error)) error
 }
 

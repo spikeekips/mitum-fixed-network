@@ -100,6 +100,20 @@ func (bd BaseBlockDataMap) IsValid([]byte) error {
 		return err
 	}
 
+	var isLocal *bool
+	for i := range bd.items {
+		i := IsLocalBlockDateItem(bd.items[i].URL())
+		if isLocal == nil {
+			isLocal = &i
+
+			continue
+		}
+
+		if *isLocal != i {
+			return xerrors.Errorf("all the items should be local or non-local")
+		}
+	}
+
 	if err := bd.IsReadyToHash(); err != nil {
 		return err
 	}
@@ -130,7 +144,7 @@ func (bd BaseBlockDataMap) GenerateHash() valuehash.Hash {
 }
 
 func (bd BaseBlockDataMap) Bytes() []byte {
-	var bs [11][]byte
+	bs := make([][]byte, len(BlockData)+2)
 
 	bs[0] = bd.height.Bytes()
 	bs[1] = localtime.NewTime(bd.createdAt).Bytes()
@@ -149,7 +163,7 @@ func (bd BaseBlockDataMap) Bytes() []byte {
 		bs[2+i] = bd.items[dataType].Bytes()
 	}
 
-	return util.ConcatBytesSlice(bs[:]...)
+	return util.ConcatBytesSlice(bs...)
 }
 
 func (bd BaseBlockDataMap) Height() base.Height {

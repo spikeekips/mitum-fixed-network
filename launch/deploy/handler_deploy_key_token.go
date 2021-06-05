@@ -37,12 +37,12 @@ func (hn *DeployKeyTokenHandler) ServeHTTP(w http.ResponseWriter, _ *http.Reques
 		"expired": hn.expired.String(),
 	}); err != nil {
 		hn.Log().Error().Err(err).Msg("failed to marshal token output")
-		network.HTTPError(w, http.StatusInternalServerError)
+		network.WriteProblemWithError(w, http.StatusInternalServerError, err)
 
 		return
 	} else if err := hn.cache.Set(token, nil, hn.expired); err != nil {
 		hn.Log().Error().Err(err).Msg("failed to set token in cache")
-		network.HTTPError(w, http.StatusInternalServerError)
+		network.WriteProblemWithError(w, http.StatusInternalServerError, err)
 
 		return
 	} else {

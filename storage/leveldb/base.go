@@ -790,6 +790,24 @@ func (st *Database) BlockDataMap(height base.Height) (block.BlockDataMap, bool, 
 	}
 }
 
+func (st *Database) SetBlockDataMaps(bds []block.BlockDataMap) error {
+	if len(bds) < 1 {
+		return xerrors.Errorf("empty BlockDataMaps")
+	}
+
+	batch := new(leveldb.Batch)
+	for i := range bds {
+		bd := bds[i]
+		if b, err := marshal(st.enc, bd); err != nil {
+			return err
+		} else {
+			batch.Put(leveldbBlockDataMapKey(bd.Height()), b)
+		}
+	}
+
+	return wrapError(st.db.Write(batch, nil))
+}
+
 func (st *Database) LocalBlockDataMapsByHeight(height base.Height, callback func(block.BlockDataMap) (bool, error)) error {
 	return st.iter(
 		keyPrefixBlockDataMap,

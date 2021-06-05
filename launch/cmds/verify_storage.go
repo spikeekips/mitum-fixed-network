@@ -153,8 +153,12 @@ func (cmd *BaseVerifyCommand) loadManifests(
 		}
 
 		if err := sem.Acquire(ctx, 100); err != nil {
-			errch <- err
-		} else if err := eg.Wait(); err != nil {
+			if !xerrors.Is(err, context.Canceled) {
+				errch <- err
+			}
+		}
+
+		if err := eg.Wait(); err != nil {
 			errch <- err
 		}
 	}()

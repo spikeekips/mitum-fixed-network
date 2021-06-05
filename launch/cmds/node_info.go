@@ -18,7 +18,7 @@ import (
 type NodeInfoCommand struct {
 	*BaseCommand
 	URL        *url.URL      `arg:"" name:"node url" help:"remote mitum url" required:""`
-	Timeout    time.Duration ` name:"timeout" help:"timeout; default is 5 seconds"`
+	Timeout    time.Duration `name:"timeout" help:"timeout; default is 5 seconds"`
 	TLSInscure bool          `name:"tls-insecure" help:"allow inseucre TLS connection; default is false"`
 }
 

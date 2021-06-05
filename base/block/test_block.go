@@ -53,3 +53,9 @@ func CompareBlockDataMapItem(t *assert.Assertions, a, b BlockDataMapItem) {
 	t.Equal(a.Checksum(), b.Checksum())
 	t.Equal(a.URL(), b.URL())
 }
+
+func (bd BaseBlockDataMap) SetHash(h valuehash.Hash) BaseBlockDataMap {
+	bd.h = h
+
+	return bd
+}

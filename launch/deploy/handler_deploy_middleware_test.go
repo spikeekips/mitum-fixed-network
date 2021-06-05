@@ -8,6 +8,7 @@ import (
 
 	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/base/key"
+	"github.com/spikeekips/mitum/network"
 	"github.com/spikeekips/mitum/util"
 	"github.com/spikeekips/mitum/util/cache"
 	"github.com/stretchr/testify/suite"
@@ -86,6 +87,10 @@ func (t *testDeployKeyByTokenMiddleware) TestMissingToken() {
 
 	res := w.Result()
 	t.Equal(http.StatusUnauthorized, res.StatusCode)
+
+	pr, err := network.LoadProblemFromResponse(res)
+	t.NoError(err)
+	t.Contains(pr.Title(), "empty token")
 }
 
 func (t *testDeployKeyByTokenMiddleware) TestMissingSignature() {
@@ -108,6 +113,10 @@ func (t *testDeployKeyByTokenMiddleware) TestMissingSignature() {
 
 	res := w.Result()
 	t.Equal(http.StatusUnauthorized, res.StatusCode)
+
+	pr, err := network.LoadProblemFromResponse(res)
+	t.NoError(err)
+	t.Contains(pr.Title(), "empty signature")
 }
 
 func (t *testDeployKeyByTokenMiddleware) TestUnknownToken() {
@@ -132,8 +141,79 @@ func (t *testDeployKeyByTokenMiddleware) TestUnknownToken() {
 
 	res := w.Result()
 	t.Equal(http.StatusUnauthorized, res.StatusCode)
+
+	pr, err := network.LoadProblemFromResponse(res)
+	t.NoError(err)
+	t.Contains(pr.Title(), "failed to verify token and signature")
 }
 
 func TestDeployKeyByTokenMiddleware(t *testing.T) {
 	suite.Run(t, new(testDeployKeyByTokenMiddleware))
+}
+
+type testDeployByKeyMiddleware struct {
+	suite.Suite
+	ks *DeployKeyStorage
+}
+
+func (t *testDeployByKeyMiddleware) SetupTest() {
+	t.ks, _ = NewDeployKeyStorage(nil)
+}
+
+func (t *testDeployByKeyMiddleware) TestWithoutKey() {
+	w := httptest.NewRecorder()
+	r := httptest.NewRequest("GET", "/", nil)
+
+	mw := NewDeployByKeyMiddleware(t.ks)
+	handler := mw.Middleware(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	}))
+
+	handler.ServeHTTP(w, r)
+	res := w.Result()
+	t.Equal(http.StatusUnauthorized, res.StatusCode)
+	t.NotEmpty(res.Header.Get("WWW-Authenticate"))
+}
+
+func (t *testDeployByKeyMiddleware) TestUnknownKey() {
+	w := httptest.NewRecorder()
+	r := httptest.NewRequest("GET", "/", nil)
+	r.Header.Set("Authorization", util.UUID().String())
+
+	mw := NewDeployByKeyMiddleware(t.ks)
+	handler := mw.Middleware(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	}))
+
+	handler.ServeHTTP(w, r)
+	res := w.Result()
+	t.Equal(http.StatusForbidden, res.StatusCode)
+
+	pr, err := network.LoadProblemFromResponse(res)
+	t.NoError(err)
+	t.Contains(pr.Title(), "unknown deploy key")
+}
+
+func (t *testDeployByKeyMiddleware) TestValidKey() {
+	dk, err := t.ks.New()
+	t.NoError(err)
+
+	w := httptest.NewRecorder()
+	r := httptest.NewRequest("GET", "/", nil)
+	r.Header.Set("Authorization", dk.Key())
+
+	mw := NewDeployByKeyMiddleware(t.ks)
+
+	var requested bool
+	handler := mw.Middleware(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		requested = true
+	}))
+
+	handler.ServeHTTP(w, r)
+	res := w.Result()
+	t.Equal(http.StatusOK, res.StatusCode)
+
+	t.True(requested)
+}
+
+func TestDeployByKeyMiddleware(t *testing.T) {
+	suite.Run(t, new(testDeployByKeyMiddleware))
 }

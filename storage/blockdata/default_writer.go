@@ -386,8 +386,12 @@ func ReadlinesWithIndex(
 	}
 
 	if err := sem.Acquire(ctx, limit); err != nil {
-		return err
-	} else if err := eg.Wait(); err != nil {
+		if !xerrors.Is(err, context.Canceled) {
+			return err
+		}
+	}
+
+	if err := eg.Wait(); err != nil {
 		return err
 	}
 

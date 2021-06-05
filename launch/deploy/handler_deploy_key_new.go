@@ -10,11 +10,11 @@ import (
 func NewDeployKeyNewHandler(ks *DeployKeyStorage, enc encoder.Encoder) network.HTTPHandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		if i, err := ks.New(); err != nil {
-			network.HTTPError(w, http.StatusInternalServerError)
+			network.WriteProblemWithError(w, http.StatusInternalServerError, err)
 
 			return
 		} else if j, err := enc.Marshal(i); err != nil {
-			network.HTTPError(w, http.StatusInternalServerError)
+			network.WriteProblemWithError(w, http.StatusInternalServerError, err)
 
 			return
 		} else {

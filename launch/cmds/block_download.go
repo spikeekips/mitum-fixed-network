@@ -352,7 +352,7 @@ func (cmd *BlockDownloadCommand) printBlockData(m block.BlockDataMap, items []bl
 
 func (cmd *BlockDownloadCommand) printBlockDataItem(item block.BlockDataMapItem) (interface{}, error) {
 	var r io.ReadCloser
-	if i, err := cmd.requestChannel(item); err != nil {
+	if i, err := cmd.requestBlockData(item); err != nil {
 		return nil, err
 	} else {
 		r = i
@@ -424,7 +424,7 @@ func (cmd *BlockDownloadCommand) saveBlockDataItem(
 	session blockdata.Session,
 ) error {
 	var r io.ReadCloser
-	if i, err := cmd.requestChannel(item); err != nil {
+	if i, err := cmd.requestBlockData(item); err != nil {
 		return err
 	} else {
 		r = i
@@ -445,11 +445,15 @@ func (cmd *BlockDownloadCommand) saveBlockDataItem(
 	}
 }
 
-func (cmd *BlockDownloadCommand) requestChannel(item block.BlockDataMapItem) (io.ReadCloser, error) {
+func (cmd *BlockDownloadCommand) requestBlockData(item block.BlockDataMapItem) (io.ReadCloser, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), cmd.Timeout)
 	defer cancel()
 
-	return cmd.channel.BlockData(ctx, item)
+	if block.IsLocalBlockDateItem(item.URL()) {
+		return cmd.channel.BlockData(ctx, item)
+	} else {
+		return network.FetchBlockDataFromRemote(ctx, item)
+	}
 }
 
 func getItemBlockDataMap(m block.BlockDataMap, dataType string) (block.BlockDataMapItem, error) {
@@ -508,8 +512,12 @@ func requestBlockDataMaps(heights []base.Height, callback func([]base.Height) er
 	}
 
 	if err := sem.Acquire(ctx, 10); err != nil {
-		return err
-	} else if err := eg.Wait(); err != nil {
+		if !xerrors.Is(err, context.Canceled) {
+			return err
+		}
+	}
+
+	if err := eg.Wait(); err != nil {
 		return err
 	}
 
@@ -534,8 +542,12 @@ func requestBlockData(maps []block.BlockDataMap, callback func(block.BlockDataMa
 	}
 
 	if err := sem.Acquire(ctx, 10); err != nil {
-		return err
-	} else if err := eg.Wait(); err != nil {
+		if !xerrors.Is(err, context.Canceled) {
+			return err
+		}
+	}
+
+	if err := eg.Wait(); err != nil {
 		return err
 	}
 

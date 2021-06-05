@@ -21,7 +21,7 @@ func NewDeployKeyKeysHandler(ks *DeployKeyStorage, enc encoder.Encoder) network.
 		})
 
 		if i, err := enc.Marshal(m); err != nil {
-			network.HTTPError(w, http.StatusInternalServerError)
+			network.WriteProblemWithError(w, http.StatusInternalServerError, err)
 
 			return
 		} else {

@@ -8,8 +8,8 @@ import (
 )
 
 var (
-	BaseNodeV0Type = hint.MustNewType(0x01, 0x70, "base-node-v0")
-	BaseNodeV0Hint = hint.MustHint(BaseNodeV0Type, "0.0.1")
+	BaseNodeV0Type = hint.Type("base-node")
+	BaseNodeV0Hint = hint.NewHint(BaseNodeV0Type, "v0.0.1")
 )
 
 type BaseNodeV0 struct {

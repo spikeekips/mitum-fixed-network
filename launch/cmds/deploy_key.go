@@ -57,7 +57,7 @@ func (cmd *baseDeployKeyCommand) Initialize(flags interface{}, version util.Vers
 
 	if err := cmd.BaseCommand.Initialize(flags, version); err != nil {
 		return err
-	} else if _, err := cmd.LoadEncoders(nil); err != nil {
+	} else if _, err := cmd.LoadEncoders(nil, nil); err != nil {
 		return err
 	}
 

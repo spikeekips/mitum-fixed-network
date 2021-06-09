@@ -41,7 +41,7 @@ func (cmd *NodeInfoCommand) Run(version util.Version) error {
 
 	encs := cmd.Encoders()
 	if encs == nil {
-		if i, err := cmd.LoadEncoders(nil); err != nil {
+		if i, err := cmd.LoadEncoders(nil, nil); err != nil {
 			return err
 		} else {
 			encs = i

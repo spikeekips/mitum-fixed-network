@@ -17,14 +17,14 @@ import (
 )
 
 var (
-	BlockV0Type              = hint.MustNewType(0x01, 0x40, "block-v0")
-	BlockV0Hint              = hint.MustHint(BlockV0Type, "0.0.1")
-	ManifestV0Type           = hint.MustNewType(0x01, 0x41, "block-manifest-v0")
-	ManifestV0Hint           = hint.MustHint(ManifestV0Type, "0.0.1")
-	BlockConsensusInfoV0Type = hint.MustNewType(0x01, 0x42, "block-consensus-info-v0")
-	BlockConsensusInfoV0Hint = hint.MustHint(BlockConsensusInfoV0Type, "0.0.1")
-	SuffrageInfoV0Type       = hint.MustNewType(0x01, 0x43, "block-suffrage-info-v0")
-	SuffrageInfoV0Hint       = hint.MustHint(SuffrageInfoV0Type, "0.0.1")
+	BlockV0Type              = hint.Type("block")
+	BlockV0Hint              = hint.NewHint(BlockV0Type, "v0.0.1")
+	ManifestV0Type           = hint.Type("block-manifest")
+	ManifestV0Hint           = hint.NewHint(ManifestV0Type, "v0.0.1")
+	BlockConsensusInfoV0Type = hint.Type("block-consensus-info")
+	BlockConsensusInfoV0Hint = hint.NewHint(BlockConsensusInfoV0Type, "v0.0.1")
+	SuffrageInfoV0Type       = hint.Type("block-suffrage-info")
+	SuffrageInfoV0Hint       = hint.NewHint(SuffrageInfoV0Type, "v0.0.1")
 )
 
 type BlockV0 struct {

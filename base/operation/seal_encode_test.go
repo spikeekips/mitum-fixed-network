@@ -11,7 +11,6 @@ import (
 	bsonenc "github.com/spikeekips/mitum/util/encoder/bson"
 	jsonenc "github.com/spikeekips/mitum/util/encoder/json"
 	"github.com/spikeekips/mitum/util/localtime"
-	"github.com/spikeekips/mitum/util/valuehash"
 )
 
 type testSealEncode struct {
@@ -28,12 +27,11 @@ func (t *testSealEncode) SetupSuite() {
 	t.encs = encoder.NewEncoders()
 	_ = t.encs.AddEncoder(t.enc)
 
-	_ = t.encs.AddHinter(key.BTCPublickeyHinter)
-	_ = t.encs.AddHinter(valuehash.SHA256{})
-	_ = t.encs.AddHinter(BaseSeal{})
-	_ = t.encs.AddHinter(KVOperation{})
-	_ = t.encs.AddHinter(KVOperationFact{})
-	_ = t.encs.AddHinter(BaseFactSign{})
+	_ = t.encs.TestAddHinter(key.BTCPublickeyHinter)
+	_ = t.encs.TestAddHinter(BaseSeal{})
+	_ = t.encs.TestAddHinter(KVOperation{})
+	_ = t.encs.TestAddHinter(KVOperationFact{})
+	_ = t.encs.TestAddHinter(BaseFactSign{})
 }
 
 func (t *testSealEncode) TestSign() {

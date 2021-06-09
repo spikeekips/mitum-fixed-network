@@ -8,57 +8,87 @@ import (
 
 // Encoders is the collection of Encoder.
 type Encoders struct {
-	*hint.Hintset
-	hintset *hint.Hintset
+	*hint.GlobalHintset
+	hintset *hint.GlobalHintset
 }
 
 // NewEncoders returns new Encoders
 func NewEncoders() *Encoders {
 	return &Encoders{
-		Hintset: hint.NewHintset(),
-		hintset: hint.NewHintset(),
+		GlobalHintset: hint.NewGlobalHintset(),
+		hintset:       hint.NewGlobalHintset(),
 	}
+}
+
+func (es *Encoders) Initialize() error {
+	if err := es.GlobalHintset.Initialize(); err != nil {
+		return err
+	}
+
+	return es.hintset.Initialize()
 }
 
 // AddEncoder add Encoder.
 func (es *Encoders) AddEncoder(ec Encoder) error {
-	if err := es.Hintset.Add(ec); err != nil {
+	if !es.GlobalHintset.HasType(ec.Hint().Type()) {
+		if err := es.GlobalHintset.AddType(ec.Hint().Type()); err != nil {
+			return err
+		}
+	}
+
+	if err := es.GlobalHintset.Add(ec); err != nil {
 		return err
 	}
 
-	ec.SetHintset(es.hintset)
+	ec.SetHintset(es.hintset.Hintset)
 
 	return nil
 }
 
-// Encoder returns Encoder by Hint.
-func (es *Encoders) Encoder(t hint.Type, version util.Version) (Encoder, error) {
-	if h, err := es.Hintset.Hinter(t, version); err != nil {
-		return nil, err
-	} else if i, ok := h.(Encoder); !ok {
-		return nil, xerrors.Errorf("not Encoder, %T", h)
+func (es *Encoders) Encoder(ty hint.Type, version string) (Encoder, error) {
+	ht := hint.NewHint(ty, version)
+
+	var hinter hint.Hinter
+	if len(version) < 1 {
+		if i, err := es.GlobalHintset.Latest(ht.Type()); err != nil {
+			return nil, err
+		} else {
+			hinter = i
+		}
+	} else if i := es.GlobalHintset.Get(ht); i == nil {
+		return nil, util.NotFoundError.Errorf("encoder, %q not found", ht)
+	} else {
+		hinter = i
+	}
+
+	if i, ok := hinter.(Encoder); !ok {
+		return nil, xerrors.Errorf("not Encoder, %T", hinter)
 	} else {
 		return i, nil
 	}
 }
 
-func (es *Encoders) AddHinter(hinter hint.Hinter) error {
+func (es *Encoders) AddType(ty hint.Type) error {
+	return es.hintset.AddType(ty)
+}
+
+func (es *Encoders) AddHinter(ht hint.Hinter) error {
 	// analyze hinter by all encoders.
-	for _, ecs := range es.Hintset.Hinters() {
-		for _, ec := range ecs {
-			if err := (interface{})(ec).(Encoder).Analyze(hinter); err != nil {
-				return err
-			}
+	hinters := es.Hintset.Hinters(ht.Hint().Type())
+	for i := range hinters {
+		enc := hinters[i]
+		if err := (interface{})(enc).(Encoder).Analyze(ht); err != nil {
+			return err
 		}
 	}
 
-	if err := es.hintset.Add(hinter); err != nil {
+	if err := es.hintset.Add(ht); err != nil {
 		return err
 	}
 
 	return nil
 }
 
-func (es *Encoders) Hinter(t hint.Type, version util.Version) (hint.Hinter, error) {
-	return es.hintset.Hinter(t, version)
+func (es *Encoders) Compatible(t hint.Type, version string) (hint.Hinter, error) {
+	return es.hintset.Compatible(hint.NewHint(t, version))
 }

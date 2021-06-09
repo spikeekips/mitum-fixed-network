@@ -11,8 +11,8 @@ import (
 )
 
 var (
-	NumberValueType = hint.MustNewType(0x01, 0x67, "state-number-value")
-	NumberValueHint = hint.MustHint(NumberValueType, "0.0.1")
+	NumberValueType = hint.Type("state-number-value")
+	NumberValueHint = hint.NewHint(NumberValueType, "v0.0.1")
 )
 
 type NumberValue struct {

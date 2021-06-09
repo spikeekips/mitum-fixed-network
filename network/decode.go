@@ -1,8 +1,8 @@
 package network
 
 import (
+	"github.com/spikeekips/mitum/util"
 	"github.com/spikeekips/mitum/util/encoder"
-	"github.com/spikeekips/mitum/util/hint"
 )
 
 func DecodeNodeInfo(enc encoder.Encoder, b []byte) (NodeInfo, error) {
@@ -11,7 +11,7 @@ func DecodeNodeInfo(enc encoder.Encoder, b []byte) (NodeInfo, error) {
 	} else if i == nil {
 		return nil, nil
 	} else if v, ok := i.(NodeInfo); !ok {
-		return nil, hint.InvalidTypeError.Errorf("not NodeInfo; type=%T", i)
+		return nil, util.WrongTypeError.Errorf("not NodeInfo; type=%T", i)
 	} else {
 		return v, nil
 	}

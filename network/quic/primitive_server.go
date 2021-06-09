@@ -152,7 +152,7 @@ func EncoderFromHeader(header http.Header, encs *encoder.Encoders, enc encoder.E
 	if len(s) < 1 {
 		// NOTE if empty header, use default enc
 		return enc, nil
-	} else if ht, err := hint.NewHintFromString(s); err != nil {
+	} else if ht, err := hint.ParseHint(s); err != nil {
 		return nil, err
 	} else {
 		return encs.Encoder(ht.Type(), ht.Version())

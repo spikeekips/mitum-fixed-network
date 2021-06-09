@@ -28,7 +28,7 @@ type RestoreCommand struct {
 	lastManifest  block.Manifest
 }
 
-func NewRestoreCommand(hinters []hint.Hinter) RestoreCommand {
+func NewRestoreCommand(types []hint.Type, hinters []hint.Hinter) RestoreCommand {
 	cmd := RestoreCommand{
 		BaseRunCommand: NewBaseRunCommand(false, "restore"),
 	}
@@ -52,7 +52,7 @@ func NewRestoreCommand(hinters []hint.Hinter) RestoreCommand {
 
 	restoreHooks := []pm.Hook{
 		pm.NewHook(pm.HookPrefixPost, process.ProcessNameEncoders,
-			process.HookNameAddHinters, process.HookAddHinters(hinters)).SetOverride(true),
+			process.HookNameAddHinters, process.HookAddHinters(types, hinters)).SetOverride(true),
 		pm.NewHook(pm.HookPrefixPost, process.ProcessNameConfig,
 			process.HookNameConfigGenesisOperations, nil).SetOverride(true),
 		pm.NewHook(pm.HookPrefixPost, process.ProcessNameConfig,
@@ -212,7 +212,7 @@ func (cmd *RestoreCommand) hookLoadVars(ctx context.Context) (context.Context, e
 	if err := process.LoadBlockDataContextValue(ctx, &bd); err != nil {
 		return ctx, err
 	} else if i, ok := bd.(*localfs.BlockData); !ok {
-		return ctx, xerrors.Errorf("BlockData is not type of *localfs.BlockData, %T", bd)
+		return ctx, util.WrongTypeError.Errorf("BlockData is not type of *localfs.BlockData, %T", bd)
 	} else {
 		cmd.bd = i
 	}

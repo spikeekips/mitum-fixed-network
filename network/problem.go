@@ -17,8 +17,8 @@ const (
 )
 
 var (
-	ProblemType = hint.MustNewType(0x01, 0x93, "mitum-problem")
-	ProblemHint = hint.MustHint(ProblemType, "0.0.1")
+	ProblemType = hint.Type("mitum-problem")
+	ProblemHint = hint.NewHint(ProblemType, "v0.0.1")
 )
 
 var (

@@ -86,7 +86,7 @@ func loadBlockDataMaps(r *http.Request, enc encoder.Encoder) ([]block.BlockDataM
 		if j, err := enc.DecodeByHint(bs[i]); err != nil {
 			return nil, err
 		} else if k, ok := j.(block.BlockDataMap); !ok {
-			return nil, xerrors.Errorf("not block.BlockDataMap type, %T", j)
+			return nil, util.WrongTypeError.Errorf("not block.BlockDataMap type, %T", j)
 		} else if _, found := founds[k.Height()]; found {
 			continue
 		} else {

@@ -7,6 +7,7 @@ import (
 	"github.com/stretchr/testify/suite"
 
 	"github.com/spikeekips/mitum/isaac"
+	"github.com/spikeekips/mitum/launch"
 	"github.com/spikeekips/mitum/launch/config"
 	"github.com/spikeekips/mitum/launch/pm"
 	"github.com/spikeekips/mitum/util/logging"
@@ -30,7 +31,7 @@ func (t *testProcessConfig) pm(ctx context.Context) *pm.Processes {
 
 	t.NoError(ps.AddHook(
 		pm.HookPrefixPost, ProcessNameEncoders,
-		HookNameAddHinters, HookAddHinters(DefaultHinters),
+		HookNameAddHinters, HookAddHinters(launch.EncoderTypes, launch.EncoderHinters),
 		true,
 	))
 
@@ -39,7 +40,7 @@ func (t *testProcessConfig) pm(ctx context.Context) *pm.Processes {
 
 func (t *testProcessConfig) TestSimple() {
 	y := `
-privatekey: KzmnCUoBrqYbkoP8AUki1AJsyKqxNsiqdrtTB2onyzQfB6MQ5Sef-0112:0.0.1
+privatekey: KzmnCUoBrqYbkoP8AUki1AJsyKqxNsiqdrtTB2onyzQfB6MQ5Sef:btc-priv-v0.0.1
 network-id: show me
 `
 	ctx := context.Background()
@@ -54,7 +55,7 @@ network-id: show me
 	err := config.LoadConfigContextValue(ps.Context(), &conf)
 	t.NoError(err)
 
-	t.Equal("KzmnCUoBrqYbkoP8AUki1AJsyKqxNsiqdrtTB2onyzQfB6MQ5Sef-0112:0.0.1", conf.Privatekey().String())
+	t.Equal("KzmnCUoBrqYbkoP8AUki1AJsyKqxNsiqdrtTB2onyzQfB6MQ5Sef:btc-priv-v0.0.1", conf.Privatekey().String())
 	t.Equal([]byte("show me"), conf.NetworkID().Bytes())
 }
 
@@ -77,7 +78,7 @@ func (t *testConfig) ready(y string) *pm.Processes {
 	t.NoError(ps.AddProcess(ProcessorEncoders, false))
 	t.NoError(ps.AddHook(
 		pm.HookPrefixPost, ProcessNameEncoders,
-		HookNameAddHinters, HookAddHinters(DefaultHinters),
+		HookNameAddHinters, HookAddHinters(launch.EncoderTypes, launch.EncoderHinters),
 		true,
 	))
 
@@ -88,18 +89,18 @@ func (t *testConfig) ready(y string) *pm.Processes {
 
 func (t *testConfig) TestSimple() {
 	y := `
-address: n0-010a:0.0.1
-privatekey: KzmnCUoBrqYbkoP8AUki1AJsyKqxNsiqdrtTB2onyzQfB6MQ5Sef-0112:0.0.1
+address: n0:sa-v0.0.1
+privatekey: KzmnCUoBrqYbkoP8AUki1AJsyKqxNsiqdrtTB2onyzQfB6MQ5Sef:btc-priv-v0.0.1
 network-id: show me
 nodes:
-  - address: n1-010a:0.0.1
+  - address: n1:sa-v0.0.1
     url: quic://local:54322
-    publickey: 27phogA4gmbMGfg321EHfx5eABkL7KAYuDPRGFoyQtAUb-0113:0.0.1
+    publickey: 27phogA4gmbMGfg321EHfx5eABkL7KAYuDPRGFoyQtAUb:btc-pub-v0.0.1
 time-server: ""
 suffrage:
   nodes:
-    - n0-010a:0.0.1
-    - n1-010a:0.0.1
+    - n0:sa-v0.0.1
+    - n1:sa-v0.0.1
 `
 
 	ps := t.ready(y)
@@ -109,14 +110,14 @@ suffrage:
 	err := config.LoadConfigContextValue(ps.Context(), &conf)
 	t.NoError(err)
 
-	t.Equal("n0-010a:0.0.1", conf.Address().String())
-	t.Equal("KzmnCUoBrqYbkoP8AUki1AJsyKqxNsiqdrtTB2onyzQfB6MQ5Sef-0112:0.0.1", conf.Privatekey().String())
+	t.Equal("n0:sa-v0.0.1", conf.Address().String())
+	t.Equal("KzmnCUoBrqYbkoP8AUki1AJsyKqxNsiqdrtTB2onyzQfB6MQ5Sef:btc-priv-v0.0.1", conf.Privatekey().String())
 	t.Equal([]byte("show me"), conf.NetworkID().Bytes())
 
 	t.Equal(1, len(conf.Nodes()))
-	t.Equal("n1-010a:0.0.1", conf.Nodes()[0].Address().String())
+	t.Equal("n1:sa-v0.0.1", conf.Nodes()[0].Address().String())
 	t.Equal("quic://local:54322", conf.Nodes()[0].URL().String())
-	t.Equal("27phogA4gmbMGfg321EHfx5eABkL7KAYuDPRGFoyQtAUb-0113:0.0.1", conf.Nodes()[0].Publickey().String())
+	t.Equal("27phogA4gmbMGfg321EHfx5eABkL7KAYuDPRGFoyQtAUb:btc-pub-v0.0.1", conf.Nodes()[0].Publickey().String())
 
 	// check empties
 	t.Equal(config.DefaultLocalNetworkURL.String(), conf.Network().URL().String())
@@ -138,18 +139,18 @@ suffrage:
 
 func (t *testConfig) TestInValidSuffrage() {
 	y := `
-address: n0-010a:0.0.1
-privatekey: KzmnCUoBrqYbkoP8AUki1AJsyKqxNsiqdrtTB2onyzQfB6MQ5Sef-0112:0.0.1
+address: n0:sa-v0.0.1
+privatekey: KzmnCUoBrqYbkoP8AUki1AJsyKqxNsiqdrtTB2onyzQfB6MQ5Sef:btc-priv-v0.0.1
 network-id: show me
 nodes:
-  - address: n1-010a:0.0.1
+  - address: n1:sa-v0.0.1
     url: quic://local:54322
-    publickey: 27phogA4gmbMGfg321EHfx5eABkL7KAYuDPRGFoyQtAUb-0113:0.0.1
+    publickey: 27phogA4gmbMGfg321EHfx5eABkL7KAYuDPRGFoyQtAUb:btc-pub-v0.0.1
 suffrage:
   type: show-me
   nodes:
-    - n0-010a:0.0.1
-    - n1-010a:0.0.1
+    - n0:sa-v0.0.1
+    - n1:sa-v0.0.1
 `
 
 	ps := t.ready(y)

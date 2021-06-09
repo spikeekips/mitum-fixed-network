@@ -357,7 +357,7 @@ func (co *ConcurrentOperationsProcessor) opr(op state.Processor) (OperationProce
 
 	var hinter hint.Hinter
 	if ht, ok := op.(hint.Hinter); !ok {
-		return nil, xerrors.Errorf("not hint.Hinter, %T", op)
+		return nil, xerrors.Errorf("not Hinter, %T", op)
 	} else {
 		hinter = ht
 	}
@@ -368,7 +368,7 @@ func (co *ConcurrentOperationsProcessor) opr(op state.Processor) (OperationProce
 
 	var opr OperationProcessor = defaultOperationProcessor{}
 	if co.oppHintSet != nil {
-		if hinter, found := co.oppHintSet.Get(hinter); !found {
+		if hinter, err := co.oppHintSet.Compatible(hinter); err != nil {
 			opr = defaultOperationProcessor{}
 		} else {
 			opr = hinter.(OperationProcessor)

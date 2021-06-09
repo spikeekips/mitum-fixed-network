@@ -3,7 +3,6 @@ package cmds
 import (
 	"context"
 
-	"github.com/spikeekips/mitum/launch"
 	"github.com/spikeekips/mitum/launch/config"
 	"github.com/spikeekips/mitum/launch/pm"
 	"github.com/spikeekips/mitum/launch/process"
@@ -20,7 +19,7 @@ func NewBaseRunCommand(dryrun bool, name string) *BaseRunCommand {
 	return &BaseRunCommand{
 		BaseCommand: NewBaseCommand(name),
 		dryrun:      dryrun,
-		processes:   launch.DefaultProcesses(),
+		processes:   DefaultProcesses(),
 	}
 }
 

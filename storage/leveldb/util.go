@@ -1,27 +1,28 @@
 package leveldbstorage
 
 import (
-	leveldbErrors "github.com/syndtr/goleveldb/leveldb/errors"
+	"bytes"
 
 	"github.com/spikeekips/mitum/storage"
 	"github.com/spikeekips/mitum/util"
 	"github.com/spikeekips/mitum/util/encoder"
 	"github.com/spikeekips/mitum/util/hint"
+	leveldbErrors "github.com/syndtr/goleveldb/leveldb/errors"
 )
 
 func loadHint(b []byte) (hint.Hint, []byte, error) {
 	var ht hint.Hint
-	if h, err := hint.NewHintFromBytes(b[:hint.MaxHintSize]); err != nil {
+	if h, err := hint.ParseHint(string(bytes.TrimRight(b[:hint.MaxHintLength], "\x00"))); err != nil {
 		return hint.Hint{}, nil, err
 	} else {
 		ht = h
 	}
 
-	return ht, b[hint.MaxHintSize:], nil
+	return ht, b[hint.MaxHintLength:], nil
 }
 
 func encodeWithEncoder(enc encoder.Encoder, b []byte) []byte {
-	h := make([]byte, hint.MaxHintSize)
+	h := make([]byte, hint.MaxHintLength)
 	copy(h, enc.Hint().Bytes())
 
 	return util.ConcatBytesSlice(h, b)

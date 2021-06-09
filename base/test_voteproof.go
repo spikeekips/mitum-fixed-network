@@ -44,8 +44,8 @@ func NewTestVoteproofV0(
 }
 
 var (
-	DummyVoteproofType = hint.MustNewType(0xff, 0x50, "dummy-voteproof")
-	DummyVoteproofHint = hint.MustHint(DummyVoteproofType, "0.1.0-dummy")
+	DummyVoteproofType = hint.Type("dummy-voteproof")
+	DummyVoteproofHint = hint.NewHint(DummyVoteproofType, "v0.1.0-dummy")
 )
 
 type DummyVoteproof struct {

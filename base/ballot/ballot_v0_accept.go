@@ -12,8 +12,8 @@ import (
 )
 
 var (
-	ACCEPTBallotV0Hint     hint.Hint = hint.MustHint(ACCEPTBallotType, "0.0.1")
-	ACCEPTBallotFactV0Hint hint.Hint = hint.MustHint(ACCEPTBallotFactType, "0.0.1")
+	ACCEPTBallotV0Hint     = hint.NewHint(ACCEPTBallotType, "v0.0.1")
+	ACCEPTBallotFactV0Hint = hint.NewHint(ACCEPTBallotFactType, "v0.0.1")
 )
 
 type ACCEPTBallotFactV0 struct {

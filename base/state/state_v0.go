@@ -13,8 +13,8 @@ import (
 )
 
 var (
-	StateV0Type = hint.MustNewType(0x01, 0x60, "stete-v0")
-	StateV0Hint = hint.MustHint(StateV0Type, "0.0.1")
+	StateV0Type = hint.Type("stete")
+	StateV0Hint = hint.NewHint(StateV0Type, "v0.0.1")
 )
 
 type StateV0 struct {

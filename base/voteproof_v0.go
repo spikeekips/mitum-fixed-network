@@ -16,8 +16,8 @@ import (
 )
 
 var (
-	VoteproofV0Type           = hint.MustNewType(0x01, 0x30, "voteproof")
-	VoteproofV0Hint hint.Hint = hint.MustHint(VoteproofV0Type, "0.0.1")
+	VoteproofV0Type = hint.Type("voteproof")
+	VoteproofV0Hint = hint.NewHint(VoteproofV0Type, "v0.0.1")
 )
 
 type VoteproofV0 struct {

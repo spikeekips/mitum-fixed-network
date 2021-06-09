@@ -26,5 +26,5 @@ func (t *baseDeployKeyHandler) SetupTest() {
 
 	t.enc = jsonenc.NewEncoder()
 	encs.AddEncoder(t.enc)
-	_ = encs.AddHinter(key.BTCPublickeyHinter)
+	_ = encs.TestAddHinter(key.BTCPublickeyHinter)
 }

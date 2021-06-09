@@ -26,10 +26,9 @@ func (t *testBallotV0SIGNEncode) SetupSuite() {
 
 	encs := encoder.NewEncoders()
 	t.NoError(encs.AddEncoder(t.enc))
-	t.NoError(encs.AddHinter(valuehash.SHA256{}))
-	t.NoError(encs.AddHinter(base.StringAddress("")))
-	t.NoError(encs.AddHinter(key.BTCPublickeyHinter))
-	t.NoError(encs.AddHinter(SIGNBallotV0{}))
+	t.NoError(encs.TestAddHinter(base.StringAddress("")))
+	t.NoError(encs.TestAddHinter(key.BTCPublickeyHinter))
+	t.NoError(encs.TestAddHinter(SIGNBallotV0{}))
 }
 
 func (t *testBallotV0SIGNEncode) TestEncode() {

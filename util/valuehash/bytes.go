@@ -2,16 +2,9 @@ package valuehash
 
 import (
 	"bytes"
-
-	"github.com/spikeekips/mitum/util/hint"
 )
 
 const maxBytesHashSize = 100
-
-var (
-	bytesType = hint.MustNewType(0x01, 0x80, "hash-bytes")
-	bytesHint = hint.MustHint(bytesType, "0.0.1")
-)
 
 type Bytes []byte
 
@@ -25,10 +18,6 @@ func NewBytesFromString(s string) Bytes {
 
 func (hs Bytes) String() string {
 	return toString(hs)
-}
-
-func (hs Bytes) Hint() hint.Hint {
-	return bytesHint
 }
 
 func (hs Bytes) Empty() bool {

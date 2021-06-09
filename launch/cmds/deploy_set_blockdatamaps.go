@@ -38,7 +38,7 @@ func (cmd *SetBlockDataMapsCommand) Run(version util.Version) error {
 
 	if err := cmd.Initialize(cmd, version); err != nil {
 		return xerrors.Errorf("failed to initialize command: %w", err)
-	} else if _, err := cmd.LoadEncoders(nil); err != nil {
+	} else if _, err := cmd.LoadEncoders(nil, nil); err != nil {
 		return err
 	}
 

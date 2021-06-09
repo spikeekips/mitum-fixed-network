@@ -20,10 +20,10 @@ var (
 )
 
 var (
-	KVOperationFactType = hint.MustNewType(0xff, 0xf9, "kv-operation-fact")
-	KVOperationFactHint = hint.MustHint(KVOperationFactType, "0.0.1")
-	KVOperationType     = hint.MustNewType(0xff, 0xfa, "kv-operation")
-	KVOperationHint     = hint.MustHint(KVOperationType, "0.0.1")
+	KVOperationFactType = hint.Type("kv-operation-fact")
+	KVOperationFactHint = hint.NewHint(KVOperationFactType, "v0.0.1")
+	KVOperationType     = hint.Type("kv-operation")
+	KVOperationHint     = hint.NewHint(KVOperationType, "v0.0.1")
 )
 
 type KVOperationFact struct {

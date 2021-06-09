@@ -11,7 +11,7 @@ func LogEventWithSeal(sl Seal, e logging.Emitter, verbose bool) logging.Emitter 
 	} else {
 		event = e.
 			Dict("seal", logging.Dict().
-				Hinted("hint", sl.Hint()).
+				Str("hint", sl.Hint().String()).
 				Hinted("hash", sl.Hash()).(*logging.Event),
 			)
 	}

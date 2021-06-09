@@ -47,12 +47,12 @@ type BlockDownloadCommand struct {
 	bd         blockdata.BlockData
 }
 
-func NewBlockDownloadCommand(hinters []hint.Hinter) BlockDownloadCommand {
+func NewBlockDownloadCommand(types []hint.Type, hinters []hint.Hinter) BlockDownloadCommand {
 	cmd := BlockDownloadCommand{
 		BaseCommand: NewBaseCommand("block-download"),
 	}
 
-	if _, err := cmd.LoadEncoders(hinters); err != nil {
+	if _, err := cmd.LoadEncoders(types, hinters); err != nil {
 		panic(err)
 	}
 
@@ -131,7 +131,7 @@ func (cmd *BlockDownloadCommand) prepareHeight() error {
 func (cmd *BlockDownloadCommand) prepareChannel() error {
 	encs := cmd.Encoders()
 	if encs == nil {
-		if i, err := cmd.LoadEncoders(nil); err != nil {
+		if i, err := cmd.LoadEncoders(nil, nil); err != nil {
 			return err
 		} else {
 			encs = i

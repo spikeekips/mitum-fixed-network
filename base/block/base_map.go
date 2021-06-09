@@ -16,8 +16,8 @@ import (
 )
 
 var (
-	BaseBlockDataMapType           = hint.MustNewType(0x01, 0x91, "base-blockdatamap")
-	BaseBlockDataMapHint hint.Hint = hint.MustHint(BaseBlockDataMapType, "0.0.1")
+	BaseBlockDataMapType = hint.Type("base-blockdatamap")
+	BaseBlockDataMapHint = hint.NewHint(BaseBlockDataMapType, "v0.0.1")
 )
 
 var (

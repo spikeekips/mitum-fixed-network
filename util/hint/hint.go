@@ -1,162 +1,117 @@
 package hint
 
 import (
-	"bytes"
-	"encoding/hex"
 	"fmt"
-	"regexp"
+	"strings"
 
+	"github.com/spikeekips/mitum/util/isvalid"
 	"golang.org/x/mod/semver"
 	"golang.org/x/xerrors"
-
-	"github.com/spikeekips/mitum/util"
-)
-
-const (
-	MaxVersionSize          int    = 15
-	MaxHintSize             int    = MaxVersionSize + len(Type{})
-	HintVerboseFormat       string = `hint{type=%q code=%q version=%q}`
-	HintMarshalStringFormat string = "%x:%s"
 )
 
 var (
-	ReHintMarshalStringFormat                = fmt.Sprintf(`(?P<type>[a-f0-9]{%d})\:(?P<version>.*)`, len(Type{})*2)
-	reHintMarshalString       *regexp.Regexp = regexp.MustCompile("^" + ReHintMarshalStringFormat + "$")
+	MaxVersionLength int = 20
+	MaxHintLength    int = MaxTypeLength + MaxVersionLength + 1
 )
 
+type Hinter interface {
+	Hint() Hint
+}
+
 type Hint struct {
-	t       Type
-	version util.Version
+	ty Type
+	v  string
 }
 
-func NewHint(t Type, version util.Version) (Hint, error) {
-	ht := Hint{t: t, version: version}
-
-	return ht, ht.IsValid(nil)
+func NewHint(ty Type, v string) Hint {
+	return Hint{ty: ty, v: v}
 }
 
-func MustHint(t Type, version util.Version) Hint {
-	ht := Hint{t: t, version: version}
-	if err := ht.IsValid(nil); err != nil {
-		panic(err)
+// ParseHint parses string and returns Hint; it does not do valid
+// check(IsValid()).
+func ParseHint(s string) (Hint, error) {
+	switch i := strings.Split(s, "-v"); {
+	case len(i) < 2:
+		return Hint{}, isvalid.InvalidError.Errorf("invalid Hint format found, %q", s)
+	default:
+		return NewHint(Type(strings.Join(i[:len(i)-1], "-v")), "v"+i[len(i)-1]), nil
 	}
-
-	return ht
-}
-
-func NewHintFromString(s string) (Hint, error) {
-	if len(s) > MaxHintSize+1 {
-		return Hint{}, xerrors.Errorf("wrong string for Hint; len=%d", len(s))
-	}
-
-	if !reHintMarshalString.MatchString(s) {
-		return Hint{}, xerrors.Errorf("unknown format of hint: %q", s)
-	}
-
-	ms := reHintMarshalString.FindStringSubmatch(s)
-	if len(ms) != 3 {
-		return Hint{}, xerrors.Errorf("something empty of hint: %q", s)
-	}
-
-	var code [2]byte
-	if b, err := hex.DecodeString(ms[1]); err != nil {
-		return Hint{}, err
-	} else {
-		code = [2]byte{b[0], b[1]}
-	}
-
-	ht := Hint{t: Type(code), version: util.Version(ms[2])}
-
-	return ht, ht.IsValid(nil)
-}
-
-func NewHintFromBytes(b []byte) (Hint, error) {
-	if len(b) > MaxHintSize {
-		return Hint{}, xerrors.Errorf("wrong bytes for Hint; len=%d", len(b))
-	}
-
-	var t [2]byte
-	_ = copy(t[:], b[:2])
-
-	ht := Hint{
-		t:       Type(t),
-		version: util.Version(bytes.TrimRight(b[2:], "\x00")),
-	}
-
-	return ht, ht.IsValid(nil)
 }
 
 func (ht Hint) IsValid([]byte) error {
-	if err := ht.Type().IsValid(nil); err != nil {
-		return err
+	if err := ht.ty.IsValid(nil); err != nil {
+		return xerrors.Errorf("invalid Hint: %w", err)
+	} else if len(ht.v) > MaxVersionLength {
+		return isvalid.InvalidError.Errorf("version too long, %d", MaxVersionLength)
 	}
 
-	if len(ht.version) > MaxVersionSize {
-		return util.InvalidVersionError.Errorf("oversized version; len=%d", len(ht.version))
-	} else if !semver.IsValid(ht.version.GO()) {
-		return util.InvalidVersionError.Errorf("version=%s", ht.version)
-	}
-
-	return nil
-}
-
-func (ht Hint) IsRegistered() error {
-	if !isRegisteredType(ht.Type()) {
-		return UnknownTypeError.Errorf("hint=%s", ht.Verbose())
+	if !semver.IsValid(ht.v) {
+		return isvalid.InvalidError.Errorf("invalid version, %q", ht.v)
 	}
 
 	return nil
 }
 
 func (ht Hint) Type() Type {
-	return ht.t
+	return ht.ty
 }
 
-func (ht Hint) Version() util.Version {
-	return ht.version
+func (ht Hint) Version() string {
+	return ht.v
 }
 
-func (ht Hint) Equal(h Hint) bool {
-	if !ht.Type().Equal(h.Type()) {
-		return false
-	}
-
-	if ht.Version() != h.Version() {
-		return false
-	}
-
-	return true
+func (ht Hint) Equal(b Hint) bool {
+	return ht.ty == b.ty && ht.v == b.v
 }
 
-func (ht Hint) IsCompatible(check Hint) error {
-	if !ht.Type().Equal(check.Type()) {
-		return NewTypeDoesNotMatchError(ht.Type(), check.Type())
+// IsCompatible checks whether target is compatible with source, ht.
+// - Obviously, Type should be same
+// - If same version, compatible
+// - If major version is different, not compatible
+// - If same major, but minor version of target is lower than source, not compatible
+// - If same major and minor, but different patch version, compatible
+func (ht Hint) IsCompatible(target Hint) error {
+	if ht.ty != target.ty {
+		return xerrors.Errorf("type does not match; %q != %q", ht.ty, target.ty)
 	}
 
-	return ht.Version().IsCompatible(check.Version())
+	switch {
+	case semver.Major(ht.v) != semver.Major(target.v):
+		return xerrors.Errorf("not compatible; different major version")
+	case semver.Compare(semver.MajorMinor(ht.v), semver.MajorMinor(target.v)) < 0:
+		return xerrors.Errorf("not compatible; lower minor version")
+	default:
+		return nil
+	}
 }
 
 func (ht Hint) Bytes() []byte {
-	return util.ConcatBytesSlice(ht.t.Bytes(), ht.version.Bytes())
-}
-
-func (ht Hint) Verbose() string {
-	return fmt.Sprintf(
-		HintVerboseFormat,
-		ht.Type().Name(),
-		ht.Type().String(),
-		ht.version,
-	)
+	return []byte(ht.String())
 }
 
 func (ht Hint) String() string {
-	return fmt.Sprintf(
-		HintMarshalStringFormat,
-		[2]byte(ht.Type()),
-		ht.version,
-	)
+	if len(ht.ty) < 1 && len(ht.v) < 1 {
+		return ""
+	}
+
+	return fmt.Sprintf("%s-%s", ht.ty, ht.v)
 }
 
-type Hinter interface {
-	Hint() Hint
+func (ht Hint) MarshalText() ([]byte, error) {
+	return []byte(ht.String()), nil
+}
+
+func (ht *Hint) UnmarshalText(b []byte) error {
+	if len(b) < 1 {
+		return nil
+	}
+
+	if i, err := ParseHint(string(b)); err != nil {
+		return err
+	} else {
+		ht.ty = i.ty
+		ht.v = i.v
+
+		return nil
+	}
 }

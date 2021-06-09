@@ -1,10 +1,9 @@
 package bsonenc
 
 import (
+	"github.com/spikeekips/mitum/util/hint"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/bsontype"
-
-	"github.com/spikeekips/mitum/util/hint"
 )
 
 func Marshal(i interface{}) ([]byte, error) {

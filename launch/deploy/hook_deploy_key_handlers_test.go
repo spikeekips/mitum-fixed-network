@@ -31,7 +31,7 @@ type testDeployKeyHandlers struct {
 func (t *testDeployKeyHandlers) SetupSuite() {
 	t.StorageSupportTest.SetupSuite()
 
-	t.NoError(t.Encs.AddHinter(key.BTCPublickeyHinter))
+	t.NoError(t.Encs.TestAddHinter(key.BTCPublickeyHinter))
 }
 
 func (t *testDeployKeyHandlers) handlers(router *mux.Router) *deployKeyHandlers {

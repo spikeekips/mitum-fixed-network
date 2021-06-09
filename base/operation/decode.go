@@ -3,8 +3,8 @@ package operation
 import (
 	"golang.org/x/xerrors"
 
+	"github.com/spikeekips/mitum/util"
 	"github.com/spikeekips/mitum/util/encoder"
-	"github.com/spikeekips/mitum/util/hint"
 )
 
 func DecodeOperation(enc encoder.Encoder, b []byte) (Operation, error) {
@@ -13,7 +13,7 @@ func DecodeOperation(enc encoder.Encoder, b []byte) (Operation, error) {
 	} else if i == nil {
 		return nil, nil
 	} else if v, ok := i.(Operation); !ok {
-		return nil, hint.InvalidTypeError.Errorf("not Fact; type=%T", i)
+		return nil, util.WrongTypeError.Errorf("not Fact; type=%T", i)
 	} else {
 		return v, nil
 	}
@@ -33,6 +33,7 @@ func DecodeReasonError(enc encoder.Encoder, b []byte) (ReasonError, error) {
 	if len(b) < 1 {
 		return nil, nil
 	}
+
 	if hinter, err := enc.DecodeByHint(b); err != nil {
 		return nil, err
 	} else if hinter == nil {

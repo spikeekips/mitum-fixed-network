@@ -23,8 +23,8 @@ import (
 )
 
 var (
-	BlockDataWriterType           = hint.MustNewType(0x01, 0x92, "blockdata-writer")
-	BlockDataWriterHint hint.Hint = hint.MustHint(BlockDataWriterType, "0.0.1")
+	BlockDataWriterType = hint.Type("blockdata-writer")
+	BlockDataWriterHint = hint.NewHint(BlockDataWriterType, "v0.0.1")
 )
 
 type DefaultWriter struct {
@@ -399,7 +399,7 @@ func ReadlinesWithIndex(
 }
 
 type ItemsHeader struct {
-	Hint  hint.Hint
+	Hint  hint.Hint ``
 	Items uint64
 }
 

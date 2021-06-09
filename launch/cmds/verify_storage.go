@@ -22,9 +22,9 @@ type BaseVerifyCommand struct {
 	lastHeight base.Height
 }
 
-func NewBaseVerifyCommand(name string, hinters []hint.Hinter) *BaseVerifyCommand {
+func NewBaseVerifyCommand(name string, types []hint.Type, hinters []hint.Hinter) *BaseVerifyCommand {
 	b := NewBaseCommand(name)
-	if _, err := b.LoadEncoders(hinters); err != nil {
+	if _, err := b.LoadEncoders(types, hinters); err != nil {
 		panic(err)
 	}
 

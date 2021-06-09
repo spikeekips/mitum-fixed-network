@@ -24,9 +24,9 @@ type BlockDataVerifyCommand struct {
 	bd   blockdata.BlockData
 }
 
-func NewBlockDataVerifyCommand(hinters []hint.Hinter) BlockDataVerifyCommand {
+func NewBlockDataVerifyCommand(types []hint.Type, hinters []hint.Hinter) BlockDataVerifyCommand {
 	return BlockDataVerifyCommand{
-		BaseVerifyCommand: NewBaseVerifyCommand("blockdata-verify", hinters),
+		BaseVerifyCommand: NewBaseVerifyCommand("blockdata-verify", types, hinters),
 	}
 }
 

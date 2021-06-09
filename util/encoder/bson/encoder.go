@@ -12,8 +12,8 @@ import (
 )
 
 var (
-	BSONType = hint.MustNewType(0x01, 0x02, "bson")
-	bsonHint = hint.MustHint(BSONType, "0.0.1")
+	BSONType = hint.Type("bson-encoder")
+	bsonHint = hint.NewHint(BSONType, "v0.0.1")
 )
 
 type Encoder struct {
@@ -77,7 +77,7 @@ func (be *Encoder) DecodeByHint(b []byte) (hint.Hinter, error) {
 }
 
 func (be *Encoder) DecodeWithHint(h hint.Hint, b []byte) (hint.Hinter, error) {
-	hinter, err := be.hintset.Hinter(h.Type(), h.Version())
+	hinter, err := be.hintset.Compatible(h)
 	if err != nil {
 		return nil, err
 	}

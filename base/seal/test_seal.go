@@ -14,7 +14,7 @@ import (
 	"github.com/spikeekips/mitum/util/valuehash"
 )
 
-var dummySealHint = hint.MustHintWithType(hint.Type{0xff, 0x35}, "0.1", "dummy-seal")
+var dummySealHint = hint.NewHint(hint.Type("dummy-seal"), "v0.1")
 
 type DummySeal struct {
 	PK        key.Privatekey

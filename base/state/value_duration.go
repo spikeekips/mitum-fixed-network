@@ -11,8 +11,8 @@ import (
 )
 
 var (
-	DurationValueType = hint.MustNewType(0x01, 0x65, "state-duration-value")
-	DurationValueHint = hint.MustHint(DurationValueType, "0.0.1")
+	DurationValueType = hint.Type("state-duration-value")
+	DurationValueHint = hint.NewHint(DurationValueType, "v0.0.1")
 )
 
 type DurationValue struct {

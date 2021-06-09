@@ -1,8 +1,7 @@
 package base
 
 import (
-	"golang.org/x/xerrors"
-
+	"github.com/spikeekips/mitum/util"
 	"github.com/spikeekips/mitum/util/encoder"
 	"github.com/spikeekips/mitum/util/hint"
 )
@@ -13,7 +12,7 @@ func DecodeFact(enc encoder.Encoder, b []byte) (Fact, error) {
 	} else if i == nil {
 		return nil, nil
 	} else if v, ok := i.(Fact); !ok {
-		return nil, hint.InvalidTypeError.Errorf("not Fact; type=%T", i)
+		return nil, util.WrongTypeError.Errorf("not Fact; type=%T", i)
 	} else {
 		return v, nil
 	}
@@ -25,7 +24,7 @@ func DecodeNode(enc encoder.Encoder, b []byte) (Node, error) {
 	} else if i == nil {
 		return nil, nil
 	} else if v, ok := i.(Node); !ok {
-		return nil, hint.InvalidTypeError.Errorf("not Node; type=%T", i)
+		return nil, util.WrongTypeError.Errorf("not Node; type=%T", i)
 	} else {
 		return v, nil
 	}
@@ -37,7 +36,7 @@ func DecodeVoteproof(enc encoder.Encoder, b []byte) (Voteproof, error) {
 	} else if i == nil {
 		return nil, nil
 	} else if v, ok := i.(Voteproof); !ok {
-		return nil, hint.InvalidTypeError.Errorf("not Voteproof; type=%T", i)
+		return nil, util.WrongTypeError.Errorf("not Voteproof; type=%T", i)
 	} else {
 		return v, nil
 	}
@@ -53,7 +52,7 @@ func DecodeAddressFromString(enc encoder.Encoder, s string) (Address, error) {
 	if k, err := kd.Encode(enc); err != nil {
 		return nil, err
 	} else if a, ok := k.(Address); !ok {
-		return nil, xerrors.Errorf("not Address; type=%T", k)
+		return nil, util.WrongTypeError.Errorf("not Address; type=%T", k)
 	} else {
 		return a, nil
 	}

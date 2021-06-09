@@ -1,21 +1,20 @@
 package key
 
 import (
-	stellarKeypair "github.com/stellar/go/keypair"
-
 	"github.com/spikeekips/mitum/util/hint"
+	stellarKeypair "github.com/stellar/go/keypair"
 )
 
 var (
-	stellarPrivatekeyType = hint.MustNewType(0x01, 0x10, "stellar-privatekey")
-	stellarPrivatekeyHint = hint.MustHint(stellarPrivatekeyType, "0.0.1")
-	stellarPublickeyType  = hint.MustNewType(0x01, 0x11, "stellar-publickey")
-	stellarPublickeyHint  = hint.MustHint(stellarPublickeyType, "0.0.1")
+	StellarPrivatekeyType = hint.Type("stellar-priv")
+	StellarPrivatekeyHint = hint.NewHint(StellarPrivatekeyType, "v0.0.1")
+	StellarPublickeyType  = hint.Type("stellar-pub")
+	StellarPublickeyHint  = hint.NewHint(StellarPublickeyType, "v0.0.1")
 )
 
 var (
-	StellarPrivatekeyHinter = StellarPrivatekey{BaseKey: NewBaseKey(stellarPrivatekeyHint, nil)}
-	StellarPublickeyHinter  = StellarPublickey{BaseKey: NewBaseKey(stellarPublickeyHint, nil)}
+	StellarPrivatekeyHinter = StellarPrivatekey{BaseKey: NewBaseKey(StellarPrivatekeyHint, nil)}
+	StellarPublickeyHinter  = StellarPublickey{BaseKey: NewBaseKey(StellarPublickeyHint, nil)}
 )
 
 type StellarPrivatekey struct {
@@ -25,7 +24,7 @@ type StellarPrivatekey struct {
 
 func newStellarPrivatekey(kp *stellarKeypair.Full) StellarPrivatekey {
 	return StellarPrivatekey{
-		BaseKey: NewBaseKey(stellarPrivatekeyHint, kp.Seed),
+		BaseKey: NewBaseKey(StellarPrivatekeyHint, kp.Seed),
 		kp:      kp,
 	}
 }
@@ -117,7 +116,7 @@ type StellarPublickey struct {
 func newStellarPublickey(kp stellarKeypair.KP) StellarPublickey {
 	return StellarPublickey{
 		kp:      kp,
-		BaseKey: NewBaseKey(stellarPublickeyHint, kp.Address),
+		BaseKey: NewBaseKey(StellarPublickeyHint, kp.Address),
 	}
 }
 

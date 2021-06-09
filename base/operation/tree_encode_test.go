@@ -23,9 +23,9 @@ func (t *testFixedTreeNodeEncode) SetupSuite() {
 	t.encs = encoder.NewEncoders()
 	_ = t.encs.AddEncoder(t.enc)
 
-	_ = t.encs.AddHinter(tree.BaseFixedTreeNode{})
-	_ = t.encs.AddHinter(FixedTreeNode{})
-	_ = t.encs.AddHinter(BaseReasonError{})
+	_ = t.encs.TestAddHinter(tree.BaseFixedTreeNode{})
+	_ = t.encs.TestAddHinter(FixedTreeNode{})
+	_ = t.encs.TestAddHinter(BaseReasonError{})
 }
 
 func (t *testFixedTreeNodeEncode) TestMake() {

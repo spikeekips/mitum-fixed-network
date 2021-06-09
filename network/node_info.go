@@ -13,8 +13,8 @@ import (
 )
 
 var (
-	NodeInfoV0Type = hint.MustNewType(0x01, 0x86, "node-info-v0")
-	NodeInfoV0Hint = hint.MustHint(NodeInfoV0Type, "0.0.1")
+	NodeInfoType   = hint.Type("node-info")
+	NodeInfoV0Hint = hint.NewHint(NodeInfoType, "v0.0.1")
 )
 
 type NodeInfo interface {

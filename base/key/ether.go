@@ -9,20 +9,19 @@ import (
 	"math/big"
 
 	etherCrypto "github.com/ethereum/go-ethereum/crypto"
-
 	"github.com/spikeekips/mitum/util/hint"
 )
 
 var (
-	etherPrivatekeyType = hint.MustNewType(0x01, 0x14, "ether-privatekey")
-	etherPrivatekeyHint = hint.MustHint(etherPrivatekeyType, "0.0.1")
-	etherPublickeyType  = hint.MustNewType(0x01, 0x15, "ether-publickey")
-	etherPublickeyHint  = hint.MustHint(etherPublickeyType, "0.0.1")
+	EtherPrivatekeyType = hint.Type("ether-priv")
+	EtherPrivatekeyHint = hint.NewHint(EtherPrivatekeyType, "v0.0.1")
+	EtherPublickeyType  = hint.Type("ether-pub")
+	EtherPublickeyHint  = hint.NewHint(EtherPublickeyType, "v0.0.1")
 )
 
 var (
-	EtherPrivatekeyHinter = EtherPrivatekey{BaseKey: NewBaseKey(etherPrivatekeyHint, nil)}
-	EtherPublickeyHinter  = EtherPublickey{BaseKey: NewBaseKey(etherPublickeyHint, nil)}
+	EtherPrivatekeyHinter = EtherPrivatekey{BaseKey: NewBaseKey(EtherPrivatekeyHint, nil)}
+	EtherPublickeyHinter  = EtherPublickey{BaseKey: NewBaseKey(EtherPublickeyHint, nil)}
 )
 
 type EtherPrivatekey struct {
@@ -32,7 +31,7 @@ type EtherPrivatekey struct {
 
 func newEtherPrivatekey(pk *ecdsa.PrivateKey) EtherPrivatekey {
 	return EtherPrivatekey{
-		BaseKey: NewBaseKey(etherPrivatekeyHint, func() string {
+		BaseKey: NewBaseKey(EtherPrivatekeyHint, func() string {
 			return hex.EncodeToString(etherCrypto.FromECDSA(pk))
 		}),
 		pk: pk,
@@ -107,7 +106,7 @@ type EtherPublickey struct {
 
 func newEtherPublickey(pk *ecdsa.PublicKey) EtherPublickey {
 	return EtherPublickey{
-		BaseKey: NewBaseKey(etherPublickeyHint, func() string {
+		BaseKey: NewBaseKey(EtherPublickeyHint, func() string {
 			return hex.EncodeToString(etherCrypto.FromECDSAPub(pk))
 		}),
 		pk: pk,

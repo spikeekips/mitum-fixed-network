@@ -18,8 +18,8 @@ import (
 )
 
 var (
-	LocalFSBlockDataType           = hint.MustNewType(0x01, 0x90, "localfs-blockdata")
-	LocalFSBlockDataHint hint.Hint = hint.MustHint(LocalFSBlockDataType, "0.0.1")
+	LocalFSBlockDataType = hint.Type("localfs-blockdata")
+	LocalFSBlockDataHint = hint.NewHint(LocalFSBlockDataType, "v0.0.1")
 )
 
 var (

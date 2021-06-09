@@ -51,7 +51,7 @@ type se0 struct {
 	S sup0
 }
 
-var sh0Hint = hint.MustHintWithType(hint.Type{0xff, 0x31}, "0.1", "sh0")
+var sh0Hint = hint.NewHint(hint.Type("sh0"), "v0.1")
 
 type sh0 struct {
 	B string
@@ -61,7 +61,7 @@ func (s0 sh0) Hint() hint.Hint {
 	return sh0Hint
 }
 
-var s1Hint = hint.MustHintWithType(hint.Type{0xff, 0x32}, "0.1", "s1")
+var s1Hint = hint.NewHint(hint.Type("s1"), "v0.1")
 
 type s1 struct {
 	C int
@@ -76,7 +76,7 @@ type dummyStruct struct {
 	B int
 }
 
-var dummyHintedNotMarshalerHint = hint.MustHintWithType(hint.Type{0xff, 0x33}, "0.1", "dummyHintedNotMarshaler")
+var dummyHintedNotMarshalerHint = hint.NewHint(hint.Type("dummy-hinted-not-marshaler"), "v0.1")
 
 type dummyHintedNotMarshaler struct {
 	A string
@@ -87,7 +87,7 @@ func (d dummyHintedNotMarshaler) Hint() hint.Hint {
 	return dummyHintedNotMarshalerHint
 }
 
-var dummyHintedMarshalerWithoutHintInfoHint = hint.MustHintWithType(hint.Type{0xff, 0x34}, "0.1", "dummyHintedMarshalerWithoutHintInfo")
+var dummyHintedMarshalerWithoutHintInfoHint = hint.NewHint(hint.Type("dummy-hinted-marshaler-without-hint-info"), "v0.1")
 
 type dummyHintedMarshalerWithoutHintInfo struct {
 	A string
@@ -105,7 +105,7 @@ func (d dummyHintedMarshalerWithoutHintInfo) MarshalBSON() ([]byte, error) {
 	}{A: d.A, B: d.B})
 }
 
-var dummyHintedMarshalerWithHintInfoHint = hint.MustHintWithType(hint.Type{0xff, 0x35}, "0.1", "dummyHintedMarshalerWithHintInfo")
+var dummyHintedMarshalerWithHintInfoHint = hint.NewHint(hint.Type("dummy-hinted-marshaler-with-hint-info"), "v0.1")
 
 type dummyHintedMarshalerWithHintInfo struct {
 	A string
@@ -320,7 +320,7 @@ func (t *testBSON) TestEncodeHinterNotCompatible() {
 	encs := encoder.NewEncoders()
 	be := NewEncoder()
 	encs.AddEncoder(be)
-	encs.AddHinter(sh0{})
+	encs.TestAddHinter(sh0{})
 
 	var encoded []byte
 	{
@@ -339,7 +339,7 @@ func (t *testBSON) TestEncodeHinterNotCompatible() {
 	{ // wrong major version
 		var decoded []byte
 		{
-			c := bytes.Replace(encoded, []byte(`:0.1`), []byte(`:1.1`), -1)
+			c := bytes.Replace(encoded, []byte(`-v0.1`), []byte(`-v1.1`), -1)
 
 			var m1 bson.M
 			t.NoError(jsonenc.Unmarshal(c, &m1))
@@ -351,13 +351,13 @@ func (t *testBSON) TestEncodeHinterNotCompatible() {
 		}
 
 		_, err := be.DecodeByHint(decoded)
-		t.True(xerrors.Is(err, hint.HintNotFoundError))
+		t.True(xerrors.Is(err, util.NotFoundError))
 	}
 
 	{ // wrong type code
 		var decoded []byte
 		{
-			c := bytes.Replace(encoded, []byte(`ff31:`), []byte(`ffaa:`), -1)
+			c := bytes.Replace(encoded, []byte(sh0{}.Hint().Type()+"-"), []byte("findme-"), -1)
 
 			var m1 bson.M
 			t.NoError(jsonenc.Unmarshal(c, &m1))
@@ -369,7 +369,7 @@ func (t *testBSON) TestEncodeHinterNotCompatible() {
 		}
 
 		_, err := be.DecodeByHint(decoded)
-		t.Contains(err.Error(), "Hint not found in Hintset")
+		t.True(xerrors.Is(err, util.NotFoundError))
 	}
 }
 
@@ -400,7 +400,7 @@ func (t *testBSON) TestHintedNotMarshaler() {
 	encs := encoder.NewEncoders()
 	be := NewEncoder()
 	t.NoError(encs.AddEncoder(be))
-	t.NoError(encs.AddHinter(dummyHintedNotMarshaler{}))
+	t.NoError(encs.TestAddHinter(dummyHintedNotMarshaler{}))
 
 	s := dummyHintedNotMarshaler{
 		A: util.UUID().String(),
@@ -426,7 +426,7 @@ func (t *testBSON) TestHintedMarshalerWithoutHint() {
 	encs := encoder.NewEncoders()
 	be := NewEncoder()
 	t.NoError(encs.AddEncoder(be))
-	t.NoError(encs.AddHinter(dummyHintedMarshalerWithoutHintInfo{}))
+	t.NoError(encs.TestAddHinter(dummyHintedMarshalerWithoutHintInfo{}))
 
 	s := dummyHintedMarshalerWithoutHintInfo{A: util.UUID().String(), B: 33}
 
@@ -445,7 +445,7 @@ func (t *testBSON) TestHintedMarshalerWithHint() {
 	encs := encoder.NewEncoders()
 	be := NewEncoder()
 	t.NoError(encs.AddEncoder(be))
-	t.NoError(encs.AddHinter(dummyHintedMarshalerWithHintInfo{}))
+	t.NoError(encs.TestAddHinter(dummyHintedMarshalerWithHintInfo{}))
 
 	s := dummyHintedMarshalerWithHintInfo{A: util.UUID().String(), B: 33}
 

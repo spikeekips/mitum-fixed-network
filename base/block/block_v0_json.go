@@ -3,10 +3,9 @@ package block
 import (
 	"encoding/json"
 
-	"golang.org/x/xerrors"
-
 	"github.com/spikeekips/mitum/base/operation"
 	"github.com/spikeekips/mitum/base/state"
+	"github.com/spikeekips/mitum/util"
 	jsonenc "github.com/spikeekips/mitum/util/encoder/json"
 	"github.com/spikeekips/mitum/util/tree"
 )
@@ -52,7 +51,7 @@ func (bm *BlockV0) UnpackJSON(b []byte, enc *jsonenc.Encoder) error {
 	if m, err := DecodeManifest(enc, nbm.MF); err != nil {
 		return err
 	} else if mv, ok := m.(ManifestV0); !ok {
-		return xerrors.Errorf("not ManifestV0: type=%T", m)
+		return util.WrongTypeError.Errorf("not ManifestV0: type=%T", m)
 	} else {
 		bm.ManifestV0 = mv
 	}
@@ -60,7 +59,7 @@ func (bm *BlockV0) UnpackJSON(b []byte, enc *jsonenc.Encoder) error {
 	if m, err := DecodeConsensusInfo(enc, nbm.CI); err != nil {
 		return err
 	} else if mv, ok := m.(ConsensusInfoV0); !ok {
-		return xerrors.Errorf("not ConsensusInfoV0: type=%T", m)
+		return util.WrongTypeError.Errorf("not ConsensusInfoV0: type=%T", m)
 	} else {
 		bm.ci = mv
 	}

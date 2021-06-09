@@ -4,18 +4,17 @@ import (
 	"regexp"
 	"strings"
 
-	"go.mongodb.org/mongo-driver/bson/bsontype"
-	"go.mongodb.org/mongo-driver/x/bsonx/bsoncore"
-	"golang.org/x/xerrors"
-
 	"github.com/spikeekips/mitum/util/hint"
 	"github.com/spikeekips/mitum/util/isvalid"
 	"github.com/spikeekips/mitum/util/logging"
+	"go.mongodb.org/mongo-driver/bson/bsontype"
+	"go.mongodb.org/mongo-driver/x/bsonx/bsoncore"
+	"golang.org/x/xerrors"
 )
 
 var (
-	StringAddressType = hint.MustNewType(0x01, 0x0a, "string-address")
-	StringAddressHint = hint.MustHint(StringAddressType, "0.0.1")
+	StringAddressType = hint.Type("sa")
+	StringAddressHint = hint.NewHint(StringAddressType, "v0.0.1")
 )
 
 var (

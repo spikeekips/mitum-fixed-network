@@ -6,20 +6,19 @@ import (
 	"github.com/btcsuite/btcd/chaincfg/chainhash"
 	"github.com/btcsuite/btcutil"
 	"github.com/btcsuite/btcutil/base58"
-
 	"github.com/spikeekips/mitum/util/hint"
 )
 
 var (
-	btcPrivatekeyType = hint.MustNewType(0x01, 0x12, "btc-privatekey")
-	btcPrivatekeyHint = hint.MustHint(btcPrivatekeyType, "0.0.1")
-	btcPublickeyType  = hint.MustNewType(0x01, 0x13, "btc-publickey")
-	btcPublickeyHint  = hint.MustHint(btcPublickeyType, "0.0.1")
+	BTCPrivatekeyType = hint.Type("btc-priv")
+	BTCPrivatekeyHint = hint.NewHint(BTCPrivatekeyType, "v0.0.1")
+	BTCPublickeyType  = hint.Type("btc-pub")
+	BTCPublickeyHint  = hint.NewHint(BTCPublickeyType, "v0.0.1")
 )
 
 var (
-	BTCPrivatekeyHinter = BTCPrivatekey{BaseKey: NewBaseKey(btcPrivatekeyHint, nil)}
-	BTCPublickeyHinter  = BTCPublickey{BaseKey: NewBaseKey(btcPublickeyHint, nil)}
+	BTCPrivatekeyHinter = BTCPrivatekey{BaseKey: NewBaseKey(BTCPrivatekeyHint, nil)}
+	BTCPublickeyHinter  = BTCPublickey{BaseKey: NewBaseKey(BTCPublickeyHint, nil)}
 )
 
 type BTCPrivatekey struct {
@@ -30,7 +29,7 @@ type BTCPrivatekey struct {
 func newBTCPrivatekey(wif *btcutil.WIF) BTCPrivatekey {
 	return BTCPrivatekey{
 		wif:     wif,
-		BaseKey: NewBaseKey(btcPrivatekeyHint, wif.String),
+		BaseKey: NewBaseKey(BTCPrivatekeyHint, wif.String),
 	}
 }
 
@@ -101,7 +100,7 @@ type BTCPublickey struct {
 func newBTCPublickey(pk *btcec.PublicKey) BTCPublickey {
 	return BTCPublickey{
 		pk: pk,
-		BaseKey: NewBaseKey(btcPublickeyHint, func() string {
+		BaseKey: NewBaseKey(BTCPublickeyHint, func() string {
 			return base58.Encode(pk.SerializeCompressed())
 		}),
 	}
@@ -114,7 +113,7 @@ func NewBTCPublickeyFromString(s string) (BTCPublickey, error) {
 	}
 
 	return BTCPublickey{
-		BaseKey: NewBaseKey(btcPublickeyHint, func() string {
+		BaseKey: NewBaseKey(BTCPublickeyHint, func() string {
 			return base58.Encode(pk.SerializeCompressed())
 		}),
 		pk: pk,

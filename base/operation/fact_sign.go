@@ -13,8 +13,8 @@ import (
 )
 
 var (
-	baseFactSignType = hint.MustNewType(0x01, 0x50, "base-fact-sign")
-	baseFactSignHint = hint.MustHint(baseFactSignType, "0.0.1")
+	BaseFactSignType = hint.Type("base-fact-sign")
+	BaseFactSignHint = hint.NewHint(BaseFactSignType, "v0.0.1")
 )
 
 type FactSignUpdater interface {
@@ -81,7 +81,7 @@ func RawBaseFactSign(signer key.Publickey, signature key.Signature, signedAt tim
 }
 
 func (fs BaseFactSign) Hint() hint.Hint {
-	return baseFactSignHint
+	return BaseFactSignHint
 }
 
 func (fs BaseFactSign) Signer() key.Publickey {

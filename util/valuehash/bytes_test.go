@@ -122,7 +122,6 @@ func (t *testBytes) TestJSONMarshal() {
 		var jh Bytes
 		t.NoError(err, json.Unmarshal(b, &jh))
 
-		t.Equal(hs.Hint(), jh.Hint())
 		t.Equal(hs.String(), jh.String())
 		t.True(hs.Equal(jh))
 	}

@@ -18,8 +18,8 @@ import (
 )
 
 var (
-	KVOperationHint     = hint.MustHintWithType(hint.Type{0xff, 0xfb}, "0.0.1", "kv-operation-isaac")
-	LongKVOperationHint = hint.MustHintWithType(hint.Type{0xff, 0xfc}, "0.0.1", "long-kv-operation-isaac")
+	KVOperationHint     = hint.NewHint(hint.Type("kv-operation-isaac"), "v0.0.1")
+	LongKVOperationHint = hint.NewHint(hint.Type("long-kv-operation-isaac"), "v0.0.1")
 )
 
 type KVOperation struct {

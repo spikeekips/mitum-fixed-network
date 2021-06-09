@@ -1,8 +1,6 @@
 package state
 
 import (
-	"golang.org/x/xerrors"
-
 	"github.com/spikeekips/mitum/util"
 	"github.com/spikeekips/mitum/util/hint"
 	"github.com/spikeekips/mitum/util/isvalid"
@@ -10,8 +8,8 @@ import (
 )
 
 var (
-	HintedValueType = hint.MustNewType(0x01, 0x66, "state-hinted-value")
-	HintedValueHint = hint.MustHint(HintedValueType, "0.0.1")
+	HintedValueType = hint.Type("state-hinted-value")
+	HintedValueHint = hint.NewHint(HintedValueType, "v0.0.1")
 )
 
 type HintedValue struct {
@@ -60,11 +58,11 @@ func (hv HintedValue) Equal(v Value) bool {
 
 func (hv HintedValue) Set(v interface{}) (Value, error) {
 	if _, ok := v.(hint.Hinter); !ok {
-		return nil, xerrors.Errorf("not hint.Hinter: %T", v)
+		return nil, util.WrongTypeError.Errorf("not Hinter: %T", v)
 	} else if _, ok := v.(util.Byter); !ok {
-		return nil, xerrors.Errorf("not util.Byter: %T", v)
+		return nil, util.WrongTypeError.Errorf("not util.Byter: %T", v)
 	} else if _, ok := v.(valuehash.Hasher); !ok {
-		return nil, xerrors.Errorf("not valuehash.Hasher: %T", v)
+		return nil, util.WrongTypeError.Errorf("not valuehash.Hasher: %T", v)
 	}
 
 	hv.v = v.(hint.Hinter)

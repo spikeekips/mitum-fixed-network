@@ -24,8 +24,8 @@ type SealUpdater interface {
 }
 
 var (
-	SealType = hint.MustNewType(0x01, 0x51, "seal")
-	SealHint = hint.MustHint(SealType, "0.0.1")
+	SealType = hint.Type("seal")
+	SealHint = hint.NewHint(SealType, "v0.0.1")
 )
 
 type BaseSeal struct {

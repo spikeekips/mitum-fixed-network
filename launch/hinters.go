@@ -1,4 +1,4 @@
-package process
+package launch
 
 import (
 	"github.com/spikeekips/mitum/base"
@@ -12,10 +12,51 @@ import (
 	jsonenc "github.com/spikeekips/mitum/util/encoder/json"
 	"github.com/spikeekips/mitum/util/hint"
 	"github.com/spikeekips/mitum/util/tree"
-	"github.com/spikeekips/mitum/util/valuehash"
 )
 
-var DefaultHinters = []hint.Hinter{
+var EncoderTypes = []hint.Type{
+	ballot.ACCEPTBallotFactType,
+	ballot.ACCEPTBallotType,
+	ballot.INITBallotFactType,
+	ballot.INITBallotType,
+	ballot.ProposalBallotFactType,
+	ballot.ProposalBallotType,
+	ballot.SIGNBallotFactType,
+	ballot.SIGNBallotType,
+	base.BaseNodeV0Type,
+	base.StringAddressType,
+	base.VoteproofV0Type,
+	block.BaseBlockDataMapType,
+	block.BlockConsensusInfoV0Type,
+	block.BlockV0Type,
+	block.ManifestV0Type,
+	block.SuffrageInfoV0Type,
+	bsonenc.BSONType,
+	jsonenc.JSONType,
+	key.BTCPrivatekeyType,
+	key.BTCPublickeyType,
+	key.EtherPrivatekeyType,
+	key.EtherPublickeyType,
+	key.StellarPrivatekeyType,
+	key.StellarPublickeyType,
+	network.NodeInfoType,
+	network.ProblemType,
+	operation.BaseFactSignType,
+	operation.BaseReasonErrorType,
+	operation.FixedTreeNodeType,
+	operation.SealType,
+	state.BytesValueType,
+	state.DurationValueType,
+	state.HintedValueType,
+	state.NumberValueType,
+	state.SliceValueType,
+	state.StateV0Type,
+	state.StringValueType,
+	tree.BaseFixedTreeNodeType,
+	tree.FixedTreeType,
+}
+
+var EncoderHinters = []hint.Hinter{
 	ballot.ACCEPTBallotFactV0{},
 	ballot.ACCEPTBallotV0{},
 	ballot.INITBallotFactV0{},
@@ -41,10 +82,11 @@ var DefaultHinters = []hint.Hinter{
 	key.StellarPrivatekeyHinter,
 	key.StellarPublickeyHinter,
 	network.NodeInfoV0{},
+	network.Problem{},
 	operation.BaseFactSign{},
+	operation.BaseReasonError{},
 	operation.BaseSeal{},
 	operation.FixedTreeNode{},
-	operation.BaseReasonError{},
 	state.BytesValue{},
 	state.DurationValue{},
 	state.HintedValue{},
@@ -54,8 +96,4 @@ var DefaultHinters = []hint.Hinter{
 	state.StringValue{},
 	tree.BaseFixedTreeNode{},
 	tree.FixedTree{},
-	valuehash.Bytes{},
-	valuehash.SHA256{},
-	valuehash.SHA512{},
-	network.Problem{},
 }

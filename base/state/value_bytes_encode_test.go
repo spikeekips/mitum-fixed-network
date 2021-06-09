@@ -8,7 +8,6 @@ import (
 	"github.com/spikeekips/mitum/util/encoder"
 	bsonenc "github.com/spikeekips/mitum/util/encoder/bson"
 	jsonenc "github.com/spikeekips/mitum/util/encoder/json"
-	"github.com/spikeekips/mitum/util/valuehash"
 )
 
 type testStateBytesValueEncode struct {
@@ -21,8 +20,7 @@ func (t *testStateBytesValueEncode) SetupSuite() {
 	encs := encoder.NewEncoders()
 	_ = encs.AddEncoder(t.enc)
 
-	_ = encs.AddHinter(valuehash.SHA256{})
-	_ = encs.AddHinter(BytesValue{})
+	_ = encs.TestAddHinter(BytesValue{})
 }
 
 func (t *testStateBytesValueEncode) TestEncode() {

@@ -15,17 +15,13 @@ func (ht *Hint) UnmarshalBSONValue(t bsontype.Type, b []byte) error {
 		return xerrors.Errorf("invalid marshaled type for hint, %v", t)
 	}
 
-	s, _, ok := bsoncore.ReadString(b)
-	if !ok {
+	if i, _, ok := bsoncore.ReadString(b); !ok {
 		return xerrors.Errorf("can not read string")
-	}
-
-	if h, err := NewHintFromString(s); err != nil {
+	} else if j, err := ParseHint(i); err != nil {
 		return err
 	} else {
-		ht.t = h.t
-		ht.version = h.version
-	}
+		*ht = j
 
-	return nil
+		return nil
+	}
 }

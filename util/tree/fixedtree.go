@@ -14,10 +14,10 @@ import (
 )
 
 var (
-	BaseFixedTreeNodeType = hint.MustNewType(0x01, 0x55, "base-fixedtree-node")
-	BaseFixedTreeNodeHint = hint.MustHint(BaseFixedTreeNodeType, "0.0.1")
-	FixedTreeType         = hint.MustNewType(0x01, 0x56, "fixedtree")
-	FixedTreeHint         = hint.MustHint(FixedTreeType, "0.0.1")
+	BaseFixedTreeNodeType = hint.Type("base-fixedtree-node")
+	BaseFixedTreeNodeHint = hint.NewHint(BaseFixedTreeNodeType, "v0.0.1")
+	FixedTreeType         = hint.Type("fixedtree")
+	FixedTreeHint         = hint.NewHint(FixedTreeType, "v0.0.1")
 )
 
 var (

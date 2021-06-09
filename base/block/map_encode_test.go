@@ -22,8 +22,7 @@ type testBlockDataMapEncode struct {
 
 func (t *testBlockDataMapEncode) SetupSuite() {
 	hs := hint.NewHintset()
-	hs.Add(valuehash.SHA256{})
-	hs.Add(BaseBlockDataMap{})
+	hs.TestAdd(BaseBlockDataMap{})
 
 	t.enc.SetHintset(hs)
 }

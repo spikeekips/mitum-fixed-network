@@ -54,7 +54,14 @@ func (ky BaseKey) Raw() string {
 }
 
 func (ky BaseKey) String() string {
-	return hint.HintedString(ky.ht, ky.rawFunc())
+	var r string
+	if ky.rawFunc == nil {
+		r = "<empty>"
+	} else {
+		r = ky.rawFunc()
+	}
+
+	return hint.HintedString(ky.ht, r)
 }
 
 func (ky BaseKey) Bytes() []byte {

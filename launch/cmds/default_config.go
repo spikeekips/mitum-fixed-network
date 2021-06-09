@@ -11,6 +11,7 @@ import (
 
 	"github.com/alecthomas/kong"
 	"github.com/spikeekips/mitum/base"
+	"github.com/spikeekips/mitum/launch"
 	"github.com/spikeekips/mitum/launch/config"
 	"github.com/spikeekips/mitum/launch/pm"
 	"github.com/spikeekips/mitum/launch/process"
@@ -22,7 +23,7 @@ var (
 	defaultConfigYAML         = fmt.Sprintf(`
 network-id: mitum network; Thu 26 Nov 2020 12:25:18 AM KST
 address: %s
-privatekey: KzmnCUoBrqYbkoP8AUki1AJsyKqxNsiqdrtTB2onyzQfB6MQ5Sef-0112:0.0.1
+privatekey: KzmnCUoBrqYbkoP8AUki1AJsyKqxNsiqdrtTB2onyzQfB6MQ5Sef:btc-priv-v0.0.1
 suffrage:
     nodes:
         - %s
@@ -101,7 +102,7 @@ func (cmd *DefaultConfigCommand) prepare() error {
 		pm.HookPrefixPost,
 		process.ProcessNameEncoders,
 		process.HookNameAddHinters,
-		process.HookAddHinters(process.DefaultHinters),
+		process.HookAddHinters(launch.EncoderTypes, launch.EncoderHinters),
 		true,
 	); err != nil {
 		return err

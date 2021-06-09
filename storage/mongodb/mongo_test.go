@@ -63,16 +63,15 @@ func (t *testMongodbClient) SetupSuite() {
 	t.enc = bsonenc.NewEncoder()
 	_ = t.encs.AddEncoder(t.enc)
 
-	_ = t.encs.AddHinter(key.BTCPublickeyHinter)
-	_ = t.encs.AddHinter(block.BlockV0{})
-	_ = t.encs.AddHinter(block.ManifestV0{})
-	_ = t.encs.AddHinter(block.ConsensusInfoV0{})
-	_ = t.encs.AddHinter(valuehash.SHA256{})
-	_ = t.encs.AddHinter(base.VoteproofV0{})
-	_ = t.encs.AddHinter(seal.DummySeal{})
-	_ = t.encs.AddHinter(operation.BaseSeal{})
-	_ = t.encs.AddHinter(operation.KVOperation{})
-	_ = t.encs.AddHinter(operation.KVOperationFact{})
+	_ = t.encs.TestAddHinter(key.BTCPublickeyHinter)
+	_ = t.encs.TestAddHinter(block.BlockV0{})
+	_ = t.encs.TestAddHinter(block.ManifestV0{})
+	_ = t.encs.TestAddHinter(block.ConsensusInfoV0{})
+	_ = t.encs.TestAddHinter(base.VoteproofV0{})
+	_ = t.encs.TestAddHinter(seal.DummySeal{})
+	_ = t.encs.TestAddHinter(operation.BaseSeal{})
+	_ = t.encs.TestAddHinter(operation.KVOperation{})
+	_ = t.encs.TestAddHinter(operation.KVOperationFact{})
 }
 
 func (t *testMongodbClient) SetupTest() {

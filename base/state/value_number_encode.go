@@ -3,8 +3,6 @@ package state
 import (
 	"reflect"
 
-	"golang.org/x/xerrors"
-
 	"github.com/spikeekips/mitum/util"
 	"github.com/spikeekips/mitum/util/encoder"
 	"github.com/spikeekips/mitum/util/valuehash"
@@ -50,7 +48,7 @@ func (nv *NumberValue) unpack(_ encoder.Encoder, h valuehash.Hash, bValue []byte
 	case reflect.Float64:
 		v = util.BytesToFloat64(bValue)
 	default:
-		return xerrors.Errorf("not supported type for NumberValue: %v", t)
+		return util.WrongTypeError.Errorf("not supported type for NumberValue: %v", t)
 	}
 
 	nv.h = h

@@ -27,7 +27,7 @@ func (t *baseTestHintedString) SetupSuite() {
 	t.encs.AddEncoder(t.be)
 
 	k, _ := t.newKey()
-	t.encs.AddHinter(k)
+	t.encs.TestAddHinter(k)
 }
 
 func (t *baseTestHintedString) TestDecodeBSON() {

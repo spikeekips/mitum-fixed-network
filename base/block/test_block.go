@@ -12,8 +12,8 @@ import (
 )
 
 var (
-	TestBlockDataWriterType           = hint.MustNewType(0xff, 0x37, "test-blockdata-writer")
-	TestBlockDataWriterHint hint.Hint = hint.MustHint(TestBlockDataWriterType, "0.0.1")
+	TestBlockDataWriterType = hint.Type("test-blockdata-writer")
+	TestBlockDataWriterHint = hint.NewHint(TestBlockDataWriterType, "v0.0.1")
 )
 
 func NewTestBlockV0(height base.Height, round base.Round, proposal, previousBlock valuehash.Hash) (BlockV0, error) {

@@ -13,7 +13,7 @@ import (
 	"github.com/spikeekips/mitum/util/valuehash"
 )
 
-var dummyHintedValueHint = hint.MustHintWithType(hint.Type{0xff, 0x60}, "0.0.1", "dummy-hinted-value")
+var dummyHintedValueHint = hint.NewHint(hint.Type("dummy-hinted-value"), "v0.0.1")
 
 type dummyNotHinted struct {
 	v int
@@ -91,7 +91,7 @@ type testStateHintedValue struct {
 func (t *testStateHintedValue) TestNewNotHinted() {
 	dv := HintedValue{}
 	_, err := dv.Set(dummyNotHinted{v: 1})
-	t.Contains(err.Error(), "not hint.Hinter")
+	t.Contains(err.Error(), "not Hinter")
 }
 
 func (t *testStateHintedValue) TestNewNotByter() {

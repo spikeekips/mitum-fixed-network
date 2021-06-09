@@ -5,6 +5,7 @@ import (
 
 	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/base/block"
+	"github.com/spikeekips/mitum/launch"
 	"github.com/spikeekips/mitum/launch/config"
 	"github.com/spikeekips/mitum/launch/pm"
 	"github.com/spikeekips/mitum/launch/process"
@@ -31,7 +32,7 @@ var databaseVerifyProcesses = []pm.Process{
 
 var databaseVerifyHooks = []pm.Hook{
 	pm.NewHook(pm.HookPrefixPost, process.ProcessNameEncoders,
-		process.HookNameAddHinters, process.HookAddHinters(process.DefaultHinters)),
+		process.HookNameAddHinters, process.HookAddHinters(launch.EncoderTypes, launch.EncoderHinters)),
 	pm.NewHook(pm.HookPrefixPre, process.ProcessNameBlockData,
 		process.HookNameCheckBlockDataPath, process.HookCheckBlockDataPath),
 	pm.NewHook(pm.HookPrefixPost, process.ProcessNameBlockData,
@@ -60,9 +61,9 @@ type DatabaseVerifyCommand struct {
 	lastManifest block.Manifest
 }
 
-func NewDatabaseVerifyCommand(hinters []hint.Hinter) DatabaseVerifyCommand {
+func NewDatabaseVerifyCommand(types []hint.Type, hinters []hint.Hinter) DatabaseVerifyCommand {
 	return DatabaseVerifyCommand{
-		BaseVerifyCommand: NewBaseVerifyCommand("database-verify", hinters),
+		BaseVerifyCommand: NewBaseVerifyCommand("database-verify", types, hinters),
 	}
 }
 

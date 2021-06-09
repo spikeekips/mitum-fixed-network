@@ -5,8 +5,6 @@ import (
 
 	"golang.org/x/crypto/sha3"
 	"golang.org/x/xerrors"
-
-	"github.com/spikeekips/mitum/util/hint"
 )
 
 const (
@@ -19,13 +17,6 @@ var (
 	nilSHA256   [sha256Size]byte
 	emptySHA512 [sha512Size]byte
 	nilSHA512   [sha512Size]byte
-)
-
-var (
-	sha256Type = hint.MustNewType(0x01, 0x81, "hash-sha256")
-	sha256Hint = hint.MustHint(sha256Type, "0.0.1")
-	sha512Type = hint.MustNewType(0x01, 0x82, "hash-sha512")
-	sha512Hint = hint.MustHint(sha512Type, "0.0.1")
 )
 
 func init() {
@@ -58,10 +49,6 @@ func LoadSHA512FromString(s string) (Hash, error) {
 
 func (hs SHA512) String() string {
 	return toString(hs.b[:])
-}
-
-func (hs SHA512) Hint() hint.Hint {
-	return sha512Hint
 }
 
 func (hs SHA512) Empty() bool {
@@ -113,10 +100,6 @@ func LoadSHA256FromString(s string) (Hash, error) {
 
 func (hs SHA256) String() string {
 	return toString(hs.b[:])
-}
-
-func (hs SHA256) Hint() hint.Hint {
-	return sha256Hint
 }
 
 func (hs SHA256) Empty() bool {

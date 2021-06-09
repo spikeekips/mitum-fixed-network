@@ -10,10 +10,10 @@ import (
 )
 
 var (
-	FixedTreeNodeType   = hint.MustNewType(0x01, 0x57, "operation-fixedtree-node")
-	FixedTreeNodeHint   = hint.MustHint(FixedTreeNodeType, "0.0.1")
-	BaseReasonErrorType = hint.MustNewType(0x01, 0x58, "base-operation-reason")
-	BaseReasonErrorHint = hint.MustHint(BaseReasonErrorType, "0.0.1")
+	FixedTreeNodeType   = hint.Type("operation-fixedtree-node")
+	FixedTreeNodeHint   = hint.NewHint(FixedTreeNodeType, "v0.0.1")
+	BaseReasonErrorType = hint.Type("base-operation-reason")
+	BaseReasonErrorHint = hint.NewHint(BaseReasonErrorType, "v0.0.1")
 )
 
 type FixedTreeNode struct {

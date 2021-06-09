@@ -12,8 +12,8 @@ import (
 )
 
 var (
-	ProposalV0Hint     hint.Hint = hint.MustHint(ProposalBallotType, "0.0.1")
-	ProposalFactV0Hint hint.Hint = hint.MustHint(ProposalBallotFactType, "0.0.1")
+	ProposalV0Hint     = hint.NewHint(ProposalBallotType, "v0.0.1")
+	ProposalFactV0Hint = hint.NewHint(ProposalBallotFactType, "v0.0.1")
 )
 
 type ProposalFactV0 struct {

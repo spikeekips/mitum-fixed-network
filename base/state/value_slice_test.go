@@ -3,10 +3,9 @@ package state
 import (
 	"testing"
 
+	"github.com/spikeekips/mitum/util/hint"
 	"github.com/stretchr/testify/suite"
 	"golang.org/x/xerrors"
-
-	"github.com/spikeekips/mitum/util/hint"
 )
 
 type testStateSliceValue struct {
@@ -22,7 +21,7 @@ func (t *testStateSliceValue) TestNotAcceptableValue() {
 		{name: "string", v: "show me", err: "not slice-like"},
 		{name: "empty string", v: "", err: "not slice-like"},
 		{name: "int", v: 10, err: "not slice-like"},
-		{name: "[]int", v: []int{1, 2, 3}, err: "item not hint.Hinter"},
+		{name: "[]int", v: []int{1, 2, 3}, err: "item not Hinter"},
 	}
 
 	for i, c := range cases {

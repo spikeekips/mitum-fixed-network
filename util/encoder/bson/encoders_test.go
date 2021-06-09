@@ -9,7 +9,6 @@ import (
 
 	"github.com/spikeekips/mitum/util"
 	"github.com/spikeekips/mitum/util/encoder"
-	"github.com/spikeekips/mitum/util/hint"
 )
 
 type testEncodersWithBSON struct {
@@ -33,9 +32,9 @@ func (t *testEncodersWithBSON) TestAddHinter() {
 	je := NewEncoder()
 	t.NoError(encs.AddEncoder(je))
 
-	t.NoError(encs.AddHinter(sh0{}))
+	t.NoError(encs.TestAddHinter(sh0{}))
 
-	s0, err := encs.Hinter((sh0{}).Hint().Type(), (sh0{}).Hint().Version())
+	s0, err := encs.Compatible((sh0{}).Hint().Type(), (sh0{}).Hint().Version())
 	t.NoError(err)
 	t.NotNil(s0)
 	t.NoError((sh0{}).Hint().IsCompatible(s0.Hint()))
@@ -62,10 +61,14 @@ func (t *testEncodersWithBSON) TestDecodeByHint() {
 	{ // without AddHinter
 		a, err := be.DecodeByHint(b)
 		t.Empty(a)
-		t.True(xerrors.Is(err, hint.HintNotFoundError))
+		t.True(xerrors.Is(err, util.NotFoundError))
 	}
 
-	t.NoError(encs.AddHinter(sh0{}))
+	encs = encoder.NewEncoders()
+	be = NewEncoder()
+	t.NoError(encs.AddEncoder(be))
+
+	t.NoError(encs.TestAddHinter(sh0{}))
 	us, err := be.DecodeByHint(b)
 	t.NoError(err)
 	t.IsType(sh0{}, us)

@@ -11,8 +11,8 @@ import (
 )
 
 var (
-	BytesValueType = hint.MustNewType(0x01, 0x64, "state-bytes-value")
-	BytesValueHint = hint.MustHint(BytesValueType, "0.0.1")
+	BytesValueType = hint.Type("state-bytes-value")
+	BytesValueHint = hint.NewHint(BytesValueType, "v0.0.1")
 )
 
 type BytesValue struct {

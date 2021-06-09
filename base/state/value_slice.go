@@ -11,8 +11,8 @@ import (
 )
 
 var (
-	SliceValueType = hint.MustNewType(0x01, 0x68, "state-slice-value")
-	SliceValueHint = hint.MustHint(SliceValueType, "0.0.1")
+	SliceValueType = hint.Type("state-slice-value")
+	SliceValueHint = hint.NewHint(SliceValueType, "v0.0.1")
 )
 
 // SliceValue only supports the interface{} implements hint.Hinter and
@@ -42,9 +42,9 @@ func (sv SliceValue) set(v interface{}) (SliceValue, error) {
 		if e == nil {
 			continue
 		} else if ht, ok := e.(hint.Hinter); !ok {
-			return SliceValue{}, xerrors.Errorf("item not hint.Hinter: %T", e)
+			return SliceValue{}, util.WrongTypeError.Errorf("item not Hinter: %T", e)
 		} else if _, ok := e.(valuehash.Hasher); !ok {
-			return SliceValue{}, xerrors.Errorf("item not util.Byter: %T", e)
+			return SliceValue{}, util.WrongTypeError.Errorf("item not util.Byter: %T", e)
 		} else {
 			items[i] = ht
 			bs[i] = ht.(valuehash.Hasher).Hash().Bytes()

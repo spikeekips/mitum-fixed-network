@@ -1,8 +1,8 @@
 package block
 
 import (
+	"github.com/spikeekips/mitum/util"
 	"github.com/spikeekips/mitum/util/encoder"
-	"github.com/spikeekips/mitum/util/hint"
 )
 
 func DecodeManifest(enc encoder.Encoder, b []byte) (Manifest, error) {
@@ -11,7 +11,7 @@ func DecodeManifest(enc encoder.Encoder, b []byte) (Manifest, error) {
 	} else if i == nil {
 		return nil, nil
 	} else if v, ok := i.(Manifest); !ok {
-		return nil, hint.InvalidTypeError.Errorf("not Manifest; type=%T", i)
+		return nil, util.WrongTypeError.Errorf("not Manifest; type=%T", i)
 	} else {
 		return v, nil
 	}
@@ -23,7 +23,7 @@ func DecodeConsensusInfo(enc encoder.Encoder, b []byte) (ConsensusInfo, error) {
 	} else if i == nil {
 		return nil, nil
 	} else if v, ok := i.(ConsensusInfo); !ok {
-		return nil, hint.InvalidTypeError.Errorf("not ConsensusInfoifest; type=%T", i)
+		return nil, util.WrongTypeError.Errorf("not ConsensusInfoifest; type=%T", i)
 	} else {
 		return v, nil
 	}
@@ -35,7 +35,7 @@ func DecodeSuffrageInfo(enc encoder.Encoder, b []byte) (SuffrageInfo, error) {
 	} else if i == nil {
 		return nil, nil
 	} else if v, ok := i.(SuffrageInfo); !ok {
-		return nil, hint.InvalidTypeError.Errorf("not SuffrageInfo; type=%T", i)
+		return nil, util.WrongTypeError.Errorf("not SuffrageInfo; type=%T", i)
 	} else {
 		return v, nil
 	}

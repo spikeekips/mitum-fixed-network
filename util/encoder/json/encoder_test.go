@@ -20,7 +20,7 @@ type sp0 struct {
 	B []byte
 }
 
-var s1Hint = hint.MustHintWithType(hint.Type{0xff, 0x32}, "0.1", "s1")
+var s1Hint = hint.NewHint(hint.Type("s1"), "v0.1")
 
 func (s0 sp0) MarshalJSON() ([]byte, error) {
 	return Marshal(struct {
@@ -116,7 +116,7 @@ type se0 struct {
 	S sup0
 }
 
-var sh0Hint = hint.MustHintWithType(hint.Type{0xff, 0x31}, "0.1", "sh0")
+var sh0Hint = hint.NewHint(hint.Type("sh0"), "v0.1")
 
 type sh0 struct {
 	B string
@@ -358,24 +358,24 @@ func (t *testJSON) TestEncodeHinterNotCompatible() {
 	encs := encoder.NewEncoders()
 	_ = encs.AddEncoder(je)
 
-	encs.AddHinter(sh0{})
+	encs.TestAddHinter(sh0{})
 
 	b, err := Marshal(s)
 	t.NoError(err)
 	t.NotNil(b)
 
 	{ // wrong major version
-		c := bytes.Replace(b, []byte(`:0.1`), []byte(`:1.1`), -1)
+		c := bytes.Replace(b, []byte(`-v0.1`), []byte(`-v1.1`), -1)
 
 		_, err := je.DecodeByHint(c)
-		t.True(xerrors.Is(err, hint.HintNotFoundError))
+		t.True(xerrors.Is(err, util.NotFoundError))
 	}
 
 	{ // wrong type code
-		c := bytes.Replace(b, []byte(`ff31:`), []byte(`ffaa:`), -1)
+		c := bytes.Replace(b, []byte(sh0{}.Hint().Type()+"-"), []byte("findme-"), -1)
 
 		_, err := je.DecodeByHint(c)
-		t.Contains(err.Error(), "Hint not found in Hintset")
+		t.True(xerrors.Is(err, util.NotFoundError))
 	}
 }
 

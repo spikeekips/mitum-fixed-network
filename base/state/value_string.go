@@ -10,8 +10,8 @@ import (
 )
 
 var (
-	StringValueType = hint.MustNewType(0x01, 0x69, "state-string-value")
-	StringValueHint = hint.MustHint(StringValueType, "0.0.1")
+	StringValueType = hint.Type("state-string-value")
+	StringValueHint = hint.NewHint(StringValueType, "v0.0.1")
 )
 
 type StringValue struct {

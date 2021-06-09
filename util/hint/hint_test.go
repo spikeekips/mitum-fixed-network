@@ -1,160 +1,36 @@
 package hint
 
 import (
-	"strings"
+	"encoding/json"
 	"testing"
 
-	"github.com/spikeekips/mitum/util"
 	"github.com/stretchr/testify/suite"
+	"go.mongodb.org/mongo-driver/bson"
 	"golang.org/x/xerrors"
 )
-
-type testHintVersion struct {
-	suite.Suite
-}
-
-func (t *testHintVersion) TestNew() {
-	ty := Type{0xff, 0xf0}
-	v := util.Version("0.1")
-
-	h, err := NewHint(ty, v)
-	t.NoError(err)
-	t.Equal(ty, h.Type())
-	t.Equal(v, h.Version())
-}
-
-func (t *testHintVersion) TestInvalidVersion() {
-	_, err := NewHint(
-		Type{0xff, 0xf0},
-		util.Version("vv0.1"),
-	)
-	t.True(xerrors.Is(err, util.InvalidVersionError))
-}
-
-func TestHintVersion(t *testing.T) {
-	suite.Run(t, new(testHintVersion))
-}
 
 type testHint struct {
 	suite.Suite
 }
 
 func (t *testHint) TestNew() {
-	ty := Type{0xff, 0xf0}
-	v := util.Version("0.1")
-
-	hint, err := NewHint(ty, v)
-	t.NoError(err)
-
-	t.Equal(ty, hint.Type())
-	t.Equal(v, hint.Version())
+	ht := NewHint("showme", "v1.2.3+compatible")
+	t.NoError(ht.IsValid(nil))
+	t.Equal("showme-v1.2.3+compatible", ht.String())
 }
 
-func (t *testHint) TestWrongSizeVersion() {
-	ty := Type{0xff, 0xf0}
-	v := util.Version("0.1-" + strings.Repeat("k", MaxVersionSize-3))
-
-	_, err := NewHint(ty, v)
-	t.True(xerrors.Is(err, util.InvalidVersionError))
-	t.Contains(err.Error(), "oversized version")
-}
-
-func (t *testHint) TestInvalidType() {
-	ty := NullType
-	v := util.Version("0.1")
-
-	_, err := NewHint(ty, v)
-	t.True(xerrors.Is(err, InvalidTypeError))
-	t.Contains(err.Error(), "empty")
-}
-
-func (t *testHint) TestBytes() {
-	ty := Type{0xff, 0xf0}
-	v := util.Version("0.1")
-
-	hint, err := NewHint(ty, v)
-	t.NoError(err)
-
-	t.True(2+MaxVersionSize >= len(hint.Bytes()))
-
-	nh, err := NewHintFromBytes(hint.Bytes())
-	t.NoError(err)
-
-	t.Equal(hint.Type(), nh.Type())
-	t.Equal(hint.Version(), nh.Version())
-}
-
-func (t *testHint) TestString() {
-	ty := Type{0xff, 0xf0}
-	_ = registerType(ty, "dummy")
-	v := util.Version("0.1")
-
-	hint, err := NewHint(ty, v)
-	t.NoError(err)
-
-	nh, err := NewHintFromString(hint.String())
-	t.NoError(err)
-
-	t.Equal(hint.Type(), nh.Type())
-	t.Equal(hint.Version(), nh.Version())
-
-	t.True(hint.Equal(nh))
-}
-
-func (t *testHint) TestCompatible() {
+func (t *testType) TestParse() {
 	cases := []struct {
-		name string
-		t0   [2]byte
-		v0   string
-		t1   [2]byte
-		v1   string
-		err  error
+		name     string
+		s        string
+		expected string
+		err      string
 	}{
-		{
-			name: "same type and version",
-			t0:   [2]byte{0xff, 0xf0},
-			v0:   "0.1.0",
-			t1:   [2]byte{0xff, 0xf0},
-			v1:   "0.1.0",
-		},
-		{
-			name: "lower patch version",
-			t0:   [2]byte{0xff, 0xf0},
-			v0:   "0.1.1",
-			t1:   [2]byte{0xff, 0xf0},
-			v1:   "0.1.0",
-		},
-		{
-			name: "greater patch version",
-			t0:   [2]byte{0xff, 0xf0},
-			v0:   "0.1.0",
-			t1:   [2]byte{0xff, 0xf0},
-			v1:   "0.1.1",
-			err:  util.VersionNotCompatibleError,
-		},
-		{
-			name: "lower minor version",
-			t0:   [2]byte{0xff, 0xf0},
-			v0:   "0.1.0",
-			t1:   [2]byte{0xff, 0xf0},
-			v1:   "0.0.9",
-		},
-		{
-			name: "greater major version",
-			t0:   [2]byte{0xff, 0xf0},
-			v0:   "0.1.0",
-			t1:   [2]byte{0xff, 0xf0},
-			v1:   "1.0.9",
-			err:  util.VersionNotCompatibleError,
-		},
-		{
-			name: "different type",
-			t0:   [2]byte{0xff, 0xf0},
-			v0:   "0.1.0",
-			t1:   [2]byte{0xff, 0xf1},
-			v1:   "0.0.9",
-			err:  TypeDoesNotMatchError,
-		},
+		{name: "valid", s: "showme-v1.2.3+incompatible"},
+		{name: "empty version #0", s: "showme", err: "invalid Hint format"},
+		{name: "empty version #1", s: "showme-", err: "invalid Hint format"},
+		{name: "inside v+hyphen", s: "sho-vwme-v1.2.3+incompatible", expected: "sho-vwme-v1.2.3+incompatible"},
+		{name: "hyphen-v", s: "sho-v1.2.3wme-v1.2.3+incompatible", expected: "sho-v1.2.3wme-v1.2.3+incompatible"},
 	}
 
 	for i, c := range cases {
@@ -163,18 +39,102 @@ func (t *testHint) TestCompatible() {
 		t.Run(
 			c.name,
 			func() {
-				target, _ := NewHint(Type(c.t0), util.Version(c.v0))
-				check, _ := NewHint(Type(c.t1), util.Version(c.v1))
+				ht, err := ParseHint(c.s)
+				if len(c.err) > 0 {
+					if err == nil {
+						t.NoError(xerrors.Errorf("expected %q, but nil error", c.err), "%d: %v", i, c.name)
 
-				err := target.IsCompatible(check)
-				if c.err != nil {
-					t.True(xerrors.Is(err, c.err), "%d: %v; %v != %v", i, c.name, c.err, err)
+						return
+					}
+
+					t.Contains(err.Error(), c.err, "%d: %v", i, c.name)
 				} else if err != nil {
-					t.NoError(err, "%d: %v; %v != %v", i, c.name, c.err, err)
+					t.NoError(xerrors.Errorf("expected nil error, but %+v", err), "%d: %v", i, c.name)
+
+					return
+				}
+
+				if len(c.expected) > 0 {
+					t.Equal(c.expected, ht.String(), "%d: %v", i, c.name)
 				}
 			},
 		)
 	}
+}
+
+func (t *testType) TestCompatible() {
+	cases := []struct {
+		name string
+		a    string
+		b    string
+		err  string
+	}{
+		{name: "upper patch version", a: "showme-v1.2.3", b: "showme-v1.2.4"},
+		{name: "same patch version", a: "showme-v1.2.3", b: "showme-v1.2.3"},
+		{name: "lower patch version", a: "showme-v1.2.3", b: "showme-v1.2.2"},
+		{name: "upper minor version", a: "showme-v1.2.3", b: "showme-v1.3.4", err: "not compatible; lower minor version"},
+		{name: "same minor version", a: "showme-v1.2.3", b: "showme-v1.2.9"},
+		{name: "lower minor version", a: "showme-v1.2.3", b: "showme-v1.1.2"},
+		{name: "upper major version", a: "showme-v1.2.3", b: "showme-v9.3.4", err: "not compatible; different major version"},
+		{name: "same major version", a: "showme-v1.2.3", b: "showme-v10.2.9", err: "not compatible; different major version"},
+		{name: "lower major version", a: "showme-v1.2.3", b: "showme-v2.1.2", err: "not compatible; different major version"},
+	}
+
+	for i, c := range cases {
+		i := i
+		c := c
+		t.Run(
+			c.name,
+			func() {
+				a, _ := ParseHint(c.a)
+				b, _ := ParseHint(c.b)
+
+				err := a.IsCompatible(b)
+
+				if len(c.err) > 0 {
+					if err == nil {
+						t.NoError(xerrors.Errorf("expected %q, but nil error", c.err), "%d: %v", i, c.name)
+
+						return
+					}
+
+					t.Contains(err.Error(), c.err, "%d: %v", i, c.name)
+				} else if err != nil {
+					t.NoError(xerrors.Errorf("expected nil error, but %+v", err), "%d: %v", i, c.name)
+
+					return
+				}
+			},
+		)
+	}
+}
+
+func (t *testType) TestEncodeJSON() {
+	ht := NewHint("showme", "v1.2.3+compatible")
+	b, err := json.Marshal(map[string]interface{}{
+		"_hint": ht,
+	})
+	t.NoError(err)
+
+	var m map[string]Hint
+	t.NoError(json.Unmarshal(b, &m))
+
+	uht := m["_hint"]
+	t.True(ht.Equal(uht))
+}
+
+func (t *testType) TestEncodeBSON() {
+	ht := NewHint("showme", "v1.2.3+compatible")
+	b, err := bson.Marshal(map[string]interface{}{
+		"_hint": ht,
+	})
+	t.NoError(err)
+
+	var m map[string]Hint
+	t.NoError(bson.Unmarshal(b, &m))
+
+	uht := m["_hint"]
+	t.True(ht.Equal(uht))
 }
 
 func TestHint(t *testing.T) {

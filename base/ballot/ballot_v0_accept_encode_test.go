@@ -26,11 +26,10 @@ func (t *testBallotV0ACCEPTEncode) SetupSuite() {
 
 	encs := encoder.NewEncoders()
 	t.NoError(encs.AddEncoder(t.enc))
-	t.NoError(encs.AddHinter(valuehash.SHA256{}))
-	t.NoError(encs.AddHinter(base.StringAddress("")))
-	t.NoError(encs.AddHinter(key.BTCPublickeyHinter))
-	t.NoError(encs.AddHinter(ACCEPTBallotV0{}))
-	t.NoError(encs.AddHinter(base.DummyVoteproof{}))
+	t.NoError(encs.TestAddHinter(base.StringAddress("")))
+	t.NoError(encs.TestAddHinter(key.BTCPublickeyHinter))
+	t.NoError(encs.TestAddHinter(ACCEPTBallotV0{}))
+	t.NoError(encs.TestAddHinter(base.DummyVoteproof{}))
 }
 
 func (t *testBallotV0ACCEPTEncode) TestEncode() {

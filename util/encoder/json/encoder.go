@@ -15,8 +15,8 @@ import (
 var (
 	jsonNULL       []byte = []byte("null")
 	jsonNULLLength int    = len(jsonNULL)
-	JSONType              = hint.MustNewType(0x01, 0x01, "json")
-	jsonHint              = hint.MustHint(JSONType, "0.0.1")
+	JSONType              = hint.Type("json-encoder")
+	jsonHint              = hint.NewHint(JSONType, "v0.0.1")
 )
 
 type Encoder struct {
@@ -83,10 +83,10 @@ func (je *Encoder) DecodeByHint(b []byte) (hint.Hinter, error) {
 	return je.DecodeWithHint(h, b)
 }
 
-func (je *Encoder) DecodeWithHint(h hint.Hint, b []byte) (hint.Hinter, error) {
-	hinter, err := je.hintset.Hinter(h.Type(), h.Version())
+func (je *Encoder) DecodeWithHint(ht hint.Hint, b []byte) (hint.Hinter, error) {
+	hinter, err := je.hintset.Compatible(ht)
 	if err != nil {
-		return nil, xerrors.Errorf(`failed to find hinter: hint=%s input="%s": %w`, h.Verbose(), string(b), err)
+		return nil, xerrors.Errorf(`failed to find hinter: hint=%q input=%q: %w`, ht, string(b), err)
 	}
 
 	p := reflect.New(reflect.TypeOf(hinter))

@@ -1,6 +1,8 @@
 package encoder
 
-import "github.com/spikeekips/mitum/util/hint"
+import (
+	"github.com/spikeekips/mitum/util/hint"
+)
 
 const EncoderAnalyzedTypeDefault = "default"
 

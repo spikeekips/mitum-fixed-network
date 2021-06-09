@@ -14,7 +14,7 @@ import (
 	"github.com/spikeekips/mitum/util/valuehash"
 )
 
-var tinyFactHint = hint.MustHintWithType(hint.Type{0xff, 0xf4}, "0.1", "tiny-fact")
+var tinyFactHint = hint.NewHint(hint.Type("tiny-fact"), "v0.1")
 
 type tinyFact struct {
 	A string

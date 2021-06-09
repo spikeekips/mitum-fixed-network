@@ -36,13 +36,12 @@ func (t *testNodeInfo) SetupTest() {
 	_ = t.encs.AddEncoder(t.encJSON)
 	_ = t.encs.AddEncoder(t.encBSON)
 
-	_ = t.encs.AddHinter(key.BTCPrivatekeyHinter)
-	_ = t.encs.AddHinter(key.BTCPublickeyHinter)
-	_ = t.encs.AddHinter(valuehash.SHA256{})
-	_ = t.encs.AddHinter(base.BaseNodeV0{})
-	_ = t.encs.AddHinter(base.StringAddress(""))
-	_ = t.encs.AddHinter(block.ManifestV0{})
-	_ = t.encs.AddHinter(NodeInfoV0{})
+	_ = t.encs.TestAddHinter(key.BTCPrivatekeyHinter)
+	_ = t.encs.TestAddHinter(key.BTCPublickeyHinter)
+	_ = t.encs.TestAddHinter(base.BaseNodeV0{})
+	_ = t.encs.TestAddHinter(base.StringAddress(""))
+	_ = t.encs.TestAddHinter(block.ManifestV0{})
+	_ = t.encs.TestAddHinter(NodeInfoV0{})
 }
 
 func (t *testNodeInfo) TestNew() {

@@ -9,6 +9,7 @@ import (
 
 	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/isaac"
+	"github.com/spikeekips/mitum/launch"
 	"github.com/spikeekips/mitum/launch/config"
 	"github.com/spikeekips/mitum/launch/pm"
 )
@@ -31,7 +32,7 @@ func (t *testConfigChecker) ps(ctx context.Context) *pm.Processes {
 
 	t.NoError(ps.AddHook(
 		pm.HookPrefixPost, ProcessNameEncoders,
-		HookNameAddHinters, HookAddHinters(DefaultHinters),
+		HookNameAddHinters, HookAddHinters(launch.EncoderTypes, launch.EncoderHinters),
 		true,
 	))
 

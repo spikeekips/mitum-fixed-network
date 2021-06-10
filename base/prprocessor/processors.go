@@ -74,7 +74,7 @@ func NewProcessors(newFunc ProcessorNewFunc, proposalChecker func(ballot.Proposa
 	return pps
 }
 
-func (pps *Processors) Initialize() error {
+func (*Processors) Initialize() error {
 	return nil
 }
 
@@ -95,15 +95,15 @@ func (pps *Processors) NewProposal(
 		}()
 
 		return ch
-	} else {
-		ch := make(chan Result, 1)
-
-		go func() {
-			pps.newProposalChan <- pv{ctx: ctx, proposal: proposal, voteproof: initVoteproof, outchan: ch}
-		}()
-
-		return ch
 	}
+
+	ch := make(chan Result, 1)
+
+	go func() {
+		pps.newProposalChan <- pv{ctx: ctx, proposal: proposal, voteproof: initVoteproof, outchan: ch}
+	}()
+
+	return ch
 }
 
 func (pps *Processors) Save(
@@ -121,15 +121,15 @@ func (pps *Processors) Save(
 		}()
 
 		return ch
-	} else {
-		ch := make(chan Result, 1)
-
-		go func() {
-			pps.saveChan <- sv{ctx: ctx, proposal: proposal, voteproof: acceptVoteproof, outchan: ch}
-		}()
-
-		return ch
 	}
+
+	ch := make(chan Result, 1)
+
+	go func() {
+		pps.saveChan <- sv{ctx: ctx, proposal: proposal, voteproof: acceptVoteproof, outchan: ch}
+	}()
+
+	return ch
 }
 
 func (pps *Processors) Current() Processor {
@@ -201,13 +201,14 @@ func (pps *Processors) handleProposal(
 		return Result{Err: PrepareFailedError.Wrap(err)}
 	default:
 		if pp == nil {
-			if p, err := pps.newProcessor(proposal, initVoteproof); err != nil {
+			p, err := pps.newProcessor(proposal, initVoteproof)
+			if err != nil {
 				return Result{Err: err}
-			} else {
-				pps.setCurrent(p)
-
-				pp = p
 			}
+
+			pps.setCurrent(p)
+
+			pp = p
 		}
 
 		current = pp

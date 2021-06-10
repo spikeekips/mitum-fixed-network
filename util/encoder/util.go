@@ -7,8 +7,8 @@ import (
 )
 
 func ExtractPtr(i interface{}) (reflect.Value, reflect.Value) {
-	var ptr reflect.Value = reflect.ValueOf(i)
-	var elem reflect.Value = ptr
+	ptr := reflect.ValueOf(i)
+	elem := ptr
 	if ptr.Type().Kind() == reflect.Ptr {
 		elem = ptr.Elem()
 	} else {

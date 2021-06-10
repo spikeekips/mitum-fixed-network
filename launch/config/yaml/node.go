@@ -19,13 +19,11 @@ type RemoteNode struct {
 }
 
 func (no RemoteNode) Load(ctx context.Context) (config.RemoteNode, error) {
-	var conf *config.BaseRemoteNode
 	var enc *jsonenc.Encoder
 	if err := config.LoadJSONEncoderContextValue(ctx, &enc); err != nil {
 		return nil, err
-	} else {
-		conf = config.NewBaseRemoteNode(enc)
 	}
+	conf := config.NewBaseRemoteNode(enc)
 
 	if no.Address != nil {
 		if err := conf.SetAddress(*no.Address); err != nil {

@@ -27,7 +27,7 @@ func NewSliceValue(v interface{}) (SliceValue, error) {
 	return SliceValue{}.set(v)
 }
 
-func (sv SliceValue) set(v interface{}) (SliceValue, error) {
+func (SliceValue) set(v interface{}) (SliceValue, error) {
 	switch reflect.TypeOf(v).Kind() {
 	case reflect.Array, reflect.Slice:
 	default:
@@ -61,18 +61,14 @@ func (sv SliceValue) set(v interface{}) (SliceValue, error) {
 }
 
 func (sv SliceValue) IsValid([]byte) error {
-	if err := sv.h.IsValid(nil); err != nil {
-		return err
-	}
-
-	return nil
+	return sv.h.IsValid(nil)
 }
 
 func (sv SliceValue) Bytes() []byte {
 	return sv.b
 }
 
-func (sv SliceValue) Hint() hint.Hint {
+func (SliceValue) Hint() hint.Hint {
 	return SliceValueHint
 }
 

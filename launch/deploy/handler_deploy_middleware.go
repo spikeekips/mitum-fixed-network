@@ -51,13 +51,12 @@ func (md *DeployKeyByTokenMiddleware) Middleware(next http.Handler) http.Handler
 			return
 		}
 
-		var sig key.Signature
-		if i := strings.TrimSpace(r.URL.Query().Get("signature")); len(i) < 1 {
+		i := strings.TrimSpace(r.URL.Query().Get("signature"))
+		if len(i) < 1 {
 			network.WriteProblemWithError(w, http.StatusUnauthorized, xerrors.Errorf("empty signature"))
 			return
-		} else {
-			sig = key.NewSignatureFromString(i)
 		}
+		sig := key.NewSignatureFromString(i)
 
 		if err := VerifyDeployKeyToken(md.cache, md.localKey, token, md.networkID, []byte(sig)); err != nil {
 			md.Log().Error().Err(err).Msg("failed to verify token and signature")

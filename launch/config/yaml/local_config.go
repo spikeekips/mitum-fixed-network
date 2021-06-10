@@ -14,12 +14,10 @@ type LocalConfig struct {
 
 func (no LocalConfig) Set(ctx context.Context) (context.Context, error) {
 	var l config.LocalNode
-	var conf config.LocalConfig
 	if err := config.LoadConfigContextValue(ctx, &l); err != nil {
 		return ctx, err
-	} else {
-		conf = l.LocalConfig()
 	}
+	conf := l.LocalConfig()
 
 	if no.TimeServer != nil {
 		if err := conf.SetTimeServer(strings.TrimSpace(*no.TimeServer)); err != nil {

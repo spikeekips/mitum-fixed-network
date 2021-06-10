@@ -51,31 +51,30 @@ func NewStatepool(st Database) (*Statepool, error) {
 }
 
 // NewStatepoolWithBase only used for testing
-func NewStatepoolWithBase(st Database, base map[string]state.State) (*Statepool, error) {
-	if sp, err := NewStatepool(st); err != nil {
+func NewStatepoolWithBase(st Database, b map[string]state.State) (*Statepool, error) {
+	sp, err := NewStatepool(st)
+	if err != nil {
 		return nil, err
-	} else {
-		sp.fromStorage = func(key string) (state.State, bool, error) {
-			if s, found := base[key]; found {
-				return s, true, nil
-			} else {
-				return st.State(key)
-			}
-		}
-
-		return sp, nil
 	}
+	sp.fromStorage = func(key string) (state.State, bool, error) {
+		if s, found := b[key]; found {
+			return s, true, nil
+		}
+		return st.State(key)
+	}
+
+	return sp, nil
 }
 
 func (sp *Statepool) Get(key string) (state.State, bool, error) {
 	sp.Lock()
 	defer sp.Unlock()
 
-	if st, exists, err := sp.get(key); err != nil {
+	st, exists, err := sp.get(key)
+	if err != nil {
 		return nil, false, err
-	} else {
-		return st.Clear(), exists, nil
 	}
+	return st.Clear(), exists, nil
 }
 
 func (sp *Statepool) get(key string) (state.State, bool, error) {
@@ -93,13 +92,13 @@ func (sp *Statepool) get(key string) (state.State, bool, error) {
 		return st, true, nil
 	}
 
-	if st, err := state.NewStateV0(key, nil, base.NilHeight); err != nil {
+	st, err := state.NewStateV0(key, nil, base.NilHeight)
+	if err != nil {
 		return nil, false, err
-	} else {
-		sp.cached[key] = newCachedState(st, false)
-
-		return st, false, nil
 	}
+	sp.cached[key] = newCachedState(st, false)
+
+	return st, false, nil
 }
 
 func (sp *Statepool) Set(fact valuehash.Hash, s ...state.State) error {
@@ -128,11 +127,7 @@ func (sp *Statepool) Set(fact valuehash.Hash, s ...state.State) error {
 				return err
 			}
 
-			if err := su.AddOperation(fact); err != nil {
-				return err
-			}
-
-			return nil
+			return su.AddOperation(fact)
 		}(); err != nil {
 			err0 := errors.NewError("failed to set States").Wrap(err)
 			for j := 0; j <= i; j++ {

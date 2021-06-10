@@ -59,31 +59,29 @@ func ProcessProposalProcessor(ctx context.Context) (context.Context, error) {
 	}
 
 	var l config.LocalNode
-	var conf config.ProposalProcessor
 	if err := config.LoadConfigContextValue(ctx, &l); err != nil {
 		return ctx, err
-	} else {
-		conf = l.ProposalProcessor()
 	}
+	conf := l.ProposalProcessor()
 
 	var newFunc prprocessor.ProcessorNewFunc
 	switch t := conf.(type) {
 	case config.ErrorProposalProcessor:
 		log.Debug().Interface("conf", conf).Msg("ErrorProcessor will be used")
 
-		if i, err := processErrorProposalProcessor(ctx, t); err != nil {
+		i, err := processErrorProposalProcessor(ctx, t)
+		if err != nil {
 			return ctx, err
-		} else {
-			newFunc = i
 		}
+		newFunc = i
 	default:
 		log.Debug().Interface("conf", conf).Msg("DefaultProcessor will be used")
 
-		if i, err := processDefaultProposalProcessor(ctx); err != nil {
+		i, err := processDefaultProposalProcessor(ctx)
+		if err != nil {
 			return ctx, err
-		} else {
-			newFunc = i
 		}
+		newFunc = i
 	}
 
 	pps := prprocessor.NewProcessors(newFunc, nil)
@@ -141,7 +139,7 @@ func processErrorProposalProcessor(
 	}
 
 	if len(conf.WhenPreparePoints) < 1 && len(conf.WhenSavePoints) < 1 {
-		l.Debug().Msg("ErrorProposalProcessor was given, but block points are empty. DefaultProposalProcessor will be used")
+		l.Debug().Msg("ErrorProposalProcessor was given, but block points are empty. DefaultProposalProcessor will be used") // revive:disable-line:line-length-limit
 
 		return processDefaultProposalProcessor(ctx)
 	}

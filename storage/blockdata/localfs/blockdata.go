@@ -47,11 +47,11 @@ func NewBlockData(root string, encoder *jsonenc.Encoder) *BlockData {
 }
 
 func (st *BlockData) Initialize() error {
-	if i, err := filepath.Abs(st.root); err != nil {
+	i, err := filepath.Abs(st.root)
+	if err != nil {
 		return storage.WrapFSError(err)
-	} else {
-		st.root = i
 	}
+	st.root = i
 
 	if fi, err := os.Stat(st.root); err != nil {
 		return storage.WrapFSError(err)
@@ -62,11 +62,11 @@ func (st *BlockData) Initialize() error {
 	return nil
 }
 
-func (st *BlockData) Hint() hint.Hint {
+func (*BlockData) Hint() hint.Hint {
 	return LocalFSBlockDataHint
 }
 
-func (st *BlockData) IsLocal() bool {
+func (*BlockData) IsLocal() bool {
 	return true
 }
 
@@ -88,7 +88,7 @@ func (st *BlockData) Exists(height base.Height) (bool, error) {
 	}
 }
 
-func (st *BlockData) ExistsReal(height base.Height) (bool, bool, error) {
+func (st *BlockData) ExistsReal(height base.Height) (exists bool, removed bool, err error) {
 	st.RLock()
 	defer st.RUnlock()
 
@@ -161,51 +161,44 @@ func (st *BlockData) NewSession(height base.Height) (blockdata.Session, error) {
 	st.Lock()
 	defer st.Unlock()
 
-	if i, err := os.MkdirTemp(st.root, ".session"); err != nil {
+	i, err := os.MkdirTemp(st.root, ".session")
+	if err != nil {
 		return nil, err
-	} else {
-		return NewSession(i, st.writer, height)
 	}
+	return NewSession(i, st.writer, height)
 }
 
 func (st *BlockData) SaveSession(session blockdata.Session) (block.BlockDataMap, error) {
 	st.Lock()
 	defer st.Unlock()
 
-	var ss *Session
-	if i, ok := session.(*Session); !ok {
+	ss, ok := session.(*Session)
+	if !ok {
 		return nil, xerrors.Errorf("only localfs.Session only allowed for localfs blockdata, not %T", session)
-	} else {
-		ss = i
 	}
 
-	var mapData block.BaseBlockDataMap
-	if i, err := ss.done(); err != nil {
+	mapData, err := ss.done()
+	if err != nil {
 		return nil, err
-	} else {
-		mapData = i
 	}
 
 	// NOTE move items to none-temporary place
-	base := st.heightDirectory(ss.Height(), false)
-	if err := st.createDirectory(filepath.Join(st.root, base)); err != nil {
+	b := st.heightDirectory(ss.Height(), false)
+	if err = st.createDirectory(filepath.Join(st.root, b)); err != nil {
 		return nil, err
 	}
 
-	var newMapData block.BaseBlockDataMap
-	if i, err := st.moveItemFiles(base, mapData); err != nil {
+	newMapData, err := st.moveItemFiles(b, mapData)
+	if err != nil {
 		return nil, err
-	} else {
-		_ = ss.clean()
-
-		newMapData = i
 	}
+	_ = ss.clean()
 
-	if i, err := newMapData.UpdateHash(); err != nil {
+	i, err := newMapData.UpdateHash()
+	if err != nil {
 		return nil, err
-	} else {
-		newMapData = i
 	}
+	newMapData = i
 
 	if err := newMapData.IsValid(nil); err != nil {
 		return nil, err
@@ -224,7 +217,7 @@ func (st *BlockData) Root() string {
 	return st.root
 }
 
-func (st *BlockData) exists(height base.Height) (bool, bool, error) {
+func (st *BlockData) exists(height base.Height) (exists bool, removed bool, err error) {
 	d := st.heightDirectory(height, true)
 	if fi, err := os.Stat(d); err != nil {
 		if os.IsNotExist(err) {
@@ -256,20 +249,20 @@ func (st *BlockData) clean(remove bool) error {
 		return nil
 	}
 
-	if files, err := os.ReadDir(st.root); err != nil {
+	files, err := os.ReadDir(st.root)
+	if err != nil {
 		return storage.WrapFSError(err)
-	} else {
-		for _, f := range files {
-			if err := os.RemoveAll(filepath.Join(st.root, f.Name())); err != nil {
-				return storage.WrapFSError(err)
-			}
+	}
+	for _, f := range files {
+		if err := os.RemoveAll(filepath.Join(st.root, f.Name())); err != nil {
+			return storage.WrapFSError(err)
 		}
 	}
 
 	return nil
 }
 
-func (st *BlockData) createDirectory(p string) error {
+func (*BlockData) createDirectory(p string) error {
 	if _, err := os.Stat(p); err != nil {
 		if !os.IsNotExist(err) {
 			return storage.WrapFSError(err)
@@ -290,32 +283,31 @@ func (st *BlockData) createDirectory(p string) error {
 }
 
 func (st *BlockData) heightDirectory(height base.Height, abs bool) string {
-	base := HeightDirectory(height)
+	b := HeightDirectory(height)
 	if !abs {
-		return base
-	} else {
-		return filepath.Join(st.root, base)
+		return b
 	}
+	return filepath.Join(st.root, b)
 }
 
-func (st *BlockData) moveItemFiles(base string, mapData block.BaseBlockDataMap) (block.BaseBlockDataMap, error) {
+func (st *BlockData) moveItemFiles(b string, mapData block.BaseBlockDataMap) (block.BaseBlockDataMap, error) {
 	nm := mapData
 	oldDirs := map[string]struct{}{}
 	for dataType := range mapData.Items() {
 		item := mapData.Items()[dataType]
 
 		oldDirs[filepath.Dir(item.URLBody())] = struct{}{}
-		newPath := filepath.Join(base, filepath.Base(item.URLBody()))
+		newPath := filepath.Join(b, filepath.Base(item.URLBody()))
 
 		if err := os.Rename(item.URLBody(), filepath.Join(st.root, newPath)); err != nil {
 			return nm, err
 		}
 
-		if i, err := nm.SetItem(item.SetFile(newPath)); err != nil {
+		i, err := nm.SetItem(item.SetFile(newPath))
+		if err != nil {
 			return nm, err
-		} else {
-			nm = i
 		}
+		nm = i
 	}
 
 	return nm, nil

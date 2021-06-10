@@ -92,11 +92,11 @@ func Context(args []string, flags interface{}, options ...kong.Option) (*kong.Co
 	copy(ops, defaultKongOptions)
 	copy(ops[len(defaultKongOptions):], options)
 
-	if p, err := kong.New(flags, ops...); err != nil {
+	p, err := kong.New(flags, ops...)
+	if err != nil {
 		return nil, err
-	} else {
-		return p.Parse(args)
 	}
+	return p.Parse(args)
 }
 
 type BaseCommand struct {
@@ -126,29 +126,28 @@ func (cmd *BaseCommand) Initialize(flags interface{}, version util.Version) erro
 		cmd.LogOutput = os.Stdout
 	}
 
-	if i, err := SetupLoggingFromFlags(cmd.LogFlags, cmd.LogOutput); err != nil {
+	i, err := SetupLoggingFromFlags(cmd.LogFlags, cmd.LogOutput)
+	if err != nil {
 		return err
-	} else {
-		_ = cmd.SetLogger(i)
 	}
+	_ = cmd.SetLogger(i)
 
 	_, _ = maxprocs.Set(maxprocs.Logger(func(f string, s ...interface{}) {
 		cmd.Log().Debug().Msgf(f, s...)
 	}))
 
-	if hook, err := RunPprofs(cmd.PprofFlags); err != nil {
+	hook, err := RunPprofs(cmd.PprofFlags)
+	if err != nil {
 		return err
-	} else {
-		cmd.exithooks = append(cmd.exithooks, hook)
 	}
+	cmd.exithooks = append(cmd.exithooks, hook)
 
 	cmd.Log().Debug().Interface("flags", flags).Msg("flags parsed")
 
 	if err := version.IsValid(nil); err != nil {
 		return err
-	} else {
-		cmd.version = version
 	}
+	cmd.version = version
 
 	return nil
 }

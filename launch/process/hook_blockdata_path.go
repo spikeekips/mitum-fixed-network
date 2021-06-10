@@ -13,12 +13,10 @@ var HookNameCheckBlockDataPath = "check_blockdata_path"
 
 func HookCheckBlockDataPath(ctx context.Context) (context.Context, error) {
 	var l config.LocalNode
-	var conf config.BlockData
 	if err := config.LoadConfigContextValue(ctx, &l); err != nil {
 		return ctx, err
-	} else {
-		conf = l.Storage().BlockData()
 	}
+	conf := l.Storage().BlockData()
 
 	if fi, err := os.Stat(conf.Path()); err != nil {
 		if !os.IsNotExist(err) { // NOTE if not exist, create new

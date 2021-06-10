@@ -112,11 +112,11 @@ func NewDefaultProcessor(
 		},
 	}
 
-	if i, err := pp.getSuffrageInfo(); err != nil {
+	i, err := pp.getSuffrageInfo()
+	if err != nil {
 		return nil, err
-	} else {
-		pp.suffrageInfo = i
 	}
+	pp.suffrageInfo = i
 
 	return pp, nil
 }
@@ -128,15 +128,15 @@ func (pp *DefaultProcessor) State() prprocessor.State {
 	return pp.state
 }
 
-func (pp *DefaultProcessor) setState(state prprocessor.State) {
+func (pp *DefaultProcessor) setState(s prprocessor.State) {
 	pp.stateLock.Lock()
 	defer pp.stateLock.Unlock()
 
-	if state <= pp.state {
+	if s <= pp.state {
 		return
 	}
 
-	pp.state = state
+	pp.state = s
 }
 
 func (pp *DefaultProcessor) Proposal() ballot.Proposal {
@@ -231,13 +231,13 @@ func (pp *DefaultProcessor) SuffrageInfo() block.SuffrageInfoV0 {
 }
 
 func (pp *DefaultProcessor) getSuffrageInfo() (block.SuffrageInfoV0, error) {
-	var ns []base.Node
+	var ns []base.Node // nolint:prealloc
 	for _, address := range pp.suffrage.Nodes() {
-		if n, found := pp.nodepool.Node(address); !found {
+		n, found := pp.nodepool.Node(address)
+		if !found {
 			return block.SuffrageInfoV0{}, xerrors.Errorf("suffrage node, %s not found in node pool", address)
-		} else {
-			ns = append(ns, n)
 		}
+		ns = append(ns, n)
 	}
 
 	return block.NewSuffrageInfoV0(pp.proposal.Node(), ns), nil

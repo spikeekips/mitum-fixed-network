@@ -25,11 +25,7 @@ func NewBaseBallotFactV0(height base.Height, round base.Round) BaseBallotFactV0 
 }
 
 func (bf BaseBallotFactV0) IsReadyToSign([]byte) error {
-	if err := bf.height.IsValid(nil); err != nil {
-		return err
-	}
-
-	return nil
+	return bf.height.IsValid(nil)
 }
 
 func (bf BaseBallotFactV0) IsValid(networkID []byte) error {
@@ -126,11 +122,7 @@ func (bb BaseBallotV0) IsValid(networkID []byte) error {
 }
 
 func (bb BaseBallotV0) IsReadyToSign([]byte) error {
-	if err := bb.node.IsValid(nil); err != nil {
-		return err
-	}
-
-	return nil
+	return bb.node.IsValid(nil)
 }
 
 func (bb BaseBallotV0) Bytes() []byte {

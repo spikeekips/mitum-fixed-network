@@ -17,19 +17,20 @@ var (
 type Height int64
 
 func NewHeightFromString(s string) (Height, error) {
-	if i, err := strconv.ParseInt(s, 10, 64); err != nil {
+	i, err := strconv.ParseInt(s, 10, 64)
+	if err != nil {
 		return NilHeight, err
-	} else {
-		return Height(i), nil
 	}
+
+	return Height(i), nil
 }
 
 func NewHeightFromBytes(b []byte) (Height, error) {
-	if i, err := util.BytesToInt64(b); err != nil {
+	i, err := util.BytesToInt64(b)
+	if err != nil {
 		return NilHeight, err
-	} else {
-		return Height(i), nil
 	}
+	return Height(i), nil
 }
 
 // IsValid checks Height.

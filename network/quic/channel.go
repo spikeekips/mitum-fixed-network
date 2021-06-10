@@ -56,21 +56,22 @@ func NewChannel(
 	}
 
 	var insecure bool
-	if u, err := url.Parse(addr); err != nil {
+	u, err := url.Parse(addr)
+	if err != nil {
 		return nil, err
-	} else {
-		if u.Scheme == "quic" {
-			u.Scheme = "https"
-		}
-
-		query := u.Query()
-		insecure = parseBoolInQuery(u.Query().Get("insecure"))
-		query.Del("insecure")
-		u.RawQuery = query.Encode()
-
-		ch.addr = u
-		ch.u = addr
 	}
+
+	if u.Scheme == "quic" {
+		u.Scheme = "https"
+	}
+
+	query := u.Query()
+	insecure = parseBoolInQuery(u.Query().Get("insecure"))
+	query.Del("insecure")
+	u.RawQuery = query.Encode()
+
+	ch.addr = u
+	ch.u = addr
 
 	ch.nodeInfoURL, _ = mustQuicURL(ch.addr.String(), QuicHandlerPathNodeInfo)
 	ch.sendSealURL, _ = mustQuicURL(ch.addr.String(), QuicHandlerPathSendSeal)
@@ -81,16 +82,16 @@ func NewChannel(
 		ch.getBlockData = *u
 	}
 
-	if client, err := NewQuicClient(insecure, quicConfig); err != nil {
+	client, err := NewQuicClient(insecure, quicConfig)
+	if err != nil {
 		return nil, err
-	} else {
-		ch.client = client
 	}
+	ch.client = client
 
 	return ch, nil
 }
 
-func (ch *Channel) Initialize() error {
+func (*Channel) Initialize() error {
 	return nil
 }
 
@@ -119,18 +120,19 @@ func (ch *Channel) Seals(ctx context.Context, hs []valuehash.Hash) ([]seal.Seal,
 		return e.Strs("seal_hashes", l)
 	}).Msg("request seals")
 
-	ss, err := ch.doRequestHinters(ch.client.Send, ctx, timeout+(time.Second*2), ch.getSealsURL, NewHashesArgs(hs))
+	ss, err := ch.doRequestHinters(ctx, ch.client.Send, timeout+(time.Second*2), ch.getSealsURL, NewHashesArgs(hs))
 	if err != nil {
 		return nil, err
 	}
 
-	var seals []seal.Seal
-	for _, h := range ss {
-		if s, ok := h.(seal.Seal); !ok {
+	seals := make([]seal.Seal, len(ss))
+	for i := range ss {
+		h := ss[i]
+		s, ok := h.(seal.Seal)
+		if !ok {
 			return nil, xerrors.Errorf("decoded, but not seal.Seal; %T", h)
-		} else {
-			seals = append(seals, s)
 		}
+		seals[i] = s
 	}
 
 	return seals, nil
@@ -151,15 +153,15 @@ func (ch *Channel) SendSeal(ctx context.Context, sl seal.Seal) error {
 	headers := http.Header{}
 	headers.Set(QuicEncoderHintHeader, ch.enc.Hint().String())
 
-	if res, err := ch.client.Send(ctx, timeout*2, ch.sendSealURL, b, headers); err != nil {
+	res, err := ch.client.Send(ctx, timeout*2, ch.sendSealURL, b, headers)
+	if err != nil {
 		return err
-	} else {
-		defer func() {
-			_ = res.Close()
-		}()
-
-		return nil
 	}
+	defer func() {
+		_ = res.Close()
+	}()
+
+	return nil
 }
 
 func (ch *Channel) NodeInfo(ctx context.Context) (network.NodeInfo, error) {
@@ -181,15 +183,13 @@ func (ch *Channel) NodeInfo(ctx context.Context) (network.NodeInfo, error) {
 
 	if err != nil {
 		return nil, err
-	} else if err := response.Error(); err != nil {
+	} else if err = response.Error(); err != nil {
 		return nil, err
 	}
 
-	var enc encoder.Encoder
-	if e, err := EncoderFromHeader(response.Header, ch.encs, ch.enc); err != nil {
+	enc, err := EncoderFromHeader(response.Header, ch.encs, ch.enc)
+	if err != nil {
 		return nil, err
-	} else {
-		enc = e
 	}
 
 	if b, err := response.Bytes(); err != nil {
@@ -218,8 +218,9 @@ func (ch *Channel) BlockDataMaps(ctx context.Context, heights []base.Height) ([]
 	}).Msg("request block data maps")
 
 	hinters, err := ch.doRequestHinters(
+		ctx,
 		ch.client.Send,
-		ctx, timeout+(time.Second*2),
+		timeout+(time.Second*2),
 		ch.getBlockDataMaps, NewHeightsArgs(heights),
 	)
 	if err != nil {
@@ -282,8 +283,8 @@ func (ch *Channel) blockData(ctx context.Context, p string) (io.ReadCloser, func
 }
 
 func (ch *Channel) doRequestHinters(
-	f clientDoRequestFunc,
 	ctx context.Context,
+	f clientDoRequestFunc,
 	timeout time.Duration,
 	u string,
 	hs interface{},
@@ -307,15 +308,13 @@ func (ch *Channel) doRequestHinters(
 
 	if err != nil {
 		return nil, err
-	} else if err := response.Error(); err != nil {
+	} else if err = response.Error(); err != nil {
 		return nil, err
 	}
 
-	var enc encoder.Encoder
-	if e, err := EncoderFromHeader(response.Header, ch.encs, ch.enc); err != nil {
+	enc, err := EncoderFromHeader(response.Header, ch.encs, ch.enc)
+	if err != nil {
 		return nil, err
-	} else {
-		enc = e
 	}
 
 	var ss []json.RawMessage
@@ -328,19 +327,19 @@ func (ch *Channel) doRequestHinters(
 		return nil, err
 	}
 
-	var hinters []hint.Hinter
-	for _, r := range ss {
-		if hinter, err := enc.DecodeByHint(r); err != nil {
+	hinters := make([]hint.Hinter, len(ss))
+	for i := range ss {
+		hinter, err := enc.DecodeByHint(ss[i])
+		if err != nil {
 			return nil, err
-		} else {
-			hinters = append(hinters, hinter)
 		}
+		hinters[i] = hinter
 	}
 
 	return hinters, nil
 }
 
-func (ch *Channel) timeoutContext(ctx context.Context, timeout time.Duration) (context.Context, func()) {
+func (*Channel) timeoutContext(ctx context.Context, timeout time.Duration) (context.Context, func()) {
 	switch {
 	case ctx != context.TODO():
 		return ctx, func() {}

@@ -22,7 +22,7 @@ type ACCEPTBallotFactV0 struct {
 	newBlock valuehash.Hash
 }
 
-func (abf ACCEPTBallotFactV0) Hint() hint.Hint {
+func (ACCEPTBallotFactV0) Hint() hint.Hint {
 	return ACCEPTBallotFactV0Hint
 }
 
@@ -90,11 +90,11 @@ func (ab ACCEPTBallotV0) Hash() valuehash.Hash {
 	return ab.BaseBallotV0.Hash()
 }
 
-func (ab ACCEPTBallotV0) Hint() hint.Hint {
+func (ACCEPTBallotV0) Hint() hint.Hint {
 	return ACCEPTBallotV0Hint
 }
 
-func (ab ACCEPTBallotV0) Stage() base.Stage {
+func (ACCEPTBallotV0) Stage() base.Stage {
 	return base.StageACCEPT
 }
 
@@ -145,12 +145,13 @@ func (ab ACCEPTBallotV0) Fact() base.Fact {
 }
 
 func (ab *ACCEPTBallotV0) Sign(pk key.Privatekey, networkID []byte) error {
-	if newBase, err := SignBaseBallotV0(ab, ab.BaseBallotV0, pk, networkID); err != nil {
+	newBase, err := SignBaseBallotV0(ab, ab.BaseBallotV0, pk, networkID)
+	if err != nil {
 		return err
-	} else {
-		ab.BaseBallotV0 = newBase
-		ab.BaseBallotV0 = ab.BaseBallotV0.SetHash(ab.GenerateHash())
 	}
+
+	ab.BaseBallotV0 = newBase
+	ab.BaseBallotV0 = ab.BaseBallotV0.SetHash(ab.GenerateHash())
 
 	return nil
 }

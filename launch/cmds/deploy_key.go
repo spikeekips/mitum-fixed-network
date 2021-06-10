@@ -29,15 +29,15 @@ var NodeConnectVars = kong.Vars{
 }
 
 type NodeConnectFlags struct {
-	URL        *url.URL      `arg:"" name:"node url" help:"remote mitum url; default: ${node_url}" required:"" default:"${node_url}"`                                 // nolint:lll
-	Timeout    time.Duration `name:"timeout" help:"timeout; default ${node_connect_timeout}" default:"${node_connect_timeout}"`                                       // nolint:lll
-	TLSInscure bool          `name:"tls-insecure" help:"allow inseucre TLS connection; default: ${node_connect_tls_insecure}" default:"${node_connect_tls_insecure}"` // nolint:lll
+	URL        *url.URL      `arg:"" name:"node url" help:"remote mitum url; default: ${node_url}" required:"true" default:"${node_url}"`                             // revive:disable-line:line-length-limit
+	Timeout    time.Duration `name:"timeout" help:"timeout; default ${node_connect_timeout}" default:"${node_connect_timeout}"`                                       // revive:disable-line:line-length-limit
+	TLSInscure bool          `name:"tls-insecure" help:"allow inseucre TLS connection; default: ${node_connect_tls_insecure}" default:"${node_connect_tls_insecure}"` // revive:disable-line:line-length-limit,struct-tag
 }
 
 type baseDeployKeyCommand struct {
 	*BaseCommand
-	Key       string `arg:"" name:"private key of node" required:""`
-	NetworkID string `arg:"" name:"network-id" required:""`
+	Key       string `arg:"" name:"private key of node" required:"true"`
+	NetworkID string `arg:"" name:"network-id" required:"true"`
 	*NodeConnectFlags
 	privatekey key.Privatekey
 	networkID  base.NetworkID
@@ -86,11 +86,11 @@ func (cmd *baseDeployKeyCommand) Initialize(flags interface{}, version util.Vers
 	cmd.Log().Debug().Interface("node_url", cmd.URL).Msg("deploy key")
 
 	quicConfig := &quic.Config{HandshakeIdleTimeout: cmd.Timeout}
-	if i, err := quicnetwork.NewQuicClient(cmd.TLSInscure, quicConfig); err != nil {
+	i, err := quicnetwork.NewQuicClient(cmd.TLSInscure, quicConfig)
+	if err != nil {
 		return err
-	} else {
-		cmd.client = i
 	}
+	cmd.client = i
 
 	return nil
 }
@@ -137,11 +137,9 @@ func (cmd *baseDeployKeyCommand) requestToken() error {
 }
 
 func (cmd *baseDeployKeyCommand) requestWithToken(path, method string) (*http.Response, func() error, error) {
-	var sig key.Signature
-	if i, err := deploy.DeployKeyTokenSignature(cmd.privatekey, cmd.token, cmd.networkID); err != nil {
+	sig, err := deploy.DeployKeyTokenSignature(cmd.privatekey, cmd.token, cmd.networkID)
+	if err != nil {
 		return nil, nil, xerrors.Errorf("failed to make signature with token: %w", err)
-	} else {
-		sig = i
 	}
 
 	u := *cmd.URL

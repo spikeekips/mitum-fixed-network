@@ -37,7 +37,7 @@ var (
 	NotSupportedErorr = errors.NewError("not supported")
 )
 
-var LimitRequestByHeights int = 20 // max number of reqeust heights
+var LimitRequestByHeights = 20 // max number of reqeust heights
 
 var cacheKeyNodeInfo = [2]byte{0x00, 0x00}
 
@@ -80,7 +80,7 @@ func NewServer(
 	return nqs, nil
 }
 
-func (sv *Server) Initialize() error {
+func (*Server) Initialize() error {
 	return nil
 }
 
@@ -140,13 +140,11 @@ func (sv *Server) handleGetSeals(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var enc encoder.Encoder
-	if e, err := EncoderFromHeader(r.Header, sv.encs, sv.enc); err != nil {
+	enc, err := EncoderFromHeader(r.Header, sv.encs, sv.enc)
+	if err != nil {
 		sv.Log().Error().Err(err).Msg("failed to read encoder hint")
 		network.HTTPError(w, http.StatusBadRequest)
 		return
-	} else {
-		enc = e
 	}
 
 	var args HashesArgs
@@ -163,11 +161,11 @@ func (sv *Server) handleGetSeals(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if v, err, _ := sv.rg.Do("GetSeals-"+args.String(), func() (interface{}, error) {
-		if i, err := sv.getSealsHandler(args.Hashes); err != nil {
+		i, err := sv.getSealsHandler(args.Hashes)
+		if err != nil {
 			return nil, err
-		} else {
-			return sv.enc.Marshal(i)
 		}
+		return sv.enc.Marshal(i)
 	}); err != nil {
 		sv.Log().Error().Err(err).Msg("failed to get seals")
 
@@ -192,24 +190,20 @@ func (sv *Server) handleNewSeal(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var enc encoder.Encoder
-	if e, err := EncoderFromHeader(r.Header, sv.encs, sv.enc); err != nil {
+	enc, err := EncoderFromHeader(r.Header, sv.encs, sv.enc)
+	if err != nil {
 		network.HTTPError(w, http.StatusBadRequest)
 		return
-	} else {
-		enc = e
 	}
 
-	var sl seal.Seal
-	if s, err := seal.DecodeSeal(enc, body.Bytes()); err != nil {
+	sl, err := seal.DecodeSeal(enc, body.Bytes())
+	if err != nil {
 		network.HTTPError(w, http.StatusBadRequest)
 
 		sv.Log().Error().Err(err).
 			Str("body", body.String()).Msg("invalid seal found")
 
 		return
-	} else {
-		sl = s
 	}
 
 	// NOTE if already received, returns 200
@@ -257,11 +251,11 @@ func (sv *Server) handleNodeInfo(w http.ResponseWriter, _ *http.Request) {
 	}
 
 	if v, err, shared := sv.rg.Do("NodeInfo", func() (interface{}, error) {
-		if i, err := sv.nodeInfoHandler(); err != nil {
+		i, err := sv.nodeInfoHandler()
+		if err != nil {
 			return nil, err
-		} else {
-			return sv.enc.Marshal(i)
 		}
+		return sv.enc.Marshal(i)
 	}); err != nil {
 		sv.Log().Error().Err(err).Msg("failed to get node info")
 
@@ -291,13 +285,11 @@ func (sv *Server) handleGetBlockDataMaps(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
-	var enc encoder.Encoder
-	if e, err := EncoderFromHeader(r.Header, sv.encs, sv.enc); err != nil {
+	enc, err := EncoderFromHeader(r.Header, sv.encs, sv.enc)
+	if err != nil {
 		network.HTTPError(w, http.StatusBadRequest)
 
 		return
-	} else {
-		enc = e
 	}
 
 	var args HeightsArgs
@@ -318,11 +310,11 @@ func (sv *Server) handleGetBlockDataMaps(w http.ResponseWriter, r *http.Request)
 	}
 
 	if v, err, _ := sv.rg.Do("GetBlockDataMaps-"+args.String(), func() (interface{}, error) {
-		if sls, err := sv.blockDataMapsHandler(args.Heights); err != nil {
+		sls, err := sv.blockDataMapsHandler(args.Heights)
+		if err != nil {
 			return nil, err
-		} else {
-			return sv.enc.Marshal(sls)
 		}
+		return sv.enc.Marshal(sls)
 	}); err != nil {
 		handleError(w, err)
 	} else {
@@ -340,25 +332,25 @@ func (sv *Server) handleGetBlockData(w http.ResponseWriter, r *http.Request) {
 
 	vars := mux.Vars(r)
 
-	var path string
-	if i, found := vars["path"]; !found {
+	var p string
+	i, found := vars["path"]
+	if !found {
 		network.HTTPError(w, http.StatusBadRequest)
 
 		return
-	} else {
-		path = strings.TrimSpace(i)
-		if len(path) < 1 {
-			network.HTTPError(w, http.StatusBadRequest)
-			return
-		}
+	}
+	p = strings.TrimSpace(i)
+	if len(p) < 1 {
+		network.HTTPError(w, http.StatusBadRequest)
+		return
 	}
 
-	if v, err, _ := sv.rg.Do("GetBlockData-"+path, func() (interface{}, error) {
-		if j, closefunc, err := sv.blockDataHandler("/" + vars["path"]); err != nil {
+	if v, err, _ := sv.rg.Do("GetBlockData-"+p, func() (interface{}, error) {
+		j, closefunc, err := sv.blockDataHandler("/" + vars["path"])
+		if err != nil {
 			return nil, err
-		} else {
-			return []interface{}{j, closefunc}, nil
 		}
+		return []interface{}{j, closefunc}, nil
 	}); err != nil {
 		handleError(w, err)
 	} else {
@@ -401,7 +393,7 @@ func mustQuicURL(u, p string) (string, *url.URL) {
 }
 
 func handleError(w http.ResponseWriter, err error) {
-	var status int = http.StatusInternalServerError
+	status := http.StatusInternalServerError
 	switch {
 	case xerrors.Is(err, util.NotFoundError):
 		status = http.StatusNotFound

@@ -19,17 +19,15 @@ func GenerateTLSCerts(host string, key ed25519.PrivateKey) ([]tls.Certificate, e
 	template := x509.Certificate{SerialNumber: big.NewInt(1)}
 	template.DNSNames = append(template.DNSNames, host)
 
-	var certDER []byte
-	if c, err := x509.CreateCertificate(
+	certDER, err := x509.CreateCertificate(
 		rand.Reader,
 		&template,
 		&template,
 		key.Public().(ed25519.PublicKey),
 		key,
-	); err != nil {
+	)
+	if err != nil {
 		return nil, err
-	} else {
-		certDER = c
 	}
 
 	keyBytes, err := x509.MarshalPKCS8PrivateKey(key)
@@ -50,11 +48,9 @@ func GenerateTLSCerts(host string, key ed25519.PrivateKey) ([]tls.Certificate, e
 		},
 	)
 
-	var certificate tls.Certificate
-	if c, err := tls.X509KeyPair(certPEM, keyPEM); err != nil {
+	certificate, err := tls.X509KeyPair(certPEM, keyPEM)
+	if err != nil {
 		return nil, err
-	} else {
-		certificate = c
 	}
 
 	return []tls.Certificate{certificate}, nil

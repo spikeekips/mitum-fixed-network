@@ -50,22 +50,22 @@ func (es *Encoders) Encoder(ty hint.Type, version string) (Encoder, error) {
 
 	var hinter hint.Hinter
 	if len(version) < 1 {
-		if i, err := es.GlobalHintset.Latest(ht.Type()); err != nil {
+		i, err := es.GlobalHintset.Latest(ht.Type())
+		if err != nil {
 			return nil, err
-		} else {
-			hinter = i
 		}
+		hinter = i
 	} else if i := es.GlobalHintset.Get(ht); i == nil {
 		return nil, util.NotFoundError.Errorf("encoder, %q not found", ht)
 	} else {
 		hinter = i
 	}
 
-	if i, ok := hinter.(Encoder); !ok {
+	i, ok := hinter.(Encoder)
+	if !ok {
 		return nil, xerrors.Errorf("not Encoder, %T", hinter)
-	} else {
-		return i, nil
 	}
+	return i, nil
 }
 
 func (es *Encoders) AddType(ty hint.Type) error {
@@ -82,11 +82,7 @@ func (es *Encoders) AddHinter(ht hint.Hinter) error {
 		}
 	}
 
-	if err := es.hintset.Add(ht); err != nil {
-		return err
-	}
-
-	return nil
+	return es.hintset.Add(ht)
 }
 
 func (es *Encoders) Compatible(t hint.Type, version string) (hint.Hinter, error) {

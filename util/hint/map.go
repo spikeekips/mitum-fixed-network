@@ -34,9 +34,9 @@ func (hm *Hintmap) Compatible(ht Hinter) (interface{}, error) {
 	hm.RLock()
 	defer hm.RUnlock()
 
-	if hinter, err := hm.hs.Compatible(ht.Hint()); err != nil {
+	hinter, err := hm.hs.Compatible(ht.Hint())
+	if err != nil {
 		return nil, err
-	} else {
-		return hm.m[hinter.Hint().String()], nil
 	}
+	return hm.m[hinter.Hint().String()], nil
 }

@@ -14,6 +14,7 @@ import (
 	"github.com/spikeekips/mitum/util"
 	"github.com/spikeekips/mitum/util/hint"
 	"github.com/spikeekips/mitum/util/logging"
+	"golang.org/x/sync/errgroup"
 	"golang.org/x/sync/semaphore"
 	"golang.org/x/xerrors"
 )
@@ -52,11 +53,7 @@ func (cmd *BlockDataVerifyCommand) Initialize(flags interface{}, version util.Ve
 	}
 
 	cmd.bd = localfs.NewBlockData(cmd.Path, cmd.jsonenc)
-	if err := cmd.bd.Initialize(); err != nil {
-		return err
-	}
-
-	return nil
+	return cmd.bd.Initialize()
 }
 
 func (cmd *BlockDataVerifyCommand) verify() error {
@@ -114,60 +111,50 @@ func (cmd *BlockDataVerifyCommand) checkLastHeight() error {
 
 func (cmd *BlockDataVerifyCommand) loadManifest(height base.Height) (block.Manifest, error) {
 	var manifest block.Manifest
-	if _, i, err := localfs.LoadData(cmd.bd.(*localfs.BlockData), height, block.BlockDataManifest); err != nil {
+	_, i, err := localfs.LoadData(cmd.bd.(*localfs.BlockData), height, block.BlockDataManifest)
+	if err != nil {
 		return nil, err
-	} else {
-		defer func() {
-			_ = i.Close()
-		}()
+	}
+	defer func() {
+		_ = i.Close()
+	}()
 
-		if j, err := cmd.bd.Writer().ReadManifest(i); err != nil {
-			return nil, err
-		} else if err := j.IsValid(cmd.networkID); err != nil {
-			return nil, xerrors.Errorf("invalid manifest, %q found: %w", height, err)
-		} else {
-			manifest = j
-		}
+	if j, err := cmd.bd.Writer().ReadManifest(i); err != nil {
+		return nil, err
+	} else if err := j.IsValid(cmd.networkID); err != nil {
+		return nil, xerrors.Errorf("invalid manifest, %q found: %w", height, err)
+	} else {
+		manifest = j
 	}
 
 	return manifest, nil
 }
 
 func (cmd *BlockDataVerifyCommand) checkBlocks() error {
-	errch := make(chan error)
+	sem := semaphore.NewWeighted(100)
+	eg, ctx := errgroup.WithContext(context.Background())
 
-	go func() {
-		ctx := context.Background()
-		sem := semaphore.NewWeighted(100)
-		for i := base.PreGenesisHeight; i <= cmd.lastHeight; i++ {
-			height := i
-			if err := sem.Acquire(ctx, 1); err != nil {
-				break
-			}
-
-			go func() {
-				defer sem.Release(1)
-
-				if _, err := cmd.loadBlock(height); err != nil {
-					errch <- err
-				}
-			}()
+	for i := base.PreGenesisHeight; i <= cmd.lastHeight; i++ {
+		height := i
+		if err := sem.Acquire(ctx, 1); err != nil {
+			break
 		}
 
-		if err := sem.Acquire(ctx, 100); err != nil {
-			if !xerrors.Is(err, context.Canceled) {
-				errch <- err
-			}
-		}
+		eg.Go(func() error {
+			defer sem.Release(1)
 
-		close(errch)
-	}()
-
-	var err error
-	for err = range errch {
+			_, err := cmd.loadBlock(height)
+			return err
+		})
 	}
 
-	return err
+	if err := sem.Acquire(ctx, 100); err != nil {
+		if !xerrors.Is(err, context.Canceled) {
+			return err
+		}
+	}
+
+	return eg.Wait()
 }
 
 func (cmd *BlockDataVerifyCommand) loadBlock(height base.Height) (block.Block, error) {
@@ -191,40 +178,29 @@ func (cmd *BlockDataVerifyCommand) loadBlock(height base.Height) (block.Block, e
 }
 
 func (cmd *BlockDataVerifyCommand) checkAllBlockFiles() error {
-	errch := make(chan error)
+	sem := semaphore.NewWeighted(100)
+	eg, ctx := errgroup.WithContext(context.Background())
 
-	go func() {
-		ctx := context.Background()
-		sem := semaphore.NewWeighted(100)
-		for i := base.PreGenesisHeight; i <= cmd.lastHeight; i++ {
-			height := i
-			if err := sem.Acquire(ctx, 1); err != nil {
-				break
-			}
-
-			go func() {
-				defer sem.Release(1)
-
-				if err := cmd.checkBlockFiles(height); err != nil {
-					errch <- err
-				}
-			}()
+	for i := base.PreGenesisHeight; i <= cmd.lastHeight; i++ {
+		height := i
+		if err := sem.Acquire(ctx, 1); err != nil {
+			break
 		}
 
-		if err := sem.Acquire(ctx, 100); err != nil {
-			if !xerrors.Is(err, context.Canceled) {
-				errch <- err
-			}
-		}
+		eg.Go(func() error {
+			defer sem.Release(1)
 
-		close(errch)
-	}()
-
-	var err error
-	for err = range errch {
+			return cmd.checkBlockFiles(height)
+		})
 	}
 
-	return err
+	if err := sem.Acquire(ctx, 100); err != nil {
+		if !xerrors.Is(err, context.Canceled) {
+			return err
+		}
+	}
+
+	return eg.Wait()
 }
 
 func (cmd *BlockDataVerifyCommand) checkBlockFiles(height base.Height) error {
@@ -253,11 +229,10 @@ func (cmd *BlockDataVerifyCommand) checkBlockFiles(height base.Height) error {
 
 	if hasError {
 		return xerrors.Errorf("block data file of height, %d has problem", height)
-	} else {
-		l.Debug().Msg("block data files checked")
-
-		return nil
 	}
+	l.Debug().Msg("block data files checked")
+
+	return nil
 }
 
 func (cmd *BlockDataVerifyCommand) checkBlockFile(height base.Height, dataType string) error {
@@ -275,11 +250,9 @@ func (cmd *BlockDataVerifyCommand) checkBlockFile(height base.Height, dataType s
 		f = matches[0]
 	}
 
-	var checksum string
-	if _, _, c, err := localfs.ParseDataFileName(f); err != nil {
+	_, _, checksum, err := localfs.ParseDataFileName(f)
+	if err != nil {
 		return err
-	} else {
-		checksum = c
 	}
 
 	if i, err := util.GenerateFileChecksum(f); err != nil {

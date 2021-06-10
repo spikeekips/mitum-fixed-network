@@ -55,7 +55,7 @@ func NewBaseFixedTreeNodeWithHash(index uint64, key, hash []byte) BaseFixedTreeN
 	return BaseFixedTreeNode{index: index, key: key, hash: hash}
 }
 
-func (no BaseFixedTreeNode) Hint() hint.Hint {
+func (BaseFixedTreeNode) Hint() hint.Hint {
 	return BaseFixedTreeNodeHint
 }
 
@@ -110,7 +110,7 @@ func NewFixedTree(nodes []FixedTreeNode) FixedTree {
 	return FixedTree{nodes: nodes}
 }
 
-func (tr FixedTree) Hint() hint.Hint {
+func (FixedTree) Hint() hint.Hint {
 	return FixedTreeHint
 }
 
@@ -176,41 +176,37 @@ func (tr FixedTree) Traverse(f func(FixedTreeNode) (bool, error)) error {
 // Proof returns the nodes to prove whether node is in tree. It always returns
 // root node + N(2 children).
 func (tr FixedTree) Proof(index uint64) ([]FixedTreeNode, error) {
-	var self FixedTreeNode
-	if i, err := tr.Node(index); err != nil {
+	self, err := tr.Node(index)
+	if err != nil {
 		return nil, err
-	} else {
-		self = i
 	}
 
 	if tr.Len() < 1 {
 		return nil, nil
 	}
 
-	var height uint64
-	if i, err := tr.height(index); err != nil {
+	height, err := tr.height(index)
+	if err != nil {
 		return nil, err
-	} else {
-		height = i
 	}
 
 	parents := make([]FixedTreeNode, height+1)
 	parents[0] = self
 
-	var l uint64 = index
+	l := index
 	var i int
 	for {
-		if j, err := tr.parent(l); err != nil {
+		j, err := tr.parent(l)
+		if err != nil {
 			if xerrors.Is(err, NoParentError) {
 				break
 			}
 
 			return nil, err
-		} else {
-			parents[i+1] = j
-			l = j.Index()
-			i++
 		}
+		parents[i+1] = j
+		l = j.Index()
+		i++
 	}
 
 	pr := make([]FixedTreeNode, (height+1)*2+1)
@@ -231,15 +227,14 @@ func (tr FixedTree) Proof(index uint64) ([]FixedTreeNode, error) {
 }
 
 func (tr FixedTree) children(index uint64) ([]FixedTreeNode, error) {
-	if i, err := childrenFixedTree(tr.Len(), index); err != nil {
+	i, err := childrenFixedTree(tr.Len(), index)
+	if err != nil {
 		return nil, err
-	} else {
-		if i[1] == 0 {
-			return []FixedTreeNode{tr.nodes[i[0]], nil}, nil
-		} else {
-			return []FixedTreeNode{tr.nodes[i[0]], tr.nodes[i[1]]}, nil
-		}
 	}
+	if i[1] == 0 {
+		return []FixedTreeNode{tr.nodes[i[0]], nil}, nil
+	}
+	return []FixedTreeNode{tr.nodes[i[0]], tr.nodes[i[1]]}, nil
 }
 
 func (tr FixedTree) height(index uint64) (uint64, error) {
@@ -248,11 +243,11 @@ func (tr FixedTree) height(index uint64) (uint64, error) {
 
 func (tr FixedTree) parent(index uint64) (FixedTreeNode, error) {
 	var n FixedTreeNode
-	if i, err := parentFixedTree(tr.Len(), index); err != nil {
+	i, err := parentFixedTree(tr.Len(), index)
+	if err != nil {
 		return n, err
-	} else {
-		return tr.Node(i)
 	}
+	return tr.Node(i)
 }
 
 // generateNodeHash generates node hash. Hash was derived from index and key.
@@ -310,22 +305,21 @@ func (tr *FixedTreeGenerator) Tree() (FixedTree, error) {
 
 	if tr.size < 1 {
 		return NewFixedTree(tr.nodes), nil
-	} else {
-		for i := range tr.nodes {
-			if tr.nodes[i] == nil {
-				return FixedTree{}, EmptyNodeInTreeError.Errorf("node, %d", i)
-			}
+	}
+	for i := range tr.nodes {
+		if tr.nodes[i] == nil {
+			return FixedTree{}, EmptyNodeInTreeError.Errorf("node, %d", i)
 		}
 	}
 
 	if tr.size > 0 && len(tr.nodes[0].Hash()) < 1 {
 		for i := range tr.nodes {
 			n := tr.nodes[len(tr.nodes)-i-1]
-			if h, err := tr.generateNodeHash(n); err != nil {
+			h, err := tr.generateNodeHash(n)
+			if err != nil {
 				return FixedTree{}, err
-			} else {
-				tr.nodes[n.Index()] = n.SetHash(h)
 			}
+			tr.nodes[n.Index()] = n.SetHash(h)
 		}
 	}
 
@@ -360,9 +354,8 @@ func FixedTreeNodeHash(
 func ProveFixedTreeProof(pr []FixedTreeNode) error {
 	if err := proveFixedTreeProof(pr); err != nil {
 		return InvalidProofError.Wrap(err)
-	} else {
-		return nil
 	}
+	return nil
 }
 
 func proveFixedTreeProof(pr []FixedTreeNode) error {
@@ -453,11 +446,9 @@ func parentFixedTree(size int, index uint64) (uint64, error) {
 }
 
 func childrenFixedTree(size int, index uint64) ([]uint64, error) {
-	var height uint64
-	if i, err := heightFixedTree(size, index); err != nil {
+	height, err := heightFixedTree(size, index)
+	if err != nil {
 		return nil, err
-	} else {
-		height = i
 	}
 
 	currentFirst := uint64(math.Pow(2, float64(height)) - 1)
@@ -465,11 +456,11 @@ func childrenFixedTree(size int, index uint64) ([]uint64, error) {
 	nextFirst := uint64(math.Pow(2, float64(height+1)) - 1)
 
 	children := make([]uint64, 2)
-	if i := nextFirst + pos*2; i >= uint64(size) {
+	i := nextFirst + pos*2
+	if i >= uint64(size) {
 		return nil, NoChildrenError
-	} else {
-		children[0] = i
 	}
+	children[0] = i
 
 	if i := nextFirst + pos*2 + 1; i < uint64(size) {
 		children[1] = i

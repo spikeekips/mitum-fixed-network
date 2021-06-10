@@ -23,7 +23,7 @@ func NewStringValue(v interface{}) (StringValue, error) {
 	return StringValue{}.set(v)
 }
 
-func (sv StringValue) set(v interface{}) (StringValue, error) {
+func (StringValue) set(v interface{}) (StringValue, error) {
 	var s string
 	switch t := v.(type) {
 	case string:
@@ -50,7 +50,7 @@ func (sv StringValue) Bytes() []byte {
 	return []byte(sv.v)
 }
 
-func (sv StringValue) Hint() hint.Hint {
+func (StringValue) Hint() hint.Hint {
 	return StringValueHint
 }
 

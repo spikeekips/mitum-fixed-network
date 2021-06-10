@@ -137,23 +137,23 @@ func (sy *Syncers) Add(to base.Height, sourceNodes []network.Node) (bool, error)
 		baseManifest = sy.lastSyncer.TailManifest()
 	}
 
-	if i, err := sy.newSyncer(baseManifest); err != nil {
+	i, err := sy.newSyncer(baseManifest)
+	if err != nil {
 		l.Debug().Msg("target height updated, but failed to add new syncer")
 
 		return false, err
-	} else {
-		if sy.lastSyncer != nil {
-			sy.prevSyncer = sy.lastSyncer
-		}
-
-		sy.lastSyncer = i
-
-		l.Debug().Msg("target height updated and new syncer added")
-
-		go func() {
-			sy.stateChan <- NewSyncerStateChangedContext(i, SyncerCreated, nil)
-		}()
 	}
+	if sy.lastSyncer != nil {
+		sy.prevSyncer = sy.lastSyncer
+	}
+
+	sy.lastSyncer = i
+
+	l.Debug().Msg("target height updated and new syncer added")
+
+	go func() {
+		sy.stateChan <- NewSyncerStateChangedContext(i, SyncerCreated, nil)
+	}()
 
 	return false, nil
 }
@@ -210,22 +210,21 @@ func (sy *Syncers) newSyncer(baseManifest block.Manifest) (Syncer, error) {
 	})
 
 	var syncer Syncer
-	if i, err := NewGeneralSyncer(
+	i, err := NewGeneralSyncer(
 		sy.local,
 		sy.database,
 		sy.blockData,
 		sy.policy,
 		sy.sourceNodes,
 		baseManifest, to,
-	); err != nil {
+	)
+	if err != nil {
 		l.Debug().Msg("failed to add new syncer")
 
 		return nil, err
-	} else {
-		i = i.SetStateChan(sy.stateChan)
-
-		syncer = i
 	}
+	i = i.SetStateChan(sy.stateChan)
+	syncer = i
 
 	if l, ok := syncer.(logging.SetLogger); ok {
 		_ = l.SetLogger(sy.Log())
@@ -248,36 +247,32 @@ func (sy *Syncers) prepareSyncer(baseManifest block.Manifest) error {
 		return lctx.Hinted("from", from)
 	})
 
-	var newSyncer Syncer
-	if i, err := sy.newSyncer(baseManifest); err != nil {
+	newSyncer, err := sy.newSyncer(baseManifest)
+	if err != nil {
 		if xerrors.Is(err, util.IgnoreError) {
 			l.Debug().Err(err).Msg("failed to make new syncer")
 
 			return nil
-		} else {
-			l.Error().Err(err).Msg("failed to make new syncer")
-
-			return err
 		}
-	} else {
-		newSyncer = i
+		l.Error().Err(err).Msg("failed to make new syncer")
+
+		return err
 	}
 
 	if err := newSyncer.Prepare(); err != nil {
 		l.Error().Err(err).Msg("failed to prepare syncer")
 
 		return err
-	} else {
-		if sy.lastSyncer != nil {
-			sy.prevSyncer = sy.lastSyncer
-		}
-
-		sy.lastSyncer = newSyncer
-
-		l.Debug().Msg("new syncer will prepare")
-
-		return nil
 	}
+	if sy.lastSyncer != nil {
+		sy.prevSyncer = sy.lastSyncer
+	}
+
+	sy.lastSyncer = newSyncer
+
+	l.Debug().Msg("new syncer will prepare")
+
+	return nil
 }
 
 func (sy *Syncers) stateChanged(ctx SyncerStateChangedContext) error {
@@ -328,9 +323,8 @@ func (sy *Syncers) stateChangedCreated(ctx SyncerStateChangedContext) error {
 		l.Error().Err(err).Msg("failed to prepare")
 
 		return err
-	} else {
-		l.Debug().Msg("new syncer will prepare")
 	}
+	l.Debug().Msg("new syncer will prepare")
 
 	return nil
 }
@@ -387,9 +381,8 @@ func (sy *Syncers) stateChangedSaved(ctx SyncerStateChangedContext) error {
 			l.Debug().Err(err).Msg("syncer saved, but failed to prepare new syncer")
 
 			return err
-		} else {
-			l.Debug().Msg("syncer saved and new syncer will prepare")
 		}
+		l.Debug().Msg("syncer saved and new syncer will prepare")
 	}
 
 	return nil

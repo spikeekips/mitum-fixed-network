@@ -26,11 +26,11 @@ func (bd *BaseBlockDataMap) unpack(
 
 	items := map[string]BaseBlockDataMapItem{}
 	for k := range bitems {
-		if i, err := DecodeBaseBlockDataMapItem(enc, bitems[k]); err != nil {
+		i, err := DecodeBaseBlockDataMapItem(enc, bitems[k])
+		if err != nil {
 			return err
-		} else {
-			items[k] = i
 		}
+		items[k] = i
 	}
 
 	bd.items = items

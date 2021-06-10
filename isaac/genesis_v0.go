@@ -74,25 +74,19 @@ func (gg *GenesisBlockV0Generator) Generate() (block.Block, error) {
 		return nil, err
 	}
 
-	var ivp base.Voteproof
-	if vp, err := gg.generateINITVoteproof(); err != nil {
+	ivp, err := gg.generateINITVoteproof()
+	if err != nil {
 		return nil, err
-	} else {
-		ivp = vp
 	}
 
-	var seals []operation.Seal
-	if sls, err := gg.generateOperationSeal(); err != nil {
+	seals, err := gg.generateOperationSeal()
+	if err != nil {
 		return nil, err
-	} else {
-		seals = sls
 	}
 
-	var proposal ballot.Proposal
-	if pr, err := gg.generateProposal(seals, ivp); err != nil {
+	proposal, err := gg.generateProposal(seals, ivp)
+	if err != nil {
 		return nil, err
-	} else {
-		proposal = pr
 	}
 
 	pps := prprocessor.NewProcessors(
@@ -152,12 +146,11 @@ func (gg *GenesisBlockV0Generator) generateOperationSeal() ([]operation.Seal, er
 func (gg *GenesisBlockV0Generator) generatePreviousBlock() error {
 	// NOTE the privatekey of local node is melted into genesis previous block;
 	// it means, genesis block contains who creates it.
-	var genesisHash valuehash.Hash
-	if sig, err := gg.local.Privatekey().Sign(gg.policy.NetworkID()); err != nil {
+	sig, err := gg.local.Privatekey().Sign(gg.policy.NetworkID())
+	if err != nil {
 		return err
-	} else {
-		genesisHash = valuehash.NewBytes(sig.Bytes())
 	}
+	genesisHash := valuehash.NewBytes(sig.Bytes())
 
 	blk, err := block.NewBlockV0(
 		block.NewSuffrageInfoV0(
@@ -176,11 +169,9 @@ func (gg *GenesisBlockV0Generator) generatePreviousBlock() error {
 		return err
 	}
 
-	var bs storage.DatabaseSession
-	if st, err := gg.database.NewSession(blk); err != nil {
+	bs, err := gg.database.NewSession(blk)
+	if err != nil {
 		return err
-	} else {
-		bs = st
 	}
 
 	defer func() {
@@ -240,18 +231,14 @@ func (gg *GenesisBlockV0Generator) generateINITVoteproof() (base.Voteproof, erro
 		ib = b
 	}
 
-	var vp base.Voteproof
-	if voteproof, err := gg.ballotbox.Vote(ib); err != nil {
+	voteproof, err := gg.ballotbox.Vote(ib)
+	if err != nil {
 		return nil, err
-	} else {
-		if !voteproof.IsFinished() {
-			return nil, xerrors.Errorf("something wrong, INITVoteproof should be finished, but not")
-		} else {
-			vp = voteproof
-		}
+	} else if !voteproof.IsFinished() {
+		return nil, xerrors.Errorf("something wrong, INITVoteproof should be finished, but not")
 	}
 
-	return vp, nil
+	return voteproof, nil
 }
 
 func (gg *GenesisBlockV0Generator) generateACCEPTVoteproof(newBlock block.Block, ivp base.Voteproof) (
@@ -262,13 +249,12 @@ func (gg *GenesisBlockV0Generator) generateACCEPTVoteproof(newBlock block.Block,
 		return nil, err
 	}
 
-	if voteproof, err := gg.ballotbox.Vote(ab); err != nil {
+	voteproof, err := gg.ballotbox.Vote(ab)
+	if err != nil {
 		return nil, err
-	} else {
-		if !voteproof.IsFinished() {
-			return nil, xerrors.Errorf("something wrong, ACCEPTVoteproof should be finished, but not")
-		}
-
-		return voteproof, nil
+	} else if !voteproof.IsFinished() {
+		return nil, xerrors.Errorf("something wrong, ACCEPTVoteproof should be finished, but not")
 	}
+
+	return voteproof, nil
 }

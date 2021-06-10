@@ -14,7 +14,7 @@ type validator struct {
 	config LocalNode
 }
 
-func NewValidator(ctx context.Context) (*validator, error) {
+func NewValidator(ctx context.Context) (*validator, error) { // revive:disable-line:unexported-return
 	var conf LocalNode
 	if err := LoadConfigContextValue(ctx, &conf); err != nil {
 		return nil, err
@@ -63,9 +63,8 @@ func (va *validator) CheckNodePrivatekey() (bool, error) {
 func (va *validator) CheckNetworkID() (bool, error) {
 	if len(va.config.NetworkID()) < 1 {
 		return false, xerrors.Errorf("network id is missing")
-	} else {
-		return true, nil
 	}
+	return true, nil
 }
 
 func (va *validator) CheckLocalNetwork() (bool, error) {

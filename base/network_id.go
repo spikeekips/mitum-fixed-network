@@ -37,13 +37,14 @@ func (ni NetworkID) MarshalText() ([]byte, error) {
 }
 
 func (ni *NetworkID) UnmarshalText(b []byte) error {
-	if s, err := base64.StdEncoding.DecodeString(string(b)); err != nil {
+	s, err := base64.StdEncoding.DecodeString(string(b))
+	if err != nil {
 		return err
-	} else {
-		*ni = NetworkID(s)
-
-		return nil
 	}
+
+	*ni = NetworkID(s)
+
+	return nil
 }
 
 func (ni NetworkID) Bytes() []byte {

@@ -5,8 +5,8 @@ import (
 )
 
 var (
-	NilLog    zerolog.Logger = zerolog.Nop()
-	NilLogger Logger         = Logger{Logger: &NilLog}
+	NilLog    = zerolog.Nop()
+	NilLogger = Logger{Logger: &NilLog}
 )
 
 type LogHintedMarshaler interface {

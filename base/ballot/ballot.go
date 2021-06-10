@@ -228,18 +228,14 @@ func SignBaseBallotV0(blt Ballot, bb BaseBallotV0, pk key.Privatekey, networkID 
 		return BaseBallotV0{}, err
 	}
 
-	var bodyHash valuehash.Hash
-	if h, err := blt.GenerateBodyHash(); err != nil {
+	bodyHash, err := blt.GenerateBodyHash()
+	if err != nil {
 		return BaseBallotV0{}, err
-	} else {
-		bodyHash = h
 	}
 
-	var sig key.Signature
-	if s, err := pk.Sign(util.ConcatBytesSlice(bodyHash.Bytes(), networkID)); err != nil {
+	sig, err := pk.Sign(util.ConcatBytesSlice(bodyHash.Bytes(), networkID))
+	if err != nil {
 		return BaseBallotV0{}, err
-	} else {
-		sig = s
 	}
 
 	factSig, err := pk.Sign(util.ConcatBytesSlice(blt.Fact().Hash().Bytes(), networkID))

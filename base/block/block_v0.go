@@ -110,11 +110,11 @@ func (bm BlockV0) IsValid(networkID []byte) error {
 	return nil
 }
 
-func (bm BlockV0) Hint() hint.Hint {
+func (BlockV0) Hint() hint.Hint {
 	return BlockV0Hint
 }
 
-func (bm BlockV0) Bytes() []byte {
+func (BlockV0) Bytes() []byte {
 	return nil
 }
 

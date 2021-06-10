@@ -60,11 +60,8 @@ func (pvc *ProposalChecker) IsKnown() (bool, error) {
 
 // CheckSigning checks node signed by it's valid key.
 func (pvc *ProposalChecker) CheckSigning() (bool, error) {
-	if err := CheckBallotSigning(pvc.proposal, pvc.nodepool); err != nil {
-		return false, err
-	} else {
-		return true, nil
-	}
+	err := CheckBallotSigning(pvc.proposal, pvc.nodepool)
+	return err == nil, err
 }
 
 func (pvc *ProposalChecker) IsProposer() (bool, error) {
@@ -75,9 +72,9 @@ func (pvc *ProposalChecker) IsProposer() (bool, error) {
 		pvc.proposal.Round(),
 	); err != nil {
 		return false, err
-	} else {
-		return true, nil
 	}
+
+	return true, nil
 }
 
 func (pvc *ProposalChecker) SaveProposal() (bool, error) {
@@ -134,16 +131,14 @@ func (pvc *ProposalChecker) IsWaiting() (bool, error) {
 }
 
 func CheckNodeIsProposer(node base.Address, suffrage base.Suffrage, height base.Height, round base.Round) error {
-	var acting base.ActingSuffrage
-	if i, err := suffrage.Acting(height, round); err != nil {
+	acting, err := suffrage.Acting(height, round)
+	if err != nil {
 		return err
-	} else {
-		acting = i
 	}
 
 	if node.Equal(acting.Proposer()) {
 		return nil
-	} else {
-		return xerrors.Errorf("proposal has wrong proposer")
 	}
+
+	return xerrors.Errorf("proposal has wrong proposer")
 }

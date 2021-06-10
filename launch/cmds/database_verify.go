@@ -90,11 +90,7 @@ func (cmd *DatabaseVerifyCommand) Initialize(flags interface{}, version util.Ver
 		cmd.processes = i
 	}
 
-	if err := cmd.prepare(); err != nil {
-		return err
-	}
-
-	return nil
+	return cmd.prepare()
 }
 
 func (cmd *DatabaseVerifyCommand) verify() error {
@@ -157,24 +153,21 @@ func (cmd *DatabaseVerifyCommand) prepare() error {
 	var database storage.Database
 	if err := process.LoadDatabaseContextValue(ctx, &database); err != nil {
 		return err
-	} else {
-		cmd.database = database
 	}
+	cmd.database = database
 
 	var blockData blockdata.BlockData
 	if err := process.LoadBlockDataContextValue(ctx, &blockData); err != nil {
 		return err
-	} else {
-		cmd.blockData = blockData
 	}
+	cmd.blockData = blockData
 
 	var lastManifest block.Manifest
 	if err := util.LoadFromContextValue(ctx, lastManifestContextKey, &lastManifest); err != nil {
 		return err
-	} else {
-		cmd.lastHeight = lastManifest.Height()
-		cmd.lastManifest = lastManifest
 	}
+	cmd.lastHeight = lastManifest.Height()
+	cmd.lastManifest = lastManifest
 
 	return nil
 }
@@ -200,15 +193,17 @@ func hookCheckStorage(ctx context.Context) (context.Context, error) {
 		return ctx, err
 	}
 
-	if i, err := blockdata.CheckBlock(db, blockData, networkID); err != nil {
+	i, err := blockdata.CheckBlock(db, blockData, networkID)
+	if err != nil {
 		return ctx, err
-	} else {
-		log.Debug().
-			Dict("block", logging.Dict().Hinted("hash", i.Hash()).Hinted("height", i.Height()).Hinted("round", i.Round())).
-			Msg("block found")
-
-		ctx = context.WithValue(ctx, lastManifestContextKey, i)
 	}
+	log.Debug().Dict("block", logging.Dict().
+		Hinted("hash", i.Hash()).
+		Hinted("height", i.Height()).
+		Hinted("round", i.Round())).
+		Msg("block found")
+
+	ctx = context.WithValue(ctx, lastManifestContextKey, i)
 
 	return ctx, nil
 }

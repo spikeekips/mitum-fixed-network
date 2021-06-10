@@ -68,7 +68,7 @@ func (st *BaseState) Exit(sctx StateSwitchContext) (func() error, error) {
 	return nil, nil
 }
 
-func (st *BaseState) ProcessProposal(ballot.Proposal) error { return nil }
+func (*BaseState) ProcessProposal(ballot.Proposal) error { return nil }
 func (st *BaseState) ProcessVoteproof(voteproof base.Voteproof) error {
 	if st.processVoteproofFunc != nil {
 		return st.processVoteproofFunc(voteproof)

@@ -36,13 +36,13 @@ func GenerateChecksum(i io.Reader) (string, error) {
 }
 
 func GenerateFileChecksum(p string) (string, error) {
-	if f, err := os.Open(filepath.Clean(p)); err != nil {
+	f, err := os.Open(filepath.Clean(p))
+	if err != nil {
 		return "", err
-	} else {
-		defer func() {
-			_ = f.Close()
-		}()
-
-		return GenerateChecksum(f)
 	}
+	defer func() {
+		_ = f.Close()
+	}()
+
+	return GenerateChecksum(f)
 }

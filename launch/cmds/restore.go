@@ -76,12 +76,11 @@ func NewRestoreCommand(types []hint.Type, hinters []hint.Hinter) RestoreCommand 
 func (cmd *RestoreCommand) Run(version util.Version) error {
 	if err := cmd.Initialize(cmd, version); err != nil {
 		return xerrors.Errorf("failed to initialize command: %w", err)
-	} else {
-		defer cmd.Done()
-		defer func() {
-			<-time.After(time.Second * 1)
-		}()
 	}
+	defer cmd.Done()
+	defer func() {
+		<-time.After(time.Second * 1)
+	}()
 
 	if err := cmd.prepare(); err != nil {
 		return err
@@ -128,16 +127,13 @@ func (cmd *RestoreCommand) restore() error {
 }
 
 func (cmd *RestoreCommand) restoreBlock(height base.Height) error {
-	var sst storage.SyncerSession
-	if i, err := cmd.st.NewSyncerSession(); err != nil {
+	sst, err := cmd.st.NewSyncerSession()
+	if err != nil {
 		return err
-	} else {
-		defer func() {
-			_ = sst.Close()
-		}()
-
-		sst = i
 	}
+	defer func() {
+		_ = sst.Close()
+	}()
 
 	l := cmd.Log().WithLogger(func(ctx logging.Context) logging.Emitter {
 		return ctx.Int64("height", height.Int64())
@@ -220,16 +216,14 @@ func (cmd *RestoreCommand) hookLoadVars(ctx context.Context) (context.Context, e
 	var st storage.Database
 	if err := process.LoadDatabaseContextValue(ctx, &st); err != nil {
 		return ctx, err
-	} else {
-		cmd.st = st
 	}
+	cmd.st = st
 
 	var policy *isaac.LocalPolicy
 	if err := process.LoadPolicyContextValue(ctx, &policy); err != nil {
 		return ctx, err
-	} else {
-		cmd.policy = policy
 	}
+	cmd.policy = policy
 
 	return ctx, nil
 }
@@ -240,7 +234,7 @@ func (cmd *RestoreCommand) hookCheckEmptyBlockData(ctx context.Context) (context
 		if found, err := cmd.bd.Exists(height); err != nil {
 			return ctx, xerrors.Errorf("failed to check blockdata of height, %d: %w", height, err)
 		} else if !found {
-			height -= 1
+			height--
 			break
 		}
 
@@ -253,11 +247,11 @@ func (cmd *RestoreCommand) hookCheckEmptyBlockData(ctx context.Context) (context
 
 	cmd.Log().Debug().Int64("last_height", height.Int64()).Msg("blockdata checked")
 
-	if _, i, err := localfs.LoadBlock(cmd.bd, height); err != nil {
+	_, i, err := localfs.LoadBlock(cmd.bd, height)
+	if err != nil {
 		return ctx, err
-	} else {
-		cmd.lastBlock = i
 	}
+	cmd.lastBlock = i
 
 	return ctx, nil
 }
@@ -280,7 +274,8 @@ func (cmd *RestoreCommand) hookCheckExistingDatabase(ctx context.Context) (conte
 
 	switch {
 	case cmd.lastManifest.Height() > cmd.lastBlock.Height():
-		return ctx, xerrors.Errorf("block in database is higher than blockdata; clean database first with --clean-database")
+		return ctx,
+			xerrors.Errorf("block in database is higher than blockdata; clean database first with --clean-database")
 	case cmd.lastManifest.Height() == cmd.lastBlock.Height():
 		if !cmd.lastManifest.Hash().Equal(cmd.lastBlock.Hash()) {
 			return ctx, xerrors.Errorf("block in database has same height with blockdata, " +

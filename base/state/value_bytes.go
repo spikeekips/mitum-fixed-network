@@ -24,7 +24,7 @@ func NewBytesValue(v interface{}) (BytesValue, error) {
 	return BytesValue{}.set(v)
 }
 
-func (bv BytesValue) set(v interface{}) (BytesValue, error) {
+func (BytesValue) set(v interface{}) (BytesValue, error) {
 	var s []byte
 	switch t := v.(type) {
 	case []byte:
@@ -57,7 +57,7 @@ func (bv BytesValue) Bytes() []byte {
 	return bv.v
 }
 
-func (bv BytesValue) Hint() hint.Hint {
+func (BytesValue) Hint() hint.Hint {
 	return BytesValueHint
 }
 

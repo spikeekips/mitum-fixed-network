@@ -38,18 +38,14 @@ type deployKeyHandlers struct {
 }
 
 func newDeployKeyHandlers(ctx context.Context, handler func(string) *mux.Route) (*deployKeyHandlers, error) {
-	var base *baseDeployHandler
-	if i, err := newBaseDeployHandler(ctx, "deploy-key-handlers", handler); err != nil {
+	base, err := newBaseDeployHandler(ctx, "deploy-key-handlers", handler)
+	if err != nil {
 		return nil, err
-	} else {
-		base = i
 	}
 
-	var c cache.Cache
-	if i, err := cache.NewGCache("lru", 100*100, time.Minute); err != nil {
+	c, err := cache.NewGCache("lru", 100*100, time.Minute)
+	if err != nil {
 		return nil, xerrors.Errorf("failed to create cache for deploy key handlers")
-	} else {
-		c = i
 	}
 
 	var local *network.LocalNode

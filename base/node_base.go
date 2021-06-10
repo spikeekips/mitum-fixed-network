@@ -26,7 +26,7 @@ func (bn BaseNodeV0) String() string {
 	return bn.address.String()
 }
 
-func (bn BaseNodeV0) Hint() hint.Hint {
+func (BaseNodeV0) Hint() hint.Hint {
 	return BaseNodeV0Hint
 }
 

@@ -52,26 +52,23 @@ func (cmd *DeployKeyKeyCommand) Run(version util.Version) error {
 func (cmd *DeployKeyKeyCommand) requestKey() error {
 	path := deploy.QuicHandlerPathDeployKeyKeyPrefix + "/" + cmd.DeployKey
 
-	var res *http.Response
-	if i, c, err := cmd.requestWithToken(path, "GET"); err != nil {
+	res, c, err := cmd.requestWithToken(path, "GET")
+	if err != nil {
 		return xerrors.Errorf("failed to request deploy key: %w", err)
-	} else {
-		defer func() {
-			_ = c()
-			_ = i.Body.Close()
-		}()
-
-		res = i
 	}
+	defer func() {
+		_ = c()
+		_ = res.Body.Close()
+	}()
 
 	if res.StatusCode == http.StatusOK {
-		if i, err := ioutil.ReadAll(res.Body); err != nil {
+		i, err := ioutil.ReadAll(res.Body)
+		if err != nil {
 			return xerrors.Errorf("failed to read body: %w", err)
-		} else {
-			_, _ = fmt.Fprintln(os.Stdout, string(i))
-
-			return nil
 		}
+		_, _ = fmt.Fprintln(os.Stdout, string(i))
+
+		return nil
 	}
 
 	if i, err := network.LoadProblemFromResponse(res); err == nil {

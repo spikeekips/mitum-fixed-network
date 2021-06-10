@@ -10,12 +10,8 @@ func IsValidSeal(seal Seal, networkID []byte) error {
 		return isvalid.InvalidError.Errorf("hash does not match")
 	}
 
-	if err := seal.Signer().Verify(
+	return seal.Signer().Verify(
 		util.ConcatBytesSlice(seal.BodyHash().Bytes(), networkID),
 		seal.Signature(),
-	); err != nil {
-		return err
-	}
-
-	return nil
+	)
 }

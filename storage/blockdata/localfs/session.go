@@ -77,13 +77,12 @@ func (ss *Session) SetManifest(manifest block.Manifest) error {
 		return ss.writer.WriteManifest(w, manifest)
 	}); err != nil {
 		return err
-	} else {
-		ss.Lock()
-		ss.mapData = ss.mapData.SetBlock(manifest.Hash())
-		ss.Unlock()
-
-		return nil
 	}
+	ss.Lock()
+	ss.mapData = ss.mapData.SetBlock(manifest.Hash())
+	ss.Unlock()
+
+	return nil
 }
 
 func (ss *Session) AddOperations(ops ...operation.Operation) error {
@@ -91,11 +90,11 @@ func (ss *Session) AddOperations(ops ...operation.Operation) error {
 	defer ss.locks[block.BlockDataOperations].Unlock()
 
 	if ss.operationsWriter == nil {
-		if i, err := ss.newWriter(block.BlockDataOperations); err != nil {
+		i, err := ss.newWriter(block.BlockDataOperations)
+		if err != nil {
 			return err
-		} else {
-			ss.operationsWriter = i
 		}
+		ss.operationsWriter = i
 	}
 
 	return ss.writer.WriteOperations(ss.operationsWriter, ops)
@@ -111,9 +110,8 @@ func (ss *Session) CloseOperations() error {
 
 	if err := ss.operationsWriter.Close(); err != nil && !xerrors.Is(err, os.ErrClosed) {
 		return err
-	} else {
-		ss.operationsWriter = nil
 	}
+	ss.operationsWriter = nil
 
 	return ss.setToMapData(block.BlockDataOperations)
 }
@@ -132,11 +130,11 @@ func (ss *Session) AddStates(sts ...state.State) error {
 	defer ss.locks[block.BlockDataStates].Unlock()
 
 	if ss.statesWriter == nil {
-		if i, err := ss.newWriter(block.BlockDataStates); err != nil {
+		i, err := ss.newWriter(block.BlockDataStates)
+		if err != nil {
 			return err
-		} else {
-			ss.statesWriter = i
 		}
+		ss.statesWriter = i
 	}
 
 	return ss.writer.WriteStates(ss.statesWriter, sts)
@@ -152,9 +150,8 @@ func (ss *Session) CloseStates() error {
 
 	if err := ss.statesWriter.Close(); err != nil && !xerrors.Is(err, os.ErrClosed) {
 		return err
-	} else {
-		ss.statesWriter = nil
 	}
+	ss.statesWriter = nil
 
 	return ss.setToMapData(block.BlockDataStates)
 }
@@ -267,11 +264,9 @@ func (ss *Session) done() (block.BaseBlockDataMap, error) {
 		return block.BaseBlockDataMap{}, err
 	}
 
-	mapData := ss.mapData
-	if i, err := mapData.UpdateHash(); err != nil {
+	mapData, err := ss.mapData.UpdateHash()
+	if err != nil {
 		return block.BaseBlockDataMap{}, err
-	} else {
-		mapData = i
 	}
 
 	if err := mapData.IsValid(nil); err != nil {
@@ -284,22 +279,16 @@ func (ss *Session) done() (block.BaseBlockDataMap, error) {
 }
 
 func (ss *Session) Cancel() error {
-	if err := ss.clean(); err != nil {
-		return err
-	}
-
-	return nil
+	return ss.clean()
 }
 
 func (ss *Session) Import(dataType string, r io.Reader) (string, error) {
 	ss.locks[dataType].Lock()
 	defer ss.locks[dataType].Unlock()
 
-	var w io.WriteCloser
-	if i, err := ss.newWriter(dataType); err != nil {
+	w, err := ss.newWriter(dataType)
+	if err != nil {
 		return "", err
-	} else {
-		w = i
 	}
 
 	if err := func() error {
@@ -322,26 +311,24 @@ func (ss *Session) tempPath(dataType string) string {
 }
 
 func (ss *Session) newWriter(dataType string) (io.WriteCloser, error) {
-	if i, err := os.OpenFile(
+	i, err := os.OpenFile(
 		filepath.Clean(ss.tempPath(dataType)),
 		os.O_CREATE|os.O_WRONLY,
 		DefaultFilePermission,
-	); err != nil {
+	)
+	if err != nil {
 		return nil, storage.WrapFSError(err)
-	} else {
-		return util.NewGzipWriter(i), nil
 	}
+	return util.NewGzipWriter(i), nil
 }
 
 func (ss *Session) writeAndClose(dataType string, writer func(io.Writer) error) error {
-	var w io.WriteCloser
-	if i, err := ss.newWriter(dataType); err != nil {
+	w, err := ss.newWriter(dataType)
+	if err != nil {
 		return err
-	} else {
-		w = i
 	}
 
-	err := writer(w)
+	err = writer(w)
 	_ = w.Close()
 	if err != nil {
 		return err
@@ -375,11 +362,9 @@ func (ss *Session) setToMapDataWithFilename(dataType string) (string, error) {
 		return "", storage.FSError.Errorf("temp path, %q is directory", p)
 	}
 
-	var checksum string
-	if i, err := util.GenerateFileChecksum(p); err != nil {
+	checksum, err := util.GenerateFileChecksum(p)
+	if err != nil {
 		return "", storage.WrapFSError(err)
-	} else {
-		checksum = i
 	}
 
 	t := filepath.Join(filepath.Dir(p), fmt.Sprintf(BlockFileFormats, ss.height, dataType, checksum))

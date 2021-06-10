@@ -8,10 +8,10 @@ import (
 )
 
 var (
-	DefaultLocalNetworkURL       *url.URL = &url.URL{Scheme: "quic", Host: "127.0.0.1:54321"}
-	DefaultLocalNetworkBind      *url.URL = &url.URL{Scheme: "quic", Host: "0.0.0.0:54321"}
-	DefaultLocalNetworkCache              = "gcache:?type=lru&size=100&expire=3s"
-	DefaultLocalNetworkSealCache          = "gcache:?type=lru&size=10000&expire=3m"
+	DefaultLocalNetworkURL       = &url.URL{Scheme: "quic", Host: "127.0.0.1:54321"}
+	DefaultLocalNetworkBind      = &url.URL{Scheme: "quic", Host: "0.0.0.0:54321"}
+	DefaultLocalNetworkCache     = "gcache:?type=lru&size=100&expire=3s"
+	DefaultLocalNetworkSealCache = "gcache:?type=lru&size=10000&expire=3m"
 )
 
 type NodeNetwork interface {
@@ -32,13 +32,13 @@ func (no BaseNodeNetwork) URL() *url.URL {
 }
 
 func (no *BaseNodeNetwork) SetURL(s string) error {
-	if u, err := ParseURLString(s, true); err != nil {
+	u, err := ParseURLString(s, true)
+	if err != nil {
 		return err
-	} else {
-		no.u = u
-
-		return nil
 	}
+	no.u = u
+
+	return nil
 }
 
 type LocalNetwork interface {
@@ -74,13 +74,13 @@ func (no BaseLocalNetwork) Bind() *url.URL {
 }
 
 func (no *BaseLocalNetwork) SetBind(s string) error {
-	if u, err := ParseURLString(s, true); err != nil {
+	u, err := ParseURLString(s, true)
+	if err != nil {
 		return err
-	} else {
-		no.bind = u
-
-		return nil
 	}
+	no.bind = u
+
+	return nil
 }
 
 func (no BaseLocalNetwork) Certs() []tls.Certificate {
@@ -94,13 +94,13 @@ func (no *BaseLocalNetwork) SetCerts(certs []tls.Certificate) error {
 }
 
 func (no *BaseLocalNetwork) SetCertFiles(key, cert string) error {
-	if c, err := tls.LoadX509KeyPair(key, cert); err != nil {
+	c, err := tls.LoadX509KeyPair(key, cert)
+	if err != nil {
 		return err
-	} else {
-		no.certs = []tls.Certificate{c}
-
-		return nil
 	}
+	no.certs = []tls.Certificate{c}
+
+	return nil
 }
 
 func (no BaseLocalNetwork) Cache() *url.URL {

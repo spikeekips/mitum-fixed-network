@@ -16,17 +16,15 @@ import (
 )
 
 func FetchBlockDataThruChannel(handler BlockDataHandler, item block.BlockDataMapItem) (io.ReadCloser, error) {
-	var u *url.URL
-	if i, err := url.Parse(item.URL()); err != nil {
+	u, err := url.Parse(item.URL())
+	if err != nil {
 		return nil, err
-	} else {
-		u = i
 	}
 
 	var ro io.Reader
 	switch u.Scheme {
 	case "file":
-		i, closefunc, err := handler(u.Path)
+		i, closefunc, e := handler(u.Path)
 		if closefunc != nil {
 			defer func() {
 				_ = closefunc()
@@ -34,8 +32,8 @@ func FetchBlockDataThruChannel(handler BlockDataHandler, item block.BlockDataMap
 		}
 
 		switch {
-		case err != nil:
-			return nil, err
+		case e != nil:
+			return nil, e
 		case i == nil:
 			return nil, xerrors.Errorf("empty raw block data reader returned")
 		default:
@@ -45,12 +43,11 @@ func FetchBlockDataThruChannel(handler BlockDataHandler, item block.BlockDataMap
 		return nil, xerrors.Errorf("%q not yet supported", u.Scheme)
 	}
 
-	var bo io.ReadSeeker
-	if b, err := io.ReadAll(ro); err != nil {
+	b, err := io.ReadAll(ro)
+	if err != nil {
 		return nil, storage.WrapFSError(err)
-	} else {
-		bo = bytes.NewReader(b)
 	}
+	bo := bytes.NewReader(b)
 
 	// NOTE check checksum
 	if i, err := util.GenerateChecksum(bo); err != nil {
@@ -73,11 +70,9 @@ func FetchBlockDataThruChannel(handler BlockDataHandler, item block.BlockDataMap
 }
 
 func FetchBlockDataFromRemote(ctx context.Context, item block.BlockDataMapItem) (io.ReadCloser, error) {
-	var u *url.URL
-	if i, err := url.Parse(item.URL()); err != nil {
+	u, err := url.Parse(item.URL())
+	if err != nil {
 		return nil, err
-	} else {
-		u = i
 	}
 
 	switch u.Scheme {
@@ -91,11 +86,9 @@ func FetchBlockDataFromRemote(ctx context.Context, item block.BlockDataMapItem) 
 }
 
 func FetchBlockDataFromHTTP(ctx context.Context, item block.BlockDataMapItem) (io.ReadCloser, error) {
-	var u *url.URL
-	if i, err := url.Parse(item.URL()); err != nil {
+	u, err := url.Parse(item.URL())
+	if err != nil {
 		return nil, err
-	} else {
-		u = i
 	}
 
 	switch u.Scheme {
@@ -106,30 +99,27 @@ func FetchBlockDataFromHTTP(ctx context.Context, item block.BlockDataMapItem) (i
 
 	client := &http.Client{}
 	var r *http.Request
-	if i, err := http.NewRequest("GET", u.String(), nil); err != nil {
+	i, err := http.NewRequest("GET", u.String(), nil)
+	if err != nil {
 		return nil, err
-	} else {
-		r = i.WithContext(ctx)
 	}
+	r = i.WithContext(ctx)
 
-	var res *http.Response
-	if i, err := client.Do(r); err != nil {
+	res, err := client.Do(r)
+	if err != nil {
 		return nil, err
-	} else {
-		defer func() {
-			_ = i.Body.Close()
-		}()
-
-		res = i
 	}
+	defer func() {
+		_ = res.Body.Close()
+	}()
 
 	switch res.StatusCode {
 	case http.StatusOK:
-		if i, err := ioutil.ReadAll(res.Body); err != nil {
+		i, err := ioutil.ReadAll(res.Body)
+		if err != nil {
 			return nil, xerrors.Errorf("failed to request blockdata: %w", err)
-		} else {
-			return io.NopCloser(bytes.NewBuffer(i)), nil
 		}
+		return io.NopCloser(bytes.NewBuffer(i)), nil
 	default:
 		return nil, xerrors.Errorf("failed to request blockdata: %q", res.Status)
 	}

@@ -50,30 +50,30 @@ func (cl *QuicClient) Get(
 	ctx context.Context, timeout time.Duration,
 	url string, b []byte, headers http.Header,
 ) (*QuicResponse, error) {
-	if res, closefunc, err := cl.Request(ctx, timeout, url, "GET", b, headers); err != nil {
+	res, closefunc, err := cl.Request(ctx, timeout, url, "GET", b, headers)
+	if err != nil {
 		defer func() {
 			_ = closefunc()
 		}()
 
 		return nil, err
-	} else {
-		return NewQuicResponse(res, closefunc), nil
 	}
+	return NewQuicResponse(res, closefunc), nil
 }
 
 func (cl *QuicClient) Send(
 	ctx context.Context, timeout time.Duration,
 	url string, b []byte, headers http.Header,
 ) (*QuicResponse, error) {
-	if res, closefunc, err := cl.Request(ctx, timeout, url, "POST", b, headers); err != nil {
+	res, closefunc, err := cl.Request(ctx, timeout, url, "POST", b, headers)
+	if err != nil {
 		defer func() {
 			_ = closefunc()
 		}()
 
 		return nil, err
-	} else {
-		return NewQuicResponse(res, closefunc), nil
 	}
+	return NewQuicResponse(res, closefunc), nil
 }
 
 func (cl *QuicClient) Request(
@@ -86,13 +86,13 @@ func (cl *QuicClient) Request(
 ) (*http.Response, func() error, error) {
 	client, closefunc := cl.newClient(timeout)
 
-	if i, err := cl.makeRequest(url, method, b, headers); err != nil {
+	i, err := cl.makeRequest(url, method, b, headers)
+	if err != nil {
 		return nil, closefunc, err
-	} else {
-		res, err := client.Do(i.WithContext(ctx))
-
-		return res, closefunc, err
 	}
+	res, err := client.Do(i.WithContext(ctx))
+
+	return res, closefunc, err
 }
 
 func (cl *QuicClient) makeRequest(url string, method string, b []byte, headers http.Header) (*http.Request, error) {

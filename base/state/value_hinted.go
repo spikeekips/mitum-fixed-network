@@ -40,7 +40,7 @@ func (hv HintedValue) Bytes() []byte {
 	return hv.v.(util.Byter).Bytes()
 }
 
-func (hv HintedValue) Hint() hint.Hint {
+func (HintedValue) Hint() hint.Hint {
 	return HintedValueHint
 }
 

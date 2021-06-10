@@ -99,13 +99,14 @@ func (sp StellarPrivatekey) Sign(input []byte) (Signature, error) {
 }
 
 func (sp *StellarPrivatekey) UnmarshalText(b []byte) error {
-	if k, err := NewStellarPrivatekeyFromString(string(b)); err != nil {
+	k, err := NewStellarPrivatekeyFromString(string(b))
+	if err != nil {
 		return err
-	} else {
-		*sp = k
-
-		return nil
 	}
+
+	*sp = k
+
+	return nil
 }
 
 type StellarPublickey struct {
@@ -146,11 +147,12 @@ func (sp StellarPublickey) Verify(input []byte, sig Signature) error {
 }
 
 func (sp *StellarPublickey) UnmarshalText(b []byte) error {
-	if k, err := NewStellarPublickeyFromString(string(b)); err != nil {
+	k, err := NewStellarPublickeyFromString(string(b))
+	if err != nil {
 		return err
-	} else {
-		*sp = k
-
-		return nil
 	}
+
+	*sp = k
+
+	return nil
 }

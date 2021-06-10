@@ -153,9 +153,8 @@ func loadDeployKeys(db storage.Database) (map[string]DeployKey, error) {
 	var uks map[string]DeployKey
 	if err := db.Encoder().Unmarshal(b, &uks); err != nil {
 		return nil, xerrors.Errorf("failed to deocde deploy keys: %w", err)
-	} else {
-		return uks, nil
 	}
+	return uks, nil
 }
 
 func saveDeployKeys(db storage.Database, keys map[string]DeployKey) error {

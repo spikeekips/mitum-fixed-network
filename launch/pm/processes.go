@@ -241,9 +241,8 @@ func (pm *Processes) checkProcess(pr Process, processed map[string]struct{}, req
 
 	if c := requireCount[pr.Name()]; c > 0 {
 		return xerrors.Errorf("circulation found: %q", pr.Name())
-	} else {
-		requireCount[pr.Name()] = 1
 	}
+	requireCount[pr.Name()] = 1
 
 	for _, r := range pr.Requires() {
 		if npr, found := pm.processes[r]; !found {
@@ -291,16 +290,16 @@ func (pm *Processes) runProcess(s, from string) error {
 		return err
 	}
 
-	if ctx, err := pr.Run(pm.ctx); err != nil {
+	ctx, err := pr.Run(pm.ctx)
+	if err != nil {
 		return err
-	} else {
-		if ctx == nil {
-			ctx = context.Background()
-		}
-
-		pm.ctx = ctx
-		pm.processed[pr.Name()] = struct{}{}
 	}
+	if ctx == nil {
+		ctx = context.Background()
+	}
+
+	pm.ctx = ctx
+	pm.processed[pr.Name()] = struct{}{}
 
 	// check post hooks
 	if err := pm.runProcessHooks(HookPrefixPost, pr.Name()); err != nil {
@@ -345,15 +344,15 @@ func (pm *Processes) runProcessHook(hook, from string) error {
 	case f == nil:
 		return nil
 	default:
-		if ctx, err := f(pm.ctx); err != nil {
+		ctx, err := f(pm.ctx)
+		if err != nil {
 			return xerrors.Errorf("failed to emit hook of %q(%s): %w", hook, from, err)
-		} else {
-			if ctx == nil {
-				ctx = context.Background()
-			}
-
-			pm.ctx = ctx
 		}
+		if ctx == nil {
+			ctx = context.Background()
+		}
+
+		pm.ctx = ctx
 	}
 
 	l.Debug().Msg("hook processed")
@@ -361,6 +360,6 @@ func (pm *Processes) runProcessHook(hook, from string) error {
 	return nil
 }
 
-func (pm *Processes) processHookName(prefix HookPrefix, pr string) string {
+func (*Processes) processHookName(prefix HookPrefix, pr string) string {
 	return fmt.Sprintf("%s:%s", prefix, pr)
 }

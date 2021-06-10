@@ -17,19 +17,19 @@ func (ni *NodeInfoV0) unpack(
 	co map[string]interface{},
 	bsf [][]byte,
 ) error {
-	if n, err := base.DecodeNode(enc, bnode); err != nil {
+	n, err := base.DecodeNode(enc, bnode)
+	if err != nil {
 		return err
-	} else {
-		ni.node = n
 	}
+	ni.node = n
 
 	ni.networkID = bnid
 	ni.state = st
-	if b, err := block.DecodeManifest(enc, blb); err != nil {
+	b, err := block.DecodeManifest(enc, blb)
+	if err != nil {
 		return err
-	} else {
-		ni.lastBlock = b
 	}
+	ni.lastBlock = b
 
 	ni.version = vs
 	ni.u = u
@@ -38,11 +38,11 @@ func (ni *NodeInfoV0) unpack(
 
 	sf := make([]base.Node, len(bsf))
 	for i := range bsf {
-		if n, err := base.DecodeNode(enc, bsf[i]); err != nil {
+		n, err := base.DecodeNode(enc, bsf[i])
+		if err != nil {
 			return err
-		} else {
-			sf[i] = n
 		}
+		sf[i] = n
 	}
 
 	ni.nodes = sf

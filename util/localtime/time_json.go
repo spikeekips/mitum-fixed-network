@@ -5,11 +5,11 @@ func (t Time) MarshalText() ([]byte, error) {
 }
 
 func (t *Time) UnmarshalText(b []byte) error {
-	if s, err := ParseRFC3339(string(b)); err != nil {
+	s, err := ParseRFC3339(string(b))
+	if err != nil {
 		return err
-	} else {
-		t.Time = Normalize(s)
-
-		return nil
 	}
+	t.Time = Normalize(s)
+
+	return nil
 }

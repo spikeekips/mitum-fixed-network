@@ -45,11 +45,11 @@ type GzipReader struct {
 }
 
 func NewGzipReader(f io.Reader) (GzipReader, error) {
-	if r, err := gzip.NewReader(f); err != nil {
+	r, err := gzip.NewReader(f)
+	if err != nil {
 		return GzipReader{}, err
-	} else {
-		return GzipReader{f: f, Reader: r}, nil
 	}
+	return GzipReader{f: f, Reader: r}, nil
 }
 
 func (r GzipReader) Close() error {

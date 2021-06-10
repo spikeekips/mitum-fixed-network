@@ -26,7 +26,7 @@ func NewDummyChannel(url string) *DummyChannel {
 	return &DummyChannel{url: url}
 }
 
-func (lc *DummyChannel) Initialize() error {
+func (*DummyChannel) Initialize() error {
 	return nil
 }
 
@@ -106,6 +106,6 @@ func (lc *DummyChannel) SetBlockDataHandler(f BlockDataHandler) {
 	lc.blockDataHandler = f
 }
 
-func (lc *DummyChannel) notSupported() error {
+func (*DummyChannel) notSupported() error {
 	return xerrors.Errorf("not supported")
 }

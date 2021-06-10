@@ -25,12 +25,10 @@ type LocalNetwork struct {
 
 func (no LocalNetwork) Set(ctx context.Context) (context.Context, error) {
 	var l config.LocalNode
-	var conf config.LocalNetwork
 	if err := config.LoadConfigContextValue(ctx, &l); err != nil {
 		return ctx, err
-	} else {
-		conf = l.Network()
 	}
+	conf := l.Network()
 
 	if no.NodeNetwork.URL != nil {
 		if err := conf.SetURL(*no.NodeNetwork.URL); err != nil {
@@ -65,11 +63,11 @@ func (no LocalNetwork) Set(ctx context.Context) (context.Context, error) {
 	}
 
 	if no.RateLimit != nil {
-		if i, err := no.RateLimit.Set(ctx); err != nil {
+		i, err := no.RateLimit.Set(ctx)
+		if err != nil {
 			return ctx, err
-		} else {
-			ctx = i
 		}
+		ctx = i
 	}
 
 	return ctx, nil

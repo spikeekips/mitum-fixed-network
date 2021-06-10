@@ -19,11 +19,11 @@ func (ha *HashesArgs) UnpackJSON(b []byte, enc *jsonenc.Encoder) error {
 
 	hs := make([]valuehash.Hash, len(uh.Hashes))
 	for i := range uh.Hashes {
-		if h, err := valuehash.Decode(enc, uh.Hashes[i]); err != nil {
+		h, err := valuehash.Decode(enc, uh.Hashes[i])
+		if err != nil {
 			return err
-		} else {
-			hs[i] = h
 		}
+		hs[i] = h
 	}
 
 	ha.Hashes = hs

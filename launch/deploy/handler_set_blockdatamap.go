@@ -29,7 +29,8 @@ func NewSetBlockDataMapsHandler(
 		var bdms []block.BlockDataMap
 		switch i, err := loadBlockDataMaps(r, enc); {
 		case err != nil:
-			network.WriteProblemWithError(w, http.StatusBadRequest, xerrors.Errorf("failed to load blockdatamaps: %w", err))
+			network.WriteProblemWithError(w, http.StatusBadRequest,
+				xerrors.Errorf("failed to load blockdatamaps: %w", err))
 			return
 		case len(i) < 1, len(i) > LimitBlockDataMaps:
 			network.WriteProblemWithError(w, http.StatusBadRequest, err)
@@ -56,17 +57,17 @@ func NewSetBlockDataMapsHandler(
 			i++
 		}
 
-		if i, err := jsonenc.Marshal(map[string]interface{}{
+		b, err := jsonenc.Marshal(map[string]interface{}{
 			"heights":       heights,
 			"expected_time": localtime.UTCNow().Add(bc.RemoveAfter()),
-		}); err != nil {
+		})
+		if err != nil {
 			network.WriteProblemWithError(w, http.StatusInternalServerError, err)
 			return
-		} else {
-			w.Header().Set("Content-Type", "application/json")
-
-			_, _ = w.Write(i)
 		}
+		w.Header().Set("Content-Type", "application/json")
+
+		_, _ = w.Write(b)
 	}
 }
 
@@ -122,11 +123,7 @@ func checkBlockDataMaps(db storage.Database, bdms []block.BlockDataMap) error {
 		}
 	}
 
-	if err := eg.Wait(); err != nil {
-		return err
-	}
-
-	return nil
+	return eg.Wait()
 }
 
 func checkBlockDataMap(db storage.Database, bdm block.BlockDataMap) error {
@@ -184,9 +181,5 @@ func commitBlockDataMaps(db storage.Database, bc *BlockDataCleaner, bdms []block
 		}
 	}
 
-	if err := eg.Wait(); err != nil {
-		return err
-	}
-
-	return nil
+	return eg.Wait()
 }

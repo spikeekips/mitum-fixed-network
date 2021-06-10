@@ -45,17 +45,17 @@ func ProcessTimeSyncer(ctx context.Context) (context.Context, error) {
 		return ctx, nil
 	}
 
-	if ts, err := localtime.NewTimeSyncer(conf.LocalConfig().TimeServer(), time.Minute*2); err != nil {
+	ts, err := localtime.NewTimeSyncer(conf.LocalConfig().TimeServer(), time.Minute*2)
+	if err != nil {
 		return ctx, err
-	} else {
-		_ = ts.SetLogger(log)
-
-		if err := ts.Start(); err != nil {
-			return ctx, err
-		}
-
-		localtime.SetTimeSyncer(ts)
 	}
+	_ = ts.SetLogger(log)
+
+	if err := ts.Start(); err != nil {
+		return ctx, err
+	}
+
+	localtime.SetTimeSyncer(ts)
 
 	return ctx, nil
 }

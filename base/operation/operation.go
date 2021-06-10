@@ -34,11 +34,9 @@ func IsValidOperation(op Operation, networkID []byte) error {
 		return err
 	}
 
-	var fact OperationFact
-	if fc, ok := op.Fact().(OperationFact); !ok {
+	fact, ok := op.Fact().(OperationFact)
+	if !ok {
 		return isvalid.InvalidError.Errorf("wrong fact, %T found", op.Fact())
-	} else {
-		fact = fc
 	}
 
 	if l := len(fact.Token()); l < 1 {

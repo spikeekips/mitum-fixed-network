@@ -17,12 +17,10 @@ type Database struct {
 
 func (no Database) Set(ctx context.Context) (context.Context, error) {
 	var l config.LocalNode
-	var conf config.Database
 	if err := config.LoadConfigContextValue(ctx, &l); err != nil {
 		return ctx, err
-	} else {
-		conf = l.Storage().Database()
 	}
+	conf := l.Storage().Database()
 
 	if no.URI != nil {
 		if err := conf.SetURI(*no.URI); err != nil {
@@ -45,19 +43,17 @@ type Storage struct {
 
 func (no Storage) Set(ctx context.Context) (context.Context, error) {
 	var l config.LocalNode
-	var conf config.Storage
 	if err := config.LoadConfigContextValue(ctx, &l); err != nil {
 		return ctx, err
-	} else {
-		conf = l.Storage()
 	}
+	conf := l.Storage()
 
 	if no.Database != nil {
-		if i, err := no.Database.Set(ctx); err != nil {
+		i, err := no.Database.Set(ctx)
+		if err != nil {
 			return ctx, err
-		} else {
-			ctx = i
 		}
+		ctx = i
 	}
 
 	if no.BlockData != nil {

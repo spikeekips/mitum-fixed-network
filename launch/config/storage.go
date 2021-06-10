@@ -64,13 +64,13 @@ func (no BaseDatabase) URI() *url.URL {
 }
 
 func (no *BaseDatabase) SetURI(s string) error {
-	if u, err := ParseURLString(s, true); err != nil {
+	u, err := ParseURLString(s, true)
+	if err != nil {
 		return err
-	} else {
-		no.uri = u
-
-		return nil
 	}
+	no.uri = u
+
+	return nil
 }
 
 func (no BaseDatabase) Cache() *url.URL {

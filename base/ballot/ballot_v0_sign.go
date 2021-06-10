@@ -20,7 +20,7 @@ type SIGNBallotFactV0 struct {
 	newBlock valuehash.Hash
 }
 
-func (sbf SIGNBallotFactV0) Hint() hint.Hint {
+func (SIGNBallotFactV0) Hint() hint.Hint {
 	return SIGNBallotFactV0Hint
 }
 
@@ -83,11 +83,11 @@ func (sb SIGNBallotV0) Hash() valuehash.Hash {
 	return sb.BaseBallotV0.Hash()
 }
 
-func (sb SIGNBallotV0) Hint() hint.Hint {
+func (SIGNBallotV0) Hint() hint.Hint {
 	return SIGNBallotV0Hint
 }
 
-func (sb SIGNBallotV0) Stage() base.Stage {
+func (SIGNBallotV0) Stage() base.Stage {
 	return base.StageSIGN
 }
 
@@ -119,12 +119,13 @@ func (sb SIGNBallotV0) Fact() base.Fact {
 }
 
 func (sb *SIGNBallotV0) Sign(pk key.Privatekey, networkID []byte) error {
-	if newBase, err := SignBaseBallotV0(sb, sb.BaseBallotV0, pk, networkID); err != nil {
+	newBase, err := SignBaseBallotV0(sb, sb.BaseBallotV0, pk, networkID)
+	if err != nil {
 		return err
-	} else {
-		sb.BaseBallotV0 = newBase
-		sb.BaseBallotV0 = sb.BaseBallotV0.SetHash(sb.GenerateHash())
 	}
+
+	sb.BaseBallotV0 = newBase
+	sb.BaseBallotV0 = sb.BaseBallotV0.SetHash(sb.GenerateHash())
 
 	return nil
 }

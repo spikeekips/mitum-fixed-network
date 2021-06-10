@@ -114,7 +114,6 @@ func (wk *ParallelWorker) Done() {
 	if wk.jobChan != nil {
 		close(wk.jobChan)
 	}
-
 	// NOTE don't close errChan :)
 }
 

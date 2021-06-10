@@ -32,9 +32,8 @@ func (hs *Hintset) Add(ht Hinter) error {
 
 	if _, found := hs.m[ht.Hint().String()]; found {
 		return util.FoundError.Errorf("Hint already added: %q", ht)
-	} else {
-		hs.m[ht.Hint().String()] = ht
 	}
+	hs.m[ht.Hint().String()] = ht
 
 	l := hs.set[ht.Hint().Type()]
 	l = append(l, ht)
@@ -49,11 +48,11 @@ func (hs *Hintset) Add(ht Hinter) error {
 }
 
 func (hs *Hintset) Latest(ty Type) (Hinter, error) {
-	if i, found := hs.set[ty]; !found {
+	i, found := hs.set[ty]
+	if !found {
 		return nil, util.NotFoundError.Errorf("Type, %q not found", ty)
-	} else {
-		return i[0], nil
 	}
+	return i[0], nil
 }
 
 func (hs *Hintset) Get(ht Hint) Hinter {
@@ -68,9 +67,8 @@ func (hs *Hintset) Compatible(ht Hint) (Hinter, error) {
 	if i, err := hs.cache.Get(ht.String()); err == nil {
 		if h, ok := i.(Hinter); ok {
 			return h, nil
-		} else {
-			return nil, util.NotFoundError.Errorf("Hinter not found for %q", ht)
 		}
+		return nil, util.NotFoundError.Errorf("Hinter not found for %q", ht)
 	} else if !xerrors.Is(err, gcache.KeyNotFoundError) {
 		return nil, xerrors.Errorf("Hintset cache problem: %w", err)
 	}

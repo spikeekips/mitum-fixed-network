@@ -11,8 +11,8 @@ import (
 )
 
 var (
-	DefaultGCacheSize int = 100 * 100
-	DefaultGCacheType     = "lru"
+	DefaultGCacheSize = 100 * 100
+	DefaultGCacheType = "lru"
 )
 
 type GCache struct {
@@ -23,9 +23,9 @@ type GCache struct {
 }
 
 func NewGCacheWithQuery(config url.Values) (*GCache, error) {
-	var size int = DefaultGCacheSize
-	var expire time.Duration = DefaultCacheExpire
-	var tp string = DefaultGCacheType
+	size := DefaultGCacheSize
+	expire := DefaultCacheExpire
+	tp := DefaultGCacheType
 
 	if config != nil && len(config) > 0 {
 		if s := config.Get("size"); len(s) > 0 {
@@ -37,11 +37,11 @@ func NewGCacheWithQuery(config url.Values) (*GCache, error) {
 		}
 
 		if s := config.Get("expire"); len(s) > 0 {
-			if n, err := time.ParseDuration(s); err != nil {
+			n, err := time.ParseDuration(s)
+			if err != nil {
 				return nil, xerrors.Errorf("invalid expire, %qof GCache: %w", s, err)
-			} else {
-				expire = n
 			}
+			expire = n
 		}
 
 		if s := config.Get("type"); len(s) > 0 {

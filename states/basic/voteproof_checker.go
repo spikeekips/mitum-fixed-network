@@ -73,7 +73,8 @@ func (vc *VoteproofChecker) checkPointINITVoteproof() (bool, error) {
 
 	switch d := vc.voteproof.Height() - (vc.lvp.Height() + 1); {
 	case d > 0:
-		return false, SyncByVoteproofError.Errorf("height of init voteproof has higher than last voteproof; moves to syncing")
+		return false,
+			SyncByVoteproofError.Errorf("height of init voteproof has higher than last voteproof; moves to syncing")
 	case d < 0:
 		return false, util.IgnoreError.Errorf("height of init voteproof has lower than last voteproof; ignore it")
 	default:

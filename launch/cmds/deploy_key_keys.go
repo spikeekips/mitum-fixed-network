@@ -49,26 +49,23 @@ func (cmd *DeployKeyKeysCommand) Run(version util.Version) error {
 }
 
 func (cmd *DeployKeyKeysCommand) requestKeys() error { // nolint:dupl
-	var res *http.Response
-	if i, c, err := cmd.requestWithToken(deploy.QuicHandlerPathDeployKeyKeys, "GET"); err != nil {
+	res, c, err := cmd.requestWithToken(deploy.QuicHandlerPathDeployKeyKeys, "GET")
+	if err != nil {
 		return xerrors.Errorf("failed to request deploy keys: %w", err)
-	} else {
-		defer func() {
-			_ = c()
-			_ = i.Body.Close()
-		}()
-
-		res = i
 	}
+	defer func() {
+		_ = c()
+		_ = res.Body.Close()
+	}()
 
 	if res.StatusCode == http.StatusOK {
-		if i, err := ioutil.ReadAll(res.Body); err != nil {
+		i, err := ioutil.ReadAll(res.Body)
+		if err != nil {
 			return xerrors.Errorf("failed to read body: %w", err)
-		} else {
-			_, _ = fmt.Fprintln(os.Stdout, string(i))
-
-			return nil
 		}
+		_, _ = fmt.Fprintln(os.Stdout, string(i))
+
+		return nil
 	}
 
 	if i, err := network.LoadProblemFromResponse(res); err == nil {

@@ -52,11 +52,11 @@ func ProcessConfig(ctx context.Context) (context.Context, error) {
 		return ctx, xerrors.Errorf("not supported config source type, %q", sourceType)
 	}
 
-	if c, err := loadConfigYAML(ctx, source); err != nil {
+	c, err := loadConfigYAML(ctx, source)
+	if err != nil {
 		return ctx, err
-	} else {
-		return checkConfig(c)
 	}
+	return checkConfig(c)
 }
 
 func loadConfigYAML(ctx context.Context, source []byte) (context.Context, error) {
@@ -78,33 +78,32 @@ func loadConfigYAML(ctx context.Context, source []byte) (context.Context, error)
 	conf := config.NewBaseLocalNode(enc, m)
 	ctx = context.WithValue(ctx, config.ContextValueConfig, conf)
 
-	if c, err := yconf.Set(ctx); err != nil {
+	c, err := yconf.Set(ctx)
+	if err != nil {
 		return ctx, err
-	} else {
-		ctx = c
 	}
+	ctx = c
 
 	return context.WithValue(ctx, config.ContextValueConfig, conf), nil
 }
 
 func checkConfig(ctx context.Context) (context.Context, error) {
-	if cc, err := config.NewChecker(ctx); err != nil {
+	cc, err := config.NewChecker(ctx)
+	if err != nil {
 		return ctx, err
-	} else {
-		if err := util.NewChecker("config-checker", []util.CheckerFunc{
-			cc.CheckLocalNetwork,
-			cc.CheckStorage,
-			cc.CheckPolicy,
-		}).Check(); err != nil {
-			if xerrors.Is(err, util.IgnoreError) {
-				return ctx, nil
-			}
-
-			return ctx, err
-		} else {
-			return cc.Context(), nil
-		}
 	}
+	if err := util.NewChecker("config-checker", []util.CheckerFunc{
+		cc.CheckLocalNetwork,
+		cc.CheckStorage,
+		cc.CheckPolicy,
+	}).Check(); err != nil {
+		if xerrors.Is(err, util.IgnoreError) {
+			return ctx, nil
+		}
+
+		return ctx, err
+	}
+	return cc.Context(), nil
 }
 
 func Config(ps *pm.Processes) error {
@@ -144,13 +143,9 @@ func Config(ps *pm.Processes) error {
 		return err
 	}
 
-	if err := ps.AddHook(
+	return ps.AddHook(
 		pm.HookPrefixPost, ProcessNameConfig,
 		HookNameConfigVerbose, HookConfigVerbose,
 		false,
-	); err != nil {
-		return err
-	}
-
-	return nil
+	)
 }

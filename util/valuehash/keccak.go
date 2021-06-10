@@ -63,7 +63,7 @@ func (hs SHA512) IsValid([]byte) error {
 	return nil
 }
 
-func (hs SHA512) Size() int {
+func (SHA512) Size() int {
 	return sha512Size
 }
 
@@ -114,7 +114,7 @@ func (hs SHA256) IsValid([]byte) error {
 	return nil
 }
 
-func (hs SHA256) Size() int {
+func (SHA256) Size() int {
 	return sha256Size
 }
 

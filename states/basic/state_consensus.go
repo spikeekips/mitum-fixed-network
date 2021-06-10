@@ -156,9 +156,8 @@ func (st *ConsensusState) ProcessProposal(proposal ballot.Proposal) error {
 		}
 
 		return st.broadcastACCEPTBallot(newBlock, proposal.Hash(), voteproof, initialDelay)
-	} else {
-		return nil
 	}
+	return nil
 }
 
 func (st *ConsensusState) newINITVoteproof(voteproof base.Voteproof) error {
@@ -172,13 +171,11 @@ func (st *ConsensusState) newINITVoteproof(voteproof base.Voteproof) error {
 
 	var proposal ballot.Proposal
 
-	var actingSuffrage base.ActingSuffrage
-	if i, err := st.suffrage.Acting(voteproof.Height(), voteproof.Round()); err != nil {
+	actingSuffrage, err := st.suffrage.Acting(voteproof.Height(), voteproof.Round())
+	if err != nil {
 		l.Error().Err(err).Msg("failed to get acting suffrage")
 
 		return err
-	} else {
-		actingSuffrage = i
 	}
 
 	// NOTE find proposal first
@@ -215,11 +212,9 @@ func (st *ConsensusState) newACCEPTVoteproof(voteproof base.Voteproof) error {
 }
 
 func (st *ConsensusState) processACCEPTVoteproof(voteproof base.Voteproof) error {
-	var fact ballot.ACCEPTBallotFact
-	if f, ok := voteproof.Majority().(ballot.ACCEPTBallotFact); !ok {
+	fact, ok := voteproof.Majority().(ballot.ACCEPTBallotFact)
+	if !ok {
 		return xerrors.Errorf("needs ACCEPTBallotFact: fact=%T", voteproof.Majority())
-	} else {
-		fact = f
 	}
 
 	l := isaac.LoggerWithVoteproof(voteproof, st.Log().WithLogger(func(ctx logging.Context) logging.Emitter {
@@ -266,11 +261,9 @@ func (st *ConsensusState) processACCEPTVoteproof(voteproof base.Voteproof) error
 }
 
 func (st *ConsensusState) processProposalOfACCEPTVoteproof(voteproof base.Voteproof) (ballot.Proposal, error) {
-	var fact ballot.ACCEPTBallotFact
-	if f, ok := voteproof.Majority().(ballot.ACCEPTBallotFact); !ok {
+	fact, ok := voteproof.Majority().(ballot.ACCEPTBallotFact)
+	if !ok {
 		return nil, xerrors.Errorf("needs ACCEPTBallotFact: fact=%T", voteproof.Majority())
-	} else {
-		fact = f
 	}
 
 	l := isaac.LoggerWithVoteproof(voteproof, st.Log().WithLogger(func(ctx logging.Context) logging.Emitter {
@@ -302,11 +295,11 @@ func (st *ConsensusState) processProposalOfACCEPTVoteproof(voteproof base.Votepr
 	case !found:
 		return nil, xerrors.Errorf("proposal of accept voteproof not found in local")
 	default:
-		if j, ok := i.(ballot.Proposal); !ok {
+		j, ok := i.(ballot.Proposal)
+		if !ok {
 			return nil, xerrors.Errorf("proposal of accept voteproof is not proposal, %T", i)
-		} else {
-			proposal = j
 		}
+		proposal = j
 	}
 
 	if _, _, ok := st.processProposal(proposal); ok {
@@ -357,24 +350,23 @@ func (st *ConsensusState) processProposal(proposal ballot.Proposal) (base.Votepr
 
 	started := time.Now()
 
-	var newBlock valuehash.Hash
-	if result := <-st.pps.NewProposal(context.Background(), proposal, voteproof); result.Err != nil {
+	result := <-st.pps.NewProposal(context.Background(), proposal, voteproof)
+	if result.Err != nil {
 		if xerrors.Is(result.Err, util.IgnoreError) {
 			return nil, nil, false
 		}
 
-		newBlock = valuehash.RandomSHA256WithPrefix(BlockPrefixFailedProcessProposal)
+		newBlock := valuehash.RandomSHA256WithPrefix(BlockPrefixFailedProcessProposal)
 		l.Debug().Err(result.Err).Dur("elapsed", time.Since(started)).Hinted("new_block", newBlock).
 			Msg("proposal processging failed; random block hash will be used")
 
 		return voteproof, newBlock, false
-	} else {
-		newBlock = result.Block.Hash()
-
-		l.Debug().Dur("elapsed", time.Since(started)).Hinted("new_block", newBlock).Msg("proposal processed")
-
-		return voteproof, newBlock, true
 	}
+	newBlock := result.Block.Hash()
+
+	l.Debug().Dur("elapsed", time.Since(started)).Hinted("new_block", newBlock).Msg("proposal processed")
+
+	return voteproof, newBlock, true
 }
 
 func (st *ConsensusState) broadcastProposal(proposal ballot.Proposal) error {

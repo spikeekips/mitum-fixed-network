@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"context"
 	"fmt"
-	"io"
 	"regexp"
 	"strconv"
 	"strings"
@@ -27,29 +26,27 @@ type RateLimit struct {
 
 func (no RateLimit) Set(ctx context.Context) (context.Context, error) {
 	var l config.LocalNode
-	var conf config.LocalNetwork
 	if err := config.LoadConfigContextValue(ctx, &l); err != nil {
 		return ctx, err
-	} else {
-		conf = l.Network()
 	}
+	conf := l.Network()
 
 	rconf := conf.RateLimit()
 	if rconf == nil {
 		rconf = config.NewBaseRateLimit(nil)
 	}
 
-	if i, err := no.setFixed(ctx, rconf); err != nil {
+	i, err := no.setFixed(ctx, rconf)
+	if err != nil {
 		return ctx, err
-	} else {
-		ctx = i
 	}
+	ctx = i
 
-	if i, err := no.setRules(ctx, rconf); err != nil {
+	c, err := no.setRules(ctx, rconf)
+	if err != nil {
 		return ctx, err
-	} else {
-		ctx = i
 	}
+	ctx = c
 
 	if err := conf.SetRateLimit(rconf); err != nil {
 		return ctx, err
@@ -100,9 +97,8 @@ func (no RateLimit) setRules(ctx context.Context, conf config.RateLimit) (contex
 
 		if err := tr.SetRules(rs); err != nil {
 			return ctx, err
-		} else {
-			rules[i] = tr
 		}
+		rules[i] = tr
 	}
 
 	if err := conf.SetRules(rules); err != nil {
@@ -138,18 +134,16 @@ func (no *RateLimit) UnmarshalYAML(value *yaml.Node) error {
 
 	if err := value.Decode(&fixed); err != nil {
 		return err
-	} else {
-		no.preset = fixed.Preset
-		no.cache = fixed.Cache
 	}
+	no.preset = fixed.Preset
+	no.cache = fixed.Cache
 
 	// NOTE RateLimit keeps the defined order of set
-	var r io.Reader
-	if i, err := yaml.Marshal(value); err != nil {
+	i, err := yaml.Marshal(value)
+	if err != nil {
 		return err
-	} else {
-		r = bytes.NewBuffer(i)
 	}
+	r := bytes.NewBuffer(i)
 
 	var nb []byte
 	var skip bool
@@ -188,9 +182,9 @@ func (no *RateLimit) UnmarshalYAML(value *yaml.Node) error {
 }
 
 type RateLimitTargetRule struct {
-	target string               `yaml:"-"`
-	preset string               `yaml:",omitempty"`
-	rules  RateLimitRateRuleSet `yaml:",inline,omitempty"`
+	target string
+	preset string
+	rules  RateLimitRateRuleSet
 }
 
 func (no *RateLimitTargetRule) UnmarshalYAML(value *yaml.Node) error {
@@ -245,27 +239,27 @@ func (no *RateLimitRate) UnmarshalYAML(value *yaml.Node) error {
 	r := limiter.Rate{Formatted: s}
 
 	var l, p string
-	if values := strings.Split(s, "/"); len(values) != 2 {
+	values := strings.Split(s, "/")
+	if len(values) != 2 {
 		return xerrors.Errorf("incorrect format '%s'", s)
-	} else {
-		l, p = values[0], strings.ToLower(values[1])
 	}
+	l, p = values[0], strings.ToLower(values[1])
 
 	if reNoDigitDuration.Match([]byte(p)) {
 		p = "1" + p
 	}
 
-	if i, err := time.ParseDuration(p); err != nil {
+	i, err := time.ParseDuration(p)
+	if err != nil {
 		return err
-	} else {
-		r.Period = i
 	}
+	r.Period = i
 
-	if i, err := strconv.ParseInt(l, 10, 64); err != nil {
+	n, err := strconv.ParseInt(l, 10, 64)
+	if err != nil {
 		return xerrors.Errorf("incorrect limit '%s'", l)
-	} else {
-		r.Limit = i
 	}
+	r.Limit = n
 
 	*no = RateLimitRate(r)
 

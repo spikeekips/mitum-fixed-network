@@ -23,13 +23,12 @@ func (ab *ACCEPTBallotV0) unpack(
 		return xerrors.Errorf("empty newBlock hash found")
 	}
 
-	var voteproof base.Voteproof
 	if bVoteproof != nil {
-		if i, err := base.DecodeVoteproof(enc, bVoteproof); err != nil {
+		i, err := base.DecodeVoteproof(enc, bVoteproof)
+		if err != nil {
 			return err
-		} else {
-			voteproof = i
 		}
+		ab.voteproof = i
 	}
 
 	ab.BaseBallotV0 = bb
@@ -38,7 +37,6 @@ func (ab *ACCEPTBallotV0) unpack(
 		proposal:         proposal,
 		newBlock:         newBlock,
 	}
-	ab.voteproof = voteproof
 
 	return nil
 }

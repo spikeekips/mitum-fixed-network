@@ -18,11 +18,11 @@ func (v FileLoad) MarshalText() ([]byte, error) {
 func (v *FileLoad) UnmarshalText(b []byte) error {
 	var body []byte
 	if bytes.Equal(bytes.TrimSpace(b), []byte("-")) {
-		if c, err := LoadFromStdInput(); err != nil {
+		c, err := LoadFromStdInput()
+		if err != nil {
 			return err
-		} else {
-			body = c
 		}
+		body = c
 	} else if c, err := os.ReadFile(filepath.Clean(string(b))); err != nil {
 		return err
 	} else {

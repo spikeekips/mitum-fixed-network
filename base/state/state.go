@@ -61,26 +61,28 @@ func (stu *StateUpdater) SetHash(h valuehash.Hash) error {
 		return err
 	}
 
-	if st, err := stu.State.SetHash(h); err != nil {
+	st, err := stu.State.SetHash(h)
+	if err != nil {
 		return err
-	} else {
-		stu.State = st
-
-		return nil
 	}
+
+	stu.State = st
+
+	return nil
 }
 
 func (stu *StateUpdater) SetValue(value Value) error {
 	stu.Lock()
 	defer stu.Unlock()
 
-	if st, err := stu.State.SetValue(value); err != nil {
+	st, err := stu.State.SetValue(value)
+	if err != nil {
 		return err
-	} else {
-		stu.State = st
-
-		return nil
 	}
+
+	stu.State = st
+
+	return nil
 }
 
 func (stu *StateUpdater) SetHeight(h base.Height) *StateUpdater {
@@ -104,9 +106,9 @@ func (stu *StateUpdater) AddOperation(op valuehash.Hash) error {
 	oh := op.String()
 	if _, found := stu.opcache[oh]; found {
 		return nil
-	} else {
-		stu.opcache[oh] = struct{}{}
 	}
+
+	stu.opcache[oh] = struct{}{}
 
 	if err := op.IsValid(nil); err != nil {
 		return err

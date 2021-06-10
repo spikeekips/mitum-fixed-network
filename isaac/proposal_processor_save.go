@@ -34,11 +34,10 @@ func (pp *DefaultProcessor) Save(ctx context.Context) error {
 		}
 
 		return err
-	} else {
-		pp.setState(prprocessor.Saved)
-
-		return nil
 	}
+	pp.setState(prprocessor.Saved)
+
+	return nil
 }
 
 func (pp *DefaultProcessor) save(ctx context.Context) error {
@@ -59,13 +58,13 @@ func (pp *DefaultProcessor) save(ctx context.Context) error {
 		case <-ctx.Done():
 			return ctx.Err()
 		default:
-			if i, err := f(sctx); err != nil {
+			i, err := f(sctx)
+			if err != nil {
 				pp.Log().Error().Err(err).Msg("failed to save")
 
 				return err
-			} else {
-				sctx = i
 			}
+			sctx = i
 		}
 	}
 
@@ -92,13 +91,13 @@ func (pp *DefaultProcessor) storeBlockDataSession(ctx context.Context) (context.
 		return ctx, xerrors.Errorf("not prepared")
 	}
 
-	if bd, err := pp.blockData.SaveSession(pp.blockDataSession); err != nil {
+	bd, err := pp.blockData.SaveSession(pp.blockDataSession)
+	if err != nil {
 		pp.Log().Error().Err(err).Msg("trying to store block database session")
 
 		return ctx, err
-	} else {
-		ctx = context.WithValue(ctx, blockDataMapContextKey, bd)
 	}
+	ctx = context.WithValue(ctx, blockDataMapContextKey, bd)
 
 	pp.Log().Debug().Msg("stored block database session")
 

@@ -10,9 +10,8 @@ func (hs *Bytes) UnmarshalJSON(b []byte) error {
 	var s string
 	if err := util.JSON.Unmarshal(b, &s); err != nil {
 		return err
-	} else {
-		*hs = NewBytes(fromString(s))
 	}
+	*hs = NewBytes(fromString(s))
 
 	return nil
 }

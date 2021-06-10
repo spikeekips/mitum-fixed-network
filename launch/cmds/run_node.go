@@ -67,9 +67,8 @@ func NewRunCommand(dryrun bool) RunCommand {
 func (cmd *RunCommand) Run(version util.Version) error {
 	if err := cmd.Initialize(cmd, version); err != nil {
 		return xerrors.Errorf("failed to initialize command: %w", err)
-	} else {
-		defer cmd.Done()
 	}
+	defer cmd.Done()
 
 	cmd.Log().Info().Bool("dryrun", cmd.dryrun).Msg("dryrun?")
 
@@ -96,11 +95,11 @@ func (cmd *RunCommand) prepare() error {
 	} else {
 		outs := make([]io.Writer, len(cmd.NetworkLogFile))
 		for i, f := range cmd.NetworkLogFile {
-			if out, err := LogOutput(f); err != nil {
+			out, err := LogOutput(f)
+			if err != nil {
 				return err
-			} else {
-				outs[i] = out
 			}
+			outs[i] = out
 		}
 
 		networkLogger = SetupLogging(
@@ -125,7 +124,7 @@ func (cmd *RunCommand) run() error {
 	return cmd.runStates(ps.Context())
 }
 
-func (cmd *RunCommand) prepareStates(ctx context.Context) (states.States, error) {
+func (*RunCommand) prepareStates(ctx context.Context) (states.States, error) {
 	var cs states.States
 	if err := process.LoadConsensusStatesContextValue(ctx, &cs); err != nil {
 		return nil, err
@@ -156,11 +155,9 @@ func (cmd *RunCommand) prepareStates(ctx context.Context) (states.States, error)
 }
 
 func (cmd *RunCommand) runStates(ctx context.Context) error {
-	var cs states.States
-	if i, err := cmd.prepareStates(ctx); err != nil {
+	cs, err := cmd.prepareStates(ctx)
+	if err != nil {
 		return err
-	} else {
-		cs = i
 	}
 
 	errch := make(chan error)
@@ -185,11 +182,10 @@ func (cmd *RunCommand) runStates(ctx context.Context) error {
 			_, _ = fmt.Fprintf(os.Stderr, "stop signal received, but failed to stop consensus states, %v\n", err)
 
 			return err
-		} else {
-			_, _ = fmt.Fprintln(os.Stderr, "stop signal received, consensus states stopped")
-
-			return nil
 		}
+		_, _ = fmt.Fprintln(os.Stderr, "stop signal received, consensus states stopped")
+
+		return nil
 	case <-func(w time.Duration) <-chan time.Time {
 		if w < 1 {
 			return make(chan time.Time)
@@ -202,11 +198,10 @@ func (cmd *RunCommand) runStates(ctx context.Context) error {
 				"expired by exit-after, %v, but failed to stop consensus states: %+v\n", cmd.ExitAfter, err)
 
 			return err
-		} else {
-			_, _ = fmt.Fprintf(os.Stderr, "expired by exit-after, %v, consensus states stopped\n", cmd.ExitAfter)
-
-			return nil
 		}
+		_, _ = fmt.Fprintf(os.Stderr, "expired by exit-after, %v, consensus states stopped\n", cmd.ExitAfter)
+
+		return nil
 	}
 }
 

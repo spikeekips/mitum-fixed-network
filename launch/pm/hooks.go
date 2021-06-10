@@ -97,15 +97,15 @@ func (hs Hooks) Run(ctx context.Context) error {
 
 	for i := range hs.seq {
 		name := hs.seq[i]
-		if i, err := hs.hooks[name](ctx); err != nil {
+		i, err := hs.hooks[name](ctx)
+		if err != nil {
 			hs.Log().Error().Err(err).Str("hook", name).Msg("failed to run hook")
 
 			return err
-		} else {
-			hs.Log().Debug().Str("hook", name).Msg("hook done")
-
-			ctx = i
 		}
+		hs.Log().Debug().Str("hook", name).Msg("hook done")
+
+		ctx = i
 	}
 
 	hs.Log().Debug().Msg("hooks done")

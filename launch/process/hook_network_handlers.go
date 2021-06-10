@@ -91,11 +91,9 @@ func SettingNetworkHandlersFromContext(ctx context.Context) (*SettingNetworkHand
 		return nil, err
 	}
 
-	var sealCache cache.Cache
-	if c, err := cache.NewCacheFromURI(conf.Network().SealCache().String()); err != nil {
+	sealCache, err := cache.NewCacheFromURI(conf.Network().SealCache().String())
+	if err != nil {
 		return nil, err
-	} else {
-		sealCache = c
 	}
 
 	var nt network.Server
@@ -227,11 +225,11 @@ func (sn *SettingNetworkHandlers) networkHandlerNodeInfo() network.NodeInfoHandl
 		suffrageNodes := sn.suffrage.Nodes()
 		nodes := make([]base.Node, len(suffrageNodes))
 		for i := range suffrageNodes {
-			if n, found := sn.nodepool.Node(suffrageNodes[i]); !found {
+			n, found := sn.nodepool.Node(suffrageNodes[i])
+			if !found {
 				return nil, xerrors.Errorf("suffrage node, %q not found", n.Address())
-			} else {
-				nodes[i] = n
 			}
+			nodes[i] = n
 		}
 
 		return network.NewNodeInfoV0(
@@ -284,10 +282,10 @@ func (sn *SettingNetworkHandlers) networkHandlerBlockDataMaps() network.BlockDat
 
 func (sn *SettingNetworkHandlers) networkHandlerBlockData() network.BlockDataHandler {
 	return func(p string) (io.Reader, func() error, error) {
-		if i, err := sn.blockData.FS().Open(p); err != nil {
+		i, err := sn.blockData.FS().Open(p)
+		if err != nil {
 			return nil, func() error { return nil }, err
-		} else {
-			return i, i.Close, nil
 		}
+		return i, i.Close, nil
 	}
 }

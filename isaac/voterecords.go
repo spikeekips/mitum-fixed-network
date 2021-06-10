@@ -79,7 +79,7 @@ func (vrs *VoteRecords) addBallot(blt ballot.Ballot) bool {
 	return false
 }
 
-func (vrs *VoteRecords) sanitizeHash(h valuehash.Hash) valuehash.Hash {
+func (*VoteRecords) sanitizeHash(h valuehash.Hash) valuehash.Hash {
 	if _, ok := h.(valuehash.Bytes); ok {
 		return h
 	}

@@ -32,7 +32,7 @@ func NewINITBallotFactV0(
 	}
 }
 
-func (ibf INITBallotFactV0) Hint() hint.Hint {
+func (INITBallotFactV0) Hint() hint.Hint {
 	return INITBallotFactV0Hint
 }
 
@@ -89,11 +89,11 @@ func (ib INITBallotV0) Hash() valuehash.Hash {
 	return ib.BaseBallotV0.Hash()
 }
 
-func (ib INITBallotV0) Hint() hint.Hint {
+func (INITBallotV0) Hint() hint.Hint {
 	return INITBallotV0Hint
 }
 
-func (ib INITBallotV0) Stage() base.Stage {
+func (INITBallotV0) Stage() base.Stage {
 	return base.StageINIT
 }
 
@@ -164,12 +164,13 @@ func (ib INITBallotV0) Fact() base.Fact {
 }
 
 func (ib *INITBallotV0) Sign(pk key.Privatekey, networkID []byte) error {
-	if newBase, err := SignBaseBallotV0(ib, ib.BaseBallotV0, pk, networkID); err != nil {
+	newBase, err := SignBaseBallotV0(ib, ib.BaseBallotV0, pk, networkID)
+	if err != nil {
 		return err
-	} else {
-		ib.BaseBallotV0 = newBase
-		ib.BaseBallotV0 = ib.BaseBallotV0.SetHash(ib.GenerateHash())
 	}
+
+	ib.BaseBallotV0 = newBase
+	ib.BaseBallotV0 = ib.BaseBallotV0.SetHash(ib.GenerateHash())
 
 	return nil
 }

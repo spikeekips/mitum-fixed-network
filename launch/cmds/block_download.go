@@ -36,9 +36,9 @@ var BlockDownloadVars = kong.Vars{
 
 type BlockDownloadCommand struct {
 	*BaseCommand
-	DataType   string        `arg:"" name:"data type" help:"data type of block data, {${block_datatypes} ${all_blockdata}}" required:""` // nolint:lll
-	Heights    []int64       `arg:"" name:"height" help:"block heights of block" required:""`
-	URL        *url.URL      `name:"node" help:"remote mitum url. default: ${node_url}" required:"" default:"${node_url}"`
+	DataType   string        `arg:"" name:"data type" help:"data type of block data, {${block_datatypes} ${all_blockdata}}" required:"true"` // revive:disable-line:line-length-limit
+	Heights    []int64       `arg:"" name:"height" help:"block heights of block" required:"true"`
+	URL        *url.URL      `name:"node" help:"remote mitum url. default: ${node_url}" required:"true" default:"${node_url}"` // revive:disable-line:line-length-limit
 	Timeout    time.Duration `name:"timeout" help:"timeout; default is 5 seconds"`
 	TLSInscure bool          `name:"tls-insecure" help:"allow inseucre TLS connection; default is false"`
 	Save       string        `name:"save" help:"save block data under directory"`
@@ -98,11 +98,7 @@ func (cmd *BlockDownloadCommand) prepare() error {
 	if err := cmd.prepareDataType(); err != nil {
 		return err
 	}
-	if err := cmd.prepareBlockData(); err != nil {
-		return err
-	}
-
-	return nil
+	return cmd.prepareBlockData()
 }
 
 func (cmd *BlockDownloadCommand) prepareHeight() error {
@@ -131,11 +127,11 @@ func (cmd *BlockDownloadCommand) prepareHeight() error {
 func (cmd *BlockDownloadCommand) prepareChannel() error {
 	encs := cmd.Encoders()
 	if encs == nil {
-		if i, err := cmd.LoadEncoders(nil, nil); err != nil {
+		i, err := cmd.LoadEncoders(nil, nil)
+		if err != nil {
 			return err
-		} else {
-			encs = i
 		}
+		encs = i
 	}
 
 	if cmd.TLSInscure {
@@ -144,11 +140,11 @@ func (cmd *BlockDownloadCommand) prepareChannel() error {
 		cmd.URL.RawQuery = query.Encode()
 	}
 
-	if ch, err := process.LoadNodeChannel(cmd.URL, encs, cmd.Timeout); err != nil {
+	ch, err := process.LoadNodeChannel(cmd.URL, encs, cmd.Timeout)
+	if err != nil {
 		return err
-	} else {
-		cmd.channel = ch
 	}
+	cmd.channel = ch
 
 	cmd.Log().Debug().Msg("network channel loaded")
 
@@ -196,11 +192,7 @@ func (cmd *BlockDownloadCommand) prepareBlockData() error {
 	}
 
 	cmd.bd = localfs.NewBlockData(cmd.Save, cmd.jsonenc)
-	if err := cmd.bd.Initialize(); err != nil {
-		return err
-	}
-
-	return nil
+	return cmd.bd.Initialize()
 }
 
 func (cmd *BlockDownloadCommand) blockDataMaps(heights []base.Height) ([]block.BlockDataMap, error) {
@@ -216,17 +208,17 @@ func (cmd *BlockDownloadCommand) blockDataMaps(heights []base.Height) ([]block.B
 			ctx, cancel := context.WithTimeout(context.Background(), cmd.Timeout)
 			defer cancel()
 
-			if m, err := cmd.channel.BlockDataMaps(ctx, hs); err != nil {
+			m, err := cmd.channel.BlockDataMaps(ctx, hs)
+			if err != nil {
 				return err
-			} else {
-				sort.Slice(m, func(i, j int) bool {
-					return m[i].Height()-m[j].Height() < 0
-				})
-
-				ch <- m
-
-				return nil
 			}
+			sort.Slice(m, func(i, j int) bool {
+				return m[i].Height()-m[j].Height() < 0
+			})
+
+			ch <- m
+
+			return nil
 		})
 		if err != nil {
 			errch <- err
@@ -257,37 +249,32 @@ end:
 }
 
 func (cmd *BlockDownloadCommand) blockData(heights []base.Height) error {
-	var maps []block.BlockDataMap
-	if i, err := cmd.blockDataMaps(heights); err != nil {
+	maps, err := cmd.blockDataMaps(heights)
+	if err != nil {
 		return xerrors.Errorf("failed to get block data maps: %w", err)
-	} else {
-		maps = i
 	}
 
 	return requestBlockData(maps, func(m block.BlockDataMap) error {
 		if err := cmd.oneBlockData(m); err != nil {
 			return xerrors.Errorf("failed to get one block data, %d: %w", m.Height(), err)
-		} else {
-			return nil
 		}
+		return nil
 	})
 }
 
 func (cmd *BlockDownloadCommand) printBlockDataMaps(heights []base.Height) error {
-	var maps []block.BlockDataMap
-	if i, err := cmd.blockDataMaps(heights); err != nil {
+	maps, err := cmd.blockDataMaps(heights)
+	if err != nil {
 		return err
-	} else {
-		maps = i
 	}
 
 	cmd.Log().Debug().Msg("block data maps thru channel")
 	for i := range maps {
-		if b, err := cmd.jsonenc.Marshal(maps[i]); err != nil {
+		b, err := cmd.jsonenc.Marshal(maps[i])
+		if err != nil {
 			return err
-		} else {
-			_, _ = fmt.Fprintln(os.Stdout, string(b))
 		}
+		_, _ = fmt.Fprintln(os.Stdout, string(b))
 	}
 
 	return nil
@@ -305,19 +292,19 @@ func (cmd *BlockDownloadCommand) oneBlockData(m block.BlockDataMap) error {
 		block.BlockDataACCEPTVoteproof,
 		block.BlockDataSuffrageInfo,
 		block.BlockDataProposal:
-		if i, err := getItemBlockDataMap(m, cmd.DataType); err != nil {
+		i, err := getItemBlockDataMap(m, cmd.DataType)
+		if err != nil {
 			return err
-		} else {
-			items = append(items, i)
 		}
+		items = append(items, i)
 	case allBlockData:
 		items = make([]block.BlockDataMapItem, len(block.BlockData))
 		for i := range block.BlockData {
-			if j, err := getItemBlockDataMap(m, block.BlockData[i]); err != nil {
+			j, err := getItemBlockDataMap(m, block.BlockData[i])
+			if err != nil {
 				return err
-			} else {
-				items[i] = j
 			}
+			items[i] = j
 		}
 	default:
 		return xerrors.Errorf("unknown data type found, %q", cmd.DataType)
@@ -351,11 +338,9 @@ func (cmd *BlockDownloadCommand) printBlockData(m block.BlockDataMap, items []bl
 }
 
 func (cmd *BlockDownloadCommand) printBlockDataItem(item block.BlockDataMapItem) (interface{}, error) {
-	var r io.ReadCloser
-	if i, err := cmd.requestBlockData(item); err != nil {
+	r, err := cmd.requestBlockData(item)
+	if err != nil {
 		return nil, err
-	} else {
-		r = i
 	}
 
 	writer := blockdata.NewDefaultWriter(cmd.jsonenc)
@@ -385,28 +370,25 @@ func (cmd *BlockDownloadCommand) printBlockDataItem(item block.BlockDataMapItem)
 }
 
 func (cmd *BlockDownloadCommand) saveBlockData(m block.BlockDataMap, items []block.BlockDataMapItem) error {
-	var session blockdata.Session
-	if i, err := cmd.bd.NewSession(m.Height()); err != nil {
+	session, err := cmd.bd.NewSession(m.Height())
+	if err != nil {
 		return err
-	} else {
-		defer func() {
-			_ = i.Cancel()
-		}()
-
-		session = i
 	}
+	defer func() {
+		_ = session.Cancel()
+	}()
 
-	base := filepath.Join(cmd.Save, localfs.HeightDirectory(m.Height()))
-	if i, err := os.Stat(base); err != nil {
+	b := filepath.Join(cmd.Save, localfs.HeightDirectory(m.Height()))
+	if i, err := os.Stat(b); err != nil {
 		if !os.IsNotExist(err) {
 			return err
 		}
 
-		if err := os.MkdirAll(base, localfs.DefaultDirectoryPermission); err != nil {
+		if err := os.MkdirAll(b, localfs.DefaultDirectoryPermission); err != nil {
 			return err
 		}
 	} else if !i.IsDir() {
-		return xerrors.Errorf("block directory, %q already exists", base)
+		return xerrors.Errorf("block directory, %q already exists", b)
 	}
 
 	for i := range items {
@@ -423,26 +405,24 @@ func (cmd *BlockDownloadCommand) saveBlockDataItem(
 	item block.BlockDataMapItem,
 	session blockdata.Session,
 ) error {
-	var r io.ReadCloser
-	if i, err := cmd.requestBlockData(item); err != nil {
+	r, err := cmd.requestBlockData(item)
+	if err != nil {
 		return err
-	} else {
-		r = i
 	}
 
-	if i, err := session.Import(item.Type(), r); err != nil {
+	i, err := session.Import(item.Type(), r)
+	if err != nil {
 		return xerrors.Errorf("failed to import block data: %w", err)
-	} else {
-		base := filepath.Join(cmd.Save, localfs.HeightDirectory(m.Height()))
-		f := filepath.Join(base, filepath.Base(i))
-		if err := os.Rename(i, f); err != nil {
-			return err
-		}
-
-		cmd.Log().Info().Int64("height", m.Height().Int64()).Str("file", f).Msg("saved")
-
-		return nil
 	}
+	b := filepath.Join(cmd.Save, localfs.HeightDirectory(m.Height()))
+	f := filepath.Join(b, filepath.Base(i))
+	if err := os.Rename(i, f); err != nil {
+		return err
+	}
+
+	cmd.Log().Info().Int64("height", m.Height().Int64()).Str("file", f).Msg("saved")
+
+	return nil
 }
 
 func (cmd *BlockDownloadCommand) requestBlockData(item block.BlockDataMapItem) (io.ReadCloser, error) {
@@ -451,9 +431,9 @@ func (cmd *BlockDownloadCommand) requestBlockData(item block.BlockDataMapItem) (
 
 	if block.IsLocalBlockDateItem(item.URL()) {
 		return cmd.channel.BlockData(ctx, item)
-	} else {
-		return network.FetchBlockDataFromRemote(ctx, item)
 	}
+
+	return network.FetchBlockDataFromRemote(ctx, item)
 }
 
 func getItemBlockDataMap(m block.BlockDataMap, dataType string) (block.BlockDataMapItem, error) {
@@ -517,11 +497,7 @@ func requestBlockDataMaps(heights []base.Height, callback func([]base.Height) er
 		}
 	}
 
-	if err := eg.Wait(); err != nil {
-		return err
-	}
-
-	return nil
+	return eg.Wait()
 }
 
 func requestBlockData(maps []block.BlockDataMap, callback func(block.BlockDataMap) error) error {
@@ -547,9 +523,5 @@ func requestBlockData(maps []block.BlockDataMap, callback func(block.BlockDataMa
 		}
 	}
 
-	if err := eg.Wait(); err != nil {
-		return err
-	}
-
-	return nil
+	return eg.Wait()
 }

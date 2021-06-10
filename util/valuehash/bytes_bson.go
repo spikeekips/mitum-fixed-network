@@ -20,11 +20,11 @@ func (hs *Bytes) UnmarshalBSONValue(t bsontype.Type, b []byte) error {
 		return xerrors.Errorf("invalid marshaled type for Hash, %v", t)
 	}
 
-	if bt, err := unmarshalBSONValue(b); err != nil {
+	bt, err := unmarshalBSONValue(b)
+	if err != nil {
 		return err
-	} else {
-		*hs = bt
 	}
+	*hs = bt
 
 	return nil
 }

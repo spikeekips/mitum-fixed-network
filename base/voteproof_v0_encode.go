@@ -32,22 +32,21 @@ func (vp *VoteproofV0) unpack( // nolint
 	finishedAt time.Time,
 	isClosed bool,
 ) error {
-	var majority Fact
 	if bMajority != nil {
-		if m, err := DecodeFact(enc, bMajority); err != nil {
+		m, err := DecodeFact(enc, bMajority)
+		if err != nil {
 			return err
-		} else {
-			majority = m
 		}
+		vp.majority = m
 	}
 
-	var suffrages []Address
+	vp.suffrages = make([]Address, len(bSuffrages))
 	for i := range bSuffrages {
-		if address, err := bSuffrages[i].Encode(enc); err != nil {
+		address, err := bSuffrages[i].Encode(enc)
+		if err != nil {
 			return err
-		} else {
-			suffrages = append(suffrages, address)
 		}
+		vp.suffrages[i] = address
 	}
 
 	facts := make([]Fact, len(bFacts))
@@ -65,18 +64,15 @@ func (vp *VoteproofV0) unpack( // nolint
 		var nodeFact VoteproofNodeFact
 		if err := enc.Decode(bVotes[i], &nodeFact); err != nil {
 			return err
-		} else {
-			votes[i] = nodeFact
 		}
+		votes[i] = nodeFact
 	}
 
 	vp.height = height
 	vp.round = round
-	vp.suffrages = suffrages
 	vp.thresholdRatio = thresholdRatio
 	vp.result = result
 	vp.stage = stage
-	vp.majority = majority
 	vp.facts = facts
 	vp.votes = votes
 	vp.finishedAt = finishedAt
@@ -93,18 +89,14 @@ func (vf *VoteproofNodeFact) unpack(
 	factSignature key.Signature,
 	bSigner key.PublickeyDecoder,
 ) error {
-	var address Address
-	if h, err := bAddress.Encode(enc); err != nil {
+	address, err := bAddress.Encode(enc)
+	if err != nil {
 		return err
-	} else {
-		address = h
 	}
 
-	var signer key.Publickey
-	if k, err := bSigner.Encode(enc); err != nil {
+	signer, err := bSigner.Encode(enc)
+	if err != nil {
 		return err
-	} else {
-		signer = k
 	}
 
 	vf.address = address

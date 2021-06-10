@@ -20,12 +20,10 @@ var DefaultHookHandlersProposalProcessorConfig = map[string]HookHandlerProposalP
 func HookProposalProcessorConfigFunc(handlers map[string]HookHandlerProposalProcessorConfig) pm.ProcessFunc {
 	return func(ctx context.Context) (context.Context, error) {
 		var conf config.LocalNode
-		var sc map[string]interface{}
 		if err := config.LoadConfigContextValue(ctx, &conf); err != nil {
 			return nil, err
-		} else {
-			sc = conf.Source()
 		}
+		sc := conf.Source()
 
 		var m map[string]interface{}
 		var st string
@@ -40,11 +38,11 @@ func HookProposalProcessorConfigFunc(handlers map[string]HookHandlerProposalProc
 
 		var pp config.ProposalProcessor
 		if len(st) < 1 {
-			if i, err := ProposalProcessorConfigHandlerDefault(ctx, nil); err != nil {
+			i, err := ProposalProcessorConfigHandlerDefault(ctx, nil)
+			if err != nil {
 				return ctx, err
-			} else {
-				pp = i
 			}
+			pp = i
 		} else if h, found := handlers[st]; !found {
 			return nil, xerrors.Errorf("unknown proposal-processor found, %s", st)
 		} else if i, err := h(ctx, m); err != nil {
@@ -55,9 +53,8 @@ func HookProposalProcessorConfigFunc(handlers map[string]HookHandlerProposalProc
 
 		if err := conf.SetProposalProcessor(pp); err != nil {
 			return ctx, err
-		} else {
-			return ctx, nil
 		}
+		return ctx, nil
 	}
 }
 
@@ -70,18 +67,20 @@ func ErrorProposalProcessorConfigHandler(
 	m map[string]interface{},
 ) (config.ProposalProcessor, error) {
 	var preparePoints []config.ErrorPoint
-	if w, found := m["when-prepare"]; !found {
-	} else if p, err := parseErrorPoints(w); err != nil {
-		return nil, err
-	} else {
+	if w, found := m["when-prepare"]; found {
+		p, err := parseErrorPoints(w)
+		if err != nil {
+			return nil, err
+		}
 		preparePoints = p
 	}
 
 	var savePoints []config.ErrorPoint
-	if w, found := m["when-save"]; !found {
-	} else if p, err := parseErrorPoints(w); err != nil {
-		return nil, err
-	} else {
+	if w, found := m["when-save"]; found {
+		p, err := parseErrorPoints(w)
+		if err != nil {
+			return nil, err
+		}
 		savePoints = p
 	}
 

@@ -21,49 +21,41 @@ func (bc *ConsensusInfoV0) unpack(enc encoder.Encoder, biv, bav, bsi, bpr []byte
 		}
 	}
 
-	var si SuffrageInfo
-	if v, err := DecodeSuffrageInfo(enc, bsi); err != nil {
+	si, err := DecodeSuffrageInfo(enc, bsi)
+	if err != nil {
 		return err
-	} else {
-		si = v
 	}
 
-	var pr ballot.Proposal
 	if bpr != nil {
-		if v, err := ballot.DecodeProposal(enc, bpr); err != nil {
+		i, err := ballot.DecodeProposal(enc, bpr)
+		if err != nil {
 			return err
-		} else {
-			pr = v
 		}
+		bc.proposal = i
 	}
 
 	bc.initVoteproof = iv
 	bc.acceptVoteproof = av
 	bc.suffrageInfo = si
-	bc.proposal = pr
 
 	return nil
 }
 
 func (si *SuffrageInfoV0) unpack(enc encoder.Encoder, bpr base.AddressDecoder, bns [][]byte) error {
-	var proposer base.Address
-	if pr, err := bpr.Encode(enc); err != nil {
+	i, err := bpr.Encode(enc)
+	if err != nil {
 		return err
-	} else {
-		proposer = pr
 	}
+	si.proposer = i
 
-	var ns []base.Node
-	for _, b := range bns {
-		if n, err := base.DecodeNode(enc, b); err != nil {
+	si.nodes = make([]base.Node, len(bns))
+	for i := range bns {
+		n, err := base.DecodeNode(enc, bns[i])
+		if err != nil {
 			return err
-		} else {
-			ns = append(ns, n)
 		}
+		si.nodes[i] = n
 	}
-
-	si.proposer = proposer
-	si.nodes = ns
 
 	return nil
 }

@@ -55,7 +55,7 @@ func (vp VoteproofV0) ID() string {
 	return valuehash.NewSHA256(vp.Bytes()).String()
 }
 
-func (vp VoteproofV0) Hint() hint.Hint {
+func (VoteproofV0) Hint() hint.Hint {
 	return VoteproofV0Hint
 }
 
@@ -235,11 +235,9 @@ func (vp VoteproofV0) IsValid(networkID []byte) error {
 }
 
 func (vp VoteproofV0) isValidCheckMajority() error {
-	var threshold Threshold
-	if t, err := NewThreshold(uint(len(vp.suffrages)), vp.thresholdRatio); err != nil {
+	threshold, err := NewThreshold(uint(len(vp.suffrages)), vp.thresholdRatio)
+	if err != nil {
 		return err
-	} else {
-		threshold = t
 	}
 
 	counts := map[string]uint{}

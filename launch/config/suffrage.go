@@ -6,7 +6,7 @@ import (
 	"golang.org/x/xerrors"
 )
 
-var defaultCacheSize int = 10
+var defaultCacheSize = 10
 
 type Suffrage interface {
 	isvalid.IsValider
@@ -17,19 +17,19 @@ type Suffrage interface {
 
 type EmptySuffrage struct{}
 
-func (fd EmptySuffrage) SuffrageType() string {
+func (EmptySuffrage) SuffrageType() string {
 	return "empty-suffrage"
 }
 
-func (fd EmptySuffrage) Nodes() []base.Address {
+func (EmptySuffrage) Nodes() []base.Address {
 	return nil
 }
 
-func (fd EmptySuffrage) NumberOfActing() uint {
+func (EmptySuffrage) NumberOfActing() uint {
 	return 0
 }
 
-func (fd EmptySuffrage) IsValid([]byte) error {
+func (EmptySuffrage) IsValid([]byte) error {
 	return nil
 }
 
@@ -44,7 +44,7 @@ func NewFixedSuffrage(proposer base.Address, nodes []base.Address, numberOfActin
 	return FixedSuffrage{Proposer: proposer, nodes: nodes, numberOfActing: numberOfActing, CacheSize: defaultCacheSize}
 }
 
-func (fd FixedSuffrage) SuffrageType() string {
+func (FixedSuffrage) SuffrageType() string {
 	return "fixed-suffrage"
 }
 
@@ -79,7 +79,7 @@ func NewRoundrobinSuffrage(nodes []base.Address, numberOfActing uint) Roundrobin
 	return RoundrobinSuffrage{nodes: nodes, numberOfActing: numberOfActing, CacheSize: defaultCacheSize}
 }
 
-func (fd RoundrobinSuffrage) SuffrageType() string {
+func (RoundrobinSuffrage) SuffrageType() string {
 	return "roundrobin"
 }
 

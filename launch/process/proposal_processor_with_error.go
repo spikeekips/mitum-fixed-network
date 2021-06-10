@@ -30,7 +30,7 @@ func NewErrorProcessorNewFunc(
 	whenSavePoints []config.ErrorPoint,
 ) prprocessor.ProcessorNewFunc {
 	return func(proposal ballot.Proposal, initVoteproof base.Voteproof) (prprocessor.Processor, error) {
-		if pp, err := isaac.NewDefaultProcessor(
+		pp, err := isaac.NewDefaultProcessor(
 			st,
 			blockData,
 			nodepool,
@@ -38,15 +38,15 @@ func NewErrorProcessorNewFunc(
 			oprHintset,
 			proposal,
 			initVoteproof,
-		); err != nil {
+		)
+		if err != nil {
 			return nil, err
-		} else {
-			return NewErrorProposalProcessor(
-				pp,
-				whenPreparePoints,
-				whenSavePoints,
-			), nil
 		}
+		return NewErrorProposalProcessor(
+			pp,
+			whenPreparePoints,
+			whenSavePoints,
+		), nil
 	}
 }
 
@@ -90,13 +90,12 @@ func (pp *ErrorProposalProcessor) Prepare(ctx context.Context) (block.Block, err
 				valuehash.RandomSHA256(),
 				localtime.UTCNow(),
 			)
-		} else {
-			return nil, xerrors.Errorf(
-				"contest-designed-error: prepare-occurring-error: height=%d round=%d",
-				pp.Proposal().Height(),
-				pp.Proposal().Round(),
-			)
 		}
+		return nil, xerrors.Errorf(
+			"contest-designed-error: prepare-occurring-error: height=%d round=%d",
+			pp.Proposal().Height(),
+			pp.Proposal().Round(),
+		)
 	}
 
 	return pp.DefaultProcessor.Prepare(ctx)

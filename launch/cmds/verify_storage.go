@@ -69,45 +69,46 @@ func (cmd *BaseVerifyCommand) checkAllManifests(
 			e = lh
 		}
 
-		if j, err := cmd.checkManifests(baseManifest, base.Height(s), base.Height(e), get); err != nil {
+		j, err := cmd.checkManifests(baseManifest, base.Height(s), base.Height(e), get)
+		if err != nil {
 			return err
-		} else {
-			baseManifest = j
 		}
+		baseManifest = j
 	}
 
 	return nil
 }
 
 func (cmd *BaseVerifyCommand) checkManifests(
-	base block.Manifest,
+	b block.Manifest,
 	s, e base.Height,
 	get func(base.Height) (block.Manifest, error),
 ) (block.Manifest, error) {
 	l := cmd.Log().WithLogger(func(ctx logging.Context) logging.Emitter {
 		e := ctx.Ints64("heights", []int64{s.Int64(), e.Int64()})
 
-		if base != nil {
-			e = e.Int64("base_height", base.Height().Int64())
+		if b != nil {
+			e = e.Int64("base_height", b.Height().Int64())
 		}
 
 		return e
 	})
 
 	var manifests []block.Manifest
-	if i, err := cmd.loadManifests(s, e, get); err != nil {
+	i, err := cmd.loadManifests(s, e, get)
+	if err != nil {
 		return nil, xerrors.Errorf("failed to load manifests, %d-%d: %w", s, e, err)
-	} else {
-		if base == nil {
-			manifests = i
-		} else {
-			manifests = make([]block.Manifest, len(i)+1)
-			manifests[0] = base
-			copy(manifests[1:], i)
-		}
-
-		l.Debug().Msg("manifests loaded")
 	}
+
+	if b == nil {
+		manifests = i
+	} else {
+		manifests = make([]block.Manifest, len(i)+1)
+		manifests[0] = b
+		copy(manifests[1:], i)
+	}
+
+	l.Debug().Msg("manifests loaded")
 
 	checker := isaac.NewManifestsValidationChecker(cmd.networkID, manifests)
 	if err := util.NewChecker("manifests-validation-checker", []util.CheckerFunc{

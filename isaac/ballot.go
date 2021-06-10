@@ -60,12 +60,12 @@ func NewINITBallotV0WithVoteproof(
 		avp = voteproof
 		height = voteproof.Height() + 1
 		round = base.Round(0)
-		if f, ok := voteproof.Majority().(ballot.ACCEPTBallotFact); !ok {
+		f, ok := voteproof.Majority().(ballot.ACCEPTBallotFact)
+		if !ok {
 			return ballot.INITBallotV0{},
 				xerrors.Errorf("invalid voteproof found; should have ACCEPTBallotFact, not %T", voteproof.Majority())
-		} else {
-			previousBlock = f.NewBlock()
 		}
+		previousBlock = f.NewBlock()
 	}
 
 	return ballot.NewINITBallotV0(

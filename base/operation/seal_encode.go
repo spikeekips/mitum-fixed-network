@@ -17,20 +17,18 @@ func (sl *BaseSeal) unpack(
 	signedAt time.Time,
 	operations [][]byte,
 ) error {
-	var signer key.Publickey
-	if k, err := bSigner.Encode(enc); err != nil {
+	signer, err := bSigner.Encode(enc)
+	if err != nil {
 		return err
-	} else {
-		signer = k
 	}
 
-	var ops []Operation
-	for _, r := range operations {
-		if op, err := DecodeOperation(enc, r); err != nil {
+	sl.ops = make([]Operation, len(operations))
+	for i := range operations {
+		op, err := DecodeOperation(enc, operations[i])
+		if err != nil {
 			return err
-		} else {
-			ops = append(ops, op)
 		}
+		sl.ops[i] = op
 	}
 
 	sl.h = h
@@ -38,7 +36,6 @@ func (sl *BaseSeal) unpack(
 	sl.signer = signer
 	sl.signature = signature
 	sl.signedAt = signedAt
-	sl.ops = ops
 
 	return nil
 }

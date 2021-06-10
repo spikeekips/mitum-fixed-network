@@ -52,17 +52,17 @@ func NewFixedSuffrage(
 		elect = sf.electWithProposer
 	}
 
-	if b, err := NewBaseSuffrage(
+	b, err := NewBaseSuffrage(
 		"fixed-suffrage",
 		nodes,
 		numberOfActing,
 		elect,
 		cacheSize,
-	); err != nil {
+	)
+	if err != nil {
 		return nil, err
-	} else {
-		sf.BaseSuffrage = b
 	}
+	sf.BaseSuffrage = b
 
 	return sf, nil
 }
@@ -87,7 +87,8 @@ func (sf *FixedSuffrage) Verbose() string {
 		"nodes":            sf.nodes,
 	}
 
-	if b, err := jsonenc.Marshal(m); err != nil {
+	b, err := jsonenc.Marshal(m)
+	if err != nil {
 		_, _ = fmt.Fprintf(
 			os.Stderr,
 			"%+v\n",
@@ -95,7 +96,6 @@ func (sf *FixedSuffrage) Verbose() string {
 		)
 
 		return sf.Name()
-	} else {
-		return string(b)
 	}
+	return string(b)
 }

@@ -85,11 +85,11 @@ func (ni NodeInfoV0) String() string {
 	return jsonenc.ToString(ni)
 }
 
-func (ni NodeInfoV0) Bytes() []byte {
+func (NodeInfoV0) Bytes() []byte {
 	return nil
 }
 
-func (ni NodeInfoV0) Hint() hint.Hint {
+func (NodeInfoV0) Hint() hint.Hint {
 	return NodeInfoV0Hint
 }
 

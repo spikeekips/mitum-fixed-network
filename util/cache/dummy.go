@@ -4,25 +4,24 @@ import (
 	"time"
 )
 
-type Dummy struct {
-}
+type Dummy struct{}
 
-func (ca Dummy) Has(interface{}) bool {
+func (Dummy) Has(interface{}) bool {
 	return false
 }
 
-func (ca Dummy) Get(interface{}) (interface{}, error) {
+func (Dummy) Get(interface{}) (interface{}, error) {
 	return nil, nil
 }
 
-func (ca Dummy) Set(interface{}, interface{}, time.Duration) error {
+func (Dummy) Set(interface{}, interface{}, time.Duration) error {
 	return nil
 }
 
-func (ca Dummy) Purge() error {
+func (Dummy) Purge() error {
 	return nil
 }
 
-func (ca Dummy) New() (Cache, error) {
+func (Dummy) New() (Cache, error) {
 	return Dummy{}, nil
 }

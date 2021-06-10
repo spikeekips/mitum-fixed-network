@@ -18,16 +18,16 @@ type Cache interface {
 }
 
 func NewCacheFromURI(uri string) (Cache, error) {
-	if u, err := url.Parse(uri); err != nil {
+	u, err := url.Parse(uri)
+	if err != nil {
 		return nil, xerrors.Errorf("invalid uri of cache, %q: %w", uri, err)
-	} else {
-		switch {
-		case u.Scheme == "gcache":
-			return NewGCacheWithQuery(u.Query())
-		case u.Scheme == "dummy":
-			return Dummy{}, nil
-		default:
-			return nil, xerrors.Errorf("not supported uri of cache, %q", uri)
-		}
+	}
+	switch {
+	case u.Scheme == "gcache":
+		return NewGCacheWithQuery(u.Query())
+	case u.Scheme == "dummy":
+		return Dummy{}, nil
+	default:
+		return nil, xerrors.Errorf("not supported uri of cache, %q", uri)
 	}
 }

@@ -4,11 +4,11 @@ import "time"
 
 // ParseRFC3339 parses RFC3339 string.
 func ParseRFC3339(s string) (time.Time, error) {
-	if t, err := time.Parse(time.RFC3339Nano, s); err != nil {
+	t, err := time.Parse(time.RFC3339Nano, s)
+	if err != nil {
 		return time.Time{}, err
-	} else {
-		return t, nil
 	}
+	return t, nil
 }
 
 // RFC3339 formats time.Time to RFC3339Nano string.

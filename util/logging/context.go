@@ -224,9 +224,9 @@ func (c Context) Uints8(key string, i []uint8) Emitter {
 	return newContext(c.Context.Uints8(key, i), c.verbose)
 }
 
-func (c Context) Msg(string)                  {}
-func (c Context) Msgf(string, ...interface{}) {}
-func (c Context) Send()                       {}
+func (Context) Msg(string)                  {}
+func (Context) Msgf(string, ...interface{}) {}
+func (Context) Send()                       {}
 
 func (c Context) Hinted(key string, obj LogHintedMarshaler) Emitter {
 	if obj == nil {

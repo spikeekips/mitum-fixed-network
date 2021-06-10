@@ -27,13 +27,14 @@ func init() {
 func ProcessEncoders(ctx context.Context) (context.Context, error) {
 	jenc := jsonenc.NewEncoder()
 	benc := bsonenc.NewEncoder()
-	if encs, err := encoder.LoadEncoders([]encoder.Encoder{jenc, benc}); err != nil {
+	encs, err := encoder.LoadEncoders([]encoder.Encoder{jenc, benc})
+	if err != nil {
 		return ctx, xerrors.Errorf("failed to load encoders: %w", err)
-	} else {
-		ctx = context.WithValue(ctx, config.ContextValueEncoders, encs)
-		ctx = context.WithValue(ctx, config.ContextValueJSONEncoder, jenc)
-		ctx = context.WithValue(ctx, config.ContextValueBSONEncoder, benc)
 	}
+
+	ctx = context.WithValue(ctx, config.ContextValueEncoders, encs)
+	ctx = context.WithValue(ctx, config.ContextValueJSONEncoder, jenc)
+	ctx = context.WithValue(ctx, config.ContextValueBSONEncoder, benc)
 
 	return ctx, nil
 }

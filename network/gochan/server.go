@@ -29,7 +29,7 @@ func NewServer(ch *Channel) *Server {
 	return sv
 }
 
-func (sv *Server) Initialize() error {
+func (*Server) Initialize() error {
 	return nil
 }
 
@@ -40,17 +40,17 @@ func (sv *Server) SetLogger(l logging.Logger) logging.Logger {
 	return sv.Log()
 }
 
-func (sv *Server) SetHasSealHandler(network.HasSealHandler)   {}
-func (sv *Server) SetGetSealsHandler(network.GetSealsHandler) {}
+func (*Server) SetHasSealHandler(network.HasSealHandler)   {}
+func (*Server) SetGetSealsHandler(network.GetSealsHandler) {}
 
 func (sv *Server) SetNewSealHandler(f network.NewSealHandler) {
 	sv.newSealHandler = f
 }
 
-func (sv *Server) SetNodeInfoHandler(network.NodeInfoHandler)           {}
-func (sv *Server) NodeInfoHandler() network.NodeInfoHandler             { return nil }
-func (sv *Server) SetBlockDataMapsHandler(network.BlockDataMapsHandler) {}
-func (sv *Server) SetBlockDataHandler(network.BlockDataHandler)         {}
+func (*Server) SetNodeInfoHandler(network.NodeInfoHandler)           {}
+func (*Server) NodeInfoHandler() network.NodeInfoHandler             { return nil }
+func (*Server) SetBlockDataMapsHandler(network.BlockDataMapsHandler) {}
+func (*Server) SetBlockDataHandler(network.BlockDataHandler)         {}
 
 func (sv *Server) run(ctx context.Context) error {
 end:

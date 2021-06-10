@@ -47,9 +47,8 @@ func ParseMap(m map[string]interface{}, key string, allowEmpty bool) (map[string
 	if i, found := m[key]; !found || i == nil {
 		if !allowEmpty {
 			return nil, xerrors.Errorf("empty map")
-		} else {
-			return nil, nil
 		}
+		return nil, nil
 	} else if n, ok := i.(map[string]interface{}); !ok {
 		return nil, xerrors.Errorf("invalid map, %T found", i)
 	} else {
@@ -61,9 +60,8 @@ func ParseType(m map[string]interface{}, allowEmpty bool) (string, error) {
 	if i, found := m["type"]; !found || i == nil {
 		if !allowEmpty {
 			return "", xerrors.Errorf("type is missing")
-		} else {
-			return "", nil
 		}
+		return "", nil
 	} else if s, ok := i.(string); !ok {
 		return "", xerrors.Errorf("invalid type, %T found", i)
 	} else {

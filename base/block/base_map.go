@@ -72,7 +72,7 @@ func NewBaseBlockDataMap(writerHint hint.Hint, height base.Height) BaseBlockData
 	}
 }
 
-func (bd BaseBlockDataMap) Hint() hint.Hint {
+func (BaseBlockDataMap) Hint() hint.Hint {
 	return BaseBlockDataMapHint
 }
 
@@ -188,10 +188,10 @@ func (bd BaseBlockDataMap) IsLocal() bool {
 	return false
 }
 
-func (bd BaseBlockDataMap) Exists(base string) error {
+func (bd BaseBlockDataMap) Exists(b string) error {
 	for i := range BlockData {
 		item := bd.items[BlockData[i]]
-		if err := item.Exists(base); err != nil {
+		if err := item.Exists(b); err != nil {
 			return err
 		}
 	}
@@ -212,11 +212,11 @@ func (bd BaseBlockDataMap) Item(dataType string) (BaseBlockDataMapItem, bool) {
 func (bd BaseBlockDataMap) SetItem(item BaseBlockDataMapItem) (BaseBlockDataMap, error) {
 	if _, found := bd.items[item.Type()]; !found {
 		return BaseBlockDataMap{}, xerrors.Errorf("unknown data type, %q of block data item", item.Type())
-	} else {
-		bd.items[item.Type()] = item
-
-		return bd, nil
 	}
+
+	bd.items[item.Type()] = item
+
+	return bd, nil
 }
 
 func (bd BaseBlockDataMap) Block() valuehash.Hash {
@@ -395,12 +395,12 @@ func (bd BaseBlockDataMapItem) URLBody() string {
 	}
 }
 
-func (bd BaseBlockDataMapItem) Exists(base string) error {
+func (bd BaseBlockDataMapItem) Exists(b string) error {
 	if len(bd.URLBody()) < 1 {
 		return os.ErrNotExist
 	}
 
-	if fi, err := os.Stat(filepath.Join(base, bd.URLBody())); err != nil {
+	if fi, err := os.Stat(filepath.Join(b, bd.URLBody())); err != nil {
 		return err
 	} else if fi.IsDir() {
 		return os.ErrInvalid

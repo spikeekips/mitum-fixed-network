@@ -32,27 +32,27 @@ func RunPprofs(flags *PprofFlags) (func() error, error) {
 
 	var exitHooks []func() error
 	if len(flags.TraceProf) > 0 {
-		if c, err := RunTracePprof(flags.TraceProf); err != nil {
+		c, err := RunTracePprof(flags.TraceProf)
+		if err != nil {
 			return nil, err
-		} else {
-			exitHooks = append(exitHooks, c)
 		}
+		exitHooks = append(exitHooks, c)
 	}
 
 	if len(flags.CPUProf) > 0 {
-		if c, err := RunCPUPprof(flags.CPUProf); err != nil {
+		c, err := RunCPUPprof(flags.CPUProf)
+		if err != nil {
 			return nil, err
-		} else {
-			exitHooks = append(exitHooks, c)
 		}
+		exitHooks = append(exitHooks, c)
 	}
 
 	if len(flags.MemProf) > 0 {
-		if c, err := RunMemPprof(flags.MemProf); err != nil {
+		c, err := RunMemPprof(flags.MemProf)
+		if err != nil {
 			return nil, err
-		} else {
-			exitHooks = append(exitHooks, c)
 		}
+		exitHooks = append(exitHooks, c)
 	}
 
 	return func() error {

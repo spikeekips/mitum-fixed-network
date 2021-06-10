@@ -165,11 +165,11 @@ func (no *BaseRateLimitTargetRule) SetIPNet(s string) error {
 		target = s
 	}
 
-	if _, i, err := net.ParseCIDR(target); err != nil {
+	_, i, err := net.ParseCIDR(target)
+	if err != nil {
 		return err
-	} else {
-		no.ipnet = i
-
-		return nil
 	}
+	no.ipnet = i
+
+	return nil
 }

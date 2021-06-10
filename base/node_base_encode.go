@@ -6,18 +6,14 @@ import (
 )
 
 func (bn *BaseNodeV0) unpack(enc encoder.Encoder, bad AddressDecoder, bpk key.PublickeyDecoder, url string) error {
-	var address Address
-	if a, err := bad.Encode(enc); err != nil {
+	address, err := bad.Encode(enc)
+	if err != nil {
 		return err
-	} else {
-		address = a
 	}
 
-	var pk key.Publickey
-	if k, err := bpk.Encode(enc); err != nil {
+	pk, err := bpk.Encode(enc)
+	if err != nil {
 		return err
-	} else {
-		pk = k
 	}
 
 	bn.address = address

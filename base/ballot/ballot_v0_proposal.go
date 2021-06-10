@@ -21,7 +21,7 @@ type ProposalFactV0 struct {
 	seals []valuehash.Hash
 }
 
-func (prf ProposalFactV0) Hint() hint.Hint {
+func (ProposalFactV0) Hint() hint.Hint {
 	return ProposalFactV0Hint
 }
 
@@ -110,11 +110,11 @@ func (pr ProposalV0) Hash() valuehash.Hash {
 	return pr.BaseBallotV0.Hash()
 }
 
-func (pr ProposalV0) Hint() hint.Hint {
+func (ProposalV0) Hint() hint.Hint {
 	return ProposalV0Hint
 }
 
-func (pr ProposalV0) Stage() base.Stage {
+func (ProposalV0) Stage() base.Stage {
 	return base.StageProposal
 }
 
@@ -159,12 +159,13 @@ func (pr ProposalV0) Fact() base.Fact {
 }
 
 func (pr *ProposalV0) Sign(pk key.Privatekey, networkID []byte) error {
-	if newBase, err := SignBaseBallotV0(pr, pr.BaseBallotV0, pk, networkID); err != nil {
+	newBase, err := SignBaseBallotV0(pr, pr.BaseBallotV0, pk, networkID)
+	if err != nil {
 		return err
-	} else {
-		pr.BaseBallotV0 = newBase
-		pr.BaseBallotV0 = pr.BaseBallotV0.SetHash(pr.GenerateHash())
 	}
+
+	pr.BaseBallotV0 = newBase
+	pr.BaseBallotV0 = pr.BaseBallotV0.SetHash(pr.GenerateHash())
 
 	return nil
 }

@@ -21,12 +21,11 @@ func HookNodepool(ctx context.Context) (context.Context, error) {
 	}
 
 	var l config.LocalNode
-	var nodeConfigs []config.RemoteNode
 	if err := config.LoadConfigContextValue(ctx, &l); err != nil {
 		return ctx, err
-	} else {
-		nodeConfigs = l.Nodes()
 	}
+
+	nodeConfigs := l.Nodes()
 
 	var nodepool *network.Nodepool
 	if err := LoadNodepoolContextValue(ctx, &nodepool); err != nil {
@@ -47,21 +46,20 @@ func HookNodepool(ctx context.Context) (context.Context, error) {
 		conf := nodeConfigs[i]
 
 		node := network.NewRemoteNode(conf.Address(), conf.Publickey(), conf.URL().String())
-		if ch, err := LoadNodeChannel(
+		ch, err := LoadNodeChannel(
 			conf.URL(),
 			encs,
 			policy.NetworkConnectionTimeout(),
-		); err != nil {
+		)
+		if err != nil {
 			return ctx, err
-		} else {
-			_ = node.SetChannel(ch)
 		}
+		_ = node.SetChannel(ch)
 
 		if err := nodepool.Add(node); err != nil {
 			return ctx, err
-		} else {
-			log.Debug().Str("added_node", node.Address().String()).Msg("node added to nodepool")
 		}
+		log.Debug().Str("added_node", node.Address().String()).Msg("node added to nodepool")
 	}
 
 	return ctx, nil

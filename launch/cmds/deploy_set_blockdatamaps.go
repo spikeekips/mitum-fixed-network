@@ -53,11 +53,11 @@ func (cmd *SetBlockDataMapsCommand) Run(version util.Version) error {
 	cmd.Log().Debug().Interface("node_url", cmd.URL).Msg("deploy set-blockdatamaps")
 
 	quicConfig := &quic.Config{HandshakeIdleTimeout: cmd.Timeout}
-	if i, err := quicnetwork.NewQuicClient(cmd.TLSInscure, quicConfig); err != nil {
+	i, err := quicnetwork.NewQuicClient(cmd.TLSInscure, quicConfig)
+	if err != nil {
 		return err
-	} else {
-		cmd.client = i
 	}
+	cmd.client = i
 
 	var heights []base.Height
 	var maps []block.BlockDataMap
@@ -133,11 +133,11 @@ func (cmd *SetBlockDataMapsCommand) loadMap(b []byte) (block.BlockDataMap, error
 	um := block.NewBaseBlockDataMap(m.Writer(), m.Height()).SetBlock(m.Block())
 	items := m.Items()
 	for i := range items {
-		if j, err := um.SetItem(items[i]); err != nil {
+		j, err := um.SetItem(items[i])
+		if err != nil {
 			return nil, err
-		} else {
-			um = j
 		}
+		um = j
 	}
 
 	var nm block.BlockDataMap
@@ -149,21 +149,19 @@ func (cmd *SetBlockDataMapsCommand) loadMap(b []byte) (block.BlockDataMap, error
 		nm = i
 	}
 
-	if i, err := cmd.JSONEncoder().Marshal(nm); err != nil {
+	i, err := cmd.JSONEncoder().Marshal(nm)
+	if err != nil {
 		return nil, xerrors.Errorf("failed to marshal map: %w", err)
-	} else {
-		_, _ = fmt.Fprintln(os.Stdout, string(i))
 	}
+	_, _ = fmt.Fprintln(os.Stdout, string(i))
 
 	return nm, nil
 }
 
 func (cmd *SetBlockDataMapsCommand) request(maps []block.BlockDataMap) error {
-	var body []byte
-	if i, err := cmd.JSONEncoder().Marshal(maps); err != nil {
+	body, err := cmd.JSONEncoder().Marshal(maps)
+	if err != nil {
 		return err
-	} else {
-		body = i
 	}
 
 	u := *cmd.URL
@@ -175,17 +173,14 @@ func (cmd *SetBlockDataMapsCommand) request(maps []block.BlockDataMap) error {
 	ctx, cancel := context.WithTimeout(context.Background(), cmd.Timeout)
 	defer cancel()
 
-	var res *http.Response
-	if i, c, err := cmd.client.Request(ctx, cmd.Timeout, u.String(), "POST", body, headers); err != nil {
+	res, c, err := cmd.client.Request(ctx, cmd.Timeout, u.String(), "POST", body, headers)
+	if err != nil {
 		return xerrors.Errorf("failed to request: %w", err)
-	} else {
-		defer func() {
-			_ = c()
-			_ = i.Body.Close()
-		}()
-
-		res = i
 	}
+	defer func() {
+		_ = c()
+		_ = res.Body.Close()
+	}()
 
 	if res.StatusCode != http.StatusOK {
 		if i, err := network.LoadProblemFromResponse(res); err == nil {

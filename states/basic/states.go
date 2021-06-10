@@ -367,10 +367,9 @@ func (ss *States) processSwitchStates(sctx StateSwitchContext) error {
 
 			if sctx.ToState() == base.StateBooting {
 				return xerrors.Errorf("failed to move to booting: %w", err)
-			} else {
-				<-time.After(time.Second * 1)
-				sctx = NewStateSwitchContext(ss.state, base.StateBooting).SetError(err)
 			}
+			<-time.After(time.Second * 1)
+			sctx = NewStateSwitchContext(ss.state, base.StateBooting).SetError(err)
 		}
 	}
 }
@@ -411,13 +410,12 @@ func (ss *States) switchState(sctx StateSwitchContext) error {
 	switch err = ss.exitState(sctx); {
 	case err == nil:
 	case xerrors.As(err, &nsctx):
-		if sctx.FromState() == nsctx.ToState() {
-			l.Debug().Msg("exit to state returns same from state context; ignore")
-		} else {
+		if sctx.FromState() != nsctx.ToState() {
 			l.Debug().Msg("exit to state returns state switch context; will switch state")
 
 			return err
 		}
+		l.Debug().Msg("exit to state returns same from state context; ignore")
 	}
 
 	switch err = ss.enterState(sctx); {
@@ -439,15 +437,15 @@ func (ss *States) exitState(sctx StateSwitchContext) error {
 	l := LoggerWithStateSwitchContext(sctx, ss.Log())
 
 	exitFunc := EmptySwitchFunc
-	if f, err := ss.states[sctx.FromState()].Exit(sctx); err != nil {
+	f, err := ss.states[sctx.FromState()].Exit(sctx)
+	if err != nil {
 		return err
-	} else {
-		if f != nil {
-			exitFunc = f
-		}
-
-		l.Debug().Str("state", sctx.FromState().String()).Msg("state exited")
 	}
+	if f != nil {
+		exitFunc = f
+	}
+
+	l.Debug().Str("state", sctx.FromState().String()).Msg("state exited")
 
 	var nsctx StateSwitchContext
 	switch err := exitFunc(); {
@@ -536,9 +534,8 @@ func (ss *States) processVoteproofInternal(voteproof base.Voteproof) error {
 
 	if err == nil || sctx.ToState() == ss.State() {
 		return ss.states[ss.State()].ProcessVoteproof(voteproof)
-	} else {
-		return err
 	}
+	return err
 }
 
 func (ss *States) processProposal(proposal ballot.Proposal) error {
@@ -661,9 +658,8 @@ func (ss *States) validateProposal(proposal ballot.Proposal) error {
 		}
 
 		return nil
-	} else {
-		return nil
 	}
+	return nil
 }
 
 func (ss *States) validateBallot(blt ballot.Ballot) error {
@@ -680,11 +676,9 @@ func (ss *States) voteBallot(blt ballot.Ballot) (base.Voteproof, error) {
 		return nil, nil
 	}
 
-	var voteproof base.Voteproof
-	if i, err := ss.ballotbox.Vote(blt); err != nil {
+	voteproof, err := ss.ballotbox.Vote(blt)
+	if err != nil {
 		return nil, xerrors.Errorf("failed to vote: %w", err)
-	} else {
-		voteproof = i
 	}
 
 	if !voteproof.IsFinished() || voteproof.IsClosed() {
@@ -735,13 +729,12 @@ func (ss *States) checkBallotVoteproof(blt ballot.Ballot) error {
 		l.Debug().Msg("old or same height voteproof received")
 
 		return nil
-	} else {
-		l.Debug().Msg("found higher voteproof found from ballot; process voteproof")
-
-		go ss.NewVoteproof(voteproof)
-
-		return nil
 	}
+	l.Debug().Msg("found higher voteproof found from ballot; process voteproof")
+
+	go ss.NewVoteproof(voteproof)
+
+	return nil
 }
 
 func (ss *States) cleanBallotbox(ctx context.Context) {

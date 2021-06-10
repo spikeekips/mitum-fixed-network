@@ -49,14 +49,6 @@ jobs:
          name: Run govet
          command: go vet -tags 'test' ./...
 
-      - run:
-         name: Install nargs
-         command: go get -u github.com/alexkohler/nargs/cmd/nargs
-
-      - run:
-         name: Run nargs
-         command: nargs -set_exit_status -named_returns -tests ./...
-
   go-test:
     <<: *defaults
     steps:

@@ -73,7 +73,7 @@ func (st StateV0) IsValid([]byte) error {
 	return nil
 }
 
-func (st StateV0) Hint() hint.Hint {
+func (StateV0) Hint() hint.Hint {
 	return StateV0Hint
 }
 

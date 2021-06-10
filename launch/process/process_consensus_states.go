@@ -71,17 +71,17 @@ func ProcessConsensusStates(ctx context.Context) (context.Context, error) {
 
 	var cs states.States
 	if suffrage.IsInside(nodepool.Local().Address()) {
-		if i, err := processConsensusStatesSuffrageNode(ctx, st, blockData, policy, nodepool, suffrage); err != nil {
+		i, err := processConsensusStatesSuffrageNode(ctx, st, blockData, policy, nodepool, suffrage)
+		if err != nil {
 			return ctx, err
-		} else {
-			cs = i
 		}
+		cs = i
 	} else {
-		if i, err := processConsensusStatesNoneSuffrageNode(ctx, st, blockData, policy, nodepool, suffrage); err != nil {
+		i, err := processConsensusStatesNoneSuffrageNode(ctx, st, blockData, policy, nodepool, suffrage)
+		if err != nil {
 			return ctx, err
-		} else {
-			cs = i
 		}
+		cs = i
 	}
 
 	if i, ok := cs.(logging.SetLogger); ok {
@@ -116,14 +116,14 @@ func processConsensusStatesSuffrageNode(
 	ballotbox := isaac.NewBallotbox(
 		suffrage.Nodes,
 		func() base.Threshold {
-			if t, err := base.NewThreshold(
+			t, err := base.NewThreshold(
 				uint(len(suffrage.Nodes())),
 				policy.ThresholdRatio(),
-			); err != nil {
+			)
+			if err != nil {
 				panic(err)
-			} else {
-				return t
 			}
+			return t
 		},
 	)
 	_ = ballotbox.SetLogger(log)

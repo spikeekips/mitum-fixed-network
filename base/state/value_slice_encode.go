@@ -17,15 +17,13 @@ func (sv *SliceValue) unpack(enc encoder.Encoder, h valuehash.Hash, bValue [][]b
 		v[i] = decoded
 	}
 
-	var b []byte
-	if usv, err := (SliceValue{}).set(v); err != nil {
+	usv, err := (SliceValue{}).set(v)
+	if err != nil {
 		return err
-	} else {
-		b = usv.b
 	}
 
 	sv.h = h
-	sv.b = b
+	sv.b = usv.b
 	sv.v = v
 
 	return nil

@@ -68,7 +68,7 @@ func (sl BaseSeal) IsValid(networkID []byte) error {
 	return nil
 }
 
-func (sl BaseSeal) Hint() hint.Hint {
+func (BaseSeal) Hint() hint.Hint {
 	return SealHint
 }
 
@@ -123,22 +123,17 @@ func (sl *BaseSeal) Sign(pk key.Privatekey, b []byte) error {
 	sl.signer = pk.Publickey()
 	sl.signedAt = localtime.UTCNow()
 
-	var bodyHash valuehash.Hash
-	if h, err := sl.GenerateBodyHash(); err != nil {
+	var err error
+	sl.bodyHash, err = sl.GenerateBodyHash()
+	if err != nil {
 		return err
-	} else {
-		bodyHash = h
 	}
 
-	var sig key.Signature
-	if s, err := pk.Sign(util.ConcatBytesSlice(bodyHash.Bytes(), b)); err != nil {
+	sl.signature, err = pk.Sign(util.ConcatBytesSlice(sl.bodyHash.Bytes(), b))
+	if err != nil {
 		return err
-	} else {
-		sig = s
 	}
 
-	sl.signature = sig
-	sl.bodyHash = bodyHash
 	sl.h = sl.GenerateHash()
 
 	return nil

@@ -76,17 +76,16 @@ func (st *BootingState) Enter(sctx StateSwitchContext) (func() error, error) {
 
 			return NewStateSwitchContext(base.StateBooting, base.StateJoining)
 		}, nil
-	} else {
-		return func() error {
-			if err := callback(); err != nil {
-				return err
-			}
-
-			st.Log().Debug().Msg("block checked; none-suffrage node moves to syncing")
-
-			return NewStateSwitchContext(base.StateBooting, base.StateSyncing)
-		}, nil
 	}
+	return func() error {
+		if err := callback(); err != nil {
+			return err
+		}
+
+		st.Log().Debug().Msg("block checked; none-suffrage node moves to syncing")
+
+		return NewStateSwitchContext(base.StateBooting, base.StateSyncing)
+	}, nil
 }
 
 func (st *BootingState) enterSyncing(callback func() error) (func() error, error) {

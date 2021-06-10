@@ -60,7 +60,7 @@ func NewBaseSuffrage(
 	}, nil
 }
 
-func (sf *BaseSuffrage) Initialize() error {
+func (*BaseSuffrage) Initialize() error {
 	return nil
 }
 
@@ -92,39 +92,39 @@ func (sf *BaseSuffrage) Acting(height base.Height, round base.Round) (base.Actin
 		return af.(base.ActingSuffrage), nil
 	}
 
-	if af, err := sf.electFunc(height, round); err != nil {
+	af, err := sf.electFunc(height, round)
+	if err != nil {
 		return af, err
-	} else {
-		sf.cache.Add(cacheKey, af)
-
-		return af, nil
 	}
+	sf.cache.Add(cacheKey, af)
+
+	return af, nil
 }
 
 func (sf *BaseSuffrage) IsActing(height base.Height, round base.Round, node base.Address) (bool, error) {
-	if af, err := sf.Acting(height, round); err != nil {
+	af, err := sf.Acting(height, round)
+	if err != nil {
 		return false, err
-	} else {
-		return af.Exists(node), nil
 	}
+	return af.Exists(node), nil
 }
 
 func (sf *BaseSuffrage) IsProposer(height base.Height, round base.Round, node base.Address) (bool, error) {
-	if af, err := sf.Acting(height, round); err != nil {
+	af, err := sf.Acting(height, round)
+	if err != nil {
 		return false, err
-	} else {
-		return af.Proposer().Equal(node), nil
 	}
+	return af.Proposer().Equal(node), nil
 }
 
 func (sf *BaseSuffrage) Nodes() []base.Address {
 	return sf.nodes
 }
 
-func (sf *BaseSuffrage) cacheKey(height base.Height, round base.Round) string {
+func (*BaseSuffrage) cacheKey(height base.Height, round base.Round) string {
 	return fmt.Sprintf("%d-%d", height.Int64(), round.Uint64())
 }
 
-func (sf *BaseSuffrage) Verbose() string {
+func (*BaseSuffrage) Verbose() string {
 	return ""
 }

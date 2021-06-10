@@ -16,10 +16,9 @@ func HookSetPolicy(ctx context.Context) (context.Context, error) {
 	var conf config.Policy
 	if err := config.LoadConfigContextValue(ctx, &l); err != nil {
 		return ctx, err
-	} else {
-		networkID = l.NetworkID()
-		conf = l.Policy()
 	}
+	networkID = l.NetworkID()
+	conf = l.Policy()
 
 	policy := isaac.NewLocalPolicy(networkID)
 

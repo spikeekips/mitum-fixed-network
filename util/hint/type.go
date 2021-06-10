@@ -11,7 +11,7 @@ var (
 	minTypeLength, MaxTypeLength = 2, 100
 )
 
-type Type string
+type Type string // revive:disable-line:redefines-builtin-id
 
 func (t Type) IsValid([]byte) error {
 	switch n := len(t); {

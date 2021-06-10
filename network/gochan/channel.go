@@ -34,11 +34,11 @@ func NewChannel(bufsize uint) *Channel {
 	}
 }
 
-func (ch *Channel) Initialize() error {
+func (*Channel) Initialize() error {
 	return nil
 }
 
-func (ch *Channel) URL() string {
+func (*Channel) URL() string {
 	return "gochan://"
 }
 
@@ -85,17 +85,17 @@ func (ch *Channel) BlockDataMaps(_ context.Context, hs []base.Height) ([]block.B
 		return nil, xerrors.Errorf("not supported")
 	}
 
-	if bds, err := ch.getBlockDataMaps(hs); err != nil {
+	bds, err := ch.getBlockDataMaps(hs)
+	if err != nil {
 		return nil, err
-	} else {
-		for i := range bds {
-			if err := bds[i].IsValid(nil); err != nil {
-				return nil, err
-			}
-		}
-
-		return bds, nil
 	}
+	for i := range bds {
+		if err := bds[i].IsValid(nil); err != nil {
+			return nil, err
+		}
+	}
+
+	return bds, nil
 }
 
 func (ch *Channel) SetBlockDataMapsHandler(f network.BlockDataMapsHandler) {

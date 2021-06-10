@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"path/filepath"
 	"time"
 
 	"github.com/alecthomas/kong"
@@ -36,8 +37,8 @@ var LogVars = kong.Vars{
 }
 
 type LogFlags struct {
-	Verbose   bool      `help:"verbose log output (default: false)" default:"${verbose}"`
-	LogColor  bool      `help:"show color log" default:"${log_color}"`
+	Verbose   bool      `help:"verbose log output (default: ${verbose})" default:"${verbose}"` // revive:disable-line:struct-tag,line-length-limit
+	LogColor  bool      `help:"show color log" default:"${log_color}"`                         // revive:disable-line:struct-tag,line-length-limit
 	LogLevel  LogLevel  `help:"log level {debug error warn info crit} (default: ${log_level})" default:"${log_level}"`
 	LogFormat LogFormat `help:"log format {json terminal} (default: ${log_format})" default:"${log_format}"`
 	LogFile   []string  `name:"log" help:"log file"`
@@ -87,17 +88,23 @@ func SetupLoggingFromFlags(flags *LogFlags, defaultout io.Writer) (logging.Logge
 	} else {
 		outs := make([]io.Writer, len(flags.LogFile))
 		for i, f := range flags.LogFile {
-			if out, err := LogOutput(f); err != nil {
+			out, err := LogOutput(f)
+			if err != nil {
 				return logging.Logger{}, err
-			} else {
-				outs[i] = out
 			}
+			outs[i] = out
 		}
 
 		output = zerolog.MultiLevelWriter(outs...)
 	}
 
-	return SetupLogging(output, zerolog.Level(flags.LogLevel), string(flags.LogFormat), flags.Verbose, flags.LogColor), nil
+	return SetupLogging(
+		output,
+		zerolog.Level(flags.LogLevel),
+		string(flags.LogFormat),
+		flags.Verbose,
+		flags.LogColor,
+	), nil
 }
 
 func SetupLogging(out io.Writer, level zerolog.Level, format string, verbose, forceColor bool) logging.Logger {
@@ -132,16 +139,16 @@ func SetupLogging(out io.Writer, level zerolog.Level, format string, verbose, fo
 }
 
 func LogOutput(f string) (io.Writer, error) {
-	if out, err := os.OpenFile(f, os.O_CREATE|os.O_RDWR|os.O_APPEND, 0o644); err != nil { // nolint
+	out, err := os.OpenFile(filepath.Clean(f), os.O_CREATE|os.O_RDWR|os.O_APPEND, 0o644) // nolint:gosec
+	if err != nil {
 		return nil, err
-	} else {
-		return diode.NewWriter(
-			out,
-			1000,
-			0,
-			func(missed int) {
-				fmt.Fprintf(os.Stderr, "zerolog: dropped %d log mesages\n", missed)
-			},
-		), nil
 	}
+	return diode.NewWriter(
+		out,
+		1000,
+		0,
+		func(missed int) {
+			_, _ = fmt.Fprintf(os.Stderr, "zerolog: dropped %d log mesages\n", missed)
+		},
+	), nil
 }

@@ -8,15 +8,16 @@ import (
 
 	"golang.org/x/xerrors"
 
+	"github.com/spikeekips/mitum/util"
 	"github.com/spikeekips/mitum/util/encoder"
 	"github.com/spikeekips/mitum/util/hint"
 )
 
 var (
-	jsonNULL       []byte = []byte("null")
-	jsonNULLLength int    = len(jsonNULL)
-	JSONType              = hint.Type("json-encoder")
-	jsonHint              = hint.NewHint(JSONType, "v0.0.1")
+	jsonNULL       = []byte("null")
+	jsonNULLLength = len(jsonNULL)
+	JSONType       = hint.Type("json-encoder")
+	jsonHint       = hint.NewHint(JSONType, "v0.0.1")
 )
 
 type Encoder struct {
@@ -34,19 +35,19 @@ func (je *Encoder) SetHintset(hintset *hint.Hintset) {
 	je.hintset = hintset
 }
 
-func (je Encoder) Hint() hint.Hint {
+func (Encoder) Hint() hint.Hint {
 	return jsonHint
 }
 
-func (je Encoder) Marshal(i interface{}) ([]byte, error) {
-	return Marshal(i)
+func (Encoder) Marshal(i interface{}) ([]byte, error) {
+	return util.JSON.Marshal(i)
 }
 
-func (je Encoder) Unmarshal(b []byte, i interface{}) error {
-	return Unmarshal(b, i)
+func (Encoder) Unmarshal(b []byte, i interface{}) error {
+	return util.JSON.Unmarshal(b, i)
 }
 
-func (je Encoder) UnmarshalArray(b []byte) ([][]byte, error) {
+func (Encoder) UnmarshalArray(b []byte) ([][]byte, error) {
 	var bs []json.RawMessage
 	if err := Unmarshal(b, &bs); err != nil {
 		return nil, err
@@ -148,10 +149,10 @@ func (je *Encoder) Unpack(b []byte, i interface{}) error {
 	if c, found := je.cache.Get(elem.Type()); found {
 		if packer, ok := c.(encoder.CachedPacker); !ok {
 			je.cache.Delete(elem.Type())
-		} else if fn, ok := packer.Unpack.(unpackFunc); !ok {
-			je.cache.Delete(elem.Type())
-		} else {
+		} else if fn, ok := packer.Unpack.(unpackFunc); ok {
 			return fn(b, i)
+		} else {
+			je.cache.Delete(elem.Type())
 		}
 	}
 
@@ -165,11 +166,11 @@ func (je *Encoder) Unpack(b []byte, i interface{}) error {
 	return cp.Unpack.(unpackFunc)(b, i)
 }
 
-func (je *Encoder) unpackValueDefault(b []byte, i interface{}) error {
+func (*Encoder) unpackValueDefault(b []byte, i interface{}) error {
 	return Unmarshal(b, i)
 }
 
-func (je Encoder) loadHint(b []byte) (hint.Hint, error) {
+func (Encoder) loadHint(b []byte) (hint.Hint, error) {
 	var m HintedHead
 	if err := Unmarshal(b, &m); err != nil {
 		return hint.Hint{}, err

@@ -39,7 +39,7 @@ func (dv DurationValue) Bytes() []byte {
 	return util.Int64ToBytes(dv.v.Nanoseconds())
 }
 
-func (dv DurationValue) Hint() hint.Hint {
+func (DurationValue) Hint() hint.Hint {
 	return DurationValueHint
 }
 

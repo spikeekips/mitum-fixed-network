@@ -21,7 +21,7 @@ func (bc *baseBlocksValidationChecker) checkIsValid(blk block.Manifest) error {
 	return blk.IsValid(bc.networkID)
 }
 
-func (bc *baseBlocksValidationChecker) checkPreviousBlock(current, next block.Manifest) error {
+func (*baseBlocksValidationChecker) checkPreviousBlock(current, next block.Manifest) error {
 	if next.Height() != current.Height()+1 {
 		return xerrors.Errorf("wrong height: current=%v next=%s", current.Height(), next.Height())
 	}

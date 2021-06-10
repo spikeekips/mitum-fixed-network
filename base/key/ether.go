@@ -90,13 +90,14 @@ func (ep EtherPrivatekey) Sign(input []byte) (Signature, error) {
 }
 
 func (ep *EtherPrivatekey) UnmarshalText(b []byte) error {
-	if k, err := NewEtherPrivatekeyFromString(string(b)); err != nil {
+	k, err := NewEtherPrivatekeyFromString(string(b))
+	if err != nil {
 		return err
-	} else {
-		*ep = k
-
-		return nil
 	}
+
+	*ep = k
+
+	return nil
 }
 
 type EtherPublickey struct {
@@ -153,11 +154,12 @@ func (ep EtherPublickey) Verify(input []byte, sig Signature) error {
 }
 
 func (ep *EtherPublickey) UnmarshalText(b []byte) error {
-	if k, err := NewEtherPublickeyFromString(string(b)); err != nil {
+	k, err := NewEtherPublickeyFromString(string(b))
+	if err != nil {
 		return err
-	} else {
-		*ep = k
-
-		return nil
 	}
+
+	*ep = k
+
+	return nil
 }

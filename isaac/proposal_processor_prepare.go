@@ -41,11 +41,10 @@ func (pp *DefaultProcessor) Prepare(ctx context.Context) (block.Block, error) {
 		}
 
 		return nil, err
-	} else {
-		pp.setState(prprocessor.Prepared)
-
-		return pp.blk, nil
 	}
+	pp.setState(prprocessor.Prepared)
+
+	return pp.blk, nil
 }
 
 func (pp *DefaultProcessor) prepare(ctx context.Context) error {
@@ -106,15 +105,15 @@ func (pp *DefaultProcessor) prepareOperations(ctx context.Context) error {
 	se := NewSealsExtracter(pp.nodepool.Local().Address(), pp.proposal.Node(), pp.st, pp.nodepool, seals)
 	_ = se.SetLogger(pp.Log())
 
-	if ops, err := se.Extract(ctx); err != nil {
+	ops, err := se.Extract(ctx)
+	if err != nil {
 		return xerrors.Errorf("failed to extract seals: %w", err)
-	} else {
-		ev.Int("operations", len(ops)).Msg("operations extracted from seals of proposal")
-
-		pp.operations = ops
-
-		return nil
 	}
+	ev.Int("operations", len(ops)).Msg("operations extracted from seals of proposal")
+
+	pp.operations = ops
+
+	return nil
 }
 
 func (pp *DefaultProcessor) process(ctx context.Context) error {
@@ -137,11 +136,7 @@ func (pp *DefaultProcessor) process(ctx context.Context) error {
 		return err
 	}
 
-	if err := pp.processBlockDataSessionSetStates(); err != nil {
-		return err
-	}
-
-	return nil
+	return pp.processBlockDataSessionSetStates()
 }
 
 func (pp *DefaultProcessor) processBlockDataSessionAddOperations() error {
@@ -205,14 +200,11 @@ func (pp *DefaultProcessor) processOperations(ctx context.Context) error {
 		return nil
 	}
 
-	var pool *storage.Statepool
-	if p, err := storage.NewStatepool(pp.st); err != nil {
+	pool, err := storage.NewStatepool(pp.st)
+	if err != nil {
 		return err
-	} else {
-		defer p.Done()
-
-		pool = p
 	}
+	defer pool.Done()
 
 	if len(pp.operations) > 0 {
 		var err error
@@ -274,11 +266,9 @@ func (pp *DefaultProcessor) prepareDatabaseSession(ctx context.Context) error {
 		_ = pp.setStatic("processor_prepare_database_session_elapsed", time.Since(started))
 	}()
 
-	var bs storage.DatabaseSession
-	if b, err := pp.st.NewSession(pp.blk); err != nil {
+	bs, err := pp.st.NewSession(pp.blk)
+	if err != nil {
 		return err
-	} else {
-		bs = b
 	}
 
 	if err := bs.SetBlock(ctx, pp.blk); err != nil {
@@ -306,25 +296,25 @@ func (pp *DefaultProcessor) processStatesTree(ctx context.Context, pool *storage
 
 	var co *prprocessor.ConcurrentOperationsProcessor
 	size := len(pp.operations)
-	if c, err := prprocessor.NewConcurrentOperationsProcessor(uint64(size), size, pool, pp.oprHintset); err != nil {
+	c, err := prprocessor.NewConcurrentOperationsProcessor(uint64(size), size, pool, pp.oprHintset)
+	if err != nil {
 		return err
-	} else {
-		_ = c.SetLogger(pp.Log())
-
-		co = c.Start(
-			ctx,
-			func(sp state.Processor) error {
-				switch found, err := pp.st.HasOperationFact(sp.(operation.Operation).Fact().Hash()); {
-				case err != nil:
-					return err
-				case found:
-					return operation.NewBaseReasonError("known operation")
-				default:
-					return nil
-				}
-			},
-		)
 	}
+	_ = c.SetLogger(pp.Log())
+
+	co = c.Start(
+		ctx,
+		func(sp state.Processor) error {
+			switch found, err := pp.st.HasOperationFact(sp.(operation.Operation).Fact().Hash()); {
+			case err != nil:
+				return err
+			case found:
+				return operation.NewBaseReasonError("known operation")
+			default:
+				return nil
+			}
+		},
+	)
 
 	if err := pp.concurrentProcessStatesTree(co, pool); err != nil {
 		pp.Log().Error().Err(err).Msg("failed to process statesTree")
@@ -356,26 +346,28 @@ func (pp *DefaultProcessor) concurrentProcessStatesTree(
 	}
 
 	if pool.IsUpdated() {
-		if tr, states, err := co.StatesTree(); err != nil {
+		tr, states, err := co.StatesTree()
+		if err != nil {
 			return err
-		} else {
-			pp.statesTree = tr
-			pp.states = states
 		}
+
+		pp.statesTree = tr
+		pp.states = states
 	}
 
-	if tr, err := co.OperationsTree(); err != nil {
+	tr, err := co.OperationsTree()
+	if err != nil {
 		return err
-	} else {
-		added := pool.AddedOperations()
-		for i := range added {
-			pp.operations = append(pp.operations, added[i])
-		}
-
-		pp.operationsTree = tr
-
-		return nil
 	}
+
+	added := pool.AddedOperations()
+	for i := range added {
+		pp.operations = append(pp.operations, added[i])
+	}
+
+	pp.operationsTree = tr
+
+	return nil
 }
 
 func (pp *DefaultProcessor) prepareBlockDataSession(context.Context) error {
@@ -384,13 +376,13 @@ func (pp *DefaultProcessor) prepareBlockDataSession(context.Context) error {
 		_ = pp.setStatic("processor_prepare_blockdata_session_elapsed", time.Since(started))
 	}()
 
-	if i, err := pp.blockData.NewSession(pp.proposal.Height()); err != nil {
+	i, err := pp.blockData.NewSession(pp.proposal.Height())
+	if err != nil {
 		pp.Log().Error().Err(err).Msg("failed to make new block database session")
 
 		return err
-	} else {
-		pp.blockDataSession = i
 	}
+	pp.blockDataSession = i
 
 	if vp := pp.initVoteproof; vp != nil {
 		if err := pp.blockDataSession.SetINITVoteproof(vp); err != nil {

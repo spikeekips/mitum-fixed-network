@@ -27,7 +27,7 @@ type ProposalProcessor interface {
 
 type DefaultProposalProcessor struct{}
 
-func (no DefaultProposalProcessor) ProposalProcessorType() string {
+func (DefaultProposalProcessor) ProposalProcessorType() string {
 	return "default"
 }
 
@@ -36,7 +36,7 @@ type ErrorProposalProcessor struct {
 	WhenSavePoints    []ErrorPoint
 }
 
-func (no ErrorProposalProcessor) ProposalProcessorType() string {
+func (ErrorProposalProcessor) ProposalProcessorType() string {
 	return "error"
 }
 

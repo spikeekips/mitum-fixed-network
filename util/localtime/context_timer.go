@@ -86,19 +86,6 @@ func (ct *ContextTimer) Reset() error {
 	return nil
 }
 
-func (ct *ContextTimer) Stop() error {
-	if err := ct.ContextDaemon.Stop(); err != nil {
-		return err
-	}
-
-	ct.Lock()
-	defer ct.Unlock()
-
-	close(ct.runchan)
-
-	return nil
-}
-
 func (ct *ContextTimer) SetLogger(l logging.Logger) logging.Logger {
 	_ = ct.ContextDaemon.SetLogger(l)
 
@@ -168,11 +155,9 @@ func (ct *ContextTimer) prepareCallback(ctx context.Context, errchan chan error)
 	}
 
 	count := ct.count()
-	var interval time.Duration
-	if i := intervalfunc(count); i < time.Nanosecond {
-		return xerrors.Errorf("invalid interval; too narrow, %v", i)
-	} else {
-		interval = i
+	interval := intervalfunc(count)
+	if interval < time.Nanosecond {
+		return xerrors.Errorf("invalid interval; too narrow, %v", interval)
 	}
 
 	go func(

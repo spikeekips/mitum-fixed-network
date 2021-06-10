@@ -35,11 +35,7 @@ func NewBytesForFactSignature(fact base.Fact, b []byte) []byte {
 }
 
 func NewFactSignature(signer key.Privatekey, fact base.Fact, b []byte) (key.Signature, error) {
-	if fs, err := signer.Sign(NewBytesForFactSignature(fact, b)); err != nil {
-		return nil, err
-	} else {
-		return fs, nil
-	}
+	return signer.Sign(NewBytesForFactSignature(fact, b))
 }
 
 func IsValidFactSign(fact base.Fact, fs FactSign, b []byte) error {
@@ -80,7 +76,7 @@ func RawBaseFactSign(signer key.Publickey, signature key.Signature, signedAt tim
 	return BaseFactSign{signer: signer, signature: signature, signedAt: signedAt}
 }
 
-func (fs BaseFactSign) Hint() hint.Hint {
+func (BaseFactSign) Hint() hint.Hint {
 	return BaseFactSignHint
 }
 

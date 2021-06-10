@@ -20,11 +20,11 @@ func (pr *ProposalV0) unpack(
 	}
 
 	if bVoteproof != nil {
-		if i, err := base.DecodeVoteproof(enc, bVoteproof); err != nil {
+		i, err := base.DecodeVoteproof(enc, bVoteproof)
+		if err != nil {
 			return err
-		} else {
-			pr.voteproof = i
 		}
+		pr.voteproof = i
 	}
 
 	return nil

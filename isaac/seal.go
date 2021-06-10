@@ -56,19 +56,19 @@ func (se *SealsExtracter) Extract(ctx context.Context) ([]operation.Operation, e
 	var opsCount int
 	opsBySeals := map[string][]operation.Operation{}
 
-	if i, f, err := se.extractFromStorage(ctx, opsBySeals); err != nil {
+	i, f, err := se.extractFromStorage(ctx, opsBySeals)
+	if err != nil {
 		return nil, err
-	} else {
-		opsCount += i
-		notFounds = f
 	}
+	opsCount += i
+	notFounds = f
 
 	if len(notFounds) > 0 {
-		if i, err := se.extractFromChannel(ctx, notFounds, opsBySeals); err != nil {
+		i, err := se.extractFromChannel(ctx, notFounds, opsBySeals)
+		if err != nil {
 			return nil, err
-		} else {
-			opsCount += i
 		}
+		opsCount += i
 	}
 
 	se.Log().Debug().Int("operations", opsCount).Msg("extracted seals and it's operations")
@@ -168,9 +168,7 @@ func (se *SealsExtracter) filterFounds(ops []operation.Operation) []operation.Op
 	var nops []operation.Operation
 	for i := range ops {
 		h := ops[i].Hash().String()
-		if _, found := se.founds[h]; found {
-			continue
-		} else {
+		if _, found := se.founds[h]; !found {
 			nops = append(nops, ops[i])
 
 			se.founds[h] = struct{}{}
@@ -180,7 +178,7 @@ func (se *SealsExtracter) filterFounds(ops []operation.Operation) []operation.Op
 	return nops
 }
 
-func (se *SealsExtracter) filterDuplicated(ops []operation.Operation) []operation.Operation {
+func (*SealsExtracter) filterDuplicated(ops []operation.Operation) []operation.Operation {
 	if len(ops) < 1 {
 		return nil
 	}
@@ -190,9 +188,7 @@ func (se *SealsExtracter) filterDuplicated(ops []operation.Operation) []operatio
 	for i := range ops {
 		op := ops[i]
 		fk := op.Hash().String()
-		if _, found := founds[fk]; found {
-			continue
-		} else {
+		if _, found := founds[fk]; !found {
 			nops = append(nops, op)
 			founds[fk] = struct{}{}
 		}
@@ -263,11 +259,11 @@ func (se *SealsExtracter) fromChannel(notFounds []valuehash.Hash) (map[string][]
 	bySeals := map[string][]operation.Operation{}
 	for i := range received {
 		sl := received[i]
-		if os, ok := sl.(operation.Seal); !ok {
+		os, ok := sl.(operation.Seal)
+		if !ok {
 			return nil, xerrors.Errorf("not operation.Seal: %T", sl)
-		} else {
-			bySeals[sl.Hash().String()] = os.Operations()
 		}
+		bySeals[sl.Hash().String()] = os.Operations()
 	}
 
 	return bySeals, nil

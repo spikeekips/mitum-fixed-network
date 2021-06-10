@@ -83,13 +83,14 @@ func (bt BTCPrivatekey) Sign(input []byte) (Signature, error) {
 }
 
 func (bt *BTCPrivatekey) UnmarshalText(b []byte) error {
-	if k, err := NewBTCPrivatekeyFromString(string(b)); err != nil {
+	k, err := NewBTCPrivatekeyFromString(string(b))
+	if err != nil {
 		return err
-	} else {
-		*bt = k
-
-		return nil
 	}
+
+	*bt = k
+
+	return nil
 }
 
 type BTCPublickey struct {
@@ -142,11 +143,12 @@ func (bt BTCPublickey) Verify(input []byte, sig Signature) error {
 }
 
 func (bt *BTCPublickey) UnmarshalText(b []byte) error {
-	if k, err := NewBTCPublickeyFromString(string(b)); err != nil {
+	k, err := NewBTCPublickeyFromString(string(b))
+	if err != nil {
 		return err
-	} else {
-		*bt = k
-
-		return nil
 	}
+
+	*bt = k
+
+	return nil
 }

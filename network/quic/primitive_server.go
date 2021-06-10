@@ -132,7 +132,7 @@ func (qs *PrimitiveQuicServer) run(ctx context.Context) error {
 	return nil
 }
 
-func (qs *PrimitiveQuicServer) stop(server *http3.Server) error {
+func (*PrimitiveQuicServer) stop(server *http3.Server) error {
 	if err := server.Close(); err != nil {
 		return err
 	}
@@ -140,11 +140,7 @@ func (qs *PrimitiveQuicServer) stop(server *http3.Server) error {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second*5)
 	defer cancel()
 
-	if err := server.Shutdown(ctx); err != nil {
-		return err
-	}
-
-	return nil
+	return server.Shutdown(ctx)
 }
 
 func EncoderFromHeader(header http.Header, encs *encoder.Encoders, enc encoder.Encoder) (encoder.Encoder, error) {

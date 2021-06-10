@@ -53,7 +53,7 @@ func (ts *Timers) SetLogger(l logging.Logger) logging.Logger {
 }
 
 // Start of Timers does nothing
-func (ts *Timers) Start() error {
+func (*Timers) Start() error {
 	return nil
 }
 
@@ -84,9 +84,7 @@ func (ts *Timers) Stop() error {
 	wg.Wait()
 
 	for id := range ts.timers {
-		if timer := ts.timers[id]; timer == nil {
-			continue
-		} else {
+		if timer := ts.timers[id]; timer != nil {
 			ts.putTimer(timer)
 		}
 	}
@@ -263,7 +261,7 @@ func (ts *Timers) traverse(callback func(Timer), ids []TimerID) error {
 	return nil
 }
 
-func (ts *Timers) putTimer(timer Timer) {
+func (*Timers) putTimer(timer Timer) {
 	if t, ok := timer.(*ContextTimer); ok {
 		ContextTimerPoolPut(t)
 	}

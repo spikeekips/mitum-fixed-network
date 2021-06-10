@@ -30,9 +30,8 @@ func (rr RateLimitRule) Rate() limiter.Rate {
 func (rr RateLimitRule) Match(ip net.IP) bool {
 	if rr.ipnet == nil {
 		return false
-	} else {
-		return rr.ipnet.Contains(ip)
 	}
+	return rr.ipnet.Contains(ip)
 }
 
 type RateLimit struct {
@@ -106,11 +105,9 @@ func (mw *RateLimitMiddleware) limit(w http.ResponseWriter, r *http.Request) boo
 		return true
 	}
 
-	var rctx limiter.Context
-	if i, err := mw.store.Get(r.Context(), ip.String(), rate); err != nil {
+	rctx, err := mw.store.Get(r.Context(), ip.String(), rate)
+	if err != nil {
 		return false
-	} else {
-		rctx = i
 	}
 
 	w.Header().Add("X-RateLimit-Limit", strconv.FormatInt(rctx.Limit, 10))

@@ -24,17 +24,17 @@ func NewRoundrobinSuffrage(
 ) (*RoundrobinSuffrage, error) {
 	sf := &RoundrobinSuffrage{getManifestFunc: getManifestFunc}
 
-	if b, err := NewBaseSuffrage(
+	b, err := NewBaseSuffrage(
 		"roundrobin-suffrage",
 		nodes,
 		numberOfActing,
 		sf.elect,
 		cacheSize,
-	); err != nil {
+	)
+	if err != nil {
 		return nil, err
-	} else {
-		sf.BaseSuffrage = b
 	}
+	sf.BaseSuffrage = b
 
 	return sf, nil
 }
@@ -100,7 +100,8 @@ func (sf *RoundrobinSuffrage) Verbose() string {
 		"number_of_acting": sf.NumberOfActing(),
 	}
 
-	if b, err := jsonenc.Marshal(m); err != nil {
+	b, err := jsonenc.Marshal(m)
+	if err != nil {
 		_, _ = fmt.Fprintf(
 			os.Stderr,
 			"%+v\n",
@@ -108,7 +109,6 @@ func (sf *RoundrobinSuffrage) Verbose() string {
 		)
 
 		return sf.Name()
-	} else {
-		return string(b)
 	}
+	return string(b)
 }

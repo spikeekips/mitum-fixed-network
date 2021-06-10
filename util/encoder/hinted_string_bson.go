@@ -21,12 +21,12 @@ func (hs *HintedString) UnmarshalBSONValue(t bsontype.Type, b []byte) error {
 		return xerrors.Errorf("can not read string")
 	}
 
-	if h, us, err := hint.ParseHintedString(s); err != nil {
+	h, us, err := hint.ParseHintedString(s)
+	if err != nil {
 		return err
-	} else {
-		hs.h = h
-		hs.s = us
 	}
+	hs.h = h
+	hs.s = us
 
 	return nil
 }

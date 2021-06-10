@@ -14,6 +14,6 @@ func NewFS(root string) FS {
 	return FS{root: root}
 }
 
-func (fs FS) Open(p string) (fs.File, error) {
-	return os.Open(filepath.Clean(filepath.Join(fs.root, p)))
+func (f FS) Open(p string) (fs.File, error) {
+	return os.Open(filepath.Clean(filepath.Join(f.root, p)))
 }

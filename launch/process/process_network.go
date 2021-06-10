@@ -41,12 +41,10 @@ func init() {
 
 func ProcessQuicNetwork(ctx context.Context) (context.Context, error) {
 	var ln config.LocalNode
-	var conf config.LocalNetwork
 	if err := config.LoadConfigContextValue(ctx, &ln); err != nil {
 		return ctx, err
-	} else {
-		conf = ln.Network()
 	}
+	conf := ln.Network()
 
 	var encs *encoder.Encoders
 	if err := config.LoadEncodersContextValue(ctx, &encs); err != nil {
@@ -58,32 +56,28 @@ func ProcessQuicNetwork(ctx context.Context) (context.Context, error) {
 		return ctx, err
 	}
 
-	var ca cache.Cache
-	if c, err := cache.NewCacheFromURI(conf.Cache().String()); err != nil {
+	ca, err := cache.NewCacheFromURI(conf.Cache().String())
+	if err != nil {
 		return ctx, err
-	} else {
-		ca = c
 	}
 
-	if nt, err := NewNetworkServer(conf.Bind().Host, conf.URL(), encs, ca); err != nil {
+	nt, err := NewNetworkServer(conf.Bind().Host, conf.URL(), encs, ca)
+	if err != nil {
 		return ctx, err
-	} else {
-		if i, ok := nt.(logging.SetLogger); ok {
-			_ = i.SetLogger(l)
-		}
-
-		ctx = context.WithValue(ctx, ContextValueNetwork, nt)
-
-		return ctx, nil
 	}
+	if i, ok := nt.(logging.SetLogger); ok {
+		_ = i.SetLogger(l)
+	}
+
+	ctx = context.WithValue(ctx, ContextValueNetwork, nt)
+
+	return ctx, nil
 }
 
 func NewNetworkServer(bind string, u *url.URL, encs *encoder.Encoders, ca cache.Cache) (network.Server, error) {
-	var je encoder.Encoder
-	if e, err := encs.Encoder(jsonenc.JSONType, ""); err != nil {
+	je, err := encs.Encoder(jsonenc.JSONType, "")
+	if err != nil {
 		return nil, xerrors.Errorf("json encoder needs for quic-network: %w", err)
-	} else {
-		je = e
 	}
 
 	var certs []tls.Certificate
@@ -111,27 +105,25 @@ func LoadNodeChannel(
 	encs *encoder.Encoders,
 	connectionTimeout time.Duration,
 ) (network.Channel, error) {
-	var je encoder.Encoder
-	if e, err := encs.Encoder(jsonenc.JSONType, ""); err != nil {
+	je, err := encs.Encoder(jsonenc.JSONType, "")
+	if err != nil {
 		return nil, xerrors.Errorf("json encoder needs for quic-network: %w", err)
-	} else {
-		je = e
 	}
 
 	switch u.Scheme {
 	case "quic":
 		quicConfig := &quic.Config{HandshakeIdleTimeout: connectionTimeout}
-		if ch, err := quicnetwork.NewChannel(
+		ch, err := quicnetwork.NewChannel(
 			u.String(),
 			100,
 			quicConfig,
 			encs,
 			je,
-		); err != nil {
+		)
+		if err != nil {
 			return nil, err
-		} else {
-			return ch, nil
 		}
+		return ch, nil
 	default:
 		return nil, xerrors.Errorf("not supported publish URL, %v", u.String())
 	}

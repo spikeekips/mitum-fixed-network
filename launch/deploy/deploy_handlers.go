@@ -76,14 +76,14 @@ func newBaseDeployHandler(
 }
 
 func (dh *baseDeployHandler) rateLimit(name string, handler http.Handler) http.Handler {
-	if i, found := dh.handlerMap[name]; !found {
+	i, found := dh.handlerMap[name]
+	if !found {
 		return handler
-	} else {
-		return process.NewRateLimitMiddleware(
-			process.NewRateLimit(i, limiter.Rate{Limit: -1}),
-			dh.store,
-		).Middleware(handler)
 	}
+	return process.NewRateLimitMiddleware(
+		process.NewRateLimit(i, limiter.Rate{Limit: -1}),
+		dh.store,
+	).Middleware(handler)
 }
 
 type deployHandlers struct {
@@ -94,11 +94,9 @@ type deployHandlers struct {
 }
 
 func newDeployHandlers(ctx context.Context, handler func(string) *mux.Route) (*deployHandlers, error) {
-	var base *baseDeployHandler
-	if i, err := newBaseDeployHandler(ctx, "deploy-handlers", handler); err != nil {
+	base, err := newBaseDeployHandler(ctx, "deploy-handlers", handler)
+	if err != nil {
 		return nil, err
-	} else {
-		base = i
 	}
 
 	var db storage.Database

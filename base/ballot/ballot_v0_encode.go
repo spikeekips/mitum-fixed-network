@@ -11,7 +11,7 @@ import (
 	"github.com/spikeekips/mitum/util/valuehash"
 )
 
-func (bb BaseBallotV0) unpack(
+func (BaseBallotV0) unpack(
 	enc encoder.Encoder,
 	h valuehash.Hash,
 	bSigner key.PublickeyDecoder,
@@ -24,18 +24,14 @@ func (bb BaseBallotV0) unpack(
 	factSignature key.Signature,
 ) (BaseBallotV0, BaseBallotFactV0, error) {
 	// signer
-	var signer key.Publickey
-	if k, err := bSigner.Encode(enc); err != nil {
+	signer, err := bSigner.Encode(enc)
+	if err != nil {
 		return BaseBallotV0{}, BaseBallotFactV0{}, err
-	} else {
-		signer = k
 	}
 
-	var node base.Address
-	if n, err := bNode.Encode(enc); err != nil {
+	node, err := bNode.Encode(enc)
+	if err != nil {
 		return BaseBallotV0{}, BaseBallotFactV0{}, err
-	} else {
-		node = n
 	}
 
 	return BaseBallotV0{
@@ -77,7 +73,7 @@ func (bb BaseBallotV0) unpackBSON(b []byte, enc *bsonenc.Encoder) (
 		nbb.H, nbb.SN, nbb.SG, nbb.SA, nbb.HT, nbb.RD, nbb.N, nbb.BH, nbb.FSG)
 }
 
-func (bf BaseBallotFactV0) unpack(_ encoder.Encoder, height base.Height, round base.Round) (
+func (BaseBallotFactV0) unpack(_ encoder.Encoder, height base.Height, round base.Round) (
 	BaseBallotFactV0, error,
 ) {
 	return NewBaseBallotFactV0(height, round), nil

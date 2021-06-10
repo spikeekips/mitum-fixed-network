@@ -14,11 +14,9 @@ var ContextValueNotFoundError = errors.NewError("not found in context")
 type ContextKey string
 
 func LoadFromContextValue(ctx context.Context, key ContextKey, t interface{}) error {
-	var cv interface{}
-	if i := ctx.Value(key); i == nil {
+	cv := ctx.Value(key)
+	if cv == nil {
 		return ContextValueNotFoundError.Errorf(string(key))
-	} else {
-		cv = i
 	}
 
 	value := reflect.ValueOf(t)

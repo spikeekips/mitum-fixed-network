@@ -69,9 +69,8 @@ func (ne *NError) Is(err error) bool {
 	var e *NError
 	if !xerrors.As(err, &e) {
 		return false
-	} else {
-		return e.id == ne.id
 	}
+	return e.id == ne.id
 }
 
 func (ne *NError) As(target interface{}) bool {

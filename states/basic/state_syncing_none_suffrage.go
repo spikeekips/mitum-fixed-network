@@ -188,11 +188,9 @@ func (st *SyncingStateNoneSuffrage) SetLogger(logger logging.Logger) logging.Log
 }
 
 func (st *SyncingStateNoneSuffrage) Enter(sctx StateSwitchContext) (func() error, error) {
-	var callback func() error
-	if i, err := st.BaseSyncingState.Enter(sctx); err != nil {
+	callback, err := st.BaseSyncingState.Enter(sctx)
+	if err != nil {
 		return nil, err
-	} else {
-		callback = i
 	}
 
 	return func() error {
@@ -205,11 +203,9 @@ func (st *SyncingStateNoneSuffrage) Enter(sctx StateSwitchContext) (func() error
 }
 
 func (st *SyncingStateNoneSuffrage) Exit(sctx StateSwitchContext) (func() error, error) {
-	var callback func() error
-	if i, err := st.BaseSyncingState.Exit(sctx); err != nil {
+	callback, err := st.BaseSyncingState.Exit(sctx)
+	if err != nil {
 		return nil, err
-	} else {
-		callback = i
 	}
 
 	return func() error {

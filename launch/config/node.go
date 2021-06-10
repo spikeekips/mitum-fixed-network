@@ -37,13 +37,13 @@ func (no BaseRemoteNode) Address() base.Address {
 }
 
 func (no *BaseRemoteNode) SetAddress(s string) error {
-	if address, err := base.DecodeAddressFromString(no.enc, s); err != nil {
+	address, err := base.DecodeAddressFromString(no.enc, s)
+	if err != nil {
 		return err
-	} else {
-		no.address = address
-
-		return nil
 	}
+	no.address = address
+
+	return nil
 }
 
 func (no BaseRemoteNode) Publickey() key.Publickey {
@@ -51,11 +51,11 @@ func (no BaseRemoteNode) Publickey() key.Publickey {
 }
 
 func (no *BaseRemoteNode) SetPublickey(s string) error {
-	if pub, err := key.DecodePublickey(no.enc, s); err != nil {
+	pub, err := key.DecodePublickey(no.enc, s)
+	if err != nil {
 		return err
-	} else {
-		no.publickey = pub
-
-		return nil
 	}
+	no.publickey = pub
+
+	return nil
 }

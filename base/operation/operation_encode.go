@@ -20,11 +20,11 @@ func (bo *BaseOperation) unpack(enc encoder.Encoder, ht hint.Hint, h valuehash.H
 
 	ufs := make([]FactSign, len(fs))
 	for i := range fs {
-		if f, err := DecodeFactSign(enc, fs[i]); err != nil {
+		f, err := DecodeFactSign(enc, fs[i])
+		if err != nil {
 			return err
-		} else {
-			ufs[i] = f
 		}
+		ufs[i] = f
 	}
 
 	bo.ht = ht

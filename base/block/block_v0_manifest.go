@@ -58,7 +58,7 @@ func (bm ManifestV0) IsValid(networkID []byte) error {
 	return nil
 }
 
-func (bm ManifestV0) Hint() hint.Hint {
+func (ManifestV0) Hint() hint.Hint {
 	return ManifestV0Hint
 }
 

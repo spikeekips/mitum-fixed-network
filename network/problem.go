@@ -47,7 +47,7 @@ func NewProblemFromError(err error) Problem {
 	}
 }
 
-func (pr Problem) Hint() hint.Hint {
+func (Problem) Hint() hint.Hint {
 	return ProblemHint
 }
 

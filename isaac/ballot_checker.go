@@ -73,11 +73,8 @@ func (bc *BallotChecker) InSuffrage() (bool, error) {
 
 // CheckSigning checks node signed by it's valid key.
 func (bc *BallotChecker) CheckSigning() (bool, error) {
-	if err := CheckBallotSigning(bc.ballot, bc.nodepool); err != nil {
-		return false, err
-	} else {
-		return true, nil
-	}
+	err := CheckBallotSigning(bc.ballot, bc.nodepool)
+	return err == nil, err
 }
 
 // CheckWithLastVoteproof checks Ballot.Height() and Ballot.Round() with
@@ -107,30 +104,29 @@ func (bc *BallotChecker) CheckWithLastVoteproof() (bool, error) {
 
 // CheckProposalInACCEPTBallot checks ACCEPT ballot should have valid proposal.
 func (bc *BallotChecker) CheckProposalInACCEPTBallot() (bool, error) {
-	var ph valuehash.Hash
-	if i, ok := bc.ballot.(ballot.ACCEPTBallot); !ok {
+	i, ok := bc.ballot.(ballot.ACCEPTBallot)
+	if !ok {
 		return true, nil
-	} else {
-		ph = i.Proposal()
 	}
+	ph := i.Proposal()
 
 	var proposal ballot.Proposal
 	if i, found, err := bc.database.Seal(ph); err != nil {
 		return false, err
 	} else if found {
-		if j, ok := i.(ballot.Proposal); !ok {
+		j, ok := i.(ballot.Proposal)
+		if !ok {
 			return false, xerrors.Errorf("not proposal in accept ballot, %T", i)
-		} else {
-			proposal = j
 		}
+		proposal = j
 	}
 
 	if proposal == nil { // NOTE if not found, request proposal from node of ballot
-		if i, err := bc.requestProposal(bc.ballot.Node(), ph); err != nil {
+		i, err := bc.requestProposal(bc.ballot.Node(), ph)
+		if err != nil {
 			return false, err
-		} else {
-			proposal = i
 		}
+		proposal = i
 	}
 
 	if bc.ballot.Height() != proposal.Height() {
@@ -145,12 +141,11 @@ func (bc *BallotChecker) CheckProposalInACCEPTBallot() (bool, error) {
 }
 
 func (bc *BallotChecker) CheckVoteproof() (bool, error) {
-	var voteproof base.Voteproof
-	if i, ok := bc.ballot.(base.Voteproofer); !ok {
+	i, ok := bc.ballot.(base.Voteproofer)
+	if !ok {
 		return true, nil
-	} else {
-		voteproof = i.Voteproof()
 	}
+	voteproof := i.Voteproof()
 
 	vc := NewVoteProofChecker(voteproof, bc.policy, bc.suffrage)
 	_ = vc.SetLogger(bc.Log())
@@ -209,11 +204,9 @@ func (bc *BallotChecker) requestProposal(address base.Address, h valuehash.Hash)
 }
 
 func CheckBallotSigning(blt ballot.Ballot, nodepool *network.Nodepool) error {
-	var node base.Node
-	if n, found := nodepool.Node(blt.Node()); !found {
+	node, found := nodepool.Node(blt.Node())
+	if !found {
 		return xerrors.Errorf("node not found")
-	} else {
-		node = n
 	}
 
 	if !blt.Signer().Equal(node.Publickey()) {

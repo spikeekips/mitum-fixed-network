@@ -49,17 +49,14 @@ func (cmd *DeployKeyRevokeCommand) Run(version util.Version) error {
 func (cmd *DeployKeyRevokeCommand) requestRevoke() error {
 	path := deploy.QuicHandlerPathDeployKeyKeyPrefix + "/" + cmd.DeployKey
 
-	var res *http.Response
-	if i, c, err := cmd.requestWithToken(path, "DELETE"); err != nil {
+	res, c, err := cmd.requestWithToken(path, "DELETE")
+	if err != nil {
 		return xerrors.Errorf("failed to revoke deploy key: %w", err)
-	} else {
-		defer func() {
-			_ = c()
-			_ = i.Body.Close()
-		}()
-
-		res = i
 	}
+	defer func() {
+		_ = c()
+		_ = res.Body.Close()
+	}()
 
 	if res.StatusCode == http.StatusOK {
 		cmd.Log().Info().Str("deploy_key", cmd.DeployKey).Msg("deploy key revoked")

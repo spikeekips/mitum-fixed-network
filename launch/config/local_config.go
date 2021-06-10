@@ -33,13 +33,13 @@ func (no *DefaultLocalConfig) SyncInterval() time.Duration {
 }
 
 func (no *DefaultLocalConfig) SetSyncInterval(s string) error {
-	if t, err := parseTimeDuration(s, true); err != nil {
+	t, err := parseTimeDuration(s, true)
+	if err != nil {
 		return err
-	} else {
-		no.syncInterval = t
-
-		return nil
 	}
+	no.syncInterval = t
+
+	return nil
 }
 
 func (no *DefaultLocalConfig) TimeServer() string {

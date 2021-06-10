@@ -71,9 +71,8 @@ func (st *JoiningState) Enter(sctx StateSwitchContext) (func() error, error) {
 		// NOTE standalone node does not wait incoming ballots to join network
 		if len(st.suffrage.Nodes()) < 2 {
 			return st.broadcastINITBallotEnteredWithoutDelay(voteproof)
-		} else {
-			return st.broadcastINITBallotEntered(voteproof)
 		}
+		return st.broadcastINITBallotEntered(voteproof)
 	}, nil
 }
 
@@ -130,9 +129,8 @@ func (st *JoiningState) broadcastINITBallotEnteredWithoutDelay(voteproof base.Vo
 	}).SetInterval(func(i int) time.Duration {
 		if i < 1 {
 			return time.Nanosecond
-		} else {
-			return st.policy.IntervalBroadcastingINITBallot()
 		}
+		return st.policy.IntervalBroadcastingINITBallot()
 	})
 
 	if err := st.Timers().SetTimer(timer); err != nil {
@@ -172,9 +170,8 @@ func (st *JoiningState) broadcastINITBallotEntered(voteproof base.Voteproof) err
 	}).SetInterval(func(i int) time.Duration {
 		if i < 1 { // NOTE at first time, wait enough time for incoming ballot
 			return st.policy.IntervalBroadcastingINITBallot() * 5
-		} else {
-			return st.policy.IntervalBroadcastingINITBallot()
 		}
+		return st.policy.IntervalBroadcastingINITBallot()
 	})
 
 	if err := st.Timers().SetTimer(timer); err != nil {

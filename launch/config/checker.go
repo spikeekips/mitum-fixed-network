@@ -16,7 +16,7 @@ type checker struct {
 	config LocalNode
 }
 
-func NewChecker(ctx context.Context) (*checker, error) {
+func NewChecker(ctx context.Context) (*checker, error) { // revive:disable-line:unexported-return
 	var conf LocalNode
 	if err := LoadConfigContextValue(ctx, &conf); err != nil {
 		return nil, err
@@ -110,8 +110,8 @@ func (cc *checker) CheckPolicy() (bool, error) {
 	}
 
 	uints := [][3]interface{}{
-		{conf.MaxOperationsInSeal(), conf.SetMaxOperationsInSeal, isaac.DefaultPolicyMaxOperationsInSeal},             // nolint:lll
-		{conf.MaxOperationsInProposal(), conf.SetMaxOperationsInProposal, isaac.DefaultPolicyMaxOperationsInProposal}, // nolint:lll
+		{conf.MaxOperationsInSeal(), conf.SetMaxOperationsInSeal, isaac.DefaultPolicyMaxOperationsInSeal},             // revive:disable-line:line-length-limit
+		{conf.MaxOperationsInProposal(), conf.SetMaxOperationsInProposal, isaac.DefaultPolicyMaxOperationsInProposal}, // revive:disable-line:line-length-limit
 	}
 
 	for i := range uints {
@@ -128,13 +128,13 @@ func (cc *checker) CheckPolicy() (bool, error) {
 	}
 
 	durs := [][3]interface{}{
-		{conf.TimeoutWaitingProposal(), conf.SetTimeoutWaitingProposal, isaac.DefaultPolicyTimeoutWaitingProposal},                               // nolint:lll
-		{conf.IntervalBroadcastingINITBallot(), conf.SetIntervalBroadcastingINITBallot, isaac.DefaultPolicyIntervalBroadcastingINITBallot},       // nolint:lll
-		{conf.IntervalBroadcastingProposal(), conf.SetIntervalBroadcastingProposal, isaac.DefaultPolicyIntervalBroadcastingProposal},             // nolint:lll
-		{conf.WaitBroadcastingACCEPTBallot(), conf.SetWaitBroadcastingACCEPTBallot, isaac.DefaultPolicyWaitBroadcastingACCEPTBallot},             // nolint:lll
-		{conf.IntervalBroadcastingACCEPTBallot(), conf.SetIntervalBroadcastingACCEPTBallot, isaac.DefaultPolicyIntervalBroadcastingACCEPTBallot}, // nolint:lll
-		{conf.TimespanValidBallot(), conf.SetTimespanValidBallot, isaac.DefaultPolicyTimespanValidBallot},                                        // nolint:lll
-		{conf.NetworkConnectionTimeout(), conf.SetNetworkConnectionTimeout, isaac.DefaultPolicyNetworkConnectionTimeout},                         // nolint:lll
+		{conf.TimeoutWaitingProposal(), conf.SetTimeoutWaitingProposal, isaac.DefaultPolicyTimeoutWaitingProposal},                               // revive:disable-line:line-length-limit
+		{conf.IntervalBroadcastingINITBallot(), conf.SetIntervalBroadcastingINITBallot, isaac.DefaultPolicyIntervalBroadcastingINITBallot},       // revive:disable-line:line-length-limit
+		{conf.IntervalBroadcastingProposal(), conf.SetIntervalBroadcastingProposal, isaac.DefaultPolicyIntervalBroadcastingProposal},             // revive:disable-line:line-length-limit
+		{conf.WaitBroadcastingACCEPTBallot(), conf.SetWaitBroadcastingACCEPTBallot, isaac.DefaultPolicyWaitBroadcastingACCEPTBallot},             // revive:disable-line:line-length-limit
+		{conf.IntervalBroadcastingACCEPTBallot(), conf.SetIntervalBroadcastingACCEPTBallot, isaac.DefaultPolicyIntervalBroadcastingACCEPTBallot}, // revive:disable-line:line-length-limit
+		{conf.TimespanValidBallot(), conf.SetTimespanValidBallot, isaac.DefaultPolicyTimespanValidBallot},                                        // revive:disable-line:line-length-limit
+		{conf.NetworkConnectionTimeout(), conf.SetNetworkConnectionTimeout, isaac.DefaultPolicyNetworkConnectionTimeout},                         // revive:disable-line:line-length-limit
 	}
 
 	for i := range durs {

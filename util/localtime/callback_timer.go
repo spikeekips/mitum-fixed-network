@@ -144,13 +144,11 @@ func (ct *CallbackTimer) IsStarted() bool {
 }
 
 func (ct *CallbackTimer) clock() {
-	var lastInterval time.Duration
-	if d, err := ct.resetTicker(0, lastInterval); err != nil {
+	lastInterval, err := ct.resetTicker(0, 0)
+	if err != nil {
 		_ = ct.Stop()
 
 		return
-	} else {
-		lastInterval = d
 	}
 
 	defer ct.ticker.Stop()
@@ -164,11 +162,11 @@ end:
 			return
 		case <-ct.resetChan:
 			i = 0
-			if d, err := ct.resetTicker(0, lastInterval); err != nil {
+			j, err := ct.resetTicker(0, lastInterval)
+			if err != nil {
 				break end
-			} else {
-				lastInterval = d
 			}
+			lastInterval = j
 		case err := <-ct.errchan:
 			if err == nil {
 				continue
@@ -192,11 +190,11 @@ end:
 
 			i++
 
-			if d, err := ct.resetTicker(i, lastInterval); err != nil {
+			d, err := ct.resetTicker(i, lastInterval)
+			if err != nil {
 				break end
-			} else {
-				lastInterval = d
 			}
+			lastInterval = d
 		}
 	}
 
@@ -204,13 +202,13 @@ end:
 }
 
 func (ct *CallbackTimer) resetTicker(i int, last time.Duration) (time.Duration, error) {
-	if i := ct.intervalFunc(i); i < time.Nanosecond {
-		return 0, xerrors.Errorf("too narrow interval: %v", i)
-	} else {
-		if i != last {
-			ct.ticker.Reset(i)
-		}
-
-		return i, nil
+	in := ct.intervalFunc(i)
+	if in < time.Nanosecond {
+		return 0, xerrors.Errorf("too narrow interval: %v", in)
 	}
+	if in != last {
+		ct.ticker.Reset(in)
+	}
+
+	return in, nil
 }

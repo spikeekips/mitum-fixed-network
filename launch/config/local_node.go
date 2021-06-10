@@ -64,13 +64,13 @@ func (no BaseLocalNode) Address() base.Address {
 }
 
 func (no *BaseLocalNode) SetAddress(s string) error {
-	if address, err := base.DecodeAddressFromString(no.enc, s); err != nil {
+	address, err := base.DecodeAddressFromString(no.enc, s)
+	if err != nil {
 		return err
-	} else {
-		no.address = address
-
-		return nil
 	}
+	no.address = address
+
+	return nil
 }
 
 func (no BaseLocalNode) NetworkID() base.NetworkID {
@@ -88,13 +88,13 @@ func (no BaseLocalNode) Privatekey() key.Privatekey {
 }
 
 func (no *BaseLocalNode) SetPrivatekey(s string) error {
-	if priv, err := key.DecodePrivatekey(no.enc, s); err != nil {
+	priv, err := key.DecodePrivatekey(no.enc, s)
+	if err != nil {
 		return err
-	} else {
-		no.privatekey = priv
-
-		return nil
 	}
+	no.privatekey = priv
+
+	return nil
 }
 
 func (no BaseLocalNode) Network() LocalNetwork {

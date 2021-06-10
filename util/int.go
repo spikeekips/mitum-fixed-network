@@ -85,10 +85,10 @@ func BytesToUint64(b []byte) (uint64, error) {
 
 func Float64ToBytes(i float64) []byte {
 	bt := math.Float64bits(i)
-	bytes := make([]byte, 8)
-	binary.LittleEndian.PutUint64(bytes, bt)
+	b := make([]byte, 8)
+	binary.LittleEndian.PutUint64(b, bt)
 
-	return bytes
+	return b
 }
 
 func BytesToFloat64(b []byte) float64 {

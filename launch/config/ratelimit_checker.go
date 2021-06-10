@@ -86,11 +86,7 @@ func (cc *RateLimitChecker) checkRateLimitPresets() error {
 		}
 	}
 
-	if err := cc.conf.SetPreset(preset); err != nil {
-		return err
-	}
-
-	return nil
+	return cc.conf.SetPreset(preset)
 }
 
 func (cc *RateLimitChecker) fillRateLimitPreset(name string, r RateLimitRules) RateLimitRules {
@@ -103,9 +99,7 @@ func (cc *RateLimitChecker) fillRateLimitPreset(name string, r RateLimitRules) R
 
 	rules := r.Rules()
 	for i := range defined {
-		if _, found := rules[i]; found {
-			continue
-		} else {
+		if _, found := rules[i]; !found {
 			rules[i] = defined[i]
 		}
 	}
@@ -121,11 +115,11 @@ func (cc *RateLimitChecker) checkRateLimitTargetRules() error {
 
 	nr := make([]RateLimitTargetRule, len(rules))
 	for i := range rules {
-		if j, err := cc.checkRateLimitTargetRule(rules[i]); err != nil {
+		j, err := cc.checkRateLimitTargetRule(rules[i])
+		if err != nil {
 			return err
-		} else {
-			nr[i] = j
 		}
+		nr[i] = j
 	}
 
 	return cc.conf.SetRules(nr)
@@ -144,11 +138,11 @@ func (cc *RateLimitChecker) checkRateLimitTargetRule(r RateLimitTargetRule) (Rat
 
 	var preset map[string]limiter.Rate
 	presets := cc.conf.Preset()
-	if i, found := presets[r.Preset()]; !found {
+	i, found := presets[r.Preset()]
+	if !found {
 		return nil, xerrors.Errorf("unknown preset, %q", r.Preset())
-	} else {
-		preset = i.Rules()
 	}
+	preset = i.Rules()
 
 	rs := map[string]limiter.Rate{}
 

@@ -64,35 +64,33 @@ func (bm *BlockV0) UnpackJSON(b []byte, enc *jsonenc.Encoder) error {
 		bm.ci = mv
 	}
 
-	if tr, err := tree.DecodeFixedTree(enc, nbm.OPT); err != nil {
+	var err error
+	bm.operationsTree, err = tree.DecodeFixedTree(enc, nbm.OPT)
+	if err != nil {
 		return err
-	} else {
-		bm.operationsTree = tr
 	}
 
-	ops := make([]operation.Operation, len(nbm.OP))
+	bm.operations = make([]operation.Operation, len(nbm.OP))
 	for i := range nbm.OP {
-		if op, err := operation.DecodeOperation(enc, nbm.OP[i]); err != nil {
+		bm.operations[i], err = operation.DecodeOperation(enc, nbm.OP[i])
+		if err != nil {
 			return err
-		} else {
-			ops[i] = op
 		}
 	}
-	bm.operations = ops
 
-	if tr, err := tree.DecodeFixedTree(enc, nbm.STT); err != nil {
+	tr, err := tree.DecodeFixedTree(enc, nbm.STT)
+	if err != nil {
 		return err
-	} else {
-		bm.statesTree = tr
 	}
+	bm.statesTree = tr
 
 	sts := make([]state.State, len(nbm.ST))
 	for i := range nbm.ST {
-		if st, err := state.DecodeState(enc, nbm.ST[i]); err != nil {
+		st, err := state.DecodeState(enc, nbm.ST[i])
+		if err != nil {
 			return err
-		} else {
-			sts[i] = st
 		}
+		sts[i] = st
 	}
 	bm.states = sts
 

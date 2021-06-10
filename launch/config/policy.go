@@ -50,11 +50,10 @@ func (no *BasePolicy) SetThresholdRatio(s float64) error {
 	t := base.ThresholdRatio(s)
 	if err := t.IsValid(nil); err != nil {
 		return err
-	} else {
-		no.thresholdRatio = t
-
-		return nil
 	}
+	no.thresholdRatio = t
+
+	return nil
 }
 
 func (no *BasePolicy) MaxOperationsInSeal() uint {
@@ -82,13 +81,13 @@ func (no BasePolicy) TimeoutWaitingProposal() time.Duration {
 }
 
 func (no *BasePolicy) SetTimeoutWaitingProposal(s string) error {
-	if t, err := parseTimeDuration(s, true); err != nil {
+	t, err := parseTimeDuration(s, true)
+	if err != nil {
 		return err
-	} else {
-		no.timeoutWaitingProposal = t
-
-		return nil
 	}
+	no.timeoutWaitingProposal = t
+
+	return nil
 }
 
 func (no BasePolicy) IntervalBroadcastingINITBallot() time.Duration {
@@ -96,13 +95,13 @@ func (no BasePolicy) IntervalBroadcastingINITBallot() time.Duration {
 }
 
 func (no *BasePolicy) SetIntervalBroadcastingINITBallot(s string) error {
-	if t, err := parseTimeDuration(s, true); err != nil {
+	t, err := parseTimeDuration(s, true)
+	if err != nil {
 		return err
-	} else {
-		no.intervalBroadcastingINITBallot = t
-
-		return nil
 	}
+	no.intervalBroadcastingINITBallot = t
+
+	return nil
 }
 
 func (no BasePolicy) IntervalBroadcastingProposal() time.Duration {
@@ -110,13 +109,13 @@ func (no BasePolicy) IntervalBroadcastingProposal() time.Duration {
 }
 
 func (no *BasePolicy) SetIntervalBroadcastingProposal(s string) error {
-	if t, err := parseTimeDuration(s, true); err != nil {
+	t, err := parseTimeDuration(s, true)
+	if err != nil {
 		return err
-	} else {
-		no.intervalBroadcastingProposal = t
-
-		return nil
 	}
+	no.intervalBroadcastingProposal = t
+
+	return nil
 }
 
 func (no BasePolicy) WaitBroadcastingACCEPTBallot() time.Duration {
@@ -124,13 +123,13 @@ func (no BasePolicy) WaitBroadcastingACCEPTBallot() time.Duration {
 }
 
 func (no *BasePolicy) SetWaitBroadcastingACCEPTBallot(s string) error {
-	if t, err := parseTimeDuration(s, true); err != nil {
+	t, err := parseTimeDuration(s, true)
+	if err != nil {
 		return err
-	} else {
-		no.waitBroadcastingACCEPTBallot = t
-
-		return nil
 	}
+	no.waitBroadcastingACCEPTBallot = t
+
+	return nil
 }
 
 func (no BasePolicy) IntervalBroadcastingACCEPTBallot() time.Duration {
@@ -138,13 +137,13 @@ func (no BasePolicy) IntervalBroadcastingACCEPTBallot() time.Duration {
 }
 
 func (no *BasePolicy) SetIntervalBroadcastingACCEPTBallot(s string) error {
-	if t, err := parseTimeDuration(s, true); err != nil {
+	t, err := parseTimeDuration(s, true)
+	if err != nil {
 		return err
-	} else {
-		no.intervalBroadcastingACCEPTBallot = t
-
-		return nil
 	}
+	no.intervalBroadcastingACCEPTBallot = t
+
+	return nil
 }
 
 func (no BasePolicy) TimespanValidBallot() time.Duration {
@@ -152,13 +151,13 @@ func (no BasePolicy) TimespanValidBallot() time.Duration {
 }
 
 func (no *BasePolicy) SetTimespanValidBallot(s string) error {
-	if t, err := parseTimeDuration(s, true); err != nil {
+	t, err := parseTimeDuration(s, true)
+	if err != nil {
 		return err
-	} else {
-		no.timespanValidBallot = t
-
-		return nil
 	}
+	no.timespanValidBallot = t
+
+	return nil
 }
 
 func (no BasePolicy) NetworkConnectionTimeout() time.Duration {
@@ -166,11 +165,11 @@ func (no BasePolicy) NetworkConnectionTimeout() time.Duration {
 }
 
 func (no *BasePolicy) SetNetworkConnectionTimeout(s string) error {
-	if t, err := parseTimeDuration(s, true); err != nil {
+	t, err := parseTimeDuration(s, true)
+	if err != nil {
 		return err
-	} else {
-		no.networkConnectionTimeout = t
-
-		return nil
 	}
+	no.networkConnectionTimeout = t
+
+	return nil
 }

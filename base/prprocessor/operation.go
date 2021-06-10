@@ -18,7 +18,7 @@ import (
 	"github.com/spikeekips/mitum/util/valuehash"
 )
 
-var maxConcurrentOperations int = 500
+var maxConcurrentOperations = 500
 
 type OperationProcessor interface {
 	New(*storage.Statepool) OperationProcessor
@@ -32,29 +32,30 @@ type defaultOperationProcessor struct {
 	pool *storage.Statepool
 }
 
-func (opp defaultOperationProcessor) New(pool *storage.Statepool) OperationProcessor {
+func (defaultOperationProcessor) New(pool *storage.Statepool) OperationProcessor {
 	return &defaultOperationProcessor{
 		pool: pool,
 	}
 }
 
 func (opp defaultOperationProcessor) PreProcess(op state.Processor) (state.Processor, error) {
-	if pr, ok := op.(state.PreProcessor); ok {
+	pr, ok := op.(state.PreProcessor)
+	if ok {
 		return pr.PreProcess(opp.pool.Get, opp.pool.Set)
-	} else {
-		return op, nil
 	}
+
+	return op, nil
 }
 
 func (opp defaultOperationProcessor) Process(op state.Processor) error {
 	return op.Process(opp.pool.Get, opp.pool.Set)
 }
 
-func (opp defaultOperationProcessor) Close() error {
+func (defaultOperationProcessor) Close() error {
 	return nil
 }
 
-func (opp defaultOperationProcessor) Cancel() error {
+func (defaultOperationProcessor) Cancel() error {
 	return nil
 }
 
@@ -181,11 +182,12 @@ func (co *ConcurrentOperationsProcessor) StatesTree() (tree.FixedTree, []state.S
 		}
 	}
 
-	if tr, err := trg.Tree(); err != nil {
+	tr, err := trg.Tree()
+	if err != nil {
 		return tree.FixedTree{}, nil, err
-	} else {
-		return tr, states, nil
 	}
+
+	return tr, states, nil
 }
 
 func (co *ConcurrentOperationsProcessor) OperationsTree() (tree.FixedTree, error) {
@@ -194,22 +196,23 @@ func (co *ConcurrentOperationsProcessor) OperationsTree() (tree.FixedTree, error
 
 	added := co.pool.AddedOperations()
 	size := uint64(co.opsTreeGenerator.Len())
-	if n := len(added); n < 1 {
+	n := len(added)
+	if n < 1 {
 		return co.opsTreeGenerator.Tree()
-	} else {
-		trg := tree.NewFixedTreeGenerator(size + uint64(n))
-		if err := co.opsTreeGenerator.Traverse(func(no tree.FixedTreeNode) (bool, error) {
-			if err := trg.Add(no); err != nil {
-				return false, err
-			}
-
-			return true, nil
-		}); err != nil {
-			return tree.FixedTree{}, err
-		} else {
-			co.opsTreeGenerator = trg
-		}
 	}
+
+	trg := tree.NewFixedTreeGenerator(size + uint64(n))
+	if err := co.opsTreeGenerator.Traverse(func(no tree.FixedTreeNode) (bool, error) {
+		if err := trg.Add(no); err != nil {
+			return false, err
+		}
+
+		return true, nil
+	}); err != nil {
+		return tree.FixedTree{}, err
+	}
+
+	co.opsTreeGenerator = trg
 
 	var i uint64
 	for k := range added {
@@ -355,11 +358,9 @@ func (co *ConcurrentOperationsProcessor) opr(op state.Processor) (OperationProce
 	co.oprLock.Lock()
 	defer co.oprLock.Unlock()
 
-	var hinter hint.Hinter
-	if ht, ok := op.(hint.Hinter); !ok {
+	hinter, ok := op.(hint.Hinter)
+	if !ok {
 		return nil, xerrors.Errorf("not Hinter, %T", op)
-	} else {
-		hinter = ht
 	}
 
 	if opr, found := co.oprs[hinter.Hint()]; found {
@@ -401,9 +402,9 @@ func (co *ConcurrentOperationsProcessor) work(_ uint, j interface{}) error {
 
 	if err0 := co.addOperationsTree(job.Index, op.Fact().Hash(), err); err0 != nil {
 		return err0
-	} else {
-		return err
 	}
+
+	return err
 }
 
 func (co *ConcurrentOperationsProcessor) workProcess(op state.Processor) error {
@@ -411,22 +412,23 @@ func (co *ConcurrentOperationsProcessor) workProcess(op state.Processor) error {
 		return err
 	}
 
-	if opr, err := co.opr(op); err != nil {
+	opr, err := co.opr(op)
+	if err != nil {
 		return err
-	} else {
-		if err := opr.Process(op); err != nil {
-			co.Log().Verbose().
-				Hinted("operation", op.(operation.Operation).Hash()).
-				Err(err).
-				Msg("operation failed to process")
-
-			return err
-		} else {
-			co.Log().Verbose().Hinted("operation", op.(operation.Operation).Hash()).Err(err).Msg("operation processed")
-
-			return nil
-		}
 	}
+
+	if err = opr.Process(op); err != nil {
+		co.Log().Verbose().
+			Hinted("operation", op.(operation.Operation).Hash()).
+			Err(err).
+			Msg("operation failed to process")
+
+		return err
+	}
+
+	co.Log().Verbose().Hinted("operation", op.(operation.Operation).Hash()).Err(err).Msg("operation processed")
+
+	return nil
 }
 
 func operationIgnored(err error) bool {

@@ -18,8 +18,8 @@ var (
 )
 
 var (
-	reBlankAddressString *regexp.Regexp = regexp.MustCompile(`[\s][\s]*`)
-	reAddressString      *regexp.Regexp = regexp.MustCompile(`^[a-zA-Z0-9][\w\-]*[a-zA-Z0-9]$`)
+	reBlankAddressString = regexp.MustCompile(`[\s][\s]*`)
+	reAddressString      = regexp.MustCompile(`^[a-zA-Z0-9][\w\-]*[a-zA-Z0-9]$`)
 )
 
 var EmptyStringAddress = StringAddress("")
@@ -51,7 +51,7 @@ func (sa StringAddress) String() string {
 	return hint.HintedString(StringAddressHint, string(sa))
 }
 
-func (sa StringAddress) Hint() hint.Hint {
+func (StringAddress) Hint() hint.Hint {
 	return StringAddressHint
 }
 
@@ -88,13 +88,14 @@ func (sa StringAddress) MarshalText() ([]byte, error) {
 }
 
 func (sa *StringAddress) UnmarshalText(b []byte) error {
-	if a, err := NewStringAddress(string(b)); err != nil {
+	a, err := NewStringAddress(string(b))
+	if err != nil {
 		return err
-	} else {
-		*sa = a
-
-		return nil
 	}
+
+	*sa = a
+
+	return nil
 }
 
 func (sa StringAddress) MarshalBSONValue() (bsontype.Type, []byte, error) {

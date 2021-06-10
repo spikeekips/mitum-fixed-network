@@ -39,7 +39,7 @@ func NewFixedTreeNodeWithHash(index uint64, key, hash []byte, inState bool, reas
 	}
 }
 
-func (no FixedTreeNode) Hint() hint.Hint {
+func (FixedTreeNode) Hint() hint.Hint {
 	return FixedTreeNodeHint
 }
 
@@ -62,11 +62,9 @@ func (no FixedTreeNode) Equal(n tree.FixedTreeNode) bool {
 		return false
 	}
 
-	var nno FixedTreeNode
-	if i, ok := n.(FixedTreeNode); !ok {
+	nno, ok := n.(FixedTreeNode)
+	if !ok {
 		return true
-	} else {
-		nno = i
 	}
 
 	switch {
@@ -110,7 +108,7 @@ func NewBaseReasonError(s string, a ...interface{}) BaseReasonError {
 	return BaseReasonError{NError: errors.NewError("").Errorf(s, a...).SetFrame(2)}
 }
 
-func (e BaseReasonError) Hint() hint.Hint {
+func (BaseReasonError) Hint() hint.Hint {
 	return BaseReasonErrorHint
 }
 

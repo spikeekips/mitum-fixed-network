@@ -14,13 +14,11 @@ var QuicHandlerPathDeployKeyKeySuffix = "/{deploy_key:.*}"
 
 func NewDeployKeyKeyHandler(ks *DeployKeyStorage, enc encoder.Encoder) network.HTTPHandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		var deployKey string
-		if i, err := loadDeployKeyFromRequestPath(r); err != nil {
+		deployKey, err := loadDeployKeyFromRequestPath(r)
+		if err != nil {
 			network.WriteProblemWithError(w, http.StatusBadRequest, err)
 
 			return
-		} else {
-			deployKey = i
 		}
 
 		if i, found := ks.Key(deployKey); !found {
@@ -40,9 +38,9 @@ func NewDeployKeyKeyHandler(ks *DeployKeyStorage, enc encoder.Encoder) network.H
 
 func loadDeployKeyFromRequestPath(r *http.Request) (string, error) {
 	vars := mux.Vars(r)
-	if i := strings.TrimSpace(vars["deploy_key"]); len(i) < 1 {
+	i := strings.TrimSpace(vars["deploy_key"])
+	if len(i) < 1 {
 		return "", xerrors.Errorf("empty deploy key")
-	} else {
-		return i, nil
 	}
+	return i, nil
 }

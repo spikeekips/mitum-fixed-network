@@ -31,19 +31,19 @@ func (be *Encoder) SetHintset(hintset *hint.Hintset) {
 	be.hintset = hintset
 }
 
-func (be Encoder) Hint() hint.Hint {
+func (Encoder) Hint() hint.Hint {
 	return bsonHint
 }
 
-func (be Encoder) Marshal(i interface{}) ([]byte, error) {
-	return Marshal(i)
+func (Encoder) Marshal(i interface{}) ([]byte, error) {
+	return bson.Marshal(i)
 }
 
-func (be Encoder) Unmarshal(b []byte, i interface{}) error {
-	return Unmarshal(b, i)
+func (Encoder) Unmarshal(b []byte, i interface{}) error {
+	return bson.Unmarshal(b, i)
 }
 
-func (be Encoder) UnmarshalArray(b []byte) ([][]byte, error) {
+func (Encoder) UnmarshalArray(b []byte) ([][]byte, error) {
 	var bs []bson.Raw
 	if err := Unmarshal(b, &bs); err != nil {
 		return nil, err
@@ -152,10 +152,10 @@ func (be *Encoder) Unpack(b []byte, i interface{}) error {
 	if c, found := be.cache.Get(elem.Type()); found {
 		if packer, ok := c.(encoder.CachedPacker); !ok {
 			be.cache.Delete(elem.Type())
-		} else if fn, ok := packer.Unpack.(unpackFunc); !ok {
-			be.cache.Delete(elem.Type())
-		} else {
+		} else if fn, ok := packer.Unpack.(unpackFunc); ok {
 			return fn(b, i)
+		} else {
+			be.cache.Delete(elem.Type())
 		}
 	}
 
@@ -169,11 +169,11 @@ func (be *Encoder) Unpack(b []byte, i interface{}) error {
 	return cp.Unpack.(unpackFunc)(b, i)
 }
 
-func (be *Encoder) unpackValueDefault(b []byte, i interface{}) error {
+func (*Encoder) unpackValueDefault(b []byte, i interface{}) error {
 	return Unmarshal(b, i)
 }
 
-func (be Encoder) loadHint(b []byte) (hint.Hint, error) {
+func (Encoder) loadHint(b []byte) (hint.Hint, error) {
 	var o PackHintedHead
 	if err := Unmarshal(b, &o); err != nil {
 		return hint.Hint{}, err

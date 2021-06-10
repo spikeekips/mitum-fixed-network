@@ -31,11 +31,11 @@ type DefaultWriter struct {
 	encoder encoder.Encoder
 }
 
-func NewDefaultWriter(encoder encoder.Encoder) DefaultWriter {
-	return DefaultWriter{encoder: encoder}
+func NewDefaultWriter(enc encoder.Encoder) DefaultWriter {
+	return DefaultWriter{encoder: enc}
 }
 
-func (bd DefaultWriter) Hint() hint.Hint {
+func (DefaultWriter) Hint() hint.Hint {
 	return BlockDataWriterHint
 }
 
@@ -76,11 +76,11 @@ func (bd DefaultWriter) WriteProposal(w io.Writer, pr ballot.Proposal) error {
 }
 
 func (bd DefaultWriter) ReadManifest(r io.Reader) (block.Manifest, error) {
-	if b, err := bd.read(r); err != nil {
+	b, err := bd.read(r)
+	if err != nil {
 		return nil, err
-	} else {
-		return block.DecodeManifest(bd.encoder, b)
 	}
+	return block.DecodeManifest(bd.encoder, b)
 }
 
 func (bd DefaultWriter) ReadOperations(r io.Reader) ([]operation.Operation, error) {
@@ -94,13 +94,13 @@ func (bd DefaultWriter) ReadOperations(r io.Reader) ([]operation.Operation, erro
 			return nil
 		},
 		func(index uint64, b []byte) error {
-			if i, err := operation.DecodeOperation(bd.encoder, b); err != nil {
+			i, err := operation.DecodeOperation(bd.encoder, b)
+			if err != nil {
 				return err
-			} else {
-				ops[index] = i
-
-				return nil
 			}
+			ops[index] = i
+
+			return nil
 		},
 		300,
 	); err != nil {
@@ -125,13 +125,13 @@ func (bd DefaultWriter) ReadStates(r io.Reader) ([]state.State, error) {
 			return nil
 		},
 		func(index uint64, b []byte) error {
-			if i, err := state.DecodeState(bd.encoder, b); err != nil {
+			i, err := state.DecodeState(bd.encoder, b)
+			if err != nil {
 				return err
-			} else {
-				sts[index] = i
-
-				return nil
 			}
+			sts[index] = i
+
+			return nil
 		},
 		300,
 	); err != nil {
@@ -146,43 +146,43 @@ func (bd DefaultWriter) ReadStatesTree(r io.Reader) (tree.FixedTree, error) {
 }
 
 func (bd DefaultWriter) ReadINITVoteproof(r io.Reader) (base.Voteproof, error) {
-	if b, err := bd.read(r); err != nil {
+	b, err := bd.read(r)
+	if err != nil {
 		return nil, err
-	} else {
-		return base.DecodeVoteproof(bd.encoder, b)
 	}
+	return base.DecodeVoteproof(bd.encoder, b)
 }
 
 func (bd DefaultWriter) ReadACCEPTVoteproof(r io.Reader) (base.Voteproof, error) {
-	if b, err := bd.read(r); err != nil {
+	b, err := bd.read(r)
+	if err != nil {
 		return nil, err
-	} else {
-		return base.DecodeVoteproof(bd.encoder, b)
 	}
+	return base.DecodeVoteproof(bd.encoder, b)
 }
 
 func (bd DefaultWriter) ReadSuffrageInfo(r io.Reader) (block.SuffrageInfo, error) {
-	if b, err := bd.read(r); err != nil {
+	b, err := bd.read(r)
+	if err != nil {
 		return nil, err
-	} else {
-		return block.DecodeSuffrageInfo(bd.encoder, b)
 	}
+	return block.DecodeSuffrageInfo(bd.encoder, b)
 }
 
 func (bd DefaultWriter) ReadProposal(r io.Reader) (ballot.Proposal, error) {
-	if b, err := bd.read(r); err != nil {
+	b, err := bd.read(r)
+	if err != nil {
 		return nil, err
-	} else {
-		return ballot.DecodeProposal(bd.encoder, b)
 	}
+	return ballot.DecodeProposal(bd.encoder, b)
 }
 
-func (bd DefaultWriter) read(r io.Reader) ([]byte, error) {
-	if i, err := io.ReadAll(r); err != nil {
+func (DefaultWriter) read(r io.Reader) ([]byte, error) {
+	i, err := io.ReadAll(r)
+	if err != nil {
 		return nil, storage.WrapFSError(err)
-	} else {
-		return i, nil
 	}
+	return i, nil
 }
 
 func (bd DefaultWriter) writeItem(w io.Writer, v interface{}) error {
@@ -229,7 +229,7 @@ func (bd DefaultWriter) writeItems(w io.Writer, v interface{}) error {
 	}
 
 	n := l.Len()
-	var index uint64 = 0
+	var index uint64
 	return WritelinesWithIndex(
 		w,
 		func() ([]byte, error) {
@@ -244,11 +244,11 @@ func (bd DefaultWriter) writeItems(w io.Writer, v interface{}) error {
 				return index, nil, io.EOF
 			}
 
-			if i, err := bd.encoder.Marshal(l.Index(int(index)).Interface()); err != nil {
+			i, err := bd.encoder.Marshal(l.Index(int(index)).Interface())
+			if err != nil {
 				return index, nil, err
-			} else {
-				return index, i, nil
 			}
+			return index, i, nil
 		},
 	)
 }
@@ -299,13 +299,13 @@ func (bd DefaultWriter) readTree(r io.Reader, limit int64) (tree.FixedTree, erro
 			return nil
 		},
 		func(index uint64, b []byte) error {
-			if i, err := tree.DecodeFixedTreeNode(bd.encoder, b); err != nil {
+			i, err := tree.DecodeFixedTreeNode(bd.encoder, b)
+			if err != nil {
 				return err
-			} else {
-				nodes[index] = i
-
-				return nil
 			}
+			nodes[index] = i
+
+			return nil
 		},
 		limit,
 	); err != nil {
@@ -327,13 +327,13 @@ func WritelinesWithIndex(
 	}
 
 	return util.WritelineAsync(w, func() ([]byte, error) {
-		if i, j, err := getItem(); err != nil {
+		i, j, err := getItem()
+		if err != nil {
 			return nil, err
-		} else {
-			b := []byte(fmt.Sprintf("# index=%d\n", i))
-
-			return append(b, j...), nil
 		}
+		b := []byte(fmt.Sprintf("# index=%d\n", i))
+
+		return append(b, j...), nil
 	}, 100)
 }
 
@@ -352,19 +352,18 @@ func ReadlinesWithIndex(
 		if !foundHeader {
 			if err := callbackHeader(b); err != nil {
 				return err
-			} else {
-				foundHeader = true
-
-				return nil
 			}
+			foundHeader = true
+
+			return nil
 		}
 
 		if bytes.HasPrefix(b, []byte("# index=")) {
-			if a, err := ParseItemIndexLine(b); err != nil {
+			a, err := ParseItemIndexLine(b)
+			if err != nil {
 				return err
-			} else {
-				index = a
 			}
+			index = a
 
 			return nil
 		}
@@ -391,11 +390,7 @@ func ReadlinesWithIndex(
 		}
 	}
 
-	if err := eg.Wait(); err != nil {
-		return err
-	}
-
-	return nil
+	return eg.Wait()
 }
 
 type ItemsHeader struct {

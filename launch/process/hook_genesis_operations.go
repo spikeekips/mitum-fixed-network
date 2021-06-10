@@ -20,18 +20,14 @@ var (
 func HookGenesisOperationFunc(handlers map[string]HookHandlerGenesisOperations) pm.ProcessFunc {
 	return func(ctx context.Context) (context.Context, error) {
 		var conf config.LocalNode
-		var sc map[string]interface{}
 		if err := config.LoadConfigContextValue(ctx, &conf); err != nil {
 			return nil, err
-		} else {
-			sc = conf.Source()
 		}
+		sc := conf.Source()
 
-		var l []map[string]interface{}
-		if i, err := parseGenesisOperations(sc["genesis-operations"]); err != nil {
+		l, err := parseGenesisOperations(sc["genesis-operations"])
+		if err != nil {
 			return ctx, err
-		} else {
-			l = i
 		}
 
 		ops := make([]operation.Operation, len(l))
@@ -49,9 +45,8 @@ func HookGenesisOperationFunc(handlers map[string]HookHandlerGenesisOperations) 
 
 		if err := conf.SetGenesisOperations(ops); err != nil {
 			return ctx, err
-		} else {
-			return ctx, nil
 		}
+		return ctx, nil
 	}
 }
 

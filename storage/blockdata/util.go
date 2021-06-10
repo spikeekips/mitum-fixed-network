@@ -28,9 +28,8 @@ func CleanByHeight(st storage.Database, blockData BlockData, height base.Height)
 			}
 
 			return false, err
-		} else {
-			return true, nil
 		}
+		return true, nil
 	}); err != nil {
 		return err
 	}
@@ -39,11 +38,9 @@ func CleanByHeight(st storage.Database, blockData BlockData, height base.Height)
 }
 
 func CheckBlock(st storage.Database, blockData BlockData, networkID base.NetworkID) (block.Manifest, error) {
-	var m block.Manifest
-	if i, err := storage.CheckBlock(st, networkID); err != nil {
-		return i, err
-	} else {
-		m = i
+	m, err := storage.CheckBlock(st, networkID)
+	if err != nil {
+		return m, err
 	}
 
 	if found, err := blockData.Exists(m.Height()); err != nil {

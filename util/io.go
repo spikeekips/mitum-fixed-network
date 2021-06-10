@@ -18,7 +18,7 @@ func NewNilReadCloser(r io.Reader) NilReadCloser {
 	return NilReadCloser{Reader: r}
 }
 
-func (rc NilReadCloser) Close() error {
+func (NilReadCloser) Close() error {
 	return nil
 }
 
@@ -63,15 +63,13 @@ func WritelineAsync(w io.Writer, get func() ([]byte, error), limit int64) error 
 	eg, ctx := errgroup.WithContext(context.Background())
 
 	for {
-		var b []byte
-		if i, err := get(); err != nil {
+		b, err := get()
+		if err != nil {
 			if xerrors.Is(err, io.EOF) {
 				break
 			}
 
 			return err
-		} else {
-			b = i
 		}
 
 		if err := sem.Acquire(ctx, 1); err != nil {
@@ -95,9 +93,5 @@ func WritelineAsync(w io.Writer, get func() ([]byte, error), limit int64) error 
 		}
 	}
 
-	if err := eg.Wait(); err != nil {
-		return err
-	}
-
-	return nil
+	return eg.Wait()
 }

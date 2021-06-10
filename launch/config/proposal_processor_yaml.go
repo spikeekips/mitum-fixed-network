@@ -28,12 +28,12 @@ func (ep *ErrorPoint) UnmarshalYAML(decode func(v interface{}) error) error {
 		ep.Type = et
 	}
 
-	if h, r, err := parseErrorPointPoint(epy.Point); err != nil {
+	h, r, err := parseErrorPointPoint(epy.Point)
+	if err != nil {
 		return err
-	} else {
-		ep.Height = h
-		ep.Round = r
 	}
+	ep.Height = h
+	ep.Round = r
 
 	return nil
 }

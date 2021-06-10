@@ -10,14 +10,13 @@ import (
 	"golang.org/x/xerrors"
 
 	"github.com/spikeekips/mitum/launch/process"
-	"github.com/spikeekips/mitum/network"
 	"github.com/spikeekips/mitum/util"
 	jsonenc "github.com/spikeekips/mitum/util/encoder/json"
 )
 
 type NodeInfoCommand struct {
 	*BaseCommand
-	URL        *url.URL      `arg:"" name:"node url" help:"remote mitum url" required:""`
+	URL        *url.URL      `arg:"" name:"node url" help:"remote mitum url" required:"true"`
 	Timeout    time.Duration `name:"timeout" help:"timeout; default is 5 seconds"`
 	TLSInscure bool          `name:"tls-insecure" help:"allow inseucre TLS connection; default is false"`
 }
@@ -41,11 +40,11 @@ func (cmd *NodeInfoCommand) Run(version util.Version) error {
 
 	encs := cmd.Encoders()
 	if encs == nil {
-		if i, err := cmd.LoadEncoders(nil, nil); err != nil {
+		i, err := cmd.LoadEncoders(nil, nil)
+		if err != nil {
 			return err
-		} else {
-			encs = i
 		}
+		encs = i
 	}
 
 	if cmd.TLSInscure {
@@ -54,11 +53,9 @@ func (cmd *NodeInfoCommand) Run(version util.Version) error {
 		cmd.URL.RawQuery = query.Encode()
 	}
 
-	var channel network.Channel
-	if ch, err := process.LoadNodeChannel(cmd.URL, encs, cmd.Timeout); err != nil {
+	channel, err := process.LoadNodeChannel(cmd.URL, encs, cmd.Timeout)
+	if err != nil {
 		return err
-	} else {
-		channel = ch
 	}
 	cmd.Log().Debug().Msg("network channel loaded")
 
@@ -67,11 +64,11 @@ func (cmd *NodeInfoCommand) Run(version util.Version) error {
 	ctx, cancel := context.WithTimeout(context.Background(), cmd.Timeout)
 	defer cancel()
 
-	if n, err := channel.NodeInfo(ctx); err != nil {
+	n, err := channel.NodeInfo(ctx)
+	if err != nil {
 		return err
-	} else {
-		_, _ = fmt.Fprintln(os.Stdout, jsonenc.ToString(n))
 	}
+	_, _ = fmt.Fprintln(os.Stdout, jsonenc.ToString(n))
 
 	return nil
 }

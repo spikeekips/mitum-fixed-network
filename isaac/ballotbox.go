@@ -142,7 +142,7 @@ func (bb *Ballotbox) loadVoteRecords(blt ballot.Ballot, ifNotCreate bool) *VoteR
 	return vrs
 }
 
-func (bb *Ballotbox) vrsKey(blt ballot.Ballot) string {
+func (*Ballotbox) vrsKey(blt ballot.Ballot) string {
 	return fmt.Sprintf("%d-%d-%d", blt.Height(), blt.Round(), blt.Stage())
 }
 

@@ -23,12 +23,10 @@ type Policy struct {
 
 func (no Policy) Set(ctx context.Context) (context.Context, error) {
 	var l config.LocalNode
-	var conf config.Policy
 	if err := config.LoadConfigContextValue(ctx, &l); err != nil {
 		return ctx, err
-	} else {
-		conf = l.Policy()
 	}
+	conf := l.Policy()
 
 	if no.ThresholdRatio != nil {
 		if err := conf.SetThresholdRatio(*no.ThresholdRatio); err != nil {

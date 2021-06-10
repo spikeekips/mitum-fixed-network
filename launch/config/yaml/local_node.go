@@ -44,11 +44,11 @@ func (no LocalNode) Set(ctx context.Context) (context.Context, error) {
 		no.setComponents,
 		no.setNodes,
 	} {
-		if c, err := f(ctx, conf); err != nil {
+		c, err := f(ctx, conf)
+		if err != nil {
 			return ctx, err
-		} else {
-			ctx = c
 		}
+		ctx = c
 	}
 
 	return ctx, nil
@@ -78,35 +78,35 @@ func (no LocalNode) setBase(ctx context.Context, conf config.LocalNode) (context
 
 func (no LocalNode) setComponents(ctx context.Context, _ config.LocalNode) (context.Context, error) {
 	if no.Network != nil {
-		if c, err := no.Network.Set(ctx); err != nil {
+		c, err := no.Network.Set(ctx)
+		if err != nil {
 			return ctx, err
-		} else {
-			ctx = c
 		}
+		ctx = c
 	}
 
 	if no.Storage != nil {
-		if c, err := no.Storage.Set(ctx); err != nil {
+		c, err := no.Storage.Set(ctx)
+		if err != nil {
 			return ctx, err
-		} else {
-			ctx = c
 		}
+		ctx = c
 	}
 
 	if no.Policy != nil {
-		if c, err := no.Policy.Set(ctx); err != nil {
+		c, err := no.Policy.Set(ctx)
+		if err != nil {
 			return ctx, err
-		} else {
-			ctx = c
 		}
+		ctx = c
 	}
 
 	if no.LocalConfig != nil {
-		if c, err := no.LocalConfig.Set(ctx); err != nil {
+		c, err := no.LocalConfig.Set(ctx)
+		if err != nil {
 			return ctx, err
-		} else {
-			ctx = c
 		}
+		ctx = c
 	}
 
 	return ctx, nil
@@ -123,11 +123,11 @@ func (no LocalNode) setNodes(ctx context.Context, conf config.LocalNode) (contex
 
 	nodes := make([]config.RemoteNode, len(no.Nodes))
 	for i := range no.Nodes {
-		if c, err := no.Nodes[i].Load(ctx); err != nil {
+		c, err := no.Nodes[i].Load(ctx)
+		if err != nil {
 			return ctx, err
-		} else {
-			nodes[i] = c
 		}
+		nodes[i] = c
 	}
 
 	if err := conf.SetNodes(nodes); err != nil {

@@ -22,22 +22,20 @@ var DefaultHookHandlersSuffrageConfig = map[string]HookHandlerSuffrageConfig{
 func HookSuffrageConfigFunc(handlers map[string]HookHandlerSuffrageConfig) pm.ProcessFunc {
 	return func(ctx context.Context) (context.Context, error) {
 		var conf config.LocalNode
-		var sc map[string]interface{}
 		if err := config.LoadConfigContextValue(ctx, &conf); err != nil {
 			return nil, err
-		} else {
-			sc = conf.Source()
 		}
+		sc := conf.Source()
 
 		var m map[string]interface{}
 		var st string
 		if n, err := config.ParseMap(sc, "suffrage", true); err != nil {
 			return ctx, err
-		} else if n == nil {
-			//
-		} else if t, err := config.ParseType(n, true); err != nil {
-			return ctx, err
-		} else {
+		} else if n != nil {
+			t, err := config.ParseType(n, true)
+			if err != nil {
+				return ctx, err
+			}
 			st = t
 			m = n
 		}
@@ -54,11 +52,11 @@ func HookSuffrageConfigFunc(handlers map[string]HookHandlerSuffrageConfig) pm.Pr
 
 		var sf config.Suffrage
 		if len(st) < 1 {
-			if i, err := SuffrageConfigHandlerRoundrobin(ctx, nil, nodes); err != nil {
+			i, err := SuffrageConfigHandlerRoundrobin(ctx, nil, nodes)
+			if err != nil {
 				return ctx, err
-			} else {
-				sf = i
 			}
+			sf = i
 		} else if h, found := handlers[st]; !found {
 			return ctx, xerrors.Errorf("unknown suffrage found, %s", st)
 		} else if i, err := h(ctx, m, nodes); err != nil {
@@ -97,11 +95,11 @@ func SuffrageConfigHandlerFixedProposer(
 
 	var proposer base.Address
 	if i, found := m["proposer"]; found {
-		if a, err := parseAddress(i, enc); err != nil {
+		a, err := parseAddress(i, enc)
+		if err != nil {
 			return nil, xerrors.Errorf("invalid proposer address for fixed-suffrage: %w", err)
-		} else {
-			proposer = a
 		}
+		proposer = a
 	}
 
 	if proposer == nil {
@@ -150,11 +148,11 @@ func parseSuffrageNodes(ctx context.Context, m map[string]interface{}) ([]base.A
 
 	nodes := make([]base.Address, len(l))
 	for j := range l {
-		if a, err := parseAddress(l[j], enc); err != nil {
+		a, err := parseAddress(l[j], enc)
+		if err != nil {
 			return nil, xerrors.Errorf("invalid node address for suffrage config: %w", err)
-		} else {
-			nodes[j] = a
 		}
+		nodes[j] = a
 	}
 
 	return nodes, nil

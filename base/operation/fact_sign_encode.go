@@ -13,11 +13,9 @@ func (fs *BaseFactSign) unpack(
 	signature key.Signature,
 	signedAt time.Time,
 ) error {
-	var signer key.Publickey
-	if k, err := bSigner.Encode(enc); err != nil {
+	signer, err := bSigner.Encode(enc)
+	if err != nil {
 		return err
-	} else {
-		signer = k
 	}
 
 	fs.signer = signer

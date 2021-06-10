@@ -12,35 +12,35 @@ import (
 
 type EmptySuffrage struct{}
 
-func (sf EmptySuffrage) Initialize() error {
+func (EmptySuffrage) Initialize() error {
 	return nil
 }
 
-func (sf EmptySuffrage) NumberOfActing() uint {
+func (EmptySuffrage) NumberOfActing() uint {
 	return 0
 }
 
-func (sf EmptySuffrage) Acting(height base.Height, round base.Round) (base.ActingSuffrage, error) {
+func (EmptySuffrage) Acting(height base.Height, round base.Round) (base.ActingSuffrage, error) {
 	return base.NewActingSuffrage(height, round, nil, nil), nil
 }
 
-func (sf EmptySuffrage) IsInside(base.Address) bool {
+func (EmptySuffrage) IsInside(base.Address) bool {
 	return false
 }
 
-func (sf EmptySuffrage) IsActing(base.Height, base.Round, base.Address) (bool, error) {
+func (EmptySuffrage) IsActing(base.Height, base.Round, base.Address) (bool, error) {
 	return false, nil
 }
 
-func (sf EmptySuffrage) IsProposer(base.Height, base.Round, base.Address) (bool, error) {
+func (EmptySuffrage) IsProposer(base.Height, base.Round, base.Address) (bool, error) {
 	return false, nil
 }
 
-func (sf EmptySuffrage) Nodes() []base.Address {
+func (EmptySuffrage) Nodes() []base.Address {
 	return nil
 }
 
-func (sf EmptySuffrage) Name() string {
+func (EmptySuffrage) Name() string {
 	return "empty-suffrage"
 }
 
@@ -49,7 +49,8 @@ func (sf EmptySuffrage) Verbose() string {
 		"type": sf.Name(),
 	}
 
-	if b, err := jsonenc.Marshal(m); err != nil {
+	b, err := jsonenc.Marshal(m)
+	if err != nil {
 		_, _ = fmt.Fprintf(
 			os.Stderr,
 			"%+v\n",
@@ -57,7 +58,6 @@ func (sf EmptySuffrage) Verbose() string {
 		)
 
 		return sf.Name()
-	} else {
-		return string(b)
 	}
+	return string(b)
 }

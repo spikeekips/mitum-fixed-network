@@ -53,12 +53,10 @@ func init() {
 
 func ProcessBlockData(ctx context.Context) (context.Context, error) {
 	var l config.LocalNode
-	var conf config.BlockData
 	if err := config.LoadConfigContextValue(ctx, &l); err != nil {
 		return ctx, err
-	} else {
-		conf = l.Storage().BlockData()
 	}
+	conf := l.Storage().BlockData()
 
 	var enc *jsonenc.Encoder
 	if err := config.LoadJSONEncoderContextValue(ctx, &enc); err != nil {
@@ -82,22 +80,18 @@ func ProcessBlockData(ctx context.Context) (context.Context, error) {
 
 func ProcessMongodbDatabase(ctx context.Context) (context.Context, error) {
 	var l config.LocalNode
-	var conf config.Database
 	if err := config.LoadConfigContextValue(ctx, &l); err != nil {
 		return ctx, err
-	} else {
-		conf = l.Storage().Database()
 	}
+	conf := l.Storage().Database()
 
 	if !strings.EqualFold(conf.URI().Scheme, "mongodb") {
 		return ctx, nil
 	}
 
-	var ca cache.Cache
-	if c, err := cache.NewCacheFromURI(conf.Cache().String()); err != nil {
+	ca, err := cache.NewCacheFromURI(conf.Cache().String())
+	if err != nil {
 		return ctx, err
-	} else {
-		ca = c
 	}
 
 	var encs *encoder.Encoders

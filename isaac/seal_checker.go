@@ -51,11 +51,9 @@ func (svc SealChecker) IsKnown() (bool, error) {
 }
 
 func (svc SealChecker) IsValidOperationSeal() (bool, error) {
-	var os operation.Seal
-	if s, ok := svc.seal.(operation.Seal); !ok {
+	os, ok := svc.seal.(operation.Seal)
+	if !ok {
 		return true, nil
-	} else {
-		os = s
 	}
 
 	if l := len(os.Operations()); l < 1 {

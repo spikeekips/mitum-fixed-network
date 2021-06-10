@@ -32,11 +32,9 @@ func NewSyncingState(
 }
 
 func (st *SyncingState) Enter(sctx StateSwitchContext) (func() error, error) {
-	var callback func() error
-	if i, err := st.BaseSyncingState.Enter(sctx); err != nil {
+	callback, err := st.BaseSyncingState.Enter(sctx)
+	if err != nil {
 		return nil, err
-	} else {
-		callback = i
 	}
 
 	return func() error {
@@ -49,11 +47,9 @@ func (st *SyncingState) Enter(sctx StateSwitchContext) (func() error, error) {
 }
 
 func (st *SyncingState) Exit(sctx StateSwitchContext) (func() error, error) {
-	var callback func() error
-	if i, err := st.BaseSyncingState.Exit(sctx); err != nil {
+	callback, err := st.BaseSyncingState.Exit(sctx)
+	if err != nil {
 		return nil, err
-	} else {
-		callback = i
 	}
 
 	return func() error {
@@ -96,16 +92,15 @@ func (st *SyncingState) enterCallback(voteproof base.Voteproof) error {
 		e.Msg("new syncers started with voteproof")
 
 		return st.ProcessVoteproof(voteproof)
-	} else {
-		e := st.Log().Debug()
-		if baseManifest != nil {
-			e.Hinted("base_height", baseManifest.Height())
-		}
-
-		e.Msg("new syncers started without voteproof")
-
-		return nil
 	}
+	e := st.Log().Debug()
+	if baseManifest != nil {
+		e.Hinted("base_height", baseManifest.Height())
+	}
+
+	e.Msg("new syncers started without voteproof")
+
+	return nil
 }
 
 func (st *SyncingState) handleINITTVoteproof(voteproof base.Voteproof) error {
@@ -205,17 +200,16 @@ func (st *SyncingState) syncFromVoteproof(voteproof base.Voteproof, to base.Heig
 		Hinted("height_to", to).
 		Msg("will sync to the height")
 
-	if isFinished, err := st.syncers().Add(to, sourceNodes); !isFinished {
-		if err0 := st.stopWaitVoteproof(); err0 != nil {
-			if err == nil {
-				return err0
-			}
+	isFinished, err := st.syncers().Add(to, sourceNodes)
+	if !isFinished {
+		if err = st.stopWaitVoteproof(); err != nil {
+			return err
 		}
 
 		return err
-	} else {
-		return err
 	}
+
+	return err
 }
 
 func (st *SyncingState) whenFinished(height base.Height) {

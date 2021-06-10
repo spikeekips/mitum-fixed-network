@@ -20,13 +20,13 @@ func NewDeployKeyKeysHandler(ks *DeployKeyStorage, enc encoder.Encoder) network.
 			return true
 		})
 
-		if i, err := enc.Marshal(m); err != nil {
+		b, err := enc.Marshal(m)
+		if err != nil {
 			network.WriteProblemWithError(w, http.StatusInternalServerError, err)
 
 			return
-		} else {
-			w.Header().Set("Content-Type", "application/json")
-			_, _ = w.Write(i)
 		}
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write(b)
 	}
 }

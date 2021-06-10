@@ -103,11 +103,11 @@ func LoadBlock(st *BlockData, height base.Height) (block.BaseBlockDataMap, block
 	bdm = block.NewBaseBlockDataMap(st.Writer().Hint(), height)
 	bdm = bdm.SetBlock(blk.Hash())
 	for i := range mapItems {
-		if j, err := bdm.SetItem(mapItems[i]); err != nil {
+		j, err := bdm.SetItem(mapItems[i])
+		if err != nil {
 			return bdm, nil, err
-		} else {
-			bdm = j
 		}
+		bdm = j
 	}
 
 	if i, err := bdm.UpdateHash(); err != nil {
@@ -205,14 +205,9 @@ func ParseDataFileName(s string) (base.Height, string /* data type */, string /*
 }
 
 func NewBaseBlockDataMapItem(f string) (block.BaseBlockDataMapItem, error) {
-	var height base.Height
-	var dataType, checksum string
-	if a, b, c, err := ParseDataFileName(f); err != nil {
+	height, dataType, checksum, err := ParseDataFileName(f)
+	if err != nil {
 		return block.BaseBlockDataMapItem{}, err
-	} else {
-		height = a
-		dataType = b
-		checksum = c
 	}
 
 	return block.NewBaseBlockDataMapItem(

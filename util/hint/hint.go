@@ -10,8 +10,8 @@ import (
 )
 
 var (
-	MaxVersionLength int = 20
-	MaxHintLength    int = MaxTypeLength + MaxVersionLength + 1
+	MaxVersionLength = 20
+	MaxHintLength    = MaxTypeLength + MaxVersionLength + 1
 )
 
 type Hinter interface {
@@ -106,12 +106,12 @@ func (ht *Hint) UnmarshalText(b []byte) error {
 		return nil
 	}
 
-	if i, err := ParseHint(string(b)); err != nil {
+	i, err := ParseHint(string(b))
+	if err != nil {
 		return err
-	} else {
-		ht.ty = i.ty
-		ht.v = i.v
-
-		return nil
 	}
+	ht.ty = i.ty
+	ht.v = i.v
+
+	return nil
 }

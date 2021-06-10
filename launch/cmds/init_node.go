@@ -62,12 +62,11 @@ func NewInitCommand(dryrun bool) InitCommand {
 func (cmd *InitCommand) Run(version util.Version) error {
 	if err := cmd.Initialize(cmd, version); err != nil {
 		return xerrors.Errorf("failed to initialize command: %w", err)
-	} else {
-		defer cmd.Done()
-		defer func() {
-			<-time.After(time.Second * 1)
-		}()
 	}
+	defer cmd.Done()
+	defer func() {
+		<-time.After(time.Second * 1)
+	}()
 
 	cmd.Log().Info().Bool("dryrun", cmd.dryrun).Msg("dryrun?")
 

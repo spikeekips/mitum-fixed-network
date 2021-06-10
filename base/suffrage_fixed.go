@@ -47,11 +47,11 @@ func (ff *FixedSuffrage) Initialize() error {
 	return nil
 }
 
-func (ff *FixedSuffrage) Name() string {
+func (*FixedSuffrage) Name() string {
 	return "base-fixed-suffrage"
 }
 
-func (ff *FixedSuffrage) NumberOfActing() uint {
+func (*FixedSuffrage) NumberOfActing() uint {
 	return 1
 }
 
@@ -86,11 +86,14 @@ func (ff *FixedSuffrage) Verbose() string {
 		m["nodes"] = ff.Nodes()
 	}
 
-	if b, err := jsonenc.Marshal(m); err != nil {
-		_, _ = fmt.Fprintf(os.Stderr, "%+v\n", xerrors.Errorf("failed to marshal FixedSuffrage.Verbose(): %w", err).Error())
+	b, err := jsonenc.Marshal(m)
+	if err != nil {
+		_, _ = fmt.Fprintf(os.Stderr,
+			"%+v\n", xerrors.Errorf("failed to marshal FixedSuffrage.Verbose(): %w", err).Error(),
+		)
 
 		return ff.Name()
-	} else {
-		return string(b)
 	}
+
+	return string(b)
 }

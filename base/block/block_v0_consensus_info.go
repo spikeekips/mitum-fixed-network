@@ -48,7 +48,7 @@ func (bc ConsensusInfoV0) IsValid(networkID []byte) error {
 	return nil
 }
 
-func (bc ConsensusInfoV0) isValidVoteproof(
+func (ConsensusInfoV0) isValidVoteproof(
 	_ []byte,
 	sn map[base.Address]base.Node,
 	voteproof base.Voteproof,
@@ -65,7 +65,7 @@ func (bc ConsensusInfoV0) isValidVoteproof(
 	return nil
 }
 
-func (bc ConsensusInfoV0) Hint() hint.Hint {
+func (ConsensusInfoV0) Hint() hint.Hint {
 	return BlockConsensusInfoV0Hint
 }
 
@@ -97,7 +97,7 @@ func NewSuffrageInfoV0(proposer base.Address, nodes []base.Node) SuffrageInfoV0 
 	}
 }
 
-func (si SuffrageInfoV0) Hint() hint.Hint {
+func (SuffrageInfoV0) Hint() hint.Hint {
 	return SuffrageInfoV0Hint
 }
 

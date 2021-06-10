@@ -26,7 +26,7 @@ func NewNumberValue(v interface{}) (NumberValue, error) {
 	return NumberValue{}.set(v)
 }
 
-func (nv NumberValue) set(v interface{}) (NumberValue, error) {
+func (NumberValue) set(v interface{}) (NumberValue, error) {
 	var b []byte
 	switch t := v.(type) {
 	case int, int8, int16, int32, int64:
@@ -107,7 +107,7 @@ func (nv NumberValue) Bytes() []byte {
 	return nv.b
 }
 
-func (nv NumberValue) Hint() hint.Hint {
+func (NumberValue) Hint() hint.Hint {
 	return NumberValueHint
 }
 

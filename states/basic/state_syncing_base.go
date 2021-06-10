@@ -101,14 +101,13 @@ func (st *BaseSyncingState) enterCallback() error {
 
 	if err := syncs.Start(); err != nil {
 		return err
-	} else {
-		st.setSyncers(syncs)
 	}
+	st.setSyncers(syncs)
 
 	return nil
 }
 
-func (st *BaseSyncingState) exitCallback(syncs *isaac.Syncers) error {
+func (*BaseSyncingState) exitCallback(syncs *isaac.Syncers) error {
 	if syncs == nil {
 		return nil
 	}

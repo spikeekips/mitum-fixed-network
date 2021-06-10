@@ -11,22 +11,22 @@ func NewEmptyState() *EmptyState {
 	return &EmptyState{}
 }
 
-func (st *EmptyState) Enter(StateSwitchContext) (func() error, error) {
+func (*EmptyState) Enter(StateSwitchContext) (func() error, error) {
 	return nil, nil
 }
 
-func (st *EmptyState) Exit(StateSwitchContext) (func() error, error) {
+func (*EmptyState) Exit(StateSwitchContext) (func() error, error) {
 	return nil, nil
 }
 
-func (st *EmptyState) ProcessProposal(ballot.Proposal) error {
+func (*EmptyState) ProcessProposal(ballot.Proposal) error {
 	return nil
 }
 
-func (st *EmptyState) ProcessVoteproof(base.Voteproof) error {
+func (*EmptyState) ProcessVoteproof(base.Voteproof) error {
 	return nil
 }
 
-func (st *EmptyState) SetStates(*States) State {
+func (*EmptyState) SetStates(*States) State {
 	return nil
 }

@@ -12,31 +12,29 @@ import (
 )
 
 func RateLimitStoreFromURI(s string) (limiter.Store, error) {
-	var u *url.URL
-	if i, err := url.Parse(s); err != nil {
+	u, err := url.Parse(s)
+	if err != nil {
 		return nil, xerrors.Errorf("wrong ratelimit cache url, %q", s)
-	} else {
-		u = i
 	}
 
-	var prefix string = "mitum:limiter"
+	prefix := "mitum:limiter"
 	if i := u.Query().Get("prefix"); len(i) > 0 {
 		prefix = i
 	}
 
 	switch {
 	case u.Scheme == "memory":
-		if i, err := newMemoryRateLimitStore(u, prefix); err != nil {
+		i, err := newMemoryRateLimitStore(u, prefix)
+		if err != nil {
 			return nil, xerrors.Errorf("failed to create ratelimit memory store: %w", err)
-		} else {
-			return i, nil
 		}
+		return i, nil
 	case u.Scheme == "redis":
-		if i, err := newRedisRateLimitStore(u, prefix); err != nil {
+		i, err := newRedisRateLimitStore(u, prefix)
+		if err != nil {
 			return nil, xerrors.Errorf("failed to create ratelimit redis store: %w", err)
-		} else {
-			return i, nil
 		}
+		return i, nil
 	default:
 		return nil, xerrors.Errorf("unknown ratelimit cache uri: %q", u.String())
 	}
@@ -45,11 +43,11 @@ func RateLimitStoreFromURI(s string) (limiter.Store, error) {
 func newMemoryRateLimitStore(u *url.URL, prefix string) (limiter.Store, error) {
 	var cleanup time.Duration = limiter.DefaultCleanUpInterval
 	if i := u.Query().Get("cleanup-interval"); len(i) > 0 {
-		if d, err := time.ParseDuration(i); err != nil {
+		d, err := time.ParseDuration(i)
+		if err != nil {
 			return nil, err
-		} else {
-			cleanup = d
 		}
+		cleanup = d
 	}
 
 	return memory.NewStoreWithOptions(limiter.StoreOptions{
@@ -60,12 +58,11 @@ func newMemoryRateLimitStore(u *url.URL, prefix string) (limiter.Store, error) {
 
 func newRedisRateLimitStore(u *url.URL, prefix string) (limiter.Store, error) {
 	u.RawQuery = ""
-	var client *libredis.Client
-	if i, err := libredis.ParseURL(u.String()); err != nil {
+	i, err := libredis.ParseURL(u.String())
+	if err != nil {
 		return nil, err
-	} else {
-		client = libredis.NewClient(i)
 	}
+	client := libredis.NewClient(i)
 
 	return redis.NewStoreWithOptions(client, limiter.StoreOptions{
 		Prefix: prefix,

@@ -6,7 +6,6 @@ import (
 	"golang.org/x/xerrors"
 
 	"github.com/spikeekips/mitum/base/block"
-	"github.com/spikeekips/mitum/base/operation"
 	"github.com/spikeekips/mitum/isaac"
 	"github.com/spikeekips/mitum/launch/config"
 	"github.com/spikeekips/mitum/launch/pm"
@@ -62,14 +61,12 @@ func ProcessGenerateGenesisBlock(ctx context.Context) (context.Context, error) {
 	}
 
 	var l config.LocalNode
-	var ops []operation.Operation
 	if err := config.LoadConfigContextValue(ctx, &l); err != nil {
 		return ctx, err
-	} else {
-		ops = l.GenesisOperations()
-
-		log.Debug().Int("operations", len(ops)).Msg("operations loaded")
 	}
+	ops := l.GenesisOperations()
+
+	log.Debug().Int("operations", len(ops)).Msg("operations loaded")
 
 	if gg, err := isaac.NewGenesisBlockV0Generator(local, st, blockData, policy, ops); err != nil {
 		return ctx, xerrors.Errorf("failed to create genesis block generator: %w", err)
@@ -126,9 +123,8 @@ func HookCheckGenesisBlock(ctx context.Context) (context.Context, error) {
 
 	if err := blockdata.Clean(st, blockData, false); err != nil {
 		return ctx, err
-	} else {
-		log.Debug().Msg("existing environment cleaned")
 	}
+	log.Debug().Msg("existing environment cleaned")
 
 	return ctx, nil
 }

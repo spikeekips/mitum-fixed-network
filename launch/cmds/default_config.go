@@ -72,11 +72,11 @@ func (cmd *DefaultConfigCommand) Run(version util.Version) error {
 		"type": "default",
 	}
 
-	if b, err := yaml.Marshal(bconf); err != nil {
+	b, err := yaml.Marshal(bconf)
+	if err != nil {
 		return xerrors.Errorf("failed to format config: %w", err)
-	} else {
-		_, _ = fmt.Fprintln(cmd.out, string(b))
 	}
+	_, _ = fmt.Fprintln(cmd.out, string(b))
 
 	return nil
 }
@@ -118,9 +118,8 @@ func (cmd *DefaultConfigCommand) prepare() error {
 
 	if err := ps.Run(); err != nil {
 		return err
-	} else {
-		cmd.ctx = ps.Context()
-
-		return nil
 	}
+	cmd.ctx = ps.Context()
+
+	return nil
 }

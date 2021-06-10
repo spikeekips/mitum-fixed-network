@@ -56,18 +56,14 @@ func UnpackBaseBallotV0JSON(nib BaseBallotV0UnpackerJSON, enc *jsonenc.Encoder) 
 	error,
 ) {
 	// signer
-	var signer key.Publickey
-	if k, err := nib.SN.Encode(enc); err != nil {
+	signer, err := nib.SN.Encode(enc)
+	if err != nil {
 		return BaseBallotV0{}, BaseBallotFactV0{}, err
-	} else {
-		signer = k
 	}
 
-	var node base.Address
-	if n, err := nib.N.Encode(enc); err != nil {
+	node, err := nib.N.Encode(enc)
+	if err != nil {
 		return BaseBallotV0{}, BaseBallotFactV0{}, err
-	} else {
-		node = n
 	}
 
 	var h, bh valuehash.Hash

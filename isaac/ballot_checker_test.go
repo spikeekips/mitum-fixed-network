@@ -145,7 +145,7 @@ func (t *testBallotChecker) TestCheckWithLastVoteproof() {
 	{ // lower Height
 		lastManifest := t.LastManifest(t.local.Database())
 
-		ib := ballot.NewINITBallotV0(
+		ib := ballot.NewINITV0(
 			t.local.Node().Address(),
 			lastManifest.Height(),
 			base.Round(0),

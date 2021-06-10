@@ -12,23 +12,23 @@ import (
 	"github.com/spikeekips/mitum/util/valuehash"
 )
 
-type testBallotV0SIGN struct {
+type testSIGNV0 struct {
 	suite.Suite
 
 	pk key.Privatekey
 }
 
-func (t *testBallotV0SIGN) SetupSuite() {
+func (t *testSIGNV0) SetupSuite() {
 	t.pk, _ = key.NewBTCPrivatekey()
 }
 
-func (t *testBallotV0SIGN) TestNew() {
-	ib := SIGNBallotV0{
+func (t *testSIGNV0) TestNew() {
+	ib := SIGNV0{
 		BaseBallotV0: BaseBallotV0{
 			node: base.RandomStringAddress(),
 		},
-		SIGNBallotFactV0: SIGNBallotFactV0{
-			BaseBallotFactV0: BaseBallotFactV0{
+		SIGNFactV0: SIGNFactV0{
+			BaseFactV0: BaseFactV0{
 				height: base.Height(10),
 				round:  base.Round(0),
 			},
@@ -43,13 +43,13 @@ func (t *testBallotV0SIGN) TestNew() {
 	t.Implements((*Ballot)(nil), ib)
 }
 
-func (t *testBallotV0SIGN) TestFact() {
-	ib := SIGNBallotV0{
+func (t *testSIGNV0) TestFact() {
+	ib := SIGNV0{
 		BaseBallotV0: BaseBallotV0{
 			node: base.RandomStringAddress(),
 		},
-		SIGNBallotFactV0: SIGNBallotFactV0{
-			BaseBallotFactV0: BaseBallotFactV0{
+		SIGNFactV0: SIGNFactV0{
+			BaseFactV0: BaseFactV0{
 				height: base.Height(10),
 				round:  base.Round(0),
 			},
@@ -76,13 +76,13 @@ func (t *testBallotV0SIGN) TestFact() {
 	t.NoError(ib.Signer().Verify(ib.Fact().Hash().Bytes(), ib.FactSignature()))
 }
 
-func (t *testBallotV0SIGN) TestGenerateHash() {
-	ib := SIGNBallotV0{
+func (t *testSIGNV0) TestGenerateHash() {
+	ib := SIGNV0{
 		BaseBallotV0: BaseBallotV0{
 			node: base.RandomStringAddress(),
 		},
-		SIGNBallotFactV0: SIGNBallotFactV0{
-			BaseBallotFactV0: BaseBallotFactV0{
+		SIGNFactV0: SIGNFactV0{
+			BaseFactV0: BaseFactV0{
 				height: base.Height(10),
 				round:  base.Round(0),
 			},
@@ -102,13 +102,13 @@ func (t *testBallotV0SIGN) TestGenerateHash() {
 	t.NotEmpty(bh)
 }
 
-func (t *testBallotV0SIGN) TestSign() {
-	ib := SIGNBallotV0{
+func (t *testSIGNV0) TestSign() {
+	ib := SIGNV0{
 		BaseBallotV0: BaseBallotV0{
 			node: base.RandomStringAddress(),
 		},
-		SIGNBallotFactV0: SIGNBallotFactV0{
-			BaseBallotFactV0: BaseBallotFactV0{
+		SIGNFactV0: SIGNFactV0{
+			BaseFactV0: BaseFactV0{
 				height: base.Height(10),
 				round:  base.Round(0),
 			},
@@ -139,7 +139,7 @@ func (t *testBallotV0SIGN) TestSign() {
 	t.True(xerrors.Is(err, key.SignatureVerificationFailedError))
 }
 
-func (t *testBallotV0SIGN) TestIsValid() {
+func (t *testSIGNV0) TestIsValid() {
 	{ // empty signedAt
 		bb := BaseBallotV0{
 			node: base.RandomStringAddress(),
@@ -168,6 +168,6 @@ func (t *testBallotV0SIGN) TestIsValid() {
 	}
 }
 
-func TestBallotV0SIGN(t *testing.T) {
-	suite.Run(t, new(testBallotV0SIGN))
+func TestSIGNV0(t *testing.T) {
+	suite.Run(t, new(testSIGNV0))
 }

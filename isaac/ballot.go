@@ -12,20 +12,20 @@ import (
 	"github.com/spikeekips/mitum/util/valuehash"
 )
 
-func NewINITBallotV0Round0(node network.Node, st storage.Database) (ballot.INITBallotV0, error) {
+func NewINITBallotV0Round0(node network.Node, st storage.Database) (ballot.INITV0, error) {
 	var m block.Manifest
 	switch l, found, err := st.LastManifest(); {
 	case !found:
-		return ballot.INITBallotV0{}, xerrors.Errorf("last block not found")
+		return ballot.INITV0{}, xerrors.Errorf("last block not found")
 	case err != nil:
-		return ballot.INITBallotV0{}, xerrors.Errorf("failed to get last block: %w", err)
+		return ballot.INITV0{}, xerrors.Errorf("failed to get last block: %w", err)
 	default:
 		m = l
 	}
 
 	avp := st.LastVoteproof(base.StageACCEPT)
 
-	return ballot.NewINITBallotV0(
+	return ballot.NewINITV0(
 		node.Address(),
 		m.Height()+1,
 		base.Round(0),
@@ -39,7 +39,7 @@ func NewINITBallotV0WithVoteproof(
 	node network.Node,
 	st storage.Database,
 	voteproof base.Voteproof,
-) (ballot.INITBallotV0, error) {
+) (ballot.INITV0, error) {
 	var height base.Height
 	var round base.Round
 	var previousBlock valuehash.Hash
@@ -49,9 +49,9 @@ func NewINITBallotV0WithVoteproof(
 		height = voteproof.Height()
 		round = voteproof.Round() + 1
 		switch t := voteproof.Majority().(type) {
-		case ballot.INITBallotFact:
+		case ballot.INITFact:
 			previousBlock = t.PreviousBlock()
-		case ballot.ACCEPTBallotFact:
+		case ballot.ACCEPTFact:
 			previousBlock = t.NewBlock()
 		}
 
@@ -60,15 +60,15 @@ func NewINITBallotV0WithVoteproof(
 		avp = voteproof
 		height = voteproof.Height() + 1
 		round = base.Round(0)
-		f, ok := voteproof.Majority().(ballot.ACCEPTBallotFact)
+		f, ok := voteproof.Majority().(ballot.ACCEPTFact)
 		if !ok {
-			return ballot.INITBallotV0{},
+			return ballot.INITV0{},
 				xerrors.Errorf("invalid voteproof found; should have ACCEPTBallotFact, not %T", voteproof.Majority())
 		}
 		previousBlock = f.NewBlock()
 	}
 
-	return ballot.NewINITBallotV0(
+	return ballot.NewINITV0(
 		node.Address(),
 		height,
 		round,
@@ -106,8 +106,8 @@ func NewProposalV0(
 	), nil
 }
 
-func NewSIGNBallotV0(node base.Address, newBlock block.Block) ballot.SIGNBallotV0 {
-	return ballot.NewSIGNBallotV0(
+func NewSIGNBallotV0(node base.Address, newBlock block.Block) ballot.SIGNV0 {
+	return ballot.NewSIGNV0(
 		node,
 		newBlock.Height(),
 		newBlock.Round(),
@@ -116,8 +116,8 @@ func NewSIGNBallotV0(node base.Address, newBlock block.Block) ballot.SIGNBallotV
 	)
 }
 
-func NewACCEPTBallotV0(node base.Address, newBlock block.Block, voteproof base.Voteproof) ballot.ACCEPTBallotV0 {
-	return ballot.NewACCEPTBallotV0(
+func NewACCEPTBallotV0(node base.Address, newBlock block.Block, voteproof base.Voteproof) ballot.ACCEPTV0 {
+	return ballot.NewACCEPTV0(
 		node,
 		newBlock.Height(),
 		newBlock.Round(),

@@ -212,7 +212,7 @@ func (st *ConsensusState) newACCEPTVoteproof(voteproof base.Voteproof) error {
 }
 
 func (st *ConsensusState) processACCEPTVoteproof(voteproof base.Voteproof) error {
-	fact, ok := voteproof.Majority().(ballot.ACCEPTBallotFact)
+	fact, ok := voteproof.Majority().(ballot.ACCEPTFact)
 	if !ok {
 		return xerrors.Errorf("needs ACCEPTBallotFact: fact=%T", voteproof.Majority())
 	}
@@ -261,7 +261,7 @@ func (st *ConsensusState) processACCEPTVoteproof(voteproof base.Voteproof) error
 }
 
 func (st *ConsensusState) processProposalOfACCEPTVoteproof(voteproof base.Voteproof) (ballot.Proposal, error) {
-	fact, ok := voteproof.Majority().(ballot.ACCEPTBallotFact)
+	fact, ok := voteproof.Majority().(ballot.ACCEPTFact)
 	if !ok {
 		return nil, xerrors.Errorf("needs ACCEPTBallotFact: fact=%T", voteproof.Majority())
 	}
@@ -434,7 +434,7 @@ func (st *ConsensusState) broadcastSIGNBallot(proposal ballot.Proposal, newBlock
 
 	// NOTE not like broadcasting ACCEPT Ballot, SIGN Ballot will be broadcasted
 	// withtout waiting.
-	sb := ballot.NewSIGNBallotV0(
+	sb := ballot.NewSIGNV0(
 		st.nodepool.Local().Address(),
 		proposal.Height(),
 		proposal.Round(),
@@ -456,7 +456,7 @@ func (st *ConsensusState) broadcastACCEPTBallot(
 	voteproof base.Voteproof,
 	initialDelay time.Duration,
 ) error {
-	baseBallot := ballot.NewACCEPTBallotV0(
+	baseBallot := ballot.NewACCEPTV0(
 		st.nodepool.Local().Address(),
 		voteproof.Height(),
 		voteproof.Round(),
@@ -506,7 +506,7 @@ func (st *ConsensusState) broadcastNewINITBallot(voteproof base.Voteproof) error
 		return xerrors.Errorf("for broadcastNewINITBallot, should be accept voteproof, not %v", s)
 	}
 
-	var baseBallot ballot.INITBallotV0
+	var baseBallot ballot.INITV0
 	if b, err := NextINITBallotFromACCEPTVoteproof(st.database, st.nodepool.Local(), voteproof); err != nil {
 		return err
 	} else if err := b.Sign(st.nodepool.Local().Privatekey(), st.policy.NetworkID()); err != nil {
@@ -550,7 +550,7 @@ func (st *ConsensusState) whenProposalTimeout(voteproof base.Voteproof, proposer
 	})
 	l.Debug().Msg("waiting new proposal; if timed out, will move to next round")
 
-	var baseBallot ballot.INITBallotV0
+	var baseBallot ballot.INITV0
 	if b, err := NextINITBallotFromINITVoteproof(st.database, st.nodepool.Local(), voteproof); err != nil {
 		return err
 	} else if err := b.Sign(st.nodepool.Local().Privatekey(), st.policy.NetworkID()); err != nil {
@@ -608,7 +608,7 @@ func (st *ConsensusState) nextRound(voteproof base.Voteproof) error {
 	})
 	l.Debug().Msg("starting next round")
 
-	var baseBallot ballot.INITBallotV0
+	var baseBallot ballot.INITV0
 	{
 		var err error
 		switch s := voteproof.Stage(); s {

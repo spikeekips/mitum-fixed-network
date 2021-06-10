@@ -12,38 +12,38 @@ import (
 	"github.com/spikeekips/mitum/util/valuehash"
 )
 
-type BaseBallotFactV0 struct {
+type BaseFactV0 struct {
 	height base.Height
 	round  base.Round
 }
 
-func NewBaseBallotFactV0(height base.Height, round base.Round) BaseBallotFactV0 {
-	return BaseBallotFactV0{
+func NewBaseFactV0(height base.Height, round base.Round) BaseFactV0 {
+	return BaseFactV0{
 		height: height,
 		round:  round,
 	}
 }
 
-func (bf BaseBallotFactV0) IsReadyToSign([]byte) error {
+func (bf BaseFactV0) IsReadyToSign([]byte) error {
 	return bf.height.IsValid(nil)
 }
 
-func (bf BaseBallotFactV0) IsValid(networkID []byte) error {
+func (bf BaseFactV0) IsValid(networkID []byte) error {
 	return bf.IsReadyToSign(networkID)
 }
 
-func (bf BaseBallotFactV0) Bytes() []byte {
+func (bf BaseFactV0) Bytes() []byte {
 	return util.ConcatBytesSlice(
 		bf.height.Bytes(),
 		bf.round.Bytes(),
 	)
 }
 
-func (bf BaseBallotFactV0) Height() base.Height {
+func (bf BaseFactV0) Height() base.Height {
 	return bf.height
 }
 
-func (bf BaseBallotFactV0) Round() base.Round {
+func (bf BaseFactV0) Round() base.Round {
 	return bf.round
 }
 

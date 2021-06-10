@@ -7,10 +7,10 @@ import (
 	"golang.org/x/xerrors"
 )
 
-func (ab *ACCEPTBallotV0) unpack(
+func (ab *ACCEPTV0) unpack(
 	enc encoder.Encoder,
 	bb BaseBallotV0,
-	bf BaseBallotFactV0,
+	bf BaseFactV0,
 	proposal,
 	newBlock valuehash.Hash,
 	bVoteproof []byte,
@@ -32,18 +32,18 @@ func (ab *ACCEPTBallotV0) unpack(
 	}
 
 	ab.BaseBallotV0 = bb
-	ab.ACCEPTBallotFactV0 = ACCEPTBallotFactV0{
-		BaseBallotFactV0: bf,
-		proposal:         proposal,
-		newBlock:         newBlock,
+	ab.ACCEPTFactV0 = ACCEPTFactV0{
+		BaseFactV0: bf,
+		proposal:   proposal,
+		newBlock:   newBlock,
 	}
 
 	return nil
 }
 
-func (abf *ACCEPTBallotFactV0) unpack(
+func (abf *ACCEPTFactV0) unpack(
 	_ encoder.Encoder,
-	bf BaseBallotFactV0,
+	bf BaseFactV0,
 	proposal,
 	newBlock valuehash.Hash,
 ) error {
@@ -55,7 +55,7 @@ func (abf *ACCEPTBallotFactV0) unpack(
 		return xerrors.Errorf("empty newBlock hash found")
 	}
 
-	abf.BaseBallotFactV0 = bf
+	abf.BaseFactV0 = bf
 	abf.proposal = proposal
 	abf.newBlock = newBlock
 

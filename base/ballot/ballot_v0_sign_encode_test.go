@@ -14,30 +14,30 @@ import (
 	"github.com/spikeekips/mitum/util/valuehash"
 )
 
-type testBallotV0SIGNEncode struct {
+type testSIGNV0Encode struct {
 	suite.Suite
 
 	pk  key.Privatekey
 	enc encoder.Encoder
 }
 
-func (t *testBallotV0SIGNEncode) SetupSuite() {
+func (t *testSIGNV0Encode) SetupSuite() {
 	t.pk, _ = key.NewBTCPrivatekey()
 
 	encs := encoder.NewEncoders()
 	t.NoError(encs.AddEncoder(t.enc))
 	t.NoError(encs.TestAddHinter(base.StringAddress("")))
 	t.NoError(encs.TestAddHinter(key.BTCPublickeyHinter))
-	t.NoError(encs.TestAddHinter(SIGNBallotV0{}))
+	t.NoError(encs.TestAddHinter(SIGNV0{}))
 }
 
-func (t *testBallotV0SIGNEncode) TestEncode() {
-	ib := SIGNBallotV0{
+func (t *testSIGNV0Encode) TestEncode() {
+	ib := SIGNV0{
 		BaseBallotV0: BaseBallotV0{
 			node: base.RandomStringAddress(),
 		},
-		SIGNBallotFactV0: SIGNBallotFactV0{
-			BaseBallotFactV0: BaseBallotFactV0{
+		SIGNFactV0: SIGNFactV0{
+			BaseFactV0: BaseFactV0{
 				height: base.Height(10),
 				round:  base.Round(0),
 			},
@@ -54,7 +54,7 @@ func (t *testBallotV0SIGNEncode) TestEncode() {
 	ht, err := t.enc.DecodeByHint(b)
 	t.NoError(err)
 
-	nib, ok := ht.(SIGNBallotV0)
+	nib, ok := ht.(SIGNV0)
 	t.True(ok)
 	t.NoError(nib.IsValid(nil))
 	t.Equal(ib.Node(), nib.Node())
@@ -71,15 +71,15 @@ func (t *testBallotV0SIGNEncode) TestEncode() {
 	t.True(ib.Fact().Hash().Equal(nib.Fact().Hash()))
 }
 
-func TestBallotV0SIGNEncodeJSON(t *testing.T) {
-	b := new(testBallotV0SIGNEncode)
+func testSIGNV0EncodeJSON(t *testing.T) {
+	b := new(testSIGNV0Encode)
 	b.enc = jsonenc.NewEncoder()
 
 	suite.Run(t, b)
 }
 
-func TestBallotV0SIGNEncodeBSON(t *testing.T) {
-	b := new(testBallotV0SIGNEncode)
+func TestSIGNV0EncodeBSON(t *testing.T) {
+	b := new(testSIGNV0Encode)
 	b.enc = bsonenc.NewEncoder()
 
 	suite.Run(t, b)

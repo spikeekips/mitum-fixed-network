@@ -704,11 +704,11 @@ func (ss *States) checkBallotVoteproof(blt ballot.Ballot) error {
 	// NOTE incoming seal should be filtered as new
 	var voteproof base.Voteproof
 	switch t := blt.(type) {
-	case ballot.INITBallot:
+	case ballot.INIT:
 		voteproof = t.ACCEPTVoteproof()
 	case ballot.Proposal:
 		voteproof = t.Voteproof()
-	case ballot.ACCEPTBallot:
+	case ballot.ACCEPT:
 		voteproof = t.Voteproof()
 	default:
 		return nil

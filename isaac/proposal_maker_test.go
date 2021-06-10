@@ -21,7 +21,7 @@ func (t *testProposalMaker) TestCached() {
 	proposalMaker := NewProposalMaker(local.Node(), local.Database(), local.Policy())
 
 	ib := t.NewINITBallot(local, base.Round(0), nil)
-	initFact := ib.INITBallotFactV0
+	initFact := ib.INITFactV0
 
 	ivp, err := t.NewVoteproof(base.StageINIT, initFact, local)
 	t.NoError(err)

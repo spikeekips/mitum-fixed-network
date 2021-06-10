@@ -52,18 +52,18 @@ type BaseBallotV0UnpackerJSON struct {
 
 func UnpackBaseBallotV0JSON(nib BaseBallotV0UnpackerJSON, enc *jsonenc.Encoder) (
 	BaseBallotV0,
-	BaseBallotFactV0,
+	BaseFactV0,
 	error,
 ) {
 	// signer
 	signer, err := nib.SN.Encode(enc)
 	if err != nil {
-		return BaseBallotV0{}, BaseBallotFactV0{}, err
+		return BaseBallotV0{}, BaseFactV0{}, err
 	}
 
 	node, err := nib.N.Encode(enc)
 	if err != nil {
-		return BaseBallotV0{}, BaseBallotFactV0{}, err
+		return BaseBallotV0{}, BaseFactV0{}, err
 	}
 
 	var h, bh valuehash.Hash
@@ -83,7 +83,7 @@ func UnpackBaseBallotV0JSON(nib BaseBallotV0UnpackerJSON, enc *jsonenc.Encoder) 
 			node:          node,
 			factSignature: nib.FSG,
 		},
-		BaseBallotFactV0{
+		BaseFactV0{
 			height: nib.HT,
 			round:  nib.RD,
 		}, nil
@@ -95,7 +95,7 @@ type BaseBallotFactV0PackerJSON struct {
 	RD base.Round  `json:"round"`
 }
 
-func NewBaseBallotFactV0PackerJSON(bbf BaseBallotFactV0, ht hint.Hint) BaseBallotFactV0PackerJSON {
+func NewBaseBallotFactV0PackerJSON(bbf BaseFactV0, ht hint.Hint) BaseBallotFactV0PackerJSON {
 	return BaseBallotFactV0PackerJSON{
 		HintedHead: jsonenc.NewHintedHead(ht),
 		HT:         bbf.height,

@@ -27,7 +27,7 @@ func (t *testProposalChecker) SetupTest() {
 
 func (t *testProposalChecker) TestIsKnown() {
 	ib := t.NewINITBallot(t.local, base.Round(0), nil)
-	initFact := ib.INITBallotFactV0
+	initFact := ib.INITFactV0
 
 	vp, err := t.NewVoteproof(base.StageINIT, initFact, t.local, t.remote)
 	t.NoError(err)
@@ -54,7 +54,7 @@ func (t *testProposalChecker) TestIsKnown() {
 
 func (t *testProposalChecker) TestCheckSigning() {
 	ib := t.NewINITBallot(t.local, base.Round(0), nil)
-	initFact := ib.INITBallotFactV0
+	initFact := ib.INITFactV0
 
 	vp, err := t.NewVoteproof(base.StageINIT, initFact, t.local, t.remote)
 	t.NoError(err)
@@ -85,7 +85,7 @@ func (t *testProposalChecker) TestCheckSigning() {
 
 func (t *testProposalChecker) TestPropserPointProposal() {
 	ib := t.NewINITBallot(t.local, base.Round(0), nil)
-	initFact := ib.INITBallotFactV0
+	initFact := ib.INITFactV0
 
 	vp, err := t.NewVoteproof(base.StageINIT, initFact, t.local, t.remote)
 	t.NoError(err)
@@ -100,7 +100,7 @@ func (t *testProposalChecker) TestPropserPointProposal() {
 
 func (t *testProposalChecker) TestPropserPointOldProposalHeight() {
 	ib := t.NewINITBallot(t.local, base.Round(0), nil)
-	initFact := ib.INITBallotFactV0
+	initFact := ib.INITFactV0
 
 	ivp, err := t.NewVoteproof(base.StageINIT, initFact, t.local, t.remote)
 	t.NoError(err)
@@ -122,13 +122,13 @@ func (t *testProposalChecker) TestPropserPointOldProposalHeight() {
 
 func (t *testProposalChecker) TestPropserPointOldProposalRound() {
 	ib0 := t.NewINITBallot(t.local, base.Round(0), nil)
-	initFact0 := ib0.INITBallotFactV0
+	initFact0 := ib0.INITFactV0
 
 	ivp0, err := t.NewVoteproof(base.StageINIT, initFact0, t.local, t.remote)
 	t.NoError(err)
 
 	ib1 := t.NewINITBallot(t.local, base.Round(1), ivp0)
-	initFact1 := ib1.INITBallotFactV0
+	initFact1 := ib1.INITFactV0
 
 	ivp1, err := t.NewVoteproof(base.StageINIT, initFact1, t.local, t.remote)
 	t.NoError(err)
@@ -144,7 +144,7 @@ func (t *testProposalChecker) TestPropserPointOldProposalRound() {
 
 func (t *testProposalChecker) TestPropserPointHigherProposalHeight() {
 	ib := t.NewINITBallot(t.local, base.Round(0), nil)
-	initFact := ib.INITBallotFactV0
+	initFact := ib.INITFactV0
 
 	ivp, err := t.NewVoteproof(base.StageINIT, initFact, t.local, t.remote)
 	t.NoError(err)
@@ -171,13 +171,13 @@ func (t *testProposalChecker) TestPropserPointHigherProposalHeight() {
 
 func (t *testProposalChecker) TestPropserPointHigherProposalRound() {
 	ib0 := t.NewINITBallot(t.local, base.Round(0), nil)
-	initFact0 := ib0.INITBallotFactV0
+	initFact0 := ib0.INITFactV0
 
 	ivp0, err := t.NewVoteproof(base.StageINIT, initFact0, t.local, t.remote)
 	t.NoError(err)
 
 	ib1 := t.NewINITBallot(t.local, base.Round(1), ivp0)
-	initFact1 := ib1.INITBallotFactV0
+	initFact1 := ib1.INITFactV0
 
 	ivp1, err := t.NewVoteproof(base.StageINIT, initFact1, t.local, t.remote)
 	t.NoError(err)

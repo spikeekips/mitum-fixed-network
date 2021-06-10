@@ -43,14 +43,14 @@ func (t *BaseTest) SetupSuite() {
 	_ = t.Encs.TestAddHinter(key.BTCPrivatekeyHinter)
 	_ = t.Encs.TestAddHinter(key.BTCPublickeyHinter)
 	_ = t.Encs.TestAddHinter(base.StringAddress(""))
-	_ = t.Encs.TestAddHinter(ballot.INITBallotV0{})
-	_ = t.Encs.TestAddHinter(ballot.INITBallotFactV0{})
+	_ = t.Encs.TestAddHinter(ballot.INITV0{})
+	_ = t.Encs.TestAddHinter(ballot.INITFactV0{})
 	_ = t.Encs.TestAddHinter(ballot.ProposalV0{})
 	_ = t.Encs.TestAddHinter(ballot.ProposalFactV0{})
-	_ = t.Encs.TestAddHinter(ballot.SIGNBallotV0{})
-	_ = t.Encs.TestAddHinter(ballot.SIGNBallotFactV0{})
-	_ = t.Encs.TestAddHinter(ballot.ACCEPTBallotV0{})
-	_ = t.Encs.TestAddHinter(ballot.ACCEPTBallotFactV0{})
+	_ = t.Encs.TestAddHinter(ballot.SIGNV0{})
+	_ = t.Encs.TestAddHinter(ballot.SIGNFactV0{})
+	_ = t.Encs.TestAddHinter(ballot.ACCEPTV0{})
+	_ = t.Encs.TestAddHinter(ballot.ACCEPTFactV0{})
 	_ = t.Encs.TestAddHinter(base.VoteproofV0{})
 	_ = t.Encs.TestAddHinter(base.BaseNodeV0{})
 	_ = t.Encs.TestAddHinter(block.BlockV0{})
@@ -236,10 +236,10 @@ func (t *BaseTest) NewVoteproof(
 	var height base.Height
 	var round base.Round
 	switch f := fact.(type) {
-	case ballot.ACCEPTBallotFactV0:
+	case ballot.ACCEPTFactV0:
 		height = f.Height()
 		round = f.Round()
-	case ballot.INITBallotFactV0:
+	case ballot.INITFactV0:
 		height = f.Height()
 		round = f.Round()
 	}
@@ -276,8 +276,8 @@ func (t *BaseTest) Suffrage(proposerState *Local, states ...*Local) base.Suffrag
 	return sf
 }
 
-func (t *BaseTest) NewINITBallot(local *Local, round base.Round, voteproof base.Voteproof) ballot.INITBallotV0 {
-	var ib ballot.INITBallotV0
+func (t *BaseTest) NewINITBallot(local *Local, round base.Round, voteproof base.Voteproof) ballot.INITV0 {
+	var ib ballot.INITV0
 	if round == 0 {
 		if b, err := NewINITBallotV0Round0(local.Node(), local.Database()); err != nil {
 			panic(err)
@@ -297,7 +297,7 @@ func (t *BaseTest) NewINITBallot(local *Local, round base.Round, voteproof base.
 	return ib
 }
 
-func (t *BaseTest) NewINITBallotFact(local *Local, round base.Round) ballot.INITBallotFactV0 {
+func (t *BaseTest) NewINITBallotFact(local *Local, round base.Round) ballot.INITFactV0 {
 	var manifest block.Manifest
 	switch l, found, err := local.Database().LastManifest(); {
 	case !found:
@@ -308,17 +308,17 @@ func (t *BaseTest) NewINITBallotFact(local *Local, round base.Round) ballot.INIT
 		manifest = l
 	}
 
-	return ballot.NewINITBallotFactV0(
+	return ballot.NewINITFactV0(
 		manifest.Height()+1,
 		round,
 		manifest.Hash(),
 	)
 }
 
-func (t *BaseTest) NewACCEPTBallot(local *Local, round base.Round, proposal, newBlock valuehash.Hash, voteproof base.Voteproof) ballot.ACCEPTBallotV0 {
+func (t *BaseTest) NewACCEPTBallot(local *Local, round base.Round, proposal, newBlock valuehash.Hash, voteproof base.Voteproof) ballot.ACCEPTV0 {
 	manifest := t.LastManifest(local.Database())
 
-	ab := ballot.NewACCEPTBallotV0(
+	ab := ballot.NewACCEPTV0(
 		local.Node().Address(),
 		manifest.Height()+1,
 		round,

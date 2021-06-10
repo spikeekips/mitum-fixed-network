@@ -5,7 +5,7 @@ import (
 	"github.com/spikeekips/mitum/util/valuehash"
 )
 
-func (sb SIGNBallotV0) MarshalBSON() ([]byte, error) {
+func (sb SIGNV0) MarshalBSON() ([]byte, error) {
 	m := PackBaseBallotV0BSON(sb)
 
 	m["proposal"] = sb.proposal
@@ -14,18 +14,18 @@ func (sb SIGNBallotV0) MarshalBSON() ([]byte, error) {
 	return bsonenc.Marshal(m)
 }
 
-type SIGNBallotV0UnpackerBSON struct {
+type SIGNV0UnpackerBSON struct {
 	PR valuehash.Bytes `bson:"proposal"`
 	NB valuehash.Bytes `bson:"new_block"`
 }
 
-func (sb *SIGNBallotV0) UnpackBSON(b []byte, enc *bsonenc.Encoder) error {
+func (sb *SIGNV0) UnpackBSON(b []byte, enc *bsonenc.Encoder) error {
 	bb, bf, err := sb.BaseBallotV0.unpackBSON(b, enc)
 	if err != nil {
 		return err
 	}
 
-	var nib SIGNBallotV0UnpackerBSON
+	var nib SIGNV0UnpackerBSON
 	if err := enc.Unmarshal(b, &nib); err != nil {
 		return err
 	}

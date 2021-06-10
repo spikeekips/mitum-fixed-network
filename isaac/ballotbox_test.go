@@ -73,7 +73,7 @@ func (t *testBallotbox) newINITBallot(
 	round base.Round,
 	node base.Address,
 	previousBlock valuehash.Hash,
-) ballot.INITBallotV0 {
+) ballot.INITV0 {
 	vp := base.NewDummyVoteproof(
 		height-1,
 		base.Round(0),
@@ -85,7 +85,7 @@ func (t *testBallotbox) newINITBallot(
 		previousBlock = valuehash.RandomSHA256()
 	}
 
-	ib := ballot.NewINITBallotV0(
+	ib := ballot.NewINITV0(
 		node,
 		height,
 		round,
@@ -157,7 +157,7 @@ func (t *testBallotbox) TestINITVoteResultNotYet() {
 	ib, found := vrs.ballots[ba.Node().String()]
 	t.True(found)
 
-	iba := ib.(ballot.INITBallotV0)
+	iba := ib.(ballot.INITV0)
 	t.True(ba.PreviousBlock().Equal(iba.PreviousBlock()))
 	t.Equal(ba.Node(), iba.Node())
 }
@@ -276,7 +276,7 @@ func (t *testBallotbox) newACCEPTBallot(
 	node base.Address,
 	proposal,
 	newBlock valuehash.Hash,
-) ballot.ACCEPTBallotV0 {
+) ballot.ACCEPTV0 {
 	vp := base.NewDummyVoteproof(
 		height,
 		round,
@@ -291,7 +291,7 @@ func (t *testBallotbox) newACCEPTBallot(
 		newBlock = valuehash.RandomSHA256()
 	}
 
-	ib := ballot.NewACCEPTBallotV0(
+	ib := ballot.NewACCEPTV0(
 		node,
 		height,
 		round,
@@ -323,7 +323,7 @@ func (t *testBallotbox) TestACCEPTVoteResultNotYet() {
 	ib, found := vrs.ballots[ba.Node().String()]
 	t.True(found)
 
-	iba := ib.(ballot.ACCEPTBallotV0)
+	iba := ib.(ballot.ACCEPTV0)
 	t.True(ba.Proposal().Equal(iba.Proposal()))
 	t.Equal(ba.Node(), iba.Node())
 	t.Equal(ba.NewBlock(), iba.NewBlock())

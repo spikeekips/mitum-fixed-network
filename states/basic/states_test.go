@@ -187,7 +187,7 @@ func (t *testStates) TestSwitchingStateWithVoteproof() {
 	}
 
 	ib := t.NewINITBallot(t.local, base.Round(0), nil)
-	initFact := ib.INITBallotFactV0
+	initFact := ib.INITFactV0
 
 	ivp, err := t.NewVoteproof(base.StageINIT, initFact, t.local, t.remote)
 	t.NoError(err)
@@ -247,7 +247,7 @@ func (t *testStates) TestNewVoteproofThruStateSwithContext() {
 	}
 
 	ib := t.NewINITBallot(t.local, base.Round(0), nil)
-	initFact := ib.INITBallotFactV0
+	initFact := ib.INITFactV0
 
 	ivp, err := t.NewVoteproof(base.StageINIT, initFact, t.local, t.remote)
 	t.NoError(err)

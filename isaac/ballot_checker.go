@@ -104,7 +104,7 @@ func (bc *BallotChecker) CheckWithLastVoteproof() (bool, error) {
 
 // CheckProposalInACCEPTBallot checks ACCEPT ballot should have valid proposal.
 func (bc *BallotChecker) CheckProposalInACCEPTBallot() (bool, error) {
-	i, ok := bc.ballot.(ballot.ACCEPTBallot)
+	i, ok := bc.ballot.(ballot.ACCEPT)
 	if !ok {
 		return true, nil
 	}

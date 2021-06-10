@@ -50,7 +50,7 @@ func (t *testStateSyncing) TestINITMovesToConsensus() {
 	{
 		b := t.NewINITBallot(t.remote, base.Round(0), lastINITVoteproof)
 
-		vp, err := t.NewVoteproof(b.Stage(), b.INITBallotFactV0, t.remote)
+		vp, err := t.NewVoteproof(b.Stage(), b.INITFactV0, t.remote)
 		t.NoError(err)
 
 		voteproof = vp
@@ -145,7 +145,7 @@ func (t *testStateSyncing) TestSyncingHandlerFromVoteproof() {
 	{
 		b := t.NewINITBallot(rn0, base.Round(0), nil)
 
-		vp, err := t.NewVoteproof(b.Stage(), b.INITBallotFactV0, rn0)
+		vp, err := t.NewVoteproof(b.Stage(), b.INITFactV0, rn0)
 		t.NoError(err)
 
 		voteproof = vp

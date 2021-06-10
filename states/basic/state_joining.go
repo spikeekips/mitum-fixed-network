@@ -108,7 +108,7 @@ func (st *JoiningState) ProcessVoteproof(voteproof base.Voteproof) error {
 }
 
 func (st *JoiningState) broadcastINITBallotEnteredWithoutDelay(voteproof base.Voteproof) error {
-	var baseBallot ballot.INITBallotV0
+	var baseBallot ballot.INITV0
 	if i, err := NextINITBallotFromACCEPTVoteproof(st.database, st.local, voteproof); err != nil {
 		return err
 	} else if err := i.Sign(st.local.Privatekey(), st.policy.NetworkID()); err != nil {
@@ -143,7 +143,7 @@ func (st *JoiningState) broadcastINITBallotEnteredWithoutDelay(voteproof base.Vo
 // broadcastINITBallotEntered broadcasts INIT ballot from local; it will be only
 // executed when voteproof is stucked.
 func (st *JoiningState) broadcastINITBallotEntered(voteproof base.Voteproof) error {
-	var baseBallot ballot.INITBallotV0
+	var baseBallot ballot.INITV0
 	if i, err := NextINITBallotFromACCEPTVoteproof(st.database, st.local, voteproof); err != nil {
 		return err
 	} else if err := i.Sign(st.local.Privatekey(), st.policy.NetworkID()); err != nil {

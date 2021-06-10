@@ -12,70 +12,70 @@ import (
 )
 
 var (
-	ACCEPTBallotV0Hint     = hint.NewHint(ACCEPTBallotType, "v0.0.1")
-	ACCEPTBallotFactV0Hint = hint.NewHint(ACCEPTBallotFactType, "v0.0.1")
+	ACCEPTV0Hint     = hint.NewHint(ACCEPTType, "v0.0.1")
+	ACCEPTFactV0Hint = hint.NewHint(ACCEPTFactType, "v0.0.1")
 )
 
-type ACCEPTBallotFactV0 struct {
-	BaseBallotFactV0
+type ACCEPTFactV0 struct {
+	BaseFactV0
 	proposal valuehash.Hash
 	newBlock valuehash.Hash
 }
 
-func (ACCEPTBallotFactV0) Hint() hint.Hint {
-	return ACCEPTBallotFactV0Hint
+func (ACCEPTFactV0) Hint() hint.Hint {
+	return ACCEPTFactV0Hint
 }
 
-func (abf ACCEPTBallotFactV0) IsValid(networkID []byte) error {
+func (abf ACCEPTFactV0) IsValid(networkID []byte) error {
 	return isvalid.Check([]isvalid.IsValider{
-		abf.BaseBallotFactV0,
+		abf.BaseFactV0,
 		abf.proposal,
 		abf.newBlock,
 	}, networkID, false)
 }
 
-func (abf ACCEPTBallotFactV0) Hash() valuehash.Hash {
+func (abf ACCEPTFactV0) Hash() valuehash.Hash {
 	return valuehash.NewSHA256(abf.Bytes())
 }
 
-func (abf ACCEPTBallotFactV0) Bytes() []byte {
+func (abf ACCEPTFactV0) Bytes() []byte {
 	return util.ConcatBytesSlice(
-		abf.BaseBallotFactV0.Bytes(),
+		abf.BaseFactV0.Bytes(),
 		abf.proposal.Bytes(),
 		abf.newBlock.Bytes(),
 	)
 }
 
-func (abf ACCEPTBallotFactV0) Proposal() valuehash.Hash {
+func (abf ACCEPTFactV0) Proposal() valuehash.Hash {
 	return abf.proposal
 }
 
-func (abf ACCEPTBallotFactV0) NewBlock() valuehash.Hash {
+func (abf ACCEPTFactV0) NewBlock() valuehash.Hash {
 	return abf.newBlock
 }
 
-// FUTURE ACCEPTBallot should have SIGNBallots
+// FUTURE ACCEPT Ballot should have SIGN Ballots
 
-type ACCEPTBallotV0 struct {
+type ACCEPTV0 struct {
 	BaseBallotV0
-	ACCEPTBallotFactV0
+	ACCEPTFactV0
 	voteproof base.Voteproof
 }
 
-func NewACCEPTBallotV0(
+func NewACCEPTV0(
 	node base.Address,
 	height base.Height,
 	round base.Round,
 	proposal valuehash.Hash,
 	newBlock valuehash.Hash,
 	voteproof base.Voteproof,
-) ACCEPTBallotV0 {
-	return ACCEPTBallotV0{
+) ACCEPTV0 {
+	return ACCEPTV0{
 		BaseBallotV0: BaseBallotV0{
 			node: node,
 		},
-		ACCEPTBallotFactV0: ACCEPTBallotFactV0{
-			BaseBallotFactV0: BaseBallotFactV0{
+		ACCEPTFactV0: ACCEPTFactV0{
+			BaseFactV0: BaseFactV0{
 				height: height,
 				round:  round,
 			},
@@ -86,26 +86,26 @@ func NewACCEPTBallotV0(
 	}
 }
 
-func (ab ACCEPTBallotV0) Hash() valuehash.Hash {
+func (ab ACCEPTV0) Hash() valuehash.Hash {
 	return ab.BaseBallotV0.Hash()
 }
 
-func (ACCEPTBallotV0) Hint() hint.Hint {
-	return ACCEPTBallotV0Hint
+func (ACCEPTV0) Hint() hint.Hint {
+	return ACCEPTV0Hint
 }
 
-func (ACCEPTBallotV0) Stage() base.Stage {
+func (ACCEPTV0) Stage() base.Stage {
 	return base.StageACCEPT
 }
 
-func (ab ACCEPTBallotV0) IsValid(networkID []byte) error {
+func (ab ACCEPTV0) IsValid(networkID []byte) error {
 	if ab.voteproof == nil {
 		return xerrors.Errorf("empty Voteproof")
 	}
 
 	if err := isvalid.Check([]isvalid.IsValider{
 		ab.BaseBallotV0,
-		ab.ACCEPTBallotFactV0,
+		ab.ACCEPTFactV0,
 		ab.voteproof,
 	}, networkID, false); err != nil {
 		return err
@@ -114,11 +114,11 @@ func (ab ACCEPTBallotV0) IsValid(networkID []byte) error {
 	return IsValidBallot(ab, networkID)
 }
 
-func (ab ACCEPTBallotV0) Voteproof() base.Voteproof {
+func (ab ACCEPTV0) Voteproof() base.Voteproof {
 	return ab.voteproof
 }
 
-func (ab ACCEPTBallotV0) GenerateHash() valuehash.Hash {
+func (ab ACCEPTV0) GenerateHash() valuehash.Hash {
 	var vb []byte
 	if ab.voteproof != nil {
 		vb = ab.voteproof.Bytes()
@@ -127,8 +127,8 @@ func (ab ACCEPTBallotV0) GenerateHash() valuehash.Hash {
 	return GenerateHash(ab, ab.BaseBallotV0, vb)
 }
 
-func (ab ACCEPTBallotV0) GenerateBodyHash() (valuehash.Hash, error) {
-	if err := ab.ACCEPTBallotFactV0.IsValid(nil); err != nil {
+func (ab ACCEPTV0) GenerateBodyHash() (valuehash.Hash, error) {
+	if err := ab.ACCEPTFactV0.IsValid(nil); err != nil {
 		return nil, err
 	}
 
@@ -137,14 +137,14 @@ func (ab ACCEPTBallotV0) GenerateBodyHash() (valuehash.Hash, error) {
 		vb = ab.voteproof.Bytes()
 	}
 
-	return valuehash.NewSHA256(util.ConcatBytesSlice(ab.ACCEPTBallotFactV0.Bytes(), vb)), nil
+	return valuehash.NewSHA256(util.ConcatBytesSlice(ab.ACCEPTFactV0.Bytes(), vb)), nil
 }
 
-func (ab ACCEPTBallotV0) Fact() base.Fact {
-	return ab.ACCEPTBallotFactV0
+func (ab ACCEPTV0) Fact() base.Fact {
+	return ab.ACCEPTFactV0
 }
 
-func (ab *ACCEPTBallotV0) Sign(pk key.Privatekey, networkID []byte) error {
+func (ab *ACCEPTV0) Sign(pk key.Privatekey, networkID []byte) error {
 	newBase, err := SignBaseBallotV0(ab, ab.BaseBallotV0, pk, networkID)
 	if err != nil {
 		return err

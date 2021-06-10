@@ -41,7 +41,7 @@ type BaseBallotV0UnpackerBSON struct {
 	FSG key.Signature        `bson:"fact_signature"`
 }
 
-func NewBaseBallotFactV0PackerBSON(bbf BaseBallotFactV0, ht hint.Hint) bson.M {
+func NewBaseBallotFactV0PackerBSON(bbf BaseFactV0, ht hint.Hint) bson.M {
 	return bsonenc.MergeBSONM(
 		bsonenc.NewHintedDoc(ht),
 		bson.M{

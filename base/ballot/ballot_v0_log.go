@@ -5,7 +5,7 @@ import (
 	"github.com/spikeekips/mitum/util/logging"
 )
 
-func marshalBallotLog(ballot Ballot, key string, e logging.Emitter, verbose bool) logging.Emitter {
+func marshalLog(ballot Ballot, key string, e logging.Emitter, verbose bool) logging.Emitter {
 	if !verbose {
 		return e.Dict(key, logging.Dict().
 			Hinted("hash", ballot.Hash()).
@@ -21,18 +21,18 @@ func marshalBallotLog(ballot Ballot, key string, e logging.Emitter, verbose bool
 	return e.RawJSON(key, r)
 }
 
-func (ib INITBallotV0) MarshalLog(key string, e logging.Emitter, verbose bool) logging.Emitter {
-	return marshalBallotLog(ib, key, e, verbose)
+func (ib INITV0) MarshalLog(key string, e logging.Emitter, verbose bool) logging.Emitter {
+	return marshalLog(ib, key, e, verbose)
 }
 
 func (pr ProposalV0) MarshalLog(key string, e logging.Emitter, verbose bool) logging.Emitter {
-	return marshalBallotLog(pr, key, e, verbose)
+	return marshalLog(pr, key, e, verbose)
 }
 
-func (sb SIGNBallotV0) MarshalLog(key string, e logging.Emitter, verbose bool) logging.Emitter {
-	return marshalBallotLog(sb, key, e, verbose)
+func (sb SIGNV0) MarshalLog(key string, e logging.Emitter, verbose bool) logging.Emitter {
+	return marshalLog(sb, key, e, verbose)
 }
 
-func (ab ACCEPTBallotV0) MarshalLog(key string, e logging.Emitter, verbose bool) logging.Emitter {
-	return marshalBallotLog(ab, key, e, verbose)
+func (ab ACCEPTV0) MarshalLog(key string, e logging.Emitter, verbose bool) logging.Emitter {
+	return marshalLog(ab, key, e, verbose)
 }

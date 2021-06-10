@@ -12,12 +12,12 @@ import (
 )
 
 var (
-	ProposalV0Hint     = hint.NewHint(ProposalBallotType, "v0.0.1")
-	ProposalFactV0Hint = hint.NewHint(ProposalBallotFactType, "v0.0.1")
+	ProposalV0Hint     = hint.NewHint(ProposalType, "v0.0.1")
+	ProposalFactV0Hint = hint.NewHint(ProposalFactType, "v0.0.1")
 )
 
 type ProposalFactV0 struct {
-	BaseBallotFactV0
+	BaseFactV0
 	seals []valuehash.Hash
 }
 
@@ -26,7 +26,7 @@ func (ProposalFactV0) Hint() hint.Hint {
 }
 
 func (prf ProposalFactV0) IsValid(networkID []byte) error {
-	if err := prf.BaseBallotFactV0.IsValid(networkID); err != nil {
+	if err := prf.BaseFactV0.IsValid(networkID); err != nil {
 		return err
 	}
 
@@ -62,7 +62,7 @@ func (prf ProposalFactV0) Hash() valuehash.Hash {
 
 func (prf ProposalFactV0) Bytes() []byte {
 	return util.ConcatBytesSlice(
-		prf.BaseBallotFactV0.Bytes(),
+		prf.BaseFactV0.Bytes(),
 		func() []byte {
 			hl := make([][]byte, len(prf.seals))
 			for i := range prf.seals {
@@ -96,7 +96,7 @@ func NewProposalV0(
 			node: node,
 		},
 		ProposalFactV0: ProposalFactV0{
-			BaseBallotFactV0: BaseBallotFactV0{
+			BaseFactV0: BaseFactV0{
 				height: height,
 				round:  round,
 			},

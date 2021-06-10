@@ -75,12 +75,12 @@ func (t *testStateJoining) TestBroadcastingINITBallotInStandalone() {
 	t.NotNil(received)
 
 	t.Implements((*seal.Seal)(nil), received)
-	t.IsType(ballot.INITBallotV0{}, received)
+	t.IsType(ballot.INITV0{}, received)
 
 	t.NotNil(receivedTime.Value())
 	t.True(receivedTime.Value().(time.Time).Sub(started) < t.local.Policy().IntervalBroadcastingINITBallot()*3)
 
-	ballot := received.(ballot.INITBallotV0)
+	ballot := received.(ballot.INITV0)
 
 	t.NoError(ballot.IsValid(t.local.Policy().NetworkID()))
 
@@ -133,12 +133,12 @@ func (t *testStateJoining) TestBroadcastingINITBallotWithoutACCEPTVoteproof() {
 	t.NotNil(received)
 
 	t.Implements((*seal.Seal)(nil), received)
-	t.IsType(ballot.INITBallotV0{}, received)
+	t.IsType(ballot.INITV0{}, received)
 
 	t.NotNil(receivedTime.Value())
 	t.True(receivedTime.Value().(time.Time).Sub(started) > t.local.Policy().IntervalBroadcastingINITBallot()*3)
 
-	ballot := received.(ballot.INITBallotV0)
+	ballot := received.(ballot.INITV0)
 
 	t.NoError(ballot.IsValid(t.local.Policy().NetworkID()))
 
@@ -198,12 +198,12 @@ func (t *testStateJoining) TestBroadcastingINITBallotWithACCEPTVoteproof() {
 	t.NotNil(received)
 
 	t.Implements((*seal.Seal)(nil), received)
-	t.IsType(ballot.INITBallotV0{}, received)
+	t.IsType(ballot.INITV0{}, received)
 
 	t.NotNil(receivedTime.Value())
 	t.True(receivedTime.Value().(time.Time).Sub(started) > t.local.Policy().IntervalBroadcastingINITBallot()*3)
 
-	ballot := received.(ballot.INITBallotV0)
+	ballot := received.(ballot.INITV0)
 
 	t.NoError(ballot.IsValid(t.local.Policy().NetworkID()))
 
@@ -286,19 +286,19 @@ func (t *testStateJoining) TestCheckBallotboxWithINITBallot() {
 	lastACCEPTVoteproof := t.local.Database().LastVoteproof(base.StageACCEPT)
 	t.NotNil(lastACCEPTVoteproof)
 
-	initFact := ballot.NewINITBallotV0(
+	initFact := ballot.NewINITV0(
 		t.local.Node().Address(),
 		lastACCEPTVoteproof.Height()+1,
 		base.Round(0),
 		valuehash.RandomSHA256(),
 		nil,
 		nil,
-	).Fact().(ballot.INITBallotFactV0)
+	).Fact().(ballot.INITFactV0)
 
 	initVoteproof, err := t.NewVoteproof(base.StageINIT, initFact, t.local, t.remote)
 	t.NoError(err)
 
-	acceptBallot := ballot.NewACCEPTBallotV0(
+	acceptBallot := ballot.NewACCEPTV0(
 		t.local.Node().Address(),
 		initVoteproof.Height(),
 		initVoteproof.Round(),
@@ -371,14 +371,14 @@ func (t *testStateJoining) TestNewINITVoteproof() {
 	t.NoError(err)
 	t.NoError(f())
 
-	initFact := ballot.NewINITBallotV0(
+	initFact := ballot.NewINITV0(
 		t.local.Node().Address(),
 		lastACCEPTVoteproof.Height()+1,
 		base.Round(0),
 		valuehash.RandomSHA256(),
 		nil,
 		nil,
-	).Fact().(ballot.INITBallotFactV0)
+	).Fact().(ballot.INITFactV0)
 
 	newINITVoteproof, err := t.NewVoteproof(base.StageINIT, initFact, t.local, t.remote)
 	t.NoError(err)

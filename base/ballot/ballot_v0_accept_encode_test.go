@@ -14,25 +14,25 @@ import (
 	"github.com/spikeekips/mitum/util/valuehash"
 )
 
-type testBallotV0ACCEPTEncode struct {
+type testACCEPTV0Encode struct {
 	suite.Suite
 
 	pk  key.Privatekey
 	enc encoder.Encoder
 }
 
-func (t *testBallotV0ACCEPTEncode) SetupSuite() {
+func (t *testACCEPTV0Encode) SetupSuite() {
 	t.pk, _ = key.NewBTCPrivatekey()
 
 	encs := encoder.NewEncoders()
 	t.NoError(encs.AddEncoder(t.enc))
 	t.NoError(encs.TestAddHinter(base.StringAddress("")))
 	t.NoError(encs.TestAddHinter(key.BTCPublickeyHinter))
-	t.NoError(encs.TestAddHinter(ACCEPTBallotV0{}))
+	t.NoError(encs.TestAddHinter(ACCEPTV0{}))
 	t.NoError(encs.TestAddHinter(base.DummyVoteproof{}))
 }
 
-func (t *testBallotV0ACCEPTEncode) TestEncode() {
+func (t *testACCEPTV0Encode) TestEncode() {
 	vp := base.NewDummyVoteproof(
 		base.Height(10),
 		base.Round(0),
@@ -40,12 +40,12 @@ func (t *testBallotV0ACCEPTEncode) TestEncode() {
 		base.VoteResultMajority,
 	)
 
-	ab := ACCEPTBallotV0{
+	ab := ACCEPTV0{
 		BaseBallotV0: BaseBallotV0{
 			node: base.RandomStringAddress(),
 		},
-		ACCEPTBallotFactV0: ACCEPTBallotFactV0{
-			BaseBallotFactV0: BaseBallotFactV0{
+		ACCEPTFactV0: ACCEPTFactV0{
+			BaseFactV0: BaseFactV0{
 				height: vp.Height(),
 				round:  vp.Round(),
 			},
@@ -63,7 +63,7 @@ func (t *testBallotV0ACCEPTEncode) TestEncode() {
 	ht, err := t.enc.DecodeByHint(b)
 	t.NoError(err)
 
-	nib, ok := ht.(ACCEPTBallotV0)
+	nib, ok := ht.(ACCEPTV0)
 	t.True(ok)
 
 	t.NoError(nib.IsValid(nil))
@@ -83,15 +83,15 @@ func (t *testBallotV0ACCEPTEncode) TestEncode() {
 	t.Equal(vp, nib.Voteproof())
 }
 
-func TestBallotV0ACCEPTEncodeJSON(t *testing.T) {
-	b := new(testBallotV0ACCEPTEncode)
+func testACCEPTV0EncodeJSON(t *testing.T) {
+	b := new(testACCEPTV0Encode)
 	b.enc = jsonenc.NewEncoder()
 
 	suite.Run(t, b)
 }
 
-func TestBallotV0ACCEPTEncodeBSON(t *testing.T) {
-	b := new(testBallotV0ACCEPTEncode)
+func TestACCEPTV0EncodeBSON(t *testing.T) {
+	b := new(testACCEPTV0Encode)
 	b.enc = bsonenc.NewEncoder()
 
 	suite.Run(t, b)

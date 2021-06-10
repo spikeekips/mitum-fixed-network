@@ -7,10 +7,10 @@ import (
 	"golang.org/x/xerrors"
 )
 
-func (ib *INITBallotV0) unpack(
+func (ib *INITV0) unpack(
 	enc encoder.Encoder,
 	bb BaseBallotV0,
-	bf BaseBallotFactV0,
+	bf BaseFactV0,
 	previousBlock valuehash.Hash,
 	bVoteproof,
 	bAVoteproof []byte,
@@ -36,24 +36,24 @@ func (ib *INITBallotV0) unpack(
 	}
 
 	ib.BaseBallotV0 = bb
-	ib.INITBallotFactV0 = INITBallotFactV0{
-		BaseBallotFactV0: bf,
-		previousBlock:    previousBlock,
+	ib.INITFactV0 = INITFactV0{
+		BaseFactV0:    bf,
+		previousBlock: previousBlock,
 	}
 
 	return nil
 }
 
-func (ibf *INITBallotFactV0) unpack(
+func (ibf *INITFactV0) unpack(
 	_ encoder.Encoder,
-	bf BaseBallotFactV0,
+	bf BaseFactV0,
 	previousBlock valuehash.Hash,
 ) error {
 	if previousBlock != nil && previousBlock.Empty() {
 		return xerrors.Errorf("empty previous_block hash found")
 	}
 
-	ibf.BaseBallotFactV0 = bf
+	ibf.BaseFactV0 = bf
 	ibf.previousBlock = previousBlock
 
 	return nil

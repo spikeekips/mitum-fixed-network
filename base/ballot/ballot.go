@@ -15,14 +15,14 @@ import (
 )
 
 var (
-	INITBallotType         = hint.Type("init-ballot")
-	ProposalBallotType     = hint.Type("proposal")
-	SIGNBallotType         = hint.Type("sign-ballot")
-	ACCEPTBallotType       = hint.Type("accept-ballot")
-	INITBallotFactType     = hint.Type("init-ballot-fact")
-	ProposalBallotFactType = hint.Type("proposal-fact")
-	SIGNBallotFactType     = hint.Type("sign-ballot-fact")
-	ACCEPTBallotFactType   = hint.Type("accept-ballot-fact")
+	INITType         = hint.Type("init-ballot")
+	ProposalType     = hint.Type("proposal")
+	SIGNType         = hint.Type("sign-ballot")
+	ACCEPTType       = hint.Type("accept-ballot")
+	INITFactType     = hint.Type("init-ballot-fact")
+	ProposalFactType = hint.Type("proposal-fact")
+	SIGNFactType     = hint.Type("sign-ballot-fact")
+	ACCEPTFactType   = hint.Type("accept-ballot-fact")
 )
 
 type Ballot interface {
@@ -36,7 +36,7 @@ type Ballot interface {
 	Node() base.Address
 }
 
-type INITBallot interface {
+type INIT interface {
 	Ballot
 	PreviousBlock() valuehash.Hash
 	Voteproof() base.Voteproof
@@ -49,31 +49,31 @@ type Proposal interface {
 	Seals() []valuehash.Hash // NOTE collection of received Seals, which must have Operations()
 }
 
-type SIGNBallot interface {
+type SIGN interface {
 	Ballot
 	Proposal() valuehash.Hash
 	NewBlock() valuehash.Hash
 }
 
-type ACCEPTBallot interface {
+type ACCEPT interface {
 	Ballot
 	Proposal() valuehash.Hash
 	NewBlock() valuehash.Hash
 	Voteproof() base.Voteproof
 }
 
-type INITBallotFact interface {
+type INITFact interface {
 	valuehash.Hasher
 	PreviousBlock() valuehash.Hash
 }
 
-type SIGNBallotFact interface {
+type SIGNFact interface {
 	valuehash.Hasher
 	Proposal() valuehash.Hash
 	NewBlock() valuehash.Hash
 }
 
-type ACCEPTBallotFact interface {
+type ACCEPTFact interface {
 	valuehash.Hasher
 	Proposal() valuehash.Hash
 	NewBlock() valuehash.Hash
@@ -95,7 +95,7 @@ func IsValidBallot(blt Ballot, b []byte) error {
 	}
 
 	if i, ok := blt.(base.Voteproofer); ok {
-		if err := IsValidVoteproofInBallot(blt, i.Voteproof()); err != nil {
+		if err := IsValidVoteproof(blt, i.Voteproof()); err != nil {
 			return err
 		}
 	}
@@ -110,20 +110,20 @@ func IsValidBallot(blt Ballot, b []byte) error {
 	)
 }
 
-func IsValidVoteproofInBallot(blt Ballot, voteproof base.Voteproof) error {
+func IsValidVoteproof(blt Ballot, voteproof base.Voteproof) error {
 	if !voteproof.IsFinished() {
 		return xerrors.Errorf("not yet finished voteproof found in ballot")
 	}
 
 	switch t := blt.(type) {
-	case INITBallot:
-		if err := isValidVoteproofInINITBallot(t, voteproof); err != nil {
+	case INIT:
+		if err := isValidVoteproofInINIT(t, voteproof); err != nil {
 			return err
 		}
 
-		return isValidACCEPTVoteproofInINITBallot(t, t.ACCEPTVoteproof())
-	case ACCEPTBallot:
-		return isValidVoteproofInACCEPTBallot(t, voteproof)
+		return isValidACCEPTVoteproofInINIT(t, t.ACCEPTVoteproof())
+	case ACCEPT:
+		return isValidVoteproofInACCEPT(t, voteproof)
 	case Proposal:
 		return isValidVoteproofInProposal(t, voteproof)
 	default:
@@ -131,7 +131,7 @@ func IsValidVoteproofInBallot(blt Ballot, voteproof base.Voteproof) error {
 	}
 }
 
-func isValidVoteproofInINITBallot(blt INITBallot, voteproof base.Voteproof) error {
+func isValidVoteproofInINIT(blt INIT, voteproof base.Voteproof) error {
 	vs := voteproof.Stage()
 	if vs != base.StageINIT && vs != base.StageACCEPT {
 		return xerrors.Errorf("invalid voteproof stage for init ballot; it should be init or accept, not %v", vs)
@@ -169,7 +169,7 @@ func isValidVoteproofInINITBallot(blt INITBallot, voteproof base.Voteproof) erro
 	return nil
 }
 
-func isValidACCEPTVoteproofInINITBallot(blt INITBallot, voteproof base.Voteproof) error {
+func isValidACCEPTVoteproofInINIT(blt INIT, voteproof base.Voteproof) error {
 	if vs := voteproof.Stage(); vs != base.StageACCEPT {
 		return xerrors.Errorf("invalid accept voteproof stage for init ballot; it should be accept, not %v", vs)
 	}
@@ -185,7 +185,7 @@ func isValidACCEPTVoteproofInINITBallot(blt INITBallot, voteproof base.Voteproof
 	return nil
 }
 
-func isValidVoteproofInACCEPTBallot(blt ACCEPTBallot, voteproof base.Voteproof) error {
+func isValidVoteproofInACCEPT(blt ACCEPT, voteproof base.Voteproof) error {
 	if vs := voteproof.Stage(); vs != base.StageINIT {
 		return xerrors.Errorf("invalid voteproof stage for accept ballot; it should be init, not %v", vs)
 	} else if voteproof.Result() != base.VoteResultMajority {

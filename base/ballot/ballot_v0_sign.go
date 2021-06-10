@@ -10,66 +10,66 @@ import (
 )
 
 var (
-	SIGNBallotV0Hint     = hint.NewHint(SIGNBallotType, "v0.0.1")
-	SIGNBallotFactV0Hint = hint.NewHint(SIGNBallotFactType, "v0.0.1")
+	SIGNV0Hint     = hint.NewHint(SIGNType, "v0.0.1")
+	SIGNFactV0Hint = hint.NewHint(SIGNFactType, "v0.0.1")
 )
 
-type SIGNBallotFactV0 struct {
-	BaseBallotFactV0
+type SIGNFactV0 struct {
+	BaseFactV0
 	proposal valuehash.Hash
 	newBlock valuehash.Hash
 }
 
-func (SIGNBallotFactV0) Hint() hint.Hint {
-	return SIGNBallotFactV0Hint
+func (SIGNFactV0) Hint() hint.Hint {
+	return SIGNFactV0Hint
 }
 
-func (sbf SIGNBallotFactV0) IsValid(networkID []byte) error {
+func (sbf SIGNFactV0) IsValid(networkID []byte) error {
 	return isvalid.Check([]isvalid.IsValider{
-		sbf.BaseBallotFactV0,
+		sbf.BaseFactV0,
 		sbf.proposal,
 		sbf.newBlock,
 	}, networkID, false)
 }
 
-func (sbf SIGNBallotFactV0) Hash() valuehash.Hash {
+func (sbf SIGNFactV0) Hash() valuehash.Hash {
 	return valuehash.NewSHA256(sbf.Bytes())
 }
 
-func (sbf SIGNBallotFactV0) Bytes() []byte {
+func (sbf SIGNFactV0) Bytes() []byte {
 	return util.ConcatBytesSlice(
-		sbf.BaseBallotFactV0.Bytes(),
+		sbf.BaseFactV0.Bytes(),
 		sbf.proposal.Bytes(),
 		sbf.newBlock.Bytes(),
 	)
 }
 
-func (sbf SIGNBallotFactV0) Proposal() valuehash.Hash {
+func (sbf SIGNFactV0) Proposal() valuehash.Hash {
 	return sbf.proposal
 }
 
-func (sbf SIGNBallotFactV0) NewBlock() valuehash.Hash {
+func (sbf SIGNFactV0) NewBlock() valuehash.Hash {
 	return sbf.newBlock
 }
 
-type SIGNBallotV0 struct {
+type SIGNV0 struct {
 	BaseBallotV0
-	SIGNBallotFactV0
+	SIGNFactV0
 }
 
-func NewSIGNBallotV0(
+func NewSIGNV0(
 	node base.Address,
 	height base.Height,
 	round base.Round,
 	proposal valuehash.Hash,
 	newBlock valuehash.Hash,
-) SIGNBallotV0 {
-	return SIGNBallotV0{
+) SIGNV0 {
+	return SIGNV0{
 		BaseBallotV0: BaseBallotV0{
 			node: node,
 		},
-		SIGNBallotFactV0: SIGNBallotFactV0{
-			BaseBallotFactV0: BaseBallotFactV0{
+		SIGNFactV0: SIGNFactV0{
+			BaseFactV0: BaseFactV0{
 				height: height,
 				round:  round,
 			},
@@ -79,22 +79,22 @@ func NewSIGNBallotV0(
 	}
 }
 
-func (sb SIGNBallotV0) Hash() valuehash.Hash {
+func (sb SIGNV0) Hash() valuehash.Hash {
 	return sb.BaseBallotV0.Hash()
 }
 
-func (SIGNBallotV0) Hint() hint.Hint {
-	return SIGNBallotV0Hint
+func (SIGNV0) Hint() hint.Hint {
+	return SIGNV0Hint
 }
 
-func (SIGNBallotV0) Stage() base.Stage {
+func (SIGNV0) Stage() base.Stage {
 	return base.StageSIGN
 }
 
-func (sb SIGNBallotV0) IsValid(networkID []byte) error {
+func (sb SIGNV0) IsValid(networkID []byte) error {
 	if err := isvalid.Check([]isvalid.IsValider{
 		sb.BaseBallotV0,
-		sb.SIGNBallotFactV0,
+		sb.SIGNFactV0,
 	}, networkID, false); err != nil {
 		return err
 	}
@@ -102,23 +102,23 @@ func (sb SIGNBallotV0) IsValid(networkID []byte) error {
 	return IsValidBallot(sb, networkID)
 }
 
-func (sb SIGNBallotV0) GenerateHash() valuehash.Hash {
+func (sb SIGNV0) GenerateHash() valuehash.Hash {
 	return GenerateHash(sb, sb.BaseBallotV0)
 }
 
-func (sb SIGNBallotV0) GenerateBodyHash() (valuehash.Hash, error) {
-	if err := sb.SIGNBallotFactV0.IsValid(nil); err != nil {
+func (sb SIGNV0) GenerateBodyHash() (valuehash.Hash, error) {
+	if err := sb.SIGNFactV0.IsValid(nil); err != nil {
 		return nil, err
 	}
 
-	return valuehash.NewSHA256(sb.SIGNBallotFactV0.Bytes()), nil
+	return valuehash.NewSHA256(sb.SIGNFactV0.Bytes()), nil
 }
 
-func (sb SIGNBallotV0) Fact() base.Fact {
-	return sb.SIGNBallotFactV0
+func (sb SIGNV0) Fact() base.Fact {
+	return sb.SIGNFactV0
 }
 
-func (sb *SIGNBallotV0) Sign(pk key.Privatekey, networkID []byte) error {
+func (sb *SIGNV0) Sign(pk key.Privatekey, networkID []byte) error {
 	newBase, err := SignBaseBallotV0(sb, sb.BaseBallotV0, pk, networkID)
 	if err != nil {
 		return err

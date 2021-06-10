@@ -7,7 +7,7 @@ import (
 	"github.com/spikeekips/mitum/util/valuehash"
 )
 
-func (ab ACCEPTBallotV0) MarshalBSON() ([]byte, error) {
+func (ab ACCEPTV0) MarshalBSON() ([]byte, error) {
 	m := PackBaseBallotV0BSON(ab)
 
 	m["proposal"] = ab.proposal
@@ -20,19 +20,19 @@ func (ab ACCEPTBallotV0) MarshalBSON() ([]byte, error) {
 	return bsonenc.Marshal(m)
 }
 
-type ACCEPTBallotV0UnpackerBSON struct {
+type ACCEPTV0UnpackerBSON struct {
 	PR valuehash.Bytes `bson:"proposal"`
 	NB valuehash.Bytes `bson:"new_block"`
 	VR bson.Raw        `bson:"voteproof,omitempty"`
 }
 
-func (ab *ACCEPTBallotV0) UnpackBSON(b []byte, enc *bsonenc.Encoder) error {
+func (ab *ACCEPTV0) UnpackBSON(b []byte, enc *bsonenc.Encoder) error {
 	bb, bf, err := ab.BaseBallotV0.unpackBSON(b, enc)
 	if err != nil {
 		return err
 	}
 
-	var nab ACCEPTBallotV0UnpackerBSON
+	var nab ACCEPTV0UnpackerBSON
 	if err := enc.Unmarshal(b, &nab); err != nil {
 		return err
 	}
@@ -40,8 +40,8 @@ func (ab *ACCEPTBallotV0) UnpackBSON(b []byte, enc *bsonenc.Encoder) error {
 	return ab.unpack(enc, bb, bf, nab.PR, nab.NB, nab.VR)
 }
 
-func (abf ACCEPTBallotFactV0) MarshalBSON() ([]byte, error) {
-	m := NewBaseBallotFactV0PackerBSON(abf.BaseBallotFactV0, abf.Hint())
+func (abf ACCEPTFactV0) MarshalBSON() ([]byte, error) {
+	m := NewBaseBallotFactV0PackerBSON(abf.BaseFactV0, abf.Hint())
 
 	m["proposal"] = abf.proposal
 	m["new_block"] = abf.newBlock
@@ -49,20 +49,20 @@ func (abf ACCEPTBallotFactV0) MarshalBSON() ([]byte, error) {
 	return bsonenc.Marshal(m)
 }
 
-type ACCEPTBallotFactV0UnpackerBSON struct {
+type ACCEPTFactV0UnpackerBSON struct {
 	PR valuehash.Bytes `bson:"proposal"`
 	NB valuehash.Bytes `bson:"new_block"`
 }
 
-func (abf *ACCEPTBallotFactV0) UnpackBSON(b []byte, enc *bsonenc.Encoder) error {
+func (abf *ACCEPTFactV0) UnpackBSON(b []byte, enc *bsonenc.Encoder) error {
 	var err error
 
-	var bf BaseBallotFactV0
-	if bf, err = abf.BaseBallotFactV0.unpackBSON(b, enc); err != nil {
+	var bf BaseFactV0
+	if bf, err = abf.BaseFactV0.unpackBSON(b, enc); err != nil {
 		return err
 	}
 
-	var ubf ACCEPTBallotFactV0UnpackerBSON
+	var ubf ACCEPTFactV0UnpackerBSON
 	if err = enc.Unmarshal(b, &ubf); err != nil {
 		return err
 	}

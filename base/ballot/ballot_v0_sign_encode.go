@@ -6,10 +6,10 @@ import (
 	"golang.org/x/xerrors"
 )
 
-func (sb *SIGNBallotV0) unpack(
+func (sb *SIGNV0) unpack(
 	_ encoder.Encoder,
 	bb BaseBallotV0,
-	bf BaseBallotFactV0,
+	bf BaseFactV0,
 	proposal,
 	newBlock valuehash.Hash,
 ) error {
@@ -22,10 +22,10 @@ func (sb *SIGNBallotV0) unpack(
 	}
 
 	sb.BaseBallotV0 = bb
-	sb.SIGNBallotFactV0 = SIGNBallotFactV0{
-		BaseBallotFactV0: bf,
-		proposal:         proposal,
-		newBlock:         newBlock,
+	sb.SIGNFactV0 = SIGNFactV0{
+		BaseFactV0: bf,
+		proposal:   proposal,
+		newBlock:   newBlock,
 	}
 
 	return nil

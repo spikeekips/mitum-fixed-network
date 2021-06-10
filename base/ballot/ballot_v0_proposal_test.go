@@ -11,23 +11,23 @@ import (
 	"github.com/spikeekips/mitum/util/valuehash"
 )
 
-type testBallotV0Proposal struct {
+type testProposalV0 struct {
 	suite.Suite
 
 	pk key.Privatekey
 }
 
-func (t *testBallotV0Proposal) SetupSuite() {
+func (t *testProposalV0) SetupSuite() {
 	t.pk, _ = key.NewBTCPrivatekey()
 }
 
-func (t *testBallotV0Proposal) TestNew() {
+func (t *testProposalV0) TestNew() {
 	ib := ProposalV0{
 		BaseBallotV0: BaseBallotV0{
 			node: base.RandomStringAddress(),
 		},
 		ProposalFactV0: ProposalFactV0{
-			BaseBallotFactV0: BaseBallotFactV0{
+			BaseFactV0: BaseFactV0{
 				height: base.Height(10),
 				round:  base.Round(0),
 			},
@@ -40,13 +40,13 @@ func (t *testBallotV0Proposal) TestNew() {
 	t.Implements((*Ballot)(nil), ib)
 }
 
-func (t *testBallotV0Proposal) TestFact() {
+func (t *testProposalV0) TestFact() {
 	ib := ProposalV0{
 		BaseBallotV0: BaseBallotV0{
 			node: base.RandomStringAddress(),
 		},
 		ProposalFactV0: ProposalFactV0{
-			BaseBallotFactV0: BaseBallotFactV0{
+			BaseFactV0: BaseFactV0{
 				height: base.Height(10),
 				round:  base.Round(0),
 			},
@@ -71,13 +71,13 @@ func (t *testBallotV0Proposal) TestFact() {
 	t.NoError(ib.Signer().Verify(ib.Fact().Hash().Bytes(), ib.FactSignature()))
 }
 
-func (t *testBallotV0Proposal) TestGenerateHash() {
+func (t *testProposalV0) TestGenerateHash() {
 	ib := ProposalV0{
 		BaseBallotV0: BaseBallotV0{
 			node: base.RandomStringAddress(),
 		},
 		ProposalFactV0: ProposalFactV0{
-			BaseBallotFactV0: BaseBallotFactV0{
+			BaseFactV0: BaseFactV0{
 				height: base.Height(10),
 				round:  base.Round(0),
 			},
@@ -100,13 +100,13 @@ func (t *testBallotV0Proposal) TestGenerateHash() {
 	t.NotEmpty(bh)
 }
 
-func (t *testBallotV0Proposal) TestSign() {
+func (t *testProposalV0) TestSign() {
 	ib := ProposalV0{
 		BaseBallotV0: BaseBallotV0{
 			node: base.RandomStringAddress(),
 		},
 		ProposalFactV0: ProposalFactV0{
-			BaseBallotFactV0: BaseBallotFactV0{
+			BaseFactV0: BaseFactV0{
 				height: base.Height(10),
 				round:  base.Round(0),
 			},
@@ -140,6 +140,6 @@ func (t *testBallotV0Proposal) TestSign() {
 	t.True(xerrors.Is(err, key.SignatureVerificationFailedError))
 }
 
-func TestBallotV0Proposal(t *testing.T) {
-	suite.Run(t, new(testBallotV0Proposal))
+func TestProposalV0(t *testing.T) {
+	suite.Run(t, new(testProposalV0))
 }

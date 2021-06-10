@@ -18,7 +18,7 @@ func SignBaseBallotV0WithTime(blt Ballot, bb BaseBallotV0, pk key.Privatekey, ne
 	}
 }
 
-func (ib *INITBallotV0) SignWithTime(pk key.Privatekey, networkID []byte, t time.Time) error {
+func (ib *INITV0) SignWithTime(pk key.Privatekey, networkID []byte, t time.Time) error {
 	if newBase, err := SignBaseBallotV0WithTime(ib, ib.BaseBallotV0, pk, networkID, t); err != nil {
 		return err
 	} else {

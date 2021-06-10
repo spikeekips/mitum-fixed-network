@@ -14,14 +14,14 @@ import (
 	"github.com/spikeekips/mitum/util/valuehash"
 )
 
-type testBallotProposalV0Encode struct {
+type testProposalV0Encode struct {
 	suite.Suite
 
 	pk  key.Privatekey
 	enc encoder.Encoder
 }
 
-func (t *testBallotProposalV0Encode) SetupSuite() {
+func (t *testProposalV0Encode) SetupSuite() {
 	t.pk, _ = key.NewBTCPrivatekey()
 
 	encs := encoder.NewEncoders()
@@ -32,7 +32,7 @@ func (t *testBallotProposalV0Encode) SetupSuite() {
 	t.NoError(encs.TestAddHinter(base.DummyVoteproof{}))
 }
 
-func (t *testBallotProposalV0Encode) TestEncode() {
+func (t *testProposalV0Encode) TestEncode() {
 	vp := base.NewDummyVoteproof(
 		base.Height(10),
 		base.Round(0),
@@ -45,7 +45,7 @@ func (t *testBallotProposalV0Encode) TestEncode() {
 			node: base.RandomStringAddress(),
 		},
 		ProposalFactV0: ProposalFactV0{
-			BaseBallotFactV0: BaseBallotFactV0{
+			BaseFactV0: BaseFactV0{
 				height: base.Height(10),
 				round:  base.Round(0),
 			},
@@ -86,15 +86,15 @@ func (t *testBallotProposalV0Encode) TestEncode() {
 	}
 }
 
-func TestBallotProposalV0EncodeJSON(t *testing.T) {
-	b := new(testBallotProposalV0Encode)
+func testProposalV0EncodeJSON(t *testing.T) {
+	b := new(testProposalV0Encode)
 	b.enc = jsonenc.NewEncoder()
 
 	suite.Run(t, b)
 }
 
-func TestBallotProposalV0EncodeBSON(t *testing.T) {
-	b := new(testBallotProposalV0Encode)
+func TestProposalV0EncodeBSON(t *testing.T) {
+	b := new(testProposalV0Encode)
 	b.enc = bsonenc.NewEncoder()
 
 	suite.Run(t, b)

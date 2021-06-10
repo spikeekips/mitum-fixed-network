@@ -222,7 +222,7 @@ func (gg *GenesisBlockV0Generator) generateProposal(
 }
 
 func (gg *GenesisBlockV0Generator) generateINITVoteproof() (base.Voteproof, error) {
-	var ib ballot.INITBallotV0
+	var ib ballot.INITV0
 	if b, err := NewINITBallotV0Round0(gg.local, gg.database); err != nil {
 		return nil, err
 	} else if err := b.Sign(gg.local.Privatekey(), gg.policy.NetworkID()); err != nil {

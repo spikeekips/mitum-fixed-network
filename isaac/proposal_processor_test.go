@@ -58,7 +58,7 @@ func (t *testDefaultProposalProcessor) TestPrepare() {
 	pm := NewProposalMaker(t.local.Node(), t.local.Database(), t.local.Policy())
 
 	ib := t.NewINITBallot(t.local, base.Round(0), nil)
-	initFact := ib.INITBallotFactV0
+	initFact := ib.INITFactV0
 
 	ivp, err := t.NewVoteproof(base.StageINIT, initFact, t.local, t.remote)
 	t.NoError(err)
@@ -93,7 +93,7 @@ func (t *testDefaultProposalProcessor) TestPrepareRetry() {
 	pm := NewProposalMaker(t.local.Node(), t.local.Database(), t.local.Policy())
 
 	ib := t.NewINITBallot(t.local, base.Round(0), nil)
-	initFact := ib.INITBallotFactV0
+	initFact := ib.INITFactV0
 
 	ivp, err := t.NewVoteproof(base.StageINIT, initFact, t.local, t.remote)
 	t.NoError(err)
@@ -163,7 +163,7 @@ func (t *testDefaultProposalProcessor) TestSave() {
 	pm := NewProposalMaker(t.local.Node(), t.local.Database(), t.local.Policy())
 
 	ib := t.NewINITBallot(t.local, base.Round(0), nil)
-	initFact := ib.INITBallotFactV0
+	initFact := ib.INITFactV0
 
 	ivp, err := t.NewVoteproof(base.StageINIT, initFact, t.local, t.remote)
 	t.NoError(err)
@@ -188,7 +188,7 @@ func (t *testDefaultProposalProcessor) TestSave() {
 		blk = result.Block
 	}
 
-	acceptFact := ballot.NewACCEPTBallotV0(
+	acceptFact := ballot.NewACCEPTV0(
 		nil,
 		ivp.Height(),
 		ivp.Round(),
@@ -271,7 +271,7 @@ func (t *testDefaultProposalProcessor) TestCancelPreviousProposal() {
 	t.NoError(t.local.Database().NewSeals([]seal.Seal{sl}))
 
 	ib := t.NewINITBallot(t.local, base.Round(0), nil)
-	initFact := ib.INITBallotFactV0
+	initFact := ib.INITFactV0
 
 	ivp, err := t.NewVoteproof(base.StageINIT, initFact, t.local, t.remote)
 	t.NoError(err)
@@ -319,7 +319,7 @@ func (t *testDefaultProposalProcessor) TestOperation() {
 	t.NoError(err)
 
 	ib := t.NewINITBallot(t.local, base.Round(0), nil)
-	initFact := ib.INITBallotFactV0
+	initFact := ib.INITFactV0
 
 	ivp, err := t.NewVoteproof(base.StageINIT, initFact, t.local, t.remote)
 	t.NoError(err)
@@ -346,7 +346,7 @@ func (t *testDefaultProposalProcessor) TestOperation() {
 	bop := blk.Operations()[0]
 	t.True(ops[0].Hash().Equal(bop.Hash()))
 
-	acceptFact := ballot.NewACCEPTBallotV0(
+	acceptFact := ballot.NewACCEPTV0(
 		nil,
 		ivp.Height(),
 		ivp.Round(),
@@ -387,7 +387,7 @@ func (t *testDefaultProposalProcessor) TestOperation() {
 
 func (t *testDefaultProposalProcessor) TestSealsNotFound() {
 	ib := t.NewINITBallot(t.local, base.Round(0), nil)
-	initFact := ib.INITBallotFactV0
+	initFact := ib.INITFactV0
 
 	ivp, err := t.NewVoteproof(base.StageINIT, initFact, t.local, t.remote)
 	t.NoError(err)
@@ -465,7 +465,7 @@ func (t *testDefaultProposalProcessor) TestTimeoutPrepare() {
 	t.NoError(t.local.Database().NewSeals([]seal.Seal{sl}))
 
 	ib := t.NewINITBallot(t.local, base.Round(0), nil)
-	initFact := ib.INITBallotFactV0
+	initFact := ib.INITFactV0
 
 	pm := NewProposalMaker(t.local.Node(), t.local.Database(), t.local.Policy())
 	ivp, err := t.NewVoteproof(base.StageINIT, initFact, t.local, t.remote)
@@ -499,7 +499,7 @@ func (t *testDefaultProposalProcessor) TestTimeoutSaveBeforeSavingStorage() {
 	t.NoError(t.local.Database().NewSeals([]seal.Seal{sl}))
 
 	ib := t.NewINITBallot(t.local, base.Round(0), nil)
-	initFact := ib.INITBallotFactV0
+	initFact := ib.INITFactV0
 
 	pm := NewProposalMaker(t.local.Node(), t.local.Database(), t.local.Policy())
 	ivp, err := t.NewVoteproof(base.StageINIT, initFact, t.local, t.remote)
@@ -536,7 +536,7 @@ func (t *testDefaultProposalProcessor) TestTimeoutSaveBeforeSavingStorage() {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Millisecond*100)
 	defer cancel()
 
-	acceptFact := ballot.NewACCEPTBallotV0(
+	acceptFact := ballot.NewACCEPTV0(
 		nil,
 		ivp.Height(),
 		ivp.Round(),
@@ -565,7 +565,7 @@ func (t *testDefaultProposalProcessor) TestTimeoutSaveAfterSaving() {
 	t.NoError(t.local.Database().NewSeals([]seal.Seal{sl}))
 
 	ib := t.NewINITBallot(t.local, base.Round(0), nil)
-	initFact := ib.INITBallotFactV0
+	initFact := ib.INITFactV0
 
 	pm := NewProposalMaker(t.local.Node(), t.local.Database(), t.local.Policy())
 	ivp, err := t.NewVoteproof(base.StageINIT, initFact, t.local, t.remote)
@@ -614,7 +614,7 @@ func (t *testDefaultProposalProcessor) TestTimeoutSaveAfterSaving() {
 		return nil
 	}
 
-	acceptFact := ballot.NewACCEPTBallotV0(
+	acceptFact := ballot.NewACCEPTV0(
 		nil,
 		ivp.Height(),
 		ivp.Round(),
@@ -657,7 +657,7 @@ func (t *testDefaultProposalProcessor) TestCustomOperationProcessor() {
 	pm := NewProposalMaker(t.local.Node(), t.local.Database(), t.local.Policy())
 
 	ib := t.NewINITBallot(t.local, base.Round(0), nil)
-	initFact := ib.INITBallotFactV0
+	initFact := ib.INITFactV0
 
 	ivp, err := t.NewVoteproof(base.StageINIT, initFact, t.local, t.remote)
 	t.NoError(err)
@@ -718,7 +718,7 @@ func (t *testDefaultProposalProcessor) TestNotProcessedOperations() {
 	pm := NewProposalMaker(t.local.Node(), t.local.Database(), t.local.Policy())
 
 	ib := t.NewINITBallot(t.local, base.Round(0), nil)
-	initFact := ib.INITBallotFactV0
+	initFact := ib.INITFactV0
 
 	ivp, err := t.NewVoteproof(base.StageINIT, initFact, t.local, t.remote)
 	t.NoError(err)
@@ -825,7 +825,7 @@ func (t *testDefaultProposalProcessor) TestSameStateHash() {
 	pm := NewProposalMaker(t.local.Node(), t.local.Database(), t.local.Policy())
 
 	ib := t.NewINITBallot(t.local, base.Round(0), nil)
-	initFact := ib.INITBallotFactV0
+	initFact := ib.INITFactV0
 
 	ivp, err := t.NewVoteproof(base.StageINIT, initFact, t.local, t.remote)
 	t.NoError(err)
@@ -911,7 +911,7 @@ func (t *testDefaultProposalProcessor) TestHeavyOperations() {
 	t.NoError(err)
 
 	ib := t.NewINITBallot(t.local, base.Round(0), nil)
-	initFact := ib.INITBallotFactV0
+	initFact := ib.INITFactV0
 
 	ivp, err := t.NewVoteproof(base.StageINIT, initFact, t.local, t.remote)
 	t.NoError(err)

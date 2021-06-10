@@ -135,7 +135,7 @@ func (vc *VoteproofChecker) CheckACCEPTVoteproofProposal() (bool, error) {
 		return true, nil
 	}
 
-	fact := vc.voteproof.Majority().(ballot.ACCEPTBallotFact)
+	fact := vc.voteproof.Majority().(ballot.ACCEPTFact)
 	if found, err := vc.database.HasSeal(fact.Proposal()); err != nil {
 		return false, xerrors.Errorf("failed to check proposal of accept voteproof: %w", err)
 	} else if found {
@@ -191,7 +191,7 @@ func (vc *VoteproofChecker) CheckACCEPTVoteproofProposal() (bool, error) {
 
 func CheckBlockWithINITVoteproof(st storage.Database, voteproof base.Voteproof) error {
 	// check init ballot fact.PreviousBlock with local block
-	fact, ok := voteproof.Majority().(ballot.INITBallotFact)
+	fact, ok := voteproof.Majority().(ballot.INITFact)
 	if !ok {
 		return xerrors.Errorf("needs INITTBallotFact: fact=%T", voteproof.Majority())
 	}

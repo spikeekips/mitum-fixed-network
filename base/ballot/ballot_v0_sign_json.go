@@ -5,38 +5,38 @@ import (
 	"github.com/spikeekips/mitum/util/valuehash"
 )
 
-type SIGNBallotV0PackerJSON struct {
+type SIGNV0PackerJSON struct {
 	BaseBallotV0PackerJSON
 	PR valuehash.Hash `json:"proposal"`
 	NB valuehash.Hash `json:"new_block"`
 }
 
-func (sb SIGNBallotV0) MarshalJSON() ([]byte, error) {
+func (sb SIGNV0) MarshalJSON() ([]byte, error) {
 	bb, err := PackBaseBallotV0JSON(sb)
 	if err != nil {
 		return nil, err
 	}
 
-	return jsonenc.Marshal(SIGNBallotV0PackerJSON{
+	return jsonenc.Marshal(SIGNV0PackerJSON{
 		BaseBallotV0PackerJSON: bb,
 		PR:                     sb.proposal,
 		NB:                     sb.newBlock,
 	})
 }
 
-type SIGNBallotV0UnpackerJSON struct {
+type SIGNV0UnpackerJSON struct {
 	BaseBallotV0UnpackerJSON
 	PR valuehash.Bytes `json:"proposal"`
 	NB valuehash.Bytes `json:"new_block"`
 }
 
-func (sb *SIGNBallotV0) UnpackJSON(b []byte, enc *jsonenc.Encoder) error {
+func (sb *SIGNV0) UnpackJSON(b []byte, enc *jsonenc.Encoder) error {
 	bb, bf, err := sb.BaseBallotV0.unpackJSON(b, enc)
 	if err != nil {
 		return err
 	}
 
-	var nib SIGNBallotV0UnpackerJSON
+	var nib SIGNV0UnpackerJSON
 	if err := enc.Unmarshal(b, &nib); err != nil {
 		return err
 	}

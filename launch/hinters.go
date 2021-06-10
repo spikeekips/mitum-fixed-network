@@ -15,14 +15,14 @@ import (
 )
 
 var EncoderTypes = []hint.Type{
-	ballot.ACCEPTBallotFactType,
-	ballot.ACCEPTBallotType,
-	ballot.INITBallotFactType,
-	ballot.INITBallotType,
-	ballot.ProposalBallotFactType,
-	ballot.ProposalBallotType,
-	ballot.SIGNBallotFactType,
-	ballot.SIGNBallotType,
+	ballot.ACCEPTFactType,
+	ballot.ACCEPTType,
+	ballot.INITFactType,
+	ballot.INITType,
+	ballot.ProposalFactType,
+	ballot.ProposalType,
+	ballot.SIGNFactType,
+	ballot.SIGNType,
 	base.BaseNodeV0Type,
 	base.StringAddressType,
 	base.VoteproofV0Type,
@@ -57,14 +57,14 @@ var EncoderTypes = []hint.Type{
 }
 
 var EncoderHinters = []hint.Hinter{
-	ballot.ACCEPTBallotFactV0{},
-	ballot.ACCEPTBallotV0{},
-	ballot.INITBallotFactV0{},
-	ballot.INITBallotV0{},
+	ballot.ACCEPTFactV0{},
+	ballot.ACCEPTV0{},
+	ballot.INITFactV0{},
+	ballot.INITV0{},
 	ballot.ProposalFactV0{},
 	ballot.ProposalV0{},
-	ballot.SIGNBallotFactV0{},
-	ballot.SIGNBallotV0{},
+	ballot.SIGNFactV0{},
+	ballot.SIGNV0{},
 	base.BaseNodeV0{},
 	base.StringAddress(""),
 	base.VoteproofV0{},

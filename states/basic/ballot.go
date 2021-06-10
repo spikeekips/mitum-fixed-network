@@ -15,11 +15,11 @@ func NextINITBallotFromACCEPTVoteproof(
 	st storage.Database,
 	local *network.LocalNode,
 	voteproof base.Voteproof,
-) (ballot.INITBallotV0, error) {
+) (ballot.INITV0, error) {
 	if voteproof.Stage() != base.StageACCEPT {
-		return ballot.INITBallotV0{}, xerrors.Errorf("not accept voteproof")
+		return ballot.INITV0{}, xerrors.Errorf("not accept voteproof")
 	} else if !voteproof.IsFinished() {
-		return ballot.INITBallotV0{}, xerrors.Errorf("voteproof not yet finished")
+		return ballot.INITV0{}, xerrors.Errorf("voteproof not yet finished")
 	}
 
 	var height base.Height
@@ -34,14 +34,14 @@ func NextINITBallotFromACCEPTVoteproof(
 
 		switch m, found, err := st.ManifestByHeight(height - 1); {
 		case !found:
-			return ballot.INITBallotV0{}, xerrors.Errorf("manfest, height=%d not found", height-1)
+			return ballot.INITV0{}, xerrors.Errorf("manfest, height=%d not found", height-1)
 		case err != nil:
-			return ballot.INITBallotV0{}, xerrors.Errorf("failed to get manifest: %w", err)
+			return ballot.INITV0{}, xerrors.Errorf("failed to get manifest: %w", err)
 		default:
 			previousBlock = m.Hash()
 		}
-	} else if i, ok := voteproof.Majority().(ballot.ACCEPTBallotFact); !ok {
-		return ballot.INITBallotV0{}, xerrors.Errorf(
+	} else if i, ok := voteproof.Majority().(ballot.ACCEPTFact); !ok {
+		return ballot.INITV0{}, xerrors.Errorf(
 			"not ballot.ACCEPTBallotFact in voteproof.Majority(); %T", voteproof.Majority())
 	} else { // NOTE agreed accept voteproof
 		height = voteproof.Height() + 1
@@ -55,13 +55,13 @@ func NextINITBallotFromACCEPTVoteproof(
 	} else {
 		switch vp, err := st.Voteproof(voteproof.Height()-1, base.StageACCEPT); {
 		case err != nil:
-			return ballot.INITBallotV0{}, xerrors.Errorf("failed to get last voteproof: %w", err)
+			return ballot.INITV0{}, xerrors.Errorf("failed to get last voteproof: %w", err)
 		case vp != nil:
 			avp = vp
 		}
 	}
 
-	return ballot.NewINITBallotV0(
+	return ballot.NewINITV0(
 		local.Address(),
 		height,
 		round,
@@ -75,17 +75,17 @@ func NextINITBallotFromINITVoteproof(
 	st storage.Database,
 	local *network.LocalNode,
 	voteproof base.Voteproof,
-) (ballot.INITBallotV0, error) {
+) (ballot.INITV0, error) {
 	if voteproof.Stage() != base.StageINIT {
-		return ballot.INITBallotV0{}, xerrors.Errorf("not init voteproof")
+		return ballot.INITV0{}, xerrors.Errorf("not init voteproof")
 	} else if !voteproof.IsFinished() {
-		return ballot.INITBallotV0{}, xerrors.Errorf("voteproof not yet finished")
+		return ballot.INITV0{}, xerrors.Errorf("voteproof not yet finished")
 	}
 
 	var avp base.Voteproof
 	switch vp, err := st.Voteproof(voteproof.Height()-1, base.StageACCEPT); {
 	case err != nil:
-		return ballot.INITBallotV0{}, xerrors.Errorf("failed to get last voteproof: %w", err)
+		return ballot.INITV0{}, xerrors.Errorf("failed to get last voteproof: %w", err)
 	case vp != nil:
 		avp = vp
 	}
@@ -93,14 +93,14 @@ func NextINITBallotFromINITVoteproof(
 	var previousBlock valuehash.Hash
 	switch m, found, err := st.ManifestByHeight(voteproof.Height() - 1); {
 	case !found:
-		return ballot.INITBallotV0{}, xerrors.Errorf("previous manfest, height=%d not found", voteproof.Height())
+		return ballot.INITV0{}, xerrors.Errorf("previous manfest, height=%d not found", voteproof.Height())
 	case err != nil:
-		return ballot.INITBallotV0{}, xerrors.Errorf("failed to get previous manifest: %w", err)
+		return ballot.INITV0{}, xerrors.Errorf("failed to get previous manifest: %w", err)
 	default:
 		previousBlock = m.Hash()
 	}
 
-	return ballot.NewINITBallotV0(
+	return ballot.NewINITV0(
 		local.Address(),
 		voteproof.Height(),
 		voteproof.Round()+1,

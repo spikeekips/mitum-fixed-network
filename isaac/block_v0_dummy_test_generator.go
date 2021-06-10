@@ -344,7 +344,7 @@ func (bg *DummyBlocksV0Generator) createNextBlock() error {
 }
 
 func (bg *DummyBlocksV0Generator) finish(l *Local, vp base.Voteproof) error {
-	proposal := vp.Majority().(ballot.ACCEPTBallotFact).Proposal()
+	proposal := vp.Majority().(ballot.ACCEPTFact).Proposal()
 
 	pps := bg.ppss[l.Node().Address()]
 	if result := <-pps.Save(context.Background(), proposal, vp); result.Err != nil {
@@ -355,7 +355,7 @@ func (bg *DummyBlocksV0Generator) finish(l *Local, vp base.Voteproof) error {
 }
 
 func (bg *DummyBlocksV0Generator) createINITVoteproof() (map[base.Address]base.Voteproof, error) {
-	var ballots []ballot.INITBallot
+	var ballots []ballot.INIT
 	for _, l := range bg.allNodes {
 		if ib, err := bg.createINITBallot(l); err != nil {
 			return nil, err
@@ -382,8 +382,8 @@ func (bg *DummyBlocksV0Generator) createINITVoteproof() (map[base.Address]base.V
 	return vm, nil
 }
 
-func (bg *DummyBlocksV0Generator) createINITBallot(local *Local) (ballot.INITBallot, error) {
-	var baseBallot ballot.INITBallotV0
+func (bg *DummyBlocksV0Generator) createINITBallot(local *Local) (ballot.INIT, error) {
+	var baseBallot ballot.INITV0
 	if b, err := NewINITBallotV0Round0(local.Node(), local.Database()); err != nil {
 		return nil, err
 	} else if err := SignSeal(&b, local); err != nil {
@@ -428,7 +428,7 @@ func (bg *DummyBlocksV0Generator) createProposal(voteproof base.Voteproof) (ball
 func (bg *DummyBlocksV0Generator) createACCEPTVoteproof(proposal ballot.Proposal, ivm map[base.Address]base.Voteproof) (
 	map[base.Address]base.Voteproof, error,
 ) {
-	var ballots []ballot.ACCEPTBallot
+	var ballots []ballot.ACCEPT
 	for _, l := range bg.allNodes {
 		var newBlock block.Block
 

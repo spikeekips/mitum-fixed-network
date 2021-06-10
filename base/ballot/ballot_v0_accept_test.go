@@ -12,17 +12,17 @@ import (
 	"github.com/spikeekips/mitum/util/valuehash"
 )
 
-type testBallotV0ACCEPT struct {
+type testACCEPTV0 struct {
 	suite.Suite
 
 	pk key.Privatekey
 }
 
-func (t *testBallotV0ACCEPT) SetupSuite() {
+func (t *testACCEPTV0) SetupSuite() {
 	t.pk, _ = key.NewBTCPrivatekey()
 }
 
-func (t *testBallotV0ACCEPT) TestNew() {
+func (t *testACCEPTV0) TestNew() {
 	vp := base.NewDummyVoteproof(
 		base.Height(10),
 		base.Round(0),
@@ -30,12 +30,12 @@ func (t *testBallotV0ACCEPT) TestNew() {
 		base.VoteResultMajority,
 	)
 
-	ib := ACCEPTBallotV0{
+	ib := ACCEPTV0{
 		BaseBallotV0: BaseBallotV0{
 			node: base.RandomStringAddress(),
 		},
-		ACCEPTBallotFactV0: ACCEPTBallotFactV0{
-			BaseBallotFactV0: BaseBallotFactV0{
+		ACCEPTFactV0: ACCEPTFactV0{
+			BaseFactV0: BaseFactV0{
 				height: vp.Height(),
 				round:  vp.Round(),
 			},
@@ -51,7 +51,7 @@ func (t *testBallotV0ACCEPT) TestNew() {
 	t.Implements((*Ballot)(nil), ib)
 }
 
-func (t *testBallotV0ACCEPT) TestFact() {
+func (t *testACCEPTV0) TestFact() {
 	vp := base.NewDummyVoteproof(
 		base.Height(10),
 		base.Round(0),
@@ -59,12 +59,12 @@ func (t *testBallotV0ACCEPT) TestFact() {
 		base.VoteResultMajority,
 	)
 
-	ib := ACCEPTBallotV0{
+	ib := ACCEPTV0{
 		BaseBallotV0: BaseBallotV0{
 			node: base.RandomStringAddress(),
 		},
-		ACCEPTBallotFactV0: ACCEPTBallotFactV0{
-			BaseBallotFactV0: BaseBallotFactV0{
+		ACCEPTFactV0: ACCEPTFactV0{
+			BaseFactV0: BaseFactV0{
 				height: vp.Height(),
 				round:  vp.Round(),
 			},
@@ -93,7 +93,7 @@ func (t *testBallotV0ACCEPT) TestFact() {
 	t.NoError(ib.Signer().Verify(ib.Fact().Hash().Bytes(), ib.FactSignature()))
 }
 
-func (t *testBallotV0ACCEPT) TestGenerateHash() {
+func (t *testACCEPTV0) TestGenerateHash() {
 	vp := base.NewDummyVoteproof(
 		base.Height(10),
 		base.Round(0),
@@ -101,12 +101,12 @@ func (t *testBallotV0ACCEPT) TestGenerateHash() {
 		base.VoteResultMajority,
 	)
 
-	ib := ACCEPTBallotV0{
+	ib := ACCEPTV0{
 		BaseBallotV0: BaseBallotV0{
 			node: base.RandomStringAddress(),
 		},
-		ACCEPTBallotFactV0: ACCEPTBallotFactV0{
-			BaseBallotFactV0: BaseBallotFactV0{
+		ACCEPTFactV0: ACCEPTFactV0{
+			BaseFactV0: BaseFactV0{
 				height: vp.Height(),
 				round:  vp.Round(),
 			},
@@ -127,7 +127,7 @@ func (t *testBallotV0ACCEPT) TestGenerateHash() {
 	t.NotEmpty(bh)
 }
 
-func (t *testBallotV0ACCEPT) TestSign() {
+func (t *testACCEPTV0) TestSign() {
 	vp := base.NewDummyVoteproof(
 		base.Height(10),
 		base.Round(0),
@@ -135,12 +135,12 @@ func (t *testBallotV0ACCEPT) TestSign() {
 		base.VoteResultMajority,
 	)
 
-	ib := ACCEPTBallotV0{
+	ib := ACCEPTV0{
 		BaseBallotV0: BaseBallotV0{
 			node: base.RandomStringAddress(),
 		},
-		ACCEPTBallotFactV0: ACCEPTBallotFactV0{
-			BaseBallotFactV0: BaseBallotFactV0{
+		ACCEPTFactV0: ACCEPTFactV0{
+			BaseFactV0: BaseFactV0{
 				height: vp.Height(),
 				round:  vp.Round(),
 			},
@@ -172,7 +172,7 @@ func (t *testBallotV0ACCEPT) TestSign() {
 	t.True(xerrors.Is(err, key.SignatureVerificationFailedError))
 }
 
-func (t *testBallotV0ACCEPT) TestIsValid() {
+func (t *testACCEPTV0) TestIsValid() {
 	{ // empty signedAt
 		bb := BaseBallotV0{
 			node: base.RandomStringAddress(),
@@ -201,6 +201,6 @@ func (t *testBallotV0ACCEPT) TestIsValid() {
 	}
 }
 
-func TestBallotV0ACCEPT(t *testing.T) {
-	suite.Run(t, new(testBallotV0ACCEPT))
+func TestCCEPTV0(t *testing.T) {
+	suite.Run(t, new(testACCEPTV0))
 }

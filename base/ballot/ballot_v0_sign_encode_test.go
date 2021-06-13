@@ -71,7 +71,7 @@ func (t *testSIGNV0Encode) TestEncode() {
 	t.True(ib.Fact().Hash().Equal(nib.Fact().Hash()))
 }
 
-func testSIGNV0EncodeJSON(t *testing.T) {
+func TestSIGNV0EncodeJSON(t *testing.T) {
 	b := new(testSIGNV0Encode)
 	b.enc = jsonenc.NewEncoder()
 

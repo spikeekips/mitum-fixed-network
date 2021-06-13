@@ -83,7 +83,7 @@ func (t *testACCEPTV0Encode) TestEncode() {
 	t.Equal(vp, nib.Voteproof())
 }
 
-func testACCEPTV0EncodeJSON(t *testing.T) {
+func TestACCEPTV0EncodeJSON(t *testing.T) {
 	b := new(testACCEPTV0Encode)
 	b.enc = jsonenc.NewEncoder()
 

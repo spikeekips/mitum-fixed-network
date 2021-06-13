@@ -81,7 +81,7 @@ func (t *testINITV0Encode) TestEncode() {
 	t.Equal(vp, nib.Voteproof())
 }
 
-func testINITV0EncodeJSON(t *testing.T) {
+func TestINITV0EncodeJSON(t *testing.T) {
 	b := new(testINITV0Encode)
 	b.enc = jsonenc.NewEncoder()
 

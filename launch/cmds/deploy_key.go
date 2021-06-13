@@ -14,6 +14,7 @@ import (
 	"github.com/lucas-clemente/quic-go"
 	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/base/key"
+	"github.com/spikeekips/mitum/launch"
 	"github.com/spikeekips/mitum/launch/deploy"
 	"github.com/spikeekips/mitum/network"
 	quicnetwork "github.com/spikeekips/mitum/network/quic"
@@ -57,7 +58,7 @@ func (cmd *baseDeployKeyCommand) Initialize(flags interface{}, version util.Vers
 
 	if err := cmd.BaseCommand.Initialize(flags, version); err != nil {
 		return err
-	} else if _, err := cmd.LoadEncoders(nil, nil); err != nil {
+	} else if _, err := cmd.LoadEncoders(launch.EncoderTypes, launch.EncoderHinters); err != nil {
 		return err
 	}
 

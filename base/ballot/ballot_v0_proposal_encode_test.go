@@ -86,7 +86,7 @@ func (t *testProposalV0Encode) TestEncode() {
 	}
 }
 
-func testProposalV0EncodeJSON(t *testing.T) {
+func TestProposalV0EncodeJSON(t *testing.T) {
 	b := new(testProposalV0Encode)
 	b.enc = jsonenc.NewEncoder()
 

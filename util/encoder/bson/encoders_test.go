@@ -3,12 +3,11 @@ package bsonenc
 import (
 	"testing"
 
-	"github.com/stretchr/testify/suite"
-	"go.mongodb.org/mongo-driver/bson"
-	"golang.org/x/xerrors"
-
 	"github.com/spikeekips/mitum/util"
 	"github.com/spikeekips/mitum/util/encoder"
+	"github.com/spikeekips/mitum/util/hint"
+	"github.com/stretchr/testify/suite"
+	"golang.org/x/xerrors"
 )
 
 type testEncodersWithBSON struct {
@@ -32,34 +31,37 @@ func (t *testEncodersWithBSON) TestAddHinter() {
 	je := NewEncoder()
 	t.NoError(encs.AddEncoder(je))
 
-	t.NoError(encs.TestAddHinter(sh0{}))
+	ht := hinterDefault{
+		h: hint.NewHint(hint.Type("findme"), "v1.2.3"),
+		A: "A", B: 33,
+	}
 
-	s0, err := encs.Compatible((sh0{}).Hint().Type(), (sh0{}).Hint().Version())
+	t.NoError(encs.TestAddHinter(ht))
+
+	s0, err := encs.Compatible((ht).Hint())
 	t.NoError(err)
 	t.NotNil(s0)
-	t.NoError((sh0{}).Hint().IsCompatible(s0.Hint()))
-	t.True((sh0{}).Hint().Equal(s0.Hint()))
+	t.NoError((ht).Hint().IsCompatible(s0.Hint()))
+	t.True((ht).Hint().Equal(s0.Hint()))
 }
 
-func (t *testEncodersWithBSON) TestDecodeByHint() {
+func (t *testEncodersWithBSON) TestDecode() {
 	encs := encoder.NewEncoders()
 	be := NewEncoder()
 	t.NoError(encs.AddEncoder(be))
 
-	s := sh0{B: util.UUID().String()}
+	ht := hinterDefault{
+		h: hint.NewHint(hint.Type("findme"), "v1.2.3"),
+		A: "A", B: 33,
+	}
 
-	b, err := be.Marshal(MergeBSONM(
-		NewHintedDoc(s.Hint()),
-		bson.M{
-			"B": s.B,
-		},
-	))
+	b, err := be.Marshal(ht)
 
 	t.NoError(err)
 	t.NotNil(b)
 
 	{ // without AddHinter
-		a, err := be.DecodeByHint(b)
+		a, err := be.Decode(b)
 		t.Empty(a)
 		t.True(xerrors.Is(err, util.NotFoundError))
 	}
@@ -68,11 +70,15 @@ func (t *testEncodersWithBSON) TestDecodeByHint() {
 	be = NewEncoder()
 	t.NoError(encs.AddEncoder(be))
 
-	t.NoError(encs.TestAddHinter(sh0{}))
-	us, err := be.DecodeByHint(b)
+	t.NoError(encs.TestAddHinter(ht))
+	hinter, err := be.Decode(b)
 	t.NoError(err)
-	t.IsType(sh0{}, us)
-	t.Equal(s.B, us.(sh0).B)
+
+	uht, ok := hinter.(hinterDefault)
+	t.True(ok)
+
+	t.Equal(ht.A, uht.A)
+	t.Equal(ht.B, uht.B)
 }
 
 func TestEncodersWithBSON(t *testing.T) {

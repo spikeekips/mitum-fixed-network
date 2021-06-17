@@ -75,7 +75,7 @@ func ProcessQuicNetwork(ctx context.Context) (context.Context, error) {
 }
 
 func NewNetworkServer(bind string, u *url.URL, encs *encoder.Encoders, ca cache.Cache) (network.Server, error) {
-	je, err := encs.Encoder(jsonenc.JSONType, "")
+	je, err := encs.Encoder(jsonenc.JSONEncoderType, "")
 	if err != nil {
 		return nil, xerrors.Errorf("json encoder needs for quic-network: %w", err)
 	}
@@ -105,7 +105,7 @@ func LoadNodeChannel(
 	encs *encoder.Encoders,
 	connectionTimeout time.Duration,
 ) (network.Channel, error) {
-	je, err := encs.Encoder(jsonenc.JSONType, "")
+	je, err := encs.Encoder(jsonenc.JSONEncoderType, "")
 	if err != nil {
 		return nil, xerrors.Errorf("json encoder needs for quic-network: %w", err)
 	}

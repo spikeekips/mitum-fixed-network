@@ -9,7 +9,7 @@ import (
 func (sv *SliceValue) unpack(enc encoder.Encoder, h valuehash.Hash, bValue [][]byte) error {
 	v := make([]hint.Hinter, len(bValue))
 	for i, r := range bValue {
-		decoded, err := enc.DecodeByHint(r)
+		decoded, err := enc.Decode(r)
 		if err != nil {
 			return err
 		}

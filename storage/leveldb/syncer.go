@@ -92,7 +92,7 @@ func (st *SyncerSession) SetManifests(manifests []block.Manifest) error {
 
 	for i := range manifests {
 		m := manifests[i]
-		if b, err := marshal(st.database.Encoder(), m); err != nil {
+		if b, err := marshal(m, st.database.Encoder()); err != nil {
 			return err
 		} else {
 			key := st.manifestKey(m.Height())

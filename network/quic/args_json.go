@@ -1,29 +1,23 @@
 package quicnetwork
 
 import (
-	"encoding/json"
-
 	jsonenc "github.com/spikeekips/mitum/util/encoder/json"
 	"github.com/spikeekips/mitum/util/valuehash"
 )
 
 type HashesArgsUnpackerJSON struct {
-	Hashes []json.RawMessage
+	Hashes []valuehash.Bytes
 }
 
-func (ha *HashesArgs) UnpackJSON(b []byte, enc *jsonenc.Encoder) error {
+func (ha *HashesArgs) UnmarshalJSON(b []byte) error {
 	var uh HashesArgsUnpackerJSON
-	if err := enc.Unmarshal(b, &uh); err != nil {
+	if err := jsonenc.Unmarshal(b, &uh); err != nil {
 		return err
 	}
 
 	hs := make([]valuehash.Hash, len(uh.Hashes))
 	for i := range uh.Hashes {
-		h, err := valuehash.Decode(enc, uh.Hashes[i])
-		if err != nil {
-			return err
-		}
-		hs[i] = h
+		hs[i] = uh.Hashes[i]
 	}
 
 	ha.Hashes = hs

@@ -9,7 +9,6 @@ import (
 	"github.com/spikeekips/mitum/util/encoder"
 	bsonenc "github.com/spikeekips/mitum/util/encoder/bson"
 	jsonenc "github.com/spikeekips/mitum/util/encoder/json"
-	"github.com/spikeekips/mitum/util/hint"
 	"github.com/spikeekips/mitum/util/localtime"
 	"github.com/spikeekips/mitum/util/valuehash"
 )
@@ -21,12 +20,11 @@ type testVoteproofEncode struct {
 }
 
 func (t *testVoteproofEncode) SetupSuite() {
-	hs := hint.NewHintset()
-	hs.TestAdd(StringAddress(""))
-	hs.TestAdd(key.BTCPublickeyHinter)
-	hs.TestAdd(tinyFact{})
-
-	t.enc.SetHintset(hs)
+	t.enc.Add(StringAddress(""))
+	t.enc.Add(key.BTCPublickeyHinter)
+	t.enc.Add(tinyFact{})
+	t.enc.Add(VoteproofV0{})
+	t.enc.Add(BaseVoteproofNodeFact{})
 }
 
 func (t *testVoteproofEncode) TestMarshal() {
@@ -50,14 +48,14 @@ func (t *testVoteproofEncode) TestMarshal() {
 		facts:          []Fact{fact0},
 		majority:       fact0,
 		votes: []VoteproofNodeFact{
-			{
+			BaseVoteproofNodeFact{
 				address:       n0.Address(),
 				ballot:        valuehash.RandomSHA256(),
 				fact:          factHash0,
 				factSignature: factSignature0,
 				signer:        n0.Publickey(),
 			},
-			{
+			BaseVoteproofNodeFact{
 				address:       n1.Address(),
 				ballot:        valuehash.RandomSHA256(),
 				fact:          factHash0,
@@ -73,8 +71,11 @@ func (t *testVoteproofEncode) TestMarshal() {
 	t.NoError(err)
 	t.NotNil(b)
 
-	var uvp VoteproofV0
-	t.NoError(t.enc.Decode(b, &uvp))
+	hinter, err := DecodeVoteproof(b, t.enc)
+	t.NoError(err)
+
+	uvp, ok := hinter.(VoteproofV0)
+	t.True(ok)
 
 	t.Equal(vp.Height(), uvp.Height())
 	t.Equal(vp.Round(), uvp.Round())
@@ -100,9 +101,9 @@ func (t *testVoteproofEncode) TestMarshal() {
 	for a, f := range vp.votes {
 		u := uvp.votes[a]
 
-		t.True(f.fact.Equal(u.fact))
-		t.True(f.factSignature.Equal(u.factSignature))
-		t.True(f.signer.Equal(u.signer))
+		t.True(f.Fact().Equal(u.Fact()))
+		t.True(f.Signature().Equal(u.Signature()))
+		t.True(f.Signer().Equal(u.Signer()))
 	}
 }
 

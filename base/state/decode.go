@@ -5,8 +5,8 @@ import (
 	"github.com/spikeekips/mitum/util/encoder"
 )
 
-func DecodeValue(enc encoder.Encoder, b []byte) (Value, error) {
-	if i, err := enc.DecodeByHint(b); err != nil {
+func DecodeValue(b []byte, enc encoder.Encoder) (Value, error) {
+	if i, err := enc.Decode(b); err != nil {
 		return nil, err
 	} else if i == nil {
 		return nil, nil
@@ -17,8 +17,8 @@ func DecodeValue(enc encoder.Encoder, b []byte) (Value, error) {
 	}
 }
 
-func DecodeState(enc encoder.Encoder, b []byte) (State, error) {
-	if i, err := enc.DecodeByHint(b); err != nil {
+func DecodeState(b []byte, enc encoder.Encoder) (State, error) {
+	if i, err := enc.Decode(b); err != nil {
 		return nil, err
 	} else if i == nil {
 		return nil, nil

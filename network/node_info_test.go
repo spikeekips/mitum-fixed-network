@@ -214,7 +214,7 @@ func (t *testNodeInfo) TestJSON() {
 	b, err := jsonenc.Marshal(ni)
 	t.NoError(err)
 
-	i, err := DecodeNodeInfo(t.encJSON, b)
+	i, err := DecodeNodeInfo(b, t.encJSON)
 	t.NoError(err)
 	nni, ok := i.(NodeInfoV0)
 	t.True(ok)
@@ -243,7 +243,7 @@ func (t *testNodeInfo) TestBSON() {
 	b, err := bsonenc.Marshal(ni)
 	t.NoError(err)
 
-	i, err := DecodeNodeInfo(t.encBSON, b)
+	i, err := DecodeNodeInfo(b, t.encBSON)
 	t.NoError(err)
 	nni, ok := i.(NodeInfoV0)
 	t.True(ok)

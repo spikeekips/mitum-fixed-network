@@ -5,7 +5,6 @@ import (
 
 	"github.com/spikeekips/mitum/base/operation"
 	"github.com/spikeekips/mitum/base/state"
-	"github.com/spikeekips/mitum/util"
 	jsonenc "github.com/spikeekips/mitum/util/encoder/json"
 	"github.com/spikeekips/mitum/util/tree"
 )
@@ -34,65 +33,19 @@ func (bm BlockV0) MarshalJSON() ([]byte, error) {
 
 type BlockV0UnpackJSON struct {
 	jsonenc.HintedHead
-	MF  json.RawMessage   `json:"manifest"`
-	CI  json.RawMessage   `json:"consensus"`
-	OPT json.RawMessage   `json:"operations_tree"`
-	OP  []json.RawMessage `json:"operations"`
-	STT json.RawMessage   `json:"states_tree"`
-	ST  []json.RawMessage `json:"states"`
+	MF  json.RawMessage `json:"manifest"`
+	CI  json.RawMessage `json:"consensus"`
+	OPT json.RawMessage `json:"operations_tree"`
+	OP  json.RawMessage `json:"operations"`
+	STT json.RawMessage `json:"states_tree"`
+	ST  json.RawMessage `json:"states"`
 }
 
 func (bm *BlockV0) UnpackJSON(b []byte, enc *jsonenc.Encoder) error {
-	var nbm BlockV0UnpackJSON
-	if err := enc.Unmarshal(b, &nbm); err != nil {
+	var um BlockV0UnpackJSON
+	if err := enc.Unmarshal(b, &um); err != nil {
 		return err
 	}
 
-	if m, err := DecodeManifest(enc, nbm.MF); err != nil {
-		return err
-	} else if mv, ok := m.(ManifestV0); !ok {
-		return util.WrongTypeError.Errorf("not ManifestV0: type=%T", m)
-	} else {
-		bm.ManifestV0 = mv
-	}
-
-	if m, err := DecodeConsensusInfo(enc, nbm.CI); err != nil {
-		return err
-	} else if mv, ok := m.(ConsensusInfoV0); !ok {
-		return util.WrongTypeError.Errorf("not ConsensusInfoV0: type=%T", m)
-	} else {
-		bm.ci = mv
-	}
-
-	var err error
-	bm.operationsTree, err = tree.DecodeFixedTree(enc, nbm.OPT)
-	if err != nil {
-		return err
-	}
-
-	bm.operations = make([]operation.Operation, len(nbm.OP))
-	for i := range nbm.OP {
-		bm.operations[i], err = operation.DecodeOperation(enc, nbm.OP[i])
-		if err != nil {
-			return err
-		}
-	}
-
-	tr, err := tree.DecodeFixedTree(enc, nbm.STT)
-	if err != nil {
-		return err
-	}
-	bm.statesTree = tr
-
-	sts := make([]state.State, len(nbm.ST))
-	for i := range nbm.ST {
-		st, err := state.DecodeState(enc, nbm.ST[i])
-		if err != nil {
-			return err
-		}
-		sts[i] = st
-	}
-	bm.states = sts
-
-	return nil
+	return bm.unpack(enc, um.MF, um.CI, um.OPT, um.OP, um.STT, um.ST)
 }

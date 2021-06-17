@@ -31,7 +31,7 @@ func (t *testStateBytesValueEncode) TestEncode() {
 	b, err := t.enc.Marshal(bv)
 	t.NoError(err)
 
-	decoded, err := t.enc.DecodeByHint(b)
+	decoded, err := t.enc.Decode(b)
 	t.NoError(err)
 	t.Implements((*Value)(nil), decoded)
 
@@ -51,7 +51,7 @@ func (t *testStateBytesValueEncode) TestEmpty() {
 	b, err := t.enc.Marshal(bv)
 	t.NoError(err)
 
-	decoded, err := t.enc.DecodeByHint(b)
+	decoded, err := t.enc.Decode(b)
 	t.NoError(err)
 	t.Implements((*Value)(nil), decoded)
 

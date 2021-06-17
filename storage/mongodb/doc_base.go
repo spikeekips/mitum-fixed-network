@@ -80,7 +80,7 @@ func LoadDataFromDoc(b []byte, encs *encoder.Encoders) (bson.Raw /* id */, inter
 	}
 
 	var data hint.Hinter
-	if i, err := enc.DecodeByHint([]byte(doc)); err != nil {
+	if i, err := enc.Decode([]byte(doc)); err != nil {
 		return nil, nil, err
 	} else {
 		data = i

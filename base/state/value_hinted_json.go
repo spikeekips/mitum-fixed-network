@@ -29,7 +29,7 @@ func (hv *HintedValue) UnpackJSON(b []byte, enc *jsonenc.Encoder) error {
 		return err
 	}
 
-	decoded, err := enc.DecodeByHint(uv.V)
+	decoded, err := enc.Decode(uv.V)
 	if err != nil {
 		return err
 	}

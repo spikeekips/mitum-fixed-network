@@ -110,6 +110,7 @@ func (t *BaseTestDatabase) SetupSuite() {
 	_ = t.Encs.TestAddHinter(block.ManifestV0{})
 	_ = t.Encs.TestAddHinter(block.ConsensusInfoV0{})
 	_ = t.Encs.TestAddHinter(base.VoteproofV0{})
+	_ = t.Encs.TestAddHinter(base.BaseVoteproofNodeFact{})
 	_ = t.Encs.TestAddHinter(seal.DummySeal{})
 	_ = t.Encs.TestAddHinter(operation.BaseSeal{})
 	_ = t.Encs.TestAddHinter(operation.BaseFactSign{})

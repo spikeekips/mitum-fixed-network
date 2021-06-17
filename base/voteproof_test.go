@@ -173,7 +173,7 @@ func (t *testVoteproof) TestWrongVotesCount() {
 		majority:       fact,
 		facts:          []Fact{fact},
 		votes: []VoteproofNodeFact{
-			{
+			BaseVoteproofNodeFact{
 				address: n0.Address(),
 				fact:    factHash,
 			},
@@ -198,7 +198,7 @@ func (t *testVoteproof) TestInvalidFactHash() {
 		majority:       fact,
 		facts:          []Fact{fact},
 		votes: []VoteproofNodeFact{
-			{
+			BaseVoteproofNodeFact{
 				address:       n0.Address(),
 				ballot:        valuehash.RandomSHA256(),
 				fact:          invalidFactHash,
@@ -229,14 +229,14 @@ func (t *testVoteproof) TestUnknownFactHash() {
 		majority:       fact,
 		facts:          []Fact{fact},
 		votes: []VoteproofNodeFact{
-			{
+			BaseVoteproofNodeFact{
 				address:       n0.Address(),
 				ballot:        valuehash.RandomSHA256(),
 				fact:          factHash,
 				factSignature: factSignature,
 				signer:        n0.Publickey(),
 			},
-			{
+			BaseVoteproofNodeFact{
 				address:       n1.Address(),
 				ballot:        valuehash.RandomSHA256(),
 				fact:          unknownFact.Hash(),
@@ -267,7 +267,7 @@ func (t *testVoteproof) TestFactNotFound() {
 		majority:       fact,
 		facts:          []Fact{fact},
 		votes: []VoteproofNodeFact{
-			{
+			BaseVoteproofNodeFact{
 				address:       n0.Address(),
 				ballot:        valuehash.RandomSHA256(),
 				fact:          newFactHash,
@@ -295,7 +295,7 @@ func (t *testVoteproof) TestSuplusFacts() {
 		majority:       fact,
 		facts:          []Fact{fact, fact},
 		votes: []VoteproofNodeFact{
-			{
+			BaseVoteproofNodeFact{
 				address:       n0.Address(),
 				ballot:        valuehash.RandomSHA256(),
 				fact:          factHash,
@@ -324,7 +324,7 @@ func (t *testVoteproof) TestNotYetButNot() {
 		majority:       fact,
 		facts:          []Fact{fact},
 		votes: []VoteproofNodeFact{
-			{
+			BaseVoteproofNodeFact{
 				address:       n0.Address(),
 				ballot:        valuehash.RandomSHA256(),
 				fact:          factHash,
@@ -360,14 +360,14 @@ func (t *testVoteproof) TestDrawButNot() {
 		majority:       fact0,
 		facts:          []Fact{fact0, fact1},
 		votes: []VoteproofNodeFact{
-			{
+			BaseVoteproofNodeFact{
 				address:       n0.Address(),
 				ballot:        valuehash.RandomSHA256(),
 				fact:          factHash0,
 				factSignature: factSignature0,
 				signer:        n0.Publickey(),
 			},
-			{
+			BaseVoteproofNodeFact{
 				address:       n1.Address(),
 				ballot:        valuehash.RandomSHA256(),
 				fact:          factHash1,
@@ -400,14 +400,14 @@ func (t *testVoteproof) TestMajorityButNot() {
 		result:         VoteResultDraw,
 		facts:          []Fact{fact0},
 		votes: []VoteproofNodeFact{
-			{
+			BaseVoteproofNodeFact{
 				address:       n0.Address(),
 				ballot:        valuehash.RandomSHA256(),
 				fact:          factHash0,
 				factSignature: factSignature0,
 				signer:        n0.Publickey(),
 			},
-			{
+			BaseVoteproofNodeFact{
 				address:       n1.Address(),
 				ballot:        valuehash.RandomSHA256(),
 				fact:          factHash0,
@@ -524,7 +524,7 @@ func (t *testVoteproof) TestCompareVoteproof() {
 			majority:       fact,
 			facts:          []Fact{fact},
 			votes: []VoteproofNodeFact{
-				{
+				BaseVoteproofNodeFact{
 					address:       n0.Address(),
 					ballot:        valuehash.RandomSHA256(),
 					fact:          factHash,

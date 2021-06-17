@@ -4,6 +4,7 @@ import (
 	"time"
 
 	"github.com/spikeekips/mitum/base/key"
+	"github.com/spikeekips/mitum/util"
 	"github.com/spikeekips/mitum/util/encoder"
 	"github.com/spikeekips/mitum/util/valuehash"
 )
@@ -15,20 +16,26 @@ func (sl *BaseSeal) unpack(
 	bSigner key.PublickeyDecoder,
 	signature key.Signature,
 	signedAt time.Time,
-	operations [][]byte,
+	bops []byte,
 ) error {
 	signer, err := bSigner.Encode(enc)
 	if err != nil {
 		return err
 	}
 
-	sl.ops = make([]Operation, len(operations))
-	for i := range operations {
-		op, err := DecodeOperation(enc, operations[i])
-		if err != nil {
-			return err
+	hops, err := enc.DecodeSlice(bops)
+	if err != nil {
+		return err
+	}
+
+	sl.ops = make([]Operation, len(hops))
+	for i := range hops {
+		j, ok := hops[i].(Operation)
+		if !ok {
+			return util.WrongTypeError.Errorf("expected Operation, not %T", hops[i])
 		}
-		sl.ops[i] = op
+
+		sl.ops[i] = j
 	}
 
 	sl.h = h

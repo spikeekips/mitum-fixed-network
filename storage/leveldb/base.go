@@ -363,11 +363,11 @@ func (st *Database) newSeal(batch *leveldb.Batch, sl seal.Seal) error {
 
 	batch.Put(
 		st.sealHashKey(sl.Hash()),
-		encodeWithEncoder(st.enc, rawHash),
+		encodeWithEncoder(rawHash, st.enc),
 	)
 
 	key := st.sealKey(sl.Hash())
-	hb := encodeWithEncoder(st.enc, raw)
+	hb := encodeWithEncoder(raw, st.enc)
 	if _, ok := sl.(operation.Seal); !ok {
 		batch.Put(key, hb)
 		return nil
@@ -404,7 +404,7 @@ func (st *Database) loadHinter(b []byte) (hint.Hinter, error) {
 		return nil, err
 	}
 
-	return enc.DecodeByHint(raw)
+	return enc.Decode(raw)
 }
 
 func (st *Database) loadValue(b []byte, i interface{}) error {
@@ -680,7 +680,7 @@ func (st *Database) State(key string) (state.State, bool, error) {
 }
 
 func (st *Database) NewState(sta state.State) error {
-	if b, err := marshal(st.enc, sta); err != nil {
+	if b, err := marshal(sta, st.enc); err != nil {
 		return err
 	} else if err := st.db.Put(leveldbStateKey(sta.Key()), b, nil); err != nil {
 		return wrapError(err)
@@ -798,7 +798,7 @@ func (st *Database) SetBlockDataMaps(bds []block.BlockDataMap) error {
 	batch := new(leveldb.Batch)
 	for i := range bds {
 		bd := bds[i]
-		if b, err := marshal(st.enc, bd); err != nil {
+		if b, err := marshal(bd, st.enc); err != nil {
 			return err
 		} else {
 			batch.Put(leveldbBlockDataMapKey(bd.Height()), b)

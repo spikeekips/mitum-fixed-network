@@ -5,17 +5,20 @@ import (
 	"golang.org/x/xerrors"
 )
 
-func (tr *FixedTree) unpack(enc encoder.Encoder, bs [][]byte) error {
-	tr.nodes = make([]FixedTreeNode, len(bs))
+func (tr *FixedTree) unpack(enc encoder.Encoder, b []byte) error {
+	hinters, err := enc.DecodeSlice(b)
+	if err != nil {
+		return err
+	}
 
-	for i := range bs {
-		if j, err := enc.DecodeByHint(bs[i]); err != nil {
-			return err
-		} else if k, ok := j.(FixedTreeNode); !ok {
+	tr.nodes = make([]FixedTreeNode, len(hinters))
+
+	for i := range hinters {
+		j, ok := hinters[i].(FixedTreeNode)
+		if !ok {
 			return xerrors.Errorf("not FixedTreeNode, %T", j)
-		} else {
-			tr.nodes[i] = k
 		}
+		tr.nodes[i] = j
 	}
 
 	return nil

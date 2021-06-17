@@ -229,7 +229,7 @@ func (t *testDefaultProposalProcessor) TestSave() {
 	b, err := io.ReadAll(f)
 	t.NoError(err)
 
-	um, err := block.DecodeManifest(t.JSONEnc, b)
+	um, err := block.DecodeManifest(b, t.JSONEnc)
 	t.NoError(err)
 
 	t.CompareManifest(blk.Manifest(), um)

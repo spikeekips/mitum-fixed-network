@@ -50,20 +50,20 @@ func (bst *DatabaseSession) SetBlock(_ context.Context, blk block.Block) error {
 		)
 	}
 
-	if b, err := marshal(bst.st.enc, blk); err != nil {
+	if b, err := marshal(blk, bst.st.enc); err != nil {
 		return err
 	} else {
 		bst.batch.Put(leveldbBlockHashKey(blk.Hash()), b)
 	}
 
-	if b, err := marshal(bst.st.enc, blk.Manifest()); err != nil {
+	if b, err := marshal(blk.Manifest(), bst.st.enc); err != nil {
 		return err
 	} else {
 		key := leveldbManifestKey(blk.Hash())
 		bst.batch.Put(key, b)
 	}
 
-	if b, err := marshal(bst.st.enc, blk.Hash()); err != nil {
+	if b, err := marshal(blk.Hash(), bst.st.enc); err != nil {
 		return err
 	} else {
 		bst.batch.Put(leveldbBlockHeightKey(blk.Height()), b)
@@ -92,7 +92,7 @@ func (bst *DatabaseSession) setOperationsTree(tr tree.FixedTree) error {
 		return nil
 	}
 
-	if b, err := marshal(bst.st.enc, tr); err != nil { // block 1st
+	if b, err := marshal(tr, bst.st.enc); err != nil { // block 1st
 		return err
 	} else {
 		bst.batch.Put(leveldbBlockOperationsKey(bst.block), b)
@@ -112,7 +112,7 @@ func (bst *DatabaseSession) setOperationsTree(tr tree.FixedTree) error {
 
 func (bst *DatabaseSession) setStates(sts []state.State) error {
 	for i := range sts {
-		if b, err := marshal(bst.st.enc, sts[i]); err != nil {
+		if b, err := marshal(sts[i], bst.st.enc); err != nil {
 			return err
 		} else {
 			bst.batch.Put(leveldbStateKey(sts[i].Key()), b)
@@ -124,7 +124,7 @@ func (bst *DatabaseSession) setStates(sts []state.State) error {
 
 func (bst *DatabaseSession) setVoteproofs(init, accept base.Voteproof) error {
 	if init != nil {
-		if b, err := marshal(bst.st.enc, init); err != nil {
+		if b, err := marshal(init, bst.st.enc); err != nil {
 			return err
 		} else {
 			bst.batch.Put(leveldbVoteproofKey(init.Height(), base.StageINIT), b)
@@ -147,7 +147,7 @@ func (bst *DatabaseSession) Commit(ctx context.Context, bd block.BlockDataMap) e
 		}
 	}
 
-	if b, err := marshal(bst.st.enc, bd); err != nil {
+	if b, err := marshal(bd, bst.st.enc); err != nil {
 		return err
 	} else {
 		bst.batch.Put(leveldbBlockDataMapKey(bd.Height()), b)
@@ -169,7 +169,7 @@ func (bst *DatabaseSession) SetACCEPTVoteproof(voteproof base.Voteproof) error {
 		return xerrors.Errorf("not accept voteproof, %v", s)
 	}
 
-	if b, err := marshal(bst.st.enc, voteproof); err != nil {
+	if b, err := marshal(voteproof, bst.st.enc); err != nil {
 		return err
 	} else {
 		bst.batch.Put(leveldbVoteproofKey(voteproof.Height(), base.StageACCEPT), b)

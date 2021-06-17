@@ -6,8 +6,8 @@ import (
 	"github.com/spikeekips/mitum/util/hint"
 )
 
-func DecodeFact(enc encoder.Encoder, b []byte) (Fact, error) {
-	if i, err := enc.DecodeByHint(b); err != nil {
+func DecodeFact(b []byte, enc encoder.Encoder) (Fact, error) {
+	if i, err := enc.Decode(b); err != nil {
 		return nil, err
 	} else if i == nil {
 		return nil, nil
@@ -18,8 +18,8 @@ func DecodeFact(enc encoder.Encoder, b []byte) (Fact, error) {
 	}
 }
 
-func DecodeNode(enc encoder.Encoder, b []byte) (Node, error) {
-	if i, err := enc.DecodeByHint(b); err != nil {
+func DecodeNode(b []byte, enc encoder.Encoder) (Node, error) {
+	if i, err := enc.Decode(b); err != nil {
 		return nil, err
 	} else if i == nil {
 		return nil, nil
@@ -30,8 +30,8 @@ func DecodeNode(enc encoder.Encoder, b []byte) (Node, error) {
 	}
 }
 
-func DecodeVoteproof(enc encoder.Encoder, b []byte) (Voteproof, error) {
-	if i, err := enc.DecodeByHint(b); err != nil {
+func DecodeVoteproof(b []byte, enc encoder.Encoder) (Voteproof, error) {
+	if i, err := enc.Decode(b); err != nil {
 		return nil, err
 	} else if i == nil {
 		return nil, nil
@@ -42,14 +42,27 @@ func DecodeVoteproof(enc encoder.Encoder, b []byte) (Voteproof, error) {
 	}
 }
 
-func DecodeAddressFromString(enc encoder.Encoder, s string) (Address, error) {
-	h, us, err := hint.ParseHintedString(s)
+func DecodeVoteproofNodeFact(b []byte, enc encoder.Encoder) (VoteproofNodeFact, error) {
+	var vp VoteproofNodeFact
+	if i, err := enc.Decode(b); err != nil {
+		return vp, err
+	} else if i == nil {
+		return vp, nil
+	} else if v, ok := i.(VoteproofNodeFact); !ok {
+		return vp, util.WrongTypeError.Errorf("not VoteproofNodeFact; type=%T", i)
+	} else {
+		return v, nil
+	}
+}
+
+func DecodeAddressFromString(s string, enc encoder.Encoder) (Address, error) {
+	hs, err := hint.ParseHintedString(s)
 	if err != nil {
 		return nil, err
 	}
 
-	kd := encoder.NewHintedString(h, us)
-	if k, err := kd.Encode(enc); err != nil {
+	kd := encoder.NewHintedString(hs.Hint(), hs.Body())
+	if k, err := kd.Decode(enc); err != nil {
 		return nil, err
 	} else if a, ok := k.(Address); !ok {
 		return nil, util.WrongTypeError.Errorf("not Address; type=%T", k)

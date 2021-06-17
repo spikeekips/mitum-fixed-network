@@ -1,384 +1,373 @@
 package jsonenc
 
 import (
-	"bytes"
-	"encoding/json"
-	"math/rand"
-	"reflect"
+	"fmt"
 	"testing"
-
-	"github.com/stretchr/testify/suite"
-	"golang.org/x/xerrors"
 
 	"github.com/spikeekips/mitum/util"
 	"github.com/spikeekips/mitum/util/encoder"
 	"github.com/spikeekips/mitum/util/hint"
+	"github.com/stretchr/testify/suite"
+	"golang.org/x/xerrors"
 )
 
-type sp0 struct {
+type hinterDefault struct {
+	h hint.Hint
 	A string
-	B []byte
+	B int
 }
 
-var s1Hint = hint.NewHint(hint.Type("s1"), "v0.1")
+func (ht hinterDefault) Hint() hint.Hint {
+	return ht.h
+}
 
-func (s0 sp0) MarshalJSON() ([]byte, error) {
-	return Marshal(struct {
+func (ht hinterDefault) MarshalJSON() ([]byte, error) {
+	return util.JSON.Marshal(struct {
+		HintedHead
 		A string
-		B []byte
+		B int
 	}{
-		A: s0.A,
-		B: []byte(s0.A),
+		HintedHead: NewHintedHead(ht.Hint()),
+		A:          ht.A, B: ht.B,
 	})
 }
 
-func (s0 sup0) MarshalJSON() ([]byte, error) {
-	return Marshal(struct {
+type hinterJSONMarshaller struct {
+	h hint.Hint
+	a string
+	b int
+}
+
+func (ht hinterJSONMarshaller) Hint() hint.Hint {
+	return ht.h
+}
+
+func (ht hinterJSONMarshaller) MarshalJSON() ([]byte, error) {
+	return util.JSON.Marshal(struct {
+		HintedHead
 		A string
+		B int
 	}{
-		A: s0.A + "-packed",
+		HintedHead: NewHintedHead(ht.Hint()),
+		A:          ht.a, B: ht.b,
 	})
 }
 
-func (s0 *sup0) UnpackJSON(b []byte, _ *Encoder) error {
-	var us sup0
-	if err := json.Unmarshal(b, &us); err != nil {
+func (ht *hinterJSONMarshaller) UnmarshalJSON(b []byte) error {
+	var uht struct {
+		A string
+		B int
+	}
+	if err := util.JSON.Unmarshal(b, &uht); err != nil {
 		return err
 	}
 
-	s0.A = us.A + "-unpacked"
+	ht.a = uht.A
+	ht.b = uht.B
 
 	return nil
 }
 
-// NOTE embed struct must have PackJSON and UnpackJSON.
-func (s0 se0) MarshalJSON() ([]byte, error) {
-	s, err := Marshal(s0.S)
+type hinterJSONUnpacker struct {
+	h hint.Hint
+	a string
+	b int
+}
+
+func (ht hinterJSONUnpacker) Hint() hint.Hint {
+	return ht.h
+}
+
+func (ht hinterJSONUnpacker) MarshalJSON() ([]byte, error) {
+	return util.JSON.Marshal(struct {
+		HintedHead
+		A string
+		B int
+	}{
+		HintedHead: NewHintedHead(ht.Hint()),
+		A:          ht.a, B: ht.b,
+	})
+}
+
+func (ht *hinterJSONUnpacker) UnpackJSON(b []byte, enc *Encoder) error {
+	var uht struct {
+		A string
+		B int
+	}
+	if err := enc.Unmarshal(b, &uht); err != nil {
+		return err
+	}
+
+	ht.a = uht.A
+	ht.b = uht.B
+
+	return nil
+}
+
+type hinterTextMarshaller struct {
+	h hint.Hint
+	A int
+	B int
+}
+
+func (ht hinterTextMarshaller) Hint() hint.Hint {
+	return ht.h
+}
+
+func (ht hinterTextMarshaller) String() string {
+	return hint.NewHintedString(ht.Hint(), fmt.Sprintf("%d-%d", ht.A, ht.B)).String()
+}
+
+func (ht hinterTextMarshaller) MarshalText() ([]byte, error) {
+	return []byte(ht.String()), nil
+}
+
+func (ht *hinterTextMarshaller) UnmarshalText(b []byte) error {
+	var ua, ub int
+	n, err := fmt.Sscanf(string(b)+"\n", "%d-%d", &ua, &ub)
+
 	if err != nil {
-		return nil, err
-	}
-
-	return Marshal(struct {
-		A string
-		S json.RawMessage
-	}{
-		A: s0.A,
-		S: s,
-	})
-}
-
-func (s0 *se0) UnpackJSON(b []byte, rp *Encoder) error {
-	var se struct {
-		A string
-		S json.RawMessage
-	}
-	if err := json.Unmarshal(b, &se); err != nil {
 		return err
+	} else if n != 2 {
+		return xerrors.Errorf("something missed")
 	}
 
-	var sup sup0
-	if err := rp.Unpack(se.S, &sup); err != nil {
-		return err
-	}
-
-	s0.A = se.A
-	s0.S = sup
+	ht.A = ua
+	ht.B = ub
 
 	return nil
 }
 
-type s1 struct {
-	C int
-}
-
-// s1 does not PackJSON without HintedHead
-func (s0 s1) Hint() hint.Hint {
-	return s1Hint
-}
-
-func (s0 s1) MarshalJSON() ([]byte, error) {
-	return Marshal(struct {
-		HintedHead
-		C int
-	}{
-		HintedHead: NewHintedHead(s0.Hint()),
-		C:          s0.C,
-	})
-}
-
-type sup0 struct {
-	A string
-}
-
-// se0 embeds sup0
-type se0 struct {
-	A string
-	S sup0
-}
-
-var sh0Hint = hint.NewHint(hint.Type("sh0"), "v0.1")
-
-type sh0 struct {
-	B string
-}
-
-func (s0 sh0) Hint() hint.Hint {
-	return sh0Hint
-}
-
-func (s0 sh0) MarshalJSON() ([]byte, error) {
-	return Marshal(struct {
-		HintedHead
-		B string
-	}{
-		HintedHead: NewHintedHead(s0.Hint()),
-		B:          s0.B,
-	})
-}
-
-// s0 is simple struct
-type s0 struct {
-	A string
-}
-
-type testJSON struct {
+type testJSONEncoder struct {
 	suite.Suite
 }
 
-func (t *testJSON) TestEncodeNatives() {
-	cases := []struct {
-		name string
-		v    interface{}
-	}{
-		//{name: "nil", v: nil},
-		{name: "string", v: util.UUID().String()},
-		{name: "int", v: rand.Int()},
-		{name: "int8", v: int8(33)},
-		{name: "int16", v: int16(33)},
-		{name: "int32", v: rand.Int31()},
-		{name: "int64", v: rand.Int63()},
-		{name: "uint", v: uint(rand.Int())},
-		{name: "unt8", v: uint8(33)},
-		{name: "unt16", v: uint16(33)},
-		{name: "unt32", v: rand.Uint32()},
-		{name: "unt64", v: rand.Uint64()},
-		{name: "true", v: true},
-		{name: "false", v: false},
-		{name: "array", v: [3]int{3, 33, 333}},
-		{name: "0 array", v: [3]int{}},
-		{name: "array ptr", v: &([3]int{3, 33, 333})},
-		{name: "slice", v: []int{3, 33, 333, 3333}},
-		{name: "empty slice", v: []int{}},
-		{name: "slice ptr", v: &([]int{3, 33, 333, 3333})},
-		{
-			name: "map",
-			v:    map[string]int{util.UUID().String(): 1, util.UUID().String(): 2},
-		},
-		{
-			name: "map ptr",
-			v:    &map[string]int{util.UUID().String(): 1, util.UUID().String(): 2},
-		},
-		{name: "empty map", v: map[string]int{}},
-		{name: "empty map ptr", v: &map[string]int{}},
-	}
-
-	je := NewEncoder()
-
-	for i, c := range cases {
-		i := i
-		c := c
-		tested := t.Run(
-			c.name,
-			func() {
-				b, err := Marshal(c.v)
-				t.NoError(err, "encode: %d: %v; error=%v", i, c.name, err)
-
-				if c.v == nil {
-					t.Nil(b, "%d: %v", i, c.name)
-					return
-				}
-
-				n := reflect.New(reflect.TypeOf(c.v)).Interface()
-				kind := reflect.TypeOf(c.v).Kind()
-				if kind == reflect.Ptr {
-					n = reflect.New(reflect.TypeOf(c.v).Elem()).Interface()
-				}
-				t.NoError(je.Decode(b, n), "decode: %d: %v", i, c.name)
-
-				expected := c.v
-				if kind == reflect.Ptr {
-					expected = reflect.ValueOf(c.v).Elem().Interface()
-				}
-				t.Equal(expected, reflect.ValueOf(n).Elem().Interface(), "%d: %v", i, c.name)
-			},
-		)
-		if !tested {
-			break
-		}
-	}
+func (t *testJSONEncoder) TestNew() {
+	enc := NewEncoder()
+	_, ok := (interface{})(enc).(encoder.Encoder)
+	t.True(ok)
 }
 
-func (t *testJSON) TestEncodeSimpleStruct() {
-	s := s0{A: util.UUID().String()}
+func (t *testJSONEncoder) TestAdd() {
+	enc := NewEncoder()
 
-	je := NewEncoder()
-	b, err := Marshal(s)
+	ht := hinterDefault{
+		h: hint.NewHint(hint.Type("findme"), "v1.2.3"),
+		A: "A", B: 33,
+	}
+	t.NoError(enc.Add(ht))
+
+	// add again
+	err := enc.Add(ht)
+	t.Contains(err.Error(), "already added")
+}
+
+func (t *testJSONEncoder) TestDecodeUnknown() {
+	enc := NewEncoder()
+
+	ht := hinterDefault{
+		h: hint.NewHint(hint.Type("findme"), "v1.2.3"),
+		A: "A", B: 33,
+	}
+
+	b, err := enc.Marshal(ht)
 	t.NoError(err)
-	t.NotNil(b)
 
-	var us s0
-	t.NoError(je.Decode(b, &us))
-	t.Equal(s.A, us.A)
+	_, err = enc.Decode(b)
+	t.True(xerrors.Is(err, util.NotFoundError))
 }
 
-func (t *testJSON) TestEncodePackable() {
-	s := sp0{A: util.UUID().String()}
+func (t *testJSONEncoder) TestDecodeDefault() {
+	enc := NewEncoder()
 
-	je := NewEncoder()
-	b, err := Marshal(s)
+	ht := hinterDefault{
+		h: hint.NewHint(hint.Type("findme"), "v1.2.3"),
+	}
+	t.NoError(enc.Add(ht))
+
+	ht.A = "A"
+	ht.B = 33
+
+	b, err := enc.Marshal(ht)
 	t.NoError(err)
-	t.NotNil(b)
 
-	var us sp0
-	t.NoError(je.Decode(b, &us))
-	t.Equal(s.A, us.A)
-	t.Equal([]byte(s.A), us.B)
-}
-
-func (t *testJSON) TestEncodeUnpackable() {
-	s := sup0{A: util.UUID().String()}
-
-	je := NewEncoder()
-	b, err := Marshal(s)
+	hinter, err := enc.Decode(b)
 	t.NoError(err)
-	t.NotNil(b)
 
-	var us sup0
-	t.NoError(je.Decode(b, &us))
-	t.Equal(s.A+"-packed-unpacked", us.A)
+	uht, ok := hinter.(hinterDefault)
+	t.True(ok)
+
+	t.Equal(ht.A, uht.A)
+	t.Equal(ht.B, uht.B)
 }
 
-func (t *testJSON) TestEncodeEmbed() {
-	s := se0{
-		A: util.UUID().String(),
-		S: sup0{A: util.UUID().String()},
-	}
+func (t *testJSONEncoder) TestDecodeTextMarshaller() {
+	enc := NewEncoder()
 
-	je := NewEncoder()
-	b, err := Marshal(s)
+	ht := hinterTextMarshaller{
+		h: hint.NewHint(hint.Type("findme"), "v1.2.3"),
+	}
+	t.NoError(enc.Add(ht))
+
+	ht.A = 22
+	ht.B = 33
+
+	b, err := enc.Marshal(ht)
 	t.NoError(err)
-	t.NotNil(b)
 
-	var us se0
-	t.NoError(je.Decode(b, &us))
-
-	t.Equal(s.A, us.A)
-	t.Equal(s.S.A+"-packed-unpacked", us.S.A)
-}
-
-func (t *testJSON) TestAnalyzePack() {
-	je := NewEncoder()
-
-	{
-		s := se0{
-			A: util.UUID().String(),
-			S: sup0{A: util.UUID().String()},
-		}
-
-		name, cp, err := je.analyze(s)
-		t.NoError(err)
-		t.NotNil(cp.Unpack)
-		t.Equal("JSONUnpackable", name)
-	}
-
-	{
-		s := s0{A: util.UUID().String()}
-
-		name, cp, err := je.analyze(s)
-		t.NoError(err)
-		t.NotNil(cp.Unpack)
-		t.Equal(encoder.EncoderAnalyzedTypeDefault, name)
-	}
-
-	{ // int-like
-		name, cp, err := je.analyze(int(0))
-		t.NoError(err)
-		t.NotNil(cp.Unpack)
-		t.Equal(encoder.EncoderAnalyzedTypeDefault, name)
-	}
-
-	{ // array
-		name, cp, err := je.analyze([]int{1, 2})
-		t.NoError(err)
-		t.NotNil(cp.Unpack)
-		t.Equal(encoder.EncoderAnalyzedTypeDefault, name)
-	}
-
-	{ // map
-		name, cp, err := je.analyze(map[int]int{1: 1, 2: 2})
-		t.NoError(err)
-		t.NotNil(cp.Unpack)
-		t.Equal(encoder.EncoderAnalyzedTypeDefault, name)
-	}
-}
-
-func (t *testJSON) TestEncodeHinter() {
-	s := sh0{B: util.UUID().String()}
-
-	je := NewEncoder()
-	b, err := Marshal(s)
+	hinter, err := enc.Decode(b)
 	t.NoError(err)
-	t.NotNil(b)
 
-	var us sh0
-	t.NoError(je.Decode(b, &us))
+	uht, ok := hinter.(hinterTextMarshaller)
+	t.True(ok)
 
-	t.Equal(s, us)
+	t.Equal(ht.A, uht.A)
+	t.Equal(ht.B, uht.B)
 }
 
-func (t *testJSON) TestEncodeHinterWithHead() {
-	s := s1{C: rand.Int()}
+func (t *testJSONEncoder) TestDecodeJSONUnmarshaller() {
+	enc := NewEncoder()
 
-	je := NewEncoder()
-	b, err := Marshal(s)
-	t.NoError(err)
-	t.NotNil(b)
-
-	var us s1
-	t.NoError(je.Decode(b, &us))
-
-	t.Equal(s, us)
-}
-
-func (t *testJSON) TestEncodeHinterNotCompatible() {
-	s := sh0{B: util.UUID().String()}
-
-	je := NewEncoder()
-
-	encs := encoder.NewEncoders()
-	_ = encs.AddEncoder(je)
-
-	encs.TestAddHinter(sh0{})
-
-	b, err := Marshal(s)
-	t.NoError(err)
-	t.NotNil(b)
-
-	{ // wrong major version
-		c := bytes.Replace(b, []byte(`-v0.1`), []byte(`-v1.1`), -1)
-
-		_, err := je.DecodeByHint(c)
-		t.True(xerrors.Is(err, util.NotFoundError))
+	ht := hinterJSONMarshaller{
+		h: hint.NewHint(hint.Type("findme"), "v1.2.3"),
 	}
+	t.NoError(enc.Add(ht))
 
-	{ // wrong type code
-		c := bytes.Replace(b, []byte(sh0{}.Hint().Type()+"-"), []byte("findme-"), -1)
+	ht.a = "fa"
+	ht.b = 33
 
-		_, err := je.DecodeByHint(c)
-		t.True(xerrors.Is(err, util.NotFoundError))
-	}
+	b, err := enc.Marshal(ht)
+	t.NoError(err)
+
+	hinter, err := enc.Decode(b)
+	t.NoError(err)
+
+	uht, ok := hinter.(hinterJSONMarshaller)
+	t.True(ok)
+
+	t.Equal(ht.a, uht.a)
+	t.Equal(ht.b, uht.b)
 }
 
-func TestJSON(t *testing.T) {
-	suite.Run(t, new(testJSON))
+func (t *testJSONEncoder) TestDecodeJSONUnpacker() {
+	enc := NewEncoder()
+
+	ht := hinterJSONUnpacker{
+		h: hint.NewHint(hint.Type("findme"), "v1.2.3"),
+	}
+	t.NoError(enc.Add(ht))
+
+	ht.a = "fa"
+	ht.b = 33
+
+	b, err := enc.Marshal(ht)
+	t.NoError(err)
+
+	hinter, err := enc.Decode(b)
+	t.NoError(err)
+
+	uht, ok := hinter.(hinterJSONUnpacker)
+	t.True(ok)
+
+	t.Equal(ht.a, uht.a)
+	t.Equal(ht.b, uht.b)
+}
+
+func (t *testJSONEncoder) TestDecodeWitHint() {
+	enc := NewEncoder()
+
+	htt := hinterTextMarshaller{
+		h: hint.NewHint(hint.Type("text"), "v1.2.3"),
+	}
+	htj := hinterJSONUnpacker{
+		h: hint.NewHint(hint.Type("unpack"), "v1.2.3"),
+	}
+	t.NoError(enc.Add(htt))
+	t.NoError(enc.Add(htj))
+
+	htj.a = "fa"
+	htj.b = 33
+
+	b, err := enc.Marshal(htj)
+	t.NoError(err)
+
+	_, err = enc.DecodeWithHint(b, htt.Hint())
+	t.Contains(err.Error(), "failed to decode")
+}
+
+func (t *testJSONEncoder) TestDecodeSlice() {
+	enc := NewEncoder()
+
+	htj := hinterJSONMarshaller{
+		h: hint.NewHint(hint.Type("text"), "v1.2.3"),
+	}
+	htu := hinterJSONUnpacker{
+		h: hint.NewHint(hint.Type("unpack"), "v1.2.3"),
+	}
+	t.NoError(enc.Add(htj))
+	t.NoError(enc.Add(htu))
+
+	ht0 := hinterJSONMarshaller{h: htj.Hint(), a: "A", b: 44}
+	ht1 := hinterJSONUnpacker{h: htu.Hint(), a: "a", b: 33}
+
+	b, err := enc.Marshal([]interface{}{ht0, ht1})
+	t.NoError(err)
+
+	i, err := enc.DecodeSlice(b)
+	t.NoError(err)
+
+	t.Equal(2, len(i))
+
+	uht0, ok := i[0].(hinterJSONMarshaller)
+	t.True(ok)
+	uht1, ok := i[1].(hinterJSONUnpacker)
+	t.True(ok)
+
+	t.Equal(ht0.a, uht0.a)
+	t.Equal(ht0.b, uht0.b)
+
+	t.Equal(ht1.a, uht1.a)
+	t.Equal(ht1.b, uht1.b)
+}
+
+func (t *testJSONEncoder) TestDecodeMap() {
+	enc := NewEncoder()
+
+	htj := hinterJSONMarshaller{
+		h: hint.NewHint(hint.Type("text"), "v1.2.3"),
+	}
+	htu := hinterJSONUnpacker{
+		h: hint.NewHint(hint.Type("unpack"), "v1.2.3"),
+	}
+	t.NoError(enc.Add(htj))
+	t.NoError(enc.Add(htu))
+
+	ht0 := hinterJSONMarshaller{h: htj.Hint(), a: "A", b: 44}
+	ht1 := hinterJSONUnpacker{h: htu.Hint(), a: "a", b: 33}
+
+	b, err := enc.Marshal(map[string]interface{}{
+		"ht0": ht0,
+		"ht1": ht1,
+	})
+	t.NoError(err)
+
+	i, err := enc.DecodeMap(b)
+	t.NoError(err)
+
+	t.Equal(2, len(i))
+
+	uht0, ok := i["ht0"].(hinterJSONMarshaller)
+	t.True(ok)
+	uht1, ok := i["ht1"].(hinterJSONUnpacker)
+	t.True(ok)
+
+	t.Equal(ht0.a, uht0.a)
+	t.Equal(ht0.b, uht0.b)
+
+	t.Equal(ht1.a, uht1.a)
+	t.Equal(ht1.b, uht1.b)
+}
+
+func TestJSONEncoder(t *testing.T) {
+	suite.Run(t, new(testJSONEncoder))
 }

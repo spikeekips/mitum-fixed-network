@@ -6,13 +6,11 @@ import (
 	"golang.org/x/xerrors"
 )
 
-// Encoders is the collection of Encoder.
 type Encoders struct {
 	*hint.GlobalHintset
 	hintset *hint.GlobalHintset
 }
 
-// NewEncoders returns new Encoders
 func NewEncoders() *Encoders {
 	return &Encoders{
 		GlobalHintset: hint.NewGlobalHintset(),
@@ -28,7 +26,6 @@ func (es *Encoders) Initialize() error {
 	return es.hintset.Initialize()
 }
 
-// AddEncoder add Encoder.
 func (es *Encoders) AddEncoder(ec Encoder) error {
 	if !es.GlobalHintset.HasType(ec.Hint().Type()) {
 		if err := es.GlobalHintset.AddType(ec.Hint().Type()); err != nil {
@@ -40,7 +37,15 @@ func (es *Encoders) AddEncoder(ec Encoder) error {
 		return err
 	}
 
-	ec.SetHintset(es.hintset.Hintset)
+	types := es.hintset.Hintset.Types()
+	for i := range types {
+		hinters := es.hintset.Hintset.Hinters(types[i])
+		for j := range hinters {
+			if err := ec.Add(hinters[j]); err != nil {
+				return err
+			}
+		}
+	}
 
 	return nil
 }
@@ -74,17 +79,19 @@ func (es *Encoders) AddType(ty hint.Type) error {
 
 func (es *Encoders) AddHinter(ht hint.Hinter) error {
 	// analyze hinter by all encoders.
-	hinters := es.Hintset.Hinters(ht.Hint().Type())
-	for i := range hinters {
-		enc := hinters[i]
-		if err := (interface{})(enc).(Encoder).Analyze(ht); err != nil {
-			return err
+	types := es.Hintset.Types()
+	for i := range types {
+		hinters := es.Hintset.Hinters(types[i])
+		for j := range hinters {
+			if err := (interface{})(hinters[j]).(Encoder).Add(ht); err != nil {
+				return err
+			}
 		}
 	}
 
 	return es.hintset.Add(ht)
 }
 
-func (es *Encoders) Compatible(t hint.Type, version string) (hint.Hinter, error) {
-	return es.hintset.Compatible(hint.NewHint(t, version))
+func (es *Encoders) Compatible(ht hint.Hint) (hint.Hinter, error) {
+	return es.hintset.Compatible(ht)
 }

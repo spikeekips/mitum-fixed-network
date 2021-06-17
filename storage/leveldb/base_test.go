@@ -34,7 +34,7 @@ func (t *testDatabase) TestNew() {
 }
 
 func (t *testDatabase) saveBlockDataMap(st *Database, bd block.BlockDataMap) error {
-	if b, err := marshal(st.enc, bd); err != nil {
+	if b, err := marshal(bd, st.enc); err != nil {
 		return err
 	} else {
 		return st.db.Put(leveldbBlockDataMapKey(bd.Height()), b, nil)
@@ -92,7 +92,7 @@ func (t *testDatabase) TestLoadBlockByHash() {
 		b, err := t.JSONEnc.Marshal(blk)
 		t.NoError(err)
 
-		hb := encodeWithEncoder(t.JSONEnc, b)
+		hb := encodeWithEncoder(b, t.JSONEnc)
 
 		key := leveldbBlockHashKey(blk.Hash())
 		t.NoError(t.database.db.Put(key, hb, nil))
@@ -385,7 +385,7 @@ func (t *testDatabase) TestHasOperation() {
 		t.NoError(err)
 		t.database.db.Put(
 			leveldbOperationFactHashKey(fact),
-			encodeWithEncoder(t.database.enc, raw),
+			encodeWithEncoder(raw, t.database.enc),
 			nil,
 		)
 	}

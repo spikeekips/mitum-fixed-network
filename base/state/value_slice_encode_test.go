@@ -35,7 +35,7 @@ func (t *testStateSliceValueEncode) TestEncode() {
 	b, err := t.enc.Marshal(bv)
 	t.NoError(err)
 
-	decoded, err := t.enc.DecodeByHint(b)
+	decoded, err := t.enc.Decode(b)
 	t.NoError(err)
 	t.Implements((*Value)(nil), decoded)
 

@@ -61,7 +61,7 @@ func (ky BaseKey) String() string {
 		r = ky.rawFunc()
 	}
 
-	return hint.HintedString(ky.ht, r)
+	return hint.NewHintedString(ky.ht, r).String()
 }
 
 func (ky BaseKey) Bytes() []byte {

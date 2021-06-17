@@ -33,14 +33,14 @@ func (t *testBTCKey) TestKeypairExportKeys() {
 	priv := "L1bQZCcDZKy342x8xjK9Hk935Nttm2jkApVVS2mn4Nqyxvu7nyGC"
 	kp, _ := NewBTCPrivatekeyFromString(priv)
 
-	t.Equal(hint.HintedString(BTCPublickeyHint, "27phogA4gmbMGfg321EHfx5eABkL7KAYuDPRGFoyQtAUb"), kp.Publickey().String())
+	t.Equal(hint.NewHintedString(BTCPublickeyHint, "27phogA4gmbMGfg321EHfx5eABkL7KAYuDPRGFoyQtAUb").String(), kp.Publickey().String())
 }
 
 func (t *testBTCKey) TestPublickey() {
 	priv := "L1bQZCcDZKy342x8xjK9Hk935Nttm2jkApVVS2mn4Nqyxvu7nyGC"
 	kp, _ := NewBTCPrivatekeyFromString(priv)
 
-	t.Equal(hint.HintedString(BTCPublickeyHint, "27phogA4gmbMGfg321EHfx5eABkL7KAYuDPRGFoyQtAUb"), kp.Publickey().String())
+	t.Equal(hint.NewHintedString(BTCPublickeyHint, "27phogA4gmbMGfg321EHfx5eABkL7KAYuDPRGFoyQtAUb").String(), kp.Publickey().String())
 
 	t.NoError(kp.IsValid(nil))
 

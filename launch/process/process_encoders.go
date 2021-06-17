@@ -27,9 +27,13 @@ func init() {
 func ProcessEncoders(ctx context.Context) (context.Context, error) {
 	jenc := jsonenc.NewEncoder()
 	benc := bsonenc.NewEncoder()
-	encs, err := encoder.LoadEncoders([]encoder.Encoder{jenc, benc})
-	if err != nil {
-		return ctx, xerrors.Errorf("failed to load encoders: %w", err)
+
+	encoders := []encoder.Encoder{jenc, benc}
+	encs := encoder.NewEncoders()
+	for _, enc := range encoders {
+		if err := encs.AddEncoder(enc); err != nil {
+			return ctx, xerrors.Errorf("failed to load encoders: %w", err)
+		}
 	}
 
 	ctx = context.WithValue(ctx, config.ContextValueEncoders, encs)

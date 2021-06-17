@@ -97,7 +97,7 @@ func NewDatabase(client *Client, encs *encoder.Encoders, enc encoder.Encoder, ca
 	}
 
 	if enc == nil {
-		if e, err := encs.Encoder(bsonenc.BSONType, ""); err != nil {
+		if e, err := encs.Encoder(bsonenc.BSONEncoderType, ""); err != nil {
 			return nil, err
 		} else {
 			enc = e
@@ -142,7 +142,7 @@ func NewDatabaseFromURI(uri string, encs *encoder.Encoders, ca cache.Cache) (*Da
 	}
 
 	var be encoder.Encoder
-	if e, err := encs.Encoder(bsonenc.BSONType, ""); err != nil { // NOTE get latest bson encoder
+	if e, err := encs.Encoder(bsonenc.BSONEncoderType, ""); err != nil { // NOTE get latest bson encoder
 		return nil, xerrors.Errorf("bson encoder needs for mongodb: %w", err)
 	} else {
 		be = e

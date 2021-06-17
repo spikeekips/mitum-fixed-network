@@ -47,7 +47,7 @@ type NodeInfoV0UnpackerJSON struct {
 	VS  util.Version           `json:"version"`
 	UL  string                 `json:"url"`
 	PO  map[string]interface{} `json:"policy"`
-	SF  []json.RawMessage      `json:"suffrage"`
+	SF  json.RawMessage        `json:"suffrage"`
 }
 
 func (ni *NodeInfoV0) UnpackJSON(b []byte, enc *jsonenc.Encoder) error {
@@ -56,10 +56,5 @@ func (ni *NodeInfoV0) UnpackJSON(b []byte, enc *jsonenc.Encoder) error {
 		return err
 	}
 
-	sf := make([][]byte, len(nni.SF))
-	for i := range nni.SF {
-		sf[i] = nni.SF[i]
-	}
-
-	return ni.unpack(enc, nni.ND, nni.NID, nni.ST, nni.LB, nni.VS, nni.UL, nni.PO, sf)
+	return ni.unpack(enc, nni.ND, nni.NID, nni.ST, nni.LB, nni.VS, nni.UL, nni.PO, nni.SF)
 }

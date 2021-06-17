@@ -52,6 +52,7 @@ func (t *BaseTest) SetupSuite() {
 	_ = t.Encs.TestAddHinter(ballot.ACCEPTV0{})
 	_ = t.Encs.TestAddHinter(ballot.ACCEPTFactV0{})
 	_ = t.Encs.TestAddHinter(base.VoteproofV0{})
+	_ = t.Encs.TestAddHinter(base.BaseVoteproofNodeFact{})
 	_ = t.Encs.TestAddHinter(base.BaseNodeV0{})
 	_ = t.Encs.TestAddHinter(block.BlockV0{})
 	_ = t.Encs.TestAddHinter(block.ManifestV0{})
@@ -224,7 +225,7 @@ func (t *BaseTest) NewVoteproof(
 			return base.VoteproofV0{}, err
 		}
 
-		votes = append(votes, base.NewVoteproofNodeFact(
+		votes = append(votes, base.NewBaseVoteproofNodeFact(
 			state.Node().Address(),
 			valuehash.RandomSHA256(),
 			factHash,

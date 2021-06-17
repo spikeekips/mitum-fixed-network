@@ -96,8 +96,8 @@ func SettingNetworkHandlersFromContext(ctx context.Context) (*SettingNetworkHand
 		return nil, err
 	}
 
+	logger := logging.NilLogger
 	var nt network.Server
-	var logger logging.Logger = logging.NilLogger
 	if err := LoadNetworkContextValue(ctx, &nt); err != nil {
 		return nil, err
 	} else if l, ok := nt.(logging.HasLogger); ok {

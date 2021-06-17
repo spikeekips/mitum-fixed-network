@@ -48,6 +48,7 @@ func (t *testSession) SetupSuite() {
 	_ = encs.TestAddHinter(ballot.ACCEPTV0{})
 	_ = encs.TestAddHinter(ballot.ACCEPTFactV0{})
 	_ = encs.TestAddHinter(base.VoteproofV0{})
+	_ = encs.TestAddHinter(base.BaseVoteproofNodeFact{})
 	_ = encs.TestAddHinter(base.BaseNodeV0{})
 	_ = encs.TestAddHinter(block.BlockV0{})
 	_ = encs.TestAddHinter(block.ManifestV0{})
@@ -108,7 +109,7 @@ func (t *testSession) loadFile(p string) ([]interface{}, error) {
 			}
 		}
 		if len(l) > 0 {
-			if i, err := t.JSONEnc.DecodeByHint(l); err != nil {
+			if i, err := t.JSONEnc.Decode(l); err != nil {
 				return nil, err
 			} else {
 				hinters = append(hinters, i)

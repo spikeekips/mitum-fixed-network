@@ -3,11 +3,7 @@ package block
 import (
 	"go.mongodb.org/mongo-driver/bson"
 
-	"github.com/spikeekips/mitum/base/operation"
-	"github.com/spikeekips/mitum/base/state"
-	"github.com/spikeekips/mitum/util"
 	bsonenc "github.com/spikeekips/mitum/util/encoder/bson"
-	"github.com/spikeekips/mitum/util/tree"
 )
 
 func (bm BlockV0) MarshalBSON() ([]byte, error) {
@@ -36,72 +32,19 @@ func (bm BlockV0) MarshalBSON() ([]byte, error) {
 }
 
 type BlockV0UnpackBSON struct {
-	MF  bson.Raw   `bson:"manifest"`
-	CI  bson.Raw   `bson:"consensus"`
-	OPT bson.Raw   `bson:"operations_tree,omitempty"`
-	OP  []bson.Raw `bson:"operations,omitempty"`
-	STT bson.Raw   `bson:"states_tree,omitempty"`
-	ST  []bson.Raw `bson:"states,omitempty"`
+	MF  bson.Raw `bson:"manifest"`
+	CI  bson.Raw `bson:"consensus"`
+	OPT bson.Raw `bson:"operations_tree,omitempty"`
+	OP  bson.Raw `bson:"operations,omitempty"`
+	STT bson.Raw `bson:"states_tree,omitempty"`
+	ST  bson.Raw `bson:"states,omitempty"`
 }
 
 func (bm *BlockV0) UnpackBSON(b []byte, enc *bsonenc.Encoder) error {
-	var nbm BlockV0UnpackBSON
-	if err := enc.Unmarshal(b, &nbm); err != nil {
+	var um BlockV0UnpackBSON
+	if err := enc.Unmarshal(b, &um); err != nil {
 		return err
 	}
 
-	if m, err := DecodeManifest(enc, nbm.MF); err != nil {
-		return err
-	} else if mv, ok := m.(ManifestV0); !ok {
-		return util.WrongTypeError.Errorf("not ManifestV0: type=%T", m)
-	} else {
-		bm.ManifestV0 = mv
-	}
-
-	if m, err := DecodeConsensusInfo(enc, nbm.CI); err != nil {
-		return err
-	} else if mv, ok := m.(ConsensusInfoV0); !ok {
-		return util.WrongTypeError.Errorf("not ConsensusInfoV0: type=%T", m)
-	} else {
-		bm.ci = mv
-	}
-
-	if nbm.OPT != nil {
-		tr, err := tree.DecodeFixedTree(enc, nbm.OPT)
-		if err != nil {
-			return err
-		}
-
-		bm.operationsTree = tr
-	}
-
-	ops := make([]operation.Operation, len(nbm.OP))
-	for i := range nbm.OP {
-		op, err := operation.DecodeOperation(enc, nbm.OP[i])
-		if err != nil {
-			return err
-		}
-		ops[i] = op
-	}
-	bm.operations = ops
-
-	if nbm.STT != nil {
-		tr, err := tree.DecodeFixedTree(enc, nbm.STT)
-		if err != nil {
-			return err
-		}
-		bm.statesTree = tr
-	}
-
-	sts := make([]state.State, len(nbm.ST))
-	for i := range nbm.ST {
-		st, err := state.DecodeState(enc, nbm.ST[i])
-		if err != nil {
-			return err
-		}
-		sts[i] = st
-	}
-	bm.states = sts
-
-	return nil
+	return bm.unpack(enc, um.MF, um.CI, um.OPT, um.OP, um.STT, um.ST)
 }

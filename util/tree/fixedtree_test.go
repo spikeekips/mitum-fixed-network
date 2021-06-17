@@ -226,9 +226,12 @@ func (t *testFixedTree) TestEncodeJSON() {
 	encs := encoder.NewEncoders()
 	t.NoError(encs.AddEncoder(enc))
 	encs.TestAddHinter(BaseFixedTreeNode{})
+	encs.TestAddHinter(FixedTree{})
 
-	var utr FixedTree
-	t.NoError(enc.Decode(b, &utr))
+	hinter, err := enc.Decode(b)
+	t.NoError(err)
+
+	utr := hinter.(FixedTree)
 
 	t.Equal(tr.Len(), utr.Len())
 
@@ -263,9 +266,12 @@ func (t *testFixedTree) TestEncodeBSON() {
 	encs := encoder.NewEncoders()
 	t.NoError(encs.AddEncoder(enc))
 	encs.TestAddHinter(BaseFixedTreeNode{})
+	encs.TestAddHinter(FixedTree{})
 
-	var utr FixedTree
-	t.NoError(enc.Decode(b, &utr))
+	hinter, err := enc.Decode(b)
+	t.NoError(err)
+
+	utr := hinter.(FixedTree)
 
 	t.Equal(tr.Len(), utr.Len())
 

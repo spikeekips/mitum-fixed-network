@@ -242,7 +242,7 @@ func (vp VoteproofV0) isValidCheckMajority() error {
 
 	counts := map[string]uint{}
 	for i := range vp.votes {
-		counts[vp.votes[i].fact.String()]++
+		counts[vp.votes[i].Fact().String()]++
 	}
 
 	set := make([]uint, len(counts))
@@ -344,16 +344,16 @@ func (vp VoteproofV0) isValidFacts(b []byte) error {
 
 		var found bool
 		for _, f := range vp.facts {
-			if nf.fact.Equal(f.Hash()) {
+			if nf.Fact().Equal(f.Hash()) {
 				found = true
 				break
 			}
 		}
 
 		if !found {
-			return xerrors.Errorf("missing fact found in facts: %s", nf.fact.String())
+			return xerrors.Errorf("missing fact found in facts: %s", nf.Fact().String())
 		}
-		factHashes[nf.fact.String()] = true
+		factHashes[nf.Fact().String()] = true
 	}
 
 	if len(factHashes) != len(vp.facts) {

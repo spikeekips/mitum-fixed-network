@@ -20,7 +20,7 @@ func (ib *INITV0) unpack(
 	}
 
 	if bVoteproof != nil {
-		i, err := base.DecodeVoteproof(enc, bVoteproof)
+		i, err := base.DecodeVoteproof(bVoteproof, enc)
 		if err != nil {
 			return err
 		}
@@ -28,7 +28,7 @@ func (ib *INITV0) unpack(
 	}
 
 	if bAVoteproof != nil {
-		i, err := base.DecodeVoteproof(enc, bAVoteproof)
+		i, err := base.DecodeVoteproof(bAVoteproof, enc)
 		if err != nil {
 			return err
 		}

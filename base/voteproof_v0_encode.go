@@ -3,7 +3,7 @@ package base
 import (
 	"time"
 
-	"github.com/spikeekips/mitum/base/key"
+	"github.com/spikeekips/mitum/util"
 	"github.com/spikeekips/mitum/util/encoder"
 	"github.com/spikeekips/mitum/util/valuehash"
 )
@@ -27,13 +27,13 @@ func (vp *VoteproofV0) unpack( // nolint
 	result VoteResultType,
 	stage Stage,
 	bMajority []byte,
-	bFacts [][]byte,
-	bVotes [][]byte,
+	bFacts []byte,
+	bVotes []byte,
 	finishedAt time.Time,
 	isClosed bool,
 ) error {
 	if bMajority != nil {
-		m, err := DecodeFact(enc, bMajority)
+		m, err := DecodeFact(bMajority, enc)
 		if err != nil {
 			return err
 		}
@@ -49,23 +49,30 @@ func (vp *VoteproofV0) unpack( // nolint
 		vp.suffrages[i] = address
 	}
 
-	facts := make([]Fact, len(bFacts))
-	for i := range bFacts {
-		switch fact, err := DecodeFact(enc, bFacts[i]); {
-		case err != nil:
-			return err
-		default:
-			facts[i] = fact
+	hfacts, err := enc.DecodeSlice(bFacts)
+	if err != nil {
+		return err
+	}
+	facts := make([]Fact, len(hfacts))
+	for i := range hfacts {
+		j, ok := hfacts[i].(Fact)
+		if !ok {
+			return util.WrongTypeError.Errorf("expected Fact, not %T", hfacts[i])
 		}
+		facts[i] = j
 	}
 
-	votes := make([]VoteproofNodeFact, len(bVotes))
-	for i := range bVotes {
-		var nodeFact VoteproofNodeFact
-		if err := enc.Decode(bVotes[i], &nodeFact); err != nil {
-			return err
+	hvotes, err := enc.DecodeSlice(bVotes)
+	if err != nil {
+		return err
+	}
+	votes := make([]VoteproofNodeFact, len(hvotes))
+	for i := range hvotes {
+		j, ok := hvotes[i].(VoteproofNodeFact)
+		if !ok {
+			return util.WrongTypeError.Errorf("expected VoteproofNodeFact, not %T", hvotes[i])
 		}
-		votes[i] = nodeFact
+		votes[i] = j
 	}
 
 	vp.height = height
@@ -77,33 +84,6 @@ func (vp *VoteproofV0) unpack( // nolint
 	vp.votes = votes
 	vp.finishedAt = finishedAt
 	vp.closed = isClosed
-
-	return nil
-}
-
-func (vf *VoteproofNodeFact) unpack(
-	enc encoder.Encoder,
-	bAddress AddressDecoder,
-	blt,
-	fact valuehash.Hash,
-	factSignature key.Signature,
-	bSigner key.PublickeyDecoder,
-) error {
-	address, err := bAddress.Encode(enc)
-	if err != nil {
-		return err
-	}
-
-	signer, err := bSigner.Encode(enc)
-	if err != nil {
-		return err
-	}
-
-	vf.address = address
-	vf.ballot = blt
-	vf.fact = fact
-	vf.factSignature = factSignature
-	vf.signer = signer
 
 	return nil
 }

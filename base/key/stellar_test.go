@@ -33,15 +33,15 @@ func (t *testStellarKey) TestKeypairExportKeys() {
 	seed := "SCD6GQMWGDQT33QOCNKYKRJZL3YWFSLBVQSL6ICVWBUYQZCBFYUQY673"
 	kp, _ := NewStellarPrivatekeyFromString(seed)
 
-	t.Equal(hint.HintedString(StellarPublickeyHint, "GAVAONBETT4MVPV2IYN2T7OB7ZTYXGNN4BFGZHUYBUYR6G4ACHZMDOQ6"), kp.Publickey().String())
-	t.Equal(hint.HintedString(StellarPrivatekeyHint, "SCD6GQMWGDQT33QOCNKYKRJZL3YWFSLBVQSL6ICVWBUYQZCBFYUQY673"), kp.String())
+	t.Equal(hint.NewHintedString(StellarPublickeyHint, "GAVAONBETT4MVPV2IYN2T7OB7ZTYXGNN4BFGZHUYBUYR6G4ACHZMDOQ6").String(), kp.Publickey().String())
+	t.Equal(hint.NewHintedString(StellarPrivatekeyHint, "SCD6GQMWGDQT33QOCNKYKRJZL3YWFSLBVQSL6ICVWBUYQZCBFYUQY673").String(), kp.String())
 }
 
 func (t *testStellarKey) TestPublickey() {
 	seed := "SCD6GQMWGDQT33QOCNKYKRJZL3YWFSLBVQSL6ICVWBUYQZCBFYUQY673"
 	kp, _ := NewStellarPrivatekeyFromString(seed)
 
-	t.Equal(hint.HintedString(StellarPublickeyHint, "GAVAONBETT4MVPV2IYN2T7OB7ZTYXGNN4BFGZHUYBUYR6G4ACHZMDOQ6"), kp.Publickey().String())
+	t.Equal(hint.NewHintedString(StellarPublickeyHint, "GAVAONBETT4MVPV2IYN2T7OB7ZTYXGNN4BFGZHUYBUYR6G4ACHZMDOQ6").String(), kp.Publickey().String())
 
 	t.NoError(kp.IsValid(nil))
 
@@ -64,7 +64,7 @@ func (t *testStellarKey) TestPrivatekey() {
 	seed := "SCD6GQMWGDQT33QOCNKYKRJZL3YWFSLBVQSL6ICVWBUYQZCBFYUQY673"
 	kp, _ := NewStellarPrivatekeyFromString(seed)
 
-	t.Equal(hint.HintedString(StellarPrivatekeyHint, "SCD6GQMWGDQT33QOCNKYKRJZL3YWFSLBVQSL6ICVWBUYQZCBFYUQY673"), kp.String())
+	t.Equal(hint.NewHintedString(StellarPrivatekeyHint, "SCD6GQMWGDQT33QOCNKYKRJZL3YWFSLBVQSL6ICVWBUYQZCBFYUQY673").String(), kp.String())
 
 	t.NoError(kp.IsValid(nil))
 

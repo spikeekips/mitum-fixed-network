@@ -29,7 +29,7 @@ type NodeInfoV0UnpackerBSON struct {
 	VS  util.Version           `bson:"version"`
 	UL  string                 `bson:"url"`
 	PO  map[string]interface{} `bson:"policy"`
-	SF  []bson.Raw             `bson:"suffrage"`
+	SF  bson.Raw               `bson:"suffrage"`
 }
 
 func (ni *NodeInfoV0) UnpackBSON(b []byte, enc *bsonenc.Encoder) error {
@@ -38,10 +38,5 @@ func (ni *NodeInfoV0) UnpackBSON(b []byte, enc *bsonenc.Encoder) error {
 		return err
 	}
 
-	sf := make([][]byte, len(nni.SF))
-	for i := range nni.SF {
-		sf[i] = nni.SF[i]
-	}
-
-	return ni.unpack(enc, nni.ND, nni.NID, nni.ST, nni.LB, nni.VS, nni.UL, nni.PO, sf)
+	return ni.unpack(enc, nni.ND, nni.NID, nni.ST, nni.LB, nni.VS, nni.UL, nni.PO, nni.SF)
 }

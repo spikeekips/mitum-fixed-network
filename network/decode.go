@@ -5,8 +5,8 @@ import (
 	"github.com/spikeekips/mitum/util/encoder"
 )
 
-func DecodeNodeInfo(enc encoder.Encoder, b []byte) (NodeInfo, error) {
-	if i, err := enc.DecodeByHint(b); err != nil {
+func DecodeNodeInfo(b []byte, enc encoder.Encoder) (NodeInfo, error) {
+	if i, err := enc.Decode(b); err != nil {
 		return nil, err
 	} else if i == nil {
 		return nil, nil

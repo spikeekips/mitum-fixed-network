@@ -58,7 +58,7 @@ func (si SuffrageInfoV0) MarshalJSON() ([]byte, error) {
 
 type SuffrageInfoV0UnpackJSON struct {
 	PR base.AddressDecoder `json:"proposer"`
-	NS []json.RawMessage   `json:"nodes"`
+	NS json.RawMessage     `json:"nodes"`
 }
 
 func (si *SuffrageInfoV0) UnpackJSON(b []byte, enc *jsonenc.Encoder) error {
@@ -67,10 +67,5 @@ func (si *SuffrageInfoV0) UnpackJSON(b []byte, enc *jsonenc.Encoder) error {
 		return err
 	}
 
-	bsn := make([][]byte, len(nsi.NS))
-	for i := range nsi.NS {
-		bsn[i] = nsi.NS[i]
-	}
-
-	return si.unpack(enc, nsi.PR, bsn)
+	return si.unpack(enc, nsi.PR, nsi.NS)
 }

@@ -26,7 +26,7 @@ func (hv *HintedValue) UnpackBSON(b []byte, enc *bsonenc.Encoder) error {
 		return err
 	}
 
-	decoded, err := enc.DecodeByHint(uv.V)
+	decoded, err := enc.Decode(uv.V)
 	if err != nil {
 		return err
 	}

@@ -5,7 +5,6 @@ import (
 
 	"go.mongodb.org/mongo-driver/bson"
 
-	"github.com/spikeekips/mitum/base/key"
 	bsonenc "github.com/spikeekips/mitum/util/encoder/bson"
 	"github.com/spikeekips/mitum/util/valuehash"
 )
@@ -78,8 +77,8 @@ type VoteproofV0UnpackBSON struct { // nolint
 	RS VoteResultType   `bson:"result"`
 	ST Stage            `bson:"stage"`
 	MJ bson.Raw         `bson:"majority"`
-	FS []bson.Raw       `bson:"facts"`
-	VS []bson.Raw       `bson:"votes"`
+	FS bson.Raw         `bson:"facts"`
+	VS bson.Raw         `bson:"votes"`
 	FA time.Time        `bson:"finished_at"`
 	CL bool             `bson:"is_closed"`
 }
@@ -88,16 +87,6 @@ func (vp *VoteproofV0) UnpackBSON(b []byte, enc *bsonenc.Encoder) error {
 	var vpp VoteproofV0UnpackBSON
 	if err := enc.Unmarshal(b, &vpp); err != nil {
 		return err
-	}
-
-	fs := make([][]byte, len(vpp.FS))
-	for i := range vpp.FS {
-		fs[i] = vpp.FS[i]
-	}
-
-	vs := make([][]byte, len(vpp.VS))
-	for i := range vpp.VS {
-		vs[i] = vpp.VS[i]
 	}
 
 	return vp.unpack(
@@ -109,44 +98,9 @@ func (vp *VoteproofV0) UnpackBSON(b []byte, enc *bsonenc.Encoder) error {
 		vpp.RS,
 		vpp.ST,
 		vpp.MJ,
-		fs,
-		vs,
+		vpp.FS,
+		vpp.VS,
 		vpp.FA,
 		vpp.CL,
 	)
-}
-
-type VoteproofNodeFactPackBSON struct {
-	AD Address        `bson:"address"`
-	BT valuehash.Hash `bson:"ballot"`
-	FC valuehash.Hash `bson:"fact"`
-	FS key.Signature  `bson:"fact_signature"`
-	SG key.Publickey  `bson:"signer"`
-}
-
-func (vf VoteproofNodeFact) MarshalBSON() ([]byte, error) {
-	return bsonenc.Marshal(VoteproofNodeFactPackBSON{
-		AD: vf.address,
-		BT: vf.ballot,
-		FC: vf.fact,
-		FS: vf.factSignature,
-		SG: vf.signer,
-	})
-}
-
-type VoteproofNodeFactUnpackBSON struct {
-	AD AddressDecoder       `bson:"address"`
-	BT valuehash.Bytes      `bson:"ballot"`
-	FC valuehash.Bytes      `bson:"fact"`
-	FS key.Signature        `bson:"fact_signature"`
-	SG key.PublickeyDecoder `bson:"signer"`
-}
-
-func (vf *VoteproofNodeFact) UnpackBSON(b []byte, enc *bsonenc.Encoder) error {
-	var vpp VoteproofNodeFactUnpackBSON
-	if err := enc.Unmarshal(b, &vpp); err != nil {
-		return err
-	}
-
-	return vf.unpack(enc, vpp.AD, vpp.BT, vpp.FC, vpp.FS, vpp.SG)
 }

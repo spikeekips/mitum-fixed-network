@@ -8,6 +8,7 @@ import (
 
 	"github.com/spikeekips/mitum/util"
 	"github.com/spikeekips/mitum/util/encoder"
+	"github.com/spikeekips/mitum/util/hint"
 )
 
 type testEncodersWithJSON struct {
@@ -31,41 +32,54 @@ func (t *testEncodersWithJSON) TestAddHinter() {
 	je := NewEncoder()
 	t.NoError(encs.AddEncoder(je))
 
-	t.NoError(encs.TestAddHinter(sh0{}))
+	ht := hinterDefault{
+		h: hint.NewHint(hint.Type("findme"), "v1.2.3"),
+		A: "A", B: 33,
+	}
 
-	s0, err := encs.Compatible((sh0{}).Hint().Type(), (sh0{}).Hint().Version())
+	t.NoError(encs.TestAddHinter(ht))
+
+	s0, err := encs.Compatible((ht).Hint())
 	t.NoError(err)
 	t.NotNil(s0)
-	t.NoError((sh0{}).Hint().IsCompatible(s0.Hint()))
-	t.True((sh0{}).Hint().Equal(s0.Hint()))
+	t.NoError((ht).Hint().IsCompatible(s0.Hint()))
+	t.True((ht).Hint().Equal(s0.Hint()))
 }
 
-func (t *testEncodersWithJSON) TestDecodeByHint() {
+func (t *testEncodersWithJSON) TestDecode() {
 	encs := encoder.NewEncoders()
-	je := NewEncoder()
-	t.NoError(encs.AddEncoder(je))
+	be := NewEncoder()
+	t.NoError(encs.AddEncoder(be))
 
-	s := sh0{B: util.UUID().String()}
+	ht := hinterDefault{
+		h: hint.NewHint(hint.Type("findme"), "v1.2.3"),
+		A: "A", B: 33,
+	}
 
-	b, err := Marshal(s)
+	b, err := be.Marshal(ht)
+
 	t.NoError(err)
 	t.NotNil(b)
 
 	{ // without AddHinter
-		a, err := je.DecodeByHint(b)
+		a, err := be.Decode(b)
 		t.Empty(a)
 		t.True(xerrors.Is(err, util.NotFoundError))
 	}
 
 	encs = encoder.NewEncoders()
-	je = NewEncoder()
-	t.NoError(encs.AddEncoder(je))
+	be = NewEncoder()
+	t.NoError(encs.AddEncoder(be))
 
-	t.NoError(encs.TestAddHinter(sh0{}))
-	us, err := je.DecodeByHint(b)
+	t.NoError(encs.TestAddHinter(ht))
+	hinter, err := be.Decode(b)
 	t.NoError(err)
-	t.IsType(sh0{}, us)
-	t.Equal(s.B, us.(sh0).B)
+
+	uht, ok := hinter.(hinterDefault)
+	t.True(ok)
+
+	t.Equal(ht.A, uht.A)
+	t.Equal(ht.B, uht.B)
 }
 
 func TestEncodersWithJSON(t *testing.T) {

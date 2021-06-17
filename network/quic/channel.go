@@ -196,7 +196,7 @@ func (ch *Channel) NodeInfo(ctx context.Context) (network.NodeInfo, error) {
 		ch.Log().Error().Err(err).Msg("failed to get bytes from response body")
 
 		return nil, err
-	} else if i, err := network.DecodeNodeInfo(enc, b); err != nil {
+	} else if i, err := network.DecodeNodeInfo(b, enc); err != nil {
 		return nil, err
 	} else {
 		return i, nil
@@ -329,7 +329,7 @@ func (ch *Channel) doRequestHinters(
 
 	hinters := make([]hint.Hinter, len(ss))
 	for i := range ss {
-		hinter, err := enc.DecodeByHint(ss[i])
+		hinter, err := enc.Decode(ss[i])
 		if err != nil {
 			return nil, err
 		}

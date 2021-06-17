@@ -10,11 +10,11 @@ type AddressDecoder struct {
 }
 
 func (ad *AddressDecoder) Encode(enc encoder.Encoder) (Address, error) {
-	if ad.IsEmpty() {
-		return nil, nil
+	if err := ad.Hint().IsValid(nil); err != nil {
+		return nil, nil // nolint:nilerr
 	}
 
-	if hinter, err := ad.HintedString.Encode(enc); err != nil {
+	if hinter, err := ad.HintedString.Decode(enc); err != nil {
 		return nil, err
 	} else if a, ok := hinter.(Address); !ok {
 		return nil, xerrors.Errorf("not Address, %T", hinter)

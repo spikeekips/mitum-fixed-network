@@ -33,7 +33,7 @@ func (t *testStringAddress) TestFormat() {
 		{
 			name:     "uuid",
 			s:        uuidString,
-			expected: hint.HintedString(StringAddressHint, uuidString),
+			expected: hint.NewHintedString(StringAddressHint, uuidString).String(),
 		},
 		{
 			name: "blank first",
@@ -58,7 +58,7 @@ func (t *testStringAddress) TestFormat() {
 		{
 			name:     "has underscore",
 			s:        "showm_e",
-			expected: hint.HintedString(StringAddressHint, "showm_e"),
+			expected: hint.NewHintedString(StringAddressHint, "showm_e").String(),
 		},
 		{
 			name: "has plus sign",

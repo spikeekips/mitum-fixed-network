@@ -9,7 +9,6 @@ import (
 	"github.com/spikeekips/mitum/util/encoder"
 	bsonenc "github.com/spikeekips/mitum/util/encoder/bson"
 	jsonenc "github.com/spikeekips/mitum/util/encoder/json"
-	"github.com/spikeekips/mitum/util/hint"
 	"github.com/spikeekips/mitum/util/localtime"
 	"github.com/spikeekips/mitum/util/valuehash"
 )
@@ -21,10 +20,7 @@ type testBlockDataMapEncode struct {
 }
 
 func (t *testBlockDataMapEncode) SetupSuite() {
-	hs := hint.NewHintset()
-	hs.TestAdd(BaseBlockDataMap{})
-
-	t.enc.SetHintset(hs)
+	t.enc.Add(BaseBlockDataMap{})
 }
 
 func (t *testBlockDataMapEncode) TestMarshal() {
@@ -65,7 +61,7 @@ func (t *testBlockDataMapEncode) TestMarshal() {
 	b, err := t.enc.Marshal(bd)
 	t.NoError(err)
 
-	j, err := t.enc.DecodeByHint(b)
+	j, err := t.enc.Decode(b)
 	t.NoError(err)
 
 	t.IsType(BaseBlockDataMap{}, j)

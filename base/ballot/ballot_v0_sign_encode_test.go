@@ -51,7 +51,7 @@ func (t *testSIGNV0Encode) TestEncode() {
 	b, err := t.enc.Marshal(ib)
 	t.NoError(err)
 
-	ht, err := t.enc.DecodeByHint(b)
+	ht, err := t.enc.Decode(b)
 	t.NoError(err)
 
 	nib, ok := ht.(SIGNV0)

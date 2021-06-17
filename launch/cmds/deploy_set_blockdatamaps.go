@@ -122,7 +122,7 @@ func (cmd *SetBlockDataMapsCommand) loadMaps() ([]block.BlockDataMap, error) {
 
 func (cmd *SetBlockDataMapsCommand) loadMap(b []byte) (block.BlockDataMap, error) {
 	var m block.BaseBlockDataMap
-	if i, err := cmd.JSONEncoder().DecodeByHint(b); err != nil {
+	if i, err := cmd.JSONEncoder().Decode(b); err != nil {
 		return nil, err
 	} else if j, ok := i.(block.BaseBlockDataMap); !ok {
 		return nil, xerrors.Errorf("expected block.BlockDataMap, not %T", i)

@@ -27,7 +27,7 @@ type BaseOperationBSONUnpacker struct {
 	HT hint.Hint       `bson:"_hint"`
 	H  valuehash.Bytes `bson:"hash"`
 	FC bson.Raw        `bson:"fact"`
-	FS []bson.Raw      `bson:"fact_signs"`
+	FS bson.Raw        `bson:"fact_signs"`
 }
 
 func (bo *BaseOperation) UnpackBSON(b []byte, enc *bsonenc.Encoder) error {
@@ -36,10 +36,5 @@ func (bo *BaseOperation) UnpackBSON(b []byte, enc *bsonenc.Encoder) error {
 		return err
 	}
 
-	fs := make([][]byte, len(ubo.FS))
-	for i := range ubo.FS {
-		fs[i] = ubo.FS[i]
-	}
-
-	return bo.unpack(enc, ubo.HT, ubo.H, ubo.FC, fs)
+	return bo.unpack(enc, ubo.HT, ubo.H, ubo.FC, ubo.FS)
 }

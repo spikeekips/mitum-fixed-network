@@ -64,7 +64,7 @@ func (no BaseLocalNode) Address() base.Address {
 }
 
 func (no *BaseLocalNode) SetAddress(s string) error {
-	address, err := base.DecodeAddressFromString(no.enc, s)
+	address, err := base.DecodeAddressFromString(s, no.enc)
 	if err != nil {
 		return err
 	}

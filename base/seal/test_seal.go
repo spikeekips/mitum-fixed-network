@@ -106,7 +106,7 @@ func (ds *DummySeal) UnmarshalJSON(b []byte) error {
 	}
 
 	signer := new(key.BTCPrivatekey)
-	if err := signer.UnmarshalText([]byte(uds.PK.String())); err != nil {
+	if err := signer.UnmarshalText([]byte(uds.PK.Body())); err != nil {
 		return err
 	}
 
@@ -147,7 +147,7 @@ func (ds *DummySeal) UnmarshalBSON(b []byte) error {
 	}
 
 	signer := new(key.BTCPrivatekey)
-	if err := signer.UnmarshalText([]byte(uds.PK.String())); err != nil {
+	if err := signer.UnmarshalText([]byte(uds.PK.Body())); err != nil {
 		return err
 	}
 

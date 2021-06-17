@@ -68,6 +68,7 @@ func (t *testMongodbClient) SetupSuite() {
 	_ = t.encs.TestAddHinter(block.ManifestV0{})
 	_ = t.encs.TestAddHinter(block.ConsensusInfoV0{})
 	_ = t.encs.TestAddHinter(base.VoteproofV0{})
+	_ = t.encs.TestAddHinter(base.BaseVoteproofNodeFact{})
 	_ = t.encs.TestAddHinter(seal.DummySeal{})
 	_ = t.encs.TestAddHinter(operation.BaseSeal{})
 	_ = t.encs.TestAddHinter(operation.KVOperation{})

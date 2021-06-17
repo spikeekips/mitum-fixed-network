@@ -26,7 +26,7 @@ func (bd *BaseBlockDataMap) unpack(
 
 	items := map[string]BaseBlockDataMapItem{}
 	for k := range bitems {
-		i, err := DecodeBaseBlockDataMapItem(enc, bitems[k])
+		i, err := DecodeBaseBlockDataMapItem(bitems[k], enc)
 		if err != nil {
 			return err
 		}
@@ -46,9 +46,9 @@ func (bd *BaseBlockDataMapItem) unpack(dataType, checksum, url string) error {
 	return nil
 }
 
-func DecodeBaseBlockDataMapItem(enc encoder.Encoder, b []byte) (BaseBlockDataMapItem, error) {
+func DecodeBaseBlockDataMapItem(b []byte, enc encoder.Encoder) (BaseBlockDataMapItem, error) {
 	var ubdi BaseBlockDataMapItem
-	if err := enc.Decode(b, &ubdi); err != nil {
+	if err := enc.Unmarshal(b, &ubdi); err != nil {
 		return ubdi, err
 	}
 

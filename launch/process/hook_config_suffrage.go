@@ -161,7 +161,7 @@ func parseSuffrageNodes(ctx context.Context, m map[string]interface{}) ([]base.A
 func parseAddress(i interface{}, enc *jsonenc.Encoder) (base.Address, error) {
 	if s, ok := i.(string); !ok {
 		return nil, xerrors.Errorf("not address string, not %T", i)
-	} else if address, err := base.DecodeAddressFromString(enc, s); err != nil {
+	} else if address, err := base.DecodeAddressFromString(s, enc); err != nil {
 		return nil, xerrors.Errorf("invalid address: %w", err)
 	} else if err := address.IsValid(nil); err != nil {
 		return nil, xerrors.Errorf("invalid address: %w", err)

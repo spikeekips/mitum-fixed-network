@@ -1,13 +1,13 @@
 package quicnetwork
 
 import (
-	bsonenc "github.com/spikeekips/mitum/util/encoder/bson"
 	"github.com/spikeekips/mitum/util/valuehash"
+	"go.mongodb.org/mongo-driver/bson"
 )
 
-func (ha *HashesArgs) UnpackBSON(b []byte, enc *bsonenc.Encoder) error {
+func (ha *HashesArgs) UnmarshalBSON(b []byte) error {
 	var uh []valuehash.Bytes
-	if err := enc.Unmarshal(b, &uh); err != nil {
+	if err := bson.Unmarshal(b, &uh); err != nil {
 		return err
 	}
 

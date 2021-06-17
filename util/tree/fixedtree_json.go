@@ -59,7 +59,7 @@ func (tr FixedTree) MarshalJSON() ([]byte, error) {
 }
 
 type FixedTreeJSONUnpacker struct {
-	NS []json.RawMessage `json:"nodes"`
+	NS json.RawMessage `json:"nodes"`
 }
 
 func (tr *FixedTree) UnpackJSON(b []byte, enc *jsonenc.Encoder) error {
@@ -68,10 +68,5 @@ func (tr *FixedTree) UnpackJSON(b []byte, enc *jsonenc.Encoder) error {
 		return err
 	}
 
-	bs := make([][]byte, len(utr.NS))
-	for i := range utr.NS {
-		bs[i] = utr.NS[i]
-	}
-
-	return tr.unpack(enc, bs)
+	return tr.unpack(enc, utr.NS)
 }

@@ -5,8 +5,8 @@ import (
 	"github.com/spikeekips/mitum/util/encoder"
 )
 
-func DecodeManifest(enc encoder.Encoder, b []byte) (Manifest, error) {
-	if i, err := enc.DecodeByHint(b); err != nil {
+func DecodeManifest(b []byte, enc encoder.Encoder) (Manifest, error) {
+	if i, err := enc.Decode(b); err != nil {
 		return nil, err
 	} else if i == nil {
 		return nil, nil
@@ -17,8 +17,8 @@ func DecodeManifest(enc encoder.Encoder, b []byte) (Manifest, error) {
 	}
 }
 
-func DecodeConsensusInfo(enc encoder.Encoder, b []byte) (ConsensusInfo, error) {
-	if i, err := enc.DecodeByHint(b); err != nil {
+func DecodeConsensusInfo(b []byte, enc encoder.Encoder) (ConsensusInfo, error) {
+	if i, err := enc.Decode(b); err != nil {
 		return nil, err
 	} else if i == nil {
 		return nil, nil
@@ -29,8 +29,8 @@ func DecodeConsensusInfo(enc encoder.Encoder, b []byte) (ConsensusInfo, error) {
 	}
 }
 
-func DecodeSuffrageInfo(enc encoder.Encoder, b []byte) (SuffrageInfo, error) {
-	if i, err := enc.DecodeByHint(b); err != nil {
+func DecodeSuffrageInfo(b []byte, enc encoder.Encoder) (SuffrageInfo, error) {
+	if i, err := enc.Decode(b); err != nil {
 		return nil, err
 	} else if i == nil {
 		return nil, nil

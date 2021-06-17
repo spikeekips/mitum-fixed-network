@@ -8,8 +8,6 @@ import (
 	"github.com/spikeekips/mitum/base/operation"
 	"github.com/spikeekips/mitum/base/state"
 	"github.com/spikeekips/mitum/network"
-	bsonenc "github.com/spikeekips/mitum/util/encoder/bson"
-	jsonenc "github.com/spikeekips/mitum/util/encoder/json"
 	"github.com/spikeekips/mitum/util/hint"
 	"github.com/spikeekips/mitum/util/tree"
 )
@@ -26,13 +24,12 @@ var EncoderTypes = []hint.Type{
 	base.BaseNodeV0Type,
 	base.StringAddressType,
 	base.VoteproofV0Type,
+	base.BaseVoteproofNodeFactType,
 	block.BaseBlockDataMapType,
 	block.BlockConsensusInfoV0Type,
 	block.BlockV0Type,
 	block.ManifestV0Type,
 	block.SuffrageInfoV0Type,
-	bsonenc.BSONType,
-	jsonenc.JSONType,
 	key.BTCPrivatekeyType,
 	key.BTCPublickeyType,
 	key.EtherPrivatekeyType,
@@ -68,13 +65,12 @@ var EncoderHinters = []hint.Hinter{
 	base.BaseNodeV0{},
 	base.StringAddress(""),
 	base.VoteproofV0{},
+	base.BaseVoteproofNodeFact{},
 	block.BaseBlockDataMap{},
 	block.BlockV0{},
 	block.ConsensusInfoV0{},
 	block.ManifestV0{},
 	block.SuffrageInfoV0{},
-	bsonenc.Encoder{},
-	jsonenc.Encoder{},
 	key.BTCPrivatekeyHinter,
 	key.BTCPublickeyHinter,
 	key.EtherPrivatekeyHinter,

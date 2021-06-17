@@ -5,8 +5,8 @@ import (
 	"github.com/spikeekips/mitum/util/encoder"
 )
 
-func DecodeSeal(enc encoder.Encoder, b []byte) (Seal, error) {
-	if hinter, err := enc.DecodeByHint(b); err != nil {
+func DecodeSeal(b []byte, enc encoder.Encoder) (Seal, error) {
+	if hinter, err := enc.Decode(b); err != nil {
 		return nil, err
 	} else if s, ok := hinter.(Seal); !ok {
 		return nil, util.WrongTypeError.Errorf("not seal.Seal; type=%T", hinter)

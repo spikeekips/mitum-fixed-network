@@ -33,13 +33,13 @@ func NewStringAddress(s string) (StringAddress, error) {
 }
 
 func NewStringAddressFromHintedString(s string) (StringAddress, error) {
-	switch ht, a, err := hint.ParseHintedString(s); {
+	switch hs, err := hint.ParseHintedString(s); {
 	case err != nil:
 		return EmptyStringAddress, err
-	case !ht.Equal(StringAddressHint):
-		return EmptyStringAddress, xerrors.Errorf("not StringAddress, %v", ht)
+	case !hs.Hint().Equal(StringAddressHint):
+		return EmptyStringAddress, xerrors.Errorf("not StringAddress, %v", hs.Hint())
 	default:
-		return NewStringAddress(a)
+		return NewStringAddress(hs.Body())
 	}
 }
 
@@ -48,7 +48,7 @@ func (sa StringAddress) Raw() string {
 }
 
 func (sa StringAddress) String() string {
-	return hint.HintedString(StringAddressHint, string(sa))
+	return hint.NewHintedString(StringAddressHint, string(sa)).String()
 }
 
 func (StringAddress) Hint() hint.Hint {

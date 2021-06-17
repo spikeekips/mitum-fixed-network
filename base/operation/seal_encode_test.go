@@ -51,7 +51,7 @@ func (t *testSealEncode) TestSign() {
 	raw, err = t.enc.Marshal(sl)
 	t.NoError(err)
 
-	hinter, err := t.enc.DecodeByHint(raw)
+	hinter, err := t.enc.Decode(raw)
 	t.NoError(err)
 
 	usl, ok := hinter.(BaseSeal)

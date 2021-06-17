@@ -62,7 +62,7 @@ func (cmd *baseDeployKeyCommand) Initialize(flags interface{}, version util.Vers
 		return err
 	}
 
-	if i, err := loadKey(cmd.jsonenc, []byte(cmd.Key)); err != nil {
+	if i, err := loadKey([]byte(cmd.Key), cmd.jsonenc); err != nil {
 		return xerrors.Errorf("failed to load node privatekey: %w", err)
 	} else if j, ok := i.(key.Privatekey); !ok {
 		return xerrors.Errorf("failed to load node privatekey; not privatekey, %T", i)
@@ -157,7 +157,7 @@ func (cmd *baseDeployKeyCommand) requestWithToken(path, method string) (*http.Re
 	return cmd.client.Request(ctx, cmd.Timeout, u.String(), method, nil, nil)
 }
 
-func loadKey(enc encoder.Encoder, b []byte) (key.Key, error) {
+func loadKey(b []byte, enc encoder.Encoder) (key.Key, error) {
 	s := strings.TrimSpace(string(b))
 
 	if pk, err := key.DecodeKey(enc, s); err != nil {

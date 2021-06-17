@@ -7,13 +7,13 @@ import (
 )
 
 func DecodeKey(enc encoder.Encoder, s string) (Key, error) {
-	h, us, err := hint.ParseHintedString(s)
+	hs, err := hint.ParseHintedString(s)
 	if err != nil {
 		return nil, err
 	}
 
-	kd := encoder.NewHintedString(h, us)
-	if k, err := kd.Encode(enc); err != nil {
+	kd := encoder.NewHintedString(hs.Hint(), hs.Body())
+	if k, err := kd.Decode(enc); err != nil {
 		return nil, err
 	} else if pk, ok := k.(Key); !ok {
 		return nil, util.WrongTypeError.Errorf("not key.Key; type=%T", k)
@@ -47,7 +47,7 @@ type PrivatekeyDecoder struct {
 }
 
 func (kd *PrivatekeyDecoder) Encode(enc encoder.Encoder) (Privatekey, error) {
-	if hinter, err := kd.HintedString.Encode(enc); err != nil {
+	if hinter, err := kd.HintedString.Decode(enc); err != nil {
 		return nil, err
 	} else if k, ok := hinter.(Privatekey); !ok {
 		return nil, util.WrongTypeError.Errorf("not Privatekey, %T", hinter)
@@ -61,7 +61,7 @@ type PublickeyDecoder struct {
 }
 
 func (kd *PublickeyDecoder) Encode(enc encoder.Encoder) (Publickey, error) {
-	if hinter, err := kd.HintedString.Encode(enc); err != nil {
+	if hinter, err := kd.HintedString.Decode(enc); err != nil {
 		return nil, err
 	} else if k, ok := hinter.(Publickey); !ok {
 		return nil, util.WrongTypeError.Errorf("not Publickey, %T", hinter)

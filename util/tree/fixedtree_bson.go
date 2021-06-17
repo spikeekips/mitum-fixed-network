@@ -49,7 +49,7 @@ func (tr FixedTree) MarshalBSON() ([]byte, error) {
 }
 
 type FixedTreeBSONUnpacker struct {
-	NS []bson.Raw `bson:"nodes"`
+	NS bson.Raw `bson:"nodes"`
 }
 
 func (tr *FixedTree) UnpackBSON(b []byte, enc *bsonenc.Encoder) error {
@@ -58,10 +58,5 @@ func (tr *FixedTree) UnpackBSON(b []byte, enc *bsonenc.Encoder) error {
 		return err
 	}
 
-	bs := make([][]byte, len(utr.NS))
-	for i := range utr.NS {
-		bs[i] = utr.NS[i]
-	}
-
-	return tr.unpack(enc, bs)
+	return tr.unpack(enc, utr.NS)
 }

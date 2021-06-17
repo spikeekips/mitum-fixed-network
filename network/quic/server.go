@@ -148,7 +148,7 @@ func (sv *Server) handleGetSeals(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var args HashesArgs
-	switch err := enc.Decode(body.Bytes(), &args); {
+	switch err := enc.Unmarshal(body.Bytes(), &args); {
 	case err != nil:
 		sv.Log().Error().Err(err).Msg("failed to decode")
 		network.HTTPError(w, http.StatusBadRequest)
@@ -196,7 +196,7 @@ func (sv *Server) handleNewSeal(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	sl, err := seal.DecodeSeal(enc, body.Bytes())
+	sl, err := seal.DecodeSeal(body.Bytes(), enc)
 	if err != nil {
 		network.HTTPError(w, http.StatusBadRequest)
 
@@ -293,7 +293,7 @@ func (sv *Server) handleGetBlockDataMaps(w http.ResponseWriter, r *http.Request)
 	}
 
 	var args HeightsArgs
-	switch err := enc.Decode(body.Bytes(), &args); {
+	switch err := enc.Unmarshal(body.Bytes(), &args); {
 	case err != nil:
 		network.HTTPError(w, http.StatusBadRequest)
 

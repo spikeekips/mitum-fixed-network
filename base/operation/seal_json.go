@@ -37,7 +37,7 @@ type SealJSONUnpack struct {
 	SN  key.PublickeyDecoder `json:"signer"`
 	SG  key.Signature        `json:"signature"`
 	SA  localtime.Time       `json:"signed_at"`
-	OPS []json.RawMessage    `json:"operations"`
+	OPS json.RawMessage      `json:"operations"`
 }
 
 func (sl *BaseSeal) UnpackJSON(b []byte, enc *jsonenc.Encoder) error {
@@ -46,10 +46,5 @@ func (sl *BaseSeal) UnpackJSON(b []byte, enc *jsonenc.Encoder) error {
 		return err
 	}
 
-	ops := make([][]byte, len(usl.OPS))
-	for i, b := range usl.OPS {
-		ops[i] = b
-	}
-
-	return sl.unpack(enc, usl.H, usl.BH, usl.SN, usl.SG, usl.SA.Time, ops)
+	return sl.unpack(enc, usl.H, usl.BH, usl.SN, usl.SG, usl.SA.Time, usl.OPS)
 }

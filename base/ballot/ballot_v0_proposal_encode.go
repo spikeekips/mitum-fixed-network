@@ -20,7 +20,7 @@ func (pr *ProposalV0) unpack(
 	}
 
 	if bVoteproof != nil {
-		i, err := base.DecodeVoteproof(enc, bVoteproof)
+		i, err := base.DecodeVoteproof(bVoteproof, enc)
 		if err != nil {
 			return err
 		}

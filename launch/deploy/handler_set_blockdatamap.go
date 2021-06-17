@@ -12,6 +12,7 @@ import (
 	"github.com/spikeekips/mitum/util"
 	"github.com/spikeekips/mitum/util/encoder"
 	jsonenc "github.com/spikeekips/mitum/util/encoder/json"
+	"github.com/spikeekips/mitum/util/hint"
 	"github.com/spikeekips/mitum/util/localtime"
 	"golang.org/x/sync/errgroup"
 	"golang.org/x/sync/semaphore"
@@ -72,21 +73,26 @@ func NewSetBlockDataMapsHandler(
 }
 
 func loadBlockDataMaps(r *http.Request, enc encoder.Encoder) ([]block.BlockDataMap, error) {
-	var bs [][]byte
-	if i, err := ioutil.ReadAll(r.Body); err != nil {
+	b, err := ioutil.ReadAll(r.Body)
+	if err != nil {
 		return nil, err
-	} else if j, err := enc.UnmarshalArray(i); err != nil {
+	}
+
+	var hinters []hint.Hinter
+	switch j, err := enc.DecodeSlice(b); {
+	case err != nil:
 		return nil, err
-	} else {
-		bs = j
+	case len(j) < 1:
+		return nil, xerrors.Errorf("empty blockdatamaps")
+	default:
+		hinters = j
 	}
 
 	founds := map[base.Height]bool{}
-	ubd := make([]block.BlockDataMap, len(bs))
-	for i := range bs {
-		if j, err := enc.DecodeByHint(bs[i]); err != nil {
-			return nil, err
-		} else if k, ok := j.(block.BlockDataMap); !ok {
+	ubd := make([]block.BlockDataMap, len(hinters))
+	for i := range hinters {
+		j := hinters[i]
+		if k, ok := j.(block.BlockDataMap); !ok {
 			return nil, util.WrongTypeError.Errorf("not block.BlockDataMap type, %T", j)
 		} else if _, found := founds[k.Height()]; found {
 			continue

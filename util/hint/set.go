@@ -59,6 +59,18 @@ func (hs *Hintset) Get(ht Hint) Hinter {
 	return hs.m[ht.String()]
 }
 
+func (hs *Hintset) Types() []Type {
+	l := make([]Type, len(hs.set))
+
+	var i int
+	for j := range hs.set {
+		l[i] = j
+		i++
+	}
+
+	return l
+}
+
 func (hs *Hintset) Hinters(ty Type) []Hinter {
 	return hs.set[ty]
 }

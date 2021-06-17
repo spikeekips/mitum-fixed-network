@@ -778,7 +778,7 @@ func (cs *GeneralSyncer) checkThresholdByHeights(heights []base.Height, fetched 
 ) {
 	manifests := make([]block.Manifest, len(heights))
 
-	var pn []base.Address = cs.provedNodes()
+	pn := cs.provedNodes()
 	for index := range heights {
 		provedNodes := map[base.Address]network.Node{}
 		{

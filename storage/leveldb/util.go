@@ -21,20 +21,20 @@ func loadHint(b []byte) (hint.Hint, []byte, error) {
 	return ht, b[hint.MaxHintLength:], nil
 }
 
-func encodeWithEncoder(enc encoder.Encoder, b []byte) []byte {
+func encodeWithEncoder(b []byte, enc encoder.Encoder) []byte {
 	h := make([]byte, hint.MaxHintLength)
 	copy(h, enc.Hint().Bytes())
 
 	return util.ConcatBytesSlice(h, b)
 }
 
-func marshal(enc encoder.Encoder, i interface{}) ([]byte, error) {
+func marshal(i interface{}, enc encoder.Encoder) ([]byte, error) {
 	b, err := enc.Marshal(i)
 	if err != nil {
 		return nil, err
 	}
 
-	return encodeWithEncoder(enc, b), nil
+	return encodeWithEncoder(b, enc), nil
 }
 
 func wrapError(err error) error {

@@ -30,7 +30,7 @@ func (t *testStateStringValueEncode) TestEncode() {
 	b, err := t.enc.Marshal(sv)
 	t.NoError(err)
 
-	decoded, err := t.enc.DecodeByHint(b)
+	decoded, err := t.enc.Decode(b)
 	t.NoError(err)
 	t.Implements((*Value)(nil), decoded)
 

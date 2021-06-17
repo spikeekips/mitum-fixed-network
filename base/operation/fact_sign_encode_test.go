@@ -38,7 +38,7 @@ func (t *testFactSignEncoding) TestMarshal() {
 	b, err := t.enc.Marshal(fs)
 	t.NoError(err)
 
-	hinter, err := t.enc.DecodeByHint(b)
+	hinter, err := t.enc.Decode(b)
 	t.NoError(err)
 	t.IsType(hinter, BaseFactSign{})
 

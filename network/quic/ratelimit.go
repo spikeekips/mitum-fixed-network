@@ -41,7 +41,7 @@ func RateLimitStoreFromURI(s string) (limiter.Store, error) {
 }
 
 func newMemoryRateLimitStore(u *url.URL, prefix string) (limiter.Store, error) {
-	var cleanup time.Duration = limiter.DefaultCleanUpInterval
+	cleanup := limiter.DefaultCleanUpInterval
 	if i := u.Query().Get("cleanup-interval"); len(i) > 0 {
 		d, err := time.ParseDuration(i)
 		if err != nil {

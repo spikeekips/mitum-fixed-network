@@ -153,7 +153,7 @@ func (vrs *VoteRecords) finishVoteproof(voteproof *base.VoteproofV0) *base.Votep
 	i = 0
 	for k := range vrs.ballots {
 		blt := vrs.ballots[k]
-		votes[i] = base.NewVoteproofNodeFact(
+		votes[i] = base.NewBaseVoteproofNodeFact(
 			blt.Node(),
 			vrs.sanitizeHash(blt.Hash()),
 			vrs.sanitizeHash(blt.Fact().Hash()),

@@ -15,9 +15,9 @@ func (ni *NodeInfoV0) unpack(
 	vs util.Version,
 	u string,
 	co map[string]interface{},
-	bsf [][]byte,
+	bsf []byte,
 ) error {
-	n, err := base.DecodeNode(enc, bnode)
+	n, err := base.DecodeNode(bnode, enc)
 	if err != nil {
 		return err
 	}
@@ -25,7 +25,7 @@ func (ni *NodeInfoV0) unpack(
 
 	ni.networkID = bnid
 	ni.state = st
-	b, err := block.DecodeManifest(enc, blb)
+	b, err := block.DecodeManifest(blb, enc)
 	if err != nil {
 		return err
 	}
@@ -36,13 +36,19 @@ func (ni *NodeInfoV0) unpack(
 
 	ni.policy = co
 
-	sf := make([]base.Node, len(bsf))
-	for i := range bsf {
-		n, err := base.DecodeNode(enc, bsf[i])
-		if err != nil {
-			return err
+	hsf, err := enc.DecodeSlice(bsf)
+	if err != nil {
+		return err
+	}
+
+	sf := make([]base.Node, len(hsf))
+	for i := range hsf {
+		j, ok := hsf[i].(base.Node)
+		if !ok {
+			return util.WrongTypeError.Errorf("expected base.Node, not %T", hsf[i])
 		}
-		sf[i] = n
+
+		sf[i] = j
 	}
 
 	ni.nodes = sf

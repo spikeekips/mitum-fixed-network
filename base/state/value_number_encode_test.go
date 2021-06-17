@@ -31,7 +31,7 @@ func (t *testStateNumberValueEncode) TestEncode() {
 	b, err := t.enc.Marshal(iv)
 	t.NoError(err)
 
-	decoded, err := t.enc.DecodeByHint(b)
+	decoded, err := t.enc.Decode(b)
 	t.NoError(err)
 	t.Implements((*Value)(nil), decoded)
 
@@ -73,7 +73,7 @@ func (t *testStateNumberValueEncode) TestCases() {
 				b, err := t.enc.Marshal(iv)
 				t.NoError(err, "%d: name=%s value=%s", i, c.name, c.v)
 
-				decoded, err := t.enc.DecodeByHint(b)
+				decoded, err := t.enc.Decode(b)
 				t.NoError(err, "%d: name=%s value=%s", i, c.name, c.v)
 				t.Implements((*Value)(nil), decoded)
 

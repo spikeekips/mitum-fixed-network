@@ -30,7 +30,7 @@ type SealBSONUnpack struct {
 	SN  key.PublickeyDecoder `bson:"signer"`
 	SG  key.Signature        `bson:"signature"`
 	SA  time.Time            `bson:"signed_at"`
-	OPS []bson.Raw           `bson:"operations"`
+	OPS bson.Raw             `bson:"operations"`
 }
 
 func (sl *BaseSeal) UnpackBSON(b []byte, enc *bsonenc.Encoder) error {
@@ -39,10 +39,5 @@ func (sl *BaseSeal) UnpackBSON(b []byte, enc *bsonenc.Encoder) error {
 		return err
 	}
 
-	ops := make([][]byte, len(usl.OPS))
-	for i, b := range usl.OPS {
-		ops[i] = b
-	}
-
-	return sl.unpack(enc, usl.H, usl.BH, usl.SN, usl.SG, usl.SA, ops)
+	return sl.unpack(enc, usl.H, usl.BH, usl.SN, usl.SG, usl.SA, usl.OPS)
 }

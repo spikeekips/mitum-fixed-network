@@ -37,7 +37,7 @@ func (no BaseRemoteNode) Address() base.Address {
 }
 
 func (no *BaseRemoteNode) SetAddress(s string) error {
-	address, err := base.DecodeAddressFromString(no.enc, s)
+	address, err := base.DecodeAddressFromString(s, no.enc)
 	if err != nil {
 		return err
 	}

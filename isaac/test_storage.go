@@ -59,7 +59,7 @@ func (ss *StorageSupportTest) Database(encs *encoder.Encoders, enc encoder.Encod
 			panic(err)
 		}
 
-		if enc == nil || enc.Hint().Type() != bsonenc.BSONType {
+		if enc == nil || enc.Hint().Type() != bsonenc.BSONEncoderType {
 			enc = ss.BSONEnc
 		}
 
@@ -80,7 +80,7 @@ func (ss *StorageSupportTest) Database(encs *encoder.Encoders, enc encoder.Encod
 			panic(err)
 		}
 
-		if enc == nil || enc.Hint().Type() != bsonenc.BSONType {
+		if enc == nil || enc.Hint().Type() != bsonenc.BSONEncoderType {
 			enc = ss.BSONEnc
 		}
 

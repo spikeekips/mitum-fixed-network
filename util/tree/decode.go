@@ -5,8 +5,8 @@ import (
 	"github.com/spikeekips/mitum/util/encoder"
 )
 
-func DecodeFixedTreeNode(enc encoder.Encoder, b []byte) (FixedTreeNode, error) {
-	if i, err := enc.DecodeByHint(b); err != nil {
+func DecodeFixedTreeNode(b []byte, enc encoder.Encoder) (FixedTreeNode, error) {
+	if i, err := enc.Decode(b); err != nil {
 		return nil, err
 	} else if i == nil {
 		return nil, nil
@@ -17,8 +17,8 @@ func DecodeFixedTreeNode(enc encoder.Encoder, b []byte) (FixedTreeNode, error) {
 	}
 }
 
-func DecodeFixedTree(enc encoder.Encoder, b []byte) (FixedTree, error) {
-	if i, err := enc.DecodeByHint(b); err != nil {
+func DecodeFixedTree(b []byte, enc encoder.Encoder) (FixedTree, error) {
+	if i, err := enc.Decode(b); err != nil {
 		return FixedTree{}, err
 	} else if i == nil {
 		return NewFixedTree(nil), nil

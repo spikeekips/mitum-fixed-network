@@ -7,8 +7,8 @@ import (
 	"github.com/spikeekips/mitum/util/encoder"
 )
 
-func DecodeOperation(enc encoder.Encoder, b []byte) (Operation, error) {
-	if i, err := enc.DecodeByHint(b); err != nil {
+func DecodeOperation(b []byte, enc encoder.Encoder) (Operation, error) {
+	if i, err := enc.Decode(b); err != nil {
 		return nil, err
 	} else if i == nil {
 		return nil, nil
@@ -19,8 +19,8 @@ func DecodeOperation(enc encoder.Encoder, b []byte) (Operation, error) {
 	}
 }
 
-func DecodeFactSign(enc encoder.Encoder, b []byte) (FactSign, error) {
-	if hinter, err := enc.DecodeByHint(b); err != nil {
+func DecodeFactSign(b []byte, enc encoder.Encoder) (FactSign, error) {
+	if hinter, err := enc.Decode(b); err != nil {
 		return nil, err
 	} else if f, ok := hinter.(FactSign); !ok {
 		return nil, xerrors.Errorf("not FactSign, %T", hinter)
@@ -29,12 +29,12 @@ func DecodeFactSign(enc encoder.Encoder, b []byte) (FactSign, error) {
 	}
 }
 
-func DecodeReasonError(enc encoder.Encoder, b []byte) (ReasonError, error) {
+func DecodeReasonError(b []byte, enc encoder.Encoder) (ReasonError, error) {
 	if len(b) < 1 {
 		return nil, nil
 	}
 
-	if hinter, err := enc.DecodeByHint(b); err != nil {
+	if hinter, err := enc.Decode(b); err != nil {
 		return nil, err
 	} else if hinter == nil {
 		return nil, nil

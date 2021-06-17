@@ -22,9 +22,9 @@ func (bo BaseOperation) MarshalJSON() ([]byte, error) {
 
 type baseOperationJSONUnpacker struct {
 	jsonenc.HintedHead
-	H  valuehash.Bytes   `json:"hash"`
-	FC json.RawMessage   `json:"fact"`
-	FS []json.RawMessage `json:"fact_signs"`
+	H  valuehash.Bytes `json:"hash"`
+	FC json.RawMessage `json:"fact"`
+	FS json.RawMessage `json:"fact_signs"`
 }
 
 func (bo *BaseOperation) UnpackJSON(b []byte, enc *jsonenc.Encoder) error {
@@ -33,10 +33,5 @@ func (bo *BaseOperation) UnpackJSON(b []byte, enc *jsonenc.Encoder) error {
 		return err
 	}
 
-	fs := make([][]byte, len(ubo.FS))
-	for i := range ubo.FS {
-		fs[i] = ubo.FS[i]
-	}
-
-	return bo.unpack(enc, ubo.HintedHead.H, ubo.H, ubo.FC, fs)
+	return bo.unpack(enc, ubo.HintedHead.H, ubo.H, ubo.FC, ubo.FS)
 }

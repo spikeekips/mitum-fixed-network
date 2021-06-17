@@ -54,7 +54,7 @@ func (st *JoiningState) Enter(sctx StateSwitchContext) (func() error, error) {
 		callback = i
 	}
 
-	var voteproof base.Voteproof = sctx.Voteproof()
+	voteproof := sctx.Voteproof()
 	if voteproof == nil { // NOTE if empty voteproof, load last accept voteproof from database
 		voteproof = st.database.LastVoteproof(base.StageACCEPT)
 		if voteproof == nil {

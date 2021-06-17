@@ -37,7 +37,7 @@ func (t *testFixedTreeNodeEncode) TestMake() {
 	raw, err := t.enc.Marshal(no)
 	t.NoError(err)
 
-	hinter, err := t.enc.DecodeByHint(raw)
+	hinter, err := t.enc.Decode(raw)
 	t.NoError(err)
 
 	uno, ok := hinter.(FixedTreeNode)

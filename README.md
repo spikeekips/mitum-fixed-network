@@ -9,15 +9,6 @@ mitum project is trying to create the general purpose blockchian factory.
 [![GoDoc](https://godoc.org/github.com/golang/gddo?status.svg)](https://pkg.go.dev/github.com/spikeekips/mitum?tab=overview)
 [![Go Report Card](https://goreportcard.com/badge/github.com/spikeekips/mitum)](https://goreportcard.com/report/github.com/spikeekips/mitum)
 [![codecov](https://codecov.io/gh/spikeekips/mitum/branch/master/graph/badge.svg)](https://codecov.io/gh/spikeekips/mitum)
-[![](https://tokei.rs/b1/github/spikeekips/mitum?category=lines)](https://github.com/spikeekips/mitum)
 [![Total alerts](https://img.shields.io/lgtm/alerts/g/spikeekips/mitum.svg?logo=lgtm&logoWidth=18)](https://lgtm.com/projects/g/spikeekips/mitum/alerts/)
 
-The detailed operations of mitum is writing at [MITUM Documentation](https://mitum-doc.readthedocs.io/en/master/).
-
 [![FOSSA Status](https://app.fossa.com/api/projects/git%2Bgithub.com%2Fspikeekips%2Fmitum.svg?type=large)](https://app.fossa.com/projects/git%2Bgithub.com%2Fspikeekips%2Fmitum?ref=badge_large)
-
-## Test
-
-```sh
-$ go clean -testcache; go test -timeout 10m -tags test -race -v ./... -run .
-```

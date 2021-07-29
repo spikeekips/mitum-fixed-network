@@ -59,7 +59,7 @@ network:
 	t.NoError(config.LoadConfigContextValue(ps.Context(), &conf))
 
 	t.NotNil(conf.Network())
-	t.Equal(config.DefaultLocalNetworkURL, conf.Network().URL())
+	t.Equal(config.DefaultLocalNetworkURL, conf.Network().ConnInfo().URL())
 	t.Equal(config.DefaultLocalNetworkBind, conf.Network().Bind())
 }
 
@@ -67,8 +67,8 @@ func (t *testConfigChecker) TestLocalNetwork() {
 	{
 		y := `
 network:
-  url: quic://local:54323
-  bind: quic://local:54324
+  url: https://local:54323
+  bind: https://local:54324
 `
 		ctx := context.Background()
 		ctx = context.WithValue(ctx, ContextValueConfigSource, []byte(y))
@@ -86,8 +86,8 @@ network:
 		t.NoError(config.LoadConfigContextValue(ps.Context(), &conf))
 
 		t.NotNil(conf.Network())
-		t.Equal("quic://local:54323", conf.Network().URL().String())
-		t.Equal("quic://local:54324", conf.Network().Bind().String())
+		t.Equal("https://local:54323", conf.Network().ConnInfo().URL().String())
+		t.Equal("https://local:54324", conf.Network().Bind().String())
 		t.Equal(config.DefaultLocalNetworkCache, conf.Network().Cache().String())
 		t.Equal(config.DefaultLocalNetworkSealCache, conf.Network().SealCache().String())
 	}
@@ -95,7 +95,7 @@ network:
 	{
 		y := `
 network:
-  url: quic://local:54323
+  url: https://local:54323
   cache: gcache:?type=lru&size=33&expire=44s
   seal-cache: gcache:?type=lru&size=55&expire=66s
 `
@@ -115,7 +115,7 @@ network:
 		t.NoError(config.LoadConfigContextValue(ps.Context(), &conf))
 
 		t.NotNil(conf.Network())
-		t.Equal("quic://local:54323", conf.Network().URL().String())
+		t.Equal("https://local:54323", conf.Network().ConnInfo().URL().String())
 		t.Equal(config.DefaultLocalNetworkBind, conf.Network().Bind())
 		t.Equal("gcache:?type=lru&size=33&expire=44s", conf.Network().Cache().String())
 		t.Equal("gcache:?type=lru&size=55&expire=66s", conf.Network().SealCache().String())
@@ -125,8 +125,8 @@ network:
 func (t *testConfigChecker) TestRateLimitWrongCache() {
 	y := `
 network:
-  url: quic://local:54323
-  bind: quic://local:54324
+  url: https://local:54323
+  bind: https://local:54324
   rate-limit:
     cache: gcache:?type=lru&size=33&expire=44s
 `
@@ -143,8 +143,8 @@ network:
 func (t *testConfigChecker) TestRateLimitCache() {
 	y := `
 network:
-  url: quic://local:54323
-  bind: quic://local:54324
+  url: https://local:54323
+  bind: https://local:54324
   rate-limit:
     cache: memory:?prefix=showme
 `
@@ -172,8 +172,8 @@ network:
 func (t *testConfigChecker) TestEmptyRateLimit() {
 	y := `
 network:
-  url: quic://local:54323
-  bind: quic://local:54324
+  url: https://local:54323
+  bind: https://local:54324
 `
 	ctx := context.Background()
 	ctx = context.WithValue(ctx, ContextValueConfigSource, []byte(y))
@@ -197,8 +197,8 @@ network:
 func (t *testConfigChecker) TestRateLimit() {
 	y := `
 network:
-  url: quic://local:54323
-  bind: quic://local:54324
+  url: https://local:54323
+  bind: https://local:54324
 
   rate-limit:
     preset:
@@ -263,8 +263,8 @@ network:
 func (t *testConfigChecker) TestRateLimitEmptyRules() {
 	y := `
 network:
-  url: quic://local:54323
-  bind: quic://local:54324
+  url: https://local:54323
+  bind: https://local:54324
 
   rate-limit:
     preset:
@@ -305,8 +305,8 @@ network:
 func (t *testConfigChecker) TestRateLimitEmptyRule() {
 	y := `
 network:
-  url: quic://local:54323
-  bind: quic://local:54324
+  url: https://local:54323
+  bind: https://local:54324
 
   rate-limit:
       192.168.0.1:
@@ -342,8 +342,8 @@ network:
 func (t *testConfigChecker) TestRateLimitRuleWithoutPreset() {
 	y := `
 network:
-  url: quic://local:54323
-  bind: quic://local:54324
+  url: https://local:54323
+  bind: https://local:54324
 
   rate-limit:
     192.168.0.1:

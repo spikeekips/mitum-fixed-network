@@ -3,6 +3,7 @@ package process
 import (
 	"context"
 
+	"github.com/spikeekips/mitum/base/node"
 	"github.com/spikeekips/mitum/isaac"
 	"github.com/spikeekips/mitum/launch/config"
 	"github.com/spikeekips/mitum/network"
@@ -45,21 +46,20 @@ func HookNodepool(ctx context.Context) (context.Context, error) {
 	for i := range nodeConfigs {
 		conf := nodeConfigs[i]
 
-		node := network.NewRemoteNode(conf.Address(), conf.Publickey(), conf.URL().String())
-		ch, err := LoadNodeChannel(
-			conf.URL(),
-			encs,
-			policy.NetworkConnectionTimeout(),
-		)
-		if err != nil {
-			return ctx, err
+		no := node.NewRemote(conf.Address(), conf.Publickey())
+		var ch network.Channel
+		if ci := conf.ConnInfo(); ci != nil {
+			i, err := LoadNodeChannel(ci, encs, policy.NetworkConnectionTimeout())
+			if err != nil {
+				return ctx, err
+			}
+			ch = i
 		}
-		_ = node.SetChannel(ch)
 
-		if err := nodepool.Add(node); err != nil {
+		if err := nodepool.Add(no, ch); err != nil {
 			return ctx, err
 		}
-		log.Debug().Str("added_node", node.Address().String()).Msg("node added to nodepool")
+		log.Debug().Str("added_node", no.Address().String()).Msg("node added to nodepool")
 	}
 
 	return ctx, nil

@@ -44,7 +44,7 @@ func (cc *checker) Context() context.Context {
 
 func (cc *checker) CheckLocalNetwork() (bool, error) {
 	conf := cc.config.Network()
-	if conf.URL() == nil {
+	if conf.ConnInfo() == nil {
 		if err := conf.SetURL(DefaultLocalNetworkURL.String()); err != nil {
 			return false, err
 		}

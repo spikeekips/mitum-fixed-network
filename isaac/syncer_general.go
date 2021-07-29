@@ -13,6 +13,7 @@ import (
 
 	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/base/block"
+	"github.com/spikeekips/mitum/base/node"
 	"github.com/spikeekips/mitum/network"
 	"github.com/spikeekips/mitum/storage"
 	"github.com/spikeekips/mitum/storage/blockdata"
@@ -61,9 +62,11 @@ type GeneralSyncer struct { // nolint; maligned
 	*logging.Logging
 	ost                     storage.Database
 	blockData               blockdata.BlockData
+	nodepool                *network.Nodepool
 	policy                  *LocalPolicy
+	stLock                  sync.RWMutex
 	st                      storage.SyncerSession
-	sourceNodes             map[base.Address]network.Node
+	sourceNodes             map[base.Address]base.Node
 	heightFrom              base.Height
 	heightTo                base.Height
 	limitManifestsPerWorker int
@@ -77,14 +80,17 @@ type GeneralSyncer struct { // nolint; maligned
 	blockDataSessions       []blockdata.Session
 	lifeCtx                 context.Context
 	lifeCancel              func()
+	donechLock              sync.RWMutex
+	donech                  chan bool
 }
 
 func NewGeneralSyncer(
-	local *network.LocalNode,
+	local *node.Local,
 	ost storage.Database,
 	blockData blockdata.BlockData,
+	nodepool *network.Nodepool,
 	policy *LocalPolicy,
-	sourceNodes []network.Node,
+	sourceNodes []base.Node,
 	baseManifest block.Manifest,
 	to base.Height,
 ) (*GeneralSyncer, error) {
@@ -122,6 +128,7 @@ func NewGeneralSyncer(
 		}),
 		ost:                     ost,
 		blockData:               blockData,
+		nodepool:                nodepool,
 		policy:                  policy,
 		sourceNodes:             sn,
 		heightFrom:              from,
@@ -140,10 +147,6 @@ func NewGeneralSyncer(
 }
 
 func (cs *GeneralSyncer) SetLogger(l logging.Logger) logging.Logger {
-	if sl, ok := cs.database().(logging.SetLogger); ok {
-		_ = sl.SetLogger(l)
-	}
-
 	return cs.Logging.SetLogger(l)
 }
 
@@ -152,10 +155,8 @@ func (cs *GeneralSyncer) ID() string {
 }
 
 func (cs *GeneralSyncer) Close() error {
-	cs.Lock()
-	defer cs.Unlock()
-
-	if cs.st == nil {
+	st := cs.syncerSession()
+	if st == nil {
 		return nil
 	}
 
@@ -163,9 +164,15 @@ func (cs *GeneralSyncer) Close() error {
 		cs.lifeCancel()
 	}
 
+	cs.donechLock.RLock()
+	if cs.donech != nil {
+		<-cs.donech
+	}
+	cs.donechLock.RUnlock()
+
 	defer cs.Log().Debug().Msg("closed")
 
-	return cs.st.Close()
+	return st.Close()
 }
 
 func (cs *GeneralSyncer) SetStateChan(stateChan chan<- SyncerStateChangedContext) *GeneralSyncer {
@@ -204,26 +211,35 @@ func (cs *GeneralSyncer) TailManifest() block.Manifest {
 }
 
 func (cs *GeneralSyncer) Prepare() error {
-	cs.Lock()
-	defer cs.Unlock()
-
-	if cs.state >= SyncerPrepared {
+	if cs.State() >= SyncerPrepared {
 		cs.Log().Debug().Msg("already prepared")
 
 		return nil
 	}
 
+	donech := make(chan bool, 2)
+	cs.donechLock.Lock()
+	cs.donech = donech
+	cs.donechLock.Unlock()
+
 	go func() {
 		// NOTE do forever unless successfully done
-	end:
+		defer func() {
+			donech <- true
+		}()
+
 		for {
 			select {
 			case <-cs.lifeCtx.Done():
-				break end
+				return
 			default:
 				err := cs.prepare()
 				if err == nil {
-					break end
+					return
+				}
+
+				if xerrors.Is(err, util.IgnoreError) {
+					return
 				}
 
 				cs.Log().Error().Err(err).Msg("failed to prepare for syncing")
@@ -231,7 +247,7 @@ func (cs *GeneralSyncer) Prepare() error {
 				var rollbackCtx *BlockIntegrityError
 				if xerrors.As(err, &rollbackCtx) {
 					if e := cs.rollback(rollbackCtx); e == nil {
-						break end
+						return
 					}
 
 					cs.Log().Error().Err(err).Msg("failed to rollback")
@@ -265,12 +281,22 @@ func (cs *GeneralSyncer) prepare() error {
 	}
 
 	if cs.State() < SyncerPrepared {
-		if err := cs.headAndTailManifests(); err != nil {
-			return err
+		select {
+		case <-cs.lifeCtx.Done():
+			return util.IgnoreError.Errorf("stopped")
+		default:
+			if err := cs.headAndTailManifests(); err != nil {
+				return err
+			}
 		}
 
-		if err := cs.fillManifests(); err != nil {
-			return err
+		select {
+		case <-cs.lifeCtx.Done():
+			return util.IgnoreError.Errorf("stopped")
+		default:
+			if err := cs.fillManifests(); err != nil {
+				return err
+			}
 		}
 	}
 
@@ -297,6 +323,10 @@ func (cs *GeneralSyncer) save() error {
 	cs.setState(SyncerSaving, false)
 
 	if err := cs.startBlocks(); err != nil {
+		if xerrors.Is(err, util.IgnoreError) {
+			return nil
+		}
+
 		return err
 	}
 
@@ -319,7 +349,8 @@ func (cs *GeneralSyncer) reset() error {
 	cs.Lock()
 	defer cs.Unlock()
 
-	if cs.st != nil {
+	st := cs.syncerSession()
+	if st != nil {
 		cs.Log().Debug().Int("blocks", len(cs.blocks)).Msg("reset: will cleanup storage; database and block data")
 		if err := blockdata.CleanByHeight(cs.ost, cs.blockData, cs.heightFrom); err != nil {
 			return err
@@ -338,7 +369,7 @@ func (cs *GeneralSyncer) reset() error {
 			}
 		}
 
-		if err := cs.st.Close(); err != nil {
+		if err := st.Close(); err != nil {
 			return err
 		}
 	}
@@ -350,11 +381,12 @@ func (cs *GeneralSyncer) reset() error {
 	if err != nil {
 		return err
 	}
-	cs.st = i
 
-	if sl, ok := cs.st.(logging.SetLogger); ok {
+	if sl, ok := i.(logging.SetLogger); ok {
 		_ = sl.SetLogger(cs.Log())
 	}
+
+	cs.setSyncerSession(i)
 
 	cs.initializeProvedNodes()
 
@@ -409,7 +441,8 @@ func (cs *GeneralSyncer) headAndTailManifests() error {
 
 	cs.setProvedNodes(provedNodes)
 
-	if err := cs.database().SetManifests(manifests); err != nil {
+	st := cs.syncerSession()
+	if err := st.SetManifests(manifests); err != nil {
 		return err
 	}
 
@@ -440,7 +473,7 @@ func (cs *GeneralSyncer) fillManifests() error {
 		default:
 			cs.setProvedNodes(pn)
 
-			return cs.database().SetManifests(ms)
+			return cs.syncerSession().SetManifests(ms)
 		}
 	}
 
@@ -477,11 +510,10 @@ func (cs *GeneralSyncer) startBlocks() error {
 	cs.Log().Debug().Msg("start to fetch blocks")
 	defer cs.Log().Debug().Msg("fetched blocks")
 
-end:
 	for {
 		select {
 		case <-cs.lifeCtx.Done():
-			break end
+			return util.IgnoreError.Errorf("stopped")
 		default:
 			if err := cs.fetchBlocksByNodes(); err != nil {
 				cs.Log().Error().Err(err).Msg("failed to fetch blocks by nodes")
@@ -489,11 +521,9 @@ end:
 				<-time.After(time.Millisecond * 500)
 			}
 
-			break end
+			return nil
 		}
 	}
-
-	return nil
 }
 
 func (cs *GeneralSyncer) fetchBlocksByNodes() error {
@@ -507,9 +537,17 @@ func (cs *GeneralSyncer) fetchBlocksByNodes() error {
 		return xerrors.Errorf("empty proved nodes")
 	}
 
-	for _, address := range cs.provedNodes() {
-		node := cs.sourceNodes[address]
-		worker.Run(cs.workerCallbackFetchBlocks(node))
+	for _, addr := range cs.provedNodes() {
+		_, ch, found := cs.nodepool.Node(addr)
+		if !found {
+			return util.NotFoundError.Errorf("unknown node, %q", addr)
+		} else if ch == nil {
+			cs.Log().Warn().Str("address", addr.String()).Msg("node is dead")
+
+			continue
+		}
+
+		worker.Run(cs.workerCallbackFetchBlocks(addr, ch))
 	}
 
 	if err := cs.distributeBlocksJob(worker); err != nil {
@@ -532,7 +570,7 @@ func (cs *GeneralSyncer) fetchBlocksByNodes() error {
 
 	// check fetched blocks
 	for i := cs.heightFrom; i <= cs.heightTo; i++ {
-		if found, err := cs.database().HasBlock(i); err != nil {
+		if found, err := cs.syncerSession().HasBlock(i); err != nil {
 			return xerrors.Errorf("some block not found after fetching blocks: height=%d; %w", i, err)
 		} else if !found {
 			return xerrors.Errorf("some block not found after fetching blocks: height=%d", i)
@@ -592,7 +630,7 @@ func (cs *GeneralSyncer) distributeBlocksJob(worker *util.ParallelWorker) error 
 
 	var heights []base.Height
 	for i := from; i <= to; i++ {
-		if found, err := cs.database().HasBlock(base.Height(i)); err != nil {
+		if found, err := cs.syncerSession().HasBlock(base.Height(i)); err != nil {
 			return err
 		} else if found {
 			continue
@@ -629,17 +667,28 @@ func (cs *GeneralSyncer) fetchManifestsByNodes(heights []base.Height) (
 	var wg sync.WaitGroup
 	wg.Add(len(provedNodes))
 
-	for _, address := range provedNodes {
-		go func(address base.Address) {
+	for _, addr := range provedNodes {
+		_, ch, found := cs.nodepool.Node(addr)
+		if !found {
+			return nil, nil, util.NotFoundError.Errorf("unknown node, %q", addr)
+		} else if ch == nil {
+			l.Warn().Str("address", addr.String()).Msg("node is dead")
+
+			wg.Done()
+
+			continue
+		}
+
+		go func(addr base.Address, ch network.Channel) {
 			defer wg.Done()
 
-			if i, err := cs.callbackFetchManifests(cs.sourceNodes[address], heights); err != nil {
-				l.Error().Err(err).Hinted("node", address).Msg("failed to get manifest from node")
+			if i, err := cs.callbackFetchManifests(addr, ch, heights); err != nil {
+				l.Error().Err(err).Str("node", addr.String()).Msg("failed to get manifest from node")
 				resultChan <- nil
 			} else {
-				resultChan <- map[base.Address][]block.Manifest{address: i}
+				resultChan <- map[base.Address][]block.Manifest{addr: i}
 			}
-		}(address)
+		}(addr, ch)
 	}
 
 	wg.Wait()
@@ -675,7 +724,11 @@ func (cs *GeneralSyncer) fetchManifestsByNodes(heights []base.Height) (
 	}
 }
 
-func (cs *GeneralSyncer) callbackFetchManifests(node network.Node, heights []base.Height) ([]block.Manifest, error) {
+func (cs *GeneralSyncer) callbackFetchManifests(
+	addr base.Address,
+	ch network.Channel,
+	heights []base.Height,
+) ([]block.Manifest, error) {
 	manifests := make([]block.Manifest, len(heights))
 
 	update := func(fetched []block.Manifest) {
@@ -706,7 +759,7 @@ func (cs *GeneralSyncer) callbackFetchManifests(node network.Node, heights []bas
 			continue
 		}
 
-		i, err := cs.callbackFetchManifestsSlice(node, sliced)
+		i, err := cs.callbackFetchManifestsSlice(addr, ch, sliced)
 		if err != nil {
 			return nil, err
 		}
@@ -715,7 +768,7 @@ func (cs *GeneralSyncer) callbackFetchManifests(node network.Node, heights []bas
 	}
 
 	if len(sliced) > 0 {
-		i, err := cs.callbackFetchManifestsSlice(node, sliced)
+		i, err := cs.callbackFetchManifestsSlice(addr, ch, sliced)
 		if err != nil {
 			return nil, err
 		}
@@ -726,13 +779,13 @@ func (cs *GeneralSyncer) callbackFetchManifests(node network.Node, heights []bas
 }
 
 func (cs *GeneralSyncer) callbackFetchManifestsSlice(
-	node network.Node, heights []base.Height,
+	addr base.Address, ch network.Channel, heights []base.Height,
 ) ([]block.Manifest, error) {
 	var maxRetries uint = 3
 
 	l := cs.Log().WithLogger(func(ctx logging.Context) logging.Emitter {
 		return ctx.Uint("max-retries", maxRetries).
-			Hinted("source_node", node.Address()).
+			Str("source_node", addr.String()).
 			Interface("heights", heights)
 	})
 
@@ -745,7 +798,7 @@ func (cs *GeneralSyncer) callbackFetchManifestsSlice(
 	if err := util.Retry(maxRetries, time.Millisecond*300, func(retries int) error {
 		l.Debug().Int("retries", retries).Msg("try to fetch manifest")
 
-		bs, err := cs.fetchManifests(node, missing)
+		bs, err := cs.fetchManifests(ch, missing)
 		if err != nil {
 			return err
 		}
@@ -780,12 +833,10 @@ func (cs *GeneralSyncer) checkThresholdByHeights(heights []base.Height, fetched 
 
 	pn := cs.provedNodes()
 	for index := range heights {
-		provedNodes := map[base.Address]network.Node{}
-		{
-			for i := range pn {
-				node := cs.sourceNodes[pn[i]]
-				provedNodes[node.Address()] = node
-			}
+		provedNodes := map[base.Address]base.Node{}
+		for i := range pn {
+			no := cs.sourceNodes[pn[i]]
+			provedNodes[no.Address()] = no
 		}
 
 		m, p, err := cs.checkThreshold(index, heights, fetched, provedNodes)
@@ -803,15 +854,15 @@ func (cs *GeneralSyncer) checkThreshold(
 	index int,
 	heights []base.Height,
 	fetched map[base.Address][]block.Manifest,
-	provedNodes map[base.Address]network.Node,
+	provedNodes map[base.Address]base.Node,
 ) (block.Manifest, []base.Address, error) {
 	height := heights[index]
 	hashByNode := map[string][]base.Address{}
 	ms := map[string]block.Manifest{}
 
 	var set []string // nolint
-	for node := range fetched {
-		bs := fetched[node]
+	for no := range fetched {
+		bs := fetched[no]
 		if len(bs) != len(heights) {
 			cs.Log().Debug().Int("expected", len(heights)).Int("returned", len(bs)).
 				Msg("failed to get the expected data from node")
@@ -820,7 +871,7 @@ func (cs *GeneralSyncer) checkThreshold(
 		}
 
 		if len(provedNodes) > 0 {
-			if _, found := provedNodes[node]; !found {
+			if _, found := provedNodes[no]; !found {
 				continue
 			}
 		}
@@ -832,7 +883,7 @@ func (cs *GeneralSyncer) checkThreshold(
 		key := bs[index].Hash().String()
 		set = append(set, key)
 		ms[key] = bs[index]
-		hashByNode[key] = append(hashByNode[key], node)
+		hashByNode[key] = append(hashByNode[key], no)
 	}
 
 	if len(set) < 1 {
@@ -852,8 +903,8 @@ func (cs *GeneralSyncer) checkThreshold(
 	return ms[key], hashByNode[key], nil
 }
 
-func (cs *GeneralSyncer) fetchManifests(node network.Node, heights []base.Height) ([]block.Manifest, error) { // nolint
-	maps, err := cs.fetchBlockDataMaps(node, heights)
+func (cs *GeneralSyncer) fetchManifests(ch network.Channel, heights []base.Height) ([]block.Manifest, error) { // nolint
+	maps, err := cs.fetchBlockDataMaps(ch, heights)
 	if err != nil {
 		return nil, err
 	}
@@ -865,7 +916,7 @@ func (cs *GeneralSyncer) fetchManifests(node network.Node, heights []base.Height
 	for i := range maps {
 		go func(bd block.BlockDataMap) {
 			defer wg.Done()
-			if i, err := node.Channel().BlockData(context.Background(), bd.Manifest()); err != nil {
+			if i, err := ch.BlockData(context.Background(), bd.Manifest()); err != nil {
 				resultchan <- err
 			} else {
 				defer func() {
@@ -948,7 +999,7 @@ func (*GeneralSyncer) sanitizeManifests(heights []base.Height, l interface{}) (
 	return checked, missing, nil
 }
 
-func (cs *GeneralSyncer) workerCallbackFetchBlocks(node network.Node) util.WorkerCallback {
+func (cs *GeneralSyncer) workerCallbackFetchBlocks(addr base.Address, ch network.Channel) util.WorkerCallback {
 	return func(jobID uint, job interface{}) error {
 		heights, ok := job.([]base.Height)
 		if !ok {
@@ -956,14 +1007,14 @@ func (cs *GeneralSyncer) workerCallbackFetchBlocks(node network.Node) util.Worke
 		}
 
 		l := cs.Log().WithLogger(func(ctx logging.Context) logging.Emitter {
-			return ctx.Hinted("source_node", node.Address()).
+			return ctx.Str("source_node", addr.String()).
 				Interface("heights", heights)
 		})
 
 		var manifests []block.Manifest
 		var missing []base.Height
 		var err error
-		if bs, e := cs.fetchBlocks(node, heights); err != nil {
+		if bs, e := cs.fetchBlocks(addr, ch, heights); err != nil {
 			err = e
 		} else if manifests, missing, err = cs.sanitizeManifests(heights, bs); err != nil {
 			err = e
@@ -973,7 +1024,7 @@ func (cs *GeneralSyncer) workerCallbackFetchBlocks(node network.Node) util.Worke
 			l.Error().Err(err).Msg("failed to fetch blocks")
 
 			return &syncerFetchBlockError{
-				node:    node.Address(),
+				node:    addr,
 				heights: heights,
 				err:     err,
 			}
@@ -986,7 +1037,7 @@ func (cs *GeneralSyncer) workerCallbackFetchBlocks(node network.Node) util.Worke
 		l.Debug().Int("blocks", len(blocks)).Msg("fetched blocks")
 
 		return &syncerFetchBlockError{
-			node:    node.Address(),
+			node:    addr,
 			heights: heights,
 			err:     err,
 			blocks:  blocks,
@@ -1014,7 +1065,7 @@ func (cs *GeneralSyncer) checkFetchedBlocks(fetched []block.Block) ([]base.Heigh
 			continue
 		}
 
-		switch manifest, found, err := cs.database().Manifest(blk.Height()); {
+		switch manifest, found, err := cs.syncerSession().Manifest(blk.Height()); {
 		case !found:
 			return nil, util.NotFoundError.Errorf("manifest not found")
 		case err != nil:
@@ -1049,21 +1100,25 @@ func (cs *GeneralSyncer) checkFetchedBlocks(fetched []block.Block) ([]base.Heigh
 
 	if maps, err := cs.saveBlockData(sessions); err != nil {
 		return nil, err
-	} else if err := cs.database().SetBlocks(filtered, maps); err != nil {
+	} else if err := cs.syncerSession().SetBlocks(filtered, maps); err != nil {
 		return nil, err
 	} else {
 		return nil, nil
 	}
 }
 
-func (cs *GeneralSyncer) fetchBlocks(node network.Node, heights []base.Height) ([]block.Block, error) {
+func (cs *GeneralSyncer) fetchBlocks(
+	addr base.Address,
+	ch network.Channel,
+	heights []base.Height,
+) ([]block.Block, error) {
 	l := cs.Log().WithLogger(func(ctx logging.Context) logging.Emitter {
-		return ctx.Hinted("source_node", node.Address()).
+		return ctx.Str("source_node", addr.String()).
 			Hinted("height_from", heights[0]).
 			Hinted("height_to", heights[len(heights)-1])
 	})
 
-	maps, err := cs.fetchBlockDataMaps(node, heights)
+	maps, err := cs.fetchBlockDataMaps(ch, heights)
 	if err != nil {
 		return nil, err
 	}
@@ -1072,7 +1127,7 @@ func (cs *GeneralSyncer) fetchBlocks(node network.Node, heights []base.Height) (
 
 	fetched := make([]block.Block, len(heights))
 	for i := range maps {
-		j, err := cs.fetchBlock(node, maps[i])
+		j, err := cs.fetchBlock(addr, ch, maps[i])
 		if err != nil {
 			l.Error().Err(err).Msg("failed to fetch block")
 
@@ -1107,14 +1162,18 @@ func (cs *GeneralSyncer) blockDataSession(height base.Height) (blockdata.Session
 	return i, nil
 }
 
-func (cs *GeneralSyncer) fetchBlock(node network.Node, bd block.BlockDataMap) (block.Block, error) { // revive:disable-line:cognitive-complexity,cyclomatic,line-length-limit
+func (cs *GeneralSyncer) fetchBlock( // revive:disable-line:cognitive-complexity,cyclomatic,line-length-limit
+	addr base.Address,
+	ch network.Channel,
+	bd block.BlockDataMap,
+) (block.Block, error) {
 	ss, err := cs.blockDataSession(bd.Height())
 	if err != nil {
 		return nil, err
 	}
 
 	l := cs.Log().WithLogger(func(ctx logging.Context) logging.Emitter {
-		return ctx.Hinted("source_node", node.Address()).
+		return ctx.Str("source_node", addr.String()).
 			Hinted("height", bd.Height())
 	})
 
@@ -1122,7 +1181,7 @@ func (cs *GeneralSyncer) fetchBlock(node network.Node, bd block.BlockDataMap) (b
 
 	blk := (interface{})(block.BlockV0{}).(block.BlockUpdater)
 
-	switch i, found, err := cs.database().Manifest(bd.Height()); {
+	switch i, found, err := cs.syncerSession().Manifest(bd.Height()); {
 	case err != nil:
 		return nil, err
 	case !found:
@@ -1135,7 +1194,7 @@ func (cs *GeneralSyncer) fetchBlock(node network.Node, bd block.BlockDataMap) (b
 		blk = blk.SetManifest(i)
 	}
 
-	if i, err := cs.fetchBlockData(node, bd.Operations(), ss); err != nil {
+	if i, err := cs.fetchBlockData(ch, bd.Operations(), ss); err != nil {
 		return nil, err
 	} else if j, err := cs.blockData.Writer().ReadOperations(i); err != nil {
 		return nil, err
@@ -1143,7 +1202,7 @@ func (cs *GeneralSyncer) fetchBlock(node network.Node, bd block.BlockDataMap) (b
 		blk = blk.SetOperations(j)
 	}
 
-	if i, err := cs.fetchBlockData(node, bd.OperationsTree(), ss); err != nil {
+	if i, err := cs.fetchBlockData(ch, bd.OperationsTree(), ss); err != nil {
 		return nil, err
 	} else if j, err := cs.blockData.Writer().ReadOperationsTree(i); err != nil {
 		return nil, err
@@ -1151,7 +1210,7 @@ func (cs *GeneralSyncer) fetchBlock(node network.Node, bd block.BlockDataMap) (b
 		blk = blk.SetOperationsTree(j)
 	}
 
-	if i, err := cs.fetchBlockData(node, bd.States(), ss); err != nil {
+	if i, err := cs.fetchBlockData(ch, bd.States(), ss); err != nil {
 		return nil, err
 	} else if j, err := cs.blockData.Writer().ReadStates(i); err != nil {
 		return nil, err
@@ -1159,7 +1218,7 @@ func (cs *GeneralSyncer) fetchBlock(node network.Node, bd block.BlockDataMap) (b
 		blk = blk.SetStates(j)
 	}
 
-	if i, err := cs.fetchBlockData(node, bd.StatesTree(), ss); err != nil {
+	if i, err := cs.fetchBlockData(ch, bd.StatesTree(), ss); err != nil {
 		return nil, err
 	} else if j, err := cs.blockData.Writer().ReadStatesTree(i); err != nil {
 		return nil, err
@@ -1167,7 +1226,7 @@ func (cs *GeneralSyncer) fetchBlock(node network.Node, bd block.BlockDataMap) (b
 		blk = blk.SetStatesTree(j)
 	}
 
-	if i, err := cs.fetchBlockData(node, bd.INITVoteproof(), ss); err != nil {
+	if i, err := cs.fetchBlockData(ch, bd.INITVoteproof(), ss); err != nil {
 		return nil, err
 	} else if j, err := cs.blockData.Writer().ReadINITVoteproof(i); err != nil {
 		return nil, err
@@ -1175,7 +1234,7 @@ func (cs *GeneralSyncer) fetchBlock(node network.Node, bd block.BlockDataMap) (b
 		blk = blk.SetINITVoteproof(j)
 	}
 
-	if i, err := cs.fetchBlockData(node, bd.ACCEPTVoteproof(), ss); err != nil {
+	if i, err := cs.fetchBlockData(ch, bd.ACCEPTVoteproof(), ss); err != nil {
 		return nil, err
 	} else if j, err := cs.blockData.Writer().ReadACCEPTVoteproof(i); err != nil {
 		return nil, err
@@ -1183,7 +1242,7 @@ func (cs *GeneralSyncer) fetchBlock(node network.Node, bd block.BlockDataMap) (b
 		blk = blk.SetACCEPTVoteproof(j)
 	}
 
-	if i, err := cs.fetchBlockData(node, bd.SuffrageInfo(), ss); err != nil {
+	if i, err := cs.fetchBlockData(ch, bd.SuffrageInfo(), ss); err != nil {
 		return nil, err
 	} else if j, err := cs.blockData.Writer().ReadSuffrageInfo(i); err != nil {
 		return nil, err
@@ -1191,7 +1250,7 @@ func (cs *GeneralSyncer) fetchBlock(node network.Node, bd block.BlockDataMap) (b
 		blk = blk.SetSuffrageInfo(j)
 	}
 
-	if i, err := cs.fetchBlockData(node, bd.Proposal(), ss); err != nil {
+	if i, err := cs.fetchBlockData(ch, bd.Proposal(), ss); err != nil {
 		return nil, err
 	} else if j, err := cs.blockData.Writer().ReadProposal(i); err != nil {
 		return nil, err
@@ -1210,12 +1269,12 @@ func (cs *GeneralSyncer) commit() error {
 	from := cs.heightFrom.Int64()
 	to := cs.heightTo.Int64()
 
-	if err := cs.database().Commit(); err != nil {
+	if err := cs.syncerSession().Commit(); err != nil {
 		return err
 	}
 
 	for i := from; i <= to; i++ {
-		switch m, found, err := cs.database().Manifest(base.Height(i)); {
+		switch m, found, err := cs.syncerSession().Manifest(base.Height(i)); {
 		case !found:
 			return util.NotFoundError.Errorf("block, %v guessed to be stored, but not found", base.Height(i))
 		case err != nil:
@@ -1394,9 +1453,9 @@ func (cs *GeneralSyncer) saveBlockData(sessions []blockdata.Session) ([]block.Bl
 	return maps, nil
 }
 
-func (*GeneralSyncer) fetchBlockDataMaps(node network.Node, heights []base.Height) ([]block.BlockDataMap, error) {
+func (*GeneralSyncer) fetchBlockDataMaps(ch network.Channel, heights []base.Height) ([]block.BlockDataMap, error) {
 	var maps []block.BlockDataMap
-	switch i, err := node.Channel().BlockDataMaps(context.TODO(), heights); {
+	switch i, err := ch.BlockDataMaps(context.TODO(), heights); {
 	case err != nil:
 		return nil, err
 	case len(i) != len(heights):
@@ -1419,13 +1478,13 @@ func (*GeneralSyncer) fetchBlockDataMaps(node network.Node, heights []base.Heigh
 }
 
 func (*GeneralSyncer) fetchBlockData(
-	node network.Node,
+	ch network.Channel,
 	item block.BlockDataMapItem,
 	ss blockdata.Session,
 ) (io.ReadSeeker, error) {
 	var r io.ReadCloser
 	if block.IsLocalBlockDateItem(item.URL()) {
-		i, err := node.Channel().BlockData(context.Background(), item)
+		i, err := ch.BlockData(context.Background(), item)
 		if err != nil {
 			return nil, err
 		}
@@ -1453,13 +1512,6 @@ func (*GeneralSyncer) fetchBlockData(
 	_, _ = s.Seek(0, 0)
 
 	return s, nil
-}
-
-func (cs *GeneralSyncer) database() storage.SyncerSession {
-	cs.RLock()
-	defer cs.RUnlock()
-
-	return cs.st
 }
 
 func (cs *GeneralSyncer) setState(state SyncerState, force bool) {
@@ -1513,18 +1565,34 @@ func (cs *GeneralSyncer) setProvedNodes(pn []base.Address) {
 	cs.pn = pn
 }
 
-func validateSyncerSourceNodes(local network.Node, sourceNodes []network.Node) (map[base.Address]network.Node, error) {
-	filtered := map[base.Address]network.Node{}
-	for _, node := range sourceNodes {
-		if local.Address().Equal(node.Address()) {
+func (cs *GeneralSyncer) syncerSession() storage.SyncerSession {
+	cs.stLock.RLock()
+	defer cs.stLock.RUnlock()
+
+	return cs.st
+}
+
+func (cs *GeneralSyncer) setSyncerSession(st storage.SyncerSession) *GeneralSyncer {
+	cs.stLock.Lock()
+	defer cs.stLock.Unlock()
+
+	cs.st = st
+
+	return cs
+}
+
+func validateSyncerSourceNodes(local base.Node, sourceNodes []base.Node) (map[base.Address]base.Node, error) {
+	filtered := map[base.Address]base.Node{}
+	for _, no := range sourceNodes {
+		if local.Address().Equal(no.Address()) {
 			return nil, xerrors.Errorf("one of sourceNodes is same with local node")
 		}
 
-		if _, found := filtered[node.Address()]; found {
+		if _, found := filtered[no.Address()]; found {
 			return nil, xerrors.Errorf("duplicated node found")
 		}
 
-		filtered[node.Address()] = node
+		filtered[no.Address()] = no
 	}
 
 	return filtered, nil

@@ -27,8 +27,7 @@ import (
 type Channel struct {
 	*logging.Logging
 	recvChan         chan seal.Seal
-	u                string
-	addr             *url.URL
+	connInfo         network.ConnInfo
 	encs             *encoder.Encoders
 	enc              encoder.Encoder
 	sendSealURL      string
@@ -40,7 +39,7 @@ type Channel struct {
 }
 
 func NewChannel(
-	addr string,
+	connInfo network.ConnInfo,
 	bufsize uint,
 	quicConfig *quic.Config,
 	encs *encoder.Encoders,
@@ -51,38 +50,22 @@ func NewChannel(
 			return c.Str("module", "quic-network")
 		}),
 		recvChan: make(chan seal.Seal, bufsize),
+		connInfo: connInfo,
 		encs:     encs,
 		enc:      enc,
 	}
 
-	var insecure bool
-	u, err := url.Parse(addr)
-	if err != nil {
-		return nil, err
-	}
-
-	if u.Scheme == "quic" {
-		u.Scheme = "https"
-	}
-
-	query := u.Query()
-	insecure = parseBoolInQuery(u.Query().Get("insecure"))
-	query.Del("insecure")
-	u.RawQuery = query.Encode()
-
-	ch.addr = u
-	ch.u = addr
-
-	ch.nodeInfoURL, _ = mustQuicURL(ch.addr.String(), QuicHandlerPathNodeInfo)
-	ch.sendSealURL, _ = mustQuicURL(ch.addr.String(), QuicHandlerPathSendSeal)
-	ch.getSealsURL, _ = mustQuicURL(ch.addr.String(), QuicHandlerPathGetSeals)
-	ch.getBlockDataMaps, _ = mustQuicURL(ch.addr.String(), QuicHandlerPathGetBlockDataMaps)
+	addr := connInfo.URL().String()
+	ch.nodeInfoURL, _ = mustQuicURL(addr, QuicHandlerPathNodeInfo)
+	ch.sendSealURL, _ = mustQuicURL(addr, QuicHandlerPathSendSeal)
+	ch.getSealsURL, _ = mustQuicURL(addr, QuicHandlerPathGetSeals)
+	ch.getBlockDataMaps, _ = mustQuicURL(addr, QuicHandlerPathGetBlockDataMaps)
 	{
-		_, u := mustQuicURL(ch.addr.String(), QuicHandlerPathGetBlockData)
+		_, u := mustQuicURL(addr, QuicHandlerPathGetBlockData)
 		ch.getBlockData = *u
 	}
 
-	client, err := NewQuicClient(insecure, quicConfig)
+	client, err := NewQuicClient(connInfo.Insecure(), quicConfig)
 	if err != nil {
 		return nil, err
 	}
@@ -102,8 +85,8 @@ func (ch *Channel) SetLogger(l logging.Logger) logging.Logger {
 	return ch.Log()
 }
 
-func (ch *Channel) URL() string {
-	return ch.u
+func (ch *Channel) ConnInfo() network.ConnInfo {
+	return ch.connInfo
 }
 
 func (ch *Channel) Seals(ctx context.Context, hs []valuehash.Hash) ([]seal.Seal, error) {
@@ -361,13 +344,4 @@ func stripSlashFilePath(p string) string {
 	b := reStripSlash.ReplaceAll([]byte(p), nil)
 
 	return string(b)
-}
-
-func parseBoolInQuery(s string) bool {
-	switch strings.ToLower(strings.TrimSpace(s)) {
-	case "t", "true", "1", "y", "yes":
-		return true
-	default:
-		return false
-	}
 }

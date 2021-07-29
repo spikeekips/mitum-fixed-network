@@ -8,8 +8,8 @@ import (
 
 	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/base/ballot"
+	"github.com/spikeekips/mitum/base/node"
 	"github.com/spikeekips/mitum/isaac"
-	"github.com/spikeekips/mitum/network"
 	"github.com/spikeekips/mitum/storage"
 	"github.com/spikeekips/mitum/util"
 	"github.com/spikeekips/mitum/util/localtime"
@@ -19,7 +19,7 @@ import (
 type JoiningState struct {
 	*logging.Logging
 	*BaseState
-	local     *network.LocalNode
+	local     *node.Local
 	database  storage.Database
 	policy    *isaac.LocalPolicy
 	suffrage  base.Suffrage
@@ -27,7 +27,7 @@ type JoiningState struct {
 }
 
 func NewJoiningState(
-	local *network.LocalNode,
+	local *node.Local,
 	st storage.Database,
 	policy *isaac.LocalPolicy,
 	suffrage base.Suffrage,
@@ -121,6 +121,10 @@ func (st *JoiningState) broadcastINITBallotEnteredWithoutDelay(voteproof base.Vo
 	}
 
 	timer := localtime.NewContextTimer(TimerIDBroadcastJoingingINITBallot, 0, func(i int) (bool, error) {
+		if i%5 == 0 {
+			_ = baseBallot.Sign(st.local.Privatekey(), st.policy.NetworkID())
+		}
+
 		if err := st.BroadcastBallot(baseBallot, i == 0); err != nil {
 			st.Log().Error().Err(err).Msg("failed to broadcast init ballot")
 		}
@@ -160,6 +164,10 @@ func (st *JoiningState) broadcastINITBallotEntered(voteproof base.Voteproof) err
 	timer := localtime.NewContextTimer(TimerIDBroadcastJoingingINITBallot, 0, func(i int) (bool, error) {
 		if err := checkBallotbox(); err != nil {
 			return false, err
+		}
+
+		if i%5 == 0 {
+			_ = baseBallot.Sign(st.local.Privatekey(), st.policy.NetworkID())
 		}
 
 		if err := st.BroadcastBallot(baseBallot, i == 0); err != nil {

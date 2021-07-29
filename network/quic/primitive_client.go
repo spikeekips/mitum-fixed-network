@@ -114,6 +114,8 @@ func (cl *QuicClient) makeRequest(url string, method string, b []byte, headers h
 			request, err = http.NewRequest("POST", url, bytes.NewBuffer(b))
 		case "DELETE":
 			request, err = http.NewRequest("DELETE", url, bytes.NewBuffer(b))
+		case "HEAD":
+			request, err = http.NewRequest("HEAD", url, bytes.NewBuffer(b))
 		}
 
 		if err != nil {

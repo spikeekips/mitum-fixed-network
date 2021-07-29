@@ -52,7 +52,7 @@ func ProcessProposalProcessor(ctx context.Context) (context.Context, error) {
 		return nil, err
 	}
 
-	if !suffrage.IsInside(nodepool.Local().Address()) {
+	if !suffrage.IsInside(nodepool.LocalNode().Address()) {
 		log.Debug().Msg("none-suffrage node; proposal processor will not be used")
 
 		return ctx, nil

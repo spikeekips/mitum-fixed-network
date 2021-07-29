@@ -10,7 +10,7 @@ type BaseLocalNetworkPackerYAML struct {
 
 func (no BaseLocalNetwork) MarshalYAML() (interface{}, error) {
 	nno := BaseLocalNetworkPackerYAML{
-		URL:       no.URL().String(),
+		URL:       no.ConnInfo().String(),
 		Bind:      no.Bind().String(),
 		RateLimit: no.RateLimit(),
 	}

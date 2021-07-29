@@ -12,6 +12,7 @@ import (
 	"github.com/spikeekips/mitum/base/ballot"
 	"github.com/spikeekips/mitum/base/block"
 	"github.com/spikeekips/mitum/base/key"
+	"github.com/spikeekips/mitum/base/node"
 	"github.com/spikeekips/mitum/base/operation"
 	"github.com/spikeekips/mitum/base/state"
 	"github.com/spikeekips/mitum/storage/blockdata"
@@ -49,7 +50,7 @@ func (t *testSession) SetupSuite() {
 	_ = encs.TestAddHinter(ballot.ACCEPTFactV0{})
 	_ = encs.TestAddHinter(base.VoteproofV0{})
 	_ = encs.TestAddHinter(base.BaseVoteproofNodeFact{})
-	_ = encs.TestAddHinter(base.BaseNodeV0{})
+	_ = encs.TestAddHinter(node.BaseV0{})
 	_ = encs.TestAddHinter(block.BlockV0{})
 	_ = encs.TestAddHinter(block.ManifestV0{})
 	_ = encs.TestAddHinter(block.ConsensusInfoV0{})
@@ -191,9 +192,9 @@ func (t *testSession) TestSetSuffrageInfo() {
 	defer ss.Cancel()
 
 	nodes := []base.Node{
-		base.RandomNode(util.UUID().String()),
-		base.RandomNode(util.UUID().String()),
-		base.RandomNode(util.UUID().String()),
+		node.RandomNode(util.UUID().String()),
+		node.RandomNode(util.UUID().String()),
+		node.RandomNode(util.UUID().String()),
 	}
 	sf := block.NewSuffrageInfoV0(nodes[0].Address(), nodes)
 
@@ -220,7 +221,6 @@ func (t *testSession) TestSetSuffrageInfo() {
 		t.Equal(a.String(), b.String())
 		t.True(a.Address().Equal(b.Address()))
 		t.True(a.Publickey().Equal(b.Publickey()))
-		t.Equal(a.URL(), b.URL())
 	}
 }
 

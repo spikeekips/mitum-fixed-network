@@ -14,7 +14,7 @@ type BaseLocalNetworkPackerJSON struct {
 
 func (no BaseLocalNetwork) MarshalJSON() ([]byte, error) {
 	nno := BaseLocalNetworkPackerJSON{
-		URL:       no.URL().String(),
+		URL:       no.ConnInfo().String(),
 		Bind:      no.Bind().String(),
 		RateLimit: no.RateLimit(),
 	}

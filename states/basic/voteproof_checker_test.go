@@ -7,7 +7,6 @@ import (
 
 	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/base/seal"
-	"github.com/spikeekips/mitum/isaac"
 	channetwork "github.com/spikeekips/mitum/network/gochan"
 	"github.com/spikeekips/mitum/util/valuehash"
 )
@@ -16,15 +15,10 @@ type testVoteproofChecker struct {
 	baseTestState
 
 	suf base.Suffrage
-
-	local  *isaac.Local
-	remote *isaac.Local
 }
 
 func (t *testVoteproofChecker) SetupTest() {
-	ls := t.Locals(2)
-
-	t.local, t.remote = ls[0], ls[1]
+	t.baseTestState.SetupTest()
 
 	t.suf = t.Suffrage(t.remote, t.local)
 }
@@ -72,7 +66,7 @@ func (t *testVoteproofChecker) TestACCEPTVoteproofProposalFoundInLocal() {
 }
 
 func (t *testVoteproofChecker) TestACCEPTVoteproofProposalFoundInRemote() {
-	nch := t.remote.Node().Channel().(*channetwork.Channel)
+	nch := t.remote.Channel().(*channetwork.Channel)
 	nch.SetGetSealHandler(func(hs []valuehash.Hash) ([]seal.Seal, error) {
 		var seals []seal.Seal
 		for _, h := range hs {

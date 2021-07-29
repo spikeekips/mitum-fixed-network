@@ -4,8 +4,8 @@ import (
 	"golang.org/x/xerrors"
 
 	"github.com/spikeekips/mitum/base"
+	"github.com/spikeekips/mitum/base/node"
 	"github.com/spikeekips/mitum/isaac"
-	"github.com/spikeekips/mitum/network"
 	"github.com/spikeekips/mitum/storage"
 	"github.com/spikeekips/mitum/storage/blockdata"
 	"github.com/spikeekips/mitum/util"
@@ -15,7 +15,7 @@ import (
 type BootingState struct {
 	*logging.Logging
 	*BaseState
-	local     *network.LocalNode
+	local     *node.Local
 	database  storage.Database
 	blockData blockdata.BlockData
 	policy    *isaac.LocalPolicy
@@ -23,7 +23,7 @@ type BootingState struct {
 }
 
 func NewBootingState(
-	local *network.LocalNode,
+	local *node.Local,
 	st storage.Database,
 	blockData blockdata.BlockData,
 	policy *isaac.LocalPolicy,

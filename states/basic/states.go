@@ -101,7 +101,7 @@ func NewStates(
 		ss.livp = i
 	}
 
-	ss.isNoneSuffrageNode = !suffrage.IsInside(nodepool.Local().Address())
+	ss.isNoneSuffrageNode = !suffrage.IsInside(nodepool.LocalNode().Address())
 
 	return ss, nil
 }
@@ -205,6 +205,8 @@ func (ss *States) SetLastVoteproof(voteproof base.Voteproof) bool {
 		ss.livp = voteproof
 	}
 
+	isaac.LoggerWithVoteproof(voteproof, ss.Log()).Debug().Msg("last voteproof updated")
+
 	return true
 }
 
@@ -260,7 +262,7 @@ func (ss *States) BroadcastBallot(blt ballot.Ballot, toLocal bool) error {
 
 	l.Debug().Bool("to_local", toLocal).Msg("broadcasting ballot")
 
-	return ss.broadcast(blt, toLocal, func(node network.Node) bool {
+	return ss.broadcast(blt, toLocal, func(node base.Node) bool {
 		return ss.suffrage.IsInside(node.Address())
 	})
 }
@@ -274,7 +276,7 @@ func (ss *States) BroadcastSeals(sl seal.Seal, toLocal bool) error {
 
 	seal.LogEventWithSeal(sl, l.Debug(), l.IsVerbose()).Bool("to_local", toLocal).Msg("broadcasting seal")
 
-	return ss.broadcast(sl, toLocal, func(network.Node) bool {
+	return ss.broadcast(sl, toLocal, func(base.Node) bool {
 		return true
 	})
 }
@@ -528,8 +530,11 @@ func (ss *States) processVoteproofInternal(voteproof base.Voteproof) error {
 		return err
 	}
 
-	if !ss.SetLastVoteproof(voteproof) {
-		return util.IgnoreError.Errorf("old voteproof received")
+	switch ss.State() {
+	case base.StateJoining, base.StateConsensus:
+		if !ss.SetLastVoteproof(voteproof) {
+			return util.IgnoreError.Errorf("old voteproof received")
+		}
 	}
 
 	if err == nil || sctx.ToState() == ss.State() {
@@ -568,7 +573,7 @@ func (ss *States) newSealProposal(proposal ballot.Proposal) error {
 		return nil
 	}
 
-	if proposal.Node().Equal(ss.nodepool.Local().Address()) {
+	if proposal.Node().Equal(ss.nodepool.LocalNode().Address()) {
 		return nil
 	}
 
@@ -635,7 +640,7 @@ func (ss *States) validateProposal(proposal ballot.Proposal) error {
 	_ = pvc.SetLogger(ss.Log())
 
 	var fns []util.CheckerFunc
-	if proposal.Node().Equal(ss.nodepool.Local().Address()) {
+	if proposal.Node().Equal(ss.nodepool.LocalNode().Address()) {
 		fns = []util.CheckerFunc{
 			pvc.SaveProposal,
 			pvc.IsOlder,
@@ -697,7 +702,7 @@ func (ss *States) checkBallotVoteproof(blt ballot.Ballot) error {
 		return nil
 	}
 
-	if blt.Node().Equal(ss.nodepool.Local().Address()) {
+	if blt.Node().Equal(ss.nodepool.LocalNode().Address()) {
 		return nil
 	}
 
@@ -726,7 +731,14 @@ func (ss *States) checkBallotVoteproof(blt ballot.Ballot) error {
 	}
 
 	if base.CompareVoteproof(voteproof, lvp) < 1 {
-		l.Debug().Msg("old or same height voteproof received")
+		l.Debug().
+			Str("last_voteproof_height", lvp.Height().String()).
+			Uint64("last_voteproof_round", lvp.Round().Uint64()).
+			Str("last_voteproof_stage", lvp.Stage().String()).
+			Str("ballot_voteproof_height", lvp.Height().String()).
+			Uint64("ballot_voteproof_round", lvp.Round().Uint64()).
+			Str("ballot_voteproof_stage", lvp.Stage().String()).
+			Msg("old or same height voteproof received")
 
 		return nil
 	}
@@ -828,7 +840,7 @@ func (ss *States) broadcastOperationSealToSuffrageNodes(sl operation.Seal) {
 		return
 	}
 
-	if err := ss.broadcast(sl, false, func(node network.Node) bool {
+	if err := ss.broadcast(sl, false, func(node base.Node) bool {
 		return ss.suffrage.IsInside(node.Address())
 	}); err != nil {
 		ss.Log().Error().Err(err).Msg("problem to broadcast operation.Seal to suffrage nodes")
@@ -838,11 +850,9 @@ func (ss *States) broadcastOperationSealToSuffrageNodes(sl operation.Seal) {
 func (ss *States) broadcast(
 	sl seal.Seal,
 	toLocal bool,
-	filter func(node network.Node) bool,
+	filter func(node base.Node) bool,
 ) error {
 	l := isaac.LoggerWithSeal(sl, ss.Log())
-
-	seal.LogEventWithSeal(sl, l.Debug(), l.IsVerbose()).Bool("to_local", toLocal).Msg("broadcasting seal")
 
 	if toLocal {
 		go func() {
@@ -852,23 +862,35 @@ func (ss *States) broadcast(
 		}()
 	}
 
+	if ss.nodepool.LenRemoteAlives() < 1 {
+		return nil
+	}
+
 	// NOTE broadcast nodes of Nodepool, including suffrage nodes
-	ss.nodepool.TraverseRemotes(func(node network.Node) bool {
-		if !filter(node) {
+	var targets int
+	ss.nodepool.TraverseAliveRemotes(func(no base.Node, ch network.Channel) bool {
+		if !filter(no) {
 			return true
 		}
 
-		go func(node network.Node) {
+		targets++
+
+		go func(no base.Node, ch network.Channel) {
 			ctx, cancel := context.WithTimeout(context.Background(), time.Second*5)
 			defer cancel()
 
-			if err := node.Channel().SendSeal(ctx, sl); err != nil {
-				l.Error().Err(err).Hinted("target_node", node.Address()).Msg("failed to broadcast")
+			if err := ch.SendSeal(ctx, sl); err != nil {
+				l.Error().Err(err).Hinted("target_node", no.Address()).Msg("failed to broadcast")
 			}
-		}(node)
+		}(no, ch)
 
 		return true
 	})
+
+	seal.LogEventWithSeal(sl, l.Debug(), l.IsVerbose()).
+		Bool("to_local", toLocal).
+		Int("targets", targets).
+		Msg("seal broadcasted")
 
 	return nil
 }

@@ -6,6 +6,7 @@ import (
 
 	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/base/block"
+	"github.com/spikeekips/mitum/base/node"
 	"github.com/spikeekips/mitum/network"
 	"github.com/spikeekips/mitum/storage"
 	"github.com/spikeekips/mitum/storage/blockdata"
@@ -18,9 +19,10 @@ type Syncers struct {
 	sync.RWMutex
 	*util.ContextDaemon
 	*logging.Logging
-	local                *network.LocalNode
+	local                *node.Local
 	database             storage.Database
 	blockData            blockdata.BlockData
+	nodepool             *network.Nodepool
 	policy               *LocalPolicy
 	baseManifest         block.Manifest
 	limitBlocksPerSyncer uint
@@ -28,15 +30,16 @@ type Syncers struct {
 	whenFinished         func(base.Height)
 	whenBlockSaved       func([]block.Block)
 	targetHeight         base.Height
-	prevSyncer           Syncer
 	lastSyncer           Syncer
-	sourceNodes          []network.Node
+	sourceNodes          []base.Node
+	syncers              *sync.Map
 }
 
 func NewSyncers(
-	local *network.LocalNode,
+	local *node.Local,
 	st storage.Database,
 	blockData blockdata.BlockData,
+	nodepool *network.Nodepool,
 	policy *LocalPolicy,
 	baseManifest block.Manifest,
 ) *Syncers {
@@ -47,13 +50,15 @@ func NewSyncers(
 		local:                local,
 		database:             st,
 		blockData:            blockData,
+		nodepool:             nodepool,
 		policy:               policy,
 		baseManifest:         baseManifest,
 		limitBlocksPerSyncer: 10,
-		stateChan:            make(chan SyncerStateChangedContext),
+		stateChan:            make(chan SyncerStateChangedContext, 10),
 		whenFinished:         func(base.Height) {},
 		whenBlockSaved:       func([]block.Block) {},
 		targetHeight:         base.NilHeight,
+		syncers:              &sync.Map{},
 	}
 
 	sy.ContextDaemon = util.NewContextDaemon("syncers", sy.start)
@@ -62,39 +67,30 @@ func NewSyncers(
 }
 
 func (sy *Syncers) Stop() error {
-	sy.Lock()
-	defer sy.Unlock()
-
 	if err := sy.ContextDaemon.Stop(); err != nil {
 		if !xerrors.Is(err, util.DaemonAlreadyStoppedError) {
 			return err
 		}
 	}
 
-	if sy.lastSyncer != nil {
-		if err := sy.lastSyncer.Close(); err != nil {
-			return xerrors.Errorf("failed to close last syncer: %w", err)
-		}
+	sy.Lock()
+	defer sy.Unlock()
 
-		sy.lastSyncer = nil
-	}
+	sy.lastSyncer = nil
 
-	if sy.prevSyncer != nil {
-		if err := sy.prevSyncer.Close(); err != nil {
-			return xerrors.Errorf("failed to close last syncer: %w", err)
-		}
+	var err error
+	sy.syncers.Range(func(k, v interface{}) bool {
+		err = v.(Syncer).Close()
+		return err == nil
+	})
 
-		sy.prevSyncer = nil
-	}
-
-	return nil
+	return err
 }
 
 func (sy *Syncers) SetLogger(l logging.Logger) logging.Logger {
-	_ = sy.Logging.SetLogger(l)
 	_ = sy.ContextDaemon.SetLogger(l)
 
-	return sy.Log()
+	return sy.Logging.SetLogger(l)
 }
 
 func (sy *Syncers) WhenFinished(callback func(base.Height)) {
@@ -107,7 +103,7 @@ func (sy *Syncers) WhenBlockSaved(callback func([]block.Block)) {
 
 // Add adds new syncer with target height. If it returns true, it means Syncers
 // not yet finished.
-func (sy *Syncers) Add(to base.Height, sourceNodes []network.Node) (bool, error) {
+func (sy *Syncers) Add(to base.Height, sourceNodes []base.Node) (bool, error) {
 	sy.Lock()
 	defer sy.Unlock()
 
@@ -143,9 +139,6 @@ func (sy *Syncers) Add(to base.Height, sourceNodes []network.Node) (bool, error)
 
 		return false, err
 	}
-	if sy.lastSyncer != nil {
-		sy.prevSyncer = sy.lastSyncer
-	}
 
 	sy.lastSyncer = i
 
@@ -166,19 +159,16 @@ func (sy *Syncers) IsFinished() bool {
 }
 
 func (sy *Syncers) start(ctx context.Context) error {
-end:
 	for {
 		select {
 		case <-ctx.Done():
-			break end
-		case cxt := <-sy.stateChan:
-			if err := sy.stateChanged(cxt); err != nil {
+			return nil
+		case sctx := <-sy.stateChan:
+			if err := sy.stateChanged(sctx); err != nil {
 				sy.Log().Error().Err(err).Msg("failed to handle state changed")
 			}
 		}
 	}
-
-	return nil
 }
 
 func (sy *Syncers) newSyncer(baseManifest block.Manifest) (Syncer, error) {
@@ -209,11 +199,11 @@ func (sy *Syncers) newSyncer(baseManifest block.Manifest) (Syncer, error) {
 		return ctx.Hinted("from", from).Hinted("to", to)
 	})
 
-	var syncer Syncer
-	i, err := NewGeneralSyncer(
+	syncer, err := NewGeneralSyncer(
 		sy.local,
 		sy.database,
 		sy.blockData,
+		sy.nodepool,
 		sy.policy,
 		sy.sourceNodes,
 		baseManifest, to,
@@ -223,14 +213,15 @@ func (sy *Syncers) newSyncer(baseManifest block.Manifest) (Syncer, error) {
 
 		return nil, err
 	}
-	i = i.SetStateChan(sy.stateChan)
-	syncer = i
+	syncer = syncer.SetStateChan(sy.stateChan)
 
-	if l, ok := syncer.(logging.SetLogger); ok {
+	if l, ok := (interface{})(syncer).(logging.SetLogger); ok {
 		_ = l.SetLogger(sy.Log())
 	}
 
 	l.Debug().Msg("new syncer added")
+
+	sy.syncers.Store(syncer.ID(), syncer)
 
 	return syncer, nil
 }
@@ -263,9 +254,6 @@ func (sy *Syncers) prepareSyncer(baseManifest block.Manifest) error {
 		l.Error().Err(err).Msg("failed to prepare syncer")
 
 		return err
-	}
-	if sy.lastSyncer != nil {
-		sy.prevSyncer = sy.lastSyncer
 	}
 
 	sy.lastSyncer = newSyncer
@@ -301,6 +289,11 @@ func (sy *Syncers) stateChanged(ctx SyncerStateChangedContext) error {
 		if err := sy.stateChangedSaved(ctx); err != nil {
 			return err
 		}
+		if err := ctx.syncer.Close(); err != nil {
+			return err
+		}
+
+		sy.syncers.Delete(ctx.syncer.ID())
 	default:
 		l.Debug().Msg("syncer state changed")
 	}
@@ -401,14 +394,14 @@ func (sy *Syncers) isFinished() bool {
 	}
 }
 
-func (sy *Syncers) mergeSourceNodes(ns []network.Node) {
+func (sy *Syncers) mergeSourceNodes(ns []base.Node) {
 	if len(sy.sourceNodes) < 1 {
 		sy.sourceNodes = ns
 
 		return
 	}
 
-	filtered := make([]network.Node, len(ns))
+	filtered := make([]base.Node, len(ns))
 	for i := range ns {
 		n := ns[i]
 

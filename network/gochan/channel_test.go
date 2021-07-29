@@ -23,7 +23,7 @@ func (t *testNetworkChanChannel) SetupSuite() {
 }
 
 func (t *testNetworkChanChannel) TestSendReceive() {
-	gs := NewChannel(0)
+	gs := NewChannel(0, network.NewNilConnInfo("showme"))
 	t.Implements((*network.Channel)(nil), gs)
 
 	sl := seal.NewDummySeal(t.pk)
@@ -37,7 +37,7 @@ func (t *testNetworkChanChannel) TestSendReceive() {
 }
 
 func (t *testNetworkChanChannel) TestGetSeal() {
-	gs := NewChannel(0)
+	gs := NewChannel(0, network.NewNilConnInfo("showme"))
 
 	sl := seal.NewDummySeal(t.pk)
 

@@ -3,6 +3,7 @@ package process
 import (
 	"context"
 
+	"github.com/spikeekips/mitum/base/node"
 	"github.com/spikeekips/mitum/launch/config"
 	"github.com/spikeekips/mitum/launch/pm"
 	"github.com/spikeekips/mitum/network"
@@ -36,13 +37,13 @@ func ProcessLocalNode(ctx context.Context) (context.Context, error) {
 		return ctx, err
 	}
 
-	local := network.NewLocalNode(conf.Address(), conf.Privatekey(), conf.Network().URL().String()).
-		SetChannel(network.NewDummyChannel("local://"))
+	no := node.NewLocal(conf.Address(), conf.Privatekey())
+	ch := network.NewDummyChannel(network.NewNilConnInfo("local://"))
 
-	nodepool := network.NewNodepool(local)
-	log.Debug().Str("added_node", local.Address().String()).Msg("local node added to nodepool")
+	nodepool := network.NewNodepool(no, ch)
+	log.Debug().Str("added_node", no.Address().String()).Msg("local node added to nodepool")
 
 	ctx = context.WithValue(ctx, ContextValueNodepool, nodepool)
 
-	return context.WithValue(ctx, ContextValueLocalNode, local), nil
+	return context.WithValue(ctx, ContextValueLocalNode, no), nil
 }

@@ -8,7 +8,6 @@ import (
 
 	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/base/block"
-	"github.com/spikeekips/mitum/network"
 	"github.com/stretchr/testify/suite"
 	"golang.org/x/xerrors"
 )
@@ -37,7 +36,7 @@ func (t *testSyncers) TestNew() {
 	finishedChan := make(chan base.Height, 10)
 	blocksChan := make(chan []block.Block, 10)
 
-	ss := NewSyncers(local.Node(), local.Database(), local.BlockData(), local.Policy(), baseManifest)
+	ss := NewSyncers(local.Node(), local.Database(), local.BlockData(), local.Nodes(), local.Policy(), baseManifest)
 
 	ss.WhenFinished(func(height base.Height) {
 		finishedChan <- height
@@ -54,7 +53,7 @@ func (t *testSyncers) TestNew() {
 	t.True(target < fromHeight+base.Height(int64(ss.limitBlocksPerSyncer)))
 	t.GenerateBlocks([]*Local{remote}, target)
 
-	isFinished, err := ss.Add(target, []network.Node{remote.Node()})
+	isFinished, err := ss.Add(target, []base.Node{remote.Node()})
 	t.NoError(err)
 	t.False(isFinished)
 
@@ -117,7 +116,7 @@ func (t *testSyncers) TestMultipleSyncers() {
 
 	finishedChan := make(chan base.Height, 10)
 
-	ss := NewSyncers(local.Node(), local.Database(), local.BlockData(), local.Policy(), baseManifest)
+	ss := NewSyncers(local.Node(), local.Database(), local.BlockData(), local.Nodes(), local.Policy(), baseManifest)
 
 	ss.WhenFinished(func(height base.Height) {
 		finishedChan <- height
@@ -127,7 +126,7 @@ func (t *testSyncers) TestMultipleSyncers() {
 	defer ss.Stop()
 
 	for i := baseManifest.Height().Int64() + 1; i <= target.Int64(); i++ {
-		isFinished, err := ss.Add(base.Height(i), []network.Node{remote.Node()})
+		isFinished, err := ss.Add(base.Height(i), []base.Node{remote.Node()})
 		t.NoError(err)
 		t.False(isFinished)
 	}
@@ -165,7 +164,7 @@ func (t *testSyncers) TestMangledFinishedOrder() {
 
 	finishedChan := make(chan base.Height, 10)
 
-	ss := NewSyncers(local.Node(), local.Database(), local.BlockData(), local.Policy(), baseManifest)
+	ss := NewSyncers(local.Node(), local.Database(), local.BlockData(), local.Nodes(), local.Policy(), baseManifest)
 
 	ss.WhenFinished(func(height base.Height) {
 		finishedChan <- height
@@ -174,10 +173,10 @@ func (t *testSyncers) TestMangledFinishedOrder() {
 
 	defer ss.Stop()
 
-	isFinished, err := ss.Add(target-1, []network.Node{remote.Node()})
+	isFinished, err := ss.Add(target-1, []base.Node{remote.Node()})
 	t.NoError(err)
 	t.False(isFinished)
-	isFinished, err = ss.Add(target, []network.Node{remote.Node()})
+	isFinished, err = ss.Add(target, []base.Node{remote.Node()})
 	t.NoError(err)
 	t.False(isFinished)
 
@@ -212,7 +211,7 @@ func (t *testSyncers) TestAddAfterFinished() {
 	t.NoError(err)
 	t.True(found)
 
-	ss := NewSyncers(local.Node(), local.Database(), local.BlockData(), local.Policy(), baseManifest)
+	ss := NewSyncers(local.Node(), local.Database(), local.BlockData(), local.Nodes(), local.Policy(), baseManifest)
 
 	finishedChan := make(chan base.Height, 10)
 	ss.WhenFinished(func(height base.Height) {
@@ -223,7 +222,7 @@ func (t *testSyncers) TestAddAfterFinished() {
 
 	defer ss.Stop()
 
-	isFinished, err := ss.Add(target-3, []network.Node{remote.Node()})
+	isFinished, err := ss.Add(target-3, []base.Node{remote.Node()})
 	t.NoError(err)
 	t.False(isFinished)
 
@@ -244,7 +243,7 @@ end0:
 		}
 	}
 
-	isFinished, err = ss.Add(target, []network.Node{remote.Node()})
+	isFinished, err = ss.Add(target, []base.Node{remote.Node()})
 	t.NoError(err)
 	t.False(isFinished)
 
@@ -279,22 +278,21 @@ func (t *testSyncers) TestStopNotFinished() {
 	t.NoError(err)
 	t.True(found)
 
-	ss := NewSyncers(local.Node(), local.Database(), local.BlockData(), local.Policy(), baseManifest)
+	ss := NewSyncers(local.Node(), local.Database(), local.BlockData(), local.Nodes(), local.Policy(), baseManifest)
 	ss.limitBlocksPerSyncer = 1
 
-	finishedChan := make(chan base.Height, 10)
-	ss.WhenFinished(func(height base.Height) {
-		finishedChan <- height
-	})
 	t.NoError(ss.Start())
 
-	isFinished, err := ss.Add(target, []network.Node{remote.Node()})
+	isFinished, err := ss.Add(target, []base.Node{remote.Node()})
 	t.NoError(err)
 	t.False(isFinished)
 
-	<-time.After(time.Millisecond * 500)
+	<-time.After(time.Millisecond * 100)
+
 	t.NoError(ss.Stop())
 	t.Nil(ss.LastSyncer())
+
+	<-time.After(time.Second * 4)
 }
 
 func TestSyncers(t *testing.T) {

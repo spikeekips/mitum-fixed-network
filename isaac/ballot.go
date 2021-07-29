@@ -6,13 +6,12 @@ import (
 	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/base/ballot"
 	"github.com/spikeekips/mitum/base/block"
-	"github.com/spikeekips/mitum/network"
 	"github.com/spikeekips/mitum/storage"
 	"github.com/spikeekips/mitum/util"
 	"github.com/spikeekips/mitum/util/valuehash"
 )
 
-func NewINITBallotV0Round0(node network.Node, st storage.Database) (ballot.INITV0, error) {
+func NewINITBallotV0Round0(node base.Node, st storage.Database) (ballot.INITV0, error) {
 	var m block.Manifest
 	switch l, found, err := st.LastManifest(); {
 	case !found:
@@ -36,7 +35,7 @@ func NewINITBallotV0Round0(node network.Node, st storage.Database) (ballot.INITV
 }
 
 func NewINITBallotV0WithVoteproof(
-	node network.Node,
+	node base.Node,
 	st storage.Database,
 	voteproof base.Voteproof,
 ) (ballot.INITV0, error) {

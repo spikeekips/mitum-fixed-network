@@ -5,6 +5,7 @@ import (
 	"github.com/spikeekips/mitum/base/ballot"
 	"github.com/spikeekips/mitum/base/block"
 	"github.com/spikeekips/mitum/base/key"
+	"github.com/spikeekips/mitum/base/node"
 	"github.com/spikeekips/mitum/base/operation"
 	"github.com/spikeekips/mitum/base/state"
 	"github.com/spikeekips/mitum/network"
@@ -21,7 +22,7 @@ var EncoderTypes = []hint.Type{
 	ballot.ProposalType,
 	ballot.SIGNFactType,
 	ballot.SIGNType,
-	base.BaseNodeV0Type,
+	node.BaseV0Type,
 	base.StringAddressType,
 	base.VoteproofV0Type,
 	base.BaseVoteproofNodeFactType,
@@ -62,7 +63,7 @@ var EncoderHinters = []hint.Hinter{
 	ballot.ProposalV0{},
 	ballot.SIGNFactV0{},
 	ballot.SIGNV0{},
-	base.BaseNodeV0{},
+	node.BaseV0{},
 	base.StringAddress(""),
 	base.VoteproofV0{},
 	base.BaseVoteproofNodeFact{},

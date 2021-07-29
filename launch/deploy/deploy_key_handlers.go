@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/gorilla/mux"
+	"github.com/spikeekips/mitum/base/node"
 	"github.com/spikeekips/mitum/isaac"
 	"github.com/spikeekips/mitum/launch/process"
 	"github.com/spikeekips/mitum/network"
@@ -48,7 +49,7 @@ func newDeployKeyHandlers(ctx context.Context, handler func(string) *mux.Route) 
 		return nil, xerrors.Errorf("failed to create cache for deploy key handlers")
 	}
 
-	var local *network.LocalNode
+	var local *node.Local
 	if err := process.LoadLocalNodeContextValue(ctx, &local); err != nil {
 		return nil, err
 	}

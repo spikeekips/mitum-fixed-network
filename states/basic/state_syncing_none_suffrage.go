@@ -79,19 +79,24 @@ func (nc *nodeInfoChecker) start(ctx context.Context) error {
 }
 
 func (nc *nodeInfoChecker) check(ctx context.Context) error {
+	if nc.nodepool.LenRemoteAlives() < 1 {
+		return nil
+	}
+
 	nctx, cancel := context.WithTimeout(ctx, nc.interval-time.Second)
 	defer cancel()
 
-	resultch := make(chan network.NodeInfo, nc.nodepool.LenRemotes())
+	lenremotes := nc.nodepool.Len() - 1
+	resultch := make(chan network.NodeInfo, lenremotes)
 
 	var wg sync.WaitGroup
-	wg.Add(nc.nodepool.LenRemotes())
-	nc.nodepool.TraverseRemotes(func(no network.Node) bool {
-		go func(no network.Node) {
+	wg.Add(lenremotes)
+	nc.nodepool.TraverseAliveRemotes(func(no base.Node, ch network.Channel) bool {
+		go func(no base.Node, ch network.Channel) {
 			defer wg.Done()
 
-			resultch <- nc.request(nctx, no)
-		}(no)
+			resultch <- nc.request(nctx, no, ch)
+		}(no, ch)
 
 		return true
 	})
@@ -127,12 +132,12 @@ func (nc *nodeInfoChecker) newHeight(height base.Height) {
 	}()
 }
 
-func (nc *nodeInfoChecker) request(ctx context.Context, no network.Node) network.NodeInfo {
+func (nc *nodeInfoChecker) request(ctx context.Context, no base.Node, ch network.Channel) network.NodeInfo {
 	l := nc.Log().WithLogger(func(lctx logging.Context) logging.Emitter {
 		return lctx.Interface("node", no)
 	})
 
-	i, err := no.Channel().NodeInfo(ctx)
+	i, err := ch.NodeInfo(ctx)
 	if err != nil {
 		l.Error().Err(err).Msg("failed to check nodeinfo")
 	} else if err := nc.validateNodeInfo(no, i); err != nil {
@@ -144,7 +149,7 @@ func (nc *nodeInfoChecker) request(ctx context.Context, no network.Node) network
 	return i
 }
 
-func (nc *nodeInfoChecker) validateNodeInfo(no network.Node, ni network.NodeInfo) error {
+func (nc *nodeInfoChecker) validateNodeInfo(no base.Node, ni network.NodeInfo) error {
 	if ni == nil {
 		return xerrors.Errorf("empty nodeinfo")
 	}
@@ -225,10 +230,15 @@ func (st *SyncingStateNoneSuffrage) whenNewHeight(height base.Height) error {
 		return nil
 	}
 
-	sources := make([]network.Node, st.nodepool.LenRemotes())
+	n := st.nodepool.LenRemoteAlives()
+	if n < 1 {
+		return nil
+	}
+
+	sources := make([]base.Node, n)
 
 	var i int
-	st.nodepool.TraverseRemotes(func(no network.Node) bool {
+	st.nodepool.TraverseAliveRemotes(func(no base.Node, _ network.Channel) bool {
 		sources[i] = no
 		i++
 

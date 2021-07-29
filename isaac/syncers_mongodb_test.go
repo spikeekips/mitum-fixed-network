@@ -10,7 +10,6 @@ import (
 	"golang.org/x/xerrors"
 
 	"github.com/spikeekips/mitum/base"
-	"github.com/spikeekips/mitum/network"
 	mongodbstorage "github.com/spikeekips/mitum/storage/mongodb"
 	"github.com/spikeekips/mitum/util/cache"
 )
@@ -34,7 +33,7 @@ func (t *testSyncers) TestSaveLastBlock() {
 
 	finishedChan := make(chan base.Height)
 
-	ss := NewSyncers(local.Node(), local.Database(), local.BlockData(), local.Policy(), baseManifest)
+	ss := NewSyncers(local.Node(), local.Database(), local.BlockData(), local.Nodes(), local.Policy(), baseManifest)
 	ss.WhenFinished(func(height base.Height) {
 		finishedChan <- height
 	})
@@ -42,7 +41,7 @@ func (t *testSyncers) TestSaveLastBlock() {
 
 	defer ss.Stop()
 
-	isFinished, err := ss.Add(target, []network.Node{remote.Node()})
+	isFinished, err := ss.Add(target, []base.Node{remote.Node()})
 	t.NoError(err)
 	t.False(isFinished)
 

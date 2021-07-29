@@ -96,6 +96,10 @@ func (ca *GCache) Set(key interface{}, b interface{}, expire time.Duration) erro
 	return ca.gc.SetWithExpire(key, b, expire)
 }
 
+func (ca *GCache) Remove(key interface{}) bool {
+	return ca.gc.Remove(key)
+}
+
 func (ca *GCache) Purge() error {
 	ca.gc.Purge()
 

@@ -8,14 +8,12 @@ import (
 
 type BaseRemoteNodePackerJSON struct {
 	Address   base.Address  `json:"address"`
-	URL       string        `json:"url"`
 	Publickey key.Publickey `json:"publickey"`
 }
 
 func (no BaseRemoteNode) MarshalJSON() ([]byte, error) {
 	return jsonenc.Marshal(BaseRemoteNodePackerJSON{
 		Address:   no.Address(),
-		URL:       no.URL().String(),
 		Publickey: no.Publickey(),
 	})
 }

@@ -11,3 +11,7 @@ func (ch *Channel) GetBlockDataMapsHandler() network.BlockDataMapsHandler {
 func (ch *Channel) GetBlockDataHandler() network.BlockDataHandler {
 	return ch.getBlockData
 }
+
+func RandomChannel(name string) network.Channel {
+	return NewChannel(0, network.NewNilConnInfo(name))
+}

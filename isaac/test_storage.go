@@ -3,8 +3,6 @@
 package isaac
 
 import (
-	"fmt"
-	"sync"
 	"time"
 
 	"golang.org/x/xerrors"
@@ -12,7 +10,6 @@ import (
 	"github.com/spikeekips/mitum/storage"
 	leveldbstorage "github.com/spikeekips/mitum/storage/leveldb"
 	mongodbstorage "github.com/spikeekips/mitum/storage/mongodb"
-	"github.com/spikeekips/mitum/util"
 	"github.com/spikeekips/mitum/util/cache"
 	"github.com/spikeekips/mitum/util/encoder"
 	bsonenc "github.com/spikeekips/mitum/util/encoder/bson"
@@ -24,6 +21,7 @@ type StorageSupportTest struct {
 	Encs    *encoder.Encoders
 	JSONEnc *jsonenc.Encoder
 	BSONEnc *bsonenc.Encoder
+	dbs     []storage.Database
 }
 
 func (ss *StorageSupportTest) SetupSuite() {
@@ -37,6 +35,19 @@ func (ss *StorageSupportTest) SetupSuite() {
 }
 
 func (ss *StorageSupportTest) Database(encs *encoder.Encoders, enc encoder.Encoder) storage.Database {
+	d := ss.database(encs, enc)
+	ss.dbs = append(ss.dbs, d)
+
+	return d
+}
+
+func (ss *StorageSupportTest) TearDownTest() {
+	for i := range ss.dbs {
+		_ = ss.dbs[i].Close()
+	}
+}
+
+func (ss *StorageSupportTest) database(encs *encoder.Encoders, enc encoder.Encoder) storage.Database {
 	if encs == nil {
 		encs = ss.Encs
 	}
@@ -53,8 +64,7 @@ func (ss *StorageSupportTest) Database(encs *encoder.Encoders, enc encoder.Encod
 
 		return leveldbstorage.NewMemDatabase(encs, enc)
 	case "mongodb":
-		c := mongoConnPool.Get().(*mongodbstorage.Client)
-		client, err := c.New(fmt.Sprintf("t-%s", util.UUID().String()))
+		client, err := mongodbstorage.NewClient(mongodbstorage.TestMongodbURI(), time.Second*2, time.Second*2)
 		if err != nil {
 			panic(err)
 		}
@@ -74,8 +84,7 @@ func (ss *StorageSupportTest) Database(encs *encoder.Encoders, enc encoder.Encod
 
 		return d
 	case "mongodb+gcache":
-		c := mongoConnPool.Get().(*mongodbstorage.Client)
-		client, err := c.New(fmt.Sprintf("t-%s", util.UUID().String()))
+		client, err := mongodbstorage.NewClient(mongodbstorage.TestMongodbURI(), time.Second*2, time.Second*2)
 		if err != nil {
 			panic(err)
 		}
@@ -121,18 +130,5 @@ func (dm DummyMongodbDatabase) Close() error {
 		return err
 	}
 
-	mongoConnPool.Put(dm.Client())
-
 	return dm.Database.Close()
-}
-
-var mongoConnPool = sync.Pool{
-	New: func() interface{} {
-		client, err := mongodbstorage.NewClient(mongodbstorage.TestMongodbURI(), time.Second*2, time.Second*2)
-		if err != nil {
-			panic(err)
-		}
-
-		return client
-	},
 }

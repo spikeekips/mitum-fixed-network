@@ -5,9 +5,12 @@ import (
 
 	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/base/block"
+	"github.com/spikeekips/mitum/base/node"
 	"github.com/spikeekips/mitum/base/prprocessor"
 	"github.com/spikeekips/mitum/isaac"
 	"github.com/spikeekips/mitum/network"
+	"github.com/spikeekips/mitum/network/discovery"
+	"github.com/spikeekips/mitum/network/discovery/memberlist"
 	"github.com/spikeekips/mitum/states"
 	"github.com/spikeekips/mitum/storage"
 	"github.com/spikeekips/mitum/storage/blockdata"
@@ -34,6 +37,8 @@ var (
 	ContextValuePolicy                  util.ContextKey = "policy"
 	ContextValueRateLimitStore          util.ContextKey = "ratelimit-store"
 	ContextValueRateLimitHandlerMap     util.ContextKey = "ratelimit-handler-map"
+	ContextValueDiscovery               util.ContextKey = "discovery"
+	ContextValueDiscoveryConnInfos      util.ContextKey = "discovery-conninfos"
 )
 
 func LoadConfigSourceContextValue(ctx context.Context, l *[]byte) error {
@@ -60,7 +65,7 @@ func LoadDatabaseContextValue(ctx context.Context, l *storage.Database) error {
 	return util.LoadFromContextValue(ctx, ContextValueDatabase, l)
 }
 
-func LoadLocalNodeContextValue(ctx context.Context, l **network.LocalNode) error {
+func LoadLocalNodeContextValue(ctx context.Context, l **node.Local) error {
 	return util.LoadFromContextValue(ctx, ContextValueLocalNode, l)
 }
 
@@ -102,4 +107,12 @@ func LoadRateLimitStoreContextValue(ctx context.Context, l *limiter.Store) error
 
 func LoadRateLimitHandlerMapContextValue(ctx context.Context, l *map[string][]RateLimitRule) error {
 	return util.LoadFromContextValue(ctx, ContextValueRateLimitHandlerMap, l)
+}
+
+func LoadDiscoveryContextValue(ctx context.Context, l *discovery.Discovery) error {
+	return util.LoadFromContextValue(ctx, ContextValueDiscovery, l)
+}
+
+func LoadDiscoveryConnInfosContextValue(ctx context.Context, l *[]memberlist.ConnInfo) error {
+	return util.LoadFromContextValue(ctx, ContextValueDiscoveryConnInfos, l)
 }

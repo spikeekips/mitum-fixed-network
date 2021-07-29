@@ -13,6 +13,7 @@ require (
 	github.com/go-redis/redis/v8 v8.10.0
 	github.com/gorilla/mux v1.8.0
 	github.com/hashicorp/golang-lru v0.5.5-0.20210104140557-80c98217689d
+	github.com/hashicorp/memberlist v0.2.4
 	github.com/json-iterator/go v1.1.11
 	github.com/justinas/alice v1.2.0
 	github.com/klauspost/compress v1.13.1 // indirect

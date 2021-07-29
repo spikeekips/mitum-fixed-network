@@ -73,7 +73,7 @@ func (va *validator) CheckLocalNetwork() (bool, error) {
 		return false, xerrors.Errorf("network is missing")
 	}
 
-	if conf.URL() == nil {
+	if conf.ConnInfo() == nil {
 		return false, xerrors.Errorf("network url is missing")
 	}
 
@@ -162,7 +162,6 @@ func (va *validator) CheckNodes() (bool, error) {
 	}
 
 	foundAddresses := map[string]struct{}{}
-	foundNetworks := map[string]struct{}{}
 	for i := range nodes {
 		node := nodes[i]
 
@@ -176,16 +175,6 @@ func (va *validator) CheckNodes() (bool, error) {
 			return false, xerrors.Errorf("duplicated address found, %s", a)
 		} else {
 			foundAddresses[a.String()] = struct{}{}
-		}
-
-		if u := node.URL(); u == nil {
-			return false, xerrors.Errorf("network of remote node is missing")
-		} else if u.String() == va.config.Network().URL().String() {
-			return false, xerrors.Errorf("same network found with local node")
-		} else if _, found := foundNetworks[u.String()]; found {
-			return false, xerrors.Errorf("duplicated network found, %s", u)
-		} else {
-			foundNetworks[u.String()] = struct{}{}
 		}
 
 		if node.Publickey() == nil {

@@ -2,6 +2,7 @@ package config
 
 import (
 	"context"
+	"net/url"
 
 	"github.com/spikeekips/mitum/util"
 	"github.com/spikeekips/mitum/util/encoder"
@@ -11,12 +12,13 @@ import (
 )
 
 var (
-	ContextValueConfig      util.ContextKey = "config"
-	ContextValueEncoders    util.ContextKey = "encoders"
-	ContextValueJSONEncoder util.ContextKey = "json_encoder"
-	ContextValueBSONEncoder util.ContextKey = "bson_encoder"
-	ContextValueLog         util.ContextKey = "log"
-	ContextValueNetworkLog  util.ContextKey = "network_log"
+	ContextValueConfig        util.ContextKey = "config"
+	ContextValueEncoders      util.ContextKey = "encoders"
+	ContextValueJSONEncoder   util.ContextKey = "json_encoder"
+	ContextValueBSONEncoder   util.ContextKey = "bson_encoder"
+	ContextValueLog           util.ContextKey = "log"
+	ContextValueNetworkLog    util.ContextKey = "network_log"
+	ContextValueDiscoveryURLs util.ContextKey = "discovery-urls"
 )
 
 func LoadConfigContextValue(ctx context.Context, l *LocalNode) error {
@@ -41,4 +43,8 @@ func LoadLogContextValue(ctx context.Context, l *logging.Logger) error {
 
 func LoadNetworkLogContextValue(ctx context.Context, l *logging.Logger) error {
 	return util.LoadFromContextValue(ctx, ContextValueNetworkLog, l)
+}
+
+func LoadDiscoveryURLsContextValue(ctx context.Context, l *[]*url.URL) error {
+	return util.LoadFromContextValue(ctx, ContextValueDiscoveryURLs, l)
 }

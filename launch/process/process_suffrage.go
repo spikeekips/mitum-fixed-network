@@ -68,9 +68,44 @@ func ProcessSuffrage(ctx context.Context) (context.Context, error) {
 		return ctx, err
 	}
 
+	if err := cleanSuffrageChannels(ctx, sf); err != nil {
+		return ctx, err
+	}
+
 	log.Debug().Interface("suffrage_nodes", sf.Nodes()).Msg("suffrage done")
 
 	return context.WithValue(ctx, ContextValueSuffrage, sf), nil
+}
+
+// cleanSuffrageChannels cleans channel of suffrage node if local is suffrage
+// node.
+func cleanSuffrageChannels(ctx context.Context, sf base.Suffrage) error {
+	var nodepool *network.Nodepool
+	if err := LoadNodepoolContextValue(ctx, &nodepool); err != nil {
+		return err
+	}
+
+	if !sf.IsInside(nodepool.LocalNode().Address()) {
+		return nil
+	}
+
+	var nodepoolerr error
+	nodepool.TraverseRemotes(func(no base.Node, ch network.Channel) bool {
+		addr := no.Address()
+		if !sf.IsInside(addr) {
+			return true
+		}
+
+		if err := nodepool.SetChannel(addr, nil); err != nil {
+			nodepoolerr = err
+
+			return false
+		}
+
+		return true
+	})
+
+	return nodepoolerr
 }
 
 func processFixedSuffrage(ctx context.Context, conf config.FixedSuffrage) (base.Suffrage, error) {

@@ -80,10 +80,6 @@ func (cmd *baseDeployKeyCommand) Initialize(flags interface{}, version util.Vers
 		cmd.Timeout = time.Second * 5
 	}
 
-	if cmd.URL.Scheme == "quic" {
-		cmd.URL.Scheme = "https"
-	}
-
 	cmd.Log().Debug().Interface("node_url", cmd.URL).Msg("deploy key")
 
 	quicConfig := &quic.Config{HandshakeIdleTimeout: cmd.Timeout}

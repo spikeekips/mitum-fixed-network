@@ -134,13 +134,8 @@ func (cmd *BlockDownloadCommand) prepareChannel() error {
 		encs = i
 	}
 
-	if cmd.TLSInscure {
-		query := cmd.URL.Query()
-		query.Set("insecure", "true")
-		cmd.URL.RawQuery = query.Encode()
-	}
-
-	ch, err := process.LoadNodeChannel(cmd.URL, encs, cmd.Timeout)
+	connInfo := network.NewHTTPConnInfo(network.NormalizeURL(cmd.URL), cmd.TLSInscure)
+	ch, err := process.LoadNodeChannel(connInfo, encs, cmd.Timeout)
 	if err != nil {
 		return err
 	}

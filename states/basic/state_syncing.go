@@ -177,12 +177,12 @@ func (st *SyncingState) handleACCEPTVoteproof(voteproof base.Voteproof) error {
 }
 
 func (st *SyncingState) syncFromVoteproof(voteproof base.Voteproof, to base.Height) error {
-	var sourceNodes []network.Node
+	var sourceNodes []base.Node
 	for i := range voteproof.Votes() {
 		nf := voteproof.Votes()[i]
-		if n, found := st.nodepool.Node(nf.Node()); !found {
+		if n, _, found := st.nodepool.Node(nf.Node()); !found {
 			return xerrors.Errorf("node, %q in voteproof is not known node", nf.Node())
-		} else if !n.Address().Equal(st.nodepool.Local().Address()) {
+		} else if !n.Address().Equal(st.nodepool.LocalNode().Address()) {
 			sourceNodes = append(sourceNodes, n)
 		}
 	}

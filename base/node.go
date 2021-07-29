@@ -16,5 +16,4 @@ type Node interface {
 	util.Byter
 	Address() Address
 	Publickey() key.Publickey
-	URL() string
 }

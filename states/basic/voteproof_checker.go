@@ -149,21 +149,28 @@ func (vc *VoteproofChecker) CheckACCEPTVoteproofProposal() (bool, error) {
 			continue
 		}
 
-		if f.Node().Equal(vc.nodepool.Local().Address()) {
+		if f.Node().Equal(vc.nodepool.LocalNode().Address()) {
 			continue
 		}
 
-		if node, found := vc.nodepool.Node(f.Node()); !found {
+		node, ch, found := vc.nodepool.Node(f.Node())
+		if !found {
 			vc.Log().Debug().Str("target_node", f.Node().String()).Msg("unknown node found in voteproof")
 
 			continue
-		} else if pr, err := isaac.RequestProposal(node, fact.Proposal()); err != nil {
-			return false, xerrors.Errorf("failed to find proposal from accept voteproof: %w", err)
-		} else {
-			proposal = pr
+		} else if ch == nil {
+			vc.Log().Debug().Str("target_node", f.Node().String()).Msg("node is dead")
 
-			break
+			continue
 		}
+
+		pr, err := isaac.RequestProposal(ch, fact.Proposal())
+		if err != nil {
+			return false, xerrors.Errorf("failed to find proposal from accept voteproof from %q: %w", node.Address(), err)
+		}
+		proposal = pr
+
+		break
 	}
 
 	if proposal == nil {

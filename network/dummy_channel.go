@@ -13,7 +13,7 @@ import (
 )
 
 type DummyChannel struct {
-	url                  string
+	connInfo             ConnInfo
 	getSealsHandler      GetSealsHandler
 	newSealHandler       NewSealHandler
 	getStateHandler      GetStateHandler
@@ -22,16 +22,16 @@ type DummyChannel struct {
 	blockDataHandler     BlockDataHandler
 }
 
-func NewDummyChannel(url string) *DummyChannel {
-	return &DummyChannel{url: url}
+func NewDummyChannel(connInfo ConnInfo) *DummyChannel {
+	return &DummyChannel{connInfo: connInfo}
 }
 
 func (*DummyChannel) Initialize() error {
 	return nil
 }
 
-func (lc *DummyChannel) URL() string {
-	return lc.url
+func (lc *DummyChannel) ConnInfo() ConnInfo {
+	return lc.connInfo
 }
 
 func (lc *DummyChannel) SendSeal(_ context.Context, sl seal.Seal) error {

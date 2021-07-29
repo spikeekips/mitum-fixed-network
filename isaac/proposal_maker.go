@@ -5,22 +5,22 @@ import (
 
 	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/base/ballot"
+	"github.com/spikeekips/mitum/base/node"
 	"github.com/spikeekips/mitum/base/operation"
-	"github.com/spikeekips/mitum/network"
 	"github.com/spikeekips/mitum/storage"
 	"github.com/spikeekips/mitum/util/valuehash"
 )
 
 type ProposalMaker struct {
 	sync.Mutex
-	local    *network.LocalNode
+	local    *node.Local
 	database storage.Database
 	policy   *LocalPolicy
 	proposed ballot.Proposal
 }
 
 func NewProposalMaker(
-	local *network.LocalNode,
+	local *node.Local,
 	st storage.Database,
 	policy *LocalPolicy,
 ) *ProposalMaker {

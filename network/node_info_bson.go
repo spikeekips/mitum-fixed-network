@@ -4,6 +4,7 @@ import (
 	"go.mongodb.org/mongo-driver/bson"
 
 	"github.com/spikeekips/mitum/base"
+	"github.com/spikeekips/mitum/base/key"
 	"github.com/spikeekips/mitum/util"
 	bsonenc "github.com/spikeekips/mitum/util/encoder/bson"
 )
@@ -29,7 +30,7 @@ type NodeInfoV0UnpackerBSON struct {
 	VS  util.Version           `bson:"version"`
 	UL  string                 `bson:"url"`
 	PO  map[string]interface{} `bson:"policy"`
-	SF  bson.Raw               `bson:"suffrage"`
+	SF  []bson.Raw             `bson:"suffrage"`
 }
 
 func (ni *NodeInfoV0) UnpackBSON(b []byte, enc *bsonenc.Encoder) error {
@@ -38,5 +39,45 @@ func (ni *NodeInfoV0) UnpackBSON(b []byte, enc *bsonenc.Encoder) error {
 		return err
 	}
 
-	return ni.unpack(enc, nni.ND, nni.NID, nni.ST, nni.LB, nni.VS, nni.UL, nni.PO, nni.SF)
+	sf := make([]RemoteNode, len(nni.SF))
+	for i := range nni.SF {
+		var r RemoteNode
+		if err := r.unpackBSON(nni.SF[i], enc); err != nil {
+			return err
+		}
+
+		sf[i] = r
+	}
+
+	return ni.unpack(enc, nni.ND, nni.NID, nni.ST, nni.LB, nni.VS, nni.UL, nni.PO, sf)
+}
+
+func (no RemoteNode) MarshalBSON() ([]byte, error) {
+	m := map[string]interface{}{
+		"address":   no.Address,
+		"publickey": no.Publickey,
+	}
+
+	if len(no.URL) > 0 {
+		m["url"] = no.URL
+		m["insecure"] = no.Insecure
+	}
+
+	return bsonenc.Marshal(m)
+}
+
+type RemoteNodeUnpackBSON struct {
+	A base.AddressDecoder  `bson:"address"`
+	P key.PublickeyDecoder `bson:"publickey"`
+	U string               `bson:"url"`
+	I bool                 `bson:"insecure"`
+}
+
+func (no *RemoteNode) unpackBSON(b []byte, enc *bsonenc.Encoder) error {
+	var uno RemoteNodeUnpackBSON
+	if err := bson.Unmarshal(b, &uno); err != nil {
+		return err
+	}
+
+	return no.unpack(enc, uno.A, uno.P, uno.U, uno.I)
 }

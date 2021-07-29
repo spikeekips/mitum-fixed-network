@@ -15,13 +15,6 @@ import (
 
 type testStateSyncing struct {
 	baseTestState
-	local  *isaac.Local
-	remote *isaac.Local
-}
-
-func (t *testStateSyncing) SetupTest() {
-	ls := t.Locals(2)
-	t.local, t.remote = ls[0], ls[1]
 }
 
 func (t *testStateSyncing) newState(local *isaac.Local) (*SyncingState, func()) {

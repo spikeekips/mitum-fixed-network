@@ -27,7 +27,7 @@ type NodeInfo interface {
 	Version() util.Version
 	URL() string
 	Policy() map[string]interface{}
-	Nodes() []base.Node // Only contains suffrage nodes
+	Nodes() []RemoteNode // Only contains suffrage nodes
 }
 
 type NodeInfoV0 struct {
@@ -38,7 +38,7 @@ type NodeInfoV0 struct {
 	version   util.Version
 	u         string
 	policy    map[string]interface{}
-	nodes     []base.Node
+	nodes     []RemoteNode
 }
 
 func NewNodeInfoV0(
@@ -49,22 +49,9 @@ func NewNodeInfoV0(
 	version util.Version,
 	u string,
 	policy map[string]interface{},
-	nodes []base.Node,
+	nodes []RemoteNode,
 	suffrage base.Suffrage,
 ) NodeInfoV0 {
-	// NOTE insert node itself to nodes
-	var found bool
-	for i := range nodes {
-		if nodes[i].Address().Equal(node.Address()) {
-			found = true
-
-			break
-		}
-	}
-	if !found {
-		nodes = append(nodes, node)
-	}
-
 	if suffrage != nil {
 		policy["suffrage"] = suffrage.Verbose()
 	}
@@ -141,6 +128,24 @@ func (ni NodeInfoV0) Policy() map[string]interface{} {
 	return ni.policy
 }
 
-func (ni NodeInfoV0) Nodes() []base.Node {
+func (ni NodeInfoV0) Nodes() []RemoteNode {
 	return ni.nodes
+}
+
+type RemoteNode struct {
+	Address   base.Address
+	Publickey key.Publickey
+	URL       string
+	Insecure  bool
+}
+
+func NewRemoteNode(no base.Node, connInfo ConnInfo) RemoteNode {
+	r := RemoteNode{Address: no.Address(), Publickey: no.Publickey()}
+
+	if connInfo != nil {
+		r.URL = connInfo.URL().String()
+		r.Insecure = connInfo.Insecure()
+	}
+
+	return r
 }

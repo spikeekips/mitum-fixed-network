@@ -50,7 +50,7 @@ var (
 
 type Channel interface {
 	util.Initializer
-	URL() string
+	ConnInfo() ConnInfo
 	Seals(context.Context, []valuehash.Hash) ([]seal.Seal, error)
 	SendSeal(context.Context, seal.Seal) error
 	NodeInfo(context.Context) (NodeInfo, error)

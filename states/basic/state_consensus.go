@@ -187,7 +187,7 @@ func (st *ConsensusState) newINITVoteproof(voteproof base.Voteproof) error {
 		proposal = i
 	}
 
-	if proposal == nil && actingSuffrage.Proposer().Equal(st.nodepool.Local().Address()) {
+	if proposal == nil && actingSuffrage.Proposer().Equal(st.nodepool.LocalNode().Address()) {
 		if i, err := st.prepareProposal(voteproof.Height(), voteproof.Round(), voteproof); err != nil {
 			return err
 		} else if i != nil {
@@ -428,20 +428,20 @@ func (st *ConsensusState) broadcastSIGNBallot(proposal ballot.Proposal, newBlock
 
 	if i, err := st.suffrage.Acting(proposal.Height(), proposal.Round()); err != nil {
 		return err
-	} else if !i.Exists(st.nodepool.Local().Address()) {
+	} else if !i.Exists(st.nodepool.LocalNode().Address()) {
 		return nil
 	}
 
 	// NOTE not like broadcasting ACCEPT Ballot, SIGN Ballot will be broadcasted
 	// withtout waiting.
 	sb := ballot.NewSIGNV0(
-		st.nodepool.Local().Address(),
+		st.nodepool.LocalNode().Address(),
 		proposal.Height(),
 		proposal.Round(),
 		proposal.Hash(),
 		newBlock,
 	)
-	if err := sb.Sign(st.nodepool.Local().Privatekey(), st.policy.NetworkID()); err != nil {
+	if err := sb.Sign(st.nodepool.LocalNode().Privatekey(), st.policy.NetworkID()); err != nil {
 		return err
 	} else if err := st.BroadcastBallot(sb, true); err != nil {
 		return err
@@ -457,7 +457,7 @@ func (st *ConsensusState) broadcastACCEPTBallot(
 	initialDelay time.Duration,
 ) error {
 	baseBallot := ballot.NewACCEPTV0(
-		st.nodepool.Local().Address(),
+		st.nodepool.LocalNode().Address(),
 		voteproof.Height(),
 		voteproof.Round(),
 		proposal,
@@ -465,7 +465,7 @@ func (st *ConsensusState) broadcastACCEPTBallot(
 		voteproof,
 	)
 
-	if err := baseBallot.Sign(st.nodepool.Local().Privatekey(), st.policy.NetworkID()); err != nil {
+	if err := baseBallot.Sign(st.nodepool.LocalNode().Privatekey(), st.policy.NetworkID()); err != nil {
 		return xerrors.Errorf("failed to re-sign accept ballot: %w", err)
 	}
 
@@ -476,6 +476,10 @@ func (st *ConsensusState) broadcastACCEPTBallot(
 	l.Debug().Dur("initial_delay", initialDelay).Msg("start timer to broadcast accept ballot")
 
 	timer := localtime.NewContextTimer(TimerIDBroadcastACCEPTBallot, 0, func(i int) (bool, error) {
+		if i%5 == 0 {
+			_ = baseBallot.Sign(st.nodepool.LocalNode().Privatekey(), st.policy.NetworkID())
+		}
+
 		if err := st.BroadcastBallot(baseBallot, i == 0); err != nil {
 			l.Error().Err(err).Msg("failed to broadcast accept ballot")
 		}
@@ -507,9 +511,9 @@ func (st *ConsensusState) broadcastNewINITBallot(voteproof base.Voteproof) error
 	}
 
 	var baseBallot ballot.INITV0
-	if b, err := NextINITBallotFromACCEPTVoteproof(st.database, st.nodepool.Local(), voteproof); err != nil {
+	if b, err := NextINITBallotFromACCEPTVoteproof(st.database, st.nodepool.LocalNode(), voteproof); err != nil {
 		return err
-	} else if err := b.Sign(st.nodepool.Local().Privatekey(), st.policy.NetworkID()); err != nil {
+	} else if err := b.Sign(st.nodepool.LocalNode().Privatekey(), st.policy.NetworkID()); err != nil {
 		return xerrors.Errorf("failed to re-sign new init ballot: %w", err)
 	} else {
 		baseBallot = b
@@ -523,6 +527,10 @@ func (st *ConsensusState) broadcastNewINITBallot(voteproof base.Voteproof) error
 
 	timer := localtime.NewContextTimer(TimerIDBroadcastINITBallot, st.policy.IntervalBroadcastingINITBallot(),
 		func(i int) (bool, error) {
+			if i%5 == 0 {
+				_ = baseBallot.Sign(st.nodepool.LocalNode().Privatekey(), st.policy.NetworkID())
+			}
+
 			if err := st.BroadcastBallot(baseBallot, i == 0); err != nil {
 				l.Error().Err(err).Msg("failed to broadcast new init ballot")
 			}
@@ -551,9 +559,9 @@ func (st *ConsensusState) whenProposalTimeout(voteproof base.Voteproof, proposer
 	l.Debug().Msg("waiting new proposal; if timed out, will move to next round")
 
 	var baseBallot ballot.INITV0
-	if b, err := NextINITBallotFromINITVoteproof(st.database, st.nodepool.Local(), voteproof); err != nil {
+	if b, err := NextINITBallotFromINITVoteproof(st.database, st.nodepool.LocalNode(), voteproof); err != nil {
 		return err
-	} else if err := b.Sign(st.nodepool.Local().Privatekey(), st.policy.NetworkID()); err != nil {
+	} else if err := b.Sign(st.nodepool.LocalNode().Privatekey(), st.policy.NetworkID()); err != nil {
 		return xerrors.Errorf("failed to re-sign next init ballot: %w", err)
 	} else {
 		baseBallot = b
@@ -562,6 +570,10 @@ func (st *ConsensusState) whenProposalTimeout(voteproof base.Voteproof, proposer
 	var timer localtime.Timer
 
 	timer = localtime.NewContextTimer(TimerIDBroadcastINITBallot, 0, func(i int) (bool, error) {
+		if i%5 == 0 {
+			_ = baseBallot.Sign(st.nodepool.LocalNode().Privatekey(), st.policy.NetworkID())
+		}
+
 		if err := st.BroadcastBallot(baseBallot, i == 0); err != nil {
 			l.Error().Err(err).Msg("failed to broadcast next init ballot")
 		}
@@ -613,20 +625,24 @@ func (st *ConsensusState) nextRound(voteproof base.Voteproof) error {
 		var err error
 		switch s := voteproof.Stage(); s {
 		case base.StageINIT:
-			baseBallot, err = NextINITBallotFromINITVoteproof(st.database, st.nodepool.Local(), voteproof)
+			baseBallot, err = NextINITBallotFromINITVoteproof(st.database, st.nodepool.LocalNode(), voteproof)
 		case base.StageACCEPT:
-			baseBallot, err = NextINITBallotFromACCEPTVoteproof(st.database, st.nodepool.Local(), voteproof)
+			baseBallot, err = NextINITBallotFromACCEPTVoteproof(st.database, st.nodepool.LocalNode(), voteproof)
 		}
 		if err != nil {
 			return err
 		}
 	}
 
-	if err := baseBallot.Sign(st.nodepool.Local().Privatekey(), st.policy.NetworkID()); err != nil {
+	if err := baseBallot.Sign(st.nodepool.LocalNode().Privatekey(), st.policy.NetworkID()); err != nil {
 		return xerrors.Errorf("failed to re-sign next round init ballot: %w", err)
 	}
 
 	timer := localtime.NewContextTimer(TimerIDBroadcastINITBallot, 0, func(i int) (bool, error) {
+		if i%5 == 0 {
+			_ = baseBallot.Sign(st.nodepool.LocalNode().Privatekey(), st.policy.NetworkID())
+		}
+
 		if err := st.BroadcastBallot(baseBallot, i == 0); err != nil {
 			l.Error().Err(err).Msg("failed to broadcast next round init ballot")
 		}

@@ -3,6 +3,7 @@ package network
 import (
 	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/base/block"
+	"github.com/spikeekips/mitum/base/key"
 	"github.com/spikeekips/mitum/util"
 	"github.com/spikeekips/mitum/util/encoder"
 )
@@ -15,7 +16,7 @@ func (ni *NodeInfoV0) unpack(
 	vs util.Version,
 	u string,
 	co map[string]interface{},
-	bsf []byte,
+	sf []RemoteNode,
 ) error {
 	n, err := base.DecodeNode(bnode, enc)
 	if err != nil {
@@ -36,22 +37,34 @@ func (ni *NodeInfoV0) unpack(
 
 	ni.policy = co
 
-	hsf, err := enc.DecodeSlice(bsf)
+	ni.nodes = sf
+
+	return nil
+}
+
+func (no *RemoteNode) unpack(
+	enc encoder.Encoder,
+	ba base.AddressDecoder,
+	bp key.PublickeyDecoder,
+	u string,
+	insecure bool,
+) error {
+	i, err := ba.Encode(enc)
 	if err != nil {
 		return err
 	}
+	no.Address = i
 
-	sf := make([]base.Node, len(hsf))
-	for i := range hsf {
-		j, ok := hsf[i].(base.Node)
-		if !ok {
-			return util.WrongTypeError.Errorf("expected base.Node, not %T", hsf[i])
-		}
-
-		sf[i] = j
+	j, err := bp.Encode(enc)
+	if err != nil {
+		return err
 	}
+	no.Publickey = j
 
-	ni.nodes = sf
+	if len(u) > 0 {
+		no.URL = u
+		no.Insecure = insecure
+	}
 
 	return nil
 }

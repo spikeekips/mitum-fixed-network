@@ -22,6 +22,10 @@ func (Dummy) Purge() error {
 	return nil
 }
 
+func (Dummy) Remove(interface{}) bool {
+	return false
+}
+
 func (Dummy) New() (Cache, error) {
 	return Dummy{}, nil
 }

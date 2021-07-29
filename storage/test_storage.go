@@ -10,6 +10,7 @@ import (
 	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/base/block"
 	"github.com/spikeekips/mitum/base/key"
+	"github.com/spikeekips/mitum/base/node"
 	"github.com/spikeekips/mitum/base/operation"
 	"github.com/spikeekips/mitum/base/seal"
 	"github.com/spikeekips/mitum/util"
@@ -103,7 +104,7 @@ func (t *BaseTestDatabase) SetupSuite() {
 	t.NoError(t.Encs.AddEncoder(t.BSONEnc))
 
 	_ = t.Encs.TestAddHinter(base.StringAddress(""))
-	_ = t.Encs.TestAddHinter(base.BaseNodeV0{})
+	_ = t.Encs.TestAddHinter(node.BaseV0{})
 	_ = t.Encs.TestAddHinter(block.SuffrageInfoV0{})
 	_ = t.Encs.TestAddHinter(key.BTCPublickeyHinter)
 	_ = t.Encs.TestAddHinter(block.BlockV0{})

@@ -8,6 +8,7 @@ import (
 	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/base/ballot"
 	"github.com/spikeekips/mitum/base/block"
+	"github.com/spikeekips/mitum/base/node"
 	"github.com/spikeekips/mitum/base/operation"
 	"github.com/spikeekips/mitum/base/prprocessor"
 	"github.com/spikeekips/mitum/base/seal"
@@ -21,7 +22,7 @@ import (
 
 type GenesisBlockV0Generator struct {
 	*logging.Logging
-	local     *network.LocalNode
+	local     *node.Local
 	database  storage.Database
 	blockData blockdata.BlockData
 	policy    *LocalPolicy
@@ -32,7 +33,7 @@ type GenesisBlockV0Generator struct {
 }
 
 func NewGenesisBlockV0Generator(
-	local *network.LocalNode,
+	local *node.Local,
 	st storage.Database,
 	blockData blockdata.BlockData,
 	policy *LocalPolicy,
@@ -45,7 +46,7 @@ func NewGenesisBlockV0Generator(
 		return nil, err
 	}
 
-	nodepool := network.NewNodepool(local)
+	nodepool := network.NewNodepool(local, nil)
 
 	return &GenesisBlockV0Generator{
 		Logging: logging.NewLogging(func(c logging.Context) logging.Emitter {

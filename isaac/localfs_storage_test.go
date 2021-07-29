@@ -7,6 +7,7 @@ import (
 
 	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/base/block"
+	"github.com/spikeekips/mitum/base/node"
 	"github.com/spikeekips/mitum/base/operation"
 	"github.com/spikeekips/mitum/base/state"
 	"github.com/spikeekips/mitum/storage/blockdata/localfs"
@@ -90,9 +91,9 @@ func (t *testBlockData) processSession(local *Local, ss *localfs.Session) {
 
 	{
 		nodes := []base.Node{
-			base.RandomNode(util.UUID().String()),
-			base.RandomNode(util.UUID().String()),
-			base.RandomNode(util.UUID().String()),
+			node.RandomNode(util.UUID().String()),
+			node.RandomNode(util.UUID().String()),
+			node.RandomNode(util.UUID().String()),
 		}
 		sf := block.NewSuffrageInfoV0(nodes[0].Address(), nodes)
 

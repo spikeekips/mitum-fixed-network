@@ -8,13 +8,12 @@ import (
 )
 
 type NodeNetwork struct {
-	URL    *string
 	Extras map[string]interface{} `yaml:",inline"`
 }
 
 type LocalNetwork struct {
-	NodeNetwork `yaml:",inline"`
-	Bind        *string
+	Bind        *string                `yaml:"bind"`
+	URL         *string                `yaml:"url"`
 	CertKeyFile *string                `yaml:"cert-key,omitempty"`
 	CertFile    *string                `yaml:"cert,omitempty"`
 	Cache       *string                `yaml:",omitempty"`
@@ -30,8 +29,8 @@ func (no LocalNetwork) Set(ctx context.Context) (context.Context, error) {
 	}
 	conf := l.Network()
 
-	if no.NodeNetwork.URL != nil {
-		if err := conf.SetURL(*no.NodeNetwork.URL); err != nil {
+	if no.URL != nil {
+		if err := conf.SetURL(*no.URL); err != nil {
 			return ctx, err
 		}
 	}

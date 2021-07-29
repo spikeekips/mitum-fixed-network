@@ -1,5 +1,7 @@
 package util
 
+import "strings"
+
 func BoolToBytes(b bool) []byte {
 	var i int
 	if b {
@@ -15,4 +17,13 @@ func BytesToBool(b []byte) (bool, error) {
 	}
 
 	return i != 0, nil
+}
+
+func ParseBoolInQuery(s string) bool {
+	switch strings.ToLower(strings.TrimSpace(s)) {
+	case "t", "true", "1", "y", "yes":
+		return true
+	default:
+		return false
+	}
 }

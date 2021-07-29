@@ -13,6 +13,7 @@ import (
 	"github.com/spikeekips/mitum/base/ballot"
 	"github.com/spikeekips/mitum/base/block"
 	"github.com/spikeekips/mitum/base/key"
+	"github.com/spikeekips/mitum/base/node"
 	"github.com/spikeekips/mitum/base/operation"
 	"github.com/spikeekips/mitum/base/prprocessor"
 	"github.com/spikeekips/mitum/base/seal"
@@ -53,7 +54,7 @@ func (t *BaseTest) SetupSuite() {
 	_ = t.Encs.TestAddHinter(ballot.ACCEPTFactV0{})
 	_ = t.Encs.TestAddHinter(base.VoteproofV0{})
 	_ = t.Encs.TestAddHinter(base.BaseVoteproofNodeFact{})
-	_ = t.Encs.TestAddHinter(base.BaseNodeV0{})
+	_ = t.Encs.TestAddHinter(node.BaseV0{})
 	_ = t.Encs.TestAddHinter(block.BlockV0{})
 	_ = t.Encs.TestAddHinter(block.ManifestV0{})
 	_ = t.Encs.TestAddHinter(block.ConsensusInfoV0{})
@@ -87,6 +88,8 @@ func (t *BaseTest) SetupTest() {
 }
 
 func (t *BaseTest) TearDownTest() {
+	t.StorageSupportTest.TearDownTest()
+
 	_ = os.RemoveAll(t.Root)
 
 	t.CloseStates(t.ls...)
@@ -101,7 +104,7 @@ func (t *BaseTest) SetupNodes(local *Local, others []*Local) {
 	t.GenerateBlocks(nodes, lastHeight)
 
 	for _, st := range nodes {
-		nch := st.Node().Channel().(*channetwork.Channel)
+		nch := st.Channel().(*channetwork.Channel)
 
 		nch.SetBlockDataMapsHandler(func(heights []base.Height) ([]block.BlockDataMap, error) {
 			var bds []block.BlockDataMap
@@ -143,7 +146,9 @@ func (t *BaseTest) Locals(n int) []*Local {
 	var ls []*Local
 	for i := 0; i < n; i++ {
 		lst := t.Database(t.Encs, t.JSONEnc)
-		localNode := channetwork.RandomLocalNode(util.UUID().String())
+		uid := util.UUID().String()
+		no := node.RandomLocal(uid)
+		ch := channetwork.RandomChannel(uid)
 
 		root, err := os.MkdirTemp(t.Root, "localfs-")
 		t.NoError(err)
@@ -151,7 +156,7 @@ func (t *BaseTest) Locals(n int) []*Local {
 		blockData := localfs.NewBlockData(root, t.JSONEnc)
 		t.NoError(blockData.Initialize())
 
-		local, err := NewLocal(lst, blockData, localNode, TestNetworkID)
+		local, err := NewLocal(lst, blockData, no, ch, TestNetworkID)
 		if err != nil {
 			panic(err)
 		} else if err := local.Initialize(); err != nil {
@@ -167,7 +172,7 @@ func (t *BaseTest) Locals(n int) []*Local {
 				continue
 			}
 
-			if err := l.Nodes().Add(r.Node()); err != nil {
+			if err := l.Nodes().Add(r.Node(), r.Channel()); err != nil {
 				panic(err)
 			}
 		}
@@ -189,11 +194,14 @@ func (t *BaseTest) Locals(n int) []*Local {
 
 func (t *BaseTest) EmptyLocal() *Local {
 	lst := t.Database(nil, nil)
-	localNode := channetwork.RandomLocalNode(util.UUID().String())
+	uid := util.UUID().String()
+	no := node.RandomLocal(uid)
+	ch := channetwork.RandomChannel(uid)
+
 	blockData := localfs.NewBlockData(t.Root, t.JSONEnc)
 	t.NoError(blockData.Initialize())
 
-	local, err := NewLocal(lst, blockData, localNode, TestNetworkID)
+	local, err := NewLocal(lst, blockData, no, ch, TestNetworkID)
 	t.NoError(err)
 
 	t.NoError(local.Initialize())

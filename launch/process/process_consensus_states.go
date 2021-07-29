@@ -70,7 +70,7 @@ func ProcessConsensusStates(ctx context.Context) (context.Context, error) {
 	}
 
 	var cs states.States
-	if suffrage.IsInside(nodepool.Local().Address()) {
+	if suffrage.IsInside(nodepool.LocalNode().Address()) {
 		i, err := processConsensusStatesSuffrageNode(ctx, st, blockData, policy, nodepool, suffrage)
 		if err != nil {
 			return ctx, err
@@ -111,7 +111,7 @@ func processConsensusStatesSuffrageNode(
 
 	log.Debug().Msg("local is in suffrage")
 
-	proposalMaker := isaac.NewProposalMaker(nodepool.Local(), st, policy)
+	proposalMaker := isaac.NewProposalMaker(nodepool.LocalNode(), st, policy)
 
 	ballotbox := isaac.NewBallotbox(
 		suffrage.Nodes,
@@ -129,8 +129,8 @@ func processConsensusStatesSuffrageNode(
 	_ = ballotbox.SetLogger(log)
 
 	stopped := basicstate.NewStoppedState()
-	booting := basicstate.NewBootingState(nodepool.Local(), st, blockData, policy, suffrage)
-	joining := basicstate.NewJoiningState(nodepool.Local(), st, policy, suffrage, ballotbox)
+	booting := basicstate.NewBootingState(nodepool.LocalNode(), st, blockData, policy, suffrage)
+	joining := basicstate.NewJoiningState(nodepool.LocalNode(), st, policy, suffrage, ballotbox)
 	consensus := basicstate.NewConsensusState(st, policy, nodepool, suffrage, proposalMaker, pps)
 	syncing := basicstate.NewSyncingState(st, blockData, policy, nodepool)
 
@@ -169,7 +169,7 @@ func processConsensusStatesNoneSuffrageNode(
 	log.Debug().Msg("local is not in suffrage")
 
 	stopped := basicstate.NewStoppedState()
-	booting := basicstate.NewBootingState(nodepool.Local(), st, blockData, policy, suffrage)
+	booting := basicstate.NewBootingState(nodepool.LocalNode(), st, blockData, policy, suffrage)
 	joining := basicstate.NewEmptyState()
 	consensus := basicstate.NewEmptyState()
 	syncing := basicstate.NewSyncingStateNoneSuffrage(st, blockData, policy, nodepool, conf.LocalConfig().SyncInterval())

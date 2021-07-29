@@ -6,10 +6,10 @@ import (
 	"golang.org/x/xerrors"
 
 	"github.com/spikeekips/mitum/base/block"
+	"github.com/spikeekips/mitum/base/node"
 	"github.com/spikeekips/mitum/isaac"
 	"github.com/spikeekips/mitum/launch/config"
 	"github.com/spikeekips/mitum/launch/pm"
-	"github.com/spikeekips/mitum/network"
 	"github.com/spikeekips/mitum/storage"
 	"github.com/spikeekips/mitum/storage/blockdata"
 	"github.com/spikeekips/mitum/util/logging"
@@ -40,7 +40,7 @@ func ProcessGenerateGenesisBlock(ctx context.Context) (context.Context, error) {
 		return ctx, err
 	}
 
-	var local *network.LocalNode
+	var local *node.Local
 	if err := LoadLocalNodeContextValue(ctx, &local); err != nil {
 		return ctx, err
 	}

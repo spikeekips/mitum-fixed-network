@@ -236,16 +236,18 @@ func (se *SealsExtracter) fromStorage(
 }
 
 func (se *SealsExtracter) fromChannel(notFounds []valuehash.Hash) (map[string][]operation.Operation, error) {
-	var proposer network.Node
 	if se.local.Equal(se.proposer) {
 		return nil, xerrors.Errorf("proposer is local, but it does not have seals. Hmmm")
-	} else if node, found := se.nodepool.Node(se.proposer); !found {
-		return nil, xerrors.Errorf("proposer is not in nodes: %v", se.proposer)
-	} else {
-		proposer = node
 	}
 
-	received, err := proposer.Channel().Seals(context.TODO(), notFounds)
+	_, proposerch, found := se.nodepool.Node(se.proposer)
+	if !found {
+		return nil, xerrors.Errorf("proposer is not in nodes: %v", se.proposer)
+	} else if proposerch == nil {
+		return nil, xerrors.Errorf("proposer is dead: %v", se.proposer)
+	}
+
+	received, err := proposerch.Seals(context.TODO(), notFounds)
 	if err != nil {
 		return nil, err
 	}

@@ -5,7 +5,7 @@ import (
 
 	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/base/ballot"
-	"github.com/spikeekips/mitum/network"
+	"github.com/spikeekips/mitum/base/node"
 	"github.com/spikeekips/mitum/storage"
 	"github.com/spikeekips/mitum/util/logging"
 	"github.com/spikeekips/mitum/util/valuehash"
@@ -13,7 +13,7 @@ import (
 
 func NextINITBallotFromACCEPTVoteproof(
 	st storage.Database,
-	local *network.LocalNode,
+	local *node.Local,
 	voteproof base.Voteproof,
 ) (ballot.INITV0, error) {
 	if voteproof.Stage() != base.StageACCEPT {
@@ -73,7 +73,7 @@ func NextINITBallotFromACCEPTVoteproof(
 
 func NextINITBallotFromINITVoteproof(
 	st storage.Database,
-	local *network.LocalNode,
+	local *node.Local,
 	voteproof base.Voteproof,
 ) (ballot.INITV0, error) {
 	if voteproof.Stage() != base.StageINIT {

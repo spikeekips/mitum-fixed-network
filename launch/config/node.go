@@ -3,6 +3,7 @@ package config
 import (
 	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/base/key"
+	"github.com/spikeekips/mitum/network"
 	"github.com/spikeekips/mitum/util/encoder"
 )
 
@@ -13,22 +14,22 @@ type Node interface {
 
 type RemoteNode interface {
 	Node
-	NodeNetwork
 	Publickey() key.Publickey
 	SetPublickey(string) error
+	ConnInfo() network.ConnInfo
+	SetConnInfo(string) error
 }
 
 type BaseRemoteNode struct {
-	*BaseNodeNetwork
 	enc       encoder.Encoder
 	address   base.Address
 	publickey key.Publickey
+	c         network.ConnInfo
 }
 
 func NewBaseRemoteNode(enc encoder.Encoder) *BaseRemoteNode {
 	return &BaseRemoteNode{
-		BaseNodeNetwork: EmptyBaseNodeNetwork(),
-		enc:             enc,
+		enc: enc,
 	}
 }
 
@@ -56,6 +57,21 @@ func (no *BaseRemoteNode) SetPublickey(s string) error {
 		return err
 	}
 	no.publickey = pub
+
+	return nil
+}
+
+func (no BaseRemoteNode) ConnInfo() network.ConnInfo {
+	return no.c
+}
+
+func (no *BaseRemoteNode) SetConnInfo(s string) error {
+	c, err := network.NormalizeNodeURL(s)
+	if err != nil {
+		return err
+	}
+
+	no.c = c
 
 	return nil
 }

@@ -9,6 +9,7 @@ import (
 
 	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/base/ballot"
+	"github.com/spikeekips/mitum/base/block"
 	"github.com/spikeekips/mitum/base/seal"
 	"github.com/spikeekips/mitum/isaac"
 	"github.com/spikeekips/mitum/util"
@@ -18,13 +19,6 @@ import (
 
 type testStateJoining struct {
 	baseTestState
-	local  *isaac.Local
-	remote *isaac.Local
-}
-
-func (t *testStateJoining) SetupTest() {
-	ls := t.Locals(2)
-	t.local, t.remote = ls[0], ls[1]
 }
 
 func (t *testStateJoining) newState(local *isaac.Local, suffrage base.Suffrage, ballotbox *isaac.Ballotbox) (*JoiningState, func()) {
@@ -394,6 +388,94 @@ func (t *testStateJoining) TestNewINITVoteproof() {
 	t.Equal(base.StateConsensus, received.ToState())
 	t.NotNil(received.Voteproof())
 	t.Equal(newINITVoteproof.Bytes(), received.Voteproof().Bytes())
+}
+
+// TestStuckAInACCEPTStage tests the stuck situation;
+// 1. before joining state, accept ballot received and it's voteproof is set as
+// last voteproof in States.
+// 2. after syncing and entering joining state, the same accept ballot is
+// received.
+// 3. the voteproof of the received accept ballot is ignored.
+func (t *testStateJoining) TestStuckAInACCEPTStage() {
+	suffrage := t.Suffrage(t.remote, t.local)
+
+	booting := NewBootingState(t.local.Node(), t.local.Database(), t.local.BlockData(), t.local.Policy(), suffrage)
+	joining, done := t.newState(t.local, suffrage, t.Ballotbox(suffrage, t.local.Policy()))
+	defer done()
+
+	statech := make(chan StateSwitchContext)
+	consensus := NewBaseState(base.StateConsensus)
+	consensus.SetEnterFunc(func(sctx StateSwitchContext) (func() error, error) {
+		statech <- sctx
+
+		return nil, nil
+	})
+
+	ss, err := NewStates(
+		t.local.Database(),
+		t.local.Policy(),
+		t.local.Nodes(),
+		suffrage,
+		t.Ballotbox(suffrage, t.local.Policy()),
+		NewBaseState(base.StateStopped),
+		booting,
+		joining,
+		consensus,
+		NewBaseState(base.StateSyncing),
+	)
+	t.NoError(err)
+
+	stopch := make(chan error)
+	go func() {
+		stopch <- ss.Start()
+	}()
+
+	defer func() {
+		_ = ss.Stop()
+	}()
+
+	// NOTE create new accept ballot
+	ib := t.NewINITBallot(t.local, base.Round(0), nil)
+	initFact := ib.INITFactV0
+
+	livp, err := t.NewVoteproof(base.StageINIT, initFact, t.local, t.remote)
+	t.NoError(err)
+
+	acting, err := suffrage.Acting(livp.Height(), livp.Round())
+	t.NoError(err)
+
+	var proposer *isaac.Local
+	switch acting.Proposer().String() {
+	case t.local.Node().Address().String():
+		proposer = t.local
+	case t.remote.Node().Address().String():
+		proposer = t.remote
+	}
+
+	pr := t.NewProposal(proposer, initFact.Round(), nil, livp)
+	newblock, _ := block.NewTestBlockV0(livp.Height(), livp.Round(), pr.Hash(), valuehash.RandomSHA256())
+	ab := t.NewACCEPTBallot(t.remote, livp.Round(), newblock.Proposal(), newblock.Hash(), livp)
+
+	t.NoError(ss.NewSeal(ab))
+
+	sctx := NewStateSwitchContext(ss.State(), base.StateBooting)
+	t.NoError(ss.SwitchState(sctx))
+
+	<-time.After(time.Second * 3)
+
+	t.NoError(ab.Sign(t.remote.Node().Privatekey(), t.remote.Policy().NetworkID()))
+
+	t.NoError(ss.NewSeal(ab))
+
+	select {
+	case <-time.After(time.Second * 5):
+		t.NoError(xerrors.Errorf("timeout to wait to be switched to consensus state"))
+	case err := <-stopch:
+		t.NoError(err)
+	case sctx := <-statech:
+		t.Equal(sctx.FromState(), base.StateJoining)
+		t.Equal(sctx.ToState(), base.StateConsensus)
+	}
 }
 
 func TestStateJoining(t *testing.T) {

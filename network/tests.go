@@ -54,13 +54,15 @@ func CompareNodeInfo(t *testing.T, a, b NodeInfo) {
 	assert.Equal(t, len(as), len(bs))
 
 	sort.Slice(as, func(i, j int) bool {
-		return bytes.Compare(as[i].Address().Bytes(), as[j].Address().Bytes()) < 0
+		return bytes.Compare(as[i].Address.Bytes(), as[j].Address.Bytes()) < 0
 	})
 	sort.Slice(bs, func(i, j int) bool {
-		return bytes.Compare(bs[i].Address().Bytes(), bs[j].Address().Bytes()) < 0
+		return bytes.Compare(bs[i].Address.Bytes(), bs[j].Address.Bytes()) < 0
 	})
 	for i := range as {
-		assert.True(t, as[i].Address().Equal(bs[i].Address()))
-		assert.True(t, as[i].Publickey().Equal(bs[i].Publickey()))
+		assert.True(t, as[i].Address.Equal(bs[i].Address))
+		assert.True(t, as[i].Publickey.Equal(bs[i].Publickey))
+		assert.Equal(t, as[i].URL, bs[i].URL)
+		assert.Equal(t, as[i].Insecure, bs[i].Insecure)
 	}
 }

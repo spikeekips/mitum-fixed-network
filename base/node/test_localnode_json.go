@@ -1,6 +1,6 @@
 // +build test
 
-package network
+package node
 
 import (
 	"github.com/spikeekips/mitum/base"
@@ -8,7 +8,7 @@ import (
 	jsonenc "github.com/spikeekips/mitum/util/encoder/json"
 )
 
-func (ln *LocalNode) MarshalJSON() ([]byte, error) {
+func (ln *Local) MarshalJSON() ([]byte, error) {
 	return jsonenc.Marshal(struct {
 		jsonenc.HintedHead
 		AD  base.Address   `json:"address"`

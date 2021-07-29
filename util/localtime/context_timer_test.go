@@ -164,8 +164,25 @@ func (t *testContextTimer) TestLongInterval() {
 	t.NoError(ct.Start())
 
 	<-time.After(time.Millisecond * 100)
-	t.Error(xerrors.Errorf("stopping too long waited"))
 	t.NoError(ct.Stop())
+}
+
+func (t *testContextTimer) TestLongRunning() {
+	stopch := make(chan bool)
+	ct := NewContextTimer(
+		TimerID("long-interval timer"),
+		time.Millisecond*100,
+		func(int) (bool, error) {
+			<-time.After(time.Second * 2)
+			stopch <- true
+			return true, nil
+		},
+	)
+	t.NoError(ct.Start())
+
+	<-time.After(time.Millisecond * 100)
+	t.NoError(ct.Stop())
+	<-stopch
 }
 
 func (t *testContextTimer) TestRestartAfterStop() {

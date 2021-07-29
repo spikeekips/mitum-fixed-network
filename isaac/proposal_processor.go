@@ -233,7 +233,7 @@ func (pp *DefaultProcessor) SuffrageInfo() block.SuffrageInfoV0 {
 func (pp *DefaultProcessor) getSuffrageInfo() (block.SuffrageInfoV0, error) {
 	var ns []base.Node // nolint:prealloc
 	for _, address := range pp.suffrage.Nodes() {
-		n, found := pp.nodepool.Node(address)
+		n, _, found := pp.nodepool.Node(address)
 		if !found {
 			return block.SuffrageInfoV0{}, xerrors.Errorf("suffrage node, %s not found in node pool", address)
 		}

@@ -14,6 +14,7 @@ type Cache interface {
 	Has(interface{}) bool
 	Set(interface{}, interface{}, time.Duration) error
 	Purge() error
+	Remove(interface{}) bool
 	New() (Cache, error)
 }
 

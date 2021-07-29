@@ -9,10 +9,10 @@ import (
 
 	"github.com/gorilla/mux"
 	"github.com/spikeekips/mitum/base/key"
+	"github.com/spikeekips/mitum/base/node"
 	"github.com/spikeekips/mitum/isaac"
 	"github.com/spikeekips/mitum/launch/config"
 	"github.com/spikeekips/mitum/launch/process"
-	"github.com/spikeekips/mitum/network"
 	"github.com/spikeekips/mitum/storage"
 	"github.com/spikeekips/mitum/util"
 	jsonenc "github.com/spikeekips/mitum/util/encoder/json"
@@ -22,7 +22,7 @@ import (
 type testDeployKeyHandlers struct {
 	baseDeployKeyHandler
 	isaac.StorageSupportTest
-	local  *network.LocalNode
+	local  *node.Local
 	policy *isaac.LocalPolicy
 	db     storage.Database
 	dks    *DeployKeyStorage
@@ -38,7 +38,7 @@ func (t *testDeployKeyHandlers) handlers(router *mux.Router) *deployKeyHandlers 
 	ctx := context.WithValue(context.Background(), config.ContextValueLog, log)
 
 	ctx = context.WithValue(ctx, config.ContextValueJSONEncoder, t.JSONEnc)
-	t.local = network.RandomLocalNode("local", nil)
+	t.local = node.RandomLocal("local")
 	ctx = context.WithValue(ctx, process.ContextValueLocalNode, t.local)
 	t.policy = isaac.NewLocalPolicy(util.UUID().Bytes())
 	ctx = context.WithValue(ctx, process.ContextValuePolicy, t.policy)

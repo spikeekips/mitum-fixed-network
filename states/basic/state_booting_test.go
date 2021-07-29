@@ -6,20 +6,12 @@ import (
 	"golang.org/x/xerrors"
 
 	"github.com/spikeekips/mitum/base"
-	"github.com/spikeekips/mitum/isaac"
 	"github.com/spikeekips/mitum/storage/blockdata"
 	"github.com/stretchr/testify/suite"
 )
 
 type testStateBooting struct {
 	baseTestState
-	local  *isaac.Local
-	remote *isaac.Local
-}
-
-func (t *testStateBooting) SetupTest() {
-	ls := t.Locals(2)
-	t.local, t.remote = ls[0], ls[1]
 }
 
 func (t *testStateBooting) TestWithBlock() {

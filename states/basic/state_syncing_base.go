@@ -93,7 +93,7 @@ func (st *BaseSyncingState) enterCallback() error {
 		baseManifest = m
 	}
 
-	syncs := isaac.NewSyncers(st.nodepool.Local(), st.database, st.blockData, st.policy, baseManifest)
+	syncs := isaac.NewSyncers(st.nodepool.LocalNode(), st.database, st.blockData, st.nodepool, st.policy, baseManifest)
 	syncs.WhenBlockSaved(st.whenBlockSaved)
 	syncs.WhenFinished(st.whenFinished)
 

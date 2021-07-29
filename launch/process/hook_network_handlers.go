@@ -128,7 +128,7 @@ func (sn *SettingNetworkHandlers) Set() error {
 	sn.network.SetBlockDataMapsHandler(sn.networkHandlerBlockDataMaps())
 	sn.network.SetBlockDataHandler(sn.networkHandlerBlockData())
 
-	lc := sn.nodepool.Local().Channel().(*network.DummyChannel)
+	lc := sn.nodepool.LocalChannel().(*network.DummyChannel)
 	lc.SetNewSealHandler(sn.networkhandlerNewSeal())
 	lc.SetGetSealsHandler(sn.networkHandlerGetSeals())
 	lc.SetNodeInfoHandler(sn.networkHandlerNodeInfo())
@@ -194,9 +194,11 @@ func (sn *SettingNetworkHandlers) networkhandlerNewSeal() network.NewSealHandler
 				sn.states.LastVoteproof(),
 			)
 			if err := util.NewChecker("network-new-ballot-checker", []util.CheckerFunc{
+				checker.IsFromLocal,
 				checker.InTimespan,
 				checker.InSuffrage,
 				checker.CheckSigning,
+				checker.IsFromAliveNode,
 				checker.CheckWithLastVoteproof,
 				checker.CheckProposalInACCEPTBallot,
 				checker.CheckVoteproof,
@@ -223,22 +225,28 @@ func (sn *SettingNetworkHandlers) networkHandlerNodeInfo() network.NodeInfoHandl
 		}
 
 		suffrageNodes := sn.suffrage.Nodes()
-		nodes := make([]base.Node, len(suffrageNodes))
+		nodes := make([]network.RemoteNode, len(suffrageNodes))
 		for i := range suffrageNodes {
-			n, found := sn.nodepool.Node(suffrageNodes[i])
+			n, ch, found := sn.nodepool.Node(suffrageNodes[i])
 			if !found {
 				return nil, xerrors.Errorf("suffrage node, %q not found", n.Address())
 			}
-			nodes[i] = n
+
+			var connInfo network.ConnInfo
+			if ch != nil {
+				connInfo = ch.ConnInfo()
+			}
+
+			nodes[i] = network.NewRemoteNode(n, connInfo)
 		}
 
 		return network.NewNodeInfoV0(
-			sn.nodepool.Local(),
+			sn.nodepool.LocalNode(),
 			sn.policy.NetworkID(),
 			sn.states.State(),
 			manifest,
 			sn.version,
-			sn.conf.Network().URL().String(),
+			sn.conf.Network().ConnInfo().URL().String(),
 			sn.policy.Config(),
 			nodes,
 			sn.suffrage,

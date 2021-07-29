@@ -7,7 +7,6 @@ import (
 
 	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/base/operation"
-	"github.com/spikeekips/mitum/isaac"
 	channetwork "github.com/spikeekips/mitum/network/gochan"
 	"github.com/spikeekips/mitum/util"
 	"github.com/spikeekips/mitum/util/valuehash"
@@ -17,13 +16,6 @@ import (
 
 type testStates struct {
 	baseTestState
-	local  *isaac.Local
-	remote *isaac.Local
-}
-
-func (t *testStates) SetupTest() {
-	ls := t.Locals(2)
-	t.local, t.remote = ls[0], ls[1]
 }
 
 func (t *testStates) TestLastINITVoteproof() {
@@ -519,14 +511,16 @@ func (t *testStates) TestNewBallotNoneSuffrage() {
 }
 
 func (t *testStates) TestNewOperationSealNoneSuffrage() {
-	ch := channetwork.NewChannel(1)
-	_ = t.remote.Node().SetChannel(ch)
+	remotech := channetwork.NewChannel(0, t.remote.Channel().ConnInfo())
+	_ = t.remote.SetChannel(remotech)
+	t.local.Nodes().SetChannel(t.remote.Node().Address(), remotech)
 
+	// NOTE local State
 	ss, err := NewStates(
 		t.local.Database(),
 		t.local.Policy(),
 		t.local.Nodes(),
-		t.Suffrage(t.remote),
+		t.Suffrage(t.remote), // NOTE local is not in suffrage
 		nil,
 		NewBaseState(base.StateStopped),
 		NewBaseState(base.StateBooting),
@@ -552,7 +546,7 @@ func (t *testStates) TestNewOperationSealNoneSuffrage() {
 	select {
 	case <-time.After(time.Second * 10):
 		t.NoError(xerrors.Errorf("waited broadcasted seal, but nothing"))
-	case rsl := <-ch.ReceiveSeal():
+	case rsl := <-remotech.ReceiveSeal():
 		t.True(sl.Hash().Equal(rsl.Hash()))
 	}
 }

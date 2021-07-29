@@ -43,8 +43,10 @@ func (t *testDatabase) SetupTest() {
 }
 
 func (t *testDatabase) TearDownTest() {
-	t.database.Client().DropDatabase()
-	t.database.Close()
+	if t.database != nil {
+		t.database.Client().DropDatabase()
+		t.database.Close()
+	}
 }
 
 func (t *testDatabase) TestNew() {
@@ -513,6 +515,10 @@ func (t *testDatabase) TestCopy() {
 
 	other, err := NewDatabase(client, t.Encs, t.BSONEnc, cache.Dummy{})
 	t.NoError(err)
+	defer func() {
+		other.Client().DropDatabase()
+		other.Close()
+	}()
 
 	var cols []string
 	for i := 0; i < 3; i++ {

@@ -23,13 +23,6 @@ import (
 
 type testStateConsensus struct {
 	baseTestState
-	local  *isaac.Local
-	remote *isaac.Local
-}
-
-func (t *testStateConsensus) SetupTest() {
-	ls := t.Locals(2)
-	t.local, t.remote = ls[0], ls[1]
 }
 
 func (t *testStateConsensus) newState(suffrage base.Suffrage, pps *prprocessor.Processors) (*ConsensusState, func()) {

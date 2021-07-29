@@ -27,7 +27,6 @@ var (
 		ct.id = TimerID("")
 		ct.interval = nil
 		ct.callback = nil
-		ct.runchan = nil
 		ct.c = 0
 		ct.Unlock()
 
@@ -42,7 +41,6 @@ type ContextTimer struct {
 	id       TimerID
 	interval func(int) time.Duration
 	callback func(int) (bool, error)
-	runchan  chan error
 	c        int
 }
 
@@ -58,7 +56,6 @@ func NewContextTimer(id TimerID, interval time.Duration, callback func(int) (boo
 		return interval
 	}
 	ct.callback = callback
-	ct.runchan = make(chan error, 1)
 	ct.ContextDaemon = util.NewContextDaemon("timer-"+string(id), ct.start)
 
 	return ct
@@ -92,6 +89,27 @@ func (ct *ContextTimer) SetLogger(l logging.Logger) logging.Logger {
 	return ct.Logging.SetLogger(l)
 }
 
+func (ct *ContextTimer) Stop() error {
+	errch := make(chan error)
+	go func() {
+		errch <- ct.ContextDaemon.Stop()
+	}()
+
+	select {
+	case err := <-errch:
+		return err
+	case <-time.After(time.Millisecond * 300):
+		break
+	}
+
+	go func() {
+		<-errch
+		ContextTimerPoolPut(ct)
+	}()
+
+	return nil
+}
+
 func (ct *ContextTimer) count() int {
 	ct.RLock()
 	defer ct.RUnlock()
@@ -104,25 +122,18 @@ func (ct *ContextTimer) start(ctx context.Context) error {
 		return err
 	}
 
-	errchan := make(chan error, 1)
-
-	ct.runchan <- nil
-
 end:
 	for {
 		select {
 		case <-ctx.Done():
 			break end
-		case err := <-errchan:
-			if !xerrors.Is(err, StopTimerError) {
-				ct.Log().Debug().Err(err).Msg("timer got error; timer will be stopped")
-			}
-
-			break end
-		case <-ct.runchan:
-			if err := ct.prepareCallback(ctx, errchan); err != nil {
-				if !xerrors.Is(err, util.IgnoreError) {
-					errchan <- err
+		default:
+			if err := ct.prepareCallback(ctx); err != nil {
+				switch {
+				case xerrors.Is(err, StopTimerError):
+				case xerrors.Is(err, util.IgnoreError):
+				default:
+					ct.Log().Debug().Err(err).Msg("timer got error; timer will be stopped")
 				}
 
 				break end
@@ -140,11 +151,9 @@ func (ct *ContextTimer) finishCallback(count int) {
 	if ct.c == count {
 		ct.c++
 	}
-
-	ct.runchan <- nil
 }
 
-func (ct *ContextTimer) prepareCallback(ctx context.Context, errchan chan error) error {
+func (ct *ContextTimer) prepareCallback(ctx context.Context) error {
 	ct.RLock()
 	intervalfunc := ct.interval
 	callback := ct.callback
@@ -160,17 +169,7 @@ func (ct *ContextTimer) prepareCallback(ctx context.Context, errchan chan error)
 		return xerrors.Errorf("invalid interval; too narrow, %v", interval)
 	}
 
-	go func(
-		interval time.Duration,
-		callback func(int) (bool, error),
-		count int,
-	) {
-		if err := ct.waitAndRun(ctx, interval, callback, count); err != nil {
-			errchan <- err
-		}
-	}(interval, callback, count)
-
-	return nil
+	return ct.waitAndRun(ctx, interval, callback, count)
 }
 
 func (ct *ContextTimer) waitAndRun(

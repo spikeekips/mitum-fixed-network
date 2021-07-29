@@ -46,10 +46,6 @@ func (cmd *SetBlockDataMapsCommand) Run(version util.Version) error {
 		cmd.Timeout = time.Second * 5
 	}
 
-	if cmd.URL.Scheme == "quic" {
-		cmd.URL.Scheme = "https"
-	}
-
 	cmd.Log().Debug().Interface("node_url", cmd.URL).Msg("deploy set-blockdatamaps")
 
 	quicConfig := &quic.Config{HandshakeIdleTimeout: cmd.Timeout}

@@ -17,6 +17,7 @@ import (
 
 type Channel struct {
 	*logging.Logging
+	connInfo         network.ConnInfo
 	recvChan         chan seal.Seal
 	getSealHandler   network.GetSealsHandler
 	getState         network.GetStateHandler
@@ -25,11 +26,12 @@ type Channel struct {
 	getBlockData     network.BlockDataHandler
 }
 
-func NewChannel(bufsize uint) *Channel {
+func NewChannel(bufsize uint, connInfo network.ConnInfo) *Channel {
 	return &Channel{
 		Logging: logging.NewLogging(func(c logging.Context) logging.Emitter {
 			return c.Str("module", "chan-network")
 		}),
+		connInfo: connInfo,
 		recvChan: make(chan seal.Seal, bufsize),
 	}
 }
@@ -38,8 +40,8 @@ func (*Channel) Initialize() error {
 	return nil
 }
 
-func (*Channel) URL() string {
-	return "gochan://"
+func (ch *Channel) ConnInfo() network.ConnInfo {
+	return ch.connInfo
 }
 
 func (ch *Channel) Seals(_ context.Context, h []valuehash.Hash) ([]seal.Seal, error) {

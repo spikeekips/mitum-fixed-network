@@ -90,6 +90,14 @@ func (sv *Server) SetLogger(l logging.Logger) logging.Logger {
 	return sv.Logging.SetLogger(l)
 }
 
+func (sv *Server) Encoders() *encoder.Encoders {
+	return sv.encs
+}
+
+func (sv *Server) Encoder() encoder.Encoder {
+	return sv.enc
+}
+
 func (sv *Server) SetHasSealHandler(fn network.HasSealHandler) {
 	sv.hasSealHandler = fn
 }

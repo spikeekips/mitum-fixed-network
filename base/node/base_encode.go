@@ -1,11 +1,12 @@
-package base
+package node
 
 import (
+	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/base/key"
 	"github.com/spikeekips/mitum/util/encoder"
 )
 
-func (bn *BaseNodeV0) unpack(enc encoder.Encoder, bad AddressDecoder, bpk key.PublickeyDecoder, url string) error {
+func (bn *BaseV0) unpack(enc encoder.Encoder, bad base.AddressDecoder, bpk key.PublickeyDecoder) error {
 	address, err := bad.Encode(enc)
 	if err != nil {
 		return err
@@ -18,7 +19,6 @@ func (bn *BaseNodeV0) unpack(enc encoder.Encoder, bad AddressDecoder, bpk key.Pu
 
 	bn.address = address
 	bn.publickey = pk
-	bn.url = url
 
 	return nil
 }

@@ -8,10 +8,10 @@ import (
 
 	"golang.org/x/xerrors"
 
-	"github.com/lucas-clemente/quic-go"
 	"github.com/spikeekips/mitum/launch/config"
 	"github.com/spikeekips/mitum/launch/pm"
 	"github.com/spikeekips/mitum/network"
+	"github.com/spikeekips/mitum/network/discovery"
 	quicnetwork "github.com/spikeekips/mitum/network/quic"
 	"github.com/spikeekips/mitum/util"
 	"github.com/spikeekips/mitum/util/cache"
@@ -61,7 +61,7 @@ func ProcessQuicNetwork(ctx context.Context) (context.Context, error) {
 		return ctx, err
 	}
 
-	nt, err := NewNetworkServer(conf.Bind().Host, conf.URL(), encs, ca)
+	nt, err := NewNetworkServer(conf.Bind().Host, conf.ConnInfo().URL(), encs, ca)
 	if err != nil {
 		return ctx, err
 	}
@@ -100,31 +100,10 @@ func NewNetworkServer(bind string, u *url.URL, encs *encoder.Encoders, ca cache.
 	}
 }
 
-func LoadNodeChannel(
-	u *url.URL,
+func LoadNodeChannel( // TODO remove
+	connInfo network.ConnInfo,
 	encs *encoder.Encoders,
 	connectionTimeout time.Duration,
 ) (network.Channel, error) {
-	je, err := encs.Encoder(jsonenc.JSONEncoderType, "")
-	if err != nil {
-		return nil, xerrors.Errorf("json encoder needs for quic-network: %w", err)
-	}
-
-	switch u.Scheme {
-	case "quic":
-		quicConfig := &quic.Config{HandshakeIdleTimeout: connectionTimeout}
-		ch, err := quicnetwork.NewChannel(
-			u.String(),
-			100,
-			quicConfig,
-			encs,
-			je,
-		)
-		if err != nil {
-			return nil, err
-		}
-		return ch, nil
-	default:
-		return nil, xerrors.Errorf("not supported publish URL, %v", u.String())
-	}
+	return discovery.LoadNodeChannel(connInfo, encs, connectionTimeout)
 }

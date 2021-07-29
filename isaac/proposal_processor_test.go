@@ -398,7 +398,7 @@ func (t *testDefaultProposalProcessor) TestSealsNotFound() {
 		t.NoError(t.remote.Database().NewSeals([]seal.Seal{sl}))
 
 		// add getSealHandler
-		t.remote.Node().Channel().(*channetwork.Channel).SetGetSealHandler(
+		t.remote.Channel().(*channetwork.Channel).SetGetSealHandler(
 			func(hs []valuehash.Hash) ([]seal.Seal, error) {
 				return []seal.Seal{sl}, nil
 			},

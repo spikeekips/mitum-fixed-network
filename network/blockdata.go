@@ -78,7 +78,7 @@ func FetchBlockDataFromRemote(ctx context.Context, item block.BlockDataMapItem) 
 	switch u.Scheme {
 	case "file":
 		return nil, xerrors.Errorf("%q is not remote", u.String())
-	case "http", "https":
+	case "http", "https": // nolint:goconst
 		return FetchBlockDataFromHTTP(ctx, item)
 	default:
 		return nil, xerrors.Errorf("%q not yet supported", u.Scheme)

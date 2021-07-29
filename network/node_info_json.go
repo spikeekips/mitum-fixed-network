@@ -5,6 +5,7 @@ import (
 
 	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/base/block"
+	"github.com/spikeekips/mitum/base/key"
 	"github.com/spikeekips/mitum/util"
 	jsonenc "github.com/spikeekips/mitum/util/encoder/json"
 )
@@ -18,7 +19,7 @@ type NodeInfoV0PackerJSON struct {
 	VS  util.Version           `json:"version"`
 	UL  string                 `json:"url"`
 	PO  map[string]interface{} `json:"policy"`
-	SF  []base.Node            `json:"suffrage"`
+	SF  []RemoteNode           `json:"suffrage"`
 }
 
 func (ni NodeInfoV0) JSONPacker() NodeInfoV0PackerJSON {
@@ -47,7 +48,7 @@ type NodeInfoV0UnpackerJSON struct {
 	VS  util.Version           `json:"version"`
 	UL  string                 `json:"url"`
 	PO  map[string]interface{} `json:"policy"`
-	SF  json.RawMessage        `json:"suffrage"`
+	SF  []json.RawMessage      `json:"suffrage"`
 }
 
 func (ni *NodeInfoV0) UnpackJSON(b []byte, enc *jsonenc.Encoder) error {
@@ -56,5 +57,45 @@ func (ni *NodeInfoV0) UnpackJSON(b []byte, enc *jsonenc.Encoder) error {
 		return err
 	}
 
-	return ni.unpack(enc, nni.ND, nni.NID, nni.ST, nni.LB, nni.VS, nni.UL, nni.PO, nni.SF)
+	sf := make([]RemoteNode, len(nni.SF))
+	for i := range nni.SF {
+		var r RemoteNode
+		if err := r.unpackJSON(nni.SF[i], enc); err != nil {
+			return err
+		}
+
+		sf[i] = r
+	}
+
+	return ni.unpack(enc, nni.ND, nni.NID, nni.ST, nni.LB, nni.VS, nni.UL, nni.PO, sf)
+}
+
+func (no RemoteNode) MarshalJSON() ([]byte, error) {
+	m := map[string]interface{}{
+		"address":   no.Address,
+		"publickey": no.Publickey,
+	}
+
+	if len(no.URL) > 0 {
+		m["url"] = no.URL
+		m["insecure"] = no.Insecure
+	}
+
+	return util.JSON.Marshal(m)
+}
+
+type RemoteNodeUnpackJSON struct {
+	A base.AddressDecoder  `json:"address"`
+	P key.PublickeyDecoder `json:"publickey"`
+	U string               `json:"url"`
+	I bool                 `json:"insecure"`
+}
+
+func (no *RemoteNode) unpackJSON(b []byte, enc *jsonenc.Encoder) error {
+	var uno RemoteNodeUnpackJSON
+	if err := util.JSON.Unmarshal(b, &uno); err != nil {
+		return err
+	}
+
+	return no.unpack(enc, uno.A, uno.P, uno.U, uno.I)
 }

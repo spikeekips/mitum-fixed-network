@@ -4,31 +4,27 @@ import (
 	"crypto/tls"
 	"net/url"
 
+	"github.com/spikeekips/mitum/network"
 	"github.com/spikeekips/mitum/util/cache"
 )
 
 var (
-	DefaultLocalNetworkURL       = &url.URL{Scheme: "quic", Host: "127.0.0.1:54321"}
-	DefaultLocalNetworkBind      = &url.URL{Scheme: "quic", Host: "0.0.0.0:54321"}
+	DefaultLocalNetworkURL       = &url.URL{Scheme: "https", Host: "127.0.0.1:54321"}
+	DefaultLocalNetworkBind      = &url.URL{Scheme: "https", Host: "0.0.0.0:54321"}
 	DefaultLocalNetworkCache     = "gcache:?type=lru&size=100&expire=3s"
 	DefaultLocalNetworkSealCache = "gcache:?type=lru&size=10000&expire=3m"
 )
 
-type NodeNetwork interface {
-	URL() *url.URL
-	SetURL(string) error
-}
-
 type BaseNodeNetwork struct {
-	u *url.URL
+	connInfo network.ConnInfo
 }
 
 func EmptyBaseNodeNetwork() *BaseNodeNetwork {
 	return &BaseNodeNetwork{}
 }
 
-func (no BaseNodeNetwork) URL() *url.URL {
-	return no.u
+func (no BaseNodeNetwork) ConnInfo() network.ConnInfo {
+	return no.connInfo
 }
 
 func (no *BaseNodeNetwork) SetURL(s string) error {
@@ -36,13 +32,20 @@ func (no *BaseNodeNetwork) SetURL(s string) error {
 	if err != nil {
 		return err
 	}
-	no.u = u
+
+	connInfo, err := network.NormalizeNodeURL(u.String())
+	if err != nil {
+		return err
+	}
+
+	no.connInfo = connInfo
 
 	return nil
 }
 
 type LocalNetwork interface {
-	NodeNetwork
+	ConnInfo() network.ConnInfo
+	SetURL(string) error
 	Bind() *url.URL
 	SetBind(string) error
 	Certs() []tls.Certificate

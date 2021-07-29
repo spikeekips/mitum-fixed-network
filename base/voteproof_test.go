@@ -1,11 +1,14 @@
 package base
 
 import (
+	"fmt"
 	"testing"
 
 	"github.com/stretchr/testify/suite"
 	"golang.org/x/xerrors"
 
+	"github.com/spikeekips/mitum/base/key"
+	"github.com/spikeekips/mitum/util"
 	bsonenc "github.com/spikeekips/mitum/util/encoder/bson"
 	jsonenc "github.com/spikeekips/mitum/util/encoder/json"
 	"github.com/spikeekips/mitum/util/hint"
@@ -58,6 +61,65 @@ func (tf tinyFact) MarshalBSON() ([]byte, error) {
 		HI: tf.Hint(),
 		A:  tf.A,
 	})
+}
+
+var (
+	DummyNodeType = hint.Type("dummy-node")
+	DummyNodeHint = hint.NewHint(DummyNodeType, "v0.0.1")
+)
+
+type DummyNode struct {
+	address    Address
+	privatekey key.Privatekey
+	publickey  key.Publickey
+}
+
+func NewDummyNode(address Address, privatekey key.Privatekey) *DummyNode {
+	return &DummyNode{
+		address:    address,
+		privatekey: privatekey,
+		publickey:  privatekey.Publickey(),
+	}
+}
+
+func (ln *DummyNode) Hint() hint.Hint {
+	return DummyNodeHint
+}
+
+func (ln *DummyNode) String() string {
+	return ln.address.String()
+}
+
+func (ln *DummyNode) IsValid([]byte) error {
+	return isvalid.Check([]isvalid.IsValider{
+		ln.address,
+		ln.publickey,
+	}, nil, false)
+}
+
+func (ln *DummyNode) Bytes() []byte {
+	return util.ConcatBytesSlice(ln.address.Bytes(), ln.publickey.Bytes())
+}
+
+func (ln *DummyNode) Address() Address {
+	return ln.address
+}
+
+func (ln *DummyNode) Privatekey() key.Privatekey {
+	return ln.privatekey
+}
+
+func (ln *DummyNode) Publickey() key.Publickey {
+	return ln.publickey
+}
+
+func RandomNode(name string) *DummyNode {
+	pk, _ := key.NewBTCPrivatekey()
+
+	return NewDummyNode(
+		MustStringAddress(fmt.Sprintf("n-%s", name)),
+		pk,
+	)
 }
 
 type testVoteproof struct {

@@ -169,7 +169,7 @@ nodes:
 		_, err = va.CheckLocalNetwork()
 		t.NoError(err)
 		_, err = va.CheckNodes()
-		t.Contains(err.Error(), "network of remote node is missing")
+		t.Contains(err.Error(), "publickey of remote node is missing")
 	}
 
 	{
@@ -177,7 +177,6 @@ nodes:
 address: node:sa-v0.0.1
 nodes:
   - address: n0:sa-v0.0.1
-    url: quic://local:54322
 `
 		ctx := t.loadConfig(y)
 
@@ -194,7 +193,6 @@ nodes:
 address: node:sa-v0.0.1
 nodes:
   - address: n0:sa-v0.0.1
-    url: quic://local:54322
     publickey: 27phogA4gmbMGfg321EHfx5eABkL7KAYuDPRGFoyQtAUb:btc-pub-v0.0.1
 `
 		ctx := t.loadConfig(y)
@@ -211,9 +209,36 @@ nodes:
 
 		t.Equal(1, len(conf.Nodes()))
 		t.Equal("n0:sa-v0.0.1", conf.Nodes()[0].Address().String())
-		t.Equal("quic://local:54322", conf.Nodes()[0].URL().String())
 		t.Equal("27phogA4gmbMGfg321EHfx5eABkL7KAYuDPRGFoyQtAUb:btc-pub-v0.0.1", conf.Nodes()[0].Publickey().String())
+		t.Nil(conf.Nodes()[0].ConnInfo())
 	}
+}
+
+func (t *testConfigValidator) TestNodesWithConnInfo() {
+	y := `
+address: node:sa-v0.0.1
+nodes:
+  - address: n0:sa-v0.0.1
+    publickey: 27phogA4gmbMGfg321EHfx5eABkL7KAYuDPRGFoyQtAUb:btc-pub-v0.0.1
+    url: https://findme/showme?insecure=true
+`
+	ctx := t.loadConfig(y)
+
+	va, err := config.NewValidator(ctx)
+	t.NoError(err)
+	_, err = va.CheckLocalNetwork()
+	t.NoError(err)
+	_, err = va.CheckNodes()
+	t.NoError(err)
+
+	var conf config.LocalNode
+	t.NoError(config.LoadConfigContextValue(ctx, &conf))
+
+	t.Equal(1, len(conf.Nodes()))
+	t.Equal("n0:sa-v0.0.1", conf.Nodes()[0].Address().String())
+	t.Equal("27phogA4gmbMGfg321EHfx5eABkL7KAYuDPRGFoyQtAUb:btc-pub-v0.0.1", conf.Nodes()[0].Publickey().String())
+	t.Equal("https://findme:443/showme", conf.Nodes()[0].ConnInfo().URL().String())
+	t.True(conf.Nodes()[0].ConnInfo().Insecure())
 }
 
 func (t *testConfigValidator) TestNodesSameAddressWithLocal() {
@@ -221,7 +246,6 @@ func (t *testConfigValidator) TestNodesSameAddressWithLocal() {
 address: n0:sa-v0.0.1
 nodes:
   - address: n0:sa-v0.0.1
-    url: quic://local:54322
     publickey: 27phogA4gmbMGfg321EHfx5eABkL7KAYuDPRGFoyQtAUb:btc-pub-v0.0.1
 `
 	ctx := t.loadConfig(y)
@@ -239,10 +263,8 @@ func (t *testConfigValidator) TestNodesDuplicatedAddress() {
 address: node:sa-v0.0.1
 nodes:
   - address: n0:sa-v0.0.1
-    url: quic://local:54322
     publickey: 27phogA4gmbMGfg321EHfx5eABkL7KAYuDPRGFoyQtAUb:btc-pub-v0.0.1
   - address: n0:sa-v0.0.1
-    url: quic://local:54323
     publickey: ideZAiLELe41jCqUD4zxmqqD7PXKR6uKS5MhZ8keqgcy:btc-pub-v0.0.1
 `
 	ctx := t.loadConfig(y)
@@ -253,50 +275,6 @@ nodes:
 	t.NoError(err)
 	_, err = va.CheckNodes()
 	t.Contains(err.Error(), "duplicated address found")
-}
-
-func (t *testConfigValidator) TestNodesSameNetworkWithLocal() {
-	y := `
-address: node:sa-v0.0.1
-network:
-  url: quic://local:54322
-nodes:
-  - address: n0:sa-v0.0.1
-    url: quic://local:54322
-    publickey: 27phogA4gmbMGfg321EHfx5eABkL7KAYuDPRGFoyQtAUb:btc-pub-v0.0.1
-  - address: n1:sa-v0.0.1
-    url: quic://local:54323
-    publickey: ideZAiLELe41jCqUD4zxmqqD7PXKR6uKS5MhZ8keqgcy:btc-pub-v0.0.1
-`
-	ctx := t.loadConfig(y)
-
-	va, err := config.NewValidator(ctx)
-	t.NoError(err)
-	_, err = va.CheckLocalNetwork()
-	t.NoError(err)
-	_, err = va.CheckNodes()
-	t.Contains(err.Error(), "same network found with local")
-}
-
-func (t *testConfigValidator) TestNodesDuplicatedNetwork() {
-	y := `
-address: node:sa-v0.0.1
-nodes:
-  - address: n0:sa-v0.0.1
-    url: quic://local:54322
-    publickey: 27phogA4gmbMGfg321EHfx5eABkL7KAYuDPRGFoyQtAUb:btc-pub-v0.0.1
-  - address: n1:sa-v0.0.1
-    url: quic://local:54322
-    publickey: ideZAiLELe41jCqUD4zxmqqD7PXKR6uKS5MhZ8keqgcy:btc-pub-v0.0.1
-`
-	ctx := t.loadConfig(y)
-
-	va, err := config.NewValidator(ctx)
-	t.NoError(err)
-	_, err = va.CheckLocalNetwork()
-	t.NoError(err)
-	_, err = va.CheckNodes()
-	t.Contains(err.Error(), "duplicated network found")
 }
 
 func (t *testConfigValidator) TestEmptySuffrage() {
@@ -365,7 +343,6 @@ address: n0:sa-v0.0.1
 
 nodes:
   - address: n1:sa-v0.0.1
-    url: quic://local:54322
     publickey: 27phogA4gmbMGfg321EHfx5eABkL7KAYuDPRGFoyQtAUb:btc-pub-v0.0.1
 
 suffrage:
@@ -392,7 +369,6 @@ address: n0:sa-v0.0.1
 
 nodes:
   - address: n1:sa-v0.0.1
-    url: quic://local:54322
     publickey: 27phogA4gmbMGfg321EHfx5eABkL7KAYuDPRGFoyQtAUb:btc-pub-v0.0.1
 
 suffrage:
@@ -450,7 +426,6 @@ address: n0:sa-v0.0.1
 
 nodes:
   - address: n1:sa-v0.0.1
-    url: quic://local:54322
     publickey: 27phogA4gmbMGfg321EHfx5eABkL7KAYuDPRGFoyQtAUb:btc-pub-v0.0.1
 
 suffrage:
@@ -485,7 +460,6 @@ address: n0:sa-v0.0.1
 
 nodes:
   - address: n1:sa-v0.0.1
-    url: quic://local:54322
     publickey: 27phogA4gmbMGfg321EHfx5eABkL7KAYuDPRGFoyQtAUb:btc-pub-v0.0.1
 
 suffrage:
@@ -535,7 +509,6 @@ address: n0:sa-v0.0.1
 
 nodes:
   - address: n1:sa-v0.0.1
-    url: quic://local:54322
     publickey: 27phogA4gmbMGfg321EHfx5eABkL7KAYuDPRGFoyQtAUb:btc-pub-v0.0.1
 
 suffrage:

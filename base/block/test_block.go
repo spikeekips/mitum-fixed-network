@@ -4,6 +4,7 @@ package block
 
 import (
 	"github.com/spikeekips/mitum/base"
+	"github.com/spikeekips/mitum/base/node"
 	"github.com/spikeekips/mitum/util"
 	"github.com/spikeekips/mitum/util/hint"
 	"github.com/spikeekips/mitum/util/localtime"
@@ -17,7 +18,7 @@ var (
 )
 
 func NewTestBlockV0(height base.Height, round base.Round, proposal, previousBlock valuehash.Hash) (BlockV0, error) {
-	nodes := []base.Node{base.RandomNode(util.UUID().String())}
+	nodes := []base.Node{node.RandomNode(util.UUID().String())}
 
 	return NewBlockV0(
 		NewSuffrageInfoV0(nodes[0].Address(), nodes),

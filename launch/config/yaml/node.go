@@ -12,10 +12,10 @@ type Node struct {
 }
 
 type RemoteNode struct {
-	Node        `yaml:",inline"`
-	NodeNetwork `yaml:",inline"`
-	Publickey   *string                `yaml:",omitempty"`
-	Extras      map[string]interface{} `yaml:",inline"`
+	Node      `yaml:",inline"`
+	Publickey *string                `yaml:",omitempty"`
+	URL       *string                `yaml:"url,omitempty"`
+	Extras    map[string]interface{} `yaml:",inline"`
 }
 
 func (no RemoteNode) Load(ctx context.Context) (config.RemoteNode, error) {
@@ -31,14 +31,14 @@ func (no RemoteNode) Load(ctx context.Context) (config.RemoteNode, error) {
 		}
 	}
 
-	if no.URL != nil {
-		if err := conf.SetURL(*no.URL); err != nil {
+	if no.Publickey != nil {
+		if err := conf.SetPublickey(*no.Publickey); err != nil {
 			return nil, err
 		}
 	}
 
-	if no.Publickey != nil {
-		if err := conf.SetPublickey(*no.Publickey); err != nil {
+	if no.URL != nil {
+		if err := conf.SetConnInfo(*no.URL); err != nil {
 			return nil, err
 		}
 	}

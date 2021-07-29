@@ -10,6 +10,7 @@ import (
 	"golang.org/x/xerrors"
 
 	"github.com/spikeekips/mitum/launch/process"
+	"github.com/spikeekips/mitum/network"
 	"github.com/spikeekips/mitum/util"
 	jsonenc "github.com/spikeekips/mitum/util/encoder/json"
 )
@@ -47,13 +48,8 @@ func (cmd *NodeInfoCommand) Run(version util.Version) error {
 		encs = i
 	}
 
-	if cmd.TLSInscure {
-		query := cmd.URL.Query()
-		query.Set("insecure", "true")
-		cmd.URL.RawQuery = query.Encode()
-	}
-
-	channel, err := process.LoadNodeChannel(cmd.URL, encs, cmd.Timeout)
+	connInfo := network.NewHTTPConnInfo(network.NormalizeURL(cmd.URL), cmd.TLSInscure)
+	channel, err := process.LoadNodeChannel(connInfo, encs, cmd.Timeout)
 	if err != nil {
 		return err
 	}

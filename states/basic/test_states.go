@@ -55,6 +55,15 @@ func (st *BaseState) SetExitFunc(fn func(StateSwitchContext) (func() error, erro
 
 type baseTestState struct {
 	isaac.BaseTest
+	local  *isaac.Local
+	remote *isaac.Local
+}
+
+func (t *baseTestState) SetupTest() {
+	t.BaseTest.SetupTest()
+
+	ls := t.Locals(2)
+	t.local, t.remote = ls[0], ls[1]
 }
 
 func (t *baseTestState) exitState(state State, sctx StateSwitchContext) {

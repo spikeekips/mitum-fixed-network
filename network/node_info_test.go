@@ -3,6 +3,8 @@
 package network
 
 import (
+	"fmt"
+	"net/url"
 	"testing"
 
 	"github.com/stretchr/testify/suite"
@@ -10,6 +12,7 @@ import (
 	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/base/block"
 	"github.com/spikeekips/mitum/base/key"
+	"github.com/spikeekips/mitum/base/node"
 	"github.com/spikeekips/mitum/util"
 	"github.com/spikeekips/mitum/util/encoder"
 	bsonenc "github.com/spikeekips/mitum/util/encoder/bson"
@@ -38,27 +41,36 @@ func (t *testNodeInfo) SetupTest() {
 
 	_ = t.encs.TestAddHinter(key.BTCPrivatekeyHinter)
 	_ = t.encs.TestAddHinter(key.BTCPublickeyHinter)
-	_ = t.encs.TestAddHinter(base.BaseNodeV0{})
+	_ = t.encs.TestAddHinter(node.BaseV0{})
 	_ = t.encs.TestAddHinter(base.StringAddress(""))
 	_ = t.encs.TestAddHinter(block.ManifestV0{})
 	_ = t.encs.TestAddHinter(NodeInfoV0{})
+}
+
+func (t *testNodeInfo) newNode(name string) (base.Node, ConnInfo) {
+	addr, err := base.NewStringAddress(name)
+	t.NoError(err)
+
+	no := node.NewBaseV0(addr, key.MustNewBTCPrivatekey().Publickey())
+	u, _ := url.Parse(fmt.Sprintf("https://%s:443", name))
+	connInfo := NewHTTPConnInfo(u, true)
+
+	return no, connInfo
 }
 
 func (t *testNodeInfo) TestNew() {
 	blk, err := block.NewTestBlockV0(base.Height(33), base.Round(0), valuehash.RandomSHA256(), valuehash.RandomSHA256())
 	t.NoError(err)
 
-	local := base.RandomNode("n0")
+	local := node.RandomNode("n0")
 
-	na1, err := base.NewStringAddress("n1")
-	t.NoError(err)
-	n1 := base.NewBaseNodeV0(na1, key.MustNewBTCPrivatekey().Publickey(), "quic://na1")
+	n1, n1ConnInfo := t.newNode("n1")
+	n2, n2ConnInfo := t.newNode("n2")
 
-	na2, err := base.NewStringAddress("n2")
-	t.NoError(err)
-	n2 := base.NewBaseNodeV0(na2, key.MustNewBTCPrivatekey().Publickey(), "quic://na2")
-
-	nodes := []base.Node{n1, n2}
+	nodes := []RemoteNode{
+		NewRemoteNode(n1, n1ConnInfo),
+		NewRemoteNode(n2, n2ConnInfo),
+	}
 	policy := map[string]interface{}{"showme": 1}
 
 	suffrage := base.NewFixedSuffrage(local.Address(), nil)
@@ -69,7 +81,7 @@ func (t *testNodeInfo) TestNew() {
 		base.StateBooting,
 		blk.Manifest(),
 		util.Version("0.1.1"),
-		"quic://local",
+		"https://local",
 		policy,
 		nodes,
 		suffrage,
@@ -79,10 +91,10 @@ func (t *testNodeInfo) TestNew() {
 	t.Implements((*NodeInfo)(nil), ni)
 	t.Equal(policy, ni.Policy())
 
-	expectedNodes := []string{n1.Address().String(), n2.Address().String(), local.Address().String()}
+	expectedNodes := []string{n1.Address().String(), n2.Address().String()}
 	var regs []string
 	for _, n := range ni.Nodes() {
-		regs = append(regs, n.Address().String())
+		regs = append(regs, n.Address.String())
 	}
 
 	t.Equal(expectedNodes, regs)
@@ -95,12 +107,12 @@ func (t *testNodeInfo) TestEmptyNetworkID() {
 	suffrage := base.NewFixedSuffrage(base.RandomStringAddress(), nil)
 
 	ni := NewNodeInfoV0(
-		base.RandomNode("n0"),
+		node.RandomNode("n0"),
 		nil,
 		base.StateBooting,
 		blk.Manifest(),
 		util.Version("0.1.1"),
-		"quic://local",
+		"https://local",
 		map[string]interface{}{"showme": 1},
 		nil,
 		suffrage,
@@ -115,12 +127,12 @@ func (t *testNodeInfo) TestWrongNetworkID() {
 	suffrage := base.NewFixedSuffrage(base.RandomStringAddress(), nil)
 
 	ni := NewNodeInfoV0(
-		base.RandomNode("n0"),
+		node.RandomNode("n0"),
 		t.nid,
 		base.StateUnknown,
 		blk.Manifest(),
 		util.Version("0.1.1"),
-		"quic://local",
+		"https://local",
 		map[string]interface{}{"showme": 1},
 		nil,
 		suffrage,
@@ -131,12 +143,12 @@ func (t *testNodeInfo) TestWrongNetworkID() {
 func (t *testNodeInfo) TestEmptyBlock() {
 	suffrage := base.NewFixedSuffrage(base.RandomStringAddress(), nil)
 	ni := NewNodeInfoV0(
-		base.RandomNode("n0"),
+		node.RandomNode("n0"),
 		t.nid,
 		base.StateBooting,
 		nil,
 		util.Version("0.1.1"),
-		"quic://local",
+		"https://local",
 		map[string]interface{}{"showme": 1},
 		nil,
 		suffrage,
@@ -150,12 +162,12 @@ func (t *testNodeInfo) TestEmptyVersion() {
 
 	suffrage := base.NewFixedSuffrage(base.RandomStringAddress(), nil)
 	ni := NewNodeInfoV0(
-		base.RandomNode("n0"),
+		node.RandomNode("n0"),
 		t.nid,
 		base.StateBooting,
 		blk.Manifest(),
 		"",
-		"quic://local",
+		"https://local",
 		map[string]interface{}{"showme": 1},
 		nil,
 		suffrage,
@@ -169,12 +181,12 @@ func (t *testNodeInfo) TestWrongVersion() {
 
 	suffrage := base.NewFixedSuffrage(base.RandomStringAddress(), nil)
 	ni := NewNodeInfoV0(
-		base.RandomNode("n0"),
+		node.RandomNode("n0"),
 		t.nid,
 		base.StateBooting,
 		blk.Manifest(),
 		util.Version("wrong-version"),
-		"quic://local",
+		"https://local",
 		map[string]interface{}{"showme": 1},
 		nil,
 		suffrage,
@@ -186,25 +198,24 @@ func (t *testNodeInfo) TestJSON() {
 	blk, err := block.NewTestBlockV0(base.Height(33), base.Round(0), valuehash.RandomSHA256(), valuehash.RandomSHA256())
 	t.NoError(err)
 
-	na0, err := base.NewStringAddress("n0")
-	t.NoError(err)
-	n0 := base.NewBaseNodeV0(na0, key.MustNewBTCPrivatekey().Publickey(), "quic://na0")
+	n0, n0ConnInfo := t.newNode("n0")
+	n1, n1ConnInfo := t.newNode("n1")
 
-	na1, err := base.NewStringAddress("n1")
-	t.NoError(err)
-	n1 := base.NewBaseNodeV0(na1, key.MustNewBTCPrivatekey().Publickey(), "quic://na1")
+	nodes := []RemoteNode{
+		NewRemoteNode(n0, n0ConnInfo),
+		NewRemoteNode(n1, n1ConnInfo),
+	}
 
-	nodes := []base.Node{n0, n1}
 	policy := map[string]interface{}{"showme": 1.1}
 
 	suffrage := base.NewFixedSuffrage(base.RandomStringAddress(), nil)
 	ni := NewNodeInfoV0(
-		base.RandomNode("n0"),
+		node.RandomNode("n0"),
 		t.nid,
 		base.StateBooting,
 		blk.Manifest(),
 		util.Version("1.2.3"),
-		"quic://local",
+		"https://local",
 		policy,
 		nodes,
 		suffrage,
@@ -228,12 +239,12 @@ func (t *testNodeInfo) TestBSON() {
 
 	suffrage := base.NewFixedSuffrage(base.RandomStringAddress(), nil)
 	ni := NewNodeInfoV0(
-		base.RandomNode("n0"),
+		node.RandomNode("n0"),
 		t.nid,
 		base.StateBooting,
 		blk.Manifest(),
 		util.Version("1.2.3"),
-		"quic://local",
+		"https://local",
 		map[string]interface{}{"showme": 1.1},
 		nil,
 		suffrage,
@@ -257,12 +268,12 @@ func (t *testNodeInfo) TestSuffrage() {
 
 	suffrage := base.NewFixedSuffrage(base.RandomStringAddress(), nil)
 	ni := NewNodeInfoV0(
-		base.RandomNode("n0"),
+		node.RandomNode("n0"),
 		t.nid,
 		base.StateBooting,
 		blk.Manifest(),
 		util.Version("1.2.3"),
-		"quic://local",
+		"https://local",
 		map[string]interface{}{"showme": 1.1},
 		nil,
 		suffrage,

@@ -31,7 +31,6 @@ var defaultProcesses = []pm.Process{
 	process.ProcessorSuffrage,
 	process.ProcessorConsensusStates,
 	process.ProcessorNetwork,
-	process.ProcessorStartNetwork,
 }
 
 var defaultHooks = []pm.Hook{

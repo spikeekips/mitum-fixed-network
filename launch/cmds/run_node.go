@@ -20,6 +20,7 @@ import (
 	"github.com/spikeekips/mitum/launch/deploy"
 	"github.com/spikeekips/mitum/launch/pm"
 	"github.com/spikeekips/mitum/launch/process"
+	"github.com/spikeekips/mitum/network"
 	"github.com/spikeekips/mitum/network/discovery/memberlist"
 	"github.com/spikeekips/mitum/states"
 	"github.com/spikeekips/mitum/util"
@@ -42,8 +43,6 @@ var defaultRunHooks = []pm.Hook{
 		deploy.HookNameInitializeDeployKeyStorage, deploy.HookInitializeDeployKeyStorage),
 	pm.NewHook(pm.HookPrefixPost, process.ProcessNameNetwork,
 		deploy.HookNameDeployHandlers, deploy.HookDeployHandlers),
-	pm.NewHook(pm.HookPrefixPost, process.ProcessNameDiscovery,
-		process.HookNameStartDiscovery, process.HookStartDiscovery),
 }
 
 type RunCommand struct {
@@ -52,6 +51,9 @@ type RunCommand struct {
 	ExitAfter         time.Duration `name:"exit-after" help:"exit after the given duration"`
 	NetworkLogFile    []string      `name:"network-log" help:"network log file"`
 	afterStartedHooks *pm.Hooks
+	cs                states.States
+	nt                network.Server
+	dis               *memberlist.Discovery
 }
 
 func NewRunCommand(dryrun bool) RunCommand {
@@ -138,57 +140,120 @@ func (cmd *RunCommand) run() error {
 		return xerrors.Errorf("failed to run: %w", err)
 	}
 
+	if err := cmd.runNetwork(ps.Context()); err != nil {
+		return xerrors.Errorf("failed to run network: %w", err)
+	}
+
+	if err := cmd.runDiscovery(ps.Context()); err != nil {
+		return xerrors.Errorf("failed to run discovery: %w", err)
+	}
+
+	if err := cmd.runPPS(ps.Context()); err != nil {
+		return xerrors.Errorf("failed to start Processors: %w", err)
+	}
+
 	return cmd.runStates(ps.Context())
 }
 
-func (*RunCommand) prepareStates(ctx context.Context) (
-	states.States, *memberlist.Discovery, *prprocessor.Processors, error,
-) {
-	var cs states.States
-	if err := process.LoadConsensusStatesContextValue(ctx, &cs); err != nil {
-		return nil, nil, nil, err
+func (*RunCommand) runNetwork(ctx context.Context) error {
+	var nt network.Server
+	if err := process.LoadNetworkContextValue(ctx, &nt); err != nil {
+		return err
 	}
 
+	return nt.Start()
+}
+
+func (*RunCommand) runPPS(ctx context.Context) error {
 	var local *node.Local
 	if err := process.LoadLocalNodeContextValue(ctx, &local); err != nil {
-		return nil, nil, nil, err
+		return err
 	}
 
 	var suffrage base.Suffrage
 	if err := process.LoadSuffrageContextValue(ctx, &suffrage); err != nil {
-		return nil, nil, nil, err
-	}
-
-	var dis *memberlist.Discovery
-	if err := util.LoadFromContextValue(ctx, process.ContextValueDiscovery, &dis); err != nil {
-		if !xerrors.Is(err, util.ContextValueNotFoundError) {
-			return nil, nil, nil, err
-		}
+		return err
 	}
 
 	inSuffrage := suffrage.IsInside(local.Address())
 
 	var pps *prprocessor.Processors
-	if inSuffrage {
-		if err := process.LoadProposalProcessorContextValue(ctx, &pps); err != nil {
-			return nil, nil, nil, err
-		}
+	if !inSuffrage {
+		return nil
 	}
 
-	return cs, dis, pps, nil
-}
-
-func (cmd *RunCommand) runStates(ctx context.Context) error {
-	cs, dis, pps, err := cmd.prepareStates(ctx)
-	if err != nil {
+	if err := process.LoadProposalProcessorContextValue(ctx, &pps); err != nil {
 		return err
 	}
 
-	if pps != nil {
-		if err := pps.Start(); err != nil {
-			return xerrors.Errorf("failed to start Processors: %w", err)
+	return pps.Start()
+}
+
+func (cmd *RunCommand) runDiscovery(ctx context.Context) error {
+	var local *node.Local
+	if err := process.LoadLocalNodeContextValue(ctx, &local); err != nil {
+		return err
+	}
+
+	var suffrage base.Suffrage
+	if err := process.LoadSuffrageContextValue(ctx, &suffrage); err != nil {
+		return err
+	}
+
+	if !suffrage.IsInside(local.Address()) {
+		return nil
+	}
+
+	var dis *memberlist.Discovery
+	if err := util.LoadFromContextValue(ctx, process.ContextValueDiscovery, &dis); err != nil {
+		return err
+	}
+
+	cmd.dis = dis
+
+	if err := dis.Start(); err != nil {
+		return err
+	}
+
+	var cis []memberlist.ConnInfo
+	if err := process.LoadDiscoveryConnInfosContextValue(ctx, &cis); err != nil {
+		if !xerrors.Is(err, util.ContextValueNotFoundError) {
+			return err
 		}
 	}
+
+	if len(cis) < 1 {
+		cmd.Log().Debug().Msg("empty discovery urls")
+
+		return nil
+	}
+
+	var nodepool *network.Nodepool
+	if err := process.LoadNodepoolContextValue(ctx, &nodepool); err != nil {
+		return err
+	}
+
+	// NOTE join network
+	if err := process.JoinDiscovery(nodepool, suffrage, dis, cis, 2, cmd.Log()); err != nil {
+		if !xerrors.Is(err, memberlist.JoiningCanceledError) {
+			return err
+		}
+
+		cmd.Log().Error().Err(err).Msg("failed to join network; keep trying")
+
+		go process.KeepDiscoveryJoining(nodepool, suffrage, dis, cis, cmd.Log())
+	}
+
+	return nil
+}
+
+func (cmd *RunCommand) runStates(ctx context.Context) error {
+	var cs states.States
+	if err := process.LoadConsensusStatesContextValue(ctx, &cs); err != nil {
+		return err
+	}
+
+	cmd.cs = cs
 
 	errch := make(chan error)
 	go func() {
@@ -208,7 +273,7 @@ func (cmd *RunCommand) runStates(ctx context.Context) error {
 	case err := <-errch:
 		return err
 	case <-sctx.Done():
-		if err := cmd.whenExited(cs, dis); err != nil {
+		if err := cmd.whenExited(); err != nil {
 			_, _ = fmt.Fprintf(cmd.LogOutput, "stop signal received, but %+v\n", err)
 
 			return err
@@ -224,7 +289,7 @@ func (cmd *RunCommand) runStates(ctx context.Context) error {
 
 		return time.After(w)
 	}(cmd.ExitAfter):
-		if err := cmd.whenExited(cs, dis); err != nil {
+		if err := cmd.whenExited(); err != nil {
 			_, _ = fmt.Fprintf(os.Stderr,
 				"expired by exit-after %v, but %+v\n", cmd.ExitAfter, err)
 
@@ -241,17 +306,25 @@ func (cmd *RunCommand) AfterStartedHooks() *pm.Hooks {
 	return cmd.afterStartedHooks
 }
 
-func (*RunCommand) whenExited(cs states.States, dis *memberlist.Discovery) error {
-	if dis != nil {
-		if err := dis.Leave(time.Second * 10); err != nil {
+func (cmd *RunCommand) whenExited() error {
+	if cmd.dis != nil {
+		if err := cmd.dis.Leave(time.Second * 10); err != nil {
 			_, _ = fmt.Fprintf(os.Stderr, "stop signal received, but discovery failed to leave, %v\n", err)
 
 			return xerrors.Errorf("discovery failed to leave: %w", err)
 		}
 	}
 
-	if err := cs.Stop(); err != nil {
-		return xerrors.Errorf("failed to stop consensus states: %w", err)
+	if cmd.nt != nil {
+		if err := cmd.nt.Stop(); err != nil {
+			return xerrors.Errorf("failed to stop network.Server: %w", err)
+		}
+	}
+
+	if cmd.cs != nil {
+		if err := cmd.cs.Stop(); err != nil {
+			return xerrors.Errorf("failed to stop consensus states: %w", err)
+		}
 	}
 
 	return nil

@@ -39,7 +39,6 @@ func NewInitCommand(dryrun bool) InitCommand {
 	for _, i := range []pm.Process{
 		process.ProcessorConsensusStates,
 		process.ProcessorNetwork,
-		process.ProcessorStartNetwork,
 	} {
 		if err := ps.AddProcess(pm.NewDisabledProcess(i), true); err != nil {
 			panic(err)

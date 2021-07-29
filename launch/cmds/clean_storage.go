@@ -28,7 +28,6 @@ func NewCleanStorageCommand(dryrun bool) CleanStorageCommand {
 	}
 
 	disabledProcessors := []string{
-		process.ProcessNameStartNetwork,
 		process.ProcessNameProposalProcessor,
 		process.ProcessNameConsensusStates,
 		process.ProcessNameNetwork,

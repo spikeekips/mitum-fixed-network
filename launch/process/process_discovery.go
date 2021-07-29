@@ -23,7 +23,13 @@ const ProcessNameDiscovery = "discovery"
 var ProcessorDiscovery pm.Process
 
 func init() {
-	if i, err := pm.NewProcess(ProcessNameDiscovery, nil, ProcessDiscovery); err != nil {
+	if i, err := pm.NewProcess(
+		ProcessNameDiscovery,
+		[]string{
+			ProcessNameNetwork,
+		},
+		ProcessDiscovery,
+	); err != nil {
 		panic(err)
 	} else {
 		ProcessorDiscovery = i

@@ -41,7 +41,6 @@ func NewRestoreCommand(types []hint.Type, hinters []hint.Hinter) RestoreCommand 
 	for _, i := range []pm.Process{
 		process.ProcessorConsensusStates,
 		process.ProcessorNetwork,
-		process.ProcessorStartNetwork,
 		process.ProcessorProposalProcessor,
 		process.ProcessorSuffrage,
 	} {

@@ -15,14 +15,7 @@ type NError struct {
 }
 
 func NewError(s string, a ...interface{}) *NError {
-	var id string
-	if u, err := uuid.NewV4(); err != nil {
-		panic(err)
-	} else {
-		id = u.String()
-	}
-
-	return &NError{id: id, s: fmt.Sprintf(s, a...)}
+	return &NError{id: uuid.NewV4().String(), s: fmt.Sprintf(s, a...)}
 }
 
 func (ne *NError) Unwrap() error {

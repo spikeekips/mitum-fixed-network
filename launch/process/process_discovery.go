@@ -109,9 +109,9 @@ func processDiscoveryURLs(ctx context.Context) ([]memberlist.ConnInfo, error) {
 	var cis []memberlist.ConnInfo // nolint:prealloc
 	for i := range urls {
 		u := urls[i]
-		ci, err := network.NormalizeNodeURL(u.String())
+		ci, err := parseCombinedNodeURL(u)
 		if err != nil {
-			return nil, xerrors.Errorf("invalid discovery url, %q", u)
+			return nil, xerrors.Errorf("invalid discovery url: %w", err)
 		}
 
 		if connInfo.URL().String() == ci.URL().String() {
@@ -214,4 +214,13 @@ func processDiscoveryDelegate(ctx context.Context, dis discovery.Discovery) erro
 		SetNotifyUpdate(dg.NotifyUpdate)
 
 	return nil
+}
+
+func parseCombinedNodeURL(u *url.URL) (network.HTTPConnInfo, error) {
+	i, insecure, err := network.ParseCombinedNodeURL(u)
+	if err != nil {
+		return network.HTTPConnInfo{}, err
+	}
+
+	return network.NewHTTPConnInfo(i, insecure), nil
 }

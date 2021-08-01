@@ -2,8 +2,8 @@ package memberlist
 
 import (
 	"net/url"
-	"strings"
 
+	"github.com/spikeekips/mitum/network"
 	"github.com/spikeekips/mitum/util"
 	"golang.org/x/xerrors"
 )
@@ -16,11 +16,7 @@ type NodeMeta struct {
 }
 
 func NewNodeMeta(publish string, insecure bool) (NodeMeta, error) {
-	if len(strings.TrimSpace(publish)) < 1 {
-		return NodeMeta{}, xerrors.Errorf("empty publish")
-	}
-
-	u, err := url.Parse(publish)
+	u, err := network.ParseURL(publish, false)
 	if err != nil {
 		return NodeMeta{}, err
 	}

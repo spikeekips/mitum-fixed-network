@@ -5,6 +5,7 @@ import (
 	"time"
 
 	libredis "github.com/go-redis/redis/v8"
+	"github.com/spikeekips/mitum/network"
 	"github.com/ulule/limiter/v3"
 	"github.com/ulule/limiter/v3/drivers/store/memory"
 	"github.com/ulule/limiter/v3/drivers/store/redis"
@@ -12,7 +13,7 @@ import (
 )
 
 func RateLimitStoreFromURI(s string) (limiter.Store, error) {
-	u, err := url.Parse(s)
+	u, err := network.ParseURL(s, false)
 	if err != nil {
 		return nil, xerrors.Errorf("wrong ratelimit cache url, %q", s)
 	}

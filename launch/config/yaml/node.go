@@ -12,10 +12,11 @@ type Node struct {
 }
 
 type RemoteNode struct {
-	Node      `yaml:",inline"`
-	Publickey *string                `yaml:",omitempty"`
-	URL       *string                `yaml:"url,omitempty"`
-	Extras    map[string]interface{} `yaml:",inline"`
+	Node        `yaml:",inline"`
+	Publickey   *string                `yaml:",omitempty"`
+	URL         *string                `yaml:"url,omitempty"`
+	TLSInsecure *bool                  `yaml:"tls-insecure,omitempty"`
+	Extras      map[string]interface{} `yaml:",inline"`
 }
 
 func (no RemoteNode) Load(ctx context.Context) (config.RemoteNode, error) {
@@ -38,7 +39,12 @@ func (no RemoteNode) Load(ctx context.Context) (config.RemoteNode, error) {
 	}
 
 	if no.URL != nil {
-		if err := conf.SetConnInfo(*no.URL); err != nil {
+		var insecure bool
+		if no.TLSInsecure != nil {
+			insecure = *no.TLSInsecure
+		}
+
+		if err := conf.SetConnInfo(*no.URL, insecure); err != nil {
 			return nil, err
 		}
 	}

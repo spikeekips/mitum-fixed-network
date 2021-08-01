@@ -5,6 +5,7 @@ import (
 	"net/url"
 
 	"github.com/spikeekips/mitum/util"
+	"golang.org/x/xerrors"
 )
 
 type ConnInfo interface {
@@ -51,16 +52,19 @@ func (NilConnInfo) Bytes() []byte {
 type HTTPConnInfo struct {
 	u        *url.URL
 	insecure bool
-	s        string
 }
 
 func NewHTTPConnInfo(u *url.URL, insecure bool) HTTPConnInfo {
-	a := *u
-	query := a.Query()
-	query.Set("insecure", fmt.Sprintf("%v", insecure))
-	a.RawQuery = query.Encode()
+	return HTTPConnInfo{u: u, insecure: insecure}
+}
 
-	return HTTPConnInfo{u: u, insecure: insecure, s: a.String()}
+func NewHTTPConnInfoFromString(s string, insecure bool) (HTTPConnInfo, error) {
+	u, err := NormalizeURLString(s)
+	if err != nil {
+		return HTTPConnInfo{}, xerrors.Errorf("wrong node url, %q: %w", s, err)
+	}
+
+	return NewHTTPConnInfo(u, insecure), nil
 }
 
 func (conn HTTPConnInfo) URL() *url.URL {
@@ -103,5 +107,12 @@ func (conn HTTPConnInfo) Bytes() []byte {
 }
 
 func (conn HTTPConnInfo) String() string {
-	return conn.s
+	return conn.u.String()
+}
+
+func (conn HTTPConnInfo) MarshalJSON() ([]byte, error) {
+	return util.JSON.Marshal(map[string]interface{}{
+		"url":      conn.u.String(),
+		"insecure": conn.insecure,
+	})
 }

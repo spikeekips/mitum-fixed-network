@@ -89,7 +89,7 @@ func (t *testDiscovery) newNode(i int, publishes map[string]http.HandlerFunc) *d
 
 	n.node = fmt.Sprintf("n%d", i)
 
-	connInfo, err := network.NormalizeNodeURL(fmt.Sprintf("https://%s:443", n.node))
+	connInfo, err := network.NewHTTPConnInfoFromString(fmt.Sprintf("https://%s:443", n.node), false)
 	t.NoError(err)
 	n.connInfo = connInfo
 
@@ -107,7 +107,7 @@ func (t *testDiscovery) copyNode(
 	newurl string,
 	publishes map[string]http.HandlerFunc,
 ) *dummyNode {
-	connInfo, err := network.NormalizeNodeURL(newurl)
+	connInfo, err := network.NewHTTPConnInfoFromString(newurl, false)
 	t.NoError(err)
 
 	t.False(orig.connInfo.Equal(connInfo))

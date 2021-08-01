@@ -3,7 +3,6 @@ package process
 import (
 	"context"
 	"crypto/tls"
-	"net/url"
 	"time"
 
 	"golang.org/x/xerrors"
@@ -13,7 +12,6 @@ import (
 	"github.com/spikeekips/mitum/network"
 	"github.com/spikeekips/mitum/network/discovery"
 	quicnetwork "github.com/spikeekips/mitum/network/quic"
-	"github.com/spikeekips/mitum/util"
 	"github.com/spikeekips/mitum/util/cache"
 	"github.com/spikeekips/mitum/util/encoder"
 	jsonenc "github.com/spikeekips/mitum/util/encoder/json"
@@ -61,7 +59,7 @@ func ProcessQuicNetwork(ctx context.Context) (context.Context, error) {
 		return ctx, err
 	}
 
-	nt, err := NewNetworkServer(conf.Bind().Host, conf.ConnInfo().URL(), encs, ca)
+	nt, err := NewNetworkServer(conf.Bind().Host, conf.Certs(), encs, ca)
 	if err != nil {
 		return ctx, err
 	}
@@ -74,19 +72,15 @@ func ProcessQuicNetwork(ctx context.Context) (context.Context, error) {
 	return ctx, nil
 }
 
-func NewNetworkServer(bind string, u *url.URL, encs *encoder.Encoders, ca cache.Cache) (network.Server, error) {
+func NewNetworkServer(
+	bind string,
+	certs []tls.Certificate,
+	encs *encoder.Encoders,
+	ca cache.Cache,
+) (network.Server, error) {
 	je, err := encs.Encoder(jsonenc.JSONEncoderType, "")
 	if err != nil {
 		return nil, xerrors.Errorf("json encoder needs for quic-network: %w", err)
-	}
-
-	var certs []tls.Certificate
-	if priv, err := util.GenerateED25519Privatekey(); err != nil {
-		return nil, err
-	} else if ct, err := util.GenerateTLSCerts(u.Host, priv); err != nil {
-		return nil, err
-	} else {
-		certs = ct
 	}
 
 	if qs, err := quicnetwork.NewPrimitiveQuicServer(bind, certs); err != nil {

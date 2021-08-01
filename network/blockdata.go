@@ -6,7 +6,6 @@ import (
 	"io"
 	"io/ioutil"
 	"net/http"
-	"net/url"
 	"path/filepath"
 
 	"github.com/spikeekips/mitum/base/block"
@@ -16,7 +15,7 @@ import (
 )
 
 func FetchBlockDataThruChannel(handler BlockDataHandler, item block.BlockDataMapItem) (io.ReadCloser, error) {
-	u, err := url.Parse(item.URL())
+	u, err := ParseURL(item.URL(), false)
 	if err != nil {
 		return nil, err
 	}
@@ -70,7 +69,7 @@ func FetchBlockDataThruChannel(handler BlockDataHandler, item block.BlockDataMap
 }
 
 func FetchBlockDataFromRemote(ctx context.Context, item block.BlockDataMapItem) (io.ReadCloser, error) {
-	u, err := url.Parse(item.URL())
+	u, err := ParseURL(item.URL(), false)
 	if err != nil {
 		return nil, err
 	}
@@ -86,7 +85,7 @@ func FetchBlockDataFromRemote(ctx context.Context, item block.BlockDataMapItem) 
 }
 
 func FetchBlockDataFromHTTP(ctx context.Context, item block.BlockDataMapItem) (io.ReadCloser, error) {
-	u, err := url.Parse(item.URL())
+	u, err := ParseURL(item.URL(), false)
 	if err != nil {
 		return nil, err
 	}

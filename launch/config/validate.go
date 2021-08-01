@@ -73,12 +73,24 @@ func (va *validator) CheckLocalNetwork() (bool, error) {
 		return false, xerrors.Errorf("network is missing")
 	}
 
+	if len(conf.Certs()) < 1 {
+		return false, xerrors.Errorf("certificates missing")
+	}
+
 	if conf.ConnInfo() == nil {
 		return false, xerrors.Errorf("network url is missing")
 	}
 
+	if s := conf.ConnInfo().URL().Scheme; s != "https" {
+		return false, xerrors.Errorf("at this time, publish url only HTTPS allowed, not %q", s)
+	}
+
 	if conf.Bind() == nil {
 		return false, xerrors.Errorf("network bind is missing")
+	}
+
+	if s := conf.Bind().Scheme; s != "https" {
+		return false, xerrors.Errorf("at this time, bind url only HTTPS allowed, not %q", s)
 	}
 
 	return true, nil

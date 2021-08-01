@@ -2,9 +2,12 @@ package config
 
 import (
 	"context"
+	"crypto/tls"
+	"crypto/x509"
 	"time"
 
 	"github.com/spikeekips/mitum/isaac"
+	"github.com/spikeekips/mitum/network"
 	"github.com/spikeekips/mitum/util"
 	"github.com/spikeekips/mitum/util/logging"
 	"golang.org/x/xerrors"
@@ -44,10 +47,14 @@ func (cc *checker) Context() context.Context {
 
 func (cc *checker) CheckLocalNetwork() (bool, error) {
 	conf := cc.config.Network()
-	if conf.ConnInfo() == nil {
-		if err := conf.SetURL(DefaultLocalNetworkURL.String()); err != nil {
-			return false, err
-		}
+
+	insecure, err := cc.checkLocalNetworkCerts(conf)
+	if err != nil {
+		return false, err
+	}
+
+	if err := cc.checkLocalNetworkConnInfo(conf, insecure); err != nil {
+		return false, err
 	}
 
 	if conf.Bind() == nil {
@@ -173,4 +180,75 @@ func (cc *checker) checkRateLimit() error {
 	}
 
 	return cc.config.Network().SetRateLimit(rcc.Config())
+}
+
+func (cc *checker) checkLocalNetworkCerts(conf LocalNetwork) (bool, error) {
+	var host string
+	if conf.ConnInfo() == nil {
+		host = DefaultLocalNetworkURL.Hostname()
+	} else {
+		host = conf.ConnInfo().URL().Hostname()
+	}
+
+	certs := conf.Certs()
+	if len(certs) < 1 {
+		if priv, err := util.GenerateED25519Privatekey(); err != nil {
+			return false, err
+		} else if ct, err := util.GenerateTLSCerts(host, priv); err != nil {
+			return false, err
+		} else {
+			certs = ct
+		}
+	}
+
+	insecure, err := cc.verifyCerts(host, certs)
+	if err != nil {
+		return false, err
+	}
+
+	return insecure, conf.SetCerts(certs)
+}
+
+func (*checker) verifyCerts(host string, certs []tls.Certificate) (bool /* insecure */, error) {
+	cert, err := x509.ParseCertificate(certs[0].Certificate[0])
+	if err != nil {
+		return false, err
+	}
+
+	opts := x509.VerifyOptions{
+		DNSName: host,
+	}
+
+	_, err = cert.Verify(opts)
+	if err == nil {
+		return false, nil
+	}
+
+	var cerr x509.CertificateInvalidError
+	if xerrors.As(err, &cerr) {
+		return true, nil
+	}
+	var herr x509.HostnameError
+	if xerrors.As(err, &herr) {
+		return true, nil
+	}
+	var uerr x509.UnknownAuthorityError
+	if xerrors.As(err, &uerr) {
+		return true, nil
+	}
+
+	return false, err
+}
+
+func (*checker) checkLocalNetworkConnInfo(conf LocalNetwork, insecure bool) error {
+	if conf.ConnInfo() == nil {
+		return conf.SetConnInfo(network.NewHTTPConnInfo(DefaultLocalNetworkURL, insecure))
+	}
+
+	connInfo := conf.ConnInfo()
+	if connInfo.Insecure() == insecure {
+		return nil
+	}
+
+	return conf.SetConnInfo(network.NewHTTPConnInfo(connInfo.URL(), insecure))
 }

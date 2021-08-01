@@ -5,6 +5,7 @@ import (
 	"net/url"
 	"strings"
 
+	"github.com/spikeekips/mitum/network"
 	"github.com/spikeekips/mitum/util/cache"
 )
 
@@ -21,7 +22,7 @@ var (
 )
 
 func init() {
-	if i, err := url.Parse(DefaultDatabaseCache); err != nil {
+	if i, err := network.ParseURL(DefaultDatabaseCache, false); err != nil {
 		panic(err)
 	} else {
 		DefaultDatabaseCacheURL = i
@@ -64,7 +65,7 @@ func (no BaseDatabase) URI() *url.URL {
 }
 
 func (no *BaseDatabase) SetURI(s string) error {
-	u, err := ParseURLString(s, true)
+	u, err := network.ParseURL(s, true)
 	if err != nil {
 		return err
 	}
@@ -78,7 +79,7 @@ func (no BaseDatabase) Cache() *url.URL {
 }
 
 func (no *BaseDatabase) SetCache(s string) error {
-	if u, err := ParseURLString(s, true); err != nil {
+	if u, err := network.ParseURL(s, true); err != nil {
 		return err
 	} else if _, err := cache.NewCacheFromURI(u.String()); err != nil {
 		return err

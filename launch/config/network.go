@@ -27,30 +27,19 @@ func (no BaseNodeNetwork) ConnInfo() network.ConnInfo {
 	return no.connInfo
 }
 
-func (no *BaseNodeNetwork) SetURL(s string) error {
-	u, err := ParseURLString(s, true)
-	if err != nil {
-		return err
-	}
-
-	connInfo, err := network.NormalizeNodeURL(u.String())
-	if err != nil {
-		return err
-	}
-
-	no.connInfo = connInfo
+func (no *BaseNodeNetwork) SetConnInfo(c network.ConnInfo) error {
+	no.connInfo = c
 
 	return nil
 }
 
 type LocalNetwork interface {
 	ConnInfo() network.ConnInfo
-	SetURL(string) error
+	SetConnInfo(network.ConnInfo) error
 	Bind() *url.URL
 	SetBind(string) error
 	Certs() []tls.Certificate
 	SetCerts([]tls.Certificate) error
-	SetCertFiles(string /* key */, string /* cert */) error
 	Cache() *url.URL
 	SetCache(string) error
 	SealCache() *url.URL
@@ -77,7 +66,7 @@ func (no BaseLocalNetwork) Bind() *url.URL {
 }
 
 func (no *BaseLocalNetwork) SetBind(s string) error {
-	u, err := ParseURLString(s, true)
+	u, err := network.ParseURL(s, true)
 	if err != nil {
 		return err
 	}
@@ -96,22 +85,12 @@ func (no *BaseLocalNetwork) SetCerts(certs []tls.Certificate) error {
 	return nil
 }
 
-func (no *BaseLocalNetwork) SetCertFiles(key, cert string) error {
-	c, err := tls.LoadX509KeyPair(key, cert)
-	if err != nil {
-		return err
-	}
-	no.certs = []tls.Certificate{c}
-
-	return nil
-}
-
 func (no BaseLocalNetwork) Cache() *url.URL {
 	return no.cache
 }
 
 func (no *BaseLocalNetwork) SetCache(s string) error {
-	if u, err := ParseURLString(s, true); err != nil {
+	if u, err := network.ParseURL(s, true); err != nil {
 		return err
 	} else if _, err := cache.NewCacheFromURI(u.String()); err != nil {
 		return err
@@ -127,7 +106,7 @@ func (no BaseLocalNetwork) SealCache() *url.URL {
 }
 
 func (no *BaseLocalNetwork) SetSealCache(s string) error {
-	if u, err := ParseURLString(s, true); err != nil {
+	if u, err := network.ParseURL(s, true); err != nil {
 		return err
 	} else if _, err := cache.NewCacheFromURI(u.String()); err != nil {
 		return err

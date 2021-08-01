@@ -1,12 +1,12 @@
 package network
 
 import (
+	"fmt"
 	"net"
 	"net/url"
 	"strings"
 	"time"
 
-	"github.com/spikeekips/mitum/util"
 	"golang.org/x/xerrors"
 )
 
@@ -39,12 +39,21 @@ func CheckBindIsOpen(network, bind string, timeout time.Duration) error {
 	}
 }
 
-func NormalizeURLString(s string) (*url.URL, error) {
-	if len(strings.TrimSpace(s)) < 1 {
-		return nil, xerrors.Errorf("empty url")
+func ParseURL(s string, allowEmpty bool) (*url.URL, error) { // nolint:unparam
+	s = strings.TrimSpace(s)
+	if len(s) < 1 {
+		if !allowEmpty {
+			return nil, xerrors.Errorf("empty url string")
+		}
+
+		return nil, nil
 	}
 
-	u, err := url.Parse(s)
+	return url.Parse(s)
+}
+
+func NormalizeURLString(s string) (*url.URL, error) {
+	u, err := ParseURL(s, false)
 	if err != nil {
 		return nil, xerrors.Errorf("invalid url, %q: %w", s, err)
 	}
@@ -53,6 +62,10 @@ func NormalizeURLString(s string) (*url.URL, error) {
 }
 
 func NormalizeURL(u *url.URL) *url.URL {
+	if u == nil {
+		return nil
+	}
+
 	uu := &url.URL{
 		Scheme:      u.Scheme,
 		Opaque:      u.Opaque,
@@ -82,22 +95,40 @@ func NormalizeURL(u *url.URL) *url.URL {
 		uu.Path = ""
 	}
 
-	uu.Fragment = ""
-
 	return uu
 }
 
-func NormalizeNodeURL(s string) (HTTPConnInfo, error) {
-	u, err := NormalizeURLString(s)
-	if err != nil {
-		return HTTPConnInfo{}, xerrors.Errorf("wrong node url, %q: %w", s, err)
+func IsValidURL(u *url.URL) error {
+	if u == nil {
+		return xerrors.Errorf("empty url")
+	}
+	if u.Scheme == "" {
+		return xerrors.Errorf("empty scheme, %q", u.String())
 	}
 
-	query := u.Query()
-	insecure := util.ParseBoolInQuery(query.Get("insecure"))
-	query.Del("insecure")
+	switch {
+	case u.Host == "":
+		return xerrors.Errorf("empty host, %q", u.String())
+	case strings.HasPrefix(u.Host, ":") && u.Host == fmt.Sprintf(":%s", u.Port()):
+		return xerrors.Errorf("empty host, %q", u.String())
+	}
 
-	u.RawQuery = query.Encode()
+	return nil
+}
 
-	return NewHTTPConnInfo(u, insecure), nil
+// ParseCombinedNodeURL parses the combined url of node; it contains,
+// - node publish url
+// - tls insecure: "#insecure"
+// "insecure" fragment will be removed.
+func ParseCombinedNodeURL(u *url.URL) (*url.URL, bool, error) {
+	if err := IsValidURL(u); err != nil {
+		return nil, false, xerrors.Errorf("invalid combined node url: %w", err)
+	}
+
+	i := NormalizeURL(u)
+
+	insecure := i.Fragment == "insecure"
+	i.Fragment = ""
+
+	return i, insecure, nil
 }

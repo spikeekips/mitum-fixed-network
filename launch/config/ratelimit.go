@@ -6,6 +6,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/spikeekips/mitum/network"
 	quicnetwork "github.com/spikeekips/mitum/network/quic"
 	"github.com/ulule/limiter/v3"
 )
@@ -101,7 +102,7 @@ func (no BaseRateLimit) Cache() *url.URL {
 }
 
 func (no *BaseRateLimit) SetCache(s string) error {
-	if u, err := ParseURLString(s, true); err != nil {
+	if u, err := network.ParseURL(s, true); err != nil {
 		return err
 	} else if _, err := quicnetwork.RateLimitStoreFromURI(u.String()); err != nil {
 		return err

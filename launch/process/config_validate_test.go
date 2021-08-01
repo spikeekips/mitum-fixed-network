@@ -220,7 +220,7 @@ address: node:sa-v0.0.1
 nodes:
   - address: n0:sa-v0.0.1
     publickey: 27phogA4gmbMGfg321EHfx5eABkL7KAYuDPRGFoyQtAUb:btc-pub-v0.0.1
-    url: https://findme/showme?insecure=true
+    url: https://findme/showme?findme=true
 `
 	ctx := t.loadConfig(y)
 
@@ -237,7 +237,35 @@ nodes:
 	t.Equal(1, len(conf.Nodes()))
 	t.Equal("n0:sa-v0.0.1", conf.Nodes()[0].Address().String())
 	t.Equal("27phogA4gmbMGfg321EHfx5eABkL7KAYuDPRGFoyQtAUb:btc-pub-v0.0.1", conf.Nodes()[0].Publickey().String())
-	t.Equal("https://findme:443/showme", conf.Nodes()[0].ConnInfo().URL().String())
+	t.Equal("https://findme:443/showme?findme=true", conf.Nodes()[0].ConnInfo().URL().String())
+	t.False(conf.Nodes()[0].ConnInfo().Insecure())
+}
+
+func (t *testConfigValidator) TestNodesWithConnInfoTLSInsecure() {
+	y := `
+address: node:sa-v0.0.1
+nodes:
+  - address: n0:sa-v0.0.1
+    publickey: 27phogA4gmbMGfg321EHfx5eABkL7KAYuDPRGFoyQtAUb:btc-pub-v0.0.1
+    url: https://findme/showme?findme=true
+    tls-insecure: true
+`
+	ctx := t.loadConfig(y)
+
+	va, err := config.NewValidator(ctx)
+	t.NoError(err)
+	_, err = va.CheckLocalNetwork()
+	t.NoError(err)
+	_, err = va.CheckNodes()
+	t.NoError(err)
+
+	var conf config.LocalNode
+	t.NoError(config.LoadConfigContextValue(ctx, &conf))
+
+	t.Equal(1, len(conf.Nodes()))
+	t.Equal("n0:sa-v0.0.1", conf.Nodes()[0].Address().String())
+	t.Equal("27phogA4gmbMGfg321EHfx5eABkL7KAYuDPRGFoyQtAUb:btc-pub-v0.0.1", conf.Nodes()[0].Publickey().String())
+	t.Equal("https://findme:443/showme?findme=true", conf.Nodes()[0].ConnInfo().URL().String())
 	t.True(conf.Nodes()[0].ConnInfo().Insecure())
 }
 

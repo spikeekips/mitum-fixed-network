@@ -1,8 +1,7 @@
 package memberlist
 
 import (
-	"net/url"
-
+	"github.com/spikeekips/mitum/network"
 	"github.com/spikeekips/mitum/util"
 	"golang.org/x/xerrors"
 )
@@ -38,7 +37,7 @@ func (meta *NodeMeta) UnmarshalJSON(b []byte) error {
 			}
 
 			if len(i) > 0 {
-				u, err := url.Parse(i)
+				u, err := network.ParseURL(i, false)
 				if err != nil {
 					return err
 				}

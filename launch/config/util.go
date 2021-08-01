@@ -1,25 +1,12 @@
 package config
 
 import (
-	"net/url"
 	"reflect"
 	"strings"
 	"time"
 
 	"golang.org/x/xerrors"
 )
-
-func ParseURLString(s string, allowEmpty bool) (*url.URL, error) { // nolint:unparam
-	if s = strings.TrimSpace(s); len(s) < 1 {
-		if !allowEmpty {
-			return nil, xerrors.Errorf("empty string")
-		}
-
-		return nil, nil
-	}
-
-	return url.Parse(s)
-}
 
 func parseTimeDuration(s string, allowEmpty bool) (time.Duration, error) { // nolint:unparam
 	if s = strings.TrimSpace(s); len(s) < 1 {

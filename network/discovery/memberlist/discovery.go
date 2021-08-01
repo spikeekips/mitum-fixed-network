@@ -871,7 +871,7 @@ func DefaultRequest(p string) QuicRequest {
 		header http.Header,
 	) (*http.Response, func() error, error) {
 		var i *url.URL
-		i, err := url.Parse(u)
+		i, err := network.ParseURL(u, false)
 		if err != nil {
 			return nil, nil, err
 		}

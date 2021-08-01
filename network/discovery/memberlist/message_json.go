@@ -1,11 +1,11 @@
 package memberlist
 
 import (
-	"net/url"
 	"time"
 
 	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/base/key"
+	"github.com/spikeekips/mitum/network"
 	"github.com/spikeekips/mitum/util"
 	"github.com/spikeekips/mitum/util/encoder"
 	"github.com/spikeekips/mitum/util/localtime"
@@ -56,7 +56,7 @@ func (ms *NodeMessage) Unpack(b []byte, enc encoder.Encoder) error {
 		return xerrors.Errorf("failed to unmarshal NodeMessage: %w", err)
 	}
 
-	publish, err := url.Parse(ums.Publish)
+	publish, err := network.ParseURL(ums.Publish, false)
 	if err != nil {
 		return err
 	}

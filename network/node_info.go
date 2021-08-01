@@ -1,8 +1,6 @@
 package network
 
 import (
-	"net/url"
-
 	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/base/block"
 	"github.com/spikeekips/mitum/base/key"
@@ -85,7 +83,7 @@ func (ni NodeInfoV0) IsValid([]byte) error {
 		return err
 	}
 
-	if _, err := url.Parse(ni.u); err != nil {
+	if _, err := ParseURL(ni.u, false); err != nil {
 		return isvalid.InvalidError.Wrap(err).Errorf("invalid node info url")
 	}
 

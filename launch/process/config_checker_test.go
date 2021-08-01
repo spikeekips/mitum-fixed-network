@@ -2,6 +2,10 @@ package process
 
 import (
 	"context"
+	"encoding/pem"
+	"fmt"
+	"io/ioutil"
+	"os"
 	"testing"
 	"time"
 
@@ -12,10 +16,46 @@ import (
 	"github.com/spikeekips/mitum/launch"
 	"github.com/spikeekips/mitum/launch/config"
 	"github.com/spikeekips/mitum/launch/pm"
+	"github.com/spikeekips/mitum/util"
 )
 
 type testConfigChecker struct {
 	suite.Suite
+	root string
+}
+
+func (t *testConfigChecker) SetupSuite() {
+	p, err := os.MkdirTemp("", "")
+	t.NoError(err)
+	t.root = p
+}
+
+func (t *testConfigChecker) TearDownSuite() {
+	_ = os.RemoveAll(t.root)
+}
+
+func (t *testConfigChecker) newCertFiles(host string) (string, string) {
+	priv, err := util.GenerateED25519Privatekey()
+	t.NoError(err)
+
+	k, c, err := util.GenerateTLSCertsPair(host, priv)
+	t.NoError(err)
+
+	var kfile, cfile string
+
+	f, err := ioutil.TempFile(t.root, "")
+	t.NoError(err)
+	t.NoError(pem.Encode(f, k))
+	_ = f.Close()
+	kfile = f.Name()
+
+	f, err = ioutil.TempFile(t.root, "")
+	t.NoError(err)
+	t.NoError(pem.Encode(f, c))
+	_ = f.Close()
+	cfile = f.Name()
+
+	return kfile, cfile
 }
 
 func (t *testConfigChecker) ps(ctx context.Context) *pm.Processes {
@@ -61,14 +101,16 @@ network:
 	t.NotNil(conf.Network())
 	t.Equal(config.DefaultLocalNetworkURL, conf.Network().ConnInfo().URL())
 	t.Equal(config.DefaultLocalNetworkBind, conf.Network().Bind())
+	t.NotNil(conf.Network().Certs())
+	t.True(conf.Network().ConnInfo().Insecure())
 }
 
 func (t *testConfigChecker) TestLocalNetwork() {
 	{
 		y := `
 network:
-  url: https://local:54323
-  bind: https://local:54324
+  url: https://localhost:54323
+  bind: https://localhost:54324
 `
 		ctx := context.Background()
 		ctx = context.WithValue(ctx, ContextValueConfigSource, []byte(y))
@@ -86,10 +128,12 @@ network:
 		t.NoError(config.LoadConfigContextValue(ps.Context(), &conf))
 
 		t.NotNil(conf.Network())
-		t.Equal("https://local:54323", conf.Network().ConnInfo().URL().String())
-		t.Equal("https://local:54324", conf.Network().Bind().String())
+		t.Equal("https://localhost:54323", conf.Network().ConnInfo().URL().String())
+		t.Equal("https://localhost:54324", conf.Network().Bind().String())
 		t.Equal(config.DefaultLocalNetworkCache, conf.Network().Cache().String())
 		t.Equal(config.DefaultLocalNetworkSealCache, conf.Network().SealCache().String())
+		t.NotNil(conf.Network().Certs())
+		t.True(conf.Network().ConnInfo().Insecure())
 	}
 
 	{
@@ -381,6 +425,151 @@ network:
 	t.Equal(time.Second*2, r.Rules()["send-seal"].Period)
 	t.Equal(int64(333), r.Rules()["seals"].Limit)
 	t.Equal(time.Second*3, r.Rules()["seals"].Period)
+}
+
+func (t *testConfigChecker) TestLocalNetworkEmptyCertificates() {
+	{
+		y := `
+network:
+  url: https://local:54323
+  bind: https://local:54324
+  cert-key:
+  cert:
+`
+
+		ctx := context.Background()
+		ctx = context.WithValue(ctx, ContextValueConfigSource, []byte(y))
+		ctx = context.WithValue(ctx, ContextValueConfigSourceType, "yaml")
+
+		ps := t.ps(ctx)
+		t.NoError(ps.Run())
+
+		cc, err := config.NewChecker(ps.Context())
+		t.NoError(err)
+		_, err = cc.CheckLocalNetwork()
+		t.NoError(err)
+
+		var conf config.LocalNode
+		t.NoError(config.LoadConfigContextValue(ps.Context(), &conf))
+
+		t.NotNil(conf.Network())
+
+		nconf := conf.Network()
+		t.Equal("https://local:54323", nconf.ConnInfo().URL().String())
+		t.Equal("https://local:54324", nconf.Bind().String())
+
+		t.NotNil(nconf.Certs())
+		t.True(nconf.ConnInfo().Insecure())
+	}
+
+	{
+		y := `
+network:
+  url: https://local:54323
+  bind: https://local:54324
+  cert-key: " "
+  cert: " "
+`
+
+		ctx := context.Background()
+		ctx = context.WithValue(ctx, ContextValueConfigSource, []byte(y))
+		ctx = context.WithValue(ctx, ContextValueConfigSourceType, "yaml")
+
+		ps := t.ps(ctx)
+		t.NoError(ps.Run())
+
+		cc, err := config.NewChecker(ps.Context())
+		t.NoError(err)
+		_, err = cc.CheckLocalNetwork()
+		t.NoError(err)
+
+		var conf config.LocalNode
+		t.NoError(config.LoadConfigContextValue(ps.Context(), &conf))
+
+		t.NotNil(conf.Network())
+
+		nconf := conf.Network()
+		t.Equal("https://local:54323", nconf.ConnInfo().URL().String())
+		t.Equal("https://local:54324", nconf.Bind().String())
+
+		t.NotNil(nconf.Certs())
+		t.True(nconf.ConnInfo().Insecure())
+	}
+}
+
+func (t *testConfigChecker) TestLocalNetworkWrongCertificates() {
+	y := `
+network:
+  url: https://local:54323
+  bind: https://local:54324
+  cert-key: %s
+  cert: %s
+`
+
+	// NOTE x509: certificate signed by unknown authority
+	keyFile, certFile := t.newCertFiles("local")
+	y = fmt.Sprintf(y, keyFile, certFile)
+
+	ctx := context.Background()
+	ctx = context.WithValue(ctx, ContextValueConfigSource, []byte(y))
+	ctx = context.WithValue(ctx, ContextValueConfigSourceType, "yaml")
+
+	ps := t.ps(ctx)
+	t.NoError(ps.Run())
+
+	cc, err := config.NewChecker(ps.Context())
+	t.NoError(err)
+	_, err = cc.CheckLocalNetwork()
+	t.NoError(err)
+
+	var conf config.LocalNode
+	t.NoError(config.LoadConfigContextValue(ps.Context(), &conf))
+
+	t.NotNil(conf.Network())
+
+	nconf := conf.Network()
+	t.Equal("https://local:54323", nconf.ConnInfo().URL().String())
+	t.Equal("https://local:54324", nconf.Bind().String())
+
+	t.NotNil(nconf.Certs())
+	t.True(nconf.ConnInfo().Insecure())
+}
+
+func (t *testConfigChecker) TestLocalNetworkWrongHost() {
+	y := `
+network:
+  url: https://local:54323
+  bind: https://local:54324
+  cert-key: %s
+  cert: %s
+`
+	// NOTE certificate is valid for show.me, not local
+	keyFile, certFile := t.newCertFiles("show.me")
+	y = fmt.Sprintf(y, keyFile, certFile)
+
+	ctx := context.Background()
+	ctx = context.WithValue(ctx, ContextValueConfigSource, []byte(y))
+	ctx = context.WithValue(ctx, ContextValueConfigSourceType, "yaml")
+
+	ps := t.ps(ctx)
+	t.NoError(ps.Run())
+
+	cc, err := config.NewChecker(ps.Context())
+	t.NoError(err)
+	_, err = cc.CheckLocalNetwork()
+	t.NoError(err)
+
+	var conf config.LocalNode
+	t.NoError(config.LoadConfigContextValue(ps.Context(), &conf))
+
+	t.NotNil(conf.Network())
+
+	nconf := conf.Network()
+	t.Equal("https://local:54323", nconf.ConnInfo().URL().String())
+	t.Equal("https://local:54324", nconf.Bind().String())
+
+	t.NotNil(nconf.Certs())
+	t.True(nconf.ConnInfo().Insecure())
 }
 
 func (t *testConfigChecker) TestEmptyStorage() {

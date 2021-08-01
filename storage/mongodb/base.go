@@ -2,7 +2,6 @@ package mongodbstorage
 
 import (
 	"context"
-	"net/url"
 	"sync"
 	"time"
 
@@ -17,6 +16,7 @@ import (
 	"github.com/spikeekips/mitum/base/operation"
 	"github.com/spikeekips/mitum/base/seal"
 	"github.com/spikeekips/mitum/base/state"
+	"github.com/spikeekips/mitum/network"
 	"github.com/spikeekips/mitum/storage"
 	"github.com/spikeekips/mitum/util"
 	"github.com/spikeekips/mitum/util/cache"
@@ -120,7 +120,7 @@ func NewDatabase(client *Client, encs *encoder.Encoders, enc encoder.Encoder, ca
 }
 
 func NewDatabaseFromURI(uri string, encs *encoder.Encoders, ca cache.Cache) (*Database, error) {
-	parsed, err := url.Parse(uri)
+	parsed, err := network.ParseURL(uri, false)
 	if err != nil {
 		return nil, xerrors.Errorf("invalid storge uri: %w", err)
 	}

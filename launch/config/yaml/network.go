@@ -2,8 +2,11 @@ package yamlconfig
 
 import (
 	"context"
+	"crypto/tls"
+	"strings"
 
 	"github.com/spikeekips/mitum/launch/config"
+	"github.com/spikeekips/mitum/network"
 	"golang.org/x/xerrors"
 )
 
@@ -29,10 +32,8 @@ func (no LocalNetwork) Set(ctx context.Context) (context.Context, error) {
 	}
 	conf := l.Network()
 
-	if no.URL != nil {
-		if err := conf.SetURL(*no.URL); err != nil {
-			return ctx, err
-		}
+	if err := no.setConnInfo(conf); err != nil {
+		return ctx, err
 	}
 
 	if no.Bind != nil {
@@ -41,12 +42,8 @@ func (no LocalNetwork) Set(ctx context.Context) (context.Context, error) {
 		}
 	}
 
-	if (no.CertKeyFile != nil || no.CertFile != nil) && (no.CertKeyFile == nil || no.CertFile == nil) {
-		return ctx, xerrors.Errorf("cert-key and cert should be given both")
-	} else if no.CertKeyFile != nil {
-		if err := conf.SetCertFiles(*no.CertFile, *no.CertKeyFile); err != nil {
-			return ctx, err
-		}
+	if err := no.setCerts(conf); err != nil {
+		return ctx, err
 	}
 
 	if no.Cache != nil {
@@ -70,4 +67,35 @@ func (no LocalNetwork) Set(ctx context.Context) (context.Context, error) {
 	}
 
 	return ctx, nil
+}
+
+func (no LocalNetwork) setConnInfo(conf config.LocalNetwork) error {
+	if no.URL == nil {
+		return nil
+	}
+
+	connInfo, err := network.NewHTTPConnInfoFromString(*no.URL, false)
+	if err != nil {
+		return err
+	}
+
+	return conf.SetConnInfo(connInfo)
+}
+
+func (no LocalNetwork) setCerts(conf config.LocalNetwork) error {
+	switch {
+	case (no.CertKeyFile != nil || no.CertFile != nil) && (no.CertKeyFile == nil || no.CertFile == nil):
+		return xerrors.Errorf("cert-key and cert should be given both")
+	case no.CertKeyFile == nil || len(strings.TrimSpace(*no.CertKeyFile)) < 1:
+		return nil
+	case no.CertFile == nil || len(strings.TrimSpace(*no.CertFile)) < 1:
+		return nil
+	}
+
+	c, err := tls.LoadX509KeyPair(*no.CertFile, *no.CertKeyFile)
+	if err != nil {
+		return err
+	}
+
+	return conf.SetCerts([]tls.Certificate{c})
 }

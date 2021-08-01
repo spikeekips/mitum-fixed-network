@@ -17,7 +17,7 @@ type RemoteNode interface {
 	Publickey() key.Publickey
 	SetPublickey(string) error
 	ConnInfo() network.ConnInfo
-	SetConnInfo(string) error
+	SetConnInfo(string, bool) error
 }
 
 type BaseRemoteNode struct {
@@ -65,8 +65,8 @@ func (no BaseRemoteNode) ConnInfo() network.ConnInfo {
 	return no.c
 }
 
-func (no *BaseRemoteNode) SetConnInfo(s string) error {
-	c, err := network.NormalizeNodeURL(s)
+func (no *BaseRemoteNode) SetConnInfo(s string, insecure bool) error {
+	c, err := network.NewHTTPConnInfoFromString(s, insecure)
 	if err != nil {
 		return err
 	}

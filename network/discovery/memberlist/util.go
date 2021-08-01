@@ -52,6 +52,10 @@ func stringToIPv6(s string) (net.IP, error) {
 
 func publishToAddress(u *url.URL) (*url.URL, string, error) {
 	uu := network.NormalizeURL(u)
+	if uu.Fragment != "" {
+		uu.Fragment = ""
+	}
+
 	ip, err := stringToIPv6(uu.String())
 	if err != nil {
 		return nil, "", err
@@ -61,15 +65,10 @@ func publishToAddress(u *url.URL) (*url.URL, string, error) {
 }
 
 func isValidPublishURL(u *url.URL) error {
-	if u == nil {
-		return xerrors.Errorf("empty publish url")
+	if err := network.IsValidURL(u); err != nil {
+		return xerrors.Errorf("invalid publish url: %w", err)
 	}
-	if u.Scheme == "" {
-		return xerrors.Errorf("empty publish url; empty scheme, %q", u.String())
-	}
-	if u.Host == "" {
-		return xerrors.Errorf("empty publish url; empty host, %q", u.String())
-	}
+
 	if u.Port() == "" {
 		return xerrors.Errorf("empty publish url; empty port, %q", u.String())
 	}

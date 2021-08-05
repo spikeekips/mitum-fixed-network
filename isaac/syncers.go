@@ -4,6 +4,7 @@ import (
 	"context"
 	"sync"
 
+	"github.com/rs/zerolog"
 	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/base/block"
 	"github.com/spikeekips/mitum/base/node"
@@ -44,7 +45,7 @@ func NewSyncers(
 	baseManifest block.Manifest,
 ) *Syncers {
 	sy := &Syncers{
-		Logging: logging.NewLogging(func(c logging.Context) logging.Emitter {
+		Logging: logging.NewLogging(func(c zerolog.Context) zerolog.Context {
 			return c.Str("module", "syncers")
 		}),
 		local:                local,
@@ -87,10 +88,10 @@ func (sy *Syncers) Stop() error {
 	return err
 }
 
-func (sy *Syncers) SetLogger(l logging.Logger) logging.Logger {
-	_ = sy.ContextDaemon.SetLogger(l)
+func (sy *Syncers) SetLogging(l *logging.Logging) *logging.Logging {
+	_ = sy.ContextDaemon.SetLogging(l)
 
-	return sy.Logging.SetLogger(l)
+	return sy.Logging.SetLogging(l)
 }
 
 func (sy *Syncers) WhenFinished(callback func(base.Height)) {
@@ -113,9 +114,9 @@ func (sy *Syncers) Add(to base.Height, sourceNodes []base.Node) (bool, error) {
 		return isFinished, util.IgnoreError.Errorf("lower height")
 	}
 
-	l := sy.Log().WithLogger(func(ctx logging.Context) logging.Emitter {
-		return ctx.Hinted("previous_height", sy.targetHeight).Hinted("new_height", to)
-	})
+	l := sy.Log().With().
+		Int64("previous_height", sy.targetHeight.Int64()).Int64("new_height", to.Int64()).
+		Logger()
 
 	sy.targetHeight = to
 	sy.mergeSourceNodes(sourceNodes)
@@ -188,7 +189,8 @@ func (sy *Syncers) newSyncer(baseManifest block.Manifest) (Syncer, error) {
 		to = sy.targetHeight
 	}
 
-	l := sy.Log().WithLogger(func(ctx logging.Context) logging.Emitter {
+	var l zerolog.Logger
+	{
 		var from base.Height
 		if baseManifest == nil {
 			from = base.PreGenesisHeight
@@ -196,8 +198,8 @@ func (sy *Syncers) newSyncer(baseManifest block.Manifest) (Syncer, error) {
 			from = baseManifest.Height() + 1
 		}
 
-		return ctx.Hinted("from", from).Hinted("to", to)
-	})
+		l = sy.Log().With().Int64("from", from.Int64()).Int64("to", to.Int64()).Logger()
+	}
 
 	syncer, err := NewGeneralSyncer(
 		sy.local,
@@ -215,8 +217,8 @@ func (sy *Syncers) newSyncer(baseManifest block.Manifest) (Syncer, error) {
 	}
 	syncer = syncer.SetStateChan(sy.stateChan)
 
-	if l, ok := (interface{})(syncer).(logging.SetLogger); ok {
-		_ = l.SetLogger(sy.Log())
+	if l, ok := (interface{})(syncer).(logging.SetLogging); ok {
+		_ = l.SetLogging(sy.Logging)
 	}
 
 	l.Debug().Msg("new syncer added")
@@ -227,7 +229,8 @@ func (sy *Syncers) newSyncer(baseManifest block.Manifest) (Syncer, error) {
 }
 
 func (sy *Syncers) prepareSyncer(baseManifest block.Manifest) error {
-	l := sy.Log().WithLogger(func(lctx logging.Context) logging.Emitter {
+	var l zerolog.Logger
+	{
 		var from base.Height
 		if baseManifest == nil {
 			from = base.PreGenesisHeight
@@ -235,17 +238,16 @@ func (sy *Syncers) prepareSyncer(baseManifest block.Manifest) error {
 			from = baseManifest.Height() + 1
 		}
 
-		return lctx.Hinted("from", from)
-	})
+		l = sy.Log().With().Int64("from", from.Int64()).Logger()
+	}
 
 	newSyncer, err := sy.newSyncer(baseManifest)
 	if err != nil {
-		if xerrors.Is(err, util.IgnoreError) {
-			l.Debug().Err(err).Msg("failed to make new syncer")
+		l.Debug().Err(err).Msg("failed to make new syncer")
 
+		if xerrors.Is(err, util.IgnoreError) {
 			return nil
 		}
-		l.Error().Err(err).Msg("failed to make new syncer")
 
 		return err
 	}
@@ -268,13 +270,12 @@ func (sy *Syncers) stateChanged(ctx SyncerStateChangedContext) error {
 	defer sy.Unlock()
 
 	syncer := ctx.Syncer()
-	l := sy.Log().WithLogger(func(lctx logging.Context) logging.Emitter {
-		return lctx.
-			Str("syncer", syncer.ID()).
-			Str("state", ctx.State().String()).
-			Hinted("from", syncer.HeightFrom()).
-			Hinted("to", syncer.HeightTo())
-	})
+	l := sy.Log().With().
+		Str("syncer", syncer.ID()).
+		Stringer("state", ctx.State()).
+		Int64("from", syncer.HeightFrom().Int64()).
+		Int64("to", syncer.HeightTo().Int64()).
+		Logger()
 
 	switch ctx.State() {
 	case SyncerCreated:
@@ -304,13 +305,12 @@ func (sy *Syncers) stateChanged(ctx SyncerStateChangedContext) error {
 func (sy *Syncers) stateChangedCreated(ctx SyncerStateChangedContext) error {
 	syncer := ctx.Syncer()
 
-	l := sy.Log().WithLogger(func(lctx logging.Context) logging.Emitter {
-		return lctx.
-			Str("syncer", syncer.ID()).
-			Str("state", ctx.State().String()).
-			Hinted("from", syncer.HeightFrom()).
-			Hinted("to", syncer.HeightTo())
-	})
+	l := sy.Log().With().
+		Str("syncer", syncer.ID()).
+		Stringer("state", ctx.State()).
+		Int64("from", syncer.HeightFrom().Int64()).
+		Int64("to", syncer.HeightTo().Int64()).
+		Logger()
 
 	if err := syncer.Prepare(); err != nil {
 		l.Error().Err(err).Msg("failed to prepare")
@@ -325,13 +325,12 @@ func (sy *Syncers) stateChangedCreated(ctx SyncerStateChangedContext) error {
 func (sy *Syncers) stateChangedPrepared(ctx SyncerStateChangedContext) error {
 	syncer := ctx.Syncer()
 
-	l := sy.Log().WithLogger(func(lctx logging.Context) logging.Emitter {
-		return lctx.
-			Str("syncer", syncer.ID()).
-			Str("state", ctx.State().String()).
-			Hinted("from", syncer.HeightFrom()).
-			Hinted("to", syncer.HeightTo())
-	})
+	l := sy.Log().With().
+		Str("syncer", syncer.ID()).
+		Stringer("state", ctx.State()).
+		Int64("from", syncer.HeightFrom().Int64()).
+		Int64("to", syncer.HeightTo().Int64()).
+		Logger()
 
 	l.Debug().Msg("syncer prepared")
 
@@ -341,15 +340,14 @@ func (sy *Syncers) stateChangedPrepared(ctx SyncerStateChangedContext) error {
 func (sy *Syncers) stateChangedSaved(ctx SyncerStateChangedContext) error {
 	syncer := ctx.Syncer()
 
-	l := sy.Log().WithLogger(func(lctx logging.Context) logging.Emitter {
-		return lctx.
-			Str("syncer", syncer.ID()).
-			Str("state", ctx.State().String()).
-			Hinted("from", syncer.HeightFrom()).
-			Hinted("to", syncer.HeightTo()).
-			Hinted("target_height", sy.targetHeight).
-			Hinted("last_syncer_height", sy.lastSyncer.HeightTo())
-	})
+	l := sy.Log().With().
+		Str("syncer", syncer.ID()).
+		Stringer("state", ctx.State()).
+		Int64("from", syncer.HeightFrom().Int64()).
+		Int64("to", syncer.HeightTo().Int64()).
+		Int64("target_height", sy.targetHeight.Int64()).
+		Int64("last_syncer_height", sy.lastSyncer.HeightTo().Int64()).
+		Logger()
 
 	if st, ok := sy.database.(storage.LastBlockSaver); ok {
 		if err := st.SaveLastBlock(syncer.HeightTo()); err != nil {

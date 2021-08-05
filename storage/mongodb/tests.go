@@ -6,12 +6,9 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/rs/zerolog"
-
 	"github.com/spikeekips/mitum/base/block"
 	"github.com/spikeekips/mitum/util"
 	"github.com/spikeekips/mitum/util/cache"
-	"github.com/spikeekips/mitum/util/logging"
 )
 
 func (st *Database) SetLastBlock(m block.Block) {
@@ -19,21 +16,6 @@ func (st *Database) SetLastBlock(m block.Block) {
 }
 
 var BaseTestMongodbURI = "mongodb://localhost:27017"
-
-//lint:file-ignore U1000 debugging inside test
-var log logging.Logger
-
-func init() {
-	l := zerolog.
-		New(os.Stderr).
-		With().
-		Timestamp().
-		Caller().
-		Stack().
-		Logger().Level(zerolog.DebugLevel)
-
-	log = logging.NewLogger(&l, true)
-}
 
 func TestMongodbURI() string {
 	uri := "localhost"

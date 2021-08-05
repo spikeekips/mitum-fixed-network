@@ -3,6 +3,7 @@ package basicstates
 import (
 	"golang.org/x/xerrors"
 
+	"github.com/rs/zerolog"
 	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/base/ballot"
 	"github.com/spikeekips/mitum/base/block"
@@ -29,7 +30,7 @@ func NewVoteproofChecker(
 	lastVoteproof, voteproof base.Voteproof,
 ) *VoteproofChecker {
 	return &VoteproofChecker{
-		Logging: logging.NewLogging(func(c logging.Context) logging.Emitter {
+		Logging: logging.NewLogging(func(c zerolog.Context) zerolog.Context {
 			e := c.Str("module", "voteproof-validation-checker").
 				Str("voteproof_id", voteproof.ID())
 
@@ -155,11 +156,11 @@ func (vc *VoteproofChecker) CheckACCEPTVoteproofProposal() (bool, error) {
 
 		node, ch, found := vc.nodepool.Node(f.Node())
 		if !found {
-			vc.Log().Debug().Str("target_node", f.Node().String()).Msg("unknown node found in voteproof")
+			vc.Log().Debug().Stringer("target_node", f.Node()).Msg("unknown node found in voteproof")
 
 			continue
 		} else if ch == nil {
-			vc.Log().Debug().Str("target_node", f.Node().String()).Msg("node is dead")
+			vc.Log().Debug().Stringer("target_node", f.Node()).Msg("node is dead")
 
 			continue
 		}

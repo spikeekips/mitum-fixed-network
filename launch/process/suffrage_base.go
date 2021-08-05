@@ -5,6 +5,7 @@ import (
 	"sync"
 
 	lru "github.com/hashicorp/golang-lru"
+	"github.com/rs/zerolog"
 	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/util/logging"
 	"golang.org/x/xerrors"
@@ -48,7 +49,7 @@ func NewBaseSuffrage(
 	base.SortAddresses(nodes)
 
 	return &BaseSuffrage{
-		Logging: logging.NewLogging(func(c logging.Context) logging.Emitter {
+		Logging: logging.NewLogging(func(c zerolog.Context) zerolog.Context {
 			return c.Str("module", name)
 		}),
 		nodes:          nodes,

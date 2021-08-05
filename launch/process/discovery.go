@@ -15,7 +15,7 @@ func JoinDiscovery(
 	dis *memberlist.Discovery,
 	cis []memberlist.ConnInfo,
 	maxretry int,
-	log logging.Logger,
+	log *logging.Logging,
 ) error {
 	// NOTE join network
 	if err := dis.Join(cis, maxretry); err != nil {
@@ -44,7 +44,7 @@ func JoinDiscovery(
 		return memberlist.JoiningCanceledError.Errorf("any nodes did not join, except local")
 	}
 
-	log.Debug().Interface("joined", alives).Msg("joined network")
+	log.Log().Debug().Interface("joined", alives).Msg("joined network")
 
 	return nil
 }
@@ -54,7 +54,7 @@ func KeepDiscoveryJoining(
 	suffrage base.Suffrage,
 	dis *memberlist.Discovery,
 	cis []memberlist.ConnInfo,
-	log logging.Logger,
+	log *logging.Logging,
 ) {
 	for {
 		err := JoinDiscovery(nodepool, suffrage, dis, cis, -1, log)
@@ -62,7 +62,7 @@ func KeepDiscoveryJoining(
 			break
 		}
 
-		log.Error().Err(err).Msg("failed to join network; keep retrying")
+		log.Log().Error().Err(err).Msg("failed to join network; keep retrying")
 
 		<-time.After(time.Second * 2)
 	}

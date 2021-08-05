@@ -29,7 +29,7 @@ func init() {
 }
 
 func ProcessTimeSyncer(ctx context.Context) (context.Context, error) {
-	var log logging.Logger
+	var log *logging.Logging
 	if err := config.LoadLogContextValue(ctx, &log); err != nil {
 		return ctx, err
 	}
@@ -40,7 +40,7 @@ func ProcessTimeSyncer(ctx context.Context) (context.Context, error) {
 	}
 
 	if len(conf.LocalConfig().TimeServer()) < 1 {
-		log.Debug().Msg("no time server; local time will be used")
+		log.Log().Debug().Msg("no time server; local time will be used")
 
 		return ctx, nil
 	}
@@ -49,7 +49,7 @@ func ProcessTimeSyncer(ctx context.Context) (context.Context, error) {
 	if err != nil {
 		return ctx, err
 	}
-	_ = ts.SetLogger(log)
+	_ = ts.SetLogging(log)
 
 	if err := ts.Start(); err != nil {
 		return ctx, err

@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 
+	"github.com/rs/zerolog"
 	jsonenc "github.com/spikeekips/mitum/util/encoder/json"
 	"github.com/spikeekips/mitum/util/logging"
 	"golang.org/x/xerrors"
@@ -19,7 +20,7 @@ type FixedSuffrage struct {
 
 func NewFixedSuffrage(proposer Address, nodes []Address) *FixedSuffrage {
 	return &FixedSuffrage{
-		Logging: logging.NewLogging(func(c logging.Context) logging.Emitter {
+		Logging: logging.NewLogging(func(c zerolog.Context) zerolog.Context {
 			return c.Str("module", "fixed-suffrage")
 		}),
 		proposer: proposer,

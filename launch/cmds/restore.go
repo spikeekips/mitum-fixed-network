@@ -14,7 +14,6 @@ import (
 	"github.com/spikeekips/mitum/storage/blockdata/localfs"
 	"github.com/spikeekips/mitum/util"
 	"github.com/spikeekips/mitum/util/hint"
-	"github.com/spikeekips/mitum/util/logging"
 	"golang.org/x/xerrors"
 )
 
@@ -134,9 +133,7 @@ func (cmd *RestoreCommand) restoreBlock(height base.Height) error {
 		_ = sst.Close()
 	}()
 
-	l := cmd.Log().WithLogger(func(ctx logging.Context) logging.Emitter {
-		return ctx.Int64("height", height.Int64())
-	})
+	l := cmd.Log().With().Int64("height", height.Int64()).Logger()
 
 	var blk block.Block
 	var bdm block.BaseBlockDataMap
@@ -263,10 +260,7 @@ func (cmd *RestoreCommand) hookCheckExistingDatabase(ctx context.Context) (conte
 		cmd.Log().Debug().Msg("last manifest not found")
 		return ctx, nil
 	case m != nil:
-		cmd.Log().Debug().Dict("block", logging.Dict().
-			Str("hash", m.Hash().String()).
-			Int64("height", m.Height().Int64()).Uint64("round", m.Round().Uint64())).
-			Msg("last manfest found in database; restore from it")
+		cmd.Log().Debug().Object("block", m).Msg("last manfest found in database; restore from it")
 
 		cmd.lastManifest = m
 	}

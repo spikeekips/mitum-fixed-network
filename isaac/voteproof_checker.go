@@ -1,6 +1,7 @@
 package isaac
 
 import (
+	"github.com/rs/zerolog"
 	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/util/logging"
 )
@@ -18,7 +19,7 @@ type VoteProofChecker struct {
 
 func NewVoteProofChecker(voteproof base.Voteproof, policy *LocalPolicy, suffrage base.Suffrage) *VoteProofChecker {
 	return &VoteProofChecker{
-		Logging: logging.NewLogging(func(c logging.Context) logging.Emitter {
+		Logging: logging.NewLogging(func(c zerolog.Context) zerolog.Context {
 			return c.Str("module", "voteproof-checker")
 		}),
 		voteproof: voteproof,
@@ -40,7 +41,7 @@ func (vc *VoteProofChecker) NodeIsInSuffrage() (bool, error) {
 	for i := range vc.voteproof.Votes() {
 		nf := vc.voteproof.Votes()[i]
 		if !vc.suffrage.IsInside(nf.Node()) {
-			vc.Log().Debug().Str("node", nf.Node().String()).Msg("voteproof has the vote from unknown node")
+			vc.Log().Debug().Stringer("node", nf.Node()).Msg("voteproof has the vote from unknown node")
 
 			return false, nil
 		}

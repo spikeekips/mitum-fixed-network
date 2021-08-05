@@ -3,6 +3,7 @@ package block
 import (
 	"time"
 
+	"github.com/rs/zerolog"
 	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/base/ballot"
 	"github.com/spikeekips/mitum/base/operation"
@@ -10,7 +11,6 @@ import (
 	"github.com/spikeekips/mitum/util"
 	"github.com/spikeekips/mitum/util/hint"
 	"github.com/spikeekips/mitum/util/isvalid"
-	"github.com/spikeekips/mitum/util/logging"
 	"github.com/spikeekips/mitum/util/tree"
 	"github.com/spikeekips/mitum/util/valuehash"
 )
@@ -20,7 +20,7 @@ type Manifest interface {
 	hint.Hinter
 	util.Byter
 	valuehash.Hasher
-	logging.LogHintedMarshaler
+	zerolog.LogObjectMarshaler
 	PreviousBlock() valuehash.Hash
 	Height() base.Height
 	Round() base.Round

@@ -1,22 +1,23 @@
 package base
 
-import "github.com/spikeekips/mitum/util/logging"
+import (
+	"github.com/rs/zerolog"
+	"github.com/rs/zerolog/log"
+)
 
-func (as ActingSuffrage) MarshalLog(key string, e logging.Emitter, verbose bool) logging.Emitter {
-	ev := logging.Dict().
-		HintedVerbose("height", as.height, verbose).
-		HintedVerbose("round", as.round, verbose).
+func (as ActingSuffrage) MarshalZerologObject(e *zerolog.Event) {
+	e.
+		Int64("height", as.height.Int64()).
+		Uint64("round", as.round.Uint64()).
 		Int("number_of_nodes", len(as.nodes)).
-		HintedVerbose("proposer", as.proposer, verbose)
+		Stringer("proposer", as.proposer)
 
-	if !verbose {
-		return e.Dict(key, ev)
+	if e := log.Debug(); e.Enabled() {
+		nodes := make([]string, len(as.nodes))
+		for i, n := range as.nodeList {
+			nodes[i] = n.String()
+		}
+
+		e.Strs("nodes", nodes)
 	}
-
-	nodes := make([]string, len(as.nodes))
-	for i, n := range as.nodeList {
-		nodes[i] = n.String()
-	}
-
-	return e.Dict(key, ev.Strs("nodes", nodes))
 }

@@ -14,7 +14,7 @@ import (
 var HookNameBlockDataCleaner = "blockdata_cleaner"
 
 func HookBlockDataCleaner(ctx context.Context) (context.Context, error) {
-	var log logging.Logger
+	var log *logging.Logging
 	if err := config.LoadLogContextValue(ctx, &log); err != nil {
 		return ctx, err
 	}
@@ -30,13 +30,13 @@ func HookBlockDataCleaner(ctx context.Context) (context.Context, error) {
 	}
 
 	bc := NewBlockDataCleaner(lbd, DefaultTimeAfterRemoveBlockDataFiles)
-	_ = bc.SetLogger(log)
+	_ = bc.SetLogging(log)
 
 	if err := bc.Start(); err != nil {
 		return ctx, err
 	}
 
-	log.Debug().Dur("remove_after", DefaultTimeAfterRemoveBlockDataFiles).Msg("BlockDataCleaner created")
+	log.Log().Debug().Dur("remove_after", DefaultTimeAfterRemoveBlockDataFiles).Msg("BlockDataCleaner created")
 
 	return context.WithValue(ctx, ContextValueBlockDataCleaner, bc), nil
 }

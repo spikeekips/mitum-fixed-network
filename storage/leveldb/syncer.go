@@ -4,6 +4,7 @@ import (
 	"context"
 	"sync"
 
+	"github.com/rs/zerolog"
 	"github.com/syndtr/goleveldb/leveldb"
 	"golang.org/x/xerrors"
 
@@ -24,7 +25,7 @@ type SyncerSession struct {
 
 func NewSyncerSession(main *Database) *SyncerSession {
 	return &SyncerSession{
-		Logging: logging.NewLogging(func(c logging.Context) logging.Emitter {
+		Logging: logging.NewLogging(func(c zerolog.Context) zerolog.Context {
 			return c.Str("module", "leveldb-syncer-database")
 		}),
 		main:       main,
@@ -77,13 +78,13 @@ func (st *SyncerSession) Manifests(heights []base.Height) ([]block.Manifest, err
 }
 
 func (st *SyncerSession) SetManifests(manifests []block.Manifest) error {
-	st.Log().VerboseFunc(func(e *logging.Event) logging.Emitter {
+	st.Log().Debug().Func(func(e *zerolog.Event) {
 		var heights []base.Height
 		for i := range manifests {
 			heights = append(heights, manifests[i].Height())
 		}
 
-		return e.Interface("heights", heights)
+		e.Interface("heights", heights)
 	}).
 		Int("manifests", len(manifests)).
 		Msg("set manifests")
@@ -122,13 +123,13 @@ func (st *SyncerSession) SetBlocks(blocks []block.Block, maps []block.BlockDataM
 		}
 	}
 
-	st.Log().VerboseFunc(func(e *logging.Event) logging.Emitter {
+	st.Log().Debug().Func(func(e *zerolog.Event) {
 		var heights []base.Height
 		for i := range blocks {
 			heights = append(heights, blocks[i].Height())
 		}
 
-		return e.Interface("heights", heights)
+		e.Interface("heights", heights)
 	}).
 		Int("blocks", len(blocks)).
 		Msg("set blocks")
@@ -152,8 +153,8 @@ func (st *SyncerSession) SetBlocks(blocks []block.Block, maps []block.BlockDataM
 
 func (st *SyncerSession) Commit() error {
 	st.Log().Debug().
-		Hinted("from_height", st.heightFrom).
-		Hinted("to_height", st.heightTo).
+		Int64("from_height", st.heightFrom.Int64()).
+		Int64("to_height", st.heightTo.Int64()).
 		Msg("trying to commit blocks")
 
 	for i := st.heightFrom; i <= st.heightTo; i++ {

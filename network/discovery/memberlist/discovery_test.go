@@ -130,10 +130,8 @@ func (t *testDiscovery) copyNode(
 func (t *testDiscovery) initializeNodes(nodes map[string]*dummyNode, publishes map[string]http.HandlerFunc) error {
 	for _, n := range nodes {
 		// NOTE uncomment for logging
-		// l := log.WithLogger(func(lctx logging.Context) logging.Emitter {
-		// 	return lctx.Str("local", k)
-		// })
-		// _ = n.discovery.SetLogger(logging.NewLogger(l.Logger, l.IsVerbose()))
+		// l := logging.TestLogging.Log().With().Str("local", k).Logger()
+		// _ = n.discovery.SetLogging(l)
 
 		if err := n.discovery.Initialize(); err != nil {
 			return err

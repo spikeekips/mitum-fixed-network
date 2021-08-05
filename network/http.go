@@ -8,15 +8,13 @@ import (
 	"github.com/justinas/alice"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/hlog"
-
-	"github.com/spikeekips/mitum/util/logging"
 )
 
 type HTTPHandlerFunc func(http.ResponseWriter, *http.Request)
 
-func HTTPLogHandler(handler http.Handler, logger logging.Logger) http.Handler {
+func HTTPLogHandler(handler http.Handler, logger *zerolog.Logger) http.Handler {
 	c := alice.New().
-		Append(hlog.NewHandler(*logger.Logger)).
+		Append(hlog.NewHandler(*logger)).
 		Append(hlog.RemoteAddrHandler("ip")).
 		Append(hlog.UserAgentHandler("user_agent")).
 		Append(hlog.RefererHandler("referer")).

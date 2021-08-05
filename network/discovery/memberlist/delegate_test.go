@@ -33,7 +33,7 @@ func (t *testDiscovery) nodepoolDelegate(
 	}
 
 	dg := discovery.NewNodepoolDelegate(np, t.encs, time.Second*5)
-	// dg.SetLogger(log)
+	// dg.SetLogging(logging.TestLogging)
 
 	return dg, np, nil
 }

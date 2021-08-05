@@ -3,6 +3,7 @@ package basicstates
 import (
 	"golang.org/x/xerrors"
 
+	"github.com/rs/zerolog"
 	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/base/ballot"
 	"github.com/spikeekips/mitum/base/node"
@@ -118,7 +119,7 @@ type BallotChecker struct {
 
 func NewBallotChecker(blt ballot.Ballot, lvp base.Voteproof) *BallotChecker {
 	return &BallotChecker{
-		Logging: logging.NewLogging(func(c logging.Context) logging.Emitter {
+		Logging: logging.NewLogging(func(c zerolog.Context) zerolog.Context {
 			return c.Str("module", "ballot-checker-in-states")
 		}),
 		ballot: blt,

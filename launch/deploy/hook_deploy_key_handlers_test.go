@@ -16,6 +16,7 @@ import (
 	"github.com/spikeekips/mitum/storage"
 	"github.com/spikeekips/mitum/util"
 	jsonenc "github.com/spikeekips/mitum/util/encoder/json"
+	"github.com/spikeekips/mitum/util/logging"
 	"github.com/stretchr/testify/suite"
 )
 
@@ -35,7 +36,7 @@ func (t *testDeployKeyHandlers) SetupSuite() {
 }
 
 func (t *testDeployKeyHandlers) handlers(router *mux.Router) *deployKeyHandlers {
-	ctx := context.WithValue(context.Background(), config.ContextValueLog, log)
+	ctx := context.WithValue(context.Background(), config.ContextValueLog, logging.TestNilLogging)
 
 	ctx = context.WithValue(ctx, config.ContextValueJSONEncoder, t.JSONEnc)
 	t.local = node.RandomLocal("local")

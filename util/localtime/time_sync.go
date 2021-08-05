@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/beevik/ntp"
+	"github.com/rs/zerolog"
 	"golang.org/x/xerrors"
 
 	"github.com/spikeekips/mitum/util"
@@ -46,7 +47,7 @@ func NewTimeSyncer(server string, checkInterval time.Duration) (*TimeSyncer, err
 	}
 
 	ts := &TimeSyncer{
-		Logging: logging.NewLogging(func(c logging.Context) logging.Emitter {
+		Logging: logging.NewLogging(func(c zerolog.Context) zerolog.Context {
 			return c.Str("module", "time-syncer").
 				Str("server", server).
 				Dur("interval", checkInterval)

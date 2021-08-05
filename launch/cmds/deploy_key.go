@@ -69,7 +69,7 @@ func (cmd *baseDeployKeyCommand) Initialize(flags interface{}, version util.Vers
 	} else {
 		cmd.privatekey = j
 
-		cmd.Log().Debug().Str("node_privatekey", cmd.privatekey.String()).Msg("node privatekey loaded")
+		cmd.Log().Debug().Stringer("node_privatekey", cmd.privatekey).Msg("node privatekey loaded")
 	}
 
 	cmd.networkID = base.NetworkID([]byte(cmd.NetworkID))

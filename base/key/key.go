@@ -6,7 +6,6 @@ import (
 	"github.com/spikeekips/mitum/util/errors"
 	"github.com/spikeekips/mitum/util/hint"
 	"github.com/spikeekips/mitum/util/isvalid"
-	"github.com/spikeekips/mitum/util/logging"
 )
 
 var (
@@ -70,10 +69,6 @@ func (ky BaseKey) Bytes() []byte {
 
 func (ky BaseKey) MarshalText() ([]byte, error) {
 	return []byte(ky.String()), nil
-}
-
-func (ky BaseKey) MarshalLog(key string, e logging.Emitter, _ bool) logging.Emitter {
-	return e.Str(key, ky.String())
 }
 
 func (ky BaseKey) Equal(k Key) bool {

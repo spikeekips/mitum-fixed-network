@@ -11,6 +11,7 @@ import (
 
 	"golang.org/x/xerrors"
 
+	"github.com/rs/zerolog"
 	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/base/block"
 	"github.com/spikeekips/mitum/base/node"
@@ -120,10 +121,10 @@ func NewGeneralSyncer(
 	}
 
 	cs := &GeneralSyncer{
-		Logging: logging.NewLogging(func(c logging.Context) logging.Emitter {
+		Logging: logging.NewLogging(func(c zerolog.Context) zerolog.Context {
 			return c.
-				Hinted("from", from).Hinted("to", to).
-				Str("syncer_id", util.UUID().String()).
+				Int64("from", from.Int64()).Int64("to", to.Int64()).
+				Stringer("syncer_id", util.UUID()).
 				Str("module", "general-syncer")
 		}),
 		ost:                     ost,
@@ -146,8 +147,8 @@ func NewGeneralSyncer(
 	return cs, nil
 }
 
-func (cs *GeneralSyncer) SetLogger(l logging.Logger) logging.Logger {
-	return cs.Logging.SetLogger(l)
+func (cs *GeneralSyncer) SetLogging(l *logging.Logging) *logging.Logging {
+	return cs.Logging.SetLogging(l)
 }
 
 func (cs *GeneralSyncer) ID() string {
@@ -382,8 +383,8 @@ func (cs *GeneralSyncer) reset() error {
 		return err
 	}
 
-	if sl, ok := i.(logging.SetLogger); ok {
-		_ = sl.SetLogger(cs.Log())
+	if sl, ok := i.(logging.SetLogging); ok {
+		_ = sl.SetLogging(cs.Logging)
 	}
 
 	cs.setSyncerSession(i)
@@ -395,7 +396,7 @@ func (cs *GeneralSyncer) reset() error {
 
 func (cs *GeneralSyncer) headAndTailManifests() error {
 	if cs.State() != SyncerPreparing {
-		cs.Log().Debug().Str("state", cs.State().String()).Msg("not preparing state")
+		cs.Log().Debug().Stringer("state", cs.State()).Msg("not preparing state")
 
 		return nil
 	}
@@ -422,14 +423,14 @@ func (cs *GeneralSyncer) headAndTailManifests() error {
 	if cs.baseManifest != nil {
 		head := manifests[0]
 		cs.Log().Debug().
-			Hinted("base_manifest_previous", cs.baseManifest.PreviousBlock()).
-			Hinted("base_manifest", cs.baseManifest.Hash()).
-			Hinted("head_previous", head.PreviousBlock()).
-			Hinted("head", head.Hash()).
+			Stringer("base_manifest_previous", cs.baseManifest.PreviousBlock()).
+			Stringer("base_manifest", cs.baseManifest.Hash()).
+			Stringer("head_previous", head.PreviousBlock()).
+			Stringer("head", head.Hash()).
 			Msg("checking base and head manifest")
 
 		checker := NewManifestsValidationChecker(cs.policy.NetworkID(), []block.Manifest{cs.baseManifest, head})
-		_ = checker.SetLogger(cs.Log())
+		_ = checker.SetLogging(cs.Logging)
 
 		if err := util.NewChecker("sync-manifests-validation-checker", []util.CheckerFunc{
 			checker.CheckSerialized,
@@ -453,7 +454,7 @@ func (cs *GeneralSyncer) headAndTailManifests() error {
 
 func (cs *GeneralSyncer) fillManifests() error {
 	if cs.State() != SyncerPreparing {
-		cs.Log().Debug().Str("state", cs.State().String()).Msg("not preparing state")
+		cs.Log().Debug().Stringer("state", cs.State()).Msg("not preparing state")
 
 		return nil
 	}
@@ -531,7 +532,7 @@ func (cs *GeneralSyncer) fetchBlocksByNodes() error {
 
 	worker := util.NewParallelWorker("sync-fetch-blocks", 5)
 	defer worker.Done()
-	_ = worker.SetLogger(cs.Log())
+	_ = worker.SetLogging(cs.Logging)
 
 	if len(cs.provedNodes()) < 1 {
 		return xerrors.Errorf("empty proved nodes")
@@ -542,7 +543,7 @@ func (cs *GeneralSyncer) fetchBlocksByNodes() error {
 		if !found {
 			return util.NotFoundError.Errorf("unknown node, %q", addr)
 		} else if ch == nil {
-			cs.Log().Warn().Str("address", addr.String()).Msg("node is dead")
+			cs.Log().Warn().Stringer("address", addr).Msg("node is dead")
 
 			continue
 		}
@@ -593,14 +594,14 @@ func (cs *GeneralSyncer) handleSyncerFetchBlockError(err error) error {
 
 	if fm.err != nil {
 		cs.Log().Error().Err(err).
-			Hinted("source_node", fm.node).Msg("something wrong to fetch blocks from node")
+			Stringer("source_node", fm.node).Msg("something wrong to fetch blocks from node")
 
 		return xerrors.Errorf("failed to fetch blocks; %w", fm.err)
 	}
 
 	if len(fm.blocks) < 1 {
 		cs.Log().Error().Err(err).
-			Hinted("source_node", fm.node).Msg("empty blocks; something wrong to fetch blocks from node")
+			Stringer("source_node", fm.node).Msg("empty blocks; something wrong to fetch blocks from node")
 
 		return xerrors.Errorf("empty blocks; failed to fetch blocks")
 	}
@@ -654,10 +655,9 @@ func (cs *GeneralSyncer) distributeBlocksJob(worker *util.ParallelWorker) error 
 func (cs *GeneralSyncer) fetchManifestsByNodes(heights []base.Height) (
 	[]block.Manifest, []base.Address, error,
 ) {
-	l := cs.Log().WithLogger(func(ctx logging.Context) logging.Emitter {
-		return ctx.Hinted("height_from", heights[0]).
-			Hinted("height_to", heights[len(heights)-1])
-	})
+	l := cs.Log().With().Int64("height_from", heights[0].Int64()).
+		Int64("height_to", heights[len(heights)-1].Int64()).
+		Logger()
 
 	l.Debug().Msg("trying to fetch manifest")
 
@@ -672,7 +672,7 @@ func (cs *GeneralSyncer) fetchManifestsByNodes(heights []base.Height) (
 		if !found {
 			return nil, nil, util.NotFoundError.Errorf("unknown node, %q", addr)
 		} else if ch == nil {
-			l.Warn().Str("address", addr.String()).Msg("node is dead")
+			l.Warn().Stringer("address", addr).Msg("node is dead")
 
 			wg.Done()
 
@@ -682,12 +682,16 @@ func (cs *GeneralSyncer) fetchManifestsByNodes(heights []base.Height) (
 		go func(addr base.Address, ch network.Channel) {
 			defer wg.Done()
 
-			if i, err := cs.callbackFetchManifests(addr, ch, heights); err != nil {
-				l.Error().Err(err).Str("node", addr.String()).Msg("failed to get manifest from node")
+			i, err := cs.callbackFetchManifests(addr, ch, heights)
+			if err != nil {
+				l.Error().Err(err).Stringer("node", addr).Msg("failed to get manifest from node")
+
 				resultChan <- nil
-			} else {
-				resultChan <- map[base.Address][]block.Manifest{addr: i}
+
+				return
 			}
+
+			resultChan <- map[base.Address][]block.Manifest{addr: i}
 		}(addr, ch)
 	}
 
@@ -783,11 +787,10 @@ func (cs *GeneralSyncer) callbackFetchManifestsSlice(
 ) ([]block.Manifest, error) {
 	var maxRetries uint = 3
 
-	l := cs.Log().WithLogger(func(ctx logging.Context) logging.Emitter {
-		return ctx.Uint("max-retries", maxRetries).
-			Str("source_node", addr.String()).
-			Interface("heights", heights)
-	})
+	l := cs.Log().With().Uint("max-retries", maxRetries).
+		Stringer("source_node", addr).
+		Interface("heights", heights).
+		Logger()
 
 	l.Debug().Msg("trying to fetch manifest of node")
 
@@ -1006,10 +1009,9 @@ func (cs *GeneralSyncer) workerCallbackFetchBlocks(addr base.Address, ch network
 			return xerrors.Errorf("job is not []Height: %T", job)
 		}
 
-		l := cs.Log().WithLogger(func(ctx logging.Context) logging.Emitter {
-			return ctx.Str("source_node", addr.String()).
-				Interface("heights", heights)
-		})
+		l := cs.Log().With().Stringer("source_node", addr).
+			Interface("heights", heights).
+			Logger()
 
 		var manifests []block.Manifest
 		var missing []base.Height
@@ -1056,8 +1058,8 @@ func (cs *GeneralSyncer) checkFetchedBlocks(fetched []block.Block) ([]base.Heigh
 		blk := fetched[i]
 		if err := blk.IsValid(networkID); err != nil {
 			cs.Log().Error().Err(err).
-				Hinted("height", blk.Height()).
-				Interface("block", blk).
+				Int64("height", blk.Height().Int64()).
+				Object("block", blk).
 				Msg("found invalid block")
 
 			missing = append(missing, blk.Height())
@@ -1112,11 +1114,10 @@ func (cs *GeneralSyncer) fetchBlocks(
 	ch network.Channel,
 	heights []base.Height,
 ) ([]block.Block, error) {
-	l := cs.Log().WithLogger(func(ctx logging.Context) logging.Emitter {
-		return ctx.Str("source_node", addr.String()).
-			Hinted("height_from", heights[0]).
-			Hinted("height_to", heights[len(heights)-1])
-	})
+	l := cs.Log().With().Stringer("source_node", addr).
+		Int64("height_from", heights[0].Int64()).
+		Int64("height_to", heights[len(heights)-1].Int64()).
+		Logger()
 
 	maps, err := cs.fetchBlockDataMaps(ch, heights)
 	if err != nil {
@@ -1172,10 +1173,9 @@ func (cs *GeneralSyncer) fetchBlock( // revive:disable-line:cognitive-complexity
 		return nil, err
 	}
 
-	l := cs.Log().WithLogger(func(ctx logging.Context) logging.Emitter {
-		return ctx.Str("source_node", addr.String()).
-			Hinted("height", bd.Height())
-	})
+	l := cs.Log().With().Stringer("source_node", addr).
+		Int64("height", bd.Height().Int64()).
+		Logger()
 
 	l.Debug().Msg("trying to fetch block")
 
@@ -1258,7 +1258,7 @@ func (cs *GeneralSyncer) fetchBlock( // revive:disable-line:cognitive-complexity
 		blk = blk.SetProposal(j)
 	}
 
-	l.Debug().Hinted("block", blk.Hash()).Msg("fetched block")
+	l.Debug().Stringer("block", blk.Hash()).Msg("fetched block")
 
 	return blk, nil
 }
@@ -1281,12 +1281,8 @@ func (cs *GeneralSyncer) commit() error {
 			return err
 		default:
 			cs.Log().Info().
-				Hinted("proposal_hash", m.Proposal()).
-				Dict("block", logging.Dict().
-					Hinted("hash", m.Hash()).
-					Hinted("height", m.Height()).
-					Hinted("round", m.Round()),
-				).
+				Stringer("proposal_hash", m.Proposal()).
+				Object("block", m).
 				Msg("new block stored")
 		}
 	}
@@ -1297,7 +1293,7 @@ func (cs *GeneralSyncer) commit() error {
 }
 
 func (cs *GeneralSyncer) rollback(rollbackCtx *BlockIntegrityError) error {
-	cs.Log().Debug().Hinted("compare_from", rollbackCtx.From.Height()).Msg("block integrity failed; will rollback")
+	cs.Log().Debug().Int64("compare_from", rollbackCtx.From.Height().Int64()).Msg("block integrity failed; will rollback")
 
 	var unmatched base.Height
 	switch u, err := cs.compareBlocks(rollbackCtx.From.Height()); {
@@ -1309,7 +1305,7 @@ func (cs *GeneralSyncer) rollback(rollbackCtx *BlockIntegrityError) error {
 		unmatched = u
 	}
 
-	cs.Log().Debug().Hinted("unmatched", unmatched).Msg("found unmatched; clean blocks")
+	cs.Log().Debug().Int64("unmatched", unmatched.Int64()).Msg("found unmatched; clean blocks")
 
 	// NOTE clean block until unmatched height and start again prepare()
 	var baseManifest block.Manifest
@@ -1334,14 +1330,14 @@ func (cs *GeneralSyncer) rollback(rollbackCtx *BlockIntegrityError) error {
 	}
 
 	cs.Log().Debug().
-		Hinted("new_height_from", unmatched).
+		Int64("new_height_from", unmatched.Int64()).
 		Msg("height from and base manifest was changed")
 
 	return cs.prepare()
 }
 
 func (cs *GeneralSyncer) compareBlocks(from base.Height) (base.Height, error) {
-	cs.Log().Debug().Hinted("compare_from", from).Msg("before rollback, check genesis blocks")
+	cs.Log().Debug().Int64("compare_from", from.Int64()).Msg("before rollback, check genesis blocks")
 
 	cs.Log().Debug().Msg("compare genesis blocks")
 	switch matched, err := cs.compareBlock(base.PreGenesisHeight + 1); {
@@ -1518,7 +1514,7 @@ func (cs *GeneralSyncer) setState(state SyncerState, force bool) {
 	cs.Lock()
 	defer cs.Unlock()
 
-	cs.Log().Debug().Str("new_state", state.String()).Bool("force", force).Msg("state changed")
+	cs.Log().Debug().Stringer("new_state", state).Bool("force", force).Msg("state changed")
 
 	if !force && cs.state >= state {
 		return

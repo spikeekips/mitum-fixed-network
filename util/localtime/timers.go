@@ -5,6 +5,7 @@ import (
 
 	"golang.org/x/xerrors"
 
+	"github.com/rs/zerolog"
 	"github.com/spikeekips/mitum/util"
 	"github.com/spikeekips/mitum/util/logging"
 )
@@ -24,7 +25,7 @@ func NewTimers(ids []TimerID, allowNew bool) *Timers {
 	}
 
 	return &Timers{
-		Logging: logging.NewLogging(func(c logging.Context) logging.Emitter {
+		Logging: logging.NewLogging(func(c zerolog.Context) zerolog.Context {
 			return c.Str("module", "timers")
 		}),
 		timers:   timers,
@@ -32,11 +33,9 @@ func NewTimers(ids []TimerID, allowNew bool) *Timers {
 	}
 }
 
-func (ts *Timers) SetLogger(l logging.Logger) logging.Logger {
+func (ts *Timers) SetLogging(l *logging.Logging) *logging.Logging {
 	ts.Lock()
 	defer ts.Unlock()
-
-	_ = ts.Logging.SetLogger(l)
 
 	for id := range ts.timers {
 		timer := ts.timers[id]
@@ -44,12 +43,12 @@ func (ts *Timers) SetLogger(l logging.Logger) logging.Logger {
 			continue
 		}
 
-		if i, ok := timer.(logging.SetLogger); ok {
-			_ = i.SetLogger(l)
+		if i, ok := timer.(logging.SetLogging); ok {
+			_ = i.SetLogging(l)
 		}
 	}
 
-	return ts.Log()
+	return ts.Logging.SetLogging(l)
 }
 
 // Start of Timers does nothing
@@ -76,7 +75,7 @@ func (ts *Timers) Stop() error {
 			defer wg.Done()
 
 			if err := t.Stop(); err != nil {
-				ts.Log().Error().Err(err).Str("timer", t.ID().String()).Msg("failed to stop timer")
+				ts.Log().Error().Err(err).Stringer("timer", t.ID()).Msg("failed to stop timer")
 			}
 		}(timer)
 	}
@@ -123,8 +122,8 @@ func (ts *Timers) SetTimer(timer Timer) error {
 	ts.timers[timer.ID()] = timer
 
 	if timer != nil {
-		if l, ok := ts.timers[timer.ID()].(logging.SetLogger); ok {
-			_ = l.SetLogger(ts.Log())
+		if l, ok := ts.timers[timer.ID()].(logging.SetLogging); ok {
+			_ = l.SetLogging(ts.Logging)
 		}
 	}
 
@@ -164,7 +163,7 @@ func (ts *Timers) StartTimers(ids []TimerID, stopOthers bool) error {
 		}
 
 		if err := t.Start(); err != nil {
-			ts.Log().Error().Err(err).Str("timer", t.ID().String()).Msg("failed to start timer")
+			ts.Log().Error().Err(err).Stringer("timer", t.ID()).Msg("failed to start timer")
 		}
 	}
 
@@ -185,7 +184,7 @@ func (ts *Timers) stopTimers(ids []TimerID) error {
 		}
 
 		if err := t.Stop(); err != nil {
-			ts.Log().Error().Err(err).Str("timer", t.ID().String()).Msg("failed to stop timer")
+			ts.Log().Error().Err(err).Stringer("timer", t.ID()).Msg("failed to stop timer")
 		}
 	}
 

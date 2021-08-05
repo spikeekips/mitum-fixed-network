@@ -124,12 +124,12 @@ func (cmd *DatabaseVerifyCommand) initializeProcesses() (*pm.Processes, error) {
 	}
 
 	ctx := context.WithValue(context.Background(), config.ContextValueConfig, conf)
-	ctx = context.WithValue(ctx, config.ContextValueLog, cmd.Log())
+	ctx = context.WithValue(ctx, config.ContextValueLog, cmd.Logging)
 	ctx = context.WithValue(ctx, networkIDContextKey, cmd.networkID)
 
 	ps := pm.NewProcesses()
 	_ = ps.SetContext(ctx)
-	_ = ps.SetLogger(cmd.Log())
+	_ = ps.SetLogging(cmd.Logging)
 
 	for i := range databaseVerifyProcesses {
 		if err := ps.AddProcess(databaseVerifyProcesses[i], false); err != nil {
@@ -173,7 +173,7 @@ func (cmd *DatabaseVerifyCommand) prepare() error {
 }
 
 func hookCheckStorage(ctx context.Context) (context.Context, error) {
-	var log logging.Logger
+	var log *logging.Logging
 	if err := config.LoadLogContextValue(ctx, &log); err != nil {
 		return ctx, err
 	}
@@ -197,11 +197,7 @@ func hookCheckStorage(ctx context.Context) (context.Context, error) {
 	if err != nil {
 		return ctx, err
 	}
-	log.Debug().Dict("block", logging.Dict().
-		Hinted("hash", i.Hash()).
-		Hinted("height", i.Height()).
-		Hinted("round", i.Round())).
-		Msg("block found")
+	log.Log().Debug().Object("block", i).Msg("block found")
 
 	ctx = context.WithValue(ctx, lastManifestContextKey, i)
 

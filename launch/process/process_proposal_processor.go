@@ -37,7 +37,7 @@ func init() {
 }
 
 func ProcessProposalProcessor(ctx context.Context) (context.Context, error) {
-	var log logging.Logger
+	var log *logging.Logging
 	if err := config.LoadLogContextValue(ctx, &log); err != nil {
 		return ctx, err
 	}
@@ -53,7 +53,7 @@ func ProcessProposalProcessor(ctx context.Context) (context.Context, error) {
 	}
 
 	if !suffrage.IsInside(nodepool.LocalNode().Address()) {
-		log.Debug().Msg("none-suffrage node; proposal processor will not be used")
+		log.Log().Debug().Msg("none-suffrage node; proposal processor will not be used")
 
 		return ctx, nil
 	}
@@ -67,7 +67,7 @@ func ProcessProposalProcessor(ctx context.Context) (context.Context, error) {
 	var newFunc prprocessor.ProcessorNewFunc
 	switch t := conf.(type) {
 	case config.ErrorProposalProcessor:
-		log.Debug().Interface("conf", conf).Msg("ErrorProcessor will be used")
+		log.Log().Debug().Interface("conf", conf).Msg("ErrorProcessor will be used")
 
 		i, err := processErrorProposalProcessor(ctx, t)
 		if err != nil {
@@ -75,7 +75,7 @@ func ProcessProposalProcessor(ctx context.Context) (context.Context, error) {
 		}
 		newFunc = i
 	default:
-		log.Debug().Interface("conf", conf).Msg("DefaultProcessor will be used")
+		log.Log().Debug().Interface("conf", conf).Msg("DefaultProcessor will be used")
 
 		i, err := processDefaultProposalProcessor(ctx)
 		if err != nil {
@@ -89,7 +89,7 @@ func ProcessProposalProcessor(ctx context.Context) (context.Context, error) {
 		return ctx, err
 	}
 
-	_ = pps.SetLogger(log)
+	_ = pps.SetLogging(log)
 
 	return context.WithValue(ctx, ContextValueProposalProcessor, pps), nil
 }
@@ -133,13 +133,13 @@ func processErrorProposalProcessor(
 	ctx context.Context,
 	conf config.ErrorProposalProcessor,
 ) (prprocessor.ProcessorNewFunc, error) {
-	var l logging.Logger
+	var l *logging.Logging
 	if err := config.LoadLogContextValue(ctx, &l); err != nil {
 		return nil, err
 	}
 
 	if len(conf.WhenPreparePoints) < 1 && len(conf.WhenSavePoints) < 1 {
-		l.Debug().Msg("ErrorProposalProcessor was given, but block points are empty. DefaultProposalProcessor will be used") // revive:disable-line:line-length-limit
+		l.Log().Debug().Msg("ErrorProposalProcessor was given, but block points are empty. DefaultProposalProcessor will be used") // revive:disable-line:line-length-limit
 
 		return processDefaultProposalProcessor(ctx)
 	}

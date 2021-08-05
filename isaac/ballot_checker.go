@@ -7,6 +7,7 @@ import (
 	"golang.org/x/sync/semaphore"
 	"golang.org/x/xerrors"
 
+	"github.com/rs/zerolog"
 	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/base/ballot"
 	"github.com/spikeekips/mitum/network"
@@ -36,7 +37,7 @@ func NewBallotChecker(
 	lastVoteproof base.Voteproof,
 ) *BallotChecker {
 	return &BallotChecker{
-		Logging: logging.NewLogging(func(c logging.Context) logging.Emitter {
+		Logging: logging.NewLogging(func(c zerolog.Context) zerolog.Context {
 			return c.Str("module", "ballot-checker")
 		}),
 		database: st,
@@ -175,7 +176,7 @@ func (bc *BallotChecker) CheckVoteproof() (bool, error) {
 	voteproof := i.Voteproof()
 
 	vc := NewVoteProofChecker(voteproof, bc.policy, bc.suffrage)
-	_ = vc.SetLogger(bc.Log())
+	_ = vc.SetLogging(bc.Logging)
 
 	if err := util.NewChecker("ballot-voteproof-checker", []util.CheckerFunc{
 		vc.IsValid,

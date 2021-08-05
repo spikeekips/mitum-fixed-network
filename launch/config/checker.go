@@ -6,6 +6,7 @@ import (
 	"crypto/x509"
 	"time"
 
+	"github.com/rs/zerolog"
 	"github.com/spikeekips/mitum/isaac"
 	"github.com/spikeekips/mitum/network"
 	"github.com/spikeekips/mitum/util"
@@ -26,16 +27,16 @@ func NewChecker(ctx context.Context) (*checker, error) { // revive:disable-line:
 	}
 
 	cc := &checker{
-		Logging: logging.NewLogging(func(c logging.Context) logging.Emitter {
+		Logging: logging.NewLogging(func(c zerolog.Context) zerolog.Context {
 			return c.Str("module", "config-checker")
 		}),
 		ctx:    ctx,
 		config: conf,
 	}
 
-	var l logging.Logger
+	var l *logging.Logging
 	if err := LoadLogContextValue(ctx, &l); err == nil {
-		_ = cc.SetLogger(l)
+		_ = cc.SetLogging(l)
 	}
 
 	return cc, nil

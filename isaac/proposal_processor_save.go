@@ -145,7 +145,7 @@ func (pp *DefaultProcessor) resetSave() error {
 		return nil
 	}
 
-	pp.Log().Debug().Str("state", pp.state.String()).Msg("save will be resetted")
+	pp.Log().Debug().Stringer("state", pp.state).Msg("save will be resetted")
 
 	if err := blockdata.CleanByHeight(pp.st, pp.blockData, pp.proposal.Height()); err != nil {
 		return err

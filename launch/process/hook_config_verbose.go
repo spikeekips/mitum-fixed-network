@@ -13,12 +13,12 @@ func HookConfigVerbose(ctx context.Context) (context.Context, error) {
 		return ctx, err
 	}
 
-	var log logging.Logger
+	var log *logging.Logging
 	if err := config.LoadLogContextValue(ctx, &log); err != nil {
 		return ctx, err
 	}
 
-	log.Debug().Interface("config", conf).Msg("config loaded")
+	log.Log().Debug().Interface("config", conf).Msg("config loaded")
 
 	return ctx, nil
 }

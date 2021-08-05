@@ -5,6 +5,7 @@ import (
 
 	"golang.org/x/xerrors"
 
+	"github.com/rs/zerolog"
 	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/base/operation"
 	"github.com/spikeekips/mitum/network"
@@ -35,9 +36,9 @@ func NewSealsExtracter(
 	seals []valuehash.Hash,
 ) *SealsExtracter {
 	return &SealsExtracter{
-		Logging: logging.NewLogging(func(c logging.Context) logging.Emitter {
+		Logging: logging.NewLogging(func(c zerolog.Context) zerolog.Context {
 			return c.Str("module", "seals-extracter").
-				Hinted("proposer", proposer).
+				Stringer("proposer", proposer).
 				Int("seals", len(seals))
 		}),
 		local:    local,

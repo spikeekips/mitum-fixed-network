@@ -4,6 +4,7 @@ import (
 	"sync"
 
 	ml "github.com/hashicorp/memberlist"
+	"github.com/rs/zerolog"
 	"github.com/spikeekips/mitum/util/logging"
 	"golang.org/x/xerrors"
 )
@@ -31,7 +32,7 @@ type Events struct {
 
 func NewEvents(connInfo ConnInfo, meta NodeMeta, ma *ConnInfoMap) *Events {
 	return &Events{
-		Logging: logging.NewLogging(func(c logging.Context) logging.Emitter {
+		Logging: logging.NewLogging(func(c zerolog.Context) zerolog.Context {
 			return c.Str("module", "memberlist-discovery-event-delegate")
 		}),
 		connInfo:              connInfo,
@@ -61,7 +62,7 @@ func (dg *Events) NotifyJoin(peer *ml.Node) {
 
 	addr := peer.Address()
 
-	l.Debug().Bool("known", dg.ma.addrExists(addr)).Msg("notify join")
+	l.Trace().Bool("known", dg.ma.addrExists(addr)).Msg("notify join")
 
 	ci, _ := dg.ma.dryAdd(meta.Publish(), meta.Insecure())
 	if addr != ci.Address {
@@ -73,7 +74,7 @@ func (dg *Events) NotifyJoin(peer *ml.Node) {
 	_, _ = dg.ma.add(meta.Publish(), meta.Insecure())
 
 	if err := dg.discoveryNotifyJoin(peer, meta); err != nil {
-		dg.Log().Error().Err(err).Msg("failed to join node")
+		l.Trace().Err(err).Msg("failed to join node")
 
 		return
 	}
@@ -97,10 +98,10 @@ func (dg *Events) NotifyLeave(peer *ml.Node) {
 
 	removed := dg.ma.remove(peer.Address())
 
-	l.Debug().Bool("removed_from_connmap", removed).Msg("notify leave")
+	l.Trace().Bool("removed_from_connmap", removed).Msg("notify leave")
 
 	if err := dg.discoveryNotifyLeave(peer, meta); err != nil {
-		dg.Log().Error().Err(err).Msg("failed to leave node")
+		l.Trace().Err(err).Msg("failed to leave node")
 
 		return
 	}
@@ -120,7 +121,7 @@ func (dg *Events) NotifyUpdate(peer *ml.Node) {
 		return
 	}
 
-	l.Debug().Msg("notify update")
+	l.Trace().Msg("notify update")
 
 	dg.discoveryNotifyUpdate(peer, meta)
 
@@ -136,7 +137,7 @@ func (dg *Events) SetNotifyUpdate(callback func(peer *ml.Node, meta NodeMeta)) *
 func (dg *Events) NotifyMerge(peers []*ml.Node) error {
 	metas := map[string]NodeMeta{}
 
-	le := dg.Log().Debug()
+	le := dg.Log().Trace()
 	for i := range peers {
 		p := peers[i]
 		addr := p.Address()
@@ -148,14 +149,18 @@ func (dg *Events) NotifyMerge(peers []*ml.Node) error {
 			return err
 		}
 
-		le.Dict("peer_"+addr, LogNodeMeta(LogNode(logging.Dict(), p), meta))
 		metas[addr] = meta
+
+		le = le.Dict("peer_"+addr, zerolog.Dict().
+			Str("peer", p.Address()).
+			Object("meta", meta),
+		)
 	}
 
 	le.Msg("notify merge")
 
 	if err := dg.discoveryNotifyMerge(peers, metas); err != nil {
-		dg.Log().Error().Err(err).Msg("failed to merge nodes")
+		dg.Log().Trace().Err(err).Msg("failed to merge nodes")
 
 		return err
 	}
@@ -182,7 +187,7 @@ func (dg *Events) NotifyAlive(peer *ml.Node) error {
 		return err
 	}
 
-	l.Debug().Msg("notify alive")
+	l.Trace().Msg("notify alive")
 
 	if !dg.ma.addrExists(addr) {
 		_, _ = dg.ma.add(meta.Publish(), meta.Insecure())
@@ -200,7 +205,7 @@ func (dg *Events) SetNotifyAlive(callback func(peer *ml.Node, meta NodeMeta) err
 func (dg *Events) NodeMeta(int) []byte {
 	meta := dg.nodemeta()
 
-	dg.Log().Debug().Interface("meta", meta).Msg("node meta requested")
+	dg.Log().Trace().Interface("meta", meta).Msg("node meta requested")
 
 	return dg.requestNodeMeta(meta)
 }
@@ -212,7 +217,7 @@ func (dg *Events) SetNodeMeta(callback func(NodeMeta) []byte) *Events {
 }
 
 func (dg *Events) NotifyMsg(b []byte) {
-	dg.Log().Debug().Int("msg", len(b)).Msg("msg received")
+	dg.Log().Trace().Int("msg", len(b)).Msg("msg received")
 
 	dg.notifyMsg(b)
 }
@@ -224,7 +229,7 @@ func (dg *Events) SetNotifyMsg(callback func([]byte)) *Events {
 }
 
 func (dg *Events) GetBroadcasts(_, _ int) [][]byte {
-	dg.Log().Verbose().Msg("get Broadcast")
+	dg.Log().Trace().Msg("get Broadcast")
 
 	return nil
 }
@@ -240,7 +245,7 @@ func (dg *Events) SetLocalState(callback func(bool) []byte) *Events {
 }
 
 func (dg *Events) MergeRemoteState(buf []byte, join bool) {
-	dg.Log().Debug().Interface("buf", buf).Bool("join", join).Msg("MergeRemoteState received")
+	dg.Log().Trace().Interface("buf", buf).Bool("join", join).Msg("MergeRemoteState received")
 
 	dg.mergeRemoteState(buf, join)
 }
@@ -260,17 +265,15 @@ func (dg *Events) updateNodeMeta(meta NodeMeta) *Events {
 	return dg
 }
 
-func (dg *Events) loadMeta(event string, peer *ml.Node) (NodeMeta, logging.Logger, error) {
-	l := dg.Log().WithLogger(func(lctx logging.Context) logging.Emitter {
-		return LogNode(lctx, peer).Str("event", event)
-	})
+func (dg *Events) loadMeta(event string, peer *ml.Node) (NodeMeta, zerolog.Logger, error) {
+	l := dg.Log().With().Str("event", event).Str("peer", peer.Address()).Logger()
 
 	addr := peer.Address()
 
 	meta, err := NewNodeMetaFromBytes(peer.Meta)
 	if err != nil {
 		err = xerrors.Errorf("wrong peer for %s: %w", event, err)
-		l.Error().Err(err).Msg("failed to parse meta")
+		l.Trace().Err(err).Msg("failed to parse meta")
 
 		return NodeMeta{}, l, err
 	}
@@ -286,11 +289,7 @@ func (dg *Events) loadMeta(event string, peer *ml.Node) (NodeMeta, logging.Logge
 		return NodeMeta{}, l, xerrors.Errorf("address does not match with peer, %q != %q", addr, uaddr)
 	}
 
-	l = l.WithLogger(func(lctx logging.Context) logging.Emitter {
-		return LogNodeMeta(lctx, meta)
-	})
-
-	return meta, l, nil
+	return meta, l.With().Object("meta", meta).Logger(), nil
 }
 
 func (dg *Events) nodemeta() NodeMeta {

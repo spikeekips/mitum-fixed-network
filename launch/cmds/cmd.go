@@ -7,6 +7,7 @@ import (
 	"os"
 
 	"github.com/alecthomas/kong"
+	"github.com/rs/zerolog"
 	"go.uber.org/automaxprocs/maxprocs"
 
 	"github.com/spikeekips/mitum/launch"
@@ -112,7 +113,7 @@ type BaseCommand struct {
 
 func NewBaseCommand(name string) *BaseCommand {
 	return &BaseCommand{
-		Logging: logging.NewLogging(func(c logging.Context) logging.Emitter {
+		Logging: logging.NewLogging(func(c zerolog.Context) zerolog.Context {
 			return c.Str("module", fmt.Sprintf("command-%s", name))
 		}),
 		LogFlags:   &LogFlags{},
@@ -129,7 +130,7 @@ func (cmd *BaseCommand) Initialize(flags interface{}, version util.Version) erro
 	if err != nil {
 		return err
 	}
-	_ = cmd.SetLogger(i)
+	_ = cmd.SetLogging(i)
 
 	_, _ = maxprocs.Set(maxprocs.Logger(func(f string, s ...interface{}) {
 		cmd.Log().Debug().Msgf(f, s...)
@@ -202,7 +203,7 @@ func (cmd *BaseCommand) LoadEncoders(types []hint.Type, hinters []hint.Hinter) (
 		return nil, err
 	}
 
-	_ = ps.SetLogger(cmd.Log())
+	_ = ps.SetLogging(cmd.Logging)
 
 	if err := ps.Run(); err != nil {
 		return nil, err

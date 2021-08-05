@@ -5,6 +5,7 @@ import (
 
 	"golang.org/x/xerrors"
 
+	"github.com/rs/zerolog"
 	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/base/ballot"
 	"github.com/spikeekips/mitum/base/block"
@@ -60,11 +61,11 @@ func NewErrorProposalProcessor(
 	d *isaac.DefaultProcessor,
 	whenPreparePoints, whenSavePoints []config.ErrorPoint,
 ) *ErrorProposalProcessor {
-	d.Logging = logging.NewLogging(func(c logging.Context) logging.Emitter {
+	d.Logging = logging.NewLogging(func(c zerolog.Context) zerolog.Context {
 		return c.Str("module", "error-proposal-processor").
-			Hinted("height", d.Proposal().Height()).
-			Hinted("round", d.Proposal().Round()).
-			Hinted("proposal", d.Proposal().Hash())
+			Int64("height", d.Proposal().Height().Int64()).
+			Uint64("round", d.Proposal().Round().Uint64()).
+			Stringer("proposal", d.Proposal().Hash())
 	})
 
 	return &ErrorProposalProcessor{

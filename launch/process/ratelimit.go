@@ -6,6 +6,7 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/rs/zerolog"
 	"github.com/spikeekips/mitum/network"
 	"github.com/spikeekips/mitum/util/cache"
 	"github.com/spikeekips/mitum/util/logging"
@@ -48,7 +49,7 @@ func NewRateLimit(
 	ca, _ := cache.NewGCache("lru", 100*100, time.Hour*3)
 
 	return &RateLimit{
-		Logging: logging.NewLogging(func(c logging.Context) logging.Emitter {
+		Logging: logging.NewLogging(func(c zerolog.Context) zerolog.Context {
 			return c.Str("module", "ratelimit")
 		}),
 		cache:       ca,

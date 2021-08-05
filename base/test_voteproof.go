@@ -7,12 +7,12 @@ import (
 
 	"go.mongodb.org/mongo-driver/bson"
 
+	"github.com/rs/zerolog"
 	"github.com/spikeekips/mitum/util"
 	bsonenc "github.com/spikeekips/mitum/util/encoder/bson"
 	jsonenc "github.com/spikeekips/mitum/util/encoder/json"
 	"github.com/spikeekips/mitum/util/hint"
 	"github.com/spikeekips/mitum/util/localtime"
-	"github.com/spikeekips/mitum/util/logging"
 )
 
 func NewTestVoteproofV0(
@@ -196,16 +196,10 @@ func (vp *DummyVoteproof) UnpackBSON(b []byte, enc *bsonenc.Encoder) error {
 	return nil
 }
 
-func (vp DummyVoteproof) MarshalLog(key string, e logging.Emitter, verbose bool) logging.Emitter {
-	if !verbose {
-		return e.Dict(key, logging.Dict().
-			Hinted("height", vp.height).
-			Hinted("round", vp.round).
-			Hinted("stage", vp.stage).
-			Str("result", vp.result.String()))
-	}
-
-	r, _ := jsonenc.Marshal(vp)
-
-	return e.RawJSON(key, r)
+func (vp DummyVoteproof) MarshalZerologObject(e *zerolog.Event) {
+	e.
+		Int64("height", vp.height.Int64()).
+		Uint64("round", vp.round.Uint64()).
+		Stringer("stage", vp.stage).
+		Stringer("result", vp.result)
 }

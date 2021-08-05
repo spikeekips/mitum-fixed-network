@@ -4,6 +4,7 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/rs/zerolog"
 	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/base/key"
 	"github.com/spikeekips/mitum/network"
@@ -21,7 +22,7 @@ type DeployKeyTokenHandler struct {
 
 func NewDeployKeyTokenHandler(c cache.Cache, expired time.Duration) *DeployKeyTokenHandler {
 	return &DeployKeyTokenHandler{
-		Logging: logging.NewLogging(func(c logging.Context) logging.Emitter {
+		Logging: logging.NewLogging(func(c zerolog.Context) zerolog.Context {
 			return c.Str("module", "handler-deploy-key-token")
 		}),
 		cache:   c,

@@ -3,6 +3,7 @@ package config
 import (
 	"context"
 
+	"github.com/rs/zerolog"
 	"github.com/spikeekips/mitum/util"
 	"github.com/spikeekips/mitum/util/logging"
 	"github.com/ulule/limiter/v3"
@@ -26,7 +27,7 @@ func NewRateLimitChecker(
 	}
 
 	cc := &RateLimitChecker{
-		Logging: logging.NewLogging(func(c logging.Context) logging.Emitter {
+		Logging: logging.NewLogging(func(c zerolog.Context) zerolog.Context {
 			return c.Str("module", "config-ratelimit-checker")
 		}),
 		ctx:        ctx,
@@ -34,9 +35,9 @@ func NewRateLimitChecker(
 		basePreset: basePreset,
 	}
 
-	var l logging.Logger
+	var l *logging.Logging
 	if err := LoadLogContextValue(ctx, &l); err == nil {
-		_ = cc.SetLogger(l)
+		_ = cc.SetLogging(l)
 	}
 
 	return cc

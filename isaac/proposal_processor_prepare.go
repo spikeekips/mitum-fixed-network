@@ -10,7 +10,6 @@ import (
 	"github.com/spikeekips/mitum/base/state"
 	"github.com/spikeekips/mitum/storage"
 	"github.com/spikeekips/mitum/util"
-	"github.com/spikeekips/mitum/util/logging"
 	"github.com/spikeekips/mitum/util/tree"
 	"github.com/spikeekips/mitum/util/valuehash"
 	"golang.org/x/xerrors"
@@ -103,7 +102,7 @@ func (pp *DefaultProcessor) prepareOperations(ctx context.Context) error {
 	}
 
 	se := NewSealsExtracter(pp.nodepool.LocalNode().Address(), pp.proposal.Node(), pp.st, pp.nodepool, seals)
-	_ = se.SetLogger(pp.Log())
+	_ = se.SetLogging(pp.Logging)
 
 	ops, err := se.Extract(ctx)
 	if err != nil {
@@ -250,12 +249,7 @@ func (pp *DefaultProcessor) prepareBlock(context.Context) error {
 
 	pp.blk = blk
 
-	pp.Log().Debug().
-		Dict("block", logging.Dict().
-			Hinted("hash", blk.Hash()).Hinted("height", blk.Height()).Hinted("round", blk.Round()).
-			Hinted("proposal", blk.Proposal()).Hinted("previous_block", blk.PreviousBlock()).
-			Hinted("operations_hash", blk.OperationsHash()).Hinted("states_hash", blk.StatesHash()),
-		).Msg("block generated")
+	pp.Log().Debug().Object("block", blk).Msg("block generated")
 
 	return nil
 }
@@ -300,7 +294,7 @@ func (pp *DefaultProcessor) processStatesTree(ctx context.Context, pool *storage
 	if err != nil {
 		return err
 	}
-	_ = c.SetLogger(pp.Log())
+	_ = c.SetLogging(pp.Logging)
 
 	co = c.Start(
 		ctx,
@@ -334,7 +328,7 @@ func (pp *DefaultProcessor) concurrentProcessStatesTree(
 	for i := range pp.operations {
 		op := pp.operations[i]
 
-		pp.Log().Verbose().Hinted("fact", op.Fact().Hash()).Msg("process fact")
+		pp.Log().Trace().Stringer("fact", op.Fact().Hash()).Msg("process fact")
 
 		if err := co.Process(uint64(i), op); err != nil {
 			return err
@@ -404,7 +398,7 @@ func (pp *DefaultProcessor) prepareBlockDataSession(context.Context) error {
 }
 
 func (pp *DefaultProcessor) resetPrepare() error {
-	pp.Log().Debug().Str("state", pp.state.String()).Msg("prepare will be resetted")
+	pp.Log().Debug().Stringer("state", pp.state).Msg("prepare will be resetted")
 
 	if pp.blockDataSession != nil {
 		if err := pp.blockDataSession.Cancel(); err != nil {

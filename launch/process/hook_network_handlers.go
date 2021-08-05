@@ -7,6 +7,7 @@ import (
 
 	"golang.org/x/xerrors"
 
+	"github.com/rs/zerolog"
 	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/base/ballot"
 	"github.com/spikeekips/mitum/base/block"
@@ -47,7 +48,7 @@ type SettingNetworkHandlers struct {
 	states    states.States
 	network   network.Server
 	sealCache cache.Cache
-	logger    logging.Logger
+	logger    *zerolog.Logger
 }
 
 func SettingNetworkHandlersFromContext(ctx context.Context) (*SettingNetworkHandlers, error) { // nolint:funlen
@@ -96,7 +97,8 @@ func SettingNetworkHandlersFromContext(ctx context.Context) (*SettingNetworkHand
 		return nil, err
 	}
 
-	logger := logging.NilLogger
+	l := zerolog.Nop()
+	logger := &l
 	var nt network.Server
 	if err := LoadNetworkContextValue(ctx, &nt); err != nil {
 		return nil, err

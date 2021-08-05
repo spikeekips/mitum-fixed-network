@@ -35,7 +35,7 @@ func init() {
 }
 
 func ProcessGenerateGenesisBlock(ctx context.Context) (context.Context, error) {
-	var log logging.Logger
+	var log *logging.Logging
 	if err := config.LoadLogContextValue(ctx, &log); err != nil {
 		return ctx, err
 	}
@@ -66,16 +66,14 @@ func ProcessGenerateGenesisBlock(ctx context.Context) (context.Context, error) {
 	}
 	ops := l.GenesisOperations()
 
-	log.Debug().Int("operations", len(ops)).Msg("operations loaded")
+	log.Log().Debug().Int("operations", len(ops)).Msg("operations loaded")
 
 	if gg, err := isaac.NewGenesisBlockV0Generator(local, st, blockData, policy, ops); err != nil {
 		return ctx, xerrors.Errorf("failed to create genesis block generator: %w", err)
 	} else if blk, err := gg.Generate(); err != nil {
 		return ctx, xerrors.Errorf("failed to generate genesis block: %w", err)
 	} else {
-		log.Info().
-			Dict("block", logging.Dict().Hinted("height", blk.Height()).Hinted("hash", blk.Hash())).
-			Msg("genesis block created")
+		log.Log().Info().Object("block", blk).Msg("genesis block created")
 
 		return context.WithValue(ctx, ContextValueGenesisBlock, blk), nil
 	}
@@ -87,7 +85,7 @@ func HookCheckGenesisBlock(ctx context.Context) (context.Context, error) {
 		return ctx, err
 	}
 
-	var log logging.Logger
+	var log *logging.Logging
 	if err := config.LoadLogContextValue(ctx, &log); err != nil {
 		return ctx, err
 	}
@@ -110,12 +108,12 @@ func HookCheckGenesisBlock(ctx context.Context) (context.Context, error) {
 	}
 
 	if manifest == nil {
-		log.Debug().Msg("existing blocks not found")
+		log.Log().Debug().Msg("existing blocks not found")
 
 		return ctx, nil
 	}
 
-	log.Debug().Msgf("found existing blocks: block=%d", manifest.Height())
+	log.Log().Debug().Msgf("found existing blocks: block=%d", manifest.Height())
 
 	if !force {
 		return ctx, xerrors.Errorf("environment already exists: block=%d", manifest.Height())
@@ -124,7 +122,7 @@ func HookCheckGenesisBlock(ctx context.Context) (context.Context, error) {
 	if err := blockdata.Clean(st, blockData, false); err != nil {
 		return ctx, err
 	}
-	log.Debug().Msg("existing environment cleaned")
+	log.Log().Debug().Msg("existing environment cleaned")
 
 	return ctx, nil
 }

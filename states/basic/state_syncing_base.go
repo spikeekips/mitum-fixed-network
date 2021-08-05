@@ -4,6 +4,7 @@ import (
 	"sort"
 	"sync"
 
+	"github.com/rs/zerolog"
 	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/base/block"
 	"github.com/spikeekips/mitum/isaac"
@@ -33,7 +34,7 @@ func NewBaseSyncingState(
 	nodepool *network.Nodepool,
 ) *BaseSyncingState {
 	return &BaseSyncingState{
-		Logging: logging.NewLogging(func(c logging.Context) logging.Emitter {
+		Logging: logging.NewLogging(func(c zerolog.Context) zerolog.Context {
 			return c.Str("module", name)
 		}),
 		BaseState: NewBaseState(base.StateSyncing),
@@ -97,7 +98,7 @@ func (st *BaseSyncingState) enterCallback() error {
 	syncs.WhenBlockSaved(st.whenBlockSaved)
 	syncs.WhenFinished(st.whenFinished)
 
-	_ = syncs.SetLogger(st.Log())
+	_ = syncs.SetLogging(st.Logging)
 
 	if err := syncs.Start(); err != nil {
 		return err
@@ -147,5 +148,5 @@ func (st *BaseSyncingState) whenBlockSaved(blks []block.Block) {
 }
 
 func (st *BaseSyncingState) whenFinished(height base.Height) {
-	st.Log().Debug().Hinted("height", height).Msg("syncing finished")
+	st.Log().Debug().Int64("height", height.Int64()).Msg("syncing finished")
 }

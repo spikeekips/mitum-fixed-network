@@ -4,33 +4,11 @@ package network
 
 import (
 	"bytes"
-	"os"
 	"sort"
 	"testing"
-	"time"
 
-	"github.com/rs/zerolog"
 	"github.com/stretchr/testify/assert"
-
-	"github.com/spikeekips/mitum/util/logging"
 )
-
-//lint:ignore U1000 debugging inside test
-var log logging.Logger
-
-func init() {
-	zerolog.TimeFieldFormat = time.RFC3339Nano
-
-	l := zerolog.
-		New(os.Stderr).
-		With().
-		Timestamp().
-		Caller().
-		Stack().
-		Logger().Level(zerolog.DebugLevel)
-
-	log = logging.NewLogger(&l, true)
-}
 
 func CompareNodeInfo(t *testing.T, a, b NodeInfo) {
 	assert.True(t, a.Address().Equal(b.Address()))

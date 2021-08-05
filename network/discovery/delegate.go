@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/lucas-clemente/quic-go"
+	"github.com/rs/zerolog"
 	"github.com/spikeekips/mitum/network"
 	quicnetwork "github.com/spikeekips/mitum/network/quic"
 	"github.com/spikeekips/mitum/util/encoder"
@@ -27,7 +28,7 @@ func NewNodepoolDelegate(
 	connectionTimeout time.Duration,
 ) *NodepoolDelegate {
 	return &NodepoolDelegate{
-		Logging: logging.NewLogging(func(c logging.Context) logging.Emitter {
+		Logging: logging.NewLogging(func(c zerolog.Context) zerolog.Context {
 			return c.Str("module", "discovery-nodepool-delegate")
 		}),
 		nodepool:          nodepool,
@@ -45,9 +46,7 @@ func (dg *NodepoolDelegate) notifyJoin(ci NodeConnInfo) {
 	defer dg.Unlock()
 
 	addr := ci.Node()
-	l := dg.Log().WithLogger(func(lctx logging.Context) logging.Emitter {
-		return lctx.Str("notify", "join").Str("node", addr.String()).Interface("conninfo", ci)
-	})
+	l := dg.Log().With().Str("notify", "join").Stringer("node", addr).Interface("conninfo", ci).Logger()
 
 	if !dg.nodepool.Exists(addr) {
 		l.Error().Msg("unknown node")
@@ -84,9 +83,9 @@ func (dg *NodepoolDelegate) notifyLeave(ci NodeConnInfo, lefts []NodeConnInfo) {
 	defer dg.Unlock()
 
 	addr := ci.Node()
-	l := dg.Log().WithLogger(func(lctx logging.Context) logging.Emitter {
-		return lctx.Str("notify", "leave").Str("node", addr.String()).Interface("conninfo", ci).Interface("lefts", lefts)
-	})
+	l := dg.Log().With().
+		Str("notify", "leave").Stringer("node", addr).Interface("conninfo", ci).Interface("lefts", lefts).
+		Logger()
 
 	if !dg.nodepool.Exists(addr) {
 		l.Error().Msg("unknown node")
@@ -142,9 +141,7 @@ func (dg *NodepoolDelegate) notifyUpdate(ci NodeConnInfo) {
 	defer dg.Unlock()
 
 	addr := ci.Node()
-	l := dg.Log().WithLogger(func(lctx logging.Context) logging.Emitter {
-		return lctx.Str("notify", "update").Str("node", addr.String()).Interface("conninfo", ci)
-	})
+	l := dg.Log().With().Str("notify", "update").Stringer("node", addr).Interface("conninfo", ci).Logger()
 
 	if !dg.nodepool.Exists(addr) {
 		l.Error().Msg("unknown node")

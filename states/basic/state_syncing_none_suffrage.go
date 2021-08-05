@@ -5,6 +5,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/rs/zerolog"
 	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/isaac"
 	"github.com/spikeekips/mitum/launch/config"
@@ -34,7 +35,7 @@ func newNodeInfoChecker(
 	whenNewHeight func(base.Height) error,
 ) *nodeInfoChecker {
 	nc := &nodeInfoChecker{
-		Logging: logging.NewLogging(func(c logging.Context) logging.Emitter {
+		Logging: logging.NewLogging(func(c zerolog.Context) zerolog.Context {
 			return c.Str("module", "nodeinfo-checker")
 		}),
 		policy:        policy,
@@ -48,10 +49,10 @@ func newNodeInfoChecker(
 	return nc
 }
 
-func (nc *nodeInfoChecker) SetLogger(logger logging.Logger) logging.Logger {
-	_ = nc.ContextDaemon.SetLogger(logger)
+func (nc *nodeInfoChecker) SetLogging(l *logging.Logging) *logging.Logging {
+	_ = nc.ContextDaemon.SetLogging(l)
 
-	return nc.Logging.SetLogger(logger)
+	return nc.Logging.SetLogging(l)
 }
 
 func (nc *nodeInfoChecker) start(ctx context.Context) error {
@@ -133,9 +134,7 @@ func (nc *nodeInfoChecker) newHeight(height base.Height) {
 }
 
 func (nc *nodeInfoChecker) request(ctx context.Context, no base.Node, ch network.Channel) network.NodeInfo {
-	l := nc.Log().WithLogger(func(lctx logging.Context) logging.Emitter {
-		return lctx.Interface("node", no)
-	})
+	l := nc.Log().With().Interface("node", no).Logger()
 
 	i, err := ch.NodeInfo(ctx)
 	if err != nil {
@@ -186,10 +185,10 @@ func NewSyncingStateNoneSuffrage(
 	return st
 }
 
-func (st *SyncingStateNoneSuffrage) SetLogger(logger logging.Logger) logging.Logger {
-	_ = st.nc.SetLogger(logger)
+func (st *SyncingStateNoneSuffrage) SetLogging(l *logging.Logging) *logging.Logging {
+	_ = st.nc.SetLogging(l)
 
-	return st.Logging.SetLogger(logger)
+	return st.Logging.SetLogging(l)
 }
 
 func (st *SyncingStateNoneSuffrage) Enter(sctx StateSwitchContext) (func() error, error) {

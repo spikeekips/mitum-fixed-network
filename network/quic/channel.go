@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/lucas-clemente/quic-go"
+	"github.com/rs/zerolog"
 	"golang.org/x/xerrors"
 
 	"github.com/spikeekips/mitum/base"
@@ -46,7 +47,7 @@ func NewChannel(
 	enc encoder.Encoder,
 ) (*Channel, error) {
 	ch := &Channel{
-		Logging: logging.NewLogging(func(c logging.Context) logging.Emitter {
+		Logging: logging.NewLogging(func(c zerolog.Context) zerolog.Context {
 			return c.Str("module", "quic-network")
 		}),
 		recvChan: make(chan seal.Seal, bufsize),
@@ -78,11 +79,10 @@ func (*Channel) Initialize() error {
 	return nil
 }
 
-func (ch *Channel) SetLogger(l logging.Logger) logging.Logger {
-	_ = ch.Logging.SetLogger(l)
-	_ = ch.client.SetLogger(l)
+func (ch *Channel) SetLogging(l *logging.Logging) *logging.Logging {
+	_ = ch.client.SetLogging(l)
 
-	return ch.Log()
+	return ch.Logging.SetLogging(l)
 }
 
 func (ch *Channel) ConnInfo() network.ConnInfo {
@@ -94,13 +94,13 @@ func (ch *Channel) Seals(ctx context.Context, hs []valuehash.Hash) ([]seal.Seal,
 	ctx, cancel := ch.timeoutContext(ctx, timeout)
 	defer cancel()
 
-	ch.Log().VerboseFunc(func(e *logging.Event) logging.Emitter {
+	ch.Log().Trace().Func(func(e *zerolog.Event) {
 		var l []string
 		for _, h := range hs {
 			l = append(l, h.String())
 		}
 
-		return e.Strs("seal_hashes", l)
+		e.Strs("seal_hashes", l)
 	}).Msg("request seals")
 
 	ss, err := ch.doRequestHinters(ctx, ch.client.Send, timeout+(time.Second*2), ch.getSealsURL, NewHashesArgs(hs))
@@ -131,7 +131,7 @@ func (ch *Channel) SendSeal(ctx context.Context, sl seal.Seal) error {
 		return err
 	}
 
-	ch.Log().Debug().Hinted("seal_hash", sl.Hash()).Msg("sent seal")
+	ch.Log().Debug().Stringer("seal_hash", sl.Hash()).Msg("sent seal")
 
 	headers := http.Header{}
 	headers.Set(QuicEncoderHintHeader, ch.enc.Hint().String())
@@ -191,13 +191,13 @@ func (ch *Channel) BlockDataMaps(ctx context.Context, heights []base.Height) ([]
 	ctx, cancel := ch.timeoutContext(ctx, timeout)
 	defer cancel()
 
-	ch.Log().VerboseFunc(func(e *logging.Event) logging.Emitter {
+	ch.Log().Trace().Func(func(e *zerolog.Event) {
 		var l []string
 		for _, h := range heights {
 			l = append(l, h.String())
 		}
 
-		return e.Strs("heights", l)
+		e.Strs("heights", l)
 	}).Msg("request block data maps")
 
 	hinters, err := ch.doRequestHinters(
@@ -237,8 +237,8 @@ func (ch *Channel) BlockData(ctx context.Context, item block.BlockDataMapItem) (
 }
 
 func (ch *Channel) blockData(ctx context.Context, p string) (io.ReadCloser, func() error, error) {
-	ch.Log().VerboseFunc(func(e *logging.Event) logging.Emitter {
-		return e.Str("path", p)
+	ch.Log().Trace().Func(func(e *zerolog.Event) {
+		e.Str("path", p)
 	}).Msg("request block data")
 
 	headers := http.Header{}

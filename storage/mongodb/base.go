@@ -5,11 +5,7 @@ import (
 	"sync"
 	"time"
 
-	"go.mongodb.org/mongo-driver/bson"
-	"go.mongodb.org/mongo-driver/mongo"
-	"go.mongodb.org/mongo-driver/mongo/options"
-	"golang.org/x/xerrors"
-
+	"github.com/rs/zerolog"
 	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/base/ballot"
 	"github.com/spikeekips/mitum/base/block"
@@ -24,6 +20,10 @@ import (
 	bsonenc "github.com/spikeekips/mitum/util/encoder/bson"
 	"github.com/spikeekips/mitum/util/logging"
 	"github.com/spikeekips/mitum/util/valuehash"
+	"go.mongodb.org/mongo-driver/bson"
+	"go.mongodb.org/mongo-driver/mongo"
+	"go.mongodb.org/mongo-driver/mongo/options"
+	"golang.org/x/xerrors"
 )
 
 const (
@@ -105,7 +105,7 @@ func NewDatabase(client *Client, encs *encoder.Encoders, enc encoder.Encoder, ca
 	}
 
 	return &Database{
-		Logging: logging.NewLogging(func(c logging.Context) logging.Emitter {
+		Logging: logging.NewLogging(func(c zerolog.Context) zerolog.Context {
 			return c.Str("module", "mongodb-database")
 		}),
 		client:             client,
@@ -272,7 +272,7 @@ func (st *Database) setLastManifestInternal(manifest block.Manifest, save, force
 		}
 	}
 
-	st.Log().Debug().Hinted("block_height", manifest.Height()).Msg("new last block")
+	st.Log().Debug().Int64("block_height", manifest.Height().Int64()).Msg("new last block")
 
 	switch t := manifest.(type) {
 	case block.Block:

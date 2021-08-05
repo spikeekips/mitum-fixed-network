@@ -3,6 +3,7 @@ package basicstates
 import (
 	"time"
 
+	"github.com/rs/zerolog"
 	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/base/block"
 	"github.com/spikeekips/mitum/isaac"
@@ -10,7 +11,6 @@ import (
 	"github.com/spikeekips/mitum/storage"
 	"github.com/spikeekips/mitum/storage/blockdata"
 	"github.com/spikeekips/mitum/util/localtime"
-	"github.com/spikeekips/mitum/util/logging"
 	"golang.org/x/xerrors"
 )
 
@@ -84,18 +84,18 @@ func (st *SyncingState) enterCallback(voteproof base.Voteproof) error {
 	syncs.WhenFinished(st.whenFinished)
 
 	if voteproof != nil {
-		e := isaac.LoggerWithVoteproof(voteproof, st.Log()).Debug()
+		l := st.Log().With().Str("voteproof_id", voteproof.ID()).Logger()
 		if baseManifest != nil {
-			e.Hinted("base_height", baseManifest.Height())
+			l.Debug().Int64("base_height", baseManifest.Height().Int64())
 		}
 
-		e.Msg("new syncers started with voteproof")
+		l.Debug().Msg("new syncers started with voteproof")
 
 		return st.ProcessVoteproof(voteproof)
 	}
 	e := st.Log().Debug()
 	if baseManifest != nil {
-		e.Hinted("base_height", baseManifest.Height())
+		e.Int64("base_height", baseManifest.Height().Int64())
 	}
 
 	e.Msg("new syncers started without voteproof")
@@ -111,12 +111,11 @@ func (st *SyncingState) handleINITTVoteproof(voteproof base.Voteproof) error {
 		baseHeight = m.Height()
 	}
 
-	l := st.Log().WithLogger(func(ctx logging.Context) logging.Emitter {
-		return ctx.Hinted("voteproof_stage", voteproof.Stage()).
-			Hinted("voteproof_height", voteproof.Height()).
-			Hinted("voteproof_round", voteproof.Round()).
-			Hinted("local_height", baseHeight)
-	})
+	l := st.Log().With().Stringer("voteproof_stage", voteproof.Stage()).
+		Int64("voteproof_height", voteproof.Height().Int64()).
+		Uint64("voteproof_round", voteproof.Round().Uint64()).
+		Int64("local_height", baseHeight.Int64()).
+		Logger()
 
 	var to base.Height
 	switch voteproof.Stage() {
@@ -160,12 +159,11 @@ func (st *SyncingState) handleACCEPTVoteproof(voteproof base.Voteproof) error {
 		baseHeight = m.Height()
 	}
 
-	l := st.Log().WithLogger(func(ctx logging.Context) logging.Emitter {
-		return ctx.Hinted("voteproof_stage", voteproof.Stage()).
-			Hinted("voteproof_height", voteproof.Height()).
-			Hinted("voteproof_round", voteproof.Round()).
-			Hinted("local_height", baseHeight)
-	})
+	l := st.Log().With().Stringer("voteproof_stage", voteproof.Stage()).
+		Int64("voteproof_height", voteproof.Height().Int64()).
+		Uint64("voteproof_round", voteproof.Round().Uint64()).
+		Int64("local_height", baseHeight.Int64()).
+		Logger()
 
 	if baseHeight >= voteproof.Height() {
 		l.Debug().Msg("voteproof has lower height")
@@ -187,17 +185,17 @@ func (st *SyncingState) syncFromVoteproof(voteproof base.Voteproof, to base.Heig
 		}
 	}
 
-	st.Log().VerboseFunc(func(e *logging.Event) logging.Emitter {
+	st.Log().Trace().Func(func(e *zerolog.Event) {
 		var addresses []string
 		for _, n := range sourceNodes {
 			addresses = append(addresses, n.Address().String())
 		}
 
-		return e.Strs("source_nodes", addresses)
+		e.Strs("source_nodes", addresses)
 	}).
-		Hinted("voteproof_height", voteproof.Height()).
-		Hinted("voteproof_round", voteproof.Round()).
-		Hinted("height_to", to).
+		Int64("voteproof_height", voteproof.Height().Int64()).
+		Uint64("voteproof_round", voteproof.Round().Uint64()).
+		Int64("height_to", to.Int64()).
 		Msg("will sync to the height")
 
 	isFinished, err := st.syncers().Add(to, sourceNodes)
@@ -213,10 +211,10 @@ func (st *SyncingState) syncFromVoteproof(voteproof base.Voteproof, to base.Heig
 }
 
 func (st *SyncingState) whenFinished(height base.Height) {
-	st.Log().Debug().Hinted("height", height).Msg("syncing finished; will wait new voteproof")
+	st.Log().Debug().Int64("height", height.Int64()).Msg("syncing finished; will wait new voteproof")
 
 	if err := st.waitVoteproof(); err != nil {
-		st.Log().Error().Err(err).Str("timer", TimerIDSyncingWaitVoteproof.String()).Msg("failed to start timer")
+		st.Log().Error().Err(err).Stringer("timer", TimerIDSyncingWaitVoteproof).Msg("failed to start timer")
 
 		return
 	}

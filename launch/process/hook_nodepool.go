@@ -16,7 +16,7 @@ const HookNameNodepool = "nodepool"
 // HookNodepool generates the node list of local node. It does not include the
 // local node itself.
 func HookNodepool(ctx context.Context) (context.Context, error) {
-	var log logging.Logger
+	var log *logging.Logging
 	if err := config.LoadLogContextValue(ctx, &log); err != nil {
 		return ctx, err
 	}
@@ -59,7 +59,7 @@ func HookNodepool(ctx context.Context) (context.Context, error) {
 		if err := nodepool.Add(no, ch); err != nil {
 			return ctx, err
 		}
-		log.Debug().Str("added_node", no.Address().String()).Msg("node added to nodepool")
+		log.Log().Debug().Stringer("added_node", no.Address()).Msg("node added to nodepool")
 	}
 
 	return ctx, nil

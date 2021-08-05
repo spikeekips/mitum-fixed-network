@@ -7,34 +7,14 @@ import (
 	"context"
 	"net/http"
 	"net/http/httptest"
-	"os"
 	"time"
 
-	"github.com/rs/zerolog"
 	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/base/node"
 	"github.com/spikeekips/mitum/network"
 	"github.com/spikeekips/mitum/util/encoder"
-	"github.com/spikeekips/mitum/util/logging"
 	"golang.org/x/xerrors"
 )
-
-//lint:file-ignore U1000 debugging inside test
-var log logging.Logger
-
-func init() {
-	zerolog.TimeFieldFormat = time.RFC3339Nano
-
-	l := zerolog.
-		New(os.Stderr).
-		With().
-		Timestamp().
-		Caller().
-		Stack().
-		Logger().Level(zerolog.DebugLevel)
-
-	log = logging.NewLogger(&l, false)
-}
 
 type BaseDiscoveryTest struct{}
 

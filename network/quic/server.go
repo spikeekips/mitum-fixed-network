@@ -13,6 +13,7 @@ import (
 	"golang.org/x/xerrors"
 
 	"github.com/gorilla/mux"
+	"github.com/rs/zerolog"
 	"github.com/spikeekips/mitum/base/seal"
 	"github.com/spikeekips/mitum/network"
 	"github.com/spikeekips/mitum/util"
@@ -66,7 +67,7 @@ func NewServer(
 	}
 
 	nqs := &Server{
-		Logging: logging.NewLogging(func(c logging.Context) logging.Emitter {
+		Logging: logging.NewLogging(func(c zerolog.Context) zerolog.Context {
 			return c.Str("module", "network-quic-server")
 		}),
 		PrimitiveQuicServer: prim,
@@ -84,10 +85,10 @@ func (*Server) Initialize() error {
 	return nil
 }
 
-func (sv *Server) SetLogger(l logging.Logger) logging.Logger {
-	_ = sv.PrimitiveQuicServer.SetLogger(l)
+func (sv *Server) SetLogging(l *logging.Logging) *logging.Logging {
+	_ = sv.PrimitiveQuicServer.SetLogging(l)
 
-	return sv.Logging.SetLogger(l)
+	return sv.Logging.SetLogging(l)
 }
 
 func (sv *Server) Encoders() *encoder.Encoders {
@@ -208,8 +209,7 @@ func (sv *Server) handleNewSeal(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		network.HTTPError(w, http.StatusBadRequest)
 
-		sv.Log().Error().Err(err).
-			Str("body", body.String()).Msg("invalid seal found")
+		sv.Log().Error().Err(err).Stringer("body", body).Msg("invalid seal found")
 
 		return
 	}
@@ -228,11 +228,8 @@ func (sv *Server) handleNewSeal(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if err := sv.newSealHandler(sl); err != nil {
-		seal.LogEventWithSeal(
-			sl,
-			sv.Log().Error().Err(err),
-			sv.Log().IsVerbose(),
-		).Msg("failed to receive new seal")
+		seal.LogEventSeal(sl, "seal", sv.Log().Error(), sv.IsTraceLog()).
+			Err(err).Msg("failed to receive new seal")
 
 		network.HTTPError(w, http.StatusInternalServerError)
 

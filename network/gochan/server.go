@@ -3,6 +3,7 @@ package channetwork
 import (
 	"context"
 
+	"github.com/rs/zerolog"
 	"github.com/spikeekips/mitum/base/seal"
 	"github.com/spikeekips/mitum/network"
 	"github.com/spikeekips/mitum/util"
@@ -18,7 +19,7 @@ type Server struct {
 
 func NewServer(ch *Channel) *Server {
 	sv := &Server{
-		Logging: logging.NewLogging(func(c logging.Context) logging.Emitter {
+		Logging: logging.NewLogging(func(c zerolog.Context) zerolog.Context {
 			return c.Str("module", "network-chan-server")
 		}),
 		ch: ch,
@@ -33,11 +34,10 @@ func (*Server) Initialize() error {
 	return nil
 }
 
-func (sv *Server) SetLogger(l logging.Logger) logging.Logger {
-	_ = sv.Logging.SetLogger(l)
-	_ = sv.ContextDaemon.SetLogger(l)
+func (sv *Server) SetLogging(l *logging.Logging) *logging.Logging {
+	_ = sv.ContextDaemon.SetLogging(l)
 
-	return sv.Log()
+	return sv.Logging.SetLogging(l)
 }
 
 func (*Server) SetHasSealHandler(network.HasSealHandler)   {}
@@ -66,11 +66,8 @@ end:
 				}
 
 				if err := sv.newSealHandler(sl); err != nil {
-					seal.LogEventWithSeal(
-						sl,
-						sv.Log().Error().Err(err),
-						sv.Log().IsVerbose(),
-					).Msg("failed to receive new seal")
+					seal.LogEventSeal(sl, "seal", sv.Log().Error(), sv.IsTraceLog()).
+						Err(err).Msg("failed to receive new seal")
 
 					return
 				}

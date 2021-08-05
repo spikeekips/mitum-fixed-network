@@ -6,6 +6,7 @@ import (
 
 	"golang.org/x/xerrors"
 
+	"github.com/rs/zerolog"
 	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/base/ballot"
 	"github.com/spikeekips/mitum/base/block"
@@ -42,7 +43,7 @@ func NewConsensusState(
 	pps *prprocessor.Processors,
 ) *ConsensusState {
 	return &ConsensusState{
-		Logging: logging.NewLogging(func(c logging.Context) logging.Emitter {
+		Logging: logging.NewLogging(func(c zerolog.Context) zerolog.Context {
 			return c.Str("module", "basic-consensus-state")
 		}),
 		BaseState:     NewBaseState(base.StateConsensus),
@@ -71,7 +72,7 @@ func (st *ConsensusState) Enter(sctx StateSwitchContext) (func() error, error) {
 		return nil, xerrors.Errorf("consensus state not allowed to enter with init voteproof, not %v", stage)
 	}
 
-	l := isaac.LoggerWithVoteproof(sctx.Voteproof(), st.Log())
+	l := st.Log().With().Str("voteproof_id", sctx.Voteproof().ID()).Logger()
 
 	if lvp := st.LastINITVoteproof(); lvp == nil {
 		return nil, xerrors.Errorf("empty last init voteproof")
@@ -119,7 +120,7 @@ func (st *ConsensusState) Exit(sctx StateSwitchContext) (func() error, error) {
 
 func (st *ConsensusState) ProcessVoteproof(voteproof base.Voteproof) error {
 	if voteproof.Result() == base.VoteResultDraw { // NOTE moves to next round
-		isaac.LoggerWithVoteproof(voteproof, st.Log()).Debug().Msg("draw voteproof found; moves to next round")
+		st.Log().Debug().Str("voteproof_id", voteproof.ID()).Msg("draw voteproof found; moves to next round")
 
 		return st.nextRound(voteproof)
 	}
@@ -165,7 +166,7 @@ func (st *ConsensusState) newINITVoteproof(voteproof base.Voteproof) error {
 		return err
 	}
 
-	l := isaac.LoggerWithVoteproof(voteproof, st.Log())
+	l := st.Log().With().Str("voteproof_id", voteproof.ID()).Logger()
 
 	l.Debug().Msg("processing new init voteproof; propose proposal")
 
@@ -217,11 +218,13 @@ func (st *ConsensusState) processACCEPTVoteproof(voteproof base.Voteproof) error
 		return xerrors.Errorf("needs ACCEPTBallotFact: fact=%T", voteproof.Majority())
 	}
 
-	l := isaac.LoggerWithVoteproof(voteproof, st.Log().WithLogger(func(ctx logging.Context) logging.Emitter {
-		return ctx.Hinted("proposal_hash", fact.Proposal()).
-			Dict("block", logging.Dict().
-				Hinted("hash", fact.NewBlock()).Hinted("height", voteproof.Height()).Hinted("round", voteproof.Round()))
-	}))
+	l := st.Log().With().Str("voteproof_id", voteproof.ID()).Stringer("proposal_hash", fact.Proposal()).Logger()
+
+	l.Debug().
+		Dict("block", zerolog.Dict().
+			Stringer("hash", fact.NewBlock()).
+			Int64("height", voteproof.Height().Int64()).Uint64("round", voteproof.Round().Uint64())).
+		Msg("processing accept voteproof")
 
 	s := time.Now()
 
@@ -255,7 +258,7 @@ func (st *ConsensusState) processACCEPTVoteproof(voteproof base.Voteproof) error
 		}
 	}
 
-	l.Info().Dur("elapsed", time.Since(s)).Msg("new block stored")
+	l.Info().Object("block", newBlock).Dur("elapsed", time.Since(s)).Msg("new block stored")
 
 	return st.NewBlocks([]block.Block{newBlock})
 }
@@ -266,11 +269,7 @@ func (st *ConsensusState) processProposalOfACCEPTVoteproof(voteproof base.Votepr
 		return nil, xerrors.Errorf("needs ACCEPTBallotFact: fact=%T", voteproof.Majority())
 	}
 
-	l := isaac.LoggerWithVoteproof(voteproof, st.Log().WithLogger(func(ctx logging.Context) logging.Emitter {
-		return ctx.Hinted("proposal_hash", fact.Proposal()).
-			Dict("block", logging.Dict().
-				Hinted("hash", fact.NewBlock()).Hinted("height", voteproof.Height()).Hinted("round", voteproof.Round()))
-	}))
+	l := st.Log().With().Str("voteproof_id", voteproof.ID()).Stringer("proposal_hash", fact.Proposal()).Logger()
 
 	// NOTE if proposal is not yet processed, process first.
 
@@ -285,7 +284,7 @@ func (st *ConsensusState) processProposalOfACCEPTVoteproof(voteproof base.Votepr
 
 		return nil, nil
 	default:
-		l.Debug().Str("state", s.String()).Msg("proposal of accept voteproof not yet processed, process it")
+		l.Debug().Stringer("state", s).Msg("proposal of accept voteproof not yet processed, process it")
 	}
 
 	var proposal ballot.Proposal
@@ -336,7 +335,7 @@ func (st *ConsensusState) findProposal(
 }
 
 func (st *ConsensusState) processProposal(proposal ballot.Proposal) (base.Voteproof, valuehash.Hash, bool) {
-	l := isaac.LoggerWithBallot(proposal, st.Log())
+	l := st.Log().With().Stringer("seal_hash", proposal.Hash()).Logger()
 
 	l.Debug().Msg("processing proposal")
 
@@ -357,14 +356,14 @@ func (st *ConsensusState) processProposal(proposal ballot.Proposal) (base.Votepr
 		}
 
 		newBlock := valuehash.RandomSHA256WithPrefix(BlockPrefixFailedProcessProposal)
-		l.Debug().Err(result.Err).Dur("elapsed", time.Since(started)).Hinted("new_block", newBlock).
+		l.Debug().Err(result.Err).Dur("elapsed", time.Since(started)).Stringer("new_block", newBlock).
 			Msg("proposal processging failed; random block hash will be used")
 
 		return voteproof, newBlock, false
 	}
 	newBlock := result.Block.Hash()
 
-	l.Debug().Dur("elapsed", time.Since(started)).Hinted("new_block", newBlock).Msg("proposal processed")
+	l.Debug().Dur("elapsed", time.Since(started)).Stringer("new_block", newBlock).Msg("proposal processed")
 
 	return voteproof, newBlock, true
 }
@@ -402,9 +401,11 @@ func (st *ConsensusState) prepareProposal(
 	round base.Round,
 	voteproof base.Voteproof,
 ) (ballot.Proposal, error) {
-	l := isaac.LoggerWithVoteproof(voteproof, st.Log()).WithLogger(func(ctx logging.Context) logging.Emitter {
-		return ctx.Hinted("height", height).Hinted("round", round)
-	})
+	l := st.Log().With().
+		Str("voteproof_id", voteproof.ID()).
+		Int64("height", height.Int64()).
+		Uint64("round", round.Uint64()).
+		Logger()
 
 	l.Debug().Msg("local is proposer; preparing proposal")
 
@@ -417,7 +418,7 @@ func (st *ConsensusState) prepareProposal(
 
 		return nil, xerrors.Errorf("failed to save proposal: %w", err)
 	} else {
-		seal.LogEventWithSeal(i, l.Debug(), true).Msg("proposal made")
+		seal.LogEventSeal(i, "proposal", l.Debug(), st.IsTraceLog()).Msg("proposal made")
 
 		return i, nil
 	}
@@ -469,9 +470,7 @@ func (st *ConsensusState) broadcastACCEPTBallot(
 		return xerrors.Errorf("failed to re-sign accept ballot: %w", err)
 	}
 
-	l := isaac.LoggerWithBallot(baseBallot, st.Log().WithLogger(func(ctx logging.Context) logging.Emitter {
-		return ctx.Hinted("new_block", newBlock)
-	}))
+	l := st.Log().With().Stringer("seal_hash", baseBallot.Hash()).Stringer("new_block", newBlock).Logger()
 
 	l.Debug().Dur("initial_delay", initialDelay).Msg("start timer to broadcast accept ballot")
 
@@ -519,10 +518,9 @@ func (st *ConsensusState) broadcastNewINITBallot(voteproof base.Voteproof) error
 		baseBallot = b
 	}
 
-	l := st.Log().WithLogger(func(ctx logging.Context) logging.Emitter {
-		return ctx.Hinted("height", baseBallot.Height()).
-			Hinted("round", baseBallot.Round()).(logging.Context)
-	})
+	l := st.Log().With().Int64("height", baseBallot.Height().Int64()).
+		Uint64("round", baseBallot.Round().Uint64()).
+		Logger()
 	l.Debug().Msg("broadcasting new init ballot")
 
 	timer := localtime.NewContextTimer(TimerIDBroadcastINITBallot, st.policy.IntervalBroadcastingINITBallot(),
@@ -553,9 +551,10 @@ func (st *ConsensusState) whenProposalTimeout(voteproof base.Voteproof, proposer
 		return xerrors.Errorf("for whenProposalTimeout, should be init voteproof, not %v", s)
 	}
 
-	l := st.Log().WithLogger(func(ctx logging.Context) logging.Emitter {
-		return ctx.Hinted("height", voteproof.Height()).Hinted("round", voteproof.Round()).(logging.Context)
-	})
+	l := st.Log().With().
+		Int64("height", voteproof.Height().Int64()).
+		Uint64("round", voteproof.Round().Uint64()).
+		Logger()
 	l.Debug().Msg("waiting new proposal; if timed out, will move to next round")
 
 	var baseBallot ballot.INITV0
@@ -613,11 +612,10 @@ func (st *ConsensusState) whenProposalTimeout(voteproof base.Voteproof, proposer
 }
 
 func (st *ConsensusState) nextRound(voteproof base.Voteproof) error {
-	l := st.Log().WithLogger(func(ctx logging.Context) logging.Emitter {
-		return ctx.Str("stage", voteproof.Stage().String()).
-			Hinted("height", voteproof.Height()).
-			Hinted("round", voteproof.Round()).(logging.Context)
-	})
+	l := st.Log().With().Stringer("stage", voteproof.Stage()).
+		Int64("height", voteproof.Height().Int64()).
+		Uint64("round", voteproof.Round().Uint64()).
+		Logger()
 	l.Debug().Msg("starting next round")
 
 	var baseBallot ballot.INITV0

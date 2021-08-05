@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/rs/zerolog"
 	"github.com/spikeekips/mitum/util/logging"
 	"golang.org/x/xerrors"
 )
@@ -16,7 +17,7 @@ type Hooks struct {
 
 func NewHooks(name string) *Hooks {
 	return &Hooks{
-		Logging: logging.NewLogging(func(c logging.Context) logging.Emitter {
+		Logging: logging.NewLogging(func(c zerolog.Context) zerolog.Context {
 			return c.Str("module", fmt.Sprintf("hooks-%s", name))
 		}),
 		hooks: map[string]ProcessFunc{},

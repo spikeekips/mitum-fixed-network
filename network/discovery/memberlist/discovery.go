@@ -76,7 +76,7 @@ func NewDiscovery(
 	enc encoder.Encoder,
 ) *Discovery {
 	dis := &Discovery{
-		Logging: logging.NewLogging(func(c logging.Context) logging.Emitter {
+		Logging: logging.NewLogging(func(c zerolog.Context) zerolog.Context {
 			return c.Str("module", "memberlist-discovery")
 		}),
 		local:            local,
@@ -100,18 +100,18 @@ func NewDiscovery(
 	return dis
 }
 
-func (dis *Discovery) SetLogger(l logging.Logger) logging.Logger {
+func (dis *Discovery) SetLogging(l *logging.Logging) *logging.Logging {
 	if dis.events != nil {
-		_ = dis.events.SetLogger(l)
+		_ = dis.events.SetLogging(l)
 	}
 
 	if dis.conf != nil && dis.conf.Transport != nil {
-		_ = dis.conf.Transport.(*QuicTransport).SetLogger(l)
+		_ = dis.conf.Transport.(*QuicTransport).SetLogging(l)
 	}
 
-	_ = dis.ContextDaemon.SetLogger(l)
+	_ = dis.ContextDaemon.SetLogging(l)
 
-	return dis.Logging.SetLogger(l)
+	return dis.Logging.SetLogging(l)
 }
 
 func (dis *Discovery) SetRequest(f QuicRequest) *Discovery {
@@ -175,7 +175,7 @@ func (dis *Discovery) Initialize() error {
 	}
 
 	dis.events = NewEvents(dis.connInfo, meta, dis.ma)
-	_ = dis.events.SetLogger(dis.Log())
+	_ = dis.events.SetLogging(dis.Logging)
 
 	_ = dis.events.setDiscoveryNotifyJoin(dis.whenJoined)
 	_ = dis.events.setDiscoveryNotifyLeave(dis.whenLeave)
@@ -416,7 +416,7 @@ func (dis *Discovery) join(nodes []ConnInfo) (int, error) {
 		if j.URL().String() == dis.connInfo.URL().String() {
 			dis.Log().Warn().
 				Interface("local", dis.local).
-				Str("publish", j.URL().String()).
+				Stringer("publish", j.URL()).
 				Msg("same node found with local")
 
 			continue
@@ -511,10 +511,10 @@ func (dis *Discovery) createConfig() (*ml.Config, error) {
 	conf.IndirectChecks = 100
 	conf.DisableTcpPings = true
 
-	if dis.Log().Level() == zerolog.DebugLevel {
+	if dis.Log().GetLevel() == zerolog.DebugLevel {
 		conf.Logger = stdlog.New(
 			logging.NewZerologSTDLoggingWriter(func() *zerolog.Event {
-				return dis.Log().Debug().Event.Str("module", "hashicorp/memberlist")
+				return dis.Log().Debug().Str("module", "hashicorp/memberlist")
 			}), "", 0)
 	} else {
 		conf.LogOutput = io.Discard
@@ -527,7 +527,7 @@ func (dis *Discovery) createConfig() (*ml.Config, error) {
 		dis.ma,
 		conf.TCPTimeout,
 	)
-	_ = tp.SetLogger(dis.Log())
+	_ = tp.SetLogging(dis.Logging)
 
 	conf.Transport = tp
 
@@ -579,7 +579,7 @@ func (dis *Discovery) cleanOldConnInfo(d time.Duration) {
 
 			dis.Log().Debug().
 				Str("address", connInfo.Address).
-				Str("publish", connInfo.URL().String()).
+				Stringer("publish", connInfo.URL()).
 				Msg("old ConnInfo removed")
 		}
 
@@ -640,9 +640,9 @@ func (dis *Discovery) whenLeave(peer *ml.Node, _ NodeMeta) error {
 	dis.nodes = nil
 
 	dis.Log().Debug().
-		Str("node_address", nci.Node().String()).
+		Stringer("node_address", nci.Node()).
 		Str("peer", nci.ConnInfo.Address).
-		Str("publish", nci.ConnInfo.URL().String()).
+		Stringer("publish", nci.ConnInfo.URL()).
 		Bool("insecure", nci.ConnInfo.Insecure()).
 		Interface("lefts", lefts).
 		Msg("node removed")
@@ -664,15 +664,14 @@ func (dis *Discovery) whenUpdated(peer *ml.Node, meta NodeMeta) {
 	dis.nodesLock.Lock()
 	defer dis.nodesLock.Unlock()
 
-	l := LogNodeMeta(LogNode(dis.Log().Debug(), peer), meta)
+	l := dis.Log().With().Str("peer", peer.Address()).Object("meta", meta).Logger()
 
 	i, err := dis.nodeCache.Get(addr)
 	if err != nil {
 		if !xerrors.Is(err, gcache.KeyNotFoundError) {
-			LogNodeMeta(LogNode(dis.Log().Error(), peer), meta).
-				Err(err).Msg("failed to get NodeMessage from node cache")
+			l.Error().Err(err).Msg("failed to get NodeMessage from node cache")
 		} else {
-			l.Msg("address not found in node cache; will be added to lame nodes")
+			l.Debug().Msg("address not found in node cache; will be added to lame nodes")
 
 			_ = dis.lameNodes.Set(addr, struct{}{}, 0)
 		}
@@ -688,7 +687,7 @@ func (dis *Discovery) whenUpdated(peer *ml.Node, meta NodeMeta) {
 
 	dis.notifyUpdate()(nci)
 
-	l.Msg("node updated")
+	l.Debug().Msg("node updated")
 }
 
 func (dis *Discovery) whenMerged(peers []*ml.Node, metas map[string]NodeMeta) error {
@@ -746,8 +745,8 @@ func (dis *Discovery) joinByPeer(peer *ml.Node, meta NodeMeta) (NodeConnInfo, bo
 		if local := dis.connInfo.URL().String(); meta.Publish().String() != local {
 			err := xerrors.Errorf("weird joined node found; same address with local, but incorrect")
 
-			LogNodeMeta(LogNode(dis.Log().Warn(), peer), meta).Str("local", local).
-				Err(err).
+			dis.Log().Warn().Str("peer", peer.Address()).Object("meta", meta).
+				Err(err).Str("local", local).
 				Msg("weird joined node found; same address with local, but incorrect")
 
 			return NodeConnInfo{}, false, err
@@ -767,7 +766,7 @@ func (dis *Discovery) joinByPeer(peer *ml.Node, meta NodeMeta) (NodeConnInfo, bo
 	}
 
 	if xerrors.Is(err, gcache.KeyNotFoundError) {
-		LogNodeMeta(LogNode(dis.Log().Debug(), peer), meta).
+		dis.Log().Debug().Str("peer", peer.Address()).Object("meta", meta).
 			Msg("address not found in node cache; will be added to lame nodes")
 
 		_ = dis.lameNodes.Set(addr, struct{}{}, 0)
@@ -810,9 +809,9 @@ func (dis *Discovery) addNode(no base.Address, addr string, u *url.URL, insecure
 	dis.nodes = nil
 
 	dis.Log().Debug().
-		Str("node_address", no.String()).
+		Stringer("node_address", no).
 		Str("peer", addr).
-		Str("publish", u.String()).
+		Stringer("publish", u).
 		Bool("insecure", insecure).
 		Msg("new node added")
 

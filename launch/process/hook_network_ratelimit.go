@@ -19,14 +19,14 @@ func HookNetworkRateLimit(ctx context.Context) (context.Context, error) {
 		return nil, err
 	}
 
-	var log logging.Logger
+	var log *logging.Logging
 	if err := config.LoadLogContextValue(ctx, &log); err != nil {
 		return ctx, err
 	}
 
 	conf := localconf.Network().RateLimit()
 	if conf == nil {
-		log.Debug().Msg("ratelimit disabled")
+		log.Log().Debug().Msg("ratelimit disabled")
 
 		return ctx, nil
 	}
@@ -38,7 +38,7 @@ func HookNetworkRateLimit(ctx context.Context) (context.Context, error) {
 			return ctx, err
 		}
 		ctx = context.WithValue(ctx, ContextValueRateLimitStore, i)
-		log.Debug().Str("store", conf.Cache().String()).Msg("ratelimit store created")
+		log.Log().Debug().Stringer("store", conf.Cache()).Msg("ratelimit store created")
 
 		store = i
 	}
@@ -56,7 +56,7 @@ func HookNetworkRateLimit(ctx context.Context) (context.Context, error) {
 
 		rs := r.Rules()
 		for j := range rs {
-			log.Debug().
+			log.Log().Debug().
 				Str("handler", j).
 				Str("target", r.Target()).
 				Str("limit", fmt.Sprintf("%d/%s", rs[j].Limit, rs[j].Period.String())).
@@ -82,14 +82,12 @@ func attachRateLimitToHandler(
 	nt *quicnetwork.Server,
 	store limiter.Store,
 ) error {
-	var log logging.Logger
+	var log *logging.Logging
 	if err := config.LoadLogContextValue(ctx, &log); err != nil {
 		return err
 	}
 
-	l := log.WithLogger(func(lctx logging.Context) logging.Emitter {
-		return lctx.Str("handler", name)
-	})
+	l := log.Log().With().Str("handler", name).Logger()
 
 	var prefix string
 	if len(rules) < 1 {
@@ -111,7 +109,7 @@ func attachRateLimitToHandler(
 
 	_ = nt.SetHandler(prefix, mw)
 
-	log.Debug().Str("prefix", prefix).Msg("ratelimit middleware attached")
+	log.Log().Debug().Str("prefix", prefix).Msg("ratelimit middleware attached")
 
 	return nil
 }

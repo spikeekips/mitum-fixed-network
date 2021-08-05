@@ -3,6 +3,7 @@ package basicstates
 import (
 	"golang.org/x/xerrors"
 
+	"github.com/rs/zerolog"
 	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/base/node"
 	"github.com/spikeekips/mitum/isaac"
@@ -30,7 +31,7 @@ func NewBootingState(
 	suffrage base.Suffrage,
 ) *BootingState {
 	return &BootingState{
-		Logging: logging.NewLogging(func(c logging.Context) logging.Emitter {
+		Logging: logging.NewLogging(func(c zerolog.Context) zerolog.Context {
 			return c.Str("module", "basic-booting-state")
 		}),
 		BaseState: NewBaseState(base.StateBooting),

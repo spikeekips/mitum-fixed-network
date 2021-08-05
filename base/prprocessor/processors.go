@@ -5,6 +5,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/rs/zerolog"
 	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/base/ballot"
 	"github.com/spikeekips/mitum/base/block"
@@ -60,7 +61,7 @@ type Processors struct {
 
 func NewProcessors(newFunc ProcessorNewFunc, proposalChecker func(ballot.Proposal) error) *Processors {
 	pps := &Processors{
-		Logging: logging.NewLogging(func(c logging.Context) logging.Emitter {
+		Logging: logging.NewLogging(func(c zerolog.Context) zerolog.Context {
 			return c.Str("module", "default-proposal-processors")
 		}),
 		newFunc:         newFunc,
@@ -224,12 +225,11 @@ func (pps *Processors) handleProposal(
 }
 
 func (pps *Processors) doPrepare(ctx context.Context, processor Processor, outchan chan<- Result) {
-	l := pps.Log().WithLogger(func(ctx logging.Context) logging.Emitter {
-		return ctx.
-			Hinted("height", processor.Proposal().Height()).
-			Hinted("round", processor.Proposal().Round()).
-			Hinted("proposal", processor.Proposal().Hash())
-	})
+	l := pps.Log().With().
+		Int64("height", processor.Proposal().Height().Int64()).
+		Uint64("round", processor.Proposal().Round().Uint64()).
+		Stringer("proposal", processor.Proposal().Hash()).
+		Logger()
 
 	var blk block.Block
 	err := util.Retry(3, time.Millisecond*200, func(int) error {
@@ -268,7 +268,7 @@ func (pps *Processors) doPrepare(ctx context.Context, processor Processor, outch
 			}
 		}
 	} else if blk != nil {
-		l.Debug().Hinted("new_block", blk.Hash()).Msg("new block prepared")
+		l.Debug().Stringer("new_block", blk.Hash()).Msg("new block prepared")
 	}
 
 	outchan <- Result{Block: blk, Err: err}
@@ -288,13 +288,8 @@ func (pps *Processors) saveProposal(
 	} else if h := current.Proposal().Hash(); !h.Equal(proposal) { // NOTE if different processor exists already
 		err = xerrors.Errorf("not yet prepared; another processor already exists")
 
-		pps.Log().Error().Err(err).
-			Dict("previous", logging.Dict().
-				Str("state", current.State().String()).
-				Hinted("height", current.Proposal().Height()).
-				Hinted("round", current.Proposal().Round()).
-				Hinted("proposal", current.Proposal().Hash())).
-			Hinted("propsoal", proposal).
+		LogEventProcessor(current, "current", pps.Log().Error().Err(err)).
+			Stringer("propsoal", proposal).
 			Msg("failed to save proposal")
 	}
 
@@ -317,12 +312,11 @@ func (pps *Processors) doSave(
 	acceptVoteproof base.Voteproof,
 	outchan chan<- Result,
 ) {
-	l := pps.Log().WithLogger(func(ctx logging.Context) logging.Emitter {
-		return ctx.
-			Hinted("height", processor.Proposal().Height()).
-			Hinted("round", processor.Proposal().Round()).
-			Hinted("proposal", processor.Proposal().Hash())
-	})
+	l := pps.Log().With().
+		Int64("height", processor.Proposal().Height().Int64()).
+		Uint64("round", processor.Proposal().Round().Uint64()).
+		Stringer("proposal", processor.Proposal().Hash()).
+		Logger()
 
 	// NOTE tries 3 times
 	err := util.Retry(3, time.Millisecond*200, func(int) error {
@@ -431,10 +425,8 @@ func (pps *Processors) checkCurrent(proposal valuehash.Hash) (Processor, error) 
 
 	if h := current.Proposal().Hash(); !h.Equal(proposal) {
 		if current.State() != Saved {
-			pps.Log().Debug().Dict("previous", logging.Dict().
-				Str("state", current.State().String()).
-				Str("proposal", current.Proposal().Hash().String())).
-				Str("proposal", proposal.String()).Bool("current_exists", current == nil).
+			LogEventProcessor(current, "current", pps.Log().Debug()).
+				Stringer("proposal", proposal).Bool("current_exists", current == nil).
 				Msg("found previous Processor with different Proposal; existing Processor will be canceled")
 
 			if err := pps.cancelProcessor(current); err != nil {
@@ -471,8 +463,8 @@ func (pps *Processors) newProcessor(proposal ballot.Proposal, initVoteproof base
 	} else if state := pp.State(); state != BeforePrepared {
 		return nil, PrepareFailedError.Errorf("new Processor should be BeforePrepared state, not %s", state)
 	} else {
-		if l, ok := pp.(logging.SetLogger); ok {
-			_ = l.SetLogger(pps.Log())
+		if l, ok := pp.(logging.SetLogging); ok {
+			_ = l.SetLogging(pps.Logging)
 		}
 
 		return pp, nil

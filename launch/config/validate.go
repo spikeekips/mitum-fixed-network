@@ -4,6 +4,7 @@ import (
 	"context"
 	"time"
 
+	"github.com/rs/zerolog"
 	"github.com/spikeekips/mitum/util/logging"
 	"golang.org/x/xerrors"
 )
@@ -21,16 +22,16 @@ func NewValidator(ctx context.Context) (*validator, error) { // revive:disable-l
 	}
 
 	va := &validator{
-		Logging: logging.NewLogging(func(c logging.Context) logging.Emitter {
+		Logging: logging.NewLogging(func(c zerolog.Context) zerolog.Context {
 			return c.Str("module", "config-validator")
 		}),
 		ctx:    ctx,
 		config: conf,
 	}
 
-	var l logging.Logger
+	var l *logging.Logging
 	if err := LoadLogContextValue(ctx, &l); err == nil {
-		_ = va.SetLogger(l)
+		_ = va.SetLogging(l)
 	}
 
 	return va, nil

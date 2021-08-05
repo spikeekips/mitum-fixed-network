@@ -3,6 +3,7 @@ package isaac
 import (
 	"golang.org/x/xerrors"
 
+	"github.com/rs/zerolog"
 	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/base/block"
 	"github.com/spikeekips/mitum/util/logging"
@@ -49,10 +50,10 @@ func NewManifestsValidationChecker(
 ) *ManifestsValidationChecker {
 	return &ManifestsValidationChecker{
 		baseBlocksValidationChecker: baseBlocksValidationChecker{
-			Logging: logging.NewLogging(func(c logging.Context) logging.Emitter {
+			Logging: logging.NewLogging(func(c zerolog.Context) zerolog.Context {
 				return c.
-					Hinted("from_manifest", manifests[0].Height()).
-					Hinted("to_manifest", manifests[len(manifests)-1].Height()).
+					Int64("from_manifest", manifests[0].Height().Int64()).
+					Int64("to_manifest", manifests[len(manifests)-1].Height().Int64()).
 					Str("module", "manifests-validation-checker")
 			}),
 			networkID: networkID,

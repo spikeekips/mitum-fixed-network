@@ -6,7 +6,6 @@ import (
 
 	"github.com/spikeekips/mitum/util/hint"
 	"github.com/spikeekips/mitum/util/isvalid"
-	"github.com/spikeekips/mitum/util/logging"
 	"go.mongodb.org/mongo-driver/bson/bsontype"
 	"go.mongodb.org/mongo-driver/x/bsonx/bsoncore"
 	"golang.org/x/xerrors"
@@ -100,8 +99,4 @@ func (sa *StringAddress) UnmarshalText(b []byte) error {
 
 func (sa StringAddress) MarshalBSONValue() (bsontype.Type, []byte, error) {
 	return bsontype.String, bsoncore.AppendString(nil, sa.String()), nil
-}
-
-func (sa StringAddress) MarshalLog(key string, e logging.Emitter, _ bool) logging.Emitter {
-	return e.Str(key, sa.String())
 }

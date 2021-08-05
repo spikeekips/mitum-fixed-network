@@ -39,12 +39,12 @@ func (cmd *BaseRunCommand) prepare() error {
 	ctx := context.Background()
 	ctx = context.WithValue(ctx, process.ContextValueConfigSource, []byte(cmd.Design))
 	ctx = context.WithValue(ctx, process.ContextValueConfigSourceType, "yaml")
-	ctx = context.WithValue(ctx, config.ContextValueLog, cmd.Log())
+	ctx = context.WithValue(ctx, config.ContextValueLog, cmd.Logging)
 	ctx = context.WithValue(ctx, process.ContextValueVersion, cmd.version)
 
 	ps := cmd.Processes()
 	_ = ps.SetContext(ctx)
-	_ = ps.SetLogger(cmd.Log())
+	_ = ps.SetLogging(cmd.Logging)
 
 	_ = cmd.SetProcesses(ps)
 

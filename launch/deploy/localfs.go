@@ -10,6 +10,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/rs/zerolog"
 	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/base/block"
 	"github.com/spikeekips/mitum/storage"
@@ -36,7 +37,7 @@ type BlockDataCleaner struct {
 
 func NewBlockDataCleaner(bd *localfs.BlockData, removeAfter time.Duration) *BlockDataCleaner {
 	bc := &BlockDataCleaner{
-		Logging: logging.NewLogging(func(c logging.Context) logging.Emitter {
+		Logging: logging.NewLogging(func(c zerolog.Context) zerolog.Context {
 			return c.Str("module", "blockdata-cleaner")
 		}),
 		bd:          bd,
@@ -49,10 +50,10 @@ func NewBlockDataCleaner(bd *localfs.BlockData, removeAfter time.Duration) *Bloc
 	return bc
 }
 
-func (bc *BlockDataCleaner) SetLogger(l logging.Logger) logging.Logger {
-	_ = bc.ContextDaemon.SetLogger(l)
+func (bc *BlockDataCleaner) SetLogging(l *logging.Logging) *logging.Logging {
+	_ = bc.ContextDaemon.SetLogging(l)
 
-	return bc.Logging.SetLogger(l)
+	return bc.Logging.SetLogging(l)
 }
 
 func (bc *BlockDataCleaner) start(ctx context.Context) error {

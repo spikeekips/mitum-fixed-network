@@ -27,7 +27,7 @@ func init() {
 }
 
 func ProcessLocalNode(ctx context.Context) (context.Context, error) {
-	var log logging.Logger
+	var log *logging.Logging
 	if err := config.LoadLogContextValue(ctx, &log); err != nil {
 		return ctx, err
 	}
@@ -41,7 +41,7 @@ func ProcessLocalNode(ctx context.Context) (context.Context, error) {
 	ch := network.NewDummyChannel(network.NewNilConnInfo("local://"))
 
 	nodepool := network.NewNodepool(no, ch)
-	log.Debug().Str("added_node", no.Address().String()).Msg("local node added to nodepool")
+	log.Log().Debug().Stringer("added_node", no.Address()).Msg("local node added to nodepool")
 
 	ctx = context.WithValue(ctx, ContextValueNodepool, nodepool)
 

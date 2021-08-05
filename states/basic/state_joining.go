@@ -6,6 +6,7 @@ import (
 
 	"golang.org/x/xerrors"
 
+	"github.com/rs/zerolog"
 	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/base/ballot"
 	"github.com/spikeekips/mitum/base/node"
@@ -34,7 +35,7 @@ func NewJoiningState(
 	ballotbox *isaac.Ballotbox,
 ) *JoiningState {
 	return &JoiningState{
-		Logging: logging.NewLogging(func(c logging.Context) logging.Emitter {
+		Logging: logging.NewLogging(func(c zerolog.Context) zerolog.Context {
 			return c.Str("module", "basic-joining-state")
 		}),
 		BaseState: NewBaseState(base.StateJoining),
@@ -116,8 +117,9 @@ func (st *JoiningState) broadcastINITBallotEnteredWithoutDelay(voteproof base.Vo
 	} else {
 		baseBallot = i
 
-		l := isaac.LoggerWithVoteproof(voteproof, st.Log())
-		l.Debug().HintedVerbose("voteproof", voteproof, true).Msg("joining with latest accept voteproof from local")
+		l := st.Log().With().Str("voteproof_id", voteproof.ID()).Logger()
+		l.Trace().Interface("voteproof", voteproof).Msg("joining with latest accept voteproof from local")
+		l.Debug().Object("voteproof", voteproof).Msg("joining with latest accept voteproof from local")
 	}
 
 	timer := localtime.NewContextTimer(TimerIDBroadcastJoingingINITBallot, 0, func(i int) (bool, error) {
@@ -155,8 +157,9 @@ func (st *JoiningState) broadcastINITBallotEntered(voteproof base.Voteproof) err
 	} else {
 		baseBallot = i
 
-		l := isaac.LoggerWithVoteproof(voteproof, st.Log())
-		l.Debug().HintedVerbose("voteproof", voteproof, true).Msg("joining with latest accept voteproof from local")
+		l := st.Log().With().Str("voteproof_id", voteproof.ID()).Logger()
+		l.Trace().Interface("voteproof", voteproof).Msg("joining with latest accept voteproof from local")
+		l.Debug().Object("voteproof", voteproof).Msg("joining with latest accept voteproof from local")
 	}
 
 	checkBallotbox := st.checkBallotboxFunc()

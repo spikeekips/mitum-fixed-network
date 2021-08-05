@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/lucas-clemente/quic-go"
+	"github.com/rs/zerolog"
 	"golang.org/x/xerrors"
 
 	"github.com/spikeekips/mitum/util"
@@ -38,7 +39,7 @@ func NewQuicClient(insecure bool, quicConfig *quic.Config) (*QuicClient, error) 
 	}
 
 	return &QuicClient{
-		Logging: logging.NewLogging(func(c logging.Context) logging.Emitter {
+		Logging: logging.NewLogging(func(c zerolog.Context) zerolog.Context {
 			return c.Str("module", "network-quic-client")
 		}),
 		insecure:   insecure,
@@ -96,13 +97,12 @@ func (cl *QuicClient) Request(
 }
 
 func (cl *QuicClient) makeRequest(url string, method string, b []byte, headers http.Header) (*http.Request, error) {
-	l := cl.Log().WithLogger(func(ctx logging.Context) logging.Emitter {
-		return ctx.Str("url", url).
-			Int("content_length", len(b)).
-			Str("method", method).
-			Interface("headers", headers).
-			Str("request", "request")
-	})
+	l := cl.Log().With().Str("url", url).
+		Int("content_length", len(b)).
+		Str("method", method).
+		Interface("headers", headers).
+		Str("request", "request").
+		Logger()
 
 	var request *http.Request
 	{

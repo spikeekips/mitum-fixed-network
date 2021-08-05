@@ -6,6 +6,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/rs/zerolog"
 	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/base/key"
 	"github.com/spikeekips/mitum/network"
@@ -33,7 +34,7 @@ func NewDeployKeyByTokenMiddleware(
 	networkID base.NetworkID,
 ) *DeployKeyByTokenMiddleware {
 	return &DeployKeyByTokenMiddleware{
-		Logging: logging.NewLogging(func(c logging.Context) logging.Emitter {
+		Logging: logging.NewLogging(func(c zerolog.Context) zerolog.Context {
 			return c.Str("module", "deploy-key-token-middleware")
 		}),
 		cache:     c,
@@ -80,7 +81,7 @@ type DeployByKeyMiddleware struct {
 
 func NewDeployByKeyMiddleware(ks *DeployKeyStorage) *DeployByKeyMiddleware {
 	return &DeployByKeyMiddleware{
-		Logging: logging.NewLogging(func(c logging.Context) logging.Emitter {
+		Logging: logging.NewLogging(func(c zerolog.Context) zerolog.Context {
 			return c.Str("module", "deploy-by-key-middleware")
 		}),
 		ks: ks,

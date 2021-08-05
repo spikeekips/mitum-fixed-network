@@ -7,6 +7,7 @@ import (
 
 	"golang.org/x/xerrors"
 
+	"github.com/rs/zerolog"
 	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/base/ballot"
 	"github.com/spikeekips/mitum/base/block"
@@ -66,7 +67,7 @@ func NewDummyBlocksV0Generator(
 	}
 
 	return &DummyBlocksV0Generator{
-		Logging: logging.NewLogging(func(c logging.Context) logging.Emitter {
+		Logging: logging.NewLogging(func(c zerolog.Context) zerolog.Context {
 			return c.Str("module", "dummy-block-generator")
 		}),
 		genesisNode: genesisNode,
@@ -141,7 +142,7 @@ func (bg *DummyBlocksV0Generator) Generate(ignoreExists bool) error {
 		); err != nil {
 			return err
 		} else {
-			_ = genesis.SetLogger(bg.Log())
+			_ = genesis.SetLogging(bg.Logging)
 
 			if _, err := genesis.Generate(); err != nil {
 				return err

@@ -14,7 +14,7 @@ import (
 var HookNameDeployHandlers = "deploy_handlers"
 
 func HookDeployHandlers(ctx context.Context) (context.Context, error) {
-	var log logging.Logger
+	var log *logging.Logging
 	if err := config.LoadLogContextValue(ctx, &log); err != nil {
 		return ctx, err
 	}
@@ -24,7 +24,7 @@ func HookDeployHandlers(ctx context.Context) (context.Context, error) {
 	if err := process.LoadNetworkContextValue(ctx, &nt); err != nil {
 		return nil, err
 	} else if i, ok := nt.(*quicnetwork.Server); !ok {
-		log.Warn().
+		log.Log().Warn().
 			Str("network_server_type", fmt.Sprintf("%T", nt)).Msg("only quicnetwork server supports deploy key handlers")
 
 		return ctx, nil

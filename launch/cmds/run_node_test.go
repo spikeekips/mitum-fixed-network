@@ -6,7 +6,6 @@ import (
 	"testing"
 
 	"github.com/spikeekips/mitum/util"
-	"github.com/spikeekips/mitum/util/logging"
 	"github.com/stretchr/testify/suite"
 )
 
@@ -56,7 +55,7 @@ storage:
 	)
 	t.NoError(err)
 
-	t.NoError(kctx.Run(logging.NilLogger, util.Version("v1.2.3")))
+	t.NoError(kctx.Run(util.Version("v1.2.3")))
 }
 
 func TestRunNode(t *testing.T) {

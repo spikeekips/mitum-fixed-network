@@ -3,6 +3,7 @@ package ballot
 import (
 	"golang.org/x/xerrors"
 
+	"github.com/rs/zerolog"
 	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/base/key"
 	"github.com/spikeekips/mitum/base/seal"
@@ -10,7 +11,6 @@ import (
 	"github.com/spikeekips/mitum/util/hint"
 	"github.com/spikeekips/mitum/util/isvalid"
 	"github.com/spikeekips/mitum/util/localtime"
-	"github.com/spikeekips/mitum/util/logging"
 	"github.com/spikeekips/mitum/util/valuehash"
 )
 
@@ -26,10 +26,10 @@ var (
 )
 
 type Ballot interface {
+	zerolog.LogObjectMarshaler
 	seal.Seal
 	Fact() base.Fact
 	FactSignature() key.Signature
-	logging.LogHintedMarshaler
 	Stage() base.Stage
 	Height() base.Height
 	Round() base.Round

@@ -37,7 +37,7 @@ func init() {
 }
 
 func ProcessDiscovery(ctx context.Context) (context.Context, error) {
-	var log logging.Logger
+	var log *logging.Logging
 	if err := config.LoadLogContextValue(ctx, &log); err != nil {
 		return ctx, err
 	}
@@ -53,7 +53,7 @@ func ProcessDiscovery(ctx context.Context) (context.Context, error) {
 	}
 
 	if !suffrage.IsInside(local.Address()) {
-		log.Debug().Msg("local is not suffrage node; discovery disabled")
+		log.Log().Debug().Msg("local is not suffrage node; discovery disabled")
 
 		return ctx, nil
 	}
@@ -80,7 +80,7 @@ func ProcessDiscovery(ctx context.Context) (context.Context, error) {
 }
 
 func processDiscoveryURLs(ctx context.Context) ([]memberlist.ConnInfo, error) {
-	var log logging.Logger
+	var log *logging.Logging
 	if err := config.LoadLogContextValue(ctx, &log); err != nil {
 		return nil, err
 	}
@@ -101,9 +101,9 @@ func processDiscoveryURLs(ctx context.Context) ([]memberlist.ConnInfo, error) {
 	}
 
 	if len(urls) < 1 {
-		log.Debug().Msg("empty discovery urls")
+		log.Log().Debug().Msg("empty discovery urls")
 	} else {
-		log.Debug().Interface("urls", urls).Msg("discovery urls")
+		log.Log().Debug().Interface("urls", urls).Msg("discovery urls")
 	}
 
 	var cis []memberlist.ConnInfo // nolint:prealloc
@@ -115,7 +115,7 @@ func processDiscoveryURLs(ctx context.Context) ([]memberlist.ConnInfo, error) {
 		}
 
 		if connInfo.URL().String() == ci.URL().String() {
-			log.Warn().Msg("local discovery url ignored")
+			log.Log().Warn().Msg("local discovery url ignored")
 
 			continue
 		}
@@ -127,7 +127,7 @@ func processDiscoveryURLs(ctx context.Context) ([]memberlist.ConnInfo, error) {
 }
 
 func processDiscovery(ctx context.Context) (discovery.Discovery, error) {
-	var log logging.Logger
+	var log *logging.Logging
 	if err := config.LoadLogContextValue(ctx, &log); err != nil {
 		return nil, err
 	}
@@ -165,13 +165,13 @@ func processDiscovery(ctx context.Context) (discovery.Discovery, error) {
 		return nil, err
 	}
 
-	var nlog logging.Logger
+	var nlog *logging.Logging
 	if err := config.LoadNetworkLogContextValue(ctx, &nlog); err != nil {
 		return nil, err
 	}
 
 	dis := memberlist.NewDiscovery(local, connInfo, networkID, nt.Encoder())
-	_ = dis.SetLogger(nlog)
+	_ = dis.SetLogging(nlog)
 
 	if err := dis.Initialize(); err != nil {
 		return nil, err
@@ -186,7 +186,7 @@ func processDiscovery(ctx context.Context) (discovery.Discovery, error) {
 }
 
 func processDiscoveryDelegate(ctx context.Context, dis discovery.Discovery) error {
-	var log logging.Logger
+	var log *logging.Logging
 	if err := config.LoadLogContextValue(ctx, &log); err != nil {
 		return err
 	}
@@ -207,7 +207,7 @@ func processDiscoveryDelegate(ctx context.Context, dis discovery.Discovery) erro
 	}
 
 	dg := discovery.NewNodepoolDelegate(nodepool, nt.Encoders(), policy.NetworkConnectionTimeout())
-	_ = dg.SetLogger(log)
+	_ = dg.SetLogging(log)
 
 	_ = dis.SetNotifyJoin(dg.NotifyJoin).
 		SetNotifyLeave(dg.NotifyLeave).

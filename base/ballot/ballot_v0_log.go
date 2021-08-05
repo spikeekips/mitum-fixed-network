@@ -1,38 +1,30 @@
 package ballot
 
 import (
-	jsonenc "github.com/spikeekips/mitum/util/encoder/json"
-	"github.com/spikeekips/mitum/util/logging"
+	"github.com/rs/zerolog"
 )
 
-func marshalLog(ballot Ballot, key string, e logging.Emitter, verbose bool) logging.Emitter {
-	if !verbose {
-		return e.Dict(key, logging.Dict().
-			Hinted("hash", ballot.Hash()).
-			Hinted("stage", ballot.Stage()).
-			Hinted("node", ballot.Node()).
-			Hinted("height", ballot.Height()).
-			Hinted("round", ballot.Round()),
-		)
-	}
-
-	r, _ := jsonenc.Marshal(ballot)
-
-	return e.RawJSON(key, r)
+func marshalLog(ballot Ballot, e *zerolog.Event) {
+	e.
+		Stringer("hash", ballot.Hash()).
+		Stringer("stage", ballot.Stage()).
+		Stringer("node", ballot.Node()).
+		Int64("height", ballot.Height().Int64()).
+		Uint64("round", ballot.Round().Uint64())
 }
 
-func (ib INITV0) MarshalLog(key string, e logging.Emitter, verbose bool) logging.Emitter {
-	return marshalLog(ib, key, e, verbose)
+func (ib INITV0) MarshalZerologObject(e *zerolog.Event) {
+	marshalLog(ib, e)
 }
 
-func (pr ProposalV0) MarshalLog(key string, e logging.Emitter, verbose bool) logging.Emitter {
-	return marshalLog(pr, key, e, verbose)
+func (pr ProposalV0) MarshalZerologObject(e *zerolog.Event) {
+	marshalLog(pr, e)
 }
 
-func (sb SIGNV0) MarshalLog(key string, e logging.Emitter, verbose bool) logging.Emitter {
-	return marshalLog(sb, key, e, verbose)
+func (sb SIGNV0) MarshalZerologObject(e *zerolog.Event) {
+	marshalLog(sb, e)
 }
 
-func (ab ACCEPTV0) MarshalLog(key string, e logging.Emitter, verbose bool) logging.Emitter {
-	return marshalLog(ab, key, e, verbose)
+func (ab ACCEPTV0) MarshalZerologObject(e *zerolog.Event) {
+	marshalLog(ab, e)
 }

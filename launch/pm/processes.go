@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/rs/zerolog"
 	"github.com/spikeekips/mitum/util/logging"
 	"golang.org/x/xerrors"
 )
@@ -29,7 +30,7 @@ type Processes struct {
 
 func NewProcesses() *Processes {
 	pm := &Processes{
-		Logging: logging.NewLogging(func(c logging.Context) logging.Emitter {
+		Logging: logging.NewLogging(func(c zerolog.Context) zerolog.Context {
 			return c.Str("module", "process-manager")
 		}),
 		processes:      map[string]Process{},
@@ -274,9 +275,7 @@ func (pm *Processes) runProcess(s, from string) error {
 		pr = i
 	}
 
-	l := pm.Log().WithLogger(func(ctx logging.Context) logging.Emitter {
-		return ctx.Str("process", pr.Name()).Str("from_process", from)
-	})
+	l := pm.Log().With().Str("process", pr.Name()).Str("from_process", from).Logger()
 
 	// run requires
 	for _, r := range pr.Requires() {
@@ -334,9 +333,7 @@ func (pm *Processes) runProcessHooks(prefix HookPrefix, pr string) error {
 }
 
 func (pm *Processes) runProcessHook(hook, from string) error {
-	l := pm.Log().WithLogger(func(ctx logging.Context) logging.Emitter {
-		return ctx.Str("hook", hook).Str("from", from)
-	})
+	l := pm.Log().With().Str("hook", hook).Str("from", from).Logger()
 
 	switch f, found := pm.hooks[hook]; {
 	case !found:

@@ -5,6 +5,7 @@ import (
 	"net/http"
 
 	"github.com/gorilla/mux"
+	"github.com/rs/zerolog"
 	"github.com/spikeekips/mitum/launch/config"
 	"github.com/spikeekips/mitum/launch/process"
 	"github.com/spikeekips/mitum/storage"
@@ -34,7 +35,7 @@ func newBaseDeployHandler(
 	name string,
 	handler func(string) *mux.Route,
 ) (*baseDeployHandler, error) {
-	var log logging.Logger
+	var log *logging.Logging
 	if err := config.LoadLogContextValue(ctx, &log); err != nil {
 		return nil, err
 	}
@@ -60,7 +61,7 @@ func newBaseDeployHandler(
 	}
 
 	dh := &baseDeployHandler{
-		Logging: logging.NewLogging(func(c logging.Context) logging.Emitter {
+		Logging: logging.NewLogging(func(c zerolog.Context) zerolog.Context {
 			return c.Str("module", name)
 		}),
 		handler:    handler,
@@ -70,7 +71,7 @@ func newBaseDeployHandler(
 		enc:        enc,
 	}
 
-	_ = dh.SetLogger(log)
+	_ = dh.SetLogging(log)
 
 	return dh, nil
 }

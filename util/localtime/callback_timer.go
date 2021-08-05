@@ -6,6 +6,7 @@ import (
 
 	"golang.org/x/xerrors"
 
+	"github.com/rs/zerolog"
 	"github.com/spikeekips/mitum/util"
 	"github.com/spikeekips/mitum/util/logging"
 )
@@ -29,9 +30,8 @@ func NewCallbackTimer(
 	interval time.Duration,
 ) (*CallbackTimer, error) {
 	return &CallbackTimer{
-		Logging: logging.NewLogging(func(c logging.Context) logging.Emitter {
-			return c.Str("module", "next-callback-timer").
-				Str("id", id.String())
+		Logging: logging.NewLogging(func(c zerolog.Context) zerolog.Context {
+			return c.Str("module", "next-callback-timer").Stringer("id", id)
 		}),
 		id: id,
 		intervalFunc: func(int) time.Duration {

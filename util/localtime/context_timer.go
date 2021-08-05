@@ -5,6 +5,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/rs/zerolog"
 	"github.com/spikeekips/mitum/util"
 	"github.com/spikeekips/mitum/util/logging"
 	"golang.org/x/xerrors"
@@ -47,9 +48,8 @@ type ContextTimer struct {
 func NewContextTimer(id TimerID, interval time.Duration, callback func(int) (bool, error)) *ContextTimer {
 	ct := ContextTimerPoolGet()
 	ct.RWMutex = sync.RWMutex{}
-	ct.Logging = logging.NewLogging(func(c logging.Context) logging.Emitter {
-		return c.Str("module", "context-timer").
-			Str("id", id.String())
+	ct.Logging = logging.NewLogging(func(c zerolog.Context) zerolog.Context {
+		return c.Str("module", "context-timer").Stringer("id", id)
 	})
 	ct.id = id
 	ct.interval = func(int) time.Duration {
@@ -83,10 +83,10 @@ func (ct *ContextTimer) Reset() error {
 	return nil
 }
 
-func (ct *ContextTimer) SetLogger(l logging.Logger) logging.Logger {
-	_ = ct.ContextDaemon.SetLogger(l)
+func (ct *ContextTimer) SetLogging(l *logging.Logging) *logging.Logging {
+	_ = ct.ContextDaemon.SetLogging(l)
 
-	return ct.Logging.SetLogger(l)
+	return ct.Logging.SetLogging(l)
 }
 
 func (ct *ContextTimer) Stop() error {

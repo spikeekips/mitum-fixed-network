@@ -106,23 +106,20 @@ func (cmd *RunCommand) prepare() error {
 	}
 
 	// NOTE setup network log
-	var networkLogger logging.Logger
+	var networkLogger *logging.Logging
 	if len(cmd.NetworkLogFile) < 1 {
-		networkLogger = cmd.Log()
+		networkLogger = cmd.Logging
 	} else {
-		outs := make([]io.Writer, len(cmd.NetworkLogFile))
-		for i, f := range cmd.NetworkLogFile {
-			out, err := LogOutput(f)
+		var out io.Writer = cmd.LogOutput
+		if len(cmd.NetworkLogFile) > 0 {
+			i, err := logging.Outputs(cmd.NetworkLogFile)
 			if err != nil {
 				return err
 			}
-			outs[i] = out
+			out = i
 		}
 
-		networkLogger = SetupLogging(
-			zerolog.MultiLevelWriter(outs...),
-			zerolog.DebugLevel, "json", true, false,
-		)
+		networkLogger = logging.Setup(out, zerolog.DebugLevel, "json", false)
 	}
 
 	ctx := context.WithValue(cmd.processes.ContextSource(), config.ContextValueNetworkLog, networkLogger)
@@ -234,14 +231,14 @@ func (cmd *RunCommand) runDiscovery(ctx context.Context) error {
 	}
 
 	// NOTE join network
-	if err := process.JoinDiscovery(nodepool, suffrage, dis, cis, 2, cmd.Log()); err != nil {
+	if err := process.JoinDiscovery(nodepool, suffrage, dis, cis, 2, cmd.Logging); err != nil {
 		if !xerrors.Is(err, memberlist.JoiningCanceledError) {
 			return err
 		}
 
 		cmd.Log().Error().Err(err).Msg("failed to join network; keep trying")
 
-		go process.KeepDiscoveryJoining(nodepool, suffrage, dis, cis, cmd.Log())
+		go process.KeepDiscoveryJoining(nodepool, suffrage, dis, cis, cmd.Logging)
 	}
 
 	return nil

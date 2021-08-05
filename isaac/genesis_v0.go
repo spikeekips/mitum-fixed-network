@@ -5,6 +5,7 @@ import (
 
 	"golang.org/x/xerrors"
 
+	"github.com/rs/zerolog"
 	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/base/ballot"
 	"github.com/spikeekips/mitum/base/block"
@@ -49,7 +50,7 @@ func NewGenesisBlockV0Generator(
 	nodepool := network.NewNodepool(local, nil)
 
 	return &GenesisBlockV0Generator{
-		Logging: logging.NewLogging(func(c logging.Context) logging.Emitter {
+		Logging: logging.NewLogging(func(c zerolog.Context) zerolog.Context {
 			return c.Str("module", "genesis-block-generator")
 		}),
 		local:     local,
@@ -110,7 +111,7 @@ func (gg *GenesisBlockV0Generator) Generate() (block.Block, error) {
 		}()
 	}
 
-	_ = pps.SetLogger(gg.Log())
+	_ = pps.SetLogging(gg.Logging)
 
 	if result := <-pps.NewProposal(context.Background(), proposal, ivp); result.Err != nil {
 		return nil, result.Err

@@ -4,12 +4,12 @@ import (
 	"context"
 	"math"
 
+	"github.com/rs/zerolog"
 	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/base/block"
 	"github.com/spikeekips/mitum/isaac"
 	"github.com/spikeekips/mitum/util"
 	"github.com/spikeekips/mitum/util/hint"
-	"github.com/spikeekips/mitum/util/logging"
 	"golang.org/x/sync/errgroup"
 	"golang.org/x/sync/semaphore"
 	"golang.org/x/xerrors"
@@ -84,15 +84,14 @@ func (cmd *BaseVerifyCommand) checkManifests(
 	s, e base.Height,
 	get func(base.Height) (block.Manifest, error),
 ) (block.Manifest, error) {
-	l := cmd.Log().WithLogger(func(ctx logging.Context) logging.Emitter {
-		e := ctx.Ints64("heights", []int64{s.Int64(), e.Int64()})
-
+	var l zerolog.Logger
+	{
+		c := cmd.Log().With().Ints64("heights", []int64{s.Int64(), e.Int64()})
 		if b != nil {
-			e = e.Int64("base_height", b.Height().Int64())
+			c = c.Int64("base_height", b.Height().Int64())
 		}
-
-		return e
-	})
+		l = c.Logger()
+	}
 
 	var manifests []block.Manifest
 	i, err := cmd.loadManifests(s, e, get)

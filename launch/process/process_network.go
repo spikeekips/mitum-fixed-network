@@ -49,7 +49,7 @@ func ProcessQuicNetwork(ctx context.Context) (context.Context, error) {
 		return ctx, err
 	}
 
-	var l logging.Logger
+	var l *logging.Logging
 	if err := config.LoadNetworkLogContextValue(ctx, &l); err != nil {
 		return ctx, err
 	}
@@ -63,8 +63,8 @@ func ProcessQuicNetwork(ctx context.Context) (context.Context, error) {
 	if err != nil {
 		return ctx, err
 	}
-	if i, ok := nt.(logging.SetLogger); ok {
-		_ = i.SetLogger(l)
+	if i, ok := nt.(logging.SetLogging); ok {
+		_ = i.SetLogging(l)
 	}
 
 	ctx = context.WithValue(ctx, ContextValueNetwork, nt)

@@ -3,6 +3,7 @@ package isaac
 import (
 	"golang.org/x/xerrors"
 
+	"github.com/rs/zerolog"
 	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/base/ballot"
 	"github.com/spikeekips/mitum/network"
@@ -28,13 +29,13 @@ func NewProposalValidationChecker(
 	lastINITVoteproof base.Voteproof,
 ) *ProposalChecker {
 	return &ProposalChecker{
-		Logging: logging.NewLogging(func(c logging.Context) logging.Emitter {
+		Logging: logging.NewLogging(func(c zerolog.Context) zerolog.Context {
 			return c.
 				Str("module", "proposal-validation-checker").
-				Hinted("proposal", proposal.Hash()).
-				Hinted("proposal_height", proposal.Height()).
-				Hinted("proposal_round", proposal.Round()).
-				Hinted("proposal_node", proposal.Node())
+				Stringer("proposal", proposal.Hash()).
+				Int64("proposal_height", proposal.Height().Int64()).
+				Uint64("proposal_round", proposal.Round().Uint64()).
+				Stringer("proposal_node", proposal.Node())
 		}),
 		database: st,
 		suffrage: suffrage,

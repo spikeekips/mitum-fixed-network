@@ -2,20 +2,15 @@ package cmds
 
 import (
 	"bytes"
-	"fmt"
 	"io"
-	"os"
-	"path/filepath"
 	"time"
 
 	"github.com/alecthomas/kong"
-	"github.com/mattn/go-isatty"
 	"github.com/rs/zerolog"
-	"github.com/rs/zerolog/diode"
-	"golang.org/x/xerrors"
-
+	"github.com/spikeekips/mitum/util"
 	"github.com/spikeekips/mitum/util/localtime"
 	"github.com/spikeekips/mitum/util/logging"
+	"golang.org/x/xerrors"
 )
 
 func init() {
@@ -24,6 +19,7 @@ func init() {
 	zerolog.TimestampFieldName = "t"
 	zerolog.MessageFieldName = "m"
 	zerolog.TimestampFunc = localtime.UTCNow
+	zerolog.InterfaceMarshalFunc = util.JSON.Marshal
 
 	zerolog.DisableSampling(true)
 }
@@ -33,13 +29,13 @@ var LogVars = kong.Vars{
 	"log_level":  "info",
 	"log_format": "terminal",
 	"log_color":  "false",
-	"verbose":    "false",
 }
 
+// BLOCK use trace for verbose
+
 type LogFlags struct {
-	Verbose   bool      `help:"verbose log output (default: ${verbose})" default:"${verbose}"` // revive:disable-line:struct-tag,line-length-limit
-	LogColor  bool      `help:"show color log" default:"${log_color}"`                         // revive:disable-line:struct-tag,line-length-limit
-	LogLevel  LogLevel  `help:"log level {debug error warn info crit} (default: ${log_level})" default:"${log_level}"`
+	LogColor  bool      `help:"show color log" default:"${log_color}"`                                                       // revive:disable-line:struct-tag,line-length-limit
+	LogLevel  LogLevel  `help:"log level {trace debug error warn info crit} (default: ${log_level})" default:"${log_level}"` // revive:disable-line:struct-tag,line-length-limit
 	LogFormat LogFormat `help:"log format {json terminal} (default: ${log_format})" default:"${log_format}"`
 	LogFile   []string  `name:"log" help:"log file"`
 }
@@ -81,74 +77,20 @@ func (lf *LogFormat) UnmarshalText(b []byte) error {
 	return nil
 }
 
-func SetupLoggingFromFlags(flags *LogFlags, defaultout io.Writer) (logging.Logger, error) {
-	var output io.Writer
-	if len(flags.LogFile) < 1 {
-		output = defaultout
-	} else {
-		outs := make([]io.Writer, len(flags.LogFile))
-		for i, f := range flags.LogFile {
-			out, err := LogOutput(f)
-			if err != nil {
-				return logging.Logger{}, err
-			}
-			outs[i] = out
+func SetupLoggingFromFlags(flags *LogFlags, defaultout io.Writer) (*logging.Logging, error) {
+	output := defaultout
+	if len(flags.LogFile) > 0 {
+		i, err := logging.Outputs(flags.LogFile)
+		if err != nil {
+			return nil, err
 		}
-
-		output = zerolog.MultiLevelWriter(outs...)
+		output = i
 	}
 
-	return SetupLogging(
+	return logging.Setup(
 		output,
 		zerolog.Level(flags.LogLevel),
 		string(flags.LogFormat),
-		flags.Verbose,
 		flags.LogColor,
-	), nil
-}
-
-func SetupLogging(out io.Writer, level zerolog.Level, format string, verbose, forceColor bool) logging.Logger {
-	if format == "terminal" {
-		var useColor bool
-		if forceColor {
-			useColor = true
-		} else if isatty.IsTerminal(os.Stdout.Fd()) {
-			useColor = true
-		}
-
-		out = zerolog.ConsoleWriter{
-			Out:        out,
-			TimeFormat: time.RFC3339Nano,
-			NoColor:    !useColor,
-		}
-	}
-
-	z := zerolog.New(out).With().Timestamp()
-
-	if verbose {
-		level = zerolog.TraceLevel
-	}
-
-	if level <= zerolog.DebugLevel {
-		z = z.Caller().Stack()
-	}
-
-	l := z.Logger().Level(level)
-
-	return logging.NewLogger(&l, verbose)
-}
-
-func LogOutput(f string) (io.Writer, error) {
-	out, err := os.OpenFile(filepath.Clean(f), os.O_CREATE|os.O_RDWR|os.O_APPEND, 0o644) // nolint:gosec
-	if err != nil {
-		return nil, err
-	}
-	return diode.NewWriter(
-		out,
-		1000,
-		0,
-		func(missed int) {
-			_, _ = fmt.Fprintf(os.Stderr, "zerolog: dropped %d log mesages\n", missed)
-		},
 	), nil
 }

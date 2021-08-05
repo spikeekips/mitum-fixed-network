@@ -6,7 +6,6 @@ import (
 	"github.com/spikeekips/mitum/util"
 	"github.com/spikeekips/mitum/util/errors"
 	"github.com/spikeekips/mitum/util/isvalid"
-	"github.com/spikeekips/mitum/util/logging"
 )
 
 var (
@@ -19,7 +18,6 @@ type Hash interface {
 	util.Byter
 	// NOTE usually String() value is the base58 encoded of Bytes()
 	fmt.Stringer
-	logging.LogHintedMarshaler
 	Size() int
 	Equal(Hash) bool
 	Empty() bool

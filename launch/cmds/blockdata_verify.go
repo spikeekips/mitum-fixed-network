@@ -13,7 +13,6 @@ import (
 	"github.com/spikeekips/mitum/storage/blockdata/localfs"
 	"github.com/spikeekips/mitum/util"
 	"github.com/spikeekips/mitum/util/hint"
-	"github.com/spikeekips/mitum/util/logging"
 	"golang.org/x/sync/errgroup"
 	"golang.org/x/sync/semaphore"
 	"golang.org/x/xerrors"
@@ -158,9 +157,7 @@ func (cmd *BlockDataVerifyCommand) checkBlocks() error {
 }
 
 func (cmd *BlockDataVerifyCommand) loadBlock(height base.Height) (block.Block, error) {
-	l := cmd.Log().WithLogger(func(ctx logging.Context) logging.Emitter {
-		return ctx.Int64("height", height.Int64())
-	})
+	l := cmd.Log().With().Int64("height", height.Int64()).Logger()
 
 	if _, i, err := localfs.LoadBlock(cmd.bd.(*localfs.BlockData), height); err != nil {
 		l.Error().Err(err).Msg("failed to load block")
@@ -204,9 +201,7 @@ func (cmd *BlockDataVerifyCommand) checkAllBlockFiles() error {
 }
 
 func (cmd *BlockDataVerifyCommand) checkBlockFiles(height base.Height) error {
-	l := cmd.Log().WithLogger(func(ctx logging.Context) logging.Emitter {
-		return ctx.Int64("height", height.Int64())
-	})
+	l := cmd.Log().With().Int64("height", height.Int64()).Logger()
 
 	if found, err := cmd.bd.Exists(height); err != nil {
 		return err

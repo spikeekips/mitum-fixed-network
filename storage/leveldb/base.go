@@ -3,11 +3,7 @@ package leveldbstorage
 import (
 	"fmt"
 
-	"github.com/syndtr/goleveldb/leveldb"
-	leveldbStorage "github.com/syndtr/goleveldb/leveldb/storage"
-	leveldbutil "github.com/syndtr/goleveldb/leveldb/util"
-	"golang.org/x/xerrors"
-
+	"github.com/rs/zerolog"
 	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/base/ballot"
 	"github.com/spikeekips/mitum/base/block"
@@ -20,6 +16,10 @@ import (
 	"github.com/spikeekips/mitum/util/hint"
 	"github.com/spikeekips/mitum/util/logging"
 	"github.com/spikeekips/mitum/util/valuehash"
+	"github.com/syndtr/goleveldb/leveldb"
+	leveldbStorage "github.com/syndtr/goleveldb/leveldb/storage"
+	leveldbutil "github.com/syndtr/goleveldb/leveldb/util"
+	"golang.org/x/xerrors"
 )
 
 var (
@@ -52,7 +52,7 @@ type Database struct {
 
 func NewDatabase(db *leveldb.DB, encs *encoder.Encoders, enc encoder.Encoder) *Database {
 	return &Database{
-		Logging: logging.NewLogging(func(c logging.Context) logging.Emitter {
+		Logging: logging.NewLogging(func(c zerolog.Context) zerolog.Context {
 			return c.Str("module", "leveldb-database")
 		}),
 		db:   db,

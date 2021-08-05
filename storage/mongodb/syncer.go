@@ -9,6 +9,7 @@ import (
 	"go.mongodb.org/mongo-driver/mongo"
 	"golang.org/x/xerrors"
 
+	"github.com/rs/zerolog"
 	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/base/block"
 	"github.com/spikeekips/mitum/storage"
@@ -43,7 +44,7 @@ func NewSyncerSession(main *Database) (*SyncerSession, error) {
 	}
 
 	return &SyncerSession{
-		Logging: logging.NewLogging(func(c logging.Context) logging.Emitter {
+		Logging: logging.NewLogging(func(c zerolog.Context) zerolog.Context {
 			return c.Str("module", "mongodb-syncer-database")
 		}),
 		main:             main,
@@ -108,16 +109,16 @@ func (st *SyncerSession) SetManifests(manifests []block.Manifest) error {
 		return err
 	}
 
-	st.Log().VerboseFunc(func(e *logging.Event) logging.Emitter {
+	st.Log().Trace().Func(func(e *zerolog.Event) {
 		var heights []base.Height
 		for i := range manifests {
 			heights = append(heights, manifests[i].Height())
 		}
 
-		return e.Interface("heights", heights)
+		e.Interface("heights", heights)
 	}).
-		Hinted("from_height", st.heightFrom).
-		Hinted("to_height", st.heightTo).
+		Int64("from_height", st.heightFrom.Int64()).
+		Int64("to_height", st.heightTo.Int64()).
 		Int("manifests", len(manifests)).
 		Msg("set manifests")
 
@@ -139,13 +140,13 @@ func (st *SyncerSession) SetBlocks(blocks []block.Block, maps []block.BlockDataM
 		}
 	}
 
-	st.Log().VerboseFunc(func(e *logging.Event) logging.Emitter {
+	st.Log().Trace().Func(func(e *zerolog.Event) {
 		var heights []base.Height
 		for i := range blocks {
 			heights = append(heights, blocks[i].Height())
 		}
 
-		return e.Interface("heights", heights)
+		e.Interface("heights", heights)
 	}).
 		Int("blocks", len(blocks)).
 		Msg("set blocks")
@@ -191,10 +192,9 @@ func (st *SyncerSession) setBlock(blk block.Block, m block.BlockDataMap) error {
 }
 
 func (st *SyncerSession) Commit() error {
-	l := st.Log().WithLogger(func(ctx logging.Context) logging.Emitter {
-		return ctx.Hinted("from_height", st.heightFrom).
-			Hinted("to_height", st.heightTo)
-	})
+	l := st.Log().With().Int64("from_height", st.heightFrom.Int64()).
+		Int64("to_height", st.heightTo.Int64()).
+		Logger()
 
 	var last block.Manifest
 	if m, found, err := st.session.LastManifest(); err != nil || !found {
@@ -222,7 +222,7 @@ func (st *SyncerSession) Commit() error {
 
 			return err
 		}
-		l.Verbose().Str("collection", col).Msg("moved collection")
+		l.Trace().Str("collection", col).Msg("moved collection")
 	}
 
 	if err := st.main.setLastBlock(last, false, false); err != nil {

@@ -3,11 +3,11 @@ package base
 import (
 	"time"
 
+	"github.com/rs/zerolog"
 	"github.com/spikeekips/mitum/base/key"
 	"github.com/spikeekips/mitum/util"
 	"github.com/spikeekips/mitum/util/hint"
 	"github.com/spikeekips/mitum/util/isvalid"
-	"github.com/spikeekips/mitum/util/logging"
 	"github.com/spikeekips/mitum/util/valuehash"
 )
 
@@ -15,7 +15,7 @@ type Voteproof interface {
 	hint.Hinter
 	isvalid.IsValider
 	util.Byter
-	logging.LogHintedMarshaler
+	zerolog.LogObjectMarshaler
 	ID() string // ID is only unique in local machine
 	IsFinished() bool
 	FinishedAt() time.Time

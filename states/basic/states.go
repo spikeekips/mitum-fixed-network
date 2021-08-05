@@ -7,6 +7,7 @@ import (
 
 	"golang.org/x/xerrors"
 
+	"github.com/rs/zerolog"
 	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/base/ballot"
 	"github.com/spikeekips/mitum/base/block"
@@ -60,7 +61,7 @@ func NewStates(
 	stoppedState, bootingState, joiningState, consensusState, syncingState State,
 ) (*States, error) {
 	ss := &States{
-		Logging: logging.NewLogging(func(c logging.Context) logging.Emitter {
+		Logging: logging.NewLogging(func(c zerolog.Context) zerolog.Context {
 			return c.Str("module", "basic-states")
 		}),
 		database: st, policy: policy, nodepool: nodepool, suffrage: suffrage,
@@ -106,18 +107,17 @@ func NewStates(
 	return ss, nil
 }
 
-func (ss *States) SetLogger(l logging.Logger) logging.Logger {
-	_ = ss.Logging.SetLogger(l)
-	_ = ss.timers.SetLogger(l)
+func (ss *States) SetLogging(l *logging.Logging) *logging.Logging {
+	_ = ss.timers.SetLogging(l)
 
 	for b := range ss.states {
 		st := ss.states[b]
-		if i, ok := st.(logging.SetLogger); ok {
-			_ = i.SetLogger(l)
+		if i, ok := st.(logging.SetLogging); ok {
+			_ = i.SetLogging(l)
 		}
 	}
 
-	return ss.Logging.Log()
+	return ss.Logging.SetLogging(l)
 }
 
 func (ss *States) Start() error {
@@ -205,32 +205,31 @@ func (ss *States) SetLastVoteproof(voteproof base.Voteproof) bool {
 		ss.livp = voteproof
 	}
 
-	isaac.LoggerWithVoteproof(voteproof, ss.Log()).Debug().Msg("last voteproof updated")
+	ss.Log().Debug().Str("voteproof_id", voteproof.ID()).Msg("last voteproof updated")
 
 	return true
 }
 
 func (ss *States) NewSeal(sl seal.Seal) error {
-	l := isaac.LoggerWithSeal(sl, ss.Log())
+	l := ss.Log().With().Stringer("seal_hash", sl.Hash()).Logger()
 
-	seal.LogEventWithSeal(sl, l.Debug(), true).Msg("seal received")
+	l.Debug().Dict("seal", LogSeal(sl)).Msg("seal received")
+	l.Trace().Interface("seal", sl).Msg("seal received")
 
-	{
-		var err error
-		switch t := sl.(type) {
-		case ballot.Proposal:
-			err = ss.newSealProposal(t)
-		case ballot.Ballot:
-			err = ss.newSealBallot(t)
-		default:
-			err = ss.newSealOthers(sl)
-		}
+	var err error
+	switch t := sl.(type) {
+	case ballot.Proposal:
+		err = ss.newSealProposal(t)
+	case ballot.Ballot:
+		err = ss.newSealBallot(t)
+	default:
+		err = ss.newSealOthers(sl)
+	}
 
-		if err != nil {
-			l.Error().Err(err).Msg("failed to process seal")
+	if err != nil {
+		l.Error().Err(err).Msg("failed to process seal")
 
-			return err
-		}
+		return err
 	}
 
 	return nil
@@ -258,10 +257,6 @@ func (ss *States) NewProposal(proposal ballot.Proposal) {
 // - suffrage nodes
 // - if toLocal is true, sends to local
 func (ss *States) BroadcastBallot(blt ballot.Ballot, toLocal bool) error {
-	l := isaac.LoggerWithBallot(blt, ss.Log())
-
-	l.Debug().Bool("to_local", toLocal).Msg("broadcasting ballot")
-
 	return ss.broadcast(blt, toLocal, func(node base.Node) bool {
 		return ss.suffrage.IsInside(node.Address())
 	})
@@ -272,10 +267,6 @@ func (ss *States) BroadcastBallot(blt ballot.Ballot, toLocal bool) error {
 // - and other nodes
 // - if toLocal is true, sends to local
 func (ss *States) BroadcastSeals(sl seal.Seal, toLocal bool) error {
-	l := isaac.LoggerWithSeal(sl, ss.Log())
-
-	seal.LogEventWithSeal(sl, l.Debug(), l.IsVerbose()).Bool("to_local", toLocal).Msg("broadcasting seal")
-
 	return ss.broadcast(sl, toLocal, func(base.Node) bool {
 		return true
 	})
@@ -377,7 +368,7 @@ func (ss *States) processSwitchStates(sctx StateSwitchContext) error {
 }
 
 func (ss *States) switchState(sctx StateSwitchContext) error {
-	l := LoggerWithStateSwitchContext(sctx, ss.Log())
+	l := ss.Log().With().Object("state_context", sctx).Logger()
 
 	e := l.Debug().Interface("voteproof", sctx.Voteproof())
 	if err := sctx.Err(); err != nil {
@@ -436,7 +427,7 @@ func (ss *States) switchState(sctx StateSwitchContext) error {
 }
 
 func (ss *States) exitState(sctx StateSwitchContext) error {
-	l := LoggerWithStateSwitchContext(sctx, ss.Log())
+	l := ss.Log().With().Object("state_context", sctx).Logger()
 
 	exitFunc := EmptySwitchFunc
 	f, err := ss.states[sctx.FromState()].Exit(sctx)
@@ -447,7 +438,7 @@ func (ss *States) exitState(sctx StateSwitchContext) error {
 		exitFunc = f
 	}
 
-	l.Debug().Str("state", sctx.FromState().String()).Msg("state exited")
+	l.Debug().Stringer("state", sctx.FromState()).Msg("state exited")
 
 	var nsctx StateSwitchContext
 	switch err := exitFunc(); {
@@ -463,7 +454,7 @@ func (ss *States) exitState(sctx StateSwitchContext) error {
 }
 
 func (ss *States) enterState(sctx StateSwitchContext) error {
-	l := LoggerWithStateSwitchContext(sctx, ss.Log())
+	l := ss.Log().With().Object("state_context", sctx).Logger()
 
 	enterFunc := EmptySwitchFunc
 	if f, err := ss.states[sctx.ToState()].Enter(sctx); err != nil {
@@ -473,7 +464,7 @@ func (ss *States) enterState(sctx StateSwitchContext) error {
 	}
 
 	ss.setState(sctx.ToState())
-	l.Debug().Str("state", sctx.ToState().String()).Msg("state entered; set current")
+	l.Debug().Stringer("state", sctx.ToState()).Msg("state entered; set current")
 
 	var nsctx StateSwitchContext
 	switch err := enterFunc(); {
@@ -504,11 +495,11 @@ func (ss *States) processVoteproof(voteproof base.Voteproof) error {
 }
 
 func (ss *States) processVoteproofInternal(voteproof base.Voteproof) error {
-	l := isaac.LoggerWithVoteproof(voteproof, ss.Log())
-	l.Debug().HintedVerbose("voteproof", voteproof, true).Msg("new voteproof")
+	l := ss.Log().With().Str("voteproof_id", voteproof.ID()).Logger()
+	l.Debug().Object("voteproof", voteproof).Msg("new voteproof")
 
 	vc := NewVoteproofChecker(ss.database, ss.suffrage, ss.nodepool, ss.LastVoteproof(), voteproof)
-	_ = vc.SetLogger(ss.Log())
+	_ = vc.SetLogging(ss.Logging)
 
 	err := util.NewChecker("voteproof-checker", []util.CheckerFunc{
 		vc.CheckPoint,
@@ -547,13 +538,13 @@ func (ss *States) processProposal(proposal ballot.Proposal) error {
 	ss.Lock()
 	defer ss.Unlock()
 
-	l := isaac.LoggerWithBallot(proposal, ss.Log())
+	l := ss.Log().With().Stringer("seal_hash", proposal.Hash()).Logger()
 	pvc := isaac.NewProposalValidationChecker(
 		ss.database, ss.suffrage, ss.nodepool,
 		proposal,
 		ss.LastINITVoteproof(),
 	)
-	_ = pvc.SetLogger(ss.Log())
+	_ = pvc.SetLogging(ss.Logging)
 
 	if err := util.NewChecker("proposal-validation-checker", []util.CheckerFunc{
 		pvc.IsOlder,
@@ -637,7 +628,7 @@ func (ss *States) validateProposal(proposal ballot.Proposal) error {
 		proposal,
 		ss.LastINITVoteproof(),
 	)
-	_ = pvc.SetLogger(ss.Log())
+	_ = pvc.SetLogging(ss.Logging)
 
 	var fns []util.CheckerFunc
 	if proposal.Node().Equal(ss.nodepool.LocalNode().Address()) {
@@ -669,7 +660,7 @@ func (ss *States) validateProposal(proposal ballot.Proposal) error {
 
 func (ss *States) validateBallot(blt ballot.Ballot) error {
 	bc := NewBallotChecker(blt, ss.LastVoteproof())
-	_ = bc.SetLogger(ss.Log())
+	_ = bc.SetLogging(ss.Logging)
 
 	return util.NewChecker("ballot-validation-checker", []util.CheckerFunc{
 		bc.CheckWithLastVoteproof,
@@ -690,7 +681,7 @@ func (ss *States) voteBallot(blt ballot.Ballot) (base.Voteproof, error) {
 		return nil, nil
 	}
 
-	isaac.LoggerWithVoteproof(voteproof, isaac.LoggerWithBallot(blt, ss.Log())).Debug().Msg("voted and new voteproof")
+	ss.Log().Debug().Stringer("ballot", blt.Hash()).Object("voteproof", voteproof).Msg("voted and new voteproof")
 
 	return voteproof, nil
 }
@@ -719,7 +710,7 @@ func (ss *States) checkBallotVoteproof(blt ballot.Ballot) error {
 		return nil
 	}
 
-	l := isaac.LoggerWithVoteproof(voteproof, isaac.LoggerWithBallot(blt, ss.Log()))
+	l := ss.Log().With().Stringer("seal_hash", blt.Hash()).Str("voteproof_id", voteproof.ID()).Logger()
 
 	lvp := ss.LastVoteproof()
 	// NOTE last init voteproof is nil, it means current database is empty, so
@@ -732,12 +723,12 @@ func (ss *States) checkBallotVoteproof(blt ballot.Ballot) error {
 
 	if base.CompareVoteproof(voteproof, lvp) < 1 {
 		l.Debug().
-			Str("last_voteproof_height", lvp.Height().String()).
+			Stringer("last_voteproof_height", lvp.Height()).
 			Uint64("last_voteproof_round", lvp.Round().Uint64()).
-			Str("last_voteproof_stage", lvp.Stage().String()).
-			Str("ballot_voteproof_height", lvp.Height().String()).
+			Stringer("last_voteproof_stage", lvp.Stage()).
+			Stringer("ballot_voteproof_height", lvp.Height()).
 			Uint64("ballot_voteproof_round", lvp.Round().Uint64()).
-			Str("ballot_voteproof_stage", lvp.Stage().String()).
+			Stringer("ballot_voteproof_stage", lvp.Stage()).
 			Msg("old or same height voteproof received")
 
 		return nil
@@ -791,20 +782,13 @@ func (ss *States) detectStuck(ctx context.Context) {
 			lvp := ss.LastVoteproof()
 			state := ss.State()
 
-			l := ss.Log().WithLogger(func(c logging.Context) logging.Emitter {
-				e := c.Str("state", state.String()).Dur("endure", endure)
+			e := ss.Log().With().Stringer("state", state).Dur("endure", endure)
 
-				if lvp != nil {
-					e = e.Dict("last_voteproof", logging.Dict().
-						Str("id", lvp.ID()).
-						Hinted("height", lvp.Height()).
-						Hinted("round", lvp.Round()).
-						Hinted("stage", lvp.Stage()),
-					)
-				}
+			if lvp != nil {
+				e = e.Object("last_voteproof", lvp)
+			}
 
-				return e
-			})
+			l := e.Logger()
 
 			cc := NewConsensusStuckChecker(lvp, state, endure)
 			err := util.NewChecker("consensus-stuck-checker", []util.CheckerFunc{
@@ -852,7 +836,10 @@ func (ss *States) broadcast(
 	toLocal bool,
 	filter func(node base.Node) bool,
 ) error {
-	l := isaac.LoggerWithSeal(sl, ss.Log())
+	l := ss.Log().With().Stringer("seal_hash", sl.Hash()).Logger()
+
+	l.Debug().Dict("seal", LogSeal(sl)).Bool("to_local", toLocal).Msg("broadcasting seal")
+	l.Trace().Interface("seal", sl).Bool("to_local", toLocal).Msg("broadcasting seal")
 
 	if toLocal {
 		go func() {
@@ -880,17 +867,14 @@ func (ss *States) broadcast(
 			defer cancel()
 
 			if err := ch.SendSeal(ctx, sl); err != nil {
-				l.Error().Err(err).Hinted("target_node", no.Address()).Msg("failed to broadcast")
+				l.Error().Err(err).Stringer("target_node", no.Address()).Msg("failed to broadcast")
 			}
 		}(no, ch)
 
 		return true
 	})
 
-	seal.LogEventWithSeal(sl, l.Debug(), l.IsVerbose()).
-		Bool("to_local", toLocal).
-		Int("targets", targets).
-		Msg("seal broadcasted")
+	l.Debug().Msg("seal broadcasted")
 
 	return nil
 }

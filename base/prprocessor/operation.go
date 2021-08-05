@@ -8,6 +8,7 @@ import (
 
 	"golang.org/x/xerrors"
 
+	"github.com/rs/zerolog"
 	"github.com/spikeekips/mitum/base/operation"
 	"github.com/spikeekips/mitum/base/state"
 	"github.com/spikeekips/mitum/storage"
@@ -92,7 +93,7 @@ func NewConcurrentOperationsProcessor(
 	}
 
 	return &ConcurrentOperationsProcessor{
-		Logging: logging.NewLogging(func(c logging.Context) logging.Emitter {
+		Logging: logging.NewLogging(func(c zerolog.Context) zerolog.Context {
 			return c.Str("module", "concurrent-operations-processor")
 		}),
 		max:              uint(max),
@@ -231,14 +232,13 @@ func (co *ConcurrentOperationsProcessor) Process(index uint64, op operation.Oper
 		return xerrors.Errorf("not started")
 	}
 
-	l := co.Log().WithLogger(func(ctx logging.Context) logging.Emitter {
-		return ctx.Hinted("operation", op.Hash()).Hinted("fact", op.Fact().Hash())
-	})
+	l := co.Log().With().
+		Stringer("operation", op.Hash()).Stringer("fact", op.Fact().Hash()).Logger()
 
-	l.Verbose().Msg("operation will be processed")
+	l.Trace().Msg("operation will be processed")
 
 	if pr, ok := op.(state.Processor); !ok {
-		l.Verbose().Msgf("not state.StateProcessor, %T", op)
+		l.Trace().Msgf("not state.StateProcessor, %T", op)
 
 		return co.addOperationsTree(
 			index,
@@ -251,17 +251,17 @@ func (co *ConcurrentOperationsProcessor) Process(index uint64, op operation.Oper
 		}
 
 		if operationIgnored(err) {
-			l.Verbose().Err(err).Msg("operation ignored")
+			l.Trace().Err(err).Msg("operation ignored")
 
 			return nil
 		}
 
-		l.Verbose().Err(err).Msg("operation failed to PreProcess")
+		l.Trace().Err(err).Msg("operation failed to PreProcess")
 
 		return err
 	}
 
-	l.Verbose().Msg("operation ready to process")
+	l.Trace().Msg("operation ready to process")
 
 	return nil
 }
@@ -379,8 +379,8 @@ func (co *ConcurrentOperationsProcessor) opr(op state.Processor) (OperationProce
 	opr = opr.New(co.pool)
 	co.oprs[hinter.Hint()] = opr
 
-	if l, ok := opr.(logging.SetLogger); ok {
-		_ = l.SetLogger(co.Log())
+	if l, ok := opr.(logging.SetLogging); ok {
+		_ = l.SetLogging(co.Logging)
 	}
 
 	return opr, nil
@@ -418,15 +418,15 @@ func (co *ConcurrentOperationsProcessor) workProcess(op state.Processor) error {
 	}
 
 	if err = opr.Process(op); err != nil {
-		co.Log().Verbose().
-			Hinted("operation", op.(operation.Operation).Hash()).
+		co.Log().Trace().
+			Stringer("operation", op.(operation.Operation).Hash()).
 			Err(err).
 			Msg("operation failed to process")
 
 		return err
 	}
 
-	co.Log().Verbose().Hinted("operation", op.(operation.Operation).Hash()).Err(err).Msg("operation processed")
+	co.Log().Trace().Stringer("operation", op.(operation.Operation).Hash()).Err(err).Msg("operation processed")
 
 	return nil
 }

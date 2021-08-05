@@ -17,7 +17,7 @@ const HookNameCheckEmptyBlock = "check_empty_block"
 // HookCheckEmptyBlock checks whether local has empty block. If empty block and
 // there are no other nodes, stop process with error.
 func HookCheckEmptyBlock(ctx context.Context) (context.Context, error) {
-	var log logging.Logger
+	var log *logging.Logging
 	if err := config.LoadLogContextValue(ctx, &log); err != nil {
 		return ctx, err
 	}
@@ -45,7 +45,7 @@ func HookCheckEmptyBlock(ctx context.Context) (context.Context, error) {
 	if m, err := storage.CheckBlockEmpty(st); err != nil {
 		return ctx, err
 	} else if m == nil {
-		log.Debug().Msg("empty block found; storage will be empty")
+		log.Log().Debug().Msg("empty block found; storage will be empty")
 
 		if err := blockdata.Clean(st, blockData, false); err != nil {
 			return nil, err
@@ -55,7 +55,7 @@ func HookCheckEmptyBlock(ctx context.Context) (context.Context, error) {
 	} else if err := m.IsValid(policy.NetworkID()); err != nil {
 		return ctx, xerrors.Errorf("invalid block found, clean up block: %w", err)
 	} else {
-		log.Debug().Hinted("block", m).Msg("valid initial block found")
+		log.Log().Debug().Object("block", m).Msg("valid initial block found")
 	}
 
 	return ctx, nil

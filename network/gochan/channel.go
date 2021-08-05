@@ -4,8 +4,7 @@ import (
 	"context"
 	"io"
 
-	"golang.org/x/xerrors"
-
+	"github.com/rs/zerolog"
 	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/base/block"
 	"github.com/spikeekips/mitum/base/seal"
@@ -13,6 +12,7 @@ import (
 	"github.com/spikeekips/mitum/network"
 	"github.com/spikeekips/mitum/util/logging"
 	"github.com/spikeekips/mitum/util/valuehash"
+	"golang.org/x/xerrors"
 )
 
 type Channel struct {
@@ -28,7 +28,7 @@ type Channel struct {
 
 func NewChannel(bufsize uint, connInfo network.ConnInfo) *Channel {
 	return &Channel{
-		Logging: logging.NewLogging(func(c logging.Context) logging.Emitter {
+		Logging: logging.NewLogging(func(c zerolog.Context) zerolog.Context {
 			return c.Str("module", "chan-network")
 		}),
 		connInfo: connInfo,

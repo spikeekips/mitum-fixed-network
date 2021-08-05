@@ -4,6 +4,7 @@ import (
 	"context"
 	"sync"
 
+	"github.com/rs/zerolog"
 	"github.com/spikeekips/mitum/util/logging"
 )
 
@@ -20,7 +21,7 @@ type ContextDaemon struct {
 
 func NewContextDaemon(name string, startfunc func(context.Context) error) *ContextDaemon {
 	return &ContextDaemon{
-		Logging: logging.NewLogging(func(c logging.Context) logging.Emitter {
+		Logging: logging.NewLogging(func(c zerolog.Context) zerolog.Context {
 			return c.Str("module", "context-daemon").Str("daemon", name)
 		}),
 		callback: startfunc,

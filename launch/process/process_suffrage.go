@@ -35,7 +35,7 @@ func init() {
 }
 
 func ProcessSuffrage(ctx context.Context) (context.Context, error) {
-	var log logging.Logger
+	var log *logging.Logging
 	if err := config.LoadLogContextValue(ctx, &log); err != nil {
 		return ctx, err
 	}
@@ -72,7 +72,7 @@ func ProcessSuffrage(ctx context.Context) (context.Context, error) {
 		return ctx, err
 	}
 
-	log.Debug().Interface("suffrage_nodes", sf.Nodes()).Msg("suffrage done")
+	log.Log().Debug().Interface("suffrage_nodes", sf.Nodes()).Msg("suffrage done")
 
 	return context.WithValue(ctx, ContextValueSuffrage, sf), nil
 }

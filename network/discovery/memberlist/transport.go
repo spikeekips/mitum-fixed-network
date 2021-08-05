@@ -9,6 +9,7 @@ import (
 	"time"
 
 	ml "github.com/hashicorp/memberlist"
+	"github.com/rs/zerolog"
 	"github.com/spikeekips/mitum/util"
 	"github.com/spikeekips/mitum/util/localtime"
 	"github.com/spikeekips/mitum/util/logging"
@@ -46,7 +47,7 @@ func NewQuicTransport(
 	timeout time.Duration,
 ) *QuicTransport {
 	return &QuicTransport{
-		Logging: logging.NewLogging(func(c logging.Context) logging.Emitter {
+		Logging: logging.NewLogging(func(c zerolog.Context) zerolog.Context {
 			return c.Str("module", "memberlist-discovery-transport")
 		}),
 		request:         request,
@@ -230,28 +231,27 @@ func (tp *QuicTransport) handler(callback func(NodeMessage) error) http.HandlerF
 
 		var ms NodeMessage
 		if i, err := ioutil.ReadAll(r.Body); err != nil {
-			tp.Log().Error().Err(err).Msg("failed to read body")
+			tp.Log().Trace().Err(err).Msg("failed to read body")
 
 			http.Error(w, http.StatusText(http.StatusBadRequest), http.StatusBadRequest)
 
 			return
 		} else if ms, err = tp.loadNodeMessage(i); err != nil {
-			tp.Log().Error().Err(err).Msg("failed to load NodeMessage")
+			tp.Log().Trace().Err(err).Msg("failed to load NodeMessage")
 
 			http.Error(w, http.StatusText(http.StatusBadRequest), http.StatusBadRequest)
 
 			return
 		}
 
-		l := tp.Log().WithLogger(func(lctx logging.Context) logging.Emitter {
-			return lctx.
-				Str("conn_id", ms.connid).
-				Str("node", ms.node.String()).
-				Interface("conninfo", ms.ConnInfo)
-		})
+		l := tp.Log().With().
+			Str("conn_id", ms.connid).
+			Stringer("node", ms.node).
+			Interface("conninfo", ms.ConnInfo).
+			Logger()
 
 		if err := callback(ms); err != nil {
-			l.Error().Err(err).Msg("failed to handle; ignored")
+			l.Trace().Err(err).Msg("failed to handle; ignored")
 
 			switch {
 			case xerrors.Is(err, JoinDeclinedError):
@@ -264,11 +264,11 @@ func (tp *QuicTransport) handler(callback func(NodeMessage) error) http.HandlerF
 		}
 
 		if !tp.ma.addrExists(ms.Address) {
-			l.Debug().Msg("address not found in ConnMap; will be added")
+			l.Trace().Msg("address not found in ConnMap; will be added")
 
 			_, _ = tp.ma.add(ms.URL(), ms.Insecure())
 		} else if err := tp.ma.setAlive(ms.Address); err != nil {
-			l.Error().Err(err).Msg("failed to set alive")
+			l.Trace().Err(err).Msg("failed to set alive")
 		}
 
 		if len(ms.connid) > 0 {
@@ -287,7 +287,7 @@ func (tp *QuicTransport) handler(callback func(NodeMessage) error) http.HandlerF
 	}
 }
 
-func (tp *QuicTransport) handleStream(ms NodeMessage, l logging.Logger) error {
+func (tp *QuicTransport) handleStream(ms NodeMessage, l zerolog.Logger) error {
 	if i, found := tp.conns.Load(ms.connid); found {
 		_, _ = i.(*QuicConn).append(ms.body)
 
@@ -301,7 +301,7 @@ func (tp *QuicTransport) handleStream(ms NodeMessage, l logging.Logger) error {
 
 	_, _ = conn.append(ms.body)
 
-	l.Verbose().Str("method", "stream").Int("body", len(ms.body)).Msg("got stream")
+	l.Trace().Str("method", "stream").Int("body", len(ms.body)).Msg("got stream")
 	go func() {
 		tp.streamch <- conn
 	}()
@@ -309,14 +309,14 @@ func (tp *QuicTransport) handleStream(ms NodeMessage, l logging.Logger) error {
 	return nil
 }
 
-func (tp *QuicTransport) handlePacket(ms NodeMessage, l logging.Logger) error {
+func (tp *QuicTransport) handlePacket(ms NodeMessage, l zerolog.Logger) error {
 	raddr, err := net.ResolveUDPAddr("udp", ms.Address)
 	if err != nil {
 		return err
 	}
 
-	l.Verbose().
-		Str("remote_address", raddr.String()).
+	l.Trace().
+		Stringer("remote_address", raddr).
 		Str("method", "packet").
 		Int("body", len(ms.body)).
 		Msg("got packet")
@@ -339,9 +339,9 @@ func (tp *QuicTransport) checkConnections() {
 		i.RLock()
 		defer i.RUnlock()
 
-		tp.Log().Verbose().
+		tp.Log().Trace().
 			Str("conn_id", k.(string)).
-			Str("created_at", i.createdAt.String()).
+			Stringer("created_at", i.createdAt).
 			Dur("time_diff", now.Sub(i.createdAt)).
 			Msg("connection found")
 

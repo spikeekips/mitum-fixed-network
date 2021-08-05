@@ -6,6 +6,7 @@ import (
 
 	"golang.org/x/xerrors"
 
+	"github.com/rs/zerolog"
 	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/base/ballot"
 	"github.com/spikeekips/mitum/util/logging"
@@ -23,7 +24,7 @@ type Ballotbox struct {
 
 func NewBallotbox(suffragesFunc func() []base.Address, thresholdFunc func() base.Threshold) *Ballotbox {
 	return &Ballotbox{
-		Logging: logging.NewLogging(func(c logging.Context) logging.Emitter {
+		Logging: logging.NewLogging(func(c zerolog.Context) zerolog.Context {
 			return c.Str("module", "ballotbox")
 		}),
 		vrs:           &sync.Map{},
@@ -48,9 +49,7 @@ func (bb *Ballotbox) Clean(height base.Height) error {
 	bb.Lock()
 	defer bb.Unlock()
 
-	l := bb.Log().WithLogger(func(ctx logging.Context) logging.Emitter {
-		return ctx.Hinted("height", height)
-	})
+	l := bb.Log().With().Int64("height", height.Int64()).Logger()
 	l.Debug().Msg("trying to clean unused records")
 
 	gh := height.Int64()

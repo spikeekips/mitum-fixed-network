@@ -8,6 +8,7 @@ import (
 
 	"github.com/gorilla/mux"
 	"github.com/lucas-clemente/quic-go/http3"
+	"github.com/rs/zerolog"
 	"golang.org/x/xerrors"
 
 	"github.com/spikeekips/mitum/network"
@@ -34,7 +35,7 @@ func NewPrimitiveQuicServer(bind string, certs []tls.Certificate) (*PrimitiveQui
 	}
 
 	qs := &PrimitiveQuicServer{
-		Logging: logging.NewLogging(func(c logging.Context) logging.Emitter {
+		Logging: logging.NewLogging(func(c zerolog.Context) zerolog.Context {
 			return c.Str("module", "network-quic-primitive-server")
 		}),
 		bind: bind,
@@ -79,11 +80,10 @@ func (qs *PrimitiveQuicServer) SetHandler(prefix string, handler http.Handler) *
 	return qs.Handler(prefix).Handler(handler)
 }
 
-func (qs *PrimitiveQuicServer) SetLogger(l logging.Logger) logging.Logger {
-	_ = qs.Logging.SetLogger(l)
-	_ = qs.ContextDaemon.SetLogger(l)
+func (qs *PrimitiveQuicServer) SetLogging(l *logging.Logging) *logging.Logging {
+	_ = qs.ContextDaemon.SetLogging(l)
 
-	return qs.Log()
+	return qs.Logging.SetLogging(l)
 }
 
 func (qs *PrimitiveQuicServer) StoppedChan() <-chan struct{} {

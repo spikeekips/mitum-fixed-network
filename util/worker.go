@@ -5,6 +5,7 @@ import (
 	"sync"
 	"sync/atomic"
 
+	"github.com/rs/zerolog"
 	"github.com/spikeekips/mitum/util/logging"
 	"golang.org/x/xerrors"
 )
@@ -25,7 +26,7 @@ type ParallelWorker struct {
 
 func NewParallelWorker(name string, bufsize uint) *ParallelWorker {
 	wk := &ParallelWorker{
-		Logging: logging.NewLogging(func(c logging.Context) logging.Emitter {
+		Logging: logging.NewLogging(func(c zerolog.Context) zerolog.Context {
 			return c.Str("module", fmt.Sprintf("worker-%s", name))
 		}),
 		bufsize:    bufsize,

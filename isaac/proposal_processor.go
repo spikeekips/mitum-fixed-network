@@ -5,6 +5,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/rs/zerolog"
 	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/base/ballot"
 	"github.com/spikeekips/mitum/base/block"
@@ -90,11 +91,11 @@ func NewDefaultProcessor(
 	}
 
 	pp := &DefaultProcessor{
-		Logging: logging.NewLogging(func(c logging.Context) logging.Emitter {
+		Logging: logging.NewLogging(func(c zerolog.Context) zerolog.Context {
 			return c.Str("module", "default-proposal-processor").
-				Hinted("height", proposal.Height()).
-				Hinted("round", proposal.Round()).
-				Hinted("proposal", proposal.Hash())
+				Int64("height", proposal.Height().Int64()).
+				Uint64("round", proposal.Round().Uint64()).
+				Stringer("proposal", proposal.Hash())
 		}),
 		st:            st,
 		blockData:     blockData,

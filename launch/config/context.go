@@ -37,11 +37,11 @@ func LoadBSONEncoderContextValue(ctx context.Context, l **bsonenc.Encoder) error
 	return util.LoadFromContextValue(ctx, ContextValueBSONEncoder, l)
 }
 
-func LoadLogContextValue(ctx context.Context, l *logging.Logger) error {
+func LoadLogContextValue(ctx context.Context, l **logging.Logging) error {
 	return util.LoadFromContextValue(ctx, ContextValueLog, l)
 }
 
-func LoadNetworkLogContextValue(ctx context.Context, l *logging.Logger) error {
+func LoadNetworkLogContextValue(ctx context.Context, l **logging.Logging) error {
 	return util.LoadFromContextValue(ctx, ContextValueNetworkLog, l)
 }
 

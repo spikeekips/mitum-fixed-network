@@ -21,7 +21,7 @@ func (t *testStateBooting) TestWithBlock() {
 	st.SetLastVoteproofFuncs(
 		func() base.Voteproof { return nil },
 		func() base.Voteproof { return nil },
-		func(base.Voteproof) {},
+		func(base.Voteproof) bool { return true },
 	)
 	f, err := st.Enter(NewStateSwitchContext(base.StateStopped, base.StateBooting))
 	t.NoError(err)
@@ -41,7 +41,7 @@ func (t *testStateBooting) TestNoneSuffrageNode() {
 	st.SetLastVoteproofFuncs(
 		func() base.Voteproof { return nil },
 		func() base.Voteproof { return nil },
-		func(base.Voteproof) {},
+		func(base.Voteproof) bool { return true },
 	)
 	f, err := st.Enter(NewStateSwitchContext(base.StateStopped, base.StateBooting))
 	t.NoError(err)

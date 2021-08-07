@@ -11,7 +11,7 @@ import (
 	"github.com/spikeekips/mitum/util/localtime"
 )
 
-func (st *BaseState) SetLastVoteproofFuncs(last func() base.Voteproof, lastinit func() base.Voteproof, setter func(base.Voteproof)) {
+func (st *BaseState) SetLastVoteproofFuncs(last func() base.Voteproof, lastinit func() base.Voteproof, setter func(base.Voteproof) bool) {
 	st.lastVoteproofFunc = last
 	st.lastINITVoteproofFunc = lastinit
 	st.setLastVoteproofFunc = setter

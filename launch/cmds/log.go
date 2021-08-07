@@ -31,8 +31,6 @@ var LogVars = kong.Vars{
 	"log_color":  "false",
 }
 
-// BLOCK use trace for verbose
-
 type LogFlags struct {
 	LogColor  bool      `help:"show color log" default:"${log_color}"`                                                       // revive:disable-line:struct-tag,line-length-limit
 	LogLevel  LogLevel  `help:"log level {trace debug error warn info crit} (default: ${log_level})" default:"${log_level}"` // revive:disable-line:struct-tag,line-length-limit

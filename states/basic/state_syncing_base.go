@@ -140,7 +140,7 @@ func (st *BaseSyncingState) whenBlockSaved(blks []block.Block) {
 	})
 
 	ivp := blks[len(blks)-1].ConsensusInfo().INITVoteproof()
-	st.SetLastVoteproof(ivp)
+	_ = st.SetLastVoteproof(ivp)
 
 	if err := st.NewBlocks(blks); err != nil {
 		st.Log().Error().Err(err).Msg("new blocks hooks failed")

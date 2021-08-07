@@ -211,10 +211,15 @@ func (st *SyncingState) syncFromVoteproof(voteproof base.Voteproof, to base.Heig
 }
 
 func (st *SyncingState) whenFinished(height base.Height) {
-	st.Log().Debug().Int64("height", height.Int64()).Msg("syncing finished; will wait new voteproof")
+	l := st.Log().With().Int64("height", height.Int64()).Logger()
+
+	voteproof := st.database.LastVoteproof(base.StageACCEPT)
+	_ = st.SetLastVoteproof(voteproof)
+
+	l.Debug().Msg("syncing finished; will wait new voteproof")
 
 	if err := st.waitVoteproof(); err != nil {
-		st.Log().Error().Err(err).Stringer("timer", TimerIDSyncingWaitVoteproof).Msg("failed to start timer")
+		l.Error().Err(err).Stringer("timer", TimerIDSyncingWaitVoteproof).Msg("failed to start timer")
 
 		return
 	}

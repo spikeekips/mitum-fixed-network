@@ -28,7 +28,7 @@ type BaseState struct {
 	States                *States
 	lastVoteproofFunc     func() base.Voteproof
 	lastINITVoteproofFunc func() base.Voteproof
-	setLastVoteproofFunc  func(base.Voteproof)
+	setLastVoteproofFunc  func(base.Voteproof) bool
 	newProposalFunc       func(ballot.Proposal)
 	newVoteproofFunc      func(base.Voteproof)
 	broadcastSealsFunc    func(seal.Seal, bool /* to local */) error
@@ -99,14 +99,12 @@ func (st *BaseState) LastINITVoteproof() base.Voteproof {
 	return st.States.LastINITVoteproof()
 }
 
-func (st *BaseState) SetLastVoteproof(voteproof base.Voteproof) {
+func (st *BaseState) SetLastVoteproof(voteproof base.Voteproof) bool {
 	if st.setLastVoteproofFunc != nil {
-		st.setLastVoteproofFunc(voteproof)
-
-		return
+		return st.setLastVoteproofFunc(voteproof)
 	}
 
-	_ = st.States.SetLastVoteproof(voteproof)
+	return st.States.SetLastVoteproof(voteproof)
 }
 
 func (st *BaseState) NewProposal(proposal ballot.Proposal) {

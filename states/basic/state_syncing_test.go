@@ -67,6 +67,13 @@ func (t *testStateSyncing) TestWaitMovesToJoining() {
 	defer done()
 
 	st.waitVoteproofTimeout = time.Millisecond * 10
+	st.SetLastVoteproofFuncs(func() base.Voteproof {
+		return nil
+	}, func() base.Voteproof {
+		return nil
+	}, func(voteproof base.Voteproof) bool {
+		return true
+	})
 
 	timers := localtime.NewTimers([]localtime.TimerID{
 		TimerIDSyncingWaitVoteproof,
@@ -119,13 +126,15 @@ func (t *testStateSyncing) TestSyncingHandlerFromVoteproof() {
 	}, false)
 	st.SetTimers(timers)
 
-	livpch := make(chan base.Voteproof)
+	livpch := make(chan base.Voteproof, 1)
 	st.SetLastVoteproofFuncs(func() base.Voteproof {
 		return nil
 	}, func() base.Voteproof {
 		return nil
-	}, func(voteproof base.Voteproof) {
+	}, func(voteproof base.Voteproof) bool {
 		livpch <- voteproof
+
+		return true
 	})
 
 	savedblocksch := make(chan []block.Block)

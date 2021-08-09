@@ -8,9 +8,9 @@ import (
 	"time"
 
 	"github.com/mattn/go-isatty"
+	"github.com/pkg/errors"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/diode"
-	"golang.org/x/xerrors"
 )
 
 func Setup(
@@ -54,7 +54,7 @@ func Output(f string) (io.Writer, error) {
 
 func Outputs(files []string) (io.Writer, error) {
 	if len(files) < 1 {
-		return nil, xerrors.Errorf("empty log files")
+		return nil, errors.Errorf("empty log files")
 	}
 
 	ws := make([]io.Writer, len(files))

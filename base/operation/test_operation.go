@@ -3,15 +3,14 @@
 package operation
 
 import (
-	"go.mongodb.org/mongo-driver/bson"
-	"golang.org/x/xerrors"
-
+	"github.com/pkg/errors"
 	"github.com/spikeekips/mitum/base/key"
 	"github.com/spikeekips/mitum/util"
 	bsonenc "github.com/spikeekips/mitum/util/encoder/bson"
 	jsonenc "github.com/spikeekips/mitum/util/encoder/json"
 	"github.com/spikeekips/mitum/util/hint"
 	"github.com/spikeekips/mitum/util/valuehash"
+	"go.mongodb.org/mongo-driver/bson"
 )
 
 var (
@@ -38,14 +37,14 @@ func (kvof KVOperationFact) IsValid([]byte) error {
 	}
 
 	if l := len(kvof.K); l < 1 {
-		return xerrors.Errorf("empty Key of KVOperation")
+		return errors.Errorf("empty Key of KVOperation")
 	} else if l > MaxKeyKVOperation {
-		return xerrors.Errorf("Key of KVOperation over limit; %d > %d", l, MaxKeyKVOperation)
+		return errors.Errorf("Key of KVOperation over limit; %d > %d", l, MaxKeyKVOperation)
 	}
 
 	if kvof.V != nil {
 		if l := len(kvof.V); l > MaxValueKVOperation {
-			return xerrors.Errorf("Value of KVOperation over limit; %d > %d", l, MaxValueKVOperation)
+			return errors.Errorf("Value of KVOperation over limit; %d > %d", l, MaxValueKVOperation)
 		}
 	}
 

@@ -4,11 +4,10 @@ import (
 	"time"
 
 	"github.com/spikeekips/mitum/util"
-	"github.com/spikeekips/mitum/util/errors"
 )
 
 var (
-	StopTimerError       = errors.NewError("stop timer")
+	StopTimerError       = util.NewError("stop timer")
 	defaultTimerDuration = time.Hour * 24 * 360
 )
 

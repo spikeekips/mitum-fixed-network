@@ -1,21 +1,20 @@
 package network
 
 import (
-	"golang.org/x/xerrors"
-
-	"github.com/spikeekips/mitum/util/errors"
+	"github.com/pkg/errors"
+	"github.com/spikeekips/mitum/util"
 )
 
-var NetworkError = errors.NewError("network error")
+var NetworkError = util.NewError("network error")
 
-func WrapError(err error) error {
+func MergeError(err error) error {
 	if err == nil {
 		return nil
 	}
 
-	if xerrors.Is(err, NetworkError) {
+	if errors.Is(err, NetworkError) {
 		return err
 	}
 
-	return NetworkError.Wrap(err)
+	return NetworkError.Merge(err)
 }

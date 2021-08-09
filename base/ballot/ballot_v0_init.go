@@ -1,8 +1,7 @@
 package ballot
 
 import (
-	"golang.org/x/xerrors"
-
+	"github.com/pkg/errors"
 	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/base/key"
 	"github.com/spikeekips/mitum/util"
@@ -100,7 +99,7 @@ func (INITV0) Stage() base.Stage {
 func (ib INITV0) IsValid(networkID []byte) error {
 	if ib.Height() == base.Height(0) {
 		if ib.voteproof != nil {
-			return xerrors.Errorf("not empty voteproof for genesis INITBallot")
+			return errors.Errorf("not empty voteproof for genesis INITBallot")
 		}
 
 		if err := isvalid.Check([]isvalid.IsValider{
@@ -112,7 +111,7 @@ func (ib INITV0) IsValid(networkID []byte) error {
 	}
 
 	if ib.voteproof == nil || ib.acceptVoteproof == nil {
-		return xerrors.Errorf("empty voteproof")
+		return errors.Errorf("empty voteproof")
 	}
 
 	if err := isvalid.Check([]isvalid.IsValider{

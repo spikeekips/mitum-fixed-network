@@ -5,8 +5,7 @@ package isaac
 import (
 	"context"
 
-	"golang.org/x/xerrors"
-
+	"github.com/pkg/errors"
 	"github.com/rs/zerolog"
 	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/base/ballot"
@@ -37,7 +36,7 @@ func NewDummyBlocksV0Generator(
 	genesisNode *Local, lastHeight base.Height, suffrage base.Suffrage, locals []*Local,
 ) (*DummyBlocksV0Generator, error) {
 	if lastHeight <= base.NilHeight {
-		return nil, xerrors.Errorf("last height must not be nil height, %v", base.NilHeight)
+		return nil, errors.Errorf("last height must not be nil height, %v", base.NilHeight)
 	}
 
 	allNodes := map[base.Address]*Local{}
@@ -163,10 +162,10 @@ end:
 		}
 
 		switch l, found, err := bg.genesisNode.Database().LastManifest(); {
-		case !found:
-			return util.NotFoundError.Errorf("last manifest not found")
 		case err != nil:
 			return err
+		case !found:
+			return util.NotFoundError.Errorf("last manifest not found")
 		case l.Height() == bg.lastHeight:
 			break end
 		}
@@ -185,7 +184,7 @@ end:
 	for {
 		switch _, blk, err := localfs.LoadBlock(fbs, height); {
 		case err != nil:
-			if xerrors.Is(err, util.NotFoundError) {
+			if errors.Is(err, util.NotFoundError) {
 				break end
 			}
 
@@ -198,7 +197,7 @@ end:
 	}
 
 	if len(blocks) < 1 {
-		return xerrors.Errorf("empty blocks for syncing blocks")
+		return errors.Errorf("empty blocks for syncing blocks")
 	}
 
 	for _, blk := range blocks {
@@ -294,7 +293,7 @@ func (bg *DummyBlocksV0Generator) syncSeals(from *Local) error {
 
 		for _, proposal := range proposals {
 			if err := l.Database().NewProposal(proposal); err != nil {
-				if xerrors.Is(err, util.DuplicatedError) {
+				if errors.Is(err, util.DuplicatedError) {
 					continue
 				}
 
@@ -331,7 +330,7 @@ func (bg *DummyBlocksV0Generator) createNextBlock() error {
 	for _, l := range bg.allNodes {
 		var vp base.Voteproof
 		if v, found := avm[l.Node().Address()]; !found {
-			return xerrors.Errorf("failed to find voteproofs for all nodes")
+			return errors.Errorf("failed to find voteproofs for all nodes")
 		} else {
 			vp = v
 		}
@@ -377,7 +376,7 @@ func (bg *DummyBlocksV0Generator) createINITVoteproof() (map[base.Address]base.V
 	}
 
 	if len(vm) != len(bg.allNodes) {
-		return nil, xerrors.Errorf("failed to create INIT Voteproof")
+		return nil, errors.Errorf("failed to create INIT Voteproof")
 	}
 
 	return vm, nil
@@ -401,7 +400,7 @@ func (bg *DummyBlocksV0Generator) createProposal(voteproof base.Voteproof) (ball
 	if acting, err := bg.suffrage.Acting(voteproof.Height(), voteproof.Round()); err != nil {
 		return nil, err
 	} else if acting.Proposer() == nil {
-		return nil, xerrors.Errorf("empty proposer")
+		return nil, errors.Errorf("empty proposer")
 	} else {
 		proposer = bg.allNodes[acting.Proposer()]
 	}
@@ -461,7 +460,7 @@ func (bg *DummyBlocksV0Generator) createACCEPTVoteproof(proposal ballot.Proposal
 	}
 
 	if len(vm) != len(bg.allNodes) {
-		return nil, xerrors.Errorf("failed to create voteproofs for all nodes")
+		return nil, errors.Errorf("failed to create voteproofs for all nodes")
 	}
 
 	return vm, nil

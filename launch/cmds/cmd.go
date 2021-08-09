@@ -8,8 +8,6 @@ import (
 
 	"github.com/alecthomas/kong"
 	"github.com/rs/zerolog"
-	"go.uber.org/automaxprocs/maxprocs"
-
 	"github.com/spikeekips/mitum/launch"
 	"github.com/spikeekips/mitum/launch/config"
 	"github.com/spikeekips/mitum/launch/pm"
@@ -20,6 +18,7 @@ import (
 	jsonenc "github.com/spikeekips/mitum/util/encoder/json"
 	"github.com/spikeekips/mitum/util/hint"
 	"github.com/spikeekips/mitum/util/logging"
+	"go.uber.org/automaxprocs/maxprocs"
 )
 
 var defaultProcesses = []pm.Process{

@@ -5,11 +5,10 @@ import (
 	"testing"
 	"time"
 
+	"github.com/pkg/errors"
+	"github.com/spikeekips/mitum/util"
 	"github.com/stretchr/testify/suite"
 	"go.uber.org/goleak"
-	"golang.org/x/xerrors"
-
-	"github.com/spikeekips/mitum/util"
 )
 
 type testCallbackTimer struct {
@@ -41,7 +40,7 @@ func (t *testCallbackTimer) TestStart() {
 	t.NoError(err)
 
 	t.NoError(ct.Start())
-	t.True(xerrors.Is(ct.Start(), util.DaemonAlreadyStartedError))
+	t.True(errors.Is(ct.Start(), util.DaemonAlreadyStartedError))
 
 	<-time.After(time.Millisecond * 50)
 
@@ -64,7 +63,7 @@ func (t *testCallbackTimer) TestStop() {
 	t.NoError(err)
 
 	t.NoError(ct.Start())
-	t.True(xerrors.Is(ct.Start(), util.DaemonAlreadyStartedError))
+	t.True(errors.Is(ct.Start(), util.DaemonAlreadyStartedError))
 
 	<-time.After(time.Millisecond * 40)
 	ct.Stop()
@@ -99,7 +98,7 @@ func (t *testCallbackTimer) TestStoppedByCallback() {
 	t.NoError(err)
 
 	t.NoError(ct.Start())
-	t.True(xerrors.Is(ct.Start(), util.DaemonAlreadyStartedError))
+	t.True(errors.Is(ct.Start(), util.DaemonAlreadyStartedError))
 
 	<-time.After(time.Millisecond * 100)
 	t.True(atomic.LoadInt64(&ticked) < 4)
@@ -111,7 +110,7 @@ func (t *testCallbackTimer) TestStoppedByError() {
 		TimerID("good timer"),
 		func(i int) (bool, error) {
 			if i == 2 {
-				return true, xerrors.Errorf("idontknow")
+				return true, errors.Errorf("idontknow")
 			}
 
 			atomic.AddInt64(&ticked, 1)
@@ -123,7 +122,7 @@ func (t *testCallbackTimer) TestStoppedByError() {
 	t.NoError(err)
 
 	t.NoError(ct.Start())
-	t.True(xerrors.Is(ct.Start(), util.DaemonAlreadyStartedError))
+	t.True(errors.Is(ct.Start(), util.DaemonAlreadyStartedError))
 
 	<-time.After(time.Millisecond * 100)
 	t.True(atomic.LoadInt64(&ticked) < 4)
@@ -149,7 +148,7 @@ func (t *testCallbackTimer) TestIntervalFunc() {
 	t.NoError(err)
 
 	t.NoError(ct.Start())
-	t.True(xerrors.Is(ct.Start(), util.DaemonAlreadyStartedError))
+	t.True(errors.Is(ct.Start(), util.DaemonAlreadyStartedError))
 
 	<-time.After(time.Millisecond * 60)
 
@@ -181,7 +180,7 @@ func (t *testCallbackTimer) TestIntervalFuncNarrowInterval() {
 	t.NoError(err)
 
 	t.NoError(ct.Start())
-	t.True(xerrors.Is(ct.Start(), util.DaemonAlreadyStartedError))
+	t.True(errors.Is(ct.Start(), util.DaemonAlreadyStartedError))
 
 	<-time.After(time.Millisecond * 50)
 
@@ -202,7 +201,7 @@ func (t *testCallbackTimer) TestLongInterval() {
 	t.NoError(ct.Start())
 
 	<-time.After(time.Millisecond * 100)
-	t.Error(xerrors.Errorf("stopping too long waited"))
+	t.Error(errors.Errorf("stopping too long waited"))
 	t.NoError(ct.Stop())
 }
 

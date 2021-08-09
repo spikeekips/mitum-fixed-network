@@ -9,14 +9,13 @@ import (
 	"testing"
 	"time"
 
-	"github.com/stretchr/testify/suite"
-
 	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/isaac"
 	"github.com/spikeekips/mitum/launch"
 	"github.com/spikeekips/mitum/launch/config"
 	"github.com/spikeekips/mitum/launch/pm"
 	"github.com/spikeekips/mitum/util"
+	"github.com/stretchr/testify/suite"
 )
 
 type testConfigChecker struct {

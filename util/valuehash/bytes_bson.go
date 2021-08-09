@@ -1,8 +1,8 @@
 package valuehash
 
 import (
+	"github.com/pkg/errors"
 	"go.mongodb.org/mongo-driver/bson/bsontype"
-	"golang.org/x/xerrors"
 )
 
 func (hs Bytes) MarshalBSONValue() (bsontype.Type, []byte, error) {
@@ -17,7 +17,7 @@ func (hs *Bytes) UnmarshalBSONValue(t bsontype.Type, b []byte) error {
 			return nil
 		}
 
-		return xerrors.Errorf("invalid marshaled type for Hash, %v", t)
+		return errors.Errorf("invalid marshaled type for Hash, %v", t)
 	}
 
 	bt, err := unmarshalBSONValue(b)

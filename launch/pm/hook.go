@@ -1,8 +1,6 @@
 package pm
 
-import (
-	"golang.org/x/xerrors"
-)
+import "github.com/pkg/errors"
 
 const (
 	HookDirBefore = "before"
@@ -45,9 +43,9 @@ func (ho Hook) Add(ps *Processes) error {
 	switch ho.Dir {
 	case HookDirBefore, HookDirAfter:
 		if len(ho.Target) < 1 {
-			return xerrors.Errorf("target is empty for setting direction")
+			return errors.Errorf("target is empty for setting direction")
 		} else if ho.Dir != HookDirBefore && ho.Dir != HookDirAfter {
-			return xerrors.Errorf("unknown dir, %q", ho.Dir)
+			return errors.Errorf("unknown dir, %q", ho.Dir)
 		}
 	}
 

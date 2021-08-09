@@ -2,21 +2,14 @@ package util
 
 import (
 	"fmt"
-
-	"github.com/spikeekips/mitum/util/errors"
 )
 
-// NOTE Generaal Errors
-
-var IgnoreError = errors.NewError("ignore")
-
-// Data Errors
-
 var (
-	NotFoundError   = errors.NewError("not found")
-	FoundError      = errors.NewError("found")
-	DuplicatedError = errors.NewError("duplicated error")
-	WrongTypeError  = errors.NewError("wrong type")
+	IgnoreError     = NewError("ignore")
+	NotFoundError   = NewError("not found")
+	FoundError      = NewError("found")
+	DuplicatedError = NewError("duplicated error")
+	WrongTypeError  = NewError("wrong type")
 )
 
 type DataContainerError struct {

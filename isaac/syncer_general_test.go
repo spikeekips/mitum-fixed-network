@@ -8,13 +8,13 @@ import (
 	"testing"
 	"time"
 
+	"github.com/pkg/errors"
 	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/base/block"
 	channetwork "github.com/spikeekips/mitum/network/gochan"
 	"github.com/spikeekips/mitum/storage/blockdata/localfs"
 	"github.com/spikeekips/mitum/util"
 	"github.com/stretchr/testify/suite"
-	"golang.org/x/xerrors"
 )
 
 type testGeneralSyncer struct {
@@ -394,7 +394,7 @@ func (t *testGeneralSyncer) TestFinishedChan() {
 
 	select {
 	case <-time.After(time.Second * 5):
-		t.NoError(xerrors.Errorf("timeout to wait to be finished"))
+		t.NoError(errors.Errorf("timeout to wait to be finished"))
 	case ctx := <-finishedChan:
 		t.Equal(SyncerSaved, ctx.State())
 		t.Equal(baseBlock.Height()+1, ctx.Syncer().HeightFrom())
@@ -439,7 +439,7 @@ func (t *testGeneralSyncer) TestFromGenesis() {
 
 	select {
 	case <-time.After(time.Second * 5):
-		t.NoError(xerrors.Errorf("timeout to wait to be finished"))
+		t.NoError(errors.Errorf("timeout to wait to be finished"))
 	case ctx := <-finishedChan:
 		t.Equal(SyncerSaved, ctx.State())
 		t.Equal(base.PreGenesisHeight, ctx.Syncer().HeightFrom())
@@ -690,7 +690,7 @@ func (t *testGeneralSyncer) TestRollbackFindUnmatched() {
 				)
 
 				if c.expected != unmatched.Int64() {
-					panic(xerrors.Errorf("failed"))
+					panic(errors.Errorf("failed"))
 				}
 			},
 		)
@@ -725,10 +725,10 @@ func (t *testGeneralSyncer) TestRollbackWrongGenesisBlocks() {
 	cs.setState(SyncerPreparing, false)
 
 	err = cs.headAndTailManifests()
-	t.True(xerrors.Is(err, blockIntegrityError))
+	t.True(errors.Is(err, blockIntegrityError))
 
 	var rollbackCtx *BlockIntegrityError
-	t.True(xerrors.As(err, &rollbackCtx))
+	t.True(errors.As(err, &rollbackCtx))
 	t.Equal(baseBlock.Height()+3, rollbackCtx.From.Height())
 }
 
@@ -754,7 +754,7 @@ func (t *testGeneralSyncer) TestRollbackDetect() {
 	cs.reset()
 
 	err = cs.prepare()
-	t.True(xerrors.Is(err, blockIntegrityError))
+	t.True(errors.Is(err, blockIntegrityError))
 }
 
 func (t *testGeneralSyncer) TestRollback() {
@@ -785,7 +785,7 @@ end:
 	for {
 		select {
 		case <-time.After(time.Second * 10):
-			t.NoError(xerrors.Errorf("timeout to wait to be finished"))
+			t.NoError(errors.Errorf("timeout to wait to be finished"))
 
 			return
 		case ctx := <-stateChan:

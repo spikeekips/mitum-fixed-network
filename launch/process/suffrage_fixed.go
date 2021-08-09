@@ -4,8 +4,7 @@ import (
 	"fmt"
 	"os"
 
-	"golang.org/x/xerrors"
-
+	"github.com/pkg/errors"
 	"github.com/spikeekips/mitum/base"
 	jsonenc "github.com/spikeekips/mitum/util/encoder/json"
 )
@@ -22,7 +21,7 @@ func NewFixedSuffrage(
 	cacheSize int,
 ) (*FixedSuffrage, error) {
 	if len(nodes) < 1 {
-		return nil, xerrors.Errorf("empty nodes")
+		return nil, errors.Errorf("empty nodes")
 	}
 
 	sf := &FixedSuffrage{proposer: proposer}
@@ -46,7 +45,7 @@ func NewFixedSuffrage(
 		}
 
 		if !found {
-			return nil, xerrors.Errorf("proposer not found in nodes")
+			return nil, errors.Errorf("proposer not found in nodes")
 		}
 
 		elect = sf.electWithProposer
@@ -92,7 +91,7 @@ func (sf *FixedSuffrage) Verbose() string {
 		_, _ = fmt.Fprintf(
 			os.Stderr,
 			"%+v\n",
-			xerrors.Errorf("failed to marshal FixedSuffrage.Verbose(): %w", err).Error(),
+			errors.Wrap(err, "failed to marshal FixedSuffrage.Verbose()").Error(),
 		)
 
 		return sf.Name()

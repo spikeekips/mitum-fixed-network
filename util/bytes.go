@@ -8,7 +8,7 @@ import (
 	"os"
 	"path/filepath"
 
-	"golang.org/x/xerrors"
+	"github.com/pkg/errors"
 )
 
 type Byter interface {
@@ -29,7 +29,7 @@ func CopyBytes(b []byte) []byte {
 func GenerateChecksum(i io.Reader) (string, error) {
 	sha := sha256.New()
 	if _, err := io.Copy(sha, i); err != nil {
-		return "", xerrors.Errorf("failed to get checksum: %w", err)
+		return "", errors.Wrap(err, "failed to get checksum")
 	}
 
 	return fmt.Sprintf("%x", sha.Sum(nil)), nil

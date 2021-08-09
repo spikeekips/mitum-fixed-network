@@ -3,10 +3,9 @@ package state
 import (
 	"testing"
 
-	"github.com/stretchr/testify/suite"
-	"golang.org/x/xerrors"
-
+	"github.com/pkg/errors"
 	"github.com/spikeekips/mitum/util/valuehash"
+	"github.com/stretchr/testify/suite"
 )
 
 type testStateStringValue struct {
@@ -39,7 +38,7 @@ func (t *testStateStringValue) TestCases() {
 				sv, err := NewStringValue(c.v)
 				if len(c.err) > 0 {
 					if err == nil {
-						t.NoError(xerrors.Errorf("error expected, but got %v", c.err), "%d: %v; %v != %v", i, c.name, c.err, err)
+						t.NoError(errors.Errorf("error expected, but got %v", c.err), "%d: %v; %v != %v", i, c.name, c.err, err)
 						return
 					}
 

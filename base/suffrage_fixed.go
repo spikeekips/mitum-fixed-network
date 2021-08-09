@@ -4,10 +4,10 @@ import (
 	"fmt"
 	"os"
 
+	"github.com/pkg/errors"
 	"github.com/rs/zerolog"
 	jsonenc "github.com/spikeekips/mitum/util/encoder/json"
 	"github.com/spikeekips/mitum/util/logging"
-	"golang.org/x/xerrors"
 )
 
 // FixedSuffrage will be used for creating genesis block or testing.
@@ -90,7 +90,7 @@ func (ff *FixedSuffrage) Verbose() string {
 	b, err := jsonenc.Marshal(m)
 	if err != nil {
 		_, _ = fmt.Fprintf(os.Stderr,
-			"%+v\n", xerrors.Errorf("failed to marshal FixedSuffrage.Verbose(): %w", err).Error(),
+			"%+v\n", errors.Wrap(err, "failed to marshal FixedSuffrage.Verbose()").Error(),
 		)
 
 		return ff.Name()

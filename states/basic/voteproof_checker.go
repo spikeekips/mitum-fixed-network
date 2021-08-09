@@ -1,8 +1,7 @@
 package basicstates
 
 import (
-	"golang.org/x/xerrors"
-
+	"github.com/pkg/errors"
 	"github.com/rs/zerolog"
 	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/base/ballot"
@@ -55,7 +54,7 @@ func (vc *VoteproofChecker) CheckPoint() (bool, error) {
 	case base.StageACCEPT:
 		return vc.checkPointACCEPTVoteproof()
 	default:
-		return false, xerrors.Errorf("not supported voteproof stage, %v", s)
+		return false, errors.Errorf("not supported voteproof stage, %v", s)
 	}
 }
 
@@ -117,7 +116,7 @@ func (vc *VoteproofChecker) CheckINITVoteproofWithLocalBlock() (bool, error) {
 	}
 
 	if err := CheckBlockWithINITVoteproof(vc.database, vc.voteproof); err != nil {
-		if xerrors.Is(err, util.IgnoreError) || xerrors.Is(err, util.NotFoundError) {
+		if errors.Is(err, util.IgnoreError) || errors.Is(err, util.NotFoundError) {
 			return true, nil
 		}
 
@@ -138,7 +137,7 @@ func (vc *VoteproofChecker) CheckACCEPTVoteproofProposal() (bool, error) {
 
 	fact := vc.voteproof.Majority().(ballot.ACCEPTFact)
 	if found, err := vc.database.HasSeal(fact.Proposal()); err != nil {
-		return false, xerrors.Errorf("failed to check proposal of accept voteproof: %w", err)
+		return false, errors.Wrap(err, "failed to check proposal of accept voteproof")
 	} else if found {
 		return true, nil
 	}
@@ -167,7 +166,7 @@ func (vc *VoteproofChecker) CheckACCEPTVoteproofProposal() (bool, error) {
 
 		pr, err := isaac.RequestProposal(ch, fact.Proposal())
 		if err != nil {
-			return false, xerrors.Errorf("failed to find proposal from accept voteproof from %q: %w", node.Address(), err)
+			return false, errors.Wrapf(err, "failed to find proposal from accept voteproof from %q", node.Address())
 		}
 		proposal = pr
 
@@ -175,7 +174,7 @@ func (vc *VoteproofChecker) CheckACCEPTVoteproofProposal() (bool, error) {
 	}
 
 	if proposal == nil {
-		return false, xerrors.Errorf("failed to find proposal from accept voteproof")
+		return false, errors.Errorf("failed to find proposal from accept voteproof")
 	}
 
 	pvc := isaac.NewProposalValidationChecker(vc.database, vc.suffrage, vc.nodepool, proposal, nil)
@@ -187,10 +186,10 @@ func (vc *VoteproofChecker) CheckACCEPTVoteproofProposal() (bool, error) {
 
 	if err := util.NewChecker("proposal-of-accept-voteproof-validation-checker", checkers).Check(); err != nil {
 		switch {
-		case xerrors.Is(err, util.IgnoreError):
-		case xerrors.Is(err, isaac.KnownSealError):
+		case errors.Is(err, util.IgnoreError):
+		case errors.Is(err, isaac.KnownSealError):
 		default:
-			return false, xerrors.Errorf("failed to find proposal from accept voteproof: %w", err)
+			return false, errors.Wrap(err, "failed to find proposal from accept voteproof")
 		}
 	}
 
@@ -201,7 +200,7 @@ func CheckBlockWithINITVoteproof(st storage.Database, voteproof base.Voteproof) 
 	// check init ballot fact.PreviousBlock with local block
 	fact, ok := voteproof.Majority().(ballot.INITFact)
 	if !ok {
-		return xerrors.Errorf("needs INITTBallotFact: fact=%T", voteproof.Majority())
+		return errors.Errorf("needs INITTBallotFact: fact=%T", voteproof.Majority())
 	}
 
 	var m block.Manifest
@@ -215,7 +214,7 @@ func CheckBlockWithINITVoteproof(st storage.Database, voteproof base.Voteproof) 
 	}
 
 	if !fact.PreviousBlock().Equal(m.Hash()) {
-		return xerrors.Errorf(
+		return errors.Errorf(
 			"different block within previous block of init voteproof and local: previousBlock=%s local=%s",
 			fact.PreviousBlock(), m.Hash(),
 		)

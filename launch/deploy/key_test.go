@@ -3,6 +3,7 @@ package deploy
 import (
 	"testing"
 
+	"github.com/pkg/errors"
 	"github.com/spikeekips/mitum/base/key"
 	"github.com/spikeekips/mitum/isaac"
 	"github.com/spikeekips/mitum/storage"
@@ -12,7 +13,6 @@ import (
 	jsonenc "github.com/spikeekips/mitum/util/encoder/json"
 	"github.com/spikeekips/mitum/util/localtime"
 	"github.com/stretchr/testify/suite"
-	"golang.org/x/xerrors"
 )
 
 type testDeployKeyStorage struct {
@@ -80,7 +80,7 @@ func (t *testDeployKeyStorage) TestRevokeUnknown() {
 	t.Equal(1, ks.Len())
 
 	err = ks.Revoke(util.UUID().String())
-	t.True(xerrors.Is(err, util.NotFoundError))
+	t.True(errors.Is(err, util.NotFoundError))
 
 	t.Equal(1, ks.Len())
 }

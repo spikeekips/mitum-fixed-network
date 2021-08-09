@@ -3,10 +3,10 @@ package cmds
 import (
 	"net/http"
 
+	"github.com/pkg/errors"
 	"github.com/spikeekips/mitum/launch/deploy"
 	"github.com/spikeekips/mitum/network"
 	"github.com/spikeekips/mitum/util"
-	"golang.org/x/xerrors"
 )
 
 type DeployKeyRevokeCommand struct {
@@ -22,12 +22,12 @@ func NewDeployKeyRevokeCommand() DeployKeyRevokeCommand {
 
 func (cmd *DeployKeyRevokeCommand) Run(version util.Version) error {
 	if err := cmd.Initialize(cmd, version); err != nil {
-		return xerrors.Errorf("failed to initialize command: %w", err)
+		return errors.Wrap(err, "failed to initialize command")
 	}
 
 	if err := cmd.requestToken(); err != nil {
 		var pr network.Problem
-		if xerrors.As(err, &pr) {
+		if errors.As(err, &pr) {
 			cmd.Log().Error().Interface("problem", pr).Msg("failed")
 		}
 
@@ -36,7 +36,7 @@ func (cmd *DeployKeyRevokeCommand) Run(version util.Version) error {
 
 	if err := cmd.requestRevoke(); err != nil {
 		var pr network.Problem
-		if xerrors.As(err, &pr) {
+		if errors.As(err, &pr) {
 			cmd.Log().Error().Interface("problem", pr).Msg("failed")
 		}
 
@@ -51,7 +51,7 @@ func (cmd *DeployKeyRevokeCommand) requestRevoke() error {
 
 	res, c, err := cmd.requestWithToken(path, "DELETE")
 	if err != nil {
-		return xerrors.Errorf("failed to revoke deploy key: %w", err)
+		return errors.Wrap(err, "failed to revoke deploy key")
 	}
 	defer func() {
 		_ = c()
@@ -74,10 +74,10 @@ func (cmd *DeployKeyRevokeCommand) requestRevoke() error {
 
 	switch res.StatusCode {
 	case http.StatusNotFound:
-		return xerrors.Errorf("deploy key not found")
+		return errors.Errorf("deploy key not found")
 	default:
 		cmd.Log().Debug().Interface("response", res).Msg("failed to request")
 
-		return xerrors.Errorf("failed to revoke deploy key")
+		return errors.Errorf("failed to revoke deploy key")
 	}
 }

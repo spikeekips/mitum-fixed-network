@@ -5,14 +5,13 @@ package base
 import (
 	"time"
 
-	"go.mongodb.org/mongo-driver/bson"
-
 	"github.com/rs/zerolog"
 	"github.com/spikeekips/mitum/util"
 	bsonenc "github.com/spikeekips/mitum/util/encoder/bson"
 	jsonenc "github.com/spikeekips/mitum/util/encoder/json"
 	"github.com/spikeekips/mitum/util/hint"
 	"github.com/spikeekips/mitum/util/localtime"
+	"go.mongodb.org/mongo-driver/bson"
 )
 
 func NewTestVoteproofV0(

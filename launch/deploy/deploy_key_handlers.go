@@ -6,12 +6,12 @@ import (
 	"time"
 
 	"github.com/gorilla/mux"
+	"github.com/pkg/errors"
 	"github.com/spikeekips/mitum/base/node"
 	"github.com/spikeekips/mitum/isaac"
 	"github.com/spikeekips/mitum/launch/process"
 	"github.com/spikeekips/mitum/network"
 	"github.com/spikeekips/mitum/util/cache"
-	"golang.org/x/xerrors"
 )
 
 var DefaultDeployKeyTokenExpired = time.Second * 30
@@ -46,7 +46,7 @@ func newDeployKeyHandlers(ctx context.Context, handler func(string) *mux.Route) 
 
 	c, err := cache.NewGCache("lru", 100*100, time.Minute)
 	if err != nil {
-		return nil, xerrors.Errorf("failed to create cache for deploy key handlers")
+		return nil, errors.Errorf("failed to create cache for deploy key handlers")
 	}
 
 	var local *node.Local

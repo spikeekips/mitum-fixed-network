@@ -9,10 +9,10 @@ import (
 	"strings"
 	"time"
 
+	"github.com/pkg/errors"
 	"github.com/spikeekips/mitum/launch/config"
 	"github.com/spikeekips/mitum/util"
 	"github.com/ulule/limiter/v3"
-	"golang.org/x/xerrors"
 	"gopkg.in/yaml.v3"
 )
 
@@ -198,7 +198,7 @@ func (no *RateLimitTargetRule) UnmarshalYAML(value *yaml.Node) error {
 	}
 
 	if len(m) < 1 {
-		return xerrors.Errorf("empty set")
+		return errors.Errorf("empty set")
 	}
 
 	for i := range m {
@@ -241,7 +241,7 @@ func (no *RateLimitRate) UnmarshalYAML(value *yaml.Node) error {
 	var l, p string
 	values := strings.Split(s, "/")
 	if len(values) != 2 {
-		return xerrors.Errorf("incorrect format '%s'", s)
+		return errors.Errorf("incorrect format '%s'", s)
 	}
 	l, p = values[0], strings.ToLower(values[1])
 
@@ -257,7 +257,7 @@ func (no *RateLimitRate) UnmarshalYAML(value *yaml.Node) error {
 
 	n, err := strconv.ParseInt(l, 10, 64)
 	if err != nil {
-		return xerrors.Errorf("incorrect limit '%s'", l)
+		return errors.Errorf("incorrect limit '%s'", l)
 	}
 	r.Limit = n
 

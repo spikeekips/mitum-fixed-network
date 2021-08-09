@@ -1,8 +1,7 @@
 package operation
 
 import (
-	"golang.org/x/xerrors"
-
+	"github.com/pkg/errors"
 	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/util"
 	"github.com/spikeekips/mitum/util/encoder"
@@ -14,7 +13,7 @@ func (bo *BaseOperation) unpack(enc encoder.Encoder, ht hint.Hint, h valuehash.H
 	if hinter, err := base.DecodeFact(fc, enc); err != nil {
 		return err
 	} else if f, ok := hinter.(OperationFact); !ok {
-		return xerrors.Errorf("not OperationFact, %T", hinter)
+		return errors.Errorf("not OperationFact, %T", hinter)
 	} else {
 		bo.fact = f
 	}

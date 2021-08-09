@@ -5,10 +5,9 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/stretchr/testify/suite"
-	"golang.org/x/xerrors"
-
+	"github.com/pkg/errors"
 	"github.com/spikeekips/mitum/util"
+	"github.com/stretchr/testify/suite"
 )
 
 func (pm *Processes) Processed(pr string) bool {
@@ -118,7 +117,7 @@ func (t *testProcesses) TestCirculation() {
 
 					return
 				} else if len(c.err) > 0 {
-					t.NoError(xerrors.Errorf("expected error, but not occurred"), "%d; expected error=%q", i, c.err)
+					t.NoError(errors.Errorf("expected error, but not occurred"), "%d; expected error=%q", i, c.err)
 
 					return
 				}
@@ -164,7 +163,7 @@ func (t testProcess) IsValid([]byte) error {
 
 func (t testProcess) Run(ctx context.Context) (context.Context, error) {
 	if len(t.err) > 0 {
-		return nil, xerrors.Errorf(t.err)
+		return nil, errors.Errorf(t.err)
 	}
 
 	var result []string
@@ -287,12 +286,12 @@ func (t *testProcesses) TestRunSequence() {
 						t.NoError(err, "%d", i)
 					}
 				} else if len(c.err) > 0 {
-					t.NoError(xerrors.Errorf("expected error, but not occurred"), "%d; expected error=%q", i, c.err)
+					t.NoError(errors.Errorf("expected error, but not occurred"), "%d; expected error=%q", i, c.err)
 				}
 
 				if c.context != nil {
 					if pm.Context() == nil {
-						t.NoError(xerrors.Errorf("empty result context"))
+						t.NoError(errors.Errorf("empty result context"))
 					} else {
 						result := pm.Context().Value("r").([]string)
 
@@ -442,7 +441,7 @@ func (t *testProcesses) TestHooksSequence() {
 						t.NoError(err, "%d", i)
 					}
 				} else if len(c.err) > 0 {
-					t.NoError(xerrors.Errorf("expected error, but not occurred"), "%d; expected error=%q", i, c.err)
+					t.NoError(errors.Errorf("expected error, but not occurred"), "%d; expected error=%q", i, c.err)
 				}
 
 				if c.context != nil {

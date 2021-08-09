@@ -2,7 +2,6 @@ package key
 
 import (
 	"github.com/btcsuite/btcutil/base58"
-
 	jsonenc "github.com/spikeekips/mitum/util/encoder/json"
 )
 

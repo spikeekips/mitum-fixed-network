@@ -4,8 +4,7 @@ import (
 	"fmt"
 	"os"
 
-	"golang.org/x/xerrors"
-
+	"github.com/pkg/errors"
 	"github.com/spikeekips/mitum/base"
 	jsonenc "github.com/spikeekips/mitum/util/encoder/json"
 )
@@ -54,7 +53,7 @@ func (sf EmptySuffrage) Verbose() string {
 		_, _ = fmt.Fprintf(
 			os.Stderr,
 			"%+v\n",
-			xerrors.Errorf("failed to marshal EmptySuffrage.Verbose(): %w", err).Error(),
+			errors.Wrap(err, "failed to marshal EmptySuffrage.Verbose()").Error(),
 		)
 
 		return sf.Name()

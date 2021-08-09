@@ -7,7 +7,7 @@ import (
 	"time"
 
 	"github.com/bluele/gcache"
-	"golang.org/x/xerrors"
+	"github.com/pkg/errors"
 )
 
 var (
@@ -30,7 +30,7 @@ func NewGCacheWithQuery(config url.Values) (*GCache, error) {
 	if config != nil && len(config) > 0 {
 		if s := config.Get("size"); len(s) > 0 {
 			if n, err := strconv.ParseInt(s, 10, 32); err != nil {
-				return nil, xerrors.Errorf("invalid size, %q of GCache: %w", s, err)
+				return nil, errors.Wrapf(err, "invalid size, %q of GCache", s)
 			} else if n > 0 && n <= math.MaxInt32 {
 				size = int(n)
 			}
@@ -39,7 +39,7 @@ func NewGCacheWithQuery(config url.Values) (*GCache, error) {
 		if s := config.Get("expire"); len(s) > 0 {
 			n, err := time.ParseDuration(s)
 			if err != nil {
-				return nil, xerrors.Errorf("invalid expire, %qof GCache: %w", s, err)
+				return nil, errors.Wrapf(err, "invalid expire, %qof GCache", s)
 			}
 			expire = n
 		}
@@ -49,7 +49,7 @@ func NewGCacheWithQuery(config url.Values) (*GCache, error) {
 			case "lru", "lfu", "arc":
 				tp = s
 			default:
-				return nil, xerrors.Errorf("not supported type, %q of GCache", s)
+				return nil, errors.Errorf("not supported type, %q of GCache", s)
 			}
 		}
 	}
@@ -67,7 +67,7 @@ func NewGCache(tp string, size int, expire time.Duration) (*GCache, error) {
 	case "arc":
 		builder = builder.ARC()
 	default:
-		return nil, xerrors.Errorf("not supported type, %q of GCache", tp)
+		return nil, errors.Errorf("not supported type, %q of GCache", tp)
 	}
 
 	gc := builder.Expiration(expire).Build()

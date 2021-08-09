@@ -4,12 +4,12 @@ import (
 	"context"
 	"io"
 
+	"github.com/pkg/errors"
 	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/base/block"
 	"github.com/spikeekips/mitum/base/seal"
 	"github.com/spikeekips/mitum/base/state"
 	"github.com/spikeekips/mitum/util/valuehash"
-	"golang.org/x/xerrors"
 )
 
 type DummyChannel struct {
@@ -107,5 +107,5 @@ func (lc *DummyChannel) SetBlockDataHandler(f BlockDataHandler) {
 }
 
 func (*DummyChannel) notSupported() error {
-	return xerrors.Errorf("not supported")
+	return errors.Errorf("not supported")
 }

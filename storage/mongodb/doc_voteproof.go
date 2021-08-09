@@ -1,11 +1,11 @@
 package mongodbstorage
 
 import (
+	"github.com/pkg/errors"
 	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/util/encoder"
 	bsonenc "github.com/spikeekips/mitum/util/encoder/bson"
 	"go.mongodb.org/mongo-driver/bson"
-	"golang.org/x/xerrors"
 )
 
 type VoteproofDoc struct {
@@ -49,7 +49,7 @@ func loadVoteproofFromDecoder(decoder func(interface{}) error, encs *encoder.Enc
 	if err != nil {
 		return nil, err
 	} else if i, ok := hinter.(base.Voteproof); !ok {
-		return nil, xerrors.Errorf("not Manifest: %T", hinter)
+		return nil, errors.Errorf("not Manifest: %T", hinter)
 	} else {
 		voteproof = i
 	}

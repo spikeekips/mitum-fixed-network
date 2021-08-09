@@ -5,13 +5,13 @@ import (
 	"strings"
 	"time"
 
-	"golang.org/x/xerrors"
+	"github.com/pkg/errors"
 )
 
 func parseTimeDuration(s string, allowEmpty bool) (time.Duration, error) { // nolint:unparam
 	if s = strings.TrimSpace(s); len(s) < 1 {
 		if !allowEmpty {
-			return 0, xerrors.Errorf("empty string")
+			return 0, errors.Errorf("empty string")
 		}
 
 		return 0, nil
@@ -33,11 +33,11 @@ func IfNotNil(v interface{}, f func() error) error {
 func ParseMap(m map[string]interface{}, key string, allowEmpty bool) (map[string]interface{}, error) {
 	if i, found := m[key]; !found || i == nil {
 		if !allowEmpty {
-			return nil, xerrors.Errorf("empty map")
+			return nil, errors.Errorf("empty map")
 		}
 		return nil, nil
 	} else if n, ok := i.(map[string]interface{}); !ok {
-		return nil, xerrors.Errorf("invalid map, %T found", i)
+		return nil, errors.Errorf("invalid map, %T found", i)
 	} else {
 		return n, nil
 	}
@@ -46,11 +46,11 @@ func ParseMap(m map[string]interface{}, key string, allowEmpty bool) (map[string
 func ParseType(m map[string]interface{}, allowEmpty bool) (string, error) {
 	if i, found := m["type"]; !found || i == nil {
 		if !allowEmpty {
-			return "", xerrors.Errorf("type is missing")
+			return "", errors.Errorf("type is missing")
 		}
 		return "", nil
 	} else if s, ok := i.(string); !ok {
-		return "", xerrors.Errorf("invalid type, %T found", i)
+		return "", errors.Errorf("invalid type, %T found", i)
 	} else {
 		return s, nil
 	}

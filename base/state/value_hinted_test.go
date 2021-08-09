@@ -3,14 +3,13 @@ package state
 import (
 	"testing"
 
-	"github.com/stretchr/testify/suite"
-	"go.mongodb.org/mongo-driver/bson"
-
 	"github.com/spikeekips/mitum/util"
 	bsonenc "github.com/spikeekips/mitum/util/encoder/bson"
 	jsonenc "github.com/spikeekips/mitum/util/encoder/json"
 	"github.com/spikeekips/mitum/util/hint"
 	"github.com/spikeekips/mitum/util/valuehash"
+	"github.com/stretchr/testify/suite"
+	"go.mongodb.org/mongo-driver/bson"
 )
 
 var dummyHintedValueHint = hint.NewHint(hint.Type("dummy-hinted-value"), "v0.0.1")

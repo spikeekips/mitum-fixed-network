@@ -8,7 +8,7 @@ import (
 	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/base/operation"
 	"github.com/spikeekips/mitum/base/state"
-	"github.com/spikeekips/mitum/util/errors"
+	"github.com/spikeekips/mitum/util"
 	"github.com/spikeekips/mitum/util/valuehash"
 )
 
@@ -129,7 +129,7 @@ func (sp *Statepool) Set(fact valuehash.Hash, s ...state.State) error {
 
 			return su.AddOperation(fact)
 		}(); err != nil {
-			err0 := errors.NewError("failed to set States").Wrap(err)
+			err0 := util.NewError("failed to set States").Merge(err)
 			for j := 0; j <= i; j++ {
 				// NOTE reset previous updated states
 				if err := sp.updated[s[j].Key()].Reset(); err != nil {

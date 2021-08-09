@@ -7,6 +7,7 @@ import (
 	"path/filepath"
 	"sync"
 
+	"github.com/pkg/errors"
 	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/base/ballot"
 	"github.com/spikeekips/mitum/base/block"
@@ -16,7 +17,6 @@ import (
 	"github.com/spikeekips/mitum/storage/blockdata"
 	"github.com/spikeekips/mitum/util"
 	"github.com/spikeekips/mitum/util/tree"
-	"golang.org/x/xerrors"
 )
 
 var (
@@ -37,7 +37,7 @@ type Session struct {
 
 func NewSession(root string, writer blockdata.Writer, height base.Height) (*Session, error) {
 	if fi, err := os.Stat(root); err != nil {
-		return nil, storage.WrapFSError(err)
+		return nil, storage.MergeFSError(err)
 	} else if !fi.IsDir() {
 		return nil, storage.FSError.Errorf("session root, %q is not directory", root)
 	}
@@ -108,7 +108,7 @@ func (ss *Session) CloseOperations() error {
 		return nil
 	}
 
-	if err := ss.operationsWriter.Close(); err != nil && !xerrors.Is(err, os.ErrClosed) {
+	if err := ss.operationsWriter.Close(); err != nil && !errors.Is(err, os.ErrClosed) {
 		return err
 	}
 	ss.operationsWriter = nil
@@ -148,7 +148,7 @@ func (ss *Session) CloseStates() error {
 		return nil
 	}
 
-	if err := ss.statesWriter.Close(); err != nil && !xerrors.Is(err, os.ErrClosed) {
+	if err := ss.statesWriter.Close(); err != nil && !errors.Is(err, os.ErrClosed) {
 		return err
 	}
 	ss.statesWriter = nil
@@ -168,7 +168,7 @@ func (ss *Session) SetStatesTree(ft tree.FixedTree) error {
 func (ss *Session) SetINITVoteproof(voteproof base.Voteproof) error {
 	if voteproof != nil {
 		if voteproof.Stage() != base.StageINIT {
-			return xerrors.Errorf("not init voteproof")
+			return errors.Errorf("not init voteproof")
 		}
 	}
 
@@ -183,7 +183,7 @@ func (ss *Session) SetINITVoteproof(voteproof base.Voteproof) error {
 func (ss *Session) SetACCEPTVoteproof(voteproof base.Voteproof) error {
 	if voteproof != nil {
 		if voteproof.Stage() != base.StageACCEPT {
-			return xerrors.Errorf("not accept voteproof")
+			return errors.Errorf("not accept voteproof")
 		}
 	}
 
@@ -317,7 +317,7 @@ func (ss *Session) newWriter(dataType string) (io.WriteCloser, error) {
 		DefaultFilePermission,
 	)
 	if err != nil {
-		return nil, storage.WrapFSError(err)
+		return nil, storage.MergeFSError(err)
 	}
 	return util.NewGzipWriter(i), nil
 }
@@ -339,7 +339,7 @@ func (ss *Session) writeAndClose(dataType string, writer func(io.Writer) error) 
 
 func (ss *Session) clean() error {
 	if err := os.RemoveAll(ss.root); err != nil {
-		return storage.WrapFSError(err)
+		return storage.MergeFSError(err)
 	}
 
 	return nil
@@ -357,20 +357,20 @@ func (ss *Session) setToMapDataWithFilename(dataType string) (string, error) {
 
 	p := ss.tempPath(dataType)
 	if fi, err := os.Stat(p); err != nil {
-		return "", storage.WrapFSError(err)
+		return "", storage.MergeFSError(err)
 	} else if fi.IsDir() {
 		return "", storage.FSError.Errorf("temp path, %q is directory", p)
 	}
 
 	checksum, err := util.GenerateFileChecksum(p)
 	if err != nil {
-		return "", storage.WrapFSError(err)
+		return "", storage.MergeFSError(err)
 	}
 
 	t := filepath.Join(filepath.Dir(p), fmt.Sprintf(BlockFileFormats, ss.height, dataType, checksum))
 
 	if err := os.Rename(p, t); err != nil {
-		return "", storage.WrapFSError(err)
+		return "", storage.MergeFSError(err)
 	}
 
 	item := block.NewBaseBlockDataMapItem(dataType, checksum, "file://"+t)

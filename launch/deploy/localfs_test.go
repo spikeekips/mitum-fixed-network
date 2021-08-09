@@ -4,12 +4,12 @@ import (
 	"testing"
 	"time"
 
+	"github.com/pkg/errors"
 	"github.com/spikeekips/mitum/isaac"
 	"github.com/spikeekips/mitum/storage/blockdata/localfs"
 	"github.com/spikeekips/mitum/util"
 	"github.com/spikeekips/mitum/util/localtime"
 	"github.com/stretchr/testify/suite"
-	"golang.org/x/xerrors"
 )
 
 type testBlockDataCleaner struct {
@@ -71,7 +71,7 @@ func (t *testBlockDataCleaner) TestUnknownHeight() {
 	bc := NewBlockDataCleaner(lbd, time.Millisecond)
 
 	err = bc.Add(m.Height() + 1)
-	t.True(xerrors.Is(err, util.NotFoundError))
+	t.True(errors.Is(err, util.NotFoundError))
 }
 
 func (t *testBlockDataCleaner) TestAddRemovedHeights() {

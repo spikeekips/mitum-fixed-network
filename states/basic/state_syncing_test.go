@@ -4,8 +4,7 @@ import (
 	"testing"
 	"time"
 
-	"golang.org/x/xerrors"
-
+	"github.com/pkg/errors"
 	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/base/block"
 	"github.com/spikeekips/mitum/isaac"
@@ -54,7 +53,7 @@ func (t *testStateSyncing) TestINITMovesToConsensus() {
 	err = f()
 
 	var sctx StateSwitchContext
-	t.True(xerrors.As(err, &sctx))
+	t.True(errors.As(err, &sctx))
 	t.Equal(base.StateSyncing, sctx.FromState())
 	t.Equal(base.StateConsensus, sctx.ToState())
 	t.Equal(voteproof.Bytes(), sctx.Voteproof().Bytes())
@@ -98,7 +97,7 @@ func (t *testStateSyncing) TestWaitMovesToJoining() {
 
 	select {
 	case <-time.After(time.Second * 3):
-		t.NoError(xerrors.Errorf("timeout to wait to move joining state"))
+		t.NoError(errors.Errorf("timeout to wait to move joining state"))
 	case sctx := <-statech:
 		t.Equal(base.StateSyncing, sctx.FromState())
 		t.Equal(base.StateJoining, sctx.ToState())
@@ -175,7 +174,7 @@ func (t *testStateSyncing) TestSyncingHandlerFromVoteproof() {
 
 	select {
 	case <-time.After(time.Second * 10):
-		t.NoError(xerrors.Errorf("timeout to wait to be finished"))
+		t.NoError(errors.Errorf("timeout to wait to be finished"))
 
 		return
 	case <-finishedChan:
@@ -184,7 +183,7 @@ func (t *testStateSyncing) TestSyncingHandlerFromVoteproof() {
 
 	select {
 	case <-time.After(time.Second * 3):
-		t.NoError(xerrors.Errorf("timeout to wait to set last init voteproof"))
+		t.NoError(errors.Errorf("timeout to wait to set last init voteproof"))
 
 		return
 	case vp := <-livpch:

@@ -3,13 +3,13 @@ package process
 import (
 	"context"
 
+	"github.com/pkg/errors"
 	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/isaac"
 	"github.com/spikeekips/mitum/launch/config"
 	"github.com/spikeekips/mitum/storage"
 	"github.com/spikeekips/mitum/storage/blockdata"
 	"github.com/spikeekips/mitum/util/logging"
-	"golang.org/x/xerrors"
 )
 
 const HookNameCheckEmptyBlock = "check_empty_block"
@@ -53,7 +53,7 @@ func HookCheckEmptyBlock(ctx context.Context) (context.Context, error) {
 
 		return ctx, nil
 	} else if err := m.IsValid(policy.NetworkID()); err != nil {
-		return ctx, xerrors.Errorf("invalid block found, clean up block: %w", err)
+		return ctx, errors.Wrap(err, "invalid block found, clean up block")
 	} else {
 		log.Log().Debug().Object("block", m).Msg("valid initial block found")
 	}

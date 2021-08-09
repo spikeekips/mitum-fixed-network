@@ -5,8 +5,8 @@ import (
 	"os"
 	"path/filepath"
 
+	"github.com/pkg/errors"
 	"github.com/spikeekips/mitum/base"
-	"golang.org/x/xerrors"
 )
 
 type FileLoad []byte
@@ -30,7 +30,7 @@ func (v *FileLoad) UnmarshalText(b []byte) error {
 	}
 
 	if len(body) < 1 {
-		return xerrors.Errorf("empty file")
+		return errors.Errorf("empty file")
 	}
 
 	*v = body

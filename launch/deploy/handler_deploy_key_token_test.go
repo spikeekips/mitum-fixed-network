@@ -7,11 +7,11 @@ import (
 	"testing"
 	"time"
 
+	"github.com/pkg/errors"
 	"github.com/spikeekips/mitum/base/key"
 	"github.com/spikeekips/mitum/util"
 	jsonenc "github.com/spikeekips/mitum/util/encoder/json"
 	"github.com/stretchr/testify/suite"
-	"golang.org/x/xerrors"
 )
 
 type testDeployKeyTokenHandler struct {
@@ -65,7 +65,7 @@ func (t *testDeployKeyTokenHandler) TestVerifyTokenSignatureBadToken() {
 	t.NoError(t.cache.Set(unknownToken, nil, 0))
 
 	err = VerifyDeployKeyToken(t.cache, lk.Publickey(), unknownToken, networkID, sig)
-	t.True(xerrors.Is(err, key.SignatureVerificationFailedError))
+	t.True(errors.Is(err, key.SignatureVerificationFailedError))
 }
 
 func TestDeployKeyTokenHandler(t *testing.T) {

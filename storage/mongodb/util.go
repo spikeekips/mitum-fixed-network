@@ -6,13 +6,12 @@ import (
 	"strings"
 	"time"
 
+	"github.com/pkg/errors"
+	"github.com/spikeekips/mitum/storage"
+	"github.com/spikeekips/mitum/util"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
 	"go.mongodb.org/mongo-driver/x/mongo/driver/connstring"
-	"golang.org/x/xerrors"
-
-	"github.com/spikeekips/mitum/storage"
-	"github.com/spikeekips/mitum/util"
 )
 
 var defaultLimitWriteModels int = 200
@@ -20,11 +19,11 @@ var defaultLimitWriteModels int = 200
 func checkURI(uri string) (connstring.ConnString, error) {
 	cs, err := connstring.Parse(uri)
 	if err != nil {
-		return connstring.ConnString{}, storage.WrapStorageError(err)
+		return connstring.ConnString{}, storage.MergeStorageError(err)
 	}
 
 	if len(cs.Database) < 1 {
-		return connstring.ConnString{}, storage.WrapStorageError(xerrors.Errorf("empty database name in mongodb uri: '%v'", uri))
+		return connstring.ConnString{}, storage.MergeStorageError(errors.Errorf("empty database name in mongodb uri: '%v'", uri))
 	}
 
 	return cs, nil
@@ -36,7 +35,7 @@ func parseDurationFromQuery(query url.Values, key string, v time.Duration) (time
 	} else if s := sl[len(sl)-1]; len(strings.TrimSpace(s)) < 1 { // pop last one
 		return v, nil
 	} else if d, err := time.ParseDuration(s); err != nil {
-		return 0, xerrors.Errorf("invalid %s value for mongodb: %w", key, err)
+		return 0, errors.Wrapf(err, "invalid %s value for mongodb", key)
 	} else {
 		return d, nil
 	}
@@ -74,10 +73,10 @@ func writeBulkModels(
 
 		if res, err := client.Collection(col).BulkWrite(ctx, ms, opts); err != nil {
 			if isDuplicatedError(err) {
-				err = util.DuplicatedError.Wrap(err)
+				err = util.DuplicatedError.Merge(err)
 			}
 
-			return nil, storage.WrapStorageError(err)
+			return nil, storage.MergeStorageError(err)
 		} else {
 			result.InsertedCount += res.InsertedCount
 			result.MatchedCount += res.MatchedCount

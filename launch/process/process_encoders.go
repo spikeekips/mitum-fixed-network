@@ -3,8 +3,7 @@ package process
 import (
 	"context"
 
-	"golang.org/x/xerrors"
-
+	"github.com/pkg/errors"
 	"github.com/spikeekips/mitum/launch/config"
 	"github.com/spikeekips/mitum/launch/pm"
 	"github.com/spikeekips/mitum/util/encoder"
@@ -32,7 +31,7 @@ func ProcessEncoders(ctx context.Context) (context.Context, error) {
 	encs := encoder.NewEncoders()
 	for _, enc := range encoders {
 		if err := encs.AddEncoder(enc); err != nil {
-			return ctx, xerrors.Errorf("failed to load encoders: %w", err)
+			return ctx, errors.Wrap(err, "failed to load encoders")
 		}
 	}
 

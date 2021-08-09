@@ -6,10 +6,10 @@ import (
 	"net/http"
 	"os"
 
+	"github.com/pkg/errors"
 	"github.com/spikeekips/mitum/launch/deploy"
 	"github.com/spikeekips/mitum/network"
 	"github.com/spikeekips/mitum/util"
-	"golang.org/x/xerrors"
 )
 
 type DeployKeyKeysCommand struct {
@@ -24,12 +24,12 @@ func NewDeployKeyKeysCommand() DeployKeyKeysCommand {
 
 func (cmd *DeployKeyKeysCommand) Run(version util.Version) error {
 	if err := cmd.Initialize(cmd, version); err != nil {
-		return xerrors.Errorf("failed to initialize command: %w", err)
+		return errors.Wrap(err, "failed to initialize command")
 	}
 
 	if err := cmd.requestToken(); err != nil {
 		var pr network.Problem
-		if xerrors.As(err, &pr) {
+		if errors.As(err, &pr) {
 			cmd.Log().Error().Interface("problem", pr).Msg("failed")
 		}
 
@@ -38,7 +38,7 @@ func (cmd *DeployKeyKeysCommand) Run(version util.Version) error {
 
 	if err := cmd.requestKeys(); err != nil {
 		var pr network.Problem
-		if xerrors.As(err, &pr) {
+		if errors.As(err, &pr) {
 			cmd.Log().Error().Interface("problem", pr).Msg("failed")
 		}
 
@@ -51,7 +51,7 @@ func (cmd *DeployKeyKeysCommand) Run(version util.Version) error {
 func (cmd *DeployKeyKeysCommand) requestKeys() error { // nolint:dupl
 	res, c, err := cmd.requestWithToken(deploy.QuicHandlerPathDeployKeyKeys, "GET")
 	if err != nil {
-		return xerrors.Errorf("failed to request deploy keys: %w", err)
+		return errors.Wrap(err, "failed to request deploy keys")
 	}
 	defer func() {
 		_ = c()
@@ -61,7 +61,7 @@ func (cmd *DeployKeyKeysCommand) requestKeys() error { // nolint:dupl
 	if res.StatusCode == http.StatusOK {
 		i, err := ioutil.ReadAll(res.Body)
 		if err != nil {
-			return xerrors.Errorf("failed to read body: %w", err)
+			return errors.Wrap(err, "failed to read body")
 		}
 		_, _ = fmt.Fprintln(os.Stdout, string(i))
 
@@ -76,5 +76,5 @@ func (cmd *DeployKeyKeysCommand) requestKeys() error { // nolint:dupl
 
 	cmd.Log().Debug().Interface("response", res).Msg("failed to request")
 
-	return xerrors.Errorf("failed to request deploy keys")
+	return errors.Errorf("failed to request deploy keys")
 }

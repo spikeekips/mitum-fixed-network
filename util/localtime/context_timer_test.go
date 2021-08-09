@@ -5,10 +5,10 @@ import (
 	"testing"
 	"time"
 
+	"github.com/pkg/errors"
 	"github.com/spikeekips/mitum/util"
 	"github.com/stretchr/testify/suite"
 	"go.uber.org/goleak"
-	"golang.org/x/xerrors"
 )
 
 type testContextTimer struct {
@@ -38,7 +38,7 @@ func (t *testContextTimer) TestStart() {
 	)
 
 	t.NoError(ct.Start())
-	t.True(xerrors.Is(ct.Start(), util.DaemonAlreadyStartedError))
+	t.True(errors.Is(ct.Start(), util.DaemonAlreadyStartedError))
 
 	<-time.After(time.Millisecond * 50)
 
@@ -60,7 +60,7 @@ func (t *testContextTimer) TestStop() {
 	)
 
 	t.NoError(ct.Start())
-	t.True(xerrors.Is(ct.Start(), util.DaemonAlreadyStartedError))
+	t.True(errors.Is(ct.Start(), util.DaemonAlreadyStartedError))
 
 	<-time.After(time.Millisecond * 40)
 	ct.Stop()
@@ -92,7 +92,7 @@ func (t *testContextTimer) TestStoppedByCallback() {
 	})
 
 	t.NoError(ct.Start())
-	t.True(xerrors.Is(ct.Start(), util.DaemonAlreadyStartedError))
+	t.True(errors.Is(ct.Start(), util.DaemonAlreadyStartedError))
 
 	<-time.After(time.Millisecond * 100)
 	t.True(atomic.LoadInt64(&ticked) < 4)
@@ -115,7 +115,7 @@ func (t *testContextTimer) TestIntervalFunc() {
 	})
 
 	t.NoError(ct.Start())
-	t.True(xerrors.Is(ct.Start(), util.DaemonAlreadyStartedError))
+	t.True(errors.Is(ct.Start(), util.DaemonAlreadyStartedError))
 
 	<-time.After(time.Millisecond * 60)
 
@@ -144,7 +144,7 @@ func (t *testContextTimer) TestIntervalFuncNarrowInterval() {
 	})
 
 	t.NoError(ct.Start())
-	t.True(xerrors.Is(ct.Start(), util.DaemonAlreadyStartedError))
+	t.True(errors.Is(ct.Start(), util.DaemonAlreadyStartedError))
 
 	<-time.After(time.Millisecond * 50)
 

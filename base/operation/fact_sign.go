@@ -3,13 +3,13 @@ package operation
 import (
 	"time"
 
+	"github.com/pkg/errors"
 	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/base/key"
 	"github.com/spikeekips/mitum/util"
 	"github.com/spikeekips/mitum/util/hint"
 	"github.com/spikeekips/mitum/util/isvalid"
 	"github.com/spikeekips/mitum/util/localtime"
-	"golang.org/x/xerrors"
 )
 
 var (
@@ -102,7 +102,7 @@ func (fs BaseFactSign) Bytes() []byte {
 
 func (fs BaseFactSign) IsValid(b []byte) error {
 	if fs.signedAt.IsZero() {
-		return xerrors.Errorf("empty SignedAt")
+		return errors.Errorf("empty SignedAt")
 	}
 
 	return isvalid.Check(

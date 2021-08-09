@@ -1,8 +1,7 @@
 package base
 
 import (
-	"golang.org/x/xerrors"
-
+	"github.com/pkg/errors"
 	"github.com/spikeekips/mitum/util"
 	"github.com/spikeekips/mitum/util/isvalid"
 )
@@ -61,7 +60,7 @@ func (st *Stage) UnmarshalText(b []byte) error {
 	case "PROPOSAL":
 		t = StageProposal
 	default:
-		return xerrors.Errorf("<unknown stage>")
+		return errors.Errorf("<unknown stage>")
 	}
 
 	*st = t

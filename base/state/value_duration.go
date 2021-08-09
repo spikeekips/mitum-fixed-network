@@ -3,8 +3,7 @@ package state
 import (
 	"time"
 
-	"golang.org/x/xerrors"
-
+	"github.com/pkg/errors"
 	"github.com/spikeekips/mitum/util"
 	"github.com/spikeekips/mitum/util/hint"
 	"github.com/spikeekips/mitum/util/valuehash"
@@ -58,7 +57,7 @@ func (dv DurationValue) Interface() interface{} {
 func (dv DurationValue) Set(v interface{}) (Value, error) {
 	d, ok := v.(time.Duration)
 	if !ok {
-		return nil, xerrors.Errorf("not time.Duration: %T", v)
+		return nil, errors.Errorf("not time.Duration: %T", v)
 	}
 
 	return dv.set(d)

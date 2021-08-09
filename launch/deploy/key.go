@@ -4,10 +4,10 @@ import (
 	"sync"
 	"time"
 
+	"github.com/pkg/errors"
 	"github.com/spikeekips/mitum/storage"
 	"github.com/spikeekips/mitum/util"
 	"github.com/spikeekips/mitum/util/localtime"
-	"golang.org/x/xerrors"
 )
 
 var DatabaseInfoDeployKeysKey = "deploy_keys"
@@ -143,7 +143,7 @@ func loadDeployKeys(db storage.Database) (map[string]DeployKey, error) {
 	var b []byte
 	switch i, found, err := db.Info(DatabaseInfoDeployKeysKey); {
 	case err != nil:
-		return nil, xerrors.Errorf("failed to load deploy keys from database: %w", err)
+		return nil, errors.Wrap(err, "failed to load deploy keys from database")
 	case !found:
 		return nil, nil
 	default:
@@ -152,16 +152,16 @@ func loadDeployKeys(db storage.Database) (map[string]DeployKey, error) {
 
 	var uks map[string]DeployKey
 	if err := db.Encoder().Unmarshal(b, &uks); err != nil {
-		return nil, xerrors.Errorf("failed to deocde deploy keys: %w", err)
+		return nil, errors.Wrap(err, "failed to deocde deploy keys")
 	}
 	return uks, nil
 }
 
 func saveDeployKeys(db storage.Database, keys map[string]DeployKey) error {
 	if i, err := db.Encoder().Marshal(keys); err != nil {
-		return xerrors.Errorf("failed to marshal deploy keys: %w", err)
+		return errors.Wrap(err, "failed to marshal deploy keys")
 	} else if err := db.SetInfo(DatabaseInfoDeployKeysKey, i); err != nil {
-		return xerrors.Errorf("failed to save deploy keys: %w", err)
+		return errors.Wrap(err, "failed to save deploy keys")
 	}
 
 	return nil

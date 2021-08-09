@@ -3,10 +3,9 @@ package process
 import (
 	"testing"
 
-	"github.com/stretchr/testify/suite"
-
 	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/util/valuehash"
+	"github.com/stretchr/testify/suite"
 )
 
 type testRoundrobinSuffrage struct {

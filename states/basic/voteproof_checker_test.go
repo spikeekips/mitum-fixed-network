@@ -3,12 +3,11 @@ package basicstates
 import (
 	"testing"
 
-	"github.com/stretchr/testify/suite"
-
 	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/base/seal"
 	channetwork "github.com/spikeekips/mitum/network/gochan"
 	"github.com/spikeekips/mitum/util/valuehash"
+	"github.com/stretchr/testify/suite"
 )
 
 type testVoteproofChecker struct {

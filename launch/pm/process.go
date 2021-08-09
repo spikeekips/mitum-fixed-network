@@ -4,7 +4,7 @@ import (
 	"context"
 	"strings"
 
-	"golang.org/x/xerrors"
+	"github.com/pkg/errors"
 )
 
 type ProcessFunc func(context.Context) (context.Context, error)
@@ -33,16 +33,16 @@ func NewDisabledProcess(process Process) BaseProcess {
 func NewProcess(name string, requires []string, f ProcessFunc) (BaseProcess, error) {
 	name = strings.TrimSpace(name)
 	if len(name) < 1 {
-		return BaseProcess{}, xerrors.Errorf("empty name found")
+		return BaseProcess{}, errors.Errorf("empty name found")
 	}
 
 	rs := requires[:0]
 	for _, r := range requires {
 		switch s := strings.TrimSpace(r); {
 		case len(s) < 1:
-			return BaseProcess{}, xerrors.Errorf("empty require found")
+			return BaseProcess{}, errors.Errorf("empty require found")
 		case name == r:
-			return BaseProcess{}, xerrors.Errorf("same name found in requires, %q", r)
+			return BaseProcess{}, errors.Errorf("same name found in requires, %q", r)
 		default:
 			rs = append(rs, r)
 		}

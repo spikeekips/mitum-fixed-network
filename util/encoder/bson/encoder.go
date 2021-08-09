@@ -5,13 +5,13 @@ import (
 	"reflect"
 
 	"github.com/bluele/gcache"
+	"github.com/pkg/errors"
 	"github.com/spikeekips/mitum/util"
 	"github.com/spikeekips/mitum/util/encoder"
 	"github.com/spikeekips/mitum/util/hint"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/bsontype"
 	"go.mongodb.org/mongo-driver/x/bsonx/bsoncore"
-	"golang.org/x/xerrors"
 )
 
 var (
@@ -40,11 +40,11 @@ func (*Encoder) Hint() hint.Hint {
 
 func (enc *Encoder) Add(ht hint.Hinter) error {
 	if err := enc.Hintset.Add(ht); err != nil {
-		return xerrors.Errorf("BSONEncoder: %w", err)
+		return errors.Wrap(err, "BSONEncoder")
 	}
 
 	if err := enc.unpackers.Add(ht, enc.analyzeUnpack(ht)); err != nil {
-		return xerrors.Errorf("BSONEncoder: %w", err)
+		return errors.Wrap(err, "BSONEncoder")
 	}
 
 	return nil
@@ -68,7 +68,7 @@ func (enc *Encoder) Decode(b []byte) (hint.Hinter, error) {
 
 	i, err := enc.decode(ub, ht)
 	if err != nil {
-		return nil, xerrors.Errorf("failed to bson decode: %w", err)
+		return nil, errors.Wrap(err, "failed to bson decode")
 	}
 
 	return i, nil
@@ -93,7 +93,7 @@ func (enc *Encoder) DecodeSlice(b []byte) ([]hint.Hinter, error) {
 	for i := range r {
 		j, err := enc.Decode(r[i].Value)
 		if err != nil {
-			return nil, xerrors.Errorf("failed to decode slice: %w", err)
+			return nil, errors.Wrap(err, "failed to decode slice")
 		}
 
 		s[i] = j
@@ -105,14 +105,14 @@ func (enc *Encoder) DecodeSlice(b []byte) ([]hint.Hinter, error) {
 func (enc *Encoder) DecodeMap(b []byte) (map[string]hint.Hinter, error) {
 	var r map[string]bson.Raw
 	if err := bson.Unmarshal(b, &r); err != nil {
-		return nil, xerrors.Errorf("failed to decode slice: %w", err)
+		return nil, errors.Wrap(err, "failed to decode slice")
 	}
 
 	s := map[string]hint.Hinter{}
 	for i := range r {
 		j, err := enc.Decode(r[i])
 		if err != nil {
-			return nil, xerrors.Errorf("failed to decode slice: %w", err)
+			return nil, errors.Wrap(err, "failed to decode slice")
 		}
 
 		s[i] = j
@@ -124,12 +124,12 @@ func (enc *Encoder) DecodeMap(b []byte) (map[string]hint.Hinter, error) {
 func (enc *Encoder) decode(b []byte, ht hint.Hint) (hint.Hinter, error) {
 	up, err := enc.findUnpacker(ht)
 	if err != nil {
-		return nil, xerrors.Errorf("failed to find unpacker: %w", err)
+		return nil, errors.Wrap(err, "failed to find unpacker")
 	}
 
 	i, err := up.F(b)
 	if err != nil {
-		return nil, xerrors.Errorf("failed to decode %T: %w", up.Elem, err)
+		return nil, errors.Wrapf(err, "failed to decode %T", up.Elem)
 	} else if i == nil {
 		return nil, nil
 	}
@@ -146,7 +146,7 @@ func (enc *Encoder) guessHint(b []byte) (hint.Hint, []byte, error) {
 	ht, ub, err := enc.extractHintFromString(b)
 	if err == nil {
 		return ht, ub, nil
-	} else if !xerrors.Is(err, util.NotFoundError) {
+	} else if !errors.Is(err, util.NotFoundError) {
 		return hint.Hint{}, nil, err
 	}
 
@@ -188,7 +188,7 @@ func (enc *Encoder) findUnpacker(ht hint.Hint) (encoder.Unpacker, error) {
 		}
 	}
 
-	if !xerrors.Is(err, gcache.KeyNotFoundError) {
+	if !errors.Is(err, gcache.KeyNotFoundError) {
 		return encoder.Unpacker{}, err
 	}
 

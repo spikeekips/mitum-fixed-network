@@ -1,9 +1,9 @@
 package util
 
 import (
-	"fmt"
 	"testing"
 
+	"github.com/pkg/errors"
 	"github.com/stretchr/testify/suite"
 	"go.uber.org/goleak"
 )
@@ -28,7 +28,7 @@ func (t *testRetry) TestErrorAndSuccess() {
 	err := Retry(3, 0, func(i int) error {
 		called = i
 		if i == 1 {
-			return fmt.Errorf("error")
+			return errors.Errorf("error")
 		}
 
 		return nil
@@ -42,7 +42,7 @@ func (t *testRetry) TestError() {
 	err := Retry(3, 0, func(i int) error {
 		called = i
 
-		return fmt.Errorf("error: %d", called+1)
+		return errors.Errorf("error: %d", called+1)
 	})
 	t.Contains(err.Error(), "3")
 	t.Equal(2, called)
@@ -56,7 +56,7 @@ func (t *testRetry) TestStopRetrying() {
 			return StopRetryingError
 		}
 
-		return fmt.Errorf("error: %d", called+1)
+		return errors.Errorf("error: %d", called+1)
 	})
 	t.Equal(1, called)
 }

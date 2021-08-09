@@ -3,8 +3,7 @@ package state
 import (
 	"fmt"
 
-	"golang.org/x/xerrors"
-
+	"github.com/pkg/errors"
 	"github.com/spikeekips/mitum/util/hint"
 	"github.com/spikeekips/mitum/util/valuehash"
 )
@@ -33,7 +32,7 @@ func (StringValue) set(v interface{}) (StringValue, error) {
 			s = t.String()
 		}
 	default:
-		return StringValue{}, xerrors.Errorf("not string-like: %T", v)
+		return StringValue{}, errors.Errorf("not string-like: %T", v)
 	}
 
 	return StringValue{

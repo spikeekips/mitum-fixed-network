@@ -5,9 +5,9 @@ import (
 	"context"
 	"io"
 
+	"github.com/pkg/errors"
 	"golang.org/x/sync/errgroup"
 	"golang.org/x/sync/semaphore"
-	"golang.org/x/xerrors"
 )
 
 type NilReadCloser struct {
@@ -27,7 +27,7 @@ func Readlines(r io.Reader, callback func([]byte) error) error {
 	for {
 		l, err := br.ReadBytes('\n')
 		if err != nil {
-			if xerrors.Is(err, io.EOF) {
+			if errors.Is(err, io.EOF) {
 				break
 			}
 
@@ -45,7 +45,7 @@ func Readlines(r io.Reader, callback func([]byte) error) error {
 func Writeline(w io.Writer, get func() ([]byte, error)) error {
 	for {
 		if i, err := get(); err != nil {
-			if xerrors.Is(err, io.EOF) {
+			if errors.Is(err, io.EOF) {
 				break
 			}
 
@@ -65,7 +65,7 @@ func WritelineAsync(w io.Writer, get func() ([]byte, error), limit int64) error 
 	for {
 		b, err := get()
 		if err != nil {
-			if xerrors.Is(err, io.EOF) {
+			if errors.Is(err, io.EOF) {
 				break
 			}
 
@@ -88,7 +88,7 @@ func WritelineAsync(w io.Writer, get func() ([]byte, error), limit int64) error 
 	}
 
 	if err := sem.Acquire(ctx, limit); err != nil {
-		if !xerrors.Is(err, context.Canceled) {
+		if !errors.Is(err, context.Canceled) {
 			return err
 		}
 	}

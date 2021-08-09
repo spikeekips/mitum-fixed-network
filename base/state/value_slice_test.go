@@ -3,9 +3,9 @@ package state
 import (
 	"testing"
 
+	"github.com/pkg/errors"
 	"github.com/spikeekips/mitum/util/hint"
 	"github.com/stretchr/testify/suite"
-	"golang.org/x/xerrors"
 )
 
 type testStateSliceValue struct {
@@ -32,7 +32,7 @@ func (t *testStateSliceValue) TestNotAcceptableValue() {
 			func() {
 				_, err := NewSliceValue(c.v)
 				if err == nil {
-					t.NoError(xerrors.Errorf("error expected, but got %v", c.err), "%d: %v; %v != %v", i, c.name, c.err, err)
+					t.NoError(errors.Errorf("error expected, but got %v", c.err), "%d: %v; %v != %v", i, c.name, c.err, err)
 					return
 				}
 

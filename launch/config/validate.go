@@ -4,9 +4,9 @@ import (
 	"context"
 	"time"
 
+	"github.com/pkg/errors"
 	"github.com/rs/zerolog"
 	"github.com/spikeekips/mitum/util/logging"
-	"golang.org/x/xerrors"
 )
 
 type validator struct {
@@ -43,7 +43,7 @@ func (va *validator) Context() context.Context {
 
 func (va *validator) CheckNodeAddress() (bool, error) {
 	if va.config.Address() == nil {
-		return false, xerrors.Errorf("node address is missing")
+		return false, errors.Errorf("node address is missing")
 	} else if err := va.config.Address().IsValid(nil); err != nil {
 		return false, err
 	} else {
@@ -53,7 +53,7 @@ func (va *validator) CheckNodeAddress() (bool, error) {
 
 func (va *validator) CheckNodePrivatekey() (bool, error) {
 	if va.config.Privatekey() == nil {
-		return false, xerrors.Errorf("node privatekey is missing")
+		return false, errors.Errorf("node privatekey is missing")
 	} else if err := va.config.Privatekey().IsValid(nil); err != nil {
 		return false, err
 	} else {
@@ -63,7 +63,7 @@ func (va *validator) CheckNodePrivatekey() (bool, error) {
 
 func (va *validator) CheckNetworkID() (bool, error) {
 	if len(va.config.NetworkID()) < 1 {
-		return false, xerrors.Errorf("network id is missing")
+		return false, errors.Errorf("network id is missing")
 	}
 	return true, nil
 }
@@ -71,27 +71,27 @@ func (va *validator) CheckNetworkID() (bool, error) {
 func (va *validator) CheckLocalNetwork() (bool, error) {
 	conf := va.config.Network()
 	if conf == nil {
-		return false, xerrors.Errorf("network is missing")
+		return false, errors.Errorf("network is missing")
 	}
 
 	if len(conf.Certs()) < 1 {
-		return false, xerrors.Errorf("certificates missing")
+		return false, errors.Errorf("certificates missing")
 	}
 
 	if conf.ConnInfo() == nil {
-		return false, xerrors.Errorf("network url is missing")
+		return false, errors.Errorf("network url is missing")
 	}
 
 	if s := conf.ConnInfo().URL().Scheme; s != "https" {
-		return false, xerrors.Errorf("at this time, publish url only HTTPS allowed, not %q", s)
+		return false, errors.Errorf("at this time, publish url only HTTPS allowed, not %q", s)
 	}
 
 	if conf.Bind() == nil {
-		return false, xerrors.Errorf("network bind is missing")
+		return false, errors.Errorf("network bind is missing")
 	}
 
 	if s := conf.Bind().Scheme; s != "https" {
-		return false, xerrors.Errorf("at this time, bind url only HTTPS allowed, not %q", s)
+		return false, errors.Errorf("at this time, bind url only HTTPS allowed, not %q", s)
 	}
 
 	return true, nil
@@ -100,18 +100,18 @@ func (va *validator) CheckLocalNetwork() (bool, error) {
 func (va *validator) CheckStorage() (bool, error) {
 	conf := va.config.Storage()
 	if conf == nil {
-		return false, xerrors.Errorf("storage is missing")
+		return false, errors.Errorf("storage is missing")
 	}
 
 	if len(conf.BlockData().Path()) < 1 {
-		return false, xerrors.Errorf("blockdata path is missing")
+		return false, errors.Errorf("blockdata path is missing")
 	}
 
 	if conf.Database().URI() == nil {
-		return false, xerrors.Errorf("database uri is missing")
+		return false, errors.Errorf("database uri is missing")
 	}
 	if conf.Database().Cache() == nil {
-		return false, xerrors.Errorf("database cache is missing")
+		return false, errors.Errorf("database cache is missing")
 	}
 
 	return true, nil
@@ -121,43 +121,43 @@ func (va *validator) CheckPolicy() (bool, error) {
 	conf := va.config.Policy()
 
 	if conf.ThresholdRatio() < 1 {
-		return false, xerrors.Errorf("threshold is zero")
+		return false, errors.Errorf("threshold is zero")
 	}
 
 	if conf.MaxOperationsInSeal() < 1 {
-		return false, xerrors.Errorf("max-operations-in-seal is zero")
+		return false, errors.Errorf("max-operations-in-seal is zero")
 	}
 
 	if conf.MaxOperationsInProposal() < 1 {
-		return false, xerrors.Errorf("max-operations-in-proposal is zero")
+		return false, errors.Errorf("max-operations-in-proposal is zero")
 	}
 
 	if conf.TimeoutWaitingProposal() < 1 {
-		return false, xerrors.Errorf("timeout-waiting-proposal is zero")
+		return false, errors.Errorf("timeout-waiting-proposal is zero")
 	}
 
 	if conf.IntervalBroadcastingINITBallot() == 0 {
-		return false, xerrors.Errorf("interval-broadcasting-init-ballot is zero")
+		return false, errors.Errorf("interval-broadcasting-init-ballot is zero")
 	}
 
 	if conf.IntervalBroadcastingProposal() == 0 {
-		return false, xerrors.Errorf("interval-broadcasting-proposal is zero")
+		return false, errors.Errorf("interval-broadcasting-proposal is zero")
 	}
 
 	if conf.WaitBroadcastingACCEPTBallot() == 0 {
-		return false, xerrors.Errorf("wait-broadcasting-accept-ballot is zero")
+		return false, errors.Errorf("wait-broadcasting-accept-ballot is zero")
 	}
 
 	if conf.IntervalBroadcastingACCEPTBallot() == 0 {
-		return false, xerrors.Errorf("interval-broadcasting-accept-ballot is zero")
+		return false, errors.Errorf("interval-broadcasting-accept-ballot is zero")
 	}
 
 	if conf.TimespanValidBallot() == 0 {
-		return false, xerrors.Errorf("timespan-valid-ballot is zero")
+		return false, errors.Errorf("timespan-valid-ballot is zero")
 	}
 
 	if conf.NetworkConnectionTimeout() == 0 {
-		return false, xerrors.Errorf("network-connection-timeout is zero")
+		return false, errors.Errorf("network-connection-timeout is zero")
 	}
 
 	return true, nil
@@ -165,7 +165,7 @@ func (va *validator) CheckPolicy() (bool, error) {
 
 func (va *validator) CheckNodes() (bool, error) {
 	if va.config.Address() == nil {
-		return false, xerrors.Errorf("missing local address")
+		return false, errors.Errorf("missing local address")
 	}
 
 	nodes := va.config.Nodes()
@@ -179,21 +179,21 @@ func (va *validator) CheckNodes() (bool, error) {
 		node := nodes[i]
 
 		if a := node.Address(); a == nil {
-			return false, xerrors.Errorf("remote node address is missing")
+			return false, errors.Errorf("remote node address is missing")
 		} else if err := a.IsValid(nil); err != nil {
-			return false, xerrors.Errorf("invalid remote node address: %w", err)
+			return false, errors.Wrap(err, "invalid remote node address")
 		} else if a.Equal(va.config.Address()) {
-			return false, xerrors.Errorf("same address found with local node")
+			return false, errors.Errorf("same address found with local node")
 		} else if _, found := foundAddresses[a.String()]; found {
-			return false, xerrors.Errorf("duplicated address found, %s", a)
+			return false, errors.Errorf("duplicated address found, %s", a)
 		} else {
 			foundAddresses[a.String()] = struct{}{}
 		}
 
 		if node.Publickey() == nil {
-			return false, xerrors.Errorf("publickey of remote node is missing")
+			return false, errors.Errorf("publickey of remote node is missing")
 		} else if err := node.Publickey().IsValid(nil); err != nil {
-			return false, xerrors.Errorf("invalid remote node publickey: %w", err)
+			return false, errors.Wrap(err, "invalid remote node publickey")
 		}
 	}
 
@@ -202,12 +202,12 @@ func (va *validator) CheckNodes() (bool, error) {
 
 func (va *validator) CheckSuffrage() (bool, error) {
 	if va.config.Address() == nil {
-		return false, xerrors.Errorf("missing local address")
+		return false, errors.Errorf("missing local address")
 	}
 
 	conf := va.config.Suffrage()
 	if conf == nil {
-		return false, xerrors.Errorf("suffrage is missing")
+		return false, errors.Errorf("suffrage is missing")
 	}
 
 	if err := conf.IsValid(nil); err != nil {
@@ -217,7 +217,7 @@ func (va *validator) CheckSuffrage() (bool, error) {
 	nodes := va.config.Nodes()
 	if len(conf.Nodes()) < 1 {
 		if len(nodes) < 1 {
-			return false, xerrors.Errorf("suffrage nodes and nodes both empty")
+			return false, errors.Errorf("suffrage nodes and nodes both empty")
 		}
 
 		return true, nil
@@ -240,7 +240,7 @@ func (va *validator) CheckSuffrage() (bool, error) {
 		}
 
 		if !found {
-			return false, xerrors.Errorf("node, %q in suffrage not found in nodes", n)
+			return false, errors.Errorf("node, %q in suffrage not found in nodes", n)
 		}
 	}
 
@@ -250,7 +250,7 @@ func (va *validator) CheckSuffrage() (bool, error) {
 func (va *validator) CheckProposalProcessor() (bool, error) {
 	conf := va.config.ProposalProcessor()
 	if conf == nil {
-		return false, xerrors.Errorf("proposal_processor is missing")
+		return false, errors.Errorf("proposal_processor is missing")
 	}
 
 	return true, nil
@@ -264,9 +264,9 @@ func (va *validator) CheckGenesisOperations() (bool, error) {
 
 	for i := range ops {
 		if op := ops[i]; op == nil {
-			return false, xerrors.Errorf("nil operation found")
+			return false, errors.Errorf("nil operation found")
 		} else if err := op.IsValid(va.config.NetworkID()); err != nil {
-			return false, xerrors.Errorf("invalid operation found: %w", err)
+			return false, errors.Wrap(err, "invalid operation found")
 		}
 	}
 
@@ -278,9 +278,9 @@ func (va *validator) CheckLocalConfig() (bool, error) {
 
 	switch t := conf.SyncInterval(); {
 	case t < 1:
-		return false, xerrors.Errorf("empty sync-interval")
+		return false, errors.Errorf("empty sync-interval")
 	case t < time.Second:
-		return false, xerrors.Errorf("sync-interval too narrow, %q", t)
+		return false, errors.Errorf("sync-interval too narrow, %q", t)
 	default:
 		return true, nil
 	}

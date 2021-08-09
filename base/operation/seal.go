@@ -3,8 +3,7 @@ package operation
 import (
 	"time"
 
-	"golang.org/x/xerrors"
-
+	"github.com/pkg/errors"
 	"github.com/spikeekips/mitum/base/key"
 	"github.com/spikeekips/mitum/base/seal"
 	"github.com/spikeekips/mitum/util"
@@ -39,7 +38,7 @@ type BaseSeal struct {
 
 func NewBaseSeal(pk key.Privatekey, ops []Operation, networkID []byte) (BaseSeal, error) {
 	if len(ops) < 1 {
-		return BaseSeal{}, xerrors.Errorf("seal can not be generated without Operations")
+		return BaseSeal{}, errors.Errorf("seal can not be generated without Operations")
 	}
 
 	sl := BaseSeal{ops: ops}

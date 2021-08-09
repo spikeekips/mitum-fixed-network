@@ -9,13 +9,13 @@ import (
 	"time"
 
 	"github.com/lucas-clemente/quic-go"
+	"github.com/pkg/errors"
 	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/base/block"
 	"github.com/spikeekips/mitum/launch/deploy"
 	"github.com/spikeekips/mitum/network"
 	quicnetwork "github.com/spikeekips/mitum/network/quic"
 	"github.com/spikeekips/mitum/util"
-	"golang.org/x/xerrors"
 )
 
 type SetBlockDataMapsCommand struct {
@@ -37,7 +37,7 @@ func (cmd *SetBlockDataMapsCommand) Run(version util.Version) error {
 	cmd.BaseCommand.LogOutput = os.Stderr
 
 	if err := cmd.Initialize(cmd, version); err != nil {
-		return xerrors.Errorf("failed to initialize command: %w", err)
+		return errors.Wrap(err, "failed to initialize command")
 	} else if _, err := cmd.LoadEncoders(nil, nil); err != nil {
 		return err
 	}
@@ -58,9 +58,9 @@ func (cmd *SetBlockDataMapsCommand) Run(version util.Version) error {
 	var heights []base.Height
 	var maps []block.BlockDataMap
 	if i, err := cmd.loadMaps(); err != nil {
-		return xerrors.Errorf("failed to load maps from file: %w", err)
+		return errors.Wrap(err, "failed to load maps from file")
 	} else if n := len(maps); n > deploy.LimitBlockDataMaps {
-		return xerrors.Errorf("too many maps over %d > %d", n, deploy.LimitBlockDataMaps)
+		return errors.Errorf("too many maps over %d > %d", n, deploy.LimitBlockDataMaps)
 	} else {
 		maps = i
 
@@ -73,7 +73,7 @@ func (cmd *SetBlockDataMapsCommand) Run(version util.Version) error {
 
 	if err := cmd.request(maps); err != nil {
 		var pr network.Problem
-		if xerrors.As(err, &pr) {
+		if errors.As(err, &pr) {
 			cmd.Log().Error().Interface("problem", pr).Msg("failed")
 		}
 
@@ -121,7 +121,7 @@ func (cmd *SetBlockDataMapsCommand) loadMap(b []byte) (block.BlockDataMap, error
 	if i, err := cmd.JSONEncoder().Decode(b); err != nil {
 		return nil, err
 	} else if j, ok := i.(block.BaseBlockDataMap); !ok {
-		return nil, xerrors.Errorf("expected block.BlockDataMap, not %T", i)
+		return nil, errors.Errorf("expected block.BlockDataMap, not %T", i)
 	} else {
 		m = j
 	}
@@ -138,16 +138,16 @@ func (cmd *SetBlockDataMapsCommand) loadMap(b []byte) (block.BlockDataMap, error
 
 	var nm block.BlockDataMap
 	if i, err := um.UpdateHash(); err != nil {
-		return nil, xerrors.Errorf("failed to update hash: %w", err)
+		return nil, errors.Wrap(err, "failed to update hash")
 	} else if err := i.IsValid(nil); err != nil {
-		return nil, xerrors.Errorf("failed to update hash: %w", err)
+		return nil, errors.Wrap(err, "failed to update hash")
 	} else {
 		nm = i
 	}
 
 	i, err := cmd.JSONEncoder().Marshal(nm)
 	if err != nil {
-		return nil, xerrors.Errorf("failed to marshal map: %w", err)
+		return nil, errors.Wrap(err, "failed to marshal map")
 	}
 	_, _ = fmt.Fprintln(os.Stdout, string(i))
 
@@ -171,7 +171,7 @@ func (cmd *SetBlockDataMapsCommand) request(maps []block.BlockDataMap) error {
 
 	res, c, err := cmd.client.Request(ctx, cmd.Timeout, u.String(), "POST", body, headers)
 	if err != nil {
-		return xerrors.Errorf("failed to request: %w", err)
+		return errors.Wrap(err, "failed to request")
 	}
 	defer func() {
 		_ = c()
@@ -187,7 +187,7 @@ func (cmd *SetBlockDataMapsCommand) request(maps []block.BlockDataMap) error {
 
 		cmd.Log().Debug().Interface("response", res).Msg("failed to set blockdatamaps")
 
-		return xerrors.Errorf("failed to set blockdatamaps")
+		return errors.Errorf("failed to set blockdatamaps")
 	}
 
 	return nil

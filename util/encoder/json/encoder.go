@@ -7,10 +7,10 @@ import (
 	"reflect"
 
 	"github.com/bluele/gcache"
+	"github.com/pkg/errors"
 	"github.com/spikeekips/mitum/util"
 	"github.com/spikeekips/mitum/util/encoder"
 	"github.com/spikeekips/mitum/util/hint"
-	"golang.org/x/xerrors"
 )
 
 var (
@@ -39,11 +39,11 @@ func (*Encoder) Hint() hint.Hint {
 
 func (enc *Encoder) Add(ht hint.Hinter) error {
 	if err := enc.Hintset.Add(ht); err != nil {
-		return xerrors.Errorf("JSONEncoder: %w", err)
+		return errors.Wrap(err, "JSONEncoder")
 	}
 
 	if err := enc.unpackers.Add(ht, enc.analyzeUnpack(ht)); err != nil {
-		return xerrors.Errorf("JSONEncoder: %w", err)
+		return errors.Wrap(err, "JSONEncoder")
 	}
 
 	return nil
@@ -67,7 +67,7 @@ func (enc *Encoder) Decode(b []byte) (hint.Hinter, error) {
 
 	i, err := enc.decode(ub, ht)
 	if err != nil {
-		return nil, xerrors.Errorf("failed to json decode: %w", err)
+		return nil, errors.Wrap(err, "failed to json decode")
 	}
 
 	return i, nil
@@ -84,14 +84,14 @@ func (enc *Encoder) DecodeSlice(b []byte) ([]hint.Hinter, error) {
 
 	var r []json.RawMessage
 	if err := util.JSON.Unmarshal(b, &r); err != nil {
-		return nil, xerrors.Errorf("failed to decode slice: %w", err)
+		return nil, errors.Wrap(err, "failed to decode slice")
 	}
 
 	s := make([]hint.Hinter, len(r))
 	for i := range r {
 		j, err := enc.Decode(r[i])
 		if err != nil {
-			return nil, xerrors.Errorf("failed to decode slice: %w", err)
+			return nil, errors.Wrap(err, "failed to decode slice")
 		}
 
 		s[i] = j
@@ -103,14 +103,14 @@ func (enc *Encoder) DecodeSlice(b []byte) ([]hint.Hinter, error) {
 func (enc *Encoder) DecodeMap(b []byte) (map[string]hint.Hinter, error) {
 	var r map[string]json.RawMessage
 	if err := util.JSON.Unmarshal(b, &r); err != nil {
-		return nil, xerrors.Errorf("failed to decode slice: %w", err)
+		return nil, errors.Wrap(err, "failed to decode slice")
 	}
 
 	s := map[string]hint.Hinter{}
 	for i := range r {
 		j, err := enc.Decode(r[i])
 		if err != nil {
-			return nil, xerrors.Errorf("failed to decode slice: %w", err)
+			return nil, errors.Wrap(err, "failed to decode slice")
 		}
 
 		s[i] = j
@@ -122,12 +122,12 @@ func (enc *Encoder) DecodeMap(b []byte) (map[string]hint.Hinter, error) {
 func (enc *Encoder) decode(b []byte, ht hint.Hint) (hint.Hinter, error) {
 	up, err := enc.findUnpacker(ht)
 	if err != nil {
-		return nil, xerrors.Errorf("failed to find unpacker: %w", err)
+		return nil, errors.Wrap(err, "failed to find unpacker")
 	}
 
 	i, err := up.F(b)
 	if err != nil {
-		return nil, xerrors.Errorf("failed to decode %T: %w", up.Elem, err)
+		return nil, errors.Wrapf(err, "failed to decode %T", up.Elem)
 	} else if i == nil {
 		return nil, nil
 	}
@@ -194,7 +194,7 @@ func (enc *Encoder) findUnpacker(ht hint.Hint) (encoder.Unpacker, error) {
 		}
 	}
 
-	if !xerrors.Is(err, gcache.KeyNotFoundError) {
+	if !errors.Is(err, gcache.KeyNotFoundError) {
 		return encoder.Unpacker{}, err
 	}
 

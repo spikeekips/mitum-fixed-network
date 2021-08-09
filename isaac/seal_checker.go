@@ -1,13 +1,13 @@
 package isaac
 
 import (
+	"github.com/pkg/errors"
 	"github.com/spikeekips/mitum/base/operation"
 	"github.com/spikeekips/mitum/base/seal"
 	"github.com/spikeekips/mitum/storage"
 	"github.com/spikeekips/mitum/util"
 	"github.com/spikeekips/mitum/util/cache"
 	"github.com/spikeekips/mitum/util/isvalid"
-	"golang.org/x/xerrors"
 )
 
 type SealChecker struct {
@@ -65,7 +65,7 @@ func (svc SealChecker) IsValidOperationSeal() (bool, error) {
 	var notFound bool
 	for i := range os.Operations() {
 		if found, err := svc.database.HasOperationFact(os.Operations()[i].Fact().Hash()); err != nil {
-			return false, xerrors.Errorf("failed to check HasOperationFact: %w", err)
+			return false, errors.Wrap(err, "failed to check HasOperationFact")
 		} else if !found {
 			notFound = true
 

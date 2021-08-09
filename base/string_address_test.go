@@ -3,13 +3,12 @@ package base
 import (
 	"testing"
 
-	"github.com/stretchr/testify/suite"
-	"go.mongodb.org/mongo-driver/bson"
-	"golang.org/x/xerrors"
-
+	"github.com/pkg/errors"
 	"github.com/spikeekips/mitum/util"
 	bsonenc "github.com/spikeekips/mitum/util/encoder/bson"
 	"github.com/spikeekips/mitum/util/hint"
+	"github.com/stretchr/testify/suite"
+	"go.mongodb.org/mongo-driver/bson"
 )
 
 type testStringAddress struct {
@@ -96,7 +95,7 @@ func (t *testStringAddress) TestFormat() {
 						t.Contains(err.Error(), c.err, "%d: %v; %v != %v", i, c.name, c.err, err)
 					}
 				} else if len(c.err) > 0 {
-					t.NoError(xerrors.Errorf(c.err))
+					t.NoError(errors.Errorf(c.err))
 				} else {
 					t.Equal(c.expected, r.String(), "%d: %v; %v != %v", i, c.name, c.expected, r)
 					t.Equal(c.s, r.Raw(), "%d: %v; %v != %v", i, c.name, c.s, r.Raw())

@@ -10,9 +10,8 @@ import (
 	"time"
 
 	"github.com/lucas-clemente/quic-go"
+	"github.com/pkg/errors"
 	"github.com/rs/zerolog"
-	"golang.org/x/xerrors"
-
 	"github.com/spikeekips/mitum/util"
 	"github.com/spikeekips/mitum/util/logging"
 )
@@ -191,7 +190,7 @@ func (qr *QuicResponse) Error() error {
 		return util.NotFoundError.Errorf("request not found: %d", qr.StatusCode)
 	}
 
-	return xerrors.Errorf("failed to request: %d", qr.StatusCode)
+	return errors.Errorf("failed to request: %d", qr.StatusCode)
 }
 
 func (qr *QuicResponse) Close() error {

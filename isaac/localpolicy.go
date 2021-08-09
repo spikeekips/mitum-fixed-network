@@ -4,8 +4,7 @@ import (
 	"sync"
 	"time"
 
-	"golang.org/x/xerrors"
-
+	"github.com/pkg/errors"
 	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/util"
 )
@@ -80,7 +79,7 @@ func (lp *LocalPolicy) TimeoutWaitingProposal() time.Duration {
 
 func (lp *LocalPolicy) SetTimeoutWaitingProposal(d time.Duration) (*LocalPolicy, error) {
 	if d < 1 {
-		return nil, xerrors.Errorf("TimeoutWaitingProposal too short; %v", d)
+		return nil, errors.Errorf("TimeoutWaitingProposal too short; %v", d)
 	}
 
 	_ = lp.timeoutWaitingProposal.Set(d)
@@ -94,7 +93,7 @@ func (lp *LocalPolicy) IntervalBroadcastingINITBallot() time.Duration {
 
 func (lp *LocalPolicy) SetIntervalBroadcastingINITBallot(d time.Duration) (*LocalPolicy, error) {
 	if d < 1 {
-		return nil, xerrors.Errorf("IntervalBroadcastingINITBallot too short; %v", d)
+		return nil, errors.Errorf("IntervalBroadcastingINITBallot too short; %v", d)
 	}
 
 	_ = lp.intervalBroadcastingINITBallot.Set(d)
@@ -108,7 +107,7 @@ func (lp *LocalPolicy) IntervalBroadcastingProposal() time.Duration {
 
 func (lp *LocalPolicy) SetIntervalBroadcastingProposal(d time.Duration) (*LocalPolicy, error) {
 	if d < 1 {
-		return nil, xerrors.Errorf("IntervalBroadcastingProposal too short; %v", d)
+		return nil, errors.Errorf("IntervalBroadcastingProposal too short; %v", d)
 	}
 
 	_ = lp.intervalBroadcastingProposal.Set(d)
@@ -122,7 +121,7 @@ func (lp *LocalPolicy) WaitBroadcastingACCEPTBallot() time.Duration {
 
 func (lp *LocalPolicy) SetWaitBroadcastingACCEPTBallot(d time.Duration) (*LocalPolicy, error) {
 	if d < 1 {
-		return nil, xerrors.Errorf("WaitBroadcastingACCEPTBallot too short; %v", d)
+		return nil, errors.Errorf("WaitBroadcastingACCEPTBallot too short; %v", d)
 	}
 
 	_ = lp.waitBroadcastingACCEPTBallot.Set(d)
@@ -136,7 +135,7 @@ func (lp *LocalPolicy) IntervalBroadcastingACCEPTBallot() time.Duration {
 
 func (lp *LocalPolicy) SetIntervalBroadcastingACCEPTBallot(d time.Duration) (*LocalPolicy, error) {
 	if d < 1 {
-		return nil, xerrors.Errorf("IntervalBroadcastingACCEPTBallot too short; %v", d)
+		return nil, errors.Errorf("IntervalBroadcastingACCEPTBallot too short; %v", d)
 	}
 
 	_ = lp.intervalBroadcastingACCEPTBallot.Set(d)
@@ -150,7 +149,7 @@ func (lp *LocalPolicy) TimespanValidBallot() time.Duration {
 
 func (lp *LocalPolicy) SetTimespanValidBallot(d time.Duration) (*LocalPolicy, error) {
 	if d < 1 {
-		return nil, xerrors.Errorf("TimespanValidBallot too short; %v", d)
+		return nil, errors.Errorf("TimespanValidBallot too short; %v", d)
 	}
 
 	_ = lp.timespanValidBallot.Set(d)
@@ -164,7 +163,7 @@ func (lp *LocalPolicy) NetworkConnectionTimeout() time.Duration {
 
 func (lp *LocalPolicy) SetNetworkConnectionTimeout(d time.Duration) (*LocalPolicy, error) {
 	if d < time.Second {
-		return nil, xerrors.Errorf("networkConnectionTimeout too short; %v", d)
+		return nil, errors.Errorf("networkConnectionTimeout too short; %v", d)
 	}
 
 	_ = lp.networkConnectionTimeout.Set(d)
@@ -178,7 +177,7 @@ func (lp *LocalPolicy) MaxOperationsInSeal() uint {
 
 func (lp *LocalPolicy) SetMaxOperationsInSeal(m uint) (*LocalPolicy, error) {
 	if m < 1 {
-		return nil, xerrors.Errorf("zero MaxOperationsInSeal")
+		return nil, errors.Errorf("zero MaxOperationsInSeal")
 	}
 
 	_ = lp.maxOperationsInSeal.Set(m)
@@ -192,7 +191,7 @@ func (lp *LocalPolicy) MaxOperationsInProposal() uint {
 
 func (lp *LocalPolicy) SetMaxOperationsInProposal(m uint) (*LocalPolicy, error) {
 	if m < 1 {
-		return nil, xerrors.Errorf("zero MaxOperationsInProposal")
+		return nil, errors.Errorf("zero MaxOperationsInProposal")
 	}
 
 	_ = lp.maxOperationsInProposal.Set(m)

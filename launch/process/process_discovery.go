@@ -4,6 +4,7 @@ import (
 	"context"
 	"net/url"
 
+	"github.com/pkg/errors"
 	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/base/node"
 	"github.com/spikeekips/mitum/isaac"
@@ -15,7 +16,6 @@ import (
 	quicnetwork "github.com/spikeekips/mitum/network/quic"
 	"github.com/spikeekips/mitum/util"
 	"github.com/spikeekips/mitum/util/logging"
-	"golang.org/x/xerrors"
 )
 
 const ProcessNameDiscovery = "discovery"
@@ -93,7 +93,7 @@ func processDiscoveryURLs(ctx context.Context) ([]memberlist.ConnInfo, error) {
 
 	var urls []*url.URL
 	if err := config.LoadDiscoveryURLsContextValue(ctx, &urls); err != nil {
-		if xerrors.Is(err, util.ContextValueNotFoundError) {
+		if errors.Is(err, util.ContextValueNotFoundError) {
 			return nil, nil
 		}
 
@@ -111,7 +111,7 @@ func processDiscoveryURLs(ctx context.Context) ([]memberlist.ConnInfo, error) {
 		u := urls[i]
 		ci, err := parseCombinedNodeURL(u)
 		if err != nil {
-			return nil, xerrors.Errorf("invalid discovery url: %w", err)
+			return nil, errors.Wrap(err, "invalid discovery url")
 		}
 
 		if connInfo.URL().String() == ci.URL().String() {

@@ -6,6 +6,7 @@ import (
 	"path/filepath"
 	"sync"
 
+	"github.com/pkg/errors"
 	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/base/block"
 	"github.com/spikeekips/mitum/storage"
@@ -14,7 +15,6 @@ import (
 	jsonenc "github.com/spikeekips/mitum/util/encoder/json"
 	"github.com/spikeekips/mitum/util/hint"
 	"github.com/spikeekips/mitum/util/localtime"
-	"golang.org/x/xerrors"
 )
 
 var (
@@ -49,12 +49,12 @@ func NewBlockData(root string, encoder *jsonenc.Encoder) *BlockData {
 func (st *BlockData) Initialize() error {
 	i, err := filepath.Abs(st.root)
 	if err != nil {
-		return storage.WrapFSError(err)
+		return storage.MergeFSError(err)
 	}
 	st.root = i
 
 	if fi, err := os.Stat(st.root); err != nil {
-		return storage.WrapFSError(err)
+		return storage.MergeFSError(err)
 	} else if !fi.IsDir() {
 		return storage.FSError.Errorf("storage root, %q is not directory", st.root)
 	}
@@ -123,9 +123,9 @@ func (st *BlockData) remove(height base.Height) error {
 		os.O_CREATE|os.O_WRONLY,
 		DefaultFilePermission,
 	); err != nil {
-		return storage.WrapFSError(err)
+		return storage.MergeFSError(err)
 	} else if _, err := i.Write(removedFile); err != nil {
-		return storage.WrapFSError(err)
+		return storage.MergeFSError(err)
 	} else {
 		return nil
 	}
@@ -144,7 +144,7 @@ func (st *BlockData) RemoveAll(height base.Height) error {
 	}
 
 	if err := os.RemoveAll(st.heightDirectory(height, true)); err != nil {
-		return storage.WrapFSError(err)
+		return storage.MergeFSError(err)
 	}
 
 	return nil
@@ -174,7 +174,7 @@ func (st *BlockData) SaveSession(session blockdata.Session) (block.BlockDataMap,
 
 	ss, ok := session.(*Session)
 	if !ok {
-		return nil, xerrors.Errorf("only localfs.Session only allowed for localfs blockdata, not %T", session)
+		return nil, errors.Errorf("only localfs.Session only allowed for localfs blockdata, not %T", session)
 	}
 
 	mapData, err := ss.done()
@@ -224,7 +224,7 @@ func (st *BlockData) exists(height base.Height) (exists bool, removed bool, err 
 			return false, false, nil
 		}
 
-		return false, false, storage.WrapFSError(err)
+		return false, false, storage.MergeFSError(err)
 	} else if !fi.IsDir() {
 		return true, false, storage.FSError.Errorf("block directory, %q is not directory, %q", d, fi.Mode().String())
 	}
@@ -243,7 +243,7 @@ func (st *BlockData) exists(height base.Height) (exists bool, removed bool, err 
 func (st *BlockData) clean(remove bool) error {
 	if remove {
 		if err := os.RemoveAll(st.root); err != nil {
-			return storage.WrapFSError(err)
+			return storage.MergeFSError(err)
 		}
 
 		return nil
@@ -251,11 +251,11 @@ func (st *BlockData) clean(remove bool) error {
 
 	files, err := os.ReadDir(st.root)
 	if err != nil {
-		return storage.WrapFSError(err)
+		return storage.MergeFSError(err)
 	}
 	for _, f := range files {
 		if err := os.RemoveAll(filepath.Join(st.root, f.Name())); err != nil {
-			return storage.WrapFSError(err)
+			return storage.MergeFSError(err)
 		}
 	}
 
@@ -265,11 +265,11 @@ func (st *BlockData) clean(remove bool) error {
 func (*BlockData) createDirectory(p string) error {
 	if _, err := os.Stat(p); err != nil {
 		if !os.IsNotExist(err) {
-			return storage.WrapFSError(err)
+			return storage.MergeFSError(err)
 		}
 	} else {
 		if err := os.RemoveAll(p); err != nil {
-			return storage.WrapFSError(err)
+			return storage.MergeFSError(err)
 		}
 	}
 

@@ -24,7 +24,7 @@ func HookCheckBlockDataPath(ctx context.Context) (context.Context, error) {
 		}
 
 		if err := os.MkdirAll(conf.Path(), localfs.DefaultDirectoryPermission); err != nil {
-			return ctx, storage.WrapFSError(err)
+			return ctx, storage.MergeFSError(err)
 		}
 	} else if !fi.IsDir() {
 		return ctx, storage.FSError.Errorf("blockdata directory, %q not directory", conf.Path())

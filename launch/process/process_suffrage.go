@@ -3,8 +3,7 @@ package process
 import (
 	"context"
 
-	"golang.org/x/xerrors"
-
+	"github.com/pkg/errors"
 	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/launch/config"
 	"github.com/spikeekips/mitum/launch/pm"
@@ -115,13 +114,13 @@ func processFixedSuffrage(ctx context.Context, conf config.FixedSuffrage) (base.
 	}
 
 	if len(conf.Nodes()) < 1 {
-		return nil, xerrors.Errorf("empty nodes for suffrage")
+		return nil, errors.Errorf("empty nodes for suffrage")
 	}
 
 	for i := range conf.Nodes() {
 		c := conf.Nodes()[i]
 		if !nodepool.Exists(c) {
-			return nil, xerrors.Errorf("unknown node of fixed-suffrage found, %q", c)
+			return nil, errors.Errorf("unknown node of fixed-suffrage found, %q", c)
 		}
 	}
 
@@ -135,12 +134,12 @@ func processRoundrobinSuffrage(ctx context.Context, conf config.RoundrobinSuffra
 	}
 
 	if len(conf.Nodes()) < 1 {
-		return nil, xerrors.Errorf("empty nodes for suffrage")
+		return nil, errors.Errorf("empty nodes for suffrage")
 	}
 	for i := range conf.Nodes() {
 		c := conf.Nodes()[i]
 		if !nodepool.Exists(c) {
-			return nil, xerrors.Errorf("unknown node of fixed-suffrage found, %q", c)
+			return nil, errors.Errorf("unknown node of fixed-suffrage found, %q", c)
 		}
 	}
 

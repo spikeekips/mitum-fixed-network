@@ -3,11 +3,10 @@ package ballot
 import (
 	"testing"
 
-	"github.com/stretchr/testify/suite"
-
 	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/base/key"
 	"github.com/spikeekips/mitum/util/localtime"
+	"github.com/stretchr/testify/suite"
 )
 
 type testBaseBallotV0 struct {

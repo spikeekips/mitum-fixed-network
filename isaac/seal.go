@@ -3,20 +3,18 @@ package isaac
 import (
 	"context"
 
-	"golang.org/x/xerrors"
-
+	"github.com/pkg/errors"
 	"github.com/rs/zerolog"
 	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/base/operation"
 	"github.com/spikeekips/mitum/network"
 	"github.com/spikeekips/mitum/storage"
 	"github.com/spikeekips/mitum/util"
-	"github.com/spikeekips/mitum/util/errors"
 	"github.com/spikeekips/mitum/util/logging"
 	"github.com/spikeekips/mitum/util/valuehash"
 )
 
-var KnownSealError = errors.NewError("seal is known")
+var KnownSealError = util.NewError("seal is known")
 
 type SealsExtracter struct {
 	*logging.Logging
@@ -100,9 +98,9 @@ func (se *SealsExtracter) extractFromStorage(
 		h := se.seals[i]
 		switch ops, found, err := se.fromStorage(ctx, h); {
 		case err != nil:
-			if xerrors.Is(err, context.DeadlineExceeded) || xerrors.Is(err, context.Canceled) {
+			if errors.Is(err, context.DeadlineExceeded) || errors.Is(err, context.Canceled) {
 				return count, nil, err
-			} else if xerrors.Is(err, util.NotFoundError) {
+			} else if errors.Is(err, util.NotFoundError) {
 				notFounds = append(notFounds, h)
 
 				continue
@@ -210,7 +208,7 @@ func (se *SealsExtracter) fromStorage(
 		} else if !found0 {
 			return nil
 		} else if os, ok := sl.(operation.Seal); !ok {
-			return xerrors.Errorf("not operation.Seal: %T", sl)
+			return errors.Errorf("not operation.Seal: %T", sl)
 		} else {
 			ops = se.filterDuplicated(os.Operations())
 			found = true
@@ -238,14 +236,14 @@ func (se *SealsExtracter) fromStorage(
 
 func (se *SealsExtracter) fromChannel(notFounds []valuehash.Hash) (map[string][]operation.Operation, error) {
 	if se.local.Equal(se.proposer) {
-		return nil, xerrors.Errorf("proposer is local, but it does not have seals. Hmmm")
+		return nil, errors.Errorf("proposer is local, but it does not have seals. Hmmm")
 	}
 
 	_, proposerch, found := se.nodepool.Node(se.proposer)
 	if !found {
-		return nil, xerrors.Errorf("proposer is not in nodes: %v", se.proposer)
+		return nil, errors.Errorf("proposer is not in nodes: %v", se.proposer)
 	} else if proposerch == nil {
-		return nil, xerrors.Errorf("proposer is dead: %v", se.proposer)
+		return nil, errors.Errorf("proposer is dead: %v", se.proposer)
 	}
 
 	received, err := proposerch.Seals(context.TODO(), notFounds)
@@ -254,7 +252,7 @@ func (se *SealsExtracter) fromChannel(notFounds []valuehash.Hash) (map[string][]
 	}
 
 	if err := se.st.NewSeals(received); err != nil {
-		if !xerrors.Is(err, util.DuplicatedError) {
+		if !errors.Is(err, util.DuplicatedError) {
 			return nil, err
 		}
 	}
@@ -264,7 +262,7 @@ func (se *SealsExtracter) fromChannel(notFounds []valuehash.Hash) (map[string][]
 		sl := received[i]
 		os, ok := sl.(operation.Seal)
 		if !ok {
-			return nil, xerrors.Errorf("not operation.Seal: %T", sl)
+			return nil, errors.Errorf("not operation.Seal: %T", sl)
 		}
 		bySeals[sl.Hash().String()] = os.Operations()
 	}

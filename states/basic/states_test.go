@@ -5,13 +5,13 @@ import (
 	"testing"
 	"time"
 
+	"github.com/pkg/errors"
 	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/base/operation"
 	channetwork "github.com/spikeekips/mitum/network/gochan"
 	"github.com/spikeekips/mitum/util"
 	"github.com/spikeekips/mitum/util/valuehash"
 	"github.com/stretchr/testify/suite"
-	"golang.org/x/xerrors"
 )
 
 type testStates struct {
@@ -188,7 +188,7 @@ func (t *testStates) TestSwitchingStateWithVoteproof() {
 
 	select {
 	case <-time.After(time.Second * 3):
-		t.NoError(xerrors.Errorf("timeout to wait voteproof thru consensus state"))
+		t.NoError(errors.Errorf("timeout to wait voteproof thru consensus state"))
 	case voteproof := <-gotvoteproofch:
 		t.NotNil(voteproof)
 
@@ -248,7 +248,7 @@ func (t *testStates) TestNewVoteproofThruStateSwithContext() {
 
 	select {
 	case <-time.After(time.Second * 3):
-		t.NoError(xerrors.Errorf("timeout to wait voteproof thru consensus state"))
+		t.NoError(errors.Errorf("timeout to wait voteproof thru consensus state"))
 	case voteproof := <-gotvoteproofch:
 		t.NotNil(voteproof)
 
@@ -310,7 +310,7 @@ func (t *testStates) TestNewVoteproofFromBallot() {
 
 	select {
 	case <-time.After(time.Second * 3):
-		t.NoError(xerrors.Errorf("timeout to wait voteproof thru consensus state"))
+		t.NoError(errors.Errorf("timeout to wait voteproof thru consensus state"))
 	case voteproof := <-gotvoteproofch:
 		t.NotNil(voteproof)
 
@@ -342,7 +342,7 @@ func (t *testStates) TestFailedSwitchingState() {
 
 	stateJoining := NewBaseState(base.StateJoining)
 	stateJoining.SetEnterFunc(func(StateSwitchContext) (func() error, error) {
-		return nil, xerrors.Errorf("born to be killed")
+		return nil, errors.Errorf("born to be killed")
 	})
 
 	ss.states[base.StateBooting] = stateBooting
@@ -358,7 +358,7 @@ func (t *testStates) TestFailedSwitchingState() {
 
 	select {
 	case <-time.After(time.Second * 3):
-		t.NoError(xerrors.Errorf("timeout to wait to switch state"))
+		t.NoError(errors.Errorf("timeout to wait to switch state"))
 	case err := <-stopch:
 		t.NoError(err)
 	case sctx := <-statech:
@@ -381,12 +381,12 @@ func (t *testStates) TestFailedSwitchingStateButKeepFailing() {
 	stateBooting.SetEnterFunc(func(sctx StateSwitchContext) (func() error, error) {
 		atomic.AddInt64(&trying, 1)
 
-		return nil, xerrors.Errorf("impossible entering")
+		return nil, errors.Errorf("impossible entering")
 	})
 
 	stateJoining := NewBaseState(base.StateJoining)
 	stateJoining.SetEnterFunc(func(StateSwitchContext) (func() error, error) {
-		return nil, xerrors.Errorf("born to be killed")
+		return nil, errors.Errorf("born to be killed")
 	})
 
 	ss.states[base.StateBooting] = stateBooting
@@ -402,7 +402,7 @@ func (t *testStates) TestFailedSwitchingStateButKeepFailing() {
 
 	select {
 	case <-time.After(time.Second * 4):
-		t.NoError(xerrors.Errorf("timeout to wait states to be stopped"))
+		t.NoError(errors.Errorf("timeout to wait states to be stopped"))
 	case err := <-stopch:
 		t.Contains(err.Error(), "failed to move to booting")
 		t.Contains(err.Error(), "impossible entering")
@@ -417,14 +417,14 @@ func (t *testStates) TestFailedSwitchingStateButIgnore() {
 	stateStopped := NewBaseState(base.StateStopped)
 	stateStopped.SetExitFunc(func(sctx StateSwitchContext) (func() error, error) {
 		return func() error {
-			return xerrors.Errorf("exit error")
+			return errors.Errorf("exit error")
 		}, nil
 	})
 
 	stateJoining := NewBaseState(base.StateJoining)
 	stateJoining.SetEnterFunc(func(StateSwitchContext) (func() error, error) {
 		return func() error {
-			return xerrors.Errorf("enter error")
+			return errors.Errorf("enter error")
 		}, nil
 	})
 
@@ -545,7 +545,7 @@ func (t *testStates) TestNewOperationSealNoneSuffrage() {
 
 	select {
 	case <-time.After(time.Second * 10):
-		t.NoError(xerrors.Errorf("waited broadcasted seal, but nothing"))
+		t.NoError(errors.Errorf("waited broadcasted seal, but nothing"))
 	case rsl := <-remotech.ReceiveSeal():
 		t.True(sl.Hash().Equal(rsl.Hash()))
 	}

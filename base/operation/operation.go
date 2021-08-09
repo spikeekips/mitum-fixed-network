@@ -4,12 +4,12 @@ import (
 	"sort"
 	"time"
 
+	"github.com/pkg/errors"
 	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/util"
 	"github.com/spikeekips/mitum/util/hint"
 	"github.com/spikeekips/mitum/util/isvalid"
 	"github.com/spikeekips/mitum/util/valuehash"
-	"golang.org/x/xerrors"
 )
 
 const MaxTokenSize = 100
@@ -157,7 +157,7 @@ func (bo BaseOperation) AddFactSigns(fs ...FactSign) (FactSignUpdater, error) {
 		}
 
 		if found {
-			return nil, xerrors.Errorf("already signed")
+			return nil, errors.Errorf("already signed")
 		}
 	}
 

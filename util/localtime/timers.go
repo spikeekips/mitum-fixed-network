@@ -3,8 +3,7 @@ package localtime
 import (
 	"sync"
 
-	"golang.org/x/xerrors"
-
+	"github.com/pkg/errors"
 	"github.com/rs/zerolog"
 	"github.com/spikeekips/mitum/util"
 	"github.com/spikeekips/mitum/util/logging"
@@ -93,9 +92,9 @@ func (ts *Timers) ResetTimer(id TimerID) error {
 
 	switch t, found := ts.timers[id]; {
 	case !found:
-		return xerrors.Errorf("timer, %q not found", id)
+		return errors.Errorf("timer, %q not found", id)
 	case t == nil:
-		return xerrors.Errorf("timer, %q not running", id)
+		return errors.Errorf("timer, %q not running", id)
 	default:
 		return t.Reset()
 	}
@@ -108,7 +107,7 @@ func (ts *Timers) SetTimer(timer Timer) error {
 
 	if _, found := ts.timers[timer.ID()]; !found {
 		if !ts.allowNew {
-			return xerrors.Errorf("not allowed to add new timer: %s", timer.ID())
+			return errors.Errorf("not allowed to add new timer: %s", timer.ID())
 		}
 	}
 
@@ -217,7 +216,7 @@ func (ts *Timers) Started() []TimerID {
 func (ts *Timers) checkExists(ids []TimerID) error {
 	for _, id := range ids {
 		if _, found := ts.timers[id]; !found {
-			return xerrors.Errorf("timer not found: %s", id)
+			return errors.Errorf("timer not found: %s", id)
 		}
 	}
 

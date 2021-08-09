@@ -6,16 +6,15 @@ import (
 	"io"
 	"os"
 
-	"golang.org/x/xerrors"
-	"gopkg.in/yaml.v3"
-
 	"github.com/alecthomas/kong"
+	"github.com/pkg/errors"
 	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/launch"
 	"github.com/spikeekips/mitum/launch/config"
 	"github.com/spikeekips/mitum/launch/pm"
 	"github.com/spikeekips/mitum/launch/process"
 	"github.com/spikeekips/mitum/util"
+	"gopkg.in/yaml.v3"
 )
 
 var (
@@ -51,7 +50,7 @@ func NewDefaultConfigCommand() DefaultConfigCommand {
 
 func (cmd *DefaultConfigCommand) Run(version util.Version) error {
 	if err := cmd.Initialize(cmd, version); err != nil {
-		return xerrors.Errorf("failed to initialize command: %w", err)
+		return errors.Wrap(err, "failed to initialize command")
 	}
 
 	if err := cmd.prepare(); err != nil {
@@ -74,7 +73,7 @@ func (cmd *DefaultConfigCommand) Run(version util.Version) error {
 
 	b, err := yaml.Marshal(bconf)
 	if err != nil {
-		return xerrors.Errorf("failed to format config: %w", err)
+		return errors.Wrap(err, "failed to format config")
 	}
 	_, _ = fmt.Fprintln(cmd.out, string(b))
 
@@ -85,7 +84,7 @@ func (cmd *DefaultConfigCommand) prepare() error {
 	switch t := cmd.Format; t {
 	case "yaml":
 	default:
-		return xerrors.Errorf("unknown output format, %q", t)
+		return errors.Errorf("unknown output format, %q", t)
 	}
 
 	ps := pm.NewProcesses()

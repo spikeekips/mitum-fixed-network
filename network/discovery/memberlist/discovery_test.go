@@ -12,6 +12,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/pkg/errors"
 	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/base/key"
 	"github.com/spikeekips/mitum/base/node"
@@ -23,7 +24,6 @@ import (
 	jsonenc "github.com/spikeekips/mitum/util/encoder/json"
 	"github.com/stretchr/testify/suite"
 	"golang.org/x/sync/errgroup"
-	"golang.org/x/xerrors"
 )
 
 type dummyNode struct {
@@ -720,7 +720,7 @@ func (t *testDiscovery) TestJoiningDeclined() {
 	t.checkJoinedNodes(others)
 
 	err := t.startNodes(map[string]*dummyNode{local.node: local}, others)
-	t.True(xerrors.Is(err, JoiningCanceledError))
+	t.True(errors.Is(err, JoiningCanceledError))
 	t.Contains(err.Error(), "over max retry")
 }
 

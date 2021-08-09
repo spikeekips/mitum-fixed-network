@@ -3,13 +3,12 @@ package basicstates
 import (
 	"time"
 
-	"golang.org/x/xerrors"
-
+	"github.com/pkg/errors"
 	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/base/ballot"
 	"github.com/spikeekips/mitum/base/block"
 	"github.com/spikeekips/mitum/base/seal"
-	"github.com/spikeekips/mitum/util/errors"
+	"github.com/spikeekips/mitum/util"
 	"github.com/spikeekips/mitum/util/localtime"
 )
 
@@ -46,7 +45,7 @@ func NewBaseState(st base.State) *BaseState {
 
 func (st *BaseState) Enter(sctx StateSwitchContext) (func() error, error) {
 	if sctx.ToState() != st.state {
-		return nil, xerrors.Errorf("context not for entering this state, %v", st.state)
+		return nil, errors.Errorf("context not for entering this state, %v", st.state)
 	}
 
 	if st.enterFunc != nil {
@@ -58,7 +57,7 @@ func (st *BaseState) Enter(sctx StateSwitchContext) (func() error, error) {
 
 func (st *BaseState) Exit(sctx StateSwitchContext) (func() error, error) {
 	if sctx.FromState() != st.state {
-		return nil, xerrors.Errorf("context not for exiting this state, %v", st.state)
+		return nil, errors.Errorf("context not for exiting this state, %v", st.state)
 	}
 
 	if st.exitFunc != nil {
@@ -159,7 +158,7 @@ func (st *BaseState) NewBlocks(blks []block.Block) error {
 	return st.States.NewBlocks(blks)
 }
 
-var ConsensusStuckError = errors.NewError("consensus looks stuck")
+var ConsensusStuckError = util.NewError("consensus looks stuck")
 
 type ConsensusStuckChecker struct {
 	lastVoteproof base.Voteproof

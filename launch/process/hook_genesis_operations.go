@@ -3,8 +3,7 @@ package process
 import (
 	"context"
 
-	"golang.org/x/xerrors"
-
+	"github.com/pkg/errors"
 	"github.com/spikeekips/mitum/base/operation"
 	"github.com/spikeekips/mitum/launch/config"
 	"github.com/spikeekips/mitum/launch/pm"
@@ -35,7 +34,7 @@ func HookGenesisOperationFunc(handlers map[string]HookHandlerGenesisOperations) 
 			if t, err := config.ParseType(l[i], false); err != nil {
 				return ctx, err
 			} else if h, found := handlers[t]; !found {
-				return ctx, xerrors.Errorf("invalid genesis operation found,  %q", t)
+				return ctx, errors.Errorf("invalid genesis operation found,  %q", t)
 			} else if op, err := h(ctx, l[i]); err != nil {
 				return nil, err
 			} else {
@@ -57,16 +56,16 @@ func parseGenesisOperations(o interface{}) ([]map[string]interface{}, error) {
 
 	switch l, ok := o.([]interface{}); {
 	case !ok:
-		return nil, xerrors.Errorf("invalid genesis-operations configs, %T found", o)
+		return nil, errors.Errorf("invalid genesis-operations configs, %T found", o)
 	case len(l) < 1:
 		return nil, nil
 	default:
 		ml := make([]map[string]interface{}, len(l))
 		for i := range l {
 			if m, ok := l[i].(map[string]interface{}); !ok {
-				return nil, xerrors.Errorf("invalid genesis operation config type, %T", l[i])
+				return nil, errors.Errorf("invalid genesis operation config type, %T", l[i])
 			} else if _, err := config.ParseType(m, false); err != nil {
-				return nil, xerrors.Errorf("invalid genesis operation found: %w", err)
+				return nil, errors.Wrap(err, "invalid genesis operation found")
 			} else {
 				ml[i] = m
 			}

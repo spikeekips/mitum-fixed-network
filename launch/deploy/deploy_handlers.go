@@ -5,6 +5,7 @@ import (
 	"net/http"
 
 	"github.com/gorilla/mux"
+	"github.com/pkg/errors"
 	"github.com/rs/zerolog"
 	"github.com/spikeekips/mitum/launch/config"
 	"github.com/spikeekips/mitum/launch/process"
@@ -14,7 +15,6 @@ import (
 	jsonenc "github.com/spikeekips/mitum/util/encoder/json"
 	"github.com/spikeekips/mitum/util/logging"
 	"github.com/ulule/limiter/v3"
-	"golang.org/x/xerrors"
 )
 
 var QuicHandlerPathSetBlockDataMaps = "/_deploy/blockdatamaps"
@@ -45,7 +45,7 @@ func newBaseDeployHandler(
 	if err := process.LoadRateLimitHandlerMapContextValue(ctx, &handlerMap); err != nil {
 		handlerMap = map[string][]process.RateLimitRule{}
 	} else if err := process.LoadRateLimitStoreContextValue(ctx, &store); err != nil {
-		if !xerrors.Is(err, util.ContextValueNotFoundError) {
+		if !errors.Is(err, util.ContextValueNotFoundError) {
 			return nil, err
 		}
 	}

@@ -4,9 +4,9 @@ import (
 	"sync"
 
 	ml "github.com/hashicorp/memberlist"
+	"github.com/pkg/errors"
 	"github.com/rs/zerolog"
 	"github.com/spikeekips/mitum/util/logging"
-	"golang.org/x/xerrors"
 )
 
 type Events struct {
@@ -272,7 +272,7 @@ func (dg *Events) loadMeta(event string, peer *ml.Node) (NodeMeta, zerolog.Logge
 
 	meta, err := NewNodeMetaFromBytes(peer.Meta)
 	if err != nil {
-		err = xerrors.Errorf("wrong peer for %s: %w", event, err)
+		err = errors.Wrapf(err, "wrong peer for %s", event)
 		l.Trace().Err(err).Msg("failed to parse meta")
 
 		return NodeMeta{}, l, err
@@ -283,10 +283,10 @@ func (dg *Events) loadMeta(event string, peer *ml.Node) (NodeMeta, zerolog.Logge
 		return NodeMeta{}, l, err
 	}
 	if meta.Publish().String() != u.String() {
-		return NodeMeta{}, l, xerrors.Errorf("wrong publish url in meta, %q", meta.Publish().String())
+		return NodeMeta{}, l, errors.Errorf("wrong publish url in meta, %q", meta.Publish().String())
 	}
 	if addr != uaddr {
-		return NodeMeta{}, l, xerrors.Errorf("address does not match with peer, %q != %q", addr, uaddr)
+		return NodeMeta{}, l, errors.Errorf("address does not match with peer, %q != %q", addr, uaddr)
 	}
 
 	return meta, l.With().Object("meta", meta).Logger(), nil

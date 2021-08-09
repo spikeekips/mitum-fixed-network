@@ -6,9 +6,7 @@ import (
 	"io"
 	"os"
 
-	"github.com/stretchr/testify/suite"
-	"golang.org/x/xerrors"
-
+	"github.com/pkg/errors"
 	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/base/ballot"
 	"github.com/spikeekips/mitum/base/block"
@@ -25,6 +23,7 @@ import (
 	"github.com/spikeekips/mitum/util/localtime"
 	"github.com/spikeekips/mitum/util/tree"
 	"github.com/spikeekips/mitum/util/valuehash"
+	"github.com/stretchr/testify/suite"
 )
 
 func SignSeal(b seal.Signer, local *Local) error {
@@ -309,10 +308,10 @@ func (t *BaseTest) NewINITBallot(local *Local, round base.Round, voteproof base.
 func (t *BaseTest) NewINITBallotFact(local *Local, round base.Round) ballot.INITFactV0 {
 	var manifest block.Manifest
 	switch l, found, err := local.Database().LastManifest(); {
-	case !found:
-		panic(xerrors.Errorf("last block not found: %w", err))
 	case err != nil:
-		panic(xerrors.Errorf("failed to get last block: %w", err))
+		panic(errors.Wrap(err, "failed to get last block"))
+	case !found:
+		panic(errors.Errorf("last block not found"))
 	default:
 		manifest = l
 	}

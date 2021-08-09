@@ -5,16 +5,15 @@ import (
 	"fmt"
 	"sync"
 
-	"go.mongodb.org/mongo-driver/bson"
-	"go.mongodb.org/mongo-driver/mongo"
-	"golang.org/x/xerrors"
-
+	"github.com/pkg/errors"
 	"github.com/rs/zerolog"
 	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/base/block"
 	"github.com/spikeekips/mitum/storage"
 	"github.com/spikeekips/mitum/util"
 	"github.com/spikeekips/mitum/util/logging"
+	"go.mongodb.org/mongo-driver/bson"
+	"go.mongodb.org/mongo-driver/mongo"
 )
 
 type SyncerSession struct {
@@ -131,7 +130,7 @@ func (st *SyncerSession) HasBlock(height base.Height) (bool, error) {
 
 func (st *SyncerSession) SetBlocks(blocks []block.Block, maps []block.BlockDataMap) error {
 	if len(blocks) != len(maps) {
-		return xerrors.Errorf("blocks and maps has different size, %d != %d", len(blocks), len(maps))
+		return errors.Errorf("blocks and maps has different size, %d != %d", len(blocks), len(maps))
 	} else {
 		for i := range blocks {
 			if err := block.CompareManifestWithMap(blocks[i], maps[i]); err != nil {
@@ -197,13 +196,20 @@ func (st *SyncerSession) Commit() error {
 		Logger()
 
 	var last block.Manifest
-	if m, found, err := st.session.LastManifest(); err != nil || !found {
-		err = xerrors.Errorf("failed to get last manifest fromm storage: %w", err)
+	switch m, found, err := st.session.LastManifest(); {
+	case err != nil:
+		err = errors.Wrap(err, "failed to get last manifest from storage")
 
 		l.Error().Err(err).Msg("failed to commit blocks to main database")
 
 		return err
-	} else {
+	case !found:
+		err = util.NotFoundError.Errorf("failed to get manifest from storage")
+
+		l.Error().Err(err).Msg("failed to commit blocks to main database")
+
+		return err
+	default:
 		last = m
 	}
 

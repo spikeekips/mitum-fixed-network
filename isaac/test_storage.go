@@ -5,8 +5,7 @@ package isaac
 import (
 	"time"
 
-	"golang.org/x/xerrors"
-
+	"github.com/pkg/errors"
 	"github.com/spikeekips/mitum/storage"
 	leveldbstorage "github.com/spikeekips/mitum/storage/leveldb"
 	mongodbstorage "github.com/spikeekips/mitum/storage/mongodb"
@@ -108,7 +107,7 @@ func (ss *StorageSupportTest) database(encs *encoder.Encoders, enc encoder.Encod
 
 		return d
 	default:
-		panic(xerrors.Errorf("unknown db type: %v", ss.DBType))
+		panic(errors.Errorf("unknown db type: %v", ss.DBType))
 	}
 }
 

@@ -3,9 +3,8 @@ package channetwork
 import (
 	"testing"
 
-	"github.com/stretchr/testify/suite"
-
 	"github.com/spikeekips/mitum/network"
+	"github.com/stretchr/testify/suite"
 )
 
 type testChanServer struct {

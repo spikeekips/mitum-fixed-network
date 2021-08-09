@@ -3,8 +3,7 @@ package process
 import (
 	"context"
 
-	"golang.org/x/xerrors"
-
+	"github.com/pkg/errors"
 	"github.com/spikeekips/mitum/base/block"
 	"github.com/spikeekips/mitum/base/node"
 	"github.com/spikeekips/mitum/isaac"
@@ -69,9 +68,9 @@ func ProcessGenerateGenesisBlock(ctx context.Context) (context.Context, error) {
 	log.Log().Debug().Int("operations", len(ops)).Msg("operations loaded")
 
 	if gg, err := isaac.NewGenesisBlockV0Generator(local, st, blockData, policy, ops); err != nil {
-		return ctx, xerrors.Errorf("failed to create genesis block generator: %w", err)
+		return ctx, errors.Wrap(err, "failed to create genesis block generator")
 	} else if blk, err := gg.Generate(); err != nil {
-		return ctx, xerrors.Errorf("failed to generate genesis block: %w", err)
+		return ctx, errors.Wrap(err, "failed to generate genesis block")
 	} else {
 		log.Log().Info().Object("block", blk).Msg("genesis block created")
 
@@ -116,7 +115,7 @@ func HookCheckGenesisBlock(ctx context.Context) (context.Context, error) {
 	log.Log().Debug().Msgf("found existing blocks: block=%d", manifest.Height())
 
 	if !force {
-		return ctx, xerrors.Errorf("environment already exists: block=%d", manifest.Height())
+		return ctx, errors.Errorf("environment already exists: block=%d", manifest.Height())
 	}
 
 	if err := blockdata.Clean(st, blockData, false); err != nil {

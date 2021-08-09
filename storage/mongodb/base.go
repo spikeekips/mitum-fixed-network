@@ -5,6 +5,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/pkg/errors"
 	"github.com/rs/zerolog"
 	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/base/ballot"
@@ -23,7 +24,6 @@ import (
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
-	"golang.org/x/xerrors"
 )
 
 const (
@@ -122,7 +122,7 @@ func NewDatabase(client *Client, encs *encoder.Encoders, enc encoder.Encoder, ca
 func NewDatabaseFromURI(uri string, encs *encoder.Encoders, ca cache.Cache) (*Database, error) {
 	parsed, err := network.ParseURL(uri, false)
 	if err != nil {
-		return nil, xerrors.Errorf("invalid storge uri: %w", err)
+		return nil, errors.Wrap(err, "invalid storge uri")
 	}
 
 	connectTimeout := time.Second * 2
@@ -143,7 +143,7 @@ func NewDatabaseFromURI(uri string, encs *encoder.Encoders, ca cache.Cache) (*Da
 
 	var be encoder.Encoder
 	if e, err := encs.Encoder(bsonenc.BSONEncoderType, ""); err != nil { // NOTE get latest bson encoder
-		return nil, xerrors.Errorf("bson encoder needs for mongodb: %w", err)
+		return nil, errors.Wrap(err, "bson encoder needs for mongodb")
 	} else {
 		be = e
 	}
@@ -164,7 +164,7 @@ func (st *Database) Initialize() error {
 		return nil
 	}
 
-	if err := st.loadLastBlock(); err != nil && !xerrors.Is(err, util.NotFoundError) {
+	if err := st.loadLastBlock(); err != nil && !errors.Is(err, util.NotFoundError) {
 		return err
 	}
 
@@ -193,7 +193,7 @@ func (st *Database) loadLastBlock() error {
 
 	switch m, found, err := st.manifestByFilter(util.NewBSONFilter("height", height).D()); {
 	case err != nil:
-		return xerrors.Errorf("failed to find last block of height, %v: %w", height, err)
+		return errors.Wrapf(err, "failed to find last block of height, %v", height)
 	case !found:
 		return util.NotFoundError.Errorf("failed to find last block of height, %v", height)
 	default:
@@ -203,7 +203,7 @@ func (st *Database) loadLastBlock() error {
 
 func (st *Database) SaveLastBlock(height base.Height) error {
 	if st.readonly {
-		return xerrors.Errorf("readonly mode")
+		return errors.Errorf("readonly mode")
 	}
 
 	if cb, err := NewLastManifestDoc(height, st.enc); err != nil {
@@ -246,7 +246,7 @@ func (st *Database) setLastManifest(manifest block.Manifest, save, force bool) e
 
 func (st *Database) setLastManifestInternal(manifest block.Manifest, save, force bool) error {
 	if st.readonly {
-		return xerrors.Errorf("readonly mode")
+		return errors.Errorf("readonly mode")
 	}
 
 	if manifest == nil {
@@ -290,7 +290,7 @@ func (st *Database) setLastBlock(manifest block.Manifest, save, force bool) erro
 	defer st.Unlock()
 
 	if st.readonly {
-		return xerrors.Errorf("readonly mode")
+		return errors.Errorf("readonly mode")
 	}
 
 	lastManifestHeight := st.lastManifestHeight
@@ -327,7 +327,7 @@ func (st *Database) setLastBlock(manifest block.Manifest, save, force bool) erro
 
 func (st *Database) NewSyncerSession() (storage.SyncerSession, error) {
 	if st.readonly {
-		return nil, xerrors.Errorf("readonly mode")
+		return nil, errors.Errorf("readonly mode")
 	}
 
 	st.Lock()
@@ -349,7 +349,7 @@ func (st *Database) Close() error {
 // collections by user, drop collections instead of drop database.
 func (st *Database) Clean() error {
 	if st.readonly {
-		return xerrors.Errorf("readonly mode")
+		return errors.Errorf("readonly mode")
 	}
 
 	drop := func(c string) error {
@@ -379,7 +379,7 @@ func (st *Database) Clean() error {
 
 func (st *Database) CleanByHeight(height base.Height) error {
 	if st.readonly {
-		return xerrors.Errorf("readonly mode")
+		return errors.Errorf("readonly mode")
 	}
 
 	if err := st.cleanByHeight(height); err != nil {
@@ -399,7 +399,7 @@ func (st *Database) CleanByHeight(height base.Height) error {
 
 	switch m, found, err := st.ManifestByHeight(height - 1); {
 	case err != nil:
-		return xerrors.Errorf("failed to find block of height, %v: %w", height-1, err)
+		return errors.Wrapf(err, "failed to find block of height, %v", height-1)
 	case !found:
 		return util.NotFoundError.Errorf("failed to find block of height, %v", height-1)
 	default:
@@ -412,12 +412,12 @@ func (st *Database) CleanByHeight(height base.Height) error {
 
 func (st *Database) Copy(source storage.Database) error {
 	if st.readonly {
-		return xerrors.Errorf("readonly mode")
+		return errors.Errorf("readonly mode")
 	}
 
 	var sst *Database
 	if s, ok := source.(*Database); !ok {
-		return xerrors.Errorf("only mongodbstorage.Database can be allowed: %T", source)
+		return errors.Errorf("only mongodbstorage.Database can be allowed: %T", source)
 	} else {
 		sst = s
 	}
@@ -464,7 +464,7 @@ func (st *Database) manifestByFilter(filter bson.D) (block.Manifest, bool, error
 		},
 		options.FindOne().SetSort(util.NewBSONFilter("height", -1).D()),
 	); err != nil {
-		if xerrors.Is(err, util.NotFoundError) {
+		if errors.Is(err, util.NotFoundError) {
 			return nil, false, nil
 		}
 
@@ -566,7 +566,7 @@ func (st *Database) Seal(h valuehash.Hash) (seal.Seal, bool, error) {
 			return nil
 		},
 	); err != nil {
-		if xerrors.Is(err, util.NotFoundError) {
+		if errors.Is(err, util.NotFoundError) {
 			return nil, false, nil
 		}
 
@@ -582,11 +582,11 @@ func (st *Database) Seal(h valuehash.Hash) (seal.Seal, bool, error) {
 
 func (st *Database) NewSeals(seals []seal.Seal) error {
 	if st.readonly {
-		return xerrors.Errorf("readonly mode")
+		return errors.Errorf("readonly mode")
 	}
 
 	if len(seals) < 1 {
-		return xerrors.Errorf("empty seals")
+		return errors.Errorf("empty seals")
 	}
 
 	var models []mongo.WriteModel
@@ -767,7 +767,7 @@ func (st *Database) StagedOperationSeals(callback func(operation.Seal) (bool, er
 			if i, err := loadSealFromDecoder(cursor.Decode, st.encs); err != nil {
 				return false, err
 			} else if v, ok := i.(operation.Seal); !ok {
-				return false, xerrors.Errorf("not operation.Seal: %T", i)
+				return false, errors.Errorf("not operation.Seal: %T", i)
 			} else {
 				sl = v
 			}
@@ -780,7 +780,7 @@ func (st *Database) StagedOperationSeals(callback func(operation.Seal) (bool, er
 
 func (st *Database) UnstagedOperationSeals(seals []valuehash.Hash) error {
 	if st.readonly {
-		return xerrors.Errorf("readonly mode")
+		return errors.Errorf("readonly mode")
 	}
 
 	var models []mongo.WriteModel
@@ -824,7 +824,7 @@ func (st *Database) Proposals(callback func(ballot.Proposal) (bool, error), sort
 
 func (st *Database) NewProposal(proposal ballot.Proposal) error {
 	if st.readonly {
-		return xerrors.Errorf("readonly mode")
+		return errors.Errorf("readonly mode")
 	}
 
 	if doc, err := NewProposalDoc(proposal, st.enc); err != nil {
@@ -895,7 +895,7 @@ func (st *Database) State(key string) (state.State, bool, error) {
 
 func (st *Database) NewState(sta state.State) error {
 	if st.readonly {
-		return xerrors.Errorf("readonly mode")
+		return errors.Errorf("readonly mode")
 	}
 
 	if doc, err := NewStateDoc(sta, st.enc); err != nil {
@@ -933,7 +933,7 @@ func (st *Database) HasOperationFact(h valuehash.Hash) (bool, error) {
 
 func (st *Database) NewSession(blk block.Block) (storage.DatabaseSession, error) {
 	if st.readonly {
-		return nil, xerrors.Errorf("readonly mode")
+		return nil, errors.Errorf("readonly mode")
 	}
 
 	return NewDatabaseSession(st, blk)
@@ -941,7 +941,7 @@ func (st *Database) NewSession(blk block.Block) (storage.DatabaseSession, error)
 
 func (st *Database) initialize() error {
 	if st.readonly {
-		return xerrors.Errorf("readonly mode")
+		return errors.Errorf("readonly mode")
 	}
 
 	for col, models := range defaultIndexes {
@@ -955,7 +955,7 @@ func (st *Database) initialize() error {
 
 func (st *Database) cleanByHeight(height base.Height) error {
 	if st.readonly {
-		return xerrors.Errorf("readonly mode")
+		return errors.Errorf("readonly mode")
 	}
 
 	if height <= base.PreGenesisHeight {
@@ -981,7 +981,7 @@ func (st *Database) cleanByHeight(height base.Height) error {
 			opts,
 		)
 		if err != nil {
-			return storage.WrapStorageError(err)
+			return storage.MergeStorageError(err)
 		}
 
 		st.Log().Debug().Str("collection", col).Interface("result", res).Msg("clean collection by height")
@@ -992,7 +992,7 @@ func (st *Database) cleanByHeight(height base.Height) error {
 
 func (st *Database) cleanupIncompleteData() error {
 	if st.readonly {
-		return xerrors.Errorf("readonly mode")
+		return errors.Errorf("readonly mode")
 	}
 
 	return st.cleanByHeight(st.lastHeight() + 1)
@@ -1000,7 +1000,7 @@ func (st *Database) cleanupIncompleteData() error {
 
 func (st *Database) CreateIndex(col string, models []mongo.IndexModel, prefix string) error {
 	if st.readonly {
-		return xerrors.Errorf("readonly mode")
+		return errors.Errorf("readonly mode")
 	}
 
 	st.Lock()
@@ -1031,7 +1031,7 @@ func (st *Database) CreateIndex(col string, models []mongo.IndexModel, prefix st
 	if len(existings) > 0 {
 		for _, name := range existings {
 			if _, err := iv.DropOne(context.TODO(), name); err != nil {
-				return storage.WrapStorageError(err)
+				return storage.MergeStorageError(err)
 			}
 		}
 	}
@@ -1041,7 +1041,7 @@ func (st *Database) CreateIndex(col string, models []mongo.IndexModel, prefix st
 	}
 
 	if _, err := iv.CreateMany(context.TODO(), models); err != nil {
-		return storage.WrapStorageError(err)
+		return storage.MergeStorageError(err)
 	}
 
 	return nil
@@ -1070,7 +1070,7 @@ func (st *Database) New() (*Database, error) {
 
 func (st *Database) SetInfo(key string, b []byte) error {
 	if st.readonly {
-		return xerrors.Errorf("readonly mode")
+		return errors.Errorf("readonly mode")
 	}
 
 	if doc, err := NewInfoDoc(key, b, st.enc); err != nil {
@@ -1095,7 +1095,7 @@ func (st *Database) Info(key string) ([]byte, bool, error) {
 			return nil
 		},
 	); err != nil {
-		if xerrors.Is(err, util.NotFoundError) {
+		if errors.Is(err, util.NotFoundError) {
 			return nil, false, nil
 		}
 
@@ -1132,7 +1132,7 @@ func (st *Database) voteproofByFilter(filter bson.D) (base.Voteproof, bool, erro
 		},
 		options.FindOne().SetSort(util.NewBSONFilter("height", -1).D()),
 	); err != nil {
-		if xerrors.Is(err, util.NotFoundError) {
+		if errors.Is(err, util.NotFoundError) {
 			return nil, false, nil
 		}
 
@@ -1150,7 +1150,7 @@ func (st *Database) lastVoteproofs(height base.Height) (base.Voteproof, base.Vot
 	var initVoteproof, acceptVoteproof base.Voteproof
 	switch i, found, err := st.voteproofByFilter(util.NewBSONFilter("height", height).Add("stage", base.StageINIT.String()).D()); {
 	case err != nil:
-		return nil, nil, xerrors.Errorf("failed to find last init voteproof of height, %v: %w", height, err)
+		return nil, nil, errors.Wrapf(err, "failed to find last init voteproof of height, %v", height)
 	case !found:
 		return nil, nil, util.NotFoundError.Errorf("failed to find last init voteproof of height, %v", height)
 	default:
@@ -1159,7 +1159,7 @@ func (st *Database) lastVoteproofs(height base.Height) (base.Voteproof, base.Vot
 
 	switch i, found, err := st.voteproofByFilter(util.NewBSONFilter("height", height).Add("stage", base.StageACCEPT.String()).D()); {
 	case err != nil:
-		return nil, nil, xerrors.Errorf("failed to find last accept voteproof of height, %v: %w", height, err)
+		return nil, nil, errors.Wrapf(err, "failed to find last accept voteproof of height, %v", height)
 	case !found:
 		return nil, nil, util.NotFoundError.Errorf("failed to find last accept voteproof of height, %v", height)
 	default:
@@ -1190,7 +1190,7 @@ func (st *Database) Voteproof(height base.Height, stage base.Stage) (base.Votepr
 
 	switch i, found, err := st.voteproofByFilter(util.NewBSONFilter("height", height).Add("stage", stage.String()).D()); {
 	case err != nil:
-		return nil, xerrors.Errorf("something wrong to find voteproof of height, %v and stage, %v: %w", height, stage, err)
+		return nil, errors.Wrapf(err, "something wrong to find voteproof of height, %v and stage, %v", height, stage)
 	case !found:
 		return nil, nil
 	default:
@@ -1215,7 +1215,7 @@ func (st *Database) BlockDataMap(height base.Height) (block.BlockDataMap, bool, 
 		},
 		options.FindOne().SetSort(util.NewBSONFilter("height", -1).D()),
 	); err != nil {
-		if xerrors.Is(err, util.NotFoundError) {
+		if errors.Is(err, util.NotFoundError) {
 			return nil, false, nil
 		}
 
@@ -1231,7 +1231,7 @@ func (st *Database) BlockDataMap(height base.Height) (block.BlockDataMap, bool, 
 
 func (st *Database) SetBlockDataMaps(bds []block.BlockDataMap) error {
 	if len(bds) < 1 {
-		return xerrors.Errorf("empty BlockDataMaps")
+		return errors.Errorf("empty BlockDataMaps")
 	}
 
 	models := make([]mongo.WriteModel, len(bds))

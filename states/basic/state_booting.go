@@ -1,8 +1,7 @@
 package basicstates
 
 import (
-	"golang.org/x/xerrors"
-
+	"github.com/pkg/errors"
 	"github.com/rs/zerolog"
 	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/base/node"
@@ -54,7 +53,7 @@ func (st *BootingState) Enter(sctx StateSwitchContext) (func() error, error) {
 	if _, err := storage.CheckBlock(st.database, st.policy.NetworkID()); err != nil {
 		st.Log().Error().Err(err).Msg("something wrong to check blocks")
 
-		if !xerrors.Is(err, util.NotFoundError) {
+		if !errors.Is(err, util.NotFoundError) {
 			return nil, err
 		}
 
@@ -94,7 +93,7 @@ func (st *BootingState) enterSyncing(callback func() error) (func() error, error
 		if len(st.suffrage.Nodes()) < 2 { // NOTE suffrage nodes has local node itself
 			st.Log().Debug().Msg("empty blocks; no other nodes in suffrage; can not sync")
 
-			return nil, xerrors.Errorf("empty blocks, but no other nodes; can not sync")
+			return nil, errors.Errorf("empty blocks, but no other nodes; can not sync")
 		}
 	}
 

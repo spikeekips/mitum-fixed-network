@@ -4,13 +4,12 @@ import (
 	"fmt"
 
 	"github.com/spikeekips/mitum/util"
-	"github.com/spikeekips/mitum/util/errors"
 	"github.com/spikeekips/mitum/util/isvalid"
 )
 
 var (
-	EmptyHashError   = errors.NewError("empty hash")
-	InvalidHashError = errors.NewError("invalid hash")
+	EmptyHashError   = util.NewError("empty hash")
+	InvalidHashError = util.NewError("invalid hash")
 )
 
 type Hash interface {

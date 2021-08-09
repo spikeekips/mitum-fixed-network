@@ -3,6 +3,7 @@ package leveldbstorage
 import (
 	"fmt"
 
+	"github.com/pkg/errors"
 	"github.com/rs/zerolog"
 	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/base/ballot"
@@ -19,7 +20,6 @@ import (
 	"github.com/syndtr/goleveldb/leveldb"
 	leveldbStorage "github.com/syndtr/goleveldb/leveldb/storage"
 	leveldbutil "github.com/syndtr/goleveldb/leveldb/util"
-	"golang.org/x/xerrors"
 )
 
 var (
@@ -97,7 +97,7 @@ func (st *Database) Clean() error {
 		return err
 	}
 
-	return wrapError(st.db.Write(batch, nil))
+	return mergeError(st.db.Write(batch, nil))
 }
 
 func (st *Database) CleanByHeight(height base.Height) error {
@@ -112,10 +112,10 @@ func (st *Database) CleanByHeight(height base.Height) error {
 end:
 	for {
 		switch m, found, err := st.ManifestByHeight(h); {
-		case !found:
-			break end
 		case err != nil:
 			return err
+		case !found:
+			break end
 		default:
 			batch.Delete(leveldbBlockHeightKey(h))
 			batch.Delete(leveldbBlockHashKey(m.Hash()))
@@ -128,13 +128,13 @@ end:
 		h++
 	}
 
-	return wrapError(st.db.Write(batch, nil))
+	return mergeError(st.db.Write(batch, nil))
 }
 
 func (st *Database) Copy(source storage.Database) error {
 	var sst *Database
 	if s, ok := source.(*Database); !ok {
-		return xerrors.Errorf("only leveldbstorage.Database can be allowed: %T", source)
+		return errors.Errorf("only leveldbstorage.Database can be allowed: %T", source)
 	} else {
 		sst = s
 	}
@@ -148,7 +148,7 @@ func (st *Database) Copy(source storage.Database) error {
 			batch.Put(key, value)
 
 			if batch.Len() == limit {
-				if err := wrapError(st.db.Write(batch, nil)); err != nil {
+				if err := mergeError(st.db.Write(batch, nil)); err != nil {
 					return false, err
 				}
 
@@ -166,7 +166,7 @@ func (st *Database) Copy(source storage.Database) error {
 		return nil
 	}
 
-	return wrapError(st.db.Write(batch, nil))
+	return mergeError(st.db.Write(batch, nil))
 }
 
 func (st *Database) Encoder() encoder.Encoder {
@@ -232,12 +232,12 @@ func (st *Database) lastBlock() (block.Block, bool, error) {
 func (st *Database) get(key []byte) ([]byte, error) {
 	b, err := st.db.Get(key, nil)
 
-	return b, wrapError(err)
+	return b, mergeError(err)
 }
 
 func (st *Database) block(h valuehash.Hash) (block.Block, bool, error) {
 	if raw, err := st.get(leveldbBlockHashKey(h)); err != nil {
-		if xerrors.Is(err, util.NotFoundError) {
+		if errors.Is(err, util.NotFoundError) {
 			return nil, false, nil
 		}
 
@@ -251,7 +251,7 @@ func (st *Database) block(h valuehash.Hash) (block.Block, bool, error) {
 
 func (st *Database) blockByHeight(height base.Height) (block.Block, bool, error) {
 	if raw, err := st.get(leveldbBlockHeightKey(height)); err != nil {
-		if xerrors.Is(err, util.NotFoundError) {
+		if errors.Is(err, util.NotFoundError) {
 			return nil, false, nil
 		}
 
@@ -265,7 +265,7 @@ func (st *Database) blockByHeight(height base.Height) (block.Block, bool, error)
 
 func (st *Database) Manifest(h valuehash.Hash) (block.Manifest, bool, error) {
 	if raw, err := st.get(leveldbManifestKey(h)); err != nil {
-		if xerrors.Is(err, util.NotFoundError) {
+		if errors.Is(err, util.NotFoundError) {
 			return nil, false, nil
 		}
 
@@ -279,7 +279,7 @@ func (st *Database) Manifest(h valuehash.Hash) (block.Manifest, bool, error) {
 
 func (st *Database) ManifestByHeight(height base.Height) (block.Manifest, bool, error) {
 	if raw, err := st.get(leveldbBlockHeightKey(height)); err != nil {
-		if xerrors.Is(err, util.NotFoundError) {
+		if errors.Is(err, util.NotFoundError) {
 			return nil, false, nil
 		}
 
@@ -319,7 +319,7 @@ func (st *Database) Seal(h valuehash.Hash) (seal.Seal, bool, error) {
 func (st *Database) sealByKey(key []byte) (seal.Seal, bool, error) {
 	b, err := st.get(key)
 	if err != nil {
-		if xerrors.Is(err, util.NotFoundError) {
+		if errors.Is(err, util.NotFoundError) {
 			return nil, false, nil
 		}
 
@@ -348,7 +348,7 @@ func (st *Database) NewSeals(seals []seal.Seal) error {
 		inserted[sl.Hash().String()] = struct{}{}
 	}
 
-	return wrapError(st.db.Write(batch, nil))
+	return mergeError(st.db.Write(batch, nil))
 }
 
 func (st *Database) newSeal(batch *leveldb.Batch, sl seal.Seal) error {
@@ -385,7 +385,7 @@ func (st *Database) newSeal(batch *leveldb.Batch, sl seal.Seal) error {
 func (st *Database) HasSeal(h valuehash.Hash) (bool, error) {
 	found, err := st.db.Has(st.sealKey(h), nil)
 
-	return found, wrapError(err)
+	return found, mergeError(err)
 }
 
 func (st *Database) loadHinter(b []byte) (hint.Hinter, error) {
@@ -432,7 +432,7 @@ func (st *Database) loadBlock(b []byte) (block.Block, error) {
 	} else if hinter == nil {
 		return nil, nil
 	} else if i, ok := hinter.(block.Block); !ok {
-		return nil, xerrors.Errorf("not Block: %T", hinter)
+		return nil, errors.Errorf("not Block: %T", hinter)
 	} else {
 		return i, nil
 	}
@@ -444,7 +444,7 @@ func (st *Database) loadManifest(b []byte) (block.Manifest, error) {
 	} else if hinter == nil {
 		return nil, nil
 	} else if i, ok := hinter.(block.Manifest); !ok {
-		return nil, xerrors.Errorf("not Block: %T", hinter)
+		return nil, errors.Errorf("not Block: %T", hinter)
 	} else {
 		return i, nil
 	}
@@ -456,7 +456,7 @@ func (st *Database) loadSeal(b []byte) (seal.Seal, error) {
 	} else if hinter == nil {
 		return nil, nil
 	} else if i, ok := hinter.(seal.Seal); !ok {
-		return nil, xerrors.Errorf("not Seal: %T", hinter)
+		return nil, errors.Errorf("not Seal: %T", hinter)
 	} else {
 		return i, nil
 	}
@@ -467,7 +467,7 @@ func (st *Database) loadHash(b []byte) (valuehash.Hash, error) {
 	if err := st.loadValue(b, &h); err != nil {
 		return nil, err
 	} else if h.Empty() {
-		return nil, xerrors.Errorf("empty hash found")
+		return nil, errors.Errorf("empty hash found")
 	}
 
 	return h, nil
@@ -479,7 +479,7 @@ func (st *Database) loadState(b []byte) (state.State, error) {
 	} else if hinter == nil {
 		return nil, nil
 	} else if i, ok := hinter.(state.State); !ok {
-		return nil, xerrors.Errorf("not state.State: %T", hinter)
+		return nil, errors.Errorf("not state.State: %T", hinter)
 	} else {
 		return i, nil
 	}
@@ -491,7 +491,7 @@ func (st *Database) loadBlockDataMap(b []byte) (block.BlockDataMap, error) {
 	} else if hinter == nil {
 		return nil, nil
 	} else if i, ok := hinter.(block.BlockDataMap); !ok {
-		return nil, xerrors.Errorf("not block.BlockDataMap: %T", hinter)
+		return nil, errors.Errorf("not block.BlockDataMap: %T", hinter)
 	} else {
 		return i, nil
 	}
@@ -530,7 +530,7 @@ func (st *Database) iter(
 		}
 	}
 
-	return wrapError(iter.Error())
+	return mergeError(iter.Error())
 }
 
 func (st *Database) Seals(callback func(valuehash.Hash, seal.Seal) (bool, error), sort, load bool) error {
@@ -590,7 +590,7 @@ func (st *Database) StagedOperationSeals(callback func(operation.Seal) (bool, er
 			if v, found, err := st.sealByKey(value); err != nil || !found {
 				return false, err
 			} else if sl, ok := v.(operation.Seal); !ok {
-				return false, xerrors.Errorf("not operation.Seal: %T", v)
+				return false, errors.Errorf("not operation.Seal: %T", v)
 			} else {
 				osl = sl
 			}
@@ -607,7 +607,7 @@ func (st *Database) UnstagedOperationSeals(seals []valuehash.Hash) error {
 		return err
 	}
 
-	return wrapError(st.db.Write(batch, nil))
+	return mergeError(st.db.Write(batch, nil))
 }
 
 func (st *Database) Proposals(callback func(ballot.Proposal) (bool, error), sort bool) error {
@@ -617,7 +617,7 @@ func (st *Database) Proposals(callback func(ballot.Proposal) (bool, error), sort
 			if sl, found, err := st.sealByKey(value); err != nil || !found {
 				return false, err
 			} else if pr, ok := sl.(ballot.Proposal); !ok {
-				return false, xerrors.Errorf("not Proposal: %T", sl)
+				return false, errors.Errorf("not Proposal: %T", sl)
 			} else {
 				return callback(pr)
 			}
@@ -633,7 +633,7 @@ func (st *Database) proposalKey(height base.Height, round base.Round, proposer b
 func (st *Database) NewProposal(proposal ballot.Proposal) error {
 	sealKey := st.sealKey(proposal.Hash())
 	if found, err := st.db.Has(sealKey, nil); err != nil {
-		return wrapError(err)
+		return mergeError(err)
 	} else if !found {
 		if err := st.NewSeals([]seal.Seal{proposal}); err != nil {
 			return err
@@ -641,7 +641,7 @@ func (st *Database) NewProposal(proposal ballot.Proposal) error {
 	}
 
 	if err := st.db.Put(st.proposalKey(proposal.Height(), proposal.Round(), proposal.Node()), sealKey, nil); err != nil {
-		return wrapError(err)
+		return mergeError(err)
 	}
 
 	return nil
@@ -650,7 +650,7 @@ func (st *Database) NewProposal(proposal ballot.Proposal) error {
 func (st *Database) Proposal(height base.Height, round base.Round, proposer base.Address) (ballot.Proposal, bool, error) {
 	sealKey, err := st.get(st.proposalKey(height, round, proposer))
 	if err != nil {
-		if xerrors.Is(err, util.NotFoundError) {
+		if errors.Is(err, util.NotFoundError) {
 			return nil, false, nil
 		}
 
@@ -667,7 +667,7 @@ func (st *Database) Proposal(height base.Height, round base.Round, proposer base
 func (st *Database) State(key string) (state.State, bool, error) {
 	b, err := st.get(leveldbStateKey(key))
 	if err != nil {
-		if xerrors.Is(err, util.NotFoundError) {
+		if errors.Is(err, util.NotFoundError) {
 			return nil, false, nil
 		}
 
@@ -683,7 +683,7 @@ func (st *Database) NewState(sta state.State) error {
 	if b, err := marshal(sta, st.enc); err != nil {
 		return err
 	} else if err := st.db.Put(leveldbStateKey(sta.Key()), b, nil); err != nil {
-		return wrapError(err)
+		return mergeError(err)
 	}
 
 	return nil
@@ -692,7 +692,7 @@ func (st *Database) NewState(sta state.State) error {
 func (st *Database) HasOperationFact(h valuehash.Hash) (bool, error) {
 	found, err := st.db.Has(leveldbOperationFactHashKey(h), nil)
 
-	return found, wrapError(err)
+	return found, mergeError(err)
 }
 
 func (st *Database) NewSession(blk block.Block) (storage.DatabaseSession, error) {
@@ -701,7 +701,7 @@ func (st *Database) NewSession(blk block.Block) (storage.DatabaseSession, error)
 
 func (st *Database) SetInfo(key string, b []byte) error {
 	if err := st.db.Put(leveldbInfoKey(key), b, nil); err != nil {
-		return wrapError(err)
+		return mergeError(err)
 	}
 
 	return nil
@@ -709,7 +709,7 @@ func (st *Database) SetInfo(key string, b []byte) error {
 
 func (st *Database) Info(key string) ([]byte, bool, error) {
 	if b, err := st.get(leveldbInfoKey(key)); err != nil {
-		if xerrors.Is(err, util.NotFoundError) {
+		if errors.Is(err, util.NotFoundError) {
 			return nil, false, nil
 		}
 
@@ -770,7 +770,7 @@ func (st *Database) Voteproof(height base.Height, stage base.Stage) (base.Votepr
 	if i, err := st.loadHinter(raw); err != nil {
 		return nil, err
 	} else if j, ok := i.(base.Voteproof); !ok {
-		return nil, xerrors.Errorf("wrong voteproof, not %t", i)
+		return nil, errors.Errorf("wrong voteproof, not %t", i)
 	} else {
 		return j, nil
 	}
@@ -778,7 +778,7 @@ func (st *Database) Voteproof(height base.Height, stage base.Stage) (base.Votepr
 
 func (st *Database) BlockDataMap(height base.Height) (block.BlockDataMap, bool, error) {
 	if raw, err := st.get(leveldbBlockDataMapKey(height)); err != nil {
-		if xerrors.Is(err, util.NotFoundError) {
+		if errors.Is(err, util.NotFoundError) {
 			return nil, false, nil
 		}
 
@@ -792,7 +792,7 @@ func (st *Database) BlockDataMap(height base.Height) (block.BlockDataMap, bool, 
 
 func (st *Database) SetBlockDataMaps(bds []block.BlockDataMap) error {
 	if len(bds) < 1 {
-		return xerrors.Errorf("empty BlockDataMaps")
+		return errors.Errorf("empty BlockDataMaps")
 	}
 
 	batch := new(leveldb.Batch)
@@ -805,7 +805,7 @@ func (st *Database) SetBlockDataMaps(bds []block.BlockDataMap) error {
 		}
 	}
 
-	return wrapError(st.db.Write(batch, nil))
+	return mergeError(st.db.Write(batch, nil))
 }
 
 func (st *Database) LocalBlockDataMapsByHeight(height base.Height, callback func(block.BlockDataMap) (bool, error)) error {

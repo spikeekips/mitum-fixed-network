@@ -1,8 +1,7 @@
 package basicstates
 
 import (
-	"golang.org/x/xerrors"
-
+	"github.com/pkg/errors"
 	"github.com/rs/zerolog"
 	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/base/ballot"
@@ -18,9 +17,9 @@ func NextINITBallotFromACCEPTVoteproof(
 	voteproof base.Voteproof,
 ) (ballot.INITV0, error) {
 	if voteproof.Stage() != base.StageACCEPT {
-		return ballot.INITV0{}, xerrors.Errorf("not accept voteproof")
+		return ballot.INITV0{}, errors.Errorf("not accept voteproof")
 	} else if !voteproof.IsFinished() {
-		return ballot.INITV0{}, xerrors.Errorf("voteproof not yet finished")
+		return ballot.INITV0{}, errors.Errorf("voteproof not yet finished")
 	}
 
 	var height base.Height
@@ -34,15 +33,15 @@ func NextINITBallotFromACCEPTVoteproof(
 		round = voteproof.Round() + 1
 
 		switch m, found, err := st.ManifestByHeight(height - 1); {
-		case !found:
-			return ballot.INITV0{}, xerrors.Errorf("manfest, height=%d not found", height-1)
 		case err != nil:
-			return ballot.INITV0{}, xerrors.Errorf("failed to get manifest: %w", err)
+			return ballot.INITV0{}, errors.Wrap(err, "failed to get manifest")
+		case !found:
+			return ballot.INITV0{}, errors.Errorf("manfest, height=%d not found", height-1)
 		default:
 			previousBlock = m.Hash()
 		}
 	} else if i, ok := voteproof.Majority().(ballot.ACCEPTFact); !ok {
-		return ballot.INITV0{}, xerrors.Errorf(
+		return ballot.INITV0{}, errors.Errorf(
 			"not ballot.ACCEPTBallotFact in voteproof.Majority(); %T", voteproof.Majority())
 	} else { // NOTE agreed accept voteproof
 		height = voteproof.Height() + 1
@@ -56,7 +55,7 @@ func NextINITBallotFromACCEPTVoteproof(
 	} else {
 		switch vp, err := st.Voteproof(voteproof.Height()-1, base.StageACCEPT); {
 		case err != nil:
-			return ballot.INITV0{}, xerrors.Errorf("failed to get last voteproof: %w", err)
+			return ballot.INITV0{}, errors.Wrap(err, "failed to get last voteproof")
 		case vp != nil:
 			avp = vp
 		}
@@ -78,25 +77,25 @@ func NextINITBallotFromINITVoteproof(
 	voteproof base.Voteproof,
 ) (ballot.INITV0, error) {
 	if voteproof.Stage() != base.StageINIT {
-		return ballot.INITV0{}, xerrors.Errorf("not init voteproof")
+		return ballot.INITV0{}, errors.Errorf("not init voteproof")
 	} else if !voteproof.IsFinished() {
-		return ballot.INITV0{}, xerrors.Errorf("voteproof not yet finished")
+		return ballot.INITV0{}, errors.Errorf("voteproof not yet finished")
 	}
 
 	var avp base.Voteproof
 	switch vp, err := st.Voteproof(voteproof.Height()-1, base.StageACCEPT); {
 	case err != nil:
-		return ballot.INITV0{}, xerrors.Errorf("failed to get last voteproof: %w", err)
+		return ballot.INITV0{}, errors.Wrap(err, "failed to get last voteproof")
 	case vp != nil:
 		avp = vp
 	}
 
 	var previousBlock valuehash.Hash
 	switch m, found, err := st.ManifestByHeight(voteproof.Height() - 1); {
-	case !found:
-		return ballot.INITV0{}, xerrors.Errorf("previous manfest, height=%d not found", voteproof.Height())
 	case err != nil:
-		return ballot.INITV0{}, xerrors.Errorf("failed to get previous manifest: %w", err)
+		return ballot.INITV0{}, errors.Wrap(err, "failed to get previous manifest")
+	case !found:
+		return ballot.INITV0{}, errors.Errorf("previous manfest, height=%d not found", voteproof.Height())
 	default:
 		previousBlock = m.Hash()
 	}
@@ -136,13 +135,13 @@ func (bc *BallotChecker) CheckWithLastVoteproof() (bool, error) {
 	lh := bc.lvp.Height()
 
 	if bh < lh {
-		return false, xerrors.Errorf("lower height than last init voteproof")
+		return false, errors.Errorf("lower height than last init voteproof")
 	} else if bh > lh {
 		return true, nil
 	}
 
 	if bc.ballot.Round() < bc.lvp.Round() {
-		return false, xerrors.Errorf("lower round than last init voteproof")
+		return false, errors.Errorf("lower round than last init voteproof")
 	}
 
 	return true, nil

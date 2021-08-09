@@ -3,8 +3,8 @@ package valuehash
 import (
 	"bytes"
 
+	"github.com/pkg/errors"
 	"golang.org/x/crypto/sha3"
-	"golang.org/x/xerrors"
 )
 
 const (
@@ -34,7 +34,7 @@ func NewSHA512(b []byte) SHA512 {
 
 func LoadSHA512FromBytes(b []byte) (Hash, error) {
 	if l := len(b); l != sha512Size {
-		return nil, xerrors.Errorf("invalid sha512 size: %d", l)
+		return nil, errors.Errorf("invalid sha512 size: %d", l)
 	}
 
 	n := [sha512Size]byte{}
@@ -85,7 +85,7 @@ func NewSHA256(b []byte) SHA256 {
 
 func LoadSHA256FromBytes(b []byte) (Hash, error) {
 	if l := len(b); l != sha256Size {
-		return nil, xerrors.Errorf("invalid sha256 size: %d", l)
+		return nil, errors.Errorf("invalid sha256 size: %d", l)
 	}
 
 	n := [sha256Size]byte{}

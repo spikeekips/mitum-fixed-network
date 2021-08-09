@@ -3,8 +3,7 @@ package block
 import (
 	"time"
 
-	"golang.org/x/xerrors"
-
+	"github.com/pkg/errors"
 	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/util"
 	"github.com/spikeekips/mitum/util/hint"
@@ -31,7 +30,7 @@ func (bm ManifestV0) GenerateHash() valuehash.Hash {
 
 func (bm ManifestV0) IsValid(networkID []byte) error {
 	if bm.confirmedAt.IsZero() {
-		return xerrors.Errorf("empty confirmedAt")
+		return errors.Errorf("empty confirmedAt")
 	}
 
 	if err := isvalid.Check([]isvalid.IsValider{
@@ -47,12 +46,12 @@ func (bm ManifestV0) IsValid(networkID []byte) error {
 	if err := isvalid.Check([]isvalid.IsValider{
 		bm.operationsHash,
 		bm.statesHash,
-	}, networkID, true); err != nil && !xerrors.Is(err, valuehash.EmptyHashError) {
+	}, networkID, true); err != nil && !errors.Is(err, valuehash.EmptyHashError) {
 		return err
 	}
 
 	if !bm.h.Equal(bm.GenerateHash()) {
-		return xerrors.Errorf("incorrect manifest hash")
+		return errors.Errorf("incorrect manifest hash")
 	}
 
 	return nil

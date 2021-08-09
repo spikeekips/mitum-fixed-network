@@ -10,6 +10,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/pkg/errors"
 	"github.com/rs/zerolog"
 	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/base/block"
@@ -20,7 +21,6 @@ import (
 	"github.com/spikeekips/mitum/util/logging"
 	"golang.org/x/sync/errgroup"
 	"golang.org/x/sync/semaphore"
-	"golang.org/x/xerrors"
 )
 
 var DefaultTimeAfterRemoveBlockDataFiles = time.Minute * 30
@@ -144,7 +144,7 @@ func (bc *BlockDataCleaner) clean(ctx context.Context) error {
 	}
 
 	if err := sem.Acquire(ctx, limit); err != nil {
-		if !xerrors.Is(err, context.Canceled) {
+		if !errors.Is(err, context.Canceled) {
 			return err
 		}
 	}
@@ -223,7 +223,7 @@ func (bc *BlockDataCleaner) findRemovedDirectory() ([]string, error) {
 	var removeds []string
 	err := filepath.WalkDir(bc.bd.Root(), func(path string, d fs.DirEntry, err error) error {
 		if err != nil {
-			if xerrors.Is(err, fs.ErrPermission) {
+			if errors.Is(err, fs.ErrPermission) {
 				return nil
 			}
 
@@ -236,7 +236,7 @@ func (bc *BlockDataCleaner) findRemovedDirectory() ([]string, error) {
 
 		removed := filepath.Join(path, localfs.BlockDirectoryRemovedTouchFile)
 		if _, err := os.Stat(removed); err != nil {
-			if xerrors.Is(err, fs.ErrNotExist) {
+			if errors.Is(err, fs.ErrNotExist) {
 				return nil
 			}
 
@@ -282,7 +282,7 @@ func (bc *BlockDataCleaner) loadManifestFromRemoveds(removeds []string) ([]base.
 	}
 
 	if err := sem.Acquire(ctx, limit); err != nil {
-		if !xerrors.Is(err, context.Canceled) {
+		if !errors.Is(err, context.Canceled) {
 			return nil, err
 		}
 	}
@@ -299,7 +299,7 @@ func (bc *BlockDataCleaner) loadRemoved(path string) (block.Manifest, error) {
 	var f string
 	switch matches, err := filepath.Glob(g); {
 	case err != nil:
-		return nil, storage.WrapStorageError(err)
+		return nil, storage.MergeStorageError(err)
 	case len(matches) < 1:
 		return nil, util.NotFoundError.Errorf("manifest block data not found")
 	default:
@@ -308,9 +308,9 @@ func (bc *BlockDataCleaner) loadRemoved(path string) (block.Manifest, error) {
 
 	var r io.Reader
 	if i, err := os.Open(filepath.Clean(f)); err != nil {
-		return nil, storage.WrapStorageError(err)
+		return nil, storage.MergeStorageError(err)
 	} else if j, err := util.NewGzipReader(i); err != nil {
-		return nil, storage.WrapStorageError(err)
+		return nil, storage.MergeStorageError(err)
 	} else {
 		r = j
 	}

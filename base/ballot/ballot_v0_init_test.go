@@ -3,13 +3,12 @@ package ballot
 import (
 	"testing"
 
-	"github.com/stretchr/testify/suite"
-	"golang.org/x/xerrors"
-
+	"github.com/pkg/errors"
 	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/base/key"
 	"github.com/spikeekips/mitum/util/localtime"
 	"github.com/spikeekips/mitum/util/valuehash"
+	"github.com/stretchr/testify/suite"
 )
 
 type testINITV0 struct {
@@ -156,7 +155,7 @@ func (t *testINITV0) TestSign() {
 	// invalid signature
 	unknownPK, _ := key.NewBTCPrivatekey()
 	err := unknownPK.Publickey().Verify(ib.BodyHash().Bytes(), ib.Signature())
-	t.True(xerrors.Is(err, key.SignatureVerificationFailedError))
+	t.True(errors.Is(err, key.SignatureVerificationFailedError))
 }
 
 func (t *testINITV0) TestIsValid() {

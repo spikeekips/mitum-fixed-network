@@ -4,6 +4,7 @@ import (
 	"context"
 	"sync"
 
+	"github.com/pkg/errors"
 	"github.com/rs/zerolog"
 	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/base/block"
@@ -13,7 +14,6 @@ import (
 	"github.com/spikeekips/mitum/storage/blockdata"
 	"github.com/spikeekips/mitum/util"
 	"github.com/spikeekips/mitum/util/logging"
-	"golang.org/x/xerrors"
 )
 
 type Syncers struct {
@@ -69,7 +69,7 @@ func NewSyncers(
 
 func (sy *Syncers) Stop() error {
 	if err := sy.ContextDaemon.Stop(); err != nil {
-		if !xerrors.Is(err, util.DaemonAlreadyStoppedError) {
+		if !errors.Is(err, util.DaemonAlreadyStoppedError) {
 			return err
 		}
 	}
@@ -245,7 +245,7 @@ func (sy *Syncers) prepareSyncer(baseManifest block.Manifest) error {
 	if err != nil {
 		l.Debug().Err(err).Msg("failed to make new syncer")
 
-		if xerrors.Is(err, util.IgnoreError) {
+		if errors.Is(err, util.IgnoreError) {
 			return nil
 		}
 

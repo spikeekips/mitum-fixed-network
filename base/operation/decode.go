@@ -1,8 +1,7 @@
 package operation
 
 import (
-	"golang.org/x/xerrors"
-
+	"github.com/pkg/errors"
 	"github.com/spikeekips/mitum/util"
 	"github.com/spikeekips/mitum/util/encoder"
 )
@@ -23,7 +22,7 @@ func DecodeFactSign(b []byte, enc encoder.Encoder) (FactSign, error) {
 	if hinter, err := enc.Decode(b); err != nil {
 		return nil, err
 	} else if f, ok := hinter.(FactSign); !ok {
-		return nil, xerrors.Errorf("not FactSign, %T", hinter)
+		return nil, errors.Errorf("not FactSign, %T", hinter)
 	} else {
 		return f, nil
 	}
@@ -39,7 +38,7 @@ func DecodeReasonError(b []byte, enc encoder.Encoder) (ReasonError, error) {
 	} else if hinter == nil {
 		return nil, nil
 	} else if f, ok := hinter.(ReasonError); !ok {
-		return nil, xerrors.Errorf("not ReasonError, %T", hinter)
+		return nil, errors.Errorf("not ReasonError, %T", hinter)
 	} else {
 		return f, nil
 	}

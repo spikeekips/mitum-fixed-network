@@ -4,8 +4,7 @@ import (
 	"context"
 	"time"
 
-	"golang.org/x/xerrors"
-
+	"github.com/pkg/errors"
 	"github.com/spikeekips/mitum/launch/pm"
 	"github.com/spikeekips/mitum/launch/process"
 	"github.com/spikeekips/mitum/storage"
@@ -24,7 +23,7 @@ func NewCleanStorageCommand(dryrun bool) CleanStorageCommand {
 
 	ps := cmd.Processes()
 	if ps == nil {
-		panic(xerrors.Errorf("processes not prepared"))
+		panic(errors.Errorf("processes not prepared"))
 	}
 
 	disabledProcessors := []string{
@@ -63,7 +62,7 @@ func NewCleanStorageCommand(dryrun bool) CleanStorageCommand {
 
 func (cmd *CleanStorageCommand) Run(version util.Version) error {
 	if err := cmd.Initialize(cmd, version); err != nil {
-		return xerrors.Errorf("failed to initialize command: %w", err)
+		return errors.Wrap(err, "failed to initialize command")
 	}
 	defer cmd.Done()
 	defer func() {

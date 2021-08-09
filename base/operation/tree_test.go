@@ -3,8 +3,8 @@ package operation
 import (
 	"testing"
 
+	"github.com/pkg/errors"
 	"github.com/stretchr/testify/suite"
-	"golang.org/x/xerrors"
 )
 
 type testOperationReasonError struct {
@@ -21,7 +21,7 @@ func (t *testOperationReasonError) TestMake() {
 	t.Implements((*ReasonError)(nil), err)
 
 	var uerr ReasonError
-	t.True(xerrors.As(err, &uerr))
+	t.True(errors.As(err, &uerr))
 	t.Equal(err.Msg(), uerr.Msg())
 	t.Equal(err.data, uerr.Data())
 }

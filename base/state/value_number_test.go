@@ -4,8 +4,8 @@ import (
 	"reflect"
 	"testing"
 
+	"github.com/pkg/errors"
 	"github.com/stretchr/testify/suite"
-	"golang.org/x/xerrors"
 )
 
 type testStateNumberValue struct {
@@ -42,7 +42,7 @@ func (t *testStateNumberValue) TestCases() {
 				isv, err := NewNumberValue(c.v)
 				if len(c.err) > 0 {
 					if err == nil {
-						t.NoError(xerrors.Errorf("error expected, but got %v", c.err), "%d: %v; %v != %v", i, c.name, c.err, err)
+						t.NoError(errors.Errorf("error expected, but got %v", c.err), "%d: %v; %v != %v", i, c.name, c.err, err)
 						return
 					}
 

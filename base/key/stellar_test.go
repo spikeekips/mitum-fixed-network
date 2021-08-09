@@ -3,10 +3,10 @@ package key
 import (
 	"testing"
 
+	"github.com/pkg/errors"
 	"github.com/spikeekips/mitum/util"
 	"github.com/spikeekips/mitum/util/hint"
 	"github.com/stretchr/testify/suite"
-	"golang.org/x/xerrors"
 )
 
 type testStellarKey struct {
@@ -26,7 +26,7 @@ func (t *testStellarKey) TestKeypairIsValid() {
 
 	// empty Keypair
 	empty := StellarPrivatekey{}
-	t.True(xerrors.Is(empty.IsValid(nil), InvalidKeyError))
+	t.True(errors.Is(empty.IsValid(nil), InvalidKeyError))
 }
 
 func (t *testStellarKey) TestKeypairExportKeys() {
@@ -120,7 +120,7 @@ func (t *testStellarKey) TestSignInvalidInput() {
 		newInput = append(newInput, []byte("showme")...)
 
 		err = kp.Publickey().Verify(newInput, sig)
-		t.True(xerrors.Is(err, SignatureVerificationFailedError))
+		t.True(errors.Is(err, SignatureVerificationFailedError))
 	}
 }
 

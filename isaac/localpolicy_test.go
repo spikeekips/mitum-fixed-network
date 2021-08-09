@@ -4,9 +4,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/stretchr/testify/suite"
-
 	"github.com/spikeekips/mitum/base"
+	"github.com/stretchr/testify/suite"
 )
 
 type testPolicy struct {

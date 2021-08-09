@@ -3,8 +3,7 @@ package ballot
 import (
 	"time"
 
-	"golang.org/x/xerrors"
-
+	"github.com/pkg/errors"
 	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/base/key"
 	"github.com/spikeekips/mitum/util"
@@ -103,17 +102,17 @@ func (bb BaseBallotV0) IsValid(networkID []byte) error {
 	}
 
 	if bb.signedAt.IsZero() {
-		return xerrors.Errorf("empty SignedAt")
+		return errors.Errorf("empty SignedAt")
 	}
 
 	if bb.signer == nil {
-		return xerrors.Errorf("empty Signer")
+		return errors.Errorf("empty Signer")
 	} else if err := bb.signer.IsValid(nil); err != nil {
 		return err
 	}
 
 	if bb.signature == nil {
-		return xerrors.Errorf("empty Signature")
+		return errors.Errorf("empty Signature")
 	} else if err := bb.signature.IsValid(nil); err != nil {
 		return err
 	}

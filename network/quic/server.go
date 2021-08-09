@@ -9,18 +9,16 @@ import (
 	"strings"
 	"time"
 
-	"golang.org/x/sync/singleflight"
-	"golang.org/x/xerrors"
-
 	"github.com/gorilla/mux"
+	"github.com/pkg/errors"
 	"github.com/rs/zerolog"
 	"github.com/spikeekips/mitum/base/seal"
 	"github.com/spikeekips/mitum/network"
 	"github.com/spikeekips/mitum/util"
 	"github.com/spikeekips/mitum/util/cache"
 	"github.com/spikeekips/mitum/util/encoder"
-	"github.com/spikeekips/mitum/util/errors"
 	"github.com/spikeekips/mitum/util/logging"
+	"golang.org/x/sync/singleflight"
 )
 
 var (
@@ -34,8 +32,8 @@ var (
 )
 
 var (
-	BadRequestError   = errors.NewError("bad request")
-	NotSupportedErorr = errors.NewError("not supported")
+	BadRequestError   = util.NewError("bad request")
+	NotSupportedErorr = util.NewError("not supported")
 )
 
 var LimitRequestByHeights = 20 // max number of reqeust heights
@@ -389,7 +387,7 @@ func (sv *Server) handleGetBlockData(w http.ResponseWriter, r *http.Request) {
 func mustQuicURL(u, p string) (string, *url.URL) {
 	uu, err := network.ParseURL(u, false)
 	if err != nil {
-		panic(xerrors.Errorf("failed to join quic url: %w", err))
+		panic(errors.Wrap(err, "failed to join quic url"))
 	}
 
 	uu.Path = path.Join(uu.Path, p)
@@ -400,9 +398,9 @@ func mustQuicURL(u, p string) (string, *url.URL) {
 func handleError(w http.ResponseWriter, err error) {
 	status := http.StatusInternalServerError
 	switch {
-	case xerrors.Is(err, util.NotFoundError):
+	case errors.Is(err, util.NotFoundError):
 		status = http.StatusNotFound
-	case xerrors.Is(err, BadRequestError):
+	case errors.Is(err, BadRequestError):
 		status = http.StatusBadRequest
 	}
 

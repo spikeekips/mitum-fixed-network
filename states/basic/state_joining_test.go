@@ -4,9 +4,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/stretchr/testify/suite"
-	"golang.org/x/xerrors"
-
+	"github.com/pkg/errors"
 	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/base/ballot"
 	"github.com/spikeekips/mitum/base/block"
@@ -15,6 +13,7 @@ import (
 	"github.com/spikeekips/mitum/util"
 	"github.com/spikeekips/mitum/util/localtime"
 	"github.com/spikeekips/mitum/util/valuehash"
+	"github.com/stretchr/testify/suite"
 )
 
 type testStateJoining struct {
@@ -382,7 +381,7 @@ func (t *testStateJoining) TestNewINITVoteproof() {
 	err = st.ProcessVoteproof(newINITVoteproof)
 
 	var received StateSwitchContext
-	t.True(xerrors.As(err, &received))
+	t.True(errors.As(err, &received))
 
 	t.Equal(base.StateJoining, received.FromState())
 	t.Equal(base.StateConsensus, received.ToState())
@@ -469,7 +468,7 @@ func (t *testStateJoining) TestStuckAInACCEPTStage() {
 
 	select {
 	case <-time.After(time.Second * 5):
-		t.NoError(xerrors.Errorf("timeout to wait to be switched to consensus state"))
+		t.NoError(errors.Errorf("timeout to wait to be switched to consensus state"))
 	case err := <-stopch:
 		t.NoError(err)
 	case sctx := <-statech:

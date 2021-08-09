@@ -4,8 +4,8 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/pkg/errors"
 	"github.com/stretchr/testify/suite"
-	"golang.org/x/xerrors"
 )
 
 type testType struct {
@@ -41,14 +41,14 @@ func (t *testType) TestNew() {
 				err := ty.IsValid(nil)
 				if len(c.err) > 0 {
 					if err == nil {
-						t.NoError(xerrors.Errorf("expected %q, but nil error", c.err), "%d: %v", i, c.name)
+						t.NoError(errors.Errorf("expected %q, but nil error", c.err), "%d: %v", i, c.name)
 
 						return
 					}
 
 					t.Contains(err.Error(), c.err, "%d: %v", i, c.name)
 				} else if err != nil {
-					t.NoError(xerrors.Errorf("expected nil error, but %+v", err), "%d: %v", i, c.name)
+					t.NoError(errors.Errorf("expected nil error, but %+v", err), "%d: %v", i, c.name)
 
 					return
 				}

@@ -8,6 +8,7 @@ import (
 	"path/filepath"
 	"testing"
 
+	"github.com/pkg/errors"
 	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/base/ballot"
 	"github.com/spikeekips/mitum/base/block"
@@ -22,7 +23,6 @@ import (
 	"github.com/spikeekips/mitum/util/tree"
 	"github.com/spikeekips/mitum/util/valuehash"
 	"github.com/stretchr/testify/suite"
-	"golang.org/x/xerrors"
 )
 
 type testSession struct {
@@ -105,7 +105,7 @@ func (t *testSession) loadFile(p string) ([]interface{}, error) {
 	for {
 		l, err := bd.ReadBytes('\n')
 		if err != nil {
-			if !xerrors.Is(err, io.EOF) {
+			if !errors.Is(err, io.EOF) {
 				return nil, err
 			}
 		}
@@ -117,7 +117,7 @@ func (t *testSession) loadFile(p string) ([]interface{}, error) {
 			}
 		}
 
-		if xerrors.Is(err, io.EOF) {
+		if errors.Is(err, io.EOF) {
 			break
 		}
 	}
@@ -143,7 +143,7 @@ func (t *testSession) checkSessionFile(ss *Session, dataType string) string {
 func (t *testSession) TestRootNotExist() {
 	_, err := NewSession(valuehash.RandomSHA256().String(), blockdata.NewDefaultWriter(t.JSONEnc), 10)
 	t.Error(err)
-	t.True(xerrors.Is(err, util.NotFoundError))
+	t.True(errors.Is(err, util.NotFoundError))
 }
 
 func (t *testSession) TestNew() {

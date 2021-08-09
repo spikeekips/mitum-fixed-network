@@ -4,8 +4,8 @@ import (
 	"encoding/json"
 
 	"github.com/btcsuite/btcutil/base58"
+	"github.com/spikeekips/mitum/util"
 	jsonenc "github.com/spikeekips/mitum/util/encoder/json"
-	"github.com/spikeekips/mitum/util/errors"
 	"github.com/spikeekips/mitum/util/tree"
 )
 
@@ -81,7 +81,7 @@ func (e *BaseReasonError) UnmarshalJSON(b []byte) error {
 		return err
 	}
 
-	e.NError = errors.NewError(ue.MS)
+	e.NError = util.NewError(ue.MS)
 	e.msg = ue.MS
 	e.data = ue.DT
 

@@ -1,8 +1,8 @@
 package memberlist
 
-import "github.com/spikeekips/mitum/util/errors"
+import "github.com/spikeekips/mitum/util"
 
 var (
-	JoinDeclinedError    = errors.NewError("joining declined")
-	JoiningCanceledError = errors.NewError("joining canceled")
+	JoinDeclinedError    = util.NewError("joining declined")
+	JoiningCanceledError = util.NewError("joining canceled")
 )

@@ -6,9 +6,9 @@ import (
 	"testing"
 	"time"
 
+	"github.com/pkg/errors"
 	"github.com/stretchr/testify/suite"
 	"go.uber.org/goleak"
-	"golang.org/x/xerrors"
 )
 
 type emptyDaemon struct {
@@ -45,7 +45,7 @@ func (t *testFunctionDaemon) TestStart() {
 	t.True(ed.IsStarted())
 
 	// start again
-	t.True(xerrors.Is(ed.Start(), DaemonAlreadyStartedError))
+	t.True(errors.Is(ed.Start(), DaemonAlreadyStartedError))
 
 	defer func() {
 		_ = ed.Stop()
@@ -74,19 +74,19 @@ func (t *testFunctionDaemon) TestStop() {
 	t.True(ed.IsStopped())
 
 	// stop again
-	t.True(xerrors.Is(ed.Stop(), DaemonAlreadyStoppedError))
+	t.True(errors.Is(ed.Stop(), DaemonAlreadyStoppedError))
 }
 
 func (t *testFunctionDaemon) TestFunctionError() {
 	ed := &emptyDaemon{FunctionDaemon: NewFunctionDaemon(func(stopChan chan struct{}) error {
-		return xerrors.Errorf("find me :)")
+		return errors.Errorf("find me :)")
 	}, true)}
 	t.NoError(ed.Start())
 
 	time.Sleep(time.Millisecond * 100)
 
 	t.False(ed.IsStarted())
-	t.True(xerrors.Is(ed.Stop(), DaemonAlreadyStoppedError))
+	t.True(errors.Is(ed.Stop(), DaemonAlreadyStoppedError))
 }
 
 func (t *testFunctionDaemon) TestStopByStopChan() {
@@ -106,7 +106,7 @@ func (t *testFunctionDaemon) TestStopByStopChan() {
 
 	time.Sleep(time.Millisecond * 50)
 
-	t.True(xerrors.Is(ed.Stop(), DaemonAlreadyStoppedError))
+	t.True(errors.Is(ed.Stop(), DaemonAlreadyStoppedError))
 }
 
 func (t *testFunctionDaemon) TestTimer() {

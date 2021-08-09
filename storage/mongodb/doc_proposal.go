@@ -1,8 +1,7 @@
 package mongodbstorage
 
 import (
-	"golang.org/x/xerrors"
-
+	"github.com/pkg/errors"
 	"github.com/spikeekips/mitum/base/ballot"
 	"github.com/spikeekips/mitum/util/encoder"
 	bsonenc "github.com/spikeekips/mitum/util/encoder/bson"
@@ -47,7 +46,7 @@ func loadProposalFromDecoder(decoder func(interface{}) error, encs *encoder.Enco
 
 	var proposal ballot.Proposal
 	if i, ok := sl.(ballot.Proposal); !ok {
-		return nil, xerrors.Errorf("not Proposal: %T", sl)
+		return nil, errors.Errorf("not Proposal: %T", sl)
 	} else {
 		proposal = i
 	}

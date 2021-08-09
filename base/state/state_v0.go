@@ -4,8 +4,7 @@ import (
 	"bytes"
 	"sort"
 
-	"golang.org/x/xerrors"
-
+	"github.com/pkg/errors"
 	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/util"
 	"github.com/spikeekips/mitum/util/hint"
@@ -45,7 +44,7 @@ func (st StateV0) IsValid([]byte) error {
 	}
 
 	if st.h != nil && st.h.Empty() {
-		return xerrors.Errorf("empty hash found")
+		return errors.Errorf("empty hash found")
 	}
 
 	if err := st.value.IsValid(nil); err != nil {
@@ -168,7 +167,7 @@ func (st StateV0) SetOperation(ops []valuehash.Hash) State {
 
 func (st StateV0) Merge(source State) (State, error) {
 	if st.Key() != source.Key() {
-		return nil, xerrors.Errorf("different key found during merging")
+		return nil, errors.Errorf("different key found during merging")
 	}
 
 	if source.Value() == nil {

@@ -3,12 +3,12 @@ package deploy
 import (
 	"context"
 
+	"github.com/pkg/errors"
 	"github.com/spikeekips/mitum/launch/config"
 	"github.com/spikeekips/mitum/launch/process"
 	"github.com/spikeekips/mitum/storage/blockdata"
 	"github.com/spikeekips/mitum/storage/blockdata/localfs"
 	"github.com/spikeekips/mitum/util/logging"
-	"golang.org/x/xerrors"
 )
 
 var HookNameBlockDataCleaner = "blockdata_cleaner"
@@ -24,7 +24,7 @@ func HookBlockDataCleaner(ctx context.Context) (context.Context, error) {
 	if err := process.LoadBlockDataContextValue(ctx, &bd); err != nil {
 		return ctx, err
 	} else if i, ok := bd.(*localfs.BlockData); !ok {
-		return ctx, xerrors.Errorf("to clean blockdata, needs localfs.BlockData, not %T", bd)
+		return ctx, errors.Errorf("to clean blockdata, needs localfs.BlockData, not %T", bd)
 	} else {
 		lbd = i
 	}

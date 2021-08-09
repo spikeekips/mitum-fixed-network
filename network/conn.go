@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"net/url"
 
+	"github.com/pkg/errors"
 	"github.com/spikeekips/mitum/util"
-	"golang.org/x/xerrors"
 )
 
 type ConnInfo interface {
@@ -61,7 +61,7 @@ func NewHTTPConnInfo(u *url.URL, insecure bool) HTTPConnInfo {
 func NewHTTPConnInfoFromString(s string, insecure bool) (HTTPConnInfo, error) {
 	u, err := NormalizeURLString(s)
 	if err != nil {
-		return HTTPConnInfo{}, xerrors.Errorf("wrong node url, %q: %w", s, err)
+		return HTTPConnInfo{}, errors.Wrapf(err, "wrong node url, %q", s)
 	}
 
 	return NewHTTPConnInfo(u, insecure), nil

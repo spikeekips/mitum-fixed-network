@@ -3,14 +3,13 @@ package leveldbstorage
 import (
 	"context"
 
-	"github.com/syndtr/goleveldb/leveldb"
-	"golang.org/x/xerrors"
-
+	"github.com/pkg/errors"
 	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/base/block"
 	"github.com/spikeekips/mitum/base/state"
 	"github.com/spikeekips/mitum/util/tree"
 	"github.com/spikeekips/mitum/util/valuehash"
+	"github.com/syndtr/goleveldb/leveldb"
 )
 
 type DatabaseSession struct {
@@ -35,7 +34,7 @@ func (bst *DatabaseSession) Block() block.Block {
 
 func (bst *DatabaseSession) SetBlock(_ context.Context, blk block.Block) error {
 	if bst.block.Height() != blk.Height() {
-		return xerrors.Errorf(
+		return errors.Errorf(
 			"block has different height from initial block; initial=%d != block=%d",
 			bst.block.Height(),
 			blk.Height(),
@@ -43,7 +42,7 @@ func (bst *DatabaseSession) SetBlock(_ context.Context, blk block.Block) error {
 	}
 
 	if bst.block.Round() != blk.Round() {
-		return xerrors.Errorf(
+		return errors.Errorf(
 			"block has different round from initial block; initial=%d != block=%d",
 			bst.block.Round(),
 			blk.Round(),
@@ -153,7 +152,7 @@ func (bst *DatabaseSession) Commit(ctx context.Context, bd block.BlockDataMap) e
 		bst.batch.Put(leveldbBlockDataMapKey(bd.Height()), b)
 	}
 
-	return wrapError(bst.st.db.Write(bst.batch, nil))
+	return mergeError(bst.st.db.Write(bst.batch, nil))
 }
 
 func (bst *DatabaseSession) Cancel() error {
@@ -166,7 +165,7 @@ func (bst *DatabaseSession) Close() error {
 
 func (bst *DatabaseSession) SetACCEPTVoteproof(voteproof base.Voteproof) error {
 	if s := voteproof.Stage(); s != base.StageACCEPT {
-		return xerrors.Errorf("not accept voteproof, %v", s)
+		return errors.Errorf("not accept voteproof, %v", s)
 	}
 
 	if b, err := marshal(voteproof, bst.st.enc); err != nil {

@@ -3,9 +3,9 @@ package memberlist
 import (
 	"net/url"
 
+	"github.com/pkg/errors"
 	"github.com/spikeekips/mitum/network"
 	"github.com/spikeekips/mitum/util"
-	"golang.org/x/xerrors"
 )
 
 type NodeMeta struct {
@@ -34,7 +34,7 @@ func NewNodeMeta(publish string, insecure bool) (NodeMeta, error) {
 func NewNodeMetaFromBytes(b []byte) (NodeMeta, error) {
 	var meta NodeMeta
 	if err := util.JSON.Unmarshal(b, &meta); err != nil {
-		return NodeMeta{}, xerrors.Errorf("failed to parse NodeMeta: %w", err)
+		return NodeMeta{}, errors.Wrap(err, "failed to parse NodeMeta")
 	}
 
 	return meta, meta.IsValid(nil)
@@ -42,7 +42,7 @@ func NewNodeMetaFromBytes(b []byte) (NodeMeta, error) {
 
 func (meta NodeMeta) IsValid([]byte) error {
 	if len(meta.b) < 1 {
-		return xerrors.Errorf("empty bytes")
+		return errors.Errorf("empty bytes")
 	}
 
 	return isValidPublishURL(meta.publish)
@@ -82,7 +82,7 @@ func (meta NodeMeta) AddMeta(k string, v interface{}) (NodeMeta, error) {
 
 	b, err := util.JSON.Marshal(meta)
 	if err != nil {
-		return NodeMeta{}, xerrors.Errorf("failed to marshal NodeMeta: %w", err)
+		return NodeMeta{}, errors.Wrap(err, "failed to marshal NodeMeta")
 	}
 	meta.b = b
 

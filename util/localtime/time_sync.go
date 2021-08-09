@@ -6,9 +6,8 @@ import (
 	"time"
 
 	"github.com/beevik/ntp"
+	"github.com/pkg/errors"
 	"github.com/rs/zerolog"
-	"golang.org/x/xerrors"
-
 	"github.com/spikeekips/mitum/util"
 	"github.com/spikeekips/mitum/util/logging"
 )
@@ -33,17 +32,17 @@ type TimeSyncer struct {
 // NewTimeSyncer creates new TimeSyncer
 func NewTimeSyncer(server string, checkInterval time.Duration) (*TimeSyncer, error) {
 	if checkInterval < timeServerQueryingTimeout {
-		return nil, xerrors.Errorf("too narrow checking interval; should be over %v", timeServerQueryingTimeout)
+		return nil, errors.Errorf("too narrow checking interval; should be over %v", timeServerQueryingTimeout)
 	}
 
 	if err := util.Retry(3, time.Second*2, func(int) error {
 		if _, err := ntp.Query(server); err != nil {
-			return xerrors.Errorf("failed to query ntp server, %q: %w", server, err)
+			return errors.Wrapf(err, "failed to query ntp server, %q", server)
 		}
 
 		return nil
 	}); err != nil {
-		return nil, xerrors.Errorf("failed to query ntp server, %q: %w", server, err)
+		return nil, err
 	}
 
 	ts := &TimeSyncer{

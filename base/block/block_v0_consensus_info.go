@@ -1,8 +1,7 @@
 package block
 
 import (
-	"golang.org/x/xerrors"
-
+	"github.com/pkg/errors"
 	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/base/ballot"
 	"github.com/spikeekips/mitum/util/hint"
@@ -29,9 +28,9 @@ func (bc ConsensusInfoV0) IsValid(networkID []byte) error {
 	}
 
 	if bc.initVoteproof.Stage() != base.StageINIT {
-		return xerrors.Errorf("invalid initVoteproof, %v found in ConsensusInfo", bc.initVoteproof.Stage())
+		return errors.Errorf("invalid initVoteproof, %v found in ConsensusInfo", bc.initVoteproof.Stage())
 	} else if bc.acceptVoteproof.Stage() != base.StageACCEPT {
-		return xerrors.Errorf("invalid acceptVoteproof, %v found in ConsensusInfo", bc.acceptVoteproof.Stage())
+		return errors.Errorf("invalid acceptVoteproof, %v found in ConsensusInfo", bc.acceptVoteproof.Stage())
 	}
 
 	sn := map[base.Address]base.Node{}
@@ -56,9 +55,9 @@ func (ConsensusInfoV0) isValidVoteproof(
 	for i := range voteproof.Votes() {
 		nf := voteproof.Votes()[i]
 		if node, found := sn[nf.Node()]; !found {
-			return xerrors.Errorf("unknown node, %s voted in %v voteproof.Votes()", nf.Node(), voteproof.Stage())
+			return errors.Errorf("unknown node, %s voted in %v voteproof.Votes()", nf.Node(), voteproof.Stage())
 		} else if !nf.Signer().Equal(node.Publickey()) {
-			return xerrors.Errorf("node, %s has invalid Publickey in %v voteproof", nf.Node(), voteproof.Stage())
+			return errors.Errorf("node, %s has invalid Publickey in %v voteproof", nf.Node(), voteproof.Stage())
 		}
 	}
 
@@ -121,7 +120,7 @@ func (si SuffrageInfoV0) IsValid([]byte) error {
 	}
 
 	if !found {
-		return xerrors.Errorf("proposer not found in nodes")
+		return errors.Errorf("proposer not found in nodes")
 	}
 
 	return isvalid.Check(vs, nil, false)

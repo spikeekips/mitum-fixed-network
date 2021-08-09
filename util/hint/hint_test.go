@@ -4,9 +4,9 @@ import (
 	"encoding/json"
 	"testing"
 
+	"github.com/pkg/errors"
 	"github.com/stretchr/testify/suite"
 	"go.mongodb.org/mongo-driver/bson"
-	"golang.org/x/xerrors"
 )
 
 type testHint struct {
@@ -42,14 +42,14 @@ func (t *testType) TestParse() {
 				ht, err := ParseHint(c.s)
 				if len(c.err) > 0 {
 					if err == nil {
-						t.NoError(xerrors.Errorf("expected %q, but nil error", c.err), "%d: %v", i, c.name)
+						t.NoError(errors.Errorf("expected %q, but nil error", c.err), "%d: %v", i, c.name)
 
 						return
 					}
 
 					t.Contains(err.Error(), c.err, "%d: %v", i, c.name)
 				} else if err != nil {
-					t.NoError(xerrors.Errorf("expected nil error, but %+v", err), "%d: %v", i, c.name)
+					t.NoError(errors.Errorf("expected nil error, but %+v", err), "%d: %v", i, c.name)
 
 					return
 				}
@@ -93,14 +93,14 @@ func (t *testType) TestCompatible() {
 
 				if len(c.err) > 0 {
 					if err == nil {
-						t.NoError(xerrors.Errorf("expected %q, but nil error", c.err), "%d: %v", i, c.name)
+						t.NoError(errors.Errorf("expected %q, but nil error", c.err), "%d: %v", i, c.name)
 
 						return
 					}
 
 					t.Contains(err.Error(), c.err, "%d: %v", i, c.name)
 				} else if err != nil {
-					t.NoError(xerrors.Errorf("expected nil error, but %+v", err), "%d: %v", i, c.name)
+					t.NoError(errors.Errorf("expected nil error, but %+v", err), "%d: %v", i, c.name)
 
 					return
 				}

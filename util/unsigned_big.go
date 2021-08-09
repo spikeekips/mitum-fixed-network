@@ -2,11 +2,9 @@ package util
 
 import (
 	"math/big"
-
-	"github.com/spikeekips/mitum/util/errors"
 )
 
-var InvalidUnsignedIntError = errors.NewError("invalid UnsignedInt")
+var InvalidUnsignedIntError = NewError("invalid UnsignedInt")
 
 var ZeroInt = big.NewInt(0)
 

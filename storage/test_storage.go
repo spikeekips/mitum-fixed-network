@@ -5,8 +5,6 @@ package storage
 import (
 	"context"
 
-	"github.com/stretchr/testify/suite"
-
 	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/base/block"
 	"github.com/spikeekips/mitum/base/key"
@@ -20,6 +18,7 @@ import (
 	"github.com/spikeekips/mitum/util/localtime"
 	"github.com/spikeekips/mitum/util/tree"
 	"github.com/spikeekips/mitum/util/valuehash"
+	"github.com/stretchr/testify/suite"
 )
 
 type DummyDatabaseSession struct {

@@ -1,12 +1,11 @@
 package mongodbstorage
 
 import (
-	"go.mongodb.org/mongo-driver/bson"
-	"golang.org/x/xerrors"
-
+	"github.com/pkg/errors"
 	"github.com/spikeekips/mitum/base/block"
 	"github.com/spikeekips/mitum/util/encoder"
 	bsonenc "github.com/spikeekips/mitum/util/encoder/bson"
+	"go.mongodb.org/mongo-driver/bson"
 )
 
 type BlockDataMapDoc struct {
@@ -52,7 +51,7 @@ func loadBlockDataMapFromDecoder(decoder func(interface{}) error, encs *encoder.
 	if err != nil {
 		return nil, err
 	} else if i, ok := hinter.(block.BlockDataMap); !ok {
-		return nil, xerrors.Errorf("not block.BlockDataMap: %T", hinter)
+		return nil, errors.Errorf("not block.BlockDataMap: %T", hinter)
 	} else {
 		bd = i
 	}

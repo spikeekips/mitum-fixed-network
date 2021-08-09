@@ -5,8 +5,7 @@ import (
 	"crypto/tls"
 	"time"
 
-	"golang.org/x/xerrors"
-
+	"github.com/pkg/errors"
 	"github.com/spikeekips/mitum/launch/config"
 	"github.com/spikeekips/mitum/launch/pm"
 	"github.com/spikeekips/mitum/network"
@@ -80,7 +79,7 @@ func NewNetworkServer(
 ) (network.Server, error) {
 	je, err := encs.Encoder(jsonenc.JSONEncoderType, "")
 	if err != nil {
-		return nil, xerrors.Errorf("json encoder needs for quic-network: %w", err)
+		return nil, errors.Wrap(err, "json encoder needs for quic-network")
 	}
 
 	if qs, err := quicnetwork.NewPrimitiveQuicServer(bind, certs); err != nil {

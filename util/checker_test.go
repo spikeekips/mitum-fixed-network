@@ -1,9 +1,9 @@
 package util
 
 import (
-	"fmt"
 	"testing"
 
+	"github.com/pkg/errors"
 	"github.com/stretchr/testify/suite"
 	"go.uber.org/goleak"
 )
@@ -75,7 +75,7 @@ func (t *testChecker) TestKeep() {
 func (t *testChecker) TestError() {
 	cs := &checkerStruct{
 		c0keep: true, c0err: nil,
-		c1keep: true, c1err: fmt.Errorf("show me"),
+		c1keep: true, c1err: errors.Errorf("show me"),
 		c2keep: true, c2err: nil,
 	}
 

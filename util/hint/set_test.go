@@ -5,10 +5,10 @@ import (
 	"sort"
 	"testing"
 
+	"github.com/pkg/errors"
 	"github.com/spikeekips/mitum/util"
 	"github.com/stretchr/testify/suite"
 	"golang.org/x/mod/semver"
-	"golang.org/x/xerrors"
 )
 
 type hinter struct {
@@ -44,7 +44,7 @@ func (t *testHintset) TestDuplicated() {
 	ht := newHinter(ty, "v2019.10")
 	t.NoError(hs.Add(ht))
 	err := hs.Add(ht)
-	t.True(xerrors.Is(err, util.FoundError))
+	t.True(errors.Is(err, util.FoundError))
 }
 
 func (t *testHintset) TestGet() {
@@ -181,17 +181,17 @@ func (t *testHintset) TestCompatibleMajor() {
 
 	// major matched, but upper minor
 	uht, err = hs.Compatible(NewHint(ty, "v201910.2"))
-	t.True(xerrors.Is(err, util.NotFoundError))
+	t.True(errors.Is(err, util.NotFoundError))
 	t.Nil(uht)
 
 	// upper major
 	uht, err = hs.Compatible(NewHint(ty, "v201934"))
-	t.True(xerrors.Is(err, util.NotFoundError))
+	t.True(errors.Is(err, util.NotFoundError))
 	t.Nil(uht)
 
 	// again; get from cached
 	uht, err = hs.Compatible(NewHint(ty, "v201934"))
-	t.True(xerrors.Is(err, util.NotFoundError))
+	t.True(errors.Is(err, util.NotFoundError))
 	t.Nil(uht)
 }
 
@@ -208,7 +208,7 @@ func (t *testGlobalHintset) TestAddType() {
 
 	ht := newHinter(Type("showme"), "v2019.10")
 	err := hs.Add(ht)
-	t.True(xerrors.Is(err, util.NotFoundError))
+	t.True(errors.Is(err, util.NotFoundError))
 
 	t.False(hs.HasType(ht.Hint().Type()))
 	t.NoError(hs.AddType(ht.Hint().Type()))
@@ -220,7 +220,7 @@ func (t *testGlobalHintset) TestInitialize() {
 
 	ht := newHinter(Type("showme"), "v2019.10")
 	err := hs.Add(ht)
-	t.True(xerrors.Is(err, util.NotFoundError))
+	t.True(errors.Is(err, util.NotFoundError))
 
 	t.NoError(hs.AddType(ht.Hint().Type()))
 

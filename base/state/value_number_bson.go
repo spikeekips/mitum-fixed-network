@@ -3,10 +3,9 @@ package state
 import (
 	"reflect"
 
-	"go.mongodb.org/mongo-driver/bson"
-
 	bsonenc "github.com/spikeekips/mitum/util/encoder/bson"
 	"github.com/spikeekips/mitum/util/valuehash"
+	"go.mongodb.org/mongo-driver/bson"
 )
 
 func (nv NumberValue) MarshalBSON() ([]byte, error) {

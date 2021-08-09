@@ -7,8 +7,7 @@ import (
 	"os"
 	"time"
 
-	"golang.org/x/xerrors"
-
+	"github.com/pkg/errors"
 	"github.com/spikeekips/mitum/launch/process"
 	"github.com/spikeekips/mitum/network"
 	"github.com/spikeekips/mitum/util"
@@ -30,7 +29,7 @@ func NewNodeInfoCommand() NodeInfoCommand {
 
 func (cmd *NodeInfoCommand) Run(version util.Version) error {
 	if err := cmd.Initialize(cmd, version); err != nil {
-		return xerrors.Errorf("failed to initialize command: %w", err)
+		return errors.Wrap(err, "failed to initialize command")
 	}
 
 	if cmd.Timeout < 1 {

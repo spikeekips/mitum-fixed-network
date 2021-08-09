@@ -4,9 +4,7 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/stretchr/testify/suite"
-	"golang.org/x/xerrors"
-
+	"github.com/pkg/errors"
 	"github.com/spikeekips/mitum/base/key"
 	"github.com/spikeekips/mitum/util"
 	bsonenc "github.com/spikeekips/mitum/util/encoder/bson"
@@ -15,6 +13,7 @@ import (
 	"github.com/spikeekips/mitum/util/isvalid"
 	"github.com/spikeekips/mitum/util/localtime"
 	"github.com/spikeekips/mitum/util/valuehash"
+	"github.com/stretchr/testify/suite"
 )
 
 var tinyFactHint = hint.NewHint(hint.Type("tiny-fact"), "v0.1")
@@ -134,19 +133,19 @@ func (t *testVoteproof) SetupTest() {
 func (t *testVoteproof) TestInvalidHeight() {
 	vp := VoteproofV0{height: Height(-3)}
 	err := vp.IsValid(nil)
-	t.True(xerrors.Is(err, isvalid.InvalidError))
+	t.True(errors.Is(err, isvalid.InvalidError))
 }
 
 func (t *testVoteproof) TestInvalidStage() {
 	vp := VoteproofV0{stage: Stage(100)}
 	err := vp.IsValid(nil)
-	t.True(xerrors.Is(err, isvalid.InvalidError))
+	t.True(errors.Is(err, isvalid.InvalidError))
 }
 
 func (t *testVoteproof) TestInvalidThreshold() {
 	vp := VoteproofV0{stage: StageINIT, thresholdRatio: ThresholdRatio(140)}
 	err := vp.IsValid(nil)
-	t.True(xerrors.Is(err, isvalid.InvalidError))
+	t.True(errors.Is(err, isvalid.InvalidError))
 }
 
 func (t *testVoteproof) TestInvalidResult() {
@@ -156,7 +155,7 @@ func (t *testVoteproof) TestInvalidResult() {
 		result:         VoteResultType(10),
 	}
 	err := vp.IsValid(nil)
-	t.True(xerrors.Is(err, isvalid.InvalidError))
+	t.True(errors.Is(err, isvalid.InvalidError))
 }
 
 func (t *testVoteproof) TestEmptyMajority() {
@@ -168,7 +167,7 @@ func (t *testVoteproof) TestEmptyMajority() {
 		finishedAt:     localtime.UTCNow(),
 	}
 	err := vp.IsValid(nil)
-	t.True(xerrors.Is(err, isvalid.InvalidError))
+	t.True(errors.Is(err, isvalid.InvalidError))
 	t.Contains(err.Error(), "empty majority")
 }
 
@@ -180,7 +179,7 @@ func (t *testVoteproof) TestInvalidMajority() {
 		majority:       tinyFact{A: ""},
 	}
 	err := vp.IsValid(nil)
-	t.True(xerrors.Is(err, isvalid.InvalidError))
+	t.True(errors.Is(err, isvalid.InvalidError))
 }
 
 func (t *testVoteproof) TestEmptyFacts() {
@@ -191,7 +190,7 @@ func (t *testVoteproof) TestEmptyFacts() {
 		majority:       tinyFact{A: "showme"},
 	}
 	err := vp.IsValid(nil)
-	t.True(xerrors.Is(err, isvalid.InvalidError))
+	t.True(errors.Is(err, isvalid.InvalidError))
 }
 
 func (t *testVoteproof) TestEmptyBallots() {
@@ -205,7 +204,7 @@ func (t *testVoteproof) TestEmptyBallots() {
 		facts:          []Fact{fact},
 	}
 	err := vp.IsValid(nil)
-	t.True(xerrors.Is(err, isvalid.InvalidError))
+	t.True(errors.Is(err, isvalid.InvalidError))
 }
 
 func (t *testVoteproof) TestEmptyVotes() {
@@ -219,7 +218,7 @@ func (t *testVoteproof) TestEmptyVotes() {
 		facts:          []Fact{fact},
 	}
 	err := vp.IsValid(nil)
-	t.True(xerrors.Is(err, isvalid.InvalidError))
+	t.True(errors.Is(err, isvalid.InvalidError))
 }
 
 func (t *testVoteproof) TestWrongVotesCount() {
@@ -242,7 +241,7 @@ func (t *testVoteproof) TestWrongVotesCount() {
 		},
 	}
 	err := vp.IsValid(nil)
-	t.True(xerrors.Is(err, isvalid.InvalidError))
+	t.True(errors.Is(err, isvalid.InvalidError))
 }
 
 func (t *testVoteproof) TestInvalidFactHash() {
@@ -271,7 +270,7 @@ func (t *testVoteproof) TestInvalidFactHash() {
 		finishedAt: localtime.UTCNow(),
 	}
 	err := vp.IsValid(nil)
-	t.True(xerrors.Is(err, valuehash.EmptyHashError))
+	t.True(errors.Is(err, valuehash.EmptyHashError))
 }
 
 func (t *testVoteproof) TestUnknownFactHash() {

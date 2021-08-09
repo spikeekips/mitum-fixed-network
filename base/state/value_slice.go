@@ -3,8 +3,7 @@ package state
 import (
 	"reflect"
 
-	"golang.org/x/xerrors"
-
+	"github.com/pkg/errors"
 	"github.com/spikeekips/mitum/util"
 	"github.com/spikeekips/mitum/util/hint"
 	"github.com/spikeekips/mitum/util/valuehash"
@@ -31,7 +30,7 @@ func (SliceValue) set(v interface{}) (SliceValue, error) {
 	switch reflect.TypeOf(v).Kind() {
 	case reflect.Array, reflect.Slice:
 	default:
-		return SliceValue{}, xerrors.Errorf("not slice-like: %T", v)
+		return SliceValue{}, errors.Errorf("not slice-like: %T", v)
 	}
 
 	elem := reflect.ValueOf(v)

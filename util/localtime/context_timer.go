@@ -5,10 +5,10 @@ import (
 	"sync"
 	"time"
 
+	"github.com/pkg/errors"
 	"github.com/rs/zerolog"
 	"github.com/spikeekips/mitum/util"
 	"github.com/spikeekips/mitum/util/logging"
-	"golang.org/x/xerrors"
 )
 
 var contextTimerPool = sync.Pool{
@@ -130,8 +130,8 @@ end:
 		default:
 			if err := ct.prepareCallback(ctx); err != nil {
 				switch {
-				case xerrors.Is(err, StopTimerError):
-				case xerrors.Is(err, util.IgnoreError):
+				case errors.Is(err, StopTimerError):
+				case errors.Is(err, util.IgnoreError):
 				default:
 					ct.Log().Debug().Err(err).Msg("timer got error; timer will be stopped")
 				}
@@ -166,7 +166,7 @@ func (ct *ContextTimer) prepareCallback(ctx context.Context) error {
 	count := ct.count()
 	interval := intervalfunc(count)
 	if interval < time.Nanosecond {
-		return xerrors.Errorf("invalid interval; too narrow, %v", interval)
+		return errors.Errorf("invalid interval; too narrow, %v", interval)
 	}
 
 	return ct.waitAndRun(ctx, interval, callback, count)

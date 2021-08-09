@@ -1,9 +1,8 @@
 package state
 
 import (
-	"go.mongodb.org/mongo-driver/bson"
-
 	bsonenc "github.com/spikeekips/mitum/util/encoder/bson"
+	"go.mongodb.org/mongo-driver/bson"
 )
 
 func (hv HintedValue) MarshalBSON() ([]byte, error) {

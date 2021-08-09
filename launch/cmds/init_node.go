@@ -4,8 +4,7 @@ import (
 	"context"
 	"time"
 
-	"golang.org/x/xerrors"
-
+	"github.com/pkg/errors"
 	"github.com/spikeekips/mitum/launch/pm"
 	"github.com/spikeekips/mitum/launch/process"
 	"github.com/spikeekips/mitum/storage"
@@ -25,7 +24,7 @@ func NewInitCommand(dryrun bool) InitCommand {
 
 	ps := cmd.Processes()
 	if ps == nil {
-		panic(xerrors.Errorf("processes not prepared"))
+		panic(errors.Errorf("processes not prepared"))
 	}
 
 	if err := ps.AddHook( // NOTE clean database and block data with `--force`
@@ -60,7 +59,7 @@ func NewInitCommand(dryrun bool) InitCommand {
 
 func (cmd *InitCommand) Run(version util.Version) error {
 	if err := cmd.Initialize(cmd, version); err != nil {
-		return xerrors.Errorf("failed to initialize command: %w", err)
+		return errors.Wrap(err, "failed to initialize command")
 	}
 	defer cmd.Done()
 	defer func() {

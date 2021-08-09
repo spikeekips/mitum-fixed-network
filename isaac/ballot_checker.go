@@ -3,10 +3,7 @@ package isaac
 import (
 	"context"
 
-	"golang.org/x/sync/errgroup"
-	"golang.org/x/sync/semaphore"
-	"golang.org/x/xerrors"
-
+	"github.com/pkg/errors"
 	"github.com/rs/zerolog"
 	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/base/ballot"
@@ -16,6 +13,8 @@ import (
 	"github.com/spikeekips/mitum/util/localtime"
 	"github.com/spikeekips/mitum/util/logging"
 	"github.com/spikeekips/mitum/util/valuehash"
+	"golang.org/x/sync/errgroup"
+	"golang.org/x/sync/semaphore"
 )
 
 type BallotChecker struct {
@@ -67,9 +66,9 @@ func (bc *BallotChecker) InTimespan() (bool, error) {
 	}
 
 	if s := bc.ballot.SignedAt(); s.After(localtime.Now().Add(bc.policy.TimespanValidBallot())) {
-		return false, xerrors.Errorf("too new ballot")
+		return false, errors.Errorf("too new ballot")
 	} else if s.Before(localtime.Now().Add(bc.policy.TimespanValidBallot() * -1)) {
-		return false, xerrors.Errorf("too old ballot")
+		return false, errors.Errorf("too old ballot")
 	}
 
 	return true, nil
@@ -97,9 +96,9 @@ func (bc *BallotChecker) IsFromAliveNode() (bool, error) {
 
 	switch _, ch, found := bc.nodepool.Node(bc.ballot.Node()); {
 	case !found:
-		return false, xerrors.Errorf("unknown node, %q", bc.ballot.Node())
+		return false, errors.Errorf("unknown node, %q", bc.ballot.Node())
 	case ch == nil:
-		return false, xerrors.Errorf("from dead node, %q", bc.ballot.Node())
+		return false, errors.Errorf("from dead node, %q", bc.ballot.Node())
 	}
 
 	return true, nil
@@ -144,7 +143,7 @@ func (bc *BallotChecker) CheckProposalInACCEPTBallot() (bool, error) {
 	} else if found {
 		j, ok := i.(ballot.Proposal)
 		if !ok {
-			return false, xerrors.Errorf("not proposal in accept ballot, %T", i)
+			return false, errors.Errorf("not proposal in accept ballot, %T", i)
 		}
 		proposal = j
 	}
@@ -158,10 +157,10 @@ func (bc *BallotChecker) CheckProposalInACCEPTBallot() (bool, error) {
 	}
 
 	if bc.ballot.Height() != proposal.Height() {
-		return false, xerrors.Errorf("proposal in ACCEPTBallot is invalid; different height, ballot=%v proposal=%v",
+		return false, errors.Errorf("proposal in ACCEPTBallot is invalid; different height, ballot=%v proposal=%v",
 			bc.ballot.Height(), proposal.Height())
 	} else if bc.ballot.Round() != proposal.Round() {
-		return false, xerrors.Errorf("proposal in ACCEPTBallot is invalid; different round, ballot=%v proposal=%v",
+		return false, errors.Errorf("proposal in ACCEPTBallot is invalid; different round, ballot=%v proposal=%v",
 			bc.ballot.Round(), proposal.Round())
 	}
 
@@ -219,16 +218,16 @@ func (bc *BallotChecker) requestProposalFromNodes(h valuehash.Hash) (ballot.Prop
 	})
 
 	if err := sem.Acquire(ctx, 100); err != nil {
-		if !xerrors.Is(err, context.Canceled) {
-			return nil, xerrors.Errorf("failed to request proposal: %w", err)
+		if !errors.Is(err, context.Canceled) {
+			return nil, errors.Wrap(err, "failed to request proposal")
 		}
 	}
 
 	err := eg.Wait()
 
 	var dc util.DataContainerError
-	if !xerrors.As(err, &dc) {
-		return nil, xerrors.Errorf("failed to request proposal, %v", h)
+	if !errors.As(err, &dc) {
+		return nil, errors.Errorf("failed to request proposal, %v", h)
 	}
 
 	return dc.Data().(ballot.Proposal), nil
@@ -250,7 +249,7 @@ func (bc *BallotChecker) requestProposal(ch network.Channel, h valuehash.Hash) (
 		ballotChecker.InSuffrage,
 		ballotChecker.CheckVoteproof,
 	}).Check(); err != nil {
-		if !xerrors.Is(err, util.IgnoreError) {
+		if !errors.Is(err, util.IgnoreError) {
 			return nil, err
 		}
 	}
@@ -262,8 +261,8 @@ func (bc *BallotChecker) requestProposal(ch network.Channel, h valuehash.Hash) (
 		pvc.SaveProposal,
 	}).Check(); err != nil {
 		switch {
-		case xerrors.Is(err, util.IgnoreError):
-		case xerrors.Is(err, KnownSealError):
+		case errors.Is(err, util.IgnoreError):
+		case errors.Is(err, KnownSealError):
 		default:
 			return nil, err
 		}
@@ -275,11 +274,11 @@ func (bc *BallotChecker) requestProposal(ch network.Channel, h valuehash.Hash) (
 func CheckBallotSigning(blt ballot.Ballot, nodepool *network.Nodepool) error {
 	node, _, found := nodepool.Node(blt.Node())
 	if !found {
-		return xerrors.Errorf("node not found")
+		return errors.Errorf("node not found")
 	}
 
 	if !blt.Signer().Equal(node.Publickey()) {
-		return xerrors.Errorf("publickey not matched")
+		return errors.Errorf("publickey not matched")
 	}
 
 	return nil
@@ -289,9 +288,9 @@ func RequestProposal(ch network.Channel, h valuehash.Hash) (ballot.Proposal, err
 	if r, err := ch.Seals(context.TODO(), []valuehash.Hash{h}); err != nil {
 		return nil, err
 	} else if len(r) < 1 {
-		return nil, xerrors.Errorf("no Proposal found, %v", h.String())
+		return nil, errors.Errorf("no Proposal found, %v", h.String())
 	} else if pr, ok := r[0].(ballot.Proposal); !ok {
-		return nil, xerrors.Errorf(
+		return nil, errors.Errorf(
 			"request %v, but not ballot.Proposal, %T",
 			h.String(),
 			r[0],

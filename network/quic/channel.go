@@ -11,9 +11,8 @@ import (
 	"time"
 
 	"github.com/lucas-clemente/quic-go"
+	"github.com/pkg/errors"
 	"github.com/rs/zerolog"
-	"golang.org/x/xerrors"
-
 	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/base/block"
 	"github.com/spikeekips/mitum/base/seal"
@@ -113,7 +112,7 @@ func (ch *Channel) Seals(ctx context.Context, hs []valuehash.Hash) ([]seal.Seal,
 		h := ss[i]
 		s, ok := h.(seal.Seal)
 		if !ok {
-			return nil, xerrors.Errorf("decoded, but not seal.Seal; %T", h)
+			return nil, errors.Errorf("decoded, but not seal.Seal; %T", h)
 		}
 		seals[i] = s
 	}
@@ -213,7 +212,7 @@ func (ch *Channel) BlockDataMaps(ctx context.Context, heights []base.Height) ([]
 	var bds []block.BlockDataMap
 	for _, h := range hinters {
 		if s, ok := h.(block.BlockDataMap); !ok {
-			return nil, xerrors.Errorf("decoded, but not BlockDataMap; %T", h)
+			return nil, errors.Errorf("decoded, but not BlockDataMap; %T", h)
 		} else if err := s.IsValid(nil); err != nil {
 			return nil, isvalid.InvalidError.Errorf("invalid block data map: %w", err)
 		} else {

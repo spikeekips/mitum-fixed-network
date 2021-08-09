@@ -6,10 +6,10 @@ import (
 	"sync"
 	"time"
 
+	"github.com/pkg/errors"
 	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/network"
 	"github.com/spikeekips/mitum/network/discovery"
-	"golang.org/x/xerrors"
 )
 
 func (t *testDiscovery) nodepoolDelegate(
@@ -292,7 +292,7 @@ func (t *testDiscovery) checkNodeLeftNodepool(nodepool *network.Nodepool, no bas
 	for {
 		select {
 		case <-time.After(time.Second * 3):
-			return xerrors.Errorf("expired")
+			return errors.Errorf("expired")
 		default:
 			_, ch, found := nodepool.Node(no)
 			t.True(found)
@@ -310,7 +310,7 @@ func (t *testDiscovery) checkNodeJoinedNodepool(nodepool *network.Nodepool, no b
 	for {
 		select {
 		case <-time.After(time.Second * 3):
-			return xerrors.Errorf("expired")
+			return errors.Errorf("expired")
 		default:
 			_, ch, found := nodepool.Node(no)
 			t.True(found)

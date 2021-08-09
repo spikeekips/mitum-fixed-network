@@ -3,8 +3,7 @@ package basicstates
 import (
 	"testing"
 
-	"golang.org/x/xerrors"
-
+	"github.com/pkg/errors"
 	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/storage/blockdata"
 	"github.com/stretchr/testify/suite"
@@ -28,7 +27,7 @@ func (t *testStateBooting) TestWithBlock() {
 	err = f()
 
 	var sctx StateSwitchContext
-	t.True(xerrors.As(err, &sctx))
+	t.True(errors.As(err, &sctx))
 
 	t.Equal(base.StateBooting, sctx.FromState())
 	t.Equal(base.StateJoining, sctx.ToState())
@@ -48,7 +47,7 @@ func (t *testStateBooting) TestNoneSuffrageNode() {
 	err = f()
 
 	var sctx StateSwitchContext
-	t.True(xerrors.As(err, &sctx))
+	t.True(errors.As(err, &sctx))
 
 	t.Equal(base.StateBooting, sctx.FromState())
 	t.Equal(base.StateSyncing, sctx.ToState())
@@ -65,7 +64,7 @@ func (t *testStateBooting) TestWithEmptyBlockWithSuffrageNodes() {
 	err = f()
 
 	var sctx StateSwitchContext
-	t.True(xerrors.As(err, &sctx))
+	t.True(errors.As(err, &sctx))
 
 	t.Equal(base.StateBooting, sctx.FromState())
 	t.Equal(base.StateSyncing, sctx.ToState())

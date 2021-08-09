@@ -3,8 +3,7 @@ package process
 import (
 	"context"
 
-	"golang.org/x/xerrors"
-
+	"github.com/pkg/errors"
 	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/isaac"
 	"github.com/spikeekips/mitum/launch/config"
@@ -58,7 +57,7 @@ func HookSuffrageConfigFunc(handlers map[string]HookHandlerSuffrageConfig) pm.Pr
 			}
 			sf = i
 		} else if h, found := handlers[st]; !found {
-			return ctx, xerrors.Errorf("unknown suffrage found, %s", st)
+			return ctx, errors.Errorf("unknown suffrage found, %s", st)
 		} else if i, err := h(ctx, m, nodes); err != nil {
 			return ctx, err
 		} else {
@@ -89,7 +88,7 @@ func SuffrageConfigHandlerFixedProposer(
 		case uint:
 			numberOfActing = n
 		default:
-			return nil, xerrors.Errorf("invalid type for number-of-acting, %T", i)
+			return nil, errors.Errorf("invalid type for number-of-acting, %T", i)
 		}
 	}
 
@@ -97,13 +96,13 @@ func SuffrageConfigHandlerFixedProposer(
 	if i, found := m["proposer"]; found {
 		a, err := parseAddress(i, enc)
 		if err != nil {
-			return nil, xerrors.Errorf("invalid proposer address for fixed-suffrage: %w", err)
+			return nil, errors.Wrap(err, "invalid proposer address for fixed-suffrage")
 		}
 		proposer = a
 	}
 
 	if proposer == nil {
-		return nil, xerrors.Errorf("empty proposer")
+		return nil, errors.Errorf("empty proposer")
 	}
 
 	return config.NewFixedSuffrage(proposer, nodes, numberOfActing), nil
@@ -124,7 +123,7 @@ func SuffrageConfigHandlerRoundrobin(
 		case uint:
 			numberOfActing = n
 		default:
-			return nil, xerrors.Errorf("invalid type for number-of-acting, %T", i)
+			return nil, errors.Errorf("invalid type for number-of-acting, %T", i)
 		}
 	}
 
@@ -141,7 +140,7 @@ func parseSuffrageNodes(ctx context.Context, m map[string]interface{}) ([]base.A
 	if i, found := m["nodes"]; !found {
 		return nil, nil
 	} else if j, ok := i.([]interface{}); !ok {
-		return nil, xerrors.Errorf("invalid nodes list, %T", i)
+		return nil, errors.Errorf("invalid nodes list, %T", i)
 	} else {
 		l = j
 	}
@@ -150,7 +149,7 @@ func parseSuffrageNodes(ctx context.Context, m map[string]interface{}) ([]base.A
 	for j := range l {
 		a, err := parseAddress(l[j], enc)
 		if err != nil {
-			return nil, xerrors.Errorf("invalid node address for suffrage config: %w", err)
+			return nil, errors.Wrap(err, "invalid node address for suffrage config")
 		}
 		nodes[j] = a
 	}
@@ -160,11 +159,11 @@ func parseSuffrageNodes(ctx context.Context, m map[string]interface{}) ([]base.A
 
 func parseAddress(i interface{}, enc *jsonenc.Encoder) (base.Address, error) {
 	if s, ok := i.(string); !ok {
-		return nil, xerrors.Errorf("not address string, not %T", i)
+		return nil, errors.Errorf("not address string, not %T", i)
 	} else if address, err := base.DecodeAddressFromString(s, enc); err != nil {
-		return nil, xerrors.Errorf("invalid address: %w", err)
+		return nil, errors.Wrap(err, "invalid address")
 	} else if err := address.IsValid(nil); err != nil {
-		return nil, xerrors.Errorf("invalid address: %w", err)
+		return nil, errors.Wrap(err, "invalid address")
 	} else {
 		return address, err
 	}

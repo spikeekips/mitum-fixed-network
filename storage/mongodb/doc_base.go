@@ -1,13 +1,12 @@
 package mongodbstorage
 
 import (
-	"go.mongodb.org/mongo-driver/bson"
-	"golang.org/x/xerrors"
-
+	"github.com/pkg/errors"
 	"github.com/spikeekips/mitum/util/encoder"
 	bsonenc "github.com/spikeekips/mitum/util/encoder/bson"
 	"github.com/spikeekips/mitum/util/hint"
 	"github.com/spikeekips/mitum/util/valuehash"
+	"go.mongodb.org/mongo-driver/bson"
 )
 
 type Doc interface {
@@ -74,7 +73,7 @@ func LoadDataFromDoc(b []byte, encs *encoder.Encoders) (bson.Raw /* id */, inter
 
 	var doc bson.Raw
 	if d, ok := bd.D.DocumentOK(); !ok {
-		return nil, nil, xerrors.Errorf("hinted should be mongodb Document")
+		return nil, nil, errors.Errorf("hinted should be mongodb Document")
 	} else {
 		doc = d
 	}

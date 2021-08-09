@@ -5,9 +5,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/stretchr/testify/suite"
-	"golang.org/x/xerrors"
-
+	"github.com/pkg/errors"
 	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/base/ballot"
 	"github.com/spikeekips/mitum/base/block"
@@ -15,6 +13,7 @@ import (
 	"github.com/spikeekips/mitum/util"
 	"github.com/spikeekips/mitum/util/localtime"
 	"github.com/spikeekips/mitum/util/valuehash"
+	"github.com/stretchr/testify/suite"
 )
 
 type testProcessors struct {
@@ -87,7 +86,7 @@ func (t *testProcessors) TestNewProposal() {
 
 	select {
 	case <-time.After(time.Second * 2):
-		t.NoError(xerrors.Errorf("waiting result, but expired"))
+		t.NoError(errors.Errorf("waiting result, but expired"))
 
 		return
 	case result := <-ch:
@@ -114,7 +113,7 @@ func (t *testProcessors) TestNewProposalWithWrongVoteroof() {
 
 	select {
 	case <-time.After(time.Millisecond * 100):
-		t.NoError(xerrors.Errorf("waiting result, but expired"))
+		t.NoError(errors.Errorf("waiting result, but expired"))
 
 		return
 	case result := <-ch:
@@ -151,7 +150,7 @@ func (t *testProcessors) TestPrepareTimeout() {
 
 	select {
 	case <-time.After(timeout + time.Second*1):
-		t.NoError(xerrors.Errorf("waiting result, but expired"))
+		t.NoError(errors.Errorf("waiting result, but expired"))
 
 		return
 	case result := <-ch:
@@ -264,7 +263,7 @@ func (t *testProcessors) TestPrepareExistsAsSaved() {
 
 	select {
 	case <-time.After(time.Millisecond * 100):
-		t.NoError(xerrors.Errorf("waiting result, but expired"))
+		t.NoError(errors.Errorf("waiting result, but expired"))
 
 		return
 	case result := <-ch:
@@ -303,7 +302,7 @@ func (t *testProcessors) TestPrepareExistsAsFailed() {
 
 	select {
 	case <-time.After(time.Millisecond * 100):
-		t.NoError(xerrors.Errorf("waiting result, but expired"))
+		t.NoError(errors.Errorf("waiting result, but expired"))
 
 		return
 	case result := <-ch:
@@ -333,11 +332,11 @@ func (t *testProcessors) TestSaveButNotYetPrepared() {
 	sch := pps.Save(context.Background(), pr.Hash(), avp)
 	select {
 	case <-time.After(time.Millisecond * 100):
-		t.NoError(xerrors.Errorf("waiting result, but expired"))
+		t.NoError(errors.Errorf("waiting result, but expired"))
 
 		return
 	case result := <-sch:
-		t.True(xerrors.Is(result.Err, SaveFailedError))
+		t.True(errors.Is(result.Err, SaveFailedError))
 		t.Contains(result.Err.Error(), "not yet prepared")
 	}
 }
@@ -362,7 +361,7 @@ func (t *testProcessors) TestSaveButPrepareFailed() {
 	pch := pps.NewProposal(context.Background(), pr, ivp)
 	select {
 	case <-time.After(time.Millisecond * 100):
-		t.NoError(xerrors.Errorf("waiting result, but expired"))
+		t.NoError(errors.Errorf("waiting result, but expired"))
 
 		return
 	case result := <-pch:
@@ -378,7 +377,7 @@ func (t *testProcessors) TestSaveButPrepareFailed() {
 	sch := pps.Save(context.Background(), pr.Hash(), avp)
 	select {
 	case <-time.After(time.Millisecond * 100):
-		t.NoError(xerrors.Errorf("waiting result, but expired"))
+		t.NoError(errors.Errorf("waiting result, but expired"))
 
 		return
 	case result := <-sch:
@@ -407,7 +406,7 @@ func (t *testProcessors) TestEmptySaveFunc() {
 	pch := pps.NewProposal(context.Background(), pr, ivp)
 	select {
 	case <-time.After(time.Millisecond * 100):
-		t.NoError(xerrors.Errorf("waiting result, but expired"))
+		t.NoError(errors.Errorf("waiting result, but expired"))
 
 		return
 	case result := <-pch:
@@ -420,7 +419,7 @@ func (t *testProcessors) TestEmptySaveFunc() {
 	sch := pps.Save(context.Background(), pr.Hash(), avp)
 	select {
 	case <-time.After(time.Millisecond * 100):
-		t.NoError(xerrors.Errorf("waiting result, but expired"))
+		t.NoError(errors.Errorf("waiting result, but expired"))
 
 		return
 	case result := <-sch:
@@ -459,7 +458,7 @@ func (t *testProcessors) TestSaveTimeout() {
 
 	select {
 	case <-time.After(time.Millisecond * 100):
-		t.NoError(xerrors.Errorf("waiting result, but expired"))
+		t.NoError(errors.Errorf("waiting result, but expired"))
 
 		return
 	case result := <-pch:
@@ -476,7 +475,7 @@ func (t *testProcessors) TestSaveTimeout() {
 
 	select {
 	case <-time.After(timeout + time.Second*1):
-		t.NoError(xerrors.Errorf("waiting result, but expired"))
+		t.NoError(errors.Errorf("waiting result, but expired"))
 
 		return
 	case result := <-sch:
@@ -514,7 +513,7 @@ end:
 	for {
 		select {
 		case <-time.After(time.Second * 3):
-			t.NoError(xerrors.Errorf("waiting result, but expired"))
+			t.NoError(errors.Errorf("waiting result, but expired"))
 
 			return
 		default:
@@ -532,7 +531,7 @@ end:
 
 	select {
 	case <-time.After(time.Second * 3):
-		t.NoError(xerrors.Errorf("waiting result, but expired"))
+		t.NoError(errors.Errorf("waiting result, but expired"))
 
 		return
 	case result := <-sch:
@@ -543,7 +542,7 @@ end:
 
 func (t *testProcessors) TestProposalChecker() {
 	pps := NewProcessors(nil, func(ballot.Proposal) error {
-		return xerrors.Errorf("checker pong pong")
+		return errors.Errorf("checker pong pong")
 	})
 	t.NoError(pps.Initialize())
 	t.NoError(pps.Start())
@@ -558,7 +557,7 @@ func (t *testProcessors) TestProposalChecker() {
 
 	select {
 	case <-time.After(time.Millisecond * 100):
-		t.NoError(xerrors.Errorf("waiting result, but expired"))
+		t.NoError(errors.Errorf("waiting result, but expired"))
 
 		return
 	case result := <-ch:
@@ -572,7 +571,7 @@ func (t *testProcessors) TestPrepareRetry() {
 	pp := &DummyProcessor{PF: func(ctx context.Context) (block.Block, error) {
 		if i < 1 {
 			i++
-			return nil, xerrors.Errorf("showme")
+			return nil, errors.Errorf("showme")
 		}
 
 		return block.BlockV0{}, nil
@@ -592,7 +591,7 @@ func (t *testProcessors) TestPrepareRetry() {
 
 	select {
 	case <-time.After(time.Second * 2):
-		t.NoError(xerrors.Errorf("waiting result, but expired"))
+		t.NoError(errors.Errorf("waiting result, but expired"))
 
 		return
 	case result := <-ch:
@@ -610,7 +609,7 @@ func (t *testProcessors) TestSaveRetry() {
 		SF: func(ctx context.Context) error {
 			if i < 1 {
 				i++
-				return xerrors.Errorf("showme")
+				return errors.Errorf("showme")
 			}
 
 			return nil
@@ -630,7 +629,7 @@ func (t *testProcessors) TestSaveRetry() {
 	pch := pps.NewProposal(context.Background(), pr, ivp)
 	select {
 	case <-time.After(time.Second * 2):
-		t.NoError(xerrors.Errorf("waiting result, but expired to prepare"))
+		t.NoError(errors.Errorf("waiting result, but expired to prepare"))
 
 		return
 	case result := <-pch:
@@ -642,7 +641,7 @@ func (t *testProcessors) TestSaveRetry() {
 	sch := pps.Save(context.Background(), pr.Hash(), avp)
 	select {
 	case <-time.After(time.Second * 2):
-		t.NoError(xerrors.Errorf("waiting result, but expired to save"))
+		t.NoError(errors.Errorf("waiting result, but expired to save"))
 
 		return
 	case result := <-sch:

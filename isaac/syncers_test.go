@@ -6,10 +6,10 @@ import (
 	"testing"
 	"time"
 
+	"github.com/pkg/errors"
 	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/base/block"
 	"github.com/stretchr/testify/suite"
-	"golang.org/x/xerrors"
 )
 
 func (sy *Syncers) LastSyncer() Syncer {
@@ -66,7 +66,7 @@ end:
 	for {
 		select {
 		case <-ctx.Done():
-			t.NoError(xerrors.Errorf("timeout to wait to be finished"))
+			t.NoError(errors.Errorf("timeout to wait to be finished"))
 
 			break end
 		case bs := <-blocksChan:
@@ -138,7 +138,7 @@ end:
 	for {
 		select {
 		case <-ctx.Done():
-			t.NoError(xerrors.Errorf("timeout to wait to be finished"))
+			t.NoError(errors.Errorf("timeout to wait to be finished"))
 
 			break end
 		case height := <-finishedChan:
@@ -187,7 +187,7 @@ end:
 	for {
 		select {
 		case <-ctx.Done():
-			t.NoError(xerrors.Errorf("timeout to wait to be finished"))
+			t.NoError(errors.Errorf("timeout to wait to be finished"))
 
 			break end
 		case height := <-finishedChan:
@@ -233,7 +233,7 @@ end0:
 	for {
 		select {
 		case <-ctx.Done():
-			t.NoError(xerrors.Errorf("timeout to wait to be finished"))
+			t.NoError(errors.Errorf("timeout to wait to be finished"))
 
 			break end0
 		case height := <-finishedChan:
@@ -254,7 +254,7 @@ end1:
 	for {
 		select {
 		case <-ctx.Done():
-			t.NoError(xerrors.Errorf("timeout to wait to be finished"))
+			t.NoError(errors.Errorf("timeout to wait to be finished"))
 
 			break end1
 		case height := <-finishedChan:

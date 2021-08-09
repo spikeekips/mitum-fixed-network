@@ -3,13 +3,13 @@ package memberlist
 import (
 	"time"
 
+	"github.com/pkg/errors"
 	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/base/key"
 	"github.com/spikeekips/mitum/network"
 	"github.com/spikeekips/mitum/util"
 	"github.com/spikeekips/mitum/util/encoder"
 	"github.com/spikeekips/mitum/util/localtime"
-	"golang.org/x/xerrors"
 )
 
 type NodeMessagePackerJSON struct {
@@ -53,7 +53,7 @@ type NodeMessageUnpackerJSON struct {
 func (ms *NodeMessage) Unpack(b []byte, enc encoder.Encoder) error {
 	var ums NodeMessageUnpackerJSON
 	if err := util.JSON.Unmarshal(b, &ums); err != nil {
-		return xerrors.Errorf("failed to unmarshal NodeMessage: %w", err)
+		return errors.Wrap(err, "failed to unmarshal NodeMessage")
 	}
 
 	publish, err := network.ParseURL(ums.Publish, false)

@@ -4,6 +4,7 @@ import (
 	"context"
 	"math"
 
+	"github.com/pkg/errors"
 	"github.com/rs/zerolog"
 	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/base/block"
@@ -12,7 +13,6 @@ import (
 	"github.com/spikeekips/mitum/util/hint"
 	"golang.org/x/sync/errgroup"
 	"golang.org/x/sync/semaphore"
-	"golang.org/x/xerrors"
 )
 
 type BaseVerifyCommand struct {
@@ -96,7 +96,7 @@ func (cmd *BaseVerifyCommand) checkManifests(
 	var manifests []block.Manifest
 	i, err := cmd.loadManifests(s, e, get)
 	if err != nil {
-		return nil, xerrors.Errorf("failed to load manifests, %d-%d: %w", s, e, err)
+		return nil, errors.Wrapf(err, "failed to load manifests, %d-%d", s, e)
 	}
 
 	if b == nil {
@@ -153,7 +153,7 @@ func (cmd *BaseVerifyCommand) loadManifests(
 		}
 
 		if err := sem.Acquire(ctx, 100); err != nil {
-			if !xerrors.Is(err, context.Canceled) {
+			if !errors.Is(err, context.Canceled) {
 				errch <- err
 			}
 		}

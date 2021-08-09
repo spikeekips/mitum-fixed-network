@@ -4,13 +4,11 @@ import (
 	"strings"
 
 	"golang.org/x/mod/semver"
-
-	"github.com/spikeekips/mitum/util/errors"
 )
 
 var (
-	InvalidVersionError       = errors.NewError("invalid version found")
-	VersionNotCompatibleError = errors.NewError("versions not compatible")
+	InvalidVersionError       = NewError("invalid version found")
+	VersionNotCompatibleError = NewError("versions not compatible")
 )
 
 type Version string

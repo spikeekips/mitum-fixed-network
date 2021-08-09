@@ -3,8 +3,7 @@ package process
 import (
 	"context"
 
-	"golang.org/x/xerrors"
-
+	"github.com/pkg/errors"
 	"github.com/rs/zerolog"
 	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/base/ballot"
@@ -92,7 +91,7 @@ func (pp *ErrorProposalProcessor) Prepare(ctx context.Context) (block.Block, err
 				localtime.UTCNow(),
 			)
 		}
-		return nil, xerrors.Errorf(
+		return nil, errors.Errorf(
 			"contest-designed-error: prepare-occurring-error: height=%d round=%d",
 			pp.Proposal().Height(),
 			pp.Proposal().Round(),
@@ -106,7 +105,7 @@ func (pp *ErrorProposalProcessor) Save(ctx context.Context) error {
 	if p, found := pp.findPoint(pp.whenSavePoints); found {
 		pp.Log().Debug().Interface("point", p).Msg("save-occurring-error")
 
-		return xerrors.Errorf(
+		return errors.Errorf(
 			"contest-designed-error: save-occurring-error: height=%d round=%d",
 			pp.Proposal().Height(),
 			pp.Proposal().Round(),

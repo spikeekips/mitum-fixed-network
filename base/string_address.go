@@ -4,11 +4,11 @@ import (
 	"regexp"
 	"strings"
 
+	"github.com/pkg/errors"
 	"github.com/spikeekips/mitum/util/hint"
 	"github.com/spikeekips/mitum/util/isvalid"
 	"go.mongodb.org/mongo-driver/bson/bsontype"
 	"go.mongodb.org/mongo-driver/x/bsonx/bsoncore"
-	"golang.org/x/xerrors"
 )
 
 var (
@@ -36,7 +36,7 @@ func NewStringAddressFromHintedString(s string) (StringAddress, error) {
 	case err != nil:
 		return EmptyStringAddress, err
 	case !hs.Hint().Equal(StringAddressHint):
-		return EmptyStringAddress, xerrors.Errorf("not StringAddress, %v", hs.Hint())
+		return EmptyStringAddress, errors.Errorf("not StringAddress, %v", hs.Hint())
 	default:
 		return NewStringAddress(hs.Body())
 	}

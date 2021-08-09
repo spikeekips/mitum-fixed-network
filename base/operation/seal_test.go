@@ -4,9 +4,8 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/stretchr/testify/suite"
-
 	"github.com/spikeekips/mitum/base/key"
+	"github.com/stretchr/testify/suite"
 )
 
 type testSeal struct {

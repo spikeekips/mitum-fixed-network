@@ -37,14 +37,14 @@ func marshal(i interface{}, enc encoder.Encoder) ([]byte, error) {
 	return encodeWithEncoder(b, enc), nil
 }
 
-func wrapError(err error) error {
+func mergeError(err error) error {
 	if err == nil {
 		return nil
 	}
 
 	if err == leveldbErrors.ErrNotFound {
-		return util.NotFoundError.Wrap(err)
+		return util.NotFoundError.Merge(err)
 	}
 
-	return storage.WrapStorageError(err)
+	return storage.MergeStorageError(err)
 }

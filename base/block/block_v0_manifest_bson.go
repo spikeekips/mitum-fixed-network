@@ -3,11 +3,10 @@ package block
 import (
 	"time"
 
-	"go.mongodb.org/mongo-driver/bson"
-
 	"github.com/spikeekips/mitum/base"
 	bsonenc "github.com/spikeekips/mitum/util/encoder/bson"
 	"github.com/spikeekips/mitum/util/valuehash"
+	"go.mongodb.org/mongo-driver/bson"
 )
 
 func (bm ManifestV0) MarshalBSON() ([]byte, error) {

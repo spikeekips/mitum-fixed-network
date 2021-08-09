@@ -4,11 +4,11 @@ import (
 	"os"
 	"testing"
 
+	"github.com/pkg/errors"
 	"github.com/spikeekips/mitum/storage/blockdata"
 	"github.com/spikeekips/mitum/util"
 	jsonenc "github.com/spikeekips/mitum/util/encoder/json"
 	"github.com/stretchr/testify/suite"
-	"golang.org/x/xerrors"
 )
 
 type testBlockData struct {
@@ -51,7 +51,7 @@ func (t *testBlockData) TestNew() {
 func (t *testBlockData) TestRootDoesNotExist() {
 	st := NewBlockData(util.UUID().String(), t.JSONEnc)
 	err := st.Initialize()
-	t.True(xerrors.Is(err, util.NotFoundError))
+	t.True(errors.Is(err, util.NotFoundError))
 }
 
 func (t *testBlockData) TestRemove() {

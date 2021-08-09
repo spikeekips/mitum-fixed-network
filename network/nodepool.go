@@ -3,8 +3,7 @@ package network
 import (
 	"sync"
 
-	"golang.org/x/xerrors"
-
+	"github.com/pkg/errors"
 	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/base/node"
 	"github.com/spikeekips/mitum/util"
@@ -100,13 +99,13 @@ func (np *Nodepool) Remove(addrs ...base.Address) error {
 	founds := map[string]struct{}{}
 	for _, addr := range addrs {
 		if addr.Equal(np.local.Address()) {
-			return xerrors.Errorf("local can not be removed, %q", addr)
+			return errors.Errorf("local can not be removed, %q", addr)
 		}
 
 		if !np.exists(addr) {
-			return xerrors.Errorf("Address does not exist, %q", addr)
+			return errors.Errorf("Address does not exist, %q", addr)
 		} else if _, found := founds[addr.String()]; found {
-			return xerrors.Errorf("duplicated Address found, %q", addr)
+			return errors.Errorf("duplicated Address found, %q", addr)
 		} else {
 			founds[addr.String()] = struct{}{}
 		}

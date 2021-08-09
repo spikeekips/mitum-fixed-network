@@ -1,9 +1,9 @@
 package encoder
 
 import (
+	"github.com/pkg/errors"
 	"github.com/spikeekips/mitum/util"
 	"github.com/spikeekips/mitum/util/hint"
-	"golang.org/x/xerrors"
 )
 
 type Encoders struct {
@@ -68,7 +68,7 @@ func (es *Encoders) Encoder(ty hint.Type, version string) (Encoder, error) {
 
 	i, ok := hinter.(Encoder)
 	if !ok {
-		return nil, xerrors.Errorf("not Encoder, %T", hinter)
+		return nil, errors.Errorf("not Encoder, %T", hinter)
 	}
 	return i, nil
 }

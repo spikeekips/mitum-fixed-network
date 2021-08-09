@@ -7,11 +7,11 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/pkg/errors"
 	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/base/block"
 	"github.com/spikeekips/mitum/storage"
 	"github.com/spikeekips/mitum/util"
-	"golang.org/x/xerrors"
 )
 
 func LoadBlock(st *BlockData, height base.Height) (block.BaseBlockDataMap, block.Block, error) { // nolint
@@ -132,7 +132,7 @@ func LoadData(st *BlockData, height base.Height, dataType string) (block.BaseBlo
 	var f string
 	switch matches, err := filepath.Glob(g); {
 	case err != nil:
-		return m, nil, storage.WrapStorageError(err)
+		return m, nil, storage.MergeStorageError(err)
 	case len(matches) < 1:
 		return m, nil, util.NotFoundError.Errorf("block data, %q(%d) not found", dataType, height)
 	default:
@@ -140,9 +140,9 @@ func LoadData(st *BlockData, height base.Height, dataType string) (block.BaseBlo
 	}
 
 	if i, err := os.Open(filepath.Clean(f)); err != nil {
-		return m, nil, storage.WrapStorageError(err)
+		return m, nil, storage.MergeStorageError(err)
 	} else if j, err := util.NewGzipReader(i); err != nil {
-		return m, nil, storage.WrapStorageError(err)
+		return m, nil, storage.MergeStorageError(err)
 	} else if k, err := NewBaseBlockDataMapItem(f); err != nil {
 		return m, nil, err
 	} else {
@@ -194,7 +194,7 @@ func ParseDataFileName(s string) (base.Height, string /* data type */, string /*
 	if n, err := fmt.Sscanf(y+"\n", "%d %s %s", &a, &b, &c); err != nil {
 		return base.NilHeight, "", "", err
 	} else if n != 3 {
-		return base.NilHeight, "", "", xerrors.Errorf("invalid file format: %s", s)
+		return base.NilHeight, "", "", errors.Errorf("invalid file format: %s", s)
 	}
 
 	if strings.HasPrefix(o, "-") {

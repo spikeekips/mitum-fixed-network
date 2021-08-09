@@ -6,6 +6,7 @@ import (
 	"os"
 	"path/filepath"
 
+	"github.com/pkg/errors"
 	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/base/block"
 	"github.com/spikeekips/mitum/storage"
@@ -15,7 +16,6 @@ import (
 	"github.com/spikeekips/mitum/util/hint"
 	"golang.org/x/sync/errgroup"
 	"golang.org/x/sync/semaphore"
-	"golang.org/x/xerrors"
 )
 
 type BlockDataVerifyCommand struct {
@@ -32,7 +32,7 @@ func NewBlockDataVerifyCommand(types []hint.Type, hinters []hint.Hinter) BlockDa
 
 func (cmd *BlockDataVerifyCommand) Run(version util.Version) error {
 	if err := cmd.Initialize(cmd, version); err != nil {
-		return xerrors.Errorf("failed to initialize command: %w", err)
+		return errors.Wrap(err, "failed to initialize command")
 	}
 
 	cmd.Log().Debug().Str("path", cmd.Path).Msg("trying to verify blockdata")
@@ -46,9 +46,9 @@ func (cmd *BlockDataVerifyCommand) Initialize(flags interface{}, version util.Ve
 	}
 
 	if i, err := os.Stat(cmd.Path); err != nil {
-		return xerrors.Errorf("invalid path, %q: %w", cmd.Path, err)
+		return errors.Wrapf(err, "invalid path, %q", cmd.Path)
 	} else if !i.IsDir() {
-		return xerrors.Errorf("path, %q is not directory", cmd.Path)
+		return errors.Errorf("path, %q is not directory", cmd.Path)
 	}
 
 	cmd.bd = localfs.NewBlockData(cmd.Path, cmd.jsonenc)
@@ -90,7 +90,7 @@ func (cmd *BlockDataVerifyCommand) checkLastHeight() error {
 	var height base.Height = base.PreGenesisHeight
 	for {
 		if found, err := cmd.bd.Exists(height); err != nil {
-			return xerrors.Errorf("failed to check blockdata of height, %d: %w", height, err)
+			return errors.Wrapf(err, "failed to check blockdata of height, %d", height)
 		} else if !found {
 			break
 		}
@@ -121,7 +121,7 @@ func (cmd *BlockDataVerifyCommand) loadManifest(height base.Height) (block.Manif
 	if j, err := cmd.bd.Writer().ReadManifest(i); err != nil {
 		return nil, err
 	} else if err := j.IsValid(cmd.networkID); err != nil {
-		return nil, xerrors.Errorf("invalid manifest, %q found: %w", height, err)
+		return nil, errors.Wrapf(err, "invalid manifest, %q found", height)
 	} else {
 		manifest = j
 	}
@@ -148,7 +148,7 @@ func (cmd *BlockDataVerifyCommand) checkBlocks() error {
 	}
 
 	if err := sem.Acquire(ctx, 100); err != nil {
-		if !xerrors.Is(err, context.Canceled) {
+		if !errors.Is(err, context.Canceled) {
 			return err
 		}
 	}
@@ -192,7 +192,7 @@ func (cmd *BlockDataVerifyCommand) checkAllBlockFiles() error {
 	}
 
 	if err := sem.Acquire(ctx, 100); err != nil {
-		if !xerrors.Is(err, context.Canceled) {
+		if !errors.Is(err, context.Canceled) {
 			return err
 		}
 	}
@@ -223,7 +223,7 @@ func (cmd *BlockDataVerifyCommand) checkBlockFiles(height base.Height) error {
 	}
 
 	if hasError {
-		return xerrors.Errorf("block data file of height, %d has problem", height)
+		return errors.Errorf("block data file of height, %d has problem", height)
 	}
 	l.Debug().Msg("block data files checked")
 
@@ -236,11 +236,11 @@ func (cmd *BlockDataVerifyCommand) checkBlockFile(height base.Height, dataType s
 	var f string
 	switch matches, err := filepath.Glob(g); {
 	case err != nil:
-		return storage.WrapStorageError(err)
+		return storage.MergeStorageError(err)
 	case len(matches) < 1:
 		return util.NotFoundError.Errorf("block data, %q(%d) not found", dataType, height)
 	case len(matches) > 1:
-		return xerrors.Errorf("block data, %q(%d) multiple files found", dataType, height)
+		return errors.Errorf("block data, %q(%d) multiple files found", dataType, height)
 	default:
 		f = matches[0]
 	}
@@ -253,7 +253,7 @@ func (cmd *BlockDataVerifyCommand) checkBlockFile(height base.Height, dataType s
 	if i, err := util.GenerateFileChecksum(f); err != nil {
 		return err
 	} else if checksum != i {
-		return xerrors.Errorf("file checksum does not match; %s != %s", checksum, i)
+		return errors.Errorf("file checksum does not match; %s != %s", checksum, i)
 	}
 
 	return nil

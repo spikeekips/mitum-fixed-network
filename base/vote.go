@@ -1,8 +1,7 @@
 package base
 
 import (
-	"golang.org/x/xerrors"
-
+	"github.com/pkg/errors"
 	"github.com/spikeekips/mitum/util"
 	"github.com/spikeekips/mitum/util/isvalid"
 )
@@ -55,7 +54,7 @@ func (vrt *VoteResultType) UnmarshalText(b []byte) error {
 	case "MAJORITY":
 		t = VoteResultMajority
 	default:
-		return xerrors.Errorf("<unknown VoteResultType>")
+		return errors.Errorf("<unknown VoteResultType>")
 	}
 
 	*vrt = t

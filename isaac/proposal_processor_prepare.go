@@ -4,6 +4,7 @@ import (
 	"context"
 	"time"
 
+	"github.com/pkg/errors"
 	"github.com/spikeekips/mitum/base/block"
 	"github.com/spikeekips/mitum/base/operation"
 	"github.com/spikeekips/mitum/base/prprocessor"
@@ -12,7 +13,6 @@ import (
 	"github.com/spikeekips/mitum/util"
 	"github.com/spikeekips/mitum/util/tree"
 	"github.com/spikeekips/mitum/util/valuehash"
-	"golang.org/x/xerrors"
 )
 
 var blockDataMapContextKey util.ContextKey = "blockdata_map"
@@ -106,7 +106,7 @@ func (pp *DefaultProcessor) prepareOperations(ctx context.Context) error {
 
 	ops, err := se.Extract(ctx)
 	if err != nil {
-		return xerrors.Errorf("failed to extract seals: %w", err)
+		return errors.Wrap(err, "failed to extract seals")
 	}
 	ev.Int("operations", len(ops)).Msg("operations extracted from seals of proposal")
 

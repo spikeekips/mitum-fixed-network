@@ -6,13 +6,13 @@ import (
 	"strings"
 	"time"
 
+	"github.com/pkg/errors"
 	"github.com/rs/zerolog"
 	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/base/key"
 	"github.com/spikeekips/mitum/network"
 	"github.com/spikeekips/mitum/util/cache"
 	"github.com/spikeekips/mitum/util/logging"
-	"golang.org/x/xerrors"
 )
 
 func UnauthorizedError(w http.ResponseWriter, realm string, err error) {
@@ -48,13 +48,13 @@ func (md *DeployKeyByTokenMiddleware) Middleware(next http.Handler) http.Handler
 		// NOTE check token and signature
 		token := strings.TrimSpace(r.URL.Query().Get("token"))
 		if len(token) < 1 {
-			network.WriteProblemWithError(w, http.StatusUnauthorized, xerrors.Errorf("empty token"))
+			network.WriteProblemWithError(w, http.StatusUnauthorized, errors.Errorf("empty token"))
 			return
 		}
 
 		i := strings.TrimSpace(r.URL.Query().Get("signature"))
 		if len(i) < 1 {
-			network.WriteProblemWithError(w, http.StatusUnauthorized, xerrors.Errorf("empty signature"))
+			network.WriteProblemWithError(w, http.StatusUnauthorized, errors.Errorf("empty signature"))
 			return
 		}
 		sig := key.NewSignatureFromString(i)
@@ -62,7 +62,7 @@ func (md *DeployKeyByTokenMiddleware) Middleware(next http.Handler) http.Handler
 		if err := VerifyDeployKeyToken(md.cache, md.localKey, token, md.networkID, []byte(sig)); err != nil {
 			md.Log().Error().Err(err).Msg("failed to verify token and signature")
 			network.WriteProblemWithError(w, http.StatusUnauthorized,
-				xerrors.Errorf("failed to verify token and signature: %w", err))
+				errors.Wrap(err, "failed to verify token and signature"))
 
 			return
 		}
@@ -92,12 +92,12 @@ func (md *DeployByKeyMiddleware) Middleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		auth := strings.TrimSpace(r.Header.Get("Authorization"))
 		if len(auth) < 1 {
-			UnauthorizedError(w, "", xerrors.Errorf("empty Authorization"))
+			UnauthorizedError(w, "", errors.Errorf("empty Authorization"))
 			return
 		}
 
 		if !md.ks.Exists(auth) {
-			network.WriteProblemWithError(w, http.StatusForbidden, xerrors.Errorf("unknown deploy key"))
+			network.WriteProblemWithError(w, http.StatusForbidden, errors.Errorf("unknown deploy key"))
 			return
 		}
 

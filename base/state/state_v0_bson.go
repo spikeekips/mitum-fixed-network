@@ -1,11 +1,10 @@
 package state
 
 import (
-	"go.mongodb.org/mongo-driver/bson"
-
 	"github.com/spikeekips/mitum/base"
 	bsonenc "github.com/spikeekips/mitum/util/encoder/bson"
 	"github.com/spikeekips/mitum/util/valuehash"
+	"go.mongodb.org/mongo-driver/bson"
 )
 
 func (st StateV0) BSONM() bson.M {

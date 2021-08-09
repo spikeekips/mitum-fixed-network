@@ -1,11 +1,10 @@
 package state
 
 import (
-	"go.mongodb.org/mongo-driver/bson"
-	"golang.org/x/xerrors"
-
+	"github.com/pkg/errors"
 	bsonenc "github.com/spikeekips/mitum/util/encoder/bson"
 	"github.com/spikeekips/mitum/util/valuehash"
+	"go.mongodb.org/mongo-driver/bson"
 )
 
 func (sv StringValue) MarshalBSON() ([]byte, error) {
@@ -30,7 +29,7 @@ func (sv *StringValue) UnpackBSON(b []byte, enc *bsonenc.Encoder) error {
 	}
 
 	if uv.H.Empty() {
-		return xerrors.Errorf("empty previous_block hash found")
+		return errors.Errorf("empty previous_block hash found")
 	}
 
 	sv.h = uv.H

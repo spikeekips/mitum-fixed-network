@@ -5,12 +5,11 @@ import (
 	"testing"
 	"time"
 
-	"github.com/stretchr/testify/suite"
-
 	"github.com/spikeekips/mitum/base/operation"
 	"github.com/spikeekips/mitum/launch"
 	"github.com/spikeekips/mitum/launch/config"
 	"github.com/spikeekips/mitum/launch/pm"
+	"github.com/stretchr/testify/suite"
 )
 
 type testConfigValidator struct {

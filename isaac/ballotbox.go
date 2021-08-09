@@ -4,8 +4,7 @@ import (
 	"fmt"
 	"sync"
 
-	"golang.org/x/xerrors"
-
+	"github.com/pkg/errors"
 	"github.com/rs/zerolog"
 	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/base/ballot"
@@ -68,7 +67,7 @@ func (bb *Ballotbox) Clean(height base.Height) error {
 			return false
 		}
 		if n != 3 {
-			err = xerrors.Errorf("invalid formatted key found: key=%q", k)
+			err = errors.Errorf("invalid formatted key found: key=%q", k)
 			return false
 		}
 
@@ -147,7 +146,7 @@ func (*Ballotbox) vrsKey(blt ballot.Ballot) string {
 
 func (bb *Ballotbox) canVote(blt ballot.Ballot) error {
 	if !blt.Stage().CanVote() {
-		return xerrors.Errorf("this ballot is not for voting; stage=%s", blt.Stage())
+		return errors.Errorf("this ballot is not for voting; stage=%s", blt.Stage())
 	}
 
 	var found bool
@@ -159,7 +158,7 @@ func (bb *Ballotbox) canVote(blt ballot.Ballot) error {
 	}
 
 	if !found {
-		return xerrors.Errorf("this ballot is not in suffrages")
+		return errors.Errorf("this ballot is not in suffrages")
 	}
 
 	return nil

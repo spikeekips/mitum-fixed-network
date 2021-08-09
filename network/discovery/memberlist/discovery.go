@@ -14,6 +14,7 @@ import (
 	"github.com/bluele/gcache"
 	ml "github.com/hashicorp/memberlist"
 	"github.com/lucas-clemente/quic-go"
+	"github.com/pkg/errors"
 	"github.com/rs/zerolog"
 	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/base/node"
@@ -27,7 +28,6 @@ import (
 	"github.com/spikeekips/mitum/util/logging"
 	"golang.org/x/sync/errgroup"
 	"golang.org/x/sync/semaphore"
-	"golang.org/x/xerrors"
 )
 
 var (
@@ -475,7 +475,7 @@ func (dis *Discovery) Broadcast(b []byte) error {
 	}
 
 	if err := sem.Acquire(ctx, 100); err != nil {
-		if !xerrors.Is(err, context.Canceled) {
+		if !errors.Is(err, context.Canceled) {
 			return err
 		}
 	}
@@ -486,7 +486,7 @@ func (dis *Discovery) Broadcast(b []byte) error {
 func (dis *Discovery) createConfig() (*ml.Config, error) {
 	host, port, err := parseHostPort(dis.connInfo.Address)
 	if err != nil {
-		return nil, xerrors.Errorf("wrong advertise address: %w", err)
+		return nil, errors.Wrap(err, "wrong advertise address")
 	}
 
 	conf := ml.DefaultWANConfig()
@@ -552,7 +552,7 @@ func (dis *Discovery) newNodeMessage(body []byte, conid string) ([]byte, error) 
 func (dis *Discovery) loadNodeMessage(b []byte) (NodeMessage, error) {
 	var ms NodeMessage
 	if err := ms.Unpack(b, dis.enc); err != nil {
-		return ms, xerrors.Errorf("failed to unmarshal NodeMessage: %w", err)
+		return ms, errors.Wrap(err, "failed to unmarshal NodeMessage")
 	}
 
 	if err := ms.IsValid(dis.networkID); err != nil {
@@ -560,7 +560,7 @@ func (dis *Discovery) loadNodeMessage(b []byte) (NodeMessage, error) {
 	}
 
 	if localtime.UTCNow().After(ms.signedAt.Add(dis.tcpTimeout * 2)) {
-		return ms, xerrors.Errorf("too old node message received from %q(%q)", ms.node, ms.signedAt)
+		return ms, errors.Errorf("too old node message received from %q(%q)", ms.node, ms.signedAt)
 	}
 
 	return ms, nil
@@ -668,7 +668,7 @@ func (dis *Discovery) whenUpdated(peer *ml.Node, meta NodeMeta) {
 
 	i, err := dis.nodeCache.Get(addr)
 	if err != nil {
-		if !xerrors.Is(err, gcache.KeyNotFoundError) {
+		if !errors.Is(err, gcache.KeyNotFoundError) {
 			l.Error().Err(err).Msg("failed to get NodeMessage from node cache")
 		} else {
 			l.Debug().Msg("address not found in node cache; will be added to lame nodes")
@@ -699,7 +699,7 @@ func (dis *Discovery) whenMerged(peers []*ml.Node, metas map[string]NodeMeta) er
 		addr := peer.Address()
 		meta, found := metas[addr]
 		if !found {
-			return xerrors.Errorf("meta missed of peer, %q", addr)
+			return errors.Errorf("meta missed of peer, %q", addr)
 		}
 
 		nci, isnew, err := dis.joinByPeer(peer, meta)
@@ -732,7 +732,7 @@ func (dis *Discovery) updateMissingJoinedNode(ms NodeMessage) {
 		return
 	}
 
-	if !xerrors.Is(err, gcache.KeyNotFoundError) {
+	if !errors.Is(err, gcache.KeyNotFoundError) {
 		dis.Log().Error().Err(err).Msg("failed to get NodeMessage from lame nodes cache")
 
 		return
@@ -743,7 +743,7 @@ func (dis *Discovery) joinByPeer(peer *ml.Node, meta NodeMeta) (NodeConnInfo, bo
 	addr := peer.Address()
 	if addr == dis.connInfo.Address {
 		if local := dis.connInfo.URL().String(); meta.Publish().String() != local {
-			err := xerrors.Errorf("weird joined node found; same address with local, but incorrect")
+			err := errors.Errorf("weird joined node found; same address with local, but incorrect")
 
 			dis.Log().Warn().Str("peer", peer.Address()).Object("meta", meta).
 				Err(err).Str("local", local).
@@ -765,7 +765,7 @@ func (dis *Discovery) joinByPeer(peer *ml.Node, meta NodeMeta) (NodeConnInfo, bo
 		return nci, isnew, nil
 	}
 
-	if xerrors.Is(err, gcache.KeyNotFoundError) {
+	if errors.Is(err, gcache.KeyNotFoundError) {
 		dis.Log().Debug().Str("peer", peer.Address()).Object("meta", meta).
 			Msg("address not found in node cache; will be added to lame nodes")
 

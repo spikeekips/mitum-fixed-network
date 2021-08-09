@@ -1,9 +1,9 @@
 package state
 
 import (
+	"github.com/pkg/errors"
 	jsonenc "github.com/spikeekips/mitum/util/encoder/json"
 	"github.com/spikeekips/mitum/util/valuehash"
-	"golang.org/x/xerrors"
 )
 
 func (sv StringValue) MarshalJSON() ([]byte, error) {
@@ -29,7 +29,7 @@ func (sv *StringValue) UnpackJSON(b []byte, enc *jsonenc.Encoder) error {
 	}
 
 	if uv.H.Empty() {
-		return xerrors.Errorf("empty previous_block hash found")
+		return errors.Errorf("empty previous_block hash found")
 	}
 
 	sv.h = uv.H

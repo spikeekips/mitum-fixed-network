@@ -1,8 +1,7 @@
 package isaac
 
 import (
-	"golang.org/x/xerrors"
-
+	"github.com/pkg/errors"
 	"github.com/rs/zerolog"
 	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/base/ballot"
@@ -53,7 +52,7 @@ func (pvc *ProposalChecker) IsKnown() (bool, error) {
 	if _, found, err := pvc.database.Proposal(height, round, pvc.proposal.Node()); err != nil {
 		return false, err
 	} else if found {
-		return false, KnownSealError.Wrap(util.FoundError.Errorf("proposal already in database"))
+		return false, KnownSealError.Merge(util.FoundError.Errorf("proposal already in database"))
 	}
 
 	return true, nil
@@ -82,7 +81,7 @@ func (pvc *ProposalChecker) SaveProposal() (bool, error) {
 	switch err := pvc.database.NewProposal(pvc.proposal); {
 	case err == nil:
 		return true, nil
-	case xerrors.Is(err, util.DuplicatedError):
+	case errors.Is(err, util.DuplicatedError):
 		return true, nil
 	default:
 		return false, err
@@ -91,7 +90,7 @@ func (pvc *ProposalChecker) SaveProposal() (bool, error) {
 
 func (pvc *ProposalChecker) IsOlder() (bool, error) {
 	if pvc.livp == nil {
-		return false, xerrors.Errorf("no last voteproof")
+		return false, errors.Errorf("no last voteproof")
 	}
 
 	ph := pvc.proposal.Height()
@@ -101,9 +100,9 @@ func (pvc *ProposalChecker) IsOlder() (bool, error) {
 
 	switch {
 	case ph < lh:
-		return false, xerrors.Errorf("lower proposal height than last voteproof: %v < %v", ph, lh)
+		return false, errors.Errorf("lower proposal height than last voteproof: %v < %v", ph, lh)
 	case ph == lh && pr < lr:
-		return false, xerrors.Errorf(
+		return false, errors.Errorf(
 			"same height, but lower proposal round than last voteproof: %v < %v", pr, lr)
 	default:
 		return true, nil
@@ -112,7 +111,7 @@ func (pvc *ProposalChecker) IsOlder() (bool, error) {
 
 func (pvc *ProposalChecker) IsWaiting() (bool, error) {
 	if pvc.livp == nil {
-		return false, xerrors.Errorf("no last voteproof")
+		return false, errors.Errorf("no last voteproof")
 	}
 
 	ph := pvc.proposal.Height()
@@ -122,9 +121,9 @@ func (pvc *ProposalChecker) IsWaiting() (bool, error) {
 
 	switch {
 	case ph != lh:
-		return false, xerrors.Errorf("proposal height does not match with last voteproof: %v != %v", ph, lh)
+		return false, errors.Errorf("proposal height does not match with last voteproof: %v != %v", ph, lh)
 	case pr != lr:
-		return false, xerrors.Errorf(
+		return false, errors.Errorf(
 			"proposal round does not match with last voteproof: %v != %v", pr, lr)
 	default:
 		return true, nil
@@ -141,5 +140,5 @@ func CheckNodeIsProposer(node base.Address, suffrage base.Suffrage, height base.
 		return nil
 	}
 
-	return xerrors.Errorf("proposal has wrong proposer")
+	return errors.Errorf("proposal has wrong proposer")
 }

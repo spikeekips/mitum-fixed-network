@@ -1,14 +1,13 @@
 package mongodbstorage
 
 import (
-	"go.mongodb.org/mongo-driver/bson"
-	"golang.org/x/xerrors"
-
+	"github.com/pkg/errors"
 	"github.com/spikeekips/mitum/base/seal"
 	"github.com/spikeekips/mitum/util/encoder"
 	bsonenc "github.com/spikeekips/mitum/util/encoder/bson"
 	"github.com/spikeekips/mitum/util/localtime"
 	"github.com/spikeekips/mitum/util/valuehash"
+	"go.mongodb.org/mongo-driver/bson"
 )
 
 type SealDoc struct {
@@ -52,7 +51,7 @@ func loadSealFromDecoder(decoder func(interface{}) error, encs *encoder.Encoders
 	if err != nil {
 		return nil, err
 	} else if i, ok := hinter.(seal.Seal); !ok {
-		return nil, xerrors.Errorf("not Seal: %T", hinter)
+		return nil, errors.Errorf("not Seal: %T", hinter)
 	} else {
 		sl = i
 	}
@@ -65,7 +64,7 @@ func loadSealHashFromDecoder(decoder func(interface{}) error, _ *encoder.Encoder
 	if err := decoder(&hd); err != nil {
 		return nil, err
 	} else if hd.H.Empty() {
-		return nil, xerrors.Errorf("empty hash for HashIDDoc")
+		return nil, errors.Errorf("empty hash for HashIDDoc")
 	}
 
 	return hd.H, nil

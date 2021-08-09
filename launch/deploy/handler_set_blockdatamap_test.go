@@ -210,7 +210,7 @@ func (t *testSetBlockDataMaps) TestInvalidMapHash() {
 	pr, err := network.LoadProblemFromResponse(res)
 	t.NoError(err)
 
-	t.Contains(pr.Title(), "invalid: incorrect block data map hash")
+	t.Contains(pr.Title(), "invalid; incorrect block data map hash")
 }
 
 func (t *testSetBlockDataMaps) TestInvalidBlockHashMap() {

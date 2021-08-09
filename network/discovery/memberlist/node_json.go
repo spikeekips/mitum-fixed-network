@@ -1,9 +1,9 @@
 package memberlist
 
 import (
+	"github.com/pkg/errors"
 	"github.com/spikeekips/mitum/network"
 	"github.com/spikeekips/mitum/util"
-	"golang.org/x/xerrors"
 )
 
 func (meta NodeMeta) MarshalJSON() ([]byte, error) {
@@ -33,7 +33,7 @@ func (meta *NodeMeta) UnmarshalJSON(b []byte) error {
 		case "p":
 			i, ok := m["p"].(string)
 			if !ok {
-				return xerrors.Errorf("invalid publish, %T", m["p"])
+				return errors.Errorf("invalid publish, %T", m["p"])
 			}
 
 			if len(i) > 0 {

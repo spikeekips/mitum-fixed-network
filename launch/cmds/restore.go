@@ -4,6 +4,7 @@ import (
 	"context"
 	"time"
 
+	"github.com/pkg/errors"
 	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/base/block"
 	"github.com/spikeekips/mitum/isaac"
@@ -14,7 +15,6 @@ import (
 	"github.com/spikeekips/mitum/storage/blockdata/localfs"
 	"github.com/spikeekips/mitum/util"
 	"github.com/spikeekips/mitum/util/hint"
-	"golang.org/x/xerrors"
 )
 
 type RestoreCommand struct {
@@ -34,7 +34,7 @@ func NewRestoreCommand(types []hint.Type, hinters []hint.Hinter) RestoreCommand 
 
 	ps := cmd.Processes()
 	if ps == nil {
-		panic(xerrors.Errorf("processes not prepared"))
+		panic(errors.Errorf("processes not prepared"))
 	}
 
 	for _, i := range []pm.Process{
@@ -73,7 +73,7 @@ func NewRestoreCommand(types []hint.Type, hinters []hint.Hinter) RestoreCommand 
 
 func (cmd *RestoreCommand) Run(version util.Version) error {
 	if err := cmd.Initialize(cmd, version); err != nil {
-		return xerrors.Errorf("failed to initialize command: %w", err)
+		return errors.Wrap(err, "failed to initialize command")
 	}
 	defer cmd.Done()
 	defer func() {
@@ -101,7 +101,7 @@ func (cmd *RestoreCommand) restore() error {
 	}
 	for {
 		if found, err := cmd.bd.Exists(height); err != nil {
-			return xerrors.Errorf("failed to check blockdata of height, %d: %w", height, err)
+			return errors.Wrapf(err, "failed to check blockdata of height, %d", height)
 		} else if !found {
 			break
 		}
@@ -228,7 +228,7 @@ func (cmd *RestoreCommand) hookCheckEmptyBlockData(ctx context.Context) (context
 	var height base.Height = base.PreGenesisHeight
 	for {
 		if found, err := cmd.bd.Exists(height); err != nil {
-			return ctx, xerrors.Errorf("failed to check blockdata of height, %d: %w", height, err)
+			return ctx, errors.Wrapf(err, "failed to check blockdata of height, %d", height)
 		} else if !found {
 			height--
 			break
@@ -238,7 +238,7 @@ func (cmd *RestoreCommand) hookCheckEmptyBlockData(ctx context.Context) (context
 	}
 
 	if height < base.PreGenesisHeight+1 {
-		return ctx, xerrors.Errorf("blockdata is empty")
+		return ctx, errors.Errorf("blockdata is empty")
 	}
 
 	cmd.Log().Debug().Int64("last_height", height.Int64()).Msg("blockdata checked")
@@ -268,19 +268,19 @@ func (cmd *RestoreCommand) hookCheckExistingDatabase(ctx context.Context) (conte
 	switch {
 	case cmd.lastManifest.Height() > cmd.lastBlock.Height():
 		return ctx,
-			xerrors.Errorf("block in database is higher than blockdata; clean database first with --clean-database")
+			errors.Errorf("block in database is higher than blockdata; clean database first with --clean-database")
 	case cmd.lastManifest.Height() == cmd.lastBlock.Height():
 		if !cmd.lastManifest.Hash().Equal(cmd.lastBlock.Hash()) {
-			return ctx, xerrors.Errorf("block in database has same height with blockdata, " +
+			return ctx, errors.Errorf("block in database has same height with blockdata, " +
 				"but different hash; clean database first with --clean-database")
 		}
 
 		return ctx, util.IgnoreError.Errorf("block in database is already same with blockdata")
 	default:
 		if _, j, err := localfs.LoadBlock(cmd.bd, cmd.lastManifest.Height()); err != nil {
-			return ctx, xerrors.Errorf("failed to load block of last manifest")
+			return ctx, errors.Errorf("failed to load block of last manifest")
 		} else if !j.Hash().Equal(cmd.lastManifest.Hash()) {
-			return ctx, xerrors.Errorf("hash of last manifest does not match with one of blockdata" +
+			return ctx, errors.Errorf("hash of last manifest does not match with one of blockdata" +
 				"; clean database first with --clean-database")
 		}
 	}

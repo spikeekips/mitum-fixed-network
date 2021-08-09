@@ -1,10 +1,10 @@
 package ballot
 
 import (
+	"github.com/pkg/errors"
 	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/util/encoder"
 	"github.com/spikeekips/mitum/util/valuehash"
-	"golang.org/x/xerrors"
 )
 
 func (ib *INITV0) unpack(
@@ -16,7 +16,7 @@ func (ib *INITV0) unpack(
 	bAVoteproof []byte,
 ) error {
 	if previousBlock != nil && previousBlock.Empty() {
-		return xerrors.Errorf("empty previous_block hash found")
+		return errors.Errorf("empty previous_block hash found")
 	}
 
 	if bVoteproof != nil {
@@ -50,7 +50,7 @@ func (ibf *INITFactV0) unpack(
 	previousBlock valuehash.Hash,
 ) error {
 	if previousBlock != nil && previousBlock.Empty() {
-		return xerrors.Errorf("empty previous_block hash found")
+		return errors.Errorf("empty previous_block hash found")
 	}
 
 	ibf.BaseFactV0 = bf

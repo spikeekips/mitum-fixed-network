@@ -8,13 +8,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/stretchr/testify/suite"
-	"go.mongodb.org/mongo-driver/bson"
-	"go.mongodb.org/mongo-driver/bson/primitive"
-	"go.mongodb.org/mongo-driver/mongo"
-	"go.mongodb.org/mongo-driver/mongo/options"
-	"golang.org/x/xerrors"
-
+	"github.com/pkg/errors"
 	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/base/block"
 	"github.com/spikeekips/mitum/base/key"
@@ -24,6 +18,11 @@ import (
 	"github.com/spikeekips/mitum/util/encoder"
 	bsonenc "github.com/spikeekips/mitum/util/encoder/bson"
 	"github.com/spikeekips/mitum/util/valuehash"
+	"github.com/stretchr/testify/suite"
+	"go.mongodb.org/mongo-driver/bson"
+	"go.mongodb.org/mongo-driver/bson/primitive"
+	"go.mongodb.org/mongo-driver/mongo"
+	"go.mongodb.org/mongo-driver/mongo/options"
 )
 
 type docNilID struct {
@@ -245,7 +244,7 @@ func (t *testMongodbClient) TestSetDuplicatedError() {
 	t.Equal(id, inserted)
 
 	_, err = t.client.Add("showme", doc)
-	t.True(xerrors.Is(err, util.DuplicatedError))
+	t.True(errors.Is(err, util.DuplicatedError))
 }
 
 func (t *testMongodbClient) TestSetRawDuplicatedError() {
@@ -259,7 +258,7 @@ func (t *testMongodbClient) TestSetRawDuplicatedError() {
 	t.Equal(id, inserted)
 
 	_, err = t.client.AddRaw("showme", raw)
-	t.True(xerrors.Is(err, util.DuplicatedError))
+	t.True(errors.Is(err, util.DuplicatedError))
 }
 
 func (t *testMongodbClient) TestBulkDuplicatedError0() {
@@ -272,7 +271,7 @@ func (t *testMongodbClient) TestBulkDuplicatedError0() {
 	models = append(models, mongo.NewInsertOneModel().SetDocument(doc))
 
 	err := t.client.Bulk(context.Background(), "showme", models, false)
-	t.True(xerrors.Is(err, util.DuplicatedError))
+	t.True(errors.Is(err, util.DuplicatedError))
 }
 
 func (t *testMongodbClient) TestBulkDuplicatedError1() {
@@ -287,7 +286,7 @@ func (t *testMongodbClient) TestBulkDuplicatedError1() {
 	models = append(models, mongo.NewInsertOneModel().SetDocument(doc))
 
 	err = t.client.Bulk(context.Background(), "showme", models, false)
-	t.True(xerrors.Is(err, util.DuplicatedError))
+	t.True(errors.Is(err, util.DuplicatedError))
 }
 
 func (t *testMongodbClient) TestMoveRawBytes() {
@@ -336,7 +335,7 @@ func (t *testMongodbClient) TestBulkTimeoutShort() {
 	_, err = t.client.Collection("showme").BulkWrite(ctx, models, opts)
 	t.Error(err)
 
-	t.True(xerrors.Is(err, context.DeadlineExceeded))
+	t.True(errors.Is(err, context.DeadlineExceeded))
 }
 
 func (t *testMongodbClient) TestBulkTimeoutNetworkError() {
@@ -363,9 +362,9 @@ func (t *testMongodbClient) TestBulkTimeoutNetworkError() {
 	inserted, _ := t.client.Count(context.Background(), "showme", bson.D{})
 	t.NotEqual(0, inserted)
 
-	if !xerrors.Is(err, context.DeadlineExceeded) {
+	if !errors.Is(err, context.DeadlineExceeded) {
 		var me mongo.CommandError
-		t.True(xerrors.As(err, &me))
+		t.True(errors.As(err, &me))
 		t.Equal(int32(0), me.Code)
 		t.True(me.HasErrorLabel("NetworkError"))
 	}

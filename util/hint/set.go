@@ -5,9 +5,9 @@ import (
 	"sync"
 
 	"github.com/bluele/gcache"
+	"github.com/pkg/errors"
 	"github.com/spikeekips/mitum/util"
 	"golang.org/x/mod/semver"
-	"golang.org/x/xerrors"
 )
 
 type Hintset struct {
@@ -81,8 +81,8 @@ func (hs *Hintset) Compatible(ht Hint) (Hinter, error) {
 			return h, nil
 		}
 		return nil, util.NotFoundError.Errorf("Hinter not found for %q", ht)
-	} else if !xerrors.Is(err, gcache.KeyNotFoundError) {
-		return nil, xerrors.Errorf("Hintset cache problem: %w", err)
+	} else if !errors.Is(err, gcache.KeyNotFoundError) {
+		return nil, errors.Wrap(err, "Hintset cache problem")
 	}
 
 	hinter := hs.compatible(ht)
@@ -127,7 +127,7 @@ func NewGlobalHintset() *GlobalHintset {
 func (hs *GlobalHintset) Initialize() error {
 	for i := range hs.set {
 		if len(hs.set[i]) < 1 {
-			return xerrors.Errorf("empty Type, %q found", i)
+			return errors.Errorf("empty Type, %q found", i)
 		}
 	}
 

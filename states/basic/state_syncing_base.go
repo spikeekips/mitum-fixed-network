@@ -4,6 +4,7 @@ import (
 	"sort"
 	"sync"
 
+	"github.com/pkg/errors"
 	"github.com/rs/zerolog"
 	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/base/block"
@@ -12,7 +13,6 @@ import (
 	"github.com/spikeekips/mitum/storage"
 	"github.com/spikeekips/mitum/storage/blockdata"
 	"github.com/spikeekips/mitum/util/logging"
-	"golang.org/x/xerrors"
 )
 
 type BaseSyncingState struct {
@@ -54,7 +54,7 @@ func (st *BaseSyncingState) Enter(sctx StateSwitchContext) (func() error, error)
 	}
 
 	if st.syncers() != nil {
-		return nil, xerrors.Errorf("not stopped correctly; syncers still running")
+		return nil, errors.Errorf("not stopped correctly; syncers still running")
 	}
 
 	return func() error {

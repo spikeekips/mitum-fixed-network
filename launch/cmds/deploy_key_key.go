@@ -6,10 +6,10 @@ import (
 	"net/http"
 	"os"
 
+	"github.com/pkg/errors"
 	"github.com/spikeekips/mitum/launch/deploy"
 	"github.com/spikeekips/mitum/network"
 	"github.com/spikeekips/mitum/util"
-	"golang.org/x/xerrors"
 )
 
 type DeployKeyKeyCommand struct {
@@ -25,12 +25,12 @@ func NewDeployKeyKeyCommand() DeployKeyKeyCommand {
 
 func (cmd *DeployKeyKeyCommand) Run(version util.Version) error {
 	if err := cmd.Initialize(cmd, version); err != nil {
-		return xerrors.Errorf("failed to initialize command: %w", err)
+		return errors.Wrap(err, "failed to initialize command")
 	}
 
 	if err := cmd.requestToken(); err != nil {
 		var pr network.Problem
-		if xerrors.As(err, &pr) {
+		if errors.As(err, &pr) {
 			cmd.Log().Error().Interface("problem", pr).Msg("failed")
 		}
 
@@ -39,7 +39,7 @@ func (cmd *DeployKeyKeyCommand) Run(version util.Version) error {
 
 	if err := cmd.requestKey(); err != nil {
 		var pr network.Problem
-		if xerrors.As(err, &pr) {
+		if errors.As(err, &pr) {
 			cmd.Log().Error().Interface("problem", pr).Msg("failed")
 		}
 
@@ -54,7 +54,7 @@ func (cmd *DeployKeyKeyCommand) requestKey() error {
 
 	res, c, err := cmd.requestWithToken(path, "GET")
 	if err != nil {
-		return xerrors.Errorf("failed to request deploy key: %w", err)
+		return errors.Wrap(err, "failed to request deploy key")
 	}
 	defer func() {
 		_ = c()
@@ -64,7 +64,7 @@ func (cmd *DeployKeyKeyCommand) requestKey() error {
 	if res.StatusCode == http.StatusOK {
 		i, err := ioutil.ReadAll(res.Body)
 		if err != nil {
-			return xerrors.Errorf("failed to read body: %w", err)
+			return errors.Wrap(err, "failed to read body")
 		}
 		_, _ = fmt.Fprintln(os.Stdout, string(i))
 
@@ -79,5 +79,5 @@ func (cmd *DeployKeyKeyCommand) requestKey() error {
 
 	cmd.Log().Debug().Interface("response", res).Msg("failed to request")
 
-	return xerrors.Errorf("failed to revoke deploy key")
+	return errors.Errorf("failed to revoke deploy key")
 }

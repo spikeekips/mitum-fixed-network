@@ -5,9 +5,9 @@ import (
 	"sync"
 	"sync/atomic"
 
+	"github.com/pkg/errors"
 	"github.com/rs/zerolog"
 	"github.com/spikeekips/mitum/util/logging"
-	"golang.org/x/xerrors"
 )
 
 type WorkerCallback func( /* job id */ uint, interface{} /* arguments */) error
@@ -158,7 +158,7 @@ func (wk *DistributeWorker) Run(callback WorkerCallback) error {
 	}
 
 	if wk.wg != nil {
-		return xerrors.Errorf("already ran")
+		return errors.Errorf("already ran")
 	}
 
 	wk.wg = &sync.WaitGroup{}

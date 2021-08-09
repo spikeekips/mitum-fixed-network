@@ -3,11 +3,11 @@ package bsonenc
 import (
 	"testing"
 
+	"github.com/pkg/errors"
 	"github.com/spikeekips/mitum/util"
 	"github.com/spikeekips/mitum/util/encoder"
 	"github.com/spikeekips/mitum/util/hint"
 	"github.com/stretchr/testify/suite"
-	"golang.org/x/xerrors"
 )
 
 type testEncodersWithBSON struct {
@@ -63,7 +63,7 @@ func (t *testEncodersWithBSON) TestDecode() {
 	{ // without AddHinter
 		a, err := be.Decode(b)
 		t.Empty(a)
-		t.True(xerrors.Is(err, util.NotFoundError))
+		t.True(errors.Is(err, util.NotFoundError))
 	}
 
 	encs = encoder.NewEncoders()

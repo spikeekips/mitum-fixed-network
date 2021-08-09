@@ -1,8 +1,7 @@
 package isaac
 
 import (
-	"golang.org/x/xerrors"
-
+	"github.com/pkg/errors"
 	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/base/ballot"
 	"github.com/spikeekips/mitum/base/block"
@@ -14,10 +13,10 @@ import (
 func NewINITBallotV0Round0(node base.Node, st storage.Database) (ballot.INITV0, error) {
 	var m block.Manifest
 	switch l, found, err := st.LastManifest(); {
-	case !found:
-		return ballot.INITV0{}, xerrors.Errorf("last block not found")
 	case err != nil:
-		return ballot.INITV0{}, xerrors.Errorf("failed to get last block: %w", err)
+		return ballot.INITV0{}, errors.Wrap(err, "failed to get last block")
+	case !found:
+		return ballot.INITV0{}, errors.Errorf("last block not found")
 	default:
 		m = l
 	}
@@ -62,7 +61,7 @@ func NewINITBallotV0WithVoteproof(
 		f, ok := voteproof.Majority().(ballot.ACCEPTFact)
 		if !ok {
 			return ballot.INITV0{},
-				xerrors.Errorf("invalid voteproof found; should have ACCEPTBallotFact, not %T", voteproof.Majority())
+				errors.Errorf("invalid voteproof found; should have ACCEPTBallotFact, not %T", voteproof.Majority())
 		}
 		previousBlock = f.NewBlock()
 	}
@@ -88,10 +87,10 @@ func NewProposalV0(
 ) {
 	var manifest block.Manifest
 	switch l, found, err := st.LastManifest(); {
-	case !found:
-		return ballot.ProposalV0{}, util.NotFoundError.Errorf("last manifest not found for NewProposalV0")
 	case err != nil:
 		return ballot.ProposalV0{}, err
+	case !found:
+		return ballot.ProposalV0{}, util.NotFoundError.Errorf("last manifest not found for NewProposalV0")
 	default:
 		manifest = l
 	}

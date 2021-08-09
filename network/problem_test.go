@@ -3,10 +3,10 @@ package network
 import (
 	"testing"
 
+	"github.com/pkg/errors"
+	"github.com/spikeekips/mitum/util"
 	jsonenc "github.com/spikeekips/mitum/util/encoder/json"
-	"github.com/spikeekips/mitum/util/errors"
 	"github.com/stretchr/testify/suite"
-	"golang.org/x/xerrors"
 )
 
 type testProblem struct {
@@ -48,7 +48,7 @@ func (t *testProblem) TestExtra() {
 }
 
 func (t *testProblem) TestFromError() {
-	e := errors.NewError("showme")
+	e := util.NewError("showme")
 	pr := NewProblemFromError(e)
 
 	b, err := jsonenc.Marshal(pr)
@@ -63,8 +63,8 @@ func (t *testProblem) TestFromError() {
 }
 
 func (t *testProblem) TestFromWrapedError() {
-	e0 := xerrors.Errorf("showme")
-	e := xerrors.Errorf("findme: %w", e0)
+	e0 := errors.Errorf("showme")
+	e := errors.Wrapf(e0, "findme")
 	pr := NewProblemFromError(e)
 
 	b, err := jsonenc.Marshal(pr)

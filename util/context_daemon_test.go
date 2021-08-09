@@ -6,9 +6,9 @@ import (
 	"testing"
 	"time"
 
+	"github.com/pkg/errors"
 	"github.com/stretchr/testify/suite"
 	"go.uber.org/goleak"
-	"golang.org/x/xerrors"
 )
 
 type testContextDaemon struct {
@@ -29,7 +29,7 @@ func (t *testContextDaemon) TestNew() {
 	t.True(ed.IsStarted())
 
 	err := ed.Start()
-	t.True(xerrors.Is(err, DaemonAlreadyStartedError))
+	t.True(errors.Is(err, DaemonAlreadyStartedError))
 
 	<-time.After(time.Millisecond * 100)
 
@@ -41,14 +41,14 @@ func (t *testContextDaemon) TestNew() {
 	t.True(timeStopped.Sub(timeStopping) > 0)
 
 	err = ed.Stop()
-	t.True(xerrors.Is(err, DaemonAlreadyStoppedError))
+	t.True(errors.Is(err, DaemonAlreadyStoppedError))
 }
 
 func (t *testContextDaemon) TestFuncStopped() {
 	ed := NewContextDaemon("test", func(ctx context.Context) error {
 		<-time.After(time.Millisecond * 100)
 
-		return xerrors.Errorf("show me")
+		return errors.Errorf("show me")
 	})
 	t.NoError(ed.Start())
 	defer ed.Stop()
@@ -73,7 +73,7 @@ func (t *testContextDaemon) TestStop() {
 	t.True(time.Since(timeStopping) > stopAfter)
 
 	// stop again
-	t.True(xerrors.Is(ed.Stop(), DaemonAlreadyStoppedError))
+	t.True(errors.Is(ed.Stop(), DaemonAlreadyStoppedError))
 }
 
 func (t *testContextDaemon) TestStartAgain() {
@@ -91,7 +91,7 @@ func (t *testContextDaemon) TestStartAgain() {
 	t.NoError(ed.Stop())
 	select {
 	case <-time.After(time.Second):
-		t.NoError(xerrors.Errorf("wait to stop, but failed"))
+		t.NoError(errors.Errorf("wait to stop, but failed"))
 		return
 	case <-resultchan:
 	}
@@ -104,7 +104,7 @@ func (t *testContextDaemon) TestStartAgain() {
 
 	select {
 	case <-time.After(time.Second):
-		t.NoError(xerrors.Errorf("wait to stop, but failed"))
+		t.NoError(errors.Errorf("wait to stop, but failed"))
 		return
 	case <-resultchan:
 	}
@@ -112,17 +112,17 @@ func (t *testContextDaemon) TestStartAgain() {
 
 func (t *testContextDaemon) TestWait() {
 	ed := NewContextDaemon("test", func(_ context.Context) error {
-		return xerrors.Errorf("show me")
+		return errors.Errorf("show me")
 	})
 
 	err := <-ed.Wait(context.Background())
 	t.Contains(err.Error(), "show me")
-	t.True(xerrors.Is(ed.Stop(), DaemonAlreadyStoppedError))
+	t.True(errors.Is(ed.Stop(), DaemonAlreadyStoppedError))
 
 	ed = NewContextDaemon("test", func(_ context.Context) error {
 		<-time.After(time.Second * 2)
 
-		return xerrors.Errorf("show me")
+		return errors.Errorf("show me")
 	})
 
 	done := make(chan error)
@@ -142,7 +142,7 @@ func (t *testContextDaemon) TestStartWithContext() {
 	ed := NewContextDaemon("test", func(ctx context.Context) error {
 		<-ctx.Done()
 
-		resultchan <- xerrors.Errorf("find me")
+		resultchan <- errors.Errorf("find me")
 
 		return nil
 	})

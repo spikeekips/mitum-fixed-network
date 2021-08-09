@@ -4,6 +4,7 @@ import (
 	"context"
 	"io"
 
+	"github.com/pkg/errors"
 	"github.com/rs/zerolog"
 	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/base/block"
@@ -12,7 +13,6 @@ import (
 	"github.com/spikeekips/mitum/network"
 	"github.com/spikeekips/mitum/util/logging"
 	"github.com/spikeekips/mitum/util/valuehash"
-	"golang.org/x/xerrors"
 )
 
 type Channel struct {
@@ -46,7 +46,7 @@ func (ch *Channel) ConnInfo() network.ConnInfo {
 
 func (ch *Channel) Seals(_ context.Context, h []valuehash.Hash) ([]seal.Seal, error) {
 	if ch.getSealHandler == nil {
-		return nil, xerrors.Errorf("getSealHandler is missing")
+		return nil, errors.Errorf("getSealHandler is missing")
 	}
 
 	return ch.getSealHandler(h)
@@ -84,7 +84,7 @@ func (ch *Channel) SetNodeInfoHandler(f network.NodeInfoHandler) {
 
 func (ch *Channel) BlockDataMaps(_ context.Context, hs []base.Height) ([]block.BlockDataMap, error) {
 	if ch.getBlockDataMaps == nil {
-		return nil, xerrors.Errorf("not supported")
+		return nil, errors.Errorf("not supported")
 	}
 
 	bds, err := ch.getBlockDataMaps(hs)
@@ -106,7 +106,7 @@ func (ch *Channel) SetBlockDataMapsHandler(f network.BlockDataMapsHandler) {
 
 func (ch *Channel) BlockData(_ context.Context, item block.BlockDataMapItem) (io.ReadCloser, error) {
 	if ch.getBlockData == nil {
-		return nil, xerrors.Errorf("not supported")
+		return nil, errors.Errorf("not supported")
 	}
 
 	return network.FetchBlockDataThruChannel(ch.getBlockData, item)

@@ -5,6 +5,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/pkg/errors"
 	"github.com/rs/zerolog"
 	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/base/ballot"
@@ -19,7 +20,6 @@ import (
 	"github.com/spikeekips/mitum/util/hint"
 	"github.com/spikeekips/mitum/util/logging"
 	"github.com/spikeekips/mitum/util/tree"
-	"golang.org/x/xerrors"
 )
 
 type DefaultProcessor struct {
@@ -82,10 +82,10 @@ func NewDefaultProcessor(
 ) (*DefaultProcessor, error) {
 	var baseManifest block.Manifest
 	switch m, found, err := st.ManifestByHeight(proposal.Height() - 1); {
-	case !found:
-		return nil, util.NotFoundError.Errorf("base manifest, %d is empty", proposal.Height()-1)
 	case err != nil:
 		return nil, err
+	case !found:
+		return nil, util.NotFoundError.Errorf("base manifest, %d is empty", proposal.Height()-1)
 	default:
 		baseManifest = m
 	}
@@ -178,19 +178,19 @@ func (pp *DefaultProcessor) SetACCEPTVoteproof(acceptVoteproof base.Voteproof) e
 
 	switch {
 	case pp.blk == nil:
-		return xerrors.Errorf("empty block, not prepared")
+		return errors.Errorf("empty block, not prepared")
 	case pp.ss == nil:
-		return xerrors.Errorf("empty block session, not prepared")
+		return errors.Errorf("empty block session, not prepared")
 	case pp.blockDataSession == nil:
-		return xerrors.Errorf("empty block database session, not prepared")
+		return errors.Errorf("empty block database session, not prepared")
 	}
 
 	if m := acceptVoteproof.Majority(); m == nil {
-		return xerrors.Errorf("acceptVoteproof has empty majority")
+		return errors.Errorf("acceptVoteproof has empty majority")
 	} else if fact, ok := m.(ballot.ACCEPTFact); !ok {
-		return xerrors.Errorf("acceptVoteproof does not have ballot.ACCEPTBallotFact")
+		return errors.Errorf("acceptVoteproof does not have ballot.ACCEPTBallotFact")
 	} else if !pp.blk.Hash().Equal(fact.NewBlock()) {
-		return xerrors.Errorf("hash of the processed block does not match with acceptVoteproof")
+		return errors.Errorf("hash of the processed block does not match with acceptVoteproof")
 	}
 
 	pp.blk = pp.blk.SetACCEPTVoteproof(acceptVoteproof)
@@ -236,7 +236,7 @@ func (pp *DefaultProcessor) getSuffrageInfo() (block.SuffrageInfoV0, error) {
 	for _, address := range pp.suffrage.Nodes() {
 		n, _, found := pp.nodepool.Node(address)
 		if !found {
-			return block.SuffrageInfoV0{}, xerrors.Errorf("suffrage node, %s not found in node pool", address)
+			return block.SuffrageInfoV0{}, errors.Errorf("suffrage node, %s not found in node pool", address)
 		}
 		ns = append(ns, n)
 	}

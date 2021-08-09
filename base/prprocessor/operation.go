@@ -6,8 +6,7 @@ import (
 	"sort"
 	"sync"
 
-	"golang.org/x/xerrors"
-
+	"github.com/pkg/errors"
 	"github.com/rs/zerolog"
 	"github.com/spikeekips/mitum/base/operation"
 	"github.com/spikeekips/mitum/base/state"
@@ -87,7 +86,7 @@ func NewConcurrentOperationsProcessor(
 	oppHintSet *hint.Hintmap,
 ) (*ConcurrentOperationsProcessor, error) {
 	if max < 1 {
-		return nil, xerrors.Errorf("max must be over 0")
+		return nil, errors.Errorf("max must be over 0")
 	} else if max > maxConcurrentOperations {
 		max = maxConcurrentOperations
 	}
@@ -125,7 +124,7 @@ func (co *ConcurrentOperationsProcessor) Start(
 	co.donechan = make(chan error, 2)
 	go func() {
 		<-ctx.Done()
-		co.donechan <- xerrors.Errorf("canceled to process: %w", ctx.Err())
+		co.donechan <- errors.Wrap(ctx.Err(), "canceled to process")
 	}()
 
 	go func() {
@@ -229,7 +228,7 @@ func (co *ConcurrentOperationsProcessor) OperationsTree() (tree.FixedTree, error
 
 func (co *ConcurrentOperationsProcessor) Process(index uint64, op operation.Operation) error {
 	if co.wk == nil {
-		return xerrors.Errorf("not started")
+		return errors.Errorf("not started")
 	}
 
 	l := co.Log().With().
@@ -360,7 +359,7 @@ func (co *ConcurrentOperationsProcessor) opr(op state.Processor) (OperationProce
 
 	hinter, ok := op.(hint.Hinter)
 	if !ok {
-		return nil, xerrors.Errorf("not Hinter, %T", op)
+		return nil, errors.Errorf("not Hinter, %T", op)
 	}
 
 	if opr, found := co.oprs[hinter.Hint()]; found {
@@ -391,7 +390,7 @@ func (co *ConcurrentOperationsProcessor) work(_ uint, j interface{}) error {
 	if j == nil {
 		return nil
 	} else if i, ok := j.(workerJob); !ok {
-		return xerrors.Errorf("invalid input, %T", j)
+		return errors.Errorf("invalid input, %T", j)
 	} else {
 		job = i
 	}
@@ -438,9 +437,9 @@ func operationIgnored(err error) bool {
 
 	var operr operation.ReasonError
 	switch {
-	case xerrors.Is(err, util.IgnoreError):
+	case errors.Is(err, util.IgnoreError):
 		return true
-	case xerrors.As(err, &operr):
+	case errors.As(err, &operr):
 		return true
 	default:
 		return false

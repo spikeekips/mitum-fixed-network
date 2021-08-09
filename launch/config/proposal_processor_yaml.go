@@ -4,8 +4,7 @@ import (
 	"fmt"
 	"strings"
 
-	"golang.org/x/xerrors"
-
+	"github.com/pkg/errors"
 	"github.com/spikeekips/mitum/base"
 )
 
@@ -40,15 +39,15 @@ func (ep *ErrorPoint) UnmarshalYAML(decode func(v interface{}) error) error {
 
 func parseErrorPointPoint(s string) (base.Height, base.Round, error) {
 	if s = strings.TrimSpace(s); len(s) < 1 {
-		return base.NilHeight, 0, xerrors.Errorf("empty point string")
+		return base.NilHeight, 0, errors.Errorf("empty point string")
 	}
 
 	var h int64
 	var r uint64
 	if n, err := fmt.Sscanf(s, "%d,%d", &h, &r); err != nil {
-		return base.NilHeight, 0, xerrors.Errorf("invalid block point string: %v: %w", s, err)
+		return base.NilHeight, 0, errors.Wrapf(err, "invalid block point string: %v", s)
 	} else if n != 2 {
-		return base.NilHeight, 0, xerrors.Errorf("invalid block point string: %v", s)
+		return base.NilHeight, 0, errors.Errorf("invalid block point string: %v", s)
 	}
 
 	height := base.Height(h)

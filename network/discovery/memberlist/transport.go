@@ -9,11 +9,11 @@ import (
 	"time"
 
 	ml "github.com/hashicorp/memberlist"
+	"github.com/pkg/errors"
 	"github.com/rs/zerolog"
 	"github.com/spikeekips/mitum/util"
 	"github.com/spikeekips/mitum/util/localtime"
 	"github.com/spikeekips/mitum/util/logging"
-	"golang.org/x/xerrors"
 )
 
 type QuicRequest func(
@@ -98,7 +98,7 @@ func (tp *QuicTransport) DialTimeout(addr string, timeout time.Duration) (net.Co
 func (tp *QuicTransport) DialAddressTimeout(a ml.Address, timeout time.Duration) (net.Conn, error) {
 	conn, err := tp.dialAddressTimeout(a, timeout)
 	if err != nil {
-		return nil, &net.OpError{Net: "tcp", Op: "dial", Err: xerrors.Errorf("dial: failed to connect, %q: %w", a, err)}
+		return nil, &net.OpError{Net: "tcp", Op: "dial", Err: errors.Wrapf(err, "dial: failed to connect, %q", a)}
 	}
 
 	return conn, nil
@@ -117,7 +117,7 @@ func (tp *QuicTransport) dialAddressTimeout(a ml.Address, timeout time.Duration)
 	if !found {
 		tp.Log().Warn().Str("address", a.Addr).Msg("unknown address found")
 
-		return nil, xerrors.Errorf("unknown address, %q", a.Addr)
+		return nil, errors.Errorf("unknown address, %q", a.Addr)
 	}
 
 	ctx, cancel := context.WithTimeout(context.Background(), tp.getTimeout())
@@ -131,7 +131,7 @@ func (tp *QuicTransport) dialAddressTimeout(a ml.Address, timeout time.Duration)
 	case res.StatusCode == http.StatusCreated:
 	default:
 		if res != nil {
-			err = xerrors.Errorf("status=%d", res.StatusCode)
+			err = errors.Errorf("status=%d", res.StatusCode)
 		}
 
 		return nil, err
@@ -157,7 +157,7 @@ func (tp *QuicTransport) write(addr string, body []byte, timeout time.Duration, 
 	if !found {
 		tp.Log().Warn().Str("address", addr).Msg("unknown address found")
 
-		return xerrors.Errorf("write: unknown address, %q", addr)
+		return errors.Errorf("write: unknown address, %q", addr)
 	}
 
 	b, err := tp.newNodeMessage(body, conid)
@@ -191,7 +191,7 @@ func (tp *QuicTransport) write(addr string, body []byte, timeout time.Duration, 
 	default:
 		return &net.OpError{
 			Net: "tcp", Op: "write",
-			Err: xerrors.Errorf("failed to write; status=%d", res.StatusCode),
+			Err: errors.Errorf("failed to write; status=%d", res.StatusCode),
 		}
 	}
 }
@@ -254,7 +254,7 @@ func (tp *QuicTransport) handler(callback func(NodeMessage) error) http.HandlerF
 			l.Trace().Err(err).Msg("failed to handle; ignored")
 
 			switch {
-			case xerrors.Is(err, JoinDeclinedError):
+			case errors.Is(err, JoinDeclinedError):
 				http.Error(w, http.StatusText(http.StatusForbidden), http.StatusForbidden)
 			default:
 				http.Error(w, http.StatusText(http.StatusBadRequest), http.StatusBadRequest)

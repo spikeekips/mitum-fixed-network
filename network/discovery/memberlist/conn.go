@@ -8,11 +8,11 @@ import (
 	"sync"
 	"time"
 
+	"github.com/pkg/errors"
 	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/network"
 	"github.com/spikeekips/mitum/util"
 	"github.com/spikeekips/mitum/util/localtime"
-	"golang.org/x/xerrors"
 )
 
 var connPool = sync.Pool{
@@ -149,7 +149,7 @@ func NewConnInfoWithConnInfo(addr string, connInfo network.HTTPConnInfo) ConnInf
 
 func (ci ConnInfo) IsValid([]byte) error {
 	if len(strings.TrimSpace(ci.Address)) < 1 {
-		return xerrors.Errorf("empty address")
+		return errors.Errorf("empty address")
 	}
 
 	return isValidPublishURL(ci.URL())
@@ -209,7 +209,7 @@ func (ma *ConnInfoMap) addrExists(addr string) bool {
 func (ma *ConnInfoMap) dryAdd(u *url.URL, insecure bool) (ConnInfo, error) {
 	uu, addr, err := publishToAddress(u)
 	if err != nil {
-		return ConnInfo{}, xerrors.Errorf("failed to convert url to address, %q: %w", u.String(), err)
+		return ConnInfo{}, errors.Wrapf(err, "failed to convert url to address, %q", u.String())
 	}
 
 	item := NewConnInfo(addr, uu, insecure)
@@ -227,7 +227,7 @@ func (ma *ConnInfoMap) add(u *url.URL, insecure bool) (ConnInfo, error) {
 
 	uu, addr, err := publishToAddress(u)
 	if err != nil {
-		return ConnInfo{}, xerrors.Errorf("failed to convert url to address, %q: %w", u.String(), err)
+		return ConnInfo{}, errors.Wrapf(err, "failed to convert url to address, %q", u.String())
 	}
 
 	if i, found := ma.load(addr); found { // NOTE if already exists, compare item values
@@ -286,7 +286,7 @@ func (ma *ConnInfoMap) setAlive(addr string) error {
 
 	i, found := ma.addrs.Load(addr)
 	if !found {
-		return xerrors.Errorf("address, %q not found", addr)
+		return errors.Errorf("address, %q not found", addr)
 	}
 
 	j := i.(ConnInfo)

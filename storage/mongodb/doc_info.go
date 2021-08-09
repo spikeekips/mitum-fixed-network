@@ -2,13 +2,12 @@ package mongodbstorage
 
 import (
 	"github.com/btcsuite/btcutil/base58"
-	"go.mongodb.org/mongo-driver/bson"
-	"golang.org/x/crypto/sha3"
-	"golang.org/x/xerrors"
-
+	"github.com/pkg/errors"
 	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/util/encoder"
 	bsonenc "github.com/spikeekips/mitum/util/encoder/bson"
+	"go.mongodb.org/mongo-driver/bson"
+	"golang.org/x/crypto/sha3"
 )
 
 const lastManifestDocID = "confirmed_block"
@@ -46,7 +45,7 @@ func loadLastManifest(decoder func(interface{}) error, encs *encoder.Encoders) (
 	if err != nil {
 		return base.Height(0), err
 	} else if r, ok := d.(bson.RawValue); !ok {
-		return base.Height(0), xerrors.Errorf("invalid height: %T", d)
+		return base.Height(0), errors.Errorf("invalid height: %T", d)
 	} else if err := r.Unmarshal(&height); err != nil {
 		return base.Height(0), err
 	}
@@ -95,7 +94,7 @@ func loadInfo(decoder func(interface{}) error, encs *encoder.Encoders) ([]byte /
 	if _, d, err := LoadDataFromDoc(b, encs); err != nil {
 		return nil, err
 	} else if r, ok := d.(bson.RawValue); !ok {
-		return nil, xerrors.Errorf("invalid data type for info, %T", d)
+		return nil, errors.Errorf("invalid data type for info, %T", d)
 	} else if err := r.Unmarshal(&v); err != nil {
 		return nil, err
 	} else {

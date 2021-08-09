@@ -3,14 +3,13 @@ package isaac
 import (
 	"testing"
 
-	"github.com/stretchr/testify/suite"
-
 	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/base/prprocessor"
 	"github.com/spikeekips/mitum/base/state"
 	"github.com/spikeekips/mitum/storage"
 	"github.com/spikeekips/mitum/storage/blockdata"
 	"github.com/spikeekips/mitum/storage/blockdata/localfs"
+	"github.com/stretchr/testify/suite"
 )
 
 type dummyOperationProcessor struct {

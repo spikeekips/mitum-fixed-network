@@ -5,6 +5,7 @@ import (
 	"path/filepath"
 	"testing"
 
+	"github.com/pkg/errors"
 	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/base/block"
 	"github.com/spikeekips/mitum/base/node"
@@ -15,7 +16,6 @@ import (
 	"github.com/spikeekips/mitum/util/tree"
 	"github.com/spikeekips/mitum/util/valuehash"
 	"github.com/stretchr/testify/suite"
-	"golang.org/x/xerrors"
 )
 
 type testBlockData struct {
@@ -230,7 +230,7 @@ func (t *testBlockData) TestRemove() {
 
 	err := st.Remove(22)
 	t.Error(err)
-	t.True(xerrors.Is(err, util.NotFoundError))
+	t.True(errors.Is(err, util.NotFoundError))
 
 	t.NoError(st.Remove(34))
 	found, err := st.Exists(34)
@@ -267,7 +267,7 @@ func (t *testBlockData) TestRemoveAll() {
 
 	err := st.RemoveAll(22)
 	t.Error(err)
-	t.True(xerrors.Is(err, util.NotFoundError))
+	t.True(errors.Is(err, util.NotFoundError))
 
 	t.NoError(st.RemoveAll(34))
 

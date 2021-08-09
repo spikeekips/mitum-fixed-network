@@ -3,11 +3,11 @@ package isaac
 import (
 	"testing"
 
+	"github.com/pkg/errors"
 	"github.com/spikeekips/mitum/base/key"
 	"github.com/spikeekips/mitum/storage/blockdata/localfs"
 	"github.com/spikeekips/mitum/util"
 	"github.com/stretchr/testify/suite"
-	"golang.org/x/xerrors"
 )
 
 type testBlock struct {
@@ -28,7 +28,7 @@ func (t *testBlock) TestBlockIsValid() {
 	n := []byte(util.UUID().String())
 
 	err = blk.IsValid(n)
-	t.True(xerrors.Is(err, key.SignatureVerificationFailedError)) // with invalid network id
+	t.True(errors.Is(err, key.SignatureVerificationFailedError)) // with invalid network id
 }
 
 func TestBlock(t *testing.T) {

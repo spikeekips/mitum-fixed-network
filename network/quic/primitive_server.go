@@ -8,9 +8,8 @@ import (
 
 	"github.com/gorilla/mux"
 	"github.com/lucas-clemente/quic-go/http3"
+	"github.com/pkg/errors"
 	"github.com/rs/zerolog"
-	"golang.org/x/xerrors"
-
 	"github.com/spikeekips/mitum/network"
 	"github.com/spikeekips/mitum/util"
 	"github.com/spikeekips/mitum/util/encoder"
@@ -31,7 +30,7 @@ type PrimitiveQuicServer struct {
 
 func NewPrimitiveQuicServer(bind string, certs []tls.Certificate) (*PrimitiveQuicServer, error) {
 	if err := network.CheckBindIsOpen("udp", bind, time.Second*1); err != nil {
-		return nil, xerrors.Errorf("failed to open quic server, %q: %w", bind, err)
+		return nil, errors.Wrapf(err, "failed to open quic server, %q", bind)
 	}
 
 	qs := &PrimitiveQuicServer{
@@ -103,7 +102,7 @@ func (qs *PrimitiveQuicServer) run(ctx context.Context) error {
 
 	errChan := make(chan error)
 	go func() {
-		if err := server.ListenAndServe(); !xerrors.Is(err, http.ErrServerClosed) {
+		if err := server.ListenAndServe(); !errors.Is(err, http.ErrServerClosed) {
 			// NOTE monkey patch; see https://github.com/lucas-clemente/quic-go/issues/1778
 			if err.Error() == "server closed" {
 				return

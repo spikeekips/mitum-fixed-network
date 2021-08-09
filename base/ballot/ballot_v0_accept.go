@@ -1,8 +1,7 @@
 package ballot
 
 import (
-	"golang.org/x/xerrors"
-
+	"github.com/pkg/errors"
 	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/base/key"
 	"github.com/spikeekips/mitum/util"
@@ -100,7 +99,7 @@ func (ACCEPTV0) Stage() base.Stage {
 
 func (ab ACCEPTV0) IsValid(networkID []byte) error {
 	if ab.voteproof == nil {
-		return xerrors.Errorf("empty Voteproof")
+		return errors.Errorf("empty Voteproof")
 	}
 
 	if err := isvalid.Check([]isvalid.IsValider{

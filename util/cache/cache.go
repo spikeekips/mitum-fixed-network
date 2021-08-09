@@ -4,7 +4,7 @@ import (
 	"net/url"
 	"time"
 
-	"golang.org/x/xerrors"
+	"github.com/pkg/errors"
 )
 
 var DefaultCacheExpire = time.Hour
@@ -21,7 +21,7 @@ type Cache interface {
 func NewCacheFromURI(uri string) (Cache, error) {
 	u, err := url.Parse(uri)
 	if err != nil {
-		return nil, xerrors.Errorf("invalid uri of cache, %q: %w", uri, err)
+		return nil, errors.Wrapf(err, "invalid uri of cache, %q", uri)
 	}
 	switch {
 	case u.Scheme == "gcache":
@@ -29,6 +29,6 @@ func NewCacheFromURI(uri string) (Cache, error) {
 	case u.Scheme == "dummy":
 		return Dummy{}, nil
 	default:
-		return nil, xerrors.Errorf("not supported uri of cache, %q", uri)
+		return nil, errors.Errorf("not supported uri of cache, %q", uri)
 	}
 }

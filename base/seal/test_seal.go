@@ -3,8 +3,6 @@ package seal
 import (
 	"time"
 
-	"go.mongodb.org/mongo-driver/bson"
-
 	"github.com/spikeekips/mitum/base/key"
 	"github.com/spikeekips/mitum/util"
 	bsonenc "github.com/spikeekips/mitum/util/encoder/bson"
@@ -12,6 +10,7 @@ import (
 	"github.com/spikeekips/mitum/util/hint"
 	"github.com/spikeekips/mitum/util/localtime"
 	"github.com/spikeekips/mitum/util/valuehash"
+	"go.mongodb.org/mongo-driver/bson"
 )
 
 var dummySealHint = hint.NewHint(hint.Type("dummy-seal"), "v0.1")

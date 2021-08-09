@@ -4,11 +4,11 @@ import (
 	"fmt"
 	"testing"
 
+	"github.com/pkg/errors"
 	"github.com/spikeekips/mitum/util"
 	"github.com/spikeekips/mitum/util/encoder"
 	"github.com/spikeekips/mitum/util/hint"
 	"github.com/stretchr/testify/suite"
-	"golang.org/x/xerrors"
 )
 
 type hinterDefault struct {
@@ -129,7 +129,7 @@ func (ht *hinterTextMarshaller) UnmarshalText(b []byte) error {
 	if err != nil {
 		return err
 	} else if n != 2 {
-		return xerrors.Errorf("something missed")
+		return errors.Errorf("something missed")
 	}
 
 	ht.A = ua
@@ -174,7 +174,7 @@ func (t *testJSONEncoder) TestDecodeUnknown() {
 	t.NoError(err)
 
 	_, err = enc.Decode(b)
-	t.True(xerrors.Is(err, util.NotFoundError))
+	t.True(errors.Is(err, util.NotFoundError))
 }
 
 func (t *testJSONEncoder) TestDecodeDefault() {

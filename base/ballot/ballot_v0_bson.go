@@ -3,13 +3,12 @@ package ballot
 import (
 	"time"
 
-	"go.mongodb.org/mongo-driver/bson"
-
 	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/base/key"
 	bsonenc "github.com/spikeekips/mitum/util/encoder/bson"
 	"github.com/spikeekips/mitum/util/hint"
 	"github.com/spikeekips/mitum/util/valuehash"
+	"go.mongodb.org/mongo-driver/bson"
 )
 
 func PackBaseBallotV0BSON(ballot Ballot) bson.M {

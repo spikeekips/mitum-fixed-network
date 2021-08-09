@@ -6,11 +6,10 @@ import (
 	"math"
 	"sync"
 
+	"github.com/pkg/errors"
 	"github.com/spikeekips/mitum/util"
-	"github.com/spikeekips/mitum/util/errors"
 	"github.com/spikeekips/mitum/util/hint"
 	"github.com/spikeekips/mitum/util/isvalid"
-	"golang.org/x/xerrors"
 )
 
 var (
@@ -21,14 +20,14 @@ var (
 )
 
 var (
-	InvalidNodeError     = errors.NewError("invalid node")
-	NoParentError        = errors.NewError("no node parent")
-	EmptyNodeInTreeError = errors.NewError("empty node found in tree")
-	EmptyKeyError        = errors.NewError("empty node key")
-	EmptyHashError       = errors.NewError("empty node hash")
-	NoChildrenError      = errors.NewError("no children")
-	HashNotMatchError    = errors.NewError("hash not match")
-	InvalidProofError    = errors.NewError("invalid proof")
+	InvalidNodeError     = util.NewError("invalid node")
+	NoParentError        = util.NewError("no node parent")
+	EmptyNodeInTreeError = util.NewError("empty node found in tree")
+	EmptyKeyError        = util.NewError("empty node key")
+	EmptyHashError       = util.NewError("empty node hash")
+	NoChildrenError      = util.NewError("no children")
+	HashNotMatchError    = util.NewError("hash not match")
+	InvalidProofError    = util.NewError("invalid proof")
 )
 
 type FixedTreeNode interface {
@@ -198,7 +197,7 @@ func (tr FixedTree) Proof(index uint64) ([]FixedTreeNode, error) {
 	for {
 		j, err := tr.parent(l)
 		if err != nil {
-			if xerrors.Is(err, NoParentError) {
+			if errors.Is(err, NoParentError) {
 				break
 			}
 
@@ -213,7 +212,7 @@ func (tr FixedTree) Proof(index uint64) ([]FixedTreeNode, error) {
 	for i := range parents {
 		n := parents[i]
 		if cs, err := tr.children(n.Index()); err != nil {
-			if !xerrors.Is(err, NoChildrenError) {
+			if !errors.Is(err, NoChildrenError) {
 				return nil, err
 			}
 		} else {
@@ -258,7 +257,7 @@ func (tr FixedTree) generateNodeHash(n FixedTreeNode) ([]byte, error) {
 
 	var left, right FixedTreeNode
 	if i, err := tr.children(n.Index()); err != nil {
-		if !xerrors.Is(err, NoChildrenError) {
+		if !errors.Is(err, NoChildrenError) {
 			return nil, err
 		}
 	} else {
@@ -291,7 +290,7 @@ func (tr *FixedTreeGenerator) Add(n FixedTreeNode) error {
 	}
 
 	if n.Index() >= tr.size {
-		return xerrors.Errorf("out of range; %d >= %d", n.Index(), tr.size)
+		return errors.Errorf("out of range; %d >= %d", n.Index(), tr.size)
 	}
 
 	tr.nodes[n.Index()] = n.SetHash(nil)
@@ -361,11 +360,11 @@ func ProveFixedTreeProof(pr []FixedTreeNode) error {
 func proveFixedTreeProof(pr []FixedTreeNode) error {
 	switch n := len(pr); {
 	case n < 1:
-		return xerrors.Errorf("nothing to prove")
+		return errors.Errorf("nothing to prove")
 	case n%2 != 1:
-		return xerrors.Errorf("invalid proof; len=%d", n)
+		return errors.Errorf("invalid proof; len=%d", n)
 	case pr[len(pr)-1].Index() != 0:
-		return xerrors.Errorf("root node not found")
+		return errors.Errorf("root node not found")
 	}
 
 	for i := range pr {
@@ -377,7 +376,7 @@ func proveFixedTreeProof(pr []FixedTreeNode) error {
 	for i := 0; i < len(pr[:len(pr)-1])/2; i++ {
 		a, b := pr[(i*2)], pr[(i*2)+1]
 		if p, err := parentNodeInProof(i, pr, a.Index()); err != nil {
-			return xerrors.Errorf("nodes, %d and %d: %w", a.Index(), b.Index(), err)
+			return errors.Wrapf(err, "nodes, %d and %d", a.Index(), b.Index())
 		} else if h, err := FixedTreeNodeHash(p, a, b); err != nil {
 			return err
 		} else if !bytes.Equal(p.Hash(), h) {
@@ -407,7 +406,7 @@ func parentNodeInProof(i int, pr []FixedTreeNode, index uint64) (FixedTreeNode, 
 	}
 
 	if len(p.Key()) < 1 {
-		return p, xerrors.Errorf("parent node not found")
+		return p, errors.Errorf("parent node not found")
 	}
 
 	return p, nil

@@ -4,9 +4,9 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/pkg/errors"
 	"github.com/rs/zerolog"
 	"github.com/spikeekips/mitum/util/logging"
-	"golang.org/x/xerrors"
 )
 
 type HookPrefix string
@@ -68,12 +68,12 @@ func (pm *Processes) SetINIT(f ProcessFunc) *Processes {
 
 func (pm *Processes) AddProcess(pr Process, override bool) error {
 	if pr.Name() == INITProcess {
-		return xerrors.Errorf("use SetINIT")
+		return errors.Errorf("use SetINIT")
 	}
 
 	if _, found := pm.processes[pr.Name()]; found {
 		if !override {
-			return xerrors.Errorf("process already added, %q", pr.Name())
+			return errors.Errorf("process already added, %q", pr.Name())
 		}
 	} else {
 		pm.processesOrder = append(pm.processesOrder, pr.Name())
@@ -86,11 +86,11 @@ func (pm *Processes) AddProcess(pr Process, override bool) error {
 
 func (pm *Processes) RemoveProcess(name string) error {
 	if name == INITProcess {
-		return xerrors.Errorf("can not remove init process")
+		return errors.Errorf("can not remove init process")
 	}
 
 	if _, found := pm.processes[name]; !found {
-		return xerrors.Errorf("process not found, %q", name)
+		return errors.Errorf("process not found, %q", name)
 	}
 
 	processesOrder := make([]string, len(pm.processesOrder)-1)
@@ -120,7 +120,7 @@ func (pm *Processes) AddHook(
 	prName := pm.processHookName(prefix, pr)
 	if _, found := pm.hooks[hook]; found {
 		if !override {
-			return xerrors.Errorf("hook already added, %q", hook)
+			return errors.Errorf("hook already added, %q", hook)
 		}
 	} else {
 		pm.hooksByProcess[prName] = append(pm.hooksByProcess[prName], hook)
@@ -205,12 +205,12 @@ func (pm *Processes) Run() error {
 
 	// run init first
 	if err := pm.runProcess(INITProcess, ""); err != nil {
-		return xerrors.Errorf("failed to run init: %w", err)
+		return errors.Wrap(err, "failed to run init")
 	}
 
 	for _, name := range pm.processesOrder {
 		if err := pm.runProcess(name, INITProcess); err != nil {
-			return xerrors.Errorf("failed to run process, %q: %w", name, err)
+			return errors.Wrapf(err, "failed to run process, %q", name)
 		}
 	}
 
@@ -224,9 +224,9 @@ func (pm *Processes) check() error {
 
 	for _, name := range pm.processesOrder {
 		if pr, found := pm.processes[name]; !found {
-			return xerrors.Errorf("process, %q not found", name)
+			return errors.Errorf("process, %q not found", name)
 		} else if err := pm.checkProcess(pr, processed, requireCount); err != nil {
-			return xerrors.Errorf("failed to check process, %q: %w", name, err)
+			return errors.Wrapf(err, "failed to check process, %q", name)
 		}
 	}
 
@@ -241,15 +241,15 @@ func (pm *Processes) checkProcess(pr Process, processed map[string]struct{}, req
 	}
 
 	if c := requireCount[pr.Name()]; c > 0 {
-		return xerrors.Errorf("circulation found: %q", pr.Name())
+		return errors.Errorf("circulation found: %q", pr.Name())
 	}
 	requireCount[pr.Name()] = 1
 
 	for _, r := range pr.Requires() {
 		if npr, found := pm.processes[r]; !found {
-			return xerrors.Errorf("process, %q requires %q, but not found", pr.Name(), r)
+			return errors.Errorf("process, %q requires %q, but not found", pr.Name(), r)
 		} else if npr.Disabled() {
-			return xerrors.Errorf("process, %q requires %q, but disabled", pr.Name(), r)
+			return errors.Errorf("process, %q requires %q, but disabled", pr.Name(), r)
 		} else if err := pm.checkProcess(npr, processed, requireCount); err != nil {
 			return err
 		}
@@ -268,7 +268,7 @@ func (pm *Processes) runProcess(s, from string) error {
 	var pr Process
 	switch i, found := pm.processes[s]; {
 	case !found:
-		return xerrors.Errorf("process, %q not found", s)
+		return errors.Errorf("process, %q not found", s)
 	case i.Disabled():
 		return nil
 	default:
@@ -337,13 +337,13 @@ func (pm *Processes) runProcessHook(hook, from string) error {
 
 	switch f, found := pm.hooks[hook]; {
 	case !found:
-		return xerrors.Errorf("hook, %q not found", hook)
+		return errors.Errorf("hook, %q not found", hook)
 	case f == nil:
 		return nil
 	default:
 		ctx, err := f(pm.ctx)
 		if err != nil {
-			return xerrors.Errorf("failed to emit hook of %q(%s): %w", hook, from, err)
+			return errors.Wrapf(err, "failed to emit hook of %q(%s)", hook, from)
 		}
 		if ctx == nil {
 			ctx = context.Background()

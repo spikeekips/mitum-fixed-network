@@ -3,10 +3,9 @@ package base
 import (
 	"time"
 
-	"go.mongodb.org/mongo-driver/bson"
-
 	bsonenc "github.com/spikeekips/mitum/util/encoder/bson"
 	"github.com/spikeekips/mitum/util/valuehash"
+	"go.mongodb.org/mongo-driver/bson"
 )
 
 type VoteproofV0FactBSONPacker struct {

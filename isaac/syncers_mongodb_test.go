@@ -6,12 +6,11 @@ import (
 	"testing"
 	"time"
 
-	"github.com/stretchr/testify/suite"
-	"golang.org/x/xerrors"
-
+	"github.com/pkg/errors"
 	"github.com/spikeekips/mitum/base"
 	mongodbstorage "github.com/spikeekips/mitum/storage/mongodb"
 	"github.com/spikeekips/mitum/util/cache"
+	"github.com/stretchr/testify/suite"
 )
 
 func (t *testSyncers) TestSaveLastBlock() {
@@ -47,7 +46,7 @@ func (t *testSyncers) TestSaveLastBlock() {
 
 	select {
 	case <-time.After(time.Second * 3):
-		t.NoError(xerrors.Errorf("timeout to wait to be finished"))
+		t.NoError(errors.Errorf("timeout to wait to be finished"))
 	case height := <-finishedChan:
 		t.Equal(target, height)
 		break

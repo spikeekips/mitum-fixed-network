@@ -29,6 +29,7 @@ require (
 	github.com/mattn/go-isatty v0.0.13
 	github.com/miekg/dns v1.1.43 // indirect
 	github.com/oklog/ulid v1.3.1
+	github.com/pkg/errors v0.9.1
 	github.com/rs/xid v1.3.0 // indirect
 	github.com/rs/zerolog v0.0.0-20210801152418-c1533bd5f89a
 	github.com/satori/go.uuid v1.2.0
@@ -45,6 +46,5 @@ require (
 	golang.org/x/net v0.0.0-20210726213435-c6fcb2dbf985 // indirect
 	golang.org/x/sync v0.0.0-20210220032951-036812b2e83c
 	golang.org/x/tools v0.1.5 // indirect
-	golang.org/x/xerrors v0.0.0-20200804184101-5ec99f83aff1
 	gopkg.in/yaml.v3 v3.0.0-20210107192922-496545a6307b
 )

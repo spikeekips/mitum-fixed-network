@@ -4,8 +4,7 @@ import (
 	"sync"
 	"time"
 
-	"golang.org/x/xerrors"
-
+	"github.com/pkg/errors"
 	"github.com/rs/zerolog"
 	"github.com/spikeekips/mitum/util"
 	"github.com/spikeekips/mitum/util/logging"
@@ -66,7 +65,7 @@ func (ct *CallbackTimer) Start() error {
 	defer ct.Unlock()
 
 	if i := ct.intervalFunc(0); i < time.Nanosecond {
-		return xerrors.Errorf("too narrow interval: %v", i)
+		return errors.Errorf("too narrow interval: %v", i)
 	}
 
 	return ct.start()
@@ -172,7 +171,7 @@ end:
 				continue
 			}
 
-			if xerrors.Is(err, StopTimerError) {
+			if errors.Is(err, StopTimerError) {
 				ct.Log().Debug().Msg("timer will be stopped by callback")
 			} else {
 				ct.Log().Error().Err(err).Msg("timer got error; timer will be stopped")
@@ -204,7 +203,7 @@ end:
 func (ct *CallbackTimer) resetTicker(i int, last time.Duration) (time.Duration, error) {
 	in := ct.intervalFunc(i)
 	if in < time.Nanosecond {
-		return 0, xerrors.Errorf("too narrow interval: %v", in)
+		return 0, errors.Errorf("too narrow interval: %v", in)
 	}
 	if in != last {
 		ct.ticker.Reset(in)

@@ -3,6 +3,7 @@ package basicstates
 import (
 	"time"
 
+	"github.com/pkg/errors"
 	"github.com/rs/zerolog"
 	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/base/block"
@@ -11,7 +12,6 @@ import (
 	"github.com/spikeekips/mitum/storage"
 	"github.com/spikeekips/mitum/storage/blockdata"
 	"github.com/spikeekips/mitum/util/localtime"
-	"golang.org/x/xerrors"
 )
 
 type SyncingState struct {
@@ -124,7 +124,7 @@ func (st *SyncingState) handleINITTVoteproof(voteproof base.Voteproof) error {
 	case base.StageACCEPT:
 		to = voteproof.Height()
 	default:
-		return xerrors.Errorf("invalid Voteproof received")
+		return errors.Errorf("invalid Voteproof received")
 	}
 
 	switch {
@@ -179,7 +179,7 @@ func (st *SyncingState) syncFromVoteproof(voteproof base.Voteproof, to base.Heig
 	for i := range voteproof.Votes() {
 		nf := voteproof.Votes()[i]
 		if n, _, found := st.nodepool.Node(nf.Node()); !found {
-			return xerrors.Errorf("node, %q in voteproof is not known node", nf.Node())
+			return errors.Errorf("node, %q in voteproof is not known node", nf.Node())
 		} else if !n.Address().Equal(st.nodepool.LocalNode().Address()) {
 			sourceNodes = append(sourceNodes, n)
 		}

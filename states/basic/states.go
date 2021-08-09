@@ -5,8 +5,7 @@ import (
 	"sync"
 	"time"
 
-	"golang.org/x/xerrors"
-
+	"github.com/pkg/errors"
 	"github.com/rs/zerolog"
 	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/base/ballot"
@@ -129,7 +128,7 @@ func (ss *States) Stop() error {
 	defer ss.Unlock()
 
 	if err := ss.ContextDaemon.Stop(); err != nil {
-		if !xerrors.Is(err, util.DaemonAlreadyStoppedError) {
+		if !errors.Is(err, util.DaemonAlreadyStoppedError) {
 			return err
 		}
 	}
@@ -321,9 +320,9 @@ end:
 		switch {
 		case err == nil:
 			continue
-		case xerrors.Is(err, util.IgnoreError):
+		case errors.Is(err, util.IgnoreError):
 			continue
-		case !xerrors.As(err, &sctx):
+		case !errors.As(err, &sctx):
 			ss.Log().Error().Err(err).Msg("something wrong")
 
 			continue
@@ -349,9 +348,9 @@ func (ss *States) processSwitchStates(sctx StateSwitchContext) error {
 		switch err := ss.switchState(sctx); {
 		case err == nil:
 			return nil
-		case xerrors.As(err, &nsctx):
+		case errors.As(err, &nsctx):
 			sctx = nsctx
-		case xerrors.Is(err, util.IgnoreError):
+		case errors.Is(err, util.IgnoreError):
 			ss.Log().Error().Err(err).Msg("problem during states switch, but ignore")
 
 			return nil
@@ -359,7 +358,7 @@ func (ss *States) processSwitchStates(sctx StateSwitchContext) error {
 			ss.Log().Error().Err(err).Msg("problem during states switch; moves to booting")
 
 			if sctx.ToState() == base.StateBooting {
-				return xerrors.Errorf("failed to move to booting: %w", err)
+				return errors.Wrap(err, "failed to move to booting")
 			}
 			<-time.After(time.Second * 1)
 			sctx = NewStateSwitchContext(ss.state, base.StateBooting).SetError(err)
@@ -378,7 +377,7 @@ func (ss *States) switchState(sctx StateSwitchContext) error {
 	e.Msg("switching state")
 
 	if err := sctx.IsValid(nil); err != nil {
-		return xerrors.Errorf("invalid state switch context: %w", err)
+		return errors.Wrap(err, "invalid state switch context")
 	} else if ss.State() != sctx.FromState() {
 		l.Debug().Msg("current state does not match in state switch context; ignore")
 
@@ -387,7 +386,7 @@ func (ss *States) switchState(sctx StateSwitchContext) error {
 
 	if ss.State() == sctx.ToState() {
 		if sctx.Voteproof() == nil {
-			return xerrors.Errorf("same state, but empty voteproof")
+			return errors.Errorf("same state, but empty voteproof")
 		}
 
 		l.Debug().Msg("processing voteproof into current state")
@@ -402,7 +401,7 @@ func (ss *States) switchState(sctx StateSwitchContext) error {
 	var nsctx StateSwitchContext
 	switch err = ss.exitState(sctx); {
 	case err == nil:
-	case xerrors.As(err, &nsctx):
+	case errors.As(err, &nsctx):
 		if sctx.FromState() != nsctx.ToState() {
 			l.Debug().Msg("exit to state returns state switch context; will switch state")
 
@@ -413,9 +412,9 @@ func (ss *States) switchState(sctx StateSwitchContext) error {
 
 	switch err = ss.enterState(sctx); {
 	case err == nil:
-	case xerrors.As(err, &nsctx):
+	case errors.As(err, &nsctx):
 		if sctx.ToState() == nsctx.ToState() {
-			l.Error().Err(xerrors.Errorf("enter to state returns same to state context; ignore"))
+			l.Error().Err(errors.Errorf("enter to state returns same to state context; ignore"))
 
 			err = nil
 		}
@@ -444,7 +443,7 @@ func (ss *States) exitState(sctx StateSwitchContext) error {
 	switch err := exitFunc(); {
 	case err == nil:
 		return nil
-	case xerrors.As(err, &nsctx):
+	case errors.As(err, &nsctx):
 		return nsctx
 	default:
 		l.Error().Err(err).Msg("something wrong after exit")
@@ -470,7 +469,7 @@ func (ss *States) enterState(sctx StateSwitchContext) error {
 	switch err := enterFunc(); {
 	case err == nil:
 		return nil
-	case xerrors.As(err, &nsctx):
+	case errors.As(err, &nsctx):
 		return nsctx
 	default:
 		l.Error().Err(err).Msg("something wrong after entering")
@@ -510,13 +509,13 @@ func (ss *States) processVoteproofInternal(voteproof base.Voteproof) error {
 	var sctx StateSwitchContext
 	switch {
 	case err == nil:
-	case xerrors.Is(err, SyncByVoteproofError):
+	case errors.Is(err, SyncByVoteproofError):
 		err = NewStateSwitchContext(ss.State(), base.StateSyncing).
 			SetVoteproof(voteproof).
 			SetError(err)
-	case xerrors.Is(err, util.IgnoreError):
+	case errors.Is(err, util.IgnoreError):
 		err = nil
-	case xerrors.As(err, &sctx):
+	case errors.As(err, &sctx):
 	default:
 		return err
 	}
@@ -605,7 +604,7 @@ func (ss *States) newSealBallot(blt ballot.Ballot) error {
 func (ss *States) newSealOthers(sl seal.Seal) error {
 	// NOTE save seal
 	if err := ss.database.NewSeals([]seal.Seal{sl}); err != nil {
-		if !xerrors.Is(err, util.DuplicatedError) {
+		if !errors.Is(err, util.DuplicatedError) {
 			return err
 		}
 
@@ -647,8 +646,8 @@ func (ss *States) validateProposal(proposal ballot.Proposal) error {
 
 	if err := util.NewChecker("proposal-validation-checker", fns).Check(); err != nil {
 		switch {
-		case xerrors.Is(err, isaac.KnownSealError):
-		case xerrors.Is(err, util.IgnoreError):
+		case errors.Is(err, isaac.KnownSealError):
+		case errors.Is(err, util.IgnoreError):
 		default:
 			return err
 		}
@@ -674,7 +673,7 @@ func (ss *States) voteBallot(blt ballot.Ballot) (base.Voteproof, error) {
 
 	voteproof, err := ss.ballotbox.Vote(blt)
 	if err != nil {
-		return nil, xerrors.Errorf("failed to vote: %w", err)
+		return nil, errors.Wrap(err, "failed to vote")
 	}
 
 	if !voteproof.IsFinished() || voteproof.IsClosed() {
@@ -798,7 +797,7 @@ func (ss *States) detectStuck(ctx context.Context) {
 
 			var changed bool
 			if err != nil {
-				if !stucked && !xerrors.Is(err, util.IgnoreError) {
+				if !stucked && !errors.Is(err, util.IgnoreError) {
 					changed = true
 					stucked = true
 				}

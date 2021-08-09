@@ -3,15 +3,14 @@ package basicstates
 import (
 	"fmt"
 
-	"golang.org/x/xerrors"
-
+	"github.com/pkg/errors"
 	"github.com/spikeekips/mitum/base"
+	"github.com/spikeekips/mitum/util"
 	jsonenc "github.com/spikeekips/mitum/util/encoder/json"
-	"github.com/spikeekips/mitum/util/errors"
 	"github.com/spikeekips/mitum/util/isvalid"
 )
 
-var SyncByVoteproofError = errors.NewError("sync by voteproof")
+var SyncByVoteproofError = util.NewError("sync by voteproof")
 
 type StateSwitchContext struct {
 	to        base.State
@@ -36,7 +35,7 @@ func (sctx StateSwitchContext) IsValid([]byte) error {
 	}
 
 	if sctx.to == base.StateUnknown || sctx.from == base.StateUnknown {
-		return xerrors.Errorf("invalid state, to=%v from=%v", sctx.to, sctx.from)
+		return errors.Errorf("invalid state, to=%v from=%v", sctx.to, sctx.from)
 	}
 
 	return nil

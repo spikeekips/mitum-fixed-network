@@ -4,14 +4,13 @@ import (
 	"context"
 	"sync"
 
+	"github.com/pkg/errors"
 	"github.com/rs/zerolog"
-	"github.com/syndtr/goleveldb/leveldb"
-	"golang.org/x/xerrors"
-
 	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/base/block"
 	"github.com/spikeekips/mitum/util"
 	"github.com/spikeekips/mitum/util/logging"
+	"github.com/syndtr/goleveldb/leveldb"
 )
 
 type SyncerSession struct {
@@ -44,16 +43,16 @@ func (st *SyncerSession) manifestKey(height base.Height) []byte {
 func (st *SyncerSession) Manifest(height base.Height) (block.Manifest, bool, error) {
 	raw, err := st.database.DB().Get(st.manifestKey(height), nil)
 	if err != nil {
-		if xerrors.Is(err, util.NotFoundError) {
+		if errors.Is(err, util.NotFoundError) {
 			return nil, false, nil
 		}
 
-		return nil, false, wrapError(err)
+		return nil, false, mergeError(err)
 	}
 
 	m, err := st.database.loadManifest(raw)
 	if err != nil {
-		if xerrors.Is(err, util.NotFoundError) {
+		if errors.Is(err, util.NotFoundError) {
 			return nil, false, nil
 		}
 		return nil, false, err
@@ -101,7 +100,7 @@ func (st *SyncerSession) SetManifests(manifests []block.Manifest) error {
 		}
 	}
 
-	return wrapError(st.database.DB().Write(batch, nil))
+	return mergeError(st.database.DB().Write(batch, nil))
 }
 
 func (st *SyncerSession) HasBlock(height base.Height) (bool, error) {
@@ -114,7 +113,7 @@ func (st *SyncerSession) block(height base.Height) (block.Block, bool, error) {
 
 func (st *SyncerSession) SetBlocks(blocks []block.Block, maps []block.BlockDataMap) error {
 	if len(blocks) != len(maps) {
-		return xerrors.Errorf("blocks and maps has different size, %d != %d", len(blocks), len(maps))
+		return errors.Errorf("blocks and maps has different size, %d != %d", len(blocks), len(maps))
 	} else {
 		for i := range blocks {
 			if err := block.CompareManifestWithMap(blocks[i], maps[i]); err != nil {
@@ -218,5 +217,5 @@ func (st *SyncerSession) checkHeight(height base.Height) {
 }
 
 func (st *SyncerSession) Close() error {
-	return wrapError(st.database.DB().Close())
+	return mergeError(st.database.DB().Close())
 }

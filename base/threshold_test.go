@@ -3,8 +3,8 @@ package base
 import (
 	"testing"
 
+	"github.com/pkg/errors"
 	"github.com/stretchr/testify/assert"
-	"golang.org/x/xerrors"
 )
 
 func TestThreshold(t *testing.T) {
@@ -80,7 +80,7 @@ func TestThreshold(t *testing.T) {
 				thr, err := NewThreshold(c.total, ThresholdRatio(c.ratio))
 				if len(c.err) > 0 {
 					if err == nil {
-						assert.Error(t, xerrors.Errorf("expected error: %s, but nothing happened", c.err), "%d: %v", i, c.name)
+						assert.Error(t, errors.Errorf("expected error: %s, but nothing happened", c.err), "%d: %v", i, c.name)
 						return
 					}
 					assert.Contains(t, err.Error(), c.err, "%d: %v", i, c.name)

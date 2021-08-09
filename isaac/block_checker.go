@@ -1,8 +1,7 @@
 package isaac
 
 import (
-	"golang.org/x/xerrors"
-
+	"github.com/pkg/errors"
 	"github.com/rs/zerolog"
 	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/base/block"
@@ -16,7 +15,7 @@ type baseBlocksValidationChecker struct {
 
 func (bc *baseBlocksValidationChecker) checkIsValid(blk block.Manifest) error {
 	if blk == nil {
-		return xerrors.Errorf("nil manifest found")
+		return errors.Errorf("nil manifest found")
 	}
 
 	return blk.IsValid(bc.networkID)
@@ -24,11 +23,11 @@ func (bc *baseBlocksValidationChecker) checkIsValid(blk block.Manifest) error {
 
 func (*baseBlocksValidationChecker) checkPreviousBlock(current, next block.Manifest) error {
 	if next.Height() != current.Height()+1 {
-		return xerrors.Errorf("wrong height: current=%v next=%s", current.Height(), next.Height())
+		return errors.Errorf("wrong height: current=%v next=%s", current.Height(), next.Height())
 	}
 
 	if !next.PreviousBlock().Equal(current.Hash()) {
-		return xerrors.Errorf(
+		return errors.Errorf(
 			"chained Hash does not match: height=%v current=%s next=%s",
 			next.Height(),
 			current.Hash(),

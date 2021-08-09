@@ -3,8 +3,7 @@ package state
 import (
 	"sync"
 
-	"golang.org/x/xerrors"
-
+	"github.com/pkg/errors"
 	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/util"
 	"github.com/spikeekips/mitum/util/hint"
@@ -124,7 +123,7 @@ func (stu *StateUpdater) Merge(source State) error {
 	defer stu.Unlock()
 
 	if stu.Key() != source.Key() {
-		return xerrors.Errorf("different key found during merging")
+		return errors.Errorf("different key found during merging")
 	} else if ns, err := source.Merge(stu.State); err != nil {
 		return err
 	} else {

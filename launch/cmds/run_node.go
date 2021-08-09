@@ -10,8 +10,7 @@ import (
 	"syscall"
 	"time"
 
-	"golang.org/x/xerrors"
-
+	"github.com/pkg/errors"
 	"github.com/rs/zerolog"
 	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/base/node"
@@ -83,7 +82,7 @@ func NewRunCommand(dryrun bool) RunCommand {
 
 func (cmd *RunCommand) Run(version util.Version) error {
 	if err := cmd.Initialize(cmd, version); err != nil {
-		return xerrors.Errorf("failed to initialize command: %w", err)
+		return errors.Wrap(err, "failed to initialize command")
 	}
 	defer cmd.Done()
 
@@ -134,19 +133,19 @@ func (cmd *RunCommand) run() error {
 	ps := cmd.Processes()
 
 	if err := ps.Run(); err != nil {
-		return xerrors.Errorf("failed to run: %w", err)
+		return errors.Wrap(err, "failed to run")
 	}
 
 	if err := cmd.runNetwork(ps.Context()); err != nil {
-		return xerrors.Errorf("failed to run network: %w", err)
+		return errors.Wrap(err, "failed to run network")
 	}
 
 	if err := cmd.runDiscovery(ps.Context()); err != nil {
-		return xerrors.Errorf("failed to run discovery: %w", err)
+		return errors.Wrap(err, "failed to run discovery")
 	}
 
 	if err := cmd.runPPS(ps.Context()); err != nil {
-		return xerrors.Errorf("failed to start Processors: %w", err)
+		return errors.Wrap(err, "failed to start Processors")
 	}
 
 	return cmd.runStates(ps.Context())
@@ -214,7 +213,7 @@ func (cmd *RunCommand) runDiscovery(ctx context.Context) error {
 
 	var cis []memberlist.ConnInfo
 	if err := process.LoadDiscoveryConnInfosContextValue(ctx, &cis); err != nil {
-		if !xerrors.Is(err, util.ContextValueNotFoundError) {
+		if !errors.Is(err, util.ContextValueNotFoundError) {
 			return err
 		}
 	}
@@ -232,7 +231,7 @@ func (cmd *RunCommand) runDiscovery(ctx context.Context) error {
 
 	// NOTE join network
 	if err := process.JoinDiscovery(nodepool, suffrage, dis, cis, 2, cmd.Logging); err != nil {
-		if !xerrors.Is(err, memberlist.JoiningCanceledError) {
+		if !errors.Is(err, memberlist.JoiningCanceledError) {
 			return err
 		}
 
@@ -308,19 +307,19 @@ func (cmd *RunCommand) whenExited() error {
 		if err := cmd.dis.Leave(time.Second * 10); err != nil {
 			_, _ = fmt.Fprintf(os.Stderr, "stop signal received, but discovery failed to leave, %v\n", err)
 
-			return xerrors.Errorf("discovery failed to leave: %w", err)
+			return errors.Wrap(err, "discovery failed to leave")
 		}
 	}
 
 	if cmd.nt != nil {
 		if err := cmd.nt.Stop(); err != nil {
-			return xerrors.Errorf("failed to stop network.Server: %w", err)
+			return errors.Wrap(err, "failed to stop network.Server")
 		}
 	}
 
 	if cmd.cs != nil {
 		if err := cmd.cs.Stop(); err != nil {
-			return xerrors.Errorf("failed to stop consensus states: %w", err)
+			return errors.Wrap(err, "failed to stop consensus states")
 		}
 	}
 

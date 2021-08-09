@@ -4,7 +4,7 @@ import (
 	"bytes"
 
 	"github.com/btcsuite/btcutil/base58"
-	"golang.org/x/xerrors"
+	"github.com/pkg/errors"
 )
 
 type Signature []byte
@@ -23,7 +23,7 @@ func (sg Signature) String() string {
 
 func (sg Signature) IsValid([]byte) error {
 	if len(sg) < 1 {
-		return xerrors.Errorf("empty Signature")
+		return errors.Errorf("empty Signature")
 	}
 
 	return nil

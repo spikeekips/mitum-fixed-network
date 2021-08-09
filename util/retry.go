@@ -3,15 +3,14 @@ package util
 import (
 	"time"
 
-	"github.com/spikeekips/mitum/util/errors"
-	"golang.org/x/xerrors"
+	"github.com/pkg/errors"
 )
 
 type Callbacker interface {
 	Callback() error
 }
 
-var StopRetryingError = errors.NewError("stop retrying")
+var StopRetryingError = NewError("stop retrying")
 
 func Retry(max uint, interval time.Duration, callback func(int) error) error {
 	var err error
@@ -23,7 +22,7 @@ func Retry(max uint, interval time.Duration, callback func(int) error) error {
 
 		if err = callback(tried); err == nil {
 			return nil
-		} else if xerrors.Is(err, StopRetryingError) {
+		} else if errors.Is(err, StopRetryingError) {
 			return err
 		}
 

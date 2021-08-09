@@ -5,10 +5,10 @@ import (
 	"sync"
 
 	lru "github.com/hashicorp/golang-lru"
+	"github.com/pkg/errors"
 	"github.com/rs/zerolog"
 	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/util/logging"
-	"golang.org/x/xerrors"
 )
 
 type ActinfSuffrageElectFunc func(base.Height, base.Round) (base.ActingSuffrage, error)
@@ -33,7 +33,7 @@ func NewBaseSuffrage(
 	cacheSize int,
 ) (*BaseSuffrage, error) {
 	if len(nodes) < int(numberOfActing) {
-		return nil, xerrors.Errorf("nodes is under number of acting, %d < %d", len(nodes), numberOfActing)
+		return nil, errors.Errorf("nodes is under number of acting, %d < %d", len(nodes), numberOfActing)
 	}
 
 	nm := map[string]struct{}{}

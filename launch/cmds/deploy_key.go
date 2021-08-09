@@ -12,6 +12,7 @@ import (
 
 	"github.com/alecthomas/kong"
 	"github.com/lucas-clemente/quic-go"
+	"github.com/pkg/errors"
 	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/base/key"
 	"github.com/spikeekips/mitum/launch"
@@ -21,7 +22,6 @@ import (
 	"github.com/spikeekips/mitum/util"
 	"github.com/spikeekips/mitum/util/encoder"
 	jsonenc "github.com/spikeekips/mitum/util/encoder/json"
-	"golang.org/x/xerrors"
 )
 
 var NodeConnectVars = kong.Vars{
@@ -63,9 +63,9 @@ func (cmd *baseDeployKeyCommand) Initialize(flags interface{}, version util.Vers
 	}
 
 	if i, err := loadKey([]byte(cmd.Key), cmd.jsonenc); err != nil {
-		return xerrors.Errorf("failed to load node privatekey: %w", err)
+		return errors.Wrap(err, "failed to load node privatekey")
 	} else if j, ok := i.(key.Privatekey); !ok {
-		return xerrors.Errorf("failed to load node privatekey; not privatekey, %T", i)
+		return errors.Errorf("failed to load node privatekey; not privatekey, %T", i)
 	} else {
 		cmd.privatekey = j
 
@@ -111,9 +111,9 @@ func (cmd *baseDeployKeyCommand) requestToken() error {
 
 		cmd.Log().Debug().Interface("response", i).Msg("failed to request token")
 
-		return xerrors.Errorf("failed to request token")
+		return errors.Errorf("failed to request token")
 	} else if j, err := ioutil.ReadAll(i.Body()); err != nil {
-		return xerrors.Errorf("failed to read body for requesting token")
+		return errors.Errorf("failed to read body for requesting token")
 	} else {
 		body = j
 	}
@@ -121,9 +121,9 @@ func (cmd *baseDeployKeyCommand) requestToken() error {
 	var m map[string]string
 
 	if err := jsonenc.Unmarshal(body, &m); err != nil {
-		return xerrors.Errorf("failed to load token response: %w", err)
+		return errors.Wrap(err, "failed to load token response")
 	} else if i, found := m["token"]; !found {
-		return xerrors.Errorf("token not found in response")
+		return errors.Errorf("token not found in response")
 	} else {
 		cmd.token = i
 	}
@@ -136,7 +136,7 @@ func (cmd *baseDeployKeyCommand) requestToken() error {
 func (cmd *baseDeployKeyCommand) requestWithToken(path, method string) (*http.Response, func() error, error) {
 	sig, err := deploy.DeployKeyTokenSignature(cmd.privatekey, cmd.token, cmd.networkID)
 	if err != nil {
-		return nil, nil, xerrors.Errorf("failed to make signature with token: %w", err)
+		return nil, nil, errors.Wrap(err, "failed to make signature with token")
 	}
 
 	u := *cmd.URL

@@ -5,6 +5,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/pkg/errors"
 	"github.com/rs/zerolog"
 	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/isaac"
@@ -14,7 +15,6 @@ import (
 	"github.com/spikeekips/mitum/storage/blockdata"
 	"github.com/spikeekips/mitum/util"
 	"github.com/spikeekips/mitum/util/logging"
-	"golang.org/x/xerrors"
 )
 
 type nodeInfoChecker struct {
@@ -150,15 +150,15 @@ func (nc *nodeInfoChecker) request(ctx context.Context, no base.Node, ch network
 
 func (nc *nodeInfoChecker) validateNodeInfo(no base.Node, ni network.NodeInfo) error {
 	if ni == nil {
-		return xerrors.Errorf("empty nodeinfo")
+		return errors.Errorf("empty nodeinfo")
 	}
 
 	if !no.Address().Equal(ni.Address()) {
-		return xerrors.Errorf("address does not match: %q != %q", no.Address().String(), ni.Address().String())
+		return errors.Errorf("address does not match: %q != %q", no.Address().String(), ni.Address().String())
 	}
 
 	if !nc.policy.NetworkID().Equal(ni.NetworkID()) {
-		return xerrors.Errorf("network id does not match: %v != %v", nc.policy.NetworkID(), ni.NetworkID())
+		return errors.Errorf("network id does not match: %v != %v", nc.policy.NetworkID(), ni.NetworkID())
 	}
 
 	return nil

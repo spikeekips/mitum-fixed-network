@@ -5,9 +5,9 @@ import (
 	"strings"
 
 	"github.com/gorilla/mux"
+	"github.com/pkg/errors"
 	"github.com/spikeekips/mitum/network"
 	"github.com/spikeekips/mitum/util/encoder"
-	"golang.org/x/xerrors"
 )
 
 var QuicHandlerPathDeployKeyKeySuffix = "/{deploy_key:.*}"
@@ -22,7 +22,7 @@ func NewDeployKeyKeyHandler(ks *DeployKeyStorage, enc encoder.Encoder) network.H
 		}
 
 		if i, found := ks.Key(deployKey); !found {
-			network.WriteProblemWithError(w, http.StatusNotFound, xerrors.Errorf("deploy key not found"))
+			network.WriteProblemWithError(w, http.StatusNotFound, errors.Errorf("deploy key not found"))
 
 			return
 		} else if j, err := enc.Marshal(i); err != nil {
@@ -40,7 +40,7 @@ func loadDeployKeyFromRequestPath(r *http.Request) (string, error) {
 	vars := mux.Vars(r)
 	i := strings.TrimSpace(vars["deploy_key"])
 	if len(i) < 1 {
-		return "", xerrors.Errorf("empty deploy key")
+		return "", errors.Errorf("empty deploy key")
 	}
 	return i, nil
 }

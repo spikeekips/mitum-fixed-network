@@ -5,9 +5,9 @@ import (
 	"io/ioutil"
 	"net/http"
 
+	"github.com/pkg/errors"
 	jsonenc "github.com/spikeekips/mitum/util/encoder/json"
 	"github.com/spikeekips/mitum/util/hint"
-	"golang.org/x/xerrors"
 )
 
 const (
@@ -113,13 +113,13 @@ func WritePoblem(w http.ResponseWriter, status int, pr Problem) {
 func LoadProblemFromResponse(res *http.Response) (Problem, error) {
 	var pr Problem
 	if m := res.Header.Get("Content-Type"); ProblemMimetype != m {
-		return pr, xerrors.Errorf("unknown mimetype for problem, %q", m)
+		return pr, errors.Errorf("unknown mimetype for problem, %q", m)
 	}
 
 	if i, err := ioutil.ReadAll(res.Body); err != nil {
-		return pr, xerrors.Errorf("failed to read body for loading problem: %w", err)
+		return pr, errors.Wrap(err, "failed to read body for loading problem")
 	} else if err := jsonenc.Unmarshal(i, &pr); err != nil {
-		return pr, xerrors.Errorf("failed to unmarshal for loading problem: %w", err)
+		return pr, errors.Wrap(err, "failed to unmarshal for loading problem")
 	}
 
 	return pr, nil

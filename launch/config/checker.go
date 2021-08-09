@@ -6,12 +6,12 @@ import (
 	"crypto/x509"
 	"time"
 
+	"github.com/pkg/errors"
 	"github.com/rs/zerolog"
 	"github.com/spikeekips/mitum/isaac"
 	"github.com/spikeekips/mitum/network"
 	"github.com/spikeekips/mitum/util"
 	"github.com/spikeekips/mitum/util/logging"
-	"golang.org/x/xerrors"
 )
 
 type checker struct {
@@ -175,7 +175,7 @@ func (cc *checker) checkRateLimit() error {
 		rcc.Initialize,
 		rcc.Check,
 	}).Check(); err != nil {
-		if !xerrors.Is(err, util.IgnoreError) {
+		if !errors.Is(err, util.IgnoreError) {
 			return err
 		}
 	}
@@ -226,15 +226,15 @@ func (*checker) verifyCerts(host string, certs []tls.Certificate) (bool /* insec
 	}
 
 	var cerr x509.CertificateInvalidError
-	if xerrors.As(err, &cerr) {
+	if errors.As(err, &cerr) {
 		return true, nil
 	}
 	var herr x509.HostnameError
-	if xerrors.As(err, &herr) {
+	if errors.As(err, &herr) {
 		return true, nil
 	}
 	var uerr x509.UnknownAuthorityError
-	if xerrors.As(err, &uerr) {
+	if errors.As(err, &uerr) {
 		return true, nil
 	}
 

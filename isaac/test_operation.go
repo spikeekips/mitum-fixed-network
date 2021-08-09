@@ -5,8 +5,6 @@ package isaac
 import (
 	"sync"
 
-	"go.mongodb.org/mongo-driver/bson"
-
 	"github.com/spikeekips/mitum/base/key"
 	"github.com/spikeekips/mitum/base/operation"
 	"github.com/spikeekips/mitum/base/state"
@@ -15,6 +13,7 @@ import (
 	jsonenc "github.com/spikeekips/mitum/util/encoder/json"
 	"github.com/spikeekips/mitum/util/hint"
 	"github.com/spikeekips/mitum/util/valuehash"
+	"go.mongodb.org/mongo-driver/bson"
 )
 
 var (

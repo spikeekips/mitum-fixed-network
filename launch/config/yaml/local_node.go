@@ -4,8 +4,8 @@ import (
 	"context"
 	"strings"
 
+	"github.com/pkg/errors"
 	"github.com/spikeekips/mitum/launch/config"
-	"golang.org/x/xerrors"
 )
 
 type LocalNode struct {
@@ -143,11 +143,11 @@ func (no LocalNode) checkProposalProcessor() error {
 	}
 
 	if s, found := no.ProposalProcessor["type"]; !found {
-		return xerrors.Errorf("'type' is missing in proposal_processor")
+		return errors.Errorf("'type' is missing in proposal_processor")
 	} else if t, ok := s.(string); !ok {
-		return xerrors.Errorf("invalie 'type' type, %T", s)
+		return errors.Errorf("invalie 'type' type, %T", s)
 	} else if len(strings.TrimSpace(t)) < 1 {
-		return xerrors.Errorf("empty 'type'")
+		return errors.Errorf("empty 'type'")
 	}
 
 	return nil
@@ -159,14 +159,14 @@ func (no LocalNode) checkSuffrage() error {
 	}
 
 	if _, found := no.Suffrage["nodes"]; !found {
-		return xerrors.Errorf("'nodes' is missing in suffrage")
+		return errors.Errorf("'nodes' is missing in suffrage")
 	}
 
 	if s, found := no.Suffrage["type"]; found {
 		if t, ok := s.(string); !ok {
-			return xerrors.Errorf("invalie 'type' type, %T", s)
+			return errors.Errorf("invalie 'type' type, %T", s)
 		} else if len(strings.TrimSpace(t)) < 1 {
-			return xerrors.Errorf("empty 'type'")
+			return errors.Errorf("empty 'type'")
 		}
 	}
 
@@ -176,11 +176,11 @@ func (no LocalNode) checkSuffrage() error {
 func (no LocalNode) checkGenesisOperations() error {
 	for _, v := range no.GenesisOperations {
 		if s, found := v["type"]; !found {
-			return xerrors.Errorf("'type' is missing in operation")
+			return errors.Errorf("'type' is missing in operation")
 		} else if t, ok := s.(string); !ok {
-			return xerrors.Errorf("invalie 'type' type, %T", s)
+			return errors.Errorf("invalie 'type' type, %T", s)
 		} else if len(strings.TrimSpace(t)) < 1 {
-			return xerrors.Errorf("empty 'type'")
+			return errors.Errorf("empty 'type'")
 		}
 	}
 

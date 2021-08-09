@@ -5,6 +5,7 @@ import (
 	"io/ioutil"
 	"net/http"
 
+	"github.com/pkg/errors"
 	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/base/block"
 	"github.com/spikeekips/mitum/network"
@@ -16,7 +17,6 @@ import (
 	"github.com/spikeekips/mitum/util/localtime"
 	"golang.org/x/sync/errgroup"
 	"golang.org/x/sync/semaphore"
-	"golang.org/x/xerrors"
 )
 
 var LimitBlockDataMaps = 100
@@ -31,7 +31,7 @@ func NewSetBlockDataMapsHandler(
 		switch i, err := loadBlockDataMaps(r, enc); {
 		case err != nil:
 			network.WriteProblemWithError(w, http.StatusBadRequest,
-				xerrors.Errorf("failed to load blockdatamaps: %w", err))
+				errors.Wrap(err, "failed to load blockdatamaps"))
 			return
 		case len(i) < 1, len(i) > LimitBlockDataMaps:
 			network.WriteProblemWithError(w, http.StatusBadRequest, err)
@@ -83,7 +83,7 @@ func loadBlockDataMaps(r *http.Request, enc encoder.Encoder) ([]block.BlockDataM
 	case err != nil:
 		return nil, err
 	case len(j) < 1:
-		return nil, xerrors.Errorf("empty blockdatamaps")
+		return nil, errors.Errorf("empty blockdatamaps")
 	default:
 		hinters = j
 	}
@@ -124,7 +124,7 @@ func checkBlockDataMaps(db storage.Database, bdms []block.BlockDataMap) error {
 	}
 
 	if err := sem.Acquire(ctx, limit); err != nil {
-		if !xerrors.Is(err, context.Canceled) {
+		if !errors.Is(err, context.Canceled) {
 			return err
 		}
 	}
@@ -143,7 +143,7 @@ func checkBlockDataMap(db storage.Database, bdm block.BlockDataMap) error {
 	case !found:
 		return util.NotFoundError.Errorf("height of blockdatamap, %d not found in database", bdm.Height())
 	case !i.Hash().Equal(bdm.Block()):
-		return xerrors.Errorf("block hash does not match with manifest")
+		return errors.Errorf("block hash does not match with manifest")
 	}
 
 	return nil
@@ -172,7 +172,7 @@ func commitBlockDataMaps(db storage.Database, bc *BlockDataCleaner, bdms []block
 			defer sem.Release(1)
 
 			if err := bc.Add(bdm.Height()); err != nil {
-				if !xerrors.Is(err, util.NotFoundError) {
+				if !errors.Is(err, util.NotFoundError) {
 					return err
 				}
 			}
@@ -182,7 +182,7 @@ func commitBlockDataMaps(db storage.Database, bc *BlockDataCleaner, bdms []block
 	}
 
 	if err := sem.Acquire(ctx, limit); err != nil {
-		if !xerrors.Is(err, context.Canceled) {
+		if !errors.Is(err, context.Canceled) {
 			return err
 		}
 	}

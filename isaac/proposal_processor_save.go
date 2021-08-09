@@ -4,11 +4,11 @@ import (
 	"context"
 	"time"
 
+	"github.com/pkg/errors"
 	"github.com/spikeekips/mitum/base/block"
 	"github.com/spikeekips/mitum/base/prprocessor"
 	"github.com/spikeekips/mitum/storage/blockdata"
 	"github.com/spikeekips/mitum/util"
-	"golang.org/x/xerrors"
 )
 
 func (pp *DefaultProcessor) Save(ctx context.Context) error {
@@ -88,7 +88,7 @@ func (pp *DefaultProcessor) storeBlockDataSession(ctx context.Context) (context.
 	pp.Log().Debug().Msg("trying to store block database session")
 
 	if pp.blockDataSession == nil {
-		return ctx, xerrors.Errorf("not prepared")
+		return ctx, errors.Errorf("not prepared")
 	}
 
 	bd, err := pp.blockData.SaveSession(pp.blockDataSession)
@@ -114,7 +114,7 @@ func (pp *DefaultProcessor) storeStorage(ctx context.Context) (context.Context, 
 
 	var bd block.BlockDataMap
 	if err := util.LoadFromContextValue(ctx, blockDataMapContextKey, &bd); err != nil {
-		return ctx, xerrors.Errorf("block data map not found: %w", err)
+		return ctx, errors.Wrap(err, "block data map not found")
 	}
 
 	if err := pp.ss.Commit(ctx, bd); err != nil {

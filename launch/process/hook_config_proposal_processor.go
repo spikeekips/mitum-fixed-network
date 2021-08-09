@@ -3,11 +3,10 @@ package process
 import (
 	"context"
 
-	"golang.org/x/xerrors"
-	"gopkg.in/yaml.v3"
-
+	"github.com/pkg/errors"
 	"github.com/spikeekips/mitum/launch/config"
 	"github.com/spikeekips/mitum/launch/pm"
+	"gopkg.in/yaml.v3"
 )
 
 type HookHandlerProposalProcessorConfig func(context.Context, map[string]interface{}) (config.ProposalProcessor, error)
@@ -44,7 +43,7 @@ func HookProposalProcessorConfigFunc(handlers map[string]HookHandlerProposalProc
 			}
 			pp = i
 		} else if h, found := handlers[st]; !found {
-			return nil, xerrors.Errorf("unknown proposal-processor found, %s", st)
+			return nil, errors.Errorf("unknown proposal-processor found, %s", st)
 		} else if i, err := h(ctx, m); err != nil {
 			return nil, err
 		} else {
@@ -96,7 +95,7 @@ func parseErrorPoints(v interface{}) ([]config.ErrorPoint, error) {
 	if b, err := yaml.Marshal(v); err != nil {
 		return nil, err
 	} else if err := yaml.Unmarshal(b, &eps); err != nil {
-		return nil, xerrors.Errorf("invalid []ErrorPoint: %w", err)
+		return nil, errors.Wrap(err, "invalid []ErrorPoint")
 	}
 
 	return eps, nil

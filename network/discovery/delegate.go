@@ -5,13 +5,13 @@ import (
 	"time"
 
 	"github.com/lucas-clemente/quic-go"
+	"github.com/pkg/errors"
 	"github.com/rs/zerolog"
 	"github.com/spikeekips/mitum/network"
 	quicnetwork "github.com/spikeekips/mitum/network/quic"
 	"github.com/spikeekips/mitum/util/encoder"
 	jsonenc "github.com/spikeekips/mitum/util/encoder/json"
 	"github.com/spikeekips/mitum/util/logging"
-	"golang.org/x/xerrors"
 )
 
 type NodepoolDelegate struct {
@@ -200,7 +200,7 @@ func LoadNodeChannel(
 ) (network.Channel, error) {
 	je, err := encs.Encoder(jsonenc.JSONEncoderType, "")
 	if err != nil {
-		return nil, xerrors.Errorf("json encoder needs for quic-network: %w", err)
+		return nil, errors.Wrap(err, "json encoder needs for quic-network")
 	}
 
 	switch connInfo.URL().Scheme {
@@ -218,6 +218,6 @@ func LoadNodeChannel(
 		}
 		return ch, nil
 	default:
-		return nil, xerrors.Errorf("not supported publish URL, %v", connInfo)
+		return nil, errors.Errorf("not supported publish URL, %v", connInfo)
 	}
 }

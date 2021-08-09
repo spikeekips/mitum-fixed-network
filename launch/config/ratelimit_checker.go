@@ -3,11 +3,11 @@ package config
 import (
 	"context"
 
+	"github.com/pkg/errors"
 	"github.com/rs/zerolog"
 	"github.com/spikeekips/mitum/util"
 	"github.com/spikeekips/mitum/util/logging"
 	"github.com/ulule/limiter/v3"
-	"golang.org/x/xerrors"
 )
 
 type RateLimitChecker struct {
@@ -128,7 +128,7 @@ func (cc *RateLimitChecker) checkRateLimitTargetRules() error {
 
 func (cc *RateLimitChecker) checkRateLimitTargetRule(r RateLimitTargetRule) (RateLimitTargetRule, error) {
 	if i := r.Target(); len(i) < 1 {
-		return nil, xerrors.Errorf("empty target")
+		return nil, errors.Errorf("empty target")
 	} else if err := r.SetIPNet(i); err != nil {
 		return nil, err
 	}
@@ -141,7 +141,7 @@ func (cc *RateLimitChecker) checkRateLimitTargetRule(r RateLimitTargetRule) (Rat
 	presets := cc.conf.Preset()
 	i, found := presets[r.Preset()]
 	if !found {
-		return nil, xerrors.Errorf("unknown preset, %q", r.Preset())
+		return nil, errors.Errorf("unknown preset, %q", r.Preset())
 	}
 	preset = i.Rules()
 

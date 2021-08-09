@@ -1,9 +1,9 @@
 package hint
 
 import (
+	"github.com/pkg/errors"
 	"go.mongodb.org/mongo-driver/bson/bsontype"
 	"go.mongodb.org/mongo-driver/x/bsonx/bsoncore"
-	"golang.org/x/xerrors"
 )
 
 func (hs HintedString) MarshalBSONValue() (bsontype.Type, []byte, error) {
@@ -20,12 +20,12 @@ func (hs *HintedString) UnmarshalBSONValue(t bsontype.Type, b []byte) error {
 		return nil
 	case bsontype.String:
 	default:
-		return xerrors.Errorf("invalid marshaled type for HintedString, %v", t)
+		return errors.Errorf("invalid marshaled type for HintedString, %v", t)
 	}
 
 	i, _, ok := bsoncore.ReadString(b)
 	if !ok {
-		return xerrors.Errorf("can not read string")
+		return errors.Errorf("can not read string")
 	}
 
 	return hs.UnmarshalText([]byte(i))

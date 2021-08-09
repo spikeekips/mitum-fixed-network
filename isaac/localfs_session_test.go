@@ -7,6 +7,7 @@ import (
 	"path/filepath"
 	"testing"
 
+	"github.com/pkg/errors"
 	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/base/block"
 	"github.com/spikeekips/mitum/base/node"
@@ -18,7 +19,6 @@ import (
 	"github.com/spikeekips/mitum/util/tree"
 	"github.com/spikeekips/mitum/util/valuehash"
 	"github.com/stretchr/testify/suite"
-	"golang.org/x/xerrors"
 )
 
 type testBlockDataLocalFSSession struct {
@@ -191,7 +191,7 @@ func (t *testBlockDataLocalFSSession) TestSetStatesTree() {
 		if i, err := utr.Node(no.Index()); err != nil {
 			return false, err
 		} else if !no.Equal(i) {
-			return false, xerrors.Errorf("different node found")
+			return false, errors.Errorf("different node found")
 		}
 
 		return true, nil

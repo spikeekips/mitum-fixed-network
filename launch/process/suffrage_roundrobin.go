@@ -4,8 +4,7 @@ import (
 	"fmt"
 	"os"
 
-	"golang.org/x/xerrors"
-
+	"github.com/pkg/errors"
 	"github.com/spikeekips/mitum/base"
 	jsonenc "github.com/spikeekips/mitum/util/encoder/json"
 	"github.com/spikeekips/mitum/util/valuehash"
@@ -105,7 +104,7 @@ func (sf *RoundrobinSuffrage) Verbose() string {
 		_, _ = fmt.Fprintf(
 			os.Stderr,
 			"%+v\n",
-			xerrors.Errorf("failed to marshal RoundrobinSuffrage.Verbose(): %w", err).Error(),
+			errors.Wrap(err, "failed to marshal RoundrobinSuffrage.Verbose()").Error(),
 		)
 
 		return sf.Name()

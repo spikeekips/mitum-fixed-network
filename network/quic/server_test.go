@@ -11,9 +11,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/stretchr/testify/suite"
-	"golang.org/x/xerrors"
-
+	"github.com/pkg/errors"
 	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/base/block"
 	"github.com/spikeekips/mitum/base/key"
@@ -27,6 +25,7 @@ import (
 	jsonenc "github.com/spikeekips/mitum/util/encoder/json"
 	"github.com/spikeekips/mitum/util/localtime"
 	"github.com/spikeekips/mitum/util/valuehash"
+	"github.com/stretchr/testify/suite"
 )
 
 type testQuicServer struct {
@@ -89,7 +88,7 @@ func (t *testQuicServer) readyServer() *Server {
 	var retries int
 	for {
 		if retries == maxRetries {
-			t.NoError(xerrors.Errorf("quic server did not respond"))
+			t.NoError(errors.Errorf("quic server did not respond"))
 			break
 		}
 
@@ -134,7 +133,7 @@ func (t *testQuicServer) TestSendSeal() {
 
 	select {
 	case <-time.After(time.Second):
-		t.NoError(xerrors.Errorf("failed to receive respond"))
+		t.NoError(errors.Errorf("failed to receive respond"))
 	case r := <-received:
 		t.Equal(sl.Hint(), r.Hint())
 		t.True(sl.Hash().Equal(r.Hash()))

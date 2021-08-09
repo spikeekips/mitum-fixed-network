@@ -6,9 +6,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/stretchr/testify/suite"
-	"golang.org/x/xerrors"
-
+	"github.com/pkg/errors"
 	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/base/ballot"
 	"github.com/spikeekips/mitum/base/block"
@@ -19,6 +17,7 @@ import (
 	"github.com/spikeekips/mitum/util/localtime"
 	"github.com/spikeekips/mitum/util/tree"
 	"github.com/spikeekips/mitum/util/valuehash"
+	"github.com/stretchr/testify/suite"
 )
 
 type testStateConsensus struct {
@@ -176,7 +175,7 @@ func (t *testStateConsensus) TestBroadcastProposalWithINITVoteproof() {
 	// NOTE proposal will be broadcasted prior to accept ballot
 	select {
 	case <-time.After(time.Second * 3):
-		t.NoError(xerrors.Errorf("timeout to wait proposal"))
+		t.NoError(errors.Errorf("timeout to wait proposal"))
 	case sl := <-sealch:
 		t.Implements((*ballot.Proposal)(nil), sl)
 
@@ -233,7 +232,7 @@ func (t *testStateConsensus) TestFindProposal() {
 	// NOTE proposal will be broadcasted prior to accept ballot
 	select {
 	case <-time.After(time.Second * 3):
-		t.NoError(xerrors.Errorf("timeout to wait accept ballot"))
+		t.NoError(errors.Errorf("timeout to wait accept ballot"))
 	case sl := <-sealch:
 		t.Implements((*ballot.ACCEPT)(nil), sl)
 
@@ -283,7 +282,7 @@ func (t *testStateConsensus) TestTimeoutWaitingProposal() {
 
 	select {
 	case <-time.After(time.Second * 3):
-		t.NoError(xerrors.Errorf("timeout to wait init ballot"))
+		t.NoError(errors.Errorf("timeout to wait init ballot"))
 	case sl := <-sealch:
 		t.Implements((*ballot.INIT)(nil), sl)
 
@@ -369,7 +368,7 @@ end:
 		switch sl.(type) {
 		case ballot.ACCEPT, ballot.Proposal:
 		default:
-			t.NoError(xerrors.Errorf("unexpected ballot found, %T", sl))
+			t.NoError(errors.Errorf("unexpected ballot found, %T", sl))
 		}
 	}
 }
@@ -422,7 +421,7 @@ func (t *testStateConsensus) TestACCEPTVoteproof() {
 	blockch := make(chan block.Block, 1)
 	st.SetNewBlocksFunc(func(blks []block.Block) error {
 		if len(blks) < 1 {
-			return xerrors.Errorf("empty blocks")
+			return errors.Errorf("empty blocks")
 		}
 
 		blockch <- blks[0]
@@ -442,7 +441,7 @@ end:
 	for {
 		select {
 		case <-ctx.Done():
-			t.NoError(xerrors.Errorf("timeout to wait init ballot"))
+			t.NoError(errors.Errorf("timeout to wait init ballot"))
 
 			break end
 		case sl := <-sealch:
@@ -456,7 +455,7 @@ end:
 
 	select {
 	case <-time.After(time.Second * 3):
-		t.NoError(xerrors.Errorf("timeout to wait saved block"))
+		t.NoError(errors.Errorf("timeout to wait saved block"))
 	case savedBlock := <-blockch:
 		t.Equal(newblock.Height(), savedBlock.Height())
 		t.True(newblock.Hash().Equal(savedBlock.Hash()))
@@ -512,7 +511,7 @@ end:
 	for {
 		select {
 		case <-ctx.Done():
-			t.NoError(xerrors.Errorf("timeout to wait init ballot"))
+			t.NoError(errors.Errorf("timeout to wait init ballot"))
 
 			break end
 		case sl := <-sealch:
@@ -596,7 +595,7 @@ func (t *testStateConsensus) TestFailedSavingBlockMovesToSyncing() {
 		return newblock, nil
 	}
 	dp.SF = func(ctx context.Context) error {
-		return xerrors.Errorf("killme")
+		return errors.Errorf("killme")
 	}
 	pps := t.Processors(dp.New)
 
@@ -622,7 +621,7 @@ end:
 	for {
 		select {
 		case <-ctx.Done():
-			t.NoError(xerrors.Errorf("timeout to wait init ballot"))
+			t.NoError(errors.Errorf("timeout to wait init ballot"))
 
 			break end
 		case sl := <-sealch:
@@ -636,7 +635,7 @@ end:
 	err = st.ProcessVoteproof(avp)
 
 	var sctx StateSwitchContext
-	t.True(xerrors.As(err, &sctx))
+	t.True(errors.As(err, &sctx))
 	t.Equal(base.StateSyncing, sctx.ToState())
 }
 
@@ -653,7 +652,7 @@ func (t *testStateConsensus) TestFailedProcessingProposal() {
 
 	dp := &prprocessor.DummyProcessor{S: prprocessor.BeforePrepared}
 	dp.PF = func(ctx context.Context) (block.Block, error) {
-		return nil, xerrors.Errorf("happy meal")
+		return nil, errors.Errorf("happy meal")
 	}
 	pps := t.Processors(dp.New)
 
@@ -681,7 +680,7 @@ end:
 	for {
 		select {
 		case <-ctx.Done():
-			t.NoError(xerrors.Errorf("timeout to wait accept ballot"))
+			t.NoError(errors.Errorf("timeout to wait accept ballot"))
 
 			break end
 		case sl := <-sealch:
@@ -749,7 +748,7 @@ func (t *testStateConsensus) TestProcessingProposalFromACCEPTVoterpof() {
 	blockch := make(chan block.Block, 1)
 	st.SetNewBlocksFunc(func(blks []block.Block) error {
 		if len(blks) < 1 {
-			return xerrors.Errorf("empty blocks")
+			return errors.Errorf("empty blocks")
 		}
 
 		blockch <- blks[0]
@@ -774,7 +773,7 @@ end:
 	for {
 		select {
 		case <-ctx.Done():
-			t.NoError(xerrors.Errorf("timeout to wait init ballot"))
+			t.NoError(errors.Errorf("timeout to wait init ballot"))
 
 			break end
 		case sl := <-sealch:
@@ -786,7 +785,7 @@ end:
 
 	select {
 	case <-time.After(time.Second * 3):
-		t.NoError(xerrors.Errorf("timeout to wait saved block"))
+		t.NoError(errors.Errorf("timeout to wait saved block"))
 	case savedBlock := <-blockch:
 		t.Equal(newblock.Height(), savedBlock.Height())
 		t.True(newblock.Hash().Equal(savedBlock.Hash()))

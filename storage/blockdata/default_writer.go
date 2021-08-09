@@ -7,6 +7,7 @@ import (
 	"io"
 	"reflect"
 
+	"github.com/pkg/errors"
 	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/base/ballot"
 	"github.com/spikeekips/mitum/base/block"
@@ -19,7 +20,6 @@ import (
 	"github.com/spikeekips/mitum/util/tree"
 	"golang.org/x/sync/errgroup"
 	"golang.org/x/sync/semaphore"
-	"golang.org/x/xerrors"
 )
 
 var (
@@ -180,7 +180,7 @@ func (bd DefaultWriter) ReadProposal(r io.Reader) (ballot.Proposal, error) {
 func (DefaultWriter) read(r io.Reader) ([]byte, error) {
 	i, err := io.ReadAll(r)
 	if err != nil {
-		return nil, storage.WrapFSError(err)
+		return nil, storage.MergeFSError(err)
 	}
 	return i, nil
 }
@@ -225,7 +225,7 @@ func (bd DefaultWriter) writeItems(w io.Writer, v interface{}) error {
 	case reflect.Slice, reflect.Array:
 		l = reflect.ValueOf(v)
 	default:
-		return xerrors.Errorf("not array or slice: %T", v)
+		return errors.Errorf("not array or slice: %T", v)
 	}
 
 	n := l.Len()
@@ -266,7 +266,7 @@ func (bd DefaultWriter) writeTree(w io.Writer, tr tree.FixedTree) error {
 			}()
 
 			if i, err := tr.Node(index); err != nil {
-				if xerrors.Is(err, util.NotFoundError) {
+				if errors.Is(err, util.NotFoundError) {
 					return index, nil, io.EOF
 				}
 
@@ -291,7 +291,7 @@ func (bd DefaultWriter) readTree(r io.Reader, limit int64) (tree.FixedTree, erro
 			if err := bd.encoder.Unmarshal(b, &header); err != nil {
 				return err
 			} else if err := header.Hint.IsCompatible(tr.Hint()); err != nil {
-				return xerrors.Errorf("unknown FixedTree: %w", err)
+				return errors.Wrap(err, "unknown FixedTree")
 			}
 
 			nodes = make([]tree.FixedTreeNode, header.Items)
@@ -385,7 +385,7 @@ func ReadlinesWithIndex(
 	}
 
 	if err := sem.Acquire(ctx, limit); err != nil {
-		if !xerrors.Is(err, context.Canceled) {
+		if !errors.Is(err, context.Canceled) {
 			return err
 		}
 	}
@@ -400,15 +400,15 @@ type ItemsHeader struct {
 
 func ParseItemIndexLine(b []byte) (uint64, error) {
 	if !bytes.HasPrefix(b, []byte("# index=")) {
-		return 0, xerrors.Errorf("invalid item index, %q", string(b))
+		return 0, errors.Errorf("invalid item index, %q", string(b))
 	}
 
 	var i uint64
 	switch n, err := fmt.Sscanf(string(b), "# index=%d", &i); {
 	case err != nil:
-		return 0, xerrors.Errorf("invalid item index: %w", err)
+		return 0, errors.Wrap(err, "invalid item index")
 	case n != 1:
-		return 0, xerrors.Errorf("invalid item index: %w", err)
+		return 0, errors.Errorf("invalid item index, %d", n)
 	default:
 		return i, nil
 	}

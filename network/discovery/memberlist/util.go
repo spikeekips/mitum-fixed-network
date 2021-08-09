@@ -8,10 +8,10 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/pkg/errors"
 	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/network"
 	"github.com/spikeekips/mitum/util/valuehash"
-	"golang.org/x/xerrors"
 )
 
 func parseHostPort(a string) (string, int, error) {
@@ -21,7 +21,7 @@ func parseHostPort(a string) (string, int, error) {
 	}
 	port, err := strconv.ParseInt(uport, 10, 64)
 	if err != nil {
-		return "", 0, xerrors.Errorf("wrong port, %q", a)
+		return "", 0, errors.Errorf("wrong port, %q", a)
 	}
 
 	return host, int(port), nil
@@ -44,7 +44,7 @@ func stringToIPv6(s string) (net.IP, error) {
 
 	ip := net.ParseIP(strings.Join(r, ":"))
 	if ip == nil {
-		return nil, xerrors.Errorf("failed to convert to IPv6, %q", s)
+		return nil, errors.Errorf("failed to convert to IPv6, %q", s)
 	}
 
 	return ip, nil
@@ -66,11 +66,11 @@ func publishToAddress(u *url.URL) (*url.URL, string, error) {
 
 func isValidPublishURL(u *url.URL) error {
 	if err := network.IsValidURL(u); err != nil {
-		return xerrors.Errorf("invalid publish url: %w", err)
+		return errors.Wrap(err, "invalid publish url")
 	}
 
 	if u.Port() == "" {
-		return xerrors.Errorf("empty publish url; empty port, %q", u.String())
+		return errors.Errorf("empty publish url; empty port, %q", u.String())
 	}
 
 	return nil
@@ -79,11 +79,11 @@ func isValidPublishURL(u *url.URL) error {
 func SuffrageHandlerFilter(suffrage base.Suffrage, nodepool *network.Nodepool) func(NodeMessage) error {
 	return func(msg NodeMessage) error {
 		if !suffrage.IsInside(msg.Node()) {
-			return xerrors.Errorf("not suffrage node, %q", msg.Node())
+			return errors.Errorf("not suffrage node, %q", msg.Node())
 		}
 
 		if !nodepool.Exists(msg.Node()) {
-			return xerrors.Errorf("not in nodepool, %q", msg.Node())
+			return errors.Errorf("not in nodepool, %q", msg.Node())
 		}
 
 		return nil

@@ -4,7 +4,7 @@ import (
 	"bytes"
 	"encoding/base64"
 
-	"golang.org/x/xerrors"
+	"github.com/pkg/errors"
 )
 
 // NetworkID will be used to separate mitum network with the other network. For
@@ -16,9 +16,9 @@ const MaxNetworkIDLength = 300
 
 func (ni NetworkID) IsValid([]byte) error {
 	if len(ni) < 1 {
-		return xerrors.Errorf("empty NetworkID")
+		return errors.Errorf("empty NetworkID")
 	} else if len(ni) > MaxNetworkIDLength {
-		return xerrors.Errorf(
+		return errors.Errorf(
 			"length of NetworkID too long; max=%d, but len=%d",
 			MaxNetworkIDLength,
 			len(ni),

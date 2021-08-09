@@ -4,9 +4,9 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/pkg/errors"
 	"github.com/rs/zerolog"
 	"github.com/spikeekips/mitum/util/logging"
-	"golang.org/x/xerrors"
 )
 
 type Hooks struct {
@@ -27,7 +27,7 @@ func NewHooks(name string) *Hooks {
 func (hs *Hooks) Add(name string, f ProcessFunc, override bool) error {
 	if _, found := hs.hooks[name]; found {
 		if !override {
-			return xerrors.Errorf("hook already added, %q", name)
+			return errors.Errorf("hook already added, %q", name)
 		}
 	}
 

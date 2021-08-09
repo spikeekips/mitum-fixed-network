@@ -6,10 +6,7 @@ import (
 	"sync"
 	"time"
 
-	"go.mongodb.org/mongo-driver/mongo"
-	"go.mongodb.org/mongo-driver/mongo/options"
-	"golang.org/x/xerrors"
-
+	"github.com/pkg/errors"
 	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/base/block"
 	"github.com/spikeekips/mitum/base/state"
@@ -17,6 +14,8 @@ import (
 	"github.com/spikeekips/mitum/util"
 	"github.com/spikeekips/mitum/util/tree"
 	"github.com/spikeekips/mitum/util/valuehash"
+	"go.mongodb.org/mongo-driver/mongo"
+	"go.mongodb.org/mongo-driver/mongo/options"
 )
 
 type DatabaseSession struct {
@@ -57,7 +56,7 @@ func (bst *DatabaseSession) Block() block.Block {
 
 func (bst *DatabaseSession) SetBlock(ctx context.Context, blk block.Block) error {
 	if blk == nil {
-		return xerrors.Errorf("empty block")
+		return errors.Errorf("empty block")
 	}
 
 	finished := make(chan error)
@@ -68,7 +67,7 @@ func (bst *DatabaseSession) SetBlock(ctx context.Context, blk block.Block) error
 	select {
 	case <-ctx.Done():
 		if err := bst.st.CleanByHeight(blk.Height()); err != nil {
-			if !xerrors.Is(err, util.NotFoundError) {
+			if !errors.Is(err, util.NotFoundError) {
 				return err
 			}
 		}
@@ -81,7 +80,7 @@ func (bst *DatabaseSession) SetBlock(ctx context.Context, blk block.Block) error
 
 func (bst *DatabaseSession) SetACCEPTVoteproof(voteproof base.Voteproof) error {
 	if s := voteproof.Stage(); s != base.StageACCEPT {
-		return xerrors.Errorf("not accept voteproof, %v", s)
+		return errors.Errorf("not accept voteproof, %v", s)
 	}
 
 	if doc, err := NewVoteproofDoc(voteproof, bst.st.enc); err != nil {
@@ -100,7 +99,7 @@ func (bst *DatabaseSession) setBlock(blk block.Block) error {
 	}()
 
 	if bst.block.Height() != blk.Height() {
-		return xerrors.Errorf(
+		return errors.Errorf(
 			"block has different height from initial block; initial=%d != block=%d",
 			bst.block.Height(),
 			blk.Height(),
@@ -108,7 +107,7 @@ func (bst *DatabaseSession) setBlock(blk block.Block) error {
 	}
 
 	if bst.block.Round() != blk.Round() {
-		return xerrors.Errorf(
+		return errors.Errorf(
 			"block has different round from initial block; initial=%d != block=%d",
 			bst.block.Round(),
 			blk.Round(),
@@ -151,9 +150,9 @@ func (bst *DatabaseSession) Commit(ctx context.Context, bd block.BlockDataMap) e
 		return nil
 	} else {
 		var me mongo.CommandError
-		if xerrors.Is(err, context.DeadlineExceeded) {
+		if errors.Is(err, context.DeadlineExceeded) {
 			return storage.TimeoutError.Wrap(err)
-		} else if xerrors.As(err, &me) {
+		} else if errors.As(err, &me) {
 			if me.HasErrorLabel("NetworkError") {
 				return storage.TimeoutError.Wrap(err)
 			}
@@ -177,54 +176,54 @@ func (bst *DatabaseSession) commit(ctx context.Context, bd block.BlockDataMap) e
 
 	if bst.block.Height() > base.PreGenesisHeight {
 		if bst.initVoteproofsModels == nil {
-			return xerrors.Errorf("empty init voteproof")
+			return errors.Errorf("empty init voteproof")
 		}
 
 		if bst.acceptVoteproofsModels == nil {
-			return xerrors.Errorf("empty accept voteproof")
+			return errors.Errorf("empty accept voteproof")
 		}
 	}
 
 	if res, err := bst.writeModels(ctx, ColNameManifest, bst.manifestModels); err != nil {
-		return storage.WrapStorageError(err)
+		return storage.MergeStorageError(err)
 	} else if res != nil && res.InsertedCount < 1 {
-		return xerrors.Errorf("manifest not inserted")
+		return errors.Errorf("manifest not inserted")
 	}
 
 	if res, err := bst.writeModels(ctx, ColNameOperation, bst.operationModels); err != nil {
-		return storage.WrapStorageError(err)
+		return storage.MergeStorageError(err)
 	} else if res != nil && res.InsertedCount < 1 {
-		return xerrors.Errorf("operation not inserted")
+		return errors.Errorf("operation not inserted")
 	}
 
 	if res, err := bst.writeModels(ctx, ColNameState, bst.stateModels); err != nil {
-		return storage.WrapStorageError(err)
+		return storage.MergeStorageError(err)
 	} else if res != nil && res.InsertedCount < 1 {
-		return xerrors.Errorf("state not inserted")
+		return errors.Errorf("state not inserted")
 	}
 
 	if bst.initVoteproofsModels != nil {
 		if res, err := bst.writeModels(ctx, ColNameVoteproof, []mongo.WriteModel{bst.initVoteproofsModels}); err != nil {
-			return storage.WrapStorageError(err)
+			return storage.MergeStorageError(err)
 		} else if res != nil && res.InsertedCount < 1 {
-			return xerrors.Errorf("init voteproofs not inserted")
+			return errors.Errorf("init voteproofs not inserted")
 		}
 	}
 
 	if bst.acceptVoteproofsModels != nil {
 		if res, err := bst.writeModels(ctx, ColNameVoteproof, []mongo.WriteModel{bst.acceptVoteproofsModels}); err != nil {
-			return storage.WrapStorageError(err)
+			return storage.MergeStorageError(err)
 		} else if res != nil && res.InsertedCount < 1 {
-			return xerrors.Errorf("accept voteproofs not inserted")
+			return errors.Errorf("accept voteproofs not inserted")
 		}
 	}
 
 	if doc, err := NewBlockDataMapDoc(bd, bst.st.enc); err != nil {
 		return err
 	} else if res, err := bst.writeModels(ctx, ColNameBlockDataMap, []mongo.WriteModel{mongo.NewInsertOneModel().SetDocument(doc)}); err != nil {
-		return storage.WrapStorageError(err)
+		return storage.MergeStorageError(err)
 	} else if res != nil && res.InsertedCount < 1 {
-		return xerrors.Errorf("blockdatamap not inserted")
+		return errors.Errorf("blockdatamap not inserted")
 	}
 
 	if err := bst.ost.setLastBlock(bst.block, true, false); err != nil {
@@ -362,7 +361,7 @@ func (bst *DatabaseSession) Cancel() error {
 	}()
 
 	if bst.block == nil {
-		return xerrors.Errorf("empty block")
+		return errors.Errorf("empty block")
 	}
 
 	return bst.st.CleanByHeight(bst.block.Height())
@@ -370,7 +369,7 @@ func (bst *DatabaseSession) Cancel() error {
 
 func (bst *DatabaseSession) Close() error {
 	if bst.block == nil {
-		return xerrors.Errorf("database session already closed")
+		return errors.Errorf("database session already closed")
 	}
 
 	bst.states = nil

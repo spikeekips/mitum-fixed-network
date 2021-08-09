@@ -10,13 +10,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/stretchr/testify/suite"
-	"go.mongodb.org/mongo-driver/bson"
-	"go.mongodb.org/mongo-driver/bson/primitive"
-	"go.mongodb.org/mongo-driver/mongo"
-	"go.mongodb.org/mongo-driver/mongo/options"
-	"golang.org/x/xerrors"
-
+	"github.com/pkg/errors"
 	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/base/block"
 	"github.com/spikeekips/mitum/base/key"
@@ -26,6 +20,11 @@ import (
 	"github.com/spikeekips/mitum/util"
 	"github.com/spikeekips/mitum/util/cache"
 	"github.com/spikeekips/mitum/util/valuehash"
+	"github.com/stretchr/testify/suite"
+	"go.mongodb.org/mongo-driver/bson"
+	"go.mongodb.org/mongo-driver/bson/primitive"
+	"go.mongodb.org/mongo-driver/mongo"
+	"go.mongodb.org/mongo-driver/mongo/options"
 )
 
 type testDatabase struct {
@@ -109,7 +108,7 @@ func (t *testDatabase) TestSetBlockContext() {
 	defer cancel()
 
 	err = bs.SetBlock(ctx, blk)
-	t.True(xerrors.Is(err, context.DeadlineExceeded))
+	t.True(errors.Is(err, context.DeadlineExceeded))
 }
 
 func (t *testDatabase) TestSaveBlockContext() {
@@ -131,7 +130,7 @@ func (t *testDatabase) TestSaveBlockContext() {
 
 	bd := t.NewBlockDataMap(blk.Height(), blk.Hash(), true)
 	err = bs.Commit(ctx, bd)
-	t.True(xerrors.Is(err, context.DeadlineExceeded))
+	t.True(errors.Is(err, context.DeadlineExceeded))
 }
 
 func (t *testDatabase) TestLastManifest() {

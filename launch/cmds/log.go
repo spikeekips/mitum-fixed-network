@@ -6,11 +6,12 @@ import (
 	"time"
 
 	"github.com/alecthomas/kong"
+	"github.com/pkg/errors"
 	"github.com/rs/zerolog"
+	"github.com/rs/zerolog/pkgerrors"
 	"github.com/spikeekips/mitum/util"
 	"github.com/spikeekips/mitum/util/localtime"
 	"github.com/spikeekips/mitum/util/logging"
-	"golang.org/x/xerrors"
 )
 
 func init() {
@@ -20,6 +21,7 @@ func init() {
 	zerolog.MessageFieldName = "m"
 	zerolog.TimestampFunc = localtime.UTCNow
 	zerolog.InterfaceMarshalFunc = util.JSON.Marshal
+	zerolog.ErrorStackMarshaler = pkgerrors.MarshalStack
 
 	zerolog.DisableSampling(true)
 }
@@ -67,7 +69,7 @@ func (lf *LogFormat) UnmarshalText(b []byte) error {
 	case "json":
 	case "terminal":
 	default:
-		return xerrors.Errorf("invalid log_format: %q", s)
+		return errors.Errorf("invalid log_format: %q", s)
 	}
 
 	*lf = LogFormat(s)

@@ -1,8 +1,6 @@
 package isvalid
 
-import (
-	"golang.org/x/xerrors"
-)
+import "github.com/pkg/errors"
 
 func Check(vs []IsValider, b []byte, allowNil bool) error {
 	for i, v := range vs {
@@ -11,7 +9,7 @@ func Check(vs []IsValider, b []byte, allowNil bool) error {
 				return nil
 			}
 
-			return xerrors.Errorf("%dth: nil can not be checked", i)
+			return errors.Errorf("%dth: nil can not be checked", i)
 		}
 		if err := v.IsValid(b); err != nil {
 			return err

@@ -5,17 +5,17 @@ import (
 	"time"
 
 	libredis "github.com/go-redis/redis/v8"
+	"github.com/pkg/errors"
 	"github.com/spikeekips/mitum/network"
 	"github.com/ulule/limiter/v3"
 	"github.com/ulule/limiter/v3/drivers/store/memory"
 	"github.com/ulule/limiter/v3/drivers/store/redis"
-	"golang.org/x/xerrors"
 )
 
 func RateLimitStoreFromURI(s string) (limiter.Store, error) {
 	u, err := network.ParseURL(s, false)
 	if err != nil {
-		return nil, xerrors.Errorf("wrong ratelimit cache url, %q", s)
+		return nil, errors.Errorf("wrong ratelimit cache url, %q", s)
 	}
 
 	prefix := "mitum:limiter"
@@ -27,17 +27,17 @@ func RateLimitStoreFromURI(s string) (limiter.Store, error) {
 	case u.Scheme == "memory":
 		i, err := newMemoryRateLimitStore(u, prefix)
 		if err != nil {
-			return nil, xerrors.Errorf("failed to create ratelimit memory store: %w", err)
+			return nil, errors.Wrap(err, "failed to create ratelimit memory store")
 		}
 		return i, nil
 	case u.Scheme == "redis":
 		i, err := newRedisRateLimitStore(u, prefix)
 		if err != nil {
-			return nil, xerrors.Errorf("failed to create ratelimit redis store: %w", err)
+			return nil, errors.Wrap(err, "failed to create ratelimit redis store")
 		}
 		return i, nil
 	default:
-		return nil, xerrors.Errorf("unknown ratelimit cache uri: %q", u.String())
+		return nil, errors.Errorf("unknown ratelimit cache uri: %q", u.String())
 	}
 }
 

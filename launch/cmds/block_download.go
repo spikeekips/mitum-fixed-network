@@ -11,11 +11,8 @@ import (
 	"strings"
 	"time"
 
-	"golang.org/x/sync/errgroup"
-	"golang.org/x/sync/semaphore"
-	"golang.org/x/xerrors"
-
 	"github.com/alecthomas/kong"
+	"github.com/pkg/errors"
 	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/base/block"
 	"github.com/spikeekips/mitum/launch/process"
@@ -25,6 +22,8 @@ import (
 	"github.com/spikeekips/mitum/storage/blockdata/localfs"
 	"github.com/spikeekips/mitum/util"
 	"github.com/spikeekips/mitum/util/hint"
+	"golang.org/x/sync/errgroup"
+	"golang.org/x/sync/semaphore"
 )
 
 var allBlockData = "all"
@@ -61,7 +60,7 @@ func NewBlockDownloadCommand(types []hint.Type, hinters []hint.Hinter) BlockDown
 
 func (cmd *BlockDownloadCommand) Run(version util.Version) error {
 	if err := cmd.Initialize(cmd, version); err != nil {
-		return xerrors.Errorf("failed to initialize command: %w", err)
+		return errors.Wrap(err, "failed to initialize command")
 	}
 
 	cmd.Log().Debug().Interface("node_url", cmd.URL.String()).Ints64("heights", cmd.Heights).Msg("trying to get block")
@@ -73,11 +72,11 @@ func (cmd *BlockDownloadCommand) Run(version util.Version) error {
 	switch cmd.DataType {
 	case "map":
 		if err := cmd.printBlockDataMaps(cmd.heights); err != nil {
-			return xerrors.Errorf("failed to get block data maps: %w", err)
+			return errors.Wrap(err, "failed to get block data maps")
 		}
 	default:
 		if err := cmd.blockData(cmd.heights); err != nil {
-			return xerrors.Errorf("failed to get block data: %w", err)
+			return errors.Wrap(err, "failed to get block data")
 		}
 	}
 
@@ -109,7 +108,7 @@ func (cmd *BlockDownloadCommand) prepareHeight() error {
 		if err := h.IsValid(nil); err != nil {
 			return err
 		} else if _, found := m[h]; found {
-			return xerrors.Errorf("duplicated height, %d", h)
+			return errors.Errorf("duplicated height, %d", h)
 		} else {
 			m[h] = struct{}{}
 			heights[i] = h
@@ -161,7 +160,7 @@ func (cmd *BlockDownloadCommand) prepareDataType() error {
 		}
 
 		if !found {
-			return xerrors.Errorf("unknown block data type, %q", d)
+			return errors.Errorf("unknown block data type, %q", d)
 		}
 	}
 
@@ -183,7 +182,7 @@ func (cmd *BlockDownloadCommand) prepareBlockData() error {
 			return err
 		}
 	} else if !i.IsDir() {
-		return xerrors.Errorf("save path, %q is not directory", cmd.Save)
+		return errors.Errorf("save path, %q is not directory", cmd.Save)
 	}
 
 	cmd.bd = localfs.NewBlockData(cmd.Save, cmd.jsonenc)
@@ -246,12 +245,12 @@ end:
 func (cmd *BlockDownloadCommand) blockData(heights []base.Height) error {
 	maps, err := cmd.blockDataMaps(heights)
 	if err != nil {
-		return xerrors.Errorf("failed to get block data maps: %w", err)
+		return errors.Wrap(err, "failed to get block data maps")
 	}
 
 	return requestBlockData(maps, func(m block.BlockDataMap) error {
 		if err := cmd.oneBlockData(m); err != nil {
-			return xerrors.Errorf("failed to get one block data, %d: %w", m.Height(), err)
+			return errors.Wrapf(err, "failed to get one block data, %d", m.Height())
 		}
 		return nil
 	})
@@ -302,7 +301,7 @@ func (cmd *BlockDownloadCommand) oneBlockData(m block.BlockDataMap) error {
 			items[i] = j
 		}
 	default:
-		return xerrors.Errorf("unknown data type found, %q", cmd.DataType)
+		return errors.Errorf("unknown data type found, %q", cmd.DataType)
 	}
 
 	if cmd.bd == nil {
@@ -360,7 +359,7 @@ func (cmd *BlockDownloadCommand) printBlockDataItem(item block.BlockDataMapItem)
 	case block.BlockDataProposal:
 		return writer.ReadProposal(r)
 	default:
-		return nil, xerrors.Errorf("unknown data type found, %q", item.Type())
+		return nil, errors.Errorf("unknown data type found, %q", item.Type())
 	}
 }
 
@@ -383,7 +382,7 @@ func (cmd *BlockDownloadCommand) saveBlockData(m block.BlockDataMap, items []blo
 			return err
 		}
 	} else if !i.IsDir() {
-		return xerrors.Errorf("block directory, %q already exists", b)
+		return errors.Errorf("block directory, %q already exists", b)
 	}
 
 	for i := range items {
@@ -407,7 +406,7 @@ func (cmd *BlockDownloadCommand) saveBlockDataItem(
 
 	i, err := session.Import(item.Type(), r)
 	if err != nil {
-		return xerrors.Errorf("failed to import block data: %w", err)
+		return errors.Wrap(err, "failed to import block data")
 	}
 	b := filepath.Join(cmd.Save, localfs.HeightDirectory(m.Height()))
 	f := filepath.Join(b, filepath.Base(i))
@@ -453,7 +452,7 @@ func getItemBlockDataMap(m block.BlockDataMap, dataType string) (block.BlockData
 	case block.BlockDataProposal:
 		item = m.Proposal()
 	default:
-		return nil, xerrors.Errorf("unknown data type found, %q", dataType)
+		return nil, errors.Errorf("unknown data type found, %q", dataType)
 	}
 
 	return item, nil
@@ -487,7 +486,7 @@ func requestBlockDataMaps(heights []base.Height, callback func([]base.Height) er
 	}
 
 	if err := sem.Acquire(ctx, 10); err != nil {
-		if !xerrors.Is(err, context.Canceled) {
+		if !errors.Is(err, context.Canceled) {
 			return err
 		}
 	}
@@ -513,7 +512,7 @@ func requestBlockData(maps []block.BlockDataMap, callback func(block.BlockDataMa
 	}
 
 	if err := sem.Acquire(ctx, 10); err != nil {
-		if !xerrors.Is(err, context.Canceled) {
+		if !errors.Is(err, context.Canceled) {
 			return err
 		}
 	}

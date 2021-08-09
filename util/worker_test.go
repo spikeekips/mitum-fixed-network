@@ -9,9 +9,9 @@ import (
 	"testing"
 	"time"
 
+	"github.com/pkg/errors"
 	"github.com/stretchr/testify/suite"
 	"go.uber.org/goleak"
-	"golang.org/x/xerrors"
 )
 
 type testParallelWorker struct {
@@ -23,7 +23,7 @@ func (t *testParallelWorker) TestRun() {
 	defer wk.Done()
 
 	wk.Run(func(_ uint, job interface{}) error {
-		return fmt.Errorf("%d", job)
+		return errors.Errorf("%d", job)
 	})
 
 	numJob := 3
@@ -74,7 +74,7 @@ func (t *testParallelWorker) TestMultipleCallbacks() {
 		workers = append(workers, cb)
 
 		wk.Run(func(_ uint, _ interface{}) error {
-			return fmt.Errorf("%d", cb)
+			return errors.Errorf("%d", cb)
 		})
 	}
 
@@ -111,7 +111,7 @@ func (t *testParallelWorker) TestStopBeforeFinish() {
 	longrunningChan := make(chan struct{})
 	wk.Run(func(_ uint, job interface{}) error {
 		<-longrunningChan
-		return fmt.Errorf("%d", job)
+		return errors.Errorf("%d", job)
 	})
 
 	numJob := 3
@@ -179,7 +179,7 @@ func (t *testDistributeWorker) TestWithoutErrchan() {
 			returnChan <- i
 
 			if j.(int)%3 == 0 {
-				return xerrors.Errorf("error%d", j)
+				return errors.Errorf("error%d", j)
 			}
 
 			return nil
@@ -228,7 +228,7 @@ func (t *testDistributeWorker) TestWithErrchan() {
 				<-time.After(time.Millisecond * 10)
 
 				if j.(int)%3 == 0 {
-					return xerrors.Errorf("error:%d", j)
+					return errors.Errorf("error:%d", j)
 				}
 
 				return nil
@@ -289,7 +289,7 @@ func (t *testDistributeWorker) TestWithErrchanStopFirst() {
 				}
 
 				if j.(int)%3 == 0 {
-					return xerrors.Errorf("error:%d", j)
+					return errors.Errorf("error:%d", j)
 				}
 
 				return nil
@@ -352,7 +352,7 @@ func (t *testDistributeWorker) TestWithRunFirst() {
 
 	select {
 	case <-time.After(time.Second * 1):
-		t.NoError(xerrors.Errorf("timeout to wait"))
+		t.NoError(errors.Errorf("timeout to wait"))
 	case <-done:
 		//
 	}
@@ -384,7 +384,7 @@ func (t *testDistributeWorker) TestOneCallback() {
 				<-time.After(time.Millisecond * 10)
 
 				if j.(int)%3 == 0 {
-					return xerrors.Errorf("error:%d", j)
+					return errors.Errorf("error:%d", j)
 				}
 
 				return nil

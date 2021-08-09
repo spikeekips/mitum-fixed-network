@@ -1,8 +1,7 @@
 package ballot
 
 import (
-	"golang.org/x/xerrors"
-
+	"github.com/pkg/errors"
 	"github.com/rs/zerolog"
 	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/base/key"
@@ -112,7 +111,7 @@ func IsValidBallot(blt Ballot, b []byte) error {
 
 func IsValidVoteproof(blt Ballot, voteproof base.Voteproof) error {
 	if !voteproof.IsFinished() {
-		return xerrors.Errorf("not yet finished voteproof found in ballot")
+		return errors.Errorf("not yet finished voteproof found in ballot")
 	}
 
 	switch t := blt.(type) {
@@ -127,14 +126,14 @@ func IsValidVoteproof(blt Ballot, voteproof base.Voteproof) error {
 	case Proposal:
 		return isValidVoteproofInProposal(t, voteproof)
 	default:
-		return xerrors.Errorf("not supported voteproof in ballot, %T", blt)
+		return errors.Errorf("not supported voteproof in ballot, %T", blt)
 	}
 }
 
 func isValidVoteproofInINIT(blt INIT, voteproof base.Voteproof) error {
 	vs := voteproof.Stage()
 	if vs != base.StageINIT && vs != base.StageACCEPT {
-		return xerrors.Errorf("invalid voteproof stage for init ballot; it should be init or accept, not %v", vs)
+		return errors.Errorf("invalid voteproof stage for init ballot; it should be init or accept, not %v", vs)
 	}
 
 	bh := blt.Height()
@@ -145,23 +144,23 @@ func isValidVoteproofInINIT(blt INIT, voteproof base.Voteproof) error {
 	switch vs {
 	case base.StageINIT:
 		if bh != vh {
-			return xerrors.Errorf("different height of init ballot + init voteproof; ballot=%v voteproof=%v", bh, vh)
+			return errors.Errorf("different height of init ballot + init voteproof; ballot=%v voteproof=%v", bh, vh)
 		} else if br != vr+1 {
-			return xerrors.Errorf("wrong round of init ballot + init voteproof; ballot=%v voteproof=%v+1", br, vr)
+			return errors.Errorf("wrong round of init ballot + init voteproof; ballot=%v voteproof=%v+1", br, vr)
 		}
 	case base.StageACCEPT:
 		if voteproof.Result() == base.VoteResultDraw {
 			switch {
 			case bh != vh:
-				return xerrors.Errorf(
+				return errors.Errorf(
 					"different height of init ballot + draw accept voteproof; ballot=%v voteproof=%v", bh, vh)
 			case br == base.Round(0):
-				return xerrors.Errorf("wrong round of init ballot + draw accept voteproof; round 0")
+				return errors.Errorf("wrong round of init ballot + draw accept voteproof; round 0")
 			case br != vr+1:
-				return xerrors.Errorf("wrong round of init ballot + init voteproof; ballot=%v voteproof=%v+1", br, vr)
+				return errors.Errorf("wrong round of init ballot + init voteproof; ballot=%v voteproof=%v+1", br, vr)
 			}
 		} else if bh != vh+1 {
-			return xerrors.Errorf("wrong height of init ballot + accept voteproof; ballot=%v voteproof=%v+1",
+			return errors.Errorf("wrong height of init ballot + accept voteproof; ballot=%v voteproof=%v+1",
 				bh, vh)
 		}
 	}
@@ -171,14 +170,14 @@ func isValidVoteproofInINIT(blt INIT, voteproof base.Voteproof) error {
 
 func isValidACCEPTVoteproofInINIT(blt INIT, voteproof base.Voteproof) error {
 	if vs := voteproof.Stage(); vs != base.StageACCEPT {
-		return xerrors.Errorf("invalid accept voteproof stage for init ballot; it should be accept, not %v", vs)
+		return errors.Errorf("invalid accept voteproof stage for init ballot; it should be accept, not %v", vs)
 	}
 
 	bh := blt.Height()
 	vh := voteproof.Height()
 
 	if bh != vh+1 {
-		return xerrors.Errorf("wrong height of init ballot + accept voteproof; ballot=%v voteproof=%v+1",
+		return errors.Errorf("wrong height of init ballot + accept voteproof; ballot=%v voteproof=%v+1",
 			bh, vh)
 	}
 
@@ -187,17 +186,17 @@ func isValidACCEPTVoteproofInINIT(blt INIT, voteproof base.Voteproof) error {
 
 func isValidVoteproofInACCEPT(blt ACCEPT, voteproof base.Voteproof) error {
 	if vs := voteproof.Stage(); vs != base.StageINIT {
-		return xerrors.Errorf("invalid voteproof stage for accept ballot; it should be init, not %v", vs)
+		return errors.Errorf("invalid voteproof stage for accept ballot; it should be init, not %v", vs)
 	} else if voteproof.Result() != base.VoteResultMajority {
-		return xerrors.Errorf(
+		return errors.Errorf(
 			"invalid init voteproof result for accept ballot; it should be majority, not %v", voteproof.Result())
 	}
 
 	if blt.Height() != voteproof.Height() {
-		return xerrors.Errorf("accept ballot has different height with init voteproof; ballot=%v voteproof=%v",
+		return errors.Errorf("accept ballot has different height with init voteproof; ballot=%v voteproof=%v",
 			blt.Height(), voteproof.Height())
 	} else if blt.Round() != voteproof.Round() {
-		return xerrors.Errorf("accept ballot has different round with init voteproof; ballot=%v voteproof=%v",
+		return errors.Errorf("accept ballot has different round with init voteproof; ballot=%v voteproof=%v",
 			blt.Round(), voteproof.Round())
 	}
 
@@ -206,17 +205,17 @@ func isValidVoteproofInACCEPT(blt ACCEPT, voteproof base.Voteproof) error {
 
 func isValidVoteproofInProposal(blt Proposal, voteproof base.Voteproof) error {
 	if vs := voteproof.Stage(); vs != base.StageINIT {
-		return xerrors.Errorf("invalid voteproof stage for proposal; it should be init, not %v", vs)
+		return errors.Errorf("invalid voteproof stage for proposal; it should be init, not %v", vs)
 	} else if voteproof.Result() != base.VoteResultMajority {
-		return xerrors.Errorf(
+		return errors.Errorf(
 			"invalid init voteproof result for proposal; it should be majority, not %v", voteproof.Result())
 	}
 
 	if blt.Height() != voteproof.Height() {
-		return xerrors.Errorf("proposal has different height with init voteproof; ballot=%v voteproof=%v",
+		return errors.Errorf("proposal has different height with init voteproof; ballot=%v voteproof=%v",
 			blt.Height(), voteproof.Height())
 	} else if blt.Round() != voteproof.Round() {
-		return xerrors.Errorf("proposal has different round with init voteproof; ballot=%v voteproof=%v",
+		return errors.Errorf("proposal has different round with init voteproof; ballot=%v voteproof=%v",
 			blt.Round(), voteproof.Round())
 	}
 

@@ -1,8 +1,7 @@
 package base
 
 import (
-	"golang.org/x/xerrors"
-
+	"github.com/pkg/errors"
 	"github.com/spikeekips/mitum/util"
 )
 
@@ -68,7 +67,7 @@ func StateFromString(s string) (State, error) {
 	case "BROKEN":
 		return StateBroken, nil
 	default:
-		return StateUnknown, xerrors.Errorf("unknown State, %q", s)
+		return StateUnknown, errors.Errorf("unknown State, %q", s)
 	}
 }
 
@@ -78,7 +77,7 @@ func (st State) IsValid([]byte) error {
 		return nil
 	}
 
-	return xerrors.Errorf("invalid state found; state=%d", st)
+	return errors.Errorf("invalid state found; state=%d", st)
 }
 
 func (st State) MarshalText() ([]byte, error) {

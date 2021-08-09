@@ -4,7 +4,7 @@ import (
 	"net"
 	"time"
 
-	"golang.org/x/xerrors"
+	"github.com/pkg/errors"
 )
 
 func FreePort(proto string) (int, error) {
@@ -42,7 +42,7 @@ func FreePort(proto string) (int, error) {
 
 		return l.Addr().(*net.TCPAddr).Port, nil
 	default:
-		return 0, xerrors.Errorf("invalid proto: udp, tcp")
+		return 0, errors.Errorf("invalid proto: udp, tcp")
 	}
 }
 
@@ -51,7 +51,7 @@ func CheckPort(proto string, addr string, timeout time.Duration) error {
 	if err != nil {
 		return err
 	} else if conn == nil {
-		return xerrors.Errorf("connection is empty")
+		return errors.Errorf("connection is empty")
 	}
 
 	defer func() {

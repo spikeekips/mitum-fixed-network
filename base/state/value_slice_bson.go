@@ -1,10 +1,9 @@
 package state
 
 import (
-	"go.mongodb.org/mongo-driver/bson"
-
 	bsonenc "github.com/spikeekips/mitum/util/encoder/bson"
 	"github.com/spikeekips/mitum/util/valuehash"
+	"go.mongodb.org/mongo-driver/bson"
 )
 
 func (sv SliceValue) MarshalBSON() ([]byte, error) {

@@ -6,8 +6,7 @@ import (
 	"strings"
 	"time"
 
-	"golang.org/x/xerrors"
-
+	"github.com/pkg/errors"
 	"github.com/spikeekips/mitum/util"
 	"github.com/spikeekips/mitum/util/hint"
 	"github.com/spikeekips/mitum/util/isvalid"
@@ -225,7 +224,7 @@ func (vp VoteproofV0) IsValid(networkID []byte) error {
 		return err
 	} else if len(vp.votes) < int(t.Threshold) {
 		if vp.result != VoteResultNotYet {
-			return xerrors.Errorf("result should be not-yet: %s", vp.result)
+			return errors.Errorf("result should be not-yet: %s", vp.result)
 		}
 
 		return nil
@@ -276,17 +275,17 @@ func (vp VoteproofV0) isValidCheckMajority() error {
 	}
 
 	if vp.result != result {
-		return xerrors.Errorf("result mismatch; vp.result=%s != result=%s", vp.result, result)
+		return errors.Errorf("result mismatch; vp.result=%s != result=%s", vp.result, result)
 	}
 
 	if fact == nil {
 		if vp.majority != nil {
-			return xerrors.Errorf("result should be nil, but not")
+			return errors.Errorf("result should be nil, but not")
 		}
 	} else {
 		mh := vp.majority.Hash().String()
 		if mh != factHash {
-			return xerrors.Errorf("fact hash mismatch; vp.majority=%s != fact=%s", mh, factHash)
+			return errors.Errorf("fact hash mismatch; vp.majority=%s != fact=%s", mh, factHash)
 		}
 	}
 
@@ -351,13 +350,13 @@ func (vp VoteproofV0) isValidFacts(b []byte) error {
 		}
 
 		if !found {
-			return xerrors.Errorf("missing fact found in facts: %s", nf.Fact().String())
+			return errors.Errorf("missing fact found in facts: %s", nf.Fact().String())
 		}
 		factHashes[nf.Fact().String()] = true
 	}
 
 	if len(factHashes) != len(vp.facts) {
-		return xerrors.Errorf("unknown facts found in facts: %d", len(vp.facts)-len(factHashes))
+		return errors.Errorf("unknown facts found in facts: %d", len(vp.facts)-len(factHashes))
 	}
 
 	for _, f := range vp.facts {

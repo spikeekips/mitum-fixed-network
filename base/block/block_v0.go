@@ -3,8 +3,7 @@ package block
 import (
 	"time"
 
-	"golang.org/x/xerrors"
-
+	"github.com/pkg/errors"
 	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/base/ballot"
 	"github.com/spikeekips/mitum/base/operation"
@@ -89,21 +88,21 @@ func (bm BlockV0) IsValid(networkID []byte) error {
 
 	if bm.operationsHash != nil {
 		if bm.operations == nil || bm.operationsTree.Len() < 1 {
-			return xerrors.Errorf("Operations should not be empty")
+			return errors.Errorf("Operations should not be empty")
 		}
 
 		if !bm.operationsHash.Equal(valuehash.NewBytes(bm.operationsTree.Root())) {
-			return xerrors.Errorf("Block.Opertions() hash does not match with it's Root()")
+			return errors.Errorf("Block.Opertions() hash does not match with it's Root()")
 		}
 	}
 
 	if bm.statesHash != nil {
 		if bm.states == nil || bm.statesTree.Len() < 1 {
-			return xerrors.Errorf("States should not be empty")
+			return errors.Errorf("States should not be empty")
 		}
 
 		if !bm.statesHash.Equal(valuehash.NewBytes(bm.statesTree.Root())) {
-			return xerrors.Errorf("Block.States() hash does not match with it's Root()")
+			return errors.Errorf("Block.States() hash does not match with it's Root()")
 		}
 	}
 

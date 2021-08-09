@@ -6,13 +6,13 @@ import (
 	"strings"
 	"time"
 
+	"github.com/pkg/errors"
 	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/util"
 	"github.com/spikeekips/mitum/util/hint"
 	"github.com/spikeekips/mitum/util/isvalid"
 	"github.com/spikeekips/mitum/util/localtime"
 	"github.com/spikeekips/mitum/util/valuehash"
-	"golang.org/x/xerrors"
 )
 
 var (
@@ -86,7 +86,7 @@ func (bd BaseBlockDataMap) IsReadyToHash() error {
 
 	for dataType := range bd.items {
 		if err := bd.items[dataType].IsValid(nil); err != nil {
-			return xerrors.Errorf("invalid data type, %q found: %w", dataType, err)
+			return errors.Wrapf(err, "invalid data type, %q found", dataType)
 		}
 	}
 
@@ -110,7 +110,7 @@ func (bd BaseBlockDataMap) IsValid([]byte) error {
 		}
 
 		if *isLocal != i {
-			return xerrors.Errorf("all the items should be local or non-local")
+			return errors.Errorf("all the items should be local or non-local")
 		}
 	}
 
@@ -211,7 +211,7 @@ func (bd BaseBlockDataMap) Item(dataType string) (BaseBlockDataMapItem, bool) {
 
 func (bd BaseBlockDataMap) SetItem(item BaseBlockDataMapItem) (BaseBlockDataMap, error) {
 	if _, found := bd.items[item.Type()]; !found {
-		return BaseBlockDataMap{}, xerrors.Errorf("unknown data type, %q of block data item", item.Type())
+		return BaseBlockDataMap{}, errors.Errorf("unknown data type, %q of block data item", item.Type())
 	}
 
 	bd.items[item.Type()] = item
@@ -343,7 +343,7 @@ func (bd BaseBlockDataMapItem) IsValid([]byte) error {
 	}
 
 	if n := strings.SplitN(bd.url, "://", 2); len(n) != 2 {
-		return xerrors.Errorf("invalid url")
+		return errors.Errorf("invalid url")
 	} else if len(bd.URLBody()) < 1 {
 		return isvalid.InvalidError.Errorf("empty url of map item")
 	}

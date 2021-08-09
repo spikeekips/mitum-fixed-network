@@ -1,8 +1,8 @@
 package tree
 
 import (
+	"github.com/pkg/errors"
 	"github.com/spikeekips/mitum/util/encoder"
-	"golang.org/x/xerrors"
 )
 
 func (tr *FixedTree) unpack(enc encoder.Encoder, b []byte) error {
@@ -16,7 +16,7 @@ func (tr *FixedTree) unpack(enc encoder.Encoder, b []byte) error {
 	for i := range hinters {
 		j, ok := hinters[i].(FixedTreeNode)
 		if !ok {
-			return xerrors.Errorf("not FixedTreeNode, %T", j)
+			return errors.Errorf("not FixedTreeNode, %T", j)
 		}
 		tr.nodes[i] = j
 	}

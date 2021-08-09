@@ -3,11 +3,10 @@ package isaac
 import (
 	"testing"
 
-	"github.com/stretchr/testify/suite"
-	"golang.org/x/xerrors"
-
+	"github.com/pkg/errors"
 	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/base/ballot"
+	"github.com/stretchr/testify/suite"
 )
 
 type testProposalChecker struct {
@@ -48,7 +47,7 @@ func (t *testProposalChecker) TestIsKnown() {
 		keep, err := pvc.IsKnown()
 		t.False(keep)
 		t.Error(err)
-		t.True(xerrors.Is(err, KnownSealError))
+		t.True(errors.Is(err, KnownSealError))
 	}
 }
 

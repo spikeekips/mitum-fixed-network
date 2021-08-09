@@ -5,9 +5,9 @@ import (
 	"math/big"
 	"testing"
 
+	"github.com/pkg/errors"
 	"github.com/stretchr/testify/suite"
 	"go.uber.org/goleak"
-	"golang.org/x/xerrors"
 )
 
 type testUnsignedInt struct {
@@ -34,17 +34,17 @@ func (t *testUnsignedInt) TestNew() {
 func (t *testUnsignedInt) TestUnderZero() {
 	{
 		_, err := NewUnsignedInt(-10)
-		t.True(xerrors.Is(err, InvalidUnsignedIntError))
+		t.True(errors.Is(err, InvalidUnsignedIntError))
 	}
 
 	{
 		_, err := NewUnsignedIntFromString("-10")
-		t.True(xerrors.Is(err, InvalidUnsignedIntError))
+		t.True(errors.Is(err, InvalidUnsignedIntError))
 	}
 
 	{
 		_, err := NewUnsignedIntFromBigInt(big.NewInt(-10))
-		t.True(xerrors.Is(err, InvalidUnsignedIntError))
+		t.True(errors.Is(err, InvalidUnsignedIntError))
 	}
 }
 

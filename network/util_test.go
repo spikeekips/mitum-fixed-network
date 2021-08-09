@@ -4,8 +4,8 @@ import (
 	"net/url"
 	"testing"
 
+	"github.com/pkg/errors"
 	"github.com/stretchr/testify/suite"
-	"golang.org/x/xerrors"
 )
 
 type testURL struct {
@@ -85,14 +85,14 @@ func (t *testURL) TestIsValidURL() {
 				err := IsValidURL(u)
 				if len(c.err) > 0 {
 					if err == nil {
-						t.NoError(xerrors.Errorf("expected %q, but nil error", c.err), "%d: %v", i, c.name)
+						t.NoError(errors.Errorf("expected %q, but nil error", c.err), "%d: %v", i, c.name)
 					} else {
 						t.Contains(err.Error(), c.err, "%d: %v", i, c.name)
 					}
 
 					return
 				} else if err != nil {
-					t.NoError(xerrors.Errorf("expected nil error, but %+v", err), "%d: %v", i, c.name)
+					t.NoError(errors.Errorf("expected nil error, but %+v", err), "%d: %v", i, c.name)
 
 					return
 				}
@@ -133,7 +133,7 @@ func (t *testURL) TestParseCombinedNodeURL() {
 				ru, insecure, err := ParseCombinedNodeURL(u)
 				if len(c.err) > 0 {
 					if err == nil {
-						t.NoError(xerrors.Errorf("expected %q, but nil error", c.err), "%d: %v", i, c.name)
+						t.NoError(errors.Errorf("expected %q, but nil error", c.err), "%d: %v", i, c.name)
 
 						return
 					}
@@ -142,7 +142,7 @@ func (t *testURL) TestParseCombinedNodeURL() {
 
 					return
 				} else if err != nil {
-					t.NoError(xerrors.Errorf("expected nil error, but %+v", err), "%d: %v", i, c.name)
+					t.NoError(errors.Errorf("expected nil error, but %+v", err), "%d: %v", i, c.name)
 
 					return
 				}

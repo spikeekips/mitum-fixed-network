@@ -4,9 +4,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/stretchr/testify/suite"
-	"golang.org/x/xerrors"
-
+	"github.com/pkg/errors"
 	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/base/ballot"
 	"github.com/spikeekips/mitum/base/block"
@@ -15,6 +13,7 @@ import (
 	"github.com/spikeekips/mitum/util"
 	"github.com/spikeekips/mitum/util/localtime"
 	"github.com/spikeekips/mitum/util/valuehash"
+	"github.com/stretchr/testify/suite"
 )
 
 type testBallotChecker struct {
@@ -372,7 +371,7 @@ func (t *testBallotChecker) TestCheckProposalInACCEPTBallotWithUnknownProposalBu
 			}
 
 			if err := l.Nodes().Add(r.Node(), r.Channel()); err != nil {
-				if xerrors.Is(err, util.FoundError) {
+				if errors.Is(err, util.FoundError) {
 					continue
 				}
 				panic(err)

@@ -4,9 +4,9 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/pkg/errors"
 	"github.com/spikeekips/mitum/util/isvalid"
 	"golang.org/x/mod/semver"
-	"golang.org/x/xerrors"
 )
 
 var (
@@ -40,7 +40,7 @@ func ParseHint(s string) (Hint, error) {
 
 func (ht Hint) IsValid([]byte) error {
 	if err := ht.ty.IsValid(nil); err != nil {
-		return xerrors.Errorf("invalid Hint: %w", err)
+		return errors.Wrap(err, "invalid Hint")
 	} else if len(ht.v) > MaxVersionLength {
 		return isvalid.InvalidError.Errorf("version too long, %d", MaxVersionLength)
 	}
@@ -72,14 +72,14 @@ func (ht Hint) Equal(b Hint) bool {
 // - If same major and minor, but different patch version, compatible
 func (ht Hint) IsCompatible(target Hint) error {
 	if ht.ty != target.ty {
-		return xerrors.Errorf("type does not match; %q != %q", ht.ty, target.ty)
+		return errors.Errorf("type does not match; %q != %q", ht.ty, target.ty)
 	}
 
 	switch {
 	case semver.Major(ht.v) != semver.Major(target.v):
-		return xerrors.Errorf("not compatible; different major version")
+		return errors.Errorf("not compatible; different major version")
 	case semver.Compare(semver.MajorMinor(ht.v), semver.MajorMinor(target.v)) < 0:
-		return xerrors.Errorf("not compatible; lower minor version")
+		return errors.Errorf("not compatible; lower minor version")
 	default:
 		return nil
 	}

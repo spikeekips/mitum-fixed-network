@@ -3,8 +3,7 @@ package state
 import (
 	"reflect"
 
-	"golang.org/x/xerrors"
-
+	"github.com/pkg/errors"
 	"github.com/spikeekips/mitum/util"
 	"github.com/spikeekips/mitum/util/hint"
 	"github.com/spikeekips/mitum/util/valuehash"
@@ -64,7 +63,7 @@ func (NumberValue) set(v interface{}) (NumberValue, error) {
 	case float64:
 		b = util.Float64ToBytes(t)
 	default:
-		return NumberValue{}, xerrors.Errorf("not number-like: %T", v)
+		return NumberValue{}, errors.Errorf("not number-like: %T", v)
 	}
 
 	return NumberValue{
@@ -90,14 +89,14 @@ func (nv NumberValue) IsValid([]byte) error {
 		reflect.Float32,
 		reflect.Float64:
 	default:
-		return xerrors.Errorf("invalid number type: %v", nv.t)
+		return errors.Errorf("invalid number type: %v", nv.t)
 	}
 
 	if err := nv.h.IsValid(nil); err != nil {
 		return err
 	}
 	if nv.b == nil || len(nv.b) < 1 {
-		return xerrors.Errorf("empty bytes for NumberValue")
+		return errors.Errorf("empty bytes for NumberValue")
 	}
 
 	return nil

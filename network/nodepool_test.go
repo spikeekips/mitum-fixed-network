@@ -3,11 +3,11 @@ package network
 import (
 	"testing"
 
+	"github.com/pkg/errors"
 	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/base/node"
 	"github.com/spikeekips/mitum/util"
 	"github.com/stretchr/testify/suite"
-	"golang.org/x/xerrors"
 )
 
 type testNodepool struct {
@@ -31,7 +31,7 @@ func (t *testNodepool) TestDuplicatedAddress() {
 	t.NoError(ns.Add(node.RandomLocal("n1"), nil))
 
 	err := ns.Add(node.RandomLocal("n0"), nil) // will be ignored
-	t.True(xerrors.Is(err, util.FoundError))
+	t.True(errors.Is(err, util.FoundError))
 }
 
 func (t *testNodepool) TestAdd() {
@@ -66,7 +66,7 @@ func (t *testNodepool) TestAddSameWithLocal() {
 	ns := NewNodepool(t.local, nil)
 
 	err := ns.Add(t.local, nil)
-	t.True(xerrors.Is(err, util.FoundError))
+	t.True(errors.Is(err, util.FoundError))
 }
 
 func (t *testNodepool) TestAddDuplicated() {
@@ -76,7 +76,7 @@ func (t *testNodepool) TestAddDuplicated() {
 	t.NoError(ns.Add(newNode, nil))
 
 	err := ns.Add(newNode, nil)
-	t.True(xerrors.Is(err, util.FoundError))
+	t.True(errors.Is(err, util.FoundError))
 }
 
 func (t *testNodepool) TestRemove() {

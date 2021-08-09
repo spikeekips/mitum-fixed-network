@@ -5,20 +5,19 @@ import (
 	"sync"
 	"time"
 
+	"github.com/pkg/errors"
 	"github.com/rs/zerolog"
 	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/base/ballot"
 	"github.com/spikeekips/mitum/base/block"
 	"github.com/spikeekips/mitum/util"
-	"github.com/spikeekips/mitum/util/errors"
 	"github.com/spikeekips/mitum/util/logging"
 	"github.com/spikeekips/mitum/util/valuehash"
-	"golang.org/x/xerrors"
 )
 
 var (
-	PrepareFailedError = errors.NewError("failed to prepare")
-	SaveFailedError    = errors.NewError("failed to save")
+	PrepareFailedError = util.NewError("failed to prepare")
+	SaveFailedError    = util.NewError("failed to save")
 )
 
 type Result struct {
@@ -90,7 +89,7 @@ func (pps *Processors) NewProposal(
 		ch := make(chan Result)
 
 		go func() {
-			ch <- Result{Err: xerrors.Errorf("not valid voteproof, %v", initVoteproof.Stage())}
+			ch <- Result{Err: errors.Errorf("not valid voteproof, %v", initVoteproof.Stage())}
 
 			close(ch)
 		}()
@@ -116,7 +115,7 @@ func (pps *Processors) Save(
 		ch := make(chan Result)
 
 		go func() {
-			ch <- Result{Err: xerrors.Errorf("not valid voteproof, %v", acceptVoteproof.Stage())}
+			ch <- Result{Err: errors.Errorf("not valid voteproof, %v", acceptVoteproof.Stage())}
 
 			close(ch)
 		}()
@@ -156,7 +155,7 @@ end:
 		case i := <-pps.newProposalChan:
 			r := pps.handleProposal(i.ctx, i.proposal, i.voteproof, i.outchan)
 			if err := r.Err; err != nil {
-				if xerrors.Is(err, util.IgnoreError) {
+				if errors.Is(err, util.IgnoreError) {
 					pps.Log().Debug().Err(err).Msg("proposal ignored")
 				} else {
 					pps.Log().Error().Err(err).Msg("failed to handle proposal")
@@ -174,7 +173,7 @@ end:
 					ch <- r
 				}(i.outchan)
 			} else if err := r.Err; err != nil {
-				if xerrors.Is(err, util.IgnoreError) {
+				if errors.Is(err, util.IgnoreError) {
 					pps.Log().Debug().Err(err).Msg("saving proposal ignored")
 				} else {
 					pps.Log().Error().Err(err).Msg("failed to save proposal")
@@ -193,13 +192,13 @@ func (pps *Processors) handleProposal(
 	outchan chan<- Result,
 ) Result {
 	if err := pps.checkProposal(proposal); err != nil {
-		return Result{Err: PrepareFailedError.Wrap(err)}
+		return Result{Err: PrepareFailedError.Merge(err)}
 	}
 
 	var current Processor
 	switch pp, err := pps.checkCurrent(proposal.Hash()); {
 	case err != nil:
-		return Result{Err: PrepareFailedError.Wrap(err)}
+		return Result{Err: PrepareFailedError.Merge(err)}
 	default:
 		if pp == nil {
 			p, err := pps.newProcessor(proposal, initVoteproof)
@@ -244,7 +243,7 @@ func (pps *Processors) doPrepare(ctx context.Context, processor Processor, outch
 				blk = b
 
 				return nil
-			case xerrors.Is(err, context.DeadlineExceeded) || xerrors.Is(err, context.Canceled):
+			case errors.Is(err, context.DeadlineExceeded) || errors.Is(err, context.Canceled):
 				return util.StopRetryingError.Wrap(err)
 			case processor.State() == Canceled:
 				return util.StopRetryingError.Errorf("canceled")
@@ -256,7 +255,7 @@ func (pps *Processors) doPrepare(ctx context.Context, processor Processor, outch
 		}
 	})
 	if err != nil {
-		err = PrepareFailedError.Wrap(err)
+		err = PrepareFailedError.Merge(err)
 
 		l.Error().Err(err).Msg("failed to prepare; processor will be canceled")
 
@@ -284,9 +283,9 @@ func (pps *Processors) saveProposal(
 
 	var err error
 	if current == nil {
-		err = xerrors.Errorf("not yet prepared")
+		err = errors.Errorf("not yet prepared")
 	} else if h := current.Proposal().Hash(); !h.Equal(proposal) { // NOTE if different processor exists already
-		err = xerrors.Errorf("not yet prepared; another processor already exists")
+		err = errors.Errorf("not yet prepared; another processor already exists")
 
 		LogEventProcessor(current, "current", pps.Log().Error().Err(err)).
 			Stringer("propsoal", proposal).
@@ -294,7 +293,7 @@ func (pps *Processors) saveProposal(
 	}
 
 	if err != nil {
-		return Result{Err: SaveFailedError.Wrap(err)}
+		return Result{Err: SaveFailedError.Merge(err)}
 	}
 
 	go blockingFinished(ctx, func(ctx context.Context, cancel func()) {
@@ -329,7 +328,7 @@ func (pps *Processors) doSave(
 			switch err := pps.save(ctx, processor, acceptVoteproof); {
 			case err == nil:
 				return nil
-			case xerrors.Is(err, context.DeadlineExceeded) || xerrors.Is(err, context.Canceled):
+			case errors.Is(err, context.DeadlineExceeded) || errors.Is(err, context.Canceled):
 				return util.StopRetryingError.Wrap(err)
 			case processor.State() == Canceled:
 				return util.StopRetryingError.Errorf("canceled")
@@ -366,7 +365,7 @@ func (pps *Processors) doSave(
 func (pps *Processors) save(ctx context.Context, processor Processor, acceptVoteproof base.Voteproof) error {
 	switch processor.State() {
 	case BeforePrepared:
-		return xerrors.Errorf("not yet prepared")
+		return errors.Errorf("not yet prepared")
 	case Preparing:
 		pps.Log().Debug().Msg("Processor is still preparing; will wait")
 
@@ -388,7 +387,7 @@ func (pps *Processors) save(ctx context.Context, processor Processor, acceptVote
 	case Prepared:
 		//
 	case PrepareFailed:
-		return xerrors.Errorf("failed to prepare")
+		return errors.Errorf("failed to prepare")
 	case Saving:
 		return util.IgnoreError.Errorf("already saving")
 	case Saved:
@@ -453,7 +452,7 @@ func (pps *Processors) checkCurrent(proposal valuehash.Hash) (Processor, error) 
 	case Canceled:
 		return nil, util.IgnoreError.Errorf("already canceled")
 	default:
-		return nil, xerrors.Errorf("unknow current state, %s", state)
+		return nil, errors.Errorf("unknow current state, %s", state)
 	}
 }
 
@@ -473,7 +472,7 @@ func (pps *Processors) newProcessor(proposal ballot.Proposal, initVoteproof base
 
 func (pps *Processors) checkProposal(proposal ballot.Proposal) error {
 	if proposal == nil || proposal.Hash() == nil {
-		return xerrors.Errorf("invalid proposal")
+		return errors.Errorf("invalid proposal")
 	}
 
 	if pps.proposalChecker != nil {

@@ -3,14 +3,13 @@ package process
 import (
 	"context"
 
-	"golang.org/x/xerrors"
-	"gopkg.in/yaml.v3"
-
+	"github.com/pkg/errors"
 	"github.com/spikeekips/mitum/launch/config"
 	yamlconfig "github.com/spikeekips/mitum/launch/config/yaml"
 	"github.com/spikeekips/mitum/launch/pm"
 	"github.com/spikeekips/mitum/util"
 	jsonenc "github.com/spikeekips/mitum/util/encoder/json"
+	"gopkg.in/yaml.v3"
 )
 
 const (
@@ -49,7 +48,7 @@ func ProcessConfig(ctx context.Context) (context.Context, error) {
 	}
 
 	if sourceType != "yaml" {
-		return ctx, xerrors.Errorf("not supported config source type, %q", sourceType)
+		return ctx, errors.Errorf("not supported config source type, %q", sourceType)
 	}
 
 	c, err := loadConfigYAML(ctx, source)
@@ -97,7 +96,7 @@ func checkConfig(ctx context.Context) (context.Context, error) {
 		cc.CheckStorage,
 		cc.CheckPolicy,
 	}).Check(); err != nil {
-		if xerrors.Is(err, util.IgnoreError) {
+		if errors.Is(err, util.IgnoreError) {
 			return ctx, nil
 		}
 

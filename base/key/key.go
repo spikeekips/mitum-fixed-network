@@ -3,14 +3,14 @@ package key
 import (
 	"fmt"
 
-	"github.com/spikeekips/mitum/util/errors"
+	"github.com/spikeekips/mitum/util"
 	"github.com/spikeekips/mitum/util/hint"
 	"github.com/spikeekips/mitum/util/isvalid"
 )
 
 var (
-	InvalidKeyError                  = errors.NewError("invalid key")
-	SignatureVerificationFailedError = errors.NewError("signature verification failed")
+	InvalidKeyError                  = util.NewError("invalid key")
+	SignatureVerificationFailedError = util.NewError("signature verification failed")
 )
 
 type Key interface {

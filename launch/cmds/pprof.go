@@ -6,7 +6,7 @@ import (
 	"runtime/trace"
 
 	"github.com/alecthomas/kong"
-	"golang.org/x/xerrors"
+	"github.com/pkg/errors"
 )
 
 var PprofVars = kong.Vars{
@@ -63,7 +63,7 @@ func RunPprofs(flags *PprofFlags) (func() error, error) {
 			}
 		}
 		if len(errs) > 0 {
-			return xerrors.Errorf("failed to close profiling: %v", errs)
+			return errors.Errorf("failed to close profiling: %v", errs)
 		}
 
 		return nil
@@ -80,7 +80,7 @@ func RunTracePprof(s string) (func() error, error) {
 			trace.Stop()
 
 			if err := f.Close(); err != nil {
-				return xerrors.Errorf("failed to close trace prof file, %s: %w", s, err)
+				return errors.Wrapf(err, "failed to close trace prof file, %s", s)
 			}
 
 			return nil
@@ -98,7 +98,7 @@ func RunCPUPprof(s string) (func() error, error) {
 			pprof.StopCPUProfile()
 
 			if err := f.Close(); err != nil {
-				return xerrors.Errorf("failed to close cpu prof file, %s: %w", s, err)
+				return errors.Wrapf(err, "failed to close cpu prof file, %s", s)
 			}
 
 			return nil
@@ -114,7 +114,7 @@ func RunMemPprof(s string) (func() error, error) {
 	} else {
 		return func() error {
 			if err := f.Close(); err != nil {
-				return xerrors.Errorf("failed to close mem prof file, %s: %w", s, err)
+				return errors.Wrapf(err, "failed to close mem prof file, %s", s)
 			}
 
 			return nil

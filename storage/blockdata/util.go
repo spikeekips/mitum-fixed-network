@@ -1,11 +1,11 @@
 package blockdata
 
 import (
+	"github.com/pkg/errors"
 	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/base/block"
 	"github.com/spikeekips/mitum/storage"
 	"github.com/spikeekips/mitum/util"
-	"golang.org/x/xerrors"
 )
 
 // Clean makes Database and BlockData to be empty. If 'remove' is true, remove
@@ -23,7 +23,7 @@ func Clean(st storage.Database, blockData BlockData, remove bool) error {
 func CleanByHeight(st storage.Database, blockData BlockData, height base.Height) error {
 	if err := st.LocalBlockDataMapsByHeight(height, func(bd block.BlockDataMap) (bool, error) {
 		if err := blockData.RemoveAll(bd.Height()); err != nil {
-			if xerrors.Is(err, util.NotFoundError) {
+			if errors.Is(err, util.NotFoundError) {
 				return true, nil
 			}
 

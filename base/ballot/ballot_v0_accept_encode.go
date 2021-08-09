@@ -1,10 +1,10 @@
 package ballot
 
 import (
+	"github.com/pkg/errors"
 	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/util/encoder"
 	"github.com/spikeekips/mitum/util/valuehash"
-	"golang.org/x/xerrors"
 )
 
 func (ab *ACCEPTV0) unpack(
@@ -16,11 +16,11 @@ func (ab *ACCEPTV0) unpack(
 	bVoteproof []byte,
 ) error {
 	if proposal != nil && proposal.Empty() {
-		return xerrors.Errorf("empty proposal hash found")
+		return errors.Errorf("empty proposal hash found")
 	}
 
 	if newBlock != nil && newBlock.Empty() {
-		return xerrors.Errorf("empty newBlock hash found")
+		return errors.Errorf("empty newBlock hash found")
 	}
 
 	if bVoteproof != nil {
@@ -48,11 +48,11 @@ func (abf *ACCEPTFactV0) unpack(
 	newBlock valuehash.Hash,
 ) error {
 	if proposal != nil && proposal.Empty() {
-		return xerrors.Errorf("empty proposal hash found")
+		return errors.Errorf("empty proposal hash found")
 	}
 
 	if newBlock != nil && newBlock.Empty() {
-		return xerrors.Errorf("empty newBlock hash found")
+		return errors.Errorf("empty newBlock hash found")
 	}
 
 	abf.BaseFactV0 = bf

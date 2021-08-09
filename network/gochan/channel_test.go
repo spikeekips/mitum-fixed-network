@@ -4,12 +4,11 @@ import (
 	"context"
 	"testing"
 
-	"github.com/stretchr/testify/suite"
-
 	"github.com/spikeekips/mitum/base/key"
 	"github.com/spikeekips/mitum/base/seal"
 	"github.com/spikeekips/mitum/network"
 	"github.com/spikeekips/mitum/util/valuehash"
+	"github.com/stretchr/testify/suite"
 )
 
 type testNetworkChanChannel struct {

@@ -3,8 +3,7 @@ package state
 import (
 	"fmt"
 
-	"golang.org/x/xerrors"
-
+	"github.com/pkg/errors"
 	"github.com/spikeekips/mitum/util"
 	"github.com/spikeekips/mitum/util/hint"
 	"github.com/spikeekips/mitum/util/valuehash"
@@ -40,7 +39,7 @@ func (BytesValue) set(v interface{}) (BytesValue, error) {
 			s = []byte(t.String())
 		}
 	default:
-		return BytesValue{}, xerrors.Errorf("not bytes-like: %T", v)
+		return BytesValue{}, errors.Errorf("not bytes-like: %T", v)
 	}
 
 	return BytesValue{

@@ -3,8 +3,7 @@ package process
 import (
 	"context"
 
-	"golang.org/x/xerrors"
-
+	"github.com/pkg/errors"
 	"github.com/spikeekips/mitum/launch/config"
 	"github.com/spikeekips/mitum/util"
 )
@@ -27,7 +26,7 @@ func HookValidateConfig(ctx context.Context) (context.Context, error) {
 		va.CheckGenesisOperations,
 		va.CheckLocalConfig,
 	}).Check(); err != nil {
-		if xerrors.Is(err, util.IgnoreError) {
+		if errors.Is(err, util.IgnoreError) {
 			return ctx, nil
 		}
 

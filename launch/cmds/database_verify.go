@@ -3,6 +3,7 @@ package cmds
 import (
 	"context"
 
+	"github.com/pkg/errors"
 	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/base/block"
 	"github.com/spikeekips/mitum/launch"
@@ -15,7 +16,6 @@ import (
 	jsonenc "github.com/spikeekips/mitum/util/encoder/json"
 	"github.com/spikeekips/mitum/util/hint"
 	"github.com/spikeekips/mitum/util/logging"
-	"golang.org/x/xerrors"
 )
 
 var (
@@ -69,7 +69,7 @@ func NewDatabaseVerifyCommand(types []hint.Type, hinters []hint.Hinter) Database
 
 func (cmd *DatabaseVerifyCommand) Run(version util.Version) error {
 	if err := cmd.Initialize(cmd, version); err != nil {
-		return xerrors.Errorf("failed to initialize command: %w", err)
+		return errors.Wrap(err, "failed to initialize command")
 	}
 
 	cmd.Log().Debug().Str("uri", cmd.URI).Str("path", cmd.Path).Msg("trying to verify database")

@@ -1,10 +1,10 @@
 package storage
 
 import (
+	"github.com/pkg/errors"
 	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/base/block"
 	"github.com/spikeekips/mitum/util"
-	"golang.org/x/xerrors"
 )
 
 func CheckBlock(st Database, networkID base.NetworkID) (block.Manifest, error) {
@@ -19,7 +19,7 @@ func CheckBlock(st Database, networkID base.NetworkID) (block.Manifest, error) {
 	}
 
 	if err := m.IsValid(networkID); err != nil {
-		return m, xerrors.Errorf("invalid block manifest found, clean up block: %w", err)
+		return m, errors.Wrap(err, "invalid block manifest found, clean up block")
 	}
 
 	return m, nil

@@ -4,6 +4,7 @@ import (
 	"context"
 	"strings"
 
+	"github.com/pkg/errors"
 	"github.com/spikeekips/mitum/launch/config"
 	"github.com/spikeekips/mitum/launch/pm"
 	"github.com/spikeekips/mitum/storage/blockdata/localfs"
@@ -12,7 +13,6 @@ import (
 	"github.com/spikeekips/mitum/util/cache"
 	"github.com/spikeekips/mitum/util/encoder"
 	jsonenc "github.com/spikeekips/mitum/util/encoder/json"
-	"golang.org/x/xerrors"
 )
 
 const (
@@ -70,7 +70,7 @@ func ProcessBlockData(ctx context.Context) (context.Context, error) {
 
 	var forceCreate bool
 	if err := LoadGenesisBlockForceCreateContextValue(ctx, &forceCreate); err != nil {
-		if !xerrors.Is(err, util.ContextValueNotFoundError) {
+		if !errors.Is(err, util.ContextValueNotFoundError) {
 			return ctx, err
 		}
 	}

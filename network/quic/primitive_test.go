@@ -12,11 +12,10 @@ import (
 	"testing"
 	"time"
 
-	"github.com/stretchr/testify/suite"
-	"golang.org/x/xerrors"
-
+	"github.com/pkg/errors"
 	"github.com/spikeekips/mitum/network"
 	"github.com/spikeekips/mitum/util"
+	"github.com/stretchr/testify/suite"
 )
 
 type testPrimitiveQuicServer struct {
@@ -59,7 +58,7 @@ func (t *testPrimitiveQuicServer) readyServer(handlers map[string]network.HTTPHa
 	var retries int
 	for {
 		if retries == maxRetries {
-			t.NoError(xerrors.Errorf("quic server did not respond"))
+			t.NoError(errors.Errorf("quic server did not respond"))
 			break
 		}
 
@@ -133,7 +132,7 @@ func (t *testPrimitiveQuicServer) TestSend() {
 
 	select {
 	case <-time.After(time.Second):
-		t.NoError(xerrors.Errorf("failed to receive respond"))
+		t.NoError(errors.Errorf("failed to receive respond"))
 	case r := <-received:
 		t.Equal(data, r)
 	}

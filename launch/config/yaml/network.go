@@ -5,9 +5,9 @@ import (
 	"crypto/tls"
 	"strings"
 
+	"github.com/pkg/errors"
 	"github.com/spikeekips/mitum/launch/config"
 	"github.com/spikeekips/mitum/network"
-	"golang.org/x/xerrors"
 )
 
 type NodeNetwork struct {
@@ -85,7 +85,7 @@ func (no LocalNetwork) setConnInfo(conf config.LocalNetwork) error {
 func (no LocalNetwork) setCerts(conf config.LocalNetwork) error {
 	switch {
 	case (no.CertKeyFile != nil || no.CertFile != nil) && (no.CertKeyFile == nil || no.CertFile == nil):
-		return xerrors.Errorf("cert-key and cert should be given both")
+		return errors.Errorf("cert-key and cert should be given both")
 	case no.CertKeyFile == nil || len(strings.TrimSpace(*no.CertKeyFile)) < 1:
 		return nil
 	case no.CertFile == nil || len(strings.TrimSpace(*no.CertFile)) < 1:

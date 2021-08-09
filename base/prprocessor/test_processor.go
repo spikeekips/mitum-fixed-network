@@ -4,8 +4,7 @@ import (
 	"context"
 	"sync"
 
-	"golang.org/x/xerrors"
-
+	"github.com/pkg/errors"
 	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/base/ballot"
 	"github.com/spikeekips/mitum/base/block"
@@ -83,7 +82,7 @@ func (pp *DummyProcessor) Prepare(ctx context.Context) (block.Block, error) {
 	if pp.PF == nil {
 		pp.SetState(PrepareFailed)
 
-		return nil, xerrors.Errorf("empty Prepare func")
+		return nil, errors.Errorf("empty Prepare func")
 	}
 
 	nctx := context.WithValue(ctx, "proposal", pp.P.Hash()) //lint:ignore SA1029 test

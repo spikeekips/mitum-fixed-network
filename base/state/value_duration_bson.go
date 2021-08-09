@@ -3,10 +3,9 @@ package state
 import (
 	"time"
 
-	"go.mongodb.org/mongo-driver/bson"
-
 	bsonenc "github.com/spikeekips/mitum/util/encoder/bson"
 	"github.com/spikeekips/mitum/util/valuehash"
+	"go.mongodb.org/mongo-driver/bson"
 )
 
 func (dv DurationValue) MarshalBSON() ([]byte, error) {

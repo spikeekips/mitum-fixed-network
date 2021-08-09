@@ -4,8 +4,7 @@ import (
 	"sync"
 	"time"
 
-	"golang.org/x/xerrors"
-
+	"github.com/pkg/errors"
 	"github.com/rs/zerolog"
 	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/base/ballot"
@@ -113,7 +112,7 @@ func (st *JoiningState) broadcastINITBallotEnteredWithoutDelay(voteproof base.Vo
 	if i, err := NextINITBallotFromACCEPTVoteproof(st.database, st.local, voteproof); err != nil {
 		return err
 	} else if err := i.Sign(st.local.Privatekey(), st.policy.NetworkID()); err != nil {
-		return xerrors.Errorf("failed to re-sign joining INITBallot: %w", err)
+		return errors.Wrap(err, "failed to re-sign joining INITBallot")
 	} else {
 		baseBallot = i
 
@@ -153,7 +152,7 @@ func (st *JoiningState) broadcastINITBallotEntered(voteproof base.Voteproof) err
 	if i, err := NextINITBallotFromACCEPTVoteproof(st.database, st.local, voteproof); err != nil {
 		return err
 	} else if err := i.Sign(st.local.Privatekey(), st.policy.NetworkID()); err != nil {
-		return xerrors.Errorf("failed to re-sign joining INITBallot: %w", err)
+		return errors.Wrap(err, "failed to re-sign joining INITBallot")
 	} else {
 		baseBallot = i
 

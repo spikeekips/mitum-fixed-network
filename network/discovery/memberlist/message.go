@@ -3,12 +3,12 @@ package memberlist
 import (
 	"time"
 
+	"github.com/pkg/errors"
 	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/base/key"
 	"github.com/spikeekips/mitum/util"
 	"github.com/spikeekips/mitum/util/isvalid"
 	"github.com/spikeekips/mitum/util/localtime"
-	"golang.org/x/xerrors"
 )
 
 type NodeMessage struct {
@@ -49,9 +49,9 @@ func (ms NodeMessage) IsValid(networkID []byte) error {
 	case err != nil:
 		return err
 	case ms.ConnInfo.URL().String() != u.String():
-		return xerrors.Errorf("wrong publish url, %q", ms.ConnInfo.URL().String())
+		return errors.Errorf("wrong publish url, %q", ms.ConnInfo.URL().String())
 	case ms.ConnInfo.Address != addr:
-		return xerrors.Errorf("wrong address of publish, %q != %q", ms.ConnInfo.Address, addr)
+		return errors.Errorf("wrong address of publish, %q != %q", ms.ConnInfo.Address, addr)
 	}
 
 	return ms.signer.Verify(ms.signatureBody(networkID), ms.signature)
@@ -73,7 +73,7 @@ func (ms *NodeMessage) sign(pk key.Privatekey, networkID base.NetworkID) error {
 
 	sig, err := pk.Sign(ms.signatureBody(networkID))
 	if err != nil {
-		return xerrors.Errorf("failed to sign NodeMessage: %w", err)
+		return errors.Wrap(err, "failed to sign NodeMessage")
 	}
 
 	ms.signer = pk.Publickey()

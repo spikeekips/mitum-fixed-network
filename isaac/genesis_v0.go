@@ -3,8 +3,7 @@ package isaac
 import (
 	"context"
 
-	"golang.org/x/xerrors"
-
+	"github.com/pkg/errors"
 	"github.com/rs/zerolog"
 	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/base/ballot"
@@ -237,7 +236,7 @@ func (gg *GenesisBlockV0Generator) generateINITVoteproof() (base.Voteproof, erro
 	if err != nil {
 		return nil, err
 	} else if !voteproof.IsFinished() {
-		return nil, xerrors.Errorf("something wrong, INITVoteproof should be finished, but not")
+		return nil, errors.Errorf("something wrong, INITVoteproof should be finished, but not")
 	}
 
 	return voteproof, nil
@@ -255,7 +254,7 @@ func (gg *GenesisBlockV0Generator) generateACCEPTVoteproof(newBlock block.Block,
 	if err != nil {
 		return nil, err
 	} else if !voteproof.IsFinished() {
-		return nil, xerrors.Errorf("something wrong, ACCEPTVoteproof should be finished, but not")
+		return nil, errors.Errorf("something wrong, ACCEPTVoteproof should be finished, but not")
 	}
 
 	return voteproof, nil

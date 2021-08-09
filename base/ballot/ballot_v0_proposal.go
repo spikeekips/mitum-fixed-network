@@ -1,8 +1,7 @@
 package ballot
 
 import (
-	"golang.org/x/xerrors"
-
+	"github.com/pkg/errors"
 	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/base/key"
 	"github.com/spikeekips/mitum/util"
@@ -46,7 +45,7 @@ func (prf ProposalFactV0) IsValid(networkID []byte) error {
 		founds := map[string]struct{}{}
 		for _, h := range prf.seals {
 			if _, found := founds[h.String()]; found {
-				return xerrors.Errorf("duplicated Seal found in Proposal")
+				return errors.Errorf("duplicated Seal found in Proposal")
 			}
 
 			founds[h.String()] = struct{}{}

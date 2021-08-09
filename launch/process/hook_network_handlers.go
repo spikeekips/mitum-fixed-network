@@ -5,8 +5,7 @@ import (
 	"io"
 	"sort"
 
-	"golang.org/x/xerrors"
-
+	"github.com/pkg/errors"
 	"github.com/rs/zerolog"
 	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/base/ballot"
@@ -177,7 +176,7 @@ func (sn *SettingNetworkHandlers) networkhandlerNewSeal() network.NewSealHandler
 			sealChecker.IsValid,
 			sealChecker.IsValidOperationSeal,
 		}).Check(); err != nil {
-			if xerrors.Is(err, util.IgnoreError) {
+			if errors.Is(err, util.IgnoreError) {
 				return nil
 			}
 
@@ -231,7 +230,7 @@ func (sn *SettingNetworkHandlers) networkHandlerNodeInfo() network.NodeInfoHandl
 		for i := range suffrageNodes {
 			n, ch, found := sn.nodepool.Node(suffrageNodes[i])
 			if !found {
-				return nil, xerrors.Errorf("suffrage node, %q not found", n.Address())
+				return nil, errors.Errorf("suffrage node, %q not found", n.Address())
 			}
 
 			var connInfo network.ConnInfo

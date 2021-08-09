@@ -2,9 +2,9 @@ package key
 
 import (
 	"github.com/btcsuite/btcutil/base58"
+	"github.com/pkg/errors"
 	"go.mongodb.org/mongo-driver/bson/bsontype"
 	"go.mongodb.org/mongo-driver/x/bsonx/bsoncore"
-	"golang.org/x/xerrors"
 )
 
 func (sg Signature) MarshalBSONValue() (bsontype.Type, []byte, error) {
@@ -14,7 +14,7 @@ func (sg Signature) MarshalBSONValue() (bsontype.Type, []byte, error) {
 func (sg *Signature) UnmarshalBSONValue(_ bsontype.Type, b []byte) error {
 	s, _, ok := bsoncore.ReadString(b)
 	if !ok {
-		return xerrors.Errorf("can not read string")
+		return errors.Errorf("can not read string")
 	}
 
 	*sg = Signature(base58.Decode(s))

@@ -1,10 +1,8 @@
 package isvalid
 
-import (
-	"github.com/spikeekips/mitum/util/errors"
-)
+import "github.com/spikeekips/mitum/util"
 
-var InvalidError = errors.NewError("invalid")
+var InvalidError = util.NewError("invalid")
 
 type IsValider interface {
 	IsValid([]byte) error

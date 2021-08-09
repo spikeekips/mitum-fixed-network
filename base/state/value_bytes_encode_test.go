@@ -3,11 +3,10 @@ package state
 import (
 	"testing"
 
-	"github.com/stretchr/testify/suite"
-
 	"github.com/spikeekips/mitum/util/encoder"
 	bsonenc "github.com/spikeekips/mitum/util/encoder/bson"
 	jsonenc "github.com/spikeekips/mitum/util/encoder/json"
+	"github.com/stretchr/testify/suite"
 )
 
 type testStateBytesValueEncode struct {

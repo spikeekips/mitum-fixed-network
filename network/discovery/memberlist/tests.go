@@ -9,11 +9,11 @@ import (
 	"net/http/httptest"
 	"time"
 
+	"github.com/pkg/errors"
 	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/base/node"
 	"github.com/spikeekips/mitum/network"
 	"github.com/spikeekips/mitum/util/encoder"
-	"golang.org/x/xerrors"
 )
 
 type BaseDiscoveryTest struct{}
@@ -36,10 +36,10 @@ func (t *BaseDiscoveryTest) NewDiscovery(
 	) (*http.Response, func() error, error) {
 		handler, found := remotes[u]
 		if !found {
-			return nil, func() error { return nil }, xerrors.Errorf("unknown node found, %q", u)
+			return nil, func() error { return nil }, errors.Errorf("unknown node found, %q", u)
 		}
 		if handler == nil {
-			return nil, func() error { return nil }, xerrors.Errorf("node stopped, %q", u)
+			return nil, func() error { return nil }, errors.Errorf("node stopped, %q", u)
 		}
 
 		w := httptest.NewRecorder()

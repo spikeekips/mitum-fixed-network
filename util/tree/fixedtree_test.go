@@ -7,12 +7,12 @@ import (
 	"time"
 
 	"github.com/btcsuite/btcutil/base58"
+	"github.com/pkg/errors"
 	"github.com/spikeekips/mitum/util"
 	"github.com/spikeekips/mitum/util/encoder"
 	bsonenc "github.com/spikeekips/mitum/util/encoder/bson"
 	jsonenc "github.com/spikeekips/mitum/util/encoder/json"
 	"github.com/stretchr/testify/suite"
-	"golang.org/x/xerrors"
 )
 
 type testFixedTreeNode struct {
@@ -21,12 +21,12 @@ type testFixedTreeNode struct {
 
 func (t *testFixedTreeNode) TestEmptyKey() {
 	err := NewBaseFixedTreeNode(1, nil).IsValid(nil)
-	t.True(xerrors.Is(err, EmptyKeyError))
+	t.True(errors.Is(err, EmptyKeyError))
 }
 
 func (t *testFixedTreeNode) TestEmptyHash() {
 	err := NewBaseFixedTreeNode(1, util.UUID().Bytes()).IsValid(nil)
-	t.True(xerrors.Is(err, EmptyHashError))
+	t.True(errors.Is(err, EmptyHashError))
 }
 
 func (t *testFixedTreeNode) TestEncodeJSON() {
@@ -76,7 +76,7 @@ func (t *testFixedTree) TestWrongHash() {
 
 	tr.nodes[2] = tr.nodes[2].SetHash([]byte("showme"))
 	err = tr.IsValid(nil)
-	t.True(xerrors.Is(err, InvalidNodeError))
+	t.True(errors.Is(err, InvalidNodeError))
 	t.Contains(err.Error(), "invalid node hash")
 }
 
@@ -156,8 +156,8 @@ func (t *testFixedTree) TestProofWrongSelfHash() {
 	pr[0] = pr[0].SetHash(util.UUID().Bytes()) // NOTE make wrong hash
 
 	err = ProveFixedTreeProof(pr)
-	t.True(xerrors.Is(err, InvalidProofError))
-	t.True(xerrors.Is(err, HashNotMatchError))
+	t.True(errors.Is(err, InvalidProofError))
+	t.True(errors.Is(err, HashNotMatchError))
 	t.Contains(err.Error(), "hash not match")
 }
 
@@ -182,8 +182,8 @@ func (t *testFixedTree) TestProofWrongHash() {
 	pr[3] = n
 
 	err = ProveFixedTreeProof(pr)
-	t.True(xerrors.Is(err, InvalidProofError))
-	t.True(xerrors.Is(err, HashNotMatchError))
+	t.True(errors.Is(err, InvalidProofError))
+	t.True(errors.Is(err, HashNotMatchError))
 	t.Contains(err.Error(), "hash not match")
 }
 
@@ -239,7 +239,7 @@ func (t *testFixedTree) TestEncodeJSON() {
 		if i, err := utr.Node(n.Index()); err != nil {
 			return false, err
 		} else if !n.Equal(i) {
-			return false, xerrors.Errorf("not equal")
+			return false, errors.Errorf("not equal")
 		}
 
 		return true, nil
@@ -279,7 +279,7 @@ func (t *testFixedTree) TestEncodeBSON() {
 		if i, err := utr.Node(n.Index()); err != nil {
 			return false, err
 		} else if !n.Equal(i) {
-			return false, xerrors.Errorf("not equal")
+			return false, errors.Errorf("not equal")
 		}
 
 		return true, nil
@@ -336,7 +336,7 @@ func (t *testFixedTreeGenerator) TestTreeNotFilled() {
 	t.NoError(trg.Add(NewBaseFixedTreeNode(2, util.UUID().Bytes())))
 
 	_, err := trg.Tree()
-	t.True(xerrors.Is(err, EmptyNodeInTreeError))
+	t.True(errors.Is(err, EmptyNodeInTreeError))
 }
 
 func (t *testFixedTreeGenerator) TestTreeFilled() {

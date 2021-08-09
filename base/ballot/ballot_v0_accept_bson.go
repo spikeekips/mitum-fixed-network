@@ -1,10 +1,9 @@
 package ballot // nolint
 
 import (
-	"go.mongodb.org/mongo-driver/bson"
-
 	bsonenc "github.com/spikeekips/mitum/util/encoder/bson"
 	"github.com/spikeekips/mitum/util/valuehash"
+	"go.mongodb.org/mongo-driver/bson"
 )
 
 func (ab ACCEPTV0) MarshalBSON() ([]byte, error) {

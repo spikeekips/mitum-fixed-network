@@ -1,14 +1,13 @@
 package mongodbstorage
 
 import (
-	"go.mongodb.org/mongo-driver/bson"
-	"golang.org/x/xerrors"
-
+	"github.com/pkg/errors"
 	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/base/block"
 	"github.com/spikeekips/mitum/util/encoder"
 	bsonenc "github.com/spikeekips/mitum/util/encoder/bson"
 	"github.com/spikeekips/mitum/util/valuehash"
+	"go.mongodb.org/mongo-driver/bson"
 )
 
 type BlockDoc struct {
@@ -81,7 +80,7 @@ func loadManifestFromDecoder(decoder func(interface{}) error, encs *encoder.Enco
 	if err != nil {
 		return nil, err
 	} else if i, ok := hinter.(block.Manifest); !ok {
-		return nil, xerrors.Errorf("not Manifest: %T", hinter)
+		return nil, errors.Errorf("not Manifest: %T", hinter)
 	} else {
 		manifest = i
 	}
@@ -98,7 +97,7 @@ func loadManifestHeightAndHash(decoder func(interface{}) error, _ *encoder.Encod
 	if err := decoder(&hd); err != nil {
 		return base.NilHeight, nil, err
 	} else if hd.H.Empty() {
-		return base.NilHeight, nil, xerrors.Errorf("empty hash for ManifestDoc")
+		return base.NilHeight, nil, errors.Errorf("empty hash for ManifestDoc")
 	}
 
 	return hd.HT, hd.H, nil

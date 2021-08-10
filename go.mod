@@ -31,7 +31,7 @@ require (
 	github.com/oklog/ulid v1.3.1
 	github.com/pkg/errors v0.9.1
 	github.com/rs/xid v1.3.0 // indirect
-	github.com/rs/zerolog v0.0.0-20210801152418-c1533bd5f89a
+	github.com/rs/zerolog v1.23.0
 	github.com/satori/go.uuid v1.2.0
 	github.com/stellar/go v0.0.0-20210727181749-61bc28bf313b
 	github.com/stretchr/testify v1.7.0

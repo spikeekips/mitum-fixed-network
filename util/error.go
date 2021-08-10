@@ -120,6 +120,14 @@ func (er *NError) Merge(err error) *NError {
 	}
 }
 
+func (er *NError) Call() *NError {
+	return &NError{
+		id:    er.id,
+		msg:   er.msg,
+		stack: callers(3),
+	}
+}
+
 func (er *NError) Caller(n int) *NError {
 	return &NError{
 		id:      er.id,

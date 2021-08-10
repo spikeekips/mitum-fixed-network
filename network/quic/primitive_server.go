@@ -26,9 +26,14 @@ type PrimitiveQuicServer struct {
 	tlsConfig   *tls.Config
 	stoppedChan chan struct{}
 	router      *mux.Router
+	httpLog     *logging.Logging
 }
 
-func NewPrimitiveQuicServer(bind string, certs []tls.Certificate) (*PrimitiveQuicServer, error) {
+func NewPrimitiveQuicServer(
+	bind string,
+	certs []tls.Certificate,
+	httpLog *logging.Logging,
+) (*PrimitiveQuicServer, error) {
 	if err := network.CheckBindIsOpen("udp", bind, time.Second*1); err != nil {
 		return nil, errors.Wrapf(err, "failed to open quic server, %q", bind)
 	}
@@ -44,6 +49,7 @@ func NewPrimitiveQuicServer(bind string, certs []tls.Certificate) (*PrimitiveQui
 		},
 		stoppedChan: make(chan struct{}, 10),
 		router:      mux.NewRouter(),
+		httpLog:     httpLog,
 	}
 
 	root := qs.router.Name("root")
@@ -92,11 +98,18 @@ func (qs *PrimitiveQuicServer) StoppedChan() <-chan struct{} {
 func (qs *PrimitiveQuicServer) run(ctx context.Context) error {
 	qs.Log().Debug().Str("bind", qs.bind).Msg("trying to start server")
 
+	var log *zerolog.Logger
+	if qs.httpLog != nil {
+		log = qs.httpLog.Log()
+	} else {
+		log = qs.Log()
+	}
+
 	server := &http3.Server{
 		Server: &http.Server{
 			Addr:      qs.bind,
 			TLSConfig: qs.tlsConfig,
-			Handler:   network.HTTPLogHandler(qs.router, qs.Log()),
+			Handler:   network.HTTPLogHandler(qs.router, log),
 		},
 	}
 

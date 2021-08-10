@@ -70,7 +70,7 @@ func (t *testQuicServer) SetupTest() {
 }
 
 func (t *testQuicServer) readyServer() *Server {
-	qs, err := NewPrimitiveQuicServer(t.bind, t.certs)
+	qs, err := NewPrimitiveQuicServer(t.bind, t.certs, nil)
 	t.NoError(err)
 
 	ca, err := cache.NewGCache("lru", 100, time.Second*3)
@@ -103,7 +103,7 @@ func (t *testQuicServer) readyServer() *Server {
 }
 
 func (t *testQuicServer) TestNew() {
-	qs, err := NewPrimitiveQuicServer(t.bind, t.certs)
+	qs, err := NewPrimitiveQuicServer(t.bind, t.certs, nil)
 	t.NoError(err)
 
 	qn, err := NewServer(qs, t.encs, t.enc, nil)

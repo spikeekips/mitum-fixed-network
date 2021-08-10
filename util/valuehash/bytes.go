@@ -26,7 +26,7 @@ func (hs Bytes) Empty() bool {
 
 func (hs Bytes) IsValid([]byte) error {
 	if hs.Empty() {
-		return EmptyHashError
+		return EmptyHashError.Call()
 	} else if len(hs) > maxBytesHashSize {
 		return InvalidHashError.Errorf("over max: %d > %d", len(hs), maxBytesHashSize)
 	}

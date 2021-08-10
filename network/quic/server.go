@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"net/url"
 	"path"
+	"reflect"
 	"strings"
 	"time"
 
@@ -81,6 +82,12 @@ func NewServer(
 
 func (*Server) Initialize() error {
 	return nil
+}
+
+func (sv *Server) Start() error {
+	sv.logNilHanders()
+
+	return sv.PrimitiveQuicServer.Start()
 }
 
 func (sv *Server) SetLogging(l *logging.Logging) *logging.Logging {
@@ -161,6 +168,7 @@ func (sv *Server) handleGetSeals(w http.ResponseWriter, r *http.Request) {
 		network.HTTPError(w, http.StatusBadRequest)
 		return
 	case len(args.Hashes) < 1:
+		sv.Log().Error().Msg("empty hashes")
 		network.HTTPError(w, http.StatusBadRequest)
 		return
 	default:
@@ -174,7 +182,7 @@ func (sv *Server) handleGetSeals(w http.ResponseWriter, r *http.Request) {
 		}
 		return sv.enc.Marshal(i)
 	}); err != nil {
-		sv.Log().Error().Err(err).Msg("failed to get seals")
+		sv.Log().Error().Interface("hashes", args.Hashes).Err(err).Msg("failed to get seals")
 
 		handleError(w, err)
 	} else {
@@ -205,9 +213,9 @@ func (sv *Server) handleNewSeal(w http.ResponseWriter, r *http.Request) {
 
 	sl, err := seal.DecodeSeal(body.Bytes(), enc)
 	if err != nil {
-		network.HTTPError(w, http.StatusBadRequest)
-
 		sv.Log().Error().Err(err).Stringer("body", body).Msg("invalid seal found")
+
+		network.HTTPError(w, http.StatusBadRequest)
 
 		return
 	}
@@ -319,6 +327,8 @@ func (sv *Server) handleGetBlockDataMaps(w http.ResponseWriter, r *http.Request)
 		}
 		return sv.enc.Marshal(sls)
 	}); err != nil {
+		sv.Log().Error().Err(err).Interface("heights", args.Heights).Msg("failed to get block data maps")
+
 		handleError(w, err)
 	} else {
 		w.Header().Set(QuicEncoderHintHeader, sv.enc.Hint().String())
@@ -355,6 +365,8 @@ func (sv *Server) handleGetBlockData(w http.ResponseWriter, r *http.Request) {
 		}
 		return []interface{}{j, closefunc}, nil
 	}); err != nil {
+		sv.Log().Error().Err(err).Str("path", p).Msg("failed to get block data")
+
 		handleError(w, err)
 	} else {
 		var j io.Reader
@@ -377,11 +389,39 @@ func (sv *Server) handleGetBlockData(w http.ResponseWriter, r *http.Request) {
 		}
 
 		if j == nil {
+			sv.Log().Error().Msg("failed to get block data; empty reader")
+
 			network.HTTPError(w, http.StatusInternalServerError)
 		} else if _, err := io.Copy(w, j); err != nil {
+			sv.Log().Error().Msg("failed to get block data; failed to copy")
+
 			network.HTTPError(w, http.StatusInternalServerError)
 		}
 	}
+}
+
+func (sv *Server) logNilHanders() {
+	handlers := [][2]interface{}{
+		{sv.getSealsHandler, "getSealsHandler"},
+		{sv.hasSealHandler, "hasSealHandler"},
+		{sv.newSealHandler, "newSealHandler"},
+		{sv.nodeInfoHandler, "nodeInfoHandler"},
+		{sv.blockDataMapsHandler, "blockDataMapsHandler"},
+		{sv.blockDataHandler, "blockDataHandler"},
+	}
+
+	var enables, disables []string
+	for i := range handlers {
+		f, name := handlers[i][0], handlers[i][1]
+
+		if reflect.ValueOf(f).IsNil() {
+			disables = append(disables, name.(string))
+		} else {
+			enables = append(enables, name.(string))
+		}
+	}
+
+	sv.Log().Debug().Strs("enabled", enables).Strs("disabled", disables).Msg("check handler")
 }
 
 func mustQuicURL(u, p string) (string, *url.URL) {
@@ -397,11 +437,8 @@ func mustQuicURL(u, p string) (string, *url.URL) {
 
 func handleError(w http.ResponseWriter, err error) {
 	status := http.StatusInternalServerError
-	switch {
-	case errors.Is(err, util.NotFoundError):
+	if errors.Is(err, util.NotFoundError) {
 		status = http.StatusNotFound
-	case errors.Is(err, BadRequestError):
-		status = http.StatusBadRequest
 	}
 
 	network.HTTPError(w, status)

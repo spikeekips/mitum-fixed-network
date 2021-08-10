@@ -136,7 +136,7 @@ func (bt BTCPublickey) Verify(input []byte, sig Signature) error {
 	}
 
 	if !signature.Verify(chainhash.DoubleHashB(input), bt.pk) {
-		return SignatureVerificationFailedError
+		return SignatureVerificationFailedError.Call()
 	}
 
 	return nil

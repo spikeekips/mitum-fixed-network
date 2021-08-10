@@ -63,7 +63,7 @@ func (no BaseFixedTreeNode) IsValid([]byte) error {
 		return EmptyKeyError
 	}
 	if len(no.hash) < 1 {
-		return EmptyHashError
+		return EmptyHashError.Call()
 	}
 
 	return nil

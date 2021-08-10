@@ -147,7 +147,7 @@ func (ep EtherPublickey) Verify(input []byte, sig Signature) error {
 
 	h := sha256.Sum256(input)
 	if !ecdsa.Verify(ep.pk, h[:], r, s) {
-		return SignatureVerificationFailedError
+		return SignatureVerificationFailedError.Call()
 	}
 
 	return nil

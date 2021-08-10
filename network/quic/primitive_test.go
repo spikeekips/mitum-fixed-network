@@ -42,7 +42,7 @@ func (t *testPrimitiveQuicServer) SetupTest() {
 }
 
 func (t *testPrimitiveQuicServer) readyServer(handlers map[string]network.HTTPHandlerFunc) *PrimitiveQuicServer {
-	qn, err := NewPrimitiveQuicServer(t.bind, t.certs)
+	qn, err := NewPrimitiveQuicServer(t.bind, t.certs, nil)
 	t.NoError(err)
 
 	for prefix, handler := range handlers {

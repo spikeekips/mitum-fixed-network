@@ -49,7 +49,12 @@ func ProcessQuicNetwork(ctx context.Context) (context.Context, error) {
 	}
 
 	var l *logging.Logging
-	if err := config.LoadNetworkLogContextValue(ctx, &l); err != nil {
+	if err := config.LoadLogContextValue(ctx, &l); err != nil {
+		return ctx, err
+	}
+
+	var httpLog *logging.Logging
+	if err := config.LoadNetworkLogContextValue(ctx, &httpLog); err != nil {
 		return ctx, err
 	}
 
@@ -58,7 +63,7 @@ func ProcessQuicNetwork(ctx context.Context) (context.Context, error) {
 		return ctx, err
 	}
 
-	nt, err := NewNetworkServer(conf.Bind().Host, conf.Certs(), encs, ca)
+	nt, err := NewNetworkServer(conf.Bind().Host, conf.Certs(), encs, ca, httpLog)
 	if err != nil {
 		return ctx, err
 	}
@@ -76,13 +81,14 @@ func NewNetworkServer(
 	certs []tls.Certificate,
 	encs *encoder.Encoders,
 	ca cache.Cache,
+	httpLog *logging.Logging,
 ) (network.Server, error) {
 	je, err := encs.Encoder(jsonenc.JSONEncoderType, "")
 	if err != nil {
 		return nil, errors.Wrap(err, "json encoder needs for quic-network")
 	}
 
-	if qs, err := quicnetwork.NewPrimitiveQuicServer(bind, certs); err != nil {
+	if qs, err := quicnetwork.NewPrimitiveQuicServer(bind, certs, httpLog); err != nil {
 		return nil, err
 	} else if nqs, err := quicnetwork.NewServer(qs, encs, je, ca); err != nil {
 		return nil, err

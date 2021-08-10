@@ -57,7 +57,7 @@ func (hs SHA512) Empty() bool {
 
 func (hs SHA512) IsValid([]byte) error {
 	if emptySHA512 == hs.b || nilSHA512 == hs.b {
-		return EmptyHashError
+		return EmptyHashError.Call()
 	}
 
 	return nil
@@ -108,7 +108,7 @@ func (hs SHA256) Empty() bool {
 
 func (hs SHA256) IsValid([]byte) error {
 	if emptySHA256 == hs.b || nilSHA256 == hs.b {
-		return EmptyHashError
+		return EmptyHashError.Call()
 	}
 
 	return nil

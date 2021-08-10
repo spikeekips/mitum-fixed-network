@@ -27,7 +27,6 @@ func (t *testKeccak512) TestNil() {
 func (t *testKeccak512) TestNew() {
 	hs := NewSHA512(nil)
 	t.Implements((*Hash)(nil), hs)
-	t.Equal(sha512Size, hs.Size())
 
 	initial := hs.Bytes()
 
@@ -39,27 +38,6 @@ func (t *testKeccak512) TestNew() {
 	newS512 := NewSHA512(b)
 
 	t.Equal(hs.Bytes(), newS512.Bytes())
-}
-
-func (t *testKeccak512) TestLoadFromBytes() {
-	h := NewSHA512([]byte("showme"))
-
-	b := h.Bytes()
-
-	uh, err := LoadSHA512FromBytes(b)
-	t.NoError(err)
-	t.True(h.Equal(uh))
-}
-
-func (t *testKeccak512) TestLoadFromString() {
-	b := []byte("showme")
-	h := NewSHA512(b)
-
-	s := h.String()
-
-	uh, err := LoadSHA512FromString(s)
-	t.NoError(err)
-	t.True(h.Equal(uh))
 }
 
 func (t *testKeccak512) TestJSONMarshal() {
@@ -100,7 +78,6 @@ func (t *testKeccak256) TestNil() {
 func (t *testKeccak256) TestNew() {
 	hs := NewSHA256(nil)
 	t.Implements((*Hash)(nil), hs)
-	t.Equal(sha256Size, hs.Size())
 
 	initial := hs.Bytes()
 
@@ -139,27 +116,6 @@ func (t *testKeccak256) TestJSONMarshal() {
 
 		t.True(hs.Equal(jh))
 	}
-}
-
-func (t *testKeccak256) TestLoadFromBytes() {
-	h := NewSHA256([]byte("showme"))
-
-	b := h.Bytes()
-
-	uh, err := LoadSHA256FromBytes(b)
-	t.NoError(err)
-	t.True(h.Equal(uh))
-}
-
-func (t *testKeccak256) TestLoadFromString() {
-	b := []byte("showme")
-	h := NewSHA256(b)
-
-	s := h.String()
-
-	uh, err := LoadSHA256FromString(s)
-	t.NoError(err)
-	t.True(h.Equal(uh))
 }
 
 func TestKeccak256(t *testing.T) {

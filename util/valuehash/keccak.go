@@ -3,7 +3,6 @@ package valuehash
 import (
 	"bytes"
 
-	"github.com/pkg/errors"
 	"golang.org/x/crypto/sha3"
 )
 
@@ -32,21 +31,6 @@ func NewSHA512(b []byte) SHA512 {
 	return SHA512{b: sha3.Sum512(b)}
 }
 
-func LoadSHA512FromBytes(b []byte) (Hash, error) {
-	if l := len(b); l != sha512Size {
-		return nil, errors.Errorf("invalid sha512 size: %d", l)
-	}
-
-	n := [sha512Size]byte{}
-	copy(n[:], b)
-
-	return SHA512{b: n}, nil
-}
-
-func LoadSHA512FromString(s string) (Hash, error) {
-	return LoadSHA512FromBytes(fromString(s))
-}
-
 func (hs SHA512) String() string {
 	return toString(hs.b[:])
 }
@@ -61,10 +45,6 @@ func (hs SHA512) IsValid([]byte) error {
 	}
 
 	return nil
-}
-
-func (SHA512) Size() int {
-	return sha512Size
 }
 
 func (hs SHA512) Bytes() []byte {
@@ -83,21 +63,6 @@ func NewSHA256(b []byte) SHA256 {
 	return SHA256{b: sha3.Sum256(b)}
 }
 
-func LoadSHA256FromBytes(b []byte) (Hash, error) {
-	if l := len(b); l != sha256Size {
-		return nil, errors.Errorf("invalid sha256 size: %d", l)
-	}
-
-	n := [sha256Size]byte{}
-	copy(n[:], b)
-
-	return SHA256{b: n}, nil
-}
-
-func LoadSHA256FromString(s string) (Hash, error) {
-	return LoadSHA256FromBytes(fromString(s))
-}
-
 func (hs SHA256) String() string {
 	return toString(hs.b[:])
 }
@@ -112,10 +77,6 @@ func (hs SHA256) IsValid([]byte) error {
 	}
 
 	return nil
-}
-
-func (SHA256) Size() int {
-	return sha256Size
 }
 
 func (hs SHA256) Bytes() []byte {

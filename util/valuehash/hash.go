@@ -17,7 +17,6 @@ type Hash interface {
 	util.Byter
 	// NOTE usually String() value is the base58 encoded of Bytes()
 	fmt.Stringer
-	Size() int
 	Equal(Hash) bool
 	Empty() bool
 }

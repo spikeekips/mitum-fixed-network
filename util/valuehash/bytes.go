@@ -2,6 +2,8 @@ package valuehash
 
 import (
 	"bytes"
+
+	"github.com/btcsuite/btcutil/base58"
 )
 
 const maxBytesHashSize = 100
@@ -13,7 +15,7 @@ func NewBytes(b []byte) Bytes {
 }
 
 func NewBytesFromString(s string) Bytes {
-	return NewBytes(fromString(s))
+	return NewBytes(base58.Decode(s))
 }
 
 func (hs Bytes) String() string {
@@ -32,10 +34,6 @@ func (hs Bytes) IsValid([]byte) error {
 	}
 
 	return nil
-}
-
-func (hs Bytes) Size() int {
-	return len(hs)
 }
 
 func (hs Bytes) Bytes() []byte {

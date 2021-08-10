@@ -17,5 +17,5 @@ func unmarshalBSONValue(b []byte) (Bytes, error) {
 		return Bytes{}, errors.Errorf("invalid encoded input for Hash")
 	}
 
-	return NewBytes(fromString(s)), nil
+	return NewBytesFromString(s), nil
 }

@@ -48,7 +48,3 @@ func RandomSHA512WithPrefix(prefix []byte) Hash {
 func toString(b []byte) string {
 	return base58.Encode(b)
 }
-
-func fromString(s string) []byte {
-	return base58.Decode(s)
-}

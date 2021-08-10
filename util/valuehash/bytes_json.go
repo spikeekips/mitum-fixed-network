@@ -11,7 +11,7 @@ func (hs *Bytes) UnmarshalJSON(b []byte) error {
 	if err := util.JSON.Unmarshal(b, &s); err != nil {
 		return err
 	}
-	*hs = NewBytes(fromString(s))
+	*hs = NewBytesFromString(s)
 
 	return nil
 }

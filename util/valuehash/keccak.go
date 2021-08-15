@@ -35,12 +35,12 @@ func (hs SHA512) String() string {
 	return toString(hs.b[:])
 }
 
-func (hs SHA512) Empty() bool {
+func (hs SHA512) IsEmpty() bool {
 	return emptySHA512 == hs.b || nilSHA512 == hs.b
 }
 
 func (hs SHA512) IsValid([]byte) error {
-	if emptySHA512 == hs.b || nilSHA512 == hs.b {
+	if hs.IsEmpty() {
 		return EmptyHashError.Call()
 	}
 
@@ -67,12 +67,12 @@ func (hs SHA256) String() string {
 	return toString(hs.b[:])
 }
 
-func (hs SHA256) Empty() bool {
+func (hs SHA256) IsEmpty() bool {
 	return emptySHA256 == hs.b || nilSHA256 == hs.b
 }
 
 func (hs SHA256) IsValid([]byte) error {
-	if emptySHA256 == hs.b || nilSHA256 == hs.b {
+	if hs.IsEmpty() {
 		return EmptyHashError.Call()
 	}
 

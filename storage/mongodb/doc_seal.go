@@ -63,7 +63,7 @@ func loadSealHashFromDecoder(decoder func(interface{}) error, _ *encoder.Encoder
 	var hd HashIDDoc
 	if err := decoder(&hd); err != nil {
 		return nil, err
-	} else if hd.H.Empty() {
+	} else if hd.H.IsEmpty() {
 		return nil, errors.Errorf("empty hash for HashIDDoc")
 	}
 

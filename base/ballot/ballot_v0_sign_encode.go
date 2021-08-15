@@ -13,11 +13,11 @@ func (sb *SIGNV0) unpack(
 	proposal,
 	newBlock valuehash.Hash,
 ) error {
-	if proposal != nil && proposal.Empty() {
+	if proposal != nil && proposal.IsEmpty() {
 		return errors.Errorf("empty proposal hash found")
 	}
 
-	if newBlock != nil && newBlock.Empty() {
+	if newBlock != nil && newBlock.IsEmpty() {
 		return errors.Errorf("empty newBlock hash found")
 	}
 

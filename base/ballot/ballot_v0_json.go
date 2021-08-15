@@ -67,10 +67,10 @@ func UnpackBaseBallotV0JSON(nib BaseBallotV0UnpackerJSON, enc *jsonenc.Encoder) 
 	}
 
 	var h, bh valuehash.Hash
-	if !nib.H.Empty() {
+	if !nib.H.IsEmpty() {
 		h = nib.H
 	}
-	if !nib.BH.Empty() {
+	if !nib.BH.IsEmpty() {
 		bh = nib.BH
 	}
 

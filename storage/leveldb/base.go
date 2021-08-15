@@ -466,7 +466,7 @@ func (st *Database) loadHash(b []byte) (valuehash.Hash, error) {
 	var h valuehash.Bytes
 	if err := st.loadValue(b, &h); err != nil {
 		return nil, err
-	} else if h.Empty() {
+	} else if h.IsEmpty() {
 		return nil, errors.Errorf("empty hash found")
 	}
 

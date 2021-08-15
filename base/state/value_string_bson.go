@@ -28,7 +28,7 @@ func (sv *StringValue) UnpackBSON(b []byte, enc *bsonenc.Encoder) error {
 		return err
 	}
 
-	if uv.H.Empty() {
+	if uv.H.IsEmpty() {
 		return errors.Errorf("empty previous_block hash found")
 	}
 

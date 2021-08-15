@@ -15,7 +15,7 @@ func (ib *INITV0) unpack(
 	bVoteproof,
 	bAVoteproof []byte,
 ) error {
-	if previousBlock != nil && previousBlock.Empty() {
+	if previousBlock != nil && previousBlock.IsEmpty() {
 		return errors.Errorf("empty previous_block hash found")
 	}
 
@@ -49,7 +49,7 @@ func (ibf *INITFactV0) unpack(
 	bf BaseFactV0,
 	previousBlock valuehash.Hash,
 ) error {
-	if previousBlock != nil && previousBlock.Empty() {
+	if previousBlock != nil && previousBlock.IsEmpty() {
 		return errors.Errorf("empty previous_block hash found")
 	}
 

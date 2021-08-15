@@ -20,11 +20,11 @@ func (bm *ManifestV0) unpack(
 	confirmedAt time.Time,
 	createdAt time.Time,
 ) error {
-	if operationsHash != nil && operationsHash.Empty() {
+	if operationsHash != nil && operationsHash.IsEmpty() {
 		operationsHash = nil
 	}
 
-	if statesHash != nil && statesHash.Empty() {
+	if statesHash != nil && statesHash.IsEmpty() {
 		statesHash = nil
 	}
 

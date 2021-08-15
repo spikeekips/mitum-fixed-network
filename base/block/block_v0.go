@@ -79,10 +79,10 @@ func (bm BlockV0) IsValid(networkID []byte) error {
 		}
 	}
 
-	if bm.operationsHash == nil || bm.operationsHash.Empty() {
+	if bm.operationsHash == nil || bm.operationsHash.IsEmpty() {
 		bm.operationsHash = nil
 	}
-	if bm.statesHash == nil || bm.statesHash.Empty() {
+	if bm.statesHash == nil || bm.statesHash.IsEmpty() {
 		bm.statesHash = nil
 	}
 

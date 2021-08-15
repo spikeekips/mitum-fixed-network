@@ -22,12 +22,12 @@ func (hs Bytes) String() string {
 	return toString(hs)
 }
 
-func (hs Bytes) Empty() bool {
+func (hs Bytes) IsEmpty() bool {
 	return hs == nil || len(hs) < 1
 }
 
 func (hs Bytes) IsValid([]byte) error {
-	if hs.Empty() {
+	if hs.IsEmpty() {
 		return EmptyHashError.Call()
 	} else if len(hs) > maxBytesHashSize {
 		return InvalidHashError.Errorf("over max: %d > %d", len(hs), maxBytesHashSize)

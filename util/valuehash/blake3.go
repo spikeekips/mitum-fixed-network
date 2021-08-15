@@ -31,12 +31,12 @@ func (hs Blake3256) String() string {
 	return toString(hs.b[:])
 }
 
-func (hs Blake3256) Empty() bool {
+func (hs Blake3256) IsEmpty() bool {
 	return emptyBlake3256 == hs.b || nilBlake3256 == hs.b
 }
 
 func (hs Blake3256) IsValid([]byte) error {
-	if emptyBlake3256 == hs.b || nilBlake3256 == hs.b {
+	if hs.IsEmpty() {
 		return EmptyHashError.Call()
 	}
 

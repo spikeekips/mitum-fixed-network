@@ -43,7 +43,7 @@ func (st StateV0) IsValid([]byte) error {
 		return err
 	}
 
-	if st.h != nil && st.h.Empty() {
+	if st.h != nil && st.h.IsEmpty() {
 		return errors.Errorf("empty hash found")
 	}
 

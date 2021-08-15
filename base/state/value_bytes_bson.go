@@ -28,7 +28,7 @@ func (bv *BytesValue) UnpackBSON(b []byte, enc *bsonenc.Encoder) error {
 		return err
 	}
 
-	if uv.H.Empty() {
+	if uv.H.IsEmpty() {
 		return errors.Errorf("empty hash found")
 	}
 

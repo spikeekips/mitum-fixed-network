@@ -18,7 +18,7 @@ type Hash interface {
 	// NOTE usually String() value is the base58 encoded of Bytes()
 	fmt.Stringer
 	Equal(Hash) bool
-	Empty() bool
+	IsEmpty() bool
 }
 
 type Hasher interface {

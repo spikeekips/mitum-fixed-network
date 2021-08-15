@@ -96,7 +96,7 @@ func loadManifestHeightAndHash(decoder func(interface{}) error, _ *encoder.Encod
 
 	if err := decoder(&hd); err != nil {
 		return base.NilHeight, nil, err
-	} else if hd.H.Empty() {
+	} else if hd.H.IsEmpty() {
 		return base.NilHeight, nil, errors.Errorf("empty hash for ManifestDoc")
 	}
 

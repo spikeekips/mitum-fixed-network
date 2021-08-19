@@ -196,7 +196,7 @@ func (pps *Processors) handleProposal(
 	}
 
 	var current Processor
-	switch pp, err := pps.checkCurrent(proposal.Hash()); {
+	switch pp, err := pps.checkCurrent(proposal); {
 	case err != nil:
 		return Result{Err: PrepareFailedError.Merge(err)}
 	default:
@@ -415,17 +415,23 @@ func (pps *Processors) CurrentState(proposal valuehash.Hash) State {
 	}
 }
 
-func (pps *Processors) checkCurrent(proposal valuehash.Hash) (Processor, error) {
+func (pps *Processors) checkCurrent(proposal ballot.Proposal) (Processor, error) {
 	current := pps.Current()
 
 	if current == nil {
 		return nil, nil
 	}
 
-	if h := current.Proposal().Hash(); !h.Equal(proposal) {
+	if h := current.Proposal().Hash(); !h.Equal(proposal.Hash()) {
+		cpr := current.Proposal()
+
+		if cpr.Height() == proposal.Height() && cpr.Round() == proposal.Round() {
+			return nil, util.IgnoreError.Errorf("duplicated proposal received")
+		}
+
 		if current.State() != Saved {
 			LogEventProcessor(current, "current", pps.Log().Debug()).
-				Stringer("proposal", proposal).Bool("current_exists", current == nil).
+				Stringer("proposal", proposal.Hash()).Bool("current_exists", current == nil).
 				Msg("found previous Processor with different Proposal; existing Processor will be canceled")
 
 			if err := pps.cancelProcessor(current); err != nil {

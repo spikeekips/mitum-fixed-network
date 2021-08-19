@@ -92,7 +92,47 @@ func (t *testProcessors) TestNewProposal() {
 	case result := <-ch:
 		t.Nil(result.Block)
 		t.Contains(result.Err.Error(), "showme")
-		<-time.After(time.Second * 2)
+	}
+}
+
+func (t *testProcessors) TestNewProposalDuplicatedProposal() {
+	pp := &DummyProcessor{PF: func(ctx context.Context) (block.Block, error) {
+		<-time.After(time.Second) // NOTE delay
+
+		return nil, util.StopRetryingError.Errorf("showme")
+	}}
+
+	pps := NewProcessors(pp.New, nil)
+	t.NoError(pps.Initialize())
+	t.NoError(pps.Start())
+	defer pps.Stop()
+
+	height, round := base.Height(33), base.Round(33)
+
+	pr0 := t.newProposal(height, round)
+	ivp := t.newVoteproof(height, round, base.StageINIT)
+
+	ch := pps.NewProposal(context.Background(), pr0, ivp)
+
+	pr1 := t.newProposal(height, round)
+	t.False(pr0.Hash().Equal(pr1.Hash()))
+
+	_ = pps.NewProposal(context.Background(), pr1, ivp)
+
+	<-time.After(time.Millisecond * 300)
+
+	prc := pps.Current()
+	t.NotNil(prc)
+	t.True(prc.Proposal().Hash().Equal(pr0.Hash()))
+
+	select {
+	case <-time.After(time.Second * 2):
+		t.NoError(errors.Errorf("waiting result, but expired"))
+
+		return
+	case result := <-ch:
+		t.Nil(result.Block)
+		t.Contains(result.Err.Error(), "showme")
 	}
 }
 

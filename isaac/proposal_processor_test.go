@@ -297,13 +297,29 @@ func (t *testDefaultProposalProcessor) TestCancelPreviousProposal() {
 
 	t.NoError(SignSeal(&pr, t.local)) // sign again to create the Proposal, which has different Hash
 
-	_ = pps.NewProposal(context.Background(), pr, ivp)
+	var newpr ballot.ProposalV0
+	var newivp base.Voteproof
+	{
+		ib := t.NewINITBallot(t.local, base.Round(1), ivp)
+		initFact := ib.INITFactV0
+
+		ivp, err := t.NewVoteproof(base.StageINIT, initFact, t.local, t.remote)
+		t.NoError(err)
+
+		i, err := pm.Proposal(ivp.Height(), ivp.Round(), ivp)
+		t.NoError(err)
+
+		newpr = i.(ballot.ProposalV0)
+		newivp = ivp
+	}
+
+	_ = pps.NewProposal(context.Background(), newpr, newivp)
 
 	<-time.After(timeout * 2)
 
 	t.Equal(prprocessor.Canceled, previous.State())
 	t.Equal(prprocessor.Preparing, pps.Current().State())
-	t.True(pr.Hash().Equal(pps.Current().Proposal().Hash()))
+	t.True(newpr.Hash().Equal(pps.Current().Proposal().Hash()))
 }
 
 func (t *testDefaultProposalProcessor) TestOperation() {
@@ -933,15 +949,23 @@ func (t *testDefaultProposalProcessor) TestHeavyOperations() {
 	<-time.After(time.Second * 1)
 
 	// NOTE submit new Proposal
-	var newpr ballot.Proposal
+	var newpr ballot.ProposalV0
+	var newivp base.Voteproof
 	{
-		npr := pr.(ballot.ProposalV0)
-		t.NoError(SignSeal(&npr, t.local))
+		ib := t.NewINITBallot(t.local, base.Round(1), ivp)
+		initFact := ib.INITFactV0
 
-		newpr = npr
+		ivp, err := t.NewVoteproof(base.StageINIT, initFact, t.local, t.remote)
+		t.NoError(err)
+
+		i, err := pm.Proposal(ivp.Height(), ivp.Round(), ivp)
+		t.NoError(err)
+
+		newpr = i.(ballot.ProposalV0)
+		newivp = ivp
 	}
 
-	pch := pps.NewProposal(context.Background(), newpr, ivp)
+	pch := pps.NewProposal(context.Background(), newpr, newivp)
 
 	result := <-pch
 	t.NotNil(result.Block)

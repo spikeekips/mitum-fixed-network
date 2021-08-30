@@ -23,7 +23,6 @@ import (
 	"github.com/spikeekips/mitum/util/encoder"
 	jsonenc "github.com/spikeekips/mitum/util/encoder/json"
 	"github.com/stretchr/testify/suite"
-	"golang.org/x/sync/errgroup"
 )
 
 type dummyNode struct {
@@ -161,15 +160,38 @@ func (t *testDiscovery) startNodes(nodes map[string]*dummyNode, joins map[string
 		}
 	}
 
-	eg, _ := errgroup.WithContext(context.Background())
-	for _, n := range nodes {
-		n := n
-		eg.Go(func() error {
-			return n.discovery.Join(targets, 2)
-		})
+	errch := make(chan error, len(nodes))
+	wk := util.NewDistributeWorker(context.Background(), int64(len(nodes)), errch)
+	defer wk.Close()
+
+	go func() {
+		defer wk.Done()
+
+		for _, n := range nodes {
+			dis := n.discovery
+			if err := wk.NewJob(func(context.Context, uint64) error {
+				return dis.Join(targets, 2)
+			}); err != nil {
+				t.T().Logf("failed to run job: %q", err)
+
+				return
+			}
+		}
+	}()
+
+	if err := wk.Wait(); err != nil {
+		return err
 	}
 
-	return eg.Wait()
+	close(errch)
+
+	for err := range errch {
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
 }
 
 func (t *testDiscovery) stopNodes(nodes map[string]*dummyNode) error {

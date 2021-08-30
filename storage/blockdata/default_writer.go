@@ -18,8 +18,6 @@ import (
 	"github.com/spikeekips/mitum/util/encoder"
 	"github.com/spikeekips/mitum/util/hint"
 	"github.com/spikeekips/mitum/util/tree"
-	"golang.org/x/sync/errgroup"
-	"golang.org/x/sync/semaphore"
 )
 
 var (
@@ -343,54 +341,49 @@ func ReadlinesWithIndex(
 	callbackItem func(uint64, []byte) error,
 	limit int64,
 ) error {
-	sem := semaphore.NewWeighted(limit)
-	eg, ctx := errgroup.WithContext(context.Background())
+	wk := util.NewErrgroupWorker(context.Background(), limit)
+	defer wk.Close()
 
-	var foundHeader bool
-	var index uint64
-	if err := util.Readlines(r, func(b []byte) error {
-		if !foundHeader {
-			if err := callbackHeader(b); err != nil {
-				return err
+	errch := make(chan error, 1)
+	go func() {
+		defer wk.Done()
+
+		var foundHeader bool
+		var index uint64
+
+		errch <- util.Readlines(r, func(b []byte) error {
+			if !foundHeader {
+				if err := callbackHeader(b); err != nil {
+					return err
+				}
+				foundHeader = true
+
+				return nil
 			}
-			foundHeader = true
 
-			return nil
-		}
+			if bytes.HasPrefix(b, []byte("# index=")) {
+				a, err := ParseItemIndexLine(b)
+				if err != nil {
+					return err
+				}
+				index = a
 
-		if bytes.HasPrefix(b, []byte("# index=")) {
-			a, err := ParseItemIndexLine(b)
-			if err != nil {
-				return err
+				return nil
 			}
-			index = a
 
-			return nil
-		}
-
-		if err := sem.Acquire(ctx, 1); err != nil {
-			return err
-		}
-
-		index := index
-		eg.Go(func() error {
-			defer sem.Release(1)
-
-			return callbackItem(index, b)
+			index := index
+			return wk.NewJob(func(context.Context, uint64) error {
+				return callbackItem(index, b)
+			})
 		})
+	}()
 
-		return nil
-	}); err != nil {
-		return err
+	err := wk.Wait()
+	if cerr := <-errch; cerr != nil {
+		return cerr
 	}
 
-	if err := sem.Acquire(ctx, limit); err != nil {
-		if !errors.Is(err, context.Canceled) {
-			return err
-		}
-	}
-
-	return eg.Wait()
+	return err
 }
 
 type ItemsHeader struct {

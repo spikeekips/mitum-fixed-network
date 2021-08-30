@@ -1,16 +1,28 @@
 package util
 
 import (
+	"context"
 	"fmt"
 	"sync"
-	"sync/atomic"
+	"time"
 
 	"github.com/pkg/errors"
 	"github.com/rs/zerolog"
 	"github.com/spikeekips/mitum/util/logging"
+	"golang.org/x/sync/errgroup"
+	"golang.org/x/sync/semaphore"
 )
 
-type WorkerCallback func( /* job id */ uint, interface{} /* arguments */) error
+type (
+	WorkerCallback        func( /* job id */ uint, interface{} /* arguments */) error
+	ContextWorkerCallback func(context.Context, uint64 /* job id */) error
+)
+
+type contextCanceled struct{}
+
+func (contextCanceled) Error() string {
+	return "context canceled in worker"
+}
 
 type ParallelWorker struct {
 	sync.RWMutex
@@ -125,101 +137,224 @@ func (wk *ParallelWorker) IsFinished() bool {
 	return uint(wk.jobFinished) == wk.jobCalled
 }
 
-type DistributeWorker struct {
-	sync.RWMutex
-	n          uint
-	wg         *sync.WaitGroup
-	input      chan interface{}
-	closed     bool
-	closedchan chan uint
-	errchan    chan error
-	sonce      sync.Once
-	conce      sync.Once
-	jobs       uint64
+type BaseSemWorker struct {
+	N          int64
+	Sem        *semaphore.Weighted
+	Ctx        context.Context
+	Cancel     func()
+	JobCount   uint64
+	NewJobFunc func(context.Context, uint64, ContextWorkerCallback)
+	runonce    sync.Once
+	donech     chan time.Duration
 }
 
-func NewDistributeWorker(n uint, errchan chan error) *DistributeWorker {
-	return &DistributeWorker{
-		n:          n,
-		input:      make(chan interface{}),
-		closedchan: make(chan uint, n),
-		errchan:    errchan,
+func NewBaseSemWorker(ctx context.Context, semsize int64) *BaseSemWorker {
+	closectx, cancel := context.WithCancel(ctx)
+
+	return &BaseSemWorker{
+		N:      semsize,
+		Sem:    semaphore.NewWeighted(semsize),
+		Ctx:    closectx,
+		Cancel: cancel,
+		donech: make(chan time.Duration, 2),
 	}
 }
 
-func (wk *DistributeWorker) Run(callback WorkerCallback) error {
-	var errcallback func(error)
-	if wk.errchan == nil {
-		errcallback = func(error) {}
-	} else {
-		errcallback = func(err error) {
-			wk.errchan <- err
-		}
+func (wk *BaseSemWorker) NewJob(callback ContextWorkerCallback) error {
+	if err := wk.Ctx.Err(); err != nil {
+		return err
 	}
 
-	if wk.wg != nil {
-		return errors.Errorf("already ran")
+	jobs := wk.JobCount
+
+	if err := wk.Sem.Acquire(wk.Ctx, 1); err != nil {
+		return err
 	}
 
-	wk.wg = &sync.WaitGroup{}
-	wk.wg.Add(int(wk.n))
+	ctx, cancel := context.WithCancel(wk.Ctx)
+	go func() {
+		defer wk.Sem.Release(1)
+		defer cancel()
 
-	for i := uint(0); i < wk.n; i++ {
-		go func(i uint) {
-			defer wk.wg.Done()
-
-		end:
-			for {
-				select {
-				case <-wk.closedchan:
-					break end
-				case j := <-wk.input:
-					errcallback(callback(i, j))
-				}
-			}
-		}(i)
-	}
-
-	wk.wg.Wait()
+		wk.NewJobFunc(ctx, jobs, callback)
+	}()
+	wk.JobCount++
 
 	return nil
 }
 
-func (wk *DistributeWorker) NewJob(i interface{}) bool {
-	if func() bool {
-		wk.RLock()
-		defer wk.RUnlock()
+func (wk *BaseSemWorker) Jobs() uint64 {
+	return wk.JobCount
+}
 
-		return wk.closed
-	}() {
-		return false
+func (wk *BaseSemWorker) Wait() error {
+	err := wk.wait()
+	if err != nil {
+		if errors.Is(err, contextCanceled{}) {
+			return context.Canceled
+		}
+
+		return err
 	}
 
-	atomic.AddUint64(&wk.jobs, 1)
-	wk.input <- i
-
-	return true
+	return nil
 }
 
-func (wk *DistributeWorker) Jobs() uint64 {
-	return atomic.LoadUint64(&wk.jobs)
-}
+func (wk *BaseSemWorker) wait() error {
+	errch := make(chan error, 1)
+	wk.runonce.Do(func() {
+		timeout := <-wk.donech
 
-func (wk *DistributeWorker) Done(setClose bool) {
-	wk.sonce.Do(func() {
-		wk.Lock()
-		wk.closed = true
-		wk.Unlock()
+		donech := make(chan error, 1)
+		go func() {
+			switch err := wk.Sem.Acquire(context.Background(), wk.N); {
+			case err != nil:
+				donech <- err
+			default:
+				donech <- wk.Ctx.Err()
+			}
+		}()
 
-		for i := uint(0); i < wk.n; i++ {
-			wk.closedchan <- i
+		if timeout < 1 {
+			err := <-donech
+			errch <- err
+
+			return
+		}
+
+		select {
+		case <-time.After(timeout):
+			wk.Cancel()
+
+			errch <- contextCanceled{}
+		case err := <-donech:
+			errch <- err
 		}
 	})
 
-	if setClose {
-		wk.conce.Do(func() {
-			close(wk.input)
-			close(wk.closedchan)
-		})
+	return <-errch
+}
+
+func (wk *BaseSemWorker) WaitChan() chan error {
+	ch := make(chan error)
+	go func() {
+		ch <- wk.Wait()
+	}()
+
+	return ch
+}
+
+func (wk *BaseSemWorker) Done() {
+	wk.donech <- 0
+}
+
+func (wk *BaseSemWorker) Close() {
+	wk.donech <- 0
+
+	wk.Cancel()
+}
+
+func (wk *BaseSemWorker) LazyClose(timeout time.Duration) {
+	wk.donech <- timeout
+}
+
+type DistributeWorker struct {
+	*BaseSemWorker
+	errch chan error
+}
+
+func NewDistributeWorker(ctx context.Context, semsize int64, errch chan error) *DistributeWorker {
+	base := NewBaseSemWorker(ctx, semsize)
+
+	var errf func(error)
+	if errch == nil {
+		errf = func(error) {}
+	} else {
+		errf = func(err error) {
+			if cerr := base.Ctx.Err(); cerr == nil {
+				errch <- err
+			}
+		}
 	}
+
+	base.NewJobFunc = func(ctx context.Context, jobs uint64, callback ContextWorkerCallback) {
+		errf(callback(ctx, jobs))
+	}
+
+	return &DistributeWorker{
+		BaseSemWorker: base,
+		errch:         errch,
+	}
+}
+
+type ErrgroupWorker struct {
+	*BaseSemWorker
+	eg        *errgroup.Group
+	egLock    sync.Mutex
+	doneonece sync.Once
+}
+
+func NewErrgroupWorker(ctx context.Context, semsize int64) *ErrgroupWorker {
+	base := NewBaseSemWorker(ctx, semsize)
+
+	eg, egctx := errgroup.WithContext(base.Ctx)
+	base.Ctx = egctx
+
+	wk := &ErrgroupWorker{
+		BaseSemWorker: base,
+		eg:            eg,
+	}
+
+	base.NewJobFunc = func(ctx context.Context, jobs uint64, callback ContextWorkerCallback) {
+		donech := make(chan struct{}, 1)
+		wk.egGo(func() error {
+			defer func() {
+				donech <- struct{}{}
+			}()
+
+			return callback(ctx, jobs)
+		})
+
+		<-donech
+	}
+
+	return wk
+}
+
+func (wk *ErrgroupWorker) Wait() error {
+	if err := wk.BaseSemWorker.wait(); err != nil {
+		if !errors.Is(err, context.Canceled) {
+			if errors.Is(err, contextCanceled{}) {
+				return context.Canceled
+			}
+
+			return err
+		}
+	}
+
+	errch := make(chan error, 1)
+	wk.doneonece.Do(func() {
+		wk.egLock.Lock()
+		defer wk.egLock.Unlock()
+
+		errch <- wk.eg.Wait()
+	})
+
+	return <-errch
+}
+
+func (wk *ErrgroupWorker) RunChan() chan error {
+	ch := make(chan error)
+	go func() {
+		ch <- wk.Wait()
+	}()
+
+	return ch
+}
+
+func (wk *ErrgroupWorker) egGo(f func() error) {
+	wk.egLock.Lock()
+	defer wk.egLock.Unlock()
+
+	wk.eg.Go(f)
 }

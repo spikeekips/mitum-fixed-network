@@ -6,8 +6,6 @@ import (
 	"io"
 
 	"github.com/pkg/errors"
-	"golang.org/x/sync/errgroup"
-	"golang.org/x/sync/semaphore"
 )
 
 type NilReadCloser struct {
@@ -59,39 +57,41 @@ func Writeline(w io.Writer, get func() ([]byte, error)) error {
 }
 
 func WritelineAsync(w io.Writer, get func() ([]byte, error), limit int64) error {
-	sem := semaphore.NewWeighted(limit)
-	eg, ctx := errgroup.WithContext(context.Background())
+	wk := NewErrgroupWorker(context.Background(), limit)
+	defer wk.Close()
 
-	for {
-		b, err := get()
-		if err != nil {
-			if errors.Is(err, io.EOF) {
+	errch := make(chan error, 1)
+	go func() {
+		defer wk.Done()
+
+		for {
+			b, err := get()
+			if err != nil {
+				if errors.Is(err, io.EOF) {
+					break
+				}
+
+				errch <- err
+
+				return
+			}
+
+			if err := wk.NewJob(func(context.Context, uint64) error {
+				_, err := w.Write(append(b, []byte("\n")...))
+
+				return err
+			}); err != nil {
 				break
 			}
-
-			return err
 		}
 
-		if err := sem.Acquire(ctx, 1); err != nil {
-			return err
-		}
+		errch <- nil
+	}()
 
-		eg.Go(func() error {
-			defer sem.Release(1)
-
-			if _, err := w.Write(append(b, []byte("\n")...)); err != nil {
-				return err
-			}
-
-			return nil
-		})
+	err := wk.Wait()
+	if cerr := <-errch; cerr != nil {
+		return cerr
 	}
 
-	if err := sem.Acquire(ctx, limit); err != nil {
-		if !errors.Is(err, context.Canceled) {
-			return err
-		}
-	}
-
-	return eg.Wait()
+	return err
 }

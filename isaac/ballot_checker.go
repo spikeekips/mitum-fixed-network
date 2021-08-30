@@ -13,8 +13,6 @@ import (
 	"github.com/spikeekips/mitum/util/localtime"
 	"github.com/spikeekips/mitum/util/logging"
 	"github.com/spikeekips/mitum/util/valuehash"
-	"golang.org/x/sync/errgroup"
-	"golang.org/x/sync/semaphore"
 )
 
 type BallotChecker struct {
@@ -189,44 +187,38 @@ func (bc *BallotChecker) CheckVoteproof() (bool, error) {
 }
 
 func (bc *BallotChecker) requestProposalFromNodes(h valuehash.Hash) (ballot.Proposal, error) {
-	sem := semaphore.NewWeighted(100)
-	eg, ctx := errgroup.WithContext(context.Background())
+	wk := util.NewErrgroupWorker(context.Background(), 100)
+	defer wk.Close()
 
-	bc.nodepool.TraverseAliveRemotes(func(no base.Node, ch network.Channel) bool {
-		if !bc.suffrage.IsInside(no.Address()) {
+	go func() {
+		defer wk.Done()
+
+		bc.nodepool.TraverseAliveRemotes(func(no base.Node, ch network.Channel) bool {
+			if !bc.suffrage.IsInside(no.Address()) {
+				return true
+			}
+
+			if err := wk.NewJob(func(ctx context.Context, _ uint64) error {
+				return func(_ base.Node, ch network.Channel) error {
+					pr, err := bc.requestProposal(ch, h)
+					if err != nil {
+						return nil // nolint:nilerr
+					}
+
+					return util.NewDataContainerError(pr)
+				}(no, ch)
+			}); err != nil {
+				bc.Log().Error().Err(err).Msg("failed to NewJob for requesting Proposal")
+
+				return false
+			}
+
 			return true
-		}
-
-		if err := sem.Acquire(ctx, 1); err != nil {
-			return false
-		}
-
-		eg.Go(func() error {
-			return func(_ base.Node, ch network.Channel) error {
-				defer sem.Release(1)
-
-				pr, err := bc.requestProposal(ch, h)
-				if err != nil {
-					return nil // nolint:nilerr
-				}
-
-				return util.NewDataContainerError(pr)
-			}(no, ch)
 		})
-
-		return true
-	})
-
-	if err := sem.Acquire(ctx, 100); err != nil {
-		if !errors.Is(err, context.Canceled) {
-			return nil, errors.Wrap(err, "failed to request proposal")
-		}
-	}
-
-	err := eg.Wait()
+	}()
 
 	var dc util.DataContainerError
-	if !errors.As(err, &dc) {
+	if err := wk.Wait(); !errors.As(err, &dc) {
 		return nil, errors.Errorf("failed to request proposal, %v", h)
 	}
 

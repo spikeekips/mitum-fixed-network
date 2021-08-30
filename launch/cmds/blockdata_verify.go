@@ -14,8 +14,6 @@ import (
 	"github.com/spikeekips/mitum/storage/blockdata/localfs"
 	"github.com/spikeekips/mitum/util"
 	"github.com/spikeekips/mitum/util/hint"
-	"golang.org/x/sync/errgroup"
-	"golang.org/x/sync/semaphore"
 )
 
 type BlockDataVerifyCommand struct {
@@ -130,30 +128,26 @@ func (cmd *BlockDataVerifyCommand) loadManifest(height base.Height) (block.Manif
 }
 
 func (cmd *BlockDataVerifyCommand) checkBlocks() error {
-	sem := semaphore.NewWeighted(100)
-	eg, ctx := errgroup.WithContext(context.Background())
+	wk := util.NewErrgroupWorker(context.Background(), 100)
+	defer wk.Close()
 
-	for i := base.PreGenesisHeight; i <= cmd.lastHeight; i++ {
-		height := i
-		if err := sem.Acquire(ctx, 1); err != nil {
-			break
+	go func() {
+		defer wk.Done()
+
+		for i := base.PreGenesisHeight; i <= cmd.lastHeight; i++ {
+			height := i
+
+			if err := wk.NewJob(func(context.Context, uint64) error {
+				_, err := cmd.loadBlock(height)
+
+				return err
+			}); err != nil {
+				return
+			}
 		}
+	}()
 
-		eg.Go(func() error {
-			defer sem.Release(1)
-
-			_, err := cmd.loadBlock(height)
-			return err
-		})
-	}
-
-	if err := sem.Acquire(ctx, 100); err != nil {
-		if !errors.Is(err, context.Canceled) {
-			return err
-		}
-	}
-
-	return eg.Wait()
+	return wk.Wait()
 }
 
 func (cmd *BlockDataVerifyCommand) loadBlock(height base.Height) (block.Block, error) {
@@ -175,29 +169,24 @@ func (cmd *BlockDataVerifyCommand) loadBlock(height base.Height) (block.Block, e
 }
 
 func (cmd *BlockDataVerifyCommand) checkAllBlockFiles() error {
-	sem := semaphore.NewWeighted(100)
-	eg, ctx := errgroup.WithContext(context.Background())
+	wk := util.NewErrgroupWorker(context.Background(), 100)
+	defer wk.Close()
 
-	for i := base.PreGenesisHeight; i <= cmd.lastHeight; i++ {
-		height := i
-		if err := sem.Acquire(ctx, 1); err != nil {
-			break
+	go func() {
+		defer wk.Done()
+
+		for i := base.PreGenesisHeight; i <= cmd.lastHeight; i++ {
+			height := i
+
+			if err := wk.NewJob(func(context.Context, uint64) error {
+				return cmd.checkBlockFiles(height)
+			}); err != nil {
+				return
+			}
 		}
+	}()
 
-		eg.Go(func() error {
-			defer sem.Release(1)
-
-			return cmd.checkBlockFiles(height)
-		})
-	}
-
-	if err := sem.Acquire(ctx, 100); err != nil {
-		if !errors.Is(err, context.Canceled) {
-			return err
-		}
-	}
-
-	return eg.Wait()
+	return wk.Wait()
 }
 
 func (cmd *BlockDataVerifyCommand) checkBlockFiles(height base.Height) error {

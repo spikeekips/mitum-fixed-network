@@ -3,8 +3,10 @@ package prprocessor
 import (
 	"bytes"
 	"context"
+	"fmt"
 	"sort"
 	"sync"
+	"time"
 
 	"github.com/pkg/errors"
 	"github.com/rs/zerolog"
@@ -18,7 +20,7 @@ import (
 	"github.com/spikeekips/mitum/util/valuehash"
 )
 
-var maxConcurrentOperations = 500
+var maxConcurrentOperations int64 = 500
 
 type OperationProcessor interface {
 	New(*storage.Statepool) OperationProcessor
@@ -59,17 +61,12 @@ func (defaultOperationProcessor) Cancel() error {
 	return nil
 }
 
-type workerJob struct {
-	Index     uint64
-	Operation state.Processor
-}
-
 type ConcurrentOperationsProcessor struct {
 	sync.RWMutex
 	*logging.Logging
-	max              uint
+	max              int64
 	pool             *storage.Statepool
-	wk               *util.DistributeWorker
+	wk               *util.ErrgroupWorker
 	donechan         chan error
 	oprLock          sync.RWMutex
 	oppHintSet       *hint.Hintmap
@@ -81,7 +78,7 @@ type ConcurrentOperationsProcessor struct {
 
 func NewConcurrentOperationsProcessor(
 	size uint64,
-	max int,
+	max int64,
 	pool *storage.Statepool,
 	oppHintSet *hint.Hintmap,
 ) (*ConcurrentOperationsProcessor, error) {
@@ -95,9 +92,10 @@ func NewConcurrentOperationsProcessor(
 		Logging: logging.NewLogging(func(c zerolog.Context) zerolog.Context {
 			return c.Str("module", "concurrent-operations-processor")
 		}),
-		max:              uint(max),
-		pool:             pool,
-		oppHintSet:       oppHintSet,
+		max:        max,
+		pool:       pool,
+		oppHintSet: oppHintSet,
+
 		oprs:             map[hint.Hint]OperationProcessor{},
 		workFilter:       func(state.Processor) error { return nil },
 		opsTreeGenerator: tree.NewFixedTreeGenerator(size),
@@ -118,36 +116,13 @@ func (co *ConcurrentOperationsProcessor) Start(
 		co.workFilter = workFilter
 	}
 
-	errchan := make(chan error)
-	co.wk = util.NewDistributeWorker(co.max, errchan)
+	co.wk = util.NewErrgroupWorker(ctx, co.max)
 
 	co.donechan = make(chan error, 2)
 	go func() {
-		<-ctx.Done()
-		co.donechan <- errors.Wrap(ctx.Err(), "canceled to process")
-	}()
+		defer co.wk.Close()
 
-	go func() {
-		if err := co.wk.Run(co.work); err != nil {
-			errchan <- err
-		}
-
-		close(errchan)
-	}()
-
-	go func() {
-		for err := range errchan {
-			if err == nil || operationIgnored(err) {
-				continue
-			}
-
-			co.wk.Done(false)
-			co.donechan <- err
-
-			return
-		}
-
-		co.donechan <- nil
+		co.donechan <- co.wk.Wait()
 	}()
 
 	return co
@@ -270,7 +245,9 @@ func (co *ConcurrentOperationsProcessor) process(index uint64, op state.Processo
 		return err
 	} else if ppr, err := opr.PreProcess(op); err != nil {
 		return err
-	} else if !co.wk.NewJob(workerJob{Index: index, Operation: ppr}) {
+	} else if err := co.wk.NewJob(func(context.Context, uint64) error {
+		return co.work(index, ppr)
+	}); err != nil {
 		return util.IgnoreError.Errorf("operation processor already closed")
 	}
 
@@ -285,7 +262,7 @@ func (co *ConcurrentOperationsProcessor) Cancel() error {
 		return nil
 	}
 
-	co.wk.Done(false)
+	co.wk.LazyClose(time.Second)
 	co.closed = true
 
 	errchan := make(chan error, len(co.oprs))
@@ -321,7 +298,8 @@ func (co *ConcurrentOperationsProcessor) Close() error {
 		return nil
 	}
 
-	co.wk.Done(true)
+	co.wk.Done()
+
 	co.closed = true
 
 	if err := <-co.donechan; err != nil {
@@ -385,22 +363,20 @@ func (co *ConcurrentOperationsProcessor) opr(op state.Processor) (OperationProce
 	return opr, nil
 }
 
-func (co *ConcurrentOperationsProcessor) work(_ uint, j interface{}) error {
-	var job workerJob
-	if j == nil {
-		return nil
-	} else if i, ok := j.(workerJob); !ok {
-		return errors.Errorf("invalid input, %T", j)
-	} else {
-		job = i
+func (co *ConcurrentOperationsProcessor) work(jobid uint64, ppr state.Processor) error {
+	op, ok := ppr.(operation.Operation)
+	if !ok {
+		return fmt.Errorf("operation.Operation is not operation.Operation, %T", ppr)
 	}
 
-	op := job.Operation.(operation.Operation)
+	err := co.workProcess(ppr)
 
-	err := co.workProcess(job.Operation)
+	if cerr := co.addOperationsTree(jobid, op.Fact().Hash(), err); cerr != nil {
+		return cerr
+	}
 
-	if err0 := co.addOperationsTree(job.Index, op.Fact().Hash(), err); err0 != nil {
-		return err0
+	if operationIgnored(err) {
+		return nil
 	}
 
 	return err

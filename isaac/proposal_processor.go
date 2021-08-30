@@ -49,6 +49,8 @@ type DefaultProcessor struct {
 	postSaveHook     func(context.Context) error
 	staticsLock      sync.RWMutex
 	statics          map[string]interface{}
+	prepareCtx       context.Context
+	prepareCancel    func()
 }
 
 func NewDefaultProcessorNewFunc(
@@ -111,6 +113,8 @@ func NewDefaultProcessor(
 		statics: map[string]interface{}{
 			"processor": "default-processor",
 		},
+		prepareCtx:    context.Background(),
+		prepareCancel: func() {},
 	}
 
 	i, err := pp.getSuffrageInfo()
@@ -213,6 +217,8 @@ func (pp *DefaultProcessor) Cancel() error {
 	defer func() {
 		_ = pp.setStatic("processor_cancel_elapsed", time.Since(started))
 	}()
+
+	pp.prepareCancel()
 
 	if err := pp.resetPrepare(); err != nil {
 		return err

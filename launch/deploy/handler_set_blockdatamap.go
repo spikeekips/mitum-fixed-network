@@ -15,8 +15,6 @@ import (
 	jsonenc "github.com/spikeekips/mitum/util/encoder/json"
 	"github.com/spikeekips/mitum/util/hint"
 	"github.com/spikeekips/mitum/util/localtime"
-	"golang.org/x/sync/errgroup"
-	"golang.org/x/sync/semaphore"
 )
 
 var LimitBlockDataMaps = 100
@@ -106,30 +104,23 @@ func loadBlockDataMaps(r *http.Request, enc encoder.Encoder) ([]block.BlockDataM
 }
 
 func checkBlockDataMaps(db storage.Database, bdms []block.BlockDataMap) error {
-	var limit int64 = 100
-	sem := semaphore.NewWeighted(limit)
-	eg, ctx := errgroup.WithContext(context.Background())
+	wk := util.NewErrgroupWorker(context.Background(), 100)
+	defer wk.Close()
 
-	for i := range bdms {
-		if err := sem.Acquire(ctx, 1); err != nil {
-			return err
+	go func() {
+		defer wk.Done()
+
+		for i := range bdms {
+			bdm := bdms[i]
+			if err := wk.NewJob(func(context.Context, uint64) error {
+				return checkBlockDataMap(db, bdm)
+			}); err != nil {
+				return
+			}
 		}
+	}()
 
-		bdm := bdms[i]
-		eg.Go(func() error {
-			defer sem.Release(1)
-
-			return checkBlockDataMap(db, bdm)
-		})
-	}
-
-	if err := sem.Acquire(ctx, limit); err != nil {
-		if !errors.Is(err, context.Canceled) {
-			return err
-		}
-	}
-
-	return eg.Wait()
+	return wk.Wait()
 }
 
 func checkBlockDataMap(db storage.Database, bdm block.BlockDataMap) error {
@@ -154,38 +145,31 @@ func commitBlockDataMaps(db storage.Database, bc *BlockDataCleaner, bdms []block
 		return err
 	}
 
-	var limit int64 = 100
-	sem := semaphore.NewWeighted(limit)
-	eg, ctx := errgroup.WithContext(context.Background())
+	wk := util.NewErrgroupWorker(context.Background(), 100)
+	defer wk.Close()
 
-	for i := range bdms {
-		bdm := bdms[i]
-		if bdm.IsLocal() { // NOTE local blockdata will not be removed
-			continue
-		}
+	go func() {
+		defer wk.Done()
 
-		if err := sem.Acquire(ctx, 1); err != nil {
-			return err
-		}
-
-		eg.Go(func() error {
-			defer sem.Release(1)
-
-			if err := bc.Add(bdm.Height()); err != nil {
-				if !errors.Is(err, util.NotFoundError) {
-					return err
-				}
+		for i := range bdms {
+			bdm := bdms[i]
+			if bdm.IsLocal() { // NOTE local blockdata will not be removed
+				continue
 			}
 
-			return nil
-		})
-	}
+			if err := wk.NewJob(func(context.Context, uint64) error {
+				if err := bc.Add(bdm.Height()); err != nil {
+					if !errors.Is(err, util.NotFoundError) {
+						return err
+					}
+				}
 
-	if err := sem.Acquire(ctx, limit); err != nil {
-		if !errors.Is(err, context.Canceled) {
-			return err
+				return nil
+			}); err != nil {
+				return
+			}
 		}
-	}
+	}()
 
-	return eg.Wait()
+	return wk.Wait()
 }

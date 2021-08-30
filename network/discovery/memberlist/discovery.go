@@ -26,8 +26,6 @@ import (
 	"github.com/spikeekips/mitum/util/encoder"
 	"github.com/spikeekips/mitum/util/localtime"
 	"github.com/spikeekips/mitum/util/logging"
-	"golang.org/x/sync/errgroup"
-	"golang.org/x/sync/semaphore"
 )
 
 var (
@@ -446,18 +444,13 @@ func (dis *Discovery) Events() *Events {
 
 // Broadcast send bytese message to joined nodes, except local node.
 func (dis *Discovery) Broadcast(b []byte) error {
-	sem := semaphore.NewWeighted(100)
-	eg, ctx := errgroup.WithContext(context.Background())
-
 	nodes := dis.Nodes()
+
+	filtered := make([]*ml.Node, len(nodes))
 	for i := range nodes {
 		connInfo := nodes[i].(NodeConnInfo).ConnInfo
 		if connInfo.Address == dis.connInfo.Address {
 			continue
-		}
-
-		if err := sem.Acquire(ctx, 1); err != nil {
-			return err
 		}
 
 		raddr, err := net.ResolveTCPAddr("tcp", connInfo.Address)
@@ -465,22 +458,30 @@ func (dis *Discovery) Broadcast(b []byte) error {
 			return err
 		}
 
-		no := &ml.Node{Addr: raddr.IP, Port: uint16(raddr.Port)}
-
-		eg.Go(func() error {
-			defer sem.Release(1)
-
-			return dis.ml.SendBestEffort(no, b)
-		})
+		filtered[i] = &ml.Node{Addr: raddr.IP, Port: uint16(raddr.Port)}
 	}
 
-	if err := sem.Acquire(ctx, 100); err != nil {
-		if !errors.Is(err, context.Canceled) {
-			return err
+	wk := util.NewDistributeWorker(context.Background(), 100, nil)
+	defer wk.Close()
+
+	go func() {
+		defer wk.Done()
+
+		for i := range filtered {
+			no := filtered[i]
+			if no == nil {
+				continue
+			}
+
+			if err := wk.NewJob(func(context.Context, uint64) error {
+				return dis.ml.SendBestEffort(no, b)
+			}); err != nil {
+				dis.Log().Error().Err(err).Msg("failed to broadcast")
+			}
 		}
-	}
+	}()
 
-	return eg.Wait()
+	return wk.Wait()
 }
 
 func (dis *Discovery) createConfig() (*ml.Config, error) {

@@ -19,8 +19,6 @@ import (
 	"github.com/spikeekips/mitum/util"
 	"github.com/spikeekips/mitum/util/localtime"
 	"github.com/spikeekips/mitum/util/logging"
-	"golang.org/x/sync/errgroup"
-	"golang.org/x/sync/semaphore"
 )
 
 var DefaultTimeAfterRemoveBlockDataFiles = time.Minute * 30
@@ -61,16 +59,15 @@ func (bc *BlockDataCleaner) start(ctx context.Context) error {
 		return err
 	}
 
-	for {
-		select {
-		case <-ctx.Done():
-			return nil
-		default:
-			if err := bc.clean(ctx); err != nil {
-				bc.Log().Error().Err(err).Msg("failed to clean")
-			}
+	go func() {
+		if err := bc.clean(ctx); err != nil {
+			bc.Log().Error().Err(err).Msg("failed to clean")
 		}
-	}
+	}()
+
+	<-ctx.Done()
+
+	return ctx.Err()
 }
 
 func (bc *BlockDataCleaner) RemoveAfter() time.Duration {
@@ -114,42 +111,53 @@ func (bc *BlockDataCleaner) currentTargets() map[base.Height]time.Time {
 }
 
 func (bc *BlockDataCleaner) clean(ctx context.Context) error {
-	var limit int64 = 100
-	sem := semaphore.NewWeighted(limit)
-	eg, ctx := errgroup.WithContext(context.Background())
+	if err := ctx.Err(); err != nil {
+		return err
+	}
+
+	wk := util.NewErrgroupWorker(ctx, 100)
+	defer wk.Close()
 
 	targets := bc.currentTargets()
 	var removed []base.Height
-	for i := range targets {
-		height := i
-		switch ok, err := bc.checkTargetIsRemovable(height, targets[i]); {
-		case err != nil:
-			return err
-		case !ok:
-			continue
-		default:
-			removed = append(removed, height)
+
+	errch := make(chan error, 1)
+	go func() {
+		defer wk.Done()
+
+		for i := range targets {
+			height := i
+			switch ok, err := bc.checkTargetIsRemovable(height, targets[i]); {
+			case err != nil:
+				errch <- err
+
+				return
+			case !ok:
+				continue
+			default:
+				removed = append(removed, height)
+			}
+
+			if err := wk.NewJob(func(context.Context, uint64) error {
+				bc.Log().Debug().Int64("height", height.Int64()).Msg("blockdata removed")
+
+				return bc.bd.RemoveAll(height)
+			}); err != nil {
+				bc.Log().Error().Err(err).Int64("height", height.Int64()).Msg("failed to remove blockdata")
+
+				break
+			}
 		}
 
-		if err := sem.Acquire(ctx, 1); err != nil {
-			return err
-		}
+		errch <- nil
+	}()
 
-		eg.Go(func() error {
-			defer sem.Release(1)
-
-			bc.Log().Debug().Int64("height", height.Int64()).Msg("blockdata removed")
-			return bc.bd.RemoveAll(height)
-		})
+	err := wk.Wait()
+	if cerr := <-errch; cerr != nil {
+		return cerr
 	}
 
-	if err := sem.Acquire(ctx, limit); err != nil {
-		if !errors.Is(err, context.Canceled) {
-			return err
-		}
-	}
-
-	if err := eg.Wait(); err != nil {
+	if err != nil {
 		return err
 	}
 
@@ -255,39 +263,33 @@ func (bc *BlockDataCleaner) findRemovedDirectory() ([]string, error) {
 }
 
 func (bc *BlockDataCleaner) loadManifestFromRemoveds(removeds []string) ([]base.Height, error) {
-	var limit int64 = 100
-	sem := semaphore.NewWeighted(limit)
-	eg, ctx := errgroup.WithContext(context.Background())
+	wk := util.NewErrgroupWorker(context.Background(), 100)
+	defer wk.Close()
 
 	heights := make([]base.Height, len(removeds))
-	for i := range removeds {
-		i := i
-		f := removeds[i]
 
-		if err := sem.Acquire(ctx, 1); err != nil {
-			return nil, err
-		}
+	go func() {
+		defer wk.Done()
 
-		eg.Go(func() error {
-			defer sem.Release(1)
+		for i := range removeds {
+			i := i
+			f := removeds[i]
 
-			if j, err := bc.loadRemoved(f); err != nil {
-				heights[i] = base.NilHeight
-			} else {
-				heights[i] = j.Height()
+			if err := wk.NewJob(func(context.Context, uint64) error {
+				if j, err := bc.loadRemoved(f); err != nil {
+					heights[i] = base.NilHeight
+				} else {
+					heights[i] = j.Height()
+				}
+
+				return nil
+			}); err != nil {
+				return
 			}
-
-			return nil
-		})
-	}
-
-	if err := sem.Acquire(ctx, limit); err != nil {
-		if !errors.Is(err, context.Canceled) {
-			return nil, err
 		}
-	}
+	}()
 
-	if err := eg.Wait(); err != nil {
+	if err := wk.Wait(); err != nil {
 		return nil, err
 	}
 

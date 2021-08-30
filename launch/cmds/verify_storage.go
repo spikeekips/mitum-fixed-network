@@ -11,8 +11,6 @@ import (
 	"github.com/spikeekips/mitum/isaac"
 	"github.com/spikeekips/mitum/util"
 	"github.com/spikeekips/mitum/util/hint"
-	"golang.org/x/sync/errgroup"
-	"golang.org/x/sync/semaphore"
 )
 
 type BaseVerifyCommand struct {
@@ -127,21 +125,17 @@ func (cmd *BaseVerifyCommand) loadManifests(
 	get func(base.Height) (block.Manifest, error),
 ) ([]block.Manifest, error) {
 	mch := make(chan block.Manifest)
-	errch := make(chan error)
 
-	eg, ctx := errgroup.WithContext(context.Background())
+	wk := util.NewErrgroupWorker(context.Background(), 100)
+	defer wk.Close()
+
 	go func() {
-		sem := semaphore.NewWeighted(100)
+		defer wk.Done()
 
 		for i := s; i < e; i++ {
 			height := i
-			if err := sem.Acquire(ctx, 1); err != nil {
-				break
-			}
 
-			eg.Go(func() error {
-				defer sem.Release(1)
-
+			if err := wk.NewJob(func(context.Context, uint64) error {
 				if j, err := get(height); err != nil {
 					cmd.Log().Error().Err(err).Int64("height", height.Int64()).Msg("failed to load manifest")
 				} else {
@@ -149,33 +143,20 @@ func (cmd *BaseVerifyCommand) loadManifests(
 				}
 
 				return nil
-			})
-		}
-
-		if err := sem.Acquire(ctx, 100); err != nil {
-			if !errors.Is(err, context.Canceled) {
-				errch <- err
+			}); err != nil {
+				return
 			}
-		}
-
-		if err := eg.Wait(); err != nil {
-			errch <- err
 		}
 	}()
 
 	manifests := make([]block.Manifest, (e - s).Int64())
 
-end:
 	for {
 		select {
-		case <-ctx.Done():
-			break end
-		case err := <-errch:
-			return nil, err
+		case err := <-wk.RunChan():
+			return manifests, err
 		case i := <-mch:
 			manifests[(i.Height() - s).Int64()] = i
 		}
 	}
-
-	return manifests, nil
 }

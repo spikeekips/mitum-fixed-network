@@ -21,6 +21,8 @@ func (pp *DefaultProcessor) Prepare(ctx context.Context) (block.Block, error) {
 	pp.Lock()
 	defer pp.Unlock()
 
+	pp.prepareCtx, pp.prepareCancel = context.WithCancel(ctx)
+
 	started := time.Now()
 	defer func() {
 		_ = pp.setStatic("processor_prepare_elapsed", time.Since(started))
@@ -32,7 +34,7 @@ func (pp *DefaultProcessor) Prepare(ctx context.Context) (block.Block, error) {
 
 	pp.setState(prprocessor.Preparing)
 
-	if err := pp.prepare(ctx); err != nil {
+	if err := pp.prepare(pp.prepareCtx); err != nil {
 		pp.setState(prprocessor.PrepareFailed)
 
 		if err0 := pp.resetPrepare(); err0 != nil {
@@ -290,7 +292,7 @@ func (pp *DefaultProcessor) processStatesTree(ctx context.Context, pool *storage
 
 	var co *prprocessor.ConcurrentOperationsProcessor
 	size := len(pp.operations)
-	c, err := prprocessor.NewConcurrentOperationsProcessor(uint64(size), size, pool, pp.oprHintset)
+	c, err := prprocessor.NewConcurrentOperationsProcessor(uint64(size), int64(size), pool, pp.oprHintset)
 	if err != nil {
 		return err
 	}
@@ -325,18 +327,39 @@ func (pp *DefaultProcessor) concurrentProcessStatesTree(
 	co *prprocessor.ConcurrentOperationsProcessor,
 	pool *storage.Statepool,
 ) error {
-	for i := range pp.operations {
-		op := pp.operations[i]
+	donech := make(chan error, 1)
+	go func() {
+		for i := range pp.operations {
+			op := pp.operations[i]
 
-		pp.Log().Trace().Stringer("fact", op.Fact().Hash()).Msg("process fact")
+			pp.Log().Trace().Stringer("fact", op.Fact().Hash()).Msg("process fact")
 
-		if err := co.Process(uint64(i), op); err != nil {
-			return err
+			if err := co.Process(uint64(i), op); err != nil {
+				donech <- err
+
+				return
+			}
 		}
+
+		donech <- nil
+	}()
+
+	if err := <-donech; err != nil {
+		return err
 	}
 
-	if err := co.Close(); err != nil {
-		return err
+	closedch := make(chan error)
+	go func() {
+		closedch <- co.Close()
+	}()
+
+	select {
+	case <-pp.prepareCtx.Done():
+		return pp.prepareCtx.Err()
+	case err := <-closedch:
+		if err != nil {
+			return err
+		}
 	}
 
 	if pool.IsUpdated() {

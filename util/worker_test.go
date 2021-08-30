@@ -1,6 +1,7 @@
 package util
 
 import (
+	"context"
 	"fmt"
 	"sort"
 	"strings"
@@ -155,284 +156,573 @@ type testDistributeWorker struct {
 }
 
 func (t *testDistributeWorker) TestWithoutErrchan() {
-	var l uint = 10
-	returnChan := make(chan uint, 200000)
+	var l uint64 = 10
+	returnch := make(chan uint64, l)
 
-	wk := NewDistributeWorker(l, nil)
-
-	go func() {
-		for i := 0; i < int(l)*10; i++ {
-			if !wk.NewJob(i) {
-				break
-			}
-		}
-		wk.Done(true)
-	}()
-
-	wk.Run(
-		func(i uint, j interface{}) error {
+	callback := func(j interface{}) ContextWorkerCallback {
+		return func(ctx context.Context, i uint64) error {
 			if j == nil {
 				return nil
 			}
 
-			<-time.After(time.Millisecond * 10)
-			returnChan <- i
+			select {
+			case <-time.After(time.Millisecond * 10):
+				returnch <- i
 
-			if j.(int)%3 == 0 {
-				return errors.Errorf("error%d", j)
+				if j.(uint64)%3 == 0 {
+					return errors.Errorf("error%d", j)
+				}
+
+				return nil
+			case <-ctx.Done():
+				return ctx.Err()
 			}
+		}
+	}
 
-			return nil
-		},
-	)
+	wk := NewDistributeWorker(context.Background(), 5, nil)
+	defer wk.Close()
 
-	close(returnChan)
+	go func() {
+		for i := uint64(0); i < l; i++ {
+			if err := wk.NewJob(callback(i)); err != nil {
+				break
+			}
+		}
 
-	e := make([]uint, int(l))
-	for i := uint(0); i < l; i++ {
+		wk.Done()
+	}()
+
+	t.NoError(wk.Wait())
+
+	close(returnch)
+
+	e := make([]uint64, l)
+	for i := uint64(0); i < l; i++ {
 		e[i] = i
 	}
-	r := make([]uint, int(l))
-	for i := range returnChan {
-		r[i] = uint(i)
+	r := make([]uint64, l)
+	for i := range returnch {
+		r[i] = i
 	}
 
 	t.Equal(e, r)
 }
 
 func (t *testDistributeWorker) TestWithErrchan() {
-	var l uint = 10
+	var l uint64 = 10
 
-	errchan := make(chan error)
-	wk := NewDistributeWorker(l, errchan)
+	errch := make(chan error)
+	wk := NewDistributeWorker(context.Background(), 5, errch)
+	defer wk.Close()
 
-	var count int64
-	go func() {
-		defer wk.Done(true)
-
-		for i := 0; i < int(l)*10; i++ {
-			atomic.AddInt64(&count, 1)
-			if !wk.NewJob(i) {
-				break
-			}
-		}
-	}()
-
-	go func() {
-		wk.Run(
-			func(i uint, j interface{}) error {
-				if j == nil {
-					return nil
-				}
-
-				<-time.After(time.Millisecond * 10)
-
-				if j.(int)%3 == 0 {
-					return errors.Errorf("error:%d", j)
-				}
-
-				return nil
-			},
-		)
-
-		close(errchan)
-	}()
-
-	var rerrs []string
-	for err := range errchan {
-		if err == nil {
-			continue
-		}
-
-		n := strings.Split(err.Error(), ":")
-		rerrs = append(rerrs, n[1])
-	}
-	var eerrs []string
-	for i := int64(0); i < atomic.LoadInt64(&count); i++ {
-		if i%3 != 0 {
-			continue
-		}
-		eerrs = append(eerrs, fmt.Sprintf("%v", i))
-	}
-
-	sort.Strings(rerrs)
-	sort.Strings(eerrs)
-
-	t.Equal(eerrs, rerrs)
-}
-
-func (t *testDistributeWorker) TestWithErrchanStopFirst() {
-	var l uint = 10
-
-	errchan := make(chan error)
-	wk := NewDistributeWorker(l, errchan)
-
-	go func() {
-		defer wk.Done(true)
-
-		for i := 0; i < int(l)*10; i++ {
-			if !wk.NewJob(i) {
-				break
-			}
-		}
-	}()
-
-	go func() {
-		wk.Run(
-			func(i uint, j interface{}) error {
-				if j == nil {
-					return nil
-				}
-
-				if i != 0 {
-					<-time.After(time.Millisecond * 100)
-				}
-
-				if j.(int)%3 == 0 {
-					return errors.Errorf("error:%d", j)
-				}
-
-				return nil
-			},
-		)
-
-		close(errchan)
-	}()
-
-	var found bool
-
-	for err := range errchan {
-		if err == nil {
-			continue
-		}
-		found = true
-		break
-	}
-	wk.Done(false)
-
-	t.True(found)
-}
-
-func (t *testDistributeWorker) TestWithRunFirst() {
-	var l uint = 10
-
-	errchan := make(chan error)
-	wk := NewDistributeWorker(l, errchan)
-
-	go func() {
-		defer wk.Done(true)
-
-		for i := 0; i < int(l)*10; i++ {
-			if !wk.NewJob(i) {
-				break
-			}
-		}
-	}()
-
-	done := make(chan struct{})
-	go func() {
-		for range errchan {
-		}
-		done <- struct{}{}
-	}()
-
-	wk.Run(
-		func(i uint, j interface{}) error {
+	callback := func(j interface{}) ContextWorkerCallback {
+		return func(ctx context.Context, i uint64) error {
 			if j == nil {
 				return nil
 			}
 
-			<-time.After(time.Millisecond * 10)
-
-			return nil
-		},
-	)
-
-	close(errchan)
-
-	select {
-	case <-time.After(time.Second * 1):
-		t.NoError(errors.Errorf("timeout to wait"))
-	case <-done:
-		//
-	}
-}
-
-func (t *testDistributeWorker) TestOneCallback() {
-	var l uint = 1
-
-	errchan := make(chan error)
-	wk := NewDistributeWorker(l, errchan)
-
-	go func() {
-		defer wk.Done(true)
-
-		for i := 0; i < int(l)*10; i++ {
-			if !wk.NewJob(i) {
-				break
-			}
-		}
-	}()
-
-	go func() {
-		wk.Run(
-			func(i uint, j interface{}) error {
-				if j == nil {
-					return nil
-				}
-
-				<-time.After(time.Millisecond * 10)
-
-				if j.(int)%3 == 0 {
+			select {
+			case <-time.After(time.Millisecond * 10):
+				if j.(uint64)%3 == 0 {
 					return errors.Errorf("error:%d", j)
 				}
 
 				return nil
-			},
-		)
+			case <-ctx.Done():
+				return ctx.Err()
+			}
+		}
+	}
 
-		close(errchan)
-	}()
+	donech := make(chan struct{})
 
-	var found bool
+	var count int64
+	go func() {
+		var rerrs []string
+		for err := range errch {
+			if err == nil {
+				continue
+			}
 
-	for err := range errchan {
-		if err == nil {
-			continue
+			n := strings.Split(err.Error(), ":")
+			rerrs = append(rerrs, n[1])
+		}
+		var eerrs []string
+		for i := int64(0); i < atomic.LoadInt64(&count); i++ {
+			if i%3 != 0 {
+				continue
+			}
+			eerrs = append(eerrs, fmt.Sprintf("%v", i))
 		}
 
-		found = true
-		break
-	}
-	wk.Done(false)
+		sort.Strings(rerrs)
+		sort.Strings(eerrs)
 
-	t.True(found)
+		t.Equal(eerrs, rerrs)
+
+		donech <- struct{}{}
+	}()
+
+	go func() {
+		for i := uint64(0); i < l; i++ {
+			atomic.AddInt64(&count, 1)
+			if err := wk.NewJob(callback(i)); err != nil {
+				break
+			}
+		}
+
+		wk.Done()
+	}()
+
+	t.NoError(wk.Wait())
+
+	close(errch)
+
+	<-donech
 }
 
-func (t *testDistributeWorker) TestDoneBeforeRun() {
-	{ // with errchan
-		errchan := make(chan error)
-		wk := NewDistributeWorker(10, errchan)
-		wk.Done(true)
+func (t *testDistributeWorker) TestWithErrchanCancel() {
+	var l uint64 = 10
+
+	errch := make(chan error)
+
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	wk := NewDistributeWorker(ctx, 5, errch)
+	defer wk.Close()
+
+	var called uint64
+	callback := func(j interface{}) ContextWorkerCallback {
+		return func(ctx context.Context, i uint64) error {
+			if err := ctx.Err(); err != nil {
+				return err
+			}
+
+			if j == nil {
+				return nil
+			}
+
+			if i != 0 {
+				<-time.After(time.Millisecond * 500)
+			}
+
+			atomic.AddUint64(&called, 1)
+
+			if j.(uint64)%3 == 0 {
+				return errors.Errorf("error:%d", j)
+			}
+
+			return nil
+		}
 	}
 
-	{ // with errchan + done false
-		errchan := make(chan error)
-		wk := NewDistributeWorker(10, errchan)
-		wk.Done(false)
+	donech := make(chan struct{})
+
+	go func() {
+		var found bool
+		for err := range errch {
+			if err == nil {
+				continue
+			} else if found {
+				continue
+			}
+
+			found = true
+			cancel()
+		}
+
+		t.True(found)
+
+		donech <- struct{}{}
+	}()
+
+	go func() {
+		for i := uint64(0); i < l; i++ {
+			_ = wk.NewJob(callback(i))
+		}
+
+		wk.Done()
+	}()
+
+	err := wk.Wait()
+	t.True(errors.Is(err, context.Canceled))
+
+	close(errch)
+
+	<-donech
+	t.True(l > atomic.LoadUint64(&called))
+}
+
+func (t *testDistributeWorker) TestClose() {
+	var l uint64 = 10
+
+	wk := NewDistributeWorker(context.Background(), 5, nil)
+	defer wk.Close()
+
+	var called uint64
+	callback := func(j interface{}) ContextWorkerCallback {
+		return func(_ context.Context, i uint64) error {
+			atomic.AddUint64(&called, 1)
+
+			<-time.After(time.Millisecond * 900)
+
+			return nil
+		}
 	}
 
-	{ // without errchan
-		wk := NewDistributeWorker(10, nil)
-		wk.Done(true)
+	go func() {
+		for i := uint64(0); i < l; i++ {
+			_ = wk.NewJob(callback(i))
+
+			if i == 3 {
+				go wk.Close()
+			}
+		}
+
+		wk.Done()
+	}()
+
+	err := wk.Wait()
+	t.NotNil(err)
+	t.True(errors.Is(err, context.Canceled))
+
+	t.True(atomic.LoadUint64(&called) < l)
+}
+
+func (t *testDistributeWorker) TestCloseBeforeRun() {
+	var l uint64 = 10
+
+	wk := NewDistributeWorker(context.Background(), 5, nil)
+	defer wk.Close()
+
+	var called uint64
+	callback := func(j interface{}) ContextWorkerCallback {
+		return func(context.Context, uint64) error {
+			atomic.AddUint64(&called, 1)
+
+			<-time.After(time.Millisecond * 900)
+
+			return nil
+		}
 	}
 
-	{ // without errchan + done false
-		wk := NewDistributeWorker(10, nil)
-		wk.Done(false)
+	go func() {
+		for i := uint64(0); i < l; i++ {
+			_ = wk.NewJob(callback(i))
+		}
+
+		wk.Done()
+	}()
+
+	wk.Close()
+
+	err := wk.Wait()
+	t.NotNil(err)
+	t.True(errors.Is(err, context.Canceled))
+
+	t.True(atomic.LoadUint64(&called) < l)
+}
+
+func (t *testDistributeWorker) TestLazyClose() {
+	var l uint64 = 10
+
+	var called, canceled uint64
+	callback := func(j interface{}) ContextWorkerCallback {
+		return func(ctx context.Context, jobid uint64) error {
+			if jobid < 3 {
+				atomic.AddUint64(&called, 1)
+
+				return nil
+			}
+
+			select {
+			case <-time.After(time.Second * 900):
+			case <-ctx.Done():
+				atomic.AddUint64(&canceled, 1)
+			}
+
+			return nil
+		}
 	}
+
+	wk := NewDistributeWorker(context.Background(), int64(l), nil)
+	defer wk.Close()
+
+	go func() {
+		for i := uint64(0); i < l; i++ {
+			_ = wk.NewJob(callback(i))
+		}
+
+		wk.LazyClose(time.Millisecond * 300)
+	}()
+
+	err := wk.Wait()
+	t.NotNil(err)
+	t.True(errors.Is(err, context.Canceled))
+
+	t.True(atomic.LoadUint64(&canceled) < l)
+
+	<-time.After(time.Second)
+	t.True(atomic.LoadUint64(&canceled) < l)
 }
 
 func TestDistributeWorker(t *testing.T) {
+	defer goleak.VerifyNone(t)
+
 	suite.Run(t, new(testDistributeWorker))
+}
+
+type testErrgroupWorker struct {
+	suite.Suite
+}
+
+func (t *testErrgroupWorker) TestNoError() {
+	var l uint64 = 10
+	returnch := make(chan uint64, l)
+
+	callback := func(j interface{}) ContextWorkerCallback {
+		return func(ctx context.Context, i uint64) error {
+			if j == nil {
+				return nil
+			}
+
+			select {
+			case <-time.After(time.Millisecond * 10):
+				returnch <- i
+			case <-ctx.Done():
+				return ctx.Err()
+			}
+
+			return nil
+		}
+	}
+
+	wk := NewErrgroupWorker(context.Background(), int64(l))
+	defer wk.Close()
+
+	go func() {
+		for i := uint64(0); i < l; i++ {
+			if err := wk.NewJob(callback(i)); err != nil {
+				break
+			}
+		}
+
+		wk.Done()
+	}()
+
+	t.NoError(wk.Wait())
+
+	close(returnch)
+
+	e := make([]uint64, l)
+	for i := uint64(0); i < l; i++ {
+		e[i] = i
+	}
+	r := make([]uint64, l)
+	for i := range returnch {
+		r[i] = i
+	}
+
+	t.Equal(e, r)
+}
+
+func (t *testErrgroupWorker) TestError() {
+	var l uint64 = 10
+
+	var called uint64
+	callback := func(j interface{}) ContextWorkerCallback {
+		return func(ctx context.Context, i uint64) error {
+			if j == nil {
+				return nil
+			}
+
+			if i := j.(uint64); i > 0 && i == 3 {
+				return errors.Errorf("error:%d", j)
+			}
+
+			select {
+			case <-time.After(time.Millisecond * 300):
+				atomic.AddUint64(&called, 1)
+			case <-ctx.Done():
+				return ctx.Err()
+			}
+
+			return nil
+		}
+	}
+
+	wk := NewErrgroupWorker(context.Background(), int64(l))
+	defer wk.Close()
+
+	go func() {
+		for i := uint64(0); i < l; i++ {
+			if err := wk.NewJob(callback(i)); err != nil {
+				break
+			}
+		}
+
+		wk.Done()
+	}()
+
+	err := wk.Wait()
+	t.NotNil(err)
+	t.Contains(err.Error(), "error:3")
+
+	t.True(atomic.LoadUint64(&called) < 1)
+}
+
+func (t *testErrgroupWorker) TestDeadlineError() {
+	var l uint64 = 10
+
+	var called uint64
+	callback := func(j interface{}) ContextWorkerCallback {
+		return func(ctx context.Context, i uint64) error {
+			if j == nil {
+				return nil
+			}
+
+			select {
+			case <-time.After(time.Millisecond * 900):
+				atomic.AddUint64(&called, 1)
+			case <-ctx.Done():
+				return ctx.Err()
+			}
+
+			return nil
+		}
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), time.Millisecond*100)
+	defer cancel()
+
+	wk := NewErrgroupWorker(ctx, int64(l))
+	defer wk.Close()
+
+	go func() {
+		for i := uint64(0); i < l; i++ {
+			if err := wk.NewJob(callback(i)); err != nil {
+				break
+			}
+		}
+
+		wk.Done()
+	}()
+
+	err := wk.Wait()
+	t.True(errors.Is(err, context.DeadlineExceeded))
+
+	c := atomic.LoadUint64(&called)
+	t.T().Logf("called: %d", c)
+	t.True(c < 1)
+}
+
+func (t *testErrgroupWorker) TestClose() {
+	var l uint64 = 10
+
+	callback := func(j interface{}) ContextWorkerCallback {
+		return func(context.Context, uint64) error {
+			<-time.After(time.Millisecond * 900)
+
+			return nil
+		}
+	}
+
+	wk := NewErrgroupWorker(context.Background(), int64(l))
+	defer wk.Close()
+
+	go func() {
+		for i := uint64(0); i < l; i++ {
+			_ = wk.NewJob(callback(i))
+
+			if i == 3 {
+				go wk.Close()
+			}
+		}
+
+		wk.Done()
+	}()
+
+	t.NoError(wk.Wait())
+}
+
+func (t *testErrgroupWorker) TestCloseBeforeRun() {
+	var l uint64 = 10
+
+	var called uint64
+	callback := func(j interface{}) ContextWorkerCallback {
+		return func(context.Context, uint64) error {
+			atomic.AddUint64(&called, 1)
+			<-time.After(time.Millisecond * 900)
+
+			return nil
+		}
+	}
+
+	wk := NewErrgroupWorker(context.Background(), int64(l))
+	defer wk.Close()
+
+	go func() {
+		for i := uint64(0); i < l; i++ {
+			_ = wk.NewJob(callback(i))
+		}
+
+		wk.Done()
+	}()
+
+	wk.Close()
+
+	t.NoError(wk.Wait())
+
+	t.True(atomic.LoadUint64(&called) < l)
+}
+
+func (t *testErrgroupWorker) TestLazyClose() {
+	var l uint64 = 10
+
+	var called, canceled uint64
+	callback := func(j interface{}) ContextWorkerCallback {
+		return func(ctx context.Context, jobid uint64) error {
+			if jobid < 3 {
+				atomic.AddUint64(&called, 1)
+
+				return nil
+			}
+
+			select {
+			case <-time.After(time.Second * 900):
+			case <-ctx.Done():
+				atomic.AddUint64(&canceled, 1)
+			}
+
+			return nil
+		}
+	}
+
+	wk := NewErrgroupWorker(context.Background(), int64(l))
+	defer wk.Close()
+
+	go func() {
+		for i := uint64(0); i < l; i++ {
+			_ = wk.NewJob(callback(i))
+		}
+
+		wk.LazyClose(time.Millisecond * 100)
+	}()
+
+	err := wk.Wait()
+	t.NotNil(err)
+	t.True(errors.Is(err, context.Canceled))
+
+	t.True(atomic.LoadUint64(&canceled) < l)
+
+	<-time.After(time.Millisecond * 500)
+	t.True(atomic.LoadUint64(&canceled) < l)
+}
+
+func TestErrgroupWorker(t *testing.T) {
+	defer goleak.VerifyNone(t)
+
+	suite.Run(t, new(testErrgroupWorker))
 }

@@ -22,8 +22,6 @@ import (
 	"github.com/spikeekips/mitum/storage/blockdata/localfs"
 	"github.com/spikeekips/mitum/util"
 	"github.com/spikeekips/mitum/util/hint"
-	"golang.org/x/sync/errgroup"
-	"golang.org/x/sync/semaphore"
 )
 
 var allBlockData = "all"
@@ -459,8 +457,8 @@ func getItemBlockDataMap(m block.BlockDataMap, dataType string) (block.BlockData
 }
 
 func requestBlockDataMaps(heights []base.Height, callback func([]base.Height) error) error {
-	sem := semaphore.NewWeighted(int64(quicnetwork.LimitRequestByHeights))
-	eg, ctx := errgroup.WithContext(context.Background())
+	wk := util.NewErrgroupWorker(context.Background(), int64(quicnetwork.LimitRequestByHeights))
+	defer wk.Close()
 
 	limit := quicnetwork.LimitRequestByHeights
 	l := len(heights) / limit
@@ -468,54 +466,44 @@ func requestBlockDataMaps(heights []base.Height, callback func([]base.Height) er
 		l++
 	}
 
-	for i := 0; i < l; i++ {
-		e := (i + 1) * limit
-		if e > len(heights) {
-			e = len(heights)
+	go func() {
+		defer wk.Done()
+
+		for i := 0; i < l; i++ {
+			e := (i + 1) * limit
+			if e > len(heights) {
+				e = len(heights)
+			}
+			hs := heights[i*limit : e]
+
+			if err := wk.NewJob(func(context.Context, uint64) error {
+				return callback(hs)
+			}); err != nil {
+				return
+			}
 		}
-		hs := heights[i*limit : e]
-		if err := sem.Acquire(ctx, 1); err != nil {
-			break
-		}
+	}()
 
-		eg.Go(func() error {
-			defer sem.Release(1)
-
-			return callback(hs)
-		})
-	}
-
-	if err := sem.Acquire(ctx, 10); err != nil {
-		if !errors.Is(err, context.Canceled) {
-			return err
-		}
-	}
-
-	return eg.Wait()
+	return wk.Wait()
 }
 
 func requestBlockData(maps []block.BlockDataMap, callback func(block.BlockDataMap) error) error {
-	sem := semaphore.NewWeighted(10)
-	eg, ctx := errgroup.WithContext(context.Background())
+	wk := util.NewErrgroupWorker(context.Background(), 10)
+	defer wk.Close()
 
-	for i := range maps {
-		m := maps[i]
-		if err := sem.Acquire(ctx, 1); err != nil {
-			break
+	go func() {
+		defer wk.Done()
+
+		for i := range maps {
+			m := maps[i]
+
+			if err := wk.NewJob(func(context.Context, uint64) error {
+				return callback(m)
+			}); err != nil {
+				return
+			}
 		}
+	}()
 
-		eg.Go(func() error {
-			defer sem.Release(1)
-
-			return callback(m)
-		})
-	}
-
-	if err := sem.Acquire(ctx, 10); err != nil {
-		if !errors.Is(err, context.Canceled) {
-			return err
-		}
-	}
-
-	return eg.Wait()
+	return wk.Wait()
 }

@@ -21,7 +21,7 @@ import (
 )
 
 func NewErrorProcessorNewFunc(
-	st storage.Database,
+	db storage.Database,
 	blockData blockdata.BlockData,
 	nodepool *network.Nodepool,
 	suffrage base.Suffrage,
@@ -31,7 +31,7 @@ func NewErrorProcessorNewFunc(
 ) prprocessor.ProcessorNewFunc {
 	return func(proposal ballot.Proposal, initVoteproof base.Voteproof) (prprocessor.Processor, error) {
 		pp, err := isaac.NewDefaultProcessor(
-			st,
+			db,
 			blockData,
 			nodepool,
 			suffrage,

@@ -21,10 +21,10 @@ type ProposalMaker struct {
 
 func NewProposalMaker(
 	local *node.Local,
-	st storage.Database,
+	db storage.Database,
 	policy *LocalPolicy,
 ) *ProposalMaker {
-	return &ProposalMaker{local: local, database: st, policy: policy}
+	return &ProposalMaker{local: local, database: db, policy: policy}
 }
 
 func (pm *ProposalMaker) seals() ([]valuehash.Hash, error) {

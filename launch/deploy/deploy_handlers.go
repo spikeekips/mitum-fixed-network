@@ -9,7 +9,6 @@ import (
 	"github.com/rs/zerolog"
 	"github.com/spikeekips/mitum/launch/config"
 	"github.com/spikeekips/mitum/launch/process"
-	"github.com/spikeekips/mitum/storage"
 	"github.com/spikeekips/mitum/util"
 	"github.com/spikeekips/mitum/util/encoder"
 	jsonenc "github.com/spikeekips/mitum/util/encoder/json"
@@ -21,7 +20,7 @@ var QuicHandlerPathSetBlockDataMaps = "/_deploy/blockdatamaps"
 
 var RateLimitHandlerNameSetBlockDataMaps = "set-blockdatamaps"
 
-type baseDeployHandler struct {
+type BaseDeployHandler struct {
 	*logging.Logging
 	handler    func(string) *mux.Route
 	handlerMap map[string][]process.RateLimitRule
@@ -30,11 +29,11 @@ type baseDeployHandler struct {
 	enc        encoder.Encoder
 }
 
-func newBaseDeployHandler(
+func NewBaseDeployHandler(
 	ctx context.Context,
 	name string,
 	handler func(string) *mux.Route,
-) (*baseDeployHandler, error) {
+) (*BaseDeployHandler, error) {
 	var log *logging.Logging
 	if err := config.LoadLogContextValue(ctx, &log); err != nil {
 		return nil, err
@@ -60,7 +59,7 @@ func newBaseDeployHandler(
 		return nil, err
 	}
 
-	dh := &baseDeployHandler{
+	dh := &BaseDeployHandler{
 		Logging: logging.NewLogging(func(c zerolog.Context) zerolog.Context {
 			return c.Str("module", name)
 		}),
@@ -76,7 +75,7 @@ func newBaseDeployHandler(
 	return dh, nil
 }
 
-func (dh *baseDeployHandler) rateLimit(name string, handler http.Handler) http.Handler {
+func (dh *BaseDeployHandler) RateLimit(name string, handler http.Handler) http.Handler {
 	i, found := dh.handlerMap[name]
 	if !found {
 		return handler
@@ -87,62 +86,27 @@ func (dh *baseDeployHandler) rateLimit(name string, handler http.Handler) http.H
 	).Middleware(handler)
 }
 
-type deployHandlers struct {
-	*baseDeployHandler
-	db storage.Database
-	bc *BlockDataCleaner
+type DeployHandlers struct {
+	*BaseDeployHandler
 	mw *DeployByKeyMiddleware
 }
 
-func newDeployHandlers(ctx context.Context, handler func(string) *mux.Route) (*deployHandlers, error) {
-	base, err := newBaseDeployHandler(ctx, "deploy-handlers", handler)
+func NewDeployHandlers(ctx context.Context, handler func(string) *mux.Route) (*DeployHandlers, error) {
+	base, err := NewBaseDeployHandler(ctx, "deploy-handlers", handler)
 	if err != nil {
-		return nil, err
-	}
-
-	var db storage.Database
-	if err := process.LoadDatabaseContextValue(ctx, &db); err != nil {
-		return nil, err
-	}
-
-	var bc *BlockDataCleaner
-	if err := LoadBlockDataCleanerContextValue(ctx, &bc); err != nil {
 		return nil, err
 	}
 
 	mw := NewDeployByKeyMiddleware(base.ks)
 
-	dh := &deployHandlers{
-		baseDeployHandler: base,
-		db:                db,
-		bc:                bc,
+	dh := &DeployHandlers{
+		BaseDeployHandler: base,
 		mw:                mw,
 	}
 
 	return dh, nil
 }
 
-func (dh *deployHandlers) setHandlers() error {
-	setter := []func() error{
-		dh.setSetBlockDataMaps,
-	}
-
-	for i := range setter {
-		if err := setter[i](); err != nil {
-			return err
-		}
-	}
-
-	return nil
-}
-
-func (dh *deployHandlers) setSetBlockDataMaps() error {
-	handler := dh.rateLimit(
-		RateLimitHandlerNameSetBlockDataMaps,
-		http.HandlerFunc(NewSetBlockDataMapsHandler(dh.enc, dh.db, dh.bc)),
-	)
-
-	_ = dh.handler(QuicHandlerPathSetBlockDataMaps).Handler(handler)
-
-	return nil
+func (dh *DeployHandlers) SetHandler(prefix string, handler http.Handler) *mux.Route {
+	return dh.handler(prefix).Handler(dh.mw.Middleware(handler))
 }

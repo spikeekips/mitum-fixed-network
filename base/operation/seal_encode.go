@@ -1,27 +1,13 @@
 package operation
 
 import (
-	"time"
-
-	"github.com/spikeekips/mitum/base/key"
+	"github.com/spikeekips/mitum/base/seal"
 	"github.com/spikeekips/mitum/util"
 	"github.com/spikeekips/mitum/util/encoder"
-	"github.com/spikeekips/mitum/util/valuehash"
 )
 
-func (sl *BaseSeal) unpack(
-	enc encoder.Encoder,
-	h,
-	bodyHash valuehash.Hash,
-	bSigner key.PublickeyDecoder,
-	signature key.Signature,
-	signedAt time.Time,
-	bops []byte,
-) error {
-	signer, err := bSigner.Encode(enc)
-	if err != nil {
-		return err
-	}
+func (sl *BaseSeal) unpack(enc encoder.Encoder, ub seal.BaseSeal, bops []byte) error {
+	sl.BaseSeal = ub
 
 	hops, err := enc.DecodeSlice(bops)
 	if err != nil {
@@ -37,12 +23,6 @@ func (sl *BaseSeal) unpack(
 
 		sl.ops[i] = j
 	}
-
-	sl.h = h
-	sl.bodyHash = bodyHash
-	sl.signer = signer
-	sl.signature = signature
-	sl.signedAt = signedAt
 
 	return nil
 }

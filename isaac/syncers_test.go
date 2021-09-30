@@ -9,6 +9,7 @@ import (
 	"github.com/pkg/errors"
 	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/base/block"
+	"github.com/spikeekips/mitum/network"
 	"github.com/stretchr/testify/suite"
 )
 
@@ -36,7 +37,11 @@ func (t *testSyncers) TestNew() {
 	finishedChan := make(chan base.Height, 10)
 	blocksChan := make(chan []block.Block, 10)
 
-	ss := NewSyncers(local.Node(), local.Database(), local.BlockData(), local.Nodes(), local.Policy(), baseManifest)
+	ss := NewSyncers(local.Database(), local.BlockData(), local.Policy(), baseManifest, func() map[string]network.Channel {
+		return map[string]network.Channel{
+			remote.Node().String(): remote.Channel(),
+		}
+	})
 
 	ss.WhenFinished(func(height base.Height) {
 		finishedChan <- height
@@ -116,7 +121,11 @@ func (t *testSyncers) TestMultipleSyncers() {
 
 	finishedChan := make(chan base.Height, 10)
 
-	ss := NewSyncers(local.Node(), local.Database(), local.BlockData(), local.Nodes(), local.Policy(), baseManifest)
+	ss := NewSyncers(local.Database(), local.BlockData(), local.Policy(), baseManifest, func() map[string]network.Channel {
+		return map[string]network.Channel{
+			remote.Node().String(): remote.Channel(),
+		}
+	})
 
 	ss.WhenFinished(func(height base.Height) {
 		finishedChan <- height
@@ -164,7 +173,11 @@ func (t *testSyncers) TestMangledFinishedOrder() {
 
 	finishedChan := make(chan base.Height, 10)
 
-	ss := NewSyncers(local.Node(), local.Database(), local.BlockData(), local.Nodes(), local.Policy(), baseManifest)
+	ss := NewSyncers(local.Database(), local.BlockData(), local.Policy(), baseManifest, func() map[string]network.Channel {
+		return map[string]network.Channel{
+			remote.Node().String(): remote.Channel(),
+		}
+	})
 
 	ss.WhenFinished(func(height base.Height) {
 		finishedChan <- height
@@ -211,7 +224,11 @@ func (t *testSyncers) TestAddAfterFinished() {
 	t.NoError(err)
 	t.True(found)
 
-	ss := NewSyncers(local.Node(), local.Database(), local.BlockData(), local.Nodes(), local.Policy(), baseManifest)
+	ss := NewSyncers(local.Database(), local.BlockData(), local.Policy(), baseManifest, func() map[string]network.Channel {
+		return map[string]network.Channel{
+			remote.Node().String(): remote.Channel(),
+		}
+	})
 
 	finishedChan := make(chan base.Height, 10)
 	ss.WhenFinished(func(height base.Height) {
@@ -278,7 +295,11 @@ func (t *testSyncers) TestStopNotFinished() {
 	t.NoError(err)
 	t.True(found)
 
-	ss := NewSyncers(local.Node(), local.Database(), local.BlockData(), local.Nodes(), local.Policy(), baseManifest)
+	ss := NewSyncers(local.Database(), local.BlockData(), local.Policy(), baseManifest, func() map[string]network.Channel {
+		return map[string]network.Channel{
+			remote.Node().String(): remote.Channel(),
+		}
+	})
 	ss.limitBlocksPerSyncer = 1
 
 	t.NoError(ss.Start())

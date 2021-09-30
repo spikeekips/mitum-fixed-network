@@ -44,8 +44,8 @@ func ProcessGenerateGenesisBlock(ctx context.Context) (context.Context, error) {
 		return ctx, err
 	}
 
-	var st storage.Database
-	if err := LoadDatabaseContextValue(ctx, &st); err != nil {
+	var db storage.Database
+	if err := LoadDatabaseContextValue(ctx, &db); err != nil {
 		return nil, err
 	}
 
@@ -67,7 +67,7 @@ func ProcessGenerateGenesisBlock(ctx context.Context) (context.Context, error) {
 
 	log.Log().Debug().Int("operations", len(ops)).Msg("operations loaded")
 
-	if gg, err := isaac.NewGenesisBlockV0Generator(local, st, blockData, policy, ops); err != nil {
+	if gg, err := isaac.NewGenesisBlockV0Generator(local, db, blockData, policy, ops); err != nil {
 		return ctx, errors.Wrap(err, "failed to create genesis block generator")
 	} else if blk, err := gg.Generate(); err != nil {
 		return ctx, errors.Wrap(err, "failed to generate genesis block")
@@ -89,8 +89,8 @@ func HookCheckGenesisBlock(ctx context.Context) (context.Context, error) {
 		return ctx, err
 	}
 
-	var st storage.Database
-	if err := LoadDatabaseContextValue(ctx, &st); err != nil {
+	var db storage.Database
+	if err := LoadDatabaseContextValue(ctx, &db); err != nil {
 		return ctx, err
 	}
 
@@ -100,7 +100,7 @@ func HookCheckGenesisBlock(ctx context.Context) (context.Context, error) {
 	}
 
 	var manifest block.Manifest
-	if m, found, err := st.LastManifest(); err != nil {
+	if m, found, err := db.LastManifest(); err != nil {
 		return ctx, err
 	} else if found {
 		manifest = m
@@ -118,7 +118,7 @@ func HookCheckGenesisBlock(ctx context.Context) (context.Context, error) {
 		return ctx, errors.Errorf("environment already exists: block=%d", manifest.Height())
 	}
 
-	if err := blockdata.Clean(st, blockData, false); err != nil {
+	if err := blockdata.Clean(db, blockData, false); err != nil {
 		return ctx, err
 	}
 	log.Log().Debug().Msg("existing environment cleaned")

@@ -24,7 +24,7 @@ type BootingState struct {
 
 func NewBootingState(
 	local *node.Local,
-	st storage.Database,
+	db storage.Database,
 	blockData blockdata.BlockData,
 	policy *isaac.LocalPolicy,
 	suffrage base.Suffrage,
@@ -35,7 +35,7 @@ func NewBootingState(
 		}),
 		BaseState: NewBaseState(base.StateBooting),
 		local:     local,
-		database:  st,
+		database:  db,
 		blockData: blockData,
 		policy:    policy,
 		suffrage:  suffrage,
@@ -74,7 +74,7 @@ func (st *BootingState) Enter(sctx StateSwitchContext) (func() error, error) {
 
 			st.Log().Debug().Msg("block checked; moves to joining")
 
-			return NewStateSwitchContext(base.StateBooting, base.StateJoining)
+			return st.NewStateSwitchContext(base.StateJoining)
 		}, nil
 	}
 	return func() error {
@@ -84,17 +84,15 @@ func (st *BootingState) Enter(sctx StateSwitchContext) (func() error, error) {
 
 		st.Log().Debug().Msg("block checked; none-suffrage node moves to syncing")
 
-		return NewStateSwitchContext(base.StateBooting, base.StateSyncing)
+		return st.NewStateSwitchContext(base.StateSyncing)
 	}, nil
 }
 
 func (st *BootingState) enterSyncing(callback func() error) (func() error, error) {
-	if st.suffrage.IsInside(st.local.Address()) {
-		if len(st.suffrage.Nodes()) < 2 { // NOTE suffrage nodes has local node itself
-			st.Log().Debug().Msg("empty blocks; no other nodes in suffrage; can not sync")
+	if len(st.syncableChannels()) < 1 {
+		st.Log().Debug().Msg("empty blocks; no channels for syncing; can not sync")
 
-			return nil, errors.Errorf("empty blocks, but no other nodes; can not sync")
-		}
+		return nil, errors.Errorf("empty blocks, but no channels for syncing; can not sync")
 	}
 
 	st.Log().Debug().Msg("empty blocks; will sync")
@@ -104,6 +102,6 @@ func (st *BootingState) enterSyncing(callback func() error) (func() error, error
 			return err
 		}
 
-		return NewStateSwitchContext(base.StateBooting, base.StateSyncing)
+		return st.NewStateSwitchContext(base.StateSyncing)
 	}, nil
 }

@@ -2,6 +2,7 @@ package localtime
 
 import (
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/suite"
 	"go.uber.org/goleak"
@@ -91,6 +92,96 @@ func (t *testTime) TestNormalizeCases() {
 				bn := Normalize(b)
 
 				t.True(bn.Equal(an), "%d: %v; %v != %v", i, c.name, bn.String(), an.String())
+			},
+		) {
+			break
+		}
+	}
+}
+
+func (t *testTime) TestWithin() {
+	cases := []struct {
+		name     string
+		base     string
+		target   string
+		d        time.Duration
+		expected bool
+	}{
+		{
+			name:     "zero duration; same",
+			base:     "2009-11-10T23:00:00.00101010Z",
+			target:   "2009-11-10T23:00:00.00101010Z",
+			d:        0,
+			expected: true,
+		},
+		{
+			name:     "zero duration; not same",
+			base:     "2009-11-10T23:00:00.00101010Z",
+			target:   "2009-11-10T23:00:01.00101010Z",
+			d:        0,
+			expected: false,
+		},
+		{
+			name:     "negative duration; same",
+			base:     "2009-11-10T23:00:00.00101010Z",
+			target:   "2009-11-10T23:00:00.00101010Z",
+			d:        -1,
+			expected: true,
+		},
+		{
+			name:     "negative duration; not same",
+			base:     "2009-11-10T23:00:00.00101010Z",
+			target:   "2009-11-10T23:00:01.00101010Z",
+			d:        -1,
+			expected: false,
+		},
+		{
+			name:     "ok #0",
+			base:     "2009-11-10T23:00:00.00101010Z",
+			target:   "2009-11-10T23:00:01.00101010Z",
+			d:        time.Second,
+			expected: true,
+		},
+		{
+			name:     "ok #1",
+			base:     "2009-11-10T23:00:01.00101010Z",
+			target:   "2009-11-10T23:00:00.00101010Z",
+			d:        time.Second,
+			expected: true,
+		},
+		{
+			name:     "not ok #0",
+			base:     "2009-11-10T23:00:00.00101010Z",
+			target:   "2009-11-10T23:00:02.00101010Z",
+			d:        time.Second,
+			expected: false,
+		},
+		{
+			name:     "not ok #1",
+			base:     "2009-11-10T23:00:02.00101010Z",
+			target:   "2009-11-10T23:00:00.00101010Z",
+			d:        time.Second,
+			expected: false,
+		},
+	}
+
+	for i, c := range cases {
+		i := i
+		c := c
+		if !t.Run(
+			c.name,
+			func() {
+				base, err := ParseRFC3339(c.base)
+				t.NoError(err)
+				target, err := ParseRFC3339(c.target)
+				t.NoError(err)
+
+				bn := Normalize(base)
+				tn := Normalize(target)
+
+				r := Within(bn, tn, c.d)
+
+				t.Equal(c.expected, r, "%d: %v; %v, %v, %v", i, c.name, bn.String(), tn.String(), c.d)
 			},
 		) {
 			break

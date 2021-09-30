@@ -198,6 +198,14 @@ func LoadNodeChannel(
 	encs *encoder.Encoders,
 	connectionTimeout time.Duration,
 ) (network.Channel, error) {
+	if err := connInfo.IsValid(nil); err != nil {
+		return nil, err
+	}
+
+	if connInfo.URL() == nil {
+		return nil, errors.Errorf("connInfo has nil URL, %v", connInfo)
+	}
+
 	je, err := encs.Encoder(jsonenc.JSONEncoderType, "")
 	if err != nil {
 		return nil, errors.Wrap(err, "json encoder needs for quic-network")

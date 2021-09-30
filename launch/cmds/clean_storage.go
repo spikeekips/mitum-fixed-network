@@ -86,8 +86,8 @@ func (cmd *CleanStorageCommand) Run(version util.Version) error {
 }
 
 func (cmd *CleanStorageCommand) cleanStorage(ctx context.Context) (context.Context, error) {
-	var st storage.Database
-	if err := process.LoadDatabaseContextValue(ctx, &st); err != nil {
+	var db storage.Database
+	if err := process.LoadDatabaseContextValue(ctx, &db); err != nil {
 		return ctx, err
 	}
 
@@ -96,7 +96,7 @@ func (cmd *CleanStorageCommand) cleanStorage(ctx context.Context) (context.Conte
 		return ctx, err
 	}
 
-	if err := blockdata.Clean(st, blockData, true); err != nil {
+	if err := blockdata.Clean(db, blockData, true); err != nil {
 		return ctx, err
 	}
 

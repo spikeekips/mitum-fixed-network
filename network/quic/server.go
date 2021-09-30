@@ -2,7 +2,10 @@ package quicnetwork
 
 import (
 	"bytes"
+	"context"
+	"fmt"
 	"io"
+	"io/ioutil"
 	"net/http"
 	"net/url"
 	"path"
@@ -23,13 +26,16 @@ import (
 )
 
 var (
-	DefaultPort                        = "54321"
-	QuicHandlerPathGetSeals            = "/seals"
-	QuicHandlerPathSendSeal            = "/seal"
-	QuicHandlerPathGetBlockDataMaps    = "/blockdatamaps"
-	QuicHandlerPathGetBlockData        = "/blockdata"
-	QuicHandlerPathGetBlockDataPattern = QuicHandlerPathGetBlockData + "/{path:.*}"
-	QuicHandlerPathNodeInfo            = "/"
+	DefaultPort                         = "54321"
+	QuicHandlerPathGetSeals             = "/seals"
+	QuicHandlerPathSendSeal             = "/seal"
+	QuicHandlerPathGetBlockDataMaps     = "/blockdatamaps"
+	QuicHandlerPathGetBlockData         = "/blockdata"
+	QuicHandlerPathGetBlockDataPattern  = QuicHandlerPathGetBlockData + "/{path:.*}"
+	QuicHandlerPathPingHandoverPattern  = "/handover"
+	QuicHandlerPathStartHandoverPattern = QuicHandlerPathPingHandoverPattern + "/start"
+	QuicHandlerPathEndHandoverPattern   = QuicHandlerPathPingHandoverPattern + "/end"
+	QuicHandlerPathNodeInfo             = "/"
 )
 
 var (
@@ -40,6 +46,10 @@ var (
 var LimitRequestByHeights = 20 // max number of reqeust heights
 
 var cacheKeyNodeInfo = [2]byte{0x00, 0x00}
+
+const (
+	SendSealFromConnInfoHeader string = "X-MITUM-FROM-CONNINFO"
+)
 
 type Server struct {
 	*logging.Logging
@@ -52,14 +62,21 @@ type Server struct {
 	nodeInfoHandler      network.NodeInfoHandler
 	blockDataMapsHandler network.BlockDataMapsHandler
 	blockDataHandler     network.BlockDataHandler
+	startHandoverHandler network.StartHandoverHandler
+	pingHandoverHandler  network.PingHandoverHandler
+	endHandoverHandler   network.EndHandoverHandler
 	cache                cache.Cache
 	rg                   *singleflight.Group
+	connInfo             network.ConnInfo
+	passthroughs         func(context.Context, network.PassthroughedSeal, func(seal.Seal, network.Channel)) error
 }
 
 func NewServer(
 	prim *PrimitiveQuicServer,
 	encs *encoder.Encoders, enc encoder.Encoder,
 	ca cache.Cache,
+	connInfo network.ConnInfo,
+	passthroughs func(context.Context, network.PassthroughedSeal, func(seal.Seal, network.Channel)) error,
 ) (*Server, error) {
 	if ca == nil {
 		ca = cache.Dummy{}
@@ -74,6 +91,8 @@ func NewServer(
 		enc:                 enc,
 		cache:               ca,
 		rg:                  &singleflight.Group{},
+		connInfo:            connInfo,
+		passthroughs:        passthroughs,
 	}
 	nqs.setHandlers()
 
@@ -132,12 +151,27 @@ func (sv *Server) SetBlockDataHandler(fn network.BlockDataHandler) {
 	sv.blockDataHandler = fn
 }
 
+func (sv *Server) SetStartHandoverHandler(fn network.StartHandoverHandler) {
+	sv.startHandoverHandler = fn
+}
+
+func (sv *Server) SetPingHandoverHandler(fn network.PingHandoverHandler) {
+	sv.pingHandoverHandler = fn
+}
+
+func (sv *Server) SetEndHandoverHandler(fn network.EndHandoverHandler) {
+	sv.endHandoverHandler = fn
+}
+
 func (sv *Server) setHandlers() {
 	_ = sv.SetHandlerFunc(QuicHandlerPathGetSeals, sv.handleGetSeals).Methods("POST")
 	_ = sv.SetHandlerFunc(QuicHandlerPathSendSeal, sv.handleNewSeal).Methods("POST")
 	_ = sv.SetHandlerFunc(QuicHandlerPathGetBlockDataMaps, sv.handleGetBlockDataMaps).Methods("POST")
 	_ = sv.SetHandlerFunc(QuicHandlerPathGetBlockDataPattern, sv.handleGetBlockData).Methods("GET")
 	_ = sv.SetHandlerFunc(QuicHandlerPathNodeInfo, sv.handleNodeInfo)
+	_ = sv.SetHandlerFunc(QuicHandlerPathPingHandoverPattern, sv.handlePingHandover)
+	_ = sv.SetHandlerFunc(QuicHandlerPathStartHandoverPattern, sv.handleStartHandover)
+	_ = sv.SetHandlerFunc(QuicHandlerPathEndHandoverPattern, sv.handleEndHandover)
 }
 
 func (sv *Server) handleGetSeals(w http.ResponseWriter, r *http.Request) {
@@ -192,11 +226,6 @@ func (sv *Server) handleGetSeals(w http.ResponseWriter, r *http.Request) {
 }
 
 func (sv *Server) handleNewSeal(w http.ResponseWriter, r *http.Request) {
-	if sv.newSealHandler == nil {
-		network.HTTPError(w, http.StatusInternalServerError)
-		return
-	}
-
 	body := &bytes.Buffer{}
 	if _, err := io.Copy(body, r.Body); err != nil {
 		sv.Log().Error().Err(err).Msg("failed to read post body")
@@ -217,6 +246,17 @@ func (sv *Server) handleNewSeal(w http.ResponseWriter, r *http.Request) {
 
 		network.HTTPError(w, http.StatusBadRequest)
 
+		return
+	}
+
+	go func() {
+		if err := sv.doPassthroughs(r, sl); err != nil {
+			sv.Log().Error().Err(err).Msg("failed to passthroughs")
+		}
+	}()
+
+	if sv.newSealHandler == nil {
+		network.HTTPError(w, http.StatusInternalServerError)
 		return
 	}
 
@@ -358,45 +398,114 @@ func (sv *Server) handleGetBlockData(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if v, err, _ := sv.rg.Do("GetBlockData-"+p, func() (interface{}, error) {
+	v, err, _ := sv.rg.Do("GetBlockData-"+p, func() (interface{}, error) {
 		j, closefunc, err := sv.blockDataHandler("/" + vars["path"])
+		defer func() {
+			_ = closefunc()
+		}()
+
 		if err != nil {
 			return nil, err
 		}
-		return []interface{}{j, closefunc}, nil
-	}); err != nil {
+
+		b, err := ioutil.ReadAll(j)
+		if err != nil {
+			return nil, fmt.Errorf("failed to get block data; failed to copy: %w", err)
+		}
+
+		return b, nil
+	})
+	if err != nil {
 		sv.Log().Error().Err(err).Str("path", p).Msg("failed to get block data")
 
 		handleError(w, err)
-	} else {
-		var j io.Reader
-		var closefunc func() error
-		{
-			l := v.([]interface{})
-			if l[0] != nil {
-				j = l[0].(io.Reader)
-			}
+	}
 
-			if l[1] != nil {
-				closefunc = l[1].(func() error)
-			}
-		}
+	if v == nil {
+		sv.Log().Error().Msg("failed to get block data; empty data")
 
-		if closefunc != nil {
-			defer func() {
-				_ = closefunc()
-			}()
-		}
+		network.HTTPError(w, http.StatusInternalServerError)
+	}
 
-		if j == nil {
-			sv.Log().Error().Msg("failed to get block data; empty reader")
+	_, _ = w.Write(v.([]byte))
+}
 
-			network.HTTPError(w, http.StatusInternalServerError)
-		} else if _, err := io.Copy(w, j); err != nil {
-			sv.Log().Error().Msg("failed to get block data; failed to copy")
+func (sv *Server) handleStartHandover(w http.ResponseWriter, r *http.Request) {
+	sl, ok := sv.loadHandoverSeal(w, r)
+	if !ok {
+		return
+	}
 
-			network.HTTPError(w, http.StatusInternalServerError)
-		}
+	i, err, _ := sv.rg.Do("handover", func() (interface{}, error) {
+		return sv.startHandoverHandler(sl)
+	})
+
+	sv.handleHandoverError(w, i.(bool), err)
+}
+
+func (sv *Server) handlePingHandover(w http.ResponseWriter, r *http.Request) {
+	sl, ok := sv.loadHandoverSeal(w, r)
+	if !ok {
+		return
+	}
+
+	i, err, _ := sv.rg.Do("handover", func() (interface{}, error) {
+		return sv.pingHandoverHandler(sl)
+	})
+
+	sv.handleHandoverError(w, i.(bool), err)
+}
+
+func (sv *Server) handleEndHandover(w http.ResponseWriter, r *http.Request) {
+	sl, ok := sv.loadHandoverSeal(w, r)
+	if !ok {
+		return
+	}
+
+	i, err, _ := sv.rg.Do("handover", func() (interface{}, error) {
+		return sv.endHandoverHandler(sl)
+	})
+
+	sv.handleHandoverError(w, i.(bool), err)
+}
+
+func (sv *Server) loadHandoverSeal(w http.ResponseWriter, r *http.Request) (network.HandoverSeal, bool) {
+	body := &bytes.Buffer{}
+	if _, err := io.Copy(body, r.Body); err != nil {
+		sv.Log().Error().Err(err).Msg("failed to read post body")
+
+		network.HTTPError(w, http.StatusInternalServerError)
+		return nil, false
+	}
+
+	enc, err := EncoderFromHeader(r.Header, sv.encs, sv.enc)
+	if err != nil {
+		network.HTTPError(w, http.StatusBadRequest)
+		return nil, false
+	}
+
+	sl, err := network.DecodeHandoverSeal(body.Bytes(), enc)
+	if err != nil {
+		sv.Log().Error().Err(err).Stringer("body", body).Msg("invalid handover seal found")
+
+		network.HTTPError(w, http.StatusBadRequest)
+
+		return nil, false
+	}
+
+	return sl, true
+}
+
+func (*Server) handleHandoverError(w http.ResponseWriter, ok bool, err error) {
+	switch {
+	case errors.Is(err, network.HandoverRejectedError):
+		network.WriteProblemWithError(w, http.StatusNotAcceptable, err)
+	case err != nil:
+		network.WriteProblemWithError(w, http.StatusInternalServerError, err)
+	case !ok:
+		w.WriteHeader(http.StatusNotAcceptable)
+	default:
+		w.WriteHeader(http.StatusOK)
 	}
 }
 
@@ -422,6 +531,33 @@ func (sv *Server) logNilHanders() {
 	}
 
 	sv.Log().Debug().Strs("enabled", enables).Strs("disabled", disables).Msg("check handler")
+}
+
+func (sv *Server) doPassthroughs(r *http.Request, sl seal.Seal) error {
+	if sv.passthroughs == nil {
+		return nil
+	}
+
+	return sv.passthroughs(
+		context.Background(),
+		network.NewPassthroughedSeal(sl, strings.TrimSpace(r.Header.Get(SendSealFromConnInfoHeader))),
+		func(sl seal.Seal, ch network.Channel) {
+			ctx, cancel := context.WithTimeout(context.Background(), time.Second*5)
+			defer cancel()
+
+			l := sv.Log().With().
+				Stringer("remote", ch.ConnInfo()).
+				Stringer("seal", sl.Hash()).
+				Logger()
+
+			if err := ch.SendSeal(ctx, sv.connInfo, sl); err != nil {
+				l.Trace().Err(err).Msg("failed to passthrough seal")
+
+				return
+			}
+			l.Trace().Msg("passthroughed")
+		},
+	)
 }
 
 func mustQuicURL(u, p string) (string, *url.URL) {

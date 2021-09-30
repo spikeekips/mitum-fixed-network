@@ -26,7 +26,6 @@ func init() {
 		ProcessNameNetwork,
 		[]string{
 			ProcessNameConfig,
-			ProcessNameConsensusStates,
 		},
 		ProcessQuicNetwork,
 	); err != nil {
@@ -48,6 +47,11 @@ func ProcessQuicNetwork(ctx context.Context) (context.Context, error) {
 		return ctx, err
 	}
 
+	var nodepool *network.Nodepool
+	if err := LoadNodepoolContextValue(ctx, &nodepool); err != nil {
+		return ctx, err
+	}
+
 	var l *logging.Logging
 	if err := config.LoadLogContextValue(ctx, &l); err != nil {
 		return ctx, err
@@ -63,7 +67,7 @@ func ProcessQuicNetwork(ctx context.Context) (context.Context, error) {
 		return ctx, err
 	}
 
-	nt, err := NewNetworkServer(conf.Bind().Host, conf.Certs(), encs, ca, httpLog)
+	nt, err := NewNetworkServer(conf.Bind().Host, conf.Certs(), encs, ca, conf.ConnInfo(), nodepool, httpLog)
 	if err != nil {
 		return ctx, err
 	}
@@ -81,6 +85,8 @@ func NewNetworkServer(
 	certs []tls.Certificate,
 	encs *encoder.Encoders,
 	ca cache.Cache,
+	connInfo network.ConnInfo,
+	nodepool *network.Nodepool,
 	httpLog *logging.Logging,
 ) (network.Server, error) {
 	je, err := encs.Encoder(jsonenc.JSONEncoderType, "")
@@ -90,7 +96,7 @@ func NewNetworkServer(
 
 	if qs, err := quicnetwork.NewPrimitiveQuicServer(bind, certs, httpLog); err != nil {
 		return nil, err
-	} else if nqs, err := quicnetwork.NewServer(qs, encs, je, ca); err != nil {
+	} else if nqs, err := quicnetwork.NewServer(qs, encs, je, ca, connInfo, nodepool.Passthroughs); err != nil {
 		return nil, err
 	} else if err := nqs.Initialize(); err != nil {
 		return nil, err

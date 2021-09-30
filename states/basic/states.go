@@ -2,6 +2,7 @@ package basicstates
 
 import (
 	"context"
+	"fmt"
 	"sync"
 	"time"
 
@@ -15,6 +16,8 @@ import (
 	"github.com/spikeekips/mitum/isaac"
 	"github.com/spikeekips/mitum/launch/pm"
 	"github.com/spikeekips/mitum/network"
+	"github.com/spikeekips/mitum/network/discovery/memberlist"
+	"github.com/spikeekips/mitum/states"
 	"github.com/spikeekips/mitum/storage"
 	"github.com/spikeekips/mitum/util"
 	"github.com/spikeekips/mitum/util/localtime"
@@ -49,21 +52,29 @@ type States struct {
 	livp               base.Voteproof
 	blockSavedHook     *pm.Hooks
 	isNoneSuffrageNode bool
+	hd                 *Handover
+	dis                *states.DiscoveryJoiner
+	joinDiscoveryFunc  func(int, chan error) error
 }
 
-func NewStates(
-	st storage.Database,
+func NewStates( // revive:disable-line:argument-limit
+	db storage.Database,
 	policy *isaac.LocalPolicy,
 	nodepool *network.Nodepool,
 	suffrage base.Suffrage,
 	ballotbox *isaac.Ballotbox,
-	stoppedState, bootingState, joiningState, consensusState, syncingState State,
+	stoppedState, bootingState, joiningState, consensusState, syncingState, handoverState State,
+	dis *states.DiscoveryJoiner,
+	hd *Handover,
 ) (*States, error) {
 	ss := &States{
 		Logging: logging.NewLogging(func(c zerolog.Context) zerolog.Context {
 			return c.Str("module", "basic-states")
 		}),
-		database: st, policy: policy, nodepool: nodepool, suffrage: suffrage,
+		database:    db,
+		policy:      policy,
+		nodepool:    nodepool,
+		suffrage:    suffrage,
 		state:       base.StateStopped,
 		statech:     make(chan StateSwitchContext, 33),
 		voteproofch: make(chan base.Voteproof, 33),
@@ -78,26 +89,32 @@ func NewStates(
 			TimerIDFindProposal,
 		}, false),
 		blockSavedHook: pm.NewHooks("block-saved"),
+		dis:            dis,
+		hd:             hd,
 	}
 
-	states := map[base.State]State{
-		base.StateStopped: stoppedState, base.StateBooting: bootingState,
-		base.StateJoining: joiningState, base.StateConsensus: consensusState, base.StateSyncing: syncingState,
+	sts := map[base.State]State{
+		base.StateStopped:   stoppedState,
+		base.StateBooting:   bootingState,
+		base.StateJoining:   joiningState,
+		base.StateConsensus: consensusState,
+		base.StateSyncing:   syncingState,
+		base.StateHandover:  handoverState,
 	}
 
-	for b := range states {
-		_ = states[b].SetStates(ss)
+	for b := range sts {
+		_ = sts[b].SetStates(ss)
 	}
 
-	ss.states = states
+	ss.states = sts
 	ss.ContextDaemon = util.NewContextDaemon("basic-states", ss.start)
 
 	// NOTE set last voteproof from local
-	if i := st.LastVoteproof(base.StageACCEPT); i != nil {
+	if i := db.LastVoteproof(base.StageACCEPT); i != nil {
 		ss.lvp = i
 	}
 
-	if i := st.LastVoteproof(base.StageINIT); i != nil {
+	if i := db.LastVoteproof(base.StageINIT); i != nil {
 		ss.livp = i
 	}
 
@@ -255,19 +272,9 @@ func (ss *States) NewProposal(proposal ballot.Proposal) {
 // BroadcastBallot broadcast seal to the known nodes,
 // - suffrage nodes
 // - if toLocal is true, sends to local
-func (ss *States) BroadcastBallot(blt ballot.Ballot, toLocal bool) error {
-	return ss.broadcast(blt, toLocal, func(node base.Node) bool {
+func (ss *States) BroadcastBallot(blt ballot.Ballot, toLocal bool) {
+	go ss.broadcast(blt, toLocal, func(node base.Node) bool {
 		return ss.suffrage.IsInside(node.Address())
-	})
-}
-
-// BroadcastSeals broadcast seal to the known nodes,
-// - suffrage nodes
-// - and other nodes
-// - if toLocal is true, sends to local
-func (ss *States) BroadcastSeals(sl seal.Seal, toLocal bool) error {
-	return ss.broadcast(sl, toLocal, func(base.Node) bool {
-		return true
 	})
 }
 
@@ -283,10 +290,18 @@ func (ss *States) setState(state base.State) {
 }
 
 func (ss *States) start(ctx context.Context) error {
+	if ss.joinDiscoveryFunc == nil {
+		ss.joinDiscoveryFunc = ss.defaultJoinDiscovery
+	}
+
 	ss.Log().Debug().Bool("is_none_suffrage", ss.isNoneSuffrageNode).Msg("states started")
 
 	if ss.ballotbox != nil {
 		go ss.cleanBallotbox(ctx)
+	}
+
+	if err := ss.join(); err != nil {
+		return err
 	}
 
 	if !ss.isNoneSuffrageNode {
@@ -367,7 +382,7 @@ func (ss *States) processSwitchStates(sctx StateSwitchContext) error {
 }
 
 func (ss *States) switchState(sctx StateSwitchContext) error {
-	l := ss.Log().With().Object("state_context", sctx).Logger()
+	l := ss.Log().With().Object("orig_state_context", sctx).Stringer("current_state", ss.State()).Logger()
 
 	e := l.Debug().Interface("voteproof", sctx.Voteproof())
 	if err := sctx.Err(); err != nil {
@@ -378,20 +393,33 @@ func (ss *States) switchState(sctx StateSwitchContext) error {
 
 	if err := sctx.IsValid(nil); err != nil {
 		return errors.Wrap(err, "invalid state switch context")
-	} else if ss.State() != sctx.FromState() {
+	}
+
+	if sctx.FromState() == base.StateEmpty {
+		sctx = sctx.SetFromState(ss.State())
+	}
+
+	if ss.State() != sctx.FromState() {
 		l.Debug().Msg("current state does not match in state switch context; ignore")
 
 		return nil
 	}
 
-	if ss.State() == sctx.ToState() {
-		if sctx.Voteproof() == nil {
-			return errors.Errorf("same state, but empty voteproof")
-		}
+	switch i, err := ss.switchStateHandover(sctx); {
+	case err != nil:
+		return err
+	default:
+		sctx = i
+	}
 
-		l.Debug().Msg("processing voteproof into current state")
-		if err := ss.processVoteproofInternal(sctx.Voteproof()); err != nil {
-			l.Debug().Err(err).Msg("failed to process voteproof into current state; ignore")
+	l = ss.Log().With().Object("state_context", sctx).Logger()
+
+	if ss.State() == sctx.ToState() {
+		if sctx.Voteproof() != nil {
+			l.Debug().Msg("processing voteproof into current state")
+			if err := ss.processVoteproofInternal(sctx.Voteproof()); err != nil {
+				l.Debug().Err(err).Msg("failed to process voteproof into current state; ignore")
+			}
 		}
 
 		return nil
@@ -510,9 +538,13 @@ func (ss *States) processVoteproofInternal(voteproof base.Voteproof) error {
 	switch {
 	case err == nil:
 	case errors.Is(err, SyncByVoteproofError):
-		err = NewStateSwitchContext(ss.State(), base.StateSyncing).
-			SetVoteproof(voteproof).
-			SetError(err)
+		if ss.State() == base.StateSyncing {
+			err = nil
+		} else {
+			err = NewStateSwitchContext(ss.State(), base.StateSyncing).
+				SetVoteproof(voteproof).
+				SetError(err)
+		}
 	case errors.Is(err, util.IgnoreError):
 		err = nil
 	case errors.As(err, &sctx):
@@ -521,7 +553,7 @@ func (ss *States) processVoteproofInternal(voteproof base.Voteproof) error {
 	}
 
 	switch ss.State() {
-	case base.StateJoining, base.StateConsensus:
+	case base.StateJoining, base.StateConsensus, base.StateHandover:
 		if !ss.SetLastVoteproof(voteproof) {
 			return util.IgnoreError.Errorf("old voteproof received")
 		}
@@ -563,7 +595,7 @@ func (ss *States) newSealProposal(proposal ballot.Proposal) error {
 		return nil
 	}
 
-	if proposal.Node().Equal(ss.nodepool.LocalNode().Address()) {
+	if !ss.underHandover() && proposal.Node().Equal(ss.nodepool.LocalNode().Address()) {
 		return nil
 	}
 
@@ -823,18 +855,16 @@ func (ss *States) broadcastOperationSealToSuffrageNodes(sl operation.Seal) {
 		return
 	}
 
-	if err := ss.broadcast(sl, false, func(node base.Node) bool {
+	go ss.broadcast(sl, false, func(node base.Node) bool {
 		return ss.suffrage.IsInside(node.Address())
-	}); err != nil {
-		ss.Log().Error().Err(err).Msg("problem to broadcast operation.Seal to suffrage nodes")
-	}
+	})
 }
 
 func (ss *States) broadcast(
 	sl seal.Seal,
 	toLocal bool,
 	filter func(node base.Node) bool,
-) error {
+) {
 	l := ss.Log().With().Stringer("seal_hash", sl.Hash()).Logger()
 
 	l.Debug().Dict("seal", LogSeal(sl)).Bool("to_local", toLocal).Msg("broadcasting seal")
@@ -848,32 +878,261 @@ func (ss *States) broadcast(
 		}()
 	}
 
-	if ss.nodepool.LenRemoteAlives() < 1 {
+	// NOTE broadcast nodes of Nodepool, including suffrage nodes
+	switch failed, err := ss.nodepool.Broadcast(context.Background(), sl, filter); {
+	case err != nil:
+		l.Error().Err(err).Msg("failed to broadcast seal")
+	case len(failed) > 0:
+		l.Error().Errs("failed", failed).Msg("something wrong to broadcast seal")
+	default:
+		l.Debug().Msg("seal broadcasted")
+	}
+}
+
+func (ss *States) Handover() states.Handover {
+	if ss.hd == nil {
 		return nil
 	}
 
-	// NOTE broadcast nodes of Nodepool, including suffrage nodes
-	var targets int
-	ss.nodepool.TraverseAliveRemotes(func(no base.Node, ch network.Channel) bool {
-		if !filter(no) {
-			return true
+	return ss.hd
+}
+
+func (ss *States) StartHandover() error {
+	err := ss.startHandover()
+	switch {
+	case errors.Is(err, network.HandoverRejectedError):
+		ss.Log().Debug().Err(err).Msg("trying to start handover; but rejected")
+	case err != nil:
+		ss.Log().Debug().Err(err).Msg("trying to start handover; but failed")
+	default:
+		ss.Log().Debug().Msg("handover started")
+	}
+
+	return err
+}
+
+func (ss *States) startHandover() error {
+	switch t := ss.State(); {
+	case t == base.StateStopped, t == base.StateBroken:
+		return network.HandoverRejectedError.Errorf("node can not start handover; state=%v", t)
+	case t == base.StateHandover:
+		return network.HandoverRejectedError.Errorf("node is already in handover")
+	case t == base.StateConsensus:
+		return network.HandoverRejectedError.Errorf("node is already in consensus")
+	}
+
+	if err := ss.hd.Refresh(); err != nil {
+		return fmt.Errorf("trying to start handover; but failed to refresh handover: %w", err)
+	}
+
+	switch {
+	case !ss.hd.UnderHandover():
+		return network.HandoverRejectedError.Errorf("not under handover")
+	case ss.hd.IsReady():
+		return network.HandoverRejectedError.Errorf("handover was already ready")
+	default:
+		ss.hd.setReady(true)
+
+		return nil
+	}
+}
+
+func (ss *States) EndHandover(ci network.ConnInfo) error {
+	err := ss.endHandover(ci)
+	switch {
+	case errors.Is(err, network.HandoverRejectedError):
+		ss.Log().Debug().Err(err).Msg("trying to end handover; but rejected")
+	case err != nil:
+		ss.Log().Debug().Err(err).Msg("trying to end handover; but failed")
+	default:
+		ss.Log().Debug().Msg("handover ended")
+	}
+
+	return err
+}
+
+func (ss *States) endHandover(ci network.ConnInfo) error {
+	l := ss.Log().With().Stringer("conninfo", ci).Logger()
+
+	ch, err := ss.hd.loadChannel(ci)
+	if err != nil {
+		return fmt.Errorf("failed to load channel from conninfo: %w", err)
+	}
+
+	// NOTE refresh Handover; old node will prepare handover
+	if err := ss.hd.Refresh(ch); err != nil {
+		return fmt.Errorf("failed to refresh handover: %w", err)
+	}
+
+	if !ss.underHandover() {
+		return network.HandoverRejectedError.Errorf("after handover; handover refreshed, but not under handover")
+	}
+
+	l.Debug().Msg("trying to end handover; handover refreshed and under handover")
+
+	go func() {
+		if err := ss.timers.StopTimersAll(); err != nil {
+			ss.Log().Error().Err(err).Msg("failed to stop all timers for end handover")
+		}
+	}()
+
+	old := ss.hd.OldNode()
+
+	// NOTE remove passthrough
+	if err := ss.nodepool.SetPassthrough(old, func(sl network.PassthroughedSeal) bool {
+		if _, ok := sl.Seal.(ballot.Ballot); ok { // NOTE prevent broadcasting ballots
+			return false
 		}
 
-		targets++
-
-		go func(no base.Node, ch network.Channel) {
-			ctx, cancel := context.WithTimeout(context.Background(), time.Second*5)
-			defer cancel()
-
-			if err := ch.SendSeal(ctx, sl); err != nil {
-				l.Error().Err(err).Stringer("target_node", no.Address()).Msg("failed to broadcast")
-			}
-		}(no, ch)
-
 		return true
-	})
+	}, 0); err != nil {
+		return fmt.Errorf("failed to update passthrough from EndHandoverSeal: %w", err)
+	}
 
-	l.Debug().Msg("seal broadcasted")
+	l.Debug().Msg("after handover; passthrough updated")
+
+	// NOTE leave from discovery
+	if ss.isJoined() {
+		if err := ss.dis.Leave(time.Second * 3); err != nil {
+			return fmt.Errorf("failed to end handover: %w", err)
+		}
+	}
+
+	l.Debug().Msg("after handover; left discovery; will move to syncing")
+
+	// NOTE switch to (only)syncing
+	return ss.SwitchState(NewStateSwitchContext(base.StateEmpty, base.StateSyncing).allowEmpty(true))
+}
+
+func (ss *States) underHandover() bool {
+	if ss.hd == nil {
+		return false
+	}
+
+	return ss.hd.UnderHandover()
+}
+
+func (ss *States) isHandoverReady() bool {
+	if ss.hd == nil {
+		return false
+	}
+
+	return ss.hd.IsReady()
+}
+
+func (ss *States) join() error {
+	if ss.isNoneSuffrageNode {
+		return nil
+	}
+
+	if ss.hd != nil {
+		if err := ss.hd.Start(); err != nil {
+			return err
+		}
+
+		if ss.hd.UnderHandover() {
+			ss.Log().Debug().Msg("duplicated node found; under handler; join later")
+
+			return nil
+		}
+
+		if err := ss.joinDiscovery(3, nil); err != nil {
+			ss.Log().Error().Err(err).Msg("failed to join discovery")
+		}
+	}
 
 	return nil
+}
+
+func (ss *States) isJoined() bool {
+	if ss.dis == nil {
+		return false
+	}
+
+	return ss.dis.IsJoined()
+}
+
+func (ss *States) joinDiscovery(maxretry int, donech chan error) error {
+	if ss.underHandover() {
+		if old := ss.hd.OldNode(); old != nil {
+			if err := ss.nodepool.SetPassthrough(old, nil, 0); err != nil {
+				return fmt.Errorf("failed to set passthrough to old node: %w", err)
+			}
+
+			ss.Log().Debug().Stringer("conninfo", old.ConnInfo()).Msg("set passthrough for old node")
+		}
+	}
+
+	if len(ss.suffrage.Nodes()) < 2 {
+		ss.Log().Debug().Msg("empty remote suffrage nodes; skip to join discovery")
+
+		return nil
+	}
+
+	ss.Log().Debug().Msg("trying to join discovery")
+
+	return ss.joinDiscoveryFunc(maxretry, donech)
+}
+
+func (ss *States) defaultJoinDiscovery(maxretry int, donech chan error) error {
+	if ss.dis == nil {
+		return nil
+	}
+
+	switch err := ss.dis.Join(maxretry); {
+	case err == nil:
+	case errors.Is(err, util.IgnoreError):
+		ss.Log().Error().Err(err).Msg("failed to join discovery; ignored")
+	case errors.Is(err, memberlist.JoiningCanceledError):
+		ss.Log().Error().Err(err).Msg("failed to join discovery; canceled")
+	default:
+		ss.Log().Error().Err(err).Msg("failed to join discovery")
+
+		return err
+	}
+
+	if !ss.isJoined() {
+		ss.Log().Debug().Msg("failed to join discovery; will keep trying")
+
+		go func() {
+			ss.dis.KeepTrying(context.Background(), donech)
+		}()
+	}
+
+	return nil
+}
+
+func (ss *States) switchStateHandover(sctx StateSwitchContext) (StateSwitchContext, error) {
+	if sctx.FromState() == base.StateHandover {
+		return sctx, nil
+	}
+
+	l := ss.Log().With().Object("state_context", sctx).Logger()
+
+	e := l.Debug().Interface("voteproof", sctx.Voteproof())
+
+	switch {
+	case sctx.FromState() == sctx.ToState():
+		return sctx, nil
+	case sctx.ToState() == base.StateBooting:
+		return sctx, nil
+	case !ss.underHandover():
+		if sctx.ToState() == base.StateHandover {
+			e.Msg("not under handover, to move handover state will be ignored")
+
+			return sctx, util.IgnoreError.Errorf("handover is not ready")
+		}
+
+		return sctx, nil
+	case !ss.isHandoverReady():
+		e.Msg("handover not yet ready, move to syncing")
+
+		return sctx.SetToState(base.StateSyncing), nil
+	case sctx.ToState() == base.StateConsensus:
+		e.Msg("under handover; consensus -> handover")
+
+		return sctx.SetToState(base.StateHandover), nil
+	default:
+		return sctx, nil
+	}
 }

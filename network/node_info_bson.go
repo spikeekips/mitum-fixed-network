@@ -16,9 +16,9 @@ func (ni NodeInfoV0) MarshalBSON() ([]byte, error) {
 		"state":      ni.state,
 		"last_block": ni.lastBlock,
 		"version":    ni.version,
-		"url":        ni.u,
 		"policy":     ni.policy,
 		"suffrage":   ni.nodes,
+		"conninfo":   ni.ci,
 	}))
 }
 
@@ -28,9 +28,9 @@ type NodeInfoV0UnpackerBSON struct {
 	ST  base.State             `bson:"state"`
 	LB  bson.Raw               `bson:"last_block"`
 	VS  util.Version           `bson:"version"`
-	UL  string                 `bson:"url"`
 	PO  map[string]interface{} `bson:"policy"`
 	SF  []bson.Raw             `bson:"suffrage"`
+	CI  bson.Raw               `bson:"conninfo"`
 }
 
 func (ni *NodeInfoV0) UnpackBSON(b []byte, enc *bsonenc.Encoder) error {
@@ -49,28 +49,21 @@ func (ni *NodeInfoV0) UnpackBSON(b []byte, enc *bsonenc.Encoder) error {
 		sf[i] = r
 	}
 
-	return ni.unpack(enc, nni.ND, nni.NID, nni.ST, nni.LB, nni.VS, nni.UL, nni.PO, sf)
+	return ni.unpack(enc, nni.ND, nni.NID, nni.ST, nni.LB, nni.VS, nni.PO, sf, nni.CI)
 }
 
 func (no RemoteNode) MarshalBSON() ([]byte, error) {
-	m := map[string]interface{}{
+	return bsonenc.Marshal(map[string]interface{}{
 		"address":   no.Address,
 		"publickey": no.Publickey,
-	}
-
-	if len(no.URL) > 0 {
-		m["url"] = no.URL
-		m["insecure"] = no.Insecure
-	}
-
-	return bsonenc.Marshal(m)
+		"conninfo":  no.ci,
+	})
 }
 
 type RemoteNodeUnpackBSON struct {
-	A base.AddressDecoder  `bson:"address"`
-	P key.PublickeyDecoder `bson:"publickey"`
-	U string               `bson:"url"`
-	I bool                 `bson:"insecure"`
+	A  base.AddressDecoder  `bson:"address"`
+	P  key.PublickeyDecoder `bson:"publickey"`
+	CI bson.Raw             `bson:"conninfo"`
 }
 
 func (no *RemoteNode) unpackBSON(b []byte, enc *bsonenc.Encoder) error {
@@ -79,5 +72,5 @@ func (no *RemoteNode) unpackBSON(b []byte, enc *bsonenc.Encoder) error {
 		return err
 	}
 
-	return no.unpack(enc, uno.A, uno.P, uno.U, uno.I)
+	return no.unpack(enc, uno.A, uno.P, uno.CI)
 }

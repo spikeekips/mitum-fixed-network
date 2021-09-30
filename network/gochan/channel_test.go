@@ -27,7 +27,7 @@ func (t *testNetworkChanChannel) TestSendReceive() {
 
 	sl := seal.NewDummySeal(t.pk)
 	go func() {
-		_ = gs.SendSeal(context.TODO(), sl)
+		_ = gs.SendSeal(context.TODO(), nil, sl)
 	}()
 
 	rsl := <-gs.ReceiveSeal()

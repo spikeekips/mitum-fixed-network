@@ -28,6 +28,10 @@ func (no BaseNodeNetwork) ConnInfo() network.ConnInfo {
 }
 
 func (no *BaseNodeNetwork) SetConnInfo(c network.ConnInfo) error {
+	if err := c.IsValid(nil); err != nil {
+		return err
+	}
+
 	no.connInfo = c
 
 	return nil

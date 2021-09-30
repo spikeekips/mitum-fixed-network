@@ -20,7 +20,7 @@ type SealsExtracter struct {
 	*logging.Logging
 	local    base.Address
 	proposer base.Address
-	st       storage.Database
+	database storage.Database
 	nodepool *network.Nodepool
 	seals    []valuehash.Hash
 	founds   map[string]struct{}
@@ -29,7 +29,7 @@ type SealsExtracter struct {
 func NewSealsExtracter(
 	local base.Address,
 	proposer base.Address,
-	st storage.Database,
+	db storage.Database,
 	nodepool *network.Nodepool,
 	seals []valuehash.Hash,
 ) *SealsExtracter {
@@ -40,7 +40,7 @@ func NewSealsExtracter(
 				Int("seals", len(seals))
 		}),
 		local:    local,
-		st:       st,
+		database: db,
 		nodepool: nodepool,
 		proposer: proposer,
 		seals:    seals,
@@ -203,7 +203,7 @@ func (se *SealsExtracter) fromStorage(
 	var ops []operation.Operation
 	var found bool
 	f := func(h valuehash.Hash) error {
-		if sl, found0, err := se.st.Seal(h); err != nil {
+		if sl, found0, err := se.database.Seal(h); err != nil {
 			return err
 		} else if !found0 {
 			return nil
@@ -251,7 +251,7 @@ func (se *SealsExtracter) fromChannel(notFounds []valuehash.Hash) (map[string][]
 		return nil, err
 	}
 
-	if err := se.st.NewSeals(received); err != nil {
+	if err := se.database.NewSeals(received); err != nil {
 		if !errors.Is(err, util.DuplicatedError) {
 			return nil, err
 		}

@@ -5,7 +5,10 @@ import (
 	"github.com/spikeekips/mitum/util"
 )
 
-var NetworkError = util.NewError("network error")
+var (
+	NetworkError          = util.NewError("network error")
+	HandoverRejectedError = util.NewError("handover failed")
+)
 
 func MergeError(err error) error {
 	if err == nil {

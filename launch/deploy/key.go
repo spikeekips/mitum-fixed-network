@@ -34,8 +34,8 @@ func (dk DeployKey) AddedAt() time.Time {
 
 type DeployKeyStorage struct {
 	sync.RWMutex
-	db   storage.Database
-	keys map[string]DeployKey
+	database storage.Database
+	keys     map[string]DeployKey
 }
 
 func NewDeployKeyStorage(db storage.Database) (*DeployKeyStorage, error) {
@@ -49,8 +49,8 @@ func NewDeployKeyStorage(db storage.Database) (*DeployKeyStorage, error) {
 	}
 
 	return &DeployKeyStorage{
-		db:   db,
-		keys: keys,
+		database: db,
+		keys:     keys,
 	}, nil
 }
 
@@ -78,14 +78,14 @@ func (ks *DeployKeyStorage) New() (DeployKey, error) {
 
 	nk := NewDeployKey()
 
-	if ks.db != nil {
+	if ks.database != nil {
 		m := map[string]DeployKey{}
 		for i := range ks.keys {
 			m[i] = ks.keys[i]
 		}
 		m[nk.Key()] = nk
 
-		if err := saveDeployKeys(ks.db, m); err != nil {
+		if err := saveDeployKeys(ks.database, m); err != nil {
 			return DeployKey{}, err
 		}
 	}
@@ -103,7 +103,7 @@ func (ks *DeployKeyStorage) Revoke(k string) error {
 		return util.NotFoundError
 	}
 
-	if ks.db != nil {
+	if ks.database != nil {
 		m := map[string]DeployKey{}
 
 		for i := range ks.keys {
@@ -114,7 +114,7 @@ func (ks *DeployKeyStorage) Revoke(k string) error {
 			m[i] = ks.keys[i]
 		}
 
-		if err := saveDeployKeys(ks.db, m); err != nil {
+		if err := saveDeployKeys(ks.database, m); err != nil {
 			return err
 		}
 	}

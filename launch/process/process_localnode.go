@@ -38,9 +38,11 @@ func ProcessLocalNode(ctx context.Context) (context.Context, error) {
 	}
 
 	no := node.NewLocal(conf.Address(), conf.Privatekey())
-	ch := network.NewDummyChannel(network.NewNilConnInfo("local://"))
+	ch := network.NewDummyChannel(conf.Network().ConnInfo())
 
 	nodepool := network.NewNodepool(no, ch)
+	_ = nodepool.SetLogging(log)
+
 	log.Log().Debug().Stringer("added_node", no.Address()).Msg("local node added to nodepool")
 
 	ctx = context.WithValue(ctx, ContextValueNodepool, nodepool)

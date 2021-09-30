@@ -1,3 +1,4 @@
+//go:build test
 // +build test
 
 package storage
@@ -112,7 +113,7 @@ func (t *BaseTestDatabase) SetupSuite() {
 	_ = t.Encs.TestAddHinter(base.VoteproofV0{})
 	_ = t.Encs.TestAddHinter(base.BaseVoteproofNodeFact{})
 	_ = t.Encs.TestAddHinter(seal.DummySeal{})
-	_ = t.Encs.TestAddHinter(operation.BaseSeal{})
+	_ = t.Encs.TestAddHinter(operation.SealHinter)
 	_ = t.Encs.TestAddHinter(operation.BaseFactSign{})
 	_ = t.Encs.TestAddHinter(operation.KVOperation{})
 	_ = t.Encs.TestAddHinter(operation.KVOperationFact{})

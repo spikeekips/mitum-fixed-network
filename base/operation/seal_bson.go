@@ -1,42 +1,32 @@
 package operation
 
 import (
-	"time"
-
-	"github.com/spikeekips/mitum/base/key"
+	"github.com/spikeekips/mitum/base/seal"
 	bsonenc "github.com/spikeekips/mitum/util/encoder/bson"
-	"github.com/spikeekips/mitum/util/valuehash"
 	"go.mongodb.org/mongo-driver/bson"
 )
 
 func (sl BaseSeal) MarshalBSON() ([]byte, error) {
-	return bsonenc.Marshal(bsonenc.MergeBSONM(
-		bsonenc.NewHintedDoc(sl.Hint()),
-		bson.M{
-			"hash":       sl.h,
-			"body_hash":  sl.bodyHash,
-			"signer":     sl.signer,
-			"signature":  sl.signature,
-			"signed_at":  sl.signedAt,
-			"operations": sl.ops,
-		},
-	))
+	m := sl.BaseSeal.BSONPacker()
+	m["operations"] = sl.ops
+
+	return bsonenc.Marshal(m)
 }
 
-type SealBSONUnpack struct {
-	H   valuehash.Bytes      `bson:"hash"`
-	BH  valuehash.Bytes      `bson:"body_hash"`
-	SN  key.PublickeyDecoder `bson:"signer"`
-	SG  key.Signature        `bson:"signature"`
-	SA  time.Time            `bson:"signed_at"`
-	OPS bson.Raw             `bson:"operations"`
+type BaseSealBSONUnpack struct {
+	OPS bson.Raw `bson:"operations"`
 }
 
 func (sl *BaseSeal) UnpackBSON(b []byte, enc *bsonenc.Encoder) error {
-	var usl SealBSONUnpack
+	var ub seal.BaseSeal
+	if err := ub.UnpackBSON(b, enc); err != nil {
+		return err
+	}
+
+	var usl BaseSealBSONUnpack
 	if err := enc.Unmarshal(b, &usl); err != nil {
 		return err
 	}
 
-	return sl.unpack(enc, usl.H, usl.BH, usl.SN, usl.SG, usl.SA, usl.OPS)
+	return sl.unpack(enc, ub, usl.OPS)
 }

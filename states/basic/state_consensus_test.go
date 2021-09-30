@@ -792,6 +792,77 @@ end:
 	}
 }
 
+func (t *testStateConsensus) TestEnterUnderHandover() {
+	suffrage := t.Suffrage(t.local, t.remote)
+
+	st, done := t.newState(suffrage, nil)
+	defer done()
+
+	stt := t.newStates(t.local, suffrage, st)
+	st.States = stt
+	hd := NewHandover(t.local.Channel().ConnInfo(), t.Encs, t.local.Policy(), t.local.Nodes(), suffrage)
+	_ = hd.st.setUnderHandover(true) // NOTE underhandover
+
+	st.States.hd = hd
+
+	_, err := st.Enter(NewStateSwitchContext(base.StateJoining, base.StateConsensus))
+	t.Contains(err.Error(), "consensus should not be entered under handover")
+}
+
+func (t *testStateConsensus) TestBroadcastProposalWithINITVoteproofNotUnderhandover() {
+	ib := t.NewINITBallot(t.local, base.Round(0), nil)
+	initFact := ib.INITFactV0
+
+	vp, err := t.NewVoteproof(base.StageINIT, initFact, t.local, t.remote)
+	t.NoError(err)
+
+	newblock, _ := block.NewTestBlockV0(vp.Height(), vp.Round(), valuehash.RandomSHA256(), valuehash.RandomSHA256())
+
+	dp := &prprocessor.DummyProcessor{S: prprocessor.BeforePrepared}
+	dp.PF = func(ctx context.Context) (block.Block, error) {
+		return newblock, nil
+	}
+	pps := t.Processors(dp.New)
+
+	suffrage := t.Suffrage(t.local, t.remote)
+	st, done := t.newState(suffrage, pps) // NOTE set local is proposer
+	defer done()
+
+	stt := t.newStates(t.local, suffrage, st)
+	st.States = stt
+	hd := NewHandover(t.local.Channel().ConnInfo(), t.Encs, t.local.Policy(), t.local.Nodes(), suffrage)
+
+	st.States.hd = hd
+
+	sealch := make(chan seal.Seal, 1)
+	st.SetBroadcastSealsFunc(func(sl seal.Seal, toLocal bool) error {
+		if _, ok := sl.(ballot.Proposal); !ok {
+			return nil
+		}
+
+		sealch <- sl
+
+		return nil
+	})
+
+	st.BaseState.enterFunc = func(StateSwitchContext) (func() error, error) {
+		_ = hd.st.setUnderHandover(true) // NOTE underhandover
+
+		return nil, nil
+	}
+
+	f, err := st.Enter(NewStateSwitchContext(base.StateJoining, base.StateConsensus).SetVoteproof(vp))
+	t.NoError(err)
+	t.NoError(f())
+
+	// NOTE proposal will not be broadcasted prior to accept ballot
+	select {
+	case <-time.After(time.Second * 3):
+	case <-sealch:
+		t.NoError(errors.Errorf("proposal should be blocked"))
+	}
+}
+
 func TestStateConsensus(t *testing.T) {
 	suite.Run(t, new(testStateConsensus))
 }

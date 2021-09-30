@@ -46,7 +46,7 @@ type Syncer interface {
 type syncerFetchBlockError struct {
 	err     error
 	heights []base.Height
-	node    base.Address
+	source  string
 	missing []base.Height
 	blocks  []block.Block
 }

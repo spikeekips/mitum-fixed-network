@@ -53,7 +53,7 @@ func (er *NError) Is(err error) bool {
 	return i.id == er.id
 }
 
-func (*NError) As(err error) bool { // nolint:govet
+func (*NError) As(err interface{}) bool { // nolint:govet
 	_, ok := err.(*NError) // nolint:errorlint
 
 	return ok

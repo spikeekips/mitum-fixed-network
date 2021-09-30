@@ -12,7 +12,7 @@ import (
 )
 
 func NextINITBallotFromACCEPTVoteproof(
-	st storage.Database,
+	db storage.Database,
 	local *node.Local,
 	voteproof base.Voteproof,
 ) (ballot.INITV0, error) {
@@ -32,7 +32,7 @@ func NextINITBallotFromACCEPTVoteproof(
 		height = voteproof.Height()
 		round = voteproof.Round() + 1
 
-		switch m, found, err := st.ManifestByHeight(height - 1); {
+		switch m, found, err := db.ManifestByHeight(height - 1); {
 		case err != nil:
 			return ballot.INITV0{}, errors.Wrap(err, "failed to get manifest")
 		case !found:
@@ -53,7 +53,7 @@ func NextINITBallotFromACCEPTVoteproof(
 	if voteproof.Result() == base.VoteResultMajority {
 		avp = voteproof
 	} else {
-		switch vp, err := st.Voteproof(voteproof.Height()-1, base.StageACCEPT); {
+		switch vp, err := db.Voteproof(voteproof.Height()-1, base.StageACCEPT); {
 		case err != nil:
 			return ballot.INITV0{}, errors.Wrap(err, "failed to get last voteproof")
 		case vp != nil:
@@ -72,7 +72,7 @@ func NextINITBallotFromACCEPTVoteproof(
 }
 
 func NextINITBallotFromINITVoteproof(
-	st storage.Database,
+	db storage.Database,
 	local *node.Local,
 	voteproof base.Voteproof,
 ) (ballot.INITV0, error) {
@@ -83,7 +83,7 @@ func NextINITBallotFromINITVoteproof(
 	}
 
 	var avp base.Voteproof
-	switch vp, err := st.Voteproof(voteproof.Height()-1, base.StageACCEPT); {
+	switch vp, err := db.Voteproof(voteproof.Height()-1, base.StageACCEPT); {
 	case err != nil:
 		return ballot.INITV0{}, errors.Wrap(err, "failed to get last voteproof")
 	case vp != nil:
@@ -91,7 +91,7 @@ func NextINITBallotFromINITVoteproof(
 	}
 
 	var previousBlock valuehash.Hash
-	switch m, found, err := st.ManifestByHeight(voteproof.Height() - 1); {
+	switch m, found, err := db.ManifestByHeight(voteproof.Height() - 1); {
 	case err != nil:
 		return ballot.INITV0{}, errors.Wrap(err, "failed to get previous manifest")
 	case !found:

@@ -26,7 +26,7 @@ type DefaultProcessor struct {
 	sync.RWMutex
 	*logging.Logging
 	stateLock        sync.RWMutex
-	st               storage.Database
+	database         storage.Database
 	blockData        blockdata.BlockData
 	nodepool         *network.Nodepool
 	baseManifest     block.Manifest
@@ -54,7 +54,7 @@ type DefaultProcessor struct {
 }
 
 func NewDefaultProcessorNewFunc(
-	st storage.Database,
+	db storage.Database,
 	blockData blockdata.BlockData,
 	nodepool *network.Nodepool,
 	suffrage base.Suffrage,
@@ -62,7 +62,7 @@ func NewDefaultProcessorNewFunc(
 ) prprocessor.ProcessorNewFunc {
 	return func(proposal ballot.Proposal, initVoteproof base.Voteproof) (prprocessor.Processor, error) {
 		return NewDefaultProcessor(
-			st,
+			db,
 			blockData,
 			nodepool,
 			suffrage,
@@ -74,7 +74,7 @@ func NewDefaultProcessorNewFunc(
 }
 
 func NewDefaultProcessor(
-	st storage.Database,
+	db storage.Database,
 	blockData blockdata.BlockData,
 	nodepool *network.Nodepool,
 	suffrage base.Suffrage,
@@ -83,7 +83,7 @@ func NewDefaultProcessor(
 	initVoteproof base.Voteproof,
 ) (*DefaultProcessor, error) {
 	var baseManifest block.Manifest
-	switch m, found, err := st.ManifestByHeight(proposal.Height() - 1); {
+	switch m, found, err := db.ManifestByHeight(proposal.Height() - 1); {
 	case err != nil:
 		return nil, err
 	case !found:
@@ -99,7 +99,7 @@ func NewDefaultProcessor(
 				Uint64("round", proposal.Round().Uint64()).
 				Stringer("proposal", proposal.Hash())
 		}),
-		st:            st,
+		database:      db,
 		blockData:     blockData,
 		nodepool:      nodepool,
 		baseManifest:  baseManifest,

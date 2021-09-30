@@ -1,6 +1,8 @@
 package localtime
 
 import (
+	"context"
+	"sync"
 	"sync/atomic"
 	"testing"
 	"time"
@@ -9,6 +11,7 @@ import (
 	"github.com/spikeekips/mitum/util"
 	"github.com/stretchr/testify/suite"
 	"go.uber.org/goleak"
+	"golang.org/x/sync/semaphore"
 )
 
 type testContextTimer struct {
@@ -168,21 +171,52 @@ func (t *testContextTimer) TestLongInterval() {
 }
 
 func (t *testContextTimer) TestLongRunning() {
-	stopch := make(chan bool)
-	ct := NewContextTimer(
-		TimerID("long-interval timer"),
-		time.Millisecond*100,
-		func(int) (bool, error) {
-			<-time.After(time.Second * 2)
-			stopch <- true
-			return true, nil
-		},
-	)
-	t.NoError(ct.Start())
+	sem := semaphore.NewWeighted(50)
 
-	<-time.After(time.Millisecond * 100)
-	t.NoError(ct.Stop())
-	<-stopch
+	ctx := context.Background()
+
+	var run uint64
+	for i := 0; i < 100; i++ {
+		if err := sem.Acquire(ctx, 1); err != nil {
+			panic(err)
+		}
+
+		i := i
+		go func() {
+			defer sem.Release(1)
+			defer func() {
+				atomic.AddUint64(&run, 1)
+
+				if n := atomic.LoadUint64(&run); n%20 == 0 {
+					t.T().Logf("< % 3d: % 3d", i, n)
+				}
+			}()
+
+			stopch := make(chan bool, 1)
+			var once sync.Once
+
+			ct := NewContextTimer(
+				TimerID("long-interval timer"),
+				time.Millisecond*100,
+				func(int) (bool, error) {
+					defer once.Do(func() {
+						stopch <- true
+					})
+
+					<-time.After(time.Second * 2)
+					return true, nil
+				},
+			)
+			t.NoError(ct.Start())
+
+			<-time.After(time.Second)
+			t.NoError(ct.Stop())
+			<-stopch
+		}()
+	}
+
+	t.NoError(sem.Acquire(ctx, 50))
+	t.T().Log("done")
 }
 
 func (t *testContextTimer) TestRestartAfterStop() {

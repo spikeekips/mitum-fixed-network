@@ -27,7 +27,7 @@ func (t *testSealEncode) SetupSuite() {
 	_ = t.encs.AddEncoder(t.enc)
 
 	_ = t.encs.TestAddHinter(key.BTCPublickeyHinter)
-	_ = t.encs.TestAddHinter(BaseSeal{})
+	_ = t.encs.TestAddHinter(SealHinter)
 	_ = t.encs.TestAddHinter(KVOperation{})
 	_ = t.encs.TestAddHinter(KVOperationFact{})
 	_ = t.encs.TestAddHinter(BaseFactSign{})
@@ -55,6 +55,8 @@ func (t *testSealEncode) TestSign() {
 
 	usl, ok := hinter.(BaseSeal)
 	t.True(ok)
+
+	t.NoError(usl.IsValid(nil))
 
 	t.True(sl.Hash().Equal(usl.Hash()))
 	t.Equal(len(sl.Operations()), len(usl.Operations()))

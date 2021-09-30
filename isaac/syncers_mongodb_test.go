@@ -1,3 +1,4 @@
+//go:build mongodb
 // +build mongodb
 
 package isaac
@@ -8,6 +9,7 @@ import (
 
 	"github.com/pkg/errors"
 	"github.com/spikeekips/mitum/base"
+	"github.com/spikeekips/mitum/network"
 	mongodbstorage "github.com/spikeekips/mitum/storage/mongodb"
 	"github.com/spikeekips/mitum/util/cache"
 	"github.com/stretchr/testify/suite"
@@ -32,7 +34,11 @@ func (t *testSyncers) TestSaveLastBlock() {
 
 	finishedChan := make(chan base.Height)
 
-	ss := NewSyncers(local.Node(), local.Database(), local.BlockData(), local.Nodes(), local.Policy(), baseManifest)
+	ss := NewSyncers(local.Database(), local.BlockData(), local.Policy(), baseManifest, func() map[string]network.Channel {
+		return map[string]network.Channel{
+			remote.Node().String(): remote.Channel(),
+		}
+	})
 	ss.WhenFinished(func(height base.Height) {
 		finishedChan <- height
 	})

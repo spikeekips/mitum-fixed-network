@@ -17,7 +17,7 @@ import (
 	"github.com/spikeekips/mitum/util/logging"
 )
 
-const QuicEncoderHintHeader string = "x-mitum-encoder-hint"
+const QuicEncoderHintHeader string = "X-MITUM-ENCODER-HINT"
 
 type PrimitiveQuicServer struct {
 	*logging.Logging

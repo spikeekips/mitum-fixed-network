@@ -16,8 +16,8 @@ type testStateSyncing struct {
 	baseTestState
 }
 
-func (t *testStateSyncing) newState(local *isaac.Local) (*SyncingState, func()) {
-	st := NewSyncingState(local.Database(), local.BlockData(), local.Policy(), local.Nodes())
+func (t *testStateSyncing) newState(local *isaac.Local, suffrage base.Suffrage) (*SyncingState, func()) {
+	st := NewSyncingState(local.Database(), local.BlockData(), local.Policy(), local.Nodes(), suffrage)
 
 	return st, func() {
 		f, err := st.Exit(NewStateSwitchContext(base.StateSyncing, base.StateStopped))
@@ -27,8 +27,16 @@ func (t *testStateSyncing) newState(local *isaac.Local) (*SyncingState, func()) 
 }
 
 func (t *testStateSyncing) TestINITMovesToConsensus() {
-	st, done := t.newState(t.local)
+	st, done := t.newState(t.local, t.Suffrage(t.local, t.remote))
 	defer done()
+
+	st.SetLastVoteproofFuncs(func() base.Voteproof {
+		return nil
+	}, func() base.Voteproof {
+		return nil
+	}, func(voteproof base.Voteproof) bool {
+		return true
+	})
 
 	timers := localtime.NewTimers([]localtime.TimerID{
 		TimerIDSyncingWaitVoteproof,
@@ -62,7 +70,7 @@ func (t *testStateSyncing) TestINITMovesToConsensus() {
 func (t *testStateSyncing) TestWaitMovesToJoining() {
 	t.local.Policy().SetTimeoutWaitingProposal(time.Millisecond * 10)
 
-	st, done := t.newState(t.local)
+	st, done := t.newState(t.local, t.Suffrage(t.local, t.remote))
 	defer done()
 
 	st.waitVoteproofTimeout = time.Millisecond * 10
@@ -115,7 +123,7 @@ func (t *testStateSyncing) TestSyncingHandlerFromVoteproof() {
 	target := baseBlock.Height() + 5
 	t.GenerateBlocks([]*isaac.Local{rn0, rn1, rn2}, target)
 
-	st, done := t.newState(local)
+	st, done := t.newState(local, t.Suffrage(local, rn0, rn1, rn2))
 	defer done()
 
 	st.waitVoteproofTimeout = time.Minute * 50
@@ -125,7 +133,7 @@ func (t *testStateSyncing) TestSyncingHandlerFromVoteproof() {
 	}, false)
 	st.SetTimers(timers)
 
-	livpch := make(chan base.Voteproof, 1)
+	livpch := make(chan base.Voteproof, 2)
 	st.SetLastVoteproofFuncs(func() base.Voteproof {
 		return nil
 	}, func() base.Voteproof {
@@ -205,6 +213,220 @@ end:
 	t.Equal(int(target-baseBlock.Height()), len(blks))
 	t.Equal(baseBlock.Height()+1, blks[0].Height())
 	t.Equal(target, blks[len(blks)-1].Height())
+
+	err = st.ProcessVoteproof(voteproof)
+
+	var sctx StateSwitchContext
+	t.True(errors.As(err, &sctx))
+	t.Equal(base.StateSyncing, sctx.FromState())
+	t.Equal(base.StateConsensus, sctx.ToState())
+	t.Equal(voteproof.Bytes(), sctx.Voteproof().Bytes())
+}
+
+func (t *testStateSyncing) TestNoneSuffrage() {
+	st, done := t.newState(t.local, t.Suffrage(t.remote))
+	defer done()
+
+	timers := localtime.NewTimers([]localtime.TimerID{
+		TimerIDSyncingWaitVoteproof,
+	}, false)
+	st.SetTimers(timers)
+
+	f, err := st.Enter(NewStateSwitchContext(base.StateJoining, base.StateSyncing))
+	t.NoError(err)
+	err = f()
+	t.NoError(err)
+
+	t.True(st.canStartNodeInfoChecker())
+	t.True(st.nc.IsStarted())
+}
+
+func (t *testStateSyncing) readyToFinish(local *isaac.Local, suffrage base.Suffrage, others ...*isaac.Local) (*SyncingState, chan bool) {
+	t.SetupNodes(local, others)
+
+	baseBlock := t.LastManifest(local.Database())
+	target := baseBlock.Height() + 5
+	t.GenerateBlocks(others, target)
+
+	st, done := t.newState(local, suffrage)
+	defer done()
+
+	stt := t.newStates(local, suffrage, st)
+	stt.hd = NewHandover(nil, t.Encs, local.Policy(), local.Nodes(), suffrage)
+	st.States = stt
+
+	st.waitVoteproofTimeout = time.Minute * 50
+
+	timers := localtime.NewTimers([]localtime.TimerID{
+		TimerIDSyncingWaitVoteproof,
+	}, false)
+	st.SetTimers(timers)
+
+	var livp base.Voteproof
+	st.SetLastVoteproofFuncs(func() base.Voteproof {
+		return livp
+	}, func() base.Voteproof {
+		if livp.Stage() == base.StageINIT {
+			return livp
+		}
+
+		return nil
+	}, func(voteproof base.Voteproof) bool {
+		livp = voteproof
+
+		return true
+	})
+
+	finishedch := make(chan bool)
+	st.SetNewBlocksFunc(func(blks []block.Block) error {
+		for _, blk := range blks {
+			if blk.Height() == target {
+				finishedch <- true
+			}
+		}
+
+		return nil
+	})
+
+	return st, finishedch
+}
+
+func (t *testStateSyncing) TestFinishedButNotInSuffrage() {
+	suffrage := t.Suffrage(t.remote)
+	st, finishedch := t.readyToFinish(t.local, suffrage, t.remote)
+	t.False(st.States.underHandover())
+	t.False(st.States.isHandoverReady())
+
+	var voteproof base.Voteproof
+	{
+		b := t.NewINITBallot(t.remote, base.Round(0), nil)
+
+		vp, err := t.NewVoteproof(b.Stage(), b.INITFactV0, t.remote)
+		t.NoError(err)
+
+		voteproof = vp
+	}
+
+	f, err := st.Enter(NewStateSwitchContext(base.StateJoining, base.StateSyncing).SetVoteproof(voteproof))
+	t.NoError(err)
+	t.NoError(f())
+
+	select {
+	case <-time.After(time.Second * 10):
+		t.NoError(errors.Errorf("timeout to wait to be finished"))
+
+		return
+	case <-finishedch:
+		<-time.After(time.Second)
+	}
+
+	t.NoError(st.ProcessVoteproof(voteproof)) // NOTE stay in syncing
+}
+
+func (t *testStateSyncing) TestFinishedButUnderhandover() {
+	suffrage := t.Suffrage(t.local, t.remote)
+	st, finishedch := t.readyToFinish(t.local, suffrage, t.remote)
+	st.States.hd.st.setUnderHandover(true)
+	t.True(st.States.underHandover())
+	t.False(st.States.isHandoverReady())
+
+	var voteproof base.Voteproof
+	{
+		b := t.NewINITBallot(t.remote, base.Round(0), nil)
+
+		vp, err := t.NewVoteproof(b.Stage(), b.INITFactV0, t.remote)
+		t.NoError(err)
+
+		voteproof = vp
+	}
+
+	f, err := st.Enter(NewStateSwitchContext(base.StateJoining, base.StateSyncing).SetVoteproof(voteproof))
+	t.NoError(err)
+	t.NoError(f())
+
+	select {
+	case <-time.After(time.Second * 10):
+		t.NoError(errors.Errorf("timeout to wait to be finished"))
+
+		return
+	case <-finishedch:
+		<-time.After(time.Second)
+	}
+
+	t.NoError(st.ProcessVoteproof(voteproof)) // NOTE stay in syncing
+}
+
+func (t *testStateSyncing) TestFinishedButNotReadyHandover() {
+	suffrage := t.Suffrage(t.local, t.remote)
+	st, finishedch := t.readyToFinish(t.local, suffrage, t.remote)
+	st.States.hd.st.setUnderHandover(true)
+	t.True(st.States.underHandover())
+	t.False(st.States.isHandoverReady())
+
+	var voteproof base.Voteproof
+	{
+		b := t.NewINITBallot(t.remote, base.Round(0), nil)
+
+		vp, err := t.NewVoteproof(b.Stage(), b.INITFactV0, t.remote)
+		t.NoError(err)
+
+		voteproof = vp
+	}
+
+	f, err := st.Enter(NewStateSwitchContext(base.StateJoining, base.StateSyncing).SetVoteproof(voteproof))
+	t.NoError(err)
+	t.NoError(f())
+
+	select {
+	case <-time.After(time.Second * 10):
+		t.NoError(errors.Errorf("timeout to wait to be finished"))
+
+		return
+	case <-finishedch:
+		<-time.After(time.Second)
+	}
+
+	t.NoError(st.ProcessVoteproof(voteproof)) // NOTE stay in syncing
+}
+
+func (t *testStateSyncing) TestFinishedUnderhandoverAndReady() {
+	suffrage := t.Suffrage(t.local, t.remote)
+	st, finishedch := t.readyToFinish(t.local, suffrage, t.remote)
+	st.States.hd.st.setUnderHandover(true)
+	st.States.hd.st.setIsReady(true)
+	t.True(st.States.underHandover())
+	t.True(st.States.isHandoverReady())
+
+	var voteproof base.Voteproof
+	{
+		b := t.NewINITBallot(t.remote, base.Round(0), nil)
+
+		vp, err := t.NewVoteproof(b.Stage(), b.INITFactV0, t.remote)
+		t.NoError(err)
+
+		voteproof = vp
+	}
+
+	f, err := st.Enter(NewStateSwitchContext(base.StateJoining, base.StateSyncing).SetVoteproof(voteproof))
+	t.NoError(err)
+	t.NoError(f())
+
+	select {
+	case <-time.After(time.Second * 10):
+		t.NoError(errors.Errorf("timeout to wait to be finished"))
+
+		return
+	case <-finishedch:
+		<-time.After(time.Second)
+	}
+
+	err = st.ProcessVoteproof(voteproof)
+
+	var sctx StateSwitchContext
+	t.True(errors.As(err, &sctx))
+	t.Equal(base.StateSyncing, sctx.FromState())
+	t.Equal(base.StateConsensus, sctx.ToState())
+	t.Equal(voteproof.Bytes(), sctx.Voteproof().Bytes())
 }
 
 func TestStateSyncing(t *testing.T) {

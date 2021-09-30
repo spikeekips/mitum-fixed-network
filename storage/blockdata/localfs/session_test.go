@@ -56,7 +56,7 @@ func (t *testSession) SetupSuite() {
 	_ = encs.TestAddHinter(block.ConsensusInfoV0{})
 	_ = encs.TestAddHinter(block.SuffrageInfoV0{})
 	_ = encs.TestAddHinter(operation.BaseFactSign{})
-	_ = encs.TestAddHinter(operation.BaseSeal{})
+	_ = encs.TestAddHinter(operation.SealHinter)
 	_ = encs.TestAddHinter(operation.KVOperationFact{})
 	_ = encs.TestAddHinter(operation.KVOperation{})
 	_ = encs.TestAddHinter(tree.FixedTree{})

@@ -71,7 +71,10 @@ func ProcessSuffrage(ctx context.Context) (context.Context, error) {
 		return ctx, err
 	}
 
-	log.Log().Debug().Interface("suffrage_nodes", sf.Nodes()).Msg("suffrage done")
+	log.Log().Debug().
+		Bool("in_suffrage", sf.IsInside(l.Address())).
+		Interface("suffrage_nodes", sf.Nodes()).
+		Msg("suffrage done")
 
 	return context.WithValue(ctx, ContextValueSuffrage, sf), nil
 }
@@ -143,8 +146,8 @@ func processRoundrobinSuffrage(ctx context.Context, conf config.RoundrobinSuffra
 		}
 	}
 
-	var st storage.Database
-	if err := LoadDatabaseContextValue(ctx, &st); err != nil {
+	var db storage.Database
+	if err := LoadDatabaseContextValue(ctx, &db); err != nil {
 		return nil, err
 	}
 
@@ -153,7 +156,7 @@ func processRoundrobinSuffrage(ctx context.Context, conf config.RoundrobinSuffra
 		conf.NumberOfActing(),
 		conf.CacheSize,
 		func(height base.Height) (valuehash.Hash, error) {
-			switch m, found, err := st.ManifestByHeight(height); {
+			switch m, found, err := db.ManifestByHeight(height); {
 			case err != nil:
 				return nil, err
 			case !found:

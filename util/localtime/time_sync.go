@@ -177,3 +177,20 @@ func Now() time.Time {
 func UTCNow() time.Time {
 	return Now().UTC()
 }
+
+func Within(base, target time.Time, d time.Duration) bool {
+	switch {
+	case d <= 0:
+		return base.Equal(target)
+	case target.After(base.Add(d)):
+	case target.Before(base.Add(d * -1)):
+	default:
+		return true
+	}
+
+	return false
+}
+
+func WithinNow(target time.Time, d time.Duration) bool {
+	return Within(Now(), target, d)
+}

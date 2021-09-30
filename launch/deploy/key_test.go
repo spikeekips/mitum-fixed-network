@@ -92,7 +92,7 @@ func TestDeployKeyStorage(t *testing.T) {
 type testDeployKeyStorageWithDatabase struct {
 	suite.Suite
 	isaac.StorageSupportTest
-	db storage.Database
+	database storage.Database
 }
 
 func (t *testDeployKeyStorageWithDatabase) SetupSuite() {
@@ -102,11 +102,11 @@ func (t *testDeployKeyStorageWithDatabase) SetupSuite() {
 }
 
 func (t *testDeployKeyStorageWithDatabase) SetupTest() {
-	t.db = t.Database(t.Encs, nil)
+	t.database = t.Database(t.Encs, nil)
 }
 
 func (t *testDeployKeyStorageWithDatabase) TestAdd() {
-	ks, err := NewDeployKeyStorage(t.db)
+	ks, err := NewDeployKeyStorage(t.database)
 	t.NoError(err)
 	t.Equal(0, ks.Len())
 
@@ -116,7 +116,7 @@ func (t *testDeployKeyStorageWithDatabase) TestAdd() {
 	}
 
 	// NOTE check in info
-	uks, err := loadDeployKeys(t.db)
+	uks, err := loadDeployKeys(t.database)
 	t.NoError(err)
 	for i := range ks.keys {
 		a := ks.keys[i]
@@ -128,7 +128,7 @@ func (t *testDeployKeyStorageWithDatabase) TestAdd() {
 }
 
 func (t *testDeployKeyStorageWithDatabase) TestLoad() {
-	ks, err := NewDeployKeyStorage(t.db)
+	ks, err := NewDeployKeyStorage(t.database)
 	t.NoError(err)
 	t.Equal(0, ks.Len())
 
@@ -138,7 +138,7 @@ func (t *testDeployKeyStorageWithDatabase) TestLoad() {
 	}
 
 	// NOTE check in info
-	uks, err := NewDeployKeyStorage(t.db)
+	uks, err := NewDeployKeyStorage(t.database)
 	t.NoError(err)
 	for i := range ks.keys {
 		a := ks.keys[i]
@@ -150,7 +150,7 @@ func (t *testDeployKeyStorageWithDatabase) TestLoad() {
 }
 
 func (t *testDeployKeyStorageWithDatabase) TestRevoke() {
-	ks, err := NewDeployKeyStorage(t.db)
+	ks, err := NewDeployKeyStorage(t.database)
 	t.NoError(err)
 	t.Equal(0, ks.Len())
 
@@ -164,7 +164,7 @@ func (t *testDeployKeyStorageWithDatabase) TestRevoke() {
 	t.NoError(ks.Revoke(nk.Key()))
 
 	// NOTE check in info
-	uks, err := loadDeployKeys(t.db)
+	uks, err := loadDeployKeys(t.database)
 	t.NoError(err)
 	for i := range ks.keys {
 		a := ks.keys[i]

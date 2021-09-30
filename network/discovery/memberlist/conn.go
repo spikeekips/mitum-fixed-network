@@ -148,6 +148,10 @@ func NewConnInfoWithConnInfo(addr string, connInfo network.HTTPConnInfo) ConnInf
 }
 
 func (ci ConnInfo) IsValid([]byte) error {
+	if err := ci.HTTPConnInfo.IsValid(nil); err != nil {
+		return err
+	}
+
 	if len(strings.TrimSpace(ci.Address)) < 1 {
 		return errors.Errorf("empty address")
 	}
@@ -156,6 +160,10 @@ func (ci ConnInfo) IsValid([]byte) error {
 }
 
 func (ci ConnInfo) Equal(b network.ConnInfo) bool {
+	if b == nil {
+		return false
+	}
+
 	i, ok := b.(ConnInfo)
 	if !ok {
 		return false
@@ -173,14 +181,6 @@ func (ci ConnInfo) Bytes() []byte {
 		ci.HTTPConnInfo.Bytes(),
 		[]byte(ci.Address),
 	)
-}
-
-func (ci ConnInfo) MarshalJSON() ([]byte, error) {
-	return util.JSON.Marshal(map[string]interface{}{
-		"url":      ci.URL().String(),
-		"insecure": ci.Insecure(),
-		"address":  ci.Address,
-	})
 }
 
 func (ci ConnInfo) setInsecure(i bool) ConnInfo {

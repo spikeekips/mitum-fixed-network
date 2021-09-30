@@ -1,6 +1,7 @@
 package basicstates
 
 import (
+	"fmt"
 	"testing"
 	"time"
 
@@ -421,6 +422,9 @@ func (t *testStateJoining) TestStuckAInACCEPTStage() {
 		joining,
 		consensus,
 		NewBaseState(base.StateSyncing),
+		NewBaseState(base.StateHandover),
+		nil,
+		nil,
 	)
 	t.NoError(err)
 
@@ -474,6 +478,50 @@ func (t *testStateJoining) TestStuckAInACCEPTStage() {
 	case sctx := <-statech:
 		t.Equal(sctx.FromState(), base.StateJoining)
 		t.Equal(sctx.ToState(), base.StateConsensus)
+	}
+}
+
+func (t *testStateJoining) TestNotBroadcastingINITBallotUnderHandover() {
+	_, _ = t.local.Policy().SetIntervalBroadcastingINITBallot(time.Millisecond * 30)
+
+	suffrage := t.Suffrage(t.local, t.remote)
+	st, done := t.newState(t.local, suffrage, t.Ballotbox(suffrage, t.local.Policy()))
+	defer done()
+
+	timers := localtime.NewTimers([]localtime.TimerID{
+		TimerIDBroadcastJoingingINITBallot,
+		TimerIDBroadcastINITBallot,
+	}, false)
+	st.SetTimers(timers)
+
+	stt := t.newStates(t.local, suffrage, st)
+	stt.joinDiscoveryFunc = stt.defaultJoinDiscovery
+
+	hd := NewHandover(nil, t.Encs, t.local.Policy(), t.local.Nodes(), suffrage)
+	_ = hd.st.setUnderHandover(true)
+
+	st.States.hd = hd
+
+	sealch := make(chan seal.Seal, 1)
+	st.SetBroadcastSealsFunc(func(sl seal.Seal, toLocal bool) error {
+		sealch <- sl
+
+		return nil
+	})
+
+	lastAcceptVoteproof := t.local.Database().LastVoteproof(base.StageACCEPT)
+	t.NotNil(lastAcceptVoteproof)
+
+	f, err := st.Enter(NewStateSwitchContext(base.StateBooting, base.StateJoining).SetVoteproof(lastAcceptVoteproof))
+	t.NoError(err)
+	t.NoError(f())
+
+	wait := t.local.Policy().IntervalBroadcastingINITBallot() * 7
+
+	select {
+	case <-time.After(wait):
+	case <-sealch:
+		t.NoError(fmt.Errorf("under handover, JoiningState will not broadcast init ballot"))
 	}
 }
 

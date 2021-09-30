@@ -79,7 +79,13 @@ func NormalizeURL(u *url.URL) *url.URL {
 		RawFragment: u.RawFragment,
 	}
 
-	if port := uu.Port(); port == "" {
+	hostname := uu.Hostname()
+	if strings.EqualFold(uu.Hostname(), "localhost") {
+		hostname = "127.0.0.1"
+	}
+
+	port := uu.Port()
+	if port == "" {
 		switch uu.Scheme {
 		case "https":
 			port = "443"
@@ -88,8 +94,9 @@ func NormalizeURL(u *url.URL) *url.URL {
 		default:
 			port = "0"
 		}
-		uu.Host = uu.Hostname() + ":" + port
 	}
+
+	uu.Host = hostname + ":" + port
 
 	if uu.Path == "/" {
 		uu.Path = ""

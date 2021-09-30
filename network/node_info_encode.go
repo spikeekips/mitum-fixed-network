@@ -14,9 +14,9 @@ func (ni *NodeInfoV0) unpack(
 	st base.State,
 	blb []byte,
 	vs util.Version,
-	u string,
 	co map[string]interface{},
 	sf []RemoteNode,
+	bci []byte,
 ) error {
 	n, err := base.DecodeNode(bnode, enc)
 	if err != nil {
@@ -33,11 +33,16 @@ func (ni *NodeInfoV0) unpack(
 	ni.lastBlock = b
 
 	ni.version = vs
-	ni.u = u
 
 	ni.policy = co
 
 	ni.nodes = sf
+
+	uci, err := DecodeConnInfo(bci, enc)
+	if err != nil {
+		return err
+	}
+	ni.ci = uci
 
 	return nil
 }
@@ -46,8 +51,7 @@ func (no *RemoteNode) unpack(
 	enc encoder.Encoder,
 	ba base.AddressDecoder,
 	bp key.PublickeyDecoder,
-	u string,
-	insecure bool,
+	bci []byte,
 ) error {
 	i, err := ba.Encode(enc)
 	if err != nil {
@@ -61,9 +65,13 @@ func (no *RemoteNode) unpack(
 	}
 	no.Publickey = j
 
-	if len(u) > 0 {
-		no.URL = u
-		no.Insecure = insecure
+	if len(bci) > 0 {
+		i, err := DecodeConnInfo(bci, enc)
+		if err != nil {
+			return err
+		}
+
+		no.ci = i
 	}
 
 	return nil

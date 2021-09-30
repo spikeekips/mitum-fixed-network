@@ -96,6 +96,10 @@ func (ca *GCache) Set(key interface{}, b interface{}, expire time.Duration) erro
 	return ca.gc.SetWithExpire(key, b, expire)
 }
 
+func (ca *GCache) SetWithoutExpire(key interface{}, b interface{}) error {
+	return ca.gc.Set(key, b)
+}
+
 func (ca *GCache) Remove(key interface{}) bool {
 	return ca.gc.Remove(key)
 }
@@ -108,4 +112,26 @@ func (ca *GCache) Purge() error {
 
 func (ca *GCache) New() (Cache, error) {
 	return NewGCache(ca.tp, ca.size, ca.expire)
+}
+
+func (ca *GCache) Traverse(callback func(k, v interface{}) bool) error {
+	keys := ca.gc.Keys(true)
+
+	for i := range keys {
+		k := keys[i]
+		j, err := ca.gc.Get(k)
+		if err != nil {
+			if errors.Is(err, gcache.KeyNotFoundError) {
+				continue
+			}
+
+			return err
+		}
+
+		if !callback(k, j) {
+			break
+		}
+	}
+
+	return nil
 }

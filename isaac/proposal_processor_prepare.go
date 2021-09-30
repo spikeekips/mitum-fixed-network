@@ -103,7 +103,7 @@ func (pp *DefaultProcessor) prepareOperations(ctx context.Context) error {
 		return nil
 	}
 
-	se := NewSealsExtracter(pp.nodepool.LocalNode().Address(), pp.proposal.Node(), pp.st, pp.nodepool, seals)
+	se := NewSealsExtracter(pp.nodepool.LocalNode().Address(), pp.proposal.Node(), pp.database, pp.nodepool, seals)
 	_ = se.SetLogging(pp.Logging)
 
 	ops, err := se.Extract(ctx)
@@ -201,7 +201,7 @@ func (pp *DefaultProcessor) processOperations(ctx context.Context) error {
 		return nil
 	}
 
-	pool, err := storage.NewStatepool(pp.st)
+	pool, err := storage.NewStatepool(pp.database)
 	if err != nil {
 		return err
 	}
@@ -262,7 +262,7 @@ func (pp *DefaultProcessor) prepareDatabaseSession(ctx context.Context) error {
 		_ = pp.setStatic("processor_prepare_database_session_elapsed", time.Since(started))
 	}()
 
-	bs, err := pp.st.NewSession(pp.blk)
+	bs, err := pp.database.NewSession(pp.blk)
 	if err != nil {
 		return err
 	}
@@ -301,7 +301,7 @@ func (pp *DefaultProcessor) processStatesTree(ctx context.Context, pool *storage
 	co = c.Start(
 		ctx,
 		func(sp state.Processor) error {
-			switch found, err := pp.st.HasOperationFact(sp.(operation.Operation).Fact().Hash()); {
+			switch found, err := pp.database.HasOperationFact(sp.(operation.Operation).Fact().Hash()); {
 			case err != nil:
 				return err
 			case found:

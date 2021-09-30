@@ -10,9 +10,9 @@ import (
 	"github.com/spikeekips/mitum/util/valuehash"
 )
 
-func NewINITBallotV0Round0(node base.Node, st storage.Database) (ballot.INITV0, error) {
+func NewINITBallotV0Round0(node base.Node, db storage.Database) (ballot.INITV0, error) {
 	var m block.Manifest
-	switch l, found, err := st.LastManifest(); {
+	switch l, found, err := db.LastManifest(); {
 	case err != nil:
 		return ballot.INITV0{}, errors.Wrap(err, "failed to get last block")
 	case !found:
@@ -21,7 +21,7 @@ func NewINITBallotV0Round0(node base.Node, st storage.Database) (ballot.INITV0, 
 		m = l
 	}
 
-	avp := st.LastVoteproof(base.StageACCEPT)
+	avp := db.LastVoteproof(base.StageACCEPT)
 
 	return ballot.NewINITV0(
 		node.Address(),
@@ -35,7 +35,7 @@ func NewINITBallotV0Round0(node base.Node, st storage.Database) (ballot.INITV0, 
 
 func NewINITBallotV0WithVoteproof(
 	node base.Node,
-	st storage.Database,
+	db storage.Database,
 	voteproof base.Voteproof,
 ) (ballot.INITV0, error) {
 	var height base.Height
@@ -53,7 +53,7 @@ func NewINITBallotV0WithVoteproof(
 			previousBlock = t.NewBlock()
 		}
 
-		avp = st.LastVoteproof(base.StageACCEPT)
+		avp = db.LastVoteproof(base.StageACCEPT)
 	case base.StageACCEPT:
 		avp = voteproof
 		height = voteproof.Height() + 1
@@ -77,7 +77,7 @@ func NewINITBallotV0WithVoteproof(
 }
 
 func NewProposalV0(
-	st storage.Database,
+	db storage.Database,
 	node base.Address,
 	round base.Round,
 	seals []valuehash.Hash,
@@ -86,7 +86,7 @@ func NewProposalV0(
 	ballot.ProposalV0, error,
 ) {
 	var manifest block.Manifest
-	switch l, found, err := st.LastManifest(); {
+	switch l, found, err := db.LastManifest(); {
 	case err != nil:
 		return ballot.ProposalV0{}, err
 	case !found:

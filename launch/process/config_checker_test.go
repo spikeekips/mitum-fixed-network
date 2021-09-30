@@ -127,7 +127,7 @@ network:
 		t.NoError(config.LoadConfigContextValue(ps.Context(), &conf))
 
 		t.NotNil(conf.Network())
-		t.Equal("https://localhost:54323", conf.Network().ConnInfo().URL().String())
+		t.Equal("https://127.0.0.1:54323", conf.Network().ConnInfo().URL().String())
 		t.Equal("https://localhost:54324", conf.Network().Bind().String())
 		t.Equal(config.DefaultLocalNetworkCache, conf.Network().Cache().String())
 		t.Equal(config.DefaultLocalNetworkSealCache, conf.Network().SealCache().String())

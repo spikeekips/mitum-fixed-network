@@ -14,8 +14,7 @@ import (
 
 const HookNameCheckEmptyBlock = "check_empty_block"
 
-// HookCheckEmptyBlock checks whether local has empty block. If empty block and
-// there are no other nodes, stop process with error.
+// HookCheckEmptyBlock checks whether local has empty block.
 func HookCheckEmptyBlock(ctx context.Context) (context.Context, error) {
 	var log *logging.Logging
 	if err := config.LoadLogContextValue(ctx, &log); err != nil {
@@ -32,8 +31,8 @@ func HookCheckEmptyBlock(ctx context.Context) (context.Context, error) {
 		return ctx, err
 	}
 
-	var st storage.Database
-	if err := LoadDatabaseContextValue(ctx, &st); err != nil {
+	var db storage.Database
+	if err := LoadDatabaseContextValue(ctx, &db); err != nil {
 		return ctx, err
 	}
 
@@ -42,12 +41,12 @@ func HookCheckEmptyBlock(ctx context.Context) (context.Context, error) {
 		return ctx, err
 	}
 
-	if m, err := storage.CheckBlockEmpty(st); err != nil {
+	if m, err := storage.CheckBlockEmpty(db); err != nil {
 		return ctx, err
 	} else if m == nil {
 		log.Log().Debug().Msg("empty block found; storage will be empty")
 
-		if err := blockdata.Clean(st, blockData, false); err != nil {
+		if err := blockdata.Clean(db, blockData, false); err != nil {
 			return nil, err
 		}
 

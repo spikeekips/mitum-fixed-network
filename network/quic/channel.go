@@ -17,6 +17,7 @@ import (
 	"github.com/spikeekips/mitum/base/block"
 	"github.com/spikeekips/mitum/base/seal"
 	"github.com/spikeekips/mitum/network"
+	"github.com/spikeekips/mitum/util"
 	"github.com/spikeekips/mitum/util/encoder"
 	"github.com/spikeekips/mitum/util/hint"
 	"github.com/spikeekips/mitum/util/isvalid"
@@ -35,6 +36,9 @@ type Channel struct {
 	nodeInfoURL      string
 	getBlockDataMaps string
 	getBlockData     url.URL
+	startHandover    string
+	pingHandover     string
+	endHandover      string
 	client           *QuicClient
 }
 
@@ -47,7 +51,7 @@ func NewChannel(
 ) (*Channel, error) {
 	ch := &Channel{
 		Logging: logging.NewLogging(func(c zerolog.Context) zerolog.Context {
-			return c.Str("module", "quic-network")
+			return c.Str("module", "quic-network-channel")
 		}),
 		recvChan: make(chan seal.Seal, bufsize),
 		connInfo: connInfo,
@@ -64,6 +68,9 @@ func NewChannel(
 		_, u := mustQuicURL(addr, QuicHandlerPathGetBlockData)
 		ch.getBlockData = *u
 	}
+	ch.startHandover, _ = mustQuicURL(addr, QuicHandlerPathStartHandoverPattern)
+	ch.pingHandover, _ = mustQuicURL(addr, QuicHandlerPathPingHandoverPattern)
+	ch.endHandover, _ = mustQuicURL(addr, QuicHandlerPathEndHandoverPattern)
 
 	client, err := NewQuicClient(connInfo.Insecure(), quicConfig)
 	if err != nil {
@@ -120,7 +127,11 @@ func (ch *Channel) Seals(ctx context.Context, hs []valuehash.Hash) ([]seal.Seal,
 	return seals, nil
 }
 
-func (ch *Channel) SendSeal(ctx context.Context, sl seal.Seal) error {
+func (ch *Channel) SendSeal(ctx context.Context, ci network.ConnInfo, sl seal.Seal) error {
+	l := ch.Log().With().Stringer("cid", util.UUID()).Stringer("seal_hash", sl.Hash()).Logger()
+
+	l.Trace().Msg("trying to send seal")
+
 	timeout := network.ChannelTimeoutSendSeal
 	ctx, cancel := ch.timeoutContext(ctx, timeout)
 	defer cancel()
@@ -130,10 +141,11 @@ func (ch *Channel) SendSeal(ctx context.Context, sl seal.Seal) error {
 		return err
 	}
 
-	ch.Log().Debug().Stringer("seal_hash", sl.Hash()).Msg("sent seal")
-
 	headers := http.Header{}
 	headers.Set(QuicEncoderHintHeader, ch.enc.Hint().String())
+	if ci != nil {
+		headers.Set(SendSealFromConnInfoHeader, ci.String())
+	}
 
 	res, err := ch.client.Send(ctx, timeout*2, ch.sendSealURL, b, headers)
 	if err != nil {
@@ -141,6 +153,8 @@ func (ch *Channel) SendSeal(ctx context.Context, sl seal.Seal) error {
 	}
 	defer func() {
 		_ = res.Close()
+
+		l.Trace().Msg("seal sent")
 	}()
 
 	return nil
@@ -233,6 +247,18 @@ func (ch *Channel) BlockData(ctx context.Context, item block.BlockDataMapItem) (
 		},
 		item,
 	)
+}
+
+func (ch *Channel) StartHandover(ctx context.Context, sl network.StartHandoverSeal) (bool, error) {
+	return ch.sendHandoverSeal(ctx, ch.startHandover, sl)
+}
+
+func (ch *Channel) PingHandover(ctx context.Context, sl network.PingHandoverSeal) (bool, error) {
+	return ch.sendHandoverSeal(ctx, ch.pingHandover, sl)
+}
+
+func (ch *Channel) EndHandover(ctx context.Context, sl network.EndHandoverSeal) (bool, error) {
+	return ch.sendHandoverSeal(ctx, ch.endHandover, sl)
 }
 
 func (ch *Channel) blockData(ctx context.Context, p string) (io.ReadCloser, func() error, error) {
@@ -330,6 +356,57 @@ func (*Channel) timeoutContext(ctx context.Context, timeout time.Duration) (cont
 	}
 
 	return context.WithTimeout(context.Background(), timeout)
+}
+
+func (ch *Channel) sendHandoverSeal(ctx context.Context, path string, sl network.HandoverSeal) (bool, error) {
+	timeout := network.ChannelTimeoutHandover
+	ctx, cancel := ch.timeoutContext(ctx, timeout)
+	defer cancel()
+
+	b, err := ch.enc.Marshal(sl)
+	if err != nil {
+		return false, err
+	}
+
+	l := ch.Log().With().Stringer("seal_hash", sl.Hash()).Stringer("hint", sl.Hint()).Logger()
+
+	headers := http.Header{}
+	headers.Set(QuicEncoderHintHeader, ch.enc.Hint().String())
+
+	res, err := ch.client.Send(ctx, 0 /* set to default, 30s */, path, b, headers)
+	if err != nil {
+		l.Error().Err(err).Msg("failed to send handover seal")
+
+		return false, err
+	}
+
+	defer func() {
+		_ = res.Close()
+	}()
+
+	e := l.Trace().Int("status_code", res.StatusCode)
+
+	switch {
+	case res.StatusCode == http.StatusOK, res.StatusCode == http.StatusCreated:
+		e.Msg("successfully sent handover seal")
+
+		return true, nil
+	case network.IsProblemFromResponse(res.Response):
+		problem, err := network.LoadProblemFromResponse(res.Response)
+		if err != nil {
+			e.Err(err).Msg("sent handover seal")
+
+			return false, err
+		}
+
+		e.Interface("problem", problem).Msg("sent handover seal")
+
+		return false, problem
+	default:
+		e.Msg("sent handover seal, but said no")
+
+		return false, nil
+	}
 }
 
 var reStripSlash = regexp.MustCompile(`^[/]*`)

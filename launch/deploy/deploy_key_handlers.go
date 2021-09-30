@@ -33,13 +33,13 @@ var (
 )
 
 type deployKeyHandlers struct {
-	*baseDeployHandler
+	*BaseDeployHandler
 	cache cache.Cache
 	mw    *DeployKeyByTokenMiddleware
 }
 
 func newDeployKeyHandlers(ctx context.Context, handler func(string) *mux.Route) (*deployKeyHandlers, error) {
-	base, err := newBaseDeployHandler(ctx, "deploy-key-handlers", handler)
+	base, err := NewBaseDeployHandler(ctx, "deploy-key-handlers", handler)
 	if err != nil {
 		return nil, err
 	}
@@ -62,7 +62,7 @@ func newDeployKeyHandlers(ctx context.Context, handler func(string) *mux.Route) 
 	mw := NewDeployKeyByTokenMiddleware(c, local.Privatekey().Publickey(), policy.NetworkID())
 
 	dh := &deployKeyHandlers{
-		baseDeployHandler: base,
+		BaseDeployHandler: base,
 		cache:             c,
 		mw:                mw,
 	}
@@ -88,7 +88,7 @@ func (dh *deployKeyHandlers) setHandlers() error {
 }
 
 func (dh *deployKeyHandlers) setTokenHandler() error {
-	handler := dh.rateLimit(
+	handler := dh.RateLimit(
 		RateLimitHandlerNameDeployKeyToken,
 		NewDeployKeyTokenHandler(dh.cache, DefaultDeployKeyTokenExpired),
 	)
@@ -119,7 +119,7 @@ func (dh *deployKeyHandlers) setKeyHandler() error {
 }
 
 func (dh *deployKeyHandlers) setKeysHandler() error {
-	handler := dh.rateLimit(RateLimitHandlerNameDeployKeyKeys, http.HandlerFunc(NewDeployKeyKeysHandler(dh.ks, dh.enc)))
+	handler := dh.RateLimit(RateLimitHandlerNameDeployKeyKeys, http.HandlerFunc(NewDeployKeyKeysHandler(dh.ks, dh.enc)))
 
 	_ = dh.handler(QuicHandlerPathDeployKeyKeys).Handler(dh.mw.Middleware(handler))
 
@@ -127,7 +127,7 @@ func (dh *deployKeyHandlers) setKeysHandler() error {
 }
 
 func (dh *deployKeyHandlers) setKeyNewHandler() error {
-	handler := dh.rateLimit(RateLimitHandlerNameDeployKeyNew, http.HandlerFunc(NewDeployKeyNewHandler(dh.ks, dh.enc)))
+	handler := dh.RateLimit(RateLimitHandlerNameDeployKeyNew, http.HandlerFunc(NewDeployKeyNewHandler(dh.ks, dh.enc)))
 
 	_ = dh.handler(QuicHandlerPathDeployKeyNew).Handler(dh.mw.Middleware(handler))
 
@@ -136,10 +136,10 @@ func (dh *deployKeyHandlers) setKeyNewHandler() error {
 
 func (dh *deployKeyHandlers) keyHandler() network.HTTPHandlerFunc {
 	handler := NewDeployKeyKeyHandler(dh.ks, dh.enc)
-	return dh.rateLimit(RateLimitHandlerNameDeployKeyKey, http.HandlerFunc(handler)).ServeHTTP
+	return dh.RateLimit(RateLimitHandlerNameDeployKeyKey, http.HandlerFunc(handler)).ServeHTTP
 }
 
 func (dh *deployKeyHandlers) keyRevokeHandler() network.HTTPHandlerFunc {
 	handler := NewDeployKeyRevokeHandler(dh.ks)
-	return dh.rateLimit(RateLimitHandlerNameDeployKeyRevoke, http.HandlerFunc(handler)).ServeHTTP
+	return dh.RateLimit(RateLimitHandlerNameDeployKeyRevoke, http.HandlerFunc(handler)).ServeHTTP
 }

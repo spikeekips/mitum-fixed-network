@@ -10,8 +10,8 @@ import (
 	"time"
 
 	"github.com/lucas-clemente/quic-go"
-	"github.com/pkg/errors"
 	"github.com/rs/zerolog"
+	"github.com/spikeekips/mitum/network"
 	"github.com/spikeekips/mitum/util"
 	"github.com/spikeekips/mitum/util/logging"
 )
@@ -88,11 +88,11 @@ func (cl *QuicClient) Request(
 
 	i, err := cl.makeRequest(url, method, b, headers)
 	if err != nil {
-		return nil, closefunc, err
+		return nil, closefunc, network.MergeError(err)
 	}
 	res, err := client.Do(i.WithContext(ctx))
 
-	return res, closefunc, err
+	return res, closefunc, network.MergeError(err)
 }
 
 func (cl *QuicClient) makeRequest(url string, method string, b []byte, headers http.Header) (*http.Request, error) {
@@ -187,16 +187,18 @@ func (qr *QuicResponse) Error() error {
 	if qr.OK() {
 		return nil
 	} else if qr.StatusCode == http.StatusNotFound {
-		return util.NotFoundError.Errorf("request not found: %d", qr.StatusCode)
+		return network.MergeError(
+			util.NotFoundError.Errorf("request not found: %d", qr.StatusCode),
+		)
 	}
 
-	return errors.Errorf("failed to request: %d", qr.StatusCode)
+	return network.NetworkError.Errorf("failed to request: %d", qr.StatusCode)
 }
 
 func (qr *QuicResponse) Close() error {
 	_ = qr.Response.Body.Close()
 
-	return qr.closeFunc()
+	return network.MergeError(qr.closeFunc())
 }
 
 func (qr *QuicResponse) Body() io.ReadCloser {

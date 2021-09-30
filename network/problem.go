@@ -110,10 +110,14 @@ func WritePoblem(w http.ResponseWriter, status int, pr Problem) {
 	_, _ = w.Write(output)
 }
 
+func IsProblemFromResponse(res *http.Response) bool {
+	return ProblemMimetype == res.Header.Get("Content-Type")
+}
+
 func LoadProblemFromResponse(res *http.Response) (Problem, error) {
 	var pr Problem
-	if m := res.Header.Get("Content-Type"); ProblemMimetype != m {
-		return pr, errors.Errorf("unknown mimetype for problem, %q", m)
+	if !IsProblemFromResponse(res) {
+		return pr, errors.Errorf("unknown mimetype for problem, %q", res.Header.Get("Content-Type"))
 	}
 
 	if i, err := ioutil.ReadAll(res.Body); err != nil {

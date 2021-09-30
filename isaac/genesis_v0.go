@@ -34,7 +34,7 @@ type GenesisBlockV0Generator struct {
 
 func NewGenesisBlockV0Generator(
 	local *node.Local,
-	st storage.Database,
+	db storage.Database,
 	blockData blockdata.BlockData,
 	policy *LocalPolicy,
 	ops []operation.Operation,
@@ -53,7 +53,7 @@ func NewGenesisBlockV0Generator(
 			return c.Str("module", "genesis-block-generator")
 		}),
 		local:     local,
-		database:  st,
+		database:  db,
 		blockData: blockData,
 		policy:    policy,
 		nodepool:  nodepool,

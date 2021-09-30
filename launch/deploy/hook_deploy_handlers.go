@@ -3,11 +3,13 @@ package deploy
 import (
 	"context"
 	"fmt"
+	"net/http"
 
 	"github.com/spikeekips/mitum/launch/config"
 	"github.com/spikeekips/mitum/launch/process"
 	"github.com/spikeekips/mitum/network"
 	quicnetwork "github.com/spikeekips/mitum/network/quic"
+	"github.com/spikeekips/mitum/storage"
 	"github.com/spikeekips/mitum/util/logging"
 )
 
@@ -38,11 +40,30 @@ func HookDeployHandlers(ctx context.Context) (context.Context, error) {
 		return ctx, err
 	}
 
-	if i, err := newDeployHandlers(ctx, qnt.Handler); err != nil {
-		return ctx, err
-	} else if err := i.setHandlers(); err != nil {
+	return hookDefaultDeployHandlers(ctx, qnt)
+}
+
+func hookDefaultDeployHandlers(ctx context.Context, qnt *quicnetwork.Server) (context.Context, error) {
+	dh, err := NewDeployHandlers(ctx, qnt.Handler)
+	if err != nil {
 		return ctx, err
 	}
 
-	return ctx, nil
+	var db storage.Database
+	if err := process.LoadDatabaseContextValue(ctx, &db); err != nil {
+		return ctx, err
+	}
+
+	var bc *BlockDataCleaner
+	if err := LoadBlockDataCleanerContextValue(ctx, &bc); err != nil {
+		return ctx, err
+	}
+
+	setBlockDataMapsHandler := http.HandlerFunc(NewSetBlockDataMapsHandler(qnt.Encoder(), db, bc))
+	_ = dh.SetHandler(
+		QuicHandlerPathSetBlockDataMaps,
+		dh.RateLimit(RateLimitHandlerNameSetBlockDataMaps, setBlockDataMapsHandler),
+	)
+
+	return context.WithValue(ctx, ContextValueDeployHandler, dh), nil
 }

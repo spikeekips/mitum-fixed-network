@@ -63,17 +63,16 @@ func (cmd *baseDeployKeyCommand) Initialize(flags interface{}, version util.Vers
 	}
 
 	if i, err := loadKey([]byte(cmd.Key), cmd.jsonenc); err != nil {
-		return errors.Wrap(err, "failed to load node privatekey")
+		return errors.Wrap(err, "failed to load privatekey")
 	} else if j, ok := i.(key.Privatekey); !ok {
-		return errors.Errorf("failed to load node privatekey; not privatekey, %T", i)
+		return errors.Errorf("failed to load privatekey; not privatekey, %T", i)
 	} else {
 		cmd.privatekey = j
 
-		cmd.Log().Debug().Stringer("node_privatekey", cmd.privatekey).Msg("node privatekey loaded")
+		cmd.Log().Debug().Stringer("privatekey", cmd.privatekey).Msg("privatekey loaded")
 	}
 
 	cmd.networkID = base.NetworkID([]byte(cmd.NetworkID))
-
 	cmd.Log().Debug().Str("network_id", cmd.NetworkID).Msg("network-id loaded")
 
 	if cmd.Timeout < 1 {

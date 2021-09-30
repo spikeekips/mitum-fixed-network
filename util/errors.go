@@ -10,6 +10,7 @@ var (
 	FoundError      = NewError("found")
 	DuplicatedError = NewError("duplicated error")
 	WrongTypeError  = NewError("wrong type")
+	EmptyError      = NewError("empty")
 )
 
 type DataContainerError struct {

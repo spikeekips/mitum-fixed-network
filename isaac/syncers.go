@@ -8,7 +8,6 @@ import (
 	"github.com/rs/zerolog"
 	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/base/block"
-	"github.com/spikeekips/mitum/base/node"
 	"github.com/spikeekips/mitum/network"
 	"github.com/spikeekips/mitum/storage"
 	"github.com/spikeekips/mitum/storage/blockdata"
@@ -20,10 +19,9 @@ type Syncers struct {
 	sync.RWMutex
 	*util.ContextDaemon
 	*logging.Logging
-	local                *node.Local
 	database             storage.Database
 	blockData            blockdata.BlockData
-	nodepool             *network.Nodepool
+	sourceChannelsFunc   func() map[string]network.Channel
 	policy               *LocalPolicy
 	baseManifest         block.Manifest
 	limitBlocksPerSyncer uint
@@ -37,21 +35,19 @@ type Syncers struct {
 }
 
 func NewSyncers(
-	local *node.Local,
-	st storage.Database,
+	db storage.Database,
 	blockData blockdata.BlockData,
-	nodepool *network.Nodepool,
 	policy *LocalPolicy,
 	baseManifest block.Manifest,
+	sourceChannelsFunc func() map[string]network.Channel,
 ) *Syncers {
 	sy := &Syncers{
 		Logging: logging.NewLogging(func(c zerolog.Context) zerolog.Context {
 			return c.Str("module", "syncers")
 		}),
-		local:                local,
-		database:             st,
+		database:             db,
 		blockData:            blockData,
-		nodepool:             nodepool,
+		sourceChannelsFunc:   sourceChannelsFunc,
 		policy:               policy,
 		baseManifest:         baseManifest,
 		limitBlocksPerSyncer: 10,
@@ -202,12 +198,10 @@ func (sy *Syncers) newSyncer(baseManifest block.Manifest) (Syncer, error) {
 	}
 
 	syncer, err := NewGeneralSyncer(
-		sy.local,
 		sy.database,
 		sy.blockData,
-		sy.nodepool,
 		sy.policy,
-		sy.sourceNodes,
+		sy.sourceChannelsFunc,
 		baseManifest, to,
 	)
 	if err != nil {
@@ -349,8 +343,8 @@ func (sy *Syncers) stateChangedSaved(ctx SyncerStateChangedContext) error {
 		Int64("last_syncer_height", sy.lastSyncer.HeightTo().Int64()).
 		Logger()
 
-	if st, ok := sy.database.(storage.LastBlockSaver); ok {
-		if err := st.SaveLastBlock(syncer.HeightTo()); err != nil {
+	if db, ok := sy.database.(storage.LastBlockSaver); ok {
+		if err := db.SaveLastBlock(syncer.HeightTo()); err != nil {
 			return err
 		}
 	}

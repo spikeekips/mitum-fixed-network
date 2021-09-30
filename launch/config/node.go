@@ -71,6 +71,10 @@ func (no *BaseRemoteNode) SetConnInfo(s string, insecure bool) error {
 		return err
 	}
 
+	if err := c.IsValid(nil); err != nil {
+		return err
+	}
+
 	no.c = c
 
 	return nil

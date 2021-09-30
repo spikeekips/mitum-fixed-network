@@ -79,7 +79,7 @@ func ProcessDiscovery(ctx context.Context) (context.Context, error) {
 	return ctx, nil
 }
 
-func processDiscoveryURLs(ctx context.Context) ([]memberlist.ConnInfo, error) {
+func processDiscoveryURLs(ctx context.Context) ([]network.ConnInfo, error) {
 	var log *logging.Logging
 	if err := config.LoadLogContextValue(ctx, &log); err != nil {
 		return nil, err
@@ -106,7 +106,7 @@ func processDiscoveryURLs(ctx context.Context) ([]memberlist.ConnInfo, error) {
 		log.Log().Debug().Interface("urls", urls).Msg("discovery urls")
 	}
 
-	var cis []memberlist.ConnInfo // nolint:prealloc
+	var cis []network.ConnInfo // nolint:prealloc
 	for i := range urls {
 		u := urls[i]
 		ci, err := parseCombinedNodeURL(u)
@@ -120,7 +120,7 @@ func processDiscoveryURLs(ctx context.Context) ([]memberlist.ConnInfo, error) {
 			continue
 		}
 
-		cis = append(cis, memberlist.NewConnInfoWithConnInfo("", ci))
+		cis = append(cis, ci)
 	}
 
 	return cis, nil
@@ -222,5 +222,6 @@ func parseCombinedNodeURL(u *url.URL) (network.HTTPConnInfo, error) {
 		return network.HTTPConnInfo{}, err
 	}
 
-	return network.NewHTTPConnInfo(i, insecure), nil
+	ci := network.NewHTTPConnInfo(i, insecure)
+	return ci, ci.IsValid(nil)
 }

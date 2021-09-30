@@ -3,48 +3,38 @@ package operation
 import (
 	"encoding/json"
 
-	"github.com/spikeekips/mitum/base/key"
+	"github.com/spikeekips/mitum/base/seal"
 	jsonenc "github.com/spikeekips/mitum/util/encoder/json"
-	"github.com/spikeekips/mitum/util/localtime"
-	"github.com/spikeekips/mitum/util/valuehash"
 )
 
-type SealJSONPack struct {
-	jsonenc.HintedHead
-	H   valuehash.Hash `json:"hash"`
-	BH  valuehash.Hash `json:"body_hash"`
-	SN  key.Publickey  `json:"signer"`
-	SG  key.Signature  `json:"signature"`
-	SA  localtime.Time `json:"signed_at"`
-	OPS []Operation    `json:"operations"`
+type BaseSealJSONPack struct {
+	*seal.BaseSealJSONPack
+	OPS []Operation `json:"operations"`
 }
 
 func (sl BaseSeal) MarshalJSON() ([]byte, error) {
-	return jsonenc.Marshal(SealJSONPack{
-		HintedHead: jsonenc.NewHintedHead(sl.Hint()),
-		H:          sl.h,
-		BH:         sl.bodyHash,
-		SN:         sl.signer,
-		SG:         sl.signature,
-		SA:         localtime.NewTime(sl.signedAt),
-		OPS:        sl.ops,
+	b := sl.BaseSeal.JSONPacker()
+
+	return jsonenc.Marshal(BaseSealJSONPack{
+		BaseSealJSONPack: &b,
+		OPS:              sl.ops,
 	})
 }
 
-type SealJSONUnpack struct {
-	H   valuehash.Bytes      `json:"hash"`
-	BH  valuehash.Bytes      `json:"body_hash"`
-	SN  key.PublickeyDecoder `json:"signer"`
-	SG  key.Signature        `json:"signature"`
-	SA  localtime.Time       `json:"signed_at"`
-	OPS json.RawMessage      `json:"operations"`
+type BaseSealJSONUnpack struct {
+	OPS json.RawMessage `json:"operations"`
 }
 
 func (sl *BaseSeal) UnpackJSON(b []byte, enc *jsonenc.Encoder) error {
-	var usl SealJSONUnpack
+	var ub seal.BaseSeal
+	if err := ub.UnpackJSON(b, enc); err != nil {
+		return err
+	}
+
+	var usl BaseSealJSONUnpack
 	if err := enc.Unmarshal(b, &usl); err != nil {
 		return err
 	}
 
-	return sl.unpack(enc, usl.H, usl.BH, usl.SN, usl.SG, usl.SA.Time, usl.OPS)
+	return sl.unpack(enc, ub, usl.OPS)
 }

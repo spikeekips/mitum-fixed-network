@@ -14,11 +14,13 @@ import (
 	"github.com/spikeekips/mitum/isaac"
 	"github.com/spikeekips/mitum/launch/config"
 	"github.com/spikeekips/mitum/network"
+	"github.com/spikeekips/mitum/network/discovery"
 	"github.com/spikeekips/mitum/states"
 	"github.com/spikeekips/mitum/storage"
 	"github.com/spikeekips/mitum/storage/blockdata"
 	"github.com/spikeekips/mitum/util"
 	"github.com/spikeekips/mitum/util/cache"
+	"github.com/spikeekips/mitum/util/encoder"
 	"github.com/spikeekips/mitum/util/logging"
 	"github.com/spikeekips/mitum/util/valuehash"
 )
@@ -37,7 +39,6 @@ func HookSetNetworkHandlers(ctx context.Context) (context.Context, error) {
 
 type SettingNetworkHandlers struct {
 	version   util.Version
-	ctx       context.Context
 	conf      config.LocalNode
 	database  storage.Database
 	blockData blockdata.BlockData
@@ -48,106 +49,97 @@ type SettingNetworkHandlers struct {
 	network   network.Server
 	sealCache cache.Cache
 	logger    *zerolog.Logger
+	encs      *encoder.Encoders
 }
 
-func SettingNetworkHandlersFromContext(ctx context.Context) (*SettingNetworkHandlers, error) { // nolint:funlen
-	var version util.Version
-	if err := LoadVersionContextValue(ctx, &version); err != nil {
+func SettingNetworkHandlersFromContext(ctx context.Context) (*SettingNetworkHandlers, error) {
+	sn := &SettingNetworkHandlers{}
+
+	if err := sn.loadFromContext(ctx); err != nil {
 		return nil, err
 	}
 
-	var conf config.LocalNode
-	if err := config.LoadConfigContextValue(ctx, &conf); err != nil {
-		return nil, err
+	return sn, nil
+}
+
+func (sn *SettingNetworkHandlers) loadFromContext(ctx context.Context) error {
+	if err := LoadVersionContextValue(ctx, &sn.version); err != nil {
+		return err
+	}
+	if err := config.LoadConfigContextValue(ctx, &sn.conf); err != nil {
+		return err
+	}
+	if err := LoadPolicyContextValue(ctx, &sn.policy); err != nil {
+		return err
+	}
+	if err := LoadNodepoolContextValue(ctx, &sn.nodepool); err != nil {
+		return err
+	}
+	if err := LoadDatabaseContextValue(ctx, &sn.database); err != nil {
+		return err
+	}
+	if err := LoadBlockDataContextValue(ctx, &sn.blockData); err != nil {
+		return err
+	}
+	if err := LoadSuffrageContextValue(ctx, &sn.suffrage); err != nil {
+		return err
+	}
+	if err := LoadConsensusStatesContextValue(ctx, &sn.states); err != nil {
+		return err
+	}
+	if err := config.LoadEncodersContextValue(ctx, &sn.encs); err != nil {
+		return err
 	}
 
-	var policy *isaac.LocalPolicy
-	if err := LoadPolicyContextValue(ctx, &policy); err != nil {
-		return nil, err
-	}
-
-	var nodepool *network.Nodepool
-	if err := LoadNodepoolContextValue(ctx, &nodepool); err != nil {
-		return nil, err
-	}
-
-	var st storage.Database
-	if err := LoadDatabaseContextValue(ctx, &st); err != nil {
-		return nil, err
-	}
-
-	var blockData blockdata.BlockData
-	if err := LoadBlockDataContextValue(ctx, &blockData); err != nil {
-		return nil, err
-	}
-
-	var suffrage base.Suffrage
-	if err := LoadSuffrageContextValue(ctx, &suffrage); err != nil {
-		return nil, err
-	}
-
-	var consensusStates states.States
-	if err := LoadConsensusStatesContextValue(ctx, &consensusStates); err != nil {
-		return nil, err
-	}
-
-	sealCache, err := cache.NewCacheFromURI(conf.Network().SealCache().String())
+	i, err := cache.NewCacheFromURI(sn.conf.Network().SealCache().String())
 	if err != nil {
-		return nil, err
+		return err
 	}
+	sn.sealCache = i
 
 	l := zerolog.Nop()
-	logger := &l
-	var nt network.Server
-	if err := LoadNetworkContextValue(ctx, &nt); err != nil {
-		return nil, err
-	} else if l, ok := nt.(logging.HasLogger); ok {
-		logger = l.Log()
+	sn.logger = &l
+	if err := LoadNetworkContextValue(ctx, &sn.network); err != nil {
+		return err
 	}
 
-	return &SettingNetworkHandlers{
-		ctx:       ctx,
-		version:   version,
-		conf:      conf,
-		database:  st,
-		blockData: blockData,
-		policy:    policy,
-		nodepool:  nodepool,
-		suffrage:  suffrage,
-		states:    consensusStates,
-		network:   nt,
-		sealCache: sealCache,
-		logger:    logger,
-	}, nil
+	if l, ok := sn.network.(logging.HasLogger); ok {
+		sn.logger = l.Log()
+	}
+
+	return nil
 }
 
 func (sn *SettingNetworkHandlers) Set() error {
-	sn.network.SetHasSealHandler(sn.networkHandlerHasSeal())
-	sn.network.SetGetSealsHandler(sn.networkHandlerGetSeals())
-	sn.network.SetNewSealHandler(sn.networkhandlerNewSeal())
-	sn.network.SetNodeInfoHandler(sn.networkHandlerNodeInfo())
-	sn.network.SetBlockDataMapsHandler(sn.networkHandlerBlockDataMaps())
-	sn.network.SetBlockDataHandler(sn.networkHandlerBlockData())
+	sn.network.SetHasSealHandler(sn.handlerHasSeal())
+	sn.network.SetGetSealsHandler(sn.handlerGetSeals())
+	sn.network.SetNewSealHandler(sn.handlerNewSeal())
+	sn.network.SetNodeInfoHandler(sn.handlerNodeInfo())
+	sn.network.SetBlockDataMapsHandler(sn.handlerBlockDataMaps())
+	sn.network.SetBlockDataHandler(sn.handlerBlockData())
+	sn.network.SetStartHandoverHandler(sn.handlerStartHandover())
+	sn.network.SetPingHandoverHandler(sn.handlerPingHandover())
+	sn.network.SetEndHandoverHandler(sn.handlerEndHandover())
 
 	lc := sn.nodepool.LocalChannel().(*network.DummyChannel)
-	lc.SetNewSealHandler(sn.networkhandlerNewSeal())
-	lc.SetGetSealsHandler(sn.networkHandlerGetSeals())
-	lc.SetNodeInfoHandler(sn.networkHandlerNodeInfo())
-	lc.SetBlockDataMapsHandler(sn.networkHandlerBlockDataMaps())
-	lc.SetBlockDataHandler(sn.networkHandlerBlockData())
+	lc.SetNewSealHandler(sn.handlerNewSeal())
+	lc.SetGetSealsHandler(sn.handlerGetSeals())
+	lc.SetNodeInfoHandler(sn.handlerNodeInfo())
+	lc.SetBlockDataMapsHandler(sn.handlerBlockDataMaps())
+	lc.SetBlockDataHandler(sn.handlerBlockData())
 
 	sn.logger.Debug().Msg("local channel handlers binded")
 
 	return nil
 }
 
-func (sn *SettingNetworkHandlers) networkHandlerHasSeal() network.HasSealHandler {
+func (sn *SettingNetworkHandlers) handlerHasSeal() network.HasSealHandler {
 	return func(h valuehash.Hash) (bool, error) {
 		return sn.database.HasSeal(h)
 	}
 }
 
-func (sn *SettingNetworkHandlers) networkHandlerGetSeals() network.GetSealsHandler {
+func (sn *SettingNetworkHandlers) handlerGetSeals() network.GetSealsHandler {
 	return func(hs []valuehash.Hash) ([]seal.Seal, error) {
 		var sls []seal.Seal
 
@@ -163,7 +155,7 @@ func (sn *SettingNetworkHandlers) networkHandlerGetSeals() network.GetSealsHandl
 	}
 }
 
-func (sn *SettingNetworkHandlers) networkhandlerNewSeal() network.NewSealHandler {
+func (sn *SettingNetworkHandlers) handlerNewSeal() network.NewSealHandler {
 	return func(sl seal.Seal) error {
 		sealChecker := isaac.NewSealChecker(
 			sl,
@@ -216,7 +208,7 @@ func (sn *SettingNetworkHandlers) networkhandlerNewSeal() network.NewSealHandler
 	}
 }
 
-func (sn *SettingNetworkHandlers) networkHandlerNodeInfo() network.NodeInfoHandler {
+func (sn *SettingNetworkHandlers) handlerNodeInfo() network.NodeInfoHandler {
 	return func() (network.NodeInfo, error) {
 		var manifest block.Manifest
 		if m, found, err := sn.database.LastManifest(); err != nil {
@@ -247,15 +239,15 @@ func (sn *SettingNetworkHandlers) networkHandlerNodeInfo() network.NodeInfoHandl
 			sn.states.State(),
 			manifest,
 			sn.version,
-			sn.conf.Network().ConnInfo().URL().String(),
 			sn.policy.Config(),
 			nodes,
 			sn.suffrage,
+			sn.conf.Network().ConnInfo(),
 		), nil
 	}
 }
 
-func (sn *SettingNetworkHandlers) networkHandlerBlockDataMaps() network.BlockDataMapsHandler {
+func (sn *SettingNetworkHandlers) handlerBlockDataMaps() network.BlockDataMapsHandler {
 	return func(heights []base.Height) ([]block.BlockDataMap, error) {
 		sort.Slice(heights, func(i, j int) bool {
 			return heights[i] < heights[j]
@@ -289,12 +281,80 @@ func (sn *SettingNetworkHandlers) networkHandlerBlockDataMaps() network.BlockDat
 	}
 }
 
-func (sn *SettingNetworkHandlers) networkHandlerBlockData() network.BlockDataHandler {
+func (sn *SettingNetworkHandlers) handlerBlockData() network.BlockDataHandler {
 	return func(p string) (io.Reader, func() error, error) {
 		i, err := sn.blockData.FS().Open(p)
 		if err != nil {
 			return nil, func() error { return nil }, err
 		}
 		return i, i.Close, nil
+	}
+}
+
+func (sn *SettingNetworkHandlers) checkHandoverSeal(sl network.HandoverSeal) error {
+	if err := network.IsValidHandoverSeal(
+		sn.nodepool.LocalNode(),
+		sl,
+		sn.policy.NetworkID(),
+	); err != nil {
+		return err
+	}
+
+	ci := sl.ConnInfo()
+	if ci.Hint().Type() != network.HTTPConnInfoType {
+		return errors.Errorf("only HTTPConnInfoType for handover allowed, not %v", ci.Hint().Type())
+	}
+
+	return nil
+}
+
+func (sn *SettingNetworkHandlers) handlerStartHandover() network.StartHandoverHandler {
+	return func(sl network.StartHandoverSeal) (bool, error) {
+		if err := sn.checkHandoverSeal(sl); err != nil {
+			return false, network.HandoverRejectedError.Wrap(err)
+		}
+
+		if !sl.ConnInfo().Equal(sn.conf.Network().ConnInfo()) {
+			return false, network.HandoverRejectedError.Errorf("conninfo not matched")
+		}
+
+		if err := sn.states.StartHandover(); err != nil {
+			return false, err
+		}
+
+		return true, nil
+	}
+}
+
+func (sn *SettingNetworkHandlers) handlerPingHandover() network.PingHandoverHandler {
+	return func(sl network.PingHandoverSeal) (bool, error) {
+		if err := sn.checkHandoverSeal(sl); err != nil {
+			return false, network.HandoverRejectedError.Wrap(err)
+		}
+
+		ch, err := discovery.LoadNodeChannel(sl.ConnInfo(), sn.encs, sn.policy.NetworkConnectionTimeout())
+		if err != nil {
+			return false, network.HandoverRejectedError.Errorf("failed to load channel from PingHandoverSeal: %w", err)
+		}
+
+		if err := sn.nodepool.SetPassthrough(ch, nil, states.DefaultPassthroughExpire); err != nil {
+			return false, network.HandoverRejectedError.Errorf("failed to set passthrough from PingHandoverSeal: %w", err)
+		}
+
+		return true, nil
+	}
+}
+
+func (sn *SettingNetworkHandlers) handlerEndHandover() network.EndHandoverHandler {
+	return func(sl network.EndHandoverSeal) (bool, error) {
+		if err := sn.checkHandoverSeal(sl); err != nil {
+			return false, network.HandoverRejectedError.Wrap(err)
+		}
+
+		if err := sn.states.EndHandover(sl.ConnInfo()); err != nil {
+			return false, err
+		}
+
+		return true, nil
 	}
 }

@@ -10,8 +10,8 @@ import (
 
 // Clean makes Database and BlockData to be empty. If 'remove' is true, remove
 // the BlockData directory itself.
-func Clean(st storage.Database, blockData BlockData, remove bool) error {
-	if err := st.Clean(); err != nil {
+func Clean(db storage.Database, blockData BlockData, remove bool) error {
+	if err := db.Clean(); err != nil {
 		return err
 	} else if err := blockData.Clean(remove); err != nil {
 		return err
@@ -20,8 +20,8 @@ func Clean(st storage.Database, blockData BlockData, remove bool) error {
 	}
 }
 
-func CleanByHeight(st storage.Database, blockData BlockData, height base.Height) error {
-	if err := st.LocalBlockDataMapsByHeight(height, func(bd block.BlockDataMap) (bool, error) {
+func CleanByHeight(db storage.Database, blockData BlockData, height base.Height) error {
+	if err := db.LocalBlockDataMapsByHeight(height, func(bd block.BlockDataMap) (bool, error) {
 		if err := blockData.RemoveAll(bd.Height()); err != nil {
 			if errors.Is(err, util.NotFoundError) {
 				return true, nil
@@ -34,11 +34,11 @@ func CleanByHeight(st storage.Database, blockData BlockData, height base.Height)
 		return err
 	}
 
-	return st.CleanByHeight(height)
+	return db.CleanByHeight(height)
 }
 
-func CheckBlock(st storage.Database, blockData BlockData, networkID base.NetworkID) (block.Manifest, error) {
-	m, err := storage.CheckBlock(st, networkID)
+func CheckBlock(db storage.Database, blockData BlockData, networkID base.NetworkID) (block.Manifest, error) {
+	m, err := storage.CheckBlock(db, networkID)
 	if err != nil {
 		return m, err
 	}

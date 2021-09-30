@@ -327,19 +327,24 @@ func (dis *Discovery) Join(nodes []ConnInfo, maxretry int) error {
 
 	dis.Log().Debug().Msg("joined")
 
-	return dis.UpdateNode(nil)
+	go func() {
+		if err := dis.updateNode(nil); err != nil { // NOTE to prevent blocking
+			dis.Log().Error().Err(err).Msg("failed to update node")
+		}
+	}()
+
+	return nil
 }
 
-func (dis *Discovery) UpdateNode(meta *NodeMeta) error {
+func (dis *Discovery) updateNode(meta *NodeMeta) error {
 	if meta != nil {
 		_ = dis.events.updateNodeMeta(*meta)
 	}
 
-	if err := dis.ml.UpdateNode(0); err != nil {
-		dis.Log().Error().Err(err).Msg("failed to update node")
-
+	if err := dis.ml.UpdateNode(time.Second * 5); err != nil {
 		return err
 	}
+
 	dis.Log().Debug().Msg("node requested to update node")
 
 	return nil
@@ -426,7 +431,7 @@ func (dis *Discovery) join(nodes []ConnInfo) (int, error) {
 
 	n, err := dis.ml.Join(addrs)
 	if n < 1 {
-		dis.Log().Warn().Err(err).Msg("failed to join network")
+		dis.Log().Warn().Err(err).Msg("failed to join discovery")
 	} else {
 		dis.Log().Info().Err(err).Int("nodes", n).Msg("node joined")
 	}
@@ -560,8 +565,8 @@ func (dis *Discovery) loadNodeMessage(b []byte) (NodeMessage, error) {
 		return ms, err
 	}
 
-	if localtime.UTCNow().After(ms.signedAt.Add(dis.tcpTimeout * 2)) {
-		return ms, errors.Errorf("too old node message received from %q(%q)", ms.node, ms.signedAt)
+	if !localtime.WithinNow(ms.signedAt, dis.tcpTimeout) {
+		return ms, errors.Errorf("too old or new node message received from %q(%q)", ms.node, ms.signedAt)
 	}
 
 	return ms, nil

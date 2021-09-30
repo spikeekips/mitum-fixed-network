@@ -17,9 +17,9 @@ type NodeInfoV0PackerJSON struct {
 	ST  base.State             `json:"state"`
 	LB  block.Manifest         `json:"last_block"`
 	VS  util.Version           `json:"version"`
-	UL  string                 `json:"url"`
 	PO  map[string]interface{} `json:"policy"`
 	SF  []RemoteNode           `json:"suffrage"`
+	CI  ConnInfo               `json:"conninfo"`
 }
 
 func (ni NodeInfoV0) JSONPacker() NodeInfoV0PackerJSON {
@@ -30,9 +30,9 @@ func (ni NodeInfoV0) JSONPacker() NodeInfoV0PackerJSON {
 		ST:         ni.state,
 		LB:         ni.lastBlock,
 		VS:         ni.version,
-		UL:         ni.u,
 		PO:         ni.policy,
 		SF:         ni.nodes,
+		CI:         ni.ci,
 	}
 }
 
@@ -46,9 +46,9 @@ type NodeInfoV0UnpackerJSON struct {
 	ST  base.State             `json:"state"`
 	LB  json.RawMessage        `json:"last_block"`
 	VS  util.Version           `json:"version"`
-	UL  string                 `json:"url"`
 	PO  map[string]interface{} `json:"policy"`
 	SF  []json.RawMessage      `json:"suffrage"`
+	CI  json.RawMessage        `json:"conninfo"`
 }
 
 func (ni *NodeInfoV0) UnpackJSON(b []byte, enc *jsonenc.Encoder) error {
@@ -67,28 +67,21 @@ func (ni *NodeInfoV0) UnpackJSON(b []byte, enc *jsonenc.Encoder) error {
 		sf[i] = r
 	}
 
-	return ni.unpack(enc, nni.ND, nni.NID, nni.ST, nni.LB, nni.VS, nni.UL, nni.PO, sf)
+	return ni.unpack(enc, nni.ND, nni.NID, nni.ST, nni.LB, nni.VS, nni.PO, sf, nni.CI)
 }
 
 func (no RemoteNode) MarshalJSON() ([]byte, error) {
-	m := map[string]interface{}{
+	return jsonenc.Marshal(map[string]interface{}{
 		"address":   no.Address,
 		"publickey": no.Publickey,
-	}
-
-	if len(no.URL) > 0 {
-		m["url"] = no.URL
-		m["insecure"] = no.Insecure
-	}
-
-	return util.JSON.Marshal(m)
+		"conninfo":  no.ci,
+	})
 }
 
 type RemoteNodeUnpackJSON struct {
-	A base.AddressDecoder  `json:"address"`
-	P key.PublickeyDecoder `json:"publickey"`
-	U string               `json:"url"`
-	I bool                 `json:"insecure"`
+	A  base.AddressDecoder  `json:"address"`
+	P  key.PublickeyDecoder `json:"publickey"`
+	CI json.RawMessage      `json:"conninfo"`
 }
 
 func (no *RemoteNode) unpackJSON(b []byte, enc *jsonenc.Encoder) error {
@@ -97,5 +90,5 @@ func (no *RemoteNode) unpackJSON(b []byte, enc *jsonenc.Encoder) error {
 		return err
 	}
 
-	return no.unpack(enc, uno.A, uno.P, uno.U, uno.I)
+	return no.unpack(enc, uno.A, uno.P, uno.CI)
 }

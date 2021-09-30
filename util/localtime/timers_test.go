@@ -73,6 +73,7 @@ func (t *testTimers) TestStartTimer() {
 
 	t.True(timers.timers[startID].IsStarted())
 	t.Nil(timers.timers[stoppedID])
+	t.True(timers.IsTimerStarted(startID))
 }
 
 func (t *testTimers) TestStartTimerStopOthers() {
@@ -97,12 +98,14 @@ func (t *testTimers) TestStartTimerStopOthers() {
 	// start again only one
 	startID := TimerID("showme")
 	t.NoError(timers.StartTimers([]TimerID{startID}, true))
+	t.True(timers.IsTimerStarted(startID))
 
 	for _, id := range ids {
 		if id == startID {
 			continue
 		}
 		t.Nil(timers.timers[id])
+		t.False(timers.IsTimerStarted(id))
 	}
 }
 
@@ -184,7 +187,37 @@ func (t *testTimers) TestStopTimer() {
 	t.True(util.InStringSlice("findme", started))
 }
 
-func (t *testTimers) TestStopAll() {
+func (t *testTimers) TestStopTimersAll() {
+	ids := []TimerID{
+		"showme",
+		"findme",
+		"eatme",
+	}
+
+	timers := NewTimers(ids, false)
+	defer func() {
+		_ = timers.Stop()
+	}()
+
+	for _, id := range ids {
+		t.NoError(timers.SetTimer(t.timer(id)))
+	}
+
+	// start all
+	t.NoError(timers.StartTimers(ids, true))
+
+	for _, id := range ids {
+		t.True(timers.timers[id].IsStarted())
+	}
+
+	t.NoError(timers.StopTimersAll())
+
+	for _, id := range ids {
+		t.Nil(timers.timers[id])
+	}
+}
+
+func (t *testTimers) TestStop() {
 	ids := []TimerID{
 		"showme",
 		"findme",

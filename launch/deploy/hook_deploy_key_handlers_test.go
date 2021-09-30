@@ -23,10 +23,10 @@ import (
 type testDeployKeyHandlers struct {
 	baseDeployKeyHandler
 	isaac.StorageSupportTest
-	local  *node.Local
-	policy *isaac.LocalPolicy
-	db     storage.Database
-	dks    *DeployKeyStorage
+	local    *node.Local
+	policy   *isaac.LocalPolicy
+	database storage.Database
+	dks      *DeployKeyStorage
 }
 
 func (t *testDeployKeyHandlers) SetupSuite() {
@@ -44,10 +44,10 @@ func (t *testDeployKeyHandlers) handlers(router *mux.Router) *deployKeyHandlers 
 	t.policy = isaac.NewLocalPolicy(util.UUID().Bytes())
 	ctx = context.WithValue(ctx, process.ContextValuePolicy, t.policy)
 
-	t.db = t.Database(t.Encs, nil)
-	ctx = context.WithValue(ctx, process.ContextValueDatabase, t.db)
+	t.database = t.Database(t.Encs, nil)
+	ctx = context.WithValue(ctx, process.ContextValueDatabase, t.database)
 
-	t.dks, _ = NewDeployKeyStorage(t.db)
+	t.dks, _ = NewDeployKeyStorage(t.database)
 	ctx = context.WithValue(ctx, ContextValueDeployKeyStorage, t.dks)
 
 	handlers, err := newDeployKeyHandlers(ctx, func(prefix string) *mux.Route {

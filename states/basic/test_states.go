@@ -1,13 +1,19 @@
+//go:build test
 // +build test
 
 package basicstates
 
 import (
+	"sync"
+	"time"
+
 	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/base/ballot"
 	"github.com/spikeekips/mitum/base/block"
 	"github.com/spikeekips/mitum/base/seal"
 	"github.com/spikeekips/mitum/isaac"
+	"github.com/spikeekips/mitum/network"
+	"github.com/spikeekips/mitum/network/discovery"
 	"github.com/spikeekips/mitum/util/localtime"
 )
 
@@ -54,6 +60,7 @@ func (st *BaseState) SetExitFunc(fn func(StateSwitchContext) (func() error, erro
 }
 
 type baseTestState struct {
+	sync.Mutex
 	isaac.BaseTest
 	local  *isaac.Local
 	remote *isaac.Local
@@ -77,4 +84,33 @@ func (t *baseTestState) exitState(state State, sctx StateSwitchContext) {
 			t.T().Log("error:", err)
 		}
 	}
+}
+
+func (t *baseTestState) newStates(local *isaac.Local, suffrage base.Suffrage, st State) *States {
+	if st == nil {
+		st = NewBaseState(base.StateHandover)
+	}
+
+	stt, err := NewStates(local.Database(), local.Policy(), local.Nodes(), suffrage, nil,
+		NewBaseState(base.StateStopped),
+		NewBaseState(base.StateBooting),
+		NewBaseState(base.StateJoining),
+		NewBaseState(base.StateConsensus),
+		NewBaseState(base.StateSyncing),
+		st,
+		nil, nil,
+	)
+	t.NoError(err)
+
+	return stt
+}
+
+func (t *baseTestState) newChannel(s string) network.Channel {
+	ci, err := network.NewHTTPConnInfoFromString(s, true)
+	t.NoError(err)
+
+	ch, err := discovery.LoadNodeChannel(ci, t.Encs, time.Second*2)
+	t.NoError(err)
+
+	return ch
 }

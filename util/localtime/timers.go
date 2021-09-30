@@ -176,6 +176,54 @@ func (ts *Timers) StopTimers(ids []TimerID) error {
 	return ts.stopTimers(ids)
 }
 
+func (ts *Timers) StopTimersAll() error {
+	ts.Lock()
+	defer ts.Unlock()
+
+	ids := make([]TimerID, len(ts.timers))
+
+	var i int
+	for id := range ts.timers {
+		ids[i] = id
+		i++
+	}
+
+	if len(ids) < 1 {
+		return nil
+	}
+
+	return ts.stopTimers(ids)
+}
+
+func (ts *Timers) Started() []TimerID {
+	ts.RLock()
+	defer ts.RUnlock()
+
+	var started []TimerID
+	for id := range ts.timers {
+		timer := ts.timers[id]
+		if timer != nil && ts.timers[id].IsStarted() {
+			started = append(started, id)
+		}
+	}
+
+	return started
+}
+
+func (ts *Timers) IsTimerStarted(id TimerID) bool {
+	ts.RLock()
+	defer ts.RUnlock()
+
+	switch timer, found := ts.timers[id]; {
+	case !found:
+		return false
+	case timer == nil:
+		return false
+	default:
+		return timer.IsStarted()
+	}
+}
+
 func (ts *Timers) stopTimers(ids []TimerID) error {
 	callback := func(t Timer) {
 		if !t.IsStarted() {
@@ -196,21 +244,6 @@ func (ts *Timers) stopTimers(ids []TimerID) error {
 	}
 
 	return nil
-}
-
-func (ts *Timers) Started() []TimerID {
-	ts.RLock()
-	defer ts.RUnlock()
-
-	var started []TimerID
-	for id := range ts.timers {
-		timer := ts.timers[id]
-		if timer != nil && ts.timers[id].IsStarted() {
-			started = append(started, id)
-		}
-	}
-
-	return started
 }
 
 func (ts *Timers) checkExists(ids []TimerID) error {

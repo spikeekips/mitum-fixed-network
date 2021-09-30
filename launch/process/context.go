@@ -10,7 +10,6 @@ import (
 	"github.com/spikeekips/mitum/isaac"
 	"github.com/spikeekips/mitum/network"
 	"github.com/spikeekips/mitum/network/discovery"
-	"github.com/spikeekips/mitum/network/discovery/memberlist"
 	"github.com/spikeekips/mitum/states"
 	"github.com/spikeekips/mitum/storage"
 	"github.com/spikeekips/mitum/storage/blockdata"
@@ -113,6 +112,6 @@ func LoadDiscoveryContextValue(ctx context.Context, l *discovery.Discovery) erro
 	return util.LoadFromContextValue(ctx, ContextValueDiscovery, l)
 }
 
-func LoadDiscoveryConnInfosContextValue(ctx context.Context, l *[]memberlist.ConnInfo) error {
+func LoadDiscoveryConnInfosContextValue(ctx context.Context, l *[]network.ConnInfo) error {
 	return util.LoadFromContextValue(ctx, ContextValueDiscoveryConnInfos, l)
 }

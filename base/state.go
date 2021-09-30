@@ -8,14 +8,14 @@ import (
 type State uint8
 
 const (
-	StateUnknown State = iota
+	StateEmpty State = iota
 	// StateStopped indicates node is in state, node process is
 	// finished.
 	StateStopped
 	// StateBooting indicates node is in state, node checks it's state.
 	StateBooting
 	// StateJoining indicates node is in state, node is trying to
-	// join network.
+	// join consensus.
 	StateJoining
 	// StateConsensus indicates node is in state, node participates
 	// consensus with the other nodes.
@@ -25,6 +25,8 @@ const (
 	// StateBroken indicates that node can not participates network
 	// with various kind of reason.
 	StateBroken
+	// StateHandover indicates that node tries to replace the existing same node
+	StateHandover
 )
 
 func (st State) String() string {
@@ -41,8 +43,10 @@ func (st State) String() string {
 		return "SYNCING"
 	case StateBroken:
 		return "BROKEN"
-	case StateUnknown:
-		return "<empty State>"
+	case StateHandover:
+		return "HANDOVER"
+	case StateEmpty:
+		return "EMPTY"
 	default:
 		return "<unknown State>"
 	}
@@ -66,18 +70,21 @@ func StateFromString(s string) (State, error) {
 		return StateSyncing, nil
 	case "BROKEN":
 		return StateBroken, nil
+	case "HANDOVER":
+		return StateHandover, nil
 	default:
-		return StateUnknown, errors.Errorf("unknown State, %q", s)
+		return StateEmpty, errors.Errorf("unknown State, %q", s)
 	}
 }
 
 func (st State) IsValid([]byte) error {
 	switch st {
-	case StateStopped, StateBooting, StateJoining, StateConsensus, StateSyncing, StateBroken:
+	case StateStopped, StateBooting, StateJoining, StateConsensus, StateSyncing,
+		StateBroken, StateHandover:
 		return nil
 	}
 
-	return errors.Errorf("invalid state found; state=%d", st)
+	return errors.Errorf("invalid state found; state=%q(%d)", st, st)
 }
 
 func (st State) MarshalText() ([]byte, error) {

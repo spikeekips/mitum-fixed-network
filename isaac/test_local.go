@@ -20,14 +20,14 @@ type Local struct {
 }
 
 func NewLocal(
-	st storage.Database,
+	db storage.Database,
 	blockData blockdata.BlockData,
 	node *node.Local,
 	ch network.Channel,
 	networkID []byte,
 ) (*Local, error) {
 	return &Local{
-		database:  st,
+		database:  db,
 		blockData: blockData,
 		node:      node,
 		ch:        ch,
@@ -48,8 +48,8 @@ func (ls *Local) Database() storage.Database {
 	return ls.database
 }
 
-func (ls *Local) SetDatabase(st storage.Database) *Local {
-	ls.database = st
+func (ls *Local) SetDatabase(db storage.Database) *Local {
+	ls.database = db
 
 	return ls
 }

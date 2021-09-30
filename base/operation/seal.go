@@ -1,16 +1,19 @@
 package operation
 
 import (
-	"time"
-
 	"github.com/pkg/errors"
 	"github.com/spikeekips/mitum/base/key"
 	"github.com/spikeekips/mitum/base/seal"
 	"github.com/spikeekips/mitum/util"
 	"github.com/spikeekips/mitum/util/hint"
 	"github.com/spikeekips/mitum/util/isvalid"
-	"github.com/spikeekips/mitum/util/localtime"
 	"github.com/spikeekips/mitum/util/valuehash"
+)
+
+var (
+	SealType   = hint.Type("seal")
+	SealHint   = hint.NewHint(SealType, "v0.0.1")
+	SealHinter = BaseSeal{BaseSeal: seal.NewBaseSealWithHint(SealHint)}
 )
 
 type Seal interface {
@@ -22,18 +25,9 @@ type SealUpdater interface {
 	SetOperations([]Operation) SealUpdater
 }
 
-var (
-	SealType = hint.Type("seal")
-	SealHint = hint.NewHint(SealType, "v0.0.1")
-)
-
 type BaseSeal struct {
-	h         valuehash.Hash
-	bodyHash  valuehash.Hash
-	signer    key.Publickey
-	signature key.Signature
-	signedAt  time.Time
-	ops       []Operation
+	seal.BaseSeal
+	ops []Operation
 }
 
 func NewBaseSeal(pk key.Privatekey, ops []Operation, networkID []byte) (BaseSeal, error) {
@@ -41,7 +35,15 @@ func NewBaseSeal(pk key.Privatekey, ops []Operation, networkID []byte) (BaseSeal
 		return BaseSeal{}, errors.Errorf("seal can not be generated without Operations")
 	}
 
-	sl := BaseSeal{ops: ops}
+	sl := BaseSeal{
+		BaseSeal: seal.NewBaseSealWithHint(SealHint),
+		ops:      ops,
+	}
+
+	sl.GenerateBodyHashFunc = func() (valuehash.Hash, error) {
+		return valuehash.NewSHA256(sl.BodyBytes()), nil
+	}
+
 	if err := sl.Sign(pk, networkID); err != nil {
 		return BaseSeal{}, err
 	}
@@ -54,7 +56,7 @@ func (sl BaseSeal) IsValid(networkID []byte) error {
 		return isvalid.InvalidError.Errorf("empty operations")
 	}
 
-	if err := seal.IsValidSeal(sl, networkID); err != nil {
+	if err := sl.BaseSeal.IsValid(networkID); err != nil {
 		return err
 	}
 
@@ -67,45 +69,15 @@ func (sl BaseSeal) IsValid(networkID []byte) error {
 	return nil
 }
 
-func (BaseSeal) Hint() hint.Hint {
-	return SealHint
-}
+func (sl BaseSeal) BodyBytes() []byte {
+	bl := make([][]byte, len(sl.ops)+1)
+	bl[0] = sl.BaseSeal.BodyBytes()
 
-func (sl BaseSeal) Hash() valuehash.Hash {
-	return sl.h
-}
-
-func (sl BaseSeal) GenerateHash() valuehash.Hash {
-	return valuehash.NewSHA256(util.ConcatBytesSlice(sl.bodyHash.Bytes(), sl.signature.Bytes()))
-}
-
-func (sl BaseSeal) BodyHash() valuehash.Hash {
-	return sl.bodyHash
-}
-
-func (sl BaseSeal) GenerateBodyHash() (valuehash.Hash, error) {
-	bl := [][]byte{
-		sl.signer.Bytes(),
-		localtime.NewTime(sl.signedAt).Bytes(),
+	for i := range sl.ops {
+		bl[i+1] = sl.ops[i].Hash().Bytes()
 	}
 
-	for _, op := range sl.ops {
-		bl = append(bl, op.Hash().Bytes())
-	}
-
-	return valuehash.NewSHA256(util.ConcatBytesSlice(bl...)), nil
-}
-
-func (sl BaseSeal) Signer() key.Publickey {
-	return sl.signer
-}
-
-func (sl BaseSeal) Signature() key.Signature {
-	return sl.signature
-}
-
-func (sl BaseSeal) SignedAt() time.Time {
-	return sl.signedAt
+	return util.ConcatBytesSlice(bl...)
 }
 
 func (sl BaseSeal) Operations() []Operation {
@@ -116,24 +88,4 @@ func (sl BaseSeal) SetOperations(ops []Operation) SealUpdater {
 	sl.ops = ops
 
 	return sl
-}
-
-func (sl *BaseSeal) Sign(pk key.Privatekey, b []byte) error {
-	sl.signer = pk.Publickey()
-	sl.signedAt = localtime.UTCNow()
-
-	var err error
-	sl.bodyHash, err = sl.GenerateBodyHash()
-	if err != nil {
-		return err
-	}
-
-	sl.signature, err = pk.Sign(util.ConcatBytesSlice(sl.bodyHash.Bytes(), b))
-	if err != nil {
-		return err
-	}
-
-	sl.h = sl.GenerateHash()
-
-	return nil
 }

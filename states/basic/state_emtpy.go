@@ -11,8 +11,8 @@ func NewEmptyState() *EmptyState {
 	return &EmptyState{}
 }
 
-func (*EmptyState) Enter(StateSwitchContext) (func() error, error) {
-	return nil, nil
+func (*EmptyState) Enter(sctx StateSwitchContext) (func() error, error) {
+	return nil, sctx.Return()
 }
 
 func (*EmptyState) Exit(StateSwitchContext) (func() error, error) {

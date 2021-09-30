@@ -1,3 +1,4 @@
+//go:build test
 // +build test
 
 package network
@@ -16,7 +17,6 @@ func CompareNodeInfo(t *testing.T, a, b NodeInfo) {
 	assert.True(t, a.NetworkID().Equal(b.NetworkID()))
 	assert.Equal(t, a.State(), b.State())
 	assert.Equal(t, a.Version(), b.Version())
-	assert.Equal(t, a.URL(), b.URL())
 
 	assert.Equal(t, a.LastBlock().Height(), b.LastBlock().Height())
 	assert.Equal(t, a.LastBlock().Round(), b.LastBlock().Round())
@@ -40,7 +40,12 @@ func CompareNodeInfo(t *testing.T, a, b NodeInfo) {
 	for i := range as {
 		assert.True(t, as[i].Address.Equal(bs[i].Address))
 		assert.True(t, as[i].Publickey.Equal(bs[i].Publickey))
-		assert.Equal(t, as[i].URL, bs[i].URL)
-		assert.Equal(t, as[i].Insecure, bs[i].Insecure)
+		assert.True(t, as[i].ConnInfo().Equal(bs[i].ConnInfo()))
 	}
+
+	assert.True(t, a.ConnInfo().Equal(b.ConnInfo()))
+}
+
+func NilConnInfoChannel(s string) *DummyChannel {
+	return NewDummyChannel(NewNilConnInfo(s))
 }

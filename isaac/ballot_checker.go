@@ -27,7 +27,7 @@ type BallotChecker struct {
 
 func NewBallotChecker(
 	blt ballot.Ballot,
-	st storage.Database,
+	db storage.Database,
 	policy *LocalPolicy,
 	suffrage base.Suffrage,
 	nodepool *network.Nodepool,
@@ -37,7 +37,7 @@ func NewBallotChecker(
 		Logging: logging.NewLogging(func(c zerolog.Context) zerolog.Context {
 			return c.Str("module", "ballot-checker")
 		}),
-		database: st,
+		database: db,
 		policy:   policy,
 		suffrage: suffrage,
 		nodepool: nodepool,
@@ -63,10 +63,8 @@ func (bc *BallotChecker) InTimespan() (bool, error) {
 		return true, nil
 	}
 
-	if s := bc.ballot.SignedAt(); s.After(localtime.Now().Add(bc.policy.TimespanValidBallot())) {
-		return false, errors.Errorf("too new ballot")
-	} else if s.Before(localtime.Now().Add(bc.policy.TimespanValidBallot() * -1)) {
-		return false, errors.Errorf("too old ballot")
+	if !localtime.WithinNow(bc.ballot.SignedAt(), bc.policy.TimespanValidBallot()) {
+		return false, errors.Errorf("too old or new ballot")
 	}
 
 	return true, nil

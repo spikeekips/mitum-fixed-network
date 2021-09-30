@@ -21,7 +21,7 @@ type ProposalChecker struct {
 }
 
 func NewProposalValidationChecker(
-	st storage.Database,
+	db storage.Database,
 	suffrage base.Suffrage,
 	nodepool *network.Nodepool,
 	proposal ballot.Proposal,
@@ -36,7 +36,7 @@ func NewProposalValidationChecker(
 				Uint64("proposal_round", proposal.Round().Uint64()).
 				Stringer("proposal_node", proposal.Node())
 		}),
-		database: st,
+		database: db,
 		suffrage: suffrage,
 		nodepool: nodepool,
 		proposal: proposal,

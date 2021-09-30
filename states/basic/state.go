@@ -8,6 +8,7 @@ import (
 	"github.com/spikeekips/mitum/base/ballot"
 	"github.com/spikeekips/mitum/base/block"
 	"github.com/spikeekips/mitum/base/seal"
+	"github.com/spikeekips/mitum/network"
 	"github.com/spikeekips/mitum/util"
 	"github.com/spikeekips/mitum/util/localtime"
 )
@@ -37,6 +38,7 @@ type BaseState struct {
 	enterFunc             func(StateSwitchContext) (func() error, error)
 	exitFunc              func(StateSwitchContext) (func() error, error)
 	processVoteproofFunc  func(base.Voteproof) error
+	syncableChannelsFunc  func() map[string]network.Channel
 }
 
 func NewBaseState(st base.State) *BaseState {
@@ -131,7 +133,9 @@ func (st *BaseState) BroadcastBallot(blt ballot.Ballot, toLocal bool) error {
 		return st.broadcastSealsFunc(blt, toLocal)
 	}
 
-	return st.States.BroadcastBallot(blt, toLocal)
+	st.States.BroadcastBallot(blt, toLocal)
+
+	return nil
 }
 
 func (st *BaseState) Timers() *localtime.Timers {
@@ -156,6 +160,45 @@ func (st *BaseState) NewBlocks(blks []block.Block) error {
 	}
 
 	return st.States.NewBlocks(blks)
+}
+
+func (st *BaseState) NewStateSwitchContext(next base.State) StateSwitchContext {
+	return NewStateSwitchContext(st.state, next)
+}
+
+func (st *BaseState) syncableChannels() map[string]network.Channel {
+	if st.syncableChannelsFunc != nil {
+		return st.syncableChannelsFunc()
+	}
+
+	if st.States == nil {
+		return nil
+	}
+
+	pn := map[string]network.Channel{}
+	st.States.nodepool.TraverseAliveRemotes(func(no base.Node, ch network.Channel) bool {
+		pn[no.String()] = ch
+
+		return true
+	})
+
+	if ch := st.oldNode(); ch != nil {
+		pn["handover"] = ch
+	}
+
+	return pn
+}
+
+func (st *BaseState) oldNode() network.Channel {
+	if !st.underHandover() {
+		return nil
+	}
+
+	return st.States.hd.OldNode()
+}
+
+func (st *BaseState) underHandover() bool {
+	return st.States != nil && st.States.underHandover()
 }
 
 var ConsensusStuckError = util.NewError("consensus looks stuck")

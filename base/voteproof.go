@@ -59,7 +59,11 @@ type Voteproofer interface {
 	Voteproof() Voteproof
 }
 
-func CompareVoteproof(a, b Voteproof) int {
+func CompareVoteproofSamePoint(a, b Voteproof) int {
+	if a == nil || b == nil {
+		return -1
+	}
+
 	if a.Height() > b.Height() {
 		return 1
 	} else if a.Height() < b.Height() {
@@ -70,6 +74,14 @@ func CompareVoteproof(a, b Voteproof) int {
 		return 1
 	} else if a.Round() < b.Round() {
 		return -1
+	}
+
+	return 0
+}
+
+func CompareVoteproof(a, b Voteproof) int {
+	if i := CompareVoteproofSamePoint(a, b); i != 0 {
+		return i
 	}
 
 	if a.Stage() > b.Stage() {

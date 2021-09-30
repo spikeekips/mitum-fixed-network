@@ -28,6 +28,7 @@ import (
 
 var defaultRunProcesses = []pm.Process{
 	process.ProcessorDiscovery,
+	process.ProcessorConsensusStates,
 }
 
 var defaultRunHooks = []pm.Hook{
@@ -40,7 +41,7 @@ var defaultRunHooks = []pm.Hook{
 		deploy.HookNameBlockDataCleaner, deploy.HookBlockDataCleaner),
 	pm.NewHook(pm.HookPrefixPost, process.ProcessNameNetwork,
 		deploy.HookNameInitializeDeployKeyStorage, deploy.HookInitializeDeployKeyStorage),
-	pm.NewHook(pm.HookPrefixPost, process.ProcessNameNetwork,
+	pm.NewHook(pm.HookPrefixPost, process.ProcessNameConsensusStates,
 		deploy.HookNameDeployHandlers, deploy.HookDeployHandlers),
 }
 
@@ -62,6 +63,10 @@ func NewRunCommand(dryrun bool) RunCommand {
 	}
 
 	ps := co.Processes()
+	if err := ps.RemoveProcess(process.ProcessNameConsensusStates); err != nil {
+		panic(err)
+	}
+
 	for i := range defaultRunProcesses {
 		if err := ps.AddProcess(defaultRunProcesses[i], false); err != nil {
 			panic(err)
@@ -105,10 +110,8 @@ func (cmd *RunCommand) prepare() error {
 	}
 
 	// NOTE setup network log
-	var networkLogger *logging.Logging
-	if len(cmd.NetworkLogFile) < 1 {
-		networkLogger = cmd.Logging
-	} else {
+	l := cmd.Logging
+	if len(cmd.NetworkLogFile) > 0 {
 		var out io.Writer = cmd.LogOutput
 		if len(cmd.NetworkLogFile) > 0 {
 			i, err := logging.Outputs(cmd.NetworkLogFile)
@@ -118,8 +121,12 @@ func (cmd *RunCommand) prepare() error {
 			out = i
 		}
 
-		networkLogger = logging.Setup(out, zerolog.DebugLevel, "json", false)
+		l = logging.Setup(out, zerolog.DebugLevel, "json", false)
 	}
+
+	networkLogger := logging.NewLogging(func(c zerolog.Context) zerolog.Context {
+		return c.Str("module", "network")
+	}).SetLogging(l)
 
 	ctx := context.WithValue(cmd.processes.ContextSource(), config.ContextValueNetworkLog, networkLogger)
 	ctx = context.WithValue(ctx, config.ContextValueDiscoveryURLs, cmd.Discovery)
@@ -207,40 +214,7 @@ func (cmd *RunCommand) runDiscovery(ctx context.Context) error {
 
 	cmd.dis = dis
 
-	if err := dis.Start(); err != nil {
-		return err
-	}
-
-	var cis []memberlist.ConnInfo
-	if err := process.LoadDiscoveryConnInfosContextValue(ctx, &cis); err != nil {
-		if !errors.Is(err, util.ContextValueNotFoundError) {
-			return err
-		}
-	}
-
-	if len(cis) < 1 {
-		cmd.Log().Debug().Msg("empty discovery urls")
-
-		return nil
-	}
-
-	var nodepool *network.Nodepool
-	if err := process.LoadNodepoolContextValue(ctx, &nodepool); err != nil {
-		return err
-	}
-
-	// NOTE join network
-	if err := process.JoinDiscovery(nodepool, suffrage, dis, cis, 2, cmd.Logging); err != nil {
-		if !errors.Is(err, memberlist.JoiningCanceledError) {
-			return err
-		}
-
-		cmd.Log().Error().Err(err).Msg("failed to join network; keep trying")
-
-		go process.KeepDiscoveryJoining(nodepool, suffrage, dis, cis, cmd.Logging)
-	}
-
-	return nil
+	return dis.Start()
 }
 
 func (cmd *RunCommand) runStates(ctx context.Context) error {

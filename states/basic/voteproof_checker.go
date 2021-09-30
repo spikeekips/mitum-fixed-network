@@ -23,7 +23,7 @@ type VoteproofChecker struct {
 }
 
 func NewVoteproofChecker(
-	st storage.Database,
+	db storage.Database,
 	suffrage base.Suffrage,
 	nodepool *network.Nodepool,
 	lastVoteproof, voteproof base.Voteproof,
@@ -39,7 +39,7 @@ func NewVoteproofChecker(
 
 			return e
 		}),
-		database:  st,
+		database:  db,
 		suffrage:  suffrage,
 		nodepool:  nodepool,
 		lvp:       lastVoteproof,
@@ -196,7 +196,7 @@ func (vc *VoteproofChecker) CheckACCEPTVoteproofProposal() (bool, error) {
 	return true, nil
 }
 
-func CheckBlockWithINITVoteproof(st storage.Database, voteproof base.Voteproof) error {
+func CheckBlockWithINITVoteproof(db storage.Database, voteproof base.Voteproof) error {
 	// check init ballot fact.PreviousBlock with local block
 	fact, ok := voteproof.Majority().(ballot.INITFact)
 	if !ok {
@@ -204,7 +204,7 @@ func CheckBlockWithINITVoteproof(st storage.Database, voteproof base.Voteproof) 
 	}
 
 	var m block.Manifest
-	switch i, found, err := st.ManifestByHeight(voteproof.Height() - 1); {
+	switch i, found, err := db.ManifestByHeight(voteproof.Height() - 1); {
 	case err != nil:
 		return err
 	case !found:

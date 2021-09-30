@@ -1,13 +1,12 @@
 package basicstates
 
 import (
+	"context"
 	"fmt"
 
-	"github.com/pkg/errors"
 	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/util"
 	jsonenc "github.com/spikeekips/mitum/util/encoder/json"
-	"github.com/spikeekips/mitum/util/isvalid"
 )
 
 var SyncByVoteproofError = util.NewError("sync by voteproof")
@@ -17,28 +16,26 @@ type StateSwitchContext struct {
 	from      base.State
 	voteproof base.Voteproof
 	err       error
+	ctx       context.Context
+	ae        bool
 }
 
 func NewStateSwitchContext(from, to base.State) StateSwitchContext {
 	return StateSwitchContext{
 		to:   to,
 		from: from,
+		ctx:  context.Background(),
 	}
 }
 
 func (sctx StateSwitchContext) IsValid([]byte) error {
-	if err := isvalid.Check([]isvalid.IsValider{
-		sctx.to,
-		sctx.from,
-	}, nil, false); err != nil {
-		return err
+	if !sctx.ae {
+		if err := sctx.from.IsValid(nil); err != nil {
+			return fmt.Errorf("invalid from state: %w", err)
+		}
 	}
 
-	if sctx.to == base.StateUnknown || sctx.from == base.StateUnknown {
-		return errors.Errorf("invalid state, to=%v from=%v", sctx.to, sctx.from)
-	}
-
-	return nil
+	return sctx.to.IsValid(nil)
 }
 
 func (sctx StateSwitchContext) Voteproof() base.Voteproof {
@@ -89,6 +86,35 @@ func (sctx StateSwitchContext) SetToState(st base.State) StateSwitchContext {
 	return sctx
 }
 
+func (sctx StateSwitchContext) allowEmpty(b bool) StateSwitchContext {
+	sctx.ae = b
+
+	return sctx
+}
+
+func (sctx StateSwitchContext) Context() context.Context {
+	return sctx.ctx
+}
+
+func (sctx StateSwitchContext) SetContext(ctx context.Context) StateSwitchContext {
+	sctx.ctx = ctx
+
+	return sctx
+}
+
+func (sctx StateSwitchContext) Return() StateSwitchContext {
+	to := sctx.to
+	from := sctx.from
+
+	return sctx.SetToState(from).SetFromState(to)
+}
+
+func (sctx StateSwitchContext) ContextWithValue(k util.ContextKey, v interface{}) StateSwitchContext {
+	sctx.ctx = context.WithValue(sctx.ctx, k, v)
+
+	return sctx
+}
+
 func (sctx StateSwitchContext) MarshalText() ([]byte, error) {
 	return jsonenc.Marshal(map[string]interface{}{
 		"to":        sctx.to,
@@ -99,5 +125,5 @@ func (sctx StateSwitchContext) MarshalText() ([]byte, error) {
 }
 
 func (sctx StateSwitchContext) IsEmpty() bool {
-	return sctx.to == base.StateUnknown
+	return sctx.to == base.StateEmpty
 }

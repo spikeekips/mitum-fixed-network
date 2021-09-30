@@ -7,6 +7,7 @@ import (
 	"io"
 	"io/ioutil"
 	"net"
+	"net/url"
 	"os"
 	"testing"
 	"time"
@@ -51,6 +52,9 @@ func (t *testQuicServer) SetupTest() {
 	_ = t.encs.TestAddHinter(state.StateV0{})
 	_ = t.encs.TestAddHinter(state.BytesValue{})
 	_ = t.encs.TestAddHinter(block.BaseBlockDataMap{})
+	_ = t.encs.TestAddHinter(network.HTTPConnInfo{})
+	_ = t.encs.TestAddHinter(network.PingHandoverSealV0Hinter)
+	_ = t.encs.TestAddHinter(network.EndHandoverSealV0Hinter)
 
 	port, err := util.FreePort("udp")
 	t.NoError(err)
@@ -76,7 +80,7 @@ func (t *testQuicServer) readyServer() *Server {
 	ca, err := cache.NewGCache("lru", 100, time.Second*3)
 	t.NoError(err)
 
-	qn, err := NewServer(qs, t.encs, t.enc, ca)
+	qn, err := NewServer(qs, t.encs, t.enc, ca, t.connInfo, nil)
 	t.NoError(err)
 
 	t.NoError(qn.Start())
@@ -106,7 +110,7 @@ func (t *testQuicServer) TestNew() {
 	qs, err := NewPrimitiveQuicServer(t.bind, t.certs, nil)
 	t.NoError(err)
 
-	qn, err := NewServer(qs, t.encs, t.enc, nil)
+	qn, err := NewServer(qs, t.encs, t.enc, nil, t.connInfo, nil)
 	t.NoError(err)
 
 	t.Implements((*network.Server)(nil), qn)
@@ -129,7 +133,7 @@ func (t *testQuicServer) TestSendSeal() {
 
 	sl := seal.NewDummySeal(key.MustNewBTCPrivatekey())
 
-	t.NoError(qc.SendSeal(context.TODO(), sl))
+	t.NoError(qc.SendSeal(context.TODO(), nil, sl))
 
 	select {
 	case <-time.After(time.Second):
@@ -148,7 +152,7 @@ func (t *testQuicServer) TestSendSeal() {
 		return true, nil
 	})
 
-	t.NoError(qc.SendSeal(context.TODO(), sl))
+	t.NoError(qc.SendSeal(context.TODO(), nil, sl))
 }
 
 func (t *testQuicServer) TestGetSeals() {
@@ -248,10 +252,10 @@ func (t *testQuicServer) TestNodeInfo() {
 			base.StateBooting,
 			blk.Manifest(),
 			util.Version("0.1.1"),
-			"https://local",
 			map[string]interface{}{"showme": 1.1},
 			nil,
 			suffrage,
+			t.connInfo,
 		)
 	}
 
@@ -388,6 +392,172 @@ func (t *testQuicServer) TestGetBlockData() {
 	b, err := io.ReadAll(r)
 	t.NoError(err)
 	t.Equal(data, b)
+}
+
+func (t *testQuicServer) TestPassthroughs() {
+	qn := t.readyServer()
+	defer qn.Stop()
+
+	qc, err := NewChannel(t.connInfo, 2, nil, t.encs, t.enc)
+	t.NoError(err)
+	t.Implements((*network.Channel)(nil), qc)
+
+	// attach Nodepool
+	local := node.RandomLocal("local")
+	ns := network.NewNodepool(local, qc)
+
+	ch0 := network.NilConnInfoChannel("n0")
+	t.NoError(ns.SetPassthrough(ch0, nil, 0))
+
+	passedch := make(chan seal.Seal, 10)
+	ch0.SetNewSealHandler(func(sl seal.Seal) error {
+		passedch <- sl
+		return nil
+	})
+
+	qn.passthroughs = ns.Passthroughs
+
+	sl := seal.NewDummySeal(key.MustNewBTCPrivatekey())
+
+	t.NoError(qc.SendSeal(context.TODO(), t.connInfo, sl))
+
+	select {
+	case <-time.After(time.Second):
+		t.NoError(errors.Errorf("failed to receive respond"))
+	case r := <-passedch:
+		t.Equal(sl.Hint(), r.Hint())
+		t.True(sl.Hash().Equal(r.Hash()))
+		t.True(sl.BodyHash().Equal(r.BodyHash()))
+		t.True(sl.Signer().Equal(r.Signer()))
+		t.Equal(sl.Signature(), r.Signature())
+		t.True(localtime.Equal(sl.SignedAt(), r.SignedAt()))
+	}
+}
+
+func (t *testQuicServer) TestPassthroughsFilterFrom() {
+	qn := t.readyServer()
+	defer qn.Stop()
+
+	qc, err := NewChannel(t.connInfo, 2, nil, t.encs, t.enc)
+	t.NoError(err)
+	t.Implements((*network.Channel)(nil), qc)
+
+	// attach Nodepool
+	local := node.RandomLocal("local")
+	ns := network.NewNodepool(local, qc)
+
+	ch0 := network.NilConnInfoChannel("n0")
+	t.NoError(ns.SetPassthrough(ch0, nil, 0))
+
+	passedch := make(chan seal.Seal, 10)
+	ch0.SetNewSealHandler(func(sl seal.Seal) error {
+		passedch <- sl
+		return nil
+	})
+
+	qn.passthroughs = ns.Passthroughs
+
+	sl := seal.NewDummySeal(key.MustNewBTCPrivatekey())
+
+	t.NoError(qc.SendSeal(context.TODO(), ch0.ConnInfo(), sl))
+
+	select {
+	case <-time.After(time.Second):
+	case <-passedch:
+		t.NoError(errors.Errorf("seal should be filtered"))
+	}
+}
+
+func (t *testQuicServer) TestHandoverHandlers() {
+	qn := t.readyServer()
+	defer qn.Stop()
+
+	qc, err := NewChannel(t.connInfo, 2, nil, t.encs, t.enc)
+	t.NoError(err)
+	t.Implements((*network.Channel)(nil), qc)
+
+	newconnInfo := network.NewHTTPConnInfo(&url.URL{Scheme: "https", Host: "new"}, true)
+
+	compareSeal := func(a, b seal.Seal) {
+		t.Equal(a.Hint(), b.Hint())
+		t.True(a.Hash().Equal(b.Hash()))
+		t.True(a.BodyHash().Equal(b.BodyHash()))
+		t.True(a.Signer().Equal(b.Signer()))
+		t.Equal(a.Signature(), b.Signature())
+		t.True(localtime.Equal(a.SignedAt(), b.SignedAt()))
+	}
+
+	t.Run("ping-handover", func() {
+		receivedch := make(chan seal.Seal, 10)
+		qn.SetPingHandoverHandler(func(sl network.PingHandoverSeal) (bool, error) {
+			receivedch <- sl
+			return true, nil
+		})
+
+		sl, err := network.NewHandoverSealV0(network.PingHandoverSealV0Hint, key.MustNewBTCPrivatekey(), base.RandomStringAddress(), newconnInfo, nil)
+		t.NoError(err)
+
+		ok, err := qc.PingHandover(context.TODO(), sl)
+		t.NoError(err)
+		t.True(ok)
+
+		select {
+		case <-time.After(time.Second):
+			t.NoError(errors.Errorf("failed to receive respond"))
+		case r := <-receivedch:
+			t.Equal(sl.Hint(), r.Hint())
+			compareSeal(sl, r)
+		}
+	})
+
+	t.Run("end-handover", func() {
+		receivedch := make(chan seal.Seal, 10)
+		qn.SetEndHandoverHandler(func(sl network.EndHandoverSeal) (bool, error) {
+			receivedch <- sl
+			return true, nil
+		})
+
+		sl, err := network.NewHandoverSealV0(network.EndHandoverSealV0Hint, key.MustNewBTCPrivatekey(), base.RandomStringAddress(), newconnInfo, nil)
+		t.NoError(err)
+
+		ok, err := qc.EndHandover(context.TODO(), sl)
+		t.NoError(err)
+		t.True(ok)
+
+		select {
+		case <-time.After(time.Second):
+			t.NoError(errors.Errorf("failed to receive respond"))
+		case r := <-receivedch:
+			t.Equal(sl.Hint(), r.Hint())
+			compareSeal(sl, r)
+		}
+	})
+
+	t.Run("ping-handover-not-ok", func() {
+		qn.SetPingHandoverHandler(func(sl network.PingHandoverSeal) (bool, error) {
+			return false, nil
+		})
+
+		sl, err := network.NewHandoverSealV0(network.PingHandoverSealV0Hint, key.MustNewBTCPrivatekey(), base.RandomStringAddress(), newconnInfo, nil)
+		t.NoError(err)
+
+		ok, err := qc.PingHandover(context.TODO(), sl)
+		t.NoError(err)
+		t.False(ok)
+	})
+
+	t.Run("end-handover-not-ok", func() {
+		qn.SetEndHandoverHandler(func(sl network.EndHandoverSeal) (bool, error) {
+			return false, nil
+		})
+
+		sl, err := network.NewHandoverSealV0(network.EndHandoverSealV0Hint, key.MustNewBTCPrivatekey(), base.RandomStringAddress(), newconnInfo, nil)
+		t.NoError(err)
+
+		ok, err := qc.EndHandover(context.TODO(), sl)
+		t.NoError(err)
+		t.False(ok)
+	})
 }
 
 func TestQuicServer(t *testing.T) {

@@ -29,14 +29,14 @@ var defaultProcesses = []pm.Process{
 	process.ProcessorLocalNode,
 	process.ProcessorProposalProcessor,
 	process.ProcessorSuffrage,
-	process.ProcessorConsensusStates,
 	process.ProcessorNetwork,
+	process.ProcessorConsensusStates,
 }
 
 var defaultHooks = []pm.Hook{
 	pm.NewHook(pm.HookPrefixPost, process.ProcessNameEncoders,
 		process.HookNameAddHinters, process.HookAddHinters(launch.EncoderTypes, launch.EncoderHinters)),
-	pm.NewHook(pm.HookPrefixPost, process.ProcessNameNetwork,
+	pm.NewHook(pm.HookPrefixPost, process.ProcessNameConsensusStates,
 		process.HookNameSetNetworkHandlers, process.HookSetNetworkHandlers),
 	pm.NewHook(pm.HookPrefixPost, process.ProcessNameNetwork,
 		process.HookNameNetworkRateLimit, process.HookNetworkRateLimit),

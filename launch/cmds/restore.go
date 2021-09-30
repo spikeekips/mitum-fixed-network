@@ -21,7 +21,7 @@ type RestoreCommand struct {
 	*BaseRunCommand
 	CleanDatabase bool `name:"clean-database" help:"clean database"`
 	bd            *localfs.BlockData
-	st            storage.Database
+	database      storage.Database
 	policy        *isaac.LocalPolicy
 	lastBlock     block.Block
 	lastManifest  block.Manifest
@@ -125,7 +125,7 @@ func (cmd *RestoreCommand) restore() error {
 }
 
 func (cmd *RestoreCommand) restoreBlock(height base.Height) error {
-	sst, err := cmd.st.NewSyncerSession()
+	sst, err := cmd.database.NewSyncerSession()
 	if err != nil {
 		return err
 	}
@@ -156,8 +156,8 @@ func (cmd *RestoreCommand) restoreBlock(height base.Height) error {
 
 	if err := sst.Commit(); err != nil {
 		return err
-	} else if st, ok := cmd.st.(storage.LastBlockSaver); ok {
-		if err := st.SaveLastBlock(height); err != nil {
+	} else if db, ok := cmd.database.(storage.LastBlockSaver); ok {
+		if err := db.SaveLastBlock(height); err != nil {
 			return err
 		}
 	}
@@ -209,11 +209,11 @@ func (cmd *RestoreCommand) hookLoadVars(ctx context.Context) (context.Context, e
 		cmd.bd = i
 	}
 
-	var st storage.Database
-	if err := process.LoadDatabaseContextValue(ctx, &st); err != nil {
+	var db storage.Database
+	if err := process.LoadDatabaseContextValue(ctx, &db); err != nil {
 		return ctx, err
 	}
-	cmd.st = st
+	cmd.database = db
 
 	var policy *isaac.LocalPolicy
 	if err := process.LoadPolicyContextValue(ctx, &policy); err != nil {
@@ -253,7 +253,7 @@ func (cmd *RestoreCommand) hookCheckEmptyBlockData(ctx context.Context) (context
 }
 
 func (cmd *RestoreCommand) hookCheckExistingDatabase(ctx context.Context) (context.Context, error) {
-	switch m, found, err := cmd.st.LastManifest(); {
+	switch m, found, err := cmd.database.LastManifest(); {
 	case err != nil:
 		return ctx, err
 	case !found:
@@ -289,11 +289,11 @@ func (cmd *RestoreCommand) hookCheckExistingDatabase(ctx context.Context) (conte
 }
 
 func (cmd *RestoreCommand) hookCleanDatabase(ctx context.Context) (context.Context, error) {
-	if err := cmd.st.Clean(); err != nil {
+	if err := cmd.database.Clean(); err != nil {
 		return ctx, err
 	}
 
 	cmd.Log().Debug().Msg("database cleaned")
 
-	return ctx, cmd.st.Clean()
+	return ctx, cmd.database.Clean()
 }

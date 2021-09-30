@@ -18,21 +18,24 @@ import (
 type Channel struct {
 	*logging.Logging
 	connInfo         network.ConnInfo
-	recvChan         chan seal.Seal
+	recvChan         chan network.PassthroughedSeal
 	getSealHandler   network.GetSealsHandler
 	getState         network.GetStateHandler
 	nodeInfo         network.NodeInfoHandler
 	getBlockDataMaps network.BlockDataMapsHandler
 	getBlockData     network.BlockDataHandler
+	startHandover    network.StartHandoverHandler
+	pingHandover     network.PingHandoverHandler
+	endHandover      network.EndHandoverHandler
 }
 
 func NewChannel(bufsize uint, connInfo network.ConnInfo) *Channel {
 	return &Channel{
 		Logging: logging.NewLogging(func(c zerolog.Context) zerolog.Context {
-			return c.Str("module", "chan-network")
+			return c.Str("module", "chan-network-channel")
 		}),
 		connInfo: connInfo,
-		recvChan: make(chan seal.Seal, bufsize),
+		recvChan: make(chan network.PassthroughedSeal, bufsize),
 	}
 }
 
@@ -52,13 +55,13 @@ func (ch *Channel) Seals(_ context.Context, h []valuehash.Hash) ([]seal.Seal, er
 	return ch.getSealHandler(h)
 }
 
-func (ch *Channel) SendSeal(_ context.Context, sl seal.Seal) error {
-	ch.recvChan <- sl
+func (ch *Channel) SendSeal(_ context.Context, ci network.ConnInfo, sl seal.Seal) error {
+	ch.recvChan <- network.NewPassthroughedSealFromConnInfo(sl, ci)
 
 	return nil
 }
 
-func (ch *Channel) ReceiveSeal() <-chan seal.Seal {
+func (ch *Channel) ReceiveSeal() <-chan network.PassthroughedSeal {
 	return ch.recvChan
 }
 
@@ -114,4 +117,40 @@ func (ch *Channel) BlockData(_ context.Context, item block.BlockDataMapItem) (io
 
 func (ch *Channel) SetBlockDataHandler(f network.BlockDataHandler) {
 	ch.getBlockData = f
+}
+
+func (ch *Channel) StartHandover(_ context.Context, sl network.StartHandoverSeal) (bool, error) {
+	if ch.startHandover == nil {
+		return false, errors.Errorf("not supported")
+	}
+
+	return ch.startHandover(sl)
+}
+
+func (ch *Channel) SetStartHandover(f network.StartHandoverHandler) {
+	ch.startHandover = f
+}
+
+func (ch *Channel) PingHandover(_ context.Context, sl network.PingHandoverSeal) (bool, error) {
+	if ch.pingHandover == nil {
+		return false, errors.Errorf("not supported")
+	}
+
+	return ch.pingHandover(sl)
+}
+
+func (ch *Channel) SetPingHandover(f network.PingHandoverHandler) {
+	ch.pingHandover = f
+}
+
+func (ch *Channel) EndHandover(_ context.Context, sl network.EndHandoverSeal) (bool, error) {
+	if ch.endHandover == nil {
+		return false, errors.Errorf("not supported")
+	}
+
+	return ch.endHandover(sl)
+}
+
+func (ch *Channel) SetEndHandover(f network.EndHandoverHandler) {
+	ch.endHandover = f
 }

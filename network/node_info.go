@@ -23,7 +23,7 @@ type NodeInfo interface {
 	State() base.State
 	LastBlock() block.Manifest
 	Version() util.Version
-	URL() string
+	ConnInfo() ConnInfo
 	Policy() map[string]interface{}
 	Nodes() []RemoteNode // Only contains suffrage nodes
 }
@@ -34,9 +34,9 @@ type NodeInfoV0 struct {
 	state     base.State
 	lastBlock block.Manifest
 	version   util.Version
-	u         string
 	policy    map[string]interface{}
 	nodes     []RemoteNode
+	ci        ConnInfo
 }
 
 func NewNodeInfoV0(
@@ -45,10 +45,10 @@ func NewNodeInfoV0(
 	state base.State,
 	lastBlock block.Manifest,
 	version util.Version,
-	u string,
 	policy map[string]interface{},
 	nodes []RemoteNode,
 	suffrage base.Suffrage,
+	ci ConnInfo,
 ) NodeInfoV0 {
 	if suffrage != nil {
 		policy["suffrage"] = suffrage.Verbose()
@@ -60,9 +60,9 @@ func NewNodeInfoV0(
 		state:     state,
 		lastBlock: lastBlock,
 		version:   version,
-		u:         u,
 		policy:    policy,
 		nodes:     nodes,
+		ci:        ci,
 	}
 }
 
@@ -79,15 +79,15 @@ func (NodeInfoV0) Hint() hint.Hint {
 }
 
 func (ni NodeInfoV0) IsValid([]byte) error {
+	if err := ni.node.IsValid(nil); err != nil {
+		return err
+	}
+
 	if err := ni.networkID.IsValid(nil); err != nil {
 		return err
 	}
 
-	if _, err := ParseURL(ni.u, false); err != nil {
-		return isvalid.InvalidError.Wrap(err).Errorf("invalid node info url")
-	}
-
-	if err := isvalid.Check([]isvalid.IsValider{ni.state, ni.version}, nil, false); err != nil {
+	if err := isvalid.Check([]isvalid.IsValider{ni.state, ni.version, ni.ci}, nil, false); err != nil {
 		return err
 	}
 
@@ -118,8 +118,8 @@ func (ni NodeInfoV0) Version() util.Version {
 	return ni.version
 }
 
-func (ni NodeInfoV0) URL() string {
-	return ni.u
+func (ni NodeInfoV0) ConnInfo() ConnInfo {
+	return ni.ci
 }
 
 func (ni NodeInfoV0) Policy() map[string]interface{} {
@@ -133,17 +133,17 @@ func (ni NodeInfoV0) Nodes() []RemoteNode {
 type RemoteNode struct {
 	Address   base.Address
 	Publickey key.Publickey
-	URL       string
-	Insecure  bool
+	ci        ConnInfo
 }
 
 func NewRemoteNode(no base.Node, connInfo ConnInfo) RemoteNode {
-	r := RemoteNode{Address: no.Address(), Publickey: no.Publickey()}
+	return RemoteNode{Address: no.Address(), Publickey: no.Publickey(), ci: connInfo}
+}
 
-	if connInfo != nil {
-		r.URL = connInfo.URL().String()
-		r.Insecure = connInfo.Insecure()
-	}
+func (no RemoteNode) ConnInfo() ConnInfo {
+	return no.ci
+}
 
-	return r
+func NewRemoteNodeFromNodeInfo(ni NodeInfo) RemoteNode {
+	return RemoteNode{Address: ni.Address(), Publickey: ni.Publickey(), ci: ni.ConnInfo()}
 }

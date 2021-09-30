@@ -2,17 +2,22 @@ package process
 
 import (
 	"context"
+	"fmt"
 
+	"github.com/pkg/errors"
 	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/base/prprocessor"
 	"github.com/spikeekips/mitum/isaac"
 	"github.com/spikeekips/mitum/launch/config"
 	"github.com/spikeekips/mitum/launch/pm"
 	"github.com/spikeekips/mitum/network"
+	"github.com/spikeekips/mitum/network/discovery/memberlist"
 	"github.com/spikeekips/mitum/states"
 	basicstate "github.com/spikeekips/mitum/states/basic"
 	"github.com/spikeekips/mitum/storage"
 	"github.com/spikeekips/mitum/storage/blockdata"
+	"github.com/spikeekips/mitum/util"
+	"github.com/spikeekips/mitum/util/encoder"
 	"github.com/spikeekips/mitum/util/logging"
 )
 
@@ -49,8 +54,8 @@ func ProcessConsensusStates(ctx context.Context) (context.Context, error) {
 		return ctx, err
 	}
 
-	var st storage.Database
-	if err := LoadDatabaseContextValue(ctx, &st); err != nil {
+	var db storage.Database
+	if err := LoadDatabaseContextValue(ctx, &db); err != nil {
 		return ctx, err
 	}
 
@@ -69,19 +74,9 @@ func ProcessConsensusStates(ctx context.Context) (context.Context, error) {
 		return ctx, err
 	}
 
-	var cs states.States
-	if suffrage.IsInside(nodepool.LocalNode().Address()) {
-		i, err := processConsensusStatesSuffrageNode(ctx, st, blockData, policy, nodepool, suffrage)
-		if err != nil {
-			return ctx, err
-		}
-		cs = i
-	} else {
-		i, err := processConsensusStatesNoneSuffrageNode(ctx, st, blockData, policy, nodepool, suffrage)
-		if err != nil {
-			return ctx, err
-		}
-		cs = i
+	cs, err := processConsensusStates(ctx, db, blockData, policy, nodepool, suffrage)
+	if err != nil {
+		return ctx, err
 	}
 
 	if i, ok := cs.(logging.SetLogging); ok {
@@ -91,9 +86,9 @@ func ProcessConsensusStates(ctx context.Context) (context.Context, error) {
 	return context.WithValue(ctx, ContextValueConsensusStates, cs), nil
 }
 
-func processConsensusStatesSuffrageNode(
+func processConsensusStates(
 	ctx context.Context,
-	st storage.Database,
+	db storage.Database,
 	blockData blockdata.BlockData,
 	policy *isaac.LocalPolicy,
 	nodepool *network.Nodepool,
@@ -106,12 +101,12 @@ func processConsensusStatesSuffrageNode(
 
 	var pps *prprocessor.Processors
 	if err := LoadProposalProcessorContextValue(ctx, &pps); err != nil {
-		return nil, err
+		if !errors.Is(err, util.ContextValueNotFoundError) {
+			return nil, err
+		}
 	}
 
-	log.Log().Debug().Msg("local is in suffrage")
-
-	proposalMaker := isaac.NewProposalMaker(nodepool.LocalNode(), st, policy)
+	proposalMaker := isaac.NewProposalMaker(nodepool.LocalNode(), db, policy)
 
 	ballotbox := isaac.NewBallotbox(
 		suffrage.Nodes,
@@ -128,14 +123,25 @@ func processConsensusStatesSuffrageNode(
 	)
 	_ = ballotbox.SetLogging(log)
 
+	joiner, err := createDiscoveryJoiner(ctx, nodepool, suffrage)
+	if err != nil {
+		return nil, err
+	}
+
+	hd, err := createHandover(ctx, policy, nodepool, suffrage)
+	if err != nil {
+		return nil, err
+	}
+
 	stopped := basicstate.NewStoppedState()
-	booting := basicstate.NewBootingState(nodepool.LocalNode(), st, blockData, policy, suffrage)
-	joining := basicstate.NewJoiningState(nodepool.LocalNode(), st, policy, suffrage, ballotbox)
-	consensus := basicstate.NewConsensusState(st, policy, nodepool, suffrage, proposalMaker, pps)
-	syncing := basicstate.NewSyncingState(st, blockData, policy, nodepool)
+	booting := basicstate.NewBootingState(nodepool.LocalNode(), db, blockData, policy, suffrage)
+	joining := basicstate.NewJoiningState(nodepool.LocalNode(), db, policy, suffrage, ballotbox)
+	consensus := basicstate.NewConsensusState(db, policy, nodepool, suffrage, proposalMaker, pps)
+	syncing := basicstate.NewSyncingState(db, blockData, policy, nodepool, suffrage)
+	handover := basicstate.NewHandoverState(db, policy, nodepool, suffrage, pps)
 
 	return basicstate.NewStates(
-		st,
+		db,
 		policy,
 		nodepool,
 		suffrage,
@@ -145,45 +151,93 @@ func processConsensusStatesSuffrageNode(
 		joining,
 		consensus,
 		syncing,
+		handover,
+		joiner,
+		hd,
 	)
 }
 
-func processConsensusStatesNoneSuffrageNode(
+func createDiscoveryJoiner(
 	ctx context.Context,
-	st storage.Database,
-	blockData blockdata.BlockData,
-	policy *isaac.LocalPolicy,
 	nodepool *network.Nodepool,
 	suffrage base.Suffrage,
-) (states.States, error) {
+) (*states.DiscoveryJoiner, error) {
 	var log *logging.Logging
 	if err := config.LoadLogContextValue(ctx, &log); err != nil {
 		return nil, err
 	}
 
-	var conf config.LocalNode
-	if err := config.LoadConfigContextValue(ctx, &conf); err != nil {
+	var encs *encoder.Encoders
+	if err := config.LoadEncodersContextValue(ctx, &encs); err != nil {
 		return nil, err
 	}
 
-	log.Log().Debug().Msg("local is not in suffrage")
+	var dis *memberlist.Discovery
+	if err := util.LoadFromContextValue(ctx, ContextValueDiscovery, &dis); err != nil {
+		if errors.Is(err, util.ContextValueNotFoundError) {
+			return nil, nil
+		}
 
-	stopped := basicstate.NewStoppedState()
-	booting := basicstate.NewBootingState(nodepool.LocalNode(), st, blockData, policy, suffrage)
-	joining := basicstate.NewEmptyState()
-	consensus := basicstate.NewEmptyState()
-	syncing := basicstate.NewSyncingStateNoneSuffrage(st, blockData, policy, nodepool, conf.LocalConfig().SyncInterval())
+		log.Log().Debug().Err(err).Msgf("discovery joiner disabled for %T", dis)
 
-	return basicstate.NewStates(
-		st,
-		policy,
-		nodepool,
-		suffrage,
-		nil,
-		stopped,
-		booting,
-		joining,
-		consensus,
-		syncing,
-	)
+		return nil, nil
+	}
+
+	var cis []network.ConnInfo
+	if err := LoadDiscoveryConnInfosContextValue(ctx, &cis); err != nil {
+		if !errors.Is(err, util.ContextValueNotFoundError) {
+			return nil, err
+		}
+	}
+
+	if len(cis) < 1 {
+		return nil, nil
+	}
+
+	joiner, err := states.NewDiscoveryJoiner(nodepool, suffrage, dis, cis)
+	if err != nil {
+		return nil, fmt.Errorf("failed to make *DiscoveryJoiner: %w", err)
+	}
+
+	_ = joiner.SetLogging(log)
+
+	return joiner, nil
+}
+
+func createHandover(
+	ctx context.Context,
+	policy *isaac.LocalPolicy,
+	nodepool *network.Nodepool,
+	suffrage base.Suffrage,
+) (*basicstate.Handover, error) {
+	var log *logging.Logging
+	if err := config.LoadLogContextValue(ctx, &log); err != nil {
+		return nil, err
+	}
+
+	var encs *encoder.Encoders
+	if err := config.LoadEncodersContextValue(ctx, &encs); err != nil {
+		return nil, err
+	}
+
+	var ln config.LocalNode
+	if err := config.LoadConfigContextValue(ctx, &ln); err != nil {
+		return nil, err
+	}
+	connInfo := ln.Network().ConnInfo()
+
+	var cis []network.ConnInfo
+	if err := LoadDiscoveryConnInfosContextValue(ctx, &cis); err != nil {
+		if !errors.Is(err, util.ContextValueNotFoundError) {
+			return nil, err
+		}
+	}
+
+	handover, err := basicstate.NewHandoverWithDiscoveryURL(connInfo, encs, policy, nodepool, suffrage, cis)
+	if err != nil {
+		return nil, fmt.Errorf("failed to make Handover: %w", err)
+	}
+	_ = handover.SetLogging(log)
+
+	return handover, nil
 }

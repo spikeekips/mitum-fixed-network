@@ -5,6 +5,7 @@ import (
 
 	"github.com/pkg/errors"
 	"github.com/spikeekips/mitum/base"
+	"github.com/spikeekips/mitum/network"
 	"github.com/spikeekips/mitum/storage/blockdata"
 	"github.com/stretchr/testify/suite"
 )
@@ -53,11 +54,17 @@ func (t *testStateBooting) TestNoneSuffrageNode() {
 	t.Equal(base.StateSyncing, sctx.ToState())
 }
 
-func (t *testStateBooting) TestWithEmptyBlockWithSuffrageNodes() {
+func (t *testStateBooting) TestWithEmptyBlockWithChannels() {
 	t.NoError(blockdata.Clean(t.local.Database(), t.local.BlockData(), false))
 
 	st := NewBootingState(t.local.Node(), t.local.Database(), t.local.BlockData(), t.local.Policy(), t.Suffrage(t.local, t.remote))
 	defer t.exitState(st, NewStateSwitchContext(base.StateBooting, base.StateStopped))
+
+	st.syncableChannelsFunc = func() map[string]network.Channel {
+		return map[string]network.Channel{
+			"showme": t.remote.Channel(),
+		}
+	}
 
 	f, err := st.Enter(NewStateSwitchContext(base.StateStopped, base.StateBooting))
 	t.NoError(err)
@@ -70,14 +77,18 @@ func (t *testStateBooting) TestWithEmptyBlockWithSuffrageNodes() {
 	t.Equal(base.StateSyncing, sctx.ToState())
 }
 
-func (t *testStateBooting) TestWithEmptyBlockWithoutSuffrageNodes() {
+func (t *testStateBooting) TestWithEmptyBlockWithoutChannels() {
 	t.NoError(blockdata.Clean(t.local.Database(), t.local.BlockData(), false))
 
 	st := NewBootingState(t.local.Node(), t.local.Database(), t.local.BlockData(), t.local.Policy(), t.Suffrage(t.local))
 	defer t.exitState(st, NewStateSwitchContext(base.StateBooting, base.StateStopped))
 
+	st.syncableChannelsFunc = func() map[string]network.Channel {
+		return nil
+	}
+
 	_, err := st.Enter(NewStateSwitchContext(base.StateStopped, base.StateBooting))
-	t.Contains(err.Error(), "empty blocks, but no other nodes; can not sync")
+	t.Contains(err.Error(), "empty blocks, but no channels for syncing; can not sync")
 }
 
 func TestStateBooting(t *testing.T) {

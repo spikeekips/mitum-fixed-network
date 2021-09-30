@@ -1,6 +1,8 @@
 package basicstates
 
 import (
+	"sort"
+	"sync"
 	"time"
 
 	"github.com/pkg/errors"
@@ -12,11 +14,21 @@ import (
 	"github.com/spikeekips/mitum/storage"
 	"github.com/spikeekips/mitum/storage/blockdata"
 	"github.com/spikeekips/mitum/util/localtime"
+	"github.com/spikeekips/mitum/util/logging"
 )
 
 type SyncingState struct {
-	*BaseSyncingState
+	sync.RWMutex
+	*logging.Logging
+	*BaseState
+	database             storage.Database
+	blockData            blockdata.BlockData
+	policy               *isaac.LocalPolicy
+	nodepool             *network.Nodepool
+	suffrage             base.Suffrage
+	syncs                *isaac.Syncers
 	waitVoteproofTimeout time.Duration
+	nc                   *network.NodeInfoChecker
 }
 
 func NewSyncingState(
@@ -24,17 +36,32 @@ func NewSyncingState(
 	blockData blockdata.BlockData,
 	policy *isaac.LocalPolicy,
 	nodepool *network.Nodepool,
+	suffrage base.Suffrage,
 ) *SyncingState {
 	return &SyncingState{
-		BaseSyncingState:     NewBaseSyncingState("basic-syncing-state", db, blockData, policy, nodepool),
+		Logging: logging.NewLogging(func(c zerolog.Context) zerolog.Context {
+			return c.Str("module", "basic-syncing-state")
+		}),
+		BaseState:            NewBaseState(base.StateSyncing),
+		database:             db,
+		blockData:            blockData,
+		policy:               policy,
+		nodepool:             nodepool,
+		suffrage:             suffrage,
 		waitVoteproofTimeout: time.Second * 5, // NOTE long enough time
 	}
 }
 
 func (st *SyncingState) Enter(sctx StateSwitchContext) (func() error, error) {
-	callback, err := st.BaseSyncingState.Enter(sctx)
-	if err != nil {
+	callback := EmptySwitchFunc
+	if i, err := st.BaseState.Enter(sctx); err != nil {
 		return nil, err
+	} else if i != nil {
+		callback = i
+	}
+
+	if st.syncers() != nil {
+		return nil, errors.Errorf("not stopped correctly; syncers still running")
 	}
 
 	return func() error {
@@ -47,17 +74,40 @@ func (st *SyncingState) Enter(sctx StateSwitchContext) (func() error, error) {
 }
 
 func (st *SyncingState) Exit(sctx StateSwitchContext) (func() error, error) {
-	callback, err := st.BaseSyncingState.Exit(sctx)
-	if err != nil {
+	callback := EmptySwitchFunc
+	if i, err := st.BaseState.Exit(sctx); err != nil {
 		return nil, err
+	} else if i != nil {
+		callback = i
 	}
 
+	syncs := st.syncers()
+	st.setSyncers(nil)
+
 	return func() error {
+		if err := st.stopWaitVoteproof(); err != nil {
+			return err
+		}
+
 		if err := callback(); err != nil {
 			return err
 		}
 
-		return st.stopWaitVoteproof()
+		if syncs != nil {
+			if err := syncs.Stop(); err != nil {
+				return err
+			}
+		}
+
+		if st.nc != nil {
+			if err := st.nc.Stop(); err != nil {
+				return err
+			}
+
+			st.nc = nil
+		}
+
+		return nil
 	}, nil
 }
 
@@ -80,8 +130,33 @@ func (st *SyncingState) enterCallback(voteproof base.Voteproof) error {
 		baseManifest = m
 	}
 
-	syncs := st.syncers()
+	var syncableChannels func() map[string]network.Channel
+	if st.States != nil {
+		syncableChannels = st.BaseState.syncableChannels
+	} else {
+		syncableChannels = st.syncableChannelsOfNodepool
+	}
+
+	syncs := isaac.NewSyncers(st.database, st.blockData, st.policy, baseManifest, syncableChannels)
+	syncs.WhenBlockSaved(st.whenBlockSaved)
 	syncs.WhenFinished(st.whenFinished)
+
+	_ = syncs.SetLogging(st.Logging)
+
+	if err := syncs.Start(); err != nil {
+		return err
+	}
+	st.setSyncers(syncs)
+
+	if st.canStartNodeInfoChecker() {
+		st.Log().Debug().Msg("local is not suffrage node, NodeInfoChecker started")
+
+		st.nc = network.NewNodeInfoChecker(st.policy.NetworkID(), st.nodepool, 0, st.whenNewHeight)
+		_ = st.nc.SetLogging(st.Logging)
+		if err := st.nc.Start(); err != nil {
+			return err
+		}
+	}
 
 	if voteproof != nil {
 		l := st.Log().With().Str("voteproof_id", voteproof.ID()).Logger()
@@ -101,6 +176,54 @@ func (st *SyncingState) enterCallback(voteproof base.Voteproof) error {
 	e.Msg("new syncers started without voteproof")
 
 	return nil
+}
+
+func (st *SyncingState) syncers() *isaac.Syncers {
+	st.RLock()
+	defer st.RUnlock()
+
+	return st.syncs
+}
+
+func (st *SyncingState) setSyncers(syncs *isaac.Syncers) {
+	st.Lock()
+	defer st.Unlock()
+
+	st.syncs = syncs
+}
+
+func (st *SyncingState) whenBlockSaved(blks []block.Block) {
+	if len(blks) < 1 {
+		panic("empty saved blocks in SyncingStateNoneSuffrage")
+	}
+
+	sort.Slice(blks, func(i, j int) bool {
+		return blks[i].Height()-blks[j].Height() < 0
+	})
+
+	ivp := blks[len(blks)-1].ConsensusInfo().INITVoteproof()
+	_ = st.SetLastVoteproof(ivp)
+
+	if err := st.NewBlocks(blks); err != nil {
+		st.Log().Error().Err(err).Msg("new blocks hooks failed")
+	}
+}
+
+func (st *SyncingState) whenFinished(height base.Height) {
+	l := st.Log().With().Int64("height", height.Int64()).Logger()
+
+	voteproof := st.database.LastVoteproof(base.StageACCEPT)
+	_ = st.SetLastVoteproof(voteproof)
+
+	if st.suffrage.IsInside(st.nodepool.LocalNode().Address()) {
+		l.Debug().Msg("syncing finished; will wait new voteproof")
+
+		if err := st.waitVoteproof(); err != nil {
+			l.Error().Err(err).Stringer("timer", TimerIDSyncingWaitVoteproof).Msg("failed to start timer")
+
+			return
+		}
+	}
 }
 
 func (st *SyncingState) handleINITTVoteproof(voteproof base.Voteproof) error {
@@ -136,18 +259,21 @@ func (st *SyncingState) handleINITTVoteproof(voteproof base.Voteproof) error {
 		return st.syncFromVoteproof(voteproof, to)
 	default:
 		if !st.syncers().IsFinished() {
+			l.Debug().Msg("expected init voteproof received, but not finished")
+
 			return nil
 		}
 
-		l.Debug().Msg("init voteproof, expected")
+		if st.canMoveConsensus() {
+			l.Debug().Msg("init voteproof, expected; moves to consensus")
 
-		if err := st.stopWaitVoteproof(); err != nil {
-			return err
+			_ = st.SetLastVoteproof(voteproof)
+			return st.NewStateSwitchContext(base.StateConsensus).SetVoteproof(voteproof)
 		}
 
-		l.Debug().Msg("init voteproof, expected; moves to consensus")
+		l.Debug().Msg("expected init voteproof received, but will stay in syncing")
 
-		return NewStateSwitchContext(base.StateSyncing, base.StateConsensus).SetVoteproof(voteproof)
+		return nil
 	}
 }
 
@@ -210,26 +336,19 @@ func (st *SyncingState) syncFromVoteproof(voteproof base.Voteproof, to base.Heig
 	return err
 }
 
-func (st *SyncingState) whenFinished(height base.Height) {
-	l := st.Log().With().Int64("height", height.Int64()).Logger()
-
-	voteproof := st.database.LastVoteproof(base.StageACCEPT)
-	_ = st.SetLastVoteproof(voteproof)
-
-	l.Debug().Msg("syncing finished; will wait new voteproof")
-
-	if err := st.waitVoteproof(); err != nil {
-		l.Error().Err(err).Stringer("timer", TimerIDSyncingWaitVoteproof).Msg("failed to start timer")
-
-		return
-	}
-}
-
 func (st *SyncingState) waitVoteproof() error {
+	if st.Timers().IsTimerStarted(TimerIDSyncingWaitVoteproof) {
+		return nil
+	}
+
 	timer := localtime.NewContextTimer(
 		TimerIDSyncingWaitVoteproof,
 		0,
 		func(int) (bool, error) {
+			if !st.canMoveConsensus() {
+				return true, nil
+			}
+
 			if syncs := st.syncers(); syncs != nil {
 				if !syncs.IsFinished() {
 					st.Log().Debug().Msg("syncer is still running; timer will be stopped")
@@ -240,7 +359,7 @@ func (st *SyncingState) waitVoteproof() error {
 
 			st.Log().Debug().Msg("syncing finished, but no more Voteproof; moves to joining state")
 
-			if err := st.StateSwitch(NewStateSwitchContext(base.StateSyncing, base.StateJoining)); err != nil {
+			if err := st.StateSwitch(st.NewStateSwitchContext(base.StateJoining)); err != nil {
 				st.Log().Error().Err(err).Msg("failed to switch state; keeps trying")
 			}
 
@@ -263,4 +382,82 @@ func (st *SyncingState) waitVoteproof() error {
 
 func (st *SyncingState) stopWaitVoteproof() error {
 	return st.Timers().StopTimers([]localtime.TimerID{TimerIDSyncingWaitVoteproof})
+}
+
+func (st *SyncingState) whenNewHeight(height base.Height) error {
+	st.Lock()
+	defer st.Unlock()
+
+	if st.syncs == nil {
+		return nil
+	}
+
+	n := st.nodepool.LenRemoteAlives()
+	if n < 1 {
+		return nil
+	}
+
+	sources := make([]base.Node, n)
+
+	var i int
+	st.nodepool.TraverseAliveRemotes(func(no base.Node, _ network.Channel) bool {
+		sources[i] = no
+		i++
+
+		return true
+	})
+
+	if _, err := st.syncs.Add(height, sources); err != nil {
+		st.Log().Error().Err(err).Int64("height", height.Int64()).Msg("failed to add syncers")
+
+		return err
+	}
+
+	return nil
+}
+
+func (st *SyncingState) canStartNodeInfoChecker() bool {
+	switch {
+	case !st.suffrage.IsInside(st.nodepool.LocalNode().Address()):
+		return true
+	case st.underHandover():
+		return true
+	default:
+		return false
+	}
+}
+
+func (st *SyncingState) canMoveConsensus() bool {
+	switch {
+	case !st.suffrage.IsInside(st.nodepool.LocalNode().Address()):
+		st.Log().Debug().Msg("local is not in suffrage; will stay in syncing")
+
+		return false
+	case st.States == nil:
+		return true
+	case st.underHandover():
+		if st.States.isHandoverReady() {
+			st.Log().Debug().Msg("under handover and is ready; can move handover")
+
+			return true
+		}
+
+		st.Log().Debug().Msg("under handover, but is not ready; will stay in syncing")
+
+		return false
+	default:
+		return true
+	}
+}
+
+func (st *SyncingState) syncableChannelsOfNodepool() map[string]network.Channel {
+	pn := map[string]network.Channel{}
+
+	st.nodepool.TraverseAliveRemotes(func(no base.Node, ch network.Channel) bool {
+		pn[no.String()] = ch
+
+		return true
+	})
+
+	return pn
 }

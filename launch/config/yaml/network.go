@@ -74,12 +74,16 @@ func (no LocalNetwork) setConnInfo(conf config.LocalNetwork) error {
 		return nil
 	}
 
-	connInfo, err := network.NewHTTPConnInfoFromString(*no.URL, false)
+	ci, err := network.NewHTTPConnInfoFromString(*no.URL, false)
 	if err != nil {
 		return err
 	}
 
-	return conf.SetConnInfo(connInfo)
+	if err := ci.IsValid(nil); err != nil {
+		return err
+	}
+
+	return conf.SetConnInfo(ci)
 }
 
 func (no LocalNetwork) setCerts(conf config.LocalNetwork) error {

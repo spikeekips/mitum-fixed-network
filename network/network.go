@@ -21,6 +21,9 @@ type (
 	NodeInfoHandler      func() (NodeInfo, error)
 	BlockDataMapsHandler func([]base.Height) ([]block.BlockDataMap, error)
 	BlockDataHandler     func(string) (io.Reader, func() error, error)
+	StartHandoverHandler func(StartHandoverSeal) (bool, error)
+	PingHandoverHandler  func(PingHandoverSeal) (bool, error)
+	EndHandoverHandler   func(EndHandoverSeal) (bool, error)
 )
 
 type Server interface {
@@ -33,6 +36,9 @@ type Server interface {
 	SetNodeInfoHandler(NodeInfoHandler)
 	SetBlockDataMapsHandler(BlockDataMapsHandler)
 	SetBlockDataHandler(BlockDataHandler)
+	SetStartHandoverHandler(StartHandoverHandler)
+	SetPingHandoverHandler(PingHandoverHandler)
+	SetEndHandoverHandler(EndHandoverHandler)
 }
 
 type Response interface {
@@ -46,14 +52,18 @@ var (
 	ChannelTimeoutNodeInfo     = time.Second * 2
 	ChannelTimeoutBlockDataMap = time.Second * 2
 	ChannelTimeoutBlockData    = time.Second * 30
+	ChannelTimeoutHandover     = time.Second * 2
 )
 
 type Channel interface {
 	util.Initializer
 	ConnInfo() ConnInfo
 	Seals(context.Context, []valuehash.Hash) ([]seal.Seal, error)
-	SendSeal(context.Context, seal.Seal) error
+	SendSeal(context.Context, ConnInfo /* from ConnInfo */, seal.Seal) error
 	NodeInfo(context.Context) (NodeInfo, error)
 	BlockDataMaps(context.Context, []base.Height) ([]block.BlockDataMap, error)
 	BlockData(context.Context, block.BlockDataMapItem) (io.ReadCloser, error)
+	StartHandover(context.Context, StartHandoverSeal) (bool, error)
+	PingHandover(context.Context, PingHandoverSeal) (bool, error)
+	EndHandover(context.Context, EndHandoverSeal) (bool, error)
 }

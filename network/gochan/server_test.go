@@ -12,7 +12,7 @@ type testChanServer struct {
 }
 
 func (t *testChanServer) TestNew() {
-	s := NewServer(nil)
+	s := NewServer(nil, nil)
 
 	t.Implements((*network.Server)(nil), s)
 }

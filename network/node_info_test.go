@@ -1,3 +1,4 @@
+//go:build test
 // +build test
 
 package network
@@ -44,6 +45,14 @@ func (t *testNodeInfo) SetupTest() {
 	_ = t.encs.TestAddHinter(base.StringAddress(""))
 	_ = t.encs.TestAddHinter(block.ManifestV0{})
 	_ = t.encs.TestAddHinter(NodeInfoV0{})
+	_ = t.encs.TestAddHinter(NilConnInfo{})
+	_ = t.encs.TestAddHinter(HTTPConnInfo{})
+}
+
+func (t *testNodeInfo) newConnInfo(name string, insecure bool) ConnInfo {
+	u, _ := url.Parse(fmt.Sprintf("https://%s:443", name))
+
+	return NewHTTPConnInfo(u, insecure)
 }
 
 func (t *testNodeInfo) newNode(name string) (base.Node, ConnInfo) {
@@ -51,10 +60,8 @@ func (t *testNodeInfo) newNode(name string) (base.Node, ConnInfo) {
 	t.NoError(err)
 
 	no := node.NewBaseV0(addr, key.MustNewBTCPrivatekey().Publickey())
-	u, _ := url.Parse(fmt.Sprintf("https://%s:443", name))
-	connInfo := NewHTTPConnInfo(u, true)
 
-	return no, connInfo
+	return no, t.newConnInfo(name, true)
 }
 
 func (t *testNodeInfo) TestNew() {
@@ -62,6 +69,7 @@ func (t *testNodeInfo) TestNew() {
 	t.NoError(err)
 
 	local := node.RandomNode("n0")
+	localConnInfo := t.newConnInfo("n0", true)
 
 	n1, n1ConnInfo := t.newNode("n1")
 	n2, n2ConnInfo := t.newNode("n2")
@@ -80,10 +88,10 @@ func (t *testNodeInfo) TestNew() {
 		base.StateBooting,
 		blk.Manifest(),
 		util.Version("0.1.1"),
-		"https://local",
 		policy,
 		nodes,
 		suffrage,
+		localConnInfo,
 	)
 	t.NoError(ni.IsValid(nil))
 
@@ -97,6 +105,7 @@ func (t *testNodeInfo) TestNew() {
 	}
 
 	t.Equal(expectedNodes, regs)
+	t.True(ni.ConnInfo().Equal(localConnInfo))
 }
 
 func (t *testNodeInfo) TestEmptyNetworkID() {
@@ -111,10 +120,10 @@ func (t *testNodeInfo) TestEmptyNetworkID() {
 		base.StateBooting,
 		blk.Manifest(),
 		util.Version("0.1.1"),
-		"https://local",
 		map[string]interface{}{"showme": 1},
 		nil,
 		suffrage,
+		t.newConnInfo("n0", true),
 	)
 	t.Contains(ni.IsValid(nil).Error(), "empty NetworkID")
 }
@@ -128,13 +137,13 @@ func (t *testNodeInfo) TestWrongNetworkID() {
 	ni := NewNodeInfoV0(
 		node.RandomNode("n0"),
 		t.nid,
-		base.StateUnknown,
+		base.StateEmpty,
 		blk.Manifest(),
 		util.Version("0.1.1"),
-		"https://local",
 		map[string]interface{}{"showme": 1},
 		nil,
 		suffrage,
+		t.newConnInfo("n0", true),
 	)
 	t.Contains(ni.IsValid(nil).Error(), "invalid state")
 }
@@ -147,10 +156,10 @@ func (t *testNodeInfo) TestEmptyBlock() {
 		base.StateBooting,
 		nil,
 		util.Version("0.1.1"),
-		"https://local",
 		map[string]interface{}{"showme": 1},
 		nil,
 		suffrage,
+		t.newConnInfo("n0", true),
 	)
 	t.NoError(ni.IsValid(nil))
 }
@@ -166,10 +175,10 @@ func (t *testNodeInfo) TestEmptyVersion() {
 		base.StateBooting,
 		blk.Manifest(),
 		"",
-		"https://local",
 		map[string]interface{}{"showme": 1},
 		nil,
 		suffrage,
+		t.newConnInfo("n0", true),
 	)
 	t.Contains(ni.IsValid(nil).Error(), "invalid version")
 }
@@ -185,10 +194,10 @@ func (t *testNodeInfo) TestWrongVersion() {
 		base.StateBooting,
 		blk.Manifest(),
 		util.Version("wrong-version"),
-		"https://local",
 		map[string]interface{}{"showme": 1},
 		nil,
 		suffrage,
+		t.newConnInfo("n0", true),
 	)
 	t.Contains(ni.IsValid(nil).Error(), "invalid version")
 }
@@ -214,10 +223,10 @@ func (t *testNodeInfo) TestJSON() {
 		base.StateBooting,
 		blk.Manifest(),
 		util.Version("1.2.3"),
-		"https://local",
 		policy,
 		nodes,
 		suffrage,
+		t.newConnInfo("n0", true),
 	)
 	t.NoError(ni.IsValid(nil))
 
@@ -243,10 +252,10 @@ func (t *testNodeInfo) TestBSON() {
 		base.StateBooting,
 		blk.Manifest(),
 		util.Version("1.2.3"),
-		"https://local",
 		map[string]interface{}{"showme": 1.1},
 		nil,
 		suffrage,
+		t.newConnInfo("n0", true),
 	)
 	t.NoError(ni.IsValid(nil))
 
@@ -272,10 +281,10 @@ func (t *testNodeInfo) TestSuffrage() {
 		base.StateBooting,
 		blk.Manifest(),
 		util.Version("1.2.3"),
-		"https://local",
 		map[string]interface{}{"showme": 1.1},
 		nil,
 		suffrage,
+		t.newConnInfo("n0", true),
 	)
 	t.NoError(ni.IsValid(nil))
 

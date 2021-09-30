@@ -9,6 +9,7 @@ import (
 var (
 	ContextValueDeployKeyStorage util.ContextKey = "deploy_key_storage"
 	ContextValueBlockDataCleaner util.ContextKey = "blockdata_cleaner"
+	ContextValueDeployHandler    util.ContextKey = "deploy_handler"
 )
 
 func LoadDeployKeyStorageContextValue(ctx context.Context, l **DeployKeyStorage) error {
@@ -17,4 +18,8 @@ func LoadDeployKeyStorageContextValue(ctx context.Context, l **DeployKeyStorage)
 
 func LoadBlockDataCleanerContextValue(ctx context.Context, l **BlockDataCleaner) error {
 	return util.LoadFromContextValue(ctx, ContextValueBlockDataCleaner, l)
+}
+
+func LoadDeployHandler(ctx context.Context, l **DeployHandlers) error {
+	return util.LoadFromContextValue(ctx, ContextValueDeployHandler, l)
 }

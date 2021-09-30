@@ -86,7 +86,7 @@ func (t *testBallotChecker) TestInTimespan() {
 		err = util.NewChecker("test-ballot-checker", []util.CheckerFunc{
 			bc.InTimespan,
 		}).Check()
-		t.Contains(err.Error(), "too new ballot")
+		t.Contains(err.Error(), "too old or new ballot")
 	}
 
 	{ // too old
@@ -98,7 +98,7 @@ func (t *testBallotChecker) TestInTimespan() {
 		err = util.NewChecker("test-ballot-checker", []util.CheckerFunc{
 			bc.InTimespan,
 		}).Check()
-		t.Contains(err.Error(), "too old ballot")
+		t.Contains(err.Error(), "too old or new ballot")
 	}
 }
 

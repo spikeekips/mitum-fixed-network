@@ -28,7 +28,7 @@ type JoiningState struct {
 
 func NewJoiningState(
 	local *node.Local,
-	st storage.Database,
+	db storage.Database,
 	policy *isaac.LocalPolicy,
 	suffrage base.Suffrage,
 	ballotbox *isaac.Ballotbox,
@@ -39,7 +39,7 @@ func NewJoiningState(
 		}),
 		BaseState: NewBaseState(base.StateJoining),
 		local:     local,
-		database:  st,
+		database:  db,
 		policy:    policy,
 		suffrage:  suffrage,
 		ballotbox: ballotbox,
@@ -68,7 +68,7 @@ func (st *JoiningState) Enter(sctx StateSwitchContext) (func() error, error) {
 			return err
 		}
 
-		// NOTE standalone node does not wait incoming ballots to join network
+		// NOTE standalone node does not wait incoming ballots to join consensus
 		if len(st.suffrage.Nodes()) < 2 {
 			return st.broadcastINITBallotEnteredWithoutDelay(voteproof)
 		}
@@ -100,7 +100,7 @@ func (st *JoiningState) ProcessVoteproof(voteproof base.Voteproof) error {
 			return err
 		}
 
-		return NewStateSwitchContext(base.StateJoining, base.StateConsensus).
+		return st.NewStateSwitchContext(base.StateConsensus).
 			SetVoteproof(voteproof)
 	}
 
@@ -108,6 +108,10 @@ func (st *JoiningState) ProcessVoteproof(voteproof base.Voteproof) error {
 }
 
 func (st *JoiningState) broadcastINITBallotEnteredWithoutDelay(voteproof base.Voteproof) error {
+	if st.underHandover() {
+		return nil
+	}
+
 	var baseBallot ballot.INITV0
 	if i, err := NextINITBallotFromACCEPTVoteproof(st.database, st.local, voteproof); err != nil {
 		return err
@@ -148,6 +152,10 @@ func (st *JoiningState) broadcastINITBallotEnteredWithoutDelay(voteproof base.Vo
 // broadcastINITBallotEntered broadcasts INIT ballot from local; it will be only
 // executed when voteproof is stucked.
 func (st *JoiningState) broadcastINITBallotEntered(voteproof base.Voteproof) error {
+	if st.underHandover() {
+		return nil
+	}
+
 	var baseBallot ballot.INITV0
 	if i, err := NextINITBallotFromACCEPTVoteproof(st.database, st.local, voteproof); err != nil {
 		return err

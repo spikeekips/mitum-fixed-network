@@ -1,3 +1,4 @@
+//go:build test
 // +build test
 
 package isaac
@@ -59,7 +60,7 @@ func (t *BaseTest) SetupSuite() {
 	_ = t.Encs.TestAddHinter(block.ConsensusInfoV0{})
 	_ = t.Encs.TestAddHinter(block.SuffrageInfoV0{})
 	_ = t.Encs.TestAddHinter(operation.BaseFactSign{})
-	_ = t.Encs.TestAddHinter(operation.BaseSeal{})
+	_ = t.Encs.TestAddHinter(operation.SealHinter)
 	_ = t.Encs.TestAddHinter(operation.KVOperationFact{})
 	_ = t.Encs.TestAddHinter(operation.KVOperation{})
 	_ = t.Encs.TestAddHinter(KVOperation{})
@@ -470,8 +471,8 @@ func (t *BaseTest) CompareVoteproof(a, b base.Voteproof) {
 	}
 }
 
-func (t *BaseTest) LastManifest(st storage.Database) block.Manifest {
-	if m, found, err := st.LastManifest(); !found {
+func (t *BaseTest) LastManifest(db storage.Database) block.Manifest {
+	if m, found, err := db.LastManifest(); !found {
 		panic(util.NotFoundError.Errorf("last manifest not found"))
 	} else if err != nil {
 		panic(err)

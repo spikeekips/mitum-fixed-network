@@ -58,6 +58,9 @@ func (st *HandoverState) Enter(sctx StateSwitchContext) (func() error, error) {
 		return nil, sctx.SetFromState(base.StateHandover).SetToState(base.StateConsensus)
 	}
 
+	_ = st.jivp.Set(nil)
+	_ = st.af.Set(false)
+
 	callback, err := st.BaseConsensusState.Enter(sctx)
 	if err != nil {
 		return nil, err
@@ -87,6 +90,9 @@ func (st *HandoverState) Exit(sctx StateSwitchContext) (func() error, error) {
 	if err != nil {
 		return nil, err
 	}
+
+	_ = st.jivp.Set(nil)
+	_ = st.af.Set(false)
 
 	return func() error {
 		if err := callback(); err != nil {

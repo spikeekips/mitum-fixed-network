@@ -282,8 +282,6 @@ func (t *testStateHandover) TestNewProposalNextAcceptBallotBroadcastedAfterJoine
 	ivp, err := t.NewVoteproof(base.StageINIT, initFact, t.local, t.remote)
 	t.NoError(err)
 
-	_ = st.jivp.Set(ivp)
-
 	sealch := make(chan seal.Seal, 1)
 	st.SetBroadcastSealsFunc(func(sl seal.Seal, toLocal bool) error {
 		if _, ok := sl.(ballot.ACCEPT); !ok {
@@ -303,6 +301,7 @@ func (t *testStateHandover) TestNewProposalNextAcceptBallotBroadcastedAfterJoine
 	t.NoError(err)
 	t.NoError(f())
 
+	_ = st.jivp.Set(ivp)
 	pr := t.NewProposal(t.old, initFact.Round(), nil, ivp) // new proposal from old
 	t.NoError(st.ProcessProposal(pr))
 

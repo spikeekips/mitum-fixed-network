@@ -6,10 +6,12 @@ import (
 	"crypto/tls"
 	"io"
 	"net/http"
+	"strings"
 	"sync"
 	"time"
 
 	"github.com/lucas-clemente/quic-go"
+	"github.com/pkg/errors"
 	"github.com/rs/zerolog"
 	"github.com/spikeekips/mitum/network"
 	"github.com/spikeekips/mitum/util"
@@ -106,15 +108,19 @@ func (cl *QuicClient) makeRequest(url string, method string, b []byte, headers h
 	var request *http.Request
 	{
 		var err error
-		switch method {
-		case "GET":
+		switch method = strings.ToUpper(strings.TrimSpace(method)); {
+		case len(method) < 1:
+			err = errors.Errorf("empty not supported")
+		case method == "GET":
 			request, err = http.NewRequest("GET", url, nil)
-		case "POST":
+		case method == "POST":
 			request, err = http.NewRequest("POST", url, bytes.NewBuffer(b))
-		case "DELETE":
+		case method == "DELETE":
 			request, err = http.NewRequest("DELETE", url, bytes.NewBuffer(b))
-		case "HEAD":
+		case method == "HEAD":
 			request, err = http.NewRequest("HEAD", url, bytes.NewBuffer(b))
+		default:
+			err = errors.Errorf("method, %q not supported", method)
 		}
 
 		if err != nil {

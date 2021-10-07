@@ -18,10 +18,9 @@ type Key interface {
 	hint.Hinter
 	isvalid.IsValider
 	Equal(Key) bool
-	Bytes() []byte // NOTE Bytes() will be used for hashing. It only contains Type
-	// without version. With same type, but different version hashing will be
-	// different.
-	Raw() string
+	Bytes() []byte
+	Raw() string // NOTE Raw() will be used for hashing. It only contains raw
+	// key string without hint.
 }
 
 type Privatekey interface {

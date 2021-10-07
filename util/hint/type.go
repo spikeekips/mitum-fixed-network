@@ -31,3 +31,7 @@ func (t Type) IsValid([]byte) error {
 func (t Type) Bytes() []byte {
 	return []byte(t)
 }
+
+func (t Type) String() string {
+	return string(t)
+}

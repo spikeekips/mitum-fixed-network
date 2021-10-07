@@ -67,6 +67,8 @@ func (t *testBTCKey) TestPrivatekey() {
 
 	ukp, _ := NewBTCPrivatekeyFromString(priv)
 	t.True(kp.Equal(ukp))
+
+	t.Equal(priv, kp.Raw())
 }
 
 func (t *testBTCKey) TestPrivatekeyEqual() {

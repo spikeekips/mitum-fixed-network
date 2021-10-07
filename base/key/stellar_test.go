@@ -72,6 +72,8 @@ func (t *testStellarKey) TestPrivatekey() {
 	t.NoError(err)
 
 	t.True(kp.Equal(pk))
+
+	t.Equal(seed, kp.Raw())
 }
 
 func (t *testStellarKey) TestPrivatekeyEqual() {

@@ -73,6 +73,8 @@ func (t *testEtherKey) TestPrivatekey() {
 	t.NoError(err)
 
 	t.True(kp.Equal(pk))
+
+	t.Equal(priv, kp.Raw())
 }
 
 func (t *testEtherKey) TestPrivatekeyEqual() {

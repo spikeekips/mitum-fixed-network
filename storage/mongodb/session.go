@@ -24,7 +24,7 @@ type DatabaseSession struct {
 	block                  block.Block
 	operations             tree.FixedTree
 	states                 []state.State
-	manifestModels         []mongo.WriteModel
+	manifestModel          mongo.WriteModel
 	operationModels        []mongo.WriteModel
 	stateModels            []mongo.WriteModel
 	statesValue            *sync.Map
@@ -114,7 +114,7 @@ func (bst *DatabaseSession) setBlock(blk block.Block) error {
 		)
 	}
 
-	if bst.manifestModels != nil {
+	if bst.manifestModel != nil {
 		return nil
 	}
 
@@ -125,7 +125,7 @@ func (bst *DatabaseSession) setBlock(blk block.Block) error {
 		return err
 	} else {
 		bst.statesValue.Store("set-manifest-model", time.Since(started))
-		bst.manifestModels = append(bst.manifestModels, mongo.NewInsertOneModel().SetDocument(doc))
+		bst.manifestModel = mongo.NewInsertOneModel().SetDocument(doc)
 	}
 
 	if err := bst.setOperationsTree(blk.OperationsTree()); err != nil {
@@ -168,7 +168,7 @@ func (bst *DatabaseSession) commit(ctx context.Context, bd block.BlockDataMap) e
 		bst.statesValue.Store("commit", time.Since(started))
 	}()
 
-	if bst.manifestModels == nil {
+	if bst.manifestModel == nil {
 		if err := bst.SetBlock(ctx, bst.block); err != nil {
 			return err
 		}
@@ -184,7 +184,7 @@ func (bst *DatabaseSession) commit(ctx context.Context, bd block.BlockDataMap) e
 		}
 	}
 
-	if res, err := bst.writeModels(ctx, ColNameManifest, bst.manifestModels); err != nil {
+	if res, err := bst.writeModels(ctx, ColNameManifest, []mongo.WriteModel{bst.manifestModel}); err != nil {
 		return storage.MergeStorageError(err)
 	} else if res != nil && res.InsertedCount < 1 {
 		return errors.Errorf("manifest not inserted")
@@ -373,7 +373,7 @@ func (bst *DatabaseSession) Close() error {
 	}
 
 	bst.states = nil
-	bst.manifestModels = nil
+	bst.manifestModel = nil
 	bst.operationModels = nil
 	bst.stateModels = nil
 	bst.initVoteproofsModels = nil

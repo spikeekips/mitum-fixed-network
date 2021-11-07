@@ -105,7 +105,10 @@ func (st *SyncingState) Enter(sctx StateSwitchContext) (func() error, error) {
 			case <-ctx.Done():
 				break end
 			case event := <-st.newBlockEventch:
-				if st.syncers() == nil {
+				switch {
+				case st.syncers() == nil:
+					continue
+				case st.exiting.Value().(bool):
 					continue
 				}
 
@@ -321,6 +324,7 @@ func (st *SyncingState) handleINITTVoteproof(voteproof base.Voteproof) error {
 				return err
 			}
 
+			_ = st.exiting.Set(true)
 			return st.NewStateSwitchContext(base.StateConsensus).SetVoteproof(voteproof)
 		}
 

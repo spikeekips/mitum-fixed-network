@@ -1,6 +1,7 @@
 package basicstates
 
 import (
+	"context"
 	"sort"
 	"sync"
 	"time"
@@ -13,9 +14,36 @@ import (
 	"github.com/spikeekips/mitum/network"
 	"github.com/spikeekips/mitum/storage"
 	"github.com/spikeekips/mitum/storage/blockdata"
+	"github.com/spikeekips/mitum/util"
 	"github.com/spikeekips/mitum/util/localtime"
 	"github.com/spikeekips/mitum/util/logging"
 )
+
+type syncBlockEvent struct {
+	voteproof base.Voteproof
+	height    base.Height
+	errch     chan error
+}
+
+func newSyncBlockEvent() syncBlockEvent {
+	return syncBlockEvent{
+		voteproof: nil,
+		height:    base.NilHeight,
+		errch:     make(chan error),
+	}
+}
+
+func (e syncBlockEvent) setVoteproof(voteproof base.Voteproof) syncBlockEvent {
+	e.voteproof = voteproof
+
+	return e
+}
+
+func (e syncBlockEvent) setHeight(height base.Height) syncBlockEvent {
+	e.height = height
+
+	return e
+}
 
 type SyncingState struct {
 	sync.RWMutex
@@ -29,6 +57,8 @@ type SyncingState struct {
 	syncs                *isaac.Syncers
 	waitVoteproofTimeout time.Duration
 	nc                   *network.NodeInfoChecker
+	notifyNewBlockCancel func()
+	newBlockEventch      chan syncBlockEvent
 }
 
 func NewSyncingState(
@@ -49,6 +79,7 @@ func NewSyncingState(
 		nodepool:             nodepool,
 		suffrage:             suffrage,
 		waitVoteproofTimeout: time.Second * 5, // NOTE long enough time
+		newBlockEventch:      make(chan syncBlockEvent),
 	}
 }
 
@@ -63,6 +94,30 @@ func (st *SyncingState) Enter(sctx StateSwitchContext) (func() error, error) {
 	if st.syncers() != nil {
 		return nil, errors.Errorf("not stopped correctly; syncers still running")
 	}
+
+	ctx, cancel := context.WithCancel(context.Background())
+	st.notifyNewBlockCancel = cancel
+
+	go func() {
+	end:
+		for {
+			select {
+			case <-ctx.Done():
+				break end
+			case event := <-st.newBlockEventch:
+				if st.syncers() == nil {
+					continue
+				}
+
+				switch {
+				case event.voteproof != nil:
+					event.errch <- st.processVoteproof(event.voteproof)
+				case event.height > base.NilHeight:
+					event.errch <- st.whenNewHeight(event.height)
+				}
+			}
+		}
+	}()
 
 	return func() error {
 		if err := callback(); err != nil {
@@ -81,37 +136,23 @@ func (st *SyncingState) Exit(sctx StateSwitchContext) (func() error, error) {
 		callback = i
 	}
 
-	syncs := st.syncers()
-	st.setSyncers(nil)
+	if err := st.stopNewBlockEvent(); err != nil {
+		return nil, err
+	}
 
-	return func() error {
-		if err := st.stopWaitVoteproof(); err != nil {
-			return err
-		}
+	if st.notifyNewBlockCancel != nil {
+		st.notifyNewBlockCancel()
+		st.notifyNewBlockCancel = nil
+	}
 
-		if err := callback(); err != nil {
-			return err
-		}
-
-		if syncs != nil {
-			if err := syncs.Stop(); err != nil {
-				return err
-			}
-		}
-
-		if st.nc != nil {
-			if err := st.nc.Stop(); err != nil {
-				return err
-			}
-
-			st.nc = nil
-		}
-
-		return nil
-	}, nil
+	return callback, nil
 }
 
 func (st *SyncingState) ProcessVoteproof(voteproof base.Voteproof) error {
+	return st.newBlockEvent(newSyncBlockEvent().setVoteproof(voteproof))
+}
+
+func (st *SyncingState) processVoteproof(voteproof base.Voteproof) error {
 	switch voteproof.Stage() {
 	case base.StageINIT:
 		return st.handleINITTVoteproof(voteproof)
@@ -151,7 +192,14 @@ func (st *SyncingState) enterCallback(voteproof base.Voteproof) error {
 	if st.canStartNodeInfoChecker() {
 		st.Log().Debug().Msg("local is not suffrage node, NodeInfoChecker started")
 
-		st.nc = network.NewNodeInfoChecker(st.policy.NetworkID(), st.nodepool, 0, st.whenNewHeight)
+		st.nc = network.NewNodeInfoChecker(
+			st.policy.NetworkID(),
+			st.nodepool,
+			0,
+			func(height base.Height) error {
+				return st.newBlockEvent(newSyncBlockEvent().setHeight(height))
+			},
+		)
 		_ = st.nc.SetLogging(st.Logging)
 		if err := st.nc.Start(); err != nil {
 			return err
@@ -166,7 +214,7 @@ func (st *SyncingState) enterCallback(voteproof base.Voteproof) error {
 
 		l.Debug().Msg("new syncers started with voteproof")
 
-		return st.ProcessVoteproof(voteproof)
+		return st.newBlockEvent(newSyncBlockEvent().setVoteproof(voteproof))
 	}
 	e := st.Log().Debug()
 	if baseManifest != nil {
@@ -268,6 +316,11 @@ func (st *SyncingState) handleINITTVoteproof(voteproof base.Voteproof) error {
 			l.Debug().Msg("init voteproof, expected; moves to consensus")
 
 			_ = st.SetLastVoteproof(voteproof)
+
+			if err := st.stopNewBlockEvent(); err != nil {
+				return err
+			}
+
 			return st.NewStateSwitchContext(base.StateConsensus).SetVoteproof(voteproof)
 		}
 
@@ -392,6 +445,10 @@ func (st *SyncingState) whenNewHeight(height base.Height) error {
 		return nil
 	}
 
+	if lvp := st.LastVoteproof(); lvp != nil && height <= lvp.Height() {
+		return nil
+	}
+
 	n := st.nodepool.LenRemoteAlives()
 	if n < 1 {
 		return nil
@@ -460,4 +517,40 @@ func (st *SyncingState) syncableChannelsOfNodepool() map[string]network.Channel 
 	})
 
 	return pn
+}
+
+func (st *SyncingState) newBlockEvent(event syncBlockEvent) error {
+	if st.syncers() == nil {
+		return nil
+	}
+
+	st.newBlockEventch <- event
+
+	return <-event.errch
+}
+
+func (st *SyncingState) stopNewBlockEvent() error {
+	if err := st.stopWaitVoteproof(); err != nil {
+		return err
+	}
+
+	if syncs := st.syncers(); syncs != nil {
+		if err := syncs.Stop(); err != nil {
+			return err
+		}
+	}
+
+	st.setSyncers(nil)
+
+	if st.nc != nil {
+		if err := st.nc.Stop(); err != nil {
+			if !errors.Is(err, util.DaemonAlreadyStoppedError) {
+				return err
+			}
+		}
+
+		st.nc = nil
+	}
+
+	return nil
 }

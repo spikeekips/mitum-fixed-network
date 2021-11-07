@@ -82,7 +82,7 @@ func (t *testProposalChecker) TestCheckSigning() {
 	}
 }
 
-func (t *testProposalChecker) TestPropserPointProposal() {
+func (t *testProposalChecker) TestProposerPointProposal() {
 	ib := t.NewINITBallot(t.local, base.Round(0), nil)
 	initFact := ib.INITFactV0
 
@@ -97,7 +97,7 @@ func (t *testProposalChecker) TestPropserPointProposal() {
 	t.NoError(err)
 }
 
-func (t *testProposalChecker) TestPropserPointOldProposalHeight() {
+func (t *testProposalChecker) TestProposerPointOldProposalHeight() {
 	ib := t.NewINITBallot(t.local, base.Round(0), nil)
 	initFact := ib.INITFactV0
 
@@ -119,7 +119,7 @@ func (t *testProposalChecker) TestPropserPointOldProposalHeight() {
 	t.Contains(err.Error(), "lower proposal height than last voteproof")
 }
 
-func (t *testProposalChecker) TestPropserPointOldProposalRound() {
+func (t *testProposalChecker) TestProposerPointOldProposalRound() {
 	ib0 := t.NewINITBallot(t.local, base.Round(0), nil)
 	initFact0 := ib0.INITFactV0
 
@@ -141,7 +141,7 @@ func (t *testProposalChecker) TestPropserPointOldProposalRound() {
 	t.Contains(err.Error(), "same height, but lower proposal round than last voteproof")
 }
 
-func (t *testProposalChecker) TestPropserPointHigherProposalHeight() {
+func (t *testProposalChecker) TestProposerPointHigherProposalHeight() {
 	ib := t.NewINITBallot(t.local, base.Round(0), nil)
 	initFact := ib.INITFactV0
 
@@ -168,7 +168,7 @@ func (t *testProposalChecker) TestPropserPointHigherProposalHeight() {
 	t.Contains(err.Error(), "proposal height does not match with last voteproof")
 }
 
-func (t *testProposalChecker) TestPropserPointHigherProposalRound() {
+func (t *testProposalChecker) TestProposerPointHigherProposalRound() {
 	ib0 := t.NewINITBallot(t.local, base.Round(0), nil)
 	initFact0 := ib0.INITFactV0
 

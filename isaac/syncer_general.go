@@ -159,6 +159,7 @@ func (cs *GeneralSyncer) Close() error {
 	cs.donechLock.RUnlock()
 
 	defer cs.Log().Debug().Msg("closed")
+	defer cs.setSyncerSession(nil)
 
 	return st.Close()
 }
@@ -1562,13 +1563,11 @@ func (cs *GeneralSyncer) syncerSession() storage.SyncerSession {
 	return cs.st
 }
 
-func (cs *GeneralSyncer) setSyncerSession(st storage.SyncerSession) *GeneralSyncer {
+func (cs *GeneralSyncer) setSyncerSession(st storage.SyncerSession) {
 	cs.stLock.Lock()
 	defer cs.stLock.Unlock()
 
 	cs.st = st
-
-	return cs
 }
 
 func (cs *GeneralSyncer) blocks() []block.Block {

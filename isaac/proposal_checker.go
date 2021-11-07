@@ -104,9 +104,15 @@ func (pvc *ProposalChecker) IsOlder() (bool, error) {
 	case ph == lh && pr < lr:
 		return false, errors.Errorf(
 			"same height, but lower proposal round than last voteproof: %v < %v", pr, lr)
-	default:
-		return true, nil
 	}
+
+	switch m, found, err := pvc.database.LastManifest(); {
+	case err != nil || !found:
+	case ph <= m.Height():
+		return false, errors.Errorf("lower proposal height than last manifest: %v < %v", ph, m.Height())
+	}
+
+	return true, nil
 }
 
 func (pvc *ProposalChecker) IsWaiting() (bool, error) {

@@ -439,3 +439,23 @@ func (pp *DefaultProcessor) resetPrepare() error {
 
 	return pp.resetSave()
 }
+
+func (pp *DefaultProcessor) cancelPrepare() error {
+	pp.Log().Debug().Stringer("state", pp.state).Msg("prepare will be canceled")
+
+	if pp.blockDataSession != nil {
+		if err := pp.blockDataSession.Cancel(); err != nil {
+			return err
+		}
+	}
+
+	pp.ss = nil
+	pp.blockDataSession = nil
+	pp.blk = nil
+	pp.operations = nil
+	pp.operationsTree = tree.FixedTree{}
+	pp.states = nil
+	pp.statesTree = tree.FixedTree{}
+
+	return nil
+}

@@ -220,7 +220,7 @@ func (pp *DefaultProcessor) Cancel() error {
 
 	pp.prepareCancel()
 
-	if err := pp.resetPrepare(); err != nil {
+	if err := pp.cancelPrepare(); err != nil {
 		return err
 	}
 

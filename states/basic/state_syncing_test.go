@@ -146,7 +146,10 @@ func (t *testStateSyncing) TestSyncingHandlerFromVoteproof() {
 
 	savedblocksch := make(chan []block.Block)
 	st.SetNewBlocksFunc(func(blks []block.Block) error {
-		savedblocksch <- blks
+		go func() {
+			savedblocksch <- blks
+		}()
+
 		return nil
 	})
 

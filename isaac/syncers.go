@@ -81,6 +81,8 @@ func (sy *Syncers) Stop() error {
 		return err == nil
 	})
 
+	sy.syncers = &sync.Map{}
+
 	return err
 }
 

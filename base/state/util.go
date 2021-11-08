@@ -9,7 +9,7 @@ import (
 var reHasBlank = regexp.MustCompile(`\s`)
 
 func IsValidKey(s string) error {
-	if reHasBlank.Match([]byte(s)) {
+	if reHasBlank.MatchString(s) {
 		return isvalid.InvalidError.Errorf("state key should not have blank, %q", s)
 	} else if len(s) < 1 {
 		return isvalid.InvalidError.Errorf("empty state key")

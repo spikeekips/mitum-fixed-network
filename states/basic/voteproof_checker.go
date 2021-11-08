@@ -1,6 +1,8 @@
 package basicstates
 
 import (
+	"context"
+
 	"github.com/pkg/errors"
 	"github.com/rs/zerolog"
 	"github.com/spikeekips/mitum/base"
@@ -164,7 +166,7 @@ func (vc *VoteproofChecker) CheckACCEPTVoteproofProposal() (bool, error) {
 			continue
 		}
 
-		pr, err := isaac.RequestProposal(ch, fact.Proposal())
+		pr, err := isaac.RequestProposal(context.Background(), ch, fact.Proposal())
 		if err != nil {
 			return false, errors.Wrapf(err, "failed to find proposal from accept voteproof from %q", node.Address())
 		}

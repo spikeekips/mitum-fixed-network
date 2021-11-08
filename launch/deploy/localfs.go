@@ -55,7 +55,7 @@ func (bc *BlockDataCleaner) SetLogging(l *logging.Logging) *logging.Logging {
 }
 
 func (bc *BlockDataCleaner) start(ctx context.Context) error {
-	if err := bc.findRemoveds(); err != nil {
+	if err := bc.findRemoveds(ctx); err != nil {
 		return err
 	}
 
@@ -192,7 +192,7 @@ func (bc *BlockDataCleaner) checkTargetIsRemovable(height base.Height, t time.Ti
 	return localtime.UTCNow().After(t), nil
 }
 
-func (bc *BlockDataCleaner) findRemoveds() error {
+func (bc *BlockDataCleaner) findRemoveds(ctx context.Context) error {
 	var removeds []string
 	switch i, err := bc.findRemovedDirectory(); {
 	case err != nil:
@@ -204,7 +204,7 @@ func (bc *BlockDataCleaner) findRemoveds() error {
 	}
 
 	var heights []base.Height
-	switch i, err := bc.loadManifestFromRemoveds(removeds); {
+	switch i, err := bc.loadManifestFromRemoveds(ctx, removeds); {
 	case err != nil:
 		return err
 	case len(i) < 1:
@@ -262,8 +262,8 @@ func (bc *BlockDataCleaner) findRemovedDirectory() ([]string, error) {
 	return removeds, nil
 }
 
-func (bc *BlockDataCleaner) loadManifestFromRemoveds(removeds []string) ([]base.Height, error) {
-	wk := util.NewErrgroupWorker(context.Background(), 100)
+func (bc *BlockDataCleaner) loadManifestFromRemoveds(ctx context.Context, removeds []string) ([]base.Height, error) {
+	wk := util.NewErrgroupWorker(ctx, 100)
 	defer wk.Close()
 
 	heights := make([]base.Height, len(removeds))

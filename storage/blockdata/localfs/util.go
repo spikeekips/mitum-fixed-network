@@ -180,7 +180,7 @@ func HeightDirectory(height base.Height) string {
 		i++
 	}
 
-	return "/" + filepath.Join(strings.Join(sl, "/"))
+	return "/" + strings.Join(sl, "/")
 }
 
 func ParseDataFileName(s string) (base.Height, string /* data type */, string /* checksum */, error) {

@@ -126,7 +126,7 @@ func (mw *RateLimitMiddleware) limit(w http.ResponseWriter, r *http.Request) boo
 
 func (mw *RateLimitMiddleware) Middleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if mw.limit(w, r) {
+		if mw.limit(w, r) { // nolint:contextcheck
 			return
 		}
 

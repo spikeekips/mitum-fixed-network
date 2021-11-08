@@ -153,7 +153,7 @@ end:
 		case <-ctx.Done():
 			break end
 		case i := <-pps.newProposalChan:
-			r := pps.handleProposal(i.ctx, i.proposal, i.voteproof, i.outchan)
+			r := pps.handleProposal(i.ctx, i.proposal, i.voteproof, i.outchan) // nolint:contextcheck
 			if err := r.Err; err != nil {
 				if errors.Is(err, util.IgnoreError) {
 					pps.Log().Debug().Err(err).Msg("proposal ignored")
@@ -168,7 +168,7 @@ end:
 				}(i.outchan)
 			}
 		case i := <-pps.saveChan:
-			if r := pps.saveProposal(i.ctx, i.proposal, i.voteproof, i.outchan); !r.IsEmpty() {
+			if r := pps.saveProposal(i.ctx, i.proposal, i.voteproof, i.outchan); !r.IsEmpty() { // nolint:contextcheck
 				go func(ch chan<- Result) {
 					ch <- r
 				}(i.outchan)

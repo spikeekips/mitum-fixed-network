@@ -486,7 +486,7 @@ func (hd *Handover) defaultCheckDuplicatedNode() (network.Channel, network.NodeI
 			if err := wk.NewJob(func(ctx context.Context, _ uint64) error {
 				l := hd.Log().With().Stringer("conninfo", ch.ConnInfo()).Logger()
 
-				ni, err := ch.NodeInfo(wk.Ctx)
+				ni, err := ch.NodeInfo(ctx)
 				if err != nil {
 					l.Error().Err(err).Msg("failed to get node info")
 
@@ -498,7 +498,7 @@ func (hd *Handover) defaultCheckDuplicatedNode() (network.Channel, network.NodeI
 					return nil
 				}
 
-				dup, found := hd.findDuplicatedNodeFromNodeInfo(ni)
+				dup, found := hd.findDuplicatedNodeFromNodeInfo(ctx, ni)
 				if !found {
 					return nil
 				}
@@ -527,7 +527,7 @@ func (hd *Handover) defaultCheckDuplicatedNode() (network.Channel, network.NodeI
 	return derr.ch, derr.ni, nil
 }
 
-func (hd *Handover) findDuplicatedNodeFromNodeInfo(ni network.NodeInfo) (network.Channel, bool) {
+func (hd *Handover) findDuplicatedNodeFromNodeInfo(ctx context.Context, ni network.NodeInfo) (network.Channel, bool) {
 	if ni.Address().Equal(hd.nodepool.LocalNode().Address()) {
 		ch, err := discovery.LoadNodeChannel(ni.ConnInfo(), hd.encs, hd.policy.NetworkConnectionTimeout())
 		if err != nil {
@@ -566,7 +566,7 @@ func (hd *Handover) findDuplicatedNodeFromNodeInfo(ni network.NodeInfo) (network
 
 	hd.Log().Error().Interface("conninfo", ch.ConnInfo()).Msg("duplication suspected node found")
 
-	if _, err := ch.NodeInfo(context.Background()); err != nil {
+	if _, err := ch.NodeInfo(ctx); err != nil {
 		return nil, false
 	}
 

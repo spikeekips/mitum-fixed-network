@@ -245,7 +245,7 @@ func (no *RateLimitRate) UnmarshalYAML(value *yaml.Node) error {
 	}
 	l, p = values[0], strings.ToLower(values[1])
 
-	if reNoDigitDuration.Match([]byte(p)) {
+	if reNoDigitDuration.MatchString(p) {
 		p = "1" + p
 	}
 

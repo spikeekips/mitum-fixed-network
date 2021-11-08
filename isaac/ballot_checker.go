@@ -198,7 +198,7 @@ func (bc *BallotChecker) requestProposalFromNodes(h valuehash.Hash) (ballot.Prop
 
 			if err := wk.NewJob(func(ctx context.Context, _ uint64) error {
 				return func(_ base.Node, ch network.Channel) error {
-					pr, err := bc.requestProposal(ch, h)
+					pr, err := bc.requestProposal(context.Background(), ch, h)
 					if err != nil {
 						return nil // nolint:nilerr
 					}
@@ -223,8 +223,10 @@ func (bc *BallotChecker) requestProposalFromNodes(h valuehash.Hash) (ballot.Prop
 	return dc.Data().(ballot.Proposal), nil
 }
 
-func (bc *BallotChecker) requestProposal(ch network.Channel, h valuehash.Hash) (ballot.Proposal, error) {
-	proposal, err := RequestProposal(ch, h)
+func (bc *BallotChecker) requestProposal(
+	ctx context.Context, ch network.Channel, h valuehash.Hash,
+) (ballot.Proposal, error) {
+	proposal, err := RequestProposal(ctx, ch, h)
 	if err != nil {
 		return nil, err
 	}
@@ -274,8 +276,8 @@ func CheckBallotSigning(blt ballot.Ballot, nodepool *network.Nodepool) error {
 	return nil
 }
 
-func RequestProposal(ch network.Channel, h valuehash.Hash) (ballot.Proposal, error) {
-	if r, err := ch.Seals(context.TODO(), []valuehash.Hash{h}); err != nil {
+func RequestProposal(ctx context.Context, ch network.Channel, h valuehash.Hash) (ballot.Proposal, error) {
+	if r, err := ch.Seals(ctx, []valuehash.Hash{h}); err != nil {
 		return nil, err
 	} else if len(r) < 1 {
 		return nil, errors.Errorf("no Proposal found, %v", h.String())

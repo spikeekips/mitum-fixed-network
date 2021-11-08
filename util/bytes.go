@@ -40,9 +40,13 @@ func GenerateFileChecksum(p string) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	defer func() {
-		_ = f.Close()
-	}()
 
-	return GenerateChecksum(f)
+	c, err := GenerateChecksum(f)
+	if err != nil {
+		return "", err
+	}
+
+	_ = f.Close()
+
+	return c, nil
 }

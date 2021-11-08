@@ -21,7 +21,9 @@ func (pp *DefaultProcessor) Prepare(ctx context.Context) (block.Block, error) {
 	pp.Lock()
 	defer pp.Unlock()
 
-	pp.prepareCtx, pp.prepareCancel = context.WithCancel(ctx)
+	prepareCtx, prepareCancel := context.WithCancel(ctx)
+	pp.prepareCtx = prepareCtx
+	pp.prepareCancel = prepareCancel
 
 	started := time.Now()
 	defer func() {
@@ -34,7 +36,7 @@ func (pp *DefaultProcessor) Prepare(ctx context.Context) (block.Block, error) {
 
 	pp.setState(prprocessor.Preparing)
 
-	if err := pp.prepare(pp.prepareCtx); err != nil {
+	if err := pp.prepare(prepareCtx); err != nil {
 		pp.setState(prprocessor.PrepareFailed)
 
 		if err0 := pp.resetPrepare(); err0 != nil {

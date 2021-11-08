@@ -782,7 +782,10 @@ func (cs *GeneralSyncer) callbackFetchManifestsSlice(
 		l.Debug().Int("retries", retries).Msg("try to fetch manifest")
 
 		bs, err := cs.fetchManifests(ch, missing)
-		if err != nil {
+		switch {
+		case errors.Is(err, context.Canceled):
+			return util.StopRetryingError.Wrap(err)
+		case err != nil:
 			return err
 		}
 
@@ -1433,9 +1436,9 @@ func (cs *GeneralSyncer) saveBlockData(sessions []blockdata.Session) ([]block.Bl
 	return maps, nil
 }
 
-func (*GeneralSyncer) fetchBlockDataMaps(ch network.Channel, heights []base.Height) ([]block.BlockDataMap, error) {
+func (cs *GeneralSyncer) fetchBlockDataMaps(ch network.Channel, heights []base.Height) ([]block.BlockDataMap, error) {
 	var maps []block.BlockDataMap
-	switch i, err := ch.BlockDataMaps(context.TODO(), heights); {
+	switch i, err := ch.BlockDataMaps(cs.lifeCtx, heights); {
 	case err != nil:
 		return nil, err
 	case len(i) != len(heights):

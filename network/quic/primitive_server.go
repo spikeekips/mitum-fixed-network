@@ -135,7 +135,7 @@ func (qs *PrimitiveQuicServer) run(ctx context.Context) error {
 	case err := <-errChan:
 		return err
 	case <-ctx.Done():
-		if err := qs.stop(server); err != nil {
+		if err := qs.stop(server); err != nil { // nolint:contextcheck
 			qs.Log().Error().Err(err).Msg("failed to stop server")
 			return err
 		}

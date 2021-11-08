@@ -105,7 +105,7 @@ func attachRateLimitToHandler(
 	mw := NewRateLimitMiddleware(
 		NewRateLimit(rules, limiter.Rate{Limit: -1}), // NOTE by default, unlimited
 		store,
-	).Middleware(nt.Handler(prefix).GetHandler())
+	).Middleware(nt.Handler(prefix).GetHandler()) // nolint:contextcheck
 
 	_ = nt.SetHandler(prefix, mw)
 

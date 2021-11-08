@@ -1,6 +1,7 @@
 package deploy
 
 import (
+	"context"
 	"testing"
 	"time"
 
@@ -84,7 +85,7 @@ func (t *testBlockDataCleaner) TestAddRemovedHeights() {
 	t.NoError(lbd.Remove(m.Height() - 1))
 
 	bc := NewBlockDataCleaner(lbd, time.Millisecond)
-	t.NoError(bc.findRemoveds())
+	t.NoError(bc.findRemoveds(context.Background()))
 
 	targets := bc.currentTargets()
 	t.Equal(2, len(targets))

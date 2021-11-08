@@ -70,7 +70,7 @@ end:
 		case sl := <-sv.ch.ReceiveSeal():
 			go func(sl network.PassthroughedSeal) {
 				go func() {
-					if err := sv.doPassthroughs(sl); err != nil {
+					if err := sv.doPassthroughs(ctx, sl); err != nil {
 						sv.Log().Error().Err(err).Msg("failed to passthroughs")
 					}
 				}()
@@ -93,19 +93,19 @@ end:
 	return nil
 }
 
-func (sv *Server) doPassthroughs(sl network.PassthroughedSeal) error {
+func (sv *Server) doPassthroughs(ctx context.Context, sl network.PassthroughedSeal) error {
 	if sv.passthroughs == nil {
 		return nil
 	}
 
 	return sv.passthroughs(
-		context.Background(),
+		ctx,
 		sl,
 		func(sl seal.Seal, ch network.Channel) {
-			ctx, cancel := context.WithTimeout(context.Background(), time.Second*5)
+			nctx, cancel := context.WithTimeout(ctx, time.Second*5)
 			defer cancel()
 
-			if err := ch.SendSeal(ctx, sv.ch.ConnInfo(), sl); err != nil {
+			if err := ch.SendSeal(nctx, sv.ch.ConnInfo(), sl); err != nil {
 				sv.Log().Error().Err(err).Stringer("remote", ch.ConnInfo()).Msg("failed to send seal")
 			}
 		},

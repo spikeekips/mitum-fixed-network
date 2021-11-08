@@ -131,7 +131,7 @@ func (se *SealsExtracter) extractFromChannel(
 
 	var m map[string][]operation.Operation
 	go func() {
-		i, err := se.fromChannel(seals)
+		i, err := se.fromChannel(ctx, seals)
 		if err == nil {
 			m = i
 		}
@@ -234,7 +234,9 @@ func (se *SealsExtracter) fromStorage(
 	return ops, found, nil
 }
 
-func (se *SealsExtracter) fromChannel(notFounds []valuehash.Hash) (map[string][]operation.Operation, error) {
+func (se *SealsExtracter) fromChannel(
+	ctx context.Context, notFounds []valuehash.Hash,
+) (map[string][]operation.Operation, error) {
 	if se.local.Equal(se.proposer) {
 		return nil, errors.Errorf("proposer is local, but it does not have seals. Hmmm")
 	}
@@ -246,7 +248,7 @@ func (se *SealsExtracter) fromChannel(notFounds []valuehash.Hash) (map[string][]
 		return nil, errors.Errorf("proposer is dead: %v", se.proposer)
 	}
 
-	received, err := proposerch.Seals(context.TODO(), notFounds)
+	received, err := proposerch.Seals(ctx, notFounds)
 	if err != nil {
 		return nil, err
 	}

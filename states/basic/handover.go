@@ -132,19 +132,6 @@ func (DuplicatedError) Error() string {
 	return "duplicated node found"
 }
 
-type handoverStoppedError struct {
-	err error
-	f   func()
-}
-
-func (err handoverStoppedError) Error() string {
-	if err.err == nil {
-		return ""
-	}
-
-	return err.err.Error()
-}
-
 type Handover struct {
 	sync.Mutex
 	*logging.Logging
@@ -238,10 +225,7 @@ func (hd *Handover) Refresh(chs ...network.Channel) error {
 		hd.Log().Debug().Bool("added", added).Msg("remote channel added")
 	}
 
-	f, err := hd.stop()
-	f()
-
-	if err != nil {
+	if err := hd.stop(); err != nil {
 		hd.Log().Error().Err(err).Msg("failed to refresh")
 
 		return err
@@ -262,18 +246,8 @@ func (hd *Handover) Stop() error {
 	hd.Lock()
 	defer hd.Unlock()
 
-	var f func()
-	unlock, err := hd.st.reset(func() error {
-		i, err := hd.stop()
-		f = i
-
-		return err
-	})
-
-	go func() {
-		f()
-		unlock()
-	}()
+	unlock, err := hd.st.reset(hd.stop)
+	unlock()
 
 	return err
 }
@@ -309,7 +283,7 @@ func (hd *Handover) start(ctx context.Context, investigatedch chan bool) error {
 		hd.checkDuplicatedNodeFunc = hd.defaultCheckDuplicatedNode
 	}
 
-	underhandover, err := hd.investigate()
+	underhandover, err := hd.investigate(ctx)
 	if investigatedch != nil {
 		investigatedch <- underhandover
 	}
@@ -339,39 +313,20 @@ func (hd *Handover) start(ctx context.Context, investigatedch chan bool) error {
 		return fmt.Errorf("failed to start ping: %w", err)
 	}
 
-	donech := make(chan struct{}, 1)
-	go hd.keepVerifyDuplicatedNode(nctx, cancel, donech)
+	go hd.keepVerifyDuplicatedNode(nctx, cancel)
 
 	<-nctx.Done()
 
-	return func() error {
-		return handoverStoppedError{err: nctx.Err(), f: func() {
-			<-donech
-		}}
-	}()
+	return nil
 }
 
-func (hd *Handover) stop() (func(), error) {
-	emptyfunc := func() {}
-
-	err := hd.ContextDaemon.Stop()
-
-	var he handoverStoppedError
-	switch {
-	case err == nil:
-		return emptyfunc, nil
-	case errors.As(err, &he):
-	case errors.Is(err, util.DaemonAlreadyStoppedError):
-		return emptyfunc, nil
+func (hd *Handover) stop() error {
+	switch err := hd.ContextDaemon.Stop(); {
+	case err == nil, errors.Is(err, util.DaemonAlreadyStoppedError):
+		return nil
 	default:
-		return emptyfunc, err
+		return err
 	}
-
-	if errors.Is(he.err, util.DaemonAlreadyStoppedError) {
-		he.err = nil
-	}
-
-	return he.f, he.err
 }
 
 // IsReady indicates node operator approves Handover.
@@ -411,7 +366,7 @@ func (hd *Handover) setOldNode(ch network.Channel) {
 	hd.st.setOldNode(ch)
 }
 
-func (hd *Handover) investigate() (bool, error) {
+func (hd *Handover) investigate(ctx context.Context) (bool, error) {
 	if !hd.suffrage.IsInside(hd.nodepool.LocalNode().Address()) {
 		hd.Log().Debug().Msg("local is not suffrage node; no need to find duplicated node")
 
@@ -455,7 +410,11 @@ end:
 		return false, nil
 	}
 
-	if err := hd.whenFound(ch, ni); err != nil {
+	if err := hd.whenFound(ctx, ch, ni); err != nil {
+		if errors.Is(err, context.Canceled) {
+			return false, nil
+		}
+
 		return false, err
 	}
 
@@ -573,11 +532,7 @@ func (hd *Handover) findDuplicatedNodeFromNodeInfo(ctx context.Context, ni netwo
 	return ch, true
 }
 
-func (hd *Handover) keepVerifyDuplicatedNode(ctx context.Context, cancel context.CancelFunc, donech chan struct{}) {
-	defer func() {
-		donech <- struct{}{}
-	}()
-
+func (hd *Handover) keepVerifyDuplicatedNode(ctx context.Context, cancel context.CancelFunc) {
 	on := hd.OldNode()
 	if on == nil {
 		return
@@ -602,8 +557,10 @@ end:
 			switch ni, err := on.NodeInfo(ctx); {
 			case ni == nil:
 			case err == nil && ni.Address().Equal(hd.nodepool.LocalNode().Address()):
-				if err := hd.whenFound(on, ni); err != nil {
-					continue
+				if err := hd.whenFound(ctx, on, ni); err != nil {
+					if errors.Is(err, context.Canceled) {
+						break end
+					}
 				}
 
 				failed = 0
@@ -786,7 +743,11 @@ func (hd *Handover) loadChannel(ci network.ConnInfo) (network.Channel, error) {
 	return discovery.LoadNodeChannel(ci, hd.encs, hd.policy.NetworkConnectionTimeout())
 }
 
-func (hd *Handover) whenFound(ch network.Channel, ni network.NodeInfo) error {
+func (hd *Handover) whenFound(ctx context.Context, ch network.Channel, ni network.NodeInfo) error {
+	if ctx.Err() != nil {
+		return ctx.Err()
+	}
+
 	if ni != nil {
 		if err := hd.updateNodes(ni.Nodes()); err != nil {
 			hd.Log().Error().Err(err).Msg("failed to update nodes in nodepool")

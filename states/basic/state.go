@@ -39,16 +39,22 @@ type BaseState struct {
 	exitFunc              func(StateSwitchContext) (func() error, error)
 	processVoteproofFunc  func(base.Voteproof) error
 	syncableChannelsFunc  func() map[string]network.Channel
+	exiting               *util.LockedItem
 }
 
 func NewBaseState(st base.State) *BaseState {
-	return &BaseState{state: st}
+	return &BaseState{
+		state:   st,
+		exiting: util.NewLockedItem(false),
+	}
 }
 
 func (st *BaseState) Enter(sctx StateSwitchContext) (func() error, error) {
 	if sctx.ToState() != st.state {
 		return nil, errors.Errorf("context not for entering this state, %v", st.state)
 	}
+
+	_ = st.exiting.Set(false)
 
 	if st.enterFunc != nil {
 		return st.enterFunc(sctx)

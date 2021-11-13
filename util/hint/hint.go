@@ -2,7 +2,7 @@ package hint
 
 import (
 	"fmt"
-	"strings"
+	"regexp"
 
 	"github.com/pkg/errors"
 	"github.com/spikeekips/mitum/util/isvalid"
@@ -12,6 +12,7 @@ import (
 var (
 	MaxVersionLength = 20
 	MaxHintLength    = MaxTypeLength + MaxVersionLength + 1
+	regVersion       = regexp.MustCompile(`\-v\d+`)
 )
 
 type Hinter interface {
@@ -30,12 +31,12 @@ func NewHint(ty Type, v string) Hint {
 // ParseHint parses string and returns Hint; it does not do valid
 // check(IsValid()).
 func ParseHint(s string) (Hint, error) {
-	switch i := strings.Split(s, "-v"); {
-	case len(i) < 2:
+	l := regVersion.FindStringIndex(s)
+	if len(l) < 1 {
 		return Hint{}, isvalid.InvalidError.Errorf("invalid Hint format found, %q", s)
-	default:
-		return NewHint(Type(strings.Join(i[:len(i)-1], "-v")), "v"+i[len(i)-1]), nil
 	}
+
+	return NewHint(Type(s[:l[0]]), s[l[0]+1:]), nil
 }
 
 func (ht Hint) IsValid([]byte) error {

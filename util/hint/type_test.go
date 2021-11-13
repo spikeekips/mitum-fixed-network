@@ -23,6 +23,8 @@ func (t *testType) TestNew() {
 		{name: "blank tail", s: "showme ", err: "invalid char found"},
 		{name: "uppercase", s: "shOwme", err: "invalid char found"},
 		{name: "slash", s: "sh/wme", err: "invalid char found"},
+		{name: "-v", s: "showme-ver"},
+		{name: "-v0.", s: "showme-v0.1", err: "invalid char found"},
 		{name: "hyphen", s: "sh-wme"},
 		{name: "underscore", s: "sh-w_me"},
 		{name: "plus", s: "sh-w_m+e"},

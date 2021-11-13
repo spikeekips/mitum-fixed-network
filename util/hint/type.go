@@ -18,7 +18,7 @@ func (t Type) IsValid([]byte) error {
 	case n < minTypeLength:
 		return isvalid.InvalidError.Errorf("empty Type")
 	case n > MaxTypeLength:
-		return isvalid.InvalidError.Errorf("Type too long, %q", t)
+		return isvalid.InvalidError.Errorf("Type too long")
 	}
 
 	if !reTypeAllowedChars.Match([]byte(t)) {

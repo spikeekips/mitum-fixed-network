@@ -30,3 +30,28 @@ func (hs *HintedString) UnmarshalBSONValue(t bsontype.Type, b []byte) error {
 
 	return hs.UnmarshalText([]byte(i))
 }
+
+func (ts TypedString) MarshalBSONValue() (bsontype.Type, []byte, error) {
+	return bsontype.String, bsoncore.AppendString(nil, ts.String()), nil
+}
+
+func (ts *TypedString) UnmarshalBSONValue(t bsontype.Type, b []byte) error {
+	if len(b) < 1 {
+		return nil
+	}
+
+	switch t {
+	case bsontype.Null:
+		return nil
+	case bsontype.String:
+	default:
+		return errors.Errorf("invalid marshaled type for TypedString, %v", t)
+	}
+
+	i, _, ok := bsoncore.ReadString(b)
+	if !ok {
+		return errors.Errorf("can not read string")
+	}
+
+	return ts.UnmarshalText([]byte(i))
+}

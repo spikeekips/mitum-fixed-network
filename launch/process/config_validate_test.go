@@ -62,7 +62,7 @@ func (t *testConfigValidator) TestMissingNodeAddress() {
 
 func (t *testConfigValidator) TestNodeAddress() {
 	y := `
-address: node:sa-v0.0.1
+address: node~sa-v0.0.1
 `
 
 	ctx := t.loadConfig(y)
@@ -99,7 +99,7 @@ func (t *testConfigValidator) TestMissingNodePrivatekey() {
 
 func (t *testConfigValidator) TestNodePrivatekey() {
 	y := `
-privatekey: KzmnCUoBrqYbkoP8AUki1AJsyKqxNsiqdrtTB2onyzQfB6MQ5Sef:btc-priv-v0.0.1
+privatekey: KzmnCUoBrqYbkoP8AUki1AJsyKqxNsiqdrtTB2onyzQfB6MQ5Sef~btc-priv-v0.0.1
 `
 
 	ctx := t.loadConfig(y)
@@ -157,9 +157,9 @@ nodes:
 func (t *testConfigValidator) TestNodes() {
 	{
 		y := `
-address: node:sa-v0.0.1
+address: node~sa-v0.0.1
 nodes:
-  - address: n0:sa-v0.0.1
+  - address: n0~sa-v0.0.1
 `
 		ctx := t.loadConfig(y)
 
@@ -173,9 +173,9 @@ nodes:
 
 	{
 		y := `
-address: node:sa-v0.0.1
+address: node~sa-v0.0.1
 nodes:
-  - address: n0:sa-v0.0.1
+  - address: n0~sa-v0.0.1
 `
 		ctx := t.loadConfig(y)
 
@@ -189,10 +189,10 @@ nodes:
 
 	{
 		y := `
-address: node:sa-v0.0.1
+address: node~sa-v0.0.1
 nodes:
-  - address: n0:sa-v0.0.1
-    publickey: 27phogA4gmbMGfg321EHfx5eABkL7KAYuDPRGFoyQtAUb:btc-pub-v0.0.1
+  - address: n0~sa-v0.0.1
+    publickey: 27phogA4gmbMGfg321EHfx5eABkL7KAYuDPRGFoyQtAUb~btc-pub-v0.0.1
 `
 		ctx := t.loadConfig(y)
 
@@ -207,18 +207,18 @@ nodes:
 		t.NoError(config.LoadConfigContextValue(ctx, &conf))
 
 		t.Equal(1, len(conf.Nodes()))
-		t.Equal("n0:sa-v0.0.1", conf.Nodes()[0].Address().String())
-		t.Equal("27phogA4gmbMGfg321EHfx5eABkL7KAYuDPRGFoyQtAUb:btc-pub-v0.0.1", conf.Nodes()[0].Publickey().String())
+		t.Equal("n0~sa-v0.0.1", conf.Nodes()[0].Address().String())
+		t.Equal("27phogA4gmbMGfg321EHfx5eABkL7KAYuDPRGFoyQtAUb~btc-pub-v0.0.1", conf.Nodes()[0].Publickey().String())
 		t.Nil(conf.Nodes()[0].ConnInfo())
 	}
 }
 
 func (t *testConfigValidator) TestNodesWithConnInfo() {
 	y := `
-address: node:sa-v0.0.1
+address: node~sa-v0.0.1
 nodes:
-  - address: n0:sa-v0.0.1
-    publickey: 27phogA4gmbMGfg321EHfx5eABkL7KAYuDPRGFoyQtAUb:btc-pub-v0.0.1
+  - address: n0~sa-v0.0.1
+    publickey: 27phogA4gmbMGfg321EHfx5eABkL7KAYuDPRGFoyQtAUb~btc-pub-v0.0.1
     url: https://findme/showme?findme=true
 `
 	ctx := t.loadConfig(y)
@@ -234,18 +234,18 @@ nodes:
 	t.NoError(config.LoadConfigContextValue(ctx, &conf))
 
 	t.Equal(1, len(conf.Nodes()))
-	t.Equal("n0:sa-v0.0.1", conf.Nodes()[0].Address().String())
-	t.Equal("27phogA4gmbMGfg321EHfx5eABkL7KAYuDPRGFoyQtAUb:btc-pub-v0.0.1", conf.Nodes()[0].Publickey().String())
+	t.Equal("n0~sa-v0.0.1", conf.Nodes()[0].Address().String())
+	t.Equal("27phogA4gmbMGfg321EHfx5eABkL7KAYuDPRGFoyQtAUb~btc-pub-v0.0.1", conf.Nodes()[0].Publickey().String())
 	t.Equal("https://findme:443/showme?findme=true", conf.Nodes()[0].ConnInfo().URL().String())
 	t.False(conf.Nodes()[0].ConnInfo().Insecure())
 }
 
 func (t *testConfigValidator) TestNodesWithConnInfoTLSInsecure() {
 	y := `
-address: node:sa-v0.0.1
+address: node~sa-v0.0.1
 nodes:
-  - address: n0:sa-v0.0.1
-    publickey: 27phogA4gmbMGfg321EHfx5eABkL7KAYuDPRGFoyQtAUb:btc-pub-v0.0.1
+  - address: n0~sa-v0.0.1
+    publickey: 27phogA4gmbMGfg321EHfx5eABkL7KAYuDPRGFoyQtAUb~btc-pub-v0.0.1
     url: https://findme/showme?findme=true
     tls-insecure: true
 `
@@ -262,18 +262,18 @@ nodes:
 	t.NoError(config.LoadConfigContextValue(ctx, &conf))
 
 	t.Equal(1, len(conf.Nodes()))
-	t.Equal("n0:sa-v0.0.1", conf.Nodes()[0].Address().String())
-	t.Equal("27phogA4gmbMGfg321EHfx5eABkL7KAYuDPRGFoyQtAUb:btc-pub-v0.0.1", conf.Nodes()[0].Publickey().String())
+	t.Equal("n0~sa-v0.0.1", conf.Nodes()[0].Address().String())
+	t.Equal("27phogA4gmbMGfg321EHfx5eABkL7KAYuDPRGFoyQtAUb~btc-pub-v0.0.1", conf.Nodes()[0].Publickey().String())
 	t.Equal("https://findme:443/showme?findme=true", conf.Nodes()[0].ConnInfo().URL().String())
 	t.True(conf.Nodes()[0].ConnInfo().Insecure())
 }
 
 func (t *testConfigValidator) TestNodesSameAddressWithLocal() {
 	y := `
-address: n0:sa-v0.0.1
+address: n0~sa-v0.0.1
 nodes:
-  - address: n0:sa-v0.0.1
-    publickey: 27phogA4gmbMGfg321EHfx5eABkL7KAYuDPRGFoyQtAUb:btc-pub-v0.0.1
+  - address: n0~sa-v0.0.1
+    publickey: 27phogA4gmbMGfg321EHfx5eABkL7KAYuDPRGFoyQtAUb~btc-pub-v0.0.1
 `
 	ctx := t.loadConfig(y)
 
@@ -287,12 +287,12 @@ nodes:
 
 func (t *testConfigValidator) TestNodesDuplicatedAddress() {
 	y := `
-address: node:sa-v0.0.1
+address: node~sa-v0.0.1
 nodes:
-  - address: n0:sa-v0.0.1
-    publickey: 27phogA4gmbMGfg321EHfx5eABkL7KAYuDPRGFoyQtAUb:btc-pub-v0.0.1
-  - address: n0:sa-v0.0.1
-    publickey: ideZAiLELe41jCqUD4zxmqqD7PXKR6uKS5MhZ8keqgcy:btc-pub-v0.0.1
+  - address: n0~sa-v0.0.1
+    publickey: 27phogA4gmbMGfg321EHfx5eABkL7KAYuDPRGFoyQtAUb~btc-pub-v0.0.1
+  - address: n0~sa-v0.0.1
+    publickey: ideZAiLELe41jCqUD4zxmqqD7PXKR6uKS5MhZ8keqgcy~btc-pub-v0.0.1
 `
 	ctx := t.loadConfig(y)
 
@@ -306,7 +306,7 @@ nodes:
 
 func (t *testConfigValidator) TestEmptySuffrage() {
 	y := `
-address: n0:sa-v0.0.1
+address: n0~sa-v0.0.1
 `
 	ctx := t.loadConfig(y)
 
@@ -324,7 +324,7 @@ address: n0:sa-v0.0.1
 
 func (t *testConfigValidator) TestEmptySuffrageWithoutNodes() {
 	y := `
-address: n0:sa-v0.0.1
+address: n0~sa-v0.0.1
 suffrage:
 `
 	ctx := t.loadConfig(y)
@@ -366,15 +366,15 @@ suffrage:
 
 func (t *testConfigValidator) TestSuffrageUnknownNode() {
 	y := `
-address: n0:sa-v0.0.1
+address: n0~sa-v0.0.1
 
 nodes:
-  - address: n1:sa-v0.0.1
-    publickey: 27phogA4gmbMGfg321EHfx5eABkL7KAYuDPRGFoyQtAUb:btc-pub-v0.0.1
+  - address: n1~sa-v0.0.1
+    publickey: 27phogA4gmbMGfg321EHfx5eABkL7KAYuDPRGFoyQtAUb~btc-pub-v0.0.1
 
 suffrage:
   nodes:
-    - unknown:sa-v0.0.1
+    - unknown~sa-v0.0.1
 `
 	ctx := t.loadConfig(y)
 
@@ -392,15 +392,15 @@ suffrage:
 
 func (t *testConfigValidator) TestSuffrage() {
 	y := `
-address: n0:sa-v0.0.1
+address: n0~sa-v0.0.1
 
 nodes:
-  - address: n1:sa-v0.0.1
-    publickey: 27phogA4gmbMGfg321EHfx5eABkL7KAYuDPRGFoyQtAUb:btc-pub-v0.0.1
+  - address: n1~sa-v0.0.1
+    publickey: 27phogA4gmbMGfg321EHfx5eABkL7KAYuDPRGFoyQtAUb~btc-pub-v0.0.1
 
 suffrage:
   nodes:
-    - n0:sa-v0.0.1
+    - n0~sa-v0.0.1
 `
 	ctx := t.loadConfig(y)
 
@@ -425,7 +425,7 @@ func (t *testConfigValidator) TestFixedSuffrageWithEmptyAddress() {
 suffrage:
   type: fixed-suffrage
   nodes:
-    - n0:sa-v0.0.1
+    - n0~sa-v0.0.1
 `
 	ctx := t.loadConfig(y)
 
@@ -439,7 +439,7 @@ suffrage:
   type: fixed-suffrage
   proposer: showme hahah
   nodes:
-    - n0:sa-v0.0.1
+    - n0~sa-v0.0.1
 `
 	ctx := t.loadConfig(y)
 
@@ -449,17 +449,17 @@ suffrage:
 
 func (t *testConfigValidator) TestFixedSuffrage() {
 	y := `
-address: n0:sa-v0.0.1
+address: n0~sa-v0.0.1
 
 nodes:
-  - address: n1:sa-v0.0.1
-    publickey: 27phogA4gmbMGfg321EHfx5eABkL7KAYuDPRGFoyQtAUb:btc-pub-v0.0.1
+  - address: n1~sa-v0.0.1
+    publickey: 27phogA4gmbMGfg321EHfx5eABkL7KAYuDPRGFoyQtAUb~btc-pub-v0.0.1
 
 suffrage:
   type: fixed-suffrage
-  proposer: n0:sa-v0.0.1
+  proposer: n0~sa-v0.0.1
   nodes:
-    - n0:sa-v0.0.1
+    - n0~sa-v0.0.1
 `
 	ctx := t.loadConfig(y)
 
@@ -477,23 +477,23 @@ suffrage:
 	t.IsType(config.FixedSuffrage{}, conf.Suffrage())
 
 	fs := conf.Suffrage().(config.FixedSuffrage)
-	t.Equal("n0:sa-v0.0.1", fs.Proposer.String())
+	t.Equal("n0~sa-v0.0.1", fs.Proposer.String())
 	t.NotEmpty(fs.Nodes())
 }
 
 func (t *testConfigValidator) TestFixedSuffrageWithNodes() {
 	y := `
-address: n0:sa-v0.0.1
+address: n0~sa-v0.0.1
 
 nodes:
-  - address: n1:sa-v0.0.1
-    publickey: 27phogA4gmbMGfg321EHfx5eABkL7KAYuDPRGFoyQtAUb:btc-pub-v0.0.1
+  - address: n1~sa-v0.0.1
+    publickey: 27phogA4gmbMGfg321EHfx5eABkL7KAYuDPRGFoyQtAUb~btc-pub-v0.0.1
 
 suffrage:
   type: fixed-suffrage
-  proposer: n0:sa-v0.0.1
+  proposer: n0~sa-v0.0.1
   nodes:
-    - n1:sa-v0.0.1
+    - n1~sa-v0.0.1
 `
 	ctx := t.loadConfig(y)
 
@@ -511,16 +511,16 @@ suffrage:
 	t.IsType(config.FixedSuffrage{}, conf.Suffrage())
 
 	fs := conf.Suffrage().(config.FixedSuffrage)
-	t.Equal("n0:sa-v0.0.1", fs.Proposer.String())
+	t.Equal("n0~sa-v0.0.1", fs.Proposer.String())
 	t.Equal(1, len(fs.Nodes()))
-	t.Equal("n1:sa-v0.0.1", fs.Nodes()[0].String())
+	t.Equal("n1~sa-v0.0.1", fs.Nodes()[0].String())
 }
 
 func (t *testConfigValidator) TestFixedSuffrageWithBadNodes() {
 	y := `
 suffrage:
   type: fixed-suffrage
-  proposer: n0:sa-v0.0.1
+  proposer: n0~sa-v0.0.1
   nodes:
     - n1-010a:0. # invalid address
 `
@@ -532,16 +532,16 @@ suffrage:
 
 func (t *testConfigValidator) TestRoundrobin() {
 	y := `
-address: n0:sa-v0.0.1
+address: n0~sa-v0.0.1
 
 nodes:
-  - address: n1:sa-v0.0.1
-    publickey: 27phogA4gmbMGfg321EHfx5eABkL7KAYuDPRGFoyQtAUb:btc-pub-v0.0.1
+  - address: n1~sa-v0.0.1
+    publickey: 27phogA4gmbMGfg321EHfx5eABkL7KAYuDPRGFoyQtAUb~btc-pub-v0.0.1
 
 suffrage:
   type: roundrobin
   nodes:
-    - n1:sa-v0.0.1
+    - n1~sa-v0.0.1
 `
 	ctx := t.loadConfig(y)
 
@@ -644,7 +644,7 @@ proposal-processor:
 
 func (t *testConfigValidator) TestLoadGenesisOperations() {
 	y := `
-privatekey: KzmnCUoBrqYbkoP8AUki1AJsyKqxNsiqdrtTB2onyzQfB6MQ5Sef:btc-priv-v0.0.1
+privatekey: KzmnCUoBrqYbkoP8AUki1AJsyKqxNsiqdrtTB2onyzQfB6MQ5Sef~btc-priv-v0.0.1
 network-id: show me
 genesis-operations:
   - type: set-data

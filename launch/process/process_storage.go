@@ -2,7 +2,6 @@ package process
 
 import (
 	"context"
-	"strings"
 
 	"github.com/pkg/errors"
 	"github.com/spikeekips/mitum/launch/config"
@@ -31,7 +30,7 @@ func init() {
 		[]string{
 			ProcessNameConfig,
 		},
-		ProcessMongodbDatabase,
+		ProcessDatabase,
 	); err != nil {
 		panic(err)
 	} else {
@@ -78,16 +77,23 @@ func ProcessBlockData(ctx context.Context) (context.Context, error) {
 	return context.WithValue(ctx, ContextValueBlockData, blockData), nil
 }
 
-func ProcessMongodbDatabase(ctx context.Context) (context.Context, error) {
+func ProcessDatabase(ctx context.Context) (context.Context, error) {
 	var l config.LocalNode
 	if err := config.LoadConfigContextValue(ctx, &l); err != nil {
 		return ctx, err
 	}
 	conf := l.Storage().Database()
 
-	if !strings.EqualFold(conf.URI().Scheme, "mongodb") {
-		return ctx, nil
+	switch {
+	case conf.URI().Scheme == "mongodb", conf.URI().Scheme == "mongodb+srv":
+		return processMongodbDatabase(ctx, l)
+	default:
+		return ctx, errors.Errorf("unsupported database type, %q", conf.URI().Scheme)
 	}
+}
+
+func processMongodbDatabase(ctx context.Context, l config.LocalNode) (context.Context, error) {
+	conf := l.Storage().Database()
 
 	ca, err := cache.NewCacheFromURI(conf.Cache().String())
 	if err != nil {

@@ -34,7 +34,7 @@ var BlockDownloadVars = kong.Vars{
 type BlockDownloadCommand struct {
 	*BaseCommand
 	DataType   string        `arg:"" name:"data type" help:"data type of block data, {${block_datatypes} ${all_blockdata}}" required:"true"` // revive:disable-line:line-length-limit
-	Heights    []int64       `arg:"" name:"height" help:"block heights of block" required:"true"`
+	Heights    []int64       `arg:"" name:"height" help:"heights of block" required:"true"`
 	URL        *url.URL      `name:"node" help:"remote mitum url. default: ${node_url}" required:"true" default:"${node_url}"` // revive:disable-line:line-length-limit
 	Timeout    time.Duration `name:"timeout" help:"timeout; default is 5 seconds"`
 	TLSInscure bool          `name:"tls-insecure" help:"allow inseucre TLS connection; default is false"`

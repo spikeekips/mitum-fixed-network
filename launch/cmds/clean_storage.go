@@ -31,6 +31,7 @@ func NewCleanStorageCommand(dryrun bool) CleanStorageCommand {
 		process.ProcessNameConsensusStates,
 		process.ProcessNameNetwork,
 		process.ProcessNameSuffrage,
+		process.ProcessNameTimeSyncer,
 	}
 
 	for i := range disabledProcessors {

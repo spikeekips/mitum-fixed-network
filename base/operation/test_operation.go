@@ -1,3 +1,4 @@
+//go:build test
 // +build test
 
 package operation
@@ -31,15 +32,9 @@ type KVOperationFact struct {
 	V []byte `json:"value" bson:"value"`
 }
 
-func (kvof KVOperationFact) IsValid([]byte) error {
-	if err := kvof.Hint().IsValid(nil); err != nil {
+func (kvof KVOperationFact) IsValid(b []byte) error {
+	if err := IsValidOperationFact(kvof, b); err != nil {
 		return err
-	}
-
-	if l := len(kvof.K); l < 1 {
-		return errors.Errorf("empty Key of KVOperation")
-	} else if l > MaxKeyKVOperation {
-		return errors.Errorf("Key of KVOperation over limit; %d > %d", l, MaxKeyKVOperation)
 	}
 
 	if kvof.V != nil {

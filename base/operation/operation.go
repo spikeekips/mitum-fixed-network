@@ -29,6 +29,24 @@ type Operation interface {
 	LastSignedAt() time.Time
 }
 
+func IsValidOperationFact(fact OperationFact, networkID []byte) error {
+	if err := isvalid.Check([]isvalid.IsValider{
+		fact.Hash(),
+		fact.Hint(),
+	}, networkID, false); err != nil {
+		return err
+	}
+
+	switch l := len(fact.Token()); {
+	case l < 1:
+		return isvalid.InvalidError.Errorf("Operation has empty token")
+	case l > MaxTokenSize:
+		return isvalid.InvalidError.Errorf("Operation token size too large: %d > %d", l, MaxTokenSize)
+	}
+
+	return nil
+}
+
 func IsValidOperation(op Operation, networkID []byte) error {
 	if err := op.Hint().IsValid(nil); err != nil {
 		return err
@@ -39,13 +57,7 @@ func IsValidOperation(op Operation, networkID []byte) error {
 		return isvalid.InvalidError.Errorf("wrong fact, %T found", op.Fact())
 	}
 
-	if l := len(fact.Token()); l < 1 {
-		return isvalid.InvalidError.Errorf("Operation has empty token")
-	} else if l > MaxTokenSize {
-		return isvalid.InvalidError.Errorf("Operation token size too large: %d > %d", l, MaxTokenSize)
-	}
-
-	if err := op.Fact().IsValid(networkID); err != nil {
+	if err := fact.IsValid(networkID); err != nil {
 		return err
 	}
 
@@ -55,9 +67,13 @@ func IsValidOperation(op Operation, networkID []byte) error {
 
 	for i := range op.Signs() {
 		fs := op.Signs()[i]
+		if fs == nil {
+			return isvalid.InvalidError.Errorf("empty fact sign found")
+		}
+
 		if err := fs.IsValid(networkID); err != nil {
 			return err
-		} else if err := IsValidFactSign(op.Fact(), fs, networkID); err != nil {
+		} else if err := IsValidFactSign(fact, fs, networkID); err != nil {
 			return err
 		}
 	}

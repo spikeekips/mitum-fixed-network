@@ -4,7 +4,6 @@ import (
 	"sort"
 	"time"
 
-	"github.com/pkg/errors"
 	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/util"
 	"github.com/spikeekips/mitum/util/hint"
@@ -161,23 +160,30 @@ func (bo BaseOperation) IsValid(networkID []byte) error {
 }
 
 func (bo BaseOperation) AddFactSigns(fs ...FactSign) (FactSignUpdater, error) {
-	for i := range bo.fs {
-		bofs := bo.fs[i]
+	var afs []FactSign
+	for i := range fs {
+		found := -1
+		for j := range bo.fs {
+			if fs[i].Signer().Equal(bo.fs[j].Signer()) {
+				found = j
 
-		var found bool
-		for j := range fs {
-			if bofs.Signer().Equal(fs[j].Signer()) {
-				found = true
 				break
 			}
 		}
 
-		if found {
-			return nil, errors.Errorf("already signed")
+		switch {
+		case found < 0:
+			afs = append(afs, fs[i])
+		default:
+			bo.fs[found] = fs[i]
 		}
 	}
 
-	bo.fs = append(bo.fs, fs...)
+	nfs := make([]FactSign, len(bo.fs)+len(afs))
+	copy(nfs[:len(bo.fs)], bo.fs)
+	copy(nfs[len(bo.fs):], afs)
+
+	bo.fs = nfs
 	bo.h = bo.GenerateHash()
 
 	return bo, nil

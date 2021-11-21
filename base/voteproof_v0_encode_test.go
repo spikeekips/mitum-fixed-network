@@ -82,19 +82,18 @@ func (t *testVoteproofEncode) TestMarshal() {
 	t.Equal(vp.Result(), uvp.Result())
 	t.Equal(vp.Stage(), uvp.Stage())
 
-	t.Equal(vp.Majority().Bytes(), uvp.Majority().Bytes())
+	t.True(vp.Majority().Hash().Equal(uvp.Majority().Hash()))
 	t.Equal(len(vp.facts), len(uvp.facts))
 	for _, f := range vp.facts {
-		var fact Fact
-
+		var found bool
 		for _, uf := range uvp.facts {
 			if f.Hash().Equal(uf.Hash()) {
-				fact = f
+				found = true
 				break
 			}
 		}
 
-		t.Equal(f.Bytes(), fact.Bytes())
+		t.True(found)
 	}
 	t.Equal(len(vp.votes), len(uvp.votes))
 	for a, f := range vp.votes {

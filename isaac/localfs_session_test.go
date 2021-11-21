@@ -144,7 +144,6 @@ func (t *testBlockDataLocalFSSession) TestAddStatesFinishedWithClose() {
 		a := sts[i]
 		b := usts[i]
 
-		t.Equal(a.Bytes(), b.Bytes())
 		t.True(a.Hash().Equal(b.Hash()))
 		t.True(a.Hint().Equal(b.Hint()))
 		t.Equal(a.Key(), b.Key())

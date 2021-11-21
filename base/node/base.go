@@ -3,7 +3,6 @@ package node
 import (
 	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/base/key"
-	"github.com/spikeekips/mitum/util"
 	"github.com/spikeekips/mitum/util/hint"
 	"github.com/spikeekips/mitum/util/isvalid"
 )
@@ -35,10 +34,6 @@ func (bn BaseV0) IsValid([]byte) error {
 		bn.address,
 		bn.publickey,
 	}, nil, false)
-}
-
-func (bn BaseV0) Bytes() []byte {
-	return util.ConcatBytesSlice(bn.address.Bytes(), bn.publickey.Bytes())
 }
 
 func (bn BaseV0) Address() base.Address {

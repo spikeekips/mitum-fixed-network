@@ -25,7 +25,27 @@ type ManifestV0 struct {
 }
 
 func (bm ManifestV0) GenerateHash() valuehash.Hash {
-	return valuehash.NewSHA256(bm.Bytes())
+	var operationsHashBytes []byte
+	if bm.operationsHash != nil {
+		operationsHashBytes = bm.operationsHash.Bytes()
+	}
+
+	var statesHashBytes []byte
+	if bm.statesHash != nil {
+		statesHashBytes = bm.statesHash.Bytes()
+	}
+
+	return valuehash.NewSHA256(util.ConcatBytesSlice(
+		bm.height.Bytes(),
+		bm.round.Bytes(),
+		bm.proposal.Bytes(),
+		bm.previousBlock.Bytes(),
+		operationsHashBytes,
+		statesHashBytes,
+		localtime.NewTime(bm.confirmedAt).Bytes(),
+		// NOTE createdAt does not included for Bytes(), because Bytes() is used
+		// for Hash().
+	))
 }
 
 func (bm ManifestV0) IsValid(networkID []byte) error {
@@ -63,30 +83,6 @@ func (ManifestV0) Hint() hint.Hint {
 
 func (bm ManifestV0) Hash() valuehash.Hash {
 	return bm.h
-}
-
-func (bm ManifestV0) Bytes() []byte {
-	var operationsHashBytes []byte
-	if bm.operationsHash != nil {
-		operationsHashBytes = bm.operationsHash.Bytes()
-	}
-
-	var statesHashBytes []byte
-	if bm.statesHash != nil {
-		statesHashBytes = bm.statesHash.Bytes()
-	}
-
-	return util.ConcatBytesSlice(
-		bm.height.Bytes(),
-		bm.round.Bytes(),
-		bm.proposal.Bytes(),
-		bm.previousBlock.Bytes(),
-		operationsHashBytes,
-		statesHashBytes,
-		localtime.NewTime(bm.confirmedAt).Bytes(),
-		// NOTE createdAt does not included for Bytes(), because Bytes() is used
-		// for Hash().
-	)
 }
 
 func (bm ManifestV0) Height() base.Height {

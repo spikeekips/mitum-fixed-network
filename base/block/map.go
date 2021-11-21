@@ -13,12 +13,11 @@ import (
 type BlockDataMap interface {
 	hint.Hinter
 	valuehash.HashGenerator
-	util.Byter
+	valuehash.Hasher
 	isvalid.IsValider
 	// Writer indicates which writer stores block data
 	Writer() hint.Hint
 	Height() base.Height
-	Hash() valuehash.Hash
 	CreatedAt() time.Time
 	IsLocal() bool
 	Block() valuehash.Hash

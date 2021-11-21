@@ -102,10 +102,6 @@ func (nv NumberValue) IsValid([]byte) error {
 	return nil
 }
 
-func (nv NumberValue) Bytes() []byte {
-	return nv.b
-}
-
 func (NumberValue) Hint() hint.Hint {
 	return NumberValueHint
 }

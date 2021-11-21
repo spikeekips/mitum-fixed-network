@@ -25,17 +25,13 @@ func NewDurationValue(d time.Duration) (DurationValue, error) {
 
 func (dv DurationValue) set(d time.Duration) (DurationValue, error) {
 	dv.v = d
-	dv.h = valuehash.NewSHA256(dv.Bytes())
+	dv.h = valuehash.NewSHA256(util.Int64ToBytes(dv.v.Nanoseconds()))
 
 	return dv, nil
 }
 
 func (dv DurationValue) IsValid([]byte) error {
 	return dv.h.IsValid(nil)
-}
-
-func (dv DurationValue) Bytes() []byte {
-	return util.Int64ToBytes(dv.v.Nanoseconds())
 }
 
 func (DurationValue) Hint() hint.Hint {

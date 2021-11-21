@@ -52,10 +52,6 @@ func (bv BytesValue) IsValid([]byte) error {
 	return bv.h.IsValid(nil)
 }
 
-func (bv BytesValue) Bytes() []byte {
-	return bv.v
-}
-
 func (BytesValue) Hint() hint.Hint {
 	return BytesValueHint
 }

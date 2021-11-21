@@ -43,7 +43,7 @@ func (SliceValue) set(v interface{}) (SliceValue, error) {
 		} else if ht, ok := e.(hint.Hinter); !ok {
 			return SliceValue{}, util.WrongTypeError.Errorf("item not Hinter: %T", e)
 		} else if _, ok := e.(valuehash.Hasher); !ok {
-			return SliceValue{}, util.WrongTypeError.Errorf("item not util.Byter: %T", e)
+			return SliceValue{}, util.WrongTypeError.Errorf("item not valuehash.Hasher: %T", e)
 		} else {
 			items[i] = ht
 			bs[i] = ht.(valuehash.Hasher).Hash().Bytes()
@@ -61,10 +61,6 @@ func (SliceValue) set(v interface{}) (SliceValue, error) {
 
 func (sv SliceValue) IsValid([]byte) error {
 	return sv.h.IsValid(nil)
-}
-
-func (sv SliceValue) Bytes() []byte {
-	return sv.b
 }
 
 func (SliceValue) Hint() hint.Hint {

@@ -158,7 +158,7 @@ func (vp VoteproofV0) factsBytes() []byte {
 
 	bs := make([][]byte, len(keys))
 	for i, a := range keys {
-		bs[i] = facts[a].Bytes()
+		bs[i] = facts[a].Hash().Bytes()
 	}
 
 	return util.ConcatBytesSlice(bs...)
@@ -193,7 +193,7 @@ func (vp VoteproofV0) suffragesBytes() []byte {
 func (vp VoteproofV0) Bytes() []byte {
 	var m []byte
 	if vp.majority != nil {
-		m = vp.majority.Bytes()
+		m = vp.majority.Hash().Bytes()
 	}
 
 	return util.ConcatBytesSlice(

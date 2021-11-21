@@ -36,10 +36,6 @@ func (hv HintedValue) IsValid([]byte) error {
 	return nil
 }
 
-func (hv HintedValue) Bytes() []byte {
-	return hv.v.(util.Byter).Bytes()
-}
-
 func (HintedValue) Hint() hint.Hint {
 	return HintedValueHint
 }
@@ -59,8 +55,6 @@ func (hv HintedValue) Equal(v Value) bool {
 func (hv HintedValue) Set(v interface{}) (Value, error) {
 	if _, ok := v.(hint.Hinter); !ok {
 		return nil, util.WrongTypeError.Errorf("not Hinter: %T", v)
-	} else if _, ok := v.(util.Byter); !ok {
-		return nil, util.WrongTypeError.Errorf("not util.Byter: %T", v)
 	} else if _, ok := v.(valuehash.Hasher); !ok {
 		return nil, util.WrongTypeError.Errorf("not valuehash.Hasher: %T", v)
 	}

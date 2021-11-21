@@ -45,10 +45,6 @@ func (sv StringValue) IsValid([]byte) error {
 	return sv.h.IsValid(nil)
 }
 
-func (sv StringValue) Bytes() []byte {
-	return []byte(sv.v)
-}
-
 func (StringValue) Hint() hint.Hint {
 	return StringValueHint
 }

@@ -5,7 +5,6 @@ import (
 
 	"github.com/pkg/errors"
 	"github.com/spikeekips/mitum/base"
-	"github.com/spikeekips/mitum/util"
 	"github.com/spikeekips/mitum/util/hint"
 	"github.com/spikeekips/mitum/util/isvalid"
 	"github.com/spikeekips/mitum/util/valuehash"
@@ -15,7 +14,6 @@ type State interface {
 	isvalid.IsValider
 	hint.Hinter
 	valuehash.Hasher
-	util.Byter
 	Key() string
 	Value() Value
 	SetValue(Value) (State, error)

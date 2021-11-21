@@ -21,7 +21,6 @@ func (t *testStateDurationValue) TestNew() {
 	t.Equal(v, dv.v)
 	t.Equal(v, dv.Interface())
 	t.NotNil(dv.Hash())
-	t.NotNil(dv.Bytes())
 }
 
 func TestStateDurationValue(t *testing.T) {

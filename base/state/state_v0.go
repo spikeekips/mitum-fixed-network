@@ -90,7 +90,7 @@ func (st StateV0) SetHash(h valuehash.Hash) (State, error) {
 	return st, nil
 }
 
-func (st StateV0) Bytes() []byte {
+func (st StateV0) GenerateHash() valuehash.Hash {
 	ops := st.operations
 	sort.Slice(ops, func(i, j int) bool {
 		return bytes.Compare(ops[i].Bytes(), ops[j].Bytes()) < 0
@@ -106,16 +106,12 @@ func (st StateV0) Bytes() []byte {
 		pbb = st.previousHeight.Bytes()
 	}
 
-	return util.ConcatBytesSlice(
+	return valuehash.NewSHA256(util.ConcatBytesSlice(
 		[]byte(st.key),
 		st.value.Hash().Bytes(),
 		pbb,
 		util.ConcatBytesSlice(opb...),
-	)
-}
-
-func (st StateV0) GenerateHash() valuehash.Hash {
-	return valuehash.NewSHA256(st.Bytes())
+	))
 }
 
 func (st StateV0) Key() string {

@@ -8,7 +8,6 @@ import (
 	"github.com/spikeekips/mitum/base/ballot"
 	"github.com/spikeekips/mitum/base/operation"
 	"github.com/spikeekips/mitum/base/state"
-	"github.com/spikeekips/mitum/util"
 	"github.com/spikeekips/mitum/util/hint"
 	"github.com/spikeekips/mitum/util/isvalid"
 	"github.com/spikeekips/mitum/util/tree"
@@ -18,7 +17,6 @@ import (
 type Manifest interface {
 	isvalid.IsValider
 	hint.Hinter
-	util.Byter
 	valuehash.Hasher
 	zerolog.LogObjectMarshaler
 	PreviousBlock() valuehash.Hash

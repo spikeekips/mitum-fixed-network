@@ -18,20 +18,12 @@ type dummyNotHinted struct {
 	v int
 }
 
-type dummyNotByter struct {
+type dummyNotHasher struct {
 	dummyNotHinted
 }
 
-func (dv dummyNotByter) Hint() hint.Hint {
+func (dv dummyNotHasher) Hint() hint.Hint {
 	return dummyHintedValueHint
-}
-
-type dummyNotHasher struct {
-	dummyNotByter
-}
-
-func (dv dummyNotHasher) Bytes() []byte {
-	return util.IntToBytes(dv.v)
 }
 
 type dummy struct {
@@ -39,7 +31,7 @@ type dummy struct {
 }
 
 func (dv dummy) Hash() valuehash.Hash {
-	return valuehash.NewSHA256(dv.Bytes())
+	return valuehash.NewSHA256(util.IntToBytes(dv.v))
 }
 
 func (dv dummy) MarshalJSON() ([]byte, error) {
@@ -93,14 +85,6 @@ func (t *testStateHintedValue) TestNewNotHinted() {
 	t.Contains(err.Error(), "not Hinter")
 }
 
-func (t *testStateHintedValue) TestNewNotByter() {
-	v := dummyNotByter{}
-	v.v = 1
-
-	_, err := NewHintedValue(v)
-	t.Contains(err.Error(), "not util.Byter")
-}
-
 func (t *testStateHintedValue) TestNewNotHasher() {
 	v := dummyNotHasher{}
 	v.v = 1
@@ -118,7 +102,6 @@ func (t *testStateHintedValue) TestNew() {
 
 	t.Equal(dv.v, v)
 	t.True(dv.Hash().Equal(v.Hash()))
-	t.Equal(dv.Bytes(), v.Bytes())
 }
 
 func TestStateHintedValue(t *testing.T) {

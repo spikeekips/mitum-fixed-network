@@ -217,7 +217,6 @@ func (t *testSession) TestSetSuffrageInfo() {
 		b := nsf.Nodes()[i]
 
 		t.True(a.Hint().Equal(b.Hint()))
-		t.Equal(a.Bytes(), b.Bytes())
 		t.Equal(a.String(), b.String())
 		t.True(a.Address().Equal(b.Address()))
 		t.True(a.Publickey().Equal(b.Publickey()))

@@ -452,13 +452,17 @@ func (t *BaseTest) CompareVoteproof(a, b base.Voteproof) {
 	t.Equal(a.Result(), b.Result())
 	t.Equal(a.Stage(), b.Stage())
 
-	t.Equal(a.Majority().Bytes(), b.Majority().Bytes())
+	t.True(a.Majority().Hash().Equal(b.Majority().Hash()))
+	t.True(a.Majority().Hint().Equal(b.Majority().Hint()))
 	t.Equal(len(a.Facts()), len(b.Facts()))
 
-	af := a.Facts()
-	bf := b.Facts()
-	for i := range af {
-		t.Equal(af[i].Bytes(), bf[i].Bytes())
+	afs := a.Facts()
+	bfs := b.Facts()
+	for i := range afs {
+		af := afs[i]
+		bf := bfs[i]
+		t.True(af.Hash().Equal(bf.Hash()))
+		t.True(af.Hint().Equal(bf.Hint()))
 	}
 
 	t.Equal(len(a.Votes()), len(b.Votes()))

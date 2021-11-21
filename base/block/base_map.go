@@ -140,10 +140,6 @@ func (bd BaseBlockDataMap) UpdateHash() (BaseBlockDataMap, error) {
 }
 
 func (bd BaseBlockDataMap) GenerateHash() valuehash.Hash {
-	return valuehash.NewSHA256(bd.Bytes())
-}
-
-func (bd BaseBlockDataMap) Bytes() []byte {
 	bs := make([][]byte, len(BlockData)+2)
 
 	bs[0] = bd.height.Bytes()
@@ -163,7 +159,7 @@ func (bd BaseBlockDataMap) Bytes() []byte {
 		bs[2+i] = bd.items[dataType].Bytes()
 	}
 
-	return util.ConcatBytesSlice(bs...)
+	return valuehash.NewSHA256(util.ConcatBytesSlice(bs...))
 }
 
 func (bd BaseBlockDataMap) Height() base.Height {

@@ -5,7 +5,6 @@ import (
 
 	"github.com/pkg/errors"
 	"github.com/spikeekips/mitum/base"
-	"github.com/spikeekips/mitum/base/ballot"
 	"github.com/spikeekips/mitum/base/block"
 	"github.com/spikeekips/mitum/base/seal"
 	"github.com/spikeekips/mitum/network"
@@ -18,7 +17,7 @@ var EmptySwitchFunc = func() error { return nil }
 type State interface {
 	Enter(StateSwitchContext) (func() error, error)
 	Exit(StateSwitchContext) (func() error, error)
-	ProcessProposal(ballot.Proposal) error
+	ProcessProposal(base.Proposal) error
 	ProcessVoteproof(base.Voteproof) error
 	SetStates(*States) State
 }
@@ -29,7 +28,7 @@ type BaseState struct {
 	lastVoteproofFunc     func() base.Voteproof
 	lastINITVoteproofFunc func() base.Voteproof
 	setLastVoteproofFunc  func(base.Voteproof) bool
-	newProposalFunc       func(ballot.Proposal)
+	newProposalFunc       func(base.Proposal)
 	newVoteproofFunc      func(base.Voteproof)
 	broadcastSealsFunc    func(seal.Seal, bool /* to local */) error
 	timers                *localtime.Timers
@@ -75,7 +74,7 @@ func (st *BaseState) Exit(sctx StateSwitchContext) (func() error, error) {
 	return nil, nil
 }
 
-func (*BaseState) ProcessProposal(ballot.Proposal) error { return nil }
+func (*BaseState) ProcessProposal(base.Proposal) error { return nil }
 func (st *BaseState) ProcessVoteproof(voteproof base.Voteproof) error {
 	if st.processVoteproofFunc != nil {
 		return st.processVoteproofFunc(voteproof)
@@ -114,7 +113,7 @@ func (st *BaseState) SetLastVoteproof(voteproof base.Voteproof) bool {
 	return st.States.SetLastVoteproof(voteproof)
 }
 
-func (st *BaseState) NewProposal(proposal ballot.Proposal) {
+func (st *BaseState) NewProposal(proposal base.Proposal) {
 	if st.newVoteproofFunc != nil {
 		st.newProposalFunc(proposal)
 
@@ -134,7 +133,7 @@ func (st *BaseState) NewVoteproof(voteproof base.Voteproof) {
 	st.States.NewVoteproof(voteproof)
 }
 
-func (st *BaseState) BroadcastBallot(blt ballot.Ballot, toLocal bool) error {
+func (st *BaseState) BroadcastBallot(blt base.Ballot, toLocal bool) error {
 	if st.broadcastSealsFunc != nil {
 		return st.broadcastSealsFunc(blt, toLocal)
 	}

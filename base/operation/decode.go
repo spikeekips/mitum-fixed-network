@@ -18,16 +18,6 @@ func DecodeOperation(b []byte, enc encoder.Encoder) (Operation, error) {
 	}
 }
 
-func DecodeFactSign(b []byte, enc encoder.Encoder) (FactSign, error) {
-	if hinter, err := enc.Decode(b); err != nil {
-		return nil, err
-	} else if f, ok := hinter.(FactSign); !ok {
-		return nil, errors.Errorf("not FactSign, %T", hinter)
-	} else {
-		return f, nil
-	}
-}
-
 func DecodeReasonError(b []byte, enc encoder.Encoder) (ReasonError, error) {
 	if len(b) < 1 {
 		return nil, nil

@@ -2,7 +2,6 @@ package basicstates
 
 import (
 	"github.com/spikeekips/mitum/base"
-	"github.com/spikeekips/mitum/base/ballot"
 )
 
 type EmptyState struct{}
@@ -19,7 +18,7 @@ func (*EmptyState) Exit(StateSwitchContext) (func() error, error) {
 	return nil, nil
 }
 
-func (*EmptyState) ProcessProposal(ballot.Proposal) error {
+func (*EmptyState) ProcessProposal(base.Proposal) error {
 	return nil
 }
 

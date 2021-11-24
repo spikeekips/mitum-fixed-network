@@ -4,7 +4,6 @@ import (
 	"io"
 
 	"github.com/spikeekips/mitum/base"
-	"github.com/spikeekips/mitum/base/ballot"
 	"github.com/spikeekips/mitum/base/block"
 	"github.com/spikeekips/mitum/base/operation"
 	"github.com/spikeekips/mitum/base/state"
@@ -22,7 +21,7 @@ type Writer interface {
 	WriteINITVoteproof(io.Writer, base.Voteproof) error
 	WriteACCEPTVoteproof(io.Writer, base.Voteproof) error
 	WriteSuffrageInfo(io.Writer, block.SuffrageInfo) error
-	WriteProposal(io.Writer, ballot.Proposal) error
+	WriteProposal(io.Writer, base.SignedBallotFact) error
 	ReadManifest(io.Reader) (block.Manifest, error)
 	ReadOperations(io.Reader) ([]operation.Operation, error)
 	ReadOperationsTree(io.Reader) (tree.FixedTree, error)
@@ -31,5 +30,5 @@ type Writer interface {
 	ReadINITVoteproof(io.Reader) (base.Voteproof, error)
 	ReadACCEPTVoteproof(io.Reader) (base.Voteproof, error)
 	ReadSuffrageInfo(io.Reader) (block.SuffrageInfo, error)
-	ReadProposal(io.Reader) (ballot.Proposal, error)
+	ReadProposal(io.Reader) (base.SignedBallotFact, error)
 }

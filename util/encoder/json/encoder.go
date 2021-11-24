@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding"
 	"encoding/json"
+	"fmt"
 	"reflect"
 
 	"github.com/bluele/gcache"
@@ -122,7 +123,7 @@ func (enc *Encoder) DecodeMap(b []byte) (map[string]hint.Hinter, error) {
 func (enc *Encoder) decode(b []byte, ht hint.Hint) (hint.Hinter, error) {
 	up, err := enc.findUnpacker(ht)
 	if err != nil {
-		return nil, errors.Wrap(err, "failed to find unpacker")
+		return nil, fmt.Errorf("failed to find unpacker, %q: %w", ht, err)
 	}
 
 	i, err := up.F(b)

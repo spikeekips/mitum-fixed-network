@@ -85,7 +85,7 @@ func (gg *GenesisBlockV0Generator) Generate() (block.Block, error) {
 		return nil, err
 	}
 
-	proposal, err := gg.generateProposal(seals, ivp)
+	pr, err := gg.generateProposal(seals, ivp)
 	if err != nil {
 		return nil, err
 	}
@@ -112,11 +112,11 @@ func (gg *GenesisBlockV0Generator) Generate() (block.Block, error) {
 
 	_ = pps.SetLogging(gg.Logging)
 
-	if result := <-pps.NewProposal(context.Background(), proposal, ivp); result.Err != nil {
+	if result := <-pps.NewProposal(context.Background(), pr.SignedFact(), ivp); result.Err != nil {
 		return nil, result.Err
 	} else if avp, err := gg.generateACCEPTVoteproof(result.Block, ivp); err != nil {
 		return nil, err
-	} else if result := <-pps.Save(context.Background(), proposal.Hash(), avp); result.Err != nil {
+	} else if result := <-pps.Save(context.Background(), pr.Fact().Hash(), avp); result.Err != nil {
 		return nil, result.Err
 	} else {
 		return pps.Current().Block(), nil
@@ -196,40 +196,39 @@ func (gg *GenesisBlockV0Generator) generatePreviousBlock() error {
 func (gg *GenesisBlockV0Generator) generateProposal(
 	seals []operation.Seal,
 	voteproof base.Voteproof,
-) (ballot.Proposal, error) {
+) (base.Proposal, error) {
 	sealHashes := make([]valuehash.Hash, len(seals))
 	for i := range seals {
 		sl := seals[i]
 		sealHashes[i] = sl.Hash()
 	}
 
-	var proposal ballot.Proposal
-	pr := ballot.NewProposalV0(
+	pr, err := ballot.NewProposal(
+		ballot.NewProposalFact(
+			base.GenesisHeight,
+			base.Round(0),
+			gg.local.Address(),
+			sealHashes,
+		),
 		gg.local.Address(),
-		base.Height(0),
-		base.Round(0),
-		sealHashes,
 		voteproof,
+		gg.local.Privatekey(), gg.policy.NetworkID(),
 	)
-	if err := pr.Sign(gg.local.Privatekey(), gg.policy.NetworkID()); err != nil {
+	if err != nil {
 		return nil, err
-	} else if err := gg.database.NewProposal(pr); err != nil {
-		return nil, err
-	} else {
-		proposal = pr
 	}
 
-	return proposal, nil
+	if err := gg.database.NewProposal(pr); err != nil {
+		return nil, err
+	}
+
+	return pr, nil
 }
 
 func (gg *GenesisBlockV0Generator) generateINITVoteproof() (base.Voteproof, error) {
-	var ib ballot.INITV0
-	if b, err := NewINITBallotV0Round0(gg.local, gg.database); err != nil {
+	ib, err := NewINITBallotRound0(gg.local.Address(), gg.database, gg.local.Privatekey(), gg.policy.NetworkID())
+	if err != nil {
 		return nil, err
-	} else if err := b.Sign(gg.local.Privatekey(), gg.policy.NetworkID()); err != nil {
-		return nil, err
-	} else {
-		ib = b
 	}
 
 	voteproof, err := gg.ballotbox.Vote(ib)
@@ -242,11 +241,11 @@ func (gg *GenesisBlockV0Generator) generateINITVoteproof() (base.Voteproof, erro
 	return voteproof, nil
 }
 
-func (gg *GenesisBlockV0Generator) generateACCEPTVoteproof(newBlock block.Block, ivp base.Voteproof) (
-	base.Voteproof, error,
-) {
-	ab := NewACCEPTBallotV0(gg.local.Address(), newBlock, ivp)
-	if err := ab.Sign(gg.local.Privatekey(), gg.policy.NetworkID()); err != nil {
+func (gg *GenesisBlockV0Generator) generateACCEPTVoteproof(
+	newBlock block.Block, ivp base.Voteproof,
+) (base.Voteproof, error) {
+	ab, err := NewACCEPTBallot(gg.local.Address(), newBlock, ivp, gg.local.Privatekey(), gg.policy.NetworkID())
+	if err != nil {
 		return nil, err
 	}
 

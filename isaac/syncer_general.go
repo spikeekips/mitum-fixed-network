@@ -944,11 +944,17 @@ func (cs *GeneralSyncer) fetchManifests(ch network.Channel, heights []base.Heigh
 func (*GeneralSyncer) sanitizeManifests(heights []base.Height, l interface{}) (
 	[]block.Manifest, []base.Height, error,
 ) {
+	var checked []block.Manifest
+	var missing []base.Height
+	if len(heights) < 1 {
+		return checked, missing, nil
+	}
+
 	var bs []block.Manifest
 	switch t := l.(type) {
 	case []block.Block:
-		for _, b := range t {
-			bs = append(bs, b)
+		for i := range t {
+			bs = append(bs, t[i])
 		}
 	case []block.Manifest:
 		bs = t
@@ -956,8 +962,6 @@ func (*GeneralSyncer) sanitizeManifests(heights []base.Height, l interface{}) (
 		return nil, nil, errors.Errorf("not Manifest like: %T", l)
 	}
 
-	var checked []block.Manifest
-	var missing []base.Height
 	{
 		head := heights[0]
 		tail := heights[len(heights)-1]

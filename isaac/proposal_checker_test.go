@@ -6,6 +6,7 @@ import (
 	"github.com/pkg/errors"
 	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/base/ballot"
+	"github.com/spikeekips/mitum/base/node"
 	"github.com/stretchr/testify/suite"
 )
 
@@ -26,14 +27,15 @@ func (t *testProposalChecker) SetupTest() {
 
 func (t *testProposalChecker) TestIsKnown() {
 	ib := t.NewINITBallot(t.local, base.Round(0), nil)
-	initFact := ib.INITFactV0
+	initFact := ib.Fact()
 
 	vp, err := t.NewVoteproof(base.StageINIT, initFact, t.local, t.remote)
 	t.NoError(err)
 
 	pr := t.NewProposal(t.remote, initFact.Round(), nil, vp)
 
-	pvc := NewProposalValidationChecker(t.local.Database(), t.suf, t.local.Nodes(), pr, nil)
+	pvc, err := NewProposalValidationChecker(t.local.Database(), t.suf, t.local.Nodes(), pr, nil)
+	t.NoError(err)
 
 	{
 		keep, err := pvc.IsKnown()
@@ -53,26 +55,30 @@ func (t *testProposalChecker) TestIsKnown() {
 
 func (t *testProposalChecker) TestCheckSigning() {
 	ib := t.NewINITBallot(t.local, base.Round(0), nil)
-	initFact := ib.INITFactV0
+	initFact := ib.Fact()
 
 	vp, err := t.NewVoteproof(base.StageINIT, initFact, t.local, t.remote)
 	t.NoError(err)
 
-	pr := t.NewProposal(t.remote, initFact.Round(), nil, vp)
-
 	{
-		pvc := NewProposalValidationChecker(t.local.Database(), t.suf, t.local.Nodes(), pr, nil)
+		pr := t.NewProposal(t.remote, initFact.Round(), nil, vp)
+
+		pvc, err := NewProposalValidationChecker(t.local.Database(), t.suf, t.local.Nodes(), pr, nil)
+		t.NoError(err)
 		keep, err := pvc.CheckSigning()
 		t.True(keep)
 		t.NoError(err)
 	}
 
 	{
-		npr := pr.(ballot.ProposalV0)
+		ls := t.Locals(1)
+		another := ls[0]
+		another.SetNode(node.NewLocal(t.local.Node().Address(), another.Node().Privatekey()))
 
-		t.NoError(SignSeal(&npr, t.local))
+		npr := t.NewProposal(another, initFact.Round(), nil, vp)
 
-		pvc := NewProposalValidationChecker(t.local.Database(), t.suf, t.local.Nodes(), npr, nil)
+		pvc, err := NewProposalValidationChecker(t.local.Database(), t.suf, t.local.Nodes(), npr, nil)
+		t.NoError(err)
 
 		// NOTE sign again with another privatekey
 		keep, err := pvc.CheckSigning()
@@ -84,14 +90,15 @@ func (t *testProposalChecker) TestCheckSigning() {
 
 func (t *testProposalChecker) TestProposerPointProposal() {
 	ib := t.NewINITBallot(t.local, base.Round(0), nil)
-	initFact := ib.INITFactV0
+	initFact := ib.Fact()
 
 	vp, err := t.NewVoteproof(base.StageINIT, initFact, t.local, t.remote)
 	t.NoError(err)
 
 	pr := t.NewProposal(t.remote, initFact.Round(), nil, vp)
 
-	pvc := NewProposalValidationChecker(t.local.Database(), t.suf, t.local.Nodes(), pr, vp)
+	pvc, err := NewProposalValidationChecker(t.local.Database(), t.suf, t.local.Nodes(), pr, vp)
+	t.NoError(err)
 	keep, err := pvc.IsOlder()
 	t.True(keep)
 	t.NoError(err)
@@ -99,20 +106,26 @@ func (t *testProposalChecker) TestProposerPointProposal() {
 
 func (t *testProposalChecker) TestProposerPointOldProposalHeight() {
 	ib := t.NewINITBallot(t.local, base.Round(0), nil)
-	initFact := ib.INITFactV0
+	initFact := ib.Fact()
 
 	ivp, err := t.NewVoteproof(base.StageINIT, initFact, t.local, t.remote)
 	t.NoError(err)
 
-	pr := ballot.NewProposalV0(
+	pr, err := ballot.NewProposal(
+		ballot.NewProposalFact(
+			ivp.Height()-1,
+			base.Round(0),
+			t.local.Node().Address(),
+			nil,
+		),
 		t.local.Node().Address(),
-		ivp.Height()-1,
-		base.Round(0),
 		nil,
-		nil,
+		t.local.Node().Privatekey(), t.local.Policy().NetworkID(),
 	)
+	t.NoError(err)
 
-	pvc := NewProposalValidationChecker(t.local.Database(), t.suf, t.local.Nodes(), pr, ivp)
+	pvc, err := NewProposalValidationChecker(t.local.Database(), t.suf, t.local.Nodes(), pr, ivp)
+	t.NoError(err)
 	keep, err := pvc.IsOlder()
 	t.False(keep)
 	t.Error(err)
@@ -121,20 +134,21 @@ func (t *testProposalChecker) TestProposerPointOldProposalHeight() {
 
 func (t *testProposalChecker) TestProposerPointOldProposalRound() {
 	ib0 := t.NewINITBallot(t.local, base.Round(0), nil)
-	initFact0 := ib0.INITFactV0
+	initFact0 := ib0.Fact()
 
 	ivp0, err := t.NewVoteproof(base.StageINIT, initFact0, t.local, t.remote)
 	t.NoError(err)
 
 	ib1 := t.NewINITBallot(t.local, base.Round(1), ivp0)
-	initFact1 := ib1.INITFactV0
+	initFact1 := ib1.Fact()
 
 	ivp1, err := t.NewVoteproof(base.StageINIT, initFact1, t.local, t.remote)
 	t.NoError(err)
 
 	pr := t.NewProposal(t.remote, base.Round(0), nil, ivp0)
 
-	pvc := NewProposalValidationChecker(t.local.Database(), t.suf, t.local.Nodes(), pr, ivp1)
+	pvc, err := NewProposalValidationChecker(t.local.Database(), t.suf, t.local.Nodes(), pr, ivp1)
+	t.NoError(err)
 	keep, err := pvc.IsOlder()
 	t.False(keep)
 	t.Error(err)
@@ -143,20 +157,26 @@ func (t *testProposalChecker) TestProposerPointOldProposalRound() {
 
 func (t *testProposalChecker) TestProposerPointHigherProposalHeight() {
 	ib := t.NewINITBallot(t.local, base.Round(0), nil)
-	initFact := ib.INITFactV0
+	initFact := ib.Fact()
 
 	ivp, err := t.NewVoteproof(base.StageINIT, initFact, t.local, t.remote)
 	t.NoError(err)
 
-	pr := ballot.NewProposalV0(
+	pr, err := ballot.NewProposal(
+		ballot.NewProposalFact(
+			ivp.Height()+1,
+			base.Round(0),
+			t.local.Node().Address(),
+			nil,
+		),
 		t.local.Node().Address(),
-		ivp.Height()+1,
-		base.Round(0),
 		nil,
-		nil,
+		t.local.Node().Privatekey(), t.local.Policy().NetworkID(),
 	)
+	t.NoError(err)
 
-	pvc := NewProposalValidationChecker(t.local.Database(), t.suf, t.local.Nodes(), pr, ivp)
+	pvc, err := NewProposalValidationChecker(t.local.Database(), t.suf, t.local.Nodes(), pr, ivp)
+	t.NoError(err)
 
 	keep, err := pvc.IsOlder()
 	t.True(keep)
@@ -170,20 +190,21 @@ func (t *testProposalChecker) TestProposerPointHigherProposalHeight() {
 
 func (t *testProposalChecker) TestProposerPointHigherProposalRound() {
 	ib0 := t.NewINITBallot(t.local, base.Round(0), nil)
-	initFact0 := ib0.INITFactV0
+	initFact0 := ib0.Fact()
 
 	ivp0, err := t.NewVoteproof(base.StageINIT, initFact0, t.local, t.remote)
 	t.NoError(err)
 
 	ib1 := t.NewINITBallot(t.local, base.Round(1), ivp0)
-	initFact1 := ib1.INITFactV0
+	initFact1 := ib1.Fact()
 
 	ivp1, err := t.NewVoteproof(base.StageINIT, initFact1, t.local, t.remote)
 	t.NoError(err)
 
 	pr := t.NewProposal(t.remote, base.Round(1), nil, ivp1)
 
-	pvc := NewProposalValidationChecker(t.local.Database(), t.suf, t.local.Nodes(), pr, ivp0)
+	pvc, err := NewProposalValidationChecker(t.local.Database(), t.suf, t.local.Nodes(), pr, ivp0)
+	t.NoError(err)
 	keep, err := pvc.IsWaiting()
 	t.False(keep)
 	t.Error(err)

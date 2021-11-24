@@ -16,6 +16,7 @@ type DummyChannel struct {
 	connInfo             ConnInfo
 	getSealsHandler      GetSealsHandler
 	newSealHandler       NewSealHandler
+	getProposalHandler   GetProposalHandler
 	getStateHandler      GetStateHandler
 	nodeInfoHandler      NodeInfoHandler
 	blockDataMapsHandler BlockDataMapsHandler
@@ -55,6 +56,14 @@ func (ch *DummyChannel) Seals(_ context.Context, h []valuehash.Hash) ([]seal.Sea
 	}
 
 	return ch.getSealsHandler(h)
+}
+
+func (ch *DummyChannel) Proposal(_ context.Context, h valuehash.Hash) (base.Proposal, error) {
+	if ch.getProposalHandler == nil {
+		return nil, ch.notSupported()
+	}
+
+	return ch.getProposalHandler(h)
 }
 
 func (ch *DummyChannel) SetGetSealsHandler(f GetSealsHandler) {

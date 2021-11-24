@@ -5,6 +5,7 @@ package operation
 
 import (
 	"github.com/pkg/errors"
+	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/base/key"
 	"github.com/spikeekips/mitum/util"
 	bsonenc "github.com/spikeekips/mitum/util/encoder/bson"
@@ -109,11 +110,11 @@ func NewKVOperation(
 ) (KVOperation, error) {
 	fact := KVOperationFact{T: token, K: k, V: v}
 
-	var fs []FactSign
+	var fs []base.FactSign
 	if sig, err := signer.Sign(util.ConcatBytesSlice(fact.Hash().Bytes(), b)); err != nil {
 		return KVOperation{}, err
 	} else {
-		fs = []FactSign{NewBaseFactSign(signer.Publickey(), sig)}
+		fs = []base.FactSign{base.NewBaseFactSign(signer.Publickey(), sig)}
 	}
 
 	if bo, err := NewBaseOperationFromFact(KVOperationHint, fact, fs); err != nil {

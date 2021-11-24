@@ -361,8 +361,8 @@ func (st *SyncingState) syncFromVoteproof(voteproof base.Voteproof, to base.Heig
 	var sourceNodes []base.Node
 	for i := range voteproof.Votes() {
 		nf := voteproof.Votes()[i]
-		if n, _, found := st.nodepool.Node(nf.Node()); !found {
-			return errors.Errorf("node, %q in voteproof is not known node", nf.Node())
+		if n, _, found := st.nodepool.Node(nf.FactSign().Node()); !found {
+			return errors.Errorf("node, %q in voteproof is not known node", nf.FactSign().Node())
 		} else if !n.Address().Equal(st.nodepool.LocalNode().Address()) {
 			sourceNodes = append(sourceNodes, n)
 		}

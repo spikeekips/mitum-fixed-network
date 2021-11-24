@@ -7,7 +7,6 @@ import (
 
 	"github.com/pkg/errors"
 	"github.com/spikeekips/mitum/base"
-	"github.com/spikeekips/mitum/base/ballot"
 	"github.com/spikeekips/mitum/base/prprocessor"
 	"github.com/spikeekips/mitum/isaac"
 	"github.com/spikeekips/mitum/network"
@@ -130,12 +129,13 @@ func (*HandoverState) passthroughFilter(voteproof base.Voteproof) func(network.P
 	round := voteproof.Round()
 
 	return func(psl network.PassthroughedSeal) bool {
-		bl, ok := psl.Seal.(ballot.Ballot)
+		bl, ok := psl.Seal.(base.Ballot)
 		if !ok {
 			return true
 		}
 
-		if bl.Height() == height && bl.Round() == round && bl.Stage() == base.StageINIT {
+		fact := bl.RawFact()
+		if fact.Height() == height && fact.Round() == round && fact.Stage() == base.StageINIT {
 			return true
 		}
 

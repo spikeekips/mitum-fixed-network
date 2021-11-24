@@ -4,10 +4,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/pkg/errors"
 	"github.com/rs/zerolog"
 	"github.com/spikeekips/mitum/base"
-	"github.com/spikeekips/mitum/base/ballot"
 	"github.com/spikeekips/mitum/base/node"
 	"github.com/spikeekips/mitum/isaac"
 	"github.com/spikeekips/mitum/storage"
@@ -112,22 +110,23 @@ func (st *JoiningState) broadcastINITBallotEnteredWithoutDelay(voteproof base.Vo
 		return nil
 	}
 
-	var baseBallot ballot.INITV0
-	if i, err := NextINITBallotFromACCEPTVoteproof(st.database, st.local, voteproof); err != nil {
+	baseBallot, err := NextINITBallotFromACCEPTVoteproof(st.database, st.local, voteproof, st.policy.NetworkID())
+	if err != nil {
 		return err
-	} else if err := i.Sign(st.local.Privatekey(), st.policy.NetworkID()); err != nil {
-		return errors.Wrap(err, "failed to re-sign joining INITBallot")
-	} else {
-		baseBallot = i
-
-		l := st.Log().With().Str("voteproof_id", voteproof.ID()).Logger()
-		l.Trace().Interface("voteproof", voteproof).Msg("joining with latest accept voteproof from local")
-		l.Debug().Object("voteproof", voteproof).Msg("joining with latest accept voteproof from local")
 	}
+
+	l := st.Log().With().Str("voteproof_id", voteproof.ID()).Logger()
+	l.Trace().Interface("voteproof", voteproof).Msg("joining with latest accept voteproof from local")
+	l.Debug().Object("voteproof", voteproof).Msg("joining with latest accept voteproof from local")
 
 	timer := localtime.NewContextTimer(TimerIDBroadcastJoingingINITBallot, 0, func(i int) (bool, error) {
 		if i%5 == 0 {
-			_ = baseBallot.Sign(st.local.Privatekey(), st.policy.NetworkID())
+			_ = signBallotWithFact(
+				baseBallot,
+				st.local.Address(),
+				st.local.Privatekey(),
+				st.policy.NetworkID(),
+			)
 		}
 
 		if err := st.BroadcastBallot(baseBallot, i == 0); err != nil {
@@ -156,18 +155,14 @@ func (st *JoiningState) broadcastINITBallotEntered(voteproof base.Voteproof) err
 		return nil
 	}
 
-	var baseBallot ballot.INITV0
-	if i, err := NextINITBallotFromACCEPTVoteproof(st.database, st.local, voteproof); err != nil {
+	baseBallot, err := NextINITBallotFromACCEPTVoteproof(st.database, st.local, voteproof, st.policy.NetworkID())
+	if err != nil {
 		return err
-	} else if err := i.Sign(st.local.Privatekey(), st.policy.NetworkID()); err != nil {
-		return errors.Wrap(err, "failed to re-sign joining INITBallot")
-	} else {
-		baseBallot = i
-
-		l := st.Log().With().Str("voteproof_id", voteproof.ID()).Logger()
-		l.Trace().Interface("voteproof", voteproof).Msg("joining with latest accept voteproof from local")
-		l.Debug().Object("voteproof", voteproof).Msg("joining with latest accept voteproof from local")
 	}
+
+	l := st.Log().With().Str("voteproof_id", voteproof.ID()).Logger()
+	l.Trace().Interface("voteproof", voteproof).Msg("joining with latest accept voteproof from local")
+	l.Debug().Object("voteproof", voteproof).Msg("joining with latest accept voteproof from local")
 
 	checkBallotbox := st.checkBallotboxFunc()
 
@@ -177,7 +172,12 @@ func (st *JoiningState) broadcastINITBallotEntered(voteproof base.Voteproof) err
 		}
 
 		if i%5 == 0 {
-			_ = baseBallot.Sign(st.local.Privatekey(), st.policy.NetworkID())
+			_ = signBallotWithFact(
+				baseBallot,
+				st.local.Address(),
+				st.local.Privatekey(),
+				st.policy.NetworkID(),
+			)
 		}
 
 		if err := st.BroadcastBallot(baseBallot, i == 0); err != nil {
@@ -204,25 +204,26 @@ func (st *JoiningState) checkBallotboxFunc() func() error {
 	var last base.Voteproof
 	return func() error {
 		// NOTE find highest Ballot from ballotbox
-		if i := st.ballotbox.LatestBallot(); i == nil {
+		i := st.ballotbox.LatestBallot()
+		if i == nil {
 			return nil
-		} else if j, ok := i.(base.Voteproofer); ok {
-			l.Lock()
-			defer l.Unlock()
-
-			vp := j.Voteproof()
-			if base.CompareVoteproof(vp, st.LastVoteproof()) < 1 {
-				return nil
-			}
-
-			if last == nil {
-				last = vp
-			} else if base.CompareVoteproof(vp, last) < 1 {
-				return nil
-			}
-
-			go st.NewVoteproof(vp)
 		}
+
+		l.Lock()
+		defer l.Unlock()
+
+		vp := i.BaseVoteproof()
+		if base.CompareVoteproof(vp, st.LastVoteproof()) < 1 {
+			return nil
+		}
+
+		if last == nil {
+			last = vp
+		} else if base.CompareVoteproof(vp, last) < 1 {
+			return nil
+		}
+
+		go st.NewVoteproof(vp)
 
 		return nil
 	}

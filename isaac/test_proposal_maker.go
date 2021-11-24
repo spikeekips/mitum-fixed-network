@@ -1,3 +1,4 @@
+//go:build test
 // +build test
 
 package isaac
@@ -15,7 +16,7 @@ import (
 type DummyProposalMaker struct {
 	sync.Mutex
 	local    *Local
-	proposed ballot.Proposal
+	proposed base.Proposal
 	sls      []seal.Seal
 }
 
@@ -66,12 +67,12 @@ func (pm *DummyProposalMaker) seals() ([]valuehash.Hash, error) {
 	return seals, nil
 }
 
-func (pm *DummyProposalMaker) Proposal(height base.Height, round base.Round, voteproof base.Voteproof) (ballot.Proposal, error) {
+func (pm *DummyProposalMaker) Proposal(height base.Height, round base.Round, voteproof base.Voteproof) (base.Proposal, error) {
 	pm.Lock()
 	defer pm.Unlock()
 
 	if pm.proposed != nil {
-		if pm.proposed.Height() == height && pm.proposed.Round() == round {
+		if pm.proposed.Fact().Height() == height && pm.proposed.Fact().Round() == round {
 			return pm.proposed, nil
 		}
 	}
@@ -81,17 +82,20 @@ func (pm *DummyProposalMaker) Proposal(height base.Height, round base.Round, vot
 		return nil, err
 	}
 
-	pr := ballot.NewProposalV0(
+	pr, err := ballot.NewProposal(
+		ballot.NewProposalFact(
+			height,
+			round,
+			pm.local.Node().Address(),
+			seals,
+		),
 		pm.local.Node().Address(),
-		height,
-		round,
-		seals,
 		voteproof,
+		pm.local.Node().Privatekey(), pm.local.Policy().NetworkID(),
 	)
-	if err := SignSeal(&pr, pm.local); err != nil {
+	if err != nil {
 		return nil, err
 	}
-
 	pm.proposed = pr
 
 	return pr, nil

@@ -90,9 +90,9 @@ func (pp *DefaultProcessor) prepare(ctx context.Context) error {
 }
 
 func (pp *DefaultProcessor) prepareOperations(ctx context.Context) error {
-	ev := pp.Log().Debug().Int("seals", len(pp.proposal.Seals()))
+	ev := pp.Log().Debug().Int("seals", len(pp.Fact().Seals()))
 
-	seals := pp.proposal.Seals()
+	seals := pp.Fact().Seals()
 
 	started := time.Now()
 	defer func() {
@@ -105,7 +105,7 @@ func (pp *DefaultProcessor) prepareOperations(ctx context.Context) error {
 		return nil
 	}
 
-	se := NewSealsExtracter(pp.nodepool.LocalNode().Address(), pp.proposal.Node(), pp.database, pp.nodepool, seals)
+	se := NewSealsExtracter(pp.nodepool.LocalNode().Address(), pp.Fact().Proposer(), pp.database, pp.nodepool, seals)
 	_ = se.SetLogging(pp.Logging)
 
 	ops, err := se.Extract(ctx)
@@ -237,8 +237,8 @@ func (pp *DefaultProcessor) prepareBlock(context.Context) error {
 
 	var blk block.BlockUpdater
 	if b, err := block.NewBlockV0(
-		pp.suffrageInfo, pp.proposal.Height(), pp.proposal.Round(), pp.proposal.Hash(), pp.baseManifest.Hash(),
-		opsHash, stsHash, pp.proposal.SignedAt(),
+		pp.suffrageInfo, pp.Fact().Height(), pp.Fact().Round(), pp.Fact().Hash(), pp.baseManifest.Hash(),
+		opsHash, stsHash, pp.Fact().ProposedAt(),
 	); err != nil {
 		return err
 	} else if err := pp.blockDataSession.SetManifest(b.Manifest()); err != nil {
@@ -249,7 +249,7 @@ func (pp *DefaultProcessor) prepareBlock(context.Context) error {
 
 	blk = blk.SetOperationsTree(pp.operationsTree).SetOperations(pp.operations).
 		SetStatesTree(pp.statesTree).SetStates(pp.states).
-		SetINITVoteproof(pp.initVoteproof).SetProposal(pp.proposal)
+		SetINITVoteproof(pp.initVoteproof).SetProposal(pp.sfs)
 
 	pp.blk = blk
 
@@ -395,7 +395,7 @@ func (pp *DefaultProcessor) prepareBlockDataSession(context.Context) error {
 		_ = pp.setStatic("processor_prepare_blockdata_session_elapsed", time.Since(started))
 	}()
 
-	i, err := pp.blockData.NewSession(pp.proposal.Height())
+	i, err := pp.blockData.NewSession(pp.Fact().Height())
 	if err != nil {
 		pp.Log().Error().Err(err).Msg("failed to make new block database session")
 
@@ -413,7 +413,7 @@ func (pp *DefaultProcessor) prepareBlockDataSession(context.Context) error {
 		return err
 	}
 
-	if err := pp.blockDataSession.SetProposal(pp.proposal); err != nil {
+	if err := pp.blockDataSession.SetProposal(pp.sfs); err != nil {
 		return err
 	}
 

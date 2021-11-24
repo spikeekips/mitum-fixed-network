@@ -22,14 +22,14 @@ type NodeMessage struct {
 }
 
 func NewNodeMessage(
-	node base.Address,
+	n base.Address,
 	connInfo ConnInfo,
 	body []byte,
 	connid string,
 ) NodeMessage {
 	return NodeMessage{
 		ConnInfo: connInfo,
-		node:     node,
+		node:     n,
 		body:     body,
 		connid:   connid,
 	}

@@ -108,7 +108,7 @@ func (t *testBlockData) processSession(local *Local, ss *localfs.Session) {
 			valuehash.RandomSHA256(),
 		}, nil)
 
-		t.NoError(ss.SetProposal(pr))
+		t.NoError(ss.SetProposal(pr.SignedFact()))
 	}
 }
 

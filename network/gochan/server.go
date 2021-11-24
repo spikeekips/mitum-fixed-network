@@ -52,6 +52,7 @@ func (*Server) SetGetSealsHandler(network.GetSealsHandler) {}
 func (sv *Server) SetNewSealHandler(f network.NewSealHandler) {
 	sv.newSealHandler = f
 }
+func (*Server) SetGetProposalHandler(network.GetProposalHandler) {}
 
 func (*Server) SetNodeInfoHandler(network.NodeInfoHandler)           {}
 func (*Server) NodeInfoHandler() network.NodeInfoHandler             { return nil }

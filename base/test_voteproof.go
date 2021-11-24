@@ -1,3 +1,4 @@
+//go:build test
 // +build test
 
 package base
@@ -22,9 +23,9 @@ func NewTestVoteproofV0(
 	result VoteResultType,
 	closed bool,
 	stage Stage,
-	majority Fact,
-	facts []Fact,
-	votes []VoteproofNodeFact,
+	majority BallotFact,
+	facts []BallotFact,
+	votes []SignedBallotFact,
 	finishedAt time.Time,
 ) VoteproofV0 {
 	return VoteproofV0{
@@ -109,15 +110,15 @@ func (vp DummyVoteproof) Result() VoteResultType {
 	return vp.result
 }
 
-func (vp DummyVoteproof) Majority() Fact {
+func (vp DummyVoteproof) Majority() BallotFact {
 	return nil
 }
 
-func (vp DummyVoteproof) Facts() []Fact {
+func (vp DummyVoteproof) Facts() []BallotFact {
 	return nil
 }
 
-func (vp DummyVoteproof) Votes() []VoteproofNodeFact {
+func (vp DummyVoteproof) Votes() []SignedBallotFact {
 	return nil
 }
 

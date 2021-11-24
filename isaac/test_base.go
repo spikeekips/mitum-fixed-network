@@ -44,22 +44,21 @@ func (t *BaseTest) SetupSuite() {
 	_ = t.Encs.TestAddHinter(key.BTCPrivatekeyHinter)
 	_ = t.Encs.TestAddHinter(key.BTCPublickeyHinter)
 	_ = t.Encs.TestAddHinter(base.StringAddress(""))
-	_ = t.Encs.TestAddHinter(ballot.INITV0{})
-	_ = t.Encs.TestAddHinter(ballot.INITFactV0{})
-	_ = t.Encs.TestAddHinter(ballot.ProposalV0{})
-	_ = t.Encs.TestAddHinter(ballot.ProposalFactV0{})
-	_ = t.Encs.TestAddHinter(ballot.SIGNV0{})
-	_ = t.Encs.TestAddHinter(ballot.SIGNFactV0{})
-	_ = t.Encs.TestAddHinter(ballot.ACCEPTV0{})
-	_ = t.Encs.TestAddHinter(ballot.ACCEPTFactV0{})
+	_ = t.Encs.TestAddHinter(ballot.INITHinter)
+	_ = t.Encs.TestAddHinter(ballot.INITFactHinter)
+	_ = t.Encs.TestAddHinter(ballot.ProposalHinter)
+	_ = t.Encs.TestAddHinter(ballot.ProposalFactHinter)
+	_ = t.Encs.TestAddHinter(ballot.ACCEPTHinter)
+	_ = t.Encs.TestAddHinter(ballot.ACCEPTFactHinter)
+	_ = t.Encs.TestAddHinter(base.BaseBallotFactSign{})
 	_ = t.Encs.TestAddHinter(base.VoteproofV0{})
-	_ = t.Encs.TestAddHinter(base.BaseVoteproofNodeFact{})
+	_ = t.Encs.TestAddHinter(base.BaseSignedBallotFact{})
 	_ = t.Encs.TestAddHinter(node.BaseV0{})
 	_ = t.Encs.TestAddHinter(block.BlockV0{})
 	_ = t.Encs.TestAddHinter(block.ManifestV0{})
 	_ = t.Encs.TestAddHinter(block.ConsensusInfoV0{})
 	_ = t.Encs.TestAddHinter(block.SuffrageInfoV0{})
-	_ = t.Encs.TestAddHinter(operation.BaseFactSign{})
+	_ = t.Encs.TestAddHinter(base.BaseFactSign{})
 	_ = t.Encs.TestAddHinter(operation.SealHinter)
 	_ = t.Encs.TestAddHinter(operation.KVOperationFact{})
 	_ = t.Encs.TestAddHinter(operation.KVOperation{})
@@ -216,39 +215,26 @@ func (t *BaseTest) CloseStates(states ...*Local) {
 }
 
 func (t *BaseTest) NewVoteproof(
-	stage base.Stage, fact base.Fact, states ...*Local,
+	stage base.Stage, fact base.BallotFact, states ...*Local,
 ) (base.VoteproofV0, error) {
-	factHash := fact.Hash()
-
-	var votes []base.VoteproofNodeFact
+	var votes []base.SignedBallotFact
 
 	for _, state := range states {
-		factSignature, err := state.Node().Privatekey().Sign(
-			util.ConcatBytesSlice(
-				factHash.Bytes(),
-				state.Policy().NetworkID(),
-			),
-		)
+		fs, err := base.NewBaseBallotFactSignFromFact(fact, state.Node().Address(), state.Node().Privatekey(), state.Policy().NetworkID())
 		if err != nil {
 			return base.VoteproofV0{}, err
 		}
 
-		votes = append(votes, base.NewBaseVoteproofNodeFact(
-			state.Node().Address(),
-			valuehash.RandomSHA256(),
-			factHash,
-			factSignature,
-			state.Node().Publickey(),
-		))
+		votes = append(votes, base.NewBaseSignedBallotFact(fact, fs))
 	}
 
 	var height base.Height
 	var round base.Round
 	switch f := fact.(type) {
-	case ballot.ACCEPTFactV0:
+	case base.ACCEPTBallotFact:
 		height = f.Height()
 		round = f.Round()
-	case ballot.INITFactV0:
+	case base.INITBallotFact:
 		height = f.Height()
 		round = f.Round()
 	}
@@ -262,7 +248,7 @@ func (t *BaseTest) NewVoteproof(
 		false,
 		stage,
 		fact,
-		[]base.Fact{fact},
+		[]base.BallotFact{fact},
 		votes,
 		localtime.UTCNow(),
 	)
@@ -285,28 +271,25 @@ func (t *BaseTest) Suffrage(proposerState *Local, states ...*Local) base.Suffrag
 	return sf
 }
 
-func (t *BaseTest) NewINITBallot(local *Local, round base.Round, voteproof base.Voteproof) ballot.INITV0 {
-	var ib ballot.INITV0
+func (t *BaseTest) NewINITBallot(local *Local, round base.Round, voteproof base.Voteproof) base.INITBallot {
 	if round == 0 {
-		if b, err := NewINITBallotV0Round0(local.Node(), local.Database()); err != nil {
+		ib, err := NewINITBallotRound0(local.Node().Address(), local.Database(), local.Node().Privatekey(), local.Policy().NetworkID())
+		if err != nil {
 			panic(err)
-		} else {
-			ib = b
 		}
-	} else {
-		if b, err := NewINITBallotV0WithVoteproof(local.Node(), local.Database(), voteproof); err != nil {
-			panic(err)
-		} else {
-			ib = b
-		}
+
+		return ib
 	}
 
-	_ = ib.Sign(local.Node().Privatekey(), local.Policy().NetworkID())
+	ib, err := NewINITBallotWithVoteproof(local.Node().Address(), local.Database(), voteproof, local.Node().Privatekey(), local.Policy().NetworkID())
+	if err != nil {
+		panic(err)
+	}
 
 	return ib
 }
 
-func (t *BaseTest) NewINITBallotFact(local *Local, round base.Round) ballot.INITFactV0 {
+func (t *BaseTest) NewINITBallotFact(local *Local, round base.Round) base.INITBallotFact {
 	var manifest block.Manifest
 	switch l, found, err := local.Database().LastManifest(); {
 	case err != nil:
@@ -317,26 +300,28 @@ func (t *BaseTest) NewINITBallotFact(local *Local, round base.Round) ballot.INIT
 		manifest = l
 	}
 
-	return ballot.NewINITFactV0(
+	return ballot.NewINITFact(
 		manifest.Height()+1,
 		round,
 		manifest.Hash(),
 	)
 }
 
-func (t *BaseTest) NewACCEPTBallot(local *Local, round base.Round, proposal, newBlock valuehash.Hash, voteproof base.Voteproof) ballot.ACCEPTV0 {
+func (t *BaseTest) NewACCEPTBallot(local *Local, round base.Round, proposal, newBlock valuehash.Hash, voteproof base.Voteproof) base.ACCEPTBallot {
 	manifest := t.LastManifest(local.Database())
 
-	ab := ballot.NewACCEPTV0(
+	ab, err := ballot.NewACCEPT(
+		ballot.NewACCEPTFact(
+			manifest.Height()+1,
+			round,
+			proposal,
+			newBlock,
+		),
 		local.Node().Address(),
-		manifest.Height()+1,
-		round,
-		proposal,
-		newBlock,
 		voteproof,
+		local.Node().Privatekey(), local.Policy().NetworkID(),
 	)
-
-	if err := ab.Sign(local.Node().Privatekey(), local.Policy().NetworkID()); err != nil {
+	if err != nil {
 		panic(err)
 	}
 
@@ -370,12 +355,24 @@ func (t *BaseTest) NewOperationSeal(local *Local, n uint) (operation.Seal, []ope
 	return sl, ops
 }
 
-func (t *BaseTest) NewProposal(local *Local, round base.Round, seals []valuehash.Hash, voteproof base.Voteproof) ballot.Proposal {
-	pr, err := NewProposalV0(local.Database(), local.Node().Address(), round, seals, voteproof)
-	if err != nil {
+func (t *BaseTest) NewProposal(local *Local, round base.Round, seals []valuehash.Hash, voteproof base.Voteproof) base.Proposal {
+	var manifest block.Manifest
+	switch l, found, err := local.Database().LastManifest(); {
+	case err != nil:
 		panic(err)
+	case !found:
+		panic(util.NotFoundError.Errorf("last manifest not found for NewProposalV0"))
+	default:
+		manifest = l
 	}
-	if err := SignSeal(&pr, local); err != nil {
+
+	pr, err := ballot.NewProposal(
+		ballot.NewProposalFact(manifest.Height()+1, round, local.Node().Address(), seals),
+		local.Node().Address(),
+		voteproof,
+		local.Node().Privatekey(), local.Policy().NetworkID(),
+	)
+	if err != nil {
 		panic(err)
 	}
 
@@ -416,27 +413,45 @@ func (t *BaseTest) CompareManifest(a, b block.Manifest) {
 	}
 }
 
-func (t *BaseTest) CompareProposal(a, b ballot.Proposal) {
-	t.Equal(a.Node(), b.Node())
-	t.Equal(a.Signature(), b.Signature())
-	t.Equal(a.Height(), b.Height())
-	t.Equal(a.Round(), b.Round())
-	t.True(localtime.Equal(a.SignedAt(), b.SignedAt()))
-	t.True(a.Signer().Equal(b.Signer()))
-	t.True(a.Hash().Equal(b.Hash()))
-	t.True(a.BodyHash().Equal(b.BodyHash()))
-	t.Equal(a.FactSignature(), b.FactSignature())
-	t.True(a.Fact().Hash().Equal(b.Fact().Hash()))
+func (t *BaseTest) CompareProposal(a, b base.Proposal) {
+	af := a.Fact()
+	bf := b.Fact()
+	afs := a.FactSign()
+	bfs := b.FactSign()
 
-	av := a.Voteproof()
-	bv := b.Voteproof()
+	t.Equal(af.Height(), bf.Height())
+	t.Equal(af.Round(), bf.Round())
+	t.True(af.Hash().Equal(bf.Hash()))
+	t.True(af.Hash().Equal(bf.Hash()))
+	t.Equal(afs.Node(), bfs.Node())
+	t.True(localtime.Equal(afs.SignedAt(), bfs.SignedAt()))
+	t.True(afs.Signer().Equal(bfs.Signer()))
+	t.Equal(afs.Signature(), bfs.Signature())
+	t.Equal(afs.Signature(), bfs.Signature())
+	t.True(a.BodyHash().Equal(b.BodyHash()))
+
+	av := a.BaseVoteproof()
+	bv := b.BaseVoteproof()
 	if av == nil {
 		t.Nil(bv)
 	} else {
 		t.NotNil(bv)
 
-		t.CompareVoteproof(a.Voteproof(), b.Voteproof())
+		t.CompareVoteproof(av, bv)
 	}
+
+	as := af.Seals()
+	bs := bf.Seals()
+	for i := range as {
+		t.True(as[i].Equal(bs[i]))
+	}
+}
+
+func (t *BaseTest) CompareProposalFact(a, b base.ProposalFact) {
+	t.Equal(a.Height(), b.Height())
+	t.Equal(a.Round(), b.Round())
+	t.True(a.Hash().Equal(b.Hash()))
+	t.True(a.Hash().Equal(b.Hash()))
 
 	as := a.Seals()
 	bs := b.Seals()
@@ -469,9 +484,9 @@ func (t *BaseTest) CompareVoteproof(a, b base.Voteproof) {
 	av := a.Votes()
 	bv := b.Votes()
 	for i := range av {
-		t.True(av[i].Fact().Equal(bv[i].Fact()))
-		t.True(av[i].Signature().Equal(bv[i].Signature()))
-		t.True(av[i].Signer().Equal(bv[i].Signer()))
+		t.True(av[i].Fact().Hash().Equal(bv[i].Fact().Hash()))
+		t.True(av[i].FactSign().Signature().Equal(bv[i].FactSign().Signature()))
+		t.True(av[i].FactSign().Signer().Equal(bv[i].FactSign().Signer()))
 	}
 }
 

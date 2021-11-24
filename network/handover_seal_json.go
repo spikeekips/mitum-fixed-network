@@ -15,10 +15,8 @@ type HandoverSealV0JSONPack struct {
 }
 
 func (sl HandoverSealV0) MarshalJSON() ([]byte, error) {
-	b := sl.BaseSeal.JSONPacker()
-
 	return jsonenc.Marshal(HandoverSealV0JSONPack{
-		BaseSealJSONPack: &b,
+		BaseSealJSONPack: sl.BaseSeal.JSONPacker(),
 		AD:               sl.ad,
 		CI:               sl.ci,
 	})

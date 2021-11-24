@@ -14,6 +14,7 @@ import (
 
 	"github.com/pkg/errors"
 	"github.com/spikeekips/mitum/base"
+	"github.com/spikeekips/mitum/base/ballot"
 	"github.com/spikeekips/mitum/base/block"
 	"github.com/spikeekips/mitum/base/key"
 	"github.com/spikeekips/mitum/base/node"
@@ -55,6 +56,11 @@ func (t *testQuicServer) SetupTest() {
 	_ = t.encs.TestAddHinter(network.HTTPConnInfo{})
 	_ = t.encs.TestAddHinter(network.PingHandoverSealV0Hinter)
 	_ = t.encs.TestAddHinter(network.EndHandoverSealV0Hinter)
+	_ = t.encs.TestAddHinter(base.BaseSignedBallotFact{})
+	_ = t.encs.TestAddHinter(base.BaseBallotFactSign{})
+	_ = t.encs.TestAddHinter(ballot.ProposalFactHinter)
+	_ = t.encs.TestAddHinter(ballot.ProposalHinter)
+	_ = t.encs.TestAddHinter(base.DummyVoteproof{})
 
 	port, err := util.FreePort("udp")
 	t.NoError(err)
@@ -230,6 +236,72 @@ func (t *testQuicServer) TestGetSeals() {
 		for _, h := range hs[:2] {
 			t.True(seals[h.String()].Hash().Equal(sm[h.String()].Hash()))
 		}
+	}
+}
+
+func (t *testQuicServer) TestGetProposal() {
+	qn := t.readyServer()
+	defer qn.Stop()
+
+	hashes := make([]valuehash.Hash, 4)
+	proposals := map[string]base.Proposal{}
+
+	for i := 0; i < 4; i++ {
+		fact := ballot.NewProposalFact(
+			base.Height(33),
+			base.Round(0),
+			base.RandomStringAddress(),
+			[]valuehash.Hash{valuehash.RandomSHA256(), valuehash.RandomSHA256()},
+		)
+		bvp := base.NewDummyVoteproof(
+			fact.Height(),
+			fact.Round(),
+			base.StageINIT,
+			base.VoteResultMajority,
+		)
+
+		pr, err := ballot.NewProposal(fact, fact.Proposer(), bvp, key.MustNewBTCPrivatekey(), nil)
+		t.NoError(err)
+
+		proposals[fact.Hash().String()] = pr
+		hashes[i] = fact.Hash()
+	}
+
+	qn.SetGetProposalHandler(func(h valuehash.Hash) (base.Proposal, error) {
+		pr, found := proposals[h.String()]
+		if !found {
+			return nil, nil
+		}
+
+		return pr, nil
+	})
+
+	qc, err := NewChannel(t.connInfo, 2, nil, t.encs, t.enc)
+	t.NoError(err)
+
+	{ // normal
+		h := hashes[0]
+		pr, err := qc.Proposal(context.TODO(), h)
+		t.NoError(err)
+		t.NoError(pr.IsValid(nil))
+
+		t.True(h.Equal(pr.Fact().Hash()))
+
+		asfs := proposals[pr.Fact().Hash().String()]
+
+		afact := asfs.Fact()
+		afs := asfs.FactSign()
+		bfact := pr.Fact()
+		bfs := pr.FactSign()
+
+		t.Equal(bfact.Stage(), base.StageProposal)
+		t.True(afact.Hash().Equal(bfact.Hash()))
+		t.True(afs.Signer().Equal(bfs.Signer()))
+	}
+
+	{ // unknown
+		_, err := qc.Proposal(context.TODO(), valuehash.RandomSHA256())
+		t.True(errors.Is(err, util.NotFoundError))
 	}
 }
 

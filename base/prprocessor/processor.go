@@ -4,7 +4,6 @@ import (
 	"context"
 
 	"github.com/spikeekips/mitum/base"
-	"github.com/spikeekips/mitum/base/ballot"
 	"github.com/spikeekips/mitum/base/block"
 )
 
@@ -46,7 +45,8 @@ func (o State) String() string {
 
 type Processor interface {
 	State() State
-	Proposal() ballot.Proposal
+	Fact() base.ProposalFact
+	SignedFact() base.SignedBallotFact
 	SetACCEPTVoteproof(base.Voteproof /* ACCEPT Voteproof */) error
 	Prepare(context.Context) (block.Block, error)
 	Save(context.Context) error

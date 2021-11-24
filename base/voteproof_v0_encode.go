@@ -33,7 +33,7 @@ func (vp *VoteproofV0) unpack( // nolint
 	isClosed bool,
 ) error {
 	if bMajority != nil {
-		m, err := DecodeFact(bMajority, enc)
+		m, err := DecodeBallotFact(bMajority, enc)
 		if err != nil {
 			return err
 		}
@@ -53,9 +53,9 @@ func (vp *VoteproofV0) unpack( // nolint
 	if err != nil {
 		return err
 	}
-	facts := make([]Fact, len(hfacts))
+	facts := make([]BallotFact, len(hfacts))
 	for i := range hfacts {
-		j, ok := hfacts[i].(Fact)
+		j, ok := hfacts[i].(BallotFact)
 		if !ok {
 			return util.WrongTypeError.Errorf("expected Fact, not %T", hfacts[i])
 		}
@@ -66,11 +66,11 @@ func (vp *VoteproofV0) unpack( // nolint
 	if err != nil {
 		return err
 	}
-	votes := make([]VoteproofNodeFact, len(hvotes))
+	votes := make([]SignedBallotFact, len(hvotes))
 	for i := range hvotes {
-		j, ok := hvotes[i].(VoteproofNodeFact)
+		j, ok := hvotes[i].(SignedBallotFact)
 		if !ok {
-			return util.WrongTypeError.Errorf("expected VoteproofNodeFact, not %T", hvotes[i])
+			return util.WrongTypeError.Errorf("expected SignedBallotFact, not %T", hvotes[i])
 		}
 		votes[i] = j
 	}

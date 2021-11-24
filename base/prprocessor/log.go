@@ -9,8 +9,8 @@ func LogEventProcessor(pr Processor, key string, e *zerolog.Event) *zerolog.Even
 
 	return e.Dict(key, zerolog.Dict().
 		Stringer("state", pr.State()).
-		Int64("height", pr.Proposal().Height().Int64()).
-		Uint64("round", pr.Proposal().Round().Uint64()).
-		Stringer("proposal", pr.Proposal().Hash()),
+		Int64("height", pr.Fact().Height().Int64()).
+		Uint64("round", pr.Fact().Round().Uint64()).
+		Stringer("proposal", pr.Fact().Hash()),
 	)
 }

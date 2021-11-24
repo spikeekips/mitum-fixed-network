@@ -6,7 +6,6 @@ import (
 	"github.com/pkg/errors"
 	"github.com/rs/zerolog"
 	"github.com/spikeekips/mitum/base"
-	"github.com/spikeekips/mitum/base/ballot"
 	"github.com/spikeekips/mitum/base/block"
 	"github.com/spikeekips/mitum/isaac"
 	"github.com/spikeekips/mitum/network"
@@ -137,36 +136,36 @@ func (vc *VoteproofChecker) CheckACCEPTVoteproofProposal() (bool, error) {
 		return true, nil
 	}
 
-	fact := vc.voteproof.Majority().(ballot.ACCEPTFact)
-	if found, err := vc.database.HasSeal(fact.Proposal()); err != nil {
+	fact := vc.voteproof.Majority().(base.ACCEPTBallotFact)
+	if _, found, err := vc.database.Proposal(fact.Proposal()); err != nil {
 		return false, errors.Wrap(err, "failed to check proposal of accept voteproof")
 	} else if found {
 		return true, nil
 	}
 
-	var proposal ballot.Proposal
+	var proposal base.Proposal
 	for i := range vc.voteproof.Votes() {
 		f := vc.voteproof.Votes()[i]
-		if !f.Fact().Equal(fact.Hash()) {
+		if !f.Fact().Hash().Equal(fact.Hash()) {
 			continue
 		}
 
-		if f.Node().Equal(vc.nodepool.LocalNode().Address()) {
+		if f.FactSign().Node().Equal(vc.nodepool.LocalNode().Address()) {
 			continue
 		}
 
-		node, ch, found := vc.nodepool.Node(f.Node())
+		node, ch, found := vc.nodepool.Node(f.FactSign().Node())
 		if !found {
-			vc.Log().Debug().Stringer("target_node", f.Node()).Msg("unknown node found in voteproof")
+			vc.Log().Debug().Stringer("target_node", f.FactSign().Node()).Msg("unknown node found in voteproof")
 
 			continue
 		} else if ch == nil {
-			vc.Log().Debug().Stringer("target_node", f.Node()).Msg("node is dead")
+			vc.Log().Debug().Stringer("target_node", f.FactSign().Node()).Msg("node is dead")
 
 			continue
 		}
 
-		pr, err := isaac.RequestProposal(context.Background(), ch, fact.Proposal())
+		pr, err := ch.Proposal(context.Background(), fact.Proposal())
 		if err != nil {
 			return false, errors.Wrapf(err, "failed to find proposal from accept voteproof from %q", node.Address())
 		}
@@ -179,7 +178,10 @@ func (vc *VoteproofChecker) CheckACCEPTVoteproofProposal() (bool, error) {
 		return false, errors.Errorf("failed to find proposal from accept voteproof")
 	}
 
-	pvc := isaac.NewProposalValidationChecker(vc.database, vc.suffrage, vc.nodepool, proposal, nil)
+	pvc, err := isaac.NewProposalValidationChecker(vc.database, vc.suffrage, vc.nodepool, proposal, nil)
+	if err != nil {
+		return false, err
+	}
 	checkers := []util.CheckerFunc{
 		pvc.IsKnown,
 		pvc.CheckSigning,
@@ -200,7 +202,7 @@ func (vc *VoteproofChecker) CheckACCEPTVoteproofProposal() (bool, error) {
 
 func CheckBlockWithINITVoteproof(db storage.Database, voteproof base.Voteproof) error {
 	// check init ballot fact.PreviousBlock with local block
-	fact, ok := voteproof.Majority().(ballot.INITFact)
+	fact, ok := voteproof.Majority().(base.INITBallotFact)
 	if !ok {
 		return errors.Errorf("needs INITTBallotFact: fact=%T", voteproof.Majority())
 	}

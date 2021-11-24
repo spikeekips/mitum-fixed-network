@@ -3,6 +3,7 @@ package operation
 import (
 	"testing"
 
+	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/base/key"
 	"github.com/spikeekips/mitum/util"
 	"github.com/spikeekips/mitum/util/localtime"
@@ -35,7 +36,7 @@ func (t *testOperation) TestAddFactSign() {
 		sig, err := priv.Sign(util.ConcatBytesSlice(op.Fact().Hash().Bytes(), networkID))
 		t.NoError(err)
 
-		fs := NewBaseFactSign(priv.Publickey(), sig)
+		fs := base.NewBaseFactSign(priv.Publickey(), sig)
 
 		nop, err := bo.AddFactSigns(fs)
 		t.NoError(err)
@@ -50,7 +51,7 @@ func (t *testOperation) TestAddFactSign() {
 	sig, err := privs[0].Sign(util.ConcatBytesSlice(op.Fact().Hash().Bytes(), networkID))
 	t.NoError(err)
 
-	fs := NewBaseFactSign(privs[0].Publickey(), sig)
+	fs := base.NewBaseFactSign(privs[0].Publickey(), sig)
 
 	nop, err := bo.AddFactSigns(fs)
 	t.NoError(err)
@@ -71,7 +72,7 @@ func (t *testOperation) TestLastSignedAt() {
 	op, err := NewKVOperation(t.pk, token, util.UUID().String(), util.UUID().Bytes(), networkID)
 	t.NoError(err)
 
-	var lastfs FactSign
+	var lastfs base.FactSign
 	var bo BaseOperation
 	for i := 0; i < 3; i++ {
 		pk := key.MustNewBTCPrivatekey()
@@ -79,7 +80,7 @@ func (t *testOperation) TestLastSignedAt() {
 		sig, err := pk.Sign(util.ConcatBytesSlice(op.Fact().Hash().Bytes(), networkID))
 		t.NoError(err)
 
-		fs := NewBaseFactSign(pk.Publickey(), sig)
+		fs := base.NewBaseFactSign(pk.Publickey(), sig)
 		lastfs = fs
 
 		nop, err := op.AddFactSigns(fs)

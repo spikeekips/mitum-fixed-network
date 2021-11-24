@@ -7,7 +7,6 @@ import (
 	"github.com/pkg/errors"
 	"github.com/rs/zerolog"
 	"github.com/spikeekips/mitum/base"
-	"github.com/spikeekips/mitum/base/ballot"
 	"github.com/spikeekips/mitum/util/logging"
 )
 
@@ -18,7 +17,7 @@ type Ballotbox struct {
 	vrs           *sync.Map
 	suffragesFunc func() []base.Address
 	thresholdFunc func() base.Threshold
-	latestBallot  ballot.Ballot
+	latestBallot  base.Ballot
 }
 
 func NewBallotbox(suffragesFunc func() []base.Address, thresholdFunc func() base.Threshold) *Ballotbox {
@@ -34,7 +33,7 @@ func NewBallotbox(suffragesFunc func() []base.Address, thresholdFunc func() base
 
 // Vote receives Ballot and returns VoteRecords, which has VoteRecords.Result()
 // and VoteRecords.Majority().
-func (bb *Ballotbox) Vote(blt ballot.Ballot) (base.Voteproof, error) {
+func (bb *Ballotbox) Vote(blt base.Ballot) (base.Voteproof, error) {
 	if err := bb.canVote(blt); err != nil {
 		return nil, err
 	}
@@ -101,57 +100,62 @@ func (bb *Ballotbox) Clean(height base.Height) error {
 	return nil
 }
 
-func (bb *Ballotbox) LatestBallot() ballot.Ballot {
+func (bb *Ballotbox) LatestBallot() base.Ballot {
 	bb.RLock()
 	defer bb.RUnlock()
 
 	return bb.latestBallot
 }
 
-func (bb *Ballotbox) loadVoteRecords(blt ballot.Ballot, ifNotCreate bool) *VoteRecords {
+func (bb *Ballotbox) loadVoteRecords(blt base.Ballot, ifNotCreate bool) *VoteRecords {
 	bb.Lock()
 	defer bb.Unlock()
 
-	switch l := bb.latestBallot; {
-	case l == nil:
+	fact := blt.RawFact()
+
+	var lfact base.BallotFact
+	if bb.latestBallot != nil {
+		lfact = bb.latestBallot.RawFact()
+	}
+
+	switch {
+	case lfact == nil:
 		bb.latestBallot = blt
-	case blt.Height() > l.Height():
+	case fact.Height() > lfact.Height():
 		bb.latestBallot = blt
-	case blt.Height() == l.Height() && blt.Round() > l.Round():
+	case fact.Height() == lfact.Height() && fact.Round() > lfact.Round():
 		bb.latestBallot = blt
-	case blt.Height() == l.Height() && blt.Round() == l.Round() && blt.Stage().CanVote():
-		if blt.Stage() > bb.latestBallot.Stage() {
-			if _, ok := blt.(base.Voteproofer); ok {
-				bb.latestBallot = blt
-			}
+	case fact.Height() == lfact.Height() && fact.Round() == lfact.Round() && fact.Stage().CanVote():
+		if fact.Stage() > bb.latestBallot.RawFact().Stage() {
+			bb.latestBallot = blt
 		}
 	}
 
-	key := bb.vrsKey(blt)
+	key := bb.vrsKey(fact)
 
 	var vrs *VoteRecords
 	if i, found := bb.vrs.Load(key); found {
 		vrs = i.(*VoteRecords)
 	} else if ifNotCreate {
-		vrs = NewVoteRecords(blt, bb.suffragesFunc(), bb.thresholdFunc())
+		vrs = NewVoteRecords(fact.Height(), fact.Round(), fact.Stage(), bb.suffragesFunc(), bb.thresholdFunc())
 		bb.vrs.Store(key, vrs)
 	}
 
 	return vrs
 }
 
-func (*Ballotbox) vrsKey(blt ballot.Ballot) string {
+func (*Ballotbox) vrsKey(blt base.BallotFact) string {
 	return fmt.Sprintf("%d-%d-%d", blt.Height(), blt.Round(), blt.Stage())
 }
 
-func (bb *Ballotbox) canVote(blt ballot.Ballot) error {
-	if !blt.Stage().CanVote() {
-		return errors.Errorf("this ballot is not for voting; stage=%s", blt.Stage())
+func (bb *Ballotbox) canVote(blt base.Ballot) error {
+	if !blt.RawFact().Stage().CanVote() {
+		return errors.Errorf("this ballot is not for voting; stage=%s", blt.RawFact().Stage())
 	}
 
 	var found bool
 	for _, a := range bb.suffragesFunc() {
-		if a.Equal(blt.Node()) {
+		if a.Equal(blt.FactSign().Node()) {
 			found = true
 			break
 		}

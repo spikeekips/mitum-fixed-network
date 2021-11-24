@@ -6,7 +6,6 @@ import (
 	"github.com/pkg/errors"
 	"github.com/rs/zerolog"
 	"github.com/spikeekips/mitum/base"
-	"github.com/spikeekips/mitum/base/ballot"
 	"github.com/spikeekips/mitum/base/block"
 	"github.com/spikeekips/mitum/base/prprocessor"
 	"github.com/spikeekips/mitum/isaac"
@@ -29,14 +28,14 @@ func NewErrorProcessorNewFunc(
 	whenPreparePoints []config.ErrorPoint,
 	whenSavePoints []config.ErrorPoint,
 ) prprocessor.ProcessorNewFunc {
-	return func(proposal ballot.Proposal, initVoteproof base.Voteproof) (prprocessor.Processor, error) {
+	return func(sfs base.SignedBallotFact, initVoteproof base.Voteproof) (prprocessor.Processor, error) {
 		pp, err := isaac.NewDefaultProcessor(
 			db,
 			blockData,
 			nodepool,
 			suffrage,
 			oprHintset,
-			proposal,
+			sfs,
 			initVoteproof,
 		)
 		if err != nil {
@@ -62,9 +61,9 @@ func NewErrorProposalProcessor(
 ) *ErrorProposalProcessor {
 	d.Logging = logging.NewLogging(func(c zerolog.Context) zerolog.Context {
 		return c.Str("module", "error-proposal-processor").
-			Int64("height", d.Proposal().Height().Int64()).
-			Uint64("round", d.Proposal().Round().Uint64()).
-			Stringer("proposal", d.Proposal().Hash())
+			Int64("height", d.Fact().Height().Int64()).
+			Uint64("round", d.Fact().Round().Uint64()).
+			Stringer("proposal", d.Fact().Hash())
 	})
 
 	return &ErrorProposalProcessor{
@@ -82,9 +81,9 @@ func (pp *ErrorProposalProcessor) Prepare(ctx context.Context) (block.Block, err
 			// NOTE return fake block.Block
 			return block.NewBlockV0(
 				pp.SuffrageInfo(),
-				pp.Proposal().Height(),
-				pp.Proposal().Round(),
-				pp.Proposal().Hash(),
+				pp.Fact().Height(),
+				pp.Fact().Round(),
+				pp.Fact().Hash(),
 				pp.BaseManifest().Hash(),
 				valuehash.RandomSHA256(),
 				valuehash.RandomSHA256(),
@@ -93,8 +92,8 @@ func (pp *ErrorProposalProcessor) Prepare(ctx context.Context) (block.Block, err
 		}
 		return nil, errors.Errorf(
 			"contest-designed-error: prepare-occurring-error: height=%d round=%d",
-			pp.Proposal().Height(),
-			pp.Proposal().Round(),
+			pp.Fact().Height(),
+			pp.Fact().Round(),
 		)
 	}
 
@@ -107,8 +106,8 @@ func (pp *ErrorProposalProcessor) Save(ctx context.Context) error {
 
 		return errors.Errorf(
 			"contest-designed-error: save-occurring-error: height=%d round=%d",
-			pp.Proposal().Height(),
-			pp.Proposal().Round(),
+			pp.Fact().Height(),
+			pp.Fact().Round(),
 		)
 	}
 
@@ -120,7 +119,7 @@ func (pp *ErrorProposalProcessor) findPoint(points []config.ErrorPoint) (config.
 	var point config.ErrorPoint
 	for i := range points {
 		p := points[i]
-		if p.Height == pp.Proposal().Height() && p.Round == pp.Proposal().Round() {
+		if p.Height == pp.Fact().Height() && p.Round == pp.Fact().Round() {
 			found = true
 			point = p
 

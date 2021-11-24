@@ -5,7 +5,6 @@ import (
 
 	"github.com/rs/zerolog"
 	"github.com/spikeekips/mitum/base"
-	"github.com/spikeekips/mitum/base/ballot"
 	"github.com/spikeekips/mitum/base/operation"
 	"github.com/spikeekips/mitum/base/state"
 	"github.com/spikeekips/mitum/util/hint"
@@ -35,7 +34,7 @@ type ConsensusInfo interface {
 	INITVoteproof() base.Voteproof
 	ACCEPTVoteproof() base.Voteproof
 	SuffrageInfo() SuffrageInfo
-	Proposal() ballot.Proposal
+	Proposal() base.SignedBallotFact
 }
 
 type Block interface {
@@ -57,7 +56,7 @@ type BlockUpdater interface {
 	SetOperations([]operation.Operation) BlockUpdater
 	SetStatesTree(tree.FixedTree) BlockUpdater
 	SetStates([]state.State) BlockUpdater
-	SetProposal(ballot.Proposal) BlockUpdater
+	SetProposal(base.SignedBallotFact) BlockUpdater
 	SetSuffrageInfo(SuffrageInfo) BlockUpdater
 }
 

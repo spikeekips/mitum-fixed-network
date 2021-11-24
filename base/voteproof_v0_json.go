@@ -46,17 +46,17 @@ func (vv VoteproofV0BallotJSONUnpacker) Address() []byte {
 
 type VoteproofV0PackJSON struct {
 	jsonenc.HintedHead
-	HT Height              `json:"height"`
-	RD Round               `json:"round"`
-	SS []Address           `json:"suffrages"`
-	TH ThresholdRatio      `json:"threshold"`
-	RS VoteResultType      `json:"result"`
-	ST Stage               `json:"stage"`
-	MJ Fact                `json:"majority"`
-	FS []Fact              `json:"facts"`
-	VS []VoteproofNodeFact `json:"votes"`
-	FA localtime.Time      `json:"finished_at"`
-	CL string              `json:"is_closed"`
+	HT Height             `json:"height"`
+	RD Round              `json:"round"`
+	SS []Address          `json:"suffrages"`
+	TH ThresholdRatio     `json:"threshold"`
+	RS VoteResultType     `json:"result"`
+	ST Stage              `json:"stage"`
+	MJ BallotFact         `json:"majority"`
+	FS []BallotFact       `json:"facts"`
+	VS []SignedBallotFact `json:"votes"`
+	FA localtime.Time     `json:"finished_at"`
+	CL string             `json:"is_closed"`
 }
 
 func (vp VoteproofV0) MarshalJSON() ([]byte, error) {

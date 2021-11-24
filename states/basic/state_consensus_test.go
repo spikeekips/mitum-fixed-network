@@ -8,7 +8,6 @@ import (
 
 	"github.com/pkg/errors"
 	"github.com/spikeekips/mitum/base"
-	"github.com/spikeekips/mitum/base/ballot"
 	"github.com/spikeekips/mitum/base/block"
 	"github.com/spikeekips/mitum/base/prprocessor"
 	"github.com/spikeekips/mitum/base/seal"
@@ -84,7 +83,7 @@ func (t *testStateConsensus) TestEnterAndNilLastINITVoteproof() {
 	st.SetLastVoteproofFuncs(func() base.Voteproof { return nil }, func() base.Voteproof { return nil }, nil)
 
 	ib := t.NewINITBallot(t.local, base.Round(0), nil)
-	initFact := ib.INITFactV0
+	initFact := ib.Fact()
 
 	vp, err := t.NewVoteproof(base.StageINIT, initFact, t.local, t.remote)
 	t.NoError(err)
@@ -98,7 +97,7 @@ func (t *testStateConsensus) TestEnterWithWrongVoteproof() {
 	defer done()
 
 	ib := t.NewINITBallot(t.local, base.Round(0), nil)
-	initFact := ib.INITFactV0
+	initFact := ib.Fact()
 
 	vp, err := t.NewVoteproof(base.StageACCEPT, initFact, t.local, t.remote)
 	t.NoError(err)
@@ -120,7 +119,7 @@ func (t *testStateConsensus) TestExit() {
 	})
 
 	ib := t.NewINITBallot(t.local, base.Round(0), nil)
-	initFact := ib.INITFactV0
+	initFact := ib.Fact()
 
 	vp, err := t.NewVoteproof(base.StageINIT, initFact, t.local, t.remote)
 	t.NoError(err)
@@ -141,7 +140,7 @@ func (t *testStateConsensus) TestExit() {
 // - broadcasts proposal
 func (t *testStateConsensus) TestBroadcastProposalWithINITVoteproof() {
 	ib := t.NewINITBallot(t.local, base.Round(0), nil)
-	initFact := ib.INITFactV0
+	initFact := ib.Fact()
 
 	vp, err := t.NewVoteproof(base.StageINIT, initFact, t.local, t.remote)
 	t.NoError(err)
@@ -159,7 +158,7 @@ func (t *testStateConsensus) TestBroadcastProposalWithINITVoteproof() {
 
 	sealch := make(chan seal.Seal, 1)
 	st.SetBroadcastSealsFunc(func(sl seal.Seal, toLocal bool) error {
-		if _, ok := sl.(ballot.Proposal); !ok {
+		if _, ok := sl.(base.Proposal); !ok {
 			return nil
 		}
 
@@ -177,13 +176,13 @@ func (t *testStateConsensus) TestBroadcastProposalWithINITVoteproof() {
 	case <-time.After(time.Second * 3):
 		t.NoError(errors.Errorf("timeout to wait proposal"))
 	case sl := <-sealch:
-		t.Implements((*ballot.Proposal)(nil), sl)
+		t.Implements((*base.Proposal)(nil), sl)
 
-		bb, ok := sl.(ballot.Proposal)
+		bb, ok := sl.(base.Proposal)
 		t.True(ok)
 
-		t.Equal(vp.Height(), bb.Height())
-		t.Equal(vp.Round(), bb.Round())
+		t.Equal(vp.Height(), bb.Fact().Height())
+		t.Equal(vp.Round(), bb.Fact().Round())
 	}
 }
 
@@ -193,7 +192,7 @@ func (t *testStateConsensus) TestBroadcastProposalWithINITVoteproof() {
 // - if proper proposal in local, process it.
 func (t *testStateConsensus) TestFindProposal() {
 	ib := t.NewINITBallot(t.local, base.Round(0), nil)
-	initFact := ib.INITFactV0
+	initFact := ib.Fact()
 
 	vp, err := t.NewVoteproof(base.StageINIT, initFact, t.local, t.remote)
 	t.NoError(err)
@@ -203,7 +202,7 @@ func (t *testStateConsensus) TestFindProposal() {
 	// NOTE save proposal in local
 	t.NoError(t.local.Database().NewProposal(pr))
 
-	newblock, _ := block.NewTestBlockV0(vp.Height(), vp.Round(), pr.Hash(), valuehash.RandomSHA256())
+	newblock, _ := block.NewTestBlockV0(vp.Height(), vp.Round(), pr.Fact().Hash(), valuehash.RandomSHA256())
 
 	dp := &prprocessor.DummyProcessor{S: prprocessor.BeforePrepared}
 	dp.PF = func(ctx context.Context) (block.Block, error) {
@@ -216,7 +215,7 @@ func (t *testStateConsensus) TestFindProposal() {
 
 	sealch := make(chan seal.Seal, 1)
 	st.SetBroadcastSealsFunc(func(sl seal.Seal, toLocal bool) error {
-		if _, ok := sl.(ballot.ACCEPT); !ok {
+		if _, ok := sl.(base.ACCEPTBallot); !ok {
 			return nil
 		}
 
@@ -234,18 +233,17 @@ func (t *testStateConsensus) TestFindProposal() {
 	case <-time.After(time.Second * 3):
 		t.NoError(errors.Errorf("timeout to wait accept ballot"))
 	case sl := <-sealch:
-		t.Implements((*ballot.ACCEPT)(nil), sl)
+		t.Implements((*base.ACCEPTBallot)(nil), sl)
 
-		bb, ok := sl.(ballot.ACCEPT)
+		bb, ok := sl.(base.ACCEPTBallot)
 		t.True(ok)
 
-		t.Equal(base.StageACCEPT, bb.Stage())
+		t.Equal(base.StageACCEPT, bb.Fact().Stage())
 
-		t.Equal(vp.Height(), bb.Height())
-		t.Equal(vp.Round(), bb.Round())
+		t.Equal(vp.Height(), bb.Fact().Height())
+		t.Equal(vp.Round(), bb.Fact().Round())
 
-		fact := bb.Fact().(ballot.ACCEPTFact)
-		t.True(newblock.Hash().Equal(fact.NewBlock()))
+		t.True(newblock.Hash().Equal(bb.Fact().NewBlock()))
 	}
 }
 
@@ -260,7 +258,7 @@ func (t *testStateConsensus) TestTimeoutWaitingProposal() {
 
 	sealch := make(chan seal.Seal, 1)
 	st.SetBroadcastSealsFunc(func(sl seal.Seal, toLocal bool) error {
-		if _, ok := sl.(ballot.INIT); !ok {
+		if _, ok := sl.(base.INITBallot); !ok {
 			return nil
 		}
 
@@ -270,7 +268,7 @@ func (t *testStateConsensus) TestTimeoutWaitingProposal() {
 	})
 
 	ib := t.NewINITBallot(t.local, base.Round(0), nil)
-	initFact := ib.INITFactV0
+	initFact := ib.Fact()
 
 	vp, err := t.NewVoteproof(base.StageINIT, initFact, t.local, t.remote)
 	t.NoError(err)
@@ -284,23 +282,22 @@ func (t *testStateConsensus) TestTimeoutWaitingProposal() {
 	case <-time.After(time.Second * 3):
 		t.NoError(errors.Errorf("timeout to wait init ballot"))
 	case sl := <-sealch:
-		t.Implements((*ballot.INIT)(nil), sl)
+		t.Implements((*base.INITBallot)(nil), sl)
 
-		bb, ok := sl.(ballot.INIT)
+		bb, ok := sl.(base.INITBallot)
 		t.True(ok)
 
-		t.Equal(base.StageINIT, bb.Stage())
+		t.Equal(base.StageINIT, bb.Fact().Stage())
 
-		t.Equal(vp.Height(), bb.Height())
-		t.Equal(vp.Round()+1, bb.Round())
+		t.Equal(vp.Height(), bb.Fact().Height())
+		t.Equal(vp.Round()+1, bb.Fact().Round())
 
 		previousManifest, found, err := t.local.Database().ManifestByHeight(vp.Height() - 1)
 		t.True(found)
 		t.NoError(err)
 		t.NotNil(previousManifest)
 
-		fact := bb.Fact().(ballot.INITFact)
-		t.True(previousManifest.Hash().Equal(fact.PreviousBlock()))
+		t.True(previousManifest.Hash().Equal(bb.Fact().PreviousBlock()))
 	}
 }
 
@@ -310,7 +307,7 @@ func (t *testStateConsensus) TestTimeoutWaitingProposal() {
 // - state keeps broadcasting accept ballot and proposal
 func (t *testStateConsensus) TestStuckACCEPTVotingKeepBroadcastingACCEPTAndProposal() {
 	ib := t.NewINITBallot(t.local, base.Round(0), nil)
-	initFact := ib.INITFactV0
+	initFact := ib.Fact()
 
 	vp, err := t.NewVoteproof(base.StageINIT, initFact, t.local, t.remote)
 	t.NoError(err)
@@ -350,7 +347,7 @@ end:
 			break end
 		case sl := <-sealch:
 			if !foundACCEPT {
-				if _, ok := sl.(ballot.ACCEPT); !ok {
+				if _, ok := sl.(base.ACCEPTBallot); !ok {
 					continue
 				}
 
@@ -366,7 +363,7 @@ end:
 	for i := range seals {
 		sl := seals[i]
 		switch sl.(type) {
-		case ballot.ACCEPT, ballot.Proposal:
+		case base.ACCEPTBallot, base.Proposal:
 		default:
 			t.NoError(errors.Errorf("unexpected ballot found, %T", sl))
 		}
@@ -375,7 +372,7 @@ end:
 
 func (t *testStateConsensus) TestACCEPTVoteproof() {
 	ib := t.NewINITBallot(t.local, base.Round(0), nil)
-	initFact := ib.INITFactV0
+	initFact := ib.Fact()
 
 	ivp, err := t.NewVoteproof(base.StageINIT, initFact, t.local, t.remote)
 	t.NoError(err)
@@ -385,17 +382,17 @@ func (t *testStateConsensus) TestACCEPTVoteproof() {
 	// NOTE save proposal in local
 	t.NoError(t.local.Database().NewProposal(pr))
 
-	newblock, _ := block.NewTestBlockV0(ivp.Height(), ivp.Round(), pr.Hash(), valuehash.RandomSHA256())
+	newblock, _ := block.NewTestBlockV0(ivp.Height(), ivp.Round(), pr.Fact().Hash(), valuehash.RandomSHA256())
 
 	var avp base.Voteproof
 	{
-		ab := t.NewACCEPTBallot(t.local, ivp.Round(), newblock.Proposal(), newblock.Hash(), nil)
-		fact := ab.ACCEPTFactV0
+		ab := t.NewACCEPTBallot(t.local, ivp.Round(), pr.Fact().Hash(), newblock.Hash(), nil)
+		fact := ab.Fact()
 
 		avp, _ = t.NewVoteproof(base.StageACCEPT, fact, t.local, t.remote)
 	}
 
-	dp := &prprocessor.DummyProcessor{P: pr, S: prprocessor.BeforePrepared}
+	dp := &prprocessor.DummyProcessor{P: pr.SignedFact(), S: prprocessor.BeforePrepared}
 	dp.PF = func(ctx context.Context) (block.Block, error) {
 		return newblock, nil
 	}
@@ -445,7 +442,7 @@ end:
 
 			break end
 		case sl := <-sealch:
-			if _, ok := sl.(ballot.Proposal); ok {
+			if _, ok := sl.(base.Proposal); ok {
 				break end
 			}
 		}
@@ -464,7 +461,7 @@ end:
 
 func (t *testStateConsensus) TestDrawACCEPTVoteproofToNextRound() {
 	ib := t.NewINITBallot(t.local, base.Round(0), nil)
-	initFact := ib.INITFactV0
+	initFact := ib.Fact()
 
 	ivp, err := t.NewVoteproof(base.StageINIT, initFact, t.local, t.remote)
 	t.NoError(err)
@@ -474,7 +471,7 @@ func (t *testStateConsensus) TestDrawACCEPTVoteproofToNextRound() {
 	// NOTE save proposal in local
 	t.NoError(t.local.Database().NewProposal(pr))
 
-	newblock, _ := block.NewTestBlockV0(ivp.Height(), ivp.Round(), pr.Hash(), valuehash.RandomSHA256())
+	newblock, _ := block.NewTestBlockV0(ivp.Height(), ivp.Round(), pr.Fact().Hash(), valuehash.RandomSHA256())
 
 	dp := &prprocessor.DummyProcessor{S: prprocessor.BeforePrepared}
 	dp.PF = func(ctx context.Context) (block.Block, error) {
@@ -515,7 +512,7 @@ end:
 
 			break end
 		case sl := <-sealch:
-			if _, ok := sl.(ballot.Proposal); ok {
+			if _, ok := sl.(base.Proposal); ok {
 				break end
 			}
 		}
@@ -525,8 +522,8 @@ end:
 	{
 		dummyBlock, _ := block.NewTestBlockV0(ivp.Height(), ivp.Round(), valuehash.RandomSHA256(), valuehash.RandomSHA256())
 
-		ab := t.NewACCEPTBallot(t.local, ivp.Round(), dummyBlock.Proposal(), dummyBlock.Hash(), nil)
-		fact := ab.ACCEPTFactV0
+		ab := t.NewACCEPTBallot(t.local, ivp.Round(), valuehash.RandomSHA256(), dummyBlock.Hash(), nil)
+		fact := ab.Fact()
 
 		i, _ := t.NewVoteproof(base.StageINIT, fact, t.local, t.remote)
 		i.SetResult(base.VoteResultDraw)
@@ -547,7 +544,7 @@ end0:
 		case <-ctx.Done():
 			break end0
 		case sl := <-sealch:
-			if _, ok := sl.(ballot.INIT); !ok {
+			if _, ok := sl.(base.INITBallot); !ok {
 				continue
 			}
 
@@ -557,20 +554,20 @@ end0:
 	t.NotEmpty(seals)
 	sl := seals[len(seals)-1]
 
-	t.Implements((*ballot.INIT)(nil), sl)
+	t.Implements((*base.INITBallot)(nil), sl)
 
-	bb, ok := sl.(ballot.INIT)
+	bb, ok := sl.(base.INITBallot)
 	t.True(ok)
 
-	t.Equal(base.StageINIT, bb.Stage())
+	t.Equal(base.StageINIT, bb.Fact().Stage())
 
-	t.Equal(ivp.Height(), bb.Height())
-	t.Equal(ivp.Round()+1, bb.Round())
+	t.Equal(ivp.Height(), bb.Fact().Height())
+	t.Equal(ivp.Round()+1, bb.Fact().Round())
 }
 
 func (t *testStateConsensus) TestFailedSavingBlockMovesToSyncing() {
 	ib := t.NewINITBallot(t.local, base.Round(0), nil)
-	initFact := ib.INITFactV0
+	initFact := ib.Fact()
 
 	ivp, err := t.NewVoteproof(base.StageINIT, initFact, t.local, t.remote)
 	t.NoError(err)
@@ -580,12 +577,12 @@ func (t *testStateConsensus) TestFailedSavingBlockMovesToSyncing() {
 	// NOTE save proposal in local
 	t.NoError(t.local.Database().NewProposal(pr))
 
-	newblock, _ := block.NewTestBlockV0(ivp.Height(), ivp.Round(), pr.Hash(), valuehash.RandomSHA256())
+	newblock, _ := block.NewTestBlockV0(ivp.Height(), ivp.Round(), pr.Fact().Hash(), valuehash.RandomSHA256())
 
 	var avp base.Voteproof
 	{
-		ab := t.NewACCEPTBallot(t.local, ivp.Round(), newblock.Proposal(), newblock.Hash(), nil)
-		fact := ab.ACCEPTFactV0
+		ab := t.NewACCEPTBallot(t.local, ivp.Round(), pr.Fact().Hash(), newblock.Hash(), nil)
+		fact := ab.Fact()
 
 		avp, _ = t.NewVoteproof(base.StageACCEPT, fact, t.local, t.remote)
 	}
@@ -625,7 +622,7 @@ end:
 
 			break end
 		case sl := <-sealch:
-			if _, ok := sl.(ballot.Proposal); ok {
+			if _, ok := sl.(base.Proposal); ok {
 				break end
 			}
 		}
@@ -641,7 +638,7 @@ end:
 
 func (t *testStateConsensus) TestFailedProcessingProposal() {
 	ib := t.NewINITBallot(t.local, base.Round(0), nil)
-	initFact := ib.INITFactV0
+	initFact := ib.Fact()
 
 	ivp, err := t.NewVoteproof(base.StageINIT, initFact, t.local, t.remote)
 	t.NoError(err)
@@ -671,7 +668,7 @@ func (t *testStateConsensus) TestFailedProcessingProposal() {
 	t.NoError(f())
 
 	// NOTE proposal will be broadcasted prior to accept ballot
-	var nib ballot.ACCEPT
+	var nib base.ACCEPTBallot
 
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second*3)
 	defer cancel()
@@ -684,9 +681,9 @@ end:
 
 			break end
 		case sl := <-sealch:
-			if i, ok := sl.(ballot.ACCEPT); !ok {
+			if i, ok := sl.(base.ACCEPTBallot); !ok {
 				continue
-			} else if i.Height() == pr.Height() && i.Round() == pr.Round() {
+			} else if i.Fact().Height() == pr.Fact().Height() && i.Fact().Round() == pr.Fact().Round() {
 				nib = i
 
 				break end
@@ -694,15 +691,15 @@ end:
 		}
 	}
 
-	t.Equal(pr.Height(), nib.Height())
-	t.Equal(pr.Round(), nib.Round())
+	t.Equal(pr.Fact().Height(), nib.Fact().Height())
+	t.Equal(pr.Fact().Round(), nib.Fact().Round())
 
-	t.True(bytes.HasSuffix(nib.Fact().(ballot.ACCEPTFact).NewBlock().Bytes(), BlockPrefixFailedProcessProposal))
+	t.True(bytes.HasSuffix(nib.Fact().NewBlock().Bytes(), BlockPrefixFailedProcessProposal))
 }
 
 func (t *testStateConsensus) TestProcessingProposalFromACCEPTVoterpof() {
 	ib := t.NewINITBallot(t.local, base.Round(0), nil)
-	initFact := ib.INITFactV0
+	initFact := ib.Fact()
 
 	ivp, err := t.NewVoteproof(base.StageINIT, initFact, t.local, t.remote)
 	t.NoError(err)
@@ -712,12 +709,12 @@ func (t *testStateConsensus) TestProcessingProposalFromACCEPTVoterpof() {
 	// NOTE save proposal in local
 	t.NoError(t.local.Database().NewProposal(pr))
 
-	newblock, _ := block.NewTestBlockV0(ivp.Height(), ivp.Round(), pr.Hash(), valuehash.RandomSHA256())
+	newblock, _ := block.NewTestBlockV0(ivp.Height(), ivp.Round(), pr.Fact().Hash(), valuehash.RandomSHA256())
 
 	var avp base.Voteproof
 	{
-		ab := t.NewACCEPTBallot(t.local, ivp.Round(), newblock.Proposal(), newblock.Hash(), nil)
-		fact := ab.ACCEPTFactV0
+		ab := t.NewACCEPTBallot(t.local, ivp.Round(), pr.Fact().Hash(), newblock.Hash(), nil)
+		fact := ab.Fact()
 
 		avp, _ = t.NewVoteproof(base.StageACCEPT, fact, t.local, t.remote)
 	}
@@ -777,7 +774,7 @@ end:
 
 			break end
 		case sl := <-sealch:
-			if _, ok := sl.(ballot.INIT); ok {
+			if _, ok := sl.(base.INITBallot); ok {
 				break end
 			}
 		}
@@ -811,7 +808,7 @@ func (t *testStateConsensus) TestEnterUnderHandover() {
 
 func (t *testStateConsensus) TestBroadcastProposalWithINITVoteproofNotUnderhandover() {
 	ib := t.NewINITBallot(t.local, base.Round(0), nil)
-	initFact := ib.INITFactV0
+	initFact := ib.Fact()
 
 	vp, err := t.NewVoteproof(base.StageINIT, initFact, t.local, t.remote)
 	t.NoError(err)
@@ -836,7 +833,7 @@ func (t *testStateConsensus) TestBroadcastProposalWithINITVoteproofNotUnderhando
 
 	sealch := make(chan seal.Seal, 1)
 	st.SetBroadcastSealsFunc(func(sl seal.Seal, toLocal bool) error {
-		if _, ok := sl.(ballot.Proposal); !ok {
+		if _, ok := sl.(base.Proposal); !ok {
 			return nil
 		}
 

@@ -9,7 +9,6 @@ import (
 
 	"github.com/pkg/errors"
 	"github.com/spikeekips/mitum/base"
-	"github.com/spikeekips/mitum/base/ballot"
 	"github.com/spikeekips/mitum/base/block"
 	"github.com/spikeekips/mitum/base/operation"
 	"github.com/spikeekips/mitum/base/state"
@@ -204,12 +203,12 @@ func (ss *Session) SetSuffrageInfo(suffrageInfo block.SuffrageInfo) error {
 	})
 }
 
-func (ss *Session) SetProposal(proposal ballot.Proposal) error {
+func (ss *Session) SetProposal(sfs base.SignedBallotFact) error {
 	ss.locks[block.BlockDataProposal].Lock()
 	defer ss.locks[block.BlockDataProposal].Unlock()
 
 	return ss.writeAndClose(block.BlockDataProposal, func(w io.Writer) error {
-		return ss.writer.WriteProposal(w, proposal)
+		return ss.writer.WriteProposal(w, sfs)
 	})
 }
 

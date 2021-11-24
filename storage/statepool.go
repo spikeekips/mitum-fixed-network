@@ -32,7 +32,7 @@ type Statepool struct {
 }
 
 func NewStatepool(st Database) (*Statepool, error) {
-	nextHeight := base.Height(0)
+	nextHeight := base.GenesisHeight
 	switch m, found, err := st.LastManifest(); {
 	case err != nil:
 		return nil, err

@@ -25,9 +25,7 @@ func (t *testBlock) TestBlockIsValid() {
 	orig := local.Policy().NetworkID()
 	t.NoError(blk.IsValid(orig))
 
-	n := []byte(util.UUID().String())
-
-	err = blk.IsValid(n)
+	err = blk.IsValid(util.UUID().Bytes())
 	t.True(errors.Is(err, key.SignatureVerificationFailedError)) // with invalid network id
 }
 

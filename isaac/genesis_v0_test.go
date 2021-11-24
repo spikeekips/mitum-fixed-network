@@ -36,13 +36,21 @@ func (t *testGenesisBlockV0) TestNewGenesisBlock() {
 	blk, err := gg.Generate()
 	t.NoError(err)
 
-	t.Equal(base.Height(0), blk.Height())
+	t.Equal(base.GenesisHeight, blk.Height())
 	t.Equal(base.Round(0), blk.Round())
 
-	pr, found, err := t.local.Database().Seal(blk.Proposal())
+	var found bool
+	t.NoError(t.local.Database().Proposals(func(proposal base.Proposal) (bool, error) {
+		if proposal.Fact().Hash().Equal(blk.Proposal()) {
+			found = true
+
+			return false, nil
+		}
+
+		return true, nil
+	}, false))
+
 	t.True(found)
-	t.NoError(err)
-	t.NotNil(pr)
 
 	st, found, err := t.local.Database().State(op.Key())
 	t.NoError(err)

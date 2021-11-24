@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"testing"
 
+	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/base/key"
 	"github.com/spikeekips/mitum/util/encoder"
 	bsonenc "github.com/spikeekips/mitum/util/encoder/bson"
@@ -30,7 +31,7 @@ func (t *testSealEncode) SetupSuite() {
 	_ = t.encs.TestAddHinter(SealHinter)
 	_ = t.encs.TestAddHinter(KVOperation{})
 	_ = t.encs.TestAddHinter(KVOperationFact{})
-	_ = t.encs.TestAddHinter(BaseFactSign{})
+	_ = t.encs.TestAddHinter(base.BaseFactSign{})
 }
 
 func (t *testSealEncode) TestSign() {

@@ -16,7 +16,7 @@ type ProposalMaker struct {
 	local    *node.Local
 	database storage.Database
 	policy   *LocalPolicy
-	proposed ballot.Proposal
+	proposed base.Proposal
 }
 
 func NewProposalMaker(
@@ -85,12 +85,12 @@ func (pm *ProposalMaker) Proposal(
 	height base.Height,
 	round base.Round,
 	voteproof base.Voteproof,
-) (ballot.Proposal, error) {
+) (base.Proposal, error) {
 	pm.Lock()
 	defer pm.Unlock()
 
 	if pm.proposed != nil {
-		if pm.proposed.Height() == height && pm.proposed.Round() == round {
+		if pm.proposed.Fact().Height() == height && pm.proposed.Fact().Round() == round {
 			return pm.proposed, nil
 		}
 	}
@@ -100,14 +100,18 @@ func (pm *ProposalMaker) Proposal(
 		return nil, err
 	}
 
-	pr := ballot.NewProposalV0(
+	pr, err := ballot.NewProposal(
+		ballot.NewProposalFact(
+			height,
+			round,
+			pm.local.Address(),
+			seals,
+		),
 		pm.local.Address(),
-		height,
-		round,
-		seals,
 		voteproof,
+		pm.local.Privatekey(), pm.policy.NetworkID(),
 	)
-	if err := pr.Sign(pm.local.Privatekey(), pm.policy.NetworkID()); err != nil {
+	if err != nil {
 		return nil, err
 	}
 

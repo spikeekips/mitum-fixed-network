@@ -5,7 +5,6 @@ import (
 
 	"github.com/pkg/errors"
 	"github.com/spikeekips/mitum/base"
-	"github.com/spikeekips/mitum/base/ballot"
 	"github.com/spikeekips/mitum/base/operation"
 	"github.com/spikeekips/mitum/base/state"
 	"github.com/spikeekips/mitum/util/hint"
@@ -70,23 +69,14 @@ func (bm BlockV0) IsValid(networkID []byte) error {
 		if err := isvalid.Check([]isvalid.IsValider{bm.ManifestV0}, networkID, false); err != nil {
 			return err
 		}
-	} else {
-		if err := isvalid.Check([]isvalid.IsValider{
-			bm.ManifestV0,
-			bm.ci,
-		}, networkID, false); err != nil {
-			return err
-		}
+	} else if err := isvalid.Check([]isvalid.IsValider{
+		bm.ManifestV0,
+		bm.ci,
+	}, networkID, false); err != nil {
+		return err
 	}
 
-	if bm.operationsHash == nil || bm.operationsHash.IsEmpty() {
-		bm.operationsHash = nil
-	}
-	if bm.statesHash == nil || bm.statesHash.IsEmpty() {
-		bm.statesHash = nil
-	}
-
-	if bm.operationsHash != nil {
+	if bm.operationsHash != nil && !bm.operationsHash.IsEmpty() {
 		if bm.operations == nil || bm.operationsTree.Len() < 1 {
 			return errors.Errorf("Operations should not be empty")
 		}
@@ -96,7 +86,7 @@ func (bm BlockV0) IsValid(networkID []byte) error {
 		}
 	}
 
-	if bm.statesHash != nil {
+	if bm.statesHash != nil && !bm.statesHash.IsEmpty() {
 		if bm.states == nil || bm.statesTree.Len() < 1 {
 			return errors.Errorf("States should not be empty")
 		}
@@ -104,6 +94,10 @@ func (bm BlockV0) IsValid(networkID []byte) error {
 		if !bm.statesHash.Equal(valuehash.NewBytes(bm.statesTree.Root())) {
 			return errors.Errorf("Block.States() hash does not match with it's Root()")
 		}
+	}
+
+	if bm.proposal != nil && bm.ci.Proposal() != nil && !bm.proposal.Equal(bm.ci.Proposal().Fact().Hash()) {
+		return errors.Errorf("proposal does not match with consensus info")
 	}
 
 	return nil
@@ -135,8 +129,8 @@ func (bm BlockV0) SetSuffrageInfo(sf SuffrageInfo) BlockUpdater {
 	return bm
 }
 
-func (bm BlockV0) SetProposal(proposal ballot.Proposal) BlockUpdater {
-	bm.ci.proposal = proposal
+func (bm BlockV0) SetProposal(sfs base.SignedBallotFact) BlockUpdater {
+	bm.ci.sfs = sfs
 
 	return bm
 }

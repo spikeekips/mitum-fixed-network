@@ -99,32 +99,36 @@ func (t *testStateHandover) newState(suffrage base.Suffrage, pps *prprocessor.Pr
 }
 
 func (t *testStateHandover) nextINITVoteproof(local *isaac.Local, prevINIT, prevACCEPT base.Voteproof, round base.Round, states ...*isaac.Local) base.Voteproof {
-	var ib ballot.INITV0
+	var ib base.INITBallot
 	if prevACCEPT == nil {
 		ib = t.NewINITBallot(local, base.Round(0), nil)
 	} else {
-		fact := prevACCEPT.Facts()[0].(ballot.ACCEPTFactV0)
-		ib = ballot.NewINITV0(
+		fact := prevACCEPT.Facts()[0].(base.ACCEPTBallotFact)
+		i, err := ballot.NewINIT(
+			ballot.NewINITFact(
+				prevACCEPT.Height()+1,
+				round,
+				fact.NewBlock(),
+			),
 			local.Node().Address(),
-			prevACCEPT.Height()+1,
-			round,
-			fact.NewBlock(),
 			prevINIT,
 			prevACCEPT,
+			local.Node().Privatekey(), local.Policy().NetworkID(),
 		)
-		t.NoError(ib.Sign(local.Node().Privatekey(), local.Policy().NetworkID()))
+		t.NoError(err)
+		ib = i
 	}
 
-	vp, err := t.NewVoteproof(base.StageINIT, ib.INITFactV0, states...)
+	vp, err := t.NewVoteproof(base.StageINIT, ib.Fact(), states...)
 	t.NoError(err)
 
 	return vp
 }
 
-func (t *testStateHandover) nextACCEPTVoteproof(local *isaac.Local, pr ballot.Proposal, newBlock valuehash.Hash, states ...*isaac.Local) base.Voteproof {
-	ab := t.NewACCEPTBallot(local, pr.Round(), pr.Hash(), newBlock, pr.Voteproof())
+func (t *testStateHandover) nextACCEPTVoteproof(local *isaac.Local, pr base.Proposal, newBlock valuehash.Hash, states ...*isaac.Local) base.Voteproof {
+	ab := t.NewACCEPTBallot(local, pr.Fact().Round(), pr.Fact().Hash(), newBlock, pr.BaseVoteproof())
 
-	vp, err := t.NewVoteproof(base.StageACCEPT, ab.ACCEPTFactV0, states...)
+	vp, err := t.NewVoteproof(base.StageACCEPT, ab.Fact(), states...)
 	t.NoError(err)
 
 	return vp
@@ -199,14 +203,14 @@ func (t *testStateHandover) TestNewProposalBroadcasted() {
 	defer done()
 
 	ib := t.NewINITBallot(t.local, base.Round(0), nil)
-	initFact := ib.INITFactV0
+	initFact := ib.Fact()
 
 	ivp, err := t.NewVoteproof(base.StageINIT, initFact, t.local, t.remote)
 	t.NoError(err)
 
 	sealch := make(chan seal.Seal, 1)
 	st.SetBroadcastSealsFunc(func(sl seal.Seal, toLocal bool) error {
-		if _, ok := sl.(ballot.Proposal); !ok {
+		if _, ok := sl.(base.Proposal); !ok {
 			return nil
 		}
 
@@ -229,7 +233,7 @@ func (t *testStateHandover) TestNewProposalBroadcasted() {
 	case <-time.After(time.Second * 2):
 		t.NoError(errors.Errorf("timeout to wait to broadcast new proposal, which is from old"))
 	case sl := <-sealch:
-		t.Implements((*ballot.Proposal)(nil), sl)
+		t.Implements((*base.Proposal)(nil), sl)
 		t.True(sl.Hash().Equal(pr.Hash()))
 	}
 }
@@ -239,14 +243,14 @@ func (t *testStateHandover) TestNewProposalNextAcceptBallotNotBroadcasted() {
 	defer done()
 
 	ib := t.NewINITBallot(t.local, base.Round(0), nil)
-	initFact := ib.INITFactV0
+	initFact := ib.Fact()
 
 	ivp, err := t.NewVoteproof(base.StageINIT, initFact, t.local, t.remote)
 	t.NoError(err)
 
 	sealch := make(chan seal.Seal, 1)
 	st.SetBroadcastSealsFunc(func(sl seal.Seal, toLocal bool) error {
-		if _, ok := sl.(ballot.ACCEPT); !ok {
+		if _, ok := sl.(base.ACCEPTBallot); !ok {
 			return nil
 		}
 
@@ -277,14 +281,14 @@ func (t *testStateHandover) TestNewProposalNextAcceptBallotBroadcastedAfterJoine
 	defer done()
 
 	ib := t.NewINITBallot(t.local, base.Round(0), nil)
-	initFact := ib.INITFactV0
+	initFact := ib.Fact()
 
 	ivp, err := t.NewVoteproof(base.StageINIT, initFact, t.local, t.remote)
 	t.NoError(err)
 
 	sealch := make(chan seal.Seal, 1)
 	st.SetBroadcastSealsFunc(func(sl seal.Seal, toLocal bool) error {
-		if _, ok := sl.(ballot.ACCEPT); !ok {
+		if _, ok := sl.(base.ACCEPTBallot); !ok {
 			return nil
 		}
 
@@ -323,7 +327,7 @@ func (t *testStateHandover) TestNoNewProposal() {
 
 	sealch := make(chan seal.Seal, 1)
 	st.SetBroadcastSealsFunc(func(sl seal.Seal, toLocal bool) error {
-		if _, ok := sl.(ballot.INIT); !ok {
+		if _, ok := sl.(base.INITBallot); !ok {
 			return nil
 		}
 
@@ -333,7 +337,7 @@ func (t *testStateHandover) TestNoNewProposal() {
 	})
 
 	ib := t.NewINITBallot(t.local, base.Round(0), nil)
-	initFact := ib.INITFactV0
+	initFact := ib.Fact()
 
 	vp, err := t.NewVoteproof(base.StageINIT, initFact, t.local, t.remote)
 	t.NoError(err)
@@ -348,23 +352,22 @@ func (t *testStateHandover) TestNoNewProposal() {
 	case <-time.After(time.Second * 2):
 		t.NoError(errors.Errorf("timeout to wait next round INIT ballot"))
 	case sl := <-sealch:
-		t.Implements((*ballot.INIT)(nil), sl)
+		t.Implements((*base.INITBallot)(nil), sl)
 
-		bb, ok := sl.(ballot.INIT)
+		bb, ok := sl.(base.INITBallot)
 		t.True(ok)
 
-		t.Equal(base.StageINIT, bb.Stage())
+		t.Equal(base.StageINIT, bb.Fact().Stage())
 
-		t.Equal(vp.Height(), bb.Height())
-		t.Equal(vp.Round()+1, bb.Round())
+		t.Equal(vp.Height(), bb.Fact().Height())
+		t.Equal(vp.Round()+1, bb.Fact().Round())
 
 		previousManifest, found, err := t.local.Database().ManifestByHeight(vp.Height() - 1)
 		t.True(found)
 		t.NoError(err)
 		t.NotNil(previousManifest)
 
-		fact := bb.Fact().(ballot.INITFact)
-		t.True(previousManifest.Hash().Equal(fact.PreviousBlock()))
+		t.True(previousManifest.Hash().Equal(bb.Fact().PreviousBlock()))
 	}
 }
 
@@ -381,7 +384,7 @@ func (t *testStateHandover) TestMoveToConsensus() {
 	})
 
 	var ivp, avp base.Voteproof
-	var pr ballot.Proposal
+	var pr base.Proposal
 
 	{
 		ivp = t.nextINITVoteproof(t.local, nil, nil, base.Round(0), t.local, t.remote)
@@ -440,7 +443,7 @@ func (t *testStateHandover) TestUpdatePassthroughFilter() {
 	})
 
 	var ivp, avp base.Voteproof
-	var pr ballot.Proposal
+	var pr base.Proposal
 
 	{
 		ivp = t.nextINITVoteproof(t.local, nil, nil, base.Round(0), t.local, t.remote)
@@ -515,15 +518,18 @@ func (t *testStateHandover) TestUpdatePassthroughFilter() {
 	})
 
 	t.Run("old height ballot should be filtered", func() {
-		ib := ballot.NewINITV0(
+		ib, err := ballot.NewINIT(
+			ballot.NewINITFact(
+				ivp.Height()-1,
+				base.Round(0),
+				valuehash.RandomSHA256(),
+			),
 			t.local.Node().Address(),
-			ivp.Height()-1,
-			base.Round(0),
-			valuehash.RandomSHA256(),
 			nil,
 			nil,
+			t.local.Node().Privatekey(), t.local.Policy().NetworkID(),
 		)
-		t.NoError(ib.Sign(t.local.Node().Privatekey(), t.local.Policy().NetworkID()))
+		t.NoError(err)
 
 		psl := network.NewPassthroughedSealFromConnInfo(ib, t.local.Channel().ConnInfo())
 
@@ -544,15 +550,18 @@ func (t *testStateHandover) TestUpdatePassthroughFilter() {
 	})
 
 	t.Run("same height, but higher round INIT ballot should be filtered", func() {
-		ib := ballot.NewINITV0(
+		ib, err := ballot.NewINIT(
+			ballot.NewINITFact(
+				ivp.Height(),
+				ivp.Round()+1,
+				valuehash.RandomSHA256(),
+			),
 			t.local.Node().Address(),
-			ivp.Height(),
-			ivp.Round()+1,
-			valuehash.RandomSHA256(),
 			nil,
 			nil,
+			t.local.Node().Privatekey(), t.local.Policy().NetworkID(),
 		)
-		t.NoError(ib.Sign(t.local.Node().Privatekey(), t.local.Policy().NetworkID()))
+		t.NoError(err)
 
 		psl := network.NewPassthroughedSealFromConnInfo(ib, t.local.Channel().ConnInfo())
 
@@ -573,16 +582,18 @@ func (t *testStateHandover) TestUpdatePassthroughFilter() {
 	})
 
 	t.Run("same height, but not ACCEPT ballot should be filtered", func() {
-		ab := ballot.NewACCEPTV0(
+		ab, err := ballot.NewACCEPT(
+			ballot.NewACCEPTFact(
+				ivp.Height(),
+				ivp.Round(),
+				valuehash.RandomSHA256(),
+				valuehash.RandomSHA256(),
+			),
 			t.local.Node().Address(),
-			ivp.Height(),
-			ivp.Round(),
-			valuehash.RandomSHA256(),
-			valuehash.RandomSHA256(),
 			ivp,
+			t.local.Node().Privatekey(), t.local.Policy().NetworkID(),
 		)
-
-		t.NoError(ab.Sign(t.local.Node().Privatekey(), t.local.Policy().NetworkID()))
+		t.NoError(err)
 
 		psl := network.NewPassthroughedSealFromConnInfo(ab, t.local.Channel().ConnInfo())
 
@@ -623,7 +634,7 @@ func (t *testStateHandover) TestEmptyRemotes() {
 	})
 
 	var ivp base.Voteproof
-	var pr ballot.Proposal
+	var pr base.Proposal
 
 	{
 		ivp = t.nextINITVoteproof(t.local, nil, nil, base.Round(0), t.local, t.remote)

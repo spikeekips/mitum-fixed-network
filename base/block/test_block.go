@@ -1,3 +1,4 @@
+//go:build test
 // +build test
 
 package block
@@ -17,14 +18,14 @@ var (
 	TestBlockDataWriterHint = hint.NewHint(TestBlockDataWriterType, "v0.0.1")
 )
 
-func NewTestBlockV0(height base.Height, round base.Round, proposal, previousBlock valuehash.Hash) (BlockV0, error) {
+func NewTestBlockV0(height base.Height, round base.Round, proposalFact, previousBlock valuehash.Hash) (BlockV0, error) {
 	nodes := []base.Node{node.RandomNode(util.UUID().String())}
 
 	return NewBlockV0(
 		NewSuffrageInfoV0(nodes[0].Address(), nodes),
 		height,
 		round,
-		proposal,
+		proposalFact,
 		previousBlock,
 		valuehash.RandomSHA256(),
 		valuehash.RandomSHA256(),

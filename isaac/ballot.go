@@ -5,39 +5,45 @@ import (
 	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/base/ballot"
 	"github.com/spikeekips/mitum/base/block"
+	"github.com/spikeekips/mitum/base/key"
 	"github.com/spikeekips/mitum/storage"
-	"github.com/spikeekips/mitum/util"
 	"github.com/spikeekips/mitum/util/valuehash"
 )
 
-func NewINITBallotV0Round0(node base.Node, db storage.Database) (ballot.INITV0, error) {
+func NewINITBallotRound0(
+	n base.Address,
+	db storage.Database,
+	pk key.Privatekey,
+	networkID base.NetworkID,
+) (base.INITBallot, error) {
 	var m block.Manifest
 	switch l, found, err := db.LastManifest(); {
 	case err != nil:
-		return ballot.INITV0{}, errors.Wrap(err, "failed to get last block")
+		return nil, errors.Wrap(err, "failed to get last block")
 	case !found:
-		return ballot.INITV0{}, errors.Errorf("last block not found")
+		return nil, errors.Errorf("last block not found")
 	default:
 		m = l
 	}
 
 	avp := db.LastVoteproof(base.StageACCEPT)
 
-	return ballot.NewINITV0(
-		node.Address(),
-		m.Height()+1,
-		base.Round(0),
-		m.Hash(),
+	return ballot.NewINIT(
+		ballot.NewINITFact(m.Height()+1, base.Round(0), m.Hash()),
+		n,
 		avp,
-		avp,
-	), nil
+		nil,
+		pk, networkID,
+	)
 }
 
-func NewINITBallotV0WithVoteproof(
-	node base.Node,
+func NewINITBallotWithVoteproof(
+	n base.Address,
 	db storage.Database,
 	voteproof base.Voteproof,
-) (ballot.INITV0, error) {
+	pk key.Privatekey,
+	networkID base.NetworkID,
+) (base.INITBallot, error) {
 	var height base.Height
 	var round base.Round
 	var previousBlock valuehash.Hash
@@ -47,80 +53,49 @@ func NewINITBallotV0WithVoteproof(
 		height = voteproof.Height()
 		round = voteproof.Round() + 1
 		switch t := voteproof.Majority().(type) {
-		case ballot.INITFact:
+		case base.INITBallotFact:
 			previousBlock = t.PreviousBlock()
-		case ballot.ACCEPTFact:
+		case base.ACCEPTBallotFact:
 			previousBlock = t.NewBlock()
 		}
 
 		avp = db.LastVoteproof(base.StageACCEPT)
 	case base.StageACCEPT:
-		avp = voteproof
 		height = voteproof.Height() + 1
 		round = base.Round(0)
-		f, ok := voteproof.Majority().(ballot.ACCEPTFact)
+		f, ok := voteproof.Majority().(base.ACCEPTBallotFact)
 		if !ok {
-			return ballot.INITV0{},
+			return nil,
 				errors.Errorf("invalid voteproof found; should have ACCEPTBallotFact, not %T", voteproof.Majority())
 		}
 		previousBlock = f.NewBlock()
 	}
 
-	return ballot.NewINITV0(
-		node.Address(),
-		height,
-		round,
-		previousBlock,
+	return ballot.NewINIT(
+		ballot.NewINITFact(height, round, previousBlock),
+		n,
 		voteproof,
 		avp,
-	), nil
-}
-
-func NewProposalV0(
-	db storage.Database,
-	node base.Address,
-	round base.Round,
-	seals []valuehash.Hash,
-	voteproof base.Voteproof,
-) (
-	ballot.ProposalV0, error,
-) {
-	var manifest block.Manifest
-	switch l, found, err := db.LastManifest(); {
-	case err != nil:
-		return ballot.ProposalV0{}, err
-	case !found:
-		return ballot.ProposalV0{}, util.NotFoundError.Errorf("last manifest not found for NewProposalV0")
-	default:
-		manifest = l
-	}
-
-	return ballot.NewProposalV0(
-		node,
-		manifest.Height()+1,
-		round,
-		seals,
-		voteproof,
-	), nil
-}
-
-func NewSIGNBallotV0(node base.Address, newBlock block.Block) ballot.SIGNV0 {
-	return ballot.NewSIGNV0(
-		node,
-		newBlock.Height(),
-		newBlock.Round(),
-		newBlock.Proposal(),
-		newBlock.Hash(),
+		pk, networkID,
 	)
 }
 
-func NewACCEPTBallotV0(node base.Address, newBlock block.Block, voteproof base.Voteproof) ballot.ACCEPTV0 {
-	return ballot.NewACCEPTV0(
-		node,
-		newBlock.Height(),
-		newBlock.Round(),
-		newBlock.Proposal(),
-		newBlock.Hash(),
+func NewACCEPTBallot(
+	n base.Address,
+	newBlock block.Block,
+	voteproof base.Voteproof,
+	pk key.Privatekey,
+	networkID base.NetworkID,
+) (base.ACCEPTBallot, error) {
+	return ballot.NewACCEPT(
+		ballot.NewACCEPTFact(
+			newBlock.Height(),
+			newBlock.Round(),
+			newBlock.Proposal(),
+			newBlock.Hash(),
+		),
+		n,
 		voteproof,
+		pk, networkID,
 	)
 }

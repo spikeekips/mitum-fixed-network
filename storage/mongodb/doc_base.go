@@ -71,11 +71,9 @@ func LoadDataFromDoc(b []byte, encs *encoder.Encoders) (bson.Raw /* id */, inter
 		return bd.I, bd.D, nil
 	}
 
-	var doc bson.Raw
-	if d, ok := bd.D.DocumentOK(); !ok {
+	doc, ok := bd.D.DocumentOK()
+	if !ok {
 		return nil, nil, errors.Errorf("hinted should be mongodb Document")
-	} else {
-		doc = d
 	}
 
 	var data hint.Hinter

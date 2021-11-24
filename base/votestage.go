@@ -11,9 +11,8 @@ type Stage uint8
 const (
 	_ Stage = iota
 	StageINIT
-	StageSIGN
-	StageACCEPT
 	StageProposal
+	StageACCEPT
 )
 
 func (st Stage) Bytes() []byte {
@@ -24,12 +23,10 @@ func (st Stage) String() string {
 	switch st {
 	case StageINIT:
 		return "INIT"
-	case StageSIGN:
-		return "SIGN"
-	case StageACCEPT:
-		return "ACCEPT"
 	case StageProposal:
 		return "PROPOSAL"
+	case StageACCEPT:
+		return "ACCEPT"
 	default:
 		return "<unknown stage>"
 	}
@@ -37,7 +34,7 @@ func (st Stage) String() string {
 
 func (st Stage) IsValid([]byte) error {
 	switch st {
-	case StageINIT, StageSIGN, StageACCEPT, StageProposal:
+	case StageINIT, StageACCEPT, StageProposal:
 		return nil
 	}
 
@@ -53,12 +50,10 @@ func (st *Stage) UnmarshalText(b []byte) error {
 	switch string(b) {
 	case "INIT":
 		t = StageINIT
-	case "SIGN":
-		t = StageSIGN
-	case "ACCEPT":
-		t = StageACCEPT
 	case "PROPOSAL":
 		t = StageProposal
+	case "ACCEPT":
+		t = StageACCEPT
 	default:
 		return errors.Errorf("<unknown stage>")
 	}

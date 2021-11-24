@@ -6,7 +6,6 @@ import (
 	"github.com/pkg/errors"
 	"github.com/rs/zerolog"
 	"github.com/spikeekips/mitum/base"
-	"github.com/spikeekips/mitum/base/ballot"
 	"github.com/spikeekips/mitum/base/block"
 	"github.com/spikeekips/mitum/base/operation"
 	"github.com/spikeekips/mitum/base/seal"
@@ -30,17 +29,18 @@ var (
 	keyPrefixSeal                       []byte = []byte{0x00, 0x05}
 	keyPrefixSealHash                   []byte = []byte{0x00, 0x06}
 	keyPrefixProposal                   []byte = []byte{0x00, 0x07}
-	keyPrefixBlockOperations            []byte = []byte{0x00, 0x08}
-	keyPrefixBlockStates                []byte = []byte{0x00, 0x09}
-	keyPrefixStagedOperationSeal        []byte = []byte{0x00, 0x10}
-	keyPrefixStagedOperationSealReverse []byte = []byte{0x00, 0x11}
-	keyPrefixState                      []byte = []byte{0x00, 0x12}
-	keyPrefixOperationFactHash          []byte = []byte{0x00, 0x13}
-	keyPrefixManifestHeight             []byte = []byte{0x00, 0x14}
-	keyPrefixINITVoteproof              []byte = []byte{0x00, 0x15}
-	keyPrefixACCEPTVoteproof            []byte = []byte{0x00, 0x16}
-	keyPrefixBlockDataMap               []byte = []byte{0x00, 0x17}
-	keyPrefixInfo                       []byte = []byte{0x00, 0x18}
+	keyPrefixProposalFacts              []byte = []byte{0x00, 0x08}
+	keyPrefixBlockOperations            []byte = []byte{0x00, 0x09}
+	keyPrefixBlockStates                []byte = []byte{0x00, 0x10}
+	keyPrefixStagedOperationSeal        []byte = []byte{0x00, 0x11}
+	keyPrefixStagedOperationSealReverse []byte = []byte{0x00, 0x12}
+	keyPrefixState                      []byte = []byte{0x00, 0x13}
+	keyPrefixOperationFactHash          []byte = []byte{0x00, 0x14}
+	keyPrefixManifestHeight             []byte = []byte{0x00, 0x15}
+	keyPrefixINITVoteproof              []byte = []byte{0x00, 0x16}
+	keyPrefixACCEPTVoteproof            []byte = []byte{0x00, 0x17}
+	keyPrefixBlockDataMap               []byte = []byte{0x00, 0x18}
+	keyPrefixInfo                       []byte = []byte{0x00, 0x19}
 )
 
 type Database struct {
@@ -333,6 +333,23 @@ func (st *Database) sealByKey(key []byte) (seal.Seal, bool, error) {
 	}
 }
 
+func (st *Database) proposalByKey(key []byte) (base.Proposal, bool, error) {
+	b, err := st.get(key)
+	if err != nil {
+		if errors.Is(err, util.NotFoundError) {
+			return nil, false, nil
+		}
+
+		return nil, false, err
+	}
+
+	if sl, err := st.loadProposal(b); err != nil {
+		return nil, false, err
+	} else {
+		return sl, true, nil
+	}
+}
+
 func (st *Database) NewSeals(seals []seal.Seal) error {
 	batch := &leveldb.Batch{}
 
@@ -457,6 +474,18 @@ func (st *Database) loadSeal(b []byte) (seal.Seal, error) {
 		return nil, nil
 	} else if i, ok := hinter.(seal.Seal); !ok {
 		return nil, errors.Errorf("not Seal: %T", hinter)
+	} else {
+		return i, nil
+	}
+}
+
+func (st *Database) loadProposal(b []byte) (base.Proposal, error) {
+	if hinter, err := st.loadHinter(b); err != nil {
+		return nil, err
+	} else if hinter == nil {
+		return nil, nil
+	} else if i, ok := hinter.(base.Proposal); !ok {
+		return nil, errors.Errorf("not Proposal: %T", hinter)
 	} else {
 		return i, nil
 	}
@@ -610,45 +639,62 @@ func (st *Database) UnstagedOperationSeals(seals []valuehash.Hash) error {
 	return mergeError(st.db.Write(batch, nil))
 }
 
-func (st *Database) Proposals(callback func(ballot.Proposal) (bool, error), sort bool) error {
+func (st *Database) Proposals(callback func(base.Proposal) (bool, error), sort bool) error {
 	return st.iter(
 		keyPrefixProposal,
 		func(_, value []byte) (bool, error) {
-			if sl, found, err := st.sealByKey(value); err != nil || !found {
+			if proposal, err := st.loadProposal(value); err != nil {
 				return false, err
-			} else if pr, ok := sl.(ballot.Proposal); !ok {
-				return false, errors.Errorf("not Proposal: %T", sl)
 			} else {
-				return callback(pr)
+				return callback(proposal)
 			}
 		},
 		sort,
 	)
 }
 
-func (st *Database) proposalKey(height base.Height, round base.Round, proposer base.Address) []byte {
-	return util.ConcatBytesSlice(keyPrefixProposal, height.Bytes(), round.Bytes(), proposer.Bytes())
+func (st *Database) Proposal(h valuehash.Hash) (base.Proposal, bool, error) {
+	return st.proposalByKey(st.proposalKey(h))
 }
 
-func (st *Database) NewProposal(proposal ballot.Proposal) error {
-	sealKey := st.sealKey(proposal.Hash())
-	if found, err := st.db.Has(sealKey, nil); err != nil {
-		return mergeError(err)
-	} else if !found {
-		if err := st.NewSeals([]seal.Seal{proposal}); err != nil {
-			return err
-		}
-	}
-
-	if err := st.db.Put(st.proposalKey(proposal.Height(), proposal.Round(), proposal.Node()), sealKey, nil); err != nil {
-		return mergeError(err)
-	}
-
-	return nil
+func (st *Database) proposalKey(h valuehash.Hash) []byte {
+	return util.ConcatBytesSlice(keyPrefixProposal, h.Bytes())
 }
 
-func (st *Database) Proposal(height base.Height, round base.Round, proposer base.Address) (ballot.Proposal, bool, error) {
-	sealKey, err := st.get(st.proposalKey(height, round, proposer))
+func (st *Database) proposalFactsKey(height base.Height, round base.Round, proposer base.Address) []byte {
+	return util.ConcatBytesSlice(keyPrefixProposalFacts, height.Bytes(), round.Bytes(), proposer.Bytes())
+}
+
+func (st *Database) NewProposal(proposal base.Proposal) error {
+	fact := proposal.Fact()
+	if fact.Stage() != base.StageProposal {
+		return util.WrongTypeError.Errorf("not proposal SignedBallotFact: %T", proposal)
+	}
+
+	k := st.proposalKey(fact.Hash())
+	if found, err := st.db.Has(k, nil); err != nil {
+		return mergeError(err)
+	} else if found {
+		return nil
+	}
+
+	batch := &leveldb.Batch{}
+	raw, err := st.enc.Marshal(proposal)
+	if err != nil {
+		return err
+	}
+
+	batch.Put(k, encodeWithEncoder(raw, st.enc))
+	batch.Put(
+		st.proposalFactsKey(fact.Height(), fact.Round(), fact.Proposer()),
+		k,
+	)
+
+	return mergeError(st.db.Write(batch, nil))
+}
+
+func (st *Database) ProposalByPoint(height base.Height, round base.Round, proposer base.Address) (base.Proposal, bool, error) {
+	k, err := st.get(st.proposalFactsKey(height, round, proposer))
 	if err != nil {
 		if errors.Is(err, util.NotFoundError) {
 			return nil, false, nil
@@ -657,11 +703,7 @@ func (st *Database) Proposal(height base.Height, round base.Round, proposer base
 		return nil, false, err
 	}
 
-	if sl, found, err := st.sealByKey(sealKey); err != nil || !found {
-		return nil, false, err
-	} else {
-		return sl.(ballot.Proposal), true, nil
-	}
+	return st.proposalByKey(k)
 }
 
 func (st *Database) State(key string) (state.State, bool, error) {

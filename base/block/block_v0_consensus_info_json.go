@@ -4,16 +4,15 @@ import (
 	"encoding/json"
 
 	"github.com/spikeekips/mitum/base"
-	"github.com/spikeekips/mitum/base/ballot"
 	jsonenc "github.com/spikeekips/mitum/util/encoder/json"
 )
 
 type ConsensusInfoV0PackJSON struct {
 	jsonenc.HintedHead
-	IV base.Voteproof  `json:"init_voteproof,omitempty"`
-	AV base.Voteproof  `json:"accept_voteproof,omitempty"`
-	SI SuffrageInfo    `json:"suffrage_info,omitempty"`
-	PR ballot.Proposal `json:"proposal,omitempty"`
+	IV base.Voteproof        `json:"init_voteproof,omitempty"`
+	AV base.Voteproof        `json:"accept_voteproof,omitempty"`
+	SI SuffrageInfo          `json:"suffrage_info,omitempty"`
+	PR base.SignedBallotFact `json:"proposal,omitempty"`
 }
 
 func (bc ConsensusInfoV0) MarshalJSON() ([]byte, error) {
@@ -22,7 +21,7 @@ func (bc ConsensusInfoV0) MarshalJSON() ([]byte, error) {
 		IV:         bc.initVoteproof,
 		AV:         bc.acceptVoteproof,
 		SI:         bc.suffrageInfo,
-		PR:         bc.proposal,
+		PR:         bc.sfs,
 	})
 }
 

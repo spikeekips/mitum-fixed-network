@@ -74,9 +74,9 @@ func (t *testBallotbox) TestNotInSuffrage() {
 func (t *testBallotbox) newINITBallot(
 	height base.Height,
 	round base.Round,
-	node base.Address,
+	n base.Address,
 	previousBlock valuehash.Hash,
-) ballot.INITV0 {
+) base.INITBallot {
 	vp := base.NewDummyVoteproof(
 		height-1,
 		base.Round(0),
@@ -88,15 +88,18 @@ func (t *testBallotbox) newINITBallot(
 		previousBlock = valuehash.RandomSHA256()
 	}
 
-	ib := ballot.NewINITV0(
-		node,
-		height,
-		round,
-		previousBlock,
+	ib, err := ballot.NewINIT(
+		ballot.NewINITFact(
+			height,
+			round,
+			previousBlock,
+		),
+		n,
 		vp,
-		vp,
+		nil,
+		t.pk, nil,
 	)
-	t.NoError(ib.Sign(t.pk, nil))
+	t.NoError(err)
 
 	return ib
 }
@@ -150,19 +153,19 @@ func (t *testBallotbox) TestINITVoteResultNotYet() {
 	t.NoError(err)
 	t.Equal(base.VoteResultNotYet, vp.Result())
 
-	t.Equal(ba.Height(), vp.Height())
-	t.Equal(ba.Round(), vp.Round())
-	t.Equal(ba.Stage(), vp.Stage())
+	t.Equal(ba.Fact().Height(), vp.Height())
+	t.Equal(ba.Fact().Round(), vp.Round())
+	t.Equal(ba.Fact().Stage(), vp.Stage())
 
 	vrs := bb.loadVoteRecords(ba, false)
 	t.NotNil(vrs)
 
-	ib, found := vrs.ballots[ba.Node().String()]
+	ib, found := vrs.ballots[ba.FactSign().Node().String()]
 	t.True(found)
 
-	iba := ib.(ballot.INITV0)
-	t.True(ba.PreviousBlock().Equal(iba.PreviousBlock()))
-	t.Equal(ba.Node(), iba.Node())
+	iba := ib.(base.INITBallot).Fact()
+	t.True(ba.Fact().PreviousBlock().Equal(iba.PreviousBlock()))
+	t.Equal(ba.FactSign().Node(), ib.FactSign().Node())
 }
 
 func (t *testBallotbox) TestINITVoteResultDraw() {
@@ -276,10 +279,10 @@ func (t *testBallotbox) TestINITVoteproofClean() {
 func (t *testBallotbox) newACCEPTBallot(
 	height base.Height,
 	round base.Round,
-	node base.Address,
+	n base.Address,
 	proposal,
 	newBlock valuehash.Hash,
-) ballot.ACCEPTV0 {
+) base.ACCEPTBallot {
 	vp := base.NewDummyVoteproof(
 		height,
 		round,
@@ -294,15 +297,18 @@ func (t *testBallotbox) newACCEPTBallot(
 		newBlock = valuehash.RandomSHA256()
 	}
 
-	ib := ballot.NewACCEPTV0(
-		node,
-		height,
-		round,
-		proposal,
-		newBlock,
+	ib, err := ballot.NewACCEPT(
+		ballot.NewACCEPTFact(
+			height,
+			round,
+			proposal,
+			newBlock,
+		),
+		n,
 		vp,
+		t.pk, nil,
 	)
-	t.NoError(ib.Sign(t.pk, nil))
+	t.NoError(err)
 
 	return ib
 }
@@ -316,20 +322,20 @@ func (t *testBallotbox) TestACCEPTVoteResultNotYet() {
 	t.NoError(err)
 	t.Equal(base.VoteResultNotYet, vp.Result())
 
-	t.Equal(ba.Height(), vp.Height())
-	t.Equal(ba.Round(), vp.Round())
-	t.Equal(ba.Stage(), vp.Stage())
+	t.Equal(ba.Fact().Height(), vp.Height())
+	t.Equal(ba.Fact().Round(), vp.Round())
+	t.Equal(ba.Fact().Stage(), vp.Stage())
 
 	vrs := bb.loadVoteRecords(ba, false)
 	t.NotNil(vrs)
 
-	ib, found := vrs.ballots[ba.Node().String()]
+	ib, found := vrs.ballots[ba.FactSign().Node().String()]
 	t.True(found)
 
-	iba := ib.(ballot.ACCEPTV0)
-	t.True(ba.Proposal().Equal(iba.Proposal()))
-	t.Equal(ba.Node(), iba.Node())
-	t.Equal(ba.NewBlock(), iba.NewBlock())
+	iba := ib.(base.ACCEPTBallot).Fact()
+	t.True(ba.Fact().Proposal().Equal(iba.Proposal()))
+	t.Equal(ba.FactSign().Node(), ib.FactSign().Node())
+	t.Equal(ba.Fact().NewBlock(), iba.NewBlock())
 }
 
 func (t *testBallotbox) TestACCEPTVoteResultDraw() {

@@ -9,7 +9,6 @@ import (
 
 	"github.com/pkg/errors"
 	"github.com/spikeekips/mitum/base"
-	"github.com/spikeekips/mitum/base/ballot"
 	"github.com/spikeekips/mitum/base/block"
 	"github.com/spikeekips/mitum/base/operation"
 	"github.com/spikeekips/mitum/base/state"
@@ -69,7 +68,7 @@ func (bd DefaultWriter) WriteSuffrageInfo(w io.Writer, si block.SuffrageInfo) er
 	return bd.writeItem(w, si)
 }
 
-func (bd DefaultWriter) WriteProposal(w io.Writer, pr ballot.Proposal) error {
+func (bd DefaultWriter) WriteProposal(w io.Writer, pr base.SignedBallotFact) error {
 	return bd.writeItem(w, pr)
 }
 
@@ -167,12 +166,13 @@ func (bd DefaultWriter) ReadSuffrageInfo(r io.Reader) (block.SuffrageInfo, error
 	return block.DecodeSuffrageInfo(b, bd.encoder)
 }
 
-func (bd DefaultWriter) ReadProposal(r io.Reader) (ballot.Proposal, error) {
+func (bd DefaultWriter) ReadProposal(r io.Reader) (base.SignedBallotFact, error) {
 	b, err := bd.read(r)
 	if err != nil {
 		return nil, err
 	}
-	return ballot.DecodeProposal(b, bd.encoder)
+
+	return base.DecodeSignedBallotFact(b, bd.encoder)
 }
 
 func (DefaultWriter) read(r io.Reader) ([]byte, error) {

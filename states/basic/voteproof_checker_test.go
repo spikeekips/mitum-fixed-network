@@ -4,7 +4,6 @@ import (
 	"testing"
 
 	"github.com/spikeekips/mitum/base"
-	"github.com/spikeekips/mitum/base/seal"
 	channetwork "github.com/spikeekips/mitum/network/gochan"
 	"github.com/spikeekips/mitum/util/valuehash"
 	"github.com/stretchr/testify/suite"
@@ -24,14 +23,14 @@ func (t *testVoteproofChecker) SetupTest() {
 
 func (t *testVoteproofChecker) TestACCEPTVoteproofProposalNotFound() {
 	ib := t.NewINITBallot(t.local, base.Round(0), nil)
-	initFact := ib.INITFactV0
+	initFact := ib.Fact()
 
 	ivp, err := t.NewVoteproof(base.StageINIT, initFact, t.local, t.remote)
 	t.NoError(err)
 
 	pr := t.NewProposal(t.remote, initFact.Round(), nil, ivp)
 
-	ab := t.NewACCEPTBallot(t.local, ivp.Round(), pr.Hash(), valuehash.RandomSHA256(), ivp)
+	ab := t.NewACCEPTBallot(t.local, ivp.Round(), pr.Fact().Hash(), valuehash.RandomSHA256(), ivp)
 	avp, err := t.NewVoteproof(base.StageACCEPT, ab.Fact(), t.local, t.remote)
 	t.NoError(err)
 
@@ -45,7 +44,7 @@ func (t *testVoteproofChecker) TestACCEPTVoteproofProposalNotFound() {
 
 func (t *testVoteproofChecker) TestACCEPTVoteproofProposalFoundInLocal() {
 	ib := t.NewINITBallot(t.local, base.Round(0), nil)
-	initFact := ib.INITFactV0
+	initFact := ib.Fact()
 
 	ivp, err := t.NewVoteproof(base.StageINIT, initFact, t.local, t.remote)
 	t.NoError(err)
@@ -53,7 +52,7 @@ func (t *testVoteproofChecker) TestACCEPTVoteproofProposalFoundInLocal() {
 	pr := t.NewProposal(t.remote, initFact.Round(), nil, ivp)
 	t.NoError(t.local.Database().NewProposal(pr))
 
-	ab := t.NewACCEPTBallot(t.local, ivp.Round(), pr.Hash(), valuehash.RandomSHA256(), ivp)
+	ab := t.NewACCEPTBallot(t.local, ivp.Round(), pr.Fact().Hash(), valuehash.RandomSHA256(), ivp)
 	avp, err := t.NewVoteproof(base.StageACCEPT, ab.Fact(), t.local, t.remote)
 	t.NoError(err)
 
@@ -66,32 +65,24 @@ func (t *testVoteproofChecker) TestACCEPTVoteproofProposalFoundInLocal() {
 
 func (t *testVoteproofChecker) TestACCEPTVoteproofProposalFoundInRemote() {
 	nch := t.remote.Channel().(*channetwork.Channel)
-	nch.SetGetSealHandler(func(hs []valuehash.Hash) ([]seal.Seal, error) {
-		var seals []seal.Seal
-		for _, h := range hs {
-			sl, found, err := t.remote.Database().Seal(h)
-			if !found {
-				break
-			} else if err != nil {
-				return nil, err
-			}
+	nch.SetGetProposalHandler(func(h valuehash.Hash) (base.Proposal, error) {
+		i, _, err := t.remote.Database().Proposal(h)
 
-			seals = append(seals, sl)
-		}
-
-		return seals, nil
+		return i, err
 	})
 
 	ib := t.NewINITBallot(t.local, base.Round(0), nil)
-	initFact := ib.INITFactV0
+	initFact := ib.Fact()
 
 	ivp, err := t.NewVoteproof(base.StageINIT, initFact, t.local, t.remote)
 	t.NoError(err)
+	t.NoError(ivp.IsValid(t.local.Policy().NetworkID()))
 
 	pr := t.NewProposal(t.remote, initFact.Round(), nil, ivp)
+	t.NoError(pr.IsValid(t.local.Policy().NetworkID()))
 	t.NoError(t.remote.Database().NewProposal(pr))
 
-	ab := t.NewACCEPTBallot(t.local, ivp.Round(), pr.Hash(), valuehash.RandomSHA256(), ivp)
+	ab := t.NewACCEPTBallot(t.local, ivp.Round(), pr.Fact().Hash(), valuehash.RandomSHA256(), ivp)
 	avp, err := t.NewVoteproof(base.StageACCEPT, ab.Fact(), t.local, t.remote)
 	t.NoError(err)
 
@@ -101,7 +92,7 @@ func (t *testVoteproofChecker) TestACCEPTVoteproofProposalFoundInRemote() {
 	t.True(keep)
 	t.NoError(err)
 
-	npr, found, err := t.local.Database().Proposal(pr.Height(), pr.Round(), pr.Node())
+	npr, found, err := t.local.Database().ProposalByPoint(pr.Fact().Height(), pr.Fact().Round(), pr.FactSign().Node())
 	t.True(found)
 	t.NoError(err)
 	t.NoError(npr.IsValid(t.local.Policy().NetworkID()))

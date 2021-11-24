@@ -2,11 +2,11 @@ package isaac
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/pkg/errors"
 	"github.com/rs/zerolog"
 	"github.com/spikeekips/mitum/base"
-	"github.com/spikeekips/mitum/base/ballot"
 	"github.com/spikeekips/mitum/network"
 	"github.com/spikeekips/mitum/storage"
 	"github.com/spikeekips/mitum/util"
@@ -21,12 +21,14 @@ type BallotChecker struct {
 	policy   *LocalPolicy
 	suffrage base.Suffrage
 	nodepool *network.Nodepool
-	ballot   ballot.Ballot
+	ballot   base.Ballot
+	fact     base.BallotFact
+	factSign base.BallotFactSign
 	lvp      base.Voteproof
 }
 
 func NewBallotChecker(
-	blt ballot.Ballot,
+	blt base.Ballot,
 	db storage.Database,
 	policy *LocalPolicy,
 	suffrage base.Suffrage,
@@ -42,6 +44,8 @@ func NewBallotChecker(
 		suffrage: suffrage,
 		nodepool: nodepool,
 		ballot:   blt,
+		fact:     blt.RawFact(),
+		factSign: blt.FactSign(),
 		lvp:      lastVoteproof,
 	}
 }
@@ -49,7 +53,7 @@ func NewBallotChecker(
 // IsFromLocal filters ballots from local thru network; whether it is from the
 // other node, which has same node address
 func (bc *BallotChecker) IsFromLocal() (bool, error) {
-	if bc.nodepool.LocalNode().Address().Equal(bc.ballot.Node()) {
+	if bc.nodepool.LocalNode().Address().Equal(bc.factSign.Node()) {
 		return false, nil
 	}
 
@@ -59,20 +63,24 @@ func (bc *BallotChecker) IsFromLocal() (bool, error) {
 // InTimespan checks whether ballot is signed at a given interval,
 // policy.TimespanValidBallot().
 func (bc *BallotChecker) InTimespan() (bool, error) {
-	if _, ok := bc.ballot.(ballot.Proposal); ok { // NOTE old signed proposal also can be correct
+	if bc.fact.Stage() == base.StageProposal { // NOTE proposal should be resigned except fact
+		if !localtime.WithinNow(bc.ballot.SignedAt(), bc.policy.TimespanValidBallot()) {
+			return false, errors.Errorf("too old or new proposal")
+		}
+
 		return true, nil
 	}
 
-	if !localtime.WithinNow(bc.ballot.SignedAt(), bc.policy.TimespanValidBallot()) {
+	if !localtime.WithinNow(bc.ballot.FactSign().SignedAt(), bc.policy.TimespanValidBallot()) {
 		return false, errors.Errorf("too old or new ballot")
 	}
 
 	return true, nil
 }
 
-// InSuffrage checks Ballot.Node() is inside suffrage
+// InSuffrage checks BallotFactSign.Node() is inside suffrage
 func (bc *BallotChecker) InSuffrage() (bool, error) {
-	if !bc.suffrage.IsInside(bc.ballot.Node()) {
+	if !bc.suffrage.IsInside(bc.factSign.Node()) {
 		return false, nil
 	}
 
@@ -81,20 +89,20 @@ func (bc *BallotChecker) InSuffrage() (bool, error) {
 
 // CheckSigning checks node signed by it's valid key.
 func (bc *BallotChecker) CheckSigning() (bool, error) {
-	err := CheckBallotSigning(bc.ballot, bc.nodepool)
+	err := CheckBallotSigningNode(bc.ballot.FactSign(), bc.nodepool)
 	return err == nil, err
 }
 
 func (bc *BallotChecker) IsFromAliveNode() (bool, error) {
-	if _, ok := bc.ballot.(ballot.Proposal); ok {
+	if bc.fact.Stage() == base.StageProposal {
 		return true, nil
 	}
 
-	switch _, ch, found := bc.nodepool.Node(bc.ballot.Node()); {
+	switch _, ch, found := bc.nodepool.Node(bc.factSign.Node()); {
 	case !found:
-		return false, errors.Errorf("unknown node, %q", bc.ballot.Node())
+		return false, errors.Errorf("unknown node, %q", bc.factSign.Node())
 	case ch == nil:
-		return false, errors.Errorf("from dead node, %q", bc.ballot.Node())
+		return false, errors.Errorf("from dead node, %q", bc.factSign.Node())
 	}
 
 	return true, nil
@@ -108,9 +116,9 @@ func (bc *BallotChecker) CheckWithLastVoteproof() (bool, error) {
 		return true, nil
 	}
 
-	bh := bc.ballot.Height()
+	bh := bc.fact.Height()
 	lh := bc.lvp.Height()
-	br := bc.ballot.Round()
+	br := bc.fact.Round()
 	lr := bc.lvp.Round()
 
 	switch {
@@ -127,48 +135,44 @@ func (bc *BallotChecker) CheckWithLastVoteproof() (bool, error) {
 
 // CheckProposalInACCEPTBallot checks ACCEPT ballot should have valid proposal.
 func (bc *BallotChecker) CheckProposalInACCEPTBallot() (bool, error) {
-	i, ok := bc.ballot.(ballot.ACCEPT)
+	i, ok := bc.fact.(base.ACCEPTBallotFact)
 	if !ok {
 		return true, nil
 	}
-	ph := i.Proposal()
+	h := i.Proposal()
 
-	var proposal ballot.Proposal
-	if i, found, err := bc.database.Seal(ph); err != nil {
+	var fact base.ProposalFact
+	if i, found, err := bc.database.Proposal(h); err != nil {
 		return false, err
 	} else if found {
-		j, ok := i.(ballot.Proposal)
-		if !ok {
-			return false, errors.Errorf("not proposal in accept ballot, %T", i)
-		}
-		proposal = j
+		fact = i.Fact()
 	}
 
-	if proposal == nil { // NOTE if not found, request proposal from node of ballot
-		i, err := bc.requestProposalFromNodes(ph)
+	if fact == nil { // NOTE if not found, request proposal from node of ballot
+		i, err := bc.requestProposalFromNodes(h)
 		if err != nil {
 			return false, err
 		}
-		proposal = i
+		fact = i
 	}
 
-	if bc.ballot.Height() != proposal.Height() {
+	if bc.fact.Height() != fact.Height() {
 		return false, errors.Errorf("proposal in ACCEPTBallot is invalid; different height, ballot=%v proposal=%v",
-			bc.ballot.Height(), proposal.Height())
-	} else if bc.ballot.Round() != proposal.Round() {
+			bc.fact.Height(), fact.Height())
+	} else if bc.fact.Round() != fact.Round() {
 		return false, errors.Errorf("proposal in ACCEPTBallot is invalid; different round, ballot=%v proposal=%v",
-			bc.ballot.Round(), proposal.Round())
+			bc.fact.Round(), fact.Round())
 	}
 
 	return true, nil
 }
 
 func (bc *BallotChecker) CheckVoteproof() (bool, error) {
-	i, ok := bc.ballot.(base.Voteproofer)
+	i, ok := bc.ballot.(interface{ BaseVoteproof() base.Voteproof })
 	if !ok {
 		return true, nil
 	}
-	voteproof := i.Voteproof()
+	voteproof := i.BaseVoteproof()
 
 	vc := NewVoteProofChecker(voteproof, bc.policy, bc.suffrage)
 	_ = vc.SetLogging(bc.Logging)
@@ -184,7 +188,7 @@ func (bc *BallotChecker) CheckVoteproof() (bool, error) {
 	return true, nil
 }
 
-func (bc *BallotChecker) requestProposalFromNodes(h valuehash.Hash) (ballot.Proposal, error) {
+func (bc *BallotChecker) requestProposalFromNodes(h valuehash.Hash) (base.ProposalFact, error) {
 	wk := util.NewErrgroupWorker(context.Background(), 100)
 	defer wk.Close()
 
@@ -217,36 +221,36 @@ func (bc *BallotChecker) requestProposalFromNodes(h valuehash.Hash) (ballot.Prop
 
 	var dc util.DataContainerError
 	if err := wk.Wait(); !errors.As(err, &dc) {
+		if err != nil {
+			return nil, fmt.Errorf("failed to request proposal, %v: %w", h, err)
+		}
+
 		return nil, errors.Errorf("failed to request proposal, %v", h)
 	}
 
-	return dc.Data().(ballot.Proposal), nil
+	return dc.Data().(base.Proposal).Fact(), nil
 }
 
 func (bc *BallotChecker) requestProposal(
 	ctx context.Context, ch network.Channel, h valuehash.Hash,
-) (ballot.Proposal, error) {
-	proposal, err := RequestProposal(ctx, ch, h)
+) (base.Proposal, error) {
+	proposal, err := ch.Proposal(ctx, h)
+	switch {
+	case err != nil:
+		return nil, err
+	case proposal == nil:
+		return nil, util.NotFoundError
+	}
+
+	if err = proposal.IsValid(bc.policy.NetworkID()); err != nil {
+		return nil, err
+	}
+
+	pvc, err := NewProposalValidationChecker(bc.database, bc.suffrage, bc.nodepool, proposal, nil)
 	if err != nil {
 		return nil, err
 	}
 
-	sealChecker := NewSealChecker(proposal, bc.database, bc.policy, nil)
-	if err := util.NewChecker("proposal-seal-checker", []util.CheckerFunc{sealChecker.IsValid}).Check(); err != nil {
-		return nil, err
-	}
-
-	ballotChecker := NewBallotChecker(proposal, bc.database, bc.policy, bc.suffrage, bc.nodepool, bc.lvp)
-	if err := util.NewChecker("proposal-ballot-checker", []util.CheckerFunc{
-		ballotChecker.InSuffrage,
-		ballotChecker.CheckVoteproof,
-	}).Check(); err != nil {
-		if !errors.Is(err, util.IgnoreError) {
-			return nil, err
-		}
-	}
-
-	pvc := NewProposalValidationChecker(bc.database, bc.suffrage, bc.nodepool, proposal, nil)
 	if err := util.NewChecker("proposal-checker", []util.CheckerFunc{
 		pvc.IsKnown,
 		pvc.CheckSigning,
@@ -263,31 +267,15 @@ func (bc *BallotChecker) requestProposal(
 	return proposal, nil
 }
 
-func CheckBallotSigning(blt ballot.Ballot, nodepool *network.Nodepool) error {
-	node, _, found := nodepool.Node(blt.Node())
+func CheckBallotSigningNode(fs base.BallotFactSign, nodepool *network.Nodepool) error {
+	node, _, found := nodepool.Node(fs.Node())
 	if !found {
 		return errors.Errorf("node not found")
 	}
 
-	if !blt.Signer().Equal(node.Publickey()) {
+	if !fs.Signer().Equal(node.Publickey()) {
 		return errors.Errorf("publickey not matched")
 	}
 
 	return nil
-}
-
-func RequestProposal(ctx context.Context, ch network.Channel, h valuehash.Hash) (ballot.Proposal, error) {
-	if r, err := ch.Seals(ctx, []valuehash.Hash{h}); err != nil {
-		return nil, err
-	} else if len(r) < 1 {
-		return nil, errors.Errorf("no Proposal found, %v", h.String())
-	} else if pr, ok := r[0].(ballot.Proposal); !ok {
-		return nil, errors.Errorf(
-			"request %v, but not ballot.Proposal, %T",
-			h.String(),
-			r[0],
-		)
-	} else {
-		return pr, nil
-	}
 }

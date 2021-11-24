@@ -9,7 +9,6 @@ import (
 	"github.com/pkg/errors"
 	"github.com/rs/zerolog"
 	"github.com/spikeekips/mitum/base"
-	"github.com/spikeekips/mitum/base/ballot"
 	"github.com/spikeekips/mitum/base/block"
 	"github.com/spikeekips/mitum/base/operation"
 	"github.com/spikeekips/mitum/base/seal"
@@ -44,7 +43,7 @@ type States struct {
 	states             map[base.State]State
 	statech            chan StateSwitchContext
 	voteproofch        chan base.Voteproof
-	proposalch         chan ballot.Proposal
+	proposalch         chan base.Proposal
 	ballotbox          *isaac.Ballotbox
 	timers             *localtime.Timers
 	lvplock            sync.RWMutex
@@ -78,7 +77,7 @@ func NewStates( // revive:disable-line:argument-limit
 		state:       base.StateStopped,
 		statech:     make(chan StateSwitchContext, 33),
 		voteproofch: make(chan base.Voteproof, 33),
-		proposalch:  make(chan ballot.Proposal, 33),
+		proposalch:  make(chan base.Proposal, 33),
 		ballotbox:   ballotbox,
 		timers: localtime.NewTimers([]localtime.TimerID{
 			TimerIDBroadcastJoingingINITBallot,
@@ -234,9 +233,9 @@ func (ss *States) NewSeal(sl seal.Seal) error {
 
 	var err error
 	switch t := sl.(type) {
-	case ballot.Proposal:
+	case base.Proposal:
 		err = ss.newSealProposal(t)
-	case ballot.Ballot:
+	case base.Ballot:
 		err = ss.newSealBallot(t)
 	default:
 		err = ss.newSealOthers(sl)
@@ -263,7 +262,7 @@ func (ss *States) NewBlocks(blks []block.Block) error {
 	return ss.blockSavedHook.Run(ctx)
 }
 
-func (ss *States) NewProposal(proposal ballot.Proposal) {
+func (ss *States) NewProposal(proposal base.Proposal) {
 	go func() {
 		ss.proposalch <- proposal
 	}()
@@ -272,9 +271,9 @@ func (ss *States) NewProposal(proposal ballot.Proposal) {
 // BroadcastBallot broadcast seal to the known nodes,
 // - suffrage nodes
 // - if toLocal is true, sends to local
-func (ss *States) BroadcastBallot(blt ballot.Ballot, toLocal bool) {
-	go ss.broadcast(blt, toLocal, func(node base.Node) bool {
-		return ss.suffrage.IsInside(node.Address())
+func (ss *States) BroadcastBallot(blt base.Ballot, toLocal bool) {
+	go ss.broadcast(blt, toLocal, func(n base.Node) bool {
+		return ss.suffrage.IsInside(n.Address())
 	})
 }
 
@@ -565,16 +564,20 @@ func (ss *States) processVoteproofInternal(voteproof base.Voteproof) error {
 	return err
 }
 
-func (ss *States) processProposal(proposal ballot.Proposal) error {
+func (ss *States) processProposal(proposal base.Proposal) error {
 	ss.Lock()
 	defer ss.Unlock()
 
 	l := ss.Log().With().Stringer("seal_hash", proposal.Hash()).Logger()
-	pvc := isaac.NewProposalValidationChecker(
+	pvc, err := isaac.NewProposalValidationChecker(
 		ss.database, ss.suffrage, ss.nodepool,
 		proposal,
 		ss.LastINITVoteproof(),
 	)
+	if err != nil {
+		return err
+	}
+
 	_ = pvc.SetLogging(ss.Logging)
 
 	if err := util.NewChecker("proposal-validation-checker", []util.CheckerFunc{
@@ -590,12 +593,12 @@ func (ss *States) processProposal(proposal ballot.Proposal) error {
 	return ss.states[ss.State()].ProcessProposal(proposal)
 }
 
-func (ss *States) newSealProposal(proposal ballot.Proposal) error {
+func (ss *States) newSealProposal(proposal base.Proposal) error {
 	if ss.isNoneSuffrageNode {
 		return nil
 	}
 
-	if !ss.underHandover() && proposal.Node().Equal(ss.nodepool.LocalNode().Address()) {
+	if !ss.underHandover() && proposal.Fact().Proposer().Equal(ss.nodepool.LocalNode().Address()) {
 		return nil
 	}
 
@@ -612,7 +615,7 @@ func (ss *States) newSealProposal(proposal ballot.Proposal) error {
 	return nil
 }
 
-func (ss *States) newSealBallot(blt ballot.Ballot) error {
+func (ss *States) newSealBallot(blt base.Ballot) error {
 	if ss.isNoneSuffrageNode {
 		return nil
 	}
@@ -653,16 +656,20 @@ func (ss *States) newSealOthers(sl seal.Seal) error {
 	return nil
 }
 
-func (ss *States) validateProposal(proposal ballot.Proposal) error {
-	pvc := isaac.NewProposalValidationChecker(
+func (ss *States) validateProposal(proposal base.Proposal) error {
+	pvc, err := isaac.NewProposalValidationChecker(
 		ss.database, ss.suffrage, ss.nodepool,
 		proposal,
 		ss.LastINITVoteproof(),
 	)
+	if err != nil {
+		return err
+	}
+
 	_ = pvc.SetLogging(ss.Logging)
 
 	var fns []util.CheckerFunc
-	if proposal.Node().Equal(ss.nodepool.LocalNode().Address()) {
+	if proposal.Fact().Proposer().Equal(ss.nodepool.LocalNode().Address()) {
 		fns = []util.CheckerFunc{
 			pvc.SaveProposal,
 			pvc.IsOlder,
@@ -689,7 +696,7 @@ func (ss *States) validateProposal(proposal ballot.Proposal) error {
 	return nil
 }
 
-func (ss *States) validateBallot(blt ballot.Ballot) error {
+func (ss *States) validateBallot(blt base.Ballot) error {
 	bc := NewBallotChecker(blt, ss.LastVoteproof())
 	_ = bc.SetLogging(ss.Logging)
 
@@ -698,8 +705,8 @@ func (ss *States) validateBallot(blt ballot.Ballot) error {
 	}).Check()
 }
 
-func (ss *States) voteBallot(blt ballot.Ballot) (base.Voteproof, error) {
-	if !blt.Stage().CanVote() {
+func (ss *States) voteBallot(blt base.Ballot) (base.Voteproof, error) {
+	if !blt.RawFact().Stage().CanVote() {
 		return nil, nil
 	}
 
@@ -717,26 +724,26 @@ func (ss *States) voteBallot(blt ballot.Ballot) (base.Voteproof, error) {
 	return voteproof, nil
 }
 
-func (ss *States) checkBallotVoteproof(blt ballot.Ballot) error {
+func (ss *States) checkBallotVoteproof(blt base.Ballot) error {
 	switch ss.State() {
 	case base.StateJoining, base.StateConsensus, base.StateSyncing:
 	default:
 		return nil
 	}
 
-	if blt.Node().Equal(ss.nodepool.LocalNode().Address()) {
+	if blt.FactSign().Node().Equal(ss.nodepool.LocalNode().Address()) {
 		return nil
 	}
 
 	// NOTE incoming seal should be filtered as new
 	var voteproof base.Voteproof
 	switch t := blt.(type) {
-	case ballot.INIT:
+	case base.INITBallot:
 		voteproof = t.ACCEPTVoteproof()
-	case ballot.Proposal:
-		voteproof = t.Voteproof()
-	case ballot.ACCEPT:
-		voteproof = t.Voteproof()
+	case base.Proposal:
+		voteproof = t.BaseVoteproof()
+	case base.ACCEPTBallot:
+		voteproof = t.BaseVoteproof()
 	default:
 		return nil
 	}
@@ -813,14 +820,6 @@ func (ss *States) detectStuck(ctx context.Context) {
 			lvp := ss.LastVoteproof()
 			state := ss.State()
 
-			e := ss.Log().With().Stringer("state", state).Dur("endure", endure)
-
-			if lvp != nil {
-				e = e.Object("last_voteproof", lvp)
-			}
-
-			l := e.Logger()
-
 			cc := NewConsensusStuckChecker(lvp, state, endure)
 			err := util.NewChecker("consensus-stuck-checker", []util.CheckerFunc{
 				cc.IsValidState,
@@ -839,6 +838,7 @@ func (ss *States) detectStuck(ctx context.Context) {
 			}
 
 			if changed {
+				l := ss.Log().With().Stringer("state", state).Dur("endure", endure).Object("last_voteproof", lvp).Logger()
 				if stucked {
 					l.Error().Err(err).Msg("consensus stuck")
 				} else {
@@ -855,15 +855,15 @@ func (ss *States) broadcastOperationSealToSuffrageNodes(sl operation.Seal) {
 		return
 	}
 
-	go ss.broadcast(sl, false, func(node base.Node) bool {
-		return ss.suffrage.IsInside(node.Address())
+	go ss.broadcast(sl, false, func(n base.Node) bool {
+		return ss.suffrage.IsInside(n.Address())
 	})
 }
 
 func (ss *States) broadcast(
 	sl seal.Seal,
 	toLocal bool,
-	filter func(node base.Node) bool,
+	filter func(base.Node) bool,
 ) {
 	l := ss.Log().With().Stringer("seal_hash", sl.Hash()).Logger()
 
@@ -873,7 +873,7 @@ func (ss *States) broadcast(
 	if toLocal {
 		go func() {
 			if err := ss.NewSeal(sl); err != nil {
-				l.Error().Err(err).Msg("failed to send ballot to local")
+				ss.Log().Error().Err(err).Stringer("seal_hash", sl.Hash()).Msg("failed to send ballot to local")
 			}
 		}()
 	}
@@ -980,7 +980,7 @@ func (ss *States) endHandover(ci network.ConnInfo) error {
 
 	// NOTE remove passthrough
 	if err := ss.nodepool.SetPassthrough(old, func(sl network.PassthroughedSeal) bool {
-		if _, ok := sl.Seal.(ballot.Ballot); ok { // NOTE prevent broadcasting ballots
+		if _, ok := sl.Seal.(base.Ballot); ok { // NOTE prevent broadcasting ballots
 			return false
 		}
 

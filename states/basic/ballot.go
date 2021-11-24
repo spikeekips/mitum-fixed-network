@@ -5,7 +5,9 @@ import (
 	"github.com/rs/zerolog"
 	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/base/ballot"
+	"github.com/spikeekips/mitum/base/key"
 	"github.com/spikeekips/mitum/base/node"
+	"github.com/spikeekips/mitum/base/seal"
 	"github.com/spikeekips/mitum/storage"
 	"github.com/spikeekips/mitum/util/logging"
 	"github.com/spikeekips/mitum/util/valuehash"
@@ -15,11 +17,12 @@ func NextINITBallotFromACCEPTVoteproof(
 	db storage.Database,
 	local *node.Local,
 	voteproof base.Voteproof,
-) (ballot.INITV0, error) {
+	networkID base.NetworkID,
+) (base.INITBallot, error) {
 	if voteproof.Stage() != base.StageACCEPT {
-		return ballot.INITV0{}, errors.Errorf("not accept voteproof")
+		return nil, errors.Errorf("not accept voteproof")
 	} else if !voteproof.IsFinished() {
-		return ballot.INITV0{}, errors.Errorf("voteproof not yet finished")
+		return nil, errors.Errorf("voteproof not yet finished")
 	}
 
 	var height base.Height
@@ -34,14 +37,14 @@ func NextINITBallotFromACCEPTVoteproof(
 
 		switch m, found, err := db.ManifestByHeight(height - 1); {
 		case err != nil:
-			return ballot.INITV0{}, errors.Wrap(err, "failed to get manifest")
+			return nil, errors.Wrap(err, "failed to get manifest")
 		case !found:
-			return ballot.INITV0{}, errors.Errorf("manfest, height=%d not found", height-1)
+			return nil, errors.Errorf("manfest, height=%d not found", height-1)
 		default:
 			previousBlock = m.Hash()
 		}
-	} else if i, ok := voteproof.Majority().(ballot.ACCEPTFact); !ok {
-		return ballot.INITV0{}, errors.Errorf(
+	} else if i, ok := voteproof.Majority().(base.ACCEPTBallotFact); !ok {
+		return nil, errors.Errorf(
 			"not ballot.ACCEPTBallotFact in voteproof.Majority(); %T", voteproof.Majority())
 	} else { // NOTE agreed accept voteproof
 		height = voteproof.Height() + 1
@@ -50,42 +53,44 @@ func NextINITBallotFromACCEPTVoteproof(
 	}
 
 	var avp base.Voteproof
-	if voteproof.Result() == base.VoteResultMajority {
-		avp = voteproof
-	} else {
+	if voteproof.Result() != base.VoteResultMajority {
 		switch vp, err := db.Voteproof(voteproof.Height()-1, base.StageACCEPT); {
 		case err != nil:
-			return ballot.INITV0{}, errors.Wrap(err, "failed to get last voteproof")
+			return nil, errors.Wrap(err, "failed to get last voteproof")
 		case vp != nil:
 			avp = vp
 		}
 	}
 
-	return ballot.NewINITV0(
+	return ballot.NewINIT(
+		ballot.NewINITFact(
+			height,
+			round,
+			previousBlock,
+		),
 		local.Address(),
-		height,
-		round,
-		previousBlock,
 		voteproof,
 		avp,
-	), nil
+		local.Privatekey(), networkID,
+	)
 }
 
 func NextINITBallotFromINITVoteproof(
 	db storage.Database,
 	local *node.Local,
 	voteproof base.Voteproof,
-) (ballot.INITV0, error) {
+	networkID base.NetworkID,
+) (base.INITBallot, error) {
 	if voteproof.Stage() != base.StageINIT {
-		return ballot.INITV0{}, errors.Errorf("not init voteproof")
+		return nil, errors.Errorf("not init voteproof")
 	} else if !voteproof.IsFinished() {
-		return ballot.INITV0{}, errors.Errorf("voteproof not yet finished")
+		return nil, errors.Errorf("voteproof not yet finished")
 	}
 
 	var avp base.Voteproof
 	switch vp, err := db.Voteproof(voteproof.Height()-1, base.StageACCEPT); {
 	case err != nil:
-		return ballot.INITV0{}, errors.Wrap(err, "failed to get last voteproof")
+		return nil, errors.Wrap(err, "failed to get last voteproof")
 	case vp != nil:
 		avp = vp
 	}
@@ -93,30 +98,33 @@ func NextINITBallotFromINITVoteproof(
 	var previousBlock valuehash.Hash
 	switch m, found, err := db.ManifestByHeight(voteproof.Height() - 1); {
 	case err != nil:
-		return ballot.INITV0{}, errors.Wrap(err, "failed to get previous manifest")
+		return nil, errors.Wrap(err, "failed to get previous manifest")
 	case !found:
-		return ballot.INITV0{}, errors.Errorf("previous manfest, height=%d not found", voteproof.Height())
+		return nil, errors.Errorf("previous manfest, height=%d not found", voteproof.Height())
 	default:
 		previousBlock = m.Hash()
 	}
 
-	return ballot.NewINITV0(
+	return ballot.NewINIT(
+		ballot.NewINITFact(
+			voteproof.Height(),
+			voteproof.Round()+1,
+			previousBlock,
+		),
 		local.Address(),
-		voteproof.Height(),
-		voteproof.Round()+1,
-		previousBlock,
 		voteproof,
 		avp,
-	), nil
+		local.Privatekey(), networkID,
+	)
 }
 
 type BallotChecker struct {
 	*logging.Logging
-	ballot ballot.Ballot
+	ballot base.Ballot
 	lvp    base.Voteproof
 }
 
-func NewBallotChecker(blt ballot.Ballot, lvp base.Voteproof) *BallotChecker {
+func NewBallotChecker(blt base.Ballot, lvp base.Voteproof) *BallotChecker {
 	return &BallotChecker{
 		Logging: logging.NewLogging(func(c zerolog.Context) zerolog.Context {
 			return c.Str("module", "ballot-checker-in-states")
@@ -131,7 +139,8 @@ func (bc *BallotChecker) CheckWithLastVoteproof() (bool, error) {
 		return true, nil
 	}
 
-	bh := bc.ballot.Height()
+	fact := bc.ballot.RawFact()
+	bh := fact.Height()
 	lh := bc.lvp.Height()
 
 	if bh < lh {
@@ -140,9 +149,41 @@ func (bc *BallotChecker) CheckWithLastVoteproof() (bool, error) {
 		return true, nil
 	}
 
-	if bc.ballot.Round() < bc.lvp.Round() {
+	if fact.Round() < bc.lvp.Round() {
 		return false, errors.Errorf("lower round than last init voteproof")
 	}
 
 	return true, nil
+}
+
+func signBallot(blt base.Ballot, priv key.Privatekey, networkID base.NetworkID) error {
+	var signer seal.Signer
+	switch t := blt.(type) {
+	case ballot.INIT:
+		signer = (interface{})(&t).(seal.Signer)
+	case ballot.Proposal:
+		signer = (interface{})(&t).(seal.Signer)
+	case ballot.ACCEPT:
+		signer = (interface{})(&t).(seal.Signer)
+	default:
+		return errors.Errorf("failed to sign ballot; unknown ballot type; %T", blt)
+	}
+
+	return signer.Sign(priv, networkID)
+}
+
+func signBallotWithFact(blt base.Ballot, n base.Address, priv key.Privatekey, networkID base.NetworkID) error {
+	var signer base.SignWithFacter
+	switch t := blt.(type) {
+	case ballot.INIT:
+		signer = (interface{})(&t).(base.SignWithFacter)
+	case ballot.Proposal:
+		signer = (interface{})(&t).(base.SignWithFacter)
+	case ballot.ACCEPT:
+		signer = (interface{})(&t).(base.SignWithFacter)
+	default:
+		return errors.Errorf("failed to sign ballot with fact; unknown ballot type; %T", blt)
+	}
+
+	return signer.SignWithFact(n, priv, networkID)
 }

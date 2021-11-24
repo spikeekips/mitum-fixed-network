@@ -17,16 +17,17 @@ import (
 
 type Channel struct {
 	*logging.Logging
-	connInfo         network.ConnInfo
-	recvChan         chan network.PassthroughedSeal
-	getSealHandler   network.GetSealsHandler
-	getState         network.GetStateHandler
-	nodeInfo         network.NodeInfoHandler
-	getBlockDataMaps network.BlockDataMapsHandler
-	getBlockData     network.BlockDataHandler
-	startHandover    network.StartHandoverHandler
-	pingHandover     network.PingHandoverHandler
-	endHandover      network.EndHandoverHandler
+	connInfo           network.ConnInfo
+	recvChan           chan network.PassthroughedSeal
+	getSealHandler     network.GetSealsHandler
+	getProposalHandler network.GetProposalHandler
+	getState           network.GetStateHandler
+	nodeInfo           network.NodeInfoHandler
+	getBlockDataMaps   network.BlockDataMapsHandler
+	getBlockData       network.BlockDataHandler
+	startHandover      network.StartHandoverHandler
+	pingHandover       network.PingHandoverHandler
+	endHandover        network.EndHandoverHandler
 }
 
 func NewChannel(bufsize uint, connInfo network.ConnInfo) *Channel {
@@ -67,6 +68,18 @@ func (ch *Channel) ReceiveSeal() <-chan network.PassthroughedSeal {
 
 func (ch *Channel) SetGetSealHandler(f network.GetSealsHandler) {
 	ch.getSealHandler = f
+}
+
+func (ch *Channel) Proposal(_ context.Context, h valuehash.Hash) (base.Proposal, error) {
+	if ch.getProposalHandler == nil {
+		return nil, errors.Errorf("getProposalHandler is missing")
+	}
+
+	return ch.getProposalHandler(h)
+}
+
+func (ch *Channel) SetGetProposalHandler(f network.GetProposalHandler) {
+	ch.getProposalHandler = f
 }
 
 func (ch *Channel) State(_ context.Context, key string) (state.State, bool, error) {

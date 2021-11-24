@@ -8,7 +8,6 @@ import (
 	"github.com/pkg/errors"
 	"github.com/rs/zerolog"
 	"github.com/spikeekips/mitum/base"
-	"github.com/spikeekips/mitum/base/ballot"
 	"github.com/spikeekips/mitum/base/block"
 	"github.com/spikeekips/mitum/util"
 	"github.com/spikeekips/mitum/util/logging"
@@ -29,18 +28,18 @@ func (r Result) IsEmpty() bool {
 	return r.Block == nil && r.Err == nil
 }
 
-type ProcessorNewFunc func(ballot.Proposal, base.Voteproof) (Processor, error)
+type ProcessorNewFunc func(base.SignedBallotFact, base.Voteproof) (Processor, error)
 
 type pv struct {
 	ctx       context.Context
-	proposal  ballot.Proposal
+	sfs       base.SignedBallotFact
 	voteproof base.Voteproof
 	outchan   chan Result
 }
 
 type sv struct {
 	ctx       context.Context
-	proposal  valuehash.Hash
+	fact      valuehash.Hash
 	voteproof base.Voteproof
 	outchan   chan Result
 }
@@ -50,7 +49,7 @@ type Processors struct {
 	*logging.Logging
 	*util.ContextDaemon
 	newFunc           ProcessorNewFunc
-	proposalChecker   func(ballot.Proposal) error
+	proposalChecker   func(base.ProposalFact) error
 	newProposalChan   chan pv
 	saveChan          chan sv
 	current           Processor
@@ -58,7 +57,7 @@ type Processors struct {
 	cancelSaveFunc    func()
 }
 
-func NewProcessors(newFunc ProcessorNewFunc, proposalChecker func(ballot.Proposal) error) *Processors {
+func NewProcessors(newFunc ProcessorNewFunc, proposalChecker func(base.ProposalFact) error) *Processors {
 	pps := &Processors{
 		Logging: logging.NewLogging(func(c zerolog.Context) zerolog.Context {
 			return c.Str("module", "default-proposal-processors")
@@ -80,7 +79,7 @@ func (*Processors) Initialize() error {
 
 func (pps *Processors) NewProposal(
 	ctx context.Context,
-	proposal ballot.Proposal,
+	sfs base.SignedBallotFact,
 	initVoteproof base.Voteproof,
 ) <-chan Result {
 	// NOTE 1-size bufferred channel; channel can be closed without if receiver
@@ -100,7 +99,7 @@ func (pps *Processors) NewProposal(
 	ch := make(chan Result, 1)
 
 	go func() {
-		pps.newProposalChan <- pv{ctx: ctx, proposal: proposal, voteproof: initVoteproof, outchan: ch}
+		pps.newProposalChan <- pv{ctx: ctx, sfs: sfs, voteproof: initVoteproof, outchan: ch}
 	}()
 
 	return ch
@@ -108,7 +107,7 @@ func (pps *Processors) NewProposal(
 
 func (pps *Processors) Save(
 	ctx context.Context,
-	proposal valuehash.Hash,
+	fact valuehash.Hash,
 	acceptVoteproof base.Voteproof,
 ) <-chan Result {
 	if acceptVoteproof.Stage() != base.StageACCEPT {
@@ -126,7 +125,7 @@ func (pps *Processors) Save(
 	ch := make(chan Result, 1)
 
 	go func() {
-		pps.saveChan <- sv{ctx: ctx, proposal: proposal, voteproof: acceptVoteproof, outchan: ch}
+		pps.saveChan <- sv{ctx: ctx, fact: fact, voteproof: acceptVoteproof, outchan: ch}
 	}()
 
 	return ch
@@ -153,12 +152,14 @@ end:
 		case <-ctx.Done():
 			break end
 		case i := <-pps.newProposalChan:
-			r := pps.handleProposal(i.ctx, i.proposal, i.voteproof, i.outchan) // nolint:contextcheck
+			r := pps.handleProposal(i.ctx, i.sfs, i.voteproof, i.outchan) // nolint:contextcheck
 			if err := r.Err; err != nil {
+				l := pps.Log().With().Stringer("proposal", i.sfs.Fact().Hash()).Err(err).Logger()
+
 				if errors.Is(err, util.IgnoreError) {
-					pps.Log().Debug().Err(err).Msg("proposal ignored")
+					l.Debug().Msg("proposal ignored")
 				} else {
-					pps.Log().Error().Err(err).Msg("failed to handle proposal")
+					l.Error().Msg("failed to handle proposal")
 				}
 			}
 
@@ -168,7 +169,7 @@ end:
 				}(i.outchan)
 			}
 		case i := <-pps.saveChan:
-			if r := pps.saveProposal(i.ctx, i.proposal, i.voteproof, i.outchan); !r.IsEmpty() { // nolint:contextcheck
+			if r := pps.saveProposal(i.ctx, i.fact, i.voteproof, i.outchan); !r.IsEmpty() { // nolint:contextcheck
 				go func(ch chan<- Result) {
 					ch <- r
 				}(i.outchan)
@@ -187,21 +188,22 @@ end:
 
 func (pps *Processors) handleProposal(
 	ctx context.Context,
-	proposal ballot.Proposal,
+	sfs base.SignedBallotFact,
 	initVoteproof base.Voteproof,
 	outchan chan<- Result,
 ) Result {
-	if err := pps.checkProposal(proposal); err != nil {
+	fact := sfs.Fact().(base.ProposalFact)
+	if err := pps.checkProposal(fact); err != nil {
 		return Result{Err: PrepareFailedError.Merge(err)}
 	}
 
 	var current Processor
-	switch pp, err := pps.checkCurrent(proposal); {
+	switch pp, err := pps.checkCurrent(fact); {
 	case err != nil:
 		return Result{Err: PrepareFailedError.Merge(err)}
 	default:
 		if pp == nil {
-			p, err := pps.newProcessor(proposal, initVoteproof)
+			p, err := pps.newProcessor(sfs, initVoteproof)
 			if err != nil {
 				return Result{Err: err}
 			}
@@ -225,9 +227,9 @@ func (pps *Processors) handleProposal(
 
 func (pps *Processors) doPrepare(ctx context.Context, processor Processor, outchan chan<- Result) {
 	l := pps.Log().With().
-		Int64("height", processor.Proposal().Height().Int64()).
-		Uint64("round", processor.Proposal().Round().Uint64()).
-		Stringer("proposal", processor.Proposal().Hash()).
+		Int64("height", processor.Fact().Height().Int64()).
+		Uint64("round", processor.Fact().Round().Uint64()).
+		Stringer("proposal", processor.Fact().Hash()).
 		Logger()
 
 	var blk block.Block
@@ -270,12 +272,16 @@ func (pps *Processors) doPrepare(ctx context.Context, processor Processor, outch
 		l.Debug().Stringer("new_block", blk.Hash()).Msg("new block prepared")
 	}
 
+	if err != nil {
+		pps.setCurrent(nil)
+	}
+
 	outchan <- Result{Block: blk, Err: err}
 }
 
 func (pps *Processors) saveProposal(
 	ctx context.Context,
-	proposal valuehash.Hash,
+	fact valuehash.Hash,
 	acceptVoteproof base.Voteproof,
 	outchan chan<- Result,
 ) Result {
@@ -284,11 +290,11 @@ func (pps *Processors) saveProposal(
 	var err error
 	if current == nil {
 		err = errors.Errorf("not yet prepared")
-	} else if h := current.Proposal().Hash(); !h.Equal(proposal) { // NOTE if different processor exists already
+	} else if h := current.Fact().Hash(); !h.Equal(fact) { // NOTE if different processor exists already
 		err = errors.Errorf("not yet prepared; another processor already exists")
 
 		LogEventProcessor(current, "current", pps.Log().Error().Err(err)).
-			Stringer("propsoal", proposal).
+			Stringer("propsoal", fact).
 			Msg("failed to save proposal")
 	}
 
@@ -312,9 +318,9 @@ func (pps *Processors) doSave(
 	outchan chan<- Result,
 ) {
 	l := pps.Log().With().
-		Int64("height", processor.Proposal().Height().Int64()).
-		Uint64("round", processor.Proposal().Round().Uint64()).
-		Stringer("proposal", processor.Proposal().Hash()).
+		Int64("height", processor.Fact().Height().Int64()).
+		Uint64("round", processor.Fact().Round().Uint64()).
+		Stringer("proposal", processor.Fact().Hash()).
 		Logger()
 
 	// NOTE tries 3 times
@@ -404,34 +410,34 @@ func (pps *Processors) save(ctx context.Context, processor Processor, acceptVote
 	return processor.Save(ctx)
 }
 
-func (pps *Processors) CurrentState(proposal valuehash.Hash) State {
+func (pps *Processors) CurrentState(fact valuehash.Hash) State {
 	switch current := pps.Current(); {
 	case current == nil:
 		return BeforePrepared
-	case !current.Proposal().Hash().Equal(proposal):
+	case !current.Fact().Hash().Equal(fact):
 		return BeforePrepared
 	default:
 		return current.State()
 	}
 }
 
-func (pps *Processors) checkCurrent(proposal ballot.Proposal) (Processor, error) {
+func (pps *Processors) checkCurrent(fact base.ProposalFact) (Processor, error) {
 	current := pps.Current()
 
 	if current == nil {
 		return nil, nil
 	}
 
-	if h := current.Proposal().Hash(); !h.Equal(proposal.Hash()) {
-		cpr := current.Proposal()
+	if h := current.Fact().Hash(); !h.Equal(fact.Hash()) {
+		cpr := current.Fact()
 
-		if cpr.Height() == proposal.Height() && cpr.Round() == proposal.Round() {
+		if cpr.Height() == fact.Height() && cpr.Round() == fact.Round() {
 			return nil, util.IgnoreError.Errorf("duplicated proposal received")
 		}
 
 		if current.State() != Saved {
 			LogEventProcessor(current, "current", pps.Log().Debug()).
-				Stringer("proposal", proposal.Hash()).Bool("current_exists", current == nil).
+				Stringer("proposal", fact.Hash()).Bool("current_exists", current == nil).
 				Msg("found previous Processor with different Proposal; existing Processor will be canceled")
 
 			if err := pps.cancelProcessor(current); err != nil {
@@ -462,8 +468,8 @@ func (pps *Processors) checkCurrent(proposal ballot.Proposal) (Processor, error)
 	}
 }
 
-func (pps *Processors) newProcessor(proposal ballot.Proposal, initVoteproof base.Voteproof) (Processor, error) {
-	if pp, err := pps.newFunc(proposal, initVoteproof); err != nil {
+func (pps *Processors) newProcessor(sfs base.SignedBallotFact, initVoteproof base.Voteproof) (Processor, error) {
+	if pp, err := pps.newFunc(sfs, initVoteproof); err != nil {
 		return nil, PrepareFailedError.Wrap(err)
 	} else if state := pp.State(); state != BeforePrepared {
 		return nil, PrepareFailedError.Errorf("new Processor should be BeforePrepared state, not %s", state)
@@ -476,13 +482,13 @@ func (pps *Processors) newProcessor(proposal ballot.Proposal, initVoteproof base
 	}
 }
 
-func (pps *Processors) checkProposal(proposal ballot.Proposal) error {
-	if proposal == nil || proposal.Hash() == nil {
+func (pps *Processors) checkProposal(fact base.ProposalFact) error {
+	if fact == nil || fact.Hash() == nil {
 		return errors.Errorf("invalid proposal")
 	}
 
 	if pps.proposalChecker != nil {
-		if err := pps.proposalChecker(proposal); err != nil {
+		if err := pps.proposalChecker(fact); err != nil {
 			return err
 		}
 	}

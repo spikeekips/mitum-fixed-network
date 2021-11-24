@@ -8,7 +8,6 @@ import (
 	"github.com/pkg/errors"
 	"github.com/rs/zerolog"
 	"github.com/spikeekips/mitum/base"
-	"github.com/spikeekips/mitum/base/ballot"
 	"github.com/spikeekips/mitum/base/block"
 	"github.com/spikeekips/mitum/base/operation"
 	"github.com/spikeekips/mitum/base/prprocessor"
@@ -32,7 +31,7 @@ type DefaultProcessor struct {
 	baseManifest     block.Manifest
 	suffrage         base.Suffrage
 	oprHintset       *hint.Hintmap
-	proposal         ballot.Proposal
+	sfs              base.SignedBallotFact
 	initVoteproof    base.Voteproof
 	state            prprocessor.State
 	blk              block.BlockUpdater
@@ -60,14 +59,18 @@ func NewDefaultProcessorNewFunc(
 	suffrage base.Suffrage,
 	oprHintset *hint.Hintmap,
 ) prprocessor.ProcessorNewFunc {
-	return func(proposal ballot.Proposal, initVoteproof base.Voteproof) (prprocessor.Processor, error) {
+	return func(sfs base.SignedBallotFact, initVoteproof base.Voteproof) (prprocessor.Processor, error) {
+		if sfs.Fact().Stage() != base.StageProposal {
+			return nil, errors.Errorf("invalid proposal signed ballot fact; %T", sfs.Fact())
+		}
+
 		return NewDefaultProcessor(
 			db,
 			blockData,
 			nodepool,
 			suffrage,
 			oprHintset,
-			proposal,
+			sfs,
 			initVoteproof,
 		)
 	}
@@ -79,15 +82,15 @@ func NewDefaultProcessor(
 	nodepool *network.Nodepool,
 	suffrage base.Suffrage,
 	oprHintset *hint.Hintmap,
-	proposal ballot.Proposal,
+	sfs base.SignedBallotFact,
 	initVoteproof base.Voteproof,
 ) (*DefaultProcessor, error) {
 	var baseManifest block.Manifest
-	switch m, found, err := db.ManifestByHeight(proposal.Height() - 1); {
+	switch m, found, err := db.ManifestByHeight(sfs.Fact().Height() - 1); {
 	case err != nil:
 		return nil, err
 	case !found:
-		return nil, util.NotFoundError.Errorf("base manifest, %d is empty", proposal.Height()-1)
+		return nil, util.NotFoundError.Errorf("base manifest, %d is empty", sfs.Fact().Height()-1)
 	default:
 		baseManifest = m
 	}
@@ -95,9 +98,9 @@ func NewDefaultProcessor(
 	pp := &DefaultProcessor{
 		Logging: logging.NewLogging(func(c zerolog.Context) zerolog.Context {
 			return c.Str("module", "default-proposal-processor").
-				Int64("height", proposal.Height().Int64()).
-				Uint64("round", proposal.Round().Uint64()).
-				Stringer("proposal", proposal.Hash())
+				Int64("height", sfs.Fact().Height().Int64()).
+				Uint64("round", sfs.Fact().Round().Uint64()).
+				Stringer("proposal", sfs.Fact().Hash())
 		}),
 		database:      db,
 		blockData:     blockData,
@@ -105,7 +108,7 @@ func NewDefaultProcessor(
 		baseManifest:  baseManifest,
 		suffrage:      suffrage,
 		oprHintset:    oprHintset,
-		proposal:      proposal,
+		sfs:           sfs,
 		state:         prprocessor.BeforePrepared,
 		initVoteproof: initVoteproof,
 		preSaveHook:   nil,
@@ -144,8 +147,12 @@ func (pp *DefaultProcessor) setState(s prprocessor.State) {
 	pp.state = s
 }
 
-func (pp *DefaultProcessor) Proposal() ballot.Proposal {
-	return pp.proposal
+func (pp *DefaultProcessor) Fact() base.ProposalFact {
+	return pp.sfs.Fact().(base.ProposalFact)
+}
+
+func (pp *DefaultProcessor) SignedFact() base.SignedBallotFact {
+	return pp.sfs
 }
 
 func (pp *DefaultProcessor) Block() block.Block {
@@ -191,8 +198,8 @@ func (pp *DefaultProcessor) SetACCEPTVoteproof(acceptVoteproof base.Voteproof) e
 
 	if m := acceptVoteproof.Majority(); m == nil {
 		return errors.Errorf("acceptVoteproof has empty majority")
-	} else if fact, ok := m.(ballot.ACCEPTFact); !ok {
-		return errors.Errorf("acceptVoteproof does not have ballot.ACCEPTBallotFact")
+	} else if fact, ok := m.(base.ACCEPTBallotFact); !ok {
+		return errors.Errorf("acceptVoteproof does not have ACCEPTBallotFact")
 	} else if !pp.blk.Hash().Equal(fact.NewBlock()) {
 		return errors.Errorf("hash of the processed block does not match with acceptVoteproof")
 	}
@@ -247,5 +254,5 @@ func (pp *DefaultProcessor) getSuffrageInfo() (block.SuffrageInfoV0, error) {
 		ns = append(ns, n)
 	}
 
-	return block.NewSuffrageInfoV0(pp.proposal.Node(), ns), nil
+	return block.NewSuffrageInfoV0(pp.Fact().Proposer(), ns), nil
 }

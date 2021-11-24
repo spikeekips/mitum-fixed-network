@@ -158,3 +158,23 @@ func (ds *DummySeal) UnmarshalBSON(b []byte) error {
 
 	return nil
 }
+
+func (sl *BaseSeal) SignWithTime(pk key.Privatekey, networkID []byte, t time.Time) error {
+	sl.signer = pk.Publickey()
+	sl.signedAt = t
+
+	var err error
+	sl.bodyHash, err = sl.GenerateBodyHash()
+	if err != nil {
+		return err
+	}
+
+	sl.signature, err = pk.Sign(util.ConcatBytesSlice(sl.bodyHash.Bytes(), networkID))
+	if err != nil {
+		return err
+	}
+
+	sl.h = sl.GenerateHash()
+
+	return nil
+}

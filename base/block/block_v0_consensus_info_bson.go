@@ -20,8 +20,8 @@ func (bc ConsensusInfoV0) MarshalBSON() ([]byte, error) {
 		m["suffrage_info"] = bc.suffrageInfo
 	}
 
-	if bc.proposal != nil {
-		m["proposal"] = bc.proposal
+	if bc.sfs != nil {
+		m["proposal"] = bc.sfs
 	}
 
 	return bsonenc.Marshal(bsonenc.MergeBSONM(bsonenc.NewHintedDoc(bc.Hint()), m))

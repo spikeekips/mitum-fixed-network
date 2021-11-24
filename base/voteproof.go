@@ -4,11 +4,9 @@ import (
 	"time"
 
 	"github.com/rs/zerolog"
-	"github.com/spikeekips/mitum/base/key"
 	"github.com/spikeekips/mitum/util"
 	"github.com/spikeekips/mitum/util/hint"
 	"github.com/spikeekips/mitum/util/isvalid"
-	"github.com/spikeekips/mitum/util/valuehash"
 )
 
 type Voteproof interface {
@@ -24,39 +22,11 @@ type Voteproof interface {
 	Round() Round
 	Stage() Stage
 	Result() VoteResultType
-	Majority() Fact
-	Facts() []Fact
-	Votes() []VoteproofNodeFact
+	Majority() BallotFact
+	Facts() []BallotFact
+	Votes() []SignedBallotFact
 	ThresholdRatio() ThresholdRatio
 	Suffrages() []Address
-}
-
-type VoteproofNodeFact interface {
-	hint.Hinter
-	isvalid.IsValider
-	util.Byter
-	Ballot() valuehash.Hash
-	Fact() valuehash.Hash
-	Signature() key.Signature
-	Node() Address
-	Signer() key.Publickey
-}
-
-type VoteproofCallbacker struct {
-	Voteproof
-	callback func() error
-}
-
-func VoteproofWithCallback(voteproof Voteproof, callback func() error) VoteproofCallbacker {
-	return VoteproofCallbacker{Voteproof: voteproof, callback: callback}
-}
-
-func (vc VoteproofCallbacker) Callback() error {
-	return vc.callback()
-}
-
-type Voteproofer interface {
-	Voteproof() Voteproof
 }
 
 func CompareVoteproofSamePoint(a, b Voteproof) int {

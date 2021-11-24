@@ -37,17 +37,17 @@ func (bd lastManifestDoc) MarshalBSON() ([]byte, error) {
 func loadLastManifest(decoder func(interface{}) error, encs *encoder.Encoders) (base.Height, error) {
 	var b bson.Raw
 	if err := decoder(&b); err != nil {
-		return base.Height(0), err
+		return base.NilHeight, err
 	}
 
 	var height base.Height
 	_, d, err := LoadDataFromDoc(b, encs)
 	if err != nil {
-		return base.Height(0), err
+		return base.NilHeight, err
 	} else if r, ok := d.(bson.RawValue); !ok {
-		return base.Height(0), errors.Errorf("invalid height: %T", d)
+		return base.NilHeight, errors.Errorf("invalid height: %T", d)
 	} else if err := r.Unmarshal(&height); err != nil {
-		return base.Height(0), err
+		return base.NilHeight, err
 	}
 
 	return height, nil

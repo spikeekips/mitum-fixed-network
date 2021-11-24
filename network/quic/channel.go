@@ -33,6 +33,7 @@ type Channel struct {
 	enc              encoder.Encoder
 	sendSealURL      string
 	getSealsURL      string
+	getProposalURL   url.URL
 	nodeInfoURL      string
 	getBlockDataMaps string
 	getBlockData     url.URL
@@ -63,6 +64,10 @@ func NewChannel(
 	ch.nodeInfoURL, _ = mustQuicURL(addr, QuicHandlerPathNodeInfo)
 	ch.sendSealURL, _ = mustQuicURL(addr, QuicHandlerPathSendSeal)
 	ch.getSealsURL, _ = mustQuicURL(addr, QuicHandlerPathGetSeals)
+	{
+		_, u := mustQuicURL(addr, QuicHandlerPathGetProposal)
+		ch.getProposalURL = *u
+	}
 	ch.getBlockDataMaps, _ = mustQuicURL(addr, QuicHandlerPathGetBlockDataMaps)
 	{
 		_, u := mustQuicURL(addr, QuicHandlerPathGetBlockData)
@@ -158,6 +163,48 @@ func (ch *Channel) SendSeal(ctx context.Context, ci network.ConnInfo, sl seal.Se
 	}()
 
 	return nil
+}
+
+func (ch *Channel) Proposal(ctx context.Context, h valuehash.Hash) (base.Proposal, error) {
+	ctx, cancel := ch.timeoutContext(ctx, network.ChannelTimeoutSeal)
+	defer cancel()
+
+	ch.Log().Trace().Stringer("proposal", h).Msg("request proposal")
+
+	headers := http.Header{}
+	headers.Set(QuicEncoderHintHeader, ch.enc.Hint().String())
+
+	u := ch.getProposalURL
+	u.Path = u.Path + "/" + h.String()
+
+	response, err := ch.client.Get(ctx, network.ChannelTimeoutSeal, u.String(), nil, headers)
+	defer func() {
+		if response == nil {
+			return
+		}
+
+		_ = response.Close()
+	}()
+
+	if err != nil {
+		return nil, err
+	} else if err = response.Error(); err != nil {
+		return nil, err
+	}
+
+	enc, err := EncoderFromHeader(response.Header, ch.encs, ch.enc)
+	if err != nil {
+		return nil, err
+	}
+
+	b, err := response.Bytes()
+	if err != nil {
+		ch.Log().Error().Err(err).Msg("failed to get bytes from response body")
+
+		return nil, err
+	}
+
+	return base.DecodeProposal(b, enc)
 }
 
 func (ch *Channel) NodeInfo(ctx context.Context) (network.NodeInfo, error) {
@@ -262,9 +309,7 @@ func (ch *Channel) EndHandover(ctx context.Context, sl network.EndHandoverSeal) 
 }
 
 func (ch *Channel) blockData(ctx context.Context, p string) (io.ReadCloser, func() error, error) {
-	ch.Log().Trace().Func(func(e *zerolog.Event) {
-		e.Str("path", p)
-	}).Msg("request block data")
+	ch.Log().Trace().Str("path", p).Msg("request block data")
 
 	headers := http.Header{}
 	headers.Set(QuicEncoderHintHeader, ch.enc.Hint().String())

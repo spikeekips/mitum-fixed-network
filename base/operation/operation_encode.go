@@ -23,9 +23,9 @@ func (bo *BaseOperation) unpack(enc encoder.Encoder, ht hint.Hint, h valuehash.H
 		return err
 	}
 
-	ufs := make([]FactSign, len(hfs))
+	ufs := make([]base.FactSign, len(hfs))
 	for i := range hfs {
-		j, ok := hfs[i].(FactSign)
+		j, ok := hfs[i].(base.FactSign)
 		if !ok {
 			return util.WrongTypeError.Errorf("expected FactSign, not %T", hfs[i])
 		}

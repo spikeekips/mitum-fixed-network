@@ -2,9 +2,9 @@ package block
 
 import (
 	"github.com/spikeekips/mitum/base"
-	"github.com/spikeekips/mitum/base/ballot"
 	"github.com/spikeekips/mitum/util"
 	"github.com/spikeekips/mitum/util/encoder"
+	"github.com/spikeekips/mitum/util/isvalid"
 )
 
 func (bc *ConsensusInfoV0) unpack(enc encoder.Encoder, biv, bav, bsi, bpr []byte) error {
@@ -28,11 +28,12 @@ func (bc *ConsensusInfoV0) unpack(enc encoder.Encoder, biv, bav, bsi, bpr []byte
 	}
 
 	if bpr != nil {
-		i, err := ballot.DecodeProposal(bpr, enc)
+		fact, err := base.DecodeSignedBallotFact(bpr, enc)
 		if err != nil {
-			return err
+			return isvalid.InvalidError.Errorf("failed to decode consensus info: %w", err)
 		}
-		bc.proposal = i
+
+		bc.sfs = fact
 	}
 
 	bc.initVoteproof = iv

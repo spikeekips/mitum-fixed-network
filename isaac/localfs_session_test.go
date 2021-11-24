@@ -259,7 +259,7 @@ func (t *testBlockDataLocalFSSession) TestSetProposal() {
 		valuehash.RandomSHA256(),
 	}, nil)
 
-	t.NoError(ss.SetProposal(pr))
+	t.NoError(ss.SetProposal(pr.SignedFact()))
 
 	p := t.checkSessionFile(ss, block.BlockDataProposal)
 	writer := blockdata.NewDefaultWriter(t.JSONEnc)
@@ -269,7 +269,7 @@ func (t *testBlockDataLocalFSSession) TestSetProposal() {
 	upr, err := writer.ReadProposal(r)
 	t.NoError(err)
 
-	t.CompareProposal(pr, upr)
+	t.CompareProposalFact(pr.Fact(), upr.Fact().(base.ProposalFact))
 }
 
 func (t *testBlockDataLocalFSSession) saveBlock(local *Local) (*localfs.Session, block.Block) {
@@ -361,7 +361,7 @@ func (t *testBlockDataLocalFSSession) saveBlock(local *Local) (*localfs.Session,
 			valuehash.RandomSHA256(),
 		}, nil)
 
-		t.NoError(ss.SetProposal(pr))
+		t.NoError(ss.SetProposal(pr.SignedFact()))
 	}
 
 	return ss, blk

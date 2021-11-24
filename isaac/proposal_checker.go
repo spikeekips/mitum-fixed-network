@@ -4,7 +4,6 @@ import (
 	"github.com/pkg/errors"
 	"github.com/rs/zerolog"
 	"github.com/spikeekips/mitum/base"
-	"github.com/spikeekips/mitum/base/ballot"
 	"github.com/spikeekips/mitum/network"
 	"github.com/spikeekips/mitum/storage"
 	"github.com/spikeekips/mitum/util"
@@ -16,7 +15,9 @@ type ProposalChecker struct {
 	database storage.Database
 	suffrage base.Suffrage
 	nodepool *network.Nodepool
-	proposal ballot.Proposal
+	proposal base.Proposal
+	fact     base.ProposalFact
+	factSign base.BallotFactSign
 	livp     base.Voteproof
 }
 
@@ -24,32 +25,35 @@ func NewProposalValidationChecker(
 	db storage.Database,
 	suffrage base.Suffrage,
 	nodepool *network.Nodepool,
-	proposal ballot.Proposal,
+	proposal base.Proposal,
 	lastINITVoteproof base.Voteproof,
-) *ProposalChecker {
+) (*ProposalChecker, error) {
+	fact := proposal.Fact()
 	return &ProposalChecker{
 		Logging: logging.NewLogging(func(c zerolog.Context) zerolog.Context {
 			return c.
 				Str("module", "proposal-validation-checker").
-				Stringer("proposal", proposal.Hash()).
-				Int64("proposal_height", proposal.Height().Int64()).
-				Uint64("proposal_round", proposal.Round().Uint64()).
-				Stringer("proposal_node", proposal.Node())
+				Dict("proposal", zerolog.Dict().
+					Stringer("hash", fact.Hash()).
+					Stringer("fact", fact.Hash()).
+					Int64("height", fact.Height().Int64()).
+					Uint64("round", fact.Round().Uint64()).
+					Stringer("proposer", fact.Proposer()),
+				)
 		}),
 		database: db,
 		suffrage: suffrage,
 		nodepool: nodepool,
 		proposal: proposal,
+		fact:     fact,
+		factSign: proposal.FactSign(),
 		livp:     lastINITVoteproof,
-	}
+	}, nil
 }
 
 // IsKnown checks proposal is already received; if found, no nore checks.
 func (pvc *ProposalChecker) IsKnown() (bool, error) {
-	height := pvc.proposal.Height()
-	round := pvc.proposal.Round()
-
-	if _, found, err := pvc.database.Proposal(height, round, pvc.proposal.Node()); err != nil {
+	if _, found, err := pvc.database.Proposal(pvc.fact.Hash()); err != nil {
 		return false, err
 	} else if found {
 		return false, KnownSealError.Merge(util.FoundError.Errorf("proposal already in database"))
@@ -60,16 +64,16 @@ func (pvc *ProposalChecker) IsKnown() (bool, error) {
 
 // CheckSigning checks node signed by it's valid key.
 func (pvc *ProposalChecker) CheckSigning() (bool, error) {
-	err := CheckBallotSigning(pvc.proposal, pvc.nodepool)
+	err := CheckBallotSigningNode(pvc.factSign, pvc.nodepool)
 	return err == nil, err
 }
 
 func (pvc *ProposalChecker) IsProposer() (bool, error) {
 	if err := CheckNodeIsProposer(
-		pvc.proposal.Node(),
+		pvc.fact.Proposer(),
 		pvc.suffrage,
-		pvc.proposal.Height(),
-		pvc.proposal.Round(),
+		pvc.fact.Height(),
+		pvc.fact.Round(),
 	); err != nil {
 		return false, err
 	}
@@ -93,9 +97,9 @@ func (pvc *ProposalChecker) IsOlder() (bool, error) {
 		return false, errors.Errorf("no last voteproof")
 	}
 
-	ph := pvc.proposal.Height()
+	ph := pvc.fact.Height()
 	lh := pvc.livp.Height()
-	pr := pvc.proposal.Round()
+	pr := pvc.fact.Round()
 	lr := pvc.livp.Round()
 
 	switch {
@@ -120,9 +124,9 @@ func (pvc *ProposalChecker) IsWaiting() (bool, error) {
 		return false, errors.Errorf("no last voteproof")
 	}
 
-	ph := pvc.proposal.Height()
+	ph := pvc.fact.Height()
 	lh := pvc.livp.Height()
-	pr := pvc.proposal.Round()
+	pr := pvc.fact.Round()
 	lr := pvc.livp.Round()
 
 	switch {
@@ -136,13 +140,13 @@ func (pvc *ProposalChecker) IsWaiting() (bool, error) {
 	}
 }
 
-func CheckNodeIsProposer(node base.Address, suffrage base.Suffrage, height base.Height, round base.Round) error {
+func CheckNodeIsProposer(n base.Address, suffrage base.Suffrage, height base.Height, round base.Round) error {
 	acting, err := suffrage.Acting(height, round)
 	if err != nil {
 		return err
 	}
 
-	if node.Equal(acting.Proposer()) {
+	if n.Equal(acting.Proposer()) {
 		return nil
 	}
 

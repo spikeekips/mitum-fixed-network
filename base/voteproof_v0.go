@@ -27,9 +27,9 @@ type VoteproofV0 struct {
 	result         VoteResultType
 	closed         bool
 	stage          Stage
-	majority       Fact
-	facts          []Fact
-	votes          []VoteproofNodeFact
+	majority       BallotFact
+	facts          []BallotFact
+	votes          []SignedBallotFact
 	finishedAt     time.Time
 }
 
@@ -92,11 +92,11 @@ func (vp *VoteproofV0) SetResult(result VoteResultType) *VoteproofV0 {
 	return vp
 }
 
-func (vp VoteproofV0) Majority() Fact {
+func (vp VoteproofV0) Majority() BallotFact {
 	return vp.majority
 }
 
-func (vp *VoteproofV0) SetMajority(fact Fact) *VoteproofV0 {
+func (vp *VoteproofV0) SetMajority(fact BallotFact) *VoteproofV0 {
 	vp.majority = fact
 
 	return vp
@@ -110,21 +110,21 @@ func (vp VoteproofV0) ThresholdRatio() ThresholdRatio {
 	return vp.thresholdRatio
 }
 
-func (vp VoteproofV0) Facts() []Fact {
+func (vp VoteproofV0) Facts() []BallotFact {
 	return vp.facts
 }
 
-func (vp *VoteproofV0) SetFacts(facts []Fact) *VoteproofV0 {
+func (vp *VoteproofV0) SetFacts(facts []BallotFact) *VoteproofV0 {
 	vp.facts = facts
 
 	return vp
 }
 
-func (vp VoteproofV0) Votes() []VoteproofNodeFact {
+func (vp VoteproofV0) Votes() []SignedBallotFact {
 	return vp.votes
 }
 
-func (vp *VoteproofV0) SetVotes(votes []VoteproofNodeFact) *VoteproofV0 {
+func (vp *VoteproofV0) SetVotes(votes []SignedBallotFact) *VoteproofV0 {
 	vp.votes = votes
 
 	return vp
@@ -165,12 +165,12 @@ func (vp VoteproofV0) factsBytes() []byte {
 }
 
 func (vp VoteproofV0) votesBytes() []byte {
-	l := make([]VoteproofNodeFact, len(vp.votes))
+	l := make([]SignedBallotFact, len(vp.votes))
 	copy(l, vp.votes)
 
 	// NOTE without ordering, the bytes values will be varies.
 	sort.Slice(l, func(i, j int) bool {
-		return bytes.Compare(l[i].Node().Bytes(), l[j].Node().Bytes()) < 0
+		return bytes.Compare(l[i].FactSign().Node().Bytes(), l[j].FactSign().Node().Bytes()) < 0
 	})
 
 	bs := make([][]byte, len(l))
@@ -241,7 +241,7 @@ func (vp VoteproofV0) isValidCheckMajority() error {
 
 	counts := map[string]uint{}
 	for i := range vp.votes {
-		counts[vp.votes[i].Fact().String()]++
+		counts[vp.votes[i].Fact().Hash().String()]++
 	}
 
 	set := make([]uint, len(counts))
@@ -333,26 +333,22 @@ func (vp VoteproofV0) isValidFacts(b []byte) error {
 	for i := range vp.votes {
 		nf := vp.votes[i]
 
-		if err := nf.Node().IsValid(b); err != nil {
-			return err
-		}
-
-		if err := isvalid.Check([]isvalid.IsValider{nf}, b, false); err != nil {
+		if err := nf.IsValid(b); err != nil {
 			return err
 		}
 
 		var found bool
 		for _, f := range vp.facts {
-			if nf.Fact().Equal(f.Hash()) {
+			if nf.Fact().Hash().Equal(f.Hash()) {
 				found = true
 				break
 			}
 		}
 
 		if !found {
-			return errors.Errorf("missing fact found in facts: %s", nf.Fact().String())
+			return errors.Errorf("missing fact found in facts: %s", nf.Fact().Hash().String())
 		}
-		factHashes[nf.Fact().String()] = true
+		factHashes[nf.Fact().Hash().String()] = true
 	}
 
 	if len(factHashes) != len(vp.facts) {

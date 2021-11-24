@@ -25,17 +25,18 @@ func (t *testProcessors) SetupSuite() {
 	t.pk = key.MustNewBTCPrivatekey()
 }
 
-func (t *testProcessors) newProposal(height base.Height, round base.Round) ballot.Proposal {
-	pr := ballot.NewProposalV0(
-		base.RandomStringAddress(),
+func (t *testProcessors) newProposal(height base.Height, round base.Round) base.SignedBallotFact {
+	n := base.RandomStringAddress()
+	fact := ballot.NewProposalFact(
 		height,
 		round,
-		nil,
+		n,
 		nil,
 	)
-	t.NoError(pr.Sign(t.pk, nil))
 
-	return pr
+	sfs, _ := base.NewBaseSignedBallotFactFromFact(fact, n, t.pk, nil)
+
+	return sfs
 }
 
 func (t *testProcessors) newVoteproof(height base.Height, round base.Round, stage base.Stage) base.Voteproof {
@@ -96,10 +97,14 @@ func (t *testProcessors) TestNewProposal() {
 }
 
 func (t *testProcessors) TestNewProposalDuplicatedProposal() {
-	pp := &DummyProcessor{PF: func(ctx context.Context) (block.Block, error) {
-		<-time.After(time.Second) // NOTE delay
+	height, round := base.Height(33), base.Round(33)
+	pr0 := t.newProposal(height, round)
 
-		return nil, util.StopRetryingError.Errorf("showme")
+	newblock, err := block.NewTestBlockV0(height, round, pr0.Fact().Hash(), valuehash.RandomSHA256())
+	t.NoError(err)
+
+	pp := &DummyProcessor{PF: func(ctx context.Context) (block.Block, error) {
+		return newblock, nil
 	}}
 
 	pps := NewProcessors(pp.New, nil)
@@ -107,33 +112,21 @@ func (t *testProcessors) TestNewProposalDuplicatedProposal() {
 	t.NoError(pps.Start())
 	defer pps.Stop()
 
-	height, round := base.Height(33), base.Round(33)
-
-	pr0 := t.newProposal(height, round)
 	ivp := t.newVoteproof(height, round, base.StageINIT)
 
-	ch := pps.NewProposal(context.Background(), pr0, ivp)
+	ch0 := pps.NewProposal(context.Background(), pr0, ivp)
+	result0 := <-ch0
+	t.NotNil(result0.Block)
+	t.Nil(result0.Err)
 
 	pr1 := t.newProposal(height, round)
-	t.False(pr0.Hash().Equal(pr1.Hash()))
+	t.False(pr0.Fact().Hash().Equal(pr1.Fact().Hash()))
 
-	_ = pps.NewProposal(context.Background(), pr1, ivp)
-
-	<-time.After(time.Millisecond * 300)
-
-	prc := pps.Current()
-	t.NotNil(prc)
-	t.True(prc.Proposal().Hash().Equal(pr0.Hash()))
-
-	select {
-	case <-time.After(time.Second * 2):
-		t.NoError(errors.Errorf("waiting result, but expired"))
-
-		return
-	case result := <-ch:
-		t.Nil(result.Block)
-		t.Contains(result.Err.Error(), "showme")
-	}
+	ch1 := pps.NewProposal(context.Background(), pr1, ivp)
+	result1 := <-ch1
+	t.NotNil(result1.Err)
+	t.True(errors.Is(result1.Err, util.IgnoreError))
+	t.Contains(result1.Err.Error(), "duplicated proposal received")
 }
 
 func (t *testProcessors) TestNewProposalWithWrongVoteroof() {
@@ -238,7 +231,7 @@ func (t *testProcessors) TestCancelPreviousProcessors() {
 
 		for {
 			<-time.After(time.Millisecond * 10)
-			if pps.Current().Proposal().Hash().Equal(pr.Hash()) {
+			if pps.Current().Fact().Hash().Equal(pr.Fact().Hash()) {
 				previous = append(previous, pps.Current())
 
 				break
@@ -269,13 +262,19 @@ func (t *testProcessors) TestCancelPreviousProcessors() {
 			t.Equal(Canceled, p.State(), "total=%d i=%d", len(previous), i)
 		}
 
-		t.True(finishedProposals[i].Equal(p.Proposal().Hash()))
+		t.True(finishedProposals[i].Equal(p.Fact().Hash()))
 	}
 }
 
 func (t *testProcessors) TestPrepareExistsAsSaved() {
+	height, round := base.Height(33), base.Round(33)
+	pr := t.newProposal(height, round)
+
+	newblock, err := block.NewTestBlockV0(height, round, pr.Fact().Hash(), valuehash.RandomSHA256())
+	t.NoError(err)
+
 	pp := &DummyProcessor{PF: func(ctx context.Context) (block.Block, error) {
-		return nil, nil
+		return newblock, nil
 	}}
 
 	pps := NewProcessors(pp.New, nil)
@@ -283,11 +282,8 @@ func (t *testProcessors) TestPrepareExistsAsSaved() {
 	t.NoError(pps.Start())
 	defer pps.Stop()
 
-	var pr ballot.Proposal
 	var ivp base.Voteproof
 	{
-		height, round := base.Height(33), base.Round(33)
-		pr = t.newProposal(height, round)
 		ivp = t.newVoteproof(height, round, base.StageINIT)
 
 		_ = pps.NewProposal(context.Background(), pr, ivp)
@@ -322,7 +318,7 @@ func (t *testProcessors) TestPrepareExistsAsFailed() {
 	t.NoError(pps.Start())
 	defer pps.Stop()
 
-	var pr ballot.Proposal
+	var pr base.SignedBallotFact
 	var ivp base.Voteproof
 	{
 		height, round := base.Height(33), base.Round(33)
@@ -369,7 +365,7 @@ func (t *testProcessors) TestSaveButNotYetPrepared() {
 	avp := t.newVoteproof(height, round, base.StageACCEPT)
 
 	// save
-	sch := pps.Save(context.Background(), pr.Hash(), avp)
+	sch := pps.Save(context.Background(), pr.Fact().Hash(), avp)
 	select {
 	case <-time.After(time.Millisecond * 100):
 		t.NoError(errors.Errorf("waiting result, but expired"))
@@ -414,7 +410,7 @@ func (t *testProcessors) TestSaveButPrepareFailed() {
 	}
 
 	// save
-	sch := pps.Save(context.Background(), pr.Hash(), avp)
+	sch := pps.Save(context.Background(), pr.Fact().Hash(), avp)
 	select {
 	case <-time.After(time.Millisecond * 100):
 		t.NoError(errors.Errorf("waiting result, but expired"))
@@ -456,7 +452,7 @@ func (t *testProcessors) TestEmptySaveFunc() {
 	}
 
 	// save
-	sch := pps.Save(context.Background(), pr.Hash(), avp)
+	sch := pps.Save(context.Background(), pr.Fact().Hash(), avp)
 	select {
 	case <-time.After(time.Millisecond * 100):
 		t.NoError(errors.Errorf("waiting result, but expired"))
@@ -511,7 +507,7 @@ func (t *testProcessors) TestSaveTimeout() {
 
 	avp := t.newVoteproof(height, round, base.StageACCEPT)
 
-	sch := pps.Save(ctx, pr.Hash(), avp)
+	sch := pps.Save(ctx, pr.Fact().Hash(), avp)
 
 	select {
 	case <-time.After(timeout + time.Second*1):
@@ -567,7 +563,7 @@ end:
 
 	avp := t.newVoteproof(height, round, base.StageACCEPT)
 
-	sch := pps.Save(context.Background(), pr.Hash(), avp)
+	sch := pps.Save(context.Background(), pr.Fact().Hash(), avp)
 
 	select {
 	case <-time.After(time.Second * 3):
@@ -581,7 +577,7 @@ end:
 }
 
 func (t *testProcessors) TestProposalChecker() {
-	pps := NewProcessors(nil, func(ballot.Proposal) error {
+	pps := NewProcessors(nil, func(base.ProposalFact) error {
 		return errors.Errorf("checker pong pong")
 	})
 	t.NoError(pps.Initialize())
@@ -678,7 +674,7 @@ func (t *testProcessors) TestSaveRetry() {
 
 	avp := t.newVoteproof(height, round, base.StageACCEPT)
 
-	sch := pps.Save(context.Background(), pr.Hash(), avp)
+	sch := pps.Save(context.Background(), pr.Fact().Hash(), avp)
 	select {
 	case <-time.After(time.Second * 2):
 		t.NoError(errors.Errorf("waiting result, but expired to save"))

@@ -13,7 +13,7 @@ type VoteProofChecker struct {
 	suffrage  base.Suffrage
 }
 
-// NOTE VoteProofChecker should check the signer of VoteproofNodeFact is valid
+// NOTE VoteProofChecker should check the signer of SignedBallotFact is valid
 // Ballot.Signer(), but it takes a little bit time to gather the Ballots from
 // the other node, so this will be ignored at this time for performance reason.
 
@@ -40,8 +40,8 @@ func (vc *VoteProofChecker) IsValid() (bool, error) {
 func (vc *VoteProofChecker) NodeIsInSuffrage() (bool, error) {
 	for i := range vc.voteproof.Votes() {
 		nf := vc.voteproof.Votes()[i]
-		if !vc.suffrage.IsInside(nf.Node()) {
-			vc.Log().Debug().Stringer("node", nf.Node()).Msg("voteproof has the vote from unknown node")
+		if !vc.suffrage.IsInside(nf.FactSign().Node()) {
+			vc.Log().Debug().Stringer("node", nf.FactSign().Node()).Msg("voteproof has the vote from unknown node")
 
 			return false, nil
 		}

@@ -1,3 +1,4 @@
+//go:build test
 // +build test
 
 package isaac
@@ -60,6 +61,12 @@ func (ls *Local) BlockData() blockdata.BlockData {
 
 func (ls *Local) Node() *node.Local {
 	return ls.node
+}
+
+func (ls *Local) SetNode(n *node.Local) *Local {
+	ls.node = n
+
+	return ls
 }
 
 func (ls *Local) Channel() network.Channel {

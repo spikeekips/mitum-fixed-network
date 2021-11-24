@@ -5,7 +5,6 @@ import (
 	"io/fs"
 
 	"github.com/spikeekips/mitum/base"
-	"github.com/spikeekips/mitum/base/ballot"
 	"github.com/spikeekips/mitum/base/block"
 	"github.com/spikeekips/mitum/base/operation"
 	"github.com/spikeekips/mitum/base/state"
@@ -40,7 +39,7 @@ type Session interface {
 	SetINITVoteproof(base.Voteproof) error
 	SetACCEPTVoteproof(base.Voteproof) error
 	SetSuffrageInfo(block.SuffrageInfo) error
-	SetProposal(ballot.Proposal) error
+	SetProposal(base.SignedBallotFact) error
 	Import(string, io.Reader) (string /* file path */, error)
 	Cancel() error
 }

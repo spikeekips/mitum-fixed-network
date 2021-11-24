@@ -6,7 +6,6 @@ import (
 
 	"github.com/pkg/errors"
 	"github.com/spikeekips/mitum/base"
-	"github.com/spikeekips/mitum/base/ballot"
 	"github.com/spikeekips/mitum/base/block"
 	"github.com/spikeekips/mitum/util"
 )
@@ -20,7 +19,7 @@ type DummyProcessor struct {
 	stateLock sync.RWMutex
 	uid       string
 	S         State
-	P         ballot.Proposal
+	P         base.SignedBallotFact
 	B         block.Block
 	IV        base.Voteproof
 	AV        base.Voteproof
@@ -28,11 +27,11 @@ type DummyProcessor struct {
 	SF        func(context.Context) error
 }
 
-func (pp *DummyProcessor) New(proposal ballot.Proposal, initVoteproof base.Voteproof) (Processor, error) {
+func (pp *DummyProcessor) New(sfs base.SignedBallotFact, initVoteproof base.Voteproof) (Processor, error) {
 	return &DummyProcessor{
 		uid: util.UUID().String(),
 		S:   pp.S,
-		P:   proposal,
+		P:   sfs,
 		B:   pp.B,
 		IV:  initVoteproof,
 		AV:  pp.AV,
@@ -63,7 +62,11 @@ func (pp *DummyProcessor) SetState(s State) {
 	pp.S = s
 }
 
-func (pp *DummyProcessor) Proposal() ballot.Proposal {
+func (pp *DummyProcessor) Fact() base.ProposalFact {
+	return pp.P.Fact().(base.ProposalFact)
+}
+
+func (pp *DummyProcessor) SignedFact() base.SignedBallotFact {
 	return pp.P
 }
 
@@ -85,7 +88,7 @@ func (pp *DummyProcessor) Prepare(ctx context.Context) (block.Block, error) {
 		return nil, errors.Errorf("empty Prepare func")
 	}
 
-	nctx := context.WithValue(ctx, "proposal", pp.P.Hash()) //lint:ignore SA1029 test
+	nctx := context.WithValue(ctx, "proposal", pp.Fact().Hash()) //lint:ignore SA1029 test
 	if blk, err := pp.PF(nctx); err != nil {
 		pp.SetState(PrepareFailed)
 

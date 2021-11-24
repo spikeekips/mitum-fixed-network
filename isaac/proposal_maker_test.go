@@ -20,7 +20,7 @@ func (t *testProposalMaker) TestCached() {
 	proposalMaker := NewProposalMaker(local.Node(), local.Database(), local.Policy())
 
 	ib := t.NewINITBallot(local, base.Round(0), nil)
-	initFact := ib.INITFactV0
+	initFact := ib.Fact()
 
 	ivp, err := t.NewVoteproof(base.StageINIT, initFact, local)
 	t.NoError(err)
@@ -66,7 +66,7 @@ func (t *testProposalMaker) TestSeals() {
 	proposal, err := proposalMaker.Proposal(height, round, nil)
 	t.NoError(err)
 
-	t.Equal(len(seals), len(proposal.Seals()))
+	t.Equal(len(seals), len(proposal.Fact().Seals()))
 
 	var expectedSeals []valuehash.Hash
 	err = local.Database().StagedOperationSeals(func(sl operation.Seal) (bool, error) {
@@ -78,7 +78,7 @@ func (t *testProposalMaker) TestSeals() {
 	)
 	t.NoError(err)
 
-	for i, h := range proposal.Seals() {
+	for i, h := range proposal.Fact().Seals() {
 		t.True(expectedSeals[i].Equal(h))
 	}
 }
@@ -107,9 +107,10 @@ func (t *testProposalMaker) TestOneSealOver0() {
 	proposal, err := proposalMaker.Proposal(height, round, nil)
 	t.NoError(err)
 
-	t.Equal(len(seals)-1, len(proposal.Seals()))
+	fact := proposal.Fact()
+	t.Equal(len(seals)-1, len(fact.Seals()))
 
-	for _, h := range proposal.Seals() {
+	for _, h := range fact.Seals() {
 		t.False(over.Hash().Equal(h))
 	}
 }
@@ -140,9 +141,10 @@ func (t *testProposalMaker) TestOneSealOver1() {
 	proposal, err := proposalMaker.Proposal(height, round, nil)
 	t.NoError(err)
 
-	t.Equal(len(seals)-1, len(proposal.Seals()))
+	fact := proposal.Fact()
+	t.Equal(len(seals)-1, len(fact.Seals()))
 
-	for _, h := range proposal.Seals() {
+	for _, h := range fact.Seals() {
 		t.False(seals[2].Hash().Equal(h))
 	}
 }
@@ -167,7 +169,7 @@ func (t *testProposalMaker) TestNumberOperationMatch() {
 	proposal, err := proposalMaker.Proposal(height, round, nil)
 	t.NoError(err)
 
-	t.Equal(len(seals), len(proposal.Seals()))
+	t.Equal(len(seals), len(proposal.Fact().Seals()))
 }
 
 func TestProposalMaker(t *testing.T) {

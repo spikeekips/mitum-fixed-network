@@ -3,7 +3,6 @@ package block
 import (
 	"github.com/pkg/errors"
 	"github.com/spikeekips/mitum/base"
-	"github.com/spikeekips/mitum/base/ballot"
 	"github.com/spikeekips/mitum/util/hint"
 	"github.com/spikeekips/mitum/util/isvalid"
 )
@@ -12,7 +11,7 @@ type ConsensusInfoV0 struct {
 	initVoteproof   base.Voteproof
 	acceptVoteproof base.Voteproof
 	suffrageInfo    SuffrageInfo
-	proposal        ballot.Proposal
+	sfs             base.SignedBallotFact
 }
 
 func (bc ConsensusInfoV0) IsValid(networkID []byte) error {
@@ -21,10 +20,14 @@ func (bc ConsensusInfoV0) IsValid(networkID []byte) error {
 			bc.initVoteproof,
 			bc.acceptVoteproof,
 			bc.suffrageInfo,
-			bc.proposal,
+			bc.sfs,
 		},
 		networkID, false); err != nil {
 		return err
+	}
+
+	if bc.sfs != nil && bc.sfs.Fact().Hint().Type() != base.ProposalFactType {
+		return isvalid.InvalidError.Errorf("proposal does not have proposal fact type; %q", bc.sfs.Fact().Hint().Type())
 	}
 
 	if bc.initVoteproof.Stage() != base.StageINIT {
@@ -54,10 +57,12 @@ func (ConsensusInfoV0) isValidVoteproof(
 ) error {
 	for i := range voteproof.Votes() {
 		nf := voteproof.Votes()[i]
-		if node, found := sn[nf.Node()]; !found {
-			return errors.Errorf("unknown node, %s voted in %v voteproof.Votes()", nf.Node(), voteproof.Stage())
-		} else if !nf.Signer().Equal(node.Publickey()) {
-			return errors.Errorf("node, %s has invalid Publickey in %v voteproof", nf.Node(), voteproof.Stage())
+		if node, found := sn[nf.FactSign().Node()]; !found {
+			return errors.Errorf("unknown node, %s voted in %v voteproof.Votes()",
+				nf.FactSign().Node(), voteproof.Stage())
+		} else if !nf.FactSign().Signer().Equal(node.Publickey()) {
+			return errors.Errorf("node, %s has invalid Publickey in %v voteproof",
+				nf.FactSign().Node(), voteproof.Stage())
 		}
 	}
 
@@ -80,8 +85,8 @@ func (bc ConsensusInfoV0) SuffrageInfo() SuffrageInfo {
 	return bc.suffrageInfo
 }
 
-func (bc ConsensusInfoV0) Proposal() ballot.Proposal {
-	return bc.proposal
+func (bc ConsensusInfoV0) Proposal() base.SignedBallotFact {
+	return bc.sfs
 }
 
 type SuffrageInfoV0 struct {

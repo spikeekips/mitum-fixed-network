@@ -4,7 +4,6 @@ import (
 	"sync"
 
 	"github.com/spikeekips/mitum/base"
-	"github.com/spikeekips/mitum/base/ballot"
 	"github.com/spikeekips/mitum/util/valuehash"
 )
 
@@ -35,26 +34,32 @@ var (
 
 type VoteRecords struct {
 	sync.RWMutex
-	facts     map[string]base.Fact
+	facts     map[string]base.BallotFact
 	votes     map[string]valuehash.Hash // {node Address: fact hash}
-	ballots   map[string]ballot.Ballot  // {node Address: ballot}
+	ballots   map[string]base.Ballot    // {node Address: ballot}
 	voteproof base.VoteproofV0
 	threshold base.Threshold
 	set       []string
 }
 
-func NewVoteRecords(blt ballot.Ballot, suffrages []base.Address, threshold base.Threshold) *VoteRecords {
+func NewVoteRecords(
+	height base.Height,
+	round base.Round,
+	stage base.Stage,
+	suffrages []base.Address,
+	threshold base.Threshold,
+) *VoteRecords {
 	vrs := voteRecordsPoolGet()
 	vrs.RWMutex = sync.RWMutex{}
-	vrs.facts = map[string]base.Fact{}
+	vrs.facts = map[string]base.BallotFact{}
 	vrs.votes = map[string]valuehash.Hash{}
-	vrs.ballots = map[string]ballot.Ballot{}
+	vrs.ballots = map[string]base.Ballot{}
 	vrs.voteproof = base.NewVoteproofV0(
-		blt.Height(),
-		blt.Round(),
+		height,
+		round,
 		suffrages,
 		threshold.Ratio,
-		blt.Stage(),
+		stage,
 	)
 	vrs.threshold = threshold
 	vrs.set = nil
@@ -62,18 +67,21 @@ func NewVoteRecords(blt ballot.Ballot, suffrages []base.Address, threshold base.
 	return vrs
 }
 
-func (vrs *VoteRecords) addBallot(blt ballot.Ballot) bool {
-	if _, found := vrs.votes[blt.Node().String()]; found {
+func (vrs *VoteRecords) addBallot(blt base.Ballot) bool {
+	n := blt.FactSign().Node()
+	fact := blt.RawFact()
+
+	if _, found := vrs.votes[n.String()]; found {
 		return true
 	}
 
-	vrs.ballots[blt.Node().String()] = blt
+	vrs.ballots[n.String()] = blt
 
-	factHash := vrs.sanitizeHash(blt.Fact().Hash())
-	vrs.votes[blt.Node().String()] = factHash
+	factHash := vrs.sanitizeHash(fact.Hash())
+	vrs.votes[n.String()] = factHash
 
 	if _, found := vrs.facts[factHash.String()]; !found {
-		vrs.facts[factHash.String()] = blt.Fact()
+		vrs.facts[factHash.String()] = fact
 	}
 
 	return false
@@ -89,7 +97,7 @@ func (*VoteRecords) sanitizeHash(h valuehash.Hash) valuehash.Hash {
 
 // Vote votes by Ballot and keep track the vote records. If getting result is
 // done, Voteproof will not be updated.
-func (vrs *VoteRecords) Vote(blt ballot.Ballot) base.Voteproof {
+func (vrs *VoteRecords) Vote(blt base.Ballot) base.Voteproof {
 	vrs.Lock()
 	defer vrs.Unlock()
 
@@ -98,7 +106,7 @@ func (vrs *VoteRecords) Vote(blt ballot.Ballot) base.Voteproof {
 	return vrs.voteproof
 }
 
-func (vrs *VoteRecords) vote(blt ballot.Ballot) base.VoteproofV0 {
+func (vrs *VoteRecords) vote(blt base.Ballot) base.VoteproofV0 {
 	voteproof := &vrs.voteproof
 
 	if vrs.addBallot(blt) {
@@ -115,7 +123,7 @@ func (vrs *VoteRecords) vote(blt ballot.Ballot) base.VoteproofV0 {
 		return *voteproof
 	}
 
-	vrs.set = append(vrs.set, vrs.sanitizeHash(blt.Fact().Hash()).String())
+	vrs.set = append(vrs.set, vrs.sanitizeHash(blt.RawFact().Hash()).String())
 
 	if len(vrs.set) < int(vrs.threshold.Threshold) {
 		return *voteproof
@@ -140,7 +148,7 @@ func (vrs *VoteRecords) vote(blt ballot.Ballot) base.VoteproofV0 {
 }
 
 func (vrs *VoteRecords) finishVoteproof(voteproof *base.VoteproofV0) *base.VoteproofV0 {
-	facts := make([]base.Fact, len(vrs.facts))
+	facts := make([]base.BallotFact, len(vrs.facts))
 	var i int
 	for k := range vrs.facts {
 		facts[i] = vrs.facts[k]
@@ -148,17 +156,14 @@ func (vrs *VoteRecords) finishVoteproof(voteproof *base.VoteproofV0) *base.Votep
 	}
 	voteproof.SetFacts(facts)
 
-	votes := make([]base.VoteproofNodeFact, len(vrs.ballots))
+	votes := make([]base.SignedBallotFact, len(vrs.ballots))
 
 	i = 0
 	for k := range vrs.ballots {
 		blt := vrs.ballots[k]
-		votes[i] = base.NewBaseVoteproofNodeFact(
-			blt.Node(),
-			vrs.sanitizeHash(blt.Hash()),
-			vrs.sanitizeHash(blt.Fact().Hash()),
-			blt.FactSignature(),
-			blt.Signer(),
+		votes[i] = base.NewBaseSignedBallotFact(
+			blt.RawFact(),
+			blt.FactSign(),
 		)
 		i++
 	}

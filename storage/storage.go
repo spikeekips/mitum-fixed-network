@@ -4,7 +4,6 @@ import (
 	"context"
 
 	"github.com/spikeekips/mitum/base"
-	"github.com/spikeekips/mitum/base/ballot"
 	"github.com/spikeekips/mitum/base/block"
 	"github.com/spikeekips/mitum/base/operation"
 	"github.com/spikeekips/mitum/base/seal"
@@ -36,9 +35,10 @@ type Database interface {
 	HasSeal(valuehash.Hash) (bool, error)
 	SealsByHash([]valuehash.Hash, func(valuehash.Hash, seal.Seal) (bool, error), bool /* load Seal? */) error
 
-	NewProposal(ballot.Proposal) error
-	Proposal(base.Height, base.Round, base.Address /* proposer address */) (ballot.Proposal, bool, error)
-	Proposals(func(ballot.Proposal) (bool, error), bool /* sort */) error
+	NewProposal(base.Proposal) error
+	Proposal(valuehash.Hash /* fact hash */) (base.Proposal, bool, error)
+	ProposalByPoint(base.Height, base.Round, base.Address /* proposer address */) (base.Proposal, bool, error)
+	Proposals(func(base.Proposal) (bool, error), bool /* sort */) error
 
 	State(key string) (state.State, bool, error)
 	LastVoteproof(base.Stage) base.Voteproof

@@ -22,6 +22,7 @@ import (
 	"github.com/spikeekips/mitum/util/cache"
 	"github.com/spikeekips/mitum/util/encoder"
 	"github.com/spikeekips/mitum/util/logging"
+	"github.com/spikeekips/mitum/util/valuehash"
 	"golang.org/x/sync/singleflight"
 )
 
@@ -29,6 +30,8 @@ var (
 	DefaultPort                         = "54321"
 	QuicHandlerPathGetSeals             = "/seals"
 	QuicHandlerPathSendSeal             = "/seal"
+	QuicHandlerPathGetProposal          = "/proposal"
+	QuicHandlerPathGetProposalPattern   = "/proposal" + "/{hash:.*}"
 	QuicHandlerPathGetBlockDataMaps     = "/blockdatamaps"
 	QuicHandlerPathGetBlockData         = "/blockdata"
 	QuicHandlerPathGetBlockDataPattern  = QuicHandlerPathGetBlockData + "/{path:.*}"
@@ -59,6 +62,7 @@ type Server struct {
 	getSealsHandler      network.GetSealsHandler
 	hasSealHandler       network.HasSealHandler
 	newSealHandler       network.NewSealHandler
+	getProposalHandler   network.GetProposalHandler
 	nodeInfoHandler      network.NodeInfoHandler
 	blockDataMapsHandler network.BlockDataMapsHandler
 	blockDataHandler     network.BlockDataHandler
@@ -135,6 +139,10 @@ func (sv *Server) SetNewSealHandler(fn network.NewSealHandler) {
 	sv.newSealHandler = fn
 }
 
+func (sv *Server) SetGetProposalHandler(fn network.GetProposalHandler) {
+	sv.getProposalHandler = fn
+}
+
 func (sv *Server) NodeInfoHandler() network.NodeInfoHandler {
 	return sv.nodeInfoHandler
 }
@@ -166,6 +174,7 @@ func (sv *Server) SetEndHandoverHandler(fn network.EndHandoverHandler) {
 func (sv *Server) setHandlers() {
 	_ = sv.SetHandlerFunc(QuicHandlerPathGetSeals, sv.handleGetSeals).Methods("POST")
 	_ = sv.SetHandlerFunc(QuicHandlerPathSendSeal, sv.handleNewSeal).Methods("POST")
+	_ = sv.SetHandlerFunc(QuicHandlerPathGetProposalPattern, sv.handleGetProposal).Methods("GET")
 	_ = sv.SetHandlerFunc(QuicHandlerPathGetBlockDataMaps, sv.handleGetBlockDataMaps).Methods("POST")
 	_ = sv.SetHandlerFunc(QuicHandlerPathGetBlockDataPattern, sv.handleGetBlockData).Methods("GET")
 	_ = sv.SetHandlerFunc(QuicHandlerPathNodeInfo, sv.handleNodeInfo)
@@ -283,6 +292,54 @@ func (sv *Server) handleNewSeal(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.WriteHeader(http.StatusCreated)
+}
+
+func (sv *Server) handleGetProposal(w http.ResponseWriter, r *http.Request) {
+	if sv.getProposalHandler == nil {
+		network.HTTPError(w, http.StatusInternalServerError)
+		return
+	}
+
+	vars := mux.Vars(r)
+
+	i, found := vars["hash"]
+	if !found {
+		network.HTTPError(w, http.StatusBadRequest)
+
+		return
+	}
+	h := valuehash.NewBytesFromString(strings.TrimSpace(i))
+	if err := h.IsValid(nil); err != nil {
+		network.HTTPError(w, http.StatusBadRequest)
+
+		return
+	}
+
+	v, err, _ := sv.rg.Do("GetPropossal-"+h.String(), func() (interface{}, error) {
+		switch i, err := sv.getProposalHandler(h); {
+		case err != nil:
+			return nil, err
+		case i == nil:
+			return nil, nil
+		default:
+			return sv.enc.Marshal(i)
+		}
+	})
+
+	if err != nil {
+		sv.Log().Error().Stringer("proposal", h).Err(err).Msg("failed to get proposal")
+
+		handleError(w, err)
+	}
+
+	if v == nil {
+		network.HTTPError(w, http.StatusNotFound)
+
+		return
+	}
+
+	w.Header().Set(QuicEncoderHintHeader, sv.enc.Hint().String())
+	_, _ = w.Write(v.([]byte))
 }
 
 func (sv *Server) handleNodeInfo(w http.ResponseWriter, _ *http.Request) {

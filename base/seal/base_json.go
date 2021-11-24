@@ -16,8 +16,8 @@ type BaseSealJSONPack struct {
 	SA localtime.Time `json:"signed_at"`
 }
 
-func (sl BaseSeal) JSONPacker() BaseSealJSONPack {
-	return BaseSealJSONPack{
+func (sl BaseSeal) JSONPacker() *BaseSealJSONPack {
+	return &BaseSealJSONPack{
 		HintedHead: jsonenc.NewHintedHead(sl.Hint()),
 		HH:         sl.h,
 		BH:         sl.bodyHash,

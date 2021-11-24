@@ -11,6 +11,7 @@ import (
 var (
 	NilHeight        = Height(-2)
 	PreGenesisHeight = Height(-1)
+	GenesisHeight    = Height(0)
 )
 
 // Height stands for height of Block

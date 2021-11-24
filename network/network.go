@@ -17,6 +17,7 @@ type (
 	GetSealsHandler      func([]valuehash.Hash) ([]seal.Seal, error)
 	HasSealHandler       func(valuehash.Hash) (bool, error)
 	NewSealHandler       func(seal.Seal) error
+	GetProposalHandler   func(valuehash.Hash) (base.Proposal, error)
 	GetStateHandler      func(string) (state.State, bool, error)
 	NodeInfoHandler      func() (NodeInfo, error)
 	BlockDataMapsHandler func([]base.Height) ([]block.BlockDataMap, error)
@@ -32,6 +33,7 @@ type Server interface {
 	SetHasSealHandler(HasSealHandler)
 	SetGetSealsHandler(GetSealsHandler)
 	SetNewSealHandler(NewSealHandler)
+	SetGetProposalHandler(GetProposalHandler)
 	NodeInfoHandler() NodeInfoHandler
 	SetNodeInfoHandler(NodeInfoHandler)
 	SetBlockDataMapsHandler(BlockDataMapsHandler)
@@ -60,6 +62,7 @@ type Channel interface {
 	ConnInfo() ConnInfo
 	Seals(context.Context, []valuehash.Hash) ([]seal.Seal, error)
 	SendSeal(context.Context, ConnInfo /* from ConnInfo */, seal.Seal) error
+	Proposal(context.Context, valuehash.Hash) (base.Proposal, error)
 	NodeInfo(context.Context) (NodeInfo, error)
 	BlockDataMaps(context.Context, []base.Height) ([]block.BlockDataMap, error)
 	BlockData(context.Context, block.BlockDataMapItem) (io.ReadCloser, error)

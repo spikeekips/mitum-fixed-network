@@ -13,10 +13,8 @@ type BaseSealJSONPack struct {
 }
 
 func (sl BaseSeal) MarshalJSON() ([]byte, error) {
-	b := sl.BaseSeal.JSONPacker()
-
 	return jsonenc.Marshal(BaseSealJSONPack{
-		BaseSealJSONPack: &b,
+		BaseSealJSONPack: sl.BaseSeal.JSONPacker(),
 		OPS:              sl.ops,
 	})
 }

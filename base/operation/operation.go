@@ -24,7 +24,7 @@ type Operation interface {
 	valuehash.Hasher
 	valuehash.HashGenerator
 	Fact() base.Fact
-	Signs() []FactSign
+	Signs() []base.FactSign
 	LastSignedAt() time.Time
 }
 
@@ -72,7 +72,7 @@ func IsValidOperation(op Operation, networkID []byte) error {
 
 		if err := fs.IsValid(networkID); err != nil {
 			return err
-		} else if err := IsValidFactSign(fact, fs, networkID); err != nil {
+		} else if err := base.IsValidFactSign(op.Fact(), fs, networkID); err != nil {
 			return err
 		}
 	}
@@ -88,10 +88,10 @@ type BaseOperation struct {
 	ht   hint.Hint
 	fact OperationFact
 	h    valuehash.Hash
-	fs   []FactSign
+	fs   []base.FactSign
 }
 
-func NewBaseOperation(ht hint.Hint, fact OperationFact, h valuehash.Hash, fs []FactSign) BaseOperation {
+func NewBaseOperation(ht hint.Hint, fact OperationFact, h valuehash.Hash, fs []base.FactSign) BaseOperation {
 	return BaseOperation{
 		ht:   ht,
 		fact: fact,
@@ -100,7 +100,7 @@ func NewBaseOperation(ht hint.Hint, fact OperationFact, h valuehash.Hash, fs []F
 	}
 }
 
-func NewBaseOperationFromFact(ht hint.Hint, fact OperationFact, fs []FactSign) (BaseOperation, error) {
+func NewBaseOperationFromFact(ht hint.Hint, fact OperationFact, fs []base.FactSign) (BaseOperation, error) {
 	bo := BaseOperation{
 		ht:   ht,
 		fact: fact,
@@ -151,7 +151,7 @@ func (bo BaseOperation) GenerateHash() valuehash.Hash {
 	return valuehash.NewSHA256(e)
 }
 
-func (bo BaseOperation) Signs() []FactSign {
+func (bo BaseOperation) Signs() []base.FactSign {
 	return bo.fs
 }
 
@@ -159,8 +159,8 @@ func (bo BaseOperation) IsValid(networkID []byte) error {
 	return IsValidOperation(bo, networkID)
 }
 
-func (bo BaseOperation) AddFactSigns(fs ...FactSign) (FactSignUpdater, error) {
-	var afs []FactSign
+func (bo BaseOperation) AddFactSigns(fs ...base.FactSign) (base.FactSignUpdater, error) {
+	var afs []base.FactSign
 	for i := range fs {
 		found := -1
 		for j := range bo.fs {
@@ -179,7 +179,7 @@ func (bo BaseOperation) AddFactSigns(fs ...FactSign) (FactSignUpdater, error) {
 		}
 	}
 
-	nfs := make([]FactSign, len(bo.fs)+len(afs))
+	nfs := make([]base.FactSign, len(bo.fs)+len(afs))
 	copy(nfs[:len(bo.fs)], bo.fs)
 	copy(nfs[len(bo.fs):], afs)
 
@@ -193,7 +193,7 @@ func (bo BaseOperation) LastSignedAt() time.Time {
 	return LastSignedAt(bo.fs)
 }
 
-func LastSignedAt(fs []FactSign) time.Time {
+func LastSignedAt(fs []base.FactSign) time.Time {
 	if n := len(fs); n < 1 {
 		return time.Time{}
 	} else if n == 1 {

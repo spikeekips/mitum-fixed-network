@@ -98,7 +98,7 @@ func (t *testStates) TestNewSealVoteproof() {
 	}()
 
 	ibl := t.NewINITBallot(t.local, base.Round(0), nil)
-	ibr := t.NewINITBallot(t.remote, ibl.Round(), nil)
+	ibr := t.NewINITBallot(t.remote, ibl.Fact().Round(), nil)
 
 	t.NoError(ss.NewSeal(ibl))
 	t.NoError(ss.NewSeal(ibr))
@@ -113,8 +113,8 @@ func (t *testStates) TestNewSealVoteproof() {
 		t.NotNil(voteproof)
 
 		t.Equal(base.StageINIT, voteproof.Stage())
-		t.Equal(ibl.Height(), voteproof.Height())
-		t.Equal(ibl.Round(), voteproof.Round())
+		t.Equal(ibl.Fact().Height(), voteproof.Height())
+		t.Equal(ibl.Fact().Round(), voteproof.Round())
 		t.Equal(base.VoteResultMajority, voteproof.Result())
 		t.NotNil(voteproof.Majority())
 	}
@@ -229,7 +229,7 @@ func (t *testStates) TestSwitchingStateWithVoteproof() {
 	}
 
 	ib := t.NewINITBallot(t.local, base.Round(0), nil)
-	initFact := ib.INITFactV0
+	initFact := ib.Fact()
 
 	ivp, err := t.NewVoteproof(base.StageINIT, initFact, t.local, t.remote)
 	t.NoError(err)
@@ -289,7 +289,7 @@ func (t *testStates) TestNewVoteproofThruStateSwithContext() {
 	}
 
 	ib := t.NewINITBallot(t.local, base.Round(0), nil)
-	initFact := ib.INITFactV0
+	initFact := ib.Fact()
 
 	ivp, err := t.NewVoteproof(base.StageINIT, initFact, t.local, t.remote)
 	t.NoError(err)

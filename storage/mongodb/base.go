@@ -8,7 +8,6 @@ import (
 	"github.com/pkg/errors"
 	"github.com/rs/zerolog"
 	"github.com/spikeekips/mitum/base"
-	"github.com/spikeekips/mitum/base/ballot"
 	"github.com/spikeekips/mitum/base/block"
 	"github.com/spikeekips/mitum/base/operation"
 	"github.com/spikeekips/mitum/base/seal"
@@ -793,7 +792,7 @@ func (st *Database) UnstagedOperationSeals(seals []valuehash.Hash) error {
 	return st.client.Bulk(context.Background(), ColNameOperationSeal, models, false)
 }
 
-func (st *Database) Proposals(callback func(ballot.Proposal) (bool, error), sort bool) error {
+func (st *Database) Proposals(callback func(base.Proposal) (bool, error), sort bool) error {
 	var dir int
 	if sort {
 		dir = 1
@@ -809,47 +808,77 @@ func (st *Database) Proposals(callback func(ballot.Proposal) (bool, error), sort
 		ColNameProposal,
 		bson.D{},
 		func(cursor *mongo.Cursor) (bool, error) {
-			var proposal ballot.Proposal
 			if i, err := loadProposalFromDecoder(cursor.Decode, st.encs); err != nil {
 				return false, err
 			} else {
-				proposal = i
+				return callback(i)
 			}
-
-			return callback(proposal)
 		},
 		opt,
 	)
 }
 
-func (st *Database) NewProposal(proposal ballot.Proposal) error {
+func (st *Database) NewProposal(proposal base.Proposal) error {
+	if proposal.Fact().Stage() != base.StageProposal {
+		return util.WrongTypeError.Errorf("not proposal SignedBallotFact: %T", proposal)
+	}
+
 	if st.readonly {
 		return errors.Errorf("readonly mode")
 	}
 
-	if doc, err := NewProposalDoc(proposal, st.enc); err != nil {
-		return err
-	} else if _, err := st.client.Add(ColNameProposal, doc); err != nil {
+	doc, err := NewProposalDoc(proposal, st.enc)
+	if err != nil {
 		return err
 	}
 
-	// NOTE proposal is saved in 2 collections for performance reason.
-	return st.NewSeals([]seal.Seal{proposal})
+	_, err = st.client.Add(ColNameProposal, doc)
+	return err
 }
 
-func (st *Database) Proposal(height base.Height, round base.Round, proposer base.Address) (ballot.Proposal, bool, error) {
-	var proposal ballot.Proposal
+func (st *Database) Proposal(h valuehash.Hash) (base.Proposal, bool, error) {
+	if i, _ := st.sealCache.Get(h.String()); i != nil {
+		return i.(base.Proposal), true, nil
+	}
 
+	var proposal base.Proposal
+	if err := st.client.GetByID(
+		ColNameProposal,
+		h.String(),
+		func(res *mongo.SingleResult) error {
+			i, err := loadProposalFromDecoder(res.Decode, st.encs)
+			if err != nil {
+				return err
+			}
+
+			proposal = i
+
+			return nil
+		},
+	); err != nil {
+		if errors.Is(err, util.NotFoundError) {
+			return nil, false, nil
+		}
+
+		return nil, false, err
+	}
+
+	return proposal, proposal != nil, nil
+}
+
+func (st *Database) ProposalByPoint(height base.Height, round base.Round, proposer base.Address) (base.Proposal, bool, error) {
+	var proposal base.Proposal
 	if err := st.client.Find(
 		context.TODO(),
 		ColNameProposal,
 		util.NewBSONFilter("height", height).Add("round", round).Add("proposer", proposer.String()).D(),
 		func(cursor *mongo.Cursor) (bool, error) {
-			if i, err := loadProposalFromDecoder(cursor.Decode, st.encs); err != nil {
+			i, err := loadProposalFromDecoder(cursor.Decode, st.encs)
+			if err != nil {
 				return false, err
-			} else {
-				proposal = i
 			}
+
+			proposal = i
 
 			return false, nil
 		},
@@ -858,11 +887,7 @@ func (st *Database) Proposal(height base.Height, round base.Round, proposer base
 		return nil, false, err
 	}
 
-	if proposal == nil {
-		return nil, false, nil
-	}
-
-	return proposal, true, nil
+	return proposal, proposal != nil, nil
 }
 
 func (st *Database) State(key string) (state.State, bool, error) {

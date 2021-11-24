@@ -102,20 +102,20 @@ func (sf *BaseSuffrage) Acting(height base.Height, round base.Round) (base.Actin
 	return af, nil
 }
 
-func (sf *BaseSuffrage) IsActing(height base.Height, round base.Round, node base.Address) (bool, error) {
+func (sf *BaseSuffrage) IsActing(height base.Height, round base.Round, n base.Address) (bool, error) {
 	af, err := sf.Acting(height, round)
 	if err != nil {
 		return false, err
 	}
-	return af.Exists(node), nil
+	return af.Exists(n), nil
 }
 
-func (sf *BaseSuffrage) IsProposer(height base.Height, round base.Round, node base.Address) (bool, error) {
+func (sf *BaseSuffrage) IsProposer(height base.Height, round base.Round, n base.Address) (bool, error) {
 	af, err := sf.Acting(height, round)
 	if err != nil {
 		return false, err
 	}
-	return af.Proposer().Equal(node), nil
+	return af.Proposer().Equal(n), nil
 }
 
 func (sf *BaseSuffrage) Nodes() []base.Address {

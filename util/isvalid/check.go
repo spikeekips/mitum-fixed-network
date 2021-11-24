@@ -1,7 +1,5 @@
 package isvalid
 
-import "github.com/pkg/errors"
-
 func Check(vs []IsValider, b []byte, allowNil bool) error {
 	for i, v := range vs {
 		if v == nil {
@@ -9,10 +7,24 @@ func Check(vs []IsValider, b []byte, allowNil bool) error {
 				return nil
 			}
 
-			return errors.Errorf("%dth: nil can not be checked", i)
+			return InvalidError.Errorf("%dth: nil can not be checked", i)
 		}
 		if err := v.IsValid(b); err != nil {
-			return err
+			return InvalidError.Wrap(err)
+		}
+	}
+
+	return nil
+}
+
+func CheckFunc(fs []func() error) error {
+	for i := range fs {
+		if fs[i] == nil {
+			return InvalidError.Errorf("%dth: nil func", i)
+		}
+
+		if err := fs[i](); err != nil {
+			return InvalidError.Wrap(err)
 		}
 	}
 

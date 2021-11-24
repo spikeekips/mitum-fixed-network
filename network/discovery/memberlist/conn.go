@@ -315,8 +315,8 @@ type NodeConnInfo struct {
 	node base.Address
 }
 
-func NewNodeConnInfo(connInfo ConnInfo, node base.Address) NodeConnInfo {
-	return NodeConnInfo{ConnInfo: connInfo, node: node}
+func NewNodeConnInfo(connInfo ConnInfo, n base.Address) NodeConnInfo {
+	return NodeConnInfo{ConnInfo: connInfo, node: n}
 }
 
 func (conn NodeConnInfo) Node() base.Address {

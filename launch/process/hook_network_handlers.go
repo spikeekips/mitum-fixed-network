@@ -8,7 +8,6 @@ import (
 	"github.com/pkg/errors"
 	"github.com/rs/zerolog"
 	"github.com/spikeekips/mitum/base"
-	"github.com/spikeekips/mitum/base/ballot"
 	"github.com/spikeekips/mitum/base/block"
 	"github.com/spikeekips/mitum/base/seal"
 	"github.com/spikeekips/mitum/isaac"
@@ -120,6 +119,7 @@ func (sn *SettingNetworkHandlers) Set() error {
 	sn.network.SetStartHandoverHandler(sn.handlerStartHandover())
 	sn.network.SetPingHandoverHandler(sn.handlerPingHandover())
 	sn.network.SetEndHandoverHandler(sn.handlerEndHandover())
+	sn.network.SetGetProposalHandler(sn.handlerGetProposal())
 
 	lc := sn.nodepool.LocalChannel().(*network.DummyChannel)
 	lc.SetNewSealHandler(sn.handlerNewSeal())
@@ -177,7 +177,7 @@ func (sn *SettingNetworkHandlers) handlerNewSeal() network.NewSealHandler {
 			return err
 		}
 
-		if t, ok := sl.(ballot.Ballot); ok {
+		if t, ok := sl.(base.Ballot); ok {
 			checker := isaac.NewBallotChecker(
 				t,
 				sn.database,
@@ -356,5 +356,19 @@ func (sn *SettingNetworkHandlers) handlerEndHandover() network.EndHandoverHandle
 		}
 
 		return true, nil
+	}
+}
+
+func (sn *SettingNetworkHandlers) handlerGetProposal() network.GetProposalHandler {
+	return func(h valuehash.Hash) (base.Proposal, error) {
+		pr, found, err := sn.database.Proposal(h)
+		switch {
+		case err != nil:
+			return nil, err
+		case !found:
+			return nil, util.NotFoundError.Errorf("proposal not found")
+		default:
+			return pr, nil
+		}
 	}
 }

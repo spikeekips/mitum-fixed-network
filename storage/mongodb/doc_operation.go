@@ -32,8 +32,7 @@ func (od OperationDoc) MarshalBSON() ([]byte, error) {
 		return nil, err
 	}
 
-	m["fact_hash_string"] = od.fact.String()
-	m["fact_hash"] = od.fact
+	m["fact_hash"] = od.fact.String()
 	m["height"] = od.height
 
 	return bsonenc.Marshal(m)

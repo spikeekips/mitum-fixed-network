@@ -21,7 +21,7 @@ func (t *testStateSliceValueEncode) SetupSuite() {
 	_ = encs.AddEncoder(t.enc)
 
 	_ = encs.TestAddHinter(dummy{})
-	_ = encs.TestAddHinter(SliceValue{})
+	_ = encs.TestAddHinter(SliceValueHinter)
 }
 
 func (t *testStateSliceValueEncode) TestEncode() {

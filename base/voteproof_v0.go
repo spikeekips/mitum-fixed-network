@@ -15,11 +15,13 @@ import (
 )
 
 var (
-	VoteproofV0Type = hint.Type("voteproof")
-	VoteproofV0Hint = hint.NewHint(VoteproofV0Type, "v0.0.1")
+	VoteproofV0Type   = hint.Type("voteproof")
+	VoteproofV0Hint   = hint.NewHint(VoteproofV0Type, "v0.0.1")
+	VoteproofV0Hinter = VoteproofV0{BaseHinter: hint.NewBaseHinter(VoteproofV0Hint)}
 )
 
 type VoteproofV0 struct {
+	hint.BaseHinter
 	height         Height
 	round          Round
 	suffrages      []Address
@@ -33,6 +35,10 @@ type VoteproofV0 struct {
 	finishedAt     time.Time
 }
 
+func EmptyVoteproofV0() VoteproofV0 {
+	return VoteproofV0{BaseHinter: hint.NewBaseHinter(VoteproofV0Hint)}
+}
+
 func NewVoteproofV0(
 	height Height,
 	round Round,
@@ -41,6 +47,7 @@ func NewVoteproofV0(
 	stage Stage,
 ) VoteproofV0 {
 	return VoteproofV0{
+		BaseHinter:     hint.NewBaseHinter(VoteproofV0Hint),
 		height:         height,
 		round:          round,
 		suffrages:      suffrages,
@@ -52,10 +59,6 @@ func NewVoteproofV0(
 
 func (vp VoteproofV0) ID() string {
 	return valuehash.NewSHA256(vp.Bytes()).String()
-}
-
-func (VoteproofV0) Hint() hint.Hint {
-	return VoteproofV0Hint
 }
 
 func (vp VoteproofV0) IsFinished() bool {

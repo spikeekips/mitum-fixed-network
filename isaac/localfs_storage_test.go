@@ -62,7 +62,7 @@ func (t *testBlockData) processSession(local *Local, ss *localfs.Session) {
 
 		tg := tree.NewFixedTreeGenerator(uint64(len(sts)))
 		for i := range sts {
-			err := tg.Add(tree.NewBaseFixedTreeNode(uint64(i), sts[i].Hash().Bytes()))
+			err := tg.Add(state.NewFixedTreeNode(uint64(i), sts[i].Hash().Bytes()))
 			t.NoError(err)
 		}
 

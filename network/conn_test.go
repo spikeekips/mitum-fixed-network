@@ -9,6 +9,7 @@ import (
 	"github.com/spikeekips/mitum/util/encoder"
 	bsonenc "github.com/spikeekips/mitum/util/encoder/bson"
 	jsonenc "github.com/spikeekips/mitum/util/encoder/json"
+	"github.com/spikeekips/mitum/util/hint"
 	"github.com/stretchr/testify/suite"
 )
 
@@ -125,11 +126,12 @@ type testNilConnInfoEncode struct {
 }
 
 func (t *testNilConnInfoEncode) SetupSuite() {
-	t.enc.Add(NilConnInfo{})
+	t.enc.Add(NilConnInfoHinter)
 }
 
 func (t *testNilConnInfoEncode) TestMarshal() {
 	conn := NewNilConnInfo("showme")
+	conn.BaseHinter = hint.NewBaseHinter(hint.NewHint(NilConnInfoType, "v0.0.9"))
 	t.NoError(conn.IsValid(nil))
 
 	b, err := t.enc.Marshal(conn)
@@ -139,9 +141,10 @@ func (t *testNilConnInfoEncode) TestMarshal() {
 	hinter, err := DecodeConnInfo(b, t.enc)
 	t.NoError(err)
 
-	_, ok := hinter.(NilConnInfo)
+	uconn, ok := hinter.(NilConnInfo)
 	t.True(ok)
 
+	t.True(conn.Hint().Equal(uconn.Hint()))
 	t.False(conn.Equal(nil))
 	t.True(conn.Equal(hinter))
 }
@@ -167,11 +170,12 @@ type testHTTPConnInfoEncode struct {
 }
 
 func (t *testHTTPConnInfoEncode) SetupSuite() {
-	t.enc.Add(HTTPConnInfo{})
+	t.enc.Add(HTTPConnInfoHinter)
 }
 
 func (t *testHTTPConnInfoEncode) TestMarshal() {
 	conn, err := NewHTTPConnInfoFromString("https://a.b.c:1234/showme/findme#killme", true)
+	conn.BaseHinter = hint.NewBaseHinter(hint.NewHint(HTTPConnInfoType, "v0.0.9"))
 	t.NoError(err)
 	t.NoError(conn.IsValid(nil))
 
@@ -182,9 +186,10 @@ func (t *testHTTPConnInfoEncode) TestMarshal() {
 	hinter, err := DecodeConnInfo(b, t.enc)
 	t.NoError(err)
 
-	_, ok := hinter.(HTTPConnInfo)
+	uconn, ok := hinter.(HTTPConnInfo)
 	t.True(ok)
 
+	t.True(conn.Hint().Equal(uconn.Hint()))
 	t.False(conn.Equal(nil))
 	t.True(conn.Equal(hinter))
 }

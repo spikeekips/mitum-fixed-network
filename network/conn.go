@@ -13,10 +13,12 @@ import (
 )
 
 var (
-	NilConnInfoType  = hint.Type("nil-conninfo")
-	NilConnInfoHint  = hint.NewHint(NilConnInfoType, "v0.0.1")
-	HTTPConnInfoType = hint.Type("http-conninfo")
-	HTTPConnInfoHint = hint.NewHint(HTTPConnInfoType, "v0.0.1")
+	NilConnInfoType    = hint.Type("nil-conninfo")
+	NilConnInfoHint    = hint.NewHint(NilConnInfoType, "v0.0.1")
+	NilConnInfoHinter  = NilConnInfo{BaseHinter: hint.NewBaseHinter(NilConnInfoHint)}
+	HTTPConnInfoType   = hint.Type("http-conninfo")
+	HTTPConnInfoHint   = hint.NewHint(HTTPConnInfoType, "v0.0.1")
+	HTTPConnInfoHinter = HTTPConnInfo{BaseHinter: hint.NewBaseHinter(HTTPConnInfoHint)}
 )
 
 type ConnInfo interface {
@@ -30,18 +32,22 @@ type ConnInfo interface {
 }
 
 type NilConnInfo struct {
+	hint.BaseHinter
 	s string
 }
 
 func NewNilConnInfo(name string) NilConnInfo {
-	return NilConnInfo{s: fmt.Sprintf("<nil ConnInfo>: %s", name)}
-}
-
-func (NilConnInfo) Hint() hint.Hint {
-	return NilConnInfoHint
+	return NilConnInfo{
+		BaseHinter: hint.NewBaseHinter(NilConnInfoHint),
+		s:          fmt.Sprintf("<nil ConnInfo>: %s", name),
+	}
 }
 
 func (conn NilConnInfo) IsValid([]byte) error {
+	if err := conn.BaseHinter.IsValid(nil); err != nil {
+		return err
+	}
+
 	if len(strings.TrimSpace(conn.s)) < 1 {
 		return util.EmptyError.Errorf("NilConnInfo")
 	}
@@ -79,12 +85,16 @@ func (NilConnInfo) Bytes() []byte {
 }
 
 type HTTPConnInfo struct {
+	hint.BaseHinter
 	u        *url.URL
 	insecure bool
 }
 
 func NewHTTPConnInfo(u *url.URL, insecure bool) HTTPConnInfo {
-	return HTTPConnInfo{u: NormalizeURL(u), insecure: insecure}
+	return HTTPConnInfo{
+		BaseHinter: hint.NewBaseHinter(HTTPConnInfoHint),
+		u:          NormalizeURL(u), insecure: insecure,
+	}
 }
 
 func NewHTTPConnInfoFromString(s string, insecure bool) (HTTPConnInfo, error) {
@@ -96,11 +106,11 @@ func NewHTTPConnInfoFromString(s string, insecure bool) (HTTPConnInfo, error) {
 	return NewHTTPConnInfo(u, insecure), nil
 }
 
-func (HTTPConnInfo) Hint() hint.Hint {
-	return HTTPConnInfoHint
-}
-
 func (conn HTTPConnInfo) IsValid([]byte) error {
+	if err := conn.BaseHinter.IsValid(nil); err != nil {
+		return err
+	}
+
 	return IsValidURL(conn.u)
 }
 

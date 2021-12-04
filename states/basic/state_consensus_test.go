@@ -399,7 +399,7 @@ func (t *testStateConsensus) TestACCEPTVoteproof() {
 	dp.SF = func(ctx context.Context) error {
 		dp.B = newblock
 
-		bs := storage.NewDummyDatabaseSession(newblock, tree.FixedTree{}, tree.FixedTree{})
+		bs := storage.NewDummyDatabaseSession(newblock, tree.EmptyFixedTree(), tree.EmptyFixedTree())
 
 		return bs.Commit(ctx)
 	}
@@ -480,7 +480,7 @@ func (t *testStateConsensus) TestDrawACCEPTVoteproofToNextRound() {
 	dp.SF = func(ctx context.Context) error {
 		dp.B = newblock
 
-		bs := storage.NewDummyDatabaseSession(newblock, tree.FixedTree{}, tree.FixedTree{})
+		bs := storage.NewDummyDatabaseSession(newblock, tree.EmptyFixedTree(), tree.EmptyFixedTree())
 
 		return bs.Commit(ctx)
 	}
@@ -726,7 +726,7 @@ func (t *testStateConsensus) TestProcessingProposalFromACCEPTVoterpof() {
 	dp.SF = func(ctx context.Context) error {
 		dp.B = newblock
 
-		bs := storage.NewDummyDatabaseSession(newblock, tree.FixedTree{}, tree.FixedTree{})
+		bs := storage.NewDummyDatabaseSession(newblock, tree.EmptyFixedTree(), tree.EmptyFixedTree())
 
 		return bs.Commit(ctx)
 	}

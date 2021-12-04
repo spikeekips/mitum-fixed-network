@@ -20,7 +20,7 @@ func (t *testStateHintedValueEncode) SetupSuite() {
 	_ = encs.AddEncoder(t.enc)
 
 	_ = encs.TestAddHinter(dummy{})
-	_ = encs.TestAddHinter(HintedValue{})
+	_ = encs.TestAddHinter(HintedValueHinter)
 }
 
 func (t *testStateHintedValueEncode) TestEncode() {

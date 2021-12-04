@@ -12,17 +12,17 @@ import (
 )
 
 type BaseFact struct {
+	hint.BaseHinter
 	h      valuehash.Hash
-	hint   hint.Hint
 	height base.Height
 	round  base.Round
 }
 
 func NewBaseFact(ht hint.Hint, height base.Height, round base.Round) BaseFact {
 	return BaseFact{
-		hint:   ht,
-		height: height,
-		round:  round,
+		BaseHinter: hint.NewBaseHinter(ht),
+		height:     height,
+		round:      round,
 	}
 }
 
@@ -35,7 +35,7 @@ func (fact BaseFact) bytes() []byte {
 
 func (fact BaseFact) IsValid([]byte) error {
 	if err := isvalid.Check([]isvalid.IsValider{
-		fact.hint,
+		fact.BaseHinter,
 		fact.h,
 		fact.height,
 	}, nil, false); err != nil {
@@ -49,16 +49,12 @@ func (fact BaseFact) IsValid([]byte) error {
 	return nil
 }
 
-func (fact BaseFact) Hint() hint.Hint {
-	return fact.hint
-}
-
 func (fact BaseFact) Hash() valuehash.Hash {
 	return fact.h
 }
 
 func (fact BaseFact) Stage() base.Stage {
-	switch fact.hint.Type() {
+	switch fact.BaseHinter.Hint().Type() {
 	case base.INITBallotFactType:
 		return base.StageINIT
 	case base.ProposalFactType:

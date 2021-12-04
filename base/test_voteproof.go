@@ -28,19 +28,20 @@ func NewTestVoteproofV0(
 	votes []SignedBallotFact,
 	finishedAt time.Time,
 ) VoteproofV0 {
-	return VoteproofV0{
-		height:         height,
-		round:          round,
-		suffrages:      suffrage,
-		thresholdRatio: thresholdRatio,
-		result:         result,
-		closed:         closed,
-		stage:          stage,
-		majority:       majority,
-		facts:          facts,
-		votes:          votes,
-		finishedAt:     finishedAt,
-	}
+	vp := EmptyVoteproofV0()
+	vp.height = height
+	vp.round = round
+	vp.suffrages = suffrage
+	vp.thresholdRatio = thresholdRatio
+	vp.result = result
+	vp.closed = closed
+	vp.stage = stage
+	vp.majority = majority
+	vp.facts = facts
+	vp.votes = votes
+	vp.finishedAt = finishedAt
+
+	return vp
 }
 
 var (

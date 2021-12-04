@@ -19,6 +19,10 @@ type Hinter interface {
 	Hint() Hint
 }
 
+type SetHinter interface {
+	SetHint(Hint) Hinter
+}
+
 type Hint struct {
 	ty Type
 	v  string
@@ -40,6 +44,10 @@ func ParseHint(s string) (Hint, error) {
 }
 
 func (ht Hint) IsValid([]byte) error {
+	if ht.IsZero() {
+		return isvalid.InvalidError.Errorf("empty hint")
+	}
+
 	if err := ht.ty.IsValid(nil); err != nil {
 		return errors.Wrap(err, "invalid Hint")
 	} else if len(ht.v) > MaxVersionLength {
@@ -91,11 +99,15 @@ func (ht Hint) Bytes() []byte {
 }
 
 func (ht Hint) String() string {
-	if len(ht.ty) < 1 && len(ht.v) < 1 {
+	if ht.IsZero() {
 		return ""
 	}
 
 	return fmt.Sprintf("%s-%s", ht.ty, ht.v)
+}
+
+func (ht Hint) IsZero() bool {
+	return len(ht.ty) < 1 || len(ht.v) < 1
 }
 
 func (ht Hint) MarshalText() ([]byte, error) {

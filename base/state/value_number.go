@@ -6,15 +6,18 @@ import (
 	"github.com/pkg/errors"
 	"github.com/spikeekips/mitum/util"
 	"github.com/spikeekips/mitum/util/hint"
+	"github.com/spikeekips/mitum/util/isvalid"
 	"github.com/spikeekips/mitum/util/valuehash"
 )
 
 var (
-	NumberValueType = hint.Type("state-number-value")
-	NumberValueHint = hint.NewHint(NumberValueType, "v0.0.1")
+	NumberValueType   = hint.Type("state-number-value")
+	NumberValueHint   = hint.NewHint(NumberValueType, "v0.0.1")
+	NumberValueHinter = NumberValue{BaseHinter: hint.NewBaseHinter(NumberValueHint)}
 )
 
 type NumberValue struct {
+	hint.BaseHinter
 	v interface{}
 	b []byte
 	h valuehash.Hash
@@ -22,10 +25,10 @@ type NumberValue struct {
 }
 
 func NewNumberValue(v interface{}) (NumberValue, error) {
-	return NumberValue{}.set(v)
+	return NumberValue{BaseHinter: hint.NewBaseHinter(NumberValueHint)}.set(v)
 }
 
-func (NumberValue) set(v interface{}) (NumberValue, error) {
+func (nv NumberValue) set(v interface{}) (NumberValue, error) {
 	var b []byte
 	switch t := v.(type) {
 	case int, int8, int16, int32, int64:
@@ -67,10 +70,11 @@ func (NumberValue) set(v interface{}) (NumberValue, error) {
 	}
 
 	return NumberValue{
-		v: v,
-		b: b,
-		h: valuehash.NewSHA256(b),
-		t: reflect.TypeOf(v).Kind(),
+		BaseHinter: nv.BaseHinter,
+		v:          v,
+		b:          b,
+		h:          valuehash.NewSHA256(b),
+		t:          reflect.TypeOf(v).Kind(),
 	}, nil
 }
 
@@ -92,18 +96,15 @@ func (nv NumberValue) IsValid([]byte) error {
 		return errors.Errorf("invalid number type: %v", nv.t)
 	}
 
-	if err := nv.h.IsValid(nil); err != nil {
+	if err := isvalid.Check([]isvalid.IsValider{nv.BaseHinter, nv.h}, nil, false); err != nil {
 		return err
 	}
+
 	if nv.b == nil || len(nv.b) < 1 {
 		return errors.Errorf("empty bytes for NumberValue")
 	}
 
 	return nil
-}
-
-func (NumberValue) Hint() hint.Hint {
-	return NumberValueHint
 }
 
 func (nv NumberValue) Equal(v Value) bool {

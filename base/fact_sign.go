@@ -20,8 +20,9 @@ type FactSign interface {
 }
 
 var (
-	BaseFactSignType = hint.Type("base-fact-sign")
-	BaseFactSignHint = hint.NewHint(BaseFactSignType, "v0.0.1")
+	BaseFactSignType   = hint.Type("base-fact-sign")
+	BaseFactSignHint   = hint.NewHint(BaseFactSignType, "v0.0.1")
+	BaseFactSignHinter = BaseFactSign{BaseHinter: hint.NewBaseHinter(BaseFactSignHint)}
 )
 
 type FactSignUpdater interface {
@@ -57,21 +58,30 @@ func IsValidFactSign(fact Fact, fs FactSign, b []byte) error {
 }
 
 type BaseFactSign struct {
+	hint.BaseHinter
 	signer    key.Publickey
 	signature key.Signature
 	signedAt  time.Time
 }
 
 func NewBaseFactSign(signer key.Publickey, signature key.Signature) BaseFactSign {
-	return BaseFactSign{signer: signer, signature: signature, signedAt: localtime.UTCNow()}
+	return NewBaseFactSignWithHint(BaseFactSignHint, signer, signature)
+}
+
+func NewBaseFactSignWithHint(ht hint.Hint, signer key.Publickey, signature key.Signature) BaseFactSign {
+	return BaseFactSign{
+		BaseHinter: hint.NewBaseHinter(ht),
+		signer:     signer,
+		signature:  signature,
+		signedAt:   localtime.UTCNow(),
+	}
 }
 
 func RawBaseFactSign(signer key.Publickey, signature key.Signature, signedAt time.Time) BaseFactSign {
-	return BaseFactSign{signer: signer, signature: signature, signedAt: signedAt}
-}
+	fs := NewBaseFactSignWithHint(BaseFactSignHint, signer, signature)
+	fs.signedAt = signedAt
 
-func (BaseFactSign) Hint() hint.Hint {
-	return BaseFactSignHint
+	return fs
 }
 
 func (fs BaseFactSign) Signer() key.Publickey {
@@ -107,6 +117,7 @@ func (fs BaseFactSign) IsValid([]byte) error {
 
 	return isvalid.Check(
 		[]isvalid.IsValider{
+			fs.BaseHinter,
 			fs.signer,
 			fs.signature,
 		},

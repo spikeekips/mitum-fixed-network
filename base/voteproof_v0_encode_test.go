@@ -7,6 +7,7 @@ import (
 	"github.com/spikeekips/mitum/util/encoder"
 	bsonenc "github.com/spikeekips/mitum/util/encoder/bson"
 	jsonenc "github.com/spikeekips/mitum/util/encoder/json"
+	"github.com/spikeekips/mitum/util/hint"
 	"github.com/spikeekips/mitum/util/localtime"
 	"github.com/stretchr/testify/suite"
 )
@@ -21,10 +22,10 @@ func (t *testVoteproofEncode) SetupSuite() {
 	t.enc.Add(StringAddress(""))
 	t.enc.Add(key.BTCPublickeyHinter)
 	t.enc.Add(DummyBallotFact{})
-	t.enc.Add(VoteproofV0{})
-	t.enc.Add(BaseSignedBallotFact{})
-	t.enc.Add(BaseFactSign{})
-	t.enc.Add(BaseBallotFactSign{})
+	t.enc.Add(VoteproofV0Hinter)
+	t.enc.Add(SignedBallotFactHinter)
+	t.enc.Add(BaseFactSignHinter)
+	t.enc.Add(BallotFactSignHinter)
 }
 
 func (t *testVoteproofEncode) TestMarshal() {
@@ -41,27 +42,25 @@ func (t *testVoteproofEncode) TestMarshal() {
 	fs0, _ := NewBaseBallotFactSignFromFact(fact, n0.Address(), n0.Privatekey(), nil)
 	fs1, _ := NewBaseBallotFactSignFromFact(fact, n1.Address(), n1.Privatekey(), nil)
 
-	vp := VoteproofV0{
-		height:         Height(33),
-		round:          Round(3),
-		stage:          StageINIT,
-		suffrages:      []Address{n0.Address(), n1.Address()},
-		thresholdRatio: threshold.Ratio,
-		result:         VoteResultMajority,
-		facts:          []BallotFact{fact},
-		majority:       fact,
-		votes: []SignedBallotFact{
-			BaseSignedBallotFact{
-				fact:     fact,
-				factSign: fs0,
-			},
-			BaseSignedBallotFact{
-				fact:     fact,
-				factSign: fs1,
-			},
-		},
-		finishedAt: localtime.UTCNow(),
-	}
+	i := NewVoteproofV0(
+		Height(33),
+		Round(3),
+		[]Address{n0.Address(), n1.Address()},
+		threshold.Ratio,
+		StageINIT,
+	)
+
+	i.BaseHinter = hint.NewBaseHinter(hint.NewHint(VoteproofV0Type, "v0.0.9"))
+
+	vp := &i
+	vp = vp.SetResult(VoteResultMajority).
+		SetFacts([]BallotFact{fact}).
+		SetMajority(fact).
+		SetVotes([]SignedBallotFact{
+			NewBaseSignedBallotFact(fact, fs0),
+			NewBaseSignedBallotFact(fact, fs1),
+		}).
+		Finish()
 	t.NoError(vp.IsValid(nil))
 
 	b, err := t.enc.Marshal(vp)
@@ -74,6 +73,7 @@ func (t *testVoteproofEncode) TestMarshal() {
 	uvp, ok := hinter.(VoteproofV0)
 	t.True(ok)
 
+	t.True(vp.Hint().Equal(uvp.Hint()))
 	t.Equal(vp.Height(), uvp.Height())
 	t.Equal(vp.Round(), uvp.Round())
 	t.Equal(vp.thresholdRatio, uvp.thresholdRatio)

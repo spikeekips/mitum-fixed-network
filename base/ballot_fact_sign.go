@@ -13,8 +13,12 @@ import (
 var (
 	BallotFactSignType   = hint.Type("ballot-fact-sign")
 	BallotFactSignHint   = hint.NewHint(BallotFactSignType, "v0.0.1")
-	SignedBallotFactType = hint.Type("signed-ballot-fact")
-	SignedBallotFactHint = hint.NewHint(SignedBallotFactType, "v0.0.1")
+	BallotFactSignHinter = BaseBallotFactSign{BaseFactSign: BaseFactSign{
+		BaseHinter: hint.NewBaseHinter(BallotFactSignHint),
+	}}
+	SignedBallotFactType   = hint.Type("signed-ballot-fact")
+	SignedBallotFactHint   = hint.NewHint(SignedBallotFactType, "v0.0.1")
+	SignedBallotFactHinter = BaseSignedBallotFact{BaseHinter: hint.NewBaseHinter(SignedBallotFactHint)}
 )
 
 type SignedBallotFact interface {
@@ -32,7 +36,7 @@ type BaseBallotFactSign struct {
 
 func NewBaseBallotFactSign(n Address, pub key.Publickey, signedAt time.Time, sig key.Signature) BaseBallotFactSign {
 	return BaseBallotFactSign{
-		BaseFactSign: NewBaseFactSign(pub, sig).SetSignedAt(signedAt),
+		BaseFactSign: NewBaseFactSignWithHint(BallotFactSignHint, pub, sig).SetSignedAt(signedAt),
 		node:         n,
 	}
 }
@@ -70,10 +74,6 @@ func (fs BaseBallotFactSign) IsValid([]byte) error {
 
 func (fs BaseBallotFactSign) Bytes() []byte {
 	return util.ConcatBytesSlice(fs.BaseFactSign.Bytes(), fs.node.Bytes())
-}
-
-func (BaseBallotFactSign) Hint() hint.Hint {
-	return BallotFactSignHint
 }
 
 func (fs BaseBallotFactSign) Node() Address {
@@ -117,14 +117,16 @@ func IsValidBallotFactSign(fact BallotFact, fs BallotFactSign, b []byte) error {
 }
 
 type BaseSignedBallotFact struct {
+	hint.BaseHinter
 	fact     BallotFact
 	factSign BallotFactSign
 }
 
 func NewBaseSignedBallotFact(fact BallotFact, factSign BallotFactSign) BaseSignedBallotFact {
 	return BaseSignedBallotFact{
-		fact:     fact,
-		factSign: factSign,
+		BaseHinter: hint.NewBaseHinter(SignedBallotFactHint),
+		fact:       fact,
+		factSign:   factSign,
 	}
 }
 
@@ -142,12 +144,9 @@ func NewBaseSignedBallotFactFromFact(
 	return NewBaseSignedBallotFact(fact, fs), nil
 }
 
-func (BaseSignedBallotFact) Hint() hint.Hint {
-	return SignedBallotFactHint
-}
-
 func (sfs BaseSignedBallotFact) IsValid(networkID []byte) error {
 	if err := isvalid.Check([]isvalid.IsValider{
+		sfs.BaseHinter,
 		sfs.fact,
 		sfs.factSign,
 	}, nil, false); err != nil {

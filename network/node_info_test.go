@@ -16,6 +16,7 @@ import (
 	"github.com/spikeekips/mitum/util/encoder"
 	bsonenc "github.com/spikeekips/mitum/util/encoder/bson"
 	jsonenc "github.com/spikeekips/mitum/util/encoder/json"
+	"github.com/spikeekips/mitum/util/hint"
 	"github.com/spikeekips/mitum/util/valuehash"
 	"github.com/stretchr/testify/suite"
 )
@@ -39,14 +40,14 @@ func (t *testNodeInfo) SetupTest() {
 	_ = t.encs.AddEncoder(t.encJSON)
 	_ = t.encs.AddEncoder(t.encBSON)
 
+	_ = t.encs.TestAddHinter(HTTPConnInfoHinter)
+	_ = t.encs.TestAddHinter(NilConnInfoHinter)
+	_ = t.encs.TestAddHinter(NodeInfoV0Hinter)
+	_ = t.encs.TestAddHinter(base.StringAddress(""))
+	_ = t.encs.TestAddHinter(block.ManifestV0Hinter)
 	_ = t.encs.TestAddHinter(key.BTCPrivatekeyHinter)
 	_ = t.encs.TestAddHinter(key.BTCPublickeyHinter)
-	_ = t.encs.TestAddHinter(node.BaseV0{})
-	_ = t.encs.TestAddHinter(base.StringAddress(""))
-	_ = t.encs.TestAddHinter(block.ManifestV0{})
-	_ = t.encs.TestAddHinter(NodeInfoV0{})
-	_ = t.encs.TestAddHinter(NilConnInfo{})
-	_ = t.encs.TestAddHinter(HTTPConnInfo{})
+	_ = t.encs.TestAddHinter(node.BaseV0Hinter)
 }
 
 func (t *testNodeInfo) newConnInfo(name string, insecure bool) ConnInfo {
@@ -228,6 +229,7 @@ func (t *testNodeInfo) TestJSON() {
 		suffrage,
 		t.newConnInfo("n0", true),
 	)
+	ni.BaseHinter = hint.NewBaseHinter(hint.NewHint(NodeInfoType, "v0.0.9"))
 	t.NoError(ni.IsValid(nil))
 
 	b, err := jsonenc.Marshal(ni)
@@ -257,6 +259,7 @@ func (t *testNodeInfo) TestBSON() {
 		suffrage,
 		t.newConnInfo("n0", true),
 	)
+	ni.BaseHinter = hint.NewBaseHinter(hint.NewHint(NodeInfoType, "v0.0.9"))
 	t.NoError(ni.IsValid(nil))
 
 	b, err := bsonenc.Marshal(ni)

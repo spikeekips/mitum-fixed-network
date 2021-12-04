@@ -36,15 +36,10 @@ type BaseSealJSONUnpack struct {
 }
 
 func (sl *BaseSeal) UnpackJSON(b []byte, enc *jsonenc.Encoder) error {
-	var uht jsonenc.HintedHead
-	if err := enc.Unmarshal(b, &uht); err != nil {
-		return err
-	}
-
 	var usl BaseSealJSONUnpack
 	if err := enc.Unmarshal(b, &usl); err != nil {
 		return err
 	}
 
-	return sl.unpack(enc, uht.H, usl.HH, usl.BH, usl.SN, usl.SG, usl.SA.Time)
+	return sl.unpack(enc, usl.HH, usl.BH, usl.SN, usl.SG, usl.SA.Time)
 }

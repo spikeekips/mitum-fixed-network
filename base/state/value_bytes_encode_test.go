@@ -19,7 +19,7 @@ func (t *testStateBytesValueEncode) SetupSuite() {
 	encs := encoder.NewEncoders()
 	_ = encs.AddEncoder(t.enc)
 
-	_ = encs.TestAddHinter(BytesValue{})
+	_ = encs.TestAddHinter(BytesValueHinter)
 }
 
 func (t *testStateBytesValueEncode) TestEncode() {

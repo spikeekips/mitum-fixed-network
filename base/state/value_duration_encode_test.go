@@ -21,7 +21,7 @@ func (t *testStateDurationValueEncode) SetupSuite() {
 	_ = encs.AddEncoder(t.enc)
 
 	_ = encs.TestAddHinter(dummy{})
-	_ = encs.TestAddHinter(DurationValue{})
+	_ = encs.TestAddHinter(DurationValueHinter)
 }
 
 func (t *testStateDurationValueEncode) TestCases() {

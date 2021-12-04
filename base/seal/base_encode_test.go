@@ -33,20 +33,19 @@ func (t *testBaseSealEncode) SetupSuite() {
 	t.sealType = hint.Type("seal")
 	t.sealHint = hint.NewHint(t.sealType, "v0.0.1")
 
-	sl := BaseSeal{ht: t.sealHint}
+	sl := NewBaseSealWithHint(t.sealHint)
 
 	_ = t.encs.TestAddHinter(key.BTCPublickeyHinter)
 	_ = t.encs.TestAddHinter(sl)
 }
 
 func (t *testBaseSealEncode) TestSign() {
-	sl, err := NewBaseSeal(t.sealHint, t.pk, nil)
-	t.NoError(err)
+	sl := NewBaseSealWithHint(t.sealHint)
+	t.NoError(sl.Sign(t.pk, nil))
 
 	t.NoError(sl.IsValid(nil))
 
-	var raw []byte
-	raw, err = t.pack(sl)
+	raw, err := t.pack(sl)
 	t.NoError(err)
 
 	hinter, err := t.enc.Decode(raw)

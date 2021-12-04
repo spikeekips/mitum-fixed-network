@@ -31,7 +31,7 @@ func (t *testSealEncode) SetupSuite() {
 	_ = t.encs.TestAddHinter(SealHinter)
 	_ = t.encs.TestAddHinter(KVOperation{})
 	_ = t.encs.TestAddHinter(KVOperationFact{})
-	_ = t.encs.TestAddHinter(base.BaseFactSign{})
+	_ = t.encs.TestAddHinter(base.BaseFactSignHinter)
 }
 
 func (t *testSealEncode) TestSign() {

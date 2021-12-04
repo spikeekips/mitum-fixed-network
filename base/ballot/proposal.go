@@ -17,7 +17,7 @@ import (
 
 var (
 	ProposalFactHint   = hint.NewHint(base.ProposalFactType, "v0.0.1")
-	ProposalFactHinter = ProposalFact{BaseFact: BaseFact{hint: ProposalFactHint}}
+	ProposalFactHinter = ProposalFact{BaseFact: BaseFact{BaseHinter: hint.NewBaseHinter(ProposalFactHint)}}
 	ProposalHint       = hint.NewHint(base.ProposalType, "v0.0.1")
 	ProposalHinter     = Proposal{BaseSeal: BaseSeal{BaseSeal: seal.NewBaseSealWithHint(ProposalHint)}}
 )

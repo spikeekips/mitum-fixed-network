@@ -1,3 +1,4 @@
+//go:build test
 // +build test
 
 package isaac
@@ -37,7 +38,7 @@ func NewKVOperation(
 		return KVOperation{}, err
 	}
 
-	op.BaseOperation = op.SetHint(KVOperationHint)
+	op.BaseOperation.BaseHinter = hint.NewBaseHinter(KVOperationHint)
 
 	return KVOperation{
 		KVOperation: op,
@@ -107,7 +108,7 @@ type LongKVOperation struct {
 }
 
 func NewLongKVOperation(op KVOperation) LongKVOperation {
-	op.BaseOperation = op.SetHint(LongKVOperationHint)
+	op.BaseOperation.BaseHinter = hint.NewBaseHinter(LongKVOperationHint)
 
 	return LongKVOperation{
 		KVOperation: op,

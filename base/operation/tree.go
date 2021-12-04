@@ -12,6 +12,9 @@ import (
 var (
 	FixedTreeNodeType   = hint.Type("operation-fixedtree-node")
 	FixedTreeNodeHint   = hint.NewHint(FixedTreeNodeType, "v0.0.1")
+	FixedTreeNodeHinter = FixedTreeNode{
+		BaseFixedTreeNode: tree.BaseFixedTreeNode{BaseHinter: hint.NewBaseHinter(FixedTreeNodeHint)},
+	}
 	BaseReasonErrorType = hint.Type("base-operation-reason")
 	BaseReasonErrorHint = hint.NewHint(BaseReasonErrorType, "v0.0.1")
 )
@@ -33,14 +36,10 @@ func NewFixedTreeNodeWithHash(index uint64, key, hash []byte, inState bool, reas
 	}
 
 	return FixedTreeNode{
-		BaseFixedTreeNode: tree.NewBaseFixedTreeNodeWithHash(index, key, hash),
+		BaseFixedTreeNode: tree.NewBaseFixedTreeNodeWithHash(FixedTreeNodeHint, index, key, hash),
 		inState:           inState,
 		reason:            operr,
 	}
-}
-
-func (FixedTreeNode) Hint() hint.Hint {
-	return FixedTreeNodeHint
 }
 
 func (no FixedTreeNode) InState() bool {

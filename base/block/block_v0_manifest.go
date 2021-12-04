@@ -13,6 +13,7 @@ import (
 )
 
 type ManifestV0 struct {
+	hint.BaseHinter
 	h              valuehash.Hash
 	height         base.Height
 	round          base.Round
@@ -54,6 +55,7 @@ func (bm ManifestV0) IsValid(networkID []byte) error {
 	}
 
 	if err := isvalid.Check([]isvalid.IsValider{
+		bm.BaseHinter,
 		bm.h,
 		bm.height,
 		bm.proposal,
@@ -75,10 +77,6 @@ func (bm ManifestV0) IsValid(networkID []byte) error {
 	}
 
 	return nil
-}
-
-func (ManifestV0) Hint() hint.Hint {
-	return ManifestV0Hint
 }
 
 func (bm ManifestV0) Hash() valuehash.Hash {

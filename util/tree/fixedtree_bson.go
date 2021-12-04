@@ -2,6 +2,7 @@ package tree
 
 import (
 	bsonenc "github.com/spikeekips/mitum/util/encoder/bson"
+	"github.com/spikeekips/mitum/util/hint"
 	"go.mongodb.org/mongo-driver/bson"
 )
 
@@ -21,9 +22,10 @@ func (no BaseFixedTreeNode) MarshalBSON() ([]byte, error) {
 }
 
 type BaseFixedTreeNodeBSONUnpacker struct {
-	IN uint64 `bson:"index"`
-	KY []byte `bson:"key"`
-	HS []byte `bson:"hash"`
+	HT hint.Hint `bson:"_hint"`
+	IN uint64    `bson:"index"`
+	KY []byte    `bson:"key"`
+	HS []byte    `bson:"hash"`
 }
 
 func (no *BaseFixedTreeNode) UnmarshalBSON(b []byte) error {
@@ -32,6 +34,7 @@ func (no *BaseFixedTreeNode) UnmarshalBSON(b []byte) error {
 		return err
 	}
 
+	no.BaseHinter = hint.NewBaseHinter(uno.HT)
 	no.index = uno.IN
 	no.key = uno.KY
 	no.hash = uno.HS

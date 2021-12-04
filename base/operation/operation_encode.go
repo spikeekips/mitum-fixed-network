@@ -5,11 +5,10 @@ import (
 	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/util"
 	"github.com/spikeekips/mitum/util/encoder"
-	"github.com/spikeekips/mitum/util/hint"
 	"github.com/spikeekips/mitum/util/valuehash"
 )
 
-func (bo *BaseOperation) unpack(enc encoder.Encoder, ht hint.Hint, h valuehash.Hash, fc []byte, fs []byte) error {
+func (bo *BaseOperation) unpack(enc encoder.Encoder, h valuehash.Hash, fc []byte, fs []byte) error {
 	if hinter, err := base.DecodeFact(fc, enc); err != nil {
 		return err
 	} else if f, ok := hinter.(OperationFact); !ok {
@@ -33,7 +32,6 @@ func (bo *BaseOperation) unpack(enc encoder.Encoder, ht hint.Hint, h valuehash.H
 		ufs[i] = j
 	}
 
-	bo.ht = ht
 	bo.h = h
 	bo.fs = ufs
 

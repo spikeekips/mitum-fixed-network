@@ -32,7 +32,6 @@ func (bm BlockV0) MarshalJSON() ([]byte, error) {
 }
 
 type BlockV0UnpackJSON struct {
-	jsonenc.HintedHead
 	MF  json.RawMessage `json:"manifest"`
 	CI  json.RawMessage `json:"consensus"`
 	OPT json.RawMessage `json:"operations_tree"`

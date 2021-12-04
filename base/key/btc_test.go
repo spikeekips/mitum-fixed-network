@@ -25,7 +25,7 @@ func (t *testBTCKey) TestKeypairIsValid() {
 	t.NoError(kp.IsValid(nil))
 
 	// empty Keypair
-	empty := BTCPrivatekey{}
+	empty := BTCPrivatekey{BaseKey: NewBaseKey(BTCPrivatekeyHint, nil)}
 	t.True(errors.Is(empty.IsValid(nil), InvalidKeyError))
 }
 

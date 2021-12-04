@@ -254,10 +254,7 @@ func (t *testVoteproof) TestWrongVotesCount() {
 		majority:       fact,
 		facts:          []BallotFact{fact},
 		votes: []SignedBallotFact{
-			BaseSignedBallotFact{
-				fact:     fact,
-				factSign: fs,
-			},
+			NewBaseSignedBallotFact(fact, fs),
 		},
 	}
 	err := vp.IsValid(nil)
@@ -278,10 +275,7 @@ func (t *testVoteproof) TestInvalidFactHash() {
 		majority:       fact,
 		facts:          []BallotFact{fact},
 		votes: []SignedBallotFact{
-			BaseSignedBallotFact{
-				fact:     fact,
-				factSign: fs,
-			},
+			NewBaseSignedBallotFact(fact, fs),
 		},
 		finishedAt: localtime.UTCNow(),
 	}
@@ -307,14 +301,8 @@ func (t *testVoteproof) TestUnknownFactHash() {
 		majority:       fact,
 		facts:          []BallotFact{fact},
 		votes: []SignedBallotFact{
-			BaseSignedBallotFact{
-				fact:     fact,
-				factSign: fs,
-			},
-			BaseSignedBallotFact{
-				fact:     unknownFact,
-				factSign: unknownFactSign,
-			},
+			NewBaseSignedBallotFact(fact, fs),
+			NewBaseSignedBallotFact(unknownFact, unknownFactSign),
 		},
 		finishedAt: localtime.UTCNow(),
 	}
@@ -338,10 +326,7 @@ func (t *testVoteproof) TestFactNotFound() {
 		majority:       fact,
 		facts:          []BallotFact{fact},
 		votes: []SignedBallotFact{
-			BaseSignedBallotFact{
-				fact:     newfact,
-				factSign: newfs,
-			},
+			NewBaseSignedBallotFact(newfact, newfs),
 		},
 		finishedAt: localtime.UTCNow(),
 	}
@@ -362,10 +347,7 @@ func (t *testVoteproof) TestSuplusFacts() {
 		majority:       fact,
 		facts:          []BallotFact{fact, fact},
 		votes: []SignedBallotFact{
-			BaseSignedBallotFact{
-				fact:     fact,
-				factSign: fs,
-			},
+			NewBaseSignedBallotFact(fact, fs),
 		},
 		finishedAt: localtime.UTCNow(),
 	}
@@ -387,10 +369,7 @@ func (t *testVoteproof) TestNotYetButNot() {
 		majority:       fact,
 		facts:          []BallotFact{fact},
 		votes: []SignedBallotFact{
-			BaseSignedBallotFact{
-				fact:     fact,
-				factSign: fs,
-			},
+			NewBaseSignedBallotFact(fact, fs),
 		},
 		finishedAt: localtime.UTCNow(),
 	}
@@ -418,14 +397,8 @@ func (t *testVoteproof) TestDrawButNot() {
 		majority:       fact0,
 		facts:          []BallotFact{fact0, fact1},
 		votes: []SignedBallotFact{
-			BaseSignedBallotFact{
-				fact:     fact0,
-				factSign: fs0,
-			},
-			BaseSignedBallotFact{
-				fact:     fact1,
-				factSign: fs1,
-			},
+			NewBaseSignedBallotFact(fact0, fs0),
+			NewBaseSignedBallotFact(fact1, fs1),
 		},
 		finishedAt: localtime.UTCNow(),
 	}
@@ -452,8 +425,8 @@ func (t *testVoteproof) TestMajorityButNot() {
 		result:         VoteResultDraw,
 		facts:          []BallotFact{fact},
 		votes: []SignedBallotFact{
-			BaseSignedBallotFact{fact: fact, factSign: fs0},
-			BaseSignedBallotFact{fact: fact, factSign: fs1},
+			NewBaseSignedBallotFact(fact, fs0),
+			NewBaseSignedBallotFact(fact, fs1),
 		},
 		finishedAt: localtime.UTCNow(),
 	}
@@ -564,10 +537,7 @@ func (t *testVoteproof) TestCompareVoteproof() {
 			majority:       fact,
 			facts:          []BallotFact{fact},
 			votes: []SignedBallotFact{
-				BaseSignedBallotFact{
-					fact:     fact,
-					factSign: fs,
-				},
+				NewBaseSignedBallotFact(fact, fs),
 			},
 			finishedAt: localtime.UTCNow(),
 		}

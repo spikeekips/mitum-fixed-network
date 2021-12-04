@@ -128,7 +128,7 @@ func (enc *Encoder) decode(b []byte, ht hint.Hint) (hint.Hinter, error) {
 		return nil, fmt.Errorf("failed to find unpacker, %q: %w", ht, err)
 	}
 
-	i, err := up.F(b)
+	i, err := up.F(b, ht)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to decode %T", up.Elem)
 	} else if i == nil {
@@ -218,7 +218,7 @@ func (enc *Encoder) analyzeUnpack(ht hint.Hinter) encoder.Unpacker {
 	switch ptr.Interface().(type) {
 	case Unpackable:
 		up.N = "BSONUnpackable"
-		up.F = func(b []byte) (interface{}, error) {
+		up.F = func(b []byte, _ hint.Hint) (interface{}, error) {
 			i := reflect.New(elem.Type()).Interface()
 
 			if err := i.(Unpackable).UnpackBSON(b, enc); err != nil {
@@ -229,7 +229,7 @@ func (enc *Encoder) analyzeUnpack(ht hint.Hinter) encoder.Unpacker {
 		}
 	case bson.Unmarshaler:
 		up.N = "BSONUnmarshaler"
-		up.F = func(b []byte) (interface{}, error) {
+		up.F = func(b []byte, _ hint.Hint) (interface{}, error) {
 			i := reflect.New(elem.Type()).Interface()
 
 			if err := i.(bson.Unmarshaler).UnmarshalBSON(b); err != nil {
@@ -240,7 +240,7 @@ func (enc *Encoder) analyzeUnpack(ht hint.Hinter) encoder.Unpacker {
 		}
 	case encoding.TextUnmarshaler:
 		up.N = "TextUnmarshaler"
-		up.F = func(b []byte) (interface{}, error) {
+		up.F = func(b []byte, _ hint.Hint) (interface{}, error) {
 			i := reflect.New(elem.Type()).Interface()
 
 			if err := i.(encoding.TextUnmarshaler).UnmarshalText(b); err != nil {
@@ -251,7 +251,7 @@ func (enc *Encoder) analyzeUnpack(ht hint.Hinter) encoder.Unpacker {
 		}
 	default:
 		up.N = "default"
-		up.F = func(b []byte) (interface{}, error) {
+		up.F = func(b []byte, _ hint.Hint) (interface{}, error) {
 			i := reflect.New(elem.Type()).Interface()
 
 			if err := bson.Unmarshal(b, i); err != nil {
@@ -262,7 +262,7 @@ func (enc *Encoder) analyzeUnpack(ht hint.Hinter) encoder.Unpacker {
 		}
 	}
 
-	return up
+	return encoder.AnalyzeSetHinter(up)
 }
 
 type Unpackable interface {

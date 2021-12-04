@@ -12,13 +12,17 @@ import (
 )
 
 type hinterDefault struct {
-	h hint.Hint
+	hint.BaseHinter
 	A string
 	B int
 }
 
-func (ht hinterDefault) Hint() hint.Hint {
-	return ht.h
+func newHinterDefault(ht hint.Hint, a string, b int) hinterDefault {
+	return hinterDefault{
+		BaseHinter: hint.NewBaseHinter(ht),
+		A:          a,
+		B:          b,
+	}
 }
 
 func (ht hinterDefault) MarshalJSON() ([]byte, error) {
@@ -40,6 +44,12 @@ type hinterJSONMarshaller struct {
 
 func (ht hinterJSONMarshaller) Hint() hint.Hint {
 	return ht.h
+}
+
+func (ht hinterJSONMarshaller) SetHint(n hint.Hint) hint.Hinter {
+	ht.h = n
+
+	return ht
 }
 
 func (ht hinterJSONMarshaller) MarshalJSON() ([]byte, error) {
@@ -69,13 +79,17 @@ func (ht *hinterJSONMarshaller) UnmarshalJSON(b []byte) error {
 }
 
 type hinterJSONUnpacker struct {
-	h hint.Hint
+	hint.BaseHinter
 	a string
 	b int
 }
 
-func (ht hinterJSONUnpacker) Hint() hint.Hint {
-	return ht.h
+func newHinterJSONUnpacker(ht hint.Hint, a string, b int) hinterJSONUnpacker {
+	return hinterJSONUnpacker{
+		BaseHinter: hint.NewBaseHinter(ht),
+		a:          a,
+		b:          b,
+	}
 }
 
 func (ht hinterJSONUnpacker) MarshalJSON() ([]byte, error) {
@@ -112,6 +126,11 @@ type hinterTextMarshaller struct {
 
 func (ht hinterTextMarshaller) Hint() hint.Hint {
 	return ht.h
+}
+
+func (ht hinterTextMarshaller) SetHint(n hint.Hint) hint.Hinter {
+	ht.h = n
+	return ht
 }
 
 func (ht hinterTextMarshaller) String() string {
@@ -151,10 +170,10 @@ func (t *testJSONEncoder) TestNew() {
 func (t *testJSONEncoder) TestAdd() {
 	enc := NewEncoder()
 
-	ht := hinterDefault{
-		h: hint.NewHint(hint.Type("findme"), "v1.2.3"),
-		A: "A", B: 33,
-	}
+	ht := newHinterDefault(
+		hint.NewHint(hint.Type("findme"), "v1.2.3"),
+		"A", 33,
+	)
 	t.NoError(enc.Add(ht))
 
 	// add again
@@ -165,10 +184,10 @@ func (t *testJSONEncoder) TestAdd() {
 func (t *testJSONEncoder) TestDecodeUnknown() {
 	enc := NewEncoder()
 
-	ht := hinterDefault{
-		h: hint.NewHint(hint.Type("findme"), "v1.2.3"),
-		A: "A", B: 33,
-	}
+	ht := newHinterDefault(
+		hint.NewHint(hint.Type("findme"), "v1.2.3"),
+		"A", 33,
+	)
 
 	b, err := enc.Marshal(ht)
 	t.NoError(err)
@@ -180,13 +199,12 @@ func (t *testJSONEncoder) TestDecodeUnknown() {
 func (t *testJSONEncoder) TestDecodeDefault() {
 	enc := NewEncoder()
 
-	ht := hinterDefault{
-		h: hint.NewHint(hint.Type("findme"), "v1.2.3"),
-	}
+	ht := newHinterDefault(
+		hint.NewHint(hint.Type("findme"), "v1.2.3"),
+		"A",
+		33,
+	)
 	t.NoError(enc.Add(ht))
-
-	ht.A = "A"
-	ht.B = 33
 
 	b, err := enc.Marshal(ht)
 	t.NoError(err)
@@ -204,13 +222,16 @@ func (t *testJSONEncoder) TestDecodeDefault() {
 func (t *testJSONEncoder) TestDecodeTextMarshaller() {
 	enc := NewEncoder()
 
-	ht := hinterTextMarshaller{
+	orig := hinterTextMarshaller{
 		h: hint.NewHint(hint.Type("findme"), "v1.2.3"),
 	}
-	t.NoError(enc.Add(ht))
+	t.NoError(enc.Add(orig))
 
-	ht.A = 22
-	ht.B = 33
+	ht := hinterTextMarshaller{
+		h: hint.NewHint(hint.Type("findme"), "v1.2.0"),
+		A: 22,
+		B: 33,
+	}
 
 	b, err := enc.Marshal(ht)
 	t.NoError(err)
@@ -221,6 +242,7 @@ func (t *testJSONEncoder) TestDecodeTextMarshaller() {
 	uht, ok := hinter.(hinterTextMarshaller)
 	t.True(ok)
 
+	t.True(ht.Hint().Equal(uht.Hint()))
 	t.Equal(ht.A, uht.A)
 	t.Equal(ht.B, uht.B)
 }
@@ -228,13 +250,16 @@ func (t *testJSONEncoder) TestDecodeTextMarshaller() {
 func (t *testJSONEncoder) TestDecodeJSONUnmarshaller() {
 	enc := NewEncoder()
 
-	ht := hinterJSONMarshaller{
+	orig := hinterJSONMarshaller{
 		h: hint.NewHint(hint.Type("findme"), "v1.2.3"),
 	}
-	t.NoError(enc.Add(ht))
+	t.NoError(enc.Add(orig))
 
-	ht.a = "fa"
-	ht.b = 33
+	ht := hinterJSONMarshaller{
+		h: hint.NewHint(hint.Type("findme"), "v1.2.1"),
+		a: "fa",
+		b: 33,
+	}
 
 	b, err := enc.Marshal(ht)
 	t.NoError(err)
@@ -245,6 +270,7 @@ func (t *testJSONEncoder) TestDecodeJSONUnmarshaller() {
 	uht, ok := hinter.(hinterJSONMarshaller)
 	t.True(ok)
 
+	t.True(ht.Hint().Equal(uht.Hint()))
 	t.Equal(ht.a, uht.a)
 	t.Equal(ht.b, uht.b)
 }
@@ -252,13 +278,20 @@ func (t *testJSONEncoder) TestDecodeJSONUnmarshaller() {
 func (t *testJSONEncoder) TestDecodeJSONUnpacker() {
 	enc := NewEncoder()
 
-	ht := hinterJSONUnpacker{
-		h: hint.NewHint(hint.Type("findme"), "v1.2.3"),
-	}
-	t.NoError(enc.Add(ht))
+	orig := newHinterJSONUnpacker(
+		hint.NewHint(hint.Type("findme"), "v1.2.3"),
+		"",
+		0,
+	)
+	t.NoError(enc.Add(orig))
 
-	ht.a = "fa"
-	ht.b = 33
+	ht := newHinterJSONUnpacker(
+		hint.NewHint(hint.Type("findme"), "v1.2.2"),
+		"fa",
+		33,
+	)
+	t.Equal(orig.Hint().Type(), ht.Hint().Type())
+	t.NotEqual(orig.Hint().Version(), ht.Hint().Version())
 
 	b, err := enc.Marshal(ht)
 	t.NoError(err)
@@ -268,6 +301,8 @@ func (t *testJSONEncoder) TestDecodeJSONUnpacker() {
 
 	uht, ok := hinter.(hinterJSONUnpacker)
 	t.True(ok)
+
+	t.True(ht.Hint().Equal(uht.Hint()))
 
 	t.Equal(ht.a, uht.a)
 	t.Equal(ht.b, uht.b)
@@ -279,14 +314,13 @@ func (t *testJSONEncoder) TestDecodeWitHint() {
 	htt := hinterTextMarshaller{
 		h: hint.NewHint(hint.Type("text"), "v1.2.3"),
 	}
-	htj := hinterJSONUnpacker{
-		h: hint.NewHint(hint.Type("unpack"), "v1.2.3"),
-	}
+	htj := newHinterJSONUnpacker(
+		hint.NewHint(hint.Type("unpack"), "v1.2.3"),
+		"fa",
+		33,
+	)
 	t.NoError(enc.Add(htt))
 	t.NoError(enc.Add(htj))
-
-	htj.a = "fa"
-	htj.b = 33
 
 	b, err := enc.Marshal(htj)
 	t.NoError(err)
@@ -301,14 +335,16 @@ func (t *testJSONEncoder) TestDecodeSlice() {
 	htj := hinterJSONMarshaller{
 		h: hint.NewHint(hint.Type("text"), "v1.2.3"),
 	}
-	htu := hinterJSONUnpacker{
-		h: hint.NewHint(hint.Type("unpack"), "v1.2.3"),
-	}
+	htu := newHinterJSONUnpacker(
+		hint.NewHint(hint.Type("unpack"), "v1.2.3"),
+		"",
+		0,
+	)
 	t.NoError(enc.Add(htj))
 	t.NoError(enc.Add(htu))
 
 	ht0 := hinterJSONMarshaller{h: htj.Hint(), a: "A", b: 44}
-	ht1 := hinterJSONUnpacker{h: htu.Hint(), a: "a", b: 33}
+	ht1 := newHinterJSONUnpacker(htu.Hint(), "a", 33)
 
 	b, err := enc.Marshal([]interface{}{ht0, ht1})
 	t.NoError(err)
@@ -336,14 +372,16 @@ func (t *testJSONEncoder) TestDecodeMap() {
 	htj := hinterJSONMarshaller{
 		h: hint.NewHint(hint.Type("text"), "v1.2.3"),
 	}
-	htu := hinterJSONUnpacker{
-		h: hint.NewHint(hint.Type("unpack"), "v1.2.3"),
-	}
+	htu := newHinterJSONUnpacker(
+		hint.NewHint(hint.Type("unpack"), "v1.2.3"),
+		"",
+		0,
+	)
 	t.NoError(enc.Add(htj))
 	t.NoError(enc.Add(htu))
 
 	ht0 := hinterJSONMarshaller{h: htj.Hint(), a: "A", b: 44}
-	ht1 := hinterJSONUnpacker{h: htu.Hint(), a: "a", b: 33}
+	ht1 := newHinterJSONUnpacker(htu.Hint(), "a", 33)
 
 	b, err := enc.Marshal(map[string]interface{}{
 		"ht0": ht0,
@@ -366,6 +404,40 @@ func (t *testJSONEncoder) TestDecodeMap() {
 
 	t.Equal(ht1.a, uht1.a)
 	t.Equal(ht1.b, uht1.b)
+}
+
+func (t *testJSONEncoder) TestDecodeKeepHint() {
+	enc := NewEncoder()
+
+	orig := newHinterDefault(
+		hint.NewHint(hint.Type("findme"), "v1.2.3"),
+		"",
+		0,
+	)
+	t.NoError(enc.Add(orig))
+
+	ht := newHinterDefault(
+		hint.NewHint(hint.Type("findme"), "v1.2.0"),
+		"A",
+		33,
+	)
+
+	t.Equal(orig.Hint().Type(), ht.Hint().Type())
+	t.NotEqual(orig.Hint().Version(), ht.Hint().Version())
+
+	b, err := enc.Marshal(ht)
+	t.NoError(err)
+
+	hinter, err := enc.Decode(b)
+	t.NoError(err)
+
+	uht, ok := hinter.(hinterDefault)
+	t.True(ok)
+
+	t.True(ht.Hint().Equal(uht.Hint()))
+
+	t.Equal(ht.A, uht.A)
+	t.Equal(ht.B, uht.B)
 }
 
 func TestJSONEncoder(t *testing.T) {

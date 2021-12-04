@@ -12,25 +12,31 @@ import (
 	"github.com/spikeekips/mitum/util/encoder"
 	bsonenc "github.com/spikeekips/mitum/util/encoder/bson"
 	jsonenc "github.com/spikeekips/mitum/util/encoder/json"
+	"github.com/spikeekips/mitum/util/hint"
 	"github.com/stretchr/testify/suite"
 )
 
 type testFixedTreeNode struct {
 	suite.Suite
+	hint hint.Hint
+}
+
+func (t *testFixedTreeNode) SetupSuite() {
+	t.hint = hint.NewHint(hint.Type("tree-node"), "v0.0.1")
 }
 
 func (t *testFixedTreeNode) TestEmptyKey() {
-	err := NewBaseFixedTreeNode(1, nil).IsValid(nil)
+	err := NewBaseFixedTreeNode(t.hint, 1, nil).IsValid(nil)
 	t.True(errors.Is(err, EmptyKeyError))
 }
 
 func (t *testFixedTreeNode) TestEmptyHash() {
-	err := NewBaseFixedTreeNode(1, util.UUID().Bytes()).IsValid(nil)
+	err := NewBaseFixedTreeNode(t.hint, 1, util.UUID().Bytes()).IsValid(nil)
 	t.True(errors.Is(err, EmptyHashError))
 }
 
 func (t *testFixedTreeNode) TestEncodeJSON() {
-	no := NewBaseFixedTreeNodeWithHash(20, util.UUID().Bytes(), util.UUID().Bytes())
+	no := NewBaseFixedTreeNodeWithHash(t.hint, 20, util.UUID().Bytes(), util.UUID().Bytes())
 
 	b, err := jsonenc.Marshal(no)
 	t.NoError(err)
@@ -43,7 +49,7 @@ func (t *testFixedTreeNode) TestEncodeJSON() {
 }
 
 func (t *testFixedTreeNode) TestEncodeBSON() {
-	no := NewBaseFixedTreeNodeWithHash(20, util.UUID().Bytes(), util.UUID().Bytes())
+	no := NewBaseFixedTreeNodeWithHash(t.hint, 20, util.UUID().Bytes(), util.UUID().Bytes())
 
 	b, err := bsonenc.Marshal(no)
 	t.NoError(err)
@@ -61,14 +67,19 @@ func TestFixedTreeNode(t *testing.T) {
 
 type testFixedTree struct {
 	suite.Suite
+	hint hint.Hint
+}
+
+func (t *testFixedTree) SetupSuite() {
+	t.hint = hint.NewHint(hint.Type("tree-node"), "v0.0.1")
 }
 
 func (t *testFixedTree) TestWrongHash() {
 	trg := NewFixedTreeGenerator(3)
 
-	t.NoError(trg.Add(NewBaseFixedTreeNode(0, util.UUID().Bytes())))
-	t.NoError(trg.Add(NewBaseFixedTreeNode(1, util.UUID().Bytes())))
-	t.NoError(trg.Add(NewBaseFixedTreeNode(2, util.UUID().Bytes())))
+	t.NoError(trg.Add(NewBaseFixedTreeNode(t.hint, 0, util.UUID().Bytes())))
+	t.NoError(trg.Add(NewBaseFixedTreeNode(t.hint, 1, util.UUID().Bytes())))
+	t.NoError(trg.Add(NewBaseFixedTreeNode(t.hint, 2, util.UUID().Bytes())))
 
 	tr, err := trg.Tree()
 	t.NoError(err)
@@ -84,7 +95,7 @@ func (t *testFixedTree) TestTraverse() {
 	trg := NewFixedTreeGenerator(10)
 
 	for i := 0; i < 10; i++ {
-		n := NewBaseFixedTreeNode(uint64(i), util.UUID().Bytes())
+		n := NewBaseFixedTreeNode(t.hint, uint64(i), util.UUID().Bytes())
 		t.NoError(trg.Add(n))
 	}
 
@@ -105,7 +116,7 @@ func (t *testFixedTree) TestProof1Index() {
 	trg := NewFixedTreeGenerator(10)
 
 	for i := 0; i < 10; i++ {
-		n := NewBaseFixedTreeNode(uint64(i), util.UUID().Bytes())
+		n := NewBaseFixedTreeNode(t.hint, uint64(i), util.UUID().Bytes())
 		t.NoError(trg.Add(n))
 	}
 
@@ -123,7 +134,7 @@ func (t *testFixedTree) TestProof0Index() {
 	trg := NewFixedTreeGenerator(10)
 
 	for i := 0; i < 10; i++ {
-		n := NewBaseFixedTreeNode(uint64(i), util.UUID().Bytes())
+		n := NewBaseFixedTreeNode(t.hint, uint64(i), util.UUID().Bytes())
 		t.NoError(trg.Add(n))
 	}
 
@@ -142,7 +153,7 @@ func (t *testFixedTree) TestProofWrongSelfHash() {
 	trg := NewFixedTreeGenerator(l)
 
 	for i := uint64(0); i < l; i++ {
-		n := NewBaseFixedTreeNode(i, util.UUID().Bytes())
+		n := NewBaseFixedTreeNode(t.hint, i, util.UUID().Bytes())
 		t.NoError(trg.Add(n))
 	}
 
@@ -166,7 +177,7 @@ func (t *testFixedTree) TestProofWrongHash() {
 	trg := NewFixedTreeGenerator(l)
 
 	for i := uint64(0); i < l; i++ {
-		n := NewBaseFixedTreeNode(i, util.UUID().Bytes())
+		n := NewBaseFixedTreeNode(t.hint, i, util.UUID().Bytes())
 		t.NoError(trg.Add(n))
 	}
 
@@ -192,7 +203,7 @@ func (t *testFixedTree) TestProof() {
 	trg := NewFixedTreeGenerator(l)
 
 	for i := uint64(0); i < l; i++ {
-		n := NewBaseFixedTreeNode(i, util.UUID().Bytes())
+		n := NewBaseFixedTreeNode(t.hint, i, util.UUID().Bytes())
 		t.NoError(trg.Add(n))
 	}
 
@@ -211,7 +222,7 @@ func (t *testFixedTree) TestEncodeJSON() {
 	trg := NewFixedTreeGenerator(l)
 
 	for i := uint64(0); i < l; i++ {
-		n := NewBaseFixedTreeNode(i, util.UUID().Bytes())
+		n := NewBaseFixedTreeNode(t.hint, i, util.UUID().Bytes())
 		t.NoError(trg.Add(n))
 	}
 
@@ -225,8 +236,8 @@ func (t *testFixedTree) TestEncodeJSON() {
 	enc := jsonenc.NewEncoder()
 	encs := encoder.NewEncoders()
 	t.NoError(encs.AddEncoder(enc))
-	encs.TestAddHinter(BaseFixedTreeNode{})
-	encs.TestAddHinter(FixedTree{})
+	encs.TestAddHinter(BaseFixedTreeNode{BaseHinter: hint.NewBaseHinter(t.hint)})
+	encs.TestAddHinter(FixedTreeHinter)
 
 	hinter, err := enc.Decode(b)
 	t.NoError(err)
@@ -251,7 +262,7 @@ func (t *testFixedTree) TestEncodeBSON() {
 	trg := NewFixedTreeGenerator(l)
 
 	for i := uint64(0); i < l; i++ {
-		n := NewBaseFixedTreeNode(i, util.UUID().Bytes())
+		n := NewBaseFixedTreeNode(t.hint, i, util.UUID().Bytes())
 		t.NoError(trg.Add(n))
 	}
 
@@ -265,14 +276,15 @@ func (t *testFixedTree) TestEncodeBSON() {
 	enc := bsonenc.NewEncoder()
 	encs := encoder.NewEncoders()
 	t.NoError(encs.AddEncoder(enc))
-	encs.TestAddHinter(BaseFixedTreeNode{})
-	encs.TestAddHinter(FixedTree{})
+	encs.TestAddHinter(BaseFixedTreeNode{BaseHinter: hint.NewBaseHinter(t.hint)})
+	encs.TestAddHinter(FixedTree{BaseHinter: hint.NewBaseHinter(hint.NewHint(FixedTreeType, "v0.0.5"))})
 
 	hinter, err := enc.Decode(b)
 	t.NoError(err)
 
 	utr := hinter.(FixedTree)
 
+	t.Equal(tr.Hint(), utr.Hint())
 	t.Equal(tr.Len(), utr.Len())
 
 	t.NoError(tr.Traverse(func(n FixedTreeNode) (bool, error) {
@@ -292,6 +304,11 @@ func TestFixedTree(t *testing.T) {
 
 type testFixedTreeGenerator struct {
 	suite.Suite
+	hint hint.Hint
+}
+
+func (t *testFixedTreeGenerator) SetupSuite() {
+	t.hint = hint.NewHint(hint.Type("tree-node"), "v0.0.1")
 }
 
 func (t *testFixedTreeGenerator) TestNew() {
@@ -313,16 +330,16 @@ func (t *testFixedTreeGenerator) TestZeroSize() {
 func (t *testFixedTreeGenerator) TestAddOutOfRange() {
 	trg := NewFixedTreeGenerator(3)
 
-	t.NoError(trg.Add(NewBaseFixedTreeNode(1, util.UUID().Bytes())))
+	t.NoError(trg.Add(NewBaseFixedTreeNode(t.hint, 1, util.UUID().Bytes())))
 
-	err := trg.Add(NewBaseFixedTreeNode(3, util.UUID().Bytes()))
+	err := trg.Add(NewBaseFixedTreeNode(t.hint, 3, util.UUID().Bytes()))
 	t.Contains(err.Error(), "out of range")
 }
 
 func (t *testFixedTreeGenerator) TestAddSetNilHash() {
 	trg := NewFixedTreeGenerator(3)
 
-	n := NewBaseFixedTreeNode(1, util.UUID().Bytes())
+	n := NewBaseFixedTreeNode(t.hint, 1, util.UUID().Bytes())
 	n.hash = util.UUID().Bytes()
 
 	t.NoError(trg.Add(n))
@@ -332,8 +349,8 @@ func (t *testFixedTreeGenerator) TestAddSetNilHash() {
 func (t *testFixedTreeGenerator) TestTreeNotFilled() {
 	trg := NewFixedTreeGenerator(3)
 
-	t.NoError(trg.Add(NewBaseFixedTreeNode(0, util.UUID().Bytes())))
-	t.NoError(trg.Add(NewBaseFixedTreeNode(2, util.UUID().Bytes())))
+	t.NoError(trg.Add(NewBaseFixedTreeNode(t.hint, 0, util.UUID().Bytes())))
+	t.NoError(trg.Add(NewBaseFixedTreeNode(t.hint, 2, util.UUID().Bytes())))
 
 	_, err := trg.Tree()
 	t.True(errors.Is(err, EmptyNodeInTreeError))
@@ -342,9 +359,9 @@ func (t *testFixedTreeGenerator) TestTreeNotFilled() {
 func (t *testFixedTreeGenerator) TestTreeFilled() {
 	trg := NewFixedTreeGenerator(3)
 
-	t.NoError(trg.Add(NewBaseFixedTreeNode(0, util.UUID().Bytes())))
-	t.NoError(trg.Add(NewBaseFixedTreeNode(1, util.UUID().Bytes())))
-	t.NoError(trg.Add(NewBaseFixedTreeNode(2, util.UUID().Bytes())))
+	t.NoError(trg.Add(NewBaseFixedTreeNode(t.hint, 0, util.UUID().Bytes())))
+	t.NoError(trg.Add(NewBaseFixedTreeNode(t.hint, 1, util.UUID().Bytes())))
+	t.NoError(trg.Add(NewBaseFixedTreeNode(t.hint, 2, util.UUID().Bytes())))
 
 	tr, err := trg.Tree()
 	t.NoError(err)
@@ -354,9 +371,9 @@ func (t *testFixedTreeGenerator) TestTreeFilled() {
 func (t *testFixedTreeGenerator) TestTreeAgain() {
 	trg := NewFixedTreeGenerator(3)
 
-	t.NoError(trg.Add(NewBaseFixedTreeNode(0, util.UUID().Bytes())))
-	t.NoError(trg.Add(NewBaseFixedTreeNode(1, util.UUID().Bytes())))
-	t.NoError(trg.Add(NewBaseFixedTreeNode(2, util.UUID().Bytes())))
+	t.NoError(trg.Add(NewBaseFixedTreeNode(t.hint, 0, util.UUID().Bytes())))
+	t.NoError(trg.Add(NewBaseFixedTreeNode(t.hint, 1, util.UUID().Bytes())))
+	t.NoError(trg.Add(NewBaseFixedTreeNode(t.hint, 2, util.UUID().Bytes())))
 
 	tr0, err := trg.Tree()
 	t.NoError(err)
@@ -379,7 +396,7 @@ func (t *testFixedTreeGenerator) TestNodeHash() {
 
 	for i := 0; i < 20; i++ {
 		b := []byte(fmt.Sprintf("%d", i))
-		t.NoError(trg.Add(NewBaseFixedTreeNode(uint64(i), b)))
+		t.NoError(trg.Add(NewBaseFixedTreeNode(t.hint, uint64(i), b)))
 	}
 
 	expectedHashes := []string{
@@ -420,7 +437,7 @@ func (t *testFixedTreeGenerator) TestAddMany() {
 
 		s := time.Now()
 		for i := uint64(0); i < tr.size; i++ {
-			t.NoError(tr.Add(NewBaseFixedTreeNode(i, []byte(fmt.Sprintf("%d", i)))))
+			t.NoError(tr.Add(NewBaseFixedTreeNode(t.hint, i, []byte(fmt.Sprintf("%d", i)))))
 		}
 		t.T().Log("from root:  insert: elapsed", tr.size, time.Since(s))
 
@@ -435,7 +452,7 @@ func (t *testFixedTreeGenerator) TestAddMany() {
 		s := time.Now()
 		for i := uint64(0); i < tr.size; i++ {
 			j := tr.size - 1 - i
-			t.NoError(tr.Add(NewBaseFixedTreeNode(j, []byte(fmt.Sprintf("%d", j)))))
+			t.NoError(tr.Add(NewBaseFixedTreeNode(t.hint, j, []byte(fmt.Sprintf("%d", j)))))
 		}
 		t.T().Log(" from end:  insert: elapsed", tr.size, time.Since(s))
 
@@ -456,7 +473,7 @@ func (t *testFixedTreeGenerator) TestParallel() {
 
 		s := time.Now()
 		for i := uint64(0); i < tr.size; i++ {
-			t.NoError(tr.Add(NewBaseFixedTreeNode(i, []byte(fmt.Sprintf("%d", i)))))
+			t.NoError(tr.Add(NewBaseFixedTreeNode(t.hint, i, []byte(fmt.Sprintf("%d", i)))))
 		}
 		t.T().Log("     add:  insert: elapsed", tr.size, time.Since(s))
 
@@ -484,7 +501,7 @@ func (t *testFixedTreeGenerator) TestParallel() {
 			i := i
 			go func() {
 				for j := range indexChan {
-					t.NoError(tr.Add(NewBaseFixedTreeNode(j, []byte(fmt.Sprintf("%d", i)))))
+					t.NoError(tr.Add(NewBaseFixedTreeNode(t.hint, j, []byte(fmt.Sprintf("%d", i)))))
 					done <- struct{}{}
 				}
 			}()

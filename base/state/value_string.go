@@ -5,24 +5,27 @@ import (
 
 	"github.com/pkg/errors"
 	"github.com/spikeekips/mitum/util/hint"
+	"github.com/spikeekips/mitum/util/isvalid"
 	"github.com/spikeekips/mitum/util/valuehash"
 )
 
 var (
-	StringValueType = hint.Type("state-string-value")
-	StringValueHint = hint.NewHint(StringValueType, "v0.0.1")
+	StringValueType   = hint.Type("state-string-value")
+	StringValueHint   = hint.NewHint(StringValueType, "v0.0.1")
+	StringValueHinter = StringValue{BaseHinter: hint.NewBaseHinter(StringValueHint)}
 )
 
 type StringValue struct {
+	hint.BaseHinter
 	v string
 	h valuehash.Hash
 }
 
 func NewStringValue(v interface{}) (StringValue, error) {
-	return StringValue{}.set(v)
+	return StringValue{BaseHinter: hint.NewBaseHinter(StringValueHint)}.set(v)
 }
 
-func (StringValue) set(v interface{}) (StringValue, error) {
+func (sv StringValue) set(v interface{}) (StringValue, error) {
 	var s string
 	switch t := v.(type) {
 	case string:
@@ -35,18 +38,14 @@ func (StringValue) set(v interface{}) (StringValue, error) {
 		return StringValue{}, errors.Errorf("not string-like: %T", v)
 	}
 
-	return StringValue{
-		v: s,
-		h: valuehash.NewSHA256([]byte(s)),
-	}, nil
+	sv.v = s
+	sv.h = valuehash.NewSHA256([]byte(s))
+
+	return sv, nil
 }
 
 func (sv StringValue) IsValid([]byte) error {
-	return sv.h.IsValid(nil)
-}
-
-func (StringValue) Hint() hint.Hint {
-	return StringValueHint
+	return isvalid.Check([]isvalid.IsValider{sv.BaseHinter, sv.h}, nil, false)
 }
 
 func (sv StringValue) Equal(v Value) bool {

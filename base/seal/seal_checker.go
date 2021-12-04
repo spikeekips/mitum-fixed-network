@@ -10,6 +10,10 @@ func IsValidSeal(seal Seal, networkID []byte) error {
 		return isvalid.InvalidError.Errorf("empty SignedAt")
 	}
 
+	if seal.Hash() == nil || seal.BodyHash() == nil {
+		return isvalid.InvalidError.Errorf("empty hash")
+	}
+
 	if !seal.Hash().Equal(seal.GenerateHash()) {
 		return isvalid.InvalidError.Errorf("hash does not match")
 	}

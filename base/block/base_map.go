@@ -16,8 +16,9 @@ import (
 )
 
 var (
-	BaseBlockDataMapType = hint.Type("base-blockdatamap")
-	BaseBlockDataMapHint = hint.NewHint(BaseBlockDataMapType, "v0.0.1")
+	BaseBlockDataMapType   = hint.Type("base-blockdatamap")
+	BaseBlockDataMapHint   = hint.NewHint(BaseBlockDataMapType, "v0.0.1")
+	BaseBlockDataMapHinter = BaseBlockDataMap{BaseHinter: hint.NewBaseHinter(BaseBlockDataMapHint)}
 )
 
 var (
@@ -45,6 +46,7 @@ var BlockData = []string{
 }
 
 type BaseBlockDataMap struct {
+	hint.BaseHinter
 	h          valuehash.Hash
 	height     base.Height
 	block      valuehash.Hash
@@ -55,8 +57,9 @@ type BaseBlockDataMap struct {
 
 func NewBaseBlockDataMap(writerHint hint.Hint, height base.Height) BaseBlockDataMap {
 	return BaseBlockDataMap{
-		height:    height,
-		createdAt: localtime.UTCNow(),
+		BaseHinter: hint.NewBaseHinter(BaseBlockDataMapHint),
+		height:     height,
+		createdAt:  localtime.UTCNow(),
 		items: map[string]BaseBlockDataMapItem{
 			BlockDataManifest:        {},
 			BlockDataOperations:      {},
@@ -72,12 +75,9 @@ func NewBaseBlockDataMap(writerHint hint.Hint, height base.Height) BaseBlockData
 	}
 }
 
-func (BaseBlockDataMap) Hint() hint.Hint {
-	return BaseBlockDataMapHint
-}
-
 func (bd BaseBlockDataMap) IsReadyToHash() error {
 	if err := isvalid.Check([]isvalid.IsValider{
+		bd.BaseHinter,
 		bd.height,
 		bd.block,
 	}, nil, false); err != nil {
@@ -94,9 +94,7 @@ func (bd BaseBlockDataMap) IsReadyToHash() error {
 }
 
 func (bd BaseBlockDataMap) IsValid([]byte) error {
-	if err := isvalid.Check([]isvalid.IsValider{
-		bd.h,
-	}, nil, false); err != nil {
+	if err := isvalid.Check([]isvalid.IsValider{bd.BaseHinter, bd.h}, nil, false); err != nil {
 		return err
 	}
 

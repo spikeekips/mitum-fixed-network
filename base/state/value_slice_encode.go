@@ -17,7 +17,7 @@ func (sv *SliceValue) unpack(enc encoder.Encoder, h valuehash.Hash, bValue [][]b
 		v[i] = decoded
 	}
 
-	usv, err := (SliceValue{}).set(v)
+	usv, err := (SliceValueHinter).set(v)
 	if err != nil {
 		return err
 	}

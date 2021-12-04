@@ -5,7 +5,6 @@ import (
 
 	"github.com/spikeekips/mitum/base/key"
 	bsonenc "github.com/spikeekips/mitum/util/encoder/bson"
-	"github.com/spikeekips/mitum/util/hint"
 	"github.com/spikeekips/mitum/util/valuehash"
 	"go.mongodb.org/mongo-driver/bson"
 )
@@ -24,7 +23,6 @@ func (sl BaseSeal) BSONPacker() map[string]interface{} {
 }
 
 type BaseSealBSONUnpack struct {
-	H  hint.Hint            `bson:"_hint"`
 	HH valuehash.Bytes      `bson:"hash"`
 	BH valuehash.Bytes      `bson:"body_hash"`
 	SN key.PublickeyDecoder `bson:"signer"`
@@ -38,5 +36,5 @@ func (sl *BaseSeal) UnpackBSON(b []byte, enc *bsonenc.Encoder) error {
 		return err
 	}
 
-	return sl.unpack(enc, usl.H, usl.HH, usl.BH, usl.SN, usl.SG, usl.SA)
+	return sl.unpack(enc, usl.HH, usl.BH, usl.SN, usl.SG, usl.SA)
 }

@@ -35,16 +35,16 @@ type Publickey interface {
 }
 
 type BaseKey struct {
-	ht      hint.Hint
+	hint.BaseHinter
 	rawFunc func() string
 }
 
 func NewBaseKey(ht hint.Hint, rawFunc func() string) BaseKey {
-	return BaseKey{ht: ht, rawFunc: rawFunc}
+	return BaseKey{BaseHinter: hint.NewBaseHinter(ht), rawFunc: rawFunc}
 }
 
-func (ky BaseKey) Hint() hint.Hint {
-	return ky.ht
+func (ky BaseKey) IsValid([]byte) error {
+	return ky.BaseHinter.IsValid(nil)
 }
 
 func (ky BaseKey) Raw() string {
@@ -59,7 +59,7 @@ func (ky BaseKey) String() string {
 		r = ky.rawFunc()
 	}
 
-	return hint.NewHintedString(ky.ht, r).String()
+	return hint.NewHintedString(ky.Hint(), r).String()
 }
 
 func (ky BaseKey) Bytes() []byte {

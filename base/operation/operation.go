@@ -30,6 +30,7 @@ type Operation interface {
 
 func IsValidOperationFact(fact OperationFact, networkID []byte) error {
 	if err := isvalid.Check([]isvalid.IsValider{
+		fact.Hint(),
 		fact.Hash(),
 		fact.Hint(),
 	}, networkID, false); err != nil {
@@ -47,6 +48,14 @@ func IsValidOperationFact(fact OperationFact, networkID []byte) error {
 }
 
 func IsValidOperation(op Operation, networkID []byte) error {
+	if op.Hash() == nil {
+		return isvalid.InvalidError.Errorf("empty operation hash")
+	}
+
+	if op.Fact() == nil {
+		return isvalid.InvalidError.Errorf("empty operation fact")
+	}
+
 	if err := op.Hint().IsValid(nil); err != nil {
 		return err
 	}
@@ -85,28 +94,27 @@ func IsValidOperation(op Operation, networkID []byte) error {
 }
 
 type BaseOperation struct {
-	ht   hint.Hint
+	hint.BaseHinter
 	fact OperationFact
 	h    valuehash.Hash
 	fs   []base.FactSign
 }
 
+func EmptyBaseOperation(ht hint.Hint) BaseOperation {
+	return BaseOperation{BaseHinter: hint.NewBaseHinter(ht)}
+}
+
 func NewBaseOperation(ht hint.Hint, fact OperationFact, h valuehash.Hash, fs []base.FactSign) BaseOperation {
 	return BaseOperation{
-		ht:   ht,
-		fact: fact,
-		h:    h,
-		fs:   fs,
+		BaseHinter: hint.NewBaseHinter(ht),
+		fact:       fact,
+		h:          h,
+		fs:         fs,
 	}
 }
 
 func NewBaseOperationFromFact(ht hint.Hint, fact OperationFact, fs []base.FactSign) (BaseOperation, error) {
-	bo := BaseOperation{
-		ht:   ht,
-		fact: fact,
-		fs:   fs,
-	}
-
+	bo := NewBaseOperation(ht, fact, nil, fs)
 	bo.h = bo.GenerateHash()
 
 	return bo, nil
@@ -118,22 +126,12 @@ func (bo BaseOperation) SetHash(h valuehash.Hash) BaseOperation {
 	return bo
 }
 
-func (bo BaseOperation) SetHint(ht hint.Hint) BaseOperation {
-	bo.ht = ht
-
-	return bo
-}
-
 func (bo BaseOperation) Fact() base.Fact {
 	return bo.fact
 }
 
 func (bo BaseOperation) Token() []byte {
 	return bo.fact.Token()
-}
-
-func (bo BaseOperation) Hint() hint.Hint {
-	return bo.ht
 }
 
 func (bo BaseOperation) Hash() valuehash.Hash {
@@ -156,6 +154,10 @@ func (bo BaseOperation) Signs() []base.FactSign {
 }
 
 func (bo BaseOperation) IsValid(networkID []byte) error {
+	if err := bo.BaseHinter.IsValid(nil); err != nil {
+		return err
+	}
+
 	return IsValidOperation(bo, networkID)
 }
 

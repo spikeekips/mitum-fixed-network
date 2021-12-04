@@ -288,8 +288,8 @@ func (pp *DefaultProcessor) processStatesTree(ctx context.Context, pool *storage
 		_ = pp.setStatic("processor_process_operations_states_tree_elapsed", time.Since(started))
 	}()
 
-	pp.operationsTree = tree.FixedTree{}
-	pp.statesTree = tree.FixedTree{}
+	pp.operationsTree = tree.EmptyFixedTree()
+	pp.statesTree = tree.EmptyFixedTree()
 	pp.states = nil
 
 	var co *prprocessor.ConcurrentOperationsProcessor
@@ -435,9 +435,9 @@ func (pp *DefaultProcessor) resetPrepare() error {
 	pp.blockDataSession = nil
 	pp.blk = nil
 	pp.operations = nil
-	pp.operationsTree = tree.FixedTree{}
+	pp.operationsTree = tree.EmptyFixedTree()
 	pp.states = nil
-	pp.statesTree = tree.FixedTree{}
+	pp.statesTree = tree.EmptyFixedTree()
 
 	return pp.resetSave()
 }
@@ -455,9 +455,9 @@ func (pp *DefaultProcessor) cancelPrepare() error {
 	pp.blockDataSession = nil
 	pp.blk = nil
 	pp.operations = nil
-	pp.operationsTree = tree.FixedTree{}
+	pp.operationsTree = tree.EmptyFixedTree()
 	pp.states = nil
-	pp.statesTree = tree.FixedTree{}
+	pp.statesTree = tree.EmptyFixedTree()
 
 	return nil
 }

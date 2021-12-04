@@ -53,6 +53,10 @@ func NewStellarPrivatekeyFromString(s string) (StellarPrivatekey, error) {
 }
 
 func (sp StellarPrivatekey) IsValid([]byte) error {
+	if err := sp.BaseHinter.IsValid(nil); err != nil {
+		return err
+	}
+
 	if sp.kp == nil {
 		return InvalidKeyError.Errorf("empty stellar Privatekey")
 	}

@@ -8,6 +8,7 @@ import (
 )
 
 type ConsensusInfoV0 struct {
+	hint.BaseHinter
 	initVoteproof   base.Voteproof
 	acceptVoteproof base.Voteproof
 	suffrageInfo    SuffrageInfo
@@ -15,14 +16,13 @@ type ConsensusInfoV0 struct {
 }
 
 func (bc ConsensusInfoV0) IsValid(networkID []byte) error {
-	if err := isvalid.Check(
-		[]isvalid.IsValider{
-			bc.initVoteproof,
-			bc.acceptVoteproof,
-			bc.suffrageInfo,
-			bc.sfs,
-		},
-		networkID, false); err != nil {
+	if err := isvalid.Check([]isvalid.IsValider{
+		bc.BaseHinter,
+		bc.initVoteproof,
+		bc.acceptVoteproof,
+		bc.suffrageInfo,
+		bc.sfs,
+	}, networkID, false); err != nil {
 		return err
 	}
 
@@ -69,10 +69,6 @@ func (ConsensusInfoV0) isValidVoteproof(
 	return nil
 }
 
-func (ConsensusInfoV0) Hint() hint.Hint {
-	return BlockConsensusInfoV0Hint
-}
-
 func (bc ConsensusInfoV0) INITVoteproof() base.Voteproof {
 	return bc.initVoteproof
 }
@@ -90,19 +86,17 @@ func (bc ConsensusInfoV0) Proposal() base.SignedBallotFact {
 }
 
 type SuffrageInfoV0 struct {
+	hint.BaseHinter
 	proposer base.Address
 	nodes    []base.Node
 }
 
 func NewSuffrageInfoV0(proposer base.Address, nodes []base.Node) SuffrageInfoV0 {
 	return SuffrageInfoV0{
-		proposer: proposer,
-		nodes:    nodes,
+		BaseHinter: hint.NewBaseHinter(SuffrageInfoV0Hint),
+		proposer:   proposer,
+		nodes:      nodes,
 	}
-}
-
-func (SuffrageInfoV0) Hint() hint.Hint {
-	return SuffrageInfoV0Hint
 }
 
 func (si SuffrageInfoV0) Proposer() base.Address {
@@ -114,8 +108,12 @@ func (si SuffrageInfoV0) Nodes() []base.Node {
 }
 
 func (si SuffrageInfoV0) IsValid([]byte) error {
+	if err := si.BaseHinter.IsValid(nil); err != nil {
+		return err
+	}
+
 	var found bool
-	vs := []isvalid.IsValider{si.proposer}
+	vs := []isvalid.IsValider{si.BaseHinter, si.proposer}
 	for _, n := range si.nodes {
 		if !found && si.proposer.Equal(n.Address()) {
 			found = true

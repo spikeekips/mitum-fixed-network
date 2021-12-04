@@ -6,24 +6,27 @@ import (
 	"github.com/pkg/errors"
 	"github.com/spikeekips/mitum/util"
 	"github.com/spikeekips/mitum/util/hint"
+	"github.com/spikeekips/mitum/util/isvalid"
 	"github.com/spikeekips/mitum/util/valuehash"
 )
 
 var (
-	BytesValueType = hint.Type("state-bytes-value")
-	BytesValueHint = hint.NewHint(BytesValueType, "v0.0.1")
+	BytesValueType   = hint.Type("state-bytes-value")
+	BytesValueHint   = hint.NewHint(BytesValueType, "v0.0.1")
+	BytesValueHinter = BytesValue{BaseHinter: hint.NewBaseHinter(BytesValueHint)}
 )
 
 type BytesValue struct {
+	hint.BaseHinter
 	v []byte
 	h valuehash.Hash
 }
 
 func NewBytesValue(v interface{}) (BytesValue, error) {
-	return BytesValue{}.set(v)
+	return BytesValue{BaseHinter: hint.NewBaseHinter(BytesValueHint)}.set(v)
 }
 
-func (BytesValue) set(v interface{}) (BytesValue, error) {
+func (bv BytesValue) set(v interface{}) (BytesValue, error) {
 	var s []byte
 	switch t := v.(type) {
 	case []byte:
@@ -43,17 +46,14 @@ func (BytesValue) set(v interface{}) (BytesValue, error) {
 	}
 
 	return BytesValue{
-		v: s,
-		h: valuehash.NewSHA256(s),
+		BaseHinter: bv.BaseHinter,
+		v:          s,
+		h:          valuehash.NewSHA256(s),
 	}, nil
 }
 
 func (bv BytesValue) IsValid([]byte) error {
-	return bv.h.IsValid(nil)
-}
-
-func (BytesValue) Hint() hint.Hint {
-	return BytesValueHint
+	return isvalid.Check([]isvalid.IsValider{bv.BaseHinter, bv.h}, nil, false)
 }
 
 func (bv BytesValue) Equal(v Value) bool {

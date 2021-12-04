@@ -2,7 +2,6 @@ package operation
 
 import (
 	bsonenc "github.com/spikeekips/mitum/util/encoder/bson"
-	"github.com/spikeekips/mitum/util/hint"
 	"github.com/spikeekips/mitum/util/valuehash"
 	"go.mongodb.org/mongo-driver/bson"
 )
@@ -23,7 +22,6 @@ func (bo BaseOperation) BSONM() bson.M {
 }
 
 type BaseOperationBSONUnpacker struct {
-	HT hint.Hint       `bson:"_hint"`
 	H  valuehash.Bytes `bson:"hash"`
 	FC bson.Raw        `bson:"fact"`
 	FS bson.Raw        `bson:"fact_signs"`
@@ -35,5 +33,5 @@ func (bo *BaseOperation) UnpackBSON(b []byte, enc *bsonenc.Encoder) error {
 		return err
 	}
 
-	return bo.unpack(enc, ubo.HT, ubo.H, ubo.FC, ubo.FS)
+	return bo.unpack(enc, ubo.H, ubo.FC, ubo.FS)
 }

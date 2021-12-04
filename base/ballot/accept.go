@@ -15,7 +15,7 @@ import (
 
 var (
 	ACCEPTFactHint   = hint.NewHint(base.ACCEPTBallotFactType, "v0.0.1")
-	ACCEPTFactHinter = ACCEPTFact{BaseFact: BaseFact{hint: ACCEPTFactHint}}
+	ACCEPTFactHinter = ACCEPTFact{BaseFact: BaseFact{BaseHinter: hint.NewBaseHinter(ACCEPTFactHint)}}
 	ACCEPTHint       = hint.NewHint(base.ACCEPTBallotType, "v0.0.1")
 	ACCEPTHinter     = ACCEPT{BaseSeal: BaseSeal{BaseSeal: seal.NewBaseSealWithHint(ACCEPTHint)}}
 )

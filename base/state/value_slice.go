@@ -6,27 +6,30 @@ import (
 	"github.com/pkg/errors"
 	"github.com/spikeekips/mitum/util"
 	"github.com/spikeekips/mitum/util/hint"
+	"github.com/spikeekips/mitum/util/isvalid"
 	"github.com/spikeekips/mitum/util/valuehash"
 )
 
 var (
-	SliceValueType = hint.Type("state-slice-value")
-	SliceValueHint = hint.NewHint(SliceValueType, "v0.0.1")
+	SliceValueType   = hint.Type("state-slice-value")
+	SliceValueHint   = hint.NewHint(SliceValueType, "v0.0.1")
+	SliceValueHinter = SliceValue{BaseHinter: hint.NewBaseHinter(SliceValueHint)}
 )
 
 // SliceValue only supports the interface{} implements hint.Hinter and
 // valuehash.Hasher().
 type SliceValue struct {
+	hint.BaseHinter
 	v []hint.Hinter
 	b []byte
 	h valuehash.Hash
 }
 
 func NewSliceValue(v interface{}) (SliceValue, error) {
-	return SliceValue{}.set(v)
+	return SliceValue{BaseHinter: hint.NewBaseHinter(SliceValueHint)}.set(v)
 }
 
-func (SliceValue) set(v interface{}) (SliceValue, error) {
+func (sv SliceValue) set(v interface{}) (SliceValue, error) {
 	switch reflect.TypeOf(v).Kind() {
 	case reflect.Array, reflect.Slice:
 	default:
@@ -53,18 +56,15 @@ func (SliceValue) set(v interface{}) (SliceValue, error) {
 	b := util.ConcatBytesSlice(bs...)
 
 	return SliceValue{
-		v: items,
-		b: b,
-		h: valuehash.NewSHA256(b),
+		BaseHinter: sv.BaseHinter,
+		v:          items,
+		b:          b,
+		h:          valuehash.NewSHA256(b),
 	}, nil
 }
 
 func (sv SliceValue) IsValid([]byte) error {
-	return sv.h.IsValid(nil)
-}
-
-func (SliceValue) Hint() hint.Hint {
-	return SliceValueHint
+	return isvalid.Check([]isvalid.IsValider{sv.BaseHinter, sv.h}, nil, false)
 }
 
 func (sv SliceValue) Equal(v Value) bool {

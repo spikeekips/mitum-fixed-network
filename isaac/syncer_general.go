@@ -1169,7 +1169,7 @@ func (cs *GeneralSyncer) fetchBlock( // revive:disable-line:cognitive-complexity
 
 	l.Debug().Msg("trying to fetch block")
 
-	blk := (interface{})(block.BlockV0{}).(block.BlockUpdater)
+	blk := (interface{})(block.EmptyBlockV0()).(block.BlockUpdater)
 
 	switch i, found, err := cs.syncerSession().Manifest(bd.Height()); {
 	case err != nil:

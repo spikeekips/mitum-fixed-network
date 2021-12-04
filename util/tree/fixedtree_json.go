@@ -5,6 +5,7 @@ import (
 
 	"github.com/btcsuite/btcutil/base58"
 	jsonenc "github.com/spikeekips/mitum/util/encoder/json"
+	"github.com/spikeekips/mitum/util/hint"
 )
 
 type BaseFixedTreeNodeJSONPacker struct {
@@ -34,11 +35,17 @@ type BaseFixedTreeNodeJSONUnpacker struct {
 }
 
 func (no *BaseFixedTreeNode) UnmarshalJSON(b []byte) error {
+	var uht jsonenc.HintedHead
+	if err := jsonenc.Unmarshal(b, &uht); err != nil {
+		return err
+	}
+
 	var uno BaseFixedTreeNodeJSONUnpacker
 	if err := jsonenc.Unmarshal(b, &uno); err != nil {
 		return err
 	}
 
+	no.BaseHinter = hint.NewBaseHinter(uht.H)
 	no.index = uno.IN
 	no.key = base58.Decode(uno.KY)
 	no.hash = base58.Decode(uno.HS)

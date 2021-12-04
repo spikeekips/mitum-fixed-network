@@ -11,8 +11,8 @@ import (
 )
 
 type BaseSeal struct {
+	hint.BaseHinter
 	h                    valuehash.Hash
-	ht                   hint.Hint
 	bodyHash             valuehash.Hash
 	signer               key.Publickey
 	signature            key.Signature
@@ -21,24 +21,15 @@ type BaseSeal struct {
 }
 
 func NewBaseSealWithHint(ht hint.Hint) BaseSeal {
-	return BaseSeal{ht: ht}
-}
-
-func NewBaseSeal(ht hint.Hint, pk key.Privatekey, networkID []byte) (BaseSeal, error) {
-	sl := BaseSeal{ht: ht}
-	if err := sl.Sign(pk, networkID); err != nil {
-		return BaseSeal{}, err
-	}
-
-	return sl, nil
+	return BaseSeal{BaseHinter: hint.NewBaseHinter(ht)}
 }
 
 func (sl BaseSeal) IsValid(networkID []byte) error {
-	return IsValidSeal(sl, networkID)
-}
+	if err := sl.BaseHinter.IsValid(nil); err != nil {
+		return err
+	}
 
-func (sl BaseSeal) Hint() hint.Hint {
-	return sl.ht
+	return IsValidSeal(sl, networkID)
 }
 
 func (sl BaseSeal) Hash() valuehash.Hash {

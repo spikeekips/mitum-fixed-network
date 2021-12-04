@@ -31,10 +31,10 @@ func (t *testEncodersWithBSON) TestAddHinter() {
 	je := NewEncoder()
 	t.NoError(encs.AddEncoder(je))
 
-	ht := hinterDefault{
-		h: hint.NewHint(hint.Type("findme"), "v1.2.3"),
-		A: "A", B: 33,
-	}
+	ht := newHinterDefault(
+		hint.NewHint(hint.Type("findme"), "v1.2.3"),
+		"A", 33,
+	)
 
 	t.NoError(encs.TestAddHinter(ht))
 
@@ -50,10 +50,10 @@ func (t *testEncodersWithBSON) TestDecode() {
 	be := NewEncoder()
 	t.NoError(encs.AddEncoder(be))
 
-	ht := hinterDefault{
-		h: hint.NewHint(hint.Type("findme"), "v1.2.3"),
-		A: "A", B: 33,
-	}
+	ht := newHinterDefault(
+		hint.NewHint(hint.Type("findme"), "v1.2.3"),
+		"A", 33,
+	)
 
 	b, err := be.Marshal(ht)
 

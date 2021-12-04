@@ -15,7 +15,7 @@ import (
 
 var (
 	INITFactHint   = hint.NewHint(base.INITBallotFactType, "v0.0.1")
-	INITFactHinter = INITFact{BaseFact: BaseFact{hint: INITFactHint}}
+	INITFactHinter = INITFact{BaseFact: BaseFact{BaseHinter: hint.NewBaseHinter(INITFactHint)}}
 	INITHint       = hint.NewHint(base.INITBallotType, "v0.0.1")
 	INITHinter     = INIT{BaseSeal: BaseSeal{BaseSeal: seal.NewBaseSealWithHint(INITHint)}}
 )

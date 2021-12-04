@@ -20,7 +20,7 @@ func (t *testStateNumberValueEncode) SetupSuite() {
 	_ = encs.AddEncoder(t.enc)
 
 	_ = encs.TestAddHinter(dummy{})
-	_ = encs.TestAddHinter(NumberValue{})
+	_ = encs.TestAddHinter(NumberValueHinter)
 }
 
 func (t *testStateNumberValueEncode) TestEncode() {

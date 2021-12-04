@@ -6,6 +6,7 @@ package isaac
 import (
 	"io"
 	"os"
+	"sync"
 
 	"github.com/pkg/errors"
 	"github.com/spikeekips/mitum/base"
@@ -32,6 +33,7 @@ func SignSeal(b seal.Signer, local *Local) error {
 }
 
 type BaseTest struct {
+	sync.Mutex
 	suite.Suite
 	StorageSupportTest
 	ls   []*Local
@@ -41,43 +43,46 @@ type BaseTest struct {
 func (t *BaseTest) SetupSuite() {
 	t.StorageSupportTest.SetupSuite()
 
-	_ = t.Encs.TestAddHinter(key.BTCPrivatekeyHinter)
-	_ = t.Encs.TestAddHinter(key.BTCPublickeyHinter)
-	_ = t.Encs.TestAddHinter(base.StringAddress(""))
-	_ = t.Encs.TestAddHinter(ballot.INITHinter)
-	_ = t.Encs.TestAddHinter(ballot.INITFactHinter)
-	_ = t.Encs.TestAddHinter(ballot.ProposalHinter)
-	_ = t.Encs.TestAddHinter(ballot.ProposalFactHinter)
-	_ = t.Encs.TestAddHinter(ballot.ACCEPTHinter)
-	_ = t.Encs.TestAddHinter(ballot.ACCEPTFactHinter)
-	_ = t.Encs.TestAddHinter(base.BaseBallotFactSign{})
-	_ = t.Encs.TestAddHinter(base.VoteproofV0{})
-	_ = t.Encs.TestAddHinter(base.BaseSignedBallotFact{})
-	_ = t.Encs.TestAddHinter(node.BaseV0{})
-	_ = t.Encs.TestAddHinter(block.BlockV0{})
-	_ = t.Encs.TestAddHinter(block.ManifestV0{})
-	_ = t.Encs.TestAddHinter(block.ConsensusInfoV0{})
-	_ = t.Encs.TestAddHinter(block.SuffrageInfoV0{})
-	_ = t.Encs.TestAddHinter(base.BaseFactSign{})
-	_ = t.Encs.TestAddHinter(operation.SealHinter)
-	_ = t.Encs.TestAddHinter(operation.KVOperationFact{})
-	_ = t.Encs.TestAddHinter(operation.KVOperation{})
 	_ = t.Encs.TestAddHinter(KVOperation{})
 	_ = t.Encs.TestAddHinter(LongKVOperation{})
-	_ = t.Encs.TestAddHinter(tree.FixedTree{})
+	_ = t.Encs.TestAddHinter(ballot.ACCEPTFactHinter)
+	_ = t.Encs.TestAddHinter(ballot.ACCEPTHinter)
+	_ = t.Encs.TestAddHinter(ballot.INITFactHinter)
+	_ = t.Encs.TestAddHinter(ballot.INITHinter)
+	_ = t.Encs.TestAddHinter(ballot.ProposalFactHinter)
+	_ = t.Encs.TestAddHinter(ballot.ProposalHinter)
+	_ = t.Encs.TestAddHinter(base.BallotFactSignHinter)
+	_ = t.Encs.TestAddHinter(base.BaseFactSignHinter)
+	_ = t.Encs.TestAddHinter(base.SignedBallotFactHinter)
+	_ = t.Encs.TestAddHinter(base.StringAddress(""))
+	_ = t.Encs.TestAddHinter(base.VoteproofV0Hinter)
+	_ = t.Encs.TestAddHinter(block.BaseBlockDataMapHinter)
+	_ = t.Encs.TestAddHinter(block.BlockV0Hinter)
+	_ = t.Encs.TestAddHinter(block.BlockConsensusInfoV0Hinter)
+	_ = t.Encs.TestAddHinter(block.ManifestV0Hinter)
+	_ = t.Encs.TestAddHinter(block.SuffrageInfoV0Hinter)
+	_ = t.Encs.TestAddHinter(key.BTCPrivatekeyHinter)
+	_ = t.Encs.TestAddHinter(key.BTCPublickeyHinter)
+	_ = t.Encs.TestAddHinter(node.BaseV0Hinter)
+	_ = t.Encs.TestAddHinter(operation.FixedTreeNodeHinter)
+	_ = t.Encs.TestAddHinter(operation.KVOperationFact{})
+	_ = t.Encs.TestAddHinter(operation.KVOperation{})
+	_ = t.Encs.TestAddHinter(operation.SealHinter)
+	_ = t.Encs.TestAddHinter(state.BytesValueHinter)
+	_ = t.Encs.TestAddHinter(state.DurationValueHinter)
+	_ = t.Encs.TestAddHinter(state.FixedTreeNodeHinter)
+	_ = t.Encs.TestAddHinter(state.HintedValueHinter)
+	_ = t.Encs.TestAddHinter(state.NumberValueHinter)
+	_ = t.Encs.TestAddHinter(state.SliceValueHinter)
 	_ = t.Encs.TestAddHinter(state.StateV0{})
-	_ = t.Encs.TestAddHinter(state.BytesValue{})
-	_ = t.Encs.TestAddHinter(state.DurationValue{})
-	_ = t.Encs.TestAddHinter(state.HintedValue{})
-	_ = t.Encs.TestAddHinter(state.NumberValue{})
-	_ = t.Encs.TestAddHinter(state.SliceValue{})
-	_ = t.Encs.TestAddHinter(state.StringValue{})
-	_ = t.Encs.TestAddHinter(block.BaseBlockDataMap{})
-	_ = t.Encs.TestAddHinter(operation.FixedTreeNode{})
-	_ = t.Encs.TestAddHinter(tree.BaseFixedTreeNode{})
+	_ = t.Encs.TestAddHinter(state.StringValueHinter)
+	_ = t.Encs.TestAddHinter(tree.FixedTreeHinter)
 }
 
 func (t *BaseTest) SetupTest() {
+	t.Lock()
+	defer t.Unlock()
+
 	p, err := os.MkdirTemp("", "localfs-")
 	if err != nil {
 		panic(err)

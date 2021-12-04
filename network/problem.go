@@ -17,8 +17,9 @@ const (
 )
 
 var (
-	ProblemType = hint.Type("mitum-problem")
-	ProblemHint = hint.NewHint(ProblemType, "v0.0.1")
+	ProblemType   = hint.Type("mitum-problem")
+	ProblemHint   = hint.NewHint(ProblemType, "v0.0.1")
+	ProblemHinter = Problem{BaseHinter: hint.NewBaseHinter(ProblemHint)}
 )
 
 var (
@@ -29,6 +30,7 @@ var (
 // Problem implements "Problem Details for HTTP
 // APIs"<https://tools.ietf.org/html/rfc7807>.
 type Problem struct {
+	hint.BaseHinter
 	t      string // NOTE http problem type
 	title  string
 	detail string
@@ -36,7 +38,10 @@ type Problem struct {
 }
 
 func NewProblem(t, title string) Problem {
-	return Problem{t: t, title: title}
+	return Problem{
+		BaseHinter: hint.NewBaseHinter(ProblemHint),
+		t:          t, title: title,
+	}
 }
 
 func NewProblemFromError(err error) Problem {
@@ -45,10 +50,6 @@ func NewProblemFromError(err error) Problem {
 		title:  fmt.Sprintf("%s", err),
 		detail: fmt.Sprintf("%+v", err),
 	}
-}
-
-func (Problem) Hint() hint.Hint {
-	return ProblemHint
 }
 
 func (pr Problem) Error() string {

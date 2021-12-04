@@ -8,16 +8,18 @@ import (
 )
 
 var (
-	HintedValueType = hint.Type("state-hinted-value")
-	HintedValueHint = hint.NewHint(HintedValueType, "v0.0.1")
+	HintedValueType   = hint.Type("state-hinted-value")
+	HintedValueHint   = hint.NewHint(HintedValueType, "v0.0.1")
+	HintedValueHinter = HintedValue{BaseHinter: hint.NewBaseHinter(HintedValueHint)}
 )
 
 type HintedValue struct {
+	hint.BaseHinter
 	v hint.Hinter
 }
 
 func NewHintedValue(v hint.Hinter) (HintedValue, error) {
-	hv := HintedValue{}
+	hv := HintedValue{BaseHinter: hint.NewBaseHinter(HintedValueHint)}
 	nhv, err := hv.Set(v)
 	if err != nil {
 		return HintedValue{}, err
@@ -27,6 +29,10 @@ func NewHintedValue(v hint.Hinter) (HintedValue, error) {
 }
 
 func (hv HintedValue) IsValid([]byte) error {
+	if err := hv.BaseHinter.IsValid(nil); err != nil {
+		return err
+	}
+
 	if is, ok := hv.v.(isvalid.IsValider); ok {
 		if err := is.IsValid(nil); err != nil {
 			return err
@@ -34,10 +40,6 @@ func (hv HintedValue) IsValid([]byte) error {
 	}
 
 	return nil
-}
-
-func (HintedValue) Hint() hint.Hint {
-	return HintedValueHint
 }
 
 func (hv HintedValue) Hash() valuehash.Hash {

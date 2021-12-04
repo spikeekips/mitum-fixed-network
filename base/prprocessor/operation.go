@@ -152,7 +152,7 @@ func (co *ConcurrentOperationsProcessor) StatesTree() (tree.FixedTree, []state.S
 
 	trg := tree.NewFixedTreeGenerator(uint64(len(updates)))
 	for i := range states {
-		if err := trg.Add(tree.NewBaseFixedTreeNode(uint64(i), states[i].Hash().Bytes())); err != nil {
+		if err := trg.Add(state.NewFixedTreeNode(uint64(i), states[i].Hash().Bytes())); err != nil {
 			return tree.FixedTree{}, nil, err
 		}
 	}
@@ -209,7 +209,9 @@ func (co *ConcurrentOperationsProcessor) Process(index uint64, op operation.Oper
 	l := co.Log().With().
 		Stringer("operation", op.Hash()).Stringer("fact", op.Fact().Hash()).Logger()
 
-	l.Trace().Msg("operation will be processed")
+	l.Trace().Func(func(e *zerolog.Event) {
+		e.Interface("operation", op)
+	}).Msg("operation will be processed")
 
 	if pr, ok := op.(state.Processor); !ok {
 		l.Trace().Msgf("not state.StateProcessor, %T", op)

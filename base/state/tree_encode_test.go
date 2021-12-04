@@ -1,13 +1,13 @@
-package operation
+package state
 
 import (
-	"encoding/json"
 	"testing"
 
 	"github.com/spikeekips/mitum/util"
 	"github.com/spikeekips/mitum/util/encoder"
 	bsonenc "github.com/spikeekips/mitum/util/encoder/bson"
 	jsonenc "github.com/spikeekips/mitum/util/encoder/json"
+	"github.com/spikeekips/mitum/util/hint"
 	"github.com/stretchr/testify/suite"
 )
 
@@ -22,13 +22,11 @@ func (t *testFixedTreeNodeEncode) SetupSuite() {
 	_ = t.encs.AddEncoder(t.enc)
 
 	_ = t.encs.TestAddHinter(FixedTreeNodeHinter)
-	_ = t.encs.TestAddHinter(BaseReasonError{})
 }
 
 func (t *testFixedTreeNodeEncode) TestMake() {
-	e := NewBaseReasonError("show me")
-	e = e.SetData(map[string]interface{}{"a": 1})
-	no := NewFixedTreeNodeWithHash(33, util.UUID().Bytes(), util.UUID().Bytes(), true, e)
+	no := NewFixedTreeNode(33, util.UUID().Bytes())
+	no.BaseHinter = hint.NewBaseHinter(hint.NewHint(FixedTreeNodeType, "v0.0.9"))
 
 	var raw []byte
 	raw, err := t.enc.Marshal(no)
@@ -42,15 +40,6 @@ func (t *testFixedTreeNodeEncode) TestMake() {
 
 	t.True(no.Hint().Equal(uno.Hint()))
 	t.True(no.Equal(uno))
-
-	ue := uno.Reason()
-
-	ab, err := json.Marshal(e)
-	t.NoError(err)
-	bb, err := json.Marshal(ue)
-	t.NoError(err)
-
-	t.Equal(ab, bb)
 }
 
 func TestFixedTreeNodeEncodeJSON(t *testing.T) {

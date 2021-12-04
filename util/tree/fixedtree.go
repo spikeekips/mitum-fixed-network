@@ -13,10 +13,9 @@ import (
 )
 
 var (
-	BaseFixedTreeNodeType = hint.Type("base-fixedtree-node")
-	BaseFixedTreeNodeHint = hint.NewHint(BaseFixedTreeNodeType, "v0.0.1")
-	FixedTreeType         = hint.Type("fixedtree")
-	FixedTreeHint         = hint.NewHint(FixedTreeType, "v0.0.1")
+	FixedTreeType   = hint.Type("fixedtree")
+	FixedTreeHint   = hint.NewHint(FixedTreeType, "v0.0.1")
+	FixedTreeHinter = FixedTree{BaseHinter: hint.NewBaseHinter(FixedTreeHint)}
 )
 
 var (
@@ -41,24 +40,32 @@ type FixedTreeNode interface {
 }
 
 type BaseFixedTreeNode struct {
+	hint.BaseHinter
 	index uint64
 	key   []byte
 	hash  []byte
 }
 
-func NewBaseFixedTreeNode(index uint64, key []byte) BaseFixedTreeNode {
-	return BaseFixedTreeNode{index: index, key: key}
+func NewBaseFixedTreeNode(ht hint.Hint, index uint64, key []byte) BaseFixedTreeNode {
+	return BaseFixedTreeNode{
+		BaseHinter: hint.NewBaseHinter(ht),
+		index:      index,
+		key:        key,
+	}
 }
 
-func NewBaseFixedTreeNodeWithHash(index uint64, key, hash []byte) BaseFixedTreeNode {
-	return BaseFixedTreeNode{index: index, key: key, hash: hash}
-}
+func NewBaseFixedTreeNodeWithHash(ht hint.Hint, index uint64, key, hash []byte) BaseFixedTreeNode {
+	tr := NewBaseFixedTreeNode(ht, index, key)
+	tr.hash = hash
 
-func (BaseFixedTreeNode) Hint() hint.Hint {
-	return BaseFixedTreeNodeHint
+	return tr
 }
 
 func (no BaseFixedTreeNode) IsValid([]byte) error {
+	if err := no.BaseHinter.IsValid(nil); err != nil {
+		return err
+	}
+
 	if len(no.key) < 1 {
 		return EmptyKeyError
 	}
@@ -102,18 +109,27 @@ func (no BaseFixedTreeNode) SetHash(h []byte) FixedTreeNode {
 }
 
 type FixedTree struct {
+	hint.BaseHinter
 	nodes []FixedTreeNode
 }
 
-func NewFixedTree(nodes []FixedTreeNode) FixedTree {
-	return FixedTree{nodes: nodes}
+func EmptyFixedTree() FixedTree {
+	return FixedTree{BaseHinter: hint.NewBaseHinter(FixedTreeHint)}
 }
 
-func (FixedTree) Hint() hint.Hint {
-	return FixedTreeHint
+func NewFixedTree(nodes []FixedTreeNode) FixedTree {
+	return NewFixedTreeWithHint(FixedTreeHint, nodes)
+}
+
+func NewFixedTreeWithHint(ht hint.Hint, nodes []FixedTreeNode) FixedTree {
+	return FixedTree{BaseHinter: hint.NewBaseHinter(ht), nodes: nodes}
 }
 
 func (tr FixedTree) IsValid([]byte) error {
+	if err := tr.BaseHinter.IsValid(nil); err != nil {
+		return err
+	}
+
 	if tr.Len() < 1 {
 		return nil
 	}

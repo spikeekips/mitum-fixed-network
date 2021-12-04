@@ -14,7 +14,7 @@ func (fact *BaseFact) unpack(
 	height base.Height,
 	round base.Round,
 ) error {
-	fact.hint = ht
+	fact.BaseHinter = hint.NewBaseHinter(ht)
 	fact.h = h
 	fact.height = height
 	fact.round = round

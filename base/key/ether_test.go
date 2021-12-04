@@ -25,7 +25,7 @@ func (t *testEtherKey) TestKeypairIsValid() {
 	t.NoError(kp.IsValid(nil))
 
 	// empty Keypair
-	empty := EtherPrivatekey{}
+	empty := EtherPrivatekey{BaseKey: NewBaseKey(EtherPrivatekeyHint, nil)}
 	t.True(errors.Is(empty.IsValid(nil), InvalidKeyError))
 }
 

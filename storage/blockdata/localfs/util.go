@@ -16,7 +16,7 @@ import (
 
 func LoadBlock(st *BlockData, height base.Height) (block.BaseBlockDataMap, block.Block, error) { // nolint
 	var bdm block.BaseBlockDataMap
-	blk := (interface{})(block.BlockV0{}).(block.BlockUpdater)
+	blk := (interface{})(block.EmptyBlockV0()).(block.BlockUpdater)
 
 	var mapItems []block.BaseBlockDataMapItem
 	if m, r, err := LoadData(st, height, block.BlockDataManifest); err != nil {

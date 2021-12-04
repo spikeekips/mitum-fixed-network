@@ -4,15 +4,8 @@ import (
 	"fmt"
 
 	bsonenc "github.com/spikeekips/mitum/util/encoder/bson"
-	"github.com/spikeekips/mitum/util/hint"
 	"go.mongodb.org/mongo-driver/bson"
 )
-
-type BaseBallotFactSignBSONPacker struct {
-	H  hint.Hint `bson:"_hint"`
-	B  bson.Raw  `bson:"base"`
-	NO Address   `bson:"node"`
-}
 
 func (fs BaseBallotFactSign) MarshalBSON() ([]byte, error) {
 	b, err := bsonenc.Marshal(fs.BaseFactSign)

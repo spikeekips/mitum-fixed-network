@@ -6,21 +6,24 @@ import (
 	"github.com/pkg/errors"
 	"github.com/spikeekips/mitum/util"
 	"github.com/spikeekips/mitum/util/hint"
+	"github.com/spikeekips/mitum/util/isvalid"
 	"github.com/spikeekips/mitum/util/valuehash"
 )
 
 var (
-	DurationValueType = hint.Type("state-duration-value")
-	DurationValueHint = hint.NewHint(DurationValueType, "v0.0.1")
+	DurationValueType   = hint.Type("state-duration-value")
+	DurationValueHint   = hint.NewHint(DurationValueType, "v0.0.1")
+	DurationValueHinter = DurationValue{BaseHinter: hint.NewBaseHinter(DurationValueHint)}
 )
 
 type DurationValue struct {
+	hint.BaseHinter
 	h valuehash.Hash
 	v time.Duration
 }
 
 func NewDurationValue(d time.Duration) (DurationValue, error) {
-	return DurationValue{}.set(d)
+	return DurationValue{BaseHinter: hint.NewBaseHinter(DurationValueHint)}.set(d)
 }
 
 func (dv DurationValue) set(d time.Duration) (DurationValue, error) {
@@ -31,11 +34,7 @@ func (dv DurationValue) set(d time.Duration) (DurationValue, error) {
 }
 
 func (dv DurationValue) IsValid([]byte) error {
-	return dv.h.IsValid(nil)
-}
-
-func (DurationValue) Hint() hint.Hint {
-	return DurationValueHint
+	return isvalid.Check([]isvalid.IsValider{dv.BaseHinter, dv.h}, nil, false)
 }
 
 func (dv DurationValue) Equal(v Value) bool {

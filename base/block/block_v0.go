@@ -15,23 +15,37 @@ import (
 )
 
 var (
-	BlockV0Type              = hint.Type("block")
-	BlockV0Hint              = hint.NewHint(BlockV0Type, "v0.0.1")
-	ManifestV0Type           = hint.Type("block-manifest")
-	ManifestV0Hint           = hint.NewHint(ManifestV0Type, "v0.0.1")
-	BlockConsensusInfoV0Type = hint.Type("block-consensus-info")
-	BlockConsensusInfoV0Hint = hint.NewHint(BlockConsensusInfoV0Type, "v0.0.1")
-	SuffrageInfoV0Type       = hint.Type("block-suffrage-info")
-	SuffrageInfoV0Hint       = hint.NewHint(SuffrageInfoV0Type, "v0.0.1")
+	BlockV0Type                = hint.Type("block")
+	BlockV0Hint                = hint.NewHint(BlockV0Type, "v0.0.1")
+	BlockV0Hinter              = BlockV0{BaseHinter: hint.NewBaseHinter(BlockV0Hint)}
+	ManifestV0Type             = hint.Type("block-manifest")
+	ManifestV0Hint             = hint.NewHint(ManifestV0Type, "v0.0.1")
+	ManifestV0Hinter           = ManifestV0{BaseHinter: hint.NewBaseHinter(ManifestV0Hint)}
+	BlockConsensusInfoV0Type   = hint.Type("block-consensus-info")
+	BlockConsensusInfoV0Hint   = hint.NewHint(BlockConsensusInfoV0Type, "v0.0.1")
+	BlockConsensusInfoV0Hinter = ConsensusInfoV0{BaseHinter: hint.NewBaseHinter(BlockConsensusInfoV0Hint)}
+	SuffrageInfoV0Type         = hint.Type("block-suffrage-info")
+	SuffrageInfoV0Hint         = hint.NewHint(SuffrageInfoV0Type, "v0.0.1")
+	SuffrageInfoV0Hinter       = SuffrageInfoV0{BaseHinter: hint.NewBaseHinter(SuffrageInfoV0Hint)}
 )
 
 type BlockV0 struct {
+	hint.BaseHinter
 	ManifestV0
 	operationsTree tree.FixedTree
 	operations     []operation.Operation
 	statesTree     tree.FixedTree
 	states         []state.State
 	ci             ConsensusInfoV0
+}
+
+func EmptyBlockV0() BlockV0 {
+	return BlockV0{
+		BaseHinter: hint.NewBaseHinter(BlockV0Hint),
+		ci: ConsensusInfoV0{
+			BaseHinter: hint.NewBaseHinter(BlockConsensusInfoV0Hint),
+		},
+	}
 }
 
 func NewBlockV0(
@@ -45,6 +59,7 @@ func NewBlockV0(
 	confirmedAt time.Time,
 ) (BlockV0, error) {
 	bm := ManifestV0{
+		BaseHinter:     hint.NewBaseHinter(ManifestV0Hint),
 		previousBlock:  previousBlock,
 		height:         height,
 		round:          round,
@@ -57,14 +72,20 @@ func NewBlockV0(
 	bm.h = bm.GenerateHash()
 
 	return BlockV0{
+		BaseHinter: hint.NewBaseHinter(BlockV0Hint),
 		ManifestV0: bm,
 		ci: ConsensusInfoV0{
+			BaseHinter:   hint.NewBaseHinter(BlockConsensusInfoV0Hint),
 			suffrageInfo: si,
 		},
 	}, nil
 }
 
 func (bm BlockV0) IsValid(networkID []byte) error {
+	if err := bm.BaseHinter.IsValid(nil); err != nil {
+		return err
+	}
+
 	if bm.height == base.PreGenesisHeight {
 		if err := isvalid.Check([]isvalid.IsValider{bm.ManifestV0}, networkID, false); err != nil {
 			return err
@@ -103,8 +124,8 @@ func (bm BlockV0) IsValid(networkID []byte) error {
 	return nil
 }
 
-func (BlockV0) Hint() hint.Hint {
-	return BlockV0Hint
+func (bm BlockV0) Hint() hint.Hint {
+	return bm.BaseHinter.Hint()
 }
 
 func (BlockV0) Bytes() []byte {

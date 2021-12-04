@@ -2,6 +2,7 @@ package network
 
 import (
 	jsonenc "github.com/spikeekips/mitum/util/encoder/json"
+	"github.com/spikeekips/mitum/util/hint"
 )
 
 type NilConnInfoPackerJSON struct {
@@ -21,11 +22,17 @@ type NilConnInfoUnpackerJSON struct {
 }
 
 func (conn *NilConnInfo) UnmarshalJSON(b []byte) error {
+	var uht jsonenc.HintedHead
+	if err := jsonenc.Unmarshal(b, &uht); err != nil {
+		return err
+	}
+
 	var uc NilConnInfoUnpackerJSON
 	if err := jsonenc.Unmarshal(b, &uc); err != nil {
 		return err
 	}
 
+	conn.BaseHinter = hint.NewBaseHinter(uht.H)
 	conn.s = uc.S
 
 	return nil
@@ -51,10 +58,15 @@ type HTTPConnInfoUnpackerJSON struct {
 }
 
 func (conn *HTTPConnInfo) UnmarshalJSON(b []byte) error {
+	var uht jsonenc.HintedHead
+	if err := jsonenc.Unmarshal(b, &uht); err != nil {
+		return err
+	}
+
 	var uc HTTPConnInfoUnpackerJSON
 	if err := jsonenc.Unmarshal(b, &uc); err != nil {
 		return err
 	}
 
-	return conn.unpack(uc.U, uc.I)
+	return conn.unpack(uht.H, uc.U, uc.I)
 }

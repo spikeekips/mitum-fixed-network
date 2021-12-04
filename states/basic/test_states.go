@@ -66,6 +66,9 @@ type baseTestState struct {
 }
 
 func (t *baseTestState) SetupTest() {
+	t.Lock()
+	defer t.Unlock()
+
 	t.BaseTest.SetupTest()
 
 	ls := t.Locals(2)

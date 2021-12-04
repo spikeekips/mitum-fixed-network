@@ -62,6 +62,10 @@ func NewEtherPrivatekeyFromString(s string) (EtherPrivatekey, error) {
 }
 
 func (ep EtherPrivatekey) IsValid([]byte) error {
+	if err := ep.BaseHinter.IsValid(nil); err != nil {
+		return err
+	}
+
 	if ep.pk == nil {
 		return InvalidKeyError.Errorf("empty ether Privatekey")
 	}

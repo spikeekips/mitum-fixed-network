@@ -252,6 +252,10 @@ func (bd DefaultWriter) writeItems(w io.Writer, v interface{}) error {
 }
 
 func (bd DefaultWriter) writeTree(w io.Writer, tr tree.FixedTree) error {
+	if tr.Len() < 1 {
+		return nil
+	}
+
 	var index uint64
 	return WritelinesWithIndex(
 		w,
@@ -279,16 +283,15 @@ func (bd DefaultWriter) writeTree(w io.Writer, tr tree.FixedTree) error {
 }
 
 func (bd DefaultWriter) readTree(r io.Reader, limit int64) (tree.FixedTree, error) {
-	var tr tree.FixedTree
 	var nodes []tree.FixedTreeNode
+	var header ItemsHeader
 
 	if err := ReadlinesWithIndex(
 		r,
 		func(b []byte) error {
-			var header ItemsHeader
 			if err := bd.encoder.Unmarshal(b, &header); err != nil {
 				return err
-			} else if err := header.Hint.IsCompatible(tr.Hint()); err != nil {
+			} else if err := header.Hint.IsCompatible(tree.FixedTreeHint); err != nil {
 				return errors.Wrap(err, "unknown FixedTree")
 			}
 
@@ -310,7 +313,11 @@ func (bd DefaultWriter) readTree(r io.Reader, limit int64) (tree.FixedTree, erro
 		return tree.FixedTree{}, err
 	}
 
-	return tree.NewFixedTree(nodes), nil
+	if len(nodes) < 1 {
+		return tree.EmptyFixedTree(), nil
+	}
+
+	return tree.NewFixedTreeWithHint(header.Hint, nodes), nil
 }
 
 func WritelinesWithIndex(
@@ -387,8 +394,8 @@ func ReadlinesWithIndex(
 }
 
 type ItemsHeader struct {
-	Hint  hint.Hint ``
-	Items uint64
+	Hint  hint.Hint `json:"hint"`
+	Items uint64    `json:"items"`
 }
 
 func ParseItemIndexLine(b []byte) (uint64, error) {

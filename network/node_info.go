@@ -11,8 +11,9 @@ import (
 )
 
 var (
-	NodeInfoType   = hint.Type("node-info")
-	NodeInfoV0Hint = hint.NewHint(NodeInfoType, "v0.0.1")
+	NodeInfoType     = hint.Type("node-info")
+	NodeInfoV0Hint   = hint.NewHint(NodeInfoType, "v0.0.1")
+	NodeInfoV0Hinter = NodeInfoV0{BaseHinter: hint.NewBaseHinter(NodeInfoV0Hint)}
 )
 
 type NodeInfo interface {
@@ -29,6 +30,7 @@ type NodeInfo interface {
 }
 
 type NodeInfoV0 struct {
+	hint.BaseHinter
 	node      base.Node
 	networkID base.NetworkID
 	state     base.State
@@ -55,14 +57,15 @@ func NewNodeInfoV0(
 	}
 
 	return NodeInfoV0{
-		node:      node,
-		networkID: networkID,
-		state:     state,
-		lastBlock: lastBlock,
-		version:   version,
-		policy:    policy,
-		nodes:     nodes,
-		ci:        ci,
+		BaseHinter: hint.NewBaseHinter(NodeInfoV0Hint),
+		node:       node,
+		networkID:  networkID,
+		state:      state,
+		lastBlock:  lastBlock,
+		version:    version,
+		policy:     policy,
+		nodes:      nodes,
+		ci:         ci,
 	}
 }
 
@@ -72,10 +75,6 @@ func (ni NodeInfoV0) String() string {
 
 func (NodeInfoV0) Bytes() []byte {
 	return nil
-}
-
-func (NodeInfoV0) Hint() hint.Hint {
-	return NodeInfoV0Hint
 }
 
 func (ni NodeInfoV0) IsValid([]byte) error {

@@ -19,7 +19,7 @@ type testBlockDataMapEncode struct {
 }
 
 func (t *testBlockDataMapEncode) SetupSuite() {
-	t.enc.Add(BaseBlockDataMap{})
+	t.enc.Add(BaseBlockDataMapHinter)
 }
 
 func (t *testBlockDataMapEncode) TestMarshal() {

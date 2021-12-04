@@ -19,7 +19,7 @@ func (t *testStateStringValueEncode) SetupSuite() {
 	encs := encoder.NewEncoders()
 	_ = encs.AddEncoder(t.enc)
 
-	_ = encs.TestAddHinter(StringValue{})
+	_ = encs.TestAddHinter(StringValueHinter)
 }
 
 func (t *testStateStringValueEncode) TestEncode() {

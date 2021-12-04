@@ -26,7 +26,7 @@ func (t *testHandoverSealV0) SetupSuite() {
 	_ = t.encs.AddEncoder(t.enc)
 
 	_ = t.encs.TestAddHinter(key.BTCPublickeyHinter)
-	_ = t.encs.TestAddHinter(NilConnInfo{})
+	_ = t.encs.TestAddHinter(NilConnInfoHinter)
 	_ = t.encs.TestAddHinter(base.StringAddress(""))
 	_ = t.encs.TestAddHinter(StartHandoverSealV0Hinter)
 	_ = t.encs.TestAddHinter(PingHandoverSealV0Hinter)

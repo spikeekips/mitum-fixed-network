@@ -8,6 +8,7 @@ import (
 	"github.com/spikeekips/mitum/util/encoder"
 	bsonenc "github.com/spikeekips/mitum/util/encoder/bson"
 	jsonenc "github.com/spikeekips/mitum/util/encoder/json"
+	"github.com/spikeekips/mitum/util/hint"
 	"github.com/spikeekips/mitum/util/valuehash"
 	"github.com/stretchr/testify/suite"
 )
@@ -23,7 +24,7 @@ func (t *testACCEPTFactEncode) SetupSuite() {
 	encs := encoder.NewEncoders()
 	t.NoError(encs.AddEncoder(t.enc))
 	t.NoError(encs.TestAddHinter(base.StringAddress("")))
-	t.NoError(encs.TestAddHinter(base.BaseSignedBallotFact{}))
+	t.NoError(encs.TestAddHinter(base.SignedBallotFactHinter))
 	t.NoError(encs.TestAddHinter(ACCEPTFactHinter))
 }
 
@@ -34,6 +35,8 @@ func (t *testACCEPTFactEncode) TestEncode() {
 		valuehash.RandomSHA256(),
 		valuehash.RandomSHA256(),
 	)
+	fact.BaseFact = NewBaseFact(hint.NewHint(base.ACCEPTBallotFactType, "v0.0.3"), fact.Height(), fact.Round())
+	fact.BaseFact.h = valuehash.NewSHA256(fact.bytes())
 
 	b, err := t.enc.Marshal(fact)
 	t.NoError(err)
@@ -75,10 +78,10 @@ func (t *testACCEPTEncode) SetupSuite() {
 	t.NoError(encs.AddEncoder(t.enc))
 	t.NoError(encs.TestAddHinter(base.StringAddress("")))
 	t.NoError(encs.TestAddHinter(key.BTCPublickeyHinter))
-	t.NoError(encs.TestAddHinter(base.BaseFactSign{}))
-	_ = encs.TestAddHinter(base.BaseBallotFactSign{})
+	t.NoError(encs.TestAddHinter(base.BaseFactSignHinter))
+	_ = encs.TestAddHinter(base.BallotFactSignHinter)
 	t.NoError(encs.TestAddHinter(base.DummyVoteproof{}))
-	t.NoError(encs.TestAddHinter(base.BaseSignedBallotFact{}))
+	t.NoError(encs.TestAddHinter(base.SignedBallotFactHinter))
 	t.NoError(encs.TestAddHinter(ACCEPTFactHinter))
 	t.NoError(encs.TestAddHinter(ACCEPTHinter))
 }

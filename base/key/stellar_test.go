@@ -25,7 +25,7 @@ func (t *testStellarKey) TestKeypairIsValid() {
 	t.NoError(kp.IsValid(nil))
 
 	// empty Keypair
-	empty := StellarPrivatekey{}
+	empty := StellarPrivatekey{BaseKey: NewBaseKey(StellarPrivatekeyHint, nil)}
 	t.True(errors.Is(empty.IsValid(nil), InvalidKeyError))
 }
 

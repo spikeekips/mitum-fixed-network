@@ -12,6 +12,7 @@ import (
 )
 
 func CompareNodeInfo(t *testing.T, a, b NodeInfo) {
+	assert.True(t, a.Hint().Equal(b.Hint()))
 	assert.True(t, a.Address().Equal(b.Address()))
 	assert.True(t, a.Publickey().Equal(b.Publickey()))
 	assert.True(t, a.NetworkID().Equal(b.NetworkID()))

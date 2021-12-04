@@ -60,6 +60,10 @@ func NewBTCPrivatekeyFromString(s string) (BTCPrivatekey, error) {
 }
 
 func (bt BTCPrivatekey) IsValid([]byte) error {
+	if err := bt.BaseHinter.IsValid(nil); err != nil {
+		return err
+	}
+
 	if bt.wif == nil {
 		return InvalidKeyError.Errorf("empty btc wif")
 	} else if bt.wif.PrivKey == nil {

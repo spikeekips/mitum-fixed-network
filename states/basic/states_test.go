@@ -1008,11 +1008,9 @@ func (t *testStates) TestEndHandover() {
 	t.Run("ballot not passthrough", func() {
 		sl := t.NewINITBallot(t.local, base.Round(0), nil)
 
-		go func() {
-			t.local.Nodes().Passthroughs(context.Background(), network.NewPassthroughedSealFromConnInfo(sl, nil), func(sl seal.Seal, ch network.Channel) {
-				t.NoError(ch.SendSeal(context.Background(), nil, sl))
-			})
-		}()
+		t.local.Nodes().Passthroughs(context.Background(), network.NewPassthroughedSealFromConnInfo(sl, nil), func(sl seal.Seal, ch network.Channel) {
+			t.NoError(ch.SendSeal(context.Background(), nil, sl))
+		})
 
 		select {
 		case <-time.After(time.Second * 3):

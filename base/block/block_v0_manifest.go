@@ -54,21 +54,21 @@ func (bm ManifestV0) IsValid(networkID []byte) error {
 		return errors.Errorf("empty confirmedAt")
 	}
 
-	if err := isvalid.Check([]isvalid.IsValider{
+	if err := isvalid.Check(networkID, false,
 		bm.BaseHinter,
 		bm.h,
 		bm.height,
 		bm.proposal,
 		bm.previousBlock,
-	}, networkID, false); err != nil {
+	); err != nil {
 		return err
 	}
 
 	// NOTE operationsHash and statesHash are allowed to be empty.
-	if err := isvalid.Check([]isvalid.IsValider{
+	if err := isvalid.Check(networkID, true,
 		bm.operationsHash,
 		bm.statesHash,
-	}, networkID, true); err != nil && !errors.Is(err, valuehash.EmptyHashError) {
+	); err != nil && !errors.Is(err, valuehash.EmptyHashError) {
 		return err
 	}
 

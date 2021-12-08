@@ -76,11 +76,7 @@ func NewBaseBlockDataMap(writerHint hint.Hint, height base.Height) BaseBlockData
 }
 
 func (bd BaseBlockDataMap) IsReadyToHash() error {
-	if err := isvalid.Check([]isvalid.IsValider{
-		bd.BaseHinter,
-		bd.height,
-		bd.block,
-	}, nil, false); err != nil {
+	if err := isvalid.Check(nil, false, bd.BaseHinter, bd.height, bd.block); err != nil {
 		return err
 	}
 
@@ -94,7 +90,7 @@ func (bd BaseBlockDataMap) IsReadyToHash() error {
 }
 
 func (bd BaseBlockDataMap) IsValid([]byte) error {
-	if err := isvalid.Check([]isvalid.IsValider{bd.BaseHinter, bd.h}, nil, false); err != nil {
+	if err := isvalid.Check(nil, false, bd.BaseHinter, bd.h); err != nil {
 		return err
 	}
 

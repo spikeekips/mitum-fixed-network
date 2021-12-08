@@ -34,11 +34,7 @@ func (fact BaseFact) bytes() []byte {
 }
 
 func (fact BaseFact) IsValid([]byte) error {
-	if err := isvalid.Check([]isvalid.IsValider{
-		fact.BaseHinter,
-		fact.h,
-		fact.height,
-	}, nil, false); err != nil {
+	if err := isvalid.Check(nil, false, fact.BaseHinter, fact.h, fact.height); err != nil {
 		return fmt.Errorf("invalid ballot fact: %w", err)
 	}
 

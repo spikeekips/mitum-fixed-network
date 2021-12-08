@@ -183,7 +183,7 @@ func (*Encoder) extractHintFromString(b []byte) (hint.Hint, []byte, error) {
 }
 
 func (enc *Encoder) findUnpacker(ht hint.Hint) (encoder.Unpacker, error) {
-	i, err := enc.cache.Get(ht.String())
+	i, err := enc.cache.Get(ht.RawString())
 	if err == nil {
 		switch t := i.(type) {
 		case encoder.Unpacker:
@@ -201,7 +201,7 @@ func (enc *Encoder) findUnpacker(ht hint.Hint) (encoder.Unpacker, error) {
 
 	i, err = enc.unpackers.CompatibleByHint(ht)
 	if err != nil {
-		_ = enc.cache.Set(ht.String(), err)
+		_ = enc.cache.Set(ht.RawString(), err)
 
 		return encoder.Unpacker{}, err
 	}
@@ -211,7 +211,7 @@ func (enc *Encoder) findUnpacker(ht hint.Hint) (encoder.Unpacker, error) {
 		return encoder.Unpacker{}, util.WrongTypeError.Errorf("expected unpacker, not %T", i)
 	}
 
-	_ = enc.cache.Set(ht.String(), j)
+	_ = enc.cache.Set(ht.RawString(), j)
 
 	return j, nil
 }

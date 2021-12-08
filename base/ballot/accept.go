@@ -60,10 +60,7 @@ func (fact ACCEPTFact) IsValid([]byte) error {
 		return err
 	}
 
-	return isvalid.Check([]isvalid.IsValider{
-		fact.proposal,
-		fact.newBlock,
-	}, nil, false)
+	return isvalid.Check(nil, false, fact.proposal, fact.newBlock)
 }
 
 func (fact ACCEPTFact) bytes() []byte {

@@ -16,14 +16,14 @@ import (
 var dummySealHint = hint.NewHint(hint.Type("dummy-seal"), "v0.1")
 
 type DummySeal struct {
-	PK        key.Privatekey
+	PK        key.Publickey
 	H         valuehash.Hash
 	BH        valuehash.Hash
 	S         string
 	CreatedAt time.Time
 }
 
-func NewDummySeal(pk key.Privatekey) DummySeal {
+func NewDummySeal(pk key.Publickey) DummySeal {
 	return DummySeal{
 		PK:        pk,
 		H:         valuehash.RandomSHA256().(valuehash.SHA256),
@@ -58,7 +58,7 @@ func (ds DummySeal) GenerateBodyHash() (valuehash.Hash, error) {
 }
 
 func (ds DummySeal) Signer() key.Publickey {
-	return ds.PK.Publickey()
+	return ds.PK
 }
 
 func (ds DummySeal) Signature() key.Signature {
@@ -71,7 +71,7 @@ func (ds DummySeal) SignedAt() time.Time {
 
 type DummySealJSONPacker struct {
 	jsonenc.HintedHead
-	PK        key.Privatekey
+	PK        key.Publickey
 	H         valuehash.Hash
 	BH        valuehash.Hash
 	S         string
@@ -104,12 +104,12 @@ func (ds *DummySeal) UnmarshalJSON(b []byte) error {
 		return err
 	}
 
-	signer := new(key.BTCPrivatekey)
-	if err := signer.UnmarshalText([]byte(uds.PK.Body())); err != nil {
+	signer, err := key.LoadBasePublickey(string(uds.PK.Body()))
+	if err != nil {
 		return err
 	}
 
-	ds.PK = *signer
+	ds.PK = signer
 	ds.H = uds.H
 	ds.BH = uds.BH
 	ds.S = uds.S
@@ -145,12 +145,12 @@ func (ds *DummySeal) UnmarshalBSON(b []byte) error {
 		return err
 	}
 
-	signer := new(key.BTCPrivatekey)
-	if err := signer.UnmarshalText([]byte(uds.PK.Body())); err != nil {
+	signer, err := key.LoadBasePublickey(string(uds.PK.Body()))
+	if err != nil {
 		return err
 	}
 
-	ds.PK = *signer
+	ds.PK = signer
 	ds.H = uds.H
 	ds.BH = uds.BH
 	ds.S = uds.S

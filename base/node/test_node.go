@@ -1,3 +1,4 @@
+//go:build test
 // +build test
 
 package node
@@ -26,15 +27,9 @@ func (ln *DummyNode) Privatekey() key.Privatekey {
 }
 
 func RandomNode(name string) *DummyNode {
-	return NewDummyNode(
-		base.MustStringAddress(fmt.Sprintf("n-%s", name)),
-		key.MustNewBTCPrivatekey(),
-	)
+	return NewDummyNode(base.MustNewStringAddress(fmt.Sprintf("n-%s", name)), key.NewBasePrivatekey())
 }
 
 func RandomLocal(name string) *Local {
-	return NewLocal(
-		base.MustStringAddress(fmt.Sprintf("n-%s", name)),
-		key.MustNewBTCPrivatekey(),
-	)
+	return NewLocal(base.MustNewStringAddress(fmt.Sprintf("n-%s", name)), key.NewBasePrivatekey())
 }

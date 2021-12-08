@@ -22,7 +22,7 @@ func (t *testINITFactEncode) SetupSuite() {
 
 	encs := encoder.NewEncoders()
 	t.NoError(encs.AddEncoder(t.enc))
-	t.NoError(encs.TestAddHinter(base.StringAddress("")))
+	t.NoError(encs.TestAddHinter(base.StringAddressHinter))
 	t.NoError(encs.TestAddHinter(base.SignedBallotFactHinter))
 	t.NoError(encs.TestAddHinter(INITFactHinter))
 }
@@ -72,8 +72,8 @@ func (t *testINITEncode) SetupSuite() {
 
 	encs := encoder.NewEncoders()
 	t.NoError(encs.AddEncoder(t.enc))
-	t.NoError(encs.TestAddHinter(base.StringAddress("")))
-	t.NoError(encs.TestAddHinter(key.BTCPublickeyHinter))
+	t.NoError(encs.TestAddHinter(base.StringAddressHinter))
+	t.NoError(encs.TestAddHinter(key.BasePublickey{}))
 	t.NoError(encs.TestAddHinter(base.BaseFactSignHinter))
 	_ = encs.TestAddHinter(base.BallotFactSignHinter)
 	t.NoError(encs.TestAddHinter(base.DummyVoteproof{}))

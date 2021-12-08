@@ -35,3 +35,25 @@ func (t Type) Bytes() []byte {
 func (t Type) String() string {
 	return string(t)
 }
+
+func ParseFixedTypedString(s string, typesize int) (string, Type, error) {
+	if len(s) <= typesize {
+		return "", Type(""), isvalid.InvalidError.Errorf("invalid string for Key, %q", s)
+	}
+
+	ty := Type(s[len(s)-typesize:])
+
+	if err := IsValidFixedType(ty, typesize); err != nil {
+		return "", Type(""), err
+	}
+
+	return s[:len(s)-typesize], ty, nil
+}
+
+func IsValidFixedType(ty Type, typesize int) error {
+	if len(ty.String()) != typesize {
+		return isvalid.InvalidError.Errorf("invalid Type for Key, %q", ty)
+	}
+
+	return nil
+}

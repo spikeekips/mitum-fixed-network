@@ -49,9 +49,7 @@ func (fact INITFact) IsValid([]byte) error {
 		return err
 	}
 
-	return isvalid.Check([]isvalid.IsValider{
-		fact.previousBlock,
-	}, nil, false)
+	return isvalid.Check(nil, false, fact.previousBlock)
 }
 
 func (fact INITFact) bytes() []byte {

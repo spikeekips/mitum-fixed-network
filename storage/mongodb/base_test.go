@@ -1,3 +1,4 @@
+//go:build mongodb
 // +build mongodb
 
 package mongodbstorage
@@ -174,8 +175,8 @@ func (t *testDatabase) TestLoadManifestByHeight() {
 func (t *testDatabase) TestSeals() {
 	var seals []seal.Seal
 	for i := 0; i < 10; i++ {
-		pk, _ := key.NewBTCPrivatekey()
-		sl := seal.NewDummySeal(pk)
+		pk := key.NewBasePrivatekey()
+		sl := seal.NewDummySeal(pk.Publickey())
 
 		seals = append(seals, sl)
 	}
@@ -216,8 +217,8 @@ func (t *testDatabase) TestSealsByHash() {
 	var seals []seal.Seal
 	var hashes []valuehash.Hash
 	for i := 0; i < 10; i++ {
-		pk, _ := key.NewBTCPrivatekey()
-		sl := seal.NewDummySeal(pk)
+		pk := key.NewBasePrivatekey()
+		sl := seal.NewDummySeal(pk.Publickey())
 		hashes = append(hashes, sl.Hash())
 
 		seals = append(seals, sl)
@@ -246,8 +247,8 @@ func (t *testDatabase) TestSealsByHash() {
 func (t *testDatabase) TestSealsOnlyHash() {
 	var seals []seal.Seal
 	for i := 0; i < 10; i++ {
-		pk, _ := key.NewBTCPrivatekey()
-		sl := seal.NewDummySeal(pk)
+		pk := key.NewBasePrivatekey()
+		sl := seal.NewDummySeal(pk.Publickey())
 
 		seals = append(seals, sl)
 	}
@@ -282,8 +283,8 @@ func (t *testDatabase) TestSealsOnlyHash() {
 func (t *testDatabase) TestSealsLimit() {
 	var seals []seal.Seal
 	for i := 0; i < 10; i++ {
-		pk, _ := key.NewBTCPrivatekey()
-		sl := seal.NewDummySeal(pk)
+		pk := key.NewBasePrivatekey()
+		sl := seal.NewDummySeal(pk.Publickey())
 
 		seals = append(seals, sl)
 	}
@@ -335,7 +336,7 @@ func (t *testDatabase) TestStagedOperationSeals() {
 
 	// 10 seal.Seal
 	for i := 0; i < 10; i++ {
-		sl := seal.NewDummySeal(t.PK)
+		sl := seal.NewDummySeal(t.PK.Publickey())
 
 		seals = append(seals, sl)
 	}
@@ -383,7 +384,7 @@ func (t *testDatabase) TestStagedOperationSeals() {
 func (t *testDatabase) TestUnStagedOperationSeals() {
 	// 10 seal.Seal
 	for i := 0; i < 10; i++ {
-		sl := seal.NewDummySeal(t.PK)
+		sl := seal.NewDummySeal(t.PK.Publickey())
 		t.NoError(t.database.NewSeals([]seal.Seal{sl}))
 	}
 

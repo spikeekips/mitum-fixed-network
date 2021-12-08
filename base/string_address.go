@@ -1,102 +1,140 @@
 package base
 
 import (
+	"bytes"
 	"regexp"
-	"strings"
 
-	"github.com/pkg/errors"
 	"github.com/spikeekips/mitum/util/hint"
 	"github.com/spikeekips/mitum/util/isvalid"
-	"go.mongodb.org/mongo-driver/bson/bsontype"
-	"go.mongodb.org/mongo-driver/x/bsonx/bsoncore"
 )
 
 var (
-	StringAddressType = hint.Type("sa")
-	StringAddressHint = hint.NewHint(StringAddressType, "v0.0.1")
+	StringAddressType   = hint.Type("sas")
+	StringAddressHint   = hint.NewHint(StringAddressType, "v0.0.1")
+	StringAddressHinter = StringAddress{ht: StringAddressHint}
 )
 
 var (
-	reBlankAddressString = regexp.MustCompile(`[\s][\s]*`)
-	reAddressString      = regexp.MustCompile(`^[a-zA-Z0-9][\w\-]*[a-zA-Z0-9]$`)
+	MaxAddressSize             = 100
+	MinAddressSize             = AddressTypeSize + 3
+	reBlankStringAddressString = regexp.MustCompile(`[\s][\s]*`)
+	REStringAddressString      = `[a-zA-Z0-9][\w\-\.\!\$\*\@]*[a-zA-Z0-9]`
+	reStringAddressString      = regexp.MustCompile(`^` + REStringAddressString + `$`)
 )
 
-var EmptyStringAddress = StringAddress("")
-
-type StringAddress string
-
-func NewStringAddress(s string) (StringAddress, error) {
-	sa := StringAddress(s)
-
-	return sa, sa.IsValid(nil)
+type StringAddress struct {
+	ht hint.Hint
+	s  string
+	b  [100]byte
 }
 
-func NewStringAddressFromHintedString(s string) (StringAddress, error) {
-	switch hs, err := hint.ParseHintedString(s); {
+func NewStringAddress(s string) StringAddress {
+	return NewStringAddressWithHint(StringAddressHint, s)
+}
+
+func NewStringAddressWithHint(ht hint.Hint, s string) StringAddress {
+	i := s + ht.Type().String()
+	var b [100]byte
+	copy(b[:], i)
+
+	return StringAddress{ht: ht, s: i, b: b}
+}
+
+func MustNewStringAddress(s string) StringAddress {
+	ad := NewStringAddress(s)
+
+	if err := ad.IsValid(nil); err != nil {
+		panic(err)
+	}
+
+	return ad
+}
+
+func ParseStringAddress(s string) (StringAddress, error) {
+	p, ty, err := hint.ParseFixedTypedString(s, AddressTypeSize)
+	switch {
 	case err != nil:
-		return EmptyStringAddress, err
-	case !hs.Hint().Equal(StringAddressHint):
-		return EmptyStringAddress, errors.Errorf("not StringAddress, %v", hs.Hint())
-	default:
-		return NewStringAddress(hs.Body())
-	}
-}
-
-func (sa StringAddress) Raw() string {
-	return string(sa)
-}
-
-func (sa StringAddress) String() string {
-	return hint.NewHintedString(StringAddressHint, string(sa)).String()
-}
-
-func (StringAddress) Hint() hint.Hint {
-	return StringAddressHint
-}
-
-func (sa StringAddress) IsValid([]byte) error {
-	if reBlankAddressString.Match([]byte(sa)) {
-		return isvalid.InvalidError.Errorf("address string, %q has blank", sa)
+		return StringAddress{}, err
+	case ty != StringAddressType:
+		return StringAddress{}, isvalid.InvalidError.Errorf("wrong hint of string address")
 	}
 
-	if s := strings.TrimSpace(string(sa)); len(s) < 1 {
-		return isvalid.InvalidError.Errorf("empty address")
-	}
-
-	if !reAddressString.Match([]byte(sa)) {
-		return isvalid.InvalidError.Errorf("invalid address string, %q", sa)
-	}
-
-	return nil
+	return NewStringAddress(p), nil
 }
 
-func (sa StringAddress) Equal(a Address) bool {
-	if sa.Hint().Type() != a.Hint().Type() {
-		return false
-	}
-
-	return sa.String() == a.String()
-}
-
-func (sa StringAddress) Bytes() []byte {
-	return []byte(sa.String())
-}
-
-func (sa StringAddress) MarshalText() ([]byte, error) {
-	return []byte(sa.String()), nil
-}
-
-func (sa *StringAddress) UnmarshalText(b []byte) error {
-	a, err := NewStringAddress(string(b))
-	if err != nil {
+func (ad StringAddress) IsValid([]byte) error {
+	if err := ad.ht.IsValid(nil); err != nil {
 		return err
 	}
 
-	*sa = a
+	var b [100]byte
+	copy(b[:], ad.s)
+
+	if !bytes.Equal(ad.b[:], b[:]) {
+		return isvalid.InvalidError.Errorf("wrong string address")
+	}
+
+	switch l := len(ad.s); {
+	case l < MinAddressSize:
+		return isvalid.InvalidError.Errorf("too short string address")
+	case l > MaxAddressSize:
+		return isvalid.InvalidError.Errorf("too long string address")
+	}
+
+	p := ad.s[:len(ad.s)-AddressTypeSize]
+	if reBlankStringAddressString.MatchString(p) {
+		return isvalid.InvalidError.Errorf("string address string, %q has blank", ad)
+	}
+
+	if !reStringAddressString.MatchString(p) {
+		return isvalid.InvalidError.Errorf("invalid string address string, %q", ad)
+	}
+
+	switch {
+	case len(ad.Hint().Type().String()) != AddressTypeSize:
+		return isvalid.InvalidError.Errorf("wrong hint of string address")
+	case ad.s[len(ad.s)-AddressTypeSize:] != ad.ht.Type().String():
+		return isvalid.InvalidError.Errorf(
+			"wrong type of string address; %v != %v", ad.s[len(ad.s)-AddressTypeSize:], ad.ht.Type())
+	}
 
 	return nil
 }
 
-func (sa StringAddress) MarshalBSONValue() (bsontype.Type, []byte, error) {
-	return bsontype.String, bsoncore.AppendString(nil, sa.String()), nil
+func (ad StringAddress) Hint() hint.Hint {
+	return ad.ht
+}
+
+func (ad StringAddress) SetHint(ht hint.Hint) hint.Hinter {
+	if l := len(ad.s); l < MinAddressSize {
+		ad.ht = ht
+
+		return ad
+	}
+
+	return NewStringAddressWithHint(ht, ad.s[:len(ad.s)-AddressTypeSize])
+}
+
+func (ad StringAddress) String() string {
+	return ad.s
+}
+
+func (ad StringAddress) Bytes() []byte {
+	return []byte(ad.s)
+}
+
+func (ad StringAddress) Equal(b Address) bool {
+	if b == nil {
+		return false
+	}
+
+	if ad.Hint().Type() != b.Hint().Type() {
+		return false
+	}
+
+	if err := b.IsValid(nil); err != nil {
+		return false
+	}
+
+	return ad.s == b.String()
 }

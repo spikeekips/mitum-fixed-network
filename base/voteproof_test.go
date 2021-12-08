@@ -102,10 +102,7 @@ func (ln *DummyNode) String() string {
 }
 
 func (ln *DummyNode) IsValid([]byte) error {
-	return isvalid.Check([]isvalid.IsValider{
-		ln.address,
-		ln.publickey,
-	}, nil, false)
+	return isvalid.Check(nil, false, ln.address, ln.publickey)
 }
 
 func (ln *DummyNode) Bytes() []byte {
@@ -125,12 +122,7 @@ func (ln *DummyNode) Publickey() key.Publickey {
 }
 
 func RandomNode(name string) *DummyNode {
-	pk, _ := key.NewBTCPrivatekey()
-
-	return NewDummyNode(
-		MustStringAddress(fmt.Sprintf("n-%s", name)),
-		pk,
-	)
+	return NewDummyNode(MustNewStringAddress(fmt.Sprintf("n-%s", name)), key.NewBasePrivatekey())
 }
 
 type testVoteproof struct {
@@ -141,7 +133,7 @@ type testVoteproof struct {
 
 func (t *testVoteproof) SetupTest() {
 	t.threshold, _ = NewThreshold(10, 40)
-	t.pk = key.MustNewBTCPrivatekey()
+	t.pk = key.NewBasePrivatekey()
 }
 
 func (t *testVoteproof) signFact(n Address, priv key.Privatekey, fact BallotFact, networkID NetworkID) BallotFactSign {

@@ -17,7 +17,7 @@ type testHandoverSeal struct {
 }
 
 func (t *testHandoverSeal) SetupSuite() {
-	t.local = node.NewLocal(base.RandomStringAddress(), key.MustNewBTCPrivatekey())
+	t.local = node.NewLocal(base.RandomStringAddress(), key.NewBasePrivatekey())
 }
 
 func (t *testHandoverSeal) TestIsValidSeal() {

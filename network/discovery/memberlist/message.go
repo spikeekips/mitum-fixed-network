@@ -36,12 +36,12 @@ func NewNodeMessage(
 }
 
 func (ms NodeMessage) IsValid(networkID []byte) error {
-	if err := isvalid.Check([]isvalid.IsValider{
+	if err := isvalid.Check(networkID, false,
 		ms.ConnInfo,
 		ms.node,
 		ms.signer,
 		ms.signature,
-	}, networkID, false); err != nil {
+	); err != nil {
 		return isvalid.InvalidError.Errorf("invalid NodeMessage: %w", err)
 	}
 

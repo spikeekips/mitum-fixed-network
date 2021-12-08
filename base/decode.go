@@ -6,7 +6,6 @@ import (
 	"github.com/pkg/errors"
 	"github.com/spikeekips/mitum/util"
 	"github.com/spikeekips/mitum/util/encoder"
-	"github.com/spikeekips/mitum/util/hint"
 )
 
 func DecodeFact(b []byte, enc encoder.Encoder) (Fact, error) {
@@ -54,22 +53,6 @@ func DecodeSignedBallotFact(b []byte, enc encoder.Encoder) (SignedBallotFact, er
 		return nil, util.WrongTypeError.Errorf("not SignedBallotFact; type=%T", i)
 	} else {
 		return v, nil
-	}
-}
-
-func DecodeAddressFromString(s string, enc encoder.Encoder) (Address, error) {
-	hs, err := hint.ParseHintedString(s)
-	if err != nil {
-		return nil, err
-	}
-
-	kd := encoder.NewHintedString(hs.Hint(), hs.Body())
-	if k, err := kd.Decode(enc); err != nil {
-		return nil, err
-	} else if a, ok := k.(Address); !ok {
-		return nil, util.WrongTypeError.Errorf("not Address; type=%T", k)
-	} else {
-		return a, nil
 	}
 }
 

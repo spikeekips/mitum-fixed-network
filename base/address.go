@@ -10,14 +10,15 @@ import (
 	"github.com/spikeekips/mitum/util/isvalid"
 )
 
+const AddressTypeSize = 3
+
 // Address represents the address of account.
 type Address interface {
-	fmt.Stringer // NOTE String() should be hinted string
+	fmt.Stringer // NOTE String() should be typed string
 	isvalid.IsValider
 	hint.Hinter
 	util.Byter
 	Equal(Address) bool
-	Raw() string
 }
 
 func SortAddresses(as []Address) {

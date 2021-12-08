@@ -15,7 +15,7 @@ type testSeal struct {
 }
 
 func (t *testSeal) SetupSuite() {
-	t.pk, _ = key.NewBTCPrivatekey()
+	t.pk = key.NewBasePrivatekey()
 }
 
 func (t *testSeal) TestSign() {

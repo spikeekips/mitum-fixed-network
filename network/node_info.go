@@ -86,11 +86,11 @@ func (ni NodeInfoV0) IsValid([]byte) error {
 		return err
 	}
 
-	if err := isvalid.Check([]isvalid.IsValider{ni.state, ni.version, ni.ci}, nil, false); err != nil {
+	if err := isvalid.Check(nil, false, ni.state, ni.version, ni.ci); err != nil {
 		return err
 	}
 
-	return isvalid.Check([]isvalid.IsValider{ni.lastBlock}, nil, true)
+	return isvalid.Check(nil, true, ni.lastBlock)
 }
 
 func (ni NodeInfoV0) Address() base.Address {

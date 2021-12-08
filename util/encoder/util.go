@@ -37,6 +37,8 @@ func AnalyzeSetHinter(up Unpacker) Unpacker {
 		return up
 	}
 
+	oht := elem.(hint.Hinter).Hint()
+
 	// NOTE hint.BaseHinter
 	var found bool
 	if i, j := reflect.TypeOf(elem).FieldByName("BaseHinter"); j && i.Type == reflect.TypeOf(hint.BaseHinter{}) {
@@ -49,6 +51,10 @@ func AnalyzeSetHinter(up Unpacker) Unpacker {
 			i, err := p(b, ht)
 			if err != nil {
 				return i, err
+			}
+
+			if ht.IsZero() {
+				ht = oht
 			}
 
 			return i.(hint.SetHinter).SetHint(ht), nil
@@ -70,6 +76,10 @@ func AnalyzeSetHinter(up Unpacker) Unpacker {
 		v := n.Elem().FieldByName("BaseHinter")
 		if !v.IsValid() || !v.CanAddr() {
 			return i, nil
+		}
+
+		if ht.IsZero() {
+			ht = oht
 		}
 
 		v.Set(reflect.ValueOf(hint.NewBaseHinter(ht)))

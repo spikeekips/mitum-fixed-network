@@ -89,7 +89,7 @@ func (sl HandoverSealV0) IsValid(networkID []byte) error {
 		return err
 	}
 
-	return isvalid.Check([]isvalid.IsValider{sl.ad, sl.ci}, nil, false)
+	return isvalid.Check(nil, false, sl.ad, sl.ci)
 }
 
 func (sl HandoverSealV0) BodyBytes() []byte {

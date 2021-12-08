@@ -29,11 +29,11 @@ type Operation interface {
 }
 
 func IsValidOperationFact(fact OperationFact, networkID []byte) error {
-	if err := isvalid.Check([]isvalid.IsValider{
+	if err := isvalid.Check(networkID, false,
 		fact.Hint(),
 		fact.Hash(),
 		fact.Hint(),
-	}, networkID, false); err != nil {
+	); err != nil {
 		return err
 	}
 

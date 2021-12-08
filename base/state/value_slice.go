@@ -64,7 +64,7 @@ func (sv SliceValue) set(v interface{}) (SliceValue, error) {
 }
 
 func (sv SliceValue) IsValid([]byte) error {
-	return isvalid.Check([]isvalid.IsValider{sv.BaseHinter, sv.h}, nil, false)
+	return isvalid.Check(nil, false, sv.BaseHinter, sv.h)
 }
 
 func (sv SliceValue) Equal(v Value) bool {

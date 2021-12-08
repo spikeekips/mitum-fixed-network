@@ -7,7 +7,6 @@ import (
 	"net/url"
 	"os"
 	"path/filepath"
-	"strings"
 	"time"
 
 	"github.com/alecthomas/kong"
@@ -62,7 +61,7 @@ func (cmd *baseDeployKeyCommand) Initialize(flags interface{}, version util.Vers
 		return err
 	}
 
-	if i, err := loadKey([]byte(cmd.Key), cmd.jsonenc); err != nil {
+	if i, err := loadKey(cmd.Key, cmd.jsonenc); err != nil {
 		return errors.Wrap(err, "failed to load privatekey")
 	} else if j, ok := i.(key.Privatekey); !ok {
 		return errors.Errorf("failed to load privatekey; not privatekey, %T", i)
@@ -152,14 +151,15 @@ func (cmd *baseDeployKeyCommand) requestWithToken(path, method string) (*http.Re
 	return cmd.client.Request(ctx, cmd.Timeout, u.String(), method, nil, nil)
 }
 
-func loadKey(b []byte, enc encoder.Encoder) (key.Key, error) {
-	s := strings.TrimSpace(string(b))
-
-	if pk, err := key.DecodeKey(enc, s); err != nil {
+func loadKey(s string, enc encoder.Encoder) (key.Key, error) {
+	k, err := key.DecodeKeyFromString(s, enc)
+	if err != nil {
 		return nil, err
-	} else if err := pk.IsValid(nil); err != nil {
-		return nil, err
-	} else {
-		return pk, nil
 	}
+
+	if err := k.IsValid(nil); err != nil {
+		return nil, err
+	}
+
+	return k, nil
 }

@@ -45,7 +45,7 @@ func (sv StringValue) set(v interface{}) (StringValue, error) {
 }
 
 func (sv StringValue) IsValid([]byte) error {
-	return isvalid.Check([]isvalid.IsValider{sv.BaseHinter, sv.h}, nil, false)
+	return isvalid.Check(nil, false, sv.BaseHinter, sv.h)
 }
 
 func (sv StringValue) Equal(v Value) bool {

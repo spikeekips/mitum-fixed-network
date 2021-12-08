@@ -1,6 +1,6 @@
 package isvalid
 
-func Check(vs []IsValider, b []byte, allowNil bool) error {
+func Check(b []byte, allowNil bool, vs ...IsValider) error {
 	for i, v := range vs {
 		if v == nil {
 			if allowNil {

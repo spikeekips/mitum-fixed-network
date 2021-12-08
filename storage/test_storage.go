@@ -106,14 +106,14 @@ func (t *BaseTestDatabase) SetupSuite() {
 	_ = t.Encs.TestAddHinter(base.BallotFactSignHinter)
 	_ = t.Encs.TestAddHinter(base.BaseFactSignHinter)
 	_ = t.Encs.TestAddHinter(base.SignedBallotFactHinter)
-	_ = t.Encs.TestAddHinter(base.StringAddress(""))
+	_ = t.Encs.TestAddHinter(base.StringAddressHinter)
 	_ = t.Encs.TestAddHinter(base.VoteproofV0Hinter)
 	_ = t.Encs.TestAddHinter(block.BaseBlockDataMapHinter)
 	_ = t.Encs.TestAddHinter(block.BlockV0Hinter)
 	_ = t.Encs.TestAddHinter(block.BlockConsensusInfoV0Hinter)
 	_ = t.Encs.TestAddHinter(block.ManifestV0Hinter)
 	_ = t.Encs.TestAddHinter(block.SuffrageInfoV0Hinter)
-	_ = t.Encs.TestAddHinter(key.BTCPublickeyHinter)
+	_ = t.Encs.TestAddHinter(key.BasePublickey{})
 	_ = t.Encs.TestAddHinter(node.BaseV0Hinter)
 	_ = t.Encs.TestAddHinter(operation.KVOperationFact{})
 	_ = t.Encs.TestAddHinter(operation.KVOperation{})
@@ -121,7 +121,7 @@ func (t *BaseTestDatabase) SetupSuite() {
 	_ = t.Encs.TestAddHinter(seal.DummySeal{})
 	_ = t.Encs.TestAddHinter(tree.FixedTreeHinter)
 
-	t.PK, _ = key.NewBTCPrivatekey()
+	t.PK = key.NewBasePrivatekey()
 }
 
 func (t *BaseTestDatabase) CompareManifest(a, b block.Manifest) {

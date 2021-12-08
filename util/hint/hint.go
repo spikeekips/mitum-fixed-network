@@ -98,12 +98,16 @@ func (ht Hint) Bytes() []byte {
 	return []byte(ht.String())
 }
 
+func (ht Hint) RawString() string {
+	return fmt.Sprintf("%s-%s", ht.ty, ht.v)
+}
+
 func (ht Hint) String() string {
 	if ht.IsZero() {
 		return ""
 	}
 
-	return fmt.Sprintf("%s-%s", ht.ty, ht.v)
+	return ht.RawString()
 }
 
 func (ht Hint) IsZero() bool {

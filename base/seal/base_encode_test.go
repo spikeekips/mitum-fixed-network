@@ -25,7 +25,7 @@ type testBaseSealEncode struct {
 }
 
 func (t *testBaseSealEncode) SetupSuite() {
-	t.pk, _ = key.NewBTCPrivatekey()
+	t.pk = key.NewBasePrivatekey()
 
 	t.encs = encoder.NewEncoders()
 	_ = t.encs.AddEncoder(t.enc)
@@ -35,7 +35,7 @@ func (t *testBaseSealEncode) SetupSuite() {
 
 	sl := NewBaseSealWithHint(t.sealHint)
 
-	_ = t.encs.TestAddHinter(key.BTCPublickeyHinter)
+	_ = t.encs.TestAddHinter(key.BasePublickey{})
 	_ = t.encs.TestAddHinter(sl)
 }
 

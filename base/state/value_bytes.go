@@ -53,7 +53,7 @@ func (bv BytesValue) set(v interface{}) (BytesValue, error) {
 }
 
 func (bv BytesValue) IsValid([]byte) error {
-	return isvalid.Check([]isvalid.IsValider{bv.BaseHinter, bv.h}, nil, false)
+	return isvalid.Check(nil, false, bv.BaseHinter, bv.h)
 }
 
 func (bv BytesValue) Equal(v Value) bool {

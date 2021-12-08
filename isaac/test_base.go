@@ -54,15 +54,15 @@ func (t *BaseTest) SetupSuite() {
 	_ = t.Encs.TestAddHinter(base.BallotFactSignHinter)
 	_ = t.Encs.TestAddHinter(base.BaseFactSignHinter)
 	_ = t.Encs.TestAddHinter(base.SignedBallotFactHinter)
-	_ = t.Encs.TestAddHinter(base.StringAddress(""))
+	_ = t.Encs.TestAddHinter(base.StringAddressHinter)
 	_ = t.Encs.TestAddHinter(base.VoteproofV0Hinter)
 	_ = t.Encs.TestAddHinter(block.BaseBlockDataMapHinter)
 	_ = t.Encs.TestAddHinter(block.BlockV0Hinter)
 	_ = t.Encs.TestAddHinter(block.BlockConsensusInfoV0Hinter)
 	_ = t.Encs.TestAddHinter(block.ManifestV0Hinter)
 	_ = t.Encs.TestAddHinter(block.SuffrageInfoV0Hinter)
-	_ = t.Encs.TestAddHinter(key.BTCPrivatekeyHinter)
-	_ = t.Encs.TestAddHinter(key.BTCPublickeyHinter)
+	_ = t.Encs.TestAddHinter(key.BasePrivatekey{})
+	_ = t.Encs.TestAddHinter(key.BasePublickey{})
 	_ = t.Encs.TestAddHinter(node.BaseV0Hinter)
 	_ = t.Encs.TestAddHinter(operation.FixedTreeNodeHinter)
 	_ = t.Encs.TestAddHinter(operation.KVOperationFact{})
@@ -172,7 +172,7 @@ func (t *BaseTest) Locals(n int) []*Local {
 
 	for _, l := range ls {
 		for _, r := range ls {
-			if l.Node().Address() == r.Node().Address() {
+			if l.Node().Address().Equal(r.Node().Address()) {
 				continue
 			}
 

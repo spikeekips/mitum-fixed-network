@@ -15,7 +15,7 @@ type testBaseBallotFactSign struct {
 }
 
 func (t *testBaseBallotFactSign) TestNew() {
-	priv, _ := key.NewBTCPrivatekey()
+	priv := key.NewBasePrivatekey()
 	pub := priv.Publickey()
 
 	fs := NewBaseBallotFactSign(RandomStringAddress(), pub, time.Now(), key.NewSignatureFromString("findme"))
@@ -23,7 +23,7 @@ func (t *testBaseBallotFactSign) TestNew() {
 }
 
 func (t *testBaseBallotFactSign) TestEmptyNode() {
-	priv, _ := key.NewBTCPrivatekey()
+	priv := key.NewBasePrivatekey()
 	pub := priv.Publickey()
 
 	fs := NewBaseBallotFactSign(nil, pub, time.Now(), key.NewSignatureFromString("findme"))

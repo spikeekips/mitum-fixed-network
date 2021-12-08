@@ -28,11 +28,11 @@ func (bn BaseV0) String() string {
 }
 
 func (bn BaseV0) IsValid([]byte) error {
-	return isvalid.Check([]isvalid.IsValider{
+	return isvalid.Check(nil, false,
 		bn.BaseHinter,
 		bn.address,
 		bn.publickey,
-	}, nil, false)
+	)
 }
 
 func (bn BaseV0) Address() base.Address {

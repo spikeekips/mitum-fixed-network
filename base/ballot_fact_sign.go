@@ -61,11 +61,7 @@ func NewBaseBallotFactSignFromFact(
 }
 
 func (fs BaseBallotFactSign) IsValid([]byte) error {
-	if err := isvalid.Check(
-		[]isvalid.IsValider{
-			fs.node,
-			fs.BaseFactSign,
-		}, nil, false); err != nil {
+	if err := isvalid.Check(nil, false, fs.node, fs.BaseFactSign); err != nil {
 		return isvalid.InvalidError.Errorf("invalid ballot fact sign: %w", err)
 	}
 
@@ -145,11 +141,7 @@ func NewBaseSignedBallotFactFromFact(
 }
 
 func (sfs BaseSignedBallotFact) IsValid(networkID []byte) error {
-	if err := isvalid.Check([]isvalid.IsValider{
-		sfs.BaseHinter,
-		sfs.fact,
-		sfs.factSign,
-	}, nil, false); err != nil {
+	if err := isvalid.Check(nil, false, sfs.BaseHinter, sfs.fact, sfs.factSign); err != nil {
 		return err
 	}
 

@@ -18,7 +18,7 @@ type baseTest struct {
 }
 
 func (t *baseTest) SetupSuite() {
-	t.pk, _ = key.NewBTCPrivatekey()
+	t.pk = key.NewBasePrivatekey()
 	t.networkID = base.NetworkID([]byte("showme"))
 }
 

@@ -16,13 +16,13 @@ type ConsensusInfoV0 struct {
 }
 
 func (bc ConsensusInfoV0) IsValid(networkID []byte) error {
-	if err := isvalid.Check([]isvalid.IsValider{
+	if err := isvalid.Check(networkID, false,
 		bc.BaseHinter,
 		bc.initVoteproof,
 		bc.acceptVoteproof,
 		bc.suffrageInfo,
 		bc.sfs,
-	}, networkID, false); err != nil {
+	); err != nil {
 		return err
 	}
 
@@ -126,5 +126,5 @@ func (si SuffrageInfoV0) IsValid([]byte) error {
 		return errors.Errorf("proposer not found in nodes")
 	}
 
-	return isvalid.Check(vs, nil, false)
+	return isvalid.Check(nil, false, vs...)
 }

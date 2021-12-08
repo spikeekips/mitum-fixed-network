@@ -17,7 +17,7 @@ type testOperation struct {
 }
 
 func (t *testOperation) SetupSuite() {
-	t.pk, _ = key.NewBTCPrivatekey()
+	t.pk = key.NewBasePrivatekey()
 }
 
 func (t *testOperation) TestAddFactSign() {
@@ -30,7 +30,7 @@ func (t *testOperation) TestAddFactSign() {
 	bo := op.BaseOperation
 	var privs []key.Privatekey
 	for i := 0; i < 3; i++ {
-		priv := key.MustNewBTCPrivatekey()
+		priv := key.NewBasePrivatekey()
 		privs = append(privs, priv)
 
 		sig, err := priv.Sign(util.ConcatBytesSlice(op.Fact().Hash().Bytes(), networkID))
@@ -75,7 +75,7 @@ func (t *testOperation) TestLastSignedAt() {
 	var lastfs base.FactSign
 	var bo BaseOperation
 	for i := 0; i < 3; i++ {
-		pk := key.MustNewBTCPrivatekey()
+		pk := key.NewBasePrivatekey()
 
 		sig, err := pk.Sign(util.ConcatBytesSlice(op.Fact().Hash().Bytes(), networkID))
 		t.NoError(err)

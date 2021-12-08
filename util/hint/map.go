@@ -25,7 +25,7 @@ func (hm *Hintmap) Add(ht Hinter, i interface{}) error {
 		return err
 	}
 
-	hm.m[ht.Hint().String()] = i
+	hm.m[ht.Hint().RawString()] = i
 
 	return nil
 }
@@ -49,5 +49,6 @@ func (hm *Hintmap) compatible(ht Hint) (interface{}, error) {
 	if err != nil {
 		return nil, err
 	}
-	return hm.m[hinter.Hint().String()], nil
+
+	return hm.m[hinter.Hint().RawString()], nil
 }

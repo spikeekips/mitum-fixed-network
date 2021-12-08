@@ -55,7 +55,7 @@ func (cmd *StartHandoverCommand) Run(version util.Version) error {
 		cmd.address = i
 	}
 
-	if i, err := loadKey([]byte(cmd.Key), cmd.jsonenc); err != nil {
+	if i, err := loadKey(cmd.Key, cmd.jsonenc); err != nil {
 		return errors.Wrap(err, "failed to load privatekey")
 	} else if j, ok := i.(key.Privatekey); !ok {
 		return errors.Errorf("failed to load privatekey; not privatekey, %T", i)

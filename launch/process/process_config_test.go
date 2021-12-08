@@ -39,7 +39,7 @@ func (t *testProcessConfig) pm(ctx context.Context) *pm.Processes {
 
 func (t *testProcessConfig) TestSimple() {
 	y := `
-privatekey: KzmnCUoBrqYbkoP8AUki1AJsyKqxNsiqdrtTB2onyzQfB6MQ5Sef~btc-priv-v0.0.1
+privatekey: L14Ay7yp6eDs4SgYepNKdBos7aCBEmJybxvf6FjJN1CbHUEdJiUqmpr
 network-id: show me
 `
 	ctx := context.Background()
@@ -54,7 +54,7 @@ network-id: show me
 	err := config.LoadConfigContextValue(ps.Context(), &conf)
 	t.NoError(err)
 
-	t.Equal("KzmnCUoBrqYbkoP8AUki1AJsyKqxNsiqdrtTB2onyzQfB6MQ5Sef~btc-priv-v0.0.1", conf.Privatekey().String())
+	t.Equal("L14Ay7yp6eDs4SgYepNKdBos7aCBEmJybxvf6FjJN1CbHUEdJiUqmpr", conf.Privatekey().String())
 	t.Equal([]byte("show me"), conf.NetworkID().Bytes())
 }
 
@@ -88,17 +88,17 @@ func (t *testConfig) ready(y string) *pm.Processes {
 
 func (t *testConfig) TestSimple() {
 	y := `
-address: n0~sa-v0.0.1
-privatekey: KzmnCUoBrqYbkoP8AUki1AJsyKqxNsiqdrtTB2onyzQfB6MQ5Sef~btc-priv-v0.0.1
+address: n0sas
+privatekey: L14Ay7yp6eDs4SgYepNKdBos7aCBEmJybxvf6FjJN1CbHUEdJiUqmpr
 network-id: show me
 nodes:
-  - address: n1~sa-v0.0.1
-    publickey: 27phogA4gmbMGfg321EHfx5eABkL7KAYuDPRGFoyQtAUb~btc-pub-v0.0.1
+  - address: n1sas
+    publickey: soGEtYqyFcKwwdU9FpeqywSMqRYbuwWhdeoREAgWYjU8mpu
 time-server: ""
 suffrage:
   nodes:
-    - n0~sa-v0.0.1
-    - n1~sa-v0.0.1
+    - n0sas
+    - n1sas
 `
 
 	ps := t.ready(y)
@@ -108,13 +108,13 @@ suffrage:
 	err := config.LoadConfigContextValue(ps.Context(), &conf)
 	t.NoError(err)
 
-	t.Equal("n0~sa-v0.0.1", conf.Address().String())
-	t.Equal("KzmnCUoBrqYbkoP8AUki1AJsyKqxNsiqdrtTB2onyzQfB6MQ5Sef~btc-priv-v0.0.1", conf.Privatekey().String())
+	t.Equal("n0sas", conf.Address().String())
+	t.Equal("L14Ay7yp6eDs4SgYepNKdBos7aCBEmJybxvf6FjJN1CbHUEdJiUqmpr", conf.Privatekey().String())
 	t.Equal([]byte("show me"), conf.NetworkID().Bytes())
 
 	t.Equal(1, len(conf.Nodes()))
-	t.Equal("n1~sa-v0.0.1", conf.Nodes()[0].Address().String())
-	t.Equal("27phogA4gmbMGfg321EHfx5eABkL7KAYuDPRGFoyQtAUb~btc-pub-v0.0.1", conf.Nodes()[0].Publickey().String())
+	t.Equal("n1sas", conf.Nodes()[0].Address().String())
+	t.Equal("soGEtYqyFcKwwdU9FpeqywSMqRYbuwWhdeoREAgWYjU8mpu", conf.Nodes()[0].Publickey().String())
 
 	// check empties
 	t.Equal(config.DefaultLocalNetworkURL.String(), conf.Network().ConnInfo().URL().String())
@@ -136,18 +136,18 @@ suffrage:
 
 func (t *testConfig) TestInValidSuffrage() {
 	y := `
-address: n0~sa-v0.0.1
-privatekey: KzmnCUoBrqYbkoP8AUki1AJsyKqxNsiqdrtTB2onyzQfB6MQ5Sef~btc-priv-v0.0.1
+address: n0sas
+privatekey: L14Ay7yp6eDs4SgYepNKdBos7aCBEmJybxvf6FjJN1CbHUEdJiUqmpr
 network-id: show me
 nodes:
-  - address: n1~sa-v0.0.1
+  - address: n1sas
     url: https://local:54322
-    publickey: 27phogA4gmbMGfg321EHfx5eABkL7KAYuDPRGFoyQtAUb~btc-pub-v0.0.1
+    publickey: soGEtYqyFcKwwdU9FpeqywSMqRYbuwWhdeoREAgWYjU8mpu
 suffrage:
   type: show-me
   nodes:
-    - n0~sa-v0.0.1
-    - n1~sa-v0.0.1
+    - n0sas
+    - n1sas
 `
 
 	ps := t.ready(y)

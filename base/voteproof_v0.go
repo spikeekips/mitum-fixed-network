@@ -296,12 +296,12 @@ func (vp VoteproofV0) isValidCheckMajority() error {
 }
 
 func (vp VoteproofV0) isValidFields(b []byte) error {
-	if err := isvalid.Check([]isvalid.IsValider{
+	if err := isvalid.Check(nil, false,
 		vp.height,
 		vp.stage,
 		vp.thresholdRatio,
 		vp.result,
-	}, nil, false); err != nil {
+	); err != nil {
 		return err
 	}
 	if vp.finishedAt.IsZero() {
@@ -359,7 +359,7 @@ func (vp VoteproofV0) isValidFacts(b []byte) error {
 	}
 
 	for _, f := range vp.facts {
-		if err := isvalid.Check([]isvalid.IsValider{f}, b, false); err != nil {
+		if err := isvalid.Check(b, false, f); err != nil {
 			return err
 		}
 	}

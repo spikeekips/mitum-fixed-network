@@ -18,11 +18,11 @@ import (
 )
 
 var (
-	defaultConfigLocalNode, _ = base.NewStringAddress("node")
-	defaultConfigYAML         = fmt.Sprintf(`
+	defaultConfigLocalNode = base.MustNewStringAddress("node")
+	defaultConfigYAML      = fmt.Sprintf(`
 network-id: mitum network; Thu 26 Nov 2020 12:25:18 AM KST
 address: %s
-privatekey: KzmnCUoBrqYbkoP8AUki1AJsyKqxNsiqdrtTB2onyzQfB6MQ5Sef~btc-priv-v0.0.1
+privatekey: L14Ay7yp6eDs4SgYepNKdBos7aCBEmJybxvf6FjJN1CbHUEdJiUqmpr
 suffrage:
     nodes:
         - %s

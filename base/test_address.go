@@ -1,24 +1,14 @@
+//go:build test
 // +build test
 
 package base
 
-import (
-	"crypto/rand"
-	"encoding/hex"
-)
+import "github.com/spikeekips/mitum/util"
 
-func MustStringAddress(s string) StringAddress {
-	a, err := NewStringAddress(s)
-	if err != nil {
-		panic(err)
-	}
-
-	return a
+func init() {
+	MinAddressSize = AddressTypeSize + 2
 }
 
 func RandomStringAddress() StringAddress {
-	b := make([]byte, 10)
-	_, _ = rand.Read(b)
-
-	return MustStringAddress(hex.EncodeToString(b))
+	return MustNewStringAddress(util.UUID().String())
 }

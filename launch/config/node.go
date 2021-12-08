@@ -1,6 +1,7 @@
 package config
 
 import (
+	"github.com/pkg/errors"
 	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/base/key"
 	"github.com/spikeekips/mitum/network"
@@ -52,10 +53,11 @@ func (no BaseRemoteNode) Publickey() key.Publickey {
 }
 
 func (no *BaseRemoteNode) SetPublickey(s string) error {
-	pub, err := key.DecodePublickey(no.enc, s)
+	pub, err := key.DecodePublickeyFromString(s, no.enc)
 	if err != nil {
-		return err
+		return errors.Wrapf(err, "invalid publickey, %q", s)
 	}
+
 	no.publickey = pub
 
 	return nil

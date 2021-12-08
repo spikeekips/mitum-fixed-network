@@ -195,6 +195,30 @@ func (t *testHintset) TestCompatibleMajor() {
 	t.Nil(uht)
 }
 
+func (t *testHintset) TestCompatibleWithEmptyVersion() {
+	hs := NewHintset()
+
+	{
+		ty := Type("showme")
+
+		for _, i := range []int{0, 3, 5, 10, 22, 33} {
+			ht := newHinter(ty, fmt.Sprintf("v2019.10.%d", i))
+			t.NoError(hs.Add(ht))
+		}
+	}
+
+	ty := Type("findme")
+
+	for _, i := range []int{0, 3, 5, 10, 22, 33} {
+		ht := newHinter(ty, fmt.Sprintf("v2019.10.%d", i))
+		t.NoError(hs.Add(ht))
+	}
+
+	i, err := hs.Compatible(NewHint(ty, ""))
+	t.NoError(err)
+	t.True(NewHint(ty, "v2019.10.33").Equal(i.Hint()))
+}
+
 func TestHintset(t *testing.T) {
 	suite.Run(t, new(testHintset))
 }

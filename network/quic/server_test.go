@@ -48,11 +48,11 @@ func (t *testQuicServer) SetupTest() {
 	_ = t.encs.TestAddHinter(base.BallotFactSignHinter)
 	_ = t.encs.TestAddHinter(base.SignedBallotFactHinter)
 	_ = t.encs.TestAddHinter(base.DummyVoteproof{})
-	_ = t.encs.TestAddHinter(base.StringAddress(""))
+	_ = t.encs.TestAddHinter(base.StringAddressHinter)
 	_ = t.encs.TestAddHinter(block.BaseBlockDataMapHinter)
 	_ = t.encs.TestAddHinter(block.ManifestV0Hinter)
-	_ = t.encs.TestAddHinter(key.BTCPrivatekeyHinter)
-	_ = t.encs.TestAddHinter(key.BTCPublickeyHinter)
+	_ = t.encs.TestAddHinter(key.BasePrivatekey{})
+	_ = t.encs.TestAddHinter(key.BasePublickey{})
 	_ = t.encs.TestAddHinter(network.EndHandoverSealV0Hinter)
 	_ = t.encs.TestAddHinter(network.HTTPConnInfoHinter)
 	_ = t.encs.TestAddHinter(network.NodeInfoV0Hinter)
@@ -137,7 +137,7 @@ func (t *testQuicServer) TestSendSeal() {
 	t.NoError(err)
 	t.Implements((*network.Channel)(nil), qc)
 
-	sl := seal.NewDummySeal(key.MustNewBTCPrivatekey())
+	sl := seal.NewDummySeal(key.NewBasePrivatekey().Publickey())
 
 	t.NoError(qc.SendSeal(context.TODO(), nil, sl))
 
@@ -168,7 +168,7 @@ func (t *testQuicServer) TestGetSeals() {
 	var hs []valuehash.Hash
 	seals := map[string]seal.Seal{}
 	for i := 0; i < 3; i++ {
-		sl := seal.NewDummySeal(key.MustNewBTCPrivatekey())
+		sl := seal.NewDummySeal(key.NewBasePrivatekey().Publickey())
 
 		seals[sl.Hash().String()] = sl
 		hs = append(hs, sl.Hash())
@@ -260,7 +260,7 @@ func (t *testQuicServer) TestGetProposal() {
 			base.VoteResultMajority,
 		)
 
-		pr, err := ballot.NewProposal(fact, fact.Proposer(), bvp, key.MustNewBTCPrivatekey(), nil)
+		pr, err := ballot.NewProposal(fact, fact.Proposer(), bvp, key.NewBasePrivatekey(), nil)
 		t.NoError(err)
 
 		proposals[fact.Hash().String()] = pr
@@ -489,7 +489,7 @@ func (t *testQuicServer) TestPassthroughs() {
 
 	qn.passthroughs = ns.Passthroughs
 
-	sl := seal.NewDummySeal(key.MustNewBTCPrivatekey())
+	sl := seal.NewDummySeal(key.NewBasePrivatekey().Publickey())
 
 	t.NoError(qc.SendSeal(context.TODO(), t.connInfo, sl))
 
@@ -529,7 +529,7 @@ func (t *testQuicServer) TestPassthroughsFilterFrom() {
 
 	qn.passthroughs = ns.Passthroughs
 
-	sl := seal.NewDummySeal(key.MustNewBTCPrivatekey())
+	sl := seal.NewDummySeal(key.NewBasePrivatekey().Publickey())
 
 	t.NoError(qc.SendSeal(context.TODO(), ch0.ConnInfo(), sl))
 
@@ -566,7 +566,7 @@ func (t *testQuicServer) TestHandoverHandlers() {
 			return true, nil
 		})
 
-		sl, err := network.NewHandoverSealV0(network.PingHandoverSealV0Hint, key.MustNewBTCPrivatekey(), base.RandomStringAddress(), newconnInfo, nil)
+		sl, err := network.NewHandoverSealV0(network.PingHandoverSealV0Hint, key.NewBasePrivatekey(), base.RandomStringAddress(), newconnInfo, nil)
 		t.NoError(err)
 
 		ok, err := qc.PingHandover(context.TODO(), sl)
@@ -589,7 +589,7 @@ func (t *testQuicServer) TestHandoverHandlers() {
 			return true, nil
 		})
 
-		sl, err := network.NewHandoverSealV0(network.EndHandoverSealV0Hint, key.MustNewBTCPrivatekey(), base.RandomStringAddress(), newconnInfo, nil)
+		sl, err := network.NewHandoverSealV0(network.EndHandoverSealV0Hint, key.NewBasePrivatekey(), base.RandomStringAddress(), newconnInfo, nil)
 		t.NoError(err)
 
 		ok, err := qc.EndHandover(context.TODO(), sl)
@@ -610,7 +610,7 @@ func (t *testQuicServer) TestHandoverHandlers() {
 			return false, nil
 		})
 
-		sl, err := network.NewHandoverSealV0(network.PingHandoverSealV0Hint, key.MustNewBTCPrivatekey(), base.RandomStringAddress(), newconnInfo, nil)
+		sl, err := network.NewHandoverSealV0(network.PingHandoverSealV0Hint, key.NewBasePrivatekey(), base.RandomStringAddress(), newconnInfo, nil)
 		t.NoError(err)
 
 		ok, err := qc.PingHandover(context.TODO(), sl)
@@ -623,7 +623,7 @@ func (t *testQuicServer) TestHandoverHandlers() {
 			return false, nil
 		})
 
-		sl, err := network.NewHandoverSealV0(network.EndHandoverSealV0Hint, key.MustNewBTCPrivatekey(), base.RandomStringAddress(), newconnInfo, nil)
+		sl, err := network.NewHandoverSealV0(network.EndHandoverSealV0Hint, key.NewBasePrivatekey(), base.RandomStringAddress(), newconnInfo, nil)
 		t.NoError(err)
 
 		ok, err := qc.EndHandover(context.TODO(), sl)

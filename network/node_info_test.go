@@ -43,10 +43,10 @@ func (t *testNodeInfo) SetupTest() {
 	_ = t.encs.TestAddHinter(HTTPConnInfoHinter)
 	_ = t.encs.TestAddHinter(NilConnInfoHinter)
 	_ = t.encs.TestAddHinter(NodeInfoV0Hinter)
-	_ = t.encs.TestAddHinter(base.StringAddress(""))
+	_ = t.encs.TestAddHinter(base.StringAddressHinter)
 	_ = t.encs.TestAddHinter(block.ManifestV0Hinter)
-	_ = t.encs.TestAddHinter(key.BTCPrivatekeyHinter)
-	_ = t.encs.TestAddHinter(key.BTCPublickeyHinter)
+	_ = t.encs.TestAddHinter(key.BasePrivatekey{})
+	_ = t.encs.TestAddHinter(key.BasePublickey{})
 	_ = t.encs.TestAddHinter(node.BaseV0Hinter)
 }
 
@@ -57,10 +57,7 @@ func (t *testNodeInfo) newConnInfo(name string, insecure bool) ConnInfo {
 }
 
 func (t *testNodeInfo) newNode(name string) (base.Node, ConnInfo) {
-	addr, err := base.NewStringAddress(name)
-	t.NoError(err)
-
-	no := node.NewBaseV0(addr, key.MustNewBTCPrivatekey().Publickey())
+	no := node.NewBaseV0(base.MustNewStringAddress(name), key.NewBasePrivatekey().Publickey())
 
 	return no, t.newConnInfo(name, true)
 }

@@ -22,7 +22,7 @@ type testProcessors struct {
 }
 
 func (t *testProcessors) SetupSuite() {
-	t.pk = key.MustNewBTCPrivatekey()
+	t.pk = key.NewBasePrivatekey()
 }
 
 func (t *testProcessors) newProposal(height base.Height, round base.Round) base.SignedBallotFact {

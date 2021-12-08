@@ -213,8 +213,8 @@ func (t *testNodepool) TestPassthroughs() {
 	ch1 := NilConnInfoChannel("n1")
 	t.NoError(ns.SetPassthrough(ch1, nil, 0))
 
-	pk := key.MustNewBTCPrivatekey()
-	sl := NewPassthroughedSeal(seal.NewDummySeal(pk), "")
+	pub := key.NewBasePrivatekey().Publickey()
+	sl := NewPassthroughedSeal(seal.NewDummySeal(pub), "")
 
 	passedch := make(chan [2]interface{}, 2)
 	ns.Passthroughs(context.Background(), sl, func(sl seal.Seal, ch Channel) {
@@ -247,8 +247,8 @@ func (t *testNodepool) TestPassthroughsFilter() {
 		return false
 	}, 0))
 
-	pk := key.MustNewBTCPrivatekey()
-	sl := NewPassthroughedSeal(seal.NewDummySeal(pk), "")
+	pub := key.NewBasePrivatekey().Publickey()
+	sl := NewPassthroughedSeal(seal.NewDummySeal(pub), "")
 
 	passedch := make(chan [2]interface{}, 2)
 	ns.Passthroughs(context.Background(), sl, func(sl seal.Seal, ch Channel) {

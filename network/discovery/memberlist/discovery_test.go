@@ -92,7 +92,7 @@ func (t *testDiscovery) newNode(i int, publishes map[string]http.HandlerFunc) *d
 	t.NoError(err)
 	n.connInfo = connInfo
 
-	n.local = node.NewLocal(base.StringAddress(n.node), key.MustNewBTCPrivatekey())
+	n.local = node.NewLocal(base.MustNewStringAddress(n.node), key.NewBasePrivatekey())
 
 	_, n.addr, _ = publishToAddress(connInfo.URL())
 

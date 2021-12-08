@@ -22,7 +22,7 @@ type testBallotbox struct {
 }
 
 func (t *testBallotbox) SetupSuite() {
-	t.pk, _ = key.NewBTCPrivatekey()
+	t.pk = key.NewBasePrivatekey()
 }
 
 func (t *testBallotbox) thresholdFunc(total uint, ratio float64) func() base.Threshold {

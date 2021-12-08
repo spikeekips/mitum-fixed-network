@@ -18,14 +18,14 @@ type testNetworkChanChannel struct {
 }
 
 func (t *testNetworkChanChannel) SetupSuite() {
-	t.pk, _ = key.NewBTCPrivatekey()
+	t.pk = key.NewBasePrivatekey()
 }
 
 func (t *testNetworkChanChannel) TestSendReceive() {
 	gs := NewChannel(0, network.NewNilConnInfo("showme"))
 	t.Implements((*network.Channel)(nil), gs)
 
-	sl := seal.NewDummySeal(t.pk)
+	sl := seal.NewDummySeal(t.pk.Publickey())
 	go func() {
 		_ = gs.SendSeal(context.TODO(), nil, sl)
 	}()
@@ -38,7 +38,7 @@ func (t *testNetworkChanChannel) TestSendReceive() {
 func (t *testNetworkChanChannel) TestGetSeal() {
 	gs := NewChannel(0, network.NewNilConnInfo("showme"))
 
-	sl := seal.NewDummySeal(t.pk)
+	sl := seal.NewDummySeal(t.pk.Publickey())
 
 	gs.SetGetSealHandler(func([]valuehash.Hash) ([]seal.Seal, error) {
 		return []seal.Seal{sl}, nil

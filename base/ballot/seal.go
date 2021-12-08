@@ -56,10 +56,7 @@ func NewBaseSeal(
 }
 
 func (sl BaseSeal) IsValid(networkID []byte) error {
-	if err := isvalid.Check([]isvalid.IsValider{
-		sl.sfs,
-		sl.BaseSeal,
-	}, networkID, false); err != nil {
+	if err := isvalid.Check(networkID, false, sl.sfs, sl.BaseSeal); err != nil {
 		return err
 	}
 
@@ -70,10 +67,7 @@ func (sl BaseSeal) IsValid(networkID []byte) error {
 		return err
 	}
 
-	if err := isvalid.Check([]isvalid.IsValider{
-		sl.baseVoteproof,
-		sl.acceptVoteproof,
-	}, networkID, true); err != nil {
+	if err := isvalid.Check(networkID, true, sl.baseVoteproof, sl.acceptVoteproof); err != nil {
 		return err
 	}
 

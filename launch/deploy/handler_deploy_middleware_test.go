@@ -31,7 +31,7 @@ func (t *testDeployKeyByTokenMiddleware) SetupTest() {
 }
 
 func (t *testDeployKeyByTokenMiddleware) TestNew() {
-	lk := key.MustNewBTCPrivatekey()
+	lk := key.NewBasePrivatekey()
 	md := NewDeployKeyByTokenMiddleware(t.cache, lk.Publickey(), t.networkID)
 
 	w := httptest.NewRecorder()
@@ -65,7 +65,7 @@ func (t *testDeployKeyByTokenMiddleware) TestNew() {
 }
 
 func (t *testDeployKeyByTokenMiddleware) TestMissingToken() {
-	lk := key.MustNewBTCPrivatekey()
+	lk := key.NewBasePrivatekey()
 	md := NewDeployKeyByTokenMiddleware(t.cache, lk.Publickey(), t.networkID)
 
 	w := httptest.NewRecorder()
@@ -94,7 +94,7 @@ func (t *testDeployKeyByTokenMiddleware) TestMissingToken() {
 }
 
 func (t *testDeployKeyByTokenMiddleware) TestMissingSignature() {
-	lk := key.MustNewBTCPrivatekey()
+	lk := key.NewBasePrivatekey()
 	md := NewDeployKeyByTokenMiddleware(t.cache, lk.Publickey(), t.networkID)
 
 	w := httptest.NewRecorder()
@@ -120,7 +120,7 @@ func (t *testDeployKeyByTokenMiddleware) TestMissingSignature() {
 }
 
 func (t *testDeployKeyByTokenMiddleware) TestUnknownToken() {
-	lk := key.MustNewBTCPrivatekey()
+	lk := key.NewBasePrivatekey()
 	md := NewDeployKeyByTokenMiddleware(t.cache, lk.Publickey(), t.networkID)
 
 	w := httptest.NewRecorder()

@@ -96,7 +96,7 @@ func (nv NumberValue) IsValid([]byte) error {
 		return errors.Errorf("invalid number type: %v", nv.t)
 	}
 
-	if err := isvalid.Check([]isvalid.IsValider{nv.BaseHinter, nv.h}, nil, false); err != nil {
+	if err := isvalid.Check(nil, false, nv.BaseHinter, nv.h); err != nil {
 		return err
 	}
 

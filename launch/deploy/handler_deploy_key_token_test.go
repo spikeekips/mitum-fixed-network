@@ -39,7 +39,7 @@ func (t *testDeployKeyTokenHandler) TestNew() {
 }
 
 func (t *testDeployKeyTokenHandler) TestVerifyTokenSignature() {
-	lk := key.MustNewBTCPrivatekey()
+	lk := key.NewBasePrivatekey()
 	token := util.UUID().String()
 	networkID := util.UUID().Bytes()
 
@@ -52,7 +52,7 @@ func (t *testDeployKeyTokenHandler) TestVerifyTokenSignature() {
 }
 
 func (t *testDeployKeyTokenHandler) TestVerifyTokenSignatureBadToken() {
-	lk := key.MustNewBTCPrivatekey()
+	lk := key.NewBasePrivatekey()
 	token := util.UUID().String()
 	networkID := util.UUID().Bytes()
 

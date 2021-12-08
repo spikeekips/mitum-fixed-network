@@ -6,6 +6,8 @@ import (
 	"github.com/spikeekips/mitum/util"
 )
 
+const NULL = "null"
+
 func Marshal(v interface{}) ([]byte, error) {
 	return util.JSON.Marshal(v)
 }

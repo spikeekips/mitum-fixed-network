@@ -98,7 +98,7 @@ type testDeployKeyStorageWithDatabase struct {
 func (t *testDeployKeyStorageWithDatabase) SetupSuite() {
 	t.StorageSupportTest.SetupSuite()
 
-	t.NoError(t.Encs.TestAddHinter(key.BTCPublickeyHinter))
+	t.NoError(t.Encs.TestAddHinter(key.BasePublickey{}))
 }
 
 func (t *testDeployKeyStorageWithDatabase) SetupTest() {
@@ -187,7 +187,7 @@ type testDeployKeyEncode struct {
 func (t *testDeployKeyEncode) SetupSuite() {
 	encs := encoder.NewEncoders()
 	t.NoError(encs.AddEncoder(t.enc))
-	t.NoError(encs.TestAddHinter(key.BTCPublickeyHinter))
+	t.NoError(encs.TestAddHinter(key.BasePublickey{}))
 }
 
 func (t *testDeployKeyEncode) TestEncode() {

@@ -34,7 +34,7 @@ func (dv DurationValue) set(d time.Duration) (DurationValue, error) {
 }
 
 func (dv DurationValue) IsValid([]byte) error {
-	return isvalid.Check([]isvalid.IsValider{dv.BaseHinter, dv.h}, nil, false)
+	return isvalid.Check(nil, false, dv.BaseHinter, dv.h)
 }
 
 func (dv DurationValue) Equal(v Value) bool {

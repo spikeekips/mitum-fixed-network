@@ -87,13 +87,10 @@ func (bm BlockV0) IsValid(networkID []byte) error {
 	}
 
 	if bm.height == base.PreGenesisHeight {
-		if err := isvalid.Check([]isvalid.IsValider{bm.ManifestV0}, networkID, false); err != nil {
+		if err := isvalid.Check(networkID, false, bm.ManifestV0); err != nil {
 			return err
 		}
-	} else if err := isvalid.Check([]isvalid.IsValider{
-		bm.ManifestV0,
-		bm.ci,
-	}, networkID, false); err != nil {
+	} else if err := isvalid.Check(networkID, false, bm.ManifestV0, bm.ci); err != nil {
 		return err
 	}
 

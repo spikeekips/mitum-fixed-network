@@ -19,8 +19,8 @@ type testVoteproofEncode struct {
 }
 
 func (t *testVoteproofEncode) SetupSuite() {
-	t.enc.Add(StringAddress(""))
-	t.enc.Add(key.BTCPublickeyHinter)
+	t.enc.Add(StringAddressHinter)
+	t.enc.Add(key.BasePublickey{})
 	t.enc.Add(DummyBallotFact{})
 	t.enc.Add(VoteproofV0Hinter)
 	t.enc.Add(SignedBallotFactHinter)

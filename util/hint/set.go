@@ -30,10 +30,10 @@ func (hs *Hintset) Add(ht Hinter) error {
 		return err
 	}
 
-	if _, found := hs.m[ht.Hint().String()]; found {
+	if _, found := hs.m[ht.Hint().RawString()]; found {
 		return util.FoundError.Errorf("Hint already added: %q", ht)
 	}
-	hs.m[ht.Hint().String()] = ht
+	hs.m[ht.Hint().RawString()] = ht
 
 	l := hs.set[ht.Hint().Type()]
 	l = append(l, ht)
@@ -56,7 +56,7 @@ func (hs *Hintset) Latest(ty Type) (Hinter, error) {
 }
 
 func (hs *Hintset) Get(ht Hint) Hinter {
-	return hs.m[ht.String()]
+	return hs.m[ht.RawString()]
 }
 
 func (hs *Hintset) Types() []Type {
@@ -76,7 +76,7 @@ func (hs *Hintset) Hinters(ty Type) []Hinter {
 }
 
 func (hs *Hintset) Compatible(ht Hint) (Hinter, error) {
-	if i, err := hs.cache.Get(ht.String()); err == nil {
+	if i, err := hs.cache.Get(ht.RawString()); err == nil {
 		if h, ok := i.(Hinter); ok {
 			return h, nil
 		}
@@ -85,15 +85,28 @@ func (hs *Hintset) Compatible(ht Hint) (Hinter, error) {
 		return nil, errors.Wrap(err, "Hintset cache problem")
 	}
 
+	if len(ht.Version()) < 1 {
+		hinter, err := hs.Latest(ht.Type())
+		if err != nil {
+			_ = hs.cache.Set(ht.RawString(), err)
+
+			return nil, err
+		}
+
+		_ = hs.cache.Set(ht.RawString(), hinter)
+
+		return hinter, nil
+	}
+
 	hinter := hs.compatible(ht)
 	if hinter == nil {
 		err := util.NotFoundError.Errorf("Hinter not found for %q", ht)
-		_ = hs.cache.Set(ht.String(), err)
+		_ = hs.cache.Set(ht.RawString(), err)
 
 		return nil, err
 	}
 
-	_ = hs.cache.Set(ht.String(), hinter)
+	_ = hs.cache.Set(ht.RawString(), hinter)
 
 	return hinter, nil
 }

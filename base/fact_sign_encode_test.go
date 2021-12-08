@@ -21,12 +21,12 @@ type testFactSignEncoding struct {
 }
 
 func (t *testFactSignEncoding) SetupSuite() {
-	t.pk, _ = key.NewBTCPrivatekey()
+	t.pk = key.NewBasePrivatekey()
 
 	t.encs = encoder.NewEncoders()
 	_ = t.encs.AddEncoder(t.enc)
 
-	_ = t.encs.TestAddHinter(key.BTCPublickeyHinter)
+	_ = t.encs.TestAddHinter(key.BasePublickey{})
 	_ = t.encs.TestAddHinter(BaseFactSignHinter)
 }
 

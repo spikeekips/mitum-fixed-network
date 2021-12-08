@@ -1,6 +1,7 @@
 package config
 
 import (
+	"github.com/pkg/errors"
 	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/base/key"
 	"github.com/spikeekips/mitum/base/operation"
@@ -66,7 +67,7 @@ func (no BaseLocalNode) Address() base.Address {
 func (no *BaseLocalNode) SetAddress(s string) error {
 	address, err := base.DecodeAddressFromString(s, no.enc)
 	if err != nil {
-		return err
+		return errors.Wrapf(err, "invalid address, %q", s)
 	}
 	no.address = address
 
@@ -88,9 +89,9 @@ func (no BaseLocalNode) Privatekey() key.Privatekey {
 }
 
 func (no *BaseLocalNode) SetPrivatekey(s string) error {
-	priv, err := key.DecodePrivatekey(no.enc, s)
+	priv, err := key.DecodePrivatekeyFromString(s, no.enc)
 	if err != nil {
-		return err
+		return errors.Wrapf(err, "invalid privatekey, %q", s)
 	}
 	no.privatekey = priv
 

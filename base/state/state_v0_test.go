@@ -27,7 +27,7 @@ func (t *testStateV0) TestDuplicatedOperation() {
 	stu := NewStateUpdater(st)
 
 	op, err := operation.NewKVOperation(
-		key.MustNewBTCPrivatekey(),
+		key.NewBasePrivatekey(),
 		util.UUID().Bytes(),
 		stu.Key(),
 		value.Interface().([]byte),

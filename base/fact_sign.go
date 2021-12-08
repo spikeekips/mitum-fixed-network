@@ -115,11 +115,9 @@ func (fs BaseFactSign) IsValid([]byte) error {
 		return isvalid.InvalidError.Errorf("empty SignedAt")
 	}
 
-	return isvalid.Check(
-		[]isvalid.IsValider{
-			fs.BaseHinter,
-			fs.signer,
-			fs.signature,
-		},
-		nil, false)
+	return isvalid.Check(nil, false,
+		fs.BaseHinter,
+		fs.signer,
+		fs.signature,
+	)
 }

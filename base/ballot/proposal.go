@@ -72,20 +72,19 @@ func (fact ProposalFact) IsValid([]byte) error {
 		return err
 	}
 
-	if err := isvalid.Check([]isvalid.IsValider{
-		fact.proposer,
-	}, nil, false); err != nil {
+	if err := isvalid.Check(nil, false, fact.proposer); err != nil {
 		return err
 	}
 
-	return isvalid.Check(func() []isvalid.IsValider {
+	vs := func() []isvalid.IsValider {
 		vs := make([]isvalid.IsValider, len(fact.seals))
 		for i := range fact.seals {
 			vs[i] = fact.seals[i]
 		}
 
 		return vs
-	}(), nil, false)
+	}()
+	return isvalid.Check(nil, false, vs...)
 }
 
 func (fact ProposalFact) bytes() []byte {

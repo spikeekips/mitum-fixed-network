@@ -358,10 +358,6 @@ func (co *ConcurrentOperationsProcessor) opr(op state.Processor) (OperationProce
 	opr = opr.New(co.pool)
 	co.oprs[hinter.Hint()] = opr
 
-	if l, ok := opr.(logging.SetLogging); ok {
-		_ = l.SetLogging(co.Logging)
-	}
-
 	return opr, nil
 }
 

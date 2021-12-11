@@ -4,7 +4,7 @@ import (
 	"bytes"
 	"encoding/base64"
 
-	"github.com/pkg/errors"
+	"github.com/spikeekips/mitum/util/isvalid"
 )
 
 // NetworkID will be used to separate mitum network with the other network. For
@@ -16,9 +16,9 @@ const MaxNetworkIDLength = 300
 
 func (ni NetworkID) IsValid([]byte) error {
 	if len(ni) < 1 {
-		return errors.Errorf("empty NetworkID")
+		return isvalid.InvalidError.Errorf("empty NetworkID")
 	} else if len(ni) > MaxNetworkIDLength {
-		return errors.Errorf(
+		return isvalid.InvalidError.Errorf(
 			"length of NetworkID too long; max=%d, but len=%d",
 			MaxNetworkIDLength,
 			len(ni),

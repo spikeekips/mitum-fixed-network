@@ -4,13 +4,13 @@
 package operation
 
 import (
-	"github.com/pkg/errors"
 	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/base/key"
 	"github.com/spikeekips/mitum/util"
 	bsonenc "github.com/spikeekips/mitum/util/encoder/bson"
 	jsonenc "github.com/spikeekips/mitum/util/encoder/json"
 	"github.com/spikeekips/mitum/util/hint"
+	"github.com/spikeekips/mitum/util/isvalid"
 	"github.com/spikeekips/mitum/util/valuehash"
 	"go.mongodb.org/mongo-driver/bson"
 )
@@ -40,7 +40,7 @@ func (kvof KVOperationFact) IsValid(b []byte) error {
 
 	if kvof.V != nil {
 		if l := len(kvof.V); l > MaxValueKVOperation {
-			return errors.Errorf("Value of KVOperation over limit; %d > %d", l, MaxValueKVOperation)
+			return isvalid.InvalidError.Errorf("Value of KVOperation over limit; %d > %d", l, MaxValueKVOperation)
 		}
 	}
 

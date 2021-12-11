@@ -18,6 +18,7 @@ import (
 	channetwork "github.com/spikeekips/mitum/network/gochan"
 	"github.com/spikeekips/mitum/storage/blockdata/localfs"
 	"github.com/spikeekips/mitum/util"
+	"github.com/spikeekips/mitum/util/encoder"
 	"github.com/spikeekips/mitum/util/hint"
 	"github.com/spikeekips/mitum/util/tree"
 	"github.com/spikeekips/mitum/util/valuehash"
@@ -226,8 +227,8 @@ func (t *testDefaultProposalProcessor) TestSave() {
 	b, err := io.ReadAll(f)
 	t.NoError(err)
 
-	um, err := block.DecodeManifest(b, t.JSONEnc)
-	t.NoError(err)
+	var um block.Manifest
+	t.NoError(encoder.Decode(b, t.JSONEnc, &um))
 
 	t.CompareManifest(blk.Manifest(), um)
 }

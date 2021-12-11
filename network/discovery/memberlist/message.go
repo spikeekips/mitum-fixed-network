@@ -49,12 +49,16 @@ func (ms NodeMessage) IsValid(networkID []byte) error {
 	case err != nil:
 		return err
 	case ms.ConnInfo.URL().String() != u.String():
-		return errors.Errorf("wrong publish url, %q", ms.ConnInfo.URL().String())
+		return isvalid.InvalidError.Errorf("wrong publish url, %q", ms.ConnInfo.URL().String())
 	case ms.ConnInfo.Address != addr:
-		return errors.Errorf("wrong address of publish, %q != %q", ms.ConnInfo.Address, addr)
+		return isvalid.InvalidError.Errorf("wrong address of publish, %q != %q", ms.ConnInfo.Address, addr)
 	}
 
-	return ms.signer.Verify(ms.signatureBody(networkID), ms.signature)
+	if err := ms.signer.Verify(ms.signatureBody(networkID), ms.signature); err != nil {
+		return isvalid.InvalidError.Errorf("failed to verify node message: %w", err)
+	}
+
+	return nil
 }
 
 func (ms NodeMessage) signatureBody(networkID base.NetworkID) []byte {

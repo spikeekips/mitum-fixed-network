@@ -3,7 +3,6 @@ package base
 import (
 	"math"
 
-	"github.com/pkg/errors"
 	"github.com/spikeekips/mitum/util"
 	jsonenc "github.com/spikeekips/mitum/util/encoder/json"
 	"github.com/spikeekips/mitum/util/isvalid"
@@ -81,7 +80,7 @@ func (thr Threshold) IsValid([]byte) error {
 		return err
 	}
 	if thr.Total < 1 {
-		return errors.Errorf("zero total found")
+		return isvalid.InvalidError.Errorf("zero total found")
 	}
 	if thr.Threshold > thr.Total {
 		return isvalid.InvalidError.Errorf("Threshold over Total: Threshold=%v Total=%v", thr.Threshold, thr.Total)

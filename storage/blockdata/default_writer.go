@@ -77,7 +77,10 @@ func (bd DefaultWriter) ReadManifest(r io.Reader) (block.Manifest, error) {
 	if err != nil {
 		return nil, err
 	}
-	return block.DecodeManifest(b, bd.encoder)
+
+	var m block.Manifest
+	err = encoder.Decode(b, bd.encoder, &m)
+	return m, err
 }
 
 func (bd DefaultWriter) ReadOperations(r io.Reader) ([]operation.Operation, error) {
@@ -91,11 +94,11 @@ func (bd DefaultWriter) ReadOperations(r io.Reader) ([]operation.Operation, erro
 			return nil
 		},
 		func(index uint64, b []byte) error {
-			i, err := operation.DecodeOperation(b, bd.encoder)
-			if err != nil {
+			var op operation.Operation
+			if err := encoder.Decode(b, bd.encoder, &op); err != nil {
 				return err
 			}
-			ops[index] = i
+			ops[index] = op
 
 			return nil
 		},
@@ -122,11 +125,11 @@ func (bd DefaultWriter) ReadStates(r io.Reader) ([]state.State, error) {
 			return nil
 		},
 		func(index uint64, b []byte) error {
-			i, err := state.DecodeState(b, bd.encoder)
-			if err != nil {
+			var st state.State
+			if err := encoder.Decode(b, bd.encoder, &st); err != nil {
 				return err
 			}
-			sts[index] = i
+			sts[index] = st
 
 			return nil
 		},
@@ -147,7 +150,10 @@ func (bd DefaultWriter) ReadINITVoteproof(r io.Reader) (base.Voteproof, error) {
 	if err != nil {
 		return nil, err
 	}
-	return base.DecodeVoteproof(b, bd.encoder)
+
+	var vp base.Voteproof
+	err = encoder.Decode(b, bd.encoder, &vp)
+	return vp, err
 }
 
 func (bd DefaultWriter) ReadACCEPTVoteproof(r io.Reader) (base.Voteproof, error) {
@@ -155,7 +161,10 @@ func (bd DefaultWriter) ReadACCEPTVoteproof(r io.Reader) (base.Voteproof, error)
 	if err != nil {
 		return nil, err
 	}
-	return base.DecodeVoteproof(b, bd.encoder)
+
+	var vp base.Voteproof
+	err = encoder.Decode(b, bd.encoder, &vp)
+	return vp, err
 }
 
 func (bd DefaultWriter) ReadSuffrageInfo(r io.Reader) (block.SuffrageInfo, error) {
@@ -163,7 +172,9 @@ func (bd DefaultWriter) ReadSuffrageInfo(r io.Reader) (block.SuffrageInfo, error
 	if err != nil {
 		return nil, err
 	}
-	return block.DecodeSuffrageInfo(b, bd.encoder)
+	var si block.SuffrageInfo
+	err = encoder.Decode(b, bd.encoder, &si)
+	return si, err
 }
 
 func (bd DefaultWriter) ReadProposal(r io.Reader) (base.SignedBallotFact, error) {
@@ -172,7 +183,9 @@ func (bd DefaultWriter) ReadProposal(r io.Reader) (base.SignedBallotFact, error)
 		return nil, err
 	}
 
-	return base.DecodeSignedBallotFact(b, bd.encoder)
+	var sfs base.SignedBallotFact
+	err = encoder.Decode(b, bd.encoder, &sfs)
+	return sfs, err
 }
 
 func (DefaultWriter) read(r io.Reader) ([]byte, error) {
@@ -300,8 +313,8 @@ func (bd DefaultWriter) readTree(r io.Reader, limit int64) (tree.FixedTree, erro
 			return nil
 		},
 		func(index uint64, b []byte) error {
-			i, err := tree.DecodeFixedTreeNode(b, bd.encoder)
-			if err != nil {
+			var i tree.FixedTreeNode
+			if err := encoder.Decode(b, bd.encoder, &i); err != nil {
 				return err
 			}
 			nodes[index] = i

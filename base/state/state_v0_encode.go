@@ -15,8 +15,7 @@ func (st *StateV0) unpack(
 	height base.Height,
 	ops []valuehash.Bytes,
 ) error {
-	value, err := DecodeValue(bValue, enc)
-	if err != nil {
+	if err := encoder.Decode(bValue, enc, &st.value); err != nil {
 		return err
 	}
 
@@ -27,7 +26,6 @@ func (st *StateV0) unpack(
 
 	st.h = h
 	st.key = key
-	st.value = value
 	st.previousHeight = previousHeight
 	st.height = height
 	st.operations = uops

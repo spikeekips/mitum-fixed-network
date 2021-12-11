@@ -1,9 +1,6 @@
 package ballot // nolint:dupl
 
 import (
-	"fmt"
-
-	"github.com/pkg/errors"
 	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/base/key"
 	"github.com/spikeekips/mitum/base/seal"
@@ -101,11 +98,11 @@ func (sl ACCEPT) Fact() base.ACCEPTBallotFact {
 
 func (sl ACCEPT) IsValid(networkID []byte) error {
 	if err := sl.BaseSeal.IsValid(networkID); err != nil {
-		return fmt.Errorf("invalid proposal: %w", err)
+		return isvalid.InvalidError.Errorf("invalid proposal: %w", err)
 	}
 
 	if _, ok := sl.Fact().(ACCEPTFact); !ok {
-		return errors.Errorf("invalid fact of accept ballot; %T", sl.Fact())
+		return isvalid.InvalidError.Errorf("invalid fact of accept ballot; %T", sl.Fact())
 	}
 
 	if err := sl.isValidBaseVoteproofAfterINIT(); err != nil {

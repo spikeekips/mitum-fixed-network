@@ -4,7 +4,7 @@ import (
 	"bytes"
 
 	"github.com/btcsuite/btcutil/base58"
-	"github.com/pkg/errors"
+	"github.com/spikeekips/mitum/util/isvalid"
 )
 
 type Signature []byte
@@ -23,7 +23,7 @@ func (sg Signature) String() string {
 
 func (sg Signature) IsValid([]byte) error {
 	if len(sg) < 1 {
-		return errors.Errorf("empty Signature")
+		return isvalid.InvalidError.Errorf("empty Signature")
 	}
 
 	return nil

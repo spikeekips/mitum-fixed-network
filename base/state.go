@@ -3,6 +3,7 @@ package base
 import (
 	"github.com/pkg/errors"
 	"github.com/spikeekips/mitum/util"
+	"github.com/spikeekips/mitum/util/isvalid"
 )
 
 type State uint8
@@ -84,7 +85,7 @@ func (st State) IsValid([]byte) error {
 		return nil
 	}
 
-	return errors.Errorf("invalid state found; state=%q(%d)", st, st)
+	return isvalid.InvalidError.Errorf("invalid state found; state=%q(%d)", st, st)
 }
 
 func (st State) MarshalText() ([]byte, error) {

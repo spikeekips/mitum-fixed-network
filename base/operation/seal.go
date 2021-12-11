@@ -60,13 +60,17 @@ func (sl BaseSeal) IsValid(networkID []byte) error {
 		return err
 	}
 
-	for _, op := range sl.ops {
-		if err := op.IsValid(networkID); err != nil {
-			return err
+	vs := make([]isvalid.IsValider, len(sl.ops))
+	for i := range sl.ops {
+		op := sl.ops[i]
+		if op == nil {
+			return isvalid.InvalidError.Errorf("empty operation found in seal")
 		}
+
+		vs[i] = sl.ops[i]
 	}
 
-	return nil
+	return isvalid.Check(networkID, false, vs...)
 }
 
 func (sl BaseSeal) BodyBytes() []byte {

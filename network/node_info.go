@@ -78,15 +78,7 @@ func (NodeInfoV0) Bytes() []byte {
 }
 
 func (ni NodeInfoV0) IsValid([]byte) error {
-	if err := ni.node.IsValid(nil); err != nil {
-		return err
-	}
-
-	if err := ni.networkID.IsValid(nil); err != nil {
-		return err
-	}
-
-	if err := isvalid.Check(nil, false, ni.state, ni.version, ni.ci); err != nil {
+	if err := isvalid.Check(nil, false, ni.node, ni.networkID, ni.state, ni.version, ni.ci); err != nil {
 		return err
 	}
 

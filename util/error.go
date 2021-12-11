@@ -50,7 +50,15 @@ func (er *NError) Is(err error) bool {
 		return false
 	}
 
-	return i.id == er.id
+	if i.id == er.id {
+		return true
+	}
+
+	if er.wrapped == nil {
+		return false
+	}
+
+	return errors.Is(er.wrapped, err)
 }
 
 func (*NError) As(err interface{}) bool { // nolint:govet

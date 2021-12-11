@@ -1,7 +1,6 @@
 package bsonenc
 
 import (
-	"fmt"
 	"testing"
 
 	"github.com/pkg/errors"
@@ -10,8 +9,6 @@ import (
 	"github.com/spikeekips/mitum/util/hint"
 	"github.com/stretchr/testify/suite"
 	"go.mongodb.org/mongo-driver/bson"
-	"go.mongodb.org/mongo-driver/bson/bsontype"
-	"go.mongodb.org/mongo-driver/x/bsonx/bsoncore"
 )
 
 type hinterDefault struct {
@@ -104,85 +101,6 @@ func (ht *hinterBSONUnpacker) UnpackBSON(b []byte, enc *Encoder) error {
 
 	ht.a = uht.A
 	ht.b = uht.B
-
-	return nil
-}
-
-type hinterTextMarshaller struct {
-	h hint.Hint
-	A int
-	B int
-}
-
-func (ht hinterTextMarshaller) Hint() hint.Hint {
-	return ht.h
-}
-
-func (ht hinterTextMarshaller) SetHint(n hint.Hint) hint.Hinter {
-	ht.h = n
-	return ht
-}
-
-func (ht hinterTextMarshaller) String() string {
-	return hint.NewHintedString(ht.Hint(), fmt.Sprintf("%d-%d", ht.A, ht.B)).String()
-}
-
-func (ht hinterTextMarshaller) MarshalBSONValue() (bsontype.Type, []byte, error) {
-	return bsontype.String, bsoncore.AppendString(nil, ht.String()), nil
-}
-
-func (ht *hinterTextMarshaller) UnmarshalText(b []byte) error {
-	var ua, ub int
-	n, err := fmt.Sscanf(string(b)+"\n", "%d-%d", &ua, &ub)
-
-	if err != nil {
-		return err
-	} else if n != 2 {
-		return errors.Errorf("something missed")
-	}
-
-	ht.A = ua
-	ht.B = ub
-
-	return nil
-}
-
-type hinterEmbedText struct {
-	H  hint.Hint
-	HT hinterTextMarshaller
-}
-
-func (ht hinterEmbedText) Hint() hint.Hint {
-	return ht.H
-}
-
-func (ht hinterEmbedText) MarshalBSON() ([]byte, error) {
-	return bson.Marshal(MergeBSONM(NewHintedDoc(ht.H), bson.M{
-		"HT": ht.HT,
-	}))
-}
-
-func (ht *hinterEmbedText) UnpackBSON(b []byte, enc *Encoder) error {
-	var u struct {
-		H  bson.Raw
-		HT bson.RawValue
-	}
-
-	if err := bson.Unmarshal(b, &u); err != nil {
-		return err
-	}
-
-	i, err := enc.Decode(u.HT.Value)
-	if err != nil {
-		return err
-	}
-
-	j, ok := i.(hinterTextMarshaller)
-	if !ok {
-		return util.WrongTypeError.Errorf("expected hinterTextMarshaller, not %T", i)
-	}
-
-	ht.HT = j
 
 	return nil
 }
@@ -283,39 +201,6 @@ func (t *testBSONEncoder) TestDecodeDefault() {
 	t.Equal(ht.B, uht.B)
 }
 
-func (t *testBSONEncoder) TestDecodeTextMarshaller() {
-	enc := NewEncoder()
-
-	ht := hinterTextMarshaller{
-		h: hint.NewHint(hint.Type("findme"), "v1.2.3"),
-	}
-	t.NoError(enc.Add(ht))
-
-	het := hinterEmbedText{
-		H: hint.NewHint(hint.Type("showme"), "v1.2.3"),
-	}
-	t.NoError(enc.Add(het))
-
-	het.HT = hinterTextMarshaller{
-		h: hint.NewHint(hint.Type("findme"), "v1.2.3"),
-		A: 22,
-		B: 33,
-	}
-
-	b, err := enc.Marshal(het)
-	t.NoError(err)
-
-	hinter, err := enc.Decode(b)
-	t.NoError(err)
-
-	uht, ok := hinter.(hinterEmbedText)
-	t.True(ok)
-
-	t.True(het.HT.Hint().Equal(uht.HT.Hint()))
-	t.Equal(het.HT.A, uht.HT.A)
-	t.Equal(het.HT.B, uht.HT.B)
-}
-
 func (t *testBSONEncoder) TestDecodeBSONUnmarshaller() {
 	enc := NewEncoder()
 
@@ -362,27 +247,6 @@ func (t *testBSONEncoder) TestDecodeBSONUnpacker() {
 
 	t.Equal(ht.a, uht.a)
 	t.Equal(ht.b, uht.b)
-}
-
-func (t *testBSONEncoder) TestDecodeWitHint() {
-	enc := NewEncoder()
-
-	htt := hinterTextMarshaller{
-		h: hint.NewHint(hint.Type("text"), "v1.2.3"),
-	}
-	htj := newHinterBSONUnpacker(
-		hint.NewHint(hint.Type("unpack"), "v1.2.3"),
-		"fa",
-		33,
-	)
-	t.NoError(enc.Add(htt))
-	t.NoError(enc.Add(htj))
-
-	b, err := enc.Marshal(htj)
-	t.NoError(err)
-
-	_, err = enc.DecodeWithHint(b, htt.Hint())
-	t.Contains(err.Error(), "failed to decode")
 }
 
 func (t *testBSONEncoder) TestDecodeSlice() {

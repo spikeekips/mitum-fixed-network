@@ -9,11 +9,5 @@ func (no *FixedTreeNode) unpack(enc encoder.Encoder, base tree.BaseFixedTreeNode
 	no.BaseFixedTreeNode = base
 	no.inState = inState
 
-	i, err := DecodeReasonError(br, enc)
-	if err != nil {
-		return err
-	}
-	no.reason = i
-
-	return nil
+	return encoder.Decode(br, enc, &no.reason)
 }

@@ -21,18 +21,9 @@ func (sfs *BaseSignedBallotFact) unpack(
 	bfc,
 	bfs []byte,
 ) error {
-	fact, err := DecodeBallotFact(bfc, enc)
-	if err != nil {
+	if err := encoder.Decode(bfc, enc, &sfs.fact); err != nil {
 		return err
 	}
 
-	fs, err := DecodeBallotFactSign(bfs, enc)
-	if err != nil {
-		return err
-	}
-
-	sfs.fact = fact
-	sfs.factSign = fs
-
-	return nil
+	return encoder.Decode(bfs, enc, &sfs.factSign)
 }

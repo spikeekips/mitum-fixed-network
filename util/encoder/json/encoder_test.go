@@ -1,7 +1,6 @@
 package jsonenc
 
 import (
-	"fmt"
 	"testing"
 
 	"github.com/pkg/errors"
@@ -118,45 +117,6 @@ func (ht *hinterJSONUnpacker) UnpackJSON(b []byte, enc *Encoder) error {
 	return nil
 }
 
-type hinterTextMarshaller struct {
-	h hint.Hint
-	A int
-	B int
-}
-
-func (ht hinterTextMarshaller) Hint() hint.Hint {
-	return ht.h
-}
-
-func (ht hinterTextMarshaller) SetHint(n hint.Hint) hint.Hinter {
-	ht.h = n
-	return ht
-}
-
-func (ht hinterTextMarshaller) String() string {
-	return hint.NewHintedString(ht.Hint(), fmt.Sprintf("%d-%d", ht.A, ht.B)).String()
-}
-
-func (ht hinterTextMarshaller) MarshalText() ([]byte, error) {
-	return []byte(ht.String()), nil
-}
-
-func (ht *hinterTextMarshaller) UnmarshalText(b []byte) error {
-	var ua, ub int
-	n, err := fmt.Sscanf(string(b)+"\n", "%d-%d", &ua, &ub)
-
-	if err != nil {
-		return err
-	} else if n != 2 {
-		return errors.Errorf("something missed")
-	}
-
-	ht.A = ua
-	ht.B = ub
-
-	return nil
-}
-
 type testJSONEncoder struct {
 	suite.Suite
 }
@@ -215,34 +175,6 @@ func (t *testJSONEncoder) TestDecodeDefault() {
 	uht, ok := hinter.(hinterDefault)
 	t.True(ok)
 
-	t.Equal(ht.A, uht.A)
-	t.Equal(ht.B, uht.B)
-}
-
-func (t *testJSONEncoder) TestDecodeTextMarshaller() {
-	enc := NewEncoder()
-
-	orig := hinterTextMarshaller{
-		h: hint.NewHint(hint.Type("findme"), "v1.2.3"),
-	}
-	t.NoError(enc.Add(orig))
-
-	ht := hinterTextMarshaller{
-		h: hint.NewHint(hint.Type("findme"), "v1.2.0"),
-		A: 22,
-		B: 33,
-	}
-
-	b, err := enc.Marshal(ht)
-	t.NoError(err)
-
-	hinter, err := enc.Decode(b)
-	t.NoError(err)
-
-	uht, ok := hinter.(hinterTextMarshaller)
-	t.True(ok)
-
-	t.True(ht.Hint().Equal(uht.Hint()))
 	t.Equal(ht.A, uht.A)
 	t.Equal(ht.B, uht.B)
 }
@@ -306,27 +238,6 @@ func (t *testJSONEncoder) TestDecodeJSONUnpacker() {
 
 	t.Equal(ht.a, uht.a)
 	t.Equal(ht.b, uht.b)
-}
-
-func (t *testJSONEncoder) TestDecodeWitHint() {
-	enc := NewEncoder()
-
-	htt := hinterTextMarshaller{
-		h: hint.NewHint(hint.Type("text"), "v1.2.3"),
-	}
-	htj := newHinterJSONUnpacker(
-		hint.NewHint(hint.Type("unpack"), "v1.2.3"),
-		"fa",
-		33,
-	)
-	t.NoError(enc.Add(htt))
-	t.NoError(enc.Add(htj))
-
-	b, err := enc.Marshal(htj)
-	t.NoError(err)
-
-	_, err = enc.DecodeWithHint(b, htt.Hint())
-	t.Contains(err.Error(), "failed to decode")
 }
 
 func (t *testJSONEncoder) TestDecodeSlice() {

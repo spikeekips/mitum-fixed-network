@@ -67,11 +67,8 @@ func (t *testVoteproofEncode) TestMarshal() {
 	t.NoError(err)
 	t.NotNil(b)
 
-	hinter, err := DecodeVoteproof(b, t.enc)
-	t.NoError(err)
-
-	uvp, ok := hinter.(VoteproofV0)
-	t.True(ok)
+	var uvp VoteproofV0
+	t.NoError(encoder.Decode(b, t.enc, &uvp))
 
 	t.True(vp.Hint().Equal(uvp.Hint()))
 	t.Equal(vp.Height(), uvp.Height())

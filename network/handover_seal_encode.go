@@ -15,12 +15,5 @@ func (sl *HandoverSealV0) unpack(enc encoder.Encoder, ub seal.BaseSeal, bad base
 	}
 	sl.ad = ad
 
-	uci, err := DecodeConnInfo(bci, enc)
-	if err != nil {
-		return err
-	}
-
-	sl.ci = uci
-
-	return nil
+	return encoder.Decode(bci, enc, &sl.ci)
 }

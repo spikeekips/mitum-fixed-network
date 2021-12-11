@@ -18,33 +18,24 @@ func (ni *NodeInfoV0) unpack(
 	sf []RemoteNode,
 	bci []byte,
 ) error {
-	n, err := base.DecodeNode(bnode, enc)
-	if err != nil {
+	if err := encoder.Decode(bnode, enc, &ni.node); err != nil {
 		return err
 	}
-	ni.node = n
 
 	ni.networkID = bnid
 	ni.state = st
-	b, err := block.DecodeManifest(blb, enc)
-	if err != nil {
+
+	var b block.Manifest
+	if err := encoder.Decode(blb, enc, &b); err != nil {
 		return err
 	}
+
 	ni.lastBlock = b
-
 	ni.version = vs
-
 	ni.policy = co
-
 	ni.nodes = sf
 
-	uci, err := DecodeConnInfo(bci, enc)
-	if err != nil {
-		return err
-	}
-	ni.ci = uci
-
-	return nil
+	return encoder.Decode(bci, enc, &ni.ci)
 }
 
 func (no *RemoteNode) unpack(
@@ -65,14 +56,5 @@ func (no *RemoteNode) unpack(
 	}
 	no.Publickey = j
 
-	if len(bci) > 0 {
-		i, err := DecodeConnInfo(bci, enc)
-		if err != nil {
-			return err
-		}
-
-		no.ci = i
-	}
-
-	return nil
+	return encoder.Decode(bci, enc, &no.ci)
 }

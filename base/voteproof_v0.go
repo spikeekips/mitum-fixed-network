@@ -6,7 +6,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/pkg/errors"
 	"github.com/spikeekips/mitum/util"
 	"github.com/spikeekips/mitum/util/hint"
 	"github.com/spikeekips/mitum/util/isvalid"
@@ -224,10 +223,10 @@ func (vp VoteproofV0) IsValid(networkID []byte) error {
 
 	// check majority
 	if t, err := NewThreshold(uint(len(vp.suffrages)), vp.thresholdRatio); err != nil {
-		return err
+		return isvalid.InvalidError.Wrap(err)
 	} else if len(vp.votes) < int(t.Threshold) {
 		if vp.result != VoteResultNotYet {
-			return errors.Errorf("result should be not-yet: %s", vp.result)
+			return isvalid.InvalidError.Errorf("result should be not-yet: %s", vp.result)
 		}
 
 		return nil
@@ -239,7 +238,7 @@ func (vp VoteproofV0) IsValid(networkID []byte) error {
 func (vp VoteproofV0) isValidCheckMajority() error {
 	threshold, err := NewThreshold(uint(len(vp.suffrages)), vp.thresholdRatio)
 	if err != nil {
-		return err
+		return isvalid.InvalidError.Errorf("invalid threshold: %w", err)
 	}
 
 	counts := map[string]uint{}
@@ -278,17 +277,17 @@ func (vp VoteproofV0) isValidCheckMajority() error {
 	}
 
 	if vp.result != result {
-		return errors.Errorf("result mismatch; vp.result=%s != result=%s", vp.result, result)
+		return isvalid.InvalidError.Errorf("result mismatch; vp.result=%s != result=%s", vp.result, result)
 	}
 
 	if fact == nil {
 		if vp.majority != nil {
-			return errors.Errorf("result should be nil, but not")
+			return isvalid.InvalidError.Errorf("result should be nil, but not")
 		}
 	} else {
 		mh := vp.majority.Hash().String()
 		if mh != factHash {
-			return errors.Errorf("fact hash mismatch; vp.majority=%s != fact=%s", mh, factHash)
+			return isvalid.InvalidError.Errorf("fact hash mismatch; vp.majority=%s != fact=%s", mh, factHash)
 		}
 	}
 
@@ -349,13 +348,13 @@ func (vp VoteproofV0) isValidFacts(b []byte) error {
 		}
 
 		if !found {
-			return errors.Errorf("missing fact found in facts: %s", nf.Fact().Hash().String())
+			return isvalid.InvalidError.Errorf("missing fact found in facts: %s", nf.Fact().Hash().String())
 		}
 		factHashes[nf.Fact().Hash().String()] = true
 	}
 
 	if len(factHashes) != len(vp.facts) {
-		return errors.Errorf("unknown facts found in facts: %d", len(vp.facts)-len(factHashes))
+		return isvalid.InvalidError.Errorf("unknown facts found in facts: %d", len(vp.facts)-len(factHashes))
 	}
 
 	for _, f := range vp.facts {

@@ -1,9 +1,6 @@
 package ballot
 
 import (
-	"fmt"
-
-	"github.com/pkg/errors"
 	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/util"
 	"github.com/spikeekips/mitum/util/hint"
@@ -35,7 +32,7 @@ func (fact BaseFact) bytes() []byte {
 
 func (fact BaseFact) IsValid([]byte) error {
 	if err := isvalid.Check(nil, false, fact.BaseHinter, fact.h, fact.height); err != nil {
-		return fmt.Errorf("invalid ballot fact: %w", err)
+		return isvalid.InvalidError.Errorf("invalid ballot fact: %w", err)
 	}
 
 	if fact.height <= base.PreGenesisHeight {
@@ -72,7 +69,7 @@ func (fact BaseFact) Round() base.Round {
 
 func isValidFact(fact base.BallotFact) error {
 	if fact == nil {
-		return errors.Errorf("nil fact")
+		return isvalid.InvalidError.Errorf("nil fact")
 	}
 
 	var bf BaseFact
@@ -92,7 +89,7 @@ func isValidFact(fact base.BallotFact) error {
 	}
 
 	if err := bf.IsValid(nil); err != nil {
-		return fmt.Errorf("invalid ballot fact, %T: %w", fact, err)
+		return isvalid.InvalidError.Errorf("invalid ballot fact, %T: %w", fact, err)
 	}
 
 	if h := valuehash.NewSHA256(bb); !fact.Hash().Equal(h) {

@@ -32,12 +32,8 @@ func (vp *VoteproofV0) unpack( // nolint
 	finishedAt time.Time,
 	isClosed bool,
 ) error {
-	if bMajority != nil {
-		m, err := DecodeBallotFact(bMajority, enc)
-		if err != nil {
-			return err
-		}
-		vp.majority = m
+	if err := encoder.Decode(bMajority, enc, &vp.majority); err != nil {
+		return err
 	}
 
 	vp.suffrages = make([]Address, len(bSuffrages))

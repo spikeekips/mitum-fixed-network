@@ -7,6 +7,7 @@ import (
 
 	"github.com/spikeekips/mitum/util"
 	"github.com/stretchr/testify/suite"
+	"go.mongodb.org/mongo-driver/bson"
 )
 
 type testBytes struct {
@@ -110,10 +111,10 @@ func (t *testBytes) TestSHA512WithPrefix() {
 }
 
 func (t *testBytes) TestJSONMarshal() {
-	b := []byte("killme")
-	hs := NewBytes(b)
-
 	{
+		b := []byte("killme")
+		hs := NewBytes(b)
+
 		b, err := json.Marshal(hs)
 		t.NoError(err)
 
@@ -122,6 +123,49 @@ func (t *testBytes) TestJSONMarshal() {
 
 		t.Equal(hs.String(), jh.String())
 		t.True(hs.Equal(jh))
+	}
+
+	{
+		b, err := json.Marshal(nil)
+		t.NoError(err)
+
+		var jh Bytes
+		t.NoError(err, json.Unmarshal(b, &jh))
+
+		t.Empty(jh.Bytes())
+	}
+}
+
+func (t *testBytes) TestBSONMarshal() {
+	{
+		b := []byte("killme")
+		hs := NewBytes(b)
+
+		b, err := bson.Marshal(struct {
+			B Bytes
+		}{B: hs})
+		t.NoError(err)
+
+		var jh struct {
+			B Bytes
+		}
+		t.NoError(err, bson.Unmarshal(b, &jh))
+
+		t.Equal(hs.String(), jh.B.String())
+		t.True(hs.Equal(jh.B))
+	}
+
+	{
+		b, err := bson.Marshal(struct {
+			B Bytes
+		}{})
+		t.NoError(err)
+
+		var jh struct {
+			B Bytes
+		}
+		t.NoError(err, bson.Unmarshal(b, &jh))
+		t.Empty(jh.B.Bytes())
 	}
 }
 

@@ -1,8 +1,8 @@
 package config
 
 import (
-	"github.com/pkg/errors"
 	"github.com/spikeekips/mitum/base"
+	"github.com/spikeekips/mitum/util/isvalid"
 )
 
 type ErrorType string
@@ -17,7 +17,7 @@ func (et ErrorType) IsValid([]byte) error {
 	case ErrorTypeError, ErrorTypeWrongBlockHash:
 		return nil
 	default:
-		return errors.Errorf("unknown ErrorType, %q", et)
+		return isvalid.InvalidError.Errorf("unknown ErrorType, %q", et)
 	}
 }
 

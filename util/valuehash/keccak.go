@@ -3,6 +3,7 @@ package valuehash
 import (
 	"bytes"
 
+	"github.com/spikeekips/mitum/util/isvalid"
 	"golang.org/x/crypto/sha3"
 )
 
@@ -41,7 +42,7 @@ func (hs SHA512) IsEmpty() bool {
 
 func (hs SHA512) IsValid([]byte) error {
 	if hs.IsEmpty() {
-		return EmptyHashError.Call()
+		return isvalid.InvalidError.Wrap(EmptyHashError)
 	}
 
 	return nil
@@ -73,7 +74,7 @@ func (hs SHA256) IsEmpty() bool {
 
 func (hs SHA256) IsValid([]byte) error {
 	if hs.IsEmpty() {
-		return EmptyHashError.Call()
+		return isvalid.InvalidError.Wrap(EmptyHashError)
 	}
 
 	return nil

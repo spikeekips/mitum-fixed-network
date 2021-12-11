@@ -204,7 +204,9 @@ func (ch *Channel) Proposal(ctx context.Context, h valuehash.Hash) (base.Proposa
 		return nil, err
 	}
 
-	return base.DecodeProposal(b, enc)
+	var pr base.Proposal
+	err = encoder.Decode(b, enc, &pr)
+	return pr, err
 }
 
 func (ch *Channel) NodeInfo(ctx context.Context) (network.NodeInfo, error) {
@@ -235,15 +237,19 @@ func (ch *Channel) NodeInfo(ctx context.Context) (network.NodeInfo, error) {
 		return nil, err
 	}
 
-	if b, err := response.Bytes(); err != nil {
+	b, err := response.Bytes()
+	if err != nil {
 		ch.Log().Error().Err(err).Msg("failed to get bytes from response body")
 
 		return nil, err
-	} else if i, err := network.DecodeNodeInfo(b, enc); err != nil {
-		return nil, err
-	} else {
-		return i, nil
 	}
+
+	var ni network.NodeInfo
+	if err := encoder.Decode(b, enc, &ni); err != nil {
+		return nil, err
+	}
+
+	return ni, nil
 }
 
 func (ch *Channel) BlockDataMaps(ctx context.Context, heights []base.Height) ([]block.BlockDataMap, error) {

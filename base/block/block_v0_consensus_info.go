@@ -1,7 +1,6 @@
 package block
 
 import (
-	"github.com/pkg/errors"
 	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/util/hint"
 	"github.com/spikeekips/mitum/util/isvalid"
@@ -26,14 +25,15 @@ func (bc ConsensusInfoV0) IsValid(networkID []byte) error {
 		return err
 	}
 
-	if bc.sfs != nil && bc.sfs.Fact().Hint().Type() != base.ProposalFactType {
+	if bc.sfs.Fact().Hint().Type() != base.ProposalFactType {
 		return isvalid.InvalidError.Errorf("proposal does not have proposal fact type; %q", bc.sfs.Fact().Hint().Type())
 	}
 
 	if bc.initVoteproof.Stage() != base.StageINIT {
-		return errors.Errorf("invalid initVoteproof, %v found in ConsensusInfo", bc.initVoteproof.Stage())
+		return isvalid.InvalidError.Errorf("invalid initVoteproof, %v found in ConsensusInfo", bc.initVoteproof.Stage())
 	} else if bc.acceptVoteproof.Stage() != base.StageACCEPT {
-		return errors.Errorf("invalid acceptVoteproof, %v found in ConsensusInfo", bc.acceptVoteproof.Stage())
+		return isvalid.InvalidError.Errorf(
+			"invalid acceptVoteproof, %v found in ConsensusInfo", bc.acceptVoteproof.Stage())
 	}
 
 	sn := map[base.Address]base.Node{}
@@ -58,10 +58,10 @@ func (ConsensusInfoV0) isValidVoteproof(
 	for i := range voteproof.Votes() {
 		nf := voteproof.Votes()[i]
 		if node, found := sn[nf.FactSign().Node()]; !found {
-			return errors.Errorf("unknown node, %s voted in %v voteproof.Votes()",
+			return isvalid.InvalidError.Errorf("unknown node, %s voted in %v voteproof.Votes()",
 				nf.FactSign().Node(), voteproof.Stage())
 		} else if !nf.FactSign().Signer().Equal(node.Publickey()) {
-			return errors.Errorf("node, %s has invalid Publickey in %v voteproof",
+			return isvalid.InvalidError.Errorf("node, %s has invalid Publickey in %v voteproof",
 				nf.FactSign().Node(), voteproof.Stage())
 		}
 	}
@@ -112,18 +112,21 @@ func (si SuffrageInfoV0) IsValid([]byte) error {
 		return err
 	}
 
+	vs := make([]isvalid.IsValider, len(si.nodes)+1)
+	vs[0] = si.proposer
+
 	var found bool
-	vs := []isvalid.IsValider{si.BaseHinter, si.proposer}
-	for _, n := range si.nodes {
+	for i := range si.nodes {
+		n := si.nodes[i]
 		if !found && si.proposer.Equal(n.Address()) {
 			found = true
 		}
 
-		vs = append(vs, n.Address(), n.Publickey())
+		vs[i+1] = n
 	}
 
 	if !found {
-		return errors.Errorf("proposer not found in nodes")
+		return isvalid.InvalidError.Errorf("proposer not found in suffrage nodes")
 	}
 
 	return isvalid.Check(nil, false, vs...)

@@ -6,6 +6,7 @@ import (
 	"github.com/pkg/errors"
 	"github.com/spikeekips/mitum/network"
 	"github.com/spikeekips/mitum/util"
+	"github.com/spikeekips/mitum/util/isvalid"
 )
 
 type NodeMeta struct {
@@ -42,7 +43,7 @@ func NewNodeMetaFromBytes(b []byte) (NodeMeta, error) {
 
 func (meta NodeMeta) IsValid([]byte) error {
 	if len(meta.b) < 1 {
-		return errors.Errorf("empty bytes")
+		return isvalid.InvalidError.Errorf("empty bytes")
 	}
 
 	return isValidPublishURL(meta.publish)

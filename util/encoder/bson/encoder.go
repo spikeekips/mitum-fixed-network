@@ -11,8 +11,6 @@ import (
 	"github.com/spikeekips/mitum/util/encoder"
 	"github.com/spikeekips/mitum/util/hint"
 	"go.mongodb.org/mongo-driver/bson"
-	"go.mongodb.org/mongo-driver/bson/bsontype"
-	"go.mongodb.org/mongo-driver/x/bsonx/bsoncore"
 )
 
 var (
@@ -60,6 +58,10 @@ func (*Encoder) Unmarshal(b []byte, v interface{}) error {
 }
 
 func (enc *Encoder) Decode(b []byte) (hint.Hinter, error) {
+	if isNil(b) {
+		return nil, nil
+	}
+
 	ht, ub, err := enc.guessHint(b)
 	if err != nil {
 		return nil, err
@@ -76,13 +78,18 @@ func (enc *Encoder) Decode(b []byte) (hint.Hinter, error) {
 }
 
 func (enc *Encoder) DecodeWithHint(b []byte, ht hint.Hint) (hint.Hinter, error) {
+	if isNil(b) {
+		return nil, nil
+	}
+
 	return enc.decode(b, ht)
 }
 
 func (enc *Encoder) DecodeSlice(b []byte) ([]hint.Hinter, error) {
-	if len(b) < 1 {
+	if isNil(b) {
 		return nil, nil
 	}
+
 	raw := bson.Raw(b)
 
 	r, err := raw.Values()
@@ -104,6 +111,10 @@ func (enc *Encoder) DecodeSlice(b []byte) ([]hint.Hinter, error) {
 }
 
 func (enc *Encoder) DecodeMap(b []byte) (map[string]hint.Hinter, error) {
+	if isNil(b) {
+		return nil, nil
+	}
+
 	var r map[string]bson.Raw
 	if err := bson.Unmarshal(b, &r); err != nil {
 		return nil, errors.Wrap(err, "failed to decode slice")
@@ -143,37 +154,13 @@ func (enc *Encoder) decode(b []byte, ht hint.Hint) (hint.Hinter, error) {
 	return hinter, nil
 }
 
-func (enc *Encoder) guessHint(b []byte) (hint.Hint, []byte, error) {
-	ht, ub, err := enc.extractHintFromString(b)
-	if err == nil {
-		return ht, ub, nil
-	} else if !errors.Is(err, util.NotFoundError) {
-		return hint.Hint{}, nil, err
-	}
-
+func (*Encoder) guessHint(b []byte) (hint.Hint, []byte, error) {
 	var head HintedHead
 	if err := bson.Unmarshal(b, &head); err != nil {
 		return hint.Hint{}, nil, err
 	}
 
 	return head.H, b, nil
-}
-
-func (*Encoder) extractHintFromString(b []byte) (hint.Hint, []byte, error) {
-	var ht hint.Hint
-
-	r := bson.RawValue{Type: bsontype.String, Value: b}
-	s, _, ok := bsoncore.ReadString(r.Value)
-	if !ok {
-		return ht, nil, util.NotFoundError.Errorf("not string type")
-	}
-
-	hs, err := hint.ParseHintedString(s)
-	if err != nil {
-		return hs.Hint(), nil, err
-	}
-
-	return hs.Hint(), []byte(hs.Body()), nil
 }
 
 func (enc *Encoder) findUnpacker(ht hint.Hint) (encoder.Unpacker, error) {
@@ -267,4 +254,8 @@ func (enc *Encoder) analyzeUnpack(ht hint.Hinter) encoder.Unpacker {
 
 type Unpackable interface {
 	UnpackBSON([]byte, *Encoder) error
+}
+
+func isNil(b []byte) bool {
+	return len(b) < 1
 }

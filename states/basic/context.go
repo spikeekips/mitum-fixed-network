@@ -7,6 +7,7 @@ import (
 	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/util"
 	jsonenc "github.com/spikeekips/mitum/util/encoder/json"
+	"github.com/spikeekips/mitum/util/isvalid"
 )
 
 var SyncByVoteproofError = util.NewError("sync by voteproof")
@@ -31,11 +32,11 @@ func NewStateSwitchContext(from, to base.State) StateSwitchContext {
 func (sctx StateSwitchContext) IsValid([]byte) error {
 	if !sctx.ae {
 		if err := sctx.from.IsValid(nil); err != nil {
-			return fmt.Errorf("invalid from state: %w", err)
+			return err
 		}
 	}
 
-	return sctx.to.IsValid(nil)
+	return isvalid.Check(nil, false, sctx.to)
 }
 
 func (sctx StateSwitchContext) Voteproof() base.Voteproof {

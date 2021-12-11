@@ -1,7 +1,6 @@
 package base
 
 import (
-	"github.com/pkg/errors"
 	"github.com/spikeekips/mitum/util/encoder"
 	"github.com/spikeekips/mitum/util/hint"
 )
@@ -12,11 +11,9 @@ type AddressDecoder struct {
 }
 
 func (ad *AddressDecoder) Encode(enc encoder.Encoder) (Address, error) {
-	if len(ad.b) < 1 {
-		return nil, nil
-	}
-
-	return decodeAddress(ad.b, ad.ty, enc)
+	var i Address
+	err := encoder.DecodeWithHint(ad.b, enc, hint.NewHint(ad.ty, ""), &i)
+	return i, err
 }
 
 // DecodeAddressFromString parses and decodes Address from string.
@@ -30,19 +27,7 @@ func DecodeAddressFromString(s string, enc encoder.Encoder) (Address, error) {
 		return nil, err
 	}
 
-	return decodeAddress([]byte(p), ty, enc)
-}
-
-func decodeAddress(b []byte, ty hint.Type, enc encoder.Encoder) (Address, error) {
-	hinter, err := enc.DecodeWithHint(b, hint.NewHint(ty, ""))
-	if err != nil {
-		return nil, err
-	}
-
-	k, ok := hinter.(Address)
-	if !ok {
-		return nil, errors.Errorf("not Address: %T", hinter)
-	}
-
-	return k, nil
+	var i Address
+	err = encoder.DecodeWithHint([]byte(p), enc, hint.NewHint(ty, ""), &i)
+	return i, err
 }

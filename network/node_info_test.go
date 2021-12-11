@@ -232,12 +232,10 @@ func (t *testNodeInfo) TestJSON() {
 	b, err := jsonenc.Marshal(ni)
 	t.NoError(err)
 
-	i, err := DecodeNodeInfo(b, t.encJSON)
-	t.NoError(err)
-	nni, ok := i.(NodeInfoV0)
-	t.True(ok)
+	var uni NodeInfoV0
+	t.NoError(encoder.Decode(b, t.encJSON, &uni))
 
-	CompareNodeInfo(t.T(), ni, nni)
+	CompareNodeInfo(t.T(), ni, uni)
 }
 
 func (t *testNodeInfo) TestBSON() {
@@ -262,12 +260,10 @@ func (t *testNodeInfo) TestBSON() {
 	b, err := bsonenc.Marshal(ni)
 	t.NoError(err)
 
-	i, err := DecodeNodeInfo(b, t.encBSON)
-	t.NoError(err)
-	nni, ok := i.(NodeInfoV0)
-	t.True(ok)
+	var uni NodeInfoV0
+	t.NoError(encoder.Decode(b, t.encBSON, &uni))
 
-	CompareNodeInfo(t.T(), ni, nni)
+	CompareNodeInfo(t.T(), ni, uni)
 }
 
 func (t *testNodeInfo) TestSuffrage() {

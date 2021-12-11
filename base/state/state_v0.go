@@ -8,6 +8,7 @@ import (
 	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/util"
 	"github.com/spikeekips/mitum/util/hint"
+	"github.com/spikeekips/mitum/util/isvalid"
 	"github.com/spikeekips/mitum/util/valuehash"
 )
 
@@ -44,7 +45,7 @@ func (st StateV0) IsValid([]byte) error {
 	}
 
 	if st.h != nil && st.h.IsEmpty() {
-		return errors.Errorf("empty hash found")
+		return isvalid.InvalidError.Errorf("empty hash found")
 	}
 
 	if err := st.value.IsValid(nil); err != nil {
@@ -63,13 +64,12 @@ func (st StateV0) IsValid([]byte) error {
 		}
 	}
 
+	vs := make([]isvalid.IsValider, len(st.operations))
 	for i := range st.operations {
-		if err := st.operations[i].IsValid(nil); err != nil {
-			return err
-		}
+		vs[i] = st.operations[i]
 	}
 
-	return nil
+	return isvalid.Check(nil, false, vs...)
 }
 
 func (StateV0) Hint() hint.Hint {

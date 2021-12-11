@@ -4,6 +4,7 @@ import (
 	"bytes"
 
 	"github.com/btcsuite/btcutil/base58"
+	"github.com/spikeekips/mitum/util/isvalid"
 )
 
 const maxBytesHashSize = 100
@@ -28,9 +29,10 @@ func (hs Bytes) IsEmpty() bool {
 
 func (hs Bytes) IsValid([]byte) error {
 	if hs.IsEmpty() {
-		return EmptyHashError.Call()
+		return isvalid.InvalidError.Wrap(EmptyHashError)
 	} else if len(hs) > maxBytesHashSize {
-		return InvalidHashError.Errorf("over max: %d > %d", len(hs), maxBytesHashSize)
+		return isvalid.InvalidError.Wrap(InvalidHashError.Errorf(
+			"over max: %d > %d", len(hs), maxBytesHashSize))
 	}
 
 	return nil

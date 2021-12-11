@@ -3,6 +3,7 @@ package valuehash
 import (
 	"bytes"
 
+	"github.com/spikeekips/mitum/util/isvalid"
 	"github.com/zeebo/blake3"
 )
 
@@ -37,7 +38,7 @@ func (hs Blake3256) IsEmpty() bool {
 
 func (hs Blake3256) IsValid([]byte) error {
 	if hs.IsEmpty() {
-		return EmptyHashError.Call()
+		return isvalid.InvalidError.Wrap(EmptyHashError.Call())
 	}
 
 	return nil

@@ -10,35 +10,21 @@ import (
 func (bc *ConsensusInfoV0) unpack(enc encoder.Encoder, biv, bav, bsi, bpr []byte) error {
 	var err error
 
-	var iv, av base.Voteproof
-	if biv != nil {
-		if iv, err = base.DecodeVoteproof(biv, enc); err != nil {
-			return err
-		}
-	}
-	if bav != nil {
-		if av, err = base.DecodeVoteproof(bav, enc); err != nil {
-			return err
-		}
-	}
-
-	si, err := DecodeSuffrageInfo(bsi, enc)
-	if err != nil {
+	if err = encoder.Decode(biv, enc, &bc.initVoteproof); err != nil {
 		return err
 	}
 
-	if bpr != nil {
-		fact, err := base.DecodeSignedBallotFact(bpr, enc)
-		if err != nil {
-			return isvalid.InvalidError.Errorf("failed to decode consensus info: %w", err)
-		}
-
-		bc.sfs = fact
+	if err = encoder.Decode(bav, enc, &bc.acceptVoteproof); err != nil {
+		return err
 	}
 
-	bc.initVoteproof = iv
-	bc.acceptVoteproof = av
-	bc.suffrageInfo = si
+	if err := encoder.Decode(bsi, enc, &bc.suffrageInfo); err != nil {
+		return err
+	}
+
+	if err := encoder.Decode(bpr, enc, &bc.sfs); err != nil {
+		return isvalid.InvalidError.Errorf("failed to decode consensus info: %w", err)
+	}
 
 	return nil
 }

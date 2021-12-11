@@ -51,7 +51,7 @@ func (bm ManifestV0) GenerateHash() valuehash.Hash {
 
 func (bm ManifestV0) IsValid(networkID []byte) error {
 	if bm.confirmedAt.IsZero() {
-		return errors.Errorf("empty confirmedAt")
+		return isvalid.InvalidError.Errorf("empty confirmedAt")
 	}
 
 	if err := isvalid.Check(networkID, false,
@@ -73,7 +73,7 @@ func (bm ManifestV0) IsValid(networkID []byte) error {
 	}
 
 	if !bm.h.Equal(bm.GenerateHash()) {
-		return errors.Errorf("incorrect manifest hash")
+		return isvalid.InvalidError.Errorf("incorrect manifest hash")
 	}
 
 	return nil

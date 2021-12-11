@@ -21,7 +21,7 @@ func (t *testStateSwitchContext) TestUnknownState() {
 		sctx := NewStateSwitchContext(base.StateEmpty, base.StateJoining)
 		err := sctx.IsValid(nil)
 		t.NotNil(err)
-		t.Contains(err.Error(), "invalid from state")
+		t.Contains(err.Error(), "invalid state found")
 	})
 
 	t.Run("unknown to state", func() {

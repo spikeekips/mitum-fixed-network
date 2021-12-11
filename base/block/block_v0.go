@@ -3,7 +3,6 @@ package block
 import (
 	"time"
 
-	"github.com/pkg/errors"
 	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/base/operation"
 	"github.com/spikeekips/mitum/base/state"
@@ -96,26 +95,26 @@ func (bm BlockV0) IsValid(networkID []byte) error {
 
 	if bm.operationsHash != nil && !bm.operationsHash.IsEmpty() {
 		if bm.operations == nil || bm.operationsTree.Len() < 1 {
-			return errors.Errorf("Operations should not be empty")
+			return isvalid.InvalidError.Errorf("Operations should not be empty")
 		}
 
 		if !bm.operationsHash.Equal(valuehash.NewBytes(bm.operationsTree.Root())) {
-			return errors.Errorf("Block.Opertions() hash does not match with it's Root()")
+			return isvalid.InvalidError.Errorf("Block.Opertions() hash does not match with it's Root()")
 		}
 	}
 
 	if bm.statesHash != nil && !bm.statesHash.IsEmpty() {
 		if bm.states == nil || bm.statesTree.Len() < 1 {
-			return errors.Errorf("States should not be empty")
+			return isvalid.InvalidError.Errorf("States should not be empty")
 		}
 
 		if !bm.statesHash.Equal(valuehash.NewBytes(bm.statesTree.Root())) {
-			return errors.Errorf("Block.States() hash does not match with it's Root()")
+			return isvalid.InvalidError.Errorf("Block.States() hash does not match with it's Root()")
 		}
 	}
 
 	if bm.proposal != nil && bm.ci.Proposal() != nil && !bm.proposal.Equal(bm.ci.Proposal().Fact().Hash()) {
-		return errors.Errorf("proposal does not match with consensus info")
+		return isvalid.InvalidError.Errorf("proposal does not match with consensus info")
 	}
 
 	return nil

@@ -171,11 +171,12 @@ func (sl BaseSeal) isValidHasFact() error {
 	case base.StageACCEPT:
 		expected = base.ACCEPTBallotType
 	default:
-		return errors.Errorf("invalid ballot stage found, %q", sl.sfs.Fact().Stage())
+		return isvalid.InvalidError.Errorf("invalid ballot stage found, %q", sl.sfs.Fact().Stage())
 	}
 
 	if sl.Hint().Type() != expected {
-		return errors.Errorf("ballot has weird fact; %q in %q", sl.sfs.Fact().Hint().Type(), sl.Hint().Type())
+		return isvalid.InvalidError.Errorf(
+			"ballot has weird fact; %q in %q", sl.sfs.Fact().Hint().Type(), sl.Hint().Type())
 	}
 
 	return nil
@@ -187,7 +188,8 @@ func (sl BaseSeal) isValidSignedAt() error {
 	}
 
 	if sl.SignedAt().Before(sl.sfs.FactSign().SignedAt()) {
-		return errors.Errorf("ballot is signed at before fact; %q < %q", sl.SignedAt(), sl.sfs.FactSign().SignedAt())
+		return isvalid.InvalidError.Errorf(
+			"ballot is signed at before fact; %q < %q", sl.SignedAt(), sl.sfs.FactSign().SignedAt())
 	}
 
 	return nil

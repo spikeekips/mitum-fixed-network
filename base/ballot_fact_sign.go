@@ -102,14 +102,18 @@ func IsValidBallotFactSign(fact BallotFact, fs BallotFactSign, b []byte) error {
 		}
 	}
 
-	return fs.Signer().Verify(
+	if err := fs.Signer().Verify(
 		util.ConcatBytesSlice(
 			fact.Hash().Bytes(),
 			localtime.NewTime(fs.SignedAt()).Bytes(),
 			b,
 		),
 		fs.Signature(),
-	)
+	); err != nil {
+		return isvalid.InvalidError.Errorf("invalid ballot fact sign: %w", err)
+	}
+
+	return nil
 }
 
 type BaseSignedBallotFact struct {

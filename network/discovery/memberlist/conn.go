@@ -12,6 +12,7 @@ import (
 	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/network"
 	"github.com/spikeekips/mitum/util"
+	"github.com/spikeekips/mitum/util/isvalid"
 	"github.com/spikeekips/mitum/util/localtime"
 )
 
@@ -153,7 +154,7 @@ func (ci ConnInfo) IsValid([]byte) error {
 	}
 
 	if len(strings.TrimSpace(ci.Address)) < 1 {
-		return errors.Errorf("empty address")
+		return isvalid.InvalidError.Errorf("empty address")
 	}
 
 	return isValidPublishURL(ci.URL())

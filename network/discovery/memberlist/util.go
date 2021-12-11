@@ -11,6 +11,7 @@ import (
 	"github.com/pkg/errors"
 	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/network"
+	"github.com/spikeekips/mitum/util/isvalid"
 	"github.com/spikeekips/mitum/util/valuehash"
 )
 
@@ -66,11 +67,11 @@ func publishToAddress(u *url.URL) (*url.URL, string, error) {
 
 func isValidPublishURL(u *url.URL) error {
 	if err := network.IsValidURL(u); err != nil {
-		return errors.Wrap(err, "invalid publish url")
+		return isvalid.InvalidError.Errorf("invalid publish url: %w", err)
 	}
 
 	if u.Port() == "" {
-		return errors.Errorf("empty publish url; empty port, %q", u.String())
+		return isvalid.InvalidError.Errorf("empty publish url; empty port, %q", u.String())
 	}
 
 	return nil

@@ -109,8 +109,8 @@ func (t *testACCEPTEncode) TestEncode() {
 	b, err := t.enc.Marshal(sl)
 	t.NoError(err)
 
-	usl, err := base.DecodeBallot(b, t.enc)
-	t.NoError(err)
+	var usl base.Ballot
+	t.NoError(encoder.Decode(b, t.enc, &usl))
 	t.NotNil(usl)
 
 	t.compareBallot(sl, usl)

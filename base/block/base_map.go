@@ -104,12 +104,12 @@ func (bd BaseBlockDataMap) IsValid([]byte) error {
 		}
 
 		if *isLocal != i {
-			return errors.Errorf("all the items should be local or non-local")
+			return isvalid.InvalidError.Errorf("all the items should be local or non-local")
 		}
 	}
 
 	if err := bd.IsReadyToHash(); err != nil {
-		return err
+		return isvalid.InvalidError.Wrap(err)
 	}
 
 	if !bd.h.Equal(bd.GenerateHash()) {

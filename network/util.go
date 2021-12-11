@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/pkg/errors"
+	"github.com/spikeekips/mitum/util/isvalid"
 )
 
 func CheckBindIsOpen(network, bind string, timeout time.Duration) error {
@@ -107,17 +108,17 @@ func NormalizeURL(u *url.URL) *url.URL {
 
 func IsValidURL(u *url.URL) error {
 	if u == nil {
-		return errors.Errorf("empty url")
+		return isvalid.InvalidError.Errorf("empty url")
 	}
 	if u.Scheme == "" {
-		return errors.Errorf("empty scheme, %q", u.String())
+		return isvalid.InvalidError.Errorf("empty scheme, %q", u.String())
 	}
 
 	switch {
 	case u.Host == "":
-		return errors.Errorf("empty host, %q", u.String())
+		return isvalid.InvalidError.Errorf("empty host, %q", u.String())
 	case strings.HasPrefix(u.Host, ":") && u.Host == fmt.Sprintf(":%s", u.Port()):
-		return errors.Errorf("empty host, %q", u.String())
+		return isvalid.InvalidError.Errorf("empty host, %q", u.String())
 	}
 
 	return nil

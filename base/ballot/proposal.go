@@ -1,10 +1,8 @@
 package ballot
 
 import (
-	"fmt"
 	"time"
 
-	"github.com/pkg/errors"
 	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/base/key"
 	"github.com/spikeekips/mitum/base/seal"
@@ -65,7 +63,7 @@ func (fact ProposalFact) ProposedAt() time.Time {
 
 func (fact ProposalFact) IsValid([]byte) error {
 	if fact.proposedAt.IsZero() {
-		return errors.Errorf("empty proposed at")
+		return isvalid.InvalidError.Errorf("empty proposed at")
 	}
 
 	if err := isValidFact(fact); err != nil {
@@ -137,15 +135,15 @@ func (sl Proposal) Fact() base.ProposalFact {
 
 func (sl Proposal) IsValid(networkID []byte) error {
 	if err := sl.BaseSeal.IsValid(networkID); err != nil {
-		return fmt.Errorf("invalid proposal: %w", err)
+		return isvalid.InvalidError.Errorf("invalid proposal: %w", err)
 	}
 
 	if _, ok := sl.Fact().(ProposalFact); !ok {
-		return errors.Errorf("invalid fact of proposal; %T", sl.Fact())
+		return isvalid.InvalidError.Errorf("invalid fact of proposal; %T", sl.Fact())
 	}
 
 	if sl.FactSign().SignedAt().Before(sl.Fact().(ProposalFact).proposedAt) {
-		return errors.Errorf("proposal is signed at before proposed at; %q < %q",
+		return isvalid.InvalidError.Errorf("proposal is signed at before proposed at; %q < %q",
 			sl.FactSign().SignedAt(), sl.Fact().(ProposalFact).proposedAt)
 	}
 

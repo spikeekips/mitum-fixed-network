@@ -5,29 +5,18 @@ import (
 	"github.com/spikeekips/mitum/base/state"
 	"github.com/spikeekips/mitum/util"
 	"github.com/spikeekips/mitum/util/encoder"
-	"github.com/spikeekips/mitum/util/tree"
 )
 
 func (bm *BlockV0) unpack(enc encoder.Encoder, bmf, bco, bot, bops, bstt, bsts []byte) error {
-	if m, err := DecodeManifest(bmf, enc); err != nil {
+	if err := encoder.Decode(bmf, enc, &bm.ManifestV0); err != nil {
 		return err
-	} else if mv, ok := m.(ManifestV0); !ok {
-		return util.WrongTypeError.Errorf("not ManifestV0: type=%T", m)
-	} else {
-		bm.ManifestV0 = mv
 	}
 
-	if m, err := DecodeConsensusInfo(bco, enc); err != nil {
+	if err := encoder.Decode(bco, enc, &bm.ci); err != nil {
 		return err
-	} else if mv, ok := m.(ConsensusInfoV0); !ok {
-		return util.WrongTypeError.Errorf("not ConsensusInfoV0: type=%T", m)
-	} else {
-		bm.ci = mv
 	}
 
-	var err error
-	bm.operationsTree, err = tree.DecodeFixedTree(bot, enc)
-	if err != nil {
+	if err := encoder.Decode(bot, enc, &bm.operationsTree); err != nil {
 		return err
 	}
 
@@ -46,11 +35,9 @@ func (bm *BlockV0) unpack(enc encoder.Encoder, bmf, bco, bot, bops, bstt, bsts [
 	}
 	bm.operations = ops
 
-	tr, err := tree.DecodeFixedTree(bstt, enc)
-	if err != nil {
+	if err = encoder.Decode(bstt, enc, &bm.statesTree); err != nil {
 		return err
 	}
-	bm.statesTree = tr
 
 	hsts, err := enc.DecodeSlice(bsts)
 	if err != nil {

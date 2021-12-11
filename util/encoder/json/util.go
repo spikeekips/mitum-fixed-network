@@ -6,7 +6,11 @@ import (
 	"github.com/spikeekips/mitum/util"
 )
 
-const NULL = "null"
+const (
+	NULL = "null"
+)
+
+var nullbytes = []byte("null")
 
 func Marshal(v interface{}) ([]byte, error) {
 	return util.JSON.Marshal(v)

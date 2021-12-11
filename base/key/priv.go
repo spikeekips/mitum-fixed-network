@@ -125,13 +125,13 @@ func (k BasePrivatekey) Bytes() []byte {
 func (k BasePrivatekey) IsValid([]byte) error {
 	switch {
 	case k.wif == nil:
-		return InvalidKeyError.Errorf("empty btc wif")
+		return isvalid.InvalidError.Wrap(InvalidKeyError.Errorf("empty btc wif"))
 	case k.wif.PrivKey == nil:
-		return InvalidKeyError.Errorf("empty btc wif.PrivKey")
+		return isvalid.InvalidError.Wrap(InvalidKeyError.Errorf("empty btc wif.PrivKey"))
 	case len(k.s) < 1:
-		return InvalidKeyError.Errorf("empty privatekey string")
+		return isvalid.InvalidError.Wrap(InvalidKeyError.Errorf("empty privatekey string"))
 	case len(k.b) < 1:
-		return InvalidKeyError.Errorf("empty privatekey []byte")
+		return isvalid.InvalidError.Wrap(InvalidKeyError.Errorf("empty privatekey []byte"))
 	}
 
 	return nil

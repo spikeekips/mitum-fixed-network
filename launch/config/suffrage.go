@@ -1,7 +1,6 @@
 package config
 
 import (
-	"github.com/pkg/errors"
 	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/util/isvalid"
 )
@@ -59,11 +58,11 @@ func (fd FixedSuffrage) NumberOfActing() uint {
 func (fd FixedSuffrage) IsValid([]byte) error {
 	switch n := uint(len(fd.nodes)); {
 	case n < 1:
-		return errors.Errorf("empty nodes in fixed-suffrage")
+		return isvalid.InvalidError.Errorf("empty nodes in fixed-suffrage")
 	case fd.numberOfActing < 1:
-		return errors.Errorf("number-of-acting should be over zero")
+		return isvalid.InvalidError.Errorf("number-of-acting should be over zero")
 	case fd.numberOfActing > n:
-		return errors.Errorf("invalid number-of-acting in fixed-suffrage; over nodes")
+		return isvalid.InvalidError.Errorf("invalid number-of-acting in fixed-suffrage; over nodes")
 	}
 
 	return nil
@@ -94,11 +93,11 @@ func (fd RoundrobinSuffrage) NumberOfActing() uint {
 func (fd RoundrobinSuffrage) IsValid([]byte) error {
 	switch n := uint(len(fd.nodes)); {
 	case n < 1:
-		return errors.Errorf("empty nodes in roundrobin-suffrage")
+		return isvalid.InvalidError.Errorf("empty nodes in roundrobin-suffrage")
 	case fd.numberOfActing < 1:
-		return errors.Errorf("number-of-acting should be over zero")
+		return isvalid.InvalidError.Errorf("number-of-acting should be over zero")
 	case fd.numberOfActing > n:
-		return errors.Errorf("invalid number-of-acting in roundrobin-suffrage; over nodes")
+		return isvalid.InvalidError.Errorf("invalid number-of-acting in roundrobin-suffrage; over nodes")
 	}
 
 	return nil

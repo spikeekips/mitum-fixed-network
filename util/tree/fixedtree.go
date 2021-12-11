@@ -67,10 +67,10 @@ func (no BaseFixedTreeNode) IsValid([]byte) error {
 	}
 
 	if len(no.key) < 1 {
-		return EmptyKeyError
+		return isvalid.InvalidError.Wrap(EmptyKeyError)
 	}
 	if len(no.hash) < 1 {
-		return EmptyHashError.Call()
+		return isvalid.InvalidError.Wrap(EmptyHashError)
 	}
 
 	return nil
@@ -136,10 +136,12 @@ func (tr FixedTree) IsValid([]byte) error {
 
 	for i := range tr.nodes {
 		n := tr.nodes[i]
-		if err := n.IsValid(nil); err != nil {
+		if err := isvalid.Check(nil, false, n); err != nil {
 			return err
-		} else if int(n.Index()) != i {
-			return InvalidNodeError.Errorf("wrong index; %d != %d", n.Index(), i)
+		}
+
+		if int(n.Index()) != i {
+			return isvalid.InvalidError.Wrap(InvalidNodeError.Errorf("wrong index; %d != %d", n.Index(), i))
 		}
 	}
 
@@ -148,7 +150,7 @@ func (tr FixedTree) IsValid([]byte) error {
 		if h, err := tr.generateNodeHash(n); err != nil {
 			return err
 		} else if !bytes.Equal(n.Hash(), h) {
-			return InvalidNodeError.Errorf("invalid node hash")
+			return isvalid.InvalidError.Wrap(InvalidNodeError.Errorf("invalid node hash"))
 		}
 	}
 

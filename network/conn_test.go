@@ -138,15 +138,12 @@ func (t *testNilConnInfoEncode) TestMarshal() {
 	t.NoError(err)
 	t.NotNil(b)
 
-	hinter, err := DecodeConnInfo(b, t.enc)
-	t.NoError(err)
-
-	uconn, ok := hinter.(NilConnInfo)
-	t.True(ok)
+	var uconn ConnInfo
+	t.NoError(encoder.Decode(b, t.enc, &uconn))
 
 	t.True(conn.Hint().Equal(uconn.Hint()))
 	t.False(conn.Equal(nil))
-	t.True(conn.Equal(hinter))
+	t.True(conn.Equal(uconn))
 }
 
 func TestNilConnInfoEncodeJSON(t *testing.T) {
@@ -183,15 +180,12 @@ func (t *testHTTPConnInfoEncode) TestMarshal() {
 	t.NoError(err)
 	t.NotNil(b)
 
-	hinter, err := DecodeConnInfo(b, t.enc)
-	t.NoError(err)
-
-	uconn, ok := hinter.(HTTPConnInfo)
-	t.True(ok)
+	var uconn ConnInfo
+	t.NoError(encoder.Decode(b, t.enc, &uconn))
 
 	t.True(conn.Hint().Equal(uconn.Hint()))
 	t.False(conn.Equal(nil))
-	t.True(conn.Equal(hinter))
+	t.True(conn.Equal(uconn))
 }
 
 func TestHTTPConnInfoEncodeJSON(t *testing.T) {

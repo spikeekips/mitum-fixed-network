@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/pkg/errors"
 	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/base/key"
 	"github.com/spikeekips/mitum/base/node"
@@ -106,7 +105,7 @@ func (sl HandoverSealV0) ConnInfo() ConnInfo {
 
 func IsValidHandoverSeal(local *node.Local, sl HandoverSeal, networkID base.NetworkID) error {
 	if err := sl.IsValid(networkID); err != nil {
-		return isvalid.InvalidError.Wrap(err)
+		return err
 	}
 
 	if !sl.Address().Equal(local.Address()) {
@@ -118,7 +117,7 @@ func IsValidHandoverSeal(local *node.Local, sl HandoverSeal, networkID base.Netw
 	}
 
 	if !localtime.WithinNow(sl.SignedAt(), time.Second*5) {
-		return errors.Errorf("too old or new handover seal")
+		return isvalid.InvalidError.Errorf("too old or new handover seal")
 	}
 
 	return nil

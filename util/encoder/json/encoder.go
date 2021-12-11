@@ -59,6 +59,10 @@ func (*Encoder) Unmarshal(b []byte, v interface{}) error {
 }
 
 func (enc *Encoder) Decode(b []byte) (hint.Hinter, error) {
+	if isNil(b) {
+		return nil, nil
+	}
+
 	ht, ub, err := enc.guessHint(b)
 	if err != nil {
 		return nil, err
@@ -75,11 +79,15 @@ func (enc *Encoder) Decode(b []byte) (hint.Hinter, error) {
 }
 
 func (enc *Encoder) DecodeWithHint(b []byte, ht hint.Hint) (hint.Hinter, error) {
+	if isNil(b) {
+		return nil, nil
+	}
+
 	return enc.decode(b, ht)
 }
 
 func (enc *Encoder) DecodeSlice(b []byte) ([]hint.Hinter, error) {
-	if len(b) < 1 {
+	if isNil(b) {
 		return nil, nil
 	}
 
@@ -102,6 +110,10 @@ func (enc *Encoder) DecodeSlice(b []byte) ([]hint.Hinter, error) {
 }
 
 func (enc *Encoder) DecodeMap(b []byte) (map[string]hint.Hinter, error) {
+	if isNil(b) {
+		return nil, nil
+	}
+
 	var r map[string]json.RawMessage
 	if err := util.JSON.Unmarshal(b, &r); err != nil {
 		return nil, errors.Wrap(err, "failed to decode slice")
@@ -146,8 +158,6 @@ func (enc *Encoder) guessHint(b []byte) (hint.Hint, []byte, error) {
 	switch i := bytes.TrimSpace(b); {
 	case len(i) < 1:
 		return ht, nil, nil
-	case i[0] == byte('"'):
-		return enc.extractHintFromString(b)
 	default:
 		return enc.extractHintFromObject(b)
 	}
@@ -162,24 +172,6 @@ func (*Encoder) extractHintFromObject(b []byte) (hint.Hint, []byte, error) {
 	}
 
 	return head.H, b, nil
-}
-
-func (*Encoder) extractHintFromString(b []byte) (hint.Hint, []byte, error) {
-	var ht hint.Hint
-
-	var s string
-	if err := util.JSON.Unmarshal(b, &s); err != nil {
-		return ht, nil, err
-	} else if len(s) < 1 {
-		return ht, nil, nil
-	}
-
-	hs, err := hint.ParseHintedString(s)
-	if err != nil {
-		return ht, nil, err
-	}
-
-	return hs.Hint(), []byte(hs.Body()), nil
 }
 
 func (enc *Encoder) findUnpacker(ht hint.Hint) (encoder.Unpacker, error) {
@@ -273,4 +265,8 @@ func (enc *Encoder) analyzeUnpack(ht hint.Hinter) encoder.Unpacker {
 
 type Unpackable interface {
 	UnpackJSON([]byte, *Encoder) error
+}
+
+func isNil(b []byte) bool {
+	return len(b) < 1 || bytes.Equal(b, nullbytes)
 }

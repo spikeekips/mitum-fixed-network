@@ -249,8 +249,8 @@ func (sv *Server) handleNewSeal(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	sl, err := seal.DecodeSeal(body.Bytes(), enc)
-	if err != nil {
+	var sl seal.Seal
+	if err := encoder.Decode(body.Bytes(), enc, &sl); err != nil {
 		sv.Log().Error().Err(err).Stringer("body", body).Msg("invalid seal found")
 
 		network.HTTPError(w, http.StatusBadRequest)
@@ -541,8 +541,8 @@ func (sv *Server) loadHandoverSeal(w http.ResponseWriter, r *http.Request) (netw
 		return nil, false
 	}
 
-	sl, err := network.DecodeHandoverSeal(body.Bytes(), enc)
-	if err != nil {
+	var sl network.HandoverSeal
+	if err := encoder.Decode(body.Bytes(), enc, &sl); err != nil {
 		sv.Log().Error().Err(err).Stringer("body", body).Msg("invalid handover seal found")
 
 		network.HTTPError(w, http.StatusBadRequest)

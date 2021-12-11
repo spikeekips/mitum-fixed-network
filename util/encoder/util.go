@@ -3,6 +3,7 @@ package encoder
 import (
 	"reflect"
 
+	"github.com/spikeekips/mitum/util"
 	"github.com/spikeekips/mitum/util/hint"
 )
 
@@ -88,4 +89,34 @@ func AnalyzeSetHinter(up Unpacker) Unpacker {
 	}
 
 	return up
+}
+
+func Decode(b []byte, enc Encoder, target interface{}) error {
+	if len(b) < 1 {
+		return nil
+	}
+
+	switch i, err := enc.Decode(b); {
+	case err != nil:
+		return err
+	case i == nil:
+		return nil
+	default:
+		return util.InterfaceSetValue(i, target)
+	}
+}
+
+func DecodeWithHint(b []byte, enc Encoder, ht hint.Hint, target interface{}) error {
+	if len(b) < 1 {
+		return nil
+	}
+
+	switch i, err := enc.DecodeWithHint(b, ht); {
+	case err != nil:
+		return err
+	case i == nil:
+		return nil
+	default:
+		return util.InterfaceSetValue(i, target)
+	}
 }

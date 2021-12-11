@@ -93,7 +93,7 @@ func (nv NumberValue) IsValid([]byte) error {
 		reflect.Float32,
 		reflect.Float64:
 	default:
-		return errors.Errorf("invalid number type: %v", nv.t)
+		return isvalid.InvalidError.Errorf("invalid number type: %v", nv.t)
 	}
 
 	if err := isvalid.Check(nil, false, nv.BaseHinter, nv.h); err != nil {
@@ -101,7 +101,7 @@ func (nv NumberValue) IsValid([]byte) error {
 	}
 
 	if nv.b == nil || len(nv.b) < 1 {
-		return errors.Errorf("empty bytes for NumberValue")
+		return isvalid.InvalidError.Errorf("empty bytes for NumberValue")
 	}
 
 	return nil

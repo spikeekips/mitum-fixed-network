@@ -140,15 +140,7 @@ func DecodePublickeyFromString(s string, enc encoder.Encoder) (Publickey, error)
 }
 
 func decodeKey(b []byte, ty hint.Type, enc encoder.Encoder) (Key, error) {
-	hinter, err := enc.DecodeWithHint(b, hint.NewHint(ty, ""))
-	if err != nil {
-		return nil, err
-	}
-
-	k, ok := hinter.(Key)
-	if !ok {
-		return nil, errors.Errorf("not Key: %T", hinter)
-	}
-
-	return k, nil
+	var k Key
+	err := encoder.DecodeWithHint(b, enc, hint.NewHint(ty, ""), &k)
+	return k, err
 }

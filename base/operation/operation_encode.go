@@ -1,7 +1,6 @@
 package operation
 
 import (
-	"github.com/pkg/errors"
 	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/util"
 	"github.com/spikeekips/mitum/util/encoder"
@@ -9,12 +8,8 @@ import (
 )
 
 func (bo *BaseOperation) unpack(enc encoder.Encoder, h valuehash.Hash, fc []byte, fs []byte) error {
-	if hinter, err := base.DecodeFact(fc, enc); err != nil {
+	if err := encoder.Decode(fc, enc, &bo.fact); err != nil {
 		return err
-	} else if f, ok := hinter.(OperationFact); !ok {
-		return errors.Errorf("not OperationFact, %T", hinter)
-	} else {
-		bo.fact = f
 	}
 
 	hfs, err := enc.DecodeSlice(fs)

@@ -51,10 +51,14 @@ func IsValidFactSign(fact Fact, fs FactSign, b []byte) error {
 		return isvalid.InvalidError.Errorf("FactSign has empty Signature()")
 	}
 
-	return fs.Signer().Verify(
+	if err := fs.Signer().Verify(
 		util.ConcatBytesSlice(fact.Hash().Bytes(), b),
 		fs.Signature(),
-	)
+	); err != nil {
+		return isvalid.InvalidError.Errorf("invalid fact sign signature: %w", err)
+	}
+
+	return nil
 }
 
 type BaseFactSign struct {

@@ -46,8 +46,7 @@ func (sv *Server) SetLogging(l *logging.Logging) *logging.Logging {
 	return sv.Logging.SetLogging(l)
 }
 
-func (*Server) SetHasSealHandler(network.HasSealHandler)   {}
-func (*Server) SetGetSealsHandler(network.GetSealsHandler) {}
+func (*Server) SetGetStagedOperationsHandler(network.GetStagedOperationsHandler) {}
 
 func (sv *Server) SetNewSealHandler(f network.NewSealHandler) {
 	sv.newSealHandler = f

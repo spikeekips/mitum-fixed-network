@@ -11,14 +11,13 @@ import (
 	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/base/ballot"
 	"github.com/spikeekips/mitum/base/block"
+	"github.com/spikeekips/mitum/base/operation"
 	"github.com/spikeekips/mitum/base/prprocessor"
-	"github.com/spikeekips/mitum/base/seal"
 	"github.com/spikeekips/mitum/storage"
 	"github.com/spikeekips/mitum/storage/blockdata"
 	"github.com/spikeekips/mitum/storage/blockdata/localfs"
 	"github.com/spikeekips/mitum/util"
 	"github.com/spikeekips/mitum/util/logging"
-	"github.com/spikeekips/mitum/util/valuehash"
 )
 
 type DummyBlocksV0Generator struct {
@@ -254,25 +253,25 @@ func (bg *DummyBlocksV0Generator) storeBlock(l *Local, blk block.Block) error {
 }
 
 func (bg *DummyBlocksV0Generator) syncSeals(from *Local) error {
-	var seals []seal.Seal
-	if err := from.Database().Seals(
-		func(_ valuehash.Hash, sl seal.Seal) (bool, error) {
-			seals = append(seals, sl)
+	var ops []operation.Operation
+	if err := from.Database().StagedOperations(
+		func(op operation.Operation) (bool, error) {
+			ops = append(ops, op)
+
 			return true, nil
 		},
-		true,
 		true,
 	); err != nil {
 		return err
 	}
 
-	if len(seals) > 0 {
+	if len(ops) > 0 {
 		for _, l := range bg.allNodes {
 			if l.Node().Address().Equal(from.Node().Address()) {
 				continue
 			}
 
-			if err := l.Database().NewSeals(seals); err != nil {
+			if err := l.Database().NewOperations(ops); err != nil {
 				return err
 			}
 		}

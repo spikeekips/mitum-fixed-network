@@ -20,17 +20,17 @@ func marshalZerologFact(fact base.BallotFact) *zerolog.Event {
 	case INITFact:
 		e = e.Stringer("previous_block", t.previousBlock)
 	case ProposalFact:
-		seals := t.Seals()
-		sls := make([]string, len(seals))
-		for i := range seals {
-			if seals[i] == nil {
+		ops := t.Operations()
+		sls := make([]string, len(ops))
+		for i := range ops {
+			if ops[i] == nil {
 				continue
 			}
 
-			sls[i] = seals[i].String()
+			sls[i] = ops[i].String()
 		}
 
-		e = e.Strs("seals", sls)
+		e = e.Strs("operations", sls)
 	case ACCEPTFact:
 		e = e.Stringer("proposal", t.Proposal()).
 			Stringer("new_block", t.NewBlock())

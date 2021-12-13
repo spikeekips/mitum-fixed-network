@@ -99,7 +99,7 @@ func (bm BlockV0) IsValid(networkID []byte) error {
 		}
 
 		if !bm.operationsHash.Equal(valuehash.NewBytes(bm.operationsTree.Root())) {
-			return isvalid.InvalidError.Errorf("Block.Opertions() hash does not match with it's Root()")
+			return isvalid.InvalidError.Errorf("Block.Operations() hash does not match with it's Root()")
 		}
 	}
 

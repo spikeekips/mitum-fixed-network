@@ -237,8 +237,8 @@ func (ss *States) NewSeal(sl seal.Seal) error {
 		err = ss.newSealProposal(t)
 	case base.Ballot:
 		err = ss.newSealBallot(t)
-	default:
-		err = ss.newSealOthers(sl)
+	case operation.Seal:
+		err = ss.newOperationSeal(t)
 	}
 
 	if err != nil {
@@ -636,21 +636,17 @@ func (ss *States) newSealBallot(blt base.Ballot) error {
 	}
 }
 
-func (ss *States) newSealOthers(sl seal.Seal) error {
+func (ss *States) newOperationSeal(sl operation.Seal) error {
 	// NOTE save seal
-	if err := ss.database.NewSeals([]seal.Seal{sl}); err != nil {
+	if err := ss.database.NewOperationSeals([]operation.Seal{sl}); err != nil {
 		if !errors.Is(err, util.DuplicatedError) {
 			return err
 		}
-
-		return err
 	}
 
 	// NOTE none-suffrage node will broadcast operation seal to suffrage nodes
 	if ss.isNoneSuffrageNode {
-		if i, ok := sl.(operation.Seal); ok {
-			go ss.broadcastOperationSealToSuffrageNodes(i)
-		}
+		go ss.broadcastOperationSealToSuffrageNodes(sl)
 	}
 
 	return nil

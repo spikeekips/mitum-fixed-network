@@ -27,43 +27,36 @@ func NewProposalMaker(
 	return &ProposalMaker{local: local, database: db, policy: policy}
 }
 
-func (pm *ProposalMaker) seals() ([]valuehash.Hash, error) {
+func (pm *ProposalMaker) operations() ([]valuehash.Hash, error) {
 	founds := map[ /* Operation.Fact().Hash() */ string]struct{}{}
 
 	maxOperations := pm.policy.MaxOperationsInProposal()
 
-	var facts int
-	var seals, uselessSeals []valuehash.Hash
-	if err := pm.database.StagedOperationSeals(
-		func(sl operation.Seal) (bool, error) {
-			var ofs []valuehash.Hash
-			for _, op := range sl.Operations() {
-				fh := op.Fact().Hash()
-				if _, found := founds[fh.String()]; found {
-					continue
-				} else if found, err := pm.database.HasOperationFact(fh); err != nil {
-					return false, err
-				} else if found {
-					continue
-				}
+	var ops, uselesses []valuehash.Hash
+	if err := pm.database.StagedOperations(
+		func(op operation.Operation) (bool, error) {
+			fh := op.Fact().Hash()
+			if _, found := founds[fh.String()]; found {
+				uselesses = append(uselesses, fh)
 
-				ofs = append(ofs, fh)
-				if uint(facts+len(ofs)) > maxOperations {
-					break
-				}
-
-				founds[fh.String()] = struct{}{}
+				return true, nil
 			}
 
-			switch {
-			case uint(facts+len(ofs)) > maxOperations:
+			switch found, err := pm.database.HasOperationFact(fh); {
+			case err != nil:
+				return false, err
+			case found:
+				uselesses = append(uselesses, fh)
+
+				return true, nil
+			}
+
+			ops = append(ops, fh)
+			if uint(len(ops)) == maxOperations {
 				return false, nil
-			case len(ofs) > 0:
-				facts += len(ofs)
-				seals = append(seals, sl.Hash())
-			default:
-				uselessSeals = append(uselessSeals, sl.Hash())
 			}
+
+			founds[fh.String()] = struct{}{}
 
 			return true, nil
 		},
@@ -72,13 +65,13 @@ func (pm *ProposalMaker) seals() ([]valuehash.Hash, error) {
 		return nil, err
 	}
 
-	if len(uselessSeals) > 0 {
-		if err := pm.database.UnstagedOperationSeals(uselessSeals); err != nil {
+	if len(uselesses) > 0 {
+		if err := pm.database.UnstagedOperations(uselesses); err != nil {
 			return nil, err
 		}
 	}
 
-	return seals, nil
+	return ops, nil
 }
 
 func (pm *ProposalMaker) Proposal(
@@ -95,7 +88,7 @@ func (pm *ProposalMaker) Proposal(
 		}
 	}
 
-	seals, err := pm.seals()
+	ops, err := pm.operations()
 	if err != nil {
 		return nil, err
 	}
@@ -105,7 +98,7 @@ func (pm *ProposalMaker) Proposal(
 			height,
 			round,
 			pm.local.Address(),
-			seals,
+			ops,
 		),
 		pm.local.Address(),
 		voteproof,

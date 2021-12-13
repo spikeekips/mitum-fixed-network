@@ -18,6 +18,7 @@ import (
 	"github.com/spikeekips/mitum/base/block"
 	"github.com/spikeekips/mitum/base/key"
 	"github.com/spikeekips/mitum/base/node"
+	"github.com/spikeekips/mitum/base/operation"
 	"github.com/spikeekips/mitum/base/seal"
 	"github.com/spikeekips/mitum/base/state"
 	"github.com/spikeekips/mitum/network"
@@ -61,6 +62,9 @@ func (t *testQuicServer) SetupTest() {
 	_ = t.encs.TestAddHinter(seal.DummySeal{})
 	_ = t.encs.TestAddHinter(state.BytesValueHinter)
 	_ = t.encs.TestAddHinter(state.StateV0{})
+	_ = t.encs.TestAddHinter(operation.KVOperationFact{})
+	_ = t.encs.TestAddHinter(operation.KVOperation{})
+	_ = t.encs.TestAddHinter(base.BaseFactSignHinter)
 
 	port, err := util.FreePort("udp")
 	t.NoError(err)
@@ -153,70 +157,68 @@ func (t *testQuicServer) TestSendSeal() {
 		t.True(localtime.Equal(sl.SignedAt(), r.SignedAt()))
 	}
 
-	// NOTE if already known seal received, server returns 200
-	qn.SetHasSealHandler(func(h valuehash.Hash) (bool, error) {
-		return true, nil
-	})
-
 	t.NoError(qc.SendSeal(context.TODO(), nil, sl))
 }
 
-func (t *testQuicServer) TestGetSeals() {
+func (t *testQuicServer) TestGetStagedOperations() {
 	qn := t.readyServer()
 	defer qn.Stop()
 
 	var hs []valuehash.Hash
-	seals := map[string]seal.Seal{}
+	ops := map[string]operation.Operation{}
 	for i := 0; i < 3; i++ {
-		sl := seal.NewDummySeal(key.NewBasePrivatekey().Publickey())
+		op, err := operation.NewKVOperation(key.NewBasePrivatekey(), util.UUID().Bytes(), util.UUID().String(), util.UUID().Bytes(), nil)
+		t.NoError(err)
 
-		seals[sl.Hash().String()] = sl
-		hs = append(hs, sl.Hash())
+		ops[op.Fact().Hash().String()] = op
+		hs = append(hs, op.Fact().Hash())
 	}
 
-	qn.SetGetSealsHandler(func(hs []valuehash.Hash) ([]seal.Seal, error) {
-		var sls []seal.Seal
+	qn.SetGetStagedOperationsHandler(func(hs []valuehash.Hash) ([]operation.Operation, error) {
+		var l []operation.Operation
 
 		for _, ih := range hs {
 			h := ih.(valuehash.Bytes)
-			if sl, found := seals[h.String()]; found {
-				sls = append(sls, sl)
+			if op, found := ops[h.String()]; found {
+				l = append(l, op)
 			}
 		}
 
-		return sls, nil
+		return l, nil
 	})
 
 	qc, err := NewChannel(t.connInfo, 2, nil, t.encs, t.enc)
 	t.NoError(err)
 
 	{ // get all
-		l, err := qc.Seals(context.TODO(), hs)
+		l, err := qc.StagedOperations(context.TODO(), hs)
 		t.NoError(err)
 		t.Equal(len(hs), len(l))
 
-		sm := map[string]seal.Seal{}
+		sm := map[string]operation.Operation{}
 		for _, s := range l {
-			sm[s.Hash().String()] = s
+			sm[s.Fact().Hash().String()] = s
 		}
 
-		for h, sl := range seals {
-			t.True(sl.Hash().Equal(sm[h].Hash()))
+		for h, op := range ops {
+			t.True(op.Fact().Hash().Equal(sm[h].Fact().Hash()))
+			t.True(op.Hash().Equal(sm[h].Hash()))
 		}
 	}
 
 	{ // some of them
-		l, err := qc.Seals(context.TODO(), hs[:2])
+		l, err := qc.StagedOperations(context.TODO(), hs[:2])
 		t.NoError(err)
 		t.Equal(len(hs[:2]), len(l))
 
-		sm := map[string]seal.Seal{}
+		sm := map[string]operation.Operation{}
 		for _, s := range l {
-			sm[s.Hash().String()] = s
+			sm[s.Fact().Hash().String()] = s
 		}
 
 		for _, h := range hs[:2] {
-			t.True(seals[h.String()].Hash().Equal(sm[h.String()].Hash()))
+			t.True(ops[h.String()].Hash().Equal(sm[h.String()].Hash()))
+			t.True(ops[h.String()].Fact().Hash().Equal(sm[h.String()].Fact().Hash()))
 		}
 	}
 
@@ -224,17 +226,18 @@ func (t *testQuicServer) TestGetSeals() {
 		bad := hs[:2]
 		bad = append(bad, valuehash.RandomSHA256())
 
-		l, err := qc.Seals(context.TODO(), bad)
+		l, err := qc.StagedOperations(context.TODO(), bad)
 		t.NoError(err)
 		t.Equal(len(hs[:2]), len(l))
 
-		sm := map[string]seal.Seal{}
+		sm := map[string]operation.Operation{}
 		for _, s := range l {
-			sm[s.Hash().String()] = s
+			sm[s.Fact().Hash().String()] = s
 		}
 
 		for _, h := range hs[:2] {
-			t.True(seals[h.String()].Hash().Equal(sm[h.String()].Hash()))
+			t.True(ops[h.String()].Hash().Equal(sm[h.String()].Hash()))
+			t.True(ops[h.String()].Fact().Hash().Equal(sm[h.String()].Fact().Hash()))
 		}
 	}
 }

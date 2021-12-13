@@ -1,18 +1,12 @@
 package leveldbstorage
 
 import (
-	"bytes"
 	"context"
-	"math/rand"
-	"sort"
 	"testing"
-	"time"
 
 	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/base/block"
-	"github.com/spikeekips/mitum/base/key"
 	"github.com/spikeekips/mitum/base/operation"
-	"github.com/spikeekips/mitum/base/seal"
 	"github.com/spikeekips/mitum/storage"
 	"github.com/spikeekips/mitum/util"
 	"github.com/spikeekips/mitum/util/valuehash"
@@ -164,104 +158,170 @@ func (t *testDatabase) TestLoadBlockByHeight() {
 	t.CompareBlock(blk, loaded)
 }
 
-func (t *testDatabase) TestSeals() {
-	var seals []seal.Seal
+func (t *testDatabase) TestNewOperationSeals() {
+	var ops []operation.Operation
+	var seals []operation.Seal
 	for i := 0; i < 10; i++ {
-		pk := key.NewBasePrivatekey()
-		sl := seal.NewDummySeal(pk.Publickey())
+		opsl := t.newOperationSeal()
+		seals = append(seals, opsl)
 
-		seals = append(seals, sl)
+		l := opsl.Operations()
+		for j := range l {
+			ops = append(ops, l[j])
+		}
 	}
-	t.NoError(t.database.NewSeals(seals))
+	t.NoError(t.database.NewOperationSeals(seals))
 
-	sort.Slice(seals, func(i, j int) bool {
-		return bytes.Compare(seals[i].Hash().Bytes(), seals[j].Hash().Bytes()) < 0
-	})
+	var collected []operation.Operation
+	t.NoError(t.database.StagedOperations(
+		func(op operation.Operation) (bool, error) {
+			collected = append(collected, op)
 
-	var collected []seal.Seal
-	t.NoError(t.database.Seals(
-		func(_ valuehash.Hash, sl seal.Seal) (bool, error) {
-			collected = append(collected, sl)
+			t.NoError(op.IsValid(nil))
 
 			return true, nil
 		},
 		true,
-		true,
 	))
 
-	t.Equal(len(seals), len(collected))
+	t.Equal(len(ops), len(collected))
 
-	for i, sl := range collected {
-		t.True(seals[i].Hash().Equal(sl.Hash()))
+	for i := range collected {
+		a := ops[i]
+		b := collected[i]
+
+		found, err := t.database.HasStagedOperation(b.Fact().Hash())
+		t.NoError(err)
+		t.True(found)
+
+		t.True(a.Hash().Equal(b.Hash()))
+		t.True(a.Fact().Hash().Equal(b.Fact().Hash()))
 	}
 }
 
-func (t *testDatabase) TestSealsOnlyHash() {
-	var seals []seal.Seal
+func (t *testDatabase) TestStagedOperationsByFact() {
+	var ops []operation.Operation
+	var seals []operation.Seal
 	for i := 0; i < 10; i++ {
-		pk := key.NewBasePrivatekey()
-		sl := seal.NewDummySeal(pk.Publickey())
+		opsl := t.newOperationSeal()
+		seals = append(seals, opsl)
 
-		seals = append(seals, sl)
+		l := opsl.Operations()
+		for j := range l {
+			ops = append(ops, l[j])
+		}
 	}
-	t.NoError(t.database.NewSeals(seals))
+	t.NoError(t.database.NewOperationSeals(seals))
 
-	sort.Slice(seals, func(i, j int) bool {
-		return bytes.Compare(seals[i].Hash().Bytes(), seals[j].Hash().Bytes()) < 0
-	})
+	var facts []valuehash.Hash
+	for i := range ops[:3] {
+		facts = append(facts, ops[i].Fact().Hash())
+	}
+
+	rops, err := t.database.StagedOperationsByFact(facts)
+	t.NoError(err)
+
+	t.Equal(3, len(rops))
+
+	for i := range rops {
+		op := rops[i]
+
+		t.True(facts[i].Equal(op.Fact().Hash()))
+	}
+
+	l, err := t.database.StagedOperationsByFact([]valuehash.Hash{valuehash.RandomSHA256()})
+	t.NoError(err)
+	t.Equal(0, len(l))
+}
+
+func (t *testDatabase) TestUnstagedOperations() {
+	var ops []operation.Operation
+	var seals []operation.Seal
+	for i := 0; i < 10; i++ {
+		opsl := t.newOperationSeal()
+		seals = append(seals, opsl)
+
+		l := opsl.Operations()
+		for j := range l {
+			ops = append(ops, l[j])
+		}
+	}
+	t.NoError(t.database.NewOperationSeals(seals))
+
+	var inserted int
+	_ = t.database.iter(
+		nil,
+		func(key, _ []byte) (bool, error) {
+			inserted++
+			return true, nil
+		},
+		false,
+	)
+
+	var facts []valuehash.Hash
+	for i := range ops[:3] {
+		facts = append(facts, ops[i].Fact().Hash())
+	}
+
+	t.NoError(t.database.UnstagedOperations(facts))
+
+	for i := range facts {
+		found, err := t.database.HasStagedOperation(facts[i])
+		t.NoError(err)
+		t.False(found)
+	}
+
+	l, err := t.database.StagedOperationsByFact(facts)
+	t.NoError(err)
+	t.Equal(0, len(l))
+
+	var lefts int
+	_ = t.database.iter(
+		nil,
+		func(key, _ []byte) (bool, error) {
+			lefts++
+			return true, nil
+		},
+		false,
+	)
+
+	t.Equal(inserted-6, lefts)
+}
+
+func (t *testDatabase) TestStagedOperationsLimit() {
+	var ops []operation.Operation
+	var seals []operation.Seal
+	for i := 0; i < 10; i++ {
+		opsl := t.newOperationSeal()
+		seals = append(seals, opsl)
+
+		l := opsl.Operations()
+		for j := range l {
+			ops = append(ops, l[j])
+		}
+	}
+	t.NoError(t.database.NewOperationSeals(seals))
 
 	var collected []valuehash.Hash
-	t.NoError(t.database.Seals(
-		func(h valuehash.Hash, sl seal.Seal) (bool, error) {
-			t.Nil(sl)
-			collected = append(collected, h)
-
-			return true, nil
-		},
-		true,
-		false,
-	))
-
-	t.Equal(len(seals), len(collected))
-
-	for i, h := range collected {
-		t.True(seals[i].Hash().Equal(h))
-	}
-}
-
-func (t *testDatabase) TestSealsLimit() {
-	var seals []seal.Seal
-	for i := 0; i < 10; i++ {
-		pk := key.NewBasePrivatekey()
-		sl := seal.NewDummySeal(pk.Publickey())
-
-		seals = append(seals, sl)
-	}
-	t.NoError(t.database.NewSeals(seals))
-
-	sort.Slice(seals, func(i, j int) bool {
-		return bytes.Compare(seals[i].Hash().Bytes(), seals[j].Hash().Bytes()) < 0
-	})
-
-	var collected []seal.Seal
-	t.NoError(t.database.Seals(
-		func(_ valuehash.Hash, sl seal.Seal) (bool, error) {
+	t.NoError(t.database.StagedOperations(
+		func(op operation.Operation) (bool, error) {
 			if len(collected) == 3 {
 				return false, nil
 			}
-
-			collected = append(collected, sl)
+			collected = append(collected, op.Fact().Hash())
 
 			return true, nil
 		},
-		true,
 		true,
 	))
 
 	t.Equal(3, len(collected))
 
-	for i, sl := range collected {
-		t.True(seals[i].Hash().Equal(sl.Hash()))
+	for i := range collected {
+		a := ops[i].Fact().Hash()
+		b := collected[i]
+
+		t.True(a.Equal(b))
 	}
 }
 
@@ -275,105 +335,6 @@ func (t *testDatabase) newOperationSeal() operation.Seal {
 	t.NoError(sl.IsValid(nil))
 
 	return sl
-}
-
-func (t *testDatabase) TestStagedOperationSeals() {
-	var seals []seal.Seal
-
-	// 10 seal.Seal
-	for i := 0; i < 10; i++ {
-		sl := seal.NewDummySeal(t.PK.Publickey())
-
-		seals = append(seals, sl)
-	}
-	t.NoError(t.database.NewSeals(seals))
-
-	ops := map[string]operation.Seal{}
-	// 10 operation.Seal
-	for i := 0; i < 10; i++ {
-		sl := t.newOperationSeal()
-
-		seals = append(seals, sl)
-		ops[sl.Hash().String()] = sl
-	}
-	t.NoError(t.database.NewSeals(seals))
-
-	var collected []seal.Seal
-	t.NoError(t.database.StagedOperationSeals(
-		func(sl operation.Seal) (bool, error) {
-			collected = append(collected, sl)
-
-			return true, nil
-		},
-		true,
-	))
-
-	t.Equal(len(ops), len(collected))
-
-	for _, sl := range collected {
-		t.Implements((*operation.Seal)(nil), sl)
-
-		var found bool
-		for h := range ops {
-			if sl.Hash().String() == h {
-				found = true
-				break
-			}
-		}
-
-		t.True(found)
-	}
-}
-
-func (t *testDatabase) TestUnStagedOperationSeals() {
-	// 10 seal.Seal
-	for i := 0; i < 10; i++ {
-		sl := seal.NewDummySeal(t.PK.Publickey())
-		t.NoError(t.database.NewSeals([]seal.Seal{sl}))
-	}
-
-	var ops []operation.Seal
-	// 10 operation.Seal
-	for i := 0; i < 10; i++ {
-		sl := t.newOperationSeal()
-		t.NoError(t.database.NewSeals([]seal.Seal{sl}))
-
-		ops = append(ops, sl)
-	}
-
-	rs := rand.New(rand.NewSource(time.Now().Unix()))
-	selected := map[string]struct{}{}
-	for i := 0; i < 5; i++ {
-		var sl seal.Seal
-		for {
-			sl = ops[rs.Intn(len(ops))]
-			if _, found := selected[sl.Hash().String()]; !found {
-				selected[sl.Hash().String()] = struct{}{}
-				break
-			}
-		}
-	}
-
-	blk, err := block.NewTestBlockV0(base.Height(33), base.Round(0), valuehash.RandomSHA256(), valuehash.RandomSHA256())
-	t.NoError(err)
-
-	bs, err := t.database.NewSession(blk)
-	t.NoError(err)
-
-	// unstage
-	t.NoError(bs.Commit(context.Background(), t.NewBlockDataMap(blk.Height(), blk.Hash(), true)))
-
-	var collected []seal.Seal
-	t.NoError(t.database.StagedOperationSeals(
-		func(sl operation.Seal) (bool, error) {
-			collected = append(collected, sl)
-
-			return true, nil
-		},
-		true,
-	))
-
-	t.Equal(len(ops), len(collected))
 }
 
 func (t *testDatabase) TestHasOperation() {

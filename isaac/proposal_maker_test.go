@@ -5,7 +5,6 @@ import (
 
 	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/base/operation"
-	"github.com/spikeekips/mitum/base/seal"
 	"github.com/spikeekips/mitum/util/valuehash"
 	"github.com/stretchr/testify/suite"
 )
@@ -50,14 +49,20 @@ func (t *testProposalMaker) TestClean() {
 func (t *testProposalMaker) TestSeals() {
 	local := t.Locals(1)[0]
 
-	var seals []seal.Seal
+	var seals []operation.Seal
+	var ops []operation.Operation
 	// 10 operation.Seal
 	for i := 0; i < 10; i++ {
 		sl, _ := t.NewOperationSeal(local, 1)
 
+		l := sl.Operations()
+		for j := range l {
+			ops = append(ops, l[j])
+		}
+
 		seals = append(seals, sl)
 	}
-	t.NoError(local.Database().NewSeals(seals))
+	t.NoError(local.Database().NewOperationSeals(seals))
 
 	proposalMaker := NewProposalMaker(local.Node(), local.Database(), local.Policy())
 
@@ -66,11 +71,11 @@ func (t *testProposalMaker) TestSeals() {
 	proposal, err := proposalMaker.Proposal(height, round, nil)
 	t.NoError(err)
 
-	t.Equal(len(seals), len(proposal.Fact().Seals()))
+	t.Equal(len(ops), len(proposal.Fact().Operations()))
 
-	var expectedSeals []valuehash.Hash
-	err = local.Database().StagedOperationSeals(func(sl operation.Seal) (bool, error) {
-		expectedSeals = append(expectedSeals, sl.Hash())
+	var expected []valuehash.Hash
+	err = local.Database().StagedOperations(func(op operation.Operation) (bool, error) {
+		expected = append(expected, op.Fact().Hash())
 
 		return true, nil
 	},
@@ -78,8 +83,8 @@ func (t *testProposalMaker) TestSeals() {
 	)
 	t.NoError(err)
 
-	for i, h := range proposal.Fact().Seals() {
-		t.True(expectedSeals[i].Equal(h))
+	for i, h := range proposal.Fact().Operations() {
+		t.True(expected[i].Equal(h))
 	}
 }
 
@@ -89,16 +94,27 @@ func (t *testProposalMaker) TestOneSealOver0() {
 	var maxOperations uint = 3
 	_, _ = local.Policy().SetMaxOperationsInProposal(maxOperations)
 
-	var seals []seal.Seal
+	var seals []operation.Seal
+	var ops []operation.Operation
 	for i := 0; i < int(maxOperations-1); i++ {
 		sl, _ := t.NewOperationSeal(local, 1)
 		seals = append(seals, sl)
+
+		l := sl.Operations()
+		for j := range l {
+			ops = append(ops, l[j])
+		}
+
 	}
 
 	over, _ := t.NewOperationSeal(local, 2)
 	seals = append(seals, over)
+	l := over.Operations()
+	for j := range l {
+		ops = append(ops, l[j])
+	}
 
-	t.NoError(local.Database().NewSeals(seals))
+	t.NoError(local.Database().NewOperationSeals(seals))
 
 	proposalMaker := NewProposalMaker(local.Node(), local.Database(), local.Policy())
 
@@ -108,9 +124,9 @@ func (t *testProposalMaker) TestOneSealOver0() {
 	t.NoError(err)
 
 	fact := proposal.Fact()
-	t.Equal(len(seals)-1, len(fact.Seals()))
+	t.Equal(len(ops)-1, len(fact.Operations()))
 
-	for _, h := range fact.Seals() {
+	for _, h := range fact.Operations() {
 		t.False(over.Hash().Equal(h))
 	}
 }
@@ -121,18 +137,25 @@ func (t *testProposalMaker) TestOneSealOver1() {
 	var maxOperations uint = 3
 	_, _ = local.Policy().SetMaxOperationsInProposal(maxOperations)
 
-	var seals []seal.Seal
+	var seals []operation.Seal
+	var ops []operation.Operation
 	for i := 0; i < int(maxOperations); i++ {
-		var sl seal.Seal
+		var sl operation.Seal
 		if i == 1 {
 			sl, _ = t.NewOperationSeal(local, 2)
 		} else {
 			sl, _ = t.NewOperationSeal(local, 1)
 		}
+
 		seals = append(seals, sl)
+
+		l := sl.Operations()
+		for j := range l {
+			ops = append(ops, l[j])
+		}
 	}
 
-	t.NoError(local.Database().NewSeals(seals))
+	t.NoError(local.Database().NewOperationSeals(seals))
 
 	proposalMaker := NewProposalMaker(local.Node(), local.Database(), local.Policy())
 
@@ -142,10 +165,10 @@ func (t *testProposalMaker) TestOneSealOver1() {
 	t.NoError(err)
 
 	fact := proposal.Fact()
-	t.Equal(len(seals)-1, len(fact.Seals()))
+	t.Equal(len(ops)-1, len(fact.Operations()))
 
-	for _, h := range fact.Seals() {
-		t.False(seals[2].Hash().Equal(h))
+	for _, h := range fact.Operations() {
+		t.False(ops[2].Hash().Equal(h))
 	}
 }
 
@@ -155,12 +178,19 @@ func (t *testProposalMaker) TestNumberOperationMatch() {
 	var maxOperations uint = 3
 	_, _ = local.Policy().SetMaxOperationsInProposal(maxOperations)
 
-	var seals []seal.Seal
+	var seals []operation.Seal
+	var ops []operation.Operation
 	for i := 0; i < int(maxOperations); i++ {
 		sl, _ := t.NewOperationSeal(local, 1)
 		seals = append(seals, sl)
+
+		l := sl.Operations()
+		for j := range l {
+			ops = append(ops, l[j])
+		}
+
 	}
-	t.NoError(local.Database().NewSeals(seals))
+	t.NoError(local.Database().NewOperationSeals(seals))
 
 	proposalMaker := NewProposalMaker(local.Node(), local.Database(), local.Policy())
 
@@ -169,7 +199,7 @@ func (t *testProposalMaker) TestNumberOperationMatch() {
 	proposal, err := proposalMaker.Proposal(height, round, nil)
 	t.NoError(err)
 
-	t.Equal(len(seals), len(proposal.Fact().Seals()))
+	t.Equal(len(ops), len(proposal.Fact().Operations()))
 }
 
 func TestProposalMaker(t *testing.T) {

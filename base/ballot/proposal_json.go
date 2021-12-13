@@ -8,9 +8,9 @@ import (
 )
 
 type ProposalFactPackerJSON struct {
-	PR base.Address     `json:"proposer"`
-	SL []valuehash.Hash `json:"seals"`
-	PA localtime.Time   `json:"proposed_at"`
+	PR  base.Address     `json:"proposer"`
+	OPS []valuehash.Hash `json:"operations"`
+	PA  localtime.Time   `json:"proposed_at"`
 }
 
 func (fact ProposalFact) MarshalJSON() ([]byte, error) {
@@ -20,17 +20,17 @@ func (fact ProposalFact) MarshalJSON() ([]byte, error) {
 	}{
 		BaseFactPackerJSON: fact.packerJSON(),
 		ProposalFactPackerJSON: &ProposalFactPackerJSON{
-			PR: fact.proposer,
-			SL: fact.seals,
-			PA: localtime.NewTime(fact.proposedAt),
+			PR:  fact.proposer,
+			OPS: fact.ops,
+			PA:  localtime.NewTime(fact.proposedAt),
 		},
 	})
 }
 
 type ProposalFactUnpackerJSON struct {
-	PR base.AddressDecoder `json:"proposer"`
-	SL []valuehash.Bytes   `json:"seals"`
-	PA localtime.Time      `json:"proposed_at"`
+	PR  base.AddressDecoder `json:"proposer"`
+	OPS []valuehash.Bytes   `json:"operations"`
+	PA  localtime.Time      `json:"proposed_at"`
 }
 
 func (fact *ProposalFact) UnpackJSON(b []byte, enc *jsonenc.Encoder) error {
@@ -59,12 +59,12 @@ func (fact *ProposalFact) UnpackJSON(b []byte, enc *jsonenc.Encoder) error {
 	}
 	fact.proposer = pr
 
-	sl := make([]valuehash.Hash, len(ufact.ProposalFactUnpackerJSON.SL))
-	for i := range ufact.ProposalFactUnpackerJSON.SL {
-		sl[i] = ufact.ProposalFactUnpackerJSON.SL[i]
+	ops := make([]valuehash.Hash, len(ufact.ProposalFactUnpackerJSON.OPS))
+	for i := range ufact.ProposalFactUnpackerJSON.OPS {
+		ops[i] = ufact.ProposalFactUnpackerJSON.OPS[i]
 	}
 
-	fact.seals = sl
+	fact.ops = ops
 	fact.proposedAt = ufact.ProposalFactUnpackerJSON.PA.Time
 
 	return nil

@@ -7,6 +7,7 @@ import (
 
 	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/base/block"
+	"github.com/spikeekips/mitum/base/operation"
 	"github.com/spikeekips/mitum/base/seal"
 	"github.com/spikeekips/mitum/base/state"
 	"github.com/spikeekips/mitum/util"
@@ -14,25 +15,23 @@ import (
 )
 
 type (
-	GetSealsHandler      func([]valuehash.Hash) ([]seal.Seal, error)
-	HasSealHandler       func(valuehash.Hash) (bool, error)
-	NewSealHandler       func(seal.Seal) error
-	GetProposalHandler   func(valuehash.Hash) (base.Proposal, error)
-	GetStateHandler      func(string) (state.State, bool, error)
-	NodeInfoHandler      func() (NodeInfo, error)
-	BlockDataMapsHandler func([]base.Height) ([]block.BlockDataMap, error)
-	BlockDataHandler     func(string) (io.Reader, func() error, error)
-	StartHandoverHandler func(StartHandoverSeal) (bool, error)
-	PingHandoverHandler  func(PingHandoverSeal) (bool, error)
-	EndHandoverHandler   func(EndHandoverSeal) (bool, error)
+	NewSealHandler             func(seal.Seal) error
+	GetStagedOperationsHandler func([]valuehash.Hash) ([]operation.Operation, error)
+	GetProposalHandler         func(valuehash.Hash) (base.Proposal, error)
+	GetStateHandler            func(string) (state.State, bool, error)
+	NodeInfoHandler            func() (NodeInfo, error)
+	BlockDataMapsHandler       func([]base.Height) ([]block.BlockDataMap, error)
+	BlockDataHandler           func(string) (io.Reader, func() error, error)
+	StartHandoverHandler       func(StartHandoverSeal) (bool, error)
+	PingHandoverHandler        func(PingHandoverSeal) (bool, error)
+	EndHandoverHandler         func(EndHandoverSeal) (bool, error)
 )
 
 type Server interface {
 	util.Daemon
 	util.Initializer
-	SetHasSealHandler(HasSealHandler)
-	SetGetSealsHandler(GetSealsHandler)
 	SetNewSealHandler(NewSealHandler)
+	SetGetStagedOperationsHandler(GetStagedOperationsHandler)
 	SetGetProposalHandler(GetProposalHandler)
 	NodeInfoHandler() NodeInfoHandler
 	SetNodeInfoHandler(NodeInfoHandler)
@@ -50,6 +49,7 @@ type Response interface {
 
 var (
 	ChannelTimeoutSeal         = time.Second * 2
+	ChannelTimeoutOperation    = time.Second * 2
 	ChannelTimeoutSendSeal     = time.Second * 2
 	ChannelTimeoutNodeInfo     = time.Second * 2
 	ChannelTimeoutBlockDataMap = time.Second * 2
@@ -60,7 +60,7 @@ var (
 type Channel interface {
 	util.Initializer
 	ConnInfo() ConnInfo
-	Seals(context.Context, []valuehash.Hash) ([]seal.Seal, error)
+	StagedOperations(context.Context, []valuehash.Hash) ([]operation.Operation, error)
 	SendSeal(context.Context, ConnInfo /* from ConnInfo */, seal.Seal) error
 	Proposal(context.Context, valuehash.Hash) (base.Proposal, error)
 	NodeInfo(context.Context) (NodeInfo, error)

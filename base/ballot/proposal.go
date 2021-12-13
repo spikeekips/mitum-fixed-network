@@ -23,7 +23,7 @@ var (
 type ProposalFact struct {
 	BaseFact
 	proposer   base.Address
-	seals      []valuehash.Hash
+	ops        []valuehash.Hash
 	proposedAt time.Time
 }
 
@@ -31,7 +31,7 @@ func NewProposalFact(
 	height base.Height,
 	round base.Round,
 	proposer base.Address,
-	seals []valuehash.Hash,
+	ops []valuehash.Hash,
 ) ProposalFact {
 	fact := ProposalFact{
 		BaseFact: NewBaseFact(
@@ -40,7 +40,7 @@ func NewProposalFact(
 			round,
 		),
 		proposer:   proposer,
-		seals:      seals,
+		ops:        ops,
 		proposedAt: localtime.UTCNow(),
 	}
 
@@ -53,8 +53,8 @@ func (fact ProposalFact) Proposer() base.Address {
 	return fact.proposer
 }
 
-func (fact ProposalFact) Seals() []valuehash.Hash {
-	return fact.seals
+func (fact ProposalFact) Operations() []valuehash.Hash {
+	return fact.ops
 }
 
 func (fact ProposalFact) ProposedAt() time.Time {
@@ -74,15 +74,25 @@ func (fact ProposalFact) IsValid([]byte) error {
 		return err
 	}
 
-	vs := func() []isvalid.IsValider {
-		vs := make([]isvalid.IsValider, len(fact.seals))
-		for i := range fact.seals {
-			vs[i] = fact.seals[i]
+	founds := map[string]struct{}{}
+	for i := range fact.ops {
+		h := fact.ops[i]
+		if h == nil {
+			return isvalid.InvalidError.Errorf("empty operation hash found in proposal")
 		}
 
-		return vs
-	}()
-	return isvalid.Check(nil, false, vs...)
+		if err := h.IsValid(nil); err != nil {
+			return isvalid.InvalidError.Errorf("invalid operation hash found in proposal: %w", err)
+		}
+
+		if _, found := founds[h.String()]; found {
+			return isvalid.InvalidError.Errorf("duplicated operaiotn found in proposal")
+		}
+
+		founds[h.String()] = struct{}{}
+	}
+
+	return nil
 }
 
 func (fact ProposalFact) bytes() []byte {
@@ -95,13 +105,13 @@ func (fact ProposalFact) bytes() []byte {
 		fact.BaseFact.bytes(),
 		b,
 		func() []byte {
-			hs := make([][]byte, len(fact.seals))
-			for i := range fact.seals {
-				if fact.seals[i] == nil {
+			hs := make([][]byte, len(fact.ops))
+			for i := range fact.ops {
+				if fact.ops[i] == nil {
 					continue
 				}
 
-				hs[i] = fact.seals[i].Bytes()
+				hs[i] = fact.ops[i].Bytes()
 			}
 
 			return util.ConcatBytesSlice(hs...)

@@ -391,7 +391,7 @@ network:
   rate-limit:
     192.168.0.1:
       send-seal: 222/2s
-      seals: 333/3s
+      operations: 333/3s
 `
 	ctx := context.Background()
 	ctx = context.WithValue(ctx, ContextValueConfigSource, []byte(y))
@@ -422,8 +422,8 @@ network:
 
 	t.Equal(int64(222), r.Rules()["send-seal"].Limit)
 	t.Equal(time.Second*2, r.Rules()["send-seal"].Period)
-	t.Equal(int64(333), r.Rules()["seals"].Limit)
-	t.Equal(time.Second*3, r.Rules()["seals"].Period)
+	t.Equal(int64(333), r.Rules()["operations"].Limit)
+	t.Equal(time.Second*3, r.Rules()["operations"].Period)
 }
 
 func (t *testConfigChecker) TestLocalNetworkEmptyCertificates() {

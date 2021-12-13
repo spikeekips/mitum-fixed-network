@@ -8,6 +8,7 @@ import (
 	"github.com/rs/zerolog"
 	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/base/block"
+	"github.com/spikeekips/mitum/base/operation"
 	"github.com/spikeekips/mitum/base/seal"
 	"github.com/spikeekips/mitum/base/state"
 	"github.com/spikeekips/mitum/network"
@@ -17,17 +18,17 @@ import (
 
 type Channel struct {
 	*logging.Logging
-	connInfo           network.ConnInfo
-	recvChan           chan network.PassthroughedSeal
-	getSealHandler     network.GetSealsHandler
-	getProposalHandler network.GetProposalHandler
-	getState           network.GetStateHandler
-	nodeInfo           network.NodeInfoHandler
-	getBlockDataMaps   network.BlockDataMapsHandler
-	getBlockData       network.BlockDataHandler
-	startHandover      network.StartHandoverHandler
-	pingHandover       network.PingHandoverHandler
-	endHandover        network.EndHandoverHandler
+	connInfo                   network.ConnInfo
+	recvChan                   chan network.PassthroughedSeal
+	getStagedOperationsHandler network.GetStagedOperationsHandler
+	getProposalHandler         network.GetProposalHandler
+	getState                   network.GetStateHandler
+	nodeInfo                   network.NodeInfoHandler
+	getBlockDataMaps           network.BlockDataMapsHandler
+	getBlockData               network.BlockDataHandler
+	startHandover              network.StartHandoverHandler
+	pingHandover               network.PingHandoverHandler
+	endHandover                network.EndHandoverHandler
 }
 
 func NewChannel(bufsize uint, connInfo network.ConnInfo) *Channel {
@@ -48,12 +49,12 @@ func (ch *Channel) ConnInfo() network.ConnInfo {
 	return ch.connInfo
 }
 
-func (ch *Channel) Seals(_ context.Context, h []valuehash.Hash) ([]seal.Seal, error) {
-	if ch.getSealHandler == nil {
-		return nil, errors.Errorf("getSealHandler is missing")
+func (ch *Channel) StagedOperations(_ context.Context, h []valuehash.Hash) ([]operation.Operation, error) {
+	if ch.getStagedOperationsHandler == nil {
+		return nil, errors.Errorf("getStagedOperationsHandler is missing")
 	}
 
-	return ch.getSealHandler(h)
+	return ch.getStagedOperationsHandler(h)
 }
 
 func (ch *Channel) SendSeal(_ context.Context, ci network.ConnInfo, sl seal.Seal) error {
@@ -66,8 +67,8 @@ func (ch *Channel) ReceiveSeal() <-chan network.PassthroughedSeal {
 	return ch.recvChan
 }
 
-func (ch *Channel) SetGetSealHandler(f network.GetSealsHandler) {
-	ch.getSealHandler = f
+func (ch *Channel) SetGetStagedOperationsHandler(f network.GetStagedOperationsHandler) {
+	ch.getStagedOperationsHandler = f
 }
 
 func (ch *Channel) Proposal(_ context.Context, h valuehash.Hash) (base.Proposal, error) {

@@ -62,17 +62,17 @@ var proposalIndexModels = []mongo.IndexModel{
 	},
 }
 
-var sealIndexModels = []mongo.IndexModel{
+var stagedOperationIndexModels = []mongo.IndexModel{
 	{
-		Keys: bson.D{bson.E{Key: "hash_string", Value: 1}},
+		Keys: bson.D{bson.E{Key: "hash", Value: 1}},
 		Options: options.Index().
-			SetName(indexName("seal_hash")).
+			SetName(indexName("hash")).
 			SetUnique(true),
 	},
 	{
 		Keys: bson.D{bson.E{Key: "inserted_at", Value: -1}},
 		Options: options.Index().
-			SetName(indexName("seal_inserted_at")),
+			SetName(indexName("operation_inserted_at")),
 	},
 }
 
@@ -100,13 +100,13 @@ var blockDataMapIndexModels = []mongo.IndexModel{
 }
 
 var defaultIndexes = map[string] /* collection */ []mongo.IndexModel{
-	ColNameManifest:     manifestIndexModels,
-	ColNameOperation:    operationIndexModels,
-	ColNameProposal:     proposalIndexModels,
-	ColNameSeal:         sealIndexModels,
-	ColNameState:        stateIndexModels,
-	ColNameVoteproof:    voteproofIndexModels,
-	ColNameBlockDataMap: blockDataMapIndexModels,
+	ColNameManifest:        manifestIndexModels,
+	ColNameOperation:       operationIndexModels,
+	ColNameProposal:        proposalIndexModels,
+	ColNameStagedOperation: stagedOperationIndexModels,
+	ColNameState:           stateIndexModels,
+	ColNameVoteproof:       voteproofIndexModels,
+	ColNameBlockDataMap:    blockDataMapIndexModels,
 }
 
 func indexName(s string) string {

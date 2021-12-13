@@ -10,7 +10,6 @@ import (
 	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/base/block"
 	"github.com/spikeekips/mitum/base/operation"
-	"github.com/spikeekips/mitum/base/seal"
 	"github.com/spikeekips/mitum/base/state"
 	"github.com/spikeekips/mitum/network"
 	"github.com/spikeekips/mitum/storage"
@@ -26,23 +25,21 @@ import (
 )
 
 const (
-	ColNameInfo          = "info"
-	ColNameManifest      = "manifest"
-	ColNameSeal          = "seal"
-	ColNameOperation     = "operation"
-	ColNameOperationSeal = "operation_seal"
-	ColNameProposal      = "proposal"
-	ColNameState         = "state"
-	ColNameVoteproof     = "voteproof"
-	ColNameBlockDataMap  = "blockdata_map"
+	ColNameInfo            = "info"
+	ColNameManifest        = "manifest"
+	ColNameOperation       = "operation"
+	ColNameStagedOperation = "staged_operation"
+	ColNameProposal        = "proposal"
+	ColNameState           = "state"
+	ColNameVoteproof       = "voteproof"
+	ColNameBlockDataMap    = "blockdata_map"
 )
 
 var allCollections = []string{
 	ColNameInfo,
 	ColNameManifest,
-	ColNameSeal,
 	ColNameOperation,
-	ColNameOperationSeal,
+	ColNameStagedOperation,
 	ColNameProposal,
 	ColNameState,
 	ColNameVoteproof,
@@ -545,41 +542,7 @@ func (st *Database) Manifests(filter bson.M, load, reverse bool, limit int64, ca
 	)
 }
 
-func (st *Database) Seal(h valuehash.Hash) (seal.Seal, bool, error) {
-	if i, _ := st.sealCache.Get(h.String()); i != nil {
-		return i.(seal.Seal), true, nil
-	}
-
-	var sl seal.Seal
-
-	if err := st.client.GetByID(
-		ColNameSeal,
-		h.String(),
-		func(res *mongo.SingleResult) error {
-			if i, err := loadSealFromDecoder(res.Decode, st.encs); err != nil {
-				return err
-			} else {
-				sl = i
-			}
-
-			return nil
-		},
-	); err != nil {
-		if errors.Is(err, util.NotFoundError) {
-			return nil, false, nil
-		}
-
-		return nil, false, err
-	}
-
-	if sl == nil {
-		return nil, false, nil
-	}
-
-	return sl, true, nil
-}
-
-func (st *Database) NewSeals(seals []seal.Seal) error {
+func (st *Database) NewOperationSeals(seals []operation.Seal) error {
 	if st.readonly {
 		return errors.Errorf("readonly mode")
 	}
@@ -589,164 +552,74 @@ func (st *Database) NewSeals(seals []seal.Seal) error {
 	}
 
 	var models []mongo.WriteModel
-	var operationModels []mongo.WriteModel
 
-	var ops []seal.Seal
-	checked := map[string]struct{}{}
+	filter := st.newStagedOperationFilter()
+
 	for i := range seals {
 		sl := seals[i]
 
-		if _, found := checked[sl.Hash().String()]; found {
-			continue
-		} else {
-			checked[sl.Hash().String()] = struct{}{}
-		}
-
-		doc, err := NewSealDoc(sl, st.enc)
+		ms, err := st.newOperations(sl.Operations(), filter)
 		if err != nil {
 			return err
 		}
 
-		models = append(models, mongo.NewInsertOneModel().SetDocument(doc))
-
-		if ok, err := st.checkNewOperationSeal(sl); err != nil {
-			return err
-		} else if !ok {
-			continue
-		} else {
-			ops = append(ops, sl)
-			operationModels = append(operationModels, mongo.NewInsertOneModel().SetDocument(doc))
-		}
+		models = append(models, ms...)
 	}
 
-	if err := st.client.Bulk(context.Background(), ColNameSeal, models, false); err != nil {
+	return st.client.Bulk(context.Background(), ColNameStagedOperation, models, false)
+}
+
+func (st *Database) NewOperations(
+	ops []operation.Operation,
+) error {
+	filter := st.newStagedOperationFilter()
+
+	models, err := st.newOperations(ops, filter)
+	if err != nil {
 		return err
 	}
 
-	if len(operationModels) > 0 {
-		if err := st.client.Bulk(context.Background(), ColNameOperationSeal, operationModels, false); err != nil {
-			return err
-		}
+	if err := st.client.Bulk(context.Background(), ColNameStagedOperation, models, false); err != nil {
+		return err
 	}
-
-	go func() {
-		for _, sl := range ops {
-			_ = st.sealCache.Set(sl.Hash().String(), sl, 0)
-		}
-	}()
 
 	return nil
 }
 
-// checkNewOperationSeal prevents the seal, which has already processed
-// operations to be stored.
-func (st *Database) checkNewOperationSeal(sl seal.Seal) (bool, error) {
-	var osl operation.Seal
-	if i, ok := sl.(operation.Seal); !ok {
-		return false, nil
-	} else {
-		osl = i
-	}
-
-	for i := range osl.Operations() {
-		op := osl.Operations()[i]
-		if found, err := st.HasOperationFact(op.Fact().Hash()); err != nil {
-			return false, err
-		} else if !found {
-			return true, nil
+func (st *Database) newOperations(
+	ops []operation.Operation,
+	filter func(valuehash.Hash) (bool, error),
+) ([]mongo.WriteModel, error) {
+	models := make([]mongo.WriteModel, len(ops))
+	for i := range ops {
+		op := ops[i]
+		switch found, err := filter(op.Fact().Hash()); {
+		case err != nil:
+			return nil, err
+		case !found:
+			continue
 		}
+
+		doc, err := NewStagedOperation(op, st.enc)
+		if err != nil {
+			return nil, err
+		}
+		m, err := doc.bsonM()
+		if err != nil {
+			return nil, err
+		}
+		delete(m, "_id")
+
+		models[i] = mongo.NewUpdateManyModel().
+			SetFilter(util.NewBSONFilter("_id", op.Fact().Hash().String()).D()).
+			SetUpdate(bson.D{{Key: "$set", Value: m}}).
+			SetUpsert(true)
 	}
 
-	return false, nil
+	return models, nil
 }
 
-func (st *Database) Seals(callback func(valuehash.Hash, seal.Seal) (bool, error), sort, load bool) error {
-	var dir int
-	if sort {
-		dir = 1
-	} else {
-		dir = -1
-	}
-
-	opt := options.Find()
-	opt.SetSort(util.NewBSONFilter("hash", dir).D())
-
-	return st.client.Find(
-		context.Background(),
-		ColNameSeal,
-		bson.D{},
-		func(cursor *mongo.Cursor) (bool, error) {
-			var h valuehash.Hash
-			var sl seal.Seal
-
-			if load {
-				if i, err := loadSealFromDecoder(cursor.Decode, st.encs); err != nil {
-					return false, err
-				} else {
-					h = i.Hash()
-					sl = i
-				}
-			} else {
-				if i, err := loadSealHashFromDecoder(cursor.Decode, st.encs); err != nil {
-					return false, err
-				} else {
-					h = i
-				}
-			}
-
-			return callback(h, sl)
-		},
-		opt,
-	)
-}
-
-func (st *Database) SealsByHash(
-	hashes []valuehash.Hash,
-	callback func(valuehash.Hash, seal.Seal) (bool, error),
-	load bool,
-) error {
-	var hashStrings []string
-	for _, h := range hashes {
-		hashStrings = append(hashStrings, h.String())
-	}
-
-	opt := options.Find().
-		SetSort(util.NewBSONFilter("hash", 1).D())
-
-	return st.client.Find(
-		context.Background(),
-		ColNameSeal,
-		bson.M{"hash_string": bson.M{"$in": hashStrings}},
-		func(cursor *mongo.Cursor) (bool, error) {
-			var h valuehash.Hash
-			var sl seal.Seal
-
-			if load {
-				if i, err := loadSealFromDecoder(cursor.Decode, st.encs); err != nil {
-					return false, err
-				} else {
-					h = i.Hash()
-					sl = i
-				}
-			} else {
-				if i, err := loadSealHashFromDecoder(cursor.Decode, st.encs); err != nil {
-					return false, err
-				} else {
-					h = i
-				}
-			}
-
-			return callback(h, sl)
-		},
-		opt,
-	)
-}
-
-func (st *Database) HasSeal(h valuehash.Hash) (bool, error) {
-	return st.client.Exists(ColNameSeal, util.NewBSONFilter("_id", h.String()).D())
-}
-
-func (st *Database) StagedOperationSeals(callback func(operation.Seal) (bool, error), sort bool) error {
+func (st *Database) StagedOperations(callback func(operation.Operation) (bool, error), sort bool) error {
 	var dir int
 	if sort {
 		dir = 1
@@ -759,37 +632,76 @@ func (st *Database) StagedOperationSeals(callback func(operation.Seal) (bool, er
 
 	return st.client.Find(
 		context.TODO(),
-		ColNameOperationSeal,
+		ColNameStagedOperation,
 		bson.D{},
 		func(cursor *mongo.Cursor) (bool, error) {
-			var sl operation.Seal
-			if i, err := loadSealFromDecoder(cursor.Decode, st.encs); err != nil {
+			op, err := loadStagedOperationFromDecoder(cursor.Decode, st.encs)
+			if err != nil {
 				return false, err
-			} else if v, ok := i.(operation.Seal); !ok {
-				return false, errors.Errorf("not operation.Seal: %T", i)
-			} else {
-				sl = v
 			}
 
-			return callback(sl)
+			return callback(op)
 		},
 		opt,
 	)
 }
 
-func (st *Database) UnstagedOperationSeals(seals []valuehash.Hash) error {
+func (st *Database) UnstagedOperations(facts []valuehash.Hash) error {
 	if st.readonly {
 		return errors.Errorf("readonly mode")
 	}
 
 	var models []mongo.WriteModel
-	for _, h := range seals {
+	for i := range facts {
 		models = append(models,
-			mongo.NewDeleteOneModel().SetFilter(util.NewBSONFilter("_id", h.String()).D()),
+			mongo.NewDeleteOneModel().SetFilter(util.NewBSONFilter("_id", facts[i].String()).D()),
 		)
 	}
 
-	return st.client.Bulk(context.Background(), ColNameOperationSeal, models, false)
+	return st.client.Bulk(context.Background(), ColNameStagedOperation, models, false)
+}
+
+func (st *Database) StagedOperationsByFact(facts []valuehash.Hash) ([]operation.Operation, error) {
+	var ops []operation.Operation
+	for i := range facts {
+		h := facts[i]
+
+		if err := st.client.GetByFilter(
+			ColNameStagedOperation,
+			util.NewBSONFilter("_id", h.String()).D(),
+			func(res *mongo.SingleResult) error {
+				op, err := loadStagedOperationFromDecoder(res.Decode, st.encs)
+				if err != nil {
+					return err
+				}
+
+				ops = append(ops, op)
+
+				return nil
+			},
+		); err != nil {
+			if errors.Is(err, util.NotFoundError) {
+				continue
+			}
+
+			return nil, err
+		}
+	}
+
+	return ops, nil
+}
+
+func (st *Database) HasStagedOperation(h valuehash.Hash) (bool, error) {
+	count, err := st.client.Count(
+		context.Background(),
+		ColNameStagedOperation,
+		util.NewBSONFilter("_id", h.String()).D(),
+	)
+	if err != nil {
+		return false, err
+	}
+
+	return count > 0, nil
 }
 
 func (st *Database) Proposals(callback func(base.Proposal) (bool, error), sort bool) error {
@@ -994,7 +906,7 @@ func (st *Database) cleanByHeight(height base.Height) error {
 		ColNameInfo,
 		ColNameManifest,
 		ColNameOperation,
-		ColNameOperationSeal,
+		ColNameStagedOperation,
 		ColNameState,
 		ColNameVoteproof,
 		ColNameBlockDataMap,
@@ -1305,4 +1217,32 @@ func (st *Database) LocalBlockDataMapsByHeight(height base.Height, callback func
 		},
 		opt,
 	)
+}
+
+func (st *Database) newStagedOperationFilter() func(valuehash.Hash) (bool, error) {
+	inserted := map[string]struct{}{}
+	return func(h valuehash.Hash) (bool, error) {
+		k := h.String()
+		if _, found := inserted[k]; found {
+			return false, nil
+		}
+
+		switch found, err := st.HasOperationFact(h); {
+		case err != nil:
+			return false, err
+		case found:
+			return false, nil
+		}
+
+		switch found, err := st.HasStagedOperation(h); {
+		case err != nil:
+			return false, err
+		case found:
+			return false, nil
+		}
+
+		inserted[k] = struct{}{}
+
+		return true, nil
+	}
 }

@@ -15,6 +15,7 @@ import (
 	"github.com/rs/zerolog"
 	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/base/block"
+	"github.com/spikeekips/mitum/base/operation"
 	"github.com/spikeekips/mitum/base/seal"
 	"github.com/spikeekips/mitum/network"
 	"github.com/spikeekips/mitum/util"
@@ -27,20 +28,20 @@ import (
 
 type Channel struct {
 	*logging.Logging
-	recvChan         chan seal.Seal
-	connInfo         network.ConnInfo
-	encs             *encoder.Encoders
-	enc              encoder.Encoder
-	sendSealURL      string
-	getSealsURL      string
-	getProposalURL   url.URL
-	nodeInfoURL      string
-	getBlockDataMaps string
-	getBlockData     url.URL
-	startHandover    string
-	pingHandover     string
-	endHandover      string
-	client           *QuicClient
+	recvChan               chan seal.Seal
+	connInfo               network.ConnInfo
+	encs                   *encoder.Encoders
+	enc                    encoder.Encoder
+	sendSealURL            string
+	getStagedOperationsURL string
+	getProposalURL         url.URL
+	nodeInfoURL            string
+	getBlockDataMaps       string
+	getBlockData           url.URL
+	startHandover          string
+	pingHandover           string
+	endHandover            string
+	client                 *QuicClient
 }
 
 func NewChannel(
@@ -63,7 +64,7 @@ func NewChannel(
 	addr := connInfo.URL().String()
 	ch.nodeInfoURL, _ = mustQuicURL(addr, QuicHandlerPathNodeInfo)
 	ch.sendSealURL, _ = mustQuicURL(addr, QuicHandlerPathSendSeal)
-	ch.getSealsURL, _ = mustQuicURL(addr, QuicHandlerPathGetSeals)
+	ch.getStagedOperationsURL, _ = mustQuicURL(addr, QuicHandlerPathGetStagedOperations)
 	{
 		_, u := mustQuicURL(addr, QuicHandlerPathGetProposal)
 		ch.getProposalURL = *u
@@ -100,8 +101,8 @@ func (ch *Channel) ConnInfo() network.ConnInfo {
 	return ch.connInfo
 }
 
-func (ch *Channel) Seals(ctx context.Context, hs []valuehash.Hash) ([]seal.Seal, error) {
-	timeout := network.ChannelTimeoutSeal * time.Duration(len(hs))
+func (ch *Channel) StagedOperations(ctx context.Context, hs []valuehash.Hash) ([]operation.Operation, error) {
+	timeout := network.ChannelTimeoutOperation + (time.Second * 2)
 	ctx, cancel := ch.timeoutContext(ctx, timeout)
 	defer cancel()
 
@@ -111,25 +112,31 @@ func (ch *Channel) Seals(ctx context.Context, hs []valuehash.Hash) ([]seal.Seal,
 			l = append(l, h.String())
 		}
 
-		e.Strs("seal_hashes", l)
-	}).Msg("request seals")
+		e.Strs("operation_hashes", l)
+	}).Msg("request operations")
 
-	ss, err := ch.doRequestHinters(ctx, ch.client.Send, timeout+(time.Second*2), ch.getSealsURL, NewHashesArgs(hs))
+	ss, err := ch.doRequestHinters(
+		ctx,
+		ch.client.Send,
+		timeout+(time.Second*2),
+		ch.getStagedOperationsURL,
+		NewHashesArgs(hs),
+	)
 	if err != nil {
 		return nil, err
 	}
 
-	seals := make([]seal.Seal, len(ss))
+	ops := make([]operation.Operation, len(ss))
 	for i := range ss {
 		h := ss[i]
-		s, ok := h.(seal.Seal)
+		s, ok := h.(operation.Operation)
 		if !ok {
-			return nil, errors.Errorf("decoded, but not seal.Seal; %T", h)
+			return nil, errors.Errorf("decoded, but not operation.Operation; %T", h)
 		}
-		seals[i] = s
+		ops[i] = s
 	}
 
-	return seals, nil
+	return ops, nil
 }
 
 func (ch *Channel) SendSeal(ctx context.Context, ci network.ConnInfo, sl seal.Seal) error {

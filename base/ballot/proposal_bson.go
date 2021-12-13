@@ -14,15 +14,15 @@ func (fact ProposalFact) MarshalBSON() ([]byte, error) {
 		fact.BaseFact.packerBSON(),
 		bson.M{
 			"proposer":    fact.proposer,
-			"seals":       fact.seals,
+			"operations":  fact.ops,
 			"proposed_at": fact.proposedAt,
 		}))
 }
 
 type ProposalFactUnpackerBSON struct {
-	PR base.AddressDecoder `bson:"proposer"`
-	SL []valuehash.Bytes   `bson:"seals"`
-	PA time.Time           `bson:"proposed_at"`
+	PR  base.AddressDecoder `bson:"proposer"`
+	OPS []valuehash.Bytes   `bson:"operations"`
+	PA  time.Time           `bson:"proposed_at"`
 }
 
 func (fact *ProposalFact) UnpackBSON(b []byte, enc *bsonenc.Encoder) error {
@@ -41,12 +41,12 @@ func (fact *ProposalFact) UnpackBSON(b []byte, enc *bsonenc.Encoder) error {
 	}
 	fact.proposer = pr
 
-	sl := make([]valuehash.Hash, len(uf.SL))
-	for i := range uf.SL {
-		sl[i] = uf.SL[i]
+	ops := make([]valuehash.Hash, len(uf.OPS))
+	for i := range uf.OPS {
+		ops[i] = uf.OPS[i]
 	}
 
-	fact.seals = sl
+	fact.ops = ops
 	fact.proposedAt = uf.PA
 
 	return nil

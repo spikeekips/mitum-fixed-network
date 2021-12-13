@@ -6,7 +6,6 @@ import (
 	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/base/block"
 	"github.com/spikeekips/mitum/base/operation"
-	"github.com/spikeekips/mitum/base/seal"
 	"github.com/spikeekips/mitum/base/state"
 	"github.com/spikeekips/mitum/util"
 	"github.com/spikeekips/mitum/util/encoder"
@@ -29,11 +28,8 @@ type Database interface {
 	Manifest(valuehash.Hash) (block.Manifest, bool, error)
 	ManifestByHeight(base.Height) (block.Manifest, bool, error)
 
-	NewSeals([]seal.Seal) error
-	Seal(valuehash.Hash) (seal.Seal, bool, error)
-	Seals(func(valuehash.Hash, seal.Seal) (bool, error), bool /* sort */, bool /* load Seal? */) error
-	HasSeal(valuehash.Hash) (bool, error)
-	SealsByHash([]valuehash.Hash, func(valuehash.Hash, seal.Seal) (bool, error), bool /* load Seal? */) error
+	NewOperationSeals([]operation.Seal) error
+	NewOperations([]operation.Operation) error
 
 	NewProposal(base.Proposal) error
 	Proposal(valuehash.Hash /* fact hash */) (base.Proposal, bool, error)
@@ -46,9 +42,11 @@ type Database interface {
 
 	HasOperationFact(valuehash.Hash) (bool, error)
 
-	// NOTE StagedOperationSeals returns operation.Seals by incoming order.
-	StagedOperationSeals(func(operation.Seal) (bool, error), bool /* sort */) error
-	UnstagedOperationSeals([]valuehash.Hash /* seal.Hash()s */) error
+	// NOTE StagedOperationOperations returns operation.Operation by incoming order.
+	StagedOperationsByFact(facts []valuehash.Hash) ([]operation.Operation, error)
+	HasStagedOperation(valuehash.Hash) (bool, error)
+	StagedOperations(func(operation.Operation) (bool, error), bool /* sort */) error
+	UnstagedOperations([]valuehash.Hash /* operation.Fact().Hash()s */) error
 
 	SetInfo(string /* key */, []byte /* value */) error
 	Info(string /* key */) ([]byte, bool, error)

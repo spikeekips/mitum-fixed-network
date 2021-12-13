@@ -28,7 +28,7 @@ import (
 
 var (
 	DefaultPort                         = "54321"
-	QuicHandlerPathGetSeals             = "/seals"
+	QuicHandlerPathGetStagedOperations  = "/operations"
 	QuicHandlerPathSendSeal             = "/seal"
 	QuicHandlerPathGetProposal          = "/proposal"
 	QuicHandlerPathGetProposalPattern   = "/proposal" + "/{hash:.*}"
@@ -57,22 +57,21 @@ const (
 type Server struct {
 	*logging.Logging
 	*PrimitiveQuicServer
-	encs                 *encoder.Encoders
-	enc                  encoder.Encoder // NOTE default encoder.Encoder
-	getSealsHandler      network.GetSealsHandler
-	hasSealHandler       network.HasSealHandler
-	newSealHandler       network.NewSealHandler
-	getProposalHandler   network.GetProposalHandler
-	nodeInfoHandler      network.NodeInfoHandler
-	blockDataMapsHandler network.BlockDataMapsHandler
-	blockDataHandler     network.BlockDataHandler
-	startHandoverHandler network.StartHandoverHandler
-	pingHandoverHandler  network.PingHandoverHandler
-	endHandoverHandler   network.EndHandoverHandler
-	cache                cache.Cache
-	rg                   *singleflight.Group
-	connInfo             network.ConnInfo
-	passthroughs         func(context.Context, network.PassthroughedSeal, func(seal.Seal, network.Channel)) error
+	encs                       *encoder.Encoders
+	enc                        encoder.Encoder // NOTE default encoder.Encoder
+	getStagedOperationsHandler network.GetStagedOperationsHandler
+	newSealHandler             network.NewSealHandler
+	getProposalHandler         network.GetProposalHandler
+	nodeInfoHandler            network.NodeInfoHandler
+	blockDataMapsHandler       network.BlockDataMapsHandler
+	blockDataHandler           network.BlockDataHandler
+	startHandoverHandler       network.StartHandoverHandler
+	pingHandoverHandler        network.PingHandoverHandler
+	endHandoverHandler         network.EndHandoverHandler
+	cache                      cache.Cache
+	rg                         *singleflight.Group
+	connInfo                   network.ConnInfo
+	passthroughs               func(context.Context, network.PassthroughedSeal, func(seal.Seal, network.Channel)) error
 }
 
 func NewServer(
@@ -127,12 +126,8 @@ func (sv *Server) Encoder() encoder.Encoder {
 	return sv.enc
 }
 
-func (sv *Server) SetHasSealHandler(fn network.HasSealHandler) {
-	sv.hasSealHandler = fn
-}
-
-func (sv *Server) SetGetSealsHandler(fn network.GetSealsHandler) {
-	sv.getSealsHandler = fn
+func (sv *Server) SetGetStagedOperationsHandler(fn network.GetStagedOperationsHandler) {
+	sv.getStagedOperationsHandler = fn
 }
 
 func (sv *Server) SetNewSealHandler(fn network.NewSealHandler) {
@@ -172,7 +167,7 @@ func (sv *Server) SetEndHandoverHandler(fn network.EndHandoverHandler) {
 }
 
 func (sv *Server) setHandlers() {
-	_ = sv.SetHandlerFunc(QuicHandlerPathGetSeals, sv.handleGetSeals).Methods("POST")
+	_ = sv.SetHandlerFunc(QuicHandlerPathGetStagedOperations, sv.handleGetStagedOperations).Methods("POST")
 	_ = sv.SetHandlerFunc(QuicHandlerPathSendSeal, sv.handleNewSeal).Methods("POST")
 	_ = sv.SetHandlerFunc(QuicHandlerPathGetProposalPattern, sv.handleGetProposal).Methods("GET")
 	_ = sv.SetHandlerFunc(QuicHandlerPathGetBlockDataMaps, sv.handleGetBlockDataMaps).Methods("POST")
@@ -183,8 +178,8 @@ func (sv *Server) setHandlers() {
 	_ = sv.SetHandlerFunc(QuicHandlerPathEndHandoverPattern, sv.handleEndHandover)
 }
 
-func (sv *Server) handleGetSeals(w http.ResponseWriter, r *http.Request) {
-	if sv.getSealsHandler == nil {
+func (sv *Server) handleGetStagedOperations(w http.ResponseWriter, r *http.Request) {
+	if sv.getStagedOperationsHandler == nil {
 		network.HTTPError(w, http.StatusInternalServerError)
 		return
 	}
@@ -218,14 +213,14 @@ func (sv *Server) handleGetSeals(w http.ResponseWriter, r *http.Request) {
 		args.Sort()
 	}
 
-	if v, err, _ := sv.rg.Do("GetSeals-"+args.String(), func() (interface{}, error) {
-		i, err := sv.getSealsHandler(args.Hashes)
+	if v, err, _ := sv.rg.Do("GetStagedOperations-"+args.String(), func() (interface{}, error) {
+		i, err := sv.getStagedOperationsHandler(args.Hashes)
 		if err != nil {
 			return nil, err
 		}
 		return sv.enc.Marshal(i)
 	}); err != nil {
-		sv.Log().Error().Interface("hashes", args.Hashes).Err(err).Msg("failed to get seals")
+		sv.Log().Error().Interface("hashes", args.Hashes).Err(err).Msg("failed to get operationss")
 
 		handleError(w, err)
 	} else {
@@ -267,19 +262,6 @@ func (sv *Server) handleNewSeal(w http.ResponseWriter, r *http.Request) {
 	if sv.newSealHandler == nil {
 		network.HTTPError(w, http.StatusInternalServerError)
 		return
-	}
-
-	// NOTE if already received, returns 200
-	if sv.hasSealHandler != nil {
-		if found, err := sv.hasSealHandler(sl.Hash()); err != nil {
-			network.HTTPError(w, http.StatusInternalServerError)
-
-			return
-		} else if found {
-			w.WriteHeader(http.StatusOK)
-
-			return
-		}
 	}
 
 	if err := sv.newSealHandler(sl); err != nil {
@@ -568,8 +550,7 @@ func (*Server) handleHandoverError(w http.ResponseWriter, ok bool, err error) {
 
 func (sv *Server) logNilHanders() {
 	handlers := [][2]interface{}{
-		{sv.getSealsHandler, "getSealsHandler"},
-		{sv.hasSealHandler, "hasSealHandler"},
+		{sv.getStagedOperationsHandler, "getStagedOperationsHandler"},
 		{sv.newSealHandler, "newSealHandler"},
 		{sv.nodeInfoHandler, "nodeInfoHandler"},
 		{sv.blockDataMapsHandler, "blockDataMapsHandler"},

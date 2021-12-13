@@ -13,7 +13,6 @@ import (
 	"github.com/spikeekips/mitum/base/block"
 	"github.com/spikeekips/mitum/base/operation"
 	"github.com/spikeekips/mitum/base/prprocessor"
-	"github.com/spikeekips/mitum/base/seal"
 	"github.com/spikeekips/mitum/base/state"
 	channetwork "github.com/spikeekips/mitum/network/gochan"
 	"github.com/spikeekips/mitum/storage/blockdata/localfs"
@@ -266,7 +265,7 @@ func (t *testDefaultProposalProcessor) TestCancelPreviousProposal() {
 	t.NoError(err)
 	t.NoError(sl.IsValid(TestNetworkID))
 
-	t.NoError(t.local.Database().NewSeals([]seal.Seal{sl}))
+	t.NoError(t.local.Database().NewOperationSeals([]operation.Seal{sl}))
 
 	ib := t.NewINITBallot(t.local, base.Round(0), nil)
 	initFact := ib.Fact()
@@ -328,7 +327,7 @@ func (t *testDefaultProposalProcessor) TestOperation() {
 
 	// create new operation
 	sl, ops := t.NewOperationSeal(t.local, 1)
-	err := t.local.Database().NewSeals([]seal.Seal{sl})
+	err := t.local.Database().NewOperationSeals([]operation.Seal{sl})
 	t.NoError(err)
 
 	ib := t.NewINITBallot(t.local, base.Round(0), nil)
@@ -396,7 +395,7 @@ func (t *testDefaultProposalProcessor) TestOperation() {
 	t.True(nops[0].Hash().Equal(bop.Hash()))
 }
 
-func (t *testDefaultProposalProcessor) TestSealsNotFound() {
+func (t *testDefaultProposalProcessor) TestOperationssNotFound() {
 	ib := t.NewINITBallot(t.local, base.Round(0), nil)
 	initFact := ib.Fact()
 
@@ -406,12 +405,12 @@ func (t *testDefaultProposalProcessor) TestSealsNotFound() {
 	var pr base.Proposal
 	{
 		sl, _ := t.NewOperationSeal(t.local, 1)
-		t.NoError(t.remote.Database().NewSeals([]seal.Seal{sl}))
+		t.NoError(t.remote.Database().NewOperationSeals([]operation.Seal{sl}))
 
-		// add getSealHandler
-		t.remote.Channel().(*channetwork.Channel).SetGetSealHandler(
-			func(hs []valuehash.Hash) ([]seal.Seal, error) {
-				return []seal.Seal{sl}, nil
+		// add getStagedOperationHandler
+		t.remote.Channel().(*channetwork.Channel).SetGetStagedOperationsHandler(
+			func(hs []valuehash.Hash) ([]operation.Operation, error) {
+				return sl.Operations(), nil
 			},
 		)
 
@@ -419,10 +418,10 @@ func (t *testDefaultProposalProcessor) TestSealsNotFound() {
 		pr, _ = pm.Proposal(ivp.Height(), ivp.Round(), ivp)
 	}
 
-	for _, h := range pr.Fact().Seals() {
-		_, found, err := t.local.Database().Seal(h)
-		t.False(found)
-		t.Nil(err)
+	for _, h := range pr.Fact().Operations() {
+		ops, err := t.local.Database().StagedOperationsByFact([]valuehash.Hash{h})
+		t.NoError(err)
+		t.Equal(0, len(ops))
 	}
 
 	pps := t.processors()
@@ -440,9 +439,9 @@ func (t *testDefaultProposalProcessor) TestSealsNotFound() {
 		t.Equal(prprocessor.Prepared, pps.Current().State())
 	}
 
-	for _, h := range pr.Fact().Seals() {
-		_, found, err := t.local.Database().Seal(h)
-		t.True(found)
+	for _, h := range pr.Fact().Operations() {
+		ops, err := t.local.Database().StagedOperationsByFact([]valuehash.Hash{h})
+		t.Equal(1, len(ops))
 		t.Nil(err)
 	}
 }
@@ -473,7 +472,7 @@ func (t *testDefaultProposalProcessor) TestTimeoutPrepare() {
 	t.NoError(err)
 	t.NoError(sl.IsValid(TestNetworkID))
 
-	t.NoError(t.local.Database().NewSeals([]seal.Seal{sl}))
+	t.NoError(t.local.Database().NewOperationSeals([]operation.Seal{sl}))
 
 	ib := t.NewINITBallot(t.local, base.Round(0), nil)
 	initFact := ib.Fact()
@@ -507,7 +506,7 @@ func (t *testDefaultProposalProcessor) TestTimeoutPrepare() {
 
 func (t *testDefaultProposalProcessor) TestTimeoutSaveBeforeSavingStorage() {
 	sl, _ := t.NewOperationSeal(t.local, 1)
-	t.NoError(t.local.Database().NewSeals([]seal.Seal{sl}))
+	t.NoError(t.local.Database().NewOperationSeals([]operation.Seal{sl}))
 
 	ib := t.NewINITBallot(t.local, base.Round(0), nil)
 	initFact := ib.Fact()
@@ -571,7 +570,7 @@ func (t *testDefaultProposalProcessor) TestTimeoutSaveBeforeSavingStorage() {
 
 func (t *testDefaultProposalProcessor) TestTimeoutSaveAfterSaving() {
 	sl, _ := t.NewOperationSeal(t.local, 1)
-	t.NoError(t.local.Database().NewSeals([]seal.Seal{sl}))
+	t.NoError(t.local.Database().NewOperationSeals([]operation.Seal{sl}))
 
 	ib := t.NewINITBallot(t.local, base.Round(0), nil)
 	initFact := ib.Fact()
@@ -659,7 +658,7 @@ func (t *testDefaultProposalProcessor) TestTimeoutSaveAfterSaving() {
 
 func (t *testDefaultProposalProcessor) TestCustomOperationProcessor() {
 	sl, _ := t.NewOperationSeal(t.local, 1)
-	t.NoError(t.local.Database().NewSeals([]seal.Seal{sl}))
+	t.NoError(t.local.Database().NewOperationSeals([]operation.Seal{sl}))
 
 	pm := NewProposalMaker(t.local.Node(), t.local.Database(), t.local.Policy())
 
@@ -709,7 +708,7 @@ func (t *testDefaultProposalProcessor) TestCustomOperationProcessor() {
 }
 
 func (t *testDefaultProposalProcessor) TestNotProcessedOperations() {
-	var sls []seal.Seal
+	var sls []operation.Seal
 	var exclude valuehash.Hash
 	for i := 0; i < 2; i++ {
 		sl, ops := t.NewOperationSeal(t.local, 1)
@@ -720,7 +719,7 @@ func (t *testDefaultProposalProcessor) TestNotProcessedOperations() {
 		sls = append(sls, sl)
 	}
 
-	t.NoError(t.local.Database().NewSeals(sls))
+	t.NoError(t.local.Database().NewOperationSeals(sls))
 
 	pm := NewProposalMaker(t.local.Node(), t.local.Database(), t.local.Policy())
 
@@ -795,7 +794,7 @@ func (t *testDefaultProposalProcessor) TestNotProcessedOperations() {
 }
 
 func (t *testDefaultProposalProcessor) TestSameStateHash() {
-	var sls []seal.Seal
+	var sls []operation.Seal
 
 	var keys []string
 	var values [][]byte
@@ -827,7 +826,7 @@ func (t *testDefaultProposalProcessor) TestSameStateHash() {
 		sls = append(sls, sl)
 	}
 
-	t.NoError(t.local.Database().NewSeals(sls))
+	t.NoError(t.local.Database().NewOperationSeals(sls))
 
 	pm := NewProposalMaker(t.local.Node(), t.local.Database(), t.local.Policy())
 
@@ -884,7 +883,7 @@ func (t *testDefaultProposalProcessor) TestHeavyOperations() {
 	pm := NewProposalMaker(t.local.Node(), t.local.Database(), t.local.Policy())
 
 	var operated int64
-	sls := make([]seal.Seal, n)
+	sls := make([]operation.Seal, n)
 	for i := uint(0); i < n; i++ {
 		kop, err := NewKVOperation(
 			t.local.Node().Privatekey(),
@@ -914,7 +913,7 @@ func (t *testDefaultProposalProcessor) TestHeavyOperations() {
 		sls[i] = sl
 	}
 
-	err := t.local.Database().NewSeals(sls)
+	err := t.local.Database().NewOperationSeals(sls)
 	t.NoError(err)
 
 	ib := t.NewINITBallot(t.local, base.Round(0), nil)

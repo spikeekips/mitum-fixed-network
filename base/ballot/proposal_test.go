@@ -13,11 +13,11 @@ import (
 
 type testProposalFact struct {
 	suite.Suite
-	seals []valuehash.Hash
+	ops []valuehash.Hash
 }
 
 func (t *testProposalFact) SetupTest() {
-	t.seals = []valuehash.Hash{valuehash.RandomSHA256(), valuehash.RandomSHA256()}
+	t.ops = []valuehash.Hash{valuehash.RandomSHA256(), valuehash.RandomSHA256()}
 }
 
 func (t *testProposalFact) TestNew() {
@@ -29,7 +29,7 @@ func (t *testProposalFact) TestNew() {
 		height,
 		round,
 		n,
-		t.seals,
+		t.ops,
 	)
 	t.NoError(fact.IsValid(nil))
 
@@ -38,14 +38,14 @@ func (t *testProposalFact) TestNew() {
 
 	t.Equal(height, fact.Height())
 	t.Equal(round, fact.Round())
-	t.Equal(len(t.seals), len(fact.Seals()))
+	t.Equal(len(t.ops), len(fact.Operations()))
 
-	for i := range t.seals {
-		t.True(t.seals[i].Equal(fact.Seals()[i]))
+	for i := range t.ops {
+		t.True(t.ops[i].Equal(fact.Operations()[i]))
 	}
 }
 
-func (t *testProposalFact) TestEmptyHashInSeals() {
+func (t *testProposalFact) TestEmptyHashInOperations() {
 	fact := NewProposalFact(
 		base.Height(3),
 		base.Round(33),
@@ -57,7 +57,7 @@ func (t *testProposalFact) TestEmptyHashInSeals() {
 	t.True(errors.Is(err, isvalid.InvalidError))
 }
 
-func (t *testProposalFact) TestEmptySeals() {
+func (t *testProposalFact) TestEmptyOperations() {
 	fact := NewProposalFact(
 		base.Height(3),
 		base.Round(33),
@@ -73,7 +73,7 @@ func (t *testProposalFact) TestHashNotMatched() {
 		base.Height(3),
 		base.Round(33),
 		base.RandomStringAddress(),
-		t.seals,
+		t.ops,
 	)
 	t.NoError(fact.IsValid(nil))
 

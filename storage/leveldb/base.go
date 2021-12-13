@@ -8,7 +8,6 @@ import (
 	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/base/block"
 	"github.com/spikeekips/mitum/base/operation"
-	"github.com/spikeekips/mitum/base/seal"
 	"github.com/spikeekips/mitum/base/state"
 	"github.com/spikeekips/mitum/storage"
 	"github.com/spikeekips/mitum/util"
@@ -22,25 +21,23 @@ import (
 )
 
 var (
-	keyPrefixTmp                        []byte = []byte{0x00, 0x00}
-	keyPrefixBlockHeight                []byte = []byte{0x00, 0x01}
-	keyPrefixBlockHash                  []byte = []byte{0x00, 0x02}
-	keyPrefixManifest                   []byte = []byte{0x00, 0x03}
-	keyPrefixSeal                       []byte = []byte{0x00, 0x05}
-	keyPrefixSealHash                   []byte = []byte{0x00, 0x06}
-	keyPrefixProposal                   []byte = []byte{0x00, 0x07}
-	keyPrefixProposalFacts              []byte = []byte{0x00, 0x08}
-	keyPrefixBlockOperations            []byte = []byte{0x00, 0x09}
-	keyPrefixBlockStates                []byte = []byte{0x00, 0x10}
-	keyPrefixStagedOperationSeal        []byte = []byte{0x00, 0x11}
-	keyPrefixStagedOperationSealReverse []byte = []byte{0x00, 0x12}
-	keyPrefixState                      []byte = []byte{0x00, 0x13}
-	keyPrefixOperationFactHash          []byte = []byte{0x00, 0x14}
-	keyPrefixManifestHeight             []byte = []byte{0x00, 0x15}
-	keyPrefixINITVoteproof              []byte = []byte{0x00, 0x16}
-	keyPrefixACCEPTVoteproof            []byte = []byte{0x00, 0x17}
-	keyPrefixBlockDataMap               []byte = []byte{0x00, 0x18}
-	keyPrefixInfo                       []byte = []byte{0x00, 0x19}
+	keyPrefixTmp                            []byte = []byte{0x00, 0x00}
+	keyPrefixBlockHeight                    []byte = []byte{0x00, 0x01}
+	keyPrefixBlockHash                      []byte = []byte{0x00, 0x02}
+	keyPrefixManifest                       []byte = []byte{0x00, 0x03}
+	keyPrefixProposal                       []byte = []byte{0x00, 0x04}
+	keyPrefixProposalFacts                  []byte = []byte{0x00, 0x05}
+	keyPrefixBlockOperations                []byte = []byte{0x00, 0x06}
+	keyPrefixBlockStates                    []byte = []byte{0x00, 0x07}
+	keyPrefixState                          []byte = []byte{0x00, 0x08}
+	keyPrefixOperationFactHash              []byte = []byte{0x00, 0x09}
+	keyPrefixManifestHeight                 []byte = []byte{0x00, 0x10}
+	keyPrefixINITVoteproof                  []byte = []byte{0x00, 0x11}
+	keyPrefixACCEPTVoteproof                []byte = []byte{0x00, 0x12}
+	keyPrefixBlockDataMap                   []byte = []byte{0x00, 0x13}
+	keyPrefixInfo                           []byte = []byte{0x00, 0x14}
+	keyPrefixStagedOperationFactHash        []byte = []byte{0x00, 0x15}
+	keyPrefixStagedOperationFactHashReverse []byte = []byte{0x00, 0x16}
 )
 
 type Database struct {
@@ -291,46 +288,20 @@ func (st *Database) ManifestByHeight(height base.Height) (block.Manifest, bool, 
 	}
 }
 
-func (st *Database) sealKey(h valuehash.Hash) []byte {
-	return util.ConcatBytesSlice(keyPrefixSeal, h.Bytes())
-}
-
-func (st *Database) sealHashKey(h valuehash.Hash) []byte {
-	return util.ConcatBytesSlice(keyPrefixSealHash, h.Bytes())
-}
-
-func (st *Database) newStagedOperationSealKey(h valuehash.Hash) []byte {
+func (st *Database) newStagedOperationKey(h valuehash.Hash) []byte {
 	return util.ConcatBytesSlice(
-		keyPrefixStagedOperationSeal,
+		keyPrefixStagedOperationFactHash,
 		util.ULIDBytes(),
 		[]byte("-"), // delimiter
 		h.Bytes(),
 	)
 }
 
-func (st *Database) newStagedOperationSealReverseKey(h valuehash.Hash) []byte {
-	return util.ConcatBytesSlice(keyPrefixStagedOperationSealReverse, h.Bytes())
-}
-
-func (st *Database) Seal(h valuehash.Hash) (seal.Seal, bool, error) {
-	return st.sealByKey(st.sealKey(h))
-}
-
-func (st *Database) sealByKey(key []byte) (seal.Seal, bool, error) {
-	b, err := st.get(key)
-	if err != nil {
-		if errors.Is(err, util.NotFoundError) {
-			return nil, false, nil
-		}
-
-		return nil, false, err
-	}
-
-	if sl, err := st.loadSeal(b); err != nil {
-		return nil, false, err
-	} else {
-		return sl, true, nil
-	}
+func (st *Database) newStagedOperationReverseKey(h valuehash.Hash) []byte {
+	return util.ConcatBytesSlice(
+		keyPrefixStagedOperationFactHashReverse,
+		h.Bytes(),
+	)
 }
 
 func (st *Database) proposalByKey(key []byte) (base.Proposal, bool, error) {
@@ -350,59 +321,76 @@ func (st *Database) proposalByKey(key []byte) (base.Proposal, bool, error) {
 	}
 }
 
-func (st *Database) NewSeals(seals []seal.Seal) error {
+func (st *Database) NewOperationSeals(seals []operation.Seal) error {
 	batch := &leveldb.Batch{}
 
-	inserted := map[string]struct{}{}
-	for _, sl := range seals {
-		if _, found := inserted[sl.Hash().String()]; found {
-			continue
-		}
+	filter := st.newStagedOperationFilter()
 
-		if err := st.newSeal(batch, sl); err != nil {
+	for i := range seals {
+		if err := st.newOperations(batch, seals[i].Operations(), filter); err != nil {
 			return err
 		}
-		inserted[sl.Hash().String()] = struct{}{}
 	}
 
 	return mergeError(st.db.Write(batch, nil))
 }
 
-func (st *Database) newSeal(batch *leveldb.Batch, sl seal.Seal) error {
-	raw, err := st.enc.Marshal(sl)
-	if err != nil {
-		return err
+func (st *Database) newOperations(
+	batch *leveldb.Batch,
+	ops []operation.Operation,
+	filter func(valuehash.Hash) (bool, error),
+) error {
+	for i := range ops {
+		op := ops[i]
+
+		switch ok, err := filter(op.Fact().Hash()); {
+		case err != nil:
+			return err
+		case !ok:
+			continue
+		}
+
+		if err := st.newOperation(batch, op); err != nil {
+			return err
+		}
 	}
-	rawHash, err := st.enc.Marshal(sl.Hash())
-	if err != nil {
-		return err
-	}
-
-	batch.Put(
-		st.sealHashKey(sl.Hash()),
-		encodeWithEncoder(rawHash, st.enc),
-	)
-
-	key := st.sealKey(sl.Hash())
-	hb := encodeWithEncoder(raw, st.enc)
-	if _, ok := sl.(operation.Seal); !ok {
-		batch.Put(key, hb)
-		return nil
-	}
-
-	batch.Put(key, hb)
-
-	okey := st.newStagedOperationSealKey(sl.Hash())
-	batch.Put(okey, key)
-	batch.Put(st.newStagedOperationSealReverseKey(sl.Hash()), okey)
 
 	return nil
 }
 
-func (st *Database) HasSeal(h valuehash.Hash) (bool, error) {
-	found, err := st.db.Has(st.sealKey(h), nil)
+func (st *Database) NewOperations(ops []operation.Operation) error {
+	batch := &leveldb.Batch{}
 
-	return found, mergeError(err)
+	filter := st.newStagedOperationFilter()
+	for i := range ops {
+		op := ops[i]
+
+		switch ok, err := filter(op.Fact().Hash()); {
+		case err != nil:
+			return err
+		case !ok:
+			continue
+		}
+
+		if err := st.newOperation(batch, op); err != nil {
+			return err
+		}
+	}
+
+	return mergeError(st.db.Write(batch, nil))
+}
+
+func (st *Database) newOperation(batch *leveldb.Batch, op operation.Operation) error {
+	raw, err := st.enc.Marshal(op)
+	if err != nil {
+		return err
+	}
+
+	k := st.newStagedOperationKey(op.Fact().Hash())
+	batch.Put(k, encodeWithEncoder(raw, st.enc))
+	batch.Put(st.newStagedOperationReverseKey(op.Fact().Hash()), k)
+
+	return nil
 }
 
 func (st *Database) loadHinter(b []byte) (hint.Hinter, error) {
@@ -467,18 +455,6 @@ func (st *Database) loadManifest(b []byte) (block.Manifest, error) {
 	}
 }
 
-func (st *Database) loadSeal(b []byte) (seal.Seal, error) {
-	if hinter, err := st.loadHinter(b); err != nil {
-		return nil, err
-	} else if hinter == nil {
-		return nil, nil
-	} else if i, ok := hinter.(seal.Seal); !ok {
-		return nil, errors.Errorf("not Seal: %T", hinter)
-	} else {
-		return i, nil
-	}
-}
-
 func (st *Database) loadProposal(b []byte) (base.Proposal, error) {
 	if hinter, err := st.loadHinter(b); err != nil {
 		return nil, err
@@ -526,6 +502,18 @@ func (st *Database) loadBlockDataMap(b []byte) (block.BlockDataMap, error) {
 	}
 }
 
+func (st *Database) loadOperation(b []byte) (operation.Operation, error) {
+	if hinter, err := st.loadHinter(b); err != nil {
+		return nil, err
+	} else if hinter == nil {
+		return nil, nil
+	} else if i, ok := hinter.(operation.Operation); !ok {
+		return nil, errors.Errorf("not operation.Operation: %T", hinter)
+	} else {
+		return i, nil
+	}
+}
+
 func (st *Database) iter(
 	prefix []byte,
 	callback func([]byte /* key */, []byte /* value */) (bool, error),
@@ -562,77 +550,62 @@ func (st *Database) iter(
 	return mergeError(iter.Error())
 }
 
-func (st *Database) Seals(callback func(valuehash.Hash, seal.Seal) (bool, error), sort, load bool) error {
-	var prefix []byte
-	var iterFunc func([]byte, []byte) (bool, error)
+func (st *Database) HasStagedOperation(fact valuehash.Hash) (bool, error) {
+	found, err := st.db.Has(st.newStagedOperationReverseKey(fact), nil)
 
-	if load {
-		prefix = keyPrefixSeal
-		iterFunc = func(_, value []byte) (bool, error) {
-			sl, err := st.loadSeal(value)
-			if err != nil {
-				return false, err
-			}
-
-			return callback(sl.Hash(), sl)
-		}
-	} else {
-		prefix = keyPrefixSealHash
-		iterFunc = func(_, value []byte) (bool, error) {
-			h, err := st.loadHash(value)
-			if err != nil {
-				return false, err
-			}
-
-			return callback(h, nil)
-		}
-	}
-
-	return st.iter(prefix, iterFunc, sort)
+	return found, mergeError(err)
 }
 
-func (st *Database) SealsByHash(
-	hashes []valuehash.Hash,
-	callback func(valuehash.Hash, seal.Seal) (bool, error),
-	_ bool,
-) error {
-	for _, h := range hashes {
-		if sl, found, err := st.Seal(h); !found {
+func (st *Database) StagedOperationsByFact(facts []valuehash.Hash) ([]operation.Operation, error) {
+	var ops []operation.Operation
+	for i := range facts {
+		b, err := st.get(st.newStagedOperationReverseKey(facts[i]))
+		if err != nil {
+			if errors.Is(err, util.NotFoundError) {
+				continue
+			}
+
+			return nil, err
+		}
+
+		o, err := st.get(b)
+		if errors.Is(err, util.NotFoundError) {
 			continue
-		} else if err != nil {
-			return err
-		} else if keep, err := callback(h, sl); err != nil {
-			return err
-		} else if !keep {
-			break
 		}
+		if err != nil {
+			return nil, err
+		}
+
+		op, err := st.loadOperation(o)
+		if err != nil {
+			return nil, err
+		}
+
+		ops = append(ops, op)
 	}
 
-	return nil
+	return ops, nil
 }
 
-func (st *Database) StagedOperationSeals(callback func(operation.Seal) (bool, error), sort bool) error {
+func (st *Database) StagedOperations(callback func(operation.Operation) (bool, error), sort bool) error {
 	return st.iter(
-		keyPrefixStagedOperationSeal,
+		keyPrefixStagedOperationFactHash,
 		func(_, value []byte) (bool, error) {
-			var osl operation.Seal
-			if v, found, err := st.sealByKey(value); err != nil || !found {
+			op, err := st.loadOperation(value)
+			if err != nil {
 				return false, err
-			} else if sl, ok := v.(operation.Seal); !ok {
-				return false, errors.Errorf("not operation.Seal: %T", v)
-			} else {
-				osl = sl
 			}
-			return callback(osl)
+
+			return callback(op)
 		},
 		sort,
 	)
 }
 
-func (st *Database) UnstagedOperationSeals(seals []valuehash.Hash) error {
+func (st *Database) UnstagedOperations(facts []valuehash.Hash) error {
 	batch := &leveldb.Batch{}
 
-	if err := leveldbUnstageOperationSeals(st, batch, seals); err != nil {
+	if err := leveldbUnstageOperations(st, batch, facts); err != nil {
 		return err
 	}
 
@@ -869,6 +842,34 @@ func (st *Database) LocalBlockDataMapsByHeight(height base.Height, callback func
 	)
 }
 
+func (st *Database) newStagedOperationFilter() func(valuehash.Hash) (bool, error) {
+	inserted := map[string]struct{}{}
+	return func(h valuehash.Hash) (bool, error) {
+		k := h.String()
+		if _, found := inserted[k]; found {
+			return false, nil
+		}
+
+		switch found, err := st.HasOperationFact(h); {
+		case err != nil:
+			return false, err
+		case found:
+			return false, nil
+		}
+
+		switch found, err := st.HasStagedOperation(h); {
+		case err != nil:
+			return false, err
+		case found:
+			return false, nil
+		}
+
+		inserted[k] = struct{}{}
+
+		return true, nil
+	}
+}
+
 func leveldbBlockHeightKey(height base.Height) []byte {
 	return util.ConcatBytesSlice(
 		keyPrefixBlockHeight,
@@ -946,24 +947,23 @@ func leveldbBlockDataMapKey(height base.Height) []byte {
 	return util.ConcatBytesSlice(keyPrefixBlockDataMap, height.Bytes())
 }
 
-func leveldbUnstageOperationSeals(st *Database, batch *leveldb.Batch, seals []valuehash.Hash) error {
-	if len(seals) < 1 {
-		return nil
-	}
-
-	hashMap := map[string]struct{}{}
-	for _, h := range seals {
-		hashMap[h.String()] = struct{}{}
-	}
-
-	for _, h := range seals {
-		rkey := st.newStagedOperationSealReverseKey(h)
-		if key, err := st.get(rkey); err != nil {
+func leveldbUnstageOperations(st *Database, batch *leveldb.Batch, facts []valuehash.Hash) error {
+	for i := range facts {
+		k := st.newStagedOperationReverseKey(facts[i])
+		switch found, err := st.db.Has(k, nil); {
+		case err != nil:
 			return err
-		} else {
-			batch.Delete(key)
-			batch.Delete(rkey)
+		case !found:
+			continue
+		default:
+			batch.Delete(k)
 		}
+
+		b, err := st.get(k)
+		if err != nil {
+			return err
+		}
+		batch.Delete(b)
 	}
 
 	return nil

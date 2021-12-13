@@ -7,23 +7,24 @@ import (
 	"github.com/pkg/errors"
 	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/base/block"
+	"github.com/spikeekips/mitum/base/operation"
 	"github.com/spikeekips/mitum/base/seal"
 	"github.com/spikeekips/mitum/base/state"
 	"github.com/spikeekips/mitum/util/valuehash"
 )
 
 type DummyChannel struct {
-	connInfo             ConnInfo
-	getSealsHandler      GetSealsHandler
-	newSealHandler       NewSealHandler
-	getProposalHandler   GetProposalHandler
-	getStateHandler      GetStateHandler
-	nodeInfoHandler      NodeInfoHandler
-	blockDataMapsHandler BlockDataMapsHandler
-	blockDataHandler     BlockDataHandler
-	startHandover        StartHandoverHandler
-	pingHandover         PingHandoverHandler
-	endHandover          EndHandoverHandler
+	connInfo                   ConnInfo
+	getStagedOperationsHandler GetStagedOperationsHandler
+	newSealHandler             NewSealHandler
+	getProposalHandler         GetProposalHandler
+	getStateHandler            GetStateHandler
+	nodeInfoHandler            NodeInfoHandler
+	blockDataMapsHandler       BlockDataMapsHandler
+	blockDataHandler           BlockDataHandler
+	startHandover              StartHandoverHandler
+	pingHandover               PingHandoverHandler
+	endHandover                EndHandoverHandler
 }
 
 func NewDummyChannel(connInfo ConnInfo) *DummyChannel {
@@ -50,12 +51,12 @@ func (ch *DummyChannel) SetNewSealHandler(f NewSealHandler) {
 	ch.newSealHandler = f
 }
 
-func (ch *DummyChannel) Seals(_ context.Context, h []valuehash.Hash) ([]seal.Seal, error) {
-	if ch.getSealsHandler == nil {
+func (ch *DummyChannel) StagedOperations(_ context.Context, h []valuehash.Hash) ([]operation.Operation, error) {
+	if ch.getStagedOperationsHandler == nil {
 		return nil, ch.notSupported()
 	}
 
-	return ch.getSealsHandler(h)
+	return ch.getStagedOperationsHandler(h)
 }
 
 func (ch *DummyChannel) Proposal(_ context.Context, h valuehash.Hash) (base.Proposal, error) {
@@ -66,8 +67,8 @@ func (ch *DummyChannel) Proposal(_ context.Context, h valuehash.Hash) (base.Prop
 	return ch.getProposalHandler(h)
 }
 
-func (ch *DummyChannel) SetGetSealsHandler(f GetSealsHandler) {
-	ch.getSealsHandler = f
+func (ch *DummyChannel) SetGetStagedOperationsHandler(f GetStagedOperationsHandler) {
+	ch.getStagedOperationsHandler = f
 }
 
 func (ch *DummyChannel) State(_ context.Context, key string) (state.State, bool, error) {

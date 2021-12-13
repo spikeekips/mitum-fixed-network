@@ -9,6 +9,7 @@ import (
 	"github.com/rs/zerolog"
 	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/base/block"
+	"github.com/spikeekips/mitum/base/operation"
 	"github.com/spikeekips/mitum/base/seal"
 	"github.com/spikeekips/mitum/isaac"
 	"github.com/spikeekips/mitum/launch/config"
@@ -110,8 +111,7 @@ func (sn *SettingNetworkHandlers) loadFromContext(ctx context.Context) error {
 }
 
 func (sn *SettingNetworkHandlers) Set() error {
-	sn.network.SetHasSealHandler(sn.handlerHasSeal())
-	sn.network.SetGetSealsHandler(sn.handlerGetSeals())
+	sn.network.SetGetStagedOperationsHandler(sn.handlerGetStagedOperations())
 	sn.network.SetNewSealHandler(sn.handlerNewSeal())
 	sn.network.SetNodeInfoHandler(sn.handlerNodeInfo())
 	sn.network.SetBlockDataMapsHandler(sn.handlerBlockDataMaps())
@@ -123,7 +123,7 @@ func (sn *SettingNetworkHandlers) Set() error {
 
 	lc := sn.nodepool.LocalChannel().(*network.DummyChannel)
 	lc.SetNewSealHandler(sn.handlerNewSeal())
-	lc.SetGetSealsHandler(sn.handlerGetSeals())
+	lc.SetGetStagedOperationsHandler(sn.handlerGetStagedOperations())
 	lc.SetNodeInfoHandler(sn.handlerNodeInfo())
 	lc.SetBlockDataMapsHandler(sn.handlerBlockDataMaps())
 	lc.SetBlockDataHandler(sn.handlerBlockData())
@@ -133,25 +133,9 @@ func (sn *SettingNetworkHandlers) Set() error {
 	return nil
 }
 
-func (sn *SettingNetworkHandlers) handlerHasSeal() network.HasSealHandler {
-	return func(h valuehash.Hash) (bool, error) {
-		return sn.database.HasSeal(h)
-	}
-}
-
-func (sn *SettingNetworkHandlers) handlerGetSeals() network.GetSealsHandler {
-	return func(hs []valuehash.Hash) ([]seal.Seal, error) {
-		var sls []seal.Seal
-
-		if err := sn.database.SealsByHash(hs, func(_ valuehash.Hash, sl seal.Seal) (bool, error) {
-			sls = append(sls, sl)
-
-			return true, nil
-		}, true); err != nil {
-			return nil, err
-		}
-
-		return sls, nil
+func (sn *SettingNetworkHandlers) handlerGetStagedOperations() network.GetStagedOperationsHandler {
+	return func(hs []valuehash.Hash) ([]operation.Operation, error) {
+		return sn.database.StagedOperationsByFact(hs)
 	}
 }
 

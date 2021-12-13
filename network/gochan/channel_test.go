@@ -5,8 +5,10 @@ import (
 	"testing"
 
 	"github.com/spikeekips/mitum/base/key"
+	"github.com/spikeekips/mitum/base/operation"
 	"github.com/spikeekips/mitum/base/seal"
 	"github.com/spikeekips/mitum/network"
+	"github.com/spikeekips/mitum/util"
 	"github.com/spikeekips/mitum/util/valuehash"
 	"github.com/stretchr/testify/suite"
 )
@@ -35,20 +37,21 @@ func (t *testNetworkChanChannel) TestSendReceive() {
 	t.True(sl.Hash().Equal(rsl.Hash()))
 }
 
-func (t *testNetworkChanChannel) TestGetSeal() {
+func (t *testNetworkChanChannel) TestGetStagedOperation() {
 	gs := NewChannel(0, network.NewNilConnInfo("showme"))
 
-	sl := seal.NewDummySeal(t.pk.Publickey())
+	op, err := operation.NewKVOperation(t.pk, util.UUID().Bytes(), util.UUID().String(), util.UUID().Bytes(), nil)
+	t.NoError(err)
 
-	gs.SetGetSealHandler(func([]valuehash.Hash) ([]seal.Seal, error) {
-		return []seal.Seal{sl}, nil
+	gs.SetGetStagedOperationsHandler(func(hs []valuehash.Hash) ([]operation.Operation, error) {
+		return []operation.Operation{op}, nil
 	})
 
-	gsls, err := gs.Seals(context.TODO(), []valuehash.Hash{sl.Hash()})
+	ops, err := gs.StagedOperations(context.TODO(), []valuehash.Hash{op.Fact().Hash()})
 	t.NoError(err)
-	t.Equal(1, len(gsls))
+	t.Equal(1, len(ops))
 
-	t.True(sl.Hash().Equal(gsls[0].Hash()))
+	t.True(op.Hash().Equal(ops[0].Hash()))
 }
 
 func TestNetworkChanChannel(t *testing.T) {

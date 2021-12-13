@@ -4,9 +4,7 @@
 package mongodbstorage
 
 import (
-	"bytes"
 	"context"
-	"math/rand"
 	"sort"
 	"testing"
 	"time"
@@ -14,9 +12,7 @@ import (
 	"github.com/pkg/errors"
 	"github.com/spikeekips/mitum/base"
 	"github.com/spikeekips/mitum/base/block"
-	"github.com/spikeekips/mitum/base/key"
 	"github.com/spikeekips/mitum/base/operation"
-	"github.com/spikeekips/mitum/base/seal"
 	"github.com/spikeekips/mitum/storage"
 	"github.com/spikeekips/mitum/util"
 	"github.com/spikeekips/mitum/util/cache"
@@ -172,151 +168,177 @@ func (t *testDatabase) TestLoadManifestByHeight() {
 	t.CompareManifest(blk, loaded)
 }
 
-func (t *testDatabase) TestSeals() {
-	var seals []seal.Seal
+func (t *testDatabase) TestNewOperationSeals() {
+	var seals []operation.Seal
+	var ops []operation.Operation
 	for i := 0; i < 10; i++ {
-		pk := key.NewBasePrivatekey()
-		sl := seal.NewDummySeal(pk.Publickey())
-
+		sl := t.newOperationSeal()
 		seals = append(seals, sl)
-	}
-	t.NoError(t.database.NewSeals(seals))
 
-	for _, sl := range seals {
-		found, err := t.database.HasSeal(sl.Hash())
+		k := sl.Operations()
+		for j := range k {
+			ops = append(ops, k[j])
+		}
+	}
+	t.NoError(t.database.NewOperationSeals(seals))
+
+	for i := range ops {
+		found, err := t.database.HasStagedOperation(ops[i].Fact().Hash())
 		t.NoError(err)
 		t.True(found)
 	}
 
-	sort.Slice(seals, func(i, j int) bool {
-		return bytes.Compare(
-			[]byte(seals[i].Hash().String()),
-			[]byte(seals[j].Hash().String()),
-		) < 0
-	})
-
-	var collected []seal.Seal
-	t.NoError(t.database.Seals(
-		func(_ valuehash.Hash, sl seal.Seal) (bool, error) {
-			collected = append(collected, sl)
+	var collected []operation.Operation
+	t.NoError(t.database.StagedOperations(
+		func(op operation.Operation) (bool, error) {
+			collected = append(collected, op)
 
 			return true, nil
 		},
 		true,
-		true,
 	))
 
-	t.Equal(len(seals), len(collected))
+	t.Equal(len(ops), len(collected))
 
-	for i, sl := range collected {
-		t.True(seals[i].Hash().Equal(sl.Hash()))
+	for i := range collected {
+		t.True(ops[i].Fact().Hash().Equal(collected[i].Fact().Hash()))
 	}
 }
 
-func (t *testDatabase) TestSealsByHash() {
-	var seals []seal.Seal
-	var hashes []valuehash.Hash
+func (t *testDatabase) TestStagedOperationsByFact() {
+	var seals []operation.Seal
+	var ops []operation.Operation
 	for i := 0; i < 10; i++ {
-		pk := key.NewBasePrivatekey()
-		sl := seal.NewDummySeal(pk.Publickey())
-		hashes = append(hashes, sl.Hash())
-
+		sl := t.newOperationSeal()
 		seals = append(seals, sl)
-	}
-	t.NoError(t.database.NewSeals(seals))
 
-	loaded := map[string]seal.Seal{}
-	t.NoError(t.database.SealsByHash(hashes, func(_ valuehash.Hash, sl seal.Seal) (bool, error) {
-		loaded[sl.Hash().String()] = sl
-
-		return true, nil
-	}, true))
-
-	for _, h := range hashes {
-		var found bool
-		for lh := range loaded {
-			if h.String() == lh {
-				found = true
-				break
-			}
+		k := sl.Operations()
+		for j := range k {
+			ops = append(ops, k[j])
 		}
+	}
+	t.NoError(t.database.NewOperationSeals(seals))
+
+	for i := range ops {
+		found, err := t.database.HasStagedOperation(ops[i].Fact().Hash())
+		t.NoError(err)
 		t.True(found)
 	}
+
+	var facts []valuehash.Hash
+	for i := range ops[:3] {
+		facts = append(facts, ops[i].Fact().Hash())
+	}
+
+	rops, err := t.database.StagedOperationsByFact(facts)
+	t.NoError(err)
+	for i := range rops {
+		op := rops[i]
+
+		t.True(facts[i].Equal(op.Fact().Hash()))
+	}
+
+	rops, err = t.database.StagedOperationsByFact([]valuehash.Hash{valuehash.RandomSHA256()})
+	t.NoError(err)
+	t.Equal(0, len(rops))
 }
 
-func (t *testDatabase) TestSealsOnlyHash() {
-	var seals []seal.Seal
+func (t *testDatabase) TestStagedOperationsLimit() {
+	var seals []operation.Seal
+	var ops []operation.Operation
 	for i := 0; i < 10; i++ {
-		pk := key.NewBasePrivatekey()
-		sl := seal.NewDummySeal(pk.Publickey())
-
+		sl := t.newOperationSeal()
 		seals = append(seals, sl)
+
+		k := sl.Operations()
+		for j := range k {
+			ops = append(ops, k[j])
+		}
 	}
-	t.NoError(t.database.NewSeals(seals))
+	t.NoError(t.database.NewOperationSeals(seals))
 
-	sort.Slice(seals, func(i, j int) bool {
-		return bytes.Compare(
-			[]byte(seals[i].Hash().String()),
-			[]byte(seals[j].Hash().String()),
-		) < 0
-	})
-
-	var collected []valuehash.Hash
-	t.NoError(t.database.Seals(
-		func(h valuehash.Hash, sl seal.Seal) (bool, error) {
-			t.Nil(sl)
-			collected = append(collected, h)
-
-			return true, nil
-		},
-		true,
-		false,
-	))
-
-	t.Equal(len(seals), len(collected))
-
-	for i, h := range collected {
-		t.True(seals[i].Hash().Equal(h))
+	for i := range ops {
+		found, err := t.database.HasStagedOperation(ops[i].Fact().Hash())
+		t.NoError(err)
+		t.True(found)
 	}
-}
 
-func (t *testDatabase) TestSealsLimit() {
-	var seals []seal.Seal
-	for i := 0; i < 10; i++ {
-		pk := key.NewBasePrivatekey()
-		sl := seal.NewDummySeal(pk.Publickey())
-
-		seals = append(seals, sl)
-	}
-	t.NoError(t.database.NewSeals(seals))
-
-	sort.Slice(seals, func(i, j int) bool {
-		return bytes.Compare(
-			[]byte(seals[i].Hash().String()),
-			[]byte(seals[j].Hash().String()),
-		) < 0
-	})
-
-	var collected []seal.Seal
-	t.NoError(t.database.Seals(
-		func(_ valuehash.Hash, sl seal.Seal) (bool, error) {
+	var collected []operation.Operation
+	t.NoError(t.database.StagedOperations(
+		func(op operation.Operation) (bool, error) {
 			if len(collected) == 3 {
 				return false, nil
 			}
 
-			collected = append(collected, sl)
+			collected = append(collected, op)
 
 			return true, nil
 		},
-		true,
 		true,
 	))
 
 	t.Equal(3, len(collected))
 
-	for i, sl := range collected {
-		t.True(seals[i].Hash().Equal(sl.Hash()))
+	for i := range collected {
+		t.True(ops[i].Fact().Hash().Equal(collected[i].Fact().Hash()))
 	}
+}
+
+func (t *testDatabase) TestUnstagedOperations() {
+	var ops []operation.Operation
+	var seals []operation.Seal
+	for i := 0; i < 10; i++ {
+		opsl := t.newOperationSeal()
+		seals = append(seals, opsl)
+
+		l := opsl.Operations()
+		for j := range l {
+			ops = append(ops, l[j])
+		}
+	}
+	t.NoError(t.database.NewOperationSeals(seals))
+
+	var inserted int
+	_ = t.database.client.Find(
+		context.Background(),
+		ColNameStagedOperation,
+		func(_ *mongo.Cursor) (bool, error) {
+			inserted++
+			return true, nil
+		},
+		nil,
+	)
+	t.Equal(0, inserted)
+
+	var facts []valuehash.Hash
+	for i := range ops[:3] {
+		facts = append(facts, ops[i].Fact().Hash())
+	}
+
+	t.NoError(t.database.UnstagedOperations(facts))
+
+	for i := range facts {
+		found, err := t.database.HasStagedOperation(facts[i])
+		t.NoError(err)
+		t.False(found)
+	}
+
+	rops, err := t.database.StagedOperationsByFact(facts)
+	t.NoError(err)
+	t.Equal(0, len(rops))
+
+	var lefts int
+	_ = t.database.client.Find(
+		context.Background(),
+		ColNameStagedOperation,
+		func(_ *mongo.Cursor) (bool, error) {
+			lefts++
+			return true, nil
+		},
+		nil,
+	)
+
+	t.Equal(inserted, lefts)
 }
 
 func (t *testDatabase) newOperationSeal() operation.Seal {
@@ -329,112 +351,6 @@ func (t *testDatabase) newOperationSeal() operation.Seal {
 	t.NoError(sl.IsValid(nil))
 
 	return sl
-}
-
-func (t *testDatabase) TestStagedOperationSeals() {
-	var seals []seal.Seal
-
-	// 10 seal.Seal
-	for i := 0; i < 10; i++ {
-		sl := seal.NewDummySeal(t.PK.Publickey())
-
-		seals = append(seals, sl)
-	}
-	t.NoError(t.database.NewSeals(seals))
-
-	ops := map[string]operation.Seal{}
-
-	var others []seal.Seal
-	// 10 operation.Seal
-	for i := 0; i < 10; i++ {
-		sl := t.newOperationSeal()
-
-		others = append(others, sl)
-		ops[sl.Hash().String()] = sl
-	}
-	t.NoError(t.database.NewSeals(others))
-
-	var collected []seal.Seal
-	t.NoError(t.database.StagedOperationSeals(
-		func(sl operation.Seal) (bool, error) {
-			collected = append(collected, sl)
-
-			return true, nil
-		},
-		true,
-	))
-
-	t.Equal(len(ops), len(collected))
-
-	for _, sl := range collected {
-		t.Implements((*operation.Seal)(nil), sl)
-
-		var found bool
-		for h := range ops {
-			if sl.Hash().String() == h {
-				found = true
-				break
-			}
-		}
-
-		t.True(found)
-	}
-}
-
-func (t *testDatabase) TestUnStagedOperationSeals() {
-	// 10 seal.Seal
-	for i := 0; i < 10; i++ {
-		sl := seal.NewDummySeal(t.PK.Publickey())
-		t.NoError(t.database.NewSeals([]seal.Seal{sl}))
-	}
-
-	var ops []operation.Seal
-	// 10 operation.Seal
-	for i := 0; i < 10; i++ {
-		sl := t.newOperationSeal()
-		t.NoError(t.database.NewSeals([]seal.Seal{sl}))
-
-		ops = append(ops, sl)
-	}
-
-	rs := rand.New(rand.NewSource(time.Now().Unix()))
-	selected := map[string]struct{}{}
-	for i := 0; i < 5; i++ {
-		var sl seal.Seal
-		for {
-			sl = ops[rs.Intn(len(ops))]
-			if _, found := selected[sl.Hash().String()]; !found {
-				selected[sl.Hash().String()] = struct{}{}
-				break
-			}
-		}
-	}
-
-	blk, err := block.NewTestBlockV0(base.Height(33), base.Round(0), valuehash.RandomSHA256(), valuehash.RandomSHA256())
-	t.NoError(err)
-
-	i := (interface{})(blk).(block.BlockUpdater)
-	i = i.SetINITVoteproof(base.NewVoteproofV0(blk.Height(), blk.Round(), nil, base.ThresholdRatio(100), base.StageINIT))
-	i = i.SetACCEPTVoteproof(base.NewVoteproofV0(blk.Height(), blk.Round(), nil, base.ThresholdRatio(100), base.StageACCEPT))
-	blk = i.(block.BlockV0)
-
-	bs, err := t.database.NewSession(blk)
-	t.NoError(err)
-
-	bd := t.NewBlockDataMap(blk.Height(), blk.Hash(), true)
-	t.NoError(bs.Commit(context.Background(), bd))
-
-	var collected []seal.Seal
-	t.NoError(t.database.StagedOperationSeals(
-		func(sl operation.Seal) (bool, error) {
-			collected = append(collected, sl)
-
-			return true, nil
-		},
-		true,
-	))
-
-	t.Equal(len(ops), len(collected))
 }
 
 func (t *testDatabase) TestHasOperation() {

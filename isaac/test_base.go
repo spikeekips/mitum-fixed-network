@@ -445,8 +445,8 @@ func (t *BaseTest) CompareProposal(a, b base.Proposal) {
 		t.CompareVoteproof(av, bv)
 	}
 
-	as := af.Seals()
-	bs := bf.Seals()
+	as := af.Operations()
+	bs := bf.Operations()
 	for i := range as {
 		t.True(as[i].Equal(bs[i]))
 	}
@@ -458,8 +458,8 @@ func (t *BaseTest) CompareProposalFact(a, b base.ProposalFact) {
 	t.True(a.Hash().Equal(b.Hash()))
 	t.True(a.Hash().Equal(b.Hash()))
 
-	as := a.Seals()
-	bs := b.Seals()
+	as := a.Operations()
+	bs := b.Operations()
 	for i := range as {
 		t.True(as[i].Equal(bs[i]))
 	}

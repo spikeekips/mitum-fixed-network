@@ -47,9 +47,9 @@ func (t *baseTest) compareFact(a, b base.BallotFact) {
 
 		t.True(xa.proposer.Equal(xb.proposer))
 
-		t.Equal(len(xa.Seals()), len(xb.Seals()))
-		as := xa.Seals()
-		bs := xb.Seals()
+		t.Equal(len(xa.Operations()), len(xb.Operations()))
+		as := xa.Operations()
+		bs := xb.Operations()
 		for i := range as {
 			t.True(as[i].Equal(bs[i]))
 		}

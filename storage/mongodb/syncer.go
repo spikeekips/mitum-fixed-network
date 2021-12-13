@@ -215,9 +215,8 @@ func (st *SyncerSession) Commit() error {
 
 	for _, col := range []string{
 		ColNameManifest,
-		ColNameSeal,
 		ColNameOperation,
-		ColNameOperationSeal,
+		ColNameStagedOperation,
 		ColNameProposal,
 		ColNameState,
 		ColNameVoteproof,

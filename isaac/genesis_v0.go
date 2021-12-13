@@ -11,7 +11,6 @@ import (
 	"github.com/spikeekips/mitum/base/node"
 	"github.com/spikeekips/mitum/base/operation"
 	"github.com/spikeekips/mitum/base/prprocessor"
-	"github.com/spikeekips/mitum/base/seal"
 	"github.com/spikeekips/mitum/network"
 	"github.com/spikeekips/mitum/storage"
 	"github.com/spikeekips/mitum/storage/blockdata"
@@ -128,17 +127,18 @@ func (gg *GenesisBlockV0Generator) generateOperationSeal() ([]operation.Seal, er
 		return nil, nil
 	}
 
-	var seals []operation.Seal
-	if sl, err := operation.NewBaseSeal(
+	sl, err := operation.NewBaseSeal(
 		gg.local.Privatekey(),
 		gg.ops,
 		gg.policy.NetworkID(),
-	); err != nil {
+	)
+	if err != nil {
 		return nil, err
-	} else if err := gg.database.NewSeals([]seal.Seal{sl}); err != nil {
+	}
+
+	seals := []operation.Seal{sl}
+	if err = gg.database.NewOperationSeals(seals); err != nil {
 		return nil, err
-	} else {
-		seals = append(seals, sl)
 	}
 
 	return seals, nil
@@ -197,10 +197,12 @@ func (gg *GenesisBlockV0Generator) generateProposal(
 	seals []operation.Seal,
 	voteproof base.Voteproof,
 ) (base.Proposal, error) {
-	sealHashes := make([]valuehash.Hash, len(seals))
+	var ops []valuehash.Hash
 	for i := range seals {
-		sl := seals[i]
-		sealHashes[i] = sl.Hash()
+		l := seals[i].Operations()
+		for j := range l {
+			ops = append(ops, l[j].Fact().Hash())
+		}
 	}
 
 	pr, err := ballot.NewProposal(
@@ -208,7 +210,7 @@ func (gg *GenesisBlockV0Generator) generateProposal(
 			base.GenesisHeight,
 			base.Round(0),
 			gg.local.Address(),
-			sealHashes,
+			ops,
 		),
 		gg.local.Address(),
 		voteproof,

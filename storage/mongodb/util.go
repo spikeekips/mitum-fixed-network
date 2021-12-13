@@ -58,6 +58,7 @@ func writeBulkModels(
 	}
 
 	result := new(mongo.BulkWriteResult)
+	result.UpsertedIDs = make(map[int64]interface{})
 
 	var ms []mongo.WriteModel
 	var s, e int

@@ -12,7 +12,7 @@ import (
 )
 
 var RateLimitHandlerMap = map[string]string{
-	"seals":          quicnetwork.QuicHandlerPathGetSeals,
+	"operations":     quicnetwork.QuicHandlerPathGetStagedOperations,
 	"send-seal":      quicnetwork.QuicHandlerPathSendSeal,
 	"blockdata-maps": quicnetwork.QuicHandlerPathGetBlockDataMaps,
 	"blockdata":      quicnetwork.QuicHandlerPathGetBlockDataPattern,
@@ -20,7 +20,7 @@ var RateLimitHandlerMap = map[string]string{
 }
 
 var DefaultWorldRateLimit = map[string]limiter.Rate{
-	"seals":          {Period: time.Second * 10, Limit: 30},
+	"operations":     {Period: time.Second * 10, Limit: 30},
 	"send-seal":      {Period: time.Second * 10, Limit: 100},
 	"blockdata-maps": {Period: time.Minute * 1, Limit: 60 * 9},
 	"blockdata":      {Period: time.Minute * 1, Limit: 60 * 9},
@@ -28,7 +28,7 @@ var DefaultWorldRateLimit = map[string]limiter.Rate{
 }
 
 var DefaultSuffrageRateLimit = map[string]limiter.Rate{
-	"seals":          {Period: time.Second * 10, Limit: 100},
+	"operations":     {Period: time.Second * 10, Limit: 100},
 	"send-seal":      {Period: time.Second * 10, Limit: 1000},
 	"blockdata-maps": {Period: time.Second * 10, Limit: 1000},
 	"blockdata":      {Period: time.Second * 10, Limit: 1000},

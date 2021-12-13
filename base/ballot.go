@@ -49,7 +49,7 @@ type INITBallotFact interface {
 type ProposalFact interface {
 	BallotFact
 	Proposer() Address
-	Seals() []valuehash.Hash
+	Operations() []valuehash.Hash
 	ProposedAt() time.Time
 }
 

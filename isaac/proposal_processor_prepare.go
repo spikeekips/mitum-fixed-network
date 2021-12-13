@@ -90,28 +90,29 @@ func (pp *DefaultProcessor) prepare(ctx context.Context) error {
 }
 
 func (pp *DefaultProcessor) prepareOperations(ctx context.Context) error {
-	ev := pp.Log().Debug().Int("seals", len(pp.Fact().Seals()))
+	ev := pp.Log().Debug().Int("operations", len(pp.Fact().Operations()))
 
-	seals := pp.Fact().Seals()
+	opsh := pp.Fact().Operations()
 
 	started := time.Now()
 	defer func() {
 		_ = pp.setStatic("processor_prepare_operations_elapsed", time.Since(started)).
-			setStatic("processor_prepare_operations_seals", len(seals)).
+			setStatic("processor_prepare_operations_operation_hashes", len(opsh)).
 			setStatic("processor_prepare_operations_operations", len(pp.operations))
 	}()
 
-	if len(seals) < 1 {
+	if len(opsh) < 1 {
 		return nil
 	}
 
-	se := NewSealsExtracter(pp.nodepool.LocalNode().Address(), pp.Fact().Proposer(), pp.database, pp.nodepool, seals)
+	se := NewOperationsExtractor(pp.nodepool.LocalNode().Address(), pp.Fact().Proposer(), pp.database, pp.nodepool, opsh)
 	_ = se.SetLogging(pp.Logging)
 
 	ops, err := se.Extract(ctx)
 	if err != nil {
 		return errors.Wrap(err, "failed to extract seals")
 	}
+
 	ev.Int("operations", len(ops)).Msg("operations extracted from seals of proposal")
 
 	pp.operations = ops

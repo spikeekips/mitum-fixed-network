@@ -1,58 +1,32 @@
 package valuehash
 
 import (
-	"encoding/json"
 	"testing"
 
 	"github.com/stretchr/testify/suite"
-	"go.mongodb.org/mongo-driver/bson"
 )
 
 type testKeccak512 struct {
 	suite.Suite
 }
 
-func (t *testKeccak512) TestEmpty() {
-	s := SHA512{}
-	err := s.IsValid(nil)
-	t.Contains(err.Error(), "empty")
-}
-
-func (t *testKeccak512) TestNil() {
-	s := NewSHA512(nil)
-	err := s.IsValid(nil)
-	t.Contains(err.Error(), "empty")
-}
-
 func (t *testKeccak512) TestNew() {
-	hs := NewSHA512(nil)
-	t.Implements((*Hash)(nil), hs)
+	h := NewSHA512(nil)
+	t.Implements((*Hash)(nil), h)
 
-	initial := hs.Bytes()
+	initial := h.Bytes()
 
 	b := []byte("showme")
-	hs = NewSHA512(b)
+	h = NewSHA512(b)
 
-	t.NotEqual(initial, hs.Bytes())
+	t.T().Log(h.String())
+	t.Equal("2H76oz198raDfKuuZR2UzykD5ahnWkki5QHN7qaThedyt9KqL5bg3CkW3r49Ahto8LikRhP9dC4QvG6t5C2WoFoc", h.String())
+
+	t.NotEqual(initial, h.Bytes())
 
 	newS512 := NewSHA512(b)
 
-	t.Equal(hs.Bytes(), newS512.Bytes())
-}
-
-func (t *testKeccak512) TestJSONMarshal() {
-	b := []byte("killme")
-	hs := NewSHA512(b)
-
-	{
-		b, err := marshalJSON(hs)
-		t.NoError(err)
-
-		var jh Bytes
-		t.NoError(err, json.Unmarshal(b, &jh))
-
-		t.True(hs.Equal(jh))
-	}
+	t.Equal(h.Bytes(), newS512.Bytes())
 }
 
 func TestKeccak512(t *testing.T) {
@@ -63,59 +37,23 @@ type testKeccak256 struct {
 	suite.Suite
 }
 
-func (t *testKeccak256) TestEmpty() {
-	s := SHA256{}
-	err := s.IsValid(nil)
-	t.Contains(err.Error(), "empty")
-}
-
-func (t *testKeccak256) TestNil() {
-	s := NewSHA256(nil)
-	err := s.IsValid(nil)
-	t.Contains(err.Error(), "empty")
-}
-
 func (t *testKeccak256) TestNew() {
-	hs := NewSHA256(nil)
-	t.Implements((*Hash)(nil), hs)
+	h := NewSHA256(nil)
+	t.Implements((*Hash)(nil), h)
 
-	initial := hs.Bytes()
+	initial := h.Bytes()
 
 	b := []byte("showme")
-	hs = NewSHA256(b)
+	h = NewSHA256(b)
 
-	t.NotEqual(initial, hs.Bytes())
+	t.T().Log(h.String())
+	t.Equal("67fQPFDYM4QJjdCuJhM4EUakDPK6uRa4TfF1qzMNi5XV", h.String())
+
+	t.NotEqual(initial, h.Bytes())
 
 	newS256 := NewSHA256(b)
 
-	t.Equal(hs.Bytes(), newS256.Bytes())
-}
-
-func (t *testKeccak256) TestBSONMarshal() {
-	hs := NewSHA256([]byte("killme"))
-
-	_, b, err := bson.MarshalValue(hs)
-	t.NoError(err)
-
-	uh, err := unmarshalBSONValue(b)
-	t.NoError(err)
-
-	t.True(hs.Equal(uh))
-}
-
-func (t *testKeccak256) TestJSONMarshal() {
-	b := []byte("killme")
-	hs := NewSHA256(b)
-
-	{
-		b, err := marshalJSON(hs)
-		t.NoError(err)
-
-		var jh Bytes
-		t.NoError(err, json.Unmarshal(b, &jh))
-
-		t.True(hs.Equal(jh))
-	}
+	t.Equal(h.Bytes(), newS256.Bytes())
 }
 
 func TestKeccak256(t *testing.T) {

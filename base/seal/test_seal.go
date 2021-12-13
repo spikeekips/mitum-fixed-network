@@ -26,8 +26,8 @@ type DummySeal struct {
 func NewDummySeal(pk key.Publickey) DummySeal {
 	return DummySeal{
 		PK:        pk,
-		H:         valuehash.RandomSHA256().(valuehash.SHA256),
-		BH:        valuehash.RandomSHA256().(valuehash.SHA256),
+		H:         valuehash.RandomSHA256(),
+		BH:        valuehash.RandomSHA256(),
 		S:         util.UUID().String(),
 		CreatedAt: localtime.UTCNow(),
 	}

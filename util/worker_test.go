@@ -13,6 +13,7 @@ import (
 	"github.com/pkg/errors"
 	"github.com/stretchr/testify/suite"
 	"go.uber.org/goleak"
+	"golang.org/x/sync/semaphore"
 )
 
 type testParallelWorker struct {
@@ -355,7 +356,7 @@ func (t *testDistributeWorker) TestWithErrchanCancel() {
 	t.True(l > atomic.LoadUint64(&called))
 }
 
-func (t *testDistributeWorker) TestClose() {
+func (t *testDistributeWorker) TestCancel() {
 	var l uint64 = 10
 
 	wk := NewDistributeWorker(context.Background(), 5, nil)
@@ -377,7 +378,7 @@ func (t *testDistributeWorker) TestClose() {
 			_ = wk.NewJob(callback(i))
 
 			if i == 3 {
-				go wk.Close()
+				go wk.Cancel()
 			}
 		}
 
@@ -391,7 +392,7 @@ func (t *testDistributeWorker) TestClose() {
 	t.True(atomic.LoadUint64(&called) < l)
 }
 
-func (t *testDistributeWorker) TestCloseBeforeRun() {
+func (t *testDistributeWorker) TestCancelBeforeRun() {
 	var l uint64 = 10
 
 	wk := NewDistributeWorker(context.Background(), 5, nil)
@@ -416,7 +417,7 @@ func (t *testDistributeWorker) TestCloseBeforeRun() {
 		wk.Done()
 	}()
 
-	wk.Close()
+	wk.Cancel()
 
 	err := wk.Wait()
 	t.NotNil(err)
@@ -425,7 +426,7 @@ func (t *testDistributeWorker) TestCloseBeforeRun() {
 	t.True(atomic.LoadUint64(&called) < l)
 }
 
-func (t *testDistributeWorker) TestLazyClose() {
+func (t *testDistributeWorker) TestLazyCancel() {
 	var l uint64 = 10
 
 	var called, canceled uint64
@@ -455,7 +456,7 @@ func (t *testDistributeWorker) TestLazyClose() {
 			_ = wk.NewJob(callback(i))
 		}
 
-		wk.LazyClose(time.Millisecond * 300)
+		wk.LazyCancel(time.Millisecond * 300)
 	}()
 
 	err := wk.Wait()
@@ -471,7 +472,18 @@ func (t *testDistributeWorker) TestLazyClose() {
 func TestDistributeWorker(t *testing.T) {
 	defer goleak.VerifyNone(t)
 
-	suite.Run(t, new(testDistributeWorker))
+	sem := semaphore.NewWeighted(100)
+	for i := 0; i < 1000; i++ {
+		_ = sem.Acquire(context.Background(), 1)
+
+		go func() {
+			defer sem.Release(1)
+
+			suite.Run(t, new(testDistributeWorker))
+		}()
+	}
+
+	_ = sem.Acquire(context.Background(), 100)
 }
 
 type testErrgroupWorker struct {
@@ -538,12 +550,12 @@ func (t *testErrgroupWorker) TestError() {
 				return nil
 			}
 
-			if i := j.(uint64); i > 0 && i == 3 {
+			if i := j.(uint64); i == 3 {
 				return errors.Errorf("error:%d", j)
 			}
 
 			select {
-			case <-time.After(time.Millisecond * 300):
+			case <-time.After(time.Second):
 				atomic.AddUint64(&called, 1)
 			case <-ctx.Done():
 				return ctx.Err()
@@ -570,7 +582,8 @@ func (t *testErrgroupWorker) TestError() {
 	t.NotNil(err)
 	t.Contains(err.Error(), "error:3")
 
-	t.True(atomic.LoadUint64(&called) < 1)
+	c := atomic.LoadUint64(&called)
+	t.True(c < 1, "called=%d", c)
 }
 
 func (t *testErrgroupWorker) TestDeadlineError() {
@@ -618,7 +631,7 @@ func (t *testErrgroupWorker) TestDeadlineError() {
 	t.True(c < 1)
 }
 
-func (t *testErrgroupWorker) TestClose() {
+func (t *testErrgroupWorker) TestCancel() {
 	var l uint64 = 10
 
 	callback := func(j interface{}) ContextWorkerCallback {
@@ -637,7 +650,7 @@ func (t *testErrgroupWorker) TestClose() {
 			_ = wk.NewJob(callback(i))
 
 			if i == 3 {
-				go wk.Close()
+				go wk.Cancel()
 			}
 		}
 
@@ -647,7 +660,7 @@ func (t *testErrgroupWorker) TestClose() {
 	t.NoError(wk.Wait())
 }
 
-func (t *testErrgroupWorker) TestCloseBeforeRun() {
+func (t *testErrgroupWorker) TestCancelBeforeRun() {
 	var l uint64 = 10
 
 	var called uint64
@@ -660,7 +673,7 @@ func (t *testErrgroupWorker) TestCloseBeforeRun() {
 		}
 	}
 
-	wk := NewErrgroupWorker(context.Background(), int64(l))
+	wk := NewErrgroupWorker(context.Background(), int64(l)-5)
 	defer wk.Close()
 
 	go func() {
@@ -671,11 +684,12 @@ func (t *testErrgroupWorker) TestCloseBeforeRun() {
 		wk.Done()
 	}()
 
-	wk.Close()
+	wk.Cancel()
 
 	t.NoError(wk.Wait())
 
-	t.True(atomic.LoadUint64(&called) < l)
+	c := atomic.LoadUint64(&called)
+	t.True(c < l, "called=%d, total=%d", c, l)
 }
 
 func (t *testErrgroupWorker) TestLazyClose() {
@@ -708,7 +722,7 @@ func (t *testErrgroupWorker) TestLazyClose() {
 			_ = wk.NewJob(callback(i))
 		}
 
-		wk.LazyClose(time.Millisecond * 100)
+		wk.LazyCancel(time.Millisecond * 100)
 	}()
 
 	err := wk.Wait()
@@ -724,5 +738,16 @@ func (t *testErrgroupWorker) TestLazyClose() {
 func TestErrgroupWorker(t *testing.T) {
 	defer goleak.VerifyNone(t)
 
-	suite.Run(t, new(testErrgroupWorker))
+	sem := semaphore.NewWeighted(100)
+	for i := 0; i < 1000; i++ {
+		_ = sem.Acquire(context.Background(), 1)
+
+		go func() {
+			defer sem.Release(1)
+
+			suite.Run(t, new(testErrgroupWorker))
+		}()
+	}
+
+	_ = sem.Acquire(context.Background(), 100)
 }

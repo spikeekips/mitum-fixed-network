@@ -1,3 +1,4 @@
+//go:build test
 // +build test
 
 package isaac
@@ -17,7 +18,7 @@ func (ls Local) MarshalJSON() ([]byte, error) {
 	})
 
 	return jsonenc.Marshal(struct {
-		ND *node.Local  `json:"node"`
+		ND node.Local   `json:"node"`
 		PL *LocalPolicy `json:"policy"`
 		NS []base.Node  `json:"nodes"`
 	}{

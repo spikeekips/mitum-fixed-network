@@ -40,7 +40,7 @@ var (
 type Discovery struct {
 	*logging.Logging
 	*util.ContextDaemon
-	local            *node.Local
+	local            node.Local
 	networkID        base.NetworkID
 	enc              encoder.Encoder
 	tcpTimeout       time.Duration
@@ -68,7 +68,7 @@ type Discovery struct {
 }
 
 func NewDiscovery(
-	local *node.Local,
+	local node.Local,
 	connInfo network.ConnInfo,
 	networkID base.NetworkID,
 	enc encoder.Encoder,

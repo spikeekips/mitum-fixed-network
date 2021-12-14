@@ -15,7 +15,7 @@ import (
 type BootingState struct {
 	*logging.Logging
 	*BaseState
-	local     *node.Local
+	local     node.Local
 	database  storage.Database
 	blockData blockdata.BlockData
 	policy    *isaac.LocalPolicy
@@ -23,7 +23,7 @@ type BootingState struct {
 }
 
 func NewBootingState(
-	local *node.Local,
+	local node.Local,
 	db storage.Database,
 	blockData blockdata.BlockData,
 	policy *isaac.LocalPolicy,

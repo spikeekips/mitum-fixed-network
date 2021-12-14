@@ -39,7 +39,7 @@ func ProcessGenerateGenesisBlock(ctx context.Context) (context.Context, error) {
 		return ctx, err
 	}
 
-	var local *node.Local
+	var local node.Local
 	if err := LoadLocalNodeContextValue(ctx, &local); err != nil {
 		return ctx, err
 	}

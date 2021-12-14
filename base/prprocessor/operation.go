@@ -264,7 +264,7 @@ func (co *ConcurrentOperationsProcessor) Cancel() error {
 		return nil
 	}
 
-	co.wk.LazyClose(time.Second)
+	co.wk.LazyCancel(time.Second)
 	co.closed = true
 
 	errchan := make(chan error, len(co.oprs))

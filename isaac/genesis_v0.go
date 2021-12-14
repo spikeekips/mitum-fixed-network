@@ -21,7 +21,7 @@ import (
 
 type GenesisBlockV0Generator struct {
 	*logging.Logging
-	local     *node.Local
+	local     node.Local
 	database  storage.Database
 	blockData blockdata.BlockData
 	policy    *LocalPolicy
@@ -32,7 +32,7 @@ type GenesisBlockV0Generator struct {
 }
 
 func NewGenesisBlockV0Generator(
-	local *node.Local,
+	local node.Local,
 	db storage.Database,
 	blockData blockdata.BlockData,
 	policy *LocalPolicy,

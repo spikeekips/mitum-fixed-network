@@ -168,7 +168,7 @@ func (*RunCommand) runNetwork(ctx context.Context) error {
 }
 
 func (*RunCommand) runPPS(ctx context.Context) error {
-	var local *node.Local
+	var local node.Local
 	if err := process.LoadLocalNodeContextValue(ctx, &local); err != nil {
 		return err
 	}
@@ -193,7 +193,7 @@ func (*RunCommand) runPPS(ctx context.Context) error {
 }
 
 func (cmd *RunCommand) runDiscovery(ctx context.Context) error {
-	var local *node.Local
+	var local node.Local
 	if err := process.LoadLocalNodeContextValue(ctx, &local); err != nil {
 		return err
 	}

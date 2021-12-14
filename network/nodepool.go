@@ -25,14 +25,14 @@ type passthroughItem struct {
 type Nodepool struct {
 	*logging.Logging
 	sync.RWMutex
-	local   *node.Local
+	local   node.Local
 	localch Channel
 	nodes   map[string]base.Node
 	chs     map[string]Channel
 	pts     *cache.GCache // passthrough
 }
 
-func NewNodepool(local *node.Local, ch Channel) *Nodepool {
+func NewNodepool(local node.Local, ch Channel) *Nodepool {
 	addr := local.Address().String()
 	pts, _ := cache.NewGCache("lfu", 10, time.Minute)
 
@@ -65,7 +65,7 @@ func (np *Nodepool) Node(address base.Address) (base.Node, Channel, bool) {
 	return n, np.chs[addr], found
 }
 
-func (np *Nodepool) LocalNode() *node.Local {
+func (np *Nodepool) LocalNode() node.Local {
 	return np.local
 }
 

@@ -13,14 +13,14 @@ import (
 
 type ProposalMaker struct {
 	sync.Mutex
-	local    *node.Local
+	local    node.Local
 	database storage.Database
 	policy   *LocalPolicy
 	proposed base.Proposal
 }
 
 func NewProposalMaker(
-	local *node.Local,
+	local node.Local,
 	db storage.Database,
 	policy *LocalPolicy,
 ) *ProposalMaker {

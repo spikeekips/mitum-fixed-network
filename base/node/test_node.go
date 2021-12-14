@@ -15,8 +15,8 @@ type DummyNode struct {
 	privatekey key.Privatekey
 }
 
-func NewDummyNode(address base.Address, privatekey key.Privatekey) *DummyNode {
-	return &DummyNode{
+func NewDummyNode(address base.Address, privatekey key.Privatekey) DummyNode {
+	return DummyNode{
 		BaseV0:     NewBaseV0(address, privatekey.Publickey()),
 		privatekey: privatekey,
 	}
@@ -26,10 +26,10 @@ func (ln *DummyNode) Privatekey() key.Privatekey {
 	return ln.privatekey
 }
 
-func RandomNode(name string) *DummyNode {
+func RandomNode(name string) DummyNode {
 	return NewDummyNode(base.MustNewStringAddress(fmt.Sprintf("n-%s", name)), key.NewBasePrivatekey())
 }
 
-func RandomLocal(name string) *Local {
+func RandomLocal(name string) Local {
 	return NewLocal(base.MustNewStringAddress(fmt.Sprintf("n-%s", name)), key.NewBasePrivatekey())
 }

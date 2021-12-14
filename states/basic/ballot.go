@@ -15,7 +15,7 @@ import (
 
 func NextINITBallotFromACCEPTVoteproof(
 	db storage.Database,
-	local *node.Local,
+	local node.Local,
 	voteproof base.Voteproof,
 	networkID base.NetworkID,
 ) (base.INITBallot, error) {
@@ -77,7 +77,7 @@ func NextINITBallotFromACCEPTVoteproof(
 
 func NextINITBallotFromINITVoteproof(
 	db storage.Database,
-	local *node.Local,
+	local node.Local,
 	voteproof base.Voteproof,
 	networkID base.NetworkID,
 ) (base.INITBallot, error) {

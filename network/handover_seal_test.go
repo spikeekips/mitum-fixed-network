@@ -13,7 +13,7 @@ import (
 
 type testHandoverSeal struct {
 	suite.Suite
-	local *node.Local
+	local node.Local
 }
 
 func (t *testHandoverSeal) SetupSuite() {

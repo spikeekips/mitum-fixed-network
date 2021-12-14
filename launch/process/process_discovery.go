@@ -42,7 +42,7 @@ func ProcessDiscovery(ctx context.Context) (context.Context, error) {
 		return ctx, err
 	}
 
-	var local *node.Local
+	var local node.Local
 	if err := LoadLocalNodeContextValue(ctx, &local); err != nil {
 		return nil, err
 	}
@@ -132,7 +132,7 @@ func processDiscovery(ctx context.Context) (discovery.Discovery, error) {
 		return nil, err
 	}
 
-	var local *node.Local
+	var local node.Local
 	if err := LoadLocalNodeContextValue(ctx, &local); err != nil {
 		return nil, err
 	}

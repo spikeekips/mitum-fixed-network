@@ -27,7 +27,7 @@ import (
 
 type dummyNode struct {
 	sync.RWMutex
-	local     *node.Local
+	local     node.Local
 	connInfo  network.ConnInfo
 	node      string
 	addr      string

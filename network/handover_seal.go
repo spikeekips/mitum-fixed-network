@@ -103,7 +103,7 @@ func (sl HandoverSealV0) ConnInfo() ConnInfo {
 	return sl.ci
 }
 
-func IsValidHandoverSeal(local *node.Local, sl HandoverSeal, networkID base.NetworkID) error {
+func IsValidHandoverSeal(local node.Local, sl HandoverSeal, networkID base.NetworkID) error {
 	if err := sl.IsValid(networkID); err != nil {
 		return err
 	}

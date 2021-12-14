@@ -23,7 +23,7 @@ import (
 type testDeployKeyHandlers struct {
 	baseDeployKeyHandler
 	isaac.StorageSupportTest
-	local    *node.Local
+	local    node.Local
 	policy   *isaac.LocalPolicy
 	database storage.Database
 	dks      *DeployKeyStorage

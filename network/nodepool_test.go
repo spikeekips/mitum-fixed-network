@@ -28,7 +28,7 @@ func (np *Nodepool) lenPassthroughs() int {
 
 type testNodepool struct {
 	suite.Suite
-	local *node.Local
+	local node.Local
 }
 
 func (t *testNodepool) SetupSuite() {

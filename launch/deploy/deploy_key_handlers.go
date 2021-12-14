@@ -49,7 +49,7 @@ func newDeployKeyHandlers(ctx context.Context, handler func(string) *mux.Route) 
 		return nil, errors.Errorf("failed to create cache for deploy key handlers")
 	}
 
-	var local *node.Local
+	var local node.Local
 	if err := process.LoadLocalNodeContextValue(ctx, &local); err != nil {
 		return nil, err
 	}

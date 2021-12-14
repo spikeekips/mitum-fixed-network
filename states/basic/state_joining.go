@@ -17,7 +17,7 @@ import (
 type JoiningState struct {
 	*logging.Logging
 	*BaseState
-	local     *node.Local
+	local     node.Local
 	database  storage.Database
 	policy    *isaac.LocalPolicy
 	suffrage  base.Suffrage
@@ -25,7 +25,7 @@ type JoiningState struct {
 }
 
 func NewJoiningState(
-	local *node.Local,
+	local node.Local,
 	db storage.Database,
 	policy *isaac.LocalPolicy,
 	suffrage base.Suffrage,

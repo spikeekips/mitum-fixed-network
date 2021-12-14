@@ -64,7 +64,7 @@ func LoadDatabaseContextValue(ctx context.Context, l *storage.Database) error {
 	return util.LoadFromContextValue(ctx, ContextValueDatabase, l)
 }
 
-func LoadLocalNodeContextValue(ctx context.Context, l **node.Local) error {
+func LoadLocalNodeContextValue(ctx context.Context, l *node.Local) error {
 	return util.LoadFromContextValue(ctx, ContextValueLocalNode, l)
 }
 

@@ -1,3 +1,4 @@
+//go:build test
 // +build test
 
 package node
@@ -8,7 +9,7 @@ import (
 	jsonenc "github.com/spikeekips/mitum/util/encoder/json"
 )
 
-func (ln *Local) MarshalJSON() ([]byte, error) {
+func (ln Local) MarshalJSON() ([]byte, error) {
 	return jsonenc.Marshal(struct {
 		jsonenc.HintedHead
 		AD  base.Address   `json:"address"`

@@ -9,8 +9,8 @@ type Remote struct {
 	BaseV0
 }
 
-func NewRemote(address base.Address, publickey key.Publickey) *Remote {
-	return &Remote{
+func NewRemote(address base.Address, publickey key.Publickey) Remote {
+	return Remote{
 		BaseV0: NewBaseV0(address, publickey),
 	}
 }

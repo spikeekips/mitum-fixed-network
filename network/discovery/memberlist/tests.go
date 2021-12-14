@@ -1,3 +1,4 @@
+//go:build test
 // +build test
 
 package memberlist
@@ -19,7 +20,7 @@ import (
 type BaseDiscoveryTest struct{}
 
 func (t *BaseDiscoveryTest) NewDiscovery(
-	local *node.Local,
+	local node.Local,
 	connInfo network.ConnInfo,
 	networkID base.NetworkID,
 	enc encoder.Encoder,

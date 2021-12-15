@@ -854,7 +854,7 @@ func (st *Database) HasOperationFact(h valuehash.Hash) (bool, error) {
 	count, err := st.client.Count(
 		context.Background(),
 		ColNameOperation,
-		util.NewBSONFilter("fact_hash", h.String()).AddOp("height", st.lastHeight(), "$lte").D(),
+		util.NewBSONFilter("fact", h.String()).AddOp("height", st.lastHeight(), "$lte").D(),
 		options.Count().SetLimit(1),
 	)
 	if err != nil {

@@ -22,9 +22,9 @@ var manifestIndexModels = []mongo.IndexModel{
 
 var operationIndexModels = []mongo.IndexModel{
 	{
-		Keys: bson.D{bson.E{Key: "fact_hash", Value: 1}},
+		Keys: bson.D{bson.E{Key: "fact", Value: 1}},
 		Options: options.Index().
-			SetName(indexName("operation_fact_hash")).
+			SetName(indexName("operation_fact")).
 			SetUnique(true),
 	},
 	{

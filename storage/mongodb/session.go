@@ -185,26 +185,26 @@ func (bst *DatabaseSession) commit(ctx context.Context, bd block.BlockDataMap) e
 	}
 
 	if res, err := bst.writeModels(ctx, ColNameManifest, []mongo.WriteModel{bst.manifestModel}); err != nil {
-		return storage.MergeStorageError(err)
+		return MergeError(err)
 	} else if res != nil && res.InsertedCount < 1 {
 		return errors.Errorf("manifest not inserted")
 	}
 
 	if res, err := bst.writeModels(ctx, ColNameOperation, bst.operationModels); err != nil {
-		return storage.MergeStorageError(err)
+		return MergeError(err)
 	} else if res != nil && res.InsertedCount < 1 {
 		return errors.Errorf("operation not inserted")
 	}
 
 	if res, err := bst.writeModels(ctx, ColNameState, bst.stateModels); err != nil {
-		return storage.MergeStorageError(err)
+		return MergeError(err)
 	} else if res != nil && res.InsertedCount < 1 {
 		return errors.Errorf("state not inserted")
 	}
 
 	if bst.initVoteproofsModels != nil {
 		if res, err := bst.writeModels(ctx, ColNameVoteproof, []mongo.WriteModel{bst.initVoteproofsModels}); err != nil {
-			return storage.MergeStorageError(err)
+			return MergeError(err)
 		} else if res != nil && res.InsertedCount < 1 {
 			return errors.Errorf("init voteproofs not inserted")
 		}
@@ -212,7 +212,7 @@ func (bst *DatabaseSession) commit(ctx context.Context, bd block.BlockDataMap) e
 
 	if bst.acceptVoteproofsModels != nil {
 		if res, err := bst.writeModels(ctx, ColNameVoteproof, []mongo.WriteModel{bst.acceptVoteproofsModels}); err != nil {
-			return storage.MergeStorageError(err)
+			return MergeError(err)
 		} else if res != nil && res.InsertedCount < 1 {
 			return errors.Errorf("accept voteproofs not inserted")
 		}
@@ -221,7 +221,7 @@ func (bst *DatabaseSession) commit(ctx context.Context, bd block.BlockDataMap) e
 	if doc, err := NewBlockDataMapDoc(bd, bst.st.enc); err != nil {
 		return err
 	} else if res, err := bst.writeModels(ctx, ColNameBlockDataMap, []mongo.WriteModel{mongo.NewInsertOneModel().SetDocument(doc)}); err != nil {
-		return storage.MergeStorageError(err)
+		return MergeError(err)
 	} else if res != nil && res.InsertedCount < 1 {
 		return errors.Errorf("blockdatamap not inserted")
 	}

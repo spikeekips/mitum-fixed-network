@@ -2,6 +2,7 @@ package basicstates
 
 import (
 	"context"
+	"time"
 
 	"github.com/pkg/errors"
 	"github.com/rs/zerolog"
@@ -12,6 +13,7 @@ import (
 	"github.com/spikeekips/mitum/storage"
 	"github.com/spikeekips/mitum/util"
 	"github.com/spikeekips/mitum/util/logging"
+	"github.com/spikeekips/mitum/util/valuehash"
 )
 
 type VoteproofChecker struct {
@@ -137,9 +139,11 @@ func (vc *VoteproofChecker) CheckACCEPTVoteproofProposal() (bool, error) {
 	}
 
 	fact := vc.voteproof.Majority().(base.ACCEPTBallotFact)
-	if _, found, err := vc.database.Proposal(fact.Proposal()); err != nil {
-		return false, errors.Wrap(err, "failed to check proposal of accept voteproof")
-	} else if found {
+
+	switch found, err := vc.findProposalInDatabase(fact.Proposal()); {
+	case err != nil:
+		return false, err
+	case found:
 		return true, nil
 	}
 
@@ -198,6 +202,30 @@ func (vc *VoteproofChecker) CheckACCEPTVoteproofProposal() (bool, error) {
 	}
 
 	return true, nil
+}
+
+func (vc *VoteproofChecker) findProposalInDatabase(fact valuehash.Hash) (bool, error) {
+	var found bool
+	err := util.EnsureErrors(
+		context.Background(),
+		time.Millisecond*300,
+		func() error {
+			_, b, err := vc.database.Proposal(fact)
+			if err != nil {
+				return err
+			}
+
+			found = b
+
+			return nil
+		},
+		storage.ConnectionError,
+	)
+	if err != nil {
+		return false, errors.Wrap(err, "failed to check proposal of accept voteproof")
+	}
+
+	return found, nil
 }
 
 func CheckBlockWithINITVoteproof(db storage.Database, voteproof base.Voteproof) error {

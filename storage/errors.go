@@ -8,9 +8,10 @@ import (
 )
 
 var (
-	TimeoutError = util.NewError("timeout")
-	StorageError = util.NewError("storage error")
-	FSError      = util.NewError("fs error")
+	TimeoutError    = util.NewError("timeout")
+	StorageError    = util.NewError("storage error")
+	FSError         = util.NewError("fs error")
+	ConnectionError = util.NewError("storage connection error")
 )
 
 func MergeStorageError(err error) error {
@@ -22,6 +23,7 @@ func MergeStorageError(err error) error {
 	case errors.Is(err, util.DuplicatedError):
 	case errors.Is(err, TimeoutError):
 	case errors.Is(err, StorageError):
+	case errors.Is(err, ConnectionError):
 	default:
 		return StorageError.Merge(err)
 	}

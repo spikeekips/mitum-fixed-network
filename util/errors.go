@@ -1,7 +1,11 @@
 package util
 
 import (
+	"context"
 	"fmt"
+	"time"
+
+	"github.com/pkg/errors"
 )
 
 var (
@@ -27,4 +31,46 @@ func (er DataContainerError) Error() string {
 
 func (er DataContainerError) Data() interface{} {
 	return er.d
+}
+
+func EnsureErrors(
+	ctx context.Context,
+	dur time.Duration,
+	f func() error,
+	errs ...error,
+) error {
+	var wait func()
+	if dur > 0 {
+		wait = func() {
+			<-time.After(dur)
+		}
+	}
+
+	var err error
+	for {
+		select {
+		case <-ctx.Done():
+			return ctx.Err()
+		default:
+			err = f()
+			if err == nil {
+				return nil
+			}
+
+			var found bool
+			for i := range errs {
+				if errors.Is(err, errs[i]) {
+					found = true
+
+					break
+				}
+			}
+
+			if !found {
+				return err
+			}
+		}
+
+		wait()
+	}
 }

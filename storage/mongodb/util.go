@@ -7,7 +7,6 @@ import (
 	"time"
 
 	"github.com/pkg/errors"
-	"github.com/spikeekips/mitum/storage"
 	"github.com/spikeekips/mitum/util"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
@@ -19,11 +18,11 @@ var defaultLimitWriteModels int = 200
 func checkURI(uri string) (connstring.ConnString, error) {
 	cs, err := connstring.Parse(uri)
 	if err != nil {
-		return connstring.ConnString{}, storage.MergeStorageError(err)
+		return connstring.ConnString{}, MergeError(err)
 	}
 
 	if len(cs.Database) < 1 {
-		return connstring.ConnString{}, storage.MergeStorageError(errors.Errorf("empty database name in mongodb uri: '%v'", uri))
+		return connstring.ConnString{}, MergeError(errors.Errorf("empty database name in mongodb uri: '%v'", uri))
 	}
 
 	return cs, nil
@@ -77,7 +76,7 @@ func writeBulkModels(
 				err = util.DuplicatedError.Merge(err)
 			}
 
-			return nil, storage.MergeStorageError(err)
+			return nil, MergeError(err)
 		} else {
 			result.InsertedCount += res.InsertedCount
 			result.MatchedCount += res.MatchedCount

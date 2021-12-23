@@ -5,7 +5,6 @@ import (
 	"time"
 
 	"github.com/pkg/errors"
-	"github.com/spikeekips/mitum/storage"
 	"github.com/spikeekips/mitum/util"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
@@ -33,14 +32,14 @@ type Client struct {
 func NewClient(uri string, connectTimeout, execTimeout time.Duration) (*Client, error) {
 	var cs connstring.ConnString
 	if c, err := checkURI(uri); err != nil {
-		return nil, storage.MergeStorageError(err)
+		return nil, MergeError(err)
 	} else {
 		cs = c
 	}
 
 	clientOpts := options.Client().ApplyURI(uri)
 	if err := clientOpts.Validate(); err != nil {
-		return nil, storage.MergeStorageError(err)
+		return nil, MergeError(err)
 	}
 
 	var client *mongo.Client
@@ -49,7 +48,7 @@ func NewClient(uri string, connectTimeout, execTimeout time.Duration) (*Client, 
 		defer cancel()
 
 		if c, err := mongo.Connect(ctx, clientOpts); err != nil {
-			return nil, storage.MergeStorageError(errors.Wrap(err, "connect timeout"))
+			return nil, MergeError(errors.Wrap(err, "connect timeout"))
 		} else {
 			client = c
 		}
@@ -60,7 +59,7 @@ func NewClient(uri string, connectTimeout, execTimeout time.Duration) (*Client, 
 		defer cancel()
 
 		if err := client.Ping(ctx, readpref.Primary()); err != nil {
-			return nil, storage.MergeStorageError(errors.Wrap(err, "ping timeout"))
+			return nil, MergeError(errors.Wrap(err, "ping timeout"))
 		}
 	}
 
@@ -174,7 +173,7 @@ func (cl *Client) getByFilter(col string, filter bson.D, opts ...*options.FindOn
 			return nil, util.NotFoundError.Wrap(err)
 		}
 
-		return nil, storage.MergeStorageError(err)
+		return nil, MergeError(err)
 	}
 
 	return res, nil
@@ -190,7 +189,7 @@ func (cl *Client) Add(col string, doc Doc) (interface{}, error) {
 			return nil, util.DuplicatedError.Merge(err)
 		}
 
-		return nil, storage.MergeStorageError(err)
+		return nil, MergeError(err)
 	}
 
 	return res.InsertedID, nil
@@ -224,7 +223,7 @@ func (cl *Client) AddRaw(col string, raw bson.Raw) (interface{}, error) {
 			return nil, util.DuplicatedError.Merge(err)
 		}
 
-		return nil, storage.MergeStorageError(err)
+		return nil, MergeError(err)
 	}
 
 	return res.InsertedID, nil
@@ -242,7 +241,7 @@ func (cl *Client) Bulk(ctx context.Context, col string, models []mongo.WriteMode
 func (cl *Client) Count(ctx context.Context, col string, filter interface{}, opts ...*options.CountOptions) (int64, error) {
 	count, err := cl.db.Collection(col).CountDocuments(ctx, filter, opts...)
 
-	return count, storage.MergeStorageError(err)
+	return count, MergeError(err)
 }
 
 func (cl *Client) Delete(col string, filter bson.D, opts ...*options.DeleteOptions) (*mongo.DeleteResult, error) {
@@ -264,7 +263,7 @@ func (cl *Client) WithSession(
 	opts := options.Session().SetDefaultReadConcern(readconcern.Majority())
 	sess, err := cl.client.StartSession(opts)
 	if err != nil {
-		return nil, storage.MergeStorageError(err)
+		return nil, MergeError(err)
 	}
 	defer sess.EndSession(context.TODO())
 
@@ -277,7 +276,7 @@ func (cl *Client) WithSession(
 		txnOpts,
 	)
 	if err != nil {
-		return nil, storage.MergeStorageError(err)
+		return nil, MergeError(err)
 	}
 
 	return result, nil

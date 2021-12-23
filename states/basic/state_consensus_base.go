@@ -246,8 +246,6 @@ func (st *BaseConsensusState) newINITVoteproof(voteproof base.Voteproof) error {
 
 	l.Debug().Msg("processing new init voteproof; propose proposal")
 
-	var proposal base.Proposal
-
 	actingSuffrage, err := st.suffrage.Acting(voteproof.Height(), voteproof.Round())
 	if err != nil {
 		l.Error().Err(err).Msg("failed to get acting suffrage")
@@ -256,9 +254,11 @@ func (st *BaseConsensusState) newINITVoteproof(voteproof base.Voteproof) error {
 	}
 
 	// NOTE find proposal first
-	if i, err := st.findProposal(voteproof.Height(), voteproof.Round(), actingSuffrage.Proposer()); err != nil {
+	var proposal base.Proposal
+	switch i, err := st.findProposal(voteproof.Height(), voteproof.Round(), actingSuffrage.Proposer()); {
+	case err != nil:
 		return err
-	} else if i != nil {
+	case i != nil:
 		l.Debug().Msg("proposal found in local")
 
 		proposal = i
@@ -355,13 +355,26 @@ func (st *BaseConsensusState) processProposalOfACCEPTVoteproof(
 	}
 
 	var proposal base.Proposal
-	switch i, found, err := st.database.Proposal(fact.Proposal()); {
-	case err != nil:
+	if err := util.EnsureErrors(
+		context.Background(),
+		time.Millisecond*300,
+		func() error {
+			pr, found, err := st.database.Proposal(fact.Proposal())
+			if err != nil {
+				return err
+			}
+
+			if !found {
+				return errors.Errorf("proposal of accept voteproof not found in local")
+			}
+
+			proposal = pr
+
+			return nil
+		},
+		storage.ConnectionError,
+	); err != nil {
 		return nil, nil, errors.Wrap(err, "failed to find proposal of accept voteproof in local")
-	case !found:
-		return nil, nil, errors.Errorf("proposal of accept voteproof not found in local")
-	default:
-		proposal = i
 	}
 
 	l := st.Log().With().Str("voteproof_id", voteproof.ID()).Stringer("proposal_fact", fact.Proposal()).Logger()
@@ -405,14 +418,28 @@ func (st *BaseConsensusState) findProposal(
 	round base.Round,
 	proposer base.Address,
 ) (base.Proposal, error) {
-	switch i, found, err := st.database.ProposalByPoint(height, round, proposer); {
-	case err != nil:
-		return nil, err
-	case !found:
-		return nil, nil
-	default:
-		return i, nil
-	}
+	var proposal base.Proposal
+	err := util.EnsureErrors(
+		context.Background(),
+		time.Millisecond*300,
+		func() error {
+			pr, found, err := st.database.ProposalByPoint(height, round, proposer)
+			if err != nil {
+				return err
+			}
+
+			if !found {
+				return nil
+			}
+
+			proposal = pr
+
+			return nil
+		},
+		storage.ConnectionError,
+	)
+
+	return proposal, err
 }
 
 func (st *BaseConsensusState) processProposal(proposal base.Proposal) (base.Voteproof, valuehash.Hash, bool) {
@@ -510,19 +537,31 @@ func (st *BaseConsensusState) defaultPrepareProposal(
 
 	l.Debug().Msg("local is proposer; preparing proposal")
 
-	if i, err := st.proposalMaker.Proposal(height, round, voteproof); err != nil {
+	pr, err := st.proposalMaker.Proposal(height, round, voteproof)
+	if err != nil {
 		return nil, err
-	} else if err := st.database.NewProposal(i); err != nil { // NOTE save proposal
-		if errors.Is(err, util.DuplicatedError) {
-			return i, nil
-		}
-
-		return nil, errors.Wrap(err, "failed to save proposal")
-	} else {
-		seal.LogEventSeal(i, "proposal", l.Debug(), st.IsTraceLog()).Msg("proposal made")
-
-		return i, nil
 	}
+
+	err = util.EnsureErrors(
+		context.Background(),
+		time.Millisecond*100,
+		func() error {
+			return st.database.NewProposal(pr)
+		},
+		storage.ConnectionError,
+	)
+
+	switch {
+	case err == nil:
+	case errors.Is(err, util.DuplicatedError):
+		return pr, nil
+	default:
+		return nil, errors.Wrap(err, "failed to save proposal")
+	}
+
+	seal.LogEventSeal(pr, "proposal", l.Debug(), st.IsTraceLog()).Msg("proposal made")
+
+	return pr, nil
 }
 
 func (st *BaseConsensusState) defaultBroadcastACCEPTBallot(

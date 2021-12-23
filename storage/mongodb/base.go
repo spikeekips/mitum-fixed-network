@@ -918,7 +918,7 @@ func (st *Database) cleanByHeight(height base.Height) error {
 			opts,
 		)
 		if err != nil {
-			return storage.MergeStorageError(err)
+			return MergeError(err)
 		}
 
 		st.Log().Debug().Str("collection", col).Interface("result", res).Msg("clean collection by height")
@@ -968,7 +968,7 @@ func (st *Database) CreateIndex(col string, models []mongo.IndexModel, prefix st
 	if len(existings) > 0 {
 		for _, name := range existings {
 			if _, err := iv.DropOne(context.TODO(), name); err != nil {
-				return storage.MergeStorageError(err)
+				return MergeError(err)
 			}
 		}
 	}
@@ -978,7 +978,7 @@ func (st *Database) CreateIndex(col string, models []mongo.IndexModel, prefix st
 	}
 
 	if _, err := iv.CreateMany(context.TODO(), models); err != nil {
-		return storage.MergeStorageError(err)
+		return MergeError(err)
 	}
 
 	return nil

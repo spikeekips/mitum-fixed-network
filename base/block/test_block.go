@@ -14,8 +14,8 @@ import (
 )
 
 var (
-	TestBlockDataWriterType = hint.Type("test-blockdata-writer")
-	TestBlockDataWriterHint = hint.NewHint(TestBlockDataWriterType, "v0.0.1")
+	TestBlockdataWriterType = hint.Type("test-blockdata-writer")
+	TestBlockdataWriterHint = hint.NewHint(TestBlockdataWriterType, "v0.0.1")
 )
 
 func NewTestBlockV0(height base.Height, round base.Round, proposalFact, previousBlock valuehash.Hash) (BlockV0, error) {
@@ -33,30 +33,30 @@ func NewTestBlockV0(height base.Height, round base.Round, proposalFact, previous
 	)
 }
 
-func CompareBlockDataMap(t *assert.Assertions, a, b BlockDataMap) {
+func CompareBlockdataMap(t *assert.Assertions, a, b BlockdataMap) {
 	t.True(a.Hash().Equal(b.Hash()))
 	t.Equal(a.Height(), b.Height())
 	t.True(a.Block().Equal(b.Block()))
 	t.True(localtime.Equal(a.CreatedAt(), b.CreatedAt()))
 
-	CompareBlockDataMapItem(t, a.Manifest(), b.Manifest())
-	CompareBlockDataMapItem(t, a.Operations(), b.Operations())
-	CompareBlockDataMapItem(t, a.OperationsTree(), b.OperationsTree())
-	CompareBlockDataMapItem(t, a.States(), b.States())
-	CompareBlockDataMapItem(t, a.StatesTree(), b.StatesTree())
-	CompareBlockDataMapItem(t, a.INITVoteproof(), b.INITVoteproof())
-	CompareBlockDataMapItem(t, a.ACCEPTVoteproof(), b.ACCEPTVoteproof())
-	CompareBlockDataMapItem(t, a.SuffrageInfo(), b.SuffrageInfo())
-	CompareBlockDataMapItem(t, a.Proposal(), b.Proposal())
+	CompareBlockdataMapItem(t, a.Manifest(), b.Manifest())
+	CompareBlockdataMapItem(t, a.Operations(), b.Operations())
+	CompareBlockdataMapItem(t, a.OperationsTree(), b.OperationsTree())
+	CompareBlockdataMapItem(t, a.States(), b.States())
+	CompareBlockdataMapItem(t, a.StatesTree(), b.StatesTree())
+	CompareBlockdataMapItem(t, a.INITVoteproof(), b.INITVoteproof())
+	CompareBlockdataMapItem(t, a.ACCEPTVoteproof(), b.ACCEPTVoteproof())
+	CompareBlockdataMapItem(t, a.SuffrageInfo(), b.SuffrageInfo())
+	CompareBlockdataMapItem(t, a.Proposal(), b.Proposal())
 }
 
-func CompareBlockDataMapItem(t *assert.Assertions, a, b BlockDataMapItem) {
+func CompareBlockdataMapItem(t *assert.Assertions, a, b BlockdataMapItem) {
 	t.Equal(a.Type(), b.Type())
 	t.Equal(a.Checksum(), b.Checksum())
 	t.Equal(a.URL(), b.URL())
 }
 
-func (bd BaseBlockDataMap) SetHash(h valuehash.Hash) BaseBlockDataMap {
+func (bd BaseBlockdataMap) SetHash(h valuehash.Hash) BaseBlockdataMap {
 	bd.h = h
 
 	return bd

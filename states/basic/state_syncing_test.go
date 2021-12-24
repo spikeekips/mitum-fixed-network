@@ -17,7 +17,7 @@ type testStateSyncing struct {
 }
 
 func (t *testStateSyncing) newState(local *isaac.Local, suffrage base.Suffrage) (*SyncingState, func()) {
-	st := NewSyncingState(local.Database(), local.BlockData(), local.Policy(), local.Nodes(), suffrage)
+	st := NewSyncingState(local.Database(), local.Blockdata(), local.Policy(), local.Nodes(), suffrage)
 
 	return st, func() {
 		f, err := st.Exit(NewStateSwitchContext(base.StateSyncing, base.StateStopped))

@@ -11,14 +11,14 @@ import (
 	"github.com/stretchr/testify/suite"
 )
 
-type testBlockData struct {
+type testBlockdata struct {
 	suite.Suite
 	JSONEnc  *jsonenc.Encoder
 	baseRoot string
 	root     string
 }
 
-func (t *testBlockData) SetupSuite() {
+func (t *testBlockdata) SetupSuite() {
 	t.JSONEnc = jsonenc.NewEncoder()
 
 	p, err := os.MkdirTemp("", "localfs-")
@@ -29,7 +29,7 @@ func (t *testBlockData) SetupSuite() {
 	t.baseRoot = p
 }
 
-func (t *testBlockData) SetupTest() {
+func (t *testBlockdata) SetupTest() {
 	p, err := os.MkdirTemp(t.baseRoot, "localfs-")
 	if err != nil {
 		panic(err)
@@ -38,24 +38,24 @@ func (t *testBlockData) SetupTest() {
 	t.root = p
 }
 
-func (t *testBlockData) TearDownSuite() {
+func (t *testBlockdata) TearDownSuite() {
 	_ = os.RemoveAll(t.baseRoot)
 }
 
-func (t *testBlockData) TestNew() {
-	st := NewBlockData(t.root, t.JSONEnc)
-	t.Implements((*blockdata.BlockData)(nil), st)
+func (t *testBlockdata) TestNew() {
+	st := NewBlockdata(t.root, t.JSONEnc)
+	t.Implements((*blockdata.Blockdata)(nil), st)
 	t.NoError(st.Initialize())
 }
 
-func (t *testBlockData) TestRootDoesNotExist() {
-	st := NewBlockData(util.UUID().String(), t.JSONEnc)
+func (t *testBlockdata) TestRootDoesNotExist() {
+	st := NewBlockdata(util.UUID().String(), t.JSONEnc)
 	err := st.Initialize()
 	t.True(errors.Is(err, util.NotFoundError))
 }
 
-func (t *testBlockData) TestRemove() {
-	st := NewBlockData(t.root, t.JSONEnc)
+func (t *testBlockdata) TestRemove() {
+	st := NewBlockdata(t.root, t.JSONEnc)
 	t.NoError(st.Initialize())
 
 	t.NoError(st.CreateDirectory(st.HeightDirectory(33, true)))
@@ -75,8 +75,8 @@ func (t *testBlockData) TestRemove() {
 	t.False(found)
 }
 
-func (t *testBlockData) TestRemoveAll() {
-	st := NewBlockData(t.root, t.JSONEnc)
+func (t *testBlockdata) TestRemoveAll() {
+	st := NewBlockdata(t.root, t.JSONEnc)
 	t.NoError(st.Initialize())
 
 	t.NoError(st.CreateDirectory(st.HeightDirectory(33, true)))
@@ -96,6 +96,6 @@ func (t *testBlockData) TestRemoveAll() {
 	t.False(found)
 }
 
-func TestBlockData(t *testing.T) {
-	suite.Run(t, new(testBlockData))
+func TestBlockdata(t *testing.T) {
+	suite.Run(t, new(testBlockdata))
 }

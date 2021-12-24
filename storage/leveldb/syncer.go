@@ -61,21 +61,6 @@ func (st *SyncerSession) Manifest(height base.Height) (block.Manifest, bool, err
 	return m, true, nil
 }
 
-func (st *SyncerSession) Manifests(heights []base.Height) ([]block.Manifest, error) {
-	var bs []block.Manifest
-	for i := range heights {
-		if b, found, err := st.Manifest(heights[i]); !found {
-			return nil, util.NotFoundError.Errorf("manifest not found by height")
-		} else if err != nil {
-			return nil, err
-		} else {
-			bs = append(bs, b)
-		}
-	}
-
-	return bs, nil
-}
-
 func (st *SyncerSession) SetManifests(manifests []block.Manifest) error {
 	st.Log().Debug().Func(func(e *zerolog.Event) {
 		var heights []base.Height
@@ -111,7 +96,7 @@ func (st *SyncerSession) block(height base.Height) (block.Block, bool, error) {
 	return st.database.blockByHeight(height)
 }
 
-func (st *SyncerSession) SetBlocks(blocks []block.Block, maps []block.BlockDataMap) error {
+func (st *SyncerSession) SetBlocks(blocks []block.Block, maps []block.BlockdataMap) error {
 	if len(blocks) != len(maps) {
 		return errors.Errorf("blocks and maps has different size, %d != %d", len(blocks), len(maps))
 	} else {
@@ -167,8 +152,8 @@ func (st *SyncerSession) Commit() error {
 			blk = j
 		}
 
-		var m block.BlockDataMap
-		switch j, found, err := st.database.BlockDataMap(i); {
+		var m block.BlockdataMap
+		switch j, found, err := st.database.BlockdataMap(i); {
 		case err != nil:
 			return err
 		case !found:
@@ -189,7 +174,7 @@ func (st *SyncerSession) Commit() error {
 	return nil
 }
 
-func (st *SyncerSession) commitBlock(blk block.Block, m block.BlockDataMap) error {
+func (st *SyncerSession) commitBlock(blk block.Block, m block.BlockdataMap) error {
 	if bs, err := st.main.NewSession(blk); err != nil {
 		return err
 	} else if err := bs.SetBlock(context.Background(), blk); err != nil {
@@ -218,4 +203,7 @@ func (st *SyncerSession) checkHeight(height base.Height) {
 
 func (st *SyncerSession) Close() error {
 	return mergeError(st.database.DB().Close())
+}
+
+func (st *SyncerSession) SetSkipLastBlock(bool) {
 }

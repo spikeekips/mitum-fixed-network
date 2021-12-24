@@ -54,15 +54,15 @@ func hookDefaultDeployHandlers(ctx context.Context, qnt *quicnetwork.Server) (co
 		return ctx, err
 	}
 
-	var bc *BlockDataCleaner
-	if err := LoadBlockDataCleanerContextValue(ctx, &bc); err != nil {
+	var bc *BlockdataCleaner
+	if err := LoadBlockdataCleanerContextValue(ctx, &bc); err != nil {
 		return ctx, err
 	}
 
-	setBlockDataMapsHandler := http.HandlerFunc(NewSetBlockDataMapsHandler(qnt.Encoder(), db, bc))
+	setBlockdataMapsHandler := http.HandlerFunc(NewSetBlockdataMapsHandler(qnt.Encoder(), db, bc))
 	_ = dh.SetHandler(
-		QuicHandlerPathSetBlockDataMaps,
-		dh.RateLimit(RateLimitHandlerNameSetBlockDataMaps, setBlockDataMapsHandler),
+		QuicHandlerPathSetBlockdataMaps,
+		dh.RateLimit(RateLimitHandlerNameSetBlockdataMaps, setBlockdataMapsHandler),
 	)
 
 	return context.WithValue(ctx, ContextValueDeployHandler, dh), nil

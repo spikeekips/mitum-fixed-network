@@ -34,7 +34,7 @@ func (t *testSyncers) TestSaveLastBlock() {
 
 	finishedChan := make(chan base.Height)
 
-	ss := NewSyncers(local.Database(), local.BlockData(), local.Policy(), baseManifest, func() map[string]network.Channel {
+	ss := NewSyncers(local.Database(), local.Blockdata(), local.Policy(), baseManifest, func() map[string]network.Channel {
 		return map[string]network.Channel{
 			remote.Node().String(): remote.Channel(),
 		}

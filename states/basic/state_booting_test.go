@@ -15,7 +15,7 @@ type testStateBooting struct {
 }
 
 func (t *testStateBooting) TestWithBlock() {
-	st := NewBootingState(t.local.Node(), t.local.Database(), t.local.BlockData(), t.local.Policy(), t.Suffrage(t.local))
+	st := NewBootingState(t.local.Node(), t.local.Database(), t.local.Blockdata(), t.local.Policy(), t.Suffrage(t.local))
 	defer st.Exit(NewStateSwitchContext(base.StateBooting, base.StateStopped))
 
 	st.SetLastVoteproofFuncs(
@@ -35,7 +35,7 @@ func (t *testStateBooting) TestWithBlock() {
 }
 
 func (t *testStateBooting) TestNoneSuffrageNode() {
-	st := NewBootingState(t.local.Node(), t.local.Database(), t.local.BlockData(), t.local.Policy(), t.Suffrage(t.remote))
+	st := NewBootingState(t.local.Node(), t.local.Database(), t.local.Blockdata(), t.local.Policy(), t.Suffrage(t.remote))
 	defer st.Exit(NewStateSwitchContext(base.StateBooting, base.StateStopped))
 
 	st.SetLastVoteproofFuncs(
@@ -55,9 +55,9 @@ func (t *testStateBooting) TestNoneSuffrageNode() {
 }
 
 func (t *testStateBooting) TestWithEmptyBlockWithChannels() {
-	t.NoError(blockdata.Clean(t.local.Database(), t.local.BlockData(), false))
+	t.NoError(blockdata.Clean(t.local.Database(), t.local.Blockdata(), false))
 
-	st := NewBootingState(t.local.Node(), t.local.Database(), t.local.BlockData(), t.local.Policy(), t.Suffrage(t.local, t.remote))
+	st := NewBootingState(t.local.Node(), t.local.Database(), t.local.Blockdata(), t.local.Policy(), t.Suffrage(t.local, t.remote))
 	defer t.exitState(st, NewStateSwitchContext(base.StateBooting, base.StateStopped))
 
 	st.syncableChannelsFunc = func() map[string]network.Channel {
@@ -78,9 +78,9 @@ func (t *testStateBooting) TestWithEmptyBlockWithChannels() {
 }
 
 func (t *testStateBooting) TestWithEmptyBlockWithoutChannels() {
-	t.NoError(blockdata.Clean(t.local.Database(), t.local.BlockData(), false))
+	t.NoError(blockdata.Clean(t.local.Database(), t.local.Blockdata(), false))
 
-	st := NewBootingState(t.local.Node(), t.local.Database(), t.local.BlockData(), t.local.Policy(), t.Suffrage(t.local))
+	st := NewBootingState(t.local.Node(), t.local.Database(), t.local.Blockdata(), t.local.Policy(), t.Suffrage(t.local))
 	defer t.exitState(st, NewStateSwitchContext(base.StateBooting, base.StateStopped))
 
 	st.syncableChannelsFunc = func() map[string]network.Channel {

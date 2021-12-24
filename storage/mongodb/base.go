@@ -32,7 +32,7 @@ const (
 	ColNameProposal        = "proposal"
 	ColNameState           = "state"
 	ColNameVoteproof       = "voteproof"
-	ColNameBlockDataMap    = "blockdata_map"
+	ColNameBlockdataMap    = "blockdata_map"
 )
 
 var allCollections = []string{
@@ -43,7 +43,7 @@ var allCollections = []string{
 	ColNameProposal,
 	ColNameState,
 	ColNameVoteproof,
-	ColNameBlockDataMap,
+	ColNameBlockdataMap,
 }
 
 type Database struct {
@@ -496,7 +496,11 @@ func (st *Database) ManifestByHeight(height base.Height) (block.Manifest, bool, 
 	return st.manifestByFilter(util.NewBSONFilter("height", height).AddOp("height", st.lastHeight(), "$lte").D())
 }
 
-func (st *Database) Manifests(filter bson.M, load, reverse bool, limit int64, callback func(base.Height, valuehash.Hash, block.Manifest) (bool, error)) error {
+func (st *Database) Manifests(load, reverse bool, limit int64, callback func(base.Height, valuehash.Hash, block.Manifest) (bool, error)) error {
+	return st.ManifestsByFilter(bson.D{}, load, reverse, limit, callback)
+}
+
+func (st *Database) ManifestsByFilter(filter interface{}, load, reverse bool, limit int64, callback func(base.Height, valuehash.Hash, block.Manifest) (bool, error)) error {
 	var dir int = 1
 	if reverse {
 		dir = -1
@@ -902,16 +906,7 @@ func (st *Database) cleanByHeight(height base.Height) error {
 	opts := options.BulkWrite().SetOrdered(true)
 	removeByHeight := mongo.NewDeleteManyModel().SetFilter(bson.M{"height": bson.M{"$gte": height}})
 
-	for _, col := range []string{
-		ColNameInfo,
-		ColNameManifest,
-		ColNameOperation,
-		ColNameStagedOperation,
-		ColNameState,
-		ColNameVoteproof,
-		ColNameBlockDataMap,
-	} {
-
+	for _, col := range allCollections {
 		res, err := st.client.Collection(col).BulkWrite(
 			context.Background(),
 			[]mongo.WriteModel{removeByHeight},
@@ -1135,14 +1130,14 @@ func (st *Database) Voteproof(height base.Height, stage base.Stage) (base.Votepr
 	}
 }
 
-func (st *Database) BlockDataMap(height base.Height) (block.BlockDataMap, bool, error) {
-	var bd block.BlockDataMap
+func (st *Database) BlockdataMap(height base.Height) (block.BlockdataMap, bool, error) {
+	var bd block.BlockdataMap
 
 	if err := st.client.GetByFilter(
-		ColNameBlockDataMap,
+		ColNameBlockdataMap,
 		util.NewBSONFilter("height", height).D(),
 		func(res *mongo.SingleResult) error {
-			if i, err := loadBlockDataMapFromDecoder(res.Decode, st.encs); err != nil {
+			if i, err := loadBlockdataMapFromDecoder(res.Decode, st.encs); err != nil {
 				return err
 			} else {
 				bd = i
@@ -1166,16 +1161,16 @@ func (st *Database) BlockDataMap(height base.Height) (block.BlockDataMap, bool, 
 	return bd, true, nil
 }
 
-func (st *Database) SetBlockDataMaps(bds []block.BlockDataMap) error {
+func (st *Database) SetBlockdataMaps(bds []block.BlockdataMap) error {
 	if len(bds) < 1 {
-		return errors.Errorf("empty BlockDataMaps")
+		return errors.Errorf("empty BlockdataMaps")
 	}
 
 	models := make([]mongo.WriteModel, len(bds))
 
 	for i := range bds {
 		bd := bds[i]
-		if doc, err := NewBlockDataMapDoc(bd, st.enc); err != nil {
+		if doc, err := NewBlockdataMapDoc(bd, st.enc); err != nil {
 			return err
 		} else {
 			models[i] = mongo.NewReplaceOneModel().
@@ -1187,7 +1182,7 @@ func (st *Database) SetBlockDataMaps(bds []block.BlockDataMap) error {
 	if res, err := writeBulkModels(
 		context.Background(),
 		st.client,
-		ColNameBlockDataMap,
+		ColNameBlockdataMap,
 		models,
 		defaultLimitWriteModels,
 		options.BulkWrite().SetOrdered(false),
@@ -1200,16 +1195,16 @@ func (st *Database) SetBlockDataMaps(bds []block.BlockDataMap) error {
 	return nil
 }
 
-func (st *Database) LocalBlockDataMapsByHeight(height base.Height, callback func(block.BlockDataMap) (bool, error)) error {
+func (st *Database) LocalBlockdataMapsByHeight(height base.Height, callback func(block.BlockdataMap) (bool, error)) error {
 	opt := options.Find().
 		SetSort(util.NewBSONFilter("height", 1).D())
 
 	return st.client.Find(
 		context.Background(),
-		ColNameBlockDataMap,
+		ColNameBlockdataMap,
 		bson.M{"height": bson.M{"$gte": height}, "is_local": true},
 		func(cursor *mongo.Cursor) (bool, error) {
-			if i, err := loadBlockDataMapFromDecoder(cursor.Decode, st.encs); err != nil {
+			if i, err := loadBlockdataMapFromDecoder(cursor.Decode, st.encs); err != nil {
 				return false, err
 			} else {
 				return callback(i)

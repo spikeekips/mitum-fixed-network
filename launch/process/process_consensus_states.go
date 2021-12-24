@@ -31,7 +31,7 @@ func init() {
 		[]string{
 			ProcessNameLocalNode,
 			ProcessNameDatabase,
-			ProcessNameBlockData,
+			ProcessNameBlockdata,
 			ProcessNameSuffrage,
 			ProcessNameProposalProcessor,
 		},
@@ -59,8 +59,8 @@ func ProcessConsensusStates(ctx context.Context) (context.Context, error) {
 		return ctx, err
 	}
 
-	var blockData blockdata.BlockData
-	if err := LoadBlockDataContextValue(ctx, &blockData); err != nil {
+	var bd blockdata.Blockdata
+	if err := LoadBlockdataContextValue(ctx, &bd); err != nil {
 		return ctx, err
 	}
 
@@ -74,7 +74,7 @@ func ProcessConsensusStates(ctx context.Context) (context.Context, error) {
 		return ctx, err
 	}
 
-	cs, err := processConsensusStates(ctx, db, blockData, policy, nodepool, suffrage)
+	cs, err := processConsensusStates(ctx, db, bd, policy, nodepool, suffrage)
 	if err != nil {
 		return ctx, err
 	}
@@ -89,7 +89,7 @@ func ProcessConsensusStates(ctx context.Context) (context.Context, error) {
 func processConsensusStates(
 	ctx context.Context,
 	db storage.Database,
-	blockData blockdata.BlockData,
+	bd blockdata.Blockdata,
 	policy *isaac.LocalPolicy,
 	nodepool *network.Nodepool,
 	suffrage base.Suffrage,
@@ -134,10 +134,10 @@ func processConsensusStates(
 	}
 
 	stopped := basicstate.NewStoppedState()
-	booting := basicstate.NewBootingState(nodepool.LocalNode(), db, blockData, policy, suffrage)
+	booting := basicstate.NewBootingState(nodepool.LocalNode(), db, bd, policy, suffrage)
 	joining := basicstate.NewJoiningState(nodepool.LocalNode(), db, policy, suffrage, ballotbox)
 	consensus := basicstate.NewConsensusState(db, policy, nodepool, suffrage, proposalMaker, pps)
-	syncing := basicstate.NewSyncingState(db, blockData, policy, nodepool, suffrage)
+	syncing := basicstate.NewSyncingState(db, bd, policy, nodepool, suffrage)
 	handover := basicstate.NewHandoverState(db, policy, nodepool, suffrage, pps)
 
 	return basicstate.NewStates(

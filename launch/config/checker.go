@@ -88,8 +88,8 @@ func (cc *checker) CheckLocalNetwork() (bool, error) {
 func (cc *checker) CheckStorage() (bool, error) {
 	conf := cc.config.Storage()
 
-	if len(conf.BlockData().Path()) < 1 {
-		if err := conf.BlockData().SetPath(DefaultBlockDataPath); err != nil {
+	if len(conf.Blockdata().Path()) < 1 {
+		if err := conf.Blockdata().SetPath(DefaultBlockdataPath); err != nil {
 			return false, err
 		}
 	}

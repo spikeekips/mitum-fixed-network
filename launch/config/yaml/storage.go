@@ -6,7 +6,7 @@ import (
 	"github.com/spikeekips/mitum/launch/config"
 )
 
-type BlockData struct {
+type Blockdata struct {
 	Path *string
 }
 
@@ -38,7 +38,7 @@ func (no Database) Set(ctx context.Context) (context.Context, error) {
 
 type Storage struct {
 	Database  *Database  `yaml:"database,omitempty"`
-	BlockData *BlockData `yaml:"blockdata,omitempty"`
+	Blockdata *Blockdata `yaml:"blockdata,omitempty"`
 }
 
 func (no Storage) Set(ctx context.Context) (context.Context, error) {
@@ -56,9 +56,9 @@ func (no Storage) Set(ctx context.Context) (context.Context, error) {
 		ctx = i
 	}
 
-	if no.BlockData != nil {
-		if no.BlockData.Path != nil {
-			if err := conf.BlockData().SetPath(*no.BlockData.Path); err != nil {
+	if no.Blockdata != nil {
+		if no.Blockdata.Path != nil {
+			if err := conf.Blockdata().SetPath(*no.Blockdata.Path); err != nil {
 				return ctx, err
 			}
 		}

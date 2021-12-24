@@ -17,14 +17,16 @@ import (
 const HookNameCleanByHeightStorage = "clean_by_height_storage"
 
 var (
-	ContextValueDryRun util.ContextKey = "dry_run"
-	ContextValueHeight util.ContextKey = "clean_storage_by_height_height"
+	ContextValueDryRun                util.ContextKey = "dry_run"
+	ContextValueHeight                util.ContextKey = "clean_storage_by_height_height"
+	ContextValueCleanDatabaseByHeight util.ContextKey = "clean_database_by_height"
 )
 
 type CleanByHeightStorageCommand struct {
 	*BaseRunCommand
-	Height int64 `arg:"" name:"height" help:"height of block" required:"true"`
-	DryRun bool  `help:"dry-run" optional:"" default:"false"`
+	Height                int64 `arg:"" name:"height" help:"height of block" required:"true"`
+	DryRun                bool  `help:"dry-run" optional:"" default:"false"`
+	cleanDatabaseByHeight func(context.Context, base.Height) error
 }
 
 func NewCleanByHeightStorageCommand() CleanByHeightStorageCommand {
@@ -54,8 +56,6 @@ func NewCleanByHeightStorageCommand() CleanByHeightStorageCommand {
 	hooks := []pm.Hook{
 		pm.NewHook(pm.HookPrefixPre, process.ProcessNameLocalNode,
 			"clean-storage-dry-run", cmd.dryRun),
-		pm.NewHook(pm.HookPrefixPre, process.ProcessNameLocalNode,
-			HookNameCleanByHeightStorage, cmd.cleanStorage),
 		pm.NewHook(pm.HookPrefixPre, process.ProcessNameGenerateGenesisBlock,
 			process.HookNameCheckGenesisBlock, nil),
 		pm.NewHook(pm.HookPrefixPost, process.ProcessNameConfig,
@@ -86,7 +86,11 @@ func (cmd *CleanByHeightStorageCommand) Run(version util.Version) error {
 
 	cmd.Log().Info().Bool("dryrun", cmd.DryRun).Int64("height", cmd.Height).Msg("prepared")
 
-	return cmd.Processes().Run()
+	if err := cmd.Processes().Run(); err != nil {
+		return err
+	}
+
+	return cmd.cleanStorage(cmd.Processes().Context())
 }
 
 func (cmd *CleanByHeightStorageCommand) prepare() error {
@@ -135,8 +139,8 @@ func (cmd *CleanByHeightStorageCommand) dryRun(ctx context.Context) (context.Con
 		return ctx, err
 	}
 
-	var blockData blockdata.BlockData
-	if err := process.LoadBlockDataContextValue(ctx, &blockData); err != nil {
+	var bd blockdata.Blockdata
+	if err := process.LoadBlockdataContextValue(ctx, &bd); err != nil {
 		return ctx, err
 	}
 
@@ -161,46 +165,58 @@ func (cmd *CleanByHeightStorageCommand) dryRun(ctx context.Context) (context.Con
 	return ctx, nil
 }
 
-func (cmd *CleanByHeightStorageCommand) cleanStorage(ctx context.Context) (context.Context, error) {
+func (cmd *CleanByHeightStorageCommand) cleanStorage(ctx context.Context) error {
 	var dryrun bool
 	switch err := util.LoadFromContextValue(ctx, ContextValueDryRun, &dryrun); {
 	case err != nil:
-		return ctx, err
+		return err
 	case dryrun:
-		return ctx, nil
+		return nil
 	}
 
 	var db storage.Database
 	if err := process.LoadDatabaseContextValue(ctx, &db); err != nil {
-		return ctx, err
+		return err
 	}
 
-	var blockData blockdata.BlockData
-	if err := process.LoadBlockDataContextValue(ctx, &blockData); err != nil {
-		return ctx, err
+	var bd blockdata.Blockdata
+	if err := process.LoadBlockdataContextValue(ctx, &bd); err != nil {
+		return err
 	}
 
 	var height base.Height
 	if err := util.LoadFromContextValue(ctx, ContextValueHeight, &height); err != nil {
-		return ctx, err
+		return err
+	}
+
+	if err := util.LoadFromContextValue(ctx, ContextValueCleanDatabaseByHeight, &cmd.cleanDatabaseByHeight); err != nil {
+		if !errors.Is(err, util.ContextValueNotFoundError) {
+			return err
+		}
 	}
 
 	switch l, ok, err := cmd.check(db, height); {
 	case err != nil:
-		return ctx, err
+		return err
 	case !ok || height > l:
-		return ctx, nil
+		return nil
 	}
 
 	cmd.Log().Debug().Msg("will clean storage by height")
 
-	if err := blockdata.CleanByHeight(db, blockData, height); err != nil {
-		return ctx, err
+	if err := blockdata.CleanByHeight(db, bd, height); err != nil {
+		return err
+	}
+
+	if cmd.cleanDatabaseByHeight != nil {
+		if err := cmd.cleanDatabaseByHeight(context.Background(), height); err != nil { // nolint:contextcheck
+			return err
+		}
 	}
 
 	cmd.Log().Info().Msg("database and block data was cleaned by height")
 
-	return ctx, nil
+	return nil
 }
 
 func (cmd *CleanByHeightStorageCommand) check(

@@ -34,7 +34,7 @@ var (
 	keyPrefixManifestHeight                 []byte = []byte{0x00, 0x10}
 	keyPrefixINITVoteproof                  []byte = []byte{0x00, 0x11}
 	keyPrefixACCEPTVoteproof                []byte = []byte{0x00, 0x12}
-	keyPrefixBlockDataMap                   []byte = []byte{0x00, 0x13}
+	keyPrefixBlockdataMap                   []byte = []byte{0x00, 0x13}
 	keyPrefixInfo                           []byte = []byte{0x00, 0x14}
 	keyPrefixStagedOperationFactHash        []byte = []byte{0x00, 0x15}
 	keyPrefixStagedOperationFactHashReverse []byte = []byte{0x00, 0x16}
@@ -261,17 +261,21 @@ func (st *Database) blockByHeight(height base.Height) (block.Block, bool, error)
 }
 
 func (st *Database) Manifest(h valuehash.Hash) (block.Manifest, bool, error) {
-	if raw, err := st.get(leveldbManifestKey(h)); err != nil {
+	raw, err := st.get(leveldbManifestKey(h))
+	if err != nil {
 		if errors.Is(err, util.NotFoundError) {
 			return nil, false, nil
 		}
 
 		return nil, false, err
-	} else if m, err := st.loadManifest(raw); err != nil {
-		return nil, false, err
-	} else {
-		return m, true, nil
 	}
+
+	m, err := st.loadManifest(raw)
+	if err != nil {
+		return nil, false, err
+	}
+
+	return m, true, nil
 }
 
 func (st *Database) ManifestByHeight(height base.Height) (block.Manifest, bool, error) {
@@ -286,6 +290,33 @@ func (st *Database) ManifestByHeight(height base.Height) (block.Manifest, bool, 
 	} else {
 		return st.Manifest(h)
 	}
+}
+
+func (st *Database) Manifests(load, reverse bool, limit int64, callback func(base.Height, valuehash.Hash, block.Manifest) (bool, error)) error {
+	var counted int64
+	return st.iter(
+		keyPrefixManifestHeight,
+		func(_, value []byte) (bool, error) {
+			counted++
+
+			m, err := st.loadManifest(value)
+			if err != nil {
+				return false, err
+			}
+
+			switch keep, err := callback(m.Height(), m.Hash(), m); {
+			case err != nil:
+				return false, err
+			case !keep:
+				return false, nil
+			case counted == limit:
+				return false, nil
+			default:
+				return true, nil
+			}
+		},
+		!reverse,
+	)
 }
 
 func (st *Database) newStagedOperationKey(h valuehash.Hash) []byte {
@@ -490,13 +521,13 @@ func (st *Database) loadState(b []byte) (state.State, error) {
 	}
 }
 
-func (st *Database) loadBlockDataMap(b []byte) (block.BlockDataMap, error) {
+func (st *Database) loadBlockdataMap(b []byte) (block.BlockdataMap, error) {
 	if hinter, err := st.loadHinter(b); err != nil {
 		return nil, err
 	} else if hinter == nil {
 		return nil, nil
-	} else if i, ok := hinter.(block.BlockDataMap); !ok {
-		return nil, errors.Errorf("not block.BlockDataMap: %T", hinter)
+	} else if i, ok := hinter.(block.BlockdataMap); !ok {
+		return nil, errors.Errorf("not block.BlockdataMap: %T", hinter)
 	} else {
 		return i, nil
 	}
@@ -791,23 +822,23 @@ func (st *Database) Voteproof(height base.Height, stage base.Stage) (base.Votepr
 	}
 }
 
-func (st *Database) BlockDataMap(height base.Height) (block.BlockDataMap, bool, error) {
-	if raw, err := st.get(leveldbBlockDataMapKey(height)); err != nil {
+func (st *Database) BlockdataMap(height base.Height) (block.BlockdataMap, bool, error) {
+	if raw, err := st.get(leveldbBlockdataMapKey(height)); err != nil {
 		if errors.Is(err, util.NotFoundError) {
 			return nil, false, nil
 		}
 
 		return nil, false, err
-	} else if i, err := st.loadBlockDataMap(raw); err != nil {
+	} else if i, err := st.loadBlockdataMap(raw); err != nil {
 		return nil, false, err
 	} else {
 		return i, true, nil
 	}
 }
 
-func (st *Database) SetBlockDataMaps(bds []block.BlockDataMap) error {
+func (st *Database) SetBlockdataMaps(bds []block.BlockdataMap) error {
 	if len(bds) < 1 {
-		return errors.Errorf("empty BlockDataMaps")
+		return errors.Errorf("empty BlockdataMaps")
 	}
 
 	batch := new(leveldb.Batch)
@@ -816,18 +847,18 @@ func (st *Database) SetBlockDataMaps(bds []block.BlockDataMap) error {
 		if b, err := marshal(bd, st.enc); err != nil {
 			return err
 		} else {
-			batch.Put(leveldbBlockDataMapKey(bd.Height()), b)
+			batch.Put(leveldbBlockdataMapKey(bd.Height()), b)
 		}
 	}
 
 	return mergeError(st.db.Write(batch, nil))
 }
 
-func (st *Database) LocalBlockDataMapsByHeight(height base.Height, callback func(block.BlockDataMap) (bool, error)) error {
+func (st *Database) LocalBlockdataMapsByHeight(height base.Height, callback func(block.BlockdataMap) (bool, error)) error {
 	return st.iter(
-		keyPrefixBlockDataMap,
+		keyPrefixBlockdataMap,
 		func(_, value []byte) (bool, error) {
-			switch bd, err := st.loadBlockDataMap(value); {
+			switch bd, err := st.loadBlockdataMap(value); {
 			case err != nil:
 				return false, err
 			case bd.Height() < height:
@@ -943,8 +974,8 @@ func leveldbVoteproofKey(height base.Height, stage base.Stage) []byte {
 	)
 }
 
-func leveldbBlockDataMapKey(height base.Height) []byte {
-	return util.ConcatBytesSlice(keyPrefixBlockDataMap, height.Bytes())
+func leveldbBlockdataMapKey(height base.Height) []byte {
+	return util.ConcatBytesSlice(keyPrefixBlockdataMap, height.Bytes())
 }
 
 func leveldbUnstageOperations(st *Database, batch *leveldb.Batch, facts []valuehash.Hash) error {

@@ -10,7 +10,7 @@ import (
 )
 
 var (
-	DefaultBlockDataPath = "./blockdata"
+	DefaultBlockdataPath = "./blockdata"
 	DefaultDatabaseURI   = "mongodb://127.0.0.1:27017/mitum"
 	DefaultDatabaseCache = fmt.Sprintf(
 		"gcache:?type=%s&size=%d&expire=%s",
@@ -29,20 +29,20 @@ func init() {
 	}
 }
 
-type BlockData interface {
+type Blockdata interface {
 	Path() string
 	SetPath(string) error
 }
 
-type BaseBlockData struct {
+type BaseBlockdata struct {
 	path string
 }
 
-func (no BaseBlockData) Path() string {
+func (no BaseBlockdata) Path() string {
 	return no.path
 }
 
-func (no *BaseBlockData) SetPath(s string) error {
+func (no *BaseBlockdata) SetPath(s string) error {
 	no.path = strings.TrimSpace(s)
 
 	return nil
@@ -93,13 +93,13 @@ func (no *BaseDatabase) SetCache(s string) error {
 type Storage interface {
 	Database() Database
 	SetDatabase(Database) error
-	BlockData() BlockData
-	SetBlockData(BlockData) error
+	Blockdata() Blockdata
+	SetBlockdata(Blockdata) error
 }
 
 type BaseStorage struct {
 	database  Database
-	blockData BlockData
+	blockdata Blockdata
 }
 
 func EmptyBaseStorage() *BaseStorage {
@@ -107,7 +107,7 @@ func EmptyBaseStorage() *BaseStorage {
 		database: &BaseDatabase{
 			cache: DefaultDatabaseCacheURL,
 		},
-		blockData: &BaseBlockData{},
+		blockdata: &BaseBlockdata{},
 	}
 }
 
@@ -121,12 +121,12 @@ func (no *BaseStorage) SetDatabase(database Database) error {
 	return nil
 }
 
-func (no BaseStorage) BlockData() BlockData {
-	return no.blockData
+func (no BaseStorage) Blockdata() Blockdata {
+	return no.blockdata
 }
 
-func (no *BaseStorage) SetBlockData(bs BlockData) error {
-	no.blockData = bs
+func (no *BaseStorage) SetBlockdata(bs Blockdata) error {
+	no.blockdata = bs
 
 	return nil
 }

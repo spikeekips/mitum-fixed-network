@@ -9,14 +9,14 @@ import (
 	"github.com/spikeekips/mitum/storage/blockdata/localfs"
 )
 
-var HookNameCheckBlockDataPath = "check_blockdata_path"
+var HookNameCheckBlockdataPath = "check_blockdata_path"
 
-func HookCheckBlockDataPath(ctx context.Context) (context.Context, error) {
+func HookCheckBlockdataPath(ctx context.Context) (context.Context, error) {
 	var l config.LocalNode
 	if err := config.LoadConfigContextValue(ctx, &l); err != nil {
 		return ctx, err
 	}
-	conf := l.Storage().BlockData()
+	conf := l.Storage().Blockdata()
 
 	if fi, err := os.Stat(conf.Path()); err != nil {
 		if !os.IsNotExist(err) { // NOTE if not exist, create new

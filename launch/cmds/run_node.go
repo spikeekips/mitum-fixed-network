@@ -38,7 +38,7 @@ var defaultRunHooks = []pm.Hook{
 		process.HookNameConfigGenesisOperations, nil).
 		SetOverride(true),
 	pm.NewHook(pm.HookPrefixPost, process.ProcessNameNetwork,
-		deploy.HookNameBlockDataCleaner, deploy.HookBlockDataCleaner),
+		deploy.HookNameBlockdataCleaner, deploy.HookBlockdataCleaner),
 	pm.NewHook(pm.HookPrefixPost, process.ProcessNameNetwork,
 		deploy.HookNameInitializeDeployKeyStorage, deploy.HookInitializeDeployKeyStorage),
 	pm.NewHook(pm.HookPrefixPost, process.ProcessNameConsensusStates,

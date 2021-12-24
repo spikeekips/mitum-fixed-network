@@ -50,7 +50,7 @@ func (t *testQuicServer) SetupTest() {
 	_ = t.encs.TestAddHinter(base.SignedBallotFactHinter)
 	_ = t.encs.TestAddHinter(base.DummyVoteproof{})
 	_ = t.encs.TestAddHinter(base.StringAddressHinter)
-	_ = t.encs.TestAddHinter(block.BaseBlockDataMapHinter)
+	_ = t.encs.TestAddHinter(block.BaseBlockdataMapHinter)
 	_ = t.encs.TestAddHinter(block.ManifestV0Hinter)
 	_ = t.encs.TestAddHinter(key.BasePrivatekey{})
 	_ = t.encs.TestAddHinter(key.BasePublickey{})
@@ -347,32 +347,32 @@ func (t *testQuicServer) TestNodeInfo() {
 	network.CompareNodeInfo(t.T(), ni, nni)
 }
 
-func (t *testQuicServer) TestEmptyBlockDataMaps() {
+func (t *testQuicServer) TestEmptyBlockdataMaps() {
 	qn := t.readyServer()
 	defer qn.Stop()
 
-	qn.SetBlockDataMapsHandler(func(hs []base.Height) ([]block.BlockDataMap, error) {
+	qn.SetBlockdataMapsHandler(func(hs []base.Height) ([]block.BlockdataMap, error) {
 		return nil, nil
 	})
 
 	qc, err := NewChannel(t.connInfo, 2, nil, t.encs, t.enc)
 	t.NoError(err)
 
-	bds, err := qc.BlockDataMaps(context.TODO(), []base.Height{33, 34})
+	bds, err := qc.BlockdataMaps(context.TODO(), []base.Height{33, 34})
 	t.NoError(err)
 
 	t.Empty(bds)
 }
 
-func (t *testQuicServer) TestBlockDataMaps() {
+func (t *testQuicServer) TestBlockdataMaps() {
 	qn := t.readyServer()
 	defer qn.Stop()
 
-	bd := block.NewBaseBlockDataMap(block.TestBlockDataWriterHint, 33)
+	bd := block.NewBaseBlockdataMap(block.TestBlockdataWriterHint, 33)
 	bd = bd.SetBlock(valuehash.RandomSHA256())
 
-	for _, k := range block.BlockData {
-		bd, _ = bd.SetItem(block.NewBaseBlockDataMapItem(k, util.UUID().String(), "file://"+util.UUID().String()))
+	for _, k := range block.Blockdata {
+		bd, _ = bd.SetItem(block.NewBaseBlockdataMapItem(k, util.UUID().String(), "file://"+util.UUID().String()))
 	}
 	{
 		i, err := bd.UpdateHash()
@@ -380,8 +380,8 @@ func (t *testQuicServer) TestBlockDataMaps() {
 		bd = i
 	}
 
-	qn.SetBlockDataMapsHandler(func(hs []base.Height) ([]block.BlockDataMap, error) {
-		return []block.BlockDataMap{
+	qn.SetBlockdataMapsHandler(func(hs []base.Height) ([]block.BlockdataMap, error) {
+		return []block.BlockdataMap{
 			bd,
 		}, nil
 	})
@@ -389,47 +389,47 @@ func (t *testQuicServer) TestBlockDataMaps() {
 	qc, err := NewChannel(t.connInfo, 2, nil, t.encs, t.enc)
 	t.NoError(err)
 
-	bds, err := qc.BlockDataMaps(context.TODO(), []base.Height{33, 34})
+	bds, err := qc.BlockdataMaps(context.TODO(), []base.Height{33, 34})
 	t.NoError(err)
 
 	t.Equal(1, len(bds))
 
-	block.CompareBlockDataMap(t.Assert(), bd, bds[0])
+	block.CompareBlockdataMap(t.Assert(), bd, bds[0])
 }
 
-func (t *testQuicServer) TestEmptyBlockData() {
+func (t *testQuicServer) TestEmptyBlockdata() {
 	qn := t.readyServer()
 	defer qn.Stop()
 
-	qn.SetBlockDataHandler(func(p string) (io.Reader, func() error, error) {
+	qn.SetBlockdataHandler(func(p string) (io.Reader, func() error, error) {
 		return nil, func() error { return nil }, nil
 	})
 
 	qc, err := NewChannel(t.connInfo, 2, nil, t.encs, t.enc)
 	t.NoError(err)
 
-	item := block.NewBaseBlockDataMapItem("findme", util.UUID().String(), "file:///showme/findme")
-	_, err = qc.BlockData(context.Background(), item)
+	item := block.NewBaseBlockdataMapItem("findme", util.UUID().String(), "file:///showme/findme")
+	_, err = qc.Blockdata(context.Background(), item)
 	t.Contains(err.Error(), "failed to request")
 }
 
-func (t *testQuicServer) TestGetBlockDataWithError() {
+func (t *testQuicServer) TestGetBlockdataWithError() {
 	qn := t.readyServer()
 	defer qn.Stop()
 
-	qn.SetBlockDataHandler(func(p string) (io.Reader, func() error, error) {
+	qn.SetBlockdataHandler(func(p string) (io.Reader, func() error, error) {
 		return nil, func() error { return nil }, util.NotFoundError
 	})
 
 	qc, err := NewChannel(t.connInfo, 2, nil, t.encs, t.enc)
 	t.NoError(err)
 
-	item := block.NewBaseBlockDataMapItem("findme", util.UUID().String(), "file:///showme/findme")
-	_, err = qc.BlockData(context.Background(), item)
+	item := block.NewBaseBlockdataMapItem("findme", util.UUID().String(), "file:///showme/findme")
+	_, err = qc.Blockdata(context.Background(), item)
 	t.Contains(err.Error(), "not found")
 }
 
-func (t *testQuicServer) TestGetBlockData() {
+func (t *testQuicServer) TestGetBlockdata() {
 	qn := t.readyServer()
 	defer qn.Stop()
 
@@ -450,15 +450,15 @@ func (t *testQuicServer) TestGetBlockData() {
 		os.Remove(f.Name())
 	}()
 
-	qn.SetBlockDataHandler(func(p string) (io.Reader, func() error, error) {
+	qn.SetBlockdataHandler(func(p string) (io.Reader, func() error, error) {
 		return f, f.Close, nil
 	})
 
 	qc, err := NewChannel(t.connInfo, 2, nil, t.encs, t.enc)
 	t.NoError(err)
 
-	item := block.NewBaseBlockDataMapItem("findme", checksum, "file:///showme/findme")
-	r, err := qc.BlockData(context.Background(), item)
+	item := block.NewBaseBlockdataMapItem("findme", checksum, "file:///showme/findme")
+	r, err := qc.Blockdata(context.Background(), item)
 	t.NoError(err)
 	t.NotNil(r)
 

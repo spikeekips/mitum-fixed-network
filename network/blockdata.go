@@ -14,7 +14,7 @@ import (
 	"github.com/spikeekips/mitum/util"
 )
 
-func FetchBlockDataThruChannel(handler BlockDataHandler, item block.BlockDataMapItem) (io.ReadCloser, error) {
+func FetchBlockdataThruChannel(handler BlockdataHandler, item block.BlockdataMapItem) (io.ReadCloser, error) {
 	u, err := ParseURL(item.URL(), false)
 	if err != nil {
 		return nil, err
@@ -68,7 +68,7 @@ func FetchBlockDataThruChannel(handler BlockDataHandler, item block.BlockDataMap
 	}
 }
 
-func FetchBlockDataFromRemote(ctx context.Context, item block.BlockDataMapItem) (io.ReadCloser, error) {
+func FetchBlockdataFromRemote(ctx context.Context, item block.BlockdataMapItem) (io.ReadCloser, error) {
 	u, err := ParseURL(item.URL(), false)
 	if err != nil {
 		return nil, err
@@ -78,13 +78,13 @@ func FetchBlockDataFromRemote(ctx context.Context, item block.BlockDataMapItem) 
 	case "file":
 		return nil, errors.Errorf("%q is not remote", u.String())
 	case "http", "https": // nolint:goconst
-		return FetchBlockDataFromHTTP(ctx, item)
+		return FetchBlockdataFromHTTP(ctx, item)
 	default:
 		return nil, errors.Errorf("%q not yet supported", u.Scheme)
 	}
 }
 
-func FetchBlockDataFromHTTP(ctx context.Context, item block.BlockDataMapItem) (io.ReadCloser, error) {
+func FetchBlockdataFromHTTP(ctx context.Context, item block.BlockdataMapItem) (io.ReadCloser, error) {
 	u, err := ParseURL(item.URL(), false)
 	if err != nil {
 		return nil, err

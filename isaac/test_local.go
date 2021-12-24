@@ -12,7 +12,7 @@ import (
 
 type Local struct {
 	database  storage.Database
-	blockData blockdata.BlockData
+	blockdata blockdata.Blockdata
 	node      node.Local
 	ch        network.Channel
 	policy    *LocalPolicy
@@ -22,14 +22,14 @@ type Local struct {
 
 func NewLocal(
 	db storage.Database,
-	blockData blockdata.BlockData,
+	bd blockdata.Blockdata,
 	node node.Local,
 	ch network.Channel,
 	networkID []byte,
 ) (*Local, error) {
 	return &Local{
 		database:  db,
-		blockData: blockData,
+		blockdata: bd,
 		node:      node,
 		ch:        ch,
 		nodes:     network.NewNodepool(node, ch),
@@ -55,8 +55,8 @@ func (ls *Local) SetDatabase(db storage.Database) *Local {
 	return ls
 }
 
-func (ls *Local) BlockData() blockdata.BlockData {
-	return ls.blockData
+func (ls *Local) Blockdata() blockdata.Blockdata {
+	return ls.blockdata
 }
 
 func (ls *Local) Node() node.Local {

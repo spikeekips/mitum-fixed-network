@@ -20,8 +20,8 @@ import (
 )
 
 var (
-	BlockDataWriterType = hint.Type("blockdata-writer")
-	BlockDataWriterHint = hint.NewHint(BlockDataWriterType, "v0.0.1")
+	BlockdataWriterType = hint.Type("blockdata-writer")
+	BlockdataWriterHint = hint.NewHint(BlockdataWriterType, "v0.0.1")
 )
 
 type DefaultWriter struct {
@@ -33,7 +33,7 @@ func NewDefaultWriter(enc encoder.Encoder) DefaultWriter {
 }
 
 func (DefaultWriter) Hint() hint.Hint {
-	return BlockDataWriterHint
+	return BlockdataWriterHint
 }
 
 func (bd DefaultWriter) WriteManifest(w io.Writer, manifest block.Manifest) error {

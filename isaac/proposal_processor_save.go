@@ -51,7 +51,7 @@ func (pp *DefaultProcessor) save(ctx context.Context) error {
 
 	sctx := ctx
 	for _, f := range []func(context.Context) (context.Context, error){
-		pp.storeBlockDataSession,
+		pp.storeBlockdataSession,
 		pp.storeStorage,
 	} {
 		select {
@@ -79,7 +79,7 @@ func (pp *DefaultProcessor) save(ctx context.Context) error {
 	return nil
 }
 
-func (pp *DefaultProcessor) storeBlockDataSession(ctx context.Context) (context.Context, error) {
+func (pp *DefaultProcessor) storeBlockdataSession(ctx context.Context) (context.Context, error) {
 	started := time.Now()
 	defer func() {
 		_ = pp.setStatic("processor_store_blockdata_session_elapsed", time.Since(started))
@@ -87,17 +87,17 @@ func (pp *DefaultProcessor) storeBlockDataSession(ctx context.Context) (context.
 
 	pp.Log().Debug().Msg("trying to store block database session")
 
-	if pp.blockDataSession == nil {
+	if pp.blockdataSession == nil {
 		return ctx, errors.Errorf("not prepared")
 	}
 
-	bd, err := pp.blockData.SaveSession(pp.blockDataSession)
+	bd, err := pp.blockdata.SaveSession(pp.blockdataSession)
 	if err != nil {
 		pp.Log().Error().Err(err).Msg("trying to store block database session")
 
 		return ctx, err
 	}
-	ctx = context.WithValue(ctx, blockDataMapContextKey, bd)
+	ctx = context.WithValue(ctx, blockdataMapContextKey, bd)
 
 	pp.Log().Debug().Msg("stored block database session")
 
@@ -112,8 +112,8 @@ func (pp *DefaultProcessor) storeStorage(ctx context.Context) (context.Context, 
 
 	pp.Log().Debug().Msg("trying to store storage")
 
-	var bd block.BlockDataMap
-	if err := util.LoadFromContextValue(ctx, blockDataMapContextKey, &bd); err != nil {
+	var bd block.BlockdataMap
+	if err := util.LoadFromContextValue(ctx, blockdataMapContextKey, &bd); err != nil {
 		return ctx, errors.Wrap(err, "block data map not found")
 	}
 
@@ -147,7 +147,7 @@ func (pp *DefaultProcessor) resetSave() error {
 
 	pp.Log().Debug().Stringer("state", pp.state).Msg("save will be resetted")
 
-	if err := blockdata.CleanByHeight(pp.database, pp.blockData, pp.Fact().Height()); err != nil {
+	if err := blockdata.CleanByHeight(pp.database, pp.blockdata, pp.Fact().Height()); err != nil {
 		return err
 	}
 

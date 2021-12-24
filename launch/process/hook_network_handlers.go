@@ -41,7 +41,7 @@ type SettingNetworkHandlers struct {
 	version   util.Version
 	conf      config.LocalNode
 	database  storage.Database
-	blockData blockdata.BlockData
+	blockdata blockdata.Blockdata
 	policy    *isaac.LocalPolicy
 	nodepool  *network.Nodepool
 	suffrage  base.Suffrage
@@ -78,7 +78,7 @@ func (sn *SettingNetworkHandlers) loadFromContext(ctx context.Context) error {
 	if err := LoadDatabaseContextValue(ctx, &sn.database); err != nil {
 		return err
 	}
-	if err := LoadBlockDataContextValue(ctx, &sn.blockData); err != nil {
+	if err := LoadBlockdataContextValue(ctx, &sn.blockdata); err != nil {
 		return err
 	}
 	if err := LoadSuffrageContextValue(ctx, &sn.suffrage); err != nil {
@@ -114,8 +114,8 @@ func (sn *SettingNetworkHandlers) Set() error {
 	sn.network.SetGetStagedOperationsHandler(sn.handlerGetStagedOperations())
 	sn.network.SetNewSealHandler(sn.handlerNewSeal())
 	sn.network.SetNodeInfoHandler(sn.handlerNodeInfo())
-	sn.network.SetBlockDataMapsHandler(sn.handlerBlockDataMaps())
-	sn.network.SetBlockDataHandler(sn.handlerBlockData())
+	sn.network.SetBlockdataMapsHandler(sn.handlerBlockdataMaps())
+	sn.network.SetBlockdataHandler(sn.handlerBlockdata())
 	sn.network.SetStartHandoverHandler(sn.handlerStartHandover())
 	sn.network.SetPingHandoverHandler(sn.handlerPingHandover())
 	sn.network.SetEndHandoverHandler(sn.handlerEndHandover())
@@ -125,8 +125,8 @@ func (sn *SettingNetworkHandlers) Set() error {
 	lc.SetNewSealHandler(sn.handlerNewSeal())
 	lc.SetGetStagedOperationsHandler(sn.handlerGetStagedOperations())
 	lc.SetNodeInfoHandler(sn.handlerNodeInfo())
-	lc.SetBlockDataMapsHandler(sn.handlerBlockDataMaps())
-	lc.SetBlockDataHandler(sn.handlerBlockData())
+	lc.SetBlockdataMapsHandler(sn.handlerBlockdataMaps())
+	lc.SetBlockdataHandler(sn.handlerBlockdata())
 
 	sn.logger.Debug().Msg("local channel handlers binded")
 
@@ -231,8 +231,8 @@ func (sn *SettingNetworkHandlers) handlerNodeInfo() network.NodeInfoHandler {
 	}
 }
 
-func (sn *SettingNetworkHandlers) handlerBlockDataMaps() network.BlockDataMapsHandler {
-	return func(heights []base.Height) ([]block.BlockDataMap, error) {
+func (sn *SettingNetworkHandlers) handlerBlockdataMaps() network.BlockdataMapsHandler {
+	return func(heights []base.Height) ([]block.BlockdataMap, error) {
 		sort.Slice(heights, func(i, j int) bool {
 			return heights[i] < heights[j]
 		})
@@ -249,9 +249,9 @@ func (sn *SettingNetworkHandlers) handlerBlockDataMaps() network.BlockDataMapsHa
 			filtered = append(filtered, h)
 		}
 
-		maps := make([]block.BlockDataMap, len(filtered))
+		maps := make([]block.BlockdataMap, len(filtered))
 		for i := range filtered {
-			switch m, found, err := sn.database.BlockDataMap(filtered[i]); {
+			switch m, found, err := sn.database.BlockdataMap(filtered[i]); {
 			case !found:
 				continue
 			case err != nil:
@@ -265,9 +265,9 @@ func (sn *SettingNetworkHandlers) handlerBlockDataMaps() network.BlockDataMapsHa
 	}
 }
 
-func (sn *SettingNetworkHandlers) handlerBlockData() network.BlockDataHandler {
+func (sn *SettingNetworkHandlers) handlerBlockdata() network.BlockdataHandler {
 	return func(p string) (io.Reader, func() error, error) {
-		i, err := sn.blockData.FS().Open(p)
+		i, err := sn.blockdata.FS().Open(p)
 		if err != nil {
 			return nil, func() error { return nil }, err
 		}

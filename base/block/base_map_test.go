@@ -8,21 +8,21 @@ import (
 	"github.com/stretchr/testify/suite"
 )
 
-type testBaseBlockDataMap struct {
+type testBaseBlockdataMap struct {
 	suite.Suite
 }
 
-func (t *testBaseBlockDataMap) TestNew() {
-	bd := NewBaseBlockDataMap(TestBlockDataWriterHint, 33)
-	t.Implements((*BlockDataMap)(nil), bd)
+func (t *testBaseBlockdataMap) TestNew() {
+	bd := NewBaseBlockdataMap(TestBlockdataWriterHint, 33)
+	t.Implements((*BlockdataMap)(nil), bd)
 }
 
-func (t *testBaseBlockDataMap) TestRemoteMixed() {
-	bd := NewBaseBlockDataMap(TestBlockDataWriterHint, 33)
+func (t *testBaseBlockdataMap) TestRemoteMixed() {
+	bd := NewBaseBlockdataMap(TestBlockdataWriterHint, 33)
 	bd = bd.SetBlock(valuehash.RandomSHA256())
 
-	for i := range BlockData {
-		item := NewBaseBlockDataMapItem(BlockData[i], util.UUID().String(), "file:///"+util.UUID().String())
+	for i := range Blockdata {
+		item := NewBaseBlockdataMapItem(Blockdata[i], util.UUID().String(), "file:///"+util.UUID().String())
 		j, err := bd.SetItem(item)
 		t.NoError(err)
 		bd = j
@@ -35,7 +35,7 @@ func (t *testBaseBlockDataMap) TestRemoteMixed() {
 	t.NoError(bd.IsValid(nil))
 
 	// NOTE set remote item
-	item := NewBaseBlockDataMapItem(BlockDataManifest, util.UUID().String(), "https:///"+util.UUID().String())
+	item := NewBaseBlockdataMapItem(BlockdataManifest, util.UUID().String(), "https:///"+util.UUID().String())
 	j, err := bd.SetItem(item)
 	t.NoError(err)
 	bd = j
@@ -44,6 +44,6 @@ func (t *testBaseBlockDataMap) TestRemoteMixed() {
 	t.Contains(err.Error(), "all the items should be local or non-local")
 }
 
-func TestBaseBlockDataMap(t *testing.T) {
-	suite.Run(t, new(testBaseBlockDataMap))
+func TestBaseBlockdataMap(t *testing.T) {
+	suite.Run(t, new(testBaseBlockdataMap))
 }

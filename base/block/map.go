@@ -10,7 +10,7 @@ import (
 	"github.com/spikeekips/mitum/util/valuehash"
 )
 
-type BlockDataMap interface {
+type BlockdataMap interface {
 	hint.Hinter
 	valuehash.HashGenerator
 	valuehash.Hasher
@@ -21,18 +21,18 @@ type BlockDataMap interface {
 	CreatedAt() time.Time
 	IsLocal() bool
 	Block() valuehash.Hash
-	Manifest() BlockDataMapItem
-	Operations() BlockDataMapItem
-	OperationsTree() BlockDataMapItem
-	States() BlockDataMapItem
-	StatesTree() BlockDataMapItem
-	INITVoteproof() BlockDataMapItem
-	ACCEPTVoteproof() BlockDataMapItem
-	SuffrageInfo() BlockDataMapItem
-	Proposal() BlockDataMapItem
+	Manifest() BlockdataMapItem
+	Operations() BlockdataMapItem
+	OperationsTree() BlockdataMapItem
+	States() BlockdataMapItem
+	StatesTree() BlockdataMapItem
+	INITVoteproof() BlockdataMapItem
+	ACCEPTVoteproof() BlockdataMapItem
+	SuffrageInfo() BlockdataMapItem
+	Proposal() BlockdataMapItem
 }
 
-type BlockDataMapItem interface {
+type BlockdataMapItem interface {
 	isvalid.IsValider
 	util.Byter
 	Type() string

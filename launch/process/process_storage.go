@@ -16,11 +16,11 @@ import (
 
 const (
 	ProcessNameDatabase  = "database"
-	ProcessNameBlockData = "blockdata"
+	ProcessNameBlockdata = "blockdata"
 )
 
 var (
-	ProcessorBlockData pm.Process
+	ProcessorBlockdata pm.Process
 	ProcessorDatabase  pm.Process
 )
 
@@ -38,32 +38,32 @@ func init() {
 	}
 
 	if i, err := pm.NewProcess(
-		ProcessNameBlockData,
+		ProcessNameBlockdata,
 		[]string{
 			ProcessNameDatabase,
 		},
-		ProcessBlockData,
+		ProcessBlockdata,
 	); err != nil {
 		panic(err)
 	} else {
-		ProcessorBlockData = i
+		ProcessorBlockdata = i
 	}
 }
 
-func ProcessBlockData(ctx context.Context) (context.Context, error) {
+func ProcessBlockdata(ctx context.Context) (context.Context, error) {
 	var l config.LocalNode
 	if err := config.LoadConfigContextValue(ctx, &l); err != nil {
 		return ctx, err
 	}
-	conf := l.Storage().BlockData()
+	conf := l.Storage().Blockdata()
 
 	var enc *jsonenc.Encoder
 	if err := config.LoadJSONEncoderContextValue(ctx, &enc); err != nil {
 		return ctx, err
 	}
 
-	blockData := localfs.NewBlockData(conf.Path(), enc)
-	if err := blockData.Initialize(); err != nil {
+	blockdata := localfs.NewBlockdata(conf.Path(), enc)
+	if err := blockdata.Initialize(); err != nil {
 		return nil, err
 	}
 
@@ -74,7 +74,7 @@ func ProcessBlockData(ctx context.Context) (context.Context, error) {
 		}
 	}
 
-	return context.WithValue(ctx, ContextValueBlockData, blockData), nil
+	return context.WithValue(ctx, ContextValueBlockdata, blockdata), nil
 }
 
 func ProcessDatabase(ctx context.Context) (context.Context, error) {

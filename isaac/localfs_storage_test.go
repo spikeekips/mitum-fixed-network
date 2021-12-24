@@ -18,11 +18,11 @@ import (
 	"github.com/stretchr/testify/suite"
 )
 
-type testBlockData struct {
+type testBlockdata struct {
 	BaseTest
 }
 
-func (t *testBlockData) processSession(local *Local, ss *localfs.Session) {
+func (t *testBlockdata) processSession(local *Local, ss *localfs.Session) {
 	var blk block.Block
 	{
 		i, err := block.NewTestBlockV0(ss.Height(), base.Round(0), valuehash.RandomSHA256(), valuehash.RandomSHA256())
@@ -112,24 +112,24 @@ func (t *testBlockData) processSession(local *Local, ss *localfs.Session) {
 	}
 }
 
-func (t *testBlockData) createFile(root, p string) *os.File {
+func (t *testBlockdata) createFile(root, p string) *os.File {
 	f, err := os.OpenFile(filepath.Join(root, p), os.O_CREATE|os.O_WRONLY, localfs.DefaultFilePermission)
 	t.NoError(err)
 
 	return f
 }
 
-func (t *testBlockData) newBlockData(root string) *localfs.BlockData {
-	st := localfs.NewBlockData(root, t.JSONEnc)
+func (t *testBlockdata) newBlockdata(root string) *localfs.Blockdata {
+	st := localfs.NewBlockdata(root, t.JSONEnc)
 	t.NoError(st.Initialize())
 
 	return st
 }
 
-func (t *testBlockData) TestSaveSession() {
+func (t *testBlockdata) TestSaveSession() {
 	local := t.Locals(1)[0]
 
-	st := t.newBlockData(t.Root)
+	st := t.newBlockdata(t.Root)
 
 	ss, err := st.NewSession(33)
 	t.NoError(err)
@@ -140,10 +140,10 @@ func (t *testBlockData) TestSaveSession() {
 	t.NoError(err)
 }
 
-func (t *testBlockData) TestHeightDirectoryAlreadyExists() {
+func (t *testBlockdata) TestHeightDirectoryAlreadyExists() {
 	local := t.Locals(1)[0]
 
-	st := t.newBlockData(t.Root)
+	st := t.newBlockdata(t.Root)
 
 	ss, err := st.NewSession(33)
 	t.NoError(err)
@@ -171,8 +171,8 @@ func (t *testBlockData) TestHeightDirectoryAlreadyExists() {
 	t.True(os.IsNotExist(err))
 }
 
-func (t *testBlockData) TestClean() {
-	st := t.newBlockData(t.Root)
+func (t *testBlockdata) TestClean() {
+	st := t.newBlockdata(t.Root)
 
 	touch := func(a string) {
 		f := t.createFile(t.Root, a)
@@ -207,10 +207,10 @@ func (t *testBlockData) TestClean() {
 	t.False(exists(t.Root))
 }
 
-func (t *testBlockData) TestRemove() {
+func (t *testBlockdata) TestRemove() {
 	local := t.Locals(1)[0]
 
-	st := t.newBlockData(t.Root)
+	st := t.newBlockdata(t.Root)
 
 	for i := int64(33); i < 36; i++ {
 		ss, err := st.NewSession(base.Height(i))
@@ -244,10 +244,10 @@ func (t *testBlockData) TestRemove() {
 	t.NotEmpty(files)
 }
 
-func (t *testBlockData) TestRemoveAll() {
+func (t *testBlockdata) TestRemoveAll() {
 	local := t.Locals(1)[0]
 
-	st := t.newBlockData(t.Root)
+	st := t.newBlockdata(t.Root)
 
 	for i := int64(33); i < 36; i++ {
 		ss, err := st.NewSession(base.Height(i))
@@ -280,6 +280,6 @@ func (t *testBlockData) TestRemoveAll() {
 	t.True(os.IsNotExist(err))
 }
 
-func TestBlockData(t *testing.T) {
-	suite.Run(t, new(testBlockData))
+func TestBlockdata(t *testing.T) {
+	suite.Run(t, new(testBlockdata))
 }

@@ -91,21 +91,30 @@ func (cmd *InitCommand) cleanStorage(ctx context.Context) (context.Context, erro
 		return ctx, nil
 	}
 
+	nctx, err := cleanStorageFromContext(ctx)
+	if err != nil {
+		return nctx, err
+	}
+
+	cmd.Log().Info().Msg("database and block data was cleaned by force")
+
+	return nctx, nil
+}
+
+func cleanStorageFromContext(ctx context.Context) (context.Context, error) {
 	var db storage.Database
 	if err := process.LoadDatabaseContextValue(ctx, &db); err != nil {
 		return ctx, err
 	}
 
-	var blockData blockdata.BlockData
-	if err := process.LoadBlockDataContextValue(ctx, &blockData); err != nil {
+	var bd blockdata.Blockdata
+	if err := process.LoadBlockdataContextValue(ctx, &bd); err != nil {
 		return ctx, err
 	}
 
-	if err := blockdata.Clean(db, blockData, false); err != nil {
+	if err := blockdata.Clean(db, bd, false); err != nil {
 		return ctx, err
 	}
-
-	cmd.Log().Info().Msg("database and block data was cleaned by force")
 
 	return ctx, nil
 }

@@ -120,7 +120,7 @@ suffrage:
 	t.Equal(config.DefaultLocalNetworkURL.String(), conf.Network().ConnInfo().URL().String())
 	t.Equal(config.DefaultLocalNetworkBind.String(), conf.Network().Bind().String())
 
-	t.Equal(config.DefaultBlockDataPath, conf.Storage().BlockData().Path())
+	t.Equal(config.DefaultBlockdataPath, conf.Storage().Blockdata().Path())
 	t.Equal(config.DefaultDatabaseURI, conf.Storage().Database().URI().String())
 	t.Equal(config.DefaultDatabaseCache, conf.Storage().Database().Cache().String())
 

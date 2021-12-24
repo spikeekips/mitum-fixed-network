@@ -21,11 +21,11 @@ import (
 	"github.com/stretchr/testify/suite"
 )
 
-type testBlockDataLocalFSSession struct {
+type testBlockdataLocalFSSession struct {
 	BaseTest
 }
 
-func (t *testBlockDataLocalFSSession) openFile(p string) (io.ReadCloser, error) {
+func (t *testBlockdataLocalFSSession) openFile(p string) (io.ReadCloser, error) {
 	f, err := os.Open(p)
 	if err != nil {
 		return nil, err
@@ -34,7 +34,7 @@ func (t *testBlockDataLocalFSSession) openFile(p string) (io.ReadCloser, error) 
 	return gzip.NewReader(f)
 }
 
-func (t *testBlockDataLocalFSSession) checkSessionFile(ss *localfs.Session, dataType string) string {
+func (t *testBlockdataLocalFSSession) checkSessionFile(ss *localfs.Session, dataType string) string {
 	item, found := ss.MapData().Item(dataType)
 	t.True(found, dataType)
 	t.NoError(item.IsValid(nil), dataType)
@@ -49,7 +49,7 @@ func (t *testBlockDataLocalFSSession) checkSessionFile(ss *localfs.Session, data
 	return p
 }
 
-func (t *testBlockDataLocalFSSession) TestAddOperationsButNotFinished() {
+func (t *testBlockdataLocalFSSession) TestAddOperationsButNotFinished() {
 	ss, err := localfs.NewSession(t.Root, blockdata.NewDefaultWriter(t.JSONEnc), 33)
 	t.NoError(err)
 	defer ss.Cancel()
@@ -64,7 +64,7 @@ func (t *testBlockDataLocalFSSession) TestAddOperationsButNotFinished() {
 	t.Contains(err.Error(), "empty data type of map item")
 }
 
-func (t *testBlockDataLocalFSSession) TestAddOperationsFinishedWithClose() {
+func (t *testBlockdataLocalFSSession) TestAddOperationsFinishedWithClose() {
 	ss, err := localfs.NewSession(t.Root, blockdata.NewDefaultWriter(t.JSONEnc), 33)
 	t.NoError(err)
 	defer ss.Cancel()
@@ -75,7 +75,7 @@ func (t *testBlockDataLocalFSSession) TestAddOperationsFinishedWithClose() {
 	t.NoError(ss.AddOperations(ops...))
 	t.NoError(ss.CloseOperations())
 
-	p := t.checkSessionFile(ss, block.BlockDataOperations)
+	p := t.checkSessionFile(ss, block.BlockdataOperations)
 	writer := blockdata.NewDefaultWriter(t.JSONEnc)
 	r, err := t.openFile(p)
 	t.NoError(err)
@@ -100,7 +100,7 @@ func (t *testBlockDataLocalFSSession) TestAddOperationsFinishedWithClose() {
 	}
 }
 
-func (t *testBlockDataLocalFSSession) TestAddStatesButNotFinished() {
+func (t *testBlockdataLocalFSSession) TestAddStatesButNotFinished() {
 	ss, err := localfs.NewSession(t.Root, blockdata.NewDefaultWriter(t.JSONEnc), 33)
 	t.NoError(err)
 	defer ss.Cancel()
@@ -118,7 +118,7 @@ func (t *testBlockDataLocalFSSession) TestAddStatesButNotFinished() {
 	t.Contains(err.Error(), "empty data type of map item")
 }
 
-func (t *testBlockDataLocalFSSession) TestAddStatesFinishedWithClose() {
+func (t *testBlockdataLocalFSSession) TestAddStatesFinishedWithClose() {
 	ss, err := localfs.NewSession(t.Root, blockdata.NewDefaultWriter(t.JSONEnc), 33)
 	t.NoError(err)
 	defer ss.Cancel()
@@ -131,7 +131,7 @@ func (t *testBlockDataLocalFSSession) TestAddStatesFinishedWithClose() {
 	t.NoError(ss.AddStates(sts...))
 	t.NoError(ss.CloseStates())
 
-	p := t.checkSessionFile(ss, block.BlockDataStates)
+	p := t.checkSessionFile(ss, block.BlockdataStates)
 	writer := blockdata.NewDefaultWriter(t.JSONEnc)
 	r, err := t.openFile(p)
 	t.NoError(err)
@@ -152,7 +152,7 @@ func (t *testBlockDataLocalFSSession) TestAddStatesFinishedWithClose() {
 	}
 }
 
-func (t *testBlockDataLocalFSSession) TestSetStatesTree() {
+func (t *testBlockdataLocalFSSession) TestSetStatesTree() {
 	ss, err := localfs.NewSession(t.Root, blockdata.NewDefaultWriter(t.JSONEnc), 33)
 	t.NoError(err)
 	defer ss.Cancel()
@@ -174,7 +174,7 @@ func (t *testBlockDataLocalFSSession) TestSetStatesTree() {
 
 	t.NoError(ss.SetStatesTree(tr))
 
-	p := t.checkSessionFile(ss, block.BlockDataStatesTree)
+	p := t.checkSessionFile(ss, block.BlockdataStatesTree)
 	writer := blockdata.NewDefaultWriter(t.JSONEnc)
 	r, err := t.openFile(p)
 	t.NoError(err)
@@ -197,7 +197,7 @@ func (t *testBlockDataLocalFSSession) TestSetStatesTree() {
 	}))
 }
 
-func (t *testBlockDataLocalFSSession) TestSetINITVoteproof() {
+func (t *testBlockdataLocalFSSession) TestSetINITVoteproof() {
 	ss, err := localfs.NewSession(t.Root, blockdata.NewDefaultWriter(t.JSONEnc), 33)
 	t.NoError(err)
 	defer ss.Cancel()
@@ -210,7 +210,7 @@ func (t *testBlockDataLocalFSSession) TestSetINITVoteproof() {
 
 	t.NoError(ss.SetINITVoteproof(vp))
 
-	p := t.checkSessionFile(ss, block.BlockDataINITVoteproof)
+	p := t.checkSessionFile(ss, block.BlockdataINITVoteproof)
 	writer := blockdata.NewDefaultWriter(t.JSONEnc)
 	r, err := t.openFile(p)
 	t.NoError(err)
@@ -221,7 +221,7 @@ func (t *testBlockDataLocalFSSession) TestSetINITVoteproof() {
 	t.CompareVoteproof(vp, uvp)
 }
 
-func (t *testBlockDataLocalFSSession) TestSetACCEPTVoteproof() {
+func (t *testBlockdataLocalFSSession) TestSetACCEPTVoteproof() {
 	ss, err := localfs.NewSession(t.Root, blockdata.NewDefaultWriter(t.JSONEnc), 33)
 	t.NoError(err)
 	defer ss.Cancel()
@@ -234,7 +234,7 @@ func (t *testBlockDataLocalFSSession) TestSetACCEPTVoteproof() {
 
 	t.NoError(ss.SetACCEPTVoteproof(vp))
 
-	p := t.checkSessionFile(ss, block.BlockDataACCEPTVoteproof)
+	p := t.checkSessionFile(ss, block.BlockdataACCEPTVoteproof)
 	writer := blockdata.NewDefaultWriter(t.JSONEnc)
 	r, err := t.openFile(p)
 	t.NoError(err)
@@ -245,7 +245,7 @@ func (t *testBlockDataLocalFSSession) TestSetACCEPTVoteproof() {
 	t.CompareVoteproof(vp, uvp)
 }
 
-func (t *testBlockDataLocalFSSession) TestSetProposal() {
+func (t *testBlockdataLocalFSSession) TestSetProposal() {
 	ss, err := localfs.NewSession(t.Root, blockdata.NewDefaultWriter(t.JSONEnc), 33)
 	t.NoError(err)
 	defer ss.Cancel()
@@ -261,7 +261,7 @@ func (t *testBlockDataLocalFSSession) TestSetProposal() {
 
 	t.NoError(ss.SetProposal(pr.SignedFact()))
 
-	p := t.checkSessionFile(ss, block.BlockDataProposal)
+	p := t.checkSessionFile(ss, block.BlockdataProposal)
 	writer := blockdata.NewDefaultWriter(t.JSONEnc)
 	r, err := t.openFile(p)
 	t.NoError(err)
@@ -272,7 +272,7 @@ func (t *testBlockDataLocalFSSession) TestSetProposal() {
 	t.CompareProposalFact(pr.Fact(), upr.Fact().(base.ProposalFact))
 }
 
-func (t *testBlockDataLocalFSSession) saveBlock(local *Local) (*localfs.Session, block.Block) {
+func (t *testBlockdataLocalFSSession) saveBlock(local *Local) (*localfs.Session, block.Block) {
 	ss, err := localfs.NewSession(t.Root, blockdata.NewDefaultWriter(t.JSONEnc), base.Height(33))
 	t.NoError(err)
 
@@ -367,7 +367,7 @@ func (t *testBlockDataLocalFSSession) saveBlock(local *Local) (*localfs.Session,
 	return ss, blk
 }
 
-func (t *testBlockDataLocalFSSession) TestDone() {
+func (t *testBlockdataLocalFSSession) TestDone() {
 	local := t.Locals(1)[0]
 	ss, blk := t.saveBlock(local)
 
@@ -384,7 +384,7 @@ func (t *testBlockDataLocalFSSession) TestDone() {
 	t.True(mapData.Block().Equal(blk.Hash()))
 }
 
-func (t *testBlockDataLocalFSSession) TestImport() {
+func (t *testBlockdataLocalFSSession) TestImport() {
 	local := t.Locals(1)[0]
 	ss, blk := t.saveBlock(local)
 
@@ -404,8 +404,8 @@ func (t *testBlockDataLocalFSSession) TestImport() {
 	nss, err := localfs.NewSession(newroot, blockdata.NewDefaultWriter(t.JSONEnc), mapData.Height())
 	t.NoError(err)
 
-	for i := range block.BlockData {
-		dataType := block.BlockData[i]
+	for i := range block.Blockdata {
+		dataType := block.Blockdata[i]
 
 		p := t.checkSessionFile(ss, dataType)
 		r, err := t.openFile(p)
@@ -429,8 +429,8 @@ func (t *testBlockDataLocalFSSession) TestImport() {
 	t.NoError(err)
 	t.NoError(newMapData.IsValid(nil))
 
-	for i := range block.BlockData {
-		dataType := block.BlockData[i]
+	for i := range block.Blockdata {
+		dataType := block.Blockdata[i]
 
 		a, found := ss.MapData().Item(dataType)
 		t.True(found)
@@ -443,6 +443,6 @@ func (t *testBlockDataLocalFSSession) TestImport() {
 	}
 }
 
-func TestBlockDataLocalFSSession(t *testing.T) {
-	suite.Run(t, new(testBlockDataLocalFSSession))
+func TestBlockdataLocalFSSession(t *testing.T) {
+	suite.Run(t, new(testBlockdataLocalFSSession))
 }

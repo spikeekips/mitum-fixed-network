@@ -16,66 +16,66 @@ import (
 )
 
 var (
-	BaseBlockDataMapType   = hint.Type("base-blockdatamap")
-	BaseBlockDataMapHint   = hint.NewHint(BaseBlockDataMapType, "v0.0.1")
-	BaseBlockDataMapHinter = BaseBlockDataMap{BaseHinter: hint.NewBaseHinter(BaseBlockDataMapHint)}
+	BaseBlockdataMapType   = hint.Type("base-blockdatamap")
+	BaseBlockdataMapHint   = hint.NewHint(BaseBlockdataMapType, "v0.0.1")
+	BaseBlockdataMapHinter = BaseBlockdataMap{BaseHinter: hint.NewBaseHinter(BaseBlockdataMapHint)}
 )
 
 var (
-	BlockDataManifest        = "manifest"
-	BlockDataOperations      = "operations"
-	BlockDataOperationsTree  = "operations_tree"
-	BlockDataStates          = "states"
-	BlockDataStatesTree      = "states_tree"
-	BlockDataINITVoteproof   = "init_voteproof"
-	BlockDataACCEPTVoteproof = "accept_voteproof"
-	BlockDataSuffrageInfo    = "suffrage_info"
-	BlockDataProposal        = "proposal"
+	BlockdataManifest        = "manifest"
+	BlockdataOperations      = "operations"
+	BlockdataOperationsTree  = "operations_tree"
+	BlockdataStates          = "states"
+	BlockdataStatesTree      = "states_tree"
+	BlockdataINITVoteproof   = "init_voteproof"
+	BlockdataACCEPTVoteproof = "accept_voteproof"
+	BlockdataSuffrageInfo    = "suffrage_info"
+	BlockdataProposal        = "proposal"
 )
 
-var BlockData = []string{
-	BlockDataManifest,
-	BlockDataOperations,
-	BlockDataOperationsTree,
-	BlockDataStates,
-	BlockDataStatesTree,
-	BlockDataINITVoteproof,
-	BlockDataACCEPTVoteproof,
-	BlockDataSuffrageInfo,
-	BlockDataProposal,
+var Blockdata = []string{
+	BlockdataManifest,
+	BlockdataOperations,
+	BlockdataOperationsTree,
+	BlockdataStates,
+	BlockdataStatesTree,
+	BlockdataINITVoteproof,
+	BlockdataACCEPTVoteproof,
+	BlockdataSuffrageInfo,
+	BlockdataProposal,
 }
 
-type BaseBlockDataMap struct {
+type BaseBlockdataMap struct {
 	hint.BaseHinter
 	h          valuehash.Hash
 	height     base.Height
 	block      valuehash.Hash
 	createdAt  time.Time
-	items      map[string]BaseBlockDataMapItem
+	items      map[string]BaseBlockdataMapItem
 	writerHint hint.Hint
 }
 
-func NewBaseBlockDataMap(writerHint hint.Hint, height base.Height) BaseBlockDataMap {
-	return BaseBlockDataMap{
-		BaseHinter: hint.NewBaseHinter(BaseBlockDataMapHint),
+func NewBaseBlockdataMap(writerHint hint.Hint, height base.Height) BaseBlockdataMap {
+	return BaseBlockdataMap{
+		BaseHinter: hint.NewBaseHinter(BaseBlockdataMapHint),
 		height:     height,
 		createdAt:  localtime.UTCNow(),
-		items: map[string]BaseBlockDataMapItem{
-			BlockDataManifest:        {},
-			BlockDataOperations:      {},
-			BlockDataOperationsTree:  {},
-			BlockDataStates:          {},
-			BlockDataStatesTree:      {},
-			BlockDataINITVoteproof:   {},
-			BlockDataACCEPTVoteproof: {},
-			BlockDataSuffrageInfo:    {},
-			BlockDataProposal:        {},
+		items: map[string]BaseBlockdataMapItem{
+			BlockdataManifest:        {},
+			BlockdataOperations:      {},
+			BlockdataOperationsTree:  {},
+			BlockdataStates:          {},
+			BlockdataStatesTree:      {},
+			BlockdataINITVoteproof:   {},
+			BlockdataACCEPTVoteproof: {},
+			BlockdataSuffrageInfo:    {},
+			BlockdataProposal:        {},
 		},
 		writerHint: writerHint,
 	}
 }
 
-func (bd BaseBlockDataMap) IsReadyToHash() error {
+func (bd BaseBlockdataMap) IsReadyToHash() error {
 	if err := isvalid.Check(nil, false, bd.BaseHinter, bd.height, bd.block); err != nil {
 		return err
 	}
@@ -89,14 +89,14 @@ func (bd BaseBlockDataMap) IsReadyToHash() error {
 	return nil
 }
 
-func (bd BaseBlockDataMap) IsValid([]byte) error {
+func (bd BaseBlockdataMap) IsValid([]byte) error {
 	if err := isvalid.Check(nil, false, bd.BaseHinter, bd.h); err != nil {
 		return err
 	}
 
 	var isLocal *bool
 	for i := range bd.items {
-		i := IsLocalBlockDateItem(bd.items[i].URL())
+		i := IsLocalBlockdataItem(bd.items[i].URL())
 		if isLocal == nil {
 			isLocal = &i
 
@@ -119,13 +119,13 @@ func (bd BaseBlockDataMap) IsValid([]byte) error {
 	return nil
 }
 
-func (bd BaseBlockDataMap) Hash() valuehash.Hash {
+func (bd BaseBlockdataMap) Hash() valuehash.Hash {
 	return bd.h
 }
 
-func (bd BaseBlockDataMap) UpdateHash() (BaseBlockDataMap, error) {
+func (bd BaseBlockdataMap) UpdateHash() (BaseBlockdataMap, error) {
 	if err := bd.IsReadyToHash(); err != nil {
-		return BaseBlockDataMap{}, err
+		return BaseBlockdataMap{}, err
 	}
 
 	bd.h = bd.GenerateHash()
@@ -133,22 +133,22 @@ func (bd BaseBlockDataMap) UpdateHash() (BaseBlockDataMap, error) {
 	return bd, nil
 }
 
-func (bd BaseBlockDataMap) GenerateHash() valuehash.Hash {
-	bs := make([][]byte, len(BlockData)+2)
+func (bd BaseBlockdataMap) GenerateHash() valuehash.Hash {
+	bs := make([][]byte, len(Blockdata)+2)
 
 	bs[0] = bd.height.Bytes()
 	bs[1] = localtime.NewTime(bd.createdAt).Bytes()
 
 	for i, dataType := range []string{
-		BlockDataManifest,
-		BlockDataOperations,
-		BlockDataOperationsTree,
-		BlockDataStates,
-		BlockDataStatesTree,
-		BlockDataINITVoteproof,
-		BlockDataACCEPTVoteproof,
-		BlockDataSuffrageInfo,
-		BlockDataProposal,
+		BlockdataManifest,
+		BlockdataOperations,
+		BlockdataOperationsTree,
+		BlockdataStates,
+		BlockdataStatesTree,
+		BlockdataINITVoteproof,
+		BlockdataACCEPTVoteproof,
+		BlockdataSuffrageInfo,
+		BlockdataProposal,
 	} {
 		bs[2+i] = bd.items[dataType].Bytes()
 	}
@@ -156,21 +156,21 @@ func (bd BaseBlockDataMap) GenerateHash() valuehash.Hash {
 	return valuehash.NewSHA256(util.ConcatBytesSlice(bs...))
 }
 
-func (bd BaseBlockDataMap) Height() base.Height {
+func (bd BaseBlockdataMap) Height() base.Height {
 	return bd.height
 }
 
-func (bd BaseBlockDataMap) Writer() hint.Hint {
+func (bd BaseBlockdataMap) Writer() hint.Hint {
 	return bd.writerHint
 }
 
-func (bd BaseBlockDataMap) CreatedAt() time.Time {
+func (bd BaseBlockdataMap) CreatedAt() time.Time {
 	return bd.createdAt
 }
 
-func (bd BaseBlockDataMap) IsLocal() bool {
-	for i := range BlockData {
-		if IsLocalBlockDateItem(bd.items[BlockData[i]].URL()) {
+func (bd BaseBlockdataMap) IsLocal() bool {
+	for i := range Blockdata {
+		if IsLocalBlockdataItem(bd.items[Blockdata[i]].URL()) {
 			return true
 		}
 	}
@@ -178,9 +178,9 @@ func (bd BaseBlockDataMap) IsLocal() bool {
 	return false
 }
 
-func (bd BaseBlockDataMap) Exists(b string) error {
-	for i := range BlockData {
-		item := bd.items[BlockData[i]]
+func (bd BaseBlockdataMap) Exists(b string) error {
+	for i := range Blockdata {
+		item := bd.items[Blockdata[i]]
 		if err := item.Exists(b); err != nil {
 			return err
 		}
@@ -189,19 +189,19 @@ func (bd BaseBlockDataMap) Exists(b string) error {
 	return nil
 }
 
-func (bd BaseBlockDataMap) Items() map[string]BaseBlockDataMapItem {
+func (bd BaseBlockdataMap) Items() map[string]BaseBlockdataMapItem {
 	return bd.items
 }
 
-func (bd BaseBlockDataMap) Item(dataType string) (BaseBlockDataMapItem, bool) {
+func (bd BaseBlockdataMap) Item(dataType string) (BaseBlockdataMapItem, bool) {
 	i, found := bd.items[dataType]
 
 	return i, found
 }
 
-func (bd BaseBlockDataMap) SetItem(item BaseBlockDataMapItem) (BaseBlockDataMap, error) {
+func (bd BaseBlockdataMap) SetItem(item BaseBlockdataMapItem) (BaseBlockdataMap, error) {
 	if _, found := bd.items[item.Type()]; !found {
-		return BaseBlockDataMap{}, errors.Errorf("unknown data type, %q of block data item", item.Type())
+		return BaseBlockdataMap{}, errors.Errorf("unknown data type, %q of block data item", item.Type())
 	}
 
 	bd.items[item.Type()] = item
@@ -209,121 +209,121 @@ func (bd BaseBlockDataMap) SetItem(item BaseBlockDataMapItem) (BaseBlockDataMap,
 	return bd, nil
 }
 
-func (bd BaseBlockDataMap) Block() valuehash.Hash {
+func (bd BaseBlockdataMap) Block() valuehash.Hash {
 	return bd.block
 }
 
-func (bd BaseBlockDataMap) SetBlock(blk valuehash.Hash) BaseBlockDataMap {
+func (bd BaseBlockdataMap) SetBlock(blk valuehash.Hash) BaseBlockdataMap {
 	bd.block = blk
 
 	return bd
 }
 
-func (bd BaseBlockDataMap) Manifest() BlockDataMapItem {
-	return bd.items[BlockDataManifest]
+func (bd BaseBlockdataMap) Manifest() BlockdataMapItem {
+	return bd.items[BlockdataManifest]
 }
 
-func (bd BaseBlockDataMap) SetManifest(item BaseBlockDataMapItem) BaseBlockDataMap {
-	bd.items[BlockDataManifest] = item
+func (bd BaseBlockdataMap) SetManifest(item BaseBlockdataMapItem) BaseBlockdataMap {
+	bd.items[BlockdataManifest] = item
 
 	return bd
 }
 
-func (bd BaseBlockDataMap) Operations() BlockDataMapItem {
-	return bd.items[BlockDataOperations]
+func (bd BaseBlockdataMap) Operations() BlockdataMapItem {
+	return bd.items[BlockdataOperations]
 }
 
-func (bd BaseBlockDataMap) SetOperations(item BaseBlockDataMapItem) BaseBlockDataMap {
-	bd.items[BlockDataOperations] = item
+func (bd BaseBlockdataMap) SetOperations(item BaseBlockdataMapItem) BaseBlockdataMap {
+	bd.items[BlockdataOperations] = item
 
 	return bd
 }
 
-func (bd BaseBlockDataMap) OperationsTree() BlockDataMapItem {
-	return bd.items[BlockDataOperationsTree]
+func (bd BaseBlockdataMap) OperationsTree() BlockdataMapItem {
+	return bd.items[BlockdataOperationsTree]
 }
 
-func (bd BaseBlockDataMap) SetOperationsTree(item BaseBlockDataMapItem) BaseBlockDataMap {
-	bd.items[BlockDataOperationsTree] = item
+func (bd BaseBlockdataMap) SetOperationsTree(item BaseBlockdataMapItem) BaseBlockdataMap {
+	bd.items[BlockdataOperationsTree] = item
 
 	return bd
 }
 
-func (bd BaseBlockDataMap) States() BlockDataMapItem {
-	return bd.items[BlockDataStates]
+func (bd BaseBlockdataMap) States() BlockdataMapItem {
+	return bd.items[BlockdataStates]
 }
 
-func (bd BaseBlockDataMap) SetStates(item BaseBlockDataMapItem) BaseBlockDataMap {
-	bd.items[BlockDataStates] = item
+func (bd BaseBlockdataMap) SetStates(item BaseBlockdataMapItem) BaseBlockdataMap {
+	bd.items[BlockdataStates] = item
 
 	return bd
 }
 
-func (bd BaseBlockDataMap) StatesTree() BlockDataMapItem {
-	return bd.items[BlockDataStatesTree]
+func (bd BaseBlockdataMap) StatesTree() BlockdataMapItem {
+	return bd.items[BlockdataStatesTree]
 }
 
-func (bd BaseBlockDataMap) SetStatesTree(item BaseBlockDataMapItem) BaseBlockDataMap {
-	bd.items[BlockDataStatesTree] = item
+func (bd BaseBlockdataMap) SetStatesTree(item BaseBlockdataMapItem) BaseBlockdataMap {
+	bd.items[BlockdataStatesTree] = item
 
 	return bd
 }
 
-func (bd BaseBlockDataMap) INITVoteproof() BlockDataMapItem {
-	return bd.items[BlockDataINITVoteproof]
+func (bd BaseBlockdataMap) INITVoteproof() BlockdataMapItem {
+	return bd.items[BlockdataINITVoteproof]
 }
 
-func (bd BaseBlockDataMap) SetINITVoteproof(item BaseBlockDataMapItem) BaseBlockDataMap {
-	bd.items[BlockDataINITVoteproof] = item
+func (bd BaseBlockdataMap) SetINITVoteproof(item BaseBlockdataMapItem) BaseBlockdataMap {
+	bd.items[BlockdataINITVoteproof] = item
 
 	return bd
 }
 
-func (bd BaseBlockDataMap) ACCEPTVoteproof() BlockDataMapItem {
-	return bd.items[BlockDataACCEPTVoteproof]
+func (bd BaseBlockdataMap) ACCEPTVoteproof() BlockdataMapItem {
+	return bd.items[BlockdataACCEPTVoteproof]
 }
 
-func (bd BaseBlockDataMap) SetACCEPTVoteproof(item BaseBlockDataMapItem) BaseBlockDataMap {
-	bd.items[BlockDataACCEPTVoteproof] = item
+func (bd BaseBlockdataMap) SetACCEPTVoteproof(item BaseBlockdataMapItem) BaseBlockdataMap {
+	bd.items[BlockdataACCEPTVoteproof] = item
 
 	return bd
 }
 
-func (bd BaseBlockDataMap) SuffrageInfo() BlockDataMapItem {
-	return bd.items[BlockDataSuffrageInfo]
+func (bd BaseBlockdataMap) SuffrageInfo() BlockdataMapItem {
+	return bd.items[BlockdataSuffrageInfo]
 }
 
-func (bd BaseBlockDataMap) SetSuffrageInfo(item BaseBlockDataMapItem) BaseBlockDataMap {
-	bd.items[BlockDataSuffrageInfo] = item
+func (bd BaseBlockdataMap) SetSuffrageInfo(item BaseBlockdataMapItem) BaseBlockdataMap {
+	bd.items[BlockdataSuffrageInfo] = item
 
 	return bd
 }
 
-func (bd BaseBlockDataMap) Proposal() BlockDataMapItem {
-	return bd.items[BlockDataProposal]
+func (bd BaseBlockdataMap) Proposal() BlockdataMapItem {
+	return bd.items[BlockdataProposal]
 }
 
-func (bd BaseBlockDataMap) SetProposal(item BaseBlockDataMapItem) BaseBlockDataMap {
-	bd.items[BlockDataProposal] = item
+func (bd BaseBlockdataMap) SetProposal(item BaseBlockdataMapItem) BaseBlockdataMap {
+	bd.items[BlockdataProposal] = item
 
 	return bd
 }
 
-type BaseBlockDataMapItem struct {
+type BaseBlockdataMapItem struct {
 	t        string
 	checksum string
 	url      string
 }
 
-func NewBaseBlockDataMapItem(dataType string, checksum string, url string) BaseBlockDataMapItem {
-	return BaseBlockDataMapItem{
+func NewBaseBlockdataMapItem(dataType string, checksum string, url string) BaseBlockdataMapItem {
+	return BaseBlockdataMapItem{
 		t:        dataType,
 		checksum: checksum,
 		url:      url,
 	}
 }
 
-func (bd BaseBlockDataMapItem) IsValid([]byte) error {
+func (bd BaseBlockdataMapItem) IsValid([]byte) error {
 	if len(bd.t) < 1 {
 		return isvalid.InvalidError.Errorf("empty data type of map item")
 	}
@@ -341,7 +341,7 @@ func (bd BaseBlockDataMapItem) IsValid([]byte) error {
 	return nil
 }
 
-func (bd BaseBlockDataMapItem) Bytes() []byte {
+func (bd BaseBlockdataMapItem) Bytes() []byte {
 	return util.ConcatBytesSlice(
 		[]byte(bd.t),
 		[]byte(bd.checksum),
@@ -349,31 +349,31 @@ func (bd BaseBlockDataMapItem) Bytes() []byte {
 	)
 }
 
-func (bd BaseBlockDataMapItem) Type() string {
+func (bd BaseBlockdataMapItem) Type() string {
 	return bd.t
 }
 
-func (bd BaseBlockDataMapItem) Checksum() string {
+func (bd BaseBlockdataMapItem) Checksum() string {
 	return bd.checksum
 }
 
-func (bd BaseBlockDataMapItem) URL() string {
+func (bd BaseBlockdataMapItem) URL() string {
 	return bd.url
 }
 
-func (bd BaseBlockDataMapItem) SetFile(p string) BaseBlockDataMapItem {
+func (bd BaseBlockdataMapItem) SetFile(p string) BaseBlockdataMapItem {
 	bd.url = "file://" + p
 
 	return bd
 }
 
-func (bd BaseBlockDataMapItem) SetURL(u string) BaseBlockDataMapItem {
+func (bd BaseBlockdataMapItem) SetURL(u string) BaseBlockdataMapItem {
 	bd.url = u
 
 	return bd
 }
 
-func (bd BaseBlockDataMapItem) URLBody() string {
+func (bd BaseBlockdataMapItem) URLBody() string {
 	n := strings.SplitN(bd.url, "://", 2)
 	switch {
 	case len(n) != 2:
@@ -385,7 +385,7 @@ func (bd BaseBlockDataMapItem) URLBody() string {
 	}
 }
 
-func (bd BaseBlockDataMapItem) Exists(b string) error {
+func (bd BaseBlockdataMapItem) Exists(b string) error {
 	if len(bd.URLBody()) < 1 {
 		return os.ErrNotExist
 	}
@@ -399,7 +399,7 @@ func (bd BaseBlockDataMapItem) Exists(b string) error {
 	return nil
 }
 
-func IsLocalBlockDateItem(u string) bool {
+func IsLocalBlockdataItem(u string) bool {
 	switch {
 	case strings.HasPrefix(u, "file://"):
 		return true

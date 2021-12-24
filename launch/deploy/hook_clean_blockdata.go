@@ -11,32 +11,32 @@ import (
 	"github.com/spikeekips/mitum/util/logging"
 )
 
-var HookNameBlockDataCleaner = "blockdata_cleaner"
+var HookNameBlockdataCleaner = "blockdata_cleaner"
 
-func HookBlockDataCleaner(ctx context.Context) (context.Context, error) {
+func HookBlockdataCleaner(ctx context.Context) (context.Context, error) {
 	var log *logging.Logging
 	if err := config.LoadLogContextValue(ctx, &log); err != nil {
 		return ctx, err
 	}
 
-	var lbd *localfs.BlockData
-	var bd blockdata.BlockData
-	if err := process.LoadBlockDataContextValue(ctx, &bd); err != nil {
+	var lbd *localfs.Blockdata
+	var bd blockdata.Blockdata
+	if err := process.LoadBlockdataContextValue(ctx, &bd); err != nil {
 		return ctx, err
-	} else if i, ok := bd.(*localfs.BlockData); !ok {
-		return ctx, errors.Errorf("to clean blockdata, needs localfs.BlockData, not %T", bd)
+	} else if i, ok := bd.(*localfs.Blockdata); !ok {
+		return ctx, errors.Errorf("to clean blockdata, needs localfs.Blockdata, not %T", bd)
 	} else {
 		lbd = i
 	}
 
-	bc := NewBlockDataCleaner(lbd, DefaultTimeAfterRemoveBlockDataFiles)
+	bc := NewBlockdataCleaner(lbd, DefaultTimeAfterRemoveBlockdataFiles)
 	_ = bc.SetLogging(log)
 
 	if err := bc.Start(); err != nil {
 		return ctx, err
 	}
 
-	log.Log().Debug().Dur("remove_after", DefaultTimeAfterRemoveBlockDataFiles).Msg("BlockDataCleaner created")
+	log.Log().Debug().Dur("remove_after", DefaultTimeAfterRemoveBlockdataFiles).Msg("BlockdataCleaner created")
 
-	return context.WithValue(ctx, ContextValueBlockDataCleaner, bc), nil
+	return context.WithValue(ctx, ContextValueBlockdataCleaner, bc), nil
 }

@@ -16,19 +16,19 @@ import (
 	"github.com/spikeekips/mitum/util/hint"
 )
 
-type BlockDataVerifyCommand struct {
+type BlockdataVerifyCommand struct {
 	*BaseVerifyCommand
 	Path string `arg:"" name:"blockdata path"`
-	bd   blockdata.BlockData
+	bd   blockdata.Blockdata
 }
 
-func NewBlockDataVerifyCommand(types []hint.Type, hinters []hint.Hinter) BlockDataVerifyCommand {
-	return BlockDataVerifyCommand{
+func NewBlockdataVerifyCommand(types []hint.Type, hinters []hint.Hinter) BlockdataVerifyCommand {
+	return BlockdataVerifyCommand{
 		BaseVerifyCommand: NewBaseVerifyCommand("blockdata-verify", types, hinters),
 	}
 }
 
-func (cmd *BlockDataVerifyCommand) Run(version util.Version) error {
+func (cmd *BlockdataVerifyCommand) Run(version util.Version) error {
 	if err := cmd.Initialize(cmd, version); err != nil {
 		return errors.Wrap(err, "failed to initialize command")
 	}
@@ -38,7 +38,7 @@ func (cmd *BlockDataVerifyCommand) Run(version util.Version) error {
 	return cmd.verify()
 }
 
-func (cmd *BlockDataVerifyCommand) Initialize(flags interface{}, version util.Version) error {
+func (cmd *BlockdataVerifyCommand) Initialize(flags interface{}, version util.Version) error {
 	if err := cmd.BaseVerifyCommand.Initialize(flags, version); err != nil {
 		return err
 	}
@@ -49,11 +49,11 @@ func (cmd *BlockDataVerifyCommand) Initialize(flags interface{}, version util.Ve
 		return errors.Errorf("path, %q is not directory", cmd.Path)
 	}
 
-	cmd.bd = localfs.NewBlockData(cmd.Path, cmd.jsonenc)
+	cmd.bd = localfs.NewBlockdata(cmd.Path, cmd.jsonenc)
 	return cmd.bd.Initialize()
 }
 
-func (cmd *BlockDataVerifyCommand) verify() error {
+func (cmd *BlockdataVerifyCommand) verify() error {
 	if err := cmd.checkLastHeight(); err != nil {
 		cmd.Log().Error().Err(err).Msg("failed to check last height")
 
@@ -84,7 +84,7 @@ func (cmd *BlockDataVerifyCommand) verify() error {
 	return nil
 }
 
-func (cmd *BlockDataVerifyCommand) checkLastHeight() error {
+func (cmd *BlockdataVerifyCommand) checkLastHeight() error {
 	var height base.Height = base.PreGenesisHeight
 	for {
 		if found, err := cmd.bd.Exists(height); err != nil {
@@ -106,9 +106,12 @@ func (cmd *BlockDataVerifyCommand) checkLastHeight() error {
 	return nil
 }
 
-func (cmd *BlockDataVerifyCommand) loadManifest(height base.Height) (block.Manifest, error) {
+func (cmd *BlockdataVerifyCommand) loadManifest(height base.Height) (block.Manifest, error) {
+	bd := cmd.bd.(*localfs.Blockdata)
+
+	prepath := filepath.Join(bd.Root(), localfs.HeightDirectory(height))
 	var manifest block.Manifest
-	_, i, err := localfs.LoadData(cmd.bd.(*localfs.BlockData), height, block.BlockDataManifest)
+	_, i, err := localfs.LoadData(prepath, block.BlockdataManifest)
 	if err != nil {
 		return nil, err
 	}
@@ -127,7 +130,7 @@ func (cmd *BlockDataVerifyCommand) loadManifest(height base.Height) (block.Manif
 	return manifest, nil
 }
 
-func (cmd *BlockDataVerifyCommand) checkBlocks() error {
+func (cmd *BlockdataVerifyCommand) checkBlocks() error {
 	wk := util.NewErrgroupWorker(context.Background(), 100)
 	defer wk.Close()
 
@@ -150,10 +153,10 @@ func (cmd *BlockDataVerifyCommand) checkBlocks() error {
 	return wk.Wait()
 }
 
-func (cmd *BlockDataVerifyCommand) loadBlock(height base.Height) (block.Block, error) {
+func (cmd *BlockdataVerifyCommand) loadBlock(height base.Height) (block.Block, error) {
 	l := cmd.Log().With().Int64("height", height.Int64()).Logger()
 
-	if _, i, err := localfs.LoadBlock(cmd.bd.(*localfs.BlockData), height); err != nil {
+	if _, i, err := localfs.LoadBlock(cmd.bd.(*localfs.Blockdata), height); err != nil {
 		l.Error().Err(err).Msg("failed to load block")
 
 		return nil, err
@@ -168,7 +171,7 @@ func (cmd *BlockDataVerifyCommand) loadBlock(height base.Height) (block.Block, e
 	}
 }
 
-func (cmd *BlockDataVerifyCommand) checkAllBlockFiles() error {
+func (cmd *BlockdataVerifyCommand) checkAllBlockFiles() error {
 	wk := util.NewErrgroupWorker(context.Background(), 100)
 	defer wk.Close()
 
@@ -189,7 +192,7 @@ func (cmd *BlockDataVerifyCommand) checkAllBlockFiles() error {
 	return wk.Wait()
 }
 
-func (cmd *BlockDataVerifyCommand) checkBlockFiles(height base.Height) error {
+func (cmd *BlockdataVerifyCommand) checkBlockFiles(height base.Height) error {
 	l := cmd.Log().With().Int64("height", height.Int64()).Logger()
 
 	if found, err := cmd.bd.Exists(height); err != nil {
@@ -199,8 +202,8 @@ func (cmd *BlockDataVerifyCommand) checkBlockFiles(height base.Height) error {
 	}
 
 	var hasError bool
-	for i := range block.BlockData {
-		dataType := block.BlockData[i]
+	for i := range block.Blockdata {
+		dataType := block.Blockdata[i]
 		if err := cmd.checkBlockFile(height, dataType); err != nil {
 			l.Error().Err(err).
 				Int64("height", height.Int64()).
@@ -219,7 +222,7 @@ func (cmd *BlockDataVerifyCommand) checkBlockFiles(height base.Height) error {
 	return nil
 }
 
-func (cmd *BlockDataVerifyCommand) checkBlockFile(height base.Height, dataType string) error {
+func (cmd *BlockdataVerifyCommand) checkBlockFile(height base.Height, dataType string) error {
 	g := filepath.Join(cmd.Path, localfs.HeightDirectory(height), fmt.Sprintf("%d-%s-*.jsonld.gz", height, dataType))
 
 	var f string

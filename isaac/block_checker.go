@@ -51,8 +51,8 @@ func NewManifestsValidationChecker(
 		baseBlocksValidationChecker: baseBlocksValidationChecker{
 			Logging: logging.NewLogging(func(c zerolog.Context) zerolog.Context {
 				return c.
-					Int64("from_manifest", manifests[0].Height().Int64()).
-					Int64("to_manifest", manifests[len(manifests)-1].Height().Int64()).
+					Int64("from", manifests[0].Height().Int64()).
+					Int64("to", manifests[len(manifests)-1].Height().Int64()).
 					Str("module", "manifests-validation-checker")
 			}),
 			networkID: networkID,

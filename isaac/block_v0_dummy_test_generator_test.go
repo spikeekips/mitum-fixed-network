@@ -86,7 +86,7 @@ func (t *testBlockV0DummyGenerator) TestCreate() {
 	for i := int64(0); i < lastHeight.Int64(); i++ {
 		hashes := map[string]struct{}{}
 		for nodeid, l := range all {
-			bs := l.BlockData().(*localfs.BlockData)
+			bs := l.Blockdata().(*localfs.Blockdata)
 			_, blk, err := localfs.LoadBlock(bs, base.Height(i))
 			t.NoError(err)
 
@@ -106,16 +106,16 @@ func (t *testBlockV0DummyGenerator) TestblockdataCleanByHeight() {
 
 	lastManifest, _, _ := local.Database().LastManifest()
 
-	found, err := local.BlockData().Exists(lastManifest.Height())
+	found, err := local.Blockdata().Exists(lastManifest.Height())
 	t.NoError(err)
 	t.True(found)
 
-	t.NoError(blockdata.CleanByHeight(local.Database(), local.BlockData(), lastManifest.Height()))
+	t.NoError(blockdata.CleanByHeight(local.Database(), local.Blockdata(), lastManifest.Height()))
 
 	l, _, _ := local.Database().LastManifest()
 	t.Equal(lastManifest.Height()-1, l.Height())
 
-	found, err = local.BlockData().Exists(lastManifest.Height())
+	found, err = local.Blockdata().Exists(lastManifest.Height())
 	t.NoError(err)
 	t.False(found)
 }

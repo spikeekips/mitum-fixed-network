@@ -55,8 +55,8 @@ func (*Server) SetGetProposalHandler(network.GetProposalHandler) {}
 
 func (*Server) SetNodeInfoHandler(network.NodeInfoHandler)           {}
 func (*Server) NodeInfoHandler() network.NodeInfoHandler             { return nil }
-func (*Server) SetBlockDataMapsHandler(network.BlockDataMapsHandler) {}
-func (*Server) SetBlockDataHandler(network.BlockDataHandler)         {}
+func (*Server) SetBlockdataMapsHandler(network.BlockdataMapsHandler) {}
+func (*Server) SetBlockdataHandler(network.BlockdataHandler)         {}
 func (*Server) SetStartHandoverHandler(network.StartHandoverHandler) {}
 func (*Server) SetPingHandoverHandler(network.PingHandoverHandler)   {}
 func (*Server) SetEndHandoverHandler(network.EndHandoverHandler)     {}

@@ -24,8 +24,8 @@ type Channel struct {
 	getProposalHandler         network.GetProposalHandler
 	getState                   network.GetStateHandler
 	nodeInfo                   network.NodeInfoHandler
-	getBlockDataMaps           network.BlockDataMapsHandler
-	getBlockData               network.BlockDataHandler
+	getBlockdataMaps           network.BlockdataMapsHandler
+	getBlockdata               network.BlockdataHandler
 	startHandover              network.StartHandoverHandler
 	pingHandover               network.PingHandoverHandler
 	endHandover                network.EndHandoverHandler
@@ -99,12 +99,12 @@ func (ch *Channel) SetNodeInfoHandler(f network.NodeInfoHandler) {
 	ch.nodeInfo = f
 }
 
-func (ch *Channel) BlockDataMaps(_ context.Context, hs []base.Height) ([]block.BlockDataMap, error) {
-	if ch.getBlockDataMaps == nil {
+func (ch *Channel) BlockdataMaps(_ context.Context, hs []base.Height) ([]block.BlockdataMap, error) {
+	if ch.getBlockdataMaps == nil {
 		return nil, errors.Errorf("not supported")
 	}
 
-	bds, err := ch.getBlockDataMaps(hs)
+	bds, err := ch.getBlockdataMaps(hs)
 	if err != nil {
 		return nil, err
 	}
@@ -117,20 +117,20 @@ func (ch *Channel) BlockDataMaps(_ context.Context, hs []base.Height) ([]block.B
 	return bds, nil
 }
 
-func (ch *Channel) SetBlockDataMapsHandler(f network.BlockDataMapsHandler) {
-	ch.getBlockDataMaps = f
+func (ch *Channel) SetBlockdataMapsHandler(f network.BlockdataMapsHandler) {
+	ch.getBlockdataMaps = f
 }
 
-func (ch *Channel) BlockData(_ context.Context, item block.BlockDataMapItem) (io.ReadCloser, error) {
-	if ch.getBlockData == nil {
+func (ch *Channel) Blockdata(_ context.Context, item block.BlockdataMapItem) (io.ReadCloser, error) {
+	if ch.getBlockdata == nil {
 		return nil, errors.Errorf("not supported")
 	}
 
-	return network.FetchBlockDataThruChannel(ch.getBlockData, item)
+	return network.FetchBlockdataThruChannel(ch.getBlockdata, item)
 }
 
-func (ch *Channel) SetBlockDataHandler(f network.BlockDataHandler) {
-	ch.getBlockData = f
+func (ch *Channel) SetBlockdataHandler(f network.BlockdataHandler) {
+	ch.getBlockdata = f
 }
 
 func (ch *Channel) StartHandover(_ context.Context, sl network.StartHandoverSeal) (bool, error) {

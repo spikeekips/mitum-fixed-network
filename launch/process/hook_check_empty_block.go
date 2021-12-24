@@ -36,8 +36,8 @@ func HookCheckEmptyBlock(ctx context.Context) (context.Context, error) {
 		return ctx, err
 	}
 
-	var blockData blockdata.BlockData
-	if err := LoadBlockDataContextValue(ctx, &blockData); err != nil {
+	var bd blockdata.Blockdata
+	if err := LoadBlockdataContextValue(ctx, &bd); err != nil {
 		return ctx, err
 	}
 
@@ -46,7 +46,7 @@ func HookCheckEmptyBlock(ctx context.Context) (context.Context, error) {
 	} else if m == nil {
 		log.Log().Debug().Msg("empty block found; storage will be empty")
 
-		if err := blockdata.Clean(db, blockData, false); err != nil {
+		if err := blockdata.Clean(db, bd, false); err != nil {
 			return nil, err
 		}
 

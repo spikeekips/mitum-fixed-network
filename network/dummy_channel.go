@@ -20,8 +20,8 @@ type DummyChannel struct {
 	getProposalHandler         GetProposalHandler
 	getStateHandler            GetStateHandler
 	nodeInfoHandler            NodeInfoHandler
-	blockDataMapsHandler       BlockDataMapsHandler
-	blockDataHandler           BlockDataHandler
+	blockdataMapsHandler       BlockdataMapsHandler
+	blockdataHandler           BlockdataHandler
 	startHandover              StartHandoverHandler
 	pingHandover               PingHandoverHandler
 	endHandover                EndHandoverHandler
@@ -95,28 +95,28 @@ func (ch *DummyChannel) SetNodeInfoHandler(f NodeInfoHandler) {
 	ch.nodeInfoHandler = f
 }
 
-func (ch *DummyChannel) BlockDataMaps(_ context.Context, heights []base.Height) ([]block.BlockDataMap, error) {
-	if ch.blockDataMapsHandler == nil {
+func (ch *DummyChannel) BlockdataMaps(_ context.Context, heights []base.Height) ([]block.BlockdataMap, error) {
+	if ch.blockdataMapsHandler == nil {
 		return nil, ch.notSupported()
 	}
 
-	return ch.blockDataMapsHandler(heights)
+	return ch.blockdataMapsHandler(heights)
 }
 
-func (ch *DummyChannel) SetBlockDataMapsHandler(f BlockDataMapsHandler) {
-	ch.blockDataMapsHandler = f
+func (ch *DummyChannel) SetBlockdataMapsHandler(f BlockdataMapsHandler) {
+	ch.blockdataMapsHandler = f
 }
 
-func (ch *DummyChannel) BlockData(_ context.Context, item block.BlockDataMapItem) (io.ReadCloser, error) {
-	if ch.blockDataHandler == nil {
+func (ch *DummyChannel) Blockdata(_ context.Context, item block.BlockdataMapItem) (io.ReadCloser, error) {
+	if ch.blockdataHandler == nil {
 		return nil, ch.notSupported()
 	}
 
-	return FetchBlockDataThruChannel(ch.blockDataHandler, item)
+	return FetchBlockdataThruChannel(ch.blockdataHandler, item)
 }
 
-func (ch *DummyChannel) SetBlockDataHandler(f BlockDataHandler) {
-	ch.blockDataHandler = f
+func (ch *DummyChannel) SetBlockdataHandler(f BlockdataHandler) {
+	ch.blockdataHandler = f
 }
 
 func (ch *DummyChannel) StartHandover(_ context.Context, sl StartHandoverSeal) (bool, error) {

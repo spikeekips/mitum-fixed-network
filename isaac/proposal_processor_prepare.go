@@ -15,7 +15,7 @@ import (
 	"github.com/spikeekips/mitum/util/valuehash"
 )
 
-var blockDataMapContextKey util.ContextKey = "blockdata_map"
+var blockdataMapContextKey util.ContextKey = "blockdata_map"
 
 func (pp *DefaultProcessor) Prepare(ctx context.Context) (block.Block, error) {
 	pp.Lock()
@@ -58,7 +58,7 @@ func (pp *DefaultProcessor) prepare(ctx context.Context) error {
 	}
 
 	for _, f := range []func(context.Context) error{
-		pp.prepareBlockDataSession,
+		pp.prepareBlockdataSession,
 		pp.prepareOperations,
 		pp.process,
 		pp.prepareBlock,
@@ -126,7 +126,7 @@ func (pp *DefaultProcessor) process(ctx context.Context) error {
 		_ = pp.setStatic("processor_process_elapsed", time.Since(started))
 	}()
 
-	if err := pp.processBlockDataSessionAddOperations(); err != nil {
+	if err := pp.processBlockdataSessionAddOperations(); err != nil {
 		return err
 	}
 
@@ -134,58 +134,58 @@ func (pp *DefaultProcessor) process(ctx context.Context) error {
 		return err
 	}
 
-	if err := pp.processBlockDataSessionSetOperationsTree(); err != nil {
+	if err := pp.processBlockdataSessionSetOperationsTree(); err != nil {
 		return err
-	} else if err := pp.processBlockDataSessionSetStatesTree(); err != nil {
+	} else if err := pp.processBlockdataSessionSetStatesTree(); err != nil {
 		return err
 	}
 
-	return pp.processBlockDataSessionSetStates()
+	return pp.processBlockdataSessionSetStates()
 }
 
-func (pp *DefaultProcessor) processBlockDataSessionAddOperations() error {
+func (pp *DefaultProcessor) processBlockdataSessionAddOperations() error {
 	started := time.Now()
 	defer func() {
 		_ = pp.setStatic("processor_process_blockdata_session_add_operations_elapsed", time.Since(started))
 	}()
 
-	if err := pp.blockDataSession.AddOperations(pp.operations...); err != nil {
+	if err := pp.blockdataSession.AddOperations(pp.operations...); err != nil {
 		return err
-	} else if err := pp.blockDataSession.CloseOperations(); err != nil {
+	} else if err := pp.blockdataSession.CloseOperations(); err != nil {
 		return err
 	} else {
 		return nil
 	}
 }
 
-func (pp *DefaultProcessor) processBlockDataSessionSetOperationsTree() error {
+func (pp *DefaultProcessor) processBlockdataSessionSetOperationsTree() error {
 	started := time.Now()
 	defer func() {
 		_ = pp.setStatic("processor_process_set_operations_tree_elapsed", time.Since(started))
 	}()
 
-	return pp.blockDataSession.SetOperationsTree(pp.operationsTree)
+	return pp.blockdataSession.SetOperationsTree(pp.operationsTree)
 }
 
-func (pp *DefaultProcessor) processBlockDataSessionSetStatesTree() error {
+func (pp *DefaultProcessor) processBlockdataSessionSetStatesTree() error {
 	started := time.Now()
 	defer func() {
 		_ = pp.setStatic("processor_process_set_states_tree_elapsed", time.Since(started))
 	}()
 
-	return pp.blockDataSession.SetStatesTree(pp.statesTree)
+	return pp.blockdataSession.SetStatesTree(pp.statesTree)
 }
 
-func (pp *DefaultProcessor) processBlockDataSessionSetStates() error {
+func (pp *DefaultProcessor) processBlockdataSessionSetStates() error {
 	started := time.Now()
 	defer func() {
 		_ = pp.setStatic("processor_process_set_states_elapsed", time.Since(started)).
 			setStatic("processor_process_set_states_number", len(pp.states))
 	}()
 
-	if err := pp.blockDataSession.AddStates(pp.states...); err != nil {
+	if err := pp.blockdataSession.AddStates(pp.states...); err != nil {
 		return err
-	} else if err := pp.blockDataSession.CloseStates(); err != nil {
+	} else if err := pp.blockdataSession.CloseStates(); err != nil {
 		return err
 	} else {
 		return nil
@@ -242,7 +242,7 @@ func (pp *DefaultProcessor) prepareBlock(context.Context) error {
 		opsHash, stsHash, pp.Fact().ProposedAt(),
 	); err != nil {
 		return err
-	} else if err := pp.blockDataSession.SetManifest(b.Manifest()); err != nil {
+	} else if err := pp.blockdataSession.SetManifest(b.Manifest()); err != nil {
 		return err
 	} else {
 		blk = b
@@ -390,31 +390,31 @@ func (pp *DefaultProcessor) concurrentProcessStatesTree(
 	return nil
 }
 
-func (pp *DefaultProcessor) prepareBlockDataSession(context.Context) error {
+func (pp *DefaultProcessor) prepareBlockdataSession(context.Context) error {
 	started := time.Now()
 	defer func() {
 		_ = pp.setStatic("processor_prepare_blockdata_session_elapsed", time.Since(started))
 	}()
 
-	i, err := pp.blockData.NewSession(pp.Fact().Height())
+	i, err := pp.blockdata.NewSession(pp.Fact().Height())
 	if err != nil {
 		pp.Log().Error().Err(err).Msg("failed to make new block database session")
 
 		return err
 	}
-	pp.blockDataSession = i
+	pp.blockdataSession = i
 
 	if vp := pp.initVoteproof; vp != nil {
-		if err := pp.blockDataSession.SetINITVoteproof(vp); err != nil {
+		if err := pp.blockdataSession.SetINITVoteproof(vp); err != nil {
 			return err
 		}
 	}
 
-	if err := pp.blockDataSession.SetSuffrageInfo(pp.suffrageInfo); err != nil {
+	if err := pp.blockdataSession.SetSuffrageInfo(pp.suffrageInfo); err != nil {
 		return err
 	}
 
-	if err := pp.blockDataSession.SetProposal(pp.sfs); err != nil {
+	if err := pp.blockdataSession.SetProposal(pp.sfs); err != nil {
 		return err
 	}
 
@@ -426,14 +426,14 @@ func (pp *DefaultProcessor) prepareBlockDataSession(context.Context) error {
 func (pp *DefaultProcessor) resetPrepare() error {
 	pp.Log().Debug().Stringer("state", pp.state).Msg("prepare will be resetted")
 
-	if pp.blockDataSession != nil {
-		if err := pp.blockDataSession.Cancel(); err != nil {
+	if pp.blockdataSession != nil {
+		if err := pp.blockdataSession.Cancel(); err != nil {
 			return err
 		}
 	}
 
 	pp.ss = nil
-	pp.blockDataSession = nil
+	pp.blockdataSession = nil
 	pp.blk = nil
 	pp.operations = nil
 	pp.operationsTree = tree.EmptyFixedTree()
@@ -446,14 +446,14 @@ func (pp *DefaultProcessor) resetPrepare() error {
 func (pp *DefaultProcessor) cancelPrepare() error {
 	pp.Log().Debug().Stringer("state", pp.state).Msg("prepare will be canceled")
 
-	if pp.blockDataSession != nil {
-		if err := pp.blockDataSession.Cancel(); err != nil {
+	if pp.blockdataSession != nil {
+		if err := pp.blockdataSession.Cancel(); err != nil {
 			return err
 		}
 	}
 
 	pp.ss = nil
-	pp.blockDataSession = nil
+	pp.blockdataSession = nil
 	pp.blk = nil
 	pp.operations = nil
 	pp.operationsTree = tree.EmptyFixedTree()

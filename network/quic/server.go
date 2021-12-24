@@ -32,9 +32,9 @@ var (
 	QuicHandlerPathSendSeal             = "/seal"
 	QuicHandlerPathGetProposal          = "/proposal"
 	QuicHandlerPathGetProposalPattern   = "/proposal" + "/{hash:.*}"
-	QuicHandlerPathGetBlockDataMaps     = "/blockdatamaps"
-	QuicHandlerPathGetBlockData         = "/blockdata"
-	QuicHandlerPathGetBlockDataPattern  = QuicHandlerPathGetBlockData + "/{path:.*}"
+	QuicHandlerPathGetBlockdataMaps     = "/blockdatamaps"
+	QuicHandlerPathGetBlockdata         = "/blockdata"
+	QuicHandlerPathGetBlockdataPattern  = QuicHandlerPathGetBlockdata + "/{path:.*}"
 	QuicHandlerPathPingHandoverPattern  = "/handover"
 	QuicHandlerPathStartHandoverPattern = QuicHandlerPathPingHandoverPattern + "/start"
 	QuicHandlerPathEndHandoverPattern   = QuicHandlerPathPingHandoverPattern + "/end"
@@ -63,8 +63,8 @@ type Server struct {
 	newSealHandler             network.NewSealHandler
 	getProposalHandler         network.GetProposalHandler
 	nodeInfoHandler            network.NodeInfoHandler
-	blockDataMapsHandler       network.BlockDataMapsHandler
-	blockDataHandler           network.BlockDataHandler
+	blockdataMapsHandler       network.BlockdataMapsHandler
+	blockdataHandler           network.BlockdataHandler
 	startHandoverHandler       network.StartHandoverHandler
 	pingHandoverHandler        network.PingHandoverHandler
 	endHandoverHandler         network.EndHandoverHandler
@@ -146,12 +146,12 @@ func (sv *Server) SetNodeInfoHandler(fn network.NodeInfoHandler) {
 	sv.nodeInfoHandler = fn
 }
 
-func (sv *Server) SetBlockDataMapsHandler(fn network.BlockDataMapsHandler) {
-	sv.blockDataMapsHandler = fn
+func (sv *Server) SetBlockdataMapsHandler(fn network.BlockdataMapsHandler) {
+	sv.blockdataMapsHandler = fn
 }
 
-func (sv *Server) SetBlockDataHandler(fn network.BlockDataHandler) {
-	sv.blockDataHandler = fn
+func (sv *Server) SetBlockdataHandler(fn network.BlockdataHandler) {
+	sv.blockdataHandler = fn
 }
 
 func (sv *Server) SetStartHandoverHandler(fn network.StartHandoverHandler) {
@@ -170,8 +170,8 @@ func (sv *Server) setHandlers() {
 	_ = sv.SetHandlerFunc(QuicHandlerPathGetStagedOperations, sv.handleGetStagedOperations).Methods("POST")
 	_ = sv.SetHandlerFunc(QuicHandlerPathSendSeal, sv.handleNewSeal).Methods("POST")
 	_ = sv.SetHandlerFunc(QuicHandlerPathGetProposalPattern, sv.handleGetProposal).Methods("GET")
-	_ = sv.SetHandlerFunc(QuicHandlerPathGetBlockDataMaps, sv.handleGetBlockDataMaps).Methods("POST")
-	_ = sv.SetHandlerFunc(QuicHandlerPathGetBlockDataPattern, sv.handleGetBlockData).Methods("GET")
+	_ = sv.SetHandlerFunc(QuicHandlerPathGetBlockdataMaps, sv.handleGetBlockdataMaps).Methods("POST")
+	_ = sv.SetHandlerFunc(QuicHandlerPathGetBlockdataPattern, sv.handleGetBlockdata).Methods("GET")
 	_ = sv.SetHandlerFunc(QuicHandlerPathNodeInfo, sv.handleNodeInfo)
 	_ = sv.SetHandlerFunc(QuicHandlerPathPingHandoverPattern, sv.handlePingHandover)
 	_ = sv.SetHandlerFunc(QuicHandlerPathStartHandoverPattern, sv.handleStartHandover)
@@ -360,8 +360,8 @@ func (sv *Server) handleNodeInfo(w http.ResponseWriter, _ *http.Request) {
 	}
 }
 
-func (sv *Server) handleGetBlockDataMaps(w http.ResponseWriter, r *http.Request) {
-	if sv.blockDataMapsHandler == nil {
+func (sv *Server) handleGetBlockdataMaps(w http.ResponseWriter, r *http.Request) {
+	if sv.blockdataMapsHandler == nil {
 		network.HTTPError(w, http.StatusInternalServerError)
 
 		return
@@ -399,8 +399,8 @@ func (sv *Server) handleGetBlockDataMaps(w http.ResponseWriter, r *http.Request)
 		args.Sort()
 	}
 
-	if v, err, _ := sv.rg.Do("GetBlockDataMaps-"+args.String(), func() (interface{}, error) {
-		sls, err := sv.blockDataMapsHandler(args.Heights)
+	if v, err, _ := sv.rg.Do("GetBlockdataMaps-"+args.String(), func() (interface{}, error) {
+		sls, err := sv.blockdataMapsHandler(args.Heights)
 		if err != nil {
 			return nil, err
 		}
@@ -415,8 +415,8 @@ func (sv *Server) handleGetBlockDataMaps(w http.ResponseWriter, r *http.Request)
 	}
 }
 
-func (sv *Server) handleGetBlockData(w http.ResponseWriter, r *http.Request) {
-	if sv.blockDataHandler == nil {
+func (sv *Server) handleGetBlockdata(w http.ResponseWriter, r *http.Request) {
+	if sv.blockdataHandler == nil {
 		network.HTTPError(w, http.StatusInternalServerError)
 
 		return
@@ -437,8 +437,8 @@ func (sv *Server) handleGetBlockData(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	v, err, _ := sv.rg.Do("GetBlockData-"+p, func() (interface{}, error) {
-		j, closefunc, err := sv.blockDataHandler("/" + vars["path"])
+	v, err, _ := sv.rg.Do("GetBlockdata-"+p, func() (interface{}, error) {
+		j, closefunc, err := sv.blockdataHandler("/" + vars["path"])
 		defer func() {
 			_ = closefunc()
 		}()
@@ -553,8 +553,8 @@ func (sv *Server) logNilHanders() {
 		{sv.getStagedOperationsHandler, "getStagedOperationsHandler"},
 		{sv.newSealHandler, "newSealHandler"},
 		{sv.nodeInfoHandler, "nodeInfoHandler"},
-		{sv.blockDataMapsHandler, "blockDataMapsHandler"},
-		{sv.blockDataHandler, "blockDataHandler"},
+		{sv.blockdataMapsHandler, "blockdataMapsHandler"},
+		{sv.blockdataHandler, "blockdataHandler"},
 	}
 
 	var enables, disables []string

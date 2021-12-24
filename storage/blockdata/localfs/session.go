@@ -31,7 +31,7 @@ type Session struct {
 	writer           blockdata.Writer
 	operationsWriter io.WriteCloser
 	statesWriter     io.WriteCloser
-	mapData          block.BaseBlockDataMap
+	mapData          block.BaseBlockdataMap
 }
 
 func NewSession(root string, writer blockdata.Writer, height base.Height) (*Session, error) {
@@ -43,20 +43,20 @@ func NewSession(root string, writer blockdata.Writer, height base.Height) (*Sess
 
 	return &Session{
 		locks: map[string]*sync.RWMutex{
-			block.BlockDataManifest:        {},
-			block.BlockDataOperations:      {},
-			block.BlockDataOperationsTree:  {},
-			block.BlockDataStates:          {},
-			block.BlockDataStatesTree:      {},
-			block.BlockDataINITVoteproof:   {},
-			block.BlockDataACCEPTVoteproof: {},
-			block.BlockDataSuffrageInfo:    {},
-			block.BlockDataProposal:        {},
+			block.BlockdataManifest:        {},
+			block.BlockdataOperations:      {},
+			block.BlockdataOperationsTree:  {},
+			block.BlockdataStates:          {},
+			block.BlockdataStatesTree:      {},
+			block.BlockdataINITVoteproof:   {},
+			block.BlockdataACCEPTVoteproof: {},
+			block.BlockdataSuffrageInfo:    {},
+			block.BlockdataProposal:        {},
 		},
 		height:  height,
 		root:    root,
 		writer:  writer,
-		mapData: block.NewBaseBlockDataMap(writer.Hint(), height),
+		mapData: block.NewBaseBlockdataMap(writer.Hint(), height),
 	}, nil
 }
 
@@ -65,14 +65,14 @@ func (ss *Session) Height() base.Height {
 }
 
 func (ss *Session) SetManifest(manifest block.Manifest) error {
-	ss.locks[block.BlockDataManifest].Lock()
-	defer ss.locks[block.BlockDataManifest].Unlock()
+	ss.locks[block.BlockdataManifest].Lock()
+	defer ss.locks[block.BlockdataManifest].Unlock()
 
 	if i, ok := manifest.(block.Block); ok {
 		manifest = i.Manifest()
 	}
 
-	if err := ss.writeAndClose(block.BlockDataManifest, func(w io.Writer) error {
+	if err := ss.writeAndClose(block.BlockdataManifest, func(w io.Writer) error {
 		return ss.writer.WriteManifest(w, manifest)
 	}); err != nil {
 		return err
@@ -85,11 +85,11 @@ func (ss *Session) SetManifest(manifest block.Manifest) error {
 }
 
 func (ss *Session) AddOperations(ops ...operation.Operation) error {
-	ss.locks[block.BlockDataOperations].Lock()
-	defer ss.locks[block.BlockDataOperations].Unlock()
+	ss.locks[block.BlockdataOperations].Lock()
+	defer ss.locks[block.BlockdataOperations].Unlock()
 
 	if ss.operationsWriter == nil {
-		i, err := ss.newWriter(block.BlockDataOperations)
+		i, err := ss.newWriter(block.BlockdataOperations)
 		if err != nil {
 			return err
 		}
@@ -100,8 +100,8 @@ func (ss *Session) AddOperations(ops ...operation.Operation) error {
 }
 
 func (ss *Session) CloseOperations() error {
-	ss.locks[block.BlockDataOperations].Lock()
-	defer ss.locks[block.BlockDataOperations].Unlock()
+	ss.locks[block.BlockdataOperations].Lock()
+	defer ss.locks[block.BlockdataOperations].Unlock()
 
 	if ss.operationsWriter == nil {
 		return nil
@@ -112,24 +112,24 @@ func (ss *Session) CloseOperations() error {
 	}
 	ss.operationsWriter = nil
 
-	return ss.setToMapData(block.BlockDataOperations)
+	return ss.setToMapData(block.BlockdataOperations)
 }
 
 func (ss *Session) SetOperationsTree(ft tree.FixedTree) error {
-	ss.locks[block.BlockDataOperationsTree].Lock()
-	defer ss.locks[block.BlockDataOperationsTree].Unlock()
+	ss.locks[block.BlockdataOperationsTree].Lock()
+	defer ss.locks[block.BlockdataOperationsTree].Unlock()
 
-	return ss.writeAndClose(block.BlockDataOperationsTree, func(w io.Writer) error {
+	return ss.writeAndClose(block.BlockdataOperationsTree, func(w io.Writer) error {
 		return ss.writer.WriteOperationsTree(w, ft)
 	})
 }
 
 func (ss *Session) AddStates(sts ...state.State) error {
-	ss.locks[block.BlockDataStates].Lock()
-	defer ss.locks[block.BlockDataStates].Unlock()
+	ss.locks[block.BlockdataStates].Lock()
+	defer ss.locks[block.BlockdataStates].Unlock()
 
 	if ss.statesWriter == nil {
-		i, err := ss.newWriter(block.BlockDataStates)
+		i, err := ss.newWriter(block.BlockdataStates)
 		if err != nil {
 			return err
 		}
@@ -140,8 +140,8 @@ func (ss *Session) AddStates(sts ...state.State) error {
 }
 
 func (ss *Session) CloseStates() error {
-	ss.locks[block.BlockDataStates].Lock()
-	defer ss.locks[block.BlockDataStates].Unlock()
+	ss.locks[block.BlockdataStates].Lock()
+	defer ss.locks[block.BlockdataStates].Unlock()
 
 	if ss.statesWriter == nil {
 		return nil
@@ -152,14 +152,14 @@ func (ss *Session) CloseStates() error {
 	}
 	ss.statesWriter = nil
 
-	return ss.setToMapData(block.BlockDataStates)
+	return ss.setToMapData(block.BlockdataStates)
 }
 
 func (ss *Session) SetStatesTree(ft tree.FixedTree) error {
-	ss.locks[block.BlockDataStatesTree].Lock()
-	defer ss.locks[block.BlockDataStatesTree].Unlock()
+	ss.locks[block.BlockdataStatesTree].Lock()
+	defer ss.locks[block.BlockdataStatesTree].Unlock()
 
-	return ss.writeAndClose(block.BlockDataStatesTree, func(w io.Writer) error {
+	return ss.writeAndClose(block.BlockdataStatesTree, func(w io.Writer) error {
 		return ss.writer.WriteStatesTree(w, ft)
 	})
 }
@@ -171,10 +171,10 @@ func (ss *Session) SetINITVoteproof(voteproof base.Voteproof) error {
 		}
 	}
 
-	ss.locks[block.BlockDataINITVoteproof].Lock()
-	defer ss.locks[block.BlockDataINITVoteproof].Unlock()
+	ss.locks[block.BlockdataINITVoteproof].Lock()
+	defer ss.locks[block.BlockdataINITVoteproof].Unlock()
 
-	return ss.writeAndClose(block.BlockDataINITVoteproof, func(w io.Writer) error {
+	return ss.writeAndClose(block.BlockdataINITVoteproof, func(w io.Writer) error {
 		return ss.writer.WriteINITVoteproof(w, voteproof)
 	})
 }
@@ -186,28 +186,28 @@ func (ss *Session) SetACCEPTVoteproof(voteproof base.Voteproof) error {
 		}
 	}
 
-	ss.locks[block.BlockDataACCEPTVoteproof].Lock()
-	defer ss.locks[block.BlockDataACCEPTVoteproof].Unlock()
+	ss.locks[block.BlockdataACCEPTVoteproof].Lock()
+	defer ss.locks[block.BlockdataACCEPTVoteproof].Unlock()
 
-	return ss.writeAndClose(block.BlockDataACCEPTVoteproof, func(w io.Writer) error {
+	return ss.writeAndClose(block.BlockdataACCEPTVoteproof, func(w io.Writer) error {
 		return ss.writer.WriteACCEPTVoteproof(w, voteproof)
 	})
 }
 
 func (ss *Session) SetSuffrageInfo(suffrageInfo block.SuffrageInfo) error {
-	ss.locks[block.BlockDataSuffrageInfo].Lock()
-	defer ss.locks[block.BlockDataSuffrageInfo].Unlock()
+	ss.locks[block.BlockdataSuffrageInfo].Lock()
+	defer ss.locks[block.BlockdataSuffrageInfo].Unlock()
 
-	return ss.writeAndClose(block.BlockDataSuffrageInfo, func(w io.Writer) error {
+	return ss.writeAndClose(block.BlockdataSuffrageInfo, func(w io.Writer) error {
 		return ss.writer.WriteSuffrageInfo(w, suffrageInfo)
 	})
 }
 
 func (ss *Session) SetProposal(sfs base.SignedBallotFact) error {
-	ss.locks[block.BlockDataProposal].Lock()
-	defer ss.locks[block.BlockDataProposal].Unlock()
+	ss.locks[block.BlockdataProposal].Lock()
+	defer ss.locks[block.BlockdataProposal].Unlock()
 
-	return ss.writeAndClose(block.BlockDataProposal, func(w io.Writer) error {
+	return ss.writeAndClose(block.BlockdataProposal, func(w io.Writer) error {
 		return ss.writer.WriteProposal(w, sfs)
 	})
 }
@@ -254,24 +254,24 @@ func (ss *Session) SetBlock(blk block.Block) error {
 	return nil
 }
 
-func (ss *Session) done() (block.BaseBlockDataMap, error) {
+func (ss *Session) done() (block.BaseBlockdataMap, error) {
 	ss.Lock()
 	defer ss.Unlock()
 
 	// NOTE check mapData
 	if err := ss.mapData.IsReadyToHash(); err != nil {
-		return block.BaseBlockDataMap{}, err
+		return block.BaseBlockdataMap{}, err
 	}
 
 	mapData, err := ss.mapData.UpdateHash()
 	if err != nil {
-		return block.BaseBlockDataMap{}, err
+		return block.BaseBlockdataMap{}, err
 	}
 
 	if err := mapData.IsValid(nil); err != nil {
-		return block.BaseBlockDataMap{}, err
+		return block.BaseBlockdataMap{}, err
 	} else if err := mapData.Exists("/"); err != nil {
-		return block.BaseBlockDataMap{}, err
+		return block.BaseBlockdataMap{}, err
 	}
 
 	return mapData, nil
@@ -372,7 +372,7 @@ func (ss *Session) setToMapDataWithFilename(dataType string) (string, error) {
 		return "", storage.MergeFSError(err)
 	}
 
-	item := block.NewBaseBlockDataMapItem(dataType, checksum, "file://"+t)
+	item := block.NewBaseBlockdataMapItem(dataType, checksum, "file://"+t)
 	if err := item.IsValid(nil); err != nil {
 		return "", err
 	} else if i, err := ss.mapData.SetItem(item); err != nil {

@@ -18,7 +18,7 @@ import (
 	"github.com/spikeekips/mitum/util"
 )
 
-type SetBlockDataMapsCommand struct {
+type SetBlockdataMapsCommand struct {
 	*BaseCommand
 	DeployKey string   `arg:"" name:"deploy key"`
 	File      *os.File `arg:"" name:"maps file" help:"set blockdatamap file"`
@@ -26,14 +26,14 @@ type SetBlockDataMapsCommand struct {
 	client *quicnetwork.QuicClient
 }
 
-func NewSetBlockDataMapsCommand() SetBlockDataMapsCommand {
-	return SetBlockDataMapsCommand{
+func NewSetBlockdataMapsCommand() SetBlockdataMapsCommand {
+	return SetBlockdataMapsCommand{
 		BaseCommand:      NewBaseCommand("deploy-set-blockdatamaps"),
 		NodeConnectFlags: &NodeConnectFlags{},
 	}
 }
 
-func (cmd *SetBlockDataMapsCommand) Run(version util.Version) error {
+func (cmd *SetBlockdataMapsCommand) Run(version util.Version) error {
 	cmd.BaseCommand.LogOutput = os.Stderr
 
 	if err := cmd.Initialize(cmd, version); err != nil {
@@ -56,11 +56,11 @@ func (cmd *SetBlockDataMapsCommand) Run(version util.Version) error {
 	cmd.client = i
 
 	var heights []base.Height
-	var maps []block.BlockDataMap
+	var maps []block.BlockdataMap
 	if i, err := cmd.loadMaps(); err != nil {
 		return errors.Wrap(err, "failed to load maps from file")
-	} else if n := len(maps); n > deploy.LimitBlockDataMaps {
-		return errors.Errorf("too many maps over %d > %d", n, deploy.LimitBlockDataMaps)
+	} else if n := len(maps); n > deploy.LimitBlockdataMaps {
+		return errors.Errorf("too many maps over %d > %d", n, deploy.LimitBlockdataMaps)
 	} else {
 		maps = i
 
@@ -85,13 +85,13 @@ func (cmd *SetBlockDataMapsCommand) Run(version util.Version) error {
 	return nil
 }
 
-func (cmd *SetBlockDataMapsCommand) loadMaps() ([]block.BlockDataMap, error) {
+func (cmd *SetBlockdataMapsCommand) loadMaps() ([]block.BlockdataMap, error) {
 	if _, err := cmd.File.Seek(0, 0); err != nil {
 		return nil, err
 	}
 
 	founds := map[base.Height]bool{}
-	var maps []block.BlockDataMap
+	var maps []block.BlockdataMap
 	if err := util.Readlines(cmd.File, func(b []byte) error {
 		if len(b) < 1 {
 			return nil
@@ -116,17 +116,17 @@ func (cmd *SetBlockDataMapsCommand) loadMaps() ([]block.BlockDataMap, error) {
 	return maps, nil
 }
 
-func (cmd *SetBlockDataMapsCommand) loadMap(b []byte) (block.BlockDataMap, error) {
-	var m block.BaseBlockDataMap
+func (cmd *SetBlockdataMapsCommand) loadMap(b []byte) (block.BlockdataMap, error) {
+	var m block.BaseBlockdataMap
 	if i, err := cmd.JSONEncoder().Decode(b); err != nil {
 		return nil, err
-	} else if j, ok := i.(block.BaseBlockDataMap); !ok {
-		return nil, errors.Errorf("expected block.BlockDataMap, not %T", i)
+	} else if j, ok := i.(block.BaseBlockdataMap); !ok {
+		return nil, errors.Errorf("expected block.BlockdataMap, not %T", i)
 	} else {
 		m = j
 	}
 
-	um := block.NewBaseBlockDataMap(m.Writer(), m.Height()).SetBlock(m.Block())
+	um := block.NewBaseBlockdataMap(m.Writer(), m.Height()).SetBlock(m.Block())
 	items := m.Items()
 	for i := range items {
 		j, err := um.SetItem(items[i])
@@ -136,7 +136,7 @@ func (cmd *SetBlockDataMapsCommand) loadMap(b []byte) (block.BlockDataMap, error
 		um = j
 	}
 
-	var nm block.BlockDataMap
+	var nm block.BlockdataMap
 	if i, err := um.UpdateHash(); err != nil {
 		return nil, errors.Wrap(err, "failed to update hash")
 	} else if err := i.IsValid(nil); err != nil {
@@ -154,17 +154,17 @@ func (cmd *SetBlockDataMapsCommand) loadMap(b []byte) (block.BlockDataMap, error
 	return nm, nil
 }
 
-func (cmd *SetBlockDataMapsCommand) request(maps []block.BlockDataMap) error {
+func (cmd *SetBlockdataMapsCommand) request(maps []block.BlockdataMap) error {
 	body, err := cmd.JSONEncoder().Marshal(maps)
 	if err != nil {
 		return err
 	}
 
 	u := *cmd.URL
-	u.Path = filepath.Join(u.Path, deploy.QuicHandlerPathSetBlockDataMaps)
+	u.Path = filepath.Join(u.Path, deploy.QuicHandlerPathSetBlockdataMaps)
 
 	headers := http.Header{}
-	headers.Set("Authorization", filepath.Join(u.Path, deploy.QuicHandlerPathSetBlockDataMaps))
+	headers.Set("Authorization", filepath.Join(u.Path, deploy.QuicHandlerPathSetBlockdataMaps))
 
 	ctx, cancel := context.WithTimeout(context.Background(), cmd.Timeout)
 	defer cancel()

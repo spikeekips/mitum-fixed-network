@@ -3,6 +3,7 @@ package isaac
 import (
 	"context"
 	"io"
+	"path/filepath"
 	"sync/atomic"
 	"testing"
 	"time"
@@ -41,7 +42,7 @@ func (t *testDefaultProposalProcessor) SetupTest() {
 func (t *testDefaultProposalProcessor) processors() *prprocessor.Processors {
 	pps := prprocessor.NewProcessors(NewDefaultProcessorNewFunc(
 		t.local.Database(),
-		t.local.BlockData(),
+		t.local.Blockdata(),
 		t.local.Nodes(),
 		t.Suffrage(t.local),
 		nil,
@@ -112,7 +113,7 @@ func (t *testDefaultProposalProcessor) TestPrepareRetry() {
 
 	newFunc := NewDefaultProcessorNewFunc(
 		t.local.Database(),
-		t.local.BlockData(),
+		t.local.Blockdata(),
 		t.local.Nodes(),
 		t.Suffrage(t.local),
 		nil,
@@ -214,11 +215,12 @@ func (t *testDefaultProposalProcessor) TestSave() {
 	t.True(found)
 	t.True(m.Proposal().Equal(pr.Fact().Hash()))
 
-	found, err = t.local.BlockData().Exists(pr.Fact().Height())
+	found, err = t.local.Blockdata().Exists(pr.Fact().Height())
 	t.NoError(err)
 	t.True(found)
 
-	_, f, err := localfs.LoadData(t.local.BlockData().(*localfs.BlockData), pr.Fact().Height(), block.BlockDataManifest)
+	prepath := filepath.Join(t.local.Blockdata().(*localfs.Blockdata).Root(), localfs.HeightDirectory(pr.Fact().Height()))
+	_, f, err := localfs.LoadData(prepath, block.BlockdataManifest)
 	t.NoError(err)
 	t.NotNil(f)
 	defer f.Close()
@@ -609,7 +611,7 @@ func (t *testDefaultProposalProcessor) TestTimeoutSaveAfterSaving() {
 		t.True(pr.Fact().Hash().Equal(m.Proposal()))
 		t.True(blk.Hash().Equal(m.Hash()))
 
-		found, err = t.local.BlockData().Exists(pr.Fact().Height())
+		found, err = t.local.Blockdata().Exists(pr.Fact().Height())
 		t.NoError(err)
 		t.True(found)
 
@@ -651,7 +653,7 @@ func (t *testDefaultProposalProcessor) TestTimeoutSaveAfterSaving() {
 	t.NoError(err)
 	t.False(found)
 
-	found, err = t.local.BlockData().Exists(pr.Fact().Height())
+	found, err = t.local.Blockdata().Exists(pr.Fact().Height())
 	t.NoError(err)
 	t.False(found)
 }
@@ -684,7 +686,7 @@ func (t *testDefaultProposalProcessor) TestCustomOperationProcessor() {
 
 	pps := prprocessor.NewProcessors(NewDefaultProcessorNewFunc(
 		t.local.Database(),
-		t.local.BlockData(),
+		t.local.Blockdata(),
 		t.local.Nodes(),
 		t.Suffrage(t.local),
 		hm,
@@ -749,7 +751,7 @@ func (t *testDefaultProposalProcessor) TestNotProcessedOperations() {
 
 	pps := prprocessor.NewProcessors(NewDefaultProcessorNewFunc(
 		t.local.Database(),
-		t.local.BlockData(),
+		t.local.Blockdata(),
 		t.local.Nodes(),
 		t.Suffrage(t.local),
 		hm,

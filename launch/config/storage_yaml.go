@@ -5,13 +5,13 @@ type DatabasePackerYAML struct {
 	Cache string `yaml:",omitempty"`
 }
 
-type BlockDataPackerYAML struct {
+type BlockdataPackerYAML struct {
 	Path string
 }
 
 type BaseStoragePackerYAML struct {
 	Database  DatabasePackerYAML  `yaml:"database"`
-	BlockData BlockDataPackerYAML `yaml:"blockdata"`
+	Blockdata BlockdataPackerYAML `yaml:"blockdata"`
 }
 
 func (no BaseStorage) MarshalYAML() (interface{}, error) {
@@ -20,8 +20,8 @@ func (no BaseStorage) MarshalYAML() (interface{}, error) {
 			URI:   no.database.URI().String(),
 			Cache: no.database.Cache().String(),
 		},
-		BlockData: BlockDataPackerYAML{
-			Path: no.blockData.Path(),
+		Blockdata: BlockdataPackerYAML{
+			Path: no.blockdata.Path(),
 		},
 	}, nil
 }

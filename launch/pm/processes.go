@@ -276,6 +276,7 @@ func (pm *Processes) runProcess(s, from string) error {
 	}
 
 	l := pm.Log().With().Str("process", pr.Name()).Str("from_process", from).Logger()
+	l.Debug().Msg("trying to run")
 
 	// run requires
 	for _, r := range pr.Requires() {
@@ -324,7 +325,9 @@ func (pm *Processes) runProcessHooks(prefix HookPrefix, pr string) error {
 	}
 
 	for i := range hooks {
-		if err := pm.runProcessHook(hooks[i], pr); err != nil {
+		h := hooks[i]
+		pm.Log().Debug().Str("process", pr).Str("hook", h).Str("prefix", string(prefix)).Msg("trying to run hooks")
+		if err := pm.runProcessHook(h, pr); err != nil {
 			return err
 		}
 	}

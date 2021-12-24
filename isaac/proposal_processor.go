@@ -26,7 +26,7 @@ type DefaultProcessor struct {
 	*logging.Logging
 	stateLock        sync.RWMutex
 	database         storage.Database
-	blockData        blockdata.BlockData
+	blockdata        blockdata.Blockdata
 	nodepool         *network.Nodepool
 	baseManifest     block.Manifest
 	suffrage         base.Suffrage
@@ -41,7 +41,7 @@ type DefaultProcessor struct {
 	operationsTree   tree.FixedTree
 	statesTree       tree.FixedTree
 	ss               storage.DatabaseSession
-	blockDataSession blockdata.Session
+	blockdataSession blockdata.Session
 	prePrepareHook   func(context.Context) error
 	postPrepareHook  func(context.Context) error
 	preSaveHook      func(context.Context) error
@@ -54,7 +54,7 @@ type DefaultProcessor struct {
 
 func NewDefaultProcessorNewFunc(
 	db storage.Database,
-	blockData blockdata.BlockData,
+	bd blockdata.Blockdata,
 	nodepool *network.Nodepool,
 	suffrage base.Suffrage,
 	oprHintset *hint.Hintmap,
@@ -66,7 +66,7 @@ func NewDefaultProcessorNewFunc(
 
 		return NewDefaultProcessor(
 			db,
-			blockData,
+			bd,
 			nodepool,
 			suffrage,
 			oprHintset,
@@ -78,7 +78,7 @@ func NewDefaultProcessorNewFunc(
 
 func NewDefaultProcessor(
 	db storage.Database,
-	blockData blockdata.BlockData,
+	bd blockdata.Blockdata,
 	nodepool *network.Nodepool,
 	suffrage base.Suffrage,
 	oprHintset *hint.Hintmap,
@@ -103,7 +103,7 @@ func NewDefaultProcessor(
 				Stringer("proposal", sfs.Fact().Hash())
 		}),
 		database:      db,
-		blockData:     blockData,
+		blockdata:     bd,
 		nodepool:      nodepool,
 		baseManifest:  baseManifest,
 		suffrage:      suffrage,
@@ -192,7 +192,7 @@ func (pp *DefaultProcessor) SetACCEPTVoteproof(acceptVoteproof base.Voteproof) e
 		return errors.Errorf("empty block, not prepared")
 	case pp.ss == nil:
 		return errors.Errorf("empty block session, not prepared")
-	case pp.blockDataSession == nil:
+	case pp.blockdataSession == nil:
 		return errors.Errorf("empty block database session, not prepared")
 	}
 
@@ -209,7 +209,7 @@ func (pp *DefaultProcessor) SetACCEPTVoteproof(acceptVoteproof base.Voteproof) e
 		return err
 	}
 
-	return pp.blockDataSession.SetACCEPTVoteproof(acceptVoteproof)
+	return pp.blockdataSession.SetACCEPTVoteproof(acceptVoteproof)
 }
 
 func (pp *DefaultProcessor) Cancel() error {

@@ -56,7 +56,7 @@ func (t *BaseTest) SetupSuite() {
 	_ = t.Encs.TestAddHinter(base.SignedBallotFactHinter)
 	_ = t.Encs.TestAddHinter(base.StringAddressHinter)
 	_ = t.Encs.TestAddHinter(base.VoteproofV0Hinter)
-	_ = t.Encs.TestAddHinter(block.BaseBlockDataMapHinter)
+	_ = t.Encs.TestAddHinter(block.BaseBlockdataMapHinter)
 	_ = t.Encs.TestAddHinter(block.BlockV0Hinter)
 	_ = t.Encs.TestAddHinter(block.BlockConsensusInfoV0Hinter)
 	_ = t.Encs.TestAddHinter(block.ManifestV0Hinter)
@@ -110,10 +110,10 @@ func (t *BaseTest) SetupNodes(local *Local, others []*Local) {
 	for _, st := range nodes {
 		nch := st.Channel().(*channetwork.Channel)
 
-		nch.SetBlockDataMapsHandler(func(heights []base.Height) ([]block.BlockDataMap, error) {
-			var bds []block.BlockDataMap
+		nch.SetBlockdataMapsHandler(func(heights []base.Height) ([]block.BlockdataMap, error) {
+			var bds []block.BlockdataMap
 			for _, h := range heights {
-				bd, found, err := st.Database().BlockDataMap(h)
+				bd, found, err := st.Database().BlockdataMap(h)
 				if !found {
 					break
 				} else if err != nil {
@@ -125,8 +125,8 @@ func (t *BaseTest) SetupNodes(local *Local, others []*Local) {
 
 			return bds, nil
 		})
-		nch.SetBlockDataHandler(func(p string) (io.Reader, func() error, error) {
-			if i, err := st.BlockData().FS().Open(p); err != nil {
+		nch.SetBlockdataHandler(func(p string) (io.Reader, func() error, error) {
+			if i, err := st.Blockdata().FS().Open(p); err != nil {
 				return nil, nil, err
 			} else {
 				return i, i.Close, nil
@@ -157,10 +157,10 @@ func (t *BaseTest) Locals(n int) []*Local {
 		root, err := os.MkdirTemp(t.Root, "localfs-")
 		t.NoError(err)
 
-		blockData := localfs.NewBlockData(root, t.JSONEnc)
-		t.NoError(blockData.Initialize())
+		blockdata := localfs.NewBlockdata(root, t.JSONEnc)
+		t.NoError(blockdata.Initialize())
 
-		local, err := NewLocal(lst, blockData, no, ch, TestNetworkID)
+		local, err := NewLocal(lst, blockdata, no, ch, TestNetworkID)
 		if err != nil {
 			panic(err)
 		} else if err := local.Initialize(); err != nil {
@@ -202,10 +202,10 @@ func (t *BaseTest) EmptyLocal() *Local {
 	no := node.RandomLocal(uid)
 	ch := channetwork.RandomChannel(uid)
 
-	blockData := localfs.NewBlockData(t.Root, t.JSONEnc)
-	t.NoError(blockData.Initialize())
+	blockdata := localfs.NewBlockdata(t.Root, t.JSONEnc)
+	t.NoError(blockdata.Initialize())
 
-	local, err := NewLocal(lst, blockData, no, ch, TestNetworkID)
+	local, err := NewLocal(lst, blockdata, no, ch, TestNetworkID)
 	t.NoError(err)
 
 	t.NoError(local.Initialize())

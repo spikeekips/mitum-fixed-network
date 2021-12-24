@@ -25,7 +25,7 @@ func init() {
 		[]string{
 			ProcessNameLocalNode,
 			ProcessNameDatabase,
-			ProcessNameBlockData,
+			ProcessNameBlockdata,
 			ProcessNameSuffrage,
 		},
 		ProcessProposalProcessor,
@@ -105,8 +105,8 @@ func processDefaultProposalProcessor(ctx context.Context) (prprocessor.Processor
 		return nil, err
 	}
 
-	var blockData blockdata.BlockData
-	if err := LoadBlockDataContextValue(ctx, &blockData); err != nil {
+	var bd blockdata.Blockdata
+	if err := LoadBlockdataContextValue(ctx, &bd); err != nil {
 		return nil, err
 	}
 
@@ -122,7 +122,7 @@ func processDefaultProposalProcessor(ctx context.Context) (prprocessor.Processor
 
 	return isaac.NewDefaultProcessorNewFunc(
 		sf,
-		blockData,
+		bd,
 		nodepool,
 		suffrage,
 		oprs,
@@ -154,8 +154,8 @@ func processErrorProposalProcessor(
 		return nil, err
 	}
 
-	var blockData blockdata.BlockData
-	if err := LoadBlockDataContextValue(ctx, &blockData); err != nil {
+	var bd blockdata.Blockdata
+	if err := LoadBlockdataContextValue(ctx, &bd); err != nil {
 		return nil, err
 	}
 
@@ -171,7 +171,7 @@ func processErrorProposalProcessor(
 
 	return NewErrorProcessorNewFunc(
 		sf,
-		blockData,
+		bd,
 		nodepool,
 		suffrage,
 		oprs,

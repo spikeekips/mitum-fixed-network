@@ -9,13 +9,13 @@ type DatabasePackerJSON struct {
 	Cache string
 }
 
-type BlockDataPackerJSON struct {
+type BlockdataPackerJSON struct {
 	Path string `json:"path"`
 }
 
 type BaseStoragePackerJSON struct {
 	Database  DatabasePackerJSON  `json:"database"`
-	BlockData BlockDataPackerJSON `json:"blockdata"`
+	Blockdata BlockdataPackerJSON `json:"blockdata"`
 }
 
 func (no BaseStorage) MarshalJSON() ([]byte, error) {
@@ -24,8 +24,8 @@ func (no BaseStorage) MarshalJSON() ([]byte, error) {
 			URI:   no.database.URI().String(),
 			Cache: no.database.Cache().String(),
 		},
-		BlockData: BlockDataPackerJSON{
-			Path: no.blockData.Path(),
+		Blockdata: BlockdataPackerJSON{
+			Path: no.blockdata.Path(),
 		},
 	})
 }

@@ -12,42 +12,42 @@ import (
 	"github.com/stretchr/testify/suite"
 )
 
-type testBlockDataMapEncode struct {
+type testBlockdataMapEncode struct {
 	suite.Suite
 
 	enc encoder.Encoder
 }
 
-func (t *testBlockDataMapEncode) SetupSuite() {
-	t.enc.Add(BaseBlockDataMapHinter)
+func (t *testBlockdataMapEncode) SetupSuite() {
+	t.enc.Add(BaseBlockdataMapHinter)
 }
 
-func (t *testBlockDataMapEncode) TestMarshal() {
-	bd := NewBaseBlockDataMap(TestBlockDataWriterHint, 33)
+func (t *testBlockdataMapEncode) TestMarshal() {
+	bd := NewBaseBlockdataMap(TestBlockdataWriterHint, 33)
 	bd = bd.SetBlock(valuehash.RandomSHA256())
 
 	u := func() string {
 		return "file:///" + util.UUID().String()
 	}
 
-	var item BaseBlockDataMapItem
-	item = NewBaseBlockDataMapItem(BlockDataManifest, valuehash.RandomSHA256().String(), u())
+	var item BaseBlockdataMapItem
+	item = NewBaseBlockdataMapItem(BlockdataManifest, valuehash.RandomSHA256().String(), u())
 	bd.SetItem(item)
-	item = NewBaseBlockDataMapItem(BlockDataOperations, valuehash.RandomSHA256().String(), u())
+	item = NewBaseBlockdataMapItem(BlockdataOperations, valuehash.RandomSHA256().String(), u())
 	bd.SetItem(item)
-	item = NewBaseBlockDataMapItem(BlockDataOperationsTree, valuehash.RandomSHA256().String(), u())
+	item = NewBaseBlockdataMapItem(BlockdataOperationsTree, valuehash.RandomSHA256().String(), u())
 	bd.SetItem(item)
-	item = NewBaseBlockDataMapItem(BlockDataStates, valuehash.RandomSHA256().String(), u())
+	item = NewBaseBlockdataMapItem(BlockdataStates, valuehash.RandomSHA256().String(), u())
 	bd.SetItem(item)
-	item = NewBaseBlockDataMapItem(BlockDataStatesTree, valuehash.RandomSHA256().String(), u())
+	item = NewBaseBlockdataMapItem(BlockdataStatesTree, valuehash.RandomSHA256().String(), u())
 	bd.SetItem(item)
-	item = NewBaseBlockDataMapItem(BlockDataINITVoteproof, valuehash.RandomSHA256().String(), u())
+	item = NewBaseBlockdataMapItem(BlockdataINITVoteproof, valuehash.RandomSHA256().String(), u())
 	bd.SetItem(item)
-	item = NewBaseBlockDataMapItem(BlockDataACCEPTVoteproof, valuehash.RandomSHA256().String(), u())
+	item = NewBaseBlockdataMapItem(BlockdataACCEPTVoteproof, valuehash.RandomSHA256().String(), u())
 	bd.SetItem(item)
-	item = NewBaseBlockDataMapItem(BlockDataSuffrageInfo, valuehash.RandomSHA256().String(), u())
+	item = NewBaseBlockdataMapItem(BlockdataSuffrageInfo, valuehash.RandomSHA256().String(), u())
 	bd.SetItem(item)
-	item = NewBaseBlockDataMapItem(BlockDataProposal, valuehash.RandomSHA256().String(), u())
+	item = NewBaseBlockdataMapItem(BlockdataProposal, valuehash.RandomSHA256().String(), u())
 	bd.SetItem(item)
 
 	i, err := bd.UpdateHash()
@@ -63,9 +63,9 @@ func (t *testBlockDataMapEncode) TestMarshal() {
 	j, err := t.enc.Decode(b)
 	t.NoError(err)
 
-	t.IsType(BaseBlockDataMap{}, j)
+	t.IsType(BaseBlockdataMap{}, j)
 
-	ubd := j.(BaseBlockDataMap)
+	ubd := j.(BaseBlockdataMap)
 
 	t.True(bd.h.Equal(ubd.h))
 	t.True(bd.writerHint.Equal(ubd.writerHint))
@@ -77,15 +77,15 @@ func (t *testBlockDataMapEncode) TestMarshal() {
 	}
 }
 
-func TestBlockDataMapEncodeJSON(t *testing.T) {
-	b := new(testBlockDataMapEncode)
+func TestBlockdataMapEncodeJSON(t *testing.T) {
+	b := new(testBlockdataMapEncode)
 	b.enc = jsonenc.NewEncoder()
 
 	suite.Run(t, b)
 }
 
-func TestBlockDataMapEncodeBSON(t *testing.T) {
-	b := new(testBlockDataMapEncode)
+func TestBlockdataMapEncodeBSON(t *testing.T) {
+	b := new(testBlockdataMapEncode)
 	b.enc = bsonenc.NewEncoder()
 
 	suite.Run(t, b)

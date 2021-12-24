@@ -23,7 +23,7 @@ var (
 	ContextValueConfigSource            util.ContextKey = "config_source"
 	ContextValueConfigSourceType        util.ContextKey = "config_source_type"
 	ContextValueNetwork                 util.ContextKey = "network"
-	ContextValueBlockData               util.ContextKey = "blockdata"
+	ContextValueBlockdata               util.ContextKey = "blockdata"
 	ContextValueDatabase                util.ContextKey = "database"
 	ContextValueLocalNode               util.ContextKey = "local_node"
 	ContextValueNodepool                util.ContextKey = "nodepool"
@@ -56,8 +56,8 @@ func LoadNetworkContextValue(ctx context.Context, l *network.Server) error {
 	return util.LoadFromContextValue(ctx, ContextValueNetwork, l)
 }
 
-func LoadBlockDataContextValue(ctx context.Context, l *blockdata.BlockData) error {
-	return util.LoadFromContextValue(ctx, ContextValueBlockData, l)
+func LoadBlockdataContextValue(ctx context.Context, l *blockdata.Blockdata) error {
+	return util.LoadFromContextValue(ctx, ContextValueBlockdata, l)
 }
 
 func LoadDatabaseContextValue(ctx context.Context, l *storage.Database) error {

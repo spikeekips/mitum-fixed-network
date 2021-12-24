@@ -90,7 +90,7 @@ var voteproofIndexModels = []mongo.IndexModel{
 	},
 }
 
-var blockDataMapIndexModels = []mongo.IndexModel{
+var blockdataMapIndexModels = []mongo.IndexModel{
 	{
 		Keys: bson.D{bson.E{Key: "height", Value: 1}},
 		Options: options.Index().
@@ -106,7 +106,7 @@ var defaultIndexes = map[string] /* collection */ []mongo.IndexModel{
 	ColNameStagedOperation: stagedOperationIndexModels,
 	ColNameState:           stateIndexModels,
 	ColNameVoteproof:       voteproofIndexModels,
-	ColNameBlockDataMap:    blockDataMapIndexModels,
+	ColNameBlockdataMap:    blockdataMapIndexModels,
 }
 
 func indexName(s string) string {

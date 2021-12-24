@@ -30,7 +30,7 @@ func (t *testGenesisBlockV0) TestNewGenesisBlock() {
 	)
 	t.NoError(err)
 
-	gg, err := NewGenesisBlockV0Generator(t.local.Node(), t.local.Database(), t.local.BlockData(), t.local.Policy(), []operation.Operation{op})
+	gg, err := NewGenesisBlockV0Generator(t.local.Node(), t.local.Database(), t.local.Blockdata(), t.local.Policy(), []operation.Operation{op})
 	t.NoError(err)
 
 	blk, err := gg.Generate()

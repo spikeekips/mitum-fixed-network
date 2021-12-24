@@ -24,7 +24,7 @@ var ProcessorGenerateGenesisBlock pm.Process
 func init() {
 	if i, err := pm.NewProcess(
 		ProcessNameGenerateGenesisBlock,
-		[]string{ProcessNameLocalNode, ProcessNameDatabase, ProcessNameBlockData},
+		[]string{ProcessNameLocalNode, ProcessNameDatabase, ProcessNameBlockdata},
 		ProcessGenerateGenesisBlock,
 	); err != nil {
 		panic(err)
@@ -49,8 +49,8 @@ func ProcessGenerateGenesisBlock(ctx context.Context) (context.Context, error) {
 		return nil, err
 	}
 
-	var blockData blockdata.BlockData
-	if err := LoadBlockDataContextValue(ctx, &blockData); err != nil {
+	var bd blockdata.Blockdata
+	if err := LoadBlockdataContextValue(ctx, &bd); err != nil {
 		return nil, err
 	}
 
@@ -67,7 +67,7 @@ func ProcessGenerateGenesisBlock(ctx context.Context) (context.Context, error) {
 
 	log.Log().Debug().Int("operations", len(ops)).Msg("operations loaded")
 
-	if gg, err := isaac.NewGenesisBlockV0Generator(local, db, blockData, policy, ops); err != nil {
+	if gg, err := isaac.NewGenesisBlockV0Generator(local, db, bd, policy, ops); err != nil {
 		return ctx, errors.Wrap(err, "failed to create genesis block generator")
 	} else if blk, err := gg.Generate(); err != nil {
 		return ctx, errors.Wrap(err, "failed to generate genesis block")
@@ -94,8 +94,8 @@ func HookCheckGenesisBlock(ctx context.Context) (context.Context, error) {
 		return ctx, err
 	}
 
-	var blockData blockdata.BlockData
-	if err := LoadBlockDataContextValue(ctx, &blockData); err != nil {
+	var bd blockdata.Blockdata
+	if err := LoadBlockdataContextValue(ctx, &bd); err != nil {
 		return ctx, err
 	}
 
@@ -118,7 +118,7 @@ func HookCheckGenesisBlock(ctx context.Context) (context.Context, error) {
 		return ctx, errors.Errorf("environment already exists: block=%d", manifest.Height())
 	}
 
-	if err := blockdata.Clean(db, blockData, false); err != nil {
+	if err := blockdata.Clean(db, bd, false); err != nil {
 		return ctx, err
 	}
 	log.Log().Debug().Msg("existing environment cleaned")

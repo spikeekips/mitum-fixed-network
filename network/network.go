@@ -20,8 +20,8 @@ type (
 	GetProposalHandler         func(valuehash.Hash) (base.Proposal, error)
 	GetStateHandler            func(string) (state.State, bool, error)
 	NodeInfoHandler            func() (NodeInfo, error)
-	BlockDataMapsHandler       func([]base.Height) ([]block.BlockDataMap, error)
-	BlockDataHandler           func(string) (io.Reader, func() error, error)
+	BlockdataMapsHandler       func([]base.Height) ([]block.BlockdataMap, error)
+	BlockdataHandler           func(string) (io.Reader, func() error, error)
 	StartHandoverHandler       func(StartHandoverSeal) (bool, error)
 	PingHandoverHandler        func(PingHandoverSeal) (bool, error)
 	EndHandoverHandler         func(EndHandoverSeal) (bool, error)
@@ -35,8 +35,8 @@ type Server interface {
 	SetGetProposalHandler(GetProposalHandler)
 	NodeInfoHandler() NodeInfoHandler
 	SetNodeInfoHandler(NodeInfoHandler)
-	SetBlockDataMapsHandler(BlockDataMapsHandler)
-	SetBlockDataHandler(BlockDataHandler)
+	SetBlockdataMapsHandler(BlockdataMapsHandler)
+	SetBlockdataHandler(BlockdataHandler)
 	SetStartHandoverHandler(StartHandoverHandler)
 	SetPingHandoverHandler(PingHandoverHandler)
 	SetEndHandoverHandler(EndHandoverHandler)
@@ -52,8 +52,8 @@ var (
 	ChannelTimeoutOperation    = time.Second * 2
 	ChannelTimeoutSendSeal     = time.Second * 2
 	ChannelTimeoutNodeInfo     = time.Second * 2
-	ChannelTimeoutBlockDataMap = time.Second * 2
-	ChannelTimeoutBlockData    = time.Second * 30
+	ChannelTimeoutBlockdataMap = time.Second * 2
+	ChannelTimeoutBlockdata    = time.Second * 30
 	ChannelTimeoutHandover     = time.Second * 2
 )
 
@@ -64,8 +64,8 @@ type Channel interface {
 	SendSeal(context.Context, ConnInfo /* from ConnInfo */, seal.Seal) error
 	Proposal(context.Context, valuehash.Hash) (base.Proposal, error)
 	NodeInfo(context.Context) (NodeInfo, error)
-	BlockDataMaps(context.Context, []base.Height) ([]block.BlockDataMap, error)
-	BlockData(context.Context, block.BlockDataMapItem) (io.ReadCloser, error)
+	BlockdataMaps(context.Context, []base.Height) ([]block.BlockdataMap, error)
+	Blockdata(context.Context, block.BlockdataMapItem) (io.ReadCloser, error)
 	StartHandover(context.Context, StartHandoverSeal) (bool, error)
 	PingHandover(context.Context, PingHandoverSeal) (bool, error)
 	EndHandover(context.Context, EndHandoverSeal) (bool, error)

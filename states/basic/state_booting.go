@@ -17,7 +17,7 @@ type BootingState struct {
 	*BaseState
 	local     node.Local
 	database  storage.Database
-	blockData blockdata.BlockData
+	blockdata blockdata.Blockdata
 	policy    *isaac.LocalPolicy
 	suffrage  base.Suffrage
 }
@@ -25,7 +25,7 @@ type BootingState struct {
 func NewBootingState(
 	local node.Local,
 	db storage.Database,
-	blockData blockdata.BlockData,
+	bd blockdata.Blockdata,
 	policy *isaac.LocalPolicy,
 	suffrage base.Suffrage,
 ) *BootingState {
@@ -36,7 +36,7 @@ func NewBootingState(
 		BaseState: NewBaseState(base.StateBooting),
 		local:     local,
 		database:  db,
-		blockData: blockData,
+		blockdata: bd,
 		policy:    policy,
 		suffrage:  suffrage,
 	}
@@ -59,7 +59,7 @@ func (st *BootingState) Enter(sctx StateSwitchContext) (func() error, error) {
 
 		st.Log().Debug().Msg("empty blocks found; cleaning up")
 		// NOTE empty block
-		if err := blockdata.Clean(st.database, st.blockData, false); err != nil {
+		if err := blockdata.Clean(st.database, st.blockdata, false); err != nil {
 			return nil, err
 		}
 

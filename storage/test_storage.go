@@ -108,7 +108,7 @@ func (t *BaseTestDatabase) SetupSuite() {
 	_ = t.Encs.TestAddHinter(base.SignedBallotFactHinter)
 	_ = t.Encs.TestAddHinter(base.StringAddressHinter)
 	_ = t.Encs.TestAddHinter(base.VoteproofV0Hinter)
-	_ = t.Encs.TestAddHinter(block.BaseBlockDataMapHinter)
+	_ = t.Encs.TestAddHinter(block.BaseBlockdataMapHinter)
 	_ = t.Encs.TestAddHinter(block.BlockV0Hinter)
 	_ = t.Encs.TestAddHinter(block.BlockConsensusInfoV0Hinter)
 	_ = t.Encs.TestAddHinter(block.ManifestV0Hinter)
@@ -140,7 +140,7 @@ func (t *BaseTestDatabase) CompareBlock(a, b block.Block) {
 	t.Equal(a.ConsensusInfo().ACCEPTVoteproof(), b.ConsensusInfo().ACCEPTVoteproof())
 }
 
-func (t *BaseTestDatabase) NewBlockDataMap(height base.Height, blk valuehash.Hash, isLocal bool) block.BaseBlockDataMap {
+func (t *BaseTestDatabase) NewBlockdataMap(height base.Height, blk valuehash.Hash, isLocal bool) block.BaseBlockdataMap {
 	var scheme string = "file://"
 	if !isLocal {
 		scheme = "http://none-local.org"
@@ -150,27 +150,27 @@ func (t *BaseTestDatabase) NewBlockDataMap(height base.Height, blk valuehash.Has
 		return scheme + "/" + util.UUID().String()
 	}
 
-	bd := block.NewBaseBlockDataMap(block.TestBlockDataWriterHint, height)
+	bd := block.NewBaseBlockdataMap(block.TestBlockdataWriterHint, height)
 	bd = bd.SetBlock(blk)
 
-	var item block.BaseBlockDataMapItem
-	item = block.NewBaseBlockDataMapItem(block.BlockDataManifest, valuehash.RandomSHA256().String(), u())
+	var item block.BaseBlockdataMapItem
+	item = block.NewBaseBlockdataMapItem(block.BlockdataManifest, valuehash.RandomSHA256().String(), u())
 	bd, _ = bd.SetItem(item)
-	item = block.NewBaseBlockDataMapItem(block.BlockDataOperations, valuehash.RandomSHA256().String(), u())
+	item = block.NewBaseBlockdataMapItem(block.BlockdataOperations, valuehash.RandomSHA256().String(), u())
 	bd, _ = bd.SetItem(item)
-	item = block.NewBaseBlockDataMapItem(block.BlockDataOperationsTree, valuehash.RandomSHA256().String(), u())
+	item = block.NewBaseBlockdataMapItem(block.BlockdataOperationsTree, valuehash.RandomSHA256().String(), u())
 	bd, _ = bd.SetItem(item)
-	item = block.NewBaseBlockDataMapItem(block.BlockDataStates, valuehash.RandomSHA256().String(), u())
+	item = block.NewBaseBlockdataMapItem(block.BlockdataStates, valuehash.RandomSHA256().String(), u())
 	bd, _ = bd.SetItem(item)
-	item = block.NewBaseBlockDataMapItem(block.BlockDataStatesTree, valuehash.RandomSHA256().String(), u())
+	item = block.NewBaseBlockdataMapItem(block.BlockdataStatesTree, valuehash.RandomSHA256().String(), u())
 	bd, _ = bd.SetItem(item)
-	item = block.NewBaseBlockDataMapItem(block.BlockDataINITVoteproof, valuehash.RandomSHA256().String(), u())
+	item = block.NewBaseBlockdataMapItem(block.BlockdataINITVoteproof, valuehash.RandomSHA256().String(), u())
 	bd, _ = bd.SetItem(item)
-	item = block.NewBaseBlockDataMapItem(block.BlockDataACCEPTVoteproof, valuehash.RandomSHA256().String(), u())
+	item = block.NewBaseBlockdataMapItem(block.BlockdataACCEPTVoteproof, valuehash.RandomSHA256().String(), u())
 	bd, _ = bd.SetItem(item)
-	item = block.NewBaseBlockDataMapItem(block.BlockDataSuffrageInfo, valuehash.RandomSHA256().String(), u())
+	item = block.NewBaseBlockdataMapItem(block.BlockdataSuffrageInfo, valuehash.RandomSHA256().String(), u())
 	bd, _ = bd.SetItem(item)
-	item = block.NewBaseBlockDataMapItem(block.BlockDataProposal, valuehash.RandomSHA256().String(), u())
+	item = block.NewBaseBlockdataMapItem(block.BlockdataProposal, valuehash.RandomSHA256().String(), u())
 	bd, _ = bd.SetItem(item)
 
 	i, err := bd.UpdateHash()

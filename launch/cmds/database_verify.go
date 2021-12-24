@@ -27,15 +27,15 @@ var databaseVerifyProcesses = []pm.Process{
 	process.ProcessorTimeSyncer,
 	process.ProcessorEncoders,
 	process.ProcessorDatabase,
-	process.ProcessorBlockData,
+	process.ProcessorBlockdata,
 }
 
 var databaseVerifyHooks = []pm.Hook{
 	pm.NewHook(pm.HookPrefixPost, process.ProcessNameEncoders,
 		process.HookNameAddHinters, process.HookAddHinters(launch.EncoderTypes, launch.EncoderHinters)),
-	pm.NewHook(pm.HookPrefixPre, process.ProcessNameBlockData,
-		process.HookNameCheckBlockDataPath, process.HookCheckBlockDataPath),
-	pm.NewHook(pm.HookPrefixPost, process.ProcessNameBlockData,
+	pm.NewHook(pm.HookPrefixPre, process.ProcessNameBlockdata,
+		process.HookNameCheckBlockdataPath, process.HookCheckBlockdataPath),
+	pm.NewHook(pm.HookPrefixPost, process.ProcessNameBlockdata,
 		"check_storage", hookCheckStorage),
 }
 
@@ -57,7 +57,7 @@ type DatabaseVerifyCommand struct {
 	Path         string `arg:"" name:"blockdata path"`
 	processes    *pm.Processes
 	database     storage.Database
-	blockData    blockdata.BlockData
+	blockdata    blockdata.Blockdata
 	lastManifest block.Manifest
 }
 
@@ -119,7 +119,7 @@ func (cmd *DatabaseVerifyCommand) initializeProcesses() (*pm.Processes, error) {
 	conf := config.NewBaseLocalNode(jsonenc.NewEncoder(), nil)
 	if err := conf.Storage().Database().SetURI(cmd.URI); err != nil {
 		return nil, err
-	} else if err := conf.Storage().BlockData().SetPath(cmd.Path); err != nil {
+	} else if err := conf.Storage().Blockdata().SetPath(cmd.Path); err != nil {
 		return nil, err
 	}
 
@@ -156,11 +156,11 @@ func (cmd *DatabaseVerifyCommand) prepare() error {
 	}
 	cmd.database = database
 
-	var blockData blockdata.BlockData
-	if err := process.LoadBlockDataContextValue(ctx, &blockData); err != nil {
+	var bd blockdata.Blockdata
+	if err := process.LoadBlockdataContextValue(ctx, &bd); err != nil {
 		return err
 	}
-	cmd.blockData = blockData
+	cmd.blockdata = bd
 
 	var lastManifest block.Manifest
 	if err := util.LoadFromContextValue(ctx, lastManifestContextKey, &lastManifest); err != nil {
@@ -183,8 +183,8 @@ func hookCheckStorage(ctx context.Context) (context.Context, error) {
 		return ctx, err
 	}
 
-	var blockData blockdata.BlockData
-	if err := process.LoadBlockDataContextValue(ctx, &blockData); err != nil {
+	var bd blockdata.Blockdata
+	if err := process.LoadBlockdataContextValue(ctx, &bd); err != nil {
 		return ctx, err
 	}
 
@@ -193,7 +193,7 @@ func hookCheckStorage(ctx context.Context) (context.Context, error) {
 		return ctx, err
 	}
 
-	i, err := blockdata.CheckBlock(db, blockData, networkID)
+	i, err := blockdata.CheckBlock(db, bd, networkID)
 	if err != nil {
 		return ctx, err
 	}

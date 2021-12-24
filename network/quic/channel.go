@@ -36,8 +36,8 @@ type Channel struct {
 	getStagedOperationsURL string
 	getProposalURL         url.URL
 	nodeInfoURL            string
-	getBlockDataMaps       string
-	getBlockData           url.URL
+	getBlockdataMaps       string
+	getBlockdata           url.URL
 	startHandover          string
 	pingHandover           string
 	endHandover            string
@@ -69,10 +69,10 @@ func NewChannel(
 		_, u := mustQuicURL(addr, QuicHandlerPathGetProposal)
 		ch.getProposalURL = *u
 	}
-	ch.getBlockDataMaps, _ = mustQuicURL(addr, QuicHandlerPathGetBlockDataMaps)
+	ch.getBlockdataMaps, _ = mustQuicURL(addr, QuicHandlerPathGetBlockdataMaps)
 	{
-		_, u := mustQuicURL(addr, QuicHandlerPathGetBlockData)
-		ch.getBlockData = *u
+		_, u := mustQuicURL(addr, QuicHandlerPathGetBlockdata)
+		ch.getBlockdata = *u
 	}
 	ch.startHandover, _ = mustQuicURL(addr, QuicHandlerPathStartHandoverPattern)
 	ch.pingHandover, _ = mustQuicURL(addr, QuicHandlerPathPingHandoverPattern)
@@ -259,8 +259,8 @@ func (ch *Channel) NodeInfo(ctx context.Context) (network.NodeInfo, error) {
 	return ni, nil
 }
 
-func (ch *Channel) BlockDataMaps(ctx context.Context, heights []base.Height) ([]block.BlockDataMap, error) {
-	timeout := network.ChannelTimeoutBlockDataMap * time.Duration(len(heights))
+func (ch *Channel) BlockdataMaps(ctx context.Context, heights []base.Height) ([]block.BlockdataMap, error) {
+	timeout := network.ChannelTimeoutBlockdataMap * time.Duration(len(heights))
 	ctx, cancel := ch.timeoutContext(ctx, timeout)
 	defer cancel()
 
@@ -277,16 +277,16 @@ func (ch *Channel) BlockDataMaps(ctx context.Context, heights []base.Height) ([]
 		ctx,
 		ch.client.Send,
 		timeout+(time.Second*2),
-		ch.getBlockDataMaps, NewHeightsArgs(heights),
+		ch.getBlockdataMaps, NewHeightsArgs(heights),
 	)
 	if err != nil {
 		return nil, err
 	}
 
-	var bds []block.BlockDataMap
+	var bds []block.BlockdataMap
 	for _, h := range hinters {
-		if s, ok := h.(block.BlockDataMap); !ok {
-			return nil, errors.Errorf("decoded, but not BlockDataMap; %T", h)
+		if s, ok := h.(block.BlockdataMap); !ok {
+			return nil, errors.Errorf("decoded, but not BlockdataMap; %T", h)
 		} else if err := s.IsValid(nil); err != nil {
 			return nil, isvalid.InvalidError.Errorf("invalid block data map: %w", err)
 		} else {
@@ -297,13 +297,13 @@ func (ch *Channel) BlockDataMaps(ctx context.Context, heights []base.Height) ([]
 	return bds, nil
 }
 
-func (ch *Channel) BlockData(ctx context.Context, item block.BlockDataMapItem) (io.ReadCloser, error) {
-	ctx, cancel := ch.timeoutContext(ctx, network.ChannelTimeoutBlockData)
+func (ch *Channel) Blockdata(ctx context.Context, item block.BlockdataMapItem) (io.ReadCloser, error) {
+	ctx, cancel := ch.timeoutContext(ctx, network.ChannelTimeoutBlockdata)
 	defer cancel()
 
-	return network.FetchBlockDataThruChannel(
+	return network.FetchBlockdataThruChannel(
 		func(p string) (io.Reader, func() error, error) {
-			return ch.blockData(ctx, p)
+			return ch.blockdata(ctx, p)
 		},
 		item,
 	)
@@ -321,13 +321,13 @@ func (ch *Channel) EndHandover(ctx context.Context, sl network.EndHandoverSeal) 
 	return ch.sendHandoverSeal(ctx, ch.endHandover, sl)
 }
 
-func (ch *Channel) blockData(ctx context.Context, p string) (io.ReadCloser, func() error, error) {
+func (ch *Channel) blockdata(ctx context.Context, p string) (io.ReadCloser, func() error, error) {
 	ch.Log().Trace().Str("path", p).Msg("request block data")
 
 	headers := http.Header{}
 	headers.Set(QuicEncoderHintHeader, ch.enc.Hint().String())
 
-	u := ch.getBlockData
+	u := ch.getBlockdata
 	u.Path = u.Path + "/" + stripSlashFilePath(p)
 
 	response, err := ch.client.Get(ctx, time.Minute, u.String(), nil, headers)

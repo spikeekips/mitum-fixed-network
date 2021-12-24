@@ -25,7 +25,7 @@ var defaultProcesses = []pm.Process{
 	process.ProcessorTimeSyncer,
 	process.ProcessorEncoders,
 	process.ProcessorDatabase,
-	process.ProcessorBlockData,
+	process.ProcessorBlockdata,
 	process.ProcessorLocalNode,
 	process.ProcessorProposalProcessor,
 	process.ProcessorSuffrage,
@@ -42,8 +42,8 @@ var defaultHooks = []pm.Hook{
 		process.HookNameNetworkRateLimit, process.HookNetworkRateLimit),
 	pm.NewHook(pm.HookPrefixPost, process.ProcessNameLocalNode, process.HookNameSetPolicy, process.HookSetPolicy),
 	pm.NewHook(pm.HookPrefixPost, process.ProcessNameLocalNode, process.HookNameNodepool, process.HookNodepool),
-	pm.NewHook(pm.HookPrefixPre, process.ProcessNameBlockData,
-		process.HookNameCheckBlockDataPath, process.HookCheckBlockDataPath),
+	pm.NewHook(pm.HookPrefixPre, process.ProcessNameBlockdata,
+		process.HookNameCheckBlockdataPath, process.HookCheckBlockdataPath),
 }
 
 func DefaultProcesses() *pm.Processes {

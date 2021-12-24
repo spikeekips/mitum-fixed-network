@@ -20,7 +20,7 @@ type Syncers struct {
 	*util.ContextDaemon
 	*logging.Logging
 	database             storage.Database
-	blockData            blockdata.BlockData
+	blockdata            blockdata.Blockdata
 	sourceChannelsFunc   func() map[string]network.Channel
 	policy               *LocalPolicy
 	baseManifest         block.Manifest
@@ -36,7 +36,7 @@ type Syncers struct {
 
 func NewSyncers(
 	db storage.Database,
-	blockData blockdata.BlockData,
+	bd blockdata.Blockdata,
 	policy *LocalPolicy,
 	baseManifest block.Manifest,
 	sourceChannelsFunc func() map[string]network.Channel,
@@ -46,7 +46,7 @@ func NewSyncers(
 			return c.Str("module", "syncers")
 		}),
 		database:             db,
-		blockData:            blockData,
+		blockdata:            bd,
 		sourceChannelsFunc:   sourceChannelsFunc,
 		policy:               policy,
 		baseManifest:         baseManifest,
@@ -201,7 +201,7 @@ func (sy *Syncers) newSyncer(baseManifest block.Manifest) (Syncer, error) {
 
 	syncer, err := NewGeneralSyncer(
 		sy.database,
-		sy.blockData,
+		sy.blockdata,
 		sy.policy,
 		sy.sourceChannelsFunc,
 		baseManifest, to,

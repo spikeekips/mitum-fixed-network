@@ -14,12 +14,25 @@ import (
 	"github.com/spikeekips/mitum/util"
 )
 
-func LoadBlock(st *BlockData, height base.Height) (block.BaseBlockDataMap, block.Block, error) { // nolint
-	var bdm block.BaseBlockDataMap
+func LoadBlock(st *Blockdata, height base.Height) (block.BaseBlockdataMap, block.Block, error) { // nolint
+	var bdm block.BaseBlockdataMap
+	if found, err := st.Exists(height); err != nil {
+		return bdm, nil, err
+	} else if !found {
+		return bdm, nil, util.NotFoundError.Errorf("block data %d not found", height)
+	}
+
+	prepath := st.heightDirectory(height, true)
+
+	return LoadBlockByPath(st, prepath)
+}
+
+func LoadBlockByPath(st *Blockdata, prepath string) (block.BaseBlockdataMap, block.Block, error) { // nolint
 	blk := (interface{})(block.EmptyBlockV0()).(block.BlockUpdater)
 
-	var mapItems []block.BaseBlockDataMapItem
-	if m, r, err := LoadData(st, height, block.BlockDataManifest); err != nil {
+	var bdm block.BaseBlockdataMap
+	var mapItems []block.BaseBlockdataMapItem
+	if m, r, err := LoadData(prepath, block.BlockdataManifest); err != nil {
 		return bdm, nil, err
 	} else if i, err := st.Writer().ReadManifest(r); err != nil {
 		return bdm, nil, err
@@ -28,7 +41,7 @@ func LoadBlock(st *BlockData, height base.Height) (block.BaseBlockDataMap, block
 		mapItems = append(mapItems, m)
 	}
 
-	if m, r, err := LoadData(st, height, block.BlockDataOperationsTree); err != nil {
+	if m, r, err := LoadData(prepath, block.BlockdataOperationsTree); err != nil {
 		return bdm, nil, err
 	} else if i, err := st.Writer().ReadOperationsTree(r); err != nil {
 		return bdm, nil, err
@@ -37,7 +50,7 @@ func LoadBlock(st *BlockData, height base.Height) (block.BaseBlockDataMap, block
 		mapItems = append(mapItems, m)
 	}
 
-	if m, r, err := LoadData(st, height, block.BlockDataOperations); err != nil {
+	if m, r, err := LoadData(prepath, block.BlockdataOperations); err != nil {
 		return bdm, nil, err
 	} else if i, err := st.Writer().ReadOperations(r); err != nil {
 		return bdm, nil, err
@@ -46,7 +59,7 @@ func LoadBlock(st *BlockData, height base.Height) (block.BaseBlockDataMap, block
 		mapItems = append(mapItems, m)
 	}
 
-	if m, r, err := LoadData(st, height, block.BlockDataStatesTree); err != nil {
+	if m, r, err := LoadData(prepath, block.BlockdataStatesTree); err != nil {
 		return bdm, nil, err
 	} else if i, err := st.Writer().ReadStatesTree(r); err != nil {
 		return bdm, nil, err
@@ -55,7 +68,7 @@ func LoadBlock(st *BlockData, height base.Height) (block.BaseBlockDataMap, block
 		mapItems = append(mapItems, m)
 	}
 
-	if m, r, err := LoadData(st, height, block.BlockDataStates); err != nil {
+	if m, r, err := LoadData(prepath, block.BlockdataStates); err != nil {
 		return bdm, nil, err
 	} else if i, err := st.Writer().ReadStates(r); err != nil {
 		return bdm, nil, err
@@ -64,7 +77,7 @@ func LoadBlock(st *BlockData, height base.Height) (block.BaseBlockDataMap, block
 		mapItems = append(mapItems, m)
 	}
 
-	if m, r, err := LoadData(st, height, block.BlockDataINITVoteproof); err != nil {
+	if m, r, err := LoadData(prepath, block.BlockdataINITVoteproof); err != nil {
 		return bdm, nil, err
 	} else if i, err := st.Writer().ReadINITVoteproof(r); err != nil {
 		return bdm, nil, err
@@ -73,7 +86,7 @@ func LoadBlock(st *BlockData, height base.Height) (block.BaseBlockDataMap, block
 		mapItems = append(mapItems, m)
 	}
 
-	if m, r, err := LoadData(st, height, block.BlockDataACCEPTVoteproof); err != nil {
+	if m, r, err := LoadData(prepath, block.BlockdataACCEPTVoteproof); err != nil {
 		return bdm, nil, err
 	} else if i, err := st.Writer().ReadACCEPTVoteproof(r); err != nil {
 		return bdm, nil, err
@@ -82,7 +95,7 @@ func LoadBlock(st *BlockData, height base.Height) (block.BaseBlockDataMap, block
 		mapItems = append(mapItems, m)
 	}
 
-	if m, r, err := LoadData(st, height, block.BlockDataSuffrageInfo); err != nil {
+	if m, r, err := LoadData(prepath, block.BlockdataSuffrageInfo); err != nil {
 		return bdm, nil, err
 	} else if i, err := st.Writer().ReadSuffrageInfo(r); err != nil {
 		return bdm, nil, err
@@ -91,7 +104,7 @@ func LoadBlock(st *BlockData, height base.Height) (block.BaseBlockDataMap, block
 		mapItems = append(mapItems, m)
 	}
 
-	if m, r, err := LoadData(st, height, block.BlockDataProposal); err != nil {
+	if m, r, err := LoadData(prepath, block.BlockdataProposal); err != nil {
 		return bdm, nil, err
 	} else if i, err := st.Writer().ReadProposal(r); err != nil {
 		return bdm, nil, err
@@ -100,7 +113,7 @@ func LoadBlock(st *BlockData, height base.Height) (block.BaseBlockDataMap, block
 		mapItems = append(mapItems, m)
 	}
 
-	bdm = block.NewBaseBlockDataMap(st.Writer().Hint(), height)
+	bdm = block.NewBaseBlockdataMap(st.Writer().Hint(), blk.Height())
 	bdm = bdm.SetBlock(blk.Hash())
 	for i := range mapItems {
 		j, err := bdm.SetItem(mapItems[i])
@@ -119,35 +132,46 @@ func LoadBlock(st *BlockData, height base.Height) (block.BaseBlockDataMap, block
 	}
 }
 
-func LoadData(st *BlockData, height base.Height, dataType string) (block.BaseBlockDataMapItem, io.ReadCloser, error) {
-	var m block.BaseBlockDataMapItem
-	if found, err := st.Exists(height); err != nil {
-		return m, nil, err
-	} else if !found {
-		return m, nil, util.NotFoundError.Errorf("block data %d not found", height)
-	}
-
-	g := filepath.Join(st.heightDirectory(height, true), fmt.Sprintf(BlockFileGlobFormats, height, dataType))
+func OpenFile(prepath, dataType string) (string, io.ReadCloser, error) {
+	g := filepath.Join(prepath, fmt.Sprintf(BlockFileGlobFormats, dataType))
 
 	var f string
 	switch matches, err := filepath.Glob(g); {
 	case err != nil:
-		return m, nil, storage.MergeStorageError(err)
+		return "", nil, storage.MergeStorageError(err)
 	case len(matches) < 1:
-		return m, nil, util.NotFoundError.Errorf("block data, %q(%d) not found", dataType, height)
+		return "", nil, util.NotFoundError.Errorf("block data, %q not found", g)
 	default:
 		f = matches[0]
 	}
 
-	if i, err := os.Open(filepath.Clean(f)); err != nil {
-		return m, nil, storage.MergeStorageError(err)
-	} else if j, err := util.NewGzipReader(i); err != nil {
-		return m, nil, storage.MergeStorageError(err)
-	} else if k, err := NewBaseBlockDataMapItem(f); err != nil {
-		return m, nil, err
-	} else {
-		return k, j, nil
+	i, err := os.Open(filepath.Clean(f))
+	if err != nil {
+		return "", nil, storage.MergeStorageError(err)
 	}
+
+	return f, i, nil
+}
+
+func LoadData(prepath, dataType string) (block.BaseBlockdataMapItem, io.ReadCloser, error) {
+	var m block.BaseBlockdataMapItem
+
+	f, i, err := OpenFile(prepath, dataType)
+	if err != nil {
+		return m, nil, err
+	}
+
+	j, err := util.NewGzipReader(i)
+	if err != nil {
+		return m, nil, storage.MergeStorageError(err)
+	}
+
+	k, err := NewBaseBlockdataMapItem(f)
+	if err != nil {
+		return m, nil, err
+	}
+
+	return k, j, nil
 }
 
 func HeightDirectory(height base.Height) string {
@@ -204,13 +228,13 @@ func ParseDataFileName(s string) (base.Height, string /* data type */, string /*
 	return base.Height(a), b, c, nil
 }
 
-func NewBaseBlockDataMapItem(f string) (block.BaseBlockDataMapItem, error) {
+func NewBaseBlockdataMapItem(f string) (block.BaseBlockdataMapItem, error) {
 	height, dataType, checksum, err := ParseDataFileName(f)
 	if err != nil {
-		return block.BaseBlockDataMapItem{}, err
+		return block.BaseBlockdataMapItem{}, err
 	}
 
-	return block.NewBaseBlockDataMapItem(
+	return block.NewBaseBlockdataMapItem(
 		dataType,
 		checksum,
 		"file://"+filepath.Join(HeightDirectory(height), filepath.Base(f)),

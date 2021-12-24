@@ -139,7 +139,7 @@ func (bst *DatabaseSession) setVoteproofs(init, accept base.Voteproof) error {
 	return nil
 }
 
-func (bst *DatabaseSession) Commit(ctx context.Context, bd block.BlockDataMap) error {
+func (bst *DatabaseSession) Commit(ctx context.Context, bd block.BlockdataMap) error {
 	if bst.batch.Len() < 1 {
 		if err := bst.SetBlock(ctx, bst.block); err != nil {
 			return err
@@ -149,7 +149,7 @@ func (bst *DatabaseSession) Commit(ctx context.Context, bd block.BlockDataMap) e
 	if b, err := marshal(bd, bst.st.enc); err != nil {
 		return err
 	} else {
-		bst.batch.Put(leveldbBlockDataMapKey(bd.Height()), b)
+		bst.batch.Put(leveldbBlockdataMapKey(bd.Height()), b)
 	}
 
 	return mergeError(bst.st.db.Write(bst.batch, nil))

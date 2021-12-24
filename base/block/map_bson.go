@@ -10,7 +10,7 @@ import (
 	"go.mongodb.org/mongo-driver/bson"
 )
 
-func (bd BaseBlockDataMap) MarshalBSON() ([]byte, error) {
+func (bd BaseBlockdataMap) MarshalBSON() ([]byte, error) {
 	return bsonenc.Marshal(bsonenc.MergeBSONM(
 		bsonenc.NewHintedDoc(bd.Hint()),
 		bson.M{
@@ -24,7 +24,7 @@ func (bd BaseBlockDataMap) MarshalBSON() ([]byte, error) {
 	))
 }
 
-type BaseBlockDataMapBSONUnpacker struct {
+type BaseBlockdataMapBSONUnpacker struct {
 	H         valuehash.Bytes     `bson:"hash"`
 	Height    base.Height         `bson:"height"`
 	Block     valuehash.Bytes     `bson:"block"`
@@ -33,8 +33,8 @@ type BaseBlockDataMapBSONUnpacker struct {
 	Writer    hint.Hint           `bson:"writer"`
 }
 
-func (bd *BaseBlockDataMap) UnpackBSON(b []byte, enc *bsonenc.Encoder) error {
-	var ubd BaseBlockDataMapBSONUnpacker
+func (bd *BaseBlockdataMap) UnpackBSON(b []byte, enc *bsonenc.Encoder) error {
+	var ubd BaseBlockdataMapBSONUnpacker
 	if err := enc.Unmarshal(b, &ubd); err != nil {
 		return err
 	}
@@ -47,22 +47,22 @@ func (bd *BaseBlockDataMap) UnpackBSON(b []byte, enc *bsonenc.Encoder) error {
 	return bd.unpack(enc, ubd.H, ubd.Height, ubd.Block, ubd.CreatedAt, bitems, ubd.Writer)
 }
 
-type BaseBlockDataMapItemBSONPacker struct {
+type BaseBlockdataMapItemBSONPacker struct {
 	Type     string `bson:"type"`
 	Checksum string `bson:"checksum"`
 	URL      string `bson:"url"`
 }
 
-func (bd BaseBlockDataMapItem) MarshalBSON() ([]byte, error) {
-	return bsonenc.Marshal(BaseBlockDataMapItemBSONPacker{
+func (bd BaseBlockdataMapItem) MarshalBSON() ([]byte, error) {
+	return bsonenc.Marshal(BaseBlockdataMapItemBSONPacker{
 		Type:     bd.t,
 		Checksum: bd.checksum,
 		URL:      bd.url,
 	})
 }
 
-func (bd *BaseBlockDataMapItem) UnmarshalBSON(b []byte) error {
-	var ubdi BaseBlockDataMapItemBSONPacker
+func (bd *BaseBlockdataMapItem) UnmarshalBSON(b []byte) error {
+	var ubdi BaseBlockdataMapItemBSONPacker
 	if err := bsonenc.Unmarshal(b, &ubdi); err != nil {
 		return err
 	}

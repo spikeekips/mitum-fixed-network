@@ -59,7 +59,7 @@ type GeneralSyncer struct { // nolint; maligned
 	sync.RWMutex
 	*logging.Logging
 	odatabase               storage.Database
-	blockData               blockdata.BlockData
+	blockdata               blockdata.Blockdata
 	policy                  *LocalPolicy
 	stLock                  sync.RWMutex
 	st                      storage.SyncerSession
@@ -75,7 +75,7 @@ type GeneralSyncer struct { // nolint; maligned
 	tailManifest            block.Manifest
 	blksLock                sync.RWMutex
 	blks                    []block.Block
-	blockDataSessions       []blockdata.Session
+	blockdataSessions       []blockdata.Session
 	lifeCtx                 context.Context
 	lifeCancel              func()
 	donechLock              sync.RWMutex
@@ -84,7 +84,7 @@ type GeneralSyncer struct { // nolint; maligned
 
 func NewGeneralSyncer(
 	odb storage.Database,
-	blockData blockdata.BlockData,
+	bd blockdata.Blockdata,
 	policy *LocalPolicy,
 	sourceChannelsFunc func() map[string]network.Channel,
 	baseManifest block.Manifest,
@@ -117,7 +117,7 @@ func NewGeneralSyncer(
 				Str("module", "general-syncer")
 		}),
 		odatabase:               odb,
-		blockData:               blockData,
+		blockdata:               bd,
 		policy:                  policy,
 		sourceChannelsFunc:      sourceChannelsFunc,
 		heightFrom:              from,
@@ -128,7 +128,7 @@ func NewGeneralSyncer(
 		pchs:                    util.NewLockedItem(nil),
 		state:                   SyncerCreated,
 		blks:                    make([]block.Block, to-from+1),
-		blockDataSessions:       make([]blockdata.Session, to-from+1),
+		blockdataSessions:       make([]blockdata.Session, to-from+1),
 		lifeCtx:                 lifeCtx,
 		lifeCancel:              lifeCancel,
 	}, nil
@@ -337,14 +337,14 @@ func (cs *GeneralSyncer) reset() error {
 	st := cs.syncerSession()
 	if st != nil {
 		cs.Log().Debug().Int("blocks", len(cs.blocks())).Msg("reset: will cleanup storage; database and block data")
-		if err := blockdata.CleanByHeight(cs.odatabase, cs.blockData, cs.heightFrom); err != nil {
+		if err := blockdata.CleanByHeight(cs.odatabase, cs.blockdata, cs.heightFrom); err != nil {
 			return err
 		}
 
 		// NOTE clean up blocks in block data session
 		cs.Log().Debug().Int("blocks", len(cs.blocks())).Msg("reset: will cleanup block data session")
-		for i := range cs.blockDataSessions {
-			ss := cs.blockDataSessions[i]
+		for i := range cs.blockdataSessions {
+			ss := cs.blockdataSessions[i]
 			if ss == nil {
 				continue
 			}
@@ -363,7 +363,7 @@ func (cs *GeneralSyncer) reset() error {
 		return err
 	}
 
-	cs.blockDataSessions = make([]blockdata.Session, cs.heightTo-cs.heightFrom+1)
+	cs.blockdataSessions = make([]blockdata.Session, cs.heightTo-cs.heightFrom+1)
 
 	i, err := cs.odatabase.NewSyncerSession()
 	if err != nil {
@@ -877,7 +877,7 @@ func (cs *GeneralSyncer) checkThreshold(
 }
 
 func (cs *GeneralSyncer) fetchManifests(ch network.Channel, heights []base.Height) ([]block.Manifest, error) { // nolint
-	maps, err := cs.fetchBlockDataMaps(ch, heights)
+	maps, err := cs.fetchBlockdataMaps(ch, heights)
 	if err != nil {
 		return nil, err
 	}
@@ -900,7 +900,7 @@ func (cs *GeneralSyncer) fetchManifests(ch network.Channel, heights []base.Heigh
 		for i := range maps {
 			bd := maps[i]
 			if err := wk.NewJob(func(ctx context.Context, _ uint64) error {
-				r, err := ch.BlockData(ctx, bd.Manifest())
+				r, err := ch.Blockdata(ctx, bd.Manifest())
 				if err != nil {
 					return err
 				}
@@ -909,7 +909,7 @@ func (cs *GeneralSyncer) fetchManifests(ch network.Channel, heights []base.Heigh
 					_ = r.Close()
 				}()
 
-				m, err := cs.blockData.Writer().ReadManifest(r)
+				m, err := cs.blockdata.Writer().ReadManifest(r)
 				if err != nil {
 					return err
 				}
@@ -1066,7 +1066,7 @@ func (cs *GeneralSyncer) checkFetchedBlocks(fetched []block.Block) ([]base.Heigh
 			continue
 		}
 
-		ss := cs.blockDataSessions[blk.Height()-cs.heightFrom]
+		ss := cs.blockdataSessions[blk.Height()-cs.heightFrom]
 		if ss == nil {
 			missing = append(missing, blk.Height())
 
@@ -1083,7 +1083,7 @@ func (cs *GeneralSyncer) checkFetchedBlocks(fetched []block.Block) ([]base.Heigh
 
 	cs.setBlocks(filtered)
 
-	if maps, err := cs.saveBlockData(sessions); err != nil {
+	if maps, err := cs.saveBlockdata(sessions); err != nil {
 		return nil, err
 	} else if err := cs.syncerSession().SetBlocks(filtered, maps); err != nil {
 		return nil, err
@@ -1102,7 +1102,7 @@ func (cs *GeneralSyncer) fetchBlocks(
 		Int64("height_to", heights[len(heights)-1].Int64()).
 		Logger()
 
-	maps, err := cs.fetchBlockDataMaps(ch, heights)
+	maps, err := cs.fetchBlockdataMaps(ch, heights)
 	if err != nil {
 		return nil, err
 	}
@@ -1136,19 +1136,19 @@ func (cs *GeneralSyncer) fetchBlocks(
 	return fetched, nil
 }
 
-func (cs *GeneralSyncer) blockDataSession(height base.Height) (blockdata.Session, error) {
+func (cs *GeneralSyncer) blockdataSession(height base.Height) (blockdata.Session, error) {
 	cs.Lock()
 	defer cs.Unlock()
 
-	if ss := cs.blockDataSessions[height-cs.heightFrom]; ss != nil {
+	if ss := cs.blockdataSessions[height-cs.heightFrom]; ss != nil {
 		return ss, nil
 	}
 
-	i, err := cs.blockData.NewSession(height)
+	i, err := cs.blockdata.NewSession(height)
 	if err != nil {
 		return nil, err
 	}
-	cs.blockDataSessions[height-cs.heightFrom] = i
+	cs.blockdataSessions[height-cs.heightFrom] = i
 
 	return i, nil
 }
@@ -1156,9 +1156,9 @@ func (cs *GeneralSyncer) blockDataSession(height base.Height) (blockdata.Session
 func (cs *GeneralSyncer) fetchBlock( // revive:disable-line:cognitive-complexity,cyclomatic,line-length-limit
 	source string,
 	ch network.Channel,
-	bd block.BlockDataMap,
+	bd block.BlockdataMap,
 ) (block.Block, error) {
-	ss, err := cs.blockDataSession(bd.Height())
+	ss, err := cs.blockdataSession(bd.Height())
 	if err != nil {
 		return nil, err
 	}
@@ -1184,65 +1184,65 @@ func (cs *GeneralSyncer) fetchBlock( // revive:disable-line:cognitive-complexity
 		blk = blk.SetManifest(i)
 	}
 
-	if i, err := cs.fetchBlockData(ch, bd.Operations(), ss); err != nil {
+	if i, err := cs.fetchBlockdata(ch, bd.Operations(), ss); err != nil {
 		return nil, err
-	} else if j, err := cs.blockData.Writer().ReadOperations(i); err != nil {
+	} else if j, err := cs.blockdata.Writer().ReadOperations(i); err != nil {
 		return nil, err
 	} else if j != nil {
 		blk = blk.SetOperations(j)
 	}
 
-	if i, err := cs.fetchBlockData(ch, bd.OperationsTree(), ss); err != nil {
+	if i, err := cs.fetchBlockdata(ch, bd.OperationsTree(), ss); err != nil {
 		return nil, err
-	} else if j, err := cs.blockData.Writer().ReadOperationsTree(i); err != nil {
+	} else if j, err := cs.blockdata.Writer().ReadOperationsTree(i); err != nil {
 		return nil, err
 	} else if j.Len() > 0 {
 		blk = blk.SetOperationsTree(j)
 	}
 
-	if i, err := cs.fetchBlockData(ch, bd.States(), ss); err != nil {
+	if i, err := cs.fetchBlockdata(ch, bd.States(), ss); err != nil {
 		return nil, err
-	} else if j, err := cs.blockData.Writer().ReadStates(i); err != nil {
+	} else if j, err := cs.blockdata.Writer().ReadStates(i); err != nil {
 		return nil, err
 	} else if j != nil {
 		blk = blk.SetStates(j)
 	}
 
-	if i, err := cs.fetchBlockData(ch, bd.StatesTree(), ss); err != nil {
+	if i, err := cs.fetchBlockdata(ch, bd.StatesTree(), ss); err != nil {
 		return nil, err
-	} else if j, err := cs.blockData.Writer().ReadStatesTree(i); err != nil {
+	} else if j, err := cs.blockdata.Writer().ReadStatesTree(i); err != nil {
 		return nil, err
 	} else if j.Len() > 0 {
 		blk = blk.SetStatesTree(j)
 	}
 
-	if i, err := cs.fetchBlockData(ch, bd.INITVoteproof(), ss); err != nil {
+	if i, err := cs.fetchBlockdata(ch, bd.INITVoteproof(), ss); err != nil {
 		return nil, err
-	} else if j, err := cs.blockData.Writer().ReadINITVoteproof(i); err != nil {
+	} else if j, err := cs.blockdata.Writer().ReadINITVoteproof(i); err != nil {
 		return nil, err
 	} else if j != nil {
 		blk = blk.SetINITVoteproof(j)
 	}
 
-	if i, err := cs.fetchBlockData(ch, bd.ACCEPTVoteproof(), ss); err != nil {
+	if i, err := cs.fetchBlockdata(ch, bd.ACCEPTVoteproof(), ss); err != nil {
 		return nil, err
-	} else if j, err := cs.blockData.Writer().ReadACCEPTVoteproof(i); err != nil {
+	} else if j, err := cs.blockdata.Writer().ReadACCEPTVoteproof(i); err != nil {
 		return nil, err
 	} else if j != nil {
 		blk = blk.SetACCEPTVoteproof(j)
 	}
 
-	if i, err := cs.fetchBlockData(ch, bd.SuffrageInfo(), ss); err != nil {
+	if i, err := cs.fetchBlockdata(ch, bd.SuffrageInfo(), ss); err != nil {
 		return nil, err
-	} else if j, err := cs.blockData.Writer().ReadSuffrageInfo(i); err != nil {
+	} else if j, err := cs.blockdata.Writer().ReadSuffrageInfo(i); err != nil {
 		return nil, err
 	} else if j != nil {
 		blk = blk.SetSuffrageInfo(j)
 	}
 
-	if i, err := cs.fetchBlockData(ch, bd.Proposal(), ss); err != nil {
+	if i, err := cs.fetchBlockdata(ch, bd.Proposal(), ss); err != nil {
 		return nil, err
-	} else if j, err := cs.blockData.Writer().ReadProposal(i); err != nil {
+	} else if j, err := cs.blockdata.Writer().ReadProposal(i); err != nil {
 		return nil, err
 	} else if j != nil {
 		blk = blk.SetProposal(j)
@@ -1299,7 +1299,7 @@ func (cs *GeneralSyncer) rollback(rollbackCtx *BlockIntegrityError) error {
 
 	// NOTE clean block until unmatched height and start again prepare()
 	var baseManifest block.Manifest
-	if err := blockdata.CleanByHeight(cs.odatabase, cs.blockData, unmatched); err != nil {
+	if err := blockdata.CleanByHeight(cs.odatabase, cs.blockdata, unmatched); err != nil {
 		return err
 	} else if unmatched > base.PreGenesisHeight+1 {
 		switch m, found, err := cs.odatabase.ManifestByHeight(unmatched - 1); {
@@ -1419,18 +1419,18 @@ func (cs *GeneralSyncer) searchUnmatched(from, to base.Height) (base.Height, err
 	return from + base.Height(int64(found)), nil
 }
 
-func (cs *GeneralSyncer) saveBlockData(sessions []blockdata.Session) ([]block.BlockDataMap, error) {
+func (cs *GeneralSyncer) saveBlockdata(sessions []blockdata.Session) ([]block.BlockdataMap, error) {
 	cs.RLock()
 	defer cs.RUnlock()
 
-	maps := make([]block.BlockDataMap, len(sessions))
+	maps := make([]block.BlockdataMap, len(sessions))
 	for i := range sessions {
 		ss := sessions[i]
 		if ss == nil {
 			return nil, errors.Errorf("empty block data session, %d found", i)
 		}
 
-		j, err := cs.blockData.SaveSession(ss)
+		j, err := cs.blockdata.SaveSession(ss)
 		if err != nil {
 			return nil, err
 		}
@@ -1440,9 +1440,9 @@ func (cs *GeneralSyncer) saveBlockData(sessions []blockdata.Session) ([]block.Bl
 	return maps, nil
 }
 
-func (cs *GeneralSyncer) fetchBlockDataMaps(ch network.Channel, heights []base.Height) ([]block.BlockDataMap, error) {
-	var maps []block.BlockDataMap
-	switch i, err := ch.BlockDataMaps(cs.lifeCtx, heights); {
+func (cs *GeneralSyncer) fetchBlockdataMaps(ch network.Channel, heights []base.Height) ([]block.BlockdataMap, error) {
+	var maps []block.BlockdataMap
+	switch i, err := ch.BlockdataMaps(cs.lifeCtx, heights); {
 	case err != nil:
 		return nil, err
 	case len(i) != len(heights):
@@ -1464,19 +1464,19 @@ func (cs *GeneralSyncer) fetchBlockDataMaps(ch network.Channel, heights []base.H
 	return maps, nil
 }
 
-func (cs *GeneralSyncer) fetchBlockData(
+func (cs *GeneralSyncer) fetchBlockdata(
 	ch network.Channel,
-	item block.BlockDataMapItem,
+	item block.BlockdataMapItem,
 	ss blockdata.Session,
 ) (io.ReadSeeker, error) {
 	var r io.ReadCloser
-	if block.IsLocalBlockDateItem(item.URL()) {
-		i, err := ch.BlockData(cs.lifeCtx, item)
+	if block.IsLocalBlockdataItem(item.URL()) {
+		i, err := ch.Blockdata(cs.lifeCtx, item)
 		if err != nil {
 			return nil, err
 		}
 		r = i
-	} else if i, err := network.FetchBlockDataFromRemote(cs.lifeCtx, item); err != nil {
+	} else if i, err := network.FetchBlockdataFromRemote(cs.lifeCtx, item); err != nil {
 		return nil, err
 	} else {
 		r = i

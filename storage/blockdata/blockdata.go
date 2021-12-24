@@ -12,7 +12,7 @@ import (
 	"github.com/spikeekips/mitum/util/tree"
 )
 
-type BlockData interface {
+type Blockdata interface {
 	hint.Hinter
 	Initialize() error
 	IsLocal() bool
@@ -21,7 +21,7 @@ type BlockData interface {
 	RemoveAll(base.Height) error
 	Clean(remove bool) error
 	NewSession(base.Height) (Session, error)
-	SaveSession(Session) (block.BlockDataMap, error)
+	SaveSession(Session) (block.BlockdataMap, error)
 	FS() fs.FS
 	Writer() Writer
 }

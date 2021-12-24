@@ -27,6 +27,7 @@ type Database interface {
 	LastManifest() (block.Manifest, bool, error)
 	Manifest(valuehash.Hash) (block.Manifest, bool, error)
 	ManifestByHeight(base.Height) (block.Manifest, bool, error)
+	Manifests(bool, bool, int64, func(base.Height, valuehash.Hash, block.Manifest) (bool, error)) error
 
 	NewOperationSeals([]operation.Seal) error
 	NewOperations([]operation.Operation) error
@@ -51,28 +52,28 @@ type Database interface {
 	SetInfo(string /* key */, []byte /* value */) error
 	Info(string /* key */) ([]byte, bool, error)
 
-	BlockDataMap(base.Height) (block.BlockDataMap, bool, error)
-	SetBlockDataMaps([]block.BlockDataMap) error
-	LocalBlockDataMapsByHeight(base.Height, func(block.BlockDataMap) (bool, error)) error
+	BlockdataMap(base.Height) (block.BlockdataMap, bool, error)
+	SetBlockdataMaps([]block.BlockdataMap) error
+	LocalBlockdataMapsByHeight(base.Height, func(block.BlockdataMap) (bool, error)) error
 }
 
 type DatabaseSession interface {
 	Block() block.Block
 	SetBlock(context.Context, block.Block) error
 	SetACCEPTVoteproof(base.Voteproof) error
-	Commit(context.Context, block.BlockDataMap) error
+	Commit(context.Context, block.BlockdataMap) error
 	Close() error
 	Cancel() error
 }
 
 type SyncerSession interface {
 	Manifest(base.Height) (block.Manifest, bool, error)
-	Manifests([]base.Height) ([]block.Manifest, error)
 	SetManifests([]block.Manifest) error
 	HasBlock(base.Height) (bool, error)
-	SetBlocks([]block.Block, []block.BlockDataMap) error
+	SetBlocks([]block.Block, []block.BlockdataMap) error
 	Commit() error
 	Close() error
+	SetSkipLastBlock(bool)
 }
 
 type LastBlockSaver interface {

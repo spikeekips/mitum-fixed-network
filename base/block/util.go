@@ -2,7 +2,7 @@ package block
 
 import "github.com/pkg/errors"
 
-func CompareManifestWithMap(manifest Manifest, bd BlockDataMap) error {
+func CompareManifestWithMap(manifest Manifest, bd BlockdataMap) error {
 	if manifest.Height() != bd.Height() {
 		return errors.Errorf("height not matched; %d != %d", manifest.Height(), bd.Height())
 	}

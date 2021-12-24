@@ -50,7 +50,7 @@ type SyncingState struct {
 	*logging.Logging
 	*BaseState
 	database             storage.Database
-	blockData            blockdata.BlockData
+	blockdata            blockdata.Blockdata
 	policy               *isaac.LocalPolicy
 	nodepool             *network.Nodepool
 	suffrage             base.Suffrage
@@ -63,7 +63,7 @@ type SyncingState struct {
 
 func NewSyncingState(
 	db storage.Database,
-	blockData blockdata.BlockData,
+	bd blockdata.Blockdata,
 	policy *isaac.LocalPolicy,
 	nodepool *network.Nodepool,
 	suffrage base.Suffrage,
@@ -74,7 +74,7 @@ func NewSyncingState(
 		}),
 		BaseState:            NewBaseState(base.StateSyncing),
 		database:             db,
-		blockData:            blockData,
+		blockdata:            bd,
 		policy:               policy,
 		nodepool:             nodepool,
 		suffrage:             suffrage,
@@ -181,7 +181,7 @@ func (st *SyncingState) enterCallback(voteproof base.Voteproof) error {
 		syncableChannels = st.syncableChannelsOfNodepool
 	}
 
-	syncs := isaac.NewSyncers(st.database, st.blockData, st.policy, baseManifest, syncableChannels)
+	syncs := isaac.NewSyncers(st.database, st.blockdata, st.policy, baseManifest, syncableChannels)
 	syncs.WhenBlockSaved(st.whenBlockSaved)
 	syncs.WhenFinished(st.whenFinished)
 

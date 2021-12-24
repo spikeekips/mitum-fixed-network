@@ -21,20 +21,20 @@ import (
 	"github.com/spikeekips/mitum/util/logging"
 )
 
-var DefaultTimeAfterRemoveBlockDataFiles = time.Minute * 30
+var DefaultTimeAfterRemoveBlockdataFiles = time.Minute * 30
 
-type BlockDataCleaner struct {
+type BlockdataCleaner struct {
 	sync.RWMutex
 	*logging.Logging
 	*util.ContextDaemon
-	bd          *localfs.BlockData
+	bd          *localfs.Blockdata
 	removeAfter time.Duration
 	interval    time.Duration
 	targets     map[base.Height]time.Time
 }
 
-func NewBlockDataCleaner(bd *localfs.BlockData, removeAfter time.Duration) *BlockDataCleaner {
-	bc := &BlockDataCleaner{
+func NewBlockdataCleaner(bd *localfs.Blockdata, removeAfter time.Duration) *BlockdataCleaner {
+	bc := &BlockdataCleaner{
 		Logging: logging.NewLogging(func(c zerolog.Context) zerolog.Context {
 			return c.Str("module", "blockdata-cleaner")
 		}),
@@ -48,13 +48,13 @@ func NewBlockDataCleaner(bd *localfs.BlockData, removeAfter time.Duration) *Bloc
 	return bc
 }
 
-func (bc *BlockDataCleaner) SetLogging(l *logging.Logging) *logging.Logging {
+func (bc *BlockdataCleaner) SetLogging(l *logging.Logging) *logging.Logging {
 	_ = bc.ContextDaemon.SetLogging(l)
 
 	return bc.Logging.SetLogging(l)
 }
 
-func (bc *BlockDataCleaner) start(ctx context.Context) error {
+func (bc *BlockdataCleaner) start(ctx context.Context) error {
 	if err := bc.findRemoveds(ctx); err != nil {
 		return err
 	}
@@ -70,11 +70,11 @@ func (bc *BlockDataCleaner) start(ctx context.Context) error {
 	return ctx.Err()
 }
 
-func (bc *BlockDataCleaner) RemoveAfter() time.Duration {
+func (bc *BlockdataCleaner) RemoveAfter() time.Duration {
 	return bc.removeAfter
 }
 
-func (bc *BlockDataCleaner) Add(height base.Height) error {
+func (bc *BlockdataCleaner) Add(height base.Height) error {
 	bc.Lock()
 	defer bc.Unlock()
 
@@ -98,7 +98,7 @@ func (bc *BlockDataCleaner) Add(height base.Height) error {
 	return nil
 }
 
-func (bc *BlockDataCleaner) currentTargets() map[base.Height]time.Time {
+func (bc *BlockdataCleaner) currentTargets() map[base.Height]time.Time {
 	bc.RLock()
 	defer bc.RUnlock()
 
@@ -110,7 +110,7 @@ func (bc *BlockDataCleaner) currentTargets() map[base.Height]time.Time {
 	return n
 }
 
-func (bc *BlockDataCleaner) clean(ctx context.Context) error {
+func (bc *BlockdataCleaner) clean(ctx context.Context) error {
 	if err := ctx.Err(); err != nil {
 		return err
 	}
@@ -182,7 +182,7 @@ func (bc *BlockDataCleaner) clean(ctx context.Context) error {
 	return nil
 }
 
-func (bc *BlockDataCleaner) checkTargetIsRemovable(height base.Height, t time.Time) (bool, error) {
+func (bc *BlockdataCleaner) checkTargetIsRemovable(height base.Height, t time.Time) (bool, error) {
 	if found, _, err := bc.bd.ExistsReal(height); err != nil {
 		return false, err
 	} else if !found {
@@ -192,7 +192,7 @@ func (bc *BlockDataCleaner) checkTargetIsRemovable(height base.Height, t time.Ti
 	return localtime.UTCNow().After(t), nil
 }
 
-func (bc *BlockDataCleaner) findRemoveds(ctx context.Context) error {
+func (bc *BlockdataCleaner) findRemoveds(ctx context.Context) error {
 	var removeds []string
 	switch i, err := bc.findRemovedDirectory(); {
 	case err != nil:
@@ -227,7 +227,7 @@ func (bc *BlockDataCleaner) findRemoveds(ctx context.Context) error {
 	return nil
 }
 
-func (bc *BlockDataCleaner) findRemovedDirectory() ([]string, error) {
+func (bc *BlockdataCleaner) findRemovedDirectory() ([]string, error) {
 	var removeds []string
 	err := filepath.WalkDir(bc.bd.Root(), func(path string, d fs.DirEntry, err error) error {
 		if err != nil {
@@ -262,7 +262,7 @@ func (bc *BlockDataCleaner) findRemovedDirectory() ([]string, error) {
 	return removeds, nil
 }
 
-func (bc *BlockDataCleaner) loadManifestFromRemoveds(ctx context.Context, removeds []string) ([]base.Height, error) {
+func (bc *BlockdataCleaner) loadManifestFromRemoveds(ctx context.Context, removeds []string) ([]base.Height, error) {
 	wk := util.NewErrgroupWorker(ctx, 100)
 	defer wk.Close()
 
@@ -296,8 +296,8 @@ func (bc *BlockDataCleaner) loadManifestFromRemoveds(ctx context.Context, remove
 	return heights, nil
 }
 
-func (bc *BlockDataCleaner) loadRemoved(path string) (block.Manifest, error) {
-	g := filepath.Join(path, fmt.Sprintf("*-%s-*", block.BlockDataManifest))
+func (bc *BlockdataCleaner) loadRemoved(path string) (block.Manifest, error) {
+	g := filepath.Join(path, fmt.Sprintf("*-%s-*", block.BlockdataManifest))
 	var f string
 	switch matches, err := filepath.Glob(g); {
 	case err != nil:

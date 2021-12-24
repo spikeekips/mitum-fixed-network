@@ -9,7 +9,7 @@ import (
 	"github.com/spikeekips/mitum/util/valuehash"
 )
 
-func (bd *BaseBlockDataMap) unpack(
+func (bd *BaseBlockdataMap) unpack(
 	enc encoder.Encoder,
 	h valuehash.Hash,
 	height base.Height,
@@ -24,9 +24,9 @@ func (bd *BaseBlockDataMap) unpack(
 	bd.createdAt = createdAt
 	bd.writerHint = writer
 
-	items := map[string]BaseBlockDataMapItem{}
+	items := map[string]BaseBlockdataMapItem{}
 	for k := range bitems {
-		i, err := DecodeBaseBlockDataMapItem(bitems[k], enc)
+		i, err := DecodeBaseBlockdataMapItem(bitems[k], enc)
 		if err != nil {
 			return err
 		}
@@ -38,7 +38,7 @@ func (bd *BaseBlockDataMap) unpack(
 	return nil
 }
 
-func (bd *BaseBlockDataMapItem) unpack(dataType, checksum, url string) error {
+func (bd *BaseBlockdataMapItem) unpack(dataType, checksum, url string) error {
 	bd.t = dataType
 	bd.checksum = checksum
 	bd.url = url
@@ -46,8 +46,8 @@ func (bd *BaseBlockDataMapItem) unpack(dataType, checksum, url string) error {
 	return nil
 }
 
-func DecodeBaseBlockDataMapItem(b []byte, enc encoder.Encoder) (BaseBlockDataMapItem, error) {
-	var ubdi BaseBlockDataMapItem
+func DecodeBaseBlockdataMapItem(b []byte, enc encoder.Encoder) (BaseBlockdataMapItem, error) {
+	var ubdi BaseBlockdataMapItem
 	if err := enc.Unmarshal(b, &ubdi); err != nil {
 		return ubdi, err
 	}

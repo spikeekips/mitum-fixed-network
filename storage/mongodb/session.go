@@ -145,7 +145,7 @@ func (bst *DatabaseSession) setBlock(blk block.Block) error {
 	return nil
 }
 
-func (bst *DatabaseSession) Commit(ctx context.Context, bd block.BlockDataMap) error {
+func (bst *DatabaseSession) Commit(ctx context.Context, bd block.BlockdataMap) error {
 	if err := bst.commit(ctx, bd); err == nil {
 		return nil
 	} else {
@@ -162,7 +162,7 @@ func (bst *DatabaseSession) Commit(ctx context.Context, bd block.BlockDataMap) e
 	}
 }
 
-func (bst *DatabaseSession) commit(ctx context.Context, bd block.BlockDataMap) error {
+func (bst *DatabaseSession) commit(ctx context.Context, bd block.BlockdataMap) error {
 	started := time.Now()
 	defer func() {
 		bst.statesValue.Store("commit", time.Since(started))
@@ -218,9 +218,9 @@ func (bst *DatabaseSession) commit(ctx context.Context, bd block.BlockDataMap) e
 		}
 	}
 
-	if doc, err := NewBlockDataMapDoc(bd, bst.st.enc); err != nil {
+	if doc, err := NewBlockdataMapDoc(bd, bst.st.enc); err != nil {
 		return err
-	} else if res, err := bst.writeModels(ctx, ColNameBlockDataMap, []mongo.WriteModel{mongo.NewInsertOneModel().SetDocument(doc)}); err != nil {
+	} else if res, err := bst.writeModels(ctx, ColNameBlockdataMap, []mongo.WriteModel{mongo.NewInsertOneModel().SetDocument(doc)}); err != nil {
 		return MergeError(err)
 	} else if res != nil && res.InsertedCount < 1 {
 		return errors.Errorf("blockdatamap not inserted")

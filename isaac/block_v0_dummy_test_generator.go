@@ -53,7 +53,7 @@ func NewDummyBlocksV0Generator(
 			},
 		)
 		pps := prprocessor.NewProcessors(
-			NewDefaultProcessorNewFunc(l.Database(), l.BlockData(), l.Nodes(), suffrage, nil),
+			NewDefaultProcessorNewFunc(l.Database(), l.Blockdata(), l.Nodes(), suffrage, nil),
 			nil,
 		)
 		if err := pps.Initialize(); err != nil {
@@ -113,7 +113,7 @@ func (bg *DummyBlocksV0Generator) Generate(ignoreExists bool) error {
 
 	if ignoreExists {
 		for _, n := range bg.allNodes {
-			if err := blockdata.Clean(n.Database(), n.BlockData(), false); err != nil {
+			if err := blockdata.Clean(n.Database(), n.Blockdata(), false); err != nil {
 				return err
 			}
 		}
@@ -135,7 +135,7 @@ func (bg *DummyBlocksV0Generator) Generate(ignoreExists bool) error {
 		if genesis, err := NewGenesisBlockV0Generator(
 			bg.genesisNode.Node(),
 			bg.genesisNode.Database(),
-			bg.genesisNode.BlockData(),
+			bg.genesisNode.Blockdata(),
 			bg.genesisNode.Policy(),
 			nil,
 		); err != nil {
@@ -178,7 +178,7 @@ func (bg *DummyBlocksV0Generator) syncBlocks(from *Local) error {
 	var blocks []block.Block
 	height := base.PreGenesisHeight
 
-	fbs := from.BlockData().(*localfs.BlockData)
+	fbs := from.Blockdata().(*localfs.Blockdata)
 
 end:
 	for {
@@ -228,16 +228,16 @@ func (bg *DummyBlocksV0Generator) storeBlock(l *Local, blk block.Block) error {
 	}()
 
 	var session blockdata.Session
-	if i, err := l.BlockData().NewSession(blk.Height()); err != nil {
+	if i, err := l.Blockdata().NewSession(blk.Height()); err != nil {
 		return err
 	} else {
 		session = i
 	}
 
-	var bd block.BlockDataMap
+	var bd block.BlockdataMap
 	if err := session.SetBlock(blk); err != nil {
 		return err
-	} else if i, err := l.BlockData().SaveSession(session); err != nil {
+	} else if i, err := l.Blockdata().SaveSession(session); err != nil {
 		return err
 	} else {
 		bd = i

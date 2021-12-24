@@ -41,7 +41,7 @@ func (t *testStateHandover) newState(suffrage base.Suffrage, pps *prprocessor.Pr
 	if pps == nil {
 		pps = prprocessor.NewProcessors(isaac.NewDefaultProcessorNewFunc(
 			t.local.Database(),
-			t.local.BlockData(),
+			t.local.Blockdata(),
 			t.local.Nodes(),
 			suffrage,
 			nil,

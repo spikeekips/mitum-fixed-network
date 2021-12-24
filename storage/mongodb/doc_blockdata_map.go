@@ -8,24 +8,24 @@ import (
 	"go.mongodb.org/mongo-driver/bson"
 )
 
-type BlockDataMapDoc struct {
+type BlockdataMapDoc struct {
 	BaseDoc
-	bd block.BlockDataMap
+	bd block.BlockdataMap
 }
 
-func NewBlockDataMapDoc(bd block.BlockDataMap, enc encoder.Encoder) (BlockDataMapDoc, error) {
+func NewBlockdataMapDoc(bd block.BlockdataMap, enc encoder.Encoder) (BlockdataMapDoc, error) {
 	b, err := NewBaseDoc(nil, bd, enc)
 	if err != nil {
-		return BlockDataMapDoc{}, err
+		return BlockdataMapDoc{}, err
 	}
 
-	return BlockDataMapDoc{
+	return BlockdataMapDoc{
 		BaseDoc: b,
 		bd:      bd,
 	}, nil
 }
 
-func (bd BlockDataMapDoc) MarshalBSON() ([]byte, error) {
+func (bd BlockdataMapDoc) MarshalBSON() ([]byte, error) {
 	m, err := bd.BaseDoc.M()
 	if err != nil {
 		return nil, err
@@ -39,19 +39,19 @@ func (bd BlockDataMapDoc) MarshalBSON() ([]byte, error) {
 	return bsonenc.Marshal(m)
 }
 
-func loadBlockDataMapFromDecoder(decoder func(interface{}) error, encs *encoder.Encoders) (block.BlockDataMap, error) {
+func loadBlockdataMapFromDecoder(decoder func(interface{}) error, encs *encoder.Encoders) (block.BlockdataMap, error) {
 	var b bson.Raw
 	if err := decoder(&b); err != nil {
 		return nil, err
 	}
 
-	var bd block.BlockDataMap
+	var bd block.BlockdataMap
 
 	_, hinter, err := LoadDataFromDoc(b, encs)
 	if err != nil {
 		return nil, err
-	} else if i, ok := hinter.(block.BlockDataMap); !ok {
-		return nil, errors.Errorf("not block.BlockDataMap: %T", hinter)
+	} else if i, ok := hinter.(block.BlockdataMap); !ok {
+		return nil, errors.Errorf("not block.BlockdataMap: %T", hinter)
 	} else {
 		bd = i
 	}

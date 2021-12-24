@@ -37,7 +37,7 @@ func (t *testSyncers) TestNew() {
 	finishedChan := make(chan base.Height, 10)
 	blocksChan := make(chan []block.Block, 10)
 
-	ss := NewSyncers(local.Database(), local.BlockData(), local.Policy(), baseManifest, func() map[string]network.Channel {
+	ss := NewSyncers(local.Database(), local.Blockdata(), local.Policy(), baseManifest, func() map[string]network.Channel {
 		return map[string]network.Channel{
 			remote.Node().String(): remote.Channel(),
 		}
@@ -121,7 +121,7 @@ func (t *testSyncers) TestMultipleSyncers() {
 
 	finishedChan := make(chan base.Height, 10)
 
-	ss := NewSyncers(local.Database(), local.BlockData(), local.Policy(), baseManifest, func() map[string]network.Channel {
+	ss := NewSyncers(local.Database(), local.Blockdata(), local.Policy(), baseManifest, func() map[string]network.Channel {
 		return map[string]network.Channel{
 			remote.Node().String(): remote.Channel(),
 		}
@@ -173,7 +173,7 @@ func (t *testSyncers) TestMangledFinishedOrder() {
 
 	finishedChan := make(chan base.Height, 10)
 
-	ss := NewSyncers(local.Database(), local.BlockData(), local.Policy(), baseManifest, func() map[string]network.Channel {
+	ss := NewSyncers(local.Database(), local.Blockdata(), local.Policy(), baseManifest, func() map[string]network.Channel {
 		return map[string]network.Channel{
 			remote.Node().String(): remote.Channel(),
 		}
@@ -224,7 +224,7 @@ func (t *testSyncers) TestAddAfterFinished() {
 	t.NoError(err)
 	t.True(found)
 
-	ss := NewSyncers(local.Database(), local.BlockData(), local.Policy(), baseManifest, func() map[string]network.Channel {
+	ss := NewSyncers(local.Database(), local.Blockdata(), local.Policy(), baseManifest, func() map[string]network.Channel {
 		return map[string]network.Channel{
 			remote.Node().String(): remote.Channel(),
 		}
@@ -295,7 +295,7 @@ func (t *testSyncers) TestStopNotFinished() {
 	t.NoError(err)
 	t.True(found)
 
-	ss := NewSyncers(local.Database(), local.BlockData(), local.Policy(), baseManifest, func() map[string]network.Channel {
+	ss := NewSyncers(local.Database(), local.Blockdata(), local.Policy(), baseManifest, func() map[string]network.Channel {
 		return map[string]network.Channel{
 			remote.Node().String(): remote.Channel(),
 		}

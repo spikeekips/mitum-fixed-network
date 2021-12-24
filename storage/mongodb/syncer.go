@@ -24,6 +24,7 @@ type SyncerSession struct {
 	session          *Database
 	heightFrom       base.Height
 	heightTo         base.Height
+	skipLastBlock    bool
 }
 
 func NewSyncerSession(main *Database) (*SyncerSession, error) {
@@ -56,21 +57,6 @@ func NewSyncerSession(main *Database) (*SyncerSession, error) {
 
 func (st *SyncerSession) Manifest(height base.Height) (block.Manifest, bool, error) {
 	return st.manifestDatabase.ManifestByHeight(height)
-}
-
-func (st *SyncerSession) Manifests(heights []base.Height) ([]block.Manifest, error) {
-	var bs []block.Manifest
-	for i := range heights {
-		if b, found, err := st.manifestDatabase.ManifestByHeight(heights[i]); !found {
-			return nil, util.NotFoundError.Errorf("manifest not found")
-		} else if err != nil {
-			return nil, err
-		} else {
-			bs = append(bs, b)
-		}
-	}
-
-	return bs, nil
 }
 
 func (st *SyncerSession) SetManifests(manifests []block.Manifest) error {
@@ -128,7 +114,7 @@ func (st *SyncerSession) HasBlock(height base.Height) (bool, error) {
 	return st.session.client.Exists(ColNameManifest, util.NewBSONFilter("height", height).D())
 }
 
-func (st *SyncerSession) SetBlocks(blocks []block.Block, maps []block.BlockDataMap) error {
+func (st *SyncerSession) SetBlocks(blocks []block.Block, maps []block.BlockdataMap) error {
 	if len(blocks) != len(maps) {
 		return errors.Errorf("blocks and maps has different size, %d != %d", len(blocks), len(maps))
 	} else {
@@ -169,7 +155,7 @@ func (st *SyncerSession) SetBlocks(blocks []block.Block, maps []block.BlockDataM
 	return st.session.setLastBlock(lastBlock, true, false)
 }
 
-func (st *SyncerSession) setBlock(blk block.Block, m block.BlockDataMap) error {
+func (st *SyncerSession) setBlock(blk block.Block, m block.BlockdataMap) error {
 	var bs storage.DatabaseSession
 	if st, err := st.session.NewSession(blk); err != nil {
 		return err
@@ -220,7 +206,7 @@ func (st *SyncerSession) Commit() error {
 		ColNameProposal,
 		ColNameState,
 		ColNameVoteproof,
-		ColNameBlockDataMap,
+		ColNameBlockdataMap,
 	} {
 		if err := moveWithinCol(st.session, col, st.main, col, bson.D{}); err != nil {
 			l.Error().Err(err).Str("collection", col).Msg("failed to move collection")
@@ -230,15 +216,17 @@ func (st *SyncerSession) Commit() error {
 		l.Trace().Str("collection", col).Msg("moved collection")
 	}
 
-	if err := st.main.setLastBlock(last, false, false); err != nil {
-		l.Error().Err(err).Msg("failed to commit blocks to main database")
+	if !st.skipLastBlock {
+		if err := st.main.setLastBlock(last, false, false); err != nil {
+			l.Error().Err(err).Msg("failed to commit blocks to main database")
 
-		return err
-	} else {
-		l.Debug().Msg("blocks committed to main database")
-
-		return nil
+			return err
+		}
 	}
+
+	l.Debug().Msg("blocks committed to main database")
+
+	return nil
 }
 
 func (st *SyncerSession) Close() error {
@@ -252,6 +240,13 @@ func (st *SyncerSession) Close() error {
 	}
 
 	return nil
+}
+
+func (st *SyncerSession) SetSkipLastBlock(b bool) {
+	st.Lock()
+	defer st.Unlock()
+
+	st.skipLastBlock = b
 }
 
 func newTempDatabase(main *Database, prefix string) (*Database, error) {

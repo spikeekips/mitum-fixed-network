@@ -103,7 +103,7 @@ func (va *validator) CheckStorage() (bool, error) {
 		return false, errors.Errorf("storage is missing")
 	}
 
-	if len(conf.BlockData().Path()) < 1 {
+	if len(conf.Blockdata().Path()) < 1 {
 		return false, errors.Errorf("blockdata path is missing")
 	}
 

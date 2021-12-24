@@ -14,8 +14,8 @@ import (
 var RateLimitHandlerMap = map[string]string{
 	"operations":     quicnetwork.QuicHandlerPathGetStagedOperations,
 	"send-seal":      quicnetwork.QuicHandlerPathSendSeal,
-	"blockdata-maps": quicnetwork.QuicHandlerPathGetBlockDataMaps,
-	"blockdata":      quicnetwork.QuicHandlerPathGetBlockDataPattern,
+	"blockdata-maps": quicnetwork.QuicHandlerPathGetBlockdataMaps,
+	"blockdata":      quicnetwork.QuicHandlerPathGetBlockdataPattern,
 	"node-info":      quicnetwork.QuicHandlerPathNodeInfo,
 }
 

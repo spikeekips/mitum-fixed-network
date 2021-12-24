@@ -21,7 +21,7 @@ import (
 
 func NewErrorProcessorNewFunc(
 	db storage.Database,
-	blockData blockdata.BlockData,
+	bd blockdata.Blockdata,
 	nodepool *network.Nodepool,
 	suffrage base.Suffrage,
 	oprHintset *hint.Hintmap,
@@ -31,7 +31,7 @@ func NewErrorProcessorNewFunc(
 	return func(sfs base.SignedBallotFact, initVoteproof base.Voteproof) (prprocessor.Processor, error) {
 		pp, err := isaac.NewDefaultProcessor(
 			db,
-			blockData,
+			bd,
 			nodepool,
 			suffrage,
 			oprHintset,

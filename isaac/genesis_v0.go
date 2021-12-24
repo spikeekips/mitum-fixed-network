@@ -23,7 +23,7 @@ type GenesisBlockV0Generator struct {
 	*logging.Logging
 	local     node.Local
 	database  storage.Database
-	blockData blockdata.BlockData
+	blockdata blockdata.Blockdata
 	policy    *LocalPolicy
 	nodepool  *network.Nodepool
 	ballotbox *Ballotbox
@@ -34,7 +34,7 @@ type GenesisBlockV0Generator struct {
 func NewGenesisBlockV0Generator(
 	local node.Local,
 	db storage.Database,
-	blockData blockdata.BlockData,
+	bd blockdata.Blockdata,
 	policy *LocalPolicy,
 	ops []operation.Operation,
 ) (*GenesisBlockV0Generator, error) {
@@ -53,7 +53,7 @@ func NewGenesisBlockV0Generator(
 		}),
 		local:     local,
 		database:  db,
-		blockData: blockData,
+		blockdata: bd,
 		policy:    policy,
 		nodepool:  nodepool,
 		ballotbox: NewBallotbox(
@@ -92,7 +92,7 @@ func (gg *GenesisBlockV0Generator) Generate() (block.Block, error) {
 	pps := prprocessor.NewProcessors(
 		NewDefaultProcessorNewFunc(
 			gg.database,
-			gg.blockData,
+			gg.blockdata,
 			gg.nodepool,
 			gg.suffrage,
 			nil,
@@ -179,12 +179,12 @@ func (gg *GenesisBlockV0Generator) generatePreviousBlock() error {
 		_ = bs.Close()
 	}()
 
-	var bd block.BlockDataMap
-	if session, err := gg.blockData.NewSession(blk.Height()); err != nil {
+	var bd block.BlockdataMap
+	if session, err := gg.blockdata.NewSession(blk.Height()); err != nil {
 		return err
 	} else if err := session.SetBlock(blk); err != nil {
 		return err
-	} else if i, err := gg.blockData.SaveSession(session); err != nil {
+	} else if i, err := gg.blockdata.SaveSession(session); err != nil {
 		return err
 	} else {
 		bd = i

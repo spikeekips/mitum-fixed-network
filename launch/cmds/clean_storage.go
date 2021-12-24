@@ -12,8 +12,11 @@ import (
 	"github.com/spikeekips/mitum/util"
 )
 
+var ContextValueCleanDatabase util.ContextKey = "clean_database"
+
 type CleanStorageCommand struct {
 	*BaseRunCommand
+	cleanDatabase func() error
 }
 
 func NewCleanStorageCommand(dryrun bool) CleanStorageCommand {
@@ -41,8 +44,6 @@ func NewCleanStorageCommand(dryrun bool) CleanStorageCommand {
 	}
 
 	hooks := []pm.Hook{
-		pm.NewHook(pm.HookPrefixPre, process.ProcessNameLocalNode,
-			"clean-storage", cmd.cleanStorage),
 		pm.NewHook(pm.HookPrefixPre, process.ProcessNameGenerateGenesisBlock,
 			process.HookNameCheckGenesisBlock, nil),
 		pm.NewHook(pm.HookPrefixPost, process.ProcessNameConfig,
@@ -83,25 +84,41 @@ func (cmd *CleanStorageCommand) Run(version util.Version) error {
 		return nil
 	}
 
-	return ps.Run()
+	if err := ps.Run(); err != nil {
+		return err
+	}
+
+	return cmd.cleanStorage(cmd.Processes().Context())
 }
 
-func (cmd *CleanStorageCommand) cleanStorage(ctx context.Context) (context.Context, error) {
+func (cmd *CleanStorageCommand) cleanStorage(ctx context.Context) error {
 	var db storage.Database
 	if err := process.LoadDatabaseContextValue(ctx, &db); err != nil {
-		return ctx, err
+		return err
 	}
 
-	var blockData blockdata.BlockData
-	if err := process.LoadBlockDataContextValue(ctx, &blockData); err != nil {
-		return ctx, err
+	var bd blockdata.Blockdata
+	if err := process.LoadBlockdataContextValue(ctx, &bd); err != nil {
+		return err
 	}
 
-	if err := blockdata.Clean(db, blockData, true); err != nil {
-		return ctx, err
+	if err := util.LoadFromContextValue(ctx, ContextValueCleanDatabase, &cmd.cleanDatabase); err != nil {
+		if !errors.Is(err, util.ContextValueNotFoundError) {
+			return err
+		}
+	}
+
+	if err := blockdata.Clean(db, bd, true); err != nil {
+		return err
+	}
+
+	if cmd.cleanDatabase != nil {
+		if err := cmd.cleanDatabase(); err != nil {
+			return err
+		}
 	}
 
 	cmd.Log().Info().Msg("database and block data was cleaned")
 
-	return ctx, nil
+	return nil
 }

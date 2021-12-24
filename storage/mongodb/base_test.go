@@ -49,7 +49,7 @@ func (t *testDatabase) TestNew() {
 	t.Implements((*storage.Database)(nil), t.database)
 }
 
-func (t *testDatabase) saveNewBlock(height base.Height) (block.Block, block.BlockDataMap) {
+func (t *testDatabase) saveNewBlock(height base.Height) (block.Block, block.BlockdataMap) {
 	blk, err := block.NewTestBlockV0(height, base.Round(0), valuehash.RandomSHA256(), valuehash.RandomSHA256())
 	t.NoError(err)
 
@@ -62,16 +62,16 @@ func (t *testDatabase) saveNewBlock(height base.Height) (block.Block, block.Bloc
 	t.NoError(err)
 
 	t.NoError(bs.SetBlock(context.Background(), blk))
-	bd := t.NewBlockDataMap(blk.Height(), blk.Hash(), true)
+	bd := t.NewBlockdataMap(blk.Height(), blk.Hash(), true)
 	t.NoError(bs.Commit(context.Background(), bd))
 
 	return blk, bd
 }
 
-func (t *testDatabase) saveBlockDataMap(st *Database, bd block.BlockDataMap) error {
-	if doc, err := NewBlockDataMapDoc(bd, st.enc); err != nil {
+func (t *testDatabase) saveBlockdataMap(st *Database, bd block.BlockdataMap) error {
+	if doc, err := NewBlockdataMapDoc(bd, st.enc); err != nil {
 		return err
-	} else if _, err := st.client.Add(ColNameBlockDataMap, doc); err != nil {
+	} else if _, err := st.client.Add(ColNameBlockdataMap, doc); err != nil {
 		return err
 	} else {
 		return nil
@@ -87,11 +87,11 @@ func (t *testDatabase) TestLastBlock() {
 
 	t.CompareManifest(blk.Manifest(), loaded)
 
-	ubd, found, err := t.database.BlockDataMap(blk.Height())
+	ubd, found, err := t.database.BlockdataMap(blk.Height())
 	t.NoError(err)
 	t.True(found)
 
-	block.CompareBlockDataMap(t.Assert(), bd, ubd)
+	block.CompareBlockdataMap(t.Assert(), bd, ubd)
 }
 
 func (t *testDatabase) TestSetBlockContext() {
@@ -125,7 +125,7 @@ func (t *testDatabase) TestSaveBlockContext() {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Nanosecond*1)
 	defer cancel()
 
-	bd := t.NewBlockDataMap(blk.Height(), blk.Hash(), true)
+	bd := t.NewBlockdataMap(blk.Height(), blk.Hash(), true)
 	err = bs.Commit(ctx, bd)
 	t.True(errors.Is(err, context.DeadlineExceeded))
 }
@@ -508,7 +508,7 @@ func (t *testDatabase) TestInfo() {
 	t.Equal(nb, unb)
 }
 
-func (t *testDatabase) TestLocalBlockDataMapsByHeight() {
+func (t *testDatabase) TestLocalBlockdataMapsByHeight() {
 	isLocal := func(height base.Height) bool {
 		switch height {
 		case 33, 36, 39:
@@ -519,18 +519,18 @@ func (t *testDatabase) TestLocalBlockDataMapsByHeight() {
 	}
 
 	for i := base.Height(33); i < 40; i++ {
-		bd := t.NewBlockDataMap(i, valuehash.RandomSHA256(), isLocal(i))
-		t.NoError(t.saveBlockDataMap(t.database, bd))
+		bd := t.NewBlockdataMap(i, valuehash.RandomSHA256(), isLocal(i))
+		t.NoError(t.saveBlockdataMap(t.database, bd))
 	}
 
 	for i := base.Height(33); i < 40; i++ {
-		bd, found, err := t.database.BlockDataMap(i)
+		bd, found, err := t.database.BlockdataMap(i)
 		t.NoError(err)
 		t.True(found)
 		t.NotNil(bd)
 	}
 
-	err := t.database.LocalBlockDataMapsByHeight(36, func(bd block.BlockDataMap) (bool, error) {
+	err := t.database.LocalBlockdataMapsByHeight(36, func(bd block.BlockdataMap) (bool, error) {
 		t.True(bd.Height() > 35)
 		t.True(isLocal(bd.Height()))
 		t.True(bd.IsLocal())

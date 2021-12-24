@@ -13,24 +13,24 @@ import (
 	"github.com/stretchr/testify/suite"
 )
 
-type testBlockDataCleaner struct {
+type testBlockdataCleaner struct {
 	isaac.BaseTest
 	local *isaac.Local
 }
 
-func (t *testBlockDataCleaner) SetupTest() {
+func (t *testBlockdataCleaner) SetupTest() {
 	t.BaseTest.SetupTest()
 	t.local = t.Locals(1)[0]
 }
 
-func (t *testBlockDataCleaner) TestNew() {
+func (t *testBlockdataCleaner) TestNew() {
 	m, found, err := t.local.Database().LastManifest()
 	t.NoError(err)
 	t.True(found)
 
-	lbd := t.local.BlockData().(*localfs.BlockData)
+	lbd := t.local.Blockdata().(*localfs.Blockdata)
 
-	bc := NewBlockDataCleaner(lbd, time.Millisecond)
+	bc := NewBlockdataCleaner(lbd, time.Millisecond)
 	bc.interval = time.Millisecond * 300
 
 	t.NoError(bc.Add(m.Height()))
@@ -62,29 +62,29 @@ func (t *testBlockDataCleaner) TestNew() {
 	t.True(removed)
 }
 
-func (t *testBlockDataCleaner) TestUnknownHeight() {
+func (t *testBlockdataCleaner) TestUnknownHeight() {
 	m, found, err := t.local.Database().LastManifest()
 	t.NoError(err)
 	t.True(found)
 
-	lbd := t.local.BlockData().(*localfs.BlockData)
+	lbd := t.local.Blockdata().(*localfs.Blockdata)
 
-	bc := NewBlockDataCleaner(lbd, time.Millisecond)
+	bc := NewBlockdataCleaner(lbd, time.Millisecond)
 
 	err = bc.Add(m.Height() + 1)
 	t.True(errors.Is(err, util.NotFoundError))
 }
 
-func (t *testBlockDataCleaner) TestAddRemovedHeights() {
+func (t *testBlockdataCleaner) TestAddRemovedHeights() {
 	m, found, err := t.local.Database().LastManifest()
 	t.NoError(err)
 	t.True(found)
 
-	lbd := t.local.BlockData().(*localfs.BlockData)
+	lbd := t.local.Blockdata().(*localfs.Blockdata)
 	t.NoError(lbd.Remove(m.Height()))
 	t.NoError(lbd.Remove(m.Height() - 1))
 
-	bc := NewBlockDataCleaner(lbd, time.Millisecond)
+	bc := NewBlockdataCleaner(lbd, time.Millisecond)
 	t.NoError(bc.findRemoveds(context.Background()))
 
 	targets := bc.currentTargets()
@@ -99,15 +99,15 @@ func (t *testBlockDataCleaner) TestAddRemovedHeights() {
 	t.True(localtime.UTCNow().After(i))
 }
 
-func (t *testBlockDataCleaner) TestAddRemovedHeightsWithStart() {
+func (t *testBlockdataCleaner) TestAddRemovedHeightsWithStart() {
 	m, found, err := t.local.Database().LastManifest()
 	t.NoError(err)
 	t.True(found)
 
-	lbd := t.local.BlockData().(*localfs.BlockData)
+	lbd := t.local.Blockdata().(*localfs.Blockdata)
 	t.NoError(lbd.Remove(m.Height()))
 
-	bc := NewBlockDataCleaner(lbd, time.Millisecond)
+	bc := NewBlockdataCleaner(lbd, time.Millisecond)
 	bc.interval = time.Second
 	t.NoError(bc.Start())
 	defer bc.Stop()
@@ -118,6 +118,6 @@ func (t *testBlockDataCleaner) TestAddRemovedHeightsWithStart() {
 	t.Equal(0, len(targets))
 }
 
-func TestBlockDataCleaner(t *testing.T) {
-	suite.Run(t, new(testBlockDataCleaner))
+func TestBlockdataCleaner(t *testing.T) {
+	suite.Run(t, new(testBlockdataCleaner))
 }

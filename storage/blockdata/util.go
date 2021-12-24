@@ -8,21 +8,21 @@ import (
 	"github.com/spikeekips/mitum/util"
 )
 
-// Clean makes Database and BlockData to be empty. If 'remove' is true, remove
-// the BlockData directory itself.
-func Clean(db storage.Database, blockData BlockData, remove bool) error {
+// Clean makes Database and Blockdata to be empty. If 'remove' is true, remove
+// the Blockdata directory itself.
+func Clean(db storage.Database, blockdata Blockdata, remove bool) error {
 	if err := db.Clean(); err != nil {
 		return err
-	} else if err := blockData.Clean(remove); err != nil {
+	} else if err := blockdata.Clean(remove); err != nil {
 		return err
 	} else {
 		return nil
 	}
 }
 
-func CleanByHeight(db storage.Database, blockData BlockData, height base.Height) error {
-	if err := db.LocalBlockDataMapsByHeight(height, func(bd block.BlockDataMap) (bool, error) {
-		if err := blockData.RemoveAll(bd.Height()); err != nil {
+func CleanByHeight(db storage.Database, blockdata Blockdata, height base.Height) error {
+	if err := db.LocalBlockdataMapsByHeight(height, func(bd block.BlockdataMap) (bool, error) {
+		if err := blockdata.RemoveAll(bd.Height()); err != nil {
 			if errors.Is(err, util.NotFoundError) {
 				return true, nil
 			}
@@ -37,13 +37,13 @@ func CleanByHeight(db storage.Database, blockData BlockData, height base.Height)
 	return db.CleanByHeight(height)
 }
 
-func CheckBlock(db storage.Database, blockData BlockData, networkID base.NetworkID) (block.Manifest, error) {
+func CheckBlock(db storage.Database, blockdata Blockdata, networkID base.NetworkID) (block.Manifest, error) {
 	m, err := storage.CheckBlock(db, networkID)
 	if err != nil {
 		return m, err
 	}
 
-	if found, err := blockData.Exists(m.Height()); err != nil {
+	if found, err := blockdata.Exists(m.Height()); err != nil {
 		return m, err
 	} else if !found {
 		return m, util.NotFoundError.Errorf("block, %d not found in block data", m.Height())

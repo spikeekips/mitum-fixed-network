@@ -18,18 +18,18 @@ import (
 )
 
 var (
-	LocalFSBlockDataType = hint.Type("localfs-blockdata")
-	LocalFSBlockDataHint = hint.NewHint(LocalFSBlockDataType, "v0.0.1")
+	LocalFSBlockdataType = hint.Type("localfs-blockdata")
+	LocalFSBlockdataHint = hint.NewHint(LocalFSBlockdataType, "v0.0.1")
 )
 
 var (
 	BlockDirectoryHeightFormat     = "%021s"
 	BlockDirectoryRemovedTouchFile = ".removed"
 	BlockFileFormats               = "%d-%s-%s.jsonld.gz" // <height>-<data>-<checksum>.jsonld.gz
-	BlockFileGlobFormats           = "%d-%s-*.jsonld.gz"  // <height>-<data>-*.jsonld.gz
+	BlockFileGlobFormats           = "*-%s-*.jsonld.gz"   // -<data>-*.jsonld.gz
 )
 
-type BlockData struct {
+type Blockdata struct {
 	sync.RWMutex
 	root    string
 	encoder *jsonenc.Encoder
@@ -37,8 +37,8 @@ type BlockData struct {
 	fs      FS
 }
 
-func NewBlockData(root string, encoder *jsonenc.Encoder) *BlockData {
-	return &BlockData{
+func NewBlockdata(root string, encoder *jsonenc.Encoder) *Blockdata {
+	return &Blockdata{
 		root:    root,
 		encoder: encoder,
 		writer:  blockdata.NewDefaultWriter(encoder),
@@ -46,7 +46,7 @@ func NewBlockData(root string, encoder *jsonenc.Encoder) *BlockData {
 	}
 }
 
-func (st *BlockData) Initialize() error {
+func (st *Blockdata) Initialize() error {
 	i, err := filepath.Abs(st.root)
 	if err != nil {
 		return storage.MergeFSError(err)
@@ -62,19 +62,19 @@ func (st *BlockData) Initialize() error {
 	return nil
 }
 
-func (*BlockData) Hint() hint.Hint {
-	return LocalFSBlockDataHint
+func (*Blockdata) Hint() hint.Hint {
+	return LocalFSBlockdataHint
 }
 
-func (*BlockData) IsLocal() bool {
+func (*Blockdata) IsLocal() bool {
 	return true
 }
 
-func (st *BlockData) Writer() blockdata.Writer {
+func (st *Blockdata) Writer() blockdata.Writer {
 	return st.writer
 }
 
-func (st *BlockData) Exists(height base.Height) (bool, error) {
+func (st *Blockdata) Exists(height base.Height) (bool, error) {
 	st.RLock()
 	defer st.RUnlock()
 
@@ -88,7 +88,7 @@ func (st *BlockData) Exists(height base.Height) (bool, error) {
 	}
 }
 
-func (st *BlockData) ExistsReal(height base.Height) (exists bool, removed bool, err error) {
+func (st *Blockdata) ExistsReal(height base.Height) (exists bool, removed bool, err error) {
 	st.RLock()
 	defer st.RUnlock()
 
@@ -98,14 +98,14 @@ func (st *BlockData) ExistsReal(height base.Height) (exists bool, removed bool, 
 // Remove removes block directory by height. Remove does not remove the
 // directory and inside files, it just creates .removd file with time. .removed
 // file helps CleanByHeight to clean directories.
-func (st *BlockData) Remove(height base.Height) error {
+func (st *Blockdata) Remove(height base.Height) error {
 	st.Lock()
 	defer st.Unlock()
 
 	return st.remove(height)
 }
 
-func (st *BlockData) remove(height base.Height) error {
+func (st *Blockdata) remove(height base.Height) error {
 	switch found, removed, err := st.exists(height); {
 	case err != nil:
 		return err
@@ -132,7 +132,7 @@ func (st *BlockData) remove(height base.Height) error {
 }
 
 // RemoveAll removes directory and it's inside files.
-func (st *BlockData) RemoveAll(height base.Height) error {
+func (st *Blockdata) RemoveAll(height base.Height) error {
 	st.Lock()
 	defer st.Unlock()
 
@@ -150,14 +150,14 @@ func (st *BlockData) RemoveAll(height base.Height) error {
 	return nil
 }
 
-func (st *BlockData) Clean(remove bool) error {
+func (st *Blockdata) Clean(remove bool) error {
 	st.Lock()
 	defer st.Unlock()
 
 	return st.clean(remove)
 }
 
-func (st *BlockData) NewSession(height base.Height) (blockdata.Session, error) {
+func (st *Blockdata) NewSession(height base.Height) (blockdata.Session, error) {
 	st.Lock()
 	defer st.Unlock()
 
@@ -168,7 +168,7 @@ func (st *BlockData) NewSession(height base.Height) (blockdata.Session, error) {
 	return NewSession(i, st.writer, height)
 }
 
-func (st *BlockData) SaveSession(session blockdata.Session) (block.BlockDataMap, error) {
+func (st *Blockdata) SaveSession(session blockdata.Session) (block.BlockdataMap, error) {
 	st.Lock()
 	defer st.Unlock()
 
@@ -209,15 +209,15 @@ func (st *BlockData) SaveSession(session blockdata.Session) (block.BlockDataMap,
 	return newMapData, nil
 }
 
-func (st *BlockData) FS() fs.FS {
+func (st *Blockdata) FS() fs.FS {
 	return st.fs
 }
 
-func (st *BlockData) Root() string {
+func (st *Blockdata) Root() string {
 	return st.root
 }
 
-func (st *BlockData) exists(height base.Height) (exists bool, removed bool, err error) {
+func (st *Blockdata) exists(height base.Height) (exists bool, removed bool, err error) {
 	d := st.heightDirectory(height, true)
 	if fi, err := os.Stat(d); err != nil {
 		if os.IsNotExist(err) {
@@ -240,7 +240,7 @@ func (st *BlockData) exists(height base.Height) (exists bool, removed bool, err 
 	}
 }
 
-func (st *BlockData) clean(remove bool) error {
+func (st *Blockdata) clean(remove bool) error {
 	if remove {
 		if err := os.RemoveAll(st.root); err != nil {
 			return storage.MergeFSError(err)
@@ -262,7 +262,7 @@ func (st *BlockData) clean(remove bool) error {
 	return nil
 }
 
-func (*BlockData) createDirectory(p string) error {
+func (*Blockdata) createDirectory(p string) error {
 	if _, err := os.Stat(p); err != nil {
 		if !os.IsNotExist(err) {
 			return storage.MergeFSError(err)
@@ -282,7 +282,7 @@ func (*BlockData) createDirectory(p string) error {
 	}
 }
 
-func (st *BlockData) heightDirectory(height base.Height, abs bool) string {
+func (st *Blockdata) heightDirectory(height base.Height, abs bool) string {
 	b := HeightDirectory(height)
 	if !abs {
 		return b
@@ -290,7 +290,7 @@ func (st *BlockData) heightDirectory(height base.Height, abs bool) string {
 	return filepath.Join(st.root, b)
 }
 
-func (st *BlockData) moveItemFiles(b string, mapData block.BaseBlockDataMap) (block.BaseBlockDataMap, error) {
+func (st *Blockdata) moveItemFiles(b string, mapData block.BaseBlockdataMap) (block.BaseBlockdataMap, error) {
 	nm := mapData
 	oldDirs := map[string]struct{}{}
 	for dataType := range mapData.Items() {

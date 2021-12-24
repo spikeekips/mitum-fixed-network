@@ -396,7 +396,7 @@ func (t *testStateJoining) TestNewINITVoteproof() {
 func (t *testStateJoining) TestStuckAInACCEPTStage() {
 	suffrage := t.Suffrage(t.remote, t.local)
 
-	booting := NewBootingState(t.local.Node(), t.local.Database(), t.local.BlockData(), t.local.Policy(), suffrage)
+	booting := NewBootingState(t.local.Node(), t.local.Database(), t.local.Blockdata(), t.local.Policy(), suffrage)
 	joining, done := t.newState(t.local, suffrage, t.Ballotbox(suffrage, t.local.Policy()))
 	defer done()
 

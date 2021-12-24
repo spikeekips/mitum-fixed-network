@@ -17,33 +17,33 @@ import (
 	"github.com/spikeekips/mitum/util/localtime"
 )
 
-var LimitBlockDataMaps = 100
+var LimitBlockdataMaps = 100
 
-func NewSetBlockDataMapsHandler(
+func NewSetBlockdataMapsHandler(
 	enc encoder.Encoder,
 	db storage.Database,
-	bc *BlockDataCleaner,
+	bc *BlockdataCleaner,
 ) network.HTTPHandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		var bdms []block.BlockDataMap
-		switch i, err := loadBlockDataMaps(r, enc); {
+		var bdms []block.BlockdataMap
+		switch i, err := loadBlockdataMaps(r, enc); {
 		case err != nil:
 			network.WriteProblemWithError(w, http.StatusBadRequest,
 				errors.Wrap(err, "failed to load blockdatamaps"))
 			return
-		case len(i) < 1, len(i) > LimitBlockDataMaps:
+		case len(i) < 1, len(i) > LimitBlockdataMaps:
 			network.WriteProblemWithError(w, http.StatusBadRequest, err)
 			return
 		default:
 			bdms = i
 		}
 
-		if err := checkBlockDataMaps(db, bdms); err != nil {
+		if err := checkBlockdataMaps(db, bdms); err != nil {
 			network.WriteProblemWithError(w, http.StatusBadRequest, err)
 			return
 		}
 
-		if err := commitBlockDataMaps(db, bc, bdms); err != nil {
+		if err := commitBlockdataMaps(db, bc, bdms); err != nil {
 			network.WriteProblemWithError(w, http.StatusInternalServerError, err)
 			return
 		}
@@ -70,7 +70,7 @@ func NewSetBlockDataMapsHandler(
 	}
 }
 
-func loadBlockDataMaps(r *http.Request, enc encoder.Encoder) ([]block.BlockDataMap, error) {
+func loadBlockdataMaps(r *http.Request, enc encoder.Encoder) ([]block.BlockdataMap, error) {
 	b, err := ioutil.ReadAll(r.Body)
 	if err != nil {
 		return nil, err
@@ -87,11 +87,11 @@ func loadBlockDataMaps(r *http.Request, enc encoder.Encoder) ([]block.BlockDataM
 	}
 
 	founds := map[base.Height]bool{}
-	ubd := make([]block.BlockDataMap, len(hinters))
+	ubd := make([]block.BlockdataMap, len(hinters))
 	for i := range hinters {
 		j := hinters[i]
-		if k, ok := j.(block.BlockDataMap); !ok {
-			return nil, util.WrongTypeError.Errorf("not block.BlockDataMap type, %T", j)
+		if k, ok := j.(block.BlockdataMap); !ok {
+			return nil, util.WrongTypeError.Errorf("not block.BlockdataMap type, %T", j)
 		} else if _, found := founds[k.Height()]; found {
 			continue
 		} else {
@@ -103,7 +103,7 @@ func loadBlockDataMaps(r *http.Request, enc encoder.Encoder) ([]block.BlockDataM
 	return ubd, nil
 }
 
-func checkBlockDataMaps(db storage.Database, bdms []block.BlockDataMap) error {
+func checkBlockdataMaps(db storage.Database, bdms []block.BlockdataMap) error {
 	wk := util.NewErrgroupWorker(context.Background(), 100)
 	defer wk.Close()
 
@@ -113,7 +113,7 @@ func checkBlockDataMaps(db storage.Database, bdms []block.BlockDataMap) error {
 		for i := range bdms {
 			bdm := bdms[i]
 			if err := wk.NewJob(func(context.Context, uint64) error {
-				return checkBlockDataMap(db, bdm)
+				return checkBlockdataMap(db, bdm)
 			}); err != nil {
 				return
 			}
@@ -123,7 +123,7 @@ func checkBlockDataMaps(db storage.Database, bdms []block.BlockDataMap) error {
 	return wk.Wait()
 }
 
-func checkBlockDataMap(db storage.Database, bdm block.BlockDataMap) error {
+func checkBlockdataMap(db storage.Database, bdm block.BlockdataMap) error {
 	if err := bdm.IsValid(nil); err != nil {
 		return err
 	}
@@ -140,8 +140,8 @@ func checkBlockDataMap(db storage.Database, bdm block.BlockDataMap) error {
 	return nil
 }
 
-func commitBlockDataMaps(db storage.Database, bc *BlockDataCleaner, bdms []block.BlockDataMap) error {
-	if err := db.SetBlockDataMaps(bdms); err != nil {
+func commitBlockdataMaps(db storage.Database, bc *BlockdataCleaner, bdms []block.BlockdataMap) error {
+	if err := db.SetBlockdataMaps(bdms); err != nil {
 		return err
 	}
 

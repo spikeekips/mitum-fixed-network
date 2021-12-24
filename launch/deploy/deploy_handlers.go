@@ -16,9 +16,9 @@ import (
 	"github.com/ulule/limiter/v3"
 )
 
-var QuicHandlerPathSetBlockDataMaps = "/_deploy/blockdatamaps"
+var QuicHandlerPathSetBlockdataMaps = "/_deploy/blockdatamaps"
 
-var RateLimitHandlerNameSetBlockDataMaps = "set-blockdatamaps"
+var RateLimitHandlerNameSetBlockdataMaps = "set-blockdatamaps"
 
 type BaseDeployHandler struct {
 	*logging.Logging

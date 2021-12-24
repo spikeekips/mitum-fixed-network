@@ -591,7 +591,7 @@ storage:
 	t.NoError(config.LoadConfigContextValue(ps.Context(), &conf))
 
 	t.NotNil(conf.Storage())
-	t.Equal(config.DefaultBlockDataPath, conf.Storage().BlockData().Path())
+	t.Equal(config.DefaultBlockdataPath, conf.Storage().Blockdata().Path())
 	t.Equal(config.DefaultDatabaseURI, conf.Storage().Database().URI().String())
 	t.Equal(config.DefaultDatabaseCache, conf.Storage().Database().Cache().String())
 }
@@ -619,7 +619,7 @@ storage:
 		t.NoError(config.LoadConfigContextValue(ps.Context(), &conf))
 
 		t.NotNil(conf.Storage())
-		t.Equal("/a/b/c/d", conf.Storage().BlockData().Path())
+		t.Equal("/a/b/c/d", conf.Storage().Blockdata().Path())
 		t.Equal(config.DefaultDatabaseURI, conf.Storage().Database().URI().String())
 		t.Equal(config.DefaultDatabaseCache, conf.Storage().Database().Cache().String())
 	}
@@ -647,7 +647,7 @@ storage:
 		t.NoError(config.LoadConfigContextValue(ps.Context(), &conf))
 
 		t.NotNil(conf.Storage())
-		t.Equal("/a/b/c/d", conf.Storage().BlockData().Path())
+		t.Equal("/a/b/c/d", conf.Storage().Blockdata().Path())
 		t.Equal("mongodb://1.2.3.4:123456?a=b", conf.Storage().Database().URI().String())
 		t.Equal(config.DefaultDatabaseCache, conf.Storage().Database().Cache().String())
 	}
@@ -676,7 +676,7 @@ storage:
 		t.NoError(config.LoadConfigContextValue(ps.Context(), &conf))
 
 		t.NotNil(conf.Storage())
-		t.Equal("/a/b/c/d", conf.Storage().BlockData().Path())
+		t.Equal("/a/b/c/d", conf.Storage().Blockdata().Path())
 		t.Equal("mongodb://1.2.3.4:123456", conf.Storage().Database().URI().String())
 		t.Equal("dummy:", conf.Storage().Database().Cache().String())
 	}

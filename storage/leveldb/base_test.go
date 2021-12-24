@@ -26,11 +26,11 @@ func (t *testDatabase) TestNew() {
 	t.Implements((*storage.Database)(nil), t.database)
 }
 
-func (t *testDatabase) saveBlockDataMap(st *Database, bd block.BlockDataMap) error {
+func (t *testDatabase) saveBlockdataMap(st *Database, bd block.BlockdataMap) error {
 	if b, err := marshal(bd, st.enc); err != nil {
 		return err
 	} else {
-		return st.db.Put(leveldbBlockDataMapKey(bd.Height()), b, nil)
+		return st.db.Put(leveldbBlockdataMapKey(bd.Height()), b, nil)
 	}
 }
 
@@ -43,7 +43,7 @@ func (t *testDatabase) TestLastBlock() {
 	t.NoError(err)
 	t.NoError(bs.SetBlock(context.Background(), blk))
 
-	bd := t.NewBlockDataMap(blk.Height(), blk.Hash(), true)
+	bd := t.NewBlockdataMap(blk.Height(), blk.Hash(), true)
 	t.NoError(bs.Commit(context.Background(), bd))
 
 	loaded, found, err := t.database.lastBlock()
@@ -52,11 +52,11 @@ func (t *testDatabase) TestLastBlock() {
 
 	t.CompareBlock(blk, loaded)
 
-	ubd, found, err := t.database.BlockDataMap(blk.Height())
+	ubd, found, err := t.database.BlockdataMap(blk.Height())
 	t.NoError(err)
 	t.True(found)
 
-	block.CompareBlockDataMap(t.Assert(), bd, ubd)
+	block.CompareBlockdataMap(t.Assert(), bd, ubd)
 }
 
 func (t *testDatabase) TestLastManifest() {
@@ -67,7 +67,7 @@ func (t *testDatabase) TestLastManifest() {
 	bs, err := t.database.NewSession(blk)
 	t.NoError(err)
 	t.NoError(bs.SetBlock(context.Background(), blk))
-	t.NoError(bs.Commit(context.Background(), t.NewBlockDataMap(blk.Height(), blk.Hash(), true)))
+	t.NoError(bs.Commit(context.Background(), t.NewBlockdataMap(blk.Height(), blk.Hash(), true)))
 
 	loaded, found, err := t.database.LastManifest()
 	t.NoError(err)
@@ -107,7 +107,7 @@ func (t *testDatabase) TestLoadManifestByHash() {
 	bs, err := t.database.NewSession(blk)
 	t.NoError(err)
 	t.NoError(bs.SetBlock(context.Background(), blk))
-	t.NoError(bs.Commit(context.Background(), t.NewBlockDataMap(blk.Height(), blk.Hash(), true)))
+	t.NoError(bs.Commit(context.Background(), t.NewBlockdataMap(blk.Height(), blk.Hash(), true)))
 
 	loaded, found, err := t.database.Manifest(blk.Hash())
 	t.NoError(err)
@@ -128,7 +128,7 @@ func (t *testDatabase) TestLoadManifestByHeight() {
 	bs, err := t.database.NewSession(blk)
 	t.NoError(err)
 	t.NoError(bs.SetBlock(context.Background(), blk))
-	t.NoError(bs.Commit(context.Background(), t.NewBlockDataMap(blk.Height(), blk.Hash(), true)))
+	t.NoError(bs.Commit(context.Background(), t.NewBlockdataMap(blk.Height(), blk.Hash(), true)))
 
 	loaded, found, err := t.database.ManifestByHeight(blk.Height())
 	t.NoError(err)
@@ -149,7 +149,7 @@ func (t *testDatabase) TestLoadBlockByHeight() {
 	bs, err := t.database.NewSession(blk)
 	t.NoError(err)
 	t.NoError(bs.SetBlock(context.Background(), blk))
-	t.NoError(bs.Commit(context.Background(), t.NewBlockDataMap(blk.Height(), blk.Hash(), true)))
+	t.NoError(bs.Commit(context.Background(), t.NewBlockdataMap(blk.Height(), blk.Hash(), true)))
 
 	loaded, found, err := t.database.blockByHeight(blk.Height())
 	t.NoError(err)
@@ -387,7 +387,7 @@ func (t *testDatabase) TestInfo() {
 	t.Equal(nb, unb)
 }
 
-func (t *testDatabase) TestLocalBlockDataMapsByHeight() {
+func (t *testDatabase) TestLocalBlockdataMapsByHeight() {
 	isLocal := func(height base.Height) bool {
 		switch height {
 		case 33, 36, 39:
@@ -398,18 +398,18 @@ func (t *testDatabase) TestLocalBlockDataMapsByHeight() {
 	}
 
 	for i := base.Height(33); i < 40; i++ {
-		bd := t.NewBlockDataMap(i, valuehash.RandomSHA256(), isLocal(i))
-		t.NoError(t.saveBlockDataMap(t.database, bd))
+		bd := t.NewBlockdataMap(i, valuehash.RandomSHA256(), isLocal(i))
+		t.NoError(t.saveBlockdataMap(t.database, bd))
 	}
 
 	for i := base.Height(33); i < 40; i++ {
-		bd, found, err := t.database.BlockDataMap(i)
+		bd, found, err := t.database.BlockdataMap(i)
 		t.NoError(err)
 		t.True(found)
 		t.NotNil(bd)
 	}
 
-	err := t.database.LocalBlockDataMapsByHeight(36, func(bd block.BlockDataMap) (bool, error) {
+	err := t.database.LocalBlockdataMapsByHeight(36, func(bd block.BlockdataMap) (bool, error) {
 		t.True(bd.Height() > 35)
 		t.True(isLocal(bd.Height()))
 		t.True(bd.IsLocal())

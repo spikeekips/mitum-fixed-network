@@ -11,18 +11,18 @@ import (
 	"github.com/spikeekips/mitum/util/valuehash"
 )
 
-type BaseBlockDataMapJSONPacker struct {
+type BaseBlockdataMapJSONPacker struct {
 	jsonenc.HintedHead
 	H         valuehash.Hash                  `json:"hash"`
 	Height    base.Height                     `json:"height"`
 	Block     valuehash.Hash                  `json:"block"`
 	CreatedAt time.Time                       `json:"created_at"`
-	Items     map[string]BaseBlockDataMapItem `json:"items"`
+	Items     map[string]BaseBlockdataMapItem `json:"items"`
 	Writer    hint.Hint                       `json:"writer"`
 }
 
-func (bd BaseBlockDataMap) MarshalJSON() ([]byte, error) {
-	return jsonenc.Marshal(BaseBlockDataMapJSONPacker{
+func (bd BaseBlockdataMap) MarshalJSON() ([]byte, error) {
+	return jsonenc.Marshal(BaseBlockdataMapJSONPacker{
 		HintedHead: jsonenc.NewHintedHead(bd.Hint()),
 		H:          bd.h,
 		Height:     bd.height,
@@ -33,7 +33,7 @@ func (bd BaseBlockDataMap) MarshalJSON() ([]byte, error) {
 	})
 }
 
-type BaseBlockDataMapJSONUnpacker struct {
+type BaseBlockdataMapJSONUnpacker struct {
 	H         valuehash.Bytes            `json:"hash"`
 	Height    base.Height                `json:"height"`
 	Block     valuehash.Bytes            `json:"block"`
@@ -42,8 +42,8 @@ type BaseBlockDataMapJSONUnpacker struct {
 	Writer    hint.Hint                  `json:"writer"`
 }
 
-func (bd *BaseBlockDataMap) UnpackJSON(b []byte, enc *jsonenc.Encoder) error {
-	var ubd BaseBlockDataMapJSONUnpacker
+func (bd *BaseBlockdataMap) UnpackJSON(b []byte, enc *jsonenc.Encoder) error {
+	var ubd BaseBlockdataMapJSONUnpacker
 	if err := enc.Unmarshal(b, &ubd); err != nil {
 		return err
 	}
@@ -56,22 +56,22 @@ func (bd *BaseBlockDataMap) UnpackJSON(b []byte, enc *jsonenc.Encoder) error {
 	return bd.unpack(enc, ubd.H, ubd.Height, ubd.Block, ubd.CreatedAt.Time, bitems, ubd.Writer)
 }
 
-type BaseBlockDataMapItemJSONPacker struct {
+type BaseBlockdataMapItemJSONPacker struct {
 	Type     string `json:"type"`
 	Checksum string `json:"checksum"`
 	URL      string `json:"url"`
 }
 
-func (bd BaseBlockDataMapItem) MarshalJSON() ([]byte, error) {
-	return jsonenc.Marshal(BaseBlockDataMapItemJSONPacker{
+func (bd BaseBlockdataMapItem) MarshalJSON() ([]byte, error) {
+	return jsonenc.Marshal(BaseBlockdataMapItemJSONPacker{
 		Type:     bd.t,
 		Checksum: bd.checksum,
 		URL:      bd.url,
 	})
 }
 
-func (bd *BaseBlockDataMapItem) UnmarshalJSON(b []byte) error {
-	var ubdi BaseBlockDataMapItemJSONPacker
+func (bd *BaseBlockdataMapItem) UnmarshalJSON(b []byte) error {
+	var ubdi BaseBlockdataMapItemJSONPacker
 	if err := jsonenc.Unmarshal(b, &ubdi); err != nil {
 		return err
 	}

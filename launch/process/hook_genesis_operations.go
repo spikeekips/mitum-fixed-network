@@ -31,15 +31,25 @@ func HookGenesisOperationFunc(handlers map[string]HookHandlerGenesisOperations) 
 
 		ops := make([]operation.Operation, len(l))
 		for i := range l {
-			if t, err := config.ParseType(l[i], false); err != nil {
+			t, err := config.ParseType(l[i], false)
+			if err != nil {
 				return ctx, err
-			} else if h, found := handlers[t]; !found {
-				return ctx, errors.Errorf("invalid genesis operation found,  %q", t)
-			} else if op, err := h(ctx, l[i]); err != nil {
-				return nil, err
-			} else {
-				ops[i] = op
 			}
+
+			h, found := handlers[t]
+			switch {
+			case !found:
+				return ctx, errors.Errorf("invalid genesis operation found,  %q", t)
+			case h == nil:
+				return ctx, nil
+			}
+
+			op, err := h(ctx, l[i])
+			if err != nil {
+				return nil, err
+			}
+
+			ops[i] = op
 		}
 
 		if err := conf.SetGenesisOperations(ops); err != nil {

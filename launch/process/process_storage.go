@@ -101,15 +101,22 @@ func processMongodbDatabase(ctx context.Context, l config.LocalNode) (context.Co
 	}
 
 	var encs *encoder.Encoders
-	if err := config.LoadEncodersContextValue(ctx, &encs); err != nil {
+	if err = config.LoadEncodersContextValue(ctx, &encs); err != nil {
 		return ctx, err
 	}
 
-	if st, err := mongodbstorage.NewDatabaseFromURI(conf.URI().String(), encs, ca); err != nil {
+	st, err := mongodbstorage.NewDatabaseFromURI(conf.URI().String(), encs, ca)
+	if err != nil {
 		return ctx, err
-	} else if err := st.Initialize(); err != nil {
-		return ctx, err
-	} else {
-		return context.WithValue(ctx, ContextValueDatabase, st), nil
 	}
+
+	if err := st.Initialize(); err != nil {
+		return ctx, err
+	}
+
+	if err := mongodbstorage.CleanTemporayDatabase(st); err != nil {
+		return ctx, err
+	}
+
+	return context.WithValue(ctx, ContextValueDatabase, st), nil
 }

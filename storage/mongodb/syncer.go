@@ -16,6 +16,11 @@ import (
 	"go.mongodb.org/mongo-driver/mongo"
 )
 
+var (
+	syncTempDatabaseNamePrefix       = "sync-"
+	syncTempDatabaseNamePrefixRegexp = `^sync\-`
+)
+
 type SyncerSession struct {
 	sync.RWMutex
 	*logging.Logging
@@ -252,7 +257,7 @@ func (st *SyncerSession) SetSkipLastBlock(b bool) {
 func newTempDatabase(main *Database, prefix string) (*Database, error) {
 	// NOTE create new mongodb database with prefix
 	var tmpClient *Client
-	if c, err := main.client.New(fmt.Sprintf("sync-%s_%s", prefix, util.UUID().String())); err != nil {
+	if c, err := main.client.New(fmt.Sprintf("%s%s_%s", syncTempDatabaseNamePrefix, prefix, util.UUID().String())); err != nil {
 		return nil, err
 	} else {
 		tmpClient = c
@@ -285,6 +290,25 @@ func moveWithinCol(from *Database, fromCol string, to *Database, toCol string, f
 	if len(models) > 0 {
 		if err := to.Client().Bulk(context.Background(), toCol, models, false); err != nil {
 			return err
+		}
+	}
+
+	return nil
+}
+
+func CleanTemporayDatabase(st *Database) error {
+	dbs, err := st.client.Databases(bson.M{"name": bson.M{"$regex": syncTempDatabaseNamePrefixRegexp}})
+	switch {
+	case err != nil:
+		return MergeError(errors.Wrap(err, "failed to get databases"))
+	case len(dbs) < 1:
+		return nil
+	}
+
+	for i := range dbs {
+		db := dbs[i]
+		if err := st.client.Database(db).Drop(context.Background()); err != nil {
+			return MergeError(errors.Wrapf(err, "failed to drop database, %q", db))
 		}
 	}
 

@@ -80,6 +80,29 @@ func (cl *Client) Collections() ([]string, error) {
 	return cl.db.ListCollectionNames(context.TODO(), bson.M{})
 }
 
+func (cl *Client) Database(db string) *mongo.Database {
+	return cl.client.Database(db)
+}
+
+func (cl *Client) Databases(filter interface{}) ([]string, error) {
+	r, err := cl.client.ListDatabases(context.Background(), filter)
+	if err != nil {
+		return nil, MergeError(err)
+	}
+
+	ds := r.Databases
+	if len(ds) < 1 {
+		return nil, nil
+	}
+
+	l := make([]string, len(ds))
+	for i := range ds {
+		l[i] = ds[i].Name
+	}
+
+	return l, nil
+}
+
 func (cl *Client) Find(
 	ctx context.Context,
 	col string,

@@ -146,20 +146,21 @@ func (bst *DatabaseSession) setBlock(blk block.Block) error {
 }
 
 func (bst *DatabaseSession) Commit(ctx context.Context, bd block.BlockdataMap) error {
-	if err := bst.commit(ctx, bd); err == nil {
+	err := bst.commit(ctx, bd)
+	if err == nil {
 		return nil
-	} else {
-		var me mongo.CommandError
-		if errors.Is(err, context.DeadlineExceeded) {
-			return storage.TimeoutError.Wrap(err)
-		} else if errors.As(err, &me) {
-			if me.HasErrorLabel("NetworkError") {
-				return storage.TimeoutError.Wrap(err)
-			}
-		}
-
-		return err
 	}
+
+	var me mongo.CommandError
+	if errors.Is(err, context.DeadlineExceeded) {
+		return storage.TimeoutError.Wrap(err)
+	} else if errors.As(err, &me) {
+		if me.HasErrorLabel("NetworkError") {
+			return storage.TimeoutError.Wrap(err)
+		}
+	}
+
+	return err
 }
 
 func (bst *DatabaseSession) commit(ctx context.Context, bd block.BlockdataMap) error {

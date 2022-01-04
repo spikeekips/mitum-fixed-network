@@ -32,6 +32,8 @@ var defaultRunProcesses = []pm.Process{
 }
 
 var defaultRunHooks = []pm.Hook{
+	pm.NewHook(pm.HookPrefixPost, process.ProcessNameDatabase,
+		process.HookNameCleanTempMongodbDatabase, process.HookCleanTempMongodbDatabase),
 	pm.NewHook(pm.HookPrefixPre, process.ProcessNameConsensusStates,
 		process.HookNameCheckEmptyBlock, process.HookCheckEmptyBlock),
 	pm.NewHook(pm.HookPrefixPost, process.ProcessNameConfig,

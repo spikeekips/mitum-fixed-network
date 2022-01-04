@@ -114,9 +114,5 @@ func processMongodbDatabase(ctx context.Context, l config.LocalNode) (context.Co
 		return ctx, err
 	}
 
-	if err := mongodbstorage.CleanTemporayDatabase(st); err != nil {
-		return ctx, err
-	}
-
 	return context.WithValue(ctx, ContextValueDatabase, st), nil
 }

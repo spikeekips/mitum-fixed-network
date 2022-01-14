@@ -220,6 +220,7 @@ func (vc *VoteproofChecker) findProposalInDatabase(fact valuehash.Hash) (bool, e
 			return nil
 		},
 		storage.ConnectionError,
+		context.DeadlineExceeded,
 	)
 	if err != nil {
 		return false, errors.Wrap(err, "failed to check proposal of accept voteproof")

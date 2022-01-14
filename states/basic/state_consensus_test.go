@@ -860,6 +860,145 @@ func (t *testStateConsensus) TestBroadcastProposalWithINITVoteproofNotUnderhando
 	}
 }
 
+// TestIncomingNextRoundINITBallot tests,
+// - new incoming INIT ballot received,
+// - it is for next round
+// - will enter next round
+func (t *testStateConsensus) TestIncomingNextRoundINITBallot() {
+	st, done := t.newState(t.Suffrage(t.remote, t.local), nil) // NOTE set local is not proposer
+	defer done()
+
+	lvp := st.LastVoteproof()
+	st.SetLastVoteproofFuncs(func() base.Voteproof {
+		return lvp
+	}, func() base.Voteproof {
+		return lvp
+	}, nil)
+
+	sealch := make(chan base.INITBallot, 1)
+	st.SetBroadcastSealsFunc(func(sl seal.Seal, toLocal bool) error {
+		blt, ok := sl.(base.INITBallot)
+		if !ok {
+			return nil
+		}
+
+		sealch <- blt
+
+		return nil
+	})
+
+	ibRound0 := t.NewINITBallot(t.local, base.Round(0), nil)
+	st.lib.Set(ibRound0)
+
+	initFactRound0 := ibRound0.Fact()
+
+	vpRound0, err := t.NewVoteproof(base.StageINIT, initFactRound0, t.local, t.remote)
+	t.NoError(err)
+
+	lvp = lvp.(base.VoteproofV0).SetFinishedAt(
+		localtime.Now().Add(st.policy.TimeoutWaitingProposal()*-3 - time.Second),
+	) // NOTE prevent "too early"
+
+	vp := base.NewVoteproofSet(vpRound0, ibRound0.ACCEPTVoteproof())
+
+	t.NoError(st.ProcessVoteproof(vp))
+
+	expirech := time.After(time.Second * 3)
+
+end:
+	for {
+		select {
+		case <-expirech:
+			t.NoError(errors.Errorf("timeout to wait next round INIT ballot"))
+
+			return
+		case blt := <-sealch:
+			fact := blt.Fact()
+			switch {
+			case fact.Height() != vp.Height():
+				continue end
+			case fact.Round() != vp.Round()+1:
+				continue end
+			case blt.BaseVoteproof().ID() != vp.ID():
+				continue end
+			case blt.ACCEPTVoteproof().ID() != ibRound0.ACCEPTVoteproof().ID():
+				continue end
+			}
+
+			break end
+		}
+	}
+}
+
+// TestIncomingNextRoundINITBallotTooEarly tests,
+// - new incoming INIT ballot received,
+// - it is for next round
+// - but it received too early rather than last voteproof of node
+// - it will be ignored
+func (t *testStateConsensus) TestIncomingNextRoundINITBallotTooEarly() {
+	st, done := t.newState(t.Suffrage(t.remote, t.local), nil) // NOTE set local is not proposer
+	defer done()
+
+	lvp := st.LastVoteproof()
+	st.SetLastVoteproofFuncs(func() base.Voteproof {
+		return lvp
+	}, func() base.Voteproof {
+		return lvp
+	}, nil)
+
+	sealch := make(chan base.INITBallot, 1)
+	st.SetBroadcastSealsFunc(func(sl seal.Seal, toLocal bool) error {
+		blt, ok := sl.(base.INITBallot)
+		if !ok {
+			return nil
+		}
+
+		sealch <- blt
+
+		return nil
+	})
+
+	ibRound0 := t.NewINITBallot(t.local, base.Round(0), nil)
+	st.lib.Set(ibRound0)
+
+	initFactRound0 := ibRound0.Fact()
+
+	vpRound0, err := t.NewVoteproof(base.StageINIT, initFactRound0, t.local, t.remote)
+	t.NoError(err)
+
+	vp := base.NewVoteproofSet(vpRound0, ibRound0.ACCEPTVoteproof())
+
+	t.NoError(st.ProcessVoteproof(vp))
+
+	expirech := time.After(time.Second * 5)
+
+	t.T().Logf("will wait %s for checking no further next round INIT ballot", time.Second*5)
+
+end:
+	for {
+		select {
+		case <-expirech:
+			return
+		case blt := <-sealch:
+			fact := blt.Fact()
+			switch {
+			case fact.Height() != vp.Height():
+				continue end
+			case fact.Round() != vp.Round()+1:
+				continue end
+			case blt.BaseVoteproof().ID() != vp.ID():
+				continue end
+			case blt.ACCEPTVoteproof().ID() != ibRound0.ACCEPTVoteproof().ID():
+				continue end
+			}
+
+			t.NoError(errors.Errorf("too early next round INIT ballot received"))
+
+			return
+		}
+	}
+}
+
 func TestStateConsensus(t *testing.T) {
 	suite.Run(t, new(testStateConsensus))
 }

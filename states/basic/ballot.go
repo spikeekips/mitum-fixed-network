@@ -78,7 +78,8 @@ func NextINITBallotFromACCEPTVoteproof(
 func NextINITBallotFromINITVoteproof(
 	db storage.Database,
 	local node.Local,
-	voteproof base.Voteproof,
+	voteproof,
+	acceptVoteproof base.Voteproof,
 	networkID base.NetworkID,
 ) (base.INITBallot, error) {
 	if voteproof.Stage() != base.StageINIT {
@@ -87,12 +88,13 @@ func NextINITBallotFromINITVoteproof(
 		return nil, errors.Errorf("voteproof not yet finished")
 	}
 
-	var avp base.Voteproof
-	switch vp, err := db.Voteproof(voteproof.Height()-1, base.StageACCEPT); {
-	case err != nil:
-		return nil, errors.Wrap(err, "failed to get last voteproof")
-	case vp != nil:
-		avp = vp
+	if acceptVoteproof == nil {
+		switch vp, err := db.Voteproof(voteproof.Height()-1, base.StageACCEPT); {
+		case err != nil:
+			return nil, errors.Wrap(err, "failed to get last voteproof")
+		case vp != nil:
+			acceptVoteproof = vp
+		}
 	}
 
 	var previousBlock valuehash.Hash
@@ -113,7 +115,7 @@ func NextINITBallotFromINITVoteproof(
 		),
 		local.Address(),
 		voteproof,
-		avp,
+		acceptVoteproof,
 		local.Privatekey(), networkID,
 	)
 }

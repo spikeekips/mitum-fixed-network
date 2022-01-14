@@ -1020,6 +1020,68 @@ func (t *testStates) TestEndHandover() {
 	})
 }
 
+func (t *testStates) TestIncomingNextRoundVoteproof() {
+	ss := t.newStates()
+	defer func() {
+		_ = ss.Stop()
+	}()
+
+	stateConsensus := NewBaseState(base.StateConsensus)
+
+	statech := make(chan StateSwitchContext, 1)
+	stateConsensus.SetEnterFunc(func(sctx StateSwitchContext) (func() error, error) {
+		statech <- sctx
+		return nil, nil
+	})
+
+	gotvoteproofch := make(chan base.Voteproof, 1)
+	stateConsensus.SetProcessVoteproofFunc(func(voteproof base.Voteproof) error {
+		gotvoteproofch <- voteproof
+
+		return nil
+	})
+
+	ss.states[base.StateConsensus] = stateConsensus
+
+	go ss.Start()
+
+	sctx := NewStateSwitchContext(ss.State(), base.StateConsensus)
+	t.NoError(ss.SwitchState(sctx))
+
+	<-statech
+
+	lavp := ss.LastVoteproof()
+	ibround0 := t.NewINITBallot(t.local, base.Round(0), lavp)
+
+	vpRound0, err := t.NewVoteproof(base.StageINIT, ibround0.Fact(), t.local, t.remote)
+	t.NoError(err)
+
+	t.Equal(vpRound0.Height(), ibround0.Fact().Height())
+	t.Equal(vpRound0.Round(), ibround0.Fact().Round())
+
+	ibround1 := t.NewINITBallot(t.remote, vpRound0.Round()+1, vpRound0)
+	t.Equal(vpRound0.Height(), ibround1.Fact().Height())
+	t.Equal(vpRound0.Round()+1, ibround1.Fact().Round())
+
+	t.NoError(ss.NewSeal(ibround1))
+
+	var rvp base.VoteproofSet
+	select {
+	case <-time.After(time.Second * 3):
+		t.NoError(errors.Errorf("timeout to wait voteproof"))
+		return
+	case i := <-gotvoteproofch:
+		j, ok := i.(base.VoteproofSet)
+		t.True(ok)
+		rvp = j
+	}
+
+	t.Equal(vpRound0.Height(), rvp.Height())
+	t.Equal(vpRound0.Round(), rvp.Round())
+	t.Equal(vpRound0.ID(), rvp.ID())
+	t.Equal(ibround1.ACCEPTVoteproof().ID(), rvp.ACCEPTVoteproof().ID())
+}
+
 func TestStates(t *testing.T) {
 	suite.Run(t, new(testStates))
 }

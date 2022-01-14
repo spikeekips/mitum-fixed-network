@@ -15,6 +15,12 @@ import (
 	"go.mongodb.org/mongo-driver/bson"
 )
 
+func (vp VoteproofV0) SetFinishedAt(t time.Time) VoteproofV0 {
+	vp.finishedAt = t
+
+	return vp
+}
+
 func NewTestVoteproofV0(
 	height Height,
 	round Round,

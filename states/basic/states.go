@@ -735,7 +735,11 @@ func (ss *States) checkBallotVoteproof(blt base.Ballot) error {
 	var voteproof base.Voteproof
 	switch t := blt.(type) {
 	case base.INITBallot:
-		voteproof = t.ACCEPTVoteproof()
+		if blt.RawFact().Round() > 0 {
+			voteproof = base.NewVoteproofSet(t.BaseVoteproof(), t.ACCEPTVoteproof())
+		} else {
+			voteproof = t.ACCEPTVoteproof()
+		}
 	case base.Proposal:
 		voteproof = t.BaseVoteproof()
 	case base.ACCEPTBallot:
@@ -744,7 +748,11 @@ func (ss *States) checkBallotVoteproof(blt base.Ballot) error {
 		return nil
 	}
 
-	l := ss.Log().With().Stringer("seal_hash", blt.Hash()).Str("voteproof_id", voteproof.ID()).Logger()
+	l := ss.Log().With().
+		Stringer("seal_hash", blt.Hash()).
+		Str("voteproof_id", voteproof.ID()).
+		Str("voteproof_type", fmt.Sprintf("%T", voteproof)).
+		Logger()
 
 	lvp := ss.LastVoteproof()
 	// NOTE last init voteproof is nil, it means current database is empty, so

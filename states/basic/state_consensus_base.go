@@ -38,6 +38,7 @@ type BaseConsensusState struct {
 	) error
 	broadcastNewINITBallot func(base.Voteproof) error
 	prepareProposal        func(base.Height, base.Round, base.Voteproof) (base.Proposal, error)
+	lib                    *util.LockedItem // last broadcasted INIT Ballot
 }
 
 func NewBaseConsensusState(
@@ -60,6 +61,7 @@ func NewBaseConsensusState(
 		suffrage:      suffrage,
 		proposalMaker: proposalMaker,
 		pps:           pps,
+		lib:           util.NewLockedItem(nil),
 	}
 
 	bc.broadcastACCEPTBallot = func(valuehash.Hash, valuehash.Hash, base.Voteproof, time.Duration) error {
@@ -177,7 +179,7 @@ func (st *BaseConsensusState) nextRound(voteproof base.Voteproof) error {
 		switch s := voteproof.Stage(); s {
 		case base.StageINIT:
 			baseBallot, err = NextINITBallotFromINITVoteproof(
-				st.database, st.nodepool.LocalNode(), voteproof, st.policy.NetworkID())
+				st.database, st.nodepool.LocalNode(), voteproof, nil, st.policy.NetworkID())
 		case base.StageACCEPT:
 			baseBallot, err = NextINITBallotFromACCEPTVoteproof(
 				st.database, st.nodepool.LocalNode(), voteproof, st.policy.NetworkID())
@@ -243,6 +245,10 @@ func (st *BaseConsensusState) newINITVoteproof(voteproof base.Voteproof) error {
 	}
 
 	l := st.Log().With().Str("voteproof_id", voteproof.ID()).Logger()
+
+	if err := st.handleUnknownINITVoteproof(voteproof); err != nil {
+		return err
+	}
 
 	l.Debug().Msg("processing new init voteproof; propose proposal")
 
@@ -373,6 +379,7 @@ func (st *BaseConsensusState) processProposalOfACCEPTVoteproof(
 			return nil
 		},
 		storage.ConnectionError,
+		context.DeadlineExceeded,
 	); err != nil {
 		return nil, nil, errors.Wrap(err, "failed to find proposal of accept voteproof in local")
 	}
@@ -437,6 +444,7 @@ func (st *BaseConsensusState) findProposal(
 			return nil
 		},
 		storage.ConnectionError,
+		context.DeadlineExceeded,
 	)
 
 	return proposal, err
@@ -549,6 +557,7 @@ func (st *BaseConsensusState) defaultPrepareProposal(
 			return st.database.NewProposal(pr)
 		},
 		storage.ConnectionError,
+		context.DeadlineExceeded,
 	)
 
 	switch {
@@ -636,6 +645,18 @@ func (st *BaseConsensusState) defaultBroadcastNewINITBallot(voteproof base.Votep
 		return err
 	}
 
+	var reused bool
+	switch last := st.lastINITBallot(); {
+	case last == nil:
+	case last.Fact().Hash().Equal(baseBallot.Fact().Hash()):
+		baseBallot = last
+		reused = true
+	}
+
+	if !reused {
+		_ = st.lib.Set(baseBallot)
+	}
+
 	l := st.Log().With().Int64("height", baseBallot.Fact().Height().Int64()).
 		Uint64("round", baseBallot.Fact().Round().Uint64()).
 		Logger()
@@ -681,38 +702,21 @@ func (st *BaseConsensusState) whenProposalTimeout(voteproof base.Voteproof, prop
 		Logger()
 	l.Debug().Msg("waiting new proposal; if timed out, will move to next round")
 
-	baseBallot, err := NextINITBallotFromINITVoteproof(
-		st.database, st.nodepool.LocalNode(), voteproof, st.policy.NetworkID())
+	timer, err := st.broadcastNextRoundINITBallot(
+		voteproof, nil,
+		func(i int) time.Duration {
+			// NOTE at 1st time, wait timeout duration, after then, periodically
+			// broadcast INIT Ballot.
+			if i < 1 {
+				return st.policy.TimeoutWaitingProposal()
+			}
+
+			return st.policy.IntervalBroadcastingINITBallot()
+		},
+	)
 	if err != nil {
 		return err
 	}
-
-	var timer localtime.Timer
-
-	timer = localtime.NewContextTimer(TimerIDBroadcastINITBallot, 0, func(i int) (bool, error) {
-		if i%5 == 0 {
-			_ = signBallotWithFact(
-				baseBallot,
-				st.nodepool.LocalNode().Address(),
-				st.nodepool.LocalNode().Privatekey(),
-				st.policy.NetworkID(),
-			)
-		}
-
-		if err := st.BroadcastBallot(baseBallot, i == 0); err != nil {
-			l.Error().Err(err).Msg("failed to broadcast next init ballot")
-		}
-
-		return true, nil
-	}).SetInterval(func(i int) time.Duration {
-		// NOTE at 1st time, wait timeout duration, after then, periodically
-		// broadcast INIT Ballot.
-		if i < 1 {
-			return st.policy.TimeoutWaitingProposal()
-		}
-
-		return st.policy.IntervalBroadcastingINITBallot()
-	})
 	if err := st.Timers().SetTimer(timer); err != nil {
 		return err
 	}
@@ -735,4 +739,135 @@ func (st *BaseConsensusState) whenProposalTimeout(voteproof base.Voteproof, prop
 		TimerIDBroadcastProposal,
 		TimerIDFindProposal,
 	}, true)
+}
+
+func (st *BaseConsensusState) handleUnknownINITVoteproof(voteproof base.Voteproof) error {
+	vp, ok := voteproof.(base.VoteproofSet)
+	if !ok || vp.ACCEPTVoteproof() == nil {
+		return nil
+	}
+
+	l := st.Log().With().
+		Int64("height", voteproof.Height().Int64()).
+		Uint64("round", voteproof.Round().Uint64()).
+		Logger()
+
+	lvp := st.LastVoteproof()
+	switch {
+	case voteproof.Stage() != base.StageINIT:
+		return errors.Errorf("for handleUnknownINITVoteproof, should be INIT voteproof, not %v", voteproof.Stage())
+	case lvp == nil:
+	case lvp.FinishedAt().After(localtime.UTCNow().Add(st.policy.TimeoutWaitingProposal() * -3)):
+		l.Debug().Msg("next round voteproof too early; will wait")
+
+		return nil
+	}
+
+	interval := func(i int) time.Duration {
+		if i < 1 {
+			return time.Nanosecond
+		}
+
+		return st.policy.IntervalBroadcastingINITBallot()
+	}
+
+	var timer localtime.Timer
+	switch last := st.lastINITBallot(); {
+	case last == nil:
+		// NOTE last init ballot is empty, broadcast INIT Ballot
+		l.Debug().Msg("empty last INIT ballot; will broadcast next round INIT ballot")
+
+		i, err := st.broadcastNextRoundINITBallot(vp.Voteproof, vp.ACCEPTVoteproof(), interval)
+		if err != nil {
+			return err
+		}
+
+		timer = i
+	default:
+		fact := last.Fact()
+
+		switch {
+		case vp.Height() < fact.Height():
+			return nil
+		case vp.Height() == fact.Height() && vp.Round() < fact.Round():
+			return nil
+		}
+
+		l.Debug().Msg("next round voteproof found; will broadcast next round INIT ballot")
+
+		i, err := st.broadcastNextRoundINITBallot(vp.Voteproof, vp.ACCEPTVoteproof(), interval)
+		if err != nil {
+			return err
+		}
+		timer = i
+	}
+
+	if err := st.Timers().SetTimer(timer); err != nil {
+		return err
+	}
+
+	return st.Timers().StartTimers([]localtime.TimerID{
+		TimerIDBroadcastINITBallot,
+	}, true)
+}
+
+func (st *BaseConsensusState) broadcastNextRoundINITBallot(
+	voteproof, acceptVoteproof base.Voteproof,
+	interval func(int) time.Duration,
+) (localtime.Timer, error) {
+	if s := voteproof.Stage(); s != base.StageINIT {
+		return nil, errors.Errorf("for broadcast next round INITBallot, should be init voteproof, not %v", s)
+	}
+
+	l := st.Log().With().
+		Int64("height", voteproof.Height().Int64()).
+		Uint64("round", voteproof.Round().Uint64()).
+		Bool("has_acceptvoteproof", acceptVoteproof == nil).
+		Logger()
+	l.Debug().Msg("will broadcast INIT ballot for next round")
+
+	baseBallot, err := NextINITBallotFromINITVoteproof(
+		st.database, st.nodepool.LocalNode(), voteproof, acceptVoteproof, st.policy.NetworkID())
+	if err != nil {
+		return nil, err
+	}
+
+	_ = st.lib.Set(baseBallot)
+
+	var timer localtime.Timer
+	timer = localtime.NewContextTimer(TimerIDBroadcastINITBallot, 0, func(i int) (bool, error) {
+		if i%5 == 0 {
+			_ = signBallotWithFact(
+				baseBallot,
+				st.nodepool.LocalNode().Address(),
+				st.nodepool.LocalNode().Privatekey(),
+				st.policy.NetworkID(),
+			)
+		}
+
+		if err := st.BroadcastBallot(baseBallot, i == 0); err != nil {
+			l.Error().Err(err).Msg("failed to broadcast next init ballot")
+		}
+
+		return true, nil
+	})
+	if interval != nil {
+		timer = timer.SetInterval(interval)
+	}
+
+	return timer, nil
+}
+
+func (st *BaseConsensusState) lastINITBallot() base.INITBallot {
+	i := st.lib.Value()
+	if i == nil {
+		return nil
+	}
+
+	last, ok := i.(base.INITBallot)
+	if !ok {
+		return nil
+	}
+
+	return last
 }

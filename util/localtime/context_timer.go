@@ -56,6 +56,7 @@ func NewContextTimer(id TimerID, interval time.Duration, callback func(int) (boo
 		return interval
 	}
 	ct.callback = callback
+	ct.c = 0
 	ct.ContextDaemon = util.NewContextDaemon("timer-"+string(id), ct.start)
 
 	return ct

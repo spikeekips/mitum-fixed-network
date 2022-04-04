@@ -337,7 +337,7 @@ end:
 		case errors.Is(err, util.IgnoreError):
 			continue
 		case !errors.As(err, &sctx):
-			ss.Log().Error().Err(err).Str("details", fmt.Sprintf("%s+v", err)).Msg("something wrong")
+			ss.Log().Error().Err(err).Str("details", fmt.Sprintf("%+v", err)).Msg("something wrong")
 
 			continue
 		}

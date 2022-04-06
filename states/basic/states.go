@@ -225,6 +225,22 @@ func (ss *States) SetLastVoteproof(voteproof base.Voteproof) bool {
 	return true
 }
 
+func (ss *States) resetBallotbox() {
+	ss.lvplock.Lock()
+	defer ss.lvplock.Unlock()
+
+	// NOTE set last voteproof from local
+	if i := ss.database.LastVoteproof(base.StageACCEPT); i != nil {
+		ss.lvp = i
+	}
+
+	if i := ss.database.LastVoteproof(base.StageINIT); i != nil {
+		ss.livp = i
+	}
+
+	ss.ballotbox.Empty()
+}
+
 func (ss *States) NewSeal(sl seal.Seal) error {
 	l := ss.Log().With().Stringer("seal_hash", sl.Hash()).Logger()
 
@@ -339,7 +355,9 @@ end:
 		case !errors.As(err, &sctx):
 			ss.Log().Error().Err(err).Str("details", fmt.Sprintf("%+v", err)).Msg("something wrong")
 
-			continue
+			// NOTE unexpected error occurred, moves to joining state
+			ss.resetBallotbox()
+			sctx = NewStateSwitchContext(base.StateEmpty, base.StateBooting)
 		}
 
 		if err := ss.processSwitchStates(sctx); err != nil {
@@ -390,12 +408,12 @@ func (ss *States) switchState(sctx StateSwitchContext) error {
 
 	e.Msg("switching state")
 
-	if err := sctx.IsValid(nil); err != nil {
-		return errors.Wrap(err, "invalid state switch context")
-	}
-
 	if sctx.FromState() == base.StateEmpty {
 		sctx = sctx.SetFromState(ss.State())
+	}
+
+	if err := sctx.IsValid(nil); err != nil {
+		return errors.Wrap(err, "invalid state switch context")
 	}
 
 	if ss.State() != sctx.FromState() {
@@ -475,7 +493,7 @@ func (ss *States) exitState(sctx StateSwitchContext) error {
 	default:
 		l.Error().Err(err).Msg("something wrong after exit")
 
-		return nil
+		return errors.Wrap(err, "")
 	}
 }
 
@@ -501,7 +519,7 @@ func (ss *States) enterState(sctx StateSwitchContext) error {
 	default:
 		l.Error().Err(err).Msg("something wrong after entering")
 
-		return nil
+		return errors.Wrap(err, "")
 	}
 }
 

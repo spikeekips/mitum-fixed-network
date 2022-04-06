@@ -38,6 +38,7 @@ type BaseState struct {
 	exitFunc              func(StateSwitchContext) (func() error, error)
 	processVoteproofFunc  func(base.Voteproof) error
 	syncableChannelsFunc  func() map[string]network.Channel
+	resetBallotboxFunc    func()
 	exiting               *util.LockedItem
 }
 
@@ -204,6 +205,16 @@ func (st *BaseState) oldNode() network.Channel {
 
 func (st *BaseState) underHandover() bool {
 	return st.States != nil && st.States.underHandover()
+}
+
+func (st *BaseState) resetBallotbox() {
+	if st.resetBallotboxFunc != nil {
+		st.resetBallotboxFunc()
+
+		return
+	}
+
+	st.States.resetBallotbox()
 }
 
 var ConsensusStuckError = util.NewError("consensus looks stuck")

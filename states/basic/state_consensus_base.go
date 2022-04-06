@@ -228,15 +228,17 @@ func (st *BaseConsensusState) ProcessProposal(proposal base.Proposal) error {
 	}
 
 	started := time.Now()
-	if voteproof, newBlock, _ := st.processProposal(proposal); newBlock != nil {
+	switch voteproof, newBlock, _ := st.processProposal(proposal); {
+	case newBlock != nil:
 		initialDelay := st.policy.WaitBroadcastingACCEPTBallot() - (time.Since(started))
 		if initialDelay < 0 {
 			initialDelay = time.Nanosecond
 		}
 
 		return st.broadcastACCEPTBallot(newBlock, proposal.Fact().Hash(), voteproof, initialDelay)
+	default:
+		return nil
 	}
-	return nil
 }
 
 func (st *BaseConsensusState) newINITVoteproof(voteproof base.Voteproof) error {

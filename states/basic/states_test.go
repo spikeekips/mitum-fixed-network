@@ -1082,6 +1082,67 @@ func (t *testStates) TestIncomingNextRoundVoteproof() {
 	t.Equal(ibround1.ACCEPTVoteproof().ID(), rvp.ACCEPTVoteproof().ID())
 }
 
+func (t *testStates) TestFailedProcessingVoteproof() {
+	ss := t.newStates()
+	defer func() {
+		_ = ss.Stop()
+	}()
+
+	stateBooting := NewBaseState(base.StateBooting)
+	stateConsensus := NewBaseState(base.StateConsensus)
+
+	statech := make(chan StateSwitchContext, 1)
+	stateBooting.SetEnterFunc(func(sctx StateSwitchContext) (func() error, error) {
+		statech <- sctx
+		return nil, nil
+	})
+
+	stateConsensus.SetEnterFunc(func(sctx StateSwitchContext) (func() error, error) {
+		statech <- sctx
+		return nil, nil
+	})
+
+	gotvoteproofch := make(chan struct{}, 1)
+	stateConsensus.SetProcessVoteproofFunc(func(voteproof base.Voteproof) error {
+		gotvoteproofch <- struct{}{}
+		return errors.Errorf("failed")
+	})
+
+	ss.states[base.StateBooting] = stateBooting
+	ss.states[base.StateConsensus] = stateConsensus
+
+	stopch := make(chan error)
+	go func() {
+		stopch <- ss.Start()
+	}()
+
+	sctx := NewStateSwitchContext(ss.State(), base.StateConsensus)
+	t.NoError(ss.SwitchState(sctx))
+
+	<-statech
+
+	lavp := ss.LastVoteproof()
+	ibround0 := t.NewINITBallot(t.local, base.Round(0), lavp)
+
+	newvp, err := t.NewVoteproof(base.StageINIT, ibround0.Fact(), t.local, t.remote)
+	t.NoError(err)
+
+	ss.NewVoteproof(newvp)
+	<-gotvoteproofch
+
+	select {
+	case <-time.After(time.Second * 3):
+		t.NoError(errors.Errorf("timeout to wait to switch state"))
+	case err := <-stopch:
+		t.NoError(fmt.Errorf("stopped: %w", err))
+	case sctx := <-statech:
+		t.Equal(base.StateBooting, sctx.ToState())
+	}
+
+	t.Equal(0, ss.ballotbox.Len())
+	t.Nil(ss.ballotbox.LatestBallot())
+}
+
 func TestStates(t *testing.T) {
 	suite.Run(t, new(testStates))
 }

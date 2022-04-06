@@ -50,6 +50,8 @@ func (st *BootingState) Enter(sctx StateSwitchContext) (func() error, error) {
 		callback = i
 	}
 
+	st.resetBallotbox()
+
 	if _, err := storage.CheckBlock(st.database, st.policy.NetworkID()); err != nil {
 		st.Log().Error().Err(err).Msg("something wrong to check blocks")
 

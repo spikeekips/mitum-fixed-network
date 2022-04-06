@@ -107,6 +107,14 @@ func (bb *Ballotbox) LatestBallot() base.Ballot {
 	return bb.latestBallot
 }
 
+func (bb *Ballotbox) Empty() {
+	bb.Lock()
+	defer bb.Unlock()
+
+	bb.vrs = &sync.Map{}
+	bb.latestBallot = nil
+}
+
 func (bb *Ballotbox) loadVoteRecords(blt base.Ballot, ifNotCreate bool) *VoteRecords {
 	bb.Lock()
 	defer bb.Unlock()

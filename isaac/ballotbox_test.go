@@ -276,6 +276,46 @@ func (t *testBallotbox) TestINITVoteproofClean() {
 	t.False(barFound)
 }
 
+func (t *testBallotbox) TestEmpty() {
+	nodes := []base.Address{
+		base.RandomStringAddress(),
+		base.RandomStringAddress(),
+	}
+	bb := NewBallotbox(t.suffragesFunc(nodes...), t.thresholdFunc(3, 66))
+
+	previousBlock := valuehash.RandomSHA256()
+
+	// 2 ballot have the differnt previousBlock hash
+	ba0 := t.newINITBallot(base.Height(10), base.Round(0), nodes[0], previousBlock)
+	ba1 := t.newINITBallot(base.Height(10), base.Round(0), nodes[1], previousBlock)
+	bar := t.newINITBallot(base.Height(9), base.Round(0), nodes[0], nil)
+
+	{
+		vp, err := bb.Vote(ba0)
+		t.NoError(err)
+		t.Equal(base.VoteResultNotYet, vp.Result())
+	}
+
+	{
+		_, err := bb.Vote(bar)
+		t.NoError(err)
+	}
+
+	vp, err := bb.Vote(ba1)
+	t.NoError(err)
+	t.Equal(base.VoteResultMajority, vp.Result())
+
+	bb.Empty()
+
+	var remains []string
+	bb.vrs.Range(func(k, v interface{}) bool {
+		remains = append(remains, k.(string))
+		return true
+	})
+	t.Equal(0, len(remains))
+	t.Nil(bb.LatestBallot())
+}
+
 func (t *testBallotbox) newACCEPTBallot(
 	height base.Height,
 	round base.Round,

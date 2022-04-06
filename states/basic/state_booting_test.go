@@ -23,9 +23,17 @@ func (t *testStateBooting) TestWithBlock() {
 		func() base.Voteproof { return nil },
 		func(base.Voteproof) bool { return true },
 	)
+
+	resetballotboxch := make(chan struct{}, 1)
+	st.resetBallotboxFunc = func() {
+		resetballotboxch <- struct{}{}
+	}
+
 	f, err := st.Enter(NewStateSwitchContext(base.StateStopped, base.StateBooting))
 	t.NoError(err)
 	err = f()
+
+	<-resetballotboxch
 
 	var sctx StateSwitchContext
 	t.True(errors.As(err, &sctx))
@@ -38,6 +46,7 @@ func (t *testStateBooting) TestNoneSuffrageNode() {
 	st := NewBootingState(t.local.Node(), t.local.Database(), t.local.Blockdata(), t.local.Policy(), t.Suffrage(t.remote))
 	defer st.Exit(NewStateSwitchContext(base.StateBooting, base.StateStopped))
 
+	st.resetBallotboxFunc = func() {}
 	st.SetLastVoteproofFuncs(
 		func() base.Voteproof { return nil },
 		func() base.Voteproof { return nil },
@@ -60,6 +69,7 @@ func (t *testStateBooting) TestWithEmptyBlockWithChannels() {
 	st := NewBootingState(t.local.Node(), t.local.Database(), t.local.Blockdata(), t.local.Policy(), t.Suffrage(t.local, t.remote))
 	defer t.exitState(st, NewStateSwitchContext(base.StateBooting, base.StateStopped))
 
+	st.resetBallotboxFunc = func() {}
 	st.syncableChannelsFunc = func() map[string]network.Channel {
 		return map[string]network.Channel{
 			"showme": t.remote.Channel(),
@@ -83,6 +93,7 @@ func (t *testStateBooting) TestWithEmptyBlockWithoutChannels() {
 	st := NewBootingState(t.local.Node(), t.local.Database(), t.local.Blockdata(), t.local.Policy(), t.Suffrage(t.local))
 	defer t.exitState(st, NewStateSwitchContext(base.StateBooting, base.StateStopped))
 
+	st.resetBallotboxFunc = func() {}
 	st.syncableChannelsFunc = func() map[string]network.Channel {
 		return nil
 	}

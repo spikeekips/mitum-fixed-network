@@ -3,7 +3,6 @@ package cmds
 import (
 	"context"
 	"fmt"
-	"io"
 	"net/url"
 	"os"
 	"os/signal"
@@ -114,7 +113,7 @@ func (cmd *RunCommand) prepare() error {
 	// NOTE setup network log
 	l := cmd.Logging
 	if len(cmd.NetworkLogFile) > 0 {
-		var out io.Writer = cmd.LogOutput
+		out := cmd.LogOutput
 		if len(cmd.NetworkLogFile) > 0 {
 			i, err := logging.Outputs(cmd.NetworkLogFile)
 			if err != nil {

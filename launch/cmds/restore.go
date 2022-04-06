@@ -620,7 +620,7 @@ func copyBlockdataDirectory(src, dst string) error {
 		}
 	}
 
-	if err := os.MkdirAll(dsta, 0750); err != nil {
+	if err := os.MkdirAll(dsta, 0o750); err != nil {
 		return fmt.Errorf("failed to create destination directory, %q: %w", dsta, err)
 	}
 
@@ -665,7 +665,7 @@ func copyBlockdataFile(src, dst, datatype string) error {
 
 	nf := filepath.Join(dst, filepath.Base(f))
 
-	destination, err := os.Create(nf)
+	destination, err := os.Create(filepath.Clean(nf))
 	if err != nil {
 		return err
 	}

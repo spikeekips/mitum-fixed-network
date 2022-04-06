@@ -2,6 +2,7 @@ package cmds
 
 import (
 	"os"
+	"path/filepath"
 	"runtime/pprof"
 	"runtime/trace"
 
@@ -71,7 +72,7 @@ func RunPprofs(flags *PprofFlags) (func() error, error) {
 }
 
 func RunTracePprof(s string) (func() error, error) {
-	if f, err := os.Create(s); err != nil {
+	if f, err := os.Create(filepath.Clean(s)); err != nil {
 		return nil, err
 	} else if err := trace.Start(f); err != nil {
 		return nil, err
@@ -89,7 +90,7 @@ func RunTracePprof(s string) (func() error, error) {
 }
 
 func RunCPUPprof(s string) (func() error, error) {
-	if f, err := os.Create(s); err != nil {
+	if f, err := os.Create(filepath.Clean(s)); err != nil {
 		return nil, err
 	} else if err := pprof.StartCPUProfile(f); err != nil {
 		return nil, err
@@ -107,7 +108,7 @@ func RunCPUPprof(s string) (func() error, error) {
 }
 
 func RunMemPprof(s string) (func() error, error) {
-	if f, err := os.Create(s); err != nil {
+	if f, err := os.Create(filepath.Clean(s)); err != nil {
 		return nil, err
 	} else if err := pprof.WriteHeapProfile(f); err != nil {
 		return nil, err

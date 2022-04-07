@@ -205,9 +205,12 @@ func (vc *VoteproofChecker) CheckACCEPTVoteproofProposal() (bool, error) {
 }
 
 func (vc *VoteproofChecker) findProposalInDatabase(fact valuehash.Hash) (bool, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second*14)
+	defer cancel()
+
 	var found bool
 	err := util.EnsureErrors(
-		context.Background(),
+		ctx,
 		time.Millisecond*300,
 		func() error {
 			_, b, err := vc.database.Proposal(fact)

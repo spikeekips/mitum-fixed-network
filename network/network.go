@@ -48,13 +48,13 @@ type Response interface {
 }
 
 var (
-	ChannelTimeoutSeal         = time.Second * 2
-	ChannelTimeoutOperation    = time.Second * 2
-	ChannelTimeoutSendSeal     = time.Second * 2
-	ChannelTimeoutNodeInfo     = time.Second * 2
-	ChannelTimeoutBlockdataMap = time.Second * 2
-	ChannelTimeoutBlockdata    = time.Second * 30
-	ChannelTimeoutHandover     = time.Second * 2
+	ChannelTimeoutSeal         = time.Second * 7
+	ChannelTimeoutOperation    = time.Second * 7
+	ChannelTimeoutSendSeal     = time.Second * 7
+	ChannelTimeoutNodeInfo     = time.Second * 7
+	ChannelTimeoutBlockdataMap = time.Second * 7
+	ChannelTimeoutBlockdata    = time.Minute
+	ChannelTimeoutHandover     = time.Second * 7
 )
 
 type Channel interface {

@@ -362,9 +362,12 @@ func (st *BaseConsensusState) processProposalOfACCEPTVoteproof(
 		return nil, nil, errors.Errorf("needs ACCEPTBallotFact: fact=%T", voteproof.Majority())
 	}
 
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second*14)
+	defer cancel()
+
 	var proposal base.Proposal
 	if err := util.EnsureErrors(
-		context.Background(),
+		ctx,
 		time.Millisecond*300,
 		func() error {
 			pr, found, err := st.database.Proposal(fact.Proposal())
@@ -427,9 +430,12 @@ func (st *BaseConsensusState) findProposal(
 	round base.Round,
 	proposer base.Address,
 ) (base.Proposal, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second*14)
+	defer cancel()
+
 	var proposal base.Proposal
 	err := util.EnsureErrors(
-		context.Background(),
+		ctx,
 		time.Millisecond*300,
 		func() error {
 			pr, found, err := st.database.ProposalByPoint(height, round, proposer)
@@ -552,8 +558,11 @@ func (st *BaseConsensusState) defaultPrepareProposal(
 		return nil, err
 	}
 
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second*14)
+	defer cancel()
+
 	err = util.EnsureErrors(
-		context.Background(),
+		ctx,
 		time.Millisecond*100,
 		func() error {
 			return st.database.NewProposal(pr)

@@ -121,8 +121,8 @@ func NewDatabaseFromURI(uri string, encs *encoder.Encoders, ca cache.Cache) (*Da
 		return nil, errors.Wrap(err, "invalid storge uri")
 	}
 
-	connectTimeout := time.Second * 2
-	execTimeout := time.Second * 2
+	connectTimeout := time.Second * 7
+	execTimeout := time.Second * 7
 	{
 		query := parsed.Query()
 		if d, err := parseDurationFromQuery(query, "connectTimeout", connectTimeout); err != nil {

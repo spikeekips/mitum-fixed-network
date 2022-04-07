@@ -83,7 +83,11 @@ func (nc *NodeInfoChecker) check(ctx context.Context) error {
 		return nil
 	}
 
-	nctx, cancel := context.WithTimeout(ctx, nc.interval-time.Second)
+	interval := nc.interval - time.Second
+	if interval < time.Second*2 {
+		interval = time.Second * 2
+	}
+	nctx, cancel := context.WithTimeout(ctx, interval)
 	defer cancel()
 
 	lenremotes := nc.nodepool.Len() - 1

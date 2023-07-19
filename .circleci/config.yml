@@ -4,7 +4,7 @@ defaults: &defaults
   docker:
     - image: circleci/golang:1.16
     #- image: circleci/mongo:4.2
-  working_directory: /go/src/github.com/spikeekips/mitum
+  working_directory: /go/src/github.com/spikeekips/mitum-fixed-network
 
 workspace: &workspace
   attach_workspace:
@@ -31,7 +31,7 @@ jobs:
           root: /
           paths:
             - go/pkg/mod/
-            - go/src/github.com/spikeekips/mitum
+            - go/src/github.com/spikeekips/mitum-fixed-network
 
   lint:
     <<: *defaults
@@ -58,7 +58,7 @@ jobs:
          command: >
             for i in $(go list ./...);
             do
-                n=$(echo $i | sed -e "s@github.com/spikeekips/mitum@.@g")
+                n=$(echo $i | sed -e "s@github.com/spikeekips/mitum-fixed-network@.@g")
                 echo "> testing" $n
                 go test -race -tags "test" -v -timeout 20m $n -run .
                 e=$?
